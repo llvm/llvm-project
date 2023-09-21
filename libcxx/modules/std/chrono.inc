@@ -193,6 +193,7 @@ export namespace std {
 #if !defined(_LIBCPP_HAS_NO_TIME_ZONE_DATABASE) && !defined(_LIBCPP_HAS_NO_FILESYSTEM) &&                              \
     !defined(_LIBCPP_HAS_NO_LOCALIZATION)
 
+#  ifdef _LIBCPP_ENABLE_EXPERIMENTAL
     // [time.zone.db], time zone database
     using std::chrono::tzdb;
     using std::chrono::tzdb_list;
@@ -207,10 +208,10 @@ export namespace std {
     using std::chrono::reload_tzdb;
     using std::chrono::remote_version;
 
-#endif //  !defined(_LIBCPP_HAS_NO_TIME_ZONE_DATABASE) && !defined(_LIBCPP_HAS_NO_FILESYSTEM) &&
-       //    !defined(_LIBCPP_HAS_NO_LOCALIZATION)
+#  endif //  !defined(_LIBCPP_HAS_NO_TIME_ZONE_DATABASE) && !defined(_LIBCPP_HAS_NO_FILESYSTEM) &&
+         //    !defined(_LIBCPP_HAS_NO_LOCALIZATION)
 
-#if 0
+#  if 0
     // [time.zone.exception], exception classes
     using std::chrono::ambiguous_local_time;
     using std::chrono::nonexistent_local_time;
@@ -238,8 +239,9 @@ export namespace std {
 
     // [time.format], formatting
     using std::chrono::local_time_format;
-#endif
-  } // namespace chrono
+#  endif
+#endif // _LIBCPP_ENABLE_EXPERIMENTAL
+  }    // namespace chrono
 
 #ifndef _LIBCPP_HAS_NO_LOCALIZATION
   using std::formatter;

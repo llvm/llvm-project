@@ -246,35 +246,35 @@ define void @load_i64_stride2_vf16(ptr %in.vec, ptr %out.vec0, ptr %out.vec1) no
 ; SSE-NEXT:    movaps (%rdi), %xmm1
 ; SSE-NEXT:    movaps 16(%rdi), %xmm8
 ; SSE-NEXT:    movaps 32(%rdi), %xmm0
-; SSE-NEXT:    movaps 208(%rdi), %xmm9
+; SSE-NEXT:    movaps 208(%rdi), %xmm11
 ; SSE-NEXT:    movaps 192(%rdi), %xmm2
 ; SSE-NEXT:    movaps 240(%rdi), %xmm10
 ; SSE-NEXT:    movaps 224(%rdi), %xmm4
-; SSE-NEXT:    movaps 144(%rdi), %xmm12
+; SSE-NEXT:    movaps 144(%rdi), %xmm14
 ; SSE-NEXT:    movaps 128(%rdi), %xmm3
-; SSE-NEXT:    movaps 176(%rdi), %xmm13
+; SSE-NEXT:    movaps 176(%rdi), %xmm12
 ; SSE-NEXT:    movaps 160(%rdi), %xmm6
-; SSE-NEXT:    movaps 80(%rdi), %xmm14
+; SSE-NEXT:    movaps 80(%rdi), %xmm13
 ; SSE-NEXT:    movaps 64(%rdi), %xmm5
 ; SSE-NEXT:    movaps 112(%rdi), %xmm15
 ; SSE-NEXT:    movaps 96(%rdi), %xmm7
-; SSE-NEXT:    movaps %xmm5, %xmm11
-; SSE-NEXT:    movlhps {{.*#+}} xmm11 = xmm11[0],xmm14[0]
-; SSE-NEXT:    unpckhpd {{.*#+}} xmm5 = xmm5[1],xmm14[1]
-; SSE-NEXT:    movaps %xmm7, %xmm14
-; SSE-NEXT:    movlhps {{.*#+}} xmm14 = xmm14[0],xmm15[0]
+; SSE-NEXT:    movaps %xmm5, %xmm9
+; SSE-NEXT:    movlhps {{.*#+}} xmm9 = xmm9[0],xmm13[0]
+; SSE-NEXT:    unpckhpd {{.*#+}} xmm5 = xmm5[1],xmm13[1]
+; SSE-NEXT:    movaps %xmm7, %xmm13
+; SSE-NEXT:    movlhps {{.*#+}} xmm13 = xmm13[0],xmm15[0]
 ; SSE-NEXT:    unpckhpd {{.*#+}} xmm7 = xmm7[1],xmm15[1]
 ; SSE-NEXT:    movaps %xmm3, %xmm15
-; SSE-NEXT:    movlhps {{.*#+}} xmm15 = xmm15[0],xmm12[0]
-; SSE-NEXT:    unpckhpd {{.*#+}} xmm3 = xmm3[1],xmm12[1]
-; SSE-NEXT:    movaps %xmm6, %xmm12
-; SSE-NEXT:    movlhps {{.*#+}} xmm12 = xmm12[0],xmm13[0]
-; SSE-NEXT:    unpckhpd {{.*#+}} xmm6 = xmm6[1],xmm13[1]
-; SSE-NEXT:    movaps %xmm2, %xmm13
-; SSE-NEXT:    movlhps {{.*#+}} xmm13 = xmm13[0],xmm9[0]
-; SSE-NEXT:    unpckhpd {{.*#+}} xmm2 = xmm2[1],xmm9[1]
-; SSE-NEXT:    movaps %xmm4, %xmm9
-; SSE-NEXT:    movlhps {{.*#+}} xmm9 = xmm9[0],xmm10[0]
+; SSE-NEXT:    movlhps {{.*#+}} xmm15 = xmm15[0],xmm14[0]
+; SSE-NEXT:    unpckhpd {{.*#+}} xmm3 = xmm3[1],xmm14[1]
+; SSE-NEXT:    movaps %xmm6, %xmm14
+; SSE-NEXT:    movlhps {{.*#+}} xmm14 = xmm14[0],xmm12[0]
+; SSE-NEXT:    unpckhpd {{.*#+}} xmm6 = xmm6[1],xmm12[1]
+; SSE-NEXT:    movaps %xmm2, %xmm12
+; SSE-NEXT:    movlhps {{.*#+}} xmm12 = xmm12[0],xmm11[0]
+; SSE-NEXT:    unpckhpd {{.*#+}} xmm2 = xmm2[1],xmm11[1]
+; SSE-NEXT:    movaps %xmm4, %xmm11
+; SSE-NEXT:    movlhps {{.*#+}} xmm11 = xmm11[0],xmm10[0]
 ; SSE-NEXT:    unpckhpd {{.*#+}} xmm4 = xmm4[1],xmm10[1]
 ; SSE-NEXT:    movaps %xmm1, %xmm10
 ; SSE-NEXT:    movlhps {{.*#+}} xmm10 = xmm10[0],xmm8[0]
@@ -284,12 +284,12 @@ define void @load_i64_stride2_vf16(ptr %in.vec, ptr %out.vec0, ptr %out.vec1) no
 ; SSE-NEXT:    movaps %xmm0, %xmm1
 ; SSE-NEXT:    movlhps {{.*#+}} xmm1 = xmm1[0],xmm8[0]
 ; SSE-NEXT:    unpckhpd {{.*#+}} xmm0 = xmm0[1],xmm8[1]
-; SSE-NEXT:    movaps %xmm13, 96(%rsi)
-; SSE-NEXT:    movaps %xmm9, 112(%rsi)
+; SSE-NEXT:    movaps %xmm12, 96(%rsi)
+; SSE-NEXT:    movaps %xmm11, 112(%rsi)
 ; SSE-NEXT:    movaps %xmm15, 64(%rsi)
-; SSE-NEXT:    movaps %xmm12, 80(%rsi)
-; SSE-NEXT:    movaps %xmm11, 32(%rsi)
-; SSE-NEXT:    movaps %xmm14, 48(%rsi)
+; SSE-NEXT:    movaps %xmm14, 80(%rsi)
+; SSE-NEXT:    movaps %xmm9, 32(%rsi)
+; SSE-NEXT:    movaps %xmm13, 48(%rsi)
 ; SSE-NEXT:    movaps %xmm10, (%rsi)
 ; SSE-NEXT:    movaps %xmm1, 16(%rsi)
 ; SSE-NEXT:    movaps %xmm4, 112(%rdx)
@@ -404,61 +404,61 @@ define void @load_i64_stride2_vf32(ptr %in.vec, ptr %out.vec0, ptr %out.vec1) no
 ; SSE-LABEL: load_i64_stride2_vf32:
 ; SSE:       # %bb.0:
 ; SSE-NEXT:    subq $152, %rsp
-; SSE-NEXT:    movaps 208(%rdi), %xmm7
-; SSE-NEXT:    movaps 192(%rdi), %xmm1
-; SSE-NEXT:    movaps 80(%rdi), %xmm10
-; SSE-NEXT:    movaps 64(%rdi), %xmm0
-; SSE-NEXT:    movaps 240(%rdi), %xmm11
-; SSE-NEXT:    movaps 224(%rdi), %xmm3
-; SSE-NEXT:    movaps 112(%rdi), %xmm13
-; SSE-NEXT:    movaps 96(%rdi), %xmm2
-; SSE-NEXT:    movaps 272(%rdi), %xmm9
-; SSE-NEXT:    movaps 144(%rdi), %xmm14
-; SSE-NEXT:    movaps 128(%rdi), %xmm4
-; SSE-NEXT:    movaps 304(%rdi), %xmm12
-; SSE-NEXT:    movaps 288(%rdi), %xmm6
-; SSE-NEXT:    movaps 176(%rdi), %xmm15
-; SSE-NEXT:    movaps 160(%rdi), %xmm5
-; SSE-NEXT:    movaps %xmm2, %xmm8
-; SSE-NEXT:    movlhps {{.*#+}} xmm8 = xmm8[0],xmm13[0]
-; SSE-NEXT:    movaps %xmm8, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
-; SSE-NEXT:    unpckhpd {{.*#+}} xmm2 = xmm2[1],xmm13[1]
-; SSE-NEXT:    movaps %xmm2, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
-; SSE-NEXT:    movaps %xmm0, %xmm2
-; SSE-NEXT:    movlhps {{.*#+}} xmm2 = xmm2[0],xmm10[0]
-; SSE-NEXT:    movaps %xmm2, (%rsp) # 16-byte Spill
-; SSE-NEXT:    unpckhpd {{.*#+}} xmm0 = xmm0[1],xmm10[1]
-; SSE-NEXT:    movaps %xmm0, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
-; SSE-NEXT:    movaps %xmm5, %xmm0
-; SSE-NEXT:    movlhps {{.*#+}} xmm0 = xmm0[0],xmm15[0]
-; SSE-NEXT:    movaps %xmm0, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
-; SSE-NEXT:    unpckhpd {{.*#+}} xmm5 = xmm5[1],xmm15[1]
+; SSE-NEXT:    movaps 208(%rdi), %xmm11
+; SSE-NEXT:    movaps 192(%rdi), %xmm6
+; SSE-NEXT:    movaps 80(%rdi), %xmm1
+; SSE-NEXT:    movaps 64(%rdi), %xmm5
+; SSE-NEXT:    movaps 240(%rdi), %xmm14
+; SSE-NEXT:    movaps 224(%rdi), %xmm8
+; SSE-NEXT:    movaps 112(%rdi), %xmm3
+; SSE-NEXT:    movaps 96(%rdi), %xmm7
+; SSE-NEXT:    movaps 272(%rdi), %xmm12
+; SSE-NEXT:    movaps 144(%rdi), %xmm2
+; SSE-NEXT:    movaps 128(%rdi), %xmm9
+; SSE-NEXT:    movaps 304(%rdi), %xmm0
+; SSE-NEXT:    movaps 288(%rdi), %xmm13
+; SSE-NEXT:    movaps 176(%rdi), %xmm4
+; SSE-NEXT:    movaps 160(%rdi), %xmm10
+; SSE-NEXT:    movaps %xmm7, %xmm15
+; SSE-NEXT:    movlhps {{.*#+}} xmm15 = xmm15[0],xmm3[0]
+; SSE-NEXT:    movaps %xmm15, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
+; SSE-NEXT:    unpckhpd {{.*#+}} xmm7 = xmm7[1],xmm3[1]
+; SSE-NEXT:    movaps %xmm7, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
+; SSE-NEXT:    movaps %xmm5, %xmm3
+; SSE-NEXT:    movlhps {{.*#+}} xmm3 = xmm3[0],xmm1[0]
+; SSE-NEXT:    movaps %xmm3, (%rsp) # 16-byte Spill
+; SSE-NEXT:    unpckhpd {{.*#+}} xmm5 = xmm5[1],xmm1[1]
 ; SSE-NEXT:    movaps %xmm5, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
-; SSE-NEXT:    movaps %xmm4, %xmm0
-; SSE-NEXT:    movlhps {{.*#+}} xmm0 = xmm0[0],xmm14[0]
-; SSE-NEXT:    movaps %xmm0, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
-; SSE-NEXT:    unpckhpd {{.*#+}} xmm4 = xmm4[1],xmm14[1]
-; SSE-NEXT:    movaps %xmm4, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
-; SSE-NEXT:    movaps %xmm3, %xmm0
-; SSE-NEXT:    movlhps {{.*#+}} xmm0 = xmm0[0],xmm11[0]
-; SSE-NEXT:    movaps %xmm0, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
-; SSE-NEXT:    unpckhpd {{.*#+}} xmm3 = xmm3[1],xmm11[1]
-; SSE-NEXT:    movaps %xmm3, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
-; SSE-NEXT:    movaps %xmm1, %xmm0
-; SSE-NEXT:    movlhps {{.*#+}} xmm0 = xmm0[0],xmm7[0]
-; SSE-NEXT:    movaps %xmm0, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
-; SSE-NEXT:    unpckhpd {{.*#+}} xmm1 = xmm1[1],xmm7[1]
+; SSE-NEXT:    movaps %xmm10, %xmm1
+; SSE-NEXT:    movlhps {{.*#+}} xmm1 = xmm1[0],xmm4[0]
 ; SSE-NEXT:    movaps %xmm1, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
-; SSE-NEXT:    movaps %xmm6, %xmm0
-; SSE-NEXT:    movlhps {{.*#+}} xmm0 = xmm0[0],xmm12[0]
-; SSE-NEXT:    movaps %xmm0, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
-; SSE-NEXT:    unpckhpd {{.*#+}} xmm6 = xmm6[1],xmm12[1]
+; SSE-NEXT:    unpckhpd {{.*#+}} xmm10 = xmm10[1],xmm4[1]
+; SSE-NEXT:    movaps %xmm10, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
+; SSE-NEXT:    movaps %xmm9, %xmm1
+; SSE-NEXT:    movlhps {{.*#+}} xmm1 = xmm1[0],xmm2[0]
+; SSE-NEXT:    movaps %xmm1, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
+; SSE-NEXT:    unpckhpd {{.*#+}} xmm9 = xmm9[1],xmm2[1]
+; SSE-NEXT:    movaps %xmm9, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
+; SSE-NEXT:    movaps %xmm8, %xmm1
+; SSE-NEXT:    movlhps {{.*#+}} xmm1 = xmm1[0],xmm14[0]
+; SSE-NEXT:    movaps %xmm1, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
+; SSE-NEXT:    unpckhpd {{.*#+}} xmm8 = xmm8[1],xmm14[1]
+; SSE-NEXT:    movaps %xmm8, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
+; SSE-NEXT:    movaps %xmm6, %xmm1
+; SSE-NEXT:    movlhps {{.*#+}} xmm1 = xmm1[0],xmm11[0]
+; SSE-NEXT:    movaps %xmm1, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
+; SSE-NEXT:    unpckhpd {{.*#+}} xmm6 = xmm6[1],xmm11[1]
 ; SSE-NEXT:    movaps %xmm6, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
+; SSE-NEXT:    movaps %xmm13, %xmm1
+; SSE-NEXT:    movlhps {{.*#+}} xmm1 = xmm1[0],xmm0[0]
+; SSE-NEXT:    movaps %xmm1, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
+; SSE-NEXT:    unpckhpd {{.*#+}} xmm13 = xmm13[1],xmm0[1]
+; SSE-NEXT:    movaps %xmm13, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
 ; SSE-NEXT:    movaps 256(%rdi), %xmm0
 ; SSE-NEXT:    movaps %xmm0, %xmm1
-; SSE-NEXT:    movlhps {{.*#+}} xmm1 = xmm1[0],xmm9[0]
+; SSE-NEXT:    movlhps {{.*#+}} xmm1 = xmm1[0],xmm12[0]
 ; SSE-NEXT:    movaps %xmm1, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
-; SSE-NEXT:    unpckhpd {{.*#+}} xmm0 = xmm0[1],xmm9[1]
+; SSE-NEXT:    unpckhpd {{.*#+}} xmm0 = xmm0[1],xmm12[1]
 ; SSE-NEXT:    movaps %xmm0, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
 ; SSE-NEXT:    movaps 368(%rdi), %xmm0
 ; SSE-NEXT:    movaps 352(%rdi), %xmm15
@@ -468,46 +468,46 @@ define void @load_i64_stride2_vf32(ptr %in.vec, ptr %out.vec0, ptr %out.vec1) no
 ; SSE-NEXT:    unpckhpd {{.*#+}} xmm15 = xmm15[1],xmm0[1]
 ; SSE-NEXT:    movaps 336(%rdi), %xmm0
 ; SSE-NEXT:    movaps 320(%rdi), %xmm13
-; SSE-NEXT:    movaps %xmm13, %xmm12
-; SSE-NEXT:    movlhps {{.*#+}} xmm12 = xmm12[0],xmm0[0]
+; SSE-NEXT:    movaps %xmm13, %xmm11
+; SSE-NEXT:    movlhps {{.*#+}} xmm11 = xmm11[0],xmm0[0]
 ; SSE-NEXT:    unpckhpd {{.*#+}} xmm13 = xmm13[1],xmm0[1]
 ; SSE-NEXT:    movaps 432(%rdi), %xmm0
-; SSE-NEXT:    movaps 416(%rdi), %xmm9
-; SSE-NEXT:    movaps %xmm9, %xmm14
+; SSE-NEXT:    movaps 416(%rdi), %xmm12
+; SSE-NEXT:    movaps %xmm12, %xmm14
 ; SSE-NEXT:    movlhps {{.*#+}} xmm14 = xmm14[0],xmm0[0]
-; SSE-NEXT:    unpckhpd {{.*#+}} xmm9 = xmm9[1],xmm0[1]
+; SSE-NEXT:    unpckhpd {{.*#+}} xmm12 = xmm12[1],xmm0[1]
 ; SSE-NEXT:    movaps 400(%rdi), %xmm0
-; SSE-NEXT:    movaps 384(%rdi), %xmm6
-; SSE-NEXT:    movaps %xmm6, %xmm10
+; SSE-NEXT:    movaps 384(%rdi), %xmm9
+; SSE-NEXT:    movaps %xmm9, %xmm10
 ; SSE-NEXT:    movlhps {{.*#+}} xmm10 = xmm10[0],xmm0[0]
-; SSE-NEXT:    unpckhpd {{.*#+}} xmm6 = xmm6[1],xmm0[1]
-; SSE-NEXT:    movaps 496(%rdi), %xmm1
-; SSE-NEXT:    movaps 480(%rdi), %xmm4
-; SSE-NEXT:    movaps %xmm4, %xmm5
+; SSE-NEXT:    unpckhpd {{.*#+}} xmm9 = xmm9[1],xmm0[1]
+; SSE-NEXT:    movaps 496(%rdi), %xmm0
+; SSE-NEXT:    movaps 480(%rdi), %xmm7
+; SSE-NEXT:    movaps %xmm7, %xmm6
+; SSE-NEXT:    movlhps {{.*#+}} xmm6 = xmm6[0],xmm0[0]
+; SSE-NEXT:    unpckhpd {{.*#+}} xmm7 = xmm7[1],xmm0[1]
+; SSE-NEXT:    movaps 464(%rdi), %xmm1
+; SSE-NEXT:    movaps 448(%rdi), %xmm3
+; SSE-NEXT:    movaps %xmm3, %xmm2
+; SSE-NEXT:    movlhps {{.*#+}} xmm2 = xmm2[0],xmm1[0]
+; SSE-NEXT:    unpckhpd {{.*#+}} xmm3 = xmm3[1],xmm1[1]
+; SSE-NEXT:    movaps 32(%rdi), %xmm8
+; SSE-NEXT:    movaps 48(%rdi), %xmm1
+; SSE-NEXT:    movaps %xmm8, %xmm5
 ; SSE-NEXT:    movlhps {{.*#+}} xmm5 = xmm5[0],xmm1[0]
-; SSE-NEXT:    unpckhpd {{.*#+}} xmm4 = xmm4[1],xmm1[1]
-; SSE-NEXT:    movaps 464(%rdi), %xmm3
-; SSE-NEXT:    movaps 448(%rdi), %xmm1
-; SSE-NEXT:    movaps %xmm1, %xmm0
-; SSE-NEXT:    movlhps {{.*#+}} xmm0 = xmm0[0],xmm3[0]
-; SSE-NEXT:    unpckhpd {{.*#+}} xmm1 = xmm1[1],xmm3[1]
-; SSE-NEXT:    movaps 32(%rdi), %xmm11
-; SSE-NEXT:    movaps 48(%rdi), %xmm2
-; SSE-NEXT:    movaps %xmm11, %xmm3
-; SSE-NEXT:    movlhps {{.*#+}} xmm3 = xmm3[0],xmm2[0]
-; SSE-NEXT:    unpckhpd {{.*#+}} xmm11 = xmm11[1],xmm2[1]
-; SSE-NEXT:    movaps (%rdi), %xmm8
-; SSE-NEXT:    movaps 16(%rdi), %xmm2
-; SSE-NEXT:    movaps %xmm8, %xmm7
-; SSE-NEXT:    movlhps {{.*#+}} xmm7 = xmm7[0],xmm2[0]
-; SSE-NEXT:    unpckhpd {{.*#+}} xmm8 = xmm8[1],xmm2[1]
-; SSE-NEXT:    movaps %xmm0, 224(%rsi)
-; SSE-NEXT:    movaps %xmm12, 160(%rsi)
+; SSE-NEXT:    unpckhpd {{.*#+}} xmm8 = xmm8[1],xmm1[1]
+; SSE-NEXT:    movaps (%rdi), %xmm4
+; SSE-NEXT:    movaps 16(%rdi), %xmm0
+; SSE-NEXT:    movaps %xmm4, %xmm1
+; SSE-NEXT:    movlhps {{.*#+}} xmm1 = xmm1[0],xmm0[0]
+; SSE-NEXT:    unpckhpd {{.*#+}} xmm4 = xmm4[1],xmm0[1]
+; SSE-NEXT:    movaps %xmm2, 224(%rsi)
+; SSE-NEXT:    movaps %xmm11, 160(%rsi)
 ; SSE-NEXT:    movaps {{[-0-9]+}}(%r{{[sb]}}p), %xmm0 # 16-byte Reload
 ; SSE-NEXT:    movaps %xmm0, 96(%rsi)
 ; SSE-NEXT:    movaps (%rsp), %xmm0 # 16-byte Reload
 ; SSE-NEXT:    movaps %xmm0, 32(%rsi)
-; SSE-NEXT:    movaps %xmm5, 240(%rsi)
+; SSE-NEXT:    movaps %xmm6, 240(%rsi)
 ; SSE-NEXT:    movaps {{[-0-9]+}}(%r{{[sb]}}p), %xmm0 # 16-byte Reload
 ; SSE-NEXT:    movaps %xmm0, 176(%rsi)
 ; SSE-NEXT:    movaps {{[-0-9]+}}(%r{{[sb]}}p), %xmm0 # 16-byte Reload
@@ -519,17 +519,17 @@ define void @load_i64_stride2_vf32(ptr %in.vec, ptr %out.vec0, ptr %out.vec1) no
 ; SSE-NEXT:    movaps %xmm0, 128(%rsi)
 ; SSE-NEXT:    movaps {{[-0-9]+}}(%r{{[sb]}}p), %xmm0 # 16-byte Reload
 ; SSE-NEXT:    movaps %xmm0, 64(%rsi)
-; SSE-NEXT:    movaps %xmm7, (%rsi)
+; SSE-NEXT:    movaps %xmm1, (%rsi)
 ; SSE-NEXT:    movaps %xmm14, 208(%rsi)
 ; SSE-NEXT:    movaps {{[-0-9]+}}(%r{{[sb]}}p), %xmm0 # 16-byte Reload
 ; SSE-NEXT:    movaps %xmm0, 144(%rsi)
 ; SSE-NEXT:    movaps {{[-0-9]+}}(%r{{[sb]}}p), %xmm0 # 16-byte Reload
 ; SSE-NEXT:    movaps %xmm0, 80(%rsi)
-; SSE-NEXT:    movaps %xmm3, 16(%rsi)
-; SSE-NEXT:    movaps %xmm1, 224(%rdx)
-; SSE-NEXT:    movaps %xmm4, 240(%rdx)
-; SSE-NEXT:    movaps %xmm6, 192(%rdx)
-; SSE-NEXT:    movaps %xmm9, 208(%rdx)
+; SSE-NEXT:    movaps %xmm5, 16(%rsi)
+; SSE-NEXT:    movaps %xmm3, 224(%rdx)
+; SSE-NEXT:    movaps %xmm7, 240(%rdx)
+; SSE-NEXT:    movaps %xmm9, 192(%rdx)
+; SSE-NEXT:    movaps %xmm12, 208(%rdx)
 ; SSE-NEXT:    movaps %xmm13, 160(%rdx)
 ; SSE-NEXT:    movaps %xmm15, 176(%rdx)
 ; SSE-NEXT:    movaps {{[-0-9]+}}(%r{{[sb]}}p), %xmm0 # 16-byte Reload
@@ -548,141 +548,141 @@ define void @load_i64_stride2_vf32(ptr %in.vec, ptr %out.vec0, ptr %out.vec1) no
 ; SSE-NEXT:    movaps %xmm0, 32(%rdx)
 ; SSE-NEXT:    movaps {{[-0-9]+}}(%r{{[sb]}}p), %xmm0 # 16-byte Reload
 ; SSE-NEXT:    movaps %xmm0, 48(%rdx)
-; SSE-NEXT:    movaps %xmm8, (%rdx)
-; SSE-NEXT:    movaps %xmm11, 16(%rdx)
+; SSE-NEXT:    movaps %xmm4, (%rdx)
+; SSE-NEXT:    movaps %xmm8, 16(%rdx)
 ; SSE-NEXT:    addq $152, %rsp
 ; SSE-NEXT:    retq
 ;
 ; AVX1-ONLY-LABEL: load_i64_stride2_vf32:
 ; AVX1-ONLY:       # %bb.0:
-; AVX1-ONLY-NEXT:    vmovaps 384(%rdi), %ymm2
-; AVX1-ONLY-NEXT:    vmovaps 256(%rdi), %ymm4
+; AVX1-ONLY-NEXT:    vmovaps 384(%rdi), %ymm4
+; AVX1-ONLY-NEXT:    vmovaps 256(%rdi), %ymm6
 ; AVX1-ONLY-NEXT:    vmovaps 320(%rdi), %ymm5
 ; AVX1-ONLY-NEXT:    vmovaps (%rdi), %ymm1
-; AVX1-ONLY-NEXT:    vmovaps 64(%rdi), %ymm3
-; AVX1-ONLY-NEXT:    vmovaps 128(%rdi), %ymm6
-; AVX1-ONLY-NEXT:    vmovaps 192(%rdi), %ymm7
+; AVX1-ONLY-NEXT:    vmovaps 64(%rdi), %ymm2
+; AVX1-ONLY-NEXT:    vmovaps 128(%rdi), %ymm9
+; AVX1-ONLY-NEXT:    vmovaps 192(%rdi), %ymm3
 ; AVX1-ONLY-NEXT:    vmovaps 448(%rdi), %ymm0
 ; AVX1-ONLY-NEXT:    vperm2f128 {{.*#+}} ymm8 = ymm0[2,3],mem[2,3]
-; AVX1-ONLY-NEXT:    vinsertf128 $1, 480(%rdi), %ymm0, %ymm9
-; AVX1-ONLY-NEXT:    vunpcklpd {{.*#+}} ymm0 = ymm9[0],ymm8[0],ymm9[2],ymm8[2]
+; AVX1-ONLY-NEXT:    vinsertf128 $1, 480(%rdi), %ymm0, %ymm10
+; AVX1-ONLY-NEXT:    vunpcklpd {{.*#+}} ymm0 = ymm10[0],ymm8[0],ymm10[2],ymm8[2]
 ; AVX1-ONLY-NEXT:    vmovups %ymm0, {{[-0-9]+}}(%r{{[sb]}}p) # 32-byte Spill
-; AVX1-ONLY-NEXT:    vperm2f128 {{.*#+}} ymm10 = ymm3[2,3],mem[2,3]
-; AVX1-ONLY-NEXT:    vinsertf128 $1, 96(%rdi), %ymm3, %ymm11
-; AVX1-ONLY-NEXT:    vunpcklpd {{.*#+}} ymm3 = ymm11[0],ymm10[0],ymm11[2],ymm10[2]
-; AVX1-ONLY-NEXT:    vperm2f128 {{.*#+}} ymm12 = ymm7[2,3],mem[2,3]
-; AVX1-ONLY-NEXT:    vinsertf128 $1, 224(%rdi), %ymm7, %ymm7
-; AVX1-ONLY-NEXT:    vunpcklpd {{.*#+}} ymm13 = ymm7[0],ymm12[0],ymm7[2],ymm12[2]
+; AVX1-ONLY-NEXT:    vperm2f128 {{.*#+}} ymm7 = ymm2[2,3],mem[2,3]
+; AVX1-ONLY-NEXT:    vinsertf128 $1, 96(%rdi), %ymm2, %ymm11
+; AVX1-ONLY-NEXT:    vunpcklpd {{.*#+}} ymm2 = ymm11[0],ymm7[0],ymm11[2],ymm7[2]
+; AVX1-ONLY-NEXT:    vperm2f128 {{.*#+}} ymm12 = ymm3[2,3],mem[2,3]
+; AVX1-ONLY-NEXT:    vinsertf128 $1, 224(%rdi), %ymm3, %ymm13
+; AVX1-ONLY-NEXT:    vunpcklpd {{.*#+}} ymm3 = ymm13[0],ymm12[0],ymm13[2],ymm12[2]
 ; AVX1-ONLY-NEXT:    vperm2f128 {{.*#+}} ymm14 = ymm5[2,3],mem[2,3]
-; AVX1-ONLY-NEXT:    vinsertf128 $1, 352(%rdi), %ymm5, %ymm5
-; AVX1-ONLY-NEXT:    vunpcklpd {{.*#+}} ymm15 = ymm5[0],ymm14[0],ymm5[2],ymm14[2]
-; AVX1-ONLY-NEXT:    vunpckhpd {{.*#+}} ymm10 = ymm11[1],ymm10[1],ymm11[3],ymm10[3]
-; AVX1-ONLY-NEXT:    vperm2f128 {{.*#+}} ymm11 = ymm6[2,3],mem[2,3]
-; AVX1-ONLY-NEXT:    vinsertf128 $1, 160(%rdi), %ymm6, %ymm6
-; AVX1-ONLY-NEXT:    vunpckhpd {{.*#+}} ymm7 = ymm7[1],ymm12[1],ymm7[3],ymm12[3]
-; AVX1-ONLY-NEXT:    vperm2f128 {{.*#+}} ymm12 = ymm4[2,3],mem[2,3]
-; AVX1-ONLY-NEXT:    vinsertf128 $1, 288(%rdi), %ymm4, %ymm4
-; AVX1-ONLY-NEXT:    vunpckhpd {{.*#+}} ymm5 = ymm5[1],ymm14[1],ymm5[3],ymm14[3]
-; AVX1-ONLY-NEXT:    vperm2f128 {{.*#+}} ymm14 = ymm2[2,3],mem[2,3]
-; AVX1-ONLY-NEXT:    vinsertf128 $1, 416(%rdi), %ymm2, %ymm2
-; AVX1-ONLY-NEXT:    vunpckhpd {{.*#+}} ymm8 = ymm9[1],ymm8[1],ymm9[3],ymm8[3]
-; AVX1-ONLY-NEXT:    vunpcklpd {{.*#+}} ymm9 = ymm2[0],ymm14[0],ymm2[2],ymm14[2]
-; AVX1-ONLY-NEXT:    vunpckhpd {{.*#+}} ymm2 = ymm2[1],ymm14[1],ymm2[3],ymm14[3]
-; AVX1-ONLY-NEXT:    vunpcklpd {{.*#+}} ymm14 = ymm4[0],ymm12[0],ymm4[2],ymm12[2]
-; AVX1-ONLY-NEXT:    vunpckhpd {{.*#+}} ymm4 = ymm4[1],ymm12[1],ymm4[3],ymm12[3]
-; AVX1-ONLY-NEXT:    vunpcklpd {{.*#+}} ymm12 = ymm6[0],ymm11[0],ymm6[2],ymm11[2]
-; AVX1-ONLY-NEXT:    vunpckhpd {{.*#+}} ymm6 = ymm6[1],ymm11[1],ymm6[3],ymm11[3]
+; AVX1-ONLY-NEXT:    vinsertf128 $1, 352(%rdi), %ymm5, %ymm15
+; AVX1-ONLY-NEXT:    vunpcklpd {{.*#+}} ymm5 = ymm15[0],ymm14[0],ymm15[2],ymm14[2]
+; AVX1-ONLY-NEXT:    vunpckhpd {{.*#+}} ymm7 = ymm11[1],ymm7[1],ymm11[3],ymm7[3]
+; AVX1-ONLY-NEXT:    vperm2f128 {{.*#+}} ymm11 = ymm9[2,3],mem[2,3]
+; AVX1-ONLY-NEXT:    vinsertf128 $1, 160(%rdi), %ymm9, %ymm9
+; AVX1-ONLY-NEXT:    vunpckhpd {{.*#+}} ymm12 = ymm13[1],ymm12[1],ymm13[3],ymm12[3]
+; AVX1-ONLY-NEXT:    vperm2f128 {{.*#+}} ymm13 = ymm6[2,3],mem[2,3]
+; AVX1-ONLY-NEXT:    vinsertf128 $1, 288(%rdi), %ymm6, %ymm6
+; AVX1-ONLY-NEXT:    vunpckhpd {{.*#+}} ymm14 = ymm15[1],ymm14[1],ymm15[3],ymm14[3]
+; AVX1-ONLY-NEXT:    vperm2f128 {{.*#+}} ymm15 = ymm4[2,3],mem[2,3]
+; AVX1-ONLY-NEXT:    vinsertf128 $1, 416(%rdi), %ymm4, %ymm4
+; AVX1-ONLY-NEXT:    vunpckhpd {{.*#+}} ymm8 = ymm10[1],ymm8[1],ymm10[3],ymm8[3]
+; AVX1-ONLY-NEXT:    vunpcklpd {{.*#+}} ymm10 = ymm4[0],ymm15[0],ymm4[2],ymm15[2]
+; AVX1-ONLY-NEXT:    vunpckhpd {{.*#+}} ymm4 = ymm4[1],ymm15[1],ymm4[3],ymm15[3]
+; AVX1-ONLY-NEXT:    vunpcklpd {{.*#+}} ymm15 = ymm6[0],ymm13[0],ymm6[2],ymm13[2]
+; AVX1-ONLY-NEXT:    vunpckhpd {{.*#+}} ymm6 = ymm6[1],ymm13[1],ymm6[3],ymm13[3]
+; AVX1-ONLY-NEXT:    vunpcklpd {{.*#+}} ymm13 = ymm9[0],ymm11[0],ymm9[2],ymm11[2]
+; AVX1-ONLY-NEXT:    vunpckhpd {{.*#+}} ymm9 = ymm9[1],ymm11[1],ymm9[3],ymm11[3]
 ; AVX1-ONLY-NEXT:    vperm2f128 {{.*#+}} ymm11 = ymm1[2,3],mem[2,3]
 ; AVX1-ONLY-NEXT:    vinsertf128 $1, 32(%rdi), %ymm1, %ymm1
 ; AVX1-ONLY-NEXT:    vunpcklpd {{.*#+}} ymm0 = ymm1[0],ymm11[0],ymm1[2],ymm11[2]
 ; AVX1-ONLY-NEXT:    vunpckhpd {{.*#+}} ymm1 = ymm1[1],ymm11[1],ymm1[3],ymm11[3]
-; AVX1-ONLY-NEXT:    vmovaps %ymm9, 192(%rsi)
-; AVX1-ONLY-NEXT:    vmovaps %ymm14, 128(%rsi)
-; AVX1-ONLY-NEXT:    vmovaps %ymm12, 64(%rsi)
+; AVX1-ONLY-NEXT:    vmovaps %ymm10, 192(%rsi)
+; AVX1-ONLY-NEXT:    vmovaps %ymm15, 128(%rsi)
+; AVX1-ONLY-NEXT:    vmovaps %ymm13, 64(%rsi)
 ; AVX1-ONLY-NEXT:    vmovaps %ymm0, (%rsi)
-; AVX1-ONLY-NEXT:    vmovaps %ymm15, 160(%rsi)
-; AVX1-ONLY-NEXT:    vmovaps %ymm13, 96(%rsi)
-; AVX1-ONLY-NEXT:    vmovaps %ymm3, 32(%rsi)
+; AVX1-ONLY-NEXT:    vmovaps %ymm5, 160(%rsi)
+; AVX1-ONLY-NEXT:    vmovaps %ymm3, 96(%rsi)
+; AVX1-ONLY-NEXT:    vmovaps %ymm2, 32(%rsi)
 ; AVX1-ONLY-NEXT:    vmovups {{[-0-9]+}}(%r{{[sb]}}p), %ymm0 # 32-byte Reload
 ; AVX1-ONLY-NEXT:    vmovaps %ymm0, 224(%rsi)
 ; AVX1-ONLY-NEXT:    vmovaps %ymm1, (%rdx)
-; AVX1-ONLY-NEXT:    vmovaps %ymm6, 64(%rdx)
-; AVX1-ONLY-NEXT:    vmovaps %ymm4, 128(%rdx)
-; AVX1-ONLY-NEXT:    vmovaps %ymm2, 192(%rdx)
+; AVX1-ONLY-NEXT:    vmovaps %ymm9, 64(%rdx)
+; AVX1-ONLY-NEXT:    vmovaps %ymm6, 128(%rdx)
+; AVX1-ONLY-NEXT:    vmovaps %ymm4, 192(%rdx)
 ; AVX1-ONLY-NEXT:    vmovaps %ymm8, 224(%rdx)
-; AVX1-ONLY-NEXT:    vmovaps %ymm5, 160(%rdx)
-; AVX1-ONLY-NEXT:    vmovaps %ymm7, 96(%rdx)
-; AVX1-ONLY-NEXT:    vmovaps %ymm10, 32(%rdx)
+; AVX1-ONLY-NEXT:    vmovaps %ymm14, 160(%rdx)
+; AVX1-ONLY-NEXT:    vmovaps %ymm12, 96(%rdx)
+; AVX1-ONLY-NEXT:    vmovaps %ymm7, 32(%rdx)
 ; AVX1-ONLY-NEXT:    vzeroupper
 ; AVX1-ONLY-NEXT:    retq
 ;
 ; AVX2-ONLY-LABEL: load_i64_stride2_vf32:
 ; AVX2-ONLY:       # %bb.0:
-; AVX2-ONLY-NEXT:    vmovaps (%rdi), %ymm3
-; AVX2-ONLY-NEXT:    vmovaps 64(%rdi), %ymm1
-; AVX2-ONLY-NEXT:    vmovaps 96(%rdi), %ymm2
-; AVX2-ONLY-NEXT:    vmovaps 416(%rdi), %ymm4
-; AVX2-ONLY-NEXT:    vmovaps 384(%rdi), %ymm7
-; AVX2-ONLY-NEXT:    vmovaps 288(%rdi), %ymm5
-; AVX2-ONLY-NEXT:    vmovaps 256(%rdi), %ymm8
-; AVX2-ONLY-NEXT:    vmovaps 160(%rdi), %ymm6
+; AVX2-ONLY-NEXT:    vmovaps (%rdi), %ymm1
+; AVX2-ONLY-NEXT:    vmovaps 64(%rdi), %ymm3
+; AVX2-ONLY-NEXT:    vmovaps 96(%rdi), %ymm4
+; AVX2-ONLY-NEXT:    vmovaps 416(%rdi), %ymm10
+; AVX2-ONLY-NEXT:    vmovaps 384(%rdi), %ymm12
+; AVX2-ONLY-NEXT:    vmovaps 288(%rdi), %ymm8
+; AVX2-ONLY-NEXT:    vmovaps 256(%rdi), %ymm11
+; AVX2-ONLY-NEXT:    vmovaps 160(%rdi), %ymm7
 ; AVX2-ONLY-NEXT:    vmovaps 128(%rdi), %ymm9
-; AVX2-ONLY-NEXT:    vmovaps 480(%rdi), %ymm10
-; AVX2-ONLY-NEXT:    vmovaps 448(%rdi), %ymm11
-; AVX2-ONLY-NEXT:    vmovaps 352(%rdi), %ymm12
-; AVX2-ONLY-NEXT:    vmovaps 320(%rdi), %ymm13
-; AVX2-ONLY-NEXT:    vmovaps 224(%rdi), %ymm14
-; AVX2-ONLY-NEXT:    vmovaps 192(%rdi), %ymm15
-; AVX2-ONLY-NEXT:    vunpcklpd {{.*#+}} ymm0 = ymm15[0],ymm14[0],ymm15[2],ymm14[2]
+; AVX2-ONLY-NEXT:    vmovaps 480(%rdi), %ymm6
+; AVX2-ONLY-NEXT:    vmovaps 448(%rdi), %ymm14
+; AVX2-ONLY-NEXT:    vmovaps 352(%rdi), %ymm5
+; AVX2-ONLY-NEXT:    vmovaps 320(%rdi), %ymm15
+; AVX2-ONLY-NEXT:    vmovaps 224(%rdi), %ymm2
+; AVX2-ONLY-NEXT:    vmovaps 192(%rdi), %ymm13
+; AVX2-ONLY-NEXT:    vunpcklpd {{.*#+}} ymm0 = ymm13[0],ymm2[0],ymm13[2],ymm2[2]
 ; AVX2-ONLY-NEXT:    vmovups %ymm0, {{[-0-9]+}}(%r{{[sb]}}p) # 32-byte Spill
-; AVX2-ONLY-NEXT:    vunpckhpd {{.*#+}} ymm14 = ymm15[1],ymm14[1],ymm15[3],ymm14[3]
-; AVX2-ONLY-NEXT:    vunpcklpd {{.*#+}} ymm15 = ymm13[0],ymm12[0],ymm13[2],ymm12[2]
-; AVX2-ONLY-NEXT:    vunpckhpd {{.*#+}} ymm12 = ymm13[1],ymm12[1],ymm13[3],ymm12[3]
-; AVX2-ONLY-NEXT:    vunpcklpd {{.*#+}} ymm13 = ymm11[0],ymm10[0],ymm11[2],ymm10[2]
-; AVX2-ONLY-NEXT:    vunpckhpd {{.*#+}} ymm10 = ymm11[1],ymm10[1],ymm11[3],ymm10[3]
-; AVX2-ONLY-NEXT:    vunpcklpd {{.*#+}} ymm11 = ymm7[0],ymm4[0],ymm7[2],ymm4[2]
-; AVX2-ONLY-NEXT:    vunpckhpd {{.*#+}} ymm4 = ymm7[1],ymm4[1],ymm7[3],ymm4[3]
-; AVX2-ONLY-NEXT:    vunpcklpd {{.*#+}} ymm7 = ymm8[0],ymm5[0],ymm8[2],ymm5[2]
-; AVX2-ONLY-NEXT:    vunpckhpd {{.*#+}} ymm5 = ymm8[1],ymm5[1],ymm8[3],ymm5[3]
-; AVX2-ONLY-NEXT:    vunpcklpd {{.*#+}} ymm8 = ymm9[0],ymm6[0],ymm9[2],ymm6[2]
-; AVX2-ONLY-NEXT:    vunpckhpd {{.*#+}} ymm6 = ymm9[1],ymm6[1],ymm9[3],ymm6[3]
-; AVX2-ONLY-NEXT:    vunpcklpd {{.*#+}} ymm9 = ymm1[0],ymm2[0],ymm1[2],ymm2[2]
-; AVX2-ONLY-NEXT:    vunpckhpd {{.*#+}} ymm1 = ymm1[1],ymm2[1],ymm1[3],ymm2[3]
-; AVX2-ONLY-NEXT:    vmovaps 32(%rdi), %ymm2
-; AVX2-ONLY-NEXT:    vunpcklpd {{.*#+}} ymm0 = ymm3[0],ymm2[0],ymm3[2],ymm2[2]
-; AVX2-ONLY-NEXT:    vunpckhpd {{.*#+}} ymm2 = ymm3[1],ymm2[1],ymm3[3],ymm2[3]
-; AVX2-ONLY-NEXT:    vpermpd {{.*#+}} ymm3 = ymm11[0,2,1,3]
-; AVX2-ONLY-NEXT:    vmovaps %ymm3, 192(%rsi)
-; AVX2-ONLY-NEXT:    vpermpd {{.*#+}} ymm3 = ymm7[0,2,1,3]
-; AVX2-ONLY-NEXT:    vmovaps %ymm3, 128(%rsi)
-; AVX2-ONLY-NEXT:    vpermpd {{.*#+}} ymm3 = ymm8[0,2,1,3]
-; AVX2-ONLY-NEXT:    vmovaps %ymm3, 64(%rsi)
+; AVX2-ONLY-NEXT:    vunpckhpd {{.*#+}} ymm2 = ymm13[1],ymm2[1],ymm13[3],ymm2[3]
+; AVX2-ONLY-NEXT:    vunpcklpd {{.*#+}} ymm13 = ymm15[0],ymm5[0],ymm15[2],ymm5[2]
+; AVX2-ONLY-NEXT:    vunpckhpd {{.*#+}} ymm5 = ymm15[1],ymm5[1],ymm15[3],ymm5[3]
+; AVX2-ONLY-NEXT:    vunpcklpd {{.*#+}} ymm15 = ymm14[0],ymm6[0],ymm14[2],ymm6[2]
+; AVX2-ONLY-NEXT:    vunpckhpd {{.*#+}} ymm6 = ymm14[1],ymm6[1],ymm14[3],ymm6[3]
+; AVX2-ONLY-NEXT:    vunpcklpd {{.*#+}} ymm14 = ymm12[0],ymm10[0],ymm12[2],ymm10[2]
+; AVX2-ONLY-NEXT:    vunpckhpd {{.*#+}} ymm10 = ymm12[1],ymm10[1],ymm12[3],ymm10[3]
+; AVX2-ONLY-NEXT:    vunpcklpd {{.*#+}} ymm12 = ymm11[0],ymm8[0],ymm11[2],ymm8[2]
+; AVX2-ONLY-NEXT:    vunpckhpd {{.*#+}} ymm8 = ymm11[1],ymm8[1],ymm11[3],ymm8[3]
+; AVX2-ONLY-NEXT:    vunpcklpd {{.*#+}} ymm11 = ymm9[0],ymm7[0],ymm9[2],ymm7[2]
+; AVX2-ONLY-NEXT:    vunpckhpd {{.*#+}} ymm7 = ymm9[1],ymm7[1],ymm9[3],ymm7[3]
+; AVX2-ONLY-NEXT:    vunpcklpd {{.*#+}} ymm9 = ymm3[0],ymm4[0],ymm3[2],ymm4[2]
+; AVX2-ONLY-NEXT:    vunpckhpd {{.*#+}} ymm3 = ymm3[1],ymm4[1],ymm3[3],ymm4[3]
+; AVX2-ONLY-NEXT:    vmovaps 32(%rdi), %ymm4
+; AVX2-ONLY-NEXT:    vunpcklpd {{.*#+}} ymm0 = ymm1[0],ymm4[0],ymm1[2],ymm4[2]
+; AVX2-ONLY-NEXT:    vunpckhpd {{.*#+}} ymm1 = ymm1[1],ymm4[1],ymm1[3],ymm4[3]
+; AVX2-ONLY-NEXT:    vpermpd {{.*#+}} ymm4 = ymm14[0,2,1,3]
+; AVX2-ONLY-NEXT:    vmovaps %ymm4, 192(%rsi)
+; AVX2-ONLY-NEXT:    vpermpd {{.*#+}} ymm4 = ymm12[0,2,1,3]
+; AVX2-ONLY-NEXT:    vmovaps %ymm4, 128(%rsi)
+; AVX2-ONLY-NEXT:    vpermpd {{.*#+}} ymm4 = ymm11[0,2,1,3]
+; AVX2-ONLY-NEXT:    vmovaps %ymm4, 64(%rsi)
 ; AVX2-ONLY-NEXT:    vpermpd {{.*#+}} ymm0 = ymm0[0,2,1,3]
 ; AVX2-ONLY-NEXT:    vmovaps %ymm0, (%rsi)
-; AVX2-ONLY-NEXT:    vpermpd {{.*#+}} ymm0 = ymm13[0,2,1,3]
-; AVX2-ONLY-NEXT:    vmovaps %ymm0, 224(%rsi)
 ; AVX2-ONLY-NEXT:    vpermpd {{.*#+}} ymm0 = ymm15[0,2,1,3]
+; AVX2-ONLY-NEXT:    vmovaps %ymm0, 224(%rsi)
+; AVX2-ONLY-NEXT:    vpermpd {{.*#+}} ymm0 = ymm13[0,2,1,3]
 ; AVX2-ONLY-NEXT:    vmovaps %ymm0, 160(%rsi)
 ; AVX2-ONLY-NEXT:    vpermpd $216, {{[-0-9]+}}(%r{{[sb]}}p), %ymm0 # 32-byte Folded Reload
 ; AVX2-ONLY-NEXT:    # ymm0 = mem[0,2,1,3]
 ; AVX2-ONLY-NEXT:    vmovaps %ymm0, 96(%rsi)
 ; AVX2-ONLY-NEXT:    vpermpd {{.*#+}} ymm0 = ymm9[0,2,1,3]
 ; AVX2-ONLY-NEXT:    vmovaps %ymm0, 32(%rsi)
-; AVX2-ONLY-NEXT:    vpermpd {{.*#+}} ymm0 = ymm2[0,2,1,3]
-; AVX2-ONLY-NEXT:    vmovaps %ymm0, (%rdx)
-; AVX2-ONLY-NEXT:    vpermpd {{.*#+}} ymm0 = ymm6[0,2,1,3]
-; AVX2-ONLY-NEXT:    vmovaps %ymm0, 64(%rdx)
-; AVX2-ONLY-NEXT:    vpermpd {{.*#+}} ymm0 = ymm5[0,2,1,3]
-; AVX2-ONLY-NEXT:    vmovaps %ymm0, 128(%rdx)
-; AVX2-ONLY-NEXT:    vpermpd {{.*#+}} ymm0 = ymm4[0,2,1,3]
-; AVX2-ONLY-NEXT:    vmovaps %ymm0, 192(%rdx)
-; AVX2-ONLY-NEXT:    vpermpd {{.*#+}} ymm0 = ymm10[0,2,1,3]
-; AVX2-ONLY-NEXT:    vmovaps %ymm0, 224(%rdx)
-; AVX2-ONLY-NEXT:    vpermpd {{.*#+}} ymm0 = ymm12[0,2,1,3]
-; AVX2-ONLY-NEXT:    vmovaps %ymm0, 160(%rdx)
-; AVX2-ONLY-NEXT:    vpermpd {{.*#+}} ymm0 = ymm14[0,2,1,3]
-; AVX2-ONLY-NEXT:    vmovaps %ymm0, 96(%rdx)
 ; AVX2-ONLY-NEXT:    vpermpd {{.*#+}} ymm0 = ymm1[0,2,1,3]
+; AVX2-ONLY-NEXT:    vmovaps %ymm0, (%rdx)
+; AVX2-ONLY-NEXT:    vpermpd {{.*#+}} ymm0 = ymm7[0,2,1,3]
+; AVX2-ONLY-NEXT:    vmovaps %ymm0, 64(%rdx)
+; AVX2-ONLY-NEXT:    vpermpd {{.*#+}} ymm0 = ymm8[0,2,1,3]
+; AVX2-ONLY-NEXT:    vmovaps %ymm0, 128(%rdx)
+; AVX2-ONLY-NEXT:    vpermpd {{.*#+}} ymm0 = ymm10[0,2,1,3]
+; AVX2-ONLY-NEXT:    vmovaps %ymm0, 192(%rdx)
+; AVX2-ONLY-NEXT:    vpermpd {{.*#+}} ymm0 = ymm6[0,2,1,3]
+; AVX2-ONLY-NEXT:    vmovaps %ymm0, 224(%rdx)
+; AVX2-ONLY-NEXT:    vpermpd {{.*#+}} ymm0 = ymm5[0,2,1,3]
+; AVX2-ONLY-NEXT:    vmovaps %ymm0, 160(%rdx)
+; AVX2-ONLY-NEXT:    vpermpd {{.*#+}} ymm0 = ymm2[0,2,1,3]
+; AVX2-ONLY-NEXT:    vmovaps %ymm0, 96(%rdx)
+; AVX2-ONLY-NEXT:    vpermpd {{.*#+}} ymm0 = ymm3[0,2,1,3]
 ; AVX2-ONLY-NEXT:    vmovaps %ymm0, 32(%rdx)
 ; AVX2-ONLY-NEXT:    vzeroupper
 ; AVX2-ONLY-NEXT:    retq
@@ -732,62 +732,62 @@ define void @load_i64_stride2_vf64(ptr %in.vec, ptr %out.vec0, ptr %out.vec1) no
 ; SSE-LABEL: load_i64_stride2_vf64:
 ; SSE:       # %bb.0:
 ; SSE-NEXT:    subq $664, %rsp # imm = 0x298
-; SSE-NEXT:    movaps 304(%rdi), %xmm10
-; SSE-NEXT:    movaps 272(%rdi), %xmm8
-; SSE-NEXT:    movaps 256(%rdi), %xmm6
-; SSE-NEXT:    movaps 240(%rdi), %xmm0
-; SSE-NEXT:    movaps 224(%rdi), %xmm7
-; SSE-NEXT:    movaps 208(%rdi), %xmm1
-; SSE-NEXT:    movaps 192(%rdi), %xmm9
-; SSE-NEXT:    movaps 176(%rdi), %xmm2
+; SSE-NEXT:    movaps 304(%rdi), %xmm0
+; SSE-NEXT:    movaps 272(%rdi), %xmm1
+; SSE-NEXT:    movaps 256(%rdi), %xmm8
+; SSE-NEXT:    movaps 240(%rdi), %xmm2
+; SSE-NEXT:    movaps 224(%rdi), %xmm9
+; SSE-NEXT:    movaps 208(%rdi), %xmm3
+; SSE-NEXT:    movaps 192(%rdi), %xmm10
+; SSE-NEXT:    movaps 176(%rdi), %xmm4
 ; SSE-NEXT:    movaps 160(%rdi), %xmm11
-; SSE-NEXT:    movaps 144(%rdi), %xmm3
+; SSE-NEXT:    movaps 144(%rdi), %xmm5
 ; SSE-NEXT:    movaps 128(%rdi), %xmm12
-; SSE-NEXT:    movaps 112(%rdi), %xmm4
+; SSE-NEXT:    movaps 112(%rdi), %xmm6
 ; SSE-NEXT:    movaps 96(%rdi), %xmm13
-; SSE-NEXT:    movaps 80(%rdi), %xmm5
+; SSE-NEXT:    movaps 80(%rdi), %xmm7
 ; SSE-NEXT:    movaps 64(%rdi), %xmm14
 ; SSE-NEXT:    movaps %xmm14, %xmm15
-; SSE-NEXT:    movlhps {{.*#+}} xmm15 = xmm15[0],xmm5[0]
+; SSE-NEXT:    movlhps {{.*#+}} xmm15 = xmm15[0],xmm7[0]
 ; SSE-NEXT:    movaps %xmm15, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
-; SSE-NEXT:    unpckhpd {{.*#+}} xmm14 = xmm14[1],xmm5[1]
+; SSE-NEXT:    unpckhpd {{.*#+}} xmm14 = xmm14[1],xmm7[1]
 ; SSE-NEXT:    movaps %xmm14, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
-; SSE-NEXT:    movaps %xmm13, %xmm5
+; SSE-NEXT:    movaps %xmm13, %xmm7
+; SSE-NEXT:    movlhps {{.*#+}} xmm7 = xmm7[0],xmm6[0]
+; SSE-NEXT:    movaps %xmm7, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
+; SSE-NEXT:    unpckhpd {{.*#+}} xmm13 = xmm13[1],xmm6[1]
+; SSE-NEXT:    movaps %xmm13, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
+; SSE-NEXT:    movaps %xmm12, %xmm6
+; SSE-NEXT:    movlhps {{.*#+}} xmm6 = xmm6[0],xmm5[0]
+; SSE-NEXT:    movaps %xmm6, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
+; SSE-NEXT:    unpckhpd {{.*#+}} xmm12 = xmm12[1],xmm5[1]
+; SSE-NEXT:    movaps %xmm12, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
+; SSE-NEXT:    movaps %xmm11, %xmm5
 ; SSE-NEXT:    movlhps {{.*#+}} xmm5 = xmm5[0],xmm4[0]
 ; SSE-NEXT:    movaps %xmm5, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
-; SSE-NEXT:    unpckhpd {{.*#+}} xmm13 = xmm13[1],xmm4[1]
-; SSE-NEXT:    movaps %xmm13, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
-; SSE-NEXT:    movaps %xmm12, %xmm4
+; SSE-NEXT:    unpckhpd {{.*#+}} xmm11 = xmm11[1],xmm4[1]
+; SSE-NEXT:    movaps %xmm11, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
+; SSE-NEXT:    movaps %xmm10, %xmm4
 ; SSE-NEXT:    movlhps {{.*#+}} xmm4 = xmm4[0],xmm3[0]
 ; SSE-NEXT:    movaps %xmm4, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
-; SSE-NEXT:    unpckhpd {{.*#+}} xmm12 = xmm12[1],xmm3[1]
-; SSE-NEXT:    movaps %xmm12, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
-; SSE-NEXT:    movaps %xmm11, %xmm3
+; SSE-NEXT:    unpckhpd {{.*#+}} xmm10 = xmm10[1],xmm3[1]
+; SSE-NEXT:    movaps %xmm10, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
+; SSE-NEXT:    movaps %xmm9, %xmm3
 ; SSE-NEXT:    movlhps {{.*#+}} xmm3 = xmm3[0],xmm2[0]
 ; SSE-NEXT:    movaps %xmm3, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
-; SSE-NEXT:    unpckhpd {{.*#+}} xmm11 = xmm11[1],xmm2[1]
-; SSE-NEXT:    movaps %xmm11, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
-; SSE-NEXT:    movaps %xmm9, %xmm2
+; SSE-NEXT:    unpckhpd {{.*#+}} xmm9 = xmm9[1],xmm2[1]
+; SSE-NEXT:    movaps %xmm9, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
+; SSE-NEXT:    movaps %xmm8, %xmm2
 ; SSE-NEXT:    movlhps {{.*#+}} xmm2 = xmm2[0],xmm1[0]
 ; SSE-NEXT:    movaps %xmm2, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
-; SSE-NEXT:    unpckhpd {{.*#+}} xmm9 = xmm9[1],xmm1[1]
-; SSE-NEXT:    movaps %xmm9, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
-; SSE-NEXT:    movaps %xmm7, %xmm1
-; SSE-NEXT:    movlhps {{.*#+}} xmm1 = xmm1[0],xmm0[0]
+; SSE-NEXT:    unpckhpd {{.*#+}} xmm8 = xmm8[1],xmm1[1]
+; SSE-NEXT:    movaps %xmm8, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
+; SSE-NEXT:    movaps 288(%rdi), %xmm1
+; SSE-NEXT:    movaps %xmm1, %xmm2
+; SSE-NEXT:    movlhps {{.*#+}} xmm2 = xmm2[0],xmm0[0]
+; SSE-NEXT:    movaps %xmm2, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
+; SSE-NEXT:    unpckhpd {{.*#+}} xmm1 = xmm1[1],xmm0[1]
 ; SSE-NEXT:    movaps %xmm1, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
-; SSE-NEXT:    unpckhpd {{.*#+}} xmm7 = xmm7[1],xmm0[1]
-; SSE-NEXT:    movaps %xmm7, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
-; SSE-NEXT:    movaps %xmm6, %xmm0
-; SSE-NEXT:    movlhps {{.*#+}} xmm0 = xmm0[0],xmm8[0]
-; SSE-NEXT:    movaps %xmm0, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
-; SSE-NEXT:    unpckhpd {{.*#+}} xmm6 = xmm6[1],xmm8[1]
-; SSE-NEXT:    movaps %xmm6, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
-; SSE-NEXT:    movaps 288(%rdi), %xmm0
-; SSE-NEXT:    movaps %xmm0, %xmm1
-; SSE-NEXT:    movlhps {{.*#+}} xmm1 = xmm1[0],xmm10[0]
-; SSE-NEXT:    movaps %xmm1, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
-; SSE-NEXT:    unpckhpd {{.*#+}} xmm0 = xmm0[1],xmm10[1]
-; SSE-NEXT:    movaps %xmm0, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
 ; SSE-NEXT:    movaps 336(%rdi), %xmm0
 ; SSE-NEXT:    movaps 320(%rdi), %xmm1
 ; SSE-NEXT:    movaps %xmm1, %xmm2
@@ -901,52 +901,52 @@ define void @load_i64_stride2_vf64(ptr %in.vec, ptr %out.vec0, ptr %out.vec1) no
 ; SSE-NEXT:    unpckhpd {{.*#+}} xmm1 = xmm1[1],xmm0[1]
 ; SSE-NEXT:    movaps %xmm1, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
 ; SSE-NEXT:    movaps 848(%rdi), %xmm0
-; SSE-NEXT:    movaps 832(%rdi), %xmm15
-; SSE-NEXT:    movaps %xmm15, %xmm10
-; SSE-NEXT:    movlhps {{.*#+}} xmm10 = xmm10[0],xmm0[0]
-; SSE-NEXT:    unpckhpd {{.*#+}} xmm15 = xmm15[1],xmm0[1]
+; SSE-NEXT:    movaps 832(%rdi), %xmm1
+; SSE-NEXT:    movaps %xmm1, %xmm12
+; SSE-NEXT:    movlhps {{.*#+}} xmm12 = xmm12[0],xmm0[0]
+; SSE-NEXT:    unpckhpd {{.*#+}} xmm1 = xmm1[1],xmm0[1]
+; SSE-NEXT:    movaps %xmm1, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
 ; SSE-NEXT:    movaps 880(%rdi), %xmm0
-; SSE-NEXT:    movaps 864(%rdi), %xmm12
-; SSE-NEXT:    movaps %xmm12, %xmm11
-; SSE-NEXT:    movlhps {{.*#+}} xmm11 = xmm11[0],xmm0[0]
-; SSE-NEXT:    unpckhpd {{.*#+}} xmm12 = xmm12[1],xmm0[1]
-; SSE-NEXT:    movaps 912(%rdi), %xmm4
-; SSE-NEXT:    movaps 896(%rdi), %xmm9
-; SSE-NEXT:    movaps %xmm9, %xmm7
-; SSE-NEXT:    movlhps {{.*#+}} xmm7 = xmm7[0],xmm4[0]
-; SSE-NEXT:    unpckhpd {{.*#+}} xmm9 = xmm9[1],xmm4[1]
-; SSE-NEXT:    movaps 944(%rdi), %xmm4
-; SSE-NEXT:    movaps 928(%rdi), %xmm8
-; SSE-NEXT:    movaps %xmm8, %xmm5
-; SSE-NEXT:    movlhps {{.*#+}} xmm5 = xmm5[0],xmm4[0]
-; SSE-NEXT:    unpckhpd {{.*#+}} xmm8 = xmm8[1],xmm4[1]
-; SSE-NEXT:    movaps 976(%rdi), %xmm4
-; SSE-NEXT:    movaps 960(%rdi), %xmm6
-; SSE-NEXT:    movaps %xmm6, %xmm3
-; SSE-NEXT:    movlhps {{.*#+}} xmm3 = xmm3[0],xmm4[0]
-; SSE-NEXT:    unpckhpd {{.*#+}} xmm6 = xmm6[1],xmm4[1]
-; SSE-NEXT:    movaps 1008(%rdi), %xmm4
-; SSE-NEXT:    movaps 992(%rdi), %xmm2
-; SSE-NEXT:    movaps %xmm2, %xmm1
-; SSE-NEXT:    movlhps {{.*#+}} xmm1 = xmm1[0],xmm4[0]
-; SSE-NEXT:    unpckhpd {{.*#+}} xmm2 = xmm2[1],xmm4[1]
-; SSE-NEXT:    movaps (%rdi), %xmm0
-; SSE-NEXT:    movaps 16(%rdi), %xmm4
-; SSE-NEXT:    movaps %xmm0, %xmm14
-; SSE-NEXT:    movlhps {{.*#+}} xmm14 = xmm14[0],xmm4[0]
-; SSE-NEXT:    unpckhpd {{.*#+}} xmm0 = xmm0[1],xmm4[1]
-; SSE-NEXT:    movaps %xmm0, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
-; SSE-NEXT:    movaps 32(%rdi), %xmm13
-; SSE-NEXT:    movaps 48(%rdi), %xmm0
-; SSE-NEXT:    movaps %xmm13, %xmm4
-; SSE-NEXT:    movlhps {{.*#+}} xmm4 = xmm4[0],xmm0[0]
+; SSE-NEXT:    movaps 864(%rdi), %xmm15
+; SSE-NEXT:    movaps %xmm15, %xmm7
+; SSE-NEXT:    movlhps {{.*#+}} xmm7 = xmm7[0],xmm0[0]
+; SSE-NEXT:    unpckhpd {{.*#+}} xmm15 = xmm15[1],xmm0[1]
+; SSE-NEXT:    movaps 912(%rdi), %xmm0
+; SSE-NEXT:    movaps 896(%rdi), %xmm13
+; SSE-NEXT:    movaps %xmm13, %xmm9
+; SSE-NEXT:    movlhps {{.*#+}} xmm9 = xmm9[0],xmm0[0]
 ; SSE-NEXT:    unpckhpd {{.*#+}} xmm13 = xmm13[1],xmm0[1]
-; SSE-NEXT:    movaps %xmm1, 496(%rsi)
-; SSE-NEXT:    movaps %xmm3, 480(%rsi)
-; SSE-NEXT:    movaps %xmm5, 464(%rsi)
-; SSE-NEXT:    movaps %xmm7, 448(%rsi)
-; SSE-NEXT:    movaps %xmm11, 432(%rsi)
-; SSE-NEXT:    movaps %xmm10, 416(%rsi)
+; SSE-NEXT:    movaps 944(%rdi), %xmm0
+; SSE-NEXT:    movaps 928(%rdi), %xmm8
+; SSE-NEXT:    movaps %xmm8, %xmm2
+; SSE-NEXT:    movlhps {{.*#+}} xmm2 = xmm2[0],xmm0[0]
+; SSE-NEXT:    unpckhpd {{.*#+}} xmm8 = xmm8[1],xmm0[1]
+; SSE-NEXT:    movaps 976(%rdi), %xmm0
+; SSE-NEXT:    movaps 960(%rdi), %xmm6
+; SSE-NEXT:    movaps %xmm6, %xmm1
+; SSE-NEXT:    movlhps {{.*#+}} xmm1 = xmm1[0],xmm0[0]
+; SSE-NEXT:    unpckhpd {{.*#+}} xmm6 = xmm6[1],xmm0[1]
+; SSE-NEXT:    movaps 1008(%rdi), %xmm3
+; SSE-NEXT:    movaps 992(%rdi), %xmm5
+; SSE-NEXT:    movaps %xmm5, %xmm4
+; SSE-NEXT:    movlhps {{.*#+}} xmm4 = xmm4[0],xmm3[0]
+; SSE-NEXT:    unpckhpd {{.*#+}} xmm5 = xmm5[1],xmm3[1]
+; SSE-NEXT:    movaps (%rdi), %xmm14
+; SSE-NEXT:    movaps 16(%rdi), %xmm3
+; SSE-NEXT:    movaps %xmm14, %xmm10
+; SSE-NEXT:    movlhps {{.*#+}} xmm10 = xmm10[0],xmm3[0]
+; SSE-NEXT:    unpckhpd {{.*#+}} xmm14 = xmm14[1],xmm3[1]
+; SSE-NEXT:    movaps 32(%rdi), %xmm11
+; SSE-NEXT:    movaps 48(%rdi), %xmm0
+; SSE-NEXT:    movaps %xmm11, %xmm3
+; SSE-NEXT:    movlhps {{.*#+}} xmm3 = xmm3[0],xmm0[0]
+; SSE-NEXT:    unpckhpd {{.*#+}} xmm11 = xmm11[1],xmm0[1]
+; SSE-NEXT:    movaps %xmm4, 496(%rsi)
+; SSE-NEXT:    movaps %xmm1, 480(%rsi)
+; SSE-NEXT:    movaps %xmm2, 464(%rsi)
+; SSE-NEXT:    movaps %xmm9, 448(%rsi)
+; SSE-NEXT:    movaps %xmm7, 432(%rsi)
+; SSE-NEXT:    movaps %xmm12, 416(%rsi)
 ; SSE-NEXT:    movaps {{[-0-9]+}}(%r{{[sb]}}p), %xmm0 # 16-byte Reload
 ; SSE-NEXT:    movaps %xmm0, 400(%rsi)
 ; SSE-NEXT:    movaps {{[-0-9]+}}(%r{{[sb]}}p), %xmm0 # 16-byte Reload
@@ -995,14 +995,15 @@ define void @load_i64_stride2_vf64(ptr %in.vec, ptr %out.vec0, ptr %out.vec1) no
 ; SSE-NEXT:    movaps %xmm0, 48(%rsi)
 ; SSE-NEXT:    movaps {{[-0-9]+}}(%r{{[sb]}}p), %xmm0 # 16-byte Reload
 ; SSE-NEXT:    movaps %xmm0, 32(%rsi)
-; SSE-NEXT:    movaps %xmm4, 16(%rsi)
-; SSE-NEXT:    movaps %xmm14, (%rsi)
-; SSE-NEXT:    movaps %xmm2, 496(%rdx)
+; SSE-NEXT:    movaps %xmm3, 16(%rsi)
+; SSE-NEXT:    movaps %xmm10, (%rsi)
+; SSE-NEXT:    movaps %xmm5, 496(%rdx)
 ; SSE-NEXT:    movaps %xmm6, 480(%rdx)
 ; SSE-NEXT:    movaps %xmm8, 464(%rdx)
-; SSE-NEXT:    movaps %xmm9, 448(%rdx)
-; SSE-NEXT:    movaps %xmm12, 432(%rdx)
-; SSE-NEXT:    movaps %xmm15, 416(%rdx)
+; SSE-NEXT:    movaps %xmm13, 448(%rdx)
+; SSE-NEXT:    movaps %xmm15, 432(%rdx)
+; SSE-NEXT:    movaps {{[-0-9]+}}(%r{{[sb]}}p), %xmm0 # 16-byte Reload
+; SSE-NEXT:    movaps %xmm0, 416(%rdx)
 ; SSE-NEXT:    movaps {{[-0-9]+}}(%r{{[sb]}}p), %xmm0 # 16-byte Reload
 ; SSE-NEXT:    movaps %xmm0, 400(%rdx)
 ; SSE-NEXT:    movaps (%rsp), %xmm0 # 16-byte Reload
@@ -1051,126 +1052,125 @@ define void @load_i64_stride2_vf64(ptr %in.vec, ptr %out.vec0, ptr %out.vec1) no
 ; SSE-NEXT:    movaps %xmm0, 48(%rdx)
 ; SSE-NEXT:    movaps {{[-0-9]+}}(%r{{[sb]}}p), %xmm0 # 16-byte Reload
 ; SSE-NEXT:    movaps %xmm0, 32(%rdx)
-; SSE-NEXT:    movaps %xmm13, 16(%rdx)
-; SSE-NEXT:    movaps {{[-0-9]+}}(%r{{[sb]}}p), %xmm0 # 16-byte Reload
-; SSE-NEXT:    movaps %xmm0, (%rdx)
+; SSE-NEXT:    movaps %xmm11, 16(%rdx)
+; SSE-NEXT:    movaps %xmm14, (%rdx)
 ; SSE-NEXT:    addq $664, %rsp # imm = 0x298
 ; SSE-NEXT:    retq
 ;
 ; AVX1-ONLY-LABEL: load_i64_stride2_vf64:
 ; AVX1-ONLY:       # %bb.0:
 ; AVX1-ONLY-NEXT:    subq $424, %rsp # imm = 0x1A8
-; AVX1-ONLY-NEXT:    vmovaps 384(%rdi), %ymm4
-; AVX1-ONLY-NEXT:    vmovaps 256(%rdi), %ymm3
-; AVX1-ONLY-NEXT:    vmovaps 448(%rdi), %ymm13
-; AVX1-ONLY-NEXT:    vmovaps 320(%rdi), %ymm2
-; AVX1-ONLY-NEXT:    vmovaps (%rdi), %ymm14
+; AVX1-ONLY-NEXT:    vmovaps 384(%rdi), %ymm7
+; AVX1-ONLY-NEXT:    vmovaps 256(%rdi), %ymm8
+; AVX1-ONLY-NEXT:    vmovaps 448(%rdi), %ymm2
+; AVX1-ONLY-NEXT:    vmovaps 320(%rdi), %ymm4
+; AVX1-ONLY-NEXT:    vmovaps (%rdi), %ymm11
 ; AVX1-ONLY-NEXT:    vmovaps 64(%rdi), %ymm0
 ; AVX1-ONLY-NEXT:    vmovaps 128(%rdi), %ymm5
-; AVX1-ONLY-NEXT:    vmovaps 192(%rdi), %ymm1
-; AVX1-ONLY-NEXT:    vperm2f128 {{.*#+}} ymm6 = ymm0[2,3],mem[2,3]
-; AVX1-ONLY-NEXT:    vinsertf128 $1, 96(%rdi), %ymm0, %ymm7
-; AVX1-ONLY-NEXT:    vunpcklpd {{.*#+}} ymm0 = ymm7[0],ymm6[0],ymm7[2],ymm6[2]
+; AVX1-ONLY-NEXT:    vmovaps 192(%rdi), %ymm9
+; AVX1-ONLY-NEXT:    vperm2f128 {{.*#+}} ymm3 = ymm0[2,3],mem[2,3]
+; AVX1-ONLY-NEXT:    vinsertf128 $1, 96(%rdi), %ymm0, %ymm1
+; AVX1-ONLY-NEXT:    vunpcklpd {{.*#+}} ymm0 = ymm1[0],ymm3[0],ymm1[2],ymm3[2]
 ; AVX1-ONLY-NEXT:    vmovups %ymm0, {{[-0-9]+}}(%r{{[sb]}}p) # 32-byte Spill
-; AVX1-ONLY-NEXT:    vperm2f128 {{.*#+}} ymm8 = ymm1[2,3],mem[2,3]
-; AVX1-ONLY-NEXT:    vinsertf128 $1, 224(%rdi), %ymm1, %ymm9
-; AVX1-ONLY-NEXT:    vunpcklpd {{.*#+}} ymm0 = ymm9[0],ymm8[0],ymm9[2],ymm8[2]
+; AVX1-ONLY-NEXT:    vperm2f128 {{.*#+}} ymm6 = ymm9[2,3],mem[2,3]
+; AVX1-ONLY-NEXT:    vinsertf128 $1, 224(%rdi), %ymm9, %ymm12
+; AVX1-ONLY-NEXT:    vunpcklpd {{.*#+}} ymm0 = ymm12[0],ymm6[0],ymm12[2],ymm6[2]
 ; AVX1-ONLY-NEXT:    vmovups %ymm0, {{[-0-9]+}}(%r{{[sb]}}p) # 32-byte Spill
+; AVX1-ONLY-NEXT:    vperm2f128 {{.*#+}} ymm0 = ymm4[2,3],mem[2,3]
+; AVX1-ONLY-NEXT:    vinsertf128 $1, 352(%rdi), %ymm4, %ymm9
+; AVX1-ONLY-NEXT:    vunpcklpd {{.*#+}} ymm4 = ymm9[0],ymm0[0],ymm9[2],ymm0[2]
+; AVX1-ONLY-NEXT:    vmovups %ymm4, {{[-0-9]+}}(%r{{[sb]}}p) # 32-byte Spill
 ; AVX1-ONLY-NEXT:    vperm2f128 {{.*#+}} ymm10 = ymm2[2,3],mem[2,3]
-; AVX1-ONLY-NEXT:    vinsertf128 $1, 352(%rdi), %ymm2, %ymm11
-; AVX1-ONLY-NEXT:    vunpcklpd {{.*#+}} ymm0 = ymm11[0],ymm10[0],ymm11[2],ymm10[2]
+; AVX1-ONLY-NEXT:    vinsertf128 $1, 480(%rdi), %ymm2, %ymm13
+; AVX1-ONLY-NEXT:    vperm2f128 {{.*#+}} ymm2 = ymm11[2,3],mem[2,3]
+; AVX1-ONLY-NEXT:    vinsertf128 $1, 32(%rdi), %ymm11, %ymm4
+; AVX1-ONLY-NEXT:    vunpckhpd {{.*#+}} ymm1 = ymm1[1],ymm3[1],ymm1[3],ymm3[3]
+; AVX1-ONLY-NEXT:    vmovups %ymm1, {{[-0-9]+}}(%r{{[sb]}}p) # 32-byte Spill
+; AVX1-ONLY-NEXT:    vunpcklpd {{.*#+}} ymm1 = ymm4[0],ymm2[0],ymm4[2],ymm2[2]
+; AVX1-ONLY-NEXT:    vmovups %ymm1, {{[-0-9]+}}(%r{{[sb]}}p) # 32-byte Spill
+; AVX1-ONLY-NEXT:    vunpckhpd {{.*#+}} ymm1 = ymm4[1],ymm2[1],ymm4[3],ymm2[3]
+; AVX1-ONLY-NEXT:    vmovups %ymm1, {{[-0-9]+}}(%r{{[sb]}}p) # 32-byte Spill
+; AVX1-ONLY-NEXT:    vperm2f128 {{.*#+}} ymm1 = ymm5[2,3],mem[2,3]
+; AVX1-ONLY-NEXT:    vinsertf128 $1, 160(%rdi), %ymm5, %ymm2
+; AVX1-ONLY-NEXT:    vunpckhpd {{.*#+}} ymm3 = ymm12[1],ymm6[1],ymm12[3],ymm6[3]
+; AVX1-ONLY-NEXT:    vmovups %ymm3, {{[-0-9]+}}(%r{{[sb]}}p) # 32-byte Spill
+; AVX1-ONLY-NEXT:    vunpcklpd {{.*#+}} ymm3 = ymm2[0],ymm1[0],ymm2[2],ymm1[2]
+; AVX1-ONLY-NEXT:    vmovups %ymm3, (%rsp) # 32-byte Spill
+; AVX1-ONLY-NEXT:    vunpckhpd {{.*#+}} ymm1 = ymm2[1],ymm1[1],ymm2[3],ymm1[3]
+; AVX1-ONLY-NEXT:    vmovups %ymm1, {{[-0-9]+}}(%r{{[sb]}}p) # 32-byte Spill
+; AVX1-ONLY-NEXT:    vperm2f128 {{.*#+}} ymm1 = ymm8[2,3],mem[2,3]
+; AVX1-ONLY-NEXT:    vinsertf128 $1, 288(%rdi), %ymm8, %ymm2
+; AVX1-ONLY-NEXT:    vunpckhpd {{.*#+}} ymm0 = ymm9[1],ymm0[1],ymm9[3],ymm0[3]
 ; AVX1-ONLY-NEXT:    vmovups %ymm0, {{[-0-9]+}}(%r{{[sb]}}p) # 32-byte Spill
-; AVX1-ONLY-NEXT:    vperm2f128 {{.*#+}} ymm12 = ymm13[2,3],mem[2,3]
-; AVX1-ONLY-NEXT:    vinsertf128 $1, 480(%rdi), %ymm13, %ymm13
-; AVX1-ONLY-NEXT:    vperm2f128 {{.*#+}} ymm15 = ymm14[2,3],mem[2,3]
-; AVX1-ONLY-NEXT:    vinsertf128 $1, 32(%rdi), %ymm14, %ymm14
-; AVX1-ONLY-NEXT:    vunpckhpd {{.*#+}} ymm0 = ymm7[1],ymm6[1],ymm7[3],ymm6[3]
+; AVX1-ONLY-NEXT:    vunpcklpd {{.*#+}} ymm0 = ymm2[0],ymm1[0],ymm2[2],ymm1[2]
 ; AVX1-ONLY-NEXT:    vmovups %ymm0, {{[-0-9]+}}(%r{{[sb]}}p) # 32-byte Spill
-; AVX1-ONLY-NEXT:    vunpcklpd {{.*#+}} ymm0 = ymm14[0],ymm15[0],ymm14[2],ymm15[2]
+; AVX1-ONLY-NEXT:    vunpckhpd {{.*#+}} ymm0 = ymm2[1],ymm1[1],ymm2[3],ymm1[3]
 ; AVX1-ONLY-NEXT:    vmovups %ymm0, {{[-0-9]+}}(%r{{[sb]}}p) # 32-byte Spill
-; AVX1-ONLY-NEXT:    vunpckhpd {{.*#+}} ymm0 = ymm14[1],ymm15[1],ymm14[3],ymm15[3]
+; AVX1-ONLY-NEXT:    vunpcklpd {{.*#+}} ymm0 = ymm13[0],ymm10[0],ymm13[2],ymm10[2]
 ; AVX1-ONLY-NEXT:    vmovups %ymm0, {{[-0-9]+}}(%r{{[sb]}}p) # 32-byte Spill
-; AVX1-ONLY-NEXT:    vperm2f128 {{.*#+}} ymm14 = ymm5[2,3],mem[2,3]
-; AVX1-ONLY-NEXT:    vinsertf128 $1, 160(%rdi), %ymm5, %ymm15
-; AVX1-ONLY-NEXT:    vunpckhpd {{.*#+}} ymm0 = ymm9[1],ymm8[1],ymm9[3],ymm8[3]
+; AVX1-ONLY-NEXT:    vunpckhpd {{.*#+}} ymm0 = ymm13[1],ymm10[1],ymm13[3],ymm10[3]
 ; AVX1-ONLY-NEXT:    vmovups %ymm0, {{[-0-9]+}}(%r{{[sb]}}p) # 32-byte Spill
-; AVX1-ONLY-NEXT:    vunpcklpd {{.*#+}} ymm0 = ymm15[0],ymm14[0],ymm15[2],ymm14[2]
+; AVX1-ONLY-NEXT:    vperm2f128 {{.*#+}} ymm0 = ymm7[2,3],mem[2,3]
+; AVX1-ONLY-NEXT:    vinsertf128 $1, 416(%rdi), %ymm7, %ymm1
+; AVX1-ONLY-NEXT:    vunpcklpd {{.*#+}} ymm13 = ymm1[0],ymm0[0],ymm1[2],ymm0[2]
+; AVX1-ONLY-NEXT:    vunpckhpd {{.*#+}} ymm0 = ymm1[1],ymm0[1],ymm1[3],ymm0[3]
 ; AVX1-ONLY-NEXT:    vmovups %ymm0, {{[-0-9]+}}(%r{{[sb]}}p) # 32-byte Spill
-; AVX1-ONLY-NEXT:    vunpckhpd {{.*#+}} ymm0 = ymm15[1],ymm14[1],ymm15[3],ymm14[3]
+; AVX1-ONLY-NEXT:    vmovaps 576(%rdi), %ymm0
+; AVX1-ONLY-NEXT:    vperm2f128 {{.*#+}} ymm1 = ymm0[2,3],mem[2,3]
+; AVX1-ONLY-NEXT:    vinsertf128 $1, 608(%rdi), %ymm0, %ymm0
+; AVX1-ONLY-NEXT:    vunpcklpd {{.*#+}} ymm15 = ymm0[0],ymm1[0],ymm0[2],ymm1[2]
+; AVX1-ONLY-NEXT:    vunpckhpd {{.*#+}} ymm0 = ymm0[1],ymm1[1],ymm0[3],ymm1[3]
 ; AVX1-ONLY-NEXT:    vmovups %ymm0, {{[-0-9]+}}(%r{{[sb]}}p) # 32-byte Spill
-; AVX1-ONLY-NEXT:    vperm2f128 {{.*#+}} ymm9 = ymm3[2,3],mem[2,3]
-; AVX1-ONLY-NEXT:    vinsertf128 $1, 288(%rdi), %ymm3, %ymm15
-; AVX1-ONLY-NEXT:    vunpckhpd {{.*#+}} ymm0 = ymm11[1],ymm10[1],ymm11[3],ymm10[3]
+; AVX1-ONLY-NEXT:    vmovaps 512(%rdi), %ymm0
+; AVX1-ONLY-NEXT:    vperm2f128 {{.*#+}} ymm1 = ymm0[2,3],mem[2,3]
+; AVX1-ONLY-NEXT:    vinsertf128 $1, 544(%rdi), %ymm0, %ymm2
+; AVX1-ONLY-NEXT:    vunpcklpd {{.*#+}} ymm10 = ymm2[0],ymm1[0],ymm2[2],ymm1[2]
+; AVX1-ONLY-NEXT:    vunpckhpd {{.*#+}} ymm0 = ymm2[1],ymm1[1],ymm2[3],ymm1[3]
 ; AVX1-ONLY-NEXT:    vmovups %ymm0, {{[-0-9]+}}(%r{{[sb]}}p) # 32-byte Spill
-; AVX1-ONLY-NEXT:    vunpcklpd {{.*#+}} ymm0 = ymm15[0],ymm9[0],ymm15[2],ymm9[2]
-; AVX1-ONLY-NEXT:    vmovups %ymm0, {{[-0-9]+}}(%r{{[sb]}}p) # 32-byte Spill
-; AVX1-ONLY-NEXT:    vunpckhpd {{.*#+}} ymm0 = ymm15[1],ymm9[1],ymm15[3],ymm9[3]
-; AVX1-ONLY-NEXT:    vmovups %ymm0, {{[-0-9]+}}(%r{{[sb]}}p) # 32-byte Spill
-; AVX1-ONLY-NEXT:    vunpcklpd {{.*#+}} ymm0 = ymm13[0],ymm12[0],ymm13[2],ymm12[2]
-; AVX1-ONLY-NEXT:    vmovups %ymm0, {{[-0-9]+}}(%r{{[sb]}}p) # 32-byte Spill
-; AVX1-ONLY-NEXT:    vunpckhpd {{.*#+}} ymm0 = ymm13[1],ymm12[1],ymm13[3],ymm12[3]
-; AVX1-ONLY-NEXT:    vmovups %ymm0, {{[-0-9]+}}(%r{{[sb]}}p) # 32-byte Spill
-; AVX1-ONLY-NEXT:    vperm2f128 {{.*#+}} ymm12 = ymm4[2,3],mem[2,3]
-; AVX1-ONLY-NEXT:    vinsertf128 $1, 416(%rdi), %ymm4, %ymm3
-; AVX1-ONLY-NEXT:    vunpcklpd {{.*#+}} ymm13 = ymm3[0],ymm12[0],ymm3[2],ymm12[2]
-; AVX1-ONLY-NEXT:    vunpckhpd {{.*#+}} ymm0 = ymm3[1],ymm12[1],ymm3[3],ymm12[3]
-; AVX1-ONLY-NEXT:    vmovups %ymm0, {{[-0-9]+}}(%r{{[sb]}}p) # 32-byte Spill
-; AVX1-ONLY-NEXT:    vmovaps 576(%rdi), %ymm12
-; AVX1-ONLY-NEXT:    vperm2f128 {{.*#+}} ymm0 = ymm12[2,3],mem[2,3]
-; AVX1-ONLY-NEXT:    vinsertf128 $1, 608(%rdi), %ymm12, %ymm12
-; AVX1-ONLY-NEXT:    vunpcklpd {{.*#+}} ymm15 = ymm12[0],ymm0[0],ymm12[2],ymm0[2]
-; AVX1-ONLY-NEXT:    vunpckhpd {{.*#+}} ymm0 = ymm12[1],ymm0[1],ymm12[3],ymm0[3]
-; AVX1-ONLY-NEXT:    vmovups %ymm0, (%rsp) # 32-byte Spill
-; AVX1-ONLY-NEXT:    vmovaps 512(%rdi), %ymm12
-; AVX1-ONLY-NEXT:    vperm2f128 {{.*#+}} ymm0 = ymm12[2,3],mem[2,3]
-; AVX1-ONLY-NEXT:    vinsertf128 $1, 544(%rdi), %ymm12, %ymm12
-; AVX1-ONLY-NEXT:    vunpcklpd {{.*#+}} ymm9 = ymm12[0],ymm0[0],ymm12[2],ymm0[2]
-; AVX1-ONLY-NEXT:    vunpckhpd {{.*#+}} ymm0 = ymm12[1],ymm0[1],ymm12[3],ymm0[3]
-; AVX1-ONLY-NEXT:    vmovups %ymm0, {{[-0-9]+}}(%r{{[sb]}}p) # 32-byte Spill
-; AVX1-ONLY-NEXT:    vmovaps 704(%rdi), %ymm12
-; AVX1-ONLY-NEXT:    vperm2f128 {{.*#+}} ymm0 = ymm12[2,3],mem[2,3]
-; AVX1-ONLY-NEXT:    vinsertf128 $1, 736(%rdi), %ymm12, %ymm12
-; AVX1-ONLY-NEXT:    vunpcklpd {{.*#+}} ymm10 = ymm12[0],ymm0[0],ymm12[2],ymm0[2]
-; AVX1-ONLY-NEXT:    vunpckhpd {{.*#+}} ymm14 = ymm12[1],ymm0[1],ymm12[3],ymm0[3]
-; AVX1-ONLY-NEXT:    vmovaps 640(%rdi), %ymm12
-; AVX1-ONLY-NEXT:    vperm2f128 {{.*#+}} ymm0 = ymm12[2,3],mem[2,3]
-; AVX1-ONLY-NEXT:    vinsertf128 $1, 672(%rdi), %ymm12, %ymm12
-; AVX1-ONLY-NEXT:    vunpcklpd {{.*#+}} ymm5 = ymm12[0],ymm0[0],ymm12[2],ymm0[2]
-; AVX1-ONLY-NEXT:    vunpckhpd {{.*#+}} ymm11 = ymm12[1],ymm0[1],ymm12[3],ymm0[3]
-; AVX1-ONLY-NEXT:    vmovaps 832(%rdi), %ymm12
-; AVX1-ONLY-NEXT:    vperm2f128 {{.*#+}} ymm0 = ymm12[2,3],mem[2,3]
-; AVX1-ONLY-NEXT:    vinsertf128 $1, 864(%rdi), %ymm12, %ymm12
-; AVX1-ONLY-NEXT:    vunpcklpd {{.*#+}} ymm6 = ymm12[0],ymm0[0],ymm12[2],ymm0[2]
-; AVX1-ONLY-NEXT:    vunpckhpd {{.*#+}} ymm8 = ymm12[1],ymm0[1],ymm12[3],ymm0[3]
-; AVX1-ONLY-NEXT:    vmovaps 768(%rdi), %ymm12
-; AVX1-ONLY-NEXT:    vperm2f128 {{.*#+}} ymm0 = ymm12[2,3],mem[2,3]
-; AVX1-ONLY-NEXT:    vinsertf128 $1, 800(%rdi), %ymm12, %ymm12
-; AVX1-ONLY-NEXT:    vunpcklpd {{.*#+}} ymm2 = ymm12[0],ymm0[0],ymm12[2],ymm0[2]
-; AVX1-ONLY-NEXT:    vunpckhpd {{.*#+}} ymm7 = ymm12[1],ymm0[1],ymm12[3],ymm0[3]
-; AVX1-ONLY-NEXT:    vmovaps 960(%rdi), %ymm12
-; AVX1-ONLY-NEXT:    vperm2f128 {{.*#+}} ymm0 = ymm12[2,3],mem[2,3]
-; AVX1-ONLY-NEXT:    vinsertf128 $1, 992(%rdi), %ymm12, %ymm12
-; AVX1-ONLY-NEXT:    vunpcklpd {{.*#+}} ymm3 = ymm12[0],ymm0[0],ymm12[2],ymm0[2]
-; AVX1-ONLY-NEXT:    vunpckhpd {{.*#+}} ymm4 = ymm12[1],ymm0[1],ymm12[3],ymm0[3]
-; AVX1-ONLY-NEXT:    vmovaps 896(%rdi), %ymm12
-; AVX1-ONLY-NEXT:    vperm2f128 {{.*#+}} ymm0 = ymm12[2,3],mem[2,3]
-; AVX1-ONLY-NEXT:    vinsertf128 $1, 928(%rdi), %ymm12, %ymm12
-; AVX1-ONLY-NEXT:    vunpcklpd {{.*#+}} ymm1 = ymm12[0],ymm0[0],ymm12[2],ymm0[2]
-; AVX1-ONLY-NEXT:    vunpckhpd {{.*#+}} ymm0 = ymm12[1],ymm0[1],ymm12[3],ymm0[3]
-; AVX1-ONLY-NEXT:    vmovaps %ymm1, 448(%rsi)
-; AVX1-ONLY-NEXT:    vmovaps %ymm2, 384(%rsi)
-; AVX1-ONLY-NEXT:    vmovaps %ymm5, 320(%rsi)
-; AVX1-ONLY-NEXT:    vmovaps %ymm9, 256(%rsi)
+; AVX1-ONLY-NEXT:    vmovaps 704(%rdi), %ymm1
+; AVX1-ONLY-NEXT:    vperm2f128 {{.*#+}} ymm3 = ymm1[2,3],mem[2,3]
+; AVX1-ONLY-NEXT:    vinsertf128 $1, 736(%rdi), %ymm1, %ymm1
+; AVX1-ONLY-NEXT:    vunpcklpd {{.*#+}} ymm11 = ymm1[0],ymm3[0],ymm1[2],ymm3[2]
+; AVX1-ONLY-NEXT:    vunpckhpd {{.*#+}} ymm14 = ymm1[1],ymm3[1],ymm1[3],ymm3[3]
+; AVX1-ONLY-NEXT:    vmovaps 640(%rdi), %ymm1
+; AVX1-ONLY-NEXT:    vperm2f128 {{.*#+}} ymm3 = ymm1[2,3],mem[2,3]
+; AVX1-ONLY-NEXT:    vinsertf128 $1, 672(%rdi), %ymm1, %ymm1
+; AVX1-ONLY-NEXT:    vunpcklpd {{.*#+}} ymm6 = ymm1[0],ymm3[0],ymm1[2],ymm3[2]
+; AVX1-ONLY-NEXT:    vunpckhpd {{.*#+}} ymm12 = ymm1[1],ymm3[1],ymm1[3],ymm3[3]
+; AVX1-ONLY-NEXT:    vmovaps 832(%rdi), %ymm1
+; AVX1-ONLY-NEXT:    vperm2f128 {{.*#+}} ymm0 = ymm1[2,3],mem[2,3]
+; AVX1-ONLY-NEXT:    vinsertf128 $1, 864(%rdi), %ymm1, %ymm1
+; AVX1-ONLY-NEXT:    vunpcklpd {{.*#+}} ymm7 = ymm1[0],ymm0[0],ymm1[2],ymm0[2]
+; AVX1-ONLY-NEXT:    vunpckhpd {{.*#+}} ymm9 = ymm1[1],ymm0[1],ymm1[3],ymm0[3]
+; AVX1-ONLY-NEXT:    vmovaps 768(%rdi), %ymm0
+; AVX1-ONLY-NEXT:    vperm2f128 {{.*#+}} ymm1 = ymm0[2,3],mem[2,3]
+; AVX1-ONLY-NEXT:    vinsertf128 $1, 800(%rdi), %ymm0, %ymm0
+; AVX1-ONLY-NEXT:    vunpcklpd {{.*#+}} ymm3 = ymm0[0],ymm1[0],ymm0[2],ymm1[2]
+; AVX1-ONLY-NEXT:    vunpckhpd {{.*#+}} ymm8 = ymm0[1],ymm1[1],ymm0[3],ymm1[3]
+; AVX1-ONLY-NEXT:    vmovaps 960(%rdi), %ymm1
+; AVX1-ONLY-NEXT:    vperm2f128 {{.*#+}} ymm0 = ymm1[2,3],mem[2,3]
+; AVX1-ONLY-NEXT:    vinsertf128 $1, 992(%rdi), %ymm1, %ymm1
+; AVX1-ONLY-NEXT:    vunpcklpd {{.*#+}} ymm4 = ymm1[0],ymm0[0],ymm1[2],ymm0[2]
+; AVX1-ONLY-NEXT:    vunpckhpd {{.*#+}} ymm5 = ymm1[1],ymm0[1],ymm1[3],ymm0[3]
+; AVX1-ONLY-NEXT:    vmovaps 896(%rdi), %ymm1
+; AVX1-ONLY-NEXT:    vperm2f128 {{.*#+}} ymm0 = ymm1[2,3],mem[2,3]
+; AVX1-ONLY-NEXT:    vinsertf128 $1, 928(%rdi), %ymm1, %ymm1
+; AVX1-ONLY-NEXT:    vunpcklpd {{.*#+}} ymm2 = ymm1[0],ymm0[0],ymm1[2],ymm0[2]
+; AVX1-ONLY-NEXT:    vunpckhpd {{.*#+}} ymm0 = ymm1[1],ymm0[1],ymm1[3],ymm0[3]
+; AVX1-ONLY-NEXT:    vmovaps %ymm2, 448(%rsi)
+; AVX1-ONLY-NEXT:    vmovaps %ymm3, 384(%rsi)
+; AVX1-ONLY-NEXT:    vmovaps %ymm6, 320(%rsi)
+; AVX1-ONLY-NEXT:    vmovaps %ymm10, 256(%rsi)
 ; AVX1-ONLY-NEXT:    vmovaps %ymm13, 192(%rsi)
 ; AVX1-ONLY-NEXT:    vmovups {{[-0-9]+}}(%r{{[sb]}}p), %ymm1 # 32-byte Reload
 ; AVX1-ONLY-NEXT:    vmovaps %ymm1, 128(%rsi)
-; AVX1-ONLY-NEXT:    vmovups {{[-0-9]+}}(%r{{[sb]}}p), %ymm1 # 32-byte Reload
+; AVX1-ONLY-NEXT:    vmovups (%rsp), %ymm1 # 32-byte Reload
 ; AVX1-ONLY-NEXT:    vmovaps %ymm1, 64(%rsi)
 ; AVX1-ONLY-NEXT:    vmovups {{[-0-9]+}}(%r{{[sb]}}p), %ymm1 # 32-byte Reload
 ; AVX1-ONLY-NEXT:    vmovaps %ymm1, (%rsi)
-; AVX1-ONLY-NEXT:    vmovaps %ymm3, 480(%rsi)
-; AVX1-ONLY-NEXT:    vmovaps %ymm6, 416(%rsi)
-; AVX1-ONLY-NEXT:    vmovaps %ymm10, 352(%rsi)
+; AVX1-ONLY-NEXT:    vmovaps %ymm4, 480(%rsi)
+; AVX1-ONLY-NEXT:    vmovaps %ymm7, 416(%rsi)
+; AVX1-ONLY-NEXT:    vmovaps %ymm11, 352(%rsi)
 ; AVX1-ONLY-NEXT:    vmovaps %ymm15, 288(%rsi)
 ; AVX1-ONLY-NEXT:    vmovups {{[-0-9]+}}(%r{{[sb]}}p), %ymm1 # 32-byte Reload
 ; AVX1-ONLY-NEXT:    vmovaps %ymm1, 224(%rsi)
@@ -1181,14 +1181,14 @@ define void @load_i64_stride2_vf64(ptr %in.vec, ptr %out.vec0, ptr %out.vec1) no
 ; AVX1-ONLY-NEXT:    vmovups {{[-0-9]+}}(%r{{[sb]}}p), %ymm1 # 32-byte Reload
 ; AVX1-ONLY-NEXT:    vmovaps %ymm1, 32(%rsi)
 ; AVX1-ONLY-NEXT:    vmovaps %ymm0, 448(%rdx)
-; AVX1-ONLY-NEXT:    vmovaps %ymm4, 480(%rdx)
-; AVX1-ONLY-NEXT:    vmovaps %ymm7, 384(%rdx)
-; AVX1-ONLY-NEXT:    vmovaps %ymm8, 416(%rdx)
-; AVX1-ONLY-NEXT:    vmovaps %ymm11, 320(%rdx)
+; AVX1-ONLY-NEXT:    vmovaps %ymm5, 480(%rdx)
+; AVX1-ONLY-NEXT:    vmovaps %ymm8, 384(%rdx)
+; AVX1-ONLY-NEXT:    vmovaps %ymm9, 416(%rdx)
+; AVX1-ONLY-NEXT:    vmovaps %ymm12, 320(%rdx)
 ; AVX1-ONLY-NEXT:    vmovaps %ymm14, 352(%rdx)
 ; AVX1-ONLY-NEXT:    vmovups {{[-0-9]+}}(%r{{[sb]}}p), %ymm0 # 32-byte Reload
 ; AVX1-ONLY-NEXT:    vmovaps %ymm0, 256(%rdx)
-; AVX1-ONLY-NEXT:    vmovups (%rsp), %ymm0 # 32-byte Reload
+; AVX1-ONLY-NEXT:    vmovups {{[-0-9]+}}(%r{{[sb]}}p), %ymm0 # 32-byte Reload
 ; AVX1-ONLY-NEXT:    vmovaps %ymm0, 288(%rdx)
 ; AVX1-ONLY-NEXT:    vmovups {{[-0-9]+}}(%r{{[sb]}}p), %ymm0 # 32-byte Reload
 ; AVX1-ONLY-NEXT:    vmovaps %ymm0, 192(%rdx)
@@ -1213,167 +1213,167 @@ define void @load_i64_stride2_vf64(ptr %in.vec, ptr %out.vec0, ptr %out.vec1) no
 ; AVX2-ONLY-LABEL: load_i64_stride2_vf64:
 ; AVX2-ONLY:       # %bb.0:
 ; AVX2-ONLY-NEXT:    subq $424, %rsp # imm = 0x1A8
-; AVX2-ONLY-NEXT:    vmovaps 544(%rdi), %ymm4
-; AVX2-ONLY-NEXT:    vmovaps 416(%rdi), %ymm1
-; AVX2-ONLY-NEXT:    vmovaps 384(%rdi), %ymm3
-; AVX2-ONLY-NEXT:    vmovaps 288(%rdi), %ymm7
-; AVX2-ONLY-NEXT:    vmovaps 256(%rdi), %ymm8
-; AVX2-ONLY-NEXT:    vmovaps 160(%rdi), %ymm5
-; AVX2-ONLY-NEXT:    vmovaps 128(%rdi), %ymm6
-; AVX2-ONLY-NEXT:    vmovaps 608(%rdi), %ymm9
-; AVX2-ONLY-NEXT:    vmovaps 576(%rdi), %ymm10
-; AVX2-ONLY-NEXT:    vmovaps 480(%rdi), %ymm11
+; AVX2-ONLY-NEXT:    vmovaps 544(%rdi), %ymm9
+; AVX2-ONLY-NEXT:    vmovaps 416(%rdi), %ymm6
+; AVX2-ONLY-NEXT:    vmovaps 384(%rdi), %ymm7
+; AVX2-ONLY-NEXT:    vmovaps 288(%rdi), %ymm0
+; AVX2-ONLY-NEXT:    vmovaps 256(%rdi), %ymm1
+; AVX2-ONLY-NEXT:    vmovaps 160(%rdi), %ymm4
+; AVX2-ONLY-NEXT:    vmovaps 128(%rdi), %ymm5
+; AVX2-ONLY-NEXT:    vmovaps 608(%rdi), %ymm2
+; AVX2-ONLY-NEXT:    vmovaps 576(%rdi), %ymm3
+; AVX2-ONLY-NEXT:    vmovaps 480(%rdi), %ymm10
 ; AVX2-ONLY-NEXT:    vmovaps 448(%rdi), %ymm13
-; AVX2-ONLY-NEXT:    vmovaps 352(%rdi), %ymm14
-; AVX2-ONLY-NEXT:    vmovaps 320(%rdi), %ymm0
-; AVX2-ONLY-NEXT:    vmovaps 224(%rdi), %ymm2
-; AVX2-ONLY-NEXT:    vmovaps 192(%rdi), %ymm12
-; AVX2-ONLY-NEXT:    vunpcklpd {{.*#+}} ymm15 = ymm12[0],ymm2[0],ymm12[2],ymm2[2]
+; AVX2-ONLY-NEXT:    vmovaps 352(%rdi), %ymm8
+; AVX2-ONLY-NEXT:    vmovaps 320(%rdi), %ymm11
+; AVX2-ONLY-NEXT:    vmovaps 224(%rdi), %ymm12
+; AVX2-ONLY-NEXT:    vmovaps 192(%rdi), %ymm14
+; AVX2-ONLY-NEXT:    vunpcklpd {{.*#+}} ymm15 = ymm14[0],ymm12[0],ymm14[2],ymm12[2]
 ; AVX2-ONLY-NEXT:    vmovups %ymm15, {{[-0-9]+}}(%r{{[sb]}}p) # 32-byte Spill
-; AVX2-ONLY-NEXT:    vunpckhpd {{.*#+}} ymm2 = ymm12[1],ymm2[1],ymm12[3],ymm2[3]
-; AVX2-ONLY-NEXT:    vmovups %ymm2, {{[-0-9]+}}(%r{{[sb]}}p) # 32-byte Spill
-; AVX2-ONLY-NEXT:    vunpcklpd {{.*#+}} ymm2 = ymm6[0],ymm5[0],ymm6[2],ymm5[2]
-; AVX2-ONLY-NEXT:    vmovups %ymm2, {{[-0-9]+}}(%r{{[sb]}}p) # 32-byte Spill
-; AVX2-ONLY-NEXT:    vunpckhpd {{.*#+}} ymm2 = ymm6[1],ymm5[1],ymm6[3],ymm5[3]
-; AVX2-ONLY-NEXT:    vmovups %ymm2, {{[-0-9]+}}(%r{{[sb]}}p) # 32-byte Spill
-; AVX2-ONLY-NEXT:    vunpcklpd {{.*#+}} ymm2 = ymm0[0],ymm14[0],ymm0[2],ymm14[2]
-; AVX2-ONLY-NEXT:    vmovups %ymm2, {{[-0-9]+}}(%r{{[sb]}}p) # 32-byte Spill
-; AVX2-ONLY-NEXT:    vunpckhpd {{.*#+}} ymm0 = ymm0[1],ymm14[1],ymm0[3],ymm14[3]
+; AVX2-ONLY-NEXT:    vunpckhpd {{.*#+}} ymm12 = ymm14[1],ymm12[1],ymm14[3],ymm12[3]
+; AVX2-ONLY-NEXT:    vmovups %ymm12, {{[-0-9]+}}(%r{{[sb]}}p) # 32-byte Spill
+; AVX2-ONLY-NEXT:    vunpcklpd {{.*#+}} ymm12 = ymm5[0],ymm4[0],ymm5[2],ymm4[2]
+; AVX2-ONLY-NEXT:    vmovups %ymm12, (%rsp) # 32-byte Spill
+; AVX2-ONLY-NEXT:    vunpckhpd {{.*#+}} ymm4 = ymm5[1],ymm4[1],ymm5[3],ymm4[3]
+; AVX2-ONLY-NEXT:    vmovups %ymm4, {{[-0-9]+}}(%r{{[sb]}}p) # 32-byte Spill
+; AVX2-ONLY-NEXT:    vunpcklpd {{.*#+}} ymm4 = ymm11[0],ymm8[0],ymm11[2],ymm8[2]
+; AVX2-ONLY-NEXT:    vmovups %ymm4, {{[-0-9]+}}(%r{{[sb]}}p) # 32-byte Spill
+; AVX2-ONLY-NEXT:    vunpckhpd {{.*#+}} ymm4 = ymm11[1],ymm8[1],ymm11[3],ymm8[3]
+; AVX2-ONLY-NEXT:    vmovups %ymm4, {{[-0-9]+}}(%r{{[sb]}}p) # 32-byte Spill
+; AVX2-ONLY-NEXT:    vunpcklpd {{.*#+}} ymm4 = ymm1[0],ymm0[0],ymm1[2],ymm0[2]
+; AVX2-ONLY-NEXT:    vmovups %ymm4, {{[-0-9]+}}(%r{{[sb]}}p) # 32-byte Spill
+; AVX2-ONLY-NEXT:    vunpckhpd {{.*#+}} ymm0 = ymm1[1],ymm0[1],ymm1[3],ymm0[3]
 ; AVX2-ONLY-NEXT:    vmovups %ymm0, {{[-0-9]+}}(%r{{[sb]}}p) # 32-byte Spill
-; AVX2-ONLY-NEXT:    vunpcklpd {{.*#+}} ymm0 = ymm8[0],ymm7[0],ymm8[2],ymm7[2]
+; AVX2-ONLY-NEXT:    vunpcklpd {{.*#+}} ymm0 = ymm13[0],ymm10[0],ymm13[2],ymm10[2]
 ; AVX2-ONLY-NEXT:    vmovups %ymm0, {{[-0-9]+}}(%r{{[sb]}}p) # 32-byte Spill
-; AVX2-ONLY-NEXT:    vunpckhpd {{.*#+}} ymm0 = ymm8[1],ymm7[1],ymm8[3],ymm7[3]
-; AVX2-ONLY-NEXT:    vmovups %ymm0, {{[-0-9]+}}(%r{{[sb]}}p) # 32-byte Spill
-; AVX2-ONLY-NEXT:    vunpcklpd {{.*#+}} ymm0 = ymm13[0],ymm11[0],ymm13[2],ymm11[2]
-; AVX2-ONLY-NEXT:    vmovups %ymm0, {{[-0-9]+}}(%r{{[sb]}}p) # 32-byte Spill
-; AVX2-ONLY-NEXT:    vunpckhpd {{.*#+}} ymm0 = ymm13[1],ymm11[1],ymm13[3],ymm11[3]
-; AVX2-ONLY-NEXT:    vmovups %ymm0, {{[-0-9]+}}(%r{{[sb]}}p) # 32-byte Spill
-; AVX2-ONLY-NEXT:    vunpcklpd {{.*#+}} ymm15 = ymm3[0],ymm1[0],ymm3[2],ymm1[2]
-; AVX2-ONLY-NEXT:    vunpckhpd {{.*#+}} ymm0 = ymm3[1],ymm1[1],ymm3[3],ymm1[3]
-; AVX2-ONLY-NEXT:    vmovups %ymm0, {{[-0-9]+}}(%r{{[sb]}}p) # 32-byte Spill
-; AVX2-ONLY-NEXT:    vunpcklpd {{.*#+}} ymm0 = ymm10[0],ymm9[0],ymm10[2],ymm9[2]
-; AVX2-ONLY-NEXT:    vmovups %ymm0, {{[-0-9]+}}(%r{{[sb]}}p) # 32-byte Spill
-; AVX2-ONLY-NEXT:    vunpckhpd {{.*#+}} ymm0 = ymm10[1],ymm9[1],ymm10[3],ymm9[3]
-; AVX2-ONLY-NEXT:    vmovups %ymm0, {{[-0-9]+}}(%r{{[sb]}}p) # 32-byte Spill
-; AVX2-ONLY-NEXT:    vmovaps 512(%rdi), %ymm9
-; AVX2-ONLY-NEXT:    vunpcklpd {{.*#+}} ymm11 = ymm9[0],ymm4[0],ymm9[2],ymm4[2]
-; AVX2-ONLY-NEXT:    vunpckhpd {{.*#+}} ymm0 = ymm9[1],ymm4[1],ymm9[3],ymm4[3]
-; AVX2-ONLY-NEXT:    vmovups %ymm0, {{[-0-9]+}}(%r{{[sb]}}p) # 32-byte Spill
-; AVX2-ONLY-NEXT:    vmovaps 736(%rdi), %ymm9
-; AVX2-ONLY-NEXT:    vmovaps 704(%rdi), %ymm10
-; AVX2-ONLY-NEXT:    vunpcklpd {{.*#+}} ymm14 = ymm10[0],ymm9[0],ymm10[2],ymm9[2]
-; AVX2-ONLY-NEXT:    vunpckhpd {{.*#+}} ymm0 = ymm10[1],ymm9[1],ymm10[3],ymm9[3]
-; AVX2-ONLY-NEXT:    vmovups %ymm0, (%rsp) # 32-byte Spill
-; AVX2-ONLY-NEXT:    vmovaps 672(%rdi), %ymm10
-; AVX2-ONLY-NEXT:    vmovaps 640(%rdi), %ymm13
-; AVX2-ONLY-NEXT:    vunpcklpd {{.*#+}} ymm6 = ymm13[0],ymm10[0],ymm13[2],ymm10[2]
 ; AVX2-ONLY-NEXT:    vunpckhpd {{.*#+}} ymm0 = ymm13[1],ymm10[1],ymm13[3],ymm10[3]
 ; AVX2-ONLY-NEXT:    vmovups %ymm0, {{[-0-9]+}}(%r{{[sb]}}p) # 32-byte Spill
-; AVX2-ONLY-NEXT:    vmovaps 864(%rdi), %ymm13
-; AVX2-ONLY-NEXT:    vmovaps 832(%rdi), %ymm0
-; AVX2-ONLY-NEXT:    vunpcklpd {{.*#+}} ymm9 = ymm0[0],ymm13[0],ymm0[2],ymm13[2]
-; AVX2-ONLY-NEXT:    vunpckhpd {{.*#+}} ymm0 = ymm0[1],ymm13[1],ymm0[3],ymm13[3]
+; AVX2-ONLY-NEXT:    vunpcklpd {{.*#+}} ymm13 = ymm7[0],ymm6[0],ymm7[2],ymm6[2]
+; AVX2-ONLY-NEXT:    vunpckhpd {{.*#+}} ymm0 = ymm7[1],ymm6[1],ymm7[3],ymm6[3]
 ; AVX2-ONLY-NEXT:    vmovups %ymm0, {{[-0-9]+}}(%r{{[sb]}}p) # 32-byte Spill
-; AVX2-ONLY-NEXT:    vmovaps 800(%rdi), %ymm13
-; AVX2-ONLY-NEXT:    vmovaps 768(%rdi), %ymm0
-; AVX2-ONLY-NEXT:    vunpcklpd {{.*#+}} ymm4 = ymm0[0],ymm13[0],ymm0[2],ymm13[2]
-; AVX2-ONLY-NEXT:    vunpckhpd {{.*#+}} ymm12 = ymm0[1],ymm13[1],ymm0[3],ymm13[3]
-; AVX2-ONLY-NEXT:    vmovaps 992(%rdi), %ymm13
-; AVX2-ONLY-NEXT:    vmovaps 960(%rdi), %ymm0
-; AVX2-ONLY-NEXT:    vunpcklpd {{.*#+}} ymm5 = ymm0[0],ymm13[0],ymm0[2],ymm13[2]
-; AVX2-ONLY-NEXT:    vunpckhpd {{.*#+}} ymm10 = ymm0[1],ymm13[1],ymm0[3],ymm13[3]
-; AVX2-ONLY-NEXT:    vmovaps 928(%rdi), %ymm13
-; AVX2-ONLY-NEXT:    vmovaps 896(%rdi), %ymm0
-; AVX2-ONLY-NEXT:    vunpcklpd {{.*#+}} ymm2 = ymm0[0],ymm13[0],ymm0[2],ymm13[2]
-; AVX2-ONLY-NEXT:    vunpckhpd {{.*#+}} ymm8 = ymm0[1],ymm13[1],ymm0[3],ymm13[3]
-; AVX2-ONLY-NEXT:    vmovaps 64(%rdi), %ymm13
-; AVX2-ONLY-NEXT:    vmovaps 96(%rdi), %ymm0
-; AVX2-ONLY-NEXT:    vunpcklpd {{.*#+}} ymm7 = ymm13[0],ymm0[0],ymm13[2],ymm0[2]
-; AVX2-ONLY-NEXT:    vunpckhpd {{.*#+}} ymm13 = ymm13[1],ymm0[1],ymm13[3],ymm0[3]
-; AVX2-ONLY-NEXT:    vmovaps (%rdi), %ymm1
-; AVX2-ONLY-NEXT:    vmovaps 32(%rdi), %ymm0
-; AVX2-ONLY-NEXT:    vunpcklpd {{.*#+}} ymm3 = ymm1[0],ymm0[0],ymm1[2],ymm0[2]
+; AVX2-ONLY-NEXT:    vunpcklpd {{.*#+}} ymm0 = ymm3[0],ymm2[0],ymm3[2],ymm2[2]
+; AVX2-ONLY-NEXT:    vmovups %ymm0, {{[-0-9]+}}(%r{{[sb]}}p) # 32-byte Spill
+; AVX2-ONLY-NEXT:    vunpckhpd {{.*#+}} ymm0 = ymm3[1],ymm2[1],ymm3[3],ymm2[3]
+; AVX2-ONLY-NEXT:    vmovups %ymm0, {{[-0-9]+}}(%r{{[sb]}}p) # 32-byte Spill
+; AVX2-ONLY-NEXT:    vmovaps 512(%rdi), %ymm0
+; AVX2-ONLY-NEXT:    vunpcklpd {{.*#+}} ymm10 = ymm0[0],ymm9[0],ymm0[2],ymm9[2]
+; AVX2-ONLY-NEXT:    vunpckhpd {{.*#+}} ymm0 = ymm0[1],ymm9[1],ymm0[3],ymm9[3]
+; AVX2-ONLY-NEXT:    vmovups %ymm0, {{[-0-9]+}}(%r{{[sb]}}p) # 32-byte Spill
+; AVX2-ONLY-NEXT:    vmovaps 736(%rdi), %ymm0
+; AVX2-ONLY-NEXT:    vmovaps 704(%rdi), %ymm1
+; AVX2-ONLY-NEXT:    vunpcklpd {{.*#+}} ymm14 = ymm1[0],ymm0[0],ymm1[2],ymm0[2]
 ; AVX2-ONLY-NEXT:    vunpckhpd {{.*#+}} ymm0 = ymm1[1],ymm0[1],ymm1[3],ymm0[3]
-; AVX2-ONLY-NEXT:    vpermpd {{.*#+}} ymm1 = ymm2[0,2,1,3]
-; AVX2-ONLY-NEXT:    vmovaps %ymm1, 448(%rsi)
-; AVX2-ONLY-NEXT:    vpermpd {{.*#+}} ymm1 = ymm4[0,2,1,3]
-; AVX2-ONLY-NEXT:    vmovaps %ymm1, 384(%rsi)
-; AVX2-ONLY-NEXT:    vpermpd {{.*#+}} ymm1 = ymm6[0,2,1,3]
-; AVX2-ONLY-NEXT:    vmovaps %ymm1, 320(%rsi)
-; AVX2-ONLY-NEXT:    vpermpd {{.*#+}} ymm1 = ymm11[0,2,1,3]
-; AVX2-ONLY-NEXT:    vmovaps %ymm1, 256(%rsi)
-; AVX2-ONLY-NEXT:    vpermpd {{.*#+}} ymm1 = ymm15[0,2,1,3]
-; AVX2-ONLY-NEXT:    vmovaps %ymm1, 192(%rsi)
-; AVX2-ONLY-NEXT:    vpermpd $216, {{[-0-9]+}}(%r{{[sb]}}p), %ymm1 # 32-byte Folded Reload
-; AVX2-ONLY-NEXT:    # ymm1 = mem[0,2,1,3]
-; AVX2-ONLY-NEXT:    vmovaps %ymm1, 128(%rsi)
-; AVX2-ONLY-NEXT:    vpermpd $216, {{[-0-9]+}}(%r{{[sb]}}p), %ymm1 # 32-byte Folded Reload
-; AVX2-ONLY-NEXT:    # ymm1 = mem[0,2,1,3]
-; AVX2-ONLY-NEXT:    vmovaps %ymm1, 64(%rsi)
-; AVX2-ONLY-NEXT:    vpermpd {{.*#+}} ymm1 = ymm3[0,2,1,3]
-; AVX2-ONLY-NEXT:    vmovaps %ymm1, (%rsi)
-; AVX2-ONLY-NEXT:    vpermpd {{.*#+}} ymm1 = ymm5[0,2,1,3]
-; AVX2-ONLY-NEXT:    vmovaps %ymm1, 480(%rsi)
-; AVX2-ONLY-NEXT:    vpermpd {{.*#+}} ymm1 = ymm9[0,2,1,3]
-; AVX2-ONLY-NEXT:    vmovaps %ymm1, 416(%rsi)
-; AVX2-ONLY-NEXT:    vpermpd {{.*#+}} ymm1 = ymm14[0,2,1,3]
-; AVX2-ONLY-NEXT:    vmovaps %ymm1, 352(%rsi)
-; AVX2-ONLY-NEXT:    vpermpd $216, {{[-0-9]+}}(%r{{[sb]}}p), %ymm1 # 32-byte Folded Reload
-; AVX2-ONLY-NEXT:    # ymm1 = mem[0,2,1,3]
-; AVX2-ONLY-NEXT:    vmovaps %ymm1, 288(%rsi)
-; AVX2-ONLY-NEXT:    vpermpd $216, {{[-0-9]+}}(%r{{[sb]}}p), %ymm1 # 32-byte Folded Reload
-; AVX2-ONLY-NEXT:    # ymm1 = mem[0,2,1,3]
-; AVX2-ONLY-NEXT:    vmovaps %ymm1, 224(%rsi)
-; AVX2-ONLY-NEXT:    vpermpd $216, {{[-0-9]+}}(%r{{[sb]}}p), %ymm1 # 32-byte Folded Reload
-; AVX2-ONLY-NEXT:    # ymm1 = mem[0,2,1,3]
-; AVX2-ONLY-NEXT:    vmovaps %ymm1, 160(%rsi)
-; AVX2-ONLY-NEXT:    vpermpd $216, {{[-0-9]+}}(%r{{[sb]}}p), %ymm1 # 32-byte Folded Reload
-; AVX2-ONLY-NEXT:    # ymm1 = mem[0,2,1,3]
-; AVX2-ONLY-NEXT:    vmovaps %ymm1, 96(%rsi)
-; AVX2-ONLY-NEXT:    vpermpd {{.*#+}} ymm1 = ymm7[0,2,1,3]
-; AVX2-ONLY-NEXT:    vmovaps %ymm1, 32(%rsi)
-; AVX2-ONLY-NEXT:    vpermpd {{.*#+}} ymm1 = ymm8[0,2,1,3]
-; AVX2-ONLY-NEXT:    vmovaps %ymm1, 448(%rdx)
-; AVX2-ONLY-NEXT:    vpermpd {{.*#+}} ymm1 = ymm10[0,2,1,3]
-; AVX2-ONLY-NEXT:    vmovaps %ymm1, 480(%rdx)
-; AVX2-ONLY-NEXT:    vpermpd {{.*#+}} ymm1 = ymm12[0,2,1,3]
-; AVX2-ONLY-NEXT:    vmovaps %ymm1, 384(%rdx)
-; AVX2-ONLY-NEXT:    vpermpd $216, {{[-0-9]+}}(%r{{[sb]}}p), %ymm1 # 32-byte Folded Reload
-; AVX2-ONLY-NEXT:    # ymm1 = mem[0,2,1,3]
-; AVX2-ONLY-NEXT:    vmovaps %ymm1, 416(%rdx)
-; AVX2-ONLY-NEXT:    vpermpd $216, {{[-0-9]+}}(%r{{[sb]}}p), %ymm1 # 32-byte Folded Reload
-; AVX2-ONLY-NEXT:    # ymm1 = mem[0,2,1,3]
-; AVX2-ONLY-NEXT:    vmovaps %ymm1, 320(%rdx)
-; AVX2-ONLY-NEXT:    vpermpd $216, (%rsp), %ymm1 # 32-byte Folded Reload
-; AVX2-ONLY-NEXT:    # ymm1 = mem[0,2,1,3]
-; AVX2-ONLY-NEXT:    vmovaps %ymm1, 352(%rdx)
-; AVX2-ONLY-NEXT:    vpermpd $216, {{[-0-9]+}}(%r{{[sb]}}p), %ymm1 # 32-byte Folded Reload
-; AVX2-ONLY-NEXT:    # ymm1 = mem[0,2,1,3]
-; AVX2-ONLY-NEXT:    vmovaps %ymm1, 256(%rdx)
-; AVX2-ONLY-NEXT:    vpermpd $216, {{[-0-9]+}}(%r{{[sb]}}p), %ymm1 # 32-byte Folded Reload
-; AVX2-ONLY-NEXT:    # ymm1 = mem[0,2,1,3]
-; AVX2-ONLY-NEXT:    vmovaps %ymm1, 288(%rdx)
-; AVX2-ONLY-NEXT:    vpermpd $216, {{[-0-9]+}}(%r{{[sb]}}p), %ymm1 # 32-byte Folded Reload
-; AVX2-ONLY-NEXT:    # ymm1 = mem[0,2,1,3]
-; AVX2-ONLY-NEXT:    vmovaps %ymm1, 192(%rdx)
-; AVX2-ONLY-NEXT:    vpermpd $216, {{[-0-9]+}}(%r{{[sb]}}p), %ymm1 # 32-byte Folded Reload
-; AVX2-ONLY-NEXT:    # ymm1 = mem[0,2,1,3]
-; AVX2-ONLY-NEXT:    vmovaps %ymm1, 224(%rdx)
-; AVX2-ONLY-NEXT:    vpermpd $216, {{[-0-9]+}}(%r{{[sb]}}p), %ymm1 # 32-byte Folded Reload
-; AVX2-ONLY-NEXT:    # ymm1 = mem[0,2,1,3]
-; AVX2-ONLY-NEXT:    vmovaps %ymm1, 128(%rdx)
-; AVX2-ONLY-NEXT:    vpermpd $216, {{[-0-9]+}}(%r{{[sb]}}p), %ymm1 # 32-byte Folded Reload
-; AVX2-ONLY-NEXT:    # ymm1 = mem[0,2,1,3]
-; AVX2-ONLY-NEXT:    vmovaps %ymm1, 160(%rdx)
-; AVX2-ONLY-NEXT:    vpermpd $216, {{[-0-9]+}}(%r{{[sb]}}p), %ymm1 # 32-byte Folded Reload
-; AVX2-ONLY-NEXT:    # ymm1 = mem[0,2,1,3]
-; AVX2-ONLY-NEXT:    vmovaps %ymm1, 64(%rdx)
-; AVX2-ONLY-NEXT:    vpermpd $216, {{[-0-9]+}}(%r{{[sb]}}p), %ymm1 # 32-byte Folded Reload
-; AVX2-ONLY-NEXT:    # ymm1 = mem[0,2,1,3]
-; AVX2-ONLY-NEXT:    vmovaps %ymm1, 96(%rdx)
-; AVX2-ONLY-NEXT:    vpermpd {{.*#+}} ymm0 = ymm0[0,2,1,3]
-; AVX2-ONLY-NEXT:    vmovaps %ymm0, (%rdx)
+; AVX2-ONLY-NEXT:    vmovups %ymm0, {{[-0-9]+}}(%r{{[sb]}}p) # 32-byte Spill
+; AVX2-ONLY-NEXT:    vmovaps 672(%rdi), %ymm0
+; AVX2-ONLY-NEXT:    vmovaps 640(%rdi), %ymm2
+; AVX2-ONLY-NEXT:    vunpcklpd {{.*#+}} ymm6 = ymm2[0],ymm0[0],ymm2[2],ymm0[2]
+; AVX2-ONLY-NEXT:    vunpckhpd {{.*#+}} ymm0 = ymm2[1],ymm0[1],ymm2[3],ymm0[3]
+; AVX2-ONLY-NEXT:    vmovups %ymm0, {{[-0-9]+}}(%r{{[sb]}}p) # 32-byte Spill
+; AVX2-ONLY-NEXT:    vmovaps 864(%rdi), %ymm0
+; AVX2-ONLY-NEXT:    vmovaps 832(%rdi), %ymm2
+; AVX2-ONLY-NEXT:    vunpcklpd {{.*#+}} ymm8 = ymm2[0],ymm0[0],ymm2[2],ymm0[2]
+; AVX2-ONLY-NEXT:    vunpckhpd {{.*#+}} ymm0 = ymm2[1],ymm0[1],ymm2[3],ymm0[3]
+; AVX2-ONLY-NEXT:    vmovups %ymm0, {{[-0-9]+}}(%r{{[sb]}}p) # 32-byte Spill
+; AVX2-ONLY-NEXT:    vmovaps 800(%rdi), %ymm0
+; AVX2-ONLY-NEXT:    vmovaps 768(%rdi), %ymm2
+; AVX2-ONLY-NEXT:    vunpcklpd {{.*#+}} ymm3 = ymm2[0],ymm0[0],ymm2[2],ymm0[2]
+; AVX2-ONLY-NEXT:    vunpckhpd {{.*#+}} ymm11 = ymm2[1],ymm0[1],ymm2[3],ymm0[3]
+; AVX2-ONLY-NEXT:    vmovaps 992(%rdi), %ymm2
+; AVX2-ONLY-NEXT:    vmovaps 960(%rdi), %ymm4
+; AVX2-ONLY-NEXT:    vunpcklpd {{.*#+}} ymm5 = ymm4[0],ymm2[0],ymm4[2],ymm2[2]
+; AVX2-ONLY-NEXT:    vunpckhpd {{.*#+}} ymm9 = ymm4[1],ymm2[1],ymm4[3],ymm2[3]
+; AVX2-ONLY-NEXT:    vmovaps 928(%rdi), %ymm2
+; AVX2-ONLY-NEXT:    vmovaps 896(%rdi), %ymm4
+; AVX2-ONLY-NEXT:    vunpcklpd {{.*#+}} ymm1 = ymm4[0],ymm2[0],ymm4[2],ymm2[2]
+; AVX2-ONLY-NEXT:    vunpckhpd {{.*#+}} ymm7 = ymm4[1],ymm2[1],ymm4[3],ymm2[3]
+; AVX2-ONLY-NEXT:    vmovaps 64(%rdi), %ymm12
+; AVX2-ONLY-NEXT:    vmovaps 96(%rdi), %ymm15
+; AVX2-ONLY-NEXT:    vunpcklpd {{.*#+}} ymm4 = ymm12[0],ymm15[0],ymm12[2],ymm15[2]
+; AVX2-ONLY-NEXT:    vunpckhpd {{.*#+}} ymm15 = ymm12[1],ymm15[1],ymm12[3],ymm15[3]
+; AVX2-ONLY-NEXT:    vmovaps (%rdi), %ymm12
+; AVX2-ONLY-NEXT:    vmovaps 32(%rdi), %ymm0
+; AVX2-ONLY-NEXT:    vunpcklpd {{.*#+}} ymm2 = ymm12[0],ymm0[0],ymm12[2],ymm0[2]
+; AVX2-ONLY-NEXT:    vunpckhpd {{.*#+}} ymm12 = ymm12[1],ymm0[1],ymm12[3],ymm0[3]
+; AVX2-ONLY-NEXT:    vpermpd {{.*#+}} ymm0 = ymm1[0,2,1,3]
+; AVX2-ONLY-NEXT:    vmovaps %ymm0, 448(%rsi)
+; AVX2-ONLY-NEXT:    vpermpd {{.*#+}} ymm0 = ymm3[0,2,1,3]
+; AVX2-ONLY-NEXT:    vmovaps %ymm0, 384(%rsi)
+; AVX2-ONLY-NEXT:    vpermpd {{.*#+}} ymm0 = ymm6[0,2,1,3]
+; AVX2-ONLY-NEXT:    vmovaps %ymm0, 320(%rsi)
+; AVX2-ONLY-NEXT:    vpermpd {{.*#+}} ymm0 = ymm10[0,2,1,3]
+; AVX2-ONLY-NEXT:    vmovaps %ymm0, 256(%rsi)
 ; AVX2-ONLY-NEXT:    vpermpd {{.*#+}} ymm0 = ymm13[0,2,1,3]
+; AVX2-ONLY-NEXT:    vmovaps %ymm0, 192(%rsi)
+; AVX2-ONLY-NEXT:    vpermpd $216, {{[-0-9]+}}(%r{{[sb]}}p), %ymm0 # 32-byte Folded Reload
+; AVX2-ONLY-NEXT:    # ymm0 = mem[0,2,1,3]
+; AVX2-ONLY-NEXT:    vmovaps %ymm0, 128(%rsi)
+; AVX2-ONLY-NEXT:    vpermpd $216, (%rsp), %ymm0 # 32-byte Folded Reload
+; AVX2-ONLY-NEXT:    # ymm0 = mem[0,2,1,3]
+; AVX2-ONLY-NEXT:    vmovaps %ymm0, 64(%rsi)
+; AVX2-ONLY-NEXT:    vpermpd {{.*#+}} ymm0 = ymm2[0,2,1,3]
+; AVX2-ONLY-NEXT:    vmovaps %ymm0, (%rsi)
+; AVX2-ONLY-NEXT:    vpermpd {{.*#+}} ymm0 = ymm5[0,2,1,3]
+; AVX2-ONLY-NEXT:    vmovaps %ymm0, 480(%rsi)
+; AVX2-ONLY-NEXT:    vpermpd {{.*#+}} ymm0 = ymm8[0,2,1,3]
+; AVX2-ONLY-NEXT:    vmovaps %ymm0, 416(%rsi)
+; AVX2-ONLY-NEXT:    vpermpd {{.*#+}} ymm0 = ymm14[0,2,1,3]
+; AVX2-ONLY-NEXT:    vmovaps %ymm0, 352(%rsi)
+; AVX2-ONLY-NEXT:    vpermpd $216, {{[-0-9]+}}(%r{{[sb]}}p), %ymm0 # 32-byte Folded Reload
+; AVX2-ONLY-NEXT:    # ymm0 = mem[0,2,1,3]
+; AVX2-ONLY-NEXT:    vmovaps %ymm0, 288(%rsi)
+; AVX2-ONLY-NEXT:    vpermpd $216, {{[-0-9]+}}(%r{{[sb]}}p), %ymm0 # 32-byte Folded Reload
+; AVX2-ONLY-NEXT:    # ymm0 = mem[0,2,1,3]
+; AVX2-ONLY-NEXT:    vmovaps %ymm0, 224(%rsi)
+; AVX2-ONLY-NEXT:    vpermpd $216, {{[-0-9]+}}(%r{{[sb]}}p), %ymm0 # 32-byte Folded Reload
+; AVX2-ONLY-NEXT:    # ymm0 = mem[0,2,1,3]
+; AVX2-ONLY-NEXT:    vmovaps %ymm0, 160(%rsi)
+; AVX2-ONLY-NEXT:    vpermpd $216, {{[-0-9]+}}(%r{{[sb]}}p), %ymm0 # 32-byte Folded Reload
+; AVX2-ONLY-NEXT:    # ymm0 = mem[0,2,1,3]
+; AVX2-ONLY-NEXT:    vmovaps %ymm0, 96(%rsi)
+; AVX2-ONLY-NEXT:    vpermpd {{.*#+}} ymm0 = ymm4[0,2,1,3]
+; AVX2-ONLY-NEXT:    vmovaps %ymm0, 32(%rsi)
+; AVX2-ONLY-NEXT:    vpermpd {{.*#+}} ymm0 = ymm7[0,2,1,3]
+; AVX2-ONLY-NEXT:    vmovaps %ymm0, 448(%rdx)
+; AVX2-ONLY-NEXT:    vpermpd {{.*#+}} ymm0 = ymm9[0,2,1,3]
+; AVX2-ONLY-NEXT:    vmovaps %ymm0, 480(%rdx)
+; AVX2-ONLY-NEXT:    vpermpd {{.*#+}} ymm0 = ymm11[0,2,1,3]
+; AVX2-ONLY-NEXT:    vmovaps %ymm0, 384(%rdx)
+; AVX2-ONLY-NEXT:    vpermpd $216, {{[-0-9]+}}(%r{{[sb]}}p), %ymm0 # 32-byte Folded Reload
+; AVX2-ONLY-NEXT:    # ymm0 = mem[0,2,1,3]
+; AVX2-ONLY-NEXT:    vmovaps %ymm0, 416(%rdx)
+; AVX2-ONLY-NEXT:    vpermpd $216, {{[-0-9]+}}(%r{{[sb]}}p), %ymm0 # 32-byte Folded Reload
+; AVX2-ONLY-NEXT:    # ymm0 = mem[0,2,1,3]
+; AVX2-ONLY-NEXT:    vmovaps %ymm0, 320(%rdx)
+; AVX2-ONLY-NEXT:    vpermpd $216, {{[-0-9]+}}(%r{{[sb]}}p), %ymm0 # 32-byte Folded Reload
+; AVX2-ONLY-NEXT:    # ymm0 = mem[0,2,1,3]
+; AVX2-ONLY-NEXT:    vmovaps %ymm0, 352(%rdx)
+; AVX2-ONLY-NEXT:    vpermpd $216, {{[-0-9]+}}(%r{{[sb]}}p), %ymm0 # 32-byte Folded Reload
+; AVX2-ONLY-NEXT:    # ymm0 = mem[0,2,1,3]
+; AVX2-ONLY-NEXT:    vmovaps %ymm0, 256(%rdx)
+; AVX2-ONLY-NEXT:    vpermpd $216, {{[-0-9]+}}(%r{{[sb]}}p), %ymm0 # 32-byte Folded Reload
+; AVX2-ONLY-NEXT:    # ymm0 = mem[0,2,1,3]
+; AVX2-ONLY-NEXT:    vmovaps %ymm0, 288(%rdx)
+; AVX2-ONLY-NEXT:    vpermpd $216, {{[-0-9]+}}(%r{{[sb]}}p), %ymm0 # 32-byte Folded Reload
+; AVX2-ONLY-NEXT:    # ymm0 = mem[0,2,1,3]
+; AVX2-ONLY-NEXT:    vmovaps %ymm0, 192(%rdx)
+; AVX2-ONLY-NEXT:    vpermpd $216, {{[-0-9]+}}(%r{{[sb]}}p), %ymm0 # 32-byte Folded Reload
+; AVX2-ONLY-NEXT:    # ymm0 = mem[0,2,1,3]
+; AVX2-ONLY-NEXT:    vmovaps %ymm0, 224(%rdx)
+; AVX2-ONLY-NEXT:    vpermpd $216, {{[-0-9]+}}(%r{{[sb]}}p), %ymm0 # 32-byte Folded Reload
+; AVX2-ONLY-NEXT:    # ymm0 = mem[0,2,1,3]
+; AVX2-ONLY-NEXT:    vmovaps %ymm0, 128(%rdx)
+; AVX2-ONLY-NEXT:    vpermpd $216, {{[-0-9]+}}(%r{{[sb]}}p), %ymm0 # 32-byte Folded Reload
+; AVX2-ONLY-NEXT:    # ymm0 = mem[0,2,1,3]
+; AVX2-ONLY-NEXT:    vmovaps %ymm0, 160(%rdx)
+; AVX2-ONLY-NEXT:    vpermpd $216, {{[-0-9]+}}(%r{{[sb]}}p), %ymm0 # 32-byte Folded Reload
+; AVX2-ONLY-NEXT:    # ymm0 = mem[0,2,1,3]
+; AVX2-ONLY-NEXT:    vmovaps %ymm0, 64(%rdx)
+; AVX2-ONLY-NEXT:    vpermpd $216, {{[-0-9]+}}(%r{{[sb]}}p), %ymm0 # 32-byte Folded Reload
+; AVX2-ONLY-NEXT:    # ymm0 = mem[0,2,1,3]
+; AVX2-ONLY-NEXT:    vmovaps %ymm0, 96(%rdx)
+; AVX2-ONLY-NEXT:    vpermpd {{.*#+}} ymm0 = ymm12[0,2,1,3]
+; AVX2-ONLY-NEXT:    vmovaps %ymm0, (%rdx)
+; AVX2-ONLY-NEXT:    vpermpd {{.*#+}} ymm0 = ymm15[0,2,1,3]
 ; AVX2-ONLY-NEXT:    vmovaps %ymm0, 32(%rdx)
 ; AVX2-ONLY-NEXT:    addq $424, %rsp # imm = 0x1A8
 ; AVX2-ONLY-NEXT:    vzeroupper

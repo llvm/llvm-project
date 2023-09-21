@@ -302,18 +302,16 @@ namespace llvm {
     /// be set and the runtime size will be a positive integer multiple of the
     /// base size.
     TypeSize getSizeInBits() const {
-      switch (SimpleTy) {
-      default:
-        switch (SimpleTy) {
-        default:
-          llvm_unreachable("getSizeInBits called on extended MVT.");
-
+      static constexpr TypeSize SizeTable[] = {
 #define GET_VT_ATTR(Ty, N, Sz, Any, Int, FP, Vec, Sc)                          \
-  case Ty:                                                                     \
-    return (Sc ? TypeSize::Scalable(Sz) : TypeSize::Fixed(Sz));
+  TypeSize(Sz, Sc || Ty == aarch64svcount /* FIXME: Not in the td. */),
 #include "llvm/CodeGen/GenVT.inc"
 #undef GET_VT_ATTR
-        }
+      };
+
+      switch (SimpleTy) {
+      case INVALID_SIMPLE_VALUE_TYPE:
+        llvm_unreachable("getSizeInBits called on extended MVT.");
       case Other:
         llvm_unreachable("Value type is non-standard value, Other.");
       case iPTR:
@@ -329,8 +327,9 @@ namespace llvm {
                          "in codegen and has no size");
       case Metadata:
         llvm_unreachable("Value type is metadata.");
-      case aarch64svcount: // FIXME: Not in the td.
-        return TypeSize::Scalable(16);
+      default:
+        assert(SimpleTy < VALUETYPE_SIZE && "Unexpected value type!");
+        return SizeTable[SimpleTy - FIRST_VALUETYPE];
       }
     }
 

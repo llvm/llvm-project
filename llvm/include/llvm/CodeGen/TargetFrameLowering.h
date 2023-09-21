@@ -102,6 +102,10 @@ public:
   ///
   Align getStackAlign() const { return StackAlignment; }
 
+  /// getStackThreshold - Return the maximum stack size
+  ///
+  virtual uint64_t getStackThreshold() const { return UINT_MAX; }
+
   /// alignSPAdjust - This method aligns the stack adjustment to the correct
   /// alignment.
   ///

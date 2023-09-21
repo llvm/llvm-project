@@ -1,4 +1,4 @@
-// RUN: llvm-mc -arch=amdgcn -mcpu=gfx1100 -show-encoding %s | FileCheck -check-prefix=GFX11 %s
+// RUN: llvm-mc -triple=amdgcn -mcpu=gfx1100 -show-encoding %s | FileCheck -check-prefix=GFX11 %s
 
 lds_direct_load v1 wait_vdst:15
 // GFX11: lds_direct_load v1 wait_vdst:15  ; encoding: [0x01,0x00,0x1f,0xce]

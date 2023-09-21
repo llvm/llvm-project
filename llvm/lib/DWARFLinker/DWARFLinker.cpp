@@ -1587,51 +1587,25 @@ unsigned DWARFLinker::DIECloner::cloneAttribute(
   return 0;
 }
 
-static bool isObjCSelector(StringRef Name) {
-  return Name.size() > 2 && (Name[0] == '-' || Name[0] == '+') &&
-         (Name[1] == '[');
-}
-
 void DWARFLinker::DIECloner::addObjCAccelerator(CompileUnit &Unit,
                                                 const DIE *Die,
                                                 DwarfStringPoolEntryRef Name,
                                                 OffsetsStringPool &StringPool,
                                                 bool SkipPubSection) {
-  assert(isObjCSelector(Name.getString()) && "not an objc selector");
-  // Objective C method or class function.
-  // "- [Class(Category) selector :withArg ...]"
-  StringRef ClassNameStart(Name.getString().drop_front(2));
-  size_t FirstSpace = ClassNameStart.find(' ');
-  if (FirstSpace == StringRef::npos)
+  std::optional<ObjCSelectorNames> Names =
+      getObjCNamesIfSelector(Name.getString());
+  if (!Names)
     return;
-
-  StringRef SelectorStart(ClassNameStart.data() + FirstSpace + 1);
-  if (!SelectorStart.size())
-    return;
-
-  StringRef Selector(SelectorStart.data(), SelectorStart.size() - 1);
-  Unit.addNameAccelerator(Die, StringPool.getEntry(Selector), SkipPubSection);
-
-  // Add an entry for the class name that points to this
-  // method/class function.
-  StringRef ClassName(ClassNameStart.data(), FirstSpace);
-  Unit.addObjCAccelerator(Die, StringPool.getEntry(ClassName), SkipPubSection);
-
-  if (ClassName[ClassName.size() - 1] == ')') {
-    size_t OpenParens = ClassName.find('(');
-    if (OpenParens != StringRef::npos) {
-      StringRef ClassNameNoCategory(ClassName.data(), OpenParens);
-      Unit.addObjCAccelerator(Die, StringPool.getEntry(ClassNameNoCategory),
-                              SkipPubSection);
-
-      std::string MethodNameNoCategory(Name.getString().data(), OpenParens + 2);
-      // FIXME: The missing space here may be a bug, but
-      //        dsymutil-classic also does it this way.
-      MethodNameNoCategory.append(std::string(SelectorStart));
-      Unit.addNameAccelerator(Die, StringPool.getEntry(MethodNameNoCategory),
-                              SkipPubSection);
-    }
-  }
+  Unit.addNameAccelerator(Die, StringPool.getEntry(Names->Selector),
+                          SkipPubSection);
+  Unit.addObjCAccelerator(Die, StringPool.getEntry(Names->ClassName),
+                          SkipPubSection);
+  if (Names->ClassNameNoCategory)
+    Unit.addObjCAccelerator(
+        Die, StringPool.getEntry(*Names->ClassNameNoCategory), SkipPubSection);
+  if (Names->MethodNameNoCategory)
+    Unit.addNameAccelerator(
+        Die, StringPool.getEntry(*Names->MethodNameNoCategory), SkipPubSection);
 }
 
 static bool
@@ -1781,7 +1755,7 @@ DIE *DWARFLinker::DIECloner::cloneDIE(const DWARFDie &InputDIE,
       Unit.addNameAccelerator(Die, AttrInfo.Name,
                               Tag == dwarf::DW_TAG_inlined_subroutine);
     }
-    if (AttrInfo.Name && isObjCSelector(AttrInfo.Name.getString()))
+    if (AttrInfo.Name)
       addObjCAccelerator(Unit, Die, AttrInfo.Name, DebugStrPool,
                          /* SkipPubSection =*/true);
 

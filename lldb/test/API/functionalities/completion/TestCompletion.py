@@ -235,18 +235,12 @@ class CommandLineCompletionTestCase(TestBase):
     def test_log_dir(self):
         # Complete our source directory.
         src_dir = os.path.dirname(os.path.realpath(__file__))
-        self.complete_from_to(
-            "log enable lldb expr -f " + src_dir,
-            [src_dir + os.sep],
-            turn_off_re_match=True,
-        )
+        self.complete_from_to("log enable lldb expr -f " + src_dir, [src_dir + os.sep])
 
     # <rdar://problem/11052829>
     def test_infinite_loop_while_completing(self):
         """Test that 'process print hello\' completes to itself and does not infinite loop."""
-        self.complete_from_to(
-            "process print hello\\", "process print hello\\", turn_off_re_match=True
-        )
+        self.complete_from_to("process print hello\\", "process print hello\\")
 
     def test_watchpoint_co(self):
         """Test that 'watchpoint co' completes to 'watchpoint command '."""
@@ -622,6 +616,21 @@ class CommandLineCompletionTestCase(TestBase):
     def test_command_unalias(self):
         self.complete_from_to("command unalias ima", "command unalias image")
 
+    def test_command_aliases(self):
+        self.runCmd("command alias brkpt breakpoint")
+        # Exact matches are chosen if possible, even if there are longer
+        # completions we could use.
+        self.complete_from_to("b", "b ")
+        # Aliases are included in possible completions.
+        self.complete_from_to("br", ["breakpoint", "brkpt"])
+        # An alias can be the chosen completion.
+        self.complete_from_to("brk", "brkpt")
+
+        # The list can contain only aliases if there's no built-ins to match.
+        self.runCmd("command alias test_1 breakpoint")
+        self.runCmd("command alias test_2 breakpoint")
+        self.complete_from_to("test_", ["test_1", "test_2"])
+
     def test_completion_description_commands(self):
         """Test descriptions of top-level command completions"""
         self.check_completion_with_desc(
@@ -707,9 +716,7 @@ class CommandLineCompletionTestCase(TestBase):
         self.build()
         self.dbg.CreateTarget(self.getBuildArtifact("a.out"))
         self.complete_from_to(
-            "breakpoint set -n Fo",
-            "breakpoint set -n Foo::Bar(int,\\ int)",
-            turn_off_re_match=True,
+            "breakpoint set -n Fo", "breakpoint set -n Foo::Bar(int,\\ int)"
         )
         # No completion for Qu because the candidate is
         # (anonymous namespace)::Quux().
@@ -769,7 +776,7 @@ class CommandLineCompletionTestCase(TestBase):
         # complete with prefix '$'
         self.completions_match("register read $rb", ["$rbx", "$rbp"])
         self.completions_match("register read $ra", ["$rax"])
-        self.complete_from_to("register read rax $", ["\$rax", "\$rbx", "\$rcx"])
+        self.complete_from_to("register read rax $", ["$rax", "$rbx", "$rcx"])
         self.complete_from_to("register read $rax ", ["rax", "rbx", "rcx"])
 
         # test cases for register write

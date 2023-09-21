@@ -247,6 +247,7 @@ struct Config {
   bool ltoDebugPassManager;
   bool ltoEmitAsm;
   bool ltoUniqueBasicBlockSectionNames;
+  bool ltoValidateAllVtablesHaveTypeInfos;
   bool ltoWholeProgramVisibility;
   bool mergeArmExidx;
   bool mipsN32Abi = false;
@@ -341,7 +342,7 @@ struct Config {
   uint64_t zStackSize;
   unsigned ltoPartitions;
   unsigned ltoo;
-  llvm::CodeGenOpt::Level ltoCgo;
+  llvm::CodeGenOptLevel ltoCgo;
   unsigned optimize;
   StringRef thinLTOJobs;
   unsigned timeTraceGranularity;
@@ -475,6 +476,15 @@ struct Ctx {
   std::atomic<bool> hasTlsIe{false};
   // True if we need to reserve two .got entries for local-dynamic TLS model.
   std::atomic<bool> needsTlsLd{false};
+  // True if all native vtable symbols have corresponding type info symbols
+  // during LTO.
+  bool ltoAllVtablesHaveTypeInfos;
+
+  // Each symbol assignment and DEFINED(sym) reference is assigned an increasing
+  // order. Each DEFINED(sym) evaluation checks whether the reference happens
+  // before a possible `sym = expr;`.
+  unsigned scriptSymOrderCounter = 1;
+  llvm::DenseMap<const Symbol *, unsigned> scriptSymOrder;
 
   void reset();
 

@@ -1,5 +1,5 @@
-! RUN: llvm-mc %s -arch=sparc   -show-encoding | FileCheck %s
-! RUN: llvm-mc %s -arch=sparcv9 -show-encoding | FileCheck %s
+! RUN: llvm-mc %s -triple=sparc   -show-encoding | FileCheck %s
+! RUN: llvm-mc %s -triple=sparcv9 -show-encoding | FileCheck %s
 
 ! Section A.3 Synthetic Instructions
         ! CHECK: cmp %g1, %g2                     ! encoding: [0x80,0xa0,0x40,0x02]
@@ -169,8 +169,8 @@
 ! The following tests exercise 'set' in such a way that its output differs
 ! depending on whether targeting V8 or V9.
 !
-! RUN: llvm-mc %s -arch=sparc   -show-encoding | FileCheck %s --check-prefix=V8
-! RUN: llvm-mc %s -arch=sparcv9 -show-encoding | FileCheck %s --check-prefix=V9
+! RUN: llvm-mc %s -triple=sparc   -show-encoding | FileCheck %s --check-prefix=V8
+! RUN: llvm-mc %s -triple=sparcv9 -show-encoding | FileCheck %s --check-prefix=V9
 
         ! V8: mov        -1, %o1              ! encoding: [0x92,0x10,0x3f,0xff]
         ! V9: sethi %hi(-1), %o1              ! encoding: [0x13,0b00AAAAAA,A,A]

@@ -19,7 +19,7 @@ skipped while still allowing correct code generation call a function to
 check the opt-bisect limit before performing optimizations.  Passes which
 either must be run or do not modify the IR do not perform this check and are
 therefore never skipped.  Generally, this means analysis passes, passes
-that are run at CodeGenOpt::None and passes which are required for register
+that are run at CodeGenOptLevel::None and passes which are required for register
 allocation.
 
 The -opt-bisect-limit option can be used with any tool, including front ends

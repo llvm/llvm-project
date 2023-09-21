@@ -32,7 +32,7 @@ module {
         ins(%C, %6 : tensor<?xf32>, tensor<?x?xf32>)
         outs(%D : tensor<?x?xf32>) {
     ^bb0(%arg2: f32, %arg3: f32, %arg4: f32):
-      %16 = arith.maxf %arg3, %cst : f32
+      %16 = arith.maximumf %arg3, %cst : f32
       %17 = arith.cmpf ogt, %arg2, %cst : f32
       %18 = arith.select %17, %cst, %16 : f32
       linalg.yield %18 : f32
@@ -91,7 +91,7 @@ module {
         ins(%C, %6 : tensor<?xf32>, tensor<?x?xf32>)
         outs(%D : tensor<?x?xf32>) {
     ^bb0(%arg2: f32, %arg3: f32, %arg4: f32):
-      %16 = arith.maxf %arg3, %cst : f32
+      %16 = arith.maximumf %arg3, %cst : f32
       %17 = arith.cmpf ogt, %arg2, %cst : f32
       %18 = arith.select %17, %cst, %16 : f32
       linalg.yield %18 : f32

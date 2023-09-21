@@ -1,7 +1,7 @@
-; RUN: llc -march=amdgcn -verify-machineinstrs < %s | FileCheck -check-prefix=GCN %s
+; RUN: llc -mtriple=amdgcn -verify-machineinstrs < %s | FileCheck -check-prefix=GCN %s
 ; RUN: llc -mtriple=amdgcn--amdpal -mcpu=gfx900 -filetype=obj -o %t.o < %s && llvm-readobj -r %t.o | FileCheck --check-prefix=ELF %s
 
-; RUN: llc -global-isel -march=amdgcn -verify-machineinstrs < %s | FileCheck -check-prefix=GCN %s
+; RUN: llc -global-isel -mtriple=amdgcn -verify-machineinstrs < %s | FileCheck -check-prefix=GCN %s
 ; RUN: llc -global-isel -mtriple=amdgcn--amdpal -mcpu=gfx900 -filetype=obj -o %t.o < %s && llvm-readobj -r %t.o | FileCheck --check-prefix=ELF %s
 
 ; GCN-LABEL: {{^}}ps_main:

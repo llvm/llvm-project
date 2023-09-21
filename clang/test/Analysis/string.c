@@ -71,6 +71,7 @@ void clang_analyzer_eval(int);
 int scanf(const char *restrict format, ...);
 void *malloc(size_t);
 void free(void *);
+void *memcpy(void *dest, const void *src, size_t n);
 
 //===----------------------------------------------------------------------===
 // strlen()
@@ -1665,5 +1666,69 @@ void strcpy_no_overflow_2(char *y) {
 void strcpy_no_overflow_2(char *y) {
   char x[3];
   strcpy(x, "12\0");
+}
+#endif
+
+#ifndef SUPPRESS_OUT_OF_BOUND
+void testStrcpyDestinationWritableFirstByte(void) {
+  char dst[10];
+  char *p = dst - 8;
+  strcpy(p, "src"); // expected-warning {{String copy function overflows the destination buffer}}
+}
+
+void CWE124_Buffer_Underwrite__malloc_char_cpy() {
+  char * dataBuffer = (char *)malloc(100*sizeof(char));
+  if (dataBuffer == NULL) return;
+  memset(dataBuffer, 'A', 100-1);
+  dataBuffer[100-1] = '\0';
+  char * data = dataBuffer - 8;
+  char source[100];
+  memset(source, 'C', 100-1); // fill with 'C's
+  source[100-1] = '\0'; // null terminate
+  strcpy(data, source); // expected-warning {{String copy function overflows the destination buffer}}
+  free(dataBuffer);
+}
+#endif
+
+#ifndef SUPPRESS_OUT_OF_BOUND
+void testStrncpyDestinationWritableFirstByte(void) {
+  char source[100];
+  use_string(source); // escape
+  char buf[100];
+  char *p = buf - 8;
+  strncpy(p, source, 100-1); // expected-warning {{String copy function overflows the destination buffer}}
+}
+
+void CWE124_Buffer_Underwrite__malloc_char_ncpy() {
+  char * dataBuffer = (char *)malloc(100*sizeof(char));
+  if (dataBuffer == 0) return;
+  memset(dataBuffer, 'A', 100-1);
+  dataBuffer[100-1] = '\0';
+  char *data = dataBuffer - 8;
+
+  char source[100];
+  memset(source, 'C', 100-1); // fill with 'C's
+  source[100-1] = '\0'; // null terminate
+  strncpy(data, source, 100-1); // expected-warning {{String copy function overflows the destination buffer}}
+  data[100-1] = '\0'; // null terminate
+  free(dataBuffer);
+}
+#endif
+
+#ifndef SUPPRESS_OUT_OF_BOUND
+void CWE124_Buffer_Underwrite__malloc_char_memcpy() {
+  char * dataBuffer = (char *)malloc(100*sizeof(char));
+  if (dataBuffer == NULL) return;
+  memset(dataBuffer, 'A', 100-1);
+  dataBuffer[100-1] = '\0';
+  char *data = dataBuffer - 8;
+
+  char source[100];
+  memset(source, 'C', 100-1); // fill with 'C's
+  source[100-1] = '\0'; // null terminate
+
+  memcpy(data, source, 100*sizeof(char)); // expected-warning {{Memory copy function overflows the destination buffer}}
+  data[100-1] = '\0';
+  free(dataBuffer);
 }
 #endif

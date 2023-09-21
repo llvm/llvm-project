@@ -418,3 +418,51 @@ template<typename T> concept A = true;
 template<typename T> struct X { A<T> auto f(); };
 template<typename T> A<T> auto X<T>::f() {}
 }
+
+namespace GH65810 {
+template<typename Param>
+concept TrivialConcept =
+requires(Param param) {
+  (void)param;
+};
+
+template <typename T>
+struct Base {
+  class InnerClass;
+};
+
+template <typename T>
+class Base<T>::InnerClass {
+  template <typename Param>
+    requires TrivialConcept<Param>
+    int func(Param param) const;
+};
+
+template <typename T>
+template <typename Param>
+requires TrivialConcept<Param>
+int Base<T>::InnerClass::func(Param param) const {
+  return 0;
+}
+
+template<typename T>
+struct Outermost {
+  struct Middle {
+    template<typename U>
+    struct Innermost {
+      template <typename Param>
+        requires TrivialConcept<Param>
+        int func(Param param) const;
+    };
+  };
+};
+
+template <typename T>
+template <typename U>
+template <typename Param>
+requires TrivialConcept<Param>
+int Outermost<T>::Middle::Innermost<U>::func(Param param) const {
+  return 0;
+}
+
+} // namespace GH65810

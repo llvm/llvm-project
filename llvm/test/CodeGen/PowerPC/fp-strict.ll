@@ -90,9 +90,9 @@ define <4 x float> @fadd_v4f32(<4 x float> %vf1, <4 x float> %vf2) #0 {
 ; NOVSX-LABEL: fadd_v4f32:
 ; NOVSX:       # %bb.0:
 ; NOVSX-NEXT:    addi r3, r1, -32
-; NOVSX-NEXT:    addi r4, r1, -48
 ; NOVSX-NEXT:    stvx v3, 0, r3
-; NOVSX-NEXT:    stvx v2, 0, r4
+; NOVSX-NEXT:    addi r3, r1, -48
+; NOVSX-NEXT:    stvx v2, 0, r3
 ; NOVSX-NEXT:    addi r3, r1, -16
 ; NOVSX-NEXT:    lfs f0, -20(r1)
 ; NOVSX-NEXT:    lfs f1, -36(r1)
@@ -216,9 +216,9 @@ define <4 x float> @fsub_v4f32(<4 x float> %vf1, <4 x float> %vf2) #0 {
 ; NOVSX-LABEL: fsub_v4f32:
 ; NOVSX:       # %bb.0:
 ; NOVSX-NEXT:    addi r3, r1, -32
-; NOVSX-NEXT:    addi r4, r1, -48
 ; NOVSX-NEXT:    stvx v3, 0, r3
-; NOVSX-NEXT:    stvx v2, 0, r4
+; NOVSX-NEXT:    addi r3, r1, -48
+; NOVSX-NEXT:    stvx v2, 0, r3
 ; NOVSX-NEXT:    addi r3, r1, -16
 ; NOVSX-NEXT:    lfs f0, -20(r1)
 ; NOVSX-NEXT:    lfs f1, -36(r1)
@@ -342,9 +342,9 @@ define <4 x float> @fmul_v4f32(<4 x float> %vf1, <4 x float> %vf2) #0 {
 ; NOVSX-LABEL: fmul_v4f32:
 ; NOVSX:       # %bb.0:
 ; NOVSX-NEXT:    addi r3, r1, -32
-; NOVSX-NEXT:    addi r4, r1, -48
 ; NOVSX-NEXT:    stvx v3, 0, r3
-; NOVSX-NEXT:    stvx v2, 0, r4
+; NOVSX-NEXT:    addi r3, r1, -48
+; NOVSX-NEXT:    stvx v2, 0, r3
 ; NOVSX-NEXT:    addi r3, r1, -16
 ; NOVSX-NEXT:    lfs f0, -20(r1)
 ; NOVSX-NEXT:    lfs f1, -36(r1)
@@ -468,9 +468,9 @@ define <4 x float> @fdiv_v4f32(<4 x float> %vf1, <4 x float> %vf2) #0 {
 ; NOVSX-LABEL: fdiv_v4f32:
 ; NOVSX:       # %bb.0:
 ; NOVSX-NEXT:    addi r3, r1, -32
-; NOVSX-NEXT:    addi r4, r1, -48
 ; NOVSX-NEXT:    stvx v3, 0, r3
-; NOVSX-NEXT:    stvx v2, 0, r4
+; NOVSX-NEXT:    addi r3, r1, -48
+; NOVSX-NEXT:    stvx v2, 0, r3
 ; NOVSX-NEXT:    addi r3, r1, -16
 ; NOVSX-NEXT:    lfs f0, -20(r1)
 ; NOVSX-NEXT:    lfs f1, -36(r1)
@@ -649,10 +649,10 @@ define <4 x float> @fmadd_v4f32(<4 x float> %vf0, <4 x float> %vf1, <4 x float> 
 ; NOVSX-LABEL: fmadd_v4f32:
 ; NOVSX:       # %bb.0:
 ; NOVSX-NEXT:    addi r3, r1, -32
-; NOVSX-NEXT:    addi r4, r1, -48
 ; NOVSX-NEXT:    stvx v4, 0, r3
+; NOVSX-NEXT:    addi r3, r1, -48
+; NOVSX-NEXT:    stvx v3, 0, r3
 ; NOVSX-NEXT:    addi r3, r1, -64
-; NOVSX-NEXT:    stvx v3, 0, r4
 ; NOVSX-NEXT:    stvx v2, 0, r3
 ; NOVSX-NEXT:    addi r3, r1, -16
 ; NOVSX-NEXT:    lfs f0, -20(r1)
@@ -912,12 +912,12 @@ define <4 x float> @fmsub_v4f32(<4 x float> %vf0, <4 x float> %vf1, <4 x float> 
 ; NOVSX:       # %bb.0:
 ; NOVSX-NEXT:    vspltisb v5, -1
 ; NOVSX-NEXT:    addi r3, r1, -48
-; NOVSX-NEXT:    addi r4, r1, -64
-; NOVSX-NEXT:    stvx v3, 0, r3
-; NOVSX-NEXT:    addi r3, r1, -32
-; NOVSX-NEXT:    stvx v2, 0, r4
 ; NOVSX-NEXT:    vslw v5, v5, v5
+; NOVSX-NEXT:    stvx v3, 0, r3
+; NOVSX-NEXT:    addi r3, r1, -64
 ; NOVSX-NEXT:    vsubfp v4, v5, v4
+; NOVSX-NEXT:    stvx v2, 0, r3
+; NOVSX-NEXT:    addi r3, r1, -32
 ; NOVSX-NEXT:    stvx v4, 0, r3
 ; NOVSX-NEXT:    addi r3, r1, -16
 ; NOVSX-NEXT:    lfs f0, -36(r1)
@@ -1184,17 +1184,17 @@ define <4 x float> @fnmadd_v4f32(<4 x float> %vf0, <4 x float> %vf1, <4 x float>
 ; NOVSX-LABEL: fnmadd_v4f32:
 ; NOVSX:       # %bb.0:
 ; NOVSX-NEXT:    addi r3, r1, -32
-; NOVSX-NEXT:    addi r4, r1, -48
+; NOVSX-NEXT:    vspltisb v5, -1
 ; NOVSX-NEXT:    stvx v4, 0, r3
+; NOVSX-NEXT:    addi r3, r1, -48
+; NOVSX-NEXT:    stvx v3, 0, r3
 ; NOVSX-NEXT:    addi r3, r1, -64
-; NOVSX-NEXT:    stvx v3, 0, r4
+; NOVSX-NEXT:    vslw v3, v5, v5
 ; NOVSX-NEXT:    stvx v2, 0, r3
-; NOVSX-NEXT:    vspltisb v2, -1
 ; NOVSX-NEXT:    addi r3, r1, -16
 ; NOVSX-NEXT:    lfs f0, -20(r1)
 ; NOVSX-NEXT:    lfs f1, -36(r1)
 ; NOVSX-NEXT:    lfs f2, -52(r1)
-; NOVSX-NEXT:    vslw v2, v2, v2
 ; NOVSX-NEXT:    fmadds f0, f2, f1, f0
 ; NOVSX-NEXT:    lfs f1, -40(r1)
 ; NOVSX-NEXT:    lfs f2, -56(r1)
@@ -1212,8 +1212,8 @@ define <4 x float> @fnmadd_v4f32(<4 x float> %vf0, <4 x float> %vf1, <4 x float>
 ; NOVSX-NEXT:    lfs f0, -32(r1)
 ; NOVSX-NEXT:    fmadds f0, f2, f1, f0
 ; NOVSX-NEXT:    stfs f0, -16(r1)
-; NOVSX-NEXT:    lvx v3, 0, r3
-; NOVSX-NEXT:    vsubfp v2, v2, v3
+; NOVSX-NEXT:    lvx v2, 0, r3
+; NOVSX-NEXT:    vsubfp v2, v3, v2
 ; NOVSX-NEXT:    blr
 ;
 ; SPE-LABEL: fnmadd_v4f32:
@@ -1459,12 +1459,12 @@ define <4 x float> @fnmsub_v4f32(<4 x float> %vf0, <4 x float> %vf1, <4 x float>
 ; NOVSX:       # %bb.0:
 ; NOVSX-NEXT:    vspltisb v5, -1
 ; NOVSX-NEXT:    addi r3, r1, -48
-; NOVSX-NEXT:    addi r4, r1, -64
-; NOVSX-NEXT:    stvx v3, 0, r3
-; NOVSX-NEXT:    addi r3, r1, -32
-; NOVSX-NEXT:    stvx v2, 0, r4
 ; NOVSX-NEXT:    vslw v5, v5, v5
+; NOVSX-NEXT:    stvx v3, 0, r3
+; NOVSX-NEXT:    addi r3, r1, -64
 ; NOVSX-NEXT:    vsubfp v4, v5, v4
+; NOVSX-NEXT:    stvx v2, 0, r3
+; NOVSX-NEXT:    addi r3, r1, -32
 ; NOVSX-NEXT:    stvx v4, 0, r3
 ; NOVSX-NEXT:    addi r3, r1, -16
 ; NOVSX-NEXT:    lfs f0, -36(r1)

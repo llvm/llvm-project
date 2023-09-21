@@ -31,21 +31,21 @@
 ;	%E : size(E) = 270336*200000*8 = 432537600000 cast to double*
 ; 	%F : size(F) = 270336*8 = 2162688 cast to i64*
 ; CODEGEN: polly.start:
-; CODEGEN: %malloccall = tail call ptr @malloc(i64 2162688)
-; CODEGEN: %malloccall1 = tail call ptr @malloc(i64 432537600000)
-; CODEGEN: %malloccall2 = tail call ptr @malloc(i64 2162688)
+; CODEGEN: %D = tail call ptr @malloc(i64 2162688)
+; CODEGEN: %E = tail call ptr @malloc(i64 432537600000)
+; CODEGEN: %F = tail call ptr @malloc(i64 2162688)
 ;
 ; Check if there are the 3 expected malloc calls with the right parameters at polly.exiting.
 ; 	Cast to i8* before freeing because malloc give us a i8 and free is waiting for a i8*
 ; CODEGEN: polly.exiting:
-; CODEGEN: tail call void @free(ptr %malloccall)
-; CODEGEN: tail call void @free(ptr %malloccall1)
-; CODEGEN: tail call void @free(ptr %malloccall2)
+; CODEGEN: tail call void @free(ptr %D)
+; CODEGEN: tail call void @free(ptr %E)
+; CODEGEN: tail call void @free(ptr %F)
 ;
 ; Check if the new access for array E is present.
 ; CODEGEN: %polly.access.mul.{{.*}} = mul nsw i64 %polly.indvar, 200000
 ; CODEGEN: %polly.access.add.{{.*}} = add nsw i64 %polly.access.mul.{{.*}}, %
-; CODEGEN: %polly.access.{{.*}} = getelementptr double, ptr %malloccall1, i64 %polly.access.add.{{.*}}
+; CODEGEN: %polly.access.{{.*}} = getelementptr double, ptr %E, i64 %polly.access.add.{{.*}}
 ;
 ; ModuleID = 'create_arrays_heap.ll'
 ;

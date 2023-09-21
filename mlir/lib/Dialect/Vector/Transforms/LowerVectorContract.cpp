@@ -140,7 +140,8 @@ createContractArithOp(Location loc, Value x, Value y, Value acc,
   Value mul;
 
   if (isInt) {
-    if (kind == CombiningKind::MINF || kind == CombiningKind::MAXF)
+    if (kind == CombiningKind::MINF || kind == CombiningKind::MAXF ||
+        kind == CombiningKind::MINIMUMF || kind == CombiningKind::MAXIMUMF)
       // Only valid for floating point types.
       return std::nullopt;
     mul = rewriter.create<arith::MulIOp>(loc, x, y);
@@ -1121,11 +1122,14 @@ public:
 
   LogicalResult matchAndRewrite(vector::OuterProductOp op,
                                 PatternRewriter &rewriter) const override {
+    VectorType resType = op.getResultVectorType();
+    if ((resType.getShape().size() >= 2) && resType.allDimsScalable())
+      return failure();
+
     auto loc = op.getLoc();
 
     VectorType lhsType = op.getOperandVectorTypeLHS();
     VectorType rhsType = dyn_cast<VectorType>(op.getOperandTypeRHS());
-    VectorType resType = op.getResultVectorType();
     Type eltType = resType.getElementType();
     bool isInt = isa<IntegerType, IndexType>(eltType);
     Value acc = op.getAcc();

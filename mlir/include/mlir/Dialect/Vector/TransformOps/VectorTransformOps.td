@@ -122,6 +122,17 @@ def ApplyLowerContractionPatternsOp : Op<Transform_Dialect,
   }];
 }
 
+def ApplyLowerCreateMaskPatternsOp : Op<Transform_Dialect,
+    "apply_patterns.vector.lower_create_mask",
+    [DeclareOpInterfaceMethods<PatternDescriptorOpInterface>]> {
+  let description = [{
+    Indicates that vector create_mask-like operations should be lowered to
+    finer-grained vector primitives.
+  }];
+
+  let assemblyFormat = "attr-dict";
+}
+
 def ApplyLowerMasksPatternsOp : Op<Transform_Dialect,
     "apply_patterns.vector.lower_masks",
     [DeclareOpInterfaceMethods<PatternDescriptorOpInterface>]> {
@@ -279,6 +290,21 @@ def ApplyLowerTransposePatternsOp : Op<Transform_Dialect,
     )
     attr-dict
   }];
+}
+
+def ApplyRewriteNarrowTypePatternsOp : Op<Transform_Dialect,
+    "apply_patterns.vector.rewrite_narrow_types",
+    [DeclareOpInterfaceMethods<PatternDescriptorOpInterface>]> {
+  let description = [{
+    Indicates that vector narrow rewrite operations should be applied.
+
+    This is usually a late step that is run after bufferization as part of the
+    process of lowering to e.g. LLVM or NVVM.
+
+    Warning: these patterns currently only work for little endian targets.
+  }];
+
+  let assemblyFormat = "attr-dict";
 }
 
 def ApplySplitTransferFullPartialPatternsOp : Op<Transform_Dialect,

@@ -39,16 +39,11 @@ class AllocationCheckerHelper {
 public:
   AllocationCheckerHelper(
       const parser::Allocation &alloc, AllocateCheckerInfo &info)
-      : allocateInfo_{info},
-        allocateObject_{std::get<parser::AllocateObject>(alloc.t)},
-        name_{parser::GetLastName(allocateObject_)},
-        original_{name_.symbol ? &name_.symbol->GetUltimate() : nullptr},
-        symbol_{original_ ? &ResolveAssociations(*original_) : nullptr},
-        type_{symbol_ ? symbol_->GetType() : nullptr},
-        allocateShapeSpecRank_{ShapeSpecRank(alloc)},
-        rank_{original_ ? original_->Rank() : 0},
-        allocateCoarraySpecRank_{CoarraySpecRank(alloc)},
-        corank_{symbol_ ? symbol_->Corank() : 0} {}
+      : allocateInfo_{info}, allocateObject_{std::get<parser::AllocateObject>(
+                                 alloc.t)},
+        allocateShapeSpecRank_{ShapeSpecRank(alloc)}, allocateCoarraySpecRank_{
+                                                          CoarraySpecRank(
+                                                              alloc)} {}
 
   bool RunChecks(SemanticsContext &context);
 
@@ -90,14 +85,15 @@ private:
 
   AllocateCheckerInfo &allocateInfo_;
   const parser::AllocateObject &allocateObject_;
-  const parser::Name &name_;
-  const Symbol *original_{nullptr}; // no USE or host association
-  const Symbol *symbol_{nullptr}; // no USE, host, or construct association
-  const DeclTypeSpec *type_{nullptr};
-  const int allocateShapeSpecRank_;
-  const int rank_{0};
-  const int allocateCoarraySpecRank_;
-  const int corank_{0};
+  const int allocateShapeSpecRank_{0};
+  const int allocateCoarraySpecRank_{0};
+  const parser::Name &name_{parser::GetLastName(allocateObject_)};
+  // no USE or host association
+  const Symbol *ultimate_{
+      name_.symbol ? &name_.symbol->GetUltimate() : nullptr};
+  const DeclTypeSpec *type_{ultimate_ ? ultimate_->GetType() : nullptr};
+  const int rank_{ultimate_ ? ultimate_->Rank() : 0};
+  const int corank_{ultimate_ ? ultimate_->Corank() : 0};
   bool hasDeferredTypeParameter_{false};
   bool isUnlimitedPolymorphic_{false};
   bool isAbstract_{false};
@@ -450,11 +446,11 @@ static bool HaveCompatibleLengths(
 }
 
 bool AllocationCheckerHelper::RunChecks(SemanticsContext &context) {
-  if (!symbol_) {
+  if (!ultimate_) {
     CHECK(context.AnyFatalError());
     return false;
   }
-  if (!IsVariableName(*symbol_)) { // C932 pre-requisite
+  if (!IsVariableName(*ultimate_)) { // C932 pre-requisite
     context.Say(name_.source,
         "Name in ALLOCATE statement must be a variable name"_err_en_US);
     return false;
@@ -467,7 +463,7 @@ bool AllocationCheckerHelper::RunChecks(SemanticsContext &context) {
     return false;
   }
   GatherAllocationBasicInfo();
-  if (!IsAllocatableOrPointer(*symbol_)) { // C932
+  if (!IsAllocatableOrObjectPointer(ultimate_)) { // C932
     context.Say(name_.source,
         "Entity in ALLOCATE statement must have the ALLOCATABLE or POINTER attribute"_err_en_US);
     return false;
@@ -539,6 +535,16 @@ bool AllocationCheckerHelper::RunChecks(SemanticsContext &context) {
     }
   }
   // Shape related checks
+  if (ultimate_ && evaluate::IsAssumedRank(*ultimate_)) {
+    context.Say(name_.source,
+        "An assumed-rank object may not appear in an ALLOCATE statement"_err_en_US);
+    return false;
+  }
+  if (ultimate_ && IsAssumedSizeArray(*ultimate_) && context.AnyFatalError()) {
+    // An assumed-size dummy array or RANK(*) case of SELECT RANK will have
+    // already been diagnosed; don't pile on.
+    return false;
+  }
   if (rank_ > 0) {
     if (!hasAllocateShapeSpecList()) {
       // C939
@@ -565,7 +571,7 @@ bool AllocationCheckerHelper::RunChecks(SemanticsContext &context) {
             .Say(name_.source,
                 "The number of shape specifications, when they appear, must match the rank of allocatable object"_err_en_US)
             .Attach(
-                original_->name(), "Declared here with rank %d"_en_US, rank_);
+                ultimate_->name(), "Declared here with rank %d"_en_US, rank_);
         return false;
       }
     }
@@ -584,7 +590,7 @@ bool AllocationCheckerHelper::RunChecks(SemanticsContext &context) {
             "If SOURCE appears, the related expression must be scalar or have the same rank as each allocatable object in ALLOCATE"_err_en_US)
         .Attach(allocateInfo_.sourceExprLoc.value(),
             "SOURCE expression has rank %d"_en_US, allocateInfo_.sourceExprRank)
-        .Attach(symbol_->name(),
+        .Attach(ultimate_->name(),
             "Allocatable object declared here with rank %d"_en_US, rank_);
     return false;
   }
@@ -608,11 +614,11 @@ bool AllocationCheckerHelper::RunChecks(SemanticsContext &context) {
 
 bool AllocationCheckerHelper::RunCoarrayRelatedChecks(
     SemanticsContext &context) const {
-  if (!symbol_) {
+  if (!ultimate_) {
     CHECK(context.AnyFatalError());
     return false;
   }
-  if (evaluate::IsCoarray(*symbol_)) {
+  if (evaluate::IsCoarray(*ultimate_)) {
     if (allocateInfo_.gotTypeSpec) {
       // C938
       if (const DerivedTypeSpec *
@@ -662,8 +668,8 @@ bool AllocationCheckerHelper::RunCoarrayRelatedChecks(
         context
             .Say(name_.source,
                 "Corank of coarray specification in ALLOCATE must match corank of alloctable coarray"_err_en_US)
-            .Attach(
-                symbol_->name(), "Declared here with corank %d"_en_US, corank_);
+            .Attach(ultimate_->name(), "Declared here with corank %d"_en_US,
+                corank_);
         return false;
       }
     }

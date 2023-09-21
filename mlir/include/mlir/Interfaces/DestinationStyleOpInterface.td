@@ -29,7 +29,8 @@ def DestinationStyleOpInterface : OpInterface<"DestinationStyleOpInterface"> {
     ranked tensors and every tensor init is tied to a corresponding tensor
     OpResult in a 1-to-1 fashion. The i-th init tensor is tied to the i-th
     OpResult. The op may not have any additional OpResults. Init operands and
-    their tied OpResults have the same type.
+    their tied OpResults have the same type. Dynamic dimension sizes also match
+    at runtime.
 
     If the op has "buffer semantics", then the input operands are either ranked
     memrefs or other non-tensor/memref types ("scalar" types). Furthermore, the

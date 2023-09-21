@@ -334,6 +334,13 @@ func.func @null() {
   llvm.return
 }
 
+// CHECK-LABEL: @zero
+func.func @zero() {
+  // CHECK: llvm.mlir.zero : i8
+  %0 = llvm.mlir.zero : i8
+  llvm.return
+}
+
 // CHECK-LABEL: @atomic_load
 func.func @atomic_load(%ptr : !llvm.ptr) {
   // CHECK: llvm.load %{{.*}} atomic monotonic {alignment = 4 : i64} : !llvm.ptr -> f32

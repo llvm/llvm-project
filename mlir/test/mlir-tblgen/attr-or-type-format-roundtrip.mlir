@@ -70,6 +70,7 @@ attributes {
 // CHECK: !test.optional_type_string
 // CHECK: !test.optional_type_string
 // CHECK: !test.optional_type_string<"non default">
+// CHECK: !test.optional_type_string<"containing\0A \22escape\22 characters\0F">
 
 func.func private @test_roundtrip_default_parsers_struct(
   !test.no_parser<255, [1, 2, 3, 4, 5], "foobar", 4>
@@ -111,5 +112,6 @@ func.func private @test_roundtrip_default_parsers_struct(
   !test.custom_type_string<"bar" bar>,
   !test.optional_type_string,
   !test.optional_type_string<"default">,
-  !test.optional_type_string<"non default">
+  !test.optional_type_string<"non default">,
+  !test.optional_type_string<"containing\n \"escape\" characters\0f">
 )

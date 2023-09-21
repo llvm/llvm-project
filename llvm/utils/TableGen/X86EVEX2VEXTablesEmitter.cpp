@@ -186,6 +186,9 @@ void X86EVEX2VEXTablesEmitter::run(raw_ostream &OS) {
     // Filter non-X86 instructions.
     if (!Def->isSubClassOf("X86Inst"))
       continue;
+    // _REV instruction should not appear before encoding optimization
+    if (Def->getName().endswith("_REV"))
+      continue;
     RecognizableInstrBase RI(*Inst);
 
     // Add VEX encoded instructions to one of VEXInsts vectors according to

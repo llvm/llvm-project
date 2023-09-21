@@ -158,6 +158,28 @@ AST_MATCHER_P(Stmt, isStatementIdenticalToBoundNode, std::string, ID) {
   return Builder->removeBindings(Predicate);
 }
 
+// A matcher implementation that matches a list of type name regular expressions
+// against a QualType.
+class MatchesAnyListedTypeNameMatcher
+    : public ast_matchers::internal::MatcherInterface<QualType> {
+public:
+  explicit MatchesAnyListedTypeNameMatcher(llvm::ArrayRef<StringRef> NameList);
+  ~MatchesAnyListedTypeNameMatcher() override;
+  bool matches(
+      const QualType &Node, ast_matchers::internal::ASTMatchFinder *Finder,
+      ast_matchers::internal::BoundNodesTreeBuilder *Builder) const override;
+
+private:
+  std::vector<llvm::Regex> NameMatchers;
+};
+
+// Returns a matcher that matches QualType against a list of provided regular.
+inline ::clang::ast_matchers::internal::Matcher<QualType>
+matchesAnyListedTypeName(llvm::ArrayRef<StringRef> NameList) {
+  return ::clang::ast_matchers::internal::makeMatcher(
+      new MatchesAnyListedTypeNameMatcher(NameList));
+}
+
 } // namespace clang::tidy::matchers
 
 #endif // LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_UTILS_MATCHERS_H

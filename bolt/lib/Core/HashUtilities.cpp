@@ -139,7 +139,8 @@ std::string hashBlockLoose(BinaryContext &BC, const BinaryBasicBlock &BB) {
   // instruction opcodes, which is then hashed with std::hash.
   std::set<std::string> Opcodes;
   for (const MCInst &Inst : BB) {
-    if (BC.MIB->isPseudo(Inst))
+    // Skip pseudo instructions and nops.
+    if (BC.MIB->isPseudo(Inst) || BC.MIB->isNoop(Inst))
       continue;
 
     // Ignore unconditional jumps, as they can be added / removed as a result

@@ -2794,6 +2794,41 @@ define hidden void @extract3744(ptr addrspace(1) %in0, ptr addrspace(1) %in1, pt
   ret void
 }
 
+declare i32 @llvm.amdgcn.perm(i32, i32, i32)
+
+define hidden void @extract_perm_3744(ptr addrspace(1) %in0, ptr addrspace(1) %in1, ptr addrspace(1) %out0) {
+; GFX10-LABEL: extract_perm_3744:
+; GFX10:       ; %bb.0:
+; GFX10-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX10-NEXT:    global_load_dword v6, v[0:1], off
+; GFX10-NEXT:    global_load_dword v7, v[2:3], off
+; GFX10-NEXT:    s_waitcnt vmcnt(0)
+; GFX10-NEXT:    v_perm_b32 v0, v6, v7, 0x3070404
+; GFX10-NEXT:    global_store_dword v[4:5], v0, off
+; GFX10-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX9-LABEL: extract_perm_3744:
+; GFX9:       ; %bb.0:
+; GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX9-NEXT:    global_load_dword v6, v[0:1], off
+; GFX9-NEXT:    global_load_dword v7, v[2:3], off
+; GFX9-NEXT:    s_mov_b32 s4, 0x3070404
+; GFX9-NEXT:    s_waitcnt vmcnt(0)
+; GFX9-NEXT:    v_perm_b32 v0, v6, v7, s4
+; GFX9-NEXT:    global_store_dword v[4:5], v0, off
+; GFX9-NEXT:    s_waitcnt vmcnt(0)
+; GFX9-NEXT:    s_setpc_b64 s[30:31]
+  %vec1 = load <4 x i8>, ptr addrspace(1) %in0, align 4
+  %vec2 = load <4 x i8>, ptr addrspace(1) %in1, align 4
+  %cast1 = bitcast <4 x i8> %vec1 to i32
+  %cast2 = bitcast <4 x i8> %vec2 to i32
+  %lo24 = call i32 @llvm.amdgcn.perm(i32 %cast1, i32 %cast1, i32 201523200)
+  %hi8 = call i32 @llvm.amdgcn.perm(i32 %cast2, i32 %cast2, i32 51121164)
+  %res = or i32 %hi8, %lo24
+  store i32 %res, ptr addrspace(1) %out0, align 4
+  ret void
+}
+
 define hidden void @extract1347_v2i16(ptr addrspace(1) %in0, ptr addrspace(1) %in1, ptr addrspace(1) %out0) {
 ; GFX10-LABEL: extract1347_v2i16:
 ; GFX10:       ; %bb.0:

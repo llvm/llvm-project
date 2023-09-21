@@ -812,6 +812,22 @@ Type GEPOp::getResultPtrElementType() {
 // LoadOp
 //===----------------------------------------------------------------------===//
 
+void LoadOp::getEffects(
+    SmallVectorImpl<SideEffects::EffectInstance<MemoryEffects::Effect>>
+        &effects) {
+  effects.emplace_back(MemoryEffects::Read::get(), getAddr());
+  // Volatile operations can have target-specific read-write effects on
+  // memory besides the one referred to by the pointer operand.
+  // Similarly, atomic operations that are monotonic or stricter cause
+  // synchronization that from a language point-of-view, are arbitrary
+  // read-writes into memory.
+  if (getVolatile_() || (getOrdering() != AtomicOrdering::not_atomic &&
+                         getOrdering() != AtomicOrdering::unordered)) {
+    effects.emplace_back(MemoryEffects::Write::get());
+    effects.emplace_back(MemoryEffects::Read::get());
+  }
+}
+
 /// Returns true if the given type is supported by atomic operations. All
 /// integer and float types with limited bit width are supported. Additionally,
 /// depending on the operation pointers may be supported as well.
@@ -931,6 +947,22 @@ static void printLoadType(OpAsmPrinter &printer, Operation *op, Type type,
 //===----------------------------------------------------------------------===//
 // StoreOp
 //===----------------------------------------------------------------------===//
+
+void StoreOp::getEffects(
+    SmallVectorImpl<SideEffects::EffectInstance<MemoryEffects::Effect>>
+        &effects) {
+  effects.emplace_back(MemoryEffects::Write::get(), getAddr());
+  // Volatile operations can have target-specific read-write effects on
+  // memory besides the one referred to by the pointer operand.
+  // Similarly, atomic operations that are monotonic or stricter cause
+  // synchronization that from a language point-of-view, are arbitrary
+  // read-writes into memory.
+  if (getVolatile_() || (getOrdering() != AtomicOrdering::not_atomic &&
+                         getOrdering() != AtomicOrdering::unordered)) {
+    effects.emplace_back(MemoryEffects::Write::get());
+    effects.emplace_back(MemoryEffects::Read::get());
+  }
+}
 
 LogicalResult StoreOp::verify() {
   Type valueType = getValue().getType();
@@ -2018,15 +2050,9 @@ LogicalResult GlobalOp::verify() {
       return emitOpError()
              << "this target extension type cannot be used in a global";
 
-    if (Attribute value = getValueOrNull()) {
-      // Only a single, zero integer attribute (=zeroinitializer) is allowed for
-      // a global value with TargetExtType.
-      // TODO: Replace with 'zeroinitializer' once there is a dedicated
-      // zeroinitializer operation in the LLVM dialect.
-      if (!isa<IntegerAttr>(value) || !isZeroAttribute(value))
-        return emitOpError()
-               << "expected zero value for global with target extension type";
-    }
+    if (Attribute value = getValueOrNull())
+      return emitOpError() << "global with target extension type can only be "
+                              "initialized with zero-initializer";
   }
 
   if (getLinkage() == Linkage::Common) {
@@ -2479,6 +2505,19 @@ Region *LLVMFuncOp::getCallableRegion() {
 }
 
 //===----------------------------------------------------------------------===//
+// ZeroOp.
+//===----------------------------------------------------------------------===//
+
+LogicalResult LLVM::ZeroOp::verify() {
+  if (auto targetExtType = dyn_cast<LLVMTargetExtType>(getType()))
+    if (!targetExtType.hasProperty(LLVM::LLVMTargetExtType::HasZeroInit))
+      return emitOpError()
+             << "target extension type does not support zero-initializer";
+
+  return success();
+}
+
+//===----------------------------------------------------------------------===//
 // ConstantOp.
 //===----------------------------------------------------------------------===//
 
@@ -2522,16 +2561,7 @@ LogicalResult LLVM::ConstantOp::verify() {
     return success();
   }
   if (auto targetExtType = dyn_cast<LLVMTargetExtType>(getType())) {
-    if (!targetExtType.hasProperty(LLVM::LLVMTargetExtType::HasZeroInit))
-      return emitOpError()
-             << "target extension type does not support zero-initializer";
-    // Only a single, zero integer attribute (=zeroinitializer) is allowed for a
-    // global value with TargetExtType.
-    if (!isa<IntegerAttr>(getValue()) || !isZeroAttribute(getValue()))
-      return emitOpError()
-             << "only zero-initializer allowed for target extension types";
-
-    return success();
+    return emitOpError() << "does not support target extension type.";
   }
   if (!llvm::isa<IntegerAttr, ArrayAttr, FloatAttr, ElementsAttr>(getValue()))
     return emitOpError()

@@ -153,6 +153,12 @@ LIBC_INLINE uint64_t fixed_frequency_clock() {
   return nsecs;
 }
 
+/// Terminates execution of the calling thread.
+[[noreturn]] LIBC_INLINE void end_program() {
+  LIBC_INLINE_ASM("exit;" ::: "memory");
+  __builtin_unreachable();
+}
+
 } // namespace gpu
 } // namespace __llvm_libc
 

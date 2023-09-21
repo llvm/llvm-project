@@ -17,22 +17,21 @@ define hidden fastcc void @bar(i32 %arg, ptr %arg1, ptr %arg2, ptr %arg3, ptr %a
 ; CHECK-NEXT:    v_mov_b32_e32 v8, v5
 ; CHECK-NEXT:    v_mov_b32_e32 v7, v4
 ; CHECK-NEXT:    v_mov_b32_e32 v6, v3
-; CHECK-NEXT:    s_cmp_lt_i32 s4, 3
-; CHECK-NEXT:    s_cbranch_scc0 .LBB0_3
+; CHECK-NEXT:    s_branch .LBB0_3
 ; CHECK-NEXT:  ; %bb.1: ; %LeafBlock
 ; CHECK-NEXT:    s_cbranch_scc1 .LBB0_5
 ; CHECK-NEXT:  ; %bb.2: ; %bb7
 ; CHECK-NEXT:    flat_load_dwordx2 v[2:3], v[0:1]
-; CHECK-NEXT:    s_getpc_b64 s[16:17]
-; CHECK-NEXT:    s_add_u32 s16, s16, global@rel32@lo+1948
-; CHECK-NEXT:    s_addc_u32 s17, s17, global@rel32@hi+1956
-; CHECK-NEXT:    v_mov_b32_e32 v5, 0
-; CHECK-NEXT:    v_mov_b32_e32 v0, s16
-; CHECK-NEXT:    v_mov_b32_e32 v1, s17
 ; CHECK-NEXT:    s_getpc_b64 s[18:19]
-; CHECK-NEXT:    s_add_u32 s18, s18, eggs@rel32@lo+4
-; CHECK-NEXT:    s_addc_u32 s19, s19, eggs@rel32@hi+12
-; CHECK-NEXT:    s_setpc_b64 s[18:19]
+; CHECK-NEXT:    s_add_u32 s18, s18, global@rel32@lo+1948
+; CHECK-NEXT:    s_addc_u32 s19, s19, global@rel32@hi+1956
+; CHECK-NEXT:    v_mov_b32_e32 v5, 0
+; CHECK-NEXT:    v_mov_b32_e32 v0, s18
+; CHECK-NEXT:    v_mov_b32_e32 v1, s19
+; CHECK-NEXT:    s_getpc_b64 s[16:17]
+; CHECK-NEXT:    s_add_u32 s16, s16, eggs@rel32@lo+4
+; CHECK-NEXT:    s_addc_u32 s17, s17, eggs@rel32@hi+12
+; CHECK-NEXT:    s_setpc_b64 s[16:17]
 ; CHECK-NEXT:  .LBB0_3: ; %LeafBlock1
 ; CHECK-NEXT:    s_cbranch_scc0 .LBB0_5
 ; CHECK-NEXT:  ; %bb.4: ; %bb8

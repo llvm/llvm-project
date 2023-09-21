@@ -571,7 +571,7 @@ float normf(int __dim,
     ++__a;
   }
 
-  return __ocml_sqrt_f32(__r);
+  return __builtin_sqrtf(__r);
 }
 
 __DEVICE__
@@ -683,7 +683,7 @@ __DEVICE__
 float sinpif(float __x) { return __ocml_sinpi_f32(__x); }
 
 __DEVICE__
-float sqrtf(float __x) { return __ocml_sqrt_f32(__x); }
+float sqrtf(float __x) { return __builtin_sqrtf(__x); }
 
 __DEVICE__
 float tanf(float __x) { return __ocml_tan_f32(__x); }

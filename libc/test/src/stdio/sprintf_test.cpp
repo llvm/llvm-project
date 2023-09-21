@@ -394,8 +394,54 @@ TEST(LlvmLibcSPrintfTest, PointerConv) {
   EXPECT_EQ(written, 10);
   ASSERT_STREQ(buff, "0x1a2b3c4d");
 
+  if constexpr (sizeof(void *) > 4) {
+    written = __llvm_libc::sprintf(buff, "%p", 0x1a2b3c4d5e6f7081);
+    EXPECT_EQ(written, 18);
+    ASSERT_STREQ(buff, "0x1a2b3c4d5e6f7081");
+  }
+
   written = __llvm_libc::sprintf(buff, "%p", buff);
   EXPECT_GT(written, 0);
+
+  // Width tests:
+
+  written = __llvm_libc::sprintf(buff, "%20p", nullptr);
+  EXPECT_EQ(written, 20);
+  ASSERT_STREQ(buff, "           (nullptr)");
+
+  written = __llvm_libc::sprintf(buff, "%20p", 0x1a2b3c4d);
+  EXPECT_EQ(written, 20);
+  ASSERT_STREQ(buff, "          0x1a2b3c4d");
+
+  // Flag tests:
+
+  written = __llvm_libc::sprintf(buff, "%-20p", nullptr);
+  EXPECT_EQ(written, 20);
+  ASSERT_STREQ(buff, "(nullptr)           ");
+
+  written = __llvm_libc::sprintf(buff, "%-20p", 0x1a2b3c4d);
+  EXPECT_EQ(written, 20);
+  ASSERT_STREQ(buff, "0x1a2b3c4d          ");
+
+  // Using the 0 flag is technically undefined, but here we're following the
+  // convention of matching the behavior of %#x.
+  written = __llvm_libc::sprintf(buff, "%020p", 0x1a2b3c4d);
+  EXPECT_EQ(written, 20);
+  ASSERT_STREQ(buff, "0x00000000001a2b3c4d");
+
+  // Precision tests:
+  // These are all undefined behavior. The precision option is undefined for %p.
+
+  // Precision specifies the number of characters for a string conversion.
+  written = __llvm_libc::sprintf(buff, "%.5p", nullptr);
+  EXPECT_EQ(written, 5);
+  ASSERT_STREQ(buff, "(null");
+
+  // Precision specifies the number of digits to be written for %x conversions,
+  // and the "0x" doesn't count as part of the digits.
+  written = __llvm_libc::sprintf(buff, "%.20p", 0x1a2b3c4d);
+  EXPECT_EQ(written, 22);
+  ASSERT_STREQ(buff, "0x0000000000001a2b3c4d");
 }
 
 TEST(LlvmLibcSPrintfTest, OctConv) {

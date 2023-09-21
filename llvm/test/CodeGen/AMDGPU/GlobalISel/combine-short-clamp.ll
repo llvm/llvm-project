@@ -1,7 +1,7 @@
 ; RUN: llc -global-isel -mcpu=tahiti -mtriple=amdgcn-amd-amdhsa -verify-machineinstrs < %s | FileCheck --check-prefixes=GCN,GFX678,GFX6789 %s
 ; RUN: llc -global-isel -mcpu=gfx900 -mtriple=amdgcn-amd-amdhsa -verify-machineinstrs < %s | FileCheck --check-prefixes=GCN,GFX9,GFX6789 %s
-; RUN: llc -global-isel -mcpu=gfx1010 -march=amdgcn -verify-machineinstrs < %s | FileCheck --check-prefixes=GCN,GFX10 %s
-; RUN: llc -global-isel -mcpu=gfx1100 -march=amdgcn -verify-machineinstrs < %s | FileCheck --check-prefixes=GCN,GFX10 %s
+; RUN: llc -global-isel -mcpu=gfx1010 -mtriple=amdgcn -verify-machineinstrs < %s | FileCheck --check-prefixes=GCN,GFX10 %s
+; RUN: llc -global-isel -mcpu=gfx1100 -mtriple=amdgcn -verify-machineinstrs < %s | FileCheck --check-prefixes=GCN,GFX10 %s
 
 declare i64 @llvm.smax.i64(i64, i64)
 declare i64 @llvm.smin.i64(i64, i64)

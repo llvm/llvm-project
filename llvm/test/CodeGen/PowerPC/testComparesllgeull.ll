@@ -65,10 +65,10 @@ define dso_local void @test_llgeull_store(i64 %a, i64 %b) {
 ; CHECK-LABEL: test_llgeull_store:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    subc r3, r3, r4
-; CHECK-NEXT:    addis r5, r2, glob@toc@ha
 ; CHECK-NEXT:    subfe r3, r4, r4
+; CHECK-NEXT:    addis r4, r2, glob@toc@ha
 ; CHECK-NEXT:    addi r3, r3, 1
-; CHECK-NEXT:    std r3, glob@toc@l(r5)
+; CHECK-NEXT:    std r3, glob@toc@l(r4)
 ; CHECK-NEXT:    blr
 entry:
   %cmp = icmp uge i64 %a, %b
@@ -82,10 +82,10 @@ define dso_local void @test_llgeull_sext_store(i64 %a, i64 %b) {
 ; CHECK-LABEL: test_llgeull_sext_store:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    subc r3, r3, r4
-; CHECK-NEXT:    addis r5, r2, glob@toc@ha
 ; CHECK-NEXT:    subfe r3, r4, r4
+; CHECK-NEXT:    addis r4, r2, glob@toc@ha
 ; CHECK-NEXT:    not r3, r3
-; CHECK-NEXT:    std r3, glob@toc@l(r5)
+; CHECK-NEXT:    std r3, glob@toc@l(r4)
 ; CHECK-NEXT:    blr
 entry:
   %cmp = icmp uge i64 %a, %b

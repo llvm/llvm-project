@@ -400,6 +400,12 @@ generic-hardened-mode)
     check-runtimes
     check-abi-list
 ;;
+generic-safe-mode)
+    clean
+    generate-cmake -C "${MONOREPO_ROOT}/libcxx/cmake/caches/Generic-safe-mode.cmake"
+    check-runtimes
+    check-abi-list
+;;
 generic-debug-mode)
     clean
     generate-cmake -C "${MONOREPO_ROOT}/libcxx/cmake/caches/Generic-debug-mode.cmake"

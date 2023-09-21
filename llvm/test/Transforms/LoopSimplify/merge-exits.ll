@@ -103,7 +103,7 @@ define float @merge_branches_profile_metadata(ptr %pTmp1, ptr %peakWeight, i32 %
 ; CHECK-NEXT:    [[T10:%.*]] = fcmp olt float [[T4]], 2.500000e+00
 ; CHECK-NEXT:    [[T12:%.*]] = icmp sgt i64 [[TMP0]], [[INDVARS_IV_NEXT]]
 ; CHECK-NEXT:    [[OR_COND:%.*]] = and i1 [[T10]], [[T12]]
-; CHECK-NEXT:    br i1 [[OR_COND]], label [[BB]], label [[BB1_BB3_CRIT_EDGE:%.*]], !prof [[PROF0]]
+; CHECK-NEXT:    br i1 [[OR_COND]], label [[BB]], label [[BB1_BB3_CRIT_EDGE:%.*]], !prof [[PROF1:![0-9]+]]
 ; CHECK:       bb1.bb3_crit_edge:
 ; CHECK-NEXT:    [[T4_LCSSA:%.*]] = phi float [ [[T4]], [[BB]] ]
 ; CHECK-NEXT:    [[T9_LCSSA:%.*]] = phi float [ [[T9]], [[BB]] ]

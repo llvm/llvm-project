@@ -644,12 +644,12 @@ R"(All available -march extensions for RISC-V
 	zicbom              1.0
 	zicbop              1.0
 	zicboz              1.0
-	zicntr              1.0
+	zicntr              2.0
 	zicsr               2.0
 	zifencei            2.0
 	zihintntl           1.0
 	zihintpause         2.0
-	zihpm               1.0
+	zihpm               2.0
 	zmmul               1.0
 	zawrs               1.0
 	zfh                 1.0

@@ -55,7 +55,9 @@ public:
     return DiagnosedSilenceableFailure::success();
   }
 
-  Attribute getMessage() { return getOperation()->getAttr("message"); }
+  Attribute getMessage() {
+    return getOperation()->getDiscardableAttr("message");
+  }
 
   static ParseResult parse(OpAsmParser &parser, OperationState &state) {
     StringAttr message;
@@ -388,7 +390,7 @@ DiagnosedSilenceableFailure mlir::test::TestEmitRemarkAndEraseOperandOp::apply(
     transform::TransformResults &results, transform::TransformState &state) {
   emitRemark() << getRemark();
   for (Operation *op : state.getPayloadOps(getTarget()))
-    op->erase();
+    rewriter.eraseOp(op);
 
   if (getFailAfterErase())
     return emitSilenceableError() << "silenceable error";
@@ -954,17 +956,20 @@ namespace {
 class TestTypeConverter : public TypeConverter {
 public:
   TestTypeConverter() {
+    addConversion([](Type t) { return t; });
     addConversion([](RankedTensorType type) -> Type {
       return MemRefType::get(type.getShape(), type.getElementType());
     });
-    addSourceMaterialization([&](OpBuilder &builder, Type resultType,
-                                 ValueRange inputs,
-                                 Location loc) -> std::optional<Value> {
+    auto unrealizedCastConverter = [&](OpBuilder &builder, Type resultType,
+                                       ValueRange inputs,
+                                       Location loc) -> std::optional<Value> {
       if (inputs.size() != 1)
         return std::nullopt;
       return builder.create<UnrealizedConversionCastOp>(loc, resultType, inputs)
           .getResult(0);
-    });
+    };
+    addSourceMaterialization(unrealizedCastConverter);
+    addTargetMaterialization(unrealizedCastConverter);
   }
 };
 } // namespace

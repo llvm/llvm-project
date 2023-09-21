@@ -216,7 +216,6 @@ BENCHMARK_CAPTURE(BM_FindRehash,
     ->Arg(TestNumInputs);
 
 // Sorted //
-#if 1
 BENCHMARK_CAPTURE(BM_Find,
                   unordered_set_sorted_uint128,
                   std::unordered_set<__uint128_t, UInt128Hash>{},
@@ -228,7 +227,6 @@ BENCHMARK_CAPTURE(BM_FindRehash,
                   std::unordered_set<__uint128_t, UInt128Hash>{},
                   getSortedTopBitsIntegerInputs<__uint128_t>)
     ->Arg(TestNumInputs);
-#endif
 
 // Sorted //
 BENCHMARK_CAPTURE(

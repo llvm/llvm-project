@@ -89,7 +89,7 @@ namespace Fortran::lower {
 // Fortran::evaluate::Expr are functional values organized like an AST. A
 // Fortran::evaluate::Expr is meant to be moved and cloned. Using the front end
 // tools can often cause copies and extra wrapper classes to be added to any
-// Fortran::evalute::Expr. These values should not be assumed or relied upon to
+// Fortran::evaluate::Expr. These values should not be assumed or relied upon to
 // have an *object* identity. They are deeply recursive, irregular structures
 // built from a large number of classes which do not use inheritance and
 // necessitate a large volume of boilerplate code as a result.

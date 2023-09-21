@@ -508,6 +508,11 @@ void CommandInterpreter::Initialize() {
   if (cmd_obj_sp) {
     AddAlias("history", cmd_obj_sp);
   }
+
+  cmd_obj_sp = GetCommandSPExact("help");
+  if (cmd_obj_sp) {
+    AddAlias("h", cmd_obj_sp);
+  }
 }
 
 void CommandInterpreter::Clear() {
@@ -1227,36 +1232,11 @@ CommandObject *
 CommandInterpreter::GetCommandObject(llvm::StringRef cmd_str,
                                      StringList *matches,
                                      StringList *descriptions) const {
-  CommandObject *command_obj =
-      GetCommandSP(cmd_str, false, true, matches, descriptions).get();
-
-  // If we didn't find an exact match to the command string in the commands,
-  // look in the aliases.
-
-  if (command_obj)
-    return command_obj;
-
-  command_obj = GetCommandSP(cmd_str, true, true, matches, descriptions).get();
-
-  if (command_obj)
-    return command_obj;
-
-  // If there wasn't an exact match then look for an inexact one in just the
-  // commands
-  command_obj = GetCommandSP(cmd_str, false, false, nullptr).get();
-
-  // Finally, if there wasn't an inexact match among the commands, look for an
-  // inexact match in both the commands and aliases.
-
-  if (command_obj) {
-    if (matches)
-      matches->AppendString(command_obj->GetCommandName());
-    if (descriptions)
-      descriptions->AppendString(command_obj->GetHelp());
-    return command_obj;
-  }
-
-  return GetCommandSP(cmd_str, true, false, matches, descriptions).get();
+  // Try to find a match among commands and aliases. Allowing inexact matches,
+  // but perferring exact matches.
+  return GetCommandSP(cmd_str, /*include_aliases=*/true, /*exact=*/false,
+                             matches, descriptions)
+                    .get();
 }
 
 CommandObject *CommandInterpreter::GetUserCommandObject(
@@ -2491,7 +2471,7 @@ PlatformSP CommandInterpreter::GetPlatform(bool prefer_target_platform) {
   return platform_sp;
 }
 
-bool CommandInterpreter::DidProcessStopAbnormally() const {
+bool CommandInterpreter::DidProcessStopAbnormally() {
   auto exe_ctx = GetExecutionContext();
   TargetSP target_sp = exe_ctx.GetTargetSP();
   if (!target_sp)
@@ -2996,10 +2976,22 @@ void CommandInterpreter::FindCommandsForApropos(llvm::StringRef search_word,
                            m_alias_dict);
 }
 
-ExecutionContext CommandInterpreter::GetExecutionContext() const {
-  return !m_overriden_exe_contexts.empty()
-             ? m_overriden_exe_contexts.top()
-             : m_debugger.GetSelectedExecutionContext();
+ExecutionContext CommandInterpreter::GetExecutionContext() {
+  ExecutionContext exe_ctx;
+  if (!m_overriden_exe_contexts.empty()) {
+    // During the course of a command, the target may have replaced the process 
+    // coming in with another.  I fix that here:
+    exe_ctx = m_overriden_exe_contexts.top();
+    // Don't use HasProcessScope, that returns false if there is a process but
+    // it's no longer valid, which is one of the cases we want to catch here.
+    if (exe_ctx.HasTargetScope() && exe_ctx.GetProcessPtr()) {
+      ProcessSP actual_proc_sp = exe_ctx.GetTargetSP()->GetProcessSP();
+      if (actual_proc_sp != exe_ctx.GetProcessSP())
+        m_overriden_exe_contexts.top().SetContext(actual_proc_sp);
+    }
+    return m_overriden_exe_contexts.top();
+  }
+  return m_debugger.GetSelectedExecutionContext();
 }
 
 void CommandInterpreter::OverrideExecutionContext(
@@ -3192,11 +3184,16 @@ void CommandInterpreter::IOHandlerInputComplete(IOHandler &io_handler,
 }
 
 bool CommandInterpreter::IOHandlerInterrupt(IOHandler &io_handler) {
+  // InterruptCommand returns true if this is the first time
+  // we initiate an interrupt for this command.  So we give the
+  // command a chance to handle the interrupt on the first
+  // interrupt, but if that didn't do anything, a second
+  // interrupt will do more work to halt the process/interpreter.
+  if (InterruptCommand()) 
+    return true;
+
   ExecutionContext exe_ctx(GetExecutionContext());
   Process *process = exe_ctx.GetProcessPtr();
-
-  if (InterruptCommand())
-    return true;
 
   if (process) {
     StateType state = process->GetState();

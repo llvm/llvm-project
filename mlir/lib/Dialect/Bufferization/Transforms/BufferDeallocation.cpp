@@ -625,46 +625,6 @@ private:
 // BufferDeallocationPass
 //===----------------------------------------------------------------------===//
 
-struct DefaultAllocationInterface
-    : public bufferization::AllocationOpInterface::ExternalModel<
-          DefaultAllocationInterface, memref::AllocOp> {
-  static std::optional<Operation *> buildDealloc(OpBuilder &builder,
-                                                 Value alloc) {
-    return builder.create<memref::DeallocOp>(alloc.getLoc(), alloc)
-        .getOperation();
-  }
-  static std::optional<Value> buildClone(OpBuilder &builder, Value alloc) {
-    return builder.create<bufferization::CloneOp>(alloc.getLoc(), alloc)
-        .getResult();
-  }
-  static ::mlir::HoistingKind getHoistingKind() {
-    return HoistingKind::Loop | HoistingKind::Block;
-  }
-  static ::std::optional<::mlir::Operation *>
-  buildPromotedAlloc(OpBuilder &builder, Value alloc) {
-    Operation *definingOp = alloc.getDefiningOp();
-    return builder.create<memref::AllocaOp>(
-        definingOp->getLoc(), cast<MemRefType>(definingOp->getResultTypes()[0]),
-        definingOp->getOperands(), definingOp->getAttrs());
-  }
-};
-
-struct DefaultAutomaticAllocationHoistingInterface
-    : public bufferization::AllocationOpInterface::ExternalModel<
-          DefaultAutomaticAllocationHoistingInterface, memref::AllocaOp> {
-  static ::mlir::HoistingKind getHoistingKind() { return HoistingKind::Loop; }
-};
-
-struct DefaultReallocationInterface
-    : public bufferization::AllocationOpInterface::ExternalModel<
-          DefaultAllocationInterface, memref::ReallocOp> {
-  static std::optional<Operation *> buildDealloc(OpBuilder &builder,
-                                                 Value realloc) {
-    return builder.create<memref::DeallocOp>(realloc.getLoc(), realloc)
-        .getOperation();
-  }
-};
-
 /// The actual buffer deallocation pass that inserts and moves dealloc nodes
 /// into the right positions. Furthermore, it inserts additional clones if
 /// necessary. It uses the algorithm described at the top of the file.
@@ -723,16 +683,6 @@ LogicalResult bufferization::deallocateBuffers(Operation *op) {
     return failure();
 
   return success();
-}
-
-void bufferization::registerAllocationOpInterfaceExternalModels(
-    DialectRegistry &registry) {
-  registry.addExtension(+[](MLIRContext *ctx, memref::MemRefDialect *dialect) {
-    memref::AllocOp::attachInterface<DefaultAllocationInterface>(*ctx);
-    memref::AllocaOp::attachInterface<
-        DefaultAutomaticAllocationHoistingInterface>(*ctx);
-    memref::ReallocOp::attachInterface<DefaultReallocationInterface>(*ctx);
-  });
 }
 
 //===----------------------------------------------------------------------===//

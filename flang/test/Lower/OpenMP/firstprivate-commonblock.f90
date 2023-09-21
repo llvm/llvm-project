@@ -1,7 +1,7 @@
 ! RUN: %flang_fc1 -emit-fir -fopenmp -o - %s 2>&1 | FileCheck %s
 
 !CHECK: func.func @_QPfirstprivate_common() {
-!CHECK: %[[val_0:.*]] = fir.address_of(@_QCc) : !fir.ref<!fir.array<8xi8>>
+!CHECK: %[[val_0:.*]] = fir.address_of(@c_) : !fir.ref<!fir.array<8xi8>>
 !CHECK: %[[val_1:.*]] = fir.convert %[[val_0]] : (!fir.ref<!fir.array<8xi8>>) -> !fir.ref<!fir.array<?xi8>>
 !CHECK: %[[val_c0:.*]] = arith.constant 0 : index
 !CHECK: %[[val_2:.*]] = fir.coordinate_of %[[val_1]], %[[val_c0]] : (!fir.ref<!fir.array<?xi8>>, index) -> !fir.ref<i8>

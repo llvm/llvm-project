@@ -93,9 +93,9 @@ public:
   // These three methods are invoked through the  `MyStructProperty` wrapper
   // defined in TestOps.td
   mlir::Attribute asAttribute(mlir::MLIRContext *ctx) const;
-  static mlir::LogicalResult setFromAttr(MyPropStruct &prop,
-                                         mlir::Attribute attr,
-                                         mlir::InFlightDiagnostic *diag);
+  static mlir::LogicalResult
+  setFromAttr(MyPropStruct &prop, mlir::Attribute attr,
+              llvm::function_ref<mlir::InFlightDiagnostic &()> getDiag);
   llvm::hash_code hash() const;
   bool operator==(const MyPropStruct &rhs) const {
     return content == rhs.content;

@@ -1,4 +1,4 @@
-; RUN: llc %s -march=mips -mcpu=mips32r3 -mattr=micromips -filetype=asm \
+; RUN: llc %s -mtriple=mips -mcpu=mips32r3 -mattr=micromips -filetype=asm \
 ; RUN: -relocation-model=pic -O3 -o - | FileCheck %s
 
 ; The purpose of this test is to check whether the CodeGen selects

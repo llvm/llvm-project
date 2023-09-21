@@ -1798,6 +1798,25 @@ TEST_F(StructuralEquivalenceCacheTest, SimpleNonEq) {
       TU, cxxRecordDecl(hasName("B"), unless(isImplicit())))));
 }
 
+TEST_F(StructuralEquivalenceCacheTest, ReturnStmtNonEq) {
+  auto TU = makeTuDecls(
+      R"(
+      bool x(){ return true; }
+      )",
+      R"(
+      bool x(){ return false; }
+      )",
+      Lang_CXX03);
+
+  StructuralEquivalenceContext Ctx(
+      get<0>(TU)->getASTContext(), get<1>(TU)->getASTContext(),
+      NonEquivalentDecls, StructuralEquivalenceKind::Default, false, false);
+
+  auto X = findDeclPair<FunctionDecl>(TU, functionDecl(hasName("x")));
+  EXPECT_FALSE(Ctx.IsEquivalent(X.first->getBody(), X.second->getBody()));
+
+}
+
 TEST_F(StructuralEquivalenceCacheTest, SpecialNonEq) {
   auto TU = makeTuDecls(
       R"(

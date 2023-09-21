@@ -372,6 +372,8 @@ gentbl_filegroup(
     td_file = "mlir/dialects/BufferizationOps.td",
     deps = [
         ":BufferizationOpsPyTdFiles",
+        "//mlir:DestinationStyleOpInterfaceTdFiles",
+        "//mlir:SubsetInsertionOpInterfaceTdFiles",
     ],
 )
 

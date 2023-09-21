@@ -8,6 +8,8 @@ target_include_directories(llvmlibc_rpc_server PUBLIC ${CMAKE_CURRENT_SOURCE_DIR
 # Ignore unsupported clang attributes if we're using GCC.
 target_compile_options(llvmlibc_rpc_server PUBLIC
                        $<$<CXX_COMPILER_ID:GNU>:-Wno-attributes>)
+target_compile_definitions(llvmlibc_rpc_server PUBLIC
+                           LIBC_NAMESPACE=${LIBC_NAMESPACE})
 
 # Install the server and associated header.
 install(FILES ${CMAKE_CURRENT_SOURCE_DIR}/rpc_server.h

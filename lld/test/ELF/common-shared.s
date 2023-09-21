@@ -10,7 +10,7 @@
 # RUN: ld.lld %t1.so %t.o -o %t
 # RUN: llvm-readelf -s %t | FileCheck %s
 
-# CHECK: 16 OBJECT GLOBAL DEFAULT 7 com
+# CHECK: 16 OBJECT GLOBAL DEFAULT [[#]] com
 
 .globl com
 .comm com,1

@@ -63,8 +63,8 @@ protected:
             /*Line=*/1, /*Col=*/1),
         AST->sourceManager(), &PI);
   }
-  const FileEntry *physicalHeader(llvm::StringRef FileName) {
-    return AST->fileManager().getFile(FileName).get();
+  FileEntryRef physicalHeader(llvm::StringRef FileName) {
+    return *AST->fileManager().getOptionalFileRef(FileName);
   };
 };
 
@@ -409,9 +409,10 @@ TEST_F(HeadersForSymbolTest, MainFile) {
   buildAST();
   auto &SM = AST->sourceManager();
   // FIXME: Symbols provided by main file should be treated specially.
-  EXPECT_THAT(headersForFoo(),
-              ElementsAre(physicalHeader("public_complete.h"),
-                          Header(SM.getFileEntryForID(SM.getMainFileID()))));
+  EXPECT_THAT(
+      headersForFoo(),
+      ElementsAre(physicalHeader("public_complete.h"),
+                  Header(*SM.getFileEntryRefForID(SM.getMainFileID()))));
 }
 
 TEST_F(HeadersForSymbolTest, PreferExporterOfPrivate) {

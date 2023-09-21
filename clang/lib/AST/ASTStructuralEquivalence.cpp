@@ -366,6 +366,10 @@ class StmtComparer {
     return true;
   }
 
+  bool IsStmtEquivalent(const CXXBoolLiteralExpr *E1, const CXXBoolLiteralExpr *E2) {
+    return E1->getValue() == E2->getValue();
+  }
+
   /// End point of the traversal chain.
   bool TraverseStmt(const Stmt *S1, const Stmt *S2) { return true; }
 

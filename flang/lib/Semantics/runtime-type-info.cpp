@@ -310,8 +310,11 @@ static SomeExpr StructureExpr(evaluate::StructureConstructor &&x) {
 
 static int GetIntegerKind(const Symbol &symbol) {
   auto dyType{evaluate::DynamicType::From(symbol)};
-  CHECK(dyType && dyType->category() == TypeCategory::Integer);
-  return dyType->kind();
+  CHECK((dyType && dyType->category() == TypeCategory::Integer) ||
+      symbol.owner().context().HasError(symbol));
+  return dyType && dyType->category() == TypeCategory::Integer
+      ? dyType->kind()
+      : symbol.owner().context().GetDefaultKind(TypeCategory::Integer);
 }
 
 // Save a rank-1 array constant of some numeric type as an

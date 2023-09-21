@@ -68,7 +68,7 @@ void genOpenACCConstruct(AbstractConverter &,
                          pft::Evaluation &, const parser::OpenACCConstruct &);
 void genOpenACCDeclarativeConstruct(AbstractConverter &,
                                     Fortran::semantics::SemanticsContext &,
-                                    StatementContext &, pft::Evaluation &,
+                                    StatementContext &,
                                     const parser::OpenACCDeclarativeConstruct &,
                                     AccRoutineInfoMappingList &);
 
@@ -102,6 +102,9 @@ void attachDeclarePreDeallocAction(AbstractConverter &, fir::FirOpBuilder &,
                                    const Fortran::semantics::Symbol &);
 void attachDeclarePostDeallocAction(AbstractConverter &, fir::FirOpBuilder &,
                                     const Fortran::semantics::Symbol &);
+
+void genOpenACCTerminator(fir::FirOpBuilder &, mlir::Operation *,
+                          mlir::Location);
 
 } // namespace lower
 } // namespace Fortran

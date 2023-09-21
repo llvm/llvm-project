@@ -50,7 +50,7 @@ func.func @cl_fma_size1_vector(%a: vector<1xf32>, %b: vector<1xf32>, %c: vector<
   return %0 : vector<1xf32>
 }
 
-// CHECK-LABEL: func @cl_reduction_maxf
+// CHECK-LABEL: func @cl_reduction_maximumf
 //  CHECK-SAME: (%[[V:.+]]: vector<3xf32>, %[[S:.+]]: f32)
 //       CHECK:   %[[S0:.+]] = spirv.CompositeExtract %[[V]][0 : i32] : vector<3xf32>
 //       CHECK:   %[[S1:.+]] = spirv.CompositeExtract %[[V]][1 : i32] : vector<3xf32>
@@ -59,12 +59,12 @@ func.func @cl_fma_size1_vector(%a: vector<1xf32>, %b: vector<1xf32>, %c: vector<
 //       CHECK:   %[[MAX1:.+]] = spirv.CL.fmax %[[MAX0]], %[[S2]]
 //       CHECK:   %[[MAX2:.+]] = spirv.CL.fmax %[[MAX1]], %[[S]]
 //       CHECK:   return %[[MAX2]]
-func.func @cl_reduction_maxf(%v : vector<3xf32>, %s: f32) -> f32 {
-  %reduce = vector.reduction <maxf>, %v, %s : vector<3xf32> into f32
+func.func @cl_reduction_maximumf(%v : vector<3xf32>, %s: f32) -> f32 {
+  %reduce = vector.reduction <maximumf>, %v, %s : vector<3xf32> into f32
   return %reduce : f32
 }
 
-// CHECK-LABEL: func @cl_reduction_minf
+// CHECK-LABEL: func @cl_reduction_minimumf
 //  CHECK-SAME: (%[[V:.+]]: vector<3xf32>, %[[S:.+]]: f32)
 //       CHECK:   %[[S0:.+]] = spirv.CompositeExtract %[[V]][0 : i32] : vector<3xf32>
 //       CHECK:   %[[S1:.+]] = spirv.CompositeExtract %[[V]][1 : i32] : vector<3xf32>
@@ -73,8 +73,8 @@ func.func @cl_reduction_maxf(%v : vector<3xf32>, %s: f32) -> f32 {
 //       CHECK:   %[[MIN1:.+]] = spirv.CL.fmin %[[MIN0]], %[[S2]]
 //       CHECK:   %[[MIN2:.+]] = spirv.CL.fmin %[[MIN1]], %[[S]]
 //       CHECK:   return %[[MIN2]]
-func.func @cl_reduction_minf(%v : vector<3xf32>, %s: f32) -> f32 {
-  %reduce = vector.reduction <minf>, %v, %s : vector<3xf32> into f32
+func.func @cl_reduction_minimumf(%v : vector<3xf32>, %s: f32) -> f32 {
+  %reduce = vector.reduction <minimumf>, %v, %s : vector<3xf32> into f32
   return %reduce : f32
 }
 
@@ -516,7 +516,7 @@ func.func @reduction_mul(%v : vector<3xf32>, %s: f32) -> f32 {
 
 // -----
 
-// CHECK-LABEL: func @reduction_maxf
+// CHECK-LABEL: func @reduction_maximumf
 //  CHECK-SAME: (%[[V:.+]]: vector<3xf32>, %[[S:.+]]: f32)
 //       CHECK:   %[[S0:.+]] = spirv.CompositeExtract %[[V]][0 : i32] : vector<3xf32>
 //       CHECK:   %[[S1:.+]] = spirv.CompositeExtract %[[V]][1 : i32] : vector<3xf32>
@@ -525,14 +525,14 @@ func.func @reduction_mul(%v : vector<3xf32>, %s: f32) -> f32 {
 //       CHECK:   %[[MAX1:.+]] = spirv.GL.FMax %[[MAX0]], %[[S2]]
 //       CHECK:   %[[MAX2:.+]] = spirv.GL.FMax %[[MAX1]], %[[S]]
 //       CHECK:   return %[[MAX2]]
-func.func @reduction_maxf(%v : vector<3xf32>, %s: f32) -> f32 {
-  %reduce = vector.reduction <maxf>, %v, %s : vector<3xf32> into f32
+func.func @reduction_maximumf(%v : vector<3xf32>, %s: f32) -> f32 {
+  %reduce = vector.reduction <maximumf>, %v, %s : vector<3xf32> into f32
   return %reduce : f32
 }
 
 // -----
 
-// CHECK-LABEL: func @reduction_minf
+// CHECK-LABEL: func @reduction_minimumf
 //  CHECK-SAME: (%[[V:.+]]: vector<3xf32>, %[[S:.+]]: f32)
 //       CHECK:   %[[S0:.+]] = spirv.CompositeExtract %[[V]][0 : i32] : vector<3xf32>
 //       CHECK:   %[[S1:.+]] = spirv.CompositeExtract %[[V]][1 : i32] : vector<3xf32>
@@ -541,8 +541,8 @@ func.func @reduction_maxf(%v : vector<3xf32>, %s: f32) -> f32 {
 //       CHECK:   %[[MIN1:.+]] = spirv.GL.FMin %[[MIN0]], %[[S2]]
 //       CHECK:   %[[MIN2:.+]] = spirv.GL.FMin %[[MIN1]], %[[S]]
 //       CHECK:   return %[[MIN2]]
-func.func @reduction_minf(%v : vector<3xf32>, %s: f32) -> f32 {
-  %reduce = vector.reduction <minf>, %v, %s : vector<3xf32> into f32
+func.func @reduction_minimumf(%v : vector<3xf32>, %s: f32) -> f32 {
+  %reduce = vector.reduction <minimumf>, %v, %s : vector<3xf32> into f32
   return %reduce : f32
 }
 

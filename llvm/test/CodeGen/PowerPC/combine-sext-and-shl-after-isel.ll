@@ -139,8 +139,8 @@ false:
 define dso_local i64 @no_extswsli(ptr %base, i32 %index, i1 %flag) {
 ; CHECK-LABEL: no_extswsli:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    andi. r5, r5, 1
 ; CHECK-NEXT:    extsw r4, r4
+; CHECK-NEXT:    andi. r5, r5, 1
 ; CHECK-NEXT:    bc 4, gt, .LBB2_2
 ; CHECK-NEXT:  # %bb.1: # %true
 ; CHECK-NEXT:    sldi r4, r4, 3
@@ -152,8 +152,8 @@ define dso_local i64 @no_extswsli(ptr %base, i32 %index, i1 %flag) {
 ;
 ; CHECK-BE-LABEL: no_extswsli:
 ; CHECK-BE:       # %bb.0: # %entry
-; CHECK-BE-NEXT:    andi. r5, r5, 1
 ; CHECK-BE-NEXT:    extsw r4, r4
+; CHECK-BE-NEXT:    andi. r5, r5, 1
 ; CHECK-BE-NEXT:    bc 4, gt, .LBB2_2
 ; CHECK-BE-NEXT:  # %bb.1: # %true
 ; CHECK-BE-NEXT:    sldi r4, r4, 3

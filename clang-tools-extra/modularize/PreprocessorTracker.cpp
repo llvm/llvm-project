@@ -1292,8 +1292,8 @@ void PreprocessorCallbacks::FileChanged(
     PPTracker.handleHeaderEntry(PP, getSourceLocationFile(PP, Loc));
     break;
   case ExitFile: {
-    const clang::FileEntry *F =
-        PP.getSourceManager().getFileEntryForID(PrevFID);
+    clang::OptionalFileEntryRef F =
+        PP.getSourceManager().getFileEntryRefForID(PrevFID);
     if (F)
       PPTracker.handleHeaderExit(F->getName());
   } break;

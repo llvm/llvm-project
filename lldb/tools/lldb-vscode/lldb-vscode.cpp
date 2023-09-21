@@ -647,6 +647,10 @@ void request_attach(const llvm::json::Object &request) {
   std::vector<std::string> postRunCommands =
       GetStrings(arguments, "postRunCommands");
   const llvm::StringRef debuggerRoot = GetString(arguments, "debuggerRoot");
+  g_vsc.enable_auto_variable_summaries =
+      GetBoolean(arguments, "enableAutoVariableSummaries", false);
+  g_vsc.enable_synthetic_child_debugging =
+      GetBoolean(arguments, "enableSyntheticChildDebugging", false);
 
   // This is a hack for loading DWARF in .o files on Mac where the .o files
   // in the debug map of the main executable have relative paths which require
@@ -1794,6 +1798,10 @@ void request_launch(const llvm::json::Object &request) {
       GetStrings(arguments, "postRunCommands");
   g_vsc.stop_at_entry = GetBoolean(arguments, "stopOnEntry", false);
   const llvm::StringRef debuggerRoot = GetString(arguments, "debuggerRoot");
+  g_vsc.enable_auto_variable_summaries =
+      GetBoolean(arguments, "enableAutoVariableSummaries", false);
+  g_vsc.enable_synthetic_child_debugging =
+      GetBoolean(arguments, "enableSyntheticChildDebugging", false);
 
   // This is a hack for loading DWARF in .o files on Mac where the .o files
   // in the debug map of the main executable have relative paths which require
@@ -3292,7 +3300,8 @@ void request_variables(const llvm::json::Object &request) {
       // "[raw]" child that can be used to inspect the raw version of a
       // synthetic member. That eliminates the need for the user to go to the
       // debug console and type `frame var <variable> to get these values.
-      if (variable.IsSynthetic() && i == num_children)
+      if (g_vsc.enable_synthetic_child_debugging && variable.IsSynthetic() &&
+          i == num_children)
         addChild(variable.GetNonSyntheticValue(), "[raw]");
     }
   }

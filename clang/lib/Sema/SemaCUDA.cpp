@@ -105,19 +105,37 @@ Sema::IdentifyCUDATarget(const ParsedAttributesView &Attrs) {
 }
 
 template <typename A>
-static bool hasAttr(const FunctionDecl *D, bool IgnoreImplicitAttr) {
+static bool hasAttr(const Decl *D, bool IgnoreImplicitAttr) {
   return D->hasAttrs() && llvm::any_of(D->getAttrs(), [&](Attr *Attribute) {
            return isa<A>(Attribute) &&
                   !(IgnoreImplicitAttr && Attribute->isImplicit());
          });
 }
 
+Sema::CUDATargetContextRAII::CUDATargetContextRAII(Sema &S_,
+                                                   CUDATargetContextKind K,
+                                                   Decl *D)
+    : S(S_) {
+  SavedCtx = S.CurCUDATargetCtx;
+  assert(K == CTCK_InitGlobalVar);
+  auto *VD = dyn_cast_or_null<VarDecl>(D);
+  if (VD && VD->hasGlobalStorage() && !VD->isStaticLocal()) {
+    auto Target = CFT_Host;
+    if ((hasAttr<CUDADeviceAttr>(VD, /*IgnoreImplicit=*/true) &&
+         !hasAttr<CUDAHostAttr>(VD, /*IgnoreImplicit=*/true)) ||
+        hasAttr<CUDASharedAttr>(VD, /*IgnoreImplicit=*/true) ||
+        hasAttr<CUDAConstantAttr>(VD, /*IgnoreImplicit=*/true))
+      Target = CFT_Device;
+    S.CurCUDATargetCtx = {Target, K, VD};
+  }
+}
+
 /// IdentifyCUDATarget - Determine the CUDA compilation target for this function
 Sema::CUDAFunctionTarget Sema::IdentifyCUDATarget(const FunctionDecl *D,
                                                   bool IgnoreImplicitHDAttr) {
-  // Code that lives outside a function is run on the host.
+  // Code that lives outside a function gets the target from CurCUDATargetCtx.
   if (D == nullptr)
-    return CFT_Host;
+    return CurCUDATargetCtx.Target;
 
   if (D->hasAttr<CUDAInvalidTargetAttr>())
     return CFT_InvalidTarget;

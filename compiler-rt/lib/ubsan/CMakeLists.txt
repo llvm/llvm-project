@@ -71,6 +71,9 @@ append_list_if(COMPILER_RT_HAS_LIBDL dl UBSAN_DYNAMIC_LIBS)
 append_list_if(COMPILER_RT_HAS_LIBLOG log UBSAN_DYNAMIC_LIBS)
 append_list_if(COMPILER_RT_HAS_LIBRT rt UBSAN_DYNAMIC_LIBS)
 append_list_if(COMPILER_RT_HAS_LIBPTHREAD pthread UBSAN_DYNAMIC_LIBS)
+if (COMPILER_RT_ENABLE_INTERNAL_SYMBOLIZER)
+  append_list_if(COMPILER_RT_HAS_LIBM m UBSAN_DYNAMIC_LIBS)
+endif()
 
 add_compiler_rt_component(ubsan)
 
@@ -204,6 +207,7 @@ else()
               RTSanitizerCommonLibc
               RTSanitizerCommonCoverage
               RTSanitizerCommonSymbolizer
+              RTSanitizerCommonSymbolizerInternal
               RTUbsan
               RTUbsan_standalone
               RTInterception
@@ -248,6 +252,7 @@ else()
                 RTSanitizerCommonLibc
                 RTSanitizerCommonCoverage
                 RTSanitizerCommonSymbolizer
+                RTSanitizerCommonSymbolizerInternal
                 RTUbsan
                 RTUbsan_cxx
                 RTUbsan_standalone

@@ -11,7 +11,7 @@ func.func @atomic_fmax(%val: f32, %buffer: memref<?xf32>, %idx: i32) {
 // GFX9:  [[ld:%.+]] = amdgpu.raw_buffer_load {foo, indexOffset = 4 : i32} [[buffer]][[[idx]]]
 // GFX9:  cf.br [[loop:\^.+]]([[ld]] : f32)
 // GFX9:  [[loop]]([[arg:%.+]]: f32):
-// GFX9:  [[operated:%.+]] = arith.maxf [[val]], [[arg]]
+// GFX9:  [[operated:%.+]] = arith.maximumf [[val]], [[arg]]
 // GFX9:  [[atomicRes:%.+]] = amdgpu.raw_buffer_atomic_cmpswap {foo, indexOffset = 4 : i32} [[operated]], [[arg]] -> [[buffer]][[[idx]]]
 // GFX9:  [[argCast:%.+]] = arith.bitcast [[arg]] : f32 to i32
 // GFX9:  [[resCast:%.+]] = arith.bitcast [[atomicRes]] : f32 to i32

@@ -390,7 +390,7 @@ private:
       OS << "<tr><th>Header</th><td>";
       switch (H.kind()) {
       case Header::Physical:
-        printFilename(H.physical()->getName());
+        printFilename(H.physical().getName());
         break;
       case Header::Standard:
         OS << "stdlib " << H.standard().name();

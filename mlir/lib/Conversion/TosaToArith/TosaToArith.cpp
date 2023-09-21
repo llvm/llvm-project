@@ -81,7 +81,9 @@ public:
     Value shift32 = rewriter.create<arith::ExtUIOp>(loc, i32Ty, op.getShift());
 
     // Compute the multiplication in 64-bits then select the high / low parts.
-    Value value64 = rewriter.create<arith::ExtSIOp>(loc, i64Ty, value);
+    Value value64 = value;
+    if (getElementTypeOrSelf(valueTy) != rewriter.getI64Type())
+      value64 = rewriter.create<arith::ExtSIOp>(loc, i64Ty, value);
     Value multiplier64 =
         rewriter.create<arith::ExtSIOp>(loc, i64Ty, multiplier32);
     Value multiply64 =

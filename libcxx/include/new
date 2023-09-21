@@ -133,6 +133,8 @@ class _LIBCPP_EXPORTED_FROM_ABI bad_alloc
 {
 public:
     bad_alloc() _NOEXCEPT;
+    _LIBCPP_HIDE_FROM_ABI bad_alloc(const bad_alloc&) _NOEXCEPT = default;
+    _LIBCPP_HIDE_FROM_ABI bad_alloc& operator=(const bad_alloc&) _NOEXCEPT = default;
     ~bad_alloc() _NOEXCEPT override;
     const char* what() const _NOEXCEPT override;
 };
@@ -142,6 +144,8 @@ class _LIBCPP_EXPORTED_FROM_ABI bad_array_new_length
 {
 public:
     bad_array_new_length() _NOEXCEPT;
+    _LIBCPP_HIDE_FROM_ABI bad_array_new_length(const bad_array_new_length&) _NOEXCEPT = default;
+    _LIBCPP_HIDE_FROM_ABI bad_array_new_length& operator=(const bad_array_new_length&) _NOEXCEPT = default;
     ~bad_array_new_length() _NOEXCEPT override;
     const char* what() const _NOEXCEPT override;
 };

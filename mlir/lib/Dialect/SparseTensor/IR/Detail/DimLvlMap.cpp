@@ -348,7 +348,9 @@ AffineMap DimLvlMap::getDimToLvlMap(MLIRContext *context) const {
   lvlAffines.reserve(getLvlRank());
   for (const auto &lvlSpec : lvlSpecs)
     lvlAffines.push_back(lvlSpec.getExpr().getAffineExpr());
-  return AffineMap::get(getDimRank(), getSymRank(), lvlAffines, context);
+  auto map =  AffineMap::get(getDimRank(), getSymRank(), lvlAffines, context);
+  if (map.isIdentity()) return AffineMap();
+  return map;
 }
 
 AffineMap DimLvlMap::getLvlToDimMap(MLIRContext *context) const {
@@ -356,7 +358,9 @@ AffineMap DimLvlMap::getLvlToDimMap(MLIRContext *context) const {
   dimAffines.reserve(getDimRank());
   for (const auto &dimSpec : dimSpecs)
     dimAffines.push_back(dimSpec.getExpr().getAffineExpr());
-  return AffineMap::get(getLvlRank(), getSymRank(), dimAffines, context);
+  auto map = AffineMap::get(getLvlRank(), getSymRank(), dimAffines, context);
+  if (map.isIdentity()) return AffineMap();
+  return map;
 }
 
 void DimLvlMap::dump() const {

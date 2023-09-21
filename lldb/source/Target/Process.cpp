@@ -627,8 +627,7 @@ void Process::SyncIOHandler(uint32_t iohandler_id,
                             const Timeout<std::micro> &timeout) {
   // don't sync (potentially context switch) in case where there is no process
   // IO
-  std::lock_guard<std::mutex> guard(m_process_input_reader_mutex);
-  if (!m_process_input_reader)
+  if (!ProcessIOHandlerExists())
     return;
 
   auto Result = m_iohandler_sync.WaitForValueNotEqualTo(iohandler_id, timeout);
@@ -3154,6 +3153,14 @@ Status Process::Halt(bool clear_thread_plans, bool use_run_lock) {
   // case it was already set and some thread plan logic calls halt on its own.
   m_clear_thread_plans_on_stop |= clear_thread_plans;
 
+  if (m_public_state.GetValue() == eStateAttaching) {
+    // Don't hijack and eat the eStateExited as the code that was doing the
+    // attach will be waiting for this event...
+    SetExitStatus(SIGKILL, "Cancelled async attach.");
+    Destroy(false);
+    return Status();
+  }
+
   ListenerSP halt_listener_sp(
       Listener::MakeListener("lldb.process.halt_listener"));
   HijackProcessEvents(halt_listener_sp);
@@ -3161,15 +3168,6 @@ Status Process::Halt(bool clear_thread_plans, bool use_run_lock) {
   EventSP event_sp;
 
   SendAsyncInterrupt();
-
-  if (m_public_state.GetValue() == eStateAttaching) {
-    // Don't hijack and eat the eStateExited as the code that was doing the
-    // attach will be waiting for this event...
-    RestoreProcessEvents();
-    SetExitStatus(SIGKILL, "Cancelled async attach.");
-    Destroy(false);
-    return Status();
-  }
 
   // Wait for the process halt timeout seconds for the process to stop.
   // If we are going to use the run lock, that means we're stopping out to the
@@ -5912,12 +5910,12 @@ size_t Process::AddImageToken(lldb::addr_t image_ptr) {
 lldb::addr_t Process::GetImagePtrFromToken(size_t token) const {
   if (token < m_image_tokens.size())
     return m_image_tokens[token];
-  return LLDB_INVALID_ADDRESS;
+  return LLDB_INVALID_IMAGE_TOKEN;
 }
 
 void Process::ResetImageToken(size_t token) {
   if (token < m_image_tokens.size())
-    m_image_tokens[token] = LLDB_INVALID_ADDRESS;
+    m_image_tokens[token] = LLDB_INVALID_IMAGE_TOKEN;
 }
 
 Address

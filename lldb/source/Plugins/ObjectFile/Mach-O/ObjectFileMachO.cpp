@@ -5415,17 +5415,14 @@ uint32_t ObjectFileMachO::GetNumThreadContexts() {
   return m_thread_context_offsets.GetSize();
 }
 
-std::string ObjectFileMachO::GetIdentifierString() {
-  std::string result;
-  Log *log(
-      GetLog(LLDBLog::Symbols | LLDBLog::Process | LLDBLog::DynamicLoader));
+std::vector<std::tuple<offset_t, offset_t>>
+ObjectFileMachO::FindLC_NOTEByName(std::string name) {
+  std::vector<std::tuple<offset_t, offset_t>> results;
   ModuleSP module_sp(GetModule());
   if (module_sp) {
     std::lock_guard<std::recursive_mutex> guard(module_sp->GetMutex());
 
-    // First, look over the load commands for an LC_NOTE load command with
-    // data_owner string "kern ver str" & use that if found.
-    lldb::offset_t offset = MachHeaderSizeFromMagic(m_header.magic);
+    offset_t offset = MachHeaderSizeFromMagic(m_header.magic);
     for (uint32_t i = 0; i < m_header.ncmds; ++i) {
       const uint32_t cmd_offset = offset;
       llvm::MachO::load_command lc = {};
@@ -5436,58 +5433,67 @@ std::string ObjectFileMachO::GetIdentifierString() {
         m_data.CopyData(offset, 16, data_owner);
         data_owner[16] = '\0';
         offset += 16;
-        uint64_t fileoff = m_data.GetU64_unchecked(&offset);
-        uint64_t size = m_data.GetU64_unchecked(&offset);
 
-        // "kern ver str" has a uint32_t version and then a nul terminated
-        // c-string.
-        if (strcmp("kern ver str", data_owner) == 0) {
-          offset = fileoff;
-          uint32_t version;
-          if (m_data.GetU32(&offset, &version, 1) != nullptr) {
-            if (version == 1) {
-              uint32_t strsize = size - sizeof(uint32_t);
-              char *buf = (char *)malloc(strsize);
-              if (buf) {
-                m_data.CopyData(offset, strsize, buf);
-                buf[strsize - 1] = '\0';
-                result = buf;
-                if (buf)
-                  free(buf);
-                LLDB_LOGF(log, "LC_NOTE 'kern ver str' found with text '%s'",
-                          result.c_str());
-                return result;
-              }
-            }
-          }
+        if (name == data_owner) {
+          offset_t payload_offset = m_data.GetU64_unchecked(&offset);
+          offset_t payload_size = m_data.GetU64_unchecked(&offset);
+          results.push_back({payload_offset, payload_size});
         }
       }
       offset = cmd_offset + lc.cmdsize;
     }
+  }
+  return results;
+}
+
+std::string ObjectFileMachO::GetIdentifierString() {
+  Log *log(
+      GetLog(LLDBLog::Symbols | LLDBLog::Process | LLDBLog::DynamicLoader));
+  ModuleSP module_sp(GetModule());
+  if (module_sp) {
+    std::lock_guard<std::recursive_mutex> guard(module_sp->GetMutex());
+
+    auto lc_notes = FindLC_NOTEByName("kern ver str");
+    for (auto lc_note : lc_notes) {
+      offset_t payload_offset = std::get<0>(lc_note);
+      offset_t payload_size = std::get<1>(lc_note);
+      uint32_t version;
+      if (m_data.GetU32(&payload_offset, &version, 1) != nullptr) {
+        if (version == 1) {
+          uint32_t strsize = payload_size - sizeof(uint32_t);
+          std::string result(strsize, '\0');
+          m_data.CopyData(payload_offset, strsize, result.data());
+          while (result.back() == '\0')
+            result.resize(result.size() - 1);
+          LLDB_LOGF(log, "LC_NOTE 'kern ver str' found with text '%s'",
+                    result.c_str());
+          return result;
+        }
+      }
+    }
 
     // Second, make a pass over the load commands looking for an obsolete
     // LC_IDENT load command.
-    offset = MachHeaderSizeFromMagic(m_header.magic);
+    offset_t offset = MachHeaderSizeFromMagic(m_header.magic);
     for (uint32_t i = 0; i < m_header.ncmds; ++i) {
       const uint32_t cmd_offset = offset;
       llvm::MachO::ident_command ident_command;
       if (m_data.GetU32(&offset, &ident_command, 2) == nullptr)
         break;
       if (ident_command.cmd == LC_IDENT && ident_command.cmdsize != 0) {
-        char *buf = (char *)malloc(ident_command.cmdsize);
-        if (buf != nullptr && m_data.CopyData(offset, ident_command.cmdsize,
-                                              buf) == ident_command.cmdsize) {
-          buf[ident_command.cmdsize - 1] = '\0';
-          result = buf;
+        std::string result(ident_command.cmdsize, '\0');
+        if (m_data.CopyData(offset, ident_command.cmdsize, result.data()) ==
+            ident_command.cmdsize) {
+          while (result.back() == '\0')
+            result.resize(result.size() - 1);
           LLDB_LOGF(log, "LC_IDENT found with text '%s'", result.c_str());
+          return result;
         }
-        if (buf)
-          free(buf);
       }
       offset = cmd_offset + ident_command.cmdsize;
     }
   }
-  return result;
+  return {};
 }
 
 AddressableBits ObjectFileMachO::GetAddressableBits() {
@@ -5497,52 +5503,31 @@ AddressableBits ObjectFileMachO::GetAddressableBits() {
   ModuleSP module_sp(GetModule());
   if (module_sp) {
     std::lock_guard<std::recursive_mutex> guard(module_sp->GetMutex());
-    lldb::offset_t offset = MachHeaderSizeFromMagic(m_header.magic);
-    for (uint32_t i = 0; i < m_header.ncmds; ++i) {
-      const uint32_t cmd_offset = offset;
-      llvm::MachO::load_command lc = {};
-      if (m_data.GetU32(&offset, &lc.cmd, 2) == nullptr)
-        break;
-      if (lc.cmd == LC_NOTE) {
-        char data_owner[17];
-        m_data.CopyData(offset, 16, data_owner);
-        data_owner[16] = '\0';
-        offset += 16;
-        uint64_t fileoff = m_data.GetU64_unchecked(&offset);
+    auto lc_notes = FindLC_NOTEByName("addrable bits");
+    for (auto lc_note : lc_notes) {
+      offset_t payload_offset = std::get<0>(lc_note);
+      uint32_t version;
+      if (m_data.GetU32(&payload_offset, &version, 1) != nullptr) {
+        if (version == 3) {
+          uint32_t num_addr_bits = m_data.GetU32_unchecked(&payload_offset);
+          addressable_bits.SetAddressableBits(num_addr_bits);
+          LLDB_LOGF(log,
+                    "LC_NOTE 'addrable bits' v3 found, value %d "
+                    "bits",
+                    num_addr_bits);
+        }
+        if (version == 4) {
+          uint32_t lo_addr_bits = m_data.GetU32_unchecked(&payload_offset);
+          uint32_t hi_addr_bits = m_data.GetU32_unchecked(&payload_offset);
 
-        // "addrable bits" has a uint32_t version and a uint32_t
-        // number of bits used in addressing.
-        if (strcmp("addrable bits", data_owner) == 0) {
-          offset = fileoff;
-          uint32_t version;
-          if (m_data.GetU32(&offset, &version, 1) != nullptr) {
-            if (version == 3) {
-              uint32_t num_addr_bits = m_data.GetU32_unchecked(&offset);
-              addressable_bits.SetAddressableBits(num_addr_bits);
-              LLDB_LOGF(log,
-                        "LC_NOTE 'addrable bits' v3 found, value %d "
-                        "bits",
-                        num_addr_bits);
-              break;
-            }
-            if (version == 4) {
-              uint32_t lo_addr_bits = m_data.GetU32_unchecked(&offset);
-              uint32_t hi_addr_bits = m_data.GetU32_unchecked(&offset);
-
-              if (lo_addr_bits == hi_addr_bits)
-                addressable_bits.SetAddressableBits(lo_addr_bits);
-              else
-                addressable_bits.SetAddressableBits(lo_addr_bits, hi_addr_bits);
-              LLDB_LOGF(log,
-                        "LC_NOTE 'addrable bits' v4 found, value %d & %d bits",
-                        lo_addr_bits, hi_addr_bits);
-
-              break;
-            }
-          }
+          if (lo_addr_bits == hi_addr_bits)
+            addressable_bits.SetAddressableBits(lo_addr_bits);
+          else
+            addressable_bits.SetAddressableBits(lo_addr_bits, hi_addr_bits);
+          LLDB_LOGF(log, "LC_NOTE 'addrable bits' v4 found, value %d & %d bits",
+                    lo_addr_bits, hi_addr_bits);
         }
       }
-      offset = cmd_offset + lc.cmdsize;
     }
   }
   return addressable_bits;
@@ -5562,112 +5547,166 @@ bool ObjectFileMachO::GetCorefileMainBinaryInfo(addr_t &value,
   ModuleSP module_sp(GetModule());
   if (module_sp) {
     std::lock_guard<std::recursive_mutex> guard(module_sp->GetMutex());
-    lldb::offset_t offset = MachHeaderSizeFromMagic(m_header.magic);
-    for (uint32_t i = 0; i < m_header.ncmds; ++i) {
-      const uint32_t cmd_offset = offset;
-      llvm::MachO::load_command lc = {};
-      if (m_data.GetU32(&offset, &lc.cmd, 2) == nullptr)
-        break;
-      if (lc.cmd == LC_NOTE) {
-        char data_owner[17];
-        memset(data_owner, 0, sizeof(data_owner));
-        m_data.CopyData(offset, 16, data_owner);
-        offset += 16;
-        uint64_t fileoff = m_data.GetU64_unchecked(&offset);
-        uint64_t size = m_data.GetU64_unchecked(&offset);
 
-        // struct main_bin_spec
-        // {
-        //     uint32_t version;       // currently 2
-        //     uint32_t type;          // 0 == unspecified, 1 == kernel,
-        //                             // 2 == user process,
-        //                             // 3 == standalone binary
-        //     uint64_t address;       // UINT64_MAX if address not specified
-        //     uint64_t slide;         // slide, UINT64_MAX if unspecified
-        //                             // 0 if no slide needs to be applied to
-        //                             // file address
-        //     uuid_t   uuid;          // all zero's if uuid not specified
-        //     uint32_t log2_pagesize; // process page size in log base 2,
-        //                             // e.g. 4k pages are 12.
-        //                             // 0 for unspecified
-        //     uint32_t platform;      // The Mach-O platform for this corefile.
-        //                             // 0 for unspecified.
-        //                             // The values are defined in
-        //                             // <mach-o/loader.h>, PLATFORM_*.
-        // } __attribute((packed));
+    auto lc_notes = FindLC_NOTEByName("main bin spec");
+    for (auto lc_note : lc_notes) {
+      offset_t payload_offset = std::get<0>(lc_note);
 
-        // "main bin spec" (main binary specification) data payload is
-        // formatted:
-        //    uint32_t version       [currently 1]
-        //    uint32_t type          [0 == unspecified, 1 == kernel,
-        //                            2 == user process, 3 == firmware ]
-        //    uint64_t address       [ UINT64_MAX if address not specified ]
-        //    uuid_t   uuid          [ all zero's if uuid not specified ]
-        //    uint32_t log2_pagesize [ process page size in log base
-        //                             2, e.g. 4k pages are 12.
-        //                             0 for unspecified ]
-        //    uint32_t unused        [ for alignment ]
+      // struct main_bin_spec
+      // {
+      //     uint32_t version;       // currently 2
+      //     uint32_t type;          // 0 == unspecified, 1 == kernel,
+      //                             // 2 == user process,
+      //                             // 3 == standalone binary
+      //     uint64_t address;       // UINT64_MAX if address not specified
+      //     uint64_t slide;         // slide, UINT64_MAX if unspecified
+      //                             // 0 if no slide needs to be applied to
+      //                             // file address
+      //     uuid_t   uuid;          // all zero's if uuid not specified
+      //     uint32_t log2_pagesize; // process page size in log base 2,
+      //                             // e.g. 4k pages are 12.
+      //                             // 0 for unspecified
+      //     uint32_t platform;      // The Mach-O platform for this corefile.
+      //                             // 0 for unspecified.
+      //                             // The values are defined in
+      //                             // <mach-o/loader.h>, PLATFORM_*.
+      // } __attribute((packed));
 
-        if (strcmp("main bin spec", data_owner) == 0 && size >= 32) {
-          offset = fileoff;
-          uint32_t version;
-          if (m_data.GetU32(&offset, &version, 1) != nullptr && version <= 2) {
-            uint32_t binspec_type = 0;
-            uuid_t raw_uuid;
-            memset(raw_uuid, 0, sizeof(uuid_t));
+      // "main bin spec" (main binary specification) data payload is
+      // formatted:
+      //    uint32_t version       [currently 1]
+      //    uint32_t type          [0 == unspecified, 1 == kernel,
+      //                            2 == user process, 3 == firmware ]
+      //    uint64_t address       [ UINT64_MAX if address not specified ]
+      //    uuid_t   uuid          [ all zero's if uuid not specified ]
+      //    uint32_t log2_pagesize [ process page size in log base
+      //                             2, e.g. 4k pages are 12.
+      //                             0 for unspecified ]
+      //    uint32_t unused        [ for alignment ]
 
-            if (!m_data.GetU32(&offset, &binspec_type, 1))
-              return false;
-            if (!m_data.GetU64(&offset, &value, 1))
-              return false;
-            uint64_t slide = LLDB_INVALID_ADDRESS;
-            if (version > 1 && !m_data.GetU64(&offset, &slide, 1))
-              return false;
-            if (value == LLDB_INVALID_ADDRESS &&
-                slide != LLDB_INVALID_ADDRESS) {
-              value = slide;
-              value_is_offset = true;
-            }
+      uint32_t version;
+      if (m_data.GetU32(&payload_offset, &version, 1) != nullptr &&
+          version <= 2) {
+        uint32_t binspec_type = 0;
+        uuid_t raw_uuid;
+        memset(raw_uuid, 0, sizeof(uuid_t));
 
-            if (m_data.CopyData(offset, sizeof(uuid_t), raw_uuid) != 0) {
-              uuid = UUID(raw_uuid, sizeof(uuid_t));
-              // convert the "main bin spec" type into our
-              // ObjectFile::BinaryType enum
-              const char *typestr = "unrecognized type";
-              switch (binspec_type) {
-              case 0:
-                type = eBinaryTypeUnknown;
-                typestr = "uknown";
-                break;
-              case 1:
-                type = eBinaryTypeKernel;
-                typestr = "xnu kernel";
-                break;
-              case 2:
-                type = eBinaryTypeUser;
-                typestr = "userland dyld";
-                break;
-              case 3:
-                type = eBinaryTypeStandalone;
-                typestr = "standalone";
-                break;
-              }
-              LLDB_LOGF(log,
-                        "LC_NOTE 'main bin spec' found, version %d type %d "
-                        "(%s), value 0x%" PRIx64 " value-is-slide==%s uuid %s",
-                        version, type, typestr, value,
-                        value_is_offset ? "true" : "false",
-                        uuid.GetAsString().c_str());
-              if (!m_data.GetU32(&offset, &log2_pagesize, 1))
-                return false;
-              if (version > 1 && !m_data.GetU32(&offset, &platform, 1))
-                return false;
-              return true;
-            }
+        if (!m_data.GetU32(&payload_offset, &binspec_type, 1))
+          return false;
+        if (!m_data.GetU64(&payload_offset, &value, 1))
+          return false;
+        uint64_t slide = LLDB_INVALID_ADDRESS;
+        if (version > 1 && !m_data.GetU64(&payload_offset, &slide, 1))
+          return false;
+        if (value == LLDB_INVALID_ADDRESS && slide != LLDB_INVALID_ADDRESS) {
+          value = slide;
+          value_is_offset = true;
+        }
+
+        if (m_data.CopyData(payload_offset, sizeof(uuid_t), raw_uuid) != 0) {
+          uuid = UUID(raw_uuid, sizeof(uuid_t));
+          // convert the "main bin spec" type into our
+          // ObjectFile::BinaryType enum
+          const char *typestr = "unrecognized type";
+          switch (binspec_type) {
+          case 0:
+            type = eBinaryTypeUnknown;
+            typestr = "uknown";
+            break;
+          case 1:
+            type = eBinaryTypeKernel;
+            typestr = "xnu kernel";
+            break;
+          case 2:
+            type = eBinaryTypeUser;
+            typestr = "userland dyld";
+            break;
+          case 3:
+            type = eBinaryTypeStandalone;
+            typestr = "standalone";
+            break;
           }
+          LLDB_LOGF(log,
+                    "LC_NOTE 'main bin spec' found, version %d type %d "
+                    "(%s), value 0x%" PRIx64 " value-is-slide==%s uuid %s",
+                    version, type, typestr, value,
+                    value_is_offset ? "true" : "false",
+                    uuid.GetAsString().c_str());
+          if (!m_data.GetU32(&payload_offset, &log2_pagesize, 1))
+            return false;
+          if (version > 1 && !m_data.GetU32(&payload_offset, &platform, 1))
+            return false;
+          return true;
         }
       }
-      offset = cmd_offset + lc.cmdsize;
+    }
+  }
+  return false;
+}
+
+bool ObjectFileMachO::GetCorefileThreadExtraInfos(std::vector<tid_t> &tids) {
+  tids.clear();
+  ModuleSP module_sp(GetModule());
+  if (module_sp) {
+    std::lock_guard<std::recursive_mutex> guard(module_sp->GetMutex());
+
+    Log *log(GetLog(LLDBLog::Object | LLDBLog::Process | LLDBLog::Thread));
+    auto lc_notes = FindLC_NOTEByName("process metadata");
+    for (auto lc_note : lc_notes) {
+      offset_t payload_offset = std::get<0>(lc_note);
+      offset_t strsize = std::get<1>(lc_note);
+      std::string buf(strsize, '\0');
+      if (m_data.CopyData(payload_offset, strsize, buf.data()) != strsize) {
+        LLDB_LOGF(log,
+                  "Unable to read %" PRIu64
+                  " bytes of 'process metadata' LC_NOTE JSON contents",
+                  strsize);
+        return false;
+      }
+      while (buf.back() == '\0')
+        buf.resize(buf.size() - 1);
+      StructuredData::ObjectSP object_sp = StructuredData::ParseJSON(buf);
+      StructuredData::Dictionary *dict = object_sp->GetAsDictionary();
+      if (!dict) {
+        LLDB_LOGF(log, "Unable to read 'process metadata' LC_NOTE, did not "
+                       "get a dictionary.");
+        return false;
+      }
+      StructuredData::Array *threads;
+      if (!dict->GetValueForKeyAsArray("threads", threads) || !threads) {
+        LLDB_LOGF(log,
+                  "'process metadata' LC_NOTE does not have a 'threads' key");
+        return false;
+      }
+      if (threads->GetSize() != GetNumThreadContexts()) {
+        LLDB_LOGF(log, "Unable to read 'process metadata' LC_NOTE, number of "
+                       "threads does not match number of LC_THREADS.");
+        return false;
+      }
+      const size_t num_threads = threads->GetSize();
+      for (size_t i = 0; i < num_threads; i++) {
+        StructuredData::Dictionary *thread;
+        if (!threads->GetItemAtIndexAsDictionary(i, thread) || !thread) {
+          LLDB_LOGF(log,
+                    "Unable to read 'process metadata' LC_NOTE, threads "
+                    "array does not have a dictionary at index %zu.",
+                    i);
+          return false;
+        }
+        tid_t tid = LLDB_INVALID_THREAD_ID;
+        if (thread->GetValueForKeyAsInteger<tid_t>("thread_id", tid))
+          if (tid == 0)
+            tid = LLDB_INVALID_THREAD_ID;
+        tids.push_back(tid);
+      }
+
+      if (log) {
+        StreamString logmsg;
+        logmsg.Printf("LC_NOTE 'process metadata' found: ");
+        dict->Dump(logmsg, /* pretty_print */ false);
+        LLDB_LOGF(log, "%s", logmsg.GetData());
+      }
+      return true;
     }
   }
   return false;
@@ -6656,6 +6695,10 @@ bool ObjectFileMachO::SaveCore(const lldb::ProcessSP &process_sp,
           mach_header.sizeofcmds += sizeof(llvm::MachO::note_command);
         }
 
+        // LC_NOTE "process metadata"
+        mach_header.ncmds++;
+        mach_header.sizeofcmds += sizeof(llvm::MachO::note_command);
+
         // LC_NOTE "all image infos"
         mach_header.ncmds++;
         mach_header.sizeofcmds += sizeof(llvm::MachO::note_command);
@@ -6697,6 +6740,33 @@ bool ObjectFileMachO::SaveCore(const lldb::ProcessSP &process_sp,
 
           lc_notes.push_back(std::move(addrable_bits_lcnote_up));
         }
+
+        // Add "process metadata" LC_NOTE
+        std::unique_ptr<LCNoteEntry> thread_extrainfo_lcnote_up(
+            new LCNoteEntry(addr_byte_size, byte_order));
+        thread_extrainfo_lcnote_up->name = "process metadata";
+        thread_extrainfo_lcnote_up->payload_file_offset = file_offset;
+
+        StructuredData::DictionarySP dict(
+            std::make_shared<StructuredData::Dictionary>());
+        StructuredData::ArraySP threads(
+            std::make_shared<StructuredData::Array>());
+        for (uint32_t thread_idx = 0; thread_idx < num_threads; ++thread_idx) {
+          ThreadSP thread_sp(thread_list.GetThreadAtIndex(thread_idx));
+          StructuredData::DictionarySP thread(
+              std::make_shared<StructuredData::Dictionary>());
+          thread->AddIntegerItem("thread_id", thread_sp->GetID());
+          threads->AddItem(thread);
+        }
+        dict->AddItem("threads", threads);
+        StreamString strm;
+        dict->Dump(strm, /* pretty */ false);
+        thread_extrainfo_lcnote_up->payload.PutRawBytes(strm.GetData(),
+                                                        strm.GetSize());
+
+        file_offset += thread_extrainfo_lcnote_up->payload.GetSize();
+        file_offset = llvm::alignTo(file_offset, 16);
+        lc_notes.push_back(std::move(thread_extrainfo_lcnote_up));
 
         // Add "all image infos" LC_NOTE
         std::unique_ptr<LCNoteEntry> all_image_infos_lcnote_up(
@@ -6852,108 +6922,93 @@ bool ObjectFileMachO::SaveCore(const lldb::ProcessSP &process_sp,
 ObjectFileMachO::MachOCorefileAllImageInfos
 ObjectFileMachO::GetCorefileAllImageInfos() {
   MachOCorefileAllImageInfos image_infos;
-  Log *log(
-      GetLog(LLDBLog::Symbols | LLDBLog::Process | LLDBLog::DynamicLoader));
+  Log *log(GetLog(LLDBLog::Object | LLDBLog::Symbols | LLDBLog::Process |
+                  LLDBLog::DynamicLoader));
 
-  // Look for an "all image infos" LC_NOTE.
-  lldb::offset_t offset = MachHeaderSizeFromMagic(m_header.magic);
-  for (uint32_t i = 0; i < m_header.ncmds; ++i) {
-    const uint32_t cmd_offset = offset;
-    llvm::MachO::load_command lc = {};
-    if (m_data.GetU32(&offset, &lc.cmd, 2) == nullptr)
-      break;
-    if (lc.cmd == LC_NOTE) {
-      char data_owner[17];
-      m_data.CopyData(offset, 16, data_owner);
-      data_owner[16] = '\0';
-      offset += 16;
-      uint64_t fileoff = m_data.GetU64_unchecked(&offset);
-      offset += 4; /* size unused */
-
-      if (strcmp("all image infos", data_owner) == 0) {
-        offset = fileoff;
-        // Read the struct all_image_infos_header.
-        uint32_t version = m_data.GetU32(&offset);
-        if (version != 1) {
-          return image_infos;
-        }
-        uint32_t imgcount = m_data.GetU32(&offset);
-        uint64_t entries_fileoff = m_data.GetU64(&offset);
-        // 'entries_size' is not used, nor is the 'unused' entry.
-        //  offset += 4; // uint32_t entries_size;
-        //  offset += 4; // uint32_t unused;
-
-        LLDB_LOGF(log,
-                  "LC_NOTE 'all image infos' found version %d with %d images",
-                  version, imgcount);
-        offset = entries_fileoff;
-        for (uint32_t i = 0; i < imgcount; i++) {
-          // Read the struct image_entry.
-          offset_t filepath_offset = m_data.GetU64(&offset);
-          uuid_t uuid;
-          memcpy(&uuid, m_data.GetData(&offset, sizeof(uuid_t)),
-                 sizeof(uuid_t));
-          uint64_t load_address = m_data.GetU64(&offset);
-          offset_t seg_addrs_offset = m_data.GetU64(&offset);
-          uint32_t segment_count = m_data.GetU32(&offset);
-          uint32_t currently_executing = m_data.GetU32(&offset);
-
-          MachOCorefileImageEntry image_entry;
-          image_entry.filename = (const char *)m_data.GetCStr(&filepath_offset);
-          image_entry.uuid = UUID(uuid, sizeof(uuid_t));
-          image_entry.load_address = load_address;
-          image_entry.currently_executing = currently_executing;
-
-          offset_t seg_vmaddrs_offset = seg_addrs_offset;
-          for (uint32_t j = 0; j < segment_count; j++) {
-            char segname[17];
-            m_data.CopyData(seg_vmaddrs_offset, 16, segname);
-            segname[16] = '\0';
-            seg_vmaddrs_offset += 16;
-            uint64_t vmaddr = m_data.GetU64(&seg_vmaddrs_offset);
-            seg_vmaddrs_offset += 8; /* unused */
-
-            std::tuple<ConstString, addr_t> new_seg{ConstString(segname),
-                                                    vmaddr};
-            image_entry.segment_load_addresses.push_back(new_seg);
-          }
-          LLDB_LOGF(
-              log, "  image entry: %s %s 0x%" PRIx64 " %s",
-              image_entry.filename.c_str(),
-              image_entry.uuid.GetAsString().c_str(), image_entry.load_address,
-              image_entry.currently_executing ? "currently executing"
-                                              : "not currently executing");
-          image_infos.all_image_infos.push_back(image_entry);
-        }
-      } else if (strcmp("load binary", data_owner) == 0) {
-        uint32_t version = m_data.GetU32(&fileoff);
-        if (version == 1) {
-          uuid_t uuid;
-          memcpy(&uuid, m_data.GetData(&fileoff, sizeof(uuid_t)),
-                 sizeof(uuid_t));
-          uint64_t load_address = m_data.GetU64(&fileoff);
-          uint64_t slide = m_data.GetU64(&fileoff);
-          std::string filename = m_data.GetCStr(&fileoff);
-
-          MachOCorefileImageEntry image_entry;
-          image_entry.filename = filename;
-          image_entry.uuid = UUID(uuid, sizeof(uuid_t));
-          image_entry.load_address = load_address;
-          image_entry.slide = slide;
-          image_entry.currently_executing = true;
-          image_infos.all_image_infos.push_back(image_entry);
-          LLDB_LOGF(log,
-                    "LC_NOTE 'load binary' found, filename %s uuid %s load "
-                    "address 0x%" PRIx64 " slide 0x%" PRIx64,
-                    filename.c_str(),
-                    image_entry.uuid.IsValid()
-                        ? image_entry.uuid.GetAsString().c_str()
-                        : "00000000-0000-0000-0000-000000000000",
-                    load_address, slide);
-        }
-      }
+  auto lc_notes = FindLC_NOTEByName("all image infos");
+  for (auto lc_note : lc_notes) {
+    offset_t payload_offset = std::get<0>(lc_note);
+    // Read the struct all_image_infos_header.
+    uint32_t version = m_data.GetU32(&payload_offset);
+    if (version != 1) {
+      return image_infos;
     }
-    offset = cmd_offset + lc.cmdsize;
+    uint32_t imgcount = m_data.GetU32(&payload_offset);
+    uint64_t entries_fileoff = m_data.GetU64(&payload_offset);
+    // 'entries_size' is not used, nor is the 'unused' entry.
+    //  offset += 4; // uint32_t entries_size;
+    //  offset += 4; // uint32_t unused;
+
+    LLDB_LOGF(log, "LC_NOTE 'all image infos' found version %d with %d images",
+              version, imgcount);
+    payload_offset = entries_fileoff;
+    for (uint32_t i = 0; i < imgcount; i++) {
+      // Read the struct image_entry.
+      offset_t filepath_offset = m_data.GetU64(&payload_offset);
+      uuid_t uuid;
+      memcpy(&uuid, m_data.GetData(&payload_offset, sizeof(uuid_t)),
+             sizeof(uuid_t));
+      uint64_t load_address = m_data.GetU64(&payload_offset);
+      offset_t seg_addrs_offset = m_data.GetU64(&payload_offset);
+      uint32_t segment_count = m_data.GetU32(&payload_offset);
+      uint32_t currently_executing = m_data.GetU32(&payload_offset);
+
+      MachOCorefileImageEntry image_entry;
+      image_entry.filename = (const char *)m_data.GetCStr(&filepath_offset);
+      image_entry.uuid = UUID(uuid, sizeof(uuid_t));
+      image_entry.load_address = load_address;
+      image_entry.currently_executing = currently_executing;
+
+      offset_t seg_vmaddrs_offset = seg_addrs_offset;
+      for (uint32_t j = 0; j < segment_count; j++) {
+        char segname[17];
+        m_data.CopyData(seg_vmaddrs_offset, 16, segname);
+        segname[16] = '\0';
+        seg_vmaddrs_offset += 16;
+        uint64_t vmaddr = m_data.GetU64(&seg_vmaddrs_offset);
+        seg_vmaddrs_offset += 8; /* unused */
+
+        std::tuple<ConstString, addr_t> new_seg{ConstString(segname), vmaddr};
+        image_entry.segment_load_addresses.push_back(new_seg);
+      }
+      LLDB_LOGF(log, "  image entry: %s %s 0x%" PRIx64 " %s",
+                image_entry.filename.c_str(),
+                image_entry.uuid.GetAsString().c_str(),
+                image_entry.load_address,
+                image_entry.currently_executing ? "currently executing"
+                                                : "not currently executing");
+      image_infos.all_image_infos.push_back(image_entry);
+    }
+  }
+
+  lc_notes = FindLC_NOTEByName("load binary");
+  for (auto lc_note : lc_notes) {
+    offset_t payload_offset = std::get<0>(lc_note);
+    uint32_t version = m_data.GetU32(&payload_offset);
+    if (version == 1) {
+      uuid_t uuid;
+      memcpy(&uuid, m_data.GetData(&payload_offset, sizeof(uuid_t)),
+             sizeof(uuid_t));
+      uint64_t load_address = m_data.GetU64(&payload_offset);
+      uint64_t slide = m_data.GetU64(&payload_offset);
+      std::string filename = m_data.GetCStr(&payload_offset);
+
+      MachOCorefileImageEntry image_entry;
+      image_entry.filename = filename;
+      image_entry.uuid = UUID(uuid, sizeof(uuid_t));
+      image_entry.load_address = load_address;
+      image_entry.slide = slide;
+      image_entry.currently_executing = true;
+      image_infos.all_image_infos.push_back(image_entry);
+      LLDB_LOGF(log,
+                "LC_NOTE 'load binary' found, filename %s uuid %s load "
+                "address 0x%" PRIx64 " slide 0x%" PRIx64,
+                filename.c_str(),
+                image_entry.uuid.IsValid()
+                    ? image_entry.uuid.GetAsString().c_str()
+                    : "00000000-0000-0000-0000-000000000000",
+                load_address, slide);
+    }
   }
 
   return image_infos;
@@ -6961,7 +7016,7 @@ ObjectFileMachO::GetCorefileAllImageInfos() {
 
 bool ObjectFileMachO::LoadCoreFileImages(lldb_private::Process &process) {
   MachOCorefileAllImageInfos image_infos = GetCorefileAllImageInfos();
-  Log *log = GetLog(LLDBLog::DynamicLoader);
+  Log *log = GetLog(LLDBLog::Object | LLDBLog::DynamicLoader);
   Status error;
 
   bool found_platform_binary = false;

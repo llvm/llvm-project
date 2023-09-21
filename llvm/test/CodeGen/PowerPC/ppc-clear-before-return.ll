@@ -19,11 +19,10 @@ define dso_local i64 @test_xor(ptr nocapture noundef readonly %inp) local_unname
 ;
 ; 32BIT-LABEL: test_xor:
 ; 32BIT:       # %bb.0: # %entry
-; 32BIT-NEXT:    mr r4, r3
+; 32BIT-NEXT:    lbz r4, 0(r3)
+; 32BIT-NEXT:    lbz r3, 1(r3)
+; 32BIT-NEXT:    xor r4, r3, r4
 ; 32BIT-NEXT:    li r3, 0
-; 32BIT-NEXT:    lbz r5, 0(r4)
-; 32BIT-NEXT:    lbz r4, 1(r4)
-; 32BIT-NEXT:    xor r4, r4, r5
 ; 32BIT-NEXT:    blr
 entry:
   %0 = load i8, ptr %inp, align 1
@@ -46,13 +45,12 @@ define dso_local i64 @test_xor2(ptr nocapture noundef readonly %inp) local_unnam
 ;
 ; 32BIT-LABEL: test_xor2:
 ; 32BIT:       # %bb.0: # %entry
-; 32BIT-NEXT:    mr r4, r3
-; 32BIT-NEXT:    li r3, 0
-; 32BIT-NEXT:    lbz r5, 0(r4)
-; 32BIT-NEXT:    lbz r6, 1(r4)
-; 32BIT-NEXT:    lbz r4, 2(r4)
-; 32BIT-NEXT:    xor r5, r6, r5
+; 32BIT-NEXT:    lbz r4, 0(r3)
+; 32BIT-NEXT:    lbz r5, 1(r3)
+; 32BIT-NEXT:    lbz r3, 2(r3)
 ; 32BIT-NEXT:    xor r4, r5, r4
+; 32BIT-NEXT:    xor r4, r4, r3
+; 32BIT-NEXT:    li r3, 0
 ; 32BIT-NEXT:    blr
 entry:
   %0 = load i8, ptr %inp, align 1
@@ -76,11 +74,10 @@ define dso_local i64 @test_or(ptr nocapture noundef readonly %inp) local_unnamed
 ;
 ; 32BIT-LABEL: test_or:
 ; 32BIT:       # %bb.0: # %entry
-; 32BIT-NEXT:    mr r4, r3
+; 32BIT-NEXT:    lbz r4, 0(r3)
+; 32BIT-NEXT:    lbz r3, 1(r3)
+; 32BIT-NEXT:    or r4, r3, r4
 ; 32BIT-NEXT:    li r3, 0
-; 32BIT-NEXT:    lbz r5, 0(r4)
-; 32BIT-NEXT:    lbz r4, 1(r4)
-; 32BIT-NEXT:    or r4, r4, r5
 ; 32BIT-NEXT:    blr
 entry:
   %0 = load i8, ptr %inp, align 1
@@ -103,13 +100,12 @@ define dso_local i64 @test_or2(ptr nocapture noundef readonly %inp) local_unname
 ;
 ; 32BIT-LABEL: test_or2:
 ; 32BIT:       # %bb.0: # %entry
-; 32BIT-NEXT:    mr r4, r3
-; 32BIT-NEXT:    li r3, 0
-; 32BIT-NEXT:    lbz r5, 0(r4)
-; 32BIT-NEXT:    lbz r6, 1(r4)
-; 32BIT-NEXT:    lbz r4, 2(r4)
-; 32BIT-NEXT:    or r5, r6, r5
+; 32BIT-NEXT:    lbz r4, 0(r3)
+; 32BIT-NEXT:    lbz r5, 1(r3)
+; 32BIT-NEXT:    lbz r3, 2(r3)
 ; 32BIT-NEXT:    or r4, r5, r4
+; 32BIT-NEXT:    or r4, r4, r3
+; 32BIT-NEXT:    li r3, 0
 ; 32BIT-NEXT:    blr
 entry:
   %0 = load i8, ptr %inp, align 1
@@ -133,11 +129,10 @@ define dso_local i64 @test_and(ptr nocapture noundef readonly %inp) local_unname
 ;
 ; 32BIT-LABEL: test_and:
 ; 32BIT:       # %bb.0: # %entry
-; 32BIT-NEXT:    mr r4, r3
+; 32BIT-NEXT:    lbz r4, 0(r3)
+; 32BIT-NEXT:    lbz r3, 1(r3)
+; 32BIT-NEXT:    and r4, r3, r4
 ; 32BIT-NEXT:    li r3, 0
-; 32BIT-NEXT:    lbz r5, 0(r4)
-; 32BIT-NEXT:    lbz r4, 1(r4)
-; 32BIT-NEXT:    and r4, r4, r5
 ; 32BIT-NEXT:    blr
 entry:
   %0 = load i8, ptr %inp, align 1
@@ -160,13 +155,12 @@ define dso_local i64 @test_and2(ptr nocapture noundef readonly %inp) local_unnam
 ;
 ; 32BIT-LABEL: test_and2:
 ; 32BIT:       # %bb.0: # %entry
-; 32BIT-NEXT:    mr r4, r3
-; 32BIT-NEXT:    li r3, 0
-; 32BIT-NEXT:    lbz r5, 0(r4)
-; 32BIT-NEXT:    lbz r6, 1(r4)
-; 32BIT-NEXT:    lbz r4, 2(r4)
-; 32BIT-NEXT:    and r5, r6, r5
+; 32BIT-NEXT:    lbz r4, 0(r3)
+; 32BIT-NEXT:    lbz r5, 1(r3)
+; 32BIT-NEXT:    lbz r3, 2(r3)
 ; 32BIT-NEXT:    and r4, r5, r4
+; 32BIT-NEXT:    and r4, r4, r3
+; 32BIT-NEXT:    li r3, 0
 ; 32BIT-NEXT:    blr
 entry:
   %0 = load i8, ptr %inp, align 1
@@ -185,24 +179,23 @@ define dso_local i64 @test_mixed(ptr nocapture noundef readonly %inp) local_unna
 ; 64BIT:       # %bb.0: # %entry
 ; 64BIT-NEXT:    lbz r4, 0(r3)
 ; 64BIT-NEXT:    lbz r5, 1(r3)
-; 64BIT-NEXT:    lbz r6, 2(r3)
-; 64BIT-NEXT:    lbz r3, 3(r3)
 ; 64BIT-NEXT:    and r4, r5, r4
-; 64BIT-NEXT:    xor r4, r4, r6
+; 64BIT-NEXT:    lbz r5, 2(r3)
+; 64BIT-NEXT:    lbz r3, 3(r3)
+; 64BIT-NEXT:    xor r4, r4, r5
 ; 64BIT-NEXT:    or r3, r4, r3
 ; 64BIT-NEXT:    blr
 ;
 ; 32BIT-LABEL: test_mixed:
 ; 32BIT:       # %bb.0: # %entry
-; 32BIT-NEXT:    mr r4, r3
+; 32BIT-NEXT:    lbz r4, 0(r3)
+; 32BIT-NEXT:    lbz r5, 1(r3)
+; 32BIT-NEXT:    and r4, r5, r4
+; 32BIT-NEXT:    lbz r5, 2(r3)
+; 32BIT-NEXT:    lbz r3, 3(r3)
+; 32BIT-NEXT:    xor r4, r4, r5
+; 32BIT-NEXT:    or r4, r4, r3
 ; 32BIT-NEXT:    li r3, 0
-; 32BIT-NEXT:    lbz r5, 0(r4)
-; 32BIT-NEXT:    lbz r6, 1(r4)
-; 32BIT-NEXT:    lbz r7, 2(r4)
-; 32BIT-NEXT:    lbz r4, 3(r4)
-; 32BIT-NEXT:    and r5, r6, r5
-; 32BIT-NEXT:    xor r5, r5, r7
-; 32BIT-NEXT:    or r4, r5, r4
 ; 32BIT-NEXT:    blr
 entry:
   %0 = load i8, ptr %inp, align 1
@@ -268,9 +261,8 @@ define dso_local i64 @test_load(ptr nocapture noundef readonly %inp) local_unnam
 ;
 ; 32BIT-LABEL: test_load:
 ; 32BIT:       # %bb.0: # %entry
-; 32BIT-NEXT:    mr r4, r3
+; 32BIT-NEXT:    lbz r4, 0(r3)
 ; 32BIT-NEXT:    li r3, 0
-; 32BIT-NEXT:    lbz r4, 0(r4)
 ; 32BIT-NEXT:    blr
 entry:
   %0 = load i8, ptr %inp, align 1
@@ -288,11 +280,10 @@ define dso_local i64 @test_and32(ptr nocapture noundef readonly %inp) local_unna
 ;
 ; 32BIT-LABEL: test_and32:
 ; 32BIT:       # %bb.0: # %entry
-; 32BIT-NEXT:    mr r4, r3
+; 32BIT-NEXT:    lwz r4, 0(r3)
+; 32BIT-NEXT:    lwz r3, 4(r3)
+; 32BIT-NEXT:    and r4, r3, r4
 ; 32BIT-NEXT:    li r3, 0
-; 32BIT-NEXT:    lwz r5, 0(r4)
-; 32BIT-NEXT:    lwz r4, 4(r4)
-; 32BIT-NEXT:    and r4, r4, r5
 ; 32BIT-NEXT:    blr
 entry:
   %0 = load i32, ptr %inp, align 4

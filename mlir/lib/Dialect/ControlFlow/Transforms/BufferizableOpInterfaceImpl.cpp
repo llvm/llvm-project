@@ -39,12 +39,7 @@ struct BranchLikeOpInterface
 
   LogicalResult verifyAnalysis(Operation *op,
                                const AnalysisState &state) const {
-    const auto &options =
-        static_cast<const OneShotBufferizationOptions &>(state.getOptions());
-    if (options.allowReturnAllocs)
-      return success();
-    return op->emitOpError(
-        "op cannot be bufferized without allow-return-allocs");
+    return success();
   }
 
   LogicalResult bufferize(Operation *op, RewriterBase &rewriter,

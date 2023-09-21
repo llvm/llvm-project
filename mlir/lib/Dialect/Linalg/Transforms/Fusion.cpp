@@ -225,7 +225,7 @@ static void getProducerOfTensor(Value tensor, OpResult &opResult) {
     }
     if (auto blockArg = dyn_cast<BlockArgument>(tensor)) {
       if (auto forOp = blockArg.getDefiningOp<scf::ForOp>()) {
-        tensor = *(forOp.getIterOperands().begin() + blockArg.getArgNumber());
+        tensor = forOp.getInitArgs()[blockArg.getArgNumber()];
         continue;
       }
     }

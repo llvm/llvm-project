@@ -3133,6 +3133,23 @@ bool SelectionDAGLegalize::ExpandNode(SDNode *Node) {
     Results.push_back(Res.getValue(1));
     break;
   }
+  case ISD::ATOMIC_LOAD_SUB: {
+    SDLoc DL(Node);
+    EVT VT = Node->getValueType(0);
+    SDValue RHS = Node->getOperand(2);
+    AtomicSDNode *AN = cast<AtomicSDNode>(Node);
+    if (RHS->getOpcode() == ISD::SIGN_EXTEND_INREG &&
+        cast<VTSDNode>(RHS->getOperand(1))->getVT() == AN->getMemoryVT())
+      RHS = RHS->getOperand(0);
+    SDValue NewRHS =
+        DAG.getNode(ISD::SUB, DL, VT, DAG.getConstant(0, DL, VT), RHS);
+    SDValue Res = DAG.getAtomic(ISD::ATOMIC_LOAD_ADD, DL, AN->getMemoryVT(),
+                                Node->getOperand(0), Node->getOperand(1),
+                                NewRHS, AN->getMemOperand());
+    Results.push_back(Res);
+    Results.push_back(Res.getValue(1));
+    break;
+  }
   case ISD::DYNAMIC_STACKALLOC:
     ExpandDYNAMIC_STACKALLOC(Node, Results);
     break;

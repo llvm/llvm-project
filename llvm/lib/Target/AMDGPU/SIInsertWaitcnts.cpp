@@ -1824,7 +1824,7 @@ bool SIInsertWaitcnts::runOnMachineFunction(MachineFunction &MF) {
     ForceEmitWaitcnt[T] = false;
 
   OptNone = MF.getFunction().hasOptNone() ||
-            MF.getTarget().getOptLevel() == CodeGenOpt::None;
+            MF.getTarget().getOptLevel() == CodeGenOptLevel::None;
 
   HardwareLimits Limits = {};
   Limits.VmcntMax = AMDGPU::getVmcntBitMask(IV);

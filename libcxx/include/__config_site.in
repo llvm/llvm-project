@@ -37,6 +37,7 @@
 
 // Hardening.
 #cmakedefine01 _LIBCPP_ENABLE_HARDENED_MODE_DEFAULT
+#cmakedefine01 _LIBCPP_ENABLE_SAFE_MODE_DEFAULT
 #cmakedefine01 _LIBCPP_ENABLE_DEBUG_MODE_DEFAULT
 
 // __USE_MINGW_ANSI_STDIO gets redefined on MinGW

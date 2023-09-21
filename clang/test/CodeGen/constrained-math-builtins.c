@@ -64,6 +64,13 @@ void foo(double *d, float f, float *fp, long double *l, int *i, const char *c, _
 // CHECK: call x86_fp80 @llvm.experimental.constrained.exp2.f80(x86_fp80 %{{.*}}, metadata !"round.tonearest", metadata !"fpexcept.strict")
 // CHECK: call fp128 @llvm.experimental.constrained.exp2.f128(fp128 %{{.*}}, metadata !"round.tonearest", metadata !"fpexcept.strict")
 
+  __builtin_exp10(f);       __builtin_exp10f(f);      __builtin_exp10l(f); __builtin_exp10f128(f);
+
+// CHECK: call double @exp10(double noundef %{{.*}})
+// CHECK: call float @exp10f(float noundef %{{.*}})
+// CHECK: call x86_fp80 @exp10l(x86_fp80 noundef %{{.*}})
+// CHECK: call fp128 @exp10f128(fp128 noundef %{{.*}})
+
   __builtin_floor(f);      __builtin_floorf(f);     __builtin_floorl(f); __builtin_floorf128(f);
 
 // CHECK: call double @llvm.experimental.constrained.floor.f64(double %{{.*}}, metadata !"fpexcept.strict")
@@ -222,6 +229,11 @@ void foo(double *d, float f, float *fp, long double *l, int *i, const char *c, _
 // CHECK: declare float @llvm.experimental.constrained.exp2.f32(float, metadata, metadata)
 // CHECK: declare x86_fp80 @llvm.experimental.constrained.exp2.f80(x86_fp80, metadata, metadata)
 // CHECK: declare fp128 @llvm.experimental.constrained.exp2.f128(fp128, metadata, metadata)
+
+// CHECK: declare double @exp10(double noundef)
+// CHECK: declare float @exp10f(float noundef)
+// CHECK: declare x86_fp80 @exp10l(x86_fp80 noundef)
+// CHECK: declare fp128 @exp10f128(fp128 noundef)
 
 // CHECK: declare double @llvm.experimental.constrained.floor.f64(double, metadata)
 // CHECK: declare float @llvm.experimental.constrained.floor.f32(float, metadata)

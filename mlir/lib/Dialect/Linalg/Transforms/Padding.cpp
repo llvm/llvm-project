@@ -245,9 +245,11 @@ linalg::rewriteAsPaddedOp(RewriterBase &rewriter, LinalgOp opToPad,
                                                          std::get<1>(it)->get())
                                  .getResult(0));
     } else if (options.copyBackOp ==
-               LinalgPaddingOptions::CopyBackOp::BufferizationCopyTensor) {
-      replacements.push_back(rewriter.create<bufferization::CopyTensorOp>(
-          loc, std::get<0>(it), std::get<1>(it)->get()));
+               LinalgPaddingOptions::CopyBackOp::
+                   BufferizationMaterializeInDestination) {
+      replacements.push_back(
+          rewriter.create<bufferization::MaterializeInDestinationOp>(
+              loc, std::get<0>(it), std::get<1>(it)->get()));
     } else {
       llvm_unreachable("unsupported copy back op");
     }

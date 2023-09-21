@@ -9,6 +9,6 @@
 #ifndef __LLVM_LIBC_TYPES_RLIM_T_H__
 #define __LLVM_LIBC_TYPES_RLIM_T_H__
 
-typedef unsigned long rlim_t;
+typedef __UINT64_TYPE__ rlim_t;
 
 #endif // __LLVM_LIBC_TYPES_RLIM_T_H__

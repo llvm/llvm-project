@@ -20,3 +20,11 @@ module m
   logical, parameter :: test_07d = ca(1)(5:) == ""
   logical, parameter :: test_07e = ca(1)(:) == "abcd"
 end module
+
+subroutine foo(x)
+  character(4) :: x(:, :)
+  logical, parameter :: test_01 = len(transpose(x(:, :)(:))) == 4
+  logical, parameter :: test_02 = len(transpose(x(:, :)(1:2))) == 2
+  logical, parameter :: test_03 = len(maxval(x(:, :)(:))) == 4
+  logical, parameter :: test_04 = len(maxval(x(:, :)(1:2))) == 2
+end subroutine

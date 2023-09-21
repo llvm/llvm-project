@@ -7,10 +7,10 @@
 
 namespace PR5557 {
 template <class T> struct A {
-  A(); // expected-note{{instantiation}}
+  A();
   virtual int a(T x);
 };
-template<class T> A<T>::A() {}
+template<class T> A<T>::A() {} // expected-note{{instantiation}}
 
 template<class T> int A<T>::a(T x) { 
   return *x; // expected-error{{requires pointer operand}}
@@ -33,10 +33,10 @@ void X<int>::f() { }
 namespace PR5557_dtor {
 template <class T> struct A {
   A(); // Don't have an implicit constructor.
-  ~A(); // expected-note{{instantiation}}
+  ~A();
   virtual int a(T x);
 };
-template<class T> A<T>::~A() {}
+template<class T> A<T>::~A() {} // expected-note{{instantiation}}
 
 template<class T> int A<T>::a(T x) { 
   return *x; // expected-error{{requires pointer operand}}

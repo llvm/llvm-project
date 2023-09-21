@@ -30,8 +30,8 @@
 // Do the same run, but now with direct IR generation and VLA vectorization.
 // RUN: %if mlir_arm_sve_tests %{ %{compile_sve} | %{run_sve} | FileCheck %s %}
 
-#SparseVector = #sparse_tensor.encoding<{lvlTypes = ["compressed"]}>
-#DenseVector = #sparse_tensor.encoding<{lvlTypes = ["dense"]}>
+#SparseVector = #sparse_tensor.encoding<{map = (d0) -> (d0 : compressed)}>
+#DenseVector = #sparse_tensor.encoding<{map = (d0) -> (d0 : dense)}>
 
 #trait_vec_op = {
   indexing_maps = [
@@ -49,7 +49,7 @@ module {
                         %argb: tensor<?xf16, #SparseVector>) -> tensor<?xf16, #DenseVector> {
     %c = arith.constant 0 : index
     %d = tensor.dim %arga, %c : tensor<?xf16, #SparseVector>
-    %xv = bufferization.alloc_tensor (%d) : tensor<?xf16, #DenseVector>
+    %xv = tensor.empty (%d) : tensor<?xf16, #DenseVector>
     %0 = linalg.generic #trait_vec_op
        ins(%arga, %argb: tensor<?xf16, #SparseVector>, tensor<?xf16, #SparseVector>)
         outs(%xv: tensor<?xf16, #DenseVector>) {

@@ -37,8 +37,8 @@ define <4 x half> @complex_mul_v4f16(<4 x half> %a, <4 x half> %b) {
 ; CHECK-LABEL: complex_mul_v4f16:
 ; CHECK:       // %bb.0: // %entry
 ; CHECK-NEXT:    movi d2, #0000000000000000
-; CHECK-NEXT:    fcmla v2.4h, v0.4h, v1.4h, #0
-; CHECK-NEXT:    fcmla v2.4h, v0.4h, v1.4h, #90
+; CHECK-NEXT:    fcmla v2.4h, v1.4h, v0.4h, #0
+; CHECK-NEXT:    fcmla v2.4h, v1.4h, v0.4h, #90
 ; CHECK-NEXT:    fmov d0, d2
 ; CHECK-NEXT:    ret
 entry:
@@ -61,8 +61,8 @@ define <8 x half> @complex_mul_v8f16(<8 x half> %a, <8 x half> %b) {
 ; CHECK-LABEL: complex_mul_v8f16:
 ; CHECK:       // %bb.0: // %entry
 ; CHECK-NEXT:    movi v2.2d, #0000000000000000
-; CHECK-NEXT:    fcmla v2.8h, v0.8h, v1.8h, #0
-; CHECK-NEXT:    fcmla v2.8h, v0.8h, v1.8h, #90
+; CHECK-NEXT:    fcmla v2.8h, v1.8h, v0.8h, #0
+; CHECK-NEXT:    fcmla v2.8h, v1.8h, v0.8h, #90
 ; CHECK-NEXT:    mov v0.16b, v2.16b
 ; CHECK-NEXT:    ret
 entry:
@@ -86,10 +86,10 @@ define <16 x half> @complex_mul_v16f16(<16 x half> %a, <16 x half> %b) {
 ; CHECK:       // %bb.0: // %entry
 ; CHECK-NEXT:    movi v4.2d, #0000000000000000
 ; CHECK-NEXT:    movi v5.2d, #0000000000000000
-; CHECK-NEXT:    fcmla v5.8h, v0.8h, v2.8h, #0
-; CHECK-NEXT:    fcmla v4.8h, v1.8h, v3.8h, #0
-; CHECK-NEXT:    fcmla v5.8h, v0.8h, v2.8h, #90
-; CHECK-NEXT:    fcmla v4.8h, v1.8h, v3.8h, #90
+; CHECK-NEXT:    fcmla v5.8h, v2.8h, v0.8h, #0
+; CHECK-NEXT:    fcmla v4.8h, v3.8h, v1.8h, #0
+; CHECK-NEXT:    fcmla v5.8h, v2.8h, v0.8h, #90
+; CHECK-NEXT:    fcmla v4.8h, v3.8h, v1.8h, #90
 ; CHECK-NEXT:    mov v0.16b, v5.16b
 ; CHECK-NEXT:    mov v1.16b, v4.16b
 ; CHECK-NEXT:    ret
@@ -116,14 +116,14 @@ define <32 x half> @complex_mul_v32f16(<32 x half> %a, <32 x half> %b) {
 ; CHECK-NEXT:    movi v17.2d, #0000000000000000
 ; CHECK-NEXT:    movi v18.2d, #0000000000000000
 ; CHECK-NEXT:    movi v19.2d, #0000000000000000
-; CHECK-NEXT:    fcmla v16.8h, v0.8h, v4.8h, #0
-; CHECK-NEXT:    fcmla v18.8h, v1.8h, v5.8h, #0
-; CHECK-NEXT:    fcmla v17.8h, v3.8h, v7.8h, #0
-; CHECK-NEXT:    fcmla v19.8h, v2.8h, v6.8h, #0
-; CHECK-NEXT:    fcmla v16.8h, v0.8h, v4.8h, #90
-; CHECK-NEXT:    fcmla v18.8h, v1.8h, v5.8h, #90
-; CHECK-NEXT:    fcmla v17.8h, v3.8h, v7.8h, #90
-; CHECK-NEXT:    fcmla v19.8h, v2.8h, v6.8h, #90
+; CHECK-NEXT:    fcmla v16.8h, v4.8h, v0.8h, #0
+; CHECK-NEXT:    fcmla v18.8h, v5.8h, v1.8h, #0
+; CHECK-NEXT:    fcmla v17.8h, v7.8h, v3.8h, #0
+; CHECK-NEXT:    fcmla v19.8h, v6.8h, v2.8h, #0
+; CHECK-NEXT:    fcmla v16.8h, v4.8h, v0.8h, #90
+; CHECK-NEXT:    fcmla v18.8h, v5.8h, v1.8h, #90
+; CHECK-NEXT:    fcmla v17.8h, v7.8h, v3.8h, #90
+; CHECK-NEXT:    fcmla v19.8h, v6.8h, v2.8h, #90
 ; CHECK-NEXT:    mov v0.16b, v16.16b
 ; CHECK-NEXT:    mov v1.16b, v18.16b
 ; CHECK-NEXT:    mov v3.16b, v17.16b
