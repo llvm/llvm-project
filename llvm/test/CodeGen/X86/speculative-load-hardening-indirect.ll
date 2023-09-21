@@ -534,12 +534,6 @@ define dso_local i32 @test_switch_jumptable(i32 %idx) nounwind {
 ; X64-NEXT:    movl $7, %eax
 ; X64-NEXT:    orq %rcx, %rsp
 ; X64-NEXT:    retq
-; X64-NEXT:  .LBB6_2: # %bb0
-; X64-NEXT:    cmovbeq %rax, %rcx
-; X64-NEXT:    shlq $47, %rcx
-; X64-NEXT:    movl $2, %eax
-; X64-NEXT:    orq %rcx, %rsp
-; X64-NEXT:    retq
 ; X64-NEXT:  .LBB6_4: # Block address taken
 ; X64-NEXT:    # %bb2
 ; X64-NEXT:    cmpq $.LBB6_4, %rdx
@@ -562,6 +556,12 @@ define dso_local i32 @test_switch_jumptable(i32 %idx) nounwind {
 ; X64-NEXT:    cmovneq %rax, %rcx
 ; X64-NEXT:    shlq $47, %rcx
 ; X64-NEXT:    movl $11, %eax
+; X64-NEXT:    orq %rcx, %rsp
+; X64-NEXT:    retq
+; X64-NEXT:  .LBB6_2: # %bb0
+; X64-NEXT:    cmovbeq %rax, %rcx
+; X64-NEXT:    shlq $47, %rcx
+; X64-NEXT:    movl $2, %eax
 ; X64-NEXT:    orq %rcx, %rsp
 ; X64-NEXT:    retq
 ;
@@ -589,12 +589,6 @@ define dso_local i32 @test_switch_jumptable(i32 %idx) nounwind {
 ; X64-PIC-NEXT:    movl $7, %eax
 ; X64-PIC-NEXT:    orq %rcx, %rsp
 ; X64-PIC-NEXT:    retq
-; X64-PIC-NEXT:  .LBB6_2: # %bb0
-; X64-PIC-NEXT:    cmovbeq %rax, %rcx
-; X64-PIC-NEXT:    shlq $47, %rcx
-; X64-PIC-NEXT:    movl $2, %eax
-; X64-PIC-NEXT:    orq %rcx, %rsp
-; X64-PIC-NEXT:    retq
 ; X64-PIC-NEXT:  .LBB6_4: # Block address taken
 ; X64-PIC-NEXT:    # %bb2
 ; X64-PIC-NEXT:    leaq .LBB6_4(%rip), %rsi
@@ -620,6 +614,12 @@ define dso_local i32 @test_switch_jumptable(i32 %idx) nounwind {
 ; X64-PIC-NEXT:    cmovneq %rax, %rcx
 ; X64-PIC-NEXT:    shlq $47, %rcx
 ; X64-PIC-NEXT:    movl $11, %eax
+; X64-PIC-NEXT:    orq %rcx, %rsp
+; X64-PIC-NEXT:    retq
+; X64-PIC-NEXT:  .LBB6_2: # %bb0
+; X64-PIC-NEXT:    cmovbeq %rax, %rcx
+; X64-PIC-NEXT:    shlq $47, %rcx
+; X64-PIC-NEXT:    movl $2, %eax
 ; X64-PIC-NEXT:    orq %rcx, %rsp
 ; X64-PIC-NEXT:    retq
 ;

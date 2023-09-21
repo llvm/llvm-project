@@ -125,4 +125,45 @@ TEST(BlockFrequencyTest, SaturatingRightShift) {
   EXPECT_EQ(Freq.getFrequency(), 0x1ULL);
 }
 
+TEST(BlockFrequencyTest, AlmostEqual) {
+  EXPECT_FALSE(BlockFrequency(0x1234).almostEqual(BlockFrequency(0), 20));
+  EXPECT_FALSE(BlockFrequency(0x1234).almostEqual(BlockFrequency(0x1233), 20));
+  EXPECT_TRUE(BlockFrequency(0x1234).almostEqual(BlockFrequency(0x1234), 20));
+
+  EXPECT_FALSE(BlockFrequency(0).almostEqual(BlockFrequency(0x1234), 20));
+  EXPECT_FALSE(BlockFrequency(0x1233).almostEqual(BlockFrequency(0x1234), 20));
+  EXPECT_TRUE(BlockFrequency(0x1234).almostEqual(BlockFrequency(0x1234), 20));
+
+  EXPECT_FALSE(BlockFrequency(0x1235).almostEqual(BlockFrequency(0x1234), 20));
+  EXPECT_FALSE(BlockFrequency(0x1234).almostEqual(BlockFrequency(0x1235), 20));
+
+  EXPECT_TRUE(BlockFrequency(0x4129).almostEqual(BlockFrequency(0x4128), 1));
+  EXPECT_TRUE(BlockFrequency(0x4129).almostEqual(BlockFrequency(0x4128), 2));
+  EXPECT_TRUE(BlockFrequency(0x4129).almostEqual(BlockFrequency(0x4128), 8));
+  EXPECT_TRUE(BlockFrequency(0x4129).almostEqual(BlockFrequency(0x4128), 14));
+  EXPECT_FALSE(BlockFrequency(0x4129).almostEqual(BlockFrequency(0x4128), 15));
+  EXPECT_FALSE(BlockFrequency(0x4129).almostEqual(BlockFrequency(0x4128), 16));
+  EXPECT_FALSE(BlockFrequency(0x4129).almostEqual(BlockFrequency(0x4128), 63));
+
+  EXPECT_FALSE(
+      BlockFrequency(0x10000000000).almostEqual(BlockFrequency(0x10), 5));
+
+  BlockFrequency Max = BlockFrequency::max();
+  EXPECT_TRUE(BlockFrequency(Max).almostEqual(Max, 0));
+  EXPECT_TRUE(BlockFrequency(Max).almostEqual(Max, 1));
+  EXPECT_TRUE(BlockFrequency(Max).almostEqual(Max, 63));
+
+  BlockFrequency Zero = BlockFrequency(0);
+  EXPECT_TRUE(BlockFrequency(Max).almostEqual(Zero, 0));
+  EXPECT_FALSE(BlockFrequency(Max).almostEqual(Zero, 1));
+  EXPECT_FALSE(BlockFrequency(Max).almostEqual(Zero, 63));
+
+  EXPECT_TRUE(BlockFrequency(Zero).almostEqual(Max, 0));
+  EXPECT_FALSE(BlockFrequency(Zero).almostEqual(Max, 1));
+  EXPECT_FALSE(BlockFrequency(Zero).almostEqual(Max, 63));
+
+  EXPECT_TRUE(BlockFrequency(Zero).almostEqual(Zero, 0));
+  EXPECT_TRUE(BlockFrequency(Zero).almostEqual(Zero, 1));
+  EXPECT_TRUE(BlockFrequency(Zero).almostEqual(Zero, 63));
+}
 }

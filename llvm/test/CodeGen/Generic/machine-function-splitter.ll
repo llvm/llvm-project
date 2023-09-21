@@ -523,7 +523,6 @@ define i32 @foo18(i32 %in) !prof !14 !section_prefix !15 {
 ; MFS-DEFAULTS-LABEL:        foo18
 ; MFS-DEFAULTS:              .section        .text.split.foo18
 ; MFS-DEFAULTS-NEXT:         foo18.cold:
-; MFS-DEFAULTS-SAME:           %common.ret
 ; MFS-DEFAULTS-X86-DAG:        jmp     qux
 ; MFS-DEFAULTS-X86-DAG:        jmp     bam
 ; MFS-DEFAULTS-AARCH64-NOT:    b       bar

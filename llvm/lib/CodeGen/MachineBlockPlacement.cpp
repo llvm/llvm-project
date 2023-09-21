@@ -1715,7 +1715,8 @@ MachineBasicBlock *MachineBlockPlacement::selectBestCandidateBlock(
 
   bool IsEHPad = WorkList[0]->isEHPad();
 
-  MachineBasicBlock *BestBlock = nullptr;
+  MachineBasicBlock *ChainEnd = *std::prev(Chain.end());
+  MachineBasicBlock *LayoutSucc = ChainEnd->getNextNode();
   BlockFrequency BestFreq;
   for (MachineBasicBlock *MBB : WorkList) {
     assert(MBB->isEHPad() == IsEHPad &&
@@ -1731,7 +1732,8 @@ MachineBasicBlock *MachineBlockPlacement::selectBestCandidateBlock(
     BlockFrequency CandidateFreq = MBFI->getBlockFreq(MBB);
     LLVM_DEBUG(dbgs() << "    " << getBlockName(MBB) << " -> "
                       << printBlockFreq(MBFI->getMBFI(), CandidateFreq)
-                      << " (freq)\n");
+                      << " (freq) is_layoutsucc " << (MBB == LayoutSucc)
+                      << '\n');
 
     // For ehpad, we layout the least probable first as to avoid jumping back
     // from least probable landingpads to more probable ones.
@@ -1751,11 +1753,26 @@ MachineBasicBlock *MachineBlockPlacement::selectBestCandidateBlock(
     //                 +-------------------------------------+
     //                 V                                     |
     // OuterLp -> OuterCleanup -> Resume     InnerLp -> InnerCleanup
-    if (BestBlock && (IsEHPad ^ (BestFreq >= CandidateFreq)))
+    if (BestFreq > BlockFrequency(0) && (IsEHPad ^ (BestFreq >= CandidateFreq)))
       continue;
 
-    BestBlock = MBB;
     BestFreq = CandidateFreq;
+  }
+  // Perform a 2nd pass to make the output more stable: Check for blocks with
+  // almost the same frequency as `BestFreq` and prefer the one that is already
+  // a successor to `ChainEnd` first or whichever comes first in `WorkList`.
+  MachineBasicBlock *BestBlock = nullptr;
+  for (MachineBasicBlock *MBB : WorkList) {
+    // Give precedence to the layout successor otherwise the first candidate.
+    if (BestBlock != nullptr && MBB != LayoutSucc)
+      continue;
+    BlockChain &SuccChain = *BlockToChain[MBB];
+    if (&SuccChain == &Chain)
+      continue;
+    BlockFrequency CandidateFreq = MBFI->getBlockFreq(MBB);
+    if (!BestFreq.almostEqual(CandidateFreq))
+      continue;
+    BestBlock = MBB;
   }
 
   return BestBlock;

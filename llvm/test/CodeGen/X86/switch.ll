@@ -284,8 +284,6 @@ define void @jt_is_better(i32 %x) {
 ; CHECK-NEXT:  .LBB4_3: # %bb1
 ; CHECK-NEXT:    movl $1, %edi
 ; CHECK-NEXT:    jmp g@PLT # TAILCALL
-; CHECK-NEXT:  .LBB4_7: # %return
-; CHECK-NEXT:    retq
 ; CHECK-NEXT:  .LBB4_4: # %bb2
 ; CHECK-NEXT:    movl $2, %edi
 ; CHECK-NEXT:    jmp g@PLT # TAILCALL
@@ -295,6 +293,8 @@ define void @jt_is_better(i32 %x) {
 ; CHECK-NEXT:  .LBB4_6: # %bb4
 ; CHECK-NEXT:    movl $4, %edi
 ; CHECK-NEXT:    jmp g@PLT # TAILCALL
+; CHECK-NEXT:  .LBB4_7: # %return
+; CHECK-NEXT:    retq
 ;
 ; NOOPT-LABEL: jt_is_better:
 ; NOOPT:       # %bb.0: # %entry
@@ -1880,13 +1880,6 @@ define void @left_leaning_weight_balanced_tree(i32 %x) {
 ; CHECK-NEXT:  # %bb.7: # %bb2
 ; CHECK-NEXT:    movl $2, %edi
 ; CHECK-NEXT:    jmp g@PLT # TAILCALL
-; CHECK-NEXT:  .LBB19_12: # %entry
-; CHECK-NEXT:    cmpl $50, %edi
-; CHECK-NEXT:    je .LBB19_17
-; CHECK-NEXT:  # %bb.13: # %entry
-; CHECK-NEXT:    cmpl $60, %edi
-; CHECK-NEXT:    je .LBB19_14
-; CHECK-NEXT:    jmp .LBB19_18
 ; CHECK-NEXT:  .LBB19_8: # %entry
 ; CHECK-NEXT:    cmpl $30, %edi
 ; CHECK-NEXT:    je .LBB19_16
@@ -1896,6 +1889,14 @@ define void @left_leaning_weight_balanced_tree(i32 %x) {
 ; CHECK-NEXT:  # %bb.10: # %bb4
 ; CHECK-NEXT:    movl $4, %edi
 ; CHECK-NEXT:    jmp g@PLT # TAILCALL
+; CHECK-NEXT:  .LBB19_12: # %entry
+; CHECK-NEXT:    cmpl $50, %edi
+; CHECK-NEXT:    je .LBB19_17
+; CHECK-NEXT:  # %bb.13: # %entry
+; CHECK-NEXT:    cmpl $60, %edi
+; CHECK-NEXT:    je .LBB19_14
+; CHECK-NEXT:  .LBB19_18: # %return
+; CHECK-NEXT:    retq
 ; CHECK-NEXT:  .LBB19_15: # %bb1
 ; CHECK-NEXT:    movl $1, %edi
 ; CHECK-NEXT:    jmp g@PLT # TAILCALL
@@ -1905,8 +1906,6 @@ define void @left_leaning_weight_balanced_tree(i32 %x) {
 ; CHECK-NEXT:  .LBB19_17: # %bb5
 ; CHECK-NEXT:    movl $5, %edi
 ; CHECK-NEXT:    jmp g@PLT # TAILCALL
-; CHECK-NEXT:  .LBB19_18: # %return
-; CHECK-NEXT:    retq
 ;
 ; NOOPT-LABEL: left_leaning_weight_balanced_tree:
 ; NOOPT:       # %bb.0: # %entry

@@ -1149,8 +1149,8 @@ define void @test_flow_unwind() personality i32 (...)* @pers {
 ; CHECK: %entry
 ; CHECK: %then
 ; CHECK: %exit
-; CHECK: %innerlp
 ; CHECK: %outerlp
+; CHECK: %innerlp
 ; CHECK: %outercleanup
 entry:
   %0 = invoke i32 @foo()

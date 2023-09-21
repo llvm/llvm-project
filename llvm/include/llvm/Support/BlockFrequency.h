@@ -14,8 +14,10 @@
 #define LLVM_SUPPORT_BLOCKFREQUENCY_H
 
 #include <cassert>
+#include <climits>
 #include <cstdint>
 #include <optional>
+#include <utility>
 
 namespace llvm {
 
@@ -92,6 +94,32 @@ public:
     // Saturate to 1 if we are 0.
     Frequency |= Frequency == 0;
     return *this;
+  }
+
+  /// Returns true if `this` is smaller or greater than `other` and the
+  /// magnitude of the difference is below the topmost `SignificantBits` of
+  /// `this`.
+  ///
+  /// The formula is related to comparing a "relative change" to a threshold.
+  /// When choosing the threshold as a negative power-of-two things can be
+  /// computed cheaply:
+  ///   with A = max(this->Frequency, Other.Frequency);
+  ///        B = min(Other.Frequency, this->Frequency); T = SignificantBits
+  ///   relative_change(A, B) = abs(A - B) / A
+  ///         (A - B) / A  <=  2**(-T)
+  ///   <=>   A - B        <=  2**(-T) * A
+  ///   <=>   A - B        <=  shr(A, T)
+  bool almostEqual(BlockFrequency Other, unsigned SignificantBits = 20) const {
+    assert(0 <= SignificantBits &&
+           SignificantBits < sizeof(Frequency) * CHAR_BIT &&
+           "invalid SignificantBits value");
+    uint64_t Max = Frequency;
+    uint64_t Min = Other.Frequency;
+    if (Max < Min)
+      std::swap(Min, Max);
+    uint64_t Diff = Max - Min;
+    uint64_t Threshold = Max >> SignificantBits;
+    return Diff <= Threshold;
   }
 
   bool operator<(BlockFrequency RHS) const {

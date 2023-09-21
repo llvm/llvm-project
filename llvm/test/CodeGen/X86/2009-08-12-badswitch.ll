@@ -45,9 +45,6 @@ define internal fastcc i32 @foo(i64 %bar) nounwind ssp {
 ; CHECK-NEXT:  LBB0_3: ## %RRETURN_6
 ; CHECK-NEXT:    callq _f2
 ; CHECK-NEXT:    jmp LBB0_28
-; CHECK-NEXT:  LBB0_2: ## %RETURN
-; CHECK-NEXT:    callq _f1
-; CHECK-NEXT:    jmp LBB0_28
 ; CHECK-NEXT:  LBB0_4: ## %RRETURN_7
 ; CHECK-NEXT:    callq _f3
 ; CHECK-NEXT:    jmp LBB0_28
@@ -119,6 +116,9 @@ define internal fastcc i32 @foo(i64 %bar) nounwind ssp {
 ; CHECK-NEXT:    jmp LBB0_28
 ; CHECK-NEXT:  LBB0_27: ## %RRETURN_1
 ; CHECK-NEXT:    callq _f26
+; CHECK-NEXT:    jmp LBB0_28
+; CHECK-NEXT:  LBB0_2: ## %RETURN
+; CHECK-NEXT:    callq _f1
 ; CHECK-NEXT:  LBB0_28: ## %EXIT
 ; CHECK-NEXT:    xorl %eax, %eax
 ; CHECK-NEXT:    popq %rcx

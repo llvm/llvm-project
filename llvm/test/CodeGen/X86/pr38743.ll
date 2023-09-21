@@ -27,15 +27,15 @@ define void @pr38743(i32 %a0) #1 align 2 {
 ; CHECK-NEXT:    movw %ax, -{{[0-9]+}}(%rsp)
 ; CHECK-NEXT:    movq .str.17(%rip), %rax
 ; CHECK-NEXT:    jmp .LBB0_4
-; CHECK-NEXT:  .LBB0_1: # %bb2
-; CHECK-NEXT:    movq .str.16+7(%rip), %rax
-; CHECK-NEXT:    movq %rax, -{{[0-9]+}}(%rsp)
-; CHECK-NEXT:    movq .str.16(%rip), %rax
-; CHECK-NEXT:    jmp .LBB0_4
 ; CHECK-NEXT:  .LBB0_3: # %bb8
 ; CHECK-NEXT:    movq .str.18+6(%rip), %rax
 ; CHECK-NEXT:    movq %rax, -{{[0-9]+}}(%rsp)
 ; CHECK-NEXT:    movq .str.18(%rip), %rax
+; CHECK-NEXT:    jmp .LBB0_4
+; CHECK-NEXT:  .LBB0_1: # %bb2
+; CHECK-NEXT:    movq .str.16+7(%rip), %rax
+; CHECK-NEXT:    movq %rax, -{{[0-9]+}}(%rsp)
+; CHECK-NEXT:    movq .str.16(%rip), %rax
 ; CHECK-NEXT:  .LBB0_4: # %bb12
 ; CHECK-NEXT:    movq %rax, -{{[0-9]+}}(%rsp)
 ; CHECK-NEXT:    movq -{{[0-9]+}}(%rsp), %rax

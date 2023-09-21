@@ -16,13 +16,13 @@ define i32 @cold(i32 %a, ptr %p, ptr %q) !prof !21 {
 ; CHECK-NEXT:  # %bb.4: # %true2
 ; CHECK-NEXT:    xorl %edi, %eax
 ; CHECK-NEXT:    retq
+; CHECK-NEXT:  .LBB0_5: # %false2
+; CHECK-NEXT:    andl %edi, %eax
+; CHECK-NEXT:    retq
 ; CHECK-NEXT:  .LBB0_2: # %false1
 ; CHECK-NEXT:    movl (%rdx), %eax
 ; CHECK-NEXT:    addl $-3, %eax
 ; CHECK-NEXT:    jmp .LBB0_3
-; CHECK-NEXT:  .LBB0_5: # %false2
-; CHECK-NEXT:    andl %edi, %eax
-; CHECK-NEXT:    retq
 entry:
   %cond1 = icmp sgt i32 %a, 1
   br i1 %cond1, label %true1, label %false1, !prof !30

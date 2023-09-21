@@ -155,11 +155,11 @@ define dso_local fastcc void @P10_Spill_CR_GT() unnamed_addr {
 ; CHECK-NEXT:    #
 ; CHECK-NEXT:    b .LBB0_25
 ; CHECK-NEXT:    .p2align 4
-; CHECK-NEXT:  .LBB0_26: # %bb62
+; CHECK-NEXT:  .LBB0_26: # %bb56
 ; CHECK-NEXT:    #
 ; CHECK-NEXT:    b .LBB0_26
 ; CHECK-NEXT:    .p2align 4
-; CHECK-NEXT:  .LBB0_27: # %bb56
+; CHECK-NEXT:  .LBB0_27: # %bb62
 ; CHECK-NEXT:    #
 ; CHECK-NEXT:    b .LBB0_27
 ; CHECK-NEXT:    .p2align 4
@@ -348,11 +348,11 @@ define dso_local fastcc void @P10_Spill_CR_GT() unnamed_addr {
 ; CHECK-BE-NEXT:    #
 ; CHECK-BE-NEXT:    b .LBB0_25
 ; CHECK-BE-NEXT:    .p2align 4
-; CHECK-BE-NEXT:  .LBB0_26: # %bb62
+; CHECK-BE-NEXT:  .LBB0_26: # %bb56
 ; CHECK-BE-NEXT:    #
 ; CHECK-BE-NEXT:    b .LBB0_26
 ; CHECK-BE-NEXT:    .p2align 4
-; CHECK-BE-NEXT:  .LBB0_27: # %bb56
+; CHECK-BE-NEXT:  .LBB0_27: # %bb62
 ; CHECK-BE-NEXT:    #
 ; CHECK-BE-NEXT:    b .LBB0_27
 ; CHECK-BE-NEXT:    .p2align 4

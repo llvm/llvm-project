@@ -137,15 +137,6 @@ define void @_ZNK10wxDateTime6FormatEPKwRKNS_8TimeZoneE(ptr noalias sret(%struct
 ; CHECK-NEXT:    calll __ZN12wxStringBase10ConcatSelfEmPKwm
 ; CHECK-NEXT:  Ltmp11:
 ; CHECK-NEXT:    jmp LBB0_5
-; CHECK-NEXT:  LBB0_9: ## %bb5657
-; CHECK-NEXT:  Ltmp13:
-; CHECK-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; CHECK-NEXT:    movl %eax, {{[0-9]+}}(%esp)
-; CHECK-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; CHECK-NEXT:    movl %eax, (%esp)
-; CHECK-NEXT:    calll __ZNK10wxDateTime12GetDayOfYearERKNS_8TimeZoneE
-; CHECK-NEXT:  Ltmp14:
-; CHECK-NEXT:    jmp LBB0_25
 ; CHECK-NEXT:  LBB0_20: ## %bb5968
 ; CHECK-NEXT:  Ltmp2:
 ; CHECK-NEXT:    movl $0, {{[0-9]+}}(%esp)
@@ -154,6 +145,15 @@ define void @_ZNK10wxDateTime6FormatEPKwRKNS_8TimeZoneE(ptr noalias sret(%struct
 ; CHECK-NEXT:    calll __ZN8wxString6FormatEPKwz
 ; CHECK-NEXT:    subl $4, %esp
 ; CHECK-NEXT:  Ltmp3:
+; CHECK-NEXT:    jmp LBB0_25
+; CHECK-NEXT:  LBB0_9: ## %bb5657
+; CHECK-NEXT:  Ltmp13:
+; CHECK-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; CHECK-NEXT:    movl %eax, {{[0-9]+}}(%esp)
+; CHECK-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; CHECK-NEXT:    movl %eax, (%esp)
+; CHECK-NEXT:    calll __ZNK10wxDateTime12GetDayOfYearERKNS_8TimeZoneE
+; CHECK-NEXT:  Ltmp14:
 ; CHECK-NEXT:  LBB0_25: ## %bb115.critedge.i
 ; CHECK-NEXT:    movl %esi, %eax
 ; CHECK-NEXT:    addl $28, %esp

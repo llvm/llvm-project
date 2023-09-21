@@ -14,7 +14,7 @@ define dso_local signext i32 @test_shrinkwrap_jump_table(ptr noundef %m) local_u
 ; CHECK-NEXT:    lw a1, 0(a0)
 ; CHECK-NEXT:    addi a1, a1, -1
 ; CHECK-NEXT:    li a2, 4
-; CHECK-NEXT:    bltu a2, a1, .LBB0_3
+; CHECK-NEXT:    bltu a2, a1, .LBB0_7
 ; CHECK-NEXT:  # %bb.1: # %entry
 ; CHECK-NEXT:    slli a1, a1, 2
 ; CHECK-NEXT:    lui a2, %hi(.LJTI0_0)
@@ -24,7 +24,15 @@ define dso_local signext i32 @test_shrinkwrap_jump_table(ptr noundef %m) local_u
 ; CHECK-NEXT:    jr a1
 ; CHECK-NEXT:  .LBB0_2: # %sw.bb
 ; CHECK-NEXT:    tail func1@plt
-; CHECK-NEXT:  .LBB0_3: # %sw.default
+; CHECK-NEXT:  .LBB0_3: # %sw.bb1
+; CHECK-NEXT:    tail func2@plt
+; CHECK-NEXT:  .LBB0_4: # %sw.bb3
+; CHECK-NEXT:    tail func3@plt
+; CHECK-NEXT:  .LBB0_5: # %sw.bb5
+; CHECK-NEXT:    tail func4@plt
+; CHECK-NEXT:  .LBB0_6: # %sw.bb7
+; CHECK-NEXT:    tail func5@plt
+; CHECK-NEXT:  .LBB0_7: # %sw.default
 ; CHECK-NEXT:    addi sp, sp, -16
 ; CHECK-NEXT:    .cfi_def_cfa_offset 16
 ; CHECK-NEXT:    sd ra, 8(sp) # 8-byte Folded Spill
@@ -34,14 +42,6 @@ define dso_local signext i32 @test_shrinkwrap_jump_table(ptr noundef %m) local_u
 ; CHECK-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
 ; CHECK-NEXT:    addi sp, sp, 16
 ; CHECK-NEXT:    ret
-; CHECK-NEXT:  .LBB0_4: # %sw.bb1
-; CHECK-NEXT:    tail func2@plt
-; CHECK-NEXT:  .LBB0_5: # %sw.bb3
-; CHECK-NEXT:    tail func3@plt
-; CHECK-NEXT:  .LBB0_6: # %sw.bb5
-; CHECK-NEXT:    tail func4@plt
-; CHECK-NEXT:  .LBB0_7: # %sw.bb7
-; CHECK-NEXT:    tail func5@plt
 entry:
   %0 = load i32, ptr %m, align 4
   switch i32 %0, label %sw.default [

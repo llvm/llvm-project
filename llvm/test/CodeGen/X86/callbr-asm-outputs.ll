@@ -50,12 +50,12 @@ define i32 @test2(i32 %out1, i32 %out2) nounwind {
 ; CHECK-NEXT:  .LBB1_2: # Block address taken
 ; CHECK-NEXT:    # %if.then.label_true_crit_edge
 ; CHECK-NEXT:    # Label of block must be emitted
-; CHECK-NEXT:    jmp .LBB1_8
+; CHECK-NEXT:    jmp .LBB1_9
 ; CHECK-NEXT:  .LBB1_3: # %if.else
 ; CHECK-NEXT:    #APP
 ; CHECK-NEXT:    testl %esi, %edi
 ; CHECK-NEXT:    testl %esi, %edi
-; CHECK-NEXT:    jne .LBB1_9
+; CHECK-NEXT:    jne .LBB1_6
 ; CHECK-NEXT:    #NO_APP
 ; CHECK-NEXT:  .LBB1_4:
 ; CHECK-NEXT:    movl %esi, %eax
@@ -64,19 +64,19 @@ define i32 @test2(i32 %out1, i32 %out2) nounwind {
 ; CHECK-NEXT:    popl %esi
 ; CHECK-NEXT:    popl %edi
 ; CHECK-NEXT:    retl
-; CHECK-NEXT:  .LBB1_7: # Block address taken
-; CHECK-NEXT:    # %if.else.label_true_crit_edge
-; CHECK-NEXT:    # Label of block must be emitted
-; CHECK-NEXT:  .LBB1_8: # %label_true
-; CHECK-NEXT:    movl $-2, %eax
-; CHECK-NEXT:    jmp .LBB1_5
-; CHECK-NEXT:  .LBB1_9: # Block address taken
+; CHECK-NEXT:  .LBB1_6: # Block address taken
 ; CHECK-NEXT:    # %if.else.return_crit_edge
 ; CHECK-NEXT:    # Label of block must be emitted
-; CHECK-NEXT:  .LBB1_6: # Block address taken
+; CHECK-NEXT:  .LBB1_7: # Block address taken
 ; CHECK-NEXT:    # %if.then.return_crit_edge
 ; CHECK-NEXT:    # Label of block must be emitted
 ; CHECK-NEXT:    movl $-1, %eax
+; CHECK-NEXT:    jmp .LBB1_5
+; CHECK-NEXT:  .LBB1_8: # Block address taken
+; CHECK-NEXT:    # %if.else.label_true_crit_edge
+; CHECK-NEXT:    # Label of block must be emitted
+; CHECK-NEXT:  .LBB1_9: # %label_true
+; CHECK-NEXT:    movl $-2, %eax
 ; CHECK-NEXT:    jmp .LBB1_5
 entry:
   %cmp = icmp slt i32 %out1, %out2
