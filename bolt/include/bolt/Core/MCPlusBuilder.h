@@ -1791,8 +1791,7 @@ public:
   /// \p Name wasn't registered previously.
   unsigned getOrCreateAnnotationIndex(StringRef Name) {
     {
-      std::optional<unsigned> Index = getAnnotationIndex(Name);
-      if (Index.has_value())
+      if (std::optional<unsigned> Index = getAnnotationIndex(Name))
         return *Index;
     }
 
