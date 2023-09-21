@@ -51,12 +51,19 @@ contains
 ! CHECK-SAME: %[[ARG0:.*]]: !fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>> {fir.bindc_name = "a"})
 ! CHECK: %[[BOX:.*]] = fir.load %[[ARG0]] : !fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>>
 ! CHECK: %[[BOX_ADDR:.*]] = fir.box_addr %[[BOX]] : (!fir.box<!fir.heap<!fir.array<?xi32>>>) -> !fir.heap<!fir.array<?xi32>>
-! CHECK: fir.freemem %[[BOX_ADDR]] : !fir.heap<!fir.array<?xi32>>
-! CHECK: %[[ZERO:.*]] = fir.zero_bits !fir.heap<!fir.array<?xi32>>
-! CHECK: %[[C0:.*]] = arith.constant 0 : index
-! CHECK: %[[SHAPE:.*]] = fir.shape %[[C0]] : (index) -> !fir.shape<1>
-! CHECK: %[[EMBOX:.*]] = fir.embox %[[ZERO]](%[[SHAPE]]) : (!fir.heap<!fir.array<?xi32>>, !fir.shape<1>) -> !fir.box<!fir.heap<!fir.array<?xi32>>>
-! CHECK: fir.store %[[EMBOX]] to %[[ARG0]] : !fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>>
+! CHECK: %[[BOX_ADDR_PTR:.*]] = fir.convert %[[BOX_ADDR]] : (!fir.heap<!fir.array<?xi32>>) -> i64
+! CHECK: %[[C0:.*]] = arith.constant 0 : i64
+! CHECK: %[[IS_ALLOCATED:.*]] = arith.cmpi ne, %[[BOX_ADDR_PTR]], %[[C0]] : i64
+! CHECK: fir.if %[[IS_ALLOCATED]] {
+! CHECK:   %[[BOX:.*]] = fir.load %[[ARG0]] : !fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>>
+! CHECK:   %[[BOX_ADDR:.*]] = fir.box_addr %[[BOX]] : (!fir.box<!fir.heap<!fir.array<?xi32>>>) -> !fir.heap<!fir.array<?xi32>>
+! CHECK:   fir.freemem %[[BOX_ADDR]] : !fir.heap<!fir.array<?xi32>>
+! CHECK:   %[[ZERO:.*]] = fir.zero_bits !fir.heap<!fir.array<?xi32>>
+! CHECK:   %[[C0:.*]] = arith.constant 0 : index
+! CHECK:   %[[SHAPE:.*]] = fir.shape %[[C0]] : (index) -> !fir.shape<1>
+! CHECK:   %[[EMBOX:.*]] = fir.embox %[[ZERO]](%[[SHAPE]]) : (!fir.heap<!fir.array<?xi32>>, !fir.shape<1>) -> !fir.box<!fir.heap<!fir.array<?xi32>>>
+! CHECK:   fir.store %[[EMBOX]] to %[[ARG0]] : !fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>>
+! CHECK: }
 
   subroutine sub2()
     integer, allocatable :: a(:)
@@ -69,12 +76,18 @@ contains
 ! CHECK-LABEL: func.func @_QMmod1Psub2()
 ! CHECK: %[[BOX:.*]] = fir.alloca !fir.box<!fir.heap<!fir.array<?xi32>>> {bindc_name = "a", uniq_name = "_QMmod1Fsub2Ea"}
 ! CHECK: %[[BOX_ALLOC:.*]] = fir.alloca !fir.heap<!fir.array<?xi32>> {uniq_name = "_QMmod1Fsub2Ea.addr"}
+! CHECK: %[[BOX_ADDR:.*]] = fir.load %[[BOX_ALLOC]] : !fir.ref<!fir.heap<!fir.array<?xi32>>>
+! CHECK: %[[BOX_ADDR_PTR:.*]] = fir.convert %[[BOX_ADDR]] : (!fir.heap<!fir.array<?xi32>>) -> i64
+! CHECK: %[[C0:.*]] = arith.constant 0 : i64
+! CHECK: %[[IS_ALLOCATED:.*]] = arith.cmpi ne, %[[BOX_ADDR_PTR]], %[[C0]] : i64
+! CHECK: fir.if %[[IS_ALLOCATED]] {
+! CHECK:   %[[LOAD:.*]] = fir.load %[[BOX_ALLOC]] : !fir.ref<!fir.heap<!fir.array<?xi32>>>
+! CHECK:   fir.freemem %[[LOAD]] : !fir.heap<!fir.array<?xi32>>
+! CHECK:   %[[ZERO:.*]] = fir.zero_bits !fir.heap<!fir.array<?xi32>>
+! CHECK:   fir.store %[[ZERO]] to %[[BOX_ALLOC]] : !fir.ref<!fir.heap<!fir.array<?xi32>>>
+! CHECK: }
 ! CHECK: %[[LOAD:.*]] = fir.load %[[BOX_ALLOC]] : !fir.ref<!fir.heap<!fir.array<?xi32>>>
 ! CHECK: %{{.*}} = fir.embox %[[LOAD]](%{{.*}}) : (!fir.heap<!fir.array<?xi32>>, !fir.shapeshift<
-! CHECK: %[[LOAD:.*]] = fir.load %[[BOX_ALLOC]] : !fir.ref<!fir.heap<!fir.array<?xi32>>>
-! CHECK: fir.freemem %[[LOAD]] : !fir.heap<!fir.array<?xi32>>
-! CHECK: %[[ZERO:.*]] = fir.zero_bits !fir.heap<!fir.array<?xi32>>
-! CHECK: fir.store %[[ZERO]] to %[[BOX_ALLOC]] : !fir.ref<!fir.heap<!fir.array<?xi32>>>
 ! CHECK: fir.call @sub3(%[[BOX]]) {{.*}}: (!fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>>) -> ()
 
   subroutine sub4()
@@ -147,12 +160,19 @@ contains
 ! CHECK: fir.if %[[IS_PRESENT]] {
 ! CHECK:   %[[BOX:.*]] = fir.load %[[ARG0]] : !fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>>
 ! CHECK:   %[[BOX_ADDR:.*]] = fir.box_addr %[[BOX]] : (!fir.box<!fir.heap<!fir.array<?xi32>>>) -> !fir.heap<!fir.array<?xi32>>
-! CHECK:   fir.freemem %[[BOX_ADDR]] : !fir.heap<!fir.array<?xi32>>
-! CHECK:   %[[ZERO:.*]] = fir.zero_bits !fir.heap<!fir.array<?xi32>>
-! CHECK:   %[[C0:.*]] = arith.constant 0 : index
-! CHECK:   %[[SHAPE:.*]] = fir.shape %[[C0]] : (index) -> !fir.shape<1>
-! CHECK:   %[[EMBOX:.*]] = fir.embox %[[ZERO]](%[[SHAPE]]) : (!fir.heap<!fir.array<?xi32>>, !fir.shape<1>) -> !fir.box<!fir.heap<!fir.array<?xi32>>>
-! CHECK:   fir.store %[[EMBOX]] to %[[ARG0]] : !fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>>
+! CHECK:   %[[BOX_ADDR_PTR:.*]] = fir.convert %[[BOX_ADDR]] : (!fir.heap<!fir.array<?xi32>>) -> i64
+! CHECK:   %[[C0:.*]] = arith.constant 0 : i64
+! CHECK:   %[[IS_ALLOCATED:.*]] = arith.cmpi ne, %[[BOX_ADDR_PTR]], %[[C0]] : i64
+! CHECK:   fir.if %[[IS_ALLOCATED]] {
+! CHECK:     %[[BOX:.*]] = fir.load %[[ARG0]] : !fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>>
+! CHECK:     %[[BOX_ADDR:.*]] = fir.box_addr %[[BOX]] : (!fir.box<!fir.heap<!fir.array<?xi32>>>) -> !fir.heap<!fir.array<?xi32>>
+! CHECK:     fir.freemem %[[BOX_ADDR]] : !fir.heap<!fir.array<?xi32>>
+! CHECK:     %[[ZERO:.*]] = fir.zero_bits !fir.heap<!fir.array<?xi32>>
+! CHECK:     %[[C0:.*]] = arith.constant 0 : index
+! CHECK:     %[[SHAPE:.*]] = fir.shape %[[C0]] : (index) -> !fir.shape<1>
+! CHECK:     %[[EMBOX:.*]] = fir.embox %[[ZERO]](%[[SHAPE]]) : (!fir.heap<!fir.array<?xi32>>, !fir.shape<1>) -> !fir.box<!fir.heap<!fir.array<?xi32>>>
+! CHECK:     fir.store %[[EMBOX]] to %[[ARG0]] : !fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>>
+! CHECK:   }
 ! CHECK: }
 
   subroutine sub10(a)
@@ -165,12 +185,19 @@ contains
 ! CHECK-SAME: %[[ARG0:.*]]: !fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>> {fir.bindc_name = "a"}) {
 ! CHECK: %[[LOAD:.*]] = fir.load %[[ARG0]] : !fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>>
 ! CHECK: %[[BOX_ADDR:.*]] = fir.box_addr %[[LOAD]] : (!fir.box<!fir.heap<!fir.array<?xi32>>>) -> !fir.heap<!fir.array<?xi32>>
-! CHECK: fir.freemem %[[BOX_ADDR]] : !fir.heap<!fir.array<?xi32>>
-! CHECK: %[[ZERO:.*]] = fir.zero_bits !fir.heap<!fir.array<?xi32>>
-! CHECK: %[[C0:.*]] = arith.constant 0 : index
-! CHECK: %[[SHAPE:.*]] = fir.shape %[[C0]] : (index) -> !fir.shape<1>
-! CHECK: %[[EMBOX:.*]] = fir.embox %[[ZERO]](%[[SHAPE]]) : (!fir.heap<!fir.array<?xi32>>, !fir.shape<1>) -> !fir.box<!fir.heap<!fir.array<?xi32>>>
-! CHECK: fir.store %[[EMBOX]] to %[[ARG0]] : !fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>>
+! CHECK: %[[BOX_ADDR_PTR:.*]] = fir.convert %[[BOX_ADDR]] : (!fir.heap<!fir.array<?xi32>>) -> i64
+! CHECK: %[[C0:.*]] = arith.constant 0 : i64
+! CHECK: %[[IS_ALLOCATED:.*]] = arith.cmpi ne, %[[BOX_ADDR_PTR]], %[[C0]] : i64
+! CHECK: fir.if %[[IS_ALLOCATED]] {
+! CHECK:   %[[BOX:.*]] = fir.load %[[ARG0]] : !fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>>
+! CHECK:   %[[BOX_ADDR:.*]] = fir.box_addr %[[BOX]] : (!fir.box<!fir.heap<!fir.array<?xi32>>>) -> !fir.heap<!fir.array<?xi32>>
+! CHECK:   fir.freemem %[[BOX_ADDR]] : !fir.heap<!fir.array<?xi32>>
+! CHECK:   %[[ZERO:.*]] = fir.zero_bits !fir.heap<!fir.array<?xi32>>
+! CHECK:   %[[C0:.*]] = arith.constant 0 : index
+! CHECK:   %[[SHAPE:.*]] = fir.shape %[[C0]] : (index) -> !fir.shape<1>
+! CHECK:   %[[EMBOX:.*]] = fir.embox %[[ZERO]](%[[SHAPE]]) : (!fir.heap<!fir.array<?xi32>>, !fir.shape<1>) -> !fir.box<!fir.heap<!fir.array<?xi32>>>
+! CHECK:   fir.store %[[EMBOX]] to %[[ARG0]] : !fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>>
+! CHECK: }
 
 ! CHECK-LABEL: func.func @_QMmod1Psub11() {
 ! CHECK-NOT: fir.freemem
@@ -184,23 +211,37 @@ contains
 ! CHECK-SAME: %[[ARG0:.*]]: !fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>> {fir.bindc_name = "a"}) {
 ! CHECK: %[[LOAD:.*]] = fir.load %[[ARG0]] : !fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>>
 ! CHECK: %[[BOX_ADDR:.*]] = fir.box_addr %[[LOAD]] : (!fir.box<!fir.heap<!fir.array<?xi32>>>) -> !fir.heap<!fir.array<?xi32>>
-! CHECK: fir.freemem %[[BOX_ADDR]] : !fir.heap<!fir.array<?xi32>>
-! CHECK: %[[ZERO:.*]] = fir.zero_bits !fir.heap<!fir.array<?xi32>>
-! CHECK: %[[C0:.*]] = arith.constant 0 : index
-! CHECK: %[[SHAPE:.*]] = fir.shape %[[C0]] : (index) -> !fir.shape<1>
-! CHECK: %[[EMBOX:.*]] = fir.embox %[[ZERO]](%[[SHAPE]]) : (!fir.heap<!fir.array<?xi32>>, !fir.shape<1>) -> !fir.box<!fir.heap<!fir.array<?xi32>>>
-! CHECK: fir.store %[[EMBOX]] to %[[ARG0]] : !fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>>
+! CHECK: %[[BOX_ADDR_PTR:.*]] = fir.convert %[[BOX_ADDR]] : (!fir.heap<!fir.array<?xi32>>) -> i64
+! CHECK: %[[C0:.*]] = arith.constant 0 : i64
+! CHECK: %[[IS_ALLOCATED:.*]] = arith.cmpi ne, %[[BOX_ADDR_PTR]], %[[C0]] : i64
+! CHECK: fir.if %[[IS_ALLOCATED]] {
+! CHECK:   %[[BOX:.*]] = fir.load %[[ARG0]] : !fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>>
+! CHECK:   %[[BOX_ADDR:.*]] = fir.box_addr %[[BOX]] : (!fir.box<!fir.heap<!fir.array<?xi32>>>) -> !fir.heap<!fir.array<?xi32>>
+! CHECK:   fir.freemem %[[BOX_ADDR]] : !fir.heap<!fir.array<?xi32>>
+! CHECK:   %[[ZERO:.*]] = fir.zero_bits !fir.heap<!fir.array<?xi32>>
+! CHECK:   %[[C0:.*]] = arith.constant 0 : index
+! CHECK:   %[[SHAPE:.*]] = fir.shape %[[C0]] : (index) -> !fir.shape<1>
+! CHECK:   %[[EMBOX:.*]] = fir.embox %[[ZERO]](%[[SHAPE]]) : (!fir.heap<!fir.array<?xi32>>, !fir.shape<1>) -> !fir.box<!fir.heap<!fir.array<?xi32>>>
+! CHECK:   fir.store %[[EMBOX]] to %[[ARG0]] : !fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>>
+! CHECK: }
 
 ! CHECK-LABEL: func.func @_QMmod1Psub13(
 ! CHECK-SAME: %[[ARG0:.*]]: !fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>> {fir.bindc_name = "a"}) {
 ! CHECK: %[[LOAD:.*]] = fir.load %[[ARG0]] : !fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>>
 ! CHECK: %[[BOX_ADDR:.*]] = fir.box_addr %[[LOAD]] : (!fir.box<!fir.heap<!fir.array<?xi32>>>) -> !fir.heap<!fir.array<?xi32>>
-! CHECK: fir.freemem %[[BOX_ADDR]] : !fir.heap<!fir.array<?xi32>>
-! CHECK: %[[ZERO:.*]] = fir.zero_bits !fir.heap<!fir.array<?xi32>>
-! CHECK: %[[C0:.*]] = arith.constant 0 : index
-! CHECK: %[[SHAPE:.*]] = fir.shape %[[C0]] : (index) -> !fir.shape<1>
-! CHECK: %[[EMBOX:.*]] = fir.embox %[[ZERO]](%[[SHAPE]]) : (!fir.heap<!fir.array<?xi32>>, !fir.shape<1>) -> !fir.box<!fir.heap<!fir.array<?xi32>>>
-! CHECK: fir.store %[[EMBOX]] to %[[ARG0]] : !fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>>
+! CHECK: %[[BOX_ADDR_PTR:.*]] = fir.convert %[[BOX_ADDR]] : (!fir.heap<!fir.array<?xi32>>) -> i64
+! CHECK: %[[C0:.*]] = arith.constant 0 : i64
+! CHECK: %[[IS_ALLOCATED:.*]] = arith.cmpi ne, %[[BOX_ADDR_PTR]], %[[C0]] : i64
+! CHECK: fir.if %[[IS_ALLOCATED]] {
+! CHECK:   %[[BOX:.*]] = fir.load %[[ARG0]] : !fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>>
+! CHECK:   %[[BOX_ADDR:.*]] = fir.box_addr %[[BOX]] : (!fir.box<!fir.heap<!fir.array<?xi32>>>) -> !fir.heap<!fir.array<?xi32>>
+! CHECK:   fir.freemem %[[BOX_ADDR]] : !fir.heap<!fir.array<?xi32>>
+! CHECK:   %[[ZERO:.*]] = fir.zero_bits !fir.heap<!fir.array<?xi32>>
+! CHECK:   %[[C0:.*]] = arith.constant 0 : index
+! CHECK:   %[[SHAPE:.*]] = fir.shape %[[C0]] : (index) -> !fir.shape<1>
+! CHECK:   %[[EMBOX:.*]] = fir.embox %[[ZERO]](%[[SHAPE]]) : (!fir.heap<!fir.array<?xi32>>, !fir.shape<1>) -> !fir.box<!fir.heap<!fir.array<?xi32>>>
+! CHECK:   fir.store %[[EMBOX]] to %[[ARG0]] : !fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>>
+! CHECK: }
 
 
   subroutine sub14(p)
@@ -215,9 +256,9 @@ contains
 ! CHECK: %[[C0:.*]] = arith.constant 0 : i64
 ! CHECK: %[[IS_ALLOCATED:.*]] = arith.cmpi ne, %[[BOX_ADDR_PTR]], %[[C0]] : i64
 ! CHECK: fir.if %[[IS_ALLOCATED]] {
-! CHECK:   %[[TYPE_DESC:.*]] = fir.type_desc !fir.type<_QMmod1Tt{a:i32}> 
+! CHECK:   %[[TYPE_DESC:.*]] = fir.type_desc !fir.type<_QMmod1Tt{a:i32}>
 ! CHECK:   %[[BOX_NONE:.*]] = fir.convert %[[ARG0]] : (!fir.ref<!fir.class<!fir.heap<!fir.type<_QMmod1Tt{a:i32}>>>>) -> !fir.ref<!fir.box<none>>
-! CHECK:   %[[TYPE_NONE:.*]] = fir.convert %[[TYPE_DESC]] : (!fir.tdesc<!fir.type<_QMmod1Tt{a:i32}>>) -> !fir.ref<none> 
+! CHECK:   %[[TYPE_NONE:.*]] = fir.convert %[[TYPE_DESC]] : (!fir.tdesc<!fir.type<_QMmod1Tt{a:i32}>>) -> !fir.ref<none>
 ! CHECK:   %{{.*}} = fir.call @_FortranAAllocatableDeallocatePolymorphic(%[[BOX_NONE]], %[[TYPE_NONE]], %{{.*}}, %{{.*}}, %{{.*}}) {{.*}} : (!fir.ref<!fir.box<none>>, !fir.ref<none>, i1, !fir.box<none>, !fir.ref<i8>, i32) -> i32
 ! CHECK: }
 
@@ -233,7 +274,7 @@ contains
 ! CHECK: %[[C0:.*]] = arith.constant 0 : i64
 ! CHECK: %[[IS_ALLOCATED:.*]] = arith.cmpi ne, %[[BOX_ADDR_PTR]], %[[C0]] : i64
 ! CHECK: fir.if %[[IS_ALLOCATED]] {
-! CHECK:   %[[NULL_TYPE_DESC:.*]] = fir.zero_bits !fir.ref<none>  
+! CHECK:   %[[NULL_TYPE_DESC:.*]] = fir.zero_bits !fir.ref<none>
 ! CHECK:   %[[BOX_NONE:.*]] = fir.convert %[[ARG0]] : (!fir.ref<!fir.class<!fir.heap<none>>>) -> !fir.ref<!fir.box<none>>
 ! CHECK:   %{{.*}} = fir.call @_FortranAAllocatableDeallocatePolymorphic(%[[BOX_NONE]], %[[NULL_TYPE_DESC]], %{{.*}}, %{{.*}}, %{{.*}}) {{.*}} : (!fir.ref<!fir.box<none>>, !fir.ref<none>, i1, !fir.box<none>, !fir.ref<i8>, i32) -> i32
 ! CHECK: }
@@ -254,10 +295,9 @@ contains
 ! CHECK:   fir.if %[[IS_ALLOCATED]] {
 ! CHECK:     %[[TYPE_DESC:.*]] = fir.type_desc !fir.type<_QMmod1Tt{a:i32}>
 ! CHECK:     %[[BOX_NONE:.*]] = fir.convert %[[ARG0]] : (!fir.ref<!fir.class<!fir.heap<!fir.type<_QMmod1Tt{a:i32}>>>>) -> !fir.ref<!fir.box<none>>
-! CHECK:     %[[TYPE_NONE:.*]] = fir.convert %[[TYPE_DESC]] : (!fir.tdesc<!fir.type<_QMmod1Tt{a:i32}>>) -> !fir.ref<none> 
+! CHECK:     %[[TYPE_NONE:.*]] = fir.convert %[[TYPE_DESC]] : (!fir.tdesc<!fir.type<_QMmod1Tt{a:i32}>>) -> !fir.ref<none>
 ! CHECK:     %{{.*}} = fir.call @_FortranAAllocatableDeallocatePolymorphic(%[[BOX_NONE]], %[[TYPE_NONE]], %{{.*}}, %{{.*}}, %{{.*}}) {{.*}} : (!fir.ref<!fir.box<none>>, !fir.ref<none>, i1, !fir.box<none>, !fir.ref<i8>, i32) -> i32
 ! CHECK:   }
 ! CHECK: }
 
 end module
-
