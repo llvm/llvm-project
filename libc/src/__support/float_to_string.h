@@ -157,7 +157,7 @@ LIBC_INLINE constexpr uint32_t ceil_log10_pow2(const uint32_t e) {
 LIBC_INLINE constexpr uint32_t length_for_num(const uint32_t idx,
                                               const uint32_t mantissa_width) {
   //+8 to round up when dividing by 9
-  return (ceil_log10_pow2(idx) + ceil_log10_pow2(mantissa_width) +
+  return (ceil_log10_pow2(idx) + ceil_log10_pow2(mantissa_width + 1) +
           (BLOCK_SIZE - 1)) /
          BLOCK_SIZE;
   // return (ceil_log10_pow2(16 * idx + mantissa_width) + 8) / 9;
@@ -666,7 +666,7 @@ FloatToString<long double>::get_positive_block(int block_index) {
     // ----------------------------- INT CALC MODE -----------------------------
     const int32_t SHIFT_CONST = CALC_SHIFT_CONST;
     const uint64_t MAX_POW_2_SIZE =
-        exponent + CALC_SHIFT_CONST - (BLOCK_SIZE * block_index);
+        pos_exp + CALC_SHIFT_CONST - (BLOCK_SIZE * block_index);
     const uint64_t MAX_POW_5_SIZE =
         internal::log2_pow5(BLOCK_SIZE * block_index);
     const uint64_t MAX_INT_SIZE =
@@ -680,8 +680,10 @@ FloatToString<long double>::get_positive_block(int block_index) {
       val = internal::get_table_positive<4096>(pos_exp, block_index);
     } else if (MAX_INT_SIZE < 8192) {
       val = internal::get_table_positive<8192>(pos_exp, block_index);
-    } else {
+    } else if (MAX_INT_SIZE < 16384) {
       val = internal::get_table_positive<16384>(pos_exp, block_index);
+    } else {
+      val = internal::get_table_positive<16384 + 128>(pos_exp, block_index);
     }
 #endif
     const uint32_t shift_amount = SHIFT_CONST + pos_exp - exponent;

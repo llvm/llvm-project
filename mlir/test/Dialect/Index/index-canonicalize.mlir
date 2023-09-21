@@ -556,3 +556,19 @@ func.func @sub_identity(%arg0: index) -> index {
   // CHECK-NEXT: return %arg0
   return %0 : index
 }
+
+// CHECK-LABEL: @castu_to_index
+func.func @castu_to_index() -> index {
+  // CHECK: index.constant 8000000000000
+  %0 = arith.constant 8000000000000 : i48
+  %1 = index.castu %0 : i48 to index
+  return %1 : index
+}
+
+// CHECK-LABEL: @casts_to_index
+func.func @casts_to_index() -> index {
+  // CHECK: index.constant -1000
+  %0 = arith.constant -1000 : i48
+  %1 = index.casts %0 : i48 to index
+  return %1 : index
+}

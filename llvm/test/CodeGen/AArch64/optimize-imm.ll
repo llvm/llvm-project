@@ -44,7 +44,7 @@ entry:
 define i32 @and4(i32 %a) {
 ; CHECK-LABEL: and4:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    mov w8, #61951
+; CHECK-NEXT:    mov w8, #61951 // =0xf1ff
 ; CHECK-NEXT:    and w9, w0, #0xfffc07ff
 ; CHECK-NEXT:    movk w8, #65521, lsl #16
 ; CHECK-NEXT:    orr w0, w9, w8
@@ -61,7 +61,7 @@ entry:
 define i32 @xor1(i32 %a) {
 ; CHECK-LABEL: xor1:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    mov w8, #56
+; CHECK-NEXT:    mov w8, #56 // =0x38
 ; CHECK-NEXT:    bic w0, w8, w0, lsl #3
 ; CHECK-NEXT:    ret
 entry:
@@ -78,9 +78,9 @@ define i64 @PR33100(i64 %arg) {
 ; CHECK:       // %bb.0: // %entry
 ; CHECK-NEXT:    sub sp, sp, #16
 ; CHECK-NEXT:    .cfi_def_cfa_offset 16
-; CHECK-NEXT:    mov w8, #129
+; CHECK-NEXT:    mov w8, #129 // =0x81
 ; CHECK-NEXT:    eor x0, x0, x8
-; CHECK-NEXT:    mov w8, #8
+; CHECK-NEXT:    mov w8, #8 // =0x8
 ; CHECK-NEXT:    str x8, [sp, #8]
 ; CHECK-NEXT:    add sp, sp, #16
 ; CHECK-NEXT:    ret

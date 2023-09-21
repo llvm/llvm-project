@@ -461,10 +461,13 @@ fir::ExtendedValue Fortran::lower::genCallOpAndResult(
     allocatedResult->match(
         [&](const fir::MutableBoxValue &box) {
           if (box.isAllocatable() && !cleanupWithDestroy) {
-            // 9.7.3.2 point 4. Finalize allocatables.
+            // 9.7.3.2 point 4. Deallocate allocatable results. Note that
+            // finalization was done independently by calling
+            // genDerivedTypeDestroy above and is not triggered by this inline
+            // deallocation.
             fir::FirOpBuilder *bldr = &converter.getFirOpBuilder();
             stmtCtx.attachCleanup([bldr, loc, box]() {
-              fir::factory::genFinalization(*bldr, loc, box);
+              fir::factory::genFreememIfAllocated(*bldr, loc, box);
             });
           }
         },
