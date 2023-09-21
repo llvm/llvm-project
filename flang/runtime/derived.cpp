@@ -212,7 +212,7 @@ void Finalize(const Descriptor &descriptor,
     if (comp.genre() == typeInfo::Component::Genre::Allocatable &&
         comp.category() == TypeCategory::Derived) {
       // Component may be polymorphic or unlimited polymorphic. Need to use the
-      // dynamic type to check if finalization is needed.
+      // dynamic type to check whether finalization is needed.
       for (std::size_t j{0}; j < elements; ++j) {
         const Descriptor &compDesc{*descriptor.OffsetElement<Descriptor>(
             j * byteStride + comp.offset())};
