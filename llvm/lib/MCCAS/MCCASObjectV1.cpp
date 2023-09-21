@@ -1971,7 +1971,7 @@ MCCASBuilder::createOptimizedLineSection(StringRef DebugLineStrRef) {
                                                    SubOpcode, Len,
                                                    IsEndSequence, IsRelocation);
       if (Err)
-        return Err;
+        return std::move(Err);
       if (IsRelocation) {
         // Move cursor to end of relocation and copy.
         LineTableDataReader.getRelocatedAddress(Cursor);
@@ -1996,7 +1996,7 @@ MCCASBuilder::createOptimizedLineSection(StringRef DebugLineStrRef) {
       auto Err = handleStandardOpcodesForLineTable(
           LineTableDataReader, Cursor, Opcode, IsSetFile, IsRelocation);
       if (Err)
-        return Err;
+        return std::move(Err);
       if (IsRelocation) {
         // Move cursor to end of relocation and copy.
         LineTableDataReader.getRelocatedValue(Cursor, 2);
