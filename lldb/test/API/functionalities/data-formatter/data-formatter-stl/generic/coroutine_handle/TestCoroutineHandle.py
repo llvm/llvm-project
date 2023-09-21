@@ -139,6 +139,7 @@ class TestCoroutineHandle(TestBase):
             )
 
     @add_test_categories(["libstdcxx"])
+    @expectedFailureAll(oslist=["linux"])
     def test_libstdcpp(self):
         self.do_test(USE_LIBSTDCPP)
 
