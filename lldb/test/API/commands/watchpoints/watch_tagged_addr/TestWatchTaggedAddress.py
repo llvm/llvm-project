@@ -62,7 +62,7 @@ class TestWatchTaggedAddresses(TestBase):
             substrs=[
                 "Watchpoint created",
                 "size = 4",
-                "type = w",
+                "type = m",
                 "%s:%d" % (self.source, self.decl),
             ],
         )
@@ -96,7 +96,7 @@ class TestWatchTaggedAddresses(TestBase):
         self.expect(
             "watchpoint set expression -s 4 -- tagged_ptr",
             WATCHPOINT_CREATED,
-            substrs=["Watchpoint created", "size = 4", "type = w"],
+            substrs=["Watchpoint created", "size = 4", "type = rw"],
         )
 
         self.verify_watch_hits()
