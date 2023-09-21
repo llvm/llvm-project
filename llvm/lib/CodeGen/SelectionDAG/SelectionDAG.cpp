@@ -1620,7 +1620,11 @@ SDValue SelectionDAG::getConstant(const ConstantInt &Val, const SDLoc &DL,
   if (VT.isVector() && TLI->getTypeAction(*getContext(), EltVT) ==
                            TargetLowering::TypePromoteInteger) {
     EltVT = TLI->getTypeToTransformTo(*getContext(), EltVT);
-    APInt NewVal = Elt->getValue().zextOrTrunc(EltVT.getSizeInBits());
+    APInt NewVal;
+    if (TLI->isSExtCheaperThanZExt(VT.getScalarType(), EltVT))
+      NewVal = Elt->getValue().sextOrTrunc(EltVT.getSizeInBits());
+    else
+      NewVal = Elt->getValue().zextOrTrunc(EltVT.getSizeInBits());
     Elt = ConstantInt::get(*getContext(), NewVal);
   }
   // In other cases the element type is illegal and needs to be expanded, for
