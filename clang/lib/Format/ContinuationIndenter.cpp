@@ -2270,9 +2270,10 @@ ContinuationIndenter::createBreakableToken(const FormatToken &Current,
     if (State.Stack.back().IsInsideObjCArrayLiteral)
       return nullptr;
 
-    // The "DPI"/"DPI-C" in SystemVerilog direct programming interface imports
-    // cannot be split, e.g.
+    // The "DPI"/"DPI-C" in SystemVerilog direct programming interface
+    // imports/exports cannot be split, e.g.
     // `import "DPI" function foo();`
+    // FIXME: make this use same infra as C++ import checks
     if (Style.isVerilog() && Current.Previous &&
         Current.Previous->isOneOf(tok::kw_export, Keywords.kw_import)) {
       return nullptr;
