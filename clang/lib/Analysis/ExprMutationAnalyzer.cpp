@@ -101,11 +101,11 @@ AST_MATCHER(CXXTypeidExpr, isPotentiallyEvaluated) {
 }
 
 AST_MATCHER(CXXMemberCallExpr, isConstCallee) {
-  const auto *CalleeDecl = Node.getCalleeDecl();
+  const Decl *CalleeDecl = Node.getCalleeDecl();
   const auto *VD = dyn_cast_or_null<ValueDecl>(CalleeDecl);
   if (!VD)
     return false;
-  const auto T = VD->getType().getCanonicalType();
+  const QualType T = VD->getType().getCanonicalType();
   const auto *MPT = dyn_cast<MemberPointerType>(T);
   const auto *FPT = MPT ? cast<FunctionProtoType>(MPT->getPointeeType())
                         : dyn_cast<FunctionProtoType>(T);
