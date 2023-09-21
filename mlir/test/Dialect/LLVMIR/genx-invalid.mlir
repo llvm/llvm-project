@@ -165,3 +165,58 @@ func.func @joint_matrix_copy(%src : !genx.jointmatrix<8x16xi32, RowMajor>) {
   %0 = genx.matrix.copy <Subgroup> %src : (!genx.jointmatrix<8x16xi32, RowMajor>) -> !genx.jointmatrix<8x16xf32, ColumnMajor>
   llvm.return
 }
+
+// -----
+
+func.func @joint_matrix_mad(%mat : !genx.jointmatrix<8x16xf32, RowMajor>) {
+  // expected-error @+1 {{'genx.matrix.map' op scope attribute must have value 'Subgroup'}}
+  %r = genx.matrix.map <Workgroup> 
+    ins(%mat : !genx.jointmatrix<8x16xf32, RowMajor>)
+    (%elem: f32) {
+       %cst = arith.constant 1.0 : f32
+       %add = arith.addf %elem, %cst : f32
+       genx.yield %add : f32
+    } : !genx.jointmatrix<8x16xf32, RowMajor>  
+  llvm.return
+}
+
+// -----
+
+func.func @joint_matrix_mad(%mat : !genx.jointmatrix<8x16xf32, RowMajor>, %val: f32) {
+  // expected-error @+1 {{'genx.matrix.map' op expected element type of input 'f32' to match bbArg type 'i32'}}
+  %r = genx.matrix.map <Subgroup> 
+    ins(%mat, %val : !genx.jointmatrix<8x16xf32, RowMajor>, f32)
+    (%elem: i32, %v: i32) {
+       %add = arith.addf %elem, %v : i32
+       genx.yield %add : i32
+    } : !genx.jointmatrix<8x16xf32, RowMajor>  
+  llvm.return
+}
+
+// -----
+
+func.func @joint_matrix_mad(%mat : !genx.jointmatrix<8x16xf32, RowMajor>, %val: f32) {
+  // expected-error @+1 {{'genx.matrix.map' op expects number of operands to match the arity of mapper, but got: 2 and 1}}
+  %r = genx.matrix.map <Subgroup> 
+    ins(%mat, %val : !genx.jointmatrix<8x16xf32, RowMajor>, f32)
+    (%elem: f32) {
+       %cst = arith.constant 1.0 : f32
+       %add = arith.addf %elem, %cst : f32
+       genx.yield %add : f32
+    } : !genx.jointmatrix<8x16xf32, RowMajor>  
+  llvm.return
+}
+
+// -----
+
+func.func @joint_matrix_mad(%mat : !genx.jointmatrix<8x16xf32, RowMajor>, %val: f32) {
+  // expected-error @+1 {{'genx.matrix.map' op expected type of input 'f32' to match bbArg type 'i32'}}
+  %r = genx.matrix.map <Subgroup> 
+    ins(%mat, %val : !genx.jointmatrix<8x16xf32, RowMajor>, f32)
+    (%elem: f32, %v: i32) {
+       %cast = llvm.bitcast %v : i32 to f32
+       %add = arith.addf %elem, %cast : f32
+       genx.yield %add : f32
+    } : !genx.jointmatrix<8x16xf32, RowMajor>  
+  llvm.return
+}

@@ -15,7 +15,9 @@
 
 include "mlir/IR/EnumAttr.td"
 include "mlir/Dialect/LLVMIR/LLVMOpBase.td"
+include "mlir/Interfaces/ControlFlowInterfaces.td"
 include "mlir/Interfaces/SideEffectInterfaces.td"
+include "mlir/IR/OpAsmInterface.td"
 
 // spirv::CrossWorkGroup: 1
 def LLVM_i8Ptr_cross_workgroup : LLVM_IntPtrBase<8, 1>;
@@ -521,7 +523,7 @@ def GENX_MatrixInitOp : GENX_Op<"matrix.init">,
   }];
 
   let assemblyFormat = [{
-    $scope operands attr-dict`:` `(` type(operands) `)`
+    $scope operands attr-dict `:` `(` type(operands) `)`
   }];
 
   let hasVerifier = 1;
@@ -546,6 +548,61 @@ def GENX_MatrixCopyOp : GENX_Op<"matrix.copy">,
     $scope operands attr-dict `:` functional-type(operands, results)
   }];
 
+  let hasVerifier = 1;
+}
+
+def GENX_YieldOp : GENX_Op<"yield", [Pure, ReturnLike, Terminator]>,
+    Arguments<(ins Variadic<AnyType>:$values)> {
+  let summary = "Terminates and yields values from GENX regions";
+
+  string baseDescription = [{
+    The `genx.yield` operation yields one or more SSA value from a GENX dialect op 
+    region and terminates the region. The operands of this operation must correspond 
+    to the parent operation results.
+  }];
+
+  let builders = [OpBuilder<(ins), [{ /* nothing to do */ }]>];
+  let assemblyFormat = "attr-dict ($values^ `:` type($values))?";
+  let hasVerifier = 1;
+}
+
+def GENX_MatrixMapOp : GENX_Op<"matrix.map", [
+        DeclareOpInterfaceMethods<OpAsmOpInterface, ["getAsmResultNames"]>,
+        RecursiveMemoryEffects,
+        SingleBlockImplicitTerminator<"YieldOp">,
+        TypesMatchWith<"result #0 and operand #0 have the same type",
+                       "res", "mat", "$_self">]>,
+    Results<(outs GENX_AnyJointMatrix:$res)>,    
+    Arguments<(ins GENX_AnyJointMatrix:$mat, Variadic<IntegerOrFloatType>:$inputs, ScopeAttr:$scope)> {
+  let summary = "Elementwise operation on a joint matrix";
+
+  string baseDescription = [{
+    The `genx.matrix.map` operation performs an element-wise operation on the joint 
+    matrix $mat. The region attached to the operation should contain the workload and 
+    it is applied to each element of the matrix.
+
+    Example:
+
+    %res = genx.matrix.map <Subgroup>
+    ins(%mat, %val : !genx.jointmatrix<8x32xf32, RowMajor>, f32)
+    (%elem: f32, %v: f32) {
+       %0 = arith.addf %elem, %v : f32
+       genx.yield %0 : f32
+    } : !genx.jointmatrix<8x32xf32, RowMajor>
+  }];
+
+  string llvmBuilder = [{
+    assert(false); // TODO
+  }];
+
+  let builders = [
+    OpBuilder<(ins "Value":$mat, "ValueRange":$inputs, 
+      "function_ref<void(OpBuilder &, Location, ValueRange)>",
+      CArg<"ArrayRef<NamedAttribute>", "{}">:$attributes)>
+  ];
+
+  let regions = (region SizedRegion<1>:$mapper);
+  let hasCustomAssemblyFormat = 1;
   let hasVerifier = 1;
 }
 

@@ -153,3 +153,20 @@ func.func @genx.matrix.copy(%src: !genx.jointmatrix<8x32xi32, RowMajor>) {
   %0 = genx.matrix.copy <Subgroup> %src : (!genx.jointmatrix<8x32xi32, RowMajor>) -> !genx.jointmatrix<8x32xf32, RowMajor>
   llvm.return  
 }
+
+func.func @genx.matrix.map(%mat: !genx.jointmatrix<8x32xf32, RowMajor>, %val: f32) {
+  // CHECK-LABEL: genx.matrix.map
+  // CHECK:       %mapped = genx.matrix.map <Subgroup>
+  // CHECK-NEXT:  ins(%arg0, %arg1 : !genx.jointmatrix<8x32xf32, RowMajor>, f32)  
+  // CHECK-NEXT:  (%arg2: f32, %arg3: f32) {
+  // CHECK-NEXT:     %0 = arith.addf %arg2, %arg3 : f32
+  // CHECK-NEXT:     genx.yield %0 : f32
+  // CHECK-NEXT:  } : !genx.jointmatrix<8x32xf32, RowMajor>
+  %0 = genx.matrix.map <Subgroup>
+    ins(%mat, %val : !genx.jointmatrix<8x32xf32, RowMajor>, f32)
+    (%elem: f32, %v: f32) {
+       %0 = arith.addf %elem, %v : f32
+       genx.yield %0 : f32
+    } : !genx.jointmatrix<8x32xf32, RowMajor>
+  llvm.return
+}
