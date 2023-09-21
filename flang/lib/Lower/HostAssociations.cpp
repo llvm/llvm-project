@@ -507,13 +507,38 @@ void Fortran::lower::HostAssociations::addSymbolsToBind(
   assert(tupleSymbols.empty() && globalSymbols.empty() &&
          "must be initially empty");
   this->hostScope = &hostScope;
+
+  // Collect integer offsets of all global aggregate storages
+  // in the host scope.
+  llvm::DenseSet<std::size_t> globalAggregateStoreOffests;
+  for (auto &hostVariable : pft::getScopeVariableList(hostScope))
+    if (hostVariable.isAggregateStore() && hostVariable.isGlobal())
+      globalAggregateStoreOffests.insert(
+          hostVariable.getAggregateStore().getOffset());
+
+  // Look for aliases (EQUIVALENCE variables) that are associated
+  // with the global aggregate storages in the host scope.
+  // If such an alias is referenced by the internal procedure,
+  // its symbol might not be global, but we'd rather access
+  // it via the global aggregate storage than via the argument tuple.
+  for (auto &hostVariable : pft::getScopeVariableList(hostScope))
+    if (hostVariable.hasSymbol() && hostVariable.isAlias() &&
+        globalAggregateStoreOffests.contains(hostVariable.getAliasOffset())) {
+      const Fortran::semantics::Symbol *sym =
+          &hostVariable.getSymbol().GetUltimate();
+      if (symbols.contains(sym))
+        globalSymbols.insert(sym);
+    }
+
   for (const auto *s : symbols)
-    if (Fortran::lower::symbolIsGlobal(*s))
-      // The ultimate symbol is stored here so that global symbols from the
-      // host scope can later be searched in this set.
-      globalSymbols.insert(&s->GetUltimate());
-    else
-      tupleSymbols.insert(s);
+    if (!globalSymbols.contains(&s->GetUltimate())) {
+      if (Fortran::lower::symbolIsGlobal(*s))
+        // The ultimate symbol is stored here so that global symbols from the
+        // host scope can later be searched in this set.
+        globalSymbols.insert(&s->GetUltimate());
+      else
+        tupleSymbols.insert(s);
+    }
 }
 
 void Fortran::lower::HostAssociations::hostProcedureBindings(
