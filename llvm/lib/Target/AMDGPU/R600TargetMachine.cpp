@@ -113,7 +113,7 @@ public:
 
 bool R600PassConfig::addPreISel() {
   AMDGPUPassConfig::addPreISel();
-
+  addPass(&AMDGPUUnifyDivergentExitNodesID);
   if (EnableR600StructurizeCFG)
     addPass(createStructurizeCFGPass());
   return false;
