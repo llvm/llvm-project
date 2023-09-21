@@ -109,15 +109,15 @@ entry:
 ; CHECK-SEC:       [ 5] .text.foo2         PROGBITS {{.*}} 00  AX  0   0 16
 ; CHECK-SEC:       [ 8] .text.foo3         PROGBITS {{.*}} 00  AXG 0   0 16
 ; CHECK-SEC-COUNT-3:    .pseudo_probe_desc PROGBITS
-; CHECK-SEC:            .pseudo_probe      PROGBITS {{.*}} 00   L  3   0  1
+; CHECK-SEC:            .pseudo_probe      PROGBITS {{.*}} 00   LG 8   0  1
 ; CHECK-SEC-NEXT:       .pseudo_probe      PROGBITS {{.*}} 00   L  5   0  1
-; CHECK-SEC-NEXT:       .pseudo_probe      PROGBITS {{.*}} 00   LG 8   0  1
+; CHECK-SEC-NEXT:       .pseudo_probe      PROGBITS {{.*}} 00   L  3   0  1
 ; CHECK-SEC-NOT:   .rela.pseudo_probe
 
 ; CHECK-SEC:       COMDAT group section [    7] `.group' [foo3] contains 2 sections:
 ; CHECK-SEC-NEXT:     [Index]    Name
 ; CHECK-SEC-NEXT:     [    8]   .text.foo3
-; CHECK-SEC-NEXT:     [   21]   .pseudo_probe
+; CHECK-SEC-NEXT:     [   19]   .pseudo_probe
 ; CHECK-SEC-EMPTY:
 ; CHECK-SEC-NEXT:  COMDAT group section [   10] `.group' [.pseudo_probe_desc_foo] contains 1 sections:
 ; CHECK-SEC-NEXT:     [Index]    Name
@@ -137,9 +137,9 @@ entry:
 ; CHECK-SEC2:      [ 5] .text              PROGBITS {{.*}} 00  AX  0   0 16
 ; CHECK-SEC2:      [ 8] .text              PROGBITS {{.*}} 00  AXG 0   0 16
 ; CHECK-SEC2-COUNT-3:   .pseudo_probe_desc PROGBITS
-; CHECK-SEC2:           .pseudo_probe      PROGBITS {{.*}} 00   L  3   0  1
+; CHECK-SEC2:           .pseudo_probe      PROGBITS {{.*}} 00   LG 8   0  1
 ; CHECK-SEC2-NEXT:      .pseudo_probe      PROGBITS {{.*}} 00   L  5   0  1
-; CHECK-SEC2-NEXT:      .pseudo_probe      PROGBITS {{.*}} 00   LG 8   0  1
+; CHECK-SEC2-NEXT:      .pseudo_probe      PROGBITS {{.*}} 00   L  3   0  1
 ; CHECK-SEC2-NOT:  .rela.pseudo_probe
 
 !llvm.dbg.cu = !{!0}
