@@ -605,7 +605,8 @@ def HasStdExtZvknha : Predicate<"Subtarget->hasStdExtZvknha()">,
 
 def FeatureStdExtZvknhb
     : SubtargetFeature<"experimental-zvknhb", "HasStdExtZvknhb", "true",
-                       "'Zvknhb' (Vector SHA-2 (SHA-256 and SHA-512))">;
+                       "'Zvknhb' (Vector SHA-2 (SHA-256 and SHA-512))",
+                       [FeatureStdExtZve64x]>;
 def HasStdExtZvknhb : Predicate<"Subtarget->hasStdExtZvknhb()">,
                                 AssemblerPredicate<(all_of FeatureStdExtZvknhb),
                                 "'Zvknhb' (Vector SHA-2 (SHA-256 and SHA-512))">;
