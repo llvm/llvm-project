@@ -81,6 +81,12 @@ LogicalResult CpAsyncBulkTensorGlobalToSharedClusterOp::verify() {
   return success();
 }
 
+LogicalResult CpAsyncBulkTensorSharedCTAToGlobalOp::verify() {
+  if (getCoordinates().size() > 5)
+    return emitError("Maximum 5 coordinates and dimension is supported.");
+  return success();
+}
+
 LogicalResult CpAsyncOp::verify() {
   if (getModifier() != LoadCacheModifierKind::CG &&
       getModifier() != LoadCacheModifierKind::CA)
