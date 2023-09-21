@@ -62,13 +62,11 @@ void test_grouping() {
   int *z = new int[8];
   int tmp;
   int *y = new int[10];
-  // CHECK: fix-it:"{{.*}}":{[[@LINE-1]]:3-[[@LINE-1]]:11}:"std::span<int> y"
-  // CHECK: fix-it:"{{.*}}":{[[@LINE-2]]:12-[[@LINE-2]]:12}:"{"
-  // CHECK: fix-it:"{{.*}}":{[[@LINE-3]]:23-[[@LINE-3]]:23}:", 10}"
+  // CHECK-NOT: fix-it:"{{.*}}":{[[@LINE-1]]:
   tmp = y[5];
 
   int *x = new int[10];
-  x = y;
+  x = y; // FIXME: we do not fix `x = y` here as the `.data()` fix-it is not generally correct
 
   int *w = z;
 }
