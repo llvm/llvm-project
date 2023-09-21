@@ -483,7 +483,7 @@ private:
   PHINode *getAddRecExprPHILiterally(const SCEVAddRecExpr *Normalized,
                                      const Loop *L, Type *ExpandTy, Type *IntTy,
                                      Type *&TruncTy, bool &InvertStep);
-  Value *expandIVInc(PHINode *PN, Value *StepV, const Loop *L, Type *ExpandTy,
+  Value *expandIVInc(PHINode *PN, Value *StepV, const Loop *L,
                      bool useSubtract);
 
   void fixupInsertPoints(Instruction *I);
