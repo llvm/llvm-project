@@ -1342,6 +1342,23 @@ void hlfir::NullOp::build(mlir::OpBuilder &builder,
 }
 
 //===----------------------------------------------------------------------===//
+// DestroyOp
+//===----------------------------------------------------------------------===//
+
+mlir::LogicalResult hlfir::DestroyOp::verify() {
+  if (mustFinalizeExpr()) {
+    mlir::Value expr = getExpr();
+    hlfir::ExprType exprTy = mlir::cast<hlfir::ExprType>(expr.getType());
+    mlir::Type elemTy = hlfir::getFortranElementType(exprTy);
+    if (!mlir::isa<fir::RecordType>(elemTy))
+      return emitOpError(
+          "the element type must be finalizable, when 'finalize' is set");
+  }
+
+  return mlir::success();
+}
+
+//===----------------------------------------------------------------------===//
 // CopyInOp
 //===----------------------------------------------------------------------===//
 

@@ -1165,3 +1165,10 @@ func.func @elemental_poly_4(%shape : index) {
   }
   return
 }
+
+// -----
+func.func @destroy_with_finalize(%expr: !hlfir.expr<?xi32>) {
+// expected-error@+1 {{'hlfir.destroy' op the element type must be finalizable, when 'finalize' is set}}
+  hlfir.destroy %expr finalize : !hlfir.expr<?xi32>
+  return
+}
