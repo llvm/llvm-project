@@ -3,6 +3,7 @@
 add_llvm_library(omptest
 SHARED
 
+./include/InternalEvent.h
 ./include/OmptTester.h
 ./include/OmptCallbackHandler.h
 ./include/OmptAssertEvent.h
