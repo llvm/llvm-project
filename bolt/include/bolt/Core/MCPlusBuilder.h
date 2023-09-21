@@ -1790,19 +1790,15 @@ public:
   /// Return annotation index matching the \p Name. Create a new index if the
   /// \p Name wasn't registered previously.
   unsigned getOrCreateAnnotationIndex(StringRef Name) {
-    {
-      if (std::optional<unsigned> Index = getAnnotationIndex(Name))
-        return *Index;
-    }
+    if (std::optional<unsigned> Index = getAnnotationIndex(Name))
+      return *Index;
 
-    {
-      std::unique_lock<llvm::sys::RWMutex> Lock(AnnotationNameMutex);
-      const unsigned Index =
-          AnnotationNameIndexMap.size() + MCPlus::MCAnnotation::kGeneric;
-      AnnotationNameIndexMap.insert(std::make_pair(Name, Index));
-      AnnotationNames.emplace_back(std::string(Name));
-      return Index;
-    }
+    std::unique_lock<llvm::sys::RWMutex> Lock(AnnotationNameMutex);
+    const unsigned Index =
+        AnnotationNameIndexMap.size() + MCPlus::MCAnnotation::kGeneric;
+    AnnotationNameIndexMap.insert(std::make_pair(Name, Index));
+    AnnotationNames.emplace_back(std::string(Name));
+    return Index;
   }
 
   /// Store an annotation value on an MCInst.  This assumes the annotation
