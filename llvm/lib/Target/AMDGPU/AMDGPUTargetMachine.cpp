@@ -358,6 +358,7 @@ extern "C" LLVM_EXTERNAL_VISIBILITY void LLVMInitializeAMDGPUTarget() {
   initializeAMDGPUDAGToDAGISelPass(*PR);
   initializeGCNDPPCombinePass(*PR);
   initializeSILowerI1CopiesPass(*PR);
+  initializeAMDGPUTemporalDivergenceLoweringPass(*PR);
   initializeSILowerWWMCopiesPass(*PR);
   initializeSILowerSGPRSpillsPass(*PR);
   initializeSIFixSGPRCopiesPass(*PR);
@@ -1240,6 +1241,8 @@ bool GCNPassConfig::addGlobalInstructionSelect() {
 }
 
 void GCNPassConfig::addPreRegAlloc() {
+  addPass(createAMDGPUTemporalDivergenceLoweringPass());
+
   if (LateCFGStructurize) {
     addPass(createAMDGPUMachineCFGStructurizerPass());
   }

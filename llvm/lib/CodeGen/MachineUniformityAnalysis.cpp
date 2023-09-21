@@ -117,11 +117,16 @@ void llvm::GenericUniformityAnalysisImpl<MachineSSAContext>::
     if (!Op.getReg().isVirtual())
       continue;
     auto Reg = Op.getReg();
-    if (isDivergent(Reg))
-      continue;
+
     for (MachineInstr &UserInstr : RegInfo.use_instructions(Reg)) {
       if (DefCycle.contains(UserInstr.getParent()))
         continue;
+
+      recordUseOutsideCycle(Reg, &UserInstr, DefCycle);
+
+      if (isDivergent(Reg))
+        continue;
+
       markDivergent(UserInstr);
     }
   }

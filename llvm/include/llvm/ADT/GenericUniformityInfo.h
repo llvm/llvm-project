@@ -39,6 +39,9 @@ public:
 
   using CycleInfoT = GenericCycleInfo<ContextT>;
   using CycleT = typename CycleInfoT::CycleT;
+  using UseOutsideCycleInfoT =
+      typename std::tuple<ConstValueRefT, const InstructionT *,
+                          SmallVector<BlockT *, 4>>;
 
   GenericUniformityInfo(const DominatorTreeT &DT, const CycleInfoT &CI,
                         const TargetTransformInfo *TTI = nullptr);
@@ -77,6 +80,8 @@ public:
   bool hasDivergentTerminator(const BlockT &B);
 
   void print(raw_ostream &Out) const;
+
+  iterator_range<const UseOutsideCycleInfoT *> uses_outside_cycle() const;
 
 private:
   using ImplT = GenericUniformityAnalysisImpl<ContextT>;

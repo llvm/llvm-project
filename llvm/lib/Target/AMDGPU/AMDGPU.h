@@ -35,6 +35,7 @@ FunctionPass *createSIAnnotateControlFlowPass();
 FunctionPass *createSIFoldOperandsPass();
 FunctionPass *createSIPeepholeSDWAPass();
 FunctionPass *createSILowerI1CopiesPass();
+FunctionPass *createAMDGPUTemporalDivergenceLoweringPass();
 FunctionPass *createSIShrinkInstructionsPass();
 FunctionPass *createSILoadStoreOptimizerPass();
 FunctionPass *createSIWholeQuadModePass();
@@ -150,6 +151,9 @@ extern char &SILowerWWMCopiesID;
 
 void initializeSILowerI1CopiesPass(PassRegistry &);
 extern char &SILowerI1CopiesID;
+
+void initializeAMDGPUTemporalDivergenceLoweringPass(PassRegistry &);
+extern char &AMDGPUTemporalDivergenceLoweringID;
 
 void initializeSILowerSGPRSpillsPass(PassRegistry &);
 extern char &SILowerSGPRSpillsID;

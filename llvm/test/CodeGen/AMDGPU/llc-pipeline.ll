@@ -101,10 +101,12 @@
 ; GCN-O0-NEXT:        Finalize ISel and expand pseudo-instructions
 ; GCN-O0-NEXT:        Local Stack Slot Allocation
 ; GCN-O0-NEXT:        Register Usage Information Propagation
+; GCN-O0-NEXT:        Machine Cycle Info Analysis
+; GCN-O0-NEXT:        MachineDominator Tree Construction
+; GCN-O0-NEXT:        Temporal divergence lowering
 ; GCN-O0-NEXT:        Eliminate PHI nodes for register allocation
 ; GCN-O0-NEXT:        SI Lower control flow pseudo instructions
 ; GCN-O0-NEXT:        Two-Address instruction pass
-; GCN-O0-NEXT:        MachineDominator Tree Construction
 ; GCN-O0-NEXT:        Slot index numbering
 ; GCN-O0-NEXT:        Live Interval Analysis
 ; GCN-O0-NEXT:        MachinePostDominator Tree Construction
@@ -322,12 +324,13 @@
 ; GCN-O1-NEXT:        Remove dead machine instructions
 ; GCN-O1-NEXT:        SI Shrink Instructions
 ; GCN-O1-NEXT:        Register Usage Information Propagation
+; GCN-O1-NEXT:        MachineDominator Tree Construction
+; GCN-O1-NEXT:        Temporal divergence lowering
 ; GCN-O1-NEXT:        Detect Dead Lanes
 ; GCN-O1-NEXT:        Remove dead machine instructions
 ; GCN-O1-NEXT:        Process Implicit Definitions
 ; GCN-O1-NEXT:        Remove unreachable machine basic blocks
 ; GCN-O1-NEXT:        Live Variable Analysis
-; GCN-O1-NEXT:        MachineDominator Tree Construction
 ; GCN-O1-NEXT:        SI Optimize VGPR LiveRange
 ; GCN-O1-NEXT:        Eliminate PHI nodes for register allocation
 ; GCN-O1-NEXT:        SI Lower control flow pseudo instructions
@@ -616,6 +619,8 @@
 ; GCN-O1-OPTS-NEXT:        Remove dead machine instructions
 ; GCN-O1-OPTS-NEXT:        SI Shrink Instructions
 ; GCN-O1-OPTS-NEXT:        Register Usage Information Propagation
+; GCN-O1-OPTS-NEXT:        Machine Cycle Info Analysis
+; GCN-O1-OPTS-NEXT:        Temporal divergence lowering
 ; GCN-O1-OPTS-NEXT:        Detect Dead Lanes
 ; GCN-O1-OPTS-NEXT:        Remove dead machine instructions
 ; GCN-O1-OPTS-NEXT:        Process Implicit Definitions
@@ -919,6 +924,8 @@
 ; GCN-O2-NEXT:        Remove dead machine instructions
 ; GCN-O2-NEXT:        SI Shrink Instructions
 ; GCN-O2-NEXT:        Register Usage Information Propagation
+; GCN-O2-NEXT:        Machine Cycle Info Analysis
+; GCN-O2-NEXT:        Temporal divergence lowering
 ; GCN-O2-NEXT:        Detect Dead Lanes
 ; GCN-O2-NEXT:        Remove dead machine instructions
 ; GCN-O2-NEXT:        Process Implicit Definitions
@@ -1235,6 +1242,8 @@
 ; GCN-O3-NEXT:        Remove dead machine instructions
 ; GCN-O3-NEXT:        SI Shrink Instructions
 ; GCN-O3-NEXT:        Register Usage Information Propagation
+; GCN-O3-NEXT:        Machine Cycle Info Analysis
+; GCN-O3-NEXT:        Temporal divergence lowering
 ; GCN-O3-NEXT:        Detect Dead Lanes
 ; GCN-O3-NEXT:        Remove dead machine instructions
 ; GCN-O3-NEXT:        Process Implicit Definitions

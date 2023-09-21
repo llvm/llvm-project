@@ -165,6 +165,7 @@ define protected amdgpu_kernel void @kernel_round1(ptr addrspace(1) nocapture no
 ; CHECK-NEXT:    s_or_b32 exec_lo, exec_lo, s59
 ; CHECK-NEXT:    s_add_i32 s58, s58, 4
 ; CHECK-NEXT:    s_add_i32 s4, s55, s58
+; CHECK-NEXT:    v_mov_b32_e32 v0, s58
 ; CHECK-NEXT:    s_add_i32 s5, s4, 5
 ; CHECK-NEXT:    s_add_i32 s4, s4, 1
 ; CHECK-NEXT:    v_cmp_ge_u32_e32 vcc_lo, s5, v42
@@ -267,7 +268,7 @@ define protected amdgpu_kernel void @kernel_round1(ptr addrspace(1) nocapture no
 ; CHECK-NEXT:  .LBB0_16: ; %Flow43
 ; CHECK-NEXT:    ; in Loop: Header=BB0_5 Depth=1
 ; CHECK-NEXT:    s_or_b32 exec_lo, exec_lo, s57
-; CHECK-NEXT:    v_add_nc_u32_e32 v57, s58, v57
+; CHECK-NEXT:    v_add_nc_u32_e32 v57, v0, v57
 ; CHECK-NEXT:  .LBB0_17: ; %Flow44
 ; CHECK-NEXT:    ; in Loop: Header=BB0_5 Depth=1
 ; CHECK-NEXT:    s_or_b32 exec_lo, exec_lo, s56

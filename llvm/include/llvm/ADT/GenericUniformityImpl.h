@@ -341,6 +341,9 @@ public:
   using DivergenceDescriptorT =
       typename SyncDependenceAnalysisT::DivergenceDescriptor;
   using BlockLabelMapT = typename SyncDependenceAnalysisT::BlockLabelMap;
+  using UseOutsideCycleInfoT =
+      typename std::tuple<ConstValueRefT, const InstructionT *,
+                          SmallVector<BlockT *, 4>>;
 
   GenericUniformityAnalysisImpl(const DominatorTreeT &DT, const CycleInfoT &CI,
                                 const TargetTransformInfo *TTI)
@@ -396,6 +399,8 @@ public:
 
   void print(raw_ostream &out) const;
 
+  iterator_range<const UseOutsideCycleInfoT *> uses_outside_cycle() const;
+
 protected:
   /// \brief Value/block pair representing a single phi input.
   struct PhiInput {
@@ -427,6 +432,7 @@ private:
 
   // Recognized cycles with divergent exits.
   SmallPtrSet<const CycleT *, 16> DivergentExitCycles;
+  SmallVector<UseOutsideCycleInfoT, 4> UsesOutsideCycle;
 
   // Cycles assumed to be divergent.
   //
@@ -470,6 +476,9 @@ private:
   /// \brief Whether \p Def is divergent when read in \p ObservingBlock.
   bool isTemporalDivergent(const BlockT &ObservingBlock,
                            const InstructionT &Def) const;
+
+  void recordUseOutsideCycle(ConstValueRefT Src, const InstructionT *UserInstr,
+                             const CycleT &DefCycle);
 };
 
 template <typename ImplT>
@@ -1211,6 +1220,18 @@ void GenericUniformityAnalysisImpl<ContextT>::print(raw_ostream &OS) const {
 }
 
 template <typename ContextT>
+using UseOutsideCycleInfoT =
+    typename std::tuple<typename ContextT::ConstValueRefT,
+                        const typename ContextT::InstructionT *,
+                        SmallVector<typename ContextT::BlockT *, 4>>;
+
+template <typename ContextT>
+iterator_range<const UseOutsideCycleInfoT<ContextT> *>
+GenericUniformityAnalysisImpl<ContextT>::uses_outside_cycle() const {
+  return make_range(UsesOutsideCycle.begin(), UsesOutsideCycle.end());
+}
+
+template <typename ContextT>
 bool GenericUniformityInfo<ContextT>::hasDivergence() const {
   return DA->hasDivergence();
 }
@@ -1246,6 +1267,12 @@ bool GenericUniformityInfo<ContextT>::hasDivergentTerminator(const BlockT &B) {
 template <typename ContextT>
 void GenericUniformityInfo<ContextT>::print(raw_ostream &out) const {
   DA->print(out);
+}
+
+template <typename ContextT>
+iterator_range<const UseOutsideCycleInfoT<ContextT> *>
+GenericUniformityInfo<ContextT>::uses_outside_cycle() const {
+  return DA->uses_outside_cycle();
 }
 
 template <typename ContextT>
@@ -1365,6 +1392,14 @@ void llvm::ModifiedPostOrder<ContextT>::compute(const CycleInfoT &CI) {
   Stack.reserve(24); // FIXME made-up number
   Stack.push_back(&F->front());
   computeStackPO(Stack, CI, nullptr, Finalized);
+}
+
+template <typename ContextT>
+void GenericUniformityAnalysisImpl<ContextT>::recordUseOutsideCycle(
+    ConstValueRefT Src, const InstructionT *UserInstr, const CycleT &DefCycle) {
+  SmallVector<BlockT *, 4> TmpExitBlocks;
+  DefCycle.getExitBlocks(TmpExitBlocks);
+  UsesOutsideCycle.push_back({Src, UserInstr, TmpExitBlocks});
 }
 
 } // namespace llvm
