@@ -1,17 +1,19 @@
-.. _user-documentation:
+.. _using-libcxx:
 
-==================
-User documentation
-==================
+============
+Using libc++
+============
 
 .. contents::
   :local:
 
+Usually, libc++ is packaged and shipped by a vendor through some delivery vehicle
+(operating system distribution, SDK, toolchain, etc) and users don't need to do
+anything special in order to use the library.
+
 This page contains information about configuration knobs that can be used by
 users when they know libc++ is used by their toolchain, and how to use libc++
-when it is not the default library used by their toolchain. It is aimed at
-users of libc++: a separate page contains documentation aimed at vendors who
-build and ship libc++ as part of their toolchain.
+when it is not the default library used by their toolchain.
 
 
 Using a different version of the C++ Standard
@@ -26,18 +28,47 @@ matches that Standard in the library.
 
   $ clang++ -std=c++17 test.cpp
 
-Note that using ``-std=c++XY`` with a version of the Standard that has not been ratified
-yet is considered unstable. While we strive to maintain stability, libc++ may be forced to
-make breaking changes to features shipped in a Standard that hasn't been ratified yet. Use
-these versions of the Standard at your own risk.
+.. warning::
+  Using ``-std=c++XY`` with a version of the Standard that has not been ratified yet
+  is considered unstable. Libc++ reserves the right to make breaking changes to the
+  library until the standard has been ratified.
+
+
+Enabling experimental C++ Library features
+==========================================
+
+Libc++ provides implementations of some experimental features. Experimental features
+are either Technical Specifications (TSes) or official features that were voted to
+the Standard but whose implementation is not complete or stable yet in libc++. Those
+are disabled by default because they are neither API nor ABI stable. However, the
+``-fexperimental-library`` compiler flag can be defined to turn those features on.
+
+The following features are currently considered experimental and are only provided
+when ``-fexperimental-library`` is passed:
+
+* The parallel algorithms library (``<execution>`` and the associated algorithms)
+* ``std::stop_token``, ``std::stop_source`` and ``std::stop_callback``
+* ``std::jthread``
+* ``std::chrono::tzdb`` and related time zone functionality
+
+.. warning::
+  Experimental libraries are experimental.
+    * The contents of the ``<experimental/...>`` headers and the associated static
+      library will not remain compatible between versions.
+    * No guarantees of API or ABI stability are provided.
+    * When the standardized version of an experimental feature is implemented,
+      the experimental feature is removed two releases after the non-experimental
+      version has shipped. The full policy is explained :ref:`here <experimental features>`.
+
+.. note::
+  On compilers that do not support the ``-fexperimental-library`` flag, users can
+  define the ``_LIBCPP_ENABLE_EXPERIMENTAL`` macro and manually link against the
+  appropriate static library (usually shipped as ``libc++experimental.a``) to get
+  access to experimental library features.
 
 
 Using libc++ when it is not the system default
 ==============================================
-
-Usually, libc++ is packaged and shipped by a vendor through some delivery vehicle
-(operating system distribution, SDK, toolchain, etc) and users don't need to do
-anything special in order to use the library.
 
 On systems where libc++ is provided but is not the default, Clang provides a flag
 called ``-stdlib=`` that can be used to decide which standard library is used.
@@ -51,48 +82,76 @@ On systems where libc++ is the library in use by default such as macOS and FreeB
 this flag is not required.
 
 
-Enabling experimental C++ Library features
-==========================================
+.. _alternate libcxx:
 
-Libc++ provides implementations of some experimental features. Experimental features
-are either Technical Specifications (TSes) or official features that were voted to
-the Standard but whose implementation is not complete or stable yet in libc++. Those
-are disabled by default because they are neither API nor ABI stable. However, the
-``-fexperimental-library`` compiler flag can be defined to turn those features on.
+Using a custom built libc++
+===========================
 
-On compilers that do not support the ``-fexperimental-library`` flag (such as GCC),
-users can define the ``_LIBCPP_ENABLE_EXPERIMENTAL`` macro and manually link against
-the appropriate static library (usually shipped as ``libc++experimental.a``) to get
-access to experimental library features.
+Most compilers provide a way to disable the default behavior for finding the
+standard library and to override it with custom paths. With Clang, this can
+be done with:
 
-The following features are currently considered experimental and are only provided
-when ``-fexperimental-library`` is passed:
+.. code-block:: bash
 
-* The parallel algorithms library (``<execution>`` and the associated algorithms)
-* ``std::chrono::tzdb`` and related time zone functionality
-* ``<syncstream>``
+  $ clang++ -nostdinc++ -nostdlib++           \
+            -isystem <install>/include/c++/v1 \
+            -L <install>/lib                  \
+            -Wl,-rpath,<install>/lib          \
+            -lc++                             \
+            test.cpp
 
-.. note::
-  Experimental libraries are experimental.
-    * The contents of the ``<experimental/...>`` headers and the associated static
-      library will not remain compatible between versions.
-    * No guarantees of API or ABI stability are provided.
-    * When the standardized version of an experimental feature is implemented,
-      the experimental feature is removed two releases after the non-experimental
-      version has shipped. The full policy is explained :ref:`here <experimental features>`.
+The option ``-Wl,-rpath,<install>/lib`` adds a runtime library search path,
+which causes the system's dynamic linker to look for libc++ in ``<install>/lib``
+whenever the program is loaded.
 
+GCC does not support the ``-nostdlib++`` flag, so one must use ``-nodefaultlibs``
+instead. Since that removes all the standard system libraries and not just libc++,
+the system libraries must be re-added manually. For example:
+
+.. code-block:: bash
+
+  $ g++ -nostdinc++ -nodefaultlibs           \
+        -isystem <install>/include/c++/v1    \
+        -L <install>/lib                     \
+        -Wl,-rpath,<install>/lib             \
+        -lc++ -lc++abi -lm -lc -lgcc_s -lgcc \
+        test.cpp
+
+
+GDB Pretty printers for libc++
+==============================
+
+GDB does not support pretty-printing of libc++ symbols by default. However, libc++ does
+provide pretty-printers itself. Those can be used as:
+
+.. code-block:: bash
+
+  $ gdb -ex "source <libcxx>/utils/gdb/libcxx/printers.py" \
+        -ex "python register_libcxx_printer_loader()" \
+        <args>
+
+.. _include-what-you-use:
+
+include-what-you-use (IWYU)
+===========================
+
+libc++ provides an IWYU `mapping file <https://github.com/include-what-you-use/include-what-you-use/blob/master/docs/IWYUMappings.md>`_,
+which drastically improves the accuracy of the tool when using libc++. To use the mapping file with
+IWYU, you should run the tool like so:
+
+.. code-block:: bash
+
+  $ include-what-you-use -Xiwyu --mapping_file=/path/to/libcxx/include/libcxx.imp file.cpp
+
+If you would prefer to not use that flag, then you can replace ``/path/to/include-what-you-use/share/libcxx.imp``
+file with the libc++-provided ``libcxx.imp`` file.
 
 Libc++ Configuration Macros
 ===========================
 
-Libc++ provides a number of configuration macros that can be used by developers to
-enable or disable extended libc++ behavior.
-
-.. warning::
-  Configuration macros that are not documented here are not intended to be customized
-  by developers and should not be used. In particular, some configuration macros are
-  only intended to be used by vendors and changing their value from the one provided
-  in your toolchain can lead to unexpected behavior.
+Libc++ provides a number of configuration macros which can be used to enable
+or disable extended libc++ behavior, including enabling hardening or thread
+safety annotations.
 
 **_LIBCPP_ENABLE_THREAD_SAFETY_ANNOTATIONS**:
   This macro is used to enable -Wthread-safety annotations on libc++'s
@@ -134,12 +193,6 @@ enable or disable extended libc++ behavior.
   warning saying that `std::auto_ptr` is deprecated. If the macro is defined,
   no warning will be emitted. By default, this macro is not defined.
 
-**_LIBCPP_ENABLE_EXPERIMENTAL**:
-  This macro enables experimental features. This can be used on compilers that do
-  not support the ``-fexperimental-library`` flag. When used, users also need to
-  ensure that the appropriate experimental library (usually ``libc++experimental.a``)
-  is linked into their program.
-
 C++17 Specific Configuration Macros
 -----------------------------------
 **_LIBCPP_ENABLE_CXX17_REMOVED_AUTO_PTR**:
@@ -156,18 +209,12 @@ C++17 Specific Configuration Macros
 **_LIBCPP_ENABLE_CXX17_REMOVED_RANDOM_SHUFFLE**:
   This macro is used to re-enable the `random_shuffle` algorithm.
 
-**_LIBCPP_ENABLE_CXX17_REMOVED_UNARY_BINARY_FUNCTION**:
-  This macro is used to re-enable `unary_function` and `binary_function`.
-
 **_LIBCPP_ENABLE_CXX17_REMOVED_UNEXPECTED_FUNCTIONS**:
   This macro is used to re-enable `set_unexpected`, `get_unexpected`, and
   `unexpected`.
 
 C++20 Specific Configuration Macros
 -----------------------------------
-**_LIBCPP_ENABLE_CXX20_REMOVED_UNCAUGHT_EXCEPTION**:
-  This macro is used to re-enable `uncaught_exception`.
-
 **_LIBCPP_ENABLE_CXX20_REMOVED_SHARED_PTR_UNIQUE**:
   This macro is used to re-enable the function
   ``std::shared_ptr<...>::unique()``.
@@ -183,9 +230,6 @@ C++20 Specific Configuration Macros
 
 **_LIBCPP_ENABLE_CXX20_REMOVED_RAW_STORAGE_ITERATOR**:
   This macro is used to re-enable `raw_storage_iterator`.
-
-**_LIBCPP_ENABLE_CXX20_REMOVED_TEMPORARY_BUFFER**:
-  This macro is used to re-enable `get_temporary_buffer` and `return_temporary_buffer`.
 
 **_LIBCPP_ENABLE_CXX20_REMOVED_TYPE_TRAITS**:
   This macro is used to re-enable `is_literal_type`, `is_literal_type_v`,
@@ -263,7 +307,7 @@ Extensions to the C++23 modules ``std`` and ``std.compat``
 ----------------------------------------------------------
 
 Like other major implementations, libc++ provides C++23 modules ``std`` and
-``std.compat`` in C++20 as an extension.
+``std.compat`` in C++20 as an extension"
 
 Constant-initialized std::string
 --------------------------------
@@ -320,14 +364,109 @@ Unpoisoning may not be an option, if (for example) you are not maintaining the a
 * You are using allocator, which does not call destructor during deallocation.
 * You are aware that memory allocated with an allocator may be accessed, even when unused by container.
 
-Support for compiler extensions
--------------------------------
+Offloading C++ Parallel Algorithms to GPUs
+------------------------------------------
 
-Clang, GCC and other compilers all provide their own set of language extensions. These extensions
-have often been developed without particular consideration for their interaction with the library,
-and as such, libc++ does not go out of its way to support them. The library may support specific
-compiler extensions which would then be documented explicitly, but the basic expectation should be
-that no special support is provided for arbitrary compiler extensions.
+Experimental support for GPU offloading has been added to ``libc++``. The
+implementation uses OpenMP target offloading to leverage GPU compute resources.
+The OpenMP PSTL backend can target both NVIDIA and AMD GPUs.
+However, the implementation only supports contiguous iterators, such as
+iterators for ``std::vector`` or ``std::array``.
+To enable the OpenMP offloading backend it must be selected with
+``LIBCXX_PSTL_BACKEND=openmp`` when installing ``libc++``. Further, when
+compiling a program, the user must specify the command line options
+``-fopenmp -fexperimental-library``. To install LLVM with OpenMP offloading
+enabled, please read
+`the LLVM OpenMP FAQ. <https://openmp.llvm.org/SupportAndFAQ.html>`_
+You may also want to to visit
+`the OpenMP offloading command-line argument reference. <https://openmp.llvm.org/CommandLineArgumentReference.html#offload-command-line-arguments>`_
+
+Example
+~~~~~~~
+
+The following is an example of offloading vector addition to a GPU using our
+standard library extension. It implements the classical vector addition from
+BLAS that overwrites the vector ``y`` with ``y=a*x+y``. Thus ``y.begin()`` is
+both used as an input and an output iterator in this example.
+
+.. code-block:: cpp
+
+  #include <algorithm>
+  #include <execution>
+
+  template <typename T1, typename T2, typename T3>
+  void axpy(const T1 a, const std::vector<T2> &x, std::vector<T3> &y) {
+    std::transform(std::execution::par_unseq, x.begin(), x.end(), y.begin(),
+                  y.begin(), [=](T2 xi, T3 yi) { return a * xi + yi; });
+  }
+
+The execution policy ``std::execution::par_unseq`` states that the algorithm's
+execution may be parallelized, vectorized, and migrated across threads. This is
+the only execution mode that is safe to offload to GPUs, and for all other
+execution modes the algorithms will execute on the CPU.
+Special attention must be paid to the lambda captures when enabling GPU
+offloading. If the lambda captures by reference, the user must manually map the
+variables to the device. If capturing by reference, the above example could
+be implemented in the following way.
+
+.. code-block:: cpp
+
+  template <typename T1, typename T2, typename T3>
+  void axpy(const T1 a, const std::vector<T2> &x, std::vector<T3> &y) {
+  #pragma omp target data map(to : a)
+    std::transform(std::execution::par_unseq, x.begin(), x.end(), y.begin(),
+                  y.begin(), [&](T2 xi, T3 yi) { return a * xi + yi; });
+  }
+
+However, if unified shared memory, USM, is enabled, no additional data mapping
+is necessary when capturing y reference.
+
+Compiling functions for GPUs with OpenMP
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+The C++ standard defines that all accesses to memory are inside a single address
+space. However, discrete GPU systems have distinct address spaces. A single
+address space can be emulated if your system supports unified shared memory.
+However, many discrete GPU systems do not, and in those cases it is important to
+pass device function pointers to the parallel algorithms. Below is an example of
+how the OpenMP ``declare target`` directive with the ``indirect`` clause can be
+used to mark that a function should be compiled for both host and device.
+
+.. code-block:: cpp
+
+  // This function computes the squared difference of two floating points
+  float squared(float a, float b) { return a * a - 2.0f * a * b + b * b; };
+
+  // Declare that the function must be compiled for both host and device
+  #pragma omp declare target indirect to(squared)
+
+  int main() {
+    std::vector<float> a(100, 1.0);
+    std::vector<float> b(100, 1.25);
+
+    // Pass the host function pointer to the parallel algorithm and let OpenMP
+    // translate it to the device function pointer internally
+    float sum =
+        std::transform_reduce(std::execution::par_unseq, a.begin(), a.end(),
+                              b.begin(), 0.0f, std::plus{}, squared);
+
+    // Validate that the result is approximately 6.25
+    assert(std::abs(sum - 6.25f) < 1e-10);
+    return 0;
+  }
+
+Without unified shared memory, the above example will not work if the host
+function pointer ``squared`` is passed to the parallel algorithm.
+
+Important notes about exception handling
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+GPU architectures do not support exception handling. If compiling a program
+containing parallel algorithms with current versions of Clang, a program with
+exceptions in offloaded code regions will compile, but the program will
+terminate if an exception is thrown on the device. This does not conform with
+the C++ standard and exception handling on GPUs will hopefully be better
+supported in future releases of LLVM.
 
 Platform specific behavior
 ==========================
@@ -351,67 +490,3 @@ specific locale is imbued, the IO with the underlying stream happens with
 regular ``char`` elements, which are converted to/from wide characters
 according to the locale. Note that this doesn't behave as expected if the
 stream has been set in Unicode mode.
-
-
-Third-party Integrations
-========================
-
-Libc++ provides integration with a few third-party tools.
-
-Debugging libc++ internals in LLDB
-----------------------------------
-
-LLDB hides the implementation details of libc++ by default.
-
-E.g., when setting a breakpoint in a comparator passed to ``std::sort``, the
-backtrace will read as
-
-.. code-block::
-
-  (lldb) thread backtrace
-  * thread #1, name = 'a.out', stop reason = breakpoint 3.1
-    * frame #0: 0x000055555555520e a.out`my_comparator(a=1, b=8) at test-std-sort.cpp:6:3
-      frame #7: 0x0000555555555615 a.out`void std::__1::sort[abi:ne200000]<std::__1::__wrap_iter<int*>, bool (*)(int, int)>(__first=(item = 8), __last=(item = 0), __comp=(a.out`my_less(int, int) at test-std-sort.cpp:5)) at sort.h:1003:3
-      frame #8: 0x000055555555531a a.out`main at test-std-sort.cpp:24:3
-
-Note how the caller of ``my_comparator`` is shown as ``std::sort``. Looking at
-the frame numbers, we can see that frames #1 until #6 were hidden. Those frames
-represent internal implementation details such as ``__sort4`` and similar
-utility functions.
-
-To also show those implementation details, use ``thread backtrace -u``.
-Alternatively, to disable those compact backtraces, use ``frame recognizer list``
-and ``frame recognizer disable`` on the "libc++ frame recognizer".
-
-Futhermore, stepping into libc++ functions is disabled by default. This is controlled via the
-setting ``target.process.thread.step-avoid-regexp`` which defaults to ``^std::`` and can be
-disabled using ``settings set target.process.thread.step-avoid-regexp ""``.
-
-GDB Pretty printers for libc++
-------------------------------
-
-GDB does not support pretty-printing of libc++ symbols by default. However, libc++ does
-provide pretty-printers itself. Those can be used as:
-
-.. code-block:: bash
-
-  $ gdb -ex "source <libcxx>/utils/gdb/libcxx/printers.py" \
-        -ex "python register_libcxx_printer_loader()" \
-        <args>
-
-
-.. _include-what-you-use:
-
-include-what-you-use (IWYU)
----------------------------
-
-libc++ provides an IWYU `mapping file <https://github.com/include-what-you-use/include-what-you-use/blob/master/docs/IWYUMappings.md>`_,
-which drastically improves the accuracy of the tool when using libc++. To use the mapping file with
-IWYU, you should run the tool like so:
-
-.. code-block:: bash
-
-  $ include-what-you-use -Xiwyu --mapping_file=/path/to/libcxx/include/libcxx.imp file.cpp
-
-If you would prefer to not use that flag, then you can replace ``/path/to/include-what-you-use/share/libcxx.imp``
-file with the libc++-provided ``libcxx.imp`` file.

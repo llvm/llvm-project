@@ -39,8 +39,6 @@ _LIBCPP_PUSH_MACROS
 // the user.
 //
 
-#if _LIBCPP_STD_VER >= 17
-
 _LIBCPP_BEGIN_NAMESPACE_STD
 namespace __pstl {
 
@@ -49,21 +47,25 @@ struct __backend_configuration;
 
 struct __default_backend_tag;
 struct __libdispatch_backend_tag;
+struct __openmp_backend_tag;
 struct __serial_backend_tag;
 struct __std_thread_backend_tag;
 
-#  if defined(_LIBCPP_PSTL_BACKEND_SERIAL)
+#if defined(_LIBCPP_PSTL_BACKEND_SERIAL)
 using __current_configuration = __backend_configuration<__serial_backend_tag, __default_backend_tag>;
-#  elif defined(_LIBCPP_PSTL_BACKEND_STD_THREAD)
+#elif defined(_LIBCPP_PSTL_BACKEND_STD_THREAD)
 using __current_configuration = __backend_configuration<__std_thread_backend_tag, __default_backend_tag>;
-#  elif defined(_LIBCPP_PSTL_BACKEND_LIBDISPATCH)
+#elif defined(_LIBCPP_PSTL_BACKEND_LIBDISPATCH)
 using __current_configuration = __backend_configuration<__libdispatch_backend_tag, __default_backend_tag>;
-#  else
+#elif defined(_LIBCPP_PSTL_BACKEND_OPENMP)
+using __current_configuration =
+    __backend_configuration<__openmp_backend_tag, __std_thread_backend_tag, __default_backend_tag>;
+#else
 
 // ...New vendors can add parallel backends here...
 
-#    error "Invalid PSTL backend configuration"
-#  endif
+#  error "Invalid PSTL backend configuration"
+#endif
 
 template <class _Backend, class _ExecutionPolicy>
 struct __find_if;
@@ -297,8 +299,6 @@ struct __reduce;
 
 } // namespace __pstl
 _LIBCPP_END_NAMESPACE_STD
-
-#endif // _LIBCPP_STD_VER >= 17
 
 _LIBCPP_POP_MACROS
 

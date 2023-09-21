@@ -158,6 +158,7 @@ jobs:
           'generic-no-wide-characters',
           'generic-no-rtti',
           'generic-optimized-speed',
+          'generic-pstl-openmp',
           'generic-static',
           'bootstrapping-build'
         ]
