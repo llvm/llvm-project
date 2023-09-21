@@ -29,6 +29,7 @@
 #include "llvm/Support/Allocator.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/ErrorOr.h"
+#include "llvm/Support/RWMutex.h"
 #include <cassert>
 #include <cstdint>
 #include <map>
@@ -165,6 +166,10 @@ protected:
 
   /// Names of non-standard annotations.
   SmallVector<std::string, 8> AnnotationNames;
+
+  /// A mutex that is used to control parallel accesses to
+  /// AnnotationNameIndexMap and AnnotationsNames.
+  mutable llvm::sys::RWMutex AnnotationNameMutex;
 
   /// Allocate the TailCall annotation value. Clients of the target-specific
   /// MCPlusBuilder classes must use convert/lower/create* interfaces instead.
@@ -1775,6 +1780,7 @@ public:
 
   /// Return annotation index matching the \p Name.
   std::optional<unsigned> getAnnotationIndex(StringRef Name) const {
+    std::shared_lock<llvm::sys::RWMutex> Lock(AnnotationNameMutex);
     auto AI = AnnotationNameIndexMap.find(Name);
     if (AI != AnnotationNameIndexMap.end())
       return AI->second;
@@ -1784,10 +1790,10 @@ public:
   /// Return annotation index matching the \p Name. Create a new index if the
   /// \p Name wasn't registered previously.
   unsigned getOrCreateAnnotationIndex(StringRef Name) {
-    auto AI = AnnotationNameIndexMap.find(Name);
-    if (AI != AnnotationNameIndexMap.end())
-      return AI->second;
+    if (std::optional<unsigned> Index = getAnnotationIndex(Name))
+      return *Index;
 
+    std::unique_lock<llvm::sys::RWMutex> Lock(AnnotationNameMutex);
     const unsigned Index =
         AnnotationNameIndexMap.size() + MCPlus::MCAnnotation::kGeneric;
     AnnotationNameIndexMap.insert(std::make_pair(Name, Index));
