@@ -1353,13 +1353,6 @@ gentbl_filegroup(
     tbl_outs = [
         (
             [
-                "-gen-python-enum-bindings",
-                "-bind-dialect=vector",
-            ],
-            "mlir/dialects/_vector_enum_gen.py",
-        ),
-        (
-            [
                 "-gen-python-op-bindings",
                 "-bind-dialect=vector",
             ],
@@ -1368,6 +1361,26 @@ gentbl_filegroup(
     ],
     tblgen = "//mlir:mlir-tblgen",
     td_file = "mlir/dialects/VectorOps.td",
+    deps = [
+        "//mlir:ArithOpsTdFiles",
+        "//mlir:OpBaseTdFiles",
+        "//mlir:VectorOpsTdFiles",
+    ],
+)
+
+gentbl_filegroup(
+    name = "VectorAttributesPyGen",
+    tbl_outs = [
+        (
+            [
+                "-gen-python-enum-bindings",
+                "-bind-dialect=vector",
+            ],
+            "mlir/dialects/_vector_enum_gen.py",
+        ),
+    ],
+    tblgen = "//mlir:mlir-tblgen",
+    td_file = "mlir/dialects/VectorAttributes.td",
     deps = [
         "//mlir:ArithOpsTdFiles",
         "//mlir:OpBaseTdFiles",
