@@ -1,6 +1,6 @@
-long g_watch_me_read = 1;
-long g_watch_me_write = 2;
-long g_temp = 3;
+char g_watch_me_read;
+char g_watch_me_write;
+char g_temp;
 
 void watch_read() {
     g_temp = g_watch_me_read;
@@ -14,6 +14,6 @@ int main() {
     watch_read(); // Set a breakpoint here
     g_temp = g_watch_me_read; // Set breakpoint after call
     watch_write();
-    g_watch_me_write = g_temp + 1;
+    g_watch_me_write = g_temp;
     return 0;
 }

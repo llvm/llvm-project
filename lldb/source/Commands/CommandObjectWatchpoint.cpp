@@ -803,7 +803,7 @@ public:
             "Set a watchpoint on a variable. "
             "Use the '-w' option to specify the type of watchpoint and "
             "the '-s' option to specify the byte size to watch for. "
-            "If no '-w' option is specified, it defaults to modify. "
+            "If no '-w' option is specified, it defaults to write. "
             "If no '-s' option is specified, it defaults to the variable's "
             "byte size. "
             "Note that there are limited hardware resources for watchpoints. "
@@ -878,9 +878,9 @@ protected:
       return false;
     }
 
-    // If no '-w' is specified, default to '-w modify'.
+    // If no '-w' is specified, default to '-w write'.
     if (!m_option_watchpoint.watch_type_specified) {
-      m_option_watchpoint.watch_type = OptionGroupWatchpoint::eWatchModify;
+      m_option_watchpoint.watch_type = OptionGroupWatchpoint::eWatchWrite;
     }
 
     // We passed the sanity check for the command. Proceed to set the
@@ -947,23 +947,7 @@ protected:
     }
 
     // Now it's time to create the watchpoint.
-    uint32_t watch_type = 0;
-    switch (m_option_watchpoint.watch_type) {
-    case OptionGroupWatchpoint::eWatchModify:
-      watch_type |= LLDB_WATCH_TYPE_MODIFY;
-      break;
-    case OptionGroupWatchpoint::eWatchRead:
-      watch_type |= LLDB_WATCH_TYPE_READ;
-      break;
-    case OptionGroupWatchpoint::eWatchReadWrite:
-      watch_type |= LLDB_WATCH_TYPE_READ | LLDB_WATCH_TYPE_WRITE;
-      break;
-    case OptionGroupWatchpoint::eWatchWrite:
-      watch_type |= LLDB_WATCH_TYPE_WRITE;
-      break;
-    case OptionGroupWatchpoint::eWatchInvalid:
-      break;
-    };
+    uint32_t watch_type = m_option_watchpoint.watch_type;
 
     error.Clear();
     WatchpointSP watch_sp =
@@ -1015,7 +999,7 @@ public:
             "Use the '-l' option to specify the language of the expression. "
             "Use the '-w' option to specify the type of watchpoint and "
             "the '-s' option to specify the byte size to watch for. "
-            "If no '-w' option is specified, it defaults to modify. "
+            "If no '-w' option is specified, it defaults to write. "
             "If no '-s' option is specified, it defaults to the target's "
             "pointer byte size. "
             "Note that there are limited hardware resources for watchpoints. "
@@ -1029,7 +1013,7 @@ public:
         R"(
 Examples:
 
-(lldb) watchpoint set expression -w modify -s 1 -- foo + 32
+(lldb) watchpoint set expression -w write -s 1 -- foo + 32
 
     Watches write access for the 1-byte region pointed to by the address 'foo + 32')");
 
@@ -1089,7 +1073,7 @@ protected:
 
     // If no '-w' is specified, default to '-w write'.
     if (!m_option_watchpoint.watch_type_specified) {
-      m_option_watchpoint.watch_type = OptionGroupWatchpoint::eWatchModify;
+      m_option_watchpoint.watch_type = OptionGroupWatchpoint::eWatchWrite;
     }
 
     // We passed the sanity check for the command. Proceed to set the

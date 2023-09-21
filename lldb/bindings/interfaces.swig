@@ -80,7 +80,6 @@
 %include "./interface/SBValueListDocstrings.i"
 %include "./interface/SBVariablesOptionsDocstrings.i"
 %include "./interface/SBWatchpointDocstrings.i"
-%include "./interface/SBWatchpointOptionsDocstrings.i"
 
 /* API headers */
 %include "lldb/API/SBAddress.h"
@@ -153,7 +152,6 @@
 %include "lldb/API/SBValueList.h"
 %include "lldb/API/SBVariablesOptions.h"
 %include "lldb/API/SBWatchpoint.h"
-%include "lldb/API/SBWatchpointOptions.h"
 
 /* Extensions for SB classes */
 %include "./interface/SBAddressExtensions.i"
