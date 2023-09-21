@@ -326,4 +326,13 @@ def OMPFunctionFiltering : Pass<"omp-function-filtering"> {
   ];
 }
 
+def OMPLoopIndexMemToReg : Pass<"omp-loop-index-mem2reg", "mlir::func::FuncOp"> {
+  let summary = "Pushes allocations for index variables of OpenMP loops into "
+                "the loop region and, if they are never passed by reference, "
+                "they are replaced by the corresponding entry block arguments, "
+                "removing all redundant allocations in the process.";
+  let constructor = "::fir::createOMPLoopIndexMemToRegPass()";
+  let dependentDialects = ["fir::FIROpsDialect", "mlir::omp::OpenMPDialect"];
+}
+
 #endif // FLANG_OPTIMIZER_TRANSFORMS_PASSES

@@ -270,6 +270,7 @@ inline void createOpenMPFIRPassPipeline(
     pm.addPass(fir::createOMPEarlyOutliningPass());
     pm.addPass(fir::createOMPFunctionFilteringPass());
   }
+  pm.addPass(fir::createOMPLoopIndexMemToRegPass());
 }
 
 #if !defined(FLANG_EXCLUDE_CODEGEN)

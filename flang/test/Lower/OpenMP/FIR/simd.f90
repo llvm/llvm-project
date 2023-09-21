@@ -11,9 +11,7 @@ integer :: i
   ! CHECK-NEXT: %[[STEP:.*]] = arith.constant 1 : i32
   ! CHECK-NEXT: omp.simdloop for (%[[I:.*]]) : i32 = (%[[LB]]) to (%[[UB]]) inclusive step (%[[STEP]]) {
   do i=1, 9
-    ! CHECK: fir.store %[[I]] to %[[LOCAL:.*]] : !fir.ref<i32>
-    ! CHECK: %[[LD:.*]] = fir.load %[[LOCAL]] : !fir.ref<i32>
-    ! CHECK: fir.call @_FortranAioOutputInteger32({{.*}}, %[[LD]]) {{.*}}: (!fir.ref<i8>, i32) -> i1
+    ! CHECK: fir.call @_FortranAioOutputInteger32({{.*}}, %[[I]]) {{.*}}: (!fir.ref<i8>, i32) -> i1
     print*, i
   end do
   !$OMP END SIMD 
@@ -29,9 +27,7 @@ integer :: i, n, threshold
   ! CHECK: %[[COND:.*]] = arith.cmpi sge
   ! CHECK: omp.simdloop if(%[[COND:.*]]) for (%[[I:.*]]) : i32 = (%[[LB]]) to (%[[UB]]) inclusive  step (%[[STEP]]) {
   do i = 1, n
-    ! CHECK: fir.store %[[I]] to %[[LOCAL:.*]] : !fir.ref<i32>
-    ! CHECK: %[[LD:.*]] = fir.load %[[LOCAL]] : !fir.ref<i32>
-    ! CHECK: fir.call @_FortranAioOutputInteger32({{.*}}, %[[LD]]) {{.*}}: (!fir.ref<i8>, i32) -> i1
+    ! CHECK: fir.call @_FortranAioOutputInteger32({{.*}}, %[[I]]) {{.*}}: (!fir.ref<i8>, i32) -> i1
     print*, i
   end do
   !$OMP END SIMD
@@ -46,9 +42,7 @@ integer :: i, n, threshold
   ! CHECK: %[[STEP:.*]] = arith.constant 1 : i32
   ! CHECK: omp.simdloop simdlen(2) for (%[[I:.*]]) : i32 = (%[[LB]]) to (%[[UB]]) inclusive  step (%[[STEP]]) {
   do i = 1, n
-    ! CHECK: fir.store %[[I]] to %[[LOCAL:.*]] : !fir.ref<i32>
-    ! CHECK: %[[LD:.*]] = fir.load %[[LOCAL]] : !fir.ref<i32>
-    ! CHECK: fir.call @_FortranAioOutputInteger32({{.*}}, %[[LD]]) {{.*}}: (!fir.ref<i8>, i32) -> i1
+    ! CHECK: fir.call @_FortranAioOutputInteger32({{.*}}, %[[I]]) {{.*}}: (!fir.ref<i8>, i32) -> i1
     print*, i
   end do
   !$OMP END SIMD
@@ -64,9 +58,7 @@ integer, parameter :: simdlen = 2;
   ! CHECK: %[[STEP:.*]] = arith.constant 1 : i32
   ! CHECK: omp.simdloop simdlen(2) for (%[[I:.*]]) : i32 = (%[[LB]]) to (%[[UB]]) inclusive  step (%[[STEP]]) {
   do i = 1, n
-    ! CHECK: fir.store %[[I]] to %[[LOCAL:.*]] : !fir.ref<i32>
-    ! CHECK: %[[LD:.*]] = fir.load %[[LOCAL]] : !fir.ref<i32>
-    ! CHECK: fir.call @_FortranAioOutputInteger32({{.*}}, %[[LD]]) {{.*}}: (!fir.ref<i8>, i32) -> i1
+    ! CHECK: fir.call @_FortranAioOutputInteger32({{.*}}, %[[I]]) {{.*}}: (!fir.ref<i8>, i32) -> i1
     print*, i
   end do
   !$OMP END SIMD
@@ -82,9 +74,7 @@ integer, parameter :: simdlen = 2;
   ! CHECK: %[[STEP:.*]] = arith.constant 1 : i32
   ! CHECK: omp.simdloop simdlen(6) for (%[[I:.*]]) : i32 = (%[[LB]]) to (%[[UB]]) inclusive  step (%[[STEP]]) {
   do i = 1, n
-    ! CHECK: fir.store %[[I]] to %[[LOCAL:.*]] : !fir.ref<i32>
-    ! CHECK: %[[LD:.*]] = fir.load %[[LOCAL]] : !fir.ref<i32>
-    ! CHECK: fir.call @_FortranAioOutputInteger32({{.*}}, %[[LD]]) {{.*}}: (!fir.ref<i8>, i32) -> i1
+    ! CHECK: fir.call @_FortranAioOutputInteger32({{.*}}, %[[I]]) {{.*}}: (!fir.ref<i8>, i32) -> i1
     print*, i
   end do
   !$OMP END SIMD
@@ -99,9 +89,7 @@ integer :: i, n, threshold
   ! CHECK: %[[STEP:.*]] = arith.constant 1 : i32
   ! CHECK: omp.simdloop safelen(2) for (%[[I:.*]]) : i32 = (%[[LB]]) to (%[[UB]]) inclusive  step (%[[STEP]]) {
   do i = 1, n
-    ! CHECK: fir.store %[[I]] to %[[LOCAL:.*]] : !fir.ref<i32>
-    ! CHECK: %[[LD:.*]] = fir.load %[[LOCAL]] : !fir.ref<i32>
-    ! CHECK: fir.call @_FortranAioOutputInteger32({{.*}}, %[[LD]]) {{.*}}: (!fir.ref<i8>, i32) -> i1
+    ! CHECK: fir.call @_FortranAioOutputInteger32({{.*}}, %[[I]]) {{.*}}: (!fir.ref<i8>, i32) -> i1
     print*, i
   end do
   !$OMP END SIMD
@@ -117,9 +105,7 @@ integer, parameter :: safelen = 2;
   ! CHECK: %[[STEP:.*]] = arith.constant 1 : i32
   ! CHECK: omp.simdloop safelen(6) for (%[[I:.*]]) : i32 = (%[[LB]]) to (%[[UB]]) inclusive  step (%[[STEP]]) {
   do i = 1, n
-    ! CHECK: fir.store %[[I]] to %[[LOCAL:.*]] : !fir.ref<i32>
-    ! CHECK: %[[LD:.*]] = fir.load %[[LOCAL]] : !fir.ref<i32>
-    ! CHECK: fir.call @_FortranAioOutputInteger32({{.*}}, %[[LD]]) {{.*}}: (!fir.ref<i8>, i32) -> i1
+    ! CHECK: fir.call @_FortranAioOutputInteger32({{.*}}, %[[I]]) {{.*}}: (!fir.ref<i8>, i32) -> i1
     print*, i
   end do
   !$OMP END SIMD
@@ -134,9 +120,7 @@ integer :: i, n, threshold
   ! CHECK: %[[STEP:.*]] = arith.constant 1 : i32
   ! CHECK: omp.simdloop simdlen(1) safelen(2) for (%[[I:.*]]) : i32 = (%[[LB]]) to (%[[UB]]) inclusive  step (%[[STEP]]) {
   do i = 1, n
-    ! CHECK: fir.store %[[I]] to %[[LOCAL:.*]] : !fir.ref<i32>
-    ! CHECK: %[[LD:.*]] = fir.load %[[LOCAL]] : !fir.ref<i32>
-    ! CHECK: fir.call @_FortranAioOutputInteger32({{.*}}, %[[LD]]) {{.*}}: (!fir.ref<i8>, i32) -> i1
+    ! CHECK: fir.call @_FortranAioOutputInteger32({{.*}}, %[[I]]) {{.*}}: (!fir.ref<i8>, i32) -> i1
     print*, i
   end do
   !$OMP END SIMD

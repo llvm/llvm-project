@@ -50,14 +50,11 @@
 !CHECK:  %[[C1_2:.*]] = arith.constant 1 : i32
 !CHECK:  fir.store %[[C1_2]] to %[[XREF]] : !fir.ref<i32>
 !CHECK:  omp.parallel
-!CHECK:    %[[I_PVT_REF:.*]] = fir.alloca i32 {adapt.valuebyref, pinned}
 !CHECK:    %[[C1_1:.*]] = arith.constant 1 : i32
 !CHECK:    %[[C10:.*]] = arith.constant 10 : i32
 !CHECK:    %[[C1_2:.*]] = arith.constant 1 : i32
 !CHECK:    omp.wsloop   reduction(@[[RED_I32_NAME]] -> %[[XREF]] : !fir.ref<i32>) for  (%[[IVAL:.*]]) : i32 = (%[[C1_1]]) to (%[[C10]]) inclusive step (%[[C1_2]])
-!CHECK:      fir.store %[[IVAL]] to %[[I_PVT_REF]] : !fir.ref<i32>
-!CHECK:      %[[I_PVT_VAL:.*]] = fir.load %[[I_PVT_REF]] : !fir.ref<i32>
-!CHECK:      omp.reduction %[[I_PVT_VAL]], %[[XREF]] : i32, !fir.ref<i32>
+!CHECK:      omp.reduction %[[IVAL]], %[[XREF]] : i32, !fir.ref<i32>
 !CHECK:      omp.yield
 !CHECK:    omp.terminator
 !CHECK:  return
@@ -79,14 +76,11 @@ end subroutine
 !CHECK:  %[[C0_2:.*]] = arith.constant 1.000000e+00 : f32
 !CHECK:  fir.store %[[C0_2]] to %[[XREF]] : !fir.ref<f32>
 !CHECK:  omp.parallel
-!CHECK:    %[[I_PVT_REF:.*]] = fir.alloca i32 {adapt.valuebyref, pinned}
 !CHECK:    %[[C1_1:.*]] = arith.constant 1 : i32
 !CHECK:    %[[C100:.*]] = arith.constant 10 : i32
 !CHECK:    %[[C1_2:.*]] = arith.constant 1 : i32
 !CHECK:    omp.wsloop   reduction(@[[RED_F32_NAME]] -> %[[XREF]] : !fir.ref<f32>) for  (%[[IVAL:.*]]) : i32 = (%[[C1_1]]) to (%[[C100]]) inclusive step (%[[C1_2]])
-!CHECK:      fir.store %[[IVAL]] to %[[I_PVT_REF]] : !fir.ref<i32>
-!CHECK:      %[[I_PVT_VAL_i32:.*]] = fir.load %[[I_PVT_REF]] : !fir.ref<i32>
-!CHECK:      %[[I_PVT_VAL_f32:.*]] = fir.convert %[[I_PVT_VAL_i32]] : (i32) -> f32
+!CHECK:      %[[I_PVT_VAL_f32:.*]] = fir.convert %[[IVAL]] : (i32) -> f32
 !CHECK:      omp.reduction %[[I_PVT_VAL_f32]], %[[XREF]] : f32, !fir.ref<f32>
 !CHECK:      omp.yield
 !CHECK:    omp.terminator
@@ -108,14 +102,11 @@ end subroutine
 !CHECK:  %[[C1_2:.*]] = arith.constant 1 : i32
 !CHECK:  fir.store %[[C1_2]] to %[[XREF]] : !fir.ref<i32>
 !CHECK:  omp.parallel
-!CHECK:    %[[I_PVT_REF:.*]] = fir.alloca i32 {adapt.valuebyref, pinned}
 !CHECK:    %[[C1_1:.*]] = arith.constant 1 : i32
 !CHECK:    %[[C10:.*]] = arith.constant 10 : i32
 !CHECK:    %[[C1_2:.*]] = arith.constant 1 : i32
 !CHECK:    omp.wsloop   reduction(@[[RED_I32_NAME]] -> %[[XREF]] : !fir.ref<i32>) for  (%[[IVAL:.*]]) : i32 = (%[[C1_1]]) to (%[[C10]]) inclusive step (%[[C1_2]])
-!CHECK:      fir.store %[[IVAL]] to %[[I_PVT_REF]] : !fir.ref<i32>
-!CHECK:      %[[I_PVT_VAL:.*]] = fir.load %[[I_PVT_REF]] : !fir.ref<i32>
-!CHECK:      omp.reduction %[[I_PVT_VAL]], %[[XREF]] : i32, !fir.ref<i32>
+!CHECK:      omp.reduction %[[IVAL]], %[[XREF]] : i32, !fir.ref<i32>
 !CHECK:      omp.yield
 !CHECK:    omp.terminator
 !CHECK:  return
@@ -136,14 +127,11 @@ end subroutine
 !CHECK:  %[[C0_2:.*]] = arith.constant 1.000000e+00 : f32
 !CHECK:  fir.store %[[C0_2]] to %[[XREF]] : !fir.ref<f32>
 !CHECK:  omp.parallel
-!CHECK:    %[[I_PVT_REF:.*]] = fir.alloca i32 {adapt.valuebyref, pinned}
 !CHECK:    %[[C1_1:.*]] = arith.constant 1 : i32
 !CHECK:    %[[C100:.*]] = arith.constant 10 : i32
 !CHECK:    %[[C1_2:.*]] = arith.constant 1 : i32
 !CHECK:    omp.wsloop   reduction(@[[RED_F32_NAME]] -> %[[XREF]] : !fir.ref<f32>) for  (%[[IVAL:.*]]) : i32 = (%[[C1_1]]) to (%[[C100]]) inclusive step (%[[C1_2]])
-!CHECK:      fir.store %[[IVAL]] to %[[I_PVT_REF]] : !fir.ref<i32>
-!CHECK:      %[[I_PVT_VAL_i32:.*]] = fir.load %[[I_PVT_REF]] : !fir.ref<i32>
-!CHECK:      %[[I_PVT_VAL_f32:.*]] = fir.convert %[[I_PVT_VAL_i32]] : (i32) -> f32
+!CHECK:      %[[I_PVT_VAL_f32:.*]] = fir.convert %[[IVAL]] : (i32) -> f32
 !CHECK:      omp.reduction %[[I_PVT_VAL_f32]], %[[XREF]] : f32, !fir.ref<f32>
 !CHECK:      omp.yield
 !CHECK:    omp.terminator
@@ -165,15 +153,10 @@ end subroutine
 !CHECK:  %[[YREF:.*]] = fir.alloca i32 {bindc_name = "y", uniq_name = "_QFmultiple_int_reductions_same_typeEy"}
 !CHECK:  %[[ZREF:.*]] = fir.alloca i32 {bindc_name = "z", uniq_name = "_QFmultiple_int_reductions_same_typeEz"}
 !CHECK:  omp.parallel
-!CHECK:    %[[I_PVT_REF:.*]] = fir.alloca i32 {adapt.valuebyref, pinned}
 !CHECK:    omp.wsloop   reduction(@[[RED_I32_NAME]] -> %[[XREF]] : !fir.ref<i32>, @[[RED_I32_NAME]] -> %[[YREF]] : !fir.ref<i32>, @[[RED_I32_NAME]] -> %[[ZREF]] : !fir.ref<i32>) for  (%[[IVAL]]) : i32
-!CHECK:      fir.store %[[IVAL]] to %[[I_PVT_REF]] : !fir.ref<i32>
-!CHECK:      %[[I_PVT_VAL1:.*]] = fir.load %[[I_PVT_REF]] : !fir.ref<i32>
-!CHECK:      omp.reduction %[[I_PVT_VAL1]], %[[XREF]] : i32, !fir.ref<i32>
-!CHECK:      %[[I_PVT_VAL2:.*]] = fir.load %[[I_PVT_REF]] : !fir.ref<i32>
-!CHECK:      omp.reduction %[[I_PVT_VAL2]], %[[YREF]] : i32, !fir.ref<i32>
-!CHECK:      %[[I_PVT_VAL3:.*]] = fir.load %[[I_PVT_REF]] : !fir.ref<i32>
-!CHECK:      omp.reduction %[[I_PVT_VAL3]], %[[ZREF]] : i32, !fir.ref<i32>
+!CHECK:      omp.reduction %[[IVAL]], %[[XREF]] : i32, !fir.ref<i32>
+!CHECK:      omp.reduction %[[IVAL]], %[[YREF]] : i32, !fir.ref<i32>
+!CHECK:      omp.reduction %[[IVAL]], %[[ZREF]] : i32, !fir.ref<i32>
 !CHECK:      omp.yield
 !CHECK:    omp.terminator
 !CHECK:  return
@@ -198,17 +181,12 @@ end subroutine
 !CHECK:  %[[YREF:.*]] = fir.alloca f32 {bindc_name = "y", uniq_name = "_QFmultiple_real_reductions_same_typeEy"}
 !CHECK:  %[[ZREF:.*]] = fir.alloca f32 {bindc_name = "z", uniq_name = "_QFmultiple_real_reductions_same_typeEz"}
 !CHECK:  omp.parallel
-!CHECK:    %[[I_PVT_REF:.*]] = fir.alloca i32 {adapt.valuebyref, pinned}
 !CHECK:    omp.wsloop   reduction(@[[RED_F32_NAME]] -> %[[XREF]] : !fir.ref<f32>, @[[RED_F32_NAME]] -> %[[YREF]] : !fir.ref<f32>, @[[RED_F32_NAME]] -> %[[ZREF]] : !fir.ref<f32>) for  (%[[IVAL]]) : i32
-!CHECK:      fir.store %[[IVAL]] to %[[I_PVT_REF]] : !fir.ref<i32>
-!CHECK:      %[[I_PVT_VAL1_I32:.*]] = fir.load %[[I_PVT_REF]] : !fir.ref<i32>
-!CHECK:      %[[I_PVT_VAL1_F32:.*]] = fir.convert %[[I_PVT_VAL1_I32]] : (i32) -> f32
+!CHECK:      %[[I_PVT_VAL1_F32:.*]] = fir.convert %[[IVAL]] : (i32) -> f32
 !CHECK:      omp.reduction %[[I_PVT_VAL1_F32]], %[[XREF]] : f32, !fir.ref<f32>
-!CHECK:      %[[I_PVT_VAL2_I32:.*]] = fir.load %[[I_PVT_REF]] : !fir.ref<i32>
-!CHECK:      %[[I_PVT_VAL2_F32:.*]] = fir.convert %[[I_PVT_VAL2_I32]] : (i32) -> f32
+!CHECK:      %[[I_PVT_VAL2_F32:.*]] = fir.convert %[[IVAL]] : (i32) -> f32
 !CHECK:      omp.reduction %[[I_PVT_VAL2_F32]], %[[YREF]] : f32, !fir.ref<f32>
-!CHECK:      %[[I_PVT_VAL3_I32:.*]] = fir.load %[[I_PVT_REF]] : !fir.ref<i32>
-!CHECK:      %[[I_PVT_VAL3_F32:.*]] = fir.convert %[[I_PVT_VAL3_I32]] : (i32) -> f32
+!CHECK:      %[[I_PVT_VAL3_F32:.*]] = fir.convert %[[IVAL]] : (i32) -> f32
 !CHECK:      omp.reduction %[[I_PVT_VAL3_F32]], %[[ZREF]] : f32, !fir.ref<f32>
 !CHECK:      omp.yield
 !CHECK:    omp.terminator
@@ -235,19 +213,13 @@ end subroutine
 !CHECK:  %[[YREF:.*]] = fir.alloca i64 {bindc_name = "y", uniq_name = "_QFmultiple_reductions_different_typeEy"}
 !CHECK:  %[[ZREF:.*]] = fir.alloca f32 {bindc_name = "z", uniq_name = "_QFmultiple_reductions_different_typeEz"}
 !CHECK:  omp.parallel
-!CHECK:    %[[I_PVT_REF:.*]] = fir.alloca i32 {adapt.valuebyref, pinned}
 !CHECK:    omp.wsloop   reduction(@[[RED_I32_NAME]] -> %2 : !fir.ref<i32>, @[[RED_I64_NAME]] -> %3 : !fir.ref<i64>, @[[RED_F32_NAME]] -> %4 : !fir.ref<f32>, @[[RED_F64_NAME]] -> %1 : !fir.ref<f64>) for  (%[[IVAL:.*]]) : i32
-!CHECK:      fir.store %[[IVAL]] to %[[I_PVT_REF]] : !fir.ref<i32>
-!CHECK:      %[[I_PVT_VAL1_I32:.*]] = fir.load %[[I_PVT_REF]] : !fir.ref<i32>
-!CHECK:      omp.reduction %[[I_PVT_VAL1_I32]], %[[XREF]] : i32, !fir.ref<i32>
-!CHECK:      %[[I_PVT_VAL2_I32:.*]] = fir.load %[[I_PVT_REF]] : !fir.ref<i32>
-!CHECK:      %[[I_PVT_VAL2_I64:.*]] = fir.convert %[[I_PVT_VAL2_I32]] : (i32) -> i64
+!CHECK:      omp.reduction %[[IVAL]], %[[XREF]] : i32, !fir.ref<i32>
+!CHECK:      %[[I_PVT_VAL2_I64:.*]] = fir.convert %[[IVAL]] : (i32) -> i64
 !CHECK:      omp.reduction %[[I_PVT_VAL2_I64]], %[[YREF]] : i64, !fir.ref<i64>
-!CHECK:      %[[I_PVT_VAL3_I32:.*]] = fir.load %[[I_PVT_REF]] : !fir.ref<i32>
-!CHECK:      %[[I_PVT_VAL3_F32:.*]] = fir.convert %[[I_PVT_VAL3_I32]] : (i32) -> f32
+!CHECK:      %[[I_PVT_VAL3_F32:.*]] = fir.convert %[[IVAL]] : (i32) -> f32
 !CHECK:      omp.reduction %[[I_PVT_VAL3_F32]], %[[ZREF]] : f32, !fir.ref<f32>
-!CHECK:      %[[I_PVT_VAL4_I32:.*]] = fir.load %[[I_PVT_REF]] : !fir.ref<i32>
-!CHECK:      %[[I_PVT_VAL4_F64:.*]] = fir.convert %[[I_PVT_VAL4_I32]] : (i32) -> f64
+!CHECK:      %[[I_PVT_VAL4_F64:.*]] = fir.convert %[[IVAL]] : (i32) -> f64
 !CHECK:      omp.reduction %[[I_PVT_VAL4_F64]], %[[WREF]] : f64, !fir.ref<f64>
 !CHECK:      omp.yield
 !CHECK:    omp.terminator

@@ -71,14 +71,12 @@ subroutine test_stop_in_region3()
 end
 
 ! CHECK-LABEL: func.func @_QPtest_stop_in_region4() {
-! CHECK:         %[[VAL_0:.*]] = fir.alloca i32 {adapt.valuebyref, pinned}
 ! CHECK:         %[[VAL_1:.*]] = fir.alloca i32 {bindc_name = "i", uniq_name = "_QFtest_stop_in_region4Ei"}
 ! CHECK:         %[[VAL_2:.*]] = fir.alloca i32 {bindc_name = "x", uniq_name = "_QFtest_stop_in_region4Ex"}
 ! CHECK:         %[[VAL_3:.*]] = arith.constant 1 : i32
 ! CHECK:         %[[VAL_4:.*]] = arith.constant 10 : i32
 ! CHECK:         %[[VAL_5:.*]] = arith.constant 1 : i32
 ! CHECK:         omp.wsloop   for  (%[[VAL_6:.*]]) : i32 = (%[[VAL_3]]) to (%[[VAL_4]]) inclusive step (%[[VAL_5]]) {
-! CHECK:           fir.store %[[VAL_6]] to %[[VAL_0]] : !fir.ref<i32>
 ! CHECK:           cf.br ^bb1
 ! CHECK:         ^bb1:
 ! CHECK:           %[[VAL_7:.*]] = arith.constant 3 : i32

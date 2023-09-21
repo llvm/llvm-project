@@ -278,19 +278,16 @@ subroutine omp_target_parallel_do
    !CHECK: omp.target   map_entries(%[[MAP]] : !fir.ref<!fir.array<1024xi32>>) {
       !CHECK-NEXT: omp.parallel
       !$omp target parallel do map(tofrom: a)
-         !CHECK: %[[VAL_2:.*]] = fir.alloca i32 {adapt.valuebyref, pinned}
-         !CHECK: %[[VAL_3:.*]] = arith.constant 1 : i32
-         !CHECK: %[[VAL_4:.*]] = arith.constant 1024 : i32
-         !CHECK: %[[VAL_5:.*]] = arith.constant 1 : i32
-         !CHECK: omp.wsloop   for  (%[[VAL_6:.*]]) : i32 = (%[[VAL_3]]) to (%[[VAL_4]]) inclusive step (%[[VAL_5]]) {
-         !CHECK: fir.store %[[VAL_6]] to %[[VAL_2]] : !fir.ref<i32>
-         !CHECK: %[[VAL_7:.*]] = arith.constant 10 : i32
-         !CHECK: %[[VAL_8:.*]] = fir.load %[[VAL_2]] : !fir.ref<i32>
-         !CHECK: %[[VAL_9:.*]] = fir.convert %[[VAL_8]] : (i32) -> i64
-         !CHECK: %[[VAL_10:.*]] = arith.constant 1 : i64
-         !CHECK: %[[VAL_11:.*]] = arith.subi %[[VAL_9]], %[[VAL_10]] : i64
-         !CHECK: %[[VAL_12:.*]] = fir.coordinate_of %[[VAL_0]], %[[VAL_11]] : (!fir.ref<!fir.array<1024xi32>>, i64) -> !fir.ref<i32>
-         !CHECK: fir.store %[[VAL_7]] to %[[VAL_12]] : !fir.ref<i32>
+         !CHECK: %[[VAL_2:.*]] = arith.constant 1 : i32
+         !CHECK: %[[VAL_3:.*]] = arith.constant 1024 : i32
+         !CHECK: %[[VAL_4:.*]] = arith.constant 1 : i32
+         !CHECK: omp.wsloop   for  (%[[ARG:.*]]) : i32 = (%[[VAL_2]]) to (%[[VAL_3]]) inclusive step (%[[VAL_4]]) {
+         !CHECK: %[[VAL_5:.*]] = arith.constant 10 : i32
+         !CHECK: %[[VAL_6:.*]] = fir.convert %[[ARG]] : (i32) -> i64
+         !CHECK: %[[VAL_7:.*]] = arith.constant 1 : i64
+         !CHECK: %[[VAL_8:.*]] = arith.subi %[[VAL_6]], %[[VAL_7]] : i64
+         !CHECK: %[[VAL_9:.*]] = fir.coordinate_of %[[VAL_0]], %[[VAL_8]] : (!fir.ref<!fir.array<1024xi32>>, i64) -> !fir.ref<i32>
+         !CHECK: fir.store %[[VAL_5]] to %[[VAL_9]] : !fir.ref<i32>
          do i = 1, 1024
             a(i) = 10
          end do

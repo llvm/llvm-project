@@ -18,15 +18,11 @@
 !CHECK:  %[[C0_2:.*]] = arith.constant 0 : i32
 !CHECK:  hlfir.assign %[[C0_2]] to %[[XDECL]]#0 : i32, !fir.ref<i32>
 !CHECK:  omp.parallel
-!CHECK:    %[[I_PVT_REF:.*]] = fir.alloca i32 {adapt.valuebyref, pinned}
-!CHECK:    %[[I_PVT_DECL:.*]]:2 = hlfir.declare %[[I_PVT_REF]] {uniq_name = "_QFsimple_int_reductionEi"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
 !CHECK:    %[[C1_1:.*]] = arith.constant 1 : i32
 !CHECK:    %[[C100:.*]] = arith.constant 100 : i32
 !CHECK:    %[[C1_2:.*]] = arith.constant 1 : i32
 !CHECK:    omp.wsloop   reduction(@[[RED_I32_NAME]] -> %[[XDECL]]#0 : !fir.ref<i32>) for  (%[[IVAL:.*]]) : i32 = (%[[C1_1]]) to (%[[C100]]) inclusive step (%[[C1_2]])
-!CHECK:      fir.store %[[IVAL]] to %[[I_PVT_DECL]]#1 : !fir.ref<i32>
-!CHECK:      %[[I_PVT_VAL:.*]] = fir.load %[[I_PVT_DECL]]#0 : !fir.ref<i32>
-!CHECK:      omp.reduction %[[I_PVT_VAL]], %[[XDECL]]#0 : i32, !fir.ref<i32>
+!CHECK:      omp.reduction %[[IVAL]], %[[XDECL]]#0 : i32, !fir.ref<i32>
 !CHECK:      omp.yield
 !CHECK:    omp.terminator
 !CHECK:  return

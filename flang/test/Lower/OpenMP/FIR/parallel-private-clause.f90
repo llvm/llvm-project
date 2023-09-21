@@ -249,8 +249,6 @@ subroutine simple_loop_1
   real, allocatable :: r;
   ! FIRDialect:  omp.parallel
   !$OMP PARALLEL PRIVATE(r)
-  ! FIRDialect:     %[[ALLOCA_IV:.*]] = fir.alloca i32 {{{.*}}, pinned}
-
   ! FIRDialect:     [[R:%.*]] = fir.alloca !fir.box<!fir.heap<f32>> {bindc_name = "r", pinned, uniq_name = "{{.*}}Er"}
   ! FIRDialect:     fir.store {{%.*}} to [[R]] : !fir.ref<!fir.box<!fir.heap<f32>>>
   ! FIRDialect:     fir.store {{%.*}} to [[R]] : !fir.ref<!fir.box<!fir.heap<f32>>>
@@ -262,9 +260,7 @@ subroutine simple_loop_1
   ! FIRDialect:     omp.wsloop for (%[[I:.*]]) : i32 = (%[[WS_LB]]) to (%[[WS_UB]]) inclusive step (%[[WS_STEP]])
   !$OMP DO
   do i=1, 9
-  ! FIRDialect:     fir.store %[[I]] to %[[ALLOCA_IV:.*]] : !fir.ref<i32>
-  ! FIRDialect:     %[[LOAD_IV:.*]] = fir.load %[[ALLOCA_IV]] : !fir.ref<i32>
-  ! FIRDialect:     fir.call @_FortranAioOutputInteger32({{.*}}, %[[LOAD_IV]]) {{.*}}: (!fir.ref<i8>, i32) -> i1
+  ! FIRDialect:     fir.call @_FortranAioOutputInteger32({{.*}}, %[[I]]) {{.*}}: (!fir.ref<i8>, i32) -> i1
     print*, i
   end do
   ! FIRDialect:     omp.yield
@@ -285,8 +281,6 @@ subroutine simple_loop_2
   real, allocatable :: r;
   ! FIRDialect:  omp.parallel
   !$OMP PARALLEL
-  ! FIRDialect:     %[[ALLOCA_IV:.*]] = fir.alloca i32 {{{.*}}, pinned}
-
   ! FIRDialect:     [[R:%.*]] = fir.alloca !fir.box<!fir.heap<f32>> {bindc_name = "r", pinned, uniq_name = "{{.*}}Er"}
   ! FIRDialect:     fir.store {{%.*}} to [[R]] : !fir.ref<!fir.box<!fir.heap<f32>>>
   ! FIRDialect:     fir.store {{%.*}} to [[R]] : !fir.ref<!fir.box<!fir.heap<f32>>>
@@ -298,9 +292,7 @@ subroutine simple_loop_2
   ! FIRDialect:     omp.wsloop for (%[[I:.*]]) : i32 = (%[[WS_LB]]) to (%[[WS_UB]]) inclusive step (%[[WS_STEP]])
   !$OMP DO PRIVATE(r)
   do i=1, 9
-  ! FIRDialect:     fir.store %[[I]] to %[[ALLOCA_IV:.*]] : !fir.ref<i32>
-  ! FIRDialect:     %[[LOAD_IV:.*]] = fir.load %[[ALLOCA_IV]] : !fir.ref<i32>
-  ! FIRDialect:     fir.call @_FortranAioOutputInteger32({{.*}}, %[[LOAD_IV]]) {{.*}}: (!fir.ref<i8>, i32) -> i1
+  ! FIRDialect:     fir.call @_FortranAioOutputInteger32({{.*}}, %[[I]]) {{.*}}: (!fir.ref<i8>, i32) -> i1
     print*, i
   end do
   ! FIRDialect:     omp.yield
@@ -320,8 +312,6 @@ subroutine simple_loop_3
   integer :: i
   real, allocatable :: r;
   ! FIRDialect:  omp.parallel
-  ! FIRDialect:     %[[ALLOCA_IV:.*]] = fir.alloca i32 {{{.*}}, pinned}
-
   ! FIRDialect:     [[R:%.*]] = fir.alloca !fir.box<!fir.heap<f32>> {bindc_name = "r", pinned, uniq_name = "{{.*}}Er"}
   ! FIRDialect:     fir.store {{%.*}} to [[R]] : !fir.ref<!fir.box<!fir.heap<f32>>>
   ! FIRDialect:     fir.store {{%.*}} to [[R]] : !fir.ref<!fir.box<!fir.heap<f32>>>
@@ -333,9 +323,7 @@ subroutine simple_loop_3
   ! FIRDialect:     omp.wsloop for (%[[I:.*]]) : i32 = (%[[WS_LB]]) to (%[[WS_UB]]) inclusive step (%[[WS_STEP]])
   !$OMP PARALLEL DO PRIVATE(r)
   do i=1, 9
-  ! FIRDialect:     fir.store %[[I]] to %[[ALLOCA_IV:.*]] : !fir.ref<i32>
-  ! FIRDialect:     %[[LOAD_IV:.*]] = fir.load %[[ALLOCA_IV]] : !fir.ref<i32>
-  ! FIRDialect:     fir.call @_FortranAioOutputInteger32({{.*}}, %[[LOAD_IV]]) {{.*}}: (!fir.ref<i8>, i32) -> i1
+  ! FIRDialect:     fir.call @_FortranAioOutputInteger32({{.*}}, %[[I]]) {{.*}}: (!fir.ref<i8>, i32) -> i1
     print*, i
   end do
   ! FIRDialect:     omp.yield
@@ -353,9 +341,9 @@ end subroutine
 subroutine simd_loop_1
   integer :: i
   real, allocatable :: r;
-  ! IRDialect:     [[R:%.*]] = fir.alloca !fir.box<!fir.heap<f32>> {bindc_name = "r", pinned, uniq_name = "{{.*}}Er"}
-  ! IRDialect:     fir.store {{%.*}} to [[R]] : !fir.ref<!fir.box<!fir.heap<f32>>>
-  ! IRDialect:     fir.store {{%.*}} to [[R]] : !fir.ref<!fir.box<!fir.heap<f32>>>
+  ! FIRDialect:     [[R:%.*]] = fir.alloca !fir.box<!fir.heap<f32>> {bindc_name = "r", pinned, uniq_name = "{{.*}}Er"}
+  ! FIRDialect:     fir.store {{%.*}} to [[R]] : !fir.ref<!fir.box<!fir.heap<f32>>>
+  ! FIRDialect:     fir.store {{%.*}} to [[R]] : !fir.ref<!fir.box<!fir.heap<f32>>>
 
   ! FIRDialect:     %[[LB:.*]] = arith.constant 1 : i32
   ! FIRDialect:     %[[UB:.*]] = arith.constant 9 : i32
@@ -364,9 +352,7 @@ subroutine simd_loop_1
   ! FIRDialect: omp.simdloop for (%[[I:.*]]) : i32 = (%[[LB]]) to (%[[UB]]) inclusive step (%[[STEP]]) {
   !$OMP SIMD PRIVATE(r)
   do i=1, 9
-  ! FIRDialect:     fir.store %[[I]] to %[[LOCAL:.*]] : !fir.ref<i32>
-  ! FIRDialect:     %[[LOAD_IV:.*]] = fir.load %[[LOCAL]] : !fir.ref<i32>
-  ! FIRDialect:     fir.call @_FortranAioOutputInteger32({{.*}}, %[[LOAD_IV]]) {{.*}}: (!fir.ref<i8>, i32) -> i1
+  ! FIRDialect:     fir.call @_FortranAioOutputInteger32({{.*}}, %[[I]]) {{.*}}: (!fir.ref<i8>, i32) -> i1
     print*, i
   end do
   !$OMP END SIMD

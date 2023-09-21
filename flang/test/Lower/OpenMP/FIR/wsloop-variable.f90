@@ -25,11 +25,9 @@ program wsloop_variable
 !CHECK:  omp.wsloop for (%[[ARG0:.*]], %[[ARG1:.*]]) : i64 = (%[[TMP2]], %[[TMP5]]) to (%[[TMP3]], %[[TMP6]]) inclusive step (%[[TMP4]], %[[TMP7]]) {
 !CHECK:    %[[ARG0_I16:.*]] = fir.convert %[[ARG0]] : (i64) -> i16
 !CHECK:    fir.store %[[ARG0_I16]] to %[[STORE_IV0:.*]] : !fir.ref<i16>
-!CHECK:    fir.store %[[ARG1]] to %[[STORE_IV1:.*]] : !fir.ref<i64>
 !CHECK:    %[[LOAD_IV0:.*]] = fir.load %[[STORE_IV0]] : !fir.ref<i16>
 !CHECK:    %[[LOAD_IV0_I64:.*]] = fir.convert %[[LOAD_IV0]] : (i16) -> i64
-!CHECK:    %[[LOAD_IV1:.*]] = fir.load %[[STORE_IV1]] : !fir.ref<i64>
-!CHECK:    %[[TMP10:.*]] = arith.addi %[[LOAD_IV0_I64]], %[[LOAD_IV1]] : i64
+!CHECK:    %[[TMP10:.*]] = arith.addi %[[LOAD_IV0_I64]], %[[ARG1]] : i64
 !CHECK:    %[[TMP11:.*]] = fir.convert %[[TMP10]] : (i64) -> f32
 !CHECK:    fir.store %[[TMP11]] to %{{.*}} : !fir.ref<f32>
 !CHECK:    omp.yield

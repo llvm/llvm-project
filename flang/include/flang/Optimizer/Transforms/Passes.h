@@ -79,6 +79,7 @@ createOMPEarlyOutliningPass();
 std::unique_ptr<mlir::Pass> createOMPFunctionFilteringPass();
 std::unique_ptr<mlir::OperationPass<mlir::ModuleOp>>
 createOMPMarkDeclareTargetPass();
+std::unique_ptr<mlir::Pass> createOMPLoopIndexMemToRegPass();
 
 // declarative passes
 #define GEN_PASS_REGISTRATION

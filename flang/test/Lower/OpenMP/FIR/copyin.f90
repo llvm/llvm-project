@@ -138,17 +138,15 @@ end
 ! CHECK:         %[[VAL_1:.*]] = fir.address_of(@_QFcombined_parallel_worksharing_loopEx6) : !fir.ref<i32>
 ! CHECK:         %[[VAL_2:.*]] = omp.threadprivate %[[VAL_1]] : !fir.ref<i32> -> !fir.ref<i32>
 ! CHECK:         omp.parallel   {
-! CHECK:           %[[VAL_3:.*]] = fir.alloca i32 {adapt.valuebyref, pinned}
-! CHECK:           %[[VAL_4:.*]] = omp.threadprivate %[[VAL_1]] : !fir.ref<i32> -> !fir.ref<i32>
-! CHECK:           %[[VAL_5:.*]] = fir.load %[[VAL_2]] : !fir.ref<i32>
-! CHECK:           fir.store %[[VAL_5]] to %[[VAL_4]] : !fir.ref<i32>
+! CHECK:           %[[VAL_3:.*]] = omp.threadprivate %[[VAL_1]] : !fir.ref<i32> -> !fir.ref<i32>
+! CHECK:           %[[VAL_4:.*]] = fir.load %[[VAL_2]] : !fir.ref<i32>
+! CHECK:           fir.store %[[VAL_4]] to %[[VAL_3]] : !fir.ref<i32>
 ! CHECK:           omp.barrier
-! CHECK:           %[[VAL_6:.*]] = arith.constant 1 : i32
-! CHECK:           %[[VAL_7:.*]] = fir.load %[[VAL_4]] : !fir.ref<i32>
-! CHECK:           %[[VAL_8:.*]] = arith.constant 1 : i32
-! CHECK:           omp.wsloop   for  (%[[VAL_9:.*]]) : i32 = (%[[VAL_6]]) to (%[[VAL_7]]) inclusive step (%[[VAL_8]]) {
-! CHECK:             fir.store %[[VAL_9]] to %[[VAL_3]] : !fir.ref<i32>
-! CHECK:             fir.call @_QPsub4(%[[VAL_4]]) {{.*}}: (!fir.ref<i32>) -> ()
+! CHECK:           %[[VAL_5:.*]] = arith.constant 1 : i32
+! CHECK:           %[[VAL_6:.*]] = fir.load %[[VAL_3]] : !fir.ref<i32>
+! CHECK:           %[[VAL_7:.*]] = arith.constant 1 : i32
+! CHECK:           omp.wsloop   for  (%[[VAL_9:.*]]) : i32 = (%[[VAL_5]]) to (%[[VAL_6]]) inclusive step (%[[VAL_7]]) {
+! CHECK:             fir.call @_QPsub4(%[[VAL_3]]) {{.*}}: (!fir.ref<i32>) -> ()
 ! CHECK:             omp.yield
 ! CHECK:           }
 ! CHECK:           omp.terminator
@@ -269,30 +267,27 @@ end subroutine
 !CHECK: %[[val_7:.*]] = fir.coordinate_of %[[val_6]], %[[val_c4]] : (!fir.ref<!fir.array<?xi8>>, index) -> !fir.ref<i8>
 !CHECK: %[[val_8:.*]] = fir.convert %[[val_7]] : (!fir.ref<i8>) -> !fir.ref<i32>
 !CHECK: omp.parallel {
-!CHECK: %[[val_9:.*]] = fir.alloca i32 {adapt.valuebyref, pinned}
-!CHECK: %[[val_10:.*]] = omp.threadprivate %[[val_1]] : !fir.ref<!fir.array<8xi8>> -> !fir.ref<!fir.array<8xi8>>
-!CHECK: %[[val_11:.*]] = fir.convert %[[val_10]] : (!fir.ref<!fir.array<8xi8>>) -> !fir.ref<!fir.array<?xi8>>
+!CHECK: %[[val_9:.*]] = omp.threadprivate %[[val_1]] : !fir.ref<!fir.array<8xi8>> -> !fir.ref<!fir.array<8xi8>>
+!CHECK: %[[val_10:.*]] = fir.convert %[[val_9]] : (!fir.ref<!fir.array<8xi8>>) -> !fir.ref<!fir.array<?xi8>>
 !CHECK: %[[val_c0_0:.*]] = arith.constant 0 : index
-!CHECK: %[[val_12:.*]] = fir.coordinate_of %[[val_11]], %[[val_c0_0]] : (!fir.ref<!fir.array<?xi8>>, index) -> !fir.ref<i8>
-!CHECK: %[[val_13:.*]] = fir.convert %[[val_12]] : (!fir.ref<i8>) -> !fir.ref<i32>
-!CHECK: %[[val_14:.*]] = fir.convert %[[val_10]] : (!fir.ref<!fir.array<8xi8>>) -> !fir.ref<!fir.array<?xi8>>
+!CHECK: %[[val_11:.*]] = fir.coordinate_of %[[val_10]], %[[val_c0_0]] : (!fir.ref<!fir.array<?xi8>>, index) -> !fir.ref<i8>
+!CHECK: %[[val_12:.*]] = fir.convert %[[val_11]] : (!fir.ref<i8>) -> !fir.ref<i32>
+!CHECK: %[[val_13:.*]] = fir.convert %[[val_9]] : (!fir.ref<!fir.array<8xi8>>) -> !fir.ref<!fir.array<?xi8>>
 !CHECK: %[[val_c4_1:.*]] = arith.constant 4 : index
-!CHECK: %[[val_15:.*]] = fir.coordinate_of %[[val_14]], %[[val_c4_1]] : (!fir.ref<!fir.array<?xi8>>, index) -> !fir.ref<i8>
-!CHECK: %[[val_16:.*]] = fir.convert %[[val_15]] : (!fir.ref<i8>) -> !fir.ref<i32>
-!CHECK: %[[val_17:.*]] = fir.load %[[val_5]] : !fir.ref<i32>
-!CHECK: fir.store %[[val_17]] to %[[val_13]] : !fir.ref<i32>
-!CHECK: %[[val_18:.*]] = fir.load %[[val_8]] : !fir.ref<i32>
-!CHECK: fir.store %[[val_18]] to %[[val_16]] : !fir.ref<i32>
+!CHECK: %[[val_14:.*]] = fir.coordinate_of %[[val_13]], %[[val_c4_1]] : (!fir.ref<!fir.array<?xi8>>, index) -> !fir.ref<i8>
+!CHECK: %[[val_15:.*]] = fir.convert %[[val_14]] : (!fir.ref<i8>) -> !fir.ref<i32>
+!CHECK: %[[val_16:.*]] = fir.load %[[val_5]] : !fir.ref<i32>
+!CHECK: fir.store %[[val_16]] to %[[val_12]] : !fir.ref<i32>
+!CHECK: %[[val_17:.*]] = fir.load %[[val_8]] : !fir.ref<i32>
+!CHECK: fir.store %[[val_17]] to %[[val_15]] : !fir.ref<i32>
 !CHECK: omp.barrier
 !CHECK: %[[val_c1_i32:.*]] = arith.constant 1 : i32
-!CHECK: %[[val_19:.*]] = fir.load %[[val_13]] : !fir.ref<i32>
+!CHECK: %[[val_18:.*]] = fir.load %[[val_12]] : !fir.ref<i32>
 !CHECK: %[[val_c1_i32_2:.*]] = arith.constant 1 : i32
-!CHECK: omp.wsloop   for (%[[arg:.*]]) : i32 = (%[[val_c1_i32]]) to (%[[val_19]]) inclusive step (%[[val_c1_i32_2]]) {
-!CHECK: fir.store %[[arg]] to %[[val_9]] : !fir.ref<i32>
-!CHECK: %[[val_20:.*]] = fir.load %[[val_16]] : !fir.ref<i32>
-!CHECK: %[[val_21:.*]] = fir.load %[[val_9]] : !fir.ref<i32>
-!CHECK: %[[val_22:.*]] = arith.addi %[[val_20]], %[[val_21]] : i32
-!CHECK: fir.store %[[val_22]] to %[[val_16]] : !fir.ref<i32>
+!CHECK: omp.wsloop   for (%[[arg:.*]]) : i32 = (%[[val_c1_i32]]) to (%[[val_18]]) inclusive step (%[[val_c1_i32_2]]) {
+!CHECK: %[[val_19:.*]] = fir.load %[[val_15]] : !fir.ref<i32>
+!CHECK: %[[val_20:.*]] = arith.addi %[[val_19]], %[[arg]] : i32
+!CHECK: fir.store %[[val_20]] to %[[val_15]] : !fir.ref<i32>
 !CHECK: omp.yield
 !CHECK: }
 !CHECK: omp.terminator
