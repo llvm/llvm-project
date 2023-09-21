@@ -35,6 +35,7 @@ usage() {
   echo " -srcdir  <dir> Path to llvm source directory with CMakeLists.txt"
   echo "                (optional) default: $srcdir"
   echo " -no-doxygen    Don't build Doxygen docs"
+  echo " -no-sphinx     Don't build Spinx docs"
 }
 
 package_doxygen() {
@@ -60,6 +61,9 @@ while [ $# -gt 0 ]; do
       ;;
     -no-doxygen )
       no_doxygen="yes"
+      ;;
+    -no-sphinx )
+      no_sphinx="yes"
       ;;
     * )
       echo "unknown option: $1"
@@ -93,11 +97,19 @@ if [ -n "$release" ]; then
   srcdir="./llvm-project/llvm"
 fi
 
-docs_targets="docs-clang-html docs-clang-tools-html docs-flang-html docs-lld-html docs-llvm-html docs-polly-html"
+if [ "$no_doxygen" == "yes" ] && [ "$no_sphinx" == "yes" ]; then
+  echo "You can't specify both -no-doxygen and -no-sphinx, we have nothing to build then!"
+  exit 1
+fi
+
+if [ "$no_sphinx" != "yes" ]; then
+  sphinx_targets="docs-clang-html docs-clang-tools-html docs-flang-html docs-lld-html docs-llvm-html docs-polly-html"
+  sphinx_flag=" -DLLVM_ENABLE_SPHINX=ON -DSPHINX_WARNINGS_AS_ERRORS=OFF"
+fi
 
 if [ "$no_doxygen" != "yes" ]; then
   echo "Doxygen: enabled"
-  docs_targets="$docs_target doxygen-clang doxygen-clang-tools doxygen-flang doxygen-llvm doxygen-mlir doxygen-polly"
+  doxygen_targets="$docs_target doxygen-clang doxygen-clang-tools doxygen-flang doxygen-llvm doxygen-mlir doxygen-polly"
   doxygen_flag=" -DLLVM_ENABLE_DOXYGEN=ON -DLLVM_DOXYGEN_SVG=ON"
 else
    echo "Doxygen: disabled"
@@ -106,12 +118,11 @@ fi
 cmake -G Ninja $srcdir -B $builddir \
                -DLLVM_ENABLE_PROJECTS="clang;clang-tools-extra;lld;polly;flang" \
                -DCMAKE_BUILD_TYPE=Release \
-               -DLLVM_ENABLE_SPHINX=ON \
                -DLLVM_BUILD_DOCS=ON \
-               -DSPHINX_WARNINGS_AS_ERRORS=OFF \
+               $sphinx_flag \
                $doxygen_flag
 
-ninja -C $builddir $docs_targets
+ninja -C $builddir $sphinx_targets $doxygen_targets
 
 cmake -G Ninja $srcdir/../runtimes -B $builddir/runtimes-doc \
                -DLLVM_ENABLE_RUNTIMES="libcxx;libcxxabi;libunwind" \
@@ -126,6 +137,10 @@ if [ "$no_doxygen" != "yes" ]; then
   package_doxygen clang tools/clang
   package_doxygen clang-tools-extra tools/clang/tools/extra
   package_doxygen flang tools/flang
+fi
+
+if [ "$no_sphinx" == "yes" ]; then
+  exit 0
 fi
 
 html_dir=$builddir/html-export/
