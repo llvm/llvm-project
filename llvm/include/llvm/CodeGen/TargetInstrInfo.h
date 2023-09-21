@@ -2057,6 +2057,14 @@ public:
         "Target didn't implement TargetInstrInfo::insertOutlinedCall!");
   }
 
+  /// Insert an architecture-specific instruction to clear a register.
+  virtual void buildClearRegister(Register Reg, MachineBasicBlock &MBB,
+                                  MachineBasicBlock::iterator Iter,
+                                  DebugLoc &DL) const {
+    llvm_unreachable(
+        "Target didn't implement TargetInstrInfo::buildClearRegister!");
+  }
+
   /// Return true if the function can safely be outlined from.
   /// A function \p MF is considered safe for outlining if an outlined function
   /// produced from instructions in F will produce a program which produces the
