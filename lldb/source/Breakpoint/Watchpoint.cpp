@@ -29,8 +29,7 @@ Watchpoint::Watchpoint(Target &target, lldb::addr_t addr, uint32_t size,
     : StoppointSite(0, addr, size, hardware), m_target(target),
       m_enabled(false), m_is_hardware(hardware), m_is_watch_variable(false),
       m_is_ephemeral(false), m_disabled_count(0), m_watch_read(0),
-      m_watch_write(0), m_watch_modify(0), m_ignore_count(0),
-      m_being_created(true) {
+      m_watch_write(0), m_ignore_count(0), m_being_created(true) {
 
   if (type && type->IsValid())
     m_type = *type;
@@ -194,7 +193,7 @@ bool Watchpoint::IsWatchVariable() const { return m_is_watch_variable; }
 void Watchpoint::SetWatchVariable(bool val) { m_is_watch_variable = val; }
 
 bool Watchpoint::CaptureWatchedValue(const ExecutionContext &exe_ctx) {
-  ConstString g_watch_name("$__lldb__watch_value");
+  ConstString watch_name("$__lldb__watch_value");
   m_old_value_sp = m_new_value_sp;
   Address watch_address(GetLoadAddress());
   if (!m_type.IsValid()) {
@@ -206,45 +205,10 @@ bool Watchpoint::CaptureWatchedValue(const ExecutionContext &exe_ctx) {
     return false;
   }
   m_new_value_sp = ValueObjectMemory::Create(
-      exe_ctx.GetBestExecutionContextScope(), g_watch_name.GetStringRef(),
+      exe_ctx.GetBestExecutionContextScope(), watch_name.GetStringRef(),
       watch_address, m_type);
-  m_new_value_sp = m_new_value_sp->CreateConstantValue(g_watch_name);
+  m_new_value_sp = m_new_value_sp->CreateConstantValue(watch_name);
   return (m_new_value_sp && m_new_value_sp->GetError().Success());
-}
-
-bool Watchpoint::WatchedValueReportable(const ExecutionContext &exe_ctx) {
-  if (!m_watch_modify || m_watch_read)
-    return true;
-  if (!m_type.IsValid())
-    return true;
-
-  ConstString g_watch_name("$__lldb__watch_value");
-  Address watch_address(GetLoadAddress());
-  ValueObjectSP newest_valueobj_sp = ValueObjectMemory::Create(
-      exe_ctx.GetBestExecutionContextScope(), g_watch_name.GetStringRef(),
-      watch_address, m_type);
-  newest_valueobj_sp = newest_valueobj_sp->CreateConstantValue(g_watch_name);
-  Status error;
-
-  DataExtractor new_data;
-  DataExtractor old_data;
-
-  newest_valueobj_sp->GetData(new_data, error);
-  if (error.Fail())
-    return true;
-  m_new_value_sp->GetData(old_data, error);
-  if (error.Fail())
-    return true;
-
-  if (new_data.GetByteSize() != old_data.GetByteSize() ||
-      new_data.GetByteSize() == 0)
-    return true;
-
-  if (memcmp(new_data.GetDataStart(), old_data.GetDataStart(),
-             old_data.GetByteSize()) == 0)
-    return false; // Value has not changed, user requested modify watchpoint
-
-  return true;
 }
 
 // RETURNS - true if we should stop at this breakpoint, false if we
@@ -304,10 +268,10 @@ void Watchpoint::DumpWithLevel(Stream *s,
          description_level <= lldb::eDescriptionLevelVerbose);
 
   s->Printf("Watchpoint %u: addr = 0x%8.8" PRIx64
-            " size = %u state = %s type = %s%s%s",
+            " size = %u state = %s type = %s%s",
             GetID(), GetLoadAddress(), m_byte_size,
             IsEnabled() ? "enabled" : "disabled", m_watch_read ? "r" : "",
-            m_watch_write ? "w" : "", m_watch_modify ? "m" : "");
+            m_watch_write ? "w" : "");
 
   if (description_level >= lldb::eDescriptionLevelFull) {
     if (!m_decl_str.empty())
@@ -369,21 +333,16 @@ void Watchpoint::SetEnabled(bool enabled, bool notify) {
 void Watchpoint::SetWatchpointType(uint32_t type, bool notify) {
   int old_watch_read = m_watch_read;
   int old_watch_write = m_watch_write;
-  int old_watch_modify = m_watch_modify;
   m_watch_read = (type & LLDB_WATCH_TYPE_READ) != 0;
   m_watch_write = (type & LLDB_WATCH_TYPE_WRITE) != 0;
-  m_watch_modify = (type & LLDB_WATCH_TYPE_MODIFY) != 0;
   if (notify &&
-      (old_watch_read != m_watch_read || old_watch_write != m_watch_write ||
-       old_watch_modify != m_watch_modify))
+      (old_watch_read != m_watch_read || old_watch_write != m_watch_write))
     SendWatchpointChangedEvent(eWatchpointEventTypeTypeChanged);
 }
 
 bool Watchpoint::WatchpointRead() const { return m_watch_read != 0; }
 
 bool Watchpoint::WatchpointWrite() const { return m_watch_write != 0; }
-
-bool Watchpoint::WatchpointModify() const { return m_watch_modify != 0; }
 
 uint32_t Watchpoint::GetIgnoreCount() const { return m_ignore_count; }
 
