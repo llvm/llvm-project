@@ -1672,6 +1672,9 @@ public:
   /// \return The maximum number of function arguments the target supports.
   unsigned getMaxNumArgs() const;
 
+  /// \returns Whether vector operations are a good candidate for vector widen.
+  bool considerToWiden(LLVMContext &Context, ArrayRef<Instruction *> IL) const;
+
   /// @}
 
 private:
@@ -2041,6 +2044,8 @@ public:
   getVPLegalizationStrategy(const VPIntrinsic &PI) const = 0;
   virtual bool hasArmWideBranch(bool Thumb) const = 0;
   virtual unsigned getMaxNumArgs() const = 0;
+  virtual bool considerToWiden(LLVMContext &Context,
+                               ArrayRef<Instruction *> IL) const = 0;
 };
 
 template <typename T>
@@ -2756,6 +2761,11 @@ public:
 
   unsigned getMaxNumArgs() const override {
     return Impl.getMaxNumArgs();
+  }
+
+  bool considerToWiden(LLVMContext &Context,
+                       ArrayRef<Instruction *> IL) const override {
+    return Impl.considerToWiden(Context, IL);
   }
 };
 

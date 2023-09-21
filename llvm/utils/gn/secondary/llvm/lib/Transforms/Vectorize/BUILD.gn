@@ -19,5 +19,6 @@ static_library("Vectorize") {
     "VPlanVerifier.cpp",
     "VectorCombine.cpp",
     "Vectorize.cpp",
+    "VectorWiden.cpp",
   ]
 }

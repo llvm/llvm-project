@@ -1248,6 +1248,11 @@ bool TargetTransformInfo::hasActiveVectorLength(unsigned Opcode, Type *DataType,
   return TTIImpl->hasActiveVectorLength(Opcode, DataType, Alignment);
 }
 
+bool TargetTransformInfo::considerToWiden(LLVMContext &Context,
+                                          ArrayRef<Instruction *> IL) const {
+  return TTIImpl->considerToWiden(Context, IL);
+}
+
 TargetTransformInfo::Concept::~Concept() = default;
 
 TargetIRAnalysis::TargetIRAnalysis() : TTICallback(&getDefaultTTI) {}

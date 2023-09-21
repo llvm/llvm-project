@@ -5,6 +5,7 @@ add_llvm_component_library(LLVMVectorize
   SLPVectorizer.cpp
   Vectorize.cpp
   VectorCombine.cpp
+  VectorWiden.cpp
   VPlan.cpp
   VPlanHCFGBuilder.cpp
   VPlanRecipes.cpp

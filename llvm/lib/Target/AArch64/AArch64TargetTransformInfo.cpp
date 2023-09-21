@@ -2426,6 +2426,14 @@ InstructionCost AArch64TTIImpl::getCastInstrCost(unsigned Opcode, Type *Dst,
             CostKind, I));
   }
 
+  static const TypeConversionCostTblEntry SME2Tbl[] = {
+      {ISD::FP_ROUND, MVT::nxv8f16, MVT::nxv8f32, 1}};
+
+  if (ST->hasSME2())
+    if (const auto *Entry = ConvertCostTableLookup(
+            SME2Tbl, ISD, DstTy.getSimpleVT(), SrcTy.getSimpleVT()))
+      return AdjustCost(Entry->Cost);
+
   if (const auto *Entry = ConvertCostTableLookup(ConversionTbl, ISD,
                                                  DstTy.getSimpleVT(),
                                                  SrcTy.getSimpleVT()))

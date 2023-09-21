@@ -412,6 +412,26 @@ public:
 
     return BaseT::getStoreMinimumVF(VF, ScalarMemTy, ScalarValTy);
   }
+
+  bool considerToWiden(LLVMContext &Context, ArrayRef<Instruction *> IL) const {
+    unsigned Opcode = IL[0]->getOpcode();
+    Type *Ty = IL[0]->getType();
+    if (!ST->hasSME2())
+      return false;
+    if (llvm::any_of(IL, [Opcode, Ty](Instruction *I) {
+          return (Opcode != I->getOpcode() || Ty != I->getType());
+        }))
+      return false;
+    if (Opcode == Instruction::FPTrunc &&
+        Ty == ScalableVectorType::get(Type::getHalfTy(Context), 4))
+      return true;
+    if (Opcode == Instruction::Add &&
+        Ty == ScalableVectorType::get(Type::getInt32Ty(Context), 4) &&
+        (IL[0]->getOperand(1) == IL[1]->getOperand(1) ||
+         IL[0]->getOperand(0) == IL[1]->getOperand(0)))
+      return true;
+    return false;
+  }
 };
 
 } // end namespace llvm
