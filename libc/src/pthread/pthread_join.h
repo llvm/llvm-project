@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_LIBC_SRC_THREADS_PTHREAD_JOIN_H
-#define LLVM_LIBC_SRC_THREADS_PTHREAD_JOIN_H
+#ifndef LLVM_LIBC_SRC_PTHREAD_PTHREAD_JOIN_H
+#define LLVM_LIBC_SRC_PTHREAD_PTHREAD_JOIN_H
 
 #include <pthread.h>
 
@@ -17,4 +17,4 @@ int pthread_join(pthread_t thread, void **retval);
 
 } // namespace __llvm_libc
 
-#endif // LLVM_LIBC_SRC_THREADS_PTHREAD_JOIN_H
+#endif // LLVM_LIBC_SRC_PTHREAD_PTHREAD_JOIN_H

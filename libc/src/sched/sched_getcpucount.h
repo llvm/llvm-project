@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_LIBC_SRC_UNISTD_SCHED_GETCPUCOUNT_H
-#define LLVM_LIBC_SRC_UNISTD_SCHED_GETCPUCOUNT_H
+#ifndef LLVM_LIBC_SRC_SCHED_SCHED_GETCPUCOUNT_H
+#define LLVM_LIBC_SRC_SCHED_SCHED_GETCPUCOUNT_H
 
 #include <sched.h>
 #include <stddef.h>
@@ -20,4 +20,4 @@ int __sched_getcpucount(size_t cpuset_size, const cpu_set_t *mask);
 
 } // namespace __llvm_libc
 
-#endif // LLVM_LIBC_SRC_UNISTD_SCHED_GETCPUCOUNT_H
+#endif // LLVM_LIBC_SRC_SCHED_SCHED_GETCPUCOUNT_H

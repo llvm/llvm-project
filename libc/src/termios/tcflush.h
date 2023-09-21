@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_LIBC_SRC_UNISTD_TCFLUSH_H
-#define LLVM_LIBC_SRC_UNISTD_TCFLUSH_H
+#ifndef LLVM_LIBC_SRC_TERMIOS_TCFLUSH_H
+#define LLVM_LIBC_SRC_TERMIOS_TCFLUSH_H
 
 #include <termios.h>
 
@@ -17,4 +17,4 @@ int tcflush(int fd, int queue_selector);
 
 } // namespace __llvm_libc
 
-#endif // LLVM_LIBC_SRC_UNISTD_TCFLUSH_H
+#endif // LLVM_LIBC_SRC_TERMIOS_TCFLUSH_H

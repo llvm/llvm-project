@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_LIBC_SRC_SUPPORT_OSUTIL_GPU_QUICK_EXIT_H
-#define LLVM_LIBC_SRC_SUPPORT_OSUTIL_GPU_QUICK_EXIT_H
+#ifndef LLVM_LIBC_SRC___SUPPORT_OSUTIL_GPU_QUICK_EXIT_H
+#define LLVM_LIBC_SRC___SUPPORT_OSUTIL_GPU_QUICK_EXIT_H
 
 namespace __llvm_libc {
 
@@ -15,4 +15,4 @@ void quick_exit(int status);
 
 } // namespace __llvm_libc
 
-#endif // LLVM_LIBC_SRC_SUPPORT_OSUTIL_GPU_QUICK_EXIT_H
+#endif // LLVM_LIBC_SRC___SUPPORT_OSUTIL_GPU_QUICK_EXIT_H

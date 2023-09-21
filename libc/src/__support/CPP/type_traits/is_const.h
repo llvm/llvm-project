@@ -5,8 +5,8 @@
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
-#ifndef LLVM_LIBC_SRC_SUPPORT_CPP_TYPE_TRAITS_IS_CONST_H
-#define LLVM_LIBC_SRC_SUPPORT_CPP_TYPE_TRAITS_IS_CONST_H
+#ifndef LLVM_LIBC_SRC___SUPPORT_CPP_TYPE_TRAITS_IS_CONST_H
+#define LLVM_LIBC_SRC___SUPPORT_CPP_TYPE_TRAITS_IS_CONST_H
 
 #include "src/__support/CPP/type_traits/false_type.h"
 #include "src/__support/CPP/type_traits/true_type.h"
@@ -22,4 +22,4 @@ LIBC_INLINE_VAR constexpr bool is_const_v = is_const<T>::value;
 
 } // namespace __llvm_libc::cpp
 
-#endif // LLVM_LIBC_SRC_SUPPORT_CPP_TYPE_TRAITS_IS_CONST_H
+#endif // LLVM_LIBC_SRC___SUPPORT_CPP_TYPE_TRAITS_IS_CONST_H
