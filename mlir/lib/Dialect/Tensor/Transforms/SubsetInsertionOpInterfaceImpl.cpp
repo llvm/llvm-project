@@ -34,6 +34,31 @@ bool isSubsetEquivalentToInsertSliceLikeOp(
                                     isEqualConstantIntOrValue);
 }
 
+template <typename OpTy>
+Value buildSubsetExtractionOfInsertSliceLikeOp(OpBuilder &b, Location loc,
+                                               OpTy insertSliceOp) {
+  auto extractOp = b.create<tensor::ExtractSliceOp>(
+      loc, insertSliceOp.getSourceType(), insertSliceOp.getDest(),
+      insertSliceOp.getMixedOffsets(), insertSliceOp.getMixedSizes(),
+      insertSliceOp.getMixedStrides());
+  return extractOp.getResult();
+}
+
+template <typename OpTy>
+SmallVector<Value>
+getValuesNeededToBuildSubsetExtractionOfInsertSliceLikeOp(OpTy insertSliceOp) {
+  SmallVector<Value> neededValues;
+  // Collect all values that are needed to construct the replacement op.
+  neededValues.append(insertSliceOp.getOffsets().begin(),
+                      insertSliceOp.getOffsets().end());
+  neededValues.append(insertSliceOp.getSizes().begin(),
+                      insertSliceOp.getSizes().end());
+  neededValues.append(insertSliceOp.getStrides().begin(),
+                      insertSliceOp.getStrides().end());
+  neededValues.push_back(insertSliceOp.getDest());
+  return neededValues;
+}
+
 struct InsertSliceOpInterface
     : public SubsetInsertionOpInterface::ExternalModel<InsertSliceOpInterface,
                                                        tensor::InsertSliceOp> {
@@ -47,6 +72,18 @@ struct InsertSliceOpInterface
     auto insertSliceOp = cast<tensor::InsertSliceOp>(op);
     return isSubsetEquivalentToInsertSliceLikeOp(insertSliceOp, candidate,
                                                  equivalenceFn);
+  }
+
+  Value buildSubsetExtraction(Operation *op, OpBuilder &builder,
+                              Location loc) const {
+    return buildSubsetExtractionOfInsertSliceLikeOp(
+        builder, loc, cast<tensor::InsertSliceOp>(op));
+  }
+
+  SmallVector<Value>
+  getValuesNeededToBuildSubsetExtraction(Operation *op) const {
+    return getValuesNeededToBuildSubsetExtractionOfInsertSliceLikeOp(
+        cast<tensor::InsertSliceOp>(op));
   }
 };
 
@@ -67,6 +104,18 @@ struct ParallelInsertSliceOpInterface
     auto insertSliceOp = cast<tensor::ParallelInsertSliceOp>(op);
     return isSubsetEquivalentToInsertSliceLikeOp(insertSliceOp, candidate,
                                                  equivalenceFn);
+  }
+
+  Value buildSubsetExtraction(Operation *op, OpBuilder &builder,
+                              Location loc) const {
+    return buildSubsetExtractionOfInsertSliceLikeOp(
+        builder, loc, cast<tensor::ParallelInsertSliceOp>(op));
+  }
+
+  SmallVector<Value>
+  getValuesNeededToBuildSubsetExtraction(Operation *op) const {
+    return getValuesNeededToBuildSubsetExtractionOfInsertSliceLikeOp(
+        cast<tensor::ParallelInsertSliceOp>(op));
   }
 };
 

@@ -36,7 +36,7 @@ public:
   HexagonDAGToDAGISel() = delete;
 
   explicit HexagonDAGToDAGISel(HexagonTargetMachine &tm,
-                               CodeGenOpt::Level OptLevel)
+                               CodeGenOptLevel OptLevel)
       : SelectionDAGISel(ID, tm, OptLevel), HST(nullptr), HII(nullptr),
         HRI(nullptr) {}
 

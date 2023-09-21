@@ -33,7 +33,7 @@ public:
 
   AVRDAGToDAGISel() = delete;
 
-  AVRDAGToDAGISel(AVRTargetMachine &TM, CodeGenOpt::Level OptLevel)
+  AVRDAGToDAGISel(AVRTargetMachine &TM, CodeGenOptLevel OptLevel)
       : SelectionDAGISel(ID, TM, OptLevel), Subtarget(nullptr) {}
 
   bool runOnMachineFunction(MachineFunction &MF) override;
@@ -585,6 +585,6 @@ bool AVRDAGToDAGISel::trySelect(SDNode *N) {
 }
 
 FunctionPass *llvm::createAVRISelDag(AVRTargetMachine &TM,
-                                     CodeGenOpt::Level OptLevel) {
+                                     CodeGenOptLevel OptLevel) {
   return new AVRDAGToDAGISel(TM, OptLevel);
 }

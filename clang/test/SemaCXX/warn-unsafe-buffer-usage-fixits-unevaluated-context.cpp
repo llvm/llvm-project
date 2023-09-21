@@ -16,24 +16,24 @@ int bar(int *ptr);
 
 void uneval_context_fix_pointer_dereference() {
   int* p = new int[10];
-  // CHECK-DAG: fix-it:"{{.*}}":{[[@LINE-1]]:3-[[@LINE-1]]:11}:"std::span<int> p"
-  // CHECK-DAG: fix-it:"{{.*}}":{[[@LINE-2]]:12-[[@LINE-2]]:12}:"{"
-  // CHECK-DAG: fix-it:"{{.*}}":{[[@LINE-3]]:23-[[@LINE-3]]:23}:", 10}"
+  // CHECK: fix-it:"{{.*}}":{[[@LINE-1]]:3-[[@LINE-1]]:11}:"std::span<int> p"
+  // CHECK: fix-it:"{{.*}}":{[[@LINE-2]]:12-[[@LINE-2]]:12}:"{"
+  // CHECK: fix-it:"{{.*}}":{[[@LINE-3]]:23-[[@LINE-3]]:23}:", 10}"
 
   int tmp = p[5];
   typeid(foo(*p));
-  // CHECK-DAG: fix-it:"{{.*}}":{[[@LINE-1]]:14-[[@LINE-1]]:15}:""
-  // CHECK-DAG: fix-it:"{{.*}}":{[[@LINE-2]]:16-[[@LINE-2]]:16}:"[0]"
+  // CHECK: fix-it:"{{.*}}":{[[@LINE-1]]:14-[[@LINE-1]]:15}:""
+  // CHECK: fix-it:"{{.*}}":{[[@LINE-2]]:16-[[@LINE-2]]:16}:"[0]"
   _Generic(*p, int: 2, float: 3);
-  // CHECK-DAG: fix-it:"{{.*}}":{[[@LINE-1]]:12-[[@LINE-1]]:13}:""
-  // CHECK-DAG: fix-it:"{{.*}}":{[[@LINE-2]]:14-[[@LINE-2]]:14}:"[0]"
+  // CHECK: fix-it:"{{.*}}":{[[@LINE-1]]:12-[[@LINE-1]]:13}:""
+  // CHECK: fix-it:"{{.*}}":{[[@LINE-2]]:14-[[@LINE-2]]:14}:"[0]"
 }
 
 void uneval_context_fix_pointer_array_access() {
   int* p = new int[10];
-  // CHECK-DAG: fix-it:"{{.*}}":{[[@LINE-1]]:3-[[@LINE-1]]:11}:"std::span<int> p"
-  // CHECK-DAG: fix-it:"{{.*}}":{[[@LINE-2]]:12-[[@LINE-2]]:12}:"{"
-  // CHECK-DAG: fix-it:"{{.*}}":{[[@LINE-3]]:23-[[@LINE-3]]:23}:", 10}"
+  // CHECK: fix-it:"{{.*}}":{[[@LINE-1]]:3-[[@LINE-1]]:11}:"std::span<int> p"
+  // CHECK: fix-it:"{{.*}}":{[[@LINE-2]]:12-[[@LINE-2]]:12}:"{"
+  // CHECK: fix-it:"{{.*}}":{[[@LINE-3]]:23-[[@LINE-3]]:23}:", 10}"
 
   int tmp = p[5];
   typeid(foo(p[5]));
@@ -42,13 +42,13 @@ void uneval_context_fix_pointer_array_access() {
 
 void uneval_context_fix_pointer_reference() {
   int* p = new int[10];
-  // CHECK-DAG: fix-it:"{{.*}}":{[[@LINE-1]]:3-[[@LINE-1]]:11}:"std::span<int> p"
-  // CHECK-DAG: fix-it:"{{.*}}":{[[@LINE-2]]:12-[[@LINE-2]]:12}:"{"
-  // CHECK-DAG: fix-it:"{{.*}}":{[[@LINE-3]]:23-[[@LINE-3]]:23}:", 10}"
+  // CHECK: fix-it:"{{.*}}":{[[@LINE-1]]:3-[[@LINE-1]]:11}:"std::span<int> p"
+  // CHECK: fix-it:"{{.*}}":{[[@LINE-2]]:12-[[@LINE-2]]:12}:"{"
+  // CHECK: fix-it:"{{.*}}":{[[@LINE-3]]:23-[[@LINE-3]]:23}:", 10}"
 
   int tmp = p[5];
   typeid(bar(p));
-  // CHECK-DAG: fix-it:"{{.*}}":{[[@LINE-1]]:15-[[@LINE-1]]:15}:".data()"
+  // CHECK: fix-it:"{{.*}}":{[[@LINE-1]]:15-[[@LINE-1]]:15}:".data()"
 }
 
 // The FixableGagdtes are not working in the following scenarios:

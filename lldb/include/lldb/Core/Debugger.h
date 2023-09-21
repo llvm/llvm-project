@@ -289,6 +289,10 @@ public:
 
   llvm::StringRef GetPrompt() const;
 
+  llvm::StringRef GetPromptAnsiPrefix() const;
+
+  llvm::StringRef GetPromptAnsiSuffix() const;
+
   void SetPrompt(llvm::StringRef p);
   void SetPrompt(const char *) = delete;
 

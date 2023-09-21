@@ -338,7 +338,7 @@ protected:
   unsigned nSymbol;
 
   /// The matrix representing the tableau.
-  Matrix tableau;
+  IntMatrix tableau;
 
   /// This is true if the tableau has been detected to be empty, false
   /// otherwise.
@@ -861,7 +861,7 @@ private:
 
   /// Reduce the given basis, starting at the specified level, using general
   /// basis reduction.
-  void reduceBasis(Matrix &basis, unsigned level);
+  void reduceBasis(IntMatrix &basis, unsigned level);
 };
 
 /// Takes a snapshot of the simplex state on construction and rolls back to the

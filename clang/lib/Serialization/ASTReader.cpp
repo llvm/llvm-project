@@ -2489,6 +2489,32 @@ InputFile ASTReader::getInputFile(ModuleFile &F, unsigned ID, bool Complain) {
     std::optional<int64_t> Old = std::nullopt;
     std::optional<int64_t> New = std::nullopt;
   };
+  auto HasInputContentChanged = [&](Change OriginalChange) {
+    assert(ValidateASTInputFilesContent &&
+           "We should only check the content of the inputs with "
+           "ValidateASTInputFilesContent enabled.");
+
+    if (StoredContentHash == static_cast<uint64_t>(llvm::hash_code(-1)))
+      return OriginalChange;
+
+    auto MemBuffOrError = FileMgr.getBufferForFile(*File);
+    if (!MemBuffOrError) {
+      if (!Complain)
+        return OriginalChange;
+      std::string ErrorStr = "could not get buffer for file '";
+      ErrorStr += File->getName();
+      ErrorStr += "'";
+      Error(ErrorStr);
+      return OriginalChange;
+    }
+
+    // FIXME: hash_value is not guaranteed to be stable!
+    auto ContentHash = hash_value(MemBuffOrError.get()->getBuffer());
+    if (StoredContentHash == static_cast<uint64_t>(ContentHash))
+      return Change{Change::None};
+
+    return Change{Change::Content};
+  };
   auto HasInputFileChanged = [&]() {
     if (StoredSize != File->getSize())
       return Change{Change::Size, StoredSize, File->getSize()};
@@ -2499,26 +2525,9 @@ InputFile ASTReader::getInputFile(ModuleFile &F, unsigned ID, bool Complain) {
 
       // In case the modification time changes but not the content,
       // accept the cached file as legit.
-      if (ValidateASTInputFilesContent &&
-          StoredContentHash != static_cast<uint64_t>(llvm::hash_code(-1))) {
-        auto MemBuffOrError = FileMgr.getBufferForFile(*File);
-        if (!MemBuffOrError) {
-          if (!Complain)
-            return MTimeChange;
-          std::string ErrorStr = "could not get buffer for file '";
-          ErrorStr += File->getName();
-          ErrorStr += "'";
-          Error(ErrorStr);
-          return MTimeChange;
-        }
+      if (ValidateASTInputFilesContent)
+        return HasInputContentChanged(MTimeChange);
 
-        // FIXME: hash_value is not guaranteed to be stable!
-        auto ContentHash = hash_value(MemBuffOrError.get()->getBuffer());
-        if (StoredContentHash == static_cast<uint64_t>(ContentHash))
-          return Change{Change::None};
-
-        return Change{Change::Content};
-      }
       return MTimeChange;
     }
     return Change{Change::None};
@@ -2526,6 +2535,13 @@ InputFile ASTReader::getInputFile(ModuleFile &F, unsigned ID, bool Complain) {
 
   bool IsOutOfDate = false;
   auto FileChange = SkipChecks ? Change{Change::None} : HasInputFileChanged();
+  // When ForceCheckCXX20ModulesInputFiles and ValidateASTInputFilesContent
+  // enabled, it is better to check the contents of the inputs. Since we can't
+  // get correct modified time information for inputs from overriden inputs.
+  if (HSOpts.ForceCheckCXX20ModulesInputFiles && ValidateASTInputFilesContent &&
+      F.StandardCXXModule && FileChange.Kind == Change::None)
+    FileChange = HasInputContentChanged(FileChange);
+
   // For an overridden file, there is nothing to validate.
   if (!Overridden && FileChange.Kind != Change::None) {
     if (Complain && !Diags.isDiagnosticInFlight()) {

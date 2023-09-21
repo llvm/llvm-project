@@ -75,7 +75,7 @@ module {
     %c1023 = arith.constant 1023 : index
 
     // Build the sparse vector from straightline code.
-    %0 = bufferization.alloc_tensor() : tensor<1024xf32, #SparseVector>
+    %0 = tensor.empty() : tensor<1024xf32, #SparseVector>
     %1 = sparse_tensor.insert %f1 into %0[%c0] : tensor<1024xf32, #SparseVector>
     %2 = sparse_tensor.insert %f2 into %1[%c1] : tensor<1024xf32, #SparseVector>
     %3 = sparse_tensor.insert %f3 into %2[%c3] : tensor<1024xf32, #SparseVector>
@@ -88,7 +88,7 @@ module {
     call @dump(%5) : (tensor<1024xf32, #SparseVector>) -> ()
 
     // Build another sparse vector in a loop.
-    %6 = bufferization.alloc_tensor() : tensor<1024xf32, #SparseVector>
+    %6 = tensor.empty() : tensor<1024xf32, #SparseVector>
     %7 = scf.for %i = %c0 to %c8 step %c1 iter_args(%vin = %6) -> tensor<1024xf32, #SparseVector> {
       %ii = arith.muli %i, %c3 : index
       %vout = sparse_tensor.insert %f1 into %vin[%ii] : tensor<1024xf32, #SparseVector>

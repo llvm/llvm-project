@@ -1808,6 +1808,9 @@ namespace llvm {
                               const SDLoc &dl, SelectionDAG &DAG,
                               SDValue &X86CC) const;
 
+    bool optimizeFMulOrFDivAsShiftAddBitcast(SDNode *N, SDValue FPConst,
+                                             SDValue IntPow2) const override;
+
     /// Check if replacement of SQRT with RSQRT should be disabled.
     bool isFsqrtCheap(SDValue Op, SelectionDAG &DAG) const override;
 

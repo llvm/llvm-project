@@ -30,7 +30,7 @@ class CSKYDAGToDAGISel : public SelectionDAGISel {
 public:
   static char ID;
 
-  explicit CSKYDAGToDAGISel(CSKYTargetMachine &TM, CodeGenOpt::Level OptLevel)
+  explicit CSKYDAGToDAGISel(CSKYTargetMachine &TM, CodeGenOptLevel OptLevel)
       : SelectionDAGISel(ID, TM, OptLevel) {}
 
   bool runOnMachineFunction(MachineFunction &MF) override {
@@ -400,6 +400,6 @@ bool CSKYDAGToDAGISel::SelectInlineAsmMemoryOperand(
 }
 
 FunctionPass *llvm::createCSKYISelDag(CSKYTargetMachine &TM,
-                                      CodeGenOpt::Level OptLevel) {
+                                      CodeGenOptLevel OptLevel) {
   return new CSKYDAGToDAGISel(TM, OptLevel);
 }

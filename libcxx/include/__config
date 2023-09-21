@@ -25,9 +25,26 @@
 #  define _LIBCPP_CLANG_VER (__clang_major__ * 100 + __clang_minor__)
 #elif defined(__GNUC__)
 #  define _LIBCPP_COMPILER_GCC
+#  define _LIBCPP_GCC_VER (__GNUC__ * 100 + __GNUC_MINOR__)
 #endif
 
 #ifdef __cplusplus
+
+// Warn if a compiler version is used that is not supported anymore
+// LLVM RELEASE Update the minimum compiler versions
+#  if defined(_LIBCPP_CLANG_VER)
+#    if _LIBCPP_CLANG_VER < 1500
+#      warning "Libc++ only supports Clang 15 and later"
+#    endif
+#  elif defined(_LIBCPP_APPLE_CLANG_VER)
+#    if _LIBCPP_APPLE_CLANG_VER < 1400
+#      warning "Libc++ only supports AppleClang 14 and later"
+#    endif
+#  elif defined(_LIBCPP_GCC_VER)
+#    if _LIBCPP_GCC_VER < 1300
+#      warning "Libc++ only supports GCC 13 and later"
+#    endif
+#  endif
 
 // The attributes supported by clang are documented at https://clang.llvm.org/docs/AttributeReference.html
 

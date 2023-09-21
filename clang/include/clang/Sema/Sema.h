@@ -8724,7 +8724,9 @@ public:
                          const ASTConstraintSatisfaction &Satisfaction);
   ExprResult ActOnRequiresExpr(SourceLocation RequiresKWLoc,
                                RequiresExprBodyDecl *Body,
+                               SourceLocation LParenLoc,
                                ArrayRef<ParmVarDecl *> LocalParameters,
+                               SourceLocation RParenLoc,
                                ArrayRef<concepts::Requirement *> Requirements,
                                SourceLocation ClosingBraceLoc);
 

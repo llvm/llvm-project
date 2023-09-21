@@ -17,8 +17,9 @@ include "mlir/IR/OpBase.td"
 
 def LoopLikeOpInterface : OpInterface<"LoopLikeOpInterface"> {
   let description = [{
-    Encodes properties of a loop. Operations that implement this interface will
-    be considered by loop-invariant code motion.
+    Contains helper functions to query properties and perform transformations
+    of a loop. Operations that implement this interface will be considered by
+    loop-invariant code motion.
   }];
   let cppNamespace = "::mlir";
 
@@ -30,23 +31,29 @@ def LoopLikeOpInterface : OpInterface<"LoopLikeOpInterface"> {
         explicit capture of dependencies, an implementation could check whether
         the value corresponds to a captured dependency.
       }],
-      "bool", "isDefinedOutsideOfLoop", (ins "::mlir::Value ":$value), [{}], [{
-        return value.getParentRegion()->isProperAncestor(&$_op.getLoopBody());
+      /*retTy=*/"bool",
+      /*methodName=*/"isDefinedOutsideOfLoop",
+      /*args=*/(ins "::mlir::Value ":$value),
+      /*methodBody=*/"",
+      /*defaultImplementation=*/[{
+        return !$_op->isAncestor(value.getParentRegion()->getParentOp());
       }]
     >,
     InterfaceMethod<[{
-        Returns the region that makes up the body of the loop and should be
+        Returns the regions that make up the body of the loop and should be
         inspected for loop-invariant operations.
       }],
-      "::mlir::Region &", "getLoopBody"
+      /*retTy=*/"::llvm::SmallVector<::mlir::Region *>",
+      /*methodName=*/"getLoopRegions"
     >,
     InterfaceMethod<[{
         Moves the given loop-invariant operation out of the loop.
       }],
-      "void", "moveOutOfLoop",
-      (ins "::mlir::Operation *":$op), [{}], [{
-        op->moveBefore($_op);
-      }]
+      /*retTy=*/"void",
+      /*methodName=*/"moveOutOfLoop",
+      /*args=*/(ins "::mlir::Operation *":$op),
+      /*methodBody=*/"",
+      /*defaultImplementation=*/"op->moveBefore($_op);"
     >,
     InterfaceMethod<[{
         Promotes the loop body to its containing block if the loop is known to
@@ -107,6 +114,31 @@ def LoopLikeOpInterface : OpInterface<"LoopLikeOpInterface"> {
       /*methodBody=*/"",
       /*defaultImplementation=*/[{
         return std::nullopt;
+      }]
+    >,
+    InterfaceMethod<[{
+        Return the "init" operands that are used as initialization values for
+        the region "iter_args" of this loop.
+      }],
+      /*retTy=*/"::mlir::OperandRange",
+      /*methodName=*/"getInits",
+      /*args=*/(ins),
+      /*methodBody=*/"",
+      /*defaultImplementation=*/[{
+        return ::mlir::OperandRange($_op->operand_end(), $_op->operand_end());
+      }]
+    >,
+    InterfaceMethod<[{
+        Return the region "iter_args" (block arguments) that correspond to the
+        "init" operands. If the op has multiple regions, return the
+        corresponding block arguments of the entry region.
+      }],
+      /*retTy=*/"::mlir::Block::BlockArgListType",
+      /*methodName=*/"getRegionIterArgs",
+      /*args=*/(ins),
+      /*methodBody=*/"",
+      /*defaultImplementation=*/[{
+        return ::mlir::Block::BlockArgListType();
       }]
     >,
   ];

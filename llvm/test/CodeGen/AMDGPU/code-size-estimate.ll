@@ -1,6 +1,7 @@
 ; RUN: llc -march=amdgcn -mcpu=gfx900 -show-mc-encoding < %s | FileCheck -check-prefixes=CHECK,GFX9 %s
 ; RUN: llc -march=amdgcn -mcpu=gfx1030 -show-mc-encoding < %s | FileCheck -check-prefixes=CHECK,GFX10 %s
 ; RUN: llc -march=amdgcn -mcpu=gfx1100 -show-mc-encoding < %s | FileCheck -check-prefixes=CHECK,GFX11 %s
+; RUN: llc -march=amdgcn -mcpu=gfx1150 -show-mc-encoding < %s | FileCheck -check-prefixes=CHECK,GFX11,GFX1150 %s
 
 declare float @llvm.fabs.f32(float)
 declare float @llvm.fma.f32(float, float, float)
@@ -311,3 +312,39 @@ define float @v_fma_k_f32_src_mods(float %x, float %y) {
 ; GFX9: codeLenInByte = 24
 ; GFX10: codeLenInByte = 20
 ; GFX11: codeLenInByte = 20
+
+define amdgpu_ps float @s_fmaak_f32(float inreg %x, float inreg %y) {
+; GFX9-LABEL: s_fmaak_f32:
+; GFX9:       ; %bb.0:
+; GFX9-NEXT:    v_mov_b32_e32 v0, s1 ; encoding: [0x01,0x02,0x00,0x7e]
+; GFX9-NEXT:    v_mov_b32_e32 v1, 0x43800000 ; encoding: [0xff,0x02,0x02,0x7e,0x00,0x00,0x80,0x43]
+; GFX9-NEXT:    v_fma_f32 v0, s0, v0, v1 ; encoding: [0x00,0x00,0xcb,0xd1,0x00,0x00,0x06,0x04]
+; GFX9-NEXT:    ; return to shader part epilog
+;
+; GFX10-LABEL: s_fmaak_f32:
+; GFX10:       ; %bb.0:
+; GFX10-NEXT:    v_mov_b32_e32 v0, 0x43800000 ; encoding: [0xff,0x02,0x00,0x7e,0x00,0x00,0x80,0x43]
+; GFX10-NEXT:    v_fmac_f32_e64 v0, s0, s1 ; encoding: [0x00,0x00,0x2b,0xd5,0x00,0x02,0x00,0x00]
+; GFX10-NEXT:    ; return to shader part epilog
+;
+; GFX1100-LABEL: s_fmaak_f32:
+; GFX1100:       ; %bb.0:
+; GFX1100-NEXT:    v_mov_b32_e32 v0, 0x43800000 ; encoding: [0xff,0x02,0x00,0x7e,0x00,0x00,0x80,0x43]
+; GFX1100-NEXT:    s_delay_alu instid0(VALU_DEP_1) ; encoding: [0x01,0x00,0x87,0xbf]
+; GFX1100-NEXT:    v_fmac_f32_e64 v0, s0, s1 ; encoding: [0x00,0x00,0x2b,0xd5,0x00,0x02,0x00,0x00]
+; GFX1100-NEXT:    ; return to shader part epilog
+;
+; GFX1150-LABEL: s_fmaak_f32:
+; GFX1150:       ; %bb.0:
+; GFX1150-NEXT:    s_fmaak_f32 s0, s0, s1, 0x43800000 ; encoding: [0x00,0x01,0x80,0xa2,0x00,0x00,0x80,0x43]
+; GFX1150-NEXT:    s_delay_alu instid0(SALU_CYCLE_3) ; encoding: [0x0b,0x00,0x87,0xbf]
+; GFX1150-NEXT:    v_mov_b32_e32 v0, s0 ; encoding: [0x00,0x02,0x00,0x7e]
+; GFX1150-NEXT:    ; return to shader part epilog
+  %fma = call float @llvm.fma.f32(float %x, float %y, float 256.0)
+  ret float %fma
+}
+
+; GFX9: codeLenInByte = 20
+; GFX10: codeLenInByte = 16
+; GFX1100: codeLenInByte = 20
+; GFX1150: codeLenInByte = 16

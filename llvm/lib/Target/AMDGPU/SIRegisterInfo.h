@@ -23,7 +23,7 @@ namespace llvm {
 
 class GCNSubtarget;
 class LiveIntervals;
-class LivePhysRegs;
+class LiveRegUnits;
 class RegisterBank;
 struct SGPRSpillBuilder;
 
@@ -415,14 +415,14 @@ public:
   // Insert spill or restore instructions.
   // When lowering spill pseudos, the RegScavenger should be set.
   // For creating spill instructions during frame lowering, where no scavenger
-  // is available, LiveRegs can be used.
+  // is available, LiveUnits can be used.
   void buildSpillLoadStore(MachineBasicBlock &MBB,
                            MachineBasicBlock::iterator MI, const DebugLoc &DL,
                            unsigned LoadStoreOp, int Index, Register ValueReg,
                            bool ValueIsKill, MCRegister ScratchOffsetReg,
                            int64_t InstrOffset, MachineMemOperand *MMO,
                            RegScavenger *RS,
-                           LivePhysRegs *LiveRegs = nullptr) const;
+                           LiveRegUnits *LiveUnits = nullptr) const;
 
   // Return alignment in register file of first register in a register tuple.
   unsigned getRegClassAlignmentNumBits(const TargetRegisterClass *RC) const {

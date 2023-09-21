@@ -733,10 +733,14 @@ SizeOffsetType ObjectSizeOffsetVisitor::computeImpl(Value *V) {
   if (Instruction *I = dyn_cast<Instruction>(V)) {
     // If we have already seen this instruction, bail out. Cycles can happen in
     // unreachable code after constant propagation.
-    if (!SeenInsts.insert(I).second)
-      return unknown();
-
-    return visit(*I);
+    auto P = SeenInsts.try_emplace(I, unknown());
+    if (!P.second)
+      return P.first->second;
+    SizeOffsetType Res = visit(*I);
+    // Cache the result for later visits. If we happened to visit this during
+    // the above recursion, we would consider it unknown until now.
+    SeenInsts[I] = Res;
+    return Res;
   }
   if (Argument *A = dyn_cast<Argument>(V))
     return visitArgument(*A);

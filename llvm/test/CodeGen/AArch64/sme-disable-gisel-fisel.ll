@@ -229,6 +229,7 @@ define double  @za_new_caller_to_za_shared_callee(double %x) nounwind noinline o
 ; CHECK-COMMON-NEXT:    b .LBB6_2
 ; CHECK-COMMON-NEXT:  .LBB6_2: // %entry
 ; CHECK-COMMON-NEXT:    smstart za
+; CHECK-COMMON-NEXT:    zero {za}
 ; CHECK-COMMON-NEXT:    bl za_shared_callee
 ; CHECK-COMMON-NEXT:    mov x8, #4631107791820423168 // =0x4045000000000000
 ; CHECK-COMMON-NEXT:    fmov d1, x8

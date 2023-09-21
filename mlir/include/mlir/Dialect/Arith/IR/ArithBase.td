@@ -82,6 +82,8 @@ def ATOMIC_RMW_KIND_MULF     : I64EnumAttrCase<"mulf", 9>;
 def ATOMIC_RMW_KIND_MULI     : I64EnumAttrCase<"muli", 10>;
 def ATOMIC_RMW_KIND_ORI      : I64EnumAttrCase<"ori", 11>;
 def ATOMIC_RMW_KIND_ANDI     : I64EnumAttrCase<"andi", 12>;
+def ATOMIC_RMW_KIND_MAXNUMF  : I64EnumAttrCase<"maxnumf", 13>;
+def ATOMIC_RMW_KIND_MINNUMF  : I64EnumAttrCase<"minnumf", 14>;
 
 def AtomicRMWKindAttr : I64EnumAttr<
     "AtomicRMWKind", "",
@@ -89,7 +91,7 @@ def AtomicRMWKindAttr : I64EnumAttr<
      ATOMIC_RMW_KIND_MAXIMUMF, ATOMIC_RMW_KIND_MAXS, ATOMIC_RMW_KIND_MAXU,
      ATOMIC_RMW_KIND_MINIMUMF, ATOMIC_RMW_KIND_MINS, ATOMIC_RMW_KIND_MINU,
      ATOMIC_RMW_KIND_MULF, ATOMIC_RMW_KIND_MULI, ATOMIC_RMW_KIND_ORI,
-     ATOMIC_RMW_KIND_ANDI]> {
+     ATOMIC_RMW_KIND_ANDI, ATOMIC_RMW_KIND_MAXNUMF, ATOMIC_RMW_KIND_MINNUMF]> {
   let cppNamespace = "::mlir::arith";
 }
 

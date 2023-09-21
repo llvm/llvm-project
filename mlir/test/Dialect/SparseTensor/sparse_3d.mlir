@@ -3,14 +3,14 @@
 
 #Td = #sparse_tensor.encoding<{ map = (d0) -> (d0 : dense) }>
 
-#Tddd = #sparse_tensor.encoding<{ lvlTypes = [ "dense",      "dense",      "dense"      ] }>
-#Tdds = #sparse_tensor.encoding<{ lvlTypes = [ "dense",      "dense",      "compressed" ] }>
-#Tdsd = #sparse_tensor.encoding<{ lvlTypes = [ "dense",      "compressed", "dense"      ] }>
-#Tdss = #sparse_tensor.encoding<{ lvlTypes = [ "dense",      "compressed", "compressed" ] }>
-#Tsdd = #sparse_tensor.encoding<{ lvlTypes = [ "compressed", "dense",      "dense"      ] }>
-#Tsds = #sparse_tensor.encoding<{ lvlTypes = [ "compressed", "dense",      "compressed" ] }>
-#Tssd = #sparse_tensor.encoding<{ lvlTypes = [ "compressed", "compressed", "dense"      ] }>
-#Tsss = #sparse_tensor.encoding<{ lvlTypes = [ "compressed", "compressed", "compressed" ] }>
+#Tddd = #sparse_tensor.encoding<{ map = (d0, d1, d2) -> (d0 : dense, d1 : dense, d2 : dense) }>
+#Tdds = #sparse_tensor.encoding<{ map = (d0, d1, d2) -> (d0 : dense, d1 : dense, d2 : compressed) }>
+#Tdsd = #sparse_tensor.encoding<{ map = (d0, d1, d2) -> (d0 : dense, d1 : compressed, d2 : dense) }>
+#Tdss = #sparse_tensor.encoding<{ map = (d0, d1, d2) -> (d0 : dense, d1 : compressed, d2 : compressed) }>
+#Tsdd = #sparse_tensor.encoding<{ map = (d0, d1, d2) -> (d0 : compressed, d1 : dense, d2 : dense) }>
+#Tsds = #sparse_tensor.encoding<{ map = (d0, d1, d2) -> (d0 : compressed, d1 : dense, d2 : compressed) }>
+#Tssd = #sparse_tensor.encoding<{ map = (d0, d1, d2) -> (d0 : compressed, d1 : compressed, d2 : dense) }>
+#Tsss = #sparse_tensor.encoding<{ map = (d0, d1, d2) -> (d0 : compressed, d1 : compressed, d2 : compressed) }>
 
 #trait3 = {
   indexing_maps = [

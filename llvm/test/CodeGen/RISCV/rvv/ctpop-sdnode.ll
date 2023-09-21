@@ -857,6 +857,92 @@ define <vscale x 16 x i32> @ctpop_nxv16i32(<vscale x 16 x i32> %va) {
   %a = call <vscale x 16 x i32> @llvm.ctpop.nxv16i32(<vscale x 16 x i32> %va)
   ret <vscale x 16 x i32> %a
 }
+
+; We always emit vcpop.v for the scalable vector
+define <vscale x 16 x i1> @ctpop_nxv16i32_ult_two(<vscale x 16 x i32> %va) {
+; CHECK-LABEL: ctpop_nxv16i32_ult_two:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vsetvli a0, zero, e32, m8, ta, ma
+; CHECK-NEXT:    vadd.vi v16, v8, -1
+; CHECK-NEXT:    vand.vv v8, v8, v16
+; CHECK-NEXT:    vmseq.vi v0, v8, 0
+; CHECK-NEXT:    ret
+;
+; CHECK-ZVBB-LABEL: ctpop_nxv16i32_ult_two:
+; CHECK-ZVBB:       # %bb.0:
+; CHECK-ZVBB-NEXT:    vsetvli a0, zero, e32, m8, ta, ma
+; CHECK-ZVBB-NEXT:    vcpop.v v8, v8
+; CHECK-ZVBB-NEXT:    vmsleu.vi v0, v8, 1
+; CHECK-ZVBB-NEXT:    ret
+  %a = call <vscale x 16 x i32> @llvm.ctpop.nxv16i32(<vscale x 16 x i32> %va)
+  %cmp = icmp ult <vscale x 16 x i32> %a, shufflevector (<vscale x 16 x i32> insertelement (<vscale x 16 x i32> poison, i32 2, i64 0), <vscale x 16 x i32> poison, <vscale x 16 x i32> zeroinitializer)
+  ret <vscale x 16 x i1> %cmp
+}
+
+define <vscale x 16 x i1> @ctpop_nxv16i32_ugt_one(<vscale x 16 x i32> %va) {
+; CHECK-LABEL: ctpop_nxv16i32_ugt_one:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vsetvli a0, zero, e32, m8, ta, ma
+; CHECK-NEXT:    vadd.vi v16, v8, -1
+; CHECK-NEXT:    vand.vv v8, v8, v16
+; CHECK-NEXT:    vmsne.vi v0, v8, 0
+; CHECK-NEXT:    ret
+;
+; CHECK-ZVBB-LABEL: ctpop_nxv16i32_ugt_one:
+; CHECK-ZVBB:       # %bb.0:
+; CHECK-ZVBB-NEXT:    vsetvli a0, zero, e32, m8, ta, ma
+; CHECK-ZVBB-NEXT:    vcpop.v v8, v8
+; CHECK-ZVBB-NEXT:    vmsgtu.vi v0, v8, 1
+; CHECK-ZVBB-NEXT:    ret
+  %a = call <vscale x 16 x i32> @llvm.ctpop.nxv16i32(<vscale x 16 x i32> %va)
+  %cmp = icmp ugt <vscale x 16 x i32> %a, shufflevector (<vscale x 16 x i32> insertelement (<vscale x 16 x i32> poison, i32 1, i64 0), <vscale x 16 x i32> poison, <vscale x 16 x i32> zeroinitializer)
+  ret <vscale x 16 x i1> %cmp
+}
+
+define <vscale x 16 x i1> @ctpop_nxv16i32_eq_one(<vscale x 16 x i32> %va) {
+; CHECK-LABEL: ctpop_nxv16i32_eq_one:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vsetvli a0, zero, e32, m8, ta, ma
+; CHECK-NEXT:    vadd.vi v16, v8, -1
+; CHECK-NEXT:    vand.vv v16, v8, v16
+; CHECK-NEXT:    vmseq.vi v24, v16, 0
+; CHECK-NEXT:    vmsne.vi v16, v8, 0
+; CHECK-NEXT:    vmand.mm v0, v16, v24
+; CHECK-NEXT:    ret
+;
+; CHECK-ZVBB-LABEL: ctpop_nxv16i32_eq_one:
+; CHECK-ZVBB:       # %bb.0:
+; CHECK-ZVBB-NEXT:    vsetvli a0, zero, e32, m8, ta, ma
+; CHECK-ZVBB-NEXT:    vcpop.v v8, v8
+; CHECK-ZVBB-NEXT:    vmseq.vi v0, v8, 1
+; CHECK-ZVBB-NEXT:    ret
+  %a = call <vscale x 16 x i32> @llvm.ctpop.nxv16i32(<vscale x 16 x i32> %va)
+  %cmp = icmp eq <vscale x 16 x i32> %a, shufflevector (<vscale x 16 x i32> insertelement (<vscale x 16 x i32> poison, i32 1, i64 0), <vscale x 16 x i32> poison, <vscale x 16 x i32> zeroinitializer)
+  ret <vscale x 16 x i1> %cmp
+}
+
+define <vscale x 16 x i1> @ctpop_nxv16i32_ne_one(<vscale x 16 x i32> %va) {
+; CHECK-LABEL: ctpop_nxv16i32_ne_one:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vsetvli a0, zero, e32, m8, ta, ma
+; CHECK-NEXT:    vadd.vi v16, v8, -1
+; CHECK-NEXT:    vand.vv v16, v8, v16
+; CHECK-NEXT:    vmsne.vi v24, v16, 0
+; CHECK-NEXT:    vmseq.vi v16, v8, 0
+; CHECK-NEXT:    vmor.mm v0, v16, v24
+; CHECK-NEXT:    ret
+;
+; CHECK-ZVBB-LABEL: ctpop_nxv16i32_ne_one:
+; CHECK-ZVBB:       # %bb.0:
+; CHECK-ZVBB-NEXT:    vsetvli a0, zero, e32, m8, ta, ma
+; CHECK-ZVBB-NEXT:    vcpop.v v8, v8
+; CHECK-ZVBB-NEXT:    vmsne.vi v0, v8, 1
+; CHECK-ZVBB-NEXT:    ret
+  %a = call <vscale x 16 x i32> @llvm.ctpop.nxv16i32(<vscale x 16 x i32> %va)
+  %cmp = icmp ne <vscale x 16 x i32> %a, shufflevector (<vscale x 16 x i32> insertelement (<vscale x 16 x i32> poison, i32 1, i64 0), <vscale x 16 x i32> poison, <vscale x 16 x i32> zeroinitializer)
+  ret <vscale x 16 x i1> %cmp
+}
+
 declare <vscale x 16 x i32> @llvm.ctpop.nxv16i32(<vscale x 16 x i32>)
 
 define <vscale x 1 x i64> @ctpop_nxv1i64(<vscale x 1 x i64> %va) {
@@ -1189,4 +1275,90 @@ define <vscale x 8 x i64> @ctpop_nxv8i64(<vscale x 8 x i64> %va) {
   %a = call <vscale x 8 x i64> @llvm.ctpop.nxv8i64(<vscale x 8 x i64> %va)
   ret <vscale x 8 x i64> %a
 }
+
+; We always emit vcpop.v for the scalable vector
+define <vscale x 8 x i1> @ctpop_nxv8i64_ult_two(<vscale x 8 x i64> %va) {
+; CHECK-LABEL: ctpop_nxv8i64_ult_two:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vsetvli a0, zero, e64, m8, ta, ma
+; CHECK-NEXT:    vadd.vi v16, v8, -1
+; CHECK-NEXT:    vand.vv v8, v8, v16
+; CHECK-NEXT:    vmseq.vi v0, v8, 0
+; CHECK-NEXT:    ret
+;
+; CHECK-ZVBB-LABEL: ctpop_nxv8i64_ult_two:
+; CHECK-ZVBB:       # %bb.0:
+; CHECK-ZVBB-NEXT:    vsetvli a0, zero, e64, m8, ta, ma
+; CHECK-ZVBB-NEXT:    vcpop.v v8, v8
+; CHECK-ZVBB-NEXT:    vmsleu.vi v0, v8, 1
+; CHECK-ZVBB-NEXT:    ret
+  %a = call <vscale x 8 x i64> @llvm.ctpop.nxv8i64(<vscale x 8 x i64> %va)
+  %cmp = icmp ult <vscale x 8 x i64> %a, shufflevector (<vscale x 8 x i64> insertelement (<vscale x 8 x i64> poison, i64 2, i64 0), <vscale x 8 x i64> poison, <vscale x 8 x i32> zeroinitializer)
+  ret <vscale x 8 x i1> %cmp
+}
+
+define <vscale x 8 x i1> @ctpop_nxv8i64_ugt_one(<vscale x 8 x i64> %va) {
+; CHECK-LABEL: ctpop_nxv8i64_ugt_one:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vsetvli a0, zero, e64, m8, ta, ma
+; CHECK-NEXT:    vadd.vi v16, v8, -1
+; CHECK-NEXT:    vand.vv v8, v8, v16
+; CHECK-NEXT:    vmsne.vi v0, v8, 0
+; CHECK-NEXT:    ret
+;
+; CHECK-ZVBB-LABEL: ctpop_nxv8i64_ugt_one:
+; CHECK-ZVBB:       # %bb.0:
+; CHECK-ZVBB-NEXT:    vsetvli a0, zero, e64, m8, ta, ma
+; CHECK-ZVBB-NEXT:    vcpop.v v8, v8
+; CHECK-ZVBB-NEXT:    vmsgtu.vi v0, v8, 1
+; CHECK-ZVBB-NEXT:    ret
+  %a = call <vscale x 8 x i64> @llvm.ctpop.nxv8i64(<vscale x 8 x i64> %va)
+  %cmp = icmp ugt <vscale x 8 x i64> %a, shufflevector (<vscale x 8 x i64> insertelement (<vscale x 8 x i64> poison, i64 1, i64 0), <vscale x 8 x i64> poison, <vscale x 8 x i32> zeroinitializer)
+  ret <vscale x 8 x i1> %cmp
+}
+
+define <vscale x 8 x i1> @ctpop_nxv8i64_eq_one(<vscale x 8 x i64> %va) {
+; CHECK-LABEL: ctpop_nxv8i64_eq_one:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vsetvli a0, zero, e64, m8, ta, ma
+; CHECK-NEXT:    vadd.vi v16, v8, -1
+; CHECK-NEXT:    vand.vv v16, v8, v16
+; CHECK-NEXT:    vmseq.vi v24, v16, 0
+; CHECK-NEXT:    vmsne.vi v16, v8, 0
+; CHECK-NEXT:    vmand.mm v0, v16, v24
+; CHECK-NEXT:    ret
+;
+; CHECK-ZVBB-LABEL: ctpop_nxv8i64_eq_one:
+; CHECK-ZVBB:       # %bb.0:
+; CHECK-ZVBB-NEXT:    vsetvli a0, zero, e64, m8, ta, ma
+; CHECK-ZVBB-NEXT:    vcpop.v v8, v8
+; CHECK-ZVBB-NEXT:    vmseq.vi v0, v8, 1
+; CHECK-ZVBB-NEXT:    ret
+  %a = call <vscale x 8 x i64> @llvm.ctpop.nxv8i64(<vscale x 8 x i64> %va)
+  %cmp = icmp eq <vscale x 8 x i64> %a, shufflevector (<vscale x 8 x i64> insertelement (<vscale x 8 x i64> poison, i64 1, i64 0), <vscale x 8 x i64> poison, <vscale x 8 x i32> zeroinitializer)
+  ret <vscale x 8 x i1> %cmp
+}
+
+define <vscale x 8 x i1> @ctpop_nxv8i64_ne_one(<vscale x 8 x i64> %va) {
+; CHECK-LABEL: ctpop_nxv8i64_ne_one:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vsetvli a0, zero, e64, m8, ta, ma
+; CHECK-NEXT:    vadd.vi v16, v8, -1
+; CHECK-NEXT:    vand.vv v16, v8, v16
+; CHECK-NEXT:    vmsne.vi v24, v16, 0
+; CHECK-NEXT:    vmseq.vi v16, v8, 0
+; CHECK-NEXT:    vmor.mm v0, v16, v24
+; CHECK-NEXT:    ret
+;
+; CHECK-ZVBB-LABEL: ctpop_nxv8i64_ne_one:
+; CHECK-ZVBB:       # %bb.0:
+; CHECK-ZVBB-NEXT:    vsetvli a0, zero, e64, m8, ta, ma
+; CHECK-ZVBB-NEXT:    vcpop.v v8, v8
+; CHECK-ZVBB-NEXT:    vmsne.vi v0, v8, 1
+; CHECK-ZVBB-NEXT:    ret
+  %a = call <vscale x 8 x i64> @llvm.ctpop.nxv8i64(<vscale x 8 x i64> %va)
+  %cmp = icmp ne <vscale x 8 x i64> %a, shufflevector (<vscale x 8 x i64> insertelement (<vscale x 8 x i64> poison, i64 1, i64 0), <vscale x 8 x i64> poison, <vscale x 8 x i32> zeroinitializer)
+  ret <vscale x 8 x i1> %cmp
+}
+
 declare <vscale x 8 x i64> @llvm.ctpop.nxv8i64(<vscale x 8 x i64>)

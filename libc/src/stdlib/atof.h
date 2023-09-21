@@ -15,4 +15,4 @@ double atof(const char *str);
 
 } // namespace __llvm_libc
 
-#endif // LLVM_LIBC_SRC_STDLIB_ATOI_H
+#endif // LLVM_LIBC_SRC_STDLIB_ATOF_H

@@ -5,8 +5,8 @@
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
-#ifndef LLVM_LIBC_SRC_SUPPORT_CPP_TYPE_TRAITS_ADD_POINTER_H
-#define LLVM_LIBC_SRC_SUPPORT_CPP_TYPE_TRAITS_ADD_POINTER_H
+#ifndef LLVM_LIBC_SRC___SUPPORT_CPP_TYPE_TRAITS_ADD_POINTER_H
+#define LLVM_LIBC_SRC___SUPPORT_CPP_TYPE_TRAITS_ADD_POINTER_H
 
 #include "src/__support/CPP/type_traits/remove_reference.h"
 #include "src/__support/CPP/type_traits/type_identity.h"
@@ -25,4 +25,4 @@ struct add_pointer : decltype(detail::try_add_pointer<T>(0)) {};
 template <class T> using add_pointer_t = typename add_pointer<T>::type;
 } // namespace __llvm_libc::cpp
 
-#endif // LLVM_LIBC_SRC_SUPPORT_CPP_TYPE_TRAITS_ADD_POINTER_H
+#endif // LLVM_LIBC_SRC___SUPPORT_CPP_TYPE_TRAITS_ADD_POINTER_H

@@ -1,6 +1,6 @@
 // RUN: mlir-opt %s --linalg-generalize-named-ops --pre-sparsification-rewrite --sparsification --sparse-tensor-conversion --canonicalize --cse | FileCheck %s
 
-#DCSR = #sparse_tensor.encoding<{ lvlTypes = [ "compressed", "compressed" ] }>
+#DCSR = #sparse_tensor.encoding<{ map = (d0, d1) -> (d0 : compressed, d1 : compressed) }>
 
 // CHECK-LABEL:   func.func @fill_zero_after_alloc(
 // CHECK-SAME:      %[[Arg0:.*]]: !llvm.ptr<i8>,
@@ -121,7 +121,7 @@
 // CHECK:         }
 func.func @fill_zero_after_alloc(%arg0: tensor<100x200xf64, #DCSR>,
                                  %arg1: tensor<200x300xf64, #DCSR>) -> tensor<100x300xf64, #DCSR> {
-  %0 = bufferization.alloc_tensor() : tensor<100x300xf64, #DCSR>
+  %0 = tensor.empty() : tensor<100x300xf64, #DCSR>
   %cst = arith.constant 0.000000e+00 : f64
   %1 = linalg.fill ins(%cst : f64)
                    outs(%0 : tensor<100x300xf64, #DCSR>) -> tensor<100x300xf64, #DCSR>

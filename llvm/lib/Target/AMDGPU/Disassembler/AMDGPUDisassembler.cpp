@@ -238,6 +238,7 @@ DECODE_SRC_OPERAND_REG_AV10(AV_128, OPW128)
 
 DECODE_OPERAND_SRC_REG_OR_IMM_9(SReg_64, OPW64, 64)
 DECODE_OPERAND_SRC_REG_OR_IMM_9(SReg_32, OPW32, 32)
+DECODE_OPERAND_SRC_REG_OR_IMM_9(SReg_32, OPW32, 16)
 DECODE_OPERAND_SRC_REG_OR_IMM_9(SRegOrLds_32, OPW32, 32)
 DECODE_OPERAND_SRC_REG_OR_IMM_9(VS_32_Lo128, OPW16, 16)
 DECODE_OPERAND_SRC_REG_OR_IMM_9(VS_32, OPW32, 16)
@@ -259,6 +260,7 @@ DECODE_OPERAND_SRC_REG_OR_IMM_A9(AReg_1024, OPW1024, 32)
 DECODE_OPERAND_SRC_REG_OR_IMM_DEFERRED_9(VS_32_Lo128, OPW16, 16)
 DECODE_OPERAND_SRC_REG_OR_IMM_DEFERRED_9(VS_32, OPW16, 16)
 DECODE_OPERAND_SRC_REG_OR_IMM_DEFERRED_9(VS_32, OPW32, 32)
+DECODE_OPERAND_SRC_REG_OR_IMM_DEFERRED_9(SReg_32, OPW32, 32)
 
 static DecodeStatus decodeOperand_KImmFP(MCInst &Inst, unsigned Imm,
                                          uint64_t Addr,
@@ -1621,6 +1623,10 @@ bool AMDGPUDisassembler::hasArchitectedFlatScratch() const {
   return STI.hasFeature(AMDGPU::FeatureArchitectedFlatScratch);
 }
 
+bool AMDGPUDisassembler::hasKernargPreload() const {
+  return AMDGPU::hasKernargPreload(STI);
+}
+
 //===----------------------------------------------------------------------===//
 // AMDGPU specific symbol handling
 //===----------------------------------------------------------------------===//
@@ -1945,10 +1951,24 @@ AMDGPUDisassembler::decodeKernelDescriptorDirective(
 
     return MCDisassembler::Success;
 
-  case amdhsa::RESERVED2_OFFSET:
-    // 6 bytes from here are reserved, must be 0.
-    ReservedBytes = DE.getBytes(Cursor, 6);
-    for (int I = 0; I < 6; ++I) {
+  case amdhsa::KERNARG_PRELOAD_OFFSET:
+    using namespace amdhsa;
+    TwoByteBuffer = DE.getU16(Cursor);
+    if (TwoByteBuffer & KERNARG_PRELOAD_SPEC_LENGTH) {
+      PRINT_DIRECTIVE(".amdhsa_user_sgpr_kernarg_preload_length",
+                      KERNARG_PRELOAD_SPEC_LENGTH);
+    }
+
+    if (TwoByteBuffer & KERNARG_PRELOAD_SPEC_OFFSET) {
+      PRINT_DIRECTIVE(".amdhsa_user_sgpr_kernarg_preload_offset",
+                      KERNARG_PRELOAD_SPEC_OFFSET);
+    }
+    return MCDisassembler::Success;
+
+  case amdhsa::RESERVED3_OFFSET:
+    // 4 bytes from here are reserved, must be 0.
+    ReservedBytes = DE.getBytes(Cursor, 4);
+    for (int I = 0; I < 4; ++I) {
       if (ReservedBytes[I] != 0)
         return MCDisassembler::Fail;
     }

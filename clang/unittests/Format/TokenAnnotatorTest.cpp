@@ -280,6 +280,12 @@ TEST_F(TokenAnnotatorTest, UnderstandsUsesOfStarAndAmp) {
   EXPECT_TOKEN(Tokens[12], tok::ampamp, TT_BinaryOperator);
   EXPECT_TOKEN(Tokens[27], tok::ampamp, TT_BinaryOperator);
 
+  Tokens = annotate("foo = *i < *j && *j > *k;");
+  EXPECT_EQ(Tokens.size(), 15u) << Tokens;
+  EXPECT_TOKEN(Tokens[4], tok::less, TT_BinaryOperator);
+  EXPECT_TOKEN(Tokens[7], tok::ampamp, TT_BinaryOperator);
+  EXPECT_TOKEN(Tokens[10], tok::greater, TT_BinaryOperator);
+
   FormatStyle Style = getLLVMStyle();
   Style.TypeNames.push_back("MYI");
   Tokens = annotate("if (MYI *p{nullptr})", Style);
