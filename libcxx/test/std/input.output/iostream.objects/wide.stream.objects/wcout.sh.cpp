@@ -10,7 +10,7 @@
 
 // wostream wcout;
 
-// XFAIL: no-wide-characters
+// UNSUPPORTED: no-wide-characters
 
 // RUN: %{build}
 // RUN: %{exec} %t.exe > %t.actual
