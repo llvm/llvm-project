@@ -1569,8 +1569,9 @@ static void processPassthroughAttrs(llvm::Function *func, LLVMFuncOp funcOp) {
 
     // Skip the aarch64_pstate_sm_<body|enabled> since the LLVMFuncOp has an
     // explicit attribute.
+    // Also skip the vscale_range, it is also an explicit attribute.
     if (attrName == "aarch64_pstate_sm_enabled" ||
-        attrName == "aarch64_pstate_sm_body")
+        attrName == "aarch64_pstate_sm_body" || attrName == "vscale_range")
       continue;
 
     if (attr.isStringAttribute()) {
@@ -1610,6 +1611,14 @@ void ModuleImport::processFunctionAttributes(llvm::Function *func,
     funcOp.setArmStreaming(true);
   else if (func->hasFnAttribute("aarch64_pstate_sm_body"))
     funcOp.setArmLocallyStreaming(true);
+  llvm::Attribute attr = func->getFnAttribute(llvm::Attribute::VScaleRange);
+  if (attr.isValid()) {
+    MLIRContext *context = funcOp.getContext();
+    auto intTy = IntegerType::get(context, 32);
+    funcOp.setVscaleRangeAttr(LLVM::VScaleRangeAttr::get(
+        context, IntegerAttr::get(intTy, attr.getVScaleRangeMin()),
+        IntegerAttr::get(intTy, attr.getVScaleRangeMax().value_or(0))));
+  }
 }
 
 DictionaryAttr
