@@ -68,18 +68,15 @@ void * multiParmAllFix(int *p, int **q, int a[], int * r);
 
 // Fixing local variables implicates fixing parameters
 void  multiParmLocalAllFix(int *p, int * r) {
-  // CHECK: fix-it:{{.*}}:{[[@LINE-1]]:28-[[@LINE-1]]:34}:"std::span<int> p"
-  // CHECK: fix-it:{{.*}}:{[[@LINE-2]]:36-[[@LINE-2]]:43}:"std::span<int> r"
-  // CHECK: fix-it:{{.*}}:{[[@LINE+1]]:3-[[@LINE+1]]:10}:"std::span<int> x"
-  int * x; // expected-warning{{'x' is an unsafe pointer used for buffer access}} \
-	      expected-note{{change type of 'x' to 'std::span' to preserve bounds information, and change 'p', 'z', and 'r' to safe types to make function 'multiParmLocalAllFix' bounds-safe}}
-  // CHECK: fix-it:{{.*}}:{[[@LINE+1]]:3-[[@LINE+1]]:10}:"std::span<int> z"
-  int * z; // expected-warning{{'z' is an unsafe pointer used for buffer access}} \
-              expected-note{{change type of 'z' to 'std::span' to preserve bounds information, and change 'x', 'p', and 'r' to safe types to make function 'multiParmLocalAllFix' bounds-safe}}
+  // CHECK-NOT: fix-it:{{.*}}:{[[@LINE-1]]:
+  // CHECK-NOT: fix-it:{{.*}}:{[[@LINE+1]]:
+  int * x; // expected-warning{{'x' is an unsafe pointer used for buffer access}}
+  // CHECK-NOT: fix-it:{{.*}}:{[[@LINE+1]]:
+  int * z; // expected-warning{{'z' is an unsafe pointer used for buffer access}}
   int * y;
 
   x = p;
-  y = x;
+  y = x; // FIXME: we do not fix `y = x` here as the `.data()` fix-it is not generally correct
   // `x` needs to be fixed so does the pointer assigned to `x`, i.e.,`p`
   x[5] = 5; // expected-note{{used in buffer access here}}
   z = r;
@@ -89,33 +86,26 @@ void  multiParmLocalAllFix(int *p, int * r) {
   // fixing `x` involves fixing all `p`, `r` and `z`. Similar for
   // fixing `z`.
 }
-// CHECK: fix-it:{{.*}}:{[[@LINE-1]]:2-[[@LINE-1]]:2}:"\n{{\[}}{{\[}}clang::unsafe_buffer_usage{{\]}}{{\]}} void  multiParmLocalAllFix(int *p, int * r) {return multiParmLocalAllFix(std::span<int>(p, <# size #>), std::span<int>(r, <# size #>));}\n"
+// CHECK-NOT: fix-it:{{.*}}:{[[@LINE-1]]:
 
 
 // Fixing parameters implicates fixing local variables
-// CHECK: fix-it:{{.*}}:{[[@LINE+2]]:29-[[@LINE+2]]:35}:"std::span<int> p"
-// CHECK: fix-it:{{.*}}:{[[@LINE+1]]:37-[[@LINE+1]]:44}:"std::span<int> r"
+// CHECK-NOT: fix-it:{{.*}}:{[[@LINE+1]]:
 void  multiParmLocalAllFix2(int *p, int * r) { // expected-warning{{'p' is an unsafe pointer used for buffer access}} \
-                                                  expected-note{{change type of 'p' to 'std::span' to preserve bounds information, and change 'x', 'r', and 'z' to safe types to make function 'multiParmLocalAllFix2' bounds-safe}} \
-                                                  expected-warning{{'r' is an unsafe pointer used for buffer access}} \
-					          expected-note{{change type of 'r' to 'std::span' to preserve bounds information, and change 'p', 'x', and 'z' to safe types to make function 'multiParmLocalAllFix2' bounds-safe}}
+                                                  expected-warning{{'r' is an unsafe pointer used for buffer access}}
   int * x = new int[10];
-  // CHECK: fix-it:{{.*}}:{[[@LINE-1]]:3-[[@LINE-1]]:12}:"std::span<int> x"
-  // CHECK: fix-it:{{.*}}:{[[@LINE-2]]:13-[[@LINE-2]]:13}:"{"
-  // CHECK: fix-it:{{.*}}:{[[@LINE-3]]:24-[[@LINE-3]]:24}:", 10}"
+  // CHECK-NOT: fix-it:{{.*}}:{[[@LINE-1]]:
   int * z = new int[10];
-  // CHECK: fix-it:{{.*}}:{[[@LINE-1]]:3-[[@LINE-1]]:12}:"std::span<int> z"
-  // CHECK: fix-it:{{.*}}:{[[@LINE-2]]:13-[[@LINE-2]]:13}:"{"
-  // CHECK: fix-it:{{.*}}:{[[@LINE-3]]:24-[[@LINE-3]]:24}:", 10}"
+  // CHECK-NOT: fix-it:{{.*}}:{[[@LINE-1]]:
   int * y;
 
   p = x;
-  y = x;
+  y = x;    // FIXME: we do not fix `y = x` here as the `.data()` fix-it is not generally correct
   p[5] = 5; // expected-note{{used in buffer access here}}
   r = z;
   r[5] = 5; // expected-note{{used in buffer access here}}
 }
-// CHECK: fix-it:{{.*}}:{[[@LINE-1]]:2-[[@LINE-1]]:2}:"\n{{\[}}{{\[}}clang::unsafe_buffer_usage{{\]}}{{\]}} void  multiParmLocalAllFix2(int *p, int * r) {return multiParmLocalAllFix2(std::span<int>(p, <# size #>), std::span<int>(r, <# size #>));}\n"
+// CHECK-NOT: fix-it:{{.*}}:{[[@LINE-1]]:
 
 
 // No fix emitted for any of the parameter since parameter `r` cannot be fixed
