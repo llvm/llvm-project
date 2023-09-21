@@ -468,7 +468,7 @@ public:
   getRegForInlineAsmConstraint(const TargetRegisterInfo *TRI,
                                StringRef Constraint, MVT VT) const override;
   ConstraintType getConstraintType(StringRef Constraint) const override;
-  void LowerAsmOperandForConstraint(SDValue Op, const StringRef Constraint,
+  void LowerAsmOperandForConstraint(SDValue Op, StringRef Constraint,
                                     std::vector<SDValue> &Ops,
                                     SelectionDAG &DAG) const override;
   bool getAsmOperandConstVal(SDValue Op, uint64_t &Val) const;
