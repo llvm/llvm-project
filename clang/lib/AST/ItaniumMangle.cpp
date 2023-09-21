@@ -4640,7 +4640,6 @@ recurse:
   case Expr::ShuffleVectorExprClass:
   case Expr::ConvertVectorExprClass:
   case Expr::StmtExprClass:
-  case Expr::TypeTraitExprClass:
   case Expr::ArrayTypeTraitExprClass:
   case Expr::ExpressionTraitExprClass:
   case Expr::VAArgExprClass:
@@ -4992,6 +4991,10 @@ recurse:
       //   If the result of the operator is implicitly converted to a known
       //   integer type, that type is used for the literal; otherwise, the type
       //   of std::size_t or std::ptrdiff_t is used.
+      //
+      // FIXME: We still include the operand in the profile in this case. This
+      // can lead to mangling collisions between function templates that we
+      // consider to be different.
       QualType T = (ImplicitlyConvertedToType.isNull() ||
                     !ImplicitlyConvertedToType->isIntegerType())? SAE->getType()
                                                     : ImplicitlyConvertedToType;
@@ -5051,6 +5054,20 @@ recurse:
       return;
     }
     }
+    break;
+  }
+
+  case Expr::TypeTraitExprClass: {
+    //  <expression> ::= u <source-name> <template-arg>* E # vendor extension
+    const TypeTraitExpr *TTE = cast<TypeTraitExpr>(E);
+    NotPrimaryExpr();
+    Out << 'u';
+    llvm::StringRef Spelling = getTraitSpelling(TTE->getTrait());
+    Out << Spelling.size() << Spelling;
+    for (TypeSourceInfo *TSI : TTE->getArgs()) {
+      mangleType(TSI->getType());
+    }
+    Out << 'E';
     break;
   }
 
