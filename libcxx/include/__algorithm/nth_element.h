@@ -116,10 +116,18 @@ __nth_element(_RandomAccessIterator __first, _RandomAccessIterator __nth, _Rando
                     return;
                 }
                 while (true) {
-                    while (!__comp(*__first, *__i))
+                    while (!__comp(*__first, *__i)) {
                         ++__i;
-                    while (__comp(*__first, *--__j))
-                        ;
+                        _LIBCPP_ASSERT_UNCATEGORIZED(
+                            __i != __last,
+                            "Would read out of bounds, does your comparator satisfy the strict-weak ordering requirement?");
+                    }
+                    do {
+                        _LIBCPP_ASSERT_UNCATEGORIZED(
+                            __j != __first,
+                            "Would read out of bounds, does your comparator satisfy the strict-weak ordering requirement?");
+                        --__j;
+                    } while (__comp(*__first, *__j));
                     if (__i >= __j)
                         break;
                     _Ops::iter_swap(__i, __j);
@@ -146,11 +154,19 @@ __nth_element(_RandomAccessIterator __first, _RandomAccessIterator __nth, _Rando
             while (true)
             {
                 // __m still guards upward moving __i
-                while (__comp(*__i, *__m))
+                while (__comp(*__i, *__m)) {
                     ++__i;
+                    _LIBCPP_ASSERT_UNCATEGORIZED(
+                        __i != __last,
+                        "Would read out of bounds, does your comparator satisfy the strict-weak ordering requirement?");
+                }
                 // It is now known that a guard exists for downward moving __j
-                while (!__comp(*--__j, *__m))
-                    ;
+                do {
+                    _LIBCPP_ASSERT_UNCATEGORIZED(
+                        __j != __first,
+                        "Would read out of bounds, does your comparator satisfy the strict-weak ordering requirement?");
+                    --__j;
+                } while (!__comp(*__j, *__m));
                 if (__i >= __j)
                     break;
                 _Ops::iter_swap(__i, __j);
