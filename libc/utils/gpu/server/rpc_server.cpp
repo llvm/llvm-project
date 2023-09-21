@@ -80,23 +80,18 @@ private:
       });
       break;
     }
-    case RPC_READ_FROM_STREAM:
-    case RPC_READ_FROM_STDIN: {
+    case RPC_READ_FROM_STREAM: {
       uint64_t sizes[lane_size] = {0};
       void *data[lane_size] = {nullptr};
-      uint64_t rets[lane_size] = {0};
       port->recv([&](rpc::Buffer *buffer, uint32_t id) {
-        sizes[id] = buffer->data[0];
-        data[id] = new char[sizes[id]];
-        FILE *file = port->get_opcode() == RPC_READ_FROM_STREAM
-                         ? reinterpret_cast<FILE *>(buffer->data[1])
-                         : stdin;
-        rets[id] = fread(data[id], 1, sizes[id], file);
+        data[id] = new char[buffer->data[0]];
+        sizes[id] = fread(data[id], 1, buffer->data[0],
+                          file::to_stream(buffer->data[1]));
       });
       port->send_n(data, sizes);
       port->send([&](rpc::Buffer *buffer, uint32_t id) {
         delete[] reinterpret_cast<uint8_t *>(data[id]);
-        std::memcpy(buffer->data, &rets[id], sizeof(uint64_t));
+        std::memcpy(buffer->data, &sizes[id], sizeof(uint64_t));
       });
       break;
     }
