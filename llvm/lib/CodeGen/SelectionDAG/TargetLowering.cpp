@@ -5704,24 +5704,25 @@ TargetLowering::ParseConstraints(const DataLayout &DL,
 
 /// Return a number indicating our preference for chosing a type of constraint
 /// over another, for the purpose of sorting them. Immediates are almost always
-/// preferrable (when they can be emitted).
+/// preferrable (when they can be emitted). A higher return value means a
+/// stronger preference for one constraint type relative to another.
 /// FIXME: We should prefer registers over memory but doing so may lead to
 /// unrecoverable register exhaustion later.
 /// https://github.com/llvm/llvm-project/issues/20571
 static unsigned getConstraintPiority(TargetLowering::ConstraintType CT) {
   switch (CT) {
-  case TargetLowering::C_Unknown:
-    return 0;
   case TargetLowering::C_Immediate:
   case TargetLowering::C_Other:
     return 4;
-  case TargetLowering::C_Register:
-    return 1;
-  case TargetLowering::C_RegisterClass:
-    return 2;
   case TargetLowering::C_Memory:
   case TargetLowering::C_Address:
     return 3;
+  case TargetLowering::C_RegisterClass:
+    return 2;
+  case TargetLowering::C_Register:
+    return 1;
+  case TargetLowering::C_Unknown:
+    return 0;
   }
   llvm_unreachable("Invalid constraint type");
 }
