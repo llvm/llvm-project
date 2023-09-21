@@ -263,9 +263,9 @@ define void @offset_legal_for_add_imm(ptr %p) {
 ;
 ; CHECK-SPLIT-LABEL: offset_legal_for_add_imm:
 ; CHECK-SPLIT:       ; %bb.0:
-; CHECK-SPLIT-NEXT:    str xzr, [x0, #3200]
-; CHECK-SPLIT-NEXT:    str xzr, [x0, #3208]
-; CHECK-SPLIT-NEXT:    str xzr, [x0, #3216]
+; CHECK-SPLIT-NEXT:    add x8, x0, #3200
+; CHECK-SPLIT-NEXT:    stp xzr, xzr, [x8]
+; CHECK-SPLIT-NEXT:    str xzr, [x8, #16]
 ; CHECK-SPLIT-NEXT:    ret
   %bigoffset = getelementptr i64, ptr %p, i64 400
   store i64 0, ptr %bigoffset
@@ -336,10 +336,10 @@ define void @offset_illegal_for_add_imm_4_stores(ptr %p) {
 ;
 ; CHECK-SPLIT-LABEL: offset_illegal_for_add_imm_4_stores:
 ; CHECK-SPLIT:       ; %bb.0:
-; CHECK-SPLIT-NEXT:    str xzr, [x0, #8000]
-; CHECK-SPLIT-NEXT:    str xzr, [x0, #8008]
-; CHECK-SPLIT-NEXT:    str xzr, [x0, #8016]
-; CHECK-SPLIT-NEXT:    str xzr, [x0, #8024]
+; CHECK-SPLIT-NEXT:    mov w8, #8000 ; =0x1f40
+; CHECK-SPLIT-NEXT:    add x8, x0, x8
+; CHECK-SPLIT-NEXT:    stp xzr, xzr, [x8]
+; CHECK-SPLIT-NEXT:    stp xzr, xzr, [x8, #16]
 ; CHECK-SPLIT-NEXT:    ret
   %bigoffset = getelementptr i64, ptr %p, i64 1000
   store i64 0, ptr %bigoffset
