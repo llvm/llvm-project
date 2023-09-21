@@ -255,7 +255,8 @@ yieldTiledValues(RewriterBase &rewriter, ArrayRef<Value> initValues,
   for (auto tiledOp : tilingResult.tiledOps) {
     if (auto dstOp = dyn_cast<DestinationStyleOpInterface>(tiledOp)) {
       auto innerMostLoop = loops.back();
-      SmallVector<Value> tiledOpDestinationTensors = dstOp.getDpsInitOperands();
+      SmallVector<Value> tiledOpDestinationTensors =
+          llvm::to_vector(dstOp.getDpsInits());
       updateDestinationOperandsForTiledOp(rewriter, tiledOpDestinationTensors,
                                           innerMostLoop.getRegionIterArgs());
     }
@@ -447,7 +448,7 @@ mlir::scf::tileReductionUsingScf(RewriterBase &b,
 
   auto dstOp = cast<DestinationStyleOpInterface>(parallelOp);
   auto innerMostLoop = loops.back();
-  SmallVector<Value> destinationTensors = dstOp.getDpsInitOperands();
+  SmallVector<Value> destinationTensors = llvm::to_vector(dstOp.getDpsInits());
   assert(destinationTensors.size() ==
              innerMostLoop.getRegionIterArgs().size() &&
          "unexpected number of outputs");
