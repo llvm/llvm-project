@@ -1183,6 +1183,10 @@ def fgpu_inline_threshold_EQ : Joined<["-"], "fgpu-inline-threshold=">,
 def fgpu_sanitize : Flag<["-"], "fgpu-sanitize">, Group<f_Group>,
   HelpText<"Enable sanitizer for supported offloading devices">;
 def fno_gpu_sanitize : Flag<["-"], "fno-gpu-sanitize">, Group<f_Group>;
+
+def offload_compress : Flag<["--"], "offload-compress">,
+  HelpText<"Compress offload device binaries (HIP only)">;
+def no_offload_compress : Flag<["--"], "no-offload-compress">;
 }
 
 // CUDA options
