@@ -311,6 +311,9 @@ static LogicalResult defineDeclaredSymbols(Block &block, ModuleOp definitions) {
   auto readOnlyName =
       StringAttr::get(&ctx, transform::TransformDialect::kArgReadOnlyAttrName);
 
+  // Collect symbols missing in the block.
+  SmallVector<SymbolOpInterface> missingSymbols;
+  LLVM_DEBUG(DBGS() << "searching block for missing symbols:\n");
   for (Operation &op : llvm::make_early_inc_range(block)) {
     LLVM_DEBUG(DBGS() << op << "\n");
     auto symbol = dyn_cast<SymbolOpInterface>(op);
@@ -318,25 +321,33 @@ static LogicalResult defineDeclaredSymbols(Block &block, ModuleOp definitions) {
       continue;
     if (symbol->getNumRegions() == 1 && !symbol->getRegion(0).empty())
       continue;
+    LLVM_DEBUG(DBGS() << "  -> symbol missing\n");
+    missingSymbols.push_back(symbol);
+  }
 
-    LLVM_DEBUG(DBGS() << "looking for definition of symbol "
-                      << symbol.getNameAttr() << ":");
-    SymbolTable symbolTable(definitions);
-    Operation *externalSymbol = symbolTable.lookup(symbol.getNameAttr());
+  // Resolve missing symbols until they are all resolved.
+  while (!missingSymbols.empty()) {
+    SymbolOpInterface symbol = missingSymbols.pop_back_val();
+    LLVM_DEBUG(DBGS() << "looking for definition of symbol @"
+                      << symbol.getNameAttr().getValue() << ": ");
+    SymbolTable definitionsSymbolTable(definitions);
+    Operation *externalSymbol =
+        definitionsSymbolTable.lookup(symbol.getNameAttr());
     if (!externalSymbol || externalSymbol->getNumRegions() != 1 ||
         externalSymbol->getRegion(0).empty()) {
       LLVM_DEBUG(llvm::dbgs() << "not found\n");
       continue;
     }
 
-    auto symbolFunc = dyn_cast<FunctionOpInterface>(op);
+    auto symbolFunc = dyn_cast<FunctionOpInterface>(symbol.getOperation());
     auto externalSymbolFunc = dyn_cast<FunctionOpInterface>(externalSymbol);
     if (!symbolFunc || !externalSymbolFunc) {
       LLVM_DEBUG(llvm::dbgs() << "cannot compare types\n");
       continue;
     }
 
-    LLVM_DEBUG(llvm::dbgs() << "found @" << externalSymbol << "\n");
+    LLVM_DEBUG(llvm::dbgs() << "found " << externalSymbol << " from "
+                            << externalSymbol->getLoc() << "\n");
     if (symbolFunc.getFunctionType() != externalSymbolFunc.getFunctionType()) {
       return symbolFunc.emitError()
              << "external definition has a mismatching signature ("
@@ -367,10 +378,53 @@ static LogicalResult defineDeclaredSymbols(Block &block, ModuleOp definitions) {
       }
     }
 
-    OpBuilder builder(&op);
-    builder.setInsertionPoint(&op);
-    builder.clone(*externalSymbol);
+    OpBuilder builder(symbol);
+    builder.setInsertionPoint(symbol);
+    Operation *newSymbol = builder.clone(*externalSymbol);
+    builder.setInsertionPoint(newSymbol);
     symbol->erase();
+
+    LLVM_DEBUG(DBGS() << "scanning definition of @"
+                      << externalSymbolFunc.getNameAttr().getValue()
+                      << " for symbol usages\n");
+    externalSymbolFunc.walk([&](CallOpInterface callOp) {
+      LLVM_DEBUG(DBGS() << "  found symbol usage in:\n" << callOp << "\n");
+      CallInterfaceCallable callable = callOp.getCallableForCallee();
+      if (!isa<SymbolRefAttr>(callable)) {
+        LLVM_DEBUG(DBGS() << "    not a 'SymbolRefAttr'\n");
+        return WalkResult::advance();
+      }
+
+      StringRef callableSymbol =
+          cast<SymbolRefAttr>(callable).getLeafReference();
+      LLVM_DEBUG(DBGS() << "    looking for @" << callableSymbol
+                        << " in definitions: ");
+
+      Operation *callableOp = definitionsSymbolTable.lookup(callableSymbol);
+      if (!isa<SymbolRefAttr>(callable)) {
+        LLVM_DEBUG(llvm::dbgs() << "not found\n");
+        return WalkResult::advance();
+      }
+      LLVM_DEBUG(llvm::dbgs() << "found " << callableOp << " from "
+                              << callableOp->getLoc() << "\n");
+
+      if (!block.getParent() || !block.getParent()->getParentOp()) {
+        LLVM_DEBUG(DBGS() << "could not get parent of provided block");
+        return WalkResult::advance();
+      }
+
+      SymbolTable targetSymbolTable(block.getParent()->getParentOp());
+      if (targetSymbolTable.lookup(callableSymbol)) {
+        LLVM_DEBUG(DBGS() << "    symbol @" << callableSymbol
+                          << " already present in target\n");
+        return WalkResult::advance();
+      }
+
+      LLVM_DEBUG(DBGS() << "    cloning op into target\n");
+      builder.clone(*callableOp);
+
+      return WalkResult::advance();
+    });
   }
 
   return success();
