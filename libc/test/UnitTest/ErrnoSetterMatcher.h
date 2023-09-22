@@ -21,11 +21,42 @@ namespace testing {
 
 namespace internal {
 
+enum class CompareAction { EQ = 0, GE, GT, LE, LT, NE };
+
+constexpr const char *CompareMessage[] = {
+    "equal to",     "greater than or equal to",
+    "greater than", "less than or equal to",
+    "less than",    "not equal to"};
+
+template <typename T> struct Comparator {
+  CompareAction cmp;
+  T expected;
+  bool compare(T actual) {
+    switch (cmp) {
+    case CompareAction::EQ:
+      return actual == expected;
+    case CompareAction::NE:
+      return actual != expected;
+    case CompareAction::GE:
+      return actual >= expected;
+    case CompareAction::GT:
+      return actual > expected;
+    case CompareAction::LE:
+      return actual <= expected;
+    case CompareAction::LT:
+      return actual < expected;
+    }
+    __builtin_unreachable();
+  }
+
+  const char *str() { return CompareMessage[static_cast<int>(cmp)]; }
+};
+
 template <typename T> class ErrnoSetterMatcher : public Matcher<T> {
-  T ExpectedReturn;
-  T ActualReturn;
-  int ExpectedErrno;
-  int ActualErrno;
+  Comparator<T> return_cmp;
+  Comparator<int> errno_cmp;
+  T actual_return;
+  int actual_errno;
 
   // Even though this is a errno matcher primarily, it has to cater to platforms
   // which do not have an errno. This predicate checks if errno matching is to
@@ -39,38 +70,46 @@ template <typename T> class ErrnoSetterMatcher : public Matcher<T> {
   }
 
 public:
-  ErrnoSetterMatcher(T ExpectedReturn, int ExpectedErrno)
-      : ExpectedReturn(ExpectedReturn), ExpectedErrno(ExpectedErrno) {}
+  ErrnoSetterMatcher(Comparator<T> rcmp) : return_cmp(rcmp) {}
+  ErrnoSetterMatcher(Comparator<T> rcmp, Comparator<int> ecmp)
+      : return_cmp(rcmp), errno_cmp(ecmp) {}
+
+  ErrnoSetterMatcher<T> with_errno(Comparator<int> ecmp) {
+    errno_cmp = ecmp;
+    return *this;
+  }
 
   void explainError() override {
-    if (ActualReturn != ExpectedReturn) {
+    if (!return_cmp.compare(actual_return)) {
       if constexpr (cpp::is_floating_point_v<T>) {
-        tlog << "Expected return value to be: "
-             << str(fputil::FPBits<T>(ExpectedReturn)) << '\n';
-        tlog << "                    But got: "
-             << str(fputil::FPBits<T>(ActualReturn)) << '\n';
+        tlog << "Expected return value to be " << return_cmp.str() << ": "
+             << str(fputil::FPBits<T>(return_cmp.expected)) << '\n'
+             << "                    But got: "
+             << str(fputil::FPBits<T>(actual_return)) << '\n';
       } else {
-        tlog << "Expected return value to be " << ExpectedReturn << " but got "
-             << ActualReturn << ".\n";
+        tlog << "Expected return value to be " << return_cmp.str() << " "
+             << return_cmp.expected << " but got " << actual_return << ".\n";
       }
     }
 
     if constexpr (!ignore_errno()) {
-      if (ActualErrno != ExpectedErrno) {
-        tlog << "Expected errno to be \"" << get_error_string(ExpectedErrno)
-             << "\" but got \"" << get_error_string(ActualErrno) << "\".\n";
+      if (!errno_cmp.compare(actual_errno)) {
+        tlog << "Expected errno to be " << errno_cmp.str() << " \""
+             << get_error_string(errno_cmp.expected) << "\" but got \""
+             << get_error_string(actual_errno) << "\".\n";
       }
     }
   }
 
-  bool match(T Got) {
-    ActualReturn = Got;
-    ActualErrno = libc_errno;
+  bool match(T got) {
+    actual_return = got;
+    actual_errno = libc_errno;
     libc_errno = 0;
     if constexpr (ignore_errno())
-      return Got == ExpectedReturn;
+      return return_cmp.compare(actual_return);
     else
-      return Got == ExpectedReturn && ActualErrno == ExpectedErrno;
+      return return_cmp.compare(actual_return) &&
+             errno_cmp.compare(actual_errno);
   }
 };
 
@@ -78,16 +117,48 @@ public:
 
 namespace ErrnoSetterMatcher {
 
+template <typename T> internal::Comparator<T> LT(T val) {
+  return internal::Comparator<T>{internal::CompareAction::LT, val};
+}
+
+template <typename T> internal::Comparator<T> LE(T val) {
+  return internal::Comparator<T>{internal::CompareAction::LE, val};
+}
+
+template <typename T> internal::Comparator<T> GT(T val) {
+  return internal::Comparator<T>{internal::CompareAction::GT, val};
+}
+
+template <typename T> internal::Comparator<T> GE(T val) {
+  return internal::Comparator<T>{internal::CompareAction::GE, val};
+}
+
+template <typename T> internal::Comparator<T> EQ(T val) {
+  return internal::Comparator<T>{internal::CompareAction::EQ, val};
+}
+
+template <typename T> internal::Comparator<T> NE(T val) {
+  return internal::Comparator<T>{internal::CompareAction::NE, val};
+}
+
 template <typename RetT = int>
 static internal::ErrnoSetterMatcher<RetT> Succeeds(RetT ExpectedReturn = 0,
                                                    int ExpectedErrno = 0) {
-  return {ExpectedReturn, ExpectedErrno};
+  return internal::ErrnoSetterMatcher<RetT>(EQ(ExpectedReturn),
+                                            EQ(ExpectedErrno));
 }
 
 template <typename RetT = int>
 static internal::ErrnoSetterMatcher<RetT> Fails(int ExpectedErrno,
                                                 RetT ExpectedReturn = -1) {
-  return {ExpectedReturn, ExpectedErrno};
+  return internal::ErrnoSetterMatcher<RetT>(EQ(ExpectedReturn),
+                                            EQ(ExpectedErrno));
+}
+
+template <typename RetT>
+static internal::ErrnoSetterMatcher<RetT>
+returns(internal::Comparator<RetT> cmp) {
+  return internal::ErrnoSetterMatcher<RetT>(cmp);
 }
 
 } // namespace ErrnoSetterMatcher
