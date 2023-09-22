@@ -109,7 +109,7 @@ def CIR_StructType : CIR_Type<"Struct", "struct",
   let parameters = (ins
     ArrayRefParameter<"mlir::Type", "members">:$members,
     "mlir::StringAttr":$name,
-    "bool":$body,
+    "bool":$incomplete,
     "bool":$packed,
     "mlir::cir::StructType::RecordKind":$kind,
     "std::optional<ASTRecordDeclInterface>":$ast
@@ -134,7 +134,8 @@ def CIR_StructType : CIR_Type<"Struct", "struct",
   public:
     void dropAst();
     size_t getNumElements() const { return getMembers().size(); }
-    bool isOpaque() const { return !getBody(); }
+    bool isIncomplete() const { return getIncomplete(); }
+    bool isComplete() const { return !getIncomplete(); }
     bool isPadded(const ::mlir::DataLayout &dataLayout) const;
 
     std::string getPrefixedName() {

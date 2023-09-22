@@ -609,7 +609,7 @@ CIRGenTypes::computeRecordLayout(const RecordDecl *D,
       CIRRecordLowering baseBuilder(*this, D, /*Packed=*/builder.isPacked);
       auto baseIdentifier = getRecordTypeName(D, ".base");
       *BaseTy = Builder.getStructTy(baseBuilder.fieldTypes, baseIdentifier,
-                                    /*body=*/true, /*packed=*/false, D);
+                                    /*incomplete=*/false, /*packed=*/false, D);
       // TODO(cir): add something like addRecordTypeName
 
       // BaseTy and Ty must agree on their packedness for getCIRFieldNo to work
@@ -623,7 +623,7 @@ CIRGenTypes::computeRecordLayout(const RecordDecl *D,
   // signifies that the type is no longer opaque and record layout is complete,
   // but we may need to recursively layout D while laying D out as a base type.
   *Ty = Builder.getStructTy(builder.fieldTypes, getRecordTypeName(D, ""),
-                            /*body=*/true, /*packed=*/false, D);
+                            /*incomplete=*/false, /*packed=*/false, D);
 
   auto RL = std::make_unique<CIRGenRecordLayout>(
       Ty ? *Ty : mlir::cir::StructType{},
