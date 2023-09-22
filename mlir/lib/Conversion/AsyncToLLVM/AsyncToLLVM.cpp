@@ -421,7 +421,7 @@ public:
     // Constants for initializing coroutine frame.
     auto constZero =
         rewriter.create<LLVM::ConstantOp>(loc, rewriter.getI32Type(), 0);
-    auto nullPtr = rewriter.create<LLVM::NullOp>(loc, ptrType);
+    auto nullPtr = rewriter.create<LLVM::ZeroOp>(loc, ptrType);
 
     // Get coroutine id: @llvm.coro.id.
     rewriter.replaceOpWithNewOp<LLVM::CoroIdOp>(
@@ -677,7 +677,7 @@ public:
 
         // %Size = getelementptr %T* null, int 1
         // %SizeI = ptrtoint %T* %Size to i64
-        auto nullPtr = rewriter.create<LLVM::NullOp>(loc, storagePtrType);
+        auto nullPtr = rewriter.create<LLVM::ZeroOp>(loc, storagePtrType);
         auto gep =
             rewriter.create<LLVM::GEPOp>(loc, storagePtrType, storedType,
                                          nullPtr, ArrayRef<LLVM::GEPArg>{1});
