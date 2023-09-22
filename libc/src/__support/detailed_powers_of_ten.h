@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LIBC_SRC_SUPPORT_DETAILED_POWERS_OF_TEN_H
-#define LIBC_SRC_SUPPORT_DETAILED_POWERS_OF_TEN_H
+#ifndef LLVM_LIBC_SRC___SUPPORT_DETAILED_POWERS_OF_TEN_H
+#define LLVM_LIBC_SRC___SUPPORT_DETAILED_POWERS_OF_TEN_H
 
 #include "src/__support/common.h"
 
@@ -735,4 +735,4 @@ static constexpr uint64_t DETAILED_POWERS_OF_TEN[696][2] = {
 } // namespace internal
 } // namespace __llvm_libc
 
-#endif // LIBC_SRC_SUPPORT_DETAILED_POWERS_OF_TEN_H
+#endif // LLVM_LIBC_SRC___SUPPORT_DETAILED_POWERS_OF_TEN_H

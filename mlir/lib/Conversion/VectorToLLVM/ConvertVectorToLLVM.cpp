@@ -8,6 +8,7 @@
 
 #include "mlir/Conversion/VectorToLLVM/ConvertVectorToLLVM.h"
 
+#include "mlir/Conversion/ArithCommon/AttrToLLVMConverter.h"
 #include "mlir/Conversion/LLVMCommon/TypeConverter.h"
 #include "mlir/Conversion/LLVMCommon/VectorPattern.h"
 #include "mlir/Dialect/Arith/IR/Arith.h"
@@ -592,11 +593,11 @@ struct VectorToScalarMapper<LLVM::vector_reduce_fmin> {
 } // namespace
 
 template <class LLVMRedIntrinOp>
-static Value
-createFPReductionComparisonOpLowering(ConversionPatternRewriter &rewriter,
-                                      Location loc, Type llvmType,
-                                      Value vectorOperand, Value accumulator) {
-  Value result = rewriter.create<LLVMRedIntrinOp>(loc, llvmType, vectorOperand);
+static Value createFPReductionComparisonOpLowering(
+    ConversionPatternRewriter &rewriter, Location loc, Type llvmType,
+    Value vectorOperand, Value accumulator, LLVM::FastmathFlagsAttr fmf) {
+  Value result =
+      rewriter.create<LLVMRedIntrinOp>(loc, llvmType, vectorOperand, fmf);
 
   if (accumulator) {
     result =
@@ -641,25 +642,39 @@ static Value createMaskNeutralValue(ConversionPatternRewriter &rewriter,
 /// `fmaximum`/`fminimum`.
 /// More information: https://github.com/llvm/llvm-project/issues/64940
 template <class LLVMRedIntrinOp, class MaskNeutral>
-static Value lowerMaskedReductionWithRegular(
-    ConversionPatternRewriter &rewriter, Location loc, Type llvmType,
-    Value vectorOperand, Value accumulator, Value mask) {
+static Value
+lowerMaskedReductionWithRegular(ConversionPatternRewriter &rewriter,
+                                Location loc, Type llvmType,
+                                Value vectorOperand, Value accumulator,
+                                Value mask, LLVM::FastmathFlagsAttr fmf) {
   const Value vectorMaskNeutral = createMaskNeutralValue<MaskNeutral>(
       rewriter, loc, llvmType, vectorOperand.getType());
   const Value selectedVectorByMask = rewriter.create<LLVM::SelectOp>(
       loc, mask, vectorOperand, vectorMaskNeutral);
   return createFPReductionComparisonOpLowering<LLVMRedIntrinOp>(
-      rewriter, loc, llvmType, selectedVectorByMask, accumulator);
+      rewriter, loc, llvmType, selectedVectorByMask, accumulator, fmf);
 }
 
-/// Overloaded methods to lower a reduction to an llvm instrinsic that requires
-/// a start value. This start value format spans across fp reductions without
-/// mask and all the masked reduction intrinsics.
+template <class LLVMRedIntrinOp, class ReductionNeutral>
+static Value
+lowerReductionWithStartValue(ConversionPatternRewriter &rewriter, Location loc,
+                             Type llvmType, Value vectorOperand,
+                             Value accumulator, LLVM::FastmathFlagsAttr fmf) {
+  accumulator = getOrCreateAccumulator<ReductionNeutral>(rewriter, loc,
+                                                         llvmType, accumulator);
+  return rewriter.create<LLVMRedIntrinOp>(loc, llvmType,
+                                          /*startValue=*/accumulator,
+                                          vectorOperand, fmf);
+}
+
+/// Overloaded methods to lower a *predicated* reduction to an llvm instrinsic
+/// that requires a start value. This start value format spans across fp
+/// reductions without mask and all the masked reduction intrinsics.
 template <class LLVMVPRedIntrinOp, class ReductionNeutral>
-static Value lowerReductionWithStartValue(ConversionPatternRewriter &rewriter,
-                                          Location loc, Type llvmType,
-                                          Value vectorOperand,
-                                          Value accumulator) {
+static Value
+lowerPredicatedReductionWithStartValue(ConversionPatternRewriter &rewriter,
+                                       Location loc, Type llvmType,
+                                       Value vectorOperand, Value accumulator) {
   accumulator = getOrCreateAccumulator<ReductionNeutral>(rewriter, loc,
                                                          llvmType, accumulator);
   return rewriter.create<LLVMVPRedIntrinOp>(loc, llvmType,
@@ -668,22 +683,9 @@ static Value lowerReductionWithStartValue(ConversionPatternRewriter &rewriter,
 }
 
 template <class LLVMVPRedIntrinOp, class ReductionNeutral>
-static Value
-lowerReductionWithStartValue(ConversionPatternRewriter &rewriter, Location loc,
-                             Type llvmType, Value vectorOperand,
-                             Value accumulator, bool reassociateFPReds) {
-  accumulator = getOrCreateAccumulator<ReductionNeutral>(rewriter, loc,
-                                                         llvmType, accumulator);
-  return rewriter.create<LLVMVPRedIntrinOp>(loc, llvmType,
-                                            /*startValue=*/accumulator,
-                                            vectorOperand, reassociateFPReds);
-}
-
-template <class LLVMVPRedIntrinOp, class ReductionNeutral>
-static Value lowerReductionWithStartValue(ConversionPatternRewriter &rewriter,
-                                          Location loc, Type llvmType,
-                                          Value vectorOperand,
-                                          Value accumulator, Value mask) {
+static Value lowerPredicatedReductionWithStartValue(
+    ConversionPatternRewriter &rewriter, Location loc, Type llvmType,
+    Value vectorOperand, Value accumulator, Value mask) {
   accumulator = getOrCreateAccumulator<ReductionNeutral>(rewriter, loc,
                                                          llvmType, accumulator);
   Value vectorLength =
@@ -693,35 +695,19 @@ static Value lowerReductionWithStartValue(ConversionPatternRewriter &rewriter,
                                             vectorOperand, mask, vectorLength);
 }
 
-template <class LLVMVPRedIntrinOp, class ReductionNeutral>
-static Value lowerReductionWithStartValue(ConversionPatternRewriter &rewriter,
-                                          Location loc, Type llvmType,
-                                          Value vectorOperand,
-                                          Value accumulator, Value mask,
-                                          bool reassociateFPReds) {
-  accumulator = getOrCreateAccumulator<ReductionNeutral>(rewriter, loc,
-                                                         llvmType, accumulator);
-  Value vectorLength =
-      createVectorLengthValue(rewriter, loc, vectorOperand.getType());
-  return rewriter.create<LLVMVPRedIntrinOp>(loc, llvmType,
-                                            /*startValue=*/accumulator,
-                                            vectorOperand, mask, vectorLength,
-                                            reassociateFPReds);
-}
-
 template <class LLVMIntVPRedIntrinOp, class IntReductionNeutral,
           class LLVMFPVPRedIntrinOp, class FPReductionNeutral>
-static Value lowerReductionWithStartValue(ConversionPatternRewriter &rewriter,
-                                          Location loc, Type llvmType,
-                                          Value vectorOperand,
-                                          Value accumulator, Value mask) {
+static Value lowerPredicatedReductionWithStartValue(
+    ConversionPatternRewriter &rewriter, Location loc, Type llvmType,
+    Value vectorOperand, Value accumulator, Value mask) {
   if (llvmType.isIntOrIndex())
-    return lowerReductionWithStartValue<LLVMIntVPRedIntrinOp,
-                                        IntReductionNeutral>(
+    return lowerPredicatedReductionWithStartValue<LLVMIntVPRedIntrinOp,
+                                                  IntReductionNeutral>(
         rewriter, loc, llvmType, vectorOperand, accumulator, mask);
 
   // FP dispatch.
-  return lowerReductionWithStartValue<LLVMFPVPRedIntrinOp, FPReductionNeutral>(
+  return lowerPredicatedReductionWithStartValue<LLVMFPVPRedIntrinOp,
+                                                FPReductionNeutral>(
       rewriter, loc, llvmType, vectorOperand, accumulator, mask);
 }
 
@@ -809,30 +795,39 @@ public:
     if (!isa<FloatType>(eltType))
       return failure();
 
+    arith::FastMathFlagsAttr fMFAttr = reductionOp.getFastMathFlagsAttr();
+    LLVM::FastmathFlagsAttr fmf = LLVM::FastmathFlagsAttr::get(
+        reductionOp.getContext(),
+        convertArithFastMathFlagsToLLVM(fMFAttr.getValue()));
+    fmf = LLVM::FastmathFlagsAttr::get(
+        reductionOp.getContext(),
+        fmf.getValue() | (reassociateFPReductions ? LLVM::FastmathFlags::reassoc
+                                                  : LLVM::FastmathFlags::none));
+
     // Floating-point reductions: add/mul/min/max
     Value result;
     if (kind == vector::CombiningKind::ADD) {
       result = lowerReductionWithStartValue<LLVM::vector_reduce_fadd,
                                             ReductionNeutralZero>(
-          rewriter, loc, llvmType, operand, acc, reassociateFPReductions);
+          rewriter, loc, llvmType, operand, acc, fmf);
     } else if (kind == vector::CombiningKind::MUL) {
       result = lowerReductionWithStartValue<LLVM::vector_reduce_fmul,
                                             ReductionNeutralFPOne>(
-          rewriter, loc, llvmType, operand, acc, reassociateFPReductions);
+          rewriter, loc, llvmType, operand, acc, fmf);
     } else if (kind == vector::CombiningKind::MINIMUMF) {
       result =
           createFPReductionComparisonOpLowering<LLVM::vector_reduce_fminimum>(
-              rewriter, loc, llvmType, operand, acc);
+              rewriter, loc, llvmType, operand, acc, fmf);
     } else if (kind == vector::CombiningKind::MAXIMUMF) {
       result =
           createFPReductionComparisonOpLowering<LLVM::vector_reduce_fmaximum>(
-              rewriter, loc, llvmType, operand, acc);
+              rewriter, loc, llvmType, operand, acc, fmf);
     } else if (kind == vector::CombiningKind::MINF) {
       result = createFPReductionComparisonOpLowering<LLVM::vector_reduce_fmin>(
-          rewriter, loc, llvmType, operand, acc);
+          rewriter, loc, llvmType, operand, acc, fmf);
     } else if (kind == vector::CombiningKind::MAXF) {
       result = createFPReductionComparisonOpLowering<LLVM::vector_reduce_fmax>(
-          rewriter, loc, llvmType, operand, acc);
+          rewriter, loc, llvmType, operand, acc, fmf);
     } else
       return failure();
 
@@ -893,74 +888,79 @@ public:
     Value acc = reductionOp.getAcc();
     Location loc = reductionOp.getLoc();
 
+    arith::FastMathFlagsAttr fMFAttr = reductionOp.getFastMathFlagsAttr();
+    LLVM::FastmathFlagsAttr fmf = LLVM::FastmathFlagsAttr::get(
+        reductionOp.getContext(),
+        convertArithFastMathFlagsToLLVM(fMFAttr.getValue()));
+
     Value result;
     switch (kind) {
     case vector::CombiningKind::ADD:
-      result = lowerReductionWithStartValue<
+      result = lowerPredicatedReductionWithStartValue<
           LLVM::VPReduceAddOp, ReductionNeutralZero, LLVM::VPReduceFAddOp,
           ReductionNeutralZero>(rewriter, loc, llvmType, operand, acc,
                                 maskOp.getMask());
       break;
     case vector::CombiningKind::MUL:
-      result = lowerReductionWithStartValue<
+      result = lowerPredicatedReductionWithStartValue<
           LLVM::VPReduceMulOp, ReductionNeutralIntOne, LLVM::VPReduceFMulOp,
           ReductionNeutralFPOne>(rewriter, loc, llvmType, operand, acc,
                                  maskOp.getMask());
       break;
     case vector::CombiningKind::MINUI:
-      result = lowerReductionWithStartValue<LLVM::VPReduceUMinOp,
-                                            ReductionNeutralUIntMax>(
+      result = lowerPredicatedReductionWithStartValue<LLVM::VPReduceUMinOp,
+                                                      ReductionNeutralUIntMax>(
           rewriter, loc, llvmType, operand, acc, maskOp.getMask());
       break;
     case vector::CombiningKind::MINSI:
-      result = lowerReductionWithStartValue<LLVM::VPReduceSMinOp,
-                                            ReductionNeutralSIntMax>(
+      result = lowerPredicatedReductionWithStartValue<LLVM::VPReduceSMinOp,
+                                                      ReductionNeutralSIntMax>(
           rewriter, loc, llvmType, operand, acc, maskOp.getMask());
       break;
     case vector::CombiningKind::MAXUI:
-      result = lowerReductionWithStartValue<LLVM::VPReduceUMaxOp,
-                                            ReductionNeutralUIntMin>(
+      result = lowerPredicatedReductionWithStartValue<LLVM::VPReduceUMaxOp,
+                                                      ReductionNeutralUIntMin>(
           rewriter, loc, llvmType, operand, acc, maskOp.getMask());
       break;
     case vector::CombiningKind::MAXSI:
-      result = lowerReductionWithStartValue<LLVM::VPReduceSMaxOp,
-                                            ReductionNeutralSIntMin>(
+      result = lowerPredicatedReductionWithStartValue<LLVM::VPReduceSMaxOp,
+                                                      ReductionNeutralSIntMin>(
           rewriter, loc, llvmType, operand, acc, maskOp.getMask());
       break;
     case vector::CombiningKind::AND:
-      result = lowerReductionWithStartValue<LLVM::VPReduceAndOp,
-                                            ReductionNeutralAllOnes>(
+      result = lowerPredicatedReductionWithStartValue<LLVM::VPReduceAndOp,
+                                                      ReductionNeutralAllOnes>(
           rewriter, loc, llvmType, operand, acc, maskOp.getMask());
       break;
     case vector::CombiningKind::OR:
-      result = lowerReductionWithStartValue<LLVM::VPReduceOrOp,
-                                            ReductionNeutralZero>(
+      result = lowerPredicatedReductionWithStartValue<LLVM::VPReduceOrOp,
+                                                      ReductionNeutralZero>(
           rewriter, loc, llvmType, operand, acc, maskOp.getMask());
       break;
     case vector::CombiningKind::XOR:
-      result = lowerReductionWithStartValue<LLVM::VPReduceXorOp,
-                                            ReductionNeutralZero>(
+      result = lowerPredicatedReductionWithStartValue<LLVM::VPReduceXorOp,
+                                                      ReductionNeutralZero>(
           rewriter, loc, llvmType, operand, acc, maskOp.getMask());
       break;
     case vector::CombiningKind::MINF:
-      result = lowerReductionWithStartValue<LLVM::VPReduceFMinOp,
-                                            ReductionNeutralFPMax>(
+      result = lowerPredicatedReductionWithStartValue<LLVM::VPReduceFMinOp,
+                                                      ReductionNeutralFPMax>(
           rewriter, loc, llvmType, operand, acc, maskOp.getMask());
       break;
     case vector::CombiningKind::MAXF:
-      result = lowerReductionWithStartValue<LLVM::VPReduceFMaxOp,
-                                            ReductionNeutralFPMin>(
+      result = lowerPredicatedReductionWithStartValue<LLVM::VPReduceFMaxOp,
+                                                      ReductionNeutralFPMin>(
           rewriter, loc, llvmType, operand, acc, maskOp.getMask());
       break;
     case CombiningKind::MAXIMUMF:
       result = lowerMaskedReductionWithRegular<LLVM::vector_reduce_fmaximum,
                                                MaskNeutralFMaximum>(
-          rewriter, loc, llvmType, operand, acc, maskOp.getMask());
+          rewriter, loc, llvmType, operand, acc, maskOp.getMask(), fmf);
       break;
     case CombiningKind::MINIMUMF:
       result = lowerMaskedReductionWithRegular<LLVM::vector_reduce_fminimum,
                                                MaskNeutralFMinimum>(
-          rewriter, loc, llvmType, operand, acc, maskOp.getMask());
+          rewriter, loc, llvmType, operand, acc, maskOp.getMask(), fmf);
       break;
     }
 

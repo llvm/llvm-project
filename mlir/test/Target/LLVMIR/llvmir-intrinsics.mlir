@@ -375,9 +375,9 @@ llvm.func @vector_reductions(%arg0: f32, %arg1: vector<8xf32>, %arg2: vector<8xi
   // CHECK: call float @llvm.vector.reduce.fmul.v8f32
   "llvm.intr.vector.reduce.fmul"(%arg0, %arg1) : (f32, vector<8xf32>) -> f32
   // CHECK: call reassoc float @llvm.vector.reduce.fadd.v8f32
-  "llvm.intr.vector.reduce.fadd"(%arg0, %arg1) {reassoc = true} : (f32, vector<8xf32>) -> f32
+  "llvm.intr.vector.reduce.fadd"(%arg0, %arg1) <{fastmathFlags = #llvm.fastmath<reassoc>}> : (f32, vector<8xf32>) -> f32
   // CHECK: call reassoc float @llvm.vector.reduce.fmul.v8f32
-  "llvm.intr.vector.reduce.fmul"(%arg0, %arg1) {reassoc = true} : (f32, vector<8xf32>) -> f32
+  "llvm.intr.vector.reduce.fmul"(%arg0, %arg1) <{fastmathFlags = #llvm.fastmath<reassoc>}> : (f32, vector<8xf32>) -> f32
   // CHECK: call i32 @llvm.vector.reduce.xor.v8i32
   "llvm.intr.vector.reduce.xor"(%arg2) : (vector<8xi32>) -> i32
   llvm.return

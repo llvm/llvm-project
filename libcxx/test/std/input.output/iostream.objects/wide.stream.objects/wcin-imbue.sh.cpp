@@ -6,16 +6,21 @@
 //
 //===----------------------------------------------------------------------===//
 
+// TODO: Investigate
+// UNSUPPORTED: LIBCXX-AIX-FIXME
+
+// TODO: Make it possible to run this test when cross-compiling and running via a SSH executor
+//       This is a workaround to silence issues reported in https://github.com/llvm/llvm-project/pull/66842#issuecomment-1728701639
+// XFAIL: buildhost=windows && target={{.+}}-linux-{{.+}}
+
 // <iostream>
 
 // wistream wcin;
 
 // UNSUPPORTED: no-wide-characters
 
-// UNSUPPORTED: executor-has-no-bash
-// FILE_DEPENDENCIES: ../send-stdin.sh
 // RUN: %{build}
-// RUN: %{exec} bash send-stdin.sh "%t.exe" "1234"
+// RUN: echo -n 1234 | %{exec} %t.exe
 
 #include <iostream>
 #include <cassert>

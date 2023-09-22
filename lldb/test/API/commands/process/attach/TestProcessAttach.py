@@ -128,3 +128,88 @@ class ProcessAttachTestCase(TestBase):
 
         # Call super's tearDown().
         TestBase.tearDown(self)
+
+    # This test is flakey on Linux & Windows.  The failure mode is
+    # that sometimes we miss the interrupt and never succeed in
+    # getting out of the attach wait.
+    @skipUnlessDarwin
+    def test_run_then_attach_wait_interrupt(self):
+        # Test that having run one process doesn't cause us to be unable
+        # to interrupt a subsequent attach attempt.
+        self.build()
+        exe = self.getBuildArtifact(exe_name)
+
+        target = lldbutil.run_to_breakpoint_make_target(self, exe_name, True)
+        launch_info = target.GetLaunchInfo()
+        launch_info.SetArguments(["q"], True)
+        error = lldb.SBError()
+        target.Launch(launch_info, error)
+        self.assertSuccess(error, "Launched a process")
+        self.assertState(target.process.state, lldb.eStateExited, "and it exited.") 
+        
+        # Okay now we've run a process, try to attach/wait to something
+        # and make sure that we can interrupt that.
+        
+        options = lldb.SBCommandInterpreterRunOptions()
+        options.SetPrintResults(True)
+        options.SetEchoCommands(False)
+
+        self.stdin_path = self.getBuildArtifact("stdin.txt")
+
+        with open(self.stdin_path, "w") as input_handle:
+            input_handle.write("process attach -w -n noone_would_use_this_name\nquit")
+
+        # Python will close the file descriptor if all references
+        # to the filehandle object lapse, so we need to keep one
+        # around.
+        self.filehandle = open(self.stdin_path, "r")
+        self.dbg.SetInputFileHandle(self.filehandle, False)
+
+        # No need to track the output
+        self.stdout_path = self.getBuildArtifact("stdout.txt")
+        self.out_filehandle = open(self.stdout_path, "w")
+        self.dbg.SetOutputFileHandle(self.out_filehandle, False)
+        self.dbg.SetErrorFileHandle(self.out_filehandle, False)
+
+        n_errors, quit_req, crashed = self.dbg.RunCommandInterpreter(
+            True, True, options, 0, False, False)
+        
+        while 1:
+            time.sleep(1)
+            if target.process.state == lldb.eStateAttaching:
+                break
+
+        self.dbg.DispatchInputInterrupt()
+        self.dbg.DispatchInputInterrupt()
+
+        # cycle waiting for the process state to change before trying
+        # to read the command output.  I don't want to spin forever.
+        counter = 0
+        got_exit = False
+        while counter < 20:
+            if target.process.state == lldb.eStateExited:
+                got_exit = True
+                break
+            counter += 1
+            time.sleep(1)
+
+        self.assertTrue(got_exit, "The process never switched to eStateExited")
+        # Even if the state has flipped, we still need to wait for the
+        # command to complete to see the result.  We don't have a way to
+        # synchronize on "command completed" right now, but sleeping just
+        # a bit should be enough, all that's left is passing this error
+        # result to the command, and printing it to the debugger output.
+        time.sleep(1)
+
+        self.out_filehandle.flush()
+        reader = open(self.stdout_path, "r")
+        results = reader.readlines()
+        found_result = False
+        for line in results:
+            if "Cancelled async attach" in line:
+                found_result = True
+                break
+        if not found_result:
+            print(f"Results: {results}")
+
+        self.assertTrue(found_result, "Found async error in results")

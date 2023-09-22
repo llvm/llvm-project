@@ -116,6 +116,31 @@ def LoopLikeOpInterface : OpInterface<"LoopLikeOpInterface"> {
         return std::nullopt;
       }]
     >,
+    InterfaceMethod<[{
+        Return the "init" operands that are used as initialization values for
+        the region "iter_args" of this loop.
+      }],
+      /*retTy=*/"::mlir::OperandRange",
+      /*methodName=*/"getInits",
+      /*args=*/(ins),
+      /*methodBody=*/"",
+      /*defaultImplementation=*/[{
+        return ::mlir::OperandRange($_op->operand_end(), $_op->operand_end());
+      }]
+    >,
+    InterfaceMethod<[{
+        Return the region "iter_args" (block arguments) that correspond to the
+        "init" operands. If the op has multiple regions, return the
+        corresponding block arguments of the entry region.
+      }],
+      /*retTy=*/"::mlir::Block::BlockArgListType",
+      /*methodName=*/"getRegionIterArgs",
+      /*args=*/(ins),
+      /*methodBody=*/"",
+      /*defaultImplementation=*/[{
+        return ::mlir::Block::BlockArgListType();
+      }]
+    >,
   ];
 
   let extraClassDeclaration = [{

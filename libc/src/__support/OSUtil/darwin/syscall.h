@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_LIBC_SRC_SUPPORT_OSUTIL_DARWIN_SYSCALL_H
-#define LLVM_LIBC_SRC_SUPPORT_OSUTIL_DARWIN_SYSCALL_H
+#ifndef LLVM_LIBC_SRC___SUPPORT_OSUTIL_DARWIN_SYSCALL_H
+#define LLVM_LIBC_SRC___SUPPORT_OSUTIL_DARWIN_SYSCALL_H
 
 #include "src/__support/CPP/bit.h"
 #include "src/__support/common.h"
@@ -29,4 +29,4 @@ LIBC_INLINE R syscall_impl(long __number, Ts... ts) {
 
 } // namespace __llvm_libc
 
-#endif // LLVM_LIBC_SRC_SUPPORT_OSUTIL_DARWIN_SYSCALL_H
+#endif // LLVM_LIBC_SRC___SUPPORT_OSUTIL_DARWIN_SYSCALL_H

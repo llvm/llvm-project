@@ -1,5 +1,5 @@
 RUN: printf '\201rforpl\377' > %t.profraw
-RUN: printf '\11\0\0\0\0\0\0\0' >> %t.profraw
+RUN: printf '\10\0\0\0\0\0\0\0' >> %t.profraw
 // We should fail on this because the binary IDs is not a multiple of 8 bytes.
 RUN: printf '\77\0\0\0\0\0\0\0' >> %t.profraw
 RUN: printf '\0\0\0\0\0\0\0\0' >> %t.profraw

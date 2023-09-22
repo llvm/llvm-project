@@ -360,8 +360,8 @@ class MapCopyToThreadsOp:
         )
 
 
-class MaskedVectorizeOp:
-    """Specialization for MaskedVectorizeOp class."""
+class VectorizeOp:
+    """Specialization for VectorizeOp class."""
 
     def __init__(
         self,
@@ -730,8 +730,8 @@ class TileToForallOp:
         )
 
 
-class VectorizeOp:
-    """Specialization for VectorizeOp class."""
+class VectorizeChildrenAndApplyPatternsOp:
+    """Specialization for VectorizeChildrenAndApplyPatternsOp class."""
 
     def __init__(
         self,

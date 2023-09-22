@@ -131,8 +131,6 @@ public:
       M += sizeof(uint64_t); // The function hash
       M += sizeof(uint64_t); // The size of the Counts vector
       M += ProfRecord.Counts.size() * sizeof(uint64_t);
-      M += sizeof(uint64_t); // The size of the Bitmap vector
-      M += ProfRecord.BitmapBytes.size() * sizeof(uint64_t);
 
       // Value data
       M += ValueProfData::getSize(ProfileData.second);
@@ -160,10 +158,6 @@ public:
       LE.write<uint64_t>(ProfileData.first); // Function hash
       LE.write<uint64_t>(ProfRecord.Counts.size());
       for (uint64_t I : ProfRecord.Counts)
-        LE.write<uint64_t>(I);
-
-      LE.write<uint64_t>(ProfRecord.BitmapBytes.size());
-      for (uint64_t I : ProfRecord.BitmapBytes)
         LE.write<uint64_t>(I);
 
       // Write value data
@@ -385,8 +379,6 @@ bool InstrProfWriter::shouldEncodeData(const ProfilingData &PD) {
   for (const auto &Func : PD) {
     const InstrProfRecord &IPR = Func.second;
     if (llvm::any_of(IPR.Counts, [](uint64_t Count) { return Count > 0; }))
-      return true;
-    if (llvm::any_of(IPR.BitmapBytes, [](uint8_t Byte) { return Byte > 0; }))
       return true;
   }
   return false;
@@ -710,17 +702,6 @@ void InstrProfWriter::writeRecordInText(StringRef Name, uint64_t Hash,
   OS << "# Counter Values:\n";
   for (uint64_t Count : Func.Counts)
     OS << Count << "\n";
-
-  if (Func.BitmapBytes.size() > 0) {
-    OS << "# Num Bitmap Bytes:\n$" << Func.BitmapBytes.size() << "\n";
-    OS << "# Bitmap Byte Values:\n";
-    for (uint8_t Byte : Func.BitmapBytes) {
-      OS << "0x";
-      OS.write_hex(Byte);
-      OS << "\n";
-    }
-    OS << "\n";
-  }
 
   uint32_t NumValueKinds = Func.getNumValueKinds();
   if (!NumValueKinds) {

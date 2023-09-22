@@ -70,7 +70,7 @@ entry:
     i64 4, label %sw.bb4
   ]
 sw.bb0:
-  call void asm sideeffect "nop", ""()
+  call void asm sideeffect "", ""()
   ret void
 sw.bb1:
   call void asm sideeffect "", ""()

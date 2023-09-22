@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_LIBC_SRC_UNISTD_TCFLOW_H
-#define LLVM_LIBC_SRC_UNISTD_TCFLOW_H
+#ifndef LLVM_LIBC_SRC_TERMIOS_TCFLOW_H
+#define LLVM_LIBC_SRC_TERMIOS_TCFLOW_H
 
 #include <termios.h>
 
@@ -17,4 +17,4 @@ int tcflow(int fd, int action);
 
 } // namespace __llvm_libc
 
-#endif // LLVM_LIBC_SRC_UNISTD_TCFLOW_H
+#endif // LLVM_LIBC_SRC_TERMIOS_TCFLOW_H

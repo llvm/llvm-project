@@ -5,8 +5,8 @@
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
-#ifndef LLVM_LIBC_SRC_SUPPORT_CPP_UTILITY_INTEGER_SEQUENCE_H
-#define LLVM_LIBC_SRC_SUPPORT_CPP_UTILITY_INTEGER_SEQUENCE_H
+#ifndef LLVM_LIBC_SRC___SUPPORT_CPP_UTILITY_INTEGER_SEQUENCE_H
+#define LLVM_LIBC_SRC___SUPPORT_CPP_UTILITY_INTEGER_SEQUENCE_H
 
 #include "src/__support/CPP/type_traits/is_integral.h"
 
@@ -34,4 +34,4 @@ using make_integer_sequence =
 
 } // namespace __llvm_libc::cpp
 
-#endif // LLVM_LIBC_SRC_SUPPORT_CPP_UTILITY_INTEGER_SEQUENCE_H
+#endif // LLVM_LIBC_SRC___SUPPORT_CPP_UTILITY_INTEGER_SEQUENCE_H

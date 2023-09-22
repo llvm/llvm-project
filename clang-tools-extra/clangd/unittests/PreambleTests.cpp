@@ -892,9 +892,9 @@ TEST(PreamblePatch, PatchFileEntry) {
   }
   {
     auto AST = createPatchedAST(Code.code(), NewCode.code());
-    auto *FE =
+    auto FE =
         PreamblePatch::getPatchEntry(AST->tuPath(), AST->getSourceManager());
-    ASSERT_NE(FE, nullptr);
+    ASSERT_NE(FE, std::nullopt);
     EXPECT_THAT(FE->getName().str(),
                 testing::EndsWith(PreamblePatch::HeaderName.str()));
   }

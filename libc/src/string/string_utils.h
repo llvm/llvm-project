@@ -11,8 +11,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LIBC_SRC_STRING_STRING_UTILS_H
-#define LIBC_SRC_STRING_STRING_UTILS_H
+#ifndef LLVM_LIBC_SRC_STRING_STRING_UTILS_H
+#define LLVM_LIBC_SRC_STRING_STRING_UTILS_H
 
 #include "src/__support/CPP/bitset.h"
 #include "src/__support/macros/optimization.h" // LIBC_UNLIKELY
@@ -248,4 +248,4 @@ LIBC_INLINE constexpr static char *strrchr_implementation(const char *src,
 } // namespace internal
 } // namespace __llvm_libc
 
-#endif //  LIBC_SRC_STRING_STRING_UTILS_H
+#endif //  LLVM_LIBC_SRC_STRING_STRING_UTILS_H
