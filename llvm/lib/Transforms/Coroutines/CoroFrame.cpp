@@ -2879,10 +2879,9 @@ void coro::salvageDebugInfo(
 
   // Swift async arguments are described by an entry value of the ABI-defined
   // register containing the coroutine context.
-  // For the EntryPoint funclet, don't use EntryValues. This funclet can be
-  // inlined, which would remove the guarantee that this intrinsic targets an
-  // Argument.
-  if (IsSwiftAsyncArg && UseEntryValue && !Expr->isEntryValue())
+  // Entry values in variadic expressions are not supported.
+  if (IsSwiftAsyncArg && UseEntryValue && !Expr->isEntryValue() &&
+      Expr->isSingleLocationExpression())
     Expr = DIExpression::prepend(Expr, DIExpression::EntryValue);
 
   // If the coroutine frame is an Argument, store it in an alloca to improve
