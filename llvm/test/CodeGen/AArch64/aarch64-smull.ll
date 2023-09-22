@@ -1324,10 +1324,10 @@ define void @distribute(ptr %dst, ptr %src, i32 %mul) nounwind {
 ; CHECK-GI-LABEL: distribute:
 ; CHECK-GI:       // %bb.0: // %entry
 ; CHECK-GI-NEXT:    ldr q0, [x1]
-; CHECK-GI-NEXT:    dup v2.8b, w2
-; CHECK-GI-NEXT:    mov d1, v0.d[1]
-; CHECK-GI-NEXT:    uaddl v0.8h, v1.8b, v0.8b
-; CHECK-GI-NEXT:    ushll v1.8h, v2.8b, #0
+; CHECK-GI-NEXT:    dup v1.8b, w2
+; CHECK-GI-NEXT:    ushll v2.8h, v0.8b, #0
+; CHECK-GI-NEXT:    ushll v1.8h, v1.8b, #0
+; CHECK-GI-NEXT:    uaddw2 v0.8h, v2.8h, v0.16b
 ; CHECK-GI-NEXT:    mul v0.8h, v0.8h, v1.8h
 ; CHECK-GI-NEXT:    str q0, [x0]
 ; CHECK-GI-NEXT:    ret
