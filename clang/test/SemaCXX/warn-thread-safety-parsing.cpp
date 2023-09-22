@@ -1109,6 +1109,8 @@ void elr_function_args() EXCLUSIVE_LOCKS_REQUIRED(mu1, mu2);
 
 int elr_testfn(int y) EXCLUSIVE_LOCKS_REQUIRED(mu1);
 
+int EXCLUSIVE_LOCKS_REQUIRED(mu1) (*function_ptr)(int);
+
 int elr_testfn(int y) {
   int x EXCLUSIVE_LOCKS_REQUIRED(mu1) = y; // \
     // expected-warning {{'exclusive_locks_required' attribute only applies to functions}}
