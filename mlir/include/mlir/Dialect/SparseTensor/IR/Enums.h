@@ -398,13 +398,17 @@ static_assert((buildLevelType(LevelFormat::Dense,
                *buildLevelType(LevelFormat::Dense,
                                toPropertyBits(true, true)) ==
                    DimLevelType::Dense &&
-               *buildLevelType(LevelFormat::Compressed, true, true) ==
+               *buildLevelType(LevelFormat::Compressed,
+		               toPropertyBits(true, true)) ==
                    DimLevelType::Compressed &&
-               *buildLevelType(LevelFormat::Compressed, true, false) ==
+               *buildLevelType(LevelFormat::Compressed,
+		               toPropertyBits(true, false)) ==
                    DimLevelType::CompressedNu &&
-               *buildLevelType(LevelFormat::Compressed, false, true) ==
+               *buildLevelType(LevelFormat::Compressed,
+		               toPropertyBits(false, true)) ==
                    DimLevelType::CompressedNo &&
-               *buildLevelType(LevelFormat::Compressed, false, false) ==
+               *buildLevelType(LevelFormat::Compressed,
+		               toPropertyBits(false, false)) ==
                    DimLevelType::CompressedNuNo &&
                *buildLevelType(LevelFormat::Compressed,
                                toPropertyBits(true, true, true)) ==
@@ -421,13 +425,17 @@ static_assert((buildLevelType(LevelFormat::Dense,
                *buildLevelType(LevelFormat::Compressed,
                                toPropertyBits(true, true, false, true)) ==
                    DimLevelType::TwoOutOfFour &&
-               *buildLevelType(LevelFormat::Singleton, true, true) ==
+               *buildLevelType(LevelFormat::Singleton,
+			       toPropertyBits(true, true)) ==
                    DimLevelType::Singleton &&
-               *buildLevelType(LevelFormat::Singleton, true, false) ==
+               *buildLevelType(LevelFormat::Singleton,
+			       toPropertyBits(true, false)) ==
                    DimLevelType::SingletonNu &&
-               *buildLevelType(LevelFormat::Singleton, false, true) ==
+               *buildLevelType(LevelFormat::Singleton,
+			       toPropertyBits(false, true)) ==
                    DimLevelType::SingletonNo &&
-               *buildLevelType(LevelFormat::Singleton, false, false) ==
+               *buildLevelType(LevelFormat::Singleton,
+			       toPropertyBits(false, false)) ==
                    DimLevelType::SingletonNuNo),
               "buildLevelType conversion is broken");
 

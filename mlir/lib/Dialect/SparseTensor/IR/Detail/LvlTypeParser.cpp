@@ -52,7 +52,7 @@ FailureOr<uint16_t> LvlTypeParser::parseLvlType(AsmParser &parser) const {
   const auto loc = parser.getCurrentLocation();
   ERROR_IF(failed(parser.parseOptionalKeyword(&base)),
            "expected valid level format (e.g. dense, compressed or singleton)")
-  uint8_t properties = 0;
+  uint16_t properties = 0;
 
   ParseResult res = parser.parseCommaSeparatedList(
       mlir::OpAsmParser::Delimiter::OptionalParen,
