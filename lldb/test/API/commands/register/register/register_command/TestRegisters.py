@@ -665,6 +665,7 @@ class RegisterCommandsTestCase(TestBase):
         self.build()
         exe = self.getBuildArtifact("a.out")
         pid = self.spawnSubprocess(exe, ["wait_for_attach"]).pid
+        # Async so we can enter commands while the process is running.
         self.setAsync(True)
         self.runCmd("process attach --continue -p %d" % pid)
 
