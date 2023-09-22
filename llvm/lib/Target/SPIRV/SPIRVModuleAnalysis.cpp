@@ -526,7 +526,7 @@ void SPIRV::RequirementHandler::addAvailableCaps(const CapabilityList &ToAdd) {
 }
 
 void SPIRV::RequirementHandler::removeCapabilityIf(
-    const Capability::Capability ToRemove, 
+    const Capability::Capability ToRemove,
     const Capability::Capability IfPresent) {
   if (AvailableCaps.contains(IfPresent))
     AvailableCaps.erase(ToRemove);
@@ -910,7 +910,7 @@ void addInstrRequirements(const MachineInstr &MI,
   // If we require capability Shader, then we can remove the requirement for
   // the BitInstructions capability, since Shader is a superset capability
   // of BitInstructions.
-  Reqs.removeCapabilityIf(SPIRV::Capability::BitInstructions, 
+  Reqs.removeCapabilityIf(SPIRV::Capability::BitInstructions,
                           SPIRV::Capability::Shader);
 }
 
