@@ -1531,6 +1531,12 @@ bool ByteCodeExprGen<Emitter>::VisitOffsetOfExpr(const OffsetOfExpr *E) {
   return this->emitOffsetOf(T, E, E);
 }
 
+template <class Emitter>
+bool ByteCodeExprGen<Emitter>::VisitCXXScalarValueInitExpr(
+    const CXXScalarValueInitExpr *E) {
+  return this->visitZeroInitializer(E->getType(), E);
+}
+
 template <class Emitter> bool ByteCodeExprGen<Emitter>::discard(const Expr *E) {
   if (E->containsErrors())
     return false;
