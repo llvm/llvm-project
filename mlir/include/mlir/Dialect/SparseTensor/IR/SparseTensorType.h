@@ -45,7 +45,7 @@ namespace sparse_tensor {
 ///
 class SparseTensorType {
 public:
-  // We memoize `lvlRank`, `dimToLvl`, and `lvlToDim1 to avoid repeating
+  // We memoize `lvlRank`, `dimToLvl`, and `lvlToDim` to avoid repeating
   // the conditionals throughout the rest of the class.
   SparseTensorType(RankedTensorType rtp)
       : rtp(rtp), enc(getSparseTensorEncoding(rtp)),
