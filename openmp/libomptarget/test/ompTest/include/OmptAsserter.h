@@ -10,7 +10,8 @@
 #include <iostream>
 
 /// Base class for asserting on OMPT events
-struct OmptAsserter {
+class OmptAsserter {
+public:
   virtual void insert(omptest::OmptAssertEvent &&AE) {
     assert(false && "Base class 'insert' has undefined semantics.");
   }
@@ -22,8 +23,17 @@ struct OmptAsserter {
   }
 
   /// Implemented in subclasses to implement what should actually be done with
-  /// the notification
+  /// the notification.
   virtual void notifyImpl(omptest::OmptAssertEvent &&AE) = 0;
+
+  /// Control whether this asserter should be considered 'active'.
+  void setActive(bool Enabled) { Active = Enabled; }
+
+  /// Check if this asserter is considered 'active'.
+  bool isActive() { return Active; }
+
+private:
+  bool Active{true};
 };
 
 /// Class that can assert in a sequenced fashion, i.e., events hace to occur in
@@ -35,6 +45,10 @@ struct OmptSequencedAsserter : public OmptAsserter {
 
   /// Implements the asserter's logic
   virtual void notifyImpl(omptest::OmptAssertEvent &&AE) override {
+    // Ignore notifications while inactive
+    if (!isActive())
+      return;
+
     std::cout << "OmptSequencedAsserter::notifyImpl called w/ " << Events.size()
               << " Events to check.\nNext Check item: " << NextEvent
               << std::endl;

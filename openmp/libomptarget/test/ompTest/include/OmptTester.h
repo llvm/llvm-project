@@ -156,8 +156,12 @@ struct Runner {
 };
 
 /// ASSERT MACROS TO BE USED BY THE USER
-#define OMPT_SEQ_ASSERT(Event, ...)
 #define OMPT_EVENT_ASSERT(Event, ...)
+#define OMPT_EVENT_ASSERT_DISABLE() this->EventAsserter.setActive(false);
+#define OMPT_EVENT_ASSERT_ENABLE() this->EventAsserter.setActive(true);
+#define OMPT_SEQ_ASSERT(Event, ...)
+#define OMPT_SEQ_ASSERT_DISABLE() this->SequenceAsserter.setActive(false);
+#define OMPT_SEQ_ASSERT_ENABLE() this->SequenceAsserter.setActive(true);
 #define OMPT_SEQ_ASSERT_NOT(Event, ...)
 
 /// MACRO TO DEFINE A TESTSUITE + TESTCASE (like GoogleTest does)

@@ -36,6 +36,38 @@ OMPTTESTCASE(ManualSuite, ParallelFor) {
     arr[i] = i;
 }
 
+OMPTTESTCASE(ManualSuite, ParallelForActivation) {
+  /* The Test Body */
+  int arr[10] = {0};
+  SequenceAsserter.insert(omptest::OmptAssertEvent::ParallelBegin(
+      /*NumThreads=*/2, "User Parallel Begin"));
+  SequenceAsserter.insert(
+      omptest::OmptAssertEvent::ParallelEnd("User Parallel End"));
+
+  // The last sequence we want to observe does not contain
+  // another thread begin.
+  SequenceAsserter.insert(omptest::OmptAssertEvent::ParallelBegin(
+      /*NumThreads=*/2, "User Parallel Begin"));
+  SequenceAsserter.insert(
+      omptest::OmptAssertEvent::ParallelEnd("User Parallel End"));
+
+#pragma omp parallel for num_threads(2)
+  for (int i = 0; i < 10; ++i)
+    arr[i] = i;
+
+  OMPT_SEQ_ASSERT_DISABLE()
+
+#pragma omp parallel for num_threads(2)
+  for (int i = 0; i < 10; ++i)
+    arr[i] = i;
+
+  OMPT_SEQ_ASSERT_ENABLE()
+
+#pragma omp parallel for num_threads(2)
+  for (int i = 0; i < 10; ++i)
+    arr[i] = i;
+}
+
 int main(int argc, char **argv) {
   std::cout << "Starting" << std::endl;
 
