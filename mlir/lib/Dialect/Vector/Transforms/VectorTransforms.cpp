@@ -598,27 +598,34 @@ struct BubbleDownVectorBitCastForExtract
     unsigned expandRatio =
         castDstType.getNumElements() / castSrcType.getNumElements();
 
-    uint64_t index = extractOp.getPosition()[0];
+    auto getFirstIntValue = [](ArrayRef<OpFoldResult> values) -> uint64_t {
+      assert(values[0].is<Attribute>() && "Unexpected non-constant index");
+      return cast<IntegerAttr>(values[0].get<Attribute>()).getInt();
+    };
+
+    uint64_t index = getFirstIntValue(extractOp.getMixedPosition());
 
     // Get the single scalar (as a vector) in the source value that packs the
     // desired scalar. E.g. extract vector<1xf32> from vector<4xf32>
-    VectorType oneScalarType =
-        VectorType::get({1}, castSrcType.getElementType());
+    Location loc = extractOp.getLoc();
     Value packedValue = rewriter.create<vector::ExtractOp>(
-        extractOp.getLoc(), oneScalarType, castOp.getSource(),
-        index / expandRatio);
+        loc, castOp.getSource(), index / expandRatio);
+    Type packedVecType = VectorType::get(/*shape=*/{1}, packedValue.getType());
+    Value zero = rewriter.create<arith::ConstantOp>(
+        loc, packedVecType, rewriter.getZeroAttr(packedVecType));
+    packedValue = rewriter.create<vector::InsertOp>(loc, packedValue, zero,
+                                                    /*position=*/0);
 
     // Cast it to a vector with the desired scalar's type.
     // E.g. f32 -> vector<2xf16>
     VectorType packedType =
         VectorType::get({expandRatio}, castDstType.getElementType());
-    Value castedValue = rewriter.create<vector::BitCastOp>(
-        extractOp.getLoc(), packedType, packedValue);
+    Value castedValue =
+        rewriter.create<vector::BitCastOp>(loc, packedType, packedValue);
 
     // Finally extract the desired scalar.
-    rewriter.replaceOpWithNewOp<vector::ExtractOp>(
-        extractOp, extractOp.getType(), castedValue, index % expandRatio);
-
+    rewriter.replaceOpWithNewOp<vector::ExtractOp>(extractOp, castedValue,
+                                                   index % expandRatio);
     return success();
   }
 };

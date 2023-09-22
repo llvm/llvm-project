@@ -364,6 +364,8 @@ public:
     State.Observer = &Observer;
   }
 
+  GISelChangeObserver *getObserver() { return State.Observer; }
+
   void stopObservingChanges() { State.Observer = nullptr; }
 
   bool isObservingChanges() const { return State.Observer != nullptr; }
