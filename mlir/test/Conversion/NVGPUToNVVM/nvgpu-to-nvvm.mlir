@@ -672,6 +672,66 @@ func.func @create_wgmma_descriptor(%tensorMap : !tensorMap) -> !nvgpu.wgmma.desc
   func.return %descA : !nvgpu.wgmma.descriptor<tensor=memref<128x64xf16,3>>
 }
 
+// CHECK-LABEL: @warpgroup_mma_128_128_64(  
+// CHECK-SAME: %[[arg0:[a-zA-Z0-9_]+]]: !nvgpu.wgmma.descriptor<tensor = memref<128x64xf16, 3>>, %[[arg1:[a-zA-Z0-9_]+]]: !nvgpu.wgmma.descriptor<tensor = memref<64x128xf16, 3>>, %[[arg2:[a-zA-Z0-9_]+]]: !nvgpu.warpgroup.accumulator<fragmented = vector<64x128xf32>>, %[[arg3:[a-zA-Z0-9_]+]]: !nvgpu.warpgroup.accumulator<fragmented = vector<64x128xf32>>)
+func.func @warpgroup_mma_128_128_64(
+      %descA: !nvgpu.wgmma.descriptor<tensor = memref<128x64xf16, 3>>, 
+      %descB: !nvgpu.wgmma.descriptor<tensor = memref<64x128xf16, 3>>, 
+      %acc1: !nvgpu.warpgroup.accumulator< fragmented = vector<64x128xf32>>,
+      %acc2: !nvgpu.warpgroup.accumulator< fragmented = vector<64x128xf32>>) 
+{
+// CHECK: %[[S0:.+]] = builtin.unrealized_conversion_cast %[[arg0]] : !nvgpu.wgmma.descriptor<tensor = memref<128x64xf16, 3>> to i64
+// CHECK: %[[S1:.+]] = builtin.unrealized_conversion_cast %[[arg1]] : !nvgpu.wgmma.descriptor<tensor = memref<64x128xf16, 3>> to i64
+// CHECK: %[[S2:.+]] = builtin.unrealized_conversion_cast %[[arg2]] : !nvgpu.warpgroup.accumulator<fragmented = vector<64x128xf32>> to !llvm.struct<(f32, f32, f32, f32, f32, f32, f32, f32, f32, f32, f32, f32, f32, f32, f32, f32, f32, f32, f32, f32, f32, f32, f32, f32, f32, f32, f32, f32, f32, f32, f32, f32, f32, f32, f32, f32, f32, f32, f32, f32, f32, f32, f32, f32, f32, f32, f32, f32, f32, f32, f32, f32, f32, f32, f32, f32, f32, f32, f32, f32, f32, f32, f32, f32)>
+// CHECK: %[[S3:.+]] = builtin.unrealized_conversion_cast %[[arg3]] : !nvgpu.warpgroup.accumulator<fragmented = vector<64x128xf32>> to !llvm.struct<(f32, f32, f32, f32, f32, f32, f32, f32, f32, f32, f32, f32, f32, f32, f32, f32, f32, f32, f32, f32, f32, f32, f32, f32, f32, f32, f32, f32, f32, f32, f32, f32, f32, f32, f32, f32, f32, f32, f32, f32, f32, f32, f32, f32, f32, f32, f32, f32, f32, f32, f32, f32, f32, f32, f32, f32, f32, f32, f32, f32, f32, f32, f32, f32)>
+// CHECK: nvvm.wgmma.fence.aligned
+// CHECK: %[[S4:.+]] = nvvm.wgmma.mma_async %[[S0]], %[[S1]], <m = 64, n = 128, k = 16>, D[%[[S2]], <one>, <wrapped>], A[<f16>, <one>, <row>], B[<f16>, <one>, <col>] : !llvm.struct<(f32, f32, f32, f32, f32, f32, f32, f32, f32, f32, f32, f32, f32, f32, f32, f32, f32, f32, f32, f32, f32, f32, f32, f32, f32, f32, f32, f32, f32, f32, f32, f32, f32, f32, f32, f32, f32, f32, f32, f32, f32, f32, f32, f32, f32, f32, f32, f32, f32, f32, f32, f32, f32, f32, f32, f32, f32, f32, f32, f32, f32, f32, f32, f32)> -> !llvm.struct<(f32, f32, f32, f32, f32, f32, f32, f32, f32, f32, f32, f32, f32, f32, f32, f32, f32, f32, f32, f32, f32, f32, f32, f32, f32, f32, f32, f32, f32, f32, f32, f32, f32, f32, f32, f32, f32, f32, f32, f32, f32, f32, f32, f32, f32, f32, f32, f32, f32, f32, f32, f32, f32, f32, f32, f32, f32, f32, f32, f32, f32, f32, f32, f32)>
+// CHECK: %[[S5:.+]] = llvm.mlir.constant(2 : i32) : i64
+// CHECK: %[[S6:.+]] = llvm.add %[[S0]], %[[S5]] : i64
+// CHECK: %[[S7:.+]] = llvm.mlir.constant(128 : i32) : i64
+// CHECK: %[[S8:.+]] = llvm.add %[[S1]], %[[S7]]  : i64
+// CHECK: %[[S9:.+]] = nvvm.wgmma.mma_async %[[S6]], %[[S8]], <m = 64, n = 128, k = 16>, D[%[[S4]], <one>, <wrapped>], A[<f16>, <one>, <row>], B[<f16>, <one>, <col>] : !llvm.struct
+// CHECK: %[[S10:.+]] = llvm.mlir.constant(4 : i32) : i64
+// CHECK: %[[S11:.+]] = llvm.add %[[S0]], %[[S10]]  : i64
+// CHECK: %[[S12:.+]] = llvm.mlir.constant(256 : i32) : i64
+// CHECK: %[[S13:.+]] = llvm.add %[[S1]], %[[S12]]  : i64
+// CHECK: %[[S14:.+]] = nvvm.wgmma.mma_async %[[S11]], %[[S13]], <m = 64, n = 128, k = 16>, D[%[[S9]], <one>, <wrapped>], A[<f16>, <one>, <row>], B[<f16>, <one>, <col>] : !llvm.struct
+// CHECK: %[[S15:.+]] = llvm.mlir.constant(6 : i32) : i64
+// CHECK: %[[S16:.+]] = llvm.add %[[S0]], %[[S15]]  : i64
+// CHECK: %[[S17:.+]] = llvm.mlir.constant(384 : i32) : i64
+// CHECK: %[[S18:.+]] = llvm.add %[[S1]], %[[S17]]  : i64
+// CHECK: %[[S19:.+]] = nvvm.wgmma.mma_async %[[S16]], %[[S18]], <m = 64, n = 128, k = 16>, D[%[[S14]], <one>, <wrapped>], A[<f16>, <one>, <row>], B[<f16>, <one>, <col>] : !llvm.struct
+// CHECK: %[[S21:.+]] = llvm.mlir.constant(512 : i32) : i64
+// CHECK: %[[S22:.+]] = llvm.add %[[S0]], %[[S21]]  : i64
+// CHECK: %[[S23:.+]] = nvvm.wgmma.mma_async %[[S22]], %[[S1]], <m = 64, n = 128, k = 16>, D[%[[S3]], <one>, <wrapped>], A[<f16>, <one>, <row>], B[<f16>, <one>, <col>] : !llvm.struct
+// CHECK: %[[S24:.+]] = llvm.mlir.constant(514 : i32) : i64
+// CHECK: %[[S25:.+]] = llvm.add %[[S0]], %[[S24]]  : i64
+// CHECK: %[[S26:.+]] = llvm.mlir.constant(128 : i32) : i64
+// CHECK: %[[S27:.+]] = llvm.add %[[S1]], %[[S26]]  : i64
+// CHECK: %[[S28:.+]] = nvvm.wgmma.mma_async %[[S25]], %[[S27]], <m = 64, n = 128, k = 16>, D[%[[S23]], <one>, <wrapped>], A[<f16>, <one>, <row>], B[<f16>, <one>, <col>] : !llvm.struct
+// CHECK: %[[S29:.+]] = llvm.mlir.constant(516 : i32) : i64
+// CHECK: %[[S30:.+]] = llvm.add %[[S0]], %[[S29]]  : i64
+// CHECK: %[[S31:.+]] = llvm.mlir.constant(256 : i32) : i64
+// CHECK: %[[S32:.+]] = llvm.add %[[S1]], %[[S31]]  : i64
+// CHECK: %[[S33:.+]] = nvvm.wgmma.mma_async %[[S30]], %[[S32]], <m = 64, n = 128, k = 16>, D[%[[S28]], <one>, <wrapped>], A[<f16>, <one>, <row>], B[<f16>, <one>, <col>] : !llvm.struct
+// CHECK: %[[S34:.+]] = llvm.mlir.constant(518 : i32) : i64
+// CHECK: %[[S35:.+]] = llvm.add %[[S0]], %[[S34]]  : i64
+// CHECK: %[[S36:.+]] = llvm.mlir.constant(384 : i32) : i64
+// CHECK: %[[S37:.+]] = llvm.add %[[S1]], %[[S36]]  : i64
+// CHECK: %[[S38:.+]] = nvvm.wgmma.mma_async %[[S35]], %[[S37]], <m = 64, n = 128, k = 16>, D[%[[S33]], <one>, <wrapped>], A[<f16>, <one>, <row>], B[<f16>, <one>, <col>] : !llvm.struct
+// CHECK: nvvm.wgmma.commit.group.sync.aligned
+// CHECK: nvvm.wgmma.wait.group.sync.aligned 1  
+  %wgmmaResult, %wgmmaResult2 = nvgpu.warpgroup.mma %descA, %descB, %acc1, %acc2 {transposeB}: 
+      !nvgpu.wgmma.descriptor<tensor = memref<128x64xf16, 3>>, 
+      !nvgpu.wgmma.descriptor<tensor = memref<64x128xf16, 3>>, 
+      !nvgpu.warpgroup.accumulator< fragmented = vector<64x128xf32>>,
+      !nvgpu.warpgroup.accumulator< fragmented = vector<64x128xf32>> 
+      -> 
+      !nvgpu.warpgroup.accumulator< fragmented = vector<64x128xf32>>, 
+      !nvgpu.warpgroup.accumulator< fragmented = vector<64x128xf32>>  
+  return
+}
+
 transform.sequence failures(propagate) {
 ^bb1(%arg1: !transform.any_op):
   %0 = transform.structured.match ops{["func.func"]} in %arg1 
@@ -681,5 +741,5 @@ transform.sequence failures(propagate) {
   } with type_converter {
     transform.apply_conversion_patterns.memref.memref_to_llvm_type_converter
       {use_opaque_pointers = true}
-  } {legal_dialects = ["arith", "func", "llvm", "memref", "nvvm", "scf"], partial_conversion} : !transform.any_op
+  } {legal_dialects = ["arith", "func", "llvm", "memref", "nvvm", "vector", "scf"], partial_conversion} : !transform.any_op
 }
