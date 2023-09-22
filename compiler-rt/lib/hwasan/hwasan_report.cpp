@@ -342,14 +342,13 @@ template <typename PrintTag>
 static void PrintTagInfoAroundAddr(uptr addr, uptr num_rows,
                                    InternalScopedString &s,
                                    PrintTag print_tag) {
-  const uptr row_len = 16;  // better be power of two.
-  uptr center_row_beg = RoundDownTo(addr, row_len);
-  uptr beg_row = center_row_beg - row_len * (num_rows / 2);
-  uptr end_row = center_row_beg + row_len * ((num_rows + 1) / 2);
-  for (uptr row = beg_row; row < end_row; row += row_len) {
+  uptr center_row_beg = RoundDownTo(addr, kDumpWidth);
+  uptr beg_row = center_row_beg - kDumpWidth * (num_rows / 2);
+  uptr end_row = center_row_beg + kDumpWidth * ((num_rows + 1) / 2);
+  for (uptr row = beg_row; row < end_row; row += kDumpWidth) {
     s.Append(row == center_row_beg ? "=>" : "  ");
     s.AppendF("%p:", (void *)ShadowToMem(row));
-    for (uptr i = 0; i < row_len; i++) {
+    for (uptr i = 0; i < kDumpWidth; i++) {
       s.Append(row + i == addr ? "[" : " ");
       print_tag(s, row + i);
       s.Append(row + i == addr ? "]" : " ");
