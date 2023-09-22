@@ -33,7 +33,7 @@ def SparseTensor_Dialect : Dialect {
     Please note that we started to prefer the term "sparsifier" over
     the also commonly used "sparse compiler" terminology to refer to
     such a pass to make it clear that the sparsifier pass is not a
-    seperate compiler, but should be an integral part of any compiler
+    separate compiler, but should be an integral part of any compiler
     pipeline that is built with the MLIR compiler infrastructure
 
     The MLIR implementation [Biketal22] closely follows the "sparse

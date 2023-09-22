@@ -106,7 +106,7 @@ def SparseTensorEncodingAttr : SparseTensor_Attr<"SparseTensorEncoding",
     sparsity-agnostic representation of the computation, i.e., an implicit sparse
     representation is converted to an explicit sparse representation where co-iterating
     loops operate on sparse storage formats rather than tensors with a sparsity
-    encoding. Compiler passes that run before this sparsier pass need to be aware
+    encoding. Compiler passes that run before this sparsifier pass need to be aware
     of the semantics of tensor types with such a sparsity encoding.
 
     In this encoding, we use **dimension** to refer to the axes of the semantic tensor,
