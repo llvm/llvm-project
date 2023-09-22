@@ -1,3 +1,17 @@
+# This file lists reviewers that are auto-assigned when a pull request modifies
+# certain files or directories. If you add yourself to this file, you commit to
+# reviewing a large fraction of pull requests in the relevant area.
+#
+# The GitHub "code owners" mechanism is used exclusively to auto-assign
+# reviewers and does not carry significance beyond that. It is not necessary
+# to receive an approval from a "code owner" in particular -- any LLVM project
+# member can approve pull requests.
+#
+# Note that GitHub's concept of "code owner" is independent from LLVM's own
+# "code owner" concept, they merely happen to share terminology. See
+# https://llvm.org/docs/DeveloperPolicy.html#code-owners, as well as the
+# CODE_OWNERS.txt files in the respective subproject directories.
+
 /libcxx/ @llvm/reviewers-libcxx
 /libcxxabi/ @llvm/reviewers-libcxxabi
 /libunwind/ @llvm/reviewers-libunwind
