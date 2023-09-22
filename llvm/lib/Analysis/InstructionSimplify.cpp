@@ -6412,6 +6412,44 @@ static Value *simplifyBinaryIntrinsic(Function *F, Value *Op0, Value *Op1,
       return Constant::getNullValue(ReturnType);
     break;
   }
+  case Intrinsic::ptrmask: {
+    if (isa<PoisonValue>(Op0) || isa<PoisonValue>(Op1))
+      return PoisonValue::get(Op0->getType());
+
+    // NOTE: We can't apply this simplifications based on the value of Op1
+    // because we need to preserve provenance.
+    if (Q.isUndefValue(Op0) || match(Op0, m_Zero()))
+      return Constant::getNullValue(Op0->getType());
+
+    assert(Op1->getType()->getScalarSizeInBits() ==
+               Q.DL.getIndexTypeSizeInBits(Op0->getType()) &&
+           "Invalid mask width");
+    // If index-width (mask size) is less than pointer-size then mask is
+    // 1-extended.
+    if (match(Op1, m_PtrToInt(m_Specific(Op0))))
+      return Op0;
+
+    // NOTE: We may have attributes associated with the return value of the
+    // llvm.ptrmask intrinsic that will be lost when we just return the
+    // operand. We should try to preserve them.
+    if (match(Op1, m_AllOnes()) || Q.isUndefValue(Op1))
+      return Op0;
+
+    Constant *C;
+    if (match(Op1, m_ImmConstant(C))) {
+      KnownBits PtrKnown = computeKnownBits(Op0, /*Depth=*/0, Q);
+      // See if we only masking off bits we know are already zero due to
+      // alignment.
+      APInt IrrelevantPtrBits =
+          PtrKnown.Zero.zextOrTrunc(C->getType()->getScalarSizeInBits());
+      C = ConstantFoldBinaryOpOperands(
+          Instruction::Or, C, ConstantInt::get(C->getType(), IrrelevantPtrBits),
+          Q.DL);
+      if (C != nullptr && C->isAllOnesValue())
+        return Op0;
+    }
+    break;
+  }
   case Intrinsic::smax:
   case Intrinsic::smin:
   case Intrinsic::umax:
