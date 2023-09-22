@@ -1416,6 +1416,7 @@ const MachineOperand *SIFoldOperands::isClamp(const MachineInstr &MI) const {
   case AMDGPU::V_MAX_F32_e64:
   case AMDGPU::V_MAX_F16_e64:
   case AMDGPU::V_MAX_F16_t16_e64:
+  case AMDGPU::V_MAX_F16_fake16_e64:
   case AMDGPU::V_MAX_F64_e64:
   case AMDGPU::V_MAX_NUM_F64_e64:
   case AMDGPU::V_PK_MAX_F16: {
@@ -1513,7 +1514,8 @@ static int getOModValue(unsigned Opc, int64_t Val) {
     }
   }
   case AMDGPU::V_MUL_F16_e64:
-  case AMDGPU::V_MUL_F16_t16_e64: {
+  case AMDGPU::V_MUL_F16_t16_e64:
+  case AMDGPU::V_MUL_F16_fake16_e64: {
     switch (static_cast<uint16_t>(Val)) {
     case 0x3800: // 0.5
       return SIOutMods::DIV2;
@@ -1541,12 +1543,14 @@ SIFoldOperands::isOMod(const MachineInstr &MI) const {
   case AMDGPU::V_MUL_F64_pseudo_e64:
   case AMDGPU::V_MUL_F32_e64:
   case AMDGPU::V_MUL_F16_t16_e64:
+  case AMDGPU::V_MUL_F16_fake16_e64:
   case AMDGPU::V_MUL_F16_e64: {
     // If output denormals are enabled, omod is ignored.
     if ((Op == AMDGPU::V_MUL_F32_e64 &&
          MFI->getMode().FP32Denormals.Output != DenormalMode::PreserveSign) ||
         ((Op == AMDGPU::V_MUL_F64_e64 || Op == AMDGPU::V_MUL_F64_pseudo_e64 ||
-          Op == AMDGPU::V_MUL_F16_e64 || Op == AMDGPU::V_MUL_F16_t16_e64) &&
+          Op == AMDGPU::V_MUL_F16_e64 || Op == AMDGPU::V_MUL_F16_t16_e64 ||
+          Op == AMDGPU::V_MUL_F16_fake16_e64) &&
          MFI->getMode().FP64FP16Denormals.Output != DenormalMode::PreserveSign))
       return std::pair(nullptr, SIOutMods::NONE);
 
@@ -1577,12 +1581,14 @@ SIFoldOperands::isOMod(const MachineInstr &MI) const {
   case AMDGPU::V_ADD_F64_pseudo_e64:
   case AMDGPU::V_ADD_F32_e64:
   case AMDGPU::V_ADD_F16_e64:
-  case AMDGPU::V_ADD_F16_t16_e64: {
+  case AMDGPU::V_ADD_F16_t16_e64:
+  case AMDGPU::V_ADD_F16_fake16_e64: {
     // If output denormals are enabled, omod is ignored.
     if ((Op == AMDGPU::V_ADD_F32_e64 &&
          MFI->getMode().FP32Denormals.Output != DenormalMode::PreserveSign) ||
         ((Op == AMDGPU::V_ADD_F64_e64 || Op == AMDGPU::V_ADD_F64_pseudo_e64 ||
-          Op == AMDGPU::V_ADD_F16_e64 || Op == AMDGPU::V_ADD_F16_t16_e64) &&
+          Op == AMDGPU::V_ADD_F16_e64 || Op == AMDGPU::V_ADD_F16_t16_e64 ||
+          Op == AMDGPU::V_ADD_F16_fake16_e64) &&
          MFI->getMode().FP64FP16Denormals.Output != DenormalMode::PreserveSign))
       return std::pair(nullptr, SIOutMods::NONE);
 
