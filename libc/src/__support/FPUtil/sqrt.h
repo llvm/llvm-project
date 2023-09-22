@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_LIBC_SRC_SUPPORT_FPUTIL_SQRT_H
-#define LLVM_LIBC_SRC_SUPPORT_FPUTIL_SQRT_H
+#ifndef LLVM_LIBC_SRC___SUPPORT_FPUTIL_SQRT_H
+#define LLVM_LIBC_SRC___SUPPORT_FPUTIL_SQRT_H
 
 #include "src/__support/macros/properties/architectures.h"
 
@@ -21,4 +21,4 @@
 #include "generic/sqrt.h"
 
 #endif
-#endif // LLVM_LIBC_SRC_SUPPORT_FPUTIL_SQRT_H
+#endif // LLVM_LIBC_SRC___SUPPORT_FPUTIL_SQRT_H

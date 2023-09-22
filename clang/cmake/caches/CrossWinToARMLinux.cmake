@@ -95,7 +95,6 @@ set(CLANG_DEFAULT_LINKER                    "lld" CACHE STRING "")
 
 if(WIN32)
   set(CMAKE_MSVC_RUNTIME_LIBRARY            "MultiThreaded" CACHE STRING "")
-  set(LLVM_USE_CRT_RELEASE                  "MT" CACHE STRING "")
 endif()
 
 # Set up RPATH for the target runtime/builtin libraries.

@@ -463,7 +463,13 @@ void InputSection::copyRelocations(uint8_t *buf,
 
       if (RelTy::IsRela)
         p->r_addend = sym.getVA(addend) - section->getOutputSection()->addr;
-      else if (config->relocatable && type != target.noneRel)
+      // For SHF_ALLOC sections relocated by REL, append a relocation to
+      // sec->relocations so that relocateAlloc transitively called by
+      // writeSections will update the implicit addend. Non-SHF_ALLOC sections
+      // utilize relocateNonAlloc to process raw relocations and do not need
+      // this sec->relocations change.
+      else if (config->relocatable && (sec->flags & SHF_ALLOC) &&
+               type != target.noneRel)
         sec->addReloc({R_ABS, type, rel.offset, addend, &sym});
     } else if (config->emachine == EM_PPC && type == R_PPC_PLTREL24 &&
                p->r_addend >= 0x8000 && sec->file->ppc32Got2) {
@@ -954,8 +960,10 @@ void InputSection::relocateNonAlloc(uint8_t *buf, ArrayRef<RelTy> rels) {
       }
     }
 
-    // For a relocatable link, only tombstone values are applied.
-    if (config->relocatable)
+    // For a relocatable link, content relocated by RELA remains unchanged and
+    // we can stop here, while content relocated by REL referencing STT_SECTION
+    // needs updating implicit addends.
+    if (config->relocatable && (RelTy::IsRela || sym.type != STT_SECTION))
       continue;
 
     if (expr == R_SIZE) {
@@ -987,27 +995,15 @@ void InputSection::relocateNonAlloc(uint8_t *buf, ArrayRef<RelTy> rels) {
     // relocations without any errors and relocate them as if they were at
     // address 0. For bug-compatibility, we accept them with warnings. We
     // know Steel Bank Common Lisp as of 2018 have this bug.
-    warn(msg);
+    //
+    // RELA -r stopped earlier and does not get the warning. Suppress the
+    // warning for REL -r as well
+    // (https://github.com/ClangBuiltLinux/linux/issues/1937).
+    if (RelTy::IsRela || !config->relocatable)
+      warn(msg);
     target.relocateNoSym(
         bufLoc, type,
         SignExtend64<bits>(sym.getVA(addend - offset - outSecOff)));
-  }
-}
-
-// This is used when '-r' is given.
-// For REL targets, InputSection::copyRelocations() may store artificial
-// relocations aimed to update addends. They are handled in relocateAlloc()
-// for allocatable sections, and this function does the same for
-// non-allocatable sections, such as sections with debug information.
-static void relocateNonAllocForRelocatable(InputSection *sec, uint8_t *buf) {
-  const unsigned bits = config->is64 ? 64 : 32;
-
-  for (const Relocation &rel : sec->relocs()) {
-    // InputSection::copyRelocations() adds only R_ABS relocations.
-    assert(rel.expr == R_ABS);
-    uint8_t *bufLoc = buf + rel.offset;
-    uint64_t targetVA = SignExtend64(rel.sym->getVA(rel.addend), bits);
-    target->relocate(bufLoc, rel, targetVA);
   }
 }
 
@@ -1022,8 +1018,6 @@ void InputSectionBase::relocate(uint8_t *buf, uint8_t *bufEnd) {
   }
 
   auto *sec = cast<InputSection>(this);
-  if (config->relocatable)
-    relocateNonAllocForRelocatable(sec, buf);
   // For a relocatable link, also call relocateNonAlloc() to rewrite applicable
   // locations with tombstone values.
   const RelsOrRelas<ELFT> rels = sec->template relsOrRelas<ELFT>();

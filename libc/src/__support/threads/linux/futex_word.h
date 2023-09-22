@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_LIBC_SRC_SUPPORT_THREADS_LINUX_FUTEX_WORD_H
-#define LLVM_LIBC_SRC_SUPPORT_THREADS_LINUX_FUTEX_WORD_H
+#ifndef LLVM_LIBC_SRC___SUPPORT_THREADS_LINUX_FUTEX_WORD_H
+#define LLVM_LIBC_SRC___SUPPORT_THREADS_LINUX_FUTEX_WORD_H
 
 #include <stdint.h>
 #include <sys/syscall.h>
@@ -27,4 +27,4 @@ constexpr auto FUTEX_SYSCALL_ID = SYS_futex_time64;
 
 } // namespace __llvm_libc
 
-#endif // LLVM_LIBC_SRC_SUPPORT_THREADS_LINUX_FUTEX_WORD_H
+#endif // LLVM_LIBC_SRC___SUPPORT_THREADS_LINUX_FUTEX_WORD_H

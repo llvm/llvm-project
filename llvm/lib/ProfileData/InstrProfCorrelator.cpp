@@ -212,15 +212,11 @@ void InstrProfCorrelatorImpl<IntPtrT>::addProbe(StringRef FunctionName,
       // In this mode, CounterPtr actually stores the section relative address
       // of the counter.
       maybeSwap<IntPtrT>(CounterOffset),
-      // TODO: MC/DC is not yet supported.
-      /*BitmapOffset=*/maybeSwap<IntPtrT>(0),
       maybeSwap<IntPtrT>(FunctionPtr),
       // TODO: Value profiling is not yet supported.
       /*ValuesPtr=*/maybeSwap<IntPtrT>(0),
       maybeSwap<uint32_t>(NumCounters),
       /*NumValueSites=*/{maybeSwap<uint16_t>(0), maybeSwap<uint16_t>(0)},
-      // TODO: MC/DC is not yet supported.
-      /*NumBitmapBytes=*/maybeSwap<uint32_t>(0),
   });
   NamesVec.push_back(FunctionName.str());
 }

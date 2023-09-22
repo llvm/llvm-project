@@ -345,8 +345,8 @@ public:
   // Describe memory region usage.
   void printMemoryUsage(raw_ostream &os);
 
-  // Verify memory/lma overflows.
-  void checkMemoryRegions() const;
+  // Check backward location counter assignment and memory region/LMA overflows.
+  void checkFinalScriptConditions() const;
 
   // SECTIONS command list.
   SmallVector<SectionCommand *, 0> sectionCommands;
@@ -358,6 +358,7 @@ public:
   bool seenDataAlign = false;
   bool seenRelroEnd = false;
   bool errorOnMissingSection = false;
+  std::string backwardDotErr;
 
   // List of section patterns specified with KEEP commands. They will
   // be kept even if they are unused and --gc-sections is specified.

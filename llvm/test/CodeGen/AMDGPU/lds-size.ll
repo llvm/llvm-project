@@ -12,8 +12,8 @@
 ; EG-NEXT: .long 1
 ; ALL: {{^}}test:
 
-; HSA: granulated_lds_size = 0
-; HSA: workgroup_group_segment_byte_size = 4
+; HSA-NOT: COMPUTE_PGM_RSRC2.LDS_SIZE
+; HSA: .amdhsa_group_segment_fixed_size 4
 
 ; GCN: ; LDSByteSize: 4 bytes/workgroup (compile time only)
 @lds = internal unnamed_addr addrspace(3) global i32 undef, align 4
@@ -36,4 +36,4 @@ endif:
 }
 
 !llvm.module.flags = !{!0}
-!0 = !{i32 1, !"amdgpu_code_object_version", i32 200}
+!0 = !{i32 1, !"amdgpu_code_object_version", i32 400}

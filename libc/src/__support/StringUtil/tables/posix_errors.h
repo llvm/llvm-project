@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_LIBC_SRC_SUPPORT_STRING_UTIL_TABLES_POSIX_ERRORS_H
-#define LLVM_LIBC_SRC_SUPPORT_STRING_UTIL_TABLES_POSIX_ERRORS_H
+#ifndef LLVM_LIBC_SRC___SUPPORT_STRING_UTIL_TABLES_POSIX_ERRORS_H
+#define LLVM_LIBC_SRC___SUPPORT_STRING_UTIL_TABLES_POSIX_ERRORS_H
 
 #include "src/__support/StringUtil/message_mapper.h"
 
@@ -96,4 +96,4 @@ LIBC_INLINE_VAR constexpr MsgTable<76> POSIX_ERRORS = {
 
 } // namespace __llvm_libc
 
-#endif // LLVM_LIBC_SRC_SUPPORT_STRING_UTIL_TABLES_POSIX_ERRORS_H
+#endif // LLVM_LIBC_SRC___SUPPORT_STRING_UTIL_TABLES_POSIX_ERRORS_H

@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_LIBC_SRC_SUPPORT_FILE_DIR_H
-#define LLVM_LIBC_SRC_SUPPORT_FILE_DIR_H
+#ifndef LLVM_LIBC_SRC___SUPPORT_FILE_DIR_H
+#define LLVM_LIBC_SRC___SUPPORT_FILE_DIR_H
 
 #include "src/__support/CPP/span.h"
 #include "src/__support/error_or.h"
@@ -74,4 +74,4 @@ public:
 
 } // namespace __llvm_libc
 
-#endif // LLVM_LIBC_SRC_SUPPORT_FILE_DIR_H
+#endif // LLVM_LIBC_SRC___SUPPORT_FILE_DIR_H

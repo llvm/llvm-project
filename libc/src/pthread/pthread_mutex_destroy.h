@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_LIBC_SRC_PTHREAD_PTHREAD_MUTEX__DESTROY_H
-#define LLVM_LIBC_SRC_PTHREAD_PTHREAD_MUTEX__DESTROY_H
+#ifndef LLVM_LIBC_SRC_PTHREAD_PTHREAD_MUTEX_DESTROY_H
+#define LLVM_LIBC_SRC_PTHREAD_PTHREAD_MUTEX_DESTROY_H
 
 #include <pthread.h>
 
