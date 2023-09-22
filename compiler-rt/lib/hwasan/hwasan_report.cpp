@@ -902,8 +902,8 @@ class TagMismatchReport : public BaseReport {
   ~TagMismatchReport();
 
  private:
-  bool is_store;
-  uptr *registers_frame;
+  const bool is_store;
+  const uptr *registers_frame;
 };
 
 TagMismatchReport::~TagMismatchReport() {
@@ -987,7 +987,7 @@ void ReportTagMismatch(StackTrace *stack, uptr tagged_addr, uptr access_size,
 
 // See the frame breakdown defined in __hwasan_tag_mismatch (from
 // hwasan_tag_mismatch_{aarch64,riscv64}.S).
-void ReportRegisters(uptr *frame, uptr pc) {
+void ReportRegisters(const uptr *frame, uptr pc) {
   Printf("Registers where the failure occurred (pc %p):\n", pc);
 
   // We explicitly print a single line (4 registers/line) each iteration to
