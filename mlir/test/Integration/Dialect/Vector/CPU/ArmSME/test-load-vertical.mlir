@@ -64,7 +64,7 @@ func.func @entry() {
   }
 
   // Load tile from "mem1" vertically.
-  %0 = arm_sme.tile_load <ver>, %mem1[%c0, %c0] : memref<?xi32>, vector<[4]x[4]xi32>
+  %0 = arm_sme.tile_load %mem1[%c0, %c0], <ver> : memref<?xi32>, vector<[4]x[4]xi32>
 
   // Store tile back to "mem2" to print.
   // TODO: Support vector.print for 2-D scalable vectors so don't have to spill

@@ -11,20 +11,20 @@
 // CHECK-NEXT:    %[[NUM_TILE_SLICES:.*]] = arith.muli %[[C4]], %[[VSCALE]] : index
 // CHECK-NEXT:    scf.for %[[TILE_SLICE_INDEX:.*]] = %[[C0]] to %[[NUM_TILE_SLICES]] step %[[C1]] {
 // CHECK-NEXT:      %[[OFFSET:.*]] = arith.addi %[[C0]], %[[TILE_SLICE_INDEX]] : index
-// CHECK-NEXT:      arm_sme.load_tile_slice <hor>, %[[SRC]]{{\[}}%[[OFFSET]], %[[C0]]], %[[CAST_TILE_TO_VECTOR]], %[[TILE_SLICE_INDEX]] : memref<?x?xi32>, vector<[4]x[4]xi32>
+// CHECK-NEXT:      arm_sme.load_tile_slice %[[SRC]]{{\[}}%[[OFFSET]], %[[C0]]], %[[CAST_TILE_TO_VECTOR]], %[[TILE_SLICE_INDEX]] : memref<?x?xi32>, vector<[4]x[4]xi32>
 func.func @arm_sme_tile_load_hor(%src : memref<?x?xi32>) {
   %c0 = arith.constant 0 : index
-  %tile = arm_sme.tile_load <hor>, %src[%c0, %c0] : memref<?x?xi32>, vector<[4]x[4]xi32>
+  %tile = arm_sme.tile_load %src[%c0, %c0] : memref<?x?xi32>, vector<[4]x[4]xi32>
   return
 }
 
 // -----
 
 // CHECK-LABEL: @arm_sme_tile_load_ver
-// CHECK: arm_sme.load_tile_slice <ver>
+// CHECK: arm_sme.load_tile_slice {{.*}} <ver>
 func.func @arm_sme_tile_load_ver(%src : memref<?x?xi32>) {
   %c0 = arith.constant 0 : index
-  %tile = arm_sme.tile_load <ver>, %src[%c0, %c0] : memref<?x?xi32>, vector<[4]x[4]xi32>
+  %tile = arm_sme.tile_load %src[%c0, %c0], <ver> : memref<?x?xi32>, vector<[4]x[4]xi32>
   return
 }
 
@@ -40,10 +40,10 @@ func.func @arm_sme_tile_load_ver(%src : memref<?x?xi32>) {
 // CHECK:         %[[NUM_TILE_SLICES:.*]] = arith.muli %[[C4]], %[[VSCALE]] : index
 // CHECK:         scf.for %[[TILE_SLICE_INDEX:.*]] = %[[C0]] to %[[NUM_TILE_SLICES]] step %[[C1]] {
 // CHECK:           %[[OFFSET:.*]] = arith.addi %[[C0]], %[[TILE_SLICE_INDEX]] : index
-// CHECK:           arm_sme.store_tile_slice %[[TILE]], %[[TILE_SLICE_INDEX]], <hor>, %[[DEST]]{{\[}}%[[OFFSET]], %[[C0]]] : memref<?x?xi32>, vector<[4]x[4]xi32>
+// CHECK:           arm_sme.store_tile_slice %[[TILE]], %[[TILE_SLICE_INDEX]], %[[DEST]]{{\[}}%[[OFFSET]], %[[C0]]] : memref<?x?xi32>, vector<[4]x[4]xi32>
 func.func @arm_sme_tile_store_hor(%tile : vector<[4]x[4]xi32>, %dest : memref<?x?xi32>) {
   %c0 = arith.constant 0 : index
-  arm_sme.tile_store %tile, <hor>, %dest[%c0, %c0] : memref<?x?xi32>, vector<[4]x[4]xi32>
+  arm_sme.tile_store %tile, %dest[%c0, %c0] : memref<?x?xi32>, vector<[4]x[4]xi32>
   return
 }
 
@@ -53,6 +53,6 @@ func.func @arm_sme_tile_store_hor(%tile : vector<[4]x[4]xi32>, %dest : memref<?x
 // CHECK: arm_sme.store_tile_slice {{.*}} <ver>
 func.func @arm_sme_tile_store_ver(%tile : vector<[4]x[4]xi32>, %dest : memref<?x?xi32>) {
   %c0 = arith.constant 0 : index
-  arm_sme.tile_store %tile, <ver>, %dest[%c0, %c0] : memref<?x?xi32>, vector<[4]x[4]xi32>
+  arm_sme.tile_store %tile, %dest[%c0, %c0], <ver> : memref<?x?xi32>, vector<[4]x[4]xi32>
   return
 }

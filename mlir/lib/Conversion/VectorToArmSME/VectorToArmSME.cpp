@@ -81,8 +81,8 @@ struct TransferWriteToArmSMELowering
       return failure();
 
     rewriter.replaceOpWithNewOp<arm_sme::TileStoreOp>(
-        writeOp, writeOp.getVector(), arm_sme::TileSliceLayout::Horizontal,
-        writeOp.getSource(), writeOp.getIndices());
+        writeOp, writeOp.getVector(), writeOp.getSource(),
+        writeOp.getIndices());
     return success();
   }
 };
@@ -97,8 +97,7 @@ struct VectorLoadToArmSMELowering : public OpRewritePattern<vector::LoadOp> {
       return failure();
 
     rewriter.replaceOpWithNewOp<arm_sme::TileLoadOp>(
-        load, load.getVectorType(), arm_sme::TileSliceLayout::Horizontal,
-        load.getBase(), load.getIndices());
+        load, load.getVectorType(), load.getBase(), load.getIndices());
 
     return success();
   }
@@ -114,8 +113,7 @@ struct VectorStoreToArmSMELowering : public OpRewritePattern<vector::StoreOp> {
       return failure();
 
     rewriter.replaceOpWithNewOp<arm_sme::TileStoreOp>(
-        store, store.getValueToStore(), arm_sme::TileSliceLayout::Horizontal,
-        store.getBase(), store.getIndices());
+        store, store.getValueToStore(), store.getBase(), store.getIndices());
 
     return success();
   }

@@ -117,8 +117,8 @@ struct TileLoadOpConversion : public OpRewritePattern<arm_sme::TileLoadOp> {
                      tileLoadOp.getMemRefType().getRank(), tileSliceIndex,
                      numTileSlices, memrefIndices, loc, rewriter);
     rewriter.create<arm_sme::LoadTileSliceOp>(
-        loc, tileType, tileLoadOp.getLayout(), tileLoadOp.getBase(), tile,
-        memrefIndices, tileSliceIndex);
+        loc, tileType, tileLoadOp.getBase(), tile, memrefIndices,
+        tileSliceIndex, tileLoadOp.getLayout());
 
     rewriter.setInsertionPointAfter(forOp);
 
@@ -184,7 +184,7 @@ struct TileStoreOpConversion : public OpRewritePattern<arm_sme::TileStoreOp> {
                      numTileSlices, memrefIndices, loc, rewriter);
     rewriter.replaceOpWithNewOp<arm_sme::StoreTileSliceOp>(
         tileStoreOp, tileStoreOp.getValueToStore(), tileSliceIndex,
-        tileStoreOp.getLayout(), tileStoreOp.getBase(), memrefIndices);
+        tileStoreOp.getBase(), memrefIndices, tileStoreOp.getLayout());
 
     return success();
   }
