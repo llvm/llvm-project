@@ -371,27 +371,26 @@ Error DWARFLinkerImpl::LinkContext::loadClangModule(
 
 Error DWARFLinkerImpl::LinkContext::link() {
   InterCUProcessingStarted = false;
-  if (InputDWARFFile.Warnings.empty()) {
-    if (!InputDWARFFile.Dwarf)
-      return Error::success();
+  if (!InputDWARFFile.Dwarf)
+    return Error::success();
 
-    // Preload macro tables, as they can't be loaded asynchronously.
-    InputDWARFFile.Dwarf->getDebugMacinfo();
-    InputDWARFFile.Dwarf->getDebugMacro();
+  // Preload macro tables, as they can't be loaded asynchronously.
+  InputDWARFFile.Dwarf->getDebugMacinfo();
+  InputDWARFFile.Dwarf->getDebugMacro();
 
-    // Link modules compile units first.
-    parallelForEach(ModulesCompileUnits, [&](RefModuleUnit &RefModule) {
-      linkSingleCompileUnit(*RefModule.Unit);
-    });
+  // Link modules compile units first.
+  parallelForEach(ModulesCompileUnits, [&](RefModuleUnit &RefModule) {
+    linkSingleCompileUnit(*RefModule.Unit);
+  });
 
-    // Check for live relocations. If there is no any live relocation then we
-    // can skip entire object file.
-    if (!GlobalData.getOptions().UpdateIndexTablesOnly &&
-        !InputDWARFFile.Addresses->hasValidRelocs()) {
-      if (GlobalData.getOptions().Verbose)
-        outs() << "No valid relocations found. Skipping.\n";
-      return Error::success();
-    }
+  // Check for live relocations. If there is no any live relocation then we
+  // can skip entire object file.
+  if (!GlobalData.getOptions().UpdateIndexTablesOnly &&
+      !InputDWARFFile.Addresses->hasValidRelocs()) {
+    if (GlobalData.getOptions().Verbose)
+      outs() << "No valid relocations found. Skipping.\n";
+    return Error::success();
+  }
 
     OriginalDebugInfoSize = getInputDebugInfoSize();
 
@@ -460,21 +459,8 @@ Error DWARFLinkerImpl::LinkContext::link() {
         linkSingleCompileUnit(*CU, CompileUnit::Stage::Cleaned);
       });
     }
-  }
 
-  if (!InputDWARFFile.Warnings.empty()) {
-    // Create compile unit with paper trail warnings.
-
-    Error ResultErr = Error::success();
-    // We use task group here as PerThreadBumpPtrAllocator should be called from
-    // the threads created by ThreadPoolExecutor.
-    parallel::TaskGroup TGroup;
-    TGroup.spawn([&]() {
-      if (Error Err = cloneAndEmitPaperTrails())
-        ResultErr = std::move(Err);
-    });
-    return ResultErr;
-  } else if (GlobalData.getOptions().UpdateIndexTablesOnly) {
+  if (GlobalData.getOptions().UpdateIndexTablesOnly) {
     // Emit Invariant sections.
 
     if (Error Err = emitInvariantSections())
@@ -713,102 +699,6 @@ void DWARFLinkerImpl::LinkContext::emitFDE(uint32_t CIEOffset,
   Section.emitIntVal(CIEOffset, 4);
   Section.emitIntVal(Address, AddrSize);
   Section.OS.write(FDEBytes.data(), FDEBytes.size());
-}
-
-Error DWARFLinkerImpl::LinkContext::cloneAndEmitPaperTrails() {
-  CompileUnits.emplace_back(std::make_unique<CompileUnit>(
-      GlobalData, UniqueUnitID.fetch_add(1), "", InputDWARFFile,
-      getUnitForOffset, Format, Endianness));
-
-  CompileUnit &CU = *CompileUnits.back();
-
-  BumpPtrAllocator Allocator;
-
-  DIEGenerator ParentGenerator(Allocator, CU);
-
-  SectionDescriptor &DebugInfoSection =
-      CU.getOrCreateSectionDescriptor(DebugSectionKind::DebugInfo);
-  OffsetsPtrVector PatchesOffsets;
-
-  uint64_t CurrentOffset = CU.getDebugInfoHeaderSize();
-  DIE *CUDie =
-      ParentGenerator.createDIE(dwarf::DW_TAG_compile_unit, CurrentOffset);
-  CU.setOutUnitDIE(CUDie);
-
-  DebugInfoSection.notePatchWithOffsetUpdate(
-      DebugStrPatch{{CurrentOffset},
-                    GlobalData.getStringPool().insert("dsymutil").first},
-      PatchesOffsets);
-  CurrentOffset += ParentGenerator
-                       .addStringPlaceholderAttribute(dwarf::DW_AT_producer,
-                                                      dwarf::DW_FORM_strp)
-                       .second;
-
-  CurrentOffset +=
-      ParentGenerator
-          .addInplaceString(dwarf::DW_AT_name, InputDWARFFile.FileName)
-          .second;
-
-  size_t SizeAbbrevNumber = ParentGenerator.finalizeAbbreviations(true);
-  CurrentOffset += SizeAbbrevNumber;
-  for (uint64_t *OffsetPtr : PatchesOffsets)
-    *OffsetPtr += SizeAbbrevNumber;
-  for (const auto &Warning : CU.getContaingFile().Warnings) {
-    PatchesOffsets.clear();
-    DIEGenerator ChildGenerator(Allocator, CU);
-
-    DIE *ChildDie =
-        ChildGenerator.createDIE(dwarf::DW_TAG_constant, CurrentOffset);
-    ParentGenerator.addChild(ChildDie);
-
-    DebugInfoSection.notePatchWithOffsetUpdate(
-        DebugStrPatch{
-            {CurrentOffset},
-            GlobalData.getStringPool().insert("dsymutil_warning").first},
-        PatchesOffsets);
-    CurrentOffset += ChildGenerator
-                         .addStringPlaceholderAttribute(dwarf::DW_AT_name,
-                                                        dwarf::DW_FORM_strp)
-                         .second;
-
-    CurrentOffset +=
-        ChildGenerator
-            .addScalarAttribute(dwarf::DW_AT_artificial, dwarf::DW_FORM_flag, 1)
-            .second;
-
-    DebugInfoSection.notePatchWithOffsetUpdate(
-        DebugStrPatch{{CurrentOffset},
-                      GlobalData.getStringPool().insert(Warning).first},
-        PatchesOffsets);
-    CurrentOffset += ChildGenerator
-                         .addStringPlaceholderAttribute(
-                             dwarf::DW_AT_const_value, dwarf::DW_FORM_strp)
-                         .second;
-
-    SizeAbbrevNumber = ChildGenerator.finalizeAbbreviations(false);
-
-    CurrentOffset += SizeAbbrevNumber;
-    for (uint64_t *OffsetPtr : PatchesOffsets)
-      *OffsetPtr += SizeAbbrevNumber;
-
-    ChildDie->setSize(CurrentOffset - ChildDie->getOffset());
-  }
-
-  CurrentOffset += 1; // End of children
-  CUDie->setSize(CurrentOffset - CUDie->getOffset());
-
-  uint64_t UnitSize = 0;
-  UnitSize += CU.getDebugInfoHeaderSize();
-  UnitSize += CUDie->getSize();
-  CU.setUnitSize(UnitSize);
-
-  if (GlobalData.getOptions().NoOutput)
-    return Error::success();
-
-  if (Error Err = CU.emitDebugInfo(*TargetTriple))
-    return Err;
-
-  return CU.emitAbbreviations();
 }
 
 void DWARFLinkerImpl::glueCompileUnitsAndWriteToTheOutput() {
