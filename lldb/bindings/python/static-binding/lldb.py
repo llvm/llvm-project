@@ -131,6 +131,8 @@ LLDB_WATCH_TYPE_READ = _lldb.LLDB_WATCH_TYPE_READ
 
 LLDB_WATCH_TYPE_WRITE = _lldb.LLDB_WATCH_TYPE_WRITE
 
+LLDB_WATCH_TYPE_MODIFY = _lldb.LLDB_WATCH_TYPE_MODIFY
+
 LLDB_REGNUM_GENERIC_PC = _lldb.LLDB_REGNUM_GENERIC_PC
 
 LLDB_REGNUM_GENERIC_SP = _lldb.LLDB_REGNUM_GENERIC_SP
@@ -646,6 +648,12 @@ eWatchpointEventTypeIgnoreChanged = _lldb.eWatchpointEventTypeIgnoreChanged
 eWatchpointEventTypeThreadChanged = _lldb.eWatchpointEventTypeThreadChanged
 
 eWatchpointEventTypeTypeChanged = _lldb.eWatchpointEventTypeTypeChanged
+
+eWatchpointWriteTypeDisabled = _lldb.eWatchpointWriteTypeDisabled
+
+eWatchpointWriteTypeAlways = _lldb.eWatchpointWriteTypeAlways
+
+eWatchpointWriteTypeOnModify = _lldb.eWatchpointWriteTypeOnModify
 
 eLanguageTypeUnknown = _lldb.eLanguageTypeUnknown
 
@@ -3212,9 +3220,12 @@ class SBCommandInterpreter(object):
     eBroadcastBitAsynchronousErrorData = _lldb.SBCommandInterpreter_eBroadcastBitAsynchronousErrorData
     
 
-    def __init__(self, rhs):
-        r"""__init__(SBCommandInterpreter self, SBCommandInterpreter rhs) -> SBCommandInterpreter"""
-        _lldb.SBCommandInterpreter_swiginit(self, _lldb.new_SBCommandInterpreter(rhs))
+    def __init__(self, *args):
+        r"""
+        __init__(SBCommandInterpreter self) -> SBCommandInterpreter
+        __init__(SBCommandInterpreter self, SBCommandInterpreter rhs) -> SBCommandInterpreter
+        """
+        _lldb.SBCommandInterpreter_swiginit(self, _lldb.new_SBCommandInterpreter(*args))
     __swig_destroy__ = _lldb.delete_SBCommandInterpreter
 
     @staticmethod
@@ -11025,9 +11036,13 @@ class SBTarget(object):
         r"""FindWatchpointByID(SBTarget self, lldb::watch_id_t watch_id) -> SBWatchpoint"""
         return _lldb.SBTarget_FindWatchpointByID(self, watch_id)
 
-    def WatchAddress(self, addr, size, read, write, error):
-        r"""WatchAddress(SBTarget self, lldb::addr_t addr, size_t size, bool read, bool write, SBError error) -> SBWatchpoint"""
-        return _lldb.SBTarget_WatchAddress(self, addr, size, read, write, error)
+    def WatchAddress(self, addr, size, read, modify, error):
+        r"""WatchAddress(SBTarget self, lldb::addr_t addr, size_t size, bool read, bool modify, SBError error) -> SBWatchpoint"""
+        return _lldb.SBTarget_WatchAddress(self, addr, size, read, modify, error)
+
+    def WatchpointCreateByAddress(self, addr, size, options, error):
+        r"""WatchpointCreateByAddress(SBTarget self, lldb::addr_t addr, size_t size, SBWatchpointOptions options, SBError error) -> SBWatchpoint"""
+        return _lldb.SBTarget_WatchpointCreateByAddress(self, addr, size, options, error)
 
     def EnableAllWatchpoints(self):
         r"""EnableAllWatchpoints(SBTarget self) -> bool"""
@@ -15446,6 +15461,50 @@ class SBWatchpoint(object):
 
 # Register SBWatchpoint in _lldb:
 _lldb.SBWatchpoint_swigregister(SBWatchpoint)
+class SBWatchpointOptions(object):
+    r"""A container for options to use when creating watchpoints."""
+
+    thisown = property(lambda x: x.this.own(), lambda x, v: x.this.own(v), doc="The membership flag")
+    __repr__ = _swig_repr
+
+    def __init__(self, *args):
+        r"""
+        __init__(SBWatchpointOptions self) -> SBWatchpointOptions
+        __init__(SBWatchpointOptions self, SBWatchpointOptions rhs) -> SBWatchpointOptions
+        """
+        _lldb.SBWatchpointOptions_swiginit(self, _lldb.new_SBWatchpointOptions(*args))
+    __swig_destroy__ = _lldb.delete_SBWatchpointOptions
+
+    def SetWatchpointTypeRead(self, read):
+        r"""
+        SetWatchpointTypeRead(SBWatchpointOptions self, bool read)
+        Sets whether the watchpoint should stop on read accesses.
+        """
+        return _lldb.SBWatchpointOptions_SetWatchpointTypeRead(self, read)
+
+    def GetWatchpointTypeRead(self):
+        r"""
+        GetWatchpointTypeRead(SBWatchpointOptions self) -> bool
+        Gets whether the watchpoint should stop on read accesses.
+        """
+        return _lldb.SBWatchpointOptions_GetWatchpointTypeRead(self)
+
+    def SetWatchpointTypeWrite(self, write_type):
+        r"""
+        SetWatchpointTypeWrite(SBWatchpointOptions self, lldb::WatchpointWriteType write_type)
+        Sets whether the watchpoint should stop on write accesses. eWatchpointWriteTypeOnModify is the most commonly useful mode, where lldb will stop when the watched value has changed. eWatchpointWriteTypeAlways will stop on any write to the watched region, even if it's the value is the same.
+        """
+        return _lldb.SBWatchpointOptions_SetWatchpointTypeWrite(self, write_type)
+
+    def GetWatchpointTypeWrite(self):
+        r"""
+        GetWatchpointTypeWrite(SBWatchpointOptions self) -> lldb::WatchpointWriteType
+        Gets whether the watchpoint should stop on write accesses, returning WatchpointWriteType to indicate the type of write watching that is enabled, or eWatchpointWriteTypeDisabled.
+        """
+        return _lldb.SBWatchpointOptions_GetWatchpointTypeWrite(self)
+
+# Register SBWatchpointOptions in _lldb:
+_lldb.SBWatchpointOptions_swigregister(SBWatchpointOptions)
 
 # ==================================
 # Helper function for SBModule class
