@@ -135,20 +135,26 @@ def NVGPU_DeviceAsyncToken : NVGPU_Type<"DeviceAsyncToken",
   }];
 }
 
-def NVGPU_MBarrier : NVGPU_Type<"MBarrier", "mbarrier.barrier", []> {
+def NVGPU_MBarrierGroup : NVGPU_Type<"MBarrierGroup", "mbarrier.group", []> {
   let summary = "mbarrier barrier type";
   let description = [{
-    This is the type for a mbarrier object in shared memory that is used 
-    to synchronize a variable number of threads.
+    This is the type for one or more mbarrier object in shared memory that is 
+    used to synchronize a variable number of threads.
 
-    The mbarrier object is 64 bit with 8 byte alignment. The mbarrier object 
-    can be initiated and invalidated. 
+    If `num_barriers` is not set, the number of mbarrier objects is 1.
 
-    See for more details:
-    https://docs.nvidia.com/cuda/parallel-thread-execution/#size-and-alignment-of-mbarrier-object
+    A mbarrier object is 64 bit with 8 byte alignment. The mbarrier object 
+    can be initiated and invalidated.
+
+    [See for more details in PTX ISA](https://docs.nvidia.com/cuda/parallel-thread-execution/#size-and-alignment-of-mbarrier-object)
   }];    
-  let parameters = (ins "Attribute":$memorySpace);
+  let parameters = (ins "Attribute":$memorySpace, DefaultValuedParameter<"unsigned", "1">:$num_barriers);
   let assemblyFormat = "`<` struct(params) `>`";
+  let builders = [
+    TypeBuilder<(ins "Attribute":$memorySpace), [{
+      return $_get($_ctxt, memorySpace, 1);
+    }]>
+  ];
 }
 
 def NVGPU_MBarrierToken : NVGPU_Type<"MBarrierToken", "mbarrier.token", []> { }
@@ -486,7 +492,7 @@ def NVGPU_DeviceAsyncWaitOp : NVGPU_Op<"device_async_wait", []> {
 def NVGPU_MBarrierCreateOp : NVGPU_Op<"mbarrier.create", []> {
   let summary = "Creates a `nvgpu.mbarrier` object.";
   let description = [{
-    The Op generates an `mbarrier` object, which is a barrier created in 
+    The Op generates one or more `mbarrier` object, which is a barrier created in 
     shared memory and supports various synchronization behaviors for threads.
 
     The `mbarrier` object has the following type and alignment requirements:
@@ -498,9 +504,9 @@ def NVGPU_MBarrierCreateOp : NVGPU_Op<"mbarrier.create", []> {
     ```
     }];
   let arguments = (ins);
-  let results = (outs NVGPU_MBarrier:$barrier);
+  let results = (outs NVGPU_MBarrierGroup:$barriers);
   let assemblyFormat = [{
-     attr-dict `->` type($barrier)
+     attr-dict `->` type($barriers)
   }];
 }
 
@@ -516,8 +522,8 @@ def NVGPU_MBarrierInitOp : NVGPU_Op<"mbarrier.init", []> {
       nvgpu.mbarrier.init %barrier, %num_threads : !nvgpu.mbarrier.barrier<memorySpace = #gpu.address_space<workgroup>>
     ```
   }];
-  let arguments = (ins NVGPU_MBarrier:$barrier, Index:$count);    
-  let assemblyFormat = "$barrier  `,` $count attr-dict `:` type($barrier)";
+  let arguments = (ins NVGPU_MBarrierGroup:$barriers, Index:$count, Index:$mbarId);
+  let assemblyFormat = "$barriers `[` $mbarId `]` `,` $count attr-dict `:` type($barriers)";
 }
 
 def NVGPU_MBarrierTestWaitOp : NVGPU_Op<"mbarrier.test.wait", []> {
@@ -531,9 +537,9 @@ def NVGPU_MBarrierTestWaitOp : NVGPU_Op<"mbarrier.test.wait", []> {
       %isComplete = nvgpu.mbarrier.test.wait %barrier, %token : !nvgpu.mbarrier.barrier<memorySpace = #gpu.address_space<workgroup>>, !nvgpu.mbarrier.token
     ```
   }];
-  let arguments = (ins NVGPU_MBarrier:$barrier, NVGPU_MBarrierToken:$token);
+  let arguments = (ins NVGPU_MBarrierGroup:$barriers, NVGPU_MBarrierToken:$token, Index:$mbarId);
   let results = (outs I1:$waitComplete);
-  let assemblyFormat = "$barrier `,` $token attr-dict `:` type($barrier) `,` type($token)";
+  let assemblyFormat = "$barriers `[` $mbarId `]` `,` $token attr-dict `:` type($barriers) `,` type($token)";
 }
 
 def NVGPU_MBarrierArriveOp : NVGPU_Op<"mbarrier.arrive", []> {
@@ -550,9 +556,9 @@ def NVGPU_MBarrierArriveOp : NVGPU_Op<"mbarrier.arrive", []> {
       %token = nvgpu.mbarrier.arrive %barrier : !nvgpu.mbarrier.barrier<memorySpace = #gpu.address_space<workgroup>> -> !nvgpu.mbarrier.token
     ```
   }];
-  let arguments = (ins NVGPU_MBarrier:$barrier);
+  let arguments = (ins NVGPU_MBarrierGroup:$barriers, Index:$mbarId);
   let results = (outs NVGPU_MBarrierToken:$token);
-let assemblyFormat = "$barrier attr-dict `:` type($barrier) `->` type($token)";
+let assemblyFormat = "$barriers `[` $mbarId `]` attr-dict `:` type($barriers) `->` type($token)";
 }
 
 def NVGPU_MBarrierArriveNoCompleteOp : NVGPU_Op<"mbarrier.arrive.nocomplete", []> {
@@ -568,10 +574,10 @@ def NVGPU_MBarrierArriveNoCompleteOp : NVGPU_Op<"mbarrier.arrive.nocomplete", []
       %token = nvgpu.mbarrier.arrive.noComplete %barrier, %count : !nvgpu.mbarrier.barrier<memorySpace = #gpu.address_space<workgroup>> -> !nvgpu.mbarrier.token
     ```
   }];
-  let arguments = (ins NVGPU_MBarrier:$barrier,
+  let arguments = (ins NVGPU_MBarrierGroup:$barriers, Index:$mbarId,
                        Index:$count);
   let results = (outs NVGPU_MBarrierToken:$token);
-  let assemblyFormat = "$barrier `,` $count attr-dict `:` type($barrier) `->` type($token)";
+  let assemblyFormat = "$barriers `[` $mbarId `]` `,` $count attr-dict `:` type($barriers) `->` type($token)";
 }
 
 def NVGPU_MBarrierArriveExpectTxOp : NVGPU_Op<"mbarrier.arrive.expect_tx", []> {
@@ -591,9 +597,8 @@ def NVGPU_MBarrierArriveExpectTxOp : NVGPU_Op<"mbarrier.arrive.expect_tx", []> {
       nvgpu.mbarrier.arrive.expect_tx %barrier, %ic0 : !nvgpu.mbarrier.barrier<memorySpace = #gpu.address_space<workgroup>>
     ```
   }];
-  let arguments = (ins NVGPU_MBarrier:$barrier,
-                       Index:$txcount);  
-  let assemblyFormat = "$barrier `,` $txcount  attr-dict `:` type($barrier)";
+  let arguments = (ins NVGPU_MBarrierGroup:$barriers, Index:$txcount, Index:$mbarId);
+  let assemblyFormat = "$barriers `[` $mbarId `]` `,` $txcount  attr-dict `:` type($barriers)";
 }
 
 def NVGPU_MBarrierTryWaitParityOp : NVGPU_Op<"mbarrier.try_wait.parity", []> {
@@ -610,8 +615,8 @@ def NVGPU_MBarrierTryWaitParityOp : NVGPU_Op<"mbarrier.try_wait.parity", []> {
     ```
 
   }];
-  let arguments = (ins NVGPU_MBarrier:$barrier, Index:$phase, Index:$ticks);
-  let assemblyFormat = "$barrier `,` $phase `,` $ticks attr-dict `:` type($barrier)";  
+  let arguments = (ins NVGPU_MBarrierGroup:$barriers, Index:$phase, Index:$ticks, Index:$mbarId);
+  let assemblyFormat = "$barriers `[` $mbarId `]` `,` $phase `,` $ticks attr-dict `:` type($barriers)";  
 }
 
 def NVGPU_TmaAsyncLoadOp : NVGPU_Op<"tma.async.load", []> {
@@ -626,12 +631,13 @@ def NVGPU_TmaAsyncLoadOp : NVGPU_Op<"tma.async.load", []> {
     The Op uses `$barrier` mbarrier based completion mechanism. 
   }];  
   let arguments = (ins Arg<AnyMemRef, "", [MemWrite]>:$dst,
-                       NVGPU_MBarrier:$barrier,
+                       NVGPU_MBarrierGroup:$barriers,
                        NVGPU_TensorMapDescriptor:$tensorMapDescriptor,
-                       Variadic<Index>:$coordinates);
+                       Variadic<Index>:$coordinates, 
+                       Index:$mbarId);
   let assemblyFormat = [{
-    $tensorMapDescriptor `[` $coordinates `]` `,` $barrier `to` $dst
-      attr-dict `:` type($tensorMapDescriptor) `,` type($barrier) `->` type($dst)
+    $tensorMapDescriptor `[` $coordinates `]` `,` $barriers `[` $mbarId `]` `to` $dst
+      attr-dict `:` type($tensorMapDescriptor) `,` type($barriers) `->` type($dst)
   }];
   let hasVerifier = 1;
 
