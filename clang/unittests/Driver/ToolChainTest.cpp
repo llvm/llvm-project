@@ -326,6 +326,8 @@ MATCHER_P(jobHasArgs, Substr, "") {
     Args += Sep;
     Args += Arg;
   }
+  if (is_style_windows(llvm::sys::path::Style::native))
+    std::replace(Args.begin(), Args.end(), '\\', '/');
   if (llvm::StringRef(Args).contains(Substr))
     return true;
   *result_listener << "whose args are '" << Args << "'";
