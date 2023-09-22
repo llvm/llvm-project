@@ -317,4 +317,47 @@ entry:
 
 declare void @callee_stack_args(ptr, i64, i64, i64, i64, i64, i64, i64, i64, i64, i64, i64, i64, i64, i64, i64, i64, i64, i64, i64, i64, i64, i64, i64, i64, i64, i64, i64, i64, i64, i64, i64, i64, i64, i64, i64, i64, i64, i64, i64, i64, i64, i64, i64, i64, i64, i64, i64, i64, i64, i64, i64, i64, i64, i64, i64, i64, i64, i64, i64, i64, i64, i64, i64, i64, i64, i64, i64, i64, i64, i64, i64, i64, i64, i64, i64, i64, i64, i64, i64, i64, i64, i64, i64, i64, i64, i64, i64, i64, i64, i64, i64, i64, i64, i64, i64, i64, i64, i64, i64, i64, i64, i64, i64, i64, i64, i64, i64, i64, i64, i64, i64, i64, i64, i64, i64, i64, i64, i64, i64, i64, i64, i64, i64, i64, i64, i64, i64, i64, i64, i64, i64, i64, i64, i64, i64, i64, i64, i64, i64, i64, i64, i64, i64, i64)
 
+; Dynamic allocation of SVE vectors
+define void @dynamic_sve(i64 %size, ptr %out) #0 "target-features"="+sve" {
+; CHECK-LABEL: dynamic_sve:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    stp x29, x30, [sp, #-32]! // 16-byte Folded Spill
+; CHECK-NEXT:    .cfi_def_cfa_offset 32
+; CHECK-NEXT:    str x19, [sp, #16] // 8-byte Folded Spill
+; CHECK-NEXT:    mov x29, sp
+; CHECK-NEXT:    .cfi_def_cfa w29, 32
+; CHECK-NEXT:    .cfi_offset w19, -16
+; CHECK-NEXT:    .cfi_offset w30, -24
+; CHECK-NEXT:    .cfi_offset w29, -32
+; CHECK-NEXT:    rdvl x9, #1
+; CHECK-NEXT:    mov x10, #15 // =0xf
+; CHECK-NEXT:    mov x8, sp
+; CHECK-NEXT:    madd x9, x0, x9, x10
+; CHECK-NEXT:    and x9, x9, #0xfffffffffffffff0
+; CHECK-NEXT:    sub x8, x8, x9
+; CHECK-NEXT:  .LBB7_1: // =>This Inner Loop Header: Depth=1
+; CHECK-NEXT:    sub sp, sp, #1, lsl #12 // =4096
+; CHECK-NEXT:    cmp sp, x8
+; CHECK-NEXT:    b.le .LBB7_3
+; CHECK-NEXT:  // %bb.2: // in Loop: Header=BB7_1 Depth=1
+; CHECK-NEXT:    str xzr, [sp]
+; CHECK-NEXT:    b .LBB7_1
+; CHECK-NEXT:  .LBB7_3:
+; CHECK-NEXT:    mov sp, x8
+; CHECK-NEXT:    str xzr, [sp]
+; CHECK-NEXT:    str x8, [x1]
+; CHECK-NEXT:    mov sp, x29
+; CHECK-NEXT:    .cfi_def_cfa wsp, 32
+; CHECK-NEXT:    ldr x19, [sp, #16] // 8-byte Folded Reload
+; CHECK-NEXT:    ldp x29, x30, [sp], #32 // 16-byte Folded Reload
+; CHECK-NEXT:    .cfi_def_cfa_offset 0
+; CHECK-NEXT:    .cfi_restore w19
+; CHECK-NEXT:    .cfi_restore w30
+; CHECK-NEXT:    .cfi_restore w29
+; CHECK-NEXT:    ret
+  %v = alloca <vscale x 4 x float>, i64 %size, align 16
+  store ptr %v, ptr %out, align 8
+  ret void
+}
+
 attributes #0 = { uwtable(async) "probe-stack"="inline-asm" "frame-pointer"="none" }
