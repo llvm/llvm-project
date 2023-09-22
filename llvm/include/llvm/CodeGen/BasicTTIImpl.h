@@ -1697,29 +1697,23 @@ public:
       if (FOp) {
         // TODO: Support other kinds of Intrinsics (i.e. reductions)
         if (ICA.getID() == Intrinsic::vp_load) {
-          Align Alignment = isa_and_nonnull<VPIntrinsic>(ICA.getInst())
-                                ? cast<VPIntrinsic>(ICA.getInst())
-                                      ->getPointerAlignment()
-                                      .valueOrOne()
-                                : Align(1);
-          unsigned AS = ICA.getArgs().size() >= 1 &&
-                                isa<PointerType>(ICA.getArgs()[0]->getType())
-                            ? cast<PointerType>(ICA.getArgs()[0]->getType())
-                                  ->getAddressSpace()
-                            : 0;
+          Align Alignment;
+          if (auto *VPI = dyn_cast_or_null<VPIntrinsic>(ICA.getInst()))
+            Alignment = VPI->getPointerAlignment().valueOrOne();
+          unsigned AS = 0;
+          if (ICA.getArgs().size() > 1)
+            if (auto PtrTy = dyn_cast<PointerType>(ICA.getArgs()[0]->getType()))
+              AS = PtrTy->getAddressSpace();
           return thisT()->getMemoryOpCost(*FOp, ICA.getReturnType(), Alignment,
                                           AS, CostKind);
         } else if (ICA.getID() == Intrinsic::vp_store) {
-          Align Alignment = isa_and_nonnull<VPIntrinsic>(ICA.getInst())
-                                ? cast<VPIntrinsic>(ICA.getInst())
-                                      ->getPointerAlignment()
-                                      .valueOrOne()
-                                : Align(1);
-          unsigned AS = ICA.getArgs().size() >= 2 &&
-                                isa<PointerType>(ICA.getArgs()[1]->getType())
-                            ? cast<PointerType>(ICA.getArgs()[1]->getType())
-                                  ->getAddressSpace()
-                            : 0;
+          Align Alignment;
+          if (auto *VPI = dyn_cast_or_null<VPIntrinsic>(ICA.getInst()))
+            Alignment = VPI->getPointerAlignment().valueOrOne();
+          unsigned AS = 0;
+          if (ICA.getArgs().size() >= 2)
+            if (auto PtrTy = dyn_cast<PointerType>(ICA.getArgs()[1]->getType()))
+              AS = PtrTy->getAddressSpace();
           return thisT()->getMemoryOpCost(*FOp, Args[0]->getType(), Alignment,
                                           AS, CostKind);
         } else if (VPBinOpIntrinsic::isVPBinOp(ICA.getID())) {
@@ -1732,6 +1726,9 @@ public:
           VPIntrinsic::getFunctionalIntrinsicIDForVP(ICA.getID());
       if (FID) {
         // Non-vp version will have same Args/Tys except mask and vector length.
+        assert(ICA.getArgs().size() >= 2 && ICA.getArgTypes().size() >= 2 &&
+               "Expected VPIntrinsic to have Mask and Vector Length args and "
+               "types");
         ArrayRef<const Value *> NewArgs(ICA.getArgs().begin(),
                                         ICA.getArgs().end() - 2);
         ArrayRef<Type *> NewTys(ICA.getArgTypes().begin(),
