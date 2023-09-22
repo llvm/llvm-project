@@ -6541,8 +6541,7 @@ ScalarEvolution::getRangeRefIter(const SCEV *S,
     // Use getRangeRef to compute ranges for items in the worklist in reverse
     // order. This will force ranges for earlier operands to be computed before
     // their users in most cases.
-    for (const SCEV *P :
-         reverse(make_range(WorkList.begin() + 1, WorkList.end()))) {
+    for (const SCEV *P : reverse(drop_begin(WorkList))) {
       getRangeRef(P, SignHint);
 
       if (auto *UnknownS = dyn_cast<SCEVUnknown>(P))
