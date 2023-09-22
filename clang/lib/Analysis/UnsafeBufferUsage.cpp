@@ -1434,6 +1434,22 @@ static bool hasUnsupportedSpecifiers(const VarDecl *VD,
          AttrRangeOverlapping;
 }
 
+// Returns the `SourceRange` of `D`.  The reason why this function exists is
+// that `D->getSourceRange()` may return a range where the end location is the
+// starting location of the last token.  The end location of the source range
+// returned by this function is the last location of the last token.
+static SourceRange getSourceRangeToTokenEnd(const Decl *D,
+                                            const SourceManager &SM,
+                                            LangOptions LangOpts) {
+  SourceLocation Begin = D->getBeginLoc();
+  SourceLocation
+    End = // `D->getEndLoc` should always return the starting location of the
+    // last token, so we should get the end of the token
+    Lexer::getLocForEndOfToken(D->getEndLoc(), 0, SM, LangOpts);
+
+  return SourceRange(Begin, End);
+}
+
 // Returns the text of the pointee type of `T` from a `VarDecl` of a pointer
 // type. The text is obtained through from `TypeLoc`s.  Since `TypeLoc` does not
 // have source ranges of qualifiers ( The `QualifiedTypeLoc` looks hacky too me
@@ -1526,6 +1542,21 @@ static std::optional<StringRef> getFunNameText(const FunctionDecl *FD,
   SourceRange NameRange{BeginLoc, EndLoc};
 
   return getRangeText(NameRange, SM, LangOpts);
+}
+
+// Returns the text representing a `std::span` type where the element type is
+// represented by `EltTyText`.
+//
+// Note the optional parameter `Qualifiers`: one needs to pass qualifiers
+// explicitly if the element type needs to be qualified.
+static std::string
+getSpanTypeText(StringRef EltTyText,
+                std::optional<Qualifiers> Quals = std::nullopt) {
+  const char *const SpanOpen = "std::span<";
+
+  if (Quals)
+    return SpanOpen + EltTyText.str() + ' ' + Quals->getAsString() + '>';
+  return SpanOpen + EltTyText.str() + '>';
 }
 
 std::optional<FixItList>
@@ -1916,11 +1947,11 @@ static bool hasConflictingOverload(const FunctionDecl *FD) {
   return !FD->getDeclContext()->lookup(FD->getDeclName()).isSingleResult();
 }
 
-// For a `FunDecl`, one of whose `ParmVarDecl`s is being changed to have a new
-// type, this function produces fix-its to make the change self-contained.  Let
-// 'F' be the entity defined by the original `FunDecl` and "NewF" be the entity
-// defined by the `FunDecl` after the change to the parameter.  Fix-its produced
-// by this function are
+// For a `FunctionDecl`, whose `ParmVarDecl`s are being changed to have new
+// types, this function produces fix-its to make the change self-contained.  Let
+// 'F' be the entity defined by the original `FunctionDecl` and "NewF" be the
+// entity defined by the `FunctionDecl` after the change to the parameters.
+// Fix-its produced by this function are
 //   1. Add the `[[clang::unsafe_buffer_usage]]` attribute to each declaration
 //   of 'F';
 //   2. Create a declaration of "NewF" next to each declaration of `F`;
@@ -1953,10 +1984,11 @@ static bool hasConflictingOverload(const FunctionDecl *FD) {
 //   [[clang::unsafe_buffer_usage]]
 //   #endif
 //
-// `NewTypeText` is the string representation of the new type, to which the
-// parameter indexed by `ParmIdx` is being changed.
+// `ParmsMask` is an array of size of `FD->getNumParams()` such
+// that `ParmsMask[i]` is true iff the `i`-th parameter will be fixed with some
+// strategy.
 static std::optional<FixItList>
-createOverloadsForFixedParams(unsigned ParmIdx, StringRef NewTyText,
+createOverloadsForFixedParams(const std::vector<bool> &ParmsMask, const Strategy &S,
                               const FunctionDecl *FD, const ASTContext &Ctx,
                               UnsafeBufferUsageHandler &Handler) {
   // FIXME: need to make this conflict checking better:
@@ -1965,13 +1997,30 @@ createOverloadsForFixedParams(unsigned ParmIdx, StringRef NewTyText,
 
   const SourceManager &SM = Ctx.getSourceManager();
   const LangOptions &LangOpts = Ctx.getLangOpts();
+  const unsigned NumParms = FD->getNumParams();
+  std::vector<std::string> NewTysTexts(NumParms);
+
+  for (unsigned i = 0; i < NumParms; i++) {
+    if (!ParmsMask[i])
+      continue;
+
+    std::optional<Qualifiers> PteTyQuals = std::nullopt;
+    std::optional<std::string> PteTyText =
+        getPointeeTypeText(FD->getParamDecl(i), SM, LangOpts, &PteTyQuals);
+
+    if (!PteTyText)
+      // something wrong in obtaining the text of the pointee type, give up
+      return std::nullopt;
+    // FIXME: whether we should create std::span type depends on the Strategy.
+    NewTysTexts[i] = getSpanTypeText(*PteTyText, PteTyQuals);
+  }
   // FIXME Respect indentation of the original code.
 
   // A lambda that creates the text representation of a function declaration
-  // with the new type signature:
+  // with the new type signatures:
   const auto NewOverloadSignatureCreator =
-      [&SM, &LangOpts](const FunctionDecl *FD, unsigned ParmIdx,
-                       StringRef NewTypeText) -> std::optional<std::string> {
+      [&SM, &LangOpts, &NewTysTexts,
+       &ParmsMask](const FunctionDecl *FD) -> std::optional<std::string> {
     std::stringstream SS;
 
     SS << ";";
@@ -1991,13 +2040,16 @@ createOverloadsForFixedParams(unsigned ParmIdx, StringRef NewTyText,
 
       if (Parm->isImplicit())
         continue;
-      if (i == ParmIdx) {
-        SS << NewTypeText.str();
+      if (ParmsMask[i]) {
+        // This `i`-th parameter will be fixed with `NewTysTexts[i]` being its
+        // new type:
+        SS << NewTysTexts[i];
         // print parameter name if provided:
-        if (IdentifierInfo * II = Parm->getIdentifier())
-          SS << " " << II->getName().str();
-      } else if (auto ParmTypeText =
-                     getRangeText(Parm->getSourceRange(), SM, LangOpts)) {
+        if (IdentifierInfo *II = Parm->getIdentifier())
+          SS << ' ' << II->getName().str();
+      } else if (auto ParmTypeText = getRangeText(
+                     getSourceRangeToTokenEnd(Parm, SM, LangOpts),
+                     SM, LangOpts)) {
         // print the whole `Parm` without modification:
         SS << ParmTypeText->str();
       } else
@@ -2012,9 +2064,8 @@ createOverloadsForFixedParams(unsigned ParmIdx, StringRef NewTyText,
   // A lambda that creates the text representation of a function definition with
   // the original signature:
   const auto OldOverloadDefCreator =
-      [&SM, &Handler,
-       &LangOpts](const FunctionDecl *FD, unsigned ParmIdx,
-                  StringRef NewTypeText) -> std::optional<std::string> {
+      [&Handler, &SM, &LangOpts, &NewTysTexts,
+       &ParmsMask](const FunctionDecl *FD) -> std::optional<std::string> {
     std::stringstream SS;
 
     SS << getEndOfLine().str();
@@ -2044,10 +2095,10 @@ createOverloadsForFixedParams(unsigned ParmIdx, StringRef NewTyText,
       if (!Parm->getIdentifier())
         // If a parameter of a function definition has no name:
         return std::nullopt;
-      if (i == ParmIdx)
+      if (ParmsMask[i])
         // This is our spanified paramter!
-        SS << NewTypeText.str() << "(" << Parm->getIdentifier()->getName().str() << ", "
-           << getUserFillPlaceHolder("size") << ")";
+        SS << NewTysTexts[i] << "(" << Parm->getIdentifier()->getName().str()
+           << ", " << getUserFillPlaceHolder("size") << ")";
       else
         SS << Parm->getIdentifier()->getName().str();
       if (i != NumParms - 1)
@@ -2069,8 +2120,7 @@ createOverloadsForFixedParams(unsigned ParmIdx, StringRef NewTyText,
       assert(FReDecl == FD && "inconsistent function definition");
       // Inserts a definition with the old signature to the end of
       // `FReDecl`:
-      if (auto OldOverloadDef =
-              OldOverloadDefCreator(FReDecl, ParmIdx, NewTyText))
+      if (auto OldOverloadDef = OldOverloadDefCreator(FReDecl))
         FixIts.emplace_back(FixItHint::CreateInsertion(*Loc, *OldOverloadDef));
       else
         return {}; // give up
@@ -2082,8 +2132,7 @@ createOverloadsForFixedParams(unsigned ParmIdx, StringRef NewTyText,
                                         FReDecl->getBeginLoc(), " ")));
       }
       // Inserts a declaration with the new signature to the end of `FReDecl`:
-      if (auto NewOverloadDecl =
-              NewOverloadSignatureCreator(FReDecl, ParmIdx, NewTyText))
+      if (auto NewOverloadDecl = NewOverloadSignatureCreator(FReDecl))
         FixIts.emplace_back(FixItHint::CreateInsertion(*Loc, *NewOverloadDecl));
       else
         return {};
@@ -2092,9 +2141,7 @@ createOverloadsForFixedParams(unsigned ParmIdx, StringRef NewTyText,
   return FixIts;
 }
 
-// To fix a `ParmVarDecl` to be of `std::span` type.  In addition, creating a
-// new overload of the function so that the change is self-contained (see
-// `createOverloadsForFixedParams`).
+// To fix a `ParmVarDecl` to be of `std::span` type.
 static FixItList fixParamWithSpan(const ParmVarDecl *PVD, const ASTContext &Ctx,
                                   UnsafeBufferUsageHandler &Handler) {
   if (hasUnsupportedSpecifiers(PVD, Ctx.getSourceManager())) {
@@ -2107,49 +2154,37 @@ static FixItList fixParamWithSpan(const ParmVarDecl *PVD, const ASTContext &Ctx,
     return {};
   }
 
-  assert(PVD->getType()->isPointerType());
-  auto *FD = dyn_cast<FunctionDecl>(PVD->getDeclContext());
+  std::optional<Qualifiers> PteTyQualifiers = std::nullopt;
+  std::optional<std::string> PteTyText = getPointeeTypeText(
+      PVD, Ctx.getSourceManager(), Ctx.getLangOpts(), &PteTyQualifiers);
 
-  if (!FD) {
-    DEBUG_NOTE_DECL_FAIL(PVD, " : invalid func decl");
+  if (!PteTyText) {
+    DEBUG_NOTE_DECL_FAIL(PVD, " : invalid pointee type");
+    return {};
+  }
+
+  std::optional<StringRef> PVDNameText = PVD->getIdentifier()->getName();
+
+  if (!PVDNameText) {
+    DEBUG_NOTE_DECL_FAIL(PVD, " : invalid identifier name");
     return {};
   }
 
   std::stringstream SS;
   std::optional<std::string> SpanTyText = createSpanTypeForVarDecl(PVD, Ctx);
-  std::optional<StringRef> ParmIdentText;
 
-  if (!SpanTyText)
-    return {};
-  SS << *SpanTyText;
+  if (PteTyQualifiers)
+    // Append qualifiers if they exist:
+    SS << getSpanTypeText(*PteTyText, PteTyQualifiers);
+  else
+    SS << getSpanTypeText(*PteTyText);
   // Append qualifiers to the type of the parameter:
   if (PVD->getType().hasQualifiers())
-    SS << " " << PVD->getType().getQualifiers().getAsString();
-  ParmIdentText =
-      getVarDeclIdentifierText(PVD, Ctx.getSourceManager(), Ctx.getLangOpts());
-  if (!ParmIdentText)
-    return {};
+    SS << ' ' << PVD->getType().getQualifiers().getAsString();
   // Append parameter's name:
-  SS << " " << ParmIdentText->str();
-
-  FixItList Fixes;
-  unsigned ParmIdx = 0;
-
-  Fixes.push_back(
-      FixItHint::CreateReplacement(PVD->getSourceRange(), SS.str()));
-  for (auto *ParmIter : FD->parameters()) {
-    if (PVD == ParmIter)
-      break;
-    ParmIdx++;
-  }
-  if (ParmIdx < FD->getNumParams())
-    if (auto OverloadFix = createOverloadsForFixedParams(ParmIdx, *SpanTyText,
-                                                         FD, Ctx, Handler)) {
-      Fixes.append(*OverloadFix);
-      return Fixes;
-    }
-  DEBUG_NOTE_DECL_FAIL(PVD, " : invalid number of parameters");
-  return {};
+  SS << ' ' << PVDNameText->str();
+  // Add replacement fix-it:
+  return {FixItHint::CreateReplacement(PVD->getSourceRange(), SS.str())};
 }
 
 static FixItList fixVariableWithSpan(const VarDecl *VD,
@@ -2244,6 +2279,12 @@ static bool overlapWithMacro(const FixItList &FixIts) {
   });
 }
 
+// Returns true iff `VD` is a parameter of the declaration `D`:
+static bool isParameterOf(const VarDecl *VD, const Decl *D) {
+  return isa<ParmVarDecl>(VD) &&
+         VD->getDeclContext() == dyn_cast<DeclContext>(D);
+}
+
 // Erases variables in `FixItsForVariable`, if such a variable has an unfixable
 // group mate.  A variable `v` is unfixable iff `FixItsForVariable` does not
 // contain `v`.
@@ -2257,8 +2298,7 @@ static void eraseVarsForUnfixableGroupMates(
     VarGrpRef Grp = VarGrpMgr.getGroupOfVar(VD);
     if (llvm::any_of(Grp,
                      [&FixItsForVariable](const VarDecl *GrpMember) -> bool {
-                       return FixItsForVariable.find(GrpMember) ==
-                              FixItsForVariable.end();
+                       return !FixItsForVariable.count(GrpMember);
                      })) {
       // At least one group member cannot be fixed, so we have to erase the
       // whole group:
@@ -2270,6 +2310,45 @@ static void eraseVarsForUnfixableGroupMates(
     FixItsForVariable.erase(VarToErase);
 }
 
+// Returns the fix-its that create bounds-safe function overloads for the
+// function `D`, if `D`'s parameters will be changed to safe-types through
+// fix-its in `FixItsForVariable`.
+//
+// NOTE: In case `D`'s parameters will be changed but bounds-safe function
+// overloads cannot created, the whole group that contains the parameters will
+// be erased from `FixItsForVariable`.
+static FixItList createFunctionOverloadsForParms(
+    std::map<const VarDecl *, FixItList> &FixItsForVariable /* mutable */,
+    const VariableGroupsManager &VarGrpMgr, const FunctionDecl *FD,
+    const Strategy &S, ASTContext &Ctx, UnsafeBufferUsageHandler &Handler) {
+  FixItList FixItsSharedByParms{};
+  std::vector<bool> ParmsNeedFixMask(FD->getNumParams(), false);
+  const VarDecl *FirstParmNeedsFix = nullptr;
+
+  for (unsigned i = 0; i < FD->getNumParams(); i++)
+    if (FixItsForVariable.count(FD->getParamDecl(i))) {
+      ParmsNeedFixMask[i] = true;
+      FirstParmNeedsFix = FD->getParamDecl(i);
+    }
+  if (FirstParmNeedsFix) {
+    // In case at least one parameter needs to be fixed:
+    std::optional<FixItList> OverloadFixes =
+        createOverloadsForFixedParams(ParmsNeedFixMask, S, FD, Ctx, Handler);
+
+    if (OverloadFixes) {
+      FixItsSharedByParms.append(*OverloadFixes);
+    } else {
+      // Something wrong in generating `OverloadFixes`, need to remove the
+      // whole group, where parameters are in, from `FixItsForVariable` (Note
+      // that all parameters should be in the same group):
+      for (auto *Member : VarGrpMgr.getGroupOfVar(FirstParmNeedsFix))
+        FixItsForVariable.erase(Member);
+    }
+  }
+  return FixItsSharedByParms;
+}
+
+// Constructs self-contained fix-its for each variable in `FixablesForAllVars`.
 static std::map<const VarDecl *, FixItList>
 getFixIts(FixableGadgetSets &FixablesForAllVars, const Strategy &S,
 	  ASTContext &Ctx,
@@ -2323,21 +2402,36 @@ getFixIts(FixableGadgetSets &FixablesForAllVars, const Strategy &S,
   // `FixItsForVariable` iff it can be fixed and all its group mates can be
   // fixed.
 
+  // Fix-its of bounds-safe overloads of `D` are shared by parameters of `D`.
+  // That is,  when fixing multiple parameters in one step,  these fix-its will
+  // be applied only once (instead of being applied per parameter).
+  FixItList FixItsSharedByParms{};
+
+  if (auto *FD = dyn_cast<FunctionDecl>(D))
+    FixItsSharedByParms = createFunctionOverloadsForParms(
+        FixItsForVariable, VarGrpMgr, FD, S, Ctx, Handler);
+
   // The map that maps each variable `v` to fix-its for the whole group where
   // `v` is in:
   std::map<const VarDecl *, FixItList> FinalFixItsForVariable{
       FixItsForVariable};
 
   for (auto &[Var, Ignore] : FixItsForVariable) {
-    const auto VarGroupForVD = VarGrpMgr.getGroupOfVar(Var);
+    bool AnyParm = false;
+    const auto VarGroupForVD = VarGrpMgr.getGroupOfVar(Var, &AnyParm);
 
     for (const VarDecl *GrpMate : VarGroupForVD) {
       if (Var == GrpMate)
         continue;
       if (FixItsForVariable.count(GrpMate))
-        FinalFixItsForVariable[Var].insert(FinalFixItsForVariable[Var].end(),
-                                           FixItsForVariable[GrpMate].begin(),
-                                           FixItsForVariable[GrpMate].end());
+        FinalFixItsForVariable[Var].append(FixItsForVariable[GrpMate]);
+    }
+    if (AnyParm) {
+      // This assertion should never fail.  Otherwise we have a bug.
+      assert(!FixItsSharedByParms.empty() &&
+             "Should not try to fix a parameter that does not belong to a "
+             "FunctionDecl");
+      FinalFixItsForVariable[Var].append(FixItsSharedByParms);
     }
   }
   // Fix-its that will be applied in one step shall NOT:
@@ -2367,17 +2461,30 @@ getNaiveStrategy(const llvm::SmallVectorImpl<const VarDecl *> &UnsafeVars) {
 class VariableGroupsManagerImpl : public VariableGroupsManager {
   const std::vector<VarGrpTy> Groups;
   const std::map<const VarDecl *, unsigned> &VarGrpMap;
+  const llvm::SetVector<const VarDecl *> &GrpsUnionForParms;
 
 public:
   VariableGroupsManagerImpl(
       const std::vector<VarGrpTy> &Groups,
-      const std::map<const VarDecl *, unsigned> &VarGrpMap)
-      : Groups(Groups), VarGrpMap(VarGrpMap) {}
+      const std::map<const VarDecl *, unsigned> &VarGrpMap,
+      const llvm::SetVector<const VarDecl *> &GrpsUnionForParms)
+      : Groups(Groups), VarGrpMap(VarGrpMap),
+        GrpsUnionForParms(GrpsUnionForParms) {}
 
-  VarGrpRef getGroupOfVar(const VarDecl *Var) const override {
-    auto I = VarGrpMap.find(Var);
-    assert(I != VarGrpMap.end());
-    return Groups[I->second];
+  VarGrpRef getGroupOfVar(const VarDecl *Var, bool *HasParm) const override {
+    if (GrpsUnionForParms.contains(Var)) {
+      if (HasParm)
+        *HasParm = true;
+      return GrpsUnionForParms.getArrayRef();
+    }
+    if (HasParm)
+      *HasParm = false;
+
+    auto It = VarGrpMap.find(Var);
+
+    if (It == VarGrpMap.end())
+      return std::nullopt;
+    return Groups[It->second];
   }
 };
 
@@ -2563,6 +2670,9 @@ void clang::checkUnsafeBufferUsage(const Decl *D,
   // variables belong to.  Group indexes refer to the elements in `Groups`.
   // `VarGrpMap` is complete in that every variable that needs fix is in it.
   std::map<const VarDecl *, unsigned> VarGrpMap;
+  // The union group over the ones in "Groups" that contain parameters of `D`:
+  llvm::SetVector<const VarDecl *>
+      GrpsUnionForParms; // these variables need to be fixed in one step
 
   // Group Connected Components for Unsafe Vars
   // (Dependencies based on pointer assignments)
@@ -2585,11 +2695,17 @@ void clang::checkUnsafeBufferUsage(const Decl *D,
           }
         }
       }
+
+      bool HasParm = false;
       unsigned GrpIdx = Groups.size() - 1;
 
       for (const VarDecl *V : VarGroup) {
         VarGrpMap[V] = GrpIdx;
+        if (!HasParm && isParameterOf(V, D))
+          HasParm = true;
       }
+      if (HasParm)
+        GrpsUnionForParms.insert(VarGroup.begin(), VarGroup.end());
     }
   }
 
@@ -2614,7 +2730,7 @@ void clang::checkUnsafeBufferUsage(const Decl *D,
   for (auto I = FixablesForAllVars.byVar.begin();
        I != FixablesForAllVars.byVar.end();) {
     // Note `VisitedVars` contain all the variables in the graph:
-    if (VisitedVars.find((*I).first) == VisitedVars.end()) {
+    if (!VisitedVars.count((*I).first)) {
       // no such var in graph:
       I = FixablesForAllVars.byVar.erase(I);
     } else
@@ -2622,11 +2738,14 @@ void clang::checkUnsafeBufferUsage(const Decl *D,
   }
 
   Strategy NaiveStrategy = getNaiveStrategy(UnsafeVars);
-  VariableGroupsManagerImpl VarGrpMgr(Groups, VarGrpMap);
+  VariableGroupsManagerImpl VarGrpMgr(Groups, VarGrpMap, GrpsUnionForParms);
 
-  FixItsForVariableGroup =
-      getFixIts(FixablesForAllVars, NaiveStrategy, D->getASTContext(), D,
-                Tracker, Handler, VarGrpMgr);
+  if (isa<NamedDecl>(D))
+    // The only case where `D` is not a `NamedDecl` is when `D` is a
+    // `BlockDecl`. Let's not fix variables in blocks for now
+    FixItsForVariableGroup =
+        getFixIts(FixablesForAllVars, NaiveStrategy, D->getASTContext(), D,
+                  Tracker, Handler, VarGrpMgr);
 
   for (const auto &G : UnsafeOps.noVar) {
     Handler.handleUnsafeOperation(G->getBaseStmt(), /*IsRelatedToDecl=*/false);
@@ -2637,7 +2756,8 @@ void clang::checkUnsafeBufferUsage(const Decl *D,
     Handler.handleUnsafeVariableGroup(VD, VarGrpMgr,
                                       FixItsIt != FixItsForVariableGroup.end()
                                       ? std::move(FixItsIt->second)
-                                      : FixItList{});
+                                      : FixItList{},
+                                      D);
     for (const auto &G : WarningGadgets) {
       Handler.handleUnsafeOperation(G->getBaseStmt(), /*IsRelatedToDecl=*/true);
     }
