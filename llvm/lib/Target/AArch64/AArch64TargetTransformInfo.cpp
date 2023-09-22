@@ -2463,30 +2463,21 @@ InstructionCost AArch64TTIImpl::getCastInstrCost(unsigned Opcode, Type *Dst,
 
   if ((ISD == ISD::ZERO_EXTEND || ISD == ISD::SIGN_EXTEND) &&
       CCH == TTI::CastContextHint::Masked && ST->hasSVEorSME() &&
-      !TLI->isTypeLegal(SrcTy) && !TLI->isTypeLegal(DstTy)) {
-    // Add cost for extending unpacked masked loads to wide illegal scalable
-    // vectors. For such cases we require a combination of extending loads and
-    // unpacks, for example:
-    //   masked load of nxv4i8 + zext -> nxv4i64 becomes
-    //   ld1b {z0.s}, ...
-    //   uunpklo z1.d, z0.s
-    //   uunpkhi z2.d, z0.s
-    static const TypeConversionCostTblEntry IllToIllTbl[] = {
-      { ISD::ZERO_EXTEND, MVT::nxv4i64, MVT::nxv4i8,  2},
-      { ISD::ZERO_EXTEND, MVT::nxv4i64, MVT::nxv4i16, 2},
-      { ISD::ZERO_EXTEND, MVT::nxv8i32, MVT::nxv8i8,  2},
-      { ISD::ZERO_EXTEND, MVT::nxv8i64, MVT::nxv8i8,  6},
-
-      { ISD::SIGN_EXTEND, MVT::nxv4i64, MVT::nxv4i8,  2},
-      { ISD::SIGN_EXTEND, MVT::nxv4i64, MVT::nxv4i16, 2},
-      { ISD::SIGN_EXTEND, MVT::nxv8i32, MVT::nxv8i8,  2},
-      { ISD::SIGN_EXTEND, MVT::nxv8i64, MVT::nxv8i8,  6},
-    };
-
-    if (const auto *Entry = ConvertCostTableLookup(IllToIllTbl, ISD,
-                                                   DstTy.getSimpleVT(),
-                                                   SrcTy.getSimpleVT()))
-      return AdjustCost(Entry->Cost);
+      TLI->getTypeAction(Src->getContext(), SrcTy) ==
+          TargetLowering::TypePromoteInteger &&
+      TLI->getTypeAction(Dst->getContext(), DstTy) ==
+          TargetLowering::TypeSplitVector) {
+    // The standard behaviour in the backend for these cases is to split the
+    // extend up into two parts:
+    //  1. Perform an extending load or masked load up to the legal type.
+    //  2. Extend the loaded data to the final type.
+    std::pair<InstructionCost, MVT> SrcLT = getTypeLegalizationCost(Src);
+    Type *LegalTy = EVT(SrcLT.second).getTypeForEVT(Src->getContext());
+    InstructionCost Part1 = AArch64TTIImpl::getCastInstrCost(
+        Opcode, LegalTy, Src, CCH, CostKind, I);
+    InstructionCost Part2 = AArch64TTIImpl::getCastInstrCost(
+        Opcode, Dst, LegalTy, CCH, CostKind, I);
+    return Part1 + Part2;
   }
 
   // The BasicTTIImpl version only deals with CCH==TTI::CastContextHint::Normal,
