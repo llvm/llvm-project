@@ -17,9 +17,8 @@
 
 namespace clang::dataflow {
 
-const Formula &Formula::create(llvm::BumpPtrAllocator &Alloc, Kind K,
-                               ArrayRef<const Formula *> Operands,
-                               unsigned Value) {
+Formula &Formula::create(llvm::BumpPtrAllocator &Alloc, Kind K,
+                         ArrayRef<const Formula *> Operands, unsigned Value) {
   assert(Operands.size() == numOperands(K));
   if (Value != 0) // Currently, formulas have values or operands, not both.
     assert(numOperands(K) == 0);
@@ -39,7 +38,6 @@ const Formula &Formula::create(llvm::BumpPtrAllocator &Alloc, Kind K,
 static llvm::StringLiteral sigil(Formula::Kind K) {
   switch (K) {
   case Formula::AtomRef:
-  case Formula::Literal:
     return "";
   case Formula::Not:
     return "!";
@@ -64,16 +62,7 @@ void Formula::print(llvm::raw_ostream &OS, const AtomNames *Names) const {
 
   switch (numOperands(kind())) {
   case 0:
-    switch (kind()) {
-    case AtomRef:
-      OS << getAtom();
-      break;
-    case Literal:
-      OS << (literal() ? "true" : "false");
-      break;
-    default:
-      llvm_unreachable("unhandled formula kind");
-    }
+    OS << getAtom();
     break;
   case 1:
     OS << sigil(kind());

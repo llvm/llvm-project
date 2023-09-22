@@ -30,12 +30,6 @@ TEST(BoolValueDebugStringTest, AtomicBoolean) {
   EXPECT_THAT(llvm::to_string(*B), StrEq(Expected));
 }
 
-TEST(BoolValueDebugStringTest, Literal) {
-  ConstraintContext Ctx;
-  EXPECT_EQ("true", llvm::to_string(*Ctx.literal(true)));
-  EXPECT_EQ("false", llvm::to_string(*Ctx.literal(false)));
-}
-
 TEST(BoolValueDebugStringTest, Negation) {
   ConstraintContext Ctx;
   auto B = Ctx.neg(Ctx.atom());
@@ -97,14 +91,16 @@ TEST(BoolValueDebugStringTest, NestedBoolean) {
 
 TEST(BoolValueDebugStringTest, ComplexBooleanWithSomeNames) {
   ConstraintContext Ctx;
-  auto X = Ctx.atom();
-  auto Y = Ctx.atom();
+  auto True = Ctx.atom();
+  auto False = Ctx.atom();
+  auto V2 = Ctx.atom();
+  auto V3 = Ctx.atom();
   Formula::AtomNames Names;
-  Names[X->getAtom()] = "X";
-  Names[Y->getAtom()] = "Y";
-  auto B = Ctx.disj(Ctx.conj(Y, Ctx.atom()), Ctx.disj(X, Ctx.atom()));
+  Names[True->getAtom()] = "true";
+  Names[False->getAtom()] = "false";
+  auto B = Ctx.disj(Ctx.conj(False, V2), Ctx.disj(True, V3));
 
-  auto Expected = R"(((Y & V2) | (X | V3)))";
+  auto Expected = R"(((false & V2) | (true | V3)))";
   std::string Actual;
   llvm::raw_string_ostream OS(Actual);
   B->print(OS, &Names);
