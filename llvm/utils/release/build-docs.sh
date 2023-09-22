@@ -103,8 +103,11 @@ if [ "$no_doxygen" == "yes" ] && [ "$no_sphinx" == "yes" ]; then
 fi
 
 if [ "$no_sphinx" != "yes" ]; then
+  echo "Sphinx: enabled"
   sphinx_targets="docs-clang-html docs-clang-tools-html docs-flang-html docs-lld-html docs-llvm-html docs-polly-html"
   sphinx_flag=" -DLLVM_ENABLE_SPHINX=ON -DSPHINX_WARNINGS_AS_ERRORS=OFF"
+else
+  echo "Sphinx: disabled"
 fi
 
 if [ "$no_doxygen" != "yes" ]; then
