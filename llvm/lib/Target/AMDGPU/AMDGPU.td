@@ -1543,6 +1543,7 @@ def FeatureISAVersion12_10 : FeatureSet<
    FeatureSALUFloatInsts,
    FeaturePseudoScalarTrans,
    FeatureHasRestrictedSOffset,
+   FeatureVGPRSingleUseHintInsts,
    FeatureScalarDwordx3Loads,
    FeatureBitOp3Insts,
    FeatureTanhInsts,
