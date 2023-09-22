@@ -2671,7 +2671,7 @@ void ModuloScheduleExpanderMVE::expand() {
 /// Check if ModuloScheduleExpanderMVE can be applied to L
 bool ModuloScheduleExpanderMVE::canApply(MachineLoop &L) {
   if (!L.getExitBlock()) {
-    LLVM_DEBUG(dbgs() << "Can not apply MVE expander: No single exit block\n";);
+    LLVM_DEBUG(dbgs() << "Can not apply MVE expander: No single exit block.\n";);
     return false;
   }
 
@@ -2689,7 +2689,7 @@ bool ModuloScheduleExpanderMVE::canApply(MachineLoop &L) {
         for (MachineInstr &Ref : MRI.use_instructions(MO.getReg()))
           if (Ref.getParent() != BB || Ref.isPHI()) {
             LLVM_DEBUG(dbgs() << "Can not apply MVE expander: A phi result is "
-                                 "referenced outside of the loop or by phi.";);
+                                 "referenced outside of the loop or by phi.\n";);
             return false;
           }
 
