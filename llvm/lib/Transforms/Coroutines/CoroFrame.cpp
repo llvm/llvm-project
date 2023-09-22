@@ -1766,8 +1766,8 @@ static void insertSpills(const FrameDataInfo &FrameData, coro::Shape &Shape) {
       // Note: If we change the strategy dealing with alignment, we need to refine
       // this casting.
       if (GEP->getType() != Orig->getType())
-        return Builder.CreateBitCast(GEP, Orig->getType(),
-                                     Orig->getName() + Twine(".cast"));
+        return Builder.CreateAddrSpaceCast(GEP, Orig->getType(),
+                                           Orig->getName() + Twine(".cast"));
     }
     return GEP;
   };
