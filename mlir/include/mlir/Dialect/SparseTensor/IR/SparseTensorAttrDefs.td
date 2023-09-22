@@ -237,7 +237,8 @@ def SparseTensorEncodingAttr : SparseTensor_Attr<"SparseTensorEncoding",
   //
   let parameters = (
     ins
-    // A level-type for each level of the sparse storage.
+    // A level-type for each level of the sparse storage
+    // (consists of a level-format combined with level-properties).
     ArrayRefParameter<
       "::mlir::sparse_tensor::DimLevelType",
       "level-types"
@@ -245,6 +246,9 @@ def SparseTensorEncodingAttr : SparseTensor_Attr<"SparseTensorEncoding",
 
     // A mapping from dimension-coordinates to level-coordinates.
     "AffineMap":$dimToLvl,
+
+    // A mapping from level-coordinates to dimension-coordinates.
+    "AffineMap":$lvlToDim,
 
     // The required bitwidth for position storage.
     "unsigned":$posWidth,
@@ -262,9 +266,10 @@ def SparseTensorEncodingAttr : SparseTensor_Attr<"SparseTensorEncoding",
   let builders = [
     AttrBuilder<(ins "ArrayRef<::mlir::sparse_tensor::DimLevelType>":$lvlTypes,
                      "AffineMap":$dimToLvl,
+                     "AffineMap":$lvlToDim,
                      "unsigned":$posWidth,
                      "unsigned":$crdWidth), [{
-      return $_get($_ctxt, lvlTypes, dimToLvl, posWidth, crdWidth,
+      return $_get($_ctxt, lvlTypes, dimToLvl, lvlToDim, posWidth, crdWidth,
         ArrayRef<::mlir::sparse_tensor::SparseTensorDimSliceAttr>{});
     }]>
   ];
