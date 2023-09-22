@@ -295,6 +295,7 @@ Error BasicBlockSectionsProfileReader::ReadProfile() {
 
   switch (Version) {
   case 0:
+    // TODO: Deprecate V0 once V1 is fully integrated downstream.
     return ReadV0Profile();
   case 1:
     return ReadV1Profile();
