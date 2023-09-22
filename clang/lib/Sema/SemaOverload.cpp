@@ -1880,8 +1880,7 @@ static bool IsVectorConversion(Sema &S, QualType FromType, QualType ToType,
       return true;
     }
 
-  if (ToType->isRVVSizelessBuiltinType() ||
-      FromType->isRVVSizelessBuiltinType())
+  if (ToType->isRVVType() || FromType->isRVVType())
     if (S.Context.areCompatibleRVVTypes(FromType, ToType) ||
         S.Context.areLaxCompatibleRVVTypes(FromType, ToType)) {
       ICK = ICK_RVV_Vector_Conversion;

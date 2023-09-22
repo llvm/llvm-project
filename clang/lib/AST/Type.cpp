@@ -2403,7 +2403,7 @@ bool Type::isWebAssemblyTableType() const {
 bool Type::isSizelessType() const { return isSizelessBuiltinType(); }
 
 bool Type::isSizelessVectorType() const {
-  return isSVESizelessBuiltinType() || isRVVSizelessBuiltinType();
+  return isSVESizelessBuiltinType() || isRVVType();
 }
 
 bool Type::isSVESizelessBuiltinType() const {
@@ -2412,19 +2412,6 @@ bool Type::isSVESizelessBuiltinType() const {
       // SVE Types
 #define SVE_TYPE(Name, Id, SingletonId) case BuiltinType::Id:
 #include "clang/Basic/AArch64SVEACLETypes.def"
-      return true;
-    default:
-      return false;
-    }
-  }
-  return false;
-}
-
-bool Type::isRVVSizelessBuiltinType() const {
-  if (const BuiltinType *BT = getAs<BuiltinType>()) {
-    switch (BT->getKind()) {
-#define RVV_TYPE(Name, Id, SingletonId) case BuiltinType::Id:
-#include "clang/Basic/RISCVVTypes.def"
       return true;
     default:
       return false;

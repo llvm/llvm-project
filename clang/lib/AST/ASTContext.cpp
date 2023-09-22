@@ -9521,10 +9521,9 @@ static uint64_t getRVVTypeSize(ASTContext &Context, const BuiltinType *Ty) {
 
 bool ASTContext::areCompatibleRVVTypes(QualType FirstType,
                                        QualType SecondType) {
-  assert(
-      ((FirstType->isRVVSizelessBuiltinType() && SecondType->isVectorType()) ||
-       (FirstType->isVectorType() && SecondType->isRVVSizelessBuiltinType())) &&
-      "Expected RVV builtin type and vector type!");
+  assert(((FirstType->isRVVType() && SecondType->isVectorType()) ||
+          (FirstType->isVectorType() && SecondType->isRVVType())) &&
+         "Expected RVV builtin type and vector type!");
 
   auto IsValidCast = [this](QualType FirstType, QualType SecondType) {
     if (const auto *BT = FirstType->getAs<BuiltinType>()) {
@@ -9546,10 +9545,9 @@ bool ASTContext::areCompatibleRVVTypes(QualType FirstType,
 
 bool ASTContext::areLaxCompatibleRVVTypes(QualType FirstType,
                                           QualType SecondType) {
-  assert(
-      ((FirstType->isRVVSizelessBuiltinType() && SecondType->isVectorType()) ||
-       (FirstType->isVectorType() && SecondType->isRVVSizelessBuiltinType())) &&
-      "Expected RVV builtin type and vector type!");
+  assert(((FirstType->isRVVType() && SecondType->isVectorType()) ||
+          (FirstType->isVectorType() && SecondType->isRVVType())) &&
+         "Expected RVV builtin type and vector type!");
 
   auto IsLaxCompatible = [this](QualType FirstType, QualType SecondType) {
     const auto *BT = FirstType->getAs<BuiltinType>();
