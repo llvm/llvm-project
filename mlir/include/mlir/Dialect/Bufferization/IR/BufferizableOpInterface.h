@@ -528,13 +528,6 @@ public:
   /// Return `true` if the given tensor has undefined contents.
   virtual bool hasUndefinedContents(OpOperand *opOperand) const;
 
-  /// Return true if the given tensor (or an aliasing tensor) is yielded from
-  /// the containing block. Also include all aliasing tensors in the same block.
-  ///
-  /// Note: In the absence of an analysis, an implementation may return true for
-  /// any given tensor.
-  virtual bool isTensorYielded(Value tensor) const;
-
   /// Return a reference to the BufferizationOptions.
   const BufferizationOptions &getOptions() const { return options; }
 
