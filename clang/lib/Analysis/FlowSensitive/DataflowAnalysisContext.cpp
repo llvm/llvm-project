@@ -141,8 +141,6 @@ DataflowAnalysisContext::joinFlowConditions(Atom FirstToken,
 
 Solver::Result DataflowAnalysisContext::querySolver(
     llvm::SetVector<const Formula *> Constraints) {
-  Constraints.insert(&arena().makeLiteral(true));
-  Constraints.insert(&arena().makeNot(arena().makeLiteral(false)));
   return S->solve(Constraints.getArrayRef());
 }
 
@@ -213,13 +211,8 @@ void DataflowAnalysisContext::dumpFlowCondition(Atom Token,
   Constraints.insert(&arena().makeAtomRef(Token));
   addTransitiveFlowConditionConstraints(Token, Constraints);
 
-  // TODO: have formulas know about true/false directly instead
-  Atom True = arena().makeLiteral(true).getAtom();
-  Atom False = arena().makeLiteral(false).getAtom();
-  Formula::AtomNames Names = {{False, "false"}, {True, "true"}};
-
   for (const auto *Constraint : Constraints) {
-    Constraint->print(OS, &Names);
+    Constraint->print(OS);
     OS << "\n";
   }
 }
