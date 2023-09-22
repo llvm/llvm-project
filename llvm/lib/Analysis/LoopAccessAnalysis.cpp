@@ -44,6 +44,7 @@
 #include "llvm/IR/Dominators.h"
 #include "llvm/IR/Function.h"
 #include "llvm/IR/GetElementPtrTypeIterator.h"
+#include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/InstrTypes.h"
 #include "llvm/IR/Instruction.h"
 #include "llvm/IR/Instructions.h"
@@ -804,6 +805,7 @@ static bool isNoWrap(PredicatedScalarEvolution &PSE,
 }
 
 static void visitPointers(Value *StartPtr, const Loop &InnermostLoop,
+                          PredicatedScalarEvolution &PSE,
                           function_ref<void(Value *)> AddPointer) {
   SmallPtrSet<Value *, 8> Visited;
   SmallVector<Value *> WorkList;
@@ -821,8 +823,40 @@ static void visitPointers(Value *StartPtr, const Loop &InnermostLoop,
         PN->getParent() != InnermostLoop.getHeader()) {
       for (const Use &Inc : PN->incoming_values())
         WorkList.push_back(Inc);
-    } else
+    } else {
+      auto *GEP = dyn_cast<GetElementPtrInst>(Ptr);
+      ScalarEvolution &SE = *PSE.getSE();
+      // Decompose the GEP when its offset is a induction variable.
+      if (GEP && GEP->getNumOperands() == 2 &&
+          isa<SCEVAddExpr>(SE.getSCEV(GEP)) &&
+          !InnermostLoop.isLoopInvariant(GEP->getOperand(0))) {
+        if (auto *PhiI = dyn_cast<PHINode>(GEP->getOperand(0))) {
+          const SCEV *Offset = SE.getSCEV(GEP->getOperand(1));
+          if (PhiI->getNumOperands() == 2 && isa<SCEVAddRecExpr>(Offset) &&
+              InnermostLoop.isLoopInvariant(PhiI->getIncomingValue(0)) &&
+              InnermostLoop.isLoopInvariant(PhiI->getIncomingValue(1))) {
+            // Transform back to 2 PointerInfo entries with separate values to
+            // track the forked pointer.
+            Type *SourceTy = GEP->getResultElementType();
+            bool IsInBounds = GEP->isInBounds();
+            SmallVector<Value *, 4> Index(GEP->indices());
+            IRBuilder<> BuilderA(PhiI->getIncomingBlock(0)->getTerminator());
+            Value *In0 = PhiI->getIncomingValue(0);
+            auto *GEPA = BuilderA.CreateGEP(
+                SourceTy, In0, Index, GEP->getName() + ".in0", IsInBounds);
+            IRBuilder<> BuilderB(PhiI->getIncomingBlock(1)->getTerminator());
+            Value *In1 = PhiI->getIncomingValue(1);
+            auto *GEPB = BuilderA.CreateGEP(
+                SourceTy, In1, Index, GEP->getName() + ".in1", IsInBounds);
+            AddPointer(GEPA);
+            AddPointer(GEPB);
+            continue;
+          }
+        }
+      }
+
       AddPointer(Ptr);
+    }
   }
 }
 
@@ -1634,7 +1668,7 @@ bool llvm::isConsecutiveAccess(Value *A, Value *B, const DataLayout &DL,
 }
 
 void MemoryDepChecker::addAccess(StoreInst *SI) {
-  visitPointers(SI->getPointerOperand(), *InnermostLoop,
+  visitPointers(SI->getPointerOperand(), *InnermostLoop, PSE,
                 [this, SI](Value *Ptr) {
                   Accesses[MemAccessInfo(Ptr, true)].push_back(AccessIdx);
                   InstMap.push_back(SI);
@@ -1643,7 +1677,7 @@ void MemoryDepChecker::addAccess(StoreInst *SI) {
 }
 
 void MemoryDepChecker::addAccess(LoadInst *LI) {
-  visitPointers(LI->getPointerOperand(), *InnermostLoop,
+  visitPointers(LI->getPointerOperand(), *InnermostLoop, PSE,
                 [this, LI](Value *Ptr) {
                   Accesses[MemAccessInfo(Ptr, false)].push_back(AccessIdx);
                   InstMap.push_back(LI);
@@ -2367,7 +2401,7 @@ void LoopAccessInfo::analyzeLoop(AAResults *AA, LoopInfo *LI,
       if (blockNeedsPredication(ST->getParent(), TheLoop, DT))
         Loc.AATags.TBAA = nullptr;
 
-      visitPointers(const_cast<Value *>(Loc.Ptr), *TheLoop,
+      visitPointers(const_cast<Value *>(Loc.Ptr), *TheLoop, *PSE,
                     [&Accesses, AccessTy, Loc](Value *Ptr) {
                       MemoryLocation NewLoc = Loc.getWithNewPtr(Ptr);
                       Accesses.addStore(NewLoc, AccessTy);
@@ -2416,7 +2450,7 @@ void LoopAccessInfo::analyzeLoop(AAResults *AA, LoopInfo *LI,
     if (blockNeedsPredication(LD->getParent(), TheLoop, DT))
       Loc.AATags.TBAA = nullptr;
 
-    visitPointers(const_cast<Value *>(Loc.Ptr), *TheLoop,
+    visitPointers(const_cast<Value *>(Loc.Ptr), *TheLoop, *PSE,
                   [&Accesses, AccessTy, Loc, IsReadOnlyPtr](Value *Ptr) {
                     MemoryLocation NewLoc = Loc.getWithNewPtr(Ptr);
                     Accesses.addLoad(NewLoc, AccessTy, IsReadOnlyPtr);
