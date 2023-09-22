@@ -31,7 +31,9 @@ void bar() {
 // CHECK-LABEL: define dso_local void @baz(
 // CHECK-SAME: ) #[[ATTR0]] {
 // CHECK-NEXT:  entry:
-// CHECK-NEXT:    call void asm sideeffect "#NOP", "^vr"({ <vscale x 2 x i32>, <vscale x 2 x i32> } undef) #[[ATTR2:[0-9]+]], !srcloc !6
+// CHECK-NEXT:    [[TMP0:%.*]] = extractvalue { <vscale x 2 x i32>, <vscale x 2 x i32> } undef, 0
+// CHECK-NEXT:    [[TMP1:%.*]] = extractvalue { <vscale x 2 x i32>, <vscale x 2 x i32> } undef, 1
+// CHECK-NEXT:    call void asm sideeffect "#NOP", "^vr,^vr"(<vscale x 2 x i32> [[TMP0]], <vscale x 2 x i32> [[TMP1]]) #[[ATTR2:[0-9]+]], !srcloc !6
 // CHECK-NEXT:    ret void
 //
 void baz() {

@@ -2709,10 +2709,40 @@ void CodeGenFunction::EmitAsmStmt(const AsmStmt &S) {
           std::max((uint64_t)LargestVectorWidth,
                    VT->getPrimitiveSizeInBits().getKnownMinValue());
 
-    ArgTypes.push_back(Arg->getType());
-    ArgElemTypes.push_back(ArgElemType);
-    Args.push_back(Arg);
-    Constraints += InputConstraint;
+    // Expand RVV tuple type input operands.
+    if (InputExpr->getType()->isRVVType() && Arg->getType()->isStructTy()) {
+      std::string ExpandedInputContraint;
+
+      auto *STy = cast<llvm::StructType>(Arg->getType());
+
+      assert(STy->containsHomogeneousScalableVectorTypes() &&
+             isa<llvm::ScalableVectorType>(STy->getElementType(0)) &&
+             "Only aggregate type of homogeneous scalable vectors is handled "
+             "here");
+
+      auto *VTy = cast<llvm::ScalableVectorType>(STy->getElementType(0));
+
+      for (unsigned Idx = 0, TupleSize = STy->getNumElements();
+           Idx != TupleSize; ++Idx) {
+        if (ExpandedInputContraint.size())
+          ExpandedInputContraint += ",";
+
+        ExpandedInputContraint += InputConstraint;
+        ArgTypes.push_back(VTy);
+        ArgElemTypes.push_back(ArgElemType);
+
+        llvm::Value *SubVec = Builder.CreateExtractValue(Arg, {Idx});
+
+        Args.push_back(SubVec);
+      }
+
+      Constraints += ExpandedInputContraint;
+    } else {
+      ArgTypes.push_back(Arg->getType());
+      ArgElemTypes.push_back(ArgElemType);
+      Args.push_back(Arg);
+      Constraints += InputConstraint;
+    }
   }
 
   // Append the "input" part of inout constraints.
