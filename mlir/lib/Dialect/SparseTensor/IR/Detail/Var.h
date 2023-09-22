@@ -453,8 +453,8 @@ public:
   /// for the variable with the given name (i.e., either the newly created
   /// variable, or the pre-existing variable), and a bool indicating whether
   /// a new variable was created.
-  std::pair<VarInfo::ID, bool> create(StringRef name, llvm::SMLoc loc,
-                                      VarKind vk, bool verifyUsage = false);
+  std::optional<std::pair<VarInfo::ID, bool>>
+  create(StringRef name, llvm::SMLoc loc, VarKind vk, bool verifyUsage = false);
 
   /// Attempts to lookup or create a variable according to the given
   /// `Policy`.  Returns nullopt in one of two circumstances:
