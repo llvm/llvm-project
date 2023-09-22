@@ -337,12 +337,10 @@ static bool isCapabilityExpr(Sema &S, const Expr *Ex) {
 /// \param Sidx The attribute argument index to start checking with.
 /// \param ParamIdxOk Whether an argument can be indexing into a function
 /// parameter list.
-static void checkAttrArgsAreCapabilityObjs(Sema &S, Decl *D,
-                                           const ParsedAttr &AL,
-                                           SmallVectorImpl<Expr *> &Args,
-                                           unsigned Sidx = 0,
-                                           bool ParamIdxOk = false) {
-  if (Sidx == AL.getNumArgs()) {
+void Sema::checkAttrArgsAreCapabilityObjs(Decl *D, const ParsedAttr &AL,
+                                          SmallVectorImpl<Expr *> &Args,
+                                          unsigned Sidx, bool ParamIdxOk) {
+  if (D && Sidx == AL.getNumArgs()) {
     // If we don't have any capability arguments, the attribute implicitly
     // refers to 'this'. So we need to make sure that 'this' exists, i.e. we're
     // a non-static method, and that the class is a (scoped) capability.
@@ -352,11 +350,10 @@ static void checkAttrArgsAreCapabilityObjs(Sema &S, Decl *D,
       // FIXME -- need to check this again on template instantiation
       if (!checkRecordDeclForAttr<CapabilityAttr>(RD) &&
           !checkRecordDeclForAttr<ScopedLockableAttr>(RD))
-        S.Diag(AL.getLoc(),
-               diag::warn_thread_attribute_not_on_capability_member)
+        Diag(AL.getLoc(), diag::warn_thread_attribute_not_on_capability_member)
             << AL << MD->getParent();
     } else {
-      S.Diag(AL.getLoc(), diag::warn_thread_attribute_not_on_non_static_member)
+      Diag(AL.getLoc(), diag::warn_thread_attribute_not_on_non_static_member)
           << AL;
     }
   }
@@ -381,7 +378,7 @@ static void checkAttrArgsAreCapabilityObjs(Sema &S, Decl *D,
 
       // We allow constant strings to be used as a placeholder for expressions
       // that are not valid C++ syntax, but warn that they are ignored.
-      S.Diag(AL.getLoc(), diag::warn_thread_attribute_ignored) << AL;
+      Diag(AL.getLoc(), diag::warn_thread_attribute_ignored) << AL;
       Args.push_back(ArgExp);
       continue;
     }
@@ -400,7 +397,7 @@ static void checkAttrArgsAreCapabilityObjs(Sema &S, Decl *D,
     const RecordType *RT = getRecordType(ArgTy);
 
     // Now check if we index into a record type function param.
-    if(!RT && ParamIdxOk) {
+    if (D && !RT && ParamIdxOk) {
       const auto *FD = dyn_cast<FunctionDecl>(D);
       const auto *IL = dyn_cast<IntegerLiteral>(ArgExp);
       if(FD && IL) {
@@ -409,8 +406,8 @@ static void checkAttrArgsAreCapabilityObjs(Sema &S, Decl *D,
         uint64_t ParamIdxFromOne = ArgValue.getZExtValue();
         uint64_t ParamIdxFromZero = ParamIdxFromOne - 1;
         if (!ArgValue.isStrictlyPositive() || ParamIdxFromOne > NumParams) {
-          S.Diag(AL.getLoc(),
-                 diag::err_attribute_argument_out_of_bounds_extra_info)
+          Diag(AL.getLoc(),
+               diag::err_attribute_argument_out_of_bounds_extra_info)
               << AL << Idx + 1 << NumParams;
           continue;
         }
@@ -422,8 +419,8 @@ static void checkAttrArgsAreCapabilityObjs(Sema &S, Decl *D,
     // expression have capabilities. This allows for writing C code where the
     // capability may be on the type, and the expression is a capability
     // boolean logic expression. Eg) requires_capability(A || B && !C)
-    if (!typeHasCapability(S, ArgTy) && !isCapabilityExpr(S, ArgExp))
-      S.Diag(AL.getLoc(), diag::warn_thread_attribute_argument_not_lockable)
+    if (!typeHasCapability(*this, ArgTy) && !isCapabilityExpr(*this, ArgExp))
+      Diag(AL.getLoc(), diag::warn_thread_attribute_argument_not_lockable)
           << AL << ArgTy;
 
     Args.push_back(ArgExp);
@@ -458,7 +455,7 @@ static bool checkGuardedByAttrCommon(Sema &S, Decl *D, const ParsedAttr &AL,
                                      Expr *&Arg) {
   SmallVector<Expr *, 1> Args;
   // check that all arguments are lockable objects
-  checkAttrArgsAreCapabilityObjs(S, D, AL, Args);
+  S.checkAttrArgsAreCapabilityObjs(D, AL, Args);
   unsigned Size = Args.size();
   if (Size != 1)
     return false;
@@ -500,7 +497,7 @@ static bool checkAcquireOrderAttrCommon(Sema &S, Decl *D, const ParsedAttr &AL,
   }
 
   // Check that all arguments are lockable objects.
-  checkAttrArgsAreCapabilityObjs(S, D, AL, Args);
+  S.checkAttrArgsAreCapabilityObjs(D, AL, Args);
   if (Args.empty())
     return false;
 
@@ -531,7 +528,7 @@ static bool checkLockFunAttrCommon(Sema &S, Decl *D, const ParsedAttr &AL,
                                    SmallVectorImpl<Expr *> &Args) {
   // zero or more arguments ok
   // check that all arguments are lockable objects
-  checkAttrArgsAreCapabilityObjs(S, D, AL, Args, 0, /*ParamIdxOk=*/true);
+  S.checkAttrArgsAreCapabilityObjs(D, AL, Args, 0, /*ParamIdxOk=*/true);
 
   return true;
 }
@@ -633,7 +630,7 @@ static bool checkTryLockFunAttrCommon(Sema &S, Decl *D, const ParsedAttr &AL,
   }
 
   // check that all arguments are lockable objects
-  checkAttrArgsAreCapabilityObjs(S, D, AL, Args, 1);
+  S.checkAttrArgsAreCapabilityObjs(D, AL, Args, 1);
 
   return true;
 }
@@ -661,7 +658,7 @@ static void handleExclusiveTrylockFunctionAttr(Sema &S, Decl *D,
 static void handleLockReturnedAttr(Sema &S, Decl *D, const ParsedAttr &AL) {
   // check that the argument is lockable object
   SmallVector<Expr*, 1> Args;
-  checkAttrArgsAreCapabilityObjs(S, D, AL, Args);
+  S.checkAttrArgsAreCapabilityObjs(D, AL, Args);
   unsigned Size = Args.size();
   if (Size == 0)
     return;
@@ -679,7 +676,7 @@ static void handleLocksExcludedAttr(Sema &S, Decl *D, const ParsedAttr &AL) {
 
   // check that all arguments are lockable objects
   SmallVector<Expr*, 1> Args;
-  checkAttrArgsAreCapabilityObjs(S, D, AL, Args);
+  S.checkAttrArgsAreCapabilityObjs(D, AL, Args);
   unsigned Size = Args.size();
   if (Size == 0)
     return;
@@ -6020,7 +6017,7 @@ static void handleReleaseCapabilityAttr(Sema &S, Decl *D,
     return;
   // Check that all arguments are lockable objects.
   SmallVector<Expr *, 1> Args;
-  checkAttrArgsAreCapabilityObjs(S, D, AL, Args, 0, true);
+  S.checkAttrArgsAreCapabilityObjs(D, AL, Args, 0, true);
 
   D->addAttr(::new (S.Context) ReleaseCapabilityAttr(S.Context, AL, Args.data(),
                                                      Args.size()));
@@ -6037,7 +6034,7 @@ static void handleRequiresCapabilityAttr(Sema &S, Decl *D,
 
   // check that all arguments are lockable objects
   SmallVector<Expr*, 1> Args;
-  checkAttrArgsAreCapabilityObjs(S, D, AL, Args);
+  S.checkAttrArgsAreCapabilityObjs(D, AL, Args);
   if (Args.empty())
     return;
 
