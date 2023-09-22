@@ -2224,6 +2224,12 @@ bool Generic_GCC::GCCInstallationDetector::getBiarchSibling(Multilib &M) const {
 void Generic_GCC::GCCInstallationDetector::AddDefaultGCCPrefixes(
     const llvm::Triple &TargetTriple, SmallVectorImpl<std::string> &Prefixes,
     StringRef SysRoot) {
+
+  if (TargetTriple.isOSHaiku()) {
+    Prefixes.push_back(concat(SysRoot, "/boot/system/develop/tools"));
+    return;
+  }
+
   if (TargetTriple.isOSSolaris()) {
     // Solaris is a special case.
     // The GCC installation is under
