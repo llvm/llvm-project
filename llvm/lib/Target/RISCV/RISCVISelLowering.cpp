@@ -14435,7 +14435,8 @@ SDValue RISCVTargetLowering::PerformDAGCombine(SDNode *N,
     // patterns on rv32..
     ConstantSDNode *Const = dyn_cast<ConstantSDNode>(Scalar);
     if (isOneConstant(VL) && EltWidth <= Subtarget.getXLen() &&
-        (!Const || Const->isZero() || !isInt<5>(Const->getSExtValue())))
+        (!Const || Const->isZero() ||
+         !Const->getAPIntValue().sextOrTrunc(EltWidth).isSignedIntN(5)))
       return DAG.getNode(RISCVISD::VMV_S_X_VL, DL, VT, Passthru, Scalar, VL);
 
     break;
