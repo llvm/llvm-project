@@ -2262,7 +2262,6 @@ class VOPProfile <list<ValueType> _ArgVT, bit _EnableClamp = 0> {
   field list<ValueType> ArgVT = _ArgVT;
   field bit EnableClamp = _EnableClamp;
   field bit IsTrue16 = 0;
-  field bit IsRealTrue16 = 0;
 
   field ValueType DstVT = ArgVT[0];
   field ValueType Src0VT = ArgVT[1];
@@ -2454,21 +2453,6 @@ class VOP_PAT_GEN <VOPProfile p, int mode=PatGenMode.NoPattern> : VOPProfile <p.
 // VOPC_Class_NoSdst_Profile_t16, and  VOP_MAC_F16_t16 do not inherit from this
 // class, so copy changes to this class in those profiles
 class VOPProfile_True16<VOPProfile P> : VOPProfile<P.ArgVT> {
-  let IsTrue16 = 1;
-  let IsRealTrue16 = 1;
-  // Most DstVT are 16-bit, but not all.
-  let DstRC = getVALUDstForVT_t16<DstVT>.ret;
-  let DstRC64 = getVALUDstForVT<DstVT>.ret;
-  let Src1RC32 = RegisterOperand<getVregSrcForVT_t16<Src1VT>.ret>;
-  let Src0DPP = getVregSrcForVT_t16<Src0VT>.ret;
-  let Src1DPP = getVregSrcForVT_t16<Src1VT>.ret;
-  let Src2DPP = getVregSrcForVT_t16<Src2VT>.ret;
-  let Src0ModDPP = getSrcModDPP_t16<Src0VT>.ret;
-  let Src1ModDPP = getSrcModDPP_t16<Src1VT>.ret;
-  let Src2ModDPP = getSrcModDPP_t16<Src2VT>.ret;
-}
-
-class VOPProfile_Fake16<VOPProfile P> : VOPProfile<P.ArgVT> {
   let IsTrue16 = 1;
   // Most DstVT are 16-bit, but not all
   let DstRC = getVALUDstForVT_t16<DstVT>.ret;

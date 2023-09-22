@@ -144,17 +144,6 @@ public:
     return MCDisassembler::Fail;
   }
 
-  template <typename InsnType>
-  DecodeStatus tryDecodeInst(const uint8_t *Table1, const uint8_t *Table2,
-                             MCInst &MI, InsnType Inst, uint64_t Address,
-                             raw_ostream &Comments) const {
-    for (const uint8_t *T : {Table1, Table2}) {
-      if (DecodeStatus Res = tryDecodeInst(T, MI, Inst, Address, Comments))
-        return Res;
-    }
-    return MCDisassembler::Fail;
-  }
-
   std::optional<DecodeStatus>
   onSymbolStart(SymbolInfoTy &Symbol, uint64_t &Size, ArrayRef<uint8_t> Bytes,
                 uint64_t Address, raw_ostream &CStream) const override;
