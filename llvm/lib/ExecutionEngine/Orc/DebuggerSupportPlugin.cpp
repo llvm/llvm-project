@@ -16,10 +16,6 @@
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringSet.h"
 #include "llvm/BinaryFormat/MachO.h"
-#include "llvm/DebugInfo/DWARF/DWARFContext.h"
-#include "llvm/DebugInfo/DWARF/DWARFDebugLine.h"
-
-#include <chrono>
 
 #define DEBUG_TYPE "orc"
 
@@ -101,6 +97,8 @@ public:
              << "\n";
     });
 
+    auto &SDOSec = G.createSection(SynthDebugSectionName, MemProt::Read);
+
     for (auto &Sec : G.sections()) {
       if (Sec.blocks().empty())
         continue;
@@ -115,10 +113,6 @@ public:
       else if (Sec.getMemLifetimePolicy() != MemLifetimePolicy::NoAlloc)
         NonDebugSections.push_back({&Sec, nullptr});
     }
-
-    // Bail out early if no debug sections.
-    if (DebugSections.empty())
-      return Error::success();
 
     // Write MachO header and debug section load commands.
     Builder.Header.filetype = MachO::MH_OBJECT;
@@ -137,51 +131,15 @@ public:
 
     Seg = &Builder.addSegment("");
 
-    StringMap<std::unique_ptr<MemoryBuffer>> DebugSectionMap;
-    StringRef DebugLineSectionData;
     for (auto &DSec : DebugSections) {
       auto [SegName, SecName] = DSec.GraphSec->getName().split(',');
       DSec.BuilderSec = &Seg->addSection(SecName, SegName);
 
       SectionRange SR(*DSec.GraphSec);
       DSec.BuilderSec->Content.Size = SR.getSize();
-      if (!SR.empty()) {
+      if (!SR.empty())
         DSec.BuilderSec->align = Log2_64(SR.getFirstBlock()->getAlignment());
-        StringRef SectionData(SR.getFirstBlock()->getContent().data(),
-                              SR.getFirstBlock()->getSize());
-        DebugSectionMap[SecName] =
-            MemoryBuffer::getMemBuffer(SectionData, G.getName(), false);
-        if (SecName == "__debug_line")
-          DebugLineSectionData = SectionData;
-      }
     }
-
-    if (DebugLineSectionData.empty())
-      return make_error<StringError>(G.getName() +
-                                         " has debug info but no line table",
-                                     inconvertibleErrorCode());
-
-    // Add Stabs.
-    auto DWARFCtx = DWARFContext::create(DebugSectionMap, G.getPointerSize(),
-                                         G.getEndianness());
-    DWARFDataExtractor DebugLineData(
-        DebugLineSectionData, G.getEndianness() == support::endianness::little,
-        G.getPointerSize());
-    uint64_t Offset = 0;
-    DWARFDebugLine::LineTable LineTable;
-    if (auto Err = LineTable.parse(DebugLineData, &Offset, *DWARFCtx, nullptr,
-                                   consumeError))
-      return Err;
-
-    Builder.addSymbol("", MachO::N_SO, 0, 0, 0);
-    for (auto &FN : LineTable.Prologue.FileNames) {
-      if (auto Name = dwarf::toString(FN.Name))
-        Builder.addSymbol(*Name, MachO::N_SO, 0, 0, 0);
-    }
-    auto TimeStamp = std::chrono::duration_cast<std::chrono::seconds>(
-                         std::chrono::system_clock::now().time_since_epoch())
-                         .count();
-    Builder.addSymbol("", MachO::N_OSO, 3, 1, TimeStamp);
 
     for (auto &NDSP : NonDebugSections) {
       auto [SegName, SecName] = NDSP.GraphSec->getName().split(',');
@@ -206,12 +164,8 @@ public:
       }
     }
 
-    Builder.addSymbol("", MachO::N_SO, 1, 0, 0);
-
-    // Lay out the debug object, create a section and block for it.
     size_t DebugObjectSize = Builder.layout();
 
-    auto &SDOSec = G.createSection(SynthDebugSectionName, MemProt::Read);
     MachOContainerBlock = &G.createMutableContentBlock(
         SDOSec, G.allocateBuffer(DebugObjectSize), orc::ExecutorAddr(), 8, 0);
 
