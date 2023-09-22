@@ -8939,6 +8939,12 @@ BoUpSLP::isGatherShuffledEntry(const TreeEntry *TE, ArrayRef<Value *> VL,
             TE->UserTreeIndices.front().EdgeIdx <
                 TEPtr->UserTreeIndices.front().EdgeIdx)
           continue;
+        // If the user instruction is used for some reason in different
+        // vectorized nodes - make it depend on index.
+        if (TE->UserTreeIndices.front().UserTE !=
+                TEPtr->UserTreeIndices.front().UserTE &&
+            TE->Idx > TEPtr->Idx)
+          continue;
       }
       // Check if the user node of the TE comes after user node of EntryPtr,
       // otherwise EntryPtr depends on TE.

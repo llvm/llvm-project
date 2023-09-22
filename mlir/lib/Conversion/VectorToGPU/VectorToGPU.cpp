@@ -1103,7 +1103,7 @@ convertBroadcastOp(RewriterBase &rewriter, vector::BroadcastOp op,
 }
 
 // Replace ForOp with a new ForOp with extra operands. The YieldOp is not
-// updated and needs to be updated separatly for the loop to be correct.
+// updated and needs to be updated separately for the loop to be correct.
 static scf::ForOp replaceForOpWithNewSignature(RewriterBase &rewriter,
                                                scf::ForOp loop,
                                                ValueRange newInitArgs) {
@@ -1119,9 +1119,8 @@ static scf::ForOp replaceForOpWithNewSignature(RewriterBase &rewriter,
       operands);
   newLoop.getBody()->erase();
 
-  newLoop.getLoopBody().getBlocks().splice(
-      newLoop.getLoopBody().getBlocks().begin(),
-      loop.getLoopBody().getBlocks());
+  newLoop.getRegion().getBlocks().splice(
+      newLoop.getRegion().getBlocks().begin(), loop.getRegion().getBlocks());
   for (Value operand : newInitArgs)
     newLoop.getBody()->addArgument(operand.getType(), operand.getLoc());
 

@@ -932,6 +932,12 @@ def FeatureTrigReducedRange : SubtargetFeature<"trig-reduced-range",
   "Requires use of fract on arguments to trig instructions"
 >;
 
+def FeatureKernargPreload : SubtargetFeature <"kernarg-preload",
+  "KernargPreload",
+  "true",
+  "Hardware supports preloading of kernel arguments in user SGPRs."
+>;
+
 // Alignment enforcement is controlled by a configuration register:
 // SH_MEM_CONFIG.alignment_mode
 def FeatureUnalignedAccessMode : SubtargetFeature<"unaligned-access-mode",
@@ -1265,7 +1271,8 @@ def FeatureISAVersion9_0_A : FeatureSet<
      FeatureAtomicBufferGlobalPkAddF16Insts,
      FeaturePackedTID,
      FullRate64Ops,
-     FeatureBackOffBarrier])>;
+     FeatureBackOffBarrier,
+     FeatureKernargPreload])>;
 
 def FeatureISAVersion9_0_C : FeatureSet<
   !listconcat(FeatureISAVersion9_0_Common.Features,
@@ -1307,7 +1314,8 @@ def FeatureISAVersion9_4_Common : FeatureSet<
    FeaturePackedTID,
    FeatureArchitectedFlatScratch,
    FullRate64Ops,
-   FeatureBackOffBarrier]>;
+   FeatureBackOffBarrier,
+   FeatureKernargPreload]>;
 
 def FeatureISAVersion9_4_0 : FeatureSet<
   !listconcat(FeatureISAVersion9_4_Common.Features,

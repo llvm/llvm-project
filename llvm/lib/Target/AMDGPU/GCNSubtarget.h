@@ -78,6 +78,7 @@ protected:
   bool UnalignedAccessMode = false;
   bool HasApertureRegs = false;
   bool SupportsXNACK = false;
+  bool KernargPreload = false;
 
   // This should not be used directly. 'TargetID' tracks the dynamic settings
   // for XNACK.
@@ -890,7 +891,7 @@ public:
                            unsigned NumRegionInstrs) const override;
 
   unsigned getMaxNumUserSGPRs() const {
-    return 16;
+    return AMDGPU::getMaxNumUserSGPRs(*this);
   }
 
   bool hasSMemRealTime() const {
@@ -1239,6 +1240,15 @@ public:
 
   // \returns true if the target supports the pre-NGG legacy geometry path.
   bool hasLegacyGeometry() const { return getGeneration() < GFX11; }
+
+  // \returns true if preloading kernel arguments is supported.
+  bool hasKernargPreload() const { return KernargPreload; }
+
+  // \returns true if we need to generate backwards compatible code when
+  // preloading kernel arguments.
+  bool needsKernargPreloadBackwardsCompatibility() const {
+    return hasKernargPreload() && !hasGFX940Insts();
+  }
 
   // \returns true if the target has DX10_CLAMP kernel descriptor mode bit
   bool hasDX10ClampMode() const { return getGeneration() < GFX12; }

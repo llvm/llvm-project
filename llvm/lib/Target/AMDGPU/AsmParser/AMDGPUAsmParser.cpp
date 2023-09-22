@@ -1545,6 +1545,12 @@ public:
     return AMDGPU::getNSAMaxSize(getSTI(), HasSampler);
   }
 
+  unsigned getMaxNumUserSGPRs() const {
+    return AMDGPU::getMaxNumUserSGPRs(getSTI());
+  }
+
+  bool hasKernargPreload() const { return AMDGPU::hasKernargPreload(getSTI()); }
+
   AMDGPUTargetStreamer &getTargetStreamer() {
     MCTargetStreamer &TS = *getParser().getStreamer().getTargetStreamer();
     return static_cast<AMDGPUTargetStreamer &>(TS);
@@ -5250,6 +5256,8 @@ bool AMDGPUAsmParser::ParseDirectiveAMDHSAKernel() {
   uint64_t NextFreeVGPR = 0;
   uint64_t AccumOffset = 0;
   uint64_t SharedVGPRCount = 0;
+  uint64_t PreloadLength = 0;
+  uint64_t PreloadOffset = 0;
   SMRange SGPRRange;
   uint64_t NextFreeSGPR = 0;
 
@@ -5318,6 +5326,28 @@ bool AMDGPUAsmParser::ParseDirectiveAMDHSAKernel() {
                        Val, ValRange);
       if (Val)
         ImpliedUserSGPRCount += 4;
+    } else if (ID == ".amdhsa_user_sgpr_kernarg_preload_length") {
+      if (!hasKernargPreload())
+        return Error(IDRange.Start, "directive requires gfx90a+", IDRange);
+
+      if (Val > getMaxNumUserSGPRs())
+        return OutOfRangeError(ValRange);
+      PARSE_BITS_ENTRY(KD.kernarg_preload, KERNARG_PRELOAD_SPEC_LENGTH, Val,
+                       ValRange);
+      if (Val) {
+        ImpliedUserSGPRCount += Val;
+        PreloadLength = Val;
+      }
+    } else if (ID == ".amdhsa_user_sgpr_kernarg_preload_offset") {
+      if (!hasKernargPreload())
+        return Error(IDRange.Start, "directive requires gfx90a+", IDRange);
+
+      if (Val >= 1024)
+        return OutOfRangeError(ValRange);
+      PARSE_BITS_ENTRY(KD.kernarg_preload, KERNARG_PRELOAD_SPEC_OFFSET, Val,
+                       ValRange);
+      if (Val)
+        PreloadOffset = Val;
     } else if (ID == ".amdhsa_user_sgpr_dispatch_ptr") {
       PARSE_BITS_ENTRY(KD.kernel_code_properties,
                        KERNEL_CODE_PROPERTY_ENABLE_SGPR_DISPATCH_PTR, Val,
@@ -5574,6 +5604,11 @@ bool AMDGPUAsmParser::ParseDirectiveAMDHSAKernel() {
     return TokError("too many user SGPRs enabled");
   AMDHSA_BITS_SET(KD.compute_pgm_rsrc2, COMPUTE_PGM_RSRC2_USER_SGPR_COUNT,
                   UserSGPRCount);
+
+  if (PreloadLength && KD.kernarg_size &&
+      (PreloadLength * 4 + PreloadOffset * 4 > KD.kernarg_size))
+    return TokError("Kernarg preload length + offset is larger than the "
+                    "kernarg segment size");
 
   if (isGFX90A()) {
     if (!Seen.contains(".amdhsa_accum_offset"))
