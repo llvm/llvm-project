@@ -658,7 +658,7 @@ bool RISCVExpandAtomicPseudo::expandAtomicMinMaxOp(
   computeAndAddLiveIns(LiveRegs, *DoneMBB);
 
   return true;
-  }
+}
 
 // If a BNE on the cmpxchg comparison result immediately follows the cmpxchg
 // operation, it can be folded into the cmpxchg expansion by
