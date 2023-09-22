@@ -167,27 +167,61 @@ void CounterMappingContext::dump(const Counter &C, raw_ostream &OS) const {
 }
 
 Expected<int64_t> CounterMappingContext::evaluate(const Counter &C) const {
-  switch (C.getKind()) {
-  case Counter::Zero:
-    return 0;
-  case Counter::CounterValueReference:
-    if (C.getCounterID() >= CounterValues.size())
-      return errorCodeToError(errc::argument_out_of_domain);
-    return CounterValues[C.getCounterID()];
-  case Counter::Expression: {
-    if (C.getExpressionID() >= Expressions.size())
-      return errorCodeToError(errc::argument_out_of_domain);
-    const auto &E = Expressions[C.getExpressionID()];
-    Expected<int64_t> LHS = evaluate(E.LHS);
-    if (!LHS)
-      return LHS;
-    Expected<int64_t> RHS = evaluate(E.RHS);
-    if (!RHS)
-      return RHS;
-    return E.Kind == CounterExpression::Subtract ? *LHS - *RHS : *LHS + *RHS;
+  struct StackElem {
+    Counter ICounter;
+    int64_t LHS = 0;
+    enum {
+      KNeverVisited = 0,
+      KVisitedOnce = 1,
+      KVisitedTwice = 2,
+    } VisitCount = KNeverVisited;
+  };
+
+  std::stack<StackElem> CounterStack;
+  CounterStack.push({C});
+
+  int64_t LastPoppedValue;
+
+  while (!CounterStack.empty()) {
+    StackElem &Current = CounterStack.top();
+
+    switch (Current.ICounter.getKind()) {
+    case Counter::Zero:
+      LastPoppedValue = 0;
+      CounterStack.pop();
+      break;
+    case Counter::CounterValueReference:
+      if (Current.ICounter.getCounterID() >= CounterValues.size())
+        return errorCodeToError(errc::argument_out_of_domain);
+      LastPoppedValue = CounterValues[Current.ICounter.getCounterID()];
+      CounterStack.pop();
+      break;
+    case Counter::Expression: {
+      if (Current.ICounter.getExpressionID() >= Expressions.size())
+        return errorCodeToError(errc::argument_out_of_domain);
+      const auto &E = Expressions[Current.ICounter.getExpressionID()];
+      if (Current.VisitCount == StackElem::KNeverVisited) {
+        CounterStack.push(StackElem{E.LHS});
+        Current.VisitCount = StackElem::KVisitedOnce;
+      } else if (Current.VisitCount == StackElem::KVisitedOnce) {
+        Current.LHS = LastPoppedValue;
+        CounterStack.push(StackElem{E.RHS});
+        Current.VisitCount = StackElem::KVisitedTwice;
+      } else {
+        int64_t LHS = Current.LHS;
+        int64_t RHS = LastPoppedValue;
+        LastPoppedValue =
+            E.Kind == CounterExpression::Subtract ? LHS - RHS : LHS + RHS;
+        CounterStack.pop();
+      }
+      break;
+    }
+    default:
+      llvm_unreachable("Unhandled CounterKind");
+    }
   }
-  }
-  llvm_unreachable("Unhandled CounterKind");
+
+  return LastPoppedValue;
 }
 
 unsigned CounterMappingContext::getMaxCounterID(const Counter &C) const {
