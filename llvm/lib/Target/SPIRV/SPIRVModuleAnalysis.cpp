@@ -525,8 +525,9 @@ void SPIRV::RequirementHandler::addAvailableCaps(const CapabilityList &ToAdd) {
           SPIRV::OperandCategory::CapabilityOperand, Cap));
 }
 
-void SPIRV::RequirementHandler::removeCapabilityIf(const Capability::Capability ToRemove, 
-                                                   const Capability::Capability IfPresent) {
+void SPIRV::RequirementHandler::removeCapabilityIf(
+    const Capability::Capability ToRemove, 
+    const Capability::Capability IfPresent) {
   if (AvailableCaps.contains(IfPresent))
     AvailableCaps.erase(ToRemove);
 }
