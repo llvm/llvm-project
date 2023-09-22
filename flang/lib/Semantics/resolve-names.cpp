@@ -2390,7 +2390,13 @@ Symbol &ScopeHandler::MakeHostAssocSymbol(
   // These attributes can be redundantly reapplied without error
   // on the host-associated name, at most once (C815).
   symbol.implicitAttrs() =
-      symbol.attrs() & Attrs{Attr::ASYNCHRONOUS, Attr::VOLATILE, Attr::SAVE};
+      symbol.attrs() & Attrs{Attr::ASYNCHRONOUS, Attr::VOLATILE};
+  // SAVE statement in the inner scope will create a new symbol.
+  // If the host variable is used via host association,
+  // we have to propagate whether SAVE is implicit in the host scope.
+  // Otherwise, verifications that do not allow explicit SAVE
+  // attribute would fail.
+  symbol.implicitAttrs() |= hostSymbol.implicitAttrs() & Attrs{Attr::SAVE};
   symbol.flags() = hostSymbol.flags();
   return symbol;
 }
