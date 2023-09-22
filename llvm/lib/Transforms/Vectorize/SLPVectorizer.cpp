@@ -7084,30 +7084,58 @@ class BoUpSLP::ShuffleCostEstimator : public BaseShuffleAnalysis {
   /// extracted values from \p VL.
   InstructionCost computeExtractCost(ArrayRef<Value *> VL, ArrayRef<int> Mask,
                                      TTI::ShuffleKind ShuffleKind) {
-    auto *VecTy = FixedVectorType::get(VL.front()->getType(), VL.size());
+    unsigned NumElts = 0;
+    for (Value *V : VL) {
+      auto *EE = dyn_cast<ExtractElementInst>(V);
+      if (!EE)
+        continue;
+      auto *VecTy = cast<FixedVectorType>(EE->getVectorOperandType());
+      NumElts = std::max(NumElts, VecTy->getNumElements());
+    }
+    assert(NumElts > 0 &&
+           "Expected at least 2-element fixed length vector(s).");
+    auto *VecTy = FixedVectorType::get(VL.front()->getType(), NumElts);
     unsigned NumOfParts = TTI.getNumberOfParts(VecTy);
-
-    if (ShuffleKind != TargetTransformInfo::SK_PermuteSingleSrc ||
-        !NumOfParts || VecTy->getNumElements() < NumOfParts)
+    if (!NumOfParts || NumElts < NumOfParts)
+      return TTI.getShuffleCost(ShuffleKind, VecTy, Mask);
+    unsigned EltsPerVector = PowerOf2Ceil(divideCeil(NumElts, NumOfParts));
+    int ValNum = -1;
+    int ValIdx = -1;
+    // Check that if trying to permute 2 input vectors (which may result in
+    // several vector registers), each per-register subvector is the result of
+    // the permutation of 2 single registers.
+    if (ShuffleKind != TargetTransformInfo::SK_PermuteSingleSrc &&
+        !all_of(enumerate(Mask), [&](auto &&Arg) {
+          if (Arg.value() == PoisonMaskElem)
+            return true;
+          int CurValNum = (Arg.value() % NumElts) / EltsPerVector;
+          int CurValIdx = Arg.index() / EltsPerVector;
+          if (ValIdx != CurValIdx) {
+            ValIdx = CurValIdx;
+            ValNum = CurValNum;
+            return true;
+          }
+          return CurValNum == ValNum;
+        }))
       return TTI.getShuffleCost(ShuffleKind, VecTy, Mask);
 
-    bool AllConsecutive = true;
-    unsigned EltsPerVector = VecTy->getNumElements() / NumOfParts;
-    unsigned Idx = -1;
     InstructionCost Cost = 0;
 
     // Process extracts in blocks of EltsPerVector to check if the source vector
     // operand can be re-used directly. If not, add the cost of creating a
     // shuffle to extract the values into a vector register.
+    auto *RegisterVecTy =
+        FixedVectorType::get(VL.front()->getType(), EltsPerVector);
     SmallVector<int> RegMask(EltsPerVector, PoisonMaskElem);
-    for (auto *V : VL) {
-      ++Idx;
-
+    TTI::ShuffleKind RegisterSK = TargetTransformInfo::SK_PermuteSingleSrc;
+    Value *VecBase = nullptr;
+    bool IsIdentity = true;
+    for (auto [Idx, V] : enumerate(VL)) {
       // Reached the start of a new vector registers.
       if (Idx % EltsPerVector == 0) {
         RegMask.assign(EltsPerVector, PoisonMaskElem);
-        AllConsecutive = true;
-        continue;
+        RegisterSK = TargetTransformInfo::SK_PermuteSingleSrc;
+        VecBase = nullptr;
       }
 
       // Need to exclude undefs from analysis.
@@ -7117,14 +7145,26 @@ class BoUpSLP::ShuffleCostEstimator : public BaseShuffleAnalysis {
       // Check all extracts for a vector register on the target directly
       // extract values in order.
       unsigned CurrentIdx = *getExtractIndex(cast<Instruction>(V));
-      if (!isa<UndefValue>(VL[Idx - 1]) && Mask[Idx - 1] != PoisonMaskElem) {
-        unsigned PrevIdx = *getExtractIndex(cast<Instruction>(VL[Idx - 1]));
-        AllConsecutive &= PrevIdx + 1 == CurrentIdx &&
-                          CurrentIdx % EltsPerVector == Idx % EltsPerVector;
+      unsigned PrevIdx = CurrentIdx;
+      if (Idx % EltsPerVector != 0 && !isa<UndefValue>(VL[Idx - 1]) &&
+          Mask[Idx - 1] != PoisonMaskElem)
+        PrevIdx = *getExtractIndex(cast<Instruction>(VL[Idx - 1])) + 1;
+      if (!VecBase) {
+        VecBase = cast<ExtractElementInst>(V)->getVectorOperand();
+        RegMask[Idx % EltsPerVector] = CurrentIdx % EltsPerVector;
+        IsIdentity = CurrentIdx % EltsPerVector == Idx % EltsPerVector;
+      } else if (VecBase != cast<ExtractElementInst>(V)->getVectorOperand()) {
+        IsIdentity = false;
+        RegisterSK = TargetTransformInfo::SK_PermuteTwoSrc;
+        RegMask[Idx % EltsPerVector] =
+            CurrentIdx % EltsPerVector + EltsPerVector;
+      } else {
+        IsIdentity &= PrevIdx == CurrentIdx &&
+                      CurrentIdx % EltsPerVector == Idx % EltsPerVector;
         RegMask[Idx % EltsPerVector] = CurrentIdx % EltsPerVector;
       }
 
-      if (AllConsecutive)
+      if (IsIdentity)
         continue;
 
       // Skip all indices, except for the last index per vector block.
@@ -7134,10 +7174,7 @@ class BoUpSLP::ShuffleCostEstimator : public BaseShuffleAnalysis {
       // If we have a series of extracts which are not consecutive and hence
       // cannot re-use the source vector register directly, compute the shuffle
       // cost to extract the vector with EltsPerVector elements.
-      Cost += TTI.getShuffleCost(
-          TargetTransformInfo::SK_PermuteSingleSrc,
-          FixedVectorType::get(VecTy->getElementType(), EltsPerVector),
-          RegMask);
+      Cost += TTI.getShuffleCost(RegisterSK, RegisterVecTy, RegMask);
     }
     return Cost;
   }
