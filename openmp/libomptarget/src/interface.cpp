@@ -66,7 +66,7 @@ targetData(ident_t *Loc, int64_t DeviceId, int32_t ArgNum, void **ArgsBase,
                 "TargetAsyncInfoTy must be convertible to AsyncInfoTy.");
 
   //TIMESCOPE_WITH_RTM_AND_IDENT(RegionTypeMsg, Loc);
-  TIMESCOPE_WITH_RTM_AND_IDENT("Runtime Data Copy", Loc);
+  TIMESCOPE_WITH_DETAILS_AND_IDENT("Runtime: Data Copy","NumArgs="+std::to_string(ArgNum), Loc);
 
   DP("Entering data %s region for device %" PRId64 " with %d mappings\n",
      RegionName, DeviceId, ArgNum);
@@ -238,9 +238,6 @@ static inline int targetKernel(ident_t *Loc, int64_t DeviceId, int32_t NumTeams,
                                KernelArgsTy *KernelArgs) {
   static_assert(std::is_convertible_v<TargetAsyncInfoTy, AsyncInfoTy>,
                 "Target AsyncInfoTy must be convertible to AsyncInfoTy.");
-
-  TIMESCOPE_WITH_NAME_AND_IDENT("Runtime target exe",Loc);
-
   DP("Entering target region for device %" PRId64 " with entry point " DPxMOD
      "\n",
      DeviceId, DPxPTR(HostPtr));
@@ -265,7 +262,11 @@ static inline int targetKernel(ident_t *Loc, int64_t DeviceId, int32_t NumTeams,
   assert(KernelArgs->ThreadLimit[0] == static_cast<uint32_t>(ThreadLimit) &&
          !KernelArgs->ThreadLimit[1] && !KernelArgs->ThreadLimit[2] &&
          "OpenMP interface should not use multiple dimensions");
-
+  TIMESCOPE_WITH_DETAILS_AND_IDENT("Runtime target exe",
+                                    "NumTeams="+std::to_string(NumTeams)+
+                                    ";NumArgs="+std::to_string(KernelArgs->NumArgs)
+                                    , Loc);
+  
   if (getInfoLevel() & OMP_INFOTYPE_KERNEL_ARGS)
     printKernelArguments(Loc, DeviceId, KernelArgs->NumArgs,
                          KernelArgs->ArgSizes, KernelArgs->ArgTypes,
@@ -292,7 +293,7 @@ static inline int targetKernel(ident_t *Loc, int64_t DeviceId, int32_t NumTeams,
   OMPT_IF_BUILT(InterfaceRAII TargetRAII(
                     RegionInterface.getCallbacks<ompt_target>(), DeviceId,
                     /* CodePtr */ OMPT_GET_RETURN_ADDRESS(0));)
-
+  
   int Rc = OFFLOAD_SUCCESS;
   Rc = target(Loc, *DeviceOrErr, HostPtr, *KernelArgs, AsyncInfo);
 
@@ -301,7 +302,7 @@ static inline int targetKernel(ident_t *Loc, int64_t DeviceId, int32_t NumTeams,
 
   handleTargetOutcome(Rc == OFFLOAD_SUCCESS, Loc);
   assert(Rc == OFFLOAD_SUCCESS && "__tgt_target_kernel unexpected failure!");
-
+  }
   return OMP_TGT_SUCCESS;
 }
 
