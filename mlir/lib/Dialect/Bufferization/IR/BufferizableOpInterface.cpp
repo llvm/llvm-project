@@ -628,53 +628,6 @@ bool AnalysisState::hasUndefinedContents(OpOperand *opOperand) const {
   return false;
 }
 
-bool AnalysisState::isTensorYielded(Value tensor) const {
-  // In the absence of analysis information, the conservative answer is "true".
-  if (!tensor.getDefiningOp<AllocTensorOp>())
-    return true;
-
-  // For AllocTensorOp results, we can do better: They do not alias with any
-  // preceding value, so we can follow SSA use-def chains and do a simple
-  // analysis.
-  SmallVector<OpOperand *> worklist;
-  DenseSet<OpOperand *> visited;
-  for (OpOperand &use : tensor.getUses())
-    worklist.push_back(&use);
-
-  while (!worklist.empty()) {
-    OpOperand *operand = worklist.pop_back_val();
-    if (visited.contains(operand))
-      continue;
-    visited.insert(operand);
-    Operation *op = operand->getOwner();
-
-    // If the op is not bufferizable, we can safely assume that the value is not
-    // yielded. (When bufferizing that op, it must handle such cases.)
-    if (!options.dynCastBufferizableOp(op))
-      continue;
-
-    // We cannot analyze through ToMemrefOps, so we have to conservatively
-    // assume that the value is yielded.
-    if (isa<ToMemrefOp>(op))
-      return true;
-
-    // Check if the op is returning/yielding.
-    if (isa<RegionBranchTerminatorOpInterface>(op))
-      return true;
-
-    // Add all aliasing Values to the worklist.
-    // Note: In the absence of detailed analysis information (e.g., there may be
-    // no function call analysis information), this `getAliasingValues` is
-    // conservative and may report additional Values as potentially aliasing.
-    for (AliasingValue alias : getAliasingValues(*operand))
-      for (OpOperand &use : alias.value.getUses())
-        worklist.push_back(&use);
-  }
-
-  // No ReturnLike op found: The value is not yielded.
-  return false;
-}
-
 // bufferization.to_memref is not allowed to change the rank.
 static void ensureToMemrefOpIsValid(Value tensor, Type memrefType) {
 #ifndef NDEBUG
