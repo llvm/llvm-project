@@ -1408,6 +1408,15 @@ in C++11 onwards.
   }];
 }
 
+def MSNoUniqueAddressDocs : Documentation {
+  let Category = DocCatField;
+  let Content = [{
+On MSVC targets, ``[[no_unique_address]]`` is ignored; use
+``[[msvc::no_unique_address]]`` instead. Currently there is no guarantee of ABI
+compatibility or stability with MSVC.
+  }];
+}
+
 def ObjCRequiresSuperDocs : Documentation {
   let Category = DocCatFunction;
   let Content = [{
