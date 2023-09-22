@@ -9,3 +9,11 @@
 // CHECK-ENABLE-ZA-LABEL: @arm_streaming
 // CHECK-ENABLE-ZA-SAME: attributes {arm_streaming, arm_za}
 func.func @arm_streaming() { return }
+
+// CHECK-LABEL: @not_arm_streaming
+// CHECK-SAME: attributes {enable_arm_streaming_ignore}
+// CHECK-LOCALLY-LABEL: @not_arm_streaming
+// CHECK-LOCALLY-SAME: attributes {enable_arm_streaming_ignore}
+// CHECK-ENABLE-ZA-LABEL: @not_arm_streaming
+// CHECK-ENABLE-ZA-SAME: attributes {enable_arm_streaming_ignore}
+func.func @not_arm_streaming() attributes {enable_arm_streaming_ignore} { return }
