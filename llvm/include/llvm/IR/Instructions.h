@@ -1796,12 +1796,16 @@ public:
   VAArgInst(Value *List, Type *Ty, const Twine &NameStr = "",
              Instruction *InsertBefore = nullptr)
     : UnaryInstruction(Ty, VAArg, List, InsertBefore) {
+    assert(!Ty->isStructTy() && !Ty->isArrayTy() &&
+           "by-val structures and arrays unsupported");
     setName(NameStr);
   }
 
   VAArgInst(Value *List, Type *Ty, const Twine &NameStr,
             BasicBlock *InsertAtEnd)
     : UnaryInstruction(Ty, VAArg, List, InsertAtEnd) {
+    assert(!Ty->isStructTy() && !Ty->isArrayTy() &&
+           "by-val structures and arrays unsupported");
     setName(NameStr);
   }
 
