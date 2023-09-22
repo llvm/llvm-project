@@ -897,13 +897,11 @@ class TagMismatchReport : public BaseReport {
                              uptr access_size, bool is_store, bool fatal,
                              uptr *registers_frame)
       : BaseReport(stack, fatal, tagged_addr, access_size),
-        access_size(access_size),
         is_store(is_store),
         registers_frame(registers_frame) {}
   ~TagMismatchReport();
 
  private:
-  uptr access_size;
   bool is_store;
   uptr *registers_frame;
 };
