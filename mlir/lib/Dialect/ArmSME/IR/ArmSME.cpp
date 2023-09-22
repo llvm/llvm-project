@@ -13,8 +13,8 @@
 #include "mlir/Dialect/ArmSME/IR/ArmSME.h"
 #include "mlir/Dialect/LLVMIR/LLVMTypes.h"
 #include "mlir/IR/DialectImplementation.h"
-#include "llvm/ADT/TypeSwitch.h"
 #include "mlir/IR/TypeUtilities.h"
+#include "llvm/ADT/TypeSwitch.h"
 
 using namespace mlir;
 using namespace mlir::arm_sme;
