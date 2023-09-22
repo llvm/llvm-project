@@ -1,5 +1,5 @@
 // RUN: %clang_analyze_cc1 \
-// RUN:   -analyzer-checker=core,alpha.cplusplus.EnumCastOutOfRange \
+// RUN:   -analyzer-checker=core,optin.core.EnumCastOutOfRange \
 // RUN:   -std=c++11 -verify %s
 
 // expected-note@+1 + {{enum declared here}}
@@ -218,4 +218,15 @@ void empty_enums_init_with_zero_should_not_warn() {
   auto efu = static_cast<empty_specified_unsigned>(0);
 
   ignore_unused(eu, ef, efu);
+}
+
+//Test the example from checkers.rst:
+enum WidgetKind { A=1, B, C, X=99 }; // expected-note {{enum declared here}}
+
+void foo() {
+  WidgetKind c = static_cast<WidgetKind>(3);  // OK
+  WidgetKind x = static_cast<WidgetKind>(99); // OK
+  WidgetKind d = static_cast<WidgetKind>(4);  // expected-warning {{The value provided to the cast expression is not in the valid range of values for 'WidgetKind'}}
+
+  ignore_unused(c, x, d);
 }
