@@ -1477,6 +1477,9 @@ public:
   /// Collect Uniform and Scalar values for the given \p VF.
   /// The sets depend on CM decision for Load/Store instructions
   /// that may be vectorized as interleave, gather-scatter or scalarized.
+  /// Also make a decision on what to do about call instructions in the loop
+  /// at that VF -- scalarize, call a known vector routine, or call a
+  /// vector intrinsic.
   void collectUniformsAndScalars(ElementCount VF) {
     // Do the analysis once.
     if (VF.isScalar() || Uniforms.contains(VF))
@@ -6969,15 +6972,15 @@ void LoopVectorizationCostModel::setCostBasedWideningDecision(ElementCount VF) {
 }
 
 void LoopVectorizationCostModel::setVectorizedCallDecision(ElementCount VF) {
-  if (VF.isScalar())
-    return;
+  assert(!VF.isScalar() &&
+         "Trying to set a vectorization decision for a scalar VF");
 
   for (BasicBlock *BB : TheLoop->blocks()) {
     // For each instruction in the old loop.
     for (Instruction &I : *BB) {
       CallInst *CI = dyn_cast<CallInst>(&I);
 
-      if (!CI || CallWideningDecisions.contains(std::make_pair(CI, VF)))
+      if (!CI)
         continue;
 
       InstructionCost ScalarCost = InstructionCost::getInvalid();
@@ -7004,7 +7007,7 @@ void LoopVectorizationCostModel::setVectorizedCallDecision(ElementCount VF) {
           setCallWideningDecision(CI, VF, CM_IntrinsicCall, nullptr,
                                   getVectorIntrinsicIDForCall(CI, TLI),
                                   std::nullopt, *RedCost);
-          return;
+          continue;
         }
 
       // Estimate cost of scalarized vector call. The source operands are
