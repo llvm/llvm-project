@@ -709,7 +709,8 @@ unsigned StackColoring::collectMarkers(unsigned NumSlot) {
   if (WinEHFuncInfo *EHInfo = MF->getWinEHFuncInfo())
     for (WinEHTryBlockMapEntry &TBME : EHInfo->TryBlockMap)
       for (WinEHHandlerType &H : TBME.HandlerArray)
-        if (H.CatchObj.FrameIndex != std::numeric_limits<int>::max())
+        if (H.CatchObj.FrameIndex != std::numeric_limits<int>::max() &&
+            H.CatchObj.FrameIndex >= 0)
           ConservativeSlots.set(H.CatchObj.FrameIndex);
 
   LLVM_DEBUG(dumpBV("Conservative slots", ConservativeSlots));
