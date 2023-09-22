@@ -138,3 +138,58 @@ end subroutine test3
 ! HLFIR:           hlfir.assign %[[VAL_18]] to %[[VAL_5]]#0 : i32, !fir.ptr<i32>
 ! HLFIR:           return
 ! HLFIR:         }
+
+subroutine test4()
+  integer :: i1
+  integer :: j1, k1
+  common /blk/ k1
+  equivalence(i1,j1,k1)
+contains
+  subroutine inner
+    i1 = j1 + k1
+  end subroutine inner
+end subroutine test4
+! FIR-LABEL:   func.func @_QFtest4Pinner() attributes {fir.internal_proc} {
+! FIR:           %[[VAL_0:.*]] = fir.address_of(@blk_) : !fir.ref<tuple<i32>>
+! FIR:           %[[VAL_1:.*]] = fir.convert %[[VAL_0]] : (!fir.ref<tuple<i32>>) -> !fir.ref<!fir.array<?xi8>>
+! FIR:           %[[VAL_2:.*]] = arith.constant 0 : index
+! FIR:           %[[VAL_3:.*]] = fir.coordinate_of %[[VAL_1]], %[[VAL_2]] : (!fir.ref<!fir.array<?xi8>>, index) -> !fir.ref<i8>
+! FIR:           %[[VAL_4:.*]] = fir.convert %[[VAL_3]] : (!fir.ref<i8>) -> !fir.ptr<i32>
+! FIR:           %[[VAL_5:.*]] = fir.convert %[[VAL_0]] : (!fir.ref<tuple<i32>>) -> !fir.ref<!fir.array<?xi8>>
+! FIR:           %[[VAL_6:.*]] = arith.constant 0 : index
+! FIR:           %[[VAL_7:.*]] = fir.coordinate_of %[[VAL_5]], %[[VAL_6]] : (!fir.ref<!fir.array<?xi8>>, index) -> !fir.ref<i8>
+! FIR:           %[[VAL_8:.*]] = fir.convert %[[VAL_7]] : (!fir.ref<i8>) -> !fir.ptr<i32>
+! FIR:           %[[VAL_9:.*]] = fir.convert %[[VAL_0]] : (!fir.ref<tuple<i32>>) -> !fir.ref<!fir.array<?xi8>>
+! FIR:           %[[VAL_10:.*]] = arith.constant 0 : index
+! FIR:           %[[VAL_11:.*]] = fir.coordinate_of %[[VAL_9]], %[[VAL_10]] : (!fir.ref<!fir.array<?xi8>>, index) -> !fir.ref<i8>
+! FIR:           %[[VAL_12:.*]] = fir.convert %[[VAL_11]] : (!fir.ref<i8>) -> !fir.ptr<i32>
+! FIR:           %[[VAL_13:.*]] = fir.load %[[VAL_8]] : !fir.ptr<i32>
+! FIR:           %[[VAL_14:.*]] = fir.load %[[VAL_12]] : !fir.ptr<i32>
+! FIR:           %[[VAL_15:.*]] = arith.addi %[[VAL_13]], %[[VAL_14]] : i32
+! FIR:           fir.store %[[VAL_15]] to %[[VAL_4]] : !fir.ptr<i32>
+! FIR:           return
+! FIR:         }
+
+! HLFIR-LABEL:   func.func @_QFtest4Pinner() attributes {fir.internal_proc} {
+! HLFIR:           %[[VAL_0:.*]] = fir.address_of(@blk_) : !fir.ref<tuple<i32>>
+! HLFIR:           %[[VAL_1:.*]] = fir.convert %[[VAL_0]] : (!fir.ref<tuple<i32>>) -> !fir.ref<!fir.array<?xi8>>
+! HLFIR:           %[[VAL_2:.*]] = arith.constant 0 : index
+! HLFIR:           %[[VAL_3:.*]] = fir.coordinate_of %[[VAL_1]], %[[VAL_2]] : (!fir.ref<!fir.array<?xi8>>, index) -> !fir.ref<i8>
+! HLFIR:           %[[VAL_4:.*]] = fir.convert %[[VAL_3]] : (!fir.ref<i8>) -> !fir.ptr<i32>
+! HLFIR:           %[[VAL_5:.*]]:2 = hlfir.declare %[[VAL_4]] {uniq_name = "_QFtest4Ei1"} : (!fir.ptr<i32>) -> (!fir.ptr<i32>, !fir.ptr<i32>)
+! HLFIR:           %[[VAL_6:.*]] = fir.convert %[[VAL_0]] : (!fir.ref<tuple<i32>>) -> !fir.ref<!fir.array<?xi8>>
+! HLFIR:           %[[VAL_7:.*]] = arith.constant 0 : index
+! HLFIR:           %[[VAL_8:.*]] = fir.coordinate_of %[[VAL_6]], %[[VAL_7]] : (!fir.ref<!fir.array<?xi8>>, index) -> !fir.ref<i8>
+! HLFIR:           %[[VAL_9:.*]] = fir.convert %[[VAL_8]] : (!fir.ref<i8>) -> !fir.ptr<i32>
+! HLFIR:           %[[VAL_10:.*]]:2 = hlfir.declare %[[VAL_9]] {uniq_name = "_QFtest4Ej1"} : (!fir.ptr<i32>) -> (!fir.ptr<i32>, !fir.ptr<i32>)
+! HLFIR:           %[[VAL_11:.*]] = fir.convert %[[VAL_0]] : (!fir.ref<tuple<i32>>) -> !fir.ref<!fir.array<?xi8>>
+! HLFIR:           %[[VAL_12:.*]] = arith.constant 0 : index
+! HLFIR:           %[[VAL_13:.*]] = fir.coordinate_of %[[VAL_11]], %[[VAL_12]] : (!fir.ref<!fir.array<?xi8>>, index) -> !fir.ref<i8>
+! HLFIR:           %[[VAL_14:.*]] = fir.convert %[[VAL_13]] : (!fir.ref<i8>) -> !fir.ptr<i32>
+! HLFIR:           %[[VAL_15:.*]]:2 = hlfir.declare %[[VAL_14]] {uniq_name = "_QFtest4Ek1"} : (!fir.ptr<i32>) -> (!fir.ptr<i32>, !fir.ptr<i32>)
+! HLFIR:           %[[VAL_16:.*]] = fir.load %[[VAL_10]]#0 : !fir.ptr<i32>
+! HLFIR:           %[[VAL_17:.*]] = fir.load %[[VAL_15]]#0 : !fir.ptr<i32>
+! HLFIR:           %[[VAL_18:.*]] = arith.addi %[[VAL_16]], %[[VAL_17]] : i32
+! HLFIR:           hlfir.assign %[[VAL_18]] to %[[VAL_5]]#0 : i32, !fir.ptr<i32>
+! HLFIR:           return
+! HLFIR:         }

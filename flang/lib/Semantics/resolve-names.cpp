@@ -2390,7 +2390,7 @@ Symbol &ScopeHandler::MakeHostAssocSymbol(
   // These attributes can be redundantly reapplied without error
   // on the host-associated name, at most once (C815).
   symbol.implicitAttrs() =
-      symbol.attrs() & Attrs{Attr::ASYNCHRONOUS, Attr::VOLATILE};
+      symbol.attrs() & Attrs{Attr::ASYNCHRONOUS, Attr::VOLATILE, Attr::SAVE};
   symbol.flags() = hostSymbol.flags();
   return symbol;
 }
