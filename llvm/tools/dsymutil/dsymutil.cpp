@@ -106,7 +106,6 @@ struct DsymutilOptions {
   bool DumpStab = false;
   bool Flat = false;
   bool InputIsYAMLDebugMap = false;
-  bool PaperTrailWarnings = false;
   bool ForceKeepFunctionForStatic = false;
   std::string SymbolMap;
   std::string OutputFile;
@@ -195,11 +194,6 @@ static Error verifyOptions(const DsymutilOptions &Options) {
       !Options.OutputFile.empty())
     return make_error<StringError>(
         "cannot use -o with multiple inputs in flat mode.",
-        errc::invalid_argument);
-
-  if (Options.PaperTrailWarnings && Options.InputIsYAMLDebugMap)
-    return make_error<StringError>(
-        "paper trail warnings are not supported for YAML input.",
         errc::invalid_argument);
 
   if (!Options.ReproducerPath.empty() &&
@@ -303,7 +297,6 @@ static Expected<DsymutilOptions> getOptions(opt::InputArgList &Args) {
   Options.DumpStab = Args.hasArg(OPT_symtab);
   Options.Flat = Args.hasArg(OPT_flat);
   Options.InputIsYAMLDebugMap = Args.hasArg(OPT_yaml_input);
-  Options.PaperTrailWarnings = Args.hasArg(OPT_papertrail);
 
   if (Expected<DWARFVerify> Verify = getVerifyKind(Args)) {
     Options.Verify = *Verify;
@@ -388,9 +381,6 @@ static Expected<DsymutilOptions> getOptions(opt::InputArgList &Args) {
 
   if (Options.DumpDebugMap || Options.LinkOpts.Verbose)
     Options.LinkOpts.Threads = 1;
-
-  if (getenv("RC_DEBUG_OPTIONS"))
-    Options.PaperTrailWarnings = true;
 
   if (opt::Arg *RemarksPrependPath = Args.getLastArg(OPT_remarks_prepend_path))
     Options.LinkOpts.RemarksPrependPath = RemarksPrependPath->getValue();
@@ -671,8 +661,8 @@ int main(int argc, char **argv) {
 
     auto DebugMapPtrsOrErr =
         parseDebugMap(Options.LinkOpts.VFS, InputFile, Options.Archs,
-                      Options.LinkOpts.PrependPath, Options.PaperTrailWarnings,
-                      Options.LinkOpts.Verbose, Options.InputIsYAMLDebugMap);
+                      Options.LinkOpts.PrependPath, Options.LinkOpts.Verbose,
+                      Options.InputIsYAMLDebugMap);
 
     if (auto EC = DebugMapPtrsOrErr.getError()) {
       WithColor::error() << "cannot parse the debug map for '" << InputFile

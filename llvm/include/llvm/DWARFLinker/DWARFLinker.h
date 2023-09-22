@@ -99,9 +99,6 @@ class DwarfEmitter {
 public:
   virtual ~DwarfEmitter();
 
-  /// Emit DIE containing warnings.
-  virtual void emitPaperTrailWarningsDie(DIE &Die) = 0;
-
   /// Emit section named SecName with data SecData.
   virtual void emitSectionContents(StringRef SecData, StringRef SecName) = 0;
 
@@ -267,10 +264,9 @@ using UnitListTy = std::vector<std::unique_ptr<CompileUnit>>;
 class DWARFFile {
 public:
   DWARFFile(StringRef Name, std::unique_ptr<DWARFContext> Dwarf,
-            std::unique_ptr<AddressesMap> Addresses,
-            const std::vector<std::string> &Warnings)
+            std::unique_ptr<AddressesMap> Addresses)
       : FileName(Name), Dwarf(std::move(Dwarf)),
-        Addresses(std::move(Addresses)), Warnings(Warnings) {}
+        Addresses(std::move(Addresses)) {}
 
   /// The object file name.
   StringRef FileName;
@@ -280,9 +276,6 @@ public:
 
   /// Helpful address information(list of valid address ranges, relocations).
   std::unique_ptr<AddressesMap> Addresses;
-
-  /// Warnings for this object file.
-  const std::vector<std::string> &Warnings;
 };
 
 typedef std::map<std::string, std::string> swiftInterfacesMap;
@@ -501,10 +494,6 @@ private:
     if (ErrorHandler != nullptr)
       ErrorHandler(Warning, File.FileName, DIE);
   }
-
-  /// Emit warnings as Dwarf compile units to leave a trail after linking.
-  bool emitPaperTrailWarnings(const DWARFFile &File,
-                              OffsetsStringPool &StringPool);
 
   void copyInvariantDebugSection(DWARFContext &Dwarf);
 

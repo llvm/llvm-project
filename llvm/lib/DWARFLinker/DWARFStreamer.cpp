@@ -234,18 +234,6 @@ void DwarfStreamer::emitSectionContents(StringRef SecData, StringRef SecName) {
   }
 }
 
-/// Emit DIE containing warnings.
-void DwarfStreamer::emitPaperTrailWarningsDie(DIE &Die) {
-  switchToDebugInfoSection(/* Version */ 2);
-  auto &Asm = getAsmPrinter();
-  Asm.emitInt32(11 + Die.getSize() - 4);
-  Asm.emitInt16(2);
-  Asm.emitInt32(0);
-  Asm.emitInt8(MC->getTargetTriple().isArch64Bit() ? 8 : 4);
-  DebugInfoSectionSize += 11;
-  emitDIE(Die);
-}
-
 /// Emit the debug_str section stored in \p Pool.
 void DwarfStreamer::emitStrings(const NonRelocatableStringpool &Pool) {
   Asm->OutStreamer->switchSection(MOFI->getDwarfStrSection());
