@@ -2961,6 +2961,11 @@ bool RISCVDAGToDAGISel::selectVLOp(SDValue N, SDValue &VL) {
 }
 
 static SDValue findVSplat(SDValue N) {
+  if (N.getOpcode() == ISD::INSERT_SUBVECTOR) {
+    if (!N.getOperand(0).isUndef())
+      return SDValue();
+    N = N.getOperand(1);
+  }
   SDValue Splat = N;
   if ((Splat.getOpcode() != RISCVISD::VMV_V_X_VL &&
        Splat.getOpcode() != RISCVISD::VMV_S_X_VL) ||

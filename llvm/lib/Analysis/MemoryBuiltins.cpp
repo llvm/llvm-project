@@ -988,7 +988,7 @@ SizeOffsetType ObjectSizeOffsetVisitor::combineSizeOffset(SizeOffsetType LHS,
     return (getSizeWithOverflow(LHS).eq(getSizeWithOverflow(RHS))) ? LHS
                                                                    : unknown();
   case ObjectSizeOpts::Mode::ExactUnderlyingSizeAndOffset:
-    return LHS == RHS && LHS.second.eq(RHS.second) ? LHS : unknown();
+    return LHS == RHS ? LHS : unknown();
   }
   llvm_unreachable("missing an eval mode");
 }

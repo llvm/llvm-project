@@ -106,18 +106,18 @@ def SparseTensorEncodingAttr : SparseTensor_Attr<"SparseTensorEncoding",
     sparsity-agnostic representation of the computation, i.e., an implicit sparse
     representation is converted to an explicit sparse representation where co-iterating
     loops operate on sparse storage formats rather than tensors with a sparsity
-    encoding. Compiler passes that run before this sparse compiler pass need to
-    be aware of the semantics of tensor types with such a sparsity encoding.
+    encoding. Compiler passes that run before this sparsifier pass need to be aware
+    of the semantics of tensor types with such a sparsity encoding.
 
-    In this encoding, we use `dimension` to refer to the axes of the semantic tensor,
-    and `level` to refer to the axes of the actual storage format, i.e., the
+    In this encoding, we use **dimension** to refer to the axes of the semantic tensor,
+    and **level** to refer to the axes of the actual storage format, i.e., the
     operational representation of the sparse tensor in memory. The number of
     dimensions is usually the same as the number of levels (such as CSR storage format).
     However, the encoding can also map dimensions to higher-order levels (for example,
     to encode a block-sparse BSR storage format) or to lower-order levels
     (for example, to linearize dimensions as a single level in the storage).
 
-    The encoding contains a `map` that provides the following:
+    The encoding contains a map that provides the following:
 
     - An ordered sequence of dimension specifications, each of which defines:
       - the dimension-size (implicit from the tensor’s dimension-shape)
@@ -125,16 +125,17 @@ def SparseTensorEncodingAttr : SparseTensor_Attr<"SparseTensorEncoding",
     - An ordered sequence of level specifications, each of which includes a required
       **level-type**, which defines how the level should be stored. Each level-type
       consists of:
+      - a **level-expression**, which defines what is stored
       - a **level-format**
       - a collection of **level-properties** that apply to the level-format
-      - a **level-expression**, which defines what is stored
 
     Each level-expression is an affine expression over dimension-variables. Thus, the
     level-expressions collectively define an affine map from dimension-coordinates to
     level-coordinates. The dimension-expressions collectively define the inverse map,
     which only needs to be provided for elaborate cases where it cannot be inferred
     automatically. Within the sparse storage format, we refer to indices that are
-    stored explicitly as `coordinates` and indices into the storage format as `positions`.
+    stored explicitly as **coordinates** and offsets into the storage format as
+    **positions**.
 
     The supported level-formats are the following:
 
@@ -145,26 +146,26 @@ def SparseTensorEncodingAttr : SparseTensor_Attr<"SparseTensorEncoding",
     Different level-formats may have different collections of level-properties.
     By default, each level-type has the property of being unique (no duplicate
     coordinates at that level), ordered (coordinates appear sorted at that
-    level), and, for compression, storing the positions in a compact way where
-    an interval is defined by a lower bound "pos(i)" and an upper bound "pos(i+1)-1".
+    level), and, for compression, storing each position interval in a compact
+    way with a lowerbound `pos(i)`" and an upperbound `pos(i+1) - 1`.
     The following properties can be added to a level-format to change this
     default behavior:
 
     - **nonunique** : duplicate coordinates may appear at the level
     - **nonordered** : coordinates may appear in arbribratry order
-    - **high** : the upper bound is stored explicitly in a separate array
+    - **high** : position interval upperbounds are stored explicitly
     - **block2_4** : the compression uses a 2:4 encoding per 1x4 block
 
-    In addition to the  `map`, the following two fields are optional:
+    In addition to the map, the following two fields are optional:
 
-    - The required bitwidth for `position` storage (integral offsets
+    - The required bitwidth for position storage (integral offsets
       into the sparse storage scheme).  A narrow width reduces the memory
       footprint of overhead storage, as long as the width suffices to
       define the total required range (viz. the maximum number of stored
       entries over all indirection levels).  The choices are `8`, `16`,
       `32`, `64`, or, the default, `0` to indicate the native bitwidth.
 
-    - The required bitwidth for `coordinate` storage (the coordinates
+    - The required bitwidth for coordinate storage (the coordinates
       of stored entries).  A narrow width reduces the memory footprint
       of overhead storage, as long as the width suffices to define
       the total required range (viz. the maximum value of each tensor
@@ -231,7 +232,9 @@ def SparseTensorEncodingAttr : SparseTensor_Attr<"SparseTensorEncoding",
     ```
   }];
 
+  //
   // Data in sparse tensor encoding.
+  //
   let parameters = (
     ins
     // A level-type for each level of the sparse storage.
@@ -239,12 +242,16 @@ def SparseTensorEncodingAttr : SparseTensor_Attr<"SparseTensorEncoding",
       "::mlir::sparse_tensor::DimLevelType",
       "level-types"
       >: $lvlTypes,
+
     // A mapping from dimension-coordinates to level-coordinates.
     "AffineMap":$dimToLvl,
+
     // The required bitwidth for position storage.
     "unsigned":$posWidth,
+
     // The required bitwidth for coordinate storage.
     "unsigned":$crdWidth,
+
     // A slice attribute for each dimension of the tensor type.
     ArrayRefParameter<
       "::mlir::sparse_tensor::SparseTensorDimSliceAttr",
