@@ -287,7 +287,7 @@ static void run_failure_tests() {
   run_failure_config(PTHREAD_STACK_MIN, SIZE_MAX);
   run_failure_config(PTHREAD_STACK_MIN, SIZE_MAX - PTHREAD_STACK_MIN);
   run_failure_config(SIZE_MAX / 2, SIZE_MAX / 2);
-  run_failure_config(SIZE_MAX / 4, SIZE_MAX / 4);
+  run_failure_config(3 * (SIZE_MAX / 4), SIZE_MAX / 4);
   run_failure_config(SIZE_MAX / 2 + 1234, SIZE_MAX / 2);
 
   // Test invalid parameters that are impossible to obtain via the
