@@ -3188,8 +3188,8 @@ static bool usesAllOnesMask(SDValue MaskOp, SDValue GlueOp) {
   // Check the instruction defining V0; it needs to be a VMSET pseudo.
   SDValue MaskSetter = Glued->getOperand(2);
 
-  // Sometimes the VMSET is wrapped in a COPY_TO_REGCLASS node, e.g. if the mask
-  // was extracted from a larger register.
+  // Sometimes the VMSET is wrapped in a COPY_TO_REGCLASS, e.g. if the mask came
+  // from an extract_subvector or insert_subvector.
   if (MaskSetter->isMachineOpcode() &&
       MaskSetter->getMachineOpcode() == RISCV::COPY_TO_REGCLASS)
     MaskSetter = MaskSetter->getOperand(0);
