@@ -1775,6 +1775,25 @@ CoroCleanup
 This pass runs late to lower all coroutine related intrinsics not replaced by
 earlier passes.
 
+Metadata
+========
+
+'``coro.outside.frame``' Metadata
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+``coro.outside.frame`` metadata may be attached to an alloca instruction to
+to signify that it shouldn't be promoted to the coroutine frame, useful for
+filtering allocas out by the frontend when emitting internal control mechanisms.
+Additionally, this metadata is only used as a flag, so the associated
+node must be empty.
+
+.. code-block:: text
+
+  %__coro_gro = alloca %struct.GroType, align 1, !coro.outside.frame !0
+
+  ...
+  !0 = !{}
+
 Areas Requiring Attention
 =========================
 #. When coro.suspend returns -1, the coroutine is suspended, and it's possible
