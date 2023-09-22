@@ -653,12 +653,11 @@ defaultInitializeAtRuntime(Fortran::lower::AbstractConverter &converter,
 }
 
 enum class VariableCleanUp { Finalize, Deallocate };
-/// Check whether a variable needs to be finalized according to clause 7.5.6.3
-/// point 3 or if it is an allocatable that must be deallocated.
-/// Must be nonpointer object that is not a dummy argument or
-/// function result.
+/// Check whether a local variable needs to be finalized according to clause
+/// 7.5.6.3 point 3 or if it is an allocatable that must be deallocated. Note
+/// that deallocation will trigger finalization if the type has any.
 static std::optional<VariableCleanUp>
-needEndFinalization(const Fortran::lower::pft::Variable &var) {
+needDeallocationOrFinalization(const Fortran::lower::pft::Variable &var) {
   if (!var.hasSymbol())
     return std::nullopt;
   const Fortran::semantics::Symbol &sym = var.getSymbol();
@@ -784,7 +783,8 @@ static void instantiateLocal(Fortran::lower::AbstractConverter &converter,
     finalizeAtRuntime(converter, var, symMap);
   if (mustBeDefaultInitializedAtRuntime(var))
     defaultInitializeAtRuntime(converter, var, symMap);
-  if (std::optional<VariableCleanUp> cleanup = needEndFinalization(var)) {
+  if (std::optional<VariableCleanUp> cleanup =
+          needDeallocationOrFinalization(var)) {
     auto *builder = &converter.getFirOpBuilder();
     mlir::Location loc = converter.getCurrentLocation();
     fir::ExtendedValue exv =
