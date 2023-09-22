@@ -127,8 +127,8 @@ public:
   /// Allow implicit conversion to `RankedTensorType`, `ShapedType`,
   /// and `Type`.  These are implicit to help alleviate the impedance
   /// mismatch for code that has not been converted to use `SparseTensorType`
-  /// directly.  Once more of the sparse compiler has been converted to
-  /// using `SparseTensorType`, we may want to make these explicit instead.
+  /// directly.  Once more uses have been converted to `SparseTensorType`,
+  /// we may want to make these explicit instead.
   ///
   /// WARNING: This user-defined-conversion method causes overload
   /// ambiguity whenever passing a `SparseTensorType` directly to a
