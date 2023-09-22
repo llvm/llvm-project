@@ -9476,7 +9476,8 @@ void VPWidenMemoryInstructionRecipe::execute(VPTransformState &State) {
     const DataLayout &DL =
         Builder.GetInsertBlock()->getModule()->getDataLayout();
     Type *IndexTy = State.VF.isScalable() && (isReverse() || Part > 0)
-                        ? DL.getIndexType(ScalarDataTy->getPointerTo())
+                        ? DL.getIndexType(PointerType::getUnqual(
+                              ScalarDataTy->getContext()))
                         : Builder.getInt32Ty();
     bool InBounds = false;
     if (auto *gep = dyn_cast<GetElementPtrInst>(Ptr->stripPointerCasts()))
