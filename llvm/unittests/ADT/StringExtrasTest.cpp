@@ -85,8 +85,6 @@ TEST(StringExtrasTest, Join) {
   }
 }
 
-TEST(StringExtrasTest, JoinCStrings) { std::vector<const char *> Items; }
-
 TEST(StringExtrasTest, JoinItems) {
   const char *Foo = "foo";
   std::string Bar = "bar";
