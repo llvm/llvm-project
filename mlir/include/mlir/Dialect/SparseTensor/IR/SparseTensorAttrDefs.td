@@ -148,7 +148,7 @@ def SparseTensorEncodingAttr : SparseTensor_Attr<"SparseTensorEncoding",
     For a compressed level, each position interval is represented in a compact
     way with a lowerbound `pos(i)` and an upperbound `pos(i+1) - 1`, which implies
     that successive intervals must appear in order without any "holes" in between
-    them. The loose compressed format relaxes these constrainst by representing each
+    them. The loose compressed format relaxes these constraints by representing each
     position interval with a lowerbound `lo(i)` and an upperbound `hi(i)`, which
     allows intervals to appear in arbitrary order and with elbow room between them.
 
