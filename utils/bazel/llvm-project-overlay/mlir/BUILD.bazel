@@ -5240,6 +5240,7 @@ cc_library(
         ":NVGPUDialect",
         ":NVVMDialect",
         ":Pass",
+        ":SCFTransforms",
         "//llvm:Support",
     ],
 )
