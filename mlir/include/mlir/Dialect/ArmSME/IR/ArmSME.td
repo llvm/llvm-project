@@ -90,8 +90,8 @@ def TileElementWidthMatchesTileID : TypesMatchWith<
 //===----------------------------------------------------------------------===//
 
 def TileSliceLayout : I32EnumAttr<"TileSliceLayout", "Layout of a tile slice", [
-  I32EnumAttrCase<"Horizontal", 0, "hor">,
-  I32EnumAttrCase<"Vertical", 1, "ver">,
+  I32EnumAttrCase<"Horizontal", 0, "horizontal">,
+  I32EnumAttrCase<"Vertical", 1, "vertical">,
 ]> {
   let cppNamespace = "::mlir::arm_sme";
   let genSpecializedAttr = 0;
@@ -262,9 +262,9 @@ def TileLoadOp : ArmSME_Op<"tile_load"> {
     with the shape defined by the 2D scalable vector type of the result tile.
     An optional tile slice layout attribute specifies whether the slices of the
     tile being loaded are horizontal (default) or vertical. The slice of memory
-    must be contiguous.  The memref must be either rank 1 or rank 2 with
-    dynamic dimensions, since the operation is scalable, and the element type
-    must be a scalar that matches the element type of the result.
+    must be contiguous. The memref must be either rank 1 or rank 2 with dynamic
+    dimensions, since the operation is scalable, and the element type must be a
+    scalar that matches the element type of the result.
 
     Example 1: Load an 8-bit element ZA tile with horizontal layout (default) from memory (ZA0.B).
     ```mlir
@@ -273,12 +273,12 @@ def TileLoadOp : ArmSME_Op<"tile_load"> {
 
     Example 2: Load a FP 32-bit element ZA tile with vertical layout from memory.
     ```mlir
-    %tile = arm_sme.tile_load %base[%c0, %c0], <ver> : memref<?x?xf32>, vector<[4]x[4]xf32>
+    %tile = arm_sme.tile_load %base[%c0, %c0], <vertical> : memref<?x?xf32>, vector<[4]x[4]xf32>
     ```
 
     Example 3: Load a 128-bit element ZA tile with horizontal layout (default) from memory.
     ```mlir
-    %tile = arm_sme.tile_load %base[%c0, %c0], <hor> : memref<?x?xi128>, vector<[1]x[1]xi128>
+    %tile = arm_sme.tile_load %base[%c0, %c0], <horizontal> : memref<?x?xi128>, vector<[1]x[1]xi128>
     ```
   }];
   let arguments = (ins
@@ -321,12 +321,12 @@ def TileStoreOp : ArmSME_Op<"tile_store"> {
 
     Example 2: Store a FP 32-bit element ZA tile with vertical layout to memory.
     ```mlir
-    arm_sme.tile_store %tile, %base[%c0, %c0], <ver> : vector<[4]x[4]xf32>, memref<?x?xf32>
+    arm_sme.tile_store %tile, %base[%c0, %c0], <vertical> : vector<[4]x[4]xf32>, memref<?x?xf32>
     ```
 
     Example 3: Store a 128-bit element ZA tile with horizontal (default) layout to memory.
     ```mlir
-    arm_sme.tile_store %tile, %base[%c0, %c0], <hor> : vector<[1]x[1]xi128>, memref<?x?xi128>
+    arm_sme.tile_store %tile, %base[%c0, %c0], <horizontal> : vector<[1]x[1]xi128>, memref<?x?xi128>
     ```
   }];
   let arguments = (ins SMETile:$valueToStore,
@@ -373,12 +373,12 @@ def LoadTileSliceOp : ArmSME_Op<"load_tile_slice", [
 
     Example 2: Load a vector<[4]xf32> tile slice from memory into tile vertically at given index.
     ```mlir
-    %tile_update = arm_sme.load_tile_slice %base[%c0], %tile, %tile_slice_index, <ver> : memref<?x?xf32>, vector<[4]x[4]xf32>
+    %tile_update = arm_sme.load_tile_slice %base[%c0], %tile, %tile_slice_index, <vertical> : memref<?x?xf32>, vector<[4]x[4]xf32>
     ```
 
     Example 3: Load a vector<[1]xi128> tile slice from memory into tile vertically at given index.
     ```mlir
-    %tile_update = arm_sme.load_tile_slice <ver>, %base[%c0], %tile, %tile_slice_index : memref<?x?xi128>, vector<[1]x[1]xi128>
+    %tile_update = arm_sme.load_tile_slice <vertical>, %base[%c0], %tile, %tile_slice_index : memref<?x?xi128>, vector<[1]x[1]xi128>
     ```
   }];
   let arguments = (ins
@@ -426,12 +426,12 @@ def StoreTileSliceOp : ArmSME_Op<"store_tile_slice"> {
 
     Example 2: Store vector<[4]xf32> vertical tile slice from tile at given index to memory.
     ```mlir
-    arm_sme.store_tile_slice %tile, %tile_slice_index, %base[%c0], <ver>: vector<[4]x[4]xf32>, memref<?x?xf32>
+    arm_sme.store_tile_slice %tile, %tile_slice_index, %base[%c0], <vertical> : vector<[4]x[4]xf32>, memref<?x?xf32>
     ```
 
     Example 3: Store a vector<[1]xi128> vertical tile slice from tile at given index to memory.
     ```mlir
-    arm_sme.store_tile_slice %tile, %tile_slice_index, %base[%c0], <ver>: vector<[1]x[1]xi128>, memref<?x?xi128>
+    arm_sme.store_tile_slice %tile, %tile_slice_index, %base[%c0], <vertical> : vector<[1]x[1]xi128>, memref<?x?xi128>
     ```
   }];
   let arguments = (ins SMETile:$tile, Index:$tile_slice_index,

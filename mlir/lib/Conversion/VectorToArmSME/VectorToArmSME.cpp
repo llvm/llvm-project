@@ -65,7 +65,7 @@ namespace {
 ///
 /// is converted to:
 ///
-///   arm_sme.tile_store %vector, <hor>, %source[%c0, %c0]
+///   arm_sme.tile_store %vector, %source[%c0, %c0]
 ///     : memref<?x?xi8>, vector<[16]x[16]xi8>
 struct TransferWriteToArmSMELowering
     : public OpRewritePattern<vector::TransferWriteOp> {

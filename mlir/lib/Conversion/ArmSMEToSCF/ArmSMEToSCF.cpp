@@ -54,7 +54,7 @@ void getMemrefIndices(ValueRange indices, unsigned rank, Value tileSliceIndex,
 ///
 ///  BEFORE:
 ///  ```mlir
-///  %tile = arm_sme.tile_load <hor>, %src[%c0, %c0] :
+///  %tile = arm_sme.tile_load %src[%c0, %c0] :
 ///    memref<?x?xi32>, vector<[4]x[4]xi32>
 ///  ```
 ///
@@ -68,7 +68,7 @@ void getMemrefIndices(ValueRange indices, unsigned rank, Value tileSliceIndex,
 ///  %min_svl_s = arith.constant 4 : index
 ///  %svl_s = arith.muli %min_svl_s, %vscale : index
 ///  scf.for %tile_slice_idx = %c0 to %svl_s step %c1 {
-///    %tile_update = arm_sme.load_tile_slice <hor>, %src[%tile_slice_idx],
+///    %tile_update = arm_sme.load_tile_slice %src[%tile_slice_idx],
 ///      %tile, %tile_slice_idx : memref<?x?xi32>, vector<[4]x[4]xi32>
 ///  }
 ///  ```
@@ -134,7 +134,7 @@ struct TileLoadOpConversion : public OpRewritePattern<arm_sme::TileLoadOp> {
 ///
 ///  BEFORE:
 ///  ```mlir
-///  arm_sme.tile_store %tile, <ver>, %dest[%c0, %c0]
+///  arm_sme.tile_store %tile, %dest[%c0, %c0], <vertical>
 ///    : memref<?x?xi32>, vector<[4]x[4]xi32
 ///  ```
 ///
@@ -146,8 +146,8 @@ struct TileLoadOpConversion : public OpRewritePattern<arm_sme::TileLoadOp> {
 ///  %min_svl_s = arith.constant 4 : index
 ///  %svl_s = arith.muli %min_svl_s, %vscale : index
 ///  scf.for %tile_slice_idx = %c0 to %svl_s step %c1 {
-///    arm_sme.store_tile_slice %tile, %tile_slice_idx, <ver>,
-///      %dest[%tile_slice_idx] : memref<?x?xi32>, vector<[4]x[4]xi32>
+///    arm_sme.store_tile_slice %tile, %tile_slice_idx, %dest[%tile_slice_idx],
+///      <vertical> : memref<?x?xi32>, vector<[4]x[4]xi32>
 ///  }
 ///  ```
 struct TileStoreOpConversion : public OpRewritePattern<arm_sme::TileStoreOp> {
