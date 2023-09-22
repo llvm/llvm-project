@@ -220,9 +220,6 @@ LogicalResult BufferizableOpInterface::resolveTensorOpOperandConflicts(
       return op->emitError("copying of unranked tensors is not implemented");
 
     AliasingValueList aliasingValues = state.getAliasingValues(opOperand);
-    // Is the result yielded from a block? Or are deallocations turned off
-    // entirely? In either case, mark the allocation as "escaping", so that it
-    // will not be deallocated.
     if (aliasingValues.getNumAliases() == 1 &&
         isa<OpResult>(aliasingValues.getAliases()[0].value) &&
         !state.bufferizesToMemoryWrite(opOperand) &&
@@ -723,7 +720,7 @@ void bufferization::replaceOpWithBufferizedValues(RewriterBase &rewriter,
 }
 
 //===----------------------------------------------------------------------===//
-// Bufferization-specific scoped alloc/dealloc insertion support.
+// Bufferization-specific scoped alloc insertion support.
 //===----------------------------------------------------------------------===//
 
 /// Create a memref allocation with the given type and dynamic extents.
@@ -740,18 +737,6 @@ FailureOr<Value> BufferizationOptions::createAlloc(OpBuilder &b, Location loc,
                                  b.getI64IntegerAttr(bufferAlignment))
         .getResult();
   return b.create<memref::AllocOp>(loc, type, dynShape).getResult();
-}
-
-/// Creates a memref deallocation. The given memref buffer must have been
-/// allocated using `createAlloc`.
-LogicalResult BufferizationOptions::createDealloc(OpBuilder &b, Location loc,
-                                                  Value allocatedBuffer) const {
-  if (deallocationFn)
-    return (*deallocationFn)(b, loc, allocatedBuffer);
-
-  // Default buffer deallocation via DeallocOp.
-  b.create<memref::DeallocOp>(loc, allocatedBuffer);
-  return success();
 }
 
 /// Create a memory copy between two memref buffers.
