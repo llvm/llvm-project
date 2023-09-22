@@ -14,8 +14,8 @@
 // TODO: Investigate these failures which break the CI.
 // UNSUPPORTED: clang-15, clang-16, clang-17, clang-18
 
-// TODO: Investigate this failure on GCC 12 (in Ubuntu Jammy)
-// UNSUPPORTED: gcc-12, gcc-13
+// TODO: Investigate this failure on GCC 13 (in Ubuntu Jammy)
+// UNSUPPORTED: gcc-13
 
 // RUN: %{cxx} %{flags} %s -o %t.exe %{compile_flags} -g %{link_flags}
 // Ensure locale-independence for unicode tests.

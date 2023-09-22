@@ -14,14 +14,21 @@
 #ifndef LLVM_TRANSFORMS_UTILS_CODELAYOUT_H
 #define LLVM_TRANSFORMS_UTILS_CODELAYOUT_H
 
+#include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/DenseMap.h"
 
+#include <utility>
 #include <vector>
 
-namespace llvm {
+namespace llvm::codelayout {
 
 using EdgeT = std::pair<uint64_t, uint64_t>;
-using EdgeCountT = std::pair<EdgeT, uint64_t>;
+
+struct EdgeCount {
+  uint64_t src;
+  uint64_t dst;
+  uint64_t count;
+};
 
 /// Find a layout of nodes (basic blocks) of a given CFG optimizing jump
 /// locality and thus processor I-cache utilization. This is achieved via
@@ -34,24 +41,22 @@ using EdgeCountT = std::pair<EdgeT, uint64_t>;
 /// \p EdgeCounts: The execution counts of every edge (jump) in the profile. The
 ///    map also defines the edges in CFG and should include 0-count edges.
 /// \returns The best block order found.
-std::vector<uint64_t>
-applyExtTspLayout(const std::vector<uint64_t> &NodeSizes,
-                  const std::vector<uint64_t> &NodeCounts,
-                  const std::vector<EdgeCountT> &EdgeCounts);
+std::vector<uint64_t> computeExtTspLayout(ArrayRef<uint64_t> NodeSizes,
+                                          ArrayRef<uint64_t> NodeCounts,
+                                          ArrayRef<EdgeCount> EdgeCounts);
 
 /// Estimate the "quality" of a given node order in CFG. The higher the score,
 /// the better the order is. The score is designed to reflect the locality of
 /// the given order, which is anti-correlated with the number of I-cache misses
 /// in a typical execution of the function.
-double calcExtTspScore(const std::vector<uint64_t> &Order,
-                       const std::vector<uint64_t> &NodeSizes,
-                       const std::vector<uint64_t> &NodeCounts,
-                       const std::vector<EdgeCountT> &EdgeCounts);
+double calcExtTspScore(ArrayRef<uint64_t> Order, ArrayRef<uint64_t> NodeSizes,
+                       ArrayRef<uint64_t> NodeCounts,
+                       ArrayRef<EdgeCount> EdgeCounts);
 
 /// Estimate the "quality" of the current node order in CFG.
-double calcExtTspScore(const std::vector<uint64_t> &NodeSizes,
-                       const std::vector<uint64_t> &NodeCounts,
-                       const std::vector<EdgeCountT> &EdgeCounts);
+double calcExtTspScore(ArrayRef<uint64_t> NodeSizes,
+                       ArrayRef<uint64_t> NodeCounts,
+                       ArrayRef<EdgeCount> EdgeCounts);
 
 /// Algorithm-specific params for Cache-Directed Sort. The values are tuned for
 /// the best performance of large-scale front-end bound binaries.
@@ -75,18 +80,16 @@ struct CDSortConfig {
 ///    map also defines the edges in CFG and should include 0-count edges.
 /// \p CallOffsets: The offsets of the calls from their source nodes.
 /// \returns The best function order found.
-std::vector<uint64_t> applyCDSLayout(const std::vector<uint64_t> &FuncSizes,
-                                     const std::vector<uint64_t> &FuncCounts,
-                                     const std::vector<EdgeCountT> &CallCounts,
-                                     const std::vector<uint64_t> &CallOffsets);
+std::vector<uint64_t> computeCacheDirectedLayout(
+    ArrayRef<uint64_t> FuncSizes, ArrayRef<uint64_t> FuncCounts,
+    ArrayRef<EdgeCount> CallCounts, ArrayRef<uint64_t> CallOffsets);
 
 /// Apply a Cache-Directed Sort with a custom config.
-std::vector<uint64_t> applyCDSLayout(const CDSortConfig &Config,
-                                     const std::vector<uint64_t> &FuncSizes,
-                                     const std::vector<uint64_t> &FuncCounts,
-                                     const std::vector<EdgeCountT> &CallCounts,
-                                     const std::vector<uint64_t> &CallOffsets);
+std::vector<uint64_t> computeCacheDirectedLayout(
+    const CDSortConfig &Config, ArrayRef<uint64_t> FuncSizes,
+    ArrayRef<uint64_t> FuncCounts, ArrayRef<EdgeCount> CallCounts,
+    ArrayRef<uint64_t> CallOffsets);
 
-} // end namespace llvm
+} // namespace llvm::codelayout
 
 #endif // LLVM_TRANSFORMS_UTILS_CODELAYOUT_H

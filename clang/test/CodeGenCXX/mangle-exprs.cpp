@@ -389,3 +389,13 @@ namespace null {
   // CHECK-LABEL: define {{.*}} @_ZN4null8gnu_nullILPv0EEEvPN9enable_ifIXeqT_Ll0EEvE4typeE
   template void gnu_null<nullptr>(void *);
 }
+
+namespace type_trait {
+  template<typename T> void f(decltype(__is_trivially_copyable(T))) {}
+  // CHECK-LABEL: define {{.*}} @_ZN10type_trait1fIiEEvDTu23__is_trivially_copyableT_EE
+  template void f<int>(bool);
+
+  template<typename T> void g(decltype(__is_trivially_copyable(int) + T())) {}
+  // CHECK-LABEL: define {{.*}} @_ZN10type_trait1gIiEEvDTplu23__is_trivially_copyableiEcvT__EE
+  template void g<int>(int);
+}
