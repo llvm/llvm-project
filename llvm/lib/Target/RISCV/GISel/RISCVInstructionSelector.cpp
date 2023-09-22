@@ -228,9 +228,7 @@ bool RISCVInstructionSelector::select(MachineInstr &MI) {
     MI.setDesc(TII.get(TargetOpcode::COPY));
     return true;
   case TargetOpcode::G_CONSTANT:
-    if (!selectConstant(MI, MIB, MRI))
-      return false;
-    break;
+    return selectConstant(MI, MIB, MRI);
   case TargetOpcode::G_BRCOND: {
     // TODO: Fold with G_ICMP.
     auto Bcc =
@@ -242,10 +240,6 @@ bool RISCVInstructionSelector::select(MachineInstr &MI) {
   default:
     return false;
   }
-
-  MI.eraseFromParent();
-
-  return true;
 }
 
 void RISCVInstructionSelector::renderNegImm(MachineInstrBuilder &MIB,
@@ -312,6 +306,13 @@ bool RISCVInstructionSelector::selectConstant(MachineInstr &MI,
   Register FinalReg = MI.getOperand(0).getReg();
   int64_t Imm = MI.getOperand(1).getCImm()->getSExtValue();
 
+  if (Imm == 0) {
+    MI.getOperand(1).ChangeToRegister(RISCV::X0, false);
+    RBI.constrainGenericRegister(FinalReg, RISCV::GPRRegClass, MRI);
+    MI.setDesc(TII.get(TargetOpcode::COPY));
+    return true;
+  }
+
   RISCVMatInt::InstSeq Seq =
       RISCVMatInt::generateInstSeq(Imm, Subtarget->getFeatureBits());
   unsigned NumInsts = Seq.size();
@@ -358,6 +359,7 @@ bool RISCVInstructionSelector::selectConstant(MachineInstr &MI,
     SrcReg = DstReg;
   }
 
+  MI.eraseFromParent();
   return true;
 }
 

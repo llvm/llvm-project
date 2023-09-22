@@ -133,14 +133,12 @@ entry:
 define i32 @neg_i32(i32 %a) {
 ; RV32IM-LABEL: neg_i32:
 ; RV32IM:       # %bb.0: # %entry
-; RV32IM-NEXT:    li a1, 0
-; RV32IM-NEXT:    sub a0, a1, a0
+; RV32IM-NEXT:    neg a0, a0
 ; RV32IM-NEXT:    ret
 ;
 ; RV64IM-LABEL: neg_i32:
 ; RV64IM:       # %bb.0: # %entry
-; RV64IM-NEXT:    li a1, 0
-; RV64IM-NEXT:    subw a0, a1, a0
+; RV64IM-NEXT:    negw a0, a0
 ; RV64IM-NEXT:    ret
 entry:
   %0 = sub i32 0, %a
@@ -481,18 +479,16 @@ entry:
 define i64 @neg_i64(i64 %a) {
 ; RV32IM-LABEL: neg_i64:
 ; RV32IM:       # %bb.0: # %entry
-; RV32IM-NEXT:    li a3, 0
-; RV32IM-NEXT:    sub a2, a3, a0
-; RV32IM-NEXT:    sltu a0, a3, a0
-; RV32IM-NEXT:    sub a1, a3, a1
+; RV32IM-NEXT:    neg a2, a0
+; RV32IM-NEXT:    snez a0, a0
+; RV32IM-NEXT:    neg a1, a1
 ; RV32IM-NEXT:    sub a1, a1, a0
 ; RV32IM-NEXT:    mv a0, a2
 ; RV32IM-NEXT:    ret
 ;
 ; RV64IM-LABEL: neg_i64:
 ; RV64IM:       # %bb.0: # %entry
-; RV64IM-NEXT:    li a1, 0
-; RV64IM-NEXT:    sub a0, a1, a0
+; RV64IM-NEXT:    neg a0, a0
 ; RV64IM-NEXT:    ret
 entry:
   %0 = sub i64 0, %a
