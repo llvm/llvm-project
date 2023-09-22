@@ -119,10 +119,6 @@ add_subdirectory(plugin)
 add_subdirectory(tool)
 add_subdirectory(utils)
 
-if(CLANG_ENABLE_CIR)
-  add_subdirectory(cir-tidy)
-endif()
-
 if (NOT LLVM_INSTALL_TOOLCHAIN_ONLY)
   install(DIRECTORY .
     DESTINATION "${CMAKE_INSTALL_INCLUDEDIR}/clang-tidy"
