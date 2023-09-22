@@ -691,6 +691,9 @@ static ParseResult parseMapClause(OpAsmParser &parser, IntegerAttr &mapType) {
     if (mapTypeMod == "always")
       mapTypeBits |= llvm::omp::OpenMPOffloadMappingFlags::OMP_MAP_ALWAYS;
 
+    if (mapTypeMod == "implicit")
+      mapTypeBits |= llvm::omp::OpenMPOffloadMappingFlags::OMP_MAP_IMPLICIT;
+
     if (mapTypeMod == "close")
       mapTypeBits |= llvm::omp::OpenMPOffloadMappingFlags::OMP_MAP_CLOSE;
 
@@ -738,6 +741,9 @@ static void printMapClause(OpAsmPrinter &p, Operation *op,
                        llvm::omp::OpenMPOffloadMappingFlags::OMP_MAP_ALWAYS))
     mapTypeStrs.push_back("always");
   if (mapTypeToBitFlag(mapTypeBits,
+                       llvm::omp::OpenMPOffloadMappingFlags::OMP_MAP_IMPLICIT))
+    mapTypeStrs.push_back("implicit");
+  if (mapTypeToBitFlag(mapTypeBits,
                        llvm::omp::OpenMPOffloadMappingFlags::OMP_MAP_CLOSE))
     mapTypeStrs.push_back("close");
   if (mapTypeToBitFlag(mapTypeBits,
@@ -774,6 +780,64 @@ static void printMapClause(OpAsmPrinter &p, Operation *op,
     if (i + 1 < mapTypeStrs.size()) {
       p << ", ";
     }
+  }
+}
+
+static ParseResult
+parseMapEntries(OpAsmParser &parser,
+                SmallVectorImpl<OpAsmParser::UnresolvedOperand> &mapOperands,
+                SmallVectorImpl<Type> &mapOperandTypes) {
+  OpAsmParser::UnresolvedOperand arg;
+  OpAsmParser::UnresolvedOperand blockArg;
+  Type argType;
+  auto parseEntries = [&]() -> ParseResult {
+    if (parser.parseOperand(arg) || parser.parseArrow() ||
+        parser.parseOperand(blockArg))
+      return failure();
+    mapOperands.push_back(arg);
+    return success();
+  };
+
+  auto parseTypes = [&]() -> ParseResult {
+    if (parser.parseType(argType))
+      return failure();
+    mapOperandTypes.push_back(argType);
+    return success();
+  };
+
+  if (parser.parseCommaSeparatedList(parseEntries))
+    return failure();
+
+  if (parser.parseColon())
+    return failure();
+
+  if (parser.parseCommaSeparatedList(parseTypes))
+    return failure();
+
+  return success();
+}
+
+static void printMapEntries(OpAsmPrinter &p, Operation *op,
+                            OperandRange mapOperands,
+                            TypeRange mapOperandTypes) {
+  auto &region = op->getRegion(0);
+  unsigned argIndex = 0;
+
+  for (const auto &mapOp : mapOperands) {
+    const auto &blockArg = region.front().getArgument(argIndex);
+    p << mapOp << " -> " << blockArg;
+    argIndex++;
+    if (argIndex < mapOperands.size())
+      p << ", ";
+  }
+  p << " : ";
+
+  argIndex = 0;
+  for (const auto &mapType : mapOperandTypes) {
+    p << mapType;
+    argIndex++;
+    if (argIndex < mapOperands.size())
+      p << ", ";
   }
 }
 
@@ -822,6 +886,15 @@ static LogicalResult verifyMapClause(Operation *op, OperandRange mapOperands) {
 
     if (auto MapInfoOp =
             mlir::dyn_cast<mlir::omp::MapInfoOp>(mapOp.getDefiningOp())) {
+
+      if (MapInfoOp.getVal() && MapInfoOp.getVarPtr())
+        emitError(op->getLoc(), "only one of val or var_ptr must be used");
+
+      if (!MapInfoOp.getVal() && !MapInfoOp.getVarPtr())
+        emitError(op->getLoc(), "missing val or var_ptr");
+
+      if (!MapInfoOp.getVarPtr() && MapInfoOp.getVarType().has_value())
+        emitError(op->getLoc(), "var_type supplied without var_ptr");
 
       if (!MapInfoOp.getMapType().has_value())
         emitError(op->getLoc(), "missing map type for map operand");
