@@ -1486,6 +1486,17 @@ defm OR  : BITWISE<"or", or>;
 defm AND : BITWISE<"and", and>;
 defm XOR : BITWISE<"xor", xor>;
 
+// Lower logical ops as bitwise ops on b32.
+// By this point the constants get legalized into a bitcast from i32, so that's
+// what we need to match here.
+def: Pat<(or Int32Regs:$a, (v2i16 (bitconvert (i32 imm:$b)))),
+         (ORb32ri Int32Regs:$a, imm:$b)>;
+def: Pat<(xor Int32Regs:$a, (v2i16 (bitconvert (i32 imm:$b)))),
+         (XORb32ri Int32Regs:$a, imm:$b)>;
+def: Pat<(and Int32Regs:$a, (v2i16 (bitconvert (i32 imm:$b)))),
+         (ANDb32ri Int32Regs:$a, imm:$b)>;
+
+
 def NOT1  : NVPTXInst<(outs Int1Regs:$dst), (ins Int1Regs:$src),
                       "not.pred \t$dst, $src;",
                       [(set Int1Regs:$dst, (not Int1Regs:$src))]>;
