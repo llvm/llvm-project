@@ -9,6 +9,9 @@
 #include <string>
 
 namespace omptest{
+
+enum class AssertState { pass, fail };
+
 struct OmptAssertEvent {
   static OmptAssertEvent ThreadBegin(const std::string &Name) {
     auto EName = getName(Name);

@@ -29,32 +29,30 @@ ompt_start_tool_result_t *ompt_start_tool(unsigned int omp_version,
 #endif
 
 struct Error {
-  operator bool() { return fail; }
-  bool fail;
+  operator bool() { return Fail; }
+  bool Fail;
 };
-
-enum class AssertState { pass, fail };
 
 /// A pretty crude test case abstraction
 struct TestCase {
-  TestCase(const std::string name) : Name(name) {}
+  TestCase(const std::string &name) : Name(name) {}
   virtual ~TestCase() {}
   std::string Name;
-  AssertState assertState;
+  omptest::AssertState AS;
   Error exec() {
     OmptCallbackHandler::get().subscribe(&SequenceAsserter);
     OmptCallbackHandler::get().subscribe(&EventAsserter);
 
-    Error e;
-    e.fail = false;
+    Error E;
+    E.Fail = false;
     execImpl();
 
     // We remove subscribers to not be notified of events after our test case
     // finished.
     OmptCallbackHandler::get().clearSubscribers();
-    if (assertState == AssertState::fail)
-      e.fail = true;
-    return e;
+    if (SequenceAsserter.getState() == omptest::AssertState::fail)
+      E.Fail = true;
+    return E;
   };
 
   virtual void execImpl() { assert(false && "Allocating base class"); }
@@ -65,19 +63,16 @@ struct TestCase {
   OmptEventAsserter EventAsserter;
 };
 
-void failAssertImpl(TestCase &tc) { tc.assertState = AssertState::fail; }
-void passAssertImpl(TestCase &tc) { tc.assertState = AssertState::pass; }
-
 /// A pretty crude test suite abstraction
 struct TestSuite {
   using C = std::vector<std::unique_ptr<TestCase>>;
 
   std::string Name;
   TestSuite() = default;
-  TestSuite(const TestSuite &o) = delete;
-  TestSuite(TestSuite &&o) {
-    Name = o.Name;
-    TestCases.swap(o.TestCases);
+  TestSuite(const TestSuite &O) = delete;
+  TestSuite(TestSuite &&O) {
+    Name = O.Name;
+    TestCases.swap(O.TestCases);
   }
 
   void setup() {}
@@ -139,8 +134,8 @@ struct Runner {
       TS.setup();
       for (auto &TC : TS) {
         std::cout << "\nExecuting " << TC->Name << std::endl;
-        if (Error err = TC->exec()) {
-          reportError();
+        if (Error Err = TC->exec()) {
+          reportError(Err);
           abortOrKeepGoing();
         }
       }
@@ -149,7 +144,7 @@ struct Runner {
     return 0;
   }
 
-  void reportError() {}
+  void reportError(const Error &Err) {}
   void abortOrKeepGoing() {}
 
   std::vector<TestSuite> TestSuites;

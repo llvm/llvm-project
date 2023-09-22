@@ -9,8 +9,15 @@
 
 #include <iostream>
 
+/// General base class for the subscriber/notification pattern in
+/// OmptCallbachHandler. Derived classes need to implement the notify method.
+struct OmptListener {
+  /// Called for each registered OMPT event of the OmptCallbackHandler
+  virtual void notify(omptest::OmptAssertEvent &&AE) = 0;
+};
+
 /// Base class for asserting on OMPT events
-class OmptAsserter {
+class OmptAsserter : public OmptListener {
 public:
   virtual void insert(omptest::OmptAssertEvent &&AE) {
     assert(false && "Base class 'insert' has undefined semantics.");
@@ -39,24 +46,29 @@ private:
 /// Class that can assert in a sequenced fashion, i.e., events hace to occur in
 /// the order they were registered
 struct OmptSequencedAsserter : public OmptAsserter {
+  OmptSequencedAsserter()
+      : NextEvent(0), Events(), State(omptest::AssertState::pass) {}
+
+  /// Add the event to the in-sequence set of events that the asserter should
+  /// check for.
   void insert(omptest::OmptAssertEvent &&AE) override {
     Events.emplace_back(std::move(AE));
   }
 
-  /// Implements the asserter's logic
+  /// Implements the asserter's actual logic
   virtual void notifyImpl(omptest::OmptAssertEvent &&AE) override {
     // Ignore notifications while inactive
     if (!isActive())
       return;
 
-    std::cout << "OmptSequencedAsserter::notifyImpl called w/ " << Events.size()
-              << " Events to check.\nNext Check item: " << NextEvent
-              << std::endl;
     if (NextEvent >= Events.size()) {
-      std::cerr << "[Error] Too many events to check. Only asserted single "
-                   "event.\nOffending event: "
-                << AE.getEventName() << std::endl;
-      exit(-1); // TODO: Make this reasonable assert error
+      std::cerr << "[Error] [OmptSequencedAsserter] Too many events to check. "
+                   "Only asserted "
+                << Events.size()
+                << " event.\nOffending event: " << AE.getEventName()
+                << std::endl;
+      State = omptest::AssertState::fail;
+      return;
     }
 
     auto &E = Events[NextEvent++];
@@ -66,11 +78,21 @@ struct OmptSequencedAsserter : public OmptAsserter {
     // TODO: Implement assert error
     std::cout << "[ASSERT ERROR] The events are not equal.\n"
               << AE.getEventName() << " == " << E.getEventName() << std::endl;
-    exit(-2);
+    State = omptest::AssertState::fail;
   }
 
-  int NextEvent{0};
+  omptest::AssertState getState() {
+    // This is called after the testcase executed.
+    // Once, reached, no more events should be in the queue
+    if (NextEvent < Events.size())
+      State = omptest::AssertState::fail;
+
+    return State;
+  }
+
+  size_t NextEvent{0};
   std::vector<omptest::OmptAssertEvent> Events;
+  omptest::AssertState State;
 };
 
 /// Class that asserts with set semantics, i.e., unordered

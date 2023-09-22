@@ -17,7 +17,7 @@ struct OmptCallbackHandler {
     return Handler;
   }
 
-  void subscribe(OmptAsserter *Asserter) { Subscribers.push_back(Asserter); }
+  void subscribe(OmptListener *Listener) { Subscribers.push_back(Listener); }
 
   void clearSubscribers() { Subscribers.clear(); }
 
@@ -135,6 +135,6 @@ struct OmptCallbackHandler {
                      ompt_data_t *parallel_data, ompt_data_t *task_data,
                      uint64_t count, const void *codeptr_ra) {}
 
-  std::vector<OmptAsserter *> Subscribers;
+  std::vector<OmptListener *> Subscribers;
 };
 #endif
