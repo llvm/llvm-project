@@ -323,18 +323,32 @@ static uptr GetGlobalSizeFromDescriptor(uptr ptr) {
 
 void ReportStats() {}
 
+constexpr uptr kDumpWidth = 16;
+constexpr uptr kShadowLines = 17;
+constexpr uptr kShadowDumpSize = kShadowLines * kDumpWidth;
+
+constexpr uptr kShortLines = 3;
+constexpr uptr kShortDumpSize = kShortLines * kDumpWidth;
+constexpr uptr kShortDumpOffset = (kShadowLines - kShortLines) / 2 * kDumpWidth;
+
+static uptr GetPrintTagStart(uptr addr) {
+  addr = MemToShadow(addr);
+  addr = RoundDownTo(addr, kDumpWidth);
+  addr -= kDumpWidth * (kShadowLines / 2);
+  return addr;
+}
+
 template <typename PrintTag>
 static void PrintTagInfoAroundAddr(uptr addr, uptr num_rows,
                                    InternalScopedString &s,
                                    PrintTag print_tag) {
-  const uptr row_len = 16;  // better be power of two.
-  uptr center_row_beg = RoundDownTo(addr, row_len);
-  uptr beg_row = center_row_beg - row_len * (num_rows / 2);
-  uptr end_row = center_row_beg + row_len * ((num_rows + 1) / 2);
-  for (uptr row = beg_row; row < end_row; row += row_len) {
+  uptr center_row_beg = RoundDownTo(addr, kDumpWidth);
+  uptr beg_row = center_row_beg - kDumpWidth * (num_rows / 2);
+  uptr end_row = center_row_beg + kDumpWidth * ((num_rows + 1) / 2);
+  for (uptr row = beg_row; row < end_row; row += kDumpWidth) {
     s.Append(row == center_row_beg ? "=>" : "  ");
     s.AppendF("%p:", (void *)ShadowToMem(row));
-    for (uptr i = 0; i < row_len; i++) {
+    for (uptr i = 0; i < kDumpWidth; i++) {
       s.Append(row + i == addr ? "[" : " ");
       print_tag(s, row + i);
       s.Append(row + i == addr ? "]" : " ");
@@ -352,7 +366,7 @@ static void PrintTagsAroundAddr(uptr addr, GetTag get_tag,
       "Memory tags around the buggy address (one tag corresponds to %zd "
       "bytes):\n",
       kShadowAlignment);
-  PrintTagInfoAroundAddr(addr, 17, s,
+  PrintTagInfoAroundAddr(addr, kShadowLines, s,
                          [&](InternalScopedString &s, uptr tag_addr) {
                            tag_t tag = get_tag(tag_addr);
                            s.AppendF("%02x", tag);
@@ -362,7 +376,7 @@ static void PrintTagsAroundAddr(uptr addr, GetTag get_tag,
       "Tags for short granules around the buggy address (one tag corresponds "
       "to %zd bytes):\n",
       kShadowAlignment);
-  PrintTagInfoAroundAddr(addr, 3, s,
+  PrintTagInfoAroundAddr(addr, kShortLines, s,
                          [&](InternalScopedString &s, uptr tag_addr) {
                            tag_t tag = get_tag(tag_addr);
                            if (tag >= 1 && tag <= kShadowAlignment) {
@@ -439,8 +453,8 @@ class BaseReport {
 
   struct Shadow {
     uptr addr = 0;
-    tag_t tags[512] = {};
-    tag_t short_tags[ARRAY_SIZE(tags)] = {};
+    tag_t tags[kShadowDumpSize] = {};
+    tag_t short_tags[kShortDumpSize] = {};
   };
 
   sptr FindMismatchOffset() const;
@@ -508,16 +522,19 @@ BaseReport::Shadow BaseReport::CopyShadow() const {
   if (!MemIsApp(untagged_addr))
     return result;
 
-  result.addr = MemToShadow(untagged_addr) - ARRAY_SIZE(result.tags) / 2;
-  for (uptr i = 0; i < ARRAY_SIZE(result.tags); ++i) {
-    uptr tag_addr = result.addr + i;
+  result.addr = GetPrintTagStart(untagged_addr + mismatch_offset);
+  uptr tag_addr = result.addr;
+  uptr short_end = kShortDumpOffset + ARRAY_SIZE(shadow.short_tags);
+  for (uptr i = 0; i < ARRAY_SIZE(result.tags); ++i, ++tag_addr) {
     if (!MemIsShadow(tag_addr))
       continue;
     result.tags[i] = *reinterpret_cast<tag_t *>(tag_addr);
+    if (i < kShortDumpOffset || i >= short_end)
+      continue;
     uptr granule_addr = ShadowToMem(tag_addr);
     if (1 <= result.tags[i] && result.tags[i] <= kShadowAlignment &&
         IsAccessibleMemoryRange(granule_addr, kShadowAlignment)) {
-      result.short_tags[i] =
+      result.short_tags[i - kShortDumpOffset] =
           *reinterpret_cast<tag_t *>(granule_addr + kShadowAlignment - 1);
     }
   }
@@ -532,8 +549,8 @@ tag_t BaseReport::GetTagCopy(uptr addr) const {
 }
 
 tag_t BaseReport::GetShortTagCopy(uptr addr) const {
-  CHECK_GE(addr, shadow.addr);
-  uptr idx = addr - shadow.addr;
+  CHECK_GE(addr, shadow.addr + kShortDumpOffset);
+  uptr idx = addr - shadow.addr - kShortDumpOffset;
   CHECK_LT(idx, ARRAY_SIZE(shadow.short_tags));
   return shadow.short_tags[idx];
 }
@@ -1014,7 +1031,8 @@ void ReportRegisters(const uptr *frame, uptr pc) {
        frame[0], frame[1], frame[2], frame[3]);
 #elif SANITIZER_RISCV64
   Printf("    sp  %016llx  x1  %016llx  x2  %016llx  x3  %016llx\n",
-         reinterpret_cast<u8 *>(frame) + 256, frame[1], frame[2], frame[3]);
+         reinterpret_cast<const u8 *>(frame) + 256, frame[1], frame[2],
+         frame[3]);
 #endif
   Printf("    x4  %016llx  x5  %016llx  x6  %016llx  x7  %016llx\n",
        frame[4], frame[5], frame[6], frame[7]);
@@ -1032,7 +1050,7 @@ void ReportRegisters(const uptr *frame, uptr pc) {
   // passes it to this function.
 #if defined(__aarch64__)
   Printf("    x28 %016llx  x29 %016llx  x30 %016llx   sp %016llx\n", frame[28],
-         frame[29], frame[30], reinterpret_cast<u8 *>(frame) + 256);
+         frame[29], frame[30], reinterpret_cast<const u8 *>(frame) + 256);
 #elif SANITIZER_RISCV64
   Printf("    x28 %016llx  x29 %016llx  x30 %016llx  x31 %016llx\n", frame[28],
          frame[29], frame[30], frame[31]);

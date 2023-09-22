@@ -690,6 +690,10 @@ public:
   bool isDesirableToCommuteWithShift(const SDNode *N,
                                      CombineLevel Level) const override;
 
+  bool isDesirableToPullExtFromShl(const MachineInstr &MI) const override {
+    return false;
+  }
+
   /// Returns false if N is a bit extraction pattern of (X >> C) & Mask.
   bool isDesirableToCommuteXorWithShift(const SDNode *N) const override;
 

@@ -786,16 +786,11 @@ void AArch64FrameLowering::emitZeroCallUsedRegs(BitVector RegsToZero,
 
   // Zero out GPRs.
   for (MCRegister Reg : GPRsToZero.set_bits())
-    BuildMI(MBB, MBBI, DL, TII.get(AArch64::MOVi64imm), Reg).addImm(0);
+    TII.buildClearRegister(Reg, MBB, MBBI, DL);
 
   // Zero out FP/vector registers.
   for (MCRegister Reg : FPRsToZero.set_bits())
-    if (HasSVE)
-      BuildMI(MBB, MBBI, DL, TII.get(AArch64::DUP_ZI_D), Reg)
-        .addImm(0)
-        .addImm(0);
-    else
-      BuildMI(MBB, MBBI, DL, TII.get(AArch64::MOVIv2d_ns), Reg).addImm(0);
+    TII.buildClearRegister(Reg, MBB, MBBI, DL);
 
   if (HasSVE) {
     for (MCRegister PReg :
