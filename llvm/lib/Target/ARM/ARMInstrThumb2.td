@@ -4383,8 +4383,8 @@ def t2ABS : PseudoInst<(outs rGPR:$dst), (ins rGPR:$src),
 // Coprocessor load/store -- for disassembly only
 //
 class T2CI<bits<4> op31_28, dag oops, dag iops, string opc, string asm,
-           list<dag> pattern, AddrMode am = AddrModeNone>
-  : T2I<oops, iops, NoItinerary, opc, asm, pattern, am> {
+           list<dag> pattern, AddrMode am = AddrModeNone, string constraints = "">
+  : T2I<oops, iops, NoItinerary, opc, asm, pattern, am, constraints> {
   let Inst{31-28} = op31_28;
   let Inst{27-25} = 0b110;
 }
@@ -4408,8 +4408,8 @@ multiclass t2LdStCop<bits<4> op31_28, bit load, bit Dbit, string asm, list<dag> 
     let DecoderMethod = "DecodeCopMemInstruction";
   }
   def _PRE : T2CI<op31_28,
-                  (outs), (ins p_imm:$cop, c_imm:$CRd, addrmode5_pre:$addr),
-                  asm, "\t$cop, $CRd, $addr!", []> {
+                  (outs GPR:$Rn_wb), (ins p_imm:$cop, c_imm:$CRd, addrmode5_pre:$addr),
+                  asm, "\t$cop, $CRd, $addr!", [], AddrMode5, "$addr.base = $Rn_wb"> {
     bits<13> addr;
     bits<4> cop;
     bits<4> CRd;
