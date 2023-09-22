@@ -10,7 +10,6 @@ jobs:
       - name: Fetch LLVM sources
         uses: actions/checkout@v4
         with:
-          persist-credentials: false
           fetch-depth: 2
 
       - name: Get changed files
@@ -18,6 +17,7 @@ jobs:
         uses: tj-actions/changed-files@v39
         with:
           separator: ","
+          fetch_depth: 10 # Fetches only the last 10 commits
 
       - name: "Listed files"
         run: |
