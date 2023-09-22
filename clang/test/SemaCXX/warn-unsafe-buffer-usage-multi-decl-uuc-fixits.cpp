@@ -6,17 +6,13 @@ void bar(int * param) {}
 
 void foo1a() {
   int *r = new int[7];
-  // CHECK: fix-it:"{{.*}}":{[[@LINE-1]]:3-[[@LINE-1]]:11}:"std::span<int> r"
-  // CHECK: fix-it:"{{.*}}":{[[@LINE-2]]:12-[[@LINE-2]]:12}:"{"
-  // CHECK: fix-it:"{{.*}}":{[[@LINE-3]]:22-[[@LINE-3]]:22}:", 7}"
+  // CHECK-NOT: fix-it:"{{.*}}":{[[@LINE-1]]:
   int *p = new int[4];
-  // CHECK: fix-it:"{{.*}}":{[[@LINE-1]]:3-[[@LINE-1]]:11}:"std::span<int> p"
-  // CHECK: fix-it:"{{.*}}":{[[@LINE-2]]:12-[[@LINE-2]]:12}:"{"
-  // CHECK: fix-it:"{{.*}}":{[[@LINE-3]]:22-[[@LINE-3]]:22}:", 4}"
+  // CHECK-NOT: fix-it:"{{.*}}":{[[@LINE-1]]:
   p = r;
   int tmp = p[9];
   int *q;
-  q = r;
+  q = r; // FIXME: we do not fix `q = r` here as the `.data()` fix-it is not generally correct
 }
 
 void uuc_if_body() {

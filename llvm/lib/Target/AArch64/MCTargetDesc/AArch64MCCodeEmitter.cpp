@@ -192,6 +192,9 @@ public:
   uint32_t EncodePPR_p8to15(const MCInst &MI, unsigned OpIdx,
                             SmallVectorImpl<MCFixup> &Fixups,
                             const MCSubtargetInfo &STI) const;
+  uint32_t EncodePNR_p8to15(const MCInst &MI, unsigned OpIdx,
+                            SmallVectorImpl<MCFixup> &Fixups,
+                            const MCSubtargetInfo &STI) const;
 
   uint32_t EncodeZPR2StridedRegisterClass(const MCInst &MI, unsigned OpIdx,
                                           SmallVectorImpl<MCFixup> &Fixups,
@@ -549,6 +552,14 @@ AArch64MCCodeEmitter::EncodePPR_p8to15(const MCInst &MI, unsigned OpIdx,
                                        const MCSubtargetInfo &STI) const {
   auto RegOpnd = MI.getOperand(OpIdx).getReg();
   return RegOpnd - AArch64::P8;
+}
+
+uint32_t
+AArch64MCCodeEmitter::EncodePNR_p8to15(const MCInst &MI, unsigned OpIdx,
+                                       SmallVectorImpl<MCFixup> &Fixups,
+                                       const MCSubtargetInfo &STI) const {
+  auto RegOpnd = MI.getOperand(OpIdx).getReg();
+  return RegOpnd - AArch64::PN8;
 }
 
 uint32_t AArch64MCCodeEmitter::EncodeZPR2StridedRegisterClass(

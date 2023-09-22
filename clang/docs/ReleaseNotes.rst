@@ -335,6 +335,10 @@ Bug Fixes to C++ Support
 - Clang now no longer asserts when an UnresolvedLookupExpr is used as an
   expression requirement. (`#66612 https://github.com/llvm/llvm-project/issues/66612`)
 
+- Clang now disambiguates NTTP types when printing diagnostics where the
+  NTTP types are compared with the 'diff' method.
+  (`#66744 https://github.com/llvm/llvm-project/issues/66744`)
+
 Bug Fixes to AST Handling
 ^^^^^^^^^^^^^^^^^^^^^^^^^
 - Fixed an import failure of recursive friend class template.
