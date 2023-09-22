@@ -35,7 +35,7 @@ body:             |
   ; CHECK-NEXT:   dead [[DS_READ_B128_gfx9_:%[0-9]+]]:vreg_128 = DS_READ_B128_gfx9 [[V_ADD_U32_e32_]], 0, 0, implicit $exec
   ; CHECK-NEXT:   [[COPY1:%[0-9]+]]:vgpr_32 = COPY [[COPY]].sub0
   ; CHECK-NEXT:   undef %11.sub1:vreg_512 = COPY [[COPY]].sub1
-  ; CHECK-NEXT:   INLINEASM &"", 1 /* sideeffect attdialect */, 851978 /* regdef:VGPR_HI16 */, def dead [[COPY1]], 851978 /* regdef:VGPR_HI16 */, def dead [[COPY]].sub1, 2147483657 /* reguse tiedto:$0 */, [[COPY1]], 2147549193 /* reguse tiedto:$1 */, [[COPY]].sub1
+  ; CHECK-NEXT:   INLINEASM &"", 1 /* sideeffect attdialect */, 851978 /* regdef:VGPR_16 */, def dead [[COPY1]], 851978 /* regdef:VGPR_16 */, def dead [[COPY]].sub1, 2147483657 /* reguse tiedto:$0 */, [[COPY1]], 2147549193 /* reguse tiedto:$1 */, [[COPY]].sub1
   ; CHECK-NEXT:   %11.sub0:vreg_512 = COPY [[COPY]].sub0
   ; CHECK-NEXT:   %11.sub3:vreg_512 = COPY [[COPY]].sub3
   ; CHECK-NEXT:   [[V_MOV_B32_e32_1:%[0-9]+]]:vgpr_32 = V_MOV_B32_e32 0, implicit $exec

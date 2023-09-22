@@ -6,6 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "llvm/ADT/StringMap.h"
 #include "llvm/Support/RISCVISAInfo.h"
 #include "llvm/Testing/Support/Error.h"
 #include "gtest/gtest.h"
@@ -631,134 +632,137 @@ TEST(RiscvExtensionsHelp, CheckExtensions) {
   std::string ExpectedOutput =
 R"(All available -march extensions for RISC-V
 
-	Name                Version
-	i                   2.1
-	e                   2.0
-	m                   2.0
-	a                   2.1
-	f                   2.2
-	d                   2.2
-	c                   2.0
-	v                   1.0
-	h                   1.0
-	zicbom              1.0
-	zicbop              1.0
-	zicboz              1.0
-	zicntr              2.0
-	zicsr               2.0
-	zifencei            2.0
-	zihintntl           1.0
-	zihintpause         2.0
-	zihpm               2.0
-	zmmul               1.0
-	zawrs               1.0
-	zfh                 1.0
-	zfhmin              1.0
-	zfinx               1.0
-	zdinx               1.0
-	zca                 1.0
-	zcb                 1.0
-	zcd                 1.0
-	zce                 1.0
-	zcf                 1.0
-	zcmp                1.0
-	zcmt                1.0
-	zba                 1.0
-	zbb                 1.0
-	zbc                 1.0
-	zbkb                1.0
-	zbkc                1.0
-	zbkx                1.0
-	zbs                 1.0
-	zk                  1.0
-	zkn                 1.0
-	zknd                1.0
-	zkne                1.0
-	zknh                1.0
-	zkr                 1.0
-	zks                 1.0
-	zksed               1.0
-	zksh                1.0
-	zkt                 1.0
-	zve32f              1.0
-	zve32x              1.0
-	zve64d              1.0
-	zve64f              1.0
-	zve64x              1.0
-	zvfh                1.0
-	zvfhmin             1.0
-	zvl1024b            1.0
-	zvl128b             1.0
-	zvl16384b           1.0
-	zvl2048b            1.0
-	zvl256b             1.0
-	zvl32768b           1.0
-	zvl32b              1.0
-	zvl4096b            1.0
-	zvl512b             1.0
-	zvl64b              1.0
-	zvl65536b           1.0
-	zvl8192b            1.0
-	zhinx               1.0
-	zhinxmin            1.0
-	svinval             1.0
-	svnapot             1.0
-	svpbmt              1.0
-	xcvalu              1.0
-	xcvbi               1.0
-	xcvbitmanip         1.0
-	xcvmac              1.0
-	xcvsimd             1.0
-	xsfcie              1.0
-	xsfvcp              1.0
-	xtheadba            1.0
-	xtheadbb            1.0
-	xtheadbs            1.0
-	xtheadcmo           1.0
-	xtheadcondmov       1.0
-	xtheadfmemidx       1.0
-	xtheadmac           1.0
-	xtheadmemidx        1.0
-	xtheadmempair       1.0
-	xtheadsync          1.0
-	xtheadvdot          1.0
-	xventanacondops     1.0
+    Name                Version   Description
+    i                   2.1       This is a long dummy description
+    e                   2.0
+    m                   2.0
+    a                   2.1
+    f                   2.2
+    d                   2.2
+    c                   2.0
+    v                   1.0
+    h                   1.0
+    zicbom              1.0
+    zicbop              1.0
+    zicboz              1.0
+    zicntr              2.0
+    zicsr               2.0
+    zifencei            2.0
+    zihintntl           1.0
+    zihintpause         2.0
+    zihpm               2.0
+    zmmul               1.0
+    zawrs               1.0
+    zfh                 1.0
+    zfhmin              1.0
+    zfinx               1.0
+    zdinx               1.0
+    zca                 1.0
+    zcb                 1.0
+    zcd                 1.0
+    zce                 1.0
+    zcf                 1.0
+    zcmp                1.0
+    zcmt                1.0
+    zba                 1.0
+    zbb                 1.0
+    zbc                 1.0
+    zbkb                1.0
+    zbkc                1.0
+    zbkx                1.0
+    zbs                 1.0
+    zk                  1.0
+    zkn                 1.0
+    zknd                1.0
+    zkne                1.0
+    zknh                1.0
+    zkr                 1.0
+    zks                 1.0
+    zksed               1.0
+    zksh                1.0
+    zkt                 1.0
+    zve32f              1.0
+    zve32x              1.0
+    zve64d              1.0
+    zve64f              1.0
+    zve64x              1.0
+    zvfh                1.0
+    zvfhmin             1.0
+    zvl1024b            1.0
+    zvl128b             1.0
+    zvl16384b           1.0
+    zvl2048b            1.0
+    zvl256b             1.0
+    zvl32768b           1.0
+    zvl32b              1.0
+    zvl4096b            1.0
+    zvl512b             1.0
+    zvl64b              1.0
+    zvl65536b           1.0
+    zvl8192b            1.0
+    zhinx               1.0
+    zhinxmin            1.0
+    svinval             1.0
+    svnapot             1.0
+    svpbmt              1.0
+    xcvalu              1.0
+    xcvbi               1.0
+    xcvbitmanip         1.0
+    xcvmac              1.0
+    xcvsimd             1.0
+    xsfcie              1.0
+    xsfvcp              1.0
+    xtheadba            1.0
+    xtheadbb            1.0
+    xtheadbs            1.0
+    xtheadcmo           1.0
+    xtheadcondmov       1.0
+    xtheadfmemidx       1.0
+    xtheadmac           1.0
+    xtheadmemidx        1.0
+    xtheadmempair       1.0
+    xtheadsync          1.0
+    xtheadvdot          1.0
+    xventanacondops     1.0
 
 Experimental extensions
-	zicfilp             0.2
-	zicond              1.0
-	zacas               1.0
-	zfa                 0.2
-	zfbfmin             0.8
-	ztso                0.1
-	zvbb                1.0
-	zvbc                1.0
-	zvfbfmin            0.8
-	zvfbfwma            0.8
-	zvkb                1.0
-	zvkg                1.0
-	zvkn                1.0
-	zvknc               1.0
-	zvkned              1.0
-	zvkng               1.0
-	zvknha              1.0
-	zvknhb              1.0
-	zvks                1.0
-	zvksc               1.0
-	zvksed              1.0
-	zvksg               1.0
-	zvksh               1.0
-	zvkt                1.0
-	smaia               1.0
-	ssaia               1.0
+    zicfilp             0.2       This is a long dummy description
+    zicond              1.0
+    zacas               1.0
+    zfa                 0.2
+    zfbfmin             0.8
+    ztso                0.1
+    zvbb                1.0
+    zvbc                1.0
+    zvfbfmin            0.8
+    zvfbfwma            0.8
+    zvkb                1.0
+    zvkg                1.0
+    zvkn                1.0
+    zvknc               1.0
+    zvkned              1.0
+    zvkng               1.0
+    zvknha              1.0
+    zvknhb              1.0
+    zvks                1.0
+    zvksc               1.0
+    zvksed              1.0
+    zvksg               1.0
+    zvksh               1.0
+    zvkt                1.0
+    smaia               1.0
+    ssaia               1.0
 
 Use -march to specify the target's extension.
 For example, clang -march=rv32i_v1p0)";
 
+  StringMap<StringRef> DummyMap;
+  DummyMap["i"] = "This is a long dummy description";
+  DummyMap["experimental-zicfilp"] = "This is a long dummy description";
+
   outs().flush();
   testing::internal::CaptureStdout();
-
-  llvm::riscvExtensionsHelp();
+  riscvExtensionsHelp(DummyMap);
   outs().flush();
 
   std::string CapturedOutput = testing::internal::GetCapturedStdout();

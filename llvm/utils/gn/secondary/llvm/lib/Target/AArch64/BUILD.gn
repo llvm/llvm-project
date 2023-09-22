@@ -136,6 +136,7 @@ static_library("LLVMAArch64CodeGen") {
     "AArch64MachineScheduler.cpp",
     "AArch64MacroFusion.cpp",
     "AArch64PBQPRegAlloc.cpp",
+    "AArch64PointerAuth.cpp",
     "AArch64PromoteConstant.cpp",
     "AArch64RedundantCopyElimination.cpp",
     "AArch64RegisterInfo.cpp",

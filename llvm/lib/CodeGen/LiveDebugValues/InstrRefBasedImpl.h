@@ -602,8 +602,8 @@ public:
 /// Slot Num (%stack.0)   /
 /// FrameIdx => SpillNum /
 ///              \      /
-///           SpillID (int)              Register number (int)
-///                      \                  /
+///           SpillID (int)   Register number (int)
+///                      \       /
 ///                      LocationID => LocIdx
 ///                                |
 ///                       LocIdx => ValueIDNum

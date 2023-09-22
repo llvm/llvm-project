@@ -221,6 +221,7 @@ extern "C" LLVM_EXTERNAL_VISIBILITY void LLVMInitializeAArch64Target() {
   initializeAArch64SIMDInstrOptPass(*PR);
   initializeAArch64O0PreLegalizerCombinerPass(*PR);
   initializeAArch64PreLegalizerCombinerPass(*PR);
+  initializeAArch64PointerAuthPass(*PR);
   initializeAArch64PostLegalizerCombinerPass(*PR);
   initializeAArch64PostLegalizerLoweringPass(*PR);
   initializeAArch64PostSelectOptimizePass(*PR);
@@ -811,9 +812,6 @@ void AArch64PassConfig::addPreEmitPass() {
 
   addPass(createAArch64A53Fix835769());
 
-  if (EnableBranchTargets)
-    addPass(createAArch64BranchTargetsPass());
-
   if (TM->getTargetTriple().isOSWindows()) {
     // Identify valid longjmp targets for Windows Control Flow Guard.
     addPass(createCFGuardLongjmpPass());
@@ -827,6 +825,9 @@ void AArch64PassConfig::addPreEmitPass() {
 }
 
 void AArch64PassConfig::addPostBBSections() {
+  addPass(createAArch64PointerAuthPass());
+  if (EnableBranchTargets)
+    addPass(createAArch64BranchTargetsPass());
   // Relax conditional branch instructions if they're otherwise out of
   // range of their destination.
   if (BranchRelaxation)
