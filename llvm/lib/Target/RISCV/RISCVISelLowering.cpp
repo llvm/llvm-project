@@ -14480,8 +14480,16 @@ SDValue RISCVTargetLowering::PerformDAGCombine(SDNode *N,
     // no purpose.
     if (ConstantSDNode *Const = dyn_cast<ConstantSDNode>(Scalar);
         Const && !Const->isZero() && isInt<5>(Const->getSExtValue()) &&
-        VT.bitsLE(getLMUL1VT(VT)) && Passthru.isUndef())
-      return DAG.getNode(RISCVISD::VMV_V_X_VL, DL, VT, Passthru, Scalar, VL);
+        VT.bitsLE(getLMUL1VT(VT))) {
+      if (Passthru.isUndef())
+        return DAG.getNode(RISCVISD::VMV_V_X_VL, DL, VT, Passthru, Scalar, VL);
+
+      // If we know VL isn't zero, then we can use VL=1.
+      if (isa<ConstantSDNode>(VL) &&
+          cast<ConstantSDNode>(VL)->getZExtValue() > 0)
+        return DAG.getNode(RISCVISD::VMV_V_X_VL, DL, VT, Passthru, Scalar,
+                           DAG.getVectorIdxConstant(1, DL));
+    }
 
     break;
   }

@@ -361,10 +361,9 @@ define <8 x i8> @splat_ve4_ins_i0ve2(<8 x i8> %v) {
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetivli zero, 8, e8, mf2, ta, ma
 ; CHECK-NEXT:    vmv.v.i v10, 4
-; CHECK-NEXT:    li a0, 2
-; CHECK-NEXT:    vsetvli zero, zero, e8, mf2, tu, ma
-; CHECK-NEXT:    vmv.s.x v10, a0
-; CHECK-NEXT:    vsetvli zero, zero, e8, mf2, ta, ma
+; CHECK-NEXT:    vsetivli zero, 1, e8, mf2, tu, ma
+; CHECK-NEXT:    vmv.v.i v10, 2
+; CHECK-NEXT:    vsetivli zero, 8, e8, mf2, ta, ma
 ; CHECK-NEXT:    vrgather.vv v9, v8, v10
 ; CHECK-NEXT:    vmv1r.v v8, v9
 ; CHECK-NEXT:    ret
@@ -407,10 +406,9 @@ define <8 x i8> @splat_ve2_we0_ins_i0ve4(<8 x i8> %v, <8 x i8> %w) {
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetivli zero, 8, e8, mf2, ta, ma
 ; CHECK-NEXT:    vmv.v.i v11, 2
-; CHECK-NEXT:    li a0, 4
-; CHECK-NEXT:    vsetvli zero, zero, e8, mf2, tu, ma
-; CHECK-NEXT:    vmv.s.x v11, a0
-; CHECK-NEXT:    vsetvli zero, zero, e8, mf2, ta, mu
+; CHECK-NEXT:    vsetivli zero, 1, e8, mf2, tu, ma
+; CHECK-NEXT:    vmv.v.i v11, 4
+; CHECK-NEXT:    vsetivli zero, 8, e8, mf2, ta, mu
 ; CHECK-NEXT:    li a0, 66
 ; CHECK-NEXT:    vmv.s.x v0, a0
 ; CHECK-NEXT:    vrgather.vv v10, v8, v11
