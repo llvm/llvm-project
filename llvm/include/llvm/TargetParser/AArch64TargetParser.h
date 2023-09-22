@@ -16,6 +16,7 @@
 
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/Bitset.h"
+#include "llvm/ADT/StringMap.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/VersionTuple.h"
 #include <array>
@@ -663,7 +664,7 @@ bool isX18ReservedByDefault(const Triple &TT);
 // themselves, they are sequential (0, 1, 2, 3, ...).
 uint64_t getCpuSupportsMask(ArrayRef<StringRef> FeatureStrs);
 
-void PrintSupportedExtensions();
+void PrintSupportedExtensions(StringMap<StringRef> DescMap);
 
 } // namespace AArch64
 } // namespace llvm
