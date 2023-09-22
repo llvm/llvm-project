@@ -22,7 +22,7 @@
 define i16 @main() {
 ; CHECK-LABEL: @main(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    store i64 0, ptr @csmith_sink_, align 8
+; CHECK-NEXT:    store i64 0, ptr @csmith_sink_, align 1
 ; CHECK-NEXT:    ret i16 0
 ;
 entry:

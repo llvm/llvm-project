@@ -33,6 +33,9 @@ class RISCVTargetMachine;
 FunctionPass *createRISCVCodeGenPreparePass();
 void initializeRISCVCodeGenPreparePass(PassRegistry &);
 
+FunctionPass *createRISCVDeadRegisterDefinitionsPass();
+void initializeRISCVDeadRegisterDefinitionsPass(PassRegistry &);
+
 FunctionPass *createRISCVISelDag(RISCVTargetMachine &TM,
                                  CodeGenOptLevel OptLevel);
 

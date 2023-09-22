@@ -762,81 +762,32 @@ def SparseTensor_OutOp : SparseTensor_Op<"out", []>,
 // Sparse Tensor Sorting Operations.
 //===----------------------------------------------------------------------===//
 
-def SparseTensor_SortOp : SparseTensor_Op<"sort", [AttrSizedOperandSegments]>,
-    Arguments<(ins Index:$n,
-               Variadic<StridedMemRefRankOf<[AnyInteger, Index], [1]>>:$xs,
-               Variadic<StridedMemRefRankOf<[AnyType], [1]>>:$ys,
-               SparseTensorSortKindAttr:$algorithm)>  {
-  string summary = "Sorts the arrays in xs and ys lexicographically on the "
-                   "integral values found in the xs list";
-  string description = [{
-    Lexicographically sort the first `n` values in `xs` along with the values in
-    `ys`. Conceptually, the values being sorted are tuples produced by
-    `zip(zip(xs), zip(ys))`. In particular, values in `ys` needed to be sorted
-    along with values in `xs`, but values in `ys` don't affect the
-    lexicographical order. The order in which arrays appear in `xs` affects the
-    sorting result. The operator updates `xs` and `ys` in place with the result
-    of the sorting.
-
-    For example, assume x1=[4, 3], x2=[1, 2], y1=[10, 5], then the output of
-    "sort 2, x1, x2 jointly y1" are x1=[3, 4], x2=[2, 1], y1=[5, 10] while the
-    output of "sort 2, x2, x1, jointly y1" are x2=[1, 2], x1=[4, 3], y1=[10, 5].
-
-    Buffers in `xs` needs to have the same integral element type while buffers
-    in `ys` can have different numeric element types. All buffers in `xs` and
-    `ys` should have a dimension not less than `n`. The behavior of the operator
-    is undefined if this condition is not met. The operator requires at least
-    one buffer in `xs` while `ys` can be empty.
-
-    The enum attribute `algorithm` indicates the sorting algorithm used to
-    implement the operator: hybrid_quick_sort, insertion_sort_stable,
-    quick_sort, or heap_sort.
-
-    Note that this operation is "impure" in the sense that its behavior is
-    solely defined by side-effects and not SSA values.
-
-    Example:
-
-    ```mlir
-    sparse_tensor.sort insertion_sort_stable %n, %x1, %x2 jointly y1, %y2
-      : memref<?xindex>, memref<?xindex> jointly memref<?xindex>, memref<?xf32>
-    ```
-
-    ```mlir
-    sparse_tensor.sort hybrid_quick_sort %n, %x1, %x2 jointly y1, %y2
-      { alg=1 : index}
-      : memref<?xindex>, memref<?xindex> jointly memref<?xindex>, memref<?xf32>
-    ```
-  }];
-  let assemblyFormat = "$algorithm $n `,` $xs (`jointly` $ys^)? attr-dict"
-                       "`:` type($xs) (`jointly` type($ys)^)?";
-  let hasVerifier = 1;
-}
-
 def SparseTensor_SortCooOp : SparseTensor_Op<"sort_coo">,
     Arguments<(ins Index:$n, StridedMemRefRankOf<[AnyInteger, Index], [1]>:$xy,
                Variadic<StridedMemRefRankOf<[AnyType], [1]>>:$ys,
-               OptionalAttr<IndexAttr>:$nx, OptionalAttr<IndexAttr>:$ny,
+               AffineMapAttr:$perm_map, OptionalAttr<IndexAttr>:$ny,
                SparseTensorSortKindAttr:$algorithm)>  {
   let summary = "Sorts the arrays in xs and ys lexicographically on the "
                 "integral values found in the xs list";
   let description = [{
-    Sparse_tensor.sort_coo is similar to sparse_tensor.sort, except that all the
-    `xs` values and some `ys` values are put in the linear buffer `xy`. The
-    optional index attribute `nx` provides the number of `xs` values in `xy`.
-    When `nx` is not explicitly specified, its value is 1. The optional index
-    attribute `ny` provides the number of `ys` values in `xy`. When `ny` is not
-    explicitly specified, its value is 0. This instruction supports a more
-    efficient way to store the COO definition in sparse tensor type.
+    Sparse_tensor.sort_coo sort the `xs` values along with some `ys` values
+    that are put in a single linear buffer `xy`.
+    The affine map attribute `perm_map` specifies the permutation to be applied on
+    the `xs` before comparison, the rank of the permutation map
+    also specifies the number of `xs` values in `xy`.
+    The optional index attribute `ny` provides the number of `ys` values in `xy`.
+    When `ny` is not explicitly specified, its value is 0.
+    This instruction supports a more efficient way to store the COO definition
+    in sparse tensor type.
 
-    The buffer xy should have a dimension not less than n * (nx + ny) while the
+    The buffer xy should have a dimension not less than n * (rank(perm_map) + ny) while the
     buffers in `ys` should have a dimension not less than `n`. The behavior of
     the operator is undefined if this condition is not met.
 
     Example:
 
     ```mlir
-    sparse_tensor.sort_coo insertion_sort_stable %n, %x { nx = 2 : index}
+    sparse_tensor.sort_coo insertion_sort_stable %n, %x { perm_map = affine_map<(i,j) -> (j,i)> }
       : memref<?xindex>
     ```
 

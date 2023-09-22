@@ -4299,6 +4299,7 @@ Value *llvm::simplifyFCmpInst(unsigned Predicate, Value *LHS, Value *RHS,
 static Value *simplifyWithOpReplaced(Value *V, Value *Op, Value *RepOp,
                                      const SimplifyQuery &Q,
                                      bool AllowRefinement,
+                                     SmallVectorImpl<Instruction *> *DropFlags,
                                      unsigned MaxRecurse) {
   // Trivial replacement.
   if (V == Op)
@@ -4333,7 +4334,7 @@ static Value *simplifyWithOpReplaced(Value *V, Value *Op, Value *RepOp,
   bool AnyReplaced = false;
   for (Value *InstOp : I->operands()) {
     if (Value *NewInstOp = simplifyWithOpReplaced(
-            InstOp, Op, RepOp, Q, AllowRefinement, MaxRecurse)) {
+            InstOp, Op, RepOp, Q, AllowRefinement, DropFlags, MaxRecurse)) {
       NewOps.push_back(NewInstOp);
       AnyReplaced = InstOp != NewInstOp;
     } else {
@@ -4427,16 +4428,23 @@ static Value *simplifyWithOpReplaced(Value *V, Value *Op, Value *RepOp,
   // will be done in InstCombine).
   // TODO: This may be unsound, because it only catches some forms of
   // refinement.
-  if (!AllowRefinement && canCreatePoison(cast<Operator>(I)))
-    return nullptr;
+  if (!AllowRefinement) {
+    if (canCreatePoison(cast<Operator>(I), !DropFlags))
+      return nullptr;
+    Constant *Res = ConstantFoldInstOperands(I, ConstOps, Q.DL, Q.TLI);
+    if (DropFlags && Res && I->hasPoisonGeneratingFlagsOrMetadata())
+      DropFlags->push_back(I);
+    return Res;
+  }
 
   return ConstantFoldInstOperands(I, ConstOps, Q.DL, Q.TLI);
 }
 
 Value *llvm::simplifyWithOpReplaced(Value *V, Value *Op, Value *RepOp,
                                     const SimplifyQuery &Q,
-                                    bool AllowRefinement) {
-  return ::simplifyWithOpReplaced(V, Op, RepOp, Q, AllowRefinement,
+                                    bool AllowRefinement,
+                                    SmallVectorImpl<Instruction *> *DropFlags) {
+  return ::simplifyWithOpReplaced(V, Op, RepOp, Q, AllowRefinement, DropFlags,
                                   RecursionLimit);
 }
 
@@ -4569,11 +4577,11 @@ static Value *simplifySelectWithICmpEq(Value *CmpLHS, Value *CmpRHS,
                                        unsigned MaxRecurse) {
   if (simplifyWithOpReplaced(FalseVal, CmpLHS, CmpRHS, Q,
                              /* AllowRefinement */ false,
-                             MaxRecurse) == TrueVal)
+                             /* DropFlags */ nullptr, MaxRecurse) == TrueVal)
     return FalseVal;
   if (simplifyWithOpReplaced(TrueVal, CmpLHS, CmpRHS, Q,
                              /* AllowRefinement */ true,
-                             MaxRecurse) == FalseVal)
+                             /* DropFlags */ nullptr, MaxRecurse) == FalseVal)
     return FalseVal;
 
   return nullptr;

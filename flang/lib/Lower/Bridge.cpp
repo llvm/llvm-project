@@ -2320,7 +2320,7 @@ private:
   void genFIR(const Fortran::parser::OpenMPConstruct &omp) {
     mlir::OpBuilder::InsertPoint insertPt = builder->saveInsertionPoint();
     localSymbols.pushScope();
-    genOpenMPConstruct(*this, getEval(), omp);
+    genOpenMPConstruct(*this, bridge.getSemanticsContext(), getEval(), omp);
 
     const Fortran::parser::OpenMPLoopConstruct *ompLoop =
         std::get_if<Fortran::parser::OpenMPLoopConstruct>(&omp.u);
