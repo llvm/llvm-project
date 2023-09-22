@@ -3,7 +3,7 @@
 
 @type_info = external global ptr
 
-; FIXME: This is a miscompile.
+; Make sure %a1 and %a2 don't share the same stack offset.
 define void @pr66984(ptr %arg) personality ptr @__CxxFrameHandler3 {
 ; CHECK-LABEL: pr66984:
 ; CHECK:       # %bb.0: # %bb
@@ -12,7 +12,7 @@ define void @pr66984(ptr %arg) personality ptr @__CxxFrameHandler3 {
 ; CHECK-NEXT:    pushl %ebx
 ; CHECK-NEXT:    pushl %edi
 ; CHECK-NEXT:    pushl %esi
-; CHECK-NEXT:    subl $20, %esp
+; CHECK-NEXT:    subl $24, %esp
 ; CHECK-NEXT:    movl %esp, -28(%ebp)
 ; CHECK-NEXT:    movl $-1, -16(%ebp)
 ; CHECK-NEXT:    leal -24(%ebp), %eax
@@ -31,7 +31,7 @@ define void @pr66984(ptr %arg) personality ptr @__CxxFrameHandler3 {
 ; CHECK-NEXT:  $ehgcr_0_4:
 ; CHECK-NEXT:    movl -24(%ebp), %eax
 ; CHECK-NEXT:    movl %eax, %fs:0
-; CHECK-NEXT:    addl $20, %esp
+; CHECK-NEXT:    addl $24, %esp
 ; CHECK-NEXT:    popl %esi
 ; CHECK-NEXT:    popl %edi
 ; CHECK-NEXT:    popl %ebx
@@ -47,7 +47,7 @@ define void @pr66984(ptr %arg) personality ptr @__CxxFrameHandler3 {
 ; CHECK-NEXT:    pushl %ebp
 ; CHECK-NEXT:    addl $12, %ebp
 ; CHECK-NEXT:    movl %esp, -28(%ebp)
-; CHECK-NEXT:    movl -32(%ebp), %ecx
+; CHECK-NEXT:    movl -36(%ebp), %ecx
 ; CHECK-NEXT:    movl $2, -16(%ebp)
 ; CHECK-NEXT:    calll _cleanup
 ; CHECK-NEXT:    movl $LBB0_3, %eax

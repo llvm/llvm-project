@@ -2788,18 +2788,6 @@ static Value *getWideOperand(Value *Oper) {
   return Oper;
 }
 
-/// Return true if we allow an IV chain to include both types.
-static bool isCompatibleIVType(Value *LVal, Value *RVal) {
-  Type *LType = LVal->getType();
-  Type *RType = RVal->getType();
-  return (LType == RType) || (LType->isPointerTy() && RType->isPointerTy() &&
-                              // Different address spaces means (possibly)
-                              // different types of the pointer implementation,
-                              // e.g. i16 vs i32 so disallow that.
-                              (LType->getPointerAddressSpace() ==
-                               RType->getPointerAddressSpace()));
-}
-
 /// Return an approximation of this SCEV expression's "base", or NULL for any
 /// constant. Returning the expression itself is conservative. Returning a
 /// deeper subexpression is more precise and valid as long as it isn't less
@@ -2979,7 +2967,7 @@ void LSRInstance::ChainInstruction(Instruction *UserInst, Instruction *IVOper,
       continue;
 
     Value *PrevIV = getWideOperand(Chain.Incs.back().IVOperand);
-    if (!isCompatibleIVType(PrevIV, NextIV))
+    if (PrevIV->getType() != NextIV->getType())
       continue;
 
     // A phi node terminates a chain.
@@ -3273,7 +3261,7 @@ void LSRInstance::GenerateIVChain(const IVChain &Chain,
   // do this if we also found a wide value for the head of the chain.
   if (isa<PHINode>(Chain.tailUserInst())) {
     for (PHINode &Phi : L->getHeader()->phis()) {
-      if (!isCompatibleIVType(&Phi, IVSrc))
+      if (Phi.getType() != IVSrc->getType())
         continue;
       Instruction *PostIncV = dyn_cast<Instruction>(
           Phi.getIncomingValueForBlock(L->getLoopLatch()));
