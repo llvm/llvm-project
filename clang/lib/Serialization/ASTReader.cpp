@@ -1497,9 +1497,12 @@ int ASTReader::getSLocEntryID(SourceLocation::UIntTy SLocOffset) {
 
   auto It = llvm::upper_bound(Indices, SLocOffset,
                     [&](SourceLocation::UIntTy Offset, unsigned Index) {
-                      auto EntryOffset = readSLocOffset(F, Index);
-                      assert(EntryOffset && "Corrupted AST file");
-                      return Offset < *EntryOffset;
+                      if (F->SLocEntryOffsetLoaded[Index] == -1U) {
+                        auto MaybeEntryOffset = readSLocOffset(F, Index);
+                        assert(MaybeEntryOffset && "Corrupted AST file");
+                        F->SLocEntryOffsetLoaded[Index] = *MaybeEntryOffset;
+                      }
+                      return Offset < F->SLocEntryOffsetLoaded[Index];
                     });
   // The iterator points to the first entry with start offset greater than the
   // offset of interest. The previous entry must contain the offset of interest.
@@ -3606,6 +3609,7 @@ llvm::Error ASTReader::ReadASTBlock(ModuleFile &F,
         return llvm::createStringError(std::errc::invalid_argument,
                                        "ran out of source locations");
       }
+      F.SLocEntryOffsetLoaded.resize(F.LocalNumSLocEntries, -1U);
       // Make our entry in the range map. BaseID is negative and growing, so
       // we invert it. Because we invert it, though, we need the other end of
       // the range.
