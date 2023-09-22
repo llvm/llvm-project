@@ -92,7 +92,7 @@ if.then:                                          ; preds = %for.body
 
 for.inc:                                          ; preds = %for.body, %if.then
   %inc = add nuw nsw i32 %i1, 1
-  %cmp = icmp ult i32 %inc, 38
+  %cmp = icmp ult i32 %inc, 35
   br i1 %cmp, label %for.body, label %for.end
 
 for.end:                                          ; preds = %for.cond
