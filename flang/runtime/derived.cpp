@@ -209,7 +209,25 @@ void Finalize(const Descriptor &descriptor,
        k < myComponents; ++k) {
     const auto &comp{
         *componentDesc.ZeroBasedIndexedElement<typeInfo::Component>(k)};
-    if (comp.genre() == typeInfo::Component::Genre::Allocatable ||
+    if (comp.genre() == typeInfo::Component::Genre::Allocatable &&
+        comp.category() == TypeCategory::Derived) {
+      // Component may be polymorphic or unlimited polymorphic. Need to use the
+      // dynamic type to check whether finalization is needed.
+      for (std::size_t j{0}; j < elements; ++j) {
+        const Descriptor &compDesc{*descriptor.OffsetElement<Descriptor>(
+            j * byteStride + comp.offset())};
+        if (compDesc.IsAllocated()) {
+          if (const DescriptorAddendum * addendum{compDesc.Addendum()}) {
+            if (const typeInfo::DerivedType *
+                compDynamicType{addendum->derivedType()}) {
+              if (!compDynamicType->noFinalizationNeeded()) {
+                Finalize(compDesc, *compDynamicType, terminator);
+              }
+            }
+          }
+        }
+      }
+    } else if (comp.genre() == typeInfo::Component::Genre::Allocatable ||
         comp.genre() == typeInfo::Component::Genre::Automatic) {
       if (const typeInfo::DerivedType * compType{comp.derivedType()}) {
         if (!compType->noFinalizationNeeded()) {
