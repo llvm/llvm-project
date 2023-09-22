@@ -162,9 +162,6 @@ function generate-cmake-libcxx-win() {
 }
 
 function check-runtimes() {
-    echo "--- Installing libc++, libc++abi and libunwind to a fake location"
-    ${NINJA} -vC "${BUILD_DIR}" install-cxx install-cxxabi install-unwind
-
     echo "+++ Running the libc++ tests"
     ${NINJA} -vC "${BUILD_DIR}" check-cxx
 
@@ -173,6 +170,19 @@ function check-runtimes() {
 
     echo "+++ Running the libunwind tests"
     ${NINJA} -vC "${BUILD_DIR}" check-unwind
+
+    # TODO: On macOS 13.5, the linker seems to have an issue where it will pick up
+    #       a library if it exists inside a -L search path, even if we don't link
+    #       against that library. This happens with libunwind.dylib if it is built
+    #       at the point when we run the libc++ tests, which causes issues cause we
+    #       are also linking against the system unwinder.
+    #
+    #       I believe this is a linker regression and I reported it as rdar://115842730.
+    #       It should be possible to move this installation step back to the top once
+    #       that issue has been resolved, but in the meantime it doesn't really hurt to
+    #       have it here.
+    echo "--- Installing libc++, libc++abi and libunwind to a fake location"
+    ${NINJA} -vC "${BUILD_DIR}" install-cxx install-cxxabi install-unwind
 }
 
 # TODO: The goal is to test this against all configurations. We should also move

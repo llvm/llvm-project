@@ -83,6 +83,10 @@ add_library(               cxx-benchmarks-flags INTERFACE)
 # version that MSVC flags support is C++20.
 if (MSVC)
   add_compile_options(/std:c++latest)
+# ibm-clang does not recognize the cxx_std_32 flag, so use this as a temporary
+# workaround on AIX as well.
+elseif (${CMAKE_SYSTEM_NAME} MATCHES "AIX")
+  add_compile_options(-std=c++23)
 else()
   target_compile_features( cxx-benchmarks-flags INTERFACE cxx_std_23)
 endif()

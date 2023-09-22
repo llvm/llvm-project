@@ -272,6 +272,34 @@ public:
     return isLDRB(Inst) || isLDRH(Inst) || isLDRW(Inst) || isLDRX(Inst);
   }
 
+  bool isAArch64Exclusive(const MCInst &Inst) const override {
+    return (Inst.getOpcode() == AArch64::LDXPX ||
+            Inst.getOpcode() == AArch64::LDXPW ||
+            Inst.getOpcode() == AArch64::LDXRX ||
+            Inst.getOpcode() == AArch64::LDXRW ||
+            Inst.getOpcode() == AArch64::LDXRH ||
+            Inst.getOpcode() == AArch64::LDXRB ||
+            Inst.getOpcode() == AArch64::STXPX ||
+            Inst.getOpcode() == AArch64::STXPW ||
+            Inst.getOpcode() == AArch64::STXRX ||
+            Inst.getOpcode() == AArch64::STXRW ||
+            Inst.getOpcode() == AArch64::STXRH ||
+            Inst.getOpcode() == AArch64::STXRB ||
+            Inst.getOpcode() == AArch64::LDAXPX ||
+            Inst.getOpcode() == AArch64::LDAXPW ||
+            Inst.getOpcode() == AArch64::LDAXRX ||
+            Inst.getOpcode() == AArch64::LDAXRW ||
+            Inst.getOpcode() == AArch64::LDAXRH ||
+            Inst.getOpcode() == AArch64::LDAXRB ||
+            Inst.getOpcode() == AArch64::STLXPX ||
+            Inst.getOpcode() == AArch64::STLXPW ||
+            Inst.getOpcode() == AArch64::STLXRX ||
+            Inst.getOpcode() == AArch64::STLXRW ||
+            Inst.getOpcode() == AArch64::STLXRH ||
+            Inst.getOpcode() == AArch64::STLXRB ||
+            Inst.getOpcode() == AArch64::CLREX);
+  }
+
   bool isLoadFromStack(const MCInst &Inst) const {
     if (!mayLoad(Inst))
       return false;

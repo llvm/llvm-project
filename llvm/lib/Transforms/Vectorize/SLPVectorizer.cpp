@@ -2918,7 +2918,7 @@ private:
                "Scalar already in tree!");
         if (TE) {
           if (TE != Last)
-            MultiNodeScalars.insert(V);
+            MultiNodeScalars.try_emplace(V).first->getSecond().push_back(Last);
           continue;
         }
         ScalarToTreeEntry[V] = Last;
@@ -2979,8 +2979,9 @@ private:
   /// Maps a specific scalar to its tree entry.
   SmallDenseMap<Value *, TreeEntry *> ScalarToTreeEntry;
 
-  /// List of scalars, used in several vectorize nodes.
-  SmallDenseSet<Value *> MultiNodeScalars;
+  /// List of scalars, used in several vectorize nodes, and the list of the
+  /// nodes.
+  SmallDenseMap<Value *, SmallVector<TreeEntry *>> MultiNodeScalars;
 
   /// Maps a value to the proposed vectorizable size.
   SmallDenseMap<Value *, unsigned> InstrElementSize;
@@ -7072,7 +7073,10 @@ class BoUpSLP::ShuffleCostEstimator : public BaseShuffleAnalysis {
   /// extracted values from \p VL.
   InstructionCost computeExtractCost(ArrayRef<Value *> VL, ArrayRef<int> Mask,
                                      TTI::ShuffleKind ShuffleKind) {
-    auto *VecTy = FixedVectorType::get(VL.front()->getType(), VL.size());
+    auto *VecTy = cast<FixedVectorType>(
+        cast<ExtractElementInst>(*find_if(VL, [](Value *V) {
+          return isa<ExtractElementInst>(V);
+        }))->getVectorOperandType());
     unsigned NumOfParts = TTI.getNumberOfParts(VecTy);
 
     if (ShuffleKind != TargetTransformInfo::SK_PermuteSingleSrc ||
@@ -7326,6 +7330,15 @@ public:
     return VecBase;
   }
   void add(const TreeEntry *E1, const TreeEntry *E2, ArrayRef<int> Mask) {
+    if (E1 == E2) {
+      assert(all_of(Mask,
+                    [=](int Idx) {
+                      return Idx < static_cast<int>(E1->getVectorFactor());
+                    }) &&
+             "Expected single vector shuffle mask.");
+      add(E1, Mask);
+      return;
+    }
     CommonMask.assign(Mask.begin(), Mask.end());
     InVectors.assign({E1, E2});
   }
@@ -7524,10 +7537,7 @@ BoUpSLP::getEntryCost(const TreeEntry *E, ArrayRef<Value *> VectorizedVals,
       LLVM_DEBUG(dbgs() << "SLP: shuffled " << Entries.size()
                         << " entries for bundle "
                         << shortBundleName(VL) << ".\n");
-      if (Entries.size() == 1)
-        Estimator.add(Entries.front(), Mask);
-      else
-        Estimator.add(Entries.front(), Entries.back(), Mask);
+      Estimator.add(Entries.front(), Entries.back(), Mask);
       if (all_of(GatheredScalars, PoisonValue ::classof))
         return Estimator.finalize(E->ReuseShuffleIndices);
       return Estimator.finalize(
@@ -8952,7 +8962,7 @@ BoUpSLP::isGatherShuffledEntry(const TreeEntry *TE, ArrayRef<Value *> VL,
         // vectorized nodes - make it depend on index.
         if (TE->UserTreeIndices.front().UserTE !=
                 TEPtr->UserTreeIndices.front().UserTE &&
-            TE->Idx > TEPtr->Idx)
+            TE->Idx < TEPtr->Idx)
           continue;
       }
       // Check if the user node of the TE comes after user node of EntryPtr,
@@ -9866,15 +9876,16 @@ Value *BoUpSLP::vectorizeOperand(TreeEntry *E, unsigned NodeIdx) {
     };
     TreeEntry *VE = getTreeEntry(S.OpValue);
     bool IsSameVE = VE && CheckSameVE(VE);
-    if (!IsSameVE && MultiNodeScalars.contains(S.OpValue)) {
-      auto *I =
-          find_if(VectorizableTree, [&](const std::unique_ptr<TreeEntry> &TE) {
-            return TE->State != TreeEntry::NeedToGather && TE.get() != VE &&
-                   CheckSameVE(TE.get());
-          });
-      if (I != VectorizableTree.end()) {
-        VE = I->get();
-        IsSameVE = true;
+    if (!IsSameVE) {
+      auto It = MultiNodeScalars.find(S.OpValue);
+      if (It != MultiNodeScalars.end()) {
+        auto *I = find_if(It->getSecond(), [&](const TreeEntry *TE) {
+          return TE != VE && CheckSameVE(TE);
+        });
+        if (I != It->getSecond().end()) {
+          VE = *I;
+          IsSameVE = true;
+        }
       }
     }
     if (IsSameVE) {
