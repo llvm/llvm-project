@@ -12613,7 +12613,10 @@ gentbl_cc_library(
 
 cc_library(
     name = "UBDialect",
-    srcs = ["lib/Dialect/UB/IR/UBOps.cpp"],
+    srcs = [
+        "lib/Dialect/UB/IR/UBOps.cpp",
+        "include/mlir/Transforms/InliningUtils.h",
+    ],
     hdrs = ["include/mlir/Dialect/UB/IR/UBOps.h"],
     includes = ["include"],
     deps = [
