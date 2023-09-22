@@ -767,19 +767,18 @@ public:
     createTripCountGreaterCondition(int TC, MachineBasicBlock &MBB,
                                     SmallVectorImpl<MachineOperand> &Cond) = 0;
 
-    /// Create a condtion to determine if the remaining trip count represented
-    /// by the loop counter CounterReg is greater than TC. Some instructions
-    /// such as comparisons may be inserted at the bottom of MBB. CounterReg
-    /// must be accessible there.
+    /// Create a condition to determine if the remaining trip count for a phase
+    /// is greater than TC. Some instructions such as comparisons may be
+    /// inserted at the bottom of MBB. The all instructions expanded for the
+    /// phase must be inserted in MBB before calling this function. RegMap is
+    /// the map from the original registers to the expanded registers for the
+    /// phase.
     ///
-    /// The definition of the return value is the same as for the variant above.
-    virtual std::optional<bool>
-    createTripCountGreaterCondition(int TC, MachineBasicBlock &MBB,
-                                    SmallVectorImpl<MachineOperand> &Cond,
-                                    Register CounterReg) {
-      llvm_unreachable(
-          "Target didn't implement createTripCountGreaterCondition");
-    }
+    /// MBB can also be a predecessor of the prologue block. Then RegMap must be
+    /// empty and the compared value is the initial value of the trip count.
+    virtual void createRemainingIterationsGreaterCondition(
+        int TC, MachineBasicBlock &MBB, SmallVectorImpl<MachineOperand> &Cond,
+        DenseMap<unsigned, unsigned> RegMap) = 0;
 
     /// Modify the loop such that the trip count is
     /// OriginalTC + TripCountAdjust.
@@ -795,15 +794,9 @@ public:
     /// valid; the loop has been removed.
     virtual void disposed() = 0;
 
-    /// Return the initial value of the loop counter.
-    virtual Register getCounterInitReg() {
-      llvm_unreachable("Target didn't implement getCounterInitReg");
-    }
-
-    /// Return the updated value of the loop counter in the original loop.
-    virtual Register getCounterUpdatedReg() {
-      llvm_unreachable("Target didn't implement getCounterUpdatedReg");
-    }
+    /// Return true if the target can expand pipelined schedule with modulo
+    /// variable expansion.
+    virtual bool isMVEExpanderSupported() = 0;
   };
 
   /// Analyze loop L, which must be a single-basic-block loop, and if the

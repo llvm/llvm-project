@@ -2263,9 +2263,8 @@ void ModuloScheduleExpanderMVE::generatePipelinedLoop() {
   Epilog->addSuccessor(NewExit);
 
   SmallVector<MachineOperand, 4> Cond;
-  LoopInfo->createTripCountGreaterCondition(
-      Schedule.getNumStages() + NumUnroll - 2, *Check, Cond,
-      LoopInfo->getCounterInitReg());
+  LoopInfo->createRemainingIterationsGreaterCondition(
+      Schedule.getNumStages() + NumUnroll - 2, *Check, Cond, ValueMapTy());
   TII->insertBranch(*Check, Prolog, NewPreheader, Cond, DebugLoc());
 
   // VRMaps map (prolog/kernel/epilog phase#, original register#) to new
@@ -2553,9 +2552,8 @@ void ModuloScheduleExpanderMVE::generateKernel(
 
   // If remaining trip count is greater than NumUnroll-1, loop continues
   SmallVector<MachineOperand, 4> Cond;
-  LoopInfo->createTripCountGreaterCondition(
-      NumUnroll - 1, *NewKernel, Cond,
-      KernelVRMap[NumUnroll - 1][LoopInfo->getCounterUpdatedReg()]);
+  LoopInfo->createRemainingIterationsGreaterCondition(
+      NumUnroll - 1, *NewKernel, Cond, KernelVRMap[NumUnroll - 1]);
   TII->insertBranch(*NewKernel, NewKernel, Epilog, Cond, DebugLoc());
 
   LLVM_DEBUG({
@@ -2592,11 +2590,13 @@ void ModuloScheduleExpanderMVE::generateEpilog(
     updateInstrUse(MI, StageNum, EpilogNum, EpilogVRMap, &KernelVRMap);
   }
 
-  // If there are remaining iterations, they are executed in the original loop
+  // If there are remaining iterations, they are executed in the original loop.
+  // Instructions related to loop control, such as loop counter comparison,
+  // are indicated by shouldIgnoreForPipelining() and are assumed to be placed
+  // in stage 0. Thus, the map is for the last one in the kernel.
   SmallVector<MachineOperand, 4> Cond;
-  LoopInfo->createTripCountGreaterCondition(
-      0, *Epilog, Cond,
-      KernelVRMap[NumUnroll - 1][LoopInfo->getCounterUpdatedReg()]);
+  LoopInfo->createRemainingIterationsGreaterCondition(
+      0, *Epilog, Cond, KernelVRMap[NumUnroll - 1]);
   TII->insertBranch(*Epilog, NewPreheader, NewExit, Cond, DebugLoc());
 
   LLVM_DEBUG({

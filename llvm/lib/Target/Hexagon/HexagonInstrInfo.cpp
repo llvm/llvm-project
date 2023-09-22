@@ -770,6 +770,13 @@ public:
     return TripCount > TC;
   }
 
+  void createRemainingIterationsGreaterCondition(
+      int TC, MachineBasicBlock &MBB, SmallVectorImpl<MachineOperand> &Cond,
+      DenseMap<unsigned, unsigned> RegMap) override {
+    llvm_unreachable(
+        "Target didn't implement createRemainingIterationsGreaterCondition");
+  }
+
   void setPreheader(MachineBasicBlock *NewPreheader) override {
     NewPreheader->splice(NewPreheader->getFirstTerminator(), Loop->getParent(),
                          Loop);
@@ -798,6 +805,8 @@ public:
   }
 
   void disposed() override { Loop->eraseFromParent(); }
+
+  bool isMVEExpanderSupported() override { return false; }
 };
 } // namespace
 
