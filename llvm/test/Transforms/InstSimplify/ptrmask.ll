@@ -12,8 +12,7 @@ declare <2 x ptr> @llvm.ptrmask.v2p1.v2i64(<2 x ptr>, <2 x i64>)
 define ptr @ptrmask_simplify_poison_mask(ptr %p) {
 ; CHECK-LABEL: define ptr @ptrmask_simplify_poison_mask
 ; CHECK-SAME: (ptr [[P:%.*]]) {
-; CHECK-NEXT:    [[R:%.*]] = call ptr @llvm.ptrmask.p0.i64(ptr [[P]], i64 poison)
-; CHECK-NEXT:    ret ptr [[R]]
+; CHECK-NEXT:    ret ptr poison
 ;
   %r = call ptr @llvm.ptrmask.p0.i64(ptr %p, i64 poison)
   ret ptr %r
@@ -22,8 +21,7 @@ define ptr @ptrmask_simplify_poison_mask(ptr %p) {
 define <2 x ptr addrspace(1) > @ptrmask_simplify_poison_mask_vec(<2 x ptr addrspace(1) > %p) {
 ; CHECK-LABEL: define <2 x ptr addrspace(1)> @ptrmask_simplify_poison_mask_vec
 ; CHECK-SAME: (<2 x ptr addrspace(1)> [[P:%.*]]) {
-; CHECK-NEXT:    [[R:%.*]] = call <2 x ptr addrspace(1)> @llvm.ptrmask.v2p1.v2i32(<2 x ptr addrspace(1)> [[P]], <2 x i32> poison)
-; CHECK-NEXT:    ret <2 x ptr addrspace(1)> [[R]]
+; CHECK-NEXT:    ret <2 x ptr addrspace(1)> poison
 ;
   %r = call <2 x ptr addrspace(1) > @llvm.ptrmask.v2p1.v2i32(<2 x ptr addrspace(1) > %p, <2 x i32> poison)
   ret <2 x ptr addrspace(1) > %r
@@ -42,8 +40,7 @@ define <2 x ptr addrspace(1) > @ptrmask_simplify_poison_and_zero_i32_vec_fail(<2
 define <2 x ptr> @ptrmask_simplify_undef_and_ones_vec(<2 x ptr> %p) {
 ; CHECK-LABEL: define <2 x ptr> @ptrmask_simplify_undef_and_ones_vec
 ; CHECK-SAME: (<2 x ptr> [[P:%.*]]) {
-; CHECK-NEXT:    [[R:%.*]] = call <2 x ptr> @llvm.ptrmask.v2p0.v2i64(<2 x ptr> [[P]], <2 x i64> <i64 undef, i64 -1>)
-; CHECK-NEXT:    ret <2 x ptr> [[R]]
+; CHECK-NEXT:    ret <2 x ptr> [[P]]
 ;
   %r = call <2 x ptr> @llvm.ptrmask.v2p1.v2i64(<2 x ptr> %p, <2 x i64> <i64 undef, i64 -1>)
   ret <2 x ptr> %r
@@ -52,8 +49,7 @@ define <2 x ptr> @ptrmask_simplify_undef_and_ones_vec(<2 x ptr> %p) {
 define <2 x ptr> @ptrmask_simplify_poison_and_ones_vec(<2 x ptr> %p) {
 ; CHECK-LABEL: define <2 x ptr> @ptrmask_simplify_poison_and_ones_vec
 ; CHECK-SAME: (<2 x ptr> [[P:%.*]]) {
-; CHECK-NEXT:    [[R:%.*]] = call <2 x ptr> @llvm.ptrmask.v2p0.v2i64(<2 x ptr> [[P]], <2 x i64> <i64 poison, i64 -1>)
-; CHECK-NEXT:    ret <2 x ptr> [[R]]
+; CHECK-NEXT:    ret <2 x ptr> [[P]]
 ;
   %r = call <2 x ptr> @llvm.ptrmask.v2p1.v2i64(<2 x ptr> %p, <2 x i64> <i64 poison, i64 -1>)
   ret <2 x ptr> %r
@@ -62,8 +58,7 @@ define <2 x ptr> @ptrmask_simplify_poison_and_ones_vec(<2 x ptr> %p) {
 define <2 x ptr> @ptrmask_simplify_ones_vec(<2 x ptr> %p) {
 ; CHECK-LABEL: define <2 x ptr> @ptrmask_simplify_ones_vec
 ; CHECK-SAME: (<2 x ptr> [[P:%.*]]) {
-; CHECK-NEXT:    [[R:%.*]] = call <2 x ptr> @llvm.ptrmask.v2p0.v2i64(<2 x ptr> [[P]], <2 x i64> <i64 -1, i64 -1>)
-; CHECK-NEXT:    ret <2 x ptr> [[R]]
+; CHECK-NEXT:    ret <2 x ptr> [[P]]
 ;
   %r = call <2 x ptr> @llvm.ptrmask.v2p1.v2i64(<2 x ptr> %p, <2 x i64> <i64 -1, i64 -1>)
   ret <2 x ptr> %r
@@ -72,8 +67,7 @@ define <2 x ptr> @ptrmask_simplify_ones_vec(<2 x ptr> %p) {
 define <2 x ptr addrspace(1) > @ptrmask_simplify_ones_i32_vec(<2 x ptr addrspace(1) > %p) {
 ; CHECK-LABEL: define <2 x ptr addrspace(1)> @ptrmask_simplify_ones_i32_vec
 ; CHECK-SAME: (<2 x ptr addrspace(1)> [[P:%.*]]) {
-; CHECK-NEXT:    [[R:%.*]] = call <2 x ptr addrspace(1)> @llvm.ptrmask.v2p1.v2i32(<2 x ptr addrspace(1)> [[P]], <2 x i32> <i32 -1, i32 -1>)
-; CHECK-NEXT:    ret <2 x ptr addrspace(1)> [[R]]
+; CHECK-NEXT:    ret <2 x ptr addrspace(1)> [[P]]
 ;
   %r = call <2 x ptr addrspace(1) > @llvm.ptrmask.v2p1.v2i32(<2 x ptr addrspace(1) > %p, <2 x i32> <i32 -1, i32 -1>)
   ret <2 x ptr addrspace(1) > %r
@@ -82,8 +76,7 @@ define <2 x ptr addrspace(1) > @ptrmask_simplify_ones_i32_vec(<2 x ptr addrspace
 define ptr addrspace(1) @ptrmask_simplify_undef_mask(ptr addrspace(1) %p) {
 ; CHECK-LABEL: define ptr addrspace(1) @ptrmask_simplify_undef_mask
 ; CHECK-SAME: (ptr addrspace(1) [[P:%.*]]) {
-; CHECK-NEXT:    [[R:%.*]] = call ptr addrspace(1) @llvm.ptrmask.p1.i32(ptr addrspace(1) [[P]], i32 undef)
-; CHECK-NEXT:    ret ptr addrspace(1) [[R]]
+; CHECK-NEXT:    ret ptr addrspace(1) [[P]]
 ;
   %r = call ptr addrspace(1) @llvm.ptrmask.p1.i32(ptr addrspace(1) %p, i32 undef)
   ret ptr addrspace(1) %r
@@ -102,8 +95,7 @@ define ptr @ptrmask_simplify_0_mask(ptr %p) {
 define ptr @ptrmask_simplify_1s_mask(ptr %p) {
 ; CHECK-LABEL: define ptr @ptrmask_simplify_1s_mask
 ; CHECK-SAME: (ptr [[P:%.*]]) {
-; CHECK-NEXT:    [[R:%.*]] = call ptr @llvm.ptrmask.p0.i64(ptr [[P]], i64 -1)
-; CHECK-NEXT:    ret ptr [[R]]
+; CHECK-NEXT:    ret ptr [[P]]
 ;
   %r = call ptr @llvm.ptrmask.p0.i64(ptr %p, i64 -1)
   ret ptr %r
@@ -112,8 +104,7 @@ define ptr @ptrmask_simplify_1s_mask(ptr %p) {
 define ptr addrspace(1) @ptrmask_simplify_1s_mask_i32(ptr addrspace(1) %p) {
 ; CHECK-LABEL: define ptr addrspace(1) @ptrmask_simplify_1s_mask_i32
 ; CHECK-SAME: (ptr addrspace(1) [[P:%.*]]) {
-; CHECK-NEXT:    [[R:%.*]] = call ptr addrspace(1) @llvm.ptrmask.p1.i32(ptr addrspace(1) [[P]], i32 -1)
-; CHECK-NEXT:    ret ptr addrspace(1) [[R]]
+; CHECK-NEXT:    ret ptr addrspace(1) [[P]]
 ;
   %r = call ptr addrspace(1) @llvm.ptrmask.p1.i32(ptr addrspace(1) %p, i32 -1)
   ret ptr addrspace(1) %r
@@ -122,8 +113,7 @@ define ptr addrspace(1) @ptrmask_simplify_1s_mask_i32(ptr addrspace(1) %p) {
 define ptr @ptrmask_simplify_poison_ptr(i64 %m) {
 ; CHECK-LABEL: define ptr @ptrmask_simplify_poison_ptr
 ; CHECK-SAME: (i64 [[M:%.*]]) {
-; CHECK-NEXT:    [[R:%.*]] = call ptr @llvm.ptrmask.p0.i64(ptr poison, i64 [[M]])
-; CHECK-NEXT:    ret ptr [[R]]
+; CHECK-NEXT:    ret ptr poison
 ;
   %r = call ptr @llvm.ptrmask.p0.i64(ptr poison, i64 %m)
   ret ptr %r
@@ -132,8 +122,7 @@ define ptr @ptrmask_simplify_poison_ptr(i64 %m) {
 define ptr addrspace(1) @ptrmask_simplify_undef_ptr(i32 %m) {
 ; CHECK-LABEL: define ptr addrspace(1) @ptrmask_simplify_undef_ptr
 ; CHECK-SAME: (i32 [[M:%.*]]) {
-; CHECK-NEXT:    [[R:%.*]] = call ptr addrspace(1) @llvm.ptrmask.p1.i32(ptr addrspace(1) undef, i32 [[M]])
-; CHECK-NEXT:    ret ptr addrspace(1) [[R]]
+; CHECK-NEXT:    ret ptr addrspace(1) null
 ;
   %r = call ptr addrspace(1) @llvm.ptrmask.p1.i32(ptr addrspace(1) undef, i32 %m)
   ret ptr addrspace(1) %r
@@ -142,8 +131,7 @@ define ptr addrspace(1) @ptrmask_simplify_undef_ptr(i32 %m) {
 define ptr @ptrmask_simplify_null_ptr(i64 %m) {
 ; CHECK-LABEL: define ptr @ptrmask_simplify_null_ptr
 ; CHECK-SAME: (i64 [[M:%.*]]) {
-; CHECK-NEXT:    [[R:%.*]] = call ptr @llvm.ptrmask.p0.i64(ptr null, i64 [[M]])
-; CHECK-NEXT:    ret ptr [[R]]
+; CHECK-NEXT:    ret ptr null
 ;
   %r = call ptr @llvm.ptrmask.p0.i64(ptr null, i64 %m)
   ret ptr %r
@@ -152,9 +140,7 @@ define ptr @ptrmask_simplify_null_ptr(i64 %m) {
 define ptr @ptrmask_simplify_ptrmask(ptr %p) {
 ; CHECK-LABEL: define ptr @ptrmask_simplify_ptrmask
 ; CHECK-SAME: (ptr [[P:%.*]]) {
-; CHECK-NEXT:    [[M:%.*]] = ptrtoint ptr [[P]] to i64
-; CHECK-NEXT:    [[R:%.*]] = call ptr @llvm.ptrmask.p0.i64(ptr [[P]], i64 [[M]])
-; CHECK-NEXT:    ret ptr [[R]]
+; CHECK-NEXT:    ret ptr [[P]]
 ;
   %m = ptrtoint ptr %p to i64
   %r = call ptr @llvm.ptrmask.p0.i64(ptr %p, i64 %m)
@@ -164,9 +150,7 @@ define ptr @ptrmask_simplify_ptrmask(ptr %p) {
 define ptr addrspace(1) @ptrmask_simplify_ptrmask_i32(ptr addrspace(1) %p) {
 ; CHECK-LABEL: define ptr addrspace(1) @ptrmask_simplify_ptrmask_i32
 ; CHECK-SAME: (ptr addrspace(1) [[P:%.*]]) {
-; CHECK-NEXT:    [[M:%.*]] = ptrtoint ptr addrspace(1) [[P]] to i32
-; CHECK-NEXT:    [[R:%.*]] = call ptr addrspace(1) @llvm.ptrmask.p1.i32(ptr addrspace(1) [[P]], i32 [[M]])
-; CHECK-NEXT:    ret ptr addrspace(1) [[R]]
+; CHECK-NEXT:    ret ptr addrspace(1) [[P]]
 ;
   %m = ptrtoint ptr addrspace(1) %p to i32
   %r = call ptr addrspace(1) @llvm.ptrmask.p1.i32(ptr addrspace(1) %p, i32 %m)
@@ -176,8 +160,7 @@ define ptr addrspace(1) @ptrmask_simplify_ptrmask_i32(ptr addrspace(1) %p) {
 define ptr @ptrmask_simplify_aligned_unused(ptr align 64 %p) {
 ; CHECK-LABEL: define ptr @ptrmask_simplify_aligned_unused
 ; CHECK-SAME: (ptr align 64 [[P:%.*]]) {
-; CHECK-NEXT:    [[R:%.*]] = call ptr @llvm.ptrmask.p0.i64(ptr [[P]], i64 -64)
-; CHECK-NEXT:    ret ptr [[R]]
+; CHECK-NEXT:    ret ptr [[P]]
 ;
   %r = call ptr @llvm.ptrmask.p0.i64(ptr %p, i64 -64)
   ret ptr %r
@@ -206,8 +189,7 @@ define <2 x ptr> @ptrmask_simplify_aligned_unused_vec_todo(<2 x ptr> align 128 %
 define ptr addrspace(1) @ptrmask_simplify_aligned_unused_i32(ptr addrspace(1) align 64 %p) {
 ; CHECK-LABEL: define ptr addrspace(1) @ptrmask_simplify_aligned_unused_i32
 ; CHECK-SAME: (ptr addrspace(1) align 64 [[P:%.*]]) {
-; CHECK-NEXT:    [[R:%.*]] = call ptr addrspace(1) @llvm.ptrmask.p1.i32(ptr addrspace(1) [[P]], i32 -64)
-; CHECK-NEXT:    ret ptr addrspace(1) [[R]]
+; CHECK-NEXT:    ret ptr addrspace(1) [[P]]
 ;
   %r = call ptr addrspace(1) @llvm.ptrmask.p1.i32(ptr addrspace(1) %p, i32 -64)
   ret ptr addrspace(1) %r
@@ -218,8 +200,7 @@ define ptr @ptrmask_simplify_known_unused(ptr %p) {
 ; CHECK-SAME: (ptr [[P:%.*]]) {
 ; CHECK-NEXT:    [[PM0:%.*]] = call ptr @llvm.ptrmask.p0.i64(ptr [[P]], i64 -64)
 ; CHECK-NEXT:    [[PGEP:%.*]] = getelementptr i8, ptr [[PM0]], i64 32
-; CHECK-NEXT:    [[R:%.*]] = call ptr @llvm.ptrmask.p0.i64(ptr [[PGEP]], i64 -32)
-; CHECK-NEXT:    ret ptr [[R]]
+; CHECK-NEXT:    ret ptr [[PGEP]]
 ;
   %pm0 = call ptr @llvm.ptrmask.p0.i64(ptr %p, i64 -64)
   %pgep = getelementptr i8, ptr %pm0, i64 32
@@ -232,8 +213,7 @@ define <2 x ptr> @ptrmask_simplify_known_unused_vec(<2 x ptr> %p) {
 ; CHECK-SAME: (<2 x ptr> [[P:%.*]]) {
 ; CHECK-NEXT:    [[PM0:%.*]] = call <2 x ptr> @llvm.ptrmask.v2p0.v2i64(<2 x ptr> [[P]], <2 x i64> <i64 -64, i64 -64>)
 ; CHECK-NEXT:    [[PGEP:%.*]] = getelementptr i8, <2 x ptr> [[PM0]], <2 x i64> <i64 32, i64 32>
-; CHECK-NEXT:    [[R:%.*]] = call <2 x ptr> @llvm.ptrmask.v2p0.v2i64(<2 x ptr> [[PGEP]], <2 x i64> <i64 -32, i64 -32>)
-; CHECK-NEXT:    ret <2 x ptr> [[R]]
+; CHECK-NEXT:    ret <2 x ptr> [[PGEP]]
 ;
   %pm0 = call <2 x ptr> @llvm.ptrmask.v2p1.v2i64(<2 x ptr> %p, <2 x i64> <i64 -64, i64 -64>)
   %pgep = getelementptr i8, <2 x ptr> %pm0, <2 x i64> <i64 32, i64 32>
@@ -246,8 +226,7 @@ define <2 x ptr> @ptrmask_simplify_known_unused_vec2(<2 x ptr> %p) {
 ; CHECK-SAME: (<2 x ptr> [[P:%.*]]) {
 ; CHECK-NEXT:    [[PM0:%.*]] = call <2 x ptr> @llvm.ptrmask.v2p0.v2i64(<2 x ptr> [[P]], <2 x i64> <i64 -64, i64 -64>)
 ; CHECK-NEXT:    [[PGEP:%.*]] = getelementptr i8, <2 x ptr> [[PM0]], <2 x i64> <i64 32, i64 32>
-; CHECK-NEXT:    [[R:%.*]] = call <2 x ptr> @llvm.ptrmask.v2p0.v2i64(<2 x ptr> [[PGEP]], <2 x i64> <i64 -32, i64 -16>)
-; CHECK-NEXT:    ret <2 x ptr> [[R]]
+; CHECK-NEXT:    ret <2 x ptr> [[PGEP]]
 ;
   %pm0 = call <2 x ptr> @llvm.ptrmask.v2p1.v2i64(<2 x ptr> %p, <2 x i64> <i64 -64, i64 -64>)
   %pgep = getelementptr i8, <2 x ptr> %pm0, <2 x i64> <i64 32, i64 32>
@@ -260,8 +239,7 @@ define <2 x ptr> @ptrmask_simplify_known_unused_vec3(<2 x ptr> %p) {
 ; CHECK-SAME: (<2 x ptr> [[P:%.*]]) {
 ; CHECK-NEXT:    [[PM0:%.*]] = call <2 x ptr> @llvm.ptrmask.v2p0.v2i64(<2 x ptr> [[P]], <2 x i64> <i64 -64, i64 -128>)
 ; CHECK-NEXT:    [[PGEP:%.*]] = getelementptr i8, <2 x ptr> [[PM0]], <2 x i64> <i64 32, i64 32>
-; CHECK-NEXT:    [[R:%.*]] = call <2 x ptr> @llvm.ptrmask.v2p0.v2i64(<2 x ptr> [[PGEP]], <2 x i64> <i64 -32, i64 -32>)
-; CHECK-NEXT:    ret <2 x ptr> [[R]]
+; CHECK-NEXT:    ret <2 x ptr> [[PGEP]]
 ;
   %pm0 = call <2 x ptr> @llvm.ptrmask.v2p1.v2i64(<2 x ptr> %p, <2 x i64> <i64 -64, i64 -128>)
   %pgep = getelementptr i8, <2 x ptr> %pm0, <2 x i64> <i64 32, i64 32>
@@ -274,8 +252,7 @@ define <2 x ptr> @ptrmask_simplify_known_unused_vec4(<2 x ptr> %p) {
 ; CHECK-SAME: (<2 x ptr> [[P:%.*]]) {
 ; CHECK-NEXT:    [[PM0:%.*]] = call <2 x ptr> @llvm.ptrmask.v2p0.v2i64(<2 x ptr> [[P]], <2 x i64> <i64 -64, i64 -128>)
 ; CHECK-NEXT:    [[PGEP:%.*]] = getelementptr i8, <2 x ptr> [[PM0]], <2 x i64> <i64 32, i64 64>
-; CHECK-NEXT:    [[R:%.*]] = call <2 x ptr> @llvm.ptrmask.v2p0.v2i64(<2 x ptr> [[PGEP]], <2 x i64> <i64 -32, i64 -32>)
-; CHECK-NEXT:    ret <2 x ptr> [[R]]
+; CHECK-NEXT:    ret <2 x ptr> [[PGEP]]
 ;
   %pm0 = call <2 x ptr> @llvm.ptrmask.v2p1.v2i64(<2 x ptr> %p, <2 x i64> <i64 -64, i64 -128>)
   %pgep = getelementptr i8, <2 x ptr> %pm0, <2 x i64> <i64 32, i64 64>
