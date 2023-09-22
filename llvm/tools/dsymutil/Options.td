@@ -69,10 +69,6 @@ def yaml_input: Flag<["-", "--"], "y">,
   HelpText<"Treat the input file is a YAML debug map rather than a binary.">,
   Group<grp_general>;
 
-def papertrail: F<"papertrail">,
-  HelpText<"Embed warnings in the linked DWARF debug info.">,
-  Group<grp_general>;
-
 def assembly: Flag<["-", "--"], "S">,
   HelpText<"Output textual assembly instead of a binary dSYM companion file.">,
   Group<grp_general>;
