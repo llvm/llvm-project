@@ -2545,10 +2545,7 @@ struct MicrosoftRecordLayoutBuilder {
     CharUnits Alignment;
   };
   typedef llvm::DenseMap<const CXXRecordDecl *, CharUnits> BaseOffsetsMapTy;
-  MicrosoftRecordLayoutBuilder(const ASTContext &Context,
-                               EmptySubobjectMap *EmptySubobjects)
-      : Context(Context), EmptySubobjects(EmptySubobjects) {}
-
+  MicrosoftRecordLayoutBuilder(const ASTContext &Context) : Context(Context) {}
 private:
   MicrosoftRecordLayoutBuilder(const MicrosoftRecordLayoutBuilder &) = delete;
   void operator=(const MicrosoftRecordLayoutBuilder &) = delete;
@@ -2598,8 +2595,6 @@ public:
       llvm::SmallPtrSetImpl<const CXXRecordDecl *> &HasVtorDispSet,
       const CXXRecordDecl *RD) const;
   const ASTContext &Context;
-  EmptySubobjectMap *EmptySubobjects;
-
   /// The size of the record being laid out.
   CharUnits Size;
   /// The non-virtual size of the record layout.
@@ -2913,7 +2908,8 @@ static bool recordUsesEBO(const RecordDecl *RD) {
 }
 
 void MicrosoftRecordLayoutBuilder::layoutNonVirtualBase(
-    const CXXRecordDecl *RD, const CXXRecordDecl *BaseDecl,
+    const CXXRecordDecl *RD,
+    const CXXRecordDecl *BaseDecl,
     const ASTRecordLayout &BaseLayout,
     const ASTRecordLayout *&PreviousBaseLayout) {
   // Insert padding between two bases if the left first one is zero sized or
@@ -2946,7 +2942,6 @@ void MicrosoftRecordLayoutBuilder::layoutNonVirtualBase(
   }
   Bases.insert(std::make_pair(BaseDecl, BaseOffset));
   Size += BaseLayout.getNonVirtualSize();
-  DataSize = Size;
   PreviousBaseLayout = &BaseLayout;
 }
 
@@ -2964,43 +2959,15 @@ void MicrosoftRecordLayoutBuilder::layoutField(const FieldDecl *FD) {
   LastFieldIsNonZeroWidthBitfield = false;
   ElementInfo Info = getAdjustedElementInfo(FD);
   Alignment = std::max(Alignment, Info.Alignment);
-
-  const CXXRecordDecl *FieldClass = FD->getType()->getAsCXXRecordDecl();
-  bool IsOverlappingEmptyField = FD->isPotentiallyOverlapping() &&
-                                 FieldClass->isEmpty() &&
-                                 FieldClass->fields().empty();
-  CharUnits FieldOffset = CharUnits::Zero();
-
-  if (UseExternalLayout) {
+  CharUnits FieldOffset;
+  if (UseExternalLayout)
     FieldOffset =
         Context.toCharUnitsFromBits(External.getExternalFieldOffset(FD));
-  } else if (IsUnion) {
+  else if (IsUnion)
     FieldOffset = CharUnits::Zero();
-  } else if (EmptySubobjects) {
-    if (!IsOverlappingEmptyField)
-      FieldOffset = DataSize.alignTo(Info.Alignment);
-
-    while (!EmptySubobjects->CanPlaceFieldAtOffset(FD, FieldOffset)) {
-      const CXXRecordDecl *ParentClass = cast<CXXRecordDecl>(FD->getParent());
-      bool HasBases = ParentClass && (!ParentClass->bases().empty() ||
-                                      !ParentClass->vbases().empty());
-      if (FieldOffset == CharUnits::Zero() && DataSize != CharUnits::Zero() &&
-          HasBases) {
-        // MSVC appears to only do this when there are base classes;
-        // otherwise it overlaps no_unique_address fields in non-zero offsets.
-        FieldOffset = DataSize.alignTo(Info.Alignment);
-      } else {
-        FieldOffset += Info.Alignment;
-      }
-    }
-  } else {
+  else
     FieldOffset = Size.alignTo(Info.Alignment);
-  }
   placeFieldAtOffset(FieldOffset);
-
-  if (!IsOverlappingEmptyField)
-    DataSize = std::max(DataSize, FieldOffset + Info.Size);
-
   Size = std::max(Size, FieldOffset + Info.Size);
 }
 
@@ -3046,7 +3013,6 @@ void MicrosoftRecordLayoutBuilder::layoutBitField(const FieldDecl *FD) {
     Alignment = std::max(Alignment, Info.Alignment);
     RemainingBitsInField = Context.toBits(Info.Size) - Width;
   }
-  DataSize = Size;
 }
 
 void
@@ -3072,7 +3038,6 @@ MicrosoftRecordLayoutBuilder::layoutZeroWidthBitField(const FieldDecl *FD) {
     Size = FieldOffset;
     Alignment = std::max(Alignment, Info.Alignment);
   }
-  DataSize = Size;
 }
 
 void MicrosoftRecordLayoutBuilder::injectVBPtr(const CXXRecordDecl *RD) {
@@ -3339,9 +3304,8 @@ ASTContext::getASTRecordLayout(const RecordDecl *D) const {
   const ASTRecordLayout *NewEntry = nullptr;
 
   if (isMsLayout(*this)) {
+    MicrosoftRecordLayoutBuilder Builder(*this);
     if (const auto *RD = dyn_cast<CXXRecordDecl>(D)) {
-      EmptySubobjectMap EmptySubobjects(*this, RD);
-      MicrosoftRecordLayoutBuilder Builder(*this, &EmptySubobjects);
       Builder.cxxLayout(RD);
       NewEntry = new (*this) ASTRecordLayout(
           *this, Builder.Size, Builder.Alignment, Builder.Alignment,
@@ -3353,7 +3317,6 @@ ASTContext::getASTRecordLayout(const RecordDecl *D) const {
           Builder.EndsWithZeroSizedObject, Builder.LeadsWithZeroSizedBase,
           Builder.Bases, Builder.VBases);
     } else {
-      MicrosoftRecordLayoutBuilder Builder(*this, /*EmptySubobjects=*/nullptr);
       Builder.layout(D);
       NewEntry = new (*this) ASTRecordLayout(
           *this, Builder.Size, Builder.Alignment, Builder.Alignment,

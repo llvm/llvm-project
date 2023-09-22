@@ -4374,8 +4374,7 @@ static bool IsBuiltInOrStandardCXX11Attribute(IdentifierInfo *AttrName,
   case ParsedAttr::AT_Deprecated:
   case ParsedAttr::AT_FallThrough:
   case ParsedAttr::AT_CXX11NoReturn:
-  case ParsedAttr::AT_MSNoUniqueAddress:
-  case ParsedAttr::AT_ItaniumNoUniqueAddress:
+  case ParsedAttr::AT_NoUniqueAddress:
   case ParsedAttr::AT_Likely:
   case ParsedAttr::AT_Unlikely:
     return true;
