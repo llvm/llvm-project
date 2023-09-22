@@ -1163,7 +1163,7 @@ caveats to this use of name mangling:
 * The ``overloadable`` attribute has almost no meaning when used in C++,
   because names will already be mangled and functions are already overloadable.
   However, when an ``overloadable`` function occurs within an ``extern "C"``
-  linkage specification, it's name *will* be mangled in the same way as it
+  linkage specification, its name *will* be mangled in the same way as it
   would in C.
 
 For the purpose of backwards compatibility, at most one function with the same
