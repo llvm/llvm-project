@@ -7963,6 +7963,8 @@ AArch64InstrInfo::getOutliningTypeImpl(MachineBasicBlock::iterator &MIT,
   case AArch64::RETAA:
   case AArch64::RETAB:
   case AArch64::EMITBKEY:
+  case AArch64::PAUTH_PROLOGUE:
+  case AArch64::PAUTH_EPILOGUE:
     return outliner::InstrType::Illegal;
   }
 
@@ -8114,15 +8116,16 @@ void AArch64InstrInfo::fixupPostOutline(MachineBasicBlock &MBB) const {
 }
 
 static void signOutlinedFunction(MachineFunction &MF, MachineBasicBlock &MBB,
+                                 const AArch64InstrInfo *TII,
                                  bool ShouldSignReturnAddr) {
   if (!ShouldSignReturnAddr)
     return;
 
-  AArch64FrameLowering::signLR(MF, MBB, MBB.begin(),
-                               /*NeedsWinCFI=*/false, /*HasWinCFI=*/nullptr);
-
-  AArch64FrameLowering::authenticateLR(MF, MBB, /*NeedsWinCFI=*/false,
-                                       /*HasWinCFI=*/nullptr);
+  BuildMI(MBB, MBB.begin(), DebugLoc(), TII->get(AArch64::PAUTH_PROLOGUE))
+      .setMIFlag(MachineInstr::FrameSetup);
+  BuildMI(MBB, MBB.getFirstInstrTerminator(), DebugLoc(),
+          TII->get(AArch64::PAUTH_EPILOGUE))
+      .setMIFlag(MachineInstr::FrameDestroy);
 }
 
 void AArch64InstrInfo::buildOutlinedFrame(
@@ -8227,7 +8230,7 @@ void AArch64InstrInfo::buildOutlinedFrame(
   // If this is a tail call outlined function, then there's already a return.
   if (OF.FrameConstructionID == MachineOutlinerTailCall ||
       OF.FrameConstructionID == MachineOutlinerThunk) {
-    signOutlinedFunction(MF, MBB, ShouldSignReturnAddr);
+    signOutlinedFunction(MF, MBB, this, ShouldSignReturnAddr);
     return;
   }
 
@@ -8241,7 +8244,7 @@ void AArch64InstrInfo::buildOutlinedFrame(
                           .addReg(AArch64::LR);
   MBB.insert(MBB.end(), ret);
 
-  signOutlinedFunction(MF, MBB, ShouldSignReturnAddr);
+  signOutlinedFunction(MF, MBB, this, ShouldSignReturnAddr);
 
   FI->setOutliningStyle("Function");
 
