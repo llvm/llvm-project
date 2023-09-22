@@ -27,3 +27,14 @@ void bar() {
   vint32m1x2_t v0, v2;
   asm ("#NOP" : "=vr" (v0), "=vr" (v2));
 }
+
+// CHECK-LABEL: define dso_local void @baz(
+// CHECK-SAME: ) #[[ATTR0]] {
+// CHECK-NEXT:  entry:
+// CHECK-NEXT:    call void asm sideeffect "#NOP", "^vr"({ <vscale x 2 x i32>, <vscale x 2 x i32> } undef) #[[ATTR2:[0-9]+]], !srcloc !6
+// CHECK-NEXT:    ret void
+//
+void baz() {
+  vint32m1x2_t v2;
+  asm ("#NOP" :: "vr" (v2));
+}
