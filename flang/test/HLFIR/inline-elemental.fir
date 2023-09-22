@@ -310,3 +310,40 @@ func.func @noinline_ordered(%arg0: !fir.box<!fir.array<?xi32>> {fir.bindc_name =
 // CHECK:           hlfir.destroy %[[VAL_26:.*]] : !hlfir.expr<?xi32>
 // CHECK:           return
 // CHECK:         }
+
+// Check that the elemental is not inlined, because its array result
+// must be finalized.
+// FIXME: the inlining is actually blocked by the type check
+// between the yield_element and apply. When this is fixed,
+// the test should keep passing.
+func.func @noinline_due_to_finalization(%arg0: !fir.box<!fir.array<?x!fir.type<_QMtypesTt1{x:f32}>>> {fir.bindc_name = "x"}) {
+  %c0 = arith.constant 0 : index
+  %0 = fir.alloca !fir.type<_QMtypesTt1{x:f32}> {bindc_name = ".result"}
+  %1:2 = hlfir.declare %arg0 {uniq_name = "_QFtest1Ex"} : (!fir.box<!fir.array<?x!fir.type<_QMtypesTt1{x:f32}>>>) -> (!fir.box<!fir.array<?x!fir.type<_QMtypesTt1{x:f32}>>>, !fir.box<!fir.array<?x!fir.type<_QMtypesTt1{x:f32}>>>)
+  %2:3 = fir.box_dims %1#0, %c0 : (!fir.box<!fir.array<?x!fir.type<_QMtypesTt1{x:f32}>>>, index) -> (index, index, index)
+  %3 = fir.shape %2#1 : (index) -> !fir.shape<1>
+  %4 = hlfir.elemental %3 unordered : (!fir.shape<1>) -> !hlfir.expr<?x!fir.type<_QMtypesTt1{x:f32}>> {
+  ^bb0(%arg1: index):
+    %6 = hlfir.designate %1#0 (%arg1)  : (!fir.box<!fir.array<?x!fir.type<_QMtypesTt1{x:f32}>>>, index) -> !fir.ref<!fir.type<_QMtypesTt1{x:f32}>>
+    %7 = fir.call @_QPelem1(%6) fastmath<contract> : (!fir.ref<!fir.type<_QMtypesTt1{x:f32}>>) -> !fir.type<_QMtypesTt1{x:f32}>
+    fir.save_result %7 to %0 : !fir.type<_QMtypesTt1{x:f32}>, !fir.ref<!fir.type<_QMtypesTt1{x:f32}>>
+    %8:2 = hlfir.declare %0 {uniq_name = ".tmp.func_result"} : (!fir.ref<!fir.type<_QMtypesTt1{x:f32}>>) -> (!fir.ref<!fir.type<_QMtypesTt1{x:f32}>>, !fir.ref<!fir.type<_QMtypesTt1{x:f32}>>)
+    hlfir.yield_element %8#0 : !fir.ref<!fir.type<_QMtypesTt1{x:f32}>>
+  }
+  %5 = hlfir.elemental %3 unordered : (!fir.shape<1>) -> !hlfir.expr<?x!fir.type<_QMtypesTt1{x:f32}>> {
+  ^bb0(%arg1: index):
+    %6 = hlfir.apply %4, %arg1 : (!hlfir.expr<?x!fir.type<_QMtypesTt1{x:f32}>>, index) -> !hlfir.expr<!fir.type<_QMtypesTt1{x:f32}>>
+    %7 = hlfir.no_reassoc %6 : !hlfir.expr<!fir.type<_QMtypesTt1{x:f32}>>
+    hlfir.yield_element %7 : !hlfir.expr<!fir.type<_QMtypesTt1{x:f32}>>
+  }
+  hlfir.assign %5 to %1#0 : !hlfir.expr<?x!fir.type<_QMtypesTt1{x:f32}>>, !fir.box<!fir.array<?x!fir.type<_QMtypesTt1{x:f32}>>>
+  hlfir.destroy %5 : !hlfir.expr<?x!fir.type<_QMtypesTt1{x:f32}>>
+  hlfir.destroy %4 finalize : !hlfir.expr<?x!fir.type<_QMtypesTt1{x:f32}>>
+  return
+}
+// CHECK-LABEL:   func.func @noinline_due_to_finalization(
+// CHECK:           %[[VAL_6:.*]] = hlfir.elemental %{{.*}} unordered : (!fir.shape<1>) -> !hlfir.expr<?x!fir.type<_QMtypesTt1{x:f32}>> {
+// CHECK:           %[[VAL_11:.*]] = hlfir.elemental %{{.*}} unordered : (!fir.shape<1>) -> !hlfir.expr<?x!fir.type<_QMtypesTt1{x:f32}>> {
+// CHECK:             %[[VAL_13:.*]] = hlfir.apply %[[VAL_6]], %{{.*}} : (!hlfir.expr<?x!fir.type<_QMtypesTt1{x:f32}>>, index) -> !hlfir.expr<!fir.type<_QMtypesTt1{x:f32}>>
+// CHECK:           hlfir.destroy %[[VAL_11]] : !hlfir.expr<?x!fir.type<_QMtypesTt1{x:f32}>>
+// CHECK:           hlfir.destroy %[[VAL_6]] finalize : !hlfir.expr<?x!fir.type<_QMtypesTt1{x:f32}>>
