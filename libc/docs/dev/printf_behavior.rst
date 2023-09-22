@@ -31,7 +31,7 @@ These compile-time flags will change the behavior of LLVM-libc's printf when it
 is compiled. Combinations of flags that are incompatible will be marked.
 
 LIBC_COPT_STDIO_USE_SYSTEM_FILE
---------------------------------
+-------------------------------
 When set, this flag changes fprintf and printf to use the FILE API from the
 system's libc, instead of LLVM-libc's internal FILE API. This is set by default
 when LLVM-libc is built in overlay mode.

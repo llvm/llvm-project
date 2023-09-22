@@ -26,9 +26,9 @@ LIBC_INLINE int getc(void *f) {
   unsigned char c;
   auto result = reinterpret_cast<__llvm_libc::File *>(f)->read_unlocked(&c, 1);
   size_t r = result.value;
-  if (result.has_error() || r != 1) {
+  if (result.has_error() || r != 1)
     return '\0';
-  }
+
   return c;
 }
 
@@ -61,9 +61,9 @@ LIBC_INLINE int vfscanf_internal(::FILE *__restrict stream,
                                  internal::ArgList &args) {
   scanf_core::Reader reader(stream, &internal::getc, internal::ungetc);
   int retval = scanf_core::scanf_main(&reader, format, args);
-  if (retval == 0 && internal::ferror_unlocked(stream)) {
+  if (retval == 0 && internal::ferror_unlocked(stream))
     return EOF;
-  }
+
   return retval;
 }
 } // namespace scanf_core
