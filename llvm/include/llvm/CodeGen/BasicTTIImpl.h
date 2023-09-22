@@ -1692,11 +1692,40 @@ public:
     // counterpart when the vector length argument is smaller than the maximum
     // vector length.
     if (VPIntrinsic::isVPIntrinsic(ICA.getID())) {
-      std::optional<Intrinsic::ID> FOp =
+      std::optional<unsigned> FOp =
           VPIntrinsic::getFunctionalOpcodeForVP(ICA.getID());
-      if (FOp)
+      if (FOp) {
+        if (ICA.getID() == Intrinsic::vp_load) {
+          Align Alignment = isa_and_nonnull<VPIntrinsic>(ICA.getInst())
+                                ? cast<VPIntrinsic>(ICA.getInst())
+                                      ->getPointerAlignment()
+                                      .valueOrOne()
+                                : Align(1);
+          unsigned AS = ICA.getArgs().size() >= 1 &&
+                                isa<PointerType>(ICA.getArgs()[0]->getType())
+                            ? cast<PointerType>(ICA.getArgs()[0]->getType())
+                                  ->getAddressSpace()
+                            : 0;
+          return thisT()->getMemoryOpCost(*FOp, ICA.getReturnType(), Alignment,
+                                          AS, CostKind);
+        } else if (ICA.getID() == Intrinsic::vp_store) {
+          Align Alignment = isa_and_nonnull<VPIntrinsic>(ICA.getInst())
+                                ? cast<VPIntrinsic>(ICA.getInst())
+                                      ->getPointerAlignment()
+                                      .valueOrOne()
+                                : Align(1);
+          unsigned AS = ICA.getArgs().size() >= 2 &&
+                                isa<PointerType>(ICA.getArgs()[1]->getType())
+                            ? cast<PointerType>(ICA.getArgs()[1]->getType())
+                                  ->getAddressSpace()
+                            : 0;
+          return thisT()->getMemoryOpCost(*FOp, Args[0]->getType(), Alignment,
+                                          AS, CostKind);
+        }
+        // TODO: Support other kinds of Intrinsics (i.e. reductions)
         return thisT()->getArithmeticInstrCost(*FOp, ICA.getReturnType(),
                                                CostKind);
+      }
 
       std::optional<Intrinsic::ID> FID =
           VPIntrinsic::getFunctionalIntrinsicIDForVP(ICA.getID());
