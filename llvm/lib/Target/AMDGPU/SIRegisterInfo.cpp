@@ -2273,9 +2273,6 @@ bool SIRegisterInfo::eliminateFrameIndex(MachineBasicBlock::iterator MI,
           if (FrameReg)
             FIOp.ChangeToRegister(FrameReg, false);
 
-          if (!Offset)
-            return false;
-
           MachineOperand *OffsetOp =
             TII->getNamedOperand(*MI, AMDGPU::OpName::offset);
           int64_t NewOffset = Offset + OffsetOp->getImm();
