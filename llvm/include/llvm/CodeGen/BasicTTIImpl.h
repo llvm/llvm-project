@@ -1687,6 +1687,33 @@ public:
     }
     }
 
+    // VP Intrinsics should have the same cost as their non-vp counterpart.
+    // TODO: Adjust the cost to make the vp intrinsic cheaper than its non-vp
+    // counterpart when the vector length argument is smaller than the maximum
+    // vector length.
+    if (VPIntrinsic::isVPIntrinsic(ICA.getID())) {
+      std::optional<Intrinsic::ID> FOp =
+          VPIntrinsic::getFunctionalOpcodeForVP(ICA.getID());
+      if (FOp)
+        return thisT()->getArithmeticInstrCost(*FOp, ICA.getReturnType(),
+                                               CostKind);
+
+      std::optional<Intrinsic::ID> FID =
+          VPIntrinsic::getFunctionalIntrinsicIDForVP(ICA.getID());
+      if (FID) {
+        // Non-vp version will have same Args/Tys except mask and vector length.
+        ArrayRef<const Value *> NewArgs(ICA.getArgs().begin(),
+                                        ICA.getArgs().end() - 2);
+        ArrayRef<Type *> NewTys(ICA.getArgTypes().begin(),
+                                ICA.getArgTypes().end() - 2);
+
+        IntrinsicCostAttributes NewICA(*FID, ICA.getReturnType(), NewArgs,
+                                       NewTys, ICA.getFlags(), ICA.getInst(),
+                                       ICA.getScalarizationCost());
+        return thisT()->getIntrinsicInstrCost(NewICA, CostKind);
+      }
+    }
+
     // Assume that we need to scalarize this intrinsic.
     // Compute the scalarization overhead based on Args for a vector
     // intrinsic.
