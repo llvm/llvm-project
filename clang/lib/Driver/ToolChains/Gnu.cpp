@@ -3100,6 +3100,8 @@ Generic_GCC::addLibCxxIncludePaths(const llvm::opt::ArgList &DriverArgs,
                                    llvm::opt::ArgStringList &CC1Args) const {
   const Driver &D = getDriver();
   std::string SysRoot = computeSysRoot();
+  if (SysRoot.empty())
+    SysRoot = llvm::sys::path::get_separator();
 
   auto AddIncludePath = [&](StringRef Path, bool TargetDirRequired = false) {
     std::string Version = detectLibcxxVersion(Path);
@@ -3139,11 +3141,11 @@ Generic_GCC::addLibCxxIncludePaths(const llvm::opt::ArgList &DriverArgs,
   // not be found at ../include/c++ but it likely to be found at
   // one of the following two locations:
   SmallString<128> UsrLocalIncludeDir(SysRoot);
-  llvm::sys::path::append(UsrLocalIncludeDir, "/usr", "local", "include");
+  llvm::sys::path::append(UsrLocalIncludeDir, "usr", "local", "include");
   if (AddIncludePath(UsrLocalIncludeDir))
     return;
   SmallString<128> UsrIncludeDir(SysRoot);
-  llvm::sys::path::append(UsrIncludeDir, "/usr", "include");
+  llvm::sys::path::append(UsrIncludeDir, "usr", "include");
   if (AddIncludePath(UsrIncludeDir))
     return;
 }
