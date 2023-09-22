@@ -433,12 +433,13 @@ func.func @_QPomp_target() {
   %1 = arith.subi %c512, %c1 : index
   %2 = omp.bounds   lower_bound(%c0 : index) upper_bound(%1 : index) extent(%c512 : index) stride(%c1 : index) start_idx(%c1 : index)
   %3 = omp.map_info var_ptr(%0 : !fir.ref<!fir.array<512xi32>>, !fir.array<512xi32>)   map_clauses(tofrom) capture(ByRef) bounds(%2) -> !fir.ref<!fir.array<512xi32>> {name = "a"}
-  omp.target   thread_limit(%c64_i32 : i32) map_entries(%3 : !fir.ref<!fir.array<512xi32>>) {
+  omp.target   thread_limit(%c64_i32 : i32) map_entries(%3 -> %arg0 : !fir.ref<!fir.array<512xi32>>) {
+    ^bb0(%arg0: !fir.ref<!fir.array<512xi32>>):
     %c10_i32 = arith.constant 10 : i32
     %c1_i64 = arith.constant 1 : i64
     %c1_i64_0 = arith.constant 1 : i64
     %4 = arith.subi %c1_i64, %c1_i64_0 : i64
-    %5 = fir.coordinate_of %0, %4 : (!fir.ref<!fir.array<512xi32>>, i64) -> !fir.ref<i32>
+    %5 = fir.coordinate_of %arg0, %4 : (!fir.ref<!fir.array<512xi32>>, i64) -> !fir.ref<i32>
     fir.store %c10_i32 to %5 : !fir.ref<i32>
     omp.terminator
   }
@@ -455,12 +456,13 @@ func.func @_QPomp_target() {
 // CHECK:           %[[UPPER:.*]] = llvm.mlir.constant(511 : index) : i64
 // CHECK:           %[[BOUNDS:.*]] = omp.bounds   lower_bound(%[[LOWER]] : i64) upper_bound(%[[UPPER]] : i64) extent(%[[EXTENT]] : i64) stride(%[[STRIDE]] : i64) start_idx(%[[STRIDE]] : i64)
 // CHECK:           %[[MAP:.*]] = omp.map_info var_ptr(%2 : !llvm.ptr, !llvm.array<512 x i32>)   map_clauses(tofrom) capture(ByRef) bounds(%[[BOUNDS]]) -> !llvm.ptr {name = "a"}
-// CHECK:           omp.target   thread_limit(%[[VAL_2]] : i32) map_entries(%[[MAP]] : !llvm.ptr) {
+// CHECK:           omp.target   thread_limit(%[[VAL_2]] : i32) map_entries(%[[MAP]] -> %[[ARG_0:.*]] : !llvm.ptr) {
+// CHECK:           ^bb0(%[[ARG_0]]: !llvm.ptr):
 // CHECK:             %[[VAL_3:.*]] = llvm.mlir.constant(10 : i32) : i32
 // CHECK:             %[[VAL_4:.*]] = llvm.mlir.constant(1 : i64) : i64
 // CHECK:             %[[VAL_5:.*]] = llvm.mlir.constant(1 : i64) : i64
 // CHECK:             %[[VAL_6:.*]] = llvm.mlir.constant(0 : i64) : i64
-// CHECK:             %[[VAL_7:.*]] = llvm.getelementptr %[[VAL_1]][0, %[[VAL_6]]] : (!llvm.ptr, i64) -> !llvm.ptr
+// CHECK:             %[[VAL_7:.*]] = llvm.getelementptr %[[ARG_0]][0, %[[VAL_6]]] : (!llvm.ptr, i64) -> !llvm.ptr
 // CHECK:             llvm.store %[[VAL_3]], %[[VAL_7]] : i32, !llvm.ptr
 // CHECK:             omp.terminator
 // CHECK:           }
