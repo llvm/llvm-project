@@ -171,41 +171,41 @@ enum class Action : uint32_t {
 // TODO: We should generalize TwoOutOfFour to N out of M and use property to
 // encode the value of N and M.
 enum class DimLevelType : uint16_t {
-  Undef = 0,                    // 0b00000000_00000000
-  Dense = 1,                    // 0b00000000_00000001
-  Compressed = 2,               // 0b00000000_00000010
-  CompressedNu = 258,           // 0b00000001_00000010
-  CompressedNo = 514,           // 0b00000010_00000010
-  CompressedNuNo = 770,         // 0b00000011_00000010
-  Singleton = 4,                // 0b00000000_00000100
-  SingletonNu = 260,            // 0b00000001_00000100
-  SingletonNo = 516,            // 0b00000010_00000100
-  SingletonNuNo = 772,          // 0b00000011_00000100
-  CompressedWithHi = 1026,      // 0b00000100_00000010
-  CompressedWithHiNu = 1282,    // 0b00000101_00000010
-  CompressedWithHiNo = 1538,    // 0b00000110_00000010
-  CompressedWithHiNuNo = 1794,  // 0b00000111_00000010
-  TwoOutOfFour = 2050,          // 0b00001000_00000010
+  Undef = 0,                   // 0b00000000_00000000
+  Dense = 1,                   // 0b00000000_00000001
+  Compressed = 2,              // 0b00000000_00000010
+  CompressedNu = 258,          // 0b00000001_00000010
+  CompressedNo = 514,          // 0b00000010_00000010
+  CompressedNuNo = 770,        // 0b00000011_00000010
+  Singleton = 4,               // 0b00000000_00000100
+  SingletonNu = 260,           // 0b00000001_00000100
+  SingletonNo = 516,           // 0b00000010_00000100
+  SingletonNuNo = 772,         // 0b00000011_00000100
+  CompressedWithHi = 1026,     // 0b00000100_00000010
+  CompressedWithHiNu = 1282,   // 0b00000101_00000010
+  CompressedWithHiNo = 1538,   // 0b00000110_00000010
+  CompressedWithHiNuNo = 1794, // 0b00000111_00000010
+  TwoOutOfFour = 2050,         // 0b00001000_00000010
 };
 
 /// This enum defines all the storage formats supported by the sparse compiler,
 /// without the level properties.
 enum class LevelFormat : uint16_t {
-  Dense = 1,                    // 0b00000000_00000001
-  Compressed = 2,               // 0b00000000_00000010
-  Singleton = 4,                // 0b00000000_00000100
+  Dense = 1,      // 0b00000000_00000001
+  Compressed = 2, // 0b00000000_00000010
+  Singleton = 4,  // 0b00000000_00000100
   // TODO: Remove CompressedWithHi and TwoOutOfFour from LevelFormat
   // once internal change lands.
-  CompressedWithHi = 1026,      // 0b00000100_00000010
-  TwoOutOfFour = 2050,          // 0b00001000_00000010
+  CompressedWithHi = 1026, // 0b00000100_00000010
+  TwoOutOfFour = 2050,     // 0b00001000_00000010
 };
 
 /// This enum defines all the nondefault properties for storage formats.
 enum class LevelNondefaultProperty : uint16_t {
-  Nonunique = 256,              // 0b00000001_00000000
-  Nonordered = 512,             // 0b00000010_00000000
-  High = 1024,                  // 0b00000100_00000000
-  Block2_4 = 2048               // 0b00001000_00000000
+  Nonunique = 256,  // 0b00000001_00000000
+  Nonordered = 512, // 0b00000010_00000000
+  High = 1024,      // 0b00000100_00000000
+  Block2_4 = 2048   // 0b00001000_00000000
 };
 
 /// Returns string representation of the given dimension level type.
@@ -389,55 +389,47 @@ static_assert(
       static_cast<uint16_t>(LevelNondefaultProperty::Block2_4)) == 0),
     "unique bit assignment for each level format and property is broken");
 
-static_assert((buildLevelType(LevelFormat::Dense,
-                              toPropertyBits(false, true)) == std::nullopt &&
-               buildLevelType(LevelFormat::Dense,
-                              toPropertyBits(true, false)) == std::nullopt &&
-               buildLevelType(LevelFormat::Dense,
-                              toPropertyBits(false, false)) == std::nullopt &&
-               *buildLevelType(LevelFormat::Dense,
-                               toPropertyBits(true, true)) ==
-                   DimLevelType::Dense &&
-               *buildLevelType(LevelFormat::Compressed,
-		               toPropertyBits(true, true)) ==
-                   DimLevelType::Compressed &&
-               *buildLevelType(LevelFormat::Compressed,
-		               toPropertyBits(true, false)) ==
-                   DimLevelType::CompressedNu &&
-               *buildLevelType(LevelFormat::Compressed,
-		               toPropertyBits(false, true)) ==
-                   DimLevelType::CompressedNo &&
-               *buildLevelType(LevelFormat::Compressed,
-		               toPropertyBits(false, false)) ==
-                   DimLevelType::CompressedNuNo &&
-               *buildLevelType(LevelFormat::Compressed,
-                               toPropertyBits(true, true, true)) ==
-                   DimLevelType::CompressedWithHi &&
-               *buildLevelType(LevelFormat::Compressed,
-                               toPropertyBits(false, true, true)) ==
-                   DimLevelType::CompressedWithHiNo &&
-               *buildLevelType(LevelFormat::Compressed,
-                               toPropertyBits(true, false, true)) ==
-                   DimLevelType::CompressedWithHiNu &&
-               *buildLevelType(LevelFormat::Compressed,
-                               toPropertyBits(false, false, true)) ==
-                   DimLevelType::CompressedWithHiNuNo &&
-               *buildLevelType(LevelFormat::Compressed,
-                               toPropertyBits(true, true, false, true)) ==
-                   DimLevelType::TwoOutOfFour &&
-               *buildLevelType(LevelFormat::Singleton,
-			       toPropertyBits(true, true)) ==
-                   DimLevelType::Singleton &&
-               *buildLevelType(LevelFormat::Singleton,
-			       toPropertyBits(true, false)) ==
-                   DimLevelType::SingletonNu &&
-               *buildLevelType(LevelFormat::Singleton,
-			       toPropertyBits(false, true)) ==
-                   DimLevelType::SingletonNo &&
-               *buildLevelType(LevelFormat::Singleton,
-			       toPropertyBits(false, false)) ==
-                   DimLevelType::SingletonNuNo),
-              "buildLevelType conversion is broken");
+static_assert(
+    (buildLevelType(LevelFormat::Dense, toPropertyBits(false, true)) ==
+         std::nullopt &&
+     buildLevelType(LevelFormat::Dense, toPropertyBits(true, false)) ==
+         std::nullopt &&
+     buildLevelType(LevelFormat::Dense, toPropertyBits(false, false)) ==
+         std::nullopt &&
+     *buildLevelType(LevelFormat::Dense, toPropertyBits(true, true)) ==
+         DimLevelType::Dense &&
+     *buildLevelType(LevelFormat::Compressed, toPropertyBits(true, true)) ==
+         DimLevelType::Compressed &&
+     *buildLevelType(LevelFormat::Compressed, toPropertyBits(true, false)) ==
+         DimLevelType::CompressedNu &&
+     *buildLevelType(LevelFormat::Compressed, toPropertyBits(false, true)) ==
+         DimLevelType::CompressedNo &&
+     *buildLevelType(LevelFormat::Compressed, toPropertyBits(false, false)) ==
+         DimLevelType::CompressedNuNo &&
+     *buildLevelType(LevelFormat::Compressed,
+                     toPropertyBits(true, true, true)) ==
+         DimLevelType::CompressedWithHi &&
+     *buildLevelType(LevelFormat::Compressed,
+                     toPropertyBits(false, true, true)) ==
+         DimLevelType::CompressedWithHiNo &&
+     *buildLevelType(LevelFormat::Compressed,
+                     toPropertyBits(true, false, true)) ==
+         DimLevelType::CompressedWithHiNu &&
+     *buildLevelType(LevelFormat::Compressed,
+                     toPropertyBits(false, false, true)) ==
+         DimLevelType::CompressedWithHiNuNo &&
+     *buildLevelType(LevelFormat::Compressed,
+                     toPropertyBits(true, true, false, true)) ==
+         DimLevelType::TwoOutOfFour &&
+     *buildLevelType(LevelFormat::Singleton, toPropertyBits(true, true)) ==
+         DimLevelType::Singleton &&
+     *buildLevelType(LevelFormat::Singleton, toPropertyBits(true, false)) ==
+         DimLevelType::SingletonNu &&
+     *buildLevelType(LevelFormat::Singleton, toPropertyBits(false, true)) ==
+         DimLevelType::SingletonNo &&
+     *buildLevelType(LevelFormat::Singleton, toPropertyBits(false, false)) ==
+         DimLevelType::SingletonNuNo),
+    "buildLevelType conversion is broken");
 
 // Ensure the above predicates work as intended.
 static_assert((isValidDLT(DimLevelType::Undef) &&
