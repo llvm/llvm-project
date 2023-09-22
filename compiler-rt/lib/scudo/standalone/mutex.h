@@ -58,9 +58,13 @@ private:
     // are the fastest operations) so that we are unlikely to wait too long for
     // fast operations.
     constexpr u32 SpinTimes = 16;
-    volatile u32 V = 0;
+
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wunused-but-set-variable"
+    volatile u32 V;
     for (u32 I = 0; I < SpinTimes; ++I)
-      ++V;
+      V = 0;
+#pragma GCC diagnostic pop
   }
 
   void assertHeldImpl();
