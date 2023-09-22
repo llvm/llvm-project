@@ -144,9 +144,7 @@ endif()
 option(LIBCXXABI_HERMETIC_STATIC_LIBRARY
   "Do not export any symbols from the static library." ${LIBCXXABI_HERMETIC_STATIC_LIBRARY_DEFAULT})
 
-if (CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
-  set(LIBCXXABI_DEFAULT_TEST_CONFIG "llvm-libc++abi-shared-gcc.cfg.in")
-elseif(MINGW)
+if(MINGW)
   set(LIBCXXABI_DEFAULT_TEST_CONFIG "llvm-libc++abi-mingw.cfg.in")
 elseif(WIN32) # clang-cl
   if (LIBCXXABI_ENABLE_SHARED)
