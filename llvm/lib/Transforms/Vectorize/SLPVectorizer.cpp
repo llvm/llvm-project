@@ -7073,10 +7073,7 @@ class BoUpSLP::ShuffleCostEstimator : public BaseShuffleAnalysis {
   /// extracted values from \p VL.
   InstructionCost computeExtractCost(ArrayRef<Value *> VL, ArrayRef<int> Mask,
                                      TTI::ShuffleKind ShuffleKind) {
-    auto *VecTy = cast<FixedVectorType>(
-        cast<ExtractElementInst>(*find_if(VL, [](Value *V) {
-          return isa<ExtractElementInst>(V);
-        }))->getVectorOperandType());
+    auto *VecTy = FixedVectorType::get(VL.front()->getType(), VL.size());
     unsigned NumOfParts = TTI.getNumberOfParts(VecTy);
 
     if (ShuffleKind != TargetTransformInfo::SK_PermuteSingleSrc ||

@@ -1610,9 +1610,9 @@ def NVVM_WgmmaMmaAsyncOp : NVVM_Op<"wgmma.mma_async",
                 PredOpTrait<"input struct and result struct must be the same type",
                   TCresIsSameAsOpBase<0, 0>>,]> 
 {
-  let results = (outs LLVM_AnyAggregate:$results);
+  let results = (outs LLVM_AnyStruct:$results);
   let arguments = (ins 
-    LLVM_AnyAggregate:$inouts,
+    LLVM_AnyStruct:$inouts,
     I64:$descriptorA, 
     I64:$descriptorB, 
     NVVM_MMAShapeAttr:$shape,

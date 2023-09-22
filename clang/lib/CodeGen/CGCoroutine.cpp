@@ -535,6 +535,11 @@ struct GetReturnObjectManager {
     Builder.CreateStore(Builder.getFalse(), GroActiveFlag);
 
     GroEmission = CGF.EmitAutoVarAlloca(*GroVarDecl);
+    auto *GroAlloca = dyn_cast_or_null<llvm::AllocaInst>(
+        GroEmission.getOriginalAllocatedAddress().getPointer());
+    assert(GroAlloca && "expected alloca to be emitted");
+    GroAlloca->setMetadata(llvm::LLVMContext::MD_coro_outside_frame,
+                           llvm::MDNode::get(CGF.CGM.getLLVMContext(), {}));
 
     // Remember the top of EHStack before emitting the cleanup.
     auto old_top = CGF.EHStack.stable_begin();
