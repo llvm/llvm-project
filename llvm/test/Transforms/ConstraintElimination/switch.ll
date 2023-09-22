@@ -57,14 +57,10 @@ define i1 @simplify_based_on_switch(i8 %x) {
 ; CHECK-NEXT:    [[RES_1:%.*]] = xor i1 [[C_1]], [[C_2]]
 ; CHECK-NEXT:    ret i1 [[RES_1]]
 ; CHECK:       exit.2:
-; CHECK-NEXT:    [[T_1:%.*]] = icmp ult i8 [[X]], 7
-; CHECK-NEXT:    [[F_1:%.*]] = icmp ult i8 [[X]], 6
-; CHECK-NEXT:    [[RES_2:%.*]] = xor i1 [[T_1]], [[F_1]]
+; CHECK-NEXT:    [[RES_2:%.*]] = xor i1 true, false
 ; CHECK-NEXT:    ret i1 [[RES_2]]
 ; CHECK:       exit.3:
-; CHECK-NEXT:    [[T_2:%.*]] = icmp ult i8 [[X]], 11
-; CHECK-NEXT:    [[F_2:%.*]] = icmp ult i8 [[X]], 10
-; CHECK-NEXT:    [[RES_3:%.*]] = xor i1 [[T_2]], [[F_2]]
+; CHECK-NEXT:    [[RES_3:%.*]] = xor i1 true, false
 ; CHECK-NEXT:    ret i1 [[RES_3]]
 ;
 entry:
@@ -105,9 +101,7 @@ define i1 @simplify_based_on_switch_successor_branches(i8 %x) {
 ; CHECK-NEXT:    [[RES_1:%.*]] = xor i1 [[C_1]], [[C_2]]
 ; CHECK-NEXT:    ret i1 [[RES_1]]
 ; CHECK:       exit.2:
-; CHECK-NEXT:    [[T_1:%.*]] = icmp ult i8 [[X]], 7
-; CHECK-NEXT:    [[F_1:%.*]] = icmp ult i8 [[X]], 6
-; CHECK-NEXT:    [[RES_2:%.*]] = xor i1 [[T_1]], [[F_1]]
+; CHECK-NEXT:    [[RES_2:%.*]] = xor i1 true, false
 ; CHECK-NEXT:    call void @use(i1 [[RES_2]])
 ; CHECK-NEXT:    br label [[EXIT_3]]
 ; CHECK:       exit.3:
