@@ -1074,7 +1074,7 @@ Value *SCEVExpander::expandAddRecExprLiterally(const SCEVAddRecExpr *S) {
         normalizeForPostIncUse(S, Loops, SE, /*CheckInvertible=*/false));
   }
 
-  const SCEV *Start = Normalized->getStart();
+  [[maybe_unused]] const SCEV *Start = Normalized->getStart();
   const SCEV *Step = Normalized->getStepRecurrence(SE);
   assert(SE.properlyDominates(Start, L->getHeader()) &&
          "Start does not properly dominate loop header");
