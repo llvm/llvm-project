@@ -534,6 +534,9 @@ public:
   virtual bool ReadSLocEntry(int ID) = 0;
 
   /// Get the index ID for the loaded SourceLocation offset.
+  ///
+  /// \returns Invalid index ID (0) if an error occurred that prevented the
+  /// SLocEntry  from being loaded.
   virtual int getSLocEntryID(SourceLocation::UIntTy SLocOffset) = 0;
 
   /// Retrieve the module import location and name for the given ID, if
