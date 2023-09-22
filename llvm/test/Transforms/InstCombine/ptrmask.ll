@@ -12,7 +12,7 @@ define ptr @ptrmask_combine_consecutive_preserve_attrs(ptr %p0, i64 %m1) {
 ; CHECK-LABEL: define ptr @ptrmask_combine_consecutive_preserve_attrs
 ; CHECK-SAME: (ptr [[P0:%.*]], i64 [[M1:%.*]]) {
 ; CHECK-NEXT:    [[TMP1:%.*]] = and i64 [[M1]], 224
-; CHECK-NEXT:    [[R:%.*]] = call align 32 ptr @llvm.ptrmask.p0.i64(ptr [[P0]], i64 [[TMP1]])
+; CHECK-NEXT:    [[R:%.*]] = call noalias align 32 ptr @llvm.ptrmask.p0.i64(ptr [[P0]], i64 [[TMP1]])
 ; CHECK-NEXT:    ret ptr [[R]]
 ;
   %pm0 = call ptr @llvm.ptrmask.p0.i64(ptr %p0, i64 224)
@@ -24,7 +24,7 @@ define <2 x ptr> @ptrmask_combine_consecutive_preserve_attrs_vecs(<2 x ptr> %p0,
 ; CHECK-LABEL: define <2 x ptr> @ptrmask_combine_consecutive_preserve_attrs_vecs
 ; CHECK-SAME: (<2 x ptr> [[P0:%.*]], <2 x i64> [[M1:%.*]]) {
 ; CHECK-NEXT:    [[TMP1:%.*]] = and <2 x i64> [[M1]], <i64 12345, i64 12345>
-; CHECK-NEXT:    [[R:%.*]] = call <2 x ptr> @llvm.ptrmask.v2p0.v2i64(<2 x ptr> [[P0]], <2 x i64> [[TMP1]])
+; CHECK-NEXT:    [[R:%.*]] = call align 128 <2 x ptr> @llvm.ptrmask.v2p0.v2i64(<2 x ptr> [[P0]], <2 x i64> [[TMP1]])
 ; CHECK-NEXT:    ret <2 x ptr> [[R]]
 ;
   %pm0 = call <2 x ptr> @llvm.ptrmask.v2p0.v2i64(<2 x ptr> %p0, <2 x i64> <i64 12345, i64 12345>)

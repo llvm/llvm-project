@@ -1968,17 +1968,23 @@ Instruction *InstCombinerImpl::visitCallInst(CallInst &CI) {
       return II;
 
     Value *InnerPtr, *InnerMask;
+    bool Changed = false;
+    // Combine:
+    // (ptrmask (ptrmask p, A), B)
+    //    -> (ptrmask p, (and A, B))
     if (match(II->getArgOperand(0),
               m_OneUse(m_Intrinsic<Intrinsic::ptrmask>(m_Value(InnerPtr),
                                                        m_Value(InnerMask))))) {
       assert(II->getArgOperand(1)->getType() == InnerMask->getType() &&
              "Mask types must match");
+      // TODO: If InnerMask == Op1, we could copy attributes from inner
+      // callsite -> outer callsite.
       Value *NewMask = Builder.CreateAnd(II->getArgOperand(1), InnerMask);
-      return replaceInstUsesWith(
-          *II, Builder.CreateIntrinsic(InnerPtr->getType(), Intrinsic::ptrmask,
-                                       {InnerPtr, NewMask}));
+      replaceOperand(CI, 0, InnerPtr);
+      replaceOperand(CI, 1, NewMask);
+      Changed = true;
     }
-    bool Changed = false;
+
     // See if we can deduce non-null.
     if (!CI.hasRetAttr(Attribute::NonNull) &&
         (Known.isNonZero() ||
