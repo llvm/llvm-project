@@ -651,11 +651,8 @@ void AMDGPUInstPrinter::printDefaultVccOperand(bool FirstOperand,
 void AMDGPUInstPrinter::printWaitVDST(const MCInst *MI, unsigned OpNo,
                                       const MCSubtargetInfo &STI,
                                       raw_ostream &O) {
-  uint8_t Imm = MI->getOperand(OpNo).getImm();
-  if (Imm != 0) {
-    O << " wait_vdst:";
-    printU4ImmDecOperand(MI, OpNo, O);
-  }
+  O << " wait_vdst:";
+  printU4ImmDecOperand(MI, OpNo, O);
 }
 
 void AMDGPUInstPrinter::printWaitVAVDst(const MCInst *MI, unsigned OpNo,
@@ -681,11 +678,8 @@ void AMDGPUInstPrinter::printWaitVMVSrc(const MCInst *MI, unsigned OpNo,
 void AMDGPUInstPrinter::printWaitEXP(const MCInst *MI, unsigned OpNo,
                                     const MCSubtargetInfo &STI,
                                     raw_ostream &O) {
-  uint8_t Imm = MI->getOperand(OpNo).getImm();
-  if (Imm != 0) {
-    O << " wait_exp:";
-    printU4ImmDecOperand(MI, OpNo, O);
-  }
+  O << " wait_exp:";
+  printU4ImmDecOperand(MI, OpNo, O);
 }
 
 bool AMDGPUInstPrinter::needsImpliedVcc(const MCInstrDesc &Desc,
