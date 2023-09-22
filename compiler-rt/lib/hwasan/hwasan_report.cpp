@@ -525,22 +525,19 @@ BaseReport::Shadow BaseReport::CopyShadow() const {
 
   result.addr = GetPrintTagStart(untagged_addr + mismatch_offset);
   uptr tag_addr = result.addr;
-  for (tag_t &tag_copy : result.tags) {
-    if (MemIsShadow(tag_addr))
-      tag_copy = *reinterpret_cast<tag_t *>(tag_addr);
-    ++tag_addr;
-  }
-
-  uptr short_tags_addr = result.addr + kShortDumpOffset;
-  for (tag_t &tag_copy : result.short_tags) {
-    tag_t tag = GetTagCopy(short_tags_addr);
-    uptr granule_addr = ShadowToMem(short_tags_addr);
-    if (1 <= tag && tag <= kShadowAlignment &&
+  uptr short_end = kShortDumpOffset + ARRAY_SIZE(shadow.short_tags);
+  for (uptr i = 0; i < ARRAY_SIZE(result.tags); ++i, ++tag_addr) {
+    if (!MemIsShadow(tag_addr))
+      continue;
+    result.tags[i] = *reinterpret_cast<tag_t *>(tag_addr);
+    if (i < kShortDumpOffset || i >= short_end)
+      continue;
+    uptr granule_addr = ShadowToMem(tag_addr);
+    if (1 <= result.tags[i] && result.tags[i] <= kShadowAlignment &&
         IsAccessibleMemoryRange(granule_addr, kShadowAlignment)) {
-      tag_copy =
+      result.short_tags[i - kShortDumpOffset] =
           *reinterpret_cast<tag_t *>(granule_addr + kShadowAlignment - 1);
     }
-    ++short_tags_addr;
   }
   return result;
 }
