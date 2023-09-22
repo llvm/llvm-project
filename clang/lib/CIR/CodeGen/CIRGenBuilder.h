@@ -423,7 +423,7 @@ public:
                                     llvm::StringRef name, bool incomplete,
                                     bool packed, const clang::RecordDecl *ast) {
     const auto nameAttr = getStringAttr(name);
-    std::optional<mlir::cir::ASTRecordDeclAttr> astAttr = std::nullopt;
+    mlir::cir::ASTRecordDeclAttr astAttr = nullptr;
     auto kind = mlir::cir::StructType::RecordKind::Struct;
     if (ast) {
       astAttr = getAttr<mlir::cir::ASTRecordDeclAttr>(ast);
