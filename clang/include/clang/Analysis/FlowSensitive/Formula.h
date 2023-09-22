@@ -53,8 +53,7 @@ public:
     /// A reference to an atomic boolean variable.
     /// We name these e.g. "V3", where 3 == atom identity == Value.
     AtomRef,
-    /// Constant true or false.
-    Literal,
+    // FIXME: add const true/false rather than modeling them as variables
 
     Not, /// True if its only operand is false
 
@@ -71,11 +70,6 @@ public:
     return static_cast<Atom>(Value);
   }
 
-  bool literal() const {
-    assert(kind() == Literal);
-    return static_cast<bool>(Value);
-  }
-
   ArrayRef<const Formula *> operands() const {
     return ArrayRef(reinterpret_cast<Formula *const *>(this + 1),
                     numOperands(kind()));
@@ -88,9 +82,9 @@ public:
   void print(llvm::raw_ostream &OS, const AtomNames * = nullptr) const;
 
   // Allocate Formulas using Arena rather than calling this function directly.
-  static const Formula &create(llvm::BumpPtrAllocator &Alloc, Kind K,
-                               ArrayRef<const Formula *> Operands,
-                               unsigned Value = 0);
+  static Formula &create(llvm::BumpPtrAllocator &Alloc, Kind K,
+                         ArrayRef<const Formula *> Operands,
+                         unsigned Value = 0);
 
 private:
   Formula() = default;
@@ -100,7 +94,6 @@ private:
   static unsigned numOperands(Kind K) {
     switch (K) {
     case AtomRef:
-    case Literal:
       return 0;
     case Not:
       return 1;
