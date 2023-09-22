@@ -450,6 +450,7 @@ defm PhysicalStorageBufferAddressesEXT : CapabilityOperand<5347, 0, 0, [], [Shad
 defm CooperativeMatrixNV : CapabilityOperand<5357, 0, 0, [], [Shader]>;
 defm ArbitraryPrecisionIntegersINTEL : CapabilityOperand<5844, 0, 0, [SPV_INTEL_arbitrary_precision_integers], [Int8, Int16]>;
 defm OptNoneINTEL : CapabilityOperand<6094, 0, 0, [SPV_INTEL_optnone], []>;
+defm BitInstructions : CapabilityOperand<6025, 0, 0, [SPV_KHR_bit_instructions], []>;
 
 //===----------------------------------------------------------------------===//
 // Multiclass used to define SourceLanguage enum values and at the same time

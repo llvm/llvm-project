@@ -772,18 +772,21 @@ std::string PredefinedExpr::ComputeName(IdentKind IK, const Decl *CurrentDecl) {
     return std::string(Out.str());
   }
   if (const FunctionDecl *FD = dyn_cast<FunctionDecl>(CurrentDecl)) {
-    if (IK != PrettyFunction && IK != PrettyFunctionNoVirtual &&
-        IK != FuncSig && IK != LFuncSig)
+    const auto &LO = Context.getLangOpts();
+    if (((IK == Func || IK == Function) && !LO.MicrosoftExt) ||
+        (IK == LFunction && LO.MicrosoftExt))
       return FD->getNameAsString();
 
     SmallString<256> Name;
     llvm::raw_svector_ostream Out(Name);
 
-    if (const CXXMethodDecl *MD = dyn_cast<CXXMethodDecl>(FD)) {
-      if (MD->isVirtual() && IK != PrettyFunctionNoVirtual)
-        Out << "virtual ";
-      if (MD->isStatic())
-        Out << "static ";
+    if (IK != Function) {
+      if (const CXXMethodDecl *MD = dyn_cast<CXXMethodDecl>(FD)) {
+        if (MD->isVirtual() && IK != PrettyFunctionNoVirtual)
+          Out << "virtual ";
+        if (MD->isStatic())
+          Out << "static ";
+      }
     }
 
     class PrettyCallbacks final : public PrintingCallbacks {
@@ -798,9 +801,10 @@ std::string PredefinedExpr::ComputeName(IdentKind IK, const Decl *CurrentDecl) {
     private:
       const LangOptions &LO;
     };
-    PrintingPolicy Policy(Context.getLangOpts());
-    PrettyCallbacks PrettyCB(Context.getLangOpts());
+    PrintingPolicy Policy(LO);
+    PrettyCallbacks PrettyCB(LO);
     Policy.Callbacks = &PrettyCB;
+    Policy.UseClassForTemplateArgument = LO.MicrosoftExt;
     std::string Proto;
     llvm::raw_string_ostream POut(Proto);
 
@@ -826,6 +830,11 @@ std::string PredefinedExpr::ComputeName(IdentKind IK, const Decl *CurrentDecl) {
     }
 
     FD->printQualifiedName(POut, Policy);
+
+    if ((IK == Function || IK == Func) && LO.MicrosoftExt) {
+      Out << Proto;
+      return std::string(Name);
+    }
 
     POut << "(";
     if (FT) {
