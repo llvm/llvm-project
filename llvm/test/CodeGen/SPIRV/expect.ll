@@ -4,7 +4,7 @@
 ;      CHECK: OpCapability ExpectAssumeKHR
 ; CHECK-NEXT: OpExtension "SPV_KHR_expect_assume"
 
-declare i32 @llvm.expect.i32(i32, i32) 
+declare i32 @llvm.expect.i32(i32, i32)
 declare i32 @getOne()
 
 ; CHECK-DAG: %2 = OpTypeInt 32 0

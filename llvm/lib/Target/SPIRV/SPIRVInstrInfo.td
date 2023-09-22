@@ -761,4 +761,3 @@ def OpGroupNonUniformBitwiseXor: OpGroupNUGroup<"BitwiseXor", 361>;
 def OpGroupNonUniformLogicalAnd: OpGroupNUGroup<"LogicalAnd", 362>;
 def OpGroupNonUniformLogicalOr: OpGroupNUGroup<"LogicalOr", 363>;
 def OpGroupNonUniformLogicalXor: OpGroupNUGroup<"LogicalXor", 364>;
-

@@ -1,7 +1,7 @@
 ; RUN: llc -mtriple=spirv32-unknown-unknown < %s | FileCheck %s
 ; RUN: llc -mtriple=spirv64-unknown-unknown < %s | FileCheck %s
 
-;      CHECK: OpCapability ExpectAssumeKHR
+; CHECK:      OpCapability ExpectAssumeKHR
 ; CHECK-NEXT: OpExtension "SPV_KHR_expect_assume"
 
 declare void @llvm.assume(i1)
