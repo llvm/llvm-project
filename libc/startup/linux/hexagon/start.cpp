@@ -127,12 +127,12 @@ using LIBC_NAMESPACE::app;
 
 // TODO: Would be nice to use the aux entry structure from elf.h when available.
 struct AuxEntry {
-  uint64_t type;
-  uint64_t value;
+  uint32_t type;
+  uint32_t value;
 };
 
 extern "C" void _start() {
-#if 0
+#if 1
   // This TU is compiled with -fno-omit-frame-pointer. Hence, the previous value
   // of the base pointer is pushed on to the stack. So, we step over it (the
   // "+ 1" below) to get to the args.
@@ -150,7 +150,7 @@ extern "C" void _start() {
   // compilers can generate code assuming the alignment as required by the ABI.
   // If the stack pointers as setup by the OS are already aligned, then the
   // following code is a NOP.
-  __asm__ __volatile__("nop\n\t");
+  LIBC_INLINE_ASM("r29 = and(r29, #0xfffffff8)\n\t" :::);
 
   auto tid = LIBC_NAMESPACE::syscall_impl<long>(SYS_gettid);
   if (tid <= 0)
@@ -171,13 +171,13 @@ extern "C" void _start() {
 
   // After the env array, is the aux-vector. The end of the aux-vector is
   // denoted by an AT_NULL entry.
-  Elf64_Phdr *programHdrTable = nullptr;
+  Elf32_Phdr *programHdrTable = nullptr;
   uintptr_t programHdrCount;
   for (AuxEntry *aux_entry = reinterpret_cast<AuxEntry *>(env_end_marker + 1);
        aux_entry->type != AT_NULL; ++aux_entry) {
     switch (aux_entry->type) {
     case AT_PHDR:
-      programHdrTable = reinterpret_cast<Elf64_Phdr *>(aux_entry->value);
+      programHdrTable = reinterpret_cast<Elf32_Phdr *>(aux_entry->value);
       break;
     case AT_PHNUM:
       programHdrCount = aux_entry->value;
@@ -192,7 +192,7 @@ extern "C" void _start() {
 
   app.tls.size = 0;
   for (uintptr_t i = 0; i < programHdrCount; ++i) {
-    Elf64_Phdr *phdr = programHdrTable + i;
+    Elf32_Phdr *phdr = programHdrTable + i;
     if (phdr->p_type != PT_TLS)
       continue;
     // TODO: p_vaddr value has to be adjusted for static-pie executables.
