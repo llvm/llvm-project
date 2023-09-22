@@ -909,7 +909,8 @@ void addInstrRequirements(const MachineInstr &MI,
   // If we require capability Shader, then we can remove the requirement for
   // the BitInstructions capability, since Shader is a superset capability
   // of BitInstructions.
-  Reqs.removeCapabilityIf(SPIRV::Capability::BitInstructions, SPIRV::Capability::Shader);
+  Reqs.removeCapabilityIf(SPIRV::Capability::BitInstructions, 
+                          SPIRV::Capability::Shader);
 }
 
 static void collectReqs(const Module &M, SPIRV::ModuleAnalysisInfo &MAI,
