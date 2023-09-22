@@ -11,6 +11,7 @@
 #include "clang-include-cleaner/Analysis.h"
 #include "clang-include-cleaner/Record.h"
 #include "clang-include-cleaner/Types.h"
+#include "clang/AST/Expr.h"
 #include "clang/AST/RecursiveASTVisitor.h"
 #include "clang/Basic/FileEntry.h"
 #include "clang/Basic/FileManager.h"
@@ -586,6 +587,36 @@ TEST_F(HeadersForSymbolTest, AmbiguousStdSymbols) {
                     Header(*tooling::stdlib::Header::named(T.ExpectedHeader))));
   }
 }
+
+TEST_F(HeadersForSymbolTest, AmbiguousStdSymbolsUsingShadow) {
+  Inputs.Code = R"cpp(
+    void remove(char*);
+    namespace std { using ::remove; }
+
+    void k() {
+      std::remove("abc");
+    }
+  )cpp";
+  buildAST();
+
+  // Find the DeclRefExpr in the std::remove("abc") function call.
+  struct Visitor : public RecursiveASTVisitor<Visitor> {
+    const DeclRefExpr *Out = nullptr;
+    bool VisitDeclRefExpr(const DeclRefExpr *DRE) {
+      EXPECT_TRUE(Out == nullptr) << "Found multiple DeclRefExpr!";
+      Out = DRE;
+      return true;
+    }
+  };
+  Visitor V;
+  V.TraverseDecl(AST->context().getTranslationUnitDecl());
+  ASSERT_TRUE(V.Out) << "Couldn't find a DeclRefExpr!";
+  EXPECT_THAT(headersForSymbol(*(V.Out->getFoundDecl()),
+                               AST->sourceManager(), &PI),
+              UnorderedElementsAre(
+                  Header(*tooling::stdlib::Header::named("<cstdio>"))));
+}
+
 
 TEST_F(HeadersForSymbolTest, StandardHeaders) {
   Inputs.Code = "void assert();";
