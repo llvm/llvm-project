@@ -2,11 +2,12 @@ set(LLVM_LINK_COMPONENTS
   Analysis
   AsmParser
   Core
+  IPO
   Passes
+  SelectionDAG
   Support
   TargetParser
   TransformUtils
-  IPO
   )
 
 set(ANALYSIS_TEST_SOURCES

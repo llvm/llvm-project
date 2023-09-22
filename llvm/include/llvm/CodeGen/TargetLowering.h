@@ -4842,9 +4842,8 @@ public:
   /// AsmOperandInfo, setting OpInfo.ConstraintCode and OpInfo.ConstraintType.
   /// If the actual operand being passed in is available, it can be passed in as
   /// Op, otherwise an empty SDValue can be passed.
-  virtual void ComputeConstraintToUse(AsmOperandInfo &OpInfo,
-                                      SDValue Op,
-                                      SelectionDAG *DAG = nullptr) const;
+  void ComputeConstraintToUse(AsmOperandInfo &OpInfo, SDValue Op,
+                              SelectionDAG *DAG = nullptr) const;
 
   /// Given a constraint, return the type of constraint it is for this target.
   virtual ConstraintType getConstraintType(StringRef Constraint) const;
