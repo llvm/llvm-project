@@ -52,6 +52,8 @@ using namespace mlir::arm_sme;
 static constexpr char kArmStreamingAttr[] = "arm_streaming";
 static constexpr char kArmLocallyStreamingAttr[] = "arm_locally_streaming";
 static constexpr char kArmZAAttr[] = "arm_za";
+static constexpr char kEnableArmStreamingIgnoreAttr[] =
+    "enable_arm_streaming_ignore";
 
 namespace {
 struct EnableArmStreamingPass
@@ -61,7 +63,9 @@ struct EnableArmStreamingPass
     this->enableZA = enableZA;
   }
   void runOnOperation() override {
-    std::string attr;
+    if (getOperation()->getAttr(kEnableArmStreamingIgnoreAttr))
+      return;
+    StringRef attr;
     switch (mode) {
     case ArmStreaming::Default:
       attr = kArmStreamingAttr;
