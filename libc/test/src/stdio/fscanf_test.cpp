@@ -8,12 +8,12 @@
 
 #include "src/__support/CPP/string_view.h"
 
-#ifndef LIBC_COPT_SCANF_USE_SYSTEM_FILE
+#ifndef LIBC_COPT_STDIO_USE_SYSTEM_FILE
 #include "src/stdio/fclose.h"
 #include "src/stdio/ferror.h"
 #include "src/stdio/fopen.h"
 #include "src/stdio/fwrite.h"
-#endif // LIBC_COPT_SCANF_USE_SYSTEM_FILE
+#endif // LIBC_COPT_STDIO_USE_SYSTEM_FILE
 
 #include "src/stdio/fscanf.h"
 
@@ -22,17 +22,17 @@
 #include <stdio.h>
 
 namespace scanf_test {
-#ifndef LIBC_COPT_SCANF_USE_SYSTEM_FILE
+#ifndef LIBC_COPT_STDIO_USE_SYSTEM_FILE
 using __llvm_libc::fclose;
 using __llvm_libc::ferror;
 using __llvm_libc::fopen;
 using __llvm_libc::fwrite;
-#else  // defined(LIBC_COPT_SCANF_USE_SYSTEM_FILE)
+#else  // defined(LIBC_COPT_STDIO_USE_SYSTEM_FILE)
 using ::fclose;
 using ::ferror;
 using ::fopen;
 using ::fwrite;
-#endif // LIBC_COPT_SCANF_USE_SYSTEM_FILE
+#endif // LIBC_COPT_STDIO_USE_SYSTEM_FILE
 } // namespace scanf_test
 
 TEST(LlvmLibcFScanfTest, WriteToFile) {

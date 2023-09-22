@@ -138,7 +138,7 @@ if(LLVM_LIBC_FULL_BUILD)
       libc.src.__support.File.platform_stdin
   )
 else()
-  list(APPEND scanf_copts "-DLIBC_COPT_SCANF_USE_SYSTEM_FILE")
+  list(APPEND scanf_copts "-DLIBC_COPT_STDIO_USE_SYSTEM_FILE")
 endif()
 
 add_entrypoint_object(
@@ -224,7 +224,7 @@ if(LLVM_LIBC_FULL_BUILD)
       libc.src.__support.File.platform_stdout
   )
 else()
-  list(APPEND printf_copts "-DLIBC_COPT_PRINTF_USE_SYSTEM_FILE")
+  list(APPEND printf_copts "-DLIBC_COPT_STDIO_USE_SYSTEM_FILE")
 endif()
 
 add_entrypoint_object(

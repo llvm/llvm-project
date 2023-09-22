@@ -19,7 +19,9 @@
 namespace __llvm_libc {
 
 namespace internal {
-#ifndef LIBC_COPT_SCANF_USE_SYSTEM_FILE
+
+#ifndef LIBC_COPT_STDIO_USE_SYSTEM_FILE
+
 LIBC_INLINE int getc(void *f) {
   unsigned char c;
   auto result = reinterpret_cast<__llvm_libc::File *>(f)->read_unlocked(&c, 1);
@@ -37,7 +39,9 @@ LIBC_INLINE void ungetc(int c, void *f) {
 LIBC_INLINE int ferror_unlocked(FILE *f) {
   return reinterpret_cast<__llvm_libc::File *>(f)->error_unlocked();
 }
-#else  // defined(LIBC_COPT_PRINTF_USE_SYSTEM_FILE)
+
+#else // defined(LIBC_COPT_STDIO_USE_SYSTEM_FILE)
+
 LIBC_INLINE int getc(void *f) { return ::getc(reinterpret_cast<::FILE *>(f)); }
 
 LIBC_INLINE void ungetc(int c, void *f) {
@@ -45,7 +49,9 @@ LIBC_INLINE void ungetc(int c, void *f) {
 }
 
 LIBC_INLINE int ferror_unlocked(::FILE *f) { return ::ferror_unlocked(f); }
-#endif // LIBC_COPT_SCANF_USE_SYSTEM_FILE
+
+#endif // LIBC_COPT_STDIO_USE_SYSTEM_FILE
+
 } // namespace internal
 
 namespace scanf_core {

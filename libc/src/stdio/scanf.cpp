@@ -15,11 +15,11 @@
 #include <stdarg.h>
 #include <stdio.h>
 
-#ifndef LIBC_COPT_SCANF_USE_SYSTEM_FILE
+#ifndef LIBC_COPT_STDIO_USE_SYSTEM_FILE
 #define SCANF_STDIN __llvm_libc::stdin
-#else // LIBC_COPT_SCANF_USE_SYSTEM_FILE
+#else // LIBC_COPT_STDIO_USE_SYSTEM_FILE
 #define SCANF_STDIN ::stdin
-#endif // LIBC_COPT_SCANF_USE_SYSTEM_FILE
+#endif // LIBC_COPT_STDIO_USE_SYSTEM_FILE
 
 namespace __llvm_libc {
 
