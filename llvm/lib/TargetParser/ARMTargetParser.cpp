@@ -13,6 +13,7 @@
 
 #include "llvm/TargetParser/ARMTargetParser.h"
 #include "llvm/ADT/StringSwitch.h"
+#include "llvm/Support/Format.h"
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/TargetParser/ARMTargetParserCommon.h"
 #include "llvm/TargetParser/Triple.h"
@@ -600,11 +601,17 @@ StringRef ARM::getARMCPUForArch(const llvm::Triple &Triple, StringRef MArch) {
   llvm_unreachable("invalid arch name");
 }
 
-void ARM::PrintSupportedExtensions() {
-  outs() << "All available -march extensions for ARM\n\n";
+void ARM::PrintSupportedExtensions(StringMap<StringRef> DescMap) {
+  outs() << "All available -march extensions for ARM\n\n"
+         << "    " << left_justify("Name", 20)
+         << (DescMap.empty() ? "\n" : "Description\n");
   for (const auto &Ext : ARCHExtNames) {
     // Extensions without a feature cannot be used with -march.
-    if (!Ext.Feature.empty())
-      outs() << '\t' << Ext.Name << "\n";
+    if (!Ext.Feature.empty()) {
+      std::string Description = DescMap[Ext.Name].str();
+      outs() << "    "
+             << format(Description.empty() ? "%s\n" : "%-20s%s\n",
+                       Ext.Name.str().c_str(), Description.c_str());
+    }
   }
 }
