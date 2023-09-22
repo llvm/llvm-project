@@ -64,6 +64,8 @@ void clang_analyzer_isTainted_wchar(wchar_t);
 void clang_analyzer_isTainted_charp(char*);
 void clang_analyzer_isTainted_int(int);
 
+int coin();
+
 int scanf(const char *restrict format, ...);
 char *gets(char *str);
 char *gets_s(char *str, rsize_t n);
@@ -117,6 +119,41 @@ char *strncat(char *restrict s1, const char *restrict s2, size_t n);
 void *malloc(size_t);
 void *calloc(size_t nmemb, size_t size);
 void bcopy(void *s1, void *s2, size_t n);
+
+
+//    function | pathname | filename | fd | arglist | argv[] | envp[]
+//    ===============================================================
+// 1  execl    |     X    |          |    |    X    |        |
+// 2  execle   |     X    |          |    |    X    |        |   X
+// 3  execlp   |          |     X    |    |    X    |        |
+// 4  execv    |     X    |          |    |         |    X   |
+// 5  execve   |     X    |          |    |         |    X   |   X
+// 6  execvp   |          |     X    |    |         |    X   |
+// 7  execvpe  |          |     X    |    |         |    X   |   X
+// 8  fexecve  |          |          |  X |         |    X   |   X
+//    ===============================================================
+//    letter   |          |     p    |  f |    l    |    v   |   e
+//
+// legend:
+//  - pathname: rel/abs path to the binary
+//  - filename: file name searched in PATH to execute the binary
+//  - fd:       accepts a file descriptor
+//  - arglist:  accepts variadic arguments
+//  - argv:     accepts a pointer to array, denoting the new argv
+//  - envp:     accepts a pointer to array, denoting the new envp
+
+int execl(const char *path, const char *arg, ...);
+int execle(const char *path, const char *arg, ...);
+int execlp(const char *file, const char *arg, ...);
+int execv(const char *path, char *const argv[]);
+int execve(const char *path, char *const argv[], char *const envp[]);
+int execvp(const char *file, char *const argv[]);
+int execvpe(const char *file, char *const argv[], char *const envp[]);
+int fexecve(int fd, char *const argv[], char *const envp[]);
+FILE *popen(const char *command, const char *type);
+int pclose(FILE *stream);
+int system(const char *command);
+
 
 typedef size_t socklen_t;
 
@@ -224,7 +261,6 @@ void testUncontrolledFormatString(char **p) {
 
 }
 
-int system(const char *command);
 void testTaintSystemCall(void) {
   char buffer[156];
   char addr[128];
@@ -287,7 +323,6 @@ void testTaintedBufferSize(void) {
 #define SOCK_STREAM 1
 int socket(int, int, int);
 size_t read(int, void *, size_t);
-int  execl(const char *, const char *, ...);
 
 void testSocket(void) {
   int sock;
@@ -1127,6 +1162,128 @@ void testConfigurationSinks(void) {
   mySink(1, x, 2); // no-warning
   mySink(1, 2, x);
   // expected-warning@-1 {{Untrusted data is passed to a user-defined sink}}
+}
+
+int test_exec_like_functions() {
+  char buf[100] = {0};
+  scanf("%99s", buf);
+  clang_analyzer_isTainted_char(buf[0]); // expected-warning {{YES}}
+
+  char *cleanArray[] = {"ENV1=V1", "ENV2=V2", NULL};
+  char *taintedArray[] = {buf, "ENV2=V2", NULL};
+  clang_analyzer_isTainted_char(taintedArray[0][0]);      // expected-warning {{YES}}
+  clang_analyzer_isTainted_char(*(char*)taintedArray[0]); // expected-warning {{YES}}
+  clang_analyzer_isTainted_char(*(char*)taintedArray);    // expected-warning {{NO}}  We should have YES here.
+  // FIXME: Above the triple pointer indirection will confuse the checker,
+  // as we only check two levels. The results would be worse, if the tainted
+  // subobject ("buf") would not be at the beginning of the enclosing object,
+  // for the same reason.
+
+  switch (coin()) {
+    default: break;
+    // Execute `path` with all arguments after `path` until a NULL pointer
+    // and environment from `environ'.
+    case 0: return execl("path", "arg0", "arg1", "arg2", NULL); // no-warning
+    case 1: return execl(buf, "arg0", "arg1", "arg2", NULL); // expected-warning {{Untrusted data is passed to a system call}}
+    case 2: return execl("path", buf, "arg1", "arg2", NULL); // expected-warning {{Untrusted data is passed to a system call}}
+    case 3: return execl("path", "arg0", buf, "arg2", NULL); // expected-warning {{Untrusted data is passed to a system call}}
+    case 4: return execl("path", "arg0", "arg1", buf, NULL); // expected-warning {{Untrusted data is passed to a system call}}
+  }
+
+  switch (coin()) {
+    default: break;
+    // Execute `path` with all arguments after `PATH` until a NULL pointer,
+    // and the argument after that for environment.
+    case 0: return execle("path", "arg0", "arg1", NULL,   cleanArray); // no-warning
+    case 1: return execle(   buf, "arg0", "arg1", NULL,   cleanArray); // expected-warning {{Untrusted data is passed to a system call}}
+    case 2: return execle("path",    buf, "arg1", NULL,   cleanArray); // expected-warning {{Untrusted data is passed to a system call}}
+    case 3: return execle("path", "arg0",    buf, NULL,   cleanArray); // expected-warning {{Untrusted data is passed to a system call}}
+    case 4: return execle("path", "arg0", "arg1", NULL,          buf); // expected-warning {{Untrusted data is passed to a system call}}
+    case 5: return execle("path", "arg0", "arg1", NULL, taintedArray); // FIXME: We might wanna have a report here.
+  }
+
+  switch (coin()) {
+    default: break;
+    // Execute `file`, searching in the `PATH' environment variable if it
+    // contains no slashes, with all arguments after `file` until a NULL
+    // pointer and environment from `environ'.
+    case 0: return execlp("file", "arg0", "arg1", "arg2", NULL); // no-warning
+    case 1: return execlp(   buf, "arg0", "arg1", "arg2", NULL); // expected-warning {{Untrusted data is passed to a system call}}
+    case 2: return execlp("file",    buf, "arg1", "arg2", NULL); // expected-warning {{Untrusted data is passed to a system call}}
+    case 3: return execlp("file", "arg0",    buf, "arg2", NULL); // expected-warning {{Untrusted data is passed to a system call}}
+    case 4: return execlp("file", "arg0", "arg1",    buf, NULL); // expected-warning {{Untrusted data is passed to a system call}}
+  }
+
+  switch (coin()) {
+    default: break;
+    // Execute `path` with arguments `ARGV` and environment from `environ'.
+    case 0: return execv("path", /*argv=*/  cleanArray); // no-warning
+    case 1: return execv(   buf, /*argv=*/  cleanArray); // expected-warning {{Untrusted data is passed to a system call}}
+    case 2: return execv("path", /*argv=*/taintedArray); // FIXME: We might wanna have a report here.
+  }
+
+  switch (coin()) {
+    default: break;
+    // Replace the current process, executing `path` with arguments `ARGV`
+    // and environment `ENVP`. `ARGV` and `ENVP` are terminated by NULL pointers.
+    case 0: return execve("path", /*argv=*/  cleanArray, /*envp=*/cleanArray); // no-warning
+    case 1: return execve(   buf, /*argv=*/  cleanArray, /*envp=*/cleanArray); // expected-warning {{Untrusted data is passed to a system call}}
+    case 2: return execve("path", /*argv=*/taintedArray, /*envp=*/cleanArray); // FIXME: We might wanna have a report here.
+    case 3: return execve("path", /*argv=*/cleanArray, /*envp=*/taintedArray); // FIXME: We might wanna have a report here.
+  }
+
+  switch (coin()) {
+    default: break;
+    // Execute `file`, searching in the `PATH' environment variable if it
+    // contains no slashes, with arguments `ARGV` and environment from `environ'.
+    case 0: return execvp("file", /*argv=*/  cleanArray); // no-warning
+    case 1: return execvp(   buf, /*argv=*/  cleanArray); // expected-warning {{Untrusted data is passed to a system call}}
+    case 2: return execvp("file", /*argv=*/taintedArray); // FIXME: We might wanna have a report here.
+  }
+
+  // execvpe
+  switch (coin()) {
+    default: break;
+    // Execute `file`, searching in the `PATH' environment variable if it
+    // contains no slashes, with arguments `ARGV` and environment `ENVP`.
+    // `ARGV` and `ENVP` are terminated by NULL pointers.
+    case 0: return execvpe("file", /*argv=*/  cleanArray, /*envp=*/  cleanArray); // no-warning
+    case 1: return execvpe(   buf, /*argv=*/  cleanArray, /*envp=*/  cleanArray); // expected-warning {{Untrusted data is passed to a system call}}
+    case 2: return execvpe("file", /*argv=*/taintedArray, /*envp=*/  cleanArray); // FIXME: We might wanna have a report here.
+    case 3: return execvpe("file", /*argv=*/  cleanArray, /*envp=*/taintedArray); // FIXME: We might wanna have a report here.
+  }
+
+  int cleanFD = coin();
+  int taintedFD;
+  scanf("%d", &taintedFD);
+  clang_analyzer_isTainted_int(taintedFD); // expected-warning {{YES}}
+
+  switch (coin()) {
+    default: break;
+    // Execute the file `FD` refers to, overlaying the running program image.
+    // `ARGV` and `ENVP` are passed to the new program, as for `execve'.
+    case 0: return fexecve(  cleanFD, /*argv=*/  cleanArray, /*envp=*/  cleanArray); // no-warning
+    case 1: return fexecve(taintedFD, /*argv=*/  cleanArray, /*envp=*/  cleanArray); // expected-warning {{Untrusted data is passed to a system call}}
+    case 2: return fexecve(  cleanFD, /*argv=*/taintedArray, /*envp=*/  cleanArray); // FIXME: We might wanna have a report here.
+    case 3: return fexecve(  cleanFD, /*argv=*/  cleanArray, /*envp=*/taintedArray); // FIXME: We might wanna have a report here.
+  }
+
+  switch (coin()) {
+    default: break;
+    // Create a new stream connected to a pipe running the given `command`.
+    case 0: return pclose(popen("command", /*mode=*/"r")); // no-warning
+    case 1: return pclose(popen(      buf, /*mode=*/"r")); // expected-warning {{Untrusted data is passed to a system call}}
+    case 2: return pclose(popen("command", /*mode=*/buf)); // 'mode' is not a taint sink.
+  }
+
+  switch (coin()) {
+    default: break;
+    // Execute the given line as a shell command.
+    case 0: return system("command"); // no-warning
+    case 1: return system(      buf); // expected-warning {{Untrusted data is passed to a system call}}
+  }
+
+  return 0;
 }
 
 void testUnknownFunction(void (*foo)(void)) {
