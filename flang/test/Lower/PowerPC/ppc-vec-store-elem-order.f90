@@ -51,7 +51,7 @@ subroutine vec_xst_test(arg1, arg2, arg3)
 ! LLVMIR: %[[arg2:.*]] = load i32, ptr %1, align 4
 ! LLVMIR: %[[trg:.*]] = getelementptr i8, ptr %2, i32 %[[arg2]]
 ! LLVMIR: %[[src:.*]] = shufflevector <4 x i32> %[[arg1]], <4 x i32> undef, <4 x i32> <i32 3, i32 2, i32 1, i32 0>
-! LLVMIR:  store <4 x i32> %[[src]], ptr %[[trg]], align 1
+! LLVMIR:  store <4 x i32> %[[src]], ptr %[[trg]], align 16
 end subroutine vec_xst_test
 
 !----------------------
@@ -65,16 +65,19 @@ subroutine vec_xstd2_test(arg1, arg2, arg3, i)
   integer(4) :: i
   call vec_xstd2(arg1, arg2, arg3(i))
 
+! LLVMIR: %[[i:.*]] = load i32, ptr %3, align 4
+! LLVMIR: %[[iext:.*]] = sext i32 %[[i]] to i64
+! LLVMIR: %[[isub:.*]] = sub i64 %[[iext]], 1
+! LLVMIR: %[[imul1:.*]] = mul i64 %[[isub]], 1
+! LLVMIR: %[[imul2:.*]] = mul i64 %[[imul1]], 1
+! LLVMIR: %[[iadd:.*]] = add i64 %[[imul2]], 0
+! LLVMIR: %[[gep1:.*]] = getelementptr <4 x float>, ptr %2, i64 %[[iadd]]
 ! LLVMIR: %[[arg1:.*]] = load <4 x float>, ptr %0, align 16
 ! LLVMIR: %[[arg2:.*]] = load i16, ptr %1, align 2
-! LLVMIR: %[[arg4:.*]] = load i32, ptr %3, align 4
-! LLVMIR: %[[arg4_64:.*]] = sext i32 %[[arg4]] to i64
-! LLVMIR: %[[idx:.*]] = sub i64 %[[arg4_64]], 1
-! LLVMIR: %[[elemptr:.*]] = getelementptr <4 x float>, ptr %2, i64 %[[idx]]
-! LLVMIR: %[[trg:.*]] = getelementptr i8, ptr %[[elemptr]], i16 %[[arg2]]
-! LLVMIR: %[[v2elem:.*]] = bitcast <4 x float> %[[arg1]] to <2 x i64>
-! LLVMIR: %[[src:.*]] = shufflevector <2 x i64> %[[v2elem]], <2 x i64> undef, <2 x i32> <i32 1, i32 0>
-! LLVMIR: store <2 x i64> %[[src]], ptr %[[trg]], align 1
+! LLVMIR: %[[gep2:.*]] = getelementptr i8, ptr %[[gep1]], i16 %[[arg2]]
+! LLVMIR: %[[src:.*]] = bitcast <4 x float> %[[arg1]] to <2 x i64>
+! LLVMIR: %[[shf:.*]] = shufflevector <2 x i64> %[[src]], <2 x i64> undef, <2 x i32> <i32 1, i32 0>
+! LLVMIR: store <2 x i64> %[[shf]], ptr %[[gep2]], align 16
 end subroutine vec_xstd2_test
 
 !----------------------
@@ -88,13 +91,16 @@ subroutine vec_xstw4_test(arg1, arg2, arg3, i)
   integer(4) :: i
   call vec_xstw4(arg1, arg2, arg3(i))
 
+! LLVMIR: %[[i:.*]] = load i32, ptr %3, align 4
+! LLVMIR: %[[iext:.*]] = sext i32 %[[i]] to i64
+! LLVMIR: %[[isub:.*]] = sub i64 %[[iext]], 1
+! LLVMIR: %[[imul1:.*]] = mul i64 %[[isub]], 1
+! LLVMIR: %[[imul2:.*]] = mul i64 %[[imul1]], 1
+! LLVMIR: %[[iadd:.*]] = add i64 %[[imul2]], 0
+! LLVMIR: %[[gep1:.*]] = getelementptr <4 x float>, ptr %2, i64 %[[iadd]]
 ! LLVMIR: %[[arg1:.*]] = load <4 x float>, ptr %0, align 16
 ! LLVMIR: %[[arg2:.*]] = load i16, ptr %1, align 2
-! LLVMIR: %[[arg4:.*]] = load i32, ptr %3, align 4
-! LLVMIR: %[[arg4_64:.*]] = sext i32 %[[arg4]] to i64
-! LLVMIR: %[[idx:.*]] = sub i64 %[[arg4_64]], 1
-! LLVMIR: %[[elemptr:.*]] = getelementptr <4 x float>, ptr %2, i64 %[[idx]]
-! LLVMIR: %[[trg:.*]] = getelementptr i8, ptr %[[elemptr]], i16 %[[arg2]]
+! LLVMIR: %[[gep2:.*]] = getelementptr i8, ptr %[[gep1]], i16 %[[arg2]]
 ! LLVMIR: %[[src:.*]] = shufflevector <4 x float> %[[arg1]], <4 x float> undef, <4 x i32> <i32 3, i32 2, i32 1, i32 0>
-! LLVMIR: store <4 x float> %[[src]], ptr %[[trg]], align 1
+! LLVMIR: store <4 x float> %[[src]], ptr %[[gep2]], align 16
 end subroutine vec_xstw4_test
