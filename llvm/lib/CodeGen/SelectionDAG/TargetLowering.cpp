@@ -5849,15 +5849,16 @@ TargetLowering::ConstraintGroup TargetLowering::getConstraintPreferences(
   return Ret;
 }
 
-// If we have an immediate, see if we can lower it. Return true if we can, or
-// don't have an immediate, false otherwise.
+/// If we have an immediate, see if we can lower it. Return true if we can,
+/// false otherwise.
 static bool lowerImmediateIfPossible(TargetLowering::ConstraintPair &P,
                                      SDValue Op, SelectionDAG *DAG,
                                      const TargetLowering &TLI) {
 
-  if (P.second != TargetLowering::C_Other &&
-      P.second != TargetLowering::C_Immediate)
-    return true;
+  assert((P.second == TargetLowering::C_Other ||
+          P.second == TargetLowering::C_Immediate) &&
+         "need immediate or other");
+
   if (!Op.getNode())
     return false;
 
@@ -5883,11 +5884,12 @@ void TargetLowering::ComputeConstraintToUse(AsmOperandInfo &OpInfo,
       return;
 
     unsigned BestIdx = 0;
-    while (!lowerImmediateIfPossible(G[BestIdx], Op, DAG, *this)) {
-      if (BestIdx + 1 > G.size() - 1)
-        return;
-      ++BestIdx;
-    }
+    for (const unsigned E = G.size();
+         BestIdx < E && (G[BestIdx].second == TargetLowering::C_Other ||
+                         G[BestIdx].second == TargetLowering::C_Immediate);
+         ++BestIdx)
+      if (lowerImmediateIfPossible(G[BestIdx], Op, DAG, *this))
+        break;
 
     OpInfo.ConstraintCode = G[BestIdx].first;
     OpInfo.ConstraintType = G[BestIdx].second;

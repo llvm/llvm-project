@@ -147,9 +147,11 @@ static void computeConstraintToUse(const TargetLowering *TLI,
       return;
     // FIXME: prefer immediate constraints if the target allows it
     unsigned BestIdx = 0;
-    while (G[BestIdx].second == TargetLowering::C_Other ||
-           G[BestIdx].second == TargetLowering::C_Immediate)
-      ++BestIdx;
+    for (const unsigned E = G.size();
+         BestIdx < E && (G[BestIdx].second == TargetLowering::C_Other ||
+                         G[BestIdx].second == TargetLowering::C_Immediate);
+         ++BestIdx)
+      ;
     OpInfo.ConstraintCode = G[BestIdx].first;
     OpInfo.ConstraintType = G[BestIdx].second;
   }
