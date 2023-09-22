@@ -225,8 +225,7 @@ bool RISCVInstructionSelector::select(MachineInstr &MI) {
   switch (Opc) {
   case TargetOpcode::G_ANYEXT:
   case TargetOpcode::G_TRUNC:
-    MI.setDesc(TII.get(TargetOpcode::COPY));
-    return true;
+    return selectCopy(MI, MRI);
   case TargetOpcode::G_CONSTANT:
     if (!selectConstant(MI, MIB, MRI))
       return false;
@@ -271,37 +270,25 @@ const TargetRegisterClass *RISCVInstructionSelector::getRegClassForTypeOnBank(
 bool RISCVInstructionSelector::selectCopy(MachineInstr &MI,
                                           MachineRegisterInfo &MRI) const {
   Register DstReg = MI.getOperand(0).getReg();
-  Register SrcReg = MI.getOperand(1).getReg();
 
-  if (Register::isPhysicalRegister(SrcReg) &&
-      Register::isPhysicalRegister(DstReg))
+  if (DstReg.isPhysical())
     return true;
 
-  if (!Register::isPhysicalRegister(SrcReg)) {
-    const TargetRegisterClass *SrcRC = getRegClassForTypeOnBank(
-        MRI.getType(SrcReg), *RBI.getRegBank(SrcReg, MRI, TRI));
-    assert(SrcRC &&
-           "Register class not available for LLT, register bank combination");
+  const TargetRegisterClass *DstRC = getRegClassForTypeOnBank(
+      MRI.getType(DstReg), *RBI.getRegBank(DstReg, MRI, TRI));
+  assert(DstRC &&
+         "Register class not available for LLT, register bank combination");
 
-    if (!RBI.constrainGenericRegister(SrcReg, *SrcRC, MRI)) {
-      LLVM_DEBUG(dbgs() << "Failed to constrain " << TII.getName(MI.getOpcode())
-                        << " operand\n");
-      return false;
-    }
-  }
-  if (!Register::isPhysicalRegister(DstReg)) {
-    const TargetRegisterClass *DstRC = getRegClassForTypeOnBank(
-        MRI.getType(DstReg), *RBI.getRegBank(DstReg, MRI, TRI));
-    assert(DstRC &&
-           "Register class not available for LLT, register bank combination");
-
-    if (!RBI.constrainGenericRegister(DstReg, *DstRC, MRI)) {
-      LLVM_DEBUG(dbgs() << "Failed to constrain " << TII.getName(MI.getOpcode())
-                        << " operand\n");
-      return false;
-    }
+  // No need to constrain SrcReg. It will get constrained when
+  // we hit another of its uses or its defs.
+  // Copies do not have constraints.
+  if (!RBI.constrainGenericRegister(DstReg, *DstRC, MRI)) {
+    LLVM_DEBUG(dbgs() << "Failed to constrain " << TII.getName(MI.getOpcode())
+                      << " operand\n");
+    return false;
   }
 
+  MI.setDesc(TII.get(RISCV::COPY));
   return true;
 }
 
