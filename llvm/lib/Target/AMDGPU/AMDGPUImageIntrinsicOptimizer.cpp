@@ -36,6 +36,8 @@
 // and TX, but higher vdata. We start by erring on the side of converting these
 // to MSAA_LOAD.
 //
+// clang-format off
+//
 // This pass will combine intrinsics such as (not neccessarily consecutive):
 //  call float @llvm.amdgcn.image.load.2dmsaa.f32.i32(i32 1, i32 %s, i32 %t, i32 0, <8 x i32> %rsrc, i32 0, i32 0)
 //  call float @llvm.amdgcn.image.load.2dmsaa.f32.i32(i32 1, i32 %s, i32 %t, i32 1, <8 x i32> %rsrc, i32 0, i32 0)
@@ -43,6 +45,8 @@
 //  call float @llvm.amdgcn.image.load.2dmsaa.f32.i32(i32 1, i32 %s, i32 %t, i32 3, <8 x i32> %rsrc, i32 0, i32 0)
 // ==>
 //  call <4 x float> @llvm.amdgcn.image.msaa.load.2dmsaa.v4f32.i32(i32 1, i32 %s, i32 %t, i32 0, <8 x i32> %rsrc, i32 0, i32 0)
+//
+// clang-format on
 //
 // Future improvements:
 //
@@ -258,8 +262,8 @@ bool optimizeSection(std::list<std::list<IntrinsicInst *>> &MergeableInsts) {
       } else {
         for (unsigned I = 0; I < NumElts; ++I) {
           VecOp = B.CreateInsertElement(
-              VecOp, B.CreateExtractElement(
-                NewCalls[I], Idx->getValue().urem(4)), I);
+              VecOp,
+              B.CreateExtractElement(NewCalls[I], Idx->getValue().urem(4)), I);
           LLVM_DEBUG(dbgs() << "Add: " << *VecOp << "\n");
         }
       }
