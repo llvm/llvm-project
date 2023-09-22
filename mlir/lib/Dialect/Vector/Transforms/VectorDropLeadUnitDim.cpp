@@ -6,6 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "mlir/Dialect/Arith/IR/Arith.h"
 #include "mlir/Dialect/Utils/StructuredOpsUtils.h"
 #include "mlir/Dialect/Vector/IR/VectorOps.h"
 #include "mlir/Dialect/Vector/Transforms/VectorRewritePatterns.h"
@@ -176,14 +177,16 @@ struct CastAwayInsertLeadingOneDim : public OpRewritePattern<vector::InsertOp> {
     // type has leading unit dims, we also trim the position array accordingly,
     // then (2) if source type also has leading unit dims, we need to append
     // zeroes to the position array accordingly.
-    unsigned oldPosRank = insertOp.getPosition().size();
+    unsigned oldPosRank = insertOp.getNumIndices();
     unsigned newPosRank = std::max<int64_t>(0, oldPosRank - dstDropCount);
-    SmallVector<int64_t> newPositions =
-        llvm::to_vector(insertOp.getPosition().take_back(newPosRank));
-    newPositions.resize(newDstType.getRank() - newSrcRank, 0);
+    SmallVector<OpFoldResult> oldPosition = insertOp.getMixedPosition();
+    SmallVector<OpFoldResult> newPosition =
+        llvm::to_vector(ArrayRef(oldPosition).take_back(newPosRank));
+    newPosition.resize(newDstType.getRank() - newSrcRank,
+                       rewriter.getI64IntegerAttr(0));
 
     auto newInsertOp = rewriter.create<vector::InsertOp>(
-        loc, newDstType, newSrcVector, newDstVector, newPositions);
+        loc, newSrcVector, newDstVector, newPosition);
 
     rewriter.replaceOpWithNewOp<vector::BroadcastOp>(insertOp, oldDstType,
                                                      newInsertOp);

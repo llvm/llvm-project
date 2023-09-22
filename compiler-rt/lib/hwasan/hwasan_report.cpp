@@ -323,6 +323,21 @@ static uptr GetGlobalSizeFromDescriptor(uptr ptr) {
 
 void ReportStats() {}
 
+constexpr uptr kDumpWidth = 16;
+constexpr uptr kShadowLines = 17;
+constexpr uptr kShadowDumpSize = kShadowLines * kDumpWidth;
+
+constexpr uptr kShortLines = 3;
+constexpr uptr kShortDumpSize = kShortLines * kDumpWidth;
+constexpr uptr kShortDumpOffset = (kShadowLines - kShortLines) / 2 * kDumpWidth;
+
+static uptr GetPrintTagStart(uptr addr) {
+  addr = MemToShadow(addr);
+  addr = RoundDownTo(addr, kDumpWidth);
+  addr -= kDumpWidth * (kShadowLines / 2);
+  return addr;
+}
+
 template <typename PrintTag>
 static void PrintTagInfoAroundAddr(uptr addr, uptr num_rows,
                                    InternalScopedString &s,
@@ -352,7 +367,7 @@ static void PrintTagsAroundAddr(uptr addr, GetTag get_tag,
       "Memory tags around the buggy address (one tag corresponds to %zd "
       "bytes):\n",
       kShadowAlignment);
-  PrintTagInfoAroundAddr(addr, 17, s,
+  PrintTagInfoAroundAddr(addr, kShadowLines, s,
                          [&](InternalScopedString &s, uptr tag_addr) {
                            tag_t tag = get_tag(tag_addr);
                            s.AppendF("%02x", tag);
@@ -362,7 +377,7 @@ static void PrintTagsAroundAddr(uptr addr, GetTag get_tag,
       "Tags for short granules around the buggy address (one tag corresponds "
       "to %zd bytes):\n",
       kShadowAlignment);
-  PrintTagInfoAroundAddr(addr, 3, s,
+  PrintTagInfoAroundAddr(addr, kShortLines, s,
                          [&](InternalScopedString &s, uptr tag_addr) {
                            tag_t tag = get_tag(tag_addr);
                            if (tag >= 1 && tag <= kShadowAlignment) {
@@ -439,8 +454,8 @@ class BaseReport {
 
   struct Shadow {
     uptr addr = 0;
-    tag_t tags[512] = {};
-    tag_t short_tags[ARRAY_SIZE(tags)] = {};
+    tag_t tags[kShadowDumpSize] = {};
+    tag_t short_tags[kShortDumpSize] = {};
   };
 
   sptr FindMismatchOffset() const;
@@ -508,16 +523,19 @@ BaseReport::Shadow BaseReport::CopyShadow() const {
   if (!MemIsApp(untagged_addr))
     return result;
 
-  result.addr = MemToShadow(untagged_addr) - ARRAY_SIZE(result.tags) / 2;
-  for (uptr i = 0; i < ARRAY_SIZE(result.tags); ++i) {
-    uptr tag_addr = result.addr + i;
+  result.addr = GetPrintTagStart(untagged_addr + mismatch_offset);
+  uptr tag_addr = result.addr;
+  uptr short_end = kShortDumpOffset + ARRAY_SIZE(shadow.short_tags);
+  for (uptr i = 0; i < ARRAY_SIZE(result.tags); ++i, ++tag_addr) {
     if (!MemIsShadow(tag_addr))
       continue;
     result.tags[i] = *reinterpret_cast<tag_t *>(tag_addr);
+    if (i < kShortDumpOffset || i >= short_end)
+      continue;
     uptr granule_addr = ShadowToMem(tag_addr);
     if (1 <= result.tags[i] && result.tags[i] <= kShadowAlignment &&
         IsAccessibleMemoryRange(granule_addr, kShadowAlignment)) {
-      result.short_tags[i] =
+      result.short_tags[i - kShortDumpOffset] =
           *reinterpret_cast<tag_t *>(granule_addr + kShadowAlignment - 1);
     }
   }
@@ -532,8 +550,8 @@ tag_t BaseReport::GetTagCopy(uptr addr) const {
 }
 
 tag_t BaseReport::GetShortTagCopy(uptr addr) const {
-  CHECK_GE(addr, shadow.addr);
-  uptr idx = addr - shadow.addr;
+  CHECK_GE(addr, shadow.addr + kShortDumpOffset);
+  uptr idx = addr - shadow.addr - kShortDumpOffset;
   CHECK_LT(idx, ARRAY_SIZE(shadow.short_tags));
   return shadow.short_tags[idx];
 }
