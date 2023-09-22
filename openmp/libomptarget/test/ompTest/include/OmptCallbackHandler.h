@@ -46,7 +46,8 @@ public:
 
   void handleThreadBegin(ompt_thread_t ThreadType, ompt_data_t *ThreadData) {
     if (RecordAndReplay) {
-      recordEvent(omptest::OmptAssertEvent::ThreadBegin("Thread Begin"));
+      recordEvent(
+          omptest::OmptAssertEvent::ThreadBegin(ThreadType, "Thread Begin"));
       return;
     }
 
@@ -54,7 +55,8 @@ public:
     if (ThreadType == ompt_thread_initial)
       return;
     for (const auto &S : Subscribers)
-      S->notify(omptest::OmptAssertEvent::ThreadBegin("Thread Begin"));
+      S->notify(
+          omptest::OmptAssertEvent::ThreadBegin(ThreadType, "Thread Begin"));
   }
 
   void handleThreadEnd(ompt_data_t *ThreadData) {
@@ -140,76 +142,88 @@ public:
                               ompt_function_lookup_t LookupFn,
                               const char *DocumentationStr) {
     if (RecordAndReplay) {
-      recordEvent(
-          omptest::OmptAssertEvent::DeviceInitialize("Device Inititalize"));
+      recordEvent(omptest::OmptAssertEvent::DeviceInitialize(
+          DeviceNum, Type, Device, LookupFn, DocumentationStr,
+          "Device Inititalize"));
       return;
     }
 
-    std::cout << "Got Device Init Event. Ignoring" << std::endl;
-    return;
-
     for (const auto &S : Subscribers)
-      S->notify(
-          omptest::OmptAssertEvent::DeviceInitialize("Device Initialize"));
+      S->notify(omptest::OmptAssertEvent::DeviceInitialize(
+          DeviceNum, Type, Device, LookupFn, DocumentationStr,
+          "Device Initialize"));
   }
 
   void handleDeviceFinalize(int DeviceNum) {
     if (RecordAndReplay) {
-      recordEvent(omptest::OmptAssertEvent::DeviceFinalize("Device Finalize"));
+      recordEvent(omptest::OmptAssertEvent::DeviceFinalize(DeviceNum,
+                                                           "Device Finalize"));
       return;
     }
 
     for (const auto &S : Subscribers)
-      S->notify(omptest::OmptAssertEvent::DeviceFinalize("Device Finalize"));
+      S->notify(omptest::OmptAssertEvent::DeviceFinalize(DeviceNum,
+                                                         "Device Finalize"));
   }
 
   void handleTarget(ompt_target_t Kind, ompt_scope_endpoint_t Endpoint,
                     int DeviceNum, ompt_data_t *TaskData, ompt_id_t TargetId,
                     const void *CodeptrRA) {
     if (RecordAndReplay) {
-      recordEvent(omptest::OmptAssertEvent::Target("Target"));
+      recordEvent(omptest::OmptAssertEvent::Target(
+          Kind, Endpoint, DeviceNum, TaskData, TargetId, CodeptrRA, "Target"));
       return;
     }
 
     for (const auto &S : Subscribers)
-      S->notify(omptest::OmptAssertEvent::Target("Target"));
+      S->notify(omptest::OmptAssertEvent::Target(
+          Kind, Endpoint, DeviceNum, TaskData, TargetId, CodeptrRA, "Target"));
   }
 
   void handleTargetSubmit(ompt_id_t TargetId, ompt_id_t HostOpId,
                           unsigned int RequestedNumTeams) {
     if (RecordAndReplay) {
-      recordEvent(omptest::OmptAssertEvent::TargetSubmit("Target Submit"));
+      recordEvent(omptest::OmptAssertEvent::TargetSubmit(
+          TargetId, HostOpId, RequestedNumTeams, "Target Submit"));
       return;
     }
 
     for (const auto &S : Subscribers)
-      S->notify(omptest::OmptAssertEvent::TargetSubmit("Target Submit"));
+      S->notify(omptest::OmptAssertEvent::TargetSubmit(
+          TargetId, HostOpId, RequestedNumTeams, "Target Submit"));
   }
 
   void handleTargetDataOp(ompt_id_t TargetId, ompt_id_t HostOpId,
                           ompt_target_data_op_t OpType, void *SrcAddr,
-                          int SrcDeviceNum, void *DestAddr, int DestDeviceNum,
+                          int SrcDeviceNum, void *DstAddr, int DstDeviceNum,
                           size_t Bytes, const void *CodeptrRA) {
     if (RecordAndReplay) {
-      recordEvent(omptest::OmptAssertEvent::TargetDataOp("Target Data Op"));
+      recordEvent(omptest::OmptAssertEvent::TargetDataOp(
+          TargetId, HostOpId, OpType, SrcAddr, SrcDeviceNum, DstAddr,
+          DstDeviceNum, Bytes, CodeptrRA, "Target Data Op"));
       return;
     }
 
     for (const auto &S : Subscribers)
-      S->notify(omptest::OmptAssertEvent::TargetDataOp("Target Data Op"));
+      S->notify(omptest::OmptAssertEvent::TargetDataOp(
+          TargetId, HostOpId, OpType, SrcAddr, SrcDeviceNum, DstAddr,
+          DstDeviceNum, Bytes, CodeptrRA, "Target Data Op"));
   }
 
   void handleDeviceLoad(int DeviceNum, const char *Filename,
                         int64_t OffsetInFile, void *VmaInFile, size_t Bytes,
                         void *HostAddr, void *DeviceAddr, uint64_t ModuleId) {
     if (RecordAndReplay) {
-      recordEvent(omptest::OmptAssertEvent::DeviceLoad("Device Load"));
+      recordEvent(omptest::OmptAssertEvent::DeviceLoad(
+          DeviceNum, Filename, OffsetInFile, VmaInFile, Bytes, HostAddr,
+          DeviceAddr, ModuleId, "Device Load"));
       return;
     }
 
-    return; // FIXME: This would need to handled the same as DeviceInit
     for (const auto &S : Subscribers)
-      S->notify(omptest::OmptAssertEvent::DeviceLoad("Device Load"));
+      S->notify(omptest::OmptAssertEvent::DeviceLoad(
+          DeviceNum, Filename, OffsetInFile, VmaInFile, Bytes, HostAddr,
+          DeviceAddr, ModuleId, "Device Load"));
   }
 
   void handleDeviceUnload(int DeviceNum, uint64_t ModuleId) {

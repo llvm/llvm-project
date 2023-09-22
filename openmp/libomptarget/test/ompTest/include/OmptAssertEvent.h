@@ -2,6 +2,7 @@
 #define OPENMP_LIBOMPTARGET_TEST_OMPTEST_OMPTASSERTEVENT_H
 
 #include "InternalEvent.h"
+#include "omp-tools.h"
 
 #include <cassert>
 #include <iostream>
@@ -13,9 +14,10 @@ namespace omptest{
 enum class AssertState { pass, fail };
 
 struct OmptAssertEvent {
-  static OmptAssertEvent ThreadBegin(const std::string &Name) {
+  static OmptAssertEvent ThreadBegin(ompt_thread_t ThreadType,
+                                     const std::string &Name) {
     auto EName = getName(Name);
-    return OmptAssertEvent(EName, new internal::ThreadBegin());
+    return OmptAssertEvent(EName, new internal::ThreadBegin(ThreadType));
   }
 
   static OmptAssertEvent ThreadEnd(const std::string &Name) {
@@ -26,15 +28,11 @@ struct OmptAssertEvent {
   static OmptAssertEvent ParallelBegin(int NumThreads,
                                        const std::string &Name) {
     auto EName = getName(Name);
-    std::cout << "Creating new ParallelBegin Event (" << EName << ')'
-              << std::endl;
     return OmptAssertEvent(EName, new internal::ParallelBegin(NumThreads));
   }
 
   static OmptAssertEvent ParallelEnd(const std::string &Name) {
     auto EName = getName(Name);
-    std::cout << "Creating new ParallelEnd Event (" << EName << ')'
-              << std::endl;
     return OmptAssertEvent(EName, new internal::ParallelEnd());
   }
 
@@ -53,9 +51,15 @@ struct OmptAssertEvent {
     return OmptAssertEvent(EName, new internal::ImplicitTask());
   }
 
-  static OmptAssertEvent Target(const std::string &Name) {
+  static OmptAssertEvent Target(ompt_target_t Kind,
+                                ompt_scope_endpoint_t Endpoint, int DeviceNum,
+                                ompt_data_t *TaskData, ompt_id_t TargetId,
+                                const void *CodeptrRA,
+                                const std::string &Name) {
     auto EName = getName(Name);
-    return OmptAssertEvent(EName, new internal::Target());
+    return OmptAssertEvent(EName,
+                           new internal::Target(Kind, Endpoint, DeviceNum,
+                                                TaskData, TargetId, CodeptrRA));
   }
 
   static OmptAssertEvent TargetEmi(const std::string &Name) {
@@ -64,9 +68,16 @@ struct OmptAssertEvent {
   }
 
   /// Create a DataAlloc Event
-  static OmptAssertEvent TargetDataOp(const std::string &Name) {
-    std::cout << "Creating a new TargetDataOp event." << std::endl;
-    return OmptAssertEvent(Name, new internal::TargetDataOp());
+  static OmptAssertEvent TargetDataOp(ompt_id_t TargetId, ompt_id_t HostOpId,
+                                      ompt_target_data_op_t OpType,
+                                      void *SrcAddr, int SrcDeviceNum,
+                                      void *DstAddr, int DstDeviceNum,
+                                      size_t Bytes, const void *CodeptrRA,
+                                      const std::string &Name) {
+    return OmptAssertEvent(
+        Name, new internal::TargetDataOp(TargetId, HostOpId, OpType, SrcAddr,
+                                         SrcDeviceNum, DstAddr, DstDeviceNum,
+                                         Bytes, CodeptrRA));
   }
 
   static OmptAssertEvent TargetDataOpEmi(const std::string &Name) {
@@ -74,9 +85,12 @@ struct OmptAssertEvent {
     return OmptAssertEvent(EName, new internal::TargetDataOpEmi());
   }
 
-  static OmptAssertEvent TargetSubmit(const std::string &Name) {
+  static OmptAssertEvent TargetSubmit(ompt_id_t TargetId, ompt_id_t HostOpId,
+                                      unsigned int RequestedNumTeams,
+                                      const std::string &Name) {
     auto EName = getName(Name);
-    return OmptAssertEvent(EName, new internal::TargetSubmit());
+    return OmptAssertEvent(EName, new internal::TargetSubmit(
+                                      TargetId, HostOpId, RequestedNumTeams));
   }
 
   static OmptAssertEvent TargetSubmitEmi(const std::string &Name) {
@@ -89,19 +103,33 @@ struct OmptAssertEvent {
     return OmptAssertEvent(EName, new internal::ControlTool());
   }
 
-  static OmptAssertEvent DeviceInitialize(const std::string &Name) {
+  static OmptAssertEvent DeviceInitialize(int DeviceNum, const char *Type,
+                                          ompt_device_t *Device,
+                                          ompt_function_lookup_t LookupFn,
+                                          const char *DocumentationStr,
+                                          const std::string &Name) {
     auto EName = getName(Name);
-    return OmptAssertEvent(EName, new internal::DeviceInitialize());
+    return OmptAssertEvent(
+        EName, new internal::DeviceInitialize(DeviceNum, Type, Device, LookupFn,
+                                              DocumentationStr));
   }
 
-  static OmptAssertEvent DeviceFinalize(const std::string &Name) {
+  static OmptAssertEvent DeviceFinalize(int DeviceNum,
+                                        const std::string &Name) {
     auto EName = getName(Name);
-    return OmptAssertEvent(EName, new internal::DeviceFinalize());
+    return OmptAssertEvent(EName, new internal::DeviceFinalize(DeviceNum));
   }
 
-  static OmptAssertEvent DeviceLoad(const std::string &Name) {
+  static OmptAssertEvent DeviceLoad(int DeviceNum, const char *Filename,
+                                    int64_t OffsetInFile, void *VmaInFile,
+                                    size_t Bytes, void *HostAddr,
+                                    void *DeviceAddr, uint64_t ModuleId,
+                                    const std::string &Name) {
     auto EName = getName(Name);
-    return OmptAssertEvent(EName, new internal::DeviceLoad());
+    return OmptAssertEvent(
+        EName,
+        new internal::DeviceLoad(DeviceNum, Filename, OffsetInFile, VmaInFile,
+                                 Bytes, HostAddr, DeviceAddr, ModuleId));
   }
 
   static OmptAssertEvent DeviceUnload(const std::string &Name) {
@@ -115,18 +143,30 @@ struct OmptAssertEvent {
 
   std::string getEventName() const { return Name; }
 
+  internal::EventTy getEventType() const { return TheEvent->getType(); }
+
   /// Make events comparable
   friend bool operator==(const OmptAssertEvent &A, const OmptAssertEvent &B);
+
+  std::string toString(bool PrefixEventName = false) const {
+    std::string S;
+    if (PrefixEventName)
+      S.append(getEventName()).append(": ");
+    S.append((TheEvent == nullptr) ? "OmptAssertEvent" : TheEvent->toString());
+    return S;
+  }
 
 private:
   OmptAssertEvent(const std::string &Name, internal::InternalEvent *IE)
       : Name(Name), TheEvent(IE) {}
   OmptAssertEvent(const OmptAssertEvent &o) = delete;
 
-  static std::string getName(const std::string &Name) {
+  static std::string getName(const std::string &Name,
+                             const char *Caller = __builtin_FUNCTION()) {
     std::string EName = Name;
     if (EName.empty())
-      EName = "Auto Generated";
+      EName.append(Caller).append(" (auto generated)");
+
     return EName;
   }
 

@@ -5,10 +5,9 @@
 
 #include <algorithm>
 #include <cassert>
+#include <iostream>
 #include <set>
 #include <vector>
-
-#include <iostream>
 
 /// General base class for the subscriber/notification pattern in
 /// OmptCallbachHandler. Derived classes need to implement the notify method.
@@ -133,6 +132,51 @@ struct OmptEventAsserter : public OmptAsserter {
 
   /// For now use vector (but do set semantics)
   std::vector<omptest::OmptAssertEvent> Events; // TODO std::unordered_set?
+};
+
+/// Class that reports the occurred events
+class OmptEventReporter : public OmptListener {
+public:
+  OmptEventReporter(std::ostream &OutStream = std::cout)
+      : OutStream(OutStream) {}
+  // Called from the CallbackHandler with a corresponding AssertEvent to which
+  // callback was handled.
+  void notify(omptest::OmptAssertEvent &&AE) override {
+    if (!isActive() ||
+        (SuppressedEvents.find(AE.getEventType()) != SuppressedEvents.end()))
+      return;
+
+    OutStream << AE.toString() << std::endl;
+  }
+
+  /// Control whether this asserter should be considered 'active'.
+  void setActive(bool Enabled) { Active = Enabled; }
+
+  /// Check if this asserter is considered 'active'.
+  bool isActive() { return Active; }
+
+  /// Add the given event type to the set of suppressed events.
+  void suppressEvent(omptest::internal::EventTy EvTy) {
+    SuppressedEvents.insert(EvTy);
+  }
+
+  /// Remove the given event type to the set of suppressed events.
+  void permitEvent(omptest::internal::EventTy EvTy) {
+    SuppressedEvents.erase(EvTy);
+  }
+
+private:
+  bool Active{true};
+  std::ostream &OutStream;
+
+  // For now we add events to the blacklist to suppress their reports by
+  // default. This is necessary because AOMP currently does not handle these
+  // events.
+  std::set<omptest::internal::EventTy> SuppressedEvents{
+      omptest::internal::EventTy::ParallelBegin,
+      omptest::internal::EventTy::ParallelEnd,
+      omptest::internal::EventTy::ThreadBegin,
+      omptest::internal::EventTy::ThreadEnd};
 };
 
 #endif

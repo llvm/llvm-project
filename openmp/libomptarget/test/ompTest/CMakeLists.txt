@@ -1,5 +1,8 @@
-
-
+##===----------------------------------------------------------------------===##
+#
+# Build actual testing library.
+#
+##===----------------------------------------------------------------------===##
 add_llvm_library(omptest
 SHARED
 
@@ -24,7 +27,3 @@ NO_INSTALL_RPATH
 )
 
 target_compile_features(omptest PRIVATE cxx_std_17)
-
-add_executable(OMPTesterTest ./src/main.cpp)
-target_compile_options(OMPTesterTest PRIVATE "-fopenmp")
-target_link_libraries(OMPTesterTest omp omptest)

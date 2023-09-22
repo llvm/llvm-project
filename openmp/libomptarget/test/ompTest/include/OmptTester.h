@@ -42,6 +42,7 @@ struct TestCase {
   Error exec() {
     OmptCallbackHandler::get().subscribe(&SequenceAsserter);
     OmptCallbackHandler::get().subscribe(&EventAsserter);
+    OmptCallbackHandler::get().subscribe(&EventReporter);
 
     Error E;
     E.Fail = false;
@@ -61,6 +62,7 @@ struct TestCase {
   // that would allow them to manipulate the Error or AssertState.
   OmptSequencedAsserter SequenceAsserter;
   OmptEventAsserter EventAsserter;
+  OmptEventReporter EventReporter;
 };
 
 /// A pretty crude test suite abstraction
@@ -154,6 +156,8 @@ struct Runner {
 #define OMPT_EVENT_ASSERT(Event, ...)
 #define OMPT_EVENT_ASSERT_DISABLE() this->EventAsserter.setActive(false);
 #define OMPT_EVENT_ASSERT_ENABLE() this->EventAsserter.setActive(true);
+#define OMPT_EVENT_REPORT_DISABLE() this->EventReporter.setActive(false);
+#define OMPT_EVENT_REPORT_ENABLE() this->EventReporter.setActive(true);
 #define OMPT_SEQ_ASSERT(Event, ...)
 #define OMPT_SEQ_ASSERT_DISABLE() this->SequenceAsserter.setActive(false);
 #define OMPT_SEQ_ASSERT_ENABLE() this->SequenceAsserter.setActive(true);
