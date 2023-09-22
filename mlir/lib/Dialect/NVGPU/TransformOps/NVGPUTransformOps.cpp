@@ -70,7 +70,7 @@ void transform::ApplyNVGPUToNVVMConversionPatternsOp::populatePatterns(
             LLVM::LLVMStructType::getLiteral(type.getContext(), structBody);
         return llvmTypeConverter.convertType(convertedType);
       });
-  llvmTypeConverter.addConversion([&](nvgpu::MBarrierType type) -> Type {
+  llvmTypeConverter.addConversion([&](nvgpu::MBarrierGroupType type) -> Type {
     return llvmTypeConverter.convertType(
         getMBarrierMemrefType(type.getContext(), type));
   });
