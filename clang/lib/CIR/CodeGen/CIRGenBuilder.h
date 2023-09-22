@@ -178,8 +178,8 @@ public:
     if (!structTy)
       structTy = getType<mlir::cir::StructType>(
           members, mlir::StringAttr::get(getContext()),
-          /*body=*/true, packed, mlir::cir::StructType::Struct,
-          /*ast=*/std::nullopt);
+          /*incomplete=*/false, packed, mlir::cir::StructType::Struct,
+          /*ast=*/nullptr);
 
     // Return zero or anonymous constant struct.
     if (isZero)
@@ -199,7 +199,7 @@ public:
     }
 
     if (!ty)
-      ty = getAnonStructTy(members, /*body=*/true, packed);
+      ty = getAnonStructTy(members, /*incomplete=*/false, packed);
 
     auto sTy = ty.dyn_cast<mlir::cir::StructType>();
     assert(sTy && "expected struct type");
@@ -396,9 +396,9 @@ public:
 
   /// Get a CIR anonymous struct type.
   mlir::cir::StructType
-  getAnonStructTy(llvm::ArrayRef<mlir::Type> members, bool body,
+  getAnonStructTy(llvm::ArrayRef<mlir::Type> members, bool incomplete,
                   bool packed = false, const clang::RecordDecl *ast = nullptr) {
-    return getStructTy(members, "", body, packed, ast);
+    return getStructTy(members, "", incomplete, packed, ast);
   }
 
   /// Get a CIR record kind from a AST declaration tag.
@@ -420,7 +420,7 @@ public:
 
   /// Get a CIR named struct type.
   mlir::cir::StructType getStructTy(llvm::ArrayRef<mlir::Type> members,
-                                    llvm::StringRef name, bool body,
+                                    llvm::StringRef name, bool incomplete,
                                     bool packed, const clang::RecordDecl *ast) {
     const auto nameAttr = getStringAttr(name);
     std::optional<mlir::cir::ASTRecordDeclAttr> astAttr = std::nullopt;
@@ -429,8 +429,8 @@ public:
       astAttr = getAttr<mlir::cir::ASTRecordDeclAttr>(ast);
       kind = getRecordKind(ast->getTagKind());
     }
-    return mlir::cir::StructType::get(getContext(), members, nameAttr, body,
-                                      packed, kind, astAttr);
+    return mlir::cir::StructType::get(getContext(), members, nameAttr,
+                                      incomplete, packed, kind, astAttr);
   }
 
   //

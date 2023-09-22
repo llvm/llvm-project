@@ -106,8 +106,6 @@ Type StructType::getLargestMember(const ::mlir::DataLayout &dataLayout) const {
 
 Type StructType::parse(mlir::AsmParser &parser) {
   const auto loc = parser.getCurrentLocation();
-  llvm::SmallVector<mlir::Type> members;
-  bool body = false;
   bool packed = false;
   mlir::cir::ASTRecordDeclAttr ast = nullptr;
   RecordKind kind;
@@ -134,18 +132,16 @@ Type StructType::parse(mlir::AsmParser &parser) {
   if (parser.parseOptionalKeyword("packed").succeeded())
     packed = true;
 
+  // Parse record members or lack thereof.
+  bool incomplete = true;
+  llvm::SmallVector<mlir::Type> members;
   if (parser.parseOptionalKeyword("incomplete").failed()) {
-    body = true;
-    const auto delim = AsmParser::Delimiter::Braces;
-    auto result = parser.parseCommaSeparatedList(delim, [&]() -> ParseResult {
-      mlir::Type ty;
-      if (parser.parseType(ty))
-        return mlir::failure();
-      members.push_back(ty);
-      return mlir::success();
-    });
-
-    if (result.failed())
+    incomplete = false;
+    const auto delimiter = AsmParser::Delimiter::Braces;
+    const auto parseElementFn = [&parser, &members]() {
+      return parser.parseType(members.emplace_back());
+    };
+    if (parser.parseCommaSeparatedList(delimiter, parseElementFn).failed())
       return {};
   }
 
@@ -154,8 +150,8 @@ Type StructType::parse(mlir::AsmParser &parser) {
   if (parser.parseGreater())
     return {};
 
-  return StructType::get(parser.getContext(), members, name, body, packed, kind,
-                         std::nullopt);
+  return StructType::get(parser.getContext(), members, name, incomplete, packed,
+                         kind, std::nullopt);
 }
 
 void StructType::print(mlir::AsmPrinter &printer) const {
@@ -179,7 +175,7 @@ void StructType::print(mlir::AsmPrinter &printer) const {
   if (getPacked())
     printer << "packed ";
 
-  if (!getBody()) {
+  if (isIncomplete()) {
     printer << "incomplete";
   } else {
     printer << "{";
@@ -286,7 +282,7 @@ bool StructType::isPadded(const ::mlir::DataLayout &dataLayout) const {
 
 void StructType::computeSizeAndAlignment(
     const ::mlir::DataLayout &dataLayout) const {
-  assert(!isOpaque() && "Cannot get layout of opaque structs");
+  assert(isComplete() && "Cannot get layout of incomplete structs");
   // Do not recompute.
   if (size || align || padded || largestMember)
     return;

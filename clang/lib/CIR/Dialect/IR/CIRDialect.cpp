@@ -2418,7 +2418,7 @@ static bool isIncompleteType(mlir::Type typ) {
   if (auto ptr = typ.dyn_cast<PointerType>())
     return isIncompleteType(ptr.getPointee());
   else if (auto rec = typ.dyn_cast<StructType>())
-    return !rec.getBody();
+    return rec.isIncomplete();
   return false;
 }
 

@@ -73,7 +73,7 @@ std::string CIRGenTypes::getRecordTypeName(const clang::RecordDecl *recordDecl,
 bool CIRGenTypes::isRecordLayoutComplete(const Type *Ty) const {
   llvm::DenseMap<const Type *, mlir::cir::StructType>::const_iterator I =
       recordDeclTypes.find(Ty);
-  return I != recordDeclTypes.end() && I->second.getBody();
+  return I != recordDeclTypes.end() && I->second.isComplete();
 }
 
 static bool
@@ -167,12 +167,13 @@ mlir::Type CIRGenTypes::convertRecordDeclType(const clang::RecordDecl *RD) {
   // Handle forward decl / incomplete types.
   if (!entry) {
     auto name = getRecordTypeName(RD, "");
-    entry = Builder.getStructTy({}, name, /*body=*/false, /*packed=*/false, RD);
+    entry = Builder.getStructTy({}, name, /*incomplete=*/true, /*packed=*/false,
+                                RD);
     recordDeclTypes[key] = entry;
   }
 
   RD = RD->getDefinition();
-  if (!RD || !RD->isCompleteDefinition() || entry.getBody())
+  if (!RD || !RD->isCompleteDefinition() || entry.isComplete())
     return entry;
 
   // If converting this type would cause us to infinitely loop, don't do it!
