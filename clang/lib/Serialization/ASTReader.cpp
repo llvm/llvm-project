@@ -1491,19 +1491,16 @@ int ASTReader::getSLocEntryID(SourceLocation::UIntTy SLocOffset) {
          "Corrupted global sloc offset map");
   ModuleFile *F = SLocMapI->second;
 
-  std::vector<unsigned> Indices(F->LocalNumSLocEntries);
-  for (unsigned I = 0; I != F->LocalNumSLocEntries; ++I)
-    Indices[I] = I;
-
-  auto It = llvm::upper_bound(Indices, SLocOffset,
-                    [&](SourceLocation::UIntTy Offset, unsigned Index) {
-                      if (F->SLocEntryOffsetLoaded[Index] == -1U) {
-                        auto MaybeEntryOffset = readSLocOffset(F, Index);
-                        assert(MaybeEntryOffset && "Corrupted AST file");
-                        F->SLocEntryOffsetLoaded[Index] = *MaybeEntryOffset;
-                      }
-                      return Offset < F->SLocEntryOffsetLoaded[Index];
-                    });
+  auto It = llvm::upper_bound(
+      llvm::index_range(0, F->LocalNumSLocEntries), SLocOffset,
+      [&](SourceLocation::UIntTy Offset, std::size_t Index) {
+        if (F->SLocEntryOffsetLoaded[Index] == -1U) {
+          auto MaybeEntryOffset = readSLocOffset(F, Index);
+          assert(MaybeEntryOffset && "Corrupted AST file");
+          F->SLocEntryOffsetLoaded[Index] = *MaybeEntryOffset;
+        }
+        return Offset < F->SLocEntryOffsetLoaded[Index];
+      });
   // The iterator points to the first entry with start offset greater than the
   // offset of interest. The previous entry must contain the offset of interest.
   It = std::prev(It);
