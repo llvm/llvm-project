@@ -3521,11 +3521,9 @@ static SDValue lowerBuildVectorOfConstants(SDValue Op, SelectionDAG &DAG,
   // by vrgather.vv.  This covers all indice vectors up to size 4.
   // TODO: We really should be costing the smaller vector.  There are
   // profitable cases this misses.
-  const unsigned ScalarSize =
-    Op.getSimpleValueType().getScalarSizeInBits();
-  if (ScalarSize > 8 && NumElts <= 4) {
+  if (EltBitSize > 8 && NumElts <= 4) {
     unsigned SignBits = DAG.ComputeNumSignBits(Op);
-    if (ScalarSize - SignBits < 8) {
+    if (EltBitSize - SignBits < 8) {
       SDValue Source =
         DAG.getNode(ISD::TRUNCATE, DL, VT.changeVectorElementType(MVT::i8), Op);
       Source = convertToScalableVector(ContainerVT.changeVectorElementType(MVT::i8),
