@@ -107,7 +107,6 @@ Type StructType::getLargestMember(const ::mlir::DataLayout &dataLayout) const {
 Type StructType::parse(mlir::AsmParser &parser) {
   const auto loc = parser.getCurrentLocation();
   bool packed = false;
-  mlir::cir::ASTRecordDeclAttr ast = nullptr;
   RecordKind kind;
 
   if (parser.parseLess())
@@ -145,13 +144,16 @@ Type StructType::parse(mlir::AsmParser &parser) {
       return {};
   }
 
+  // Parse optional AST attribute. This is just a formality for now, since CIR
+  // cannot yet read serialized AST.
+  mlir::cir::ASTRecordDeclAttr ast = nullptr;
   parser.parseOptionalAttribute(ast);
 
   if (parser.parseGreater())
     return {};
 
   return StructType::get(parser.getContext(), members, name, incomplete, packed,
-                         kind, std::nullopt);
+                         kind, nullptr);
 }
 
 void StructType::print(mlir::AsmPrinter &printer) const {
@@ -183,9 +185,9 @@ void StructType::print(mlir::AsmPrinter &printer) const {
     printer << "}";
   }
 
-  if (getAst().has_value()) {
+  if (getAst()) {
     printer << " ";
-    printer.printAttribute(getAst().value());
+    printer.printAttribute(getAst());
   }
 
   printer << '>';
