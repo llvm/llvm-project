@@ -17,9 +17,9 @@ define amdgpu_kernel void @spill_sgprs_to_multiple_vgprs(ptr addrspace(1) %out, 
 ; GCN-NEXT:    s_mov_b32 s95, 0xe8f000
 ; GCN-NEXT:    s_add_u32 s92, s92, s11
 ; GCN-NEXT:    s_addc_u32 s93, s93, 0
-; GCN-NEXT:    ; implicit-def: $vgpr0
-; GCN-NEXT:    ; implicit-def: $vgpr1
-; GCN-NEXT:    ; implicit-def: $vgpr2
+; GCN-NEXT:    ; implicit-def: $vgpr0 : SGPR spill to VGPR lane
+; GCN-NEXT:    ; implicit-def: $vgpr1 : SGPR spill to VGPR lane
+; GCN-NEXT:    ; implicit-def: $vgpr2 : SGPR spill to VGPR lane
 ; GCN-NEXT:    s_load_dword s0, s[4:5], 0xb
 ; GCN-NEXT:    ;;#ASMSTART
 ; GCN-NEXT:    ; def s[4:11]
@@ -488,8 +488,8 @@ define amdgpu_kernel void @split_sgpr_spill_2_vgprs(ptr addrspace(1) %out, i32 %
 ; GCN-NEXT:    s_mov_b32 s55, 0xe8f000
 ; GCN-NEXT:    s_add_u32 s52, s52, s11
 ; GCN-NEXT:    s_addc_u32 s53, s53, 0
-; GCN-NEXT:    ; implicit-def: $vgpr0
-; GCN-NEXT:    ; implicit-def: $vgpr1
+; GCN-NEXT:    ; implicit-def: $vgpr0 : SGPR spill to VGPR lane
+; GCN-NEXT:    ; implicit-def: $vgpr1 : SGPR spill to VGPR lane
 ; GCN-NEXT:    s_load_dword s0, s[4:5], 0xb
 ; GCN-NEXT:    ;;#ASMSTART
 ; GCN-NEXT:    ; def s[4:19]
@@ -738,8 +738,8 @@ define amdgpu_kernel void @no_vgprs_last_sgpr_spill(ptr addrspace(1) %out, i32 %
 ; GCN-NEXT:    s_mov_b32 s55, 0xe8f000
 ; GCN-NEXT:    s_add_u32 s52, s52, s11
 ; GCN-NEXT:    s_addc_u32 s53, s53, 0
-; GCN-NEXT:    ; implicit-def: $vgpr0
-; GCN-NEXT:    ; implicit-def: $vgpr0
+; GCN-NEXT:    ; implicit-def: $vgpr0 : SGPR spill to VGPR lane
+; GCN-NEXT:    ; implicit-def: $vgpr0 : SGPR spill to VGPR lane
 ; GCN-NEXT:    s_load_dword s0, s[4:5], 0xb
 ; GCN-NEXT:    ;;#ASMSTART
 ; GCN-NEXT:    ;;#ASMEND
@@ -989,8 +989,8 @@ define amdgpu_kernel void @no_vgprs_last_sgpr_spill_live_v0(i32 %in) #1 {
 ; GCN-NEXT:    s_mov_b32 s55, 0xe8f000
 ; GCN-NEXT:    s_add_u32 s52, s52, s11
 ; GCN-NEXT:    s_addc_u32 s53, s53, 0
-; GCN-NEXT:    ; implicit-def: $vgpr0
-; GCN-NEXT:    ; implicit-def: $vgpr0
+; GCN-NEXT:    ; implicit-def: $vgpr0 : SGPR spill to VGPR lane
+; GCN-NEXT:    ; implicit-def: $vgpr0 : SGPR spill to VGPR lane
 ; GCN-NEXT:    s_load_dword s0, s[4:5], 0x9
 ; GCN-NEXT:    ;;#ASMSTART
 ; GCN-NEXT:    ;;#ASMEND

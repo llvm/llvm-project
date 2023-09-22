@@ -143,7 +143,7 @@ define float @mubuf_vgpr(ptr addrspace(8) %i, i32 %c) #0 {
 ; W64-O0-NEXT:    buffer_store_dword v0, off, s[0:3], s32 offset:32 ; 4-byte Folded Spill
 ; W64-O0-NEXT:    buffer_store_dword v1, off, s[0:3], s32 offset:36 ; 4-byte Folded Spill
 ; W64-O0-NEXT:    s_mov_b64 exec, s[4:5]
-; W64-O0-NEXT:    ; implicit-def: $vgpr5
+; W64-O0-NEXT:    ; implicit-def: $vgpr5 : SGPR spill to VGPR lane
 ; W64-O0-NEXT:    buffer_store_dword v4, off, s[0:3], s32 offset:24 ; 4-byte Folded Spill
 ; W64-O0-NEXT:    buffer_store_dword v3, off, s[0:3], s32 offset:20 ; 4-byte Folded Spill
 ; W64-O0-NEXT:    v_mov_b32_e32 v6, v2
@@ -511,7 +511,7 @@ define void @mubuf_vgpr_adjacent_in_block(ptr addrspace(8) %i, ptr addrspace(8) 
 ; W64-O0-NEXT:    buffer_store_dword v0, off, s[0:3], s32 offset:72 ; 4-byte Folded Spill
 ; W64-O0-NEXT:    buffer_store_dword v1, off, s[0:3], s32 offset:76 ; 4-byte Folded Spill
 ; W64-O0-NEXT:    s_mov_b64 exec, s[4:5]
-; W64-O0-NEXT:    ; implicit-def: $vgpr13
+; W64-O0-NEXT:    ; implicit-def: $vgpr13 : SGPR spill to VGPR lane
 ; W64-O0-NEXT:    buffer_store_dword v11, off, s[0:3], s32 offset:56 ; 4-byte Folded Spill
 ; W64-O0-NEXT:    buffer_store_dword v9, off, s[0:3], s32 offset:52 ; 4-byte Folded Spill
 ; W64-O0-NEXT:    buffer_store_dword v8, off, s[0:3], s32 offset:60 ; 4-byte Folded Spill
@@ -1058,7 +1058,7 @@ define void @mubuf_vgpr_outside_entry(ptr addrspace(8) %i, ptr addrspace(8) %j, 
 ; W64-O0-NEXT:    buffer_store_dword v0, off, s[0:3], s32 offset:100 ; 4-byte Folded Spill
 ; W64-O0-NEXT:    buffer_store_dword v1, off, s[0:3], s32 offset:104 ; 4-byte Folded Spill
 ; W64-O0-NEXT:    s_mov_b64 exec, s[4:5]
-; W64-O0-NEXT:    ; implicit-def: $vgpr8
+; W64-O0-NEXT:    ; implicit-def: $vgpr8 : SGPR spill to VGPR lane
 ; W64-O0-NEXT:    buffer_store_dword v31, off, s[0:3], s32 offset:64 ; 4-byte Folded Spill
 ; W64-O0-NEXT:    buffer_store_dword v11, off, s[0:3], s32 offset:48 ; 4-byte Folded Spill
 ; W64-O0-NEXT:    buffer_store_dword v6, off, s[0:3], s32 offset:60 ; 4-byte Folded Spill
