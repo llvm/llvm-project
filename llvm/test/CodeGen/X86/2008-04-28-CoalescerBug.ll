@@ -15,7 +15,7 @@ define void @t(ptr %depth, ptr %bop, i32 %mode) nounwind  {
 ; CHECK-NEXT:    je LBB0_3
 ; CHECK-NEXT:  ## %bb.1: ## %entry
 ; CHECK-NEXT:    cmpl $1, %edx
-; CHECK-NEXT:    jne LBB0_10
+; CHECK-NEXT:    jne LBB0_9
 ; CHECK-NEXT:    .p2align 4, 0x90
 ; CHECK-NEXT:  LBB0_2: ## %bb2898.us
 ; CHECK-NEXT:    ## =>This Inner Loop Header: Depth=1
@@ -26,15 +26,12 @@ define void @t(ptr %depth, ptr %bop, i32 %mode) nounwind  {
 ; CHECK-NEXT:  LBB0_4: ## %bb13088
 ; CHECK-NEXT:    ## =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    testb %al, %al
-; CHECK-NEXT:    jne LBB0_5
-; CHECK-NEXT:  ## %bb.6: ## %bb13101
+; CHECK-NEXT:    movl $65535, %ecx ## imm = 0xFFFF
+; CHECK-NEXT:    jne LBB0_6
+; CHECK-NEXT:  ## %bb.5: ## %bb13101
 ; CHECK-NEXT:    ## in Loop: Header=BB0_4 Depth=1
 ; CHECK-NEXT:    xorl %ecx, %ecx
-; CHECK-NEXT:    jmp LBB0_7
-; CHECK-NEXT:    .p2align 4, 0x90
-; CHECK-NEXT:  LBB0_5: ## in Loop: Header=BB0_4 Depth=1
-; CHECK-NEXT:    movl $65535, %ecx ## imm = 0xFFFF
-; CHECK-NEXT:  LBB0_7: ## %bb13107
+; CHECK-NEXT:  LBB0_6: ## %bb13107
 ; CHECK-NEXT:    ## in Loop: Header=BB0_4 Depth=1
 ; CHECK-NEXT:    movl %ecx, %edx
 ; CHECK-NEXT:    shll $16, %edx
@@ -44,11 +41,11 @@ define void @t(ptr %depth, ptr %bop, i32 %mode) nounwind  {
 ; CHECK-NEXT:    subl %edx, %ecx
 ; CHECK-NEXT:    testw %cx, %cx
 ; CHECK-NEXT:    je LBB0_4
-; CHECK-NEXT:  ## %bb.8: ## %bb13236
+; CHECK-NEXT:  ## %bb.7: ## %bb13236
 ; CHECK-NEXT:    ## in Loop: Header=BB0_4 Depth=1
 ; CHECK-NEXT:    testb %al, %al
 ; CHECK-NEXT:    jne LBB0_4
-; CHECK-NEXT:  ## %bb.9: ## %bb13572
+; CHECK-NEXT:  ## %bb.8: ## %bb13572
 ; CHECK-NEXT:    ## in Loop: Header=BB0_4 Depth=1
 ; CHECK-NEXT:    movzwl %cx, %ecx
 ; CHECK-NEXT:    movl %ecx, %edx
@@ -58,7 +55,7 @@ define void @t(ptr %depth, ptr %bop, i32 %mode) nounwind  {
 ; CHECK-NEXT:    shrl $16, %edx
 ; CHECK-NEXT:    movw %dx, 0
 ; CHECK-NEXT:    jmp LBB0_4
-; CHECK-NEXT:  LBB0_10: ## %return
+; CHECK-NEXT:  LBB0_9: ## %return
 ; CHECK-NEXT:    retq
 entry:
 	switch i32 %mode, label %return [
