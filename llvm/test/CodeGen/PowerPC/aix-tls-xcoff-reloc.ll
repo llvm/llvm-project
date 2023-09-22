@@ -34,27 +34,27 @@ entry:
 ; RELOC-NEXT:   Section (index: 1) .text {
 ; RELOC-NEXT:   Relocation {
 ; RELOC-NEXT:     Virtual Address: 0x12
-; RELOC-NEXT:     Symbol: TIUninit ([[#NFA+25]])
+; RELOC-NEXT:     Symbol: _$TLSML ([[#NFA+25]])
 ; RELOC-NEXT:     IsSigned: No
 ; RELOC-NEXT:     FixupBitValue: 0
 ; RELOC-NEXT:     Length: 16
 ; RELOC-NEXT:     Type: R_TOC (0x3)
 ; RELOC-NEXT:   }
 ; RELOC-NEXT:   Relocation {
-; RELOC-NEXT:     Virtual Address: 0x16
-; RELOC-NEXT:     Symbol: _$TLSML ([[#NFA+27]])
-; RELOC-NEXT:     IsSigned: No
-; RELOC-NEXT:     FixupBitValue: 0
-; RELOC-NEXT:     Length: 16
-; RELOC-NEXT:     Type: R_TOC (0x3)
-; RELOC-NEXT:   }
-; RELOC-NEXT:   Relocation {
-; RELOC-NEXT:     Virtual Address: 0x18
+; RELOC-NEXT:     Virtual Address: 0x14
 ; RELOC-NEXT:     Symbol: .__tls_get_mod ([[#NFA+1]])
 ; RELOC-NEXT:     IsSigned: No
 ; RELOC-NEXT:     FixupBitValue: 0
 ; RELOC-NEXT:     Length: 26
 ; RELOC-NEXT:     Type: R_RBA (0x18)
+; RELOC-NEXT:   }
+; RELOC-NEXT:   Relocation {
+; RELOC-NEXT:     Virtual Address: 0x1A
+; RELOC-NEXT:     Symbol: TIUninit ([[#NFA+27]])
+; RELOC-NEXT:     IsSigned: No
+; RELOC-NEXT:     FixupBitValue: 0
+; RELOC-NEXT:     Length: 16
+; RELOC-NEXT:     Type: R_TOC (0x3)
 ; RELOC-NEXT:   }
 ; RELOC-NEXT:   Relocation {
 ; RELOC-NEXT:     Virtual Address: 0x4A
@@ -124,19 +124,19 @@ entry:
 ; RELOC-NEXT: }
 ; RELOC-NEXT: Relocation {
 ; RELOC-NEXT:   Virtual Address: 0x98
+; RELOC-NEXT:   Symbol: _$TLSML ([[#NFA+25]])
+; RELOC-NEXT:   IsSigned: No
+; RELOC-NEXT:   FixupBitValue: 0
+; RELOC-NEXT:   Length: 32
+; RELOC-NEXT:   Type: R_TLSML (0x25)
+; RELOC-NEXT: }
+; RELOC-NEXT: Relocation {
+; RELOC-NEXT:   Virtual Address: 0x9C
 ; RELOC-NEXT:   Symbol: TIUninit ([[#NFA+39]])
 ; RELOC-NEXT:   IsSigned: No
 ; RELOC-NEXT:   FixupBitValue: 0
 ; RELOC-NEXT:   Length: 32
 ; RELOC-NEXT:   Type: R_TLS_LD (0x22)
-; RELOC-NEXT: }
-; RELOC-NEXT: Relocation {
-; RELOC-NEXT:   Virtual Address: 0x9C
-; RELOC-NEXT:   Symbol: _$TLSML ([[#NFA+27]])
-; RELOC-NEXT:   IsSigned: No
-; RELOC-NEXT:   FixupBitValue: 0
-; RELOC-NEXT:   Length: 32
-; RELOC-NEXT:   Type: R_TLSML (0x25)
 ; RELOC-NEXT: }
 ; RELOC-NEXT: Relocation {
 ; RELOC-NEXT:   Virtual Address: 0xA0
@@ -421,7 +421,7 @@ entry:
 ; SYM-NEXT:   }
 ; SYM-NEXT:   Symbol {
 ; SYM-NEXT:     Index: [[#NFA+25]]
-; SYM-NEXT:     Name: TIUninit
+; SYM-NEXT:     Name: _$TLSML
 ; SYM-NEXT:     Value (RelocatableAddress): 0x98
 ; SYM-NEXT:     Section: .data
 ; SYM-NEXT:     Type: 0x0
@@ -441,7 +441,7 @@ entry:
 ; SYM-NEXT:   }
 ; SYM-NEXT:   Symbol {
 ; SYM-NEXT:     Index: [[#NFA+27]]
-; SYM-NEXT:     Name: _$TLSML
+; SYM-NEXT:     Name: TIUninit
 ; SYM-NEXT:     Value (RelocatableAddress): 0x9C
 ; SYM-NEXT:     Section: .data
 ; SYM-NEXT:     Type: 0x0
@@ -588,13 +588,13 @@ entry:
 ; DIS-NEXT:                                      stwu 1, -32(1)
 ; DIS-NEXT:                                      stw 0, 40(1)
 ; DIS-NEXT:                                      mr 6, 3
-; DIS-NEXT: [[#%x, ADDR:]]: {{.*}}               lwz 7, 0(2)
-; DIS-NEXT: {{0*}}[[#ADDR + 2]]: R_TOC (idx: [[#NFA+25]]) TIUninit[TC]
-; DIS-NEXT: [[#%x, ADDR:]]: {{.*}}               lwz 3, 4(2)
-; DIS-NEXT: {{0*}}[[#ADDR + 2]]: R_TOC (idx: [[#NFA+27]]) _$TLSML[TC]
+; DIS-NEXT: [[#%x, ADDR:]]: {{.*}}               lwz 3, 0(2)
+; DIS-NEXT: {{0*}}[[#ADDR + 2]]: R_TOC (idx: [[#NFA+25]]) _$TLSML[TC]
 ; DIS-NEXT: [[#%x, ADDR:]]: {{.*}}               bla 0x0
 ; DIS-NEXT: {{0*}}[[#ADDR]]: R_RBA (idx: [[#NFA+1]]) .__tls_get_mod[PR]
-; DIS-NEXT:                                      add 3, 3, 7
+; DIS-NEXT: [[#%x, ADDR:]]: {{.*}}               lwz 4, 4(2)
+; DIS-NEXT: {{0*}}[[#ADDR + 2]]: R_TOC (idx: [[#NFA+27]]) TIUninit[TC]
+; DIS-NEXT:                                      add 3, 3, 4
 ; DIS-NEXT:                                      stw 6, 0(3)
 ; DIS-NEXT:                                      addi 1, 1, 32
 ; DIS-NEXT:                                      lwz 0, 8(1)
@@ -637,12 +637,12 @@ entry:
 ; DIS-NEXT:       90: 00 00 00 98
 ; DIS-NEXT: 00000090: R_POS (idx: [[#NFA+23]]) TOC[TC0]
 ; DIS-NEXT:       94: 00 00 00 00
-; DIS:      00000098  (idx: [[#NFA+25]]) TIUninit[TC]:
+; DIS:      00000098 (idx: [[#NFA+25]]) _$TLSML[TC]:
 ; DIS-NEXT:       98: 00 00 00 00
-; DIS-NEXT: 00000098: R_TLS_LD (idx: [[#NFA+39]]) TIUninit[UL]
-; DIS:      0000009c (idx: [[#NFA+27]]) _$TLSML[TC]:
+; DIS-NEXT: 00000098: R_TLSML (idx: [[#NFA+25]]) _$TLSML[TC]
+; DIS:      0000009c  (idx: [[#NFA+27]]) TIUninit[TC]:
 ; DIS-NEXT:       9c: 00 00 00 00
-; DIS-NEXT: 0000009c: R_TLSML (idx: [[#NFA+27]]) _$TLSML[TC]
+; DIS-NEXT: 0000009c: R_TLS_LD (idx: [[#NFA+39]]) TIUninit[UL]
 ; DIS:      000000a0  (idx: [[#NFA+29]]) .TGInit[TC]:
 ; DIS-NEXT:       a0: 00 00 00 00
 ; DIS-NEXT: 000000a0: R_TLSM (idx: [[#NFA+37]]) TGInit

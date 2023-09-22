@@ -160,37 +160,61 @@ protected:
         if (IsAIX) {
           if (MI.getOpcode() == PPC::TLSLDAIX8 ||
               MI.getOpcode() == PPC::TLSLDAIX) {
-            // For Local-Dynamic, the module handle is copied in r3. The copy is
-            // followed by GETtlsMOD32AIX/GETtlsMOD64AIX.
+            // For Local-Dynamic, need to swap the position of VarOffsetInst and
+            // MI, so that VarOffsetInst can use R/X4 to reduce register
+            // pressure.
             const PPCSubtarget &Subtarget =
                 MBB.getParent()->getSubtarget<PPCSubtarget>();
             bool IsLargeModel =
                 Subtarget.getTargetMachine().getCodeModel() == CodeModel::Large;
-            Register ModuleHandleHReg;
             unsigned LDTocOp =
                 Is64Bit ? (IsLargeModel ? PPC::LDtocL : PPC::LDtoc)
                         : (IsLargeModel ? PPC::LWZtocL : PPC::LWZtoc);
+            assert(RegInfo.hasOneDef(MI.getOperand(1).getReg()) &&
+                   "TLSLDAIX expects single def of its operand.");
+            MachineInstr *VarOffsetInst =
+                RegInfo.getOneDef(MI.getOperand(1).getReg())->getParent();
+            assert(VarOffsetInst->getOpcode() == LDTocOp &&
+                   "Unexpected LDTocOp.");
+            if (IsLargeModel) {
+              // Get the ADDIS instruction when using large model.
+              assert(RegInfo.hasOneDef(VarOffsetInst->getOperand(2).getReg()) &&
+                     "LDTocOp expects single def of its operand.");
+              VarOffsetInst =
+                  RegInfo.getOneDef(VarOffsetInst->getOperand(2).getReg())
+                      ->getParent();
+              assert(VarOffsetInst->getOpcode() ==
+                         (Is64Bit ? PPC::ADDIStocHA8 : PPC::ADDIStocHA) &&
+                     "Unexpected ADDIStocHA.");
+              // FIXME: machine-scheduler could schedule ADDIStocHA ahead of
+              // GETtlsMODAIX, and still has to use extra register.
+            }
+            Register ModuleHandleHReg;
             if (IsLargeModel) {
               ModuleHandleHReg = RegInfo.createVirtualRegister(GPRNoZero);
-              BuildMI(MBB, I, DL,
+              BuildMI(MBB, *VarOffsetInst, DL,
                       TII->get(Is64Bit ? PPC::ADDIStocHA8 : PPC::ADDIStocHA),
                       ModuleHandleHReg)
                   .addReg(Subtarget.getTOCPointerRegister())
                   .addExternalSymbol("_$TLSML[TC]", PPCII::MO_TLSLD_FLAG);
             }
             Register MHReg = RegInfo.createVirtualRegister(GPRNoZero);
-            BuildMI(MBB, I, DL, TII->get(LDTocOp), MHReg)
+            BuildMI(MBB, *VarOffsetInst, DL, TII->get(LDTocOp), MHReg)
                 .addExternalSymbol("_$TLSML[TC]", PPCII::MO_TLSLD_FLAG)
                 .addReg(IsLargeModel
                             ? ModuleHandleHReg
                             : Register(Subtarget.getTOCPointerRegister()));
-            BuildMI(MBB, I, DL, TII->get(TargetOpcode::COPY), GPR3)
+            // The module handle is copied in r3.
+            BuildMI(MBB, *VarOffsetInst, DL, TII->get(TargetOpcode::COPY), GPR3)
                 .addReg(MHReg);
             // The call to .__tls_get_mod.
-            BuildMI(MBB, I, DL, TII->get(Opc2), GPR3).addReg(GPR3);
+            BuildMI(MBB, *VarOffsetInst, DL, TII->get(Opc2), GPR3).addReg(GPR3);
+            // Copy VarOffset to R/X4
+            BuildMI(MBB, I, DL, TII->get(TargetOpcode::COPY), GPR4)
+                .addReg(MI.getOperand(1).getReg());
             BuildMI(MBB, I, DL, TII->get(Is64Bit ? PPC::ADD8 : PPC::ADD4), GPR3)
                 .addReg(GPR3)
-                .addReg(MI.getOperand(1).getReg());
+                .addReg(GPR4);
           } else {
             // For Global-Dynamic, the variable offset and region handle are
             // copied in r4 and r3. The copies are followed by
