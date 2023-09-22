@@ -2666,7 +2666,9 @@ SDValue SITargetLowering::LowerFormalArguments(
   if (!IsKernel) {
     CCAssignFn *AssignFn = CCAssignFnForCall(CallConv, isVarArg);
     if (!IsGraphics && !IsKernel && !Subtarget->enableFlatScratch()) {
-      CCInfo.AllocateRegBlock(ArrayRef<MCPhysReg>{AMDGPU::SGPR0, AMDGPU::SGPR1, AMDGPU::SGPR2, AMDGPU::SGPR3}, 4);
+      CCInfo.AllocateRegBlock(ArrayRef<MCPhysReg>{AMDGPU::SGPR0, AMDGPU::SGPR1,
+                                                  AMDGPU::SGPR2, AMDGPU::SGPR3},
+                              4);
     }
     CCInfo.AnalyzeFormalArguments(Splits, AssignFn);
   }
