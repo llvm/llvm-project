@@ -235,9 +235,8 @@ define i1 @ule_signed_pos_constant_1(i8 %a, i8 %b) {
 ; CHECK-NEXT:    call void @llvm.assume(i1 [[B_NON_NEG]])
 ; CHECK-NEXT:    [[A_ULE_B:%.*]] = icmp ule i8 [[A:%.*]], [[B]]
 ; CHECK-NEXT:    call void @llvm.assume(i1 [[A_ULE_B]])
-; CHECK-NEXT:    [[SLE_TEST:%.*]] = icmp sle i8 [[A]], [[B]]
 ; CHECK-NEXT:    [[SLT_TEST:%.*]] = icmp slt i8 [[A]], [[B]]
-; CHECK-NEXT:    [[RESULT_XOR:%.*]] = xor i1 [[SLE_TEST]], [[SLT_TEST]]
+; CHECK-NEXT:    [[RESULT_XOR:%.*]] = xor i1 true, [[SLT_TEST]]
 ; CHECK-NEXT:    ret i1 [[RESULT_XOR]]
 ;
   %b_non_neg = icmp sge i8 %b, 0
@@ -257,11 +256,8 @@ define i1 @ule_signed_pos_constant_2(i8 %a) {
 ; CHECK-NEXT:    [[A_ULT_4:%.*]] = icmp ule i8 [[A:%.*]], 4
 ; CHECK-NEXT:    br i1 [[A_ULT_4]], label [[THEN:%.*]], label [[ELSE:%.*]]
 ; CHECK:       then:
-; CHECK-NEXT:    [[T_0:%.*]] = icmp sge i8 [[A]], 0
-; CHECK-NEXT:    [[T_1:%.*]] = icmp sle i8 [[A]], 4
-; CHECK-NEXT:    [[RES_1:%.*]] = xor i1 [[T_0]], [[T_1]]
-; CHECK-NEXT:    [[C_0:%.*]] = icmp sle i8 [[A]], 5
-; CHECK-NEXT:    [[RES_2:%.*]] = xor i1 [[RES_1]], [[C_0]]
+; CHECK-NEXT:    [[RES_1:%.*]] = xor i1 true, true
+; CHECK-NEXT:    [[RES_2:%.*]] = xor i1 [[RES_1]], true
 ; CHECK-NEXT:    ret i1 [[RES_2]]
 ; CHECK:       else:
 ; CHECK-NEXT:    [[C_2:%.*]] = icmp sge i8 [[A]], 0
@@ -300,8 +296,7 @@ define i1 @uge_assumed_positive_values(i8 %a, i8 %b) {
 ; CHECK-NEXT:    call void @llvm.assume(i1 [[A_NON_NEG]])
 ; CHECK-NEXT:    [[A_UGT_B:%.*]] = icmp uge i8 [[A]], [[B:%.*]]
 ; CHECK-NEXT:    call void @llvm.assume(i1 [[A_UGT_B]])
-; CHECK-NEXT:    [[RESULT:%.*]] = icmp sge i8 [[A]], [[B]]
-; CHECK-NEXT:    ret i1 [[RESULT]]
+; CHECK-NEXT:    ret i1 true
 ;
   %a_non_neg = icmp sge i8 %a, 0
   call void @llvm.assume(i1 %a_non_neg)
@@ -319,8 +314,7 @@ define i1 @ugt_assumed_positive_values(i8 %a, i8 %b) {
 ; CHECK-NEXT:    call void @llvm.assume(i1 [[A_NON_NEG]])
 ; CHECK-NEXT:    [[A_UGT_B:%.*]] = icmp ugt i8 [[A]], [[B:%.*]]
 ; CHECK-NEXT:    call void @llvm.assume(i1 [[A_UGT_B]])
-; CHECK-NEXT:    [[RESULT:%.*]] = icmp sgt i8 [[A]], [[B]]
-; CHECK-NEXT:    ret i1 [[RESULT]]
+; CHECK-NEXT:    ret i1 true
 ;
   %a_non_neg = icmp sge i8 %a, 0
   call void @llvm.assume(i1 %a_non_neg)
