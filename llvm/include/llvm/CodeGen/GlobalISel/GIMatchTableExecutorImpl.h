@@ -52,24 +52,12 @@ bool GIMatchTableExecutor::executeMatchTable(
     const PredicateBitset &AvailableFeatures,
     CodeGenCoverage *CoverageInfo) const {
 
-  // Setup observer
-  GIMatchTableObserver MTObserver;
-  GISelObserverWrapper Observer(&MTObserver);
-  if (auto *CurObs = Builder.getObserver())
-    Observer.addObserver(CurObs);
-
-  // TODO: Set MF delegate?
-
-  // Setup builder.
-  auto RestoreOldObserver = Builder.setTemporaryChangeObserver(Observer);
 
   uint64_t CurrentIdx = 0;
   SmallVector<uint64_t, 4> OnFailResumeAt;
+  NewMIVector OutMIs;
 
-  // We also record MachineInstrs manually in this vector so opcodes can address
-  // them.
-  SmallVector<MachineInstrBuilder, 4> OutMIs;
-
+  GISelChangeObserver* Observer = Builder.getObserver();
   // Bypass the flag check on the instruction, and only look at the MCInstrDesc.
   bool NoFPException = !State.MIs[0]->getDesc().mayRaiseFPException();
 
@@ -88,16 +76,18 @@ bool GIMatchTableExecutor::executeMatchTable(
     return RejectAndResume;
   };
 
-  auto propagateFlags = [&]() {
-    for (auto *MI : MTObserver.CreatedInsts) {
+  const auto propagateFlags = [&]() {
+    for (auto MIB : OutMIs) {
       // Set the NoFPExcept flag when no original matched instruction could
       // raise an FP exception, but the new instruction potentially might.
       uint16_t MIBFlags = Flags;
-      if (NoFPException && MI->mayRaiseFPException())
+      if (NoFPException && MIB->mayRaiseFPException())
         MIBFlags |= MachineInstr::NoFPExcept;
-      Observer.changingInstr(*MI);
-      MI->setFlags(MIBFlags);
-      Observer.changedInstr(*MI);
+      if (Observer)
+        Observer->changingInstr(*MIB);
+      MIB.setMIFlags(MIBFlags);
+      if (Observer)
+        Observer->changedInstr(*MIB);
     }
 
     return true;
@@ -917,10 +907,14 @@ bool GIMatchTableExecutor::executeMatchTable(
       if (NewInsnID >= OutMIs.size())
         OutMIs.resize(NewInsnID + 1);
 
-      OutMIs[NewInsnID] = MachineInstrBuilder(*State.MIs[OldInsnID]->getMF(),
-                                              State.MIs[OldInsnID]);
+      MachineInstr* OldMI = State.MIs[OldInsnID];
+      if(Observer)
+        Observer->changingInstr(*OldMI);
+      OutMIs[NewInsnID] = MachineInstrBuilder(*OldMI->getMF(),
+                                              OldMI);
       OutMIs[NewInsnID]->setDesc(TII.get(NewOpcode));
-      MTObserver.CreatedInsts.insert(OutMIs[NewInsnID]);
+      if(Observer)
+        Observer->changedInstr(*OldMI);
       DEBUG_WITH_TYPE(TgtExecutor::getName(),
                       dbgs() << CurrentIdx << ": GIR_MutateOpcode(OutMIs["
                              << NewInsnID << "], MIs[" << OldInsnID << "], "
@@ -1262,7 +1256,8 @@ bool GIMatchTableExecutor::executeMatchTable(
       // pointer in the builder.
       if (Builder.getInsertPt() == MI)
         Builder.setInsertPt(*MI->getParent(), ++MI->getIterator());
-      Observer.erasingInstr(*MI);
+      if(Observer)
+        Observer->erasingInstr(*MI);
       MI->eraseFromParent();
       break;
     }
@@ -1291,9 +1286,11 @@ bool GIMatchTableExecutor::executeMatchTable(
 
       Register Old = State.MIs[OldInsnID]->getOperand(OldOpIdx).getReg();
       Register New = State.MIs[NewInsnID]->getOperand(NewOpIdx).getReg();
-      Observer.changingAllUsesOfReg(MRI, Old);
+      if (Observer)
+        Observer->changingAllUsesOfReg(MRI, Old);
       MRI.replaceRegWith(Old, New);
-      Observer.finishedChangingAllUsesOfReg();
+      if (Observer)
+        Observer->finishedChangingAllUsesOfReg();
       break;
     }
     case GIR_ReplaceRegWithTempReg: {
@@ -1308,9 +1305,11 @@ bool GIMatchTableExecutor::executeMatchTable(
 
       Register Old = State.MIs[OldInsnID]->getOperand(OldOpIdx).getReg();
       Register New = State.TempRegisters[TempRegID];
-      Observer.changingAllUsesOfReg(MRI, Old);
+      if (Observer)
+        Observer->changingAllUsesOfReg(MRI, Old);
       MRI.replaceRegWith(Old, New);
-      Observer.finishedChangingAllUsesOfReg();
+      if (Observer)
+        Observer->finishedChangingAllUsesOfReg();
       break;
     }
     case GIR_Coverage: {

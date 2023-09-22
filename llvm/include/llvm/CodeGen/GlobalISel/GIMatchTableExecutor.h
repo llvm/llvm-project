@@ -18,7 +18,6 @@
 #include "llvm/ADT/Bitset.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/SmallVector.h"
-#include "llvm/CodeGen/GlobalISel/GISelChangeObserver.h"
 #include "llvm/CodeGen/GlobalISel/Utils.h"
 #include "llvm/CodeGen/LowLevelType.h"
 #include "llvm/CodeGen/MachineFunction.h"
@@ -503,25 +502,10 @@ public:
   }
 
 protected:
-  /// Observer used by \ref executeMatchTable to record all instructions created
-  /// by the rule.
-  class GIMatchTableObserver : public GISelChangeObserver {
-  public:
-    virtual ~GIMatchTableObserver();
-
-    void erasingInstr(MachineInstr &MI) override { CreatedInsts.erase(&MI); }
-    void createdInstr(MachineInstr &MI) override { CreatedInsts.insert(&MI); }
-    void changingInstr(MachineInstr &MI) override {}
-    void changedInstr(MachineInstr &MI) override {}
-
-    // Keeps track of all instructions that have been created when applying a
-    // rule.
-    SmallDenseSet<MachineInstr *, 4> CreatedInsts;
-  };
-
   using ComplexRendererFns =
       std::optional<SmallVector<std::function<void(MachineInstrBuilder &)>, 4>>;
   using RecordedMIVector = SmallVector<MachineInstr *, 4>;
+  using NewMIVector = SmallVector<MachineInstrBuilder, 4>;
 
   struct MatcherState {
     std::vector<ComplexRendererFns::value_type> Renderers;
@@ -609,7 +593,7 @@ protected:
   }
 
   virtual void runCustomAction(unsigned, const MatcherState &State,
-                               ArrayRef<MachineInstrBuilder> OutMIs) const {
+                               NewMIVector &OutMIs) const {
     llvm_unreachable("Subclass does not implement runCustomAction!");
   }
 

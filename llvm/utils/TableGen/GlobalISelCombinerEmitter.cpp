@@ -3550,7 +3550,7 @@ void GICombinerEmitter::emitRunCustomAction(raw_ostream &OS) {
 
   OS << "void " << getClassName()
      << "::runCustomAction(unsigned ApplyID, const MatcherState &State, "
-        "ArrayRef<MachineInstrBuilder> OutMIs) const "
+        "NewMIVector &OutMIs) const "
         "{\n";
   if (!ApplyCode.empty()) {
     OS << "  switch(ApplyID) {\n";

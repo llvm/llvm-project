@@ -111,7 +111,7 @@ def MyCombiner: GICombiner<"GenMyCombiner", [
 // CHECK-NEXT:   GICXXCustomAction_CombineApplyGICombiner1,
 // CHECK-NEXT:   GICXXCustomAction_CombineApplyGICombiner2,
 // CHECK-NEXT: };
-// CHECK-NEXT: void GenMyCombiner::runCustomAction(unsigned ApplyID, const MatcherState &State, ArrayRef<MachineInstrBuilder> OutMIs) const {
+// CHECK-NEXT: void GenMyCombiner::runCustomAction(unsigned ApplyID, const MatcherState &State, NewMIVector &OutMIs) const {
 // CHECK-NEXT:   switch(ApplyID) {
 // CHECK-NEXT:   case GICXXCustomAction_CombineApplyGICombiner0:{
 // CHECK-NEXT:     APPLY
