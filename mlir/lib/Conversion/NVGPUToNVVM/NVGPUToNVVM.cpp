@@ -1189,7 +1189,6 @@ struct NVGPUWarpgroupMmaOpLowering
                             int m, int n, int k, Type resultStructType,
                             Value inout, Value descriptorA,
                             Value descriptorB) const {
-    TypeRange resultTypes = {resultStructType};
     auto shape = NVVM::MMAShapeAttr::get(ctx, m, n, k);
     auto scaleOut = NVVM::WGMMAScaleOutAttr::get(ctx, NVVM::WGMMAScaleOut::one);
     auto scaleIn = NVVM::WGMMAScaleInAttr::get(ctx, NVVM::WGMMAScaleIn::one);
@@ -1200,8 +1199,8 @@ struct NVGPUWarpgroupMmaOpLowering
     auto overflow =
         NVVM::MMAIntOverflowAttr::get(ctx, NVVM::MMAIntOverflow::wrapped);
     Value res = rewriter.create<NVVM::WgmmaMmaAsyncOp>(
-        loc, resultTypes, inout, descriptorA, descriptorB, shape, itype, itype,
-        scaleOut, scaleIn, scaleIn, layoutA, layoutB, overflow);
+        loc, resultStructType, inout, descriptorA, descriptorB, shape, itype,
+        itype, scaleOut, scaleIn, scaleIn, layoutA, layoutB, overflow);
     return res;
   }
 
