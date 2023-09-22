@@ -882,9 +882,7 @@ def SBWriteResGroup54 : SchedWriteRes<[SBPort23]> {
   let NumMicroOps = 1;
   let ReleaseAtCycles = [1];
 }
-def: InstRW<[SBWriteResGroup54], (instrs VBROADCASTSDYrm,
-                                         VBROADCASTSSYrm,
-                                         VMOVDDUPYrm,
+def: InstRW<[SBWriteResGroup54], (instrs VMOVDDUPYrm,
                                          VMOVSHDUPYrm,
                                          VMOVSLDUPYrm)>;
 

@@ -1095,9 +1095,9 @@ vzeroupper
 # CHECK-NEXT:  2      2     1.00                        vblendvps	%ymm3, %ymm0, %ymm1, %ymm2
 # CHECK-NEXT:  3      9     1.00    *                   vblendvps	%ymm3, (%rax), %ymm1, %ymm2
 # CHECK-NEXT:  2      7     1.00    *                   vbroadcastf128	(%rax), %ymm2
-# CHECK-NEXT:  1      7     0.50    *                   vbroadcastsd	(%rax), %ymm2
+# CHECK-NEXT:  2      7     1.00    *                   vbroadcastsd	(%rax), %ymm2
 # CHECK-NEXT:  1      6     0.50    *                   vbroadcastss	(%rax), %xmm2
-# CHECK-NEXT:  1      7     0.50    *                   vbroadcastss	(%rax), %ymm2
+# CHECK-NEXT:  2      7     1.00    *                   vbroadcastss	(%rax), %ymm2
 # CHECK-NEXT:  1      3     1.00                        vcmpeqpd	%xmm0, %xmm1, %xmm2
 # CHECK-NEXT:  2      9     1.00    *                   vcmpeqpd	(%rax), %xmm1, %xmm2
 # CHECK-NEXT:  1      3     1.00                        vcmpeqpd	%ymm0, %ymm1, %ymm2
@@ -1734,7 +1734,7 @@ vzeroupper
 
 # CHECK:      Resource pressure per iteration:
 # CHECK-NEXT: [0]    [1]    [2]    [3]    [4]    [5]    [6.0]  [6.1]
-# CHECK-NEXT:  -     572.00 248.50 319.00 39.00  367.50 179.50 179.50
+# CHECK-NEXT:  -     572.00 248.50 319.00 39.00  369.50 179.50 179.50
 
 # CHECK:      Resource pressure by instruction:
 # CHECK-NEXT: [0]    [1]    [2]    [3]    [4]    [5]    [6.0]  [6.1]  Instructions:
@@ -1803,9 +1803,9 @@ vzeroupper
 # CHECK-NEXT:  -      -     1.00    -      -     1.00    -      -     vblendvps	%ymm3, %ymm0, %ymm1, %ymm2
 # CHECK-NEXT:  -      -     1.00    -      -     1.00   0.50   0.50   vblendvps	%ymm3, (%rax), %ymm1, %ymm2
 # CHECK-NEXT:  -      -      -      -      -     1.00   0.50   0.50   vbroadcastf128	(%rax), %ymm2
-# CHECK-NEXT:  -      -      -      -      -      -     0.50   0.50   vbroadcastsd	(%rax), %ymm2
+# CHECK-NEXT:  -      -      -      -      -     1.00   0.50   0.50   vbroadcastsd	(%rax), %ymm2
 # CHECK-NEXT:  -      -      -      -      -      -     0.50   0.50   vbroadcastss	(%rax), %xmm2
-# CHECK-NEXT:  -      -      -      -      -      -     0.50   0.50   vbroadcastss	(%rax), %ymm2
+# CHECK-NEXT:  -      -      -      -      -     1.00   0.50   0.50   vbroadcastss	(%rax), %ymm2
 # CHECK-NEXT:  -      -      -     1.00    -      -      -      -     vcmpeqpd	%xmm0, %xmm1, %xmm2
 # CHECK-NEXT:  -      -      -     1.00    -      -     0.50   0.50   vcmpeqpd	(%rax), %xmm1, %xmm2
 # CHECK-NEXT:  -      -      -     1.00    -      -      -      -     vcmpeqpd	%ymm0, %ymm1, %ymm2
