@@ -1517,7 +1517,6 @@ struct NVGPUWarpgroupMmaStoreOpLowering
 void mlir::populateNVGPUToNVVMConversionPatterns(LLVMTypeConverter &converter,
                                                  RewritePatternSet &patterns) {
   patterns.add<
-      NVGPUWarpgroupMmaStoreOpLowering,      // nvgpu.warpgroup.mma.store`
       NVGPUMBarrierCreateLowering,           // nvgpu.mbarrier.create
       NVGPUMBarrierInitLowering,             // nvgpu.mbarrier.init
       NVGPUMBarrierArriveLowering,           // nvgpu.mbarrier.arrive
@@ -1529,6 +1528,7 @@ void mlir::populateNVGPUToNVVMConversionPatterns(LLVMTypeConverter &converter,
       NVGPUMBarrierArriveExpectTxLowering,   // nvgpu.mbarrier.arrive.expect_tx
       NVGPUGenerateWarpgroupDescriptorLowering, // nvgpu.warpgroup.generate.descriptor
       NVGPUWarpgroupMmaOpLowering,              // nvgpu.warpgroup.mma
+      NVGPUWarpgroupMmaStoreOpLowering,         // nvgpu.warpgroup.mma.store
       MmaSyncOptoNVVM, MmaLdMatrixOpToNVVM, NVGPUAsyncCopyLowering,
       NVGPUAsyncCreateGroupLowering, NVGPUAsyncWaitLowering,
       NVGPUMmaSparseSyncLowering>(converter);

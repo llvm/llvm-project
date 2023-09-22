@@ -531,13 +531,16 @@ LogicalResult WarpgroupMmaOp::verify() {
 }
 
 LogicalResult WarpgroupMmaStoreOp::verify() {
-  Type stype =
-      getMatrixD().front().getType().cast<WarpgroupResultType>().getTensor();
+  Type stype = getMatrixD()
+                   .front()
+                   .getType()
+                   .cast<WarpgroupAccumulatorType>()
+                   .getFragmented();
 
   for (auto result : getMatrixD()) {
     auto resultStype = result.getType()
-                           .cast<WarpgroupResultType>()
-                           .getTensor()
+                           .cast<WarpgroupAccumulatorType>()
+                           .getFragmented()
                            .dyn_cast<LLVM::LLVMStructType>();
     if (!resultStype)
       return emitOpError() << "result is " << result.getType()
