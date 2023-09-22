@@ -7,7 +7,10 @@
 //===----------------------------------------------------------------------===//
 
 #include "clang/Analysis/FlowSensitive/Arena.h"
+#include "clang/Analysis/FlowSensitive/Formula.h"
 #include "clang/Analysis/FlowSensitive/Value.h"
+#include "llvm/Support/Error.h"
+#include <string>
 
 namespace clang::dataflow {
 
@@ -93,6 +96,98 @@ BoolValue &Arena::makeBoolValue(const Formula &F) {
                      ? (BoolValue *)&create<AtomicBoolValue>(F)
                      : &create<FormulaBoolValue>(F);
   return *It->second;
+}
+
+namespace {
+const Formula *parse(Arena &A, llvm::StringRef &In) {
+  auto EatSpaces = [&] { In = In.ltrim(' '); };
+  EatSpaces();
+
+  if (In.consume_front("!")) {
+    if (auto *Arg = parse(A, In))
+      return &A.makeNot(*Arg);
+    return nullptr;
+  }
+
+  if (In.consume_front("(")) {
+    auto *Arg1 = parse(A, In);
+    if (!Arg1)
+      return nullptr;
+
+    EatSpaces();
+    decltype(&Arena::makeOr) Op;
+    if (In.consume_front("|"))
+      Op = &Arena::makeOr;
+    else if (In.consume_front("&"))
+      Op = &Arena::makeAnd;
+    else if (In.consume_front("=>"))
+      Op = &Arena::makeImplies;
+    else if (In.consume_front("="))
+      Op = &Arena::makeEquals;
+    else
+      return nullptr;
+
+    auto *Arg2 = parse(A, In);
+    if (!Arg2)
+      return nullptr;
+
+    EatSpaces();
+    if (!In.consume_front(")"))
+      return nullptr;
+
+    return &(A.*Op)(*Arg1, *Arg2);
+  }
+
+  // For now, only support unnamed variables V0, V1 etc.
+  // FIXME: parse e.g. "X" by allocating an atom and storing a name somewhere.
+  if (In.consume_front("V")) {
+    std::underlying_type_t<Atom> At;
+    if (In.consumeInteger(10, At))
+      return nullptr;
+    return &A.makeAtomRef(static_cast<Atom>(At));
+  }
+
+  if (In.consume_front("true"))
+    return &A.makeLiteral(true);
+  if (In.consume_front("false"))
+    return &A.makeLiteral(false);
+
+  return nullptr;
+}
+
+class FormulaParseError : public llvm::ErrorInfo<FormulaParseError> {
+  std::string Formula;
+  unsigned Offset;
+
+public:
+  static char ID;
+  FormulaParseError(llvm::StringRef Formula, unsigned Offset)
+      : Formula(Formula), Offset(Offset) {}
+
+  void log(raw_ostream &OS) const override {
+    OS << "bad formula at offset " << Offset << "\n";
+    OS << Formula << "\n";
+    OS.indent(Offset) << "^";
+  }
+
+  std::error_code convertToErrorCode() const override {
+    return std::make_error_code(std::errc::invalid_argument);
+  }
+};
+
+char FormulaParseError::ID = 0;
+
+} // namespace
+
+llvm::Expected<const Formula &> Arena::parseFormula(llvm::StringRef In) {
+  llvm::StringRef Rest = In;
+  auto *Result = parse(*this, Rest);
+  if (!Result) // parse() hit something unparseable
+    return llvm::make_error<FormulaParseError>(In, In.size() - Rest.size());
+  Rest = Rest.ltrim();
+  if (!Rest.empty()) // parse didn't consume all the input
+    return llvm::make_error<FormulaParseError>(In, In.size() - Rest.size());
+  return *Result;
 }
 
 } // namespace clang::dataflow

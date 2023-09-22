@@ -4,6 +4,8 @@
 define i1 @load_bv_v4i8(i1 zeroext %a) {
 ; CHECK-LABEL: load_bv_v4i8:
 ; CHECK:       // %bb.0:
+; CHECK-NEXT:    cmp w0, #0
+; CHECK-NEXT:    cset w0, ne
 ; CHECK-NEXT:    ret
   %b = zext i1 %a to i32
   %c = icmp eq i32 %b, 1
