@@ -53,12 +53,6 @@ set(CLANG_TOOLS_TEST_DEPS
   clang-tidy
 )
 
-if(CLANG_ENABLE_CIR)
-  list(APPEND CLANG_TOOLS_TEST_DEPS
-    cir-tidy
-  )
-endif()
-
 # Add lit test dependencies.
 set(LLVM_UTILS_DEPS
   FileCheck count not

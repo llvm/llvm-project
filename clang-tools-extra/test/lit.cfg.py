@@ -54,11 +54,6 @@ check_clang_tidy = os.path.join(
 config.substitutions.append(
     ("%check_clang_tidy", "%s %s" % (python_exec, check_clang_tidy))
 )
-check_cir_tidy = os.path.join(
-    config.test_source_root, "cir-tidy", "check_cir_tidy.py")
-config.substitutions.append(
-    ('%check_cir_tidy',
-     '%s %s' % (python_exec, check_cir_tidy)) )
 clang_tidy_diff = os.path.join(
     config.test_source_root, "..", "clang-tidy", "tool", "clang-tidy-diff.py"
 )
