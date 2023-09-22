@@ -14,11 +14,11 @@
 // CHECK-DAG:       %[[True:.*]] = arith.constant true
 // CHECK-DAG:       %[[I100:.*]] = arith.constant 100 : index
 // CHECK-DAG:       %[[I300:.*]] = arith.constant 300 : index
-// CHECK-DAG:       %[[CompressedDLT:.*]] = arith.constant 8 : i8
-// CHECK-DAG:       %[[LvlTypes:.*]] = memref.alloca() : memref<2xi8>
-// CHECK-DAG:       %[[LvlTypesP:.*]] = memref.cast %[[LvlTypes]] : memref<2xi8> to memref<?xi8>
-// CHECK-DAG:       memref.store %[[CompressedDLT]], %[[LvlTypes]]{{\[}}%[[I0]]] : memref<2xi8>
-// CHECK-DAG:       memref.store %[[CompressedDLT]], %[[LvlTypes]]{{\[}}%[[I1]]] : memref<2xi8>
+// CHECK-DAG:       %[[CompressedDLT:.*]] = arith.constant 2 : i16
+// CHECK-DAG:       %[[LvlTypes:.*]] = memref.alloca() : memref<2xi16>
+// CHECK-DAG:       %[[LvlTypesP:.*]] = memref.cast %[[LvlTypes]] : memref<2xi16> to memref<?xi16>
+// CHECK-DAG:       memref.store %[[CompressedDLT]], %[[LvlTypes]]{{\[}}%[[I0]]] : memref<2xi16>
+// CHECK-DAG:       memref.store %[[CompressedDLT]], %[[LvlTypes]]{{\[}}%[[I1]]] : memref<2xi16>
 // CHECK-DAG:       %[[DimSizes:.*]] = memref.alloca() : memref<2xindex>
 // CHECK-DAG:       %[[DimSizesP:.*]] = memref.cast %[[DimSizes]] : memref<2xindex> to memref<?xindex>
 // CHECK-DAG:       memref.store %[[I100]], %[[DimSizes]]{{\[}}%[[I0]]] : memref<2xindex>
@@ -32,7 +32,7 @@
 // CHECK-DAG:       memref.store %[[I0]], %[[Iota]]{{\[}}%[[I0]]] : memref<2xindex>
 // CHECK-DAG:       memref.store %[[I1]], %[[Iota]]{{\[}}%[[I1]]] : memref<2xindex>
 // CHECK-DAG:       %[[NullPtr:.*]] = llvm.mlir.null : !llvm.ptr<i8>
-// CHECK:           %[[VAL_19:.*]] = call @newSparseTensor(%[[DimSizesP]], %[[LvlSizesP]], %[[LvlTypesP]], %[[IotaP]], %[[IotaP]], %[[C0]], %[[C0]], %[[C1]], %[[C0]], %[[NullPtr]]) : (memref<?xindex>, memref<?xindex>, memref<?xi8>, memref<?xindex>, memref<?xindex>, i32, i32, i32, i32, !llvm.ptr<i8>) -> !llvm.ptr<i8>
+// CHECK:           %[[VAL_19:.*]] = call @newSparseTensor(%[[DimSizesP]], %[[LvlSizesP]], %[[LvlTypesP]], %[[IotaP]], %[[IotaP]], %[[C0]], %[[C0]], %[[C1]], %[[C0]], %[[NullPtr]]) : (memref<?xindex>, memref<?xindex>, memref<?xi16>, memref<?xindex>, memref<?xindex>, i32, i32, i32, i32, !llvm.ptr<i8>) -> !llvm.ptr<i8>
 // CHECK:           %[[VAL_20:.*]] = memref.alloc() : memref<300xf64>
 // CHECK:           %[[VAL_21:.*]] = memref.cast %[[VAL_20]] : memref<300xf64> to memref<?xf64>
 // CHECK:           %[[VAL_22:.*]] = memref.alloc() : memref<300xi1>

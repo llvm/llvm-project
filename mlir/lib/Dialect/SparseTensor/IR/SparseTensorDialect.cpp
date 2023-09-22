@@ -747,15 +747,19 @@ RankedTensorType sparse_tensor::getCOOFromTypeWithOrdering(RankedTensorType rtt,
 
   // An unordered and non-unique compressed level at beginning.
   // If this is also the last level, then it is unique.
-  lvlTypes.push_back(
-      *buildLevelType(LevelFormat::Compressed, ordered, lvlRank == 1));
+  lvlTypes.push_back(*buildLevelType(LevelFormat::Compressed,
+                                     toPropertyBits(ordered, lvlRank == 1)));
   if (lvlRank > 1) {
     // TODO: it is actually ordered at the level for ordered input.
     // Followed by unordered non-unique n-2 singleton levels.
-    std::fill_n(std::back_inserter(lvlTypes), lvlRank - 2,
-                *buildLevelType(LevelFormat::Singleton, ordered, false));
+    std::fill_n(
+        std::back_inserter(lvlTypes), lvlRank - 2,
+        *buildLevelType(LevelFormat::Singleton,
+                        toPropertyBits(ordered, false)));
     // Ends by a unique singleton level unless the lvlRank is 1.
-    lvlTypes.push_back(*buildLevelType(LevelFormat::Singleton, ordered, true));
+    lvlTypes.push_back(
+        *buildLevelType(LevelFormat::Singleton,
+                        toPropertyBits(ordered, true)));
   }
 
   // TODO: Maybe pick the bitwidth based on input/output tensors (probably the
@@ -831,7 +835,8 @@ static SparseTensorEncodingAttr
 getNormalizedEncodingForSpecifier(SparseTensorEncodingAttr enc) {
   SmallVector<DimLevelType> dlts;
   for (auto dlt : enc.getLvlTypes())
-    dlts.push_back(*buildLevelType(*getLevelFormat(dlt), true, true));
+    dlts.push_back(*buildLevelType(*getLevelFormat(dlt),
+                                   toPropertyBits(true, true)));
 
   return SparseTensorEncodingAttr::get(
       enc.getContext(), dlts,

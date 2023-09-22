@@ -412,7 +412,7 @@ inline Value constantPrimaryTypeEncoding(OpBuilder &builder, Location loc,
 /// Generates a constant of the internal dimension level type encoding.
 inline Value constantDimLevelTypeEncoding(OpBuilder &builder, Location loc,
                                           DimLevelType dlt) {
-  return constantI8(builder, loc, static_cast<uint8_t>(dlt));
+  return constantI16(builder, loc, static_cast<uint16_t>(dlt));
 }
 
 inline bool isZeroRankedTensorOrScalar(Type type) {

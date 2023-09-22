@@ -55,7 +55,7 @@ SparseTensorStorageBase::SparseTensorStorageBase( // NOLINT
     // when `NDEBUG` is true), thereby reducing the need to re-assert things.
     if (!(isDenseDLT(dlt) || isCompressedDLT(dlt) || isSingletonDLT(dlt)))
       MLIR_SPARSETENSOR_FATAL("unsupported level type: %d\n",
-                              static_cast<uint8_t>(dlt));
+                              static_cast<uint16_t>(dlt));
   }
 }
 

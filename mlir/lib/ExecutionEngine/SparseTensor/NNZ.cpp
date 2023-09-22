@@ -47,7 +47,7 @@ SparseTensorNNZ::SparseTensorNNZ(const std::vector<uint64_t> &lvlSizes,
       // for dense-after-compressed.
     } else {
       MLIR_SPARSETENSOR_FATAL("unsupported level type: %d\n",
-                              static_cast<uint8_t>(dlt));
+                              static_cast<uint16_t>(dlt));
     }
     sz = detail::checkedMul(sz, lvlSizes[l]);
   }

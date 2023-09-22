@@ -62,11 +62,11 @@ func.func @sparse_hidden_nop_cast(%arg0: tensor<32xf32, #SparseVector>) -> tenso
 // CHECK-LABEL: func @sparse_convert_1d_ss(
 //  CHECK-SAME: %[[A:.*]]: !llvm.ptr<i8>)
 //   CHECK-DAG: %[[SparseToSparse:.*]] = arith.constant 3 : i32
-//   CHECK-DAG: %[[LvlTypes:.*]] = memref.alloca() : memref<1xi8>
+//   CHECK-DAG: %[[LvlTypes:.*]] = memref.alloca() : memref<1xi16>
 //   CHECK-DAG: %[[DimSizes:.*]] = memref.alloca() : memref<1xindex>
 //   CHECK-DAG: %[[LvlSizes:.*]] = memref.alloca() : memref<1xindex>
 //   CHECK-DAG: %[[Iota:.*]] = memref.alloca() : memref<1xindex>
-//   CHECK-DAG: %[[LvlTypesP:.*]] = memref.cast %[[LvlTypes]] : memref<1xi8> to memref<?xi8>
+//   CHECK-DAG: %[[LvlTypesP:.*]] = memref.cast %[[LvlTypes]] : memref<1xi16> to memref<?xi16>
 //   CHECK-DAG: %[[DimSizesP:.*]] = memref.cast %[[DimSizes]] : memref<1xindex> to memref<?xindex>
 //   CHECK-DAG: %[[LvlSizesP:.*]] = memref.cast %[[LvlSizes]] : memref<1xindex> to memref<?xindex>
 //   CHECK-DAG: %[[IotaP:.*]] = memref.cast %[[Iota]] : memref<1xindex> to memref<?xindex>
@@ -81,11 +81,11 @@ func.func @sparse_convert_1d_ss(%arg0: tensor<?xf32, #SparseVector64>) -> tensor
 //  CHECK-COO-SAME: %[[A:.*]]: !llvm.ptr<i8>)
 //   CHECK-COO-DAG: %[[ToCOO:.*]] = arith.constant 5 : i32
 //   CHECK-COO-DAG: %[[FromCOO:.*]] = arith.constant 2 : i32
-//   CHECK-COO-DAG: %[[LvlTypes:.*]] = memref.alloca() : memref<1xi8>
+//   CHECK-COO-DAG: %[[LvlTypes:.*]] = memref.alloca() : memref<1xi16>
 //   CHECK-COO-DAG: %[[DimSizes:.*]] = memref.alloca() : memref<1xindex>
 //   CHECK-COO-DAG: %[[LvlSizes:.*]] = memref.alloca() : memref<1xindex>
 //   CHECK-COO-DAG: %[[Iota:.*]] = memref.alloca() : memref<1xindex>
-//   CHECK-COO-DAG: %[[LvlTypesP:.*]] = memref.cast %[[LvlTypes]] : memref<1xi8> to memref<?xi8>
+//   CHECK-COO-DAG: %[[LvlTypesP:.*]] = memref.cast %[[LvlTypes]] : memref<1xi16> to memref<?xi16>
 //   CHECK-COO-DAG: %[[DimSizesP:.*]] = memref.cast %[[DimSizes]] : memref<1xindex> to memref<?xindex>
 //   CHECK-COO-DAG: %[[LvlSizesP:.*]] = memref.cast %[[LvlSizes]] : memref<1xindex> to memref<?xindex>
 //   CHECK-COO-DAG: %[[IotaP:.*]] = memref.cast %[[Iota]] : memref<1xindex> to memref<?xindex>
@@ -97,11 +97,11 @@ func.func @sparse_convert_1d_ss(%arg0: tensor<?xf32, #SparseVector64>) -> tensor
 // CHECK-AUTO-LABEL: func @sparse_convert(
 //  CHECK-AUTO-SAME: %[[A:.*]]: !llvm.ptr<i8>)
 //   CHECK-AUTO-DAG: %[[SparseToSparse:.*]] = arith.constant 3 : i32
-//   CHECK-AUTO-DAG: %[[LvlTypes:.*]] = memref.alloca() : memref<1xi8>
+//   CHECK-AUTO-DAG: %[[LvlTypes:.*]] = memref.alloca() : memref<1xi16>
 //   CHECK-AUTO-DAG: %[[DimSizes:.*]] = memref.alloca() : memref<1xindex>
 //   CHECK-AUTO-DAG: %[[LvlSizes:.*]] = memref.alloca() : memref<1xindex>
 //   CHECK-AUTO-DAG: %[[Iota:.*]] = memref.alloca() : memref<1xindex>
-//   CHECK-AUTO-DAG: %[[LvlTypesP:.*]] = memref.cast %[[LvlTypes]] : memref<1xi8> to memref<?xi8>
+//   CHECK-AUTO-DAG: %[[LvlTypesP:.*]] = memref.cast %[[LvlTypes]] : memref<1xi16> to memref<?xi16>
 //   CHECK-AUTO-DAG: %[[DimSizesP:.*]] = memref.cast %[[DimSizes]] : memref<1xindex> to memref<?xindex>
 //   CHECK-AUTO-DAG: %[[LvlSizesP:.*]] = memref.cast %[[LvlSizes]] : memref<1xindex> to memref<?xindex>
 //   CHECK-AUTO-DAG: %[[IotaP:.*]] = memref.cast %[[Iota]] : memref<1xindex> to memref<?xindex>
@@ -129,11 +129,11 @@ func.func @sparse_convert(%arg0: tensor<?xf32, #SparseVector64>) -> tensor<?xf32
 //  CHECK-COO-SAME: %[[A:.*]]: !llvm.ptr<i8>)
 //   CHECK-COO-DAG: %[[ToCOO:.*]] = arith.constant 5 : i32
 //   CHECK-COO-DAG: %[[FromCOO:.*]] = arith.constant 2 : i32
-//   CHECK-COO-DAG: %[[LvlTypes:.*]] = memref.alloca() : memref<1xi8>
+//   CHECK-COO-DAG: %[[LvlTypes:.*]] = memref.alloca() : memref<1xi16>
 //   CHECK-COO-DAG: %[[DimSizes:.*]] = memref.alloca() : memref<1xindex>
 //   CHECK-COO-DAG: %[[LvlSizes:.*]] = memref.alloca() : memref<1xindex>
 //   CHECK-COO-DAG: %[[Iota:.*]] = memref.alloca() : memref<1xindex>
-//   CHECK-COO-DAG: %[[LvlTypesP:.*]] = memref.cast %[[LvlTypes]] : memref<1xi8> to memref<?xi8>
+//   CHECK-COO-DAG: %[[LvlTypesP:.*]] = memref.cast %[[LvlTypes]] : memref<1xi16> to memref<?xi16>
 //   CHECK-COO-DAG: %[[DimSizesP:.*]] = memref.cast %[[DimSizes]] : memref<1xindex> to memref<?xindex>
 //   CHECK-COO-DAG: %[[LvlSizesP:.*]] = memref.cast %[[LvlSizes]] : memref<1xindex> to memref<?xindex>
 //   CHECK-COO-DAG: %[[IotaP:.*]] = memref.cast %[[Iota]] : memref<1xindex> to memref<?xindex>
@@ -145,11 +145,11 @@ func.func @sparse_convert(%arg0: tensor<?xf32, #SparseVector64>) -> tensor<?xf32
 // CHECK-AUTO-LABEL: func @sparse_convert_singleton(
 //  CHECK-AUTO-SAME: %[[A:.*]]: !llvm.ptr<i8>)
 //   CHECK-AUTO-DAG: %[[SparseToSparse:.*]] = arith.constant 3 : i32
-//   CHECK-AUTO-DAG: %[[LvlTypes:.*]] = memref.alloca() : memref<1xi8>
+//   CHECK-AUTO-DAG: %[[LvlTypes:.*]] = memref.alloca() : memref<1xi16>
 //   CHECK-AUTO-DAG: %[[DimSizes:.*]] = memref.alloca() : memref<1xindex>
 //   CHECK-AUTO-DAG: %[[LvlSizes:.*]] = memref.alloca() : memref<1xindex>
 //   CHECK-AUTO-DAG: %[[Iota:.*]] = memref.alloca() : memref<1xindex>
-//   CHECK-AUTO-DAG: %[[LvlTypesP:.*]] = memref.cast %[[LvlTypes]] : memref<1xi8> to memref<?xi8>
+//   CHECK-AUTO-DAG: %[[LvlTypesP:.*]] = memref.cast %[[LvlTypes]] : memref<1xi16> to memref<?xi16>
 //   CHECK-AUTO-DAG: %[[DimSizesP:.*]] = memref.cast %[[DimSizes]] : memref<1xindex> to memref<?xindex>
 //   CHECK-AUTO-DAG: %[[LvlSizesP:.*]] = memref.cast %[[LvlSizes]] : memref<1xindex> to memref<?xindex>
 //   CHECK-AUTO-DAG: %[[IotaP:.*]] = memref.cast %[[Iota]] : memref<1xindex> to memref<?xindex>

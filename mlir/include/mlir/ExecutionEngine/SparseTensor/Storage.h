@@ -683,7 +683,7 @@ private:
     if (isDenseDLT(dlt))
       return parentSz * getLvlSizes()[l];
     MLIR_SPARSETENSOR_FATAL("unsupported level type: %d\n",
-                            static_cast<uint8_t>(dlt));
+                            static_cast<uint16_t>(dlt));
   }
 
   /// Initializes sparse tensor storage scheme from a memory-resident sparse
