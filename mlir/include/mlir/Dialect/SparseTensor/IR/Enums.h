@@ -190,8 +190,7 @@ enum class DimLevelType : uint8_t {
   TwoOutOfFour = 64,         // 0b10000_00
 };
 
-/// This enum defines all the storage formats supported by the sparse compiler,
-/// without the level properties.
+/// This enum defines all supported storage format without the level properties.
 enum class LevelFormat : uint8_t {
   Dense = 4,             // 0b00001_00
   Compressed = 8,        // 0b00010_00
