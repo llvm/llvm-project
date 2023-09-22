@@ -1634,12 +1634,10 @@ PointerDereferenceGadget::getFixits(const Strategy &S) const {
     CharSourceRange derefRange = clang::CharSourceRange::getCharRange(
         Op->getBeginLoc(), Op->getBeginLoc().getLocWithOffset(1));
     // Inserts the [0]
-    std::optional<SourceLocation> EndOfOperand =
-        getEndCharLoc(BaseDeclRefExpr, SM, Ctx.getLangOpts());
-    if (EndOfOperand) {
+    if (auto LocPastOperand =
+            getPastLoc(BaseDeclRefExpr, SM, Ctx.getLangOpts())) {
       return FixItList{{FixItHint::CreateRemoval(derefRange),
-                        FixItHint::CreateInsertion(
-                            (*EndOfOperand).getLocWithOffset(1), "[0]")}};
+			FixItHint::CreateInsertion(*LocPastOperand, "[0]")}};
     }
     break;
   }
@@ -1978,18 +1976,9 @@ static bool hasConflictingOverload(const FunctionDecl *FD) {
 //   return f(std::span(p, <# size #>));
 // }
 //
-// The actual fix-its may contain more details, e.g., the attribute may be guard
-// by a macro
-//   #if __has_cpp_attribute(clang::unsafe_buffer_usage)
-//   [[clang::unsafe_buffer_usage]]
-//   #endif
-//
-// `ParmsMask` is an array of size of `FD->getNumParams()` such
-// that `ParmsMask[i]` is true iff the `i`-th parameter will be fixed with some
-// strategy.
 static std::optional<FixItList>
-createOverloadsForFixedParams(const std::vector<bool> &ParmsMask, const Strategy &S,
-                              const FunctionDecl *FD, const ASTContext &Ctx,
+createOverloadsForFixedParams(const Strategy &S, const FunctionDecl *FD,
+                              const ASTContext &Ctx,
                               UnsafeBufferUsageHandler &Handler) {
   // FIXME: need to make this conflict checking better:
   if (hasConflictingOverload(FD))
@@ -1999,21 +1988,33 @@ createOverloadsForFixedParams(const std::vector<bool> &ParmsMask, const Strategy
   const LangOptions &LangOpts = Ctx.getLangOpts();
   const unsigned NumParms = FD->getNumParams();
   std::vector<std::string> NewTysTexts(NumParms);
+  std::vector<bool> ParmsMask(NumParms, false);
+  bool AtLeastOneParmToFix = false;
 
   for (unsigned i = 0; i < NumParms; i++) {
-    if (!ParmsMask[i])
+    const ParmVarDecl *PVD = FD->getParamDecl(i);
+
+    if (S.lookup(PVD) == Strategy::Kind::Wontfix)
       continue;
+    if (S.lookup(PVD) != Strategy::Kind::Span)
+      // Not supported, not suppose to happen:
+      return std::nullopt;
 
     std::optional<Qualifiers> PteTyQuals = std::nullopt;
     std::optional<std::string> PteTyText =
-        getPointeeTypeText(FD->getParamDecl(i), SM, LangOpts, &PteTyQuals);
+        getPointeeTypeText(PVD, SM, LangOpts, &PteTyQuals);
 
     if (!PteTyText)
       // something wrong in obtaining the text of the pointee type, give up
       return std::nullopt;
     // FIXME: whether we should create std::span type depends on the Strategy.
     NewTysTexts[i] = getSpanTypeText(*PteTyText, PteTyQuals);
+    ParmsMask[i] = true;
+    AtLeastOneParmToFix = true;
   }
+  if (!AtLeastOneParmToFix)
+    // No need to create function overloads:
+    return {};
   // FIXME Respect indentation of the original code.
 
   // A lambda that creates the text representation of a function declaration
@@ -2322,28 +2323,18 @@ static FixItList createFunctionOverloadsForParms(
     const VariableGroupsManager &VarGrpMgr, const FunctionDecl *FD,
     const Strategy &S, ASTContext &Ctx, UnsafeBufferUsageHandler &Handler) {
   FixItList FixItsSharedByParms{};
-  std::vector<bool> ParmsNeedFixMask(FD->getNumParams(), false);
-  const VarDecl *FirstParmNeedsFix = nullptr;
 
-  for (unsigned i = 0; i < FD->getNumParams(); i++)
-    if (FixItsForVariable.count(FD->getParamDecl(i))) {
-      ParmsNeedFixMask[i] = true;
-      FirstParmNeedsFix = FD->getParamDecl(i);
-    }
-  if (FirstParmNeedsFix) {
-    // In case at least one parameter needs to be fixed:
-    std::optional<FixItList> OverloadFixes =
-        createOverloadsForFixedParams(ParmsNeedFixMask, S, FD, Ctx, Handler);
+  std::optional<FixItList> OverloadFixes =
+      createOverloadsForFixedParams(S, FD, Ctx, Handler);
 
-    if (OverloadFixes) {
-      FixItsSharedByParms.append(*OverloadFixes);
-    } else {
-      // Something wrong in generating `OverloadFixes`, need to remove the
-      // whole group, where parameters are in, from `FixItsForVariable` (Note
-      // that all parameters should be in the same group):
-      for (auto *Member : VarGrpMgr.getGroupOfVar(FirstParmNeedsFix))
-        FixItsForVariable.erase(Member);
-    }
+  if (OverloadFixes) {
+    FixItsSharedByParms.append(*OverloadFixes);
+  } else {
+    // Something wrong in generating `OverloadFixes`, need to remove the
+    // whole group, where parameters are in, from `FixItsForVariable` (Note
+    // that all parameters should be in the same group):
+    for (auto *Member : VarGrpMgr.getGroupOfParms())
+      FixItsForVariable.erase(Member);
   }
   return FixItsSharedByParms;
 }
@@ -2448,8 +2439,9 @@ getFixIts(FixableGadgetSets &FixablesForAllVars, const Strategy &S,
   return FinalFixItsForVariable;
 }
 
+template <typename VarDeclIterTy>
 static Strategy
-getNaiveStrategy(const llvm::SmallVectorImpl<const VarDecl *> &UnsafeVars) {
+getNaiveStrategy(llvm::iterator_range<VarDeclIterTy> UnsafeVars) {
   Strategy S;
   for (const VarDecl *VD : UnsafeVars) {
     S.set(VD, Strategy::Kind::Span);
@@ -2485,6 +2477,10 @@ public:
     if (It == VarGrpMap.end())
       return std::nullopt;
     return Groups[It->second];
+  }
+
+  VarGrpRef getGroupOfParms() const override {
+    return GrpsUnionForParms.getArrayRef();
   }
 };
 
@@ -2581,6 +2577,14 @@ void clang::checkUnsafeBufferUsage(const Decl *D,
                "' : neither local nor a parameter"));
 #endif
         it = FixablesForAllVars.byVar.erase(it);
+      } else if (it->first->getType().getCanonicalType()->isReferenceType()) {
+#ifndef NDEBUG
+        Handler.addDebugNoteForVar(it->first, it->first->getBeginLoc(),
+                                   ("failed to produce fixit for '" +
+                                    it->first->getNameAsString() +
+                                    "' : has a reference type"));
+#endif
+        it = FixablesForAllVars.byVar.erase(it);
       } else if (Tracker.hasUnclaimedUses(it->first)) {
 #ifndef NDEBUG
         auto AllUnclaimed = Tracker.getUnclaimedUses(it->first);
@@ -2604,10 +2608,6 @@ void clang::checkUnsafeBufferUsage(const Decl *D,
       ++it;
     }
   }
-
-  llvm::SmallVector<const VarDecl *, 16> UnsafeVars;
-  for (const auto &[VD, ignore] : FixablesForAllVars.byVar)
-    UnsafeVars.push_back(VD);
 
   // Fixpoint iteration for pointer assignments
   using DepMapTy = DenseMap<const VarDecl *, llvm::SetVector<const VarDecl *>>;
@@ -2737,7 +2737,13 @@ void clang::checkUnsafeBufferUsage(const Decl *D,
       ++I;
   }
 
-  Strategy NaiveStrategy = getNaiveStrategy(UnsafeVars);
+  // We assign strategies to variables that are 1) in the graph and 2) can be
+  // fixed. Other variables have the default "Won't fix" strategy.
+  Strategy NaiveStrategy = getNaiveStrategy(llvm::make_filter_range(
+      VisitedVars, [&FixablesForAllVars](const VarDecl *V) {
+        // If a warned variable has no "Fixable", it is considered unfixable:
+        return FixablesForAllVars.byVar.count(V);
+      }));
   VariableGroupsManagerImpl VarGrpMgr(Groups, VarGrpMap, GrpsUnionForParms);
 
   if (isa<NamedDecl>(D))
