@@ -1695,6 +1695,7 @@ public:
       std::optional<unsigned> FOp =
           VPIntrinsic::getFunctionalOpcodeForVP(ICA.getID());
       if (FOp) {
+        // TODO: Support other kinds of Intrinsics (i.e. reductions)
         if (ICA.getID() == Intrinsic::vp_load) {
           Align Alignment = isa_and_nonnull<VPIntrinsic>(ICA.getInst())
                                 ? cast<VPIntrinsic>(ICA.getInst())
@@ -1721,10 +1722,10 @@ public:
                             : 0;
           return thisT()->getMemoryOpCost(*FOp, Args[0]->getType(), Alignment,
                                           AS, CostKind);
+        } else if (VPBinOpIntrinsic::isVPBinOp(ICA.getID())) {
+          return thisT()->getArithmeticInstrCost(*FOp, ICA.getReturnType(),
+                                                 CostKind);
         }
-        // TODO: Support other kinds of Intrinsics (i.e. reductions)
-        return thisT()->getArithmeticInstrCost(*FOp, ICA.getReturnType(),
-                                               CostKind);
       }
 
       std::optional<Intrinsic::ID> FID =
