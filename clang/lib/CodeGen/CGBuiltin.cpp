@@ -2312,8 +2312,8 @@ RValue CodeGenFunction::EmitBuiltinExpr(const GlobalDecl GD, unsigned BuiltinID,
   const unsigned BuiltinIDIfNoAsmLabel =
       FD->hasAttr<AsmLabelAttr>() ? 0 : BuiltinID;
 
-  bool ErrnoOverriden = false;
-  // True if math-errno is overriden via the
+  std::optional<bool> ErrnoOverriden;
+  // ErrnoOverriden is true if math-errno is overriden via the
   // '#pragma float_control(precise, on)'. This pragma disables fast-math,
   // which implies math-errno.
   if (E->hasStoredFPFeatures()) {
@@ -2329,8 +2329,8 @@ RValue CodeGenFunction::EmitBuiltinExpr(const GlobalDecl GD, unsigned BuiltinID,
   // using the '#pragma float_control(precise, off)', and
   // attribute opt-none hasn't been seen.
   bool ErrnoOverridenToFalseWithOpt =
-      !ErrnoOverriden && !OptNone &&
-      CGM.getCodeGenOpts().OptimizationLevel != 0;
+       ErrnoOverriden.has_value() && !ErrnoOverriden.value() && !OptNone &&
+       CGM.getCodeGenOpts().OptimizationLevel != 0;
 
   // There are LLVM math intrinsics/instructions corresponding to math library
   // functions except the LLVM op will never set errno while the math library
@@ -2339,6 +2339,30 @@ RValue CodeGenFunction::EmitBuiltinExpr(const GlobalDecl GD, unsigned BuiltinID,
   // LLVM counterparts if the call is marked 'const' (known to never set errno).
   // In case FP exceptions are enabled, the experimental versions of the
   // intrinsics model those.
+  bool ConstAlways =
+      getContext().BuiltinInfo.isConst(BuiltinID);
+
+  // There's a special case with the fma builtins where they are always const
+  // if the target environment is GNU or the target is OS is Windows and we're
+  // targeting the MSVCRT.dll environment.
+  // FIXME: This list can be become outdated. Need to find a way to get it some
+  // other way.
+  switch (BuiltinID) {
+  case Builtin::BI__builtin_fma:
+  case Builtin::BI__builtin_fmaf:
+  case Builtin::BI__builtin_fmal:
+  case Builtin::BIfma:
+  case Builtin::BIfmaf:
+  case Builtin::BIfmal: {
+    auto &Trip = CGM.getTriple();
+    if (Trip.isGNUEnvironment() || Trip.isOSMSVCRT())
+      ConstAlways = true;
+    break;
+  }
+  default:
+    break;
+  }
+
   bool ConstWithoutErrnoAndExceptions =
       getContext().BuiltinInfo.isConstWithoutErrnoAndExceptions(BuiltinID);
   bool ConstWithoutExceptions =
@@ -2362,14 +2386,17 @@ RValue CodeGenFunction::EmitBuiltinExpr(const GlobalDecl GD, unsigned BuiltinID,
   bool ConstWithoutErrnoOrExceptions =
       ConstWithoutErrnoAndExceptions || ConstWithoutExceptions;
   bool GenerateIntrinsics =
-      FD->hasAttr<ConstAttr>() && !ErrnoOverriden && !OptNone;
+      (ConstAlways && !OptNone) ||
+      (!getLangOpts().MathErrno &&
+       !(ErrnoOverriden.has_value() && ErrnoOverriden.value()) && !OptNone);
   if (!GenerateIntrinsics) {
     GenerateIntrinsics =
         ConstWithoutErrnoOrExceptions && !ConstWithoutErrnoAndExceptions;
     if (!GenerateIntrinsics)
       GenerateIntrinsics =
           ConstWithoutErrnoOrExceptions &&
-          (!getLangOpts().MathErrno && !ErrnoOverriden && !OptNone);
+          (!getLangOpts().MathErrno &&
+           !(ErrnoOverriden.has_value() && ErrnoOverriden.value()) && !OptNone);
     if (!GenerateIntrinsics)
       GenerateIntrinsics =
           ConstWithoutErrnoOrExceptions && ErrnoOverridenToFalseWithOpt;

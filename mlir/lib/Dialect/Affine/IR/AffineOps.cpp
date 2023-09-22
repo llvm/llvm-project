@@ -2380,8 +2380,7 @@ void AffineForOp::getCanonicalizationPatterns(RewritePatternSet &results,
 /// induction variable. AffineForOp only has one region, so zero is the only
 /// valid value for `index`.
 OperandRange AffineForOp::getEntrySuccessorOperands(RegionBranchPoint point) {
-  assert((point.isParent() || point == getLoopBody()) &&
-         "invalid region point");
+  assert((point.isParent() || point == getRegion()) && "invalid region point");
 
   // The initial operands map to the loop arguments after the induction
   // variable or are forwarded to the results when the trip count is zero.
@@ -2395,8 +2394,7 @@ OperandRange AffineForOp::getEntrySuccessorOperands(RegionBranchPoint point) {
 /// not a constant.
 void AffineForOp::getSuccessorRegions(
     RegionBranchPoint point, SmallVectorImpl<RegionSuccessor> &regions) {
-  assert((point.isParent() || point == getLoopBody()) &&
-         "expected loop region");
+  assert((point.isParent() || point == getRegion()) && "expected loop region");
   // The loop may typically branch back to its body or to the parent operation.
   // If the predecessor is the parent op and the trip count is known to be at
   // least one, branch into the body using the iterator arguments. And in cases
@@ -2404,7 +2402,7 @@ void AffineForOp::getSuccessorRegions(
   std::optional<uint64_t> tripCount = getTrivialConstantTripCount(*this);
   if (point.isParent() && tripCount.has_value()) {
     if (tripCount.value() > 0) {
-      regions.push_back(RegionSuccessor(&getLoopBody(), getRegionIterArgs()));
+      regions.push_back(RegionSuccessor(&getRegion(), getRegionIterArgs()));
       return;
     }
     if (tripCount.value() == 0) {
@@ -2422,7 +2420,7 @@ void AffineForOp::getSuccessorRegions(
 
   // In all other cases, the loop may branch back to itself or the parent
   // operation.
-  regions.push_back(RegionSuccessor(&getLoopBody(), getRegionIterArgs()));
+  regions.push_back(RegionSuccessor(&getRegion(), getRegionIterArgs()));
   regions.push_back(RegionSuccessor(getResults()));
 }
 
@@ -2561,7 +2559,7 @@ bool AffineForOp::matchingBoundOperandList() {
   return true;
 }
 
-Region &AffineForOp::getLoopBody() { return getRegion(); }
+SmallVector<Region *> AffineForOp::getLoopRegions() { return {&getRegion()}; }
 
 std::optional<Value> AffineForOp::getSingleInductionVar() {
   return getInductionVar();
@@ -2758,9 +2756,9 @@ AffineForOp mlir::affine::replaceForOpWithNewYields(OpBuilder &b,
       b.create<AffineForOp>(loop.getLoc(), lbOperands, lbMap, ubOperands, ubMap,
                             loop.getStep(), operands);
   // Take the body of the original parent loop.
-  newLoop.getLoopBody().takeBody(loop.getLoopBody());
+  newLoop.getRegion().takeBody(loop.getRegion());
   for (Value val : newIterArgs)
-    newLoop.getLoopBody().addArgument(val.getType(), val.getLoc());
+    newLoop.getRegion().addArgument(val.getType(), val.getLoc());
 
   // Update yield operation with new values to be added.
   if (!newYieldedValues.empty()) {
@@ -3848,7 +3846,9 @@ void AffineParallelOp::build(OpBuilder &builder, OperationState &result,
     ensureTerminator(*bodyRegion, builder, result.location);
 }
 
-Region &AffineParallelOp::getLoopBody() { return getRegion(); }
+SmallVector<Region *> AffineParallelOp::getLoopRegions() {
+  return {&getRegion()};
+}
 
 unsigned AffineParallelOp::getNumDims() { return getSteps().size(); }
 
