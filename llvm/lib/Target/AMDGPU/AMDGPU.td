@@ -1693,6 +1693,15 @@ def HasTrue16BitInsts : Predicate<"Subtarget->hasTrue16BitInsts()">,
   AssemblerPredicate<(all_of FeatureTrue16BitInsts)>;
 def NotHasTrue16BitInsts : Predicate<"!Subtarget->hasTrue16BitInsts()">;
 
+// Control use of True16 instructions. The real True16 instructions are
+// True16 instructions as they are defined in the ISA. Fake True16
+// instructions have the same encoding as real ones but syntactically
+// only allow 32-bit registers in operands and use low halves thereof.
+def UseRealTrue16Insts : Predicate<"Subtarget->useRealTrue16Insts()">,
+  AssemblerPredicate<(all_of FeatureTrue16BitInsts, FeatureRealTrue16Insts)>;
+def UseFakeTrue16Insts : Predicate<"Subtarget->hasTrue16BitInsts() && "
+                                   "!Subtarget->useRealTrue16Insts()">;
+
 def HasVOP3PInsts : Predicate<"Subtarget->hasVOP3PInsts()">,
   AssemblerPredicate<(all_of FeatureVOP3P)>;
 
