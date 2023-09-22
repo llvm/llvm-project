@@ -152,7 +152,7 @@ multiclass VOP1Inst_t16<string opName,
     defm NAME : VOP1Inst<opName, P, node>;
   }
   let OtherPredicates = [HasTrue16BitInsts] in {
-    defm _t16 : VOP1Inst<opName#"_t16", VOPProfile_True16<P>, node>;
+    defm _t16 : VOP1Inst<opName#"_t16", VOPProfile_Fake16<P>, node>;
   }
 }
 
@@ -170,7 +170,7 @@ class VOPProfileI2F<ValueType dstVt, ValueType srcVt> :
 }
 
 class VOPProfileI2F_True16<ValueType dstVt, ValueType srcVt> :
-  VOPProfile_True16<VOPProfile<[dstVt, srcVt, untyped, untyped]>> {
+  VOPProfile_Fake16<VOPProfile<[dstVt, srcVt, untyped, untyped]>> {
 
   let Ins64 = (ins Src0RC64:$src0, clampmod:$clamp, omod:$omod);
   let InsVOP3Base = (ins Src0VOP3DPP:$src0, clampmod:$clamp, omod:$omod);
@@ -199,7 +199,7 @@ class VOP_SPECIAL_OMOD_PROF<ValueType dstVt, ValueType srcVt> :
 def VOP_I32_F32_SPECIAL_OMOD : VOP_SPECIAL_OMOD_PROF<i32, f32>;
 def VOP_I32_F64_SPECIAL_OMOD : VOP_SPECIAL_OMOD_PROF<i32, f64>;
 def VOP_I16_F16_SPECIAL_OMOD : VOP_SPECIAL_OMOD_PROF<i16, f16>;
-def VOP_I16_F16_SPECIAL_OMOD_t16 : VOPProfile_True16<VOP_I16_F16> {
+def VOP_I16_F16_SPECIAL_OMOD_t16 : VOPProfile_Fake16<VOP_I16_F16> {
   let HasOMod = 1;
 }
 
@@ -292,13 +292,13 @@ let FPDPRounding = 1, isReMaterializable = 0 in {
   let OtherPredicates = [NotHasTrue16BitInsts] in
   defm V_CVT_F16_F32 : VOP1Inst <"v_cvt_f16_f32", VOP_F16_F32, any_fpround>;
   let OtherPredicates = [HasTrue16BitInsts] in
-  defm V_CVT_F16_F32_t16 : VOP1Inst <"v_cvt_f16_f32_t16", VOPProfile_True16<VOP_F16_F32>, any_fpround>;
+  defm V_CVT_F16_F32_t16 : VOP1Inst <"v_cvt_f16_f32_t16", VOPProfile_Fake16<VOP_F16_F32>, any_fpround>;
 } // End FPDPRounding = 1, isReMaterializable = 0
 
 let OtherPredicates = [NotHasTrue16BitInsts] in
 defm V_CVT_F32_F16 : VOP1Inst <"v_cvt_f32_f16", VOP_F32_F16, any_fpextend>;
 let OtherPredicates = [HasTrue16BitInsts] in
-defm V_CVT_F32_F16_t16 : VOP1Inst <"v_cvt_f32_f16_t16", VOPProfile_True16<VOP_F32_F16>, any_fpextend>;
+defm V_CVT_F32_F16_t16 : VOP1Inst <"v_cvt_f32_f16_t16", VOPProfile_Fake16<VOP_F32_F16>, any_fpextend>;
 
 let ReadsModeReg = 0, mayRaiseFPException = 0 in {
 defm V_CVT_RPI_I32_F32 : VOP1Inst <"v_cvt_rpi_i32_f32", VOP_I32_F32, cvt_rpi_i32_f32>;
