@@ -831,6 +831,18 @@ void State::addInfoFor(BasicBlock &BB) {
     GuaranteedToExecute &= isGuaranteedToTransferExecutionToSuccessor(&I);
   }
 
+  if (auto *Switch = dyn_cast<SwitchInst>(BB.getTerminator())) {
+    for (auto &Case : Switch->cases()) {
+      BasicBlock *Succ = Case.getCaseSuccessor();
+      Value *V = Case.getCaseValue();
+      if (!canAddSuccessor(BB, Succ))
+        continue;
+      WorkList.emplace_back(FactOrCheck::getConditionFact(
+          DT.getNode(Succ), CmpInst::ICMP_EQ, Switch->getCondition(), V));
+    }
+    return;
+  }
+
   auto *Br = dyn_cast<BranchInst>(BB.getTerminator());
   if (!Br || !Br->isConditional())
     return;
