@@ -134,7 +134,7 @@ def SparseTensorEncodingAttr : SparseTensor_Attr<"SparseTensorEncoding",
     level-coordinates. The dimension-expressions collectively define the inverse map,
     which only needs to be provided for elaborate cases where it cannot be inferred
     automatically. Within the sparse storage format, we refer to indices that are
-    stored explicitly as **coordinates** and indices into the storage format as
+    stored explicitly as **coordinates** and offsets into the storage format as
     **positions**.
 
     The supported level-formats are the following:
@@ -146,14 +146,14 @@ def SparseTensorEncodingAttr : SparseTensor_Attr<"SparseTensorEncoding",
     Different level-formats may have different collections of level-properties.
     By default, each level-type has the property of being unique (no duplicate
     coordinates at that level), ordered (coordinates appear sorted at that
-    level), and, for compression, storing the positions in a compact way where
-    an interval is defined by a lower bound "pos(i)" and an upper bound "pos(i+1)-1".
+    level), and, for compression, storing each position interval in a compact
+    way with a lowerbound `pos(i)`" and an upperbound `pos(i+1) - 1`.
     The following properties can be added to a level-format to change this
     default behavior:
 
     - **nonunique** : duplicate coordinates may appear at the level
     - **nonordered** : coordinates may appear in arbribratry order
-    - **high** : the upper bound is stored explicitly in a separate array
+    - **high** : position interval upperbounds are stored explicitly
     - **block2_4** : the compression uses a 2:4 encoding per 1x4 block
 
     In addition to the map, the following two fields are optional:
