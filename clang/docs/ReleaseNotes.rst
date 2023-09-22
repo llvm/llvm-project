@@ -67,6 +67,9 @@ C++ Specific Potentially Breaking Changes
   (`#49884 <https://github.com/llvm/llvm-project/issues/49884>`_), and
   (`#61273 <https://github.com/llvm/llvm-project/issues/61273>`_)
 
+- The downgradable error ``--Wenum-constexpr-conversion`` has been upgraded
+  into a hard error, to comply with the C++ Standard.
+
 ABI Changes in This Version
 ---------------------------
 - Following the SystemV ABI for x86-64, ``__int128`` arguments will no longer
