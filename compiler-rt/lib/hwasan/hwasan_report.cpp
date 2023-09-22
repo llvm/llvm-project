@@ -395,6 +395,7 @@ class BaseReport {
         access_size(access_size),
         untagged_addr(UntagAddr(tagged_addr)),
         ptr_tag(GetTagFromPointer(tagged_addr)),
+        mismatch_offset(FindMismatchOffset()),
         heap(CopyHeapChunk()),
         allocations(CopyAllocations()),
         candidate(FindBufferOverflowCandidate()),
@@ -442,6 +443,7 @@ class BaseReport {
     tag_t short_tags[ARRAY_SIZE(tags)] = {};
   };
 
+  sptr FindMismatchOffset() const;
   Shadow CopyShadow() const;
   tag_t GetTagCopy(uptr addr) const;
   tag_t GetShortTagCopy(uptr addr) const;
@@ -461,6 +463,7 @@ class BaseReport {
   const uptr access_size = 0;
   const uptr untagged_addr = 0;
   const tag_t ptr_tag = 0;
+  const sptr mismatch_offset = 0;
 
   const HeapChunk heap;
   const Allocations allocations;
@@ -468,6 +471,37 @@ class BaseReport {
 
   const Shadow shadow;
 };
+
+sptr BaseReport::FindMismatchOffset() const {
+  if (!access_size)
+    return 0;
+  sptr offset =
+      __hwasan_test_shadow(reinterpret_cast<void *>(tagged_addr), access_size);
+  CHECK_GE(offset, 0);
+  CHECK_LT(offset, static_cast<sptr>(access_size));
+  tag_t *tag_ptr =
+      reinterpret_cast<tag_t *>(MemToShadow(untagged_addr + offset));
+  tag_t mem_tag = *tag_ptr;
+
+  if (mem_tag && mem_tag < kShadowAlignment) {
+    tag_t *granule_ptr = reinterpret_cast<tag_t *>((untagged_addr + offset) &
+                                                   ~(kShadowAlignment - 1));
+    // If offset is 0, (untagged_addr + offset) is not aligned to granules.
+    // This is the offset of the leftmost accessed byte within the bad granule.
+    u8 in_granule_offset = (untagged_addr + offset) & (kShadowAlignment - 1);
+    tag_t short_tag = granule_ptr[kShadowAlignment - 1];
+    // The first mismatch was a short granule that matched the ptr_tag.
+    if (short_tag == ptr_tag) {
+      // If the access starts after the end of the short granule, then the first
+      // bad byte is the first byte of the access; otherwise it is the first
+      // byte past the end of the short granule
+      if (mem_tag > in_granule_offset) {
+        offset += mem_tag - in_granule_offset;
+      }
+    }
+  }
+  return offset;
+}
 
 BaseReport::Shadow BaseReport::CopyShadow() const {
   Shadow result;
@@ -917,31 +951,12 @@ TagMismatchReport::~TagMismatchReport() {
 
   Thread *t = GetCurrentThread();
 
-  sptr offset =
-      __hwasan_test_shadow(reinterpret_cast<void *>(tagged_addr), access_size);
-  CHECK_GE(offset, 0);
-  CHECK_LT(offset, static_cast<sptr>(access_size));
-  tag_t *tag_ptr =
-      reinterpret_cast<tag_t *>(MemToShadow(untagged_addr + offset));
-  tag_t mem_tag = *tag_ptr;
+  tag_t mem_tag = GetTagCopy(MemToShadow(untagged_addr + mismatch_offset));
 
   Printf("%s", d.Access());
   if (mem_tag && mem_tag < kShadowAlignment) {
-    tag_t *granule_ptr = reinterpret_cast<tag_t *>((untagged_addr + offset) &
-                                                   ~(kShadowAlignment - 1));
-    // If offset is 0, (untagged_addr + offset) is not aligned to granules.
-    // This is the offset of the leftmost accessed byte within the bad granule.
-    u8 in_granule_offset = (untagged_addr + offset) & (kShadowAlignment - 1);
-    tag_t short_tag = granule_ptr[kShadowAlignment - 1];
-    // The first mismatch was a short granule that matched the ptr_tag.
-    if (short_tag == ptr_tag) {
-      // If the access starts after the end of the short granule, then the first
-      // bad byte is the first byte of the access; otherwise it is the first
-      // byte past the end of the short granule
-      if (mem_tag > in_granule_offset) {
-        offset += mem_tag - in_granule_offset;
-      }
-    }
+    tag_t short_tag =
+        GetShortTagCopy(MemToShadow(untagged_addr + mismatch_offset));
     Printf(
         "%s of size %zu at %p tags: %02x/%02x(%02x) (ptr/mem) in thread T%zd\n",
         is_store ? "WRITE" : "READ", access_size, untagged_addr, ptr_tag,
@@ -951,8 +966,8 @@ TagMismatchReport::~TagMismatchReport() {
            is_store ? "WRITE" : "READ", access_size, untagged_addr, ptr_tag,
            mem_tag, t->unique_id());
   }
-  if (offset != 0)
-    Printf("Invalid access starting at offset %zu\n", offset);
+  if (mismatch_offset)
+    Printf("Invalid access starting at offset %zu\n", mismatch_offset);
   Printf("%s", d.Default());
 
   stack->Print();
@@ -960,7 +975,7 @@ TagMismatchReport::~TagMismatchReport() {
   PrintAddressDescription();
   t->Announce();
 
-  PrintTags(untagged_addr + offset);
+  PrintTags(untagged_addr + mismatch_offset);
 
   if (registers_frame)
     ReportRegisters(registers_frame, pc);
