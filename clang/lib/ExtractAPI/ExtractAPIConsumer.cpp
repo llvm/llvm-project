@@ -177,17 +177,17 @@ struct LocationFileChecker {
     if (FID.isInvalid())
       return false;
 
-    const auto *File = SM.getFileEntryForID(FID);
+    OptionalFileEntryRef File = SM.getFileEntryRefForID(FID);
     if (!File)
       return false;
 
-    if (KnownFileEntries.count(File))
+    if (KnownFileEntries.count(*File))
       return true;
 
-    if (ExternalFileEntries.count(File))
+    if (ExternalFileEntries.count(*File))
       return false;
 
-    StringRef FileName = SM.getFileManager().getCanonicalName(File);
+    StringRef FileName = SM.getFileManager().getCanonicalName(*File);
 
     // Try to reduce the include name the same way we tried to include it.
     bool IsQuoted = false;
@@ -197,13 +197,13 @@ struct LocationFileChecker {
                          return KnownFile.first.equals(*IncludeName) &&
                                 KnownFile.second == IsQuoted;
                        })) {
-        KnownFileEntries.insert(File);
+        KnownFileEntries.insert(*File);
         return true;
       }
 
     // Record that the file was not found to avoid future reverse lookup for
     // the same file.
-    ExternalFileEntries.insert(File);
+    ExternalFileEntries.insert(*File);
     return false;
   }
 

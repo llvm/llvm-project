@@ -131,11 +131,45 @@ You can also merge via the CLI by switching to your branch locally and run:
 
   gh pr merge --squash --delete-branch
 
+If you observe an error message from the above informing you that your pull
+request is not mergeable, then that is likely because upstream has been
+modified since your pull request was authored in a way that now results in a
+merge conflict. You must first resolve this merge conflict in order to merge
+your pull request. In order to do that:
+
+::
+
+  git fetch upstream
+  git rebase upstream/main
+
+Then fix the source files causing merge conflicts and make sure to rebuild and
+retest the result. Then:
+
+::
+
+  git add <files with resolved merge conflicts>
+  git rebase --continue
+
+Finally, you'll need to force push to your branch one more time before you can
+merge:
+
+::
+
+  git push -f
+  gh pr merge --squash --delete branch
+
+This force push may ask if you intend to push hundreds, or potentially
+thousands of patches (depending on how long it's been since your pull request
+was initially authored vs. when you intended to merge it). Since you're pushing
+to a branch in your fork, this is ok and expected. Github's UI for the pull
+request will understand that you're rebasing just your patches, and display
+this result correctly with a note that a force push did occur.
+
 
 Checking out another PR locally
 -------------------------------
 Sometimes you want to review another person's PR on your local machine to run
-tests or inspect code in your prefered editor. This is easily done with the
+tests or inspect code in your preferred editor. This is easily done with the
 CLI:
 
 ::

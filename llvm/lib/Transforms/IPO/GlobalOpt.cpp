@@ -390,7 +390,7 @@ static bool collectSRATypes(DenseMap<uint64_t, GlobalPart> &Parts,
       }
 
       // Scalable types not currently supported.
-      if (isa<ScalableVectorType>(Ty))
+      if (Ty->isScalableTy())
         return false;
 
       auto IsStored = [](Value *V, Constant *Initializer) {

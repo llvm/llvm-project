@@ -98,7 +98,7 @@ TEST(DataflowAnalysisTest, DiagnoseFunctionDiagnoserCalledOnEachElement) {
       cast<FunctionDecl>(findValueDecl(AST->getASTContext(), "target"));
   auto Diagnoser = [](const CFGElement &Elt, ASTContext &,
                       const TransferStateForDiagnostics<NoopLattice> &) {
-    std::vector<std::string> Diagnostics(1);
+    llvm::SmallVector<std::string> Diagnostics(1);
     llvm::raw_string_ostream OS(Diagnostics.front());
     Elt.dumpToStream(OS);
     return Diagnostics;

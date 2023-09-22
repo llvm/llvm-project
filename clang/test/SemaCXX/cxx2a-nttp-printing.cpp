@@ -7,9 +7,9 @@ template <int N> struct Str {
 
 template <Str V> class ASCII {};
 
-void Foo(ASCII<"this nontype template argument is too long to print">); // expected-note {{no known conversion from 'ASCII<{"this nontype template argument is too long"}>' to 'ASCII<{"this nontype template argument is too long to print"}>'}}
-void Bar(ASCII<"this nttp argument is too short">);                     // expected-note {{no known conversion from 'ASCII<{{119, 97, 105, 116, 32, 97, 32, 115, 27, 99, 111, 110, 100, 0}}>' to 'ASCII<{"this nttp argument is too short"}>'}}
-void Meow(ASCII<"what|">);                                              // expected-note {{no known conversion from 'ASCII<{"what??!"}>' to 'ASCII<{"what|"}>' for 1st argument}}
+void Foo(ASCII<"this nontype template argument is too long to print">); // expected-note {{no known conversion from 'ASCII<Str<43>{"this nontype template argument is too long"}>' to 'ASCII<Str<52>{"this nontype template argument is too long to print"}>'}}
+void Bar(ASCII<"this nttp argument is too short">);                     // expected-note {{no known conversion from 'ASCII<Str<14>{{119, 97, 105, 116, 32, 97, 32, 115, 27, 99, 111, 110, 100, 0}}>' to 'ASCII<Str<32>{"this nttp argument is too short"}>'}}
+void Meow(ASCII<"what|">);                                              // expected-note {{no known conversion from 'ASCII<Str<8>{"what??!"}>' to 'ASCII<Str<6>{"what|"}>' for 1st argument}}
 
 void test_ascii() {
   ASCII<"this nontype template argument"

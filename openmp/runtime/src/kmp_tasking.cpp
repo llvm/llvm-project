@@ -2512,7 +2512,7 @@ void *__kmp_task_reduction_init(int gtid, int num, T *data) {
   KMP_ASSERT(tg != NULL);
   KMP_ASSERT(data != NULL);
   KMP_ASSERT(num > 0);
-  if (nth == 1) {
+  if (nth == 1 && !__kmp_enable_hidden_helper) {
     KA_TRACE(10, ("__kmpc_task_reduction_init: T#%d, tg %p, exiting nth=1\n",
                   gtid, tg));
     return (void *)tg;
@@ -2699,6 +2699,7 @@ void *__kmpc_task_reduction_get_th_data(int gtid, void *tskgrp, void *data) {
         return p_priv[tid];
       }
     }
+    KMP_ASSERT(tg->parent);
     tg = tg->parent;
     arr = (kmp_taskred_data_t *)(tg->reduce_data);
     num = tg->reduce_num_data;
@@ -2711,7 +2712,10 @@ void *__kmpc_task_reduction_get_th_data(int gtid, void *tskgrp, void *data) {
 // Called from __kmpc_end_taskgroup()
 static void __kmp_task_reduction_fini(kmp_info_t *th, kmp_taskgroup_t *tg) {
   kmp_int32 nth = th->th.th_team_nproc;
-  KMP_DEBUG_ASSERT(nth > 1); // should not be called if nth == 1
+  KMP_DEBUG_ASSERT(
+      nth > 1 ||
+      __kmp_enable_hidden_helper); // should not be called if nth == 1 unless we
+                                   // are using hidden helper threads
   kmp_taskred_data_t *arr = (kmp_taskred_data_t *)tg->reduce_data;
   kmp_int32 num = tg->reduce_num_data;
   for (int i = 0; i < num; ++i) {

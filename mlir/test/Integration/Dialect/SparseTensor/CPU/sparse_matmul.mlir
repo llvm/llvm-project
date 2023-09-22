@@ -41,13 +41,11 @@
 // TODO: Investigate the output generated for SVE, see https://github.com/llvm/llvm-project/issues/60626
 
 #CSR = #sparse_tensor.encoding<{
-  lvlTypes = [ "dense", "compressed" ],
-  dimToLvl = affine_map<(i,j) -> (i,j)>
+  map = (d0, d1) -> (d0 : dense, d1 : compressed)
 }>
 
 #DCSR = #sparse_tensor.encoding<{
-  lvlTypes = [ "compressed", "compressed" ],
-  dimToLvl = affine_map<(i,j) -> (i,j)>
+  map = (d0, d1) -> (d0 : compressed, d1 : compressed)
 }>
 
 module {
@@ -70,7 +68,7 @@ module {
   //
   func.func @matmul2(%A: tensor<4x8xf64, #CSR>,
                      %B: tensor<8x4xf64, #CSR>) -> tensor<4x4xf64, #CSR> {
-    %C = bufferization.alloc_tensor() : tensor<4x4xf64, #CSR>
+    %C = tensor.empty() : tensor<4x4xf64, #CSR>
     %D = linalg.matmul
       ins(%A, %B: tensor<4x8xf64, #CSR>, tensor<8x4xf64, #CSR>)
          outs(%C: tensor<4x4xf64, #CSR>) -> tensor<4x4xf64, #CSR>
@@ -82,7 +80,7 @@ module {
   //
   func.func @matmul3(%A: tensor<4x8xf64, #DCSR>,
                      %B: tensor<8x4xf64, #DCSR>) -> tensor<4x4xf64, #DCSR> {
-    %C = bufferization.alloc_tensor() : tensor<4x4xf64, #DCSR>
+    %C = tensor.empty() : tensor<4x4xf64, #DCSR>
     %D = linalg.matmul
       ins(%A, %B: tensor<4x8xf64, #DCSR>, tensor<8x4xf64, #DCSR>)
          outs(%C: tensor<4x4xf64, #DCSR>) -> tensor<4x4xf64, #DCSR>

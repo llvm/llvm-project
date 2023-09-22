@@ -376,11 +376,19 @@ RISCVGatherScatterLowering::determineBaseAndStride(Instruction *Ptr,
   // We can't extract the stride if the arithmetic is done at a different size
   // than the pointer type. Adding the stride later may not wrap correctly.
   // Technically we could handle wider indices, but I don't expect that in
-  // practice.
+  // practice.  Handle one special case here - constants.  This simplifies
+  // writing test cases.
   Value *VecIndex = Ops[*VecOperand];
   Type *VecIntPtrTy = DL->getIntPtrType(GEP->getType());
-  if (VecIndex->getType() != VecIntPtrTy)
-    return std::make_pair(nullptr, nullptr);
+  if (VecIndex->getType() != VecIntPtrTy) {
+    auto *VecIndexC = dyn_cast<Constant>(VecIndex);
+    if (!VecIndexC)
+      return std::make_pair(nullptr, nullptr);
+    if (VecIndex->getType()->getScalarSizeInBits() > VecIntPtrTy->getScalarSizeInBits())
+      VecIndex = ConstantFoldCastInstruction(Instruction::Trunc, VecIndexC, VecIntPtrTy);
+    else
+      VecIndex = ConstantFoldCastInstruction(Instruction::SExt, VecIndexC, VecIntPtrTy);
+  }
 
   // Handle the non-recursive case.  This is what we see if the vectorizer
   // decides to use a scalar IV + vid on demand instead of a vector IV.

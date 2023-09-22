@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_LIBC_SRC_SUPPORT_THREAD_GPU_MUTEX_H
-#define LLVM_LIBC_SRC_SUPPORT_THREAD_GPU_MUTEX_H
+#ifndef LLVM_LIBC_SRC___SUPPORT_THREAD_GPU_MUTEX_H
+#define LLVM_LIBC_SRC___SUPPORT_THREAD_GPU_MUTEX_H
 
 #include "src/__support/macros/attributes.h"
 #include "src/__support/threads/mutex_common.h"

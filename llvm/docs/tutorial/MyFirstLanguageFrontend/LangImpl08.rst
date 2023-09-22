@@ -155,7 +155,7 @@ pass:
 .. code-block:: c++
 
   legacy::PassManager pass;
-  auto FileType = CGFT_ObjectFile;
+  auto FileType = CodeGenFileType::ObjectFile;
 
   if (TargetMachine->addPassesToEmitFile(pass, dest, nullptr, FileType)) {
     errs() << "TargetMachine can't emit a file of this type";

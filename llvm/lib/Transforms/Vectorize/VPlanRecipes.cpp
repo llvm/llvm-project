@@ -415,14 +415,15 @@ bool VPInstruction::isFPMathOp() const {
   return Opcode == Instruction::FAdd || Opcode == Instruction::FMul ||
          Opcode == Instruction::FNeg || Opcode == Instruction::FSub ||
          Opcode == Instruction::FDiv || Opcode == Instruction::FRem ||
-         Opcode == Instruction::FCmp;
+         Opcode == Instruction::FCmp || Opcode == Instruction::Select;
 }
 #endif
 
 void VPInstruction::execute(VPTransformState &State) {
   assert(!State.Instance && "VPInstruction executing an Instance");
   IRBuilderBase::FastMathFlagGuard FMFGuard(State.Builder);
-  assert(hasFastMathFlags() == isFPMathOp() &&
+  assert((hasFastMathFlags() == isFPMathOp() ||
+          getOpcode() == Instruction::Select) &&
          "Recipe not a FPMathOp but has fast-math flags?");
   if (hasFastMathFlags())
     State.Builder.setFastMathFlags(getFastMathFlags());
@@ -1089,7 +1090,7 @@ void VPScalarIVStepsRecipe::print(raw_ostream &O, const Twine &Indent,
                                   VPSlotTracker &SlotTracker) const {
   O << Indent;
   printAsOperand(O, SlotTracker);
-  O << Indent << "= SCALAR-STEPS ";
+  O << " = SCALAR-STEPS ";
   printOperands(O, SlotTracker);
 }
 #endif

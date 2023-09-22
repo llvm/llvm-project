@@ -227,54 +227,6 @@ MLIR_CRUNNERUTILS_EXPORT char *getTensorFilename(index_type id);
 MLIR_CRUNNERUTILS_EXPORT void readSparseTensorShape(char *filename,
                                                     std::vector<uint64_t> *out);
 
-/// Initializes sparse tensor from a COO-flavored format expressed using
-/// C-style data structures.  The expected parameters are:
-///
-///   rank:    rank of tensor
-///   nse:     number of specified elements (usually the nonzeros)
-///   shape:   array with dimension size for each rank
-///   values:  a "nse" array with values for all specified elements
-///   coordinates: a flat "nse * rank" array with coordinates for all
-///            specified elements
-///   perm:    the permutation of the levels in the storage
-///   sparse:  the sparsity for the levels
-///
-/// For example, the sparse matrix
-///     | 1.0 0.0 0.0 |
-///     | 0.0 5.0 3.0 |
-/// can be passed as
-///      rank    = 2
-///      nse     = 3
-///      shape   = [2, 3]
-///      values  = [1.0, 5.0, 3.0]
-///      coordinates = [ 0, 0,  1, 1,  1, 2]
-#define DECL_CONVERTTOMLIRSPARSETENSOR(VNAME, V)                               \
-  MLIR_CRUNNERUTILS_EXPORT void *convertToMLIRSparseTensor##VNAME(             \
-      uint64_t rank, uint64_t nse, uint64_t *dimSizes, V *values,              \
-      uint64_t *dimCoordinates, uint64_t *dim2lvl, uint8_t *lvlTypes);
-MLIR_SPARSETENSOR_FOREVERY_V(DECL_CONVERTTOMLIRSPARSETENSOR)
-#undef DECL_CONVERTTOMLIRSPARSETENSOR
-
-/// Converts a sparse tensor to COO-flavored format expressed using
-/// C-style data structures.  The expected output parameters are pointers
-/// for these values:
-///
-///   rank:    rank of tensor
-///   nse:     number of specified elements (usually the nonzeros)
-///   shape:   array with size for each dimension
-///   values:  a "nse" array with values for all specified elements
-///   coordinates: a flat "nse * rank" array with coordinates for all
-///            specified elements
-///
-/// The input is a pointer to `SparseTensorStorage<P, C, V>`, typically
-/// returned from `convertToMLIRSparseTensor`.
-#define DECL_CONVERTFROMMLIRSPARSETENSOR(VNAME, V)                             \
-  MLIR_CRUNNERUTILS_EXPORT void convertFromMLIRSparseTensor##VNAME(            \
-      void *tensor, uint64_t *pRank, uint64_t *pNse, uint64_t **pShape,        \
-      V **pValues, uint64_t **pCoordinates);
-MLIR_SPARSETENSOR_FOREVERY_V(DECL_CONVERTFROMMLIRSPARSETENSOR)
-#undef DECL_CONVERTFROMMLIRSPARSETENSOR
-
 /// Returns the rank of the sparse tensor being read.
 MLIR_CRUNNERUTILS_EXPORT index_type getSparseTensorReaderRank(void *p);
 
@@ -292,10 +244,9 @@ MLIR_CRUNNERUTILS_EXPORT index_type getSparseTensorReaderDimSize(void *p,
 /// the reader.
 MLIR_CRUNNERUTILS_EXPORT void delSparseTensorReader(void *p);
 
-/// Creates a SparseTensorWriter for outputing a sparse tensor to a file with
-/// the given file name. When the file name is empty, std::cout is used.
-//
-// Only the extended FROSTT format is supported currently.
+/// Creates a SparseTensorWriter for outputting a sparse tensor to a file
+/// with the given file name. When the file name is empty, std::cout is used.
+/// Only the extended FROSTT format is supported currently.
 MLIR_CRUNNERUTILS_EXPORT void *createSparseTensorWriter(char *filename);
 
 /// Finalizes the outputing of a sparse tensor to a file and releases the

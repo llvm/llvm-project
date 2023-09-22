@@ -7,13 +7,13 @@ func.func private @scalar(%arg0: tensor<f64, #a>) -> ()
 // -----
 
 // expected-error@+2 {{dimension-rank mismatch between encoding and tensor shape: 2 != 1}}
-#a = #sparse_tensor.encoding<{lvlTypes = ["dense", "compressed"]}>
+#a = #sparse_tensor.encoding<{map = (d0, d1) -> (d0 : dense, d1 : compressed)}>
 func.func private @tensor_dimlevel_size_mismatch(%arg0: tensor<8xi32, #a>) -> ()
 
 // -----
 
-// expected-error@+1 {{level-rank mismatch between dimToLvl and lvlTypes: 1 != 2}}
-#a = #sparse_tensor.encoding<{lvlTypes = ["dense", "compressed"], dimToLvl = affine_map<(i) -> (i)>}>
+// expected-error@+1 {{use of undeclared identifier}}
+#a = #sparse_tensor.encoding<{map = (d0) -> (d0 : dense, d1 : compressed)}>
 func.func private @tensor_sizes_mismatch(%arg0: tensor<8xi32, #a>) -> ()
 
 // -----
@@ -34,7 +34,7 @@ func.func private @tensor_dimtolvl_mismatch(%arg0: tensor<8xi32, #a>) -> ()
 // -----
 
 // expected-error@+1 {{expected a permutation affine map for dimToLvl}}
-#a = #sparse_tensor.encoding<{lvlTypes = ["dense", "compressed"], dimToLvl = affine_map<(i,j) -> (i,i)>}>
+#a = #sparse_tensor.encoding<{map = (d0, d1) -> (d0 : dense, d0 : compressed)}>
 func.func private @tensor_no_permutation(%arg0: tensor<16x32xf32, #a>) -> ()
 
 // -----

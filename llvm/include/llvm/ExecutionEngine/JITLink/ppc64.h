@@ -204,9 +204,11 @@ public:
       if (isExternal) {
         E.setKind(ppc64::CallBranchDeltaRestoreTOC);
         this->StubKind = LongBranchSaveR2;
+        // FIXME: We assume the addend to the external target is zero. It's
+        // quite unusual that the addend of an external target to be non-zero as
+        // if we have known the layout of the external object.
         E.setTarget(this->getEntryForTarget(G, E.getTarget()));
-        // We previously set branching to local entry. Now reverse that
-        // operation.
+        // Addend to the stub is zero.
         E.setAddend(0);
       } else
         // TODO: There are cases a local function call need a call stub.

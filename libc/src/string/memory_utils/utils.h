@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_LIBC_SRC_MEMORY_UTILS_UTILS_H
-#define LLVM_LIBC_SRC_MEMORY_UTILS_UTILS_H
+#ifndef LLVM_LIBC_SRC_STRING_MEMORY_UTILS_UTILS_H
+#define LLVM_LIBC_SRC_STRING_MEMORY_UTILS_UTILS_H
 
 #include "src/__support/CPP/bit.h"
 #include "src/__support/CPP/cstddef.h"
@@ -374,4 +374,4 @@ private:
 
 } // namespace __llvm_libc
 
-#endif // LLVM_LIBC_SRC_MEMORY_UTILS_UTILS_H
+#endif // LLVM_LIBC_SRC_STRING_MEMORY_UTILS_UTILS_H

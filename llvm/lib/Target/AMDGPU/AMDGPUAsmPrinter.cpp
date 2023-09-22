@@ -121,26 +121,13 @@ void AMDGPUAsmPrinter::initTargetStreamer(Module &M) {
       TM.getTargetTriple().getOS() != Triple::AMDPAL)
     return;
 
-  if (CodeObjectVersion >= AMDGPU::AMDHSA_COV3)
-    getTargetStreamer()->EmitDirectiveAMDGCNTarget();
+  getTargetStreamer()->EmitDirectiveAMDGCNTarget();
 
   if (TM.getTargetTriple().getOS() == Triple::AMDHSA)
     HSAMetadataStream->begin(M, *getTargetStreamer()->getTargetID());
 
   if (TM.getTargetTriple().getOS() == Triple::AMDPAL)
     getTargetStreamer()->getPALMetadata()->readFromIR(M);
-
-  if (CodeObjectVersion >= AMDGPU::AMDHSA_COV3)
-    return;
-
-  // HSA emits NT_AMD_HSA_CODE_OBJECT_VERSION for code objects v2.
-  if (TM.getTargetTriple().getOS() == Triple::AMDHSA)
-    getTargetStreamer()->EmitDirectiveHSACodeObjectVersion(2, 1);
-
-  // HSA and PAL emit NT_AMD_HSA_ISA_VERSION for code objects v2.
-  IsaVersion Version = getIsaVersion(getGlobalSTI()->getCPU());
-  getTargetStreamer()->EmitDirectiveHSACodeObjectISAV2(
-      Version.Major, Version.Minor, Version.Stepping, "AMD", "AMDGPU");
 }
 
 void AMDGPUAsmPrinter::emitEndOfAsmFile(Module &M) {
@@ -148,8 +135,7 @@ void AMDGPUAsmPrinter::emitEndOfAsmFile(Module &M) {
   if (!IsTargetStreamerInitialized)
     initTargetStreamer(M);
 
-  if (TM.getTargetTriple().getOS() != Triple::AMDHSA ||
-      CodeObjectVersion == AMDGPU::AMDHSA_COV2)
+  if (TM.getTargetTriple().getOS() != Triple::AMDHSA)
     getTargetStreamer()->EmitISAVersion();
 
   // Emit HSA Metadata (NT_AMD_AMDGPU_HSA_METADATA).
@@ -209,7 +195,7 @@ void AMDGPUAsmPrinter::emitFunctionBodyStart() {
   if (!MFI.isEntryFunction())
     return;
 
-  if ((STM.isMesaKernel(F) || CodeObjectVersion == AMDGPU::AMDHSA_COV2) &&
+  if (STM.isMesaKernel(F) &&
       (F.getCallingConv() == CallingConv::AMDGPU_KERNEL ||
        F.getCallingConv() == CallingConv::SPIR_KERNEL)) {
     amd_kernel_code_t KernelCode;
@@ -226,8 +212,7 @@ void AMDGPUAsmPrinter::emitFunctionBodyEnd() {
   if (!MFI.isEntryFunction())
     return;
 
-  if (TM.getTargetTriple().getOS() != Triple::AMDHSA ||
-      CodeObjectVersion == AMDGPU::AMDHSA_COV2)
+  if (TM.getTargetTriple().getOS() != Triple::AMDHSA)
     return;
 
   auto &Streamer = getTargetStreamer()->getStreamer();
@@ -261,8 +246,7 @@ void AMDGPUAsmPrinter::emitFunctionBodyEnd() {
 }
 
 void AMDGPUAsmPrinter::emitFunctionEntryLabel() {
-  if (TM.getTargetTriple().getOS() == Triple::AMDHSA &&
-      CodeObjectVersion >= AMDGPU::AMDHSA_COV3) {
+  if (TM.getTargetTriple().getOS() == Triple::AMDHSA) {
     AsmPrinter::emitFunctionEntryLabel();
     return;
   }
@@ -337,9 +321,6 @@ bool AMDGPUAsmPrinter::doInitialization(Module &M) {
 
   if (TM.getTargetTriple().getOS() == Triple::AMDHSA) {
     switch (CodeObjectVersion) {
-    case AMDGPU::AMDHSA_COV2:
-      HSAMetadataStream.reset(new HSAMD::MetadataStreamerYamlV2());
-      break;
     case AMDGPU::AMDHSA_COV3:
       HSAMetadataStream.reset(new HSAMD::MetadataStreamerMsgPackV3());
       break;
@@ -393,28 +374,29 @@ uint16_t AMDGPUAsmPrinter::getAmdhsaKernelCodeProperties(
     const MachineFunction &MF) const {
   const SIMachineFunctionInfo &MFI = *MF.getInfo<SIMachineFunctionInfo>();
   uint16_t KernelCodeProperties = 0;
+  const GCNUserSGPRUsageInfo &UserSGPRInfo = MFI.getUserSGPRInfo();
 
-  if (MFI.hasPrivateSegmentBuffer()) {
+  if (UserSGPRInfo.hasPrivateSegmentBuffer()) {
     KernelCodeProperties |=
         amdhsa::KERNEL_CODE_PROPERTY_ENABLE_SGPR_PRIVATE_SEGMENT_BUFFER;
   }
-  if (MFI.hasDispatchPtr()) {
+  if (UserSGPRInfo.hasDispatchPtr()) {
     KernelCodeProperties |=
         amdhsa::KERNEL_CODE_PROPERTY_ENABLE_SGPR_DISPATCH_PTR;
   }
-  if (MFI.hasQueuePtr() && CodeObjectVersion < AMDGPU::AMDHSA_COV5) {
+  if (UserSGPRInfo.hasQueuePtr() && CodeObjectVersion < AMDGPU::AMDHSA_COV5) {
     KernelCodeProperties |=
         amdhsa::KERNEL_CODE_PROPERTY_ENABLE_SGPR_QUEUE_PTR;
   }
-  if (MFI.hasKernargSegmentPtr()) {
+  if (UserSGPRInfo.hasKernargSegmentPtr()) {
     KernelCodeProperties |=
         amdhsa::KERNEL_CODE_PROPERTY_ENABLE_SGPR_KERNARG_SEGMENT_PTR;
   }
-  if (MFI.hasDispatchID()) {
+  if (UserSGPRInfo.hasDispatchID()) {
     KernelCodeProperties |=
         amdhsa::KERNEL_CODE_PROPERTY_ENABLE_SGPR_DISPATCH_ID;
   }
-  if (MFI.hasFlatScratchInit()) {
+  if (UserSGPRInfo.hasFlatScratchInit()) {
     KernelCodeProperties |=
         amdhsa::KERNEL_CODE_PROPERTY_ENABLE_SGPR_FLAT_SCRATCH_INIT;
   }
@@ -1165,27 +1147,28 @@ void AMDGPUAsmPrinter::getAmdKernelCode(amd_kernel_code_t &Out,
                    AMD_CODE_PROPERTY_PRIVATE_ELEMENT_SIZE,
                    getElementByteSizeValue(STM.getMaxPrivateElementSize(true)));
 
-  if (MFI->hasPrivateSegmentBuffer()) {
+  const GCNUserSGPRUsageInfo &UserSGPRInfo = MFI->getUserSGPRInfo();
+  if (UserSGPRInfo.hasPrivateSegmentBuffer()) {
     Out.code_properties |=
       AMD_CODE_PROPERTY_ENABLE_SGPR_PRIVATE_SEGMENT_BUFFER;
   }
 
-  if (MFI->hasDispatchPtr())
+  if (UserSGPRInfo.hasDispatchPtr())
     Out.code_properties |= AMD_CODE_PROPERTY_ENABLE_SGPR_DISPATCH_PTR;
 
-  if (MFI->hasQueuePtr() && CodeObjectVersion < AMDGPU::AMDHSA_COV5)
+  if (UserSGPRInfo.hasQueuePtr() && CodeObjectVersion < AMDGPU::AMDHSA_COV5)
     Out.code_properties |= AMD_CODE_PROPERTY_ENABLE_SGPR_QUEUE_PTR;
 
-  if (MFI->hasKernargSegmentPtr())
+  if (UserSGPRInfo.hasKernargSegmentPtr())
     Out.code_properties |= AMD_CODE_PROPERTY_ENABLE_SGPR_KERNARG_SEGMENT_PTR;
 
-  if (MFI->hasDispatchID())
+  if (UserSGPRInfo.hasDispatchID())
     Out.code_properties |= AMD_CODE_PROPERTY_ENABLE_SGPR_DISPATCH_ID;
 
-  if (MFI->hasFlatScratchInit())
+  if (UserSGPRInfo.hasFlatScratchInit())
     Out.code_properties |= AMD_CODE_PROPERTY_ENABLE_SGPR_FLAT_SCRATCH_INIT;
 
-  if (MFI->hasDispatchPtr())
+  if (UserSGPRInfo.hasDispatchPtr())
     Out.code_properties |= AMD_CODE_PROPERTY_ENABLE_SGPR_DISPATCH_PTR;
 
   if (STM.isXNACKEnabled())

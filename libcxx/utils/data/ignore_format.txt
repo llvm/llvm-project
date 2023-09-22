@@ -283,7 +283,6 @@ libcxx/include/__iterator/ostreambuf_iterator.h
 libcxx/include/__iterator/ostream_iterator.h
 libcxx/include/__iterator/permutable.h
 libcxx/include/__iterator/prev.h
-libcxx/include/__iterator/projected.h
 libcxx/include/__iterator/readable_traits.h
 libcxx/include/__iterator/reverse_access.h
 libcxx/include/__iterator/reverse_iterator.h

@@ -207,13 +207,14 @@ struct SparseTensorCodegenPass
     ConversionTarget target(*ctx);
     // Most ops in the sparse dialect must go!
     target.addIllegalDialect<SparseTensorDialect>();
-    target.addLegalOp<SortOp>();
     target.addLegalOp<SortCooOp>();
     target.addLegalOp<PushBackOp>();
     // Storage specifier outlives sparse tensor pipeline.
     target.addLegalOp<GetStorageSpecifierOp>();
     target.addLegalOp<SetStorageSpecifierOp>();
     target.addLegalOp<StorageSpecifierInitOp>();
+    // Note that tensor::FromElementsOp might be yield after lowering unpack.
+    target.addLegalOp<tensor::FromElementsOp>();
     // All dynamic rules below accept new function, call, return, and
     // various tensor and bufferization operations as legal output of the
     // rewriting provided that all sparse tensor types have been fully

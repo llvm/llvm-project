@@ -461,10 +461,13 @@ fir::ExtendedValue Fortran::lower::genCallOpAndResult(
     allocatedResult->match(
         [&](const fir::MutableBoxValue &box) {
           if (box.isAllocatable() && !cleanupWithDestroy) {
-            // 9.7.3.2 point 4. Finalize allocatables.
+            // 9.7.3.2 point 4. Deallocate allocatable results. Note that
+            // finalization was done independently by calling
+            // genDerivedTypeDestroy above and is not triggered by this inline
+            // deallocation.
             fir::FirOpBuilder *bldr = &converter.getFirOpBuilder();
             stmtCtx.attachCleanup([bldr, loc, box]() {
-              fir::factory::genFinalization(*bldr, loc, box);
+              fir::factory::genFreememIfAllocated(*bldr, loc, box);
             });
           }
         },
@@ -1165,8 +1168,7 @@ genUserCall(Fortran::lower::PreparedActualArguments &loweredActuals,
         continue;
       }
       if (fir::isPointerType(argTy) &&
-          !Fortran::evaluate::IsObjectPointer(
-              *expr, callContext.converter.getFoldingContext())) {
+          !Fortran::evaluate::IsObjectPointer(*expr)) {
         // Passing a non POINTER actual argument to a POINTER dummy argument.
         // Create a pointer of the dummy argument type and assign the actual
         // argument to it.
@@ -1814,13 +1816,11 @@ genIsPresentIfArgMaybeAbsent(mlir::Location loc, hlfir::Entity actual,
                              const Fortran::lower::SomeExpr &expr,
                              CallContext &callContext,
                              bool passAsAllocatableOrPointer) {
-  if (!Fortran::evaluate::MayBePassedAsAbsentOptional(
-          expr, callContext.converter.getFoldingContext()))
+  if (!Fortran::evaluate::MayBePassedAsAbsentOptional(expr))
     return std::nullopt;
   fir::FirOpBuilder &builder = callContext.getBuilder();
   if (!passAsAllocatableOrPointer &&
-      Fortran::evaluate::IsAllocatableOrPointerObject(
-          expr, callContext.converter.getFoldingContext())) {
+      Fortran::evaluate::IsAllocatableOrPointerObject(expr)) {
     // Passing Allocatable/Pointer to non-pointer/non-allocatable OPTIONAL.
     // Fortran 2018 15.5.2.12 point 1: If unallocated/disassociated, it is
     // as if the argument was absent. The main care here is to not do a

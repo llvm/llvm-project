@@ -33,8 +33,8 @@
 // RUN: %if mlir_arm_sve_tests %{ %{compile_sve} | %{env} %{run_sve} | FileCheck %s %}
 
 
-#COO_2D = #sparse_tensor.encoding<{ lvlTypes = [ "compressed_nu", "singleton" ], posWidth = 32, crdWidth = 32 }>
-#COO_3D = #sparse_tensor.encoding<{ lvlTypes = [ "compressed_nu", "singleton_nu", "singleton" ], posWidth = 32, crdWidth = 32 }>
+#COO_2D = #sparse_tensor.encoding<{ map = (d0, d1) -> (d0 : compressed(nonunique), d1 : singleton), posWidth = 32, crdWidth = 32 }>
+#COO_3D = #sparse_tensor.encoding<{ map = (d0, d1, d2) -> (d0 : compressed(nonunique), d1 : singleton(nonunique), d2 : singleton), posWidth = 32, crdWidth = 32 }>
 
 module {
   func.func private @printMemref3dF32(%ptr : tensor<?x?x?xf32>) attributes { llvm.emit_c_interface }

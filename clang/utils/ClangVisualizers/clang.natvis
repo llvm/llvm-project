@@ -1071,12 +1071,12 @@ For later versions of Visual Studio, no setup is required-->
     <DisplayString>{Val}</DisplayString>
   </Type>
   <Type Name="clang::ActionResult&lt;*, 1&gt;">
-    <DisplayString Condition="PtrWithInvalid&amp;1">Invalid</DisplayString>
-    <DisplayString Condition="!PtrWithInvalid">Unset</DisplayString>
-    <DisplayString>{($T1)(PtrWithInvalid&amp;~1)}</DisplayString>
+    <DisplayString Condition="Value&amp;1">Invalid</DisplayString>
+    <DisplayString Condition="Value==0">Unset</DisplayString>
+    <DisplayString>{($T1)(Value&amp;~1)}</DisplayString>
     <Expand>
-      <Item Name="Invalid">(bool)(PtrWithInvalid&amp;1)</Item>
-      <Item Name="Val">($T1)(PtrWithInvalid&amp;~1)</Item>
+      <Item Name="Invalid">(bool)(Value&amp;1)</Item>
+      <Item Name="Val">($T1)(Value&amp;~1)</Item>
     </Expand>
   </Type>
 </AutoVisualizer>

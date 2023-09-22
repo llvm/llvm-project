@@ -887,7 +887,8 @@ Instruction::getPrevNonDebugInstruction(bool SkipPseudoOp) const {
 
 const DebugLoc &Instruction::getStableDebugLoc() const {
   if (isa<DbgInfoIntrinsic>(this))
-    return getNextNonDebugInstruction()->getDebugLoc();
+    if (const Instruction *Next = getNextNonDebugInstruction())
+      return Next->getDebugLoc();
   return getDebugLoc();
 }
 

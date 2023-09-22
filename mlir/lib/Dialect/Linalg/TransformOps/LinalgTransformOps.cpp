@@ -389,7 +389,7 @@ transform::EliminateLinalgOpAnchoredEmptyTensorsOp::apply(
     transform::TransformRewriter &rewriter, TransformResults &transformResults,
     TransformState &state) {
   bufferization::OneShotBufferizationOptions options;
-  options.allowReturnAllocs = true;
+  options.allowReturnAllocsFromLoops = true;
 
   for (Operation *target : state.getPayloadOps(getTarget())) {
     bufferization::OneShotAnalysisState state(target, options);
@@ -473,7 +473,9 @@ transform::FuseOp::apply(transform::TransformRewriter &rewriter,
 
   scf::SCFTilingOptions tilingOptions;
   tilingOptions.interchangeVector = tileInterchange;
-  tilingOptions = tilingOptions.setTileSizes(tileSizes);
+  SmallVector<OpFoldResult> tileSizesOfr =
+      getAsIndexOpFoldResult(rewriter.getContext(), tileSizes);
+  tilingOptions = tilingOptions.setTileSizes(tileSizesOfr);
   scf::SCFTileAndFuseOptions tileAndFuseOptions;
   tileAndFuseOptions.tilingOptions = tilingOptions;
   LogicalResult result = applyTilingToAll(
@@ -923,7 +925,7 @@ transform::FuseIntoContainingOp::apply(transform::TransformRewriter &rewriter,
     auto nextProducer = getNextProducer();
     if (failed(nextProducer)) {
       auto diag = mlir::emitSilenceableFailure(getLoc())
-             << "could not find next producer to fuse into container";
+                  << "could not find next producer to fuse into container";
       diag.attachNote(containingOp->getLoc()) << "containing op";
       return diag;
     }
@@ -1999,7 +2001,7 @@ transform::ScalarizeOp::applyToOne(transform::TransformRewriter &rewriter,
                                    transform::TransformState &state) {
   scf::SCFTilingOptions tilingOptions;
   tilingOptions.setTileSizeComputationFunction([&](OpBuilder &b, Operation *) {
-    SmallVector<Value, 4> tileSizes;
+    SmallVector<OpFoldResult> tileSizes;
     Location loc = target.getLoc();
     SmallVector<OpFoldResult> allShapeSizes =
         target.createFlatListOfOperandDims(b, loc);
@@ -2012,9 +2014,8 @@ transform::ScalarizeOp::applyToOne(transform::TransformRewriter &rewriter,
     // If the shape size is dynamic, tile by 1.
     // Otherwise, do not tile (i.e. tile size 0).
     for (OpFoldResult shapeSize : shapeSizes) {
-      tileSizes.push_back(getConstantIntValue(shapeSize)
-                              ? b.create<arith::ConstantIndexOp>(loc, 0)
-                              : b.create<arith::ConstantIndexOp>(loc, 1));
+      tileSizes.push_back(getConstantIntValue(shapeSize) ? b.getIndexAttr(0)
+                                                         : b.getIndexAttr(1));
     }
     return tileSizes;
   });
@@ -2535,12 +2536,21 @@ transform::TileOp::apply(transform::TransformRewriter &rewriter,
       diag.attachNote(op->getLoc()) << "target op";
       return diag;
     }
+    if (tileSizes.size() > tilingInterface.getLoopIteratorTypes().size()) {
+      DiagnosedSilenceableFailure diag =
+          emitSilenceableError()
+          << "too many tiles provided, expected at most "
+          << tilingInterface.getLoopIteratorTypes().size() << " found "
+          << tileSizes.size();
+      diag.attachNote(op->getLoc()) << "target op";
+      return diag;
+    }
 
     scf::SCFTilingOptions tilingOptions;
     if (!tileSizes.empty()) {
       tilingOptions.setTileSizeComputationFunction([&, index = i](OpBuilder &b,
                                                                   Operation *) {
-        SmallVector<Value, 4> sizes;
+        SmallVector<OpFoldResult> sizes;
         sizes.reserve(tileSizes.size());
         unsigned dynamicIdx = 0;
 
@@ -2551,10 +2561,10 @@ transform::TileOp::apply(transform::TransformRewriter &rewriter,
                   getLoc(), attr.cast<IntegerAttr>().getInt());
               Value vscale =
                   b.create<vector::VectorScaleOp>(getLoc(), b.getIndexType());
-              sizes.push_back(b.create<arith::MulIOp>(getLoc(), val, vscale));
+              sizes.push_back(
+                  b.create<arith::MulIOp>(getLoc(), val, vscale).getResult());
             } else {
-              sizes.push_back(b.create<arith::ConstantIndexOp>(
-                  getLoc(), cast<IntegerAttr>(attr).getInt()));
+              sizes.push_back(attr);
             }
             continue;
           }
@@ -2564,8 +2574,7 @@ transform::TileOp::apply(transform::TransformRewriter &rewriter,
           assert((dynamicSizes.empty() ^ params.empty()) &&
                  "expected either dynamic sizes or parameters");
           if (!params.empty()) {
-            sizes.push_back(
-                b.create<arith::ConstantIndexOp>(getLoc(), params[index]));
+            sizes.push_back(b.getIndexAttr(params[index]));
           } else {
             sizes.push_back(dynamicSizes[index]->getResult(0));
           }
@@ -2895,27 +2904,31 @@ LogicalResult TileToForallOp::verify() {
 }
 
 //===----------------------------------------------------------------------===//
-// VectorizeOp
+// VectorizeChildrenAndApplyPatternsOp
 //===----------------------------------------------------------------------===//
 
-void transform::VectorizeOp::build(OpBuilder &builder, OperationState &result,
-                                   Value target, bool vectorizePadding,
-                                   bool vectorizeExtract) {
+void transform::VectorizeChildrenAndApplyPatternsOp::build(
+    OpBuilder &builder, OperationState &result, Value target,
+    bool vectorizePadding, bool vectorizeExtract) {
   result.addOperands(target);
   if (vectorizePadding) {
-    result.addAttribute(VectorizeOp::getVectorizePaddingAttrName(result.name),
-                        builder.getUnitAttr());
+    result.addAttribute(
+        VectorizeChildrenAndApplyPatternsOp::getVectorizePaddingAttrName(
+            result.name),
+        builder.getUnitAttr());
   }
   if (vectorizeExtract) {
-    result.addAttribute(VectorizeOp::getVectorizeNdExtractAttrName(result.name),
-                        builder.getUnitAttr());
+    result.addAttribute(
+        VectorizeChildrenAndApplyPatternsOp::getVectorizeNdExtractAttrName(
+            result.name),
+        builder.getUnitAttr());
   }
   result.addTypes(transform::AnyOpType::get(builder.getContext()));
 }
 
 namespace {
 /// This is an helper only to call vectorize via a pattern inside of
-/// VectorizeOp::applyToOne.
+/// VectorizeChildrenAndApplyPatternsOp::applyToOne.
 struct VectorizationPattern : public RewritePattern {
   explicit VectorizationPattern(MLIRContext *context,
                                 bool vectorizeExtract = false)
@@ -2938,10 +2951,10 @@ private:
 } // namespace
 
 DiagnosedSilenceableFailure
-transform::VectorizeOp::applyToOne(transform::TransformRewriter &rewriter,
-                                   Operation *target,
-                                   transform::ApplyToEachResultList &results,
-                                   transform::TransformState &state) {
+transform::VectorizeChildrenAndApplyPatternsOp::applyToOne(
+    transform::TransformRewriter &rewriter, Operation *target,
+    transform::ApplyToEachResultList &results,
+    transform::TransformState &state) {
   if (!target->hasTrait<OpTrait::IsIsolatedFromAbove>()) {
     auto diag = this->emitOpError("requires isolated-from-above targets");
     diag.attachNote(target->getLoc()) << "non-isolated target";
@@ -2983,9 +2996,9 @@ transform::VectorizeOp::applyToOne(transform::TransformRewriter &rewriter,
 }
 
 //===----------------------------------------------------------------------===//
-// MaskedVectorizeOp
+// VectorizeOp
 //===----------------------------------------------------------------------===//
-DiagnosedSilenceableFailure transform::MaskedVectorizeOp::apply(
+DiagnosedSilenceableFailure transform::VectorizeOp::apply(
     transform::TransformRewriter &rewriter,
     mlir::transform::TransformResults &transformResults,
     mlir::transform::TransformState &state) {
@@ -3049,19 +3062,19 @@ DiagnosedSilenceableFailure transform::MaskedVectorizeOp::apply(
   return DiagnosedSilenceableFailure::success();
 }
 
-void transform::MaskedVectorizeOp::getEffects(
+void transform::VectorizeOp::getEffects(
     SmallVectorImpl<MemoryEffects::EffectInstance> &effects) {
   consumesHandle(getTarget(), effects);
   onlyReadsHandle(getVectorSizes(), effects);
   modifiesPayload(effects);
 }
 
-SmallVector<OpFoldResult> MaskedVectorizeOp::getMixedVectorSizes() {
+SmallVector<OpFoldResult> VectorizeOp::getMixedVectorSizes() {
   OpBuilder b(getContext());
   return getMixedValues(getStaticVectorSizes(), getVectorSizes(), b);
 }
 
-LogicalResult transform::MaskedVectorizeOp::verify() {
+LogicalResult transform::VectorizeOp::verify() {
   if (getStaticVectorSizes().size() != getScalableSizes().size())
     return emitOpError("expected same number of vector sizes (")
            << getStaticVectorSizes().size() << ") and scalable sizes ("

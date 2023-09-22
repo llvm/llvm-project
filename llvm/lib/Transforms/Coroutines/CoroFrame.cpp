@@ -1766,8 +1766,8 @@ static void insertSpills(const FrameDataInfo &FrameData, coro::Shape &Shape) {
       // Note: If we change the strategy dealing with alignment, we need to refine
       // this casting.
       if (GEP->getType() != Orig->getType())
-        return Builder.CreateBitCast(GEP, Orig->getType(),
-                                     Orig->getName() + Twine(".cast"));
+        return Builder.CreateAddrSpaceCast(GEP, Orig->getType(),
+                                           Orig->getName() + Twine(".cast"));
     }
     return GEP;
   };
@@ -2802,6 +2802,11 @@ static void collectFrameAlloca(AllocaInst *AI, coro::Shape &Shape,
   // The PromiseAlloca will be specially handled since it needs to be in a
   // fixed position in the frame.
   if (AI == Shape.SwitchLowering.PromiseAlloca)
+    return;
+
+  // The __coro_gro alloca should outlive the promise, make sure we
+  // keep it outside the frame.
+  if (MDNode *MD = AI->getMetadata(LLVMContext::MD_coro_outside_frame))
     return;
 
   // The code that uses lifetime.start intrinsic does not work for functions

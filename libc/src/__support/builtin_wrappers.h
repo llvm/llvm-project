@@ -7,8 +7,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_LIBC_SRC_SUPPORT_BUILTIN_WRAPPERS_H
-#define LLVM_LIBC_SRC_SUPPORT_BUILTIN_WRAPPERS_H
+#ifndef LLVM_LIBC_SRC___SUPPORT_BUILTIN_WRAPPERS_H
+#define LLVM_LIBC_SRC___SUPPORT_BUILTIN_WRAPPERS_H
 
 #include "named_pair.h"
 #include "src/__support/CPP/type_traits.h"
@@ -223,4 +223,4 @@ sub_with_borrow<unsigned long long>(unsigned long long a, unsigned long long b,
 
 } // namespace __llvm_libc
 
-#endif // LLVM_LIBC_SRC_SUPPORT_BUILTIN_WRAPPERS_H
+#endif // LLVM_LIBC_SRC___SUPPORT_BUILTIN_WRAPPERS_H

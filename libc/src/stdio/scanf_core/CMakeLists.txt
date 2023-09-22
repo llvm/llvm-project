@@ -8,10 +8,8 @@ add_header_library(
     libc.src.__support.FPUtil.fp_bits
 )
 
-add_object_library(
+add_header_library(
   parser
-  SRCS
-    parser.cpp
   HDRS
     parser.h
   DEPENDS

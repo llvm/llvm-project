@@ -20,7 +20,9 @@
 //===----------------------------------------------------------------------===//
 
 #include "AArch64TargetMachine.h"
+#include "llvm/ADT/STLExtras.h"
 #include "llvm/CodeGen/GlobalISel/CSEInfo.h"
+#include "llvm/CodeGen/GlobalISel/CSEMIRBuilder.h"
 #include "llvm/CodeGen/GlobalISel/Combiner.h"
 #include "llvm/CodeGen/GlobalISel/CombinerHelper.h"
 #include "llvm/CodeGen/GlobalISel/CombinerInfo.h"
@@ -338,6 +340,47 @@ void applySplitStoreZero128(MachineInstr &MI, MachineRegisterInfo &MRI,
   Store.eraseFromParent();
 }
 
+bool matchOrToBSP(MachineInstr &MI, MachineRegisterInfo &MRI,
+                  std::tuple<Register, Register, Register> &MatchInfo) {
+  const LLT DstTy = MRI.getType(MI.getOperand(0).getReg());
+  if (!DstTy.isVector())
+    return false;
+
+  Register AO1, AO2, BVO1, BVO2;
+  if (!mi_match(MI, MRI,
+                m_GOr(m_GAnd(m_Reg(AO1), m_Reg(BVO1)),
+                      m_GAnd(m_Reg(AO2), m_Reg(BVO2)))))
+    return false;
+
+  auto *BV1 = getOpcodeDef<GBuildVector>(BVO1, MRI);
+  auto *BV2 = getOpcodeDef<GBuildVector>(BVO2, MRI);
+  if (!BV1 || !BV2)
+    return false;
+
+  for (int I = 0, E = DstTy.getNumElements(); I < E; I++) {
+    auto ValAndVReg1 =
+        getIConstantVRegValWithLookThrough(BV1->getSourceReg(I), MRI);
+    auto ValAndVReg2 =
+        getIConstantVRegValWithLookThrough(BV2->getSourceReg(I), MRI);
+    if (!ValAndVReg1 || !ValAndVReg2 ||
+        ValAndVReg1->Value != ~ValAndVReg2->Value)
+      return false;
+  }
+
+  MatchInfo = {AO1, AO2, BVO1};
+  return true;
+}
+
+void applyOrToBSP(MachineInstr &MI, MachineRegisterInfo &MRI,
+                  MachineIRBuilder &B,
+                  std::tuple<Register, Register, Register> &MatchInfo) {
+  B.setInstrAndDebugLoc(MI);
+  B.buildInstr(
+      AArch64::G_BSP, {MI.getOperand(0).getReg()},
+      {std::get<2>(MatchInfo), std::get<0>(MatchInfo), std::get<1>(MatchInfo)});
+  MI.eraseFromParent();
+}
+
 class AArch64PostLegalizerCombinerImpl : public Combiner {
 protected:
   // TODO: Make CombinerHelper methods const.
@@ -398,6 +441,22 @@ public:
 private:
   bool IsOptNone;
   AArch64PostLegalizerCombinerImplRuleConfig RuleConfig;
+
+
+  struct StoreInfo {
+    GStore *St = nullptr;
+    // The G_PTR_ADD that's used by the store. We keep this to cache the
+    // MachineInstr def.
+    GPtrAdd *Ptr = nullptr;
+    // The signed offset to the Ptr instruction.
+    int64_t Offset = 0;
+    LLT StoredType;
+  };
+  bool tryOptimizeConsecStores(SmallVectorImpl<StoreInfo> &Stores,
+                               CSEMIRBuilder &MIB);
+
+  bool optimizeConsecutiveMemOpAddressing(MachineFunction &MF,
+                                          CSEMIRBuilder &MIB);
 };
 } // end anonymous namespace
 
@@ -434,7 +493,7 @@ bool AArch64PostLegalizerCombiner::runOnMachineFunction(MachineFunction &MF) {
   auto *TPC = &getAnalysis<TargetPassConfig>();
   const Function &F = MF.getFunction();
   bool EnableOpt =
-      MF.getTarget().getOptLevel() != CodeGenOpt::None && !skipFunction(F);
+      MF.getTarget().getOptLevel() != CodeGenOptLevel::None && !skipFunction(F);
 
   const AArch64Subtarget &ST = MF.getSubtarget<AArch64Subtarget>();
   const auto *LI = ST.getLegalizerInfo();
@@ -451,7 +510,191 @@ bool AArch64PostLegalizerCombiner::runOnMachineFunction(MachineFunction &MF) {
                      F.hasMinSize());
   AArch64PostLegalizerCombinerImpl Impl(MF, CInfo, TPC, *KB, CSEInfo,
                                         RuleConfig, ST, MDT, LI);
-  return Impl.combineMachineInstrs();
+  bool Changed = Impl.combineMachineInstrs();
+
+  auto MIB = CSEMIRBuilder(MF);
+  MIB.setCSEInfo(CSEInfo);
+  Changed |= optimizeConsecutiveMemOpAddressing(MF, MIB);
+  return Changed;
+}
+
+bool AArch64PostLegalizerCombiner::tryOptimizeConsecStores(
+    SmallVectorImpl<StoreInfo> &Stores, CSEMIRBuilder &MIB) {
+  if (Stores.size() <= 2)
+    return false;
+
+  // Profitabity checks:
+  int64_t BaseOffset = Stores[0].Offset;
+  unsigned NumPairsExpected = Stores.size() / 2;
+  unsigned TotalInstsExpected = NumPairsExpected + (Stores.size() % 2);
+  // Size savings will depend on whether we can fold the offset, as an
+  // immediate of an ADD.
+  auto &TLI = *MIB.getMF().getSubtarget().getTargetLowering();
+  if (!TLI.isLegalAddImmediate(BaseOffset))
+    TotalInstsExpected++;
+  int SavingsExpected = Stores.size() - TotalInstsExpected;
+  if (SavingsExpected <= 0)
+    return false;
+
+  auto &MRI = MIB.getMF().getRegInfo();
+
+  // We have a series of consecutive stores. Factor out the common base
+  // pointer and rewrite the offsets.
+  Register NewBase = Stores[0].Ptr->getReg(0);
+  for (auto &SInfo : Stores) {
+    // Compute a new pointer with the new base ptr and adjusted offset.
+    MIB.setInstrAndDebugLoc(*SInfo.St);
+    auto NewOff = MIB.buildConstant(LLT::scalar(64), SInfo.Offset - BaseOffset);
+    auto NewPtr = MIB.buildPtrAdd(MRI.getType(SInfo.St->getPointerReg()),
+                                  NewBase, NewOff);
+    if (MIB.getObserver())
+      MIB.getObserver()->changingInstr(*SInfo.St);
+    SInfo.St->getOperand(1).setReg(NewPtr.getReg(0));
+    if (MIB.getObserver())
+      MIB.getObserver()->changedInstr(*SInfo.St);
+  }
+  LLVM_DEBUG(dbgs() << "Split a series of " << Stores.size()
+                    << " stores into a base pointer and offsets.\n");
+  return true;
+}
+
+static cl::opt<bool>
+    EnableConsecutiveMemOpOpt("aarch64-postlegalizer-consecutive-memops",
+                              cl::init(true), cl::Hidden,
+                              cl::desc("Enable consecutive memop optimization "
+                                       "in AArch64PostLegalizerCombiner"));
+
+bool AArch64PostLegalizerCombiner::optimizeConsecutiveMemOpAddressing(
+    MachineFunction &MF, CSEMIRBuilder &MIB) {
+  // This combine needs to run after all reassociations/folds on pointer
+  // addressing have been done, specifically those that combine two G_PTR_ADDs
+  // with constant offsets into a single G_PTR_ADD with a combined offset.
+  // The goal of this optimization is to undo that combine in the case where
+  // doing so has prevented the formation of pair stores due to illegal
+  // addressing modes of STP. The reason that we do it here is because
+  // it's much easier to undo the transformation of a series consecutive
+  // mem ops, than it is to detect when doing it would be a bad idea looking
+  // at a single G_PTR_ADD in the reassociation/ptradd_immed_chain combine.
+  //
+  // An example:
+  //   G_STORE %11:_(<2 x s64>), %base:_(p0) :: (store (<2 x s64>), align 1)
+  //   %off1:_(s64) = G_CONSTANT i64 4128
+  //   %p1:_(p0) = G_PTR_ADD %0:_, %off1:_(s64)
+  //   G_STORE %11:_(<2 x s64>), %p1:_(p0) :: (store (<2 x s64>), align 1)
+  //   %off2:_(s64) = G_CONSTANT i64 4144
+  //   %p2:_(p0) = G_PTR_ADD %0:_, %off2:_(s64)
+  //   G_STORE %11:_(<2 x s64>), %p2:_(p0) :: (store (<2 x s64>), align 1)
+  //   %off3:_(s64) = G_CONSTANT i64 4160
+  //   %p3:_(p0) = G_PTR_ADD %0:_, %off3:_(s64)
+  //   G_STORE %11:_(<2 x s64>), %17:_(p0) :: (store (<2 x s64>), align 1)
+  bool Changed = false;
+  auto &MRI = MF.getRegInfo();
+
+  if (!EnableConsecutiveMemOpOpt)
+    return Changed;
+
+  SmallVector<StoreInfo, 8> Stores;
+  // If we see a load, then we keep track of any values defined by it.
+  // In the following example, STP formation will fail anyway because
+  // the latter store is using a load result that appears after the
+  // the prior store. In this situation if we factor out the offset then
+  // we increase code size for no benefit.
+  //   G_STORE %v1:_(s64), %base:_(p0) :: (store (s64))
+  //   %v2:_(s64) = G_LOAD %ldptr:_(p0) :: (load (s64))
+  //   G_STORE %v2:_(s64), %base:_(p0) :: (store (s64))
+  SmallVector<Register> LoadValsSinceLastStore;
+
+  auto storeIsValid = [&](StoreInfo &Last, StoreInfo New) {
+    // Check if this store is consecutive to the last one.
+    if (Last.Ptr->getBaseReg() != New.Ptr->getBaseReg() ||
+        (Last.Offset + static_cast<int64_t>(Last.StoredType.getSizeInBytes()) !=
+         New.Offset) ||
+        Last.StoredType != New.StoredType)
+      return false;
+
+    // Check if this store is using a load result that appears after the
+    // last store. If so, bail out.
+    if (any_of(LoadValsSinceLastStore, [&](Register LoadVal) {
+          return New.St->getValueReg() == LoadVal;
+        }))
+      return false;
+
+    // Check if the current offset would be too large for STP.
+    // If not, then STP formation should be able to handle it, so we don't
+    // need to do anything.
+    int64_t MaxLegalOffset;
+    switch (New.StoredType.getSizeInBits()) {
+    case 32:
+      MaxLegalOffset = 252;
+      break;
+    case 64:
+      MaxLegalOffset = 504;
+      break;
+    case 128:
+      MaxLegalOffset = 1008;
+      break;
+    default:
+      llvm_unreachable("Unexpected stored type size");
+    }
+    if (New.Offset < MaxLegalOffset)
+      return false;
+
+    // If factoring it out still wouldn't help then don't bother.
+    return New.Offset - Stores[0].Offset <= MaxLegalOffset;
+  };
+
+  auto resetState = [&]() {
+    Stores.clear();
+    LoadValsSinceLastStore.clear();
+  };
+
+  for (auto &MBB : MF) {
+    // We're looking inside a single BB at a time since the memset pattern
+    // should only be in a single block.
+    resetState();
+    for (auto &MI : MBB) {
+      if (auto *St = dyn_cast<GStore>(&MI)) {
+        Register PtrBaseReg;
+        APInt Offset;
+        LLT StoredValTy = MRI.getType(St->getValueReg());
+        unsigned ValSize = StoredValTy.getSizeInBits();
+        if (ValSize < 32 || ValSize != St->getMMO().getSizeInBits())
+          continue;
+
+        Register PtrReg = St->getPointerReg();
+        if (mi_match(
+                PtrReg, MRI,
+                m_OneNonDBGUse(m_GPtrAdd(m_Reg(PtrBaseReg), m_ICst(Offset))))) {
+          GPtrAdd *PtrAdd = cast<GPtrAdd>(MRI.getVRegDef(PtrReg));
+          StoreInfo New = {St, PtrAdd, Offset.getSExtValue(), StoredValTy};
+
+          if (Stores.empty()) {
+            Stores.push_back(New);
+            continue;
+          }
+
+          // Check if this store is a valid continuation of the sequence.
+          auto &Last = Stores.back();
+          if (storeIsValid(Last, New)) {
+            Stores.push_back(New);
+            LoadValsSinceLastStore.clear(); // Reset the load value tracking.
+          } else {
+            // The store isn't a valid to consider for the prior sequence,
+            // so try to optimize what we have so far and start a new sequence.
+            Changed |= tryOptimizeConsecStores(Stores, MIB);
+            resetState();
+            Stores.push_back(New);
+          }
+        }
+      } else if (auto *Ld = dyn_cast<GLoad>(&MI)) {
+        LoadValsSinceLastStore.push_back(Ld->getDstReg());
+      }
+    }
+    Changed |= tryOptimizeConsecStores(Stores, MIB);
+    resetState();
+  }
+
+  return Changed;
 }
 
 char AArch64PostLegalizerCombiner::ID = 0;

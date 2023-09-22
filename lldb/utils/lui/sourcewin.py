@@ -15,7 +15,6 @@ import os
 
 
 class SourceWin(cui.TitledWin):
-
     def __init__(self, driver, x, y, w, h):
         super(SourceWin, self).__init__(x, y, w, h, "Source")
         self.sourceman = driver.getSourceManager()
@@ -35,9 +34,10 @@ class SourceWin(cui.TitledWin):
 
         try:
             from pygments.formatters import TerminalFormatter
+
             self.formatter = TerminalFormatter()
         except ImportError:
-            #self.win.addstr("\nWarning: no 'pygments' library found. Syntax highlighting is disabled.")
+            # self.win.addstr("\nWarning: no 'pygments' library found. Syntax highlighting is disabled.")
             self.lexer = None
             self.formatter = None
             pass
@@ -55,8 +55,9 @@ class SourceWin(cui.TitledWin):
             if lldb.SBBreakpoint.EventIsBreakpointEvent(event):
                 self.handleBPEvent(event)
 
-            if lldb.SBProcess.EventIsProcessEvent(event) and \
-                    not lldb.SBProcess.GetRestartedFromEvent(event):
+            if lldb.SBProcess.EventIsProcessEvent(
+                event
+            ) and not lldb.SBProcess.GetRestartedFromEvent(event):
                 process = lldb.SBProcess.GetProcessFromEvent(event)
                 if not process.IsValid():
                     return
@@ -71,8 +72,8 @@ class SourceWin(cui.TitledWin):
         pid = process.GetProcessID()
         ec = process.GetExitStatus()
         self.win.addstr(
-            "\nProcess %s [%d] has exited with exit-code %d" %
-            (target, pid, ec))
+            "\nProcess %s [%d] has exited with exit-code %d" % (target, pid, ec)
+        )
 
     def pageUp(self):
         if self.viewline > 0:
@@ -100,8 +101,8 @@ class SourceWin(cui.TitledWin):
 
         if self.viewline < 0:
             raise Exception(
-                "negative viewline: pc=%d viewline=%d" %
-                (self.pc_line, self.viewline))
+                "negative viewline: pc=%d viewline=%d" % (self.pc_line, self.viewline)
+            )
 
     def refreshSource(self, process=None):
         (self.height, self.width) = self.win.getmaxyx()
@@ -126,9 +127,14 @@ class SourceWin(cui.TitledWin):
 
         if self.formatter is not None:
             from pygments.lexers import get_lexer_for_filename
+
             self.lexer = get_lexer_for_filename(self.filename)
 
-        bps = [] if not self.filename in self.breakpoints else self.breakpoints[self.filename]
+        bps = (
+            []
+            if not self.filename in self.breakpoints
+            else self.breakpoints[self.filename]
+        )
         self.win.erase()
         if self.content:
             self.formatContent(self.content, self.pc_line, bps)
@@ -159,7 +165,7 @@ class SourceWin(cui.TitledWin):
                 marker = self.markerBP
             line = "%s%3d %s" % (marker, line_num, self.highlight(content[i]))
             if len(line) >= self.width:
-                line = line[0:self.width - 1] + "\n"
+                line = line[0 : self.width - 1] + "\n"
             self.win.addstr(line, attr)
             source += line
             count = count + 1
@@ -168,6 +174,7 @@ class SourceWin(cui.TitledWin):
     def highlight(self, source):
         if self.lexer and self.formatter:
             from pygments import highlight
+
             return highlight(source, self.lexer, self.formatter)
         else:
             return source
@@ -202,9 +209,8 @@ class SourceWin(cui.TitledWin):
                 # hack! getting the LineEntry via SBBreakpointLocation.GetAddress.GetLineEntry does not work good for
                 # inlined frames, so we get the description (which does take
                 # into account inlined functions) and parse it.
-                desc = lldbutil.get_description(
-                    location, lldb.eDescriptionLevelFull)
-                match = re.search('at\ ([^:]+):([\d]+)', desc)
+                desc = lldbutil.get_description(location, lldb.eDescriptionLevelFull)
+                match = re.search("at\ ([^:]+):([\d]+)", desc)
                 try:
                     path = match.group(1)
                     line = int(match.group(2).strip())
@@ -219,20 +225,26 @@ class SourceWin(cui.TitledWin):
             return locs
 
         event_type = lldb.SBBreakpoint.GetBreakpointEventTypeFromEvent(event)
-        if event_type == lldb.eBreakpointEventTypeEnabled \
-                or event_type == lldb.eBreakpointEventTypeAdded \
-                or event_type == lldb.eBreakpointEventTypeLocationsResolved \
-                or event_type == lldb.eBreakpointEventTypeLocationsAdded:
+        if (
+            event_type == lldb.eBreakpointEventTypeEnabled
+            or event_type == lldb.eBreakpointEventTypeAdded
+            or event_type == lldb.eBreakpointEventTypeLocationsResolved
+            or event_type == lldb.eBreakpointEventTypeLocationsAdded
+        ):
             self.addBPLocations(getLocations(event))
-        elif event_type == lldb.eBreakpointEventTypeRemoved \
-                or event_type == lldb.eBreakpointEventTypeLocationsRemoved \
-                or event_type == lldb.eBreakpointEventTypeDisabled:
+        elif (
+            event_type == lldb.eBreakpointEventTypeRemoved
+            or event_type == lldb.eBreakpointEventTypeLocationsRemoved
+            or event_type == lldb.eBreakpointEventTypeDisabled
+        ):
             self.removeBPLocations(getLocations(event))
-        elif event_type == lldb.eBreakpointEventTypeCommandChanged \
-                or event_type == lldb.eBreakpointEventTypeConditionChanged \
-                or event_type == lldb.eBreakpointEventTypeIgnoreChanged \
-                or event_type == lldb.eBreakpointEventTypeThreadChanged \
-                or event_type == lldb.eBreakpointEventTypeInvalidType:
+        elif (
+            event_type == lldb.eBreakpointEventTypeCommandChanged
+            or event_type == lldb.eBreakpointEventTypeConditionChanged
+            or event_type == lldb.eBreakpointEventTypeIgnoreChanged
+            or event_type == lldb.eBreakpointEventTypeThreadChanged
+            or event_type == lldb.eBreakpointEventTypeInvalidType
+        ):
             # no-op
             pass
         self.refreshSource()

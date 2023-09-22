@@ -170,6 +170,7 @@ LoongArchTargetLowering::LoongArchTargetLowering(const TargetMachine &TM,
     setOperationAction(ISD::FMAXNUM_IEEE, MVT::f32, Legal);
     setOperationAction(ISD::STRICT_FSETCCS, MVT::f32, Legal);
     setOperationAction(ISD::STRICT_FSETCC, MVT::f32, Legal);
+    setOperationAction(ISD::IS_FPCLASS, MVT::f32, Legal);
     setOperationAction(ISD::FSIN, MVT::f32, Expand);
     setOperationAction(ISD::FCOS, MVT::f32, Expand);
     setOperationAction(ISD::FSINCOS, MVT::f32, Expand);
@@ -202,6 +203,7 @@ LoongArchTargetLowering::LoongArchTargetLowering(const TargetMachine &TM,
     setOperationAction(ISD::FMA, MVT::f64, Legal);
     setOperationAction(ISD::FMINNUM_IEEE, MVT::f64, Legal);
     setOperationAction(ISD::FMAXNUM_IEEE, MVT::f64, Legal);
+    setOperationAction(ISD::IS_FPCLASS, MVT::f64, Legal);
     setOperationAction(ISD::FSIN, MVT::f64, Expand);
     setOperationAction(ISD::FCOS, MVT::f64, Expand);
     setOperationAction(ISD::FSINCOS, MVT::f64, Expand);
@@ -4296,12 +4298,12 @@ LoongArchTargetLowering::getConstraintType(StringRef Constraint) const {
   return TargetLowering::getConstraintType(Constraint);
 }
 
-unsigned LoongArchTargetLowering::getInlineAsmMemConstraint(
+InlineAsm::ConstraintCode LoongArchTargetLowering::getInlineAsmMemConstraint(
     StringRef ConstraintCode) const {
-  return StringSwitch<unsigned>(ConstraintCode)
-      .Case("k", InlineAsm::Constraint_k)
-      .Case("ZB", InlineAsm::Constraint_ZB)
-      .Case("ZC", InlineAsm::Constraint_ZC)
+  return StringSwitch<InlineAsm::ConstraintCode>(ConstraintCode)
+      .Case("k", InlineAsm::ConstraintCode::k)
+      .Case("ZB", InlineAsm::ConstraintCode::ZB)
+      .Case("ZC", InlineAsm::ConstraintCode::ZC)
       .Default(TargetLowering::getInlineAsmMemConstraint(ConstraintCode));
 }
 

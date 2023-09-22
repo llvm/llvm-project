@@ -280,3 +280,30 @@ transform.sequence failures(propagate) {
   %0 = transform.structured.match ops{["scf.for"]} in %arg1 : (!transform.any_op) -> !transform.any_op
   transform.loop.promote_if_one_iteration %0 : !transform.any_op
 }
+
+
+// -----
+
+// CHECK-LABEL: func @test_structural_conversion_patterns(
+// CHECK: scf.for {{.*}} -> (memref<f32>) {
+
+func.func @test_structural_conversion_patterns(%a: tensor<f32>) -> tensor<f32> {
+  %c0 = arith.constant 0 : index
+  %c1 = arith.constant 1 : index
+  %c10 = arith.constant 10 : index
+  %0 = scf.for %j = %c0 to %c10 step %c1 iter_args(%arg0 = %a) -> tensor<f32> {
+    %1 = "test.foo"(%arg0) : (tensor<f32>) -> (tensor<f32>)
+    scf.yield %1 : tensor<f32>
+  }
+  return %0 : tensor<f32>
+}
+
+transform.sequence failures(propagate) {
+^bb1(%arg1: !transform.any_op):
+  %0 = transform.structured.match ops{["func.func"]} in %arg1 : (!transform.any_op) -> !transform.any_op
+  transform.apply_conversion_patterns to %0 {
+    transform.apply_conversion_patterns.scf.structural_conversions
+  } with type_converter {
+    transform.apply_conversion_patterns.transform.test_type_converter
+  } {  partial_conversion  } : !transform.any_op
+}

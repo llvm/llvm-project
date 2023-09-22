@@ -5,8 +5,8 @@
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
-#ifndef LLVM_LIBC_SRC_SUPPORT_CPP_TYPE_TRAITS_MAKE_UNSIGNED_H
-#define LLVM_LIBC_SRC_SUPPORT_CPP_TYPE_TRAITS_MAKE_UNSIGNED_H
+#ifndef LLVM_LIBC_SRC___SUPPORT_CPP_TYPE_TRAITS_MAKE_UNSIGNED_H
+#define LLVM_LIBC_SRC___SUPPORT_CPP_TYPE_TRAITS_MAKE_UNSIGNED_H
 
 #include "src/__support/CPP/type_traits/type_identity.h"
 
@@ -39,4 +39,4 @@ template <typename T> using make_unsigned_t = typename make_unsigned<T>::type;
 
 } // namespace __llvm_libc::cpp
 
-#endif // LLVM_LIBC_SRC_SUPPORT_CPP_TYPE_TRAITS_MAKE_UNSIGNED_H
+#endif // LLVM_LIBC_SRC___SUPPORT_CPP_TYPE_TRAITS_MAKE_UNSIGNED_H

@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_LIBC_SRC_SUPPORT_GPU_NVPTX_IO_H
-#define LLVM_LIBC_SRC_SUPPORT_GPU_NVPTX_IO_H
+#ifndef LLVM_LIBC_SRC___SUPPORT_GPU_NVPTX_IO_H
+#define LLVM_LIBC_SRC___SUPPORT_GPU_NVPTX_IO_H
 
 #include "src/__support/common.h"
 
@@ -151,6 +151,12 @@ LIBC_INLINE uint64_t fixed_frequency_clock() {
   uint64_t nsecs;
   LIBC_INLINE_ASM("mov.u64  %0, %%globaltimer;" : "=l"(nsecs));
   return nsecs;
+}
+
+/// Terminates execution of the calling thread.
+[[noreturn]] LIBC_INLINE void end_program() {
+  LIBC_INLINE_ASM("exit;" ::: "memory");
+  __builtin_unreachable();
 }
 
 } // namespace gpu

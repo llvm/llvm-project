@@ -493,7 +493,7 @@ static LogicalResult printOperation(CppEmitter &emitter, scf::ForOp forOp) {
 
   raw_indented_ostream &os = emitter.ostream();
 
-  OperandRange operands = forOp.getIterOperands();
+  OperandRange operands = forOp.getInitArgs();
   Block::BlockArgListType iterArgs = forOp.getRegionIterArgs();
   Operation::result_range results = forOp.getResults();
 

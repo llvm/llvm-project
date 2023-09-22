@@ -18,10 +18,10 @@ define float @foo1(ptr %x0, ptr %x1, ptr %x2) nounwind {
 ; CHECK-NEXT:    ld4d { z16.d - z19.d }, p0/z, [x1]
 ; CHECK-NEXT:    ld1d { z5.d }, p0/z, [x2]
 ; CHECK-NEXT:    ptrue p0.d
-; CHECK-NEXT:    st1d { z16.d }, p0, [sp]
-; CHECK-NEXT:    st1d { z17.d }, p0, [sp, #1, mul vl]
-; CHECK-NEXT:    st1d { z18.d }, p0, [sp, #2, mul vl]
 ; CHECK-NEXT:    st1d { z19.d }, p0, [sp, #3, mul vl]
+; CHECK-NEXT:    st1d { z18.d }, p0, [sp, #2, mul vl]
+; CHECK-NEXT:    st1d { z17.d }, p0, [sp, #1, mul vl]
+; CHECK-NEXT:    st1d { z16.d }, p0, [sp]
 ; CHECK-NEXT:    bl callee1
 ; CHECK-NEXT:    addvl sp, sp, #4
 ; CHECK-NEXT:    ldp x29, x30, [sp], #16 // 16-byte Folded Reload
@@ -73,10 +73,10 @@ define float @foo2(ptr %x0, ptr %x1) nounwind {
 ; CHECK-NEXT:    ld4d { z16.d - z19.d }, p0/z, [x1]
 ; CHECK-NEXT:    ptrue p0.d
 ; CHECK-NEXT:    mov w1, #1 // =0x1
-; CHECK-NEXT:    st1d { z16.d }, p0, [x8]
-; CHECK-NEXT:    st1d { z17.d }, p0, [x8, #1, mul vl]
+; CHECK-NEXT:    st1d { z19.d }, p0, [x8, #3, mul vl]
 ; CHECK-NEXT:    st1d { z18.d }, p0, [x8, #2, mul vl]
-; CHECK-NEXT:    st1d { z19.d }, p0, [x9, #3, mul vl]
+; CHECK-NEXT:    st1d { z17.d }, p0, [x8, #1, mul vl]
+; CHECK-NEXT:    st1d { z16.d }, p0, [x9]
 ; CHECK-NEXT:    str x8, [sp]
 ; CHECK-NEXT:    bl callee2
 ; CHECK-NEXT:    addvl sp, sp, #4
@@ -121,9 +121,9 @@ define float @foo3(ptr %x0, ptr %x1, ptr %x2) nounwind {
 ; CHECK-NEXT:    ld3d { z16.d - z18.d }, p0/z, [x1]
 ; CHECK-NEXT:    ld1d { z6.d }, p0/z, [x2]
 ; CHECK-NEXT:    ptrue p0.d
-; CHECK-NEXT:    st1d { z16.d }, p0, [sp]
-; CHECK-NEXT:    st1d { z17.d }, p0, [sp, #1, mul vl]
 ; CHECK-NEXT:    st1d { z18.d }, p0, [sp, #2, mul vl]
+; CHECK-NEXT:    st1d { z17.d }, p0, [sp, #1, mul vl]
+; CHECK-NEXT:    st1d { z16.d }, p0, [sp]
 ; CHECK-NEXT:    bl callee3
 ; CHECK-NEXT:    addvl sp, sp, #3
 ; CHECK-NEXT:    ldp x29, x30, [sp], #16 // 16-byte Folded Reload
@@ -704,17 +704,21 @@ define void @verify_all_operands_are_initialised() {
 ; CHECK-NEXT:    .cfi_escape 0x0f, 0x0c, 0x8f, 0x00, 0x11, 0x20, 0x22, 0x11, 0x08, 0x92, 0x2e, 0x00, 0x1e, 0x22 // sp + 32 + 8 * VG
 ; CHECK-NEXT:    .cfi_offset w30, -8
 ; CHECK-NEXT:    .cfi_offset w29, -16
+; CHECK-NEXT:    ptrue p0.s
 ; CHECK-NEXT:    movi d0, #0000000000000000
 ; CHECK-NEXT:    fmov s1, #1.00000000
+; CHECK-NEXT:    fmov z16.s, #9.00000000
 ; CHECK-NEXT:    mov w8, #1090519040 // =0x41000000
+; CHECK-NEXT:    add x0, sp, #16
 ; CHECK-NEXT:    fmov s2, #2.00000000
 ; CHECK-NEXT:    fmov s3, #3.00000000
-; CHECK-NEXT:    add x0, sp, #16
+; CHECK-NEXT:    add x9, sp, #16
 ; CHECK-NEXT:    fmov s4, #4.00000000
 ; CHECK-NEXT:    fmov s5, #5.00000000
-; CHECK-NEXT:    str w8, [sp]
 ; CHECK-NEXT:    fmov s6, #6.00000000
 ; CHECK-NEXT:    fmov s7, #7.00000000
+; CHECK-NEXT:    st1w { z16.s }, p0, [x9]
+; CHECK-NEXT:    str w8, [sp]
 ; CHECK-NEXT:    bl func_f8_and_v0_passed_via_memory
 ; CHECK-NEXT:    addvl sp, sp, #1
 ; CHECK-NEXT:    add sp, sp, #16

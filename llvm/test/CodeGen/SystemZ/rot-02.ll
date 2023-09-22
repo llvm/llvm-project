@@ -2,8 +2,8 @@
 ; Test removal of AND operations that don't affect last 6 bits of rotate amount
 ; operand.
 ;
-; RUN: llc < %s -mtriple=s390x-linux-gnu | FileCheck %s -check-prefixes=CHECK,CHECK-LV
-; RUN: llc < %s -mtriple=s390x-linux-gnu -early-live-intervals | FileCheck %s -check-prefixes=CHECK,CHECK-LIS
+; RUN: llc < %s -mtriple=s390x-linux-gnu | FileCheck %s
+; RUN: llc < %s -mtriple=s390x-linux-gnu -early-live-intervals | FileCheck %s
 
 ; Test that AND is not removed when some lower 5 bits are not set.
 define i32 @f1(i32 %val, i32 %amt) {
@@ -76,20 +76,12 @@ define i64 @f4(i64 %val, i64 %amt) {
 
 ; Test that AND is not entirely removed if the result is reused.
 define i32 @f5(i32 %val, i32 %amt) {
-; CHECK-LV-LABEL: f5:
-; CHECK-LV:       # %bb.0:
-; CHECK-LV-NEXT:    rll %r2, %r2, 0(%r3)
-; CHECK-LV-NEXT:    nilf %r3, 63
-; CHECK-LV-NEXT:    ar %r2, %r3
-; CHECK-LV-NEXT:    br %r14
-;
-; CHECK-LIS-LABEL: f5:
-; CHECK-LIS:       # %bb.0:
-; CHECK-LIS-NEXT:    rll %r0, %r2, 0(%r3)
-; CHECK-LIS-NEXT:    nilf %r3, 63
-; CHECK-LIS-NEXT:    ar %r3, %r0
-; CHECK-LIS-NEXT:    lr %r2, %r3
-; CHECK-LIS-NEXT:    br %r14
+; CHECK-LABEL: f5:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    rll %r2, %r2, 0(%r3)
+; CHECK-NEXT:    nilf %r3, 63
+; CHECK-NEXT:    ar %r2, %r3
+; CHECK-NEXT:    br %r14
   %and = and i32 %amt, 63
 
   %inv = sub i32 32, %and

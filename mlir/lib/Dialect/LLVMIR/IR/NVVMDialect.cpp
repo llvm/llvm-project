@@ -81,6 +81,12 @@ LogicalResult CpAsyncBulkTensorGlobalToSharedClusterOp::verify() {
   return success();
 }
 
+LogicalResult CpAsyncBulkTensorSharedCTAToGlobalOp::verify() {
+  if (getCoordinates().size() > 5)
+    return emitError("Maximum 5 coordinates and dimension is supported.");
+  return success();
+}
+
 LogicalResult CpAsyncOp::verify() {
   if (getModifier() != LoadCacheModifierKind::CG &&
       getModifier() != LoadCacheModifierKind::CA)
@@ -903,7 +909,7 @@ std::string NVVM::WgmmaMmaAsyncOp::getPtx() {
   ss << "{\n"
         ".reg .pred p;\n"
         "setp.ne.b32 p, $"
-     << (expectedOutputRegisters + 2)
+     << ((expectedOutputRegisters * 2) + 2)
      << ", 0;\n"
         "wgmma.mma_async.sync.aligned.m"
      << m << "n" << n << "k" << k << "." << outputTypeName << "."

@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_LIBC_SUPPORT_STR_TO_NUM_RESULT_H
-#define LLVM_LIBC_SUPPORT_STR_TO_NUM_RESULT_H
+#ifndef LLVM_LIBC_SRC___SUPPORT_STR_TO_NUM_RESULT_H
+#define LLVM_LIBC_SRC___SUPPORT_STR_TO_NUM_RESULT_H
 
 #include <stddef.h>
 
@@ -30,4 +30,4 @@ template <typename T> struct StrToNumResult {
 };
 } // namespace __llvm_libc
 
-#endif // LLVM_LIBC_SUPPORT_STR_TO_NUM_RESULT_H
+#endif // LLVM_LIBC_SRC___SUPPORT_STR_TO_NUM_RESULT_H

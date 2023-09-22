@@ -30,8 +30,8 @@
 // Do the same run, but now with direct IR generation and VLA vectorization.
 // RUN: %if mlir_arm_sve_tests %{ %{compile_sve} | %{run_sve} | FileCheck %s %}
 
-#SparseVector = #sparse_tensor.encoding<{lvlTypes = ["compressed"]}>
-#DCSR = #sparse_tensor.encoding<{lvlTypes = ["compressed", "compressed"]}>
+#SparseVector = #sparse_tensor.encoding<{map = (d0) -> (d0 : compressed)}>
+#DCSR = #sparse_tensor.encoding<{map = (d0, d1) -> (d0 : compressed, d1 : compressed)}>
 
 //
 // Traits for tensor operations.
@@ -73,7 +73,7 @@ module {
                         %argb: tensor<?xi32, #SparseVector>) -> tensor<?xi32, #SparseVector> {
     %c = arith.constant 0 : index
     %d = tensor.dim %arga, %c : tensor<?xi32, #SparseVector>
-    %xv = bufferization.alloc_tensor(%d) : tensor<?xi32, #SparseVector>
+    %xv = tensor.empty(%d) : tensor<?xi32, #SparseVector>
     %0 = linalg.generic #trait_vec_op
        ins(%arga, %argb: tensor<?xi32, #SparseVector>, tensor<?xi32, #SparseVector>)
         outs(%xv: tensor<?xi32, #SparseVector>) {
@@ -97,7 +97,7 @@ module {
                         %argb: tensor<?xf64>) -> tensor<?xf64, #SparseVector> {
     %c = arith.constant 0 : index
     %d = tensor.dim %arga, %c : tensor<?xf64, #SparseVector>
-    %xv = bufferization.alloc_tensor(%d) : tensor<?xf64, #SparseVector>
+    %xv = tensor.empty(%d) : tensor<?xf64, #SparseVector>
     %0 = linalg.generic #trait_vec_op
        ins(%arga, %argb: tensor<?xf64, #SparseVector>, tensor<?xf64>)
         outs(%xv: tensor<?xf64, #SparseVector>) {
@@ -121,7 +121,7 @@ module {
                             %argb: tensor<?xf64, #SparseVector>) -> tensor<?xf64, #SparseVector> {
     %c = arith.constant 0 : index
     %d = tensor.dim %arga, %c : tensor<?xf64, #SparseVector>
-    %xv = bufferization.alloc_tensor(%d) : tensor<?xf64, #SparseVector>
+    %xv = tensor.empty(%d) : tensor<?xf64, #SparseVector>
     %0 = linalg.generic #trait_vec_op
        ins(%arga, %argb: tensor<?xf64, #SparseVector>, tensor<?xf64, #SparseVector>)
         outs(%xv: tensor<?xf64, #SparseVector>) {
@@ -139,7 +139,7 @@ module {
   func.func @vector_index(%arga: tensor<?xf64, #SparseVector>) -> tensor<?xi32, #SparseVector> {
     %c = arith.constant 0 : index
     %d = tensor.dim %arga, %c : tensor<?xf64, #SparseVector>
-    %xv = bufferization.alloc_tensor(%d) : tensor<?xi32, #SparseVector>
+    %xv = tensor.empty(%d) : tensor<?xi32, #SparseVector>
     %0 = linalg.generic #trait_vec_scale
        ins(%arga: tensor<?xf64, #SparseVector>)
         outs(%xv: tensor<?xi32, #SparseVector>) {
@@ -166,7 +166,7 @@ module {
     %c1 = arith.constant 1 : index
     %d0 = tensor.dim %arga, %c0 : tensor<?x?xf64, #DCSR>
     %d1 = tensor.dim %arga, %c1 : tensor<?x?xf64, #DCSR>
-    %xv = bufferization.alloc_tensor(%d0, %d1) : tensor<?x?xf64, #DCSR>
+    %xv = tensor.empty(%d0, %d1) : tensor<?x?xf64, #DCSR>
     %0 = linalg.generic #trait_mat_op
        ins(%arga, %argb: tensor<?x?xf64, #DCSR>, tensor<?x?xf64, #DCSR>)
         outs(%xv: tensor<?x?xf64, #DCSR>) {
@@ -191,7 +191,7 @@ module {
   // Tensor addition (use semi-ring binary operation).
   func.func @add_tensor_1(%A: tensor<4x4xf64, #DCSR>,
                           %B: tensor<4x4xf64, #DCSR>) -> tensor<4x4xf64, #DCSR> {
-    %C = bufferization.alloc_tensor() : tensor<4x4xf64, #DCSR>
+    %C = tensor.empty() : tensor<4x4xf64, #DCSR>
     %0 = linalg.generic #trait_mat_op
       ins(%A, %B: tensor<4x4xf64, #DCSR>,
                   tensor<4x4xf64, #DCSR>)
@@ -213,7 +213,7 @@ module {
   // Same as @add_tensor_1, but use sparse_tensor.yield instead of identity to yield value.
   func.func @add_tensor_2(%A: tensor<4x4xf64, #DCSR>,
                           %B: tensor<4x4xf64, #DCSR>) -> tensor<4x4xf64, #DCSR> {
-    %C = bufferization.alloc_tensor() : tensor<4x4xf64, #DCSR>
+    %C = tensor.empty() : tensor<4x4xf64, #DCSR>
     %0 = linalg.generic #trait_mat_op
       ins(%A, %B: tensor<4x4xf64, #DCSR>,
                   tensor<4x4xf64, #DCSR>)
@@ -241,7 +241,7 @@ module {
   // Performs triangular add/sub operation (using semi-ring binary op).
   func.func @triangular(%A: tensor<4x4xf64, #DCSR>,
                         %B: tensor<4x4xf64, #DCSR>) -> tensor<4x4xf64, #DCSR> {
-    %C = bufferization.alloc_tensor() : tensor<4x4xf64, #DCSR>
+    %C = tensor.empty() : tensor<4x4xf64, #DCSR>
     %0 = linalg.generic #trait_mat_op
       ins(%A, %B: tensor<4x4xf64, #DCSR>,
                   tensor<4x4xf64, #DCSR>)
@@ -274,7 +274,7 @@ module {
   // Perform sub operation (using semi-ring binary op) with a constant threshold.
   func.func @sub_with_thres(%A: tensor<4x4xf64, #DCSR>,
                             %B: tensor<4x4xf64, #DCSR>) -> tensor<4x4xf64, #DCSR> {
-    %C = bufferization.alloc_tensor() : tensor<4x4xf64, #DCSR>
+    %C = tensor.empty() : tensor<4x4xf64, #DCSR>
     // Defines out-block constant bounds.
     %thres_out_up = arith.constant 2.0 : f64
     %thres_out_lo = arith.constant -2.0 : f64
@@ -323,7 +323,7 @@ module {
   // Performs isEqual only on intersecting elements.
   func.func @intersect_equal(%A: tensor<4x4xf64, #DCSR>,
                              %B: tensor<4x4xf64, #DCSR>) -> tensor<4x4xi8, #DCSR> {
-    %C = bufferization.alloc_tensor() : tensor<4x4xi8, #DCSR>
+    %C = tensor.empty() : tensor<4x4xi8, #DCSR>
     %0 = linalg.generic #trait_mat_op
       ins(%A, %B: tensor<4x4xf64, #DCSR>,
                   tensor<4x4xf64, #DCSR>)
@@ -346,7 +346,7 @@ module {
   // Keeps values on left, negate value on right, ignore value when overlapping.
   func.func @only_left_right(%A: tensor<4x4xf64, #DCSR>,
                              %B: tensor<4x4xf64, #DCSR>) -> tensor<4x4xf64, #DCSR> {
-    %C = bufferization.alloc_tensor() : tensor<4x4xf64, #DCSR>
+    %C = tensor.empty() : tensor<4x4xf64, #DCSR>
     %0 = linalg.generic #trait_mat_op
       ins(%A, %B: tensor<4x4xf64, #DCSR>,
                   tensor<4x4xf64, #DCSR>)

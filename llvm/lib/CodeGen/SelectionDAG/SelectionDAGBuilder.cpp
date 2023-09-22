@@ -1822,7 +1822,7 @@ void SelectionDAGBuilder::visitCatchRet(const CatchReturnInst &I) {
     // If this is not a fall-through branch or optimizations are switched off,
     // emit the branch.
     if (TargetMBB != NextBlock(FuncInfo.MBB) ||
-        TM.getOptLevel() == CodeGenOpt::None)
+        TM.getOptLevel() == CodeGenOptLevel::None)
       DAG.setRoot(DAG.getNode(ISD::BR, getCurSDLoc(), MVT::Other,
                               getControlRoot(), DAG.getBasicBlock(TargetMBB)));
     return;
@@ -2478,7 +2478,8 @@ void SelectionDAGBuilder::visitBr(const BranchInst &I) {
 
     // If this is not a fall-through branch or optimizations are switched off,
     // emit the branch.
-    if (Succ0MBB != NextBlock(BrMBB) || TM.getOptLevel() == CodeGenOpt::None) {
+    if (Succ0MBB != NextBlock(BrMBB) ||
+        TM.getOptLevel() == CodeGenOptLevel::None) {
       auto Br = DAG.getNode(ISD::BR, getCurSDLoc(), MVT::Other,
                             getControlRoot(), DAG.getBasicBlock(Succ0MBB));
       setValue(&I, Br);
@@ -7088,9 +7089,12 @@ void SelectionDAGBuilder::visitIntrinsicCall(const CallInst &I,
     auto Flags = rw == 0 ? MachineMemOperand::MOLoad :MachineMemOperand::MOStore;
     Ops[0] = DAG.getRoot();
     Ops[1] = getValue(I.getArgOperand(0));
-    Ops[2] = getValue(I.getArgOperand(1));
-    Ops[3] = getValue(I.getArgOperand(2));
-    Ops[4] = getValue(I.getArgOperand(3));
+    Ops[2] = DAG.getTargetConstant(*cast<ConstantInt>(I.getArgOperand(1)), sdl,
+                                   MVT::i32);
+    Ops[3] = DAG.getTargetConstant(*cast<ConstantInt>(I.getArgOperand(2)), sdl,
+                                   MVT::i32);
+    Ops[4] = DAG.getTargetConstant(*cast<ConstantInt>(I.getArgOperand(3)), sdl,
+                                   MVT::i32);
     SDValue Result = DAG.getMemIntrinsicNode(
         ISD::PREFETCH, sdl, DAG.getVTList(MVT::Other), Ops,
         EVT::getIntegerVT(*Context, 8), MachinePointerInfo(I.getArgOperand(0)),
@@ -7107,7 +7111,7 @@ void SelectionDAGBuilder::visitIntrinsicCall(const CallInst &I,
   case Intrinsic::lifetime_end: {
     bool IsStart = (Intrinsic == Intrinsic::lifetime_start);
     // Stack coloring is not enabled in O0, discard region information.
-    if (TM.getOptLevel() == CodeGenOpt::None)
+    if (TM.getOptLevel() == CodeGenOptLevel::None)
       return;
 
     const int64_t ObjectSize =
@@ -9281,9 +9285,9 @@ void SelectionDAGBuilder::visitInlineAsm(const CallBase &Call,
     switch (OpInfo.Type) {
     case InlineAsm::isOutput:
       if (OpInfo.ConstraintType == TargetLowering::C_Memory) {
-        unsigned ConstraintID =
+        const InlineAsm::ConstraintCode ConstraintID =
             TLI.getInlineAsmMemConstraint(OpInfo.ConstraintCode);
-        assert(ConstraintID != InlineAsm::Constraint_Unknown &&
+        assert(ConstraintID != InlineAsm::ConstraintCode::Unknown &&
                "Failed to convert memory constraint code to constraint id.");
 
         // Add information to the INLINEASM node to know about this output.
@@ -9413,9 +9417,9 @@ void SelectionDAGBuilder::visitInlineAsm(const CallBase &Call,
                    TLI.getPointerTy(DAG.getDataLayout()) &&
                "Memory operands expect pointer values");
 
-        unsigned ConstraintID =
+        const InlineAsm::ConstraintCode ConstraintID =
             TLI.getInlineAsmMemConstraint(OpInfo.ConstraintCode);
-        assert(ConstraintID != InlineAsm::Constraint_Unknown &&
+        assert(ConstraintID != InlineAsm::ConstraintCode::Unknown &&
                "Failed to convert memory constraint code to constraint id.");
 
         // Add information to the INLINEASM node to know about this input.
@@ -9429,9 +9433,9 @@ void SelectionDAGBuilder::visitInlineAsm(const CallBase &Call,
       }
 
       if (OpInfo.ConstraintType == TargetLowering::C_Address) {
-        unsigned ConstraintID =
+        const InlineAsm::ConstraintCode ConstraintID =
             TLI.getInlineAsmMemConstraint(OpInfo.ConstraintCode);
-        assert(ConstraintID != InlineAsm::Constraint_Unknown &&
+        assert(ConstraintID != InlineAsm::ConstraintCode::Unknown &&
                "Failed to convert memory constraint code to constraint id.");
 
         InlineAsm::Flag ResOpType(InlineAsm::Kind::Mem, 1);
@@ -11293,7 +11297,7 @@ void SelectionDAGBuilder::lowerWorkItem(SwitchWorkListItem W, Value *Cond,
     }
   }
 
-  if (TM.getOptLevel() != CodeGenOpt::None) {
+  if (TM.getOptLevel() != CodeGenOptLevel::None) {
     // Here, we order cases by probability so the most likely case will be
     // checked first. However, two clusters can have the same probability in
     // which case their relative ordering is non-deterministic. So we use Low
@@ -11651,7 +11655,7 @@ MachineBasicBlock *SelectionDAGBuilder::peelDominantCaseCluster(
   MachineBasicBlock *SwitchMBB = FuncInfo.MBB;
   // Don't perform if there is only one cluster or optimizing for size.
   if (SwitchPeelThreshold > 100 || !FuncInfo.BPI || Clusters.size() < 2 ||
-      TM.getOptLevel() == CodeGenOpt::None ||
+      TM.getOptLevel() == CodeGenOptLevel::None ||
       SwitchMBB->getParent()->getFunction().hasMinSize())
     return SwitchMBB;
 
@@ -11773,7 +11777,7 @@ void SelectionDAGBuilder::visitSwitch(const SwitchInst &SI) {
     SwitchWorkListItem W = WorkList.pop_back_val();
     unsigned NumClusters = W.LastCluster - W.FirstCluster + 1;
 
-    if (NumClusters > 3 && TM.getOptLevel() != CodeGenOpt::None &&
+    if (NumClusters > 3 && TM.getOptLevel() != CodeGenOptLevel::None &&
         !DefaultMBB->getParent()->getFunction().hasMinSize()) {
       // For optimized builds, lower large range as a balanced binary tree.
       splitWorkItem(WorkList, W, SI.getCondition(), SwitchMBB);

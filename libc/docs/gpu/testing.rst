@@ -8,7 +8,7 @@ Testing the GPU libc library
 .. note::
    Running GPU tests with high parallelism is likely to cause spurious failures,
    out of resource errors, or indefinite hangs. limiting the number of threads
-   used while testing is highly recommended.
+   used while testing using ``LIBC_GPU_TEST_JOBS=<N>`` is highly recommended.
 
 .. contents:: Table of Contents
   :depth: 4

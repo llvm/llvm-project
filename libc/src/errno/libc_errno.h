@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_LIBC_SRC_ERRNO_LLVMLIBC_ERRNO_H
-#define LLVM_LIBC_SRC_ERRNO_LLVMLIBC_ERRNO_H
+#ifndef LLVM_LIBC_SRC_ERRNO_LIBC_ERRNO_H
+#define LLVM_LIBC_SRC_ERRNO_LIBC_ERRNO_H
 
 #include "src/__support/macros/attributes.h"
 #include "src/__support/macros/properties/architectures.h"
@@ -53,4 +53,4 @@ extern "C" LIBC_THREAD_LOCAL int __llvmlibc_internal_errno;
 } // namespace __llvm_libc
 #endif
 
-#endif // LLVM_LIBC_SRC_ERRNO_LLVMLIBC_ERRNO_H
+#endif // LLVM_LIBC_SRC_ERRNO_LIBC_ERRNO_H

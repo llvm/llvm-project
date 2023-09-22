@@ -5,8 +5,8 @@
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
-#ifndef LLVM_LIBC_SRC_SUPPORT_CPP_TYPE_TRAITS_TYPE_IDENTITY_H
-#define LLVM_LIBC_SRC_SUPPORT_CPP_TYPE_TRAITS_TYPE_IDENTITY_H
+#ifndef LLVM_LIBC_SRC___SUPPORT_CPP_TYPE_TRAITS_TYPE_IDENTITY_H
+#define LLVM_LIBC_SRC___SUPPORT_CPP_TYPE_TRAITS_TYPE_IDENTITY_H
 
 namespace __llvm_libc::cpp {
 
@@ -17,4 +17,4 @@ template <typename T> struct type_identity {
 
 } // namespace __llvm_libc::cpp
 
-#endif // LLVM_LIBC_SRC_SUPPORT_CPP_TYPE_TRAITS_TYPE_IDENTITY_H
+#endif // LLVM_LIBC_SRC___SUPPORT_CPP_TYPE_TRAITS_TYPE_IDENTITY_H

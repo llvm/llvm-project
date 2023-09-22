@@ -1719,6 +1719,8 @@ void CombinerHelper::applyCombineMulToShl(MachineInstr &MI,
 bool CombinerHelper::matchCombineShlOfExtend(MachineInstr &MI,
                                              RegisterImmPair &MatchData) {
   assert(MI.getOpcode() == TargetOpcode::G_SHL && KB);
+  if (!getTargetLowering().isDesirableToPullExtFromShl(MI))
+    return false;
 
   Register LHS = MI.getOperand(1).getReg();
 

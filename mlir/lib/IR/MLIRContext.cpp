@@ -864,6 +864,10 @@ void OperationName::UnregisteredOpModel::copyProperties(OpaqueProperties lhs,
                                                         OpaqueProperties rhs) {
   *lhs.as<Attribute *>() = *rhs.as<Attribute *>();
 }
+bool OperationName::UnregisteredOpModel::compareProperties(OpaqueProperties lhs,
+                                                        OpaqueProperties rhs) {
+  return *lhs.as<Attribute *>() == *rhs.as<Attribute *>();
+}
 llvm::hash_code
 OperationName::UnregisteredOpModel::hashProperties(OpaqueProperties prop) {
   return llvm::hash_combine(*prop.as<Attribute *>());

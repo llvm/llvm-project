@@ -126,6 +126,27 @@ extern "C" MLIR_CUDA_WRAPPERS_EXPORT CUmodule mgpuModuleLoad(void *data) {
   return module;
 }
 
+extern "C" MLIR_CUDA_WRAPPERS_EXPORT CUmodule mgpuModuleLoadJIT(void *data,
+                                                                int optLevel) {
+  ScopedContext scopedContext;
+  CUmodule module = nullptr;
+  char jitErrorBuffer[4096] = {0};
+  CUjit_option jitOptions[] = {CU_JIT_ERROR_LOG_BUFFER,
+                               CU_JIT_ERROR_LOG_BUFFER_SIZE_BYTES,
+                               CU_JIT_OPTIMIZATION_LEVEL};
+  void *jitOptionsVals[] = {jitErrorBuffer,
+                            reinterpret_cast<void *>(sizeof(jitErrorBuffer)),
+                            reinterpret_cast<void *>(optLevel)};
+
+  CUresult result =
+      cuModuleLoadDataEx(&module, data, 3, jitOptions, jitOptionsVals);
+  if (result) {
+    fprintf(stderr, "JIT compilation failed with: '%s'\n", jitErrorBuffer);
+    CUDA_REPORT_IF_ERROR(result);
+  }
+  return module;
+}
+
 extern "C" MLIR_CUDA_WRAPPERS_EXPORT void mgpuModuleUnload(CUmodule module) {
   CUDA_REPORT_IF_ERROR(cuModuleUnload(module));
 }
@@ -212,8 +233,9 @@ extern MLIR_CUDA_WRAPPERS_EXPORT "C" void mgpuEventRecord(CUevent event,
 
 extern "C" void *mgpuMemAlloc(uint64_t sizeBytes, CUstream /*stream*/) {
   ScopedContext scopedContext;
-  CUdeviceptr ptr;
-  CUDA_REPORT_IF_ERROR(cuMemAlloc(&ptr, sizeBytes));
+  CUdeviceptr ptr = 0;
+  if (sizeBytes != 0)
+    CUDA_REPORT_IF_ERROR(cuMemAlloc(&ptr, sizeBytes));
   return reinterpret_cast<void *>(ptr);
 }
 
@@ -521,7 +543,7 @@ extern "C" MLIR_CUDA_WRAPPERS_EXPORT intptr_t mgpuSpMVBufferSize(
   CUSPARSE_REPORT_IF_ERROR(cusparseSpMV_bufferSize(
       cusparse_env, modeA, alphap, matA, vecX, betap, vecY, cTp,
       CUSPARSE_SPMV_ALG_DEFAULT, &bufferSize))
-  return bufferSize == 0 ? 1 : bufferSize; // avoid zero-alloc
+  return bufferSize;
 }
 
 extern "C" MLIR_CUDA_WRAPPERS_EXPORT void mgpuSpMV(int32_t ma, void *a, void *x,
@@ -555,7 +577,7 @@ mgpuSpMMBufferSize(int32_t ma, int32_t mb, void *a, void *b, void *c,
   CUSPARSE_REPORT_IF_ERROR(cusparseSpMM_bufferSize(
       cusparse_env, modeA, modeB, alphap, matA, matB, betap, matC, cTp,
       CUSPARSE_SPMM_ALG_DEFAULT, &bufferSize))
-  return bufferSize == 0 ? 1 : bufferSize; // avoid zero-alloc
+  return bufferSize;
 }
 
 extern "C" MLIR_CUDA_WRAPPERS_EXPORT void mgpuSpMM(int32_t ma, int32_t mb,
@@ -590,7 +612,7 @@ mgpuSDDMMBufferSize(int32_t ma, int32_t mb, void *a, void *b, void *c,
   CUSPARSE_REPORT_IF_ERROR(cusparseSDDMM_bufferSize(
       cusparse_env, modeA, modeB, alphap, matA, matB, betap, matC, cTp,
       CUSPARSE_SDDMM_ALG_DEFAULT, &bufferSize))
-  return bufferSize == 0 ? 1 : bufferSize; // avoid zero-alloc
+  return bufferSize;
 }
 
 extern "C" MLIR_CUDA_WRAPPERS_EXPORT void mgpuSDDMM(int32_t ma, int32_t mb,
@@ -638,7 +660,7 @@ extern "C" MLIR_CUDA_WRAPPERS_EXPORT intptr_t mgpuSpGEMMWorkEstimation(
   CUSPARSE_REPORT_IF_ERROR(cusparseSpGEMM_workEstimation(
       cusparse_env, modeA, modeB, alphap, matA, matB, betap, matC, cTp,
       CUSPARSE_SPGEMM_DEFAULT, spgemmDesc, &newBufferSize, buf))
-  return newBufferSize == 0 ? 1 : newBufferSize; // avoid zero-alloc
+  return newBufferSize;
 }
 
 extern "C" MLIR_CUDA_WRAPPERS_EXPORT intptr_t
@@ -656,7 +678,7 @@ mgpuSpGEMMCompute(void *s, int32_t ma, int32_t mb, void *a, void *b, void *c,
   CUSPARSE_REPORT_IF_ERROR(cusparseSpGEMM_compute(
       cusparse_env, modeA, modeB, alphap, matA, matB, betap, matC, cTp,
       CUSPARSE_SPGEMM_DEFAULT, spgemmDesc, &newBufferSize2, buf2))
-  return newBufferSize2 == 0 ? 1 : newBufferSize2; // avoid zero-alloc
+  return newBufferSize2;
 }
 
 extern "C" MLIR_CUDA_WRAPPERS_EXPORT void
@@ -791,10 +813,9 @@ mgpuCuSparseLtSpMMBufferSize(void *bs, int32_t ma, int32_t mb, void *a, void *b,
   auto matA = reinterpret_cast<cusparseLtSpMatHandleAndData *>(a);
   auto matB = reinterpret_cast<cusparseLtDnMatHandleAndData *>(b);
   auto matC = reinterpret_cast<cusparseLtDnMatHandleAndData *>(c);
-  auto workspace_size = reinterpret_cast<int64_t *>(bs);
-  auto compressed_size = &(reinterpret_cast<int64_t *>(bs)[1]);
-  auto compressed_buffer_size = &(reinterpret_cast<int64_t *>(bs)[2]);
-  size_t workspace_size_, compressed_size_, compressed_buffer_size_;
+  auto workspace_size = reinterpret_cast<size_t *>(bs);
+  auto compressed_size = &(reinterpret_cast<size_t *>(bs)[1]);
+  auto compressed_buffer_size = &(reinterpret_cast<size_t *>(bs)[2]);
   auto cTp = static_cast<cusparseComputeType>(ctp);
 
   cusparseOperation_t modeA = static_cast<cusparseOperation_t>(ma);
@@ -836,16 +857,9 @@ mgpuCuSparseLtSpMMBufferSize(void *bs, int32_t ma, int32_t mb, void *a, void *b,
   }
 
   CUSPARSE_REPORT_IF_ERROR(cusparseLtMatmulGetWorkspace(
-      &cusparseLt_env, &(matA->plan), &workspace_size_))
+      &cusparseLt_env, &(matA->plan), workspace_size))
   CUSPARSE_REPORT_IF_ERROR(cusparseLtSpMMACompressedSize(
-      &cusparseLt_env, &(matA->plan), &compressed_size_,
-      &compressed_buffer_size_))
-
-  // Avoid zero-allocation.
-  *workspace_size = (workspace_size_ == 0 ? 1 : workspace_size_);
-  *compressed_size = (compressed_size_ == 0 ? 1 : compressed_size_);
-  *compressed_buffer_size =
-      (compressed_buffer_size_ == 0 ? 1 : compressed_buffer_size_);
+      &cusparseLt_env, &(matA->plan), compressed_size, compressed_buffer_size))
 }
 
 extern "C" MLIR_CUDA_WRAPPERS_EXPORT void
