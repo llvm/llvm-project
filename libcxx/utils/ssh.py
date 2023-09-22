@@ -23,24 +23,6 @@ import sys
 import tarfile
 import tempfile
 
-from shlex import quote as cmd_quote
-
-
-def ssh(args, command):
-    cmd = ["ssh", "-oBatchMode=yes"]
-    if args.extra_ssh_args is not None:
-        cmd.extend(shlex.split(args.extra_ssh_args))
-    return cmd + [args.host, command]
-
-
-def scp(args, src, dst):
-    cmd = ["scp", "-q", "-oBatchMode=yes"]
-    if args.extra_scp_args is not None:
-        cmd.extend(shlex.split(args.extra_scp_args))
-    return cmd + [src, "{}:{}".format(args.host, dst)]
-
-def runCommand(command, *args, **kwargs):
-    return subprocess.run(command, *args, **kwargs)
 
 def main():
     parser = argparse.ArgumentParser()
@@ -57,6 +39,18 @@ def main():
     args = parser.parse_args()
     commandLine = args.command
 
+    def ssh(command):
+        cmd = ["ssh", "-oBatchMode=yes"]
+        if args.extra_ssh_args is not None:
+            cmd.extend(shlex.split(args.extra_ssh_args))
+        return cmd + [args.host, command]
+
+    def scp(src, dst):
+        cmd = ["scp", "-q", "-oBatchMode=yes"]
+        if args.extra_scp_args is not None:
+            cmd.extend(shlex.split(args.extra_scp_args))
+        return cmd + [src, "{}:{}".format(args.host, dst)]
+
     def runCommand(command, *args_, **kwargs):
         if args.verbose:
             print(f"$ {' '.join(command)}")
@@ -65,7 +59,7 @@ def main():
     # Create a temporary directory where the test will be run.
     # That is effectively the value of %T on the remote host.
     tmp = runCommand(
-        ssh(args, "mktemp -d {}/libcxx.XXXXXXXXXX".format(args.tempdir)),
+        ssh("mktemp -d {}/libcxx.XXXXXXXXXX".format(args.tempdir)),
         universal_newlines=True,
         check=True,
         capture_output=True
@@ -99,7 +93,7 @@ def main():
             # the temporary file while still open doesn't work on Windows.
             tmpTar.close()
             remoteTarball = pathOnRemote(tmpTar.name)
-            runCommand(scp(args, tmpTar.name, remoteTarball), check=True)
+            runCommand(scp(tmpTar.name, remoteTarball), check=True)
         finally:
             # Make sure we close the file in case an exception happens before
             # we've closed it above -- otherwise close() is idempotent.
@@ -131,17 +125,17 @@ def main():
             args.env.extend(args.prepend_env)
 
         if args.env:
-            env = list(map(cmd_quote, args.env))
+            env = list(map(shlex.quote, args.env))
             remoteCommands.append("export {}".format(" ".join(args.env)))
         remoteCommands.append(subprocess.list2cmdline(commandLine))
 
         # Finally, SSH to the remote host and execute all the commands.
-        rc = runCommand(ssh(args, " && ".join(remoteCommands))).returncode
+        rc = runCommand(ssh(" && ".join(remoteCommands))).returncode
         return rc
 
     finally:
         # Make sure the temporary directory is removed when we're done.
-        runCommand(ssh(args, "rm -r {}".format(tmp)), check=True)
+        runCommand(ssh("rm -r {}".format(tmp)), check=True)
 
 
 if __name__ == "__main__":
