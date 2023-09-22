@@ -633,13 +633,8 @@ def ForallOp : SCF_Op<"forall", [
 
     InParallelOp getTerminator();
 
-    // Implement this to declare all shared_outs as inits/outs to 
-    // DestinationStyleOpInterface
-    std::pair<int64_t, int64_t> getDpsInitsPositionRange() {
-      int64_t numOperands = getNumOperands();
-      int64_t numOuts = getOutputs().size();
-      return {numOperands - numOuts, numOperands};
-    }
+    // Declare the shared_outs as inits/outs to DestinationStyleOpInterface.
+    MutableOperandRange getDpsInitsMutable() { return getOutputsMutable(); }
   }];
 }
 
