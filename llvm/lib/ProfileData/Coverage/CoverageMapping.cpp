@@ -216,8 +216,6 @@ Expected<int64_t> CounterMappingContext::evaluate(const Counter &C) const {
       }
       break;
     }
-    default:
-      llvm_unreachable("Unhandled CounterKind");
     }
   }
 
