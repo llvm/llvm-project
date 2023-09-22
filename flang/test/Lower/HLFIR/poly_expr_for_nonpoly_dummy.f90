@@ -28,7 +28,7 @@ end subroutine test1
 ! CHECK:           %[[VAL_29:.*]]:2 = hlfir.copy_in %[[VAL_28]] : (!fir.box<!fir.array<?x!fir.type<_QMtypesTt>>>) -> (!fir.box<!fir.array<?x!fir.type<_QMtypesTt>>>, i1)
 ! CHECK:           fir.call @_QMtypesPcallee(%[[VAL_29]]#0) fastmath<contract> : (!fir.box<!fir.array<?x!fir.type<_QMtypesTt>>>) -> ()
 ! CHECK:           hlfir.copy_out %[[VAL_29]]#0, %[[VAL_29]]#1 : (!fir.box<!fir.array<?x!fir.type<_QMtypesTt>>>, i1) -> ()
-! CHECK:           hlfir.end_associate %[[VAL_27]]#1, %[[VAL_27]]#2 : !fir.class<!fir.heap<!fir.array<?x!fir.type<_QMtypesTt>>>>, i1
+! CHECK:           hlfir.end_associate %[[VAL_27]]#0, %[[VAL_27]]#2 : !fir.class<!fir.heap<!fir.array<?x!fir.type<_QMtypesTt>>>>, i1
 ! CHECK:           hlfir.destroy %[[VAL_23]] : !hlfir.expr<?x!fir.type<_QMtypesTt>?>
 
 subroutine test2(x)
@@ -43,5 +43,5 @@ end subroutine test2
 ! CHECK:           %[[VAL_11:.*]]:2 = hlfir.copy_in %[[VAL_10]] : (!fir.box<!fir.array<?x!fir.type<_QMtypesTt>>>) -> (!fir.box<!fir.array<?x!fir.type<_QMtypesTt>>>, i1)
 ! CHECK:           fir.call @_QMtypesPcallee(%[[VAL_11]]#0) fastmath<contract> : (!fir.box<!fir.array<?x!fir.type<_QMtypesTt>>>) -> ()
 ! CHECK:           hlfir.copy_out %[[VAL_11]]#0, %[[VAL_11]]#1 : (!fir.box<!fir.array<?x!fir.type<_QMtypesTt>>>, i1) -> ()
-! CHECK:           hlfir.end_associate %[[VAL_9]]#1, %[[VAL_9]]#2 : !fir.class<!fir.heap<!fir.array<?x!fir.type<_QMtypesTt>>>>, i1
+! CHECK:           hlfir.end_associate %[[VAL_9]]#0, %[[VAL_9]]#2 : !fir.class<!fir.heap<!fir.array<?x!fir.type<_QMtypesTt>>>>, i1
 ! CHECK:           hlfir.destroy %[[VAL_5]] : !hlfir.expr<?x!fir.type<_QMtypesTt>?>

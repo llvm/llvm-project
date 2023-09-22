@@ -1,109 +1,112 @@
-//=== RISCVPreLegalizerCombiner.cpp ---------------------------------------===//
+//=== RISCVPostLegalizerCombiner.cpp --------------------------*- C++ -*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
-//
-// This pass does combining of machine instructions at the generic MI level,
-// before the legalizer.
-//
+///
+/// \file
+/// Post-legalization combines on generic MachineInstrs.
+///
+/// The combines here must preserve instruction legality.
+///
+/// Combines which don't rely on instruction legality should go in the
+/// RISCVPreLegalizerCombiner.
+///
 //===----------------------------------------------------------------------===//
 
-#include "RISCVSubtarget.h"
+#include "RISCVTargetMachine.h"
 #include "llvm/CodeGen/GlobalISel/CSEInfo.h"
 #include "llvm/CodeGen/GlobalISel/Combiner.h"
 #include "llvm/CodeGen/GlobalISel/CombinerHelper.h"
 #include "llvm/CodeGen/GlobalISel/CombinerInfo.h"
 #include "llvm/CodeGen/GlobalISel/GIMatchTableExecutorImpl.h"
 #include "llvm/CodeGen/GlobalISel/GISelKnownBits.h"
+#include "llvm/CodeGen/GlobalISel/GenericMachineInstrs.h"
 #include "llvm/CodeGen/GlobalISel/MachineIRBuilder.h"
 #include "llvm/CodeGen/MachineDominators.h"
-#include "llvm/CodeGen/MachineFunction.h"
 #include "llvm/CodeGen/MachineFunctionPass.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
 #include "llvm/CodeGen/TargetPassConfig.h"
 
 #define GET_GICOMBINER_DEPS
-#include "RISCVGenPreLegalizeGICombiner.inc"
+#include "RISCVGenPostLegalizeGICombiner.inc"
 #undef GET_GICOMBINER_DEPS
 
-#define DEBUG_TYPE "riscv-prelegalizer-combiner"
+#define DEBUG_TYPE "riscv-postlegalizer-combiner"
 
 using namespace llvm;
 
 namespace {
 
 #define GET_GICOMBINER_TYPES
-#include "RISCVGenPreLegalizeGICombiner.inc"
+#include "RISCVGenPostLegalizeGICombiner.inc"
 #undef GET_GICOMBINER_TYPES
 
-class RISCVPreLegalizerCombinerImpl : public Combiner {
+class RISCVPostLegalizerCombinerImpl : public Combiner {
 protected:
   // TODO: Make CombinerHelper methods const.
   mutable CombinerHelper Helper;
-  const RISCVPreLegalizerCombinerImplRuleConfig &RuleConfig;
+  const RISCVPostLegalizerCombinerImplRuleConfig &RuleConfig;
   const RISCVSubtarget &STI;
 
 public:
-  RISCVPreLegalizerCombinerImpl(
+  RISCVPostLegalizerCombinerImpl(
       MachineFunction &MF, CombinerInfo &CInfo, const TargetPassConfig *TPC,
       GISelKnownBits &KB, GISelCSEInfo *CSEInfo,
-      const RISCVPreLegalizerCombinerImplRuleConfig &RuleConfig,
+      const RISCVPostLegalizerCombinerImplRuleConfig &RuleConfig,
       const RISCVSubtarget &STI, MachineDominatorTree *MDT,
       const LegalizerInfo *LI);
 
-  static const char *getName() { return "RISCV00PreLegalizerCombiner"; }
+  static const char *getName() { return "RISCVPostLegalizerCombiner"; }
 
   bool tryCombineAll(MachineInstr &I) const override;
 
 private:
 #define GET_GICOMBINER_CLASS_MEMBERS
-#include "RISCVGenPreLegalizeGICombiner.inc"
+#include "RISCVGenPostLegalizeGICombiner.inc"
 #undef GET_GICOMBINER_CLASS_MEMBERS
 };
 
 #define GET_GICOMBINER_IMPL
-#include "RISCVGenPreLegalizeGICombiner.inc"
+#include "RISCVGenPostLegalizeGICombiner.inc"
 #undef GET_GICOMBINER_IMPL
 
-RISCVPreLegalizerCombinerImpl::RISCVPreLegalizerCombinerImpl(
+RISCVPostLegalizerCombinerImpl::RISCVPostLegalizerCombinerImpl(
     MachineFunction &MF, CombinerInfo &CInfo, const TargetPassConfig *TPC,
     GISelKnownBits &KB, GISelCSEInfo *CSEInfo,
-    const RISCVPreLegalizerCombinerImplRuleConfig &RuleConfig,
+    const RISCVPostLegalizerCombinerImplRuleConfig &RuleConfig,
     const RISCVSubtarget &STI, MachineDominatorTree *MDT,
     const LegalizerInfo *LI)
     : Combiner(MF, CInfo, TPC, &KB, CSEInfo),
-      Helper(Observer, B, /*IsPreLegalize*/ true, &KB, MDT, LI),
+      Helper(Observer, B, /*IsPreLegalize*/ false, &KB, MDT, LI),
       RuleConfig(RuleConfig), STI(STI),
 #define GET_GICOMBINER_CONSTRUCTOR_INITS
-#include "RISCVGenPreLegalizeGICombiner.inc"
+#include "RISCVGenPostLegalizeGICombiner.inc"
 #undef GET_GICOMBINER_CONSTRUCTOR_INITS
 {
 }
 
-// Pass boilerplate
-// ================
-
-class RISCVPreLegalizerCombiner : public MachineFunctionPass {
+class RISCVPostLegalizerCombiner : public MachineFunctionPass {
 public:
   static char ID;
 
-  RISCVPreLegalizerCombiner();
+  RISCVPostLegalizerCombiner();
 
-  StringRef getPassName() const override { return "RISCVPreLegalizerCombiner"; }
+  StringRef getPassName() const override {
+    return "RISCVPostLegalizerCombiner";
+  }
 
   bool runOnMachineFunction(MachineFunction &MF) override;
-
   void getAnalysisUsage(AnalysisUsage &AU) const override;
 
 private:
-  RISCVPreLegalizerCombinerImplRuleConfig RuleConfig;
+  RISCVPostLegalizerCombinerImplRuleConfig RuleConfig;
 };
 } // end anonymous namespace
 
-void RISCVPreLegalizerCombiner::getAnalysisUsage(AnalysisUsage &AU) const {
+void RISCVPostLegalizerCombiner::getAnalysisUsage(AnalysisUsage &AU) const {
   AU.addRequired<TargetPassConfig>();
   AU.setPreservesCFG();
   getSelectionDAGFallbackAnalysisUsage(AU);
@@ -116,54 +119,55 @@ void RISCVPreLegalizerCombiner::getAnalysisUsage(AnalysisUsage &AU) const {
   MachineFunctionPass::getAnalysisUsage(AU);
 }
 
-RISCVPreLegalizerCombiner::RISCVPreLegalizerCombiner()
+RISCVPostLegalizerCombiner::RISCVPostLegalizerCombiner()
     : MachineFunctionPass(ID) {
-  initializeRISCVPreLegalizerCombinerPass(*PassRegistry::getPassRegistry());
+  initializeRISCVPostLegalizerCombinerPass(*PassRegistry::getPassRegistry());
 
   if (!RuleConfig.parseCommandLineOption())
     report_fatal_error("Invalid rule identifier");
 }
 
-bool RISCVPreLegalizerCombiner::runOnMachineFunction(MachineFunction &MF) {
+bool RISCVPostLegalizerCombiner::runOnMachineFunction(MachineFunction &MF) {
   if (MF.getProperties().hasProperty(
           MachineFunctionProperties::Property::FailedISel))
     return false;
-  auto &TPC = getAnalysis<TargetPassConfig>();
-
-  // Enable CSE.
-  GISelCSEAnalysisWrapper &Wrapper =
-      getAnalysis<GISelCSEAnalysisWrapperPass>().getCSEWrapper();
-  auto *CSEInfo = &Wrapper.get(TPC.getCSEConfig());
+  assert(MF.getProperties().hasProperty(
+             MachineFunctionProperties::Property::Legalized) &&
+         "Expected a legalized function?");
+  auto *TPC = &getAnalysis<TargetPassConfig>();
+  const Function &F = MF.getFunction();
+  bool EnableOpt =
+      MF.getTarget().getOptLevel() != CodeGenOptLevel::None && !skipFunction(F);
 
   const RISCVSubtarget &ST = MF.getSubtarget<RISCVSubtarget>();
   const auto *LI = ST.getLegalizerInfo();
 
-  const Function &F = MF.getFunction();
-  bool EnableOpt =
-      MF.getTarget().getOptLevel() != CodeGenOptLevel::None && !skipFunction(F);
   GISelKnownBits *KB = &getAnalysis<GISelKnownBitsAnalysis>().get(MF);
   MachineDominatorTree *MDT = &getAnalysis<MachineDominatorTree>();
+  GISelCSEAnalysisWrapper &Wrapper =
+      getAnalysis<GISelCSEAnalysisWrapperPass>().getCSEWrapper();
+  auto *CSEInfo = &Wrapper.get(TPC->getCSEConfig());
+
   CombinerInfo CInfo(/*AllowIllegalOps*/ true, /*ShouldLegalizeIllegal*/ false,
                      /*LegalizerInfo*/ nullptr, EnableOpt, F.hasOptSize(),
                      F.hasMinSize());
-  RISCVPreLegalizerCombinerImpl Impl(MF, CInfo, &TPC, *KB, CSEInfo, RuleConfig,
-                                     ST, MDT, LI);
+  RISCVPostLegalizerCombinerImpl Impl(MF, CInfo, TPC, *KB, CSEInfo,
+                                        RuleConfig, ST, MDT, LI);
   return Impl.combineMachineInstrs();
 }
 
-char RISCVPreLegalizerCombiner::ID = 0;
-INITIALIZE_PASS_BEGIN(RISCVPreLegalizerCombiner, DEBUG_TYPE,
-                      "Combine RISC-V machine instrs before legalization", false,
+char RISCVPostLegalizerCombiner::ID = 0;
+INITIALIZE_PASS_BEGIN(RISCVPostLegalizerCombiner, DEBUG_TYPE,
+                      "Combine RISC-V MachineInstrs after legalization", false,
                       false)
 INITIALIZE_PASS_DEPENDENCY(TargetPassConfig)
 INITIALIZE_PASS_DEPENDENCY(GISelKnownBitsAnalysis)
-INITIALIZE_PASS_DEPENDENCY(GISelCSEAnalysisWrapperPass)
-INITIALIZE_PASS_END(RISCVPreLegalizerCombiner, DEBUG_TYPE,
-                    "Combine RISC-V machine instrs before legalization", false,
+INITIALIZE_PASS_END(RISCVPostLegalizerCombiner, DEBUG_TYPE,
+                    "Combine RISC-V MachineInstrs after legalization", false,
                     false)
 
 namespace llvm {
-FunctionPass *createRISCVPreLegalizerCombiner() {
-  return new RISCVPreLegalizerCombiner();
+FunctionPass *createRISCVPostLegalizerCombiner() {
+  return new RISCVPostLegalizerCombiner();
 }
 } // end namespace llvm
