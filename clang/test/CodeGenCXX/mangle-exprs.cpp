@@ -93,9 +93,9 @@ namespace Casts {
   template void static_<4>(void*);
   // CHECK-LABEL: define weak_odr void @_ZN5Casts12reinterpret_ILj4EiEEvPN9enable_ifIXleT_szrcPT0_Li0EEvE4typeE
   template void reinterpret_<4, int>(void*);
-  // CHECK-LABEL: define weak_odr void @_ZN5Casts6const_IiXadL_ZNS_1iEEEEEvPN9enable_ifIXleLi0EszccPT_T0_EvE4typeE
+  // CHECK-LABEL: define weak_odr void @_ZN5Casts6const_IiTnPT_XadL_ZNS_1iEEEEEvPN9enable_ifIXleLi0EszccS2_T0_EvE4typeE
   template void const_<int, &i>(void*);
-  // CHECK-LABEL: define weak_odr void @_ZN5Casts8dynamic_INS_1SEXadL_ZNS_1sEEEEEvPN9enable_ifIXleLi0EszdcPT_T0_EvE4typeE
+  // CHECK-LABEL: define weak_odr void @_ZN5Casts8dynamic_INS_1SETnPT_XadL_ZNS_1sEEEEEvPN9enable_ifIXleLi0EszdcS3_T0_EvE4typeE
   template void dynamic_<struct S, &s>(void*);
 
   // CHECK-LABEL: define weak_odr void @_ZN5Casts1fILi6EEENS_1TIXT_EEEv

@@ -7,8 +7,8 @@
 //===----------------------------------------------------------------------===//
 // This header file defines portable macros for performance optimization.
 
-#ifndef LLVM_LIBC_SRC_SUPPORT_MACROS_OPTIMIZATION_H
-#define LLVM_LIBC_SRC_SUPPORT_MACROS_OPTIMIZATION_H
+#ifndef LLVM_LIBC_SRC___SUPPORT_MACROS_OPTIMIZATION_H
+#define LLVM_LIBC_SRC___SUPPORT_MACROS_OPTIMIZATION_H
 
 #include "src/__support/macros/attributes.h"          // LIBC_INLINE
 #include "src/__support/macros/config.h"              // LIBC_HAS_BUILTIN
@@ -33,4 +33,4 @@ LIBC_INLINE constexpr bool expects_bool_condition(T value, T expected) {
 #error "Unhandled compiler"
 #endif
 
-#endif /* LLVM_LIBC_SRC_SUPPORT_MACROS_OPTIMIZATION_H */
+#endif // LLVM_LIBC_SRC___SUPPORT_MACROS_OPTIMIZATION_H

@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_LIBC_SRC_SUPPORT_FPUTIL_ROUNDING_MODE_H
-#define LLVM_LIBC_SRC_SUPPORT_FPUTIL_ROUNDING_MODE_H
+#ifndef LLVM_LIBC_SRC___SUPPORT_FPUTIL_ROUNDING_MODE_H
+#define LLVM_LIBC_SRC___SUPPORT_FPUTIL_ROUNDING_MODE_H
 
 #include "src/__support/macros/attributes.h" // LIBC_INLINE
 
@@ -76,4 +76,4 @@ LIBC_INLINE int quick_get_round() {
 
 } // namespace __llvm_libc::fputil
 
-#endif // LLVM_LIBC_SRC_SUPPORT_FPUTIL_ROUNDING_MODE_H
+#endif // LLVM_LIBC_SRC___SUPPORT_FPUTIL_ROUNDING_MODE_H

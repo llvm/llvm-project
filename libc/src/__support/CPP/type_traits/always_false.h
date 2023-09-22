@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_LIBC_SRC_SUPPORT_CPP_TYPE_TRAITS_ALWAYS_FALSE_H
-#define LLVM_LIBC_SRC_SUPPORT_CPP_TYPE_TRAITS_ALWAYS_FALSE_H
+#ifndef LLVM_LIBC_SRC___SUPPORT_CPP_TYPE_TRAITS_ALWAYS_FALSE_H
+#define LLVM_LIBC_SRC___SUPPORT_CPP_TYPE_TRAITS_ALWAYS_FALSE_H
 
 #include "src/__support/macros/attributes.h"
 
@@ -26,4 +26,4 @@ template <typename...> LIBC_INLINE_VAR constexpr bool always_false = false;
 
 } // namespace __llvm_libc::cpp
 
-#endif // LLVM_LIBC_SRC_SUPPORT_CPP_TYPE_TRAITS_ALWAYS_FALSE_H
+#endif // LLVM_LIBC_SRC___SUPPORT_CPP_TYPE_TRAITS_ALWAYS_FALSE_H

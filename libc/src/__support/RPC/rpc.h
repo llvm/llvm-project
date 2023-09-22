@@ -15,8 +15,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_LIBC_SRC_SUPPORT_RPC_RPC_H
-#define LLVM_LIBC_SRC_SUPPORT_RPC_RPC_H
+#ifndef LLVM_LIBC_SRC___SUPPORT_RPC_RPC_H
+#define LLVM_LIBC_SRC___SUPPORT_RPC_RPC_H
 
 #include "rpc_util.h"
 #include "src/__support/CPP/algorithm.h" // max

@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LIBC_SRC_SUPPORT_STR_TO_FLOAT_H
-#define LIBC_SRC_SUPPORT_STR_TO_FLOAT_H
+#ifndef LLVM_LIBC_SRC___SUPPORT_STR_TO_FLOAT_H
+#define LLVM_LIBC_SRC___SUPPORT_STR_TO_FLOAT_H
 
 #include "src/__support/CPP/limits.h"
 #include "src/__support/CPP/optional.h"
@@ -1249,4 +1249,4 @@ LIBC_INLINE StrToNumResult<T> strtofloatingpoint(const char *__restrict src) {
 } // namespace internal
 } // namespace __llvm_libc
 
-#endif // LIBC_SRC_SUPPORT_STR_TO_FLOAT_H
+#endif // LLVM_LIBC_SRC___SUPPORT_STR_TO_FLOAT_H

@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_LIBC_SRC_STDLIB_ABS_UTILS_H
-#define LLVM_LIBC_SRC_STDLIB_ABS_UTILS_H
+#ifndef LLVM_LIBC_SRC___SUPPORT_INTEGER_OPERATIONS_H
+#define LLVM_LIBC_SRC___SUPPORT_INTEGER_OPERATIONS_H
 
 #include "src/__support/CPP/type_traits.h"
 
@@ -27,4 +27,4 @@ integer_rem_quo(T x, T y, T &quot, T &rem) {
 
 } // namespace __llvm_libc
 
-#endif // LLVM_LIBC_SRC_STDLIB_ABS_UTILS_H
+#endif // LLVM_LIBC_SRC___SUPPORT_INTEGER_OPERATIONS_H

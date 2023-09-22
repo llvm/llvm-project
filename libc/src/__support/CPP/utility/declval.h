@@ -5,8 +5,8 @@
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
-#ifndef LLVM_LIBC_SRC_SUPPORT_CPP_UTILITY_DECLVAL_H
-#define LLVM_LIBC_SRC_SUPPORT_CPP_UTILITY_DECLVAL_H
+#ifndef LLVM_LIBC_SRC___SUPPORT_CPP_UTILITY_DECLVAL_H
+#define LLVM_LIBC_SRC___SUPPORT_CPP_UTILITY_DECLVAL_H
 
 #include "src/__support/CPP/type_traits/add_rvalue_reference.h"
 #include "src/__support/CPP/type_traits/always_false.h"
@@ -21,4 +21,4 @@ template <typename T> cpp::add_rvalue_reference_t<T> declval() {
 
 } // namespace __llvm_libc::cpp
 
-#endif // LLVM_LIBC_SRC_SUPPORT_CPP_UTILITY_DECLVAL_H
+#endif // LLVM_LIBC_SRC___SUPPORT_CPP_UTILITY_DECLVAL_H

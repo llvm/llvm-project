@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_LIBC_SRC_SUPPORT_FLOAT_TO_STRING_H
-#define LLVM_LIBC_SRC_SUPPORT_FLOAT_TO_STRING_H
+#ifndef LLVM_LIBC_SRC___SUPPORT_FLOAT_TO_STRING_H
+#define LLVM_LIBC_SRC___SUPPORT_FLOAT_TO_STRING_H
 
 #include <stdint.h>
 
@@ -756,4 +756,4 @@ FloatToString<long double>::get_negative_block(int block_index) {
 
 } // namespace __llvm_libc
 
-#endif // LLVM_LIBC_SRC_SUPPORT_FLOAT_TO_STRING_H
+#endif // LLVM_LIBC_SRC___SUPPORT_FLOAT_TO_STRING_H

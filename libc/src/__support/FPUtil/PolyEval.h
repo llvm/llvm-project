@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_LIBC_SRC_SUPPORT_FPUTIL_POLYEVAL_H
-#define LLVM_LIBC_SRC_SUPPORT_FPUTIL_POLYEVAL_H
+#ifndef LLVM_LIBC_SRC___SUPPORT_FPUTIL_POLYEVAL_H
+#define LLVM_LIBC_SRC___SUPPORT_FPUTIL_POLYEVAL_H
 
 #include "multiply_add.h"
 #include "src/__support/CPP/type_traits.h"
@@ -50,4 +50,4 @@ polyeval(T x, T a0, Ts... a) {
 } // namespace fputil
 } // namespace __llvm_libc
 
-#endif // LLVM_LIBC_SRC_SUPPORT_FPUTIL_POLYEVAL_H
+#endif // LLVM_LIBC_SRC___SUPPORT_FPUTIL_POLYEVAL_H

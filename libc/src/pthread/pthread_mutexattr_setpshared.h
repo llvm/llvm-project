@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_LIBC_SRC_PTHREAD_PTHREAD_MUTEXATTR_SETpshared_H
-#define LLVM_LIBC_SRC_PTHREAD_PTHREAD_MUTEXATTR_SETpshared_H
+#ifndef LLVM_LIBC_SRC_PTHREAD_PTHREAD_MUTEXATTR_SETPSHARED_H
+#define LLVM_LIBC_SRC_PTHREAD_PTHREAD_MUTEXATTR_SETPSHARED_H
 
 #include <pthread.h>
 
@@ -18,4 +18,4 @@ int pthread_mutexattr_setpshared(pthread_mutexattr_t *__restrict attr,
 
 } // namespace __llvm_libc
 
-#endif // LLVM_LIBC_SRC_PTHREAD_PTHREAD_MUTEXATTR_SETpshared_H
+#endif // LLVM_LIBC_SRC_PTHREAD_PTHREAD_MUTEXATTR_SETPSHARED_H

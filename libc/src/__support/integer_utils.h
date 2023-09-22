@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_LIBC_SRC_SUPPORT_INTEGER_UTILS_H
-#define LLVM_LIBC_SRC_SUPPORT_INTEGER_UTILS_H
+#ifndef LLVM_LIBC_SRC___SUPPORT_INTEGER_UTILS_H
+#define LLVM_LIBC_SRC___SUPPORT_INTEGER_UTILS_H
 
 #include "src/__support/CPP/type_traits.h"
 #include "src/__support/common.h"
@@ -62,4 +62,4 @@ LIBC_INLINE NumberPair<uint64_t> full_mul<uint64_t>(uint64_t a, uint64_t b) {
 
 } // namespace __llvm_libc
 
-#endif // LLVM_LIBC_SRC_SUPPORT_INTEGER_UTILS_H
+#endif // LLVM_LIBC_SRC___SUPPORT_INTEGER_UTILS_H

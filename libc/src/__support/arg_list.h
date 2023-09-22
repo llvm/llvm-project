@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_LIBC_SRC_SUPPORT_ARG_LIST_H
-#define LLVM_LIBC_SRC_SUPPORT_ARG_LIST_H
+#ifndef LLVM_LIBC_SRC___SUPPORT_ARG_LIST_H
+#define LLVM_LIBC_SRC___SUPPORT_ARG_LIST_H
 
 #include "src/__support/common.h"
 
@@ -63,4 +63,4 @@ public:
 } // namespace internal
 } // namespace __llvm_libc
 
-#endif // LLVM_LIBC_SRC_SUPPORT_ARG_LIST_H
+#endif // LLVM_LIBC_SRC___SUPPORT_ARG_LIST_H

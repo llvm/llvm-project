@@ -426,8 +426,6 @@ void AMDGPUTargetAsmStreamer::EmitAmdhsaKernelDescriptor(
   switch (CodeObjectVersion) {
   default:
     break;
-  case AMDGPU::AMDHSA_COV2:
-    break;
   case AMDGPU::AMDHSA_COV3:
   case AMDGPU::AMDHSA_COV4:
   case AMDGPU::AMDHSA_COV5:
@@ -547,7 +545,7 @@ void AMDGPUTargetELFStreamer::EmitNote(
   unsigned NoteFlags = 0;
   // TODO Apparently, this is currently needed for OpenCL as mentioned in
   // https://reviews.llvm.org/D74995
-  if (STI.getTargetTriple().getOS() == Triple::AMDHSA)
+  if (isHsaAbi(STI))
     NoteFlags = ELF::SHF_ALLOC;
 
   S.pushSection();
@@ -606,11 +604,10 @@ unsigned AMDGPUTargetELFStreamer::getEFlagsUnknownOS() {
 }
 
 unsigned AMDGPUTargetELFStreamer::getEFlagsAMDHSA() {
-  assert(STI.getTargetTriple().getOS() == Triple::AMDHSA);
+  assert(isHsaAbi(STI));
 
   if (std::optional<uint8_t> HsaAbiVer = getHsaAbiVersion(&STI)) {
     switch (*HsaAbiVer) {
-    case ELF::ELFABIVERSION_AMDGPU_HSA_V2:
     case ELF::ELFABIVERSION_AMDGPU_HSA_V3:
       return getEFlagsV3();
     case ELF::ELFABIVERSION_AMDGPU_HSA_V4:

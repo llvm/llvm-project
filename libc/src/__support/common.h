@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_LIBC_SUPPORT_COMMON_H
-#define LLVM_LIBC_SUPPORT_COMMON_H
+#ifndef LLVM_LIBC_SRC___SUPPORT_COMMON_H
+#define LLVM_LIBC_SRC___SUPPORT_COMMON_H
 
 #ifndef LIBC_NAMESPACE
 #error "LIBC_NAMESPACE macro is not defined."
@@ -58,4 +58,4 @@ LIBC_INLINE constexpr bool same_string(char const *lhs, char const *rhs) {
       LLVM_LIBC_IS_DEFINED__EVAL_AND_STRINGIZE(macro), #macro)
 #define LLVM_LIBC_IS_DEFINED__EVAL_AND_STRINGIZE(s) #s
 
-#endif // LLVM_LIBC_SUPPORT_COMMON_H
+#endif // LLVM_LIBC_SRC___SUPPORT_COMMON_H

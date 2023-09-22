@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_LIBC_SRC_SUPPORT_C_STRING_H
-#define LLVM_LIBC_SRC_SUPPORT_C_STRING_H
+#ifndef LLVM_LIBC_SRC___SUPPORT_C_STRING_H
+#define LLVM_LIBC_SRC___SUPPORT_C_STRING_H
 
 #include "src/__support/CPP/string.h"
 #include "src/__support/macros/attributes.h" // for LIBC_INLINE
@@ -33,4 +33,4 @@ public:
 
 } // namespace __llvm_libc
 
-#endif // LLVM_LIBC_SRC_SUPPORT_C_STRING_H
+#endif // LLVM_LIBC_SRC___SUPPORT_C_STRING_H
