@@ -6,14 +6,20 @@ void watch_read() {
     g_temp = g_watch_me_read;
 }
 
-void watch_write() {
-    g_watch_me_write = g_temp;
+void watch_write() { g_watch_me_write = g_temp++; }
+
+void read_watchpoint_testing() {
+  watch_read(); // break here for read watchpoints
+  g_temp = g_watch_me_read;
+}
+
+void watch_breakpoint_testing() {
+  watch_write(); // break here for modify watchpoints
+  g_watch_me_write = g_temp;
 }
 
 int main() {
-    watch_read(); // Set a breakpoint here
-    g_temp = g_watch_me_read; // Set breakpoint after call
-    watch_write();
-    g_watch_me_write = g_temp + 1;
-    return 0;
+  read_watchpoint_testing();
+  watch_breakpoint_testing();
+  return 0;
 }
