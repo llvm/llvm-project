@@ -179,7 +179,7 @@ static value alloc_variant(int tag, value Value) {
 
 /*===-- Context error handling --------------------------------------------===*/
 
-void llvm_diagnostic_handler_trampoline(LLVMDiagnosticInfoRef DI,
+static void llvm_diagnostic_handler_trampoline(LLVMDiagnosticInfoRef DI,
                                         void *DiagnosticContext) {
   caml_callback(*((value *)DiagnosticContext), to_val(DI));
 }
