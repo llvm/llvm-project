@@ -152,9 +152,7 @@ int main(int argc, const char **argv) {
   llvm::InitializeAllAsmPrinters();
 
   if (OptHostSupportsJit) {
-    auto J = llvm::orc::LLJITBuilder()
-               .setEnableDebuggerSupport(true)
-               .create();
+    auto J = llvm::orc::LLJITBuilder().create();
     if (J)
       llvm::outs() << "true\n";
     else {
