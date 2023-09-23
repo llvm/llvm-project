@@ -132,6 +132,9 @@ set(TARGET_LIBC_ENTRYPOINTS
     libc.src.stdio.vsnprintf
     libc.src.stdio.vfprintf
     libc.src.stdio.vprintf
+    libc.src.stdio.sscanf
+    libc.src.stdio.scanf
+    libc.src.stdio.fscanf
 
     # sys/mman.h entrypoints
     libc.src.sys.mman.madvise
@@ -439,10 +442,6 @@ if(LLVM_LIBC_FULL_BUILD)
     libc.src.stdio.getc_unlocked
     libc.src.stdio.getchar
     libc.src.stdio.getchar_unlocked
-    libc.src.stdio.printf
-    libc.src.stdio.sscanf
-    libc.src.stdio.scanf
-    libc.src.stdio.fscanf
     libc.src.stdio.putc
     libc.src.stdio.putchar
     libc.src.stdio.puts

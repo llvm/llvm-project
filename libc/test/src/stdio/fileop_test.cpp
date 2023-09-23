@@ -16,10 +16,15 @@
 #include "src/stdio/fread.h"
 #include "src/stdio/fseek.h"
 #include "src/stdio/fwrite.h"
+#include "test/UnitTest/ErrnoSetterMatcher.h"
 #include "test/UnitTest/Test.h"
 
 #include "src/errno/libc_errno.h"
 #include <stdio.h>
+
+using __llvm_libc::testing::ErrnoSetterMatcher::EQ;
+using __llvm_libc::testing::ErrnoSetterMatcher::NE;
+using __llvm_libc::testing::ErrnoSetterMatcher::returns;
 
 TEST(LlvmLibcFILETest, SimpleFileOperations) {
   constexpr char FILENAME[] = "testdata/simple_operations.test";
@@ -31,9 +36,9 @@ TEST(LlvmLibcFILETest, SimpleFileOperations) {
 
   // This is not a readable file.
   char read_data[sizeof(CONTENT)];
-  ASSERT_EQ(__llvm_libc::fread(read_data, 1, sizeof(CONTENT), file), size_t(0));
+  ASSERT_THAT(__llvm_libc::fread(read_data, 1, sizeof(CONTENT), file),
+              returns(EQ(size_t(0))).with_errno(NE(0)));
   ASSERT_NE(__llvm_libc::ferror(file), 0);
-  EXPECT_NE(libc_errno, 0);
   libc_errno = 0;
 
   __llvm_libc::clearerr(file);
@@ -62,25 +67,25 @@ TEST(LlvmLibcFILETest, SimpleFileOperations) {
   ASSERT_NE(__llvm_libc::feof(file), 0);
 
   // Should be an error to write.
-  ASSERT_EQ(size_t(0), __llvm_libc::fwrite(CONTENT, 1, sizeof(CONTENT), file));
+  ASSERT_THAT(__llvm_libc::fwrite(CONTENT, 1, sizeof(CONTENT), file),
+              returns(EQ(size_t(0))).with_errno(NE(0)));
   ASSERT_NE(__llvm_libc::ferror(file), 0);
-  ASSERT_NE(libc_errno, 0);
   libc_errno = 0;
 
   __llvm_libc::clearerr(file);
 
   // Should be an error to puts.
-  ASSERT_EQ(EOF, __llvm_libc::fputs(CONTENT, file));
+  ASSERT_THAT(__llvm_libc::fputs(CONTENT, file),
+              returns(EQ(EOF)).with_errno(NE(0)));
   ASSERT_NE(__llvm_libc::ferror(file), 0);
-  ASSERT_NE(libc_errno, 0);
   libc_errno = 0;
 
   __llvm_libc::clearerr(file);
   ASSERT_EQ(__llvm_libc::ferror(file), 0);
 
   libc_errno = 0;
-  ASSERT_EQ(__llvm_libc::fwrite("nothing", 1, 1, file), size_t(0));
-  ASSERT_NE(libc_errno, 0);
+  ASSERT_THAT(__llvm_libc::fwrite("nothing", 1, 1, file),
+              returns(EQ(0)).with_errno(NE(0)));
   libc_errno = 0;
 
   ASSERT_EQ(__llvm_libc::fclose(file), 0);
@@ -97,8 +102,8 @@ TEST(LlvmLibcFILETest, SimpleFileOperations) {
 
   // This is not a readable file.
   libc_errno = 0;
-  ASSERT_EQ(__llvm_libc::fread(data, 1, 1, file), size_t(0));
-  ASSERT_NE(libc_errno, 0);
+  ASSERT_THAT(__llvm_libc::fread(data, 1, 1, file),
+              returns(EQ(0)).with_errno(NE(0)));
   libc_errno = 0;
 
   ASSERT_EQ(0, __llvm_libc::fclose(file));
@@ -162,22 +167,22 @@ TEST(LlvmLibcFILETest, FOpenFWriteSizeGreaterThanOne) {
   FILE *file = __llvm_libc::fopen(FILENAME, "w");
   ASSERT_FALSE(file == nullptr);
   ASSERT_EQ(size_t(0), __llvm_libc::fwrite(WRITE_DATA, 0, 1, file));
-  ASSERT_EQ(WRITE_NMEMB, __llvm_libc::fwrite(WRITE_DATA, sizeof(MyStruct),
-                                             WRITE_NMEMB, file));
-  EXPECT_EQ(libc_errno, 0);
+  ASSERT_THAT(
+      __llvm_libc::fwrite(WRITE_DATA, sizeof(MyStruct), WRITE_NMEMB, file),
+      returns(EQ(WRITE_NMEMB)).with_errno(EQ(0)));
   ASSERT_EQ(__llvm_libc::fclose(file), 0);
 
   file = __llvm_libc::fopen(FILENAME, "r");
   ASSERT_FALSE(file == nullptr);
   MyStruct read_data[WRITE_NMEMB];
   ASSERT_EQ(size_t(0), __llvm_libc::fread(read_data, 0, 1, file));
-  ASSERT_EQ(WRITE_NMEMB,
-            __llvm_libc::fread(read_data, sizeof(MyStruct), WRITE_NMEMB, file));
-  EXPECT_EQ(libc_errno, 0);
+  ASSERT_THAT(
+      __llvm_libc::fread(read_data, sizeof(MyStruct), WRITE_NMEMB, file),
+      returns(EQ(WRITE_NMEMB)).with_errno(EQ(0)));
   // Trying to read more should fetch nothing.
-  ASSERT_EQ(size_t(0),
-            __llvm_libc::fread(read_data, sizeof(MyStruct), WRITE_NMEMB, file));
-  EXPECT_EQ(libc_errno, 0);
+  ASSERT_THAT(
+      __llvm_libc::fread(read_data, sizeof(MyStruct), WRITE_NMEMB, file),
+      returns(EQ(0)).with_errno(EQ(0)));
   EXPECT_NE(__llvm_libc::feof(file), 0);
   EXPECT_EQ(__llvm_libc::ferror(file), 0);
   ASSERT_EQ(__llvm_libc::fclose(file), 0);

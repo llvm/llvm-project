@@ -47,7 +47,7 @@ body: |
     STFSX killed $f1, killed $x3, $x5
     ; CHECK: STFS killed $f1, 100, $x5
     STD killed $x5, $x5, 100
-    ; CHECK: STD killed $x5, $x5, 100
+    ; CHECK: STD killed $x5, killed $x5, 100
     BLR8 implicit $lr8, implicit $rm
 
 ...
@@ -100,7 +100,7 @@ body: |
     STFSX killed $f1, $zero8, killed $x3
     ; CHECK: STFS killed $f1, 100, $x5
     STD killed $x5, $x5, 100
-    ; CHECK: STD killed $x5, $x5, 100
+    ; CHECK: STD killed $x5, killed $x5, 100
     BLR8 implicit $lr8, implicit $rm
 
 ...
@@ -119,7 +119,7 @@ body: |
     STFSX killed $f1, $zero8, $x3
     ; CHECK: STFS killed $f1, 100, killed $x5
     STD killed $x3, $x3, 100
-    ; CHECK: STD killed $x3, $x3, 100
+    ; CHECK: STD killed $x3, killed $x3, 100
     BLR8 implicit $lr8, implicit $rm
 
 ...
@@ -154,9 +154,9 @@ body: |
     $x3 = LDX $zero8, killed $x3
     ; CHECK: $x3 = LD 100, $x5
     STD killed $x5, $x5, 100
-    ; CHECK: STD killed $x5, $x5, 100
+    ; CHECK: STD killed $x5, killed $x5, 100
     STD killed $x3, $x3, 200
-    ; CHECK: STD killed $x3, $x3, 200
+    ; CHECK: STD killed $x3, killed $x3, 200
     BLR8 implicit $lr8, implicit $rm
 
 ...
@@ -175,7 +175,7 @@ body: |
     STD killed $x5, $x5, 100
     ; CHECK: STD $x5, $x5, 100
     STD $x3, $x3, 200
-    ; CHECK: STD killed $x3, $x3, 200
+    ; CHECK: STD killed $x3, killed $x3, 200
     STFSX killed $f1, $zero8, killed $x3
     ; CHECK: STFS killed $f1, 100, killed $x5
     BLR8 implicit $lr8, implicit $rm
