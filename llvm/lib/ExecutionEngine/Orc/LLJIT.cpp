@@ -1147,7 +1147,7 @@ Expected<JITDylibSP> ExecutorNativePlatform::operator()(LLJIT &J) {
 
   if (!ObjLinkingLayer)
     return make_error<StringError>(
-        "SetUpTargetPlatform requires ObjectLinkingLayer",
+        "ExecutorNativePlatform requires ObjectLinkingLayer",
         inconvertibleErrorCode());
 
   std::unique_ptr<MemoryBuffer> RuntimeArchiveBuffer;
