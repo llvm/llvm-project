@@ -440,7 +440,7 @@ public:
   }
 
   static _LIBCPP_HIDE_FROM_ABI _Iterator __compose(__segment_iterator __segment, __local_iterator __local) {
-        if (__local == __end(__segment)) {
+        if (__segment && __local == __end(__segment)) {
             ++__segment;
             return _Iterator(__segment, *__segment);
         }
