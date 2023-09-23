@@ -148,7 +148,7 @@ fir::ExtendedValue Fortran::lower::genCallOpAndResult(
     mlir::Location loc, Fortran::lower::AbstractConverter &converter,
     Fortran::lower::SymMap &symMap, Fortran::lower::StatementContext &stmtCtx,
     Fortran::lower::CallerInterface &caller, mlir::FunctionType callSiteType,
-    std::optional<mlir::Type> resultType) {
+    std::optional<mlir::Type> resultType, bool isElemental) {
   fir::FirOpBuilder &builder = converter.getFirOpBuilder();
   using PassBy = Fortran::lower::CallerInterface::PassEntityBy;
   // Handle cases where caller must allocate the result or a fir.box for it.
@@ -435,7 +435,13 @@ fir::ExtendedValue Fortran::lower::genCallOpAndResult(
     std::optional<Fortran::evaluate::DynamicType> retTy =
         caller.getCallDescription().proc().GetType();
     bool cleanupWithDestroy = false;
-    if (!fir::isPointerType(funcType.getResults()[0]) && retTy &&
+    // With HLFIR lowering, isElemental must be set to true
+    // if we are producing an elemental call. In this case,
+    // the elemental results must not be destroyed, instead,
+    // the resulting array result will be finalized/destroyed
+    // as needed by hlfir.destroy.
+    if (!isElemental && !fir::isPointerType(funcType.getResults()[0]) &&
+        retTy &&
         (retTy->category() == Fortran::common::TypeCategory::Derived ||
          retTy->IsPolymorphic() || retTy->IsUnlimitedPolymorphic())) {
       if (retTy->IsPolymorphic() || retTy->IsUnlimitedPolymorphic()) {
@@ -692,6 +698,14 @@ struct PreparedDummyArgument {
     cleanups.emplace_back(
         CallCleanUp{CallCleanUp::ExprAssociate{tempVar, wasCopied}});
   }
+  void pushExprAssociateCleanUp(hlfir::AssociateOp associate) {
+    mlir::Value hlfirBase = associate.getBase();
+    mlir::Value firBase = associate.getFirBase();
+    cleanups.emplace_back(CallCleanUp{CallCleanUp::ExprAssociate{
+        hlfir::mayHaveAllocatableComponent(hlfirBase.getType()) ? hlfirBase
+                                                                : firBase,
+        associate.getMustFreeStrorageFlag()}});
+  }
 
   mlir::Value dummy;
   // NOTE: the clean-ups are executed in reverse order.
@@ -896,8 +910,7 @@ static PreparedDummyArgument preparePresentUserCallActualArgument(
           loc, builder, hlfir::Entity{copy}, storageType, "adapt.valuebyref");
       entity = hlfir::Entity{associate.getBase()};
       // Register the temporary destruction after the call.
-      preparedDummy.pushExprAssociateCleanUp(
-          associate.getFirBase(), associate.getMustFreeStrorageFlag());
+      preparedDummy.pushExprAssociateCleanUp(associate);
     } else if (mustDoCopyInOut) {
       // Copy-in non contiguous variables.
       assert(entity.getType().isa<fir::BaseBoxType>() &&
@@ -924,8 +937,7 @@ static PreparedDummyArgument preparePresentUserCallActualArgument(
     hlfir::AssociateOp associate = hlfir::genAssociateExpr(
         loc, builder, entity, storageType, "adapt.valuebyref");
     entity = hlfir::Entity{associate.getBase()};
-    preparedDummy.pushExprAssociateCleanUp(associate.getFirBase(),
-                                           associate.getMustFreeStrorageFlag());
+    preparedDummy.pushExprAssociateCleanUp(associate);
     if (mustSetDynamicTypeToDummyType) {
       // Rebox the actual argument to the dummy argument's type, and make
       // sure that we pass a contiguous entity (i.e. make copy-in,
@@ -1201,7 +1213,8 @@ genUserCall(Fortran::lower::PreparedActualArguments &loweredActuals,
   // arguments.
   fir::ExtendedValue result = Fortran::lower::genCallOpAndResult(
       loc, callContext.converter, callContext.symMap, callContext.stmtCtx,
-      caller, callSiteType, callContext.resultType);
+      caller, callSiteType, callContext.resultType,
+      callContext.isElementalProcWithArrayArgs());
 
   /// Clean-up associations and copy-in.
   for (auto cleanUp : callCleanUps)
@@ -1687,9 +1700,14 @@ public:
     mlir::Value elemental =
         hlfir::genElementalOp(loc, builder, elementType, shape, typeParams,
                               genKernel, !mustBeOrdered, polymorphicMold);
+    // If the function result requires finalization, then it has to be done
+    // for the array result of the elemental call. We have to communicate
+    // this via the DestroyOp's attribute.
+    bool mustFinalizeExpr = impl().resultMayRequireFinalization(callContext);
     fir::FirOpBuilder *bldr = &builder;
-    callContext.stmtCtx.attachCleanup(
-        [=]() { bldr->create<hlfir::DestroyOp>(loc, elemental); });
+    callContext.stmtCtx.attachCleanup([=]() {
+      bldr->create<hlfir::DestroyOp>(loc, elemental, mustFinalizeExpr);
+    });
     return hlfir::EntityWithAttributes{elemental};
   }
 
@@ -1741,6 +1759,26 @@ public:
     fir::emitFatalError(callContext.loc,
                         "elemental function call with polymorphic result");
     return {};
+  }
+
+  bool resultMayRequireFinalization(CallContext &callContext) const {
+    std::optional<Fortran::evaluate::DynamicType> retTy =
+        caller.getCallDescription().proc().GetType();
+    if (!retTy)
+      return false;
+
+    if (retTy->IsPolymorphic() || retTy->IsUnlimitedPolymorphic())
+      fir::emitFatalError(
+          callContext.loc,
+          "elemental function call with [unlimited-]polymorphic result");
+
+    if (retTy->category() == Fortran::common::TypeCategory::Derived) {
+      const Fortran::semantics::DerivedTypeSpec &typeSpec =
+          retTy->GetDerivedTypeSpec();
+      return Fortran::semantics::IsFinalizable(typeSpec);
+    }
+
+    return false;
   }
 
 private:
@@ -1802,6 +1840,14 @@ public:
     }
 
     return {};
+  }
+
+  bool resultMayRequireFinalization(
+      [[maybe_unused]] CallContext &callContext) const {
+    // FIXME: need access to the CallerInterface's return type
+    // to check if the result may need finalization (e.g. the result
+    // of MERGE).
+    return false;
   }
 
 private:
