@@ -45,6 +45,12 @@ vsetvli a2, a0, 144
 # CHECK-ERROR: instruction requires the following: 'V' (Vector Extension for Application Processors), 'Zve32x' or 'Zve64x' (Vector Extensions for Embedded Processors){{$}}
 # CHECK-UNKNOWN: 57 76 05 09 <unknown>
 
+vsetvli a2, a0, e32, ta, ma
+# CHECK-INST: vsetvli a2, a0, e32, m1, ta, ma
+# CHECK-ENCODING: [0x57,0x76,0x05,0x0d]
+# CHECK-ERROR: instruction requires the following: 'V' (Vector Extension for Application Processors), 'Zve32x' or 'Zve64x' (Vector Extensions for Embedded Processors){{$}}
+# CHECK-UNKNOWN: 57 76 05 0d <unknown>
+
 vsetvli a2, a0, e32, m1, ta, ma
 # CHECK-INST: vsetvli a2, a0, e32,  m1,  ta,  ma
 # CHECK-ENCODING: [0x57,0x76,0x05,0x0d]
