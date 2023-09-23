@@ -49,7 +49,13 @@ template <typename T> struct Comparator {
     __builtin_unreachable();
   }
 
+  // The NVPTX backend cannot handle circular dependencies on global variables.
+  // We provide a constant dummy implementation to prevent this from occurring.
+#ifdef LIBC_TARGET_ARCH_IS_NVPTX
+  constexpr const char *str() { return ""; }
+#else
   const char *str() { return CompareMessage[static_cast<int>(cmp)]; }
+#endif
 };
 
 template <typename T> class ErrnoSetterMatcher : public Matcher<T> {
