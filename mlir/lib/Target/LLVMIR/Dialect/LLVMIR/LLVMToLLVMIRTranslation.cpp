@@ -211,9 +211,10 @@ convertOperationImpl(Operation &opInst, llvm::IRBuilderBase &builder,
       call = builder.CreateCall(
           moduleTranslation.lookupFunction(attr.getValue()), operandsRef);
     } else {
-      call = builder.CreateCall(getCalleeFunctionType(callOp.getResultTypes(),
-                                                      callOp.getArgOperands()),
-                                operandsRef.front(), operandsRef.drop_front());
+      call = builder.CreateCall(
+          llvm::cast<llvm::FunctionType>(
+              moduleTranslation.convertType(callOp.getCalleeType())),
+          operandsRef.front(), operandsRef.drop_front());
     }
     moduleTranslation.setAccessGroupsMetadata(callOp, call);
     moduleTranslation.setAliasScopeMetadata(callOp, call);
