@@ -8,7 +8,8 @@
 target triple = "wasm32-unknown-unknown"
 
 
-; Test that the LLVM trap and debug trap intrinsics are lowered to wasm unreachable.
+; Test that the LLVM trap and debug trap intrinsics are lowered to
+; wasm unreachable.
 
 declare void @llvm.trap() cold noreturn nounwind
 declare void @llvm.debugtrap() nounwind
@@ -35,7 +36,8 @@ define void @dtrap_ret_void() {
   ret void
 }
 
-; Test that LLVM trap followed by LLVM unreachable becomes exactly one wasm unreachable.
+; LLVM trap followed by LLVM unreachable could become exactly one
+; wasm unreachable, but two are emitted currently.
 define void @trap_unreach() {
 ; CHECK-LABEL: trap_unreach:
 ; CHECK:         .functype trap_unreach () -> ()
@@ -48,8 +50,8 @@ define void @trap_unreach() {
 }
 
 
-; Test that LLVM unreachable instruction is lowered to wasm unreachable when necessary
-; to fulfill the wasm operand stack requirements.
+; Test that LLVM unreachable instruction is lowered to wasm unreachable when
+; necessary to fulfill the wasm operand stack requirements.
 
 declare void @ext_func()
 declare i32 @ext_func_i32()
@@ -67,8 +69,8 @@ define i32 @missing_ret_unreach() {
   unreachable
 }
 
-; This is similar to the above test, but ensures wasm unreachable is emitted even
-; after a noreturn call.
+; This is similar to the above test, but ensures wasm unreachable is emitted
+; even after a noreturn call.
 define i32 @missing_ret_noreturn_unreach() {
 ; CHECK-LABEL: missing_ret_noreturn_unreach:
 ; CHECK:         .functype missing_ret_noreturn_unreach () -> (i32)
@@ -80,8 +82,9 @@ define i32 @missing_ret_noreturn_unreach() {
   unreachable
 }
 
-; We could emit no instructions at all for the llvm unreachables in these next three tests, as the signatures match
-; and reaching llvm unreachable is undefined behaviour. But wasm unreachable is emitted for the time being.
+; We could emit no instructions at all for the llvm unreachables in these next
+; three tests, as the signatures match and reaching llvm unreachable is
+; undefined behaviour. But wasm unreachable is emitted for the time being.
 
 define void @void_sig_match_unreach() {
 ; CHECK-LABEL: void_sig_match_unreach:
