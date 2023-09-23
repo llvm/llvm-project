@@ -7,4 +7,9 @@
   (names passbuilder_ocaml)
   (flags :standard -I../../target)
   (extra_deps ../../llvm/llvm_ocaml.h ../../target/target_ocaml.h))
- (c_library_flags %{env:LLVMPasses_LIB=}))
+ (c_library_flags (:include c_library_flags.sexp)))
+
+(rule
+ (targets c_library_flags.sexp)
+ (action
+  (run ../../discover.sh %{env:LLVM_CONFIG=} %{env:LINK_MODE=} passes)))
