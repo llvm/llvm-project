@@ -444,11 +444,11 @@ LogicalResult isAllowedSizeN(int sizeN, Type typeA) {
                                     176, 192, 208, 224, 240, 256};
   if (typeA.isBF16() || typeA.isF16() || typeA.isTF32() ||
       typeA.isFloat8E4M3FN() || typeA.isFloat8E5M2())
-    if (llvm::any_of(allowedN, [&](int n) { return sizeN == n; }))
+    if (llvm::is_contained(allowedN, sizeN))
       return success();
 
   if (typeA.isInteger(8) || typeA.isInteger(1))
-    if (llvm::any_of(allowedNshort, [&](int n) { return sizeN == n; }))
+    if (llvm::is_contained(allowedNshort, sizeN))
       return success();
   return failure();
 }

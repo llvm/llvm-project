@@ -5517,11 +5517,9 @@ bool AArch64InstructionSelector::tryOptBuildVecToSubregToReg(
   const RegisterBank &DstRB = *RBI.getRegBank(Dst, MRI, TRI);
   if (EltRB != DstRB)
     return false;
-  if (any_of(make_range(I.operands_begin() + 2, I.operands_end()),
-             [&MRI](const MachineOperand &Op) {
-               return !getOpcodeDef(TargetOpcode::G_IMPLICIT_DEF, Op.getReg(),
-                                    MRI);
-             }))
+  if (any_of(drop_begin(I.operands(), 2), [&MRI](const MachineOperand &Op) {
+        return !getOpcodeDef(TargetOpcode::G_IMPLICIT_DEF, Op.getReg(), MRI);
+      }))
     return false;
   unsigned SubReg;
   const TargetRegisterClass *EltRC = getRegClassForTypeOnBank(EltTy, EltRB);

@@ -118,8 +118,8 @@ body:            |
     ; CHECK-LABEL: name: const_i64_0
     ; CHECK: liveins: $x10
     ; CHECK-NEXT: {{  $}}
-    ; CHECK-NEXT: [[ADDI:%[0-9]+]]:gpr = ADDI $x0, 0
-    ; CHECK-NEXT: $x10 = COPY [[ADDI]]
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:gpr = COPY $x0
+    ; CHECK-NEXT: $x10 = COPY [[COPY]]
     ; CHECK-NEXT: PseudoRET implicit $x10
     %0:gprb(s64) = G_CONSTANT i64 0
     $x10 = COPY %0(s64)
@@ -245,8 +245,8 @@ body:            |
     ; CHECK-LABEL: name: const_i32_0
     ; CHECK: liveins: $x10
     ; CHECK-NEXT: {{  $}}
-    ; CHECK-NEXT: [[ADDI:%[0-9]+]]:gpr = ADDI $x0, 0
-    ; CHECK-NEXT: $x10 = COPY [[ADDI]]
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:gpr = COPY $x0
+    ; CHECK-NEXT: $x10 = COPY [[COPY]]
     ; CHECK-NEXT: PseudoRET implicit $x10
     %0:gprb(s32) = G_CONSTANT i32 0
     %1:gprb(s64) = G_ANYEXT %0(s32)

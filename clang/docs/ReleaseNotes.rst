@@ -51,6 +51,8 @@ C++ Specific Potentially Breaking Changes
   parameter lists or requires-clauses. This causes mangled names to change for
   function templates in the following cases:
 
+  - When a template parameter in a function template depends on a previous
+    template parameter, such as ``template<typename T, T V> void f()``.
   - When the function has any constraints, whether from constrained template
       parameters or requires-clauses.
   - When the template parameter list includes a deduced type -- either

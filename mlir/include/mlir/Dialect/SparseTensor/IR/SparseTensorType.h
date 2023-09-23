@@ -45,12 +45,13 @@ namespace sparse_tensor {
 ///
 class SparseTensorType {
 public:
-  // We memoize `lvlRank` and `dimToLvl` to avoid repeating the
-  // conditionals throughout the rest of the class.
+  // We memoize `lvlRank`, `dimToLvl`, and `lvlToDim` to avoid repeating
+  // the conditionals throughout the rest of the class.
   SparseTensorType(RankedTensorType rtp)
       : rtp(rtp), enc(getSparseTensorEncoding(rtp)),
         lvlRank(enc ? enc.getLvlRank() : getDimRank()),
-        dimToLvl(enc.isIdentity() ? AffineMap() : enc.getDimToLvl()) {
+        dimToLvl(enc.isIdentity() ? AffineMap() : enc.getDimToLvl()),
+        lvlToDim(enc.isIdentity() ? AffineMap() : enc.getLvlToDim()) {
     assert(rtp && "got null RankedTensorType");
     assert((!isIdentity() || getDimRank() == lvlRank) && "Rank mismatch");
   }
@@ -201,6 +202,9 @@ public:
   /// see `hasSameDimToLvl` instead.
   AffineMap getDimToLvl() const { return dimToLvl; }
 
+  /// Returns the lvlToDiml mapping (or the null-map for the identity).
+  AffineMap getLvlToDim() const { return lvlToDim; }
+
   /// Returns the dimToLvl mapping, where the identity map is expanded out
   /// into a full `AffineMap`.  This method is provided as a convenience,
   /// but for most purposes other methods (`isIdentity`, `getDimToLvl`,
@@ -306,6 +310,7 @@ private:
   // Memoized to avoid frequent redundant conditionals.
   const Level lvlRank;
   const AffineMap dimToLvl;
+  const AffineMap lvlToDim;
 };
 
 /// Convenience method to abbreviate wrapping `getRankedTensorType`.
