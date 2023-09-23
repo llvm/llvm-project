@@ -141,20 +141,24 @@ def SparseTensorEncodingAttr : SparseTensor_Attr<"SparseTensorEncoding",
 
     - **dense** : all entries along this level are stored
     - **compressed** : only nonzeros along this level are stored
+    - **loose_compressed** : as compressed, but allows for free space between regions
     - **singleton** : a variant of the compressed format, where coordinates have no siblings
+    - **block2_4** : the compression uses a 2:4 encoding per 1x4 block
 
-    Different level-formats may have different collections of level-properties.
+    For a compressed level, each position interval is represented in a compact
+    way with a lowerbound `pos(i)` and an upperbound `pos(i+1) - 1`, which implies
+    that successive intervals must appear in order without any "holes" in between
+    them. The loose compressed format relaxes these constraints by representing each
+    position interval with a lowerbound `lo(i)` and an upperbound `hi(i)`, which
+    allows intervals to appear in arbitrary order and with elbow room between them.
+
     By default, each level-type has the property of being unique (no duplicate
-    coordinates at that level), ordered (coordinates appear sorted at that
-    level), and, for compression, storing each position interval in a compact
-    way with a lowerbound `pos(i)`" and an upperbound `pos(i+1) - 1`.
-    The following properties can be added to a level-format to change this
-    default behavior:
+    coordinates at that level) and ordered (coordinates appear sorted at that
+    level). The following properties can be added to a level-format to change
+    this default behavior:
 
     - **nonunique** : duplicate coordinates may appear at the level
     - **nonordered** : coordinates may appear in arbribratry order
-    - **high** : position interval upperbounds are stored explicitly
-    - **block2_4** : the compression uses a 2:4 encoding per 1x4 block
 
     In addition to the map, the following two fields are optional:
 
