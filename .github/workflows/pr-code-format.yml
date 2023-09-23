@@ -18,7 +18,7 @@ jobs:
         uses: tj-actions/changed-files@v39
         with:
           separator: ","
-          fetch_depth: 10 # Fetches only the last 10 commits
+          fetch_depth: 100 # Fetches only the last 10 commits
 
       - name: "Listed files"
         run: |
