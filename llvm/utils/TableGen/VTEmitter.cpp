@@ -30,7 +30,8 @@ public:
 } // End anonymous namespace.
 
 void VTEmitter::run(raw_ostream &OS) {
-  emitSourceFileHeader("ValueTypes Source Fragment", OS);
+  emitSourceFileHeader("ValueTypes Source Fragment", OS,
+                       Records.getInputFilename());
 
   std::array<const Record *, 256> VTsByNumber = {};
   auto ValueTypes = Records.getAllDerivedDefinitions("ValueType");

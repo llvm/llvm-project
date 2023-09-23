@@ -50,7 +50,8 @@ public:
 
 /// emitSourceFileHeader - Output an LLVM style file header to the specified
 /// raw_ostream.
-void emitSourceFileHeader(StringRef Desc, raw_ostream &OS);
+void emitSourceFileHeader(StringRef Desc, raw_ostream &OS,
+                          StringRef SourcePath = "");
 
 } // End llvm namespace
 

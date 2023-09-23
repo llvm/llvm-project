@@ -40,7 +40,8 @@ static void printLine(raw_ostream &OS, const Twine &Prefix, char Fill,
   OS << Suffix << '\n';
 }
 
-void llvm::emitSourceFileHeader(StringRef Desc, raw_ostream &OS) {
+void llvm::emitSourceFileHeader(StringRef Desc, raw_ostream &OS,
+                                StringRef SourcePath) {
   printLine(OS, "/*===- TableGen'erated file ", '-', "*- C++ -*-===*\\");
   StringRef Prefix("|* ");
   StringRef Suffix(" *|");
@@ -59,4 +60,8 @@ void llvm::emitSourceFileHeader(StringRef Desc, raw_ostream &OS) {
   printLine(OS, Prefix, ' ', Suffix);
   printLine(OS, "\\*===", '-', "===*/");
   OS << '\n';
+
+  // Print the path of source file
+  if (!SourcePath.empty())
+    OS << "// Generated from: " << SourcePath << "\n\n";
 }
