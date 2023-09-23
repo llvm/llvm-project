@@ -8,20 +8,21 @@
 
 #include "src/__support/CPP/string_view.h"
 #include "src/stdio/scanf_core/reader.h"
-#include "src/stdio/scanf_core/string_reader.h"
 
 #include "test/UnitTest/Test.h"
 
 TEST(LlvmLibcScanfStringReaderTest, Constructor) {
   char str[10];
-  __llvm_libc::scanf_core::StringReader str_reader(str);
-  __llvm_libc::scanf_core::Reader reader(&str_reader);
+  // buff_len justneeds to be a big number. The specific value isn't important
+  // in the real world.
+  __llvm_libc::scanf_core::ReadBuffer rb{const_cast<char *>(str), 1000000};
+  __llvm_libc::scanf_core::Reader reader(&rb);
 }
 
 TEST(LlvmLibcScanfStringReaderTest, SimpleRead) {
   const char *str = "abc";
-  __llvm_libc::scanf_core::StringReader str_reader(str);
-  __llvm_libc::scanf_core::Reader reader(&str_reader);
+  __llvm_libc::scanf_core::ReadBuffer rb{const_cast<char *>(str), 1000000};
+  __llvm_libc::scanf_core::Reader reader(&rb);
 
   for (size_t i = 0; i < sizeof("abc"); ++i) {
     ASSERT_EQ(str[i], reader.getc());
@@ -30,8 +31,8 @@ TEST(LlvmLibcScanfStringReaderTest, SimpleRead) {
 
 TEST(LlvmLibcScanfStringReaderTest, ReadAndReverse) {
   const char *str = "abcDEF123";
-  __llvm_libc::scanf_core::StringReader str_reader(str);
-  __llvm_libc::scanf_core::Reader reader(&str_reader);
+  __llvm_libc::scanf_core::ReadBuffer rb{const_cast<char *>(str), 1000000};
+  __llvm_libc::scanf_core::Reader reader(&rb);
 
   for (size_t i = 0; i < 5; ++i) {
     ASSERT_EQ(str[i], reader.getc());
