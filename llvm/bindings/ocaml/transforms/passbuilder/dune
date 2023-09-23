@@ -11,5 +11,4 @@
 
 (rule
  (targets c_library_flags.sexp)
- (action
-  (run ../../discover.sh %{env:LLVM_CONFIG=} %{env:LINK_MODE=} passes)))
+ (action (run ../../discover.sh passes)))

@@ -6,4 +6,8 @@
   (language c)
   (names bitwriter_ocaml)
   (extra_deps ../llvm/llvm_ocaml.h))
- (c_library_flags %{env:LLVMBitWriter_LIB=}))
+ (c_library_flags (:include c_library_flags.sexp)))
+
+(rule
+ (targets c_library_flags.sexp)
+ (action (run ../discover.sh bitwriter)))

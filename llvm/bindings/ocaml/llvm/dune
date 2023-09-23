@@ -8,5 +8,4 @@
 
 (rule
  (targets c_library_flags.sexp)
- (action
-  (run ../discover.sh %{env:LLVM_CONFIG=} %{env:LINK_MODE=} core support)))
+ (action (run ../discover.sh core support)))
