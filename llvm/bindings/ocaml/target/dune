@@ -1,0 +1,9 @@
+(library
+ (name llvm_target)
+ (public_name llvm.target)
+ (libraries llvm)
+ (foreign_stubs
+  (language c)
+  (names target_ocaml)
+  (extra_deps ../llvm/llvm_ocaml.h))
+ (c_library_flags %{env:LLVMTarget_LIB=}))

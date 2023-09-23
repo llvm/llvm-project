@@ -1,0 +1,7 @@
+(library
+ (name llvm)
+ (public_name llvm)
+ (foreign_stubs
+  (language c)
+  (names llvm_ocaml))
+ (c_library_flags %{env:LLVMCore_LIB=}))

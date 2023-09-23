@@ -1,0 +1,9 @@
+(library
+ (name llvm_linker)
+ (public_name llvm.linker)
+ (libraries llvm)
+ (foreign_stubs
+  (language c)
+  (names linker_ocaml)
+  (extra_deps ../llvm/llvm_ocaml.h))
+ (c_library_flags %{env:LLVMLinker_LIB=}))

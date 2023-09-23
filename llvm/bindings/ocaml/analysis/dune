@@ -1,0 +1,9 @@
+(library
+ (name llvm_analysis)
+ (public_name llvm.analysis)
+ (libraries llvm)
+ (foreign_stubs
+  (language c)
+  (names analysis_ocaml)
+  (extra_deps ../llvm/llvm_ocaml.h))
+ (c_library_flags %{env:LLVMAnalysis_LIB=}))

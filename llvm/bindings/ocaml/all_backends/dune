@@ -1,0 +1,9 @@
+(library
+ (name llvm_all_backends)
+ (public_name llvm.all_backends)
+ (libraries llvm)
+ (foreign_stubs
+  (language c)
+  (names all_backends_ocaml)
+  (extra_deps ../llvm/llvm_ocaml.h))
+ (c_library_flags %{env:LLVM_All_backends_LIB=}))

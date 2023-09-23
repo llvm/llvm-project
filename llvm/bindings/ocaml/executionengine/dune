@@ -1,0 +1,9 @@
+(library
+ (name llvm_executionengine)
+ (public_name llvm.executionengine)
+ (libraries llvm llvm.target ctypes.foreign)
+ (foreign_stubs
+  (language c)
+  (names executionengine_ocaml)
+  (extra_deps ../llvm/llvm_ocaml.h))
+ (c_library_flags %{env:LLVMExecutionEngine_LIB=}))
