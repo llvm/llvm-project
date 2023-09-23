@@ -1,4 +1,4 @@
-"""Test stepping over watchpoints."""
+"""Test stepping over watchpoints and instruction stepping past watchpoints."""
 
 
 import lldb
@@ -11,11 +11,25 @@ class TestStepOverWatchpoint(TestBase):
     NO_DEBUG_INFO_TESTCASE = True
 
     def get_to_start(self, bkpt_text):
-        """Test stepping over watchpoints."""
+        """Test stepping over watchpoints and instruction stepping past watchpoints.."""
         self.build()
         target, process, thread, bkpt = lldbutil.run_to_source_breakpoint(
             self, bkpt_text, lldb.SBFileSpec("main.c")
         )
+        return (target, process, thread, frame, read_watchpoint)
+
+    @add_test_categories(["basic_process"])
+    @expectedFailureAll(
+        oslist=["ios", "watchos", "tvos", "bridgeos", "macosx"],
+        archs=["aarch64", "arm"],
+        bugnumber="<rdar://problem/106868647>",
+    )
+    def test_step_over_read_watchpoint(self):
+        self.build()
+        target, process, thread, bkpt = lldbutil.run_to_source_breakpoint(
+            self, "break here for read watchpoints", lldb.SBFileSpec("main.c")
+        )
+
         frame = thread.GetFrameAtIndex(0)
         self.assertTrue(frame.IsValid(), "Failed to get frame.")
 
@@ -33,14 +47,6 @@ class TestStepOverWatchpoint(TestBase):
         # stepping off from the breakpoint:
         bkpt.SetEnabled(False)
 
-        return (target, process, thread, frame, read_watchpoint)
-
-    # Read-write watchpoints not supported on SystemZ
-    @expectedFailureAll(archs=["s390x"])
-    @add_test_categories(["basic_process"])
-    def test_step_over(self):
-        target, process, thread, frame, wp = self.get_to_start("Set a breakpoint here")
-
         thread.StepOver()
         self.assertStopReason(
             thread.GetStopReason(),
@@ -49,39 +55,42 @@ class TestStepOverWatchpoint(TestBase):
         )
         self.assertEquals(thread.GetStopDescription(20), "watchpoint 1")
 
+        process.Continue()
+        self.assertState(process.GetState(), lldb.eStateStopped, PROCESS_STOPPED)
+        self.assertEquals(thread.GetStopDescription(20), "step over")
+
+        self.step_inst_for_watchpoint(1)
+
     # Skip everywhere while modify watchpoints are sorted out.
-    @skipTestIfFn(lambda : True)
     @expectedFailureAll(
         oslist=["freebsd", "linux"],
         archs=["aarch64", "arm"],
         bugnumber="llvm.org/pr26031",
     )
-    # Read-write watchpoints not supported on SystemZ
-    @expectedFailureAll(archs=["s390x"])
+    @add_test_categories(["basic_process"])
     @expectedFailureAll(
         oslist=["ios", "watchos", "tvos", "bridgeos", "macosx"],
         archs=["aarch64", "arm"],
-        bugnumber="<rdar://problem/34027183>",
+        bugnumber="<rdar://problem/106868647>",
     )
-    @add_test_categories(["basic_process"])
-    def test_step_instruction(self):
-        target, process, thread, frame, wp = self.get_to_start(
-            "Set breakpoint after call"
+    def test_step_over_write_watchpoint(self):
+        self.build()
+        target, process, thread, bkpt = lldbutil.run_to_source_breakpoint(
+            self, "break here for modify watchpoints", lldb.SBFileSpec("main.c")
         )
 
-        self.step_inst_for_watchpoint(1)
+        # Disable the breakpoint we hit so we don't muddy the waters with
+        # stepping off from the breakpoint:
+        bkpt.SetEnabled(False)
+
+        frame = thread.GetFrameAtIndex(0)
+        self.assertTrue(frame.IsValid(), "Failed to get frame.")
 
         write_value = frame.FindValue("g_watch_me_write", lldb.eValueTypeVariableGlobal)
         self.assertTrue(write_value, "Failed to find write value.")
 
-        # Most of the MIPS boards provide only one H/W watchpoints, and S/W
-        # watchpoints are not supported yet
-        arch = self.getArchitecture()
-        if re.match("^mips", arch) or re.match("powerpc64le", arch):
-            self.runCmd("watchpoint delete 1")
-
         error = lldb.SBError()
-        # resolve_location=True, read=False, write=True
+        # resolve_location=True, read=False, modify=True
         write_watchpoint = write_value.Watch(True, False, True, error)
         self.assertTrue(write_watchpoint, "Failed to set write watchpoint.")
         self.assertSuccess(error, "Error while setting watchpoint")
@@ -92,13 +101,13 @@ class TestStepOverWatchpoint(TestBase):
             lldb.eStopReasonWatchpoint,
             STOPPED_DUE_TO_WATCHPOINT,
         )
-        self.assertEquals(thread.GetStopDescription(20), "watchpoint 2")
+        self.assertEquals(thread.GetStopDescription(20), "watchpoint 1")
 
         process.Continue()
         self.assertState(process.GetState(), lldb.eStateStopped, PROCESS_STOPPED)
         self.assertEquals(thread.GetStopDescription(20), "step over")
 
-        self.step_inst_for_watchpoint(2)
+        self.step_inst_for_watchpoint(1)
 
     def step_inst_for_watchpoint(self, wp_id):
         watchpoint_hit = False
