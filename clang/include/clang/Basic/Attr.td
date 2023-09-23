@@ -1816,6 +1816,7 @@ def NoUniqueAddress : InheritableAttr {
   // No spellings because instances of this attribute are created by
   // MSNoUniqueAddress and ItaniumNoUniqueAddress
   let Spellings = [];
+  let Documentation = [NoUniqueAddressDocs];
 }
 
 def MSNoUniqueAddress : InheritableAttr, TargetSpecificAttr<TargetMicrosoftCXXABI> {
