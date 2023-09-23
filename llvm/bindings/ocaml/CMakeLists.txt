@@ -10,11 +10,26 @@ endforeach()
 foreach ( dir
   all_backends analysis backends bitreader bitwriter debuginfo executionengine
   irreader linker llvm target transforms )
-  file(COPY ${CMAKE_CURRENT_SOURCE_DIR}/${dir} DESTINATION ${CMAKE_CURRENT_BINARY_DIR})
+  add_custom_target(ocaml_copy_${dir} ALL
+    COMMAND ${CMAKE_COMMAND} -E copy_directory
+      ${CMAKE_CURRENT_SOURCE_DIR}/${dir} ${CMAKE_CURRENT_BINARY_DIR}/${dir}
+    DEPENDS ${MY_TARGET})
 endforeach()
 
 add_custom_target(ocaml_copied_files
-  DEPENDS dune-project setup.sh discover.sh llvm.opam)
+  DEPENDS dune-project setup.sh discover.sh llvm.opam
+    ocaml_copy_all_backends
+    ocaml_copy_analysis
+    ocaml_copy_backends
+    ocaml_copy_bitreader
+    ocaml_copy_bitwriter
+    ocaml_copy_debuginfo
+    ocaml_copy_executionengine
+    ocaml_copy_irreader
+    ocaml_copy_linker
+    ocaml_copy_llvm
+    ocaml_copy_target
+    ocaml_copy_transforms)
 
 add_custom_command(
   OUTPUT dune-workspace
@@ -31,16 +46,3 @@ add_custom_target(dune_build_all
   DEPENDS ocaml_copied_files dune_workspace_target)
 
 add_dependencies(ocaml_all dune_build_all)
-
-#add_subdirectory(llvm)
-#add_subdirectory(all_backends)
-#add_subdirectory(analysis)
-#add_subdirectory(backends)
-#add_subdirectory(bitreader)
-#add_subdirectory(bitwriter)
-#add_subdirectory(debuginfo)
-#add_subdirectory(irreader)
-#add_subdirectory(linker)
-#add_subdirectory(target)
-#add_subdirectory(transforms)
-#add_subdirectory(executionengine)
