@@ -17,6 +17,7 @@ from functools import cached_property
 import github
 from github import IssueComment, PullRequest
 
+foo =    ' bar'
 
 class FormatHelper:
     COMMENT_TAG = "<!--LLVM CODE FORMAT COMMENT: {fmt}-->"
