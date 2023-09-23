@@ -219,6 +219,8 @@ std::unique_ptr<TargetInfo> AllocateTarget(const llvm::Triple &Triple,
       return std::make_unique<OpenBSDTargetInfo<ARMleTargetInfo>>(Triple, Opts);
     case llvm::Triple::RTEMS:
       return std::make_unique<RTEMSTargetInfo<ARMleTargetInfo>>(Triple, Opts);
+    case llvm::Triple::Haiku:
+      return std::make_unique<HaikuTargetInfo<ARMleTargetInfo>>(Triple, Opts);
     case llvm::Triple::NaCl:
       return std::make_unique<NaClTargetInfo<ARMleTargetInfo>>(Triple, Opts);
     case llvm::Triple::Win32:
