@@ -2,9 +2,6 @@
 
 // REQUIRES: internal_symbolizer
 
-// FIXME: link internal_symbolizer.
-// XFAIL: hwasan
-
 #include <algorithm>
 #include <assert.h>
 #include <string.h>
