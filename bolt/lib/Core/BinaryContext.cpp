@@ -1738,6 +1738,15 @@ bool BinaryContext::shouldEmit(const BinaryFunction &Function) const {
   return HasRelocations || Function.isSimple();
 }
 
+void BinaryContext::dump(const MCInst &Inst) const {
+  if (LLVM_UNLIKELY(!InstPrinter)) {
+    dbgs() << "Cannot dump for InstPrinter is not initialized.\n";
+    return;
+  }
+  InstPrinter->printInst(&Inst, 0, "", *STI, dbgs());
+  dbgs() << "\n";
+}
+
 void BinaryContext::printCFI(raw_ostream &OS, const MCCFIInstruction &Inst) {
   uint32_t Operation = Inst.getOperation();
   switch (Operation) {
