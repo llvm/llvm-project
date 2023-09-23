@@ -17,7 +17,6 @@
 #include "clang/Interpreter/PartialTranslationUnit.h"
 #include "llvm/ExecutionEngine/ExecutionEngine.h"
 #include "llvm/ExecutionEngine/Orc/CompileUtils.h"
-#include "llvm/ExecutionEngine/Orc/DebuggerSupport.h"
 #include "llvm/ExecutionEngine/Orc/ExecutionUtils.h"
 #include "llvm/ExecutionEngine/Orc/IRCompileLayer.h"
 #include "llvm/ExecutionEngine/Orc/LLJIT.h"
@@ -47,13 +46,8 @@ IncrementalExecutor::IncrementalExecutor(llvm::orc::ThreadSafeContext &TSC,
   JTMB.addFeatures(TI.getTargetOpts().Features);
   LLJITBuilder Builder;
   Builder.setJITTargetMachineBuilder(JTMB);
-  Builder.setPrePlatformSetup(
-      [](LLJIT &J) {
-        // Try to enable debugging of JIT'd code (only works with JITLink for
-        // ELF and MachO).
-        consumeError(enableDebuggerSupport(J));
-        return llvm::Error::success();
-      });
+  // Enable debugging of JIT'd code (only works on JITLink for ELF and MachO).
+  Builder.setEnableDebuggerSupport(true);
 
   if (auto JitOrErr = Builder.create())
     Jit = std::move(*JitOrErr);
