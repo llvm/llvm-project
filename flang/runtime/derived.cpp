@@ -19,7 +19,6 @@ int Initialize(const Descriptor &instance, const typeInfo::DerivedType &derived,
     Terminator &terminator, bool hasStat, const Descriptor *errMsg) {
   const Descriptor &componentDesc{derived.component()};
   std::size_t elements{instance.Elements()};
-  std::size_t byteStride{instance.ElementBytes()};
   int stat{StatOk};
   // Initialize data components in each element; the per-element iterations
   // constitute the inner loops, not the outer ones
@@ -27,11 +26,13 @@ int Initialize(const Descriptor &instance, const typeInfo::DerivedType &derived,
   for (std::size_t k{0}; k < myComponents; ++k) {
     const auto &comp{
         *componentDesc.ZeroBasedIndexedElement<typeInfo::Component>(k)};
+    SubscriptValue at[maxRank];
+    instance.GetLowerBounds(at);
     if (comp.genre() == typeInfo::Component::Genre::Allocatable ||
         comp.genre() == typeInfo::Component::Genre::Automatic) {
-      for (std::size_t j{0}; j < elements; ++j) {
-        Descriptor &allocDesc{*instance.OffsetElement<Descriptor>(
-            j * byteStride + comp.offset())};
+      for (std::size_t j{0}; j++ < elements; instance.IncrementSubscripts(at)) {
+        Descriptor &allocDesc{
+            *instance.ElementComponent<Descriptor>(at, comp.offset())};
         comp.EstablishDescriptor(allocDesc, instance, terminator);
         allocDesc.raw().attribute = CFI_attribute_allocatable;
         if (comp.genre() == typeInfo::Component::Genre::Automatic) {
@@ -55,17 +56,17 @@ int Initialize(const Descriptor &instance, const typeInfo::DerivedType &derived,
       // Explicit initialization of data pointers and
       // non-allocatable non-automatic components
       std::size_t bytes{comp.SizeInBytes(instance)};
-      for (std::size_t j{0}; j < elements; ++j) {
-        char *ptr{instance.ZeroBasedIndexedElement<char>(j) + comp.offset()};
+      for (std::size_t j{0}; j++ < elements; instance.IncrementSubscripts(at)) {
+        char *ptr{instance.ElementComponent<char>(at, comp.offset())};
         std::memcpy(ptr, init, bytes);
       }
     } else if (comp.genre() == typeInfo::Component::Genre::Pointer) {
       // Data pointers without explicit initialization are established
       // so that they are valid right-hand side targets of pointer
       // assignment statements.
-      for (std::size_t j{0}; j < elements; ++j) {
-        Descriptor &ptrDesc{*instance.OffsetElement<Descriptor>(
-            j * byteStride + comp.offset())};
+      for (std::size_t j{0}; j++ < elements; instance.IncrementSubscripts(at)) {
+        Descriptor &ptrDesc{
+            *instance.ElementComponent<Descriptor>(at, comp.offset())};
         comp.EstablishDescriptor(ptrDesc, instance, terminator);
         ptrDesc.raw().attribute = CFI_attribute_pointer;
       }
@@ -85,10 +86,10 @@ int Initialize(const Descriptor &instance, const typeInfo::DerivedType &derived,
       StaticDescriptor<maxRank, true, 0> staticDescriptor;
       Descriptor &compDesc{staticDescriptor.descriptor()};
       const typeInfo::DerivedType &compType{*comp.derivedType()};
-      for (std::size_t j{0}; j < elements; ++j) {
+      for (std::size_t j{0}; j++ < elements; instance.IncrementSubscripts(at)) {
         compDesc.Establish(compType,
-            instance.OffsetElement<char>(j * byteStride + comp.offset()),
-            comp.rank(), extent);
+            instance.ElementComponent<char>(at, comp.offset()), comp.rank(),
+            extent);
         stat = Initialize(compDesc, compType, terminator, hasStat, errMsg);
         if (stat != StatOk) {
           break;
@@ -102,9 +103,11 @@ int Initialize(const Descriptor &instance, const typeInfo::DerivedType &derived,
   for (std::size_t k{0}; k < myProcPtrs; ++k) {
     const auto &comp{
         *procPtrDesc.ZeroBasedIndexedElement<typeInfo::ProcPtrComponent>(k)};
-    for (std::size_t j{0}; j < elements; ++j) {
-      auto &pptr{*instance.OffsetElement<typeInfo::ProcedurePointer>(
-          j * byteStride + comp.offset)};
+    SubscriptValue at[maxRank];
+    instance.GetLowerBounds(at);
+    for (std::size_t j{0}; j++ < elements; instance.IncrementSubscripts(at)) {
+      auto &pptr{*instance.ElementComponent<typeInfo::ProcedurePointer>(
+          at, comp.offset)};
       pptr = comp.procInitialization;
     }
   }
@@ -129,8 +132,9 @@ static void CallFinalSubroutine(const Descriptor &descriptor,
     const typeInfo::DerivedType &derived, Terminator *terminator) {
   if (const auto *special{FindFinal(derived, descriptor.rank())}) {
     if (special->which() == typeInfo::SpecialBinding::Which::ElementalFinal) {
-      std::size_t byteStride{descriptor.ElementBytes()};
       std::size_t elements{descriptor.Elements()};
+      SubscriptValue at[maxRank];
+      descriptor.GetLowerBounds(at);
       if (special->IsArgDescriptor(0)) {
         StaticDescriptor<maxRank, true, 8 /*?*/> statDesc;
         Descriptor &elemDesc{statDesc.descriptor()};
@@ -138,15 +142,16 @@ static void CallFinalSubroutine(const Descriptor &descriptor,
         elemDesc.raw().attribute = CFI_attribute_pointer;
         elemDesc.raw().rank = 0;
         auto *p{special->GetProc<void (*)(const Descriptor &)>()};
-        for (std::size_t j{0}; j < elements; ++j) {
-          elemDesc.set_base_addr(
-              descriptor.OffsetElement<char>(j * byteStride));
+        for (std::size_t j{0}; j++ < elements;
+             descriptor.IncrementSubscripts(at)) {
+          elemDesc.set_base_addr(descriptor.Element<char>(at));
           p(elemDesc);
         }
       } else {
         auto *p{special->GetProc<void (*)(char *)>()};
-        for (std::size_t j{0}; j < elements; ++j) {
-          p(descriptor.OffsetElement<char>(j * byteStride));
+        for (std::size_t j{0}; j++ < elements;
+             descriptor.IncrementSubscripts(at)) {
+          p(descriptor.Element<char>(at));
         }
       }
     } else {
@@ -202,20 +207,22 @@ void Finalize(const Descriptor &descriptor,
   const Descriptor &componentDesc{derived.component()};
   std::size_t myComponents{componentDesc.Elements()};
   std::size_t elements{descriptor.Elements()};
-  std::size_t byteStride{descriptor.ElementBytes()};
   for (auto k{recurse ? std::size_t{1}
                       /* skip first component, it's the parent */
                       : 0};
        k < myComponents; ++k) {
     const auto &comp{
         *componentDesc.ZeroBasedIndexedElement<typeInfo::Component>(k)};
+    SubscriptValue at[maxRank];
+    descriptor.GetLowerBounds(at);
     if (comp.genre() == typeInfo::Component::Genre::Allocatable &&
         comp.category() == TypeCategory::Derived) {
       // Component may be polymorphic or unlimited polymorphic. Need to use the
       // dynamic type to check whether finalization is needed.
-      for (std::size_t j{0}; j < elements; ++j) {
-        const Descriptor &compDesc{*descriptor.OffsetElement<Descriptor>(
-            j * byteStride + comp.offset())};
+      for (std::size_t j{0}; j++ < elements;
+           descriptor.IncrementSubscripts(at)) {
+        const Descriptor &compDesc{
+            *descriptor.ElementComponent<Descriptor>(at, comp.offset())};
         if (compDesc.IsAllocated()) {
           if (const DescriptorAddendum * addendum{compDesc.Addendum()}) {
             if (const typeInfo::DerivedType *
@@ -231,9 +238,10 @@ void Finalize(const Descriptor &descriptor,
         comp.genre() == typeInfo::Component::Genre::Automatic) {
       if (const typeInfo::DerivedType * compType{comp.derivedType()}) {
         if (!compType->noFinalizationNeeded()) {
-          for (std::size_t j{0}; j < elements; ++j) {
-            const Descriptor &compDesc{*descriptor.OffsetElement<Descriptor>(
-                j * byteStride + comp.offset())};
+          for (std::size_t j{0}; j++ < elements;
+               descriptor.IncrementSubscripts(at)) {
+            const Descriptor &compDesc{
+                *descriptor.ElementComponent<Descriptor>(at, comp.offset())};
             if (compDesc.IsAllocated()) {
               Finalize(compDesc, *compType, terminator);
             }
@@ -253,16 +261,23 @@ void Finalize(const Descriptor &descriptor,
       StaticDescriptor<maxRank, true, 0> staticDescriptor;
       Descriptor &compDesc{staticDescriptor.descriptor()};
       const typeInfo::DerivedType &compType{*comp.derivedType()};
-      for (std::size_t j{0}; j < elements; ++j) {
+      for (std::size_t j{0}; j++ < elements;
+           descriptor.IncrementSubscripts(at)) {
         compDesc.Establish(compType,
-            descriptor.OffsetElement<char>(j * byteStride + comp.offset()),
-            comp.rank(), extent);
+            descriptor.ElementComponent<char>(at, comp.offset()), comp.rank(),
+            extent);
         Finalize(compDesc, compType, terminator);
       }
     }
   }
   if (recurse) {
-    Finalize(descriptor, *parentType, terminator);
+    StaticDescriptor<maxRank, true, 8 /*?*/> statDesc;
+    Descriptor &tmpDesc{statDesc.descriptor()};
+    tmpDesc = descriptor;
+    tmpDesc.raw().attribute = CFI_attribute_pointer;
+    tmpDesc.Addendum()->set_derivedType(parentType);
+    tmpDesc.raw().elem_len = parentType->sizeInBytes();
+    Finalize(tmpDesc, *parentType, terminator);
   }
 }
 
@@ -289,8 +304,8 @@ void Destroy(const Descriptor &descriptor, bool finalize,
     if (comp.genre() == typeInfo::Component::Genre::Allocatable ||
         comp.genre() == typeInfo::Component::Genre::Automatic) {
       for (std::size_t j{0}; j < elements; ++j) {
-        Descriptor *d{reinterpret_cast<Descriptor *>(
-            descriptor.Element<char>(at) + comp.offset())};
+        Descriptor *d{
+            descriptor.ElementComponent<Descriptor>(at, comp.offset())};
         d->Deallocate();
         descriptor.IncrementSubscripts(at);
       }
