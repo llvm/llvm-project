@@ -496,6 +496,30 @@ def LowerHostCodeToLLVMPass : Pass<"lower-host-to-llvm", "ModuleOp"> {
 }
 
 //===----------------------------------------------------------------------===//
+// GPUToAMDGPU
+//===----------------------------------------------------------------------===//
+
+def ConvertGpuOpsToAMDGPUOps : Pass<"convert-gpu-to-amdgpu", "gpu::GPUModuleOp"> {
+  let summary = "Generate AMD GPU operations for gpu operations";
+  let constructor = "mlir::createLowerGpuOpsToAMDGPUOpsPass()";
+  let dependentDialects = [
+    "amdgpu::AMDGPUDialect",
+  ];
+  let options = [
+    Option<"chipset", "chipset", "std::string",
+           /*default=*/"\"gfx000\"",
+           "Chipset that these operations will run on">,
+    Option<"indexBitwidth", "index-bitwidth", "unsigned",
+           /*default=kDeriveIndexBitwidthFromDataLayout*/ "0",
+           "Bitwidth of the index type, 0 to use size of machine word">,
+    Option<"warpSize", "warp-size", "unsigned",
+           /*default=*/"32",
+           "AMD GPUs have a configurable warp size; valid choices are 32 and "
+           "64. 32 is used as the default size.">,
+  ];
+}
+
+//===----------------------------------------------------------------------===//
 // GPUToNVVM
 //===----------------------------------------------------------------------===//
 
