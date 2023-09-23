@@ -642,9 +642,10 @@ NVPTXTargetLowering::NVPTXTargetLowering(const NVPTXTargetMachine &TM,
   setI16x2OperationAction(ISD::UREM, MVT::v2i16, Legal, Custom);
 
   // Other arithmetic and logic ops are unsupported.
-  setOperationAction({ISD::SDIV, ISD::UDIV, ISD::SRA, ISD::SRL, ISD::MULHS,
-                      ISD::MULHU, ISD::FP_TO_SINT, ISD::FP_TO_UINT,
-                      ISD::SINT_TO_FP, ISD::UINT_TO_FP},
+  setOperationAction({ISD::AND, ISD::OR, ISD::XOR, ISD::SDIV, ISD::UDIV,
+                      ISD::SRA, ISD::SRL, ISD::MULHS, ISD::MULHU,
+                      ISD::FP_TO_SINT, ISD::FP_TO_UINT, ISD::SINT_TO_FP,
+                      ISD::UINT_TO_FP},
                      MVT::v2i16, Expand);
 
   setOperationAction(ISD::ADDC, MVT::i32, Legal);
