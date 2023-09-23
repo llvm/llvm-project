@@ -43,7 +43,6 @@ CXX11(fallthrough)
 CXX11(likely)
 CXX11(maybe_unused)
 CXX11(no_unique_address)
-CXX11(msvc::no_unique_address)
 CXX11(nodiscard)
 CXX11(noreturn)
 CXX11(unlikely)
@@ -56,9 +55,7 @@ CXX11(unlikely)
 // CHECK: likely: 201803L
 // CHECK: maybe_unused: 201603L
 // ITANIUM: no_unique_address: 201803L
-// WINDOWS: no_unique_address: 0 
-// ITANIUM: msvc::no_unique_address: 0
-// WINDOWS: msvc::no_unique_address: 201803L
+// WINDOWS: no_unique_address: 0
 // CHECK: nodiscard: 201907L
 // CHECK: noreturn: 200809L
 // CHECK: unlikely: 201803L
