@@ -220,7 +220,7 @@ def PPCaddiTlsgdLAddr : SDNode<"PPCISD::ADDI_TLSGD_L_ADDR",
                                  SDTCisSameAs<0, 1>, SDTCisSameAs<0, 2>,
                                  SDTCisSameAs<0, 3>, SDTCisInt<0> ]>>;
 def PPCTlsgdAIX     : SDNode<"PPCISD::TLSGD_AIX", SDTIntBinOp>;
-def PPCTlsldAIX     : SDNode<"PPCISD::TLSLD_AIX", SDTIntUnaryOp>;
+def PPCTlsldAIX     : SDNode<"PPCISD::TLSLD_AIX", SDTIntLeaf>;
 def PPCaddisTlsldHA : SDNode<"PPCISD::ADDIS_TLSLD_HA", SDTIntBinOp>;
 def PPCaddiTlsldL   : SDNode<"PPCISD::ADDI_TLSLD_L", SDTIntBinOp>;
 def PPCgetTlsldAddr : SDNode<"PPCISD::GET_TLSLD_ADDR", SDTIntBinOp>;
@@ -3302,10 +3302,8 @@ def TLSGDAIX : PPCEmitTimePseudo<(outs gprc:$rD), (ins gprc:$offset, gprc:$handl
                             (PPCTlsgdAIX i32:$offset, i32:$handle))]>;
 // This pseudo is expanded to one copy to put the module handle in R3, then call
 // GETtlsMOD32AIX, and then add variable offset to the output from the call.
-def TLSLDAIX : PPCEmitTimePseudo<(outs gprc:$rD), (ins gprc:$handle),
-                          "#TLSLDAIX",
-                          [(set i32:$rD,
-                            (PPCTlsldAIX i32:$handle))]>;
+def TLSLDAIX : PPCEmitTimePseudo<(outs gprc:$rD), (ins),
+                          "#TLSLDAIX", [(set i32:$rD, (PPCTlsldAIX))]>;
 // LR is a true define, while the rest of the Defs are clobbers.  R3 is
 // explicitly defined when this op is created, so not mentioned here.
 let hasExtraSrcRegAllocReq = 1, hasExtraDefRegAllocReq = 1,

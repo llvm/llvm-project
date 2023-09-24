@@ -1774,13 +1774,11 @@ const char *PPCTargetLowering::getTargetNodeName(unsigned Opcode) const {
   case PPCISD::ADDIS_TLSGD_HA:  return "PPCISD::ADDIS_TLSGD_HA";
   case PPCISD::ADDI_TLSGD_L:    return "PPCISD::ADDI_TLSGD_L";
   case PPCISD::GET_TLS_ADDR:    return "PPCISD::GET_TLS_ADDR";
-  case PPCISD::GET_TLS_MOD_AIX:
-    return "PPCISD::GET_TLS_MOD_AIX";
+  case PPCISD::GET_TLS_MOD_AIX: return "PPCISD::GET_TLS_MOD_AIX";
   case PPCISD::GET_TPOINTER:    return "PPCISD::GET_TPOINTER";
   case PPCISD::ADDI_TLSGD_L_ADDR: return "PPCISD::ADDI_TLSGD_L_ADDR";
   case PPCISD::TLSGD_AIX:       return "PPCISD::TLSGD_AIX";
-  case PPCISD::TLSLD_AIX:
-    return "PPCISD::TLSLD_AIX";
+  case PPCISD::TLSLD_AIX:       return "PPCISD::TLSLD_AIX";
   case PPCISD::ADDIS_TLSLD_HA:  return "PPCISD::ADDIS_TLSLD_HA";
   case PPCISD::ADDI_TLSLD_L:    return "PPCISD::ADDI_TLSLD_L";
   case PPCISD::GET_TLSLD_ADDR:  return "PPCISD::GET_TLSLD_ADDR";
@@ -3420,14 +3418,19 @@ SDValue PPCTargetLowering::LowerGlobalTLSAddressAIX(SDValue Op,
   }
 
   if (Model == TLSModel::LocalDynamic) {
-    // For local-dynamic on AIX, we need to generate two TOC entries, one for
-    // the variable offset, the other for the module handle. The module handle
-    // is encapsulated inside the TLSLD_AIX pseudo node, and will be expanded by
-    // PPCTLSDynamicCall.
+    // For local-dynamic on AIX, we need to generate one TOC entry for each
+    // variable offset, and single module-handle TOC entry for the entire file.
+
+    // We are not (1) create GV node (2) call getTOCEntry for the module-handle
+    // due to the reason that the module-handle should not be materialized (i.e.
+    // there should be no symbol-table entry referring to the module-handle).
+    // Instead we will create reference to __TLSML[TC]@ml in PPCTLSDynamicCall
+    // when processing the TLSLD_AIX pseudo node.
+    SDValue ModuleHandle = DAG.getNode(PPCISD::TLSLD_AIX, dl, PtrVT);
     SDValue VariableOffsetTGA =
         DAG.getTargetGlobalAddress(GV, dl, PtrVT, 0, PPCII::MO_TLSLD_FLAG);
     SDValue VariableOffset = getTOCEntry(DAG, dl, VariableOffsetTGA);
-    return DAG.getNode(PPCISD::TLSLD_AIX, dl, PtrVT, VariableOffset);
+    return DAG.getNode(ISD::ADD, dl, PtrVT, ModuleHandle, VariableOffset);
   }
 
   // If Local- or Initial-exec or Local-dynamic is not possible or specified,

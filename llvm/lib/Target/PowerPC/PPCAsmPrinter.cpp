@@ -680,9 +680,9 @@ void PPCAsmPrinter::EmitTlsCall(const MachineInstr *MI,
 
   if (Subtarget->isAIXABI()) {
     // For TLSGD, the variable offset should already be in R4 and the region
-    // handle should already be in R3, generate absolute branch to
-    // .__tls_get_addr. For TLSLD, the module handle should already be in R3,
-    // generate branch to .__tls_get_mod.
+    // handle should already be in R3. We generate an absolute branch to
+    // .__tls_get_addr. For TLSLD, the module handle should already be in R3.
+    // We generate an absolute branch to .__tls_get_mod.
     Register VarOffsetReg = Subtarget->isPPC64() ? PPC::X4 : PPC::R4;
     (void)VarOffsetReg;
     assert((MI->getOpcode() == PPC::GETtlsMOD32AIX ||
@@ -767,9 +767,10 @@ getTOCEntryTypeForMO(const MachineOperand &MO) {
   }
 }
 
-// On AIX, TLS-local-dynamic requires that symbol for the module handle must
+// FIXME: find alternative approach to get rid of this hack.
+// On AIX, TLS-local-dynamic requires that the symbol for the module handle must
 // have the name "_$TLSML". This symbol is used as one TOC symbol reference
-// itself with ML relocation type, thus it has "[TC]" attached to its name.
+// itself with an ML relocation type, thus it has "[TC]" attached to its name.
 static inline bool isSpecialAIXSymbolTLSML(const MachineOperand &MO,
                                            const bool IsAIX) {
   return IsAIX && MO.isSymbol() &&
@@ -871,9 +872,11 @@ void PPCAsmPrinter::emitInstruction(const MachineInstr *MI) {
       return MCSymbolRefExpr::VariantKind::VK_PPC_AIX_TLSGD;
     if (MO.getTargetFlags() & PPCII::MO_TLSLD_FLAG) {
       if (isSpecialAIXSymbolTLSML(MO, IsAIX))
-        // FIXME: On AIX the ML relocation type is only valid for a reference to
-        // a TOC symbol from the symbol itself, and right now its only user is
-        // symbol "_$TLSML". Use symbol name to decide that R_TLSML is expected.
+        // FIXME: Due to the size limit of MachineOperand::SubReg_TargetFlags,
+        // hacked this flag which should have been named MO_TLSLDM_FLAG: on AIX
+        // the ML relocation type is only valid for a reference to a TOC symbol
+        // from the symbol itself, and right now its only user is the symbol
+        // "_$TLSML". Use symbol name to decide that R_TLSML is expected.
         return MCSymbolRefExpr::VariantKind::VK_PPC_AIX_TLSML;
       if (IsAIX)
         return MCSymbolRefExpr::VariantKind::VK_PPC_AIX_TLSLD;
@@ -1394,14 +1397,17 @@ void PPCAsmPrinter::emitInstruction(const MachineInstr *MI) {
                    .addExpr(SymGotTlsGD));
     return;
   }
+  case PPC::GETtlsMOD32AIX:
+  case PPC::GETtlsMOD64AIX:
+    // Transform: %r3 = GETtlsMODNNAIX %r3 (for NN == 32/64).
+    // Into: BLA .__tls_get_mod()
+    // Input parameter is a module handle (__TLSML[TC]@ml) for all variables.
   case PPC::GETtlsADDR:
     // Transform: %x3 = GETtlsADDR %x3, @sym
     // Into: BL8_NOP_TLS __tls_get_addr(sym at tlsgd)
   case PPC::GETtlsADDRPCREL:
   case PPC::GETtlsADDR32AIX:
   case PPC::GETtlsADDR64AIX:
-  case PPC::GETtlsMOD32AIX:
-  case PPC::GETtlsMOD64AIX:
     // Transform: %r3 = GETtlsADDRNNAIX %r3, %r4 (for NN == 32/64).
     // Into: BLA .__tls_get_addr()
     // Unlike on Linux, there is no symbol or relocation needed for this call.
@@ -3034,6 +3040,8 @@ void PPCAIXAsmPrinter::emitInstruction(const MachineInstr *MI) {
   }
   case PPC::GETtlsMOD32AIX:
   case PPC::GETtlsMOD64AIX:
+    // A reference to .__tls_get_mod is unknown to the assembler so we need to
+    // emit an external symbol reference.
   case PPC::GETtlsTpointer32AIX:
   case PPC::GETtlsADDR64AIX:
   case PPC::GETtlsADDR32AIX: {
