@@ -5046,15 +5046,15 @@ InstCombinerImpl::foldICmpWithMinMaxImpl(Instruction &I,
     }
     // Otherwise (X != Z):
     ICmpInst::Predicate NewPred = MinMax->getPredicate();
-    auto NewCmpXZ = IsCondKnownTrue(simplifyICmpInst(NewPred, X, Z, Q));
-    if (!NewCmpXZ.has_value()) {
+    auto MinMaxCmpXZ = IsCondKnownTrue(simplifyICmpInst(NewPred, X, Z, Q));
+    if (!MinMaxCmpXZ.has_value()) {
       std::swap(X, Y);
       std::swap(CmpXZ, CmpYZ);
-      NewCmpXZ = IsCondKnownTrue(simplifyICmpInst(NewPred, X, Z, Q));
+      MinMaxCmpXZ = IsCondKnownTrue(simplifyICmpInst(NewPred, X, Z, Q));
     }
-    if (!NewCmpXZ.has_value())
+    if (!MinMaxCmpXZ.has_value())
       break;
-    if (*NewCmpXZ) {
+    if (*MinMaxCmpXZ) {
       //    Expr         Fact    Result
       // min(X, Y) == Z  X < Z   false
       // max(X, Y) == Z  X > Z   false
