@@ -51,6 +51,7 @@ llvm_config.with_environment("OCAMLPATH", top_ocaml_lib, append_path=True)
 llvm_config.with_environment("OCAMLPATH", llvm_ocaml_lib, append_path=True)
 
 llvm_config.with_system_environment("CAML_LD_LIBRARY_PATH")
+llvm_config.with_environment("CAML_LD_LIBRARY_PATH", llvm_ocaml_lib, append_path=True)
 
 # Set up OCAMLRUNPARAM to enable backtraces in OCaml tests.
 llvm_config.with_environment("OCAMLRUNPARAM", "b")
