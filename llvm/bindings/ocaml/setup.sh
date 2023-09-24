@@ -20,6 +20,17 @@ base_cflags=$($llvm_config --cflags)
 ldflags="$($llvm_config --ldflags) -lstdc++ -fPIC"
 llvm_targets=$($llvm_config --targets-built)
 
+for target in $llvm_targets; do
+    touch "llvm_${target}.opam"
+    mkdir -p backends/$target
+    sed -e "s/@TARGET@/$target/g" \
+        -e "s/@CFLAGS@/-DTARGET=$target/g" "backends/dune.in" > backends/$target/dune
+    sed "s/@TARGET@/$target/g" "backends/llvm_backend.mli.in" > backends/$target/llvm_${target}.mli
+    sed "s/@TARGET@/$target/g" "backends/llvm_backend.ml.in" > backends/$target/llvm_${target}.ml
+    sed "s/@TARGET@/$target/g" "backends/backend_ocaml.c" > backends/$target/${target}_ocaml.c
+done
+sed "s/@LLVM_TARGETS_TO_BUILD@/$llvm_targets/g" "all_backends/dune.in" > all_backends/dune
+
 append_context() {
     context_name=$1
     linking_mode=$2
