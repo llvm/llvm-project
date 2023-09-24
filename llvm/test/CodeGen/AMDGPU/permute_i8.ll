@@ -353,7 +353,7 @@ define hidden void @shuffle5341ud2(ptr addrspace(1) %in0, ptr addrspace(1) %out0
 ; GFX10-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX10-NEXT:    global_load_dword v0, v[0:1], off
 ; GFX10-NEXT:    s_waitcnt vmcnt(0)
-; GFX10-NEXT:    v_perm_b32 v0, v0, v0, 0x5040706
+; GFX10-NEXT:    v_alignbit_b32 v0, v0, v0, 16
 ; GFX10-NEXT:    global_store_dword v[2:3], v0, off
 ; GFX10-NEXT:    s_setpc_b64 s[30:31]
 ;
@@ -361,9 +361,8 @@ define hidden void @shuffle5341ud2(ptr addrspace(1) %in0, ptr addrspace(1) %out0
 ; GFX9:       ; %bb.0:
 ; GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX9-NEXT:    global_load_dword v0, v[0:1], off
-; GFX9-NEXT:    s_mov_b32 s4, 0x5040706
 ; GFX9-NEXT:    s_waitcnt vmcnt(0)
-; GFX9-NEXT:    v_perm_b32 v0, v0, v0, s4
+; GFX9-NEXT:    v_alignbit_b32 v0, v0, v0, 16
 ; GFX9-NEXT:    global_store_dword v[2:3], v0, off
 ; GFX9-NEXT:    s_waitcnt vmcnt(0)
 ; GFX9-NEXT:    s_setpc_b64 s[30:31]
