@@ -5437,6 +5437,15 @@ Instruction *InstCombinerImpl::foldICmpEquality(ICmpInst &I) {
         Pred, A,
         Builder.CreateIntrinsic(Op0->getType(), Intrinsic::fshl, {A, A, B}));
 
+  // Canonicalize:
+  // icmp eq/ne OneUse(A ^ Cst), B --> icmp eq/ne (A ^ B), Cst
+  Constant *Cst;
+  if (match(&I,
+            m_c_ICmp(PredUnused, m_OneUse(m_Xor(m_Value(A), m_Constant(Cst))),
+                     m_Value(B))))
+    return ICmpInst::Create(Instruction::ICmp, Pred, Builder.CreateXor(A, B),
+                            Cst);
+
   return nullptr;
 }
 
