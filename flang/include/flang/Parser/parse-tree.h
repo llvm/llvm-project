@@ -3593,8 +3593,8 @@ struct OmpDependClause {
 //                 ATOMIC_DEFAULT_MEM_ORDER (SEQ_CST | ACQ_REL |
 //                                           RELAXED)
 struct OmpAtomicDefaultMemOrderClause {
-  ENUM_CLASS(Type, SeqCst, AcqRel, Relaxed)
-  WRAPPER_CLASS_BOILERPLATE(OmpAtomicDefaultMemOrderClause, Type);
+  WRAPPER_CLASS_BOILERPLATE(
+      OmpAtomicDefaultMemOrderClause, common::OmpAtomicDefaultMemOrderType);
 };
 
 // OpenMP Clauses
@@ -4247,7 +4247,11 @@ struct OpenACCDeclarativeConstruct {
 EMPTY_CLASS(AccEndLoop);
 struct OpenACCLoopConstruct {
   TUPLE_CLASS_BOILERPLATE(OpenACCLoopConstruct);
-  std::tuple<AccBeginLoopDirective, DoConstruct, std::optional<AccEndLoop>> t;
+  OpenACCLoopConstruct(AccBeginLoopDirective &&a)
+      : t({std::move(a), std::nullopt, std::nullopt}) {}
+  std::tuple<AccBeginLoopDirective, std::optional<DoConstruct>,
+      std::optional<AccEndLoop>>
+      t;
 };
 
 struct OpenACCStandaloneConstruct {

@@ -12,7 +12,6 @@ import threading
 
 
 class CursesWin(object):
-
     def __init__(self, x, y, w, h):
         self.win = curses.newwin(h, w, y, x)
         self.focus = False
@@ -34,11 +33,10 @@ class CursesWin(object):
 
 
 class TextWin(CursesWin):
-
     def __init__(self, x, y, w):
         super(TextWin, self).__init__(x, y, w, 1)
         self.win.bkgd(curses.color_pair(1))
-        self.text = ''
+        self.text = ""
         self.reverse = False
 
     def canFocus(self):
@@ -48,8 +46,8 @@ class TextWin(CursesWin):
         w = self.win.getmaxyx()[1]
         text = self.text
         if len(text) > w:
-            #trunc_length = len(text) - w
-            text = text[-w + 1:]
+            # trunc_length = len(text) - w
+            text = text[-w + 1 :]
         if self.reverse:
             self.win.addstr(0, 0, text, curses.A_REVERSE)
         else:
@@ -64,7 +62,6 @@ class TextWin(CursesWin):
 
 
 class TitledWin(CursesWin):
-
     def __init__(self, x, y, w, h, title):
         super(TitledWin, self).__init__(x, y + 1, w, h - 1)
         self.title = title
@@ -82,7 +79,6 @@ class TitledWin(CursesWin):
 
 
 class ListWin(CursesWin):
-
     def __init__(self, x, y, w, h):
         super(ListWin, self).__init__(x, y, w, h)
         self.items = []
@@ -101,10 +97,10 @@ class ListWin(CursesWin):
         firstSelected = -1
         lastSelected = -1
         for i, item in enumerate(self.items):
-            lines = self.items[i].split('\n')
-            lines = lines if lines[len(lines) - 1] != '' else lines[:-1]
+            lines = self.items[i].split("\n")
+            lines = lines if lines[len(lines) - 1] != "" else lines[:-1]
             if len(lines) == 0:
-                lines = ['']
+                lines = [""]
 
             if i == self.getSelected():
                 firstSelected = len(allLines)
@@ -127,7 +123,7 @@ class ListWin(CursesWin):
             attr = curses.A_NORMAL
             if i >= firstSelected and i <= lastSelected:
                 attr = curses.A_REVERSE
-                line = '{0:{width}}'.format(line, width=w - 1)
+                line = "{0:{width}}".format(line, width=w - 1)
 
             # Ignore the error we get from drawing over the bottom-right char.
             try:
@@ -170,7 +166,6 @@ class ListWin(CursesWin):
 
 
 class InputHandler(threading.Thread):
-
     def __init__(self, screen, queue):
         super(InputHandler, self).__init__()
         self.screen = screen
@@ -183,7 +178,7 @@ class InputHandler(threading.Thread):
 
 
 class CursesUI(object):
-    """ Responsible for updating the console UI with curses. """
+    """Responsible for updating the console UI with curses."""
 
     def __init__(self, screen, event_queue):
         self.screen = screen
@@ -220,7 +215,6 @@ class CursesUI(object):
                 self.focusNext()
 
     def eventLoop(self):
-
         self.input_handler.start()
         self.wins[self.focus].setFocus(True)
 
@@ -247,7 +241,7 @@ class CursesUI(object):
 
 
 class CursesEditLine(object):
-    """ Embed an 'editline'-compatible prompt inside a CursesWin. """
+    """Embed an 'editline'-compatible prompt inside a CursesWin."""
 
     def __init__(self, win, history, enterCallback, tabCompleteCallback):
         self.win = win
@@ -255,8 +249,8 @@ class CursesEditLine(object):
         self.enterCallback = enterCallback
         self.tabCompleteCallback = tabCompleteCallback
 
-        self.prompt = ''
-        self.content = ''
+        self.prompt = ""
+        self.content = ""
         self.index = 0
         self.startx = -1
         self.starty = -1
@@ -269,16 +263,16 @@ class CursesEditLine(object):
             self.win.scroll(1)
             self.starty -= 1
             if self.starty < 0:
-                raise RuntimeError('Input too long; aborting')
+                raise RuntimeError("Input too long; aborting")
         (y, x) = (self.starty, self.startx)
 
         self.win.move(y, x)
         self.win.clrtobot()
         self.win.addstr(y, x, prompt)
         remain = self.content
-        self.win.addstr(remain[:w - len(prompt)])
-        remain = remain[w - len(prompt):]
-        while remain != '':
+        self.win.addstr(remain[: w - len(prompt)])
+        remain = remain[w - len(prompt) :]
+        while remain != "":
             y += 1
             self.win.addstr(y, 0, remain[:w])
             remain = remain[w:]
@@ -287,7 +281,7 @@ class CursesEditLine(object):
         self.win.move(self.starty + length / w, length % w)
 
     def showPrompt(self, y, x, prompt=None):
-        self.content = ''
+        self.content = ""
         self.index = 0
         self.startx = x
         self.starty = y
@@ -299,26 +293,27 @@ class CursesEditLine(object):
         key = event
 
         if self.startx == -1:
-            raise RuntimeError('Trying to handle input without prompt')
+            raise RuntimeError("Trying to handle input without prompt")
 
         if key == curses.ascii.NL:
             self.enterCallback(self.content)
         elif key == curses.ascii.TAB:
             self.tabCompleteCallback(self.content)
         elif curses.ascii.isprint(key):
-            self.content = self.content[:self.index] + \
-                chr(key) + self.content[self.index:]
+            self.content = (
+                self.content[: self.index] + chr(key) + self.content[self.index :]
+            )
             self.index += 1
         elif key == curses.KEY_BACKSPACE or key == curses.ascii.BS:
             if self.index > 0:
                 self.index -= 1
-                self.content = self.content[
-                    :self.index] + self.content[self.index + 1:]
+                self.content = (
+                    self.content[: self.index] + self.content[self.index + 1 :]
+                )
         elif key == curses.KEY_DC or key == curses.ascii.DEL or key == curses.ascii.EOT:
-            self.content = self.content[
-                :self.index] + self.content[self.index + 1:]
+            self.content = self.content[: self.index] + self.content[self.index + 1 :]
         elif key == curses.ascii.VT:  # CTRL-K
-            self.content = self.content[:self.index]
+            self.content = self.content[: self.index]
         elif key == curses.KEY_LEFT or key == curses.ascii.STX:  # left or CTRL-B
             if self.index > 0:
                 self.index -= 1

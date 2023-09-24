@@ -366,7 +366,7 @@ public:
   /// bounded. The span of the returned vectors is guaranteed to contain all
   /// such vectors. The returned vectors are NOT guaranteed to be linearly
   /// independent. This function should not be called on empty sets.
-  Matrix getBoundedDirections() const;
+  IntMatrix getBoundedDirections() const;
 
   /// Find an integer sample point satisfying the constraints using a
   /// branch and bound algorithm with generalized basis reduction, with some
@@ -792,10 +792,10 @@ protected:
   PresburgerSpace space;
 
   /// Coefficients of affine equalities (in == 0 form).
-  Matrix equalities;
+  IntMatrix equalities;
 
   /// Coefficients of affine inequalities (in >= 0 form).
-  Matrix inequalities;
+  IntMatrix inequalities;
 };
 
 /// An IntegerPolyhedron represents the set of points from a PresburgerSpace

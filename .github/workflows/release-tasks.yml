@@ -22,7 +22,7 @@ jobs:
           test "${{ github.actor }}" = "tstellar" || test "${{ github.actor }}" = "tru"
           echo "${{ github.ref_name }}" | grep -e '^llvmorg-[0-9]\+\.[0-9]\+\.[0-9]\+\(-rc[0-9]\+\)\?$'
           release_version=$(echo "${{ github.ref_name }}" | sed 's/llvmorg-//g')
-          echo "release-version=$release_version" >> $GITHUB_OUTPUT
+          echo "release-version=$release_version" >> "$GITHUB_OUTPUT"
 
       - name: Install Dependencies
         run: |
@@ -38,7 +38,7 @@ jobs:
           pip3 install --user sphinx-markdown-tables
 
       - name: Checkout LLVM
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
 
       - name: Create Release
         run: |
@@ -47,7 +47,7 @@ jobs:
       - name: Build Documentation
         run: |
           ./llvm/utils/release/build-docs.sh -release ${{ steps.validate-tag.outputs.release-version }}
-          ./llvm/utils/release/github-upload-release.py --token ${{ github.token }} --release ${{ steps.validate-tag.outputs.release-version }} upload --files *doxygen*.tar.xz
+          ./llvm/utils/release/github-upload-release.py --token ${{ github.token }} --release ${{ steps.validate-tag.outputs.release-version }} upload --files ./*doxygen*.tar.xz
 
       - name: Create Release Notes Artifact
         uses: actions/download-artifact@v3
@@ -57,7 +57,7 @@ jobs:
 
       - name: Clone www-releases
         if: ${{ !contains(steps.validate-tag.outputs.release-version, 'rc') }}
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
         with:
           repository: ${{ github.repository_owner }}/www-releases
           ref: main
@@ -81,7 +81,7 @@ jobs:
     if: github.repository == 'llvm/llvm-project'
     steps:
       - name: Checkout LLVM
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
 
       - name: Install dependencies
         run: sudo apt-get install -y python3-setuptools

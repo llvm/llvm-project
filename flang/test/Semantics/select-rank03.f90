@@ -6,7 +6,6 @@ program test
  contains
   subroutine allocatables(a)
     real, allocatable :: a(..)
-    !ERROR: RANK (*) cannot be used when selector is POINTER or ALLOCATABLE
     select rank(a)
     rank (0)
       allocate(a) ! ok
@@ -44,21 +43,38 @@ program test
       allocate(a, source=a1)
       !ERROR: Arrays in ALLOCATE must have a shape specification or an expression of the same rank must appear in SOURCE or MOLD
       allocate(a, mold=p1)
+    !ERROR: RANK (*) cannot be used when selector is POINTER or ALLOCATABLE
     rank (*)
-      !ERROR: Arrays in ALLOCATE must have a shape specification or an expression of the same rank must appear in SOURCE or MOLD
+      !ERROR: Whole assumed-size array 'a' may not appear here without subscripts
       allocate(a)
+      !ERROR: Whole assumed-size array 'a' may not appear here without subscripts
       deallocate(a)
+      !ERROR: Whole assumed-size array 'a' may not appear here without subscripts
       a = 1.
     rank default
-      !ERROR: Arrays in ALLOCATE must have a shape specification or an expression of the same rank must appear in SOURCE or MOLD
+      !ERROR: An assumed-rank object may not appear in an ALLOCATE statement
       allocate(a)
       deallocate(a)
       a = 1.
     end select
+    ! Test nested associations
+    select rank(a)
+    rank default
+      select rank(a)
+      rank default
+        select rank(a)
+        rank (0)
+          allocate(a) ! ok
+          deallocate(a) ! ok
+        rank (1)
+          allocate(a(1)) ! ok
+          deallocate(a) ! ok
+        end select
+      end select
+    end select
   end
   subroutine pointers(p)
     real, pointer :: p(..)
-    !ERROR: RANK (*) cannot be used when selector is POINTER or ALLOCATABLE
     select rank(p)
     rank (0)
       allocate(p) ! ok
@@ -98,12 +114,14 @@ program test
       p => t0
       !ERROR: Pointer has rank 2 but target has rank 1
       p => t1
+    !ERROR: RANK (*) cannot be used when selector is POINTER or ALLOCATABLE
     rank (*)
-      !ERROR: Arrays in ALLOCATE must have a shape specification or an expression of the same rank must appear in SOURCE or MOLD
+      !ERROR: Whole assumed-size array 'p' may not appear here without subscripts
       allocate(p)
+      !ERROR: Whole assumed-size array 'p' may not appear here without subscripts
       deallocate(p)
     rank default
-      !ERROR: Arrays in ALLOCATE must have a shape specification or an expression of the same rank must appear in SOURCE or MOLD
+      !ERROR: An assumed-rank object may not appear in an ALLOCATE statement
       allocate(p)
       deallocate(p)
       !ERROR: pointer 'p' associated with object 't0' with incompatible type or shape

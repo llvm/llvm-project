@@ -85,6 +85,9 @@ add_library(libc-benchmark
     LibcBenchmark.h
 )
 
+target_include_directories(libc-benchmark
+    PUBLIC ${LLVM_INCLUDE_DIR} ${LLVM_MAIN_INCLUDE_DIR}
+)
 target_link_libraries(libc-benchmark
     PUBLIC
     benchmark::benchmark

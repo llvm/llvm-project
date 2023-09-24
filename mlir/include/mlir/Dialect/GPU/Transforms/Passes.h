@@ -134,14 +134,17 @@ protected:
 
 /// Register pass to serialize GPU kernel functions to a CUBIN binary
 /// annotation.
+LLVM_DEPRECATED("use Target attributes instead", "")
 void registerGpuSerializeToCubinPass();
 
 /// Register pass to serialize GPU kernel functions to a HSAco binary
 /// annotation.
+LLVM_DEPRECATED("use Target attributes instead", "")
 void registerGpuSerializeToHsacoPass();
 
 /// Create an instance of the GPU kernel function to CUBIN binary serialization
 /// pass with optLevel (default level 2).
+LLVM_DEPRECATED("use Target attributes instead", "")
 std::unique_ptr<Pass> createGpuSerializeToCubinPass(StringRef triple,
                                                     StringRef chip,
                                                     StringRef features,
@@ -150,6 +153,7 @@ std::unique_ptr<Pass> createGpuSerializeToCubinPass(StringRef triple,
 
 /// Create an instance of the GPU kernel function to HSAco binary serialization
 /// pass.
+LLVM_DEPRECATED("use Target attributes instead", "")
 std::unique_ptr<Pass> createGpuSerializeToHsacoPass(StringRef triple,
                                                     StringRef arch,
                                                     StringRef features,

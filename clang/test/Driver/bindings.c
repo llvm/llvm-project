@@ -12,7 +12,7 @@
 // RUN: %clang -target i386-unknown-unknown -ccc-print-bindings -fsyntax-only -x c++ %s 2>&1 | FileCheck %s --check-prefix=CHECK08
 // CHECK08: "clang", inputs: ["{{.*}}bindings.c"], output: (nothing)
 
-// RUN: %clang -target i386-apple-darwin11 -ccc-print-bindings %s -S -arch ppc 2>&1 | FileCheck %s --check-prefix=CHECK11
+// RUN: %clang -target i386-apple-darwin11 -ccc-print-bindings %s -S -arch arm 2>&1 | FileCheck %s --check-prefix=CHECK11
 // CHECK11: "clang", inputs: ["{{.*}}bindings.c"], output: "bindings.s"
 
 // RUN: %clang -target powerpc-unknown-unknown -ccc-print-bindings %s -S 2>&1 | FileCheck %s --check-prefix=CHECK12

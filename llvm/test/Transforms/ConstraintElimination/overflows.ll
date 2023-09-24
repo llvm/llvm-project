@@ -18,6 +18,14 @@ bb:
 }
 
 define i1 @test_overflow_in_negate_constraint(i8 %x, i64 %y) {
+; CHECK-LABEL: define i1 @test_overflow_in_negate_constraint
+; CHECK-SAME: (i8 [[X:%.*]], i64 [[Y:%.*]]) {
+; CHECK-NEXT:  bb:
+; CHECK-NEXT:    [[ZEXT:%.*]] = zext i8 [[X]] to i64
+; CHECK-NEXT:    [[SHL:%.*]] = shl nuw nsw i64 [[ZEXT]], 63
+; CHECK-NEXT:    [[ICMP:%.*]] = icmp uge i64 [[Y]], [[SHL]]
+; CHECK-NEXT:    ret i1 [[ICMP]]
+;
 bb:
   %zext = zext i8 %x to i64
   %shl = shl nuw nsw i64 %zext, 63

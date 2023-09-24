@@ -1,4 +1,4 @@
-# RUN: llvm-mc -arch=amdgcn -mcpu=tonga -disassemble -show-encoding %s | FileCheck -check-prefix=VI %s
+# RUN: llvm-mc -triple=amdgcn -mcpu=tonga -disassemble -show-encoding %s | FileCheck -check-prefix=VI %s
 
 # VI: v_fract_f64_e32 v[0:1], 0.15915494309189532 ; encoding: [0xf8,0x64,0x00,0x7e]
 0xf8,0x64,0x00,0x7e

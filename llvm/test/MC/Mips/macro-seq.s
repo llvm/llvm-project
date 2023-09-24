@@ -1,5 +1,5 @@
-# RUN: llvm-mc -arch=mips -mcpu=mips1 < %s | FileCheck --check-prefixes=ALL,MIPS32 %s
-# RUN: llvm-mc -arch=mips -mcpu=mips64 < %s | FileCheck --check-prefixes=ALL,MIPS64 %s
+# RUN: llvm-mc -triple=mips -mcpu=mips1 < %s | FileCheck --check-prefixes=ALL,MIPS32 %s
+# RUN: llvm-mc -triple=mips -mcpu=mips64 < %s | FileCheck --check-prefixes=ALL,MIPS64 %s
 
 # ALL: .text
 seq $2, $11, $0

@@ -114,7 +114,7 @@ getCleanupLoopLowerBound(AffineForOp forOp, unsigned unrollFactor,
 /// yield values while promoting single iteration affine.for ops.
 static void replaceIterArgsAndYieldResults(AffineForOp forOp) {
   // Replace uses of iter arguments with iter operands (initial values).
-  auto iterOperands = forOp.getIterOperands();
+  auto iterOperands = forOp.getInits();
   auto iterArgs = forOp.getRegionIterArgs();
   for (auto e : llvm::zip(iterOperands, iterArgs))
     std::get<1>(e).replaceAllUsesWith(std::get<0>(e));
@@ -987,7 +987,7 @@ static LogicalResult generateCleanupLoopForUnroll(AffineForOp forOp,
   // and produce results for the original users of `forOp` results.
   auto results = forOp.getResults();
   auto cleanupResults = cleanupForOp.getResults();
-  auto cleanupIterOperands = cleanupForOp.getIterOperands();
+  auto cleanupIterOperands = cleanupForOp.getInits();
 
   for (auto e : llvm::zip(results, cleanupResults, cleanupIterOperands)) {
     std::get<0>(e).replaceAllUsesWith(std::get<1>(e));
@@ -1200,7 +1200,7 @@ LogicalResult mlir::affine::loopUnrollJamByFactor(AffineForOp forOp,
   OpBuilder builder(forOp.getContext());
   for (AffineForOp oldForOp : loopsWithIterArgs) {
     SmallVector<Value, 4> dupIterOperands, dupIterArgs, dupYieldOperands;
-    ValueRange oldIterOperands = oldForOp.getIterOperands();
+    ValueRange oldIterOperands = oldForOp.getInits();
     ValueRange oldIterArgs = oldForOp.getRegionIterArgs();
     ValueRange oldYieldOperands =
         cast<AffineYieldOp>(oldForOp.getBody()->getTerminator()).getOperands();

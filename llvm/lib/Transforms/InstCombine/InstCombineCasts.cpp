@@ -112,7 +112,7 @@ Value *InstCombinerImpl::EvaluateInDifferentType(Value *V, Type *Ty,
   }
 
   Res->takeName(I);
-  return InsertNewInstWith(Res, *I);
+  return InsertNewInstWith(Res, I->getIterator());
 }
 
 Instruction::CastOps

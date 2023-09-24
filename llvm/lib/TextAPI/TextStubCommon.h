@@ -48,7 +48,7 @@ Expected<std::unique_ptr<InterfaceFile>>
 getInterfaceFileFromJSON(StringRef JSON);
 
 Error serializeInterfaceFileToJSON(raw_ostream &OS, const InterfaceFile &File,
-                                   bool Compact);
+                                   const FileType FileKind, bool Compact);
 } // namespace MachO
 
 namespace yaml {

@@ -1,6 +1,6 @@
-// RUN: llvm-mc -arch=amdgcn -mcpu=gfx904 -show-encoding %s | FileCheck -check-prefix=GFX9-FMAMIX %s
-// RUN: llvm-mc -arch=amdgcn -mcpu=gfx906 -show-encoding %s | FileCheck -check-prefix=GFX9-FMAMIX %s
-// RUN: not llvm-mc -arch=amdgcn -mcpu=gfx900 %s 2>&1 | FileCheck -check-prefix=GFX9-MADMIX-ERR --implicit-check-not=error: %s
+// RUN: llvm-mc -triple=amdgcn -mcpu=gfx904 -show-encoding %s | FileCheck -check-prefix=GFX9-FMAMIX %s
+// RUN: llvm-mc -triple=amdgcn -mcpu=gfx906 -show-encoding %s | FileCheck -check-prefix=GFX9-FMAMIX %s
+// RUN: not llvm-mc -triple=amdgcn -mcpu=gfx900 %s 2>&1 | FileCheck -check-prefix=GFX9-MADMIX-ERR --implicit-check-not=error: %s
 
 v_fma_mix_f32 v0, v1, v2, v3
 // GFX9-FMAMIX: v_fma_mix_f32 v0, v1, v2, v3 ; encoding: [0x00,0x00,0xa0,0xd3,0x01,0x05,0x0e,0x04]

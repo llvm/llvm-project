@@ -534,4 +534,22 @@ define <2 x i16> @test_insertelement(<2 x i16> %a, i16 %x) #0 {
   ret <2 x i16> %i
 }
 
+; COMMON-LABEL: test_fptosi_2xhalf_to_2xi16(
+; COMMON:      cvt.rzi.s16.f16
+; COMMON:      cvt.rzi.s16.f16
+; COMMON:      ret;
+define <2 x i16> @test_fptosi_2xhalf_to_2xi16(<2 x half> %a) #0 {
+  %r = fptosi <2 x half> %a to <2 x i16>
+  ret <2 x i16> %r
+}
+
+; COMMON-LABEL: test_fptoui_2xhalf_to_2xi16(
+; COMMON:      cvt.rzi.u16.f16
+; COMMON:      cvt.rzi.u16.f16
+; COMMON:      ret;
+define <2 x i16> @test_fptoui_2xhalf_to_2xi16(<2 x half> %a) #0 {
+  %r = fptoui <2 x half> %a to <2 x i16>
+  ret <2 x i16> %r
+}
+
 attributes #0 = { nounwind }

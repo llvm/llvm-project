@@ -7108,6 +7108,29 @@ TEST_F(FormatTest, ExpressionIndentationBreakingBeforeOperators) {
                "(someOtherLongishConditionPart1 || "
                "someOtherEvenLongerNestedConditionPart2);",
                Style);
+
+  Style = getLLVMStyleWithColumns(20);
+  Style.AlignAfterOpenBracket = FormatStyle::BAS_AlwaysBreak;
+  Style.BinPackParameters = false;
+  Style.BreakBeforeBinaryOperators = FormatStyle::BOS_NonAssignment;
+  Style.ContinuationIndentWidth = 2;
+  verifyFormat("struct Foo {\n"
+               "  Foo(\n"
+               "    int arg1,\n"
+               "    int arg2)\n"
+               "      : Base(\n"
+               "          arg1,\n"
+               "          arg2) {}\n"
+               "};",
+               Style);
+  verifyFormat("return abc\n"
+               "         ? foo(\n"
+               "             a,\n"
+               "             b,\n"
+               "             bar(\n"
+               "               abc))\n"
+               "         : g(abc);",
+               Style);
 }
 
 TEST_F(FormatTest, ExpressionIndentationStrictAlign) {
@@ -10656,8 +10679,8 @@ TEST_F(FormatTest, UnderstandsTemplateParameters) {
   verifyFormat("f(aaaaaaaaaaaaaaaaaaaaaaaaaaaaaa\n"
                "      .template operator()<A>());",
                getLLVMStyleWithColumns(35));
-  verifyFormat("bool_constant<a && noexcept(f())>");
-  verifyFormat("bool_constant<a || noexcept(f())>");
+  verifyFormat("bool_constant<a && noexcept(f())>;");
+  verifyFormat("bool_constant<a || noexcept(f())>;");
 
   verifyFormat("if (std::tuple_size_v<T> > 0)");
 
@@ -26236,6 +26259,52 @@ TEST_F(FormatTest, RemoveParentheses) {
   verifyFormat("return (a + b) - (c + d);",
                "return (((a + b)) -\n"
                "        ((c + d)));",
+               Style);
+}
+
+TEST_F(FormatTest, AllowBreakBeforeNoexceptSpecifier) {
+  auto Style = getLLVMStyleWithColumns(35);
+
+  EXPECT_EQ(Style.AllowBreakBeforeNoexceptSpecifier, FormatStyle::BBNSS_Never);
+  verifyFormat("void foo(int arg1,\n"
+               "         double arg2) noexcept;",
+               Style);
+
+  // The following line does not fit within the 35 column limit, but that's what
+  // happens with no break allowed.
+  verifyFormat("void bar(int arg1, double arg2) noexcept(\n"
+               "    noexcept(baz(arg1)) &&\n"
+               "    noexcept(baz(arg2)));",
+               Style);
+
+  verifyFormat("void aVeryLongFunctionNameWithoutAnyArguments() noexcept;",
+               Style);
+
+  Style.AllowBreakBeforeNoexceptSpecifier = FormatStyle::BBNSS_Always;
+  verifyFormat("void foo(int arg1,\n"
+               "         double arg2) noexcept;",
+               Style);
+
+  verifyFormat("void bar(int arg1, double arg2)\n"
+               "    noexcept(noexcept(baz(arg1)) &&\n"
+               "             noexcept(baz(arg2)));",
+               Style);
+
+  verifyFormat("void aVeryLongFunctionNameWithoutAnyArguments()\n"
+               "    noexcept;",
+               Style);
+
+  Style.AllowBreakBeforeNoexceptSpecifier = FormatStyle::BBNSS_OnlyWithParen;
+  verifyFormat("void foo(int arg1,\n"
+               "         double arg2) noexcept;",
+               Style);
+
+  verifyFormat("void bar(int arg1, double arg2)\n"
+               "    noexcept(noexcept(baz(arg1)) &&\n"
+               "             noexcept(baz(arg2)));",
+               Style);
+
+  verifyFormat("void aVeryLongFunctionNameWithoutAnyArguments() noexcept;",
                Style);
 }
 

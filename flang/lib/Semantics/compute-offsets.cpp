@@ -152,7 +152,8 @@ void ComputeOffsetsHelper::DoCommonBlock(Symbol &commonBlock) {
   alignment_ = 0;
   std::size_t minSize{0};
   std::size_t minAlignment{0};
-  for (auto &object : details.objects()) {
+  UnorderedSymbolSet previous;
+  for (auto object : details.objects()) {
     Symbol &symbol{*object};
     auto errorSite{
         commonBlock.name().empty() ? symbol.name() : commonBlock.name()};
@@ -161,6 +162,7 @@ void ComputeOffsetsHelper::DoCommonBlock(Symbol &commonBlock) {
           "COMMON block /%s/ requires %zd bytes of padding before '%s' for alignment"_port_en_US,
           commonBlock.name(), padding, symbol.name());
     }
+    previous.emplace(symbol);
     auto eqIter{equivalenceBlock_.end()};
     auto iter{dependents_.find(symbol)};
     if (iter == dependents_.end()) {
@@ -173,13 +175,13 @@ void ComputeOffsetsHelper::DoCommonBlock(Symbol &commonBlock) {
       Symbol &base{*dep.symbol};
       if (const auto *baseBlock{FindCommonBlockContaining(base)}) {
         if (baseBlock == &commonBlock) {
-          if (base.offset() != symbol.offset() - dep.offset ||
-              llvm::is_contained(details.objects(), base)) {
+          if (previous.find(SymbolRef{base}) == previous.end() ||
+              base.offset() != symbol.offset() - dep.offset) {
             context_.Say(errorSite,
                 "'%s' is storage associated with '%s' by EQUIVALENCE elsewhere in COMMON block /%s/"_err_en_US,
                 symbol.name(), base.name(), commonBlock.name());
           }
-        } else { // 8.10.3(1)
+        } else { // F'2023 8.10.3 p1
           context_.Say(errorSite,
               "'%s' in COMMON block /%s/ must not be storage associated with '%s' in COMMON block /%s/ by EQUIVALENCE"_err_en_US,
               symbol.name(), commonBlock.name(), base.name(),
@@ -193,6 +195,7 @@ void ComputeOffsetsHelper::DoCommonBlock(Symbol &commonBlock) {
         eqIter = equivalenceBlock_.find(base);
         base.get<ObjectEntityDetails>().set_commonBlock(commonBlock);
         base.set_offset(symbol.offset() - dep.offset);
+        previous.emplace(base);
       }
     }
     // Get full extent of any EQUIVALENCE block into size of COMMON ( see

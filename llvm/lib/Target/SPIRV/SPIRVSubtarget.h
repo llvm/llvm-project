@@ -25,6 +25,7 @@
 #include "llvm/CodeGen/TargetSubtargetInfo.h"
 #include "llvm/IR/DataLayout.h"
 #include "llvm/Target/TargetMachine.h"
+#include "llvm/TargetParser/Triple.h"
 
 #define GET_SUBTARGETINFO_HEADER
 #include "SPIRVGenSubtargetInfo.inc"
@@ -46,6 +47,7 @@ private:
   SPIRVInstrInfo InstrInfo;
   SPIRVFrameLowering FrameLowering;
   SPIRVTargetLowering TLInfo;
+  Triple TargetTriple;
 
   // GlobalISel related APIs.
   std::unique_ptr<CallLowering> CallLoweringInfo;
@@ -71,15 +73,23 @@ public:
   unsigned getPointerSize() const { return PointerSize; }
   bool canDirectlyComparePointers() const;
   // TODO: this environment is not implemented in Triple, we need to decide
-  // how to standartize its support. For now, let's assume that we always
-  // operate with OpenCL.
-  bool isOpenCLEnv() const { return true; }
+  // how to standardize its support. For now, let's assume SPIR-V with physical
+  // addressing is OpenCL, and Logical addressing is Vulkan.
+  bool isOpenCLEnv() const {
+    return TargetTriple.getArch() == Triple::spirv32 ||
+           TargetTriple.getArch() == Triple::spirv64;
+  }
+  bool isVulkanEnv() const { return TargetTriple.getArch() == Triple::spirv; }
   uint32_t getSPIRVVersion() const { return SPIRVVersion; };
   bool isAtLeastSPIRVVer(uint32_t VerToCompareTo) const;
   bool isAtLeastOpenCLVer(uint32_t VerToCompareTo) const;
   // TODO: implement command line args or other ways to determine this.
   bool hasOpenCLFullProfile() const { return true; }
   bool hasOpenCLImageSupport() const { return true; }
+  const SmallSet<SPIRV::Extension::Extension, 4> &
+  getAllAvailableExtensions() const {
+    return AvailableExtensions;
+  }
   bool canUseExtension(SPIRV::Extension::Extension E) const;
   bool canUseExtInstSet(SPIRV::InstructionSet::InstructionSet E) const;
 
@@ -106,6 +116,10 @@ public:
   }
   const SPIRVRegisterInfo *getRegisterInfo() const override {
     return &InstrInfo.getRegisterInfo();
+  }
+
+  static bool classof(const TargetSubtargetInfo *ST) {
+    return ST->getTargetTriple().isSPIRV();
   }
 };
 } // namespace llvm

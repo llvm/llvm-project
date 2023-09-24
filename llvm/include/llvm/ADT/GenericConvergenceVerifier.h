@@ -40,6 +40,7 @@ public:
   }
 
   void clear();
+  void visit(const BlockT &BB);
   void visit(const InstructionT &I);
   void verify(const DominatorTreeT &DT);
 
@@ -62,6 +63,8 @@ private:
   // Cache token uses found so far. Note that we track the unique definitions
   // and not the token values.
   DenseMap<const InstructionT *, const InstructionT *> Tokens;
+
+  bool SeenFirstConvOp = false;
 
   static bool isInsideConvergentFunction(const InstructionT &I);
   static bool isConvergent(const InstructionT &I);

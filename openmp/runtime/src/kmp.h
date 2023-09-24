@@ -1153,7 +1153,14 @@ extern void __kmp_init_target_task();
 #if defined(PTHREAD_THREADS_MAX) && PTHREAD_THREADS_MAX < INT_MAX
 #define KMP_MAX_NTH PTHREAD_THREADS_MAX
 #else
+#ifdef __ve__
+// VE's pthread supports only up to 64 threads per a VE process.
+// Please check p. 14 of following documentation for more details.
+// https://sxauroratsubasa.sakura.ne.jp/documents/veos/en/VEOS_high_level_design.pdf
+#define KMP_MAX_NTH 64
+#else
 #define KMP_MAX_NTH INT_MAX
+#endif
 #endif
 #endif /* KMP_MAX_NTH */
 
@@ -1170,6 +1177,10 @@ extern void __kmp_init_target_task();
 #elif KMP_ARCH_X86_64
 #define KMP_DEFAULT_STKSIZE ((size_t)(4 * 1024 * 1024))
 #define KMP_BACKUP_STKSIZE ((size_t)(2 * 1024 * 1024))
+#elif KMP_ARCH_VE
+// Minimum stack size for pthread for VE is 4MB.
+//   https://www.hpc.nec/documents/veos/en/glibc/Difference_Points_glibc.htm
+#define KMP_DEFAULT_STKSIZE ((size_t)(4 * 1024 * 1024))
 #else
 #define KMP_DEFAULT_STKSIZE ((size_t)(1024 * 1024))
 #endif
@@ -3615,6 +3626,9 @@ KMP_NORETURN extern void __kmp_abort_process(void);
 extern void __kmp_warn(char const *format, ...);
 
 extern void __kmp_set_num_threads(int new_nth, int gtid);
+
+extern bool __kmp_detect_shm();
+extern bool __kmp_detect_tmp();
 
 // Returns current thread (pointer to kmp_info_t). Current thread *must* be
 // registered.

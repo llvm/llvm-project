@@ -31,19 +31,11 @@
 using namespace mlir;
 
 scf::SCFTilingOptions &
-scf::SCFTilingOptions::setTileSizes(ArrayRef<int64_t> ts) {
+scf::SCFTilingOptions::setTileSizes(ArrayRef<OpFoldResult> ts) {
   assert(!tileSizeComputationFunction && "tile sizes already set");
-  SmallVector<int64_t> tileSizes(ts.begin(), ts.end());
+  auto tileSizes = llvm::to_vector(ts);
   tileSizeComputationFunction = [tileSizes](OpBuilder &b, Operation *op) {
-    OpBuilder::InsertionGuard guard(b);
-    b.setInsertionPointToStart(
-        &op->getParentWithTrait<OpTrait::IsIsolatedFromAbove>()
-             ->getRegion(0)
-             .front());
-    return llvm::to_vector<4>(map_range(tileSizes, [&](int64_t s) {
-      Value v = b.create<arith::ConstantIndexOp>(op->getLoc(), s);
-      return v;
-    }));
+    return tileSizes;
   };
   return *this;
 }
@@ -108,17 +100,16 @@ static OpFoldResult getBoundedTileSize(OpBuilder &b, Location loc,
 
 /// Generate an empty loop nest that represents the tiled loop nest shell.
 /// - `loopRanges` specifies the lb, ub and step of the untiled iteration space.
-/// - `tileSizeVals` is the tile sizes to use. Zero represent untiled loops.
+/// - `tileSizes` is the tile sizes to use. Zero represent untiled loops.
 /// - In `offsets` and `sizes` return the multi-dimensional offset and size of
 /// the
 ///   tile processed within the inner most loop.
-static SmallVector<scf::ForOp>
-generateTileLoopNest(OpBuilder &builder, Location loc,
-                     ArrayRef<Range> loopRanges, ArrayRef<Value> tileSizeVals,
-                     SmallVector<OpFoldResult> &offsets,
-                     SmallVector<OpFoldResult> &sizes) {
+static SmallVector<scf::ForOp> generateTileLoopNest(
+    OpBuilder &builder, Location loc, ArrayRef<Range> loopRanges,
+    ArrayRef<OpFoldResult> tileSizes, SmallVector<OpFoldResult> &offsets,
+    SmallVector<OpFoldResult> &sizes) {
   assert(!loopRanges.empty() && "expected at least one loop range");
-  assert(loopRanges.size() == tileSizeVals.size() &&
+  assert(loopRanges.size() == tileSizes.size() &&
          "expected as many tile sizes as loop ranges");
   OpBuilder::InsertionGuard guard(builder);
   SmallVector<scf::ForOp> loops;
@@ -130,7 +121,8 @@ generateTileLoopNest(OpBuilder &builder, Location loc,
         getValueOrCreateConstantIndexOp(builder, loc, loopRange.value().offset);
     Value size =
         getValueOrCreateConstantIndexOp(builder, loc, loopRange.value().size);
-    Value tileSize = tileSizeVals[loopRange.index()];
+    Value tileSize = getValueOrCreateConstantIndexOp(
+        builder, loc, tileSizes[loopRange.index()]);
     // No loops if tile size is zero. Set offset and size to the loop
     // offset and size.
     if (matchPattern(tileSize, m_Zero())) {
@@ -263,7 +255,8 @@ yieldTiledValues(RewriterBase &rewriter, ArrayRef<Value> initValues,
   for (auto tiledOp : tilingResult.tiledOps) {
     if (auto dstOp = dyn_cast<DestinationStyleOpInterface>(tiledOp)) {
       auto innerMostLoop = loops.back();
-      SmallVector<Value> tiledOpDestinationTensors = dstOp.getDpsInitOperands();
+      SmallVector<Value> tiledOpDestinationTensors =
+          llvm::to_vector(dstOp.getDpsInits());
       updateDestinationOperandsForTiledOp(rewriter, tiledOpDestinationTensors,
                                           innerMostLoop.getRegionIterArgs());
     }
@@ -296,10 +289,10 @@ mlir::scf::tileUsingSCFForOp(RewriterBase &rewriter, TilingInterface op,
   // skips tiling a particular dimension. This convention is significantly
   // simpler to handle instead of adjusting affine maps to account for missing
   // dimensions.
-  SmallVector<Value> tileSizeVector =
+  SmallVector<OpFoldResult> tileSizeVector =
       options.tileSizeComputationFunction(rewriter, op);
   if (tileSizeVector.size() < iterationDomain.size()) {
-    auto zero = rewriter.create<arith::ConstantIndexOp>(op.getLoc(), 0);
+    auto zero = rewriter.getIndexAttr(0);
     tileSizeVector.append(numLoops - tileSizeVector.size(), zero);
   }
 
@@ -402,17 +395,17 @@ mlir::scf::tileUsingSCFForOp(RewriterBase &rewriter, TilingInterface op,
 FailureOr<scf::SCFReductionTilingResult>
 mlir::scf::tileReductionUsingScf(RewriterBase &b,
                                  PartialReductionOpInterface op,
-                                 ArrayRef<OpFoldResult> tileSize) {
+                                 ArrayRef<OpFoldResult> tileSizes) {
   Location loc = op.getLoc();
   // Ops implementing PartialReductionOpInterface are expected to implement
   // TilingInterface.
   auto tilingInterfaceOp = cast<TilingInterface>(op.getOperation());
   SmallVector<Range> iterationDomain = tilingInterfaceOp.getIterationDomain(b);
-  SmallVector<Value> tileSizeVector =
-      getValueOrCreateConstantIndexOp(b, loc, tileSize);
-  if (tileSizeVector.size() < iterationDomain.size()) {
-    auto zero = b.create<arith::ConstantIndexOp>(loc, 0);
-    tileSizeVector.append(iterationDomain.size() - tileSizeVector.size(), zero);
+  auto tileSizesVector = llvm::to_vector(tileSizes);
+  if (tileSizesVector.size() < iterationDomain.size()) {
+    auto zero = b.getIndexAttr(0);
+    tileSizesVector.append(iterationDomain.size() - tileSizesVector.size(),
+                           zero);
   }
   if (op->getNumResults() != 1)
     return b.notifyMatchFailure(
@@ -429,7 +422,7 @@ mlir::scf::tileReductionUsingScf(RewriterBase &b,
 
   // 1. create the inital tensor value.
   FailureOr<Operation *> identityTensor =
-      op.generateInitialTensorForPartialReduction(b, loc, tileSize,
+      op.generateInitialTensorForPartialReduction(b, loc, tileSizesVector,
                                                   reductionDims);
   if (failed(identityTensor))
     return b.notifyMatchFailure(op,
@@ -437,7 +430,7 @@ mlir::scf::tileReductionUsingScf(RewriterBase &b,
   // 2. Create the nested loops.
   SmallVector<OpFoldResult> offsets, sizes;
   SmallVector<scf::ForOp> loops = generateTileLoopNest(
-      b, loc, iterationDomain, tileSizeVector, offsets, sizes);
+      b, loc, iterationDomain, tileSizesVector, offsets, sizes);
 
   // 3. Generate the tiled implementation within the inner most loop.
   b.setInsertionPoint(loops.back().getBody()->getTerminator());
@@ -455,7 +448,7 @@ mlir::scf::tileReductionUsingScf(RewriterBase &b,
 
   auto dstOp = cast<DestinationStyleOpInterface>(parallelOp);
   auto innerMostLoop = loops.back();
-  SmallVector<Value> destinationTensors = dstOp.getDpsInitOperands();
+  SmallVector<Value> destinationTensors = llvm::to_vector(dstOp.getDpsInits());
   assert(destinationTensors.size() ==
              innerMostLoop.getRegionIterArgs().size() &&
          "unexpected number of outputs");
@@ -508,8 +501,8 @@ mlir::scf::tileAndFuseProducerOfSlice(RewriterBase &rewriter,
                                       MutableArrayRef<scf::ForOp> loops) {
   // 1. Get the producer of the source (potentially walking through
   // `iter_args` of nested `scf.for`)
-  auto [fusableProducer, destinationIterArg] =
-      getUntiledProducerFromSliceSource(&candidateSliceOp->getOpOperand(0),
+  auto [fusableProducer, destinationInitArg] =
+      getUntiledProducerFromSliceSource(&candidateSliceOp.getSourceMutable()[0],
                                         loops);
   if (!fusableProducer)
     return std::nullopt;
@@ -575,17 +568,16 @@ mlir::scf::tileAndFuseProducerOfSlice(RewriterBase &rewriter,
   // TODO: This can be modeled better if the `DestinationStyleOpInterface`.
   // Update to use that when it does become available.
   scf::ForOp outerMostLoop = loops.front();
-  std::optional<unsigned> iterArgNumber;
-  if (destinationIterArg) {
-    iterArgNumber =
-        outerMostLoop.getIterArgNumberForOpOperand(*destinationIterArg.value());
-  }
-  if (iterArgNumber) {
+  if (destinationInitArg &&
+      (*destinationInitArg)->getOwner() == outerMostLoop) {
+    unsigned iterArgNumber =
+        outerMostLoop.getResultForOpOperand(**destinationInitArg)
+            .getResultNumber();
     int64_t resultNumber = fusableProducer.getResultNumber();
     if (auto dstOp =
             dyn_cast<DestinationStyleOpInterface>(fusableProducer.getOwner())) {
-      outerMostLoop.setIterArg(iterArgNumber.value(),
-                               dstOp.getTiedOpOperand(fusableProducer)->get());
+      (*destinationInitArg)
+          ->set(dstOp.getTiedOpOperand(fusableProducer)->get());
     }
     for (auto tileAndFusedOp : tileAndFuseResult->tiledOps) {
       auto dstOp = dyn_cast<DestinationStyleOpInterface>(tileAndFusedOp);
@@ -594,7 +586,7 @@ mlir::scf::tileAndFuseProducerOfSlice(RewriterBase &rewriter,
       scf::ForOp innerMostLoop = loops.back();
       updateDestinationOperandsForTiledOp(
           rewriter, dstOp.getDpsInitOperand(resultNumber)->get(),
-          innerMostLoop.getRegionIterArgs()[iterArgNumber.value()]);
+          innerMostLoop.getRegionIterArgs()[iterArgNumber]);
     }
   }
   return scf::SCFFuseProducerOfSliceResult{fusableProducer,

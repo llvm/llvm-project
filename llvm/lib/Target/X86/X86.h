@@ -27,8 +27,7 @@ class X86TargetMachine;
 
 /// This pass converts a legalized DAG into a X86-specific DAG, ready for
 /// instruction scheduling.
-FunctionPass *createX86ISelDag(X86TargetMachine &TM,
-                               CodeGenOpt::Level OptLevel);
+FunctionPass *createX86ISelDag(X86TargetMachine &TM, CodeGenOptLevel OptLevel);
 
 /// This pass initializes a global base register for PIC on x86-32.
 FunctionPass *createX86GlobalBaseRegPass();

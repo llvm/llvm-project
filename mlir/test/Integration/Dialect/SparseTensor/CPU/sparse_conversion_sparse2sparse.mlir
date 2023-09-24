@@ -32,32 +32,37 @@
 // RUN: %if mlir_arm_sve_tests %{ %{compile_sve} | %{run_sve} | FileCheck %s %}
 
 #Tensor1 = #sparse_tensor.encoding<{
-  lvlTypes = [ "dense", "dense", "compressed" ]
+  map = (d0, d1, d2) -> (d0 : dense, d1 : dense, d2 : compressed)
+
 }>
 
 // NOTE: dense after compressed is not currently supported for the target
 // of direct-sparse2sparse conversion.  (It's fine for the source though.)
 #Tensor2 = #sparse_tensor.encoding<{
-  lvlTypes = [ "dense", "compressed", "dense" ]
+  map = (d0, d1, d2) -> (d0 : dense, d1 : compressed, d2 : dense)
+
 }>
 
 #Tensor3 = #sparse_tensor.encoding<{
-  lvlTypes = [ "dense", "dense", "compressed" ],
-  dimToLvl = affine_map<(i,j,k) -> (i,k,j)>
+  map = (d0, d1, d2) -> (d0 : dense, d2 : dense, d1 : compressed)
+
 }>
 
 #SingletonTensor1 = #sparse_tensor.encoding<{
-  lvlTypes = [ "dense", "compressed", "singleton" ]
+  map = (d0, d1, d2) -> (d0 : dense, d1 : compressed, d2 : singleton)
+
 }>
 
 // This also checks the compressed->dense conversion (when there are zeros).
 #SingletonTensor2 = #sparse_tensor.encoding<{
-  lvlTypes = [ "dense", "dense", "singleton" ]
+  map = (d0, d1, d2) -> (d0 : dense, d1 : dense, d2 : singleton)
+
 }>
 
 // This also checks the singleton->compressed conversion.
 #SingletonTensor3 = #sparse_tensor.encoding<{
-  lvlTypes = [ "dense", "dense", "compressed" ]
+  map = (d0, d1, d2) -> (d0 : dense, d1 : dense, d2 : compressed)
+
 }>
 
 module {

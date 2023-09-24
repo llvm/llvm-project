@@ -1,4 +1,4 @@
-! RUN: llvm-mc %s -arch=sparcv9 -show-encoding | FileCheck %s --check-prefix=V9
+! RUN: llvm-mc %s -triple=sparcv9 -show-encoding | FileCheck %s --check-prefix=V9
 
 !! Short names
 ! V9: casxa [%i0] #ASI_N, %l6, %o2            ! encoding: [0xd5,0xf6,0x00,0x96]

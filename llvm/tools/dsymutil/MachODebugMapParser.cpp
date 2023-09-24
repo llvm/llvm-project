@@ -28,11 +28,9 @@ class MachODebugMapParser {
 public:
   MachODebugMapParser(llvm::IntrusiveRefCntPtr<llvm::vfs::FileSystem> VFS,
                       StringRef BinaryPath, ArrayRef<std::string> Archs,
-                      StringRef PathPrefix = "",
-                      bool PaperTrailWarnings = false, bool Verbose = false)
+                      StringRef PathPrefix = "", bool Verbose = false)
       : BinaryPath(std::string(BinaryPath)), Archs(Archs.begin(), Archs.end()),
-        PathPrefix(std::string(PathPrefix)),
-        PaperTrailWarnings(PaperTrailWarnings), BinHolder(VFS, Verbose),
+        PathPrefix(std::string(PathPrefix)), BinHolder(VFS, Verbose),
         CurrentDebugMapObject(nullptr), SkipDebugMapObject(false) {}
 
   /// Parses and returns the DebugMaps of the input binary. The binary contains
@@ -50,7 +48,6 @@ private:
   std::string BinaryPath;
   SmallVector<StringRef, 1> Archs;
   std::string PathPrefix;
-  bool PaperTrailWarnings;
 
   /// Owns the MemoryBuffer for the main binary.
   BinaryHolder BinHolder;
@@ -137,13 +134,6 @@ private:
                          << MachOUtils::getArchName(
                                 Result->getTriple().getArchName())
                          << ") " << File << " " << Msg << "\n";
-
-    if (PaperTrailWarnings) {
-      if (!File.empty())
-        Result->addDebugMapObject(File, sys::TimePoint<std::chrono::seconds>());
-      if (Result->end() != Result->begin())
-        (*--Result->end())->addWarning(Msg.str());
-    }
   }
 };
 
@@ -704,13 +694,11 @@ namespace dsymutil {
 llvm::ErrorOr<std::vector<std::unique_ptr<DebugMap>>>
 parseDebugMap(llvm::IntrusiveRefCntPtr<llvm::vfs::FileSystem> VFS,
               StringRef InputFile, ArrayRef<std::string> Archs,
-              StringRef PrependPath, bool PaperTrailWarnings, bool Verbose,
-              bool InputIsYAML) {
+              StringRef PrependPath, bool Verbose, bool InputIsYAML) {
   if (InputIsYAML)
     return DebugMap::parseYAMLDebugMap(InputFile, PrependPath, Verbose);
 
-  MachODebugMapParser Parser(VFS, InputFile, Archs, PrependPath,
-                             PaperTrailWarnings, Verbose);
+  MachODebugMapParser Parser(VFS, InputFile, Archs, PrependPath, Verbose);
   return Parser.parse();
 }
 

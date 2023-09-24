@@ -408,7 +408,7 @@ void ModuleDepCollectorPP::handleImport(const Module *Imported) {
 void ModuleDepCollectorPP::EndOfMainFile() {
   FileID MainFileID = MDC.ScanInstance.getSourceManager().getMainFileID();
   MDC.MainFile = std::string(MDC.ScanInstance.getSourceManager()
-                                 .getFileEntryForID(MainFileID)
+                                 .getFileEntryRefForID(MainFileID)
                                  ->getName());
 
   auto &PP = MDC.ScanInstance.getPreprocessor();

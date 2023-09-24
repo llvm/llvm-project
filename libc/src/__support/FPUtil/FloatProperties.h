@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_LIBC_SRC_SUPPORT_FPUTIL_FLOAT_PROPERTIES_H
-#define LLVM_LIBC_SRC_SUPPORT_FPUTIL_FLOAT_PROPERTIES_H
+#ifndef LLVM_LIBC_SRC___SUPPORT_FPUTIL_FLOATPROPERTIES_H
+#define LLVM_LIBC_SRC___SUPPORT_FPUTIL_FLOATPROPERTIES_H
 
 #include "PlatformDefs.h"
 
@@ -196,4 +196,4 @@ using FloatTypeT = typename FloatType<BitsType>::Type;
 } // namespace fputil
 } // namespace __llvm_libc
 
-#endif // LLVM_LIBC_SRC_SUPPORT_FPUTIL_FLOAT_PROPERTIES_H
+#endif // LLVM_LIBC_SRC___SUPPORT_FPUTIL_FLOATPROPERTIES_H

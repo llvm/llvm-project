@@ -1,4 +1,4 @@
-! RUN: llvm-mc %s -arch=sparcv9 -show-encoding | FileCheck %s
+! RUN: llvm-mc %s -triple=sparcv9 -show-encoding | FileCheck %s
 
         ! CHECK: membar #LoadLoad | #StoreLoad | #LoadStore | #StoreStore  ! encoding: [0x81,0x43,0xe0,0x0f]
         membar 15

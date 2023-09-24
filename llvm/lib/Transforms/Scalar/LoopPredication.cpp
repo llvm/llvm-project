@@ -967,6 +967,9 @@ bool LoopPredication::isLoopProfitableToPredicate() {
           Numerator += Weight;
         Denominator += Weight;
       }
+      // If all weights are zero act as if there was no profile data
+      if (Denominator == 0)
+        return BranchProbability::getBranchProbability(1, NumSucc);
       return BranchProbability::getBranchProbability(Numerator, Denominator);
     } else {
       assert(LatchBlock != ExitingBlock &&

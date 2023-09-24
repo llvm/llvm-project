@@ -220,6 +220,10 @@ const Instruction* BasicBlock::getFirstNonPHI() const {
   return nullptr;
 }
 
+BasicBlock::const_iterator BasicBlock::getFirstNonPHIIt() const {
+  return getFirstNonPHI()->getIterator();
+}
+
 const Instruction *BasicBlock::getFirstNonPHIOrDbg(bool SkipPseudoOp) const {
   for (const Instruction &I : *this) {
     if (isa<PHINode>(I) || isa<DbgInfoIntrinsic>(I))

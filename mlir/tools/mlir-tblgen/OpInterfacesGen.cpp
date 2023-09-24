@@ -571,6 +571,7 @@ void InterfaceGenerator::emitInterfaceDecl(const Interface &interface) {
 
     // Allow implicit conversion to the base interface.
     os << "  operator " << baseQualName << " () const {\n"
+       << "    if (!*this) return nullptr;\n"
        << "    return " << baseQualName << "(*this, getImpl()->impl"
        << base.getName() << ");\n"
        << "  }\n\n";

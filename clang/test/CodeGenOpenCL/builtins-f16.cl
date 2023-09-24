@@ -24,6 +24,9 @@ void test_half_builtins(half h0, half h1, half h2, int i0) {
   // CHECK: call half @llvm.exp2.f16(half %h0)
   res = __builtin_exp2f16(h0);
 
+  // CHECK: call half @llvm.exp10.f16(half %h0)
+  res = __builtin_exp10f16(h0);
+
   // CHECK: call half @llvm.floor.f16(half %h0)
   res = __builtin_floorf16(h0);
 

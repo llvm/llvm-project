@@ -26,7 +26,7 @@ _start:
   .p2align 1
 // CHECK: <f>:
 // CHECK-NEXT: auipc a0, 0
-// CHECK-NEXT: addi a0, a0, 12
+// CHECK-NEXT: addi a0, a0, 64
 f:
   nop
 1:

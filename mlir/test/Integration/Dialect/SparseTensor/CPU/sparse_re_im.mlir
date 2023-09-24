@@ -30,7 +30,7 @@
 // Do the same run, but now with direct IR generation and VLA vectorization.
 // RUN: %if mlir_arm_sve_tests %{ %{compile_sve} | %{run_sve} | FileCheck %s %}
 
-#SparseVector = #sparse_tensor.encoding<{lvlTypes = ["compressed"]}>
+#SparseVector = #sparse_tensor.encoding<{map = (d0) -> (d0 : compressed)}>
 
 #trait_op = {
   indexing_maps = [
@@ -46,7 +46,7 @@ module {
                 -> tensor<?xf32, #SparseVector> {
     %c = arith.constant 0 : index
     %d = tensor.dim %arga, %c : tensor<?xcomplex<f32>, #SparseVector>
-    %xv = bufferization.alloc_tensor(%d) : tensor<?xf32, #SparseVector>
+    %xv = tensor.empty(%d) : tensor<?xf32, #SparseVector>
     %0 = linalg.generic #trait_op
        ins(%arga: tensor<?xcomplex<f32>, #SparseVector>)
         outs(%xv: tensor<?xf32, #SparseVector>) {
@@ -61,7 +61,7 @@ module {
                 -> tensor<?xf32, #SparseVector> {
     %c = arith.constant 0 : index
     %d = tensor.dim %arga, %c : tensor<?xcomplex<f32>, #SparseVector>
-    %xv = bufferization.alloc_tensor(%d) : tensor<?xf32, #SparseVector>
+    %xv = tensor.empty(%d) : tensor<?xf32, #SparseVector>
     %0 = linalg.generic #trait_op
        ins(%arga: tensor<?xcomplex<f32>, #SparseVector>)
         outs(%xv: tensor<?xf32, #SparseVector>) {

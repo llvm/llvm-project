@@ -4053,6 +4053,8 @@ def SPIRV_KHR_CMU_MatrixA   : I32EnumAttrCase<"MatrixA", 0>;
 def SPIRV_KHR_CMU_MatrixB   : I32EnumAttrCase<"MatrixB", 1>;
 def SPIRV_KHR_CMU_MatrixAcc : I32EnumAttrCase<"MatrixAcc", 2>;
 
+// NOTE: This is an attribute in the SPIR-V *dialect* but a constant (<id>) in
+// SPIR-V proper.
 def SPIRV_KHR_CooperativeMatrixUseAttr :
     SPIRV_I32EnumAttr<"CooperativeMatrixUseKHR",
                       "valid SPIR-V Cooperative Matrix Use (KHR)",
@@ -4064,6 +4066,8 @@ def SPIRV_KHR_CooperativeMatrixUseAttr :
 def SPIRV_KHR_CML_RowMajor    : I32EnumAttrCase<"RowMajor", 0>;
 def SPIRV_KHR_CML_ColumnMajor : I32EnumAttrCase<"ColumnMajor", 1>;
 
+// NOTE: This is an attribute in the SPIR-V *dialect* but a constant (<id>) in
+// SPIR-V proper.
 def SPIRV_KHR_CooperativeMatrixLayoutAttr :
     SPIRV_I32EnumAttr<"CooperativeMatrixLayoutKHR",
                       "valid SPIR-V Cooperative Matrix Layout (KHR)",
@@ -4073,11 +4077,11 @@ def SPIRV_KHR_CooperativeMatrixLayoutAttr :
 
 // Cooperative Matrix Operands for the SPV_KHR_cooperative_matrix extension.
 def SPIRV_KHR_CMO_None           : I32BitEnumAttrCaseNone<"None">;
-def SPIRV_KHR_CMO_MatrixA_Signed : I32BitEnumAttrCaseBit<"ASigned", 1>;
-def SPIRV_KHR_CMO_MatrixB_Signed : I32BitEnumAttrCaseBit<"BSigned", 2>;
-def SPIRV_KHR_CMO_MatrixC_Signed : I32BitEnumAttrCaseBit<"CSigned", 4>;
-def SPIRV_KHR_CMO_Result_Signed  : I32BitEnumAttrCaseBit<"ResultSigned", 8>;
-def SPIRV_KHR_CMO_AccSat         : I32BitEnumAttrCaseBit<"AccSat", 16>;
+def SPIRV_KHR_CMO_MatrixA_Signed : I32BitEnumAttrCaseBit<"ASigned", 0>;
+def SPIRV_KHR_CMO_MatrixB_Signed : I32BitEnumAttrCaseBit<"BSigned", 1>;
+def SPIRV_KHR_CMO_MatrixC_Signed : I32BitEnumAttrCaseBit<"CSigned", 2>;
+def SPIRV_KHR_CMO_Result_Signed  : I32BitEnumAttrCaseBit<"ResultSigned", 3>;
+def SPIRV_KHR_CMO_AccSat         : I32BitEnumAttrCaseBit<"AccSat", 4>;
 
 def SPIRV_KHR_CooperativeMatrixOperandsAttr :
     SPIRV_BitEnumAttr<"CooperativeMatrixOperandsKHR",

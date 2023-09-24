@@ -130,6 +130,7 @@ private:
   }
   bool IsResultOkToDiffer(const FunctionResult &);
   void CheckGlobalName(const Symbol &);
+  void CheckProcedureAssemblyName(const Symbol &symbol);
   void CheckExplicitSave(const Symbol &);
   void CheckBindC(const Symbol &);
   void CheckBindCFunctionResult(const Symbol &);
@@ -178,6 +179,9 @@ private:
   std::map<std::string, SymbolRef> globalNames_;
   // Collection of external procedures without global definitions
   std::map<std::string, SymbolRef> externalNames_;
+  // Collection of target dependent assembly names of external and BIND(C)
+  // procedures.
+  std::map<std::string, SymbolRef> procedureAssemblyNames_;
 };
 
 class DistinguishabilityHelper {
@@ -277,6 +281,7 @@ void CheckHelper::Check(const Symbol &symbol) {
     CheckContiguous(symbol);
   }
   CheckGlobalName(symbol);
+  CheckProcedureAssemblyName(symbol);
   if (symbol.attrs().test(Attr::ASYNCHRONOUS) &&
       !evaluate::IsVariable(symbol)) {
     messages_.Say(
@@ -419,11 +424,16 @@ void CheckHelper::Check(const Symbol &symbol) {
     }
     CheckBindCFunctionResult(symbol);
   }
-  if (symbol.owner().IsModule() && IsAutomatic(symbol)) {
-    messages_.Say(
-        "Automatic data object '%s' may not appear in the specification part"
-        " of a module"_err_en_US,
-        symbol.name());
+  if (IsAutomatic(symbol)) {
+    if (const Symbol * common{FindCommonBlockContaining(symbol)}) {
+      messages_.Say(
+          "Automatic data object '%s' may not appear in COMMON block /%s/"_err_en_US,
+          symbol.name(), common->name());
+    } else if (symbol.owner().IsModule()) {
+      messages_.Say(
+          "Automatic data object '%s' may not appear in a module"_err_en_US,
+          symbol.name());
+    }
   }
   if (IsProcedure(symbol) && !symbol.HasExplicitInterface()) {
     if (IsAllocatable(symbol)) {
@@ -1062,7 +1072,8 @@ void CheckHelper::CheckPointerInitialization(const Symbol &symbol) {
           SomeExpr lhs{evaluate::ProcedureDesignator{symbol}};
           SomeExpr rhs{evaluate::ProcedureDesignator{**proc->init()}};
           CheckPointerAssignment(context_, lhs, rhs,
-              GetProgramUnitOrBlockConstructContaining(symbol));
+              GetProgramUnitOrBlockConstructContaining(symbol),
+              /*isBoundsRemapping=*/false, /*isAssumedRank=*/false);
         }
       }
     }
@@ -2052,7 +2063,7 @@ bool CheckHelper::CheckConflicting(const Symbol &symbol, Attr a1, Attr a2) {
 
 void CheckHelper::WarnMissingFinal(const Symbol &symbol) {
   const auto *object{symbol.detailsIf<ObjectEntityDetails>()};
-  if (!object ||
+  if (!object || object->IsAssumedRank() ||
       (!IsAutomaticallyDestroyed(symbol) &&
           symbol.owner().kind() != Scope::Kind::DerivedType)) {
     return;
@@ -2613,6 +2624,43 @@ void CheckHelper::CheckGlobalName(const Symbol &symbol) {
         context_.SetError(symbol);
         context_.SetError(other);
       }
+    }
+  }
+}
+
+void CheckHelper::CheckProcedureAssemblyName(const Symbol &symbol) {
+  if (!IsProcedure(symbol) || symbol != symbol.GetUltimate())
+    return;
+  const std::string *bindName{symbol.GetBindName()};
+  const bool hasExplicitBindingLabel{
+      symbol.GetIsExplicitBindName() && bindName};
+  if (hasExplicitBindingLabel || IsExternal(symbol)) {
+    const std::string assemblyName{hasExplicitBindingLabel
+            ? *bindName
+            : common::GetExternalAssemblyName(
+                  symbol.name().ToString(), context_.underscoring())};
+    auto pair{procedureAssemblyNames_.emplace(std::move(assemblyName), symbol)};
+    if (!pair.second) {
+      const Symbol &other{*pair.first->second};
+      const bool otherHasExplicitBindingLabel{
+          other.GetIsExplicitBindName() && other.GetBindName()};
+      if (otherHasExplicitBindingLabel != hasExplicitBindingLabel) {
+        // The BIND(C,NAME="...") binding label is the same as the name that
+        // will be used in LLVM IR for an external procedure declared without
+        // BIND(C) in the same file. While this is not forbidden by the
+        // standard, this name collision would lead to a crash when producing
+        // the IR.
+        if (auto *msg{messages_.Say(symbol.name(),
+                "%s procedure assembly name conflicts with %s procedure assembly name"_err_en_US,
+                hasExplicitBindingLabel ? "BIND(C)" : "Non BIND(C)",
+                hasExplicitBindingLabel ? "non BIND(C)" : "BIND(C)")}) {
+          msg->Attach(other.name(), "Conflicting declaration"_en_US);
+        }
+        context_.SetError(symbol);
+        context_.SetError(other);
+      }
+      // Otherwise, the global names also match and the conflict is analyzed
+      // by CheckGlobalName.
     }
   }
 }

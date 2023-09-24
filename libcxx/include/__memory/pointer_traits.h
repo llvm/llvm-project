@@ -35,7 +35,7 @@ template <class _Tp>
 struct __has_element_type<_Tp, __void_t<typename _Tp::element_type> > : true_type {};
 
 template <class _Ptr, bool = __has_element_type<_Ptr>::value>
-struct __pointer_traits_element_type;
+struct __pointer_traits_element_type {};
 
 template <class _Ptr>
 struct __pointer_traits_element_type<_Ptr, true>
@@ -111,12 +111,14 @@ struct __pointer_traits_rebind<_Sp<_Tp, _Args...>, _Up, false>
     typedef _Sp<_Up, _Args...> type;
 };
 
+template <class _Ptr, class = void>
+struct __pointer_traits_impl {};
+
 template <class _Ptr>
-struct _LIBCPP_TEMPLATE_VIS pointer_traits
-{
-    typedef _Ptr                                                     pointer;
-    typedef typename __pointer_traits_element_type<pointer>::type    element_type;
-    typedef typename __pointer_traits_difference_type<pointer>::type difference_type;
+struct __pointer_traits_impl<_Ptr, __void_t<typename __pointer_traits_element_type<_Ptr>::type> > {
+  typedef _Ptr pointer;
+  typedef typename __pointer_traits_element_type<pointer>::type element_type;
+  typedef typename __pointer_traits_difference_type<pointer>::type difference_type;
 
 #ifndef _LIBCPP_CXX03_LANG
     template <class _Up> using rebind = typename __pointer_traits_rebind<pointer, _Up>::type;
@@ -132,6 +134,9 @@ public:
     static pointer pointer_to(__conditional_t<is_void<element_type>::value, __nat, element_type>& __r)
         {return pointer::pointer_to(__r);}
 };
+
+template <class _Ptr>
+struct _LIBCPP_TEMPLATE_VIS pointer_traits : __pointer_traits_impl<_Ptr> {};
 
 template <class _Tp>
 struct _LIBCPP_TEMPLATE_VIS pointer_traits<_Tp*>

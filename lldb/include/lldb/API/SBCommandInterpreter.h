@@ -30,6 +30,7 @@ public:
     eBroadcastBitAsynchronousErrorData = (1 << 4)
   };
 
+  SBCommandInterpreter();
   SBCommandInterpreter(const lldb::SBCommandInterpreter &rhs);
 
   ~SBCommandInterpreter();
@@ -317,9 +318,8 @@ public:
 protected:
   friend class lldb_private::CommandPluginInterfaceImplementation;
 
-  SBCommandInterpreter(
-      lldb_private::CommandInterpreter *interpreter_ptr =
-          nullptr); // Access using SBDebugger::GetCommandInterpreter();
+  /// Access using SBDebugger::GetCommandInterpreter();
+  SBCommandInterpreter(lldb_private::CommandInterpreter *interpreter_ptr);
   lldb_private::CommandInterpreter &ref();
 
   lldb_private::CommandInterpreter *get();

@@ -69,6 +69,9 @@ private:
   // recursing through their implicitly declared capabilities too.
   void pruneCapabilities(const CapabilityList &ToPrune);
 
+  void initAvailableCapabilitiesForOpenCL(const SPIRVSubtarget &ST);
+  void initAvailableCapabilitiesForVulkan(const SPIRVSubtarget &ST);
+
 public:
   RequirementHandler() : MinVersion(0), MaxVersion(0) {}
   void clear() {
@@ -110,6 +113,10 @@ public:
   bool isCapabilityAvailable(Capability::Capability Cap) const {
     return AvailableCaps.contains(Cap);
   }
+
+  // Remove capability ToRemove, but only if IfPresent is present.
+  void removeCapabilityIf(const Capability::Capability ToRemove,
+                          const Capability::Capability IfPresent);
 };
 
 using InstrList = SmallVector<MachineInstr *>;

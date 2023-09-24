@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "ByteCodeEmitter.h"
+#include "ByteCodeGenError.h"
 #include "Context.h"
 #include "Floating.h"
 #include "Opcode.h"
@@ -17,9 +18,6 @@
 
 using namespace clang;
 using namespace clang::interp;
-
-using APSInt = llvm::APSInt;
-using Error = llvm::Error;
 
 Expected<Function *>
 ByteCodeEmitter::compileFunc(const FunctionDecl *FuncDecl) {
@@ -109,23 +107,22 @@ ByteCodeEmitter::compileFunc(const FunctionDecl *FuncDecl) {
     // Return a dummy function if compilation failed.
     if (BailLocation)
       return llvm::make_error<ByteCodeGenError>(*BailLocation);
-    else {
-      Func->setIsFullyCompiled(true);
-      return Func;
-    }
-  } else {
-    // Create scopes from descriptors.
-    llvm::SmallVector<Scope, 2> Scopes;
-    for (auto &DS : Descriptors) {
-      Scopes.emplace_back(std::move(DS));
-    }
 
-    // Set the function's code.
-    Func->setCode(NextLocalOffset, std::move(Code), std::move(SrcMap),
-                  std::move(Scopes), FuncDecl->hasBody());
     Func->setIsFullyCompiled(true);
     return Func;
   }
+
+  // Create scopes from descriptors.
+  llvm::SmallVector<Scope, 2> Scopes;
+  for (auto &DS : Descriptors) {
+    Scopes.emplace_back(std::move(DS));
+  }
+
+  // Set the function's code.
+  Func->setCode(NextLocalOffset, std::move(Code), std::move(SrcMap),
+                std::move(Scopes), FuncDecl->hasBody());
+  Func->setIsFullyCompiled(true);
+  return Func;
 }
 
 Scope::Local ByteCodeEmitter::createLocal(Descriptor *D) {

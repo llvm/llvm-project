@@ -1,6 +1,6 @@
-# RUN: llvm-mc < %s -arch=mips -mcpu=mips32r2 -filetype=obj -o - | \
+# RUN: llvm-mc < %s -triple=mips -mcpu=mips32r2 -filetype=obj -o - | \
 # RUN:   llvm-readobj -A - | FileCheck %s --check-prefix=CHECK-OBJ
-# RUN: llvm-mc < %s -arch=mips -mcpu=mips32r2 -filetype=asm -o - | \
+# RUN: llvm-mc < %s -triple=mips -mcpu=mips32r2 -filetype=asm -o - | \
 # RUN:   FileCheck %s --check-prefix=CHECK-ASM
 
 # Test that the MT ASE flag in .MIPS.abiflags is _not_ set by .set.

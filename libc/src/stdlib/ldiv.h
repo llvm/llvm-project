@@ -6,10 +6,10 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include <stdlib.h>
-
 #ifndef LLVM_LIBC_SRC_STDLIB_LDIV_H
 #define LLVM_LIBC_SRC_STDLIB_LDIV_H
+
+#include <stdlib.h>
 
 namespace __llvm_libc {
 

@@ -1,8 +1,8 @@
-; RUN: llc -O0 -march=amdgcn -mtriple=amdgcn-unknown-amdhsa -mcpu=kaveri -mattr=+promote-alloca < %s | FileCheck -check-prefix=NOOPTS -check-prefix=ALL %s
-; RUN: llc -O1 -march=amdgcn -mtriple=amdgcn-unknown-amdhsa -mcpu=kaveri -mattr=+promote-alloca < %s | FileCheck -check-prefix=OPTS -check-prefix=ALL %s
+; RUN: llc -O0 -mtriple=amdgcn-unknown-amdhsa -mcpu=kaveri -mattr=+promote-alloca < %s | FileCheck -check-prefix=NOOPTS -check-prefix=ALL %s
+; RUN: llc -O1 -mtriple=amdgcn-unknown-amdhsa -mcpu=kaveri -mattr=+promote-alloca < %s | FileCheck -check-prefix=OPTS -check-prefix=ALL %s
 
 ; ALL-LABEL: {{^}}promote_alloca_i32_array_array:
-; NOOPTS: workgroup_group_segment_byte_size = 0{{$}}
+; NOOPTS: .amdhsa_group_segment_fixed_size 0
 ; NOOPTS-NOT: ds_write
 ; OPTS: ds_write
 define amdgpu_kernel void @promote_alloca_i32_array_array(ptr addrspace(1) %out, i32 %index) #0 {
@@ -18,7 +18,7 @@ entry:
 }
 
 ; ALL-LABEL: {{^}}optnone_promote_alloca_i32_array_array:
-; ALL: workgroup_group_segment_byte_size = 0{{$}}
+; ALL: .amdhsa_group_segment_fixed_size 0
 ; ALL-NOT: ds_write
 define amdgpu_kernel void @optnone_promote_alloca_i32_array_array(ptr addrspace(1) %out, i32 %index) #1 {
 entry:
@@ -36,4 +36,4 @@ attributes #0 = { nounwind "amdgpu-flat-work-group-size"="64,64" }
 attributes #1 = { nounwind optnone noinline "amdgpu-flat-work-group-size"="64,64" }
 
 !llvm.module.flags = !{!0}
-!0 = !{i32 1, !"amdgpu_code_object_version", i32 200}
+!0 = !{i32 1, !"amdgpu_code_object_version", i32 400}

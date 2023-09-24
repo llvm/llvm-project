@@ -57,7 +57,7 @@ void lld::unlinkAsync(StringRef path) {
   //
   // The code here allows LLD to work on all versions of Windows.
   // However, at Windows 10 1903 it seems that the behavior of
-  // Windows has changed, so that we could simply delete the output 
+  // Windows has changed, so that we could simply delete the output
   // file. This code should be simplified once support for older
   // versions of Windows is dropped.
   //
