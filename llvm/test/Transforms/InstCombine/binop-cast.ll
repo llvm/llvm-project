@@ -261,9 +261,8 @@ define i32 @xor_sext_to_sel_multi_use_constant_mask(i1 %y) {
 define i64 @PR63321(ptr %ptr, i64 %c) {
 ; CHECK-LABEL: @PR63321(
 ; CHECK-NEXT:    [[VAL:%.*]] = load i8, ptr [[PTR:%.*]], align 1, !range [[RNG0:![0-9]+]]
-; CHECK-NEXT:    [[RHS:%.*]] = zext i8 [[VAL]] to i64
-; CHECK-NEXT:    [[MASK:%.*]] = add nsw i64 [[RHS]], -1
-; CHECK-NEXT:    [[RES:%.*]] = and i64 [[MASK]], [[C:%.*]]
+; CHECK-NEXT:    [[TMP1:%.*]] = icmp eq i8 [[VAL]], 0
+; CHECK-NEXT:    [[RES:%.*]] = select i1 [[TMP1]], i64 [[C:%.*]], i64 0
 ; CHECK-NEXT:    ret i64 [[RES]]
 ;
   %val = load i8, ptr %ptr, align 1, !range !{i8 0, i8 2}
@@ -300,12 +299,11 @@ define i32 @and_add_bool_to_select(i1 %x, i32 %y) {
   ret i32 %res
 }
 
-; Negative test of and_add_bool_to_select
 define i32 @and_add_bool_no_fold(i32 %y) {
 ; CHECK-LABEL: @and_add_bool_no_fold(
 ; CHECK-NEXT:    [[X:%.*]] = and i32 [[Y:%.*]], 1
-; CHECK-NEXT:    [[MASK:%.*]] = add nsw i32 [[X]], -1
-; CHECK-NEXT:    [[RES:%.*]] = and i32 [[MASK]], [[Y]]
+; CHECK-NEXT:    [[TMP1:%.*]] = icmp eq i32 [[X]], 0
+; CHECK-NEXT:    [[RES:%.*]] = select i1 [[TMP1]], i32 [[Y]], i32 0
 ; CHECK-NEXT:    ret i32 [[RES]]
 ;
   %x = and i32 %y, 1
