@@ -45,14 +45,12 @@ llvm_config.with_system_environment(["HOME", "INCLUDE", "LIB", "TMP", "TEMP"])
 # Set up OCAMLPATH to include newly built OCaml libraries.
 top_ocaml_lib = os.path.join(config.llvm_lib_dir, "ocaml")
 llvm_ocaml_lib = os.path.join(top_ocaml_lib, "llvm")
-stublibs_ocaml_lib = os.path.join(top_ocaml_lib, "stublibs")
 
 llvm_config.with_system_environment("OCAMLPATH")
 llvm_config.with_environment("OCAMLPATH", top_ocaml_lib, append_path=True)
 llvm_config.with_environment("OCAMLPATH", llvm_ocaml_lib, append_path=True)
 
 llvm_config.with_system_environment("CAML_LD_LIBRARY_PATH")
-llvm_config.with_environment("CAML_LD_LIBRARY_PATH", stublibs_ocaml_lib, append_path=True)
 
 # Set up OCAMLRUNPARAM to enable backtraces in OCaml tests.
 llvm_config.with_environment("OCAMLRUNPARAM", "b")

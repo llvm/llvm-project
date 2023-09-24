@@ -17,7 +17,6 @@ llvm_config=$1
 mode=$2
 
 base_cflags=$($llvm_config --cflags)
-ldflags="$($llvm_config --ldflags) -lstdc++ -fPIC"
 llvm_targets=$($llvm_config --targets-built)
 
 for target in $llvm_targets; do
