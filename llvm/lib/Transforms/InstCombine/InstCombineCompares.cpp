@@ -6390,6 +6390,13 @@ Instruction *InstCombinerImpl::foldICmpUsingBoolRange(ICmpInst &I) {
                                                           m_APInt(C))))))) {
     bool IsSExt = ExtI->getOpcode() == Instruction::SExt;
     bool HasOneUse = ExtI->hasOneUse() && ExtI->getOperand(0)->hasOneUse();
+    auto CreateRangeCheck = [&] {
+      Value *V1 = Constant::getNullValue(X->getType());
+      Value *V2 = ConstantInt::get(X->getType(), IsSExt ? -1 : 1);
+      return BinaryOperator::Create(
+          Pred1 == ICmpInst::ICMP_EQ ? Instruction::Or : Instruction::And,
+          Builder.CreateICmp(Pred1, X, V1), Builder.CreateICmp(Pred1, X, V2));
+    };
     if (C->isZero()) {
       if (Pred2 == ICmpInst::ICMP_EQ) {
         // icmp eq X, (zext/sext (icmp eq X, 0)) --> false
@@ -6397,17 +6404,11 @@ Instruction *InstCombinerImpl::foldICmpUsingBoolRange(ICmpInst &I) {
         return replaceInstUsesWith(
             I, ConstantInt::getBool(I.getType(), Pred1 == ICmpInst::ICMP_NE));
       } else if (!IsSExt || HasOneUse) {
-        // icmp eq X, (zext (icmp ne X, 0)) --> icmp ult X, 2
-        // icmp ne X, (zext (icmp ne X, 0)) --> icmp ugt X, 1
-        // icmp eq X, (sext (icmp ne X, 0)) --> icmp ult (X + 1), 2
-        // icmp ne X, (sext (icmp ne X, 0)) --> icmp ugt (X + 1), 1
-        return ICmpInst::Create(
-            Instruction::ICmp,
-            Pred1 == ICmpInst::ICMP_NE ? ICmpInst::ICMP_UGT
-                                       : ICmpInst::ICMP_ULT,
-            IsSExt ? Builder.CreateAdd(X, ConstantInt::get(X->getType(), 1))
-                   : X,
-            ConstantInt::get(X->getType(), Pred1 == ICmpInst::ICMP_NE ? 1 : 2));
+        // icmp eq X, (zext (icmp ne X, 0)) --> X == 0 || X == 1
+        // icmp ne X, (zext (icmp ne X, 0)) --> X != 0 && X != 1
+        // icmp eq X, (sext (icmp ne X, 0)) --> X == 0 || X == -1
+        // icmp ne X, (sext (icmp ne X, 0)) --> X != 0 && X == -1
+        return CreateRangeCheck();
       }
     } else if (IsSExt ? C->isAllOnes() : C->isOne()) {
       if (Pred2 == ICmpInst::ICMP_NE) {
@@ -6418,17 +6419,11 @@ Instruction *InstCombinerImpl::foldICmpUsingBoolRange(ICmpInst &I) {
         return replaceInstUsesWith(
             I, ConstantInt::getBool(I.getType(), Pred1 == ICmpInst::ICMP_NE));
       } else if (!IsSExt || HasOneUse) {
-        // icmp eq X, (zext (icmp eq X, 1)) --> icmp ult X, 2
-        // icmp ne X, (zext (icmp eq X, 1)) --> icmp ugt X, 1
-        // icmp eq X, (sext (icmp eq X, -1)) --> icmp ult (X + 1), 2
-        // icmp ne X, (sext (icmp eq X, -1)) --> icmp ugt (X + 1), 1
-        return ICmpInst::Create(
-            Instruction::ICmp,
-            Pred1 == ICmpInst::ICMP_NE ? ICmpInst::ICMP_UGT
-                                       : ICmpInst::ICMP_ULT,
-            IsSExt ? Builder.CreateAdd(X, ConstantInt::get(X->getType(), 1))
-                   : X,
-            ConstantInt::get(X->getType(), Pred1 == ICmpInst::ICMP_NE ? 1 : 2));
+        // icmp eq X, (zext (icmp eq X, 1)) --> X == 0 || X == 1
+        // icmp ne X, (zext (icmp eq X, 1)) --> X != 0 && X != 1
+        // icmp eq X, (sext (icmp eq X, -1)) --> X == 0 || X == -1
+        // icmp ne X, (sext (icmp eq X, -1)) --> X != 0 && X == -1
+        return CreateRangeCheck();
       }
     } else {
       // when C != 0 && C != 1:
