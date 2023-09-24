@@ -1042,68 +1042,67 @@ void WhitespaceManager::alignChainedConditionals() {
 }
 
 void WhitespaceManager::alignTrailingComments() {
-  unsigned MinColumn = 0;
-  unsigned MaxColumn = UINT_MAX;
-  unsigned StartOfSequence = 0;
+  const int Size = Changes.size();
+  int MinColumn = 0;
+  int StartOfSequence = 0;
   bool BreakBeforeNext = false;
-  unsigned Newlines = 0;
-  unsigned int NewLineThreshold = 1;
+  int NewLineThreshold = 1;
   if (Style.AlignTrailingComments.Kind == FormatStyle::TCAS_Always)
     NewLineThreshold = Style.AlignTrailingComments.OverEmptyLines + 1;
 
-  for (unsigned i = 0, e = Changes.size(); i != e; ++i) {
-    if (Changes[i].StartOfBlockComment)
+  for (int I = 0, MaxColumn = INT_MAX, Newlines = 0; I < Size; ++I) {
+    auto &C = Changes[I];
+    if (C.StartOfBlockComment)
       continue;
-    Newlines += Changes[i].NewlinesBefore;
-    if (!Changes[i].IsTrailingComment)
+    Newlines += C.NewlinesBefore;
+    if (!C.IsTrailingComment)
       continue;
 
     if (Style.AlignTrailingComments.Kind == FormatStyle::TCAS_Leave) {
-      auto OriginalSpaces =
-          Changes[i].OriginalWhitespaceRange.getEnd().getRawEncoding() -
-          Changes[i].OriginalWhitespaceRange.getBegin().getRawEncoding() -
-          Changes[i].Tok->NewlinesBefore;
-      unsigned RestoredLineLength = Changes[i].StartOfTokenColumn +
-                                    Changes[i].TokenLength + OriginalSpaces;
+      const int OriginalSpaces =
+          C.OriginalWhitespaceRange.getEnd().getRawEncoding() -
+          C.OriginalWhitespaceRange.getBegin().getRawEncoding() -
+          C.Tok->NewlinesBefore;
+      assert(OriginalSpaces >= 0);
+      const auto RestoredLineLength =
+          C.StartOfTokenColumn + C.TokenLength + OriginalSpaces;
       // If leaving comments makes the line exceed the column limit, give up to
       // leave the comments.
-      if (RestoredLineLength >= Style.ColumnLimit && Style.ColumnLimit != 0)
+      if (RestoredLineLength >= Style.ColumnLimit && Style.ColumnLimit > 0)
         break;
-      Changes[i].Spaces = OriginalSpaces;
+      C.Spaces = OriginalSpaces;
       continue;
     }
 
-    unsigned ChangeMinColumn = Changes[i].StartOfTokenColumn;
-    unsigned ChangeMaxColumn;
-
-    if (Style.ColumnLimit == 0)
-      ChangeMaxColumn = UINT_MAX;
-    else if (Style.ColumnLimit >= Changes[i].TokenLength)
-      ChangeMaxColumn = Style.ColumnLimit - Changes[i].TokenLength;
-    else
-      ChangeMaxColumn = ChangeMinColumn;
+    const int ChangeMinColumn = C.StartOfTokenColumn;
+    int ChangeMaxColumn;
 
     // If we don't create a replacement for this change, we have to consider
     // it to be immovable.
-    if (!Changes[i].CreateReplacement)
+    if (!C.CreateReplacement)
+      ChangeMaxColumn = ChangeMinColumn;
+    else if (Style.ColumnLimit == 0)
+      ChangeMaxColumn = INT_MAX;
+    else if (Style.ColumnLimit >= C.TokenLength)
+      ChangeMaxColumn = Style.ColumnLimit - C.TokenLength;
+    else
       ChangeMaxColumn = ChangeMinColumn;
 
-    if (i + 1 != e && Changes[i + 1].ContinuesPPDirective)
+    if (I + 1 < Size && Changes[I + 1].ContinuesPPDirective) {
       ChangeMaxColumn -= 2;
+      assert(ChangeMaxColumn >= 0);
+    }
 
-    // We don't want to align namespace end comments.
-    bool DontAlignThisComment = i > 0 && Changes[i].NewlinesBefore == 0 &&
-                                Changes[i - 1].Tok->is(TT_NamespaceRBrace);
     bool WasAlignedWithStartOfNextLine = false;
-    if (Changes[i].NewlinesBefore >= 1) { // A comment on its own line.
-      unsigned CommentColumn = SourceMgr.getSpellingColumnNumber(
-          Changes[i].OriginalWhitespaceRange.getEnd());
-      for (unsigned j = i + 1; j != e; ++j) {
-        if (Changes[j].Tok->is(tok::comment))
+    if (C.NewlinesBefore >= 1) { // A comment on its own line.
+      const auto CommentColumn =
+          SourceMgr.getSpellingColumnNumber(C.OriginalWhitespaceRange.getEnd());
+      for (int J = I + 1; J < Size; ++J) {
+        if (Changes[J].Tok->is(tok::comment))
           continue;
 
-        unsigned NextColumn = SourceMgr.getSpellingColumnNumber(
-            Changes[j].OriginalWhitespaceRange.getEnd());
+        const auto NextColumn = SourceMgr.getSpellingColumnNumber(
+            Changes[J].OriginalWhitespaceRange.getEnd());
         // The start of the next token was previously aligned with the
         // start of this comment.
         WasAlignedWithStartOfNextLine =
@@ -1112,34 +1111,39 @@ void WhitespaceManager::alignTrailingComments() {
         break;
       }
     }
+
+    // We don't want to align namespace end comments.
+    const bool DontAlignThisComment =
+        I > 0 && C.NewlinesBefore == 0 &&
+        Changes[I - 1].Tok->is(TT_NamespaceRBrace);
     if (Style.AlignTrailingComments.Kind == FormatStyle::TCAS_Never ||
         DontAlignThisComment) {
-      alignTrailingComments(StartOfSequence, i, MinColumn);
+      alignTrailingComments(StartOfSequence, I, MinColumn);
       MinColumn = ChangeMinColumn;
       MaxColumn = ChangeMinColumn;
-      StartOfSequence = i;
+      StartOfSequence = I;
     } else if (BreakBeforeNext || Newlines > NewLineThreshold ||
                (ChangeMinColumn > MaxColumn || ChangeMaxColumn < MinColumn) ||
                // Break the comment sequence if the previous line did not end
                // in a trailing comment.
-               (Changes[i].NewlinesBefore == 1 && i > 0 &&
-                !Changes[i - 1].IsTrailingComment) ||
+               (C.NewlinesBefore == 1 && I > 0 &&
+                !Changes[I - 1].IsTrailingComment) ||
                WasAlignedWithStartOfNextLine) {
-      alignTrailingComments(StartOfSequence, i, MinColumn);
+      alignTrailingComments(StartOfSequence, I, MinColumn);
       MinColumn = ChangeMinColumn;
       MaxColumn = ChangeMaxColumn;
-      StartOfSequence = i;
+      StartOfSequence = I;
     } else {
       MinColumn = std::max(MinColumn, ChangeMinColumn);
       MaxColumn = std::min(MaxColumn, ChangeMaxColumn);
     }
-    BreakBeforeNext = (i == 0) || (Changes[i].NewlinesBefore > 1) ||
+    BreakBeforeNext = (I == 0) || (C.NewlinesBefore > 1) ||
                       // Never start a sequence with a comment at the beginning
                       // of the line.
-                      (Changes[i].NewlinesBefore == 1 && StartOfSequence == i);
+                      (C.NewlinesBefore == 1 && StartOfSequence == I);
     Newlines = 0;
   }
-  alignTrailingComments(StartOfSequence, Changes.size(), MinColumn);
+  alignTrailingComments(StartOfSequence, Size, MinColumn);
 }
 
 void WhitespaceManager::alignTrailingComments(unsigned Start, unsigned End,
