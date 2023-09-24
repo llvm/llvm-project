@@ -1563,7 +1563,7 @@ def GETtlsADDR64AIX :
                     "GETtlsADDR64AIX",
                     [(set i64:$rD,
                       (PPCgetTlsAddr i64:$offset, i64:$handle))]>, isPPC64;
-// On AIX, the call to .__tls_get_mod need one input in X3 for the module handle.
+// On AIX, the call to .__tls_get_mod needs one input in X3 for the module handle.
 def GETtlsMOD64AIX :
   PPCEmitTimePseudo<(outs g8rc:$rD),(ins g8rc:$handle),
                     "GETtlsMOD64AIX",
@@ -1602,10 +1602,10 @@ def TLSGDAIX8 :
                      "#TLSGDAIX8",
                      [(set i64:$rD,
                        (PPCTlsgdAIX i64:$offset, i64:$handle))]>;
-// This pseudo is expanded to one copy to put the module handle in R3, then call
-// GETtlsMOD64AIX, and then add variable offset to the output from the call.
-def TLSLDAIX8 : PPCEmitTimePseudo<(outs g8rc:$rD), (ins g8rc:$handle),
-                     "#TLSLDAIX8", [(set i64:$rD, (PPCTlsldAIX i64:$handle))]>;
+// This pseudo is expanded to one copy to put the module handle in R3, the call
+// to GETtlsMOD64AIX, and then adds the variable offset to the output from the call.
+def TLSLDAIX8 : PPCEmitTimePseudo<(outs g8rc:$rD), (ins),
+                     "#TLSLDAIX8", [(set i64:$rD, (PPCTlsldAIX))]>;
 // Combined op for ADDItlsldL and GETtlsADDR, late expanded.  X3 and LR8
 // are true defines, while the rest of the Defs are clobbers.
 let hasExtraSrcRegAllocReq = 1, hasExtraDefRegAllocReq = 1,

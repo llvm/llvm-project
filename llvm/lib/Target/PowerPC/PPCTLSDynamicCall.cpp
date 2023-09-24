@@ -92,7 +92,9 @@ protected:
         Register InReg = PPC::NoRegister;
         Register GPR3 = Is64Bit ? PPC::X3 : PPC::R3;
         Register GPR4 = Is64Bit ? PPC::X4 : PPC::R4;
-        if (!IsPCREL && !IsTLSTPRelMI)
+        if (!IsPCREL && !IsTLSTPRelMI &&
+            !(MI.getOpcode() == PPC::TLSLDAIX8 ||
+              MI.getOpcode() == PPC::TLSLDAIX))
           InReg = MI.getOperand(1).getReg();
         DebugLoc DL = MI.getDebugLoc();
 
@@ -160,9 +162,9 @@ protected:
         if (IsAIX) {
           if (MI.getOpcode() == PPC::TLSLDAIX8 ||
               MI.getOpcode() == PPC::TLSLDAIX) {
-            // For Local-Dynamic, need to swap the position of VarOffsetInst and
-            // MI, so that VarOffsetInst can use R/X4 to reduce register
-            // pressure.
+            // It is better to put TLSLDAIX node before LoadOffsetToc node,
+            // because LoadOffsetToc node can use clobbers r4/r5. Search for the
+            // first paired LoadOffsetToc node within the same BB.
             const PPCSubtarget &Subtarget =
                 MBB.getParent()->getSubtarget<PPCSubtarget>();
             bool IsLargeModel =
@@ -170,69 +172,94 @@ protected:
             unsigned LDTocOp =
                 Is64Bit ? (IsLargeModel ? PPC::LDtocL : PPC::LDtoc)
                         : (IsLargeModel ? PPC::LWZtocL : PPC::LWZtoc);
-            assert(RegInfo.hasOneDef(MI.getOperand(1).getReg()) &&
-                   "TLSLDAIX expects single def of its operand.");
-            MachineInstr *VarOffsetInst =
-                RegInfo.getOneDef(MI.getOperand(1).getReg())->getParent();
-            assert(VarOffsetInst->getOpcode() == LDTocOp &&
-                   "Unexpected LDTocOp.");
-            if (IsLargeModel) {
-              // Get the ADDIS instruction when using large model.
-              assert(RegInfo.hasOneDef(VarOffsetInst->getOperand(2).getReg()) &&
-                     "LDTocOp expects single def of its operand.");
-              VarOffsetInst =
-                  RegInfo.getOneDef(VarOffsetInst->getOperand(2).getReg())
-                      ->getParent();
-              assert(VarOffsetInst->getOpcode() ==
-                         (Is64Bit ? PPC::ADDIStocHA8 : PPC::ADDIStocHA) &&
-                     "Unexpected ADDIStocHA.");
-              // FIXME: machine-scheduler could schedule ADDIStocHA ahead of
-              // GETtlsMODAIX, and still has to use extra register.
+            MachineBasicBlock::iterator Anchor = I;
+            if (!RegInfo.use_empty(OutReg)) {
+              std::set<MachineInstr *> Uses;
+              // Collect all instructions that use OutReg
+              for (MachineOperand &MO : RegInfo.use_operands(OutReg)) {
+                if (Uses.count(MO.getParent()))
+                  continue;
+                Uses.insert(MO.getParent());
+              }
+              // Find the first Add within current BB.
+              MachineBasicBlock::iterator UseIter = MBB.begin();
+              for (MachineBasicBlock::iterator AE = MBB.end(); UseIter != AE;
+                   ++UseIter)
+                if (Uses.count(&*UseIter))
+                  break;
+
+              if (UseIter != MBB.end()) {
+                // Get the instruction that defines the other used register
+                // operand of UseIter. The match pattern is that: UseIter has
+                // exactly one used-operand defined by LDTocOp
+                // (LDtocL/LDtoc/LWZtocL/LWZtoc).
+                MachineInstr *LoadOffsetToc = nullptr;
+                int MatchCount = 0;
+                for (MachineOperand &MO : UseIter->operands()) {
+                  if (MO.isReg() && MO.isUse()) {
+                    if (RegInfo.hasOneDef(MO.getReg())) {
+                      if (RegInfo.getOneDef(MO.getReg())
+                              ->getParent()
+                              ->getOpcode() == LDTocOp) {
+                        LoadOffsetToc =
+                            RegInfo.getOneDef(MO.getReg())->getParent();
+                        ++MatchCount;
+                      }
+                    } else {
+                      // FIXME: analyze this scenario if there is one.
+                      MatchCount = 0;
+                      break;
+                    }
+                  }
+                }
+                // Get the iterator.
+                if (MatchCount == 1 && LoadOffsetToc) {
+                  Anchor = MBB.begin();
+                  for (MachineBasicBlock::iterator AE = MBB.end(); Anchor != AE;
+                       ++Anchor)
+                    if (&*Anchor == LoadOffsetToc)
+                      break;
+
+                  if (Anchor == MBB.end())
+                    Anchor = I;
+                }
+              }
             }
+
+            // Generate instructions refer to the "_$TLSML" symbol
             Register ModuleHandleHReg;
             if (IsLargeModel) {
               ModuleHandleHReg = RegInfo.createVirtualRegister(GPRNoZero);
-              BuildMI(MBB, *VarOffsetInst, DL,
+              BuildMI(MBB, Anchor, DL,
                       TII->get(Is64Bit ? PPC::ADDIStocHA8 : PPC::ADDIStocHA),
                       ModuleHandleHReg)
                   .addReg(Subtarget.getTOCPointerRegister())
                   .addExternalSymbol("_$TLSML[TC]", PPCII::MO_TLSLD_FLAG);
             }
             Register MHReg = RegInfo.createVirtualRegister(GPRNoZero);
-            BuildMI(MBB, *VarOffsetInst, DL, TII->get(LDTocOp), MHReg)
+            BuildMI(MBB, Anchor, DL, TII->get(LDTocOp), MHReg)
                 .addExternalSymbol("_$TLSML[TC]", PPCII::MO_TLSLD_FLAG)
                 .addReg(IsLargeModel
                             ? ModuleHandleHReg
                             : Register(Subtarget.getTOCPointerRegister()));
             // The module handle is copied in r3.
-            BuildMI(MBB, *VarOffsetInst, DL, TII->get(TargetOpcode::COPY), GPR3)
+            BuildMI(MBB, Anchor, DL, TII->get(TargetOpcode::COPY), GPR3)
                 .addReg(MHReg);
             // The call to .__tls_get_mod.
-            BuildMI(MBB, *VarOffsetInst, DL, TII->get(Opc2), GPR3).addReg(GPR3);
-            // Copy VarOffset to R/X4
+            BuildMI(MBB, Anchor, DL, TII->get(Opc2), GPR3).addReg(GPR3);
+          } else if (!IsTLSTPRelMI) {
+            // The variable offset and region handle are copied in r4 and r3.
+            // The copies are followed by GETtlsADDR32AIX/GETtlsADDR64AIX.
             BuildMI(MBB, I, DL, TII->get(TargetOpcode::COPY), GPR4)
                 .addReg(MI.getOperand(1).getReg());
-            BuildMI(MBB, I, DL, TII->get(Is64Bit ? PPC::ADD8 : PPC::ADD4), GPR3)
-                .addReg(GPR3)
-                .addReg(GPR4);
-          } else {
-            // For Global-Dynamic, the variable offset and region handle are
-            // copied in r4 and r3. The copies are followed by
-            // GETtlsADDR32AIX/GETtlsADDR64AIX.
-            if (!IsTLSTPRelMI) {
-              BuildMI(MBB, I, DL, TII->get(TargetOpcode::COPY), GPR4)
-                  .addReg(MI.getOperand(1).getReg());
-              BuildMI(MBB, I, DL, TII->get(TargetOpcode::COPY), GPR3)
-                  .addReg(MI.getOperand(2).getReg());
-              BuildMI(MBB, I, DL, TII->get(Opc2), GPR3)
-                  .addReg(GPR3)
-                  .addReg(GPR4);
-            } else
-              // The opcode of GETtlsTpointer32AIX does not change, because
-              // later this instruction will be expanded into a call to
-              // .__get_tpointer, which will return the thread pointer into r3.
-              BuildMI(MBB, I, DL, TII->get(Opc2), GPR3);
-          }
+            BuildMI(MBB, I, DL, TII->get(TargetOpcode::COPY), GPR3)
+                .addReg(MI.getOperand(2).getReg());
+            BuildMI(MBB, I, DL, TII->get(Opc2), GPR3).addReg(GPR3).addReg(GPR4);
+          } else
+            // The opcode of GETtlsTpointer32AIX does not change, because later
+            // this instruction will be expanded into a call to .__get_tpointer,
+            // which will return the thread pointer into r3.
+            BuildMI(MBB, I, DL, TII->get(Opc2), GPR3);
         } else {
           MachineInstr *Addi;
           if (IsPCREL) {
