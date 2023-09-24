@@ -73,23 +73,11 @@ inline unsigned long long getSwappedBytes(unsigned long long C) { return llvm::b
 inline   signed long long getSwappedBytes(  signed long long C) { return llvm::byteswap(C); }
 
 inline float getSwappedBytes(float C) {
-  union {
-    uint32_t i;
-    float f;
-  } in, out;
-  in.f = C;
-  out.i = llvm::byteswap(in.i);
-  return out.f;
+  return llvm::bit_cast<float>(llvm::byteswap(llvm::bit_cast<uint32_t>(C)));
 }
 
 inline double getSwappedBytes(double C) {
-  union {
-    uint64_t i;
-    double d;
-  } in, out;
-  in.d = C;
-  out.i = llvm::byteswap(in.i);
-  return out.d;
+  return llvm::bit_cast<double>(llvm::byteswap(llvm::bit_cast<uint64_t>(C)));
 }
 
 template <typename T>
