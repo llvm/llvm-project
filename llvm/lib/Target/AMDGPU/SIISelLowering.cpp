@@ -789,6 +789,7 @@ SITargetLowering::SITargetLowering(const TargetMachine &TM,
                        ISD::AND,
                        ISD::OR,
                        ISD::XOR,
+                       ISD::FSHR,
                        ISD::SINT_TO_FP,
                        ISD::UINT_TO_FP,
                        ISD::FCANONICALIZE,
@@ -10773,6 +10774,30 @@ calculateByteProvider(const SDValue &Op, unsigned Index, unsigned Depth,
     return calculateSrcByte(Op->getOperand(0), StartingIndex, Index);
   }
 
+  case ISD::FSHR: {
+    // fshr(X,Y,Z): (X << (BW - (Z % BW))) | (Y >> (Z % BW))
+    auto ShiftOp = dyn_cast<ConstantSDNode>(Op->getOperand(2));
+    if (!ShiftOp || Op.getValueType().isVector())
+      return std::nullopt;
+
+    uint64_t BitsProvided = Op.getValueSizeInBits();
+    if (BitsProvided % 8 != 0)
+      return std::nullopt;
+
+    uint64_t BitShift = ShiftOp->getAPIntValue().urem(BitsProvided);
+    if (BitShift % 8)
+      return std::nullopt;
+
+    uint64_t ConcatSizeInBytes = BitsProvided / 4;
+    uint64_t ByteShift = BitShift / 8;
+
+    uint64_t NewIndex = (Index + ByteShift) % ConcatSizeInBytes;
+    uint64_t BytesProvided = BitsProvided / 8;
+    SDValue NextOp = Op.getOperand(NewIndex >= BytesProvided ? 0 : 1);
+    NewIndex %= BytesProvided;
+    return calculateByteProvider(NextOp, NewIndex, Depth + 1, StartingIndex);
+  }
+
   case ISD::SRA:
   case ISD::SRL: {
     auto ShiftOp = dyn_cast<ConstantSDNode>(Op->getOperand(1));
@@ -11052,6 +11077,12 @@ static SDValue matchPERM(SDNode *N, TargetLowering::DAGCombinerInfo &DCI) {
   SDValue Op = *PermNodes[FirstSrc].Src;
   SDValue OtherOp = SecondSrc.has_value() ? *PermNodes[*SecondSrc].Src
                                           : *PermNodes[FirstSrc].Src;
+
+  // Check that we haven't just recreated the same FSHR node.
+  if (N->getOpcode() == ISD::FSHR &&
+      (N->getOperand(0) == Op || N->getOperand(0) == OtherOp) &&
+      (N->getOperand(1) == Op || N->getOperand(1) == OtherOp))
+    return SDValue();
 
   // Check that we are not just extracting the bytes in order from an op
   if (Op == OtherOp && Op.getValueSizeInBits() == 32) {
@@ -13061,6 +13092,14 @@ SDValue SITargetLowering::PerformDAGCombine(SDNode *N,
     return performAndCombine(N, DCI);
   case ISD::OR:
     return performOrCombine(N, DCI);
+  case ISD::FSHR: {
+    const SIInstrInfo *TII = getSubtarget()->getInstrInfo();
+    if (N->getValueType(0) == MVT::i32 && N->isDivergent() &&
+        TII->pseudoToMCOpcode(AMDGPU::V_PERM_B32_e64) != -1) {
+      return matchPERM(N, DCI);
+    }
+    break;
+  }
   case ISD::XOR:
     return performXorCombine(N, DCI);
   case ISD::ZERO_EXTEND:

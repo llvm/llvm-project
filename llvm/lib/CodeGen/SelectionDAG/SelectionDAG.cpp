@@ -5695,12 +5695,13 @@ SDValue SelectionDAG::getNode(unsigned Opcode, const SDLoc &DL, EVT VT,
       return getConstant(0, DL, VT);
 
     // Skip unnecessary zext_inreg pattern:
-    // (zext (trunc (assertzext x))) -> (assertzext x)
-    // TODO: Generalize to MaskedValueIsZero check?
+    // (zext (trunc x)) -> x iff the upper bits are known zero.
+    // TODO: Generalize to just the MaskedValueIsZero check?
     if (OpOpcode == ISD::TRUNCATE) {
       SDValue OpOp = N1.getOperand(0);
       if (OpOp.getValueType() == VT) {
-        if (OpOp.getOpcode() == ISD::AssertZext) {
+        if (OpOp.getOpcode() == ISD::AssertZext ||
+            OpOp.getOpcode() == ISD::SRL) {
           APInt HiBits = APInt::getBitsSetFrom(VT.getScalarSizeInBits(),
                                                N1.getScalarValueSizeInBits());
           if (MaskedValueIsZero(OpOp, HiBits)) {
