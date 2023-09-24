@@ -115,7 +115,7 @@ class MacroInfo {
   /// Whether this macro was used as header guard.
   bool UsedForHeaderGuard : 1;
 
-  enum : uint16_t { recursion_depth_limit = 16'000 };
+  enum : uint16_t { macro_recursion_depth_limit = 16'000 };
   /// recursion depth,
   /// > 0 if we have started an expansion of this macro already.
   /// if !AllowRecurse max is 1, else max is recursion depth limit
@@ -290,7 +290,7 @@ public:
   /// In other words, that we are not currently in an expansion of this macro.
   bool isEnabled() const {
     // macro disabled if depth exceeds and stops infinite recursion
-    return AllowRecurse ? Depth < recursion_depth_limit : Depth == 0;
+    return AllowRecurse ? Depth < macro_recursion_depth_limit : Depth == 0;
   }
   void setAllowRecursive(bool Allow) { AllowRecurse = Allow; }
   bool isAllowRecurse() const { return AllowRecurse; }
@@ -299,7 +299,6 @@ public:
     assert(Depth != 0 && "Cannot enable not disabled macro");
     --Depth;
   }
-  enum : uint16_t { macro_recursion_depth_limit = 16'000 };
   
   [[nodiscard("infinite recursion check ignored")]]
   bool TryDisableMacro() {
