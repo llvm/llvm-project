@@ -83,6 +83,15 @@ static_assert(std::indirectly_readable<InputIteratorNotInputOrOutputIterator>);
 static_assert(!std::input_iterator<InputIteratorNotInputOrOutputIterator>);
 static_assert(!std::ranges::input_range<InputRangeNotInputOrOutputIterator>);
 
+// Example predicate that satisfies HasFindLastIfPred
+class IndirectUnaryPredicate {
+  public:
+    bool operator()(int) const;
+};
+
+static_assert(std::predicate<IndirectUnaryPredicate, int&>);
+static_assert(std::indirect_unary_predicate<IndirectUnaryPredicate, int*>);
+
 // almost an indirect_unary_predicate
 class IndirectUnaryPredicateNotCopyConstructible {
 public:

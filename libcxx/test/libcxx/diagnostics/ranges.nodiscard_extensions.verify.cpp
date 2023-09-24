@@ -41,6 +41,10 @@ void test() {
   std::ranges::find_if_not(iter, iter, pred); // expected-warning {{ignoring return value of function declared with 'nodiscard' attribute}}
   std::ranges::find_if(range, pred); // expected-warning {{ignoring return value of function declared with 'nodiscard' attribute}}
   std::ranges::find_if(iter, iter, pred); // expected-warning {{ignoring return value of function declared with 'nodiscard' attribute}}
+  std::ranges::find_last_if(range, pred); // expected-warning {{ignoring return value of function declared with 'nodiscard' attribute}}
+  std::ranges::find_last_if(iter, iter, pred); // expected-warning {{ignoring return value of function declared with 'nodiscard' attribute}}
+  std::ranges::find_last_if_not(range, pred); // expected-warning {{ignoring return value of function declared with 'nodiscard' attribute}}
+  std::ranges::find_last_if_not(iter, iter, pred); // expected-warning {{ignoring return value of function declared with 'nodiscard' attribute}}
   std::ranges::find(range, 1); // expected-warning {{ignoring return value of function declared with 'nodiscard' attribute}}
   std::ranges::find(iter, iter, 1); // expected-warning {{ignoring return value of function declared with 'nodiscard' attribute}}
   std::ranges::includes(range, range); // expected-warning {{ignoring return value of function declared with 'nodiscard' attribute}}
