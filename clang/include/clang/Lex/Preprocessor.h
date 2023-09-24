@@ -2426,7 +2426,7 @@ public:
 private:
   friend void TokenLexer::ExpandFunctionArguments();
 
-  /// If macro definition containts __THIS_MACRO__ creates impl-only recursive
+  /// If macro definition contains __THIS_MACRO__ creates impl-only recursive
   /// version of macro, and replaces all __THIS_MACRO__ tokens
   /// with new created recusive version
   void appendRecursiveVersionIfRequired(IdentifierInfo*, MacroInfo*);

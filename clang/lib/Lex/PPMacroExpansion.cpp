@@ -643,8 +643,6 @@ bool Preprocessor::HandleMacroExpandedIdentifier(Token &Identifier,
     if (IdentifierInfo *NewII = Identifier.getIdentifierInfo()) {
       if (MacroInfo *NewMI = getMacroInfo(NewII))
         if (!NewMI->isEnabled() || NewMI == MI) {
-          if (NewMI->isAllowRecurse() && NewMI == MI)
-            Diag(Identifier, diag::err_pp_macro_recursion_depth_limit_exceeded);
           Identifier.setFlag(Token::DisableExpand);
           // Don't warn for "#define X X" like "#define bool bool" from
           // stdbool.h.

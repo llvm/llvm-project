@@ -3036,7 +3036,7 @@ static bool isObjCProtectedMacro(const IdentifierInfo *II) {
          II->isStr("__unsafe_unretained") || II->isStr("__autoreleasing");
 }
 
-/// HandleDefineDirective - Implements \#define. This consumes the entire macro
+/// HandleDefineDirective - Implements \#define.  This consumes the entire macro
 /// line then lets the caller lex the next real token.
 void Preprocessor::HandleDefineDirective(
     Token &DefineTok, const bool ImmediatelyAfterHeaderGuard) {
