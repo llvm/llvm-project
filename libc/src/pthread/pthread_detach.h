@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_LIBC_SRC_THREADS_PTHREAD_DETACH_H
-#define LLVM_LIBC_SRC_THREADS_PTHREAD_DETACH_H
+#ifndef LLVM_LIBC_SRC_PTHREAD_PTHREAD_DETACH_H
+#define LLVM_LIBC_SRC_PTHREAD_PTHREAD_DETACH_H
 
 #include <pthread.h>
 
@@ -17,4 +17,4 @@ int pthread_detach(pthread_t thread);
 
 } // namespace __llvm_libc
 
-#endif // LLVM_LIBC_SRC_THREADS_PTHREAD_DETACH_H
+#endif // LLVM_LIBC_SRC_PTHREAD_PTHREAD_DETACH_H

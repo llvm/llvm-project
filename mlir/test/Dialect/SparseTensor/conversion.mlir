@@ -1,33 +1,31 @@
 // RUN: mlir-opt %s --sparse-tensor-conversion --canonicalize --cse | FileCheck %s
 
 #SparseVector = #sparse_tensor.encoding<{
-  lvlTypes = ["compressed"]
+  map = (d0) -> (d0 : compressed)
 }>
 
 #SparseVector64 = #sparse_tensor.encoding<{
-  lvlTypes = ["compressed"],
+  map = (d0) -> (d0 : compressed),
   posWidth = 64,
   crdWidth = 64
 }>
 
 #SparseVector32 = #sparse_tensor.encoding<{
-  lvlTypes = ["compressed"],
+  map = (d0) -> (d0 : compressed),
   posWidth = 32,
   crdWidth = 32
 }>
 
 #CSR = #sparse_tensor.encoding<{
-  lvlTypes = ["dense", "compressed"]
+  map = (d0, d1) -> (d0 : dense, d1 : compressed)
 }>
 
 #CSC = #sparse_tensor.encoding<{
-  lvlTypes = ["dense", "compressed"],
-  dimToLvl = affine_map<(i,j) -> (j,i)>
+  map = (d0, d1) -> (d1 : dense, d0 : compressed)
 }>
 
 #SparseTensor = #sparse_tensor.encoding<{
-  lvlTypes = ["dense", "compressed", "compressed"],
-  dimToLvl = affine_map<(i,j,k) -> (k,i,j)>
+  map = (d0, d1, d2) -> (d2 : dense, d0 : compressed, d1 : compressed)
 }>
 
 // CHECK-LABEL: func @sparse_nop(
@@ -152,7 +150,7 @@ func.func @sparse_new3d(%arg0: !llvm.ptr<i8>) -> tensor<?x?x?xf32, #SparseTensor
 //       CHECK: %[[T:.*]] = call @newSparseTensor(%[[DimSizes]], %[[LvlSizes]], %[[LvlTypes]], %[[Iota]], %[[Iota]], %{{.*}}, %{{.*}}, %{{.*}}, %[[Empty]], %[[NP]])
 //       CHECK: return %[[T]] : !llvm.ptr<i8>
 func.func @sparse_init(%arg0: index, %arg1: index) -> tensor<?x?xf64, #CSR> {
-  %0 = bufferization.alloc_tensor(%arg0, %arg1) : tensor<?x?xf64, #CSR>
+  %0 = tensor.empty(%arg0, %arg1) : tensor<?x?xf64, #CSR>
   %1 = sparse_tensor.load %0 : tensor<?x?xf64, #CSR>
   return %1 : tensor<?x?xf64, #CSR>
 }
@@ -336,7 +334,7 @@ func.func @sparse_insert(%arg0: tensor<128xf32, #SparseVector>,
 //   CHECK-DAG: linalg.fill ins(%{{.*}} : i1) outs(%[[B]] : memref<8xi1>)
 //       CHECK: return %[[D]] : memref<?xindex>
 func.func @sparse_expansion1() -> memref<?xindex> {
-  %0 = bufferization.alloc_tensor() : tensor<4x8xf64, #CSR>
+  %0 = tensor.empty() : tensor<4x8xf64, #CSR>
   %values, %filled, %added, %count = sparse_tensor.expand %0
     : tensor<4x8xf64, #CSR> to memref<?xf64>, memref<?xi1>, memref<?xindex>
   return %added : memref<?xindex>
@@ -352,7 +350,7 @@ func.func @sparse_expansion1() -> memref<?xindex> {
 //   CHECK-DAG: linalg.fill ins(%{{.*}} : i1) outs(%[[B]] : memref<4xi1>)
 //       CHECK: return %[[D]] : memref<?xindex>
 func.func @sparse_expansion2() -> memref<?xindex> {
-  %0 = bufferization.alloc_tensor() : tensor<4x8xf64, #CSC>
+  %0 = tensor.empty() : tensor<4x8xf64, #CSC>
   %values, %filled, %added, %count = sparse_tensor.expand %0
     : tensor<4x8xf64, #CSC> to memref<?xf64>, memref<?xi1>, memref<?xindex>
   return %added : memref<?xindex>
@@ -369,7 +367,7 @@ func.func @sparse_expansion2() -> memref<?xindex> {
 //   CHECK-DAG: linalg.fill ins(%{{.*}} : i1) outs(%[[B]] : memref<?xi1>)
 //       CHECK: return %[[C]] : memref<?xindex>
 func.func @sparse_expansion3(%arg0: index, %arg1: index) -> memref<?xindex> {
-  %0 = bufferization.alloc_tensor(%arg0, %arg1) : tensor<?x?xf64, #CSC>
+  %0 = tensor.empty(%arg0, %arg1) : tensor<?x?xf64, #CSC>
   %values, %filled, %added, %count = sparse_tensor.expand %0
     : tensor<?x?xf64, #CSC> to memref<?xf64>, memref<?xi1>, memref<?xindex>
   return %added : memref<?xindex>
@@ -432,12 +430,12 @@ func.func @sparse_out2(%arg0: tensor<?x?x?xf32, #SparseTensor>, %arg1: !llvm.ptr
 
 // CHECK-LABEL: func @sparse_and_dense_init(
 //       CHECK: %[[S:.*]] = call @newSparseTensor
-//       CHECK: %[[D:.*]] = bufferization.alloc_tensor
+//       CHECK: %[[D:.*]] = tensor.empty
 //       CHECK: return %[[S]], %[[D]] : !llvm.ptr<i8>, tensor<?x?xf64>
 func.func @sparse_and_dense_init(%arg0: index, %arg1: index)
            -> (tensor<?x?xf64, #CSR>, tensor<?x?xf64>) {
-  %0 = bufferization.alloc_tensor(%arg0, %arg1) : tensor<?x?xf64, #CSR>
+  %0 = tensor.empty(%arg0, %arg1) : tensor<?x?xf64, #CSR>
   %1 = sparse_tensor.load %0 : tensor<?x?xf64, #CSR>
-  %2 = bufferization.alloc_tensor(%arg0, %arg1) : tensor<?x?xf64>
+  %2 = tensor.empty(%arg0, %arg1) : tensor<?x?xf64>
   return %1, %2 : tensor<?x?xf64, #CSR>, tensor<?x?xf64>
 }

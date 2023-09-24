@@ -302,7 +302,6 @@ endif()
 # about #include_next which is used everywhere.
 option(LIBCXX_ENABLE_PEDANTIC "Compile with pedantic enabled." OFF)
 option(LIBCXX_ENABLE_WERROR "Fail and stop if a warning is triggered." OFF)
-option(LIBCXX_DISABLE_MACRO_CONFLICT_WARNINGS "Disable #warnings about conflicting macros." OFF)
 
 option(LIBCXX_GENERATE_COVERAGE "Enable generating code coverage." OFF)
 set(LIBCXX_COVERAGE_LIBRARY "" CACHE STRING
@@ -660,24 +659,22 @@ function(cxx_link_system_libraries target)
     target_add_link_flags_if_supported(${target} PRIVATE "--unwindlib=none")
   endif()
 
-  if (LIBCXX_HAS_SYSTEM_LIB)
-    target_link_libraries(${target} PRIVATE System)
-  endif()
+  if (NOT APPLE) # On Apple platforms, we always use -nostdlib++ so we don't need to re-add other libraries
+    if (LIBCXX_HAS_PTHREAD_LIB)
+      target_link_libraries(${target} PRIVATE pthread)
+    endif()
 
-  if (LIBCXX_HAS_PTHREAD_LIB)
-    target_link_libraries(${target} PRIVATE pthread)
-  endif()
+    if (LIBCXX_HAS_C_LIB)
+      target_link_libraries(${target} PRIVATE c)
+    endif()
 
-  if (LIBCXX_HAS_C_LIB)
-    target_link_libraries(${target} PRIVATE c)
-  endif()
+    if (LIBCXX_HAS_M_LIB)
+      target_link_libraries(${target} PRIVATE m)
+    endif()
 
-  if (LIBCXX_HAS_M_LIB)
-    target_link_libraries(${target} PRIVATE m)
-  endif()
-
-  if (LIBCXX_HAS_RT_LIB)
-    target_link_libraries(${target} PRIVATE rt)
+    if (LIBCXX_HAS_RT_LIB)
+      target_link_libraries(${target} PRIVATE rt)
+    endif()
   endif()
 
   if (LIBCXX_USE_COMPILER_RT)

@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LIBC_SRC_SUPPORT_HIGH_PRECISION_DECIMAL_H
-#define LIBC_SRC_SUPPORT_HIGH_PRECISION_DECIMAL_H
+#ifndef LLVM_LIBC_SRC___SUPPORT_HIGH_PRECISION_DECIMAL_H
+#define LLVM_LIBC_SRC___SUPPORT_HIGH_PRECISION_DECIMAL_H
 
 #include "src/__support/ctype_utils.h"
 #include "src/__support/str_to_integer.h"
@@ -413,4 +413,4 @@ public:
 } // namespace internal
 } // namespace __llvm_libc
 
-#endif // LIBC_SRC_SUPPORT_HIGH_PRECISION_DECIMAL_H
+#endif // LLVM_LIBC_SRC___SUPPORT_HIGH_PRECISION_DECIMAL_H

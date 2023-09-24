@@ -1153,8 +1153,8 @@ void AccAttributeVisitor::PrivatizeAssociatedLoopIndex(
     return nullptr;
   };
 
-  const auto &outer{std::get<parser::DoConstruct>(x.t)};
-  for (const parser::DoConstruct *loop{&outer}; loop && level > 0; --level) {
+  const auto &outer{std::get<std::optional<parser::DoConstruct>>(x.t)};
+  for (const parser::DoConstruct *loop{&*outer}; loop && level > 0; --level) {
     // go through all the nested do-loops and resolve index variables
     const parser::Name *iv{GetLoopIndex(*loop)};
     if (iv) {

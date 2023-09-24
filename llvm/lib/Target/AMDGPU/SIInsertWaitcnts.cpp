@@ -1720,26 +1720,25 @@ bool SIInsertWaitcnts::insertWaitcntInBlock(MachineFunction &MF,
 // which we want to flush the vmcnt counter, and false otherwise.
 bool SIInsertWaitcnts::isPreheaderToFlush(MachineBasicBlock &MBB,
                                           WaitcntBrackets &ScoreBrackets) {
-  if (PreheadersToFlush.count(&MBB))
-    return PreheadersToFlush[&MBB];
-
-  auto UpdateCache = [&](bool val) {
-    PreheadersToFlush[&MBB] = val;
-    return val;
-  };
+  auto [Iterator, IsInserted] = PreheadersToFlush.try_emplace(&MBB, false);
+  if (!IsInserted)
+    return Iterator->second;
 
   MachineBasicBlock *Succ = MBB.getSingleSuccessor();
   if (!Succ)
-    return UpdateCache(false);
+    return false;
 
   MachineLoop *Loop = MLI->getLoopFor(Succ);
   if (!Loop)
-    return UpdateCache(false);
+    return false;
 
-  if (Loop->getLoopPreheader() == &MBB && shouldFlushVmCnt(Loop, ScoreBrackets))
-    return UpdateCache(true);
+  if (Loop->getLoopPreheader() == &MBB &&
+      shouldFlushVmCnt(Loop, ScoreBrackets)) {
+    Iterator->second = true;
+    return true;
+  }
 
-  return UpdateCache(false);
+  return false;
 }
 
 bool SIInsertWaitcnts::isVMEMOrFlatVMEM(const MachineInstr &MI) const {
@@ -1824,7 +1823,7 @@ bool SIInsertWaitcnts::runOnMachineFunction(MachineFunction &MF) {
     ForceEmitWaitcnt[T] = false;
 
   OptNone = MF.getFunction().hasOptNone() ||
-            MF.getTarget().getOptLevel() == CodeGenOpt::None;
+            MF.getTarget().getOptLevel() == CodeGenOptLevel::None;
 
   HardwareLimits Limits = {};
   Limits.VmcntMax = AMDGPU::getVmcntBitMask(IV);

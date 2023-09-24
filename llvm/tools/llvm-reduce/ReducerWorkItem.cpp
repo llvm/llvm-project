@@ -787,7 +787,7 @@ llvm::parseReducerWorkItem(StringRef ToolName, StringRef Filename,
       std::string FeaturesStr = codegen::getFeaturesStr();
       TM = std::unique_ptr<TargetMachine>(TheTarget->createTargetMachine(
           TheTriple.getTriple(), CPUStr, FeaturesStr, Options, RM,
-          codegen::getExplicitCodeModel(), CodeGenOpt::Default));
+          codegen::getExplicitCodeModel(), CodeGenOptLevel::Default));
       assert(TM && "Could not allocate target machine!");
 
       return TM->createDataLayout().getStringRepresentation();

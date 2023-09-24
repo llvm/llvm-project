@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_LIBC_SRC_SUPPORT_THREAD_LINUX_MUTEX_H
-#define LLVM_LIBC_SRC_SUPPORT_THREAD_LINUX_MUTEX_H
+#ifndef LLVM_LIBC_SRC___SUPPORT_THREADS_LINUX_MUTEX_H
+#define LLVM_LIBC_SRC___SUPPORT_THREADS_LINUX_MUTEX_H
 
 #include "src/__support/CPP/atomic.h"
 #include "src/__support/OSUtil/syscall.h" // For syscall functions.
@@ -133,4 +133,4 @@ public:
 
 } // namespace __llvm_libc
 
-#endif // LLVM_LIBC_SRC_SUPPORT_THREAD_LINUX_MUTEX_H
+#endif // LLVM_LIBC_SRC___SUPPORT_THREADS_LINUX_MUTEX_H

@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_LIBC_SRC_SUPPORT_ENDIAN_H
-#define LLVM_LIBC_SRC_SUPPORT_ENDIAN_H
+#ifndef LLVM_LIBC_SRC___SUPPORT_ENDIAN_H
+#define LLVM_LIBC_SRC___SUPPORT_ENDIAN_H
 
 #include "common.h"
 
@@ -142,4 +142,4 @@ using Endian = internal::Endian<__BYTE_ORDER__>;
 
 } // namespace __llvm_libc
 
-#endif // LLVM_LIBC_SRC_SUPPORT_ENDIAN_H
+#endif // LLVM_LIBC_SRC___SUPPORT_ENDIAN_H

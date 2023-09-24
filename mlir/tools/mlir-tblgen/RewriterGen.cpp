@@ -1173,9 +1173,22 @@ void PatternEmitter::emitRewriteLogic() {
       os << val << ";\n";
   }
 
+  auto processSupplementalPatterns = [&]() {
+    int numSupplementalPatterns = pattern.getNumSupplementalPatterns();
+    for (int i = 0, offset = -numSupplementalPatterns;
+         i < numSupplementalPatterns; ++i) {
+      DagNode resultTree = pattern.getSupplementalPattern(i);
+      auto val = handleResultPattern(resultTree, offset++, 0);
+      if (resultTree.isNativeCodeCall() &&
+          resultTree.getNumReturnsOfNativeCode() == 0)
+        os << val << ";\n";
+    }
+  };
+
   if (numExpectedResults == 0) {
     assert(replStartIndex >= numResultPatterns &&
            "invalid auxiliary vs. replacement pattern division!");
+    processSupplementalPatterns();
     // No result to replace. Just erase the op.
     os << "rewriter.eraseOp(op0);\n";
   } else {
@@ -1197,18 +1210,8 @@ void PatternEmitter::emitRewriteLogic() {
           "  tblgen_repl_values.push_back(v);\n}\n",
           "\n");
     }
+    processSupplementalPatterns();
     os << "\nrewriter.replaceOp(op0, tblgen_repl_values);\n";
-  }
-
-  // Process supplemtal patterns.
-  int numSupplementalPatterns = pattern.getNumSupplementalPatterns();
-  for (int i = 0, offset = -numSupplementalPatterns;
-       i < numSupplementalPatterns; ++i) {
-    DagNode resultTree = pattern.getSupplementalPattern(i);
-    auto val = handleResultPattern(resultTree, offset++, 0);
-    if (resultTree.isNativeCodeCall() &&
-        resultTree.getNumReturnsOfNativeCode() == 0)
-      os << val << ";\n";
   }
 
   LLVM_DEBUG(llvm::dbgs() << "--- done emitting rewrite logic ---\n");

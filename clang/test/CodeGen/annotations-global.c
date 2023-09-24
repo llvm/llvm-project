@@ -33,15 +33,15 @@ __attribute((address_space(1))) __attribute__((annotate("addrspace1_ann"))) char
 // CHECK: @llvm.global.annotations = appending global [11 x { ptr, ptr, ptr, i32, ptr }] [{
 // CHECK-SAME: { ptr @a.bar,
 // CHECK-SAME: { ptr @a.bar,
+// CHECK-SAME: { ptr @a,
+// CHECK-SAME: { ptr @a,
+// CHECK-SAME: { ptr @a,
+// CHECK-SAME: { ptr @a,
 // CHECK-SAME: { ptr @sfoo,
 // CHECK-SAME: { ptr @sfoo,
 // CHECK-SAME: { ptr @foo,
 // CHECK-SAME: { ptr @foo,
 // CHECK-SAME: { ptr addrspacecast (ptr addrspace(1) @addrspace1_var to ptr),
-// CHECK-SAME: { ptr @a,
-// CHECK-SAME: { ptr @a,
-// CHECK-SAME: { ptr @a,
-// CHECK-SAME: { ptr @a,
 // CHECK-SAME: }], section "llvm.metadata"
 
 // AS1-GLOBALS: target datalayout = "{{.+}}-A5-G1"

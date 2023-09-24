@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_LIBC_SRC_SUPPORT_RPC_RPC_UTILS_H
-#define LLVM_LIBC_SRC_SUPPORT_RPC_RPC_UTILS_H
+#ifndef LLVM_LIBC_SRC___SUPPORT_RPC_RPC_UTILS_H
+#define LLVM_LIBC_SRC___SUPPORT_RPC_RPC_UTILS_H
 
 #include "src/__support/CPP/type_traits.h"
 #include "src/__support/GPU/utils.h"

@@ -121,26 +121,13 @@ void AMDGPUAsmPrinter::initTargetStreamer(Module &M) {
       TM.getTargetTriple().getOS() != Triple::AMDPAL)
     return;
 
-  if (CodeObjectVersion >= AMDGPU::AMDHSA_COV3)
-    getTargetStreamer()->EmitDirectiveAMDGCNTarget();
+  getTargetStreamer()->EmitDirectiveAMDGCNTarget();
 
   if (TM.getTargetTriple().getOS() == Triple::AMDHSA)
     HSAMetadataStream->begin(M, *getTargetStreamer()->getTargetID());
 
   if (TM.getTargetTriple().getOS() == Triple::AMDPAL)
     getTargetStreamer()->getPALMetadata()->readFromIR(M);
-
-  if (CodeObjectVersion >= AMDGPU::AMDHSA_COV3)
-    return;
-
-  // HSA emits NT_AMD_HSA_CODE_OBJECT_VERSION for code objects v2.
-  if (TM.getTargetTriple().getOS() == Triple::AMDHSA)
-    getTargetStreamer()->EmitDirectiveHSACodeObjectVersion(2, 1);
-
-  // HSA and PAL emit NT_AMD_HSA_ISA_VERSION for code objects v2.
-  IsaVersion Version = getIsaVersion(getGlobalSTI()->getCPU());
-  getTargetStreamer()->EmitDirectiveHSACodeObjectISAV2(
-      Version.Major, Version.Minor, Version.Stepping, "AMD", "AMDGPU");
 }
 
 void AMDGPUAsmPrinter::emitEndOfAsmFile(Module &M) {
@@ -148,8 +135,7 @@ void AMDGPUAsmPrinter::emitEndOfAsmFile(Module &M) {
   if (!IsTargetStreamerInitialized)
     initTargetStreamer(M);
 
-  if (TM.getTargetTriple().getOS() != Triple::AMDHSA ||
-      CodeObjectVersion == AMDGPU::AMDHSA_COV2)
+  if (TM.getTargetTriple().getOS() != Triple::AMDHSA)
     getTargetStreamer()->EmitISAVersion();
 
   // Emit HSA Metadata (NT_AMD_AMDGPU_HSA_METADATA).
@@ -209,7 +195,7 @@ void AMDGPUAsmPrinter::emitFunctionBodyStart() {
   if (!MFI.isEntryFunction())
     return;
 
-  if ((STM.isMesaKernel(F) || CodeObjectVersion == AMDGPU::AMDHSA_COV2) &&
+  if (STM.isMesaKernel(F) &&
       (F.getCallingConv() == CallingConv::AMDGPU_KERNEL ||
        F.getCallingConv() == CallingConv::SPIR_KERNEL)) {
     amd_kernel_code_t KernelCode;
@@ -226,8 +212,7 @@ void AMDGPUAsmPrinter::emitFunctionBodyEnd() {
   if (!MFI.isEntryFunction())
     return;
 
-  if (TM.getTargetTriple().getOS() != Triple::AMDHSA ||
-      CodeObjectVersion == AMDGPU::AMDHSA_COV2)
+  if (TM.getTargetTriple().getOS() != Triple::AMDHSA)
     return;
 
   auto &Streamer = getTargetStreamer()->getStreamer();
@@ -261,8 +246,7 @@ void AMDGPUAsmPrinter::emitFunctionBodyEnd() {
 }
 
 void AMDGPUAsmPrinter::emitFunctionEntryLabel() {
-  if (TM.getTargetTriple().getOS() == Triple::AMDHSA &&
-      CodeObjectVersion >= AMDGPU::AMDHSA_COV3) {
+  if (TM.getTargetTriple().getOS() == Triple::AMDHSA) {
     AsmPrinter::emitFunctionEntryLabel();
     return;
   }
@@ -337,9 +321,6 @@ bool AMDGPUAsmPrinter::doInitialization(Module &M) {
 
   if (TM.getTargetTriple().getOS() == Triple::AMDHSA) {
     switch (CodeObjectVersion) {
-    case AMDGPU::AMDHSA_COV2:
-      HSAMetadataStream.reset(new HSAMD::MetadataStreamerYamlV2());
-      break;
     case AMDGPU::AMDHSA_COV3:
       HSAMetadataStream.reset(new HSAMD::MetadataStreamerMsgPackV3());
       break;

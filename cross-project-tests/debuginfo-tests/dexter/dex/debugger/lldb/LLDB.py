@@ -174,14 +174,34 @@ class LLDB(DebuggerBase):
             self._target.BreakpointDelete(id)
 
     def launch(self, cmdline):
+        num_resolved_breakpoints = 0
+        for b in self._target.breakpoint_iter():
+            num_resolved_breakpoints += b.GetNumLocations() > 0
+        assert num_resolved_breakpoints > 0
+
         if self.context.options.target_run_args:
             cmdline += shlex.split(self.context.options.target_run_args)
-        self._process = self._target.LaunchSimple(cmdline, None, os.getcwd())
+        launch_info = self._target.GetLaunchInfo()
+        launch_info.SetWorkingDirectory(os.getcwd())
+        launch_info.SetArguments(cmdline, True)
+        error = self._interface.SBError()
+        self._process = self._target.Launch(launch_info, error)
+        
+        if error.Fail():
+            raise DebuggerException(error.GetCString())
+        if not os.path.exists(self._target.executable.fullpath):
+            raise DebuggerException("exe does not exist")
         if not self._process or self._process.GetNumThreads() == 0:
             raise DebuggerException("could not launch process")
         if self._process.GetNumThreads() != 1:
             raise DebuggerException("multiple threads not supported")
         self._thread = self._process.GetThreadAtIndex(0)
+        
+        num_stopped_threads = 0
+        for thread in self._process:
+            if thread.GetStopReason() == self._interface.eStopReasonBreakpoint:
+                num_stopped_threads += 1
+        assert num_stopped_threads > 0
         assert self._thread, (self._process, self._thread)
 
     def step(self):

@@ -293,6 +293,8 @@ static unsigned getMatchingNonSExtOpcode(unsigned Opc,
     return AArch64::LDRWui;
   case AArch64::LDURSWi:
     return AArch64::LDURWi;
+  case AArch64::LDRSWpre:
+    return AArch64::LDRWpre;
   }
 }
 
@@ -372,6 +374,8 @@ static unsigned getMatchingPairOpcode(unsigned Opc) {
   case AArch64::LDRSWui:
   case AArch64::LDURSWi:
     return AArch64::LDPSWi;
+  case AArch64::LDRSWpre:
+    return AArch64::LDPSWpre;
   }
 }
 
@@ -585,6 +589,8 @@ static bool isPreLdStPairCandidate(MachineInstr &FirstMI, MachineInstr &MI) {
     return (OpcB == AArch64::LDRWui) || (OpcB == AArch64::LDURWi);
   case AArch64::LDRXpre:
     return (OpcB == AArch64::LDRXui) || (OpcB == AArch64::LDURXi);
+  case AArch64::LDRSWpre:
+    return (OpcB == AArch64::LDRSWui) || (OpcB == AArch64::LDURSWi);
   }
 }
 
@@ -1318,6 +1324,10 @@ static bool areCandidatesToMergeOrPair(MachineInstr &FirstMI, MachineInstr &MI,
   if (OpcA == OpcB)
     return !AArch64InstrInfo::isPreLdSt(FirstMI);
 
+  // Two pre ld/st of different opcodes cannot be merged either
+  if (AArch64InstrInfo::isPreLdSt(FirstMI) && AArch64InstrInfo::isPreLdSt(MI))
+    return false;
+
   // Try to match a sign-extended load/store with a zero-extended load/store.
   bool IsValidLdStrOpc, PairIsValidLdStrOpc;
   unsigned NonSExtOpc = getMatchingNonSExtOpcode(OpcA, &IsValidLdStrOpc);
@@ -1340,7 +1350,7 @@ static bool areCandidatesToMergeOrPair(MachineInstr &FirstMI, MachineInstr &MI,
     return false;
 
   // The STR<S,D,Q,W,X>pre - STR<S,D,Q,W,X>ui and
-  // LDR<S,D,Q,W,X>pre-LDR<S,D,Q,W,X>ui
+  // LDR<S,D,Q,W,X,SW>pre-LDR<S,D,Q,W,X,SW>ui
   // are candidate pairs that can be merged.
   if (isPreLdStPairCandidate(FirstMI, MI))
     return true;
@@ -2136,6 +2146,14 @@ bool AArch64LoadStoreOpt::tryToPairLdStInst(MachineBasicBlock::iterator &MBBI) {
   if (!TII->isCandidateToMergeOrPair(MI))
     return false;
 
+  // If disable-ldp feature is opted, do not emit ldp.
+  if (MI.mayLoad() && Subtarget->hasDisableLdp())
+    return false;
+
+  // If disable-stp feature is opted, do not emit stp.
+  if (MI.mayStore() && Subtarget->hasDisableStp())
+    return false;
+
   // Early exit if the offset is not possible to match. (6 bits of positive
   // range, plus allow an extra one in case we find a later insn that matches
   // with Offset-1)
@@ -2159,6 +2177,31 @@ bool AArch64LoadStoreOpt::tryToPairLdStInst(MachineBasicBlock::iterator &MBBI) {
     // Keeping the iterator straight is a pain, so we let the merge routine tell
     // us what the next instruction is after it's done mucking about.
     auto Prev = std::prev(MBBI);
+
+    // Fetch the memoperand of the load/store that is a candidate for
+    // combination.
+    MachineMemOperand *MemOp =
+        MI.memoperands_empty() ? nullptr : MI.memoperands().front();
+
+    // Get the needed alignments to check them if
+    // ldp-aligned-only/stp-aligned-only features are opted.
+    uint64_t MemAlignment = MemOp ? MemOp->getAlign().value() : -1;
+    uint64_t TypeAlignment = MemOp ? Align(MemOp->getSize()).value() : -1;
+
+    // If a load arrives and ldp-aligned-only feature is opted, check that the
+    // alignment of the source pointer is at least double the alignment of the
+    // type.
+    if (MI.mayLoad() && Subtarget->hasLdpAlignedOnly() && MemOp &&
+        MemAlignment < 2 * TypeAlignment)
+      return false;
+
+    // If a store arrives and stp-aligned-only feature is opted, check that the
+    // alignment of the source pointer is at least double the alignment of the
+    // type.
+    if (MI.mayStore() && Subtarget->hasStpAlignedOnly() && MemOp &&
+        MemAlignment < 2 * TypeAlignment)
+      return false;
+
     MBBI = mergePairedInsns(MBBI, Paired, Flags);
     // Collect liveness info for instructions between Prev and the new position
     // MBBI.

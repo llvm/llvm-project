@@ -8,6 +8,9 @@
 
 // UNSUPPORTED: no-exceptions
 
+// VE only supports SjLj and doesn't provide _Unwind_Backtrace.
+// UNSUPPORTED: target={{ve-.*}}
+
 #include <assert.h>
 #include <stddef.h>
 #include <unwind.h>

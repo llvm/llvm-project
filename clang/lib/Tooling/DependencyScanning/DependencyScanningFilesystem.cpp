@@ -96,6 +96,7 @@ DependencyScanningFilesystemSharedCache::
 DependencyScanningFilesystemSharedCache::CacheShard &
 DependencyScanningFilesystemSharedCache::getShardForFilename(
     StringRef Filename) const {
+  assert(llvm::sys::path::is_absolute_gnu(Filename));
   return CacheShards[llvm::hash_value(Filename) % NumShards];
 }
 
@@ -109,6 +110,7 @@ DependencyScanningFilesystemSharedCache::getShardForUID(
 const CachedFileSystemEntry *
 DependencyScanningFilesystemSharedCache::CacheShard::findEntryByFilename(
     StringRef Filename) const {
+  assert(llvm::sys::path::is_absolute_gnu(Filename));
   std::lock_guard<std::mutex> LockGuard(CacheLock);
   auto It = EntriesByFilename.find(Filename);
   return It == EntriesByFilename.end() ? nullptr : It->getValue();
@@ -189,6 +191,14 @@ static bool shouldCacheStatFailures(StringRef Filename) {
   return shouldScanForDirectivesBasedOnExtension(Filename);
 }
 
+DependencyScanningWorkerFilesystem::DependencyScanningWorkerFilesystem(
+    DependencyScanningFilesystemSharedCache &SharedCache,
+    IntrusiveRefCntPtr<llvm::vfs::FileSystem> FS)
+    : ProxyFileSystem(std::move(FS)), SharedCache(SharedCache),
+      WorkingDirForCacheLookup(llvm::errc::invalid_argument) {
+  updateWorkingDirForCacheLookup();
+}
+
 bool DependencyScanningWorkerFilesystem::shouldScanForDirectives(
     StringRef Filename) {
   return shouldScanForDirectivesBasedOnExtension(Filename);
@@ -215,44 +225,62 @@ DependencyScanningWorkerFilesystem::findEntryByFilenameWithWriteThrough(
 }
 
 llvm::ErrorOr<const CachedFileSystemEntry &>
-DependencyScanningWorkerFilesystem::computeAndStoreResult(StringRef Filename) {
-  llvm::ErrorOr<llvm::vfs::Status> Stat = getUnderlyingFS().status(Filename);
+DependencyScanningWorkerFilesystem::computeAndStoreResult(
+    StringRef OriginalFilename, StringRef FilenameForLookup) {
+  llvm::ErrorOr<llvm::vfs::Status> Stat =
+      getUnderlyingFS().status(OriginalFilename);
   if (!Stat) {
-    if (!shouldCacheStatFailures(Filename))
+    if (!shouldCacheStatFailures(OriginalFilename))
       return Stat.getError();
     const auto &Entry =
-        getOrEmplaceSharedEntryForFilename(Filename, Stat.getError());
-    return insertLocalEntryForFilename(Filename, Entry);
+        getOrEmplaceSharedEntryForFilename(FilenameForLookup, Stat.getError());
+    return insertLocalEntryForFilename(FilenameForLookup, Entry);
   }
 
   if (const auto *Entry = findSharedEntryByUID(*Stat))
-    return insertLocalEntryForFilename(Filename, *Entry);
+    return insertLocalEntryForFilename(FilenameForLookup, *Entry);
 
   auto TEntry =
-      Stat->isDirectory() ? TentativeEntry(*Stat) : readFile(Filename);
+      Stat->isDirectory() ? TentativeEntry(*Stat) : readFile(OriginalFilename);
 
   const CachedFileSystemEntry *SharedEntry = [&]() {
     if (TEntry) {
       const auto &UIDEntry = getOrEmplaceSharedEntryForUID(std::move(*TEntry));
-      return &getOrInsertSharedEntryForFilename(Filename, UIDEntry);
+      return &getOrInsertSharedEntryForFilename(FilenameForLookup, UIDEntry);
     }
-    return &getOrEmplaceSharedEntryForFilename(Filename, TEntry.getError());
+    return &getOrEmplaceSharedEntryForFilename(FilenameForLookup,
+                                               TEntry.getError());
   }();
 
-  return insertLocalEntryForFilename(Filename, *SharedEntry);
+  return insertLocalEntryForFilename(FilenameForLookup, *SharedEntry);
 }
 
 llvm::ErrorOr<EntryRef>
 DependencyScanningWorkerFilesystem::getOrCreateFileSystemEntry(
-    StringRef Filename, bool DisableDirectivesScanning) {
-  if (const auto *Entry = findEntryByFilenameWithWriteThrough(Filename))
-    return scanForDirectivesIfNecessary(*Entry, Filename,
+    StringRef OriginalFilename, bool DisableDirectivesScanning) {
+  StringRef FilenameForLookup;
+  SmallString<256> PathBuf;
+  if (llvm::sys::path::is_absolute_gnu(OriginalFilename)) {
+    FilenameForLookup = OriginalFilename;
+  } else if (!WorkingDirForCacheLookup) {
+    return WorkingDirForCacheLookup.getError();
+  } else {
+    StringRef RelFilename = OriginalFilename;
+    RelFilename.consume_front("./");
+    PathBuf = *WorkingDirForCacheLookup;
+    llvm::sys::path::append(PathBuf, RelFilename);
+    FilenameForLookup = PathBuf.str();
+  }
+  assert(llvm::sys::path::is_absolute_gnu(FilenameForLookup));
+  if (const auto *Entry =
+          findEntryByFilenameWithWriteThrough(FilenameForLookup))
+    return scanForDirectivesIfNecessary(*Entry, OriginalFilename,
                                         DisableDirectivesScanning)
         .unwrapError();
-  auto MaybeEntry = computeAndStoreResult(Filename);
+  auto MaybeEntry = computeAndStoreResult(OriginalFilename, FilenameForLookup);
   if (!MaybeEntry)
     return MaybeEntry.getError();
-  return scanForDirectivesIfNecessary(*MaybeEntry, Filename,
+  return scanForDirectivesIfNecessary(*MaybeEntry, OriginalFilename,
                                       DisableDirectivesScanning)
       .unwrapError();
 }
@@ -329,4 +357,25 @@ DependencyScanningWorkerFilesystem::openFileForRead(const Twine &Path) {
   if (!Result)
     return Result.getError();
   return DepScanFile::create(Result.get());
+}
+
+std::error_code DependencyScanningWorkerFilesystem::setCurrentWorkingDirectory(
+    const Twine &Path) {
+  std::error_code EC = ProxyFileSystem::setCurrentWorkingDirectory(Path);
+  updateWorkingDirForCacheLookup();
+  return EC;
+}
+
+void DependencyScanningWorkerFilesystem::updateWorkingDirForCacheLookup() {
+  llvm::ErrorOr<std::string> CWD =
+      getUnderlyingFS().getCurrentWorkingDirectory();
+  if (!CWD) {
+    WorkingDirForCacheLookup = CWD.getError();
+  } else if (!llvm::sys::path::is_absolute_gnu(*CWD)) {
+    WorkingDirForCacheLookup = llvm::errc::invalid_argument;
+  } else {
+    WorkingDirForCacheLookup = *CWD;
+  }
+  assert(!WorkingDirForCacheLookup ||
+         llvm::sys::path::is_absolute_gnu(*WorkingDirForCacheLookup));
 }

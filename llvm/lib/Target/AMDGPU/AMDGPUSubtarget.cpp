@@ -167,6 +167,10 @@ GCNSubtarget::initializeSubtargetDependencies(const Triple &TT,
 
 AMDGPUSubtarget::AMDGPUSubtarget(const Triple &TT) : TargetTriple(TT) {}
 
+bool AMDGPUSubtarget::useRealTrue16Insts() const {
+  return hasTrue16BitInsts() && EnableRealTrue16Insts;
+}
+
 GCNSubtarget::GCNSubtarget(const Triple &TT, StringRef GPU, StringRef FS,
                            const GCNTargetMachine &TM)
     : // clang-format off
@@ -771,7 +775,7 @@ unsigned GCNSubtarget::getMaxNumSGPRs(const MachineFunction &MF) const {
                             getReservedNumSGPRs(MF));
 }
 
-static constexpr unsigned getMaxNumPreloadedSGPRs() {
+static unsigned getMaxNumPreloadedSGPRs() {
   using USI = GCNUserSGPRUsageInfo;
   // Max number of user SGPRs
   const unsigned MaxUserSGPRs =

@@ -55,22 +55,22 @@ define void @VPKUDUM(ptr %A, ptr %B) {
 ;
 ; CHECK-PWR7-LABEL: VPKUDUM:
 ; CHECK-PWR7:       # %bb.0: # %entry
-; CHECK-PWR7-NEXT:    addis 5, 2, .LCPI1_0@toc@ha
-; CHECK-PWR7-NEXT:    lxvw4x 34, 0, 4
-; CHECK-PWR7-NEXT:    lxvw4x 35, 0, 3
-; CHECK-PWR7-NEXT:    addi 4, 5, .LCPI1_0@toc@l
+; CHECK-PWR7-NEXT:    lxvw4x 35, 0, 4
+; CHECK-PWR7-NEXT:    addis 4, 2, .LCPI1_0@toc@ha
+; CHECK-PWR7-NEXT:    lxvw4x 34, 0, 3
+; CHECK-PWR7-NEXT:    addi 4, 4, .LCPI1_0@toc@l
 ; CHECK-PWR7-NEXT:    lxvw4x 36, 0, 4
-; CHECK-PWR7-NEXT:    vperm 2, 3, 2, 4
+; CHECK-PWR7-NEXT:    vperm 2, 2, 3, 4
 ; CHECK-PWR7-NEXT:    stxvw4x 34, 0, 3
 ; CHECK-PWR7-NEXT:    blr
 ;
 ; CHECK-PWR7-AIX-LABEL: VPKUDUM:
 ; CHECK-PWR7-AIX:       # %bb.0: # %entry
-; CHECK-PWR7-AIX-NEXT:    ld 5, L..C1(2) # %const.0
-; CHECK-PWR7-AIX-NEXT:    lxvw4x 34, 0, 4
-; CHECK-PWR7-AIX-NEXT:    lxvw4x 35, 0, 3
-; CHECK-PWR7-AIX-NEXT:    lxvw4x 36, 0, 5
-; CHECK-PWR7-AIX-NEXT:    vperm 2, 3, 2, 4
+; CHECK-PWR7-AIX-NEXT:    lxvw4x 35, 0, 4
+; CHECK-PWR7-AIX-NEXT:    ld 4, L..C1(2) # %const.0
+; CHECK-PWR7-AIX-NEXT:    lxvw4x 34, 0, 3
+; CHECK-PWR7-AIX-NEXT:    lxvw4x 36, 0, 4
+; CHECK-PWR7-AIX-NEXT:    vperm 2, 2, 3, 4
 ; CHECK-PWR7-AIX-NEXT:    stxvw4x 34, 0, 3
 ; CHECK-PWR7-AIX-NEXT:    blr
 entry:

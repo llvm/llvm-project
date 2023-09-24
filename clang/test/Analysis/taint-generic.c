@@ -56,9 +56,15 @@
 // CHECK-INVALID-ARG-SAME:        rules greater or equal to -1
 
 typedef long long rsize_t;
+typedef __typeof(sizeof(int)) size_t;
+typedef signed long long ssize_t;
+typedef __WCHAR_TYPE__ wchar_t;
 void clang_analyzer_isTainted_char(char);
+void clang_analyzer_isTainted_wchar(wchar_t);
 void clang_analyzer_isTainted_charp(char*);
 void clang_analyzer_isTainted_int(int);
+
+int coin();
 
 int scanf(const char *restrict format, ...);
 char *gets(char *str);
@@ -75,6 +81,17 @@ extern FILE *stdin;
 #define bool _Bool
 #define NULL (void*)0
 
+wchar_t *fgetws(wchar_t *ws, int n, FILE *stream);
+wchar_t *wmemset(wchar_t *wcs, wchar_t wc, unsigned long n);
+wchar_t *wmemcpy(wchar_t *dest, const wchar_t *src, size_t n);
+wchar_t *wmemmove(wchar_t *dest, const wchar_t *src, size_t n);
+size_t wcslen(const wchar_t *s);
+wchar_t *wcscpy(wchar_t * dest, const wchar_t * src);
+wchar_t *wcsncpy(wchar_t *dest, const wchar_t *src, size_t n);
+wchar_t *wcscat(wchar_t *dest, const wchar_t *src);
+wchar_t *wcsncat(wchar_t *dest,const wchar_t *src, size_t n);
+int swprintf(wchar_t *wcs, size_t maxlen, const wchar_t *format, ...);
+
 char *getenv(const char *name);
 
 FILE *fopen(const char *name, const char *mode);
@@ -83,8 +100,6 @@ int fscanf(FILE *restrict stream, const char *restrict format, ...);
 int sprintf(char *str, const char *format, ...);
 void setproctitle(const char *fmt, ...);
 void setproctitle_init(int argc, char *argv[], char *envp[]);
-typedef __typeof(sizeof(int)) size_t;
-typedef signed long long ssize_t;
 
 // Define string functions. Use builtin for some of them. They all default to
 // the processing in the taint checker.
@@ -104,6 +119,41 @@ char *strncat(char *restrict s1, const char *restrict s2, size_t n);
 void *malloc(size_t);
 void *calloc(size_t nmemb, size_t size);
 void bcopy(void *s1, void *s2, size_t n);
+
+
+//    function | pathname | filename | fd | arglist | argv[] | envp[]
+//    ===============================================================
+// 1  execl    |     X    |          |    |    X    |        |
+// 2  execle   |     X    |          |    |    X    |        |   X
+// 3  execlp   |          |     X    |    |    X    |        |
+// 4  execv    |     X    |          |    |         |    X   |
+// 5  execve   |     X    |          |    |         |    X   |   X
+// 6  execvp   |          |     X    |    |         |    X   |
+// 7  execvpe  |          |     X    |    |         |    X   |   X
+// 8  fexecve  |          |          |  X |         |    X   |   X
+//    ===============================================================
+//    letter   |          |     p    |  f |    l    |    v   |   e
+//
+// legend:
+//  - pathname: rel/abs path to the binary
+//  - filename: file name searched in PATH to execute the binary
+//  - fd:       accepts a file descriptor
+//  - arglist:  accepts variadic arguments
+//  - argv:     accepts a pointer to array, denoting the new argv
+//  - envp:     accepts a pointer to array, denoting the new envp
+
+int execl(const char *path, const char *arg, ...);
+int execle(const char *path, const char *arg, ...);
+int execlp(const char *file, const char *arg, ...);
+int execv(const char *path, char *const argv[]);
+int execve(const char *path, char *const argv[], char *const envp[]);
+int execvp(const char *file, char *const argv[]);
+int execvpe(const char *file, char *const argv[], char *const envp[]);
+int fexecve(int fd, char *const argv[], char *const envp[]);
+FILE *popen(const char *command, const char *type);
+int pclose(FILE *stream);
+int system(const char *command);
+
 
 typedef size_t socklen_t;
 
@@ -211,7 +261,6 @@ void testUncontrolledFormatString(char **p) {
 
 }
 
-int system(const char *command);
 void testTaintSystemCall(void) {
   char buffer[156];
   char addr[128];
@@ -274,7 +323,6 @@ void testTaintedBufferSize(void) {
 #define SOCK_STREAM 1
 int socket(int, int, int);
 size_t read(int, void *, size_t);
-int  execl(const char *, const char *, ...);
 
 void testSocket(void) {
   int sock;
@@ -430,6 +478,28 @@ int testSprintf_propagates_taint(char *buf, char *msg) {
   return 1 / x;                    // expected-warning {{Division by a tainted value, possibly zero}}
 }
 
+void test_wchar_apis_dont_propagate(const char *path) {
+  // strlen, wcslen, strnlen and alike intentionally don't propagate taint.
+  // See the details here: https://github.com/llvm/llvm-project/pull/66086
+  // This isn't ideal, but this is only what we have now.
+
+  FILE *f = fopen(path, "r");
+  clang_analyzer_isTainted_charp((char*)f);  // expected-warning {{YES}}
+  wchar_t wbuf[10];
+  fgetws(wbuf, sizeof(wbuf)/sizeof(*wbuf), f);
+  clang_analyzer_isTainted_wchar(*wbuf); // expected-warning {{YES}}
+  int n = wcslen(wbuf);
+  clang_analyzer_isTainted_int(n); // expected-warning {{NO}}
+
+  wchar_t dst[100] = L"ABC";
+  clang_analyzer_isTainted_wchar(*dst); // expected-warning {{NO}}
+  wcsncat(dst, wbuf, sizeof(wbuf)/sizeof(*wbuf));
+  clang_analyzer_isTainted_wchar(*dst); // expected-warning {{YES}}
+
+  int m = wcslen(dst);
+  clang_analyzer_isTainted_int(m); // expected-warning {{NO}}
+}
+
 int scanf_s(const char *format, ...);
 int testScanf_s_(int *out) {
   scanf_s("%d", out);
@@ -544,6 +614,10 @@ void testFread(const char *fname, int *buffer, size_t size, size_t count) {
 }
 
 ssize_t recv(int sockfd, void *buf, size_t len, int flags);
+int accept(int fd, struct sockaddr *addr, socklen_t *addrlen);
+int bind(int fd, const struct sockaddr *addr, socklen_t addrlen);
+int listen(int fd, int backlog);
+
 void testRecv(int *buf, size_t len, int flags) {
   int fd;
   scanf("%d", &fd); // fake a tainted a file descriptor
@@ -640,7 +714,6 @@ void testRawmemchr(int c) {
   clang_analyzer_isTainted_charp(result); // expected-warning {{YES}}
 }
 
-typedef char wchar_t;
 int mbtowc(wchar_t *pwc, const char *s, size_t n);
 void testMbtowc(wchar_t *pwc, size_t n) {
   char buf[10];
@@ -653,8 +726,7 @@ void testMbtowc(wchar_t *pwc, size_t n) {
 
 int wctomb(char *s, wchar_t wc);
 void testWctomb(char *buf) {
-  wchar_t wc;
-  scanf("%c", &wc);
+  wchar_t wc = getchar();
 
   int result = wctomb(buf, wc);
   clang_analyzer_isTainted_char(*buf); // expected-warning {{YES}}
@@ -663,8 +735,7 @@ void testWctomb(char *buf) {
 
 int wcwidth(wchar_t c);
 void testWcwidth() {
-  wchar_t wc;
-  scanf("%c", &wc);
+  wchar_t wc = getchar();
 
   int width = wcwidth(wc);
   clang_analyzer_isTainted_int(width); // expected-warning {{YES}}
@@ -916,21 +987,27 @@ void testStrndupa(size_t n) {
 }
 
 size_t strlen(const char *s);
-void testStrlen() {
+void testStrlen_dont_propagate() {
+  // strlen, wcslen, strnlen and alike intentionally don't propagate taint.
+  // See the details here: https://github.com/llvm/llvm-project/pull/66086
+  // This isn't ideal, but this is only what we have now.
   char s[10];
   scanf("%9s", s);
 
   size_t result = strlen(s);
-  clang_analyzer_isTainted_int(result); // expected-warning {{YES}}
+  // strlen propagating taint would bring in many false positives
+  clang_analyzer_isTainted_int(result); // expected-warning {{NO}}
 }
 
 size_t strnlen(const char *s, size_t maxlen);
-void testStrnlen(size_t maxlen) {
+void testStrnlen_dont_propagate(size_t maxlen) {
+  // strlen, wcslen, strnlen and alike intentionally don't propagate taint.
+  // See the details here: https://github.com/llvm/llvm-project/pull/66086
+  // This isn't ideal, but this is only what we have now.
   char s[10];
   scanf("%9s", s);
-
   size_t result = strnlen(s, maxlen);
-  clang_analyzer_isTainted_int(result); // expected-warning {{YES}}
+  clang_analyzer_isTainted_int(result); // expected-warning {{NO}}
 }
 
 long strtol(const char *restrict nptr, char **restrict endptr, int base);
@@ -1087,6 +1164,128 @@ void testConfigurationSinks(void) {
   // expected-warning@-1 {{Untrusted data is passed to a user-defined sink}}
 }
 
+int test_exec_like_functions() {
+  char buf[100] = {0};
+  scanf("%99s", buf);
+  clang_analyzer_isTainted_char(buf[0]); // expected-warning {{YES}}
+
+  char *cleanArray[] = {"ENV1=V1", "ENV2=V2", NULL};
+  char *taintedArray[] = {buf, "ENV2=V2", NULL};
+  clang_analyzer_isTainted_char(taintedArray[0][0]);      // expected-warning {{YES}}
+  clang_analyzer_isTainted_char(*(char*)taintedArray[0]); // expected-warning {{YES}}
+  clang_analyzer_isTainted_char(*(char*)taintedArray);    // expected-warning {{NO}}  We should have YES here.
+  // FIXME: Above the triple pointer indirection will confuse the checker,
+  // as we only check two levels. The results would be worse, if the tainted
+  // subobject ("buf") would not be at the beginning of the enclosing object,
+  // for the same reason.
+
+  switch (coin()) {
+    default: break;
+    // Execute `path` with all arguments after `path` until a NULL pointer
+    // and environment from `environ'.
+    case 0: return execl("path", "arg0", "arg1", "arg2", NULL); // no-warning
+    case 1: return execl(buf, "arg0", "arg1", "arg2", NULL); // expected-warning {{Untrusted data is passed to a system call}}
+    case 2: return execl("path", buf, "arg1", "arg2", NULL); // expected-warning {{Untrusted data is passed to a system call}}
+    case 3: return execl("path", "arg0", buf, "arg2", NULL); // expected-warning {{Untrusted data is passed to a system call}}
+    case 4: return execl("path", "arg0", "arg1", buf, NULL); // expected-warning {{Untrusted data is passed to a system call}}
+  }
+
+  switch (coin()) {
+    default: break;
+    // Execute `path` with all arguments after `PATH` until a NULL pointer,
+    // and the argument after that for environment.
+    case 0: return execle("path", "arg0", "arg1", NULL,   cleanArray); // no-warning
+    case 1: return execle(   buf, "arg0", "arg1", NULL,   cleanArray); // expected-warning {{Untrusted data is passed to a system call}}
+    case 2: return execle("path",    buf, "arg1", NULL,   cleanArray); // expected-warning {{Untrusted data is passed to a system call}}
+    case 3: return execle("path", "arg0",    buf, NULL,   cleanArray); // expected-warning {{Untrusted data is passed to a system call}}
+    case 4: return execle("path", "arg0", "arg1", NULL,          buf); // expected-warning {{Untrusted data is passed to a system call}}
+    case 5: return execle("path", "arg0", "arg1", NULL, taintedArray); // FIXME: We might wanna have a report here.
+  }
+
+  switch (coin()) {
+    default: break;
+    // Execute `file`, searching in the `PATH' environment variable if it
+    // contains no slashes, with all arguments after `file` until a NULL
+    // pointer and environment from `environ'.
+    case 0: return execlp("file", "arg0", "arg1", "arg2", NULL); // no-warning
+    case 1: return execlp(   buf, "arg0", "arg1", "arg2", NULL); // expected-warning {{Untrusted data is passed to a system call}}
+    case 2: return execlp("file",    buf, "arg1", "arg2", NULL); // expected-warning {{Untrusted data is passed to a system call}}
+    case 3: return execlp("file", "arg0",    buf, "arg2", NULL); // expected-warning {{Untrusted data is passed to a system call}}
+    case 4: return execlp("file", "arg0", "arg1",    buf, NULL); // expected-warning {{Untrusted data is passed to a system call}}
+  }
+
+  switch (coin()) {
+    default: break;
+    // Execute `path` with arguments `ARGV` and environment from `environ'.
+    case 0: return execv("path", /*argv=*/  cleanArray); // no-warning
+    case 1: return execv(   buf, /*argv=*/  cleanArray); // expected-warning {{Untrusted data is passed to a system call}}
+    case 2: return execv("path", /*argv=*/taintedArray); // FIXME: We might wanna have a report here.
+  }
+
+  switch (coin()) {
+    default: break;
+    // Replace the current process, executing `path` with arguments `ARGV`
+    // and environment `ENVP`. `ARGV` and `ENVP` are terminated by NULL pointers.
+    case 0: return execve("path", /*argv=*/  cleanArray, /*envp=*/cleanArray); // no-warning
+    case 1: return execve(   buf, /*argv=*/  cleanArray, /*envp=*/cleanArray); // expected-warning {{Untrusted data is passed to a system call}}
+    case 2: return execve("path", /*argv=*/taintedArray, /*envp=*/cleanArray); // FIXME: We might wanna have a report here.
+    case 3: return execve("path", /*argv=*/cleanArray, /*envp=*/taintedArray); // FIXME: We might wanna have a report here.
+  }
+
+  switch (coin()) {
+    default: break;
+    // Execute `file`, searching in the `PATH' environment variable if it
+    // contains no slashes, with arguments `ARGV` and environment from `environ'.
+    case 0: return execvp("file", /*argv=*/  cleanArray); // no-warning
+    case 1: return execvp(   buf, /*argv=*/  cleanArray); // expected-warning {{Untrusted data is passed to a system call}}
+    case 2: return execvp("file", /*argv=*/taintedArray); // FIXME: We might wanna have a report here.
+  }
+
+  // execvpe
+  switch (coin()) {
+    default: break;
+    // Execute `file`, searching in the `PATH' environment variable if it
+    // contains no slashes, with arguments `ARGV` and environment `ENVP`.
+    // `ARGV` and `ENVP` are terminated by NULL pointers.
+    case 0: return execvpe("file", /*argv=*/  cleanArray, /*envp=*/  cleanArray); // no-warning
+    case 1: return execvpe(   buf, /*argv=*/  cleanArray, /*envp=*/  cleanArray); // expected-warning {{Untrusted data is passed to a system call}}
+    case 2: return execvpe("file", /*argv=*/taintedArray, /*envp=*/  cleanArray); // FIXME: We might wanna have a report here.
+    case 3: return execvpe("file", /*argv=*/  cleanArray, /*envp=*/taintedArray); // FIXME: We might wanna have a report here.
+  }
+
+  int cleanFD = coin();
+  int taintedFD;
+  scanf("%d", &taintedFD);
+  clang_analyzer_isTainted_int(taintedFD); // expected-warning {{YES}}
+
+  switch (coin()) {
+    default: break;
+    // Execute the file `FD` refers to, overlaying the running program image.
+    // `ARGV` and `ENVP` are passed to the new program, as for `execve'.
+    case 0: return fexecve(  cleanFD, /*argv=*/  cleanArray, /*envp=*/  cleanArray); // no-warning
+    case 1: return fexecve(taintedFD, /*argv=*/  cleanArray, /*envp=*/  cleanArray); // expected-warning {{Untrusted data is passed to a system call}}
+    case 2: return fexecve(  cleanFD, /*argv=*/taintedArray, /*envp=*/  cleanArray); // FIXME: We might wanna have a report here.
+    case 3: return fexecve(  cleanFD, /*argv=*/  cleanArray, /*envp=*/taintedArray); // FIXME: We might wanna have a report here.
+  }
+
+  switch (coin()) {
+    default: break;
+    // Create a new stream connected to a pipe running the given `command`.
+    case 0: return pclose(popen("command", /*mode=*/"r")); // no-warning
+    case 1: return pclose(popen(      buf, /*mode=*/"r")); // expected-warning {{Untrusted data is passed to a system call}}
+    case 2: return pclose(popen("command", /*mode=*/buf)); // 'mode' is not a taint sink.
+  }
+
+  switch (coin()) {
+    default: break;
+    // Execute the given line as a shell command.
+    case 0: return system("command"); // no-warning
+    case 1: return system(      buf); // expected-warning {{Untrusted data is passed to a system call}}
+  }
+
+  return 0;
+}
+
 void testUnknownFunction(void (*foo)(void)) {
   foo(); // no-crash
 }
@@ -1106,4 +1305,11 @@ void testProctitle2(char *real_argv[]) {
   char *argv[] = {app, "--foobar"};
   setproctitle_init(1, argv, 0);         // expected-warning {{Untrusted data is passed to a user-defined sink}}
   setproctitle_init(1, real_argv, argv); // expected-warning {{Untrusted data is passed to a user-defined sink}}
+}
+
+void testAcceptPropagates() {
+  int listenSocket = socket(2, 1, 6);
+  clang_analyzer_isTainted_int(listenSocket); // expected-warning {{YES}}
+  int acceptSocket = accept(listenSocket, 0, 0);
+  clang_analyzer_isTainted_int(acceptSocket); // expected-warning {{YES}}
 }

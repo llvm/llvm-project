@@ -31,12 +31,11 @@
 // RUN: %if mlir_arm_sve_tests %{ %{compile_sve} | %{run_sve} | FileCheck %s %}
 
 #DCSR = #sparse_tensor.encoding<{
-  lvlTypes = [ "compressed", "compressed" ]
+  map = (d0, d1) -> (d0 : compressed, d1 : compressed)
 }>
 
 #DCSC = #sparse_tensor.encoding<{
-  lvlTypes = [ "compressed", "compressed" ],
-  dimToLvl = affine_map<(i,j) -> (j,i)>
+  map = (d0, d1) -> (d1 : compressed, d0 : compressed)
 }>
 
 #transpose_trait = {
@@ -61,7 +60,7 @@ module {
     %t = sparse_tensor.convert %arga
       : tensor<3x4xf64, #DCSR> to tensor<3x4xf64, #DCSC>
 
-    %i = bufferization.alloc_tensor() : tensor<4x3xf64, #DCSR>
+    %i = tensor.empty() : tensor<4x3xf64, #DCSR>
     %0 = linalg.generic #transpose_trait
        ins(%t: tensor<3x4xf64, #DCSC>)
        outs(%i: tensor<4x3xf64, #DCSR>) {
@@ -80,7 +79,7 @@ module {
   //
   func.func @sparse_transpose_auto(%arga: tensor<3x4xf64, #DCSR>)
                                        -> tensor<4x3xf64, #DCSR> {
-    %i = bufferization.alloc_tensor() : tensor<4x3xf64, #DCSR>
+    %i = tensor.empty() : tensor<4x3xf64, #DCSR>
     %0 = linalg.generic #transpose_trait
        ins(%arga: tensor<3x4xf64, #DCSR>)
        outs(%i: tensor<4x3xf64, #DCSR>) {

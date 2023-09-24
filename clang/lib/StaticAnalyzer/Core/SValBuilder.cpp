@@ -598,11 +598,9 @@ SVal SValBuilder::evalIntegralCast(ProgramStateRef state, SVal val,
   APSIntType ToType(getContext().getTypeSize(castTy),
                     castTy->isUnsignedIntegerType());
   llvm::APSInt ToTypeMax = ToType.getMaxValue();
-  NonLoc ToTypeMaxVal =
-      makeIntVal(ToTypeMax.isUnsigned() ? ToTypeMax.getZExtValue()
-                                        : ToTypeMax.getSExtValue(),
-                 castTy)
-          .castAs<NonLoc>();
+
+  NonLoc ToTypeMaxVal = makeIntVal(ToTypeMax);
+
   // Check the range of the symbol being casted against the maximum value of the
   // target type.
   NonLoc FromVal = val.castAs<NonLoc>();

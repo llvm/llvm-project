@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_LIBC_SRC_SUPPORT_FPUTIL_X86_64_POLYEVAL_H
-#define LLVM_LIBC_SRC_SUPPORT_FPUTIL_X86_64_POLYEVAL_H
+#ifndef LLVM_LIBC_SRC___SUPPORT_FPUTIL_X86_64_POLYEVAL_H
+#define LLVM_LIBC_SRC___SUPPORT_FPUTIL_X86_64_POLYEVAL_H
 
 #include "src/__support/common.h"
 #include "src/__support/macros/properties/architectures.h"
@@ -82,4 +82,4 @@ LIBC_INLINE double polyeval(double x, double a0, double a1, double a2,
 } // namespace fputil
 } // namespace __llvm_libc
 
-#endif // LLVM_LIBC_SRC_SUPPORT_FPUTIL_X86_64_POLYEVAL_H
+#endif // LLVM_LIBC_SRC___SUPPORT_FPUTIL_X86_64_POLYEVAL_H

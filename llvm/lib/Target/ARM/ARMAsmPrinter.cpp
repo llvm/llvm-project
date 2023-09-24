@@ -136,13 +136,13 @@ bool ARMAsmPrinter::runOnMachineFunction(MachineFunction &MF) {
   else if (F.hasOptSize())
     // For small size, but speed and debugging illusion preserved
     OptimizationGoal = 3;
-  else if (TM.getOptLevel() == CodeGenOpt::Aggressive)
+  else if (TM.getOptLevel() == CodeGenOptLevel::Aggressive)
     // Aggressively for speed, small size and debug illusion sacrificed
     OptimizationGoal = 2;
-  else if (TM.getOptLevel() > CodeGenOpt::None)
+  else if (TM.getOptLevel() > CodeGenOptLevel::None)
     // For speed, but small size and good debug illusion preserved
     OptimizationGoal = 1;
-  else // TM.getOptLevel() == CodeGenOpt::None
+  else // TM.getOptLevel() == CodeGenOptLevel::None
     // For good debugging, but speed and small size preserved
     OptimizationGoal = 5;
 

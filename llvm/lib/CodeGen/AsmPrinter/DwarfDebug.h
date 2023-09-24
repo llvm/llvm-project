@@ -107,6 +107,9 @@ class DbgVariable;
 struct FrameIndexExpr {
   int FI;
   const DIExpression *Expr;
+
+  /// Operator enabling sorting based on fragment offset.
+  friend bool operator<(const FrameIndexExpr &LHS, const FrameIndexExpr &RHS);
 };
 
 /// Represents an entry-value location, or a fragment of one.
@@ -115,15 +118,7 @@ struct EntryValueInfo {
   const DIExpression &Expr;
 
   /// Operator enabling sorting based on fragment offset.
-  bool operator<(const EntryValueInfo &Other) const {
-    return getFragmentOffsetInBits() < Other.getFragmentOffsetInBits();
-  }
-
-private:
-  uint64_t getFragmentOffsetInBits() const {
-    std::optional<DIExpression::FragmentInfo> Fragment = Expr.getFragmentInfo();
-    return Fragment ? Fragment->OffsetInBits : 0;
-  }
+  friend bool operator<(const EntryValueInfo &LHS, const EntryValueInfo &RHS);
 };
 
 // Namespace for alternatives of a DbgVariable.
@@ -158,7 +153,7 @@ public:
 };
 /// Single location defined by (potentially multiple) MMI entries.
 struct MMI {
-  mutable SmallVector<FrameIndexExpr, 1> FrameIndexExprs;
+  std::set<FrameIndexExpr> FrameIndexExprs;
 
 public:
   explicit MMI(const DIExpression *E, int FI) : FrameIndexExprs({{FI, E}}) {
@@ -167,7 +162,7 @@ public:
   }
   void addFrameIndexExpr(const DIExpression *Expr, int FI);
   /// Get the FI entries, sorted by fragment offset.
-  ArrayRef<FrameIndexExpr> getFrameIndexExprs() const;
+  const std::set<FrameIndexExpr> &getFrameIndexExprs() const;
 };
 /// Single location defined by (potentially multiple) EntryValueInfo.
 struct EntryValue {

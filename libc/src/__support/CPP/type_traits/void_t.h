@@ -5,8 +5,8 @@
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
-#ifndef LLVM_LIBC_SRC_SUPPORT_CPP_TYPE_TRAITS_VOID_T_H
-#define LLVM_LIBC_SRC_SUPPORT_CPP_TYPE_TRAITS_VOID_T_H
+#ifndef LLVM_LIBC_SRC___SUPPORT_CPP_TYPE_TRAITS_VOID_T_H
+#define LLVM_LIBC_SRC___SUPPORT_CPP_TYPE_TRAITS_VOID_T_H
 
 #include "src/__support/CPP/type_traits/type_identity.h"
 
@@ -23,4 +23,4 @@ using void_t = typename detail::make_void<Ts...>::type;
 
 } // namespace __llvm_libc::cpp
 
-#endif // LLVM_LIBC_SRC_SUPPORT_CPP_TYPE_TRAITS_VOID_T_H
+#endif // LLVM_LIBC_SRC___SUPPORT_CPP_TYPE_TRAITS_VOID_T_H

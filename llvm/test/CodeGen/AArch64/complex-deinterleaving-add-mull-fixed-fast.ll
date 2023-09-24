@@ -7,10 +7,10 @@ target triple = "aarch64"
 define <4 x double> @mull_add(<4 x double> %a, <4 x double> %b, <4 x double> %c) {
 ; CHECK-LABEL: mull_add:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    fcmla v4.2d, v2.2d, v0.2d, #0
-; CHECK-NEXT:    fcmla v5.2d, v3.2d, v1.2d, #0
-; CHECK-NEXT:    fcmla v4.2d, v2.2d, v0.2d, #90
-; CHECK-NEXT:    fcmla v5.2d, v3.2d, v1.2d, #90
+; CHECK-NEXT:    fcmla v4.2d, v0.2d, v2.2d, #0
+; CHECK-NEXT:    fcmla v5.2d, v1.2d, v3.2d, #0
+; CHECK-NEXT:    fcmla v4.2d, v0.2d, v2.2d, #90
+; CHECK-NEXT:    fcmla v5.2d, v1.2d, v3.2d, #90
 ; CHECK-NEXT:    mov v0.16b, v4.16b
 ; CHECK-NEXT:    mov v1.16b, v5.16b
 ; CHECK-NEXT:    ret
@@ -39,14 +39,14 @@ define <4 x double> @mul_add_mull(<4 x double> %a, <4 x double> %b, <4 x double>
 ; CHECK:       // %bb.0: // %entry
 ; CHECK-NEXT:    movi v16.2d, #0000000000000000
 ; CHECK-NEXT:    movi v17.2d, #0000000000000000
-; CHECK-NEXT:    fcmla v17.2d, v4.2d, v6.2d, #0
-; CHECK-NEXT:    fcmla v16.2d, v5.2d, v7.2d, #0
-; CHECK-NEXT:    fcmla v17.2d, v2.2d, v0.2d, #0
-; CHECK-NEXT:    fcmla v16.2d, v3.2d, v1.2d, #0
-; CHECK-NEXT:    fcmla v17.2d, v4.2d, v6.2d, #90
-; CHECK-NEXT:    fcmla v16.2d, v5.2d, v7.2d, #90
-; CHECK-NEXT:    fcmla v17.2d, v2.2d, v0.2d, #90
-; CHECK-NEXT:    fcmla v16.2d, v3.2d, v1.2d, #90
+; CHECK-NEXT:    fcmla v17.2d, v6.2d, v4.2d, #0
+; CHECK-NEXT:    fcmla v16.2d, v7.2d, v5.2d, #0
+; CHECK-NEXT:    fcmla v17.2d, v0.2d, v2.2d, #0
+; CHECK-NEXT:    fcmla v16.2d, v1.2d, v3.2d, #0
+; CHECK-NEXT:    fcmla v17.2d, v6.2d, v4.2d, #90
+; CHECK-NEXT:    fcmla v16.2d, v7.2d, v5.2d, #90
+; CHECK-NEXT:    fcmla v17.2d, v0.2d, v2.2d, #90
+; CHECK-NEXT:    fcmla v16.2d, v1.2d, v3.2d, #90
 ; CHECK-NEXT:    mov v0.16b, v17.16b
 ; CHECK-NEXT:    mov v1.16b, v16.16b
 ; CHECK-NEXT:    ret
@@ -83,14 +83,14 @@ define <4 x double> @mul_sub_mull(<4 x double> %a, <4 x double> %b, <4 x double>
 ; CHECK:       // %bb.0: // %entry
 ; CHECK-NEXT:    movi v16.2d, #0000000000000000
 ; CHECK-NEXT:    movi v17.2d, #0000000000000000
-; CHECK-NEXT:    fcmla v17.2d, v4.2d, v6.2d, #270
-; CHECK-NEXT:    fcmla v16.2d, v5.2d, v7.2d, #270
-; CHECK-NEXT:    fcmla v17.2d, v2.2d, v0.2d, #0
-; CHECK-NEXT:    fcmla v16.2d, v3.2d, v1.2d, #0
-; CHECK-NEXT:    fcmla v17.2d, v4.2d, v6.2d, #180
-; CHECK-NEXT:    fcmla v16.2d, v5.2d, v7.2d, #180
-; CHECK-NEXT:    fcmla v17.2d, v2.2d, v0.2d, #90
-; CHECK-NEXT:    fcmla v16.2d, v3.2d, v1.2d, #90
+; CHECK-NEXT:    fcmla v17.2d, v6.2d, v4.2d, #270
+; CHECK-NEXT:    fcmla v16.2d, v7.2d, v5.2d, #270
+; CHECK-NEXT:    fcmla v17.2d, v0.2d, v2.2d, #0
+; CHECK-NEXT:    fcmla v16.2d, v1.2d, v3.2d, #0
+; CHECK-NEXT:    fcmla v17.2d, v6.2d, v4.2d, #180
+; CHECK-NEXT:    fcmla v16.2d, v7.2d, v5.2d, #180
+; CHECK-NEXT:    fcmla v17.2d, v0.2d, v2.2d, #90
+; CHECK-NEXT:    fcmla v16.2d, v1.2d, v3.2d, #90
 ; CHECK-NEXT:    mov v0.16b, v17.16b
 ; CHECK-NEXT:    mov v1.16b, v16.16b
 ; CHECK-NEXT:    ret
@@ -127,14 +127,14 @@ define <4 x double> @mul_conj_mull(<4 x double> %a, <4 x double> %b, <4 x double
 ; CHECK:       // %bb.0: // %entry
 ; CHECK-NEXT:    movi v16.2d, #0000000000000000
 ; CHECK-NEXT:    movi v17.2d, #0000000000000000
-; CHECK-NEXT:    fcmla v17.2d, v2.2d, v0.2d, #0
-; CHECK-NEXT:    fcmla v16.2d, v3.2d, v1.2d, #0
-; CHECK-NEXT:    fcmla v17.2d, v2.2d, v0.2d, #90
-; CHECK-NEXT:    fcmla v16.2d, v3.2d, v1.2d, #90
-; CHECK-NEXT:    fcmla v17.2d, v6.2d, v4.2d, #0
-; CHECK-NEXT:    fcmla v16.2d, v7.2d, v5.2d, #0
-; CHECK-NEXT:    fcmla v17.2d, v6.2d, v4.2d, #270
-; CHECK-NEXT:    fcmla v16.2d, v7.2d, v5.2d, #270
+; CHECK-NEXT:    fcmla v17.2d, v0.2d, v2.2d, #0
+; CHECK-NEXT:    fcmla v16.2d, v1.2d, v3.2d, #0
+; CHECK-NEXT:    fcmla v17.2d, v0.2d, v2.2d, #90
+; CHECK-NEXT:    fcmla v16.2d, v1.2d, v3.2d, #90
+; CHECK-NEXT:    fcmla v17.2d, v4.2d, v6.2d, #0
+; CHECK-NEXT:    fcmla v16.2d, v5.2d, v7.2d, #0
+; CHECK-NEXT:    fcmla v17.2d, v4.2d, v6.2d, #270
+; CHECK-NEXT:    fcmla v16.2d, v5.2d, v7.2d, #270
 ; CHECK-NEXT:    mov v0.16b, v17.16b
 ; CHECK-NEXT:    mov v1.16b, v16.16b
 ; CHECK-NEXT:    ret

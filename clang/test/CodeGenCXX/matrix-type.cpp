@@ -261,10 +261,10 @@ void test_auto_t() {
   // CHECK-LABEL: define{{.*}} void @_Z11test_auto_tv()
   // CHECK-NEXT:  entry:
   // CHECK-NEXT:    %m = alloca [130 x i32], align 4
-  // CHECK-NEXT:    call void @_Z3fooILm13EEvRu11matrix_typeIXT_ELm10EiE(ptr nonnull align 4 dereferenceable(520) %m)
+  // CHECK-NEXT:    call void @_Z3fooITnDaLm13EEvRu11matrix_typeIXT_ELm10EiE(ptr nonnull align 4 dereferenceable(520) %m)
   // CHECK-NEXT:    ret void
 
-  // CHECK-LABEL: define linkonce_odr void @_Z3fooILm13EEvRu11matrix_typeIXT_ELm10EiE(ptr nonnull align 4 dereferenceable(520) %m)
+  // CHECK-LABEL: define linkonce_odr void @_Z3fooITnDaLm13EEvRu11matrix_typeIXT_ELm10EiE(ptr nonnull align 4 dereferenceable(520) %m)
   // CHECK-NEXT:  entry:
   // CHECK-NEXT:    %m.addr = alloca ptr, align 8
   // CHECK-NEXT:    store ptr %m, ptr %m.addr, align 8

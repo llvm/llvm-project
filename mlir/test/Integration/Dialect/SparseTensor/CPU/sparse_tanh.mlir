@@ -33,7 +33,7 @@
 // Current fails for SVE, see https://github.com/llvm/llvm-project/issues/60626
 // UNSUPPORTED: target=aarch64{{.*}}
 
-#SparseVector = #sparse_tensor.encoding<{ lvlTypes = [ "compressed" ] }>
+#SparseVector = #sparse_tensor.encoding<{ map = (d0) -> (d0 : compressed) }>
 
 #trait_op = {
   indexing_maps = [

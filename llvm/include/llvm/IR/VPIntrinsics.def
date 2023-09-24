@@ -118,6 +118,11 @@
 #define VP_PROPERTY_FUNCTIONAL_INTRINSIC(INTRIN)
 #endif
 
+// This VP Intrinsic has no functionally-equivalent non-VP opcode or intrinsic.
+#ifndef VP_PROPERTY_NO_FUNCTIONAL
+#define VP_PROPERTY_NO_FUNCTIONAL
+#endif
+
 // This VP Intrinsic is a memory operation
 // The pointer arg is at POINTERPOS and the data arg is at DATAPOS.
 #ifndef VP_PROPERTY_MEMOP
@@ -235,27 +240,32 @@ END_REGISTER_VP(vp_umax, VP_UMAX)
 BEGIN_REGISTER_VP_INTRINSIC(vp_abs, 2, 3)
 BEGIN_REGISTER_VP_SDNODE(VP_ABS, -1, vp_abs, 1, 2)
 HELPER_MAP_VPID_TO_VPSD(vp_abs, VP_ABS)
+VP_PROPERTY_FUNCTIONAL_INTRINSIC(abs)
 VP_PROPERTY_FUNCTIONAL_SDOPC(ABS)
 END_REGISTER_VP(vp_abs, VP_ABS)
 
 // llvm.vp.bswap(x,mask,vlen)
 BEGIN_REGISTER_VP(vp_bswap, 1, 2, VP_BSWAP, -1)
+VP_PROPERTY_FUNCTIONAL_INTRINSIC(bswap)
 VP_PROPERTY_FUNCTIONAL_SDOPC(BSWAP)
 END_REGISTER_VP(vp_bswap, VP_BSWAP)
 
 // llvm.vp.bitreverse(x,mask,vlen)
 BEGIN_REGISTER_VP(vp_bitreverse, 1, 2, VP_BITREVERSE, -1)
+VP_PROPERTY_FUNCTIONAL_INTRINSIC(bitreverse)
 VP_PROPERTY_FUNCTIONAL_SDOPC(BITREVERSE)
 END_REGISTER_VP(vp_bitreverse, VP_BITREVERSE)
 
 // llvm.vp.ctpop(x,mask,vlen)
 BEGIN_REGISTER_VP(vp_ctpop, 1, 2, VP_CTPOP, -1)
+VP_PROPERTY_FUNCTIONAL_INTRINSIC(ctpop)
 VP_PROPERTY_FUNCTIONAL_SDOPC(CTPOP)
 END_REGISTER_VP(vp_ctpop, VP_CTPOP)
 
 // llvm.vp.ctlz(x,is_zero_poison,mask,vlen)
 BEGIN_REGISTER_VP_INTRINSIC(vp_ctlz, 2, 3)
 BEGIN_REGISTER_VP_SDNODE(VP_CTLZ, -1, vp_ctlz, 1, 2)
+VP_PROPERTY_FUNCTIONAL_INTRINSIC(ctlz)
 VP_PROPERTY_FUNCTIONAL_SDOPC(CTLZ)
 END_REGISTER_VP_SDNODE(VP_CTLZ)
 BEGIN_REGISTER_VP_SDNODE(VP_CTLZ_ZERO_UNDEF, -1, vp_ctlz_zero_undef, 1, 2)
@@ -265,6 +275,7 @@ END_REGISTER_VP_INTRINSIC(vp_ctlz)
 // llvm.vp.cttz(x,is_zero_poison,mask,vlen)
 BEGIN_REGISTER_VP_INTRINSIC(vp_cttz, 2, 3)
 BEGIN_REGISTER_VP_SDNODE(VP_CTTZ, -1, vp_cttz, 1, 2)
+VP_PROPERTY_FUNCTIONAL_INTRINSIC(cttz)
 VP_PROPERTY_FUNCTIONAL_SDOPC(CTTZ)
 END_REGISTER_VP_SDNODE(VP_CTTZ)
 BEGIN_REGISTER_VP_SDNODE(VP_CTTZ_ZERO_UNDEF, -1, vp_cttz_zero_undef, 1, 2)
@@ -273,11 +284,13 @@ END_REGISTER_VP_INTRINSIC(vp_cttz)
 
 // llvm.vp.fshl(x,y,z,mask,vlen)
 BEGIN_REGISTER_VP(vp_fshl, 3, 4, VP_FSHL, -1)
+VP_PROPERTY_FUNCTIONAL_INTRINSIC(fshl)
 VP_PROPERTY_FUNCTIONAL_SDOPC(FSHL)
 END_REGISTER_VP(vp_fshl, VP_FSHL)
 
 // llvm.vp.fshr(x,y,z,mask,vlen)
 BEGIN_REGISTER_VP(vp_fshr, 3, 4, VP_FSHR, -1)
+VP_PROPERTY_FUNCTIONAL_INTRINSIC(fshr)
 VP_PROPERTY_FUNCTIONAL_SDOPC(FSHR)
 END_REGISTER_VP(vp_fshr, VP_FSHR)
 ///// } Integer Arithmetic
@@ -323,23 +336,27 @@ END_REGISTER_VP(vp_fneg, VP_FNEG)
 
 // llvm.vp.fabs(x,mask,vlen)
 BEGIN_REGISTER_VP(vp_fabs, 1, 2, VP_FABS, -1)
+VP_PROPERTY_FUNCTIONAL_INTRINSIC(fabs)
 VP_PROPERTY_FUNCTIONAL_SDOPC(FABS)
 END_REGISTER_VP(vp_fabs, VP_FABS)
 
 // llvm.vp.sqrt(x,mask,vlen)
 BEGIN_REGISTER_VP(vp_sqrt, 1, 2, VP_SQRT, -1)
+VP_PROPERTY_FUNCTIONAL_INTRINSIC(sqrt)
 VP_PROPERTY_FUNCTIONAL_SDOPC(FSQRT)
 END_REGISTER_VP(vp_sqrt, VP_SQRT)
 
 // llvm.vp.fma(x,y,z,mask,vlen)
 BEGIN_REGISTER_VP(vp_fma, 3, 4, VP_FMA, -1)
 VP_PROPERTY_CONSTRAINEDFP(1, 1, experimental_constrained_fma)
+VP_PROPERTY_FUNCTIONAL_INTRINSIC(fma)
 VP_PROPERTY_FUNCTIONAL_SDOPC(FMA)
 END_REGISTER_VP(vp_fma, VP_FMA)
 
 // llvm.vp.fmuladd(x,y,z,mask,vlen)
 BEGIN_REGISTER_VP(vp_fmuladd, 3, 4, VP_FMULADD, -1)
 VP_PROPERTY_CONSTRAINEDFP(1, 1, experimental_constrained_fmuladd)
+VP_PROPERTY_FUNCTIONAL_INTRINSIC(fmuladd)
 VP_PROPERTY_FUNCTIONAL_SDOPC(FMAD)
 END_REGISTER_VP(vp_fmuladd, VP_FMULADD)
 
@@ -366,36 +383,43 @@ END_REGISTER_VP(vp_maxnum, VP_FMAXNUM)
 
 // llvm.vp.ceil(x,mask,vlen)
 BEGIN_REGISTER_VP(vp_ceil, 1, 2, VP_FCEIL, -1)
+VP_PROPERTY_FUNCTIONAL_INTRINSIC(ceil)
 VP_PROPERTY_FUNCTIONAL_SDOPC(FCEIL)
 END_REGISTER_VP(vp_ceil, VP_FCEIL)
 
 // llvm.vp.floor(x,mask,vlen)
 BEGIN_REGISTER_VP(vp_floor, 1, 2, VP_FFLOOR, -1)
+VP_PROPERTY_FUNCTIONAL_INTRINSIC(floor)
 VP_PROPERTY_FUNCTIONAL_SDOPC(FFLOOR)
 END_REGISTER_VP(vp_floor, VP_FFLOOR)
 
 // llvm.vp.round(x,mask,vlen)
 BEGIN_REGISTER_VP(vp_round, 1, 2, VP_FROUND, -1)
+VP_PROPERTY_FUNCTIONAL_INTRINSIC(round)
 VP_PROPERTY_FUNCTIONAL_SDOPC(FROUND)
 END_REGISTER_VP(vp_round, VP_FROUND)
 
 // llvm.vp.roundeven(x,mask,vlen)
 BEGIN_REGISTER_VP(vp_roundeven, 1, 2, VP_FROUNDEVEN, -1)
+VP_PROPERTY_FUNCTIONAL_INTRINSIC(roundeven)
 VP_PROPERTY_FUNCTIONAL_SDOPC(FROUNDEVEN)
 END_REGISTER_VP(vp_roundeven, VP_FROUNDEVEN)
 
 // llvm.vp.roundtozero(x,mask,vlen)
 BEGIN_REGISTER_VP(vp_roundtozero, 1, 2, VP_FROUNDTOZERO, -1)
+VP_PROPERTY_FUNCTIONAL_INTRINSIC(trunc)
 VP_PROPERTY_FUNCTIONAL_SDOPC(FTRUNC)
 END_REGISTER_VP(vp_roundtozero, VP_FROUNDTOZERO)
 
 // llvm.vp.rint(x,mask,vlen)
 BEGIN_REGISTER_VP(vp_rint, 1, 2, VP_FRINT, -1)
+VP_PROPERTY_FUNCTIONAL_INTRINSIC(rint)
 VP_PROPERTY_FUNCTIONAL_SDOPC(FRINT)
 END_REGISTER_VP(vp_rint, VP_FRINT)
 
 // llvm.vp.nearbyint(x,mask,vlen)
 BEGIN_REGISTER_VP(vp_nearbyint, 1, 2, VP_FNEARBYINT, -1)
+VP_PROPERTY_FUNCTIONAL_INTRINSIC(nearbyint)
 VP_PROPERTY_FUNCTIONAL_SDOPC(FNEARBYINT)
 END_REGISTER_VP(vp_nearbyint, VP_FNEARBYINT)
 
@@ -499,6 +523,7 @@ END_REGISTER_VP_INTRINSIC(vp_icmp)
 
 // llvm.vp.is.fpclass(on_true,on_false,mask,vlen)
 BEGIN_REGISTER_VP(vp_is_fpclass, 2, 3, VP_IS_FPCLASS, 0)
+VP_PROPERTY_FUNCTIONAL_INTRINSIC(is_fpclass)
 END_REGISTER_VP(vp_is_fpclass, VP_IS_FPCLASS)
 
 ///// Memory Operations {
@@ -515,6 +540,7 @@ END_REGISTER_VP(vp_store, VP_STORE)
 // llvm.experimental.vp.strided.store(val,ptr,stride,mask,vlen)
 BEGIN_REGISTER_VP_INTRINSIC(experimental_vp_strided_store, 3, 4)
 // chain = EXPERIMENTAL_VP_STRIDED_STORE chain,val,base,offset,stride,mask,evl
+VP_PROPERTY_NO_FUNCTIONAL
 BEGIN_REGISTER_VP_SDNODE(EXPERIMENTAL_VP_STRIDED_STORE, 1, experimental_vp_strided_store, 5, 6)
 HELPER_MAP_VPID_TO_VPSD(experimental_vp_strided_store, EXPERIMENTAL_VP_STRIDED_STORE)
 VP_PROPERTY_MEMOP(1, 0)
@@ -542,6 +568,7 @@ END_REGISTER_VP(vp_load, VP_LOAD)
 // llvm.experimental.vp.strided.load(ptr,stride,mask,vlen)
 BEGIN_REGISTER_VP_INTRINSIC(experimental_vp_strided_load, 2, 3)
 // chain = EXPERIMENTAL_VP_STRIDED_LOAD chain,base,offset,stride,mask,evl
+VP_PROPERTY_NO_FUNCTIONAL
 BEGIN_REGISTER_VP_SDNODE(EXPERIMENTAL_VP_STRIDED_LOAD, -1, experimental_vp_strided_load, 4, 5)
 HELPER_MAP_VPID_TO_VPSD(experimental_vp_strided_load, EXPERIMENTAL_VP_STRIDED_LOAD)
 VP_PROPERTY_MEMOP(0, std::nullopt)
@@ -668,9 +695,11 @@ END_REGISTER_VP(vp_select, VP_SELECT)
 
 // llvm.vp.merge(cond,on_true,on_false,pivot)
 BEGIN_REGISTER_VP(vp_merge, std::nullopt, 3, VP_MERGE, -1)
+VP_PROPERTY_NO_FUNCTIONAL
 END_REGISTER_VP(vp_merge, VP_MERGE)
 
 BEGIN_REGISTER_VP(experimental_vp_splice, 3, 5, EXPERIMENTAL_VP_SPLICE, -1)
+VP_PROPERTY_FUNCTIONAL_INTRINSIC(experimental_vector_splice)
 END_REGISTER_VP(experimental_vp_splice, EXPERIMENTAL_VP_SPLICE)
 
 ///// } Shuffles
@@ -689,5 +718,6 @@ END_REGISTER_VP(experimental_vp_splice, EXPERIMENTAL_VP_SPLICE)
 #undef VP_PROPERTY_FUNCTIONAL_INTRINSIC
 #undef VP_PROPERTY_FUNCTIONAL_OPC
 #undef VP_PROPERTY_FUNCTIONAL_SDOPC
+#undef VP_PROPERTY_NO_FUNCTIONAL
 #undef VP_PROPERTY_MEMOP
 #undef VP_PROPERTY_REDUCTION

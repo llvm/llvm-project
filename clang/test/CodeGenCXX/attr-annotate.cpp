@@ -3,9 +3,9 @@
 //CHECK: @[[STR1:.*]] = private unnamed_addr constant [{{.*}} x i8] c"{{.*}}attr-annotate.cpp\00", section "llvm.metadata"
 //CHECK: @[[STR2:.*]] = private unnamed_addr constant [4 x i8] c"abc\00", align 1
 //CHECK: @[[STR:.*]] = private unnamed_addr constant [5 x i8] c"test\00", section "llvm.metadata"
-//CHECK: @[[ARGS:.*]] = private unnamed_addr constant { %struct.Struct } { %struct.Struct { ptr @_ZN1AIjLj9EE2SVE, ptr getelementptr (i8, ptr @_ZN1AIjLj9EE2SVE, i64 4) } }, section "llvm.metadata"
-//CHECK: @[[ARGS2:.*]] = private unnamed_addr constant { i32, ptr, i32 } { i32 9, ptr @[[STR2:.*]], i32 8 }, section "llvm.metadata"
-//CHECK: @llvm.global.annotations = appending global [2 x { ptr, ptr, ptr, i32, ptr }] [{ ptr, ptr, ptr, i32, ptr } { ptr @_ZN1AIjLj9EE5test2Ev, ptr @.str.6, ptr @.str.1, i32 24, ptr @[[ARGS]] }, { ptr, ptr, ptr, i32, ptr } { ptr @_ZN1AIjLj9EE4testILi8EEEvv, ptr @[[STR:.*]], ptr @[[STR1:.*]], i32 {{.*}}, ptr @[[ARGS2:.*]] }]
+//CHECK: @[[ARGS:.*]] = private unnamed_addr constant { i32, ptr, i32 } { i32 9, ptr @[[STR2:.*]], i32 8 }, section "llvm.metadata"
+//CHECK: @[[ARGS2:.*]] = private unnamed_addr constant { %struct.Struct } { %struct.Struct { ptr @_ZN1AIjLj9EE2SVE, ptr getelementptr (i8, ptr @_ZN1AIjLj9EE2SVE, i64 4) } }, section "llvm.metadata"
+//CHECK: @llvm.global.annotations = appending global [2 x { ptr, ptr, ptr, i32, ptr }] [{ ptr, ptr, ptr, i32, ptr } { ptr @_ZN1AIjLj9EE4testILi8EEEvv, ptr @[[STR:.*]], ptr @[[STR1:.*]], i32 {{.*}}, ptr @[[ARGS:.*]] }, { ptr, ptr, ptr, i32, ptr } { ptr @_ZN1AIjLj9EE5test2Ev, ptr @.str.6, ptr @.str.1, i32 24, ptr @[[ARGS2]] }]
 
 constexpr const char* str() {
   return "abc";

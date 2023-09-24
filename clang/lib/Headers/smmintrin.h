@@ -645,7 +645,7 @@ static __inline__ __m128i __DEFAULT_FN_ATTRS _mm_mul_epi32(__m128i __V1,
 /// \returns A 128-bit integer vector containing the data stored at the
 ///    specified memory location.
 static __inline__ __m128i __DEFAULT_FN_ATTRS
-_mm_stream_load_si128(__m128i const *__V) {
+_mm_stream_load_si128(const void *__V) {
   return (__m128i)__builtin_nontemporal_load((const __v2di *)__V);
 }
 

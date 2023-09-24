@@ -5,6 +5,7 @@ endif()
 add_llvm_component_library(LLVMOrcTargetProcess
   ExecutorSharedMemoryMapperService.cpp
   JITLoaderGDB.cpp
+  JITLoaderPerf.cpp
   OrcRTBootstrap.cpp
   RegisterEHFrames.cpp
   SimpleExecutorDylibManager.cpp

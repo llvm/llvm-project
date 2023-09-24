@@ -89,20 +89,20 @@ static Value reshapeLoad(Location loc, Value val, VectorType type,
                          PatternRewriter &rewriter) {
   if (index == -1)
     return val;
-  Type lowType = type.getRank() > 1 ? VectorType::Builder(type).dropDim(0)
-                                    : type.getElementType();
+
   // At extraction dimension?
   if (index == 0)
-    return rewriter.create<vector::ExtractOp>(loc, lowType, val, pos);
+    return rewriter.create<vector::ExtractOp>(loc, val, pos);
+
   // Unroll leading dimensions.
-  VectorType vType = cast<VectorType>(lowType);
+  VectorType vType = VectorType::Builder(type).dropDim(0);
   VectorType resType = VectorType::Builder(type).dropDim(index);
   Value result = rewriter.create<arith::ConstantOp>(
       loc, resType, rewriter.getZeroAttr(resType));
   for (int64_t d = 0, e = resType.getDimSize(0); d < e; d++) {
-    Value ext = rewriter.create<vector::ExtractOp>(loc, vType, val, d);
+    Value ext = rewriter.create<vector::ExtractOp>(loc, val, d);
     Value load = reshapeLoad(loc, ext, vType, index - 1, pos, rewriter);
-    result = rewriter.create<vector::InsertOp>(loc, resType, load, result, d);
+    result = rewriter.create<vector::InsertOp>(loc, load, result, d);
   }
   return result;
 }
@@ -117,16 +117,15 @@ static Value reshapeStore(Location loc, Value val, Value result,
     return val;
   // At insertion dimension?
   if (index == 0)
-    return rewriter.create<vector::InsertOp>(loc, type, val, result, pos);
+    return rewriter.create<vector::InsertOp>(loc, val, result, pos);
+
   // Unroll leading dimensions.
-  VectorType lowType = VectorType::Builder(type).dropDim(0);
-  Type insType = lowType.getRank() > 1 ? VectorType::Builder(lowType).dropDim(0)
-                                       : lowType.getElementType();
+  VectorType vType = VectorType::Builder(type).dropDim(0);
   for (int64_t d = 0, e = type.getDimSize(0); d < e; d++) {
-    Value ext = rewriter.create<vector::ExtractOp>(loc, lowType, result, d);
-    Value ins = rewriter.create<vector::ExtractOp>(loc, insType, val, d);
-    Value sto = reshapeStore(loc, ins, ext, lowType, index - 1, pos, rewriter);
-    result = rewriter.create<vector::InsertOp>(loc, type, sto, result, d);
+    Value ext = rewriter.create<vector::ExtractOp>(loc, result, d);
+    Value ins = rewriter.create<vector::ExtractOp>(loc, val, d);
+    Value sto = reshapeStore(loc, ins, ext, vType, index - 1, pos, rewriter);
+    result = rewriter.create<vector::InsertOp>(loc, sto, result, d);
   }
   return result;
 }
@@ -140,7 +139,8 @@ createContractArithOp(Location loc, Value x, Value y, Value acc,
   Value mul;
 
   if (isInt) {
-    if (kind == CombiningKind::MINF || kind == CombiningKind::MAXF)
+    if (kind == CombiningKind::MINF || kind == CombiningKind::MAXF ||
+        kind == CombiningKind::MINIMUMF || kind == CombiningKind::MAXIMUMF)
       // Only valid for floating point types.
       return std::nullopt;
     mul = rewriter.create<arith::MulIOp>(loc, x, y);
@@ -1121,11 +1121,14 @@ public:
 
   LogicalResult matchAndRewrite(vector::OuterProductOp op,
                                 PatternRewriter &rewriter) const override {
+    VectorType resType = op.getResultVectorType();
+    if ((resType.getShape().size() >= 2) && resType.allDimsScalable())
+      return failure();
+
     auto loc = op.getLoc();
 
     VectorType lhsType = op.getOperandVectorTypeLHS();
     VectorType rhsType = dyn_cast<VectorType>(op.getOperandTypeRHS());
-    VectorType resType = op.getResultVectorType();
     Type eltType = resType.getElementType();
     bool isInt = isa<IntegerType, IndexType>(eltType);
     Value acc = op.getAcc();
@@ -1171,7 +1174,7 @@ public:
           loc, a, op.getRhs(), r, kind, rewriter, isInt, extrMask);
       if (!m.has_value())
         return failure();
-      result = rewriter.create<vector::InsertOp>(loc, resType, *m, result, d);
+      result = rewriter.create<vector::InsertOp>(loc, *m, result, d);
     }
 
     rewriter.replaceOp(rootOp, result);
