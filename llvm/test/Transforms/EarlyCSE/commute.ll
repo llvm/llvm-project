@@ -1100,6 +1100,19 @@ define float @fma(float %a, float %b, float %c) {
   ret float %r
 }
 
+define float @fma_fail(float %a, float %b, float %c) {
+; CHECK-LABEL: @fma_fail(
+; CHECK-NEXT:    [[X:%.*]] = call float @llvm.fma.f32(float [[A:%.*]], float [[B:%.*]], float [[C:%.*]])
+; CHECK-NEXT:    [[Y:%.*]] = call float @llvm.fma.f32(float [[A]], float [[C]], float [[B]])
+; CHECK-NEXT:    [[R:%.*]] = fdiv nnan float [[X]], [[Y]]
+; CHECK-NEXT:    ret float [[R]]
+;
+  %x = call float @llvm.fma.f32(float %a, float %b, float %c)
+  %y = call float @llvm.fma.f32(float %a, float %c, float %b)
+  %r = fdiv nnan float %x, %y
+  ret float %r
+}
+
 define float @fma_different_add_ops(float %a, float %b, float %c, float %d) {
 ; CHECK-LABEL: @fma_different_add_ops(
 ; CHECK-NEXT:    [[X:%.*]] = call float @llvm.fma.f32(float [[A:%.*]], float [[B:%.*]], float [[C:%.*]])
@@ -1124,6 +1137,32 @@ define <2 x double> @fmuladd(<2 x double> %a, <2 x double> %b, <2 x double> %c) 
 ;
   %x = call <2 x double> @llvm.fmuladd.v2f64(<2 x double> %a, <2 x double> %b, <2 x double> %c)
   %y = call <2 x double> @llvm.fmuladd.v2f64(<2 x double> %b, <2 x double> %a, <2 x double> %c)
+  %r = fdiv nnan <2 x double> %x, %y
+  ret <2 x double> %r
+}
+
+define <2 x double> @fmuladd_fail1(<2 x double> %a, <2 x double> %b, <2 x double> %c) {
+; CHECK-LABEL: @fmuladd_fail1(
+; CHECK-NEXT:    [[X:%.*]] = call <2 x double> @llvm.fmuladd.v2f64(<2 x double> [[A:%.*]], <2 x double> [[B:%.*]], <2 x double> [[C:%.*]])
+; CHECK-NEXT:    [[Y:%.*]] = call <2 x double> @llvm.fmuladd.v2f64(<2 x double> [[C]], <2 x double> [[B]], <2 x double> [[A]])
+; CHECK-NEXT:    [[R:%.*]] = fdiv nnan <2 x double> [[X]], [[Y]]
+; CHECK-NEXT:    ret <2 x double> [[R]]
+;
+  %x = call <2 x double> @llvm.fmuladd.v2f64(<2 x double> %a, <2 x double> %b, <2 x double> %c)
+  %y = call <2 x double> @llvm.fmuladd.v2f64(<2 x double> %c, <2 x double> %b, <2 x double> %a)
+  %r = fdiv nnan <2 x double> %x, %y
+  ret <2 x double> %r
+}
+
+define <2 x double> @fmuladd_fail2(<2 x double> %a, <2 x double> %b, <2 x double> %c) {
+; CHECK-LABEL: @fmuladd_fail2(
+; CHECK-NEXT:    [[X:%.*]] = call <2 x double> @llvm.fmuladd.v2f64(<2 x double> [[A:%.*]], <2 x double> [[B:%.*]], <2 x double> [[C:%.*]])
+; CHECK-NEXT:    [[Y:%.*]] = call <2 x double> @llvm.fmuladd.v2f64(<2 x double> [[A]], <2 x double> [[C]], <2 x double> [[B]])
+; CHECK-NEXT:    [[R:%.*]] = fdiv nnan <2 x double> [[X]], [[Y]]
+; CHECK-NEXT:    ret <2 x double> [[R]]
+;
+  %x = call <2 x double> @llvm.fmuladd.v2f64(<2 x double> %a, <2 x double> %b, <2 x double> %c)
+  %y = call <2 x double> @llvm.fmuladd.v2f64(<2 x double> %a, <2 x double> %c, <2 x double> %b)
   %r = fdiv nnan <2 x double> %x, %y
   ret <2 x double> %r
 }
