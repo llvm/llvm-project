@@ -6171,13 +6171,3 @@ void CombinerHelper::applyCommuteBinOpOperands(MachineInstr &MI) {
   MI.getOperand(2).setReg(LHSReg);
   Observer.changedInstr(MI);
 }
-
-bool CombinerHelper::tryCombine(MachineInstr &MI) {
-  if (tryCombineCopy(MI))
-    return true;
-  if (tryCombineExtendingLoads(MI))
-    return true;
-  if (tryCombineIndexedLoadStore(MI))
-    return true;
-  return false;
-}
