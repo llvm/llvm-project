@@ -66,7 +66,7 @@ class MacroInfo {
   /// Length in characters of the macro definition.
   mutable unsigned DefinitionLength;
 
-  /// True if 'define2' used, enables expansion anyway
+  /// True only for inner-impl '__THIS_MACRO__', enables expansion anyway
   bool AllowRecurse : 1;
 
   mutable bool IsDefinitionLengthCached : 1;
@@ -118,7 +118,7 @@ class MacroInfo {
   enum : uint16_t { recursion_depth_limit = 16'000 };
   /// recursion depth,
   /// > 0 if we have started an expansion of this macro already.
-  /// for 'define' max is 1, for 'define2' max is depth limit
+  /// if !AllowRecurse max is 1, else max is recursion depth limit
   uint16_t Depth = 0;
 
   // Only the Preprocessor gets to create these.

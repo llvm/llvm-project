@@ -115,7 +115,6 @@ PPKEYWORD(__include_macros)
 
 // C99 6.10.3 - Macro Replacement.
 PPKEYWORD(define)
-PPKEYWORD(define2)
 PPKEYWORD(undef)
 
 // C99 6.10.4 - Line Control.
