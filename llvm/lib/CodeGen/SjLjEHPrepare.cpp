@@ -442,9 +442,19 @@ bool SjLjEHPrepare::setupEntryBlockAndCallSites(Function &F) {
   for (BasicBlock &BB : F) {
     if (&BB == &F.front())
       continue;
-    for (Instruction &I : BB)
-      if (I.mayThrow())
-        insertCallSiteStore(&I, -1);
+    for (Instruction &I : BB) {
+      // Partially revert b61fd7f modifications.  Stop using "I.mayThrow()"
+      // here.  Using it inserts no-action marker to just before invoke
+      // instructions like "invoke void @__cxa_bad_cast()".  That means
+      // tests having exception and try/catch in the identical function
+      // are broken.  For example, tests like test_aux_runtime.pass.cpp.
+      if (CallInst *CI = dyn_cast<CallInst>(&I)) {
+        if (!CI->doesNotThrow())
+          insertCallSiteStore(CI, -1);
+      } else if (ResumeInst *RI = dyn_cast<ResumeInst>(&I)) {
+        insertCallSiteStore(RI, -1);
+      }
+    }
   }
 
   // Register the function context and make sure it's known to not throw
