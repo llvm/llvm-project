@@ -26,6 +26,7 @@ append_context() {
     echo "(context (default
  (env
   (_
+   (ocamlc_flags -custom)
    (c_flags $base_cflags)
    (env-vars
     (LLVM_CONFIG $llvm_config)
