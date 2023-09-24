@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "ByteCodeEmitter.h"
+#include "ByteCodeGenError.h"
 #include "Context.h"
 #include "Floating.h"
 #include "Opcode.h"
@@ -17,9 +18,6 @@
 
 using namespace clang;
 using namespace clang::interp;
-
-using APSInt = llvm::APSInt;
-using Error = llvm::Error;
 
 Expected<Function *>
 ByteCodeEmitter::compileFunc(const FunctionDecl *FuncDecl) {
