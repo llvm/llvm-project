@@ -17,6 +17,7 @@
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ExecutionEngine/Orc/ExecutionUtils.h"
 #include "llvm/ExecutionEngine/Orc/Shared/ExecutorAddress.h"
+#include "llvm/IR/PassManager.h"
 
 #include <memory>
 
@@ -24,6 +25,7 @@ namespace llvm {
 class Error;
 namespace orc {
 class LLJIT;
+class LLLazyJIT;
 class ThreadSafeContext;
 } // namespace orc
 } // namespace llvm
@@ -35,7 +37,7 @@ class TargetInfo;
 
 class IncrementalExecutor {
   using CtorDtorIterator = llvm::orc::CtorDtorIterator;
-  std::unique_ptr<llvm::orc::LLJIT> Jit;
+  std::unique_ptr<llvm::orc::LLLazyJIT> Jit;
   llvm::orc::ThreadSafeContext &TSCtx;
 
   llvm::DenseMap<const PartialTranslationUnit *, llvm::orc::ResourceTrackerSP>
@@ -55,7 +57,9 @@ public:
   llvm::Expected<llvm::orc::ExecutorAddr>
   getSymbolAddress(llvm::StringRef Name, SymbolNameKind NameKind) const;
 
-  llvm::orc::LLJIT &GetExecutionEngine() { return *Jit; }
+  llvm::orc::LLLazyJIT &GetExecutionEngine() { return *Jit; }
+
+  std::unique_ptr<llvm::ModulePassManager> MPM;
 };
 
 } // end namespace clang

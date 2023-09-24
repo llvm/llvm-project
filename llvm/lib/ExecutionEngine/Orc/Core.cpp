@@ -2232,7 +2232,7 @@ Error ExecutionSession::registerJITDispatchHandlers(
 
   auto TagAddrs = lookup({{&JD, JITDylibLookupFlags::MatchAllSymbols}},
                          SymbolLookupSet::fromMapKeys(
-                             WFs, SymbolLookupFlags::WeaklyReferencedSymbol));
+                             WFs, SymbolLookupFlags::RequiredSymbol));
   if (!TagAddrs)
     return TagAddrs.takeError();
 
@@ -2272,11 +2272,14 @@ void ExecutionSession::runJITDispatchHandler(SendResultFunction SendResult,
 
   if (F)
     (*F)(std::move(SendResult), ArgBuffer.data(), ArgBuffer.size());
-  else
+  else {
+    dbgs() << "dispatch failed" << "\n";
+    assert(false);
     SendResult(shared::WrapperFunctionResult::createOutOfBandError(
         ("No function registered for tag " +
          formatv("{0:x16}", HandlerFnTagAddr))
             .str()));
+  }
 }
 
 void ExecutionSession::dump(raw_ostream &OS) {

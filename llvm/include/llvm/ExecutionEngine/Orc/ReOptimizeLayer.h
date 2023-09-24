@@ -42,12 +42,12 @@ public:
   /// terminated.
   using ReOptimizeFunc = unique_function<Error(
       ReOptimizeLayer &Parent, ReOptMaterializationUnitID MUID,
-      unsigned CurVersion, ResourceTrackerSP OldRT, ThreadSafeModule &TSM)>;
+      unsigned CurVersion, ResourceTrackerSP OldRT, const std::vector<std::pair<uint32_t, uint64_t>>& Profile, ThreadSafeModule &TSM)>;
 
   ReOptimizeLayer(ExecutionSession &ES, IRLayer &BaseLayer,
                   RedirectableSymbolManager &RM)
       : IRLayer(ES, BaseLayer.getManglingOptions()), ES(ES),
-        BaseLayer(BaseLayer), RSManager(RM), ReOptFunc(identity),
+        BaseLayer(BaseLayer), RSManager(RM), ReOptFunc(nullptr),
         ProfilerFunc(reoptimizeIfCallFrequent) {}
 
   void setReoptimizeFunc(ReOptimizeFunc ReOptFunc) {
@@ -85,13 +85,16 @@ public:
 
   // Create IR reoptimize request fucntion call.
   static void createReoptimizeCall(Module &M, Instruction &IP,
-                                   GlobalVariable *ArgBuffer);
+                                   ReOptMaterializationUnitID MUID, uint32_t CurVersion);
+
+  // Create IR reoptimize request fucntion call.
+  static void createFucnCountCall(Module &M, Instruction &IP, ReOptMaterializationUnitID MUID, uint32_t CallID, Value* FuncPtr);
 
   Error handleRemoveResources(JITDylib &JD, ResourceKey K) override;
   void handleTransferResources(JITDylib &JD, ResourceKey DstK,
                                ResourceKey SrcK) override;
 
-private:
+  DenseMap<ExecutorAddr, std::pair<ReOptMaterializationUnitID,StringRef>> FuncAddrToMU;
   class ReOptMaterializationUnitState {
   public:
     ReOptMaterializationUnitState() = default;
@@ -139,12 +142,17 @@ private:
       shared::SPSArgList<ReOptMaterializationUnitID, uint32_t>;
   using SendErrorFn = unique_function<void(Error)>;
 
+  ReOptMaterializationUnitState &
+  getMaterializationUnitState(ReOptMaterializationUnitID MUID);
+
   Expected<SymbolMap> emitMUImplSymbols(ReOptMaterializationUnitState &MUState,
                                         uint32_t Version, JITDylib &JD,
                                         ThreadSafeModule TSM);
 
+private:
+
   void rt_reoptimize(SendErrorFn SendResult, ReOptMaterializationUnitID MUID,
-                     uint32_t CurVersion);
+                     uint32_t CurVersion, const std::vector<std::pair<uint32_t,uint64_t>>& Profile);
 
   static Expected<Constant *>
   createReoptimizeArgBuffer(Module &M, ReOptMaterializationUnitID MUID,
@@ -156,10 +164,6 @@ private:
   void
   registerMaterializationUnitResource(ResourceKey Key,
                                       ReOptMaterializationUnitState &State);
-
-  ReOptMaterializationUnitState &
-  getMaterializationUnitState(ReOptMaterializationUnitID MUID);
-
   ExecutionSession &ES;
   IRLayer &BaseLayer;
   RedirectableSymbolManager &RSManager;

@@ -29,6 +29,7 @@
 namespace llvm {
 namespace orc {
 class LLJIT;
+class LLLazyJIT;
 class ThreadSafeContext;
 } // namespace orc
 } // namespace llvm
@@ -101,7 +102,7 @@ public:
   const ASTContext &getASTContext() const;
   ASTContext &getASTContext();
   const CompilerInstance *getCompilerInstance() const;
-  llvm::Expected<llvm::orc::LLJIT &> getExecutionEngine();
+  llvm::Expected<llvm::orc::LLLazyJIT&> getExecutionEngine();
 
   llvm::Expected<PartialTranslationUnit &> Parse(llvm::StringRef Code);
   llvm::Error Execute(PartialTranslationUnit &T);

@@ -332,8 +332,9 @@ void ELFNixPlatform::getInitializersBuildSequencePhase(
       });
       auto ISItr = InitSeqs.find(InitJD.get());
       if (ISItr != InitSeqs.end()) {
-        FullInitSeq.emplace_back(std::move(ISItr->second));
-        InitSeqs.erase(ISItr);
+        FullInitSeq.emplace_back(ISItr->second);
+        //InitSeqs.erase(ISItr);
+        ISItr->second.InitSections.clear();
       }
     }
   }
@@ -549,8 +550,11 @@ Error ELFNixPlatform::registerInitInfo(
 
       Lock.lock();
       I = InitSeqs.find(&JD);
-      assert(I != InitSeqs.end() &&
-             "Entry missing after header symbol lookup?");
+      if (I == InitSeqs.end()) {
+        return Error::success();
+      }
+      /* assert(I != InitSeqs.end() && */
+      /*        "Entry missing after header symbol lookup?"); */
     }
     InitSeq = &I->second;
   }

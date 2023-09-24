@@ -27,7 +27,7 @@ void ReOptimizeLayer::ReOptMaterializationUnitState::reoptimizeFailed() {
 
 Error ReOptimizeLayer::reigsterRuntimeFunctions(JITDylib &PlatformJD) {
   ExecutionSession::JITDispatchHandlerAssociationMap WFs;
-  using ReoptimizeSPSSig = shared::SPSError(uint64_t, uint32_t);
+  using ReoptimizeSPSSig = shared::SPSError(uint64_t, uint32_t, shared::SPSSequence<shared::SPSTuple<uint32_t, uint64_t>>);
   WFs[ES.intern("__orc_rt_reoptimize_tag")] =
       ES.wrapAsyncWithSPS<ReoptimizeSPSSig>(this,
                                             &ReOptimizeLayer::rt_reoptimize);
@@ -46,9 +46,34 @@ void ReOptimizeLayer::emit(std::unique_ptr<MaterializationResponsibility> R,
   }
 
   if (HasNonCallable) {
+    dbgs() << "Skipped" << "\n";
+    TSM.withModuleDo([&](Module& M) {
+      dbgs() << M << "\n";
+    });
     BaseLayer.emit(std::move(R), std::move(TSM));
     return;
   }
+
+  TSM.withModuleDo([&](Module& M){
+      uint32_t ID = 1;
+    for (auto &F : M) {
+      if (F.isDeclaration())
+        continue;
+        for (auto &B : F) {
+          for (auto &I : B) {
+            if (auto* Call = dyn_cast<llvm::CallInst>(&I)) {
+              if (Call->isIndirectCall()) {
+                LLVMContext& C = Call->getContext();
+                Type *I32Ty = Type::getInt32Ty(C);
+                Constant *One = ConstantInt::get(I32Ty, ID);
+                MDNode* N = MDNode::get(C, llvm::ValueAsMetadata::getConstant(One));
+                Call->setMetadata("call_id", N);
+              }
+            }
+          }
+        }
+      }
+    });
 
   auto &MUState = createMaterializationUnitState(TSM);
 
@@ -59,7 +84,7 @@ void ReOptimizeLayer::emit(std::unique_ptr<MaterializationResponsibility> R,
     R->failMaterialization();
     return;
   }
-
+  
   if (auto Err =
           ProfilerFunc(*this, MUState.getID(), MUState.getCurVersion(), TSM)) {
     ES.reportError(std::move(Err));
@@ -75,7 +100,24 @@ void ReOptimizeLayer::emit(std::unique_ptr<MaterializationResponsibility> R,
     return;
   }
 
-  RSManager.emitRedirectableSymbols(std::move(R), std::move(*InitialDests));
+  RSManager.emitRedirectableSymbols(std::move(R), *InitialDests);
+
+  SymbolLookupSet LookupSymbols;
+  for (auto [K, V] : *InitialDests)
+    LookupSymbols.add(K);
+
+  auto FinalSymbols =
+      ES.lookup({{&JD, JITDylibLookupFlags::MatchAllSymbols}}, LookupSymbols,
+                LookupKind::Static, SymbolState::Resolved);
+  if (auto Err = FinalSymbols.takeError()) {
+    ES.reportError(InitialDests.takeError());
+    R->failMaterialization();
+    return;
+  }
+  
+  for (auto [K,V] : (*FinalSymbols)) {
+    FuncAddrToMU[V.getAddress()] = {MUState.getID(), *K};
+  }
 }
 
 Error ReOptimizeLayer::reoptimizeIfCallFrequent(ReOptimizeLayer &Parent,
@@ -87,12 +129,7 @@ Error ReOptimizeLayer::reoptimizeIfCallFrequent(ReOptimizeLayer &Parent,
     GlobalVariable *Counter = new GlobalVariable(
         M, I64Ty, false, GlobalValue::InternalLinkage,
         Constant::getNullValue(I64Ty), "__orc_reopt_counter");
-    auto ArgBufferConst = createReoptimizeArgBuffer(M, MUID, CurVersion);
-    if (auto Err = ArgBufferConst.takeError())
-      return Err;
-    GlobalVariable *ArgBuffer =
-        new GlobalVariable(M, (*ArgBufferConst)->getType(), true,
-                           GlobalValue::InternalLinkage, (*ArgBufferConst));
+    dbgs() << "Adding instrumentation" << "\n";
     for (auto &F : M) {
       if (F.isDeclaration())
         continue;
@@ -106,8 +143,21 @@ Error ReOptimizeLayer::reoptimizeIfCallFrequent(ReOptimizeLayer &Parent,
       Value *Added = IRB.CreateAdd(Cnt, ConstantInt::get(I64Ty, 1));
       (void)IRB.CreateStore(Added, Counter);
       Instruction *SplitTerminator = SplitBlockAndInsertIfThen(Cmp, IP, false);
-      createReoptimizeCall(M, *SplitTerminator, ArgBuffer);
+      createReoptimizeCall(M, *SplitTerminator, MUID, CurVersion);
+
+      for (auto &B : F) {
+        for (auto& I : B) {
+          if (auto* Call = dyn_cast<llvm::CallInst>(&I)) {
+            if (Call->isIndirectCall()) {
+                auto* VAM = cast<ValueAsMetadata>(dyn_cast<MDNode>(Call->getMetadata("call_id"))->getOperand(0));
+                int CallID = dyn_cast<ConstantInt>(VAM->getValue())->getSExtValue();
+                createFucnCountCall(M, I, MUID, CallID, Call->getCalledOperand());
+            }
+          }
+        }
+      }
     }
+    dbgs() << M << "\n";
     return Error::success();
   });
 }
@@ -148,15 +198,18 @@ ReOptimizeLayer::emitMUImplSymbols(ReOptMaterializationUnitState &MUState,
     return Err;
 
   SymbolMap Result;
-  for (auto [K, V] : RenamedMap)
+  for (auto [K, V] : RenamedMap) {
     Result[K] = (*ImplSymbols)[V];
+  }
+
 
   return Result;
 }
 
 void ReOptimizeLayer::rt_reoptimize(SendErrorFn SendResult,
                                     ReOptMaterializationUnitID MUID,
-                                    uint32_t CurVersion) {
+                                    uint32_t CurVersion, const std::vector<std::pair<uint32_t,uint64_t>>& Profile) {
+
   auto &MUState = getMaterializationUnitState(MUID);
   if (CurVersion < MUState.getCurVersion() || !MUState.tryStartReoptimize()) {
     SendResult(Error::success());
@@ -164,10 +217,14 @@ void ReOptimizeLayer::rt_reoptimize(SendErrorFn SendResult,
   }
 
   ThreadSafeModule TSM = cloneToNewContext(MUState.getThreadSafeModule());
+  TSM.withModuleDo([&](Module& M) {
+    dbgs() << "Reoptimization requested for" << M.getName() << "\n";
+  });
+
   auto OldRT = MUState.getResourceTracker();
   auto &JD = OldRT->getJITDylib();
 
-  if (auto Err = ReOptFunc(*this, MUID, CurVersion + 1, OldRT, TSM)) {
+  if (auto Err = ReOptFunc(*this, MUID, CurVersion + 1, OldRT, Profile, TSM)) {
     ES.reportError(std::move(Err));
     MUState.reoptimizeFailed();
     SendResult(Error::success());
@@ -206,37 +263,41 @@ Expected<Constant *> ReOptimizeLayer::createReoptimizeArgBuffer(
 }
 
 void ReOptimizeLayer::createReoptimizeCall(Module &M, Instruction &IP,
-                                           GlobalVariable *ArgBuffer) {
-  GlobalVariable *DispatchCtx =
-      M.getGlobalVariable("__orc_rt_jit_dispatch_ctx");
-  if (!DispatchCtx)
-    DispatchCtx = new GlobalVariable(M, Type::getInt8PtrTy(M.getContext()),
-                                     false, GlobalValue::ExternalLinkage,
-                                     nullptr, "__orc_rt_jit_dispatch_ctx");
-  GlobalVariable *ReoptimizeTag =
-      M.getGlobalVariable("__orc_rt_reoptimize_tag");
-  if (!ReoptimizeTag)
-    ReoptimizeTag = new GlobalVariable(M, Type::getInt8PtrTy(M.getContext()),
-                                       false, GlobalValue::ExternalLinkage,
-                                       nullptr, "__orc_rt_reoptimize_tag");
-  Function *DispatchFunc = M.getFunction("__orc_rt_jit_dispatch");
+                                           ReOptMaterializationUnitID MUID, uint32_t CurVersion) {
+  Function *DispatchFunc = M.getFunction("__orc_rt_reoptimize");
   if (!DispatchFunc) {
-    std::vector<Type *> Args = {Type::getInt8PtrTy(M.getContext()),
-                                Type::getInt8PtrTy(M.getContext()),
-                                Type::getInt8PtrTy(M.getContext()),
-                                IntegerType::get(M.getContext(), 64)};
+    std::vector<Type *> Args = {IntegerType::get(M.getContext(), 64), IntegerType::get(M.getContext(), 32)};
     FunctionType *FuncTy =
         FunctionType::get(Type::getVoidTy(M.getContext()), Args, false);
     DispatchFunc = Function::Create(FuncTy, GlobalValue::ExternalLinkage,
-                                    "__orc_rt_jit_dispatch", &M);
+                                    "__orc_rt_reoptimize", &M);
   }
-  size_t ArgBufferSizeConst =
-      SPSReoptimizeArgList::size(ReOptMaterializationUnitID{}, uint32_t{});
-  Constant *ArgBufferSize = ConstantInt::get(
-      IntegerType::get(M.getContext(), 64), ArgBufferSizeConst, false);
+  Constant *MUIDConst = ConstantInt::get(
+      IntegerType::get(M.getContext(), 64), MUID, false);
+  Constant *VersionConst= ConstantInt::get(
+      IntegerType::get(M.getContext(), 32), CurVersion, false);
   IRBuilder<> IRB(&IP);
   (void)IRB.CreateCall(DispatchFunc,
-                       {DispatchCtx, ReoptimizeTag, ArgBuffer, ArgBufferSize});
+                       {MUIDConst, VersionConst});
+}
+
+// Create IR reoptimize request fucntion call.
+void ReOptimizeLayer::createFucnCountCall(Module &M, Instruction &IP, ReOptMaterializationUnitID MUID, uint32_t CallID, Value* FuncPtr) {
+  Function *DispatchFunc = M.getFunction("__orc_rt_increment_call_count");
+  if (!DispatchFunc) {
+    std::vector<Type *> Args = {IntegerType::get(M.getContext(), 64), IntegerType::get(M.getContext(), 32), Type::getInt8PtrTy(M.getContext())};
+    FunctionType *FuncTy =
+        FunctionType::get(Type::getVoidTy(M.getContext()), Args, false);
+    DispatchFunc = Function::Create(FuncTy, GlobalValue::ExternalLinkage,
+                                    "__orc_rt_increment_call_count", &M);
+  }
+  Constant *MUIDConst = ConstantInt::get(
+      IntegerType::get(M.getContext(), 64), MUID, false);
+  Constant *CallIDConst = ConstantInt::get(
+      IntegerType::get(M.getContext(), 32), CallID, false);
+  IRBuilder<> IRB(&IP);
+  (void)IRB.CreateCall(DispatchFunc,
+                       {MUIDConst, CallIDConst, FuncPtr});
 }
 
 ReOptimizeLayer::ReOptMaterializationUnitState &

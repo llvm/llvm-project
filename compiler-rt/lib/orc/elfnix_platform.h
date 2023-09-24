@@ -29,6 +29,9 @@ ORC_RT_INTERFACE int __orc_rt_elfnix_jit_dlclose(void *dso_handle);
 ORC_RT_INTERFACE void *__orc_rt_elfnix_jit_dlsym(void *dso_handle,
                                                  const char *symbol);
 
+ORC_RT_INTERFACE void __orc_rt_increment_call_count(uint64_t MUID, uint32_t CallID, void* FuncPtr);
+ORC_RT_INTERFACE void __orc_rt_reoptimize(uint64_t MUID, uint32_t CurVersion);
+
 namespace __orc_rt {
 namespace elfnix {
 

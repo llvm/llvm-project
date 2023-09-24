@@ -15,6 +15,7 @@
 
 #include "llvm/ExecutionEngine/Orc/CompileOnDemandLayer.h"
 #include "llvm/ExecutionEngine/Orc/CompileUtils.h"
+#include "llvm/ExecutionEngine/Orc/ReOptimizeLayer.h"
 #include "llvm/ExecutionEngine/Orc/ExecutionUtils.h"
 #include "llvm/ExecutionEngine/Orc/IRCompileLayer.h"
 #include "llvm/ExecutionEngine/Orc/IRPartitionLayer.h"
@@ -279,6 +280,11 @@ public:
   /// Returns a reference to the on-demand layer.
   CompileOnDemandLayer &getCompileOnDemandLayer() { return *CODLayer; }
 
+  ReOptimizeLayer &getReOptimizeLayer() { return *ROLayer; }
+
+  /// Add a module to be lazily compiled to JITDylib JD.
+  Error addLazyIRModule(ResourceTrackerSP RT, ThreadSafeModule M);
+
   /// Add a module to be lazily compiled to JITDylib JD.
   Error addLazyIRModule(JITDylib &JD, ThreadSafeModule M);
 
@@ -293,8 +299,10 @@ private:
   LLLazyJIT(LLLazyJITBuilderState &S, Error &Err);
 
   std::unique_ptr<LazyCallThroughManager> LCTMgr;
+  std::unique_ptr<RedirectableSymbolManager> RSManager;
   std::unique_ptr<IRPartitionLayer> IPLayer;
   std::unique_ptr<CompileOnDemandLayer> CODLayer;
+  std::unique_ptr<ReOptimizeLayer> ROLayer;
 };
 
 class LLJITBuilderState {

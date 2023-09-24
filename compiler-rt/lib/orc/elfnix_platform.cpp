@@ -16,6 +16,7 @@
 #include "error.h"
 #include "wrapper_function_utils.h"
 
+#include <iostream>
 #include <algorithm>
 #include <map>
 #include <mutex>
@@ -82,6 +83,39 @@ struct TLSDescriptor {
   TLSInfoEntry *InfoEntry;
 };
 
+using CallCountMap = std::unordered_map<uint64_t, size_t>;
+using MUProfileMap = std::unordered_map<uint32_t, CallCountMap>;
+std::unordered_map<uint64_t, MUProfileMap> CallProfiles;
+
+using ReoptimizeParam = SPSSequence<SPSTuple<uint32_t, uint64_t>>;
+
+std::vector<std::pair<uint32_t, uint64_t>> SerealizeProfile(uint64_t MUID) {
+  std::vector<std::pair<uint32_t, uint64_t>> Res;
+  for (auto& [CallID, CountMap] : CallProfiles[MUID]) {
+    for (auto [FuncPtr, _ ] : CountMap) {
+      std::cout << "EECHIII:" << FuncPtr << "\n";
+      Res.push_back({CallID, FuncPtr});
+    }
+  }
+  return Res;
+}
+
+ORC_RT_INTERFACE void __orc_rt_increment_call_count(uint64_t MUID, uint32_t CallID, void* FuncPtr) {
+  CallProfiles[MUID][CallID][(uint64_t)FuncPtr] ++;
+}
+
+ORC_RT_INTERFACE void __orc_rt_reoptimize(uint64_t MUID, uint32_t CurVersion) {
+  auto Profiles = SerealizeProfile(MUID);
+  Error Err2 = Error::success();
+  if (auto Err =
+          WrapperFunction<SPSError(uint64_t, uint32_t, ReoptimizeParam)>::call(&__orc_rt_reoptimize_tag, Err2,
+                                MUID, CurVersion, Profiles))
+    return;
+  if (Err2)
+    return;
+}
+
+
 class ELFNixPlatformRuntimeState {
 private:
   struct AtExitEntry {
@@ -92,9 +126,10 @@ private:
   using AtExitsVector = std::vector<AtExitEntry>;
 
   struct PerJITDylibState {
+    PerJITDylibState() = default;
     void *Header = nullptr;
     size_t RefCount = 0;
-    bool AllowReinitialization = false;
+    bool AllowReinitialization = true;
     AtExitsVector AtExits;
   };
 
@@ -228,6 +263,7 @@ void *ELFNixPlatformRuntimeState::dlopen(std::string_view Path, int Mode) {
       return JDS->Header;
     }
   }
+
 
   auto H = dlopenInitialize(Path, Mode);
   if (!H) {
@@ -394,6 +430,8 @@ ELFNixPlatformRuntimeState::dlopenInitialize(std::string_view Path, int Mode) {
   for (auto &MOJDIs : *InitSeq)
     if (auto Err = initializeJITDylib(MOJDIs))
       return std::move(Err);
+
+  printf("ok\n");
 
   // Return the header for the last item in the list.
   auto *JDS = getJITDylibStateByHeaderAddr(

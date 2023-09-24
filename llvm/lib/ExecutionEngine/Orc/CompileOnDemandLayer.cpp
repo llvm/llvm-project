@@ -86,7 +86,7 @@ CompileOnDemandLayer::getPerDylibResources(JITDylib &TargetD) {
   auto I = DylibResources.find(&TargetD);
   if (I == DylibResources.end()) {
     auto &ImplD =
-        getExecutionSession().createBareJITDylib(TargetD.getName() + ".impl");
+        cantFail(getExecutionSession().createJITDylib(TargetD.getName() + ".impl"));
     JITDylibSearchOrder NewLinkOrder;
     TargetD.withLinkOrderDo([&](const JITDylibSearchOrder &TargetLinkOrder) {
       NewLinkOrder = TargetLinkOrder;

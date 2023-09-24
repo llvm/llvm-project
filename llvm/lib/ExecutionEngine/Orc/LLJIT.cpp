@@ -11,6 +11,7 @@
 #include "llvm/ExecutionEngine/JITLink/JITLinkMemoryManager.h"
 #include "llvm/ExecutionEngine/Orc/COFFPlatform.h"
 #include "llvm/ExecutionEngine/Orc/DebugObjectManagerPlugin.h"
+#include "llvm/ExecutionEngine/Orc/JITLinkRedirectableSymbolManager.h"
 #include "llvm/ExecutionEngine/Orc/DebuggerSupportPlugin.h"
 #include "llvm/ExecutionEngine/Orc/ELFNixPlatform.h"
 #include "llvm/ExecutionEngine/Orc/EPCDynamicLibrarySearchGenerator.h"
@@ -1241,6 +1242,16 @@ Error LLLazyJITBuilderState::prepareForConstruction() {
   return Error::success();
 }
 
+Error LLLazyJIT::addLazyIRModule(ResourceTrackerSP RT, ThreadSafeModule TSM) {
+  assert(TSM && "Can not add null module");
+
+  if (auto Err = TSM.withModuleDo(
+          [&](Module &M) -> Error { return applyDataLayout(M); }))
+    return Err;
+
+  return IPLayer->add(RT, std::move(TSM));
+}
+
 Error LLLazyJIT::addLazyIRModule(JITDylib &JD, ThreadSafeModule TSM) {
   assert(TSM && "Can not add null module");
 
@@ -1248,7 +1259,7 @@ Error LLLazyJIT::addLazyIRModule(JITDylib &JD, ThreadSafeModule TSM) {
           [&](Module &M) -> Error { return applyDataLayout(M); }))
     return Err;
 
-  return CODLayer->add(JD, std::move(TSM));
+  return IPLayer->add(JD, std::move(TSM));
 }
 
 LLLazyJIT::LLLazyJIT(LLLazyJITBuilderState &S, Error &Err) : LLJIT(S, Err) {
@@ -1288,8 +1299,14 @@ LLLazyJIT::LLLazyJIT(LLLazyJITBuilderState &S, Error &Err) : LLJIT(S, Err) {
     return;
   }
 
+  RSManager = cantFail(JITLinkRedirectableSymbolManager::Create(*ES, *dyn_cast<ObjectLinkingLayer>(&getObjLinkingLayer()), getMainJITDylib()));
+
+  ROLayer = std::make_unique<ReOptimizeLayer>(*ES, *InitHelperTransformLayer, *RSManager);
+
+  cantFail(ROLayer->reigsterRuntimeFunctions(*getPlatformJITDylib()));
+
   // Create the IP Layer.
-  IPLayer = std::make_unique<IRPartitionLayer>(*ES, *InitHelperTransformLayer);
+  IPLayer = std::make_unique<IRPartitionLayer>(*ES, *ROLayer);
 
   // Create the COD layer.
   CODLayer = std::make_unique<CompileOnDemandLayer>(*ES, *IPLayer, *LCTMgr,
