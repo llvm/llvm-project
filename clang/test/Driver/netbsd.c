@@ -59,6 +59,12 @@
 // RUN: %clang --target=arm-unknown-netbsd7.0.0-eabi \
 // RUN: --sysroot=%S/Inputs/basic_netbsd_tree -### %s 2>&1 \
 // RUN: | FileCheck -check-prefix=ARM-7 %s
+// RUN: %clang --target=riscv32-unknown-netbsd \
+// RUN: -no-integrated-as --sysroot=%S/Inputs/basic_netbsd_tree -### %s 2>&1 \
+// RUN: | FileCheck -check-prefix=RISCV32 %s
+// RUN: %clang --target=riscv64-unknown-netbsd \
+// RUN: -no-integrated-as --sysroot=%S/Inputs/basic_netbsd_tree -### %s 2>&1 \
+// RUN: | FileCheck -check-prefix=RISCV64 %s
 // RUN: %clang --target=sparc-unknown-netbsd \
 // RUN: -no-integrated-as --sysroot=%S/Inputs/basic_netbsd_tree -### %s 2>&1 \
 // RUN: | FileCheck -check-prefix=SPARC %s
@@ -99,6 +105,12 @@
 // RUN: %clang --target=arm-unknown-netbsd7.0.0-eabi -static \
 // RUN: --sysroot=%S/Inputs/basic_netbsd_tree -### %s 2>&1 \
 // RUN: | FileCheck -check-prefix=S-ARM-7 %s
+// RUN: %clang --target=riscv32-unknown-netbsd7.0.0 -static \
+// RUN: --sysroot=%S/Inputs/basic_netbsd_tree -### %s 2>&1 \
+// RUN: | FileCheck -check-prefix=S-RISCV32-7 %s
+// RUN: %clang --target=riscv64-unknown-netbsd7.0.0 -static \
+// RUN: --sysroot=%S/Inputs/basic_netbsd_tree -### %s 2>&1 \
+// RUN: | FileCheck -check-prefix=S-RISCV64-7 %s
 // RUN: %clang --target=sparc-unknown-netbsd7.0.0 -static \
 // RUN: --sysroot=%S/Inputs/basic_netbsd_tree -### %s 2>&1 \
 // RUN: | FileCheck -check-prefix=S-SPARC-7 %s
@@ -264,6 +276,22 @@
 // ARM-7:  "{{.*}}/usr/lib{{/|\\\\}}crtbegin.o" "{{.*}}.o" "-lc"
 // ARM-7: "{{.*}}/usr/lib{{/|\\\\}}crtend.o" "{{.*}}/usr/lib{{/|\\\\}}crtn.o"
 
+// RISCV32: "-cc1" "-triple" "riscv32-unknown-netbsd"
+// RISCV32-NOT: "-fno-use-init-array"
+// RISCV32: ld{{.*}}" "--eh-frame-hdr" "-dynamic-linker" "/libexec/ld.elf_so"
+// RISCV32-SAME: "-m" "elf32lriscv" "-X"
+// RISCV32-SAME: "-o" "a.out" "{{.*}}/usr/lib{{/|\\\\}}crt0.o" "{{.*}}/usr/lib{{/|\\\\}}crti.o"
+// RISCV32-SAME: "{{.*}}/usr/lib{{/|\\\\}}crtbegin.o" "{{.*}}.o" "-lc"
+// RISCV32-SAME: "{{.*}}/usr/lib{{/|\\\\}}crtend.o" "{{.*}}/usr/lib{{/|\\\\}}crtn.o"
+
+// RISCV64: "-cc1" "-triple" "riscv64-unknown-netbsd"
+// RISCV64-NOT: "-fno-use-init-array"
+// RISCV64: ld{{.*}}" "--eh-frame-hdr" "-dynamic-linker" "/libexec/ld.elf_so"
+// RISCV64-SAME: "-m" "elf64lriscv" "-X"
+// RISCV64-SAME: "-o" "a.out" "{{.*}}/usr/lib{{/|\\\\}}crt0.o" "{{.*}}/usr/lib{{/|\\\\}}crti.o"
+// RISCV64-SAME: "{{.*}}/usr/lib{{/|\\\\}}crtbegin.o" "{{.*}}.o" "-lc"
+// RISCV64-SAME: "{{.*}}/usr/lib{{/|\\\\}}crtend.o" "{{.*}}/usr/lib{{/|\\\\}}crtn.o"
+
 // SPARC: "-cc1" "-triple" "sparc-unknown-netbsd"
 // SPARC-NOT: "-fno-use-init-array"
 // SPARC: as{{.*}}" "-32" "-Av8" "-o"
@@ -360,6 +388,20 @@
 // S-ARM-7: "{{.*}}/usr/lib{{/|\\\\}}eabi{{/|\\\\}}crti.o"
 // S-ARM-7: "{{.*}}/usr/lib{{/|\\\\}}crtbegin.o" "{{.*}}.o" "-lc"
 // S-ARM-7: "{{.*}}/usr/lib{{/|\\\\}}crtend.o" "{{.*}}/usr/lib{{/|\\\\}}crtn.o"
+
+// S-RISCV32-7: "-cc1" "-triple" "riscv32-unknown-netbsd7.0.0"
+// S-RISCV32-7: ld{{.*}}" "--eh-frame-hdr" "-Bstatic"
+// S-RISCV32-7-SAME: "-m" "elf32lriscv" "-X"
+// S-RISCV32-7-SAME: "-o" "a.out" "{{.*}}/usr/lib{{/|\\\\}}crt0.o" "{{.*}}/usr/lib{{/|\\\\}}crti.o"
+// S-RISCV32-7-SAME: "{{.*}}/usr/lib{{/|\\\\}}crtbegin.o" "{{.*}}.o" "-lc"
+// S-RISCV32-7-SAME: "{{.*}}/usr/lib{{/|\\\\}}crtend.o" "{{.*}}/usr/lib{{/|\\\\}}crtn.o"
+
+// S-RISCV64-7: "-cc1" "-triple" "riscv64-unknown-netbsd7.0.0"
+// S-RISCV64-7: ld{{.*}}" "--eh-frame-hdr" "-Bstatic"
+// S-RISCV64-7-SAME: "-m" "elf64lriscv" "-X"
+// S-RISCV64-7-SAME: "-o" "a.out" "{{.*}}/usr/lib{{/|\\\\}}crt0.o" "{{.*}}/usr/lib{{/|\\\\}}crti.o"
+// S-RISCV64-7-SAME: "{{.*}}/usr/lib{{/|\\\\}}crtbegin.o" "{{.*}}.o" "-lc"
+// S-RISCV64-7-SAME: "{{.*}}/usr/lib{{/|\\\\}}crtend.o" "{{.*}}/usr/lib{{/|\\\\}}crtn.o"
 
 // S-SPARC-7: "-cc1" "-triple" "sparc-unknown-netbsd7.0.0"
 // S-SPARC-7: "-fno-use-init-array"
