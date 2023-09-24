@@ -130,7 +130,7 @@ Value *PHINode::removeIncomingValue(unsigned Idx, bool DeletePHIIfEmpty) {
   // clients might not expect this to happen.  The code as it is thrashes the
   // use/def lists, which is kinda lame.
   std::copy(op_begin() + Idx + 1, op_end(), op_begin() + Idx);
-  copyIncomingBlocks(make_range(block_begin() + Idx + 1, block_end()), Idx);
+  copyIncomingBlocks(drop_begin(blocks(), Idx + 1), Idx);
 
   // Nuke the last value.
   Op<-1>().set(nullptr);

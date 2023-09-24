@@ -434,6 +434,14 @@ private:
       SmallVectorImpl<Instruction *> &DropPoisonGeneratingInsts);
 
   Value *expand(const SCEV *S);
+  Value *expand(const SCEV *S, BasicBlock::iterator I) {
+    setInsertPoint(I);
+    return expand(S);
+  }
+  Value *expand(const SCEV *S, Instruction *I) {
+    setInsertPoint(I);
+    return expand(S);
+  }
 
   /// Determine the most "relevant" loop for the given SCEV.
   const Loop *getRelevantLoop(const SCEV *);
@@ -481,8 +489,8 @@ private:
 
   Value *expandAddRecExprLiterally(const SCEVAddRecExpr *);
   PHINode *getAddRecExprPHILiterally(const SCEVAddRecExpr *Normalized,
-                                     const Loop *L, Type *ExpandTy, Type *IntTy,
-                                     Type *&TruncTy, bool &InvertStep);
+                                     const Loop *L, Type *&TruncTy,
+                                     bool &InvertStep);
   Value *expandIVInc(PHINode *PN, Value *StepV, const Loop *L,
                      bool useSubtract);
 

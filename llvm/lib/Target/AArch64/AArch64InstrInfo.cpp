@@ -2270,6 +2270,7 @@ bool AArch64InstrInfo::hasUnscaledLdStOffset(unsigned Opc) {
   case AArch64::LDRWpre:
   case AArch64::LDURXi:
   case AArch64::LDRXpre:
+  case AArch64::LDRSWpre:
   case AArch64::LDURSWi:
   case AArch64::LDURHHi:
   case AArch64::LDURBBi:
@@ -2479,6 +2480,7 @@ bool AArch64InstrInfo::isPairableLdStInst(const MachineInstr &MI) {
   case AArch64::LDURXi:
   case AArch64::LDRXpre:
   case AArch64::LDURSWi:
+  case AArch64::LDRSWpre:
     return true;
   }
 }
@@ -2599,7 +2601,8 @@ bool AArch64InstrInfo::isCandidateToMergeOrPair(const MachineInstr &MI) const {
   // Can't merge/pair if the instruction modifies the base register.
   // e.g., ldr x0, [x0]
   // This case will never occur with an FI base.
-  // However, if the instruction is an LDR/STR<S,D,Q,W,X>pre, it can be merged.
+  // However, if the instruction is an LDR<S,D,Q,W,X,SW>pre or
+  // STR<S,D,Q,W,X>pre, it can be merged.
   // For example:
   //   ldr q0, [x11, #32]!
   //   ldr q1, [x11, #16]
@@ -3176,6 +3179,7 @@ int AArch64InstrInfo::getMemScale(unsigned Opc) {
   case AArch64::LDRSpre:
   case AArch64::LDRSWui:
   case AArch64::LDURSWi:
+  case AArch64::LDRSWpre:
   case AArch64::LDRWpre:
   case AArch64::LDRWui:
   case AArch64::LDURWi:
@@ -3231,6 +3235,7 @@ bool AArch64InstrInfo::isPreLd(const MachineInstr &MI) {
     return false;
   case AArch64::LDRWpre:
   case AArch64::LDRXpre:
+  case AArch64::LDRSWpre:
   case AArch64::LDRSpre:
   case AArch64::LDRDpre:
   case AArch64::LDRQpre:
@@ -7963,6 +7968,8 @@ AArch64InstrInfo::getOutliningTypeImpl(MachineBasicBlock::iterator &MIT,
   case AArch64::RETAA:
   case AArch64::RETAB:
   case AArch64::EMITBKEY:
+  case AArch64::PAUTH_PROLOGUE:
+  case AArch64::PAUTH_EPILOGUE:
     return outliner::InstrType::Illegal;
   }
 
@@ -8114,15 +8121,16 @@ void AArch64InstrInfo::fixupPostOutline(MachineBasicBlock &MBB) const {
 }
 
 static void signOutlinedFunction(MachineFunction &MF, MachineBasicBlock &MBB,
+                                 const AArch64InstrInfo *TII,
                                  bool ShouldSignReturnAddr) {
   if (!ShouldSignReturnAddr)
     return;
 
-  AArch64FrameLowering::signLR(MF, MBB, MBB.begin(),
-                               /*NeedsWinCFI=*/false, /*HasWinCFI=*/nullptr);
-
-  AArch64FrameLowering::authenticateLR(MF, MBB, /*NeedsWinCFI=*/false,
-                                       /*HasWinCFI=*/nullptr);
+  BuildMI(MBB, MBB.begin(), DebugLoc(), TII->get(AArch64::PAUTH_PROLOGUE))
+      .setMIFlag(MachineInstr::FrameSetup);
+  BuildMI(MBB, MBB.getFirstInstrTerminator(), DebugLoc(),
+          TII->get(AArch64::PAUTH_EPILOGUE))
+      .setMIFlag(MachineInstr::FrameDestroy);
 }
 
 void AArch64InstrInfo::buildOutlinedFrame(
@@ -8227,7 +8235,7 @@ void AArch64InstrInfo::buildOutlinedFrame(
   // If this is a tail call outlined function, then there's already a return.
   if (OF.FrameConstructionID == MachineOutlinerTailCall ||
       OF.FrameConstructionID == MachineOutlinerThunk) {
-    signOutlinedFunction(MF, MBB, ShouldSignReturnAddr);
+    signOutlinedFunction(MF, MBB, this, ShouldSignReturnAddr);
     return;
   }
 
@@ -8241,7 +8249,7 @@ void AArch64InstrInfo::buildOutlinedFrame(
                           .addReg(AArch64::LR);
   MBB.insert(MBB.end(), ret);
 
-  signOutlinedFunction(MF, MBB, ShouldSignReturnAddr);
+  signOutlinedFunction(MF, MBB, this, ShouldSignReturnAddr);
 
   FI->setOutliningStyle("Function");
 
@@ -8333,6 +8341,26 @@ MachineBasicBlock::iterator AArch64InstrInfo::insertOutlinedCall(
 bool AArch64InstrInfo::shouldOutlineFromFunctionByDefault(
   MachineFunction &MF) const {
   return MF.getFunction().hasMinSize();
+}
+
+void AArch64InstrInfo::buildClearRegister(Register Reg, MachineBasicBlock &MBB,
+                                          MachineBasicBlock::iterator Iter,
+                                          DebugLoc &DL) const {
+  const MachineFunction &MF = *MBB.getParent();
+  const AArch64Subtarget &STI = MF.getSubtarget<AArch64Subtarget>();
+  const AArch64RegisterInfo &TRI = *STI.getRegisterInfo();
+
+  if (TRI.isGeneralPurposeRegister(MF, Reg)) {
+    BuildMI(MBB, Iter, DL, get(AArch64::MOVi64imm), Reg)
+      .addImm(0);
+  } else if (STI.hasSVE()) {
+    BuildMI(MBB, Iter, DL, get(AArch64::DUP_ZI_D), Reg)
+      .addImm(0)
+      .addImm(0);
+  } else {
+    BuildMI(MBB, Iter, DL, get(AArch64::MOVIv2d_ns), Reg)
+      .addImm(0);
+  }
 }
 
 std::optional<DestSourcePair>

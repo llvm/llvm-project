@@ -2961,6 +2961,11 @@ bool RISCVDAGToDAGISel::selectVLOp(SDValue N, SDValue &VL) {
 }
 
 static SDValue findVSplat(SDValue N) {
+  if (N.getOpcode() == ISD::INSERT_SUBVECTOR) {
+    if (!N.getOperand(0).isUndef())
+      return SDValue();
+    N = N.getOperand(1);
+  }
   SDValue Splat = N;
   if ((Splat.getOpcode() != RISCVISD::VMV_V_X_VL &&
        Splat.getOpcode() != RISCVISD::VMV_S_X_VL) ||
@@ -3187,6 +3192,12 @@ static bool usesAllOnesMask(SDValue MaskOp, SDValue GlueOp) {
 
   // Check the instruction defining V0; it needs to be a VMSET pseudo.
   SDValue MaskSetter = Glued->getOperand(2);
+
+  // Sometimes the VMSET is wrapped in a COPY_TO_REGCLASS, e.g. if the mask came
+  // from an extract_subvector or insert_subvector.
+  if (MaskSetter->isMachineOpcode() &&
+      MaskSetter->getMachineOpcode() == RISCV::COPY_TO_REGCLASS)
+    MaskSetter = MaskSetter->getOperand(0);
 
   const auto IsVMSet = [](unsigned Opc) {
     return Opc == RISCV::PseudoVMSET_M_B1 || Opc == RISCV::PseudoVMSET_M_B16 ||

@@ -728,6 +728,17 @@ func.func @extract_element_from_vec_3d(%arg0: vector<4x3x16xf32>) -> f32 {
 
 // -----
 
+func.func @extract_element_with_value_1d(%arg0: vector<16xf32>, %arg1: index) -> f32 {
+  %0 = vector.extract %arg0[%arg1]: vector<16xf32>
+  return %0 : f32
+}
+// CHECK-LABEL: @extract_element_with_value_1d
+//  CHECK-SAME:   %[[VEC:.+]]: vector<16xf32>, %[[INDEX:.+]]: index
+//       CHECK:   %[[UC:.+]] = builtin.unrealized_conversion_cast %[[INDEX]] : index to i64
+//       CHECK:   llvm.extractelement %[[VEC]][%[[UC]] : i64] : vector<16xf32>
+
+// -----
+
 // CHECK-LABEL: @insert_element_0d
 // CHECK-SAME: %[[A:.*]]: f32,
 func.func @insert_element_0d(%a: f32, %b: vector<f32>) -> vector<f32> {
@@ -827,6 +838,19 @@ func.func @insert_element_into_vec_3d(%arg0: f32, %arg1: vector<4x8x16xf32>) -> 
 //       CHECK:   llvm.insertelement {{.*}}, {{.*}}[{{.*}} : i64] : vector<16xf32>
 //       CHECK:   llvm.insertvalue {{.*}}, {{.*}}[3, 7] : !llvm.array<4 x array<8 x vector<16xf32>>>
 //       CHECK:   return {{.*}} : vector<4x8x16xf32>
+
+// -----
+
+func.func @insert_element_with_value_1d(%arg0: vector<16xf32>, %arg1: f32, %arg2: index)
+                                      -> vector<16xf32> {
+  %0 = vector.insert %arg1, %arg0[%arg2]: f32 into vector<16xf32>
+  return %0 : vector<16xf32>
+}
+
+// CHECK-LABEL: @insert_element_with_value_1d
+//  CHECK-SAME:   %[[DST:.+]]: vector<16xf32>, %[[SRC:.+]]: f32, %[[INDEX:.+]]: index
+//       CHECK:   %[[UC:.+]] = builtin.unrealized_conversion_cast %[[INDEX]] : index to i64
+//       CHECK:   llvm.insertelement %[[SRC]], %[[DST]][%[[UC]] : i64] : vector<16xf32>
 
 // -----
 

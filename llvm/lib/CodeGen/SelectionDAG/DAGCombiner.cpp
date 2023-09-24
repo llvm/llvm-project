@@ -27323,8 +27323,8 @@ static SDValue takeInexpensiveLog2(SelectionDAG &DAG, const SDLoc &DL, EVT VT,
     return SDValue();
 
   auto CastToVT = [&](EVT NewVT, SDValue ToCast) {
-    EVT CurVT = ToCast.getValueType();
     ToCast = PeekThroughCastsAndTrunc(ToCast);
+    EVT CurVT = ToCast.getValueType();
     if (NewVT == CurVT)
       return ToCast;
 

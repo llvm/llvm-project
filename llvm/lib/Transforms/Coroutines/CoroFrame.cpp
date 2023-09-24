@@ -1766,8 +1766,8 @@ static void insertSpills(const FrameDataInfo &FrameData, coro::Shape &Shape) {
       // Note: If we change the strategy dealing with alignment, we need to refine
       // this casting.
       if (GEP->getType() != Orig->getType())
-        return Builder.CreateBitCast(GEP, Orig->getType(),
-                                     Orig->getName() + Twine(".cast"));
+        return Builder.CreateAddrSpaceCast(GEP, Orig->getType(),
+                                           Orig->getName() + Twine(".cast"));
     }
     return GEP;
   };
@@ -2804,6 +2804,11 @@ static void collectFrameAlloca(AllocaInst *AI, coro::Shape &Shape,
   if (AI == Shape.SwitchLowering.PromiseAlloca)
     return;
 
+  // The __coro_gro alloca should outlive the promise, make sure we
+  // keep it outside the frame.
+  if (MDNode *MD = AI->getMetadata(LLVMContext::MD_coro_outside_frame))
+    return;
+
   // The code that uses lifetime.start intrinsic does not work for functions
   // with loops without exit. Disable it on ABIs we know to generate such
   // code.
@@ -2874,10 +2879,9 @@ void coro::salvageDebugInfo(
 
   // Swift async arguments are described by an entry value of the ABI-defined
   // register containing the coroutine context.
-  // For the EntryPoint funclet, don't use EntryValues. This funclet can be
-  // inlined, which would remove the guarantee that this intrinsic targets an
-  // Argument.
-  if (IsSwiftAsyncArg && UseEntryValue && !Expr->isEntryValue())
+  // Entry values in variadic expressions are not supported.
+  if (IsSwiftAsyncArg && UseEntryValue && !Expr->isEntryValue() &&
+      Expr->isSingleLocationExpression())
     Expr = DIExpression::prepend(Expr, DIExpression::EntryValue);
 
   // If the coroutine frame is an Argument, store it in an alloca to improve
