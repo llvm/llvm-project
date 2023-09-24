@@ -257,3 +257,84 @@ define i32 @xor_sext_to_sel_multi_use_constant_mask(i1 %y) {
   %r = xor i32 %sext, 42
   ret i32 %r
 }
+
+define i64 @PR63321(ptr %ptr, i64 %c) {
+; CHECK-LABEL: @PR63321(
+; CHECK-NEXT:    [[VAL:%.*]] = load i8, ptr [[PTR:%.*]], align 1, !range [[RNG0:![0-9]+]]
+; CHECK-NEXT:    [[TMP1:%.*]] = icmp eq i8 [[VAL]], 0
+; CHECK-NEXT:    [[RES:%.*]] = select i1 [[TMP1]], i64 [[C:%.*]], i64 0
+; CHECK-NEXT:    ret i64 [[RES]]
+;
+  %val = load i8, ptr %ptr, align 1, !range !{i8 0, i8 2}
+  %rhs = zext i8 %val to i64
+  %mask = add i64 -1, %rhs
+  %res = and i64 %mask, %c
+  ret i64 %res
+}
+
+; Negative test of PR63321
+define i64 @and_add_non_bool(ptr %ptr, i64 %c) {
+; CHECK-LABEL: @and_add_non_bool(
+; CHECK-NEXT:    [[VAL:%.*]] = load i8, ptr [[PTR:%.*]], align 1, !range [[RNG1:![0-9]+]]
+; CHECK-NEXT:    [[RHS:%.*]] = zext i8 [[VAL]] to i64
+; CHECK-NEXT:    [[MASK:%.*]] = add nsw i64 [[RHS]], -1
+; CHECK-NEXT:    [[RES:%.*]] = and i64 [[MASK]], [[C:%.*]]
+; CHECK-NEXT:    ret i64 [[RES]]
+;
+  %val = load i8, ptr %ptr, align 1, !range !{i8 0, i8 3}
+  %rhs = zext i8 %val to i64
+  %mask = add i64 -1, %rhs
+  %res = and i64 %mask, %c
+  ret i64 %res
+}
+
+define i32 @and_add_bool_to_select(i1 %x, i32 %y) {
+; CHECK-LABEL: @and_add_bool_to_select(
+; CHECK-NEXT:    [[RES:%.*]] = select i1 [[X:%.*]], i32 0, i32 [[Y:%.*]]
+; CHECK-NEXT:    ret i32 [[RES]]
+;
+  %val = zext i1 %x to i32
+  %mask = add i32 -1, %val
+  %res = and i32 %mask, %y
+  ret i32 %res
+}
+
+define i32 @and_add_bool_no_fold(i32 %y) {
+; CHECK-LABEL: @and_add_bool_no_fold(
+; CHECK-NEXT:    [[X:%.*]] = and i32 [[Y:%.*]], 1
+; CHECK-NEXT:    [[TMP1:%.*]] = icmp eq i32 [[X]], 0
+; CHECK-NEXT:    [[RES:%.*]] = select i1 [[TMP1]], i32 [[Y]], i32 0
+; CHECK-NEXT:    ret i32 [[RES]]
+;
+  %x = and i32 %y, 1
+  %mask = add i32 -1, %x
+  %res = and i32 %mask, %y
+  ret i32 %res
+}
+
+define <2 x i32> @and_add_bool_vec_to_select(<2 x i1> %x, <2 x i32> %y) {
+; CHECK-LABEL: @and_add_bool_vec_to_select(
+; CHECK-NEXT:    [[RES:%.*]] = select <2 x i1> [[X:%.*]], <2 x i32> zeroinitializer, <2 x i32> [[Y:%.*]]
+; CHECK-NEXT:    ret <2 x i32> [[RES]]
+;
+  %val = zext <2 x i1> %x to <2 x i32>
+  %mask = add <2 x i32> <i32 -1, i32 -1>, %val
+  %res = and <2 x i32> %mask, %y
+  ret <2 x i32> %res
+}
+
+; Negative test of and_add_bool_to_select
+define i32 @and_add_bool_to_select_multi_use(i1 %x, i32 %y) {
+; CHECK-LABEL: @and_add_bool_to_select_multi_use(
+; CHECK-NEXT:    [[NOT_X:%.*]] = xor i1 [[X:%.*]], true
+; CHECK-NEXT:    [[MASK:%.*]] = sext i1 [[NOT_X]] to i32
+; CHECK-NEXT:    [[RES:%.*]] = and i32 [[MASK]], [[Y:%.*]]
+; CHECK-NEXT:    [[RET:%.*]] = add i32 [[RES]], [[MASK]]
+; CHECK-NEXT:    ret i32 [[RET]]
+;
+  %val = zext i1 %x to i32
+  %mask = add i32 -1, %val
+  %res = and i32 %mask, %y
+  %ret = add i32 %res, %mask
+  ret i32 %ret
+}
