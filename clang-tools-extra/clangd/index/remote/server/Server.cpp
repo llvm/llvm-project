@@ -33,8 +33,8 @@
 #include "llvm/Support/VirtualFileSystem.h"
 
 #include <chrono>
-#include <grpc++/grpc++.h>
-#include <grpc++/health_check_service_interface.h>
+#include <grpcpp/grpcpp.h>
+#include <grpcpp/health_check_service_interface.h>
 #include <memory>
 #include <optional>
 #include <string>
@@ -42,7 +42,7 @@
 #include <utility>
 
 #if ENABLE_GRPC_REFLECTION
-#include <grpc++/ext/proto_server_reflection_plugin.h>
+#include <grpcpp/ext/proto_server_reflection_plugin.h>
 #endif
 
 #ifdef __GLIBC__
