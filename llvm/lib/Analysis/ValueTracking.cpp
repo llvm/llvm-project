@@ -2264,6 +2264,12 @@ static bool isKnownNonNullFromDominatingCondition(const Value *V,
         return true;
     }
 
+    if (const auto *Div = dyn_cast<BinaryOperator>(U);
+        Div && Div->getOpcode() == BinaryOperator::UDiv &&
+        Div->getOperand(1) == V &&
+        isValidAssumeForContext(cast<Instruction>(U), CtxI, DT))
+      return true;
+
     // Consider only compare instructions uniquely controlling a branch
     Value *RHS;
     CmpInst::Predicate Pred;

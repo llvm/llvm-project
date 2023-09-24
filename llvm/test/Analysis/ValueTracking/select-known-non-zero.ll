@@ -393,3 +393,27 @@ define i1 @inv_select_v_sle_nonneg(i8 %v, i8 %C, i8 %y) {
   %r = icmp eq i8 %s, 0
   ret i1 %r
 }
+
+; Check dominance of the udiv over the icmp.
+define i64 @incorrect_safe_div(i64 %n, i64 %d) {
+; CHECK-LABEL: @incorrect_safe_div(
+; CHECK-NEXT:    [[TMP1:%.*]] = udiv i64 [[N:%.*]], [[D:%.*]]
+; CHECK-NEXT:    ret i64 [[TMP1]]
+;
+  %1 = udiv i64 %n, %d
+  %2 = icmp eq i64 %d, 0
+  %3 = select i1 %2, i64 -1, i64 %1
+  ret i64 %3
+}
+
+; Check post-dominance of the udiv over the icmp.
+define i64 @incorrect_safe_div_post(i64 %n, i64 %d) {
+; CHECK-LABEL: @incorrect_safe_div_post(
+; CHECK-NEXT:    [[TMP1:%.*]] = udiv i64 [[N:%.*]], [[D:%.*]]
+; CHECK-NEXT:    ret i64 [[TMP1]]
+;
+  %1 = icmp eq i64 %d, 0
+  %2 = udiv i64 %n, %d
+  %3 = select i1 %1, i64 -1, i64 %2
+  ret i64 %3
+}
