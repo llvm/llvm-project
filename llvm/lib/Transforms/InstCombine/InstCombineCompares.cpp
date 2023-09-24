@@ -3412,6 +3412,14 @@ static Instruction *foldCtpopPow2Test(ICmpInst &I, IntrinsicInst *CtpopLhs,
                                       const SimplifyQuery &Q) {
   assert(CtpopLhs->getIntrinsicID() == Intrinsic::ctpop &&
          "Non-ctpop intrin in ctpop fold");
+
+  const ICmpInst::Predicate Pred = I.getPredicate();
+  // If we know X is non-zero, we can fold isPow2OrZero into isPow2.
+  if (Pred == ICmpInst::ICMP_ULT && CRhs == 2 &&
+      isKnownNonZero(CtpopLhs, Q.DL, /*Depth*/ 0, Q.AC, Q.CxtI, Q.DT))
+    return ICmpInst::Create(Instruction::ICmp, ICmpInst::ICMP_EQ, CtpopLhs,
+                            ConstantInt::get(CtpopLhs->getType(), 1));
+
   if (!CtpopLhs->hasOneUse())
     return nullptr;
 
@@ -3423,7 +3431,6 @@ static Instruction *foldCtpopPow2Test(ICmpInst &I, IntrinsicInst *CtpopLhs,
   // If we know any bit of X can be folded to:
   //    IsPow2       : X & (~Bit) == 0
   //    NotPow2      : X & (~Bit) != 0
-  const ICmpInst::Predicate Pred = I.getPredicate();
   if (((I.isEquality() || Pred == ICmpInst::ICMP_UGT) && CRhs == 1) ||
       (Pred == ICmpInst::ICMP_ULT && CRhs == 2)) {
     Value *Op = CtpopLhs->getArgOperand(0);
