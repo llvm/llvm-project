@@ -26,6 +26,7 @@
 
 using namespace __cxxabiv1;
 
+#ifndef __ve__
 // Misc test configuration. It's used to tune the flakyness of the test.
 // ThreadsPerTest - The number of threads used
 constexpr int ThreadsPerTest = 10;
@@ -33,6 +34,13 @@ constexpr int ThreadsPerTest = 10;
 constexpr int ConcurrentRunsPerTest = 10;
 // The number of times to rerun each test.
 constexpr int TestSamples = 50;
+#else
+// VE limits the number of threads per a process up to 64.  Above configuration
+// causes exhausted resource error at thread creation.
+constexpr int ThreadsPerTest = 4;
+constexpr int ConcurrentRunsPerTest = 8;
+constexpr int TestSamples = 10;
+#endif
 
 
 
