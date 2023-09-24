@@ -220,3 +220,11 @@ namespace test7 {
   }
   template void f<int>();
 }
+
+namespace gh67244 {
+  template<typename T, typename ...Ts> constexpr bool B = true;
+  template<typename T, typename ...Ts> concept C = B<T, Ts...>;
+  template<C<int, float> T> void f(T) {}
+  // CHECK: define {{.*}} @_ZN7gh672441fITkNS_1CIifEEiEEvT_(
+  template void f(int);
+}
