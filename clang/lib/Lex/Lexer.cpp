@@ -847,7 +847,7 @@ bool Lexer::isAtEndOfMacroExpansion(SourceLocation loc,
                                     const SourceManager &SM,
                                     const LangOptions &LangOpts,
                                     SourceLocation *MacroEnd) {
-  for(SourceLocation expansionLoc; true;loc = expansionLoc) {
+  for (SourceLocation expansionLoc; true; loc = expansionLoc) {
     assert(loc.isValid() && loc.isMacroID() && "Expected a valid macro loc");
 
     SourceLocation spellLoc = SM.getSpellingLoc(loc);

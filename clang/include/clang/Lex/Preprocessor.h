@@ -2429,7 +2429,7 @@ private:
   /// If macro definition contains __THIS_MACRO__ creates impl-only recursive
   /// version of macro, and replaces all __THIS_MACRO__ tokens
   /// with new created recusive version
-  void appendRecursiveVersionIfRequired(IdentifierInfo*, MacroInfo*);
+  void appendRecursiveVersionIfRequired(IdentifierInfo *, MacroInfo *);
 
   void PushIncludeMacroStack() {
     assert(CurLexerKind != CLK_CachingLexer && "cannot push a caching lexer");

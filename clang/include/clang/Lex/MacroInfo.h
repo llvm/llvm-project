@@ -190,7 +190,7 @@ public:
     return ArrayRef<IdentifierInfo *>(ParameterList, NumParameters);
   }
   ArrayRef<const IdentifierInfo *> params() const {
-    return const_cast<MacroInfo*>(this)->params();
+    return const_cast<MacroInfo *>(this)->params();
   }
 
   /// Return the parameter number of the specified identifier,
@@ -300,9 +300,9 @@ public:
     --Depth;
   }
   
-  [[nodiscard("infinite recursion check ignored")]]
-  bool TryDisableMacro() {
-    assert((AllowRecurse || Depth == 0) && "Cannot disable an already-disabled macro!");
+  [[nodiscard("infinite recursion check ignored")]] bool TryDisableMacro() {
+    assert((AllowRecurse || Depth == 0) &&
+            "Cannot disable an already-disabled macro!");
     return ++Depth < macro_recursion_depth_limit;
   }
 

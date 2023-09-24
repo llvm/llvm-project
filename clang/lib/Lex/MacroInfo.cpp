@@ -155,9 +155,11 @@ LLVM_DUMP_METHOD void MacroInfo::dump() const {
   // FIXME: Dump locations.
   Out << "MacroInfo " << this;
   if (IsBuiltinMacro) Out << " builtin";
-  if (!isEnabled()) Out << " disabled";
+  if (!isEnabled())
+    Out << " disabled";
   if (IsUsed) Out << " used";
-  if (AllowRecurse) Out << " allow_recurse";
+  if (AllowRecurse)
+    Out << " allow_recurse";
   if (IsAllowRedefinitionsWithoutWarning)
     Out << " allow_redefinitions_without_warning";
   if (IsWarnIfUnused) Out << " warn_if_unused";

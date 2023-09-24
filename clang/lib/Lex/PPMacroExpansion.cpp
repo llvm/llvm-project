@@ -59,26 +59,30 @@
 
 using namespace clang;
 
-void Preprocessor::appendRecursiveVersionIfRequired(IdentifierInfo* II, MacroInfo* MI) {
+void Preprocessor::appendRecursiveVersionIfRequired(IdentifierInfo *II,
+                                                    MacroInfo *MI) {
   if (!MI->isFunctionLike())
     return;
   auto is_this_macro_tok = [&] (const Token& t) {
-    return t.getKind() == tok::identifier && t.getIdentifierInfo() == Ident__THIS_MACRO__;
+    return t.getKind() == tok::identifier &&
+           t.getIdentifierInfo() == Ident__THIS_MACRO__;
   };
   if (llvm::none_of(MI->tokens(), is_this_macro_tok))
     return;
-  IdentifierInfo* ImplMacroII = [&] {
+  IdentifierInfo *ImplMacroII = [&] {
     std::string ImplMacroName = "__THIS_MACRO__";
     ImplMacroName += II->getName();
     return getIdentifierInfo(ImplMacroName);
   }();
-  MacroInfo* NewMI = AllocateMacroInfo(MI->getDefinitionLoc());
+  MacroInfo *NewMI = AllocateMacroInfo(MI->getDefinitionLoc());
   NewMI->setIsFunctionLike();
   NewMI->setParameterList(MI->params(), getPreprocessorAllocator());
   NewMI->setDefinitionEndLoc(MI->getDefinitionEndLoc());
-  if (MI->isC99Varargs()) NewMI->setIsC99Varargs();
-  if (MI->isGNUVarargs()) NewMI->setIsGNUVarargs();
-  for (auto& t : MI->tokens()) {
+  if (MI->isC99Varargs())
+    NewMI->setIsC99Varargs();
+  if (MI->isGNUVarargs())
+    NewMI->setIsGNUVarargs();
+  for (auto &t : MI->tokens()) {
     if (is_this_macro_tok(t))
       t.setIdentifierInfo(ImplMacroII);
   }
