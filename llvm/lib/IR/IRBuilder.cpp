@@ -934,7 +934,8 @@ CallInst *IRBuilderBase::CreateBinaryIntrinsic(Intrinsic::ID ID, Value *LHS,
                                                Instruction *FMFSource,
                                                const Twine &Name) {
   Module *M = BB->getModule();
-  Function *Fn = Intrinsic::getDeclaration(M, ID, { LHS->getType() });
+  Function *Fn =
+      Intrinsic::getDeclaration(M, ID, {LHS->getType(), RHS->getType()});
   return createCallHelper(Fn, {LHS, RHS}, Name, FMFSource);
 }
 

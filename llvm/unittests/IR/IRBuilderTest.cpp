@@ -55,12 +55,13 @@ protected:
 
 TEST_F(IRBuilderTest, Intrinsics) {
   IRBuilder<> Builder(BB);
-  Value *V;
+  Value *V, *IV;
   Instruction *I;
   CallInst *Call;
   IntrinsicInst *II;
 
   V = Builder.CreateLoad(GV->getValueType(), GV);
+  IV = Builder.getInt32(2);
   I = cast<Instruction>(Builder.CreateFAdd(V, V));
   I->setHasNoInfs(true);
   I->setHasNoNaNs(false);
@@ -106,6 +107,18 @@ TEST_F(IRBuilderTest, Intrinsics) {
   Call = Builder.CreateBinaryIntrinsic(Intrinsic::pow, V, V, I);
   II = cast<IntrinsicInst>(Call);
   EXPECT_EQ(II->getIntrinsicID(), Intrinsic::pow);
+  EXPECT_TRUE(II->hasNoInfs());
+  EXPECT_FALSE(II->hasNoNaNs());
+
+  Call = Builder.CreateBinaryIntrinsic(Intrinsic::powi, V, IV);
+  II = cast<IntrinsicInst>(Call);
+  EXPECT_EQ(II->getIntrinsicID(), Intrinsic::powi);
+  EXPECT_FALSE(II->hasNoInfs());
+  EXPECT_FALSE(II->hasNoNaNs());
+
+  Call = Builder.CreateBinaryIntrinsic(Intrinsic::powi, V, IV, I);
+  II = cast<IntrinsicInst>(Call);
+  EXPECT_EQ(II->getIntrinsicID(), Intrinsic::powi);
   EXPECT_TRUE(II->hasNoInfs());
   EXPECT_FALSE(II->hasNoNaNs());
 
