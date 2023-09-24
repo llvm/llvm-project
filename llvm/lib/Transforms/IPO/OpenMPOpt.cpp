@@ -2627,9 +2627,7 @@ struct AAExecutionDomainFunction : public AAExecutionDomain {
   AAExecutionDomainFunction(const IRPosition &IRP, Attributor &A)
       : AAExecutionDomain(IRP, A) {}
 
-  ~AAExecutionDomainFunction() {
-    delete RPOT;
-  }
+  ~AAExecutionDomainFunction() { delete RPOT; }
 
   void initialize(Attributor &A) override {
     Function *F = getAnchorScope();
@@ -3131,7 +3129,7 @@ ChangeStatus AAExecutionDomainFunction::updateImpl(Attributor &A) {
         }
 
         // Check the pointer(s) of a memory intrinsic explicitly.
-        if (MemIntrinsic *MI = dyn_cast<MemIntrinsic>(&I)) {
+        if (isa<MemIntrinsic>(&I)) {
           if (!ED.EncounteredNonLocalSideEffect &&
               AA::isPotentiallyAffectedByBarrier(A, I, *this))
             ED.EncounteredNonLocalSideEffect = true;
@@ -5521,6 +5519,13 @@ void OpenMPOpt::registerAAsForFunction(Attributor &A, const Function &F) {
                              UsedAssumedInformation, AA::Interprocedural);
       continue;
     }
+#if 0 // fixme snap2 mi-teams nest_call_par2
+    if (auto *CI = dyn_cast<CallBase>(&I)) {
+      if (CI->isIndirectCall())
+        A.getOrCreateAAFor<AAIndirectCallInfo>(
+            IRPosition::callsite_function(*CI));
+    }
+#endif
     if (auto *SI = dyn_cast<StoreInst>(&I)) {
       A.getOrCreateAAFor<AAIsDead>(IRPosition::value(*SI));
       continue;
