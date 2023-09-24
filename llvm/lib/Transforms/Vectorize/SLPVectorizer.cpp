@@ -4625,6 +4625,10 @@ bool BoUpSLP::canReorderOperands(
         }))
       continue;
     if (TreeEntry *TE = getVectorizedOperand(UserTE, I)) {
+      // FIXME: Do not reorder (possible!) strided vectorized nodes, they
+      // require reordering of the operands, which is not implemented yet.
+      if (TE->State == TreeEntry::PossibleStridedVectorize)
+        return false;
       // Do not reorder if operand node is used by many user nodes.
       if (any_of(TE->UserTreeIndices,
                  [UserTE](const EdgeInfo &EI) { return EI.UserTE != UserTE; }))
@@ -4638,7 +4642,6 @@ bool BoUpSLP::canReorderOperands(
       // If there are reused scalars, process this node as a regular vectorize
       // node, just reorder reuses mask.
       if (TE->State != TreeEntry::Vectorize &&
-          TE->State != TreeEntry::PossibleStridedVectorize &&
           TE->ReuseShuffleIndices.empty() && TE->ReorderIndices.empty())
         GatherOps.push_back(TE);
       continue;
@@ -4674,9 +4677,7 @@ void BoUpSLP::reorderBottomToTop(bool IgnoreReorder) {
   // Currently the are vectorized loads,extracts without alternate operands +
   // some gathering of extracts.
   SmallVector<TreeEntry *> NonVectorized;
-  for_each(VectorizableTree, [this, &OrderedEntries, &GathersToOrders,
-                              &NonVectorized](
-                                 const std::unique_ptr<TreeEntry> &TE) {
+  for (const std::unique_ptr<TreeEntry> &TE : VectorizableTree) {
     if (TE->State != TreeEntry::Vectorize &&
         TE->State != TreeEntry::PossibleStridedVectorize)
       NonVectorized.push_back(TE.get());
@@ -4688,7 +4689,7 @@ void BoUpSLP::reorderBottomToTop(bool IgnoreReorder) {
           !TE->ReuseShuffleIndices.empty())
         GathersToOrders.try_emplace(TE.get(), *CurrentOrder);
     }
-  });
+  }
 
   // 1. Propagate order to the graph nodes, which use only reordered nodes.
   // I.e., if the node has operands, that are reordered, try to make at least
@@ -4725,8 +4726,8 @@ void BoUpSLP::reorderBottomToTop(bool IgnoreReorder) {
       }
     }
     // Erase filtered entries.
-    for_each(Filtered,
-             [&OrderedEntries](TreeEntry *TE) { OrderedEntries.remove(TE); });
+    for (TreeEntry *TE : Filtered)
+      OrderedEntries.remove(TE);
     SmallVector<
         std::pair<TreeEntry *, SmallVector<std::pair<unsigned, TreeEntry *>>>>
         UsersVec(Users.begin(), Users.end());
@@ -4738,10 +4739,8 @@ void BoUpSLP::reorderBottomToTop(bool IgnoreReorder) {
       SmallVector<TreeEntry *> GatherOps;
       if (!canReorderOperands(Data.first, Data.second, NonVectorized,
                               GatherOps)) {
-        for_each(Data.second,
-                 [&OrderedEntries](const std::pair<unsigned, TreeEntry *> &Op) {
-                   OrderedEntries.remove(Op.second);
-                 });
+        for (const std::pair<unsigned, TreeEntry *> &Op : Data.second)
+          OrderedEntries.remove(Op.second);
         continue;
       }
       // All operands are reordered and used only in this node - propagate the
@@ -4843,11 +4842,8 @@ void BoUpSLP::reorderBottomToTop(bool IgnoreReorder) {
              Data.first->ReuseShuffleIndices.empty() &&
              !(IgnoreReorder &&
                Data.first == VectorizableTree.front().get()))) {
-          for_each(
-              Data.second,
-              [&OrderedEntries](const std::pair<unsigned, TreeEntry *> &Op) {
-                OrderedEntries.remove(Op.second);
-              });
+          for (const std::pair<unsigned, TreeEntry *> &Op : Data.second)
+            OrderedEntries.remove(Op.second);
           continue;
         }
         // Add (potentially!) strided vectorize orders.
@@ -4874,10 +4870,8 @@ void BoUpSLP::reorderBottomToTop(bool IgnoreReorder) {
       }
       // Set order of the user node (reordering of operands and user nodes).
       if (BestOrder.empty()) {
-        for_each(Data.second,
-                 [&OrderedEntries](const std::pair<unsigned, TreeEntry *> &Op) {
-                   OrderedEntries.remove(Op.second);
-                 });
+        for (const std::pair<unsigned, TreeEntry *> &Op : Data.second)
+          OrderedEntries.remove(Op.second);
         continue;
       }
       // Erase operands from OrderedEntries list and adjust their orders.
@@ -13901,11 +13895,9 @@ public:
         for (unsigned Cnt = 0, Sz = ReducedVals.size(); Cnt < Sz; ++Cnt) {
           if (Cnt == I || (ShuffledExtracts && Cnt == I - 1))
             continue;
-          for_each(ReducedVals[Cnt],
-                   [&LocalExternallyUsedValues, &TrackedVals](Value *V) {
-                     if (isa<Instruction>(V))
-                       LocalExternallyUsedValues[TrackedVals[V]];
-                   });
+          for (Value *V : ReducedVals[Cnt])
+            if (isa<Instruction>(V))
+              LocalExternallyUsedValues[TrackedVals[V]];
         }
         if (!IsSupportedHorRdxIdentityOp) {
           // Number of uses of the candidates in the vector of values.

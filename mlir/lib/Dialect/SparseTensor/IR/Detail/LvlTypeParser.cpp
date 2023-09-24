@@ -49,9 +49,10 @@ using namespace mlir::sparse_tensor::ir_detail;
 
 FailureOr<uint8_t> LvlTypeParser::parseLvlType(AsmParser &parser) const {
   StringRef base;
-  FAILURE_IF_FAILED(parser.parseOptionalKeyword(&base));
-  uint8_t properties = 0;
   const auto loc = parser.getCurrentLocation();
+  ERROR_IF(failed(parser.parseOptionalKeyword(&base)),
+           "expected valid level format (e.g. dense, compressed or singleton)")
+  uint8_t properties = 0;
 
   ParseResult res = parser.parseCommaSeparatedList(
       mlir::OpAsmParser::Delimiter::OptionalParen,
@@ -73,19 +74,21 @@ FailureOr<uint8_t> LvlTypeParser::parseLvlType(AsmParser &parser) const {
   } else if (base.compare("singleton") == 0) {
     properties |= static_cast<uint8_t>(LevelFormat::Singleton);
   } else {
-    parser.emitError(loc, "unknown level format");
+    parser.emitError(loc, "unknown level format: ") << base;
     return failure();
   }
 
   ERROR_IF(!isValidDLT(static_cast<DimLevelType>(properties)),
-           "invalid level type");
+           "invalid level type: level format doesn't support the properties");
   return properties;
 }
 
 ParseResult LvlTypeParser::parseProperty(AsmParser &parser,
                                          uint8_t *properties) const {
   StringRef strVal;
-  FAILURE_IF_FAILED(parser.parseOptionalKeyword(&strVal));
+  auto loc = parser.getCurrentLocation();
+  ERROR_IF(failed(parser.parseOptionalKeyword(&strVal)),
+           "expected valid level property (e.g. nonordered, nonunique or high)")
   if (strVal.compare("nonunique") == 0) {
     *properties |= static_cast<uint8_t>(LevelNondefaultProperty::Nonunique);
   } else if (strVal.compare("nonordered") == 0) {
@@ -95,7 +98,7 @@ ParseResult LvlTypeParser::parseProperty(AsmParser &parser,
   } else if (strVal.compare("block2_4") == 0) {
     *properties |= static_cast<uint8_t>(LevelNondefaultProperty::Block2_4);
   } else {
-    parser.emitError(parser.getCurrentLocation(), "unknown level property");
+    parser.emitError(loc, "unknown level property: ") << strVal;
     return failure();
   }
   return success();

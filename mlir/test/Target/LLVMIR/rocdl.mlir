@@ -300,6 +300,82 @@ llvm.func @rocdl.wmma(%arg0 : vector<8xf32>, %arg1 : vector<16 x f16>, %arg2 : v
   llvm.return %r0 : vector<8xf32>
 }
 
+llvm.func @rocdl.make.buffer.rsrc(%ptr : !llvm.ptr,
+                                  %stride : i16,
+                                  %numRecords : i32,
+                                  %flags : i32) -> !llvm.ptr<8> {
+  // CHECK-LABEL: rocdl.make.buffer.rsrc
+  // CHECK: %[[rsrc:.*]] = call ptr addrspace(8) @llvm.amdgcn.make.buffer.rsrc.p0(ptr %{{.*}}, i16 %{{.*}}, i32 %{{.*}}, i32 %{{.*}})
+  // CHECK: ret ptr addrspace(8) %[[rsrc]]
+  %rsrc = rocdl.make.buffer.rsrc %ptr, %stride, %numRecords, %flags : !llvm.ptr to !llvm.ptr<8>
+  llvm.return %rsrc : !llvm.ptr<8>
+}
+
+llvm.func @rocdl.raw.ptr.buffer(%rsrc : !llvm.ptr<8>,
+                        %offset : i32, %soffset : i32,
+                        %vdata1 : i32,
+                        %vdata2 : vector<2xi32>,
+                        %vdata4 : vector<4xi32>) {
+  %aux = llvm.mlir.constant(0 : i32) : i32
+  // CHECK-LABEL: rocdl.raw.ptr.buffer
+  // CHECK: call i32 @llvm.amdgcn.raw.ptr.buffer.load.i32(ptr addrspace(8) %{{.*}}, i32 %{{.*}}, i32 %{{.*}}, i32 {{.*}}
+  // CHECK: call <2 x i32> @llvm.amdgcn.raw.ptr.buffer.load.v2i32(ptr addrspace(8) %{{.*}}, i32 %{{.*}}, i32 %{{.*}}, i32 {{.*}}
+  // CHECK: call <4 x i32> @llvm.amdgcn.raw.ptr.buffer.load.v4i32(ptr addrspace(8) %{{.*}}, i32 %{{.*}}, i32 %{{.*}}, i32 {{.*}}
+
+  // CHECK: call void @llvm.amdgcn.raw.ptr.buffer.store.i32(i32 %{{.*}}, ptr addrspace(8) %{{.*}}, i32 %{{.*}}, i32 %{{.*}}, i32 {{.*}}
+  // CHECK: call void @llvm.amdgcn.raw.ptr.buffer.store.v2i32(<2 x i32> %{{.*}}, ptr addrspace(8) %{{.*}}, i32 %{{.*}}, i32 %{{.*}}, i32 {{.*}}
+  // CHECK: call void @llvm.amdgcn.raw.ptr.buffer.store.v4i32(<4 x i32> %{{.*}}, ptr addrspace(8) %{{.*}}, i32 %{{.*}}, i32 %{{.*}}, i32 {{.*}}
+
+  %r1 = rocdl.raw.ptr.buffer.load %rsrc, %offset, %soffset, %aux : i32
+  %r2 = rocdl.raw.ptr.buffer.load %rsrc, %offset, %soffset, %aux : vector<2xi32>
+  %r4 = rocdl.raw.ptr.buffer.load %rsrc, %offset, %soffset, %aux : vector<4xi32>
+
+  rocdl.raw.ptr.buffer.store %vdata1, %rsrc, %offset, %soffset, %aux : i32
+  rocdl.raw.ptr.buffer.store %vdata2, %rsrc, %offset, %soffset, %aux : vector<2xi32>
+  rocdl.raw.ptr.buffer.store %vdata4, %rsrc, %offset, %soffset, %aux : vector<4xi32>
+
+  llvm.return
+}
+
+llvm.func @rocdl.raw.ptr.buffer.atomic.f32(%rsrc : !llvm.ptr<8>,
+                        %offset : i32, %soffset : i32,
+                        %vdata1 : f32) {
+  %aux = llvm.mlir.constant(0 : i32) : i32
+  // CHECK-LABEL: rocdl.raw.ptr.buffer.atomic.f32
+  // CHECK: call float @llvm.amdgcn.raw.ptr.buffer.atomic.fadd.f32(float %{{.*}}, ptr addrspace(8) %{{.*}}, i32 %{{.*}}, i32 %{{.*}}, i32 {{.*}}
+  // CHECK: call float @llvm.amdgcn.raw.ptr.buffer.atomic.fmax.f32(float %{{.*}}, ptr addrspace(8) %{{.*}}, i32 %{{.*}}, i32 %{{.*}}, i32 {{.*}}
+
+  rocdl.raw.ptr.buffer.atomic.fadd %vdata1, %rsrc, %offset, %soffset, %aux : f32
+  rocdl.raw.ptr.buffer.atomic.fmax %vdata1, %rsrc, %offset, %soffset, %aux : f32
+
+  llvm.return
+}
+
+llvm.func @rocdl.raw.ptr.buffer.atomic.i32(%rsrc : !llvm.ptr<8>,
+                        %offset : i32, %soffset : i32,
+                        %vdata1 : i32) {
+  %aux = llvm.mlir.constant(0 : i32) : i32
+  // CHECK-LABEL: rocdl.raw.ptr.buffer.atomic.i32
+  // CHECK: call i32 @llvm.amdgcn.raw.ptr.buffer.atomic.smax.i32(i32 %{{.*}}, ptr addrspace(8) %{{.*}}, i32 %{{.*}}, i32 %{{.*}}, i32 {{.*}}
+  // CHECK: call i32 @llvm.amdgcn.raw.ptr.buffer.atomic.umin.i32(i32 %{{.*}}, ptr addrspace(8) %{{.*}}, i32 %{{.*}}, i32 %{{.*}}, i32 {{.*}}
+
+  rocdl.raw.ptr.buffer.atomic.smax %vdata1, %rsrc, %offset, %soffset, %aux : i32
+  rocdl.raw.ptr.buffer.atomic.umin %vdata1, %rsrc, %offset, %soffset, %aux : i32
+
+  llvm.return
+}
+
+llvm.func @rocdl.raw.ptr.buffer.atomic.cmpswap(%rsrc : !llvm.ptr<8>,
+                        %offset : i32, %soffset : i32,
+                        %src : i32, %cmp : i32) -> i32 {
+  %aux = llvm.mlir.constant(0 : i32) : i32
+  // CHECK-LABEL: rocdl.raw.ptr.buffer.atomic.cmpswap
+  // CHECK: [[val:%.+]] = call i32 @llvm.amdgcn.raw.ptr.buffer.atomic.cmpswap.i32(i32 %{{.*}}, i32 %{{.*}}, ptr addrspace(8) %{{.*}}, i32 %{{.*}}, i32 %{{.*}}, i32 {{.*}}
+  // CHECK: ret i32 [[val]]
+
+  %val = rocdl.raw.ptr.buffer.atomic.cmpswap %src, %cmp, %rsrc, %offset, %soffset, %aux : i32
+  llvm.return %val : i32
+}
 
 llvm.func @rocdl.mubuf(%rsrc : vector<4xi32>, %vindex : i32,
                        %offset : i32, %vdata1 : vector<1xf32>,

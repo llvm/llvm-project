@@ -160,7 +160,7 @@ if(LLVM_LIBC_FULL_BUILD)
   set(hermetic_test_only HERMETIC_TEST_ONLY)
 else()
 # Else in overlay mode they use the system's FILE.
- set(fprintf_test_copts "-DLIBC_COPT_PRINTF_USE_SYSTEM_FILE")
+ set(use_system_file "-DLIBC_COPT_STDIO_USE_SYSTEM_FILE")
 endif()
 
 add_libc_unittest(
@@ -173,7 +173,7 @@ add_libc_unittest(
     libc.src.stdio.fprintf
     ${fprintf_test_deps}
   COMPILE_OPTIONS
-    ${fprintf_test_copts}
+    ${use_system_file}
 )
 
 add_libc_test(
@@ -218,7 +218,7 @@ add_libc_unittest(
     libc.src.stdio.vfprintf
     ${fprintf_test_deps}
   COMPILE_OPTIONS
-    ${fprintf_test_copts}
+    ${use_system_file}
 )
 
 add_libc_test(
@@ -232,6 +232,17 @@ add_libc_test(
     libc.src.stdio.vprintf
 )
 
+
+if(LLVM_LIBC_FULL_BUILD)
+  # In fullbuild mode, fscanf's tests use the internal FILE for other functions.
+  list(APPEND fscanf_test_deps
+       libc.src.stdio.fclose
+       libc.src.stdio.ferror
+       libc.src.stdio.fopen
+       libc.src.stdio.fwrite
+  )
+endif()
+
 add_libc_unittest(
   fscanf_test
   SUITE
@@ -240,11 +251,10 @@ add_libc_unittest(
     fscanf_test.cpp
   DEPENDS
     libc.src.stdio.fscanf
-    libc.src.stdio.fclose
-    libc.src.stdio.ferror
-    libc.src.stdio.fopen
-    libc.src.stdio.fwrite
+    ${fscanf_test_deps}
     libc.src.__support.CPP.string_view
+  COMPILE_OPTIONS
+    ${use_system_file}
 )
 
 add_libc_unittest(

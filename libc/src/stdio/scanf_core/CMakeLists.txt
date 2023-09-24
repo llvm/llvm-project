@@ -22,12 +22,6 @@ add_header_library(
     libc.src.__support.CPP.string_view
 )
 
-if(NOT (TARGET libc.src.__support.File.file))
-  # Not all platforms have a file implementation. If file is unvailable,
-  # then we must skip all the parts that need file.
-  return()
-endif()
-
 add_object_library(
   scanf_main
   SRCS
@@ -43,32 +37,13 @@ add_object_library(
 )
 
 add_object_library(
-  string_reader
-  SRCS
-    string_reader.cpp
-  HDRS
-    string_reader.h
-)
-
-add_object_library(
-  file_reader
-  SRCS
-    file_reader.cpp
-  HDRS
-    file_reader.h
-  DEPENDS
-    libc.src.__support.File.file
-)
-
-add_object_library(
   reader
   SRCS
     reader.cpp
   HDRS
     reader.h
   DEPENDS
-    .string_reader
-    .file_reader
+    libc.src.__support.macros.attributes
 )
 
 add_object_library(
@@ -99,15 +74,20 @@ add_object_library(
     libc.src.__support.str_to_float
 )
 
-add_object_library(
+if(NOT (TARGET libc.src.__support.File.file) AND LLVM_LIBC_FULL_BUILD)
+  # Not all platforms have a file implementation. If file is unvailable, and a 
+  # full build is requested, then we must skip all file based printf sections.
+  return()
+endif()
+
+add_header_library(
   vfscanf_internal
-  SRCS
-    vfscanf_internal.cpp
   HDRS
     vfscanf_internal.h
   DEPENDS
     .reader
-    .file_reader
     .scanf_main
+    libc.include.stdio
+    libc.src.__support.File.file
     libc.src.__support.arg_list
 )
