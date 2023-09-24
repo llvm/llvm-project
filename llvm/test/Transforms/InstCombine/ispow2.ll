@@ -198,7 +198,7 @@ define i1 @is_pow2_non_zero_ult_2(i32 %x) {
 ; CHECK-NEXT:    [[NOTZERO:%.*]] = icmp ne i32 [[X:%.*]], 0
 ; CHECK-NEXT:    call void @llvm.assume(i1 [[NOTZERO]])
 ; CHECK-NEXT:    [[T0:%.*]] = tail call i32 @llvm.ctpop.i32(i32 [[X]]), !range [[RNG0]]
-; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i32 [[T0]], 1
+; CHECK-NEXT:    [[CMP:%.*]] = icmp ult i32 [[T0]], 2
 ; CHECK-NEXT:    ret i1 [[CMP]]
 ;
   %notzero = icmp ne i32 %x, 0
@@ -213,7 +213,7 @@ define i1 @is_pow2_non_zero_eq_1(i32 %x) {
 ; CHECK-NEXT:    [[NOTZERO:%.*]] = icmp ne i32 [[X:%.*]], 0
 ; CHECK-NEXT:    call void @llvm.assume(i1 [[NOTZERO]])
 ; CHECK-NEXT:    [[T0:%.*]] = tail call i32 @llvm.ctpop.i32(i32 [[X]]), !range [[RNG0]]
-; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i32 [[T0]], 1
+; CHECK-NEXT:    [[CMP:%.*]] = icmp ult i32 [[T0]], 2
 ; CHECK-NEXT:    ret i1 [[CMP]]
 ;
   %notzero = icmp ne i32 %x, 0
@@ -1466,7 +1466,7 @@ define i1 @is_pow2_nz_known_bits_fail_multiuse(i32 %xin) {
 ; CHECK-NEXT:    [[X:%.*]] = or i32 [[XIN:%.*]], 64
 ; CHECK-NEXT:    [[CNT:%.*]] = call i32 @llvm.ctpop.i32(i32 [[X]]), !range [[RNG3:![0-9]+]]
 ; CHECK-NEXT:    call void @use.i32(i32 [[CNT]])
-; CHECK-NEXT:    [[R:%.*]] = icmp eq i32 [[CNT]], 1
+; CHECK-NEXT:    [[R:%.*]] = icmp ult i32 [[CNT]], 2
 ; CHECK-NEXT:    ret i1 [[R]]
 ;
   %x = or i32 %xin, 64
