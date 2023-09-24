@@ -243,7 +243,7 @@ define i1 @is_pow2_non_zero_ne_1(i32 %x) {
 ; CHECK-NEXT:    [[NOTZERO:%.*]] = icmp ne i32 [[X:%.*]], 0
 ; CHECK-NEXT:    call void @llvm.assume(i1 [[NOTZERO]])
 ; CHECK-NEXT:    [[T0:%.*]] = tail call i32 @llvm.ctpop.i32(i32 [[X]]), !range [[RNG0]]
-; CHECK-NEXT:    [[CMP:%.*]] = icmp ne i32 [[T0]], 1
+; CHECK-NEXT:    [[CMP:%.*]] = icmp ugt i32 [[T0]], 1
 ; CHECK-NEXT:    ret i1 [[CMP]]
 ;
   %notzero = icmp ne i32 %x, 0

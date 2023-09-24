@@ -3414,12 +3414,18 @@ static Instruction *foldCtpopPow2Test(ICmpInst &I, IntrinsicInst *CtpopLhs,
          "Non-ctpop intrin in ctpop fold");
 
   const ICmpInst::Predicate Pred = I.getPredicate();
-  // If we know X is non-zero, we can fold `ctpop(X) == 1` into `ctpop(X) <u 2`
-  // since the latter gives better codegen.
-  if (Pred == ICmpInst::ICMP_EQ && CRhs == 1 &&
+  // When X is non-zero:
+  // ctpop(X) == 1 --> ctpop(X) <u 2
+  // ctpop(X) != 1 --> ctpop(X) >u 1
+  // The latter forms give better codegen.
+  if (I.isEquality() && CRhs == 1 &&
       isKnownNonZero(CtpopLhs, Q.DL, /*Depth*/ 0, Q.AC, Q.CxtI, Q.DT))
-    return ICmpInst::Create(Instruction::ICmp, ICmpInst::ICMP_ULT, CtpopLhs,
-                            ConstantInt::get(CtpopLhs->getType(), 2));
+    return ICmpInst::Create(
+        Instruction::ICmp,
+        Pred == ICmpInst::ICMP_EQ ? ICmpInst::ICMP_ULT : ICmpInst::ICMP_UGT,
+        CtpopLhs,
+        ConstantInt::get(CtpopLhs->getType(),
+                         Pred == ICmpInst::ICMP_EQ ? 2 : 1));
 
   if (!CtpopLhs->hasOneUse())
     return nullptr;
