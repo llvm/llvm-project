@@ -193,8 +193,8 @@ define i1 @is_pow2_ctpop(i32 %x) {
 }
 
 ; tests from PR57328
-define i1 @is_pow2_non_zero(i32 %x) {
-; CHECK-LABEL: @is_pow2_non_zero(
+define i1 @is_pow2_non_zero_ult_2(i32 %x) {
+; CHECK-LABEL: @is_pow2_non_zero_ult_2(
 ; CHECK-NEXT:    [[NOTZERO:%.*]] = icmp ne i32 [[X:%.*]], 0
 ; CHECK-NEXT:    call void @llvm.assume(i1 [[NOTZERO]])
 ; CHECK-NEXT:    [[T0:%.*]] = tail call i32 @llvm.ctpop.i32(i32 [[X]]), !range [[RNG0]]
@@ -205,6 +205,21 @@ define i1 @is_pow2_non_zero(i32 %x) {
   call void @llvm.assume(i1 %notzero)
   %t0 = tail call i32 @llvm.ctpop.i32(i32 %x)
   %cmp = icmp ult i32 %t0, 2
+  ret i1 %cmp
+}
+
+define i1 @is_pow2_non_zero_eq_1(i32 %x) {
+; CHECK-LABEL: @is_pow2_non_zero_eq_1(
+; CHECK-NEXT:    [[NOTZERO:%.*]] = icmp ne i32 [[X:%.*]], 0
+; CHECK-NEXT:    call void @llvm.assume(i1 [[NOTZERO]])
+; CHECK-NEXT:    [[T0:%.*]] = tail call i32 @llvm.ctpop.i32(i32 [[X]]), !range [[RNG0]]
+; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i32 [[T0]], 1
+; CHECK-NEXT:    ret i1 [[CMP]]
+;
+  %notzero = icmp ne i32 %x, 0
+  call void @llvm.assume(i1 %notzero)
+  %t0 = tail call i32 @llvm.ctpop.i32(i32 %x)
+  %cmp = icmp eq i32 %t0, 1
   ret i1 %cmp
 }
 
