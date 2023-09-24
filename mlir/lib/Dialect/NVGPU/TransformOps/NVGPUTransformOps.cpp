@@ -70,7 +70,7 @@ void transform::ApplyNVGPUToNVVMConversionPatternsOp::populatePatterns(
             LLVM::LLVMStructType::getLiteral(type.getContext(), structBody);
         return llvmTypeConverter.convertType(convertedType);
       });
-  llvmTypeConverter.addConversion([&](nvgpu::MBarrierType type) -> Type {
+  llvmTypeConverter.addConversion([&](nvgpu::MBarrierGroupType type) -> Type {
     return llvmTypeConverter.convertType(
         getMBarrierMemrefType(type.getContext(), type));
   });
@@ -818,7 +818,7 @@ struct HopperBuilder {
   HopperBuilder(RewriterBase &rewriter, Location loc)
       : rewriter(rewriter), loc(loc) {}
 
-  TypedValue<nvgpu::MBarrierType>
+  TypedValue<nvgpu::MBarrierGroupType>
   buildAndInitBarrierInSharedMemory(OpFoldResult numThreads);
 
   /// Create tma descriptor op to initiate transfer from global to shared
@@ -832,9 +832,9 @@ struct HopperBuilder {
   OpFoldResult
   buildTmaAsyncLoad(TypedValue<nvgpu::TensorMapDescriptorType> globalDesc,
                     TypedValue<MemRefType> sharedMemref,
-                    TypedValue<nvgpu::MBarrierType> barrier,
+                    TypedValue<nvgpu::MBarrierGroupType> barrier,
                     SmallVectorImpl<Operation *> &loadOps);
-  void buildBarrierArriveTx(TypedValue<nvgpu::MBarrierType> barrier,
+  void buildBarrierArriveTx(TypedValue<nvgpu::MBarrierGroupType> barrier,
                             ArrayRef<OpFoldResult> sizes);
 
   /// If threadIdx.x == 0 does TMA request + wait, else just wait.
@@ -843,9 +843,9 @@ struct HopperBuilder {
   SmallVector<Operation *> buildPredicateLoadsOnThread0(
       ArrayRef<TypedValue<nvgpu::TensorMapDescriptorType>> globalDescriptors,
       ArrayRef<TypedValue<MemRefType>> sharedMemBuffers,
-      TypedValue<nvgpu::MBarrierType> barrier);
+      TypedValue<nvgpu::MBarrierGroupType> barrier);
 
-  void buildTryWaitParity(TypedValue<nvgpu::MBarrierType> barrier);
+  void buildTryWaitParity(TypedValue<nvgpu::MBarrierGroupType> barrier);
 
   RewriterBase &rewriter;
   Location loc;
@@ -854,7 +854,7 @@ struct HopperBuilder {
 SmallVector<Operation *> HopperBuilder::buildPredicateLoadsOnThread0(
     ArrayRef<TypedValue<nvgpu::TensorMapDescriptorType>> globalDescriptors,
     ArrayRef<TypedValue<MemRefType>> sharedMemBuffers,
-    TypedValue<nvgpu::MBarrierType> barrier) {
+    TypedValue<nvgpu::MBarrierGroupType> barrier) {
   SmallVector<Operation *> loadOps;
   Value zero = rewriter.create<arith::ConstantIndexOp>(loc, 0);
   Value tidx = rewriter.create<gpu::ThreadIdOp>(loc, gpu::Dimension::x);
@@ -895,15 +895,18 @@ static Attribute getSharedAddressSpaceAttribute(OpBuilder &b) {
   // return b.getI64IntegerAttr(static_cast<int64_t>(kSharedMemorySpace));
 }
 
-TypedValue<nvgpu::MBarrierType>
+TypedValue<nvgpu::MBarrierGroupType>
 HopperBuilder::buildAndInitBarrierInSharedMemory(OpFoldResult numThreads) {
   auto sharedMemorySpace = getSharedAddressSpaceAttribute(rewriter);
   Value barrier = rewriter.create<nvgpu::MBarrierCreateOp>(
-      loc, nvgpu::MBarrierType::get(rewriter.getContext(), sharedMemorySpace));
+      loc,
+      nvgpu::MBarrierGroupType::get(rewriter.getContext(), sharedMemorySpace));
+  Value zero = rewriter.create<arith::ConstantIndexOp>(loc, 0);
   rewriter.create<nvgpu::MBarrierInitOp>(
-      loc, barrier, getValueOrCreateConstantIndexOp(rewriter, loc, numThreads));
+      loc, barrier, getValueOrCreateConstantIndexOp(rewriter, loc, numThreads),
+      zero);
   rewriter.create<gpu::BarrierOp>(loc);
-  return cast<TypedValue<nvgpu::MBarrierType>>(barrier);
+  return cast<TypedValue<nvgpu::MBarrierGroupType>>(barrier);
 }
 
 TypedValue<nvgpu::TensorMapDescriptorType>
@@ -938,12 +941,12 @@ HopperBuilder::buildGlobalMemRefDescriptor(TypedValue<MemRefType> memref,
 OpFoldResult HopperBuilder::buildTmaAsyncLoad(
     TypedValue<nvgpu::TensorMapDescriptorType> globalDesc,
     TypedValue<MemRefType> sharedMemref,
-    TypedValue<nvgpu::MBarrierType> barrier,
+    TypedValue<nvgpu::MBarrierGroupType> barrier,
     SmallVectorImpl<Operation *> &loadOps) {
   MLIRContext *ctx = rewriter.getContext();
   Value zero = rewriter.create<arith::ConstantIndexOp>(loc, 0);
   Operation *loadOp = rewriter.create<nvgpu::TmaAsyncLoadOp>(
-      loc, sharedMemref, barrier, globalDesc, ValueRange{zero, zero});
+      loc, sharedMemref, barrier, globalDesc, ValueRange{zero, zero}, zero);
   loadOps.push_back(loadOp);
   auto mixedSizes = memref::getMixedSizes(rewriter, loc, sharedMemref);
   SmallVector<AffineExpr> symbols(mixedSizes.size());
@@ -957,7 +960,7 @@ OpFoldResult HopperBuilder::buildTmaAsyncLoad(
 }
 
 void HopperBuilder::buildBarrierArriveTx(
-    TypedValue<nvgpu::MBarrierType> barrier,
+    TypedValue<nvgpu::MBarrierGroupType> barrier,
     ArrayRef<OpFoldResult> mixedSizes) {
   assert(!mixedSizes.empty() && "expecte non-empty sizes");
   MLIRContext *ctx = rewriter.getContext();
@@ -967,19 +970,21 @@ void HopperBuilder::buildBarrierArriveTx(
   OpFoldResult size =
       affine::makeComposedFoldedAffineApply(rewriter, loc, sumExpr, mixedSizes);
   Value sizeVal = getValueOrCreateConstantIndexOp(rewriter, loc, size);
-  rewriter.create<nvgpu::MBarrierArriveExpectTxOp>(loc, barrier, sizeVal);
+  Value zero = rewriter.create<arith::ConstantIndexOp>(loc, 0);
+  rewriter.create<nvgpu::MBarrierArriveExpectTxOp>(loc, barrier, sizeVal, zero);
 }
 
 void HopperBuilder::buildTryWaitParity(
-    TypedValue<nvgpu::MBarrierType> barrier) {
+    TypedValue<nvgpu::MBarrierGroupType> barrier) {
   Value parity = rewriter.create<arith::ConstantIndexOp>(loc, 0);
   // 10M is an arbitrary, not too small or too big number to specify the number
   // of ticks before retry.
   // TODO: hoist this in a default dialect constant.
   Value ticksBeforeRetry =
       rewriter.create<arith::ConstantIndexOp>(loc, 10000000);
+  Value zero = rewriter.create<arith::ConstantIndexOp>(loc, 0);
   rewriter.create<nvgpu::MBarrierTryWaitParityOp>(loc, barrier, parity,
-                                                  ticksBeforeRetry);
+                                                  ticksBeforeRetry, zero);
 }
 
 //===----------------------------------------------------------------------===//
@@ -1013,7 +1018,7 @@ SmallVector<Operation *> CopyBuilder::rewrite(ArrayRef<Operation *> copyOps) {
       ArrayRef<OpFoldResult>{launchOp.getBlockSizeX(), launchOp.getBlockSizeY(),
                              launchOp.getBlockSizeZ()});
 
-  TypedValue<nvgpu::MBarrierType> barrier =
+  TypedValue<nvgpu::MBarrierGroupType> barrier =
       buildAndInitBarrierInSharedMemory(numThreads);
 
   SmallVector<TypedValue<MemRefType>> shmems;

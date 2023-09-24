@@ -986,7 +986,7 @@ public:
       const auto dstEnc = SparseTensorEncodingAttr::get(
           op->getContext(),
           SmallVector<DimLevelType>(dimRank, DimLevelType::Dense), AffineMap(),
-          srcEnc.getPosWidth(), srcEnc.getCrdWidth());
+          AffineMap(), srcEnc.getPosWidth(), srcEnc.getCrdWidth());
       SmallVector<Value> dimSizes = getDimSizes(rewriter, loc, srcTp, src);
       Value iter = NewCallParams(rewriter, loc)
                        .genBuffers(dstTp.withEncoding(dstEnc), dimSizes)

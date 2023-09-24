@@ -4802,6 +4802,9 @@ LValue CodeGenFunction::EmitCastLValue(const CastExpr *E) {
     // bound and change the IR type.
     // FIXME: Once pointee types are removed from IR, remove this.
     LValue LV = EmitLValue(E->getSubExpr());
+    // Propagate the volatile qualifer to LValue, if exist in E.
+    if (E->changesVolatileQualification())
+      LV.getQuals() = E->getType().getQualifiers();
     if (LV.isSimple()) {
       Address V = LV.getAddress(*this);
       if (V.isValid()) {

@@ -1779,7 +1779,7 @@ Metadata
 ========
 
 '``coro.outside.frame``' Metadata
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+---------------------------------
 
 ``coro.outside.frame`` metadata may be attached to an alloca instruction to
 to signify that it shouldn't be promoted to the coroutine frame, useful for

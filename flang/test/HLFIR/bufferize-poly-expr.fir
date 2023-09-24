@@ -30,7 +30,7 @@ func.func @test_poly_expr_without_associate() {
 // CHECK:           %[[VAL_14:.*]] = fir.insert_value %[[VAL_13]], %[[VAL_7]], [1 : index] : (tuple<!fir.ref<!fir.class<!fir.heap<!fir.type<_QFtestTt{c:i32}>>>>, i1>, i1) -> tuple<!fir.ref<!fir.class<!fir.heap<!fir.type<_QFtestTt{c:i32}>>>>, i1>
 // CHECK:           %[[VAL_15:.*]] = fir.insert_value %[[VAL_14]], %[[VAL_8]]#0, [0 : index] : (tuple<!fir.ref<!fir.class<!fir.heap<!fir.type<_QFtestTt{c:i32}>>>>, i1>, !fir.ref<!fir.class<!fir.heap<!fir.type<_QFtestTt{c:i32}>>>>) -> tuple<!fir.ref<!fir.class<!fir.heap<!fir.type<_QFtestTt{c:i32}>>>>, i1>
 // CHECK:           hlfir.assign %[[VAL_8]]#0 to %[[VAL_2]]#0 realloc : !fir.ref<!fir.class<!fir.heap<!fir.type<_QFtestTt{c:i32}>>>>, !fir.ref<!fir.class<!fir.heap<!fir.type<_QFtestTt{c:i32}>>>>
-// CHECK:           %[[VAL_16:.*]] = fir.load %[[VAL_8]]#1 : !fir.ref<!fir.class<!fir.heap<!fir.type<_QFtestTt{c:i32}>>>>
+// CHECK:           %[[VAL_16:.*]] = fir.load %[[VAL_8]]#0 : !fir.ref<!fir.class<!fir.heap<!fir.type<_QFtestTt{c:i32}>>>>
 // CHECK:           %[[VAL_17:.*]] = fir.box_addr %[[VAL_16]] : (!fir.class<!fir.heap<!fir.type<_QFtestTt{c:i32}>>>) -> !fir.heap<!fir.type<_QFtestTt{c:i32}>>
 // CHECK:           fir.freemem %[[VAL_17]] : !fir.heap<!fir.type<_QFtestTt{c:i32}>>
 // CHECK:           return

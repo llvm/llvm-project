@@ -42,8 +42,7 @@ public:
 
 private:
   const TargetRegisterClass *
-  getRegClassForTypeOnBank(LLT Ty, const RegisterBank &RB,
-                           bool GetAllRegSet = false) const;
+  getRegClassForTypeOnBank(LLT Ty, const RegisterBank &RB) const;
 
   bool selectImpl(MachineInstr &I, CodeGenCoverage &CoverageInfo) const;
   bool selectCopy(MachineInstr &MI, MachineRegisterInfo &MRI) const;
@@ -136,7 +135,34 @@ bool RISCVInstructionSelector::select(MachineInstr &MI) {
   MachineRegisterInfo &MRI = MF.getRegInfo();
   MachineIRBuilder MIB(MI);
 
-  if (!isPreISelGenericOpcode(Opc)) {
+  if (!isPreISelGenericOpcode(Opc) || Opc == TargetOpcode::G_PHI) {
+    if (Opc == TargetOpcode::PHI || Opc == TargetOpcode::G_PHI) {
+      const Register DefReg = MI.getOperand(0).getReg();
+      const LLT DefTy = MRI.getType(DefReg);
+
+      const RegClassOrRegBank &RegClassOrBank =
+          MRI.getRegClassOrRegBank(DefReg);
+
+      const TargetRegisterClass *DefRC =
+          RegClassOrBank.dyn_cast<const TargetRegisterClass *>();
+      if (!DefRC) {
+        if (!DefTy.isValid()) {
+          LLVM_DEBUG(dbgs() << "PHI operand has no type, not a gvreg?\n");
+          return false;
+        }
+
+        const RegisterBank &RB = *RegClassOrBank.get<const RegisterBank *>();
+        DefRC = getRegClassForTypeOnBank(DefTy, RB);
+        if (!DefRC) {
+          LLVM_DEBUG(dbgs() << "PHI operand has unexpected size/bank\n");
+          return false;
+        }
+      }
+
+      MI.setDesc(TII.get(TargetOpcode::PHI));
+      return RBI.constrainGenericRegister(DefReg, *DefRC, MRI);
+    }
+
     // Certain non-generic instructions also need some special handling.
     if (MI.isCopy())
       return selectCopy(MI, MRI);
@@ -202,16 +228,18 @@ bool RISCVInstructionSelector::select(MachineInstr &MI) {
     MI.setDesc(TII.get(TargetOpcode::COPY));
     return true;
   case TargetOpcode::G_CONSTANT:
-    if (!selectConstant(MI, MIB, MRI))
-      return false;
-    break;
+    return selectConstant(MI, MIB, MRI);
+  case TargetOpcode::G_BRCOND: {
+    // TODO: Fold with G_ICMP.
+    auto Bcc =
+        MIB.buildInstr(RISCV::BNE, {}, {MI.getOperand(0), Register(RISCV::X0)})
+            .addMBB(MI.getOperand(1).getMBB());
+    MI.eraseFromParent();
+    return constrainSelectedInstRegOperands(*Bcc, TII, TRI, RBI);
+  }
   default:
     return false;
   }
-
-  MI.eraseFromParent();
-
-  return true;
 }
 
 void RISCVInstructionSelector::renderNegImm(MachineInstrBuilder &MIB,
@@ -224,7 +252,7 @@ void RISCVInstructionSelector::renderNegImm(MachineInstrBuilder &MIB,
 }
 
 const TargetRegisterClass *RISCVInstructionSelector::getRegClassForTypeOnBank(
-    LLT Ty, const RegisterBank &RB, bool GetAllRegSet) const {
+    LLT Ty, const RegisterBank &RB) const {
   if (RB.getID() == RISCV::GPRRegBankID) {
     if (Ty.getSizeInBits() <= 32 || (STI.is64Bit() && Ty.getSizeInBits() == 64))
       return &RISCV::GPRRegClass;
@@ -278,6 +306,13 @@ bool RISCVInstructionSelector::selectConstant(MachineInstr &MI,
   Register FinalReg = MI.getOperand(0).getReg();
   int64_t Imm = MI.getOperand(1).getCImm()->getSExtValue();
 
+  if (Imm == 0) {
+    MI.getOperand(1).ChangeToRegister(RISCV::X0, false);
+    RBI.constrainGenericRegister(FinalReg, RISCV::GPRRegClass, MRI);
+    MI.setDesc(TII.get(TargetOpcode::COPY));
+    return true;
+  }
+
   RISCVMatInt::InstSeq Seq =
       RISCVMatInt::generateInstSeq(Imm, Subtarget->getFeatureBits());
   unsigned NumInsts = Seq.size();
@@ -324,6 +359,7 @@ bool RISCVInstructionSelector::selectConstant(MachineInstr &MI,
     SrcReg = DstReg;
   }
 
+  MI.eraseFromParent();
   return true;
 }
 

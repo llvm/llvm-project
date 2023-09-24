@@ -89,6 +89,10 @@ void PlainCFGBuilder::setVPBBPredsFromBB(VPBasicBlock *VPBB, BasicBlock *BB) {
   VPBB->setPredecessors(VPBBPreds);
 }
 
+static bool isHeaderBB(BasicBlock *BB, Loop *L) {
+  return L && BB == L->getHeader();
+}
+
 // Add operands to VPInstructions representing phi nodes from the input IR.
 void PlainCFGBuilder::fixPhiNodes() {
   for (auto *Phi : PhisToFix) {
@@ -99,6 +103,22 @@ void PlainCFGBuilder::fixPhiNodes() {
     auto *VPPhi = cast<VPWidenPHIRecipe>(VPVal);
     assert(VPPhi->getNumOperands() == 0 &&
            "Expected VPInstruction with no operands.");
+
+    Loop *L = LI->getLoopFor(Phi->getParent());
+    if (isHeaderBB(Phi->getParent(), L)) {
+      // For header phis, make sure the incoming value from the loop
+      // predecessor is the first operand of the recipe.
+      assert(Phi->getNumOperands() == 2);
+      BasicBlock *LoopPred = L->getLoopPredecessor();
+      VPPhi->addIncoming(
+          getOrCreateVPOperand(Phi->getIncomingValueForBlock(LoopPred)),
+          BB2VPBB[LoopPred]);
+      BasicBlock *LoopLatch = L->getLoopLatch();
+      VPPhi->addIncoming(
+          getOrCreateVPOperand(Phi->getIncomingValueForBlock(LoopLatch)),
+          BB2VPBB[LoopLatch]);
+      continue;
+    }
 
     for (unsigned I = 0; I != Phi->getNumOperands(); ++I)
       VPPhi->addIncoming(getOrCreateVPOperand(Phi->getIncomingValue(I)),
