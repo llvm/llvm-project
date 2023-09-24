@@ -8,44 +8,22 @@ if test ! "$(dirname $0)" -ef '.'; then
     exit 1
 fi
 
-if test "$#" -ne 1; then
-    echo "Usage: $0 <llvm-config>"
+if test "$#" -ne 2; then
+    echo "Usage: $0 <llvm-config> <linking mode>"
     exit 1
 fi
 
 llvm_config=$1
-default_mode=
-support_static_mode=false
-support_shared_mode=false
+mode=$2
 
-llvm_config() {
-    "$llvm_config" $@
-}
-
-if llvm_config --link-static --libs; then
-    default_mode=static
-    support_static_mode=true
-fi
-
-if llvm_config --link-shared --libs; then
-    default_mode=shared
-    support_shared_mode=true
-fi
-
-if test -z "$default_mode"; then
-    echo "Something is wrong with the llvm-config command provided."
-    exit 1
-fi
-
-base_cflags=$(llvm_config --cflags)
-ldflags="$(llvm_config --ldflags) -lstdc++ -fPIC"
-llvm_targets=$(llvm_config --targets-built)
+base_cflags=$($llvm_config --cflags)
+ldflags="$($llvm_config --ldflags) -lstdc++ -fPIC"
+llvm_targets=$($llvm_config --targets-built)
 
 append_context() {
     context_name=$1
     linking_mode=$2
     echo "(context (default
- (name ${context_name})
  (env
   (_
    (c_flags $base_cflags)
@@ -58,9 +36,19 @@ append_context() {
 echo "(lang dune 3.2)
 " > "dune-workspace"
 
-if $support_shared_mode; then
-    append_context shared --link-shared
-fi
-if $support_static_mode; then
+if [ $mode = "static" ]; then
+    $llvm_config --link-static --libs
+    if [ $? -ne 0 ]; then
+        echo "Static mode is not supported."
+        exit 1
+    fi
     append_context static --link-static
+fi
+if [ $mode = "shared" ]; then
+    $llvm_config --link-shared --libs
+    if [ $? -ne 0 ]; then
+        echo "Shared mode is not supported."
+        exit 1
+    fi
+    append_context shared --link-shared
 fi
