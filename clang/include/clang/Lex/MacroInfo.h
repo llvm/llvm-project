@@ -299,10 +299,10 @@ public:
     assert(Depth != 0 && "Cannot enable not disabled macro");
     --Depth;
   }
-  
+
   [[nodiscard("infinite recursion check ignored")]] bool TryDisableMacro() {
     assert((AllowRecurse || Depth == 0) &&
-            "Cannot disable an already-disabled macro!");
+          "Cannot disable an already-disabled macro!");
     return ++Depth < macro_recursion_depth_limit;
   }
 

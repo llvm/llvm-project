@@ -63,7 +63,7 @@ void Preprocessor::appendRecursiveVersionIfRequired(IdentifierInfo *II,
                                                     MacroInfo *MI) {
   if (!MI->isFunctionLike())
     return;
-  auto is_this_macro_tok = [&] (const Token& t) {
+  auto is_this_macro_tok = [&](const Token& t) {
     return t.getKind() == tok::identifier &&
            t.getIdentifierInfo() == Ident__THIS_MACRO__;
   };
