@@ -8308,7 +8308,7 @@ static std::optional<bool> isImpliedCondICmps(const ICmpInst *LHS,
       RPred = ICmpInst::getSwappedPredicate(RPred);
     }
     if (L0 == R0 &&
-        (LPred == ICmpInst::ICMP_UGE || LPred == ICmpInst::ICMP_ULT) &&
+        (LPred == ICmpInst::ICMP_ULT || LPred == ICmpInst::ICMP_UGE) &&
         (RPred == ICmpInst::ICMP_ULT || RPred == ICmpInst::ICMP_UGE) &&
         match(L0, m_c_Add(m_Specific(L1), m_Specific(R1))))
       return LPred == RPred;
