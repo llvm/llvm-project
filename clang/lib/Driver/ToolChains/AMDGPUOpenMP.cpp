@@ -304,8 +304,6 @@ const char *amdgpu::dlr::getOptCommandArgs(Compilation &C,
                                            llvm::StringRef TargetID,
                                            llvm::StringRef OutputFilePrefix,
                                            const char *InputFileName) {
-  addCommonArgs(C, Args, OptArgs, Triple, TargetID, InputFileName,
-                "ROCM_OPT_ARGS");
   addAMDTargetArgs(C, Args, OptArgs, /*IsLlc*/ false);
   // OptArgs.push_back(Args.MakeArgString("-openmp-opt-disable=1"));
 
@@ -313,6 +311,8 @@ const char *amdgpu::dlr::getOptCommandArgs(Compilation &C,
   auto OutputFileName =
       getOutputFileName(C, OutputFilePrefix, "-optimized", "bc");
   OptArgs.push_back(OutputFileName);
+  addCommonArgs(C, Args, OptArgs, Triple, TargetID, InputFileName,
+                "ROCM_OPT_ARGS");
 
   return OutputFileName;
 }
@@ -322,8 +322,6 @@ const char *amdgpu::dlr::getLlcCommandArgs(
     llvm::opt::ArgStringList &LlcArgs, const llvm::Triple &Triple,
     llvm::StringRef TargetID, llvm::StringRef OutputFilePrefix,
     const char *InputFileName, bool OutputIsAsm) {
-  addCommonArgs(C, Args, LlcArgs, Triple, TargetID, InputFileName,
-                "ROCM_LLC_ARGS");
   addAMDTargetArgs(C, Args, LlcArgs, /*IsLLc*/ true);
 
   if (Arg *A = Args.getLastArgNoClaim(options::OPT_g_Group))
@@ -339,6 +337,8 @@ const char *amdgpu::dlr::getLlcCommandArgs(
   const char *LlcOutputFile =
       getOutputFileName(C, OutputFilePrefix, "", OutputIsAsm ? "s" : "o");
   LlcArgs.push_back(LlcOutputFile);
+  addCommonArgs(C, Args, LlcArgs, Triple, TargetID, InputFileName,
+                "ROCM_LLC_ARGS");
 
   return LlcOutputFile;
 }
