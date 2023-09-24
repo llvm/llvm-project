@@ -82,7 +82,8 @@ struct _Unwind_FunctionContext {
 static _LIBUNWIND_THREAD_LOCAL struct _Unwind_FunctionContext *stack = NULL;
 #endif
 
-static struct _Unwind_FunctionContext *__Unwind_SjLj_GetTopOfFunctionStack() {
+static struct _Unwind_FunctionContext *
+__Unwind_SjLj_GetTopOfFunctionStack(void) {
 #if defined(__APPLE__)
   return _pthread_getspecific_direct(__PTK_LIBC_DYLD_Unwind_SjLj_Key);
 #else
