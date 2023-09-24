@@ -6391,11 +6391,13 @@ Instruction *InstCombinerImpl::foldICmpUsingBoolRange(ICmpInst &I) {
     bool IsSExt = ExtI->getOpcode() == Instruction::SExt;
     bool HasOneUse = ExtI->hasOneUse() && ExtI->getOperand(0)->hasOneUse();
     auto CreateRangeCheck = [&] {
-      Value *V1 = Constant::getNullValue(X->getType());
-      Value *V2 = ConstantInt::get(X->getType(), IsSExt ? -1 : 1);
+      Value *CmpV1 =
+          Builder.CreateICmp(Pred1, X, Constant::getNullValue(X->getType()));
+      Value *CmpV2 = Builder.CreateICmp(
+          Pred1, X, ConstantInt::get(X->getType(), IsSExt ? -1 : 1));
       return BinaryOperator::Create(
           Pred1 == ICmpInst::ICMP_EQ ? Instruction::Or : Instruction::And,
-          Builder.CreateICmp(Pred1, X, V1), Builder.CreateICmp(Pred1, X, V2));
+          CmpV1, CmpV2);
     };
     if (C->isZero()) {
       if (Pred2 == ICmpInst::ICMP_EQ) {
