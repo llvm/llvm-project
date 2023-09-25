@@ -15,16 +15,16 @@
 |*                                                                            *|
 \*===----------------------------------------------------------------------===*/
 
-#include <assert.h>
-#include <stdlib.h>
-#include <string.h>
+#include "llvm_ocaml.h"
+#include "caml/callback.h"
+#include "caml/fail.h"
+#include "caml/memory.h"
 #include "llvm-c/Core.h"
 #include "llvm-c/Support.h"
 #include "llvm/Config/llvm-config.h"
-#include "caml/memory.h"
-#include "caml/fail.h"
-#include "caml/callback.h"
-#include "llvm_ocaml.h"
+#include <assert.h>
+#include <stdlib.h>
+#include <string.h>
 
 #if OCAML_VERSION < 41200
 value caml_alloc_some(value v) {
@@ -180,7 +180,7 @@ static value alloc_variant(int tag, value Value) {
 /*===-- Context error handling --------------------------------------------===*/
 
 static void llvm_diagnostic_handler_trampoline(LLVMDiagnosticInfoRef DI,
-                                        void *DiagnosticContext) {
+                                               void *DiagnosticContext) {
   caml_callback(*((value *)DiagnosticContext), to_val(DI));
 }
 
