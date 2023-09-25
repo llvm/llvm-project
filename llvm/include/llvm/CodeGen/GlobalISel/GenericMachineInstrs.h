@@ -97,7 +97,7 @@ public:
   /// Get the offset register of the pointer value.
   Register getOffsetReg() const { return getOperand(3).getReg(); }
 
-  bool isPre() const { return getOperand(5).getImm() == 1; }
+  bool isPre() const { return getOperand(4).getImm() == 1; }
   bool isPost() const { return !isPre(); }
 
   static bool classof(const MachineInstr *MI) {
