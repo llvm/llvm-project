@@ -388,19 +388,19 @@ static LogicalResult defineDeclaredSymbols(Block &block, ModuleOp definitions) {
                       << externalSymbolFunc.getNameAttr().getValue()
                       << " for symbol usages\n");
     externalSymbolFunc.walk([&](CallOpInterface callOp) {
-      LLVM_DEBUG(DBGS() << "  found symbol usage in:\n" << callOp << "\n");
+      LLVM_DEBUG(DBGS() << "  call op in:\n" << callOp << "\n");
       CallInterfaceCallable callable = callOp.getCallableForCallee();
       if (!isa<SymbolRefAttr>(callable)) {
-        LLVM_DEBUG(DBGS() << "    not a 'SymbolRefAttr'\n");
+        LLVM_DEBUG(DBGS() << "    not a symbol usage\n");
         return WalkResult::advance();
       }
 
-      StringRef callableSymbol =
+      StringRef callableSymbolName =
           cast<SymbolRefAttr>(callable).getLeafReference();
-      LLVM_DEBUG(DBGS() << "    looking for @" << callableSymbol
+      LLVM_DEBUG(DBGS() << "    looking for @" << callableSymbolName
                         << " in definitions: ");
 
-      Operation *callableOp = definitionsSymbolTable.lookup(callableSymbol);
+      Operation *callableOp = definitionsSymbolTable.lookup(callableSymbolName);
       if (!isa<SymbolRefAttr>(callable)) {
         LLVM_DEBUG(llvm::dbgs() << "not found\n");
         return WalkResult::advance();
@@ -409,13 +409,13 @@ static LogicalResult defineDeclaredSymbols(Block &block, ModuleOp definitions) {
                               << callableOp->getLoc() << "\n");
 
       if (!block.getParent() || !block.getParent()->getParentOp()) {
-        LLVM_DEBUG(DBGS() << "could not get parent of provided block");
+        LLVM_DEBUG(DBGS() << "could not get parent op of provided block");
         return WalkResult::advance();
       }
 
       SymbolTable targetSymbolTable(block.getParent()->getParentOp());
-      if (targetSymbolTable.lookup(callableSymbol)) {
-        LLVM_DEBUG(DBGS() << "    symbol @" << callableSymbol
+      if (targetSymbolTable.lookup(callableSymbolName)) {
+        LLVM_DEBUG(DBGS() << "    symbol @" << callableSymbolName
                           << " already present in target\n");
         return WalkResult::advance();
       }
