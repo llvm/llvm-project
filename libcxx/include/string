@@ -1748,7 +1748,7 @@ private:
     }
 
     _LIBCPP_CONSTEXPR _LIBCPP_HIDE_FROM_ABI static bool __fits_in_sso(size_type __sz) {
-        return (__sz < __min_cap);
+        return __sz < __min_cap;
     }
 
     template <class _Iterator, class _Sentinel>
