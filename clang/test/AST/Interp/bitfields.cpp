@@ -31,8 +31,6 @@ namespace Basic {
     return a.a = 10;
   }
   static_assert(storeA2() == 2, "");
-
-  // TODO: +=, -=, etc. operators.
 }
 
 namespace Overflow {
@@ -44,4 +42,40 @@ namespace Overflow {
   }
 
   static_assert(f() == 3, "");
+}
+
+namespace Compound {
+  struct A {
+    unsigned int a : 2;
+    constexpr A() : a(0) {}
+    constexpr A(int a) : a(a) {}
+  };
+
+  constexpr unsigned add() {
+    A a;
+    a.a += 10;
+    return a.a;
+  }
+  static_assert(add() == 2, "");
+
+  constexpr unsigned sub() {
+    A a;
+    a.a -= 10;
+    return a.a;
+  }
+  static_assert(sub() == 2, "");
+
+  constexpr unsigned mul() {
+    A a(1);
+    a.a *= 5;
+    return a.a;
+  }
+  static_assert(mul() == 1, "");
+
+  constexpr unsigned div() {
+    A a(2);
+    a.a /= 2;
+    return a.a;
+  }
+  static_assert(div() == 1, "");
 }
