@@ -285,9 +285,6 @@ static void createMatrixInit(llvm::IRBuilderBase &builder, llvm::Value *mat,
 static llvm::Value *createMatrixCopy(llvm::IRBuilderBase &builder,
                                      llvm::Value *res, llvm::Value *src,
                                      GENX::Scope scope) {
-  assert((isa<GENX::JointMatrixType>(res->getType()) &&
-          isa<GENX::JointMatrixType>(src->getType())) &&
-         "Expecting a joint matrix type");
   assert(false && "TODO");
   return nullptr;
 }

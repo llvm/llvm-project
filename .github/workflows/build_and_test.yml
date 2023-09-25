@@ -9,7 +9,7 @@ jobs:
   build:
     name: Build + LIT
     runs-on: ubuntu-latest
-    timeout-minutes: 200 
+    timeout-minutes: 500 
     steps:
       - name: Checkout
         uses: actions/checkout@v3
@@ -17,7 +17,7 @@ jobs:
         uses: llvm/actions/install-ninja@main
       - name: Configure
         run: |
-          cmake -B build -G Ninja llvm -DCMAKE_BUILD_TYPE=Release -DLLVM_ENABLE_PROJECTS="mlir" -DLLVM_EXPERIMENTAL_TARGETS_TO_BUILD="SPIRV"
+          cmake -B build -G Ninja llvm -DCMAKE_BUILD_TYPE=Release -DLLVM_ENABLE_ASSERTIONS=true -DLLVM_ENABLE_PROJECTS="mlir" -DLLVM_EXPERIMENTAL_TARGETS_TO_BUILD="SPIRV"
       - name: mlir-opt
         run: |
           ninja -C build mlir-opt
