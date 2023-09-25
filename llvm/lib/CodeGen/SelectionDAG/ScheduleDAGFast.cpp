@@ -231,6 +231,11 @@ SUnit *ScheduleDAGFast::CopyAndMoveSuccessors(SUnit *SU) {
     if (!TII->unfoldMemoryOperand(*DAG, N, NewNodes))
       return nullptr;
 
+    // unfolding an x86 RMW operation results in store, dec, load which
+    // can't be handled here so quit
+    if (NewNodes.size() == 3)
+      return nullptr;
+
     LLVM_DEBUG(dbgs() << "Unfolding SU # " << SU->NodeNum << "\n");
     assert(NewNodes.size() == 2 && "Expected a load folding node!");
 
