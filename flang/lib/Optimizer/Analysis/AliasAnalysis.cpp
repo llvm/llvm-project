@@ -239,13 +239,26 @@ ModRefResult AliasAnalysis::getModRef(Operation *op, Value location) {
   return result;
 }
 
+AliasAnalysis::Source::Attributes
+getAttrsFromVariable(fir::FortranVariableOpInterface var) {
+  AliasAnalysis::Source::Attributes attrs;
+  if (var.isTarget())
+    attrs.set(AliasAnalysis::Attribute::Target);
+  if (var.isPointer())
+    attrs.set(AliasAnalysis::Attribute::Pointer);
+  if (var.isIntentIn())
+    attrs.set(AliasAnalysis::Attribute::IntentIn);
+
+  return attrs;
+}
+
 AliasAnalysis::Source AliasAnalysis::getSource(mlir::Value v) {
   auto *defOp = v.getDefiningOp();
   SourceKind type{SourceKind::Unknown};
   mlir::Type ty;
   bool breakFromLoop{false};
   bool approximateSource{false};
-  bool followBoxAddr{false};
+  bool followBoxAddr{mlir::isa<fir::BaseBoxType>(v.getType())};
   mlir::SymbolRefAttr global;
   Source::Attributes attributes;
   while (defOp && !breakFromLoop) {
@@ -334,6 +347,15 @@ AliasAnalysis::Source AliasAnalysis::getSource(mlir::Value v) {
         })
         .Case<hlfir::DeclareOp, fir::DeclareOp>([&](auto op) {
           auto varIf = llvm::cast<fir::FortranVariableOpInterface>(defOp);
+          // While going through a declare operation collect
+          // the variable attributes from it. Right now, some
+          // of the attributes are duplicated, e.g. a TARGET dummy
+          // argument has the target attribute both on its declare
+          // operation and on the entry block argument.
+          // In case of host associated use, the declare operation
+          // is the only carrier of the variable attributes,
+          // so we have to collect them here.
+          attributes |= getAttrsFromVariable(varIf);
           if (varIf.isHostAssoc()) {
             // Do not track past such DeclareOp, because it does not
             // currently provide any useful information. The host associated
@@ -364,6 +386,8 @@ AliasAnalysis::Source AliasAnalysis::getSource(mlir::Value v) {
           // because of this limitation, we need to make sure we never return
           // MustAlias after going through a designate operation
           approximateSource = true;
+          if (mlir::isa<fir::BaseBoxType>(v.getType()))
+            followBoxAddr = true;
         })
         .Default([&](auto op) {
           defOp = nullptr;
