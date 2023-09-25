@@ -5,7 +5,7 @@ import sys
 
 if len(sys.argv) == 3 and sys.argv[1] == "--gtest_list_tests":
     if sys.argv[2] != "--gtest_filter=-*DISABLED_*":
-        raise ValueError("unexpected argument: %s" % (sys.argv[2]))
+        raise ValueError(f"unexpected argument: {sys.argv[2]}")
     print(
         """\
 FirstTest.
@@ -21,14 +21,14 @@ ParameterizedTest/1.
     sys.exit(0)
 elif len(sys.argv) != 1:
     # sharding and json output are specified using environment variables
-    raise ValueError("unexpected argument: %r" % (" ".join(sys.argv[1:])))
+    raise ValueError(f"unexpected argument: {' '.join(sys.argv[1:])!r}")
 
 for e in ["GTEST_OUTPUT"]:
     if e not in os.environ:
-        raise ValueError("missing environment variables: " + e)
+        raise ValueError(f"missing environment variables: {e}")
 
 if not os.environ["GTEST_OUTPUT"].startswith("json:"):
-    raise ValueError("must emit json output: " + os.environ["GTEST_OUTPUT"])
+    raise ValueError(f"must emit json output: {os.environ['GTEST_OUTPUT']}")
 
 output = """\
 {

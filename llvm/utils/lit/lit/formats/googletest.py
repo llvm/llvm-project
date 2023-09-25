@@ -147,6 +147,10 @@ class GoogleTest(TestFormat):
         from lit.cl_arguments import TestOrder
 
         use_shuffle = TestOrder(litConfig.order) == TestOrder.RANDOM
+        shard_env = {
+            "GTEST_OUTPUT": "json:" + test.gtest_json_file,
+            "GTEST_SHUFFLE": "1" if use_shuffle else "0",
+        }
         if not litConfig.disableGTestSharding:
             testPath, testName = os.path.split(test.getSourcePath())
             while not os.path.exists(testPath):
@@ -157,19 +161,14 @@ class GoogleTest(TestFormat):
 
             testName, total_shards = os.path.split(testName)
             testName, shard_idx = os.path.split(testName)
-            shard_env = {
-                "GTEST_OUTPUT": "json:" + test.gtest_json_file,
-                "GTEST_SHUFFLE": "1" if use_shuffle else "0",
-                "GTEST_TOTAL_SHARDS": os.environ.get(
-                    "GTEST_TOTAL_SHARDS", total_shards
-                ),
-                "GTEST_SHARD_INDEX": os.environ.get("GTEST_SHARD_INDEX", shard_idx),
-            }
-        else:
-            shard_env = {
-                "GTEST_OUTPUT": "json:" + test.gtest_json_file,
-                "GTEST_SHUFFLE": "1" if use_shuffle else "0",
-            }
+            shard_env.update(
+                {
+                    "GTEST_TOTAL_SHARDS": os.environ.get(
+                        "GTEST_TOTAL_SHARDS", total_shards
+                    ),
+                    "GTEST_SHARD_INDEX": os.environ.get("GTEST_SHARD_INDEX", shard_idx),
+                }
+            )
         test.config.environment.update(shard_env)
 
         cmd = [testPath]
