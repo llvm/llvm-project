@@ -426,6 +426,7 @@ PPCTargetLowering::PPCTargetLowering(const PPCTargetMachine &TM,
     setLoadExtAction(ISD::EXTLOAD, MVT::f64, MVT::f32, Expand);
 
   setOperationAction(ISD::GET_ROUNDING, MVT::i32, Custom);
+  setOperationAction(ISD::SET_ROUNDING, MVT::Other, Custom);
 
   // If we're enabling GP optimizations, use hardware square root
   if (!Subtarget.hasFSQRT() &&
@@ -8898,6 +8899,83 @@ SDValue PPCTargetLowering::LowerINT_TO_FP(SDValue Op,
   return FP;
 }
 
+SDValue PPCTargetLowering::LowerSET_ROUNDING(SDValue Op,
+                                             SelectionDAG &DAG) const {
+  SDLoc Dl(Op);
+  MachineFunction &MF = DAG.getMachineFunction();
+  EVT PtrVT = getPointerTy(MF.getDataLayout());
+  SDValue Chain = Op.getOperand(0);
+
+  // If requested mode is constant, just use simpler mtfsb.
+  if (auto *CVal = dyn_cast<ConstantSDNode>(Op.getOperand(1))) {
+    uint64_t Mode = CVal->getZExtValue();
+    if (Mode >= 4)
+      llvm_unreachable("Unsupported rounding mode!");
+    unsigned InternalRnd = Mode ^ (~(Mode >> 1) & 1);
+    SDNode *SetHi = DAG.getMachineNode(
+        (InternalRnd & 2) ? PPC::MTFSB1 : PPC::MTFSB0, Dl, MVT::Other,
+        {DAG.getConstant(30, Dl, MVT::i32, true), Chain});
+    SDNode *SetLo = DAG.getMachineNode(
+        (InternalRnd & 1) ? PPC::MTFSB1 : PPC::MTFSB0, Dl, MVT::Other,
+        {DAG.getConstant(31, Dl, MVT::i32, true), SDValue(SetHi, 0)});
+    return SDValue(SetLo, 0);
+  }
+
+  // Use x ^ (~(x >> 1) & 1) to transform LLVM rounding mode to Power format.
+  SDValue One = DAG.getConstant(1, Dl, MVT::i32);
+  SDValue SrcFlag = DAG.getNode(ISD::AND, Dl, MVT::i32, Op.getOperand(1),
+                                DAG.getConstant(3, Dl, MVT::i32));
+  SDValue DstFlag = DAG.getNode(
+      ISD::XOR, Dl, MVT::i32, SrcFlag,
+      DAG.getNode(ISD::AND, Dl, MVT::i32,
+                  DAG.getNOT(Dl,
+                             DAG.getNode(ISD::SRL, Dl, MVT::i32, SrcFlag, One),
+                             MVT::i32),
+                  One));
+  SDValue MFFS = DAG.getNode(PPCISD::MFFS, Dl, {MVT::f64, MVT::Other}, Chain);
+  Chain = MFFS.getValue(1);
+  SDValue NewFPSCR;
+  if (isTypeLegal(MVT::i64)) {
+    // Set the last two bits (rounding mode) of bitcasted FPSCR.
+    NewFPSCR = DAG.getNode(
+        ISD::OR, Dl, MVT::i64,
+        DAG.getNode(ISD::AND, Dl, MVT::i64,
+                    DAG.getNode(ISD::BITCAST, Dl, MVT::i64, MFFS),
+                    DAG.getNOT(Dl, DAG.getConstant(3, Dl, MVT::i64), MVT::i64)),
+        DAG.getNode(ISD::ZERO_EXTEND, Dl, MVT::i64, DstFlag));
+    NewFPSCR = DAG.getNode(ISD::BITCAST, Dl, MVT::f64, NewFPSCR);
+  } else {
+    // In 32-bit mode, store f64, load and update the lower half.
+    int SSFI = MF.getFrameInfo().CreateStackObject(8, Align(8), false);
+    SDValue StackSlot = DAG.getFrameIndex(SSFI, PtrVT);
+    Chain = DAG.getStore(Chain, Dl, MFFS, StackSlot, MachinePointerInfo());
+    SDValue Addr;
+    if (Subtarget.isLittleEndian())
+      Addr = StackSlot;
+    else
+      Addr = DAG.getNode(ISD::ADD, Dl, PtrVT, StackSlot,
+                         DAG.getConstant(4, Dl, PtrVT));
+    SDValue Tmp = DAG.getLoad(MVT::i32, Dl, Chain, Addr, MachinePointerInfo());
+    Chain = Tmp.getValue(1);
+
+    Tmp = DAG.getNode(
+        ISD::OR, Dl, MVT::i32,
+        DAG.getNode(ISD::AND, Dl, MVT::i32, Tmp,
+                    DAG.getNOT(Dl, DAG.getConstant(3, Dl, MVT::i32), MVT::i32)),
+        DstFlag);
+
+    Chain = DAG.getStore(Chain, Dl, Tmp, Addr, MachinePointerInfo());
+    NewFPSCR =
+        DAG.getLoad(MVT::f64, Dl, Chain, StackSlot, MachinePointerInfo());
+    Chain = NewFPSCR.getValue(1);
+  }
+  SDValue Zero = DAG.getConstant(0, Dl, MVT::i32, true);
+  SDNode *MTFSF = DAG.getMachineNode(
+      PPC::MTFSF, Dl, MVT::Other,
+      {DAG.getConstant(255, Dl, MVT::i32, true), NewFPSCR, Zero, Zero, Chain});
+  return SDValue(MTFSF, 0);
+}
+
 SDValue PPCTargetLowering::LowerGET_ROUNDING(SDValue Op,
                                              SelectionDAG &DAG) const {
   SDLoc dl(Op);
@@ -11647,6 +11725,8 @@ SDValue PPCTargetLowering::LowerOperation(SDValue Op, SelectionDAG &DAG) const {
   case ISD::UINT_TO_FP:
   case ISD::SINT_TO_FP:         return LowerINT_TO_FP(Op, DAG);
   case ISD::GET_ROUNDING:       return LowerGET_ROUNDING(Op, DAG);
+  case ISD::SET_ROUNDING:
+    return LowerSET_ROUNDING(Op, DAG);
 
   // Lower 64-bit shifts.
   case ISD::SHL_PARTS:          return LowerSHL_PARTS(Op, DAG);
