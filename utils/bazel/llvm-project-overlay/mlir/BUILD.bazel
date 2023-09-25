@@ -1898,6 +1898,37 @@ gentbl_cc_library(
     deps = [":ArmSMETdFiles"],
 )
 
+gentbl_cc_library(
+    name = "ArmSMEAttrDefsIncGen",
+    tbl_outs = [
+        (
+            ["-gen-enum-decls"],
+            "include/mlir/Dialect/ArmSME/IR/ArmSMEEnums.h.inc",
+        ),
+        (
+            ["-gen-enum-defs"],
+            "include/mlir/Dialect/ArmSME/IR/ArmSMEEnums.cpp.inc",
+        ),
+        (
+            [
+                "-gen-attrdef-decls",
+                "-attrdefs-dialect=arm_sme",
+            ],
+            "include/mlir/Dialect/ArmSME/IR/ArmSMEAttrDefs.h.inc",
+        ),
+        (
+            [
+                "-gen-attrdef-defs",
+                "-attrdefs-dialect=arm_sme",
+            ],
+            "include/mlir/Dialect/ArmSME/IR/ArmSMEAttrDefs.cpp.inc",
+        ),
+    ],
+    tblgen = ":mlir-tblgen",
+    td_file = "include/mlir/Dialect/ArmSME/IR/ArmSME.td",
+    deps = [":ArmSMETdFiles"],
+)
+
 cc_library(
     name = "ArmSMEDialect",
     srcs = ["lib/Dialect/ArmSME/IR/ArmSME.cpp"],
@@ -1905,6 +1936,7 @@ cc_library(
     includes = ["include"],
     deps = [
         ":ArmSMEIncGen",
+        ":ArmSMEAttrDefsIncGen",
         ":IR",
         ":LLVMDialect",
         ":SCFDialect",
