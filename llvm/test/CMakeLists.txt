@@ -194,25 +194,13 @@ if(LLVM_BUILD_EXAMPLES)
   endif()
 endif()
 
-if(TARGET ocaml_llvm)
+if(TARGET ocaml_all)
   # Clear all non-OCaml cross-target dependencies when building out-of-tree.
   if(LLVM_OCAML_OUT_OF_TREE)
     set(LLVM_TEST_DEPENDS)
   endif()
 
-  set(LLVM_TEST_DEPENDS ${LLVM_TEST_DEPENDS}
-          ocaml_llvm
-          ocaml_llvm_all_backends
-          ocaml_llvm_analysis
-          ocaml_llvm_bitreader
-          ocaml_llvm_bitwriter
-          ocaml_llvm_executionengine
-          ocaml_llvm_irreader
-          ocaml_llvm_linker
-          ocaml_llvm_passbuilder
-          ocaml_llvm_target
-          ocaml_llvm_transform_utils
-        )
+  set(LLVM_TEST_DEPENDS ${LLVM_TEST_DEPENDS} ocaml_all)
 endif()
 
 if (LLVM_INCLUDE_DXIL_TESTS)

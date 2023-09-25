@@ -53,10 +53,13 @@ if( OCAMLFIND )
   endif()
 endif()
 
+find_program(DUNE NAMES dune)
+
 find_package_handle_standard_args( OCaml DEFAULT_MSG
   OCAMLFIND
   OCAML_VERSION
-  OCAML_STDLIB_PATH)
+  OCAML_STDLIB_PATH
+  DUNE)
 
 mark_as_advanced(
   OCAMLFIND)

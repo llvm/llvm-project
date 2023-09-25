@@ -6,7 +6,7 @@ set_target_properties(ocaml_make_directory PROPERTIES FOLDER "Misc")
 
 add_custom_target(ocaml_copy_files)
 
-foreach( file dune-project setup.sh discover.sh llvm.opam )
+foreach( file dune-project configure.sh discover.sh llvm.opam )
   add_custom_target(ocaml_copy_${file} ALL
     COMMAND "${CMAKE_COMMAND}" "-E" "copy"
       "${CMAKE_CURRENT_SOURCE_DIR}/${file}" "${CMAKE_CURRENT_BINARY_DIR}"
@@ -26,10 +26,8 @@ foreach ( dir
 endforeach()
 
 add_custom_target(dune_workspace ALL
-  COMMAND "./setup.sh" "${CMAKE_BINARY_DIR}/bin/llvm-config" "static"
-  DEPENDS
-    ocaml_copy_files
-    "${CMAKE_BINARY_DIR}/bin/llvm-config")
+  COMMAND "./configure.sh" "${LLVM_TOOLS_BINARY_DIR}/llvm-config" "static"
+  DEPENDS ocaml_copy_files "${LLVM_TOOLS_BINARY_DIR}/llvm-config")
 
 add_custom_target(ocaml_llvm_deps)
 explicit_map_components_to_libraries(llvm_libs
@@ -54,8 +52,8 @@ foreach( llvm_lib ${llvm_libs} )
 endforeach()
 
 add_custom_target(dune_build_all
-  COMMAND "dune" "build" "--release"
-  COMMAND "dune" "install" "--libdir" "${CMAKE_BINARY_DIR}/lib/ocaml"
+  COMMAND "${DUNE}" "build" "--release"
+  COMMAND "${DUNE}" "install" "--libdir" "${LLVM_LIBRARY_DIR}/ocaml"
   DEPENDS dune_workspace ocaml_copy_files ocaml_llvm_deps)
 
 add_dependencies(ocaml_all dune_build_all)

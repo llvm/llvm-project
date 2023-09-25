@@ -31,8 +31,7 @@ done
 sed "s/@LLVM_TARGETS_TO_BUILD@/$llvm_targets/g" "all_backends/dune.in" > all_backends/dune
 
 append_context() {
-    context_name=$1
-    linking_mode=$2
+    linking_mode=$1
     echo "(context (default
  (env
   (_
@@ -53,7 +52,7 @@ if [ $mode = "static" ]; then
         echo "Static mode is not supported."
         exit 1
     fi
-    append_context static --link-static
+    append_context --link-static
 fi
 if [ $mode = "shared" ]; then
     $llvm_config --link-shared
@@ -61,5 +60,5 @@ if [ $mode = "shared" ]; then
         echo "Shared mode is not supported."
         exit 1
     fi
-    append_context shared --link-shared
+    append_context --link-shared
 fi
