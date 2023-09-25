@@ -59,6 +59,9 @@ enum class BsymbolicKind { None, NonWeakFunctions, Functions, NonWeak, All };
 // For --build-id.
 enum class BuildIdKind { None, Fast, Md5, Sha1, Hexstring, Uuid };
 
+// For --call-graph-profile-sort={none,hfsort}.
+enum class CGProfileSortKind { None, Hfsort };
+
 // For --discard-{all,locals,none}.
 enum class DiscardPolicy { Default, All, Locals, None };
 
@@ -215,7 +218,7 @@ struct Config {
   bool asNeeded = false;
   bool armBe8 = false;
   BsymbolicKind bsymbolic = BsymbolicKind::None;
-  bool callGraphProfileSort;
+  CGProfileSortKind callGraphProfileSort;
   bool checkSections;
   bool checkDynamicRelocs;
   llvm::DebugCompressionType compressDebugSections;
