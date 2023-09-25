@@ -133,7 +133,7 @@ void TosaDialect::initialize() {
 #define GET_ATTRDEF_LIST
 #include "mlir/Dialect/Tosa/IR/TosaAttributes.cpp.inc"
       >();
-  addInterfaces<TosaInlinerInterface>();
+  addInterfaces<TosaDialectBytecodeInterface, TosaInlinerInterface>();
 }
 
 Operation *TosaDialect::materializeConstant(OpBuilder &builder, Attribute value,
