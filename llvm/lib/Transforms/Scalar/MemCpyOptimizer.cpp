@@ -1598,9 +1598,7 @@ bool MemCpyOptPass::performStackMoveOptzn(Instruction *Load, Instruction *Store,
   if (!CaptureTrackingWithModRef(SrcAlloca, SrcModRefCallback))
     return false;
 
-  // We can do the transformation. First, move the SrcAlloca to the entry point
-  // if it's not dominator for all uses. After that SrcAlloca becomes the
-  // dominator, because it's in the entry BB.
+  // We can do the transformation. First, move the SrcAlloca to the start of the BB.
   if (SrcNotDom)
     SrcAlloca->moveBefore(*SrcAlloca->getParent(),
                           SrcAlloca->getParent()->getFirstInsertionPt());
