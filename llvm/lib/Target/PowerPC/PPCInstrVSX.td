@@ -764,50 +764,50 @@ let hasSideEffects = 0 in {
   def XSCVDPSXDS : XX2Form<60, 344,
                       (outs vsfrc:$XT), (ins vsfrc:$XB),
                       "xscvdpsxds $XT, $XB", IIC_VecFP,
-                      [(set f64:$XT, (PPCany_fctidz f64:$XB))]>;
+                      [(set f64:$XT, (PPCany_fp_to_i64 f64:$XB))]>;
   let isCodeGenOnly = 1 in
   def XSCVDPSXDSs : XX2Form<60, 344,
                       (outs vssrc:$XT), (ins vssrc:$XB),
                       "xscvdpsxds $XT, $XB", IIC_VecFP,
-                      [(set f32:$XT, (PPCany_fctidz f32:$XB))]>;
+                      [(set f32:$XT, (PPCany_fp_to_i64 f32:$XB))]>;
   def XSCVDPSXWS : XX2Form<60, 88,
                       (outs vsfrc:$XT), (ins vsfrc:$XB),
                       "xscvdpsxws $XT, $XB", IIC_VecFP,
-                      [(set f64:$XT, (PPCany_fctiwz f64:$XB))]>;
+                      [(set f64:$XT, (PPCany_fp_to_i32 f64:$XB))]>;
   let isCodeGenOnly = 1 in
   def XSCVDPSXWSs : XX2Form<60, 88,
                       (outs vssrc:$XT), (ins vssrc:$XB),
                       "xscvdpsxws $XT, $XB", IIC_VecFP,
-                      [(set f32:$XT, (PPCany_fctiwz f32:$XB))]>;
+                      [(set f32:$XT, (PPCany_fp_to_i32 f32:$XB))]>;
   def XSCVDPUXDS : XX2Form<60, 328,
                       (outs vsfrc:$XT), (ins vsfrc:$XB),
                       "xscvdpuxds $XT, $XB", IIC_VecFP,
-                      [(set f64:$XT, (PPCany_fctiduz f64:$XB))]>;
+                      [(set f64:$XT, (PPCany_fp_to_u64 f64:$XB))]>;
   let isCodeGenOnly = 1 in
   def XSCVDPUXDSs : XX2Form<60, 328,
                       (outs vssrc:$XT), (ins vssrc:$XB),
                       "xscvdpuxds $XT, $XB", IIC_VecFP,
-                      [(set f32:$XT, (PPCany_fctiduz f32:$XB))]>;
+                      [(set f32:$XT, (PPCany_fp_to_u64 f32:$XB))]>;
   def XSCVDPUXWS : XX2Form<60, 72,
                       (outs vsfrc:$XT), (ins vsfrc:$XB),
                       "xscvdpuxws $XT, $XB", IIC_VecFP,
-                      [(set f64:$XT, (PPCany_fctiwuz f64:$XB))]>;
+                      [(set f64:$XT, (PPCany_fp_to_u32 f64:$XB))]>;
   let isCodeGenOnly = 1 in
   def XSCVDPUXWSs : XX2Form<60, 72,
                       (outs vssrc:$XT), (ins vssrc:$XB),
                       "xscvdpuxws $XT, $XB", IIC_VecFP,
-                      [(set f32:$XT, (PPCany_fctiwuz f32:$XB))]>;
+                      [(set f32:$XT, (PPCany_fp_to_u32 f32:$XB))]>;
   def XSCVSPDP : XX2Form<60, 329,
                       (outs vsfrc:$XT), (ins vsfrc:$XB),
                       "xscvspdp $XT, $XB", IIC_VecFP, []>;
   def XSCVSXDDP : XX2Form<60, 376,
                       (outs vsfrc:$XT), (ins vsfrc:$XB),
                       "xscvsxddp $XT, $XB", IIC_VecFP,
-                      [(set f64:$XT, (PPCany_fcfid f64:$XB))]>;
+                      [(set f64:$XT, (PPCany_sint_to_fp f64:$XB))]>;
   def XSCVUXDDP : XX2Form<60, 360,
                       (outs vsfrc:$XT), (ins vsfrc:$XB),
                       "xscvuxddp $XT, $XB", IIC_VecFP,
-                      [(set f64:$XT, (PPCany_fcfidu f64:$XB))]>;
+                      [(set f64:$XT, (PPCany_uint_to_fp f64:$XB))]>;
 
   def XVCVDPSP : XX2Form<60, 393,
                       (outs vsrc:$XT), (ins vsrc:$XB),
@@ -1275,11 +1275,11 @@ let Predicates = [HasVSX, HasP8Vector] in {
   def XSCVSXDSP : XX2Form<60, 312,
                       (outs vssrc:$XT), (ins vsfrc:$XB),
                       "xscvsxdsp $XT, $XB", IIC_VecFP,
-                      [(set f32:$XT, (PPCany_fcfids f64:$XB))]>;
+                      [(set f32:$XT, (PPCany_sint_to_fp f64:$XB))]>;
   def XSCVUXDSP : XX2Form<60, 296,
                       (outs vssrc:$XT), (ins vsfrc:$XB),
                       "xscvuxdsp $XT, $XB", IIC_VecFP,
-                      [(set f32:$XT, (PPCany_fcfidus f64:$XB))]>;
+                      [(set f32:$XT, (PPCany_uint_to_fp f64:$XB))]>;
   } // mayRaiseFPException
 
   // Conversions between vector and scalar single precision
@@ -1488,13 +1488,13 @@ let Predicates = [HasVSX, HasP9Vector] in {
   // Truncate & Convert QP -> (Un)Signed (D)Word (dword[1] is set to zero)
   let mayRaiseFPException = 1 in {
     def XSCVQPSDZ : X_VT5_XO5_VB5<63, 25, 836, "xscvqpsdz",
-        [(set f128:$RST, (PPCany_fctidz f128:$RB))]>;
+        [(set f128:$RST, (PPCany_fp_to_i64 f128:$RB))]>;
     def XSCVQPSWZ : X_VT5_XO5_VB5<63,  9, 836, "xscvqpswz",
-        [(set f128:$RST, (PPCany_fctiwz f128:$RB))]>;
+        [(set f128:$RST, (PPCany_fp_to_i32 f128:$RB))]>;
     def XSCVQPUDZ : X_VT5_XO5_VB5<63, 17, 836, "xscvqpudz",
-        [(set f128:$RST, (PPCany_fctiduz f128:$RB))]>;
+        [(set f128:$RST, (PPCany_fp_to_u64 f128:$RB))]>;
     def XSCVQPUWZ : X_VT5_XO5_VB5<63,  1, 836, "xscvqpuwz",
-        [(set f128:$RST, (PPCany_fctiwuz f128:$RB))]>;
+        [(set f128:$RST, (PPCany_fp_to_u32 f128:$RB))]>;
   }
 
   // Convert (Un)Signed DWord -> QP.
@@ -1843,35 +1843,35 @@ def ScalarLoads {
 }
 
 def DWToSPExtractConv {
-  dag El0US1 = (f32 (PPCfcfidus
+  dag El0US1 = (f32 (PPCuint_to_fp
                     (f64 (PPCmtvsra (i64 (vector_extract v2i64:$S1, 0))))));
-  dag El1US1 = (f32 (PPCfcfidus
+  dag El1US1 = (f32 (PPCuint_to_fp
                     (f64 (PPCmtvsra (i64 (vector_extract v2i64:$S1, 1))))));
-  dag El0US2 = (f32 (PPCfcfidus
+  dag El0US2 = (f32 (PPCuint_to_fp
                     (f64 (PPCmtvsra (i64 (vector_extract v2i64:$S2, 0))))));
-  dag El1US2 = (f32 (PPCfcfidus
+  dag El1US2 = (f32 (PPCuint_to_fp
                     (f64 (PPCmtvsra (i64 (vector_extract v2i64:$S2, 1))))));
-  dag El0SS1 = (f32 (PPCfcfids
+  dag El0SS1 = (f32 (PPCsint_to_fp
                     (f64 (PPCmtvsra (i64 (vector_extract v2i64:$S1, 0))))));
-  dag El1SS1 = (f32 (PPCfcfids
+  dag El1SS1 = (f32 (PPCsint_to_fp
                     (f64 (PPCmtvsra (i64 (vector_extract v2i64:$S1, 1))))));
-  dag El0SS2 = (f32 (PPCfcfids
+  dag El0SS2 = (f32 (PPCsint_to_fp
                     (f64 (PPCmtvsra (i64 (vector_extract v2i64:$S2, 0))))));
-  dag El1SS2 = (f32 (PPCfcfids
+  dag El1SS2 = (f32 (PPCsint_to_fp
                     (f64 (PPCmtvsra (i64 (vector_extract v2i64:$S2, 1))))));
   dag BVU = (v4f32 (build_vector El0US1, El1US1, El0US2, El1US2));
   dag BVS = (v4f32 (build_vector El0SS1, El1SS1, El0SS2, El1SS2));
 }
 
 def WToDPExtractConv {
-  dag El0S = (f64 (PPCfcfid (PPCmtvsra (extractelt v4i32:$A, 0))));
-  dag El1S = (f64 (PPCfcfid (PPCmtvsra (extractelt v4i32:$A, 1))));
-  dag El2S = (f64 (PPCfcfid (PPCmtvsra (extractelt v4i32:$A, 2))));
-  dag El3S = (f64 (PPCfcfid (PPCmtvsra (extractelt v4i32:$A, 3))));
-  dag El0U = (f64 (PPCfcfidu (PPCmtvsrz (extractelt v4i32:$A, 0))));
-  dag El1U = (f64 (PPCfcfidu (PPCmtvsrz (extractelt v4i32:$A, 1))));
-  dag El2U = (f64 (PPCfcfidu (PPCmtvsrz (extractelt v4i32:$A, 2))));
-  dag El3U = (f64 (PPCfcfidu (PPCmtvsrz (extractelt v4i32:$A, 3))));
+  dag El0S = (f64 (PPCsint_to_fp (PPCmtvsra (extractelt v4i32:$A, 0))));
+  dag El1S = (f64 (PPCsint_to_fp (PPCmtvsra (extractelt v4i32:$A, 1))));
+  dag El2S = (f64 (PPCsint_to_fp (PPCmtvsra (extractelt v4i32:$A, 2))));
+  dag El3S = (f64 (PPCsint_to_fp (PPCmtvsra (extractelt v4i32:$A, 3))));
+  dag El0U = (f64 (PPCuint_to_fp (PPCmtvsrz (extractelt v4i32:$A, 0))));
+  dag El1U = (f64 (PPCuint_to_fp (PPCmtvsrz (extractelt v4i32:$A, 1))));
+  dag El2U = (f64 (PPCuint_to_fp (PPCmtvsrz (extractelt v4i32:$A, 2))));
+  dag El3U = (f64 (PPCuint_to_fp (PPCmtvsrz (extractelt v4i32:$A, 3))));
   dag BV02S = (v2f64 (build_vector El0S, El2S));
   dag BV13S = (v2f64 (build_vector El1S, El3S));
   dag BV02U = (v2f64 (build_vector El0U, El2U));
@@ -2228,14 +2228,14 @@ def DblToFlt {
 }
 
 def ExtDbl {
-  dag A0S = (i32 (PPCmfvsr (f64 (PPCfctiwz (f64 (extractelt v2f64:$A, 0))))));
-  dag A1S = (i32 (PPCmfvsr (f64 (PPCfctiwz (f64 (extractelt v2f64:$A, 1))))));
-  dag B0S = (i32 (PPCmfvsr (f64 (PPCfctiwz (f64 (extractelt v2f64:$B, 0))))));
-  dag B1S = (i32 (PPCmfvsr (f64 (PPCfctiwz (f64 (extractelt v2f64:$B, 1))))));
-  dag A0U = (i32 (PPCmfvsr (f64 (PPCfctiwuz (f64 (extractelt v2f64:$A, 0))))));
-  dag A1U = (i32 (PPCmfvsr (f64 (PPCfctiwuz (f64 (extractelt v2f64:$A, 1))))));
-  dag B0U = (i32 (PPCmfvsr (f64 (PPCfctiwuz (f64 (extractelt v2f64:$B, 0))))));
-  dag B1U = (i32 (PPCmfvsr (f64 (PPCfctiwuz (f64 (extractelt v2f64:$B, 1))))));
+  dag A0S = (i32 (PPCmfvsr (f64 (PPCfp_to_i32 (f64 (extractelt v2f64:$A, 0))))));
+  dag A1S = (i32 (PPCmfvsr (f64 (PPCfp_to_i32 (f64 (extractelt v2f64:$A, 1))))));
+  dag B0S = (i32 (PPCmfvsr (f64 (PPCfp_to_i32 (f64 (extractelt v2f64:$B, 0))))));
+  dag B1S = (i32 (PPCmfvsr (f64 (PPCfp_to_i32 (f64 (extractelt v2f64:$B, 1))))));
+  dag A0U = (i32 (PPCmfvsr (f64 (PPCfp_to_u32 (f64 (extractelt v2f64:$A, 0))))));
+  dag A1U = (i32 (PPCmfvsr (f64 (PPCfp_to_u32 (f64 (extractelt v2f64:$A, 1))))));
+  dag B0U = (i32 (PPCmfvsr (f64 (PPCfp_to_u32 (f64 (extractelt v2f64:$B, 0))))));
+  dag B1U = (i32 (PPCmfvsr (f64 (PPCfp_to_u32 (f64 (extractelt v2f64:$B, 1))))));
 }
 
 def ByteToWord {
@@ -2290,64 +2290,64 @@ def WordToDWord {
 }
 
 def FltToIntLoad {
-  dag A = (i32 (PPCmfvsr (PPCfctiwz (f64 (extloadf32 ForceXForm:$A)))));
+  dag A = (i32 (PPCmfvsr (PPCfp_to_i32 (f64 (extloadf32 ForceXForm:$A)))));
 }
 def FltToUIntLoad {
-  dag A = (i32 (PPCmfvsr (PPCfctiwuz (f64 (extloadf32 ForceXForm:$A)))));
+  dag A = (i32 (PPCmfvsr (PPCfp_to_u32 (f64 (extloadf32 ForceXForm:$A)))));
 }
 def FltToLongLoad {
-  dag A = (i64 (PPCmfvsr (PPCfctidz (f64 (extloadf32 ForceXForm:$A)))));
+  dag A = (i64 (PPCmfvsr (PPCfp_to_i64 (f64 (extloadf32 ForceXForm:$A)))));
 }
 def FltToLongLoadP9 {
-  dag A = (i64 (PPCmfvsr (PPCfctidz (f64 (extloadf32 DSForm:$A)))));
+  dag A = (i64 (PPCmfvsr (PPCfp_to_i64 (f64 (extloadf32 DSForm:$A)))));
 }
 def FltToULongLoad {
-  dag A = (i64 (PPCmfvsr (PPCfctiduz (f64 (extloadf32 ForceXForm:$A)))));
+  dag A = (i64 (PPCmfvsr (PPCfp_to_u64 (f64 (extloadf32 ForceXForm:$A)))));
 }
 def FltToULongLoadP9 {
-  dag A = (i64 (PPCmfvsr (PPCfctiduz (f64 (extloadf32 DSForm:$A)))));
+  dag A = (i64 (PPCmfvsr (PPCfp_to_u64 (f64 (extloadf32 DSForm:$A)))));
 }
 def FltToLong {
-  dag A = (i64 (PPCmfvsr (f64 (PPCfctidz (fpextend f32:$A)))));
+  dag A = (i64 (PPCmfvsr (f64 (PPCfp_to_i64 (fpextend f32:$A)))));
 }
 def FltToULong {
-  dag A = (i64 (PPCmfvsr (f64 (PPCfctiduz (fpextend f32:$A)))));
+  dag A = (i64 (PPCmfvsr (f64 (PPCfp_to_u64 (fpextend f32:$A)))));
 }
 def DblToInt {
-  dag A = (i32 (PPCmfvsr (f64 (PPCfctiwz f64:$A))));
-  dag B = (i32 (PPCmfvsr (f64 (PPCfctiwz f64:$B))));
-  dag C = (i32 (PPCmfvsr (f64 (PPCfctiwz f64:$C))));
-  dag D = (i32 (PPCmfvsr (f64 (PPCfctiwz f64:$D))));
+  dag A = (i32 (PPCmfvsr (f64 (PPCfp_to_i32 f64:$A))));
+  dag B = (i32 (PPCmfvsr (f64 (PPCfp_to_i32 f64:$B))));
+  dag C = (i32 (PPCmfvsr (f64 (PPCfp_to_i32 f64:$C))));
+  dag D = (i32 (PPCmfvsr (f64 (PPCfp_to_i32 f64:$D))));
 }
 def DblToUInt {
-  dag A = (i32 (PPCmfvsr (f64 (PPCfctiwuz f64:$A))));
-  dag B = (i32 (PPCmfvsr (f64 (PPCfctiwuz f64:$B))));
-  dag C = (i32 (PPCmfvsr (f64 (PPCfctiwuz f64:$C))));
-  dag D = (i32 (PPCmfvsr (f64 (PPCfctiwuz f64:$D))));
+  dag A = (i32 (PPCmfvsr (f64 (PPCfp_to_u32 f64:$A))));
+  dag B = (i32 (PPCmfvsr (f64 (PPCfp_to_u32 f64:$B))));
+  dag C = (i32 (PPCmfvsr (f64 (PPCfp_to_u32 f64:$C))));
+  dag D = (i32 (PPCmfvsr (f64 (PPCfp_to_u32 f64:$D))));
 }
 def DblToLong {
-  dag A = (i64 (PPCmfvsr (f64 (PPCfctidz f64:$A))));
+  dag A = (i64 (PPCmfvsr (f64 (PPCfp_to_i64 f64:$A))));
 }
 def DblToULong {
-  dag A = (i64 (PPCmfvsr (f64 (PPCfctiduz f64:$A))));
+  dag A = (i64 (PPCmfvsr (f64 (PPCfp_to_u64 f64:$A))));
 }
 def DblToIntLoad {
-  dag A = (i32 (PPCmfvsr (PPCfctiwz (f64 (load ForceXForm:$A)))));
+  dag A = (i32 (PPCmfvsr (PPCfp_to_i32 (f64 (load ForceXForm:$A)))));
 }
 def DblToIntLoadP9 {
-  dag A = (i32 (PPCmfvsr (PPCfctiwz (f64 (load DSForm:$A)))));
+  dag A = (i32 (PPCmfvsr (PPCfp_to_i32 (f64 (load DSForm:$A)))));
 }
 def DblToUIntLoad {
-  dag A = (i32 (PPCmfvsr (PPCfctiwuz (f64 (load ForceXForm:$A)))));
+  dag A = (i32 (PPCmfvsr (PPCfp_to_u32 (f64 (load ForceXForm:$A)))));
 }
 def DblToUIntLoadP9 {
-  dag A = (i32 (PPCmfvsr (PPCfctiwuz (f64 (load DSForm:$A)))));
+  dag A = (i32 (PPCmfvsr (PPCfp_to_u32 (f64 (load DSForm:$A)))));
 }
 def DblToLongLoad {
-  dag A = (i64 (PPCmfvsr (PPCfctidz (f64 (load ForceXForm:$A)))));
+  dag A = (i64 (PPCmfvsr (PPCfp_to_i64 (f64 (load ForceXForm:$A)))));
 }
 def DblToULongLoad {
-  dag A = (i64 (PPCmfvsr (PPCfctiduz (f64 (load ForceXForm:$A)))));
+  dag A = (i64 (PPCmfvsr (PPCfp_to_u64 (f64 (load ForceXForm:$A)))));
 }
 
 // FP load dags (for f32 -> v4f32)
@@ -2929,13 +2929,13 @@ def : Pat<(f64 (extractelt v2f64:$S, 0)),
           (f64 (EXTRACT_SUBREG $S, sub_64))>;
 def : Pat<(f64 (extractelt v2f64:$S, 1)),
           (f64 (EXTRACT_SUBREG (XXPERMDI $S, $S, 2), sub_64))>;
-def : Pat<(f64 (PPCfcfid (PPCmtvsra (i64 (vector_extract v2i64:$S, 0))))),
+def : Pat<(f64 (PPCsint_to_fp (PPCmtvsra (i64 (vector_extract v2i64:$S, 0))))),
           (f64 (XSCVSXDDP (COPY_TO_REGCLASS $S, VSFRC)))>;
-def : Pat<(f64 (PPCfcfid (PPCmtvsra (i64 (vector_extract v2i64:$S, 1))))),
+def : Pat<(f64 (PPCsint_to_fp (PPCmtvsra (i64 (vector_extract v2i64:$S, 1))))),
           (f64 (XSCVSXDDP (COPY_TO_REGCLASS (XXPERMDI $S, $S, 2), VSFRC)))>;
-def : Pat<(f64 (PPCfcfidu (PPCmtvsra (i64 (vector_extract v2i64:$S, 0))))),
+def : Pat<(f64 (PPCuint_to_fp (PPCmtvsra (i64 (vector_extract v2i64:$S, 0))))),
           (f64 (XSCVUXDDP (COPY_TO_REGCLASS $S, VSFRC)))>;
-def : Pat<(f64 (PPCfcfidu (PPCmtvsra (i64 (vector_extract v2i64:$S, 1))))),
+def : Pat<(f64 (PPCuint_to_fp (PPCmtvsra (i64 (vector_extract v2i64:$S, 1))))),
           (f64 (XSCVUXDDP (COPY_TO_REGCLASS (XXPERMDI $S, $S, 2), VSFRC)))>;
 
 def : Pat<(f64 (vector_extract v2f64:$S, i64:$Idx)),
@@ -3053,13 +3053,13 @@ def : Pat<(v2i64 (PPCld_vec_be ForceXForm:$src)), (LXVD2X ForceXForm:$src)>;
 def : Pat<(PPCst_vec_be v2i64:$rS, ForceXForm:$dst), (STXVD2X $rS, ForceXForm:$dst)>;
 def : Pat<(v4i32 (PPCld_vec_be ForceXForm:$src)), (LXVW4X ForceXForm:$src)>;
 def : Pat<(PPCst_vec_be v4i32:$rS, ForceXForm:$dst), (STXVW4X $rS, ForceXForm:$dst)>;
-def : Pat<(f64 (PPCfcfid (PPCmtvsra (i64 (vector_extract v2i64:$S, 0))))),
+def : Pat<(f64 (PPCsint_to_fp (PPCmtvsra (i64 (vector_extract v2i64:$S, 0))))),
           (f64 (XSCVSXDDP (COPY_TO_REGCLASS (XXPERMDI $S, $S, 2), VSFRC)))>;
-def : Pat<(f64 (PPCfcfid (PPCmtvsra (i64 (vector_extract v2i64:$S, 1))))),
+def : Pat<(f64 (PPCsint_to_fp (PPCmtvsra (i64 (vector_extract v2i64:$S, 1))))),
           (f64 (XSCVSXDDP (COPY_TO_REGCLASS (f64 (COPY_TO_REGCLASS $S, VSRC)), VSFRC)))>;
-def : Pat<(f64 (PPCfcfidu (PPCmtvsra (i64 (vector_extract v2i64:$S, 0))))),
+def : Pat<(f64 (PPCuint_to_fp (PPCmtvsra (i64 (vector_extract v2i64:$S, 0))))),
           (f64 (XSCVUXDDP (COPY_TO_REGCLASS (XXPERMDI $S, $S, 2), VSFRC)))>;
-def : Pat<(f64 (PPCfcfidu (PPCmtvsra (i64 (vector_extract v2i64:$S, 1))))),
+def : Pat<(f64 (PPCuint_to_fp (PPCmtvsra (i64 (vector_extract v2i64:$S, 1))))),
           (f64 (XSCVUXDDP (COPY_TO_REGCLASS (f64 (COPY_TO_REGCLASS $S, VSRC)), VSFRC)))>;
 
 def : Pat<(f64 (vector_extract v2f64:$S, i64:$Idx)),
@@ -3380,21 +3380,21 @@ def : Pat<(f32 (vector_extract v4f32:$S, 2)),
 def : Pat<(f32 (vector_extract v4f32:$S, 3)),
           (f32 (XSCVSPDPN (XXSLDWI $S, $S, 3)))>;
 
-def : Pat<(f32 (PPCfcfids (f64 (PPCmtvsra (i32 (extractelt v4i32:$A, 0)))))),
+def : Pat<(f32 (PPCsint_to_fp (f64 (PPCmtvsra (i32 (extractelt v4i32:$A, 0)))))),
           (f32 (XSCVSPDPN (XVCVSXWSP (XXSPLTW $A, 0))))>;
-def : Pat<(f32 (PPCfcfids (f64 (PPCmtvsra (i32 (extractelt v4i32:$A, 1)))))),
+def : Pat<(f32 (PPCsint_to_fp (f64 (PPCmtvsra (i32 (extractelt v4i32:$A, 1)))))),
           (f32 (XSCVSPDPN (XVCVSXWSP (XXSPLTW $A, 1))))>;
-def : Pat<(f32 (PPCfcfids (f64 (PPCmtvsra (i32 (extractelt v4i32:$A, 2)))))),
+def : Pat<(f32 (PPCsint_to_fp (f64 (PPCmtvsra (i32 (extractelt v4i32:$A, 2)))))),
           (f32 (XSCVSPDPN (XVCVSXWSP (XXSPLTW $A, 2))))>;
-def : Pat<(f32 (PPCfcfids (f64 (PPCmtvsra (i32 (extractelt v4i32:$A, 3)))))),
+def : Pat<(f32 (PPCsint_to_fp (f64 (PPCmtvsra (i32 (extractelt v4i32:$A, 3)))))),
           (f32 (XSCVSPDPN (XVCVSXWSP (XXSPLTW $A, 3))))>;
-def : Pat<(f64 (PPCfcfid (f64 (PPCmtvsra (i32 (extractelt v4i32:$A, 0)))))),
+def : Pat<(f64 (PPCsint_to_fp (f64 (PPCmtvsra (i32 (extractelt v4i32:$A, 0)))))),
           (f64 (COPY_TO_REGCLASS (XVCVSXWDP (XXSPLTW $A, 0)), VSFRC))>;
-def : Pat<(f64 (PPCfcfid (f64 (PPCmtvsra (i32 (extractelt v4i32:$A, 1)))))),
+def : Pat<(f64 (PPCsint_to_fp (f64 (PPCmtvsra (i32 (extractelt v4i32:$A, 1)))))),
           (f64 (COPY_TO_REGCLASS (XVCVSXWDP (XXSPLTW $A, 1)), VSFRC))>;
-def : Pat<(f64 (PPCfcfid (f64 (PPCmtvsra (i32 (extractelt v4i32:$A, 2)))))),
+def : Pat<(f64 (PPCsint_to_fp (f64 (PPCmtvsra (i32 (extractelt v4i32:$A, 2)))))),
           (f64 (COPY_TO_REGCLASS (XVCVSXWDP (XXSPLTW $A, 2)), VSFRC))>;
-def : Pat<(f64 (PPCfcfid (f64 (PPCmtvsra (i32 (extractelt v4i32:$A, 3)))))),
+def : Pat<(f64 (PPCsint_to_fp (f64 (PPCmtvsra (i32 (extractelt v4i32:$A, 3)))))),
           (f64 (COPY_TO_REGCLASS (XVCVSXWDP (XXSPLTW $A, 3)), VSFRC))>;
 
 def : Pat<(f32 (vector_extract v4f32:$S, i32:$Idx)),
@@ -3479,21 +3479,21 @@ def : Pat<(f32 (vector_extract v4f32:$S, 3)),
 def : Pat<(f32 (vector_extract v4f32:$S, i64:$Idx)),
           (f32 VectorExtractions.LE_VARIABLE_FLOAT)>;
 
-def : Pat<(f32 (PPCfcfids (f64 (PPCmtvsra (i32 (extractelt v4i32:$A, 0)))))),
+def : Pat<(f32 (PPCsint_to_fp (f64 (PPCmtvsra (i32 (extractelt v4i32:$A, 0)))))),
           (f32 (XSCVSPDPN (XVCVSXWSP (XXSPLTW $A, 3))))>;
-def : Pat<(f32 (PPCfcfids (f64 (PPCmtvsra (i32 (extractelt v4i32:$A, 1)))))),
+def : Pat<(f32 (PPCsint_to_fp (f64 (PPCmtvsra (i32 (extractelt v4i32:$A, 1)))))),
           (f32 (XSCVSPDPN (XVCVSXWSP (XXSPLTW $A, 2))))>;
-def : Pat<(f32 (PPCfcfids (f64 (PPCmtvsra (i32 (extractelt v4i32:$A, 2)))))),
+def : Pat<(f32 (PPCsint_to_fp (f64 (PPCmtvsra (i32 (extractelt v4i32:$A, 2)))))),
           (f32 (XSCVSPDPN (XVCVSXWSP (XXSPLTW $A, 1))))>;
-def : Pat<(f32 (PPCfcfids (f64 (PPCmtvsra (i32 (extractelt v4i32:$A, 3)))))),
+def : Pat<(f32 (PPCsint_to_fp (f64 (PPCmtvsra (i32 (extractelt v4i32:$A, 3)))))),
           (f32 (XSCVSPDPN (XVCVSXWSP (XXSPLTW $A, 0))))>;
-def : Pat<(f64 (PPCfcfid (f64 (PPCmtvsra (i32 (extractelt v4i32:$A, 0)))))),
+def : Pat<(f64 (PPCsint_to_fp (f64 (PPCmtvsra (i32 (extractelt v4i32:$A, 0)))))),
           (f64 (COPY_TO_REGCLASS (XVCVSXWDP (XXSPLTW $A, 3)), VSFRC))>;
-def : Pat<(f64 (PPCfcfid (f64 (PPCmtvsra (i32 (extractelt v4i32:$A, 1)))))),
+def : Pat<(f64 (PPCsint_to_fp (f64 (PPCmtvsra (i32 (extractelt v4i32:$A, 1)))))),
           (f64 (COPY_TO_REGCLASS (XVCVSXWDP (XXSPLTW $A, 2)), VSFRC))>;
-def : Pat<(f64 (PPCfcfid (f64 (PPCmtvsra (i32 (extractelt v4i32:$A, 2)))))),
+def : Pat<(f64 (PPCsint_to_fp (f64 (PPCmtvsra (i32 (extractelt v4i32:$A, 2)))))),
           (f64 (COPY_TO_REGCLASS (XVCVSXWDP (XXSPLTW $A, 1)), VSFRC))>;
-def : Pat<(f64 (PPCfcfid (f64 (PPCmtvsra (i32 (extractelt v4i32:$A, 3)))))),
+def : Pat<(f64 (PPCsint_to_fp (f64 (PPCmtvsra (i32 (extractelt v4i32:$A, 3)))))),
           (f64 (COPY_TO_REGCLASS (XVCVSXWDP (XXSPLTW $A, 0)), VSFRC))>;
 
 // LIWAX - This instruction is used for sign extending i32 -> i64.
@@ -4172,21 +4172,21 @@ defm : ScalToVecWPermute<
   (VSPLTHs 3, (LXSIHZX ForceXForm:$src)),
   (SUBREG_TO_REG (i64 1), (LXSIHZX ForceXForm:$src), sub_64)>;
 
-def : Pat<(f32 (PPCfcfidus (f64 (PPCmtvsrz (i32 (extractelt v4i32:$A, 0)))))),
+def : Pat<(f32 (PPCuint_to_fp (f64 (PPCmtvsrz (i32 (extractelt v4i32:$A, 0)))))),
           (f32 (XSCVUXDSP (XXEXTRACTUW $A, 0)))>;
-def : Pat<(f32 (PPCfcfidus (f64 (PPCmtvsrz (i32 (extractelt v4i32:$A, 1)))))),
+def : Pat<(f32 (PPCuint_to_fp (f64 (PPCmtvsrz (i32 (extractelt v4i32:$A, 1)))))),
           (f32 (XSCVUXDSP (XXEXTRACTUW $A, 4)))>;
-def : Pat<(f32 (PPCfcfidus (f64 (PPCmtvsrz (i32 (extractelt v4i32:$A, 2)))))),
+def : Pat<(f32 (PPCuint_to_fp (f64 (PPCmtvsrz (i32 (extractelt v4i32:$A, 2)))))),
           (f32 (XSCVUXDSP (XXEXTRACTUW $A, 8)))>;
-def : Pat<(f32 (PPCfcfidus (f64 (PPCmtvsrz (i32 (extractelt v4i32:$A, 3)))))),
+def : Pat<(f32 (PPCuint_to_fp (f64 (PPCmtvsrz (i32 (extractelt v4i32:$A, 3)))))),
           (f32 (XSCVUXDSP (XXEXTRACTUW $A, 12)))>;
-def : Pat<(f64 (PPCfcfidu (f64 (PPCmtvsrz (i32 (extractelt v4i32:$A, 0)))))),
+def : Pat<(f64 (PPCuint_to_fp (f64 (PPCmtvsrz (i32 (extractelt v4i32:$A, 0)))))),
           (f64 (XSCVUXDDP (XXEXTRACTUW $A, 0)))>;
-def : Pat<(f64 (PPCfcfidu (f64 (PPCmtvsrz (i32 (extractelt v4i32:$A, 1)))))),
+def : Pat<(f64 (PPCuint_to_fp (f64 (PPCmtvsrz (i32 (extractelt v4i32:$A, 1)))))),
           (f64 (XSCVUXDDP (XXEXTRACTUW $A, 4)))>;
-def : Pat<(f64 (PPCfcfidu (f64 (PPCmtvsrz (i32 (extractelt v4i32:$A, 2)))))),
+def : Pat<(f64 (PPCuint_to_fp (f64 (PPCmtvsrz (i32 (extractelt v4i32:$A, 2)))))),
           (f64 (XSCVUXDDP (XXEXTRACTUW $A, 8)))>;
-def : Pat<(f64 (PPCfcfidu (f64 (PPCmtvsrz (i32 (extractelt v4i32:$A, 3)))))),
+def : Pat<(f64 (PPCuint_to_fp (f64 (PPCmtvsrz (i32 (extractelt v4i32:$A, 3)))))),
           (f64 (XSCVUXDDP (XXEXTRACTUW $A, 12)))>;
 def : Pat<(v4i32 (insertelt v4i32:$A, i32:$B, 0)),
           (v4i32 (XXINSERTW v4i32:$A, AlignValues.I32_TO_BE_WORD1, 0))>;
@@ -4381,25 +4381,25 @@ foreach Idx = 0-7 in {
                     (and (i32 (vector_extract v8i16:$src, Idx)), 65535))),
             (f128 (XSCVUDQP (EXTRACT_SUBREG
                               (VEXTRACTUH !add(Idx, Idx), $src), sub_64)))>;
-  def : Pat<(f32 (PPCfcfidus
+  def : Pat<(f32 (PPCuint_to_fp
                    (f64 (PPCmtvsrz (and (i32 (vector_extract v8i16:$src, Idx)),
                                         65535))))),
             (f32 (XSCVUXDSP (EXTRACT_SUBREG
                               (VEXTRACTUH !add(Idx, Idx), $src), sub_64)))>;
-  def : Pat<(f32 (PPCfcfids
+  def : Pat<(f32 (PPCsint_to_fp
                    (f64 (PPCmtvsra
                           (i32 (sext_inreg (vector_extract v8i16:$src, Idx),
                                i16)))))),
           (f32 (XSCVSXDSP (EXTRACT_SUBREG
                             (VEXTSH2D (VEXTRACTUH !add(Idx, Idx), $src)),
                             sub_64)))>;
-  def : Pat<(f64 (PPCfcfidu
+  def : Pat<(f64 (PPCuint_to_fp
                    (f64 (PPCmtvsrz
                           (and (i32 (vector_extract v8i16:$src, Idx)),
                                65535))))),
             (f64 (XSCVUXDDP (EXTRACT_SUBREG
                               (VEXTRACTUH !add(Idx, Idx), $src), sub_64)))>;
-  def : Pat<(f64 (PPCfcfid
+  def : Pat<(f64 (PPCsint_to_fp
                    (f64 (PPCmtvsra
                           (i32 (sext_inreg (vector_extract v8i16:$src, Idx),
                                i16)))))),
@@ -4420,26 +4420,26 @@ foreach Idx = 0-15 in {
             (f128 (XSCVUDQP
                     (EXTRACT_SUBREG (VEXTRACTUB Idx, $src), sub_64)))>;
 
-  def : Pat<(f32 (PPCfcfidus
+  def : Pat<(f32 (PPCuint_to_fp
                    (f64 (PPCmtvsrz
                           (and (i32 (vector_extract v16i8:$src, Idx)),
                                255))))),
             (f32 (XSCVUXDSP (EXTRACT_SUBREG
                               (VEXTRACTUB !add(Idx, Idx), $src), sub_64)))>;
-  def : Pat<(f32 (PPCfcfids
+  def : Pat<(f32 (PPCsint_to_fp
                    (f64 (PPCmtvsra
                           (i32 (sext_inreg (vector_extract v16i8:$src, Idx),
                                i8)))))),
           (f32 (XSCVSXDSP (EXTRACT_SUBREG
                             (VEXTSH2D (VEXTRACTUB !add(Idx, Idx), $src)),
                             sub_64)))>;
-  def : Pat<(f64 (PPCfcfidu
+  def : Pat<(f64 (PPCuint_to_fp
                    (f64 (PPCmtvsrz
                           (and (i32 (vector_extract v16i8:$src, Idx)),
                           255))))),
             (f64 (XSCVUXDDP (EXTRACT_SUBREG
                               (VEXTRACTUB !add(Idx, Idx), $src), sub_64)))>;
-  def : Pat<(f64 (PPCfcfid
+  def : Pat<(f64 (PPCsint_to_fp
                    (f64 (PPCmtvsra
                           (i32 (sext_inreg (vector_extract v16i8:$src, Idx),
                                i8)))))),
@@ -4456,21 +4456,21 @@ def : Pat<(f128 (uint_to_fp (i32 (PPCmfvsr f64:$src)))),
 
 // Little endian Power9 subtarget.
 let Predicates = [HasVSX, HasP9Vector, IsLittleEndian] in {
-def : Pat<(f32 (PPCfcfidus (f64 (PPCmtvsrz (i32 (extractelt v4i32:$A, 0)))))),
+def : Pat<(f32 (PPCuint_to_fp (f64 (PPCmtvsrz (i32 (extractelt v4i32:$A, 0)))))),
           (f32 (XSCVUXDSP (XXEXTRACTUW $A, 12)))>;
-def : Pat<(f32 (PPCfcfidus (f64 (PPCmtvsrz (i32 (extractelt v4i32:$A, 1)))))),
+def : Pat<(f32 (PPCuint_to_fp (f64 (PPCmtvsrz (i32 (extractelt v4i32:$A, 1)))))),
           (f32 (XSCVUXDSP (XXEXTRACTUW $A, 8)))>;
-def : Pat<(f32 (PPCfcfidus (f64 (PPCmtvsrz (i32 (extractelt v4i32:$A, 2)))))),
+def : Pat<(f32 (PPCuint_to_fp (f64 (PPCmtvsrz (i32 (extractelt v4i32:$A, 2)))))),
           (f32 (XSCVUXDSP (XXEXTRACTUW $A, 4)))>;
-def : Pat<(f32 (PPCfcfidus (f64 (PPCmtvsrz (i32 (extractelt v4i32:$A, 3)))))),
+def : Pat<(f32 (PPCuint_to_fp (f64 (PPCmtvsrz (i32 (extractelt v4i32:$A, 3)))))),
           (f32 (XSCVUXDSP (XXEXTRACTUW $A, 0)))>;
-def : Pat<(f64 (PPCfcfidu (f64 (PPCmtvsrz (i32 (extractelt v4i32:$A, 0)))))),
+def : Pat<(f64 (PPCuint_to_fp (f64 (PPCmtvsrz (i32 (extractelt v4i32:$A, 0)))))),
           (f64 (XSCVUXDDP (XXEXTRACTUW $A, 12)))>;
-def : Pat<(f64 (PPCfcfidu (f64 (PPCmtvsrz (i32 (extractelt v4i32:$A, 1)))))),
+def : Pat<(f64 (PPCuint_to_fp (f64 (PPCmtvsrz (i32 (extractelt v4i32:$A, 1)))))),
           (f64 (XSCVUXDDP (XXEXTRACTUW $A, 8)))>;
-def : Pat<(f64 (PPCfcfidu (f64 (PPCmtvsrz (i32 (extractelt v4i32:$A, 2)))))),
+def : Pat<(f64 (PPCuint_to_fp (f64 (PPCmtvsrz (i32 (extractelt v4i32:$A, 2)))))),
           (f64 (XSCVUXDDP (XXEXTRACTUW $A, 4)))>;
-def : Pat<(f64 (PPCfcfidu (f64 (PPCmtvsrz (i32 (extractelt v4i32:$A, 3)))))),
+def : Pat<(f64 (PPCuint_to_fp (f64 (PPCmtvsrz (i32 (extractelt v4i32:$A, 3)))))),
           (f64 (XSCVUXDDP (XXEXTRACTUW $A, 0)))>;
 def : Pat<(v4i32 (insertelt v4i32:$A, i32:$B, 0)),
           (v4i32 (XXINSERTW v4i32:$A, AlignValues.I32_TO_BE_WORD1, 12))>;
@@ -4685,13 +4685,13 @@ foreach Idx = [[0,14],[1,12],[2,10],[3,8],[4,6],[5,4],[6,2],[7,0]] in {
                          65535))),
             (f128 (XSCVUDQP (EXTRACT_SUBREG
                               (VEXTRACTUH !head(!tail(Idx)), $src), sub_64)))>;
-  def : Pat<(f32 (PPCfcfidus
+  def : Pat<(f32 (PPCuint_to_fp
                    (f64 (PPCmtvsrz
                           (and (i32 (vector_extract v8i16:$src, !head(Idx))),
                           65535))))),
             (f32 (XSCVUXDSP (EXTRACT_SUBREG
                               (VEXTRACTUH !head(!tail(Idx)), $src), sub_64)))>;
-  def : Pat<(f32 (PPCfcfids
+  def : Pat<(f32 (PPCsint_to_fp
                    (f64 (PPCmtvsra
                           (i32 (sext_inreg (vector_extract v8i16:$src,
                                            !head(Idx)), i16)))))),
@@ -4699,13 +4699,13 @@ foreach Idx = [[0,14],[1,12],[2,10],[3,8],[4,6],[5,4],[6,2],[7,0]] in {
                     (EXTRACT_SUBREG
                      (VEXTSH2D (VEXTRACTUH !head(!tail(Idx)), $src)),
                      sub_64)))>;
-  def : Pat<(f64 (PPCfcfidu
+  def : Pat<(f64 (PPCuint_to_fp
                    (f64 (PPCmtvsrz
                           (and (i32 (vector_extract v8i16:$src, !head(Idx))),
                           65535))))),
             (f64 (XSCVUXDDP (EXTRACT_SUBREG
                               (VEXTRACTUH !head(!tail(Idx)), $src), sub_64)))>;
-  def : Pat<(f64 (PPCfcfid
+  def : Pat<(f64 (PPCsint_to_fp
                    (f64 (PPCmtvsra
                         (i32 (sext_inreg
                             (vector_extract v8i16:$src, !head(Idx)), i16)))))),
@@ -4732,13 +4732,13 @@ foreach Idx = [[0,15],[1,14],[2,13],[3,12],[4,11],[5,10],[6,9],[7,8],[8,7],
                     (EXTRACT_SUBREG
                       (VEXTRACTUB !head(!tail(Idx)), $src), sub_64)))>;
 
-  def : Pat<(f32 (PPCfcfidus
+  def : Pat<(f32 (PPCuint_to_fp
                    (f64 (PPCmtvsrz
                           (and (i32 (vector_extract v16i8:$src, !head(Idx))),
                           255))))),
             (f32 (XSCVUXDSP (EXTRACT_SUBREG
                               (VEXTRACTUB !head(!tail(Idx)), $src), sub_64)))>;
-  def : Pat<(f32 (PPCfcfids
+  def : Pat<(f32 (PPCsint_to_fp
                    (f64 (PPCmtvsra
                           (i32 (sext_inreg
                             (vector_extract v16i8:$src, !head(Idx)), i8)))))),
@@ -4746,13 +4746,13 @@ foreach Idx = [[0,15],[1,14],[2,13],[3,12],[4,11],[5,10],[6,9],[7,8],[8,7],
                     (EXTRACT_SUBREG (VEXTSH2D
                                       (VEXTRACTUB !head(!tail(Idx)), $src)),
                                     sub_64)))>;
-  def : Pat<(f64 (PPCfcfidu
+  def : Pat<(f64 (PPCuint_to_fp
                    (f64 (PPCmtvsrz
                           (and (i32
                             (vector_extract v16i8:$src, !head(Idx))), 255))))),
             (f64 (XSCVUXDDP (EXTRACT_SUBREG
                               (VEXTRACTUB !head(!tail(Idx)), $src), sub_64)))>;
-  def : Pat<(f64 (PPCfcfidu
+  def : Pat<(f64 (PPCuint_to_fp
                    (f64 (PPCmtvsra
                         (i32 (sext_inreg
                             (vector_extract v16i8:$src, !head(Idx)), i8)))))),
@@ -4761,7 +4761,7 @@ foreach Idx = [[0,15],[1,14],[2,13],[3,12],[4,11],[5,10],[6,9],[7,8],[8,7],
                                       (VEXTRACTUB !head(!tail(Idx)), $src)),
                                     sub_64)))>;
 
-  def : Pat<(f64 (PPCfcfid
+  def : Pat<(f64 (PPCsint_to_fp
                    (f64 (PPCmtvsra
                         (i32 (sext_inreg
                           (vector_extract v16i8:$src, !head(Idx)), i8)))))),

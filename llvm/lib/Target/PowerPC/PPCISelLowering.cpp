@@ -1668,14 +1668,18 @@ const char *PPCTargetLowering::getTargetNodeName(unsigned Opcode) const {
   case PPCISD::FSEL:            return "PPCISD::FSEL";
   case PPCISD::XSMAXC:          return "PPCISD::XSMAXC";
   case PPCISD::XSMINC:          return "PPCISD::XSMINC";
-  case PPCISD::FCFID:           return "PPCISD::FCFID";
-  case PPCISD::FCFIDU:          return "PPCISD::FCFIDU";
-  case PPCISD::FCFIDS:          return "PPCISD::FCFIDS";
-  case PPCISD::FCFIDUS:         return "PPCISD::FCFIDUS";
-  case PPCISD::FCTIDZ:          return "PPCISD::FCTIDZ";
-  case PPCISD::FCTIWZ:          return "PPCISD::FCTIWZ";
-  case PPCISD::FCTIDUZ:         return "PPCISD::FCTIDUZ";
-  case PPCISD::FCTIWUZ:         return "PPCISD::FCTIWUZ";
+  case PPCISD::SINT_TO_FP_INREG:
+    return "PPCISD::SINT_TO_FP_INREG";
+  case PPCISD::UINT_TO_FP_INREG:
+    return "PPCISD::UINT_TO_FP_INREG";
+  case PPCISD::FP_TO_I64_INREG:
+    return "PPCISD::FP_TO_I64_INREG";
+  case PPCISD::FP_TO_I32_INREG:
+    return "PPCISD::FP_TO_I32_INREG";
+  case PPCISD::FP_TO_U64_INREG:
+    return "PPCISD::FP_TO_U64_INREG";
+  case PPCISD::FP_TO_U32_INREG:
+    return "PPCISD::FP_TO_U32_INREG";
   case PPCISD::FRE:             return "PPCISD::FRE";
   case PPCISD::FRSQRTE:         return "PPCISD::FRSQRTE";
   case PPCISD::FTSQRT:
@@ -1810,22 +1814,18 @@ const char *PPCTargetLowering::getTargetNodeName(unsigned Opcode) const {
   case PPCISD::FNMSUB:          return "PPCISD::FNMSUB";
   case PPCISD::STRICT_FADDRTZ:
     return "PPCISD::STRICT_FADDRTZ";
-  case PPCISD::STRICT_FCTIDZ:
-    return "PPCISD::STRICT_FCTIDZ";
-  case PPCISD::STRICT_FCTIWZ:
-    return "PPCISD::STRICT_FCTIWZ";
-  case PPCISD::STRICT_FCTIDUZ:
-    return "PPCISD::STRICT_FCTIDUZ";
-  case PPCISD::STRICT_FCTIWUZ:
-    return "PPCISD::STRICT_FCTIWUZ";
-  case PPCISD::STRICT_FCFID:
-    return "PPCISD::STRICT_FCFID";
-  case PPCISD::STRICT_FCFIDU:
-    return "PPCISD::STRICT_FCFIDU";
-  case PPCISD::STRICT_FCFIDS:
-    return "PPCISD::STRICT_FCFIDS";
-  case PPCISD::STRICT_FCFIDUS:
-    return "PPCISD::STRICT_FCFIDUS";
+  case PPCISD::STRICT_FP_TO_I64_INREG:
+    return "PPCISD::STRICT_FP_TO_I64_INREG";
+  case PPCISD::STRICT_FP_TO_I32_INREG:
+    return "PPCISD::STRICT_FP_TO_I32_INREG";
+  case PPCISD::STRICT_FP_TO_U64_INREG:
+    return "PPCISD::STRICT_FP_TO_U64_INREG";
+  case PPCISD::STRICT_FP_TO_U32_INREG:
+    return "PPCISD::STRICT_FP_TO_U32_INREG";
+  case PPCISD::STRICT_SINT_TO_FP_INREG:
+    return "PPCISD::STRICT_SINT_TO_FP_INREG";
+  case PPCISD::STRICT_UINT_TO_FP_INREG:
+    return "PPCISD::STRICT_UINT_TO_FP_INREG";
   case PPCISD::LXVRZX:          return "PPCISD::LXVRZX";
   case PPCISD::STORE_COND:
     return "PPCISD::STORE_COND";
@@ -8168,22 +8168,18 @@ static unsigned getPPCStrictOpcode(unsigned Opc) {
   switch (Opc) {
   default:
     llvm_unreachable("No strict version of this opcode!");
-  case PPCISD::FCTIDZ:
-    return PPCISD::STRICT_FCTIDZ;
-  case PPCISD::FCTIWZ:
-    return PPCISD::STRICT_FCTIWZ;
-  case PPCISD::FCTIDUZ:
-    return PPCISD::STRICT_FCTIDUZ;
-  case PPCISD::FCTIWUZ:
-    return PPCISD::STRICT_FCTIWUZ;
-  case PPCISD::FCFID:
-    return PPCISD::STRICT_FCFID;
-  case PPCISD::FCFIDU:
-    return PPCISD::STRICT_FCFIDU;
-  case PPCISD::FCFIDS:
-    return PPCISD::STRICT_FCFIDS;
-  case PPCISD::FCFIDUS:
-    return PPCISD::STRICT_FCFIDUS;
+  case PPCISD::FP_TO_I64_INREG:
+    return PPCISD::STRICT_FP_TO_I64_INREG;
+  case PPCISD::FP_TO_I32_INREG:
+    return PPCISD::STRICT_FP_TO_I32_INREG;
+  case PPCISD::FP_TO_U64_INREG:
+    return PPCISD::STRICT_FP_TO_U64_INREG;
+  case PPCISD::FP_TO_U32_INREG:
+    return PPCISD::STRICT_FP_TO_U32_INREG;
+  case PPCISD::SINT_TO_FP_INREG:
+    return PPCISD::STRICT_SINT_TO_FP_INREG;
+  case PPCISD::UINT_TO_FP_INREG:
+    return PPCISD::STRICT_UINT_TO_FP_INREG;
   }
 }
 
@@ -8221,13 +8217,14 @@ static SDValue convertFPToInt(SDValue Op, SelectionDAG &DAG,
   switch (DestTy.SimpleTy) {
   default: llvm_unreachable("Unhandled FP_TO_INT type in custom expander!");
   case MVT::i32:
-    Opc = IsSigned ? PPCISD::FCTIWZ
-                   : (Subtarget.hasFPCVT() ? PPCISD::FCTIWUZ : PPCISD::FCTIDZ);
+    Opc = IsSigned ? PPCISD::FP_TO_I32_INREG
+                   : (Subtarget.hasFPCVT() ? PPCISD::FP_TO_U32_INREG
+                                           : PPCISD::FP_TO_I64_INREG);
     break;
   case MVT::i64:
     assert((IsSigned || Subtarget.hasFPCVT()) &&
            "i64 FP_TO_UINT is supported only with FPCVT");
-    Opc = IsSigned ? PPCISD::FCTIDZ : PPCISD::FCTIDUZ;
+    Opc = IsSigned ? PPCISD::FP_TO_I64_INREG : PPCISD::FP_TO_U64_INREG;
   }
   EVT ConvTy = Src.getValueType() == MVT::f128 ? MVT::f128 : MVT::f64;
   SDValue Conv;
@@ -8528,8 +8525,8 @@ static SDValue convertIntToFP(SDValue Op, SDValue Src, SelectionDAG &DAG,
   // If we have FCFIDS, then use it when converting to single-precision.
   // Otherwise, convert to double-precision and then round.
   bool IsSingle = Op.getValueType() == MVT::f32 && Subtarget.hasFPCVT();
-  unsigned ConvOpc = IsSingle ? (IsSigned ? PPCISD::FCFIDS : PPCISD::FCFIDUS)
-                              : (IsSigned ? PPCISD::FCFID : PPCISD::FCFIDU);
+  unsigned ConvOpc =
+      IsSigned ? PPCISD::SINT_TO_FP_INREG : PPCISD::UINT_TO_FP_INREG;
   EVT ConvTy = IsSingle ? MVT::f32 : MVT::f64;
   if (Op->isStrictFPOpcode()) {
     if (!Chain)
@@ -14469,13 +14466,13 @@ combineElementTruncationToVectorTruncation(SDNode *N,
   // This combine happens after legalization so the fp_to_[su]i nodes are
   // already converted to PPCSISD nodes.
   unsigned FirstConversion = FirstInput.getOperand(0).getOpcode();
-  if (FirstConversion == PPCISD::FCTIDZ ||
-      FirstConversion == PPCISD::FCTIDUZ ||
-      FirstConversion == PPCISD::FCTIWZ ||
-      FirstConversion == PPCISD::FCTIWUZ) {
+  if (FirstConversion == PPCISD::FP_TO_I64_INREG ||
+      FirstConversion == PPCISD::FP_TO_U64_INREG ||
+      FirstConversion == PPCISD::FP_TO_I32_INREG ||
+      FirstConversion == PPCISD::FP_TO_U32_INREG) {
     bool IsSplat = true;
-    bool Is32Bit = FirstConversion == PPCISD::FCTIWZ ||
-      FirstConversion == PPCISD::FCTIWUZ;
+    bool Is32Bit = FirstConversion == PPCISD::FP_TO_I32_INREG ||
+                   FirstConversion == PPCISD::FP_TO_U32_INREG;
     EVT SrcVT = FirstInput.getOperand(0).getValueType();
     SmallVector<SDValue, 4> Ops;
     EVT TargetVT = N->getValueType(0);
@@ -14521,8 +14518,8 @@ combineElementTruncationToVectorTruncation(SDNode *N,
     }
 
     unsigned Opcode;
-    if (FirstConversion == PPCISD::FCTIDZ ||
-        FirstConversion == PPCISD::FCTIWZ)
+    if (FirstConversion == PPCISD::FP_TO_I64_INREG ||
+        FirstConversion == PPCISD::FP_TO_I32_INREG)
       Opcode = ISD::FP_TO_SINT;
     else
       Opcode = ISD::FP_TO_UINT;
@@ -14932,9 +14929,8 @@ SDValue PPCTargetLowering::combineFPToIntToFP(SDNode *N,
   if (Subtarget.hasP9Vector() && Subtarget.hasP9Altivec() && SubWordLoad) {
     bool Signed = N->getOpcode() == ISD::SINT_TO_FP;
     bool DstDouble = Op.getValueType() == MVT::f64;
-    unsigned ConvOp = Signed ?
-      (DstDouble ? PPCISD::FCFID  : PPCISD::FCFIDS) :
-      (DstDouble ? PPCISD::FCFIDU : PPCISD::FCFIDUS);
+    unsigned ConvOp =
+        Signed ? PPCISD::SINT_TO_FP_INREG : PPCISD::UINT_TO_FP_INREG;
     SDValue WidthConst =
       DAG.getIntPtrConstant(FirstOperand.getValueType() == MVT::i8 ? 1 : 2,
                             dl, false);
@@ -14966,11 +14962,8 @@ SDValue PPCTargetLowering::combineFPToIntToFP(SDNode *N,
 
   // If we have FCFIDS, then use it when converting to single-precision.
   // Otherwise, convert to double-precision and then round.
-  unsigned FCFOp = (Subtarget.hasFPCVT() && Op.getValueType() == MVT::f32)
-                       ? (Op.getOpcode() == ISD::UINT_TO_FP ? PPCISD::FCFIDUS
-                                                            : PPCISD::FCFIDS)
-                       : (Op.getOpcode() == ISD::UINT_TO_FP ? PPCISD::FCFIDU
-                                                            : PPCISD::FCFID);
+  unsigned FCFOp = Op.getOpcode() == ISD::UINT_TO_FP ? PPCISD::UINT_TO_FP_INREG
+                                                     : PPCISD::SINT_TO_FP_INREG;
   MVT FCFTy = (Subtarget.hasFPCVT() && Op.getValueType() == MVT::f32)
                   ? MVT::f32
                   : MVT::f64;
@@ -14989,9 +14982,9 @@ SDValue PPCTargetLowering::combineFPToIntToFP(SDNode *N,
       return SDValue();
     }
 
-    unsigned FCTOp =
-      Op.getOperand(0).getOpcode() == ISD::FP_TO_SINT ? PPCISD::FCTIDZ :
-                                                        PPCISD::FCTIDUZ;
+    unsigned FCTOp = Op.getOperand(0).getOpcode() == ISD::FP_TO_SINT
+                         ? PPCISD::FP_TO_I64_INREG
+                         : PPCISD::FP_TO_U64_INREG;
 
     SDValue Tmp = DAG.getNode(FCTOp, dl, MVT::f64, Src);
     SDValue FP = DAG.getNode(FCFOp, dl, FCFTy, Tmp);
