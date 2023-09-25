@@ -2442,6 +2442,7 @@ td_library(
     includes = ["include"],
     deps = [
         ":ControlFlowInterfacesTdFiles",
+        ":DestinationStyleOpInterfaceTdFiles",
         ":InferTypeOpInterfaceTdFiles",
         ":LoopLikeInterfaceTdFiles",
         ":ParallelCombiningOpInterfaceTdFiles",
@@ -6555,6 +6556,7 @@ cc_library(
         ":DialectUtils",
         ":IR",
         ":InferTypeOpInterface",
+        ":LoopLikeInterface",
         ":ParallelCombiningOpInterface",
         ":ShapedOpInterfaces",
         ":SideEffectInterfaces",
