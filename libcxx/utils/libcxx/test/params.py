@@ -5,10 +5,13 @@
 # SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 #
 # ===----------------------------------------------------------------------===##
+import sys
+import re
+from pathlib import Path
 
 from libcxx.test.dsl import *
 from libcxx.test.features import _isMSVC
-import re
+
 
 _warningFlags = [
     "-Werror",
@@ -314,5 +317,12 @@ DEFAULT_PARAMETERS = [
             AddCompileFlag("-D_LIBCPP_REMOVE_TRANSITIVE_INCLUDES"),
         ],
     ),
+    Parameter(
+        name="executor",
+        type=str,
+        default=f"{sys.executable} {Path(__file__).resolve().parent.parent.parent / 'run.py'}",
+        help="Custom executor to use instead of the configured default.",
+        actions=lambda executor: [AddSubstitution("%{executor}", executor)],
+    )
 ]
 # fmt: on
