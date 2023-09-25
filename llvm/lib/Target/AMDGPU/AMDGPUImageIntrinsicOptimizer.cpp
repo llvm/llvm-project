@@ -97,9 +97,9 @@ char AMDGPUImageIntrinsicOptimizer::ID = 0;
 
 void addInstToMergeableList(
     IntrinsicInst *II,
-    SmallVector<SmallVector<IntrinsicInst *>> &MergeableInsts,
+    SmallVector<SmallVector<IntrinsicInst *, 4>> &MergeableInsts,
     const AMDGPU::ImageDimIntrinsicInfo *ImageDimIntr) {
-  for (SmallVector<IntrinsicInst *> &IIList : MergeableInsts) {
+  for (SmallVector<IntrinsicInst *, 4> &IIList : MergeableInsts) {
     // Check Dim.
     if (IIList.front()->getIntrinsicID() != II->getIntrinsicID())
       continue;
@@ -146,7 +146,7 @@ void addInstToMergeableList(
 // block. It returns an iterator to the instruction after the last one analyzed.
 BasicBlock::iterator collectMergeableInsts(
     BasicBlock::iterator I, BasicBlock::iterator E,
-    SmallVector<SmallVector<IntrinsicInst *>> &MergeableInsts) {
+    SmallVector<SmallVector<IntrinsicInst *, 4>> &MergeableInsts) {
   for (; I != E; ++I) {
     // Don't combine if there is a store in the middle or if there is a memory
     // barrier.
@@ -178,9 +178,10 @@ BasicBlock::iterator collectMergeableInsts(
   return I;
 }
 
-bool optimizeSection(ArrayRef<SmallVector<IntrinsicInst *>> MergeableInsts) {
+bool optimizeSection(ArrayRef<SmallVector<IntrinsicInst *, 4>> MergeableInsts) {
   bool Modified = false;
 
+  SmallVector<Instruction *, 4> InstrsToErase;
   for (const auto &IIList : MergeableInsts) {
     if (IIList.size() <= 1)
       continue;
@@ -256,6 +257,7 @@ bool optimizeSection(ArrayRef<SmallVector<IntrinsicInst *>> MergeableInsts) {
     for (auto &II : IIList) {
       Value *VecOp = nullptr;
       auto Idx = cast<ConstantInt>(II->getArgOperand(FragIdIndex));
+      B.SetCurrentDebugLocation(II->getDebugLoc());
       if (NumElts == 1) {
         VecOp = B.CreateExtractElement(NewCalls[0], Idx->getValue().urem(4));
         LLVM_DEBUG(dbgs() << "Add: " << *VecOp << "\n");
@@ -271,11 +273,15 @@ bool optimizeSection(ArrayRef<SmallVector<IntrinsicInst *>> MergeableInsts) {
 
       // Replace the old instruction.
       II->replaceAllUsesWith(VecOp);
-      II->eraseFromParent();
+      VecOp->takeName(II);
+      InstrsToErase.push_back(II);
     }
 
     Modified = true;
   }
+
+  for (auto I : InstrsToErase)
+    I->eraseFromParent();
 
   return Modified;
 }
@@ -304,7 +310,7 @@ static bool imageIntrinsicOptimizerImpl(Function &F, const TargetMachine *TM) {
     BasicBlock::iterator SectionEnd;
     for (BasicBlock::iterator I = BB.begin(), E = BB.end(); I != E;
          I = SectionEnd) {
-      SmallVector<SmallVector<IntrinsicInst *>> MergeableInsts;
+      SmallVector<SmallVector<IntrinsicInst *, 4>> MergeableInsts;
 
       SectionEnd = collectMergeableInsts(I, E, MergeableInsts);
       Modified |= optimizeSection(MergeableInsts);
