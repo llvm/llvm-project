@@ -2681,6 +2681,727 @@ AArch64InstrInfo::getAddrModeFromMemoryOp(const MachineInstr &MemI,
   return AM;
 }
 
+bool AArch64InstrInfo::canFoldIntoAddrMode(const MachineInstr &MemI,
+                                           Register Reg,
+                                           const MachineInstr &AddrI,
+                                           ExtAddrMode &AM) const {
+  // Filter out instructions into which we cannot fold.
+  unsigned NumBytes;
+  int64_t OffsetScale = 1;
+  switch (MemI.getOpcode()) {
+  default:
+    return false;
+
+  case AArch64::LDURQi:
+  case AArch64::STURQi:
+    NumBytes = 16;
+    break;
+
+  case AArch64::LDURDi:
+  case AArch64::STURDi:
+  case AArch64::LDURXi:
+  case AArch64::STURXi:
+    NumBytes = 8;
+    break;
+
+  case AArch64::LDURWi:
+  case AArch64::LDURSWi:
+  case AArch64::STURWi:
+    NumBytes = 4;
+    break;
+
+  case AArch64::LDURHi:
+  case AArch64::STURHi:
+  case AArch64::LDURHHi:
+  case AArch64::STURHHi:
+  case AArch64::LDURSHXi:
+  case AArch64::LDURSHWi:
+    NumBytes = 2;
+    break;
+
+  case AArch64::LDRBroX:
+  case AArch64::LDRBBroX:
+  case AArch64::LDRSBXroX:
+  case AArch64::LDRSBWroX:
+  case AArch64::STRBroX:
+  case AArch64::STRBBroX:
+  case AArch64::LDURBi:
+  case AArch64::LDURBBi:
+  case AArch64::LDURSBXi:
+  case AArch64::LDURSBWi:
+  case AArch64::STURBi:
+  case AArch64::STURBBi:
+  case AArch64::LDRBui:
+  case AArch64::LDRBBui:
+  case AArch64::LDRSBXui:
+  case AArch64::LDRSBWui:
+  case AArch64::STRBui:
+  case AArch64::STRBBui:
+    NumBytes = 1;
+    break;
+
+  case AArch64::LDRQroX:
+  case AArch64::STRQroX:
+  case AArch64::LDRQui:
+  case AArch64::STRQui:
+    NumBytes = 16;
+    OffsetScale = 16;
+    break;
+
+  case AArch64::LDRDroX:
+  case AArch64::STRDroX:
+  case AArch64::LDRXroX:
+  case AArch64::STRXroX:
+  case AArch64::LDRDui:
+  case AArch64::STRDui:
+  case AArch64::LDRXui:
+  case AArch64::STRXui:
+    NumBytes = 8;
+    OffsetScale = 8;
+    break;
+
+  case AArch64::LDRWroX:
+  case AArch64::LDRSWroX:
+  case AArch64::STRWroX:
+  case AArch64::LDRWui:
+  case AArch64::LDRSWui:
+  case AArch64::STRWui:
+    NumBytes = 4;
+    OffsetScale = 4;
+    break;
+
+  case AArch64::LDRHroX:
+  case AArch64::STRHroX:
+  case AArch64::LDRHHroX:
+  case AArch64::STRHHroX:
+  case AArch64::LDRSHXroX:
+  case AArch64::LDRSHWroX:
+  case AArch64::LDRHui:
+  case AArch64::STRHui:
+  case AArch64::LDRHHui:
+  case AArch64::STRHHui:
+  case AArch64::LDRSHXui:
+  case AArch64::LDRSHWui:
+    NumBytes = 2;
+    OffsetScale = 2;
+    break;
+  }
+
+  // Check the fold operand is not the loaded/stored value.
+  const MachineOperand &BaseRegOp = MemI.getOperand(0);
+  if (BaseRegOp.isReg() && BaseRegOp.getReg() == Reg)
+    return false;
+
+  // Handle memory instructions with a [Reg, Reg] addressing mode.
+  if (MemI.getOperand(2).isReg()) {
+    // Bail if the addressing mode already includes extension of the offset
+    // register.
+    if (MemI.getOperand(3).getImm())
+      return false;
+
+    // Check if we actually have a scaled offset.
+    if (MemI.getOperand(4).getImm() == 0)
+      OffsetScale = 1;
+
+    // If the address instructions is folded into the base register, then the
+    // addressing mode must not have a scale. Then we can swap the base and the
+    // scaled registers.
+    if (MemI.getOperand(1).getReg() == Reg && OffsetScale != 1)
+      return false;
+
+    switch (AddrI.getOpcode()) {
+    default:
+      return false;
+
+    case AArch64::SBFMXri:
+      // sxtw Xa, Wm
+      // ldr Xd, [Xn, Xa, lsl #N]
+      // ->
+      // ldr Xd, [Xn, Wm, sxtw #N]
+      if (AddrI.getOperand(2).getImm() != 0 ||
+          AddrI.getOperand(3).getImm() != 31)
+        return false;
+
+      AM.BaseReg = MemI.getOperand(1).getReg();
+      if (AM.BaseReg == Reg)
+        AM.BaseReg = MemI.getOperand(2).getReg();
+      AM.ScaledReg = AddrI.getOperand(1).getReg();
+      AM.Scale = OffsetScale;
+      AM.Displacement = 0;
+      AM.Form = ExtAddrMode::Formula::SExtScaledReg;
+      return true;
+
+    case TargetOpcode::SUBREG_TO_REG: {
+      // mov Wa, Wm
+      // ldr Xd, [Xn, Xa, lsl #N]
+      // ->
+      // ldr Xd, [Xn, Wm, uxtw #N]
+
+      // Zero-extension looks like an ORRWrs followed by a SUBREG_TO_REG.
+      if (AddrI.getOperand(1).getImm() != 0 ||
+          AddrI.getOperand(3).getImm() != AArch64::sub_32)
+        return false;
+
+      const MachineRegisterInfo &MRI = AddrI.getMF()->getRegInfo();
+      Register OffsetReg = AddrI.getOperand(2).getReg();
+      if (!OffsetReg.isVirtual() || !MRI.hasOneNonDBGUse(OffsetReg))
+        return false;
+
+      const MachineInstr &DefMI = *MRI.getVRegDef(OffsetReg);
+      if (DefMI.getOpcode() != AArch64::ORRWrs ||
+          DefMI.getOperand(1).getReg() != AArch64::WZR ||
+          DefMI.getOperand(3).getImm() != 0)
+        return false;
+
+      AM.BaseReg = MemI.getOperand(1).getReg();
+      if (AM.BaseReg == Reg)
+        AM.BaseReg = MemI.getOperand(2).getReg();
+      AM.ScaledReg = DefMI.getOperand(2).getReg();
+      AM.Scale = OffsetScale;
+      AM.Displacement = 0;
+      AM.Form = ExtAddrMode::Formula::ZExtScaledReg;
+      return true;
+    }
+    }
+  }
+
+  // Handle memory instructions with a [Reg, #Imm] addressing mode.
+  auto canFoldAddSubImmIntoAddrMode = [&](int64_t Offset) -> bool {
+    Offset += MemI.getOperand(2).getImm() * OffsetScale;
+    if (!isLegalAddressingMode(NumBytes, Offset, /* Scale */ 0))
+      return false;
+    AM.BaseReg = AddrI.getOperand(1).getReg();
+    AM.ScaledReg = 0;
+    AM.Scale = 0;
+    AM.Displacement = Offset;
+    AM.Form = ExtAddrMode::Formula::Basic;
+    return true;
+  };
+
+  auto canFoldAddRegIntoAddrMode =
+      [&](int64_t Scale,
+          ExtAddrMode::Formula Form = ExtAddrMode::Formula::Basic) -> bool {
+    if (MemI.getOperand(2).getImm() != 0)
+      return false;
+    if (!isLegalAddressingMode(NumBytes, /* Offset */ 0, Scale))
+      return false;
+    AM.BaseReg = AddrI.getOperand(1).getReg();
+    AM.ScaledReg = AddrI.getOperand(2).getReg();
+    AM.Scale = Scale;
+    AM.Displacement = 0;
+    AM.Form = Form;
+    return true;
+  };
+
+  auto avoidSlowSTRQ = [&](const MachineInstr &MemI) {
+    unsigned Opcode = MemI.getOpcode();
+    return (Opcode == AArch64::STURQi || Opcode == AArch64::STRQui) &&
+           Subtarget.isSTRQroSlow();
+  };
+
+  int64_t Offset = 0;
+  const bool OptSize = MemI.getMF()->getFunction().hasOptSize();
+  switch (AddrI.getOpcode()) {
+  default:
+    return false;
+
+  case AArch64::ADDXri:
+    // add Xa, Xn, #N
+    // ldr Xd, [Xa, #M]
+    // ->
+    // ldr Xd, [Xn, #N'+M]
+    Offset = AddrI.getOperand(2).getImm() << AddrI.getOperand(3).getImm();
+    return canFoldAddSubImmIntoAddrMode(Offset);
+
+  case AArch64::SUBXri:
+    // sub Xa, Xn, #N
+    // ldr Xd, [Xa, #M]
+    // ->
+    // ldr Xd, [Xn, #N'+M]
+    Offset = AddrI.getOperand(2).getImm() << AddrI.getOperand(3).getImm();
+    return canFoldAddSubImmIntoAddrMode(-Offset);
+
+  case AArch64::ADDXrs: {
+    // add Xa, Xn, Xm, lsl #N
+    // ldr Xd, [Xa]
+    // ->
+    // ldr Xd, [Xn, Xm, lsl #N]
+
+    // Don't fold the add if the result would be slower, unless optimising for
+    // size.
+    int64_t Shift = AddrI.getOperand(3).getImm();
+    if (!OptSize) {
+      if ((Shift != 2 && Shift != 3) || !Subtarget.hasAddrLSLFast())
+        return false;
+      if (avoidSlowSTRQ(MemI))
+        return false;
+    }
+    return canFoldAddRegIntoAddrMode(1 << Shift);
+  }
+
+  case AArch64::ADDXrr:
+    // add Xa, Xn, Xm
+    // ldr Xd, [Xa]
+    // ->
+    // ldr Xd, [Xn, Xm, lsl #0]
+
+    // Don't fold the add if the result would be slower, unless optimising for
+    // size.
+    if (!OptSize && avoidSlowSTRQ(MemI))
+      return false;
+    return canFoldAddRegIntoAddrMode(1);
+
+  case AArch64::ADDXrx:
+    // add Xa, Xn, Wm, {s,u}xtw #N
+    // ldr Xd, [Xa]
+    // ->
+    // ldr Xd, [Xn, Wm, {s,u}xtw #N]
+
+    // Don't fold the add if the result would be slower, unless optimising for
+    // size.
+    if (!OptSize && avoidSlowSTRQ(MemI))
+      return false;
+
+    // Can fold only sign-/zero-extend of a word.
+    unsigned Imm = static_cast<unsigned>(AddrI.getOperand(3).getImm());
+    AArch64_AM::ShiftExtendType Extend = AArch64_AM::getArithExtendType(Imm);
+    if (Extend != AArch64_AM::UXTW && Extend != AArch64_AM::SXTW)
+      return false;
+
+    return canFoldAddRegIntoAddrMode(1 << AArch64_AM::getArithShiftValue(Imm),
+                                     (Extend == AArch64_AM::SXTW)
+                                         ? ExtAddrMode::Formula::SExtScaledReg
+                                         : ExtAddrMode::Formula::ZExtScaledReg);
+  }
+}
+
+// Given an opcode for an instruction with a [Reg, #Imm] addressing mode,
+// return the opcode of an instruction performing the same operation, but using
+// the [Reg, Reg] addressing mode.
+static unsigned regOffsetOpcode(unsigned Opcode) {
+  switch (Opcode) {
+  default:
+    llvm_unreachable("Address folding not implemented for instruction");
+
+  case AArch64::LDURQi:
+  case AArch64::LDRQui:
+    return AArch64::LDRQroX;
+  case AArch64::STURQi:
+  case AArch64::STRQui:
+    return AArch64::STRQroX;
+  case AArch64::LDURDi:
+  case AArch64::LDRDui:
+    return AArch64::LDRDroX;
+  case AArch64::STURDi:
+  case AArch64::STRDui:
+    return AArch64::STRDroX;
+  case AArch64::LDURXi:
+  case AArch64::LDRXui:
+    return AArch64::LDRXroX;
+  case AArch64::STURXi:
+  case AArch64::STRXui:
+    return AArch64::STRXroX;
+  case AArch64::LDURWi:
+  case AArch64::LDRWui:
+    return AArch64::LDRWroX;
+  case AArch64::LDURSWi:
+  case AArch64::LDRSWui:
+    return AArch64::LDRSWroX;
+  case AArch64::STURWi:
+  case AArch64::STRWui:
+    return AArch64::STRWroX;
+  case AArch64::LDURHi:
+  case AArch64::LDRHui:
+    return AArch64::LDRHroX;
+  case AArch64::STURHi:
+  case AArch64::STRHui:
+    return AArch64::STRHroX;
+  case AArch64::LDURHHi:
+  case AArch64::LDRHHui:
+    return AArch64::LDRHHroX;
+  case AArch64::STURHHi:
+  case AArch64::STRHHui:
+    return AArch64::STRHHroX;
+  case AArch64::LDURSHXi:
+  case AArch64::LDRSHXui:
+    return AArch64::LDRSHXroX;
+  case AArch64::LDURSHWi:
+  case AArch64::LDRSHWui:
+    return AArch64::LDRSHWroX;
+  case AArch64::LDURBi:
+  case AArch64::LDRBui:
+    return AArch64::LDRBroX;
+  case AArch64::LDURBBi:
+  case AArch64::LDRBBui:
+    return AArch64::LDRBBroX;
+  case AArch64::LDURSBXi:
+  case AArch64::LDRSBXui:
+    return AArch64::LDRSBXroX;
+  case AArch64::LDURSBWi:
+  case AArch64::LDRSBWui:
+    return AArch64::LDRSBWroX;
+  case AArch64::STURBi:
+  case AArch64::STRBui:
+    return AArch64::STRBroX;
+  case AArch64::STURBBi:
+  case AArch64::STRBBui:
+    return AArch64::STRBBroX;
+  }
+}
+
+// Given an opcode for an instruction with a [Reg, #Imm] addressing mode, return
+// the opcode of an instruction performing the same operation, but using the
+// [Reg, #Imm] addressing mode with scaled offset.
+unsigned scaledOffsetOpcode(unsigned Opcode, unsigned &Scale) {
+  switch (Opcode) {
+  default:
+    llvm_unreachable("Address folding not implemented for instruction");
+
+  case AArch64::LDURQi:
+    Scale = 16;
+    return AArch64::LDRQui;
+  case AArch64::STURQi:
+    Scale = 16;
+    return AArch64::STRQui;
+  case AArch64::LDURDi:
+    Scale = 8;
+    return AArch64::LDRDui;
+  case AArch64::STURDi:
+    Scale = 8;
+    return AArch64::STRDui;
+  case AArch64::LDURXi:
+    Scale = 8;
+    return AArch64::LDRXui;
+  case AArch64::STURXi:
+    Scale = 8;
+    return AArch64::STRXui;
+  case AArch64::LDURWi:
+    Scale = 4;
+    return AArch64::LDRWui;
+  case AArch64::LDURSWi:
+    Scale = 4;
+    return AArch64::LDRSWui;
+  case AArch64::STURWi:
+    Scale = 4;
+    return AArch64::STRWui;
+  case AArch64::LDURHi:
+    Scale = 2;
+    return AArch64::LDRHui;
+  case AArch64::STURHi:
+    Scale = 2;
+    return AArch64::STRHui;
+  case AArch64::LDURHHi:
+    Scale = 2;
+    return AArch64::LDRHHui;
+  case AArch64::STURHHi:
+    Scale = 2;
+    return AArch64::STRHHui;
+  case AArch64::LDURSHXi:
+    Scale = 2;
+    return AArch64::LDRSHXui;
+  case AArch64::LDURSHWi:
+    Scale = 2;
+    return AArch64::LDRSHWui;
+  case AArch64::LDURBi:
+    Scale = 1;
+    return AArch64::LDRBui;
+  case AArch64::LDURBBi:
+    Scale = 1;
+    return AArch64::LDRBBui;
+  case AArch64::LDURSBXi:
+    Scale = 1;
+    return AArch64::LDRSBXui;
+  case AArch64::LDURSBWi:
+    Scale = 1;
+    return AArch64::LDRSBWui;
+  case AArch64::STURBi:
+    Scale = 1;
+    return AArch64::STRBui;
+  case AArch64::STURBBi:
+    Scale = 1;
+    return AArch64::STRBBui;
+  case AArch64::LDRQui:
+  case AArch64::STRQui:
+    Scale = 16;
+    return Opcode;
+  case AArch64::LDRDui:
+  case AArch64::STRDui:
+  case AArch64::LDRXui:
+  case AArch64::STRXui:
+    Scale = 8;
+    return Opcode;
+  case AArch64::LDRWui:
+  case AArch64::LDRSWui:
+  case AArch64::STRWui:
+    Scale = 4;
+    return Opcode;
+  case AArch64::LDRHui:
+  case AArch64::STRHui:
+  case AArch64::LDRHHui:
+  case AArch64::STRHHui:
+  case AArch64::LDRSHXui:
+  case AArch64::LDRSHWui:
+    Scale = 2;
+    return Opcode;
+  case AArch64::LDRBui:
+  case AArch64::LDRBBui:
+  case AArch64::LDRSBXui:
+  case AArch64::LDRSBWui:
+  case AArch64::STRBui:
+  case AArch64::STRBBui:
+    Scale = 1;
+    return Opcode;
+  }
+}
+
+// Given an opcode for an instruction with a [Reg, #Imm] addressing mode, return
+// the opcode of an instruction performing the same operation, but using the
+// [Reg, #Imm] addressing mode with unscaled offset.
+unsigned unscaledOffsetOpcode(unsigned Opcode) {
+  switch (Opcode) {
+  default:
+    llvm_unreachable("Address folding not implemented for instruction");
+
+  case AArch64::LDURQi:
+  case AArch64::STURQi:
+  case AArch64::LDURDi:
+  case AArch64::STURDi:
+  case AArch64::LDURXi:
+  case AArch64::STURXi:
+  case AArch64::LDURWi:
+  case AArch64::LDURSWi:
+  case AArch64::STURWi:
+  case AArch64::LDURHi:
+  case AArch64::STURHi:
+  case AArch64::LDURHHi:
+  case AArch64::STURHHi:
+  case AArch64::LDURSHXi:
+  case AArch64::LDURSHWi:
+  case AArch64::LDURBi:
+  case AArch64::STURBi:
+  case AArch64::LDURBBi:
+  case AArch64::STURBBi:
+  case AArch64::LDURSBWi:
+  case AArch64::LDURSBXi:
+    return Opcode;
+  case AArch64::LDRQui:
+    return AArch64::LDURQi;
+  case AArch64::STRQui:
+    return AArch64::STURQi;
+  case AArch64::LDRDui:
+    return AArch64::LDURDi;
+  case AArch64::STRDui:
+    return AArch64::STURDi;
+  case AArch64::LDRXui:
+    return AArch64::LDURXi;
+  case AArch64::STRXui:
+    return AArch64::STURXi;
+  case AArch64::LDRWui:
+    return AArch64::LDURWi;
+  case AArch64::LDRSWui:
+    return AArch64::LDURSWi;
+  case AArch64::STRWui:
+    return AArch64::STURWi;
+  case AArch64::LDRHui:
+    return AArch64::LDURHi;
+  case AArch64::STRHui:
+    return AArch64::STURHi;
+  case AArch64::LDRHHui:
+    return AArch64::LDURHHi;
+  case AArch64::STRHHui:
+    return AArch64::STURHHi;
+  case AArch64::LDRSHXui:
+    return AArch64::LDURSHXi;
+  case AArch64::LDRSHWui:
+    return AArch64::LDURSHWi;
+  case AArch64::LDRBBui:
+    return AArch64::LDURBBi;
+  case AArch64::LDRBui:
+    return AArch64::LDURBi;
+  case AArch64::STRBBui:
+    return AArch64::STURBBi;
+  case AArch64::STRBui:
+    return AArch64::STURBi;
+  case AArch64::LDRSBWui:
+    return AArch64::LDURSBWi;
+  case AArch64::LDRSBXui:
+    return AArch64::LDURSBXi;
+  }
+}
+
+// Given the opcode of a memory load/store instruction, return the opcode of an
+// instruction performing the same operation, but using
+// the [Reg, Reg, {s,u}xtw #N] addressing mode with sign-/zero-extend of the
+// offset register.
+static unsigned offsetExtendOpcode(unsigned Opcode) {
+  switch (Opcode) {
+  default:
+    llvm_unreachable("Address folding not implemented for instruction");
+
+  case AArch64::LDRQroX:
+  case AArch64::LDURQi:
+  case AArch64::LDRQui:
+    return AArch64::LDRQroW;
+  case AArch64::STRQroX:
+  case AArch64::STURQi:
+  case AArch64::STRQui:
+    return AArch64::STRQroW;
+  case AArch64::LDRDroX:
+  case AArch64::LDURDi:
+  case AArch64::LDRDui:
+    return AArch64::LDRDroW;
+  case AArch64::STRDroX:
+  case AArch64::STURDi:
+  case AArch64::STRDui:
+    return AArch64::STRDroW;
+  case AArch64::LDRXroX:
+  case AArch64::LDURXi:
+  case AArch64::LDRXui:
+    return AArch64::LDRXroW;
+  case AArch64::STRXroX:
+  case AArch64::STURXi:
+  case AArch64::STRXui:
+    return AArch64::STRXroW;
+  case AArch64::LDRWroX:
+  case AArch64::LDURWi:
+  case AArch64::LDRWui:
+    return AArch64::LDRWroW;
+  case AArch64::LDRSWroX:
+  case AArch64::LDURSWi:
+  case AArch64::LDRSWui:
+    return AArch64::LDRSWroW;
+  case AArch64::STRWroX:
+  case AArch64::STURWi:
+  case AArch64::STRWui:
+    return AArch64::STRWroW;
+  case AArch64::LDRHroX:
+  case AArch64::LDURHi:
+  case AArch64::LDRHui:
+    return AArch64::LDRHroW;
+  case AArch64::STRHroX:
+  case AArch64::STURHi:
+  case AArch64::STRHui:
+    return AArch64::STRHroW;
+  case AArch64::LDRHHroX:
+  case AArch64::LDURHHi:
+  case AArch64::LDRHHui:
+    return AArch64::LDRHHroW;
+  case AArch64::STRHHroX:
+  case AArch64::STURHHi:
+  case AArch64::STRHHui:
+    return AArch64::STRHHroW;
+  case AArch64::LDRSHXroX:
+  case AArch64::LDURSHXi:
+  case AArch64::LDRSHXui:
+    return AArch64::LDRSHXroW;
+  case AArch64::LDRSHWroX:
+  case AArch64::LDURSHWi:
+  case AArch64::LDRSHWui:
+    return AArch64::LDRSHWroW;
+  case AArch64::LDRBroX:
+  case AArch64::LDURBi:
+  case AArch64::LDRBui:
+    return AArch64::LDRBroW;
+  case AArch64::LDRBBroX:
+  case AArch64::LDURBBi:
+  case AArch64::LDRBBui:
+    return AArch64::LDRBBroW;
+  case AArch64::LDRSBXroX:
+  case AArch64::LDURSBXi:
+  case AArch64::LDRSBXui:
+    return AArch64::LDRSBXroW;
+  case AArch64::LDRSBWroX:
+  case AArch64::LDURSBWi:
+  case AArch64::LDRSBWui:
+    return AArch64::LDRSBWroW;
+  case AArch64::STRBroX:
+  case AArch64::STURBi:
+  case AArch64::STRBui:
+    return AArch64::STRBroW;
+  case AArch64::STRBBroX:
+  case AArch64::STURBBi:
+  case AArch64::STRBBui:
+    return AArch64::STRBBroW;
+  }
+}
+
+MachineInstr *AArch64InstrInfo::emitLdStWithAddr(MachineInstr &MemI,
+                                                 const ExtAddrMode &AM) const {
+
+  const DebugLoc &DL = MemI.getDebugLoc();
+  MachineBasicBlock &MBB = *MemI.getParent();
+  MachineRegisterInfo &MRI = MemI.getMF()->getRegInfo();
+
+  if (AM.Form == ExtAddrMode::Formula::Basic) {
+    if (AM.ScaledReg) {
+      // The new instruction will be in the form `ldr Rt, [Xn, Xm, lsl #imm]`.
+      unsigned Opcode = regOffsetOpcode(MemI.getOpcode());
+      MRI.constrainRegClass(AM.BaseReg, &AArch64::GPR64spRegClass);
+      auto B = BuildMI(MBB, MemI, DL, get(Opcode))
+                   .addReg(MemI.getOperand(0).getReg(),
+                           MemI.mayLoad() ? RegState::Define : 0)
+                   .addReg(AM.BaseReg)
+                   .addReg(AM.ScaledReg)
+                   .addImm(0)
+                   .addImm(AM.Scale > 1)
+                   .setMemRefs(MemI.memoperands())
+                   .setMIFlags(MemI.getFlags());
+      return B.getInstr();
+    }
+
+    assert(AM.ScaledReg == 0 && AM.Scale == 0 &&
+           "Addressing mode not supported for folding");
+
+    // The new instruction will be in the form `ld[u]r Rt, [Xn, #imm]`.
+    unsigned Scale = 1;
+    unsigned Opcode = MemI.getOpcode();
+    if (isInt<9>(AM.Displacement))
+      Opcode = unscaledOffsetOpcode(Opcode);
+    else
+      Opcode = scaledOffsetOpcode(Opcode, Scale);
+
+    auto B = BuildMI(MBB, MemI, DL, get(Opcode))
+                 .addReg(MemI.getOperand(0).getReg(),
+                         MemI.mayLoad() ? RegState::Define : 0)
+                 .addReg(AM.BaseReg)
+                 .addImm(AM.Displacement / Scale)
+                 .setMemRefs(MemI.memoperands())
+                 .setMIFlags(MemI.getFlags());
+    return B.getInstr();
+  }
+
+  if (AM.Form == ExtAddrMode::Formula::SExtScaledReg ||
+      AM.Form == ExtAddrMode::Formula::ZExtScaledReg) {
+    // The new instruction will be in the form `ldr Rt, [Xn, Wm, {s,u}xtw #N]`.
+    assert(AM.ScaledReg && !AM.Displacement &&
+           "Address offset can be a register or an immediate, but not both");
+    unsigned Opcode = offsetExtendOpcode(MemI.getOpcode());
+    MRI.constrainRegClass(AM.BaseReg, &AArch64::GPR64spRegClass);
+    // Make sure the offset register is in the correct register class.
+    Register OffsetReg = AM.ScaledReg;
+    const TargetRegisterClass *RC = MRI.getRegClass(OffsetReg);
+    if (RC->hasSuperClassEq(&AArch64::GPR64RegClass)) {
+      OffsetReg = MRI.createVirtualRegister(&AArch64::GPR32RegClass);
+      BuildMI(MBB, MemI, DL, get(TargetOpcode::COPY), OffsetReg)
+          .addReg(AM.ScaledReg, 0, AArch64::sub_32);
+    }
+    auto B = BuildMI(MBB, MemI, DL, get(Opcode))
+                 .addReg(MemI.getOperand(0).getReg(),
+                         MemI.mayLoad() ? RegState::Define : 0)
+                 .addReg(AM.BaseReg)
+                 .addReg(OffsetReg)
+                 .addImm(AM.Form == ExtAddrMode::Formula::SExtScaledReg)
+                 .addImm(AM.Scale != 1)
+                 .setMemRefs(MemI.memoperands())
+                 .setMIFlags(MemI.getFlags());
+
+    return B.getInstr();
+  }
+
+  llvm_unreachable(
+      "Function must not be called with an addressing mode it can't handle");
+}
+
 bool AArch64InstrInfo::getMemOperandWithOffsetWidth(
     const MachineInstr &LdSt, const MachineOperand *&BaseOp, int64_t &Offset,
     bool &OffsetIsScalable, unsigned &Width,
@@ -8569,6 +9290,30 @@ bool AArch64InstrInfo::isWhileOpcode(unsigned Opc) const {
 unsigned int
 AArch64InstrInfo::getTailDuplicateSize(CodeGenOptLevel OptLevel) const {
   return OptLevel >= CodeGenOptLevel::Aggressive ? 6 : 2;
+}
+
+bool AArch64InstrInfo::isLegalAddressingMode(unsigned NumBytes, int64_t Offset,
+                                             unsigned Scale) const {
+  if (Offset && Scale)
+    return false;
+
+  // Check Reg + Imm
+  if (!Scale) {
+    // 9-bit signed offset
+    if (isInt<9>(Offset))
+      return true;
+
+    // 12-bit unsigned offset
+    unsigned Shift = Log2_64(NumBytes);
+    if (NumBytes && Offset > 0 && (Offset / NumBytes) <= (1LL << 12) - 1 &&
+        // Must be a multiple of NumBytes (NumBytes is a power of 2)
+        (Offset >> Shift) << Shift == Offset)
+      return true;
+    return false;
+  }
+
+  // Check reg1 + SIZE_IN_BYTES * reg2 and reg1 + reg2
+  return Scale == 1 || (Scale > 0 && Scale == NumBytes);
 }
 
 unsigned llvm::getBLRCallOpcode(const MachineFunction &MF) {

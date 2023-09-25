@@ -15617,25 +15617,8 @@ bool AArch64TargetLowering::isLegalAddressingMode(const DataLayout &DL,
       NumBytes = 0;
   }
 
-  if (!AM.Scale) {
-    int64_t Offset = AM.BaseOffs;
-
-    // 9-bit signed offset
-    if (isInt<9>(Offset))
-      return true;
-
-    // 12-bit unsigned offset
-    unsigned shift = Log2_64(NumBytes);
-    if (NumBytes && Offset > 0 && (Offset / NumBytes) <= (1LL << 12) - 1 &&
-        // Must be a multiple of NumBytes (NumBytes is a power of 2)
-        (Offset >> shift) << shift == Offset)
-      return true;
-    return false;
-  }
-
-  // Check reg1 + SIZE_IN_BYTES * reg2 and reg1 + reg2
-
-  return AM.Scale == 1 || (AM.Scale > 0 && (uint64_t)AM.Scale == NumBytes);
+  return Subtarget->getInstrInfo()->isLegalAddressingMode(NumBytes, AM.BaseOffs,
+                                                          AM.Scale);
 }
 
 bool AArch64TargetLowering::shouldConsiderGEPOffsetSplit() const {
