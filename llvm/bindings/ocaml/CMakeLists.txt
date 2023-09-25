@@ -31,6 +31,7 @@ add_custom_target(dune_workspace ALL
     ocaml_copy_files
     "${CMAKE_BINARY_DIR}/bin/llvm-config")
 
+add_custom_target(ocaml_llvm_deps)
 explicit_map_components_to_libraries(llvm_libs
   Core Support
   Analysis
@@ -41,18 +42,20 @@ explicit_map_components_to_libraries(llvm_libs
   Linker
   Target
   Passes
-  TransformUtils)
+  TransformUtils
+  AllTargetsCodeGens
+  AllTargetsAsmParsers
+  AllTargetsDescs
+  AllTargetsDisassemblers
+  AllTargetsInfos
+  AllTargetsMCAs)
 foreach( llvm_lib ${llvm_libs} )
-  add_dependencies(dune_workspace "${llvm_lib}")
-endforeach()
-explicit_map_components_to_libraries(llvm_libs ${LLVM_TARGETS_TO_BUILD})
-foreach( llvm_lib ${llvm_libs} )
-  add_dependencies(dune_workspace "${llvm_lib}")
+  add_dependencies(ocaml_llvm_deps "${llvm_lib}")
 endforeach()
 
 add_custom_target(dune_build_all
   COMMAND "dune" "build" "--release"
   COMMAND "dune" "install" "--libdir" "${CMAKE_BINARY_DIR}/lib/ocaml"
-  DEPENDS ocaml_copy_files dune_workspace)
+  DEPENDS dune_workspace ocaml_copy_files ocaml_llvm_deps)
 
 add_dependencies(ocaml_all dune_build_all)
