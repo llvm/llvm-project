@@ -2492,6 +2492,8 @@ convertDeclareTargetAttr(Operation *op, mlir::omp::DeclareTargetAttr attribute,
       if (declareType == omp::DeclareTargetDeviceType::host) {
         llvm::Function *llvmFunc =
             moduleTranslation.lookupFunction(funcOp.getName());
+        llvmFunc->replaceAllUsesWith(
+            llvm::UndefValue::get(llvmFunc->getType()));
         llvmFunc->dropAllReferences();
         llvmFunc->eraseFromParent();
       }
