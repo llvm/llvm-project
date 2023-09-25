@@ -232,7 +232,7 @@ public:
     // the data structure is compacted). Do not enumerate these ops.
     return llvm::make_filter_range(view, [=](Operation *op) {
 #ifdef LLVM_ENABLE_ABI_BREAKING_CHECKS
-      bool sameTimestamp =
+      [[maybe_unused]] bool sameTimestamp =
           currentTimestamp == this->getMapping(value).timestamps.lookup(value);
       assert(sameTimestamp && "iterator was invalidated during iteration");
 #endif // LLVM_ENABLE_ABI_BREAKING_CHECKS
@@ -257,7 +257,7 @@ public:
     int64_t currentTimestamp =
         getMapping(handleValue).timestamps.lookup(handleValue);
     return llvm::make_filter_range(view, [=](Value v) {
-      bool sameTimestamp =
+      [[maybe_unused]] bool sameTimestamp =
           currentTimestamp ==
           this->getMapping(handleValue).timestamps.lookup(handleValue);
       assert(sameTimestamp && "iterator was invalidated during iteration");
