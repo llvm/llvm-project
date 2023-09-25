@@ -1062,7 +1062,7 @@ void WhitespaceManager::alignTrailingComments() {
       const int OriginalSpaces =
           C.OriginalWhitespaceRange.getEnd().getRawEncoding() -
           C.OriginalWhitespaceRange.getBegin().getRawEncoding() -
-          C.Tok->NewlinesBefore;
+          C.Tok->LastNewlineOffset;
       assert(OriginalSpaces >= 0);
       const auto RestoredLineLength =
           C.StartOfTokenColumn + C.TokenLength + OriginalSpaces;
