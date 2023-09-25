@@ -213,7 +213,7 @@ convertOperationImpl(Operation &opInst, llvm::IRBuilderBase &builder,
     } else {
       call = builder.CreateCall(
           llvm::cast<llvm::FunctionType>(
-              moduleTranslation.convertType(callOp.getCalleeType())),
+              moduleTranslation.convertType(*callOp.getCalleeType())),
           operandsRef.front(), operandsRef.drop_front());
     }
     moduleTranslation.setAccessGroupsMetadata(callOp, call);

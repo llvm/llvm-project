@@ -1240,6 +1240,8 @@ LogicalResult CallOp::verifySymbolUses(SymbolTableCollection &symbolTable) {
 void CallOp::print(OpAsmPrinter &p) {
   auto callee = getCallee();
   bool isDirect = callee.has_value();
+  auto calleeType = *getCalleeType();
+  bool isVarArg = calleeType.isVarArg();
 
   // Print the direct callee if present as a function attribute, or an indirect
   // callee (first operand) otherwise.
@@ -1249,9 +1251,13 @@ void CallOp::print(OpAsmPrinter &p) {
   else
     p << getOperand(0);
 
+  if (isVarArg)
+    p << " vararg " << getCalleeType() << ' ';
+
   auto args = getOperands().drop_front(isDirect ? 0 : 1);
   p << '(' << args << ')';
-  p.printOptionalAttrDict(processFMFAttr((*this)->getAttrs()), {"callee"});
+  p.printOptionalAttrDict(processFMFAttr((*this)->getAttrs()),
+                          {"callee", "callee_type"});
 
   p << " : ";
   if (!isDirect)
@@ -1265,7 +1271,7 @@ void CallOp::print(OpAsmPrinter &p) {
 /// succeeds. Returns failure otherwise.
 static ParseResult parseCallTypeAndResolveOperands(
     OpAsmParser &parser, OperationState &result, bool isDirect,
-    ArrayRef<OpAsmParser::UnresolvedOperand> operands) {
+    ArrayRef<OpAsmParser::UnresolvedOperand> operands, bool isVarArg) {
   SMLoc trailingTypesLoc = parser.getCurrentLocation();
   SmallVector<Type> types;
   if (parser.parseColonTypeList(types))
@@ -1301,6 +1307,18 @@ static ParseResult parseCallTypeAndResolveOperands(
   if (funcType.getNumResults() != 0)
     result.addTypes(funcType.getResults());
 
+  if (!isVarArg) {
+    Type returnType;
+    if (funcType.getNumResults() == 0)
+      returnType = LLVM::LLVMVoidType::get(result.getContext());
+    else
+      returnType = funcType.getResult(0);
+    result.addAttribute(
+        "callee_type",
+        TypeAttr::get(LLVM::LLVMFunctionType::get(
+            returnType, funcType.getInputs(), /*isVarArg*/ false)));
+  }
+
   return success();
 }
 
@@ -1319,10 +1337,12 @@ static ParseResult parseOptionalCallFuncPtr(
   return success();
 }
 
-// <operation> ::= `llvm.call` (function-id | ssa-use)`(` ssa-use-list `)`
+// <operation> ::= `llvm.call` (function-id | ssa-use) var-arg-func-type?
+//                             `(` ssa-use-list `)`
 //                             attribute-dict? `:` (type `,`)? function-type
 ParseResult CallOp::parse(OpAsmParser &parser, OperationState &result) {
   SymbolRefAttr funcAttr;
+  TypeAttr calleeType;
   SmallVector<OpAsmParser::UnresolvedOperand> operands;
 
   // Parse a function pointer for indirect calls.
@@ -1335,13 +1355,18 @@ ParseResult CallOp::parse(OpAsmParser &parser, OperationState &result) {
     if (parser.parseAttribute(funcAttr, "callee", result.attributes))
       return failure();
 
+  bool isVarArg = parser.parseOptionalKeyword("vararg").succeeded();
+  if (isVarArg)
+    parser.parseOptionalAttribute(calleeType, "callee_type", result.attributes);
+
   // Parse the function arguments.
   if (parser.parseOperandList(operands, OpAsmParser::Delimiter::Paren) ||
       parser.parseOptionalAttrDict(result.attributes))
     return failure();
 
   // Parse the trailing type list and resolve the operands.
-  return parseCallTypeAndResolveOperands(parser, result, isDirect, operands);
+  return parseCallTypeAndResolveOperands(parser, result, isDirect, operands,
+                                         isVarArg);
 }
 
 ///===---------------------------------------------------------------------===//
@@ -1456,7 +1481,8 @@ ParseResult InvokeOp::parse(OpAsmParser &parser, OperationState &result) {
     return failure();
 
   // Parse the trailing type list and resolve the function operands.
-  if (parseCallTypeAndResolveOperands(parser, result, isDirect, operands))
+  if (parseCallTypeAndResolveOperands(parser, result, isDirect, operands,
+                                      /*isVarArg*/ false))
     return failure();
 
   result.addSuccessors({normalDest, unwindDest});
