@@ -2379,11 +2379,17 @@ TEST_P(ASTMatchersTest, IsDerivedFromRecursion) {
   // creating the cycles.
   DeclarationMatcher matcher = cxxRecordDecl(isDerivedFrom("X"));
   EXPECT_TRUE(notMatches(R"cpp(
-      template <typename T1, typename T2 = void, typename T3 = void, typename
-      T4 = void> struct M; template <typename T1, typename T2> struct M<T1,
-      T2> {}; template <typename T1, typename T2> struct L : M<T1, T2> {};
-      template <typename T1, typename T2, typename T3, typename T4>
-      struct M : L<M<T1, T2>, M<T3, T4>> {};
+      template <typename T1, typename T2>
+      struct M;
+
+      template <typename T1>
+      struct M<T1, void> {};
+
+      template <typename T1, typename T2>
+      struct L : M<T1, T2> {};
+
+      template <typename T1, typename T2>
+      struct M : L<M<T1, T2>, M<T1, T2>> {};
   )cpp",
                          matcher));
 
