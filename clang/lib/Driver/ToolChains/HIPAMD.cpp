@@ -91,9 +91,7 @@ void AMDGCN::Linker::constructLlvmLinkCommand(Compilation &C,
   // for the extracted archive of bitcode to inputs.
   auto TargetID = Args.getLastArgValue(options::OPT_mcpu_EQ);
   AddStaticDeviceLibsLinking(C, *this, JA, Inputs, Args, LlvmLinkArgs, "amdgcn",
-                             TargetID,
-                             /*IsBitCodeSDL=*/true,
-                             /*PostClangLink=*/false);
+                             TargetID, /*IsBitCodeSDL=*/true);
 
   const char *LlvmLink =
     Args.MakeArgString(getToolChain().GetProgramPath("llvm-link"));
@@ -179,9 +177,7 @@ void AMDGCN::Linker::constructLldCommand(Compilation &C, const JobAction &JA,
   // for the extracted archive of bitcode to inputs.
   auto TargetID = Args.getLastArgValue(options::OPT_mcpu_EQ);
   AddStaticDeviceLibsLinking(C, *this, JA, Inputs, Args, LldArgs, "amdgcn",
-                             TargetID,
-                             /*IsBitCodeSDL=*/true,
-                             /*PostClangLink=*/false);
+                             TargetID, /*IsBitCodeSDL=*/true);
 
   LldArgs.push_back("--no-whole-archive");
 
