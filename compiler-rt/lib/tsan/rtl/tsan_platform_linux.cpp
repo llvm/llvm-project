@@ -209,7 +209,7 @@ static NOINLINE void MapRodata(char* buffer, uptr size) {
 
 void InitializeShadowMemoryPlatform() {
   char buffer[256];  // Keep in a different frame.
-  MapRodata(buffer, ARRAY_SIZE(buffer));
+  MapRodata(buffer, sizeof(buffer));
 }
 
 #endif  // #if !SANITIZER_GO
