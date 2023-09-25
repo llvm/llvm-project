@@ -180,7 +180,7 @@ def process_line(line_chunks, variable_namer):
         else:
             # Otherwise, generate a new variable.
             variable = variable_namer.generate_name(ssa_name)
-            output_line += "%[[" + variable + ":.*]]"
+            output_line += "%[[" + variable + ":" + SSA_RE_STR + "]]"
 
         # Append the non named group.
         output_line += chunk[len(ssa_name) :]
