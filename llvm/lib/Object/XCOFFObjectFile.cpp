@@ -689,6 +689,10 @@ basic_symbol_iterator XCOFFObjectFile::symbol_end() const {
   return basic_symbol_iterator(SymbolRef(SymDRI, this));
 }
 
+XCOFFObjectFile::xcoff_symbol_iterator_range XCOFFObjectFile::symbols() const {
+  return xcoff_symbol_iterator_range(symbol_begin(), symbol_end());
+}
+
 section_iterator XCOFFObjectFile::section_begin() const {
   DataRefImpl DRI;
   DRI.p = getSectionHeaderTableAddress();

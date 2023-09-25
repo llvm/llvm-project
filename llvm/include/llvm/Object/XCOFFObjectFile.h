@@ -15,6 +15,7 @@
 
 #include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/SmallVector.h"
+#include "llvm/ADT/iterator_range.h"
 #include "llvm/BinaryFormat/XCOFF.h"
 #include "llvm/Object/ObjectFile.h"
 #include "llvm/Support/Endian.h"
@@ -22,6 +23,8 @@
 
 namespace llvm {
 namespace object {
+
+class xcoff_symbol_iterator;
 
 struct XCOFFFileHeader32 {
   support::ubig16_t Magic;
@@ -576,6 +579,10 @@ public:
   Expected<uint32_t> getSymbolFlags(DataRefImpl Symb) const override;
   basic_symbol_iterator symbol_begin() const override;
   basic_symbol_iterator symbol_end() const override;
+
+  using xcoff_symbol_iterator_range = iterator_range<xcoff_symbol_iterator>;
+  xcoff_symbol_iterator_range symbols() const;
+
   bool is64Bit() const override;
   Expected<StringRef> getSymbolName(DataRefImpl Symb) const override;
   Expected<uint64_t> getSymbolAddress(DataRefImpl Symb) const override;
@@ -761,7 +768,7 @@ struct XCOFFSymbolEntry64 {
   uint8_t NumberOfAuxEntries;
 };
 
-class XCOFFSymbolRef {
+class XCOFFSymbolRef : public SymbolRef {
 public:
   enum { NAME_IN_STR_TBL_MAGIC = 0x0 };
 
@@ -786,6 +793,11 @@ public:
   uint32_t getValue32() const { return Entry32->Value; }
 
   uint64_t getValue64() const { return Entry64->Value; }
+
+  uint64_t getSize() const {
+    return cast<XCOFFObjectFile>(BasicSymbolRef::getObject())
+        ->getSymbolSize(getRawDataRefImpl());
+  }
 
 #define GETVALUE(X) Entry32 ? Entry32->X : Entry64->X
 
@@ -825,6 +837,21 @@ private:
   const XCOFFObjectFile *OwningObjectPtr;
   const XCOFFSymbolEntry32 *Entry32 = nullptr;
   const XCOFFSymbolEntry64 *Entry64 = nullptr;
+};
+
+class xcoff_symbol_iterator : public symbol_iterator {
+public:
+  xcoff_symbol_iterator(const basic_symbol_iterator &B)
+      : symbol_iterator(SymbolRef(B->getRawDataRefImpl(),
+                                  cast<XCOFFObjectFile>(B->getObject()))) {}
+
+  const XCOFFSymbolRef *operator->() const {
+    return static_cast<const XCOFFSymbolRef *>(symbol_iterator::operator->());
+  }
+
+  const XCOFFSymbolRef &operator*() const {
+    return static_cast<const XCOFFSymbolRef &>(symbol_iterator::operator*());
+  }
 };
 
 class TBVectorExt {
