@@ -1944,7 +1944,6 @@ static bool __kmp_affinity_create_hwloc_map(kmp_i18n_id_t *const msg_id) {
             hw_thread.ids[index + 1] = sub_id;
             index--;
           }
-          prev = memory;
         }
         prev = obj;
       }
@@ -2126,7 +2125,8 @@ static int __kmp_affinity_cmp_apicThreadInfo_phys_id(const void *a,
 class kmp_cache_info_t {
 public:
   struct info_t {
-    unsigned level, mask;
+    unsigned level = 0;
+    unsigned mask = 0;
   };
   kmp_cache_info_t() : depth(0) { get_leaf4_levels(); }
   size_t get_depth() const { return depth; }
@@ -4715,7 +4715,7 @@ static void __kmp_aux_affinity_initialize(kmp_affinity_t &affinity) {
   int depth = __kmp_topology->get_depth();
 
   // Create the table of masks, indexed by thread Id.
-  unsigned numUnique;
+  unsigned numUnique = 0;
   int numAddrs = __kmp_topology->get_num_hw_threads();
   // If OMP_PLACES=cores:<attribute> specified, then attempt
   // to make OS Id mask table using those attributes
