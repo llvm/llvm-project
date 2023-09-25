@@ -104,24 +104,24 @@ auto matchSqrt(const Matcher<clang::Expr> ArgumentMatcher) {
 // Therefore, all top-level matcher set MatchDeclRefExprOrMacro to false
 auto matchFloatValueNear(const double Val,
                          const bool MatchDeclRefExprOrMacro = true) {
-  const auto FloatVal = floatLiteral(near(Val, DiffThreshold));
+  const auto Float = floatLiteral(near(Val, DiffThreshold));
   if (!MatchDeclRefExprOrMacro) {
-    return expr(unless(isMacro()), ignoringImplicit(FloatVal));
+    return expr(unless(isMacro()), ignoringImplicit(Float));
   }
 
   const auto Dref = declRefExpr(to(varDecl(
       anyOf(isConstexpr(), varDecl(hasType(qualType(isConstQualified())))),
-      hasInitializer(FloatVal))));
-  return expr(ignoringImplicit(anyOf(FloatVal, Dref)));
+      hasInitializer(Float))));
+  return expr(ignoringImplicit(anyOf(Float, Dref)));
 }
 
 auto matchValue(const int64_t ValInt) {
-  const auto Int2 = integerLiteral(equals(ValInt));
-  const auto Float2 = matchFloatValueNear(static_cast<double>(ValInt));
+  const auto Int = integerLiteral(equals(ValInt));
+  const auto Float = matchFloatValueNear(static_cast<double>(ValInt));
   const auto Dref = declRefExpr(to(varDecl(
       anyOf(isConstexpr(), varDecl(hasType(qualType(isConstQualified())))),
-      hasInitializer(expr(ignoringImplicit(anyOf(Int2, Float2)))))));
-  return expr(ignoringImplicit(anyOf(Int2, Float2, Dref)));
+      hasInitializer(expr(ignoringImplicit(anyOf(Int, Float)))))));
+  return expr(ignoringImplicit(anyOf(Int, Float, Dref)));
 }
 
 auto match1Div(const Matcher<clang::Expr> Match) {
