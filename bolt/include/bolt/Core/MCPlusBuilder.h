@@ -16,6 +16,7 @@
 
 #include "bolt/Core/MCPlus.h"
 #include "bolt/Core/Relocation.h"
+#include "bolt/Utils/CommandLineOpts.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/BitVector.h"
 #include "llvm/ADT/StringMap.h"
@@ -27,6 +28,7 @@
 #include "llvm/MC/MCInstrAnalysis.h"
 #include "llvm/MC/MCInstrDesc.h"
 #include "llvm/MC/MCInstrInfo.h"
+#include "llvm/MC/MCSymbol.h"
 #include "llvm/Support/Allocator.h"
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/ErrorHandling.h"
@@ -544,6 +546,27 @@ public:
 
   virtual bool isCall(const MCInst &Inst) const {
     return Analysis->isCall(Inst) || isTailCall(Inst);
+  }
+
+  virtual std::optional<StringRef> getCalleeName(const MCInst &Inst) const {
+    assert(isCall(Inst));
+    if (MCPlus::getNumPrimeOperands(Inst) != 1 || !Inst.getOperand(0).isExpr())
+      return {};
+
+    const MCSymbol *CalleeSymbol = getTargetSymbol(Inst);
+    assert(CalleeSymbol != nullptr);
+    return CalleeSymbol->getName();
+  }
+
+  virtual bool isNoReturnCall(const MCInst &Inst) const {
+    if (!isCall(Inst))
+      return false;
+    auto calleeName = getCalleeName(Inst);
+    if (calleeName)
+      for (std::string &Name : opts::AssumeNoReturnFunctions)
+        if (calleeName->equals(Name))
+          return true;
+    return false;
   }
 
   virtual bool isReturn(const MCInst &Inst) const {

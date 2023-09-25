@@ -1852,17 +1852,16 @@ Error InlineMemcpy::runOnFunctions(BinaryContext &BC) {
       for (auto II = BB.begin(); II != BB.end(); ++II) {
         MCInst &Inst = *II;
 
-        if (!BC.MIB->isCall(Inst) || MCPlus::getNumPrimeOperands(Inst) != 1 ||
-            !Inst.getOperand(0).isExpr())
+        if (!BC.MIB->isCall(Inst))
+          continue;
+        std::optional<StringRef> CalleeName = BC.MIB->getCalleeName(Inst);
+        if (!CalleeName)
+          continue;
+        if (*CalleeName != "memcpy" && *CalleeName != "memcpy@PLT" &&
+            *CalleeName != "_memcpy8")
           continue;
 
-        const MCSymbol *CalleeSymbol = BC.MIB->getTargetSymbol(Inst);
-        if (CalleeSymbol->getName() != "memcpy" &&
-            CalleeSymbol->getName() != "memcpy@PLT" &&
-            CalleeSymbol->getName() != "_memcpy8")
-          continue;
-
-        const bool IsMemcpy8 = (CalleeSymbol->getName() == "_memcpy8");
+        const bool IsMemcpy8 = (*CalleeName == "_memcpy8");
         const bool IsTailCall = BC.MIB->isTailCall(Inst);
 
         const InstructionListType NewCode =
@@ -1951,13 +1950,12 @@ Error SpecializeMemcpy1::runOnFunctions(BinaryContext &BC) {
       for (auto II = CurBB->begin(); II != CurBB->end(); ++II) {
         MCInst &Inst = *II;
 
-        if (!BC.MIB->isCall(Inst) || MCPlus::getNumPrimeOperands(Inst) != 1 ||
-            !Inst.getOperand(0).isExpr())
+        if (!BC.MIB->isCall(Inst))
           continue;
-
-        const MCSymbol *CalleeSymbol = BC.MIB->getTargetSymbol(Inst);
-        if (CalleeSymbol->getName() != "memcpy" &&
-            CalleeSymbol->getName() != "memcpy@PLT")
+        std::optional<StringRef> CalleeName = BC.MIB->getCalleeName(Inst);
+        if (!CalleeName)
+          continue;
+        if (*CalleeName != "memcpy" && *CalleeName != "memcpy@PLT")
           continue;
 
         if (BC.MIB->isTailCall(Inst))

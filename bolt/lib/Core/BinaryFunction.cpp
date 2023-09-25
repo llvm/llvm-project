@@ -2155,7 +2155,8 @@ Error BinaryFunction::buildCFG(MCPlusBuilder::AllocatorIdTy AllocatorId) {
       addCFIPlaceholders(Offset, InsertBB);
     }
 
-    const bool IsBlockEnd = MIB->isTerminator(Instr);
+    const bool IsBlockEnd =
+        MIB->isTerminator(Instr) || MIB->isNoReturnCall(Instr);
     IsLastInstrNop = MIB->isNoop(Instr);
     if (!IsLastInstrNop)
       LastInstrOffset = Offset;
@@ -2242,8 +2243,11 @@ Error BinaryFunction::buildCFG(MCPlusBuilder::AllocatorIdTy AllocatorId) {
       //
       // Conditional tail call is a special case since we don't add a taken
       // branch successor for it.
-      IsPrevFT = !MIB->isTerminator(*LastInstr) ||
-                 MIB->getConditionalTailCall(*LastInstr);
+      if (MIB->isNoReturnCall(*LastInstr))
+        IsPrevFT = false;
+      else
+        IsPrevFT = !MIB->isTerminator(*LastInstr) ||
+                   MIB->getConditionalTailCall(*LastInstr);
     } else if (BB->succ_size() == 1) {
       IsPrevFT = MIB->isConditionalBranch(*LastInstr);
     } else {

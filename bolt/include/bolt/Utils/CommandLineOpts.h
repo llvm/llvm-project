@@ -62,6 +62,13 @@ extern llvm::cl::opt<bool> TimeOpts;
 extern llvm::cl::opt<bool> UseOldText;
 extern llvm::cl::opt<bool> UpdateDebugSections;
 
+extern llvm::cl::list<std::string> AssumeNoReturnFunctions;
+extern llvm::cl::opt<std::string> AssumeNoReturnFunctionsFile;
+
+/// Reads names from FunctionNamesFile and adds them to FunctionNames.
+void populateFunctionNames(const llvm::cl::opt<std::string> &FunctionNamesFile,
+                           llvm::cl::list<std::string> &FunctionNames);
+
 // The default verbosity level (0) is pretty terse, level 1 is fairly
 // verbose and usually prints some informational message for every
 // function processed.  Level 2 is for the noisiest of messages and

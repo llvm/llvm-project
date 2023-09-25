@@ -269,6 +269,9 @@ MCPlusBuilder *createMCPlusBuilder(const Triple::ArchType Arch,
                                    const MCInstrInfo *Info,
                                    const MCRegisterInfo *RegInfo,
                                    const MCSubtargetInfo *STI) {
+  opts::populateFunctionNames(opts::AssumeNoReturnFunctionsFile,
+                              opts::AssumeNoReturnFunctions);
+
 #ifdef X86_AVAILABLE
   if (Arch == Triple::x86_64)
     return createX86MCPlusBuilder(Analysis, Info, RegInfo, STI);
@@ -2929,18 +2932,12 @@ void RewriteInstance::handleRelocation(const SectionRef &RelocatedSection,
 
 void RewriteInstance::selectFunctionsToProcess() {
   // Extend the list of functions to process or skip from a file.
-  auto populateFunctionNames = [](cl::opt<std::string> &FunctionNamesFile,
-                                  cl::list<std::string> &FunctionNames) {
-    if (FunctionNamesFile.empty())
-      return;
-    std::ifstream FuncsFile(FunctionNamesFile, std::ios::in);
-    std::string FuncName;
-    while (std::getline(FuncsFile, FuncName))
-      FunctionNames.push_back(FuncName);
-  };
-  populateFunctionNames(opts::FunctionNamesFile, opts::ForceFunctionNames);
-  populateFunctionNames(opts::SkipFunctionNamesFile, opts::SkipFunctionNames);
-  populateFunctionNames(opts::FunctionNamesFileNR, opts::ForceFunctionNamesNR);
+  opts::populateFunctionNames(opts::FunctionNamesFile,
+                              opts::ForceFunctionNames);
+  opts::populateFunctionNames(opts::SkipFunctionNamesFile,
+                              opts::SkipFunctionNames);
+  opts::populateFunctionNames(opts::FunctionNamesFileNR,
+                              opts::ForceFunctionNamesNR);
 
   // Make a set of functions to process to speed up lookups.
   std::unordered_set<std::string> ForceFunctionsNR(
