@@ -101,6 +101,18 @@ Error DXContainer::parsePSVInfo(StringRef Part) {
   return Error::success();
 }
 
+Error DirectX::Signature::initialize(StringRef Part) {
+  dxbc::ProgramSignatureHeader SigHeader;
+  if (Error Err = readStruct(Part, Part.begin(), SigHeader))
+    return Err;
+  size_t Size = sizeof(dxbc::ProgramSignatureElement) * SigHeader.ParamCount;
+  if (Part.size() < Size + SigHeader.FirstParamOffset)
+    return parseFailed("Signature extends beyond the part boundary.");
+  Parameters.Data = Part.substr(SigHeader.FirstParamOffset, Size);
+  StringTable = Part.substr(SigHeader.FirstParamOffset + Size);
+  return Error::success();
+}
+
 Error DXContainer::parsePartOffsets() {
   uint32_t LastOffset =
       sizeof(dxbc::Header) + (Header.PartCount * sizeof(uint32_t));
@@ -152,6 +164,18 @@ Error DXContainer::parsePartOffsets() {
       break;
     case dxbc::PartType::PSV0:
       if (Error Err = parsePSVInfo(PartData))
+        return Err;
+      break;
+    case dxbc::PartType::ISG1:
+      if (Error Err = InputSignature.initialize(PartData))
+        return Err;
+      break;
+    case dxbc::PartType::OSG1:
+      if (Error Err = OutputSignature.initialize(PartData))
+        return Err;
+      break;
+    case dxbc::PartType::PSG1:
+      if (Error Err = PatchConstantSignature.initialize(PartData))
         return Err;
       break;
     case dxbc::PartType::Unknown:
