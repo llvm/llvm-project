@@ -64,7 +64,6 @@ public:
 #  pragma GCC system_header
 #endif
 
-<<<<<<< HEAD
 #if defined(_LIBCPP_ABI_VCRUNTIME)
 #include <vcruntime_typeinfo.h>
 #else
