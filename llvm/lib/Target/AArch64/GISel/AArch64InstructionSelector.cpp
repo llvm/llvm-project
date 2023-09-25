@@ -174,14 +174,14 @@ private:
                                   MachineIRBuilder &MIRBuilder);
 
   MachineInstr *tryAdvSIMDModImm16(Register Dst, unsigned DstSize, APInt Bits,
-                                   MachineIRBuilder &MIRBuilder, bool inv);
+                                   MachineIRBuilder &MIRBuilder, bool Inv);
 
   MachineInstr *tryAdvSIMDModImm32(Register Dst, unsigned DstSize, APInt Bits,
-                                   MachineIRBuilder &MIRBuilder, bool inv);
+                                   MachineIRBuilder &MIRBuilder, bool Inv);
   MachineInstr *tryAdvSIMDModImm64(Register Dst, unsigned DstSize, APInt Bits,
                                    MachineIRBuilder &MIRBuilder);
   MachineInstr *tryAdvSIMDModImm321s(Register Dst, unsigned DstSize, APInt Bits,
-                                     MachineIRBuilder &MIRBuilder, bool inv);
+                                     MachineIRBuilder &MIRBuilder, bool Inv);
   MachineInstr *tryAdvSIMDModImmFP(Register Dst, unsigned DstSize, APInt Bits,
                                    MachineIRBuilder &MIRBuilder);
 
@@ -5449,7 +5449,7 @@ bool AArch64InstructionSelector::selectInsertElt(MachineInstr &I,
 }
 
 MachineInstr *AArch64InstructionSelector::tryAdvSIMDModImm8(
-    Register Dst, unsigned DstSize, APInt Bits, MachineIRBuilder &builder) {
+    Register Dst, unsigned DstSize, APInt Bits, MachineIRBuilder &Builder) {
   unsigned int Op;
   if (DstSize == 128) {
     if (Bits.getHiBits(64) != Bits.getLoBits(64))
@@ -5459,11 +5459,11 @@ MachineInstr *AArch64InstructionSelector::tryAdvSIMDModImm8(
     Op = AArch64::MOVIv8b_ns;
   }
 
-  uint64_t val = Bits.zextOrTrunc(64).getZExtValue();
+  uint64_t Val = Bits.zextOrTrunc(64).getZExtValue();
 
-  if (AArch64_AM::isAdvSIMDModImmType9(val)) {
-    val = AArch64_AM::encodeAdvSIMDModImmType9(val);
-    auto Mov = builder.buildInstr(Op, {Dst}, {}).addImm(val);
+  if (AArch64_AM::isAdvSIMDModImmType9(Val)) {
+    Val = AArch64_AM::encodeAdvSIMDModImmType9(Val);
+    auto Mov = Builder.buildInstr(Op, {Dst}, {}).addImm(Val);
     constrainSelectedInstRegOperands(*Mov, TII, TRI, RBI);
     return &*Mov;
   }
@@ -5471,80 +5471,73 @@ MachineInstr *AArch64InstructionSelector::tryAdvSIMDModImm8(
 }
 
 MachineInstr *AArch64InstructionSelector::tryAdvSIMDModImm16(
-    Register Dst, unsigned DstSize, APInt Bits, MachineIRBuilder &builder,
-    bool inv) {
+    Register Dst, unsigned DstSize, APInt Bits, MachineIRBuilder &Builder,
+    bool Inv) {
 
   unsigned int Op;
   if (DstSize == 128) {
     if (Bits.getHiBits(64) != Bits.getLoBits(64))
       return nullptr;
-    Op = inv ? AArch64::MVNIv8i16 : AArch64::MOVIv8i16;
+    Op = Inv ? AArch64::MVNIv8i16 : AArch64::MOVIv8i16;
   } else {
-    Op = inv ? AArch64::MVNIv4i16 : AArch64::MOVIv4i16;
+    Op = Inv ? AArch64::MVNIv4i16 : AArch64::MOVIv4i16;
   }
 
-  uint64_t val = Bits.zextOrTrunc(64).getZExtValue();
-
-  bool isAdvSIMDModImm = false;
+  uint64_t Val = Bits.zextOrTrunc(64).getZExtValue();
   uint64_t Shift;
 
-  if ((isAdvSIMDModImm = AArch64_AM::isAdvSIMDModImmType5(val))) {
-    val = AArch64_AM::encodeAdvSIMDModImmType5(val);
+  if (AArch64_AM::isAdvSIMDModImmType5(Val)) {
+    Val = AArch64_AM::encodeAdvSIMDModImmType5(Val);
     Shift = 0;
-  } else if ((isAdvSIMDModImm = AArch64_AM::isAdvSIMDModImmType6(val))) {
-    val = AArch64_AM::encodeAdvSIMDModImmType6(val);
+  } else if (AArch64_AM::isAdvSIMDModImmType6(Val)) {
+    Val = AArch64_AM::encodeAdvSIMDModImmType6(Val);
     Shift = 8;
-  }
+  } else
+    return nullptr;
 
-  if (isAdvSIMDModImm) {
-    auto Mov = builder.buildInstr(Op, {Dst}, {}).addImm(val).addImm(Shift);
-    constrainSelectedInstRegOperands(*Mov, TII, TRI, RBI);
-    return &*Mov;
-  }
-  return nullptr;
+  auto Mov = Builder.buildInstr(Op, {Dst}, {}).addImm(Val).addImm(Shift);
+  constrainSelectedInstRegOperands(*Mov, TII, TRI, RBI);
+  return &*Mov;
 }
 
 MachineInstr *AArch64InstructionSelector::tryAdvSIMDModImm32(
-    Register Dst, unsigned DstSize, APInt Bits, MachineIRBuilder &builder,
-    bool inv) {
+    Register Dst, unsigned DstSize, APInt Bits, MachineIRBuilder &Builder,
+    bool Inv) {
 
   unsigned int Op;
   if (DstSize == 128) {
     if (Bits.getHiBits(64) != Bits.getLoBits(64))
       return nullptr;
-    Op = inv ? AArch64::MVNIv4i32 : AArch64::MOVIv4i32;
+    Op = Inv ? AArch64::MVNIv4i32 : AArch64::MOVIv4i32;
   } else {
-    Op = inv ? AArch64::MVNIv2i32 : AArch64::MOVIv2i32;
+    Op = Inv ? AArch64::MVNIv2i32 : AArch64::MOVIv2i32;
   }
 
-  uint64_t val = Bits.zextOrTrunc(64).getZExtValue();
-  bool isAdvSIMDModImm = false;
+  uint64_t Val = Bits.zextOrTrunc(64).getZExtValue();
   uint64_t Shift;
 
-  if ((isAdvSIMDModImm = AArch64_AM::isAdvSIMDModImmType1(val))) {
-    val = AArch64_AM::encodeAdvSIMDModImmType1(val);
+  if ((AArch64_AM::isAdvSIMDModImmType1(Val))) {
+    Val = AArch64_AM::encodeAdvSIMDModImmType1(Val);
     Shift = 0;
-  } else if ((isAdvSIMDModImm = AArch64_AM::isAdvSIMDModImmType2(val))) {
-    val = AArch64_AM::encodeAdvSIMDModImmType2(val);
+  } else if ((AArch64_AM::isAdvSIMDModImmType2(Val))) {
+    Val = AArch64_AM::encodeAdvSIMDModImmType2(Val);
     Shift = 8;
-  } else if ((isAdvSIMDModImm = AArch64_AM::isAdvSIMDModImmType3(val))) {
-    val = AArch64_AM::encodeAdvSIMDModImmType3(val);
+  } else if ((AArch64_AM::isAdvSIMDModImmType3(Val))) {
+    Val = AArch64_AM::encodeAdvSIMDModImmType3(Val);
     Shift = 16;
-  } else if ((isAdvSIMDModImm = AArch64_AM::isAdvSIMDModImmType4(val))) {
-    val = AArch64_AM::encodeAdvSIMDModImmType4(val);
+  } else if ((AArch64_AM::isAdvSIMDModImmType4(Val))) {
+    Val = AArch64_AM::encodeAdvSIMDModImmType4(Val);
     Shift = 24;
-  }
+  } else
+    return nullptr;
 
-  if (isAdvSIMDModImm) {
-    auto Mov = builder.buildInstr(Op, {Dst}, {}).addImm(val).addImm(Shift);
-    constrainSelectedInstRegOperands(*Mov, TII, TRI, RBI);
-    return &*Mov;
-  }
-  return nullptr;
+  auto Mov = Builder.buildInstr(Op, {Dst}, {}).addImm(Val).addImm(Shift);
+  constrainSelectedInstRegOperands(*Mov, TII, TRI, RBI);
+  return &*Mov;
 }
 
 MachineInstr *AArch64InstructionSelector::tryAdvSIMDModImm64(
-    Register Dst, unsigned DstSize, APInt Bits, MachineIRBuilder &builder) {
+    Register Dst, unsigned DstSize, APInt Bits, MachineIRBuilder &Builder) {
 
   unsigned int Op;
   if (DstSize == 128) {
@@ -5555,10 +5548,10 @@ MachineInstr *AArch64InstructionSelector::tryAdvSIMDModImm64(
     Op = AArch64::MOVID;
   }
 
-  uint64_t val = Bits.zextOrTrunc(64).getZExtValue();
-  if (AArch64_AM::isAdvSIMDModImmType10(val)) {
-    val = AArch64_AM::encodeAdvSIMDModImmType10(val);
-    auto Mov = builder.buildInstr(Op, {Dst}, {}).addImm(val);
+  uint64_t Val = Bits.zextOrTrunc(64).getZExtValue();
+  if (AArch64_AM::isAdvSIMDModImmType10(Val)) {
+    Val = AArch64_AM::encodeAdvSIMDModImmType10(Val);
+    auto Mov = Builder.buildInstr(Op, {Dst}, {}).addImm(Val);
     constrainSelectedInstRegOperands(*Mov, TII, TRI, RBI);
     return &*Mov;
   }
@@ -5566,68 +5559,62 @@ MachineInstr *AArch64InstructionSelector::tryAdvSIMDModImm64(
 }
 
 MachineInstr *AArch64InstructionSelector::tryAdvSIMDModImm321s(
-    Register Dst, unsigned DstSize, APInt Bits, MachineIRBuilder &builder,
-    bool inv) {
+    Register Dst, unsigned DstSize, APInt Bits, MachineIRBuilder &Builder,
+    bool Inv) {
 
   unsigned int Op;
   if (DstSize == 128) {
     if (Bits.getHiBits(64) != Bits.getLoBits(64))
       return nullptr;
-    Op = inv ? AArch64::MVNIv4s_msl : AArch64::MOVIv4s_msl;
+    Op = Inv ? AArch64::MVNIv4s_msl : AArch64::MOVIv4s_msl;
   } else {
-    Op = inv ? AArch64::MVNIv2s_msl : AArch64::MOVIv2s_msl;
+    Op = Inv ? AArch64::MVNIv2s_msl : AArch64::MOVIv2s_msl;
   }
 
-  uint64_t val = Bits.zextOrTrunc(64).getZExtValue();
-  bool isAdvSIMDModImm = false;
+  uint64_t Val = Bits.zextOrTrunc(64).getZExtValue();
   uint64_t Shift;
 
-  if ((isAdvSIMDModImm = AArch64_AM::isAdvSIMDModImmType7(val))) {
-    val = AArch64_AM::encodeAdvSIMDModImmType7(val);
+  if (AArch64_AM::isAdvSIMDModImmType7(Val)) {
+    Val = AArch64_AM::encodeAdvSIMDModImmType7(Val);
     Shift = 264;
-  } else if ((isAdvSIMDModImm = AArch64_AM::isAdvSIMDModImmType8(val))) {
-    val = AArch64_AM::encodeAdvSIMDModImmType8(val);
+  } else if (AArch64_AM::isAdvSIMDModImmType8(Val)) {
+    Val = AArch64_AM::encodeAdvSIMDModImmType8(Val);
     Shift = 272;
-  }
-  if (isAdvSIMDModImm) {
-    auto Mov = builder.buildInstr(Op, {Dst}, {}).addImm(val).addImm(Shift);
-    constrainSelectedInstRegOperands(*Mov, TII, TRI, RBI);
-    return &*Mov;
-  }
-  return nullptr;
+  } else
+    return nullptr;
+
+  auto Mov = Builder.buildInstr(Op, {Dst}, {}).addImm(Val).addImm(Shift);
+  constrainSelectedInstRegOperands(*Mov, TII, TRI, RBI);
+  return &*Mov;
 }
 
 MachineInstr *AArch64InstructionSelector::tryAdvSIMDModImmFP(
-    Register Dst, unsigned DstSize, APInt Bits, MachineIRBuilder &builder) {
+    Register Dst, unsigned DstSize, APInt Bits, MachineIRBuilder &Builder) {
 
   unsigned int Op;
-  bool isWide = false;
+  bool IsWide = false;
   if (DstSize == 128) {
     if (Bits.getHiBits(64) != Bits.getLoBits(64))
       return nullptr;
     // Need to deal with 4f32
     Op = AArch64::FMOVv2f64_ns;
-    isWide = true;
+    IsWide = true;
   } else {
     Op = AArch64::FMOVv2f32_ns;
   }
 
-  uint64_t val = Bits.zextOrTrunc(64).getZExtValue();
-  bool isAdvSIMDModImm = false;
+  uint64_t Val = Bits.zextOrTrunc(64).getZExtValue();
 
-  if ((isAdvSIMDModImm = AArch64_AM::isAdvSIMDModImmType11(val))) {
-    val = AArch64_AM::encodeAdvSIMDModImmType7(val);
-  } else if (isWide &&
-             (isAdvSIMDModImm = AArch64_AM::isAdvSIMDModImmType12(val))) {
-    val = AArch64_AM::encodeAdvSIMDModImmType12(val);
-  }
+  if (AArch64_AM::isAdvSIMDModImmType11(Val)) {
+    Val = AArch64_AM::encodeAdvSIMDModImmType7(Val);
+  } else if (IsWide && AArch64_AM::isAdvSIMDModImmType12(Val)) {
+    Val = AArch64_AM::encodeAdvSIMDModImmType12(Val);
+  } else
+    return nullptr;
 
-  if (isAdvSIMDModImm) {
-    auto Mov = builder.buildInstr(Op, {Dst}, {}).addImm(val);
-    constrainSelectedInstRegOperands(*Mov, TII, TRI, RBI);
-    return &*Mov;
-  }
-  return nullptr;
+  auto Mov = Builder.buildInstr(Op, {Dst}, {}).addImm(Val);
+  constrainSelectedInstRegOperands(*Mov, TII, TRI, RBI);
+  return &*Mov;
 }
 
 MachineInstr *
@@ -5659,22 +5646,22 @@ AArch64InstructionSelector::emitConstantVector(Register Dst, Constant *CV,
   if (CV->getSplatValue()) {
     APInt DefBits = APInt::getSplat(DstSize, CV->getUniqueInteger());
     MachineInstr *NewOp;
-    bool inv = false;
+    bool Inv = false;
     if ((NewOp = tryAdvSIMDModImm64(Dst, DstSize, DefBits, MIRBuilder)) ||
-        (NewOp = tryAdvSIMDModImm32(Dst, DstSize, DefBits, MIRBuilder, inv)) ||
+        (NewOp = tryAdvSIMDModImm32(Dst, DstSize, DefBits, MIRBuilder, Inv)) ||
         (NewOp =
-             tryAdvSIMDModImm321s(Dst, DstSize, DefBits, MIRBuilder, inv)) ||
-        (NewOp = tryAdvSIMDModImm16(Dst, DstSize, DefBits, MIRBuilder, inv)) ||
+             tryAdvSIMDModImm321s(Dst, DstSize, DefBits, MIRBuilder, Inv)) ||
+        (NewOp = tryAdvSIMDModImm16(Dst, DstSize, DefBits, MIRBuilder, Inv)) ||
         (NewOp = tryAdvSIMDModImm8(Dst, DstSize, DefBits, MIRBuilder)) ||
         (NewOp = tryAdvSIMDModImmFP(Dst, DstSize, DefBits, MIRBuilder)))
       return NewOp;
 
     DefBits = ~DefBits;
-    inv = true;
-    if ((NewOp = tryAdvSIMDModImm32(Dst, DstSize, DefBits, MIRBuilder, inv)) ||
+    Inv = true;
+    if ((NewOp = tryAdvSIMDModImm32(Dst, DstSize, DefBits, MIRBuilder, Inv)) ||
         (NewOp =
-             tryAdvSIMDModImm321s(Dst, DstSize, DefBits, MIRBuilder, inv)) ||
-        (NewOp = tryAdvSIMDModImm16(Dst, DstSize, DefBits, MIRBuilder, inv)))
+             tryAdvSIMDModImm321s(Dst, DstSize, DefBits, MIRBuilder, Inv)) ||
+        (NewOp = tryAdvSIMDModImm16(Dst, DstSize, DefBits, MIRBuilder, Inv)))
       return NewOp;
   }
 
