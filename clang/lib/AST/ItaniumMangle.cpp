@@ -3165,6 +3165,15 @@ void CXXNameMangler::mangleType(const BuiltinType *T) {
   case BuiltinType::NullPtr:
     Out << "Dn";
     break;
+  case BuiltinType::DecimalFloat32:
+    Out << "Df";
+    break;
+  case BuiltinType::DecimalFloat64:
+    Out << "Dd";
+    break;
+  case BuiltinType::DecimalFloat128:
+    Out << "De";
+    break;
 
 #define BUILTIN_TYPE(Id, SingletonId)
 #define PLACEHOLDER_TYPE(Id, SingletonId) \

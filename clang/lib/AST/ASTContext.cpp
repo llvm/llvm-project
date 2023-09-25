@@ -1311,6 +1311,11 @@ void ASTContext::InitBuiltinTypes(const TargetInfo &Target,
   InitBuiltinType(SatUnsignedFractTy,      BuiltinType::SatUFract);
   InitBuiltinType(SatUnsignedLongFractTy,  BuiltinType::SatULongFract);
 
+  // ISO/IEC TS 18661-2, ISO/IEC TR 24733, and C23 decimal floating-point.
+  InitBuiltinType(DecimalFloat32Ty, BuiltinType::DecimalFloat32);
+  InitBuiltinType(DecimalFloat64Ty, BuiltinType::DecimalFloat64);
+  InitBuiltinType(DecimalFloat128Ty, BuiltinType::DecimalFloat128);
+
   // GNU extension, 128-bit integers.
   InitBuiltinType(Int128Ty,            BuiltinType::Int128);
   InitBuiltinType(UnsignedInt128Ty,    BuiltinType::UInt128);
@@ -2113,6 +2118,18 @@ TypeInfo ASTContext::getTypeInfoImpl(const Type *T) const {
     case BuiltinType::SatULongFract:
       Width = Target->getLongFractWidth();
       Align = Target->getLongFractAlign();
+      break;
+    case BuiltinType::DecimalFloat32:
+      Width = Target->getDecimalFloat32Width();
+      Align = Target->getDecimalFloat32Align();
+      break;
+    case BuiltinType::DecimalFloat64:
+      Width = Target->getDecimalFloat64Width();
+      Align = Target->getDecimalFloat64Align();
+      break;
+    case BuiltinType::DecimalFloat128:
+      Width = Target->getDecimalFloat128Width();
+      Align = Target->getDecimalFloat128Align();
       break;
     case BuiltinType::BFloat16:
       if (Target->hasBFloat16Type()) {
@@ -8066,6 +8083,9 @@ static char getObjCEncodingForPrimitiveType(const ASTContext *C,
     case BuiltinType::SatUShortFract:
     case BuiltinType::SatUFract:
     case BuiltinType::SatULongFract:
+    case BuiltinType::DecimalFloat32:
+    case BuiltinType::DecimalFloat64:
+    case BuiltinType::DecimalFloat128:
       // FIXME: potentially need @encodes for these!
       return ' ';
 

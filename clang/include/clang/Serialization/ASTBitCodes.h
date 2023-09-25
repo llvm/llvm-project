@@ -1079,6 +1079,15 @@ enum PredefinedTypeIDs {
   /// \brief The '__ibm128' type
   PREDEF_TYPE_IBM128_ID = 74,
 
+  /// \brief The '_Decimal32' type
+  PREDEF_TYPE_DECIMAL32_ID = 75,
+
+  /// \brief The '_Decimal64' type
+  PREDEF_TYPE_DECIMAL64_ID = 76,
+
+  /// \brief The '_Decimal128' type
+  PREDEF_TYPE_DECIMAL128_ID = 77,
+
 /// OpenCL image types with auto numeration
 #define IMAGE_TYPE(ImgType, Id, SingletonId, Access, Suffix)                   \
   PREDEF_TYPE_##Id##_ID,

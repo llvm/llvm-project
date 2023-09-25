@@ -11416,6 +11416,8 @@ EvaluateBuiltinClassifyType(QualType T, const LangOptions &LangOpts) {
     case BuiltinType::ID: return GCCTypeClass::Integer;
 #define FLOATING_TYPE(ID, SINGLETON_ID) \
     case BuiltinType::ID: return GCCTypeClass::RealFloat;
+#define DECIMAL_FLOATING_TYPE(ID, SINGLETON_ID) \
+    case BuiltinType::ID: return GCCTypeClass::RealFloat;
 #define PLACEHOLDER_TYPE(ID, SINGLETON_ID) \
     case BuiltinType::ID: break;
 #include "clang/AST/BuiltinTypes.def"

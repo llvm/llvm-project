@@ -7276,6 +7276,15 @@ QualType ASTReader::GetType(TypeID ID) {
     case PREDEF_TYPE_OMP_ITERATOR:
       T = Context.OMPIteratorTy;
       break;
+    case PREDEF_TYPE_DECIMAL32_ID:
+      T = Context.DecimalFloat32Ty;
+      break;
+    case PREDEF_TYPE_DECIMAL64_ID:
+      T = Context.DecimalFloat64Ty;
+      break;
+    case PREDEF_TYPE_DECIMAL128_ID:
+      T = Context.DecimalFloat128Ty;
+      break;
 #define SVE_TYPE(Name, Id, SingletonId) \
     case PREDEF_TYPE_##Id##_ID: \
       T = Context.SingletonId; \

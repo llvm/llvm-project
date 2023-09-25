@@ -75,6 +75,11 @@ TargetInfo::TargetInfo(const llvm::Triple &T) : Triple(T) {
   LongLongWidth = LongLongAlign = 64;
   Int128Align = 128;
 
+  // Decimal floating-point default bit widths and alignment.
+  DecimalFloat32Width = DecimalFloat32Align = 32;
+  DecimalFloat64Width = DecimalFloat64Align = 64;
+  DecimalFloat128Width = DecimalFloat128Align = 128;
+
   // Fixed point default bit widths
   ShortAccumWidth = ShortAccumAlign = 16;
   AccumWidth = AccumAlign = 32;

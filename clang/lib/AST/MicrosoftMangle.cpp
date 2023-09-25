@@ -2408,6 +2408,9 @@ void MicrosoftCXXNameMangler::mangleType(const BuiltinType *T, Qualifiers,
   //                 ::= _U # char32_t
   //                 ::= _W # wchar_t
   //                 ::= _Z # __float80 (Digital Mars)
+  //                 ::= FIXME # _Decimal32
+  //                 ::= FIXME # _Decimal64
+  //                 ::= FIXME # _Decimal128
   switch (T->getKind()) {
   case BuiltinType::Void:
     Out << 'X';
@@ -2588,6 +2591,9 @@ void MicrosoftCXXNameMangler::mangleType(const BuiltinType *T, Qualifiers,
   case BuiltinType::SatUFract:
   case BuiltinType::SatULongFract:
   case BuiltinType::Ibm128:
+  case BuiltinType::DecimalFloat32:
+  case BuiltinType::DecimalFloat64:
+  case BuiltinType::DecimalFloat128:
   case BuiltinType::Float128: {
     DiagnosticsEngine &Diags = Context.getDiags();
     unsigned DiagID = Diags.getCustomDiagID(

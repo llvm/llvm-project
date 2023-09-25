@@ -1272,6 +1272,20 @@ TSTToUnaryTransformType(DeclSpec::TST SwitchTST) {
   }
 }
 
+static CanQualType
+TSTToDecimalFloatType(ASTContext &Context, DeclSpec::TST SwitchTST) {
+  switch (SwitchTST) {
+  case DeclSpec::TST_decimal32:
+    return Context.DecimalFloat32Ty;
+  case DeclSpec::TST_decimal64:
+    return Context.DecimalFloat64Ty;
+  case DeclSpec::TST_decimal128:
+    return Context.DecimalFloat128Ty;
+  default:
+    llvm_unreachable("expected a decimal floating point type specifier type");
+  }
+}
+
 /// Convert the specified declspec to the appropriate type
 /// object.
 /// \param state Specifies the declarator containing the declaration specifier
@@ -1575,7 +1589,7 @@ static QualType ConvertDeclSpecToType(TypeProcessingState &state) {
   case DeclSpec::TST_decimal64:    // _Decimal64
   case DeclSpec::TST_decimal128:   // _Decimal128
     S.Diag(DS.getTypeSpecTypeLoc(), diag::err_decimal_unsupported);
-    Result = Context.IntTy;
+    Result = TSTToDecimalFloatType(Context, DS.getTypeSpecType());
     declarator.setInvalidType(true);
     break;
   case DeclSpec::TST_class:

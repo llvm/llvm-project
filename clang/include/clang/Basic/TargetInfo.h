@@ -95,6 +95,11 @@ struct TransferrableTargetInfo {
   unsigned char LongLongWidth, LongLongAlign;
   unsigned char Int128Align;
 
+  // Decimal floating-point bit widths and alignment.
+  unsigned char DecimalFloat32Width, DecimalFloat32Align;
+  unsigned char DecimalFloat64Width, DecimalFloat64Align;
+  unsigned char DecimalFloat128Width, DecimalFloat128Align;
+
   // Fixed point bit widths
   unsigned char ShortAccumWidth, ShortAccumAlign;
   unsigned char AccumWidth, AccumAlign;
@@ -499,6 +504,18 @@ public:
 
   /// getInt128Align() - Returns the alignment of Int128.
   unsigned getInt128Align() const { return Int128Align; }
+
+  /// DecimalFloat32Width/Align - Return the size/align of '_Decimal32'.
+  unsigned getDecimalFloat32Width() const { return DecimalFloat32Width; }
+  unsigned getDecimalFloat32Align() const { return DecimalFloat32Align; }
+
+  /// DecimalFloat64Width/Align - Return the size/align of '_Decimal64'.
+  unsigned getDecimalFloat64Width() const { return DecimalFloat64Width; }
+  unsigned getDecimalFloat64Align() const { return DecimalFloat64Align; }
+
+  /// DecimalFloat128Width/Align - Return the size/align of '_Decimal128'.
+  unsigned getDecimalFloat128Width() const { return DecimalFloat128Width; }
+  unsigned getDecimalFloat128Align() const { return DecimalFloat128Align; }
 
   /// getShortAccumWidth/Align - Return the size of 'signed short _Accum' and
   /// 'unsigned short _Accum' for this target, in bits.

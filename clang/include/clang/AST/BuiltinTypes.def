@@ -44,6 +44,10 @@
 #define FLOATING_TYPE(Id, SingletonId) BUILTIN_TYPE(Id, SingletonId)
 #endif
 
+#ifndef DECIMAL_FLOATING_TYPE
+#define DECIMAL_FLOATING_TYPE(Id, SingletonId) BUILTIN_TYPE(Id, SingletonId)
+#endif
+
 #ifndef PLACEHOLDER_TYPE
 #define PLACEHOLDER_TYPE(Id, SingletonId) BUILTIN_TYPE(Id, SingletonId)
 #endif
@@ -221,6 +225,18 @@ FLOATING_TYPE(Float128, Float128Ty)
 // '__ibm128'
 FLOATING_TYPE(Ibm128, Ibm128Ty)
 
+//===- Decimal floating point types ---------------------------------------===//
+// ISO/IEC TS 18661-2, ISO/IEC TR 24733, and C23 decimal floating-point.
+
+// '_Decimal32'
+DECIMAL_FLOATING_TYPE(DecimalFloat32, DecimalFloat32Ty)
+
+// '_Decimal64'
+DECIMAL_FLOATING_TYPE(DecimalFloat64, DecimalFloat64Ty)
+
+// '_Decimal128'
+DECIMAL_FLOATING_TYPE(DecimalFloat128, DecimalFloat128Ty)
+
 //===- Language-specific types --------------------------------------------===//
 
 // This is the type of C++0x 'nullptr'.
@@ -336,6 +352,7 @@ LAST_BUILTIN_TYPE(OMPIterator)
 #undef SHARED_SINGLETON_TYPE
 #undef PLACEHOLDER_TYPE
 #undef FLOATING_TYPE
+#undef DECIMAL_FLOATING_TYPE
 #undef SIGNED_TYPE
 #undef UNSIGNED_TYPE
 #undef BUILTIN_TYPE

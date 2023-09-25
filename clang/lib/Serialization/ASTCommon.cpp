@@ -273,6 +273,15 @@ serialization::TypeIdxFromBuiltin(const BuiltinType *BT) {
   case BuiltinType::BFloat16:
     ID = PREDEF_TYPE_BFLOAT16_ID;
     break;
+  case BuiltinType::DecimalFloat32:
+    ID = PREDEF_TYPE_DECIMAL32_ID;
+    break;
+  case BuiltinType::DecimalFloat64:
+    ID = PREDEF_TYPE_DECIMAL64_ID;
+    break;
+  case BuiltinType::DecimalFloat128:
+    ID = PREDEF_TYPE_DECIMAL128_ID;
+    break;
   }
 
   return TypeIdx(ID);

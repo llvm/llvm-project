@@ -783,6 +783,9 @@ bool PrintfSpecifier::fixType(QualType QT, const LangOptions &LangOpt,
   case BuiltinType::SatUShortFract:
   case BuiltinType::SatUFract:
   case BuiltinType::SatULongFract:
+  case BuiltinType::DecimalFloat32:
+  case BuiltinType::DecimalFloat64:
+  case BuiltinType::DecimalFloat128:
     // Various types which are non-trivial to correct.
     return false;
 
@@ -805,6 +808,7 @@ bool PrintfSpecifier::fixType(QualType QT, const LangOptions &LangOpt,
 #define SIGNED_TYPE(Id, SingletonId)
 #define UNSIGNED_TYPE(Id, SingletonId)
 #define FLOATING_TYPE(Id, SingletonId)
+#define DECIMAL_FLOATING_TYPE(Id, SingletonId)
 #define BUILTIN_TYPE(Id, SingletonId) \
   case BuiltinType::Id:
 #include "clang/AST/BuiltinTypes.def"

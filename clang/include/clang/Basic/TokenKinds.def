@@ -427,10 +427,12 @@ KEYWORD(_Accum                      , KEYNOCXX)
 KEYWORD(_Fract                      , KEYNOCXX)
 KEYWORD(_Sat                        , KEYNOCXX)
 
-// GNU Extensions (in impl-reserved namespace)
+// ISO/IEC TS 18661-2, ISO/IEC TR 24733, and C23 decimal floating-point.
 KEYWORD(_Decimal32                  , KEYALL)
 KEYWORD(_Decimal64                  , KEYALL)
 KEYWORD(_Decimal128                 , KEYALL)
+
+// GNU Extensions (in impl-reserved namespace)
 KEYWORD(__null                      , KEYCXX)
 // __alignof returns the preferred alignment of a type, the alignment
 // clang will attempt to give an object of the type if allowed by ABI.

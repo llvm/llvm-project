@@ -25,6 +25,7 @@
 #include "llvm/IR/DataLayout.h"
 #include "llvm/IR/DerivedTypes.h"
 #include "llvm/IR/Module.h"
+#include "llvm/Support/Error.h"
 
 using namespace clang;
 using namespace CodeGen;
@@ -415,6 +416,13 @@ llvm::Type *CodeGenTypes::ConvertType(QualType T) {
       ResultType = getTypeForFormat(getLLVMContext(),
                                     Context.getFloatTypeSemantics(T),
                                     /* UseNativeHalf = */ false);
+      break;
+
+    case BuiltinType::DecimalFloat32:
+    case BuiltinType::DecimalFloat64:
+    case BuiltinType::DecimalFloat128:
+      llvm::report_fatal_error("LLVM type support for decimal floating point "
+                               "is not yet implemented");
       break;
 
     case BuiltinType::NullPtr:

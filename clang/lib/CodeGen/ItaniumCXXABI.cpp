@@ -3342,6 +3342,9 @@ static bool TypeInfoIsInStandardLibrary(const BuiltinType *Ty) {
     case BuiltinType::Char32:
     case BuiltinType::Int128:
     case BuiltinType::UInt128:
+    case BuiltinType::DecimalFloat32:
+    case BuiltinType::DecimalFloat64:
+    case BuiltinType::DecimalFloat128:
       return true;
 
 #define IMAGE_TYPE(ImgType, Id, SingletonId, Access, Suffix) \

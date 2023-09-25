@@ -803,6 +803,12 @@ void USRGenerator::VisitType(QualType T) {
           Out << "@BT@__bf16"; break;
         case BuiltinType::Ibm128:
           Out << "@BT@__ibm128"; break;
+        case BuiltinType::DecimalFloat32:
+          Out << "@BT@_Decimal32"; break;
+        case BuiltinType::DecimalFloat64:
+          Out << "@BT@_Decimal64"; break;
+        case BuiltinType::DecimalFloat128:
+          Out << "@BT@_Decimal128"; break;
         case BuiltinType::ObjCId:
           Out << 'o'; break;
         case BuiltinType::ObjCClass:

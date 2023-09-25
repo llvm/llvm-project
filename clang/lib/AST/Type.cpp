@@ -3250,6 +3250,12 @@ StringRef BuiltinType::getName(const PrintingPolicy &Policy) const {
     return "__float128";
   case Ibm128:
     return "__ibm128";
+  case DecimalFloat32:
+    return "_Decimal32";
+  case DecimalFloat64:
+    return "_Decimal64";
+  case DecimalFloat128:
+    return "_Decimal128";
   case WChar_S:
   case WChar_U:
     return Policy.MSWChar ? "__wchar_t" : "wchar_t";
@@ -4434,6 +4440,7 @@ bool Type::canHaveNullability(bool ResultIfUnknown) const {
 #define SIGNED_TYPE(Id, SingletonId) case BuiltinType::Id:
 #define UNSIGNED_TYPE(Id, SingletonId) case BuiltinType::Id:
 #define FLOATING_TYPE(Id, SingletonId) case BuiltinType::Id:
+#define DECIMAL_FLOATING_TYPE(Id, SingletonId) case BuiltinType::Id:
 #define BUILTIN_TYPE(Id, SingletonId)
 #include "clang/AST/BuiltinTypes.def"
       return false;

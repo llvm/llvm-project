@@ -1098,6 +1098,8 @@ public:
   CanQualType SatShortFractTy, SatFractTy, SatLongFractTy;
   CanQualType SatUnsignedShortFractTy, SatUnsignedFractTy,
       SatUnsignedLongFractTy;
+  // ISO/IEC TS 18661-2, ISO/IEC TR 24733, and C23 decimal floating-point.
+  CanQualType DecimalFloat32Ty, DecimalFloat64Ty, DecimalFloat128Ty;
   CanQualType HalfTy; // [OpenCL 6.1.1.1], ARM NEON
   CanQualType BFloat16Ty;
   CanQualType Float16Ty; // C11 extension ISO/IEC TS 18661-3
