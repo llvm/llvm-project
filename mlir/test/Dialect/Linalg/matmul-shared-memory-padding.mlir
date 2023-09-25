@@ -46,13 +46,13 @@ transform.sequence failures(propagate) {
       : (!transform.any_op) -> !transform.any_op
   %fill_op = transform.structured.match ops{["linalg.fill"]} in %arg1
       : (!transform.any_op) -> !transform.any_op
-  %forall_op, %tiled_matmul_op = transform.structured.tile_to_forall_op %matmul_op num_threads [] tile_sizes [128, 128](mapping = [#gpu.block<y>, #gpu.block<x>])
+  %tiled_matmul_op, %forall_op = transform.structured.tile_using_forall %matmul_op num_threads [] tile_sizes [128, 128](mapping = [#gpu.block<y>, #gpu.block<x>])
       : (!transform.any_op) -> (!transform.any_op, !transform.any_op)
   %fused_op, %new_containing_op = transform.structured.fuse_into_containing_op %fill_op into %forall_op
       : (!transform.any_op, !transform.any_op) -> (!transform.any_op, !transform.any_op)
 
   // Tile linalg.matmul a second time.
-  %tiled_linalg_op, %loops = transform.structured.tile %tiled_matmul_op[0, 0, 16] : (!transform.any_op) -> (!transform.any_op, !transform.any_op)
+  %tiled_linalg_op, %loops = transform.structured.tile_using_for %tiled_matmul_op[0, 0, 16] : (!transform.any_op) -> (!transform.any_op, !transform.any_op)
 
   // Pad linalg.matmul.
   %padded, %pad, %copy_back = transform.structured.pad %tiled_linalg_op
@@ -163,13 +163,13 @@ transform.sequence failures(propagate) {
       : (!transform.any_op) -> !transform.any_op
   %fill_op = transform.structured.match ops{["linalg.fill"]} in %arg1
       : (!transform.any_op) -> !transform.any_op
-  %forall_op, %tiled_matmul_op = transform.structured.tile_to_forall_op %matmul_op num_threads [] tile_sizes [128, 128](mapping = [#gpu.block<y>, #gpu.block<x>])
+  %tiled_matmul_op, %forall_op = transform.structured.tile_using_forall %matmul_op num_threads [] tile_sizes [128, 128](mapping = [#gpu.block<y>, #gpu.block<x>])
       : (!transform.any_op) -> (!transform.any_op, !transform.any_op)
   %fused_op, %new_containing_op = transform.structured.fuse_into_containing_op %fill_op into %forall_op
       : (!transform.any_op, !transform.any_op) -> (!transform.any_op, !transform.any_op)
 
   // Tile linalg.matmul a second time.
-  %tiled_linalg_op, %loops = transform.structured.tile %tiled_matmul_op[0, 0, 16] : (!transform.any_op) -> (!transform.any_op, !transform.any_op)
+  %tiled_linalg_op, %loops = transform.structured.tile_using_for %tiled_matmul_op[0, 0, 16] : (!transform.any_op) -> (!transform.any_op, !transform.any_op)
 
   // Pad linalg.matmul.
   %padded, %pad, %copy_back = transform.structured.pad %tiled_linalg_op
