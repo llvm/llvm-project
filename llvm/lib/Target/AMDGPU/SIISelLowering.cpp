@@ -148,8 +148,13 @@ SITargetLowering::SITargetLowering(const TargetMachine &TM,
   addRegisterClass(MVT::v16f64, TRI->getVGPRClassForBitWidth(1024));
 
   if (Subtarget->has16BitInsts()) {
-    addRegisterClass(MVT::i16, &AMDGPU::SReg_32RegClass);
-    addRegisterClass(MVT::f16, &AMDGPU::SReg_32RegClass);
+    if (Subtarget->useRealTrue16Insts()) {
+      addRegisterClass(MVT::i16, &AMDGPU::VGPR_16RegClass);
+      addRegisterClass(MVT::f16, &AMDGPU::VGPR_16RegClass);
+    } else {
+      addRegisterClass(MVT::i16, &AMDGPU::SReg_32RegClass);
+      addRegisterClass(MVT::f16, &AMDGPU::SReg_32RegClass);
+    }
 
     // Unless there are also VOP3P operations, not operations are really legal.
     addRegisterClass(MVT::v2i16, &AMDGPU::SReg_32RegClass);
@@ -784,6 +789,7 @@ SITargetLowering::SITargetLowering(const TargetMachine &TM,
                        ISD::AND,
                        ISD::OR,
                        ISD::XOR,
+                       ISD::FSHR,
                        ISD::SINT_TO_FP,
                        ISD::UINT_TO_FP,
                        ISD::FCANONICALIZE,
@@ -10768,6 +10774,30 @@ calculateByteProvider(const SDValue &Op, unsigned Index, unsigned Depth,
     return calculateSrcByte(Op->getOperand(0), StartingIndex, Index);
   }
 
+  case ISD::FSHR: {
+    // fshr(X,Y,Z): (X << (BW - (Z % BW))) | (Y >> (Z % BW))
+    auto ShiftOp = dyn_cast<ConstantSDNode>(Op->getOperand(2));
+    if (!ShiftOp || Op.getValueType().isVector())
+      return std::nullopt;
+
+    uint64_t BitsProvided = Op.getValueSizeInBits();
+    if (BitsProvided % 8 != 0)
+      return std::nullopt;
+
+    uint64_t BitShift = ShiftOp->getAPIntValue().urem(BitsProvided);
+    if (BitShift % 8)
+      return std::nullopt;
+
+    uint64_t ConcatSizeInBytes = BitsProvided / 4;
+    uint64_t ByteShift = BitShift / 8;
+
+    uint64_t NewIndex = (Index + ByteShift) % ConcatSizeInBytes;
+    uint64_t BytesProvided = BitsProvided / 8;
+    SDValue NextOp = Op.getOperand(NewIndex >= BytesProvided ? 0 : 1);
+    NewIndex %= BytesProvided;
+    return calculateByteProvider(NextOp, NewIndex, Depth + 1, StartingIndex);
+  }
+
   case ISD::SRA:
   case ISD::SRL: {
     auto ShiftOp = dyn_cast<ConstantSDNode>(Op->getOperand(1));
@@ -10998,6 +11028,95 @@ static bool hasNon16BitAccesses(uint64_t PermMask, SDValue &Op,
   return !addresses16Bits(Low16) || !addresses16Bits(Hi16);
 }
 
+static SDValue matchPERM(SDNode *N, TargetLowering::DAGCombinerInfo &DCI) {
+  SelectionDAG &DAG = DCI.DAG;
+  EVT VT = N->getValueType(0);
+
+  if (VT != MVT::i32)
+    return SDValue();
+
+  // VT is known to be MVT::i32, so we need to provide 4 bytes.
+  SmallVector<ByteProvider<SDValue>, 8> PermNodes;
+  for (int i = 0; i < 4; i++) {
+    // Find the ByteProvider that provides the ith byte of the result of OR
+    std::optional<ByteProvider<SDValue>> P =
+        calculateByteProvider(SDValue(N, 0), i, 0, /*StartingIndex = */ i);
+    // TODO support constantZero
+    if (!P || P->isConstantZero())
+      return SDValue();
+
+    PermNodes.push_back(*P);
+  }
+  if (PermNodes.size() != 4)
+    return SDValue();
+
+  int FirstSrc = 0;
+  std::optional<int> SecondSrc;
+  uint64_t PermMask = 0x00000000;
+  for (size_t i = 0; i < PermNodes.size(); i++) {
+    auto PermOp = PermNodes[i];
+    // Since the mask is applied to Src1:Src2, Src1 bytes must be offset
+    // by sizeof(Src2) = 4
+    int SrcByteAdjust = 4;
+
+    if (!PermOp.hasSameSrc(PermNodes[FirstSrc])) {
+      if (SecondSrc.has_value())
+        if (!PermOp.hasSameSrc(PermNodes[*SecondSrc]))
+          return SDValue();
+
+      // Set the index of the second distinct Src node
+      SecondSrc = i;
+      assert(!(PermNodes[*SecondSrc].Src->getValueSizeInBits() % 8));
+      SrcByteAdjust = 0;
+    }
+    assert(PermOp.SrcOffset + SrcByteAdjust < 8);
+    assert(!DAG.getDataLayout().isBigEndian());
+    PermMask |= (PermOp.SrcOffset + SrcByteAdjust) << (i * 8);
+  }
+
+  SDValue Op = *PermNodes[FirstSrc].Src;
+  SDValue OtherOp = SecondSrc.has_value() ? *PermNodes[*SecondSrc].Src
+                                          : *PermNodes[FirstSrc].Src;
+
+  // Check that we haven't just recreated the same FSHR node.
+  if (N->getOpcode() == ISD::FSHR &&
+      (N->getOperand(0) == Op || N->getOperand(0) == OtherOp) &&
+      (N->getOperand(1) == Op || N->getOperand(1) == OtherOp))
+    return SDValue();
+
+  // Check that we are not just extracting the bytes in order from an op
+  if (Op == OtherOp && Op.getValueSizeInBits() == 32) {
+    int Low16 = PermMask & 0xffff;
+    int Hi16 = (PermMask & 0xffff0000) >> 16;
+
+    bool WellFormedLow = (Low16 == 0x0504) || (Low16 == 0x0100);
+    bool WellFormedHi = (Hi16 == 0x0706) || (Hi16 == 0x0302);
+
+    // The perm op would really just produce Op. So combine into Op
+    if (WellFormedLow && WellFormedHi)
+      return DAG.getBitcast(MVT::getIntegerVT(32), Op);
+  }
+
+  if (hasNon16BitAccesses(PermMask, Op, OtherOp)) {
+    SDLoc DL(N);
+    assert(Op.getValueType().isByteSized() &&
+           OtherOp.getValueType().isByteSized());
+
+    // If the ultimate src is less than 32 bits, then we will only be
+    // using bytes 0: Op.getValueSizeInBytes() - 1 in the or.
+    // CalculateByteProvider would not have returned Op as source if we
+    // used a byte that is outside its ValueType. Thus, we are free to
+    // ANY_EXTEND as the extended bits are dont-cares.
+    Op = DAG.getBitcastedAnyExtOrTrunc(Op, DL, MVT::i32);
+    OtherOp = DAG.getBitcastedAnyExtOrTrunc(OtherOp, DL, MVT::i32);
+
+    return DAG.getNode(AMDGPUISD::PERM, DL, MVT::i32, Op, OtherOp,
+                       DAG.getConstant(PermMask, DL, MVT::i32));
+  }
+
+  return SDValue();
+}
+
 SDValue SITargetLowering::performOrCombine(SDNode *N,
                                            DAGCombinerInfo &DCI) const {
   SelectionDAG &DAG = DCI.DAG;
@@ -11111,80 +11230,8 @@ SDValue SITargetLowering::performOrCombine(SDNode *N,
       }
     }
     if (LHSMask == ~0u || RHSMask == ~0u) {
-      SmallVector<ByteProvider<SDValue>, 8> PermNodes;
-
-      // VT is known to be MVT::i32, so we need to provide 4 bytes.
-      assert(VT == MVT::i32);
-      for (int i = 0; i < 4; i++) {
-        // Find the ByteProvider that provides the ith byte of the result of OR
-        std::optional<ByteProvider<SDValue>> P =
-            calculateByteProvider(SDValue(N, 0), i, 0, /*StartingIndex = */ i);
-        // TODO support constantZero
-        if (!P || P->isConstantZero())
-          return SDValue();
-
-        PermNodes.push_back(*P);
-      }
-      if (PermNodes.size() != 4)
-        return SDValue();
-
-      int FirstSrc = 0;
-      std::optional<int> SecondSrc;
-      uint64_t PermMask = 0x00000000;
-      for (size_t i = 0; i < PermNodes.size(); i++) {
-        auto PermOp = PermNodes[i];
-        // Since the mask is applied to Src1:Src2, Src1 bytes must be offset
-        // by sizeof(Src2) = 4
-        int SrcByteAdjust = 4;
-
-        if (!PermOp.hasSameSrc(PermNodes[FirstSrc])) {
-          if (SecondSrc.has_value())
-            if (!PermOp.hasSameSrc(PermNodes[*SecondSrc]))
-              return SDValue();
-
-          // Set the index of the second distinct Src node
-          SecondSrc = i;
-          assert(!(PermNodes[*SecondSrc].Src->getValueSizeInBits() % 8));
-          SrcByteAdjust = 0;
-        }
-        assert(PermOp.SrcOffset + SrcByteAdjust < 8);
-        assert(!DAG.getDataLayout().isBigEndian());
-        PermMask |= (PermOp.SrcOffset + SrcByteAdjust) << (i * 8);
-      }
-
-      SDValue Op = *PermNodes[FirstSrc].Src;
-      SDValue OtherOp = SecondSrc.has_value() ? *PermNodes[*SecondSrc].Src
-                                              : *PermNodes[FirstSrc].Src;
-
-      // Check that we are not just extracting the bytes in order from an op
-      if (Op == OtherOp && Op.getValueSizeInBits() == 32) {
-        int Low16 = PermMask & 0xffff;
-        int Hi16 = (PermMask & 0xffff0000) >> 16;
-
-        bool WellFormedLow = (Low16 == 0x0504) || (Low16 == 0x0100);
-        bool WellFormedHi = (Hi16 == 0x0706) || (Hi16 == 0x0302);
-
-        // The perm op would really just produce Op. So combine into Op
-        if (WellFormedLow && WellFormedHi)
-          return DAG.getBitcast(MVT::getIntegerVT(32), Op);
-      }
-
-      if (hasNon16BitAccesses(PermMask, Op, OtherOp)) {
-        SDLoc DL(N);
-        assert(Op.getValueType().isByteSized() &&
-               OtherOp.getValueType().isByteSized());
-
-        // If the ultimate src is less than 32 bits, then we will only be
-        // using bytes 0: Op.getValueSizeInBytes() - 1 in the or.
-        // CalculateByteProvider would not have returned Op as source if we
-        // used a byte that is outside its ValueType. Thus, we are free to
-        // ANY_EXTEND as the extended bits are dont-cares.
-        Op = DAG.getBitcastedAnyExtOrTrunc(Op, DL, MVT::i32);
-        OtherOp = DAG.getBitcastedAnyExtOrTrunc(OtherOp, DL, MVT::i32);
-
-        return DAG.getNode(AMDGPUISD::PERM, DL, MVT::i32, Op, OtherOp,
-                           DAG.getConstant(PermMask, DL, MVT::i32));
-      }
+      if (SDValue Perm = matchPERM(N, DCI))
+        return Perm;
     }
   }
 
@@ -13045,6 +13092,14 @@ SDValue SITargetLowering::PerformDAGCombine(SDNode *N,
     return performAndCombine(N, DCI);
   case ISD::OR:
     return performOrCombine(N, DCI);
+  case ISD::FSHR: {
+    const SIInstrInfo *TII = getSubtarget()->getInstrInfo();
+    if (N->getValueType(0) == MVT::i32 && N->isDivergent() &&
+        TII->pseudoToMCOpcode(AMDGPU::V_PERM_B32_e64) != -1) {
+      return matchPERM(N, DCI);
+    }
+    break;
+  }
   case ISD::XOR:
     return performXorCombine(N, DCI);
   case ISD::ZERO_EXTEND:

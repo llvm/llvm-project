@@ -2209,7 +2209,7 @@ void AffineForOp::print(OpAsmPrinter &p) {
   if (getNumIterOperands() > 0) {
     p << " iter_args(";
     auto regionArgs = getRegionIterArgs();
-    auto operands = getIterOperands();
+    auto operands = getInits();
 
     llvm::interleaveComma(llvm::zip(regionArgs, operands), p, [&](auto it) {
       p << std::get<0>(it) << " = " << std::get<1>(it);
@@ -2331,7 +2331,7 @@ struct AffineForEmptyLoopFolder : public OpRewritePattern<AffineForOp> {
     if (tripCount && *tripCount == 0) {
       // The initial values of the iteration arguments would be the op's
       // results.
-      rewriter.replaceOp(forOp, forOp.getIterOperands());
+      rewriter.replaceOp(forOp, forOp.getInits());
       return success();
     }
     SmallVector<Value, 4> replacements;
@@ -2352,7 +2352,7 @@ struct AffineForEmptyLoopFolder : public OpRewritePattern<AffineForOp> {
         unsigned pos = std::distance(iterArgs.begin(), iterArgIt);
         if (pos != i)
           iterArgsNotInOrder = true;
-        replacements.push_back(forOp.getIterOperands()[pos]);
+        replacements.push_back(forOp.getInits()[pos]);
       }
     }
     // Bail out when the trip count is unknown and the loop returns any value
@@ -2375,23 +2375,14 @@ void AffineForOp::getCanonicalizationPatterns(RewritePatternSet &results,
   results.add<AffineForEmptyLoopFolder>(context);
 }
 
-/// Return operands used when entering the region at 'index'. These operands
-/// correspond to the loop iterator operands, i.e., those excluding the
-/// induction variable. AffineForOp only has one region, so zero is the only
-/// valid value for `index`.
 OperandRange AffineForOp::getEntrySuccessorOperands(RegionBranchPoint point) {
   assert((point.isParent() || point == getRegion()) && "invalid region point");
 
   // The initial operands map to the loop arguments after the induction
   // variable or are forwarded to the results when the trip count is zero.
-  return getIterOperands();
+  return getInits();
 }
 
-/// Given the region at `index`, or the parent operation if `index` is None,
-/// return the successor regions. These are the regions that may be selected
-/// during the flow of control. `operands` is a set of optional attributes that
-/// correspond to a constant value for each operand, or null if that operand is
-/// not a constant.
 void AffineForOp::getSuccessorRegions(
     RegionBranchPoint point, SmallVectorImpl<RegionSuccessor> &regions) {
   assert((point.isParent() || point == getRegion()) && "expected loop region");
@@ -2440,7 +2431,7 @@ LogicalResult AffineForOp::fold(FoldAdaptor adaptor,
     // does not return any results. Since ops that do not return results cannot
     // be folded away, we would enter an infinite loop of folds on the same
     // affine.for op.
-    results.assign(getIterOperands().begin(), getIterOperands().end());
+    results.assign(getInits().begin(), getInits().end());
     folded = true;
   }
   return success(folded);
@@ -2466,7 +2457,7 @@ void AffineForOp::setLowerBound(ValueRange lbOperands, AffineMap map) {
 
   auto ubOperands = getUpperBoundOperands();
   newOperands.append(ubOperands.begin(), ubOperands.end());
-  auto iterOperands = getIterOperands();
+  auto iterOperands = getInits();
   newOperands.append(iterOperands.begin(), iterOperands.end());
   (*this)->setOperands(newOperands);
 
@@ -2479,7 +2470,7 @@ void AffineForOp::setUpperBound(ValueRange ubOperands, AffineMap map) {
 
   SmallVector<Value, 4> newOperands(getLowerBoundOperands());
   newOperands.append(ubOperands.begin(), ubOperands.end());
-  auto iterOperands = getIterOperands();
+  auto iterOperands = getInits();
   newOperands.append(iterOperands.begin(), iterOperands.end());
   (*this)->setOperands(newOperands);
 
@@ -2745,7 +2736,7 @@ AffineForOp mlir::affine::replaceForOpWithNewYields(OpBuilder &b,
   // Create a new loop before the existing one, with the extra operands.
   OpBuilder::InsertionGuard g(b);
   b.setInsertionPoint(loop);
-  auto operands = llvm::to_vector<4>(loop.getIterOperands());
+  auto operands = llvm::to_vector<4>(loop.getInits());
   operands.append(newIterOperands.begin(), newIterOperands.end());
   SmallVector<Value, 4> lbOperands(loop.getLowerBoundOperands());
   SmallVector<Value, 4> ubOperands(loop.getUpperBoundOperands());

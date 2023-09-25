@@ -15,6 +15,8 @@
 //===----------------------------------------------------------------------===//
 
 #include "SPIRVModuleAnalysis.h"
+#include "MCTargetDesc/SPIRVBaseInfo.h"
+#include "MCTargetDesc/SPIRVMCTargetDesc.h"
 #include "SPIRV.h"
 #include "SPIRVSubtarget.h"
 #include "SPIRVTargetMachine.h"
@@ -504,7 +506,7 @@ void SPIRV::RequirementHandler::checkSatisfiable(
   for (auto Ext : AllExtensions) {
     if (ST.canUseExtension(Ext))
       continue;
-    LLVM_DEBUG(dbgs() << "Extension not suported: "
+    LLVM_DEBUG(dbgs() << "Extension not supported: "
                       << getSymbolicOperandMnemonic(
                              OperandCategory::ExtensionOperand, Ext)
                       << "\n");
@@ -521,6 +523,13 @@ void SPIRV::RequirementHandler::addAvailableCaps(const CapabilityList &ToAdd) {
     if (AvailableCaps.insert(Cap).second)
       addAvailableCaps(getSymbolicOperandCapabilities(
           SPIRV::OperandCategory::CapabilityOperand, Cap));
+}
+
+void SPIRV::RequirementHandler::removeCapabilityIf(
+    const Capability::Capability ToRemove,
+    const Capability::Capability IfPresent) {
+  if (AvailableCaps.contains(IfPresent))
+    AvailableCaps.erase(ToRemove);
 }
 
 namespace llvm {
@@ -734,6 +743,16 @@ void addInstrRequirements(const MachineInstr &MI,
     break;
   }
   case SPIRV::OpBitReverse:
+  case SPIRV::OpBitFieldInsert:
+  case SPIRV::OpBitFieldSExtract:
+  case SPIRV::OpBitFieldUExtract:
+    if (!ST.canUseExtension(SPIRV::Extension::SPV_KHR_bit_instructions)) {
+      Reqs.addCapability(SPIRV::Capability::Shader);
+      break;
+    }
+    Reqs.addExtension(SPIRV::Extension::SPV_KHR_bit_instructions);
+    Reqs.addCapability(SPIRV::Capability::BitInstructions);
+    break;
   case SPIRV::OpTypeRuntimeArray:
     Reqs.addCapability(SPIRV::Capability::Shader);
     break;
@@ -884,9 +903,22 @@ void addInstrRequirements(const MachineInstr &MI,
   case SPIRV::OpGroupNonUniformBallotFindMSB:
     Reqs.addCapability(SPIRV::Capability::GroupNonUniformBallot);
     break;
+  case SPIRV::OpAssumeTrueKHR:
+  case SPIRV::OpExpectKHR:
+    if (ST.canUseExtension(SPIRV::Extension::SPV_KHR_expect_assume)) {
+      Reqs.addExtension(SPIRV::Extension::SPV_KHR_expect_assume);
+      Reqs.addCapability(SPIRV::Capability::ExpectAssumeKHR);
+    }
+    break;
   default:
     break;
   }
+
+  // If we require capability Shader, then we can remove the requirement for
+  // the BitInstructions capability, since Shader is a superset capability
+  // of BitInstructions.
+  Reqs.removeCapabilityIf(SPIRV::Capability::BitInstructions,
+                          SPIRV::Capability::Shader);
 }
 
 static void collectReqs(const Module &M, SPIRV::ModuleAnalysisInfo &MAI,

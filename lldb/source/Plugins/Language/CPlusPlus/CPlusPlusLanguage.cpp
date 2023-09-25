@@ -1009,7 +1009,7 @@ static void LoadLibStdcppFormatters(lldb::TypeCategoryImplSP cpp_category_sp) {
   cpp_category_sp->AddTypeSummary("std::string", eFormatterMatchExact,
                                   std_string_summary_sp);
   cpp_category_sp->AddTypeSummary("std::basic_string<char>",
-                                  eFormatterMatchRegex, std_string_summary_sp);
+                                  eFormatterMatchExact, std_string_summary_sp);
   cpp_category_sp->AddTypeSummary(
       "std::basic_string<char,std::char_traits<char>,std::allocator<char> >",
       eFormatterMatchExact, std_string_summary_sp);

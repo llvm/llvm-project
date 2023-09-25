@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_LIBC_SRC_STRING_STRCASECMP_H
-#define LLVM_LIBC_SRC_STRING_STRCASECMP_H
+#ifndef LLVM_LIBC_SRC_STRING_STRCASESTR_H
+#define LLVM_LIBC_SRC_STRING_STRCASESTR_H
 
 namespace __llvm_libc {
 
@@ -15,4 +15,4 @@ char *strcasestr(const char *needle, const char *haystack);
 
 } // namespace __llvm_libc
 
-#endif // LLVM_LIBC_SRC_STRING_STRCASECMP_H
+#endif // LLVM_LIBC_SRC_STRING_STRCASESTR_H

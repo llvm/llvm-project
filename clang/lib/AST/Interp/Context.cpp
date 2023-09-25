@@ -9,6 +9,7 @@
 #include "Context.h"
 #include "ByteCodeEmitter.h"
 #include "ByteCodeExprGen.h"
+#include "ByteCodeGenError.h"
 #include "ByteCodeStmtGen.h"
 #include "EvalEmitter.h"
 #include "Interp.h"

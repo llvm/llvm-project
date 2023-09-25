@@ -207,3 +207,8 @@ mlir::Value hlfir::genExprShape(mlir::OpBuilder &builder,
   fir::ShapeOp shape = builder.create<fir::ShapeOp>(loc, shapeTy, extents);
   return shape.getResult();
 }
+
+bool hlfir::mayHaveAllocatableComponent(mlir::Type ty) {
+  return fir::isPolymorphicType(ty) || fir::isUnlimitedPolymorphicType(ty) ||
+         fir::isRecordWithAllocatableMember(hlfir::getFortranElementType(ty));
+}

@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_LIBC_SRC_UNISTD_SCHED_GETAFFINITY_H
-#define LLVM_LIBC_SRC_UNISTD_SCHED_GETAFFINITY_H
+#ifndef LLVM_LIBC_SRC_SCHED_SCHED_GETAFFINITY_H
+#define LLVM_LIBC_SRC_SCHED_SCHED_GETAFFINITY_H
 
 #include <sched.h>
 
@@ -17,4 +17,4 @@ int sched_getaffinity(pid_t tid, size_t cpuset_size, cpu_set_t *mask);
 
 } // namespace __llvm_libc
 
-#endif // LLVM_LIBC_SRC_UNISTD_SCHED_GETAFFINITY_H
+#endif // LLVM_LIBC_SRC_SCHED_SCHED_GETAFFINITY_H

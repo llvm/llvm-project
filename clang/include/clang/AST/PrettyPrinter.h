@@ -76,8 +76,8 @@ struct PrintingPolicy {
         SuppressImplicitBase(false), FullyQualifiedName(false),
         PrintCanonicalTypes(false), PrintInjectedClassNameWithArguments(true),
         UsePreferredNames(true), AlwaysIncludeTypeForTemplateArgument(false),
-        CleanUglifiedParameters(false), EntireContentsOfLargeArray(true),
-        UseEnumerators(true) {}
+        UseClassForTemplateArgument(false), CleanUglifiedParameters(false),
+        EntireContentsOfLargeArray(true), UseEnumerators(true) {}
 
   /// Adjust this printing policy for cases where it's known that we're
   /// printing C++ code (for instance, if AST dumping reaches a C++-only
@@ -290,6 +290,10 @@ struct PrintingPolicy {
   /// Whether to use type suffixes (eg: 1U) on integral non-type template
   /// parameters.
   unsigned AlwaysIncludeTypeForTemplateArgument : 1;
+
+  // Prints "class" keyword before type template arguments. This is used when
+  // printing a function via the _FUNCTION__ or __func__ macro in MSVC mode.
+  unsigned UseClassForTemplateArgument : 1;
 
   /// Whether to strip underscores when printing reserved parameter names.
   /// e.g. std::vector<class _Tp> becomes std::vector<class Tp>.

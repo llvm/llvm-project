@@ -1450,12 +1450,12 @@ static LogicalResult reductionPreconditions(LinalgOp op) {
     LDBG("reduction precondition failed: no reduction iterator\n");
     return failure();
   }
-  for (OpOperand *opOperand : op.getDpsInitOperands()) {
-    AffineMap indexingMap = op.getMatchingIndexingMap(opOperand);
+  for (OpOperand &opOperand : op.getDpsInitsMutable()) {
+    AffineMap indexingMap = op.getMatchingIndexingMap(&opOperand);
     if (indexingMap.isPermutation())
       continue;
 
-    Operation *reduceOp = matchLinalgReduction(opOperand);
+    Operation *reduceOp = matchLinalgReduction(&opOperand);
     if (!reduceOp || !getCombinerOpKind(reduceOp)) {
       LDBG("reduction precondition failed: reduction detection failed\n");
       return failure();
@@ -1514,8 +1514,7 @@ vectorizeLinalgOpPrecondition(LinalgOp linalgOp,
                               ArrayRef<int64_t> inputVectorSizes,
                               bool vectorizeNDExtract) {
   // tensor with dimension of 0 cannot be vectorized.
-  if (llvm::any_of(linalgOp.getStaticShape(),
-                   [](int64_t dim) { return dim == 0; }))
+  if (llvm::is_contained(linalgOp.getStaticShape(), 0))
     return failure();
   // Check API contract for input vector sizes.
   if (!inputVectorSizes.empty() &&

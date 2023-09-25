@@ -5,8 +5,8 @@
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
-#ifndef LLVM_LIBC_SRC_SUPPORT_CPP_TYPE_TRAITS_IS_OBJECT_H
-#define LLVM_LIBC_SRC_SUPPORT_CPP_TYPE_TRAITS_IS_OBJECT_H
+#ifndef LLVM_LIBC_SRC___SUPPORT_CPP_TYPE_TRAITS_IS_OBJECT_H
+#define LLVM_LIBC_SRC___SUPPORT_CPP_TYPE_TRAITS_IS_OBJECT_H
 
 #include "src/__support/CPP/type_traits/bool_constant.h"
 #include "src/__support/CPP/type_traits/is_array.h"
@@ -27,4 +27,4 @@ LIBC_INLINE_VAR constexpr bool is_object_v = is_object<T>::value;
 
 } // namespace __llvm_libc::cpp
 
-#endif // LLVM_LIBC_SRC_SUPPORT_CPP_TYPE_TRAITS_IS_OBJECT_H
+#endif // LLVM_LIBC_SRC___SUPPORT_CPP_TYPE_TRAITS_IS_OBJECT_H

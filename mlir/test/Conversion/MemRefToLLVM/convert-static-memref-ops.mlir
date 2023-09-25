@@ -3,7 +3,7 @@
 // CHECK-LABEL: func @zero_d_alloc()
 func.func @zero_d_alloc() -> memref<f32> {
 // CHECK: %[[one:.*]] = llvm.mlir.constant(1 : index) : i64
-// CHECK: %[[null:.*]] = llvm.mlir.null : !llvm.ptr
+// CHECK: %[[null:.*]] = llvm.mlir.zero : !llvm.ptr
 // CHECK: %[[gep:.*]] = llvm.getelementptr %[[null]][%[[one]]] : (!llvm.ptr, i64) -> !llvm.ptr, f32
 // CHECK: %[[size_bytes:.*]] = llvm.ptrtoint %[[gep]] : !llvm.ptr to i64
 // CHECK: %[[ptr:.*]] = llvm.call @malloc(%[[size_bytes]]) : (i64) -> !llvm.ptr
@@ -36,7 +36,7 @@ func.func @zero_d_dealloc(%arg0: memref<f32>) {
 func.func @aligned_1d_alloc() -> memref<42xf32> {
 // CHECK: %[[sz1:.*]] = llvm.mlir.constant(42 : index) : i64
 // CHECK: %[[st1:.*]] = llvm.mlir.constant(1 : index) : i64
-// CHECK: %[[null:.*]] = llvm.mlir.null : !llvm.ptr
+// CHECK: %[[null:.*]] = llvm.mlir.zero : !llvm.ptr
 // CHECK: %[[gep:.*]] = llvm.getelementptr %[[null]][%[[sz1]]] : (!llvm.ptr, i64) -> !llvm.ptr, f32
 // CHECK: %[[size_bytes:.*]] = llvm.ptrtoint %[[gep]] : !llvm.ptr to i64
 // CHECK: %[[alignment:.*]] = llvm.mlir.constant(8 : index) : i64
@@ -63,7 +63,7 @@ func.func @aligned_1d_alloc() -> memref<42xf32> {
 // CHECK-LABEL: func @static_alloc()
 func.func @static_alloc() -> memref<32x18xf32> {
 // CHECK: %[[num_elems:.*]] = llvm.mlir.constant(576 : index) : i64
-// CHECK: %[[null:.*]] = llvm.mlir.null : !llvm.ptr
+// CHECK: %[[null:.*]] = llvm.mlir.zero : !llvm.ptr
 // CHECK: %[[gep:.*]] = llvm.getelementptr %[[null]][%[[num_elems]]] : (!llvm.ptr, i64) -> !llvm.ptr, f32
 // CHECK: %[[size_bytes:.*]] = llvm.ptrtoint %[[gep]] : !llvm.ptr to i64
 // CHECK: llvm.call @malloc(%[[size_bytes]]) : (i64) -> !llvm.ptr
@@ -207,7 +207,7 @@ module attributes { dlti.dl_spec = #dlti.dl_spec<#dlti.dl_entry<index, 32>> } {
     %0 = memref.alloc(%c1) : memref<? x vector<2xf32>>
     // CHECK: %[[CST_S:.*]] = arith.constant 1 : index
     // CHECK: %[[CST:.*]] = builtin.unrealized_conversion_cast
-    // CHECK: llvm.mlir.null
+    // CHECK: llvm.mlir.zero
     // CHECK: llvm.getelementptr %{{.*}}[[CST]]
     // CHECK: llvm.ptrtoint %{{.*}} : !llvm.ptr to i32
     // CHECK: llvm.ptrtoint %{{.*}} : !llvm.ptr to i32

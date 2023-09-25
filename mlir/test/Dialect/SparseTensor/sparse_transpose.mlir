@@ -19,7 +19,7 @@
 // CHECK-SAME:      %[[VAL_0:.*]]: tensor<3x4xf64, #sparse_tensor.encoding<{ lvlTypes = [ "compressed", "compressed" ] }>>) -> tensor<4x3xf64, #sparse_tensor.encoding<{ lvlTypes = [ "compressed", "compressed" ] }>> {
 // CHECK-DAG:       %[[VAL_1:.*]] = arith.constant 0 : index
 // CHECK-DAG:       %[[VAL_2:.*]] = arith.constant 1 : index
-// CHECK-DAG:       %[[VAL_3:.*]] = bufferization.alloc_tensor() : tensor<4x3xf64, #sparse_tensor.encoding<{ lvlTypes = [ "compressed", "compressed" ] }>>
+// CHECK-DAG:       %[[VAL_3:.*]] = tensor.empty() : tensor<4x3xf64, #sparse_tensor.encoding<{ lvlTypes = [ "compressed", "compressed" ] }>>
 // CHECK-DAG:       %[[VAL_4:.*]] = sparse_tensor.convert %[[VAL_0]] : tensor<3x4xf64, #sparse_tensor.encoding<{ lvlTypes = [ "compressed", "compressed" ] }>> to tensor<3x4xf64, #sparse_tensor.encoding<{ lvlTypes = [ "compressed", "compressed" ], dimToLvl = affine_map<(d0, d1) -> (d1, d0)> }>>
 // CHECK-DAG:       %[[VAL_5:.*]] = sparse_tensor.positions %[[VAL_4]] {level = 0 : index} : tensor<3x4xf64, #sparse_tensor.encoding<{ lvlTypes = [ "compressed", "compressed" ], dimToLvl = affine_map<(d0, d1) -> (d1, d0)> }>> to memref<?xindex>
 // CHECK-DAG:       %[[VAL_6:.*]] = sparse_tensor.coordinates %[[VAL_4]] {level = 0 : index} : tensor<3x4xf64, #sparse_tensor.encoding<{ lvlTypes = [ "compressed", "compressed" ], dimToLvl = affine_map<(d0, d1) -> (d1, d0)> }>> to memref<?xindex>
@@ -47,7 +47,7 @@
 // CHECK:         }
 func.func @sparse_transpose_auto(%arga: tensor<3x4xf64, #DCSR>)
                                      -> tensor<4x3xf64, #DCSR> {
-  %i = bufferization.alloc_tensor() : tensor<4x3xf64, #DCSR>
+  %i = tensor.empty() : tensor<4x3xf64, #DCSR>
   %0 = linalg.generic #transpose_trait
      ins(%arga: tensor<3x4xf64, #DCSR>)
      outs(%i: tensor<4x3xf64, #DCSR>) {

@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_LIBC_SRC_SUPPORT_FPUTIL_MANIPULATION_FUNCTIONS_H
-#define LLVM_LIBC_SRC_SUPPORT_FPUTIL_MANIPULATION_FUNCTIONS_H
+#ifndef LLVM_LIBC_SRC___SUPPORT_FPUTIL_MANIPULATIONFUNCTIONS_H
+#define LLVM_LIBC_SRC___SUPPORT_FPUTIL_MANIPULATIONFUNCTIONS_H
 
 #include "FPBits.h"
 #include "NearestIntegerOperations.h"
@@ -180,4 +180,4 @@ LIBC_INLINE T nextafter(T from, T to) {
 #include "x86_64/NextAfterLongDouble.h"
 #endif // SPECIAL_X86_LONG_DOUBLE
 
-#endif // LLVM_LIBC_SRC_SUPPORT_FPUTIL_MANIPULATION_FUNCTIONS_H
+#endif // LLVM_LIBC_SRC___SUPPORT_FPUTIL_MANIPULATIONFUNCTIONS_H

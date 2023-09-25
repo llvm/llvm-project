@@ -5,26 +5,20 @@
 // INSTR_PROF_RAW_HEADER(uint64_t, BinaryIdsSize, __llvm_write_binary_ids(NULL))
 // INSTR_PROF_RAW_HEADER(uint64_t, DataSize, DataSize)
 // INSTR_PROF_RAW_HEADER(uint64_t, CountersSize, CountersSize)
-// INSTR_PROF_RAW_HEADER(uint64_t, NumBitmaskBytes, NumBitmaskBytes)
 // INSTR_PROF_RAW_HEADER(uint64_t, NamesSize,  NamesSize)
 // INSTR_PROF_RAW_HEADER(uint64_t, CountersDelta, (uintptr_t)CountersBegin)
-// INSTR_PROF_RAW_HEADER(uint64_t, BitmaskDelta, (uintptr_t)BitmaskBegin)
 // INSTR_PROF_RAW_HEADER(uint64_t, NamesDelta, (uintptr_t)NamesBegin)
 // INSTR_PROF_RAW_HEADER(uint64_t, ValueKindLast, IPVK_Last)
 
 RUN: printf '\201rforpl\377' > %t.profraw
-RUN: printf '\11\0\0\0\0\0\0\0' >> %t.profraw
+RUN: printf '\10\0\0\0\0\0\0\0' >> %t.profraw
 RUN: printf '\0\0\0\0\0\0\0\0' >> %t.profraw
 RUN: printf '\1\0\0\0\0\0\0\0' >> %t.profraw
 RUN: printf '\0\0\0\0\0\0\0\0' >> %t.profraw
 RUN: printf '\1\0\0\0\0\0\0\0' >> %t.profraw
-RUN: printf '\0\0\0\0\0\0\0\0' >> %t.profraw
-RUN: printf '\0\0\0\0\0\0\0\0' >> %t.profraw
-RUN: printf '\0\0\0\0\0\0\0\0' >> %t.profraw
 RUN: printf '\0\0\0\0\0\0\0\0' >> %t.profraw
 RUN: printf '\10\0\0\0\0\0\0\0' >> %t.profraw
 RUN: printf '\0\0\4\0\1\0\0\0' >> %t.profraw
-RUN: printf '\0\0\0\0\0\0\0\0' >> %t.profraw
 RUN: printf '\0\0\4\0\2\0\0\0' >> %t.profraw
 RUN: printf '\0\0\0\0\0\0\0\0' >> %t.profraw
 
@@ -41,9 +35,7 @@ RUN: printf '\1\0\0\0\0\0\0\0' >> %t.profraw
 RUN: printf '\0\0\4\0\1\0\0\0' >> %t.profraw
 RUN: printf '\0\0\0\0\0\0\0\0' >> %t.profraw
 RUN: printf '\0\0\0\0\0\0\0\0' >> %t.profraw
-RUN: printf '\0\0\0\0\0\0\0\0' >> %t.profraw
 // Make NumCounters = 0 so that we get "number of counters is zero" error message
-RUN: printf '\0\0\0\0\0\0\0\0' >> %t.profraw
 RUN: printf '\0\0\0\0\0\0\0\0' >> %t.profraw
 
 RUN: printf '\023\0\0\0\0\0\0\0' >> %t.profraw

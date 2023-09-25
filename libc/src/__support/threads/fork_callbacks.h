@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_LIBC_SRC_SUPPORT_THREAD_FORK_CALLBACKS_H
-#define LLVM_LIBC_SRC_SUPPORT_THREAD_FORK_CALLBACKS_H
+#ifndef LLVM_LIBC_SRC___SUPPORT_THREADS_FORK_CALLBACKS_H
+#define LLVM_LIBC_SRC___SUPPORT_THREADS_FORK_CALLBACKS_H
 
 namespace __llvm_libc {
 
@@ -21,4 +21,4 @@ void invoke_child_callbacks();
 
 } // namespace __llvm_libc
 
-#endif // LLVM_LIBC_SRC_SUPPORT_THREAD_FORK_CALLBACKS_H
+#endif // LLVM_LIBC_SRC___SUPPORT_THREADS_FORK_CALLBACKS_H

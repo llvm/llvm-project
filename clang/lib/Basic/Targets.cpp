@@ -429,11 +429,13 @@ std::unique_ptr<TargetInfo> AllocateTarget(const llvm::Triple &Triple,
     return std::make_unique<AMDGPUTargetInfo>(Triple, Opts);
 
   case llvm::Triple::riscv32:
-    // TODO: add cases for NetBSD, RTEMS once tested.
     switch (os) {
     case llvm::Triple::FreeBSD:
       return std::make_unique<FreeBSDTargetInfo<RISCV32TargetInfo>>(Triple,
                                                                     Opts);
+    case llvm::Triple::NetBSD:
+      return std::make_unique<NetBSDTargetInfo<RISCV32TargetInfo>>(Triple,
+                                                                   Opts);
     case llvm::Triple::Linux:
       return std::make_unique<LinuxTargetInfo<RISCV32TargetInfo>>(Triple, Opts);
     default:
@@ -441,11 +443,13 @@ std::unique_ptr<TargetInfo> AllocateTarget(const llvm::Triple &Triple,
     }
 
   case llvm::Triple::riscv64:
-    // TODO: add cases for NetBSD, RTEMS once tested.
     switch (os) {
     case llvm::Triple::FreeBSD:
       return std::make_unique<FreeBSDTargetInfo<RISCV64TargetInfo>>(Triple,
                                                                     Opts);
+    case llvm::Triple::NetBSD:
+      return std::make_unique<NetBSDTargetInfo<RISCV64TargetInfo>>(Triple,
+                                                                   Opts);
     case llvm::Triple::OpenBSD:
       return std::make_unique<OpenBSDTargetInfo<RISCV64TargetInfo>>(Triple,
                                                                     Opts);

@@ -21,7 +21,7 @@ namespace printf_core {
 
 int printf_main(Writer *writer, const char *__restrict str,
                 internal::ArgList &args) {
-  Parser parser(str, args);
+  Parser<internal::ArgList> parser(str, args);
   int result = 0;
   for (FormatSection cur_section = parser.get_next_section();
        !cur_section.raw_string.empty();

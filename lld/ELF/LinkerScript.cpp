@@ -169,9 +169,16 @@ void LinkerScript::expandOutputSection(uint64_t size) {
 
 void LinkerScript::setDot(Expr e, const Twine &loc, bool inSec) {
   uint64_t val = e().getValue();
-  if (val < dot && inSec)
-    error(loc + ": unable to move location counter backward for: " +
-          state->outSec->name);
+  // If val is smaller and we are in an output section, record the error and
+  // report it if this is the last assignAddresses iteration. dot may be smaller
+  // if there is another assignAddresses iteration.
+  if (val < dot && inSec) {
+    backwardDotErr =
+        (loc + ": unable to move location counter (0x" + Twine::utohexstr(dot) +
+         ") backward to 0x" + Twine::utohexstr(val) + " for section '" +
+         state->outSec->name + "'")
+            .str();
+  }
 
   // Update to location counter means update to section size.
   if (inSec)
@@ -1343,6 +1350,7 @@ const Defined *LinkerScript::assignAddresses() {
   state = &st;
   errorOnMissingSection = true;
   st.outSec = aether;
+  backwardDotErr.clear();
 
   SymbolAssignmentMap oldValues = getSymbolAssignmentValues(sectionCommands);
   for (SectionCommand *cmd : sectionCommands) {
@@ -1494,7 +1502,9 @@ static void checkMemoryRegion(const MemoryRegion *region,
   }
 }
 
-void LinkerScript::checkMemoryRegions() const {
+void LinkerScript::checkFinalScriptConditions() const {
+  if (backwardDotErr.size())
+    errorOrWarn(backwardDotErr);
   for (const OutputSection *sec : outputSections) {
     if (const MemoryRegion *memoryRegion = sec->memRegion)
       checkMemoryRegion(memoryRegion, sec, sec->addr);

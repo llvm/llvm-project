@@ -329,8 +329,8 @@ func.func @alloca(%size : i64) {
 
 // CHECK-LABEL: @null
 func.func @null() {
-  // CHECK: llvm.mlir.null : !llvm.ptr
-  %0 = llvm.mlir.null : !llvm.ptr
+  // CHECK: llvm.mlir.zero : !llvm.ptr
+  %0 = llvm.mlir.zero : !llvm.ptr
   llvm.return
 }
 
@@ -386,7 +386,7 @@ llvm.func @invokeLandingpad() -> i32 attributes { personality = @__gxx_personali
 // CHECK: %[[V0:.*]] = llvm.mlir.constant(0 : i32) : i32
 // CHECK: %{{.*}} = llvm.mlir.constant(3 : i32) : i32
 // CHECK: %[[V1:.*]] = llvm.mlir.constant("\01") : !llvm.array<1 x i8>
-// CHECK: %[[V2:.*]] = llvm.mlir.null : !llvm.ptr
+// CHECK: %[[V2:.*]] = llvm.mlir.zero : !llvm.ptr
 // CHECK: %[[V3:.*]] = llvm.mlir.addressof @_ZTIi : !llvm.ptr
 // CHECK: %[[V4:.*]] = llvm.mlir.constant(1 : i32) : i32
 // CHECK: %[[V5:.*]] = llvm.alloca %[[V4]] x i8 : (i32) -> !llvm.ptr
@@ -394,7 +394,7 @@ llvm.func @invokeLandingpad() -> i32 attributes { personality = @__gxx_personali
   %0 = llvm.mlir.constant(0 : i32) : i32
   %1 = llvm.mlir.constant(3 : i32) : i32
   %2 = llvm.mlir.constant("\01") : !llvm.array<1 x i8>
-  %3 = llvm.mlir.null : !llvm.ptr
+  %3 = llvm.mlir.zero : !llvm.ptr
   %4 = llvm.mlir.addressof @_ZTIi : !llvm.ptr
   %5 = llvm.mlir.constant(1 : i32) : i32
   %6 = llvm.alloca %5 x i8 : (i32) -> !llvm.ptr

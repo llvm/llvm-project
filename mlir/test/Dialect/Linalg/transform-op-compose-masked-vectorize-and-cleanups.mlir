@@ -26,7 +26,7 @@ transform.sequence  failures(propagate) {
     : (!transform.any_op) -> (!transform.any_op, !transform.any_op, !transform.any_op, !transform.any_op)
   %tiled_linalg_op_0, %loops_1:3 = transform.structured.tile %tiled_linalg_op[8, 8, 8] 
     : (!transform.any_op) -> (!transform.any_op, !transform.any_op, !transform.any_op, !transform.any_op)
-  transform.structured.masked_vectorize %tiled_linalg_op_0 vector_sizes [8, 8, 8] 
+  transform.structured.vectorize %tiled_linalg_op_0 vector_sizes [8, 8, 8]
     : !transform.any_op
 
   %func = transform.structured.match ops{["func.func"]} in %module 

@@ -464,7 +464,7 @@ func.func @memref_copy_ranked() {
   // CHECK: [[ONE:%.*]] = llvm.mlir.constant(1 : index) : i64
   // CHECK: [[EXTRACT0:%.*]] = llvm.extractvalue {{%.*}}[3, 0] : !llvm.struct<(ptr, ptr, i64, array<1 x i64>, array<1 x i64>)>
   // CHECK: [[MUL:%.*]] = llvm.mul [[ONE]], [[EXTRACT0]] : i64
-  // CHECK: [[NULL:%.*]] = llvm.mlir.null : !llvm.ptr
+  // CHECK: [[NULL:%.*]] = llvm.mlir.zero : !llvm.ptr
   // CHECK: [[GEP:%.*]] = llvm.getelementptr [[NULL]][1] : (!llvm.ptr) -> !llvm.ptr, f32
   // CHECK: [[PTRTOINT:%.*]] = llvm.ptrtoint [[GEP]] : !llvm.ptr to i64
   // CHECK: [[SIZE:%.*]] = llvm.mul [[MUL]], [[PTRTOINT]] : i64
@@ -495,7 +495,7 @@ func.func @memref_copy_contiguous(%in: memref<16x4xi32>, %offset: index) {
   // CHECK: [[MUL1:%.*]] = llvm.mul {{.*}}, [[EXTRACT0]] : i64
   // CHECK: [[EXTRACT1:%.*]] = llvm.extractvalue %[[DESC]][3, 1] : !llvm.struct<(ptr, ptr, i64, array<2 x i64>, array<2 x i64>)>
   // CHECK: [[MUL2:%.*]] = llvm.mul [[MUL1]], [[EXTRACT1]] : i64
-  // CHECK: [[NULL:%.*]] = llvm.mlir.null : !llvm.ptr
+  // CHECK: [[NULL:%.*]] = llvm.mlir.zero : !llvm.ptr
   // CHECK: [[GEP:%.*]] = llvm.getelementptr [[NULL]][1] : (!llvm.ptr) -> !llvm.ptr, i32
   // CHECK: [[PTRTOINT:%.*]] = llvm.ptrtoint [[GEP]] : !llvm.ptr to i64
   // CHECK: [[SIZE:%.*]] = llvm.mul [[MUL2]], [[PTRTOINT]] : i64
@@ -610,7 +610,7 @@ func.func @extract_strided_metadata(
 // -----
 
 // CHECK-LABEL: func @load_non_temporal(
-func.func @load_non_temporal(%arg0 : memref<32xf32, affine_map<(d0) -> (d0)>>) {  
+func.func @load_non_temporal(%arg0 : memref<32xf32, affine_map<(d0) -> (d0)>>) {
   %1 = arith.constant 7 : index
   // CHECK: llvm.load %{{.*}} {nontemporal} : !llvm.ptr -> f32
   %2 = memref.load %arg0[%1] {nontemporal = true} : memref<32xf32, affine_map<(d0) -> (d0)>>

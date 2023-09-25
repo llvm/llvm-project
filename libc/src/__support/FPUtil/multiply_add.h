@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_LIBC_SRC_SUPPORT_FPUTIL_MULTIPLY_ADD_H
-#define LLVM_LIBC_SRC_SUPPORT_FPUTIL_MULTIPLY_ADD_H
+#ifndef LLVM_LIBC_SRC___SUPPORT_FPUTIL_MULTIPLY_ADD_H
+#define LLVM_LIBC_SRC___SUPPORT_FPUTIL_MULTIPLY_ADD_H
 
 #include "src/__support/CPP/type_traits.h"
 #include "src/__support/common.h"
@@ -57,4 +57,4 @@ LIBC_INLINE double multiply_add(double x, double y, double z) {
 
 #endif // LIBC_TARGET_CPU_HAS_FMA
 
-#endif // LLVM_LIBC_SRC_SUPPORT_FPUTIL_MULTIPLY_ADD_H
+#endif // LLVM_LIBC_SRC___SUPPORT_FPUTIL_MULTIPLY_ADD_H

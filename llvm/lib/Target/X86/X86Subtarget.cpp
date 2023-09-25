@@ -103,10 +103,10 @@ X86Subtarget::classifyLocalReference(const GlobalValue *GV) const {
         if (isa_and_nonnull<Function>(GV))
           return X86II::MO_NO_FLAG; // All code is RIP-relative
         if (auto *GVar = dyn_cast_or_null<GlobalVariable>(GV)) {
-          if (!TM.isLargeData(GVar))
-            return X86II::MO_NO_FLAG;
+          if (TM.isLargeData(GVar))
+            return X86II::MO_GOTOFF;
         }
-        return X86II::MO_GOTOFF;    // Local symbols use GOTOFF.
+        return X86II::MO_NO_FLAG;    // Local symbols use GOTOFF.
       }
       llvm_unreachable("invalid code model");
     }

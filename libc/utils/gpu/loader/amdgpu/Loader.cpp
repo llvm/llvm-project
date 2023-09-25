@@ -430,6 +430,49 @@ int load(int argc, char **argv, char **envp, void *image, size_t size,
   else
     handle_error("Invalid wavefront size");
 
+  // Initialize the RPC client on the device by copying the local data to the
+  // device's internal pointer.
+  hsa_executable_symbol_t rpc_client_sym;
+  if (hsa_status_t err = hsa_executable_get_symbol_by_name(
+          executable, rpc_client_symbol_name, &dev_agent, &rpc_client_sym))
+    handle_error(err);
+
+  void *rpc_client_host;
+  if (hsa_status_t err =
+          hsa_amd_memory_pool_allocate(coarsegrained_pool, sizeof(void *),
+                                       /*flags=*/0, &rpc_client_host))
+    handle_error(err);
+
+  void *rpc_client_dev;
+  if (hsa_status_t err = hsa_executable_symbol_get_info(
+          rpc_client_sym, HSA_EXECUTABLE_SYMBOL_INFO_VARIABLE_ADDRESS,
+          &rpc_client_dev))
+    handle_error(err);
+
+  // Copy the address of the client buffer from the device to the host.
+  if (hsa_status_t err = hsa_memcpy(rpc_client_host, host_agent, rpc_client_dev,
+                                    dev_agent, sizeof(void *)))
+    handle_error(err);
+
+  void *rpc_client_buffer;
+  if (hsa_status_t err = hsa_amd_memory_pool_allocate(
+          coarsegrained_pool, rpc_get_client_size(),
+          /*flags=*/0, &rpc_client_buffer))
+    handle_error(err);
+  std::memcpy(rpc_client_buffer, rpc_get_client_buffer(device_id),
+              rpc_get_client_size());
+
+  // Copy the RPC client buffer to the address pointed to by the symbol.
+  if (hsa_status_t err =
+          hsa_memcpy(*reinterpret_cast<void **>(rpc_client_host), dev_agent,
+                     rpc_client_buffer, host_agent, rpc_get_client_size()))
+    handle_error(err);
+
+  if (hsa_status_t err = hsa_amd_memory_pool_free(rpc_client_buffer))
+    handle_error(err);
+  if (hsa_status_t err = hsa_amd_memory_pool_free(rpc_client_host))
+    handle_error(err);
+
   // Obtain the GPU's fixed-frequency clock rate and copy it to the GPU.
   // If the clock_freq symbol is missing, no work to do.
   hsa_executable_symbol_t freq_sym;
@@ -474,8 +517,7 @@ int load(int argc, char **argv, char **envp, void *image, size_t size,
     handle_error(err);
 
   LaunchParameters single_threaded_params = {1, 1, 1, 1, 1, 1};
-  begin_args_t init_args = {argc, dev_argv, dev_envp,
-                            rpc_get_buffer(device_id)};
+  begin_args_t init_args = {argc, dev_argv, dev_envp};
   if (hsa_status_t err = launch_kernel(
           dev_agent, executable, kernargs_pool, coarsegrained_pool, queue,
           single_threaded_params, "_begin.kd", init_args))

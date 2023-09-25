@@ -715,8 +715,6 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
       setOperationAction({ISD::SMIN, ISD::SMAX, ISD::UMIN, ISD::UMAX}, VT,
                          Legal);
 
-      setOperationAction({ISD::VP_FSHL, ISD::VP_FSHR}, VT, Expand);
-
       // Custom-lower extensions and truncations from/to mask types.
       setOperationAction({ISD::ANY_EXTEND, ISD::SIGN_EXTEND, ISD::ZERO_EXTEND},
                          VT, Custom);
@@ -3523,11 +3521,9 @@ static SDValue lowerBuildVectorOfConstants(SDValue Op, SelectionDAG &DAG,
   // by vrgather.vv.  This covers all indice vectors up to size 4.
   // TODO: We really should be costing the smaller vector.  There are
   // profitable cases this misses.
-  const unsigned ScalarSize =
-    Op.getSimpleValueType().getScalarSizeInBits();
-  if (ScalarSize > 8 && NumElts <= 4) {
+  if (EltBitSize > 8 && NumElts <= 4) {
     unsigned SignBits = DAG.ComputeNumSignBits(Op);
-    if (ScalarSize - SignBits < 8) {
+    if (EltBitSize - SignBits < 8) {
       SDValue Source =
         DAG.getNode(ISD::TRUNCATE, DL, VT.changeVectorElementType(MVT::i8), Op);
       Source = convertToScalableVector(ContainerVT.changeVectorElementType(MVT::i8),
@@ -8629,6 +8625,18 @@ SDValue RISCVTargetLowering::lowerINSERT_SUBVECTOR(SDValue Op,
       ContainerVT = getContainerForFixedLengthVector(VecVT);
       Vec = convertToScalableVector(ContainerVT, Vec, DAG, Subtarget);
     }
+
+    // Shrink down Vec so we're performing the slideup on a smaller LMUL.
+    unsigned LastIdx = OrigIdx + SubVecVT.getVectorNumElements() - 1;
+    MVT OrigContainerVT = ContainerVT;
+    SDValue OrigVec = Vec;
+    if (auto ShrunkVT =
+            getSmallestVTForIndex(ContainerVT, LastIdx, DL, DAG, Subtarget)) {
+      ContainerVT = *ShrunkVT;
+      Vec = DAG.getNode(ISD::EXTRACT_SUBVECTOR, DL, ContainerVT, Vec,
+                        DAG.getVectorIdxConstant(0, DL));
+    }
+
     SubVec = DAG.getNode(ISD::INSERT_SUBVECTOR, DL, ContainerVT,
                          DAG.getUNDEF(ContainerVT), SubVec,
                          DAG.getConstant(0, DL, XLenVT));
@@ -8658,6 +8666,12 @@ SDValue RISCVTargetLowering::lowerINSERT_SUBVECTOR(SDValue Op,
       SubVec = getVSlideup(DAG, Subtarget, DL, ContainerVT, Vec, SubVec,
                            SlideupAmt, Mask, VL, Policy);
     }
+
+    // If we performed the slideup on a smaller LMUL, insert the result back
+    // into the rest of the vector.
+    if (ContainerVT != OrigContainerVT)
+      SubVec = DAG.getNode(ISD::INSERT_SUBVECTOR, DL, OrigContainerVT, OrigVec,
+                           SubVec, DAG.getVectorIdxConstant(0, DL));
 
     if (VecVT.isFixedLengthVector())
       SubVec = convertFromScalableVector(VecVT, SubVec, DAG, Subtarget);
@@ -14415,11 +14429,11 @@ SDValue RISCVTargetLowering::PerformDAGCombine(SDNode *N,
         return SDValue(N, 0);
 
     // If VL is 1 and the scalar value won't benefit from immediate, we can
-    // use vmv.s.x.  Do this only if legal to avoid breaking i64 sext(i32)
-    // patterns on rv32..
+    // use vmv.s.x.
     ConstantSDNode *Const = dyn_cast<ConstantSDNode>(Scalar);
-    if (isOneConstant(VL) && EltWidth <= Subtarget.getXLen() &&
-        (!Const || Const->isZero() || !isInt<5>(Const->getSExtValue())))
+    if (isOneConstant(VL) &&
+        (!Const || Const->isZero() ||
+         !Const->getAPIntValue().sextOrTrunc(EltWidth).isSignedIntN(5)))
       return DAG.getNode(RISCVISD::VMV_S_X_VL, DL, VT, Passthru, Scalar, VL);
 
     break;

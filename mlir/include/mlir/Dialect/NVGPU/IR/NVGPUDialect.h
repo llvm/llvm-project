@@ -21,6 +21,8 @@
 
 #include "mlir/Dialect/NVGPU/IR/NVGPUEnums.h.inc"
 
+constexpr int kWarpSize = 32;
+
 #define GET_ATTRDEF_CLASSES
 #include "mlir/Dialect/NVGPU/IR/NVGPUAttrDefs.h.inc"
 

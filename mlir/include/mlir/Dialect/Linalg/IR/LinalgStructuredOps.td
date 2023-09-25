@@ -207,10 +207,8 @@ def GenericOp : LinalgStructuredBase_Op<"generic", [
     getRegionBuilder() {
       return nullptr;
     }
-    std::pair<int64_t, int64_t> getDpsInitsPositionRange() {
-      int64_t getNumOperands = this->getNumOperands();
-      return {getNumOperands - getOutputs().size(), getNumOperands};
-    }
+
+    MutableOperandRange getDpsInitsMutable() { return getOutputsMutable(); }
   }];
 
   let hasCanonicalizer = 1;
@@ -283,11 +281,9 @@ def MapOp : LinalgStructuredBase_Op<"map", [
     }
 
     // Implement functions necessary for DestinationStyleOpInterface.
-    std::pair<int64_t, int64_t> getDpsInitsPositionRange() {
-      int64_t getNumOperands = this->getNumOperands();
-      return {getNumOperands - 1, getNumOperands};
-    }
-    OpOperandVector getOpOperandsMatchingBBargs() {
+    MutableOperandRange getDpsInitsMutable() { return getInitMutable(); }
+
+    SmallVector<OpOperand *> getOpOperandsMatchingBBargs() {
       return getDpsInputOperands();
     }
 
@@ -381,9 +377,7 @@ def ReduceOp : LinalgStructuredBase_Op<"reduce", [
     getRegionBuilder() {
       return nullptr;
     }
-    std::pair<int64_t, int64_t> getDpsInitsPositionRange() {
-      return {getInits().size(), getNumOperands()};
-    }
+    MutableOperandRange getDpsInitsMutable() { return getInitsMutable(); }
   }];
 
   let hasCustomAssemblyFormat = 1;
@@ -446,10 +440,7 @@ def TransposeOp : LinalgStructuredBase_Op<"transpose", [
     }
 
     // Implement functions necessary for DestinationStyleOpInterface.
-    std::pair<int64_t, int64_t> getDpsInitsPositionRange() {
-      int64_t getNumOperands = this->getNumOperands();
-      return {getNumOperands - 1, getNumOperands};
-    }
+    MutableOperandRange getDpsInitsMutable() { return getInitMutable(); }
 
     static std::function<void(mlir::ImplicitLocOpBuilder &, mlir::Block &,
         mlir::ArrayRef<mlir::NamedAttribute>)>
@@ -517,10 +508,7 @@ def BroadcastOp : LinalgStructuredBase_Op<"broadcast", [
     }
 
     // Implement functions necessary for DestinationStyleOpInterface.
-    std::pair<int64_t, int64_t> getDpsInitsPositionRange() {
-      int64_t getNumOperands = this->getNumOperands();
-      return {getNumOperands - 1, getNumOperands};
-    }
+    MutableOperandRange getDpsInitsMutable() { return getInitMutable(); }
 
     static std::function<void(mlir::ImplicitLocOpBuilder &, mlir::Block &,
         mlir::ArrayRef<mlir::NamedAttribute>)>
