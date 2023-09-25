@@ -2936,7 +2936,7 @@ bool AArch64InstrInfo::canFoldIntoAddrMode(const MachineInstr &MemI,
       if (avoidSlowSTRQ(MemI))
         return false;
     }
-    return canFoldAddRegIntoAddrMode(1 << Shift);
+    return canFoldAddRegIntoAddrMode(1ULL << Shift);
   }
 
   case AArch64::ADDXrr:
@@ -2968,10 +2968,10 @@ bool AArch64InstrInfo::canFoldIntoAddrMode(const MachineInstr &MemI,
     if (Extend != AArch64_AM::UXTW && Extend != AArch64_AM::SXTW)
       return false;
 
-    return canFoldAddRegIntoAddrMode(1 << AArch64_AM::getArithShiftValue(Imm),
-                                     (Extend == AArch64_AM::SXTW)
-                                         ? ExtAddrMode::Formula::SExtScaledReg
-                                         : ExtAddrMode::Formula::ZExtScaledReg);
+    return canFoldAddRegIntoAddrMode(
+        1ULL << AArch64_AM::getArithShiftValue(Imm),
+        (Extend == AArch64_AM::SXTW) ? ExtAddrMode::Formula::SExtScaledReg
+                                     : ExtAddrMode::Formula::ZExtScaledReg);
   }
 }
 

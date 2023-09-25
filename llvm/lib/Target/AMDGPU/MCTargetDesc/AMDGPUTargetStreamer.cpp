@@ -830,6 +830,24 @@ bool AMDGPUTargetELFStreamer::EmitHSAMetadata(
   return true;
 }
 
+bool AMDGPUTargetAsmStreamer::EmitKernargPreloadHeader(
+    const MCSubtargetInfo &STI) {
+  for (int i = 0; i < 64; ++i) {
+    OS << "\ts_nop 0\n";
+  }
+  return true;
+}
+
+bool AMDGPUTargetELFStreamer::EmitKernargPreloadHeader(
+    const MCSubtargetInfo &STI) {
+  const uint32_t Encoded_s_nop = 0xbf800000;
+  MCStreamer &OS = getStreamer();
+  for (int i = 0; i < 64; ++i) {
+    OS.emitInt32(Encoded_s_nop);
+  }
+  return true;
+}
+
 bool AMDGPUTargetELFStreamer::EmitCodeEnd(const MCSubtargetInfo &STI) {
   const uint32_t Encoded_s_code_end = 0xbf9f0000;
   const uint32_t Encoded_s_nop = 0xbf800000;
