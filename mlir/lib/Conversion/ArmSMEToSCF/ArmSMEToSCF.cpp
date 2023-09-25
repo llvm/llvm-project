@@ -238,7 +238,7 @@ struct TileVectorPrintOpConversion : public OpRewritePattern<vector::PrintOp> {
     // Cast tile to i32 tile ID.
     auto tileId =
         rewriter.create<arm_sme::CastVectorToTile>(loc, printOp.getSource());
-    auto tileIdI32 = castTileIDToI32(tileId, loc, rewriter);
+    Value tileIdI32 = castTileIDToI32(tileId, loc, rewriter);
 
     // Zero destination/fallback for tile slice extraction.
     auto rowType = VectorType::get(vectorType.getDimSize(1),
@@ -258,7 +258,7 @@ struct TileVectorPrintOpConversion : public OpRewritePattern<vector::PrintOp> {
       // Loop body.
       rewriter.setInsertionPointToStart(forOp.getBody());
       // Extract the current row from the tile.
-      auto rowIndex = forOp.getInductionVar();
+      Value rowIndex = forOp.getInductionVar();
       auto rowIndexI32 = rewriter.create<arith::IndexCastOp>(
           loc, rewriter.getI32Type(), rowIndex);
       auto tileSlice = rewriter.create<arm_sme::aarch64_sme_read_horiz>(
