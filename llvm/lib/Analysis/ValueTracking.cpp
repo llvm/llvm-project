@@ -2264,9 +2264,7 @@ static bool isKnownNonNullFromDominatingCondition(const Value *V,
         return true;
     }
 
-    if (const auto *Div = dyn_cast<BinaryOperator>(U);
-        Div && Div->getOpcode() == BinaryOperator::UDiv &&
-        Div->getOperand(1) == V &&
+    if (match(U, m_UDiv(m_Value(), m_Specific(V))) &&
         isValidAssumeForContext(cast<Instruction>(U), CtxI, DT))
       return true;
 
