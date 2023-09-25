@@ -167,23 +167,23 @@ std::set<const FileEntry *> GetAffectingModuleMaps(const Preprocessor &PP,
 
   const HeaderSearch &HS = PP.getHeaderSearchInfo();
 
-  SmallVector<const FileEntry *, 16> FilesByUID;
+  SmallVector<OptionalFileEntryRef, 16> FilesByUID;
   HS.getFileMgr().GetUniqueIDMapping(FilesByUID);
 
   if (FilesByUID.size() > HS.header_file_size())
     FilesByUID.resize(HS.header_file_size());
 
   for (unsigned UID = 0, LastUID = FilesByUID.size(); UID != LastUID; ++UID) {
-    const FileEntry *File = FilesByUID[UID];
+    OptionalFileEntryRef File = FilesByUID[UID];
     if (!File)
       continue;
 
     const HeaderFileInfo *HFI =
-        HS.getExistingFileInfo(File, /*WantExternal*/ false);
+        HS.getExistingFileInfo(*File, /*WantExternal*/ false);
     if (!HFI || (HFI->isModuleHeader && !HFI->isCompilingModuleHeader))
       continue;
 
-    for (const auto &KH : HS.findResolvedModulesForHeader(File)) {
+    for (const auto &KH : HS.findResolvedModulesForHeader(*File)) {
       if (!KH.getModule())
         continue;
       ModulesToProcess.push_back(KH.getModule());
@@ -2003,14 +2003,14 @@ void ASTWriter::WriteHeaderSearch(const HeaderSearch &HS) {
     }
   }
 
-  SmallVector<const FileEntry *, 16> FilesByUID;
+  SmallVector<OptionalFileEntryRef, 16> FilesByUID;
   HS.getFileMgr().GetUniqueIDMapping(FilesByUID);
 
   if (FilesByUID.size() > HS.header_file_size())
     FilesByUID.resize(HS.header_file_size());
 
   for (unsigned UID = 0, LastUID = FilesByUID.size(); UID != LastUID; ++UID) {
-    const FileEntry *File = FilesByUID[UID];
+    OptionalFileEntryRef File = FilesByUID[UID];
     if (!File)
       continue;
 
@@ -2021,7 +2021,7 @@ void ASTWriter::WriteHeaderSearch(const HeaderSearch &HS) {
     // from a different module; in that case, we rely on the module(s)
     // containing the header to provide this information.
     const HeaderFileInfo *HFI =
-        HS.getExistingFileInfo(File, /*WantExternal*/!Chain);
+        HS.getExistingFileInfo(*File, /*WantExternal*/!Chain);
     if (!HFI || (HFI->isModuleHeader && !HFI->isCompilingModuleHeader))
       continue;
 
@@ -2035,13 +2035,13 @@ void ASTWriter::WriteHeaderSearch(const HeaderSearch &HS) {
       SavedStrings.push_back(Filename.data());
     }
 
-    bool Included = PP->alreadyIncluded(File);
+    bool Included = PP->alreadyIncluded(*File);
 
     HeaderFileInfoTrait::key_type Key = {
-      Filename, File->getSize(), getTimestampForOutput(File)
+      Filename, File->getSize(), getTimestampForOutput(*File)
     };
     HeaderFileInfoTrait::data_type Data = {
-      *HFI, Included, HS.getModuleMap().findResolvedModulesForHeader(File), {}
+      *HFI, Included, HS.getModuleMap().findResolvedModulesForHeader(*File), {}
     };
     Generator.insert(Key, Data, GeneratorTrait);
     ++NumHeaderSearchEntries;
