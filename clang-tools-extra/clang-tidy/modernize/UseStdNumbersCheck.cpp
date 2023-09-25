@@ -60,7 +60,7 @@ AST_MATCHER_P2(clang::FloatingLiteral, near, double, Value, double, Threshold) {
 // Instead, the macro definition is matched and the value is exchanged there.
 // Hinting at replacing macro definitions with language constructs is done in
 // another check.
-AST_MATCHER(clang::Expr, isMathMacro) { return Node.getBeginLoc().isMacroID(); }
+AST_MATCHER(clang::Expr, isMacro) { return Node.getBeginLoc().isMacroID(); }
 
 AST_MATCHER_P(clang::QualType, hasUnqualifiedDesugaredType,
               Matcher<clang::QualType>, InnerMatcher) {
@@ -106,7 +106,7 @@ auto matchFloatValueNear(const double Val,
                          const bool MatchDeclRefExprOrMacro = true) {
   const auto FloatVal = floatLiteral(near(Val, DiffThreshold));
   if (!MatchDeclRefExprOrMacro) {
-    return expr(unless(isMathMacro()), ignoringImplicit(FloatVal));
+    return expr(unless(isMacro()), ignoringImplicit(FloatVal));
   }
 
   const auto Dref = declRefExpr(to(varDecl(
