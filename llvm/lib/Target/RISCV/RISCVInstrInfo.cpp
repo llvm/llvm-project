@@ -756,19 +756,19 @@ void RISCVInstrInfo::movImm(MachineBasicBlock &MBB,
       break;
     case RISCVMatInt::RegX0:
       BuildMI(MBB, MBBI, DL, get(Inst.getOpcode()), DstReg)
-          .addReg(SrcReg, RegState::Kill)
+          .addReg(SrcReg, getKillRegState(SrcReg != RISCV::X0))
           .addReg(RISCV::X0)
           .setMIFlag(Flag);
       break;
     case RISCVMatInt::RegReg:
       BuildMI(MBB, MBBI, DL, get(Inst.getOpcode()), DstReg)
-          .addReg(SrcReg, RegState::Kill)
-          .addReg(SrcReg, RegState::Kill)
+          .addReg(SrcReg, getKillRegState(SrcReg != RISCV::X0))
+          .addReg(SrcReg, getKillRegState(SrcReg != RISCV::X0))
           .setMIFlag(Flag);
       break;
     case RISCVMatInt::RegImm:
       BuildMI(MBB, MBBI, DL, get(Inst.getOpcode()), DstReg)
-          .addReg(SrcReg, RegState::Kill)
+          .addReg(SrcReg, getKillRegState(SrcReg != RISCV::X0))
           .addImm(Inst.getImm())
           .setMIFlag(Flag);
       break;
