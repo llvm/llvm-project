@@ -262,9 +262,9 @@ DECODE_OPERAND_SRC_REG_OR_IMM_DEFERRED_9(VS_32, OPW16, 16)
 DECODE_OPERAND_SRC_REG_OR_IMM_DEFERRED_9(VS_32, OPW32, 32)
 DECODE_OPERAND_SRC_REG_OR_IMM_DEFERRED_9(SReg_32, OPW32, 32)
 
-[[maybe_unused]] static DecodeStatus
-DecodeVGPR_16RegisterClass(MCInst &Inst, unsigned Imm, uint64_t /*Addr*/,
-                           const MCDisassembler *Decoder) {
+static DecodeStatus DecodeVGPR_16RegisterClass(MCInst &Inst, unsigned Imm,
+                                               uint64_t /*Addr*/,
+                                               const MCDisassembler *Decoder) {
   assert(isUInt<10>(Imm) && "10-bit encoding expected");
   assert((Imm & (1 << 8)) == 0 && "Imm{8} should not be used");
 
@@ -274,7 +274,7 @@ DecodeVGPR_16RegisterClass(MCInst &Inst, unsigned Imm, uint64_t /*Addr*/,
   return addOperand(Inst, DAsm->createVGPR16Operand(RegIdx, IsHi));
 }
 
-[[maybe_unused]] static DecodeStatus
+static DecodeStatus
 DecodeVGPR_16_Lo128RegisterClass(MCInst &Inst, unsigned Imm, uint64_t /*Addr*/,
                                  const MCDisassembler *Decoder) {
   assert(isUInt<8>(Imm) && "8-bit encoding expected");
@@ -285,9 +285,9 @@ DecodeVGPR_16_Lo128RegisterClass(MCInst &Inst, unsigned Imm, uint64_t /*Addr*/,
   return addOperand(Inst, DAsm->createVGPR16Operand(RegIdx, IsHi));
 }
 
-[[maybe_unused]] static DecodeStatus
-decodeOperand_VSrcT16_Lo128(MCInst &Inst, unsigned Imm, uint64_t /*Addr*/,
-                            const MCDisassembler *Decoder) {
+static DecodeStatus decodeOperand_VSrcT16_Lo128(MCInst &Inst, unsigned Imm,
+                                                uint64_t /*Addr*/,
+                                                const MCDisassembler *Decoder) {
   assert(isUInt<9>(Imm) && "9-bit encoding expected");
 
   const auto *DAsm = static_cast<const AMDGPUDisassembler *>(Decoder);
@@ -301,9 +301,9 @@ decodeOperand_VSrcT16_Lo128(MCInst &Inst, unsigned Imm, uint64_t /*Addr*/,
                                                    Imm & 0xFF, false, 16));
 }
 
-[[maybe_unused]] static DecodeStatus
-decodeOperand_VSrcT16(MCInst &Inst, unsigned Imm, uint64_t /*Addr*/,
-                      const MCDisassembler *Decoder) {
+static DecodeStatus decodeOperand_VSrcT16(MCInst &Inst, unsigned Imm,
+                                          uint64_t /*Addr*/,
+                                          const MCDisassembler *Decoder) {
   assert(isUInt<10>(Imm) && "10-bit encoding expected");
 
   const auto *DAsm = static_cast<const AMDGPUDisassembler *>(Decoder);
