@@ -18,10 +18,10 @@ define float @foo1(ptr %x0, ptr %x1, ptr %x2) nounwind {
 ; CHECK-NEXT:    ld1d { z5.d }, p0/z, [x2]
 ; CHECK-NEXT:    mov x0, sp
 ; CHECK-NEXT:    ptrue p0.d
-; CHECK-NEXT:    st1d { z16.d }, p0, [sp]
-; CHECK-NEXT:    st1d { z17.d }, p0, [sp, #1, mul vl]
-; CHECK-NEXT:    st1d { z18.d }, p0, [sp, #2, mul vl]
 ; CHECK-NEXT:    st1d { z19.d }, p0, [sp, #3, mul vl]
+; CHECK-NEXT:    st1d { z18.d }, p0, [sp, #2, mul vl]
+; CHECK-NEXT:    st1d { z17.d }, p0, [sp, #1, mul vl]
+; CHECK-NEXT:    st1d { z16.d }, p0, [sp]
 ; CHECK-NEXT:    bl callee1
 ; CHECK-NEXT:    addvl sp, sp, #4
 ; CHECK-NEXT:    ldp x29, x30, [sp], #16 // 16-byte Folded Reload
@@ -73,10 +73,10 @@ define float @foo2(ptr %x0, ptr %x1) nounwind {
 ; CHECK-NEXT:    mov w7, #7 // =0x7
 ; CHECK-NEXT:    add x9, sp, #16
 ; CHECK-NEXT:    ptrue p0.d
-; CHECK-NEXT:    st1d { z16.d }, p0, [x9]
-; CHECK-NEXT:    st1d { z17.d }, p0, [x9, #1, mul vl]
-; CHECK-NEXT:    st1d { z18.d }, p0, [x9, #2, mul vl]
 ; CHECK-NEXT:    st1d { z19.d }, p0, [x9, #3, mul vl]
+; CHECK-NEXT:    st1d { z18.d }, p0, [x9, #2, mul vl]
+; CHECK-NEXT:    st1d { z17.d }, p0, [x9, #1, mul vl]
+; CHECK-NEXT:    st1d { z16.d }, p0, [x9]
 ; CHECK-NEXT:    str x8, [sp]
 ; CHECK-NEXT:    bl callee2
 ; CHECK-NEXT:    addvl sp, sp, #4
@@ -121,9 +121,9 @@ define float @foo3(ptr %x0, ptr %x1, ptr %x2) nounwind {
 ; CHECK-NEXT:    fmov s1, #2.00000000
 ; CHECK-NEXT:    mov x0, sp
 ; CHECK-NEXT:    ptrue p0.d
-; CHECK-NEXT:    st1d { z16.d }, p0, [sp]
-; CHECK-NEXT:    st1d { z17.d }, p0, [sp, #1, mul vl]
 ; CHECK-NEXT:    st1d { z18.d }, p0, [sp, #2, mul vl]
+; CHECK-NEXT:    st1d { z17.d }, p0, [sp, #1, mul vl]
+; CHECK-NEXT:    st1d { z16.d }, p0, [sp]
 ; CHECK-NEXT:    bl callee3
 ; CHECK-NEXT:    addvl sp, sp, #3
 ; CHECK-NEXT:    ldp x29, x30, [sp], #16 // 16-byte Folded Reload
@@ -714,6 +714,10 @@ define void @verify_all_operands_are_initialised() {
 ; CHECK-NEXT:    fmov s6, #6.00000000
 ; CHECK-NEXT:    fmov s7, #7.00000000
 ; CHECK-NEXT:    add x0, sp, #16
+; CHECK-NEXT:    add x9, sp, #16
+; CHECK-NEXT:    ptrue p0.s
+; CHECK-NEXT:    fmov z16.s, #9.00000000
+; CHECK-NEXT:    st1w { z16.s }, p0, [x9]
 ; CHECK-NEXT:    str w8, [sp]
 ; CHECK-NEXT:    bl func_f8_and_v0_passed_via_memory
 ; CHECK-NEXT:    addvl sp, sp, #1
