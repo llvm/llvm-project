@@ -1156,9 +1156,11 @@ def ConstInit : InheritableAttr {
 
 def Constructor : InheritableAttr {
   let Spellings = [GCC<"constructor">];
-  let Args = [DefaultIntArgument<"Priority", 65535>];
+  let Args = [ExprArgument<"Priority", 1>];
   let Subjects = SubjectList<[Function]>;
   let Documentation = [CtorDtorDocs];
+  let TemplateDependent = 1;
+  let AdditionalMembers = [{ static const int DefaultPriority = 65535; }];
 }
 
 def CPUSpecific : InheritableAttr {
@@ -1422,9 +1424,11 @@ def Deprecated : InheritableAttr {
 
 def Destructor : InheritableAttr {
   let Spellings = [GCC<"destructor">];
-  let Args = [DefaultIntArgument<"Priority", 65535>];
+  let Args = [ExprArgument<"Priority", 1>];
   let Subjects = SubjectList<[Function]>;
   let Documentation = [CtorDtorDocs];
+  let TemplateDependent = 1;
+  let AdditionalMembers = [{ static const int DefaultPriority = 65535; }];
 }
 
 def EmptyBases : InheritableAttr, TargetSpecificAttr<TargetMicrosoftCXXABI> {

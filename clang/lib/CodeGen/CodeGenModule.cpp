@@ -32,6 +32,7 @@
 #include "clang/AST/DeclCXX.h"
 #include "clang/AST/DeclObjC.h"
 #include "clang/AST/DeclTemplate.h"
+#include "clang/AST/Expr.h"
 #include "clang/AST/Mangle.h"
 #include "clang/AST/RecursiveASTVisitor.h"
 #include "clang/AST/StmtVisitor.h"
@@ -5661,10 +5662,20 @@ void CodeGenModule::EmitGlobalFunctionDefinition(GlobalDecl GD,
   setNonAliasAttributes(GD, Fn);
   SetLLVMFunctionAttributesForDefinition(D, Fn);
 
-  if (const ConstructorAttr *CA = D->getAttr<ConstructorAttr>())
-    AddGlobalCtor(Fn, CA->getPriority());
+  auto getPrio = [this](auto *Attr) -> int {
+    Expr *E = Attr->getPriority();
+    if (!E)
+      return Attr->DefaultPriority;
+    if (auto CE = E->getIntegerConstantExpr(getContext()))
+      return CE->getExtValue();
+    return Attr->DefaultPriority;
+  };
+
+  if (const ConstructorAttr *CA = D->getAttr<ConstructorAttr>()) {
+    AddGlobalCtor(Fn, getPrio(CA));
+  }
   if (const DestructorAttr *DA = D->getAttr<DestructorAttr>())
-    AddGlobalDtor(Fn, DA->getPriority(), true);
+    AddGlobalDtor(Fn, getPrio(DA), true);
   if (D->hasAttr<AnnotateAttr>())
     AddGlobalAnnotations(D, Fn);
   if (getLangOpts().OpenMP && D->hasAttr<OMPDeclareTargetDeclAttr>())
