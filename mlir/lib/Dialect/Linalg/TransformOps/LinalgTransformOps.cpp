@@ -1037,12 +1037,21 @@ transform::InterchangeOp::applyToOne(transform::TransformRewriter &rewriter,
     results.push_back(target);
     return DiagnosedSilenceableFailure::success();
   }
+
+  unsigned numLoops = cast<LinalgOp>(target.getOperation()).getNumLoops();
+  if (interchangeVector.size() != numLoops) {
+    return emitSilenceableError()
+           << getIteratorInterchangeAttrName() << " has length ("
+           << interchangeVector.size()
+           << ") different from the number of loops in the target operation ("
+           << numLoops << ")";
+  }
   FailureOr<GenericOp> res =
       interchangeGenericOp(rewriter, target,
                            SmallVector<unsigned>(interchangeVector.begin(),
                                                  interchangeVector.end()));
   if (failed(res))
-    return DiagnosedSilenceableFailure::definiteFailure();
+    return emitDefiniteFailure() << "failed to apply";
   results.push_back(res->getOperation());
   return DiagnosedSilenceableFailure::success();
 }

@@ -17,3 +17,6 @@ Revert: breaks build of libdevice
  Need to revisit upstream vs ASO: clang/lib/Headers/__clang_hip_math.h
    new test:   clang/test/CodeGenOpenCL/sqrt-fpmath.cl
 
+Revert: waiting on pip install myst-parser 
+ b7ff03206 "[Documentation] Replace recommonmark by myst-parser
+

@@ -11,6 +11,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "flang/Lower/ConvertCall.h"
+#include "flang/Lower/Allocatable.h"
 #include "flang/Lower/ConvertExprToHLFIR.h"
 #include "flang/Lower/ConvertVariable.h"
 #include "flang/Lower/CustomIntrinsicCall.h"
@@ -1199,12 +1200,21 @@ genUserCall(Fortran::lower::PreparedActualArguments &loweredActuals,
       }
       // Passing a POINTER to a POINTER, or an ALLOCATABLE to an ALLOCATABLE.
       assert(actual.isMutableBox() && "actual must be a mutable box");
-      caller.placeInput(arg, actual);
       if (fir::isAllocatableType(argTy) && arg.isIntentOut() &&
           Fortran::semantics::IsBindCProcedure(
               *callContext.procRef.proc().GetSymbol())) {
-        TODO(loc, "BIND(C) INTENT(OUT) allocatable deallocation in HLFIR");
+        // INTENT(OUT) allocatables are deallocated on the callee side,
+        // but BIND(C) procedures may be implemented in C, so deallocation is
+        // also done on the caller side (if the procedure is implemented in
+        // Fortran, the deallocation attempt in the callee will be a no-op).
+        auto [exv, cleanup] =
+            hlfir::translateToExtendedValue(loc, builder, actual);
+        const auto *mutableBox = exv.getBoxOf<fir::MutableBoxValue>();
+        assert(mutableBox && !cleanup && "expect allocatable");
+        Fortran::lower::genDeallocateIfAllocated(callContext.converter,
+                                                 *mutableBox, loc);
       }
+      caller.placeInput(arg, actual);
     } break;
     }
   }

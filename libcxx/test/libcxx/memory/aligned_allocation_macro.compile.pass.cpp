@@ -9,9 +9,6 @@
 // UNSUPPORTED: c++03, c++11, c++14
 // XFAIL: availability-aligned_allocation-missing
 
-// https://reviews.llvm.org/D129198 is not in AppleClang 14
-// XFAIL: stdlib=apple-libc++ && target={{.+}}-apple-macosx10.13{{(.0)?}} && apple-clang-14
-
 #include <new>
 
 #include "test_macros.h"

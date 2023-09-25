@@ -87,8 +87,7 @@ namespace {
         llvm::Value *StoragePtr = CGF.Builder.CreateConstGEP1_64(
             CGF.Int8Ty, BitFieldPtr, OffsetInChars.getQuantity());
         StoragePtr = CGF.Builder.CreateAddrSpaceCast(
-            StoragePtr, llvm::PointerType::getUnqual(CGF.getLLVMContext()),
-            "atomic_bitfield_base");
+            StoragePtr, CGF.UnqualPtrTy, "atomic_bitfield_base");
         BFI = OrigBFI;
         BFI.Offset = Offset;
         BFI.StorageSize = AtomicSizeInBits;
