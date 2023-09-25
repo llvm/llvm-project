@@ -8,9 +8,10 @@
 
 # OpenACC in Flang
 
-```eval_rst
-.. contents::
-   :local:
+```{contents}
+---
+local:
+---
 ```
 
 ## Intentional deviation from the specification
