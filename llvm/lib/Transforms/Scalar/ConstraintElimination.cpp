@@ -25,6 +25,7 @@
 #include "llvm/IR/Function.h"
 #include "llvm/IR/GetElementPtrTypeIterator.h"
 #include "llvm/IR/IRBuilder.h"
+#include "llvm/IR/InstrTypes.h"
 #include "llvm/IR/Instructions.h"
 #include "llvm/IR/PatternMatch.h"
 #include "llvm/IR/Verifier.h"
@@ -748,11 +749,23 @@ void ConstraintInfo::transferToOtherSystem(
   default:
     break;
   case CmpInst::ICMP_ULT:
-    //  If B is a signed positive constant, A >=s 0 and A <s B.
+  case CmpInst::ICMP_ULE:
+    //  If B is a signed positive constant, then A >=s 0 and A <s (or <=s) B.
     if (doesHold(CmpInst::ICMP_SGE, B, ConstantInt::get(B->getType(), 0))) {
       addFact(CmpInst::ICMP_SGE, A, ConstantInt::get(B->getType(), 0), NumIn,
               NumOut, DFSInStack);
-      addFact(CmpInst::ICMP_SLT, A, B, NumIn, NumOut, DFSInStack);
+      addFact(CmpInst::getSignedPredicate(Pred), A, B, NumIn, NumOut,
+              DFSInStack);
+    }
+    break;
+  case CmpInst::ICMP_UGE:
+  case CmpInst::ICMP_UGT:
+    //  If A is a signed positive constant, then B >=s 0 and A >s (or >=s) B.
+    if (doesHold(CmpInst::ICMP_SGE, A, ConstantInt::get(B->getType(), 0))) {
+      addFact(CmpInst::ICMP_SGE, B, ConstantInt::get(B->getType(), 0), NumIn,
+              NumOut, DFSInStack);
+      addFact(CmpInst::getSignedPredicate(Pred), A, B, NumIn, NumOut,
+              DFSInStack);
     }
     break;
   case CmpInst::ICMP_SLT:
