@@ -1589,6 +1589,22 @@ void VPReductionPHIRecipe::execute(VPTransformState &State) {
       StartV = Iden =
           Builder.CreateVectorSplat(State.VF, StartV, "minmax.ident");
     }
+  } else if (RecurrenceDescriptor::isFindLastIVRecurrenceKind(RK)) {
+    // [I|F]FindLastIV will use a sentinel value as the identity to initialize
+    // the reduction phi. In the middle block, createSentinelValueHandling will
+    // generate checks to verify if the reduction result is the sentinel value.
+    // If the result is the sentinel value, it will be corrected back to the
+    // start value.
+    // TODO: The sentinel value is not always necessary. When the start value is
+    // a constant, and smaller than the start value of the induction variable,
+    // the start value can be directly used to initialize the reduction phi.
+    StartV = Iden = RdxDesc.getRecurrenceIdentity(RK, VecTy->getScalarType(),
+                                                  RdxDesc.getFastMathFlags());
+    if (!ScalarPHI) {
+      IRBuilderBase::InsertPointGuard IPBuilder(Builder);
+      Builder.SetInsertPoint(VectorPH->getTerminator());
+      StartV = Iden = Builder.CreateVectorSplat(State.VF, Iden);
+    }
   } else {
     Iden = RdxDesc.getRecurrenceIdentity(RK, VecTy->getScalarType(),
                                          RdxDesc.getFastMathFlags());

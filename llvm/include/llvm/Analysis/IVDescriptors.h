@@ -52,9 +52,16 @@ enum class RecurKind {
   FMulAdd,  ///< Sum of float products with llvm.fmuladd(a * b + sum).
   IAnyOf,   ///< Any_of reduction with select(icmp(),x,y) where one of (x,y) is
             ///< loop invariant, and both x and y are integer type.
-  FAnyOf    ///< Any_of reduction with select(fcmp(),x,y) where one of (x,y) is
+  FAnyOf,   ///< Any_of reduction with select(fcmp(),x,y) where one of (x,y) is
             ///< loop invariant, and both x and y are integer type.
-  // TODO: Any_of reduction need not be restricted to integer type only.
+  IFindLastIV, ///< FindLast reduction with select(icmp(),x,y) where one of
+               ///< (x,y) is increasing loop induction PHI, and both x and y are
+               ///< integer type.
+  FFindLastIV ///< FindLast reduction with select(fcmp(),x,y) where one of (x,y)
+              ///< is increasing loop induction PHI, and both x and y are
+              ///< integer type.
+  // TODO: Any_of and FindLast reduction need not be restricted to integer type
+  // only.
 };
 
 /// The RecurrenceDescriptor is used to identify recurrences variables in a
@@ -126,7 +133,7 @@ public:
   /// the returned struct.
   static InstDesc isRecurrenceInstr(Loop *L, PHINode *Phi, Instruction *I,
                                     RecurKind Kind, InstDesc &Prev,
-                                    FastMathFlags FuncFMF);
+                                    FastMathFlags FuncFMF, ScalarEvolution *SE);
 
   /// Returns true if instruction I has multiple uses in Insts
   static bool hasMultipleUsesOf(Instruction *I,
@@ -152,6 +159,16 @@ public:
   /// instruction, so its corresponding cmp can be matched to it.
   static InstDesc isAnyOfPattern(Loop *Loop, PHINode *OrigPhi, Instruction *I,
                                  InstDesc &Prev);
+
+  /// Returns a struct describing whether the instruction is either a
+  ///   Select(ICmp(A, B), X, Y), or
+  ///   Select(FCmp(A, B), X, Y)
+  /// where one of (X, Y) is an increasing loop induction variable, and the
+  /// other is a PHI value.
+  // TODO: FindLast does not need be restricted to increasing loop induction
+  // variables.
+  static InstDesc isFindLastIVPattern(Loop *Loop, PHINode *OrigPhi,
+                                      Instruction *I, ScalarEvolution *SE);
 
   /// Returns a struct describing if the instruction is a
   /// Select(FCmp(X, Y), (Z = X op PHINode), PHINode) instruction pattern.
@@ -239,6 +256,12 @@ public:
   ///   select(cmp(),x,y) where one of (x,y) is loop invariant.
   static bool isAnyOfRecurrenceKind(RecurKind Kind) {
     return Kind == RecurKind::IAnyOf || Kind == RecurKind::FAnyOf;
+  }
+
+  /// Returns true if the recurrence kind is of the form
+  ///   select(cmp(),x,y) where one of (x,y) is increasing loop induction.
+  static bool isFindLastIVRecurrenceKind(RecurKind Kind) {
+    return Kind == RecurKind::IFindLastIV || Kind == RecurKind::FFindLastIV;
   }
 
   /// Returns the type of the recurrence. This type can be narrower than the

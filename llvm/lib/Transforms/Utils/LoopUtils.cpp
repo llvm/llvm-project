@@ -942,6 +942,11 @@ Value *llvm::createAnyOfOp(IRBuilderBase &Builder, Value *StartVal,
   return Builder.CreateSelect(Cmp, Left, Right, "rdx.select");
 }
 
+Value *llvm::createFindLastIVOp(IRBuilderBase &Builder, Value *Left,
+                                Value *Right) {
+  return createMinMaxOp(Builder, RecurKind::SMax, Left, Right);
+}
+
 Value *llvm::createMinMaxOp(IRBuilderBase &Builder, RecurKind RK, Value *Left,
                             Value *Right) {
   Type *Ty = Left->getType();
@@ -1062,6 +1067,14 @@ Value *llvm::createAnyOfTargetReduction(IRBuilderBase &Builder, Value *Src,
   return Builder.CreateSelect(Cmp, NewVal, InitVal, "rdx.select");
 }
 
+Value *llvm::createFindLastIVTargetReduction(IRBuilderBase &Builder, Value *Src,
+                                             const RecurrenceDescriptor &Desc) {
+  assert(RecurrenceDescriptor::isFindLastIVRecurrenceKind(
+             Desc.getRecurrenceKind()) &&
+         "Unexpected reduction kind");
+  return Builder.CreateIntMaxReduce(Src, true);
+}
+
 Value *llvm::createSimpleTargetReduction(IRBuilderBase &Builder, Value *Src,
                                          RecurKind RdxKind) {
   auto *SrcVecEltTy = cast<VectorType>(Src->getType())->getElementType();
@@ -1115,6 +1128,8 @@ Value *llvm::createTargetReduction(IRBuilderBase &B,
   RecurKind RK = Desc.getRecurrenceKind();
   if (RecurrenceDescriptor::isAnyOfRecurrenceKind(RK))
     return createAnyOfTargetReduction(B, Src, Desc, OrigPhi);
+  if (RecurrenceDescriptor::isFindLastIVRecurrenceKind(RK))
+    return createFindLastIVTargetReduction(B, Src, Desc);
 
   return createSimpleTargetReduction(B, Src, RK);
 }
@@ -1129,6 +1144,16 @@ Value *llvm::createOrderedReduction(IRBuilderBase &B,
   assert(!Start->getType()->isVectorTy() && "Expected a scalar type");
 
   return B.CreateFAddReduce(Start, Src);
+}
+
+Value *llvm::createSentinelValueHandling(IRBuilderBase &Builder,
+                                         const RecurrenceDescriptor &Desc,
+                                         Value *Rdx) {
+  Value *InitVal = Desc.getRecurrenceStartValue();
+  Value *Iden = Desc.getRecurrenceIdentity(
+      Desc.getRecurrenceKind(), Rdx->getType(), Desc.getFastMathFlags());
+  Value *Cmp = Builder.CreateCmp(CmpInst::ICMP_NE, Rdx, Iden, "rdx.select.cmp");
+  return Builder.CreateSelect(Cmp, Rdx, InitVal, "rdx.select");
 }
 
 void llvm::propagateIRFlags(Value *I, ArrayRef<Value *> VL, Value *OpValue,
