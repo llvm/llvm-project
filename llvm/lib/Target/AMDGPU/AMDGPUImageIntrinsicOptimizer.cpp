@@ -96,9 +96,10 @@ INITIALIZE_PASS(AMDGPUImageIntrinsicOptimizer, DEBUG_TYPE,
 char AMDGPUImageIntrinsicOptimizer::ID = 0;
 
 void addInstToMergeableList(
-    IntrinsicInst *II, std::list<std::list<IntrinsicInst *>> &MergeableInsts,
+    IntrinsicInst *II,
+    SmallVector<SmallVector<IntrinsicInst *>> &MergeableInsts,
     const AMDGPU::ImageDimIntrinsicInfo *ImageDimIntr) {
-  for (std::list<IntrinsicInst *> &IIList : MergeableInsts) {
+  for (SmallVector<IntrinsicInst *> &IIList : MergeableInsts) {
     // Check Dim.
     if (IIList.front()->getIntrinsicID() != II->getIntrinsicID())
       continue;
@@ -143,9 +144,9 @@ void addInstToMergeableList(
 
 // Collect list of all instructions we know how to merge in a subset of the
 // block. It returns an iterator to the instruction after the last one analyzed.
-BasicBlock::iterator
-collectMergeableInsts(BasicBlock::iterator I, BasicBlock::iterator E,
-                      std::list<std::list<IntrinsicInst *>> &MergeableInsts) {
+BasicBlock::iterator collectMergeableInsts(
+    BasicBlock::iterator I, BasicBlock::iterator E,
+    SmallVector<SmallVector<IntrinsicInst *>> &MergeableInsts) {
   for (; I != E; ++I) {
     // Don't combine if there is a store in the middle or if there is a memory
     // barrier.
@@ -177,11 +178,10 @@ collectMergeableInsts(BasicBlock::iterator I, BasicBlock::iterator E,
   return I;
 }
 
-bool optimizeSection(std::list<std::list<IntrinsicInst *>> &MergeableInsts) {
+bool optimizeSection(ArrayRef<SmallVector<IntrinsicInst *>> MergeableInsts) {
   bool Modified = false;
 
-  SmallVector<Instruction *, 4> InstrsToErase;
-  for (auto IIList : MergeableInsts) {
+  for (const auto &IIList : MergeableInsts) {
     if (IIList.size() <= 1)
       continue;
 
@@ -254,12 +254,13 @@ bool optimizeSection(std::list<std::list<IntrinsicInst *>> &MergeableInsts) {
 
     // Create the new extractelement instructions.
     for (auto &II : IIList) {
-      Value *VecOp = UndefValue::get(II->getType());
+      Value *VecOp = nullptr;
       auto Idx = cast<ConstantInt>(II->getArgOperand(FragIdIndex));
       if (NumElts == 1) {
         VecOp = B.CreateExtractElement(NewCalls[0], Idx->getValue().urem(4));
         LLVM_DEBUG(dbgs() << "Add: " << *VecOp << "\n");
       } else {
+        VecOp = UndefValue::get(II->getType());
         for (unsigned I = 0; I < NumElts; ++I) {
           VecOp = B.CreateInsertElement(
               VecOp,
@@ -270,17 +271,11 @@ bool optimizeSection(std::list<std::list<IntrinsicInst *>> &MergeableInsts) {
 
       // Replace the old instruction.
       II->replaceAllUsesWith(VecOp);
-      InstrsToErase.push_back(II);
+      II->eraseFromParent();
     }
 
     Modified = true;
   }
-
-  for (auto I : InstrsToErase) {
-    I->eraseFromParent();
-  }
-
-  MergeableInsts.clear();
 
   return Modified;
 }
@@ -309,7 +304,7 @@ static bool imageIntrinsicOptimizerImpl(Function &F, const TargetMachine *TM) {
     BasicBlock::iterator SectionEnd;
     for (BasicBlock::iterator I = BB.begin(), E = BB.end(); I != E;
          I = SectionEnd) {
-      std::list<std::list<IntrinsicInst *>> MergeableInsts;
+      SmallVector<SmallVector<IntrinsicInst *>> MergeableInsts;
 
       SectionEnd = collectMergeableInsts(I, E, MergeableInsts);
       Modified |= optimizeSection(MergeableInsts);
