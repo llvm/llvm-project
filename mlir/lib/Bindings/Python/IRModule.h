@@ -759,6 +759,16 @@ class PyAsmState {
       mlirOpPrintingFlagsUseLocalScope(flags);
     state = mlirAsmStateCreateForValue(value, flags);
   }
+
+  PyAsmState(PyOperationBase &operation, bool useLocalScope) {
+    flags = mlirOpPrintingFlagsCreate();
+    // The OpPrintingFlags are not exposed Python side, create locally and
+    // associate lifetime with the state.
+    if (useLocalScope)
+      mlirOpPrintingFlagsUseLocalScope(flags);
+    state =
+        mlirAsmStateCreateForOperation(operation.getOperation().get(), flags);
+  }
   ~PyAsmState() {
     mlirOpPrintingFlagsDestroy(flags);
   }

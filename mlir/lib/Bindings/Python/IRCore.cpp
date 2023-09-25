@@ -3479,6 +3479,8 @@ void mlir::python::populateIRCore(py::module &m) {
 
   py::class_<PyAsmState>(m, "AsmState", py::module_local())
       .def(py::init<PyValue &, bool>(), py::arg("value"),
+           py::arg("use_local_scope") = false)
+      .def(py::init<PyOperationBase &, bool>(), py::arg("op"),
            py::arg("use_local_scope") = false);
 
   //----------------------------------------------------------------------------
