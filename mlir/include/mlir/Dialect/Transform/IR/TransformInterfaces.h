@@ -774,7 +774,8 @@ public:
   /// corresponds to the given list of payload IR ops. Each result must be set
   /// by the transformation exactly once in case of transformation succeeding.
   /// The value must have a type implementing TransformHandleTypeInterface.
-  template <typename Range> void set(OpResult value, Range &&ops) {
+  template <typename Range>
+  void set(OpResult value, Range &&ops) {
     int64_t position = value.getResultNumber();
     assert(position < static_cast<int64_t>(operations.size()) &&
            "setting results for a non-existent handle");
@@ -929,8 +930,9 @@ protected:
   ///
   /// Derived classes may override `findReplacementOp` to specify custom
   /// replacement rules.
-  virtual FailureOr<Operation *> findReplacementOp(Operation *op,
-                                                   ValueRange newValues) const;
+  virtual DiagnosedSilenceableFailure
+  findReplacementOp(Operation *&result, Operation *op,
+                    ValueRange newValues) const;
 
   /// Notify the listener that the pattern failed to match the given operation,
   /// and provide a callback to populate a diagnostic with the reason why the
@@ -942,8 +944,9 @@ protected:
   /// This function is called when a tracked payload op is dropped because no
   /// replacement op was found. Derived classes can implement this function for
   /// custom error handling.
-  virtual void notifyPayloadReplacementNotFound(Operation *op,
-                                                ValueRange values) {}
+  virtual void
+  notifyPayloadReplacementNotFound(Operation *op, ValueRange values,
+                                   DiagnosedSilenceableFailure &&diag) {}
 
   /// Return the single op that defines all given values (if any).
   static Operation *getCommonDefiningOp(ValueRange values);
@@ -983,8 +986,9 @@ public:
   bool failed() const;
 
 protected:
-  void notifyPayloadReplacementNotFound(Operation *op,
-                                        ValueRange values) override;
+  void
+  notifyPayloadReplacementNotFound(Operation *op, ValueRange values,
+                                   DiagnosedSilenceableFailure &&diag) override;
 
 private:
   /// The error state of this listener. "Success" indicates that no error
