@@ -1170,6 +1170,10 @@ class FPVCSrcInputModsMatchClass <int opSize> : FPInputModsMatchClass <opSize> {
 }
 
 def FP16InputModsMatchClass : FPInputModsMatchClass<16>;
+def FPT16InputModsMatchClass : FPInputModsMatchClass<16> {
+  let Name = "RegOrImmWithFPT16InputMods";
+  let PredicateMethod = "isRegOrImmWithFPT16InputMods";
+}
 def FP32InputModsMatchClass : FPInputModsMatchClass<32>;
 def FP64InputModsMatchClass : FPInputModsMatchClass<64>;
 
@@ -1187,6 +1191,7 @@ class FPInputMods <FPInputModsMatchClass matchClass> : InputMods <matchClass> {
 }
 
 def FP16InputMods : FPInputMods<FP16InputModsMatchClass>;
+def FPT16InputMods : FPInputMods<FPT16InputModsMatchClass>;
 def FP32InputMods : FPInputMods<FP32InputModsMatchClass>;
 def FP64InputMods : FPInputMods<FP64InputModsMatchClass>;
 
@@ -1202,6 +1207,10 @@ class IntVCSrcInputModsMatchClass <int opSize> : IntInputModsMatchClass <opSize>
   let Name = "RegOrInlineImmWithInt"#opSize#"InputMods";
   let PredicateMethod = "isRegOrInlineImmWithInt"#opSize#"InputMods";
 }
+def IntT16InputModsMatchClass : IntInputModsMatchClass<16> {
+  let Name = "RegOrImmWithIntT16InputMods";
+  let PredicateMethod = "isRegOrImmWithIntT16InputMods";
+}
 def Int32InputModsMatchClass : IntInputModsMatchClass<32>;
 def Int64InputModsMatchClass : IntInputModsMatchClass<64>;
 def Int32VCSrcInputModsMatchClass : IntVCSrcInputModsMatchClass<32>;
@@ -1209,6 +1218,7 @@ def Int32VCSrcInputModsMatchClass : IntVCSrcInputModsMatchClass<32>;
 class IntInputMods <IntInputModsMatchClass matchClass> : InputMods <matchClass> {
   let PrintMethod = "printOperandAndIntInputMods";
 }
+def IntT16InputMods : IntInputMods<IntT16InputModsMatchClass>;
 def Int32InputMods : IntInputMods<Int32InputModsMatchClass>;
 def Int64InputMods : IntInputMods<Int64InputModsMatchClass>;
 def Int32VCSrcInputMods : IntInputMods<Int32VCSrcInputModsMatchClass>;
@@ -1463,15 +1473,18 @@ class getNumSrcArgs<ValueType Src0, ValueType Src1, ValueType Src2> {
 
 // Returns the register class to use for the destination of VOP[123C]
 // instructions for the given VT.
-class getVALUDstForVT<ValueType VT> {
+class getVALUDstForVT<ValueType VT, bit IsTrue16 = 0, bit IsVOP3Encoding = 0> {
+  defvar op16 = !if(IsTrue16, !if (IsVOP3Encoding, VOPDstOperand_t16,
+                                   VOPDstOperand_t16Lo128),
+                    VOPDstOperand<VGPR_32>);
   RegisterOperand ret = !if(!eq(VT.Size, 32), VOPDstOperand<VGPR_32>,
                           !if(!eq(VT.Size, 128), VOPDstOperand<VReg_128>,
                             !if(!eq(VT.Size, 64), VOPDstOperand<VReg_64>,
-                              !if(!eq(VT.Size, 16), VOPDstOperand<VGPR_32>,
+                              !if(!eq(VT.Size, 16), op16,
                               VOPDstS64orS32)))); // else VT == i1
 }
 
-class getVALUDstForVT_t16<ValueType VT> {
+class getVALUDstForVT_fake16<ValueType VT> {
   RegisterOperand ret = !if(!eq(VT.Size, 32), VOPDstOperand<VGPR_32>,
                           !if(!eq(VT.Size, 128), VOPDstOperand<VReg_128>,
                             !if(!eq(VT.Size, 64), VOPDstOperand<VReg_64>,
@@ -1489,7 +1502,7 @@ class getSDWADstForVT<ValueType VT> {
 
 // Returns the register class to use for source 0 of VOP[12C]
 // instructions for the given VT.
-class getVOPSrc0ForVT<ValueType VT, bit IsTrue16> {
+class getVOPSrc0ForVT<ValueType VT, bit IsTrue16, bit IsFake16 = 1> {
   bit isFP = isFloatType<VT>.ret;
 
   RegisterOperand ret =
@@ -1498,7 +1511,7 @@ class getVOPSrc0ForVT<ValueType VT, bit IsTrue16> {
          VSrc_f64,
          !if(!eq(VT.Value, f16.Value),
             !if(IsTrue16,
-              VSrcT_f16_Lo128,
+              !if(IsFake16, VSrcFake16_f16_Lo128, VSrcT_f16_Lo128),
               VSrc_f16
             ),
             !if(!eq(VT.Value, v2f16.Value),
@@ -1514,7 +1527,7 @@ class getVOPSrc0ForVT<ValueType VT, bit IsTrue16> {
           VSrc_b64,
           !if(!eq(VT.Value, i16.Value),
             !if(IsTrue16,
-              VSrcT_b16_Lo128,
+              !if(IsFake16, VSrcFake16_b16_Lo128, VSrcT_b16_Lo128),
               VSrc_b16
             ),
              !if(!eq(VT.Value, v2i16.Value),
@@ -1539,13 +1552,17 @@ class getVregSrcForVT<ValueType VT> {
                               VGPR_32))));
 }
 
-class getVregSrcForVT_t16<ValueType VT> {
+class getVregSrcForVT_t16<ValueType VT, bit IsFake16 = 1> {
   RegisterClass ret = !if(!eq(VT.Size, 128), VReg_128,
                         !if(!eq(VT.Size, 96), VReg_96,
                           !if(!eq(VT.Size, 64), VReg_64,
                             !if(!eq(VT.Size, 48), VReg_64,
-                              !if(!eq(VT.Size, 16), VGPR_32_Lo128,
+                              !if(!eq(VT.Size, 16),
+                                  !if(IsFake16, VGPR_32_Lo128, VGPR_16_Lo128),
                                   VGPR_32)))));
+
+  RegisterOperand op = !if (!and(!eq(VT.Size, 16), !not(IsFake16)),
+                            VGPRSrc_16_Lo128, RegisterOperand<ret>);
 }
 
 class getSDWASrcForVT <ValueType VT> {
@@ -1557,7 +1574,7 @@ class getSDWASrcForVT <ValueType VT> {
 
 // Returns the register class to use for sources of VOP3 instructions for the
 // given VT.
-class getVOP3SrcForVT<ValueType VT> {
+class getVOP3SrcForVT<ValueType VT, bit IsTrue16 = 0> {
   bit isFP = isFloatType<VT>.ret;
   RegisterOperand ret =
   !if(!eq(VT.Size, 128),
@@ -1574,7 +1591,7 @@ class getVOP3SrcForVT<ValueType VT> {
            SSrc_i1,
            !if(isFP,
               !if(!eq(VT.Value, f16.Value),
-                 VSrc_f16,
+                 !if(IsTrue16, VSrcT_f16, VSrc_f16),
                  !if(!eq(VT.Value, v2f16.Value),
                     VSrc_v2f16,
                     !if(!eq(VT.Value, v4f16.Value),
@@ -1584,7 +1601,7 @@ class getVOP3SrcForVT<ValueType VT> {
                  )
               ),
               !if(!eq(VT.Value, i16.Value),
-                 VSrc_b16,
+                 !if(IsTrue16, VSrcT_b16, VSrc_b16),
                  !if(!eq(VT.Value, v2i16.Value),
                     VSrc_v2b16,
                     VSrc_b32
@@ -1631,18 +1648,15 @@ class isModifierType<ValueType SrcVT> {
 }
 
 // Return type of input modifiers operand for specified input operand
-class getSrcMod <ValueType VT> {
+class getSrcMod <ValueType VT, bit IsTrue16 = 0> {
   bit isFP = isFloatType<VT>.ret;
   bit isPacked = isPackedType<VT>.ret;
   Operand ret =  !if(!eq(VT.Size, 64),
                      !if(isFP, FP64InputMods, Int64InputMods),
-                       !if(isFP,
-                         !if(!eq(VT.Value, f16.Value),
-                            FP16InputMods,
-                            FP32InputMods
-                          ),
-                         Int32InputMods)
-                     );
+                     !if(!eq(VT.Size, 16),
+                         !if(isFP, !if(IsTrue16, FPT16InputMods, FP16InputMods),
+                                   !if(IsTrue16, IntT16InputMods, IntOpSelMods)),
+                         !if(isFP, FP32InputMods, Int32InputMods)));
 }
 
 class getOpSelMod <ValueType VT> {
@@ -2457,7 +2471,7 @@ class VOPProfile_True16<VOPProfile P> : VOPProfile<P.ArgVT> {
   let IsTrue16 = 1;
   let IsRealTrue16 = 1;
   // Most DstVT are 16-bit, but not all.
-  let DstRC = getVALUDstForVT_t16<DstVT>.ret;
+  let DstRC = getVALUDstForVT_fake16<DstVT>.ret;
   let DstRC64 = getVALUDstForVT<DstVT>.ret;
   let Src1RC32 = RegisterOperand<getVregSrcForVT_t16<Src1VT>.ret>;
   let Src0DPP = getVregSrcForVT_t16<Src0VT>.ret;
@@ -2471,7 +2485,7 @@ class VOPProfile_True16<VOPProfile P> : VOPProfile<P.ArgVT> {
 class VOPProfile_Fake16<VOPProfile P> : VOPProfile<P.ArgVT> {
   let IsTrue16 = 1;
   // Most DstVT are 16-bit, but not all
-  let DstRC = getVALUDstForVT_t16<DstVT>.ret;
+  let DstRC = getVALUDstForVT_fake16<DstVT>.ret;
   let DstRC64 = getVALUDstForVT<DstVT>.ret;
   let Src1RC32 = RegisterOperand<getVregSrcForVT_t16<Src1VT>.ret>;
   let Src0DPP = getVregSrcForVT_t16<Src0VT>.ret;
