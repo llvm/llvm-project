@@ -1150,7 +1150,7 @@ computeElementDistance(mlir::Location loc, mlir::Type ptrTy, mlir::Type idxTy,
   // *)0 + 1)' trick for all types. The generated instructions are optimized
   // into constant by the first pass of InstCombine, so it should not be a
   // performance issue.
-  auto nullPtr = rewriter.create<mlir::LLVM::NullOp>(loc, ptrTy);
+  auto nullPtr = rewriter.create<mlir::LLVM::ZeroOp>(loc, ptrTy);
   auto gep = rewriter.create<mlir::LLVM::GEPOp>(
       loc, ptrTy, nullPtr, llvm::ArrayRef<mlir::LLVM::GEPArg>{1});
   return rewriter.create<mlir::LLVM::PtrToIntOp>(loc, idxTy, gep);
@@ -1431,7 +1431,7 @@ struct EmboxCommonConversion : public FIROpConversion<OP> {
             name, Fortran::semantics::typeInfoBuiltinModule))
       fir::emitFatalError(
           loc, "runtime derived type info descriptor was not generated");
-    return rewriter.create<mlir::LLVM::NullOp>(
+    return rewriter.create<mlir::LLVM::ZeroOp>(
         loc, ::getVoidPtrType(mod.getContext()));
   }
 
@@ -1474,7 +1474,7 @@ struct EmboxCommonConversion : public FIROpConversion<OP> {
           } else {
             // Unlimited polymorphic type descriptor with no record type. Set
             // type descriptor address to a clean state.
-            typeDesc = rewriter.create<mlir::LLVM::NullOp>(
+            typeDesc = rewriter.create<mlir::LLVM::ZeroOp>(
                 loc, ::getVoidPtrType(mod.getContext()));
           }
         } else {
@@ -3407,7 +3407,7 @@ struct ZeroOpConversion : public FIROpConversion<fir::ZeroOp> {
                   mlir::ConversionPatternRewriter &rewriter) const override {
     mlir::Type ty = convertType(zero.getType());
     if (ty.isa<mlir::LLVM::LLVMPointerType>()) {
-      rewriter.replaceOpWithNewOp<mlir::LLVM::NullOp>(zero, ty);
+      rewriter.replaceOpWithNewOp<mlir::LLVM::ZeroOp>(zero, ty);
     } else if (ty.isa<mlir::IntegerType>()) {
       rewriter.replaceOpWithNewOp<mlir::LLVM::ConstantOp>(
           zero, ty, mlir::IntegerAttr::get(ty, 0));
@@ -3470,7 +3470,7 @@ struct IsPresentOpConversion : public FIROpConversion<fir::IsPresentOp> {
 };
 
 /// Create value signaling an absent optional argument in a call, e.g.
-/// `fir.absent !fir.ref<i64>` -->  `llvm.mlir.null : !llvm.ptr<i64>`
+/// `fir.absent !fir.ref<i64>` -->  `llvm.mlir.zero : !llvm.ptr<i64>`
 struct AbsentOpConversion : public FIROpConversion<fir::AbsentOp> {
   using FIROpConversion::FIROpConversion;
 
@@ -3485,11 +3485,11 @@ struct AbsentOpConversion : public FIROpConversion<fir::AbsentOp> {
       assert(!structTy.isOpaque() && !structTy.getBody().empty());
       auto undefStruct = rewriter.create<mlir::LLVM::UndefOp>(loc, ty);
       auto nullField =
-          rewriter.create<mlir::LLVM::NullOp>(loc, structTy.getBody()[0]);
+          rewriter.create<mlir::LLVM::ZeroOp>(loc, structTy.getBody()[0]);
       rewriter.replaceOpWithNewOp<mlir::LLVM::InsertValueOp>(
           absent, undefStruct, nullField, 0);
     } else {
-      rewriter.replaceOpWithNewOp<mlir::LLVM::NullOp>(absent, ty);
+      rewriter.replaceOpWithNewOp<mlir::LLVM::ZeroOp>(absent, ty);
     }
     return mlir::success();
   }

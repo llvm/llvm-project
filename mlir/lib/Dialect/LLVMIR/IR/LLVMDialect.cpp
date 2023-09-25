@@ -195,12 +195,12 @@ OpFoldResult ICmpOp::fold(FoldAdaptor adaptor) {
                             getPredicate() == ICmpPredicate::eq);
 
   // cmpi(eq/ne, alloca, null) -> false/true
-  if (getLhs().getDefiningOp<AllocaOp>() && getRhs().getDefiningOp<NullOp>())
+  if (getLhs().getDefiningOp<AllocaOp>() && getRhs().getDefiningOp<ZeroOp>())
     return getBoolAttribute(getType(), getContext(),
                             getPredicate() == ICmpPredicate::ne);
 
   // cmpi(eq/ne, null, alloca) -> cmpi(eq/ne, alloca, null)
-  if (getLhs().getDefiningOp<NullOp>() && getRhs().getDefiningOp<AllocaOp>()) {
+  if (getLhs().getDefiningOp<ZeroOp>() && getRhs().getDefiningOp<AllocaOp>()) {
     Value lhs = getLhs();
     Value rhs = getRhs();
     getLhsMutable().assign(rhs);
@@ -1466,8 +1466,8 @@ LogicalResult LandingpadOp::verify() {
                << "global addresses expected as operand to "
                   "bitcast used in clauses for landingpad";
       }
-      // NullOp and AddressOfOp allowed
-      if (value.getDefiningOp<NullOp>())
+      // ZeroOp and AddressOfOp allowed
+      if (value.getDefiningOp<ZeroOp>())
         continue;
       if (value.getDefiningOp<AddressOfOp>())
         continue;
