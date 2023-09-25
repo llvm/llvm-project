@@ -15,24 +15,30 @@ using namespace lldb;
 using namespace lldb_private;
 
 // DWARFDebugAbbrev constructor
-DWARFDebugAbbrev::DWARFDebugAbbrev()
-    : m_abbrevCollMap(), m_prev_abbr_offset_pos(m_abbrevCollMap.end()) {}
+DWARFDebugAbbrev::DWARFDebugAbbrev(const DWARFDataExtractor &data)
+    : m_abbrevCollMap(), m_prev_abbr_offset_pos(m_abbrevCollMap.end()),
+      m_data(data.GetAsLLVM()) {}
 
 // DWARFDebugAbbrev::Parse()
-llvm::Error DWARFDebugAbbrev::parse(const DWARFDataExtractor &data) {
-  llvm::DataExtractor llvm_data = data.GetAsLLVM();
+llvm::Error DWARFDebugAbbrev::parse() {
+  if (!m_data)
+    return llvm::Error::success();
+
   lldb::offset_t offset = 0;
 
-  while (llvm_data.isValidOffset(offset)) {
+  while (m_data->isValidOffset(offset)) {
     uint32_t initial_cu_offset = offset;
     DWARFAbbreviationDeclarationSet abbrevDeclSet;
 
-    llvm::Error error = abbrevDeclSet.extract(llvm_data, &offset);
-    if (error)
+    llvm::Error error = abbrevDeclSet.extract(*m_data, &offset);
+    if (error) {
+      m_data = std::nullopt;
       return error;
+    }
 
     m_abbrevCollMap[initial_cu_offset] = abbrevDeclSet;
   }
+  m_data = std::nullopt;
   m_prev_abbr_offset_pos = m_abbrevCollMap.end();
   return llvm::ErrorSuccess();
 }
