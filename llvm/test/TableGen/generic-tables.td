@@ -25,10 +25,10 @@ include "llvm/TableGen/SearchableTable.td"
 // CHECK-LABEL: GET_ATable_IMPL
 // CHECK: constexpr AEntry ATable[] = {
 // CHECK-NOT:   { "aaa"
-// CHECK:       { "baz", 0x2, 0x6, 0x0 },
-// CHECK:       { "foo", 0x4, 0x4, 0x0 },
-// CHECK:       { "foobar", 0x4, 0x5, 0x0 },
-// CHECK:       { "bar", 0x5, 0x3, 0x0 },
+// CHECK:       { "baz", 0x2, 0x6, 0xFFFFFFFF00000000 },
+// CHECK:       { "foo", 0x4, 0x4, 0x100000000 },
+// CHECK:       { "foobar", 0x4, 0x5, 0x100000000 },
+// CHECK:       { "bar", 0x5, 0x3, 0x100000000 },
 // CHECK: };
 
 // CHECK: const AEntry *lookupATableByValues(uint8_t Val1, uint16_t Val2) {
