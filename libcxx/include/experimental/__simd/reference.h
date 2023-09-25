@@ -26,6 +26,8 @@ class __simd_reference {
   _Storage& __s_;
   size_t __idx_;
 
+  _LIBCPP_HIDE_FROM_ABI __simd_reference(_Storage& __s, size_t __idx) : __s_(__s), __idx_(__idx) {}
+
   _LIBCPP_HIDE_FROM_ABI _Vp __get() const noexcept { return __s_.__get(__idx_); }
 
   _LIBCPP_HIDE_FROM_ABI void __set(_Vp __v) {
