@@ -406,8 +406,8 @@ const Stmt *ExprMutationAnalyzer::findMemberMutation(const Expr *Exp) {
                                    canResolveToExpr(equalsNode(Exp)))),
                                cxxDependentScopeMemberExpr(hasObjectExpression(
                                    canResolveToExpr(equalsNode(Exp)))),
-                               binaryOperator(allOf(hasOperatorName(".*"),
-                                                    hasLHS(equalsNode(Exp))))))
+                               binaryOperator(hasOperatorName(".*"),
+                                              hasLHS(equalsNode(Exp)))))
                         .bind(NodeID<Expr>::value)),
             Stm, Context);
   return findExprMutation(MemberExprs);
