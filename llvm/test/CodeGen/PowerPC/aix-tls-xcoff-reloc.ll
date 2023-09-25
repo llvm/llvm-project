@@ -641,7 +641,7 @@ entry:
 ; DIS-NEXT:       88: 00 00 00 00
 ; DIS-NEXT: 00000088: R_TLSML (idx: 25) _$TLSML[TC]
 ; DIS:      0000008c  (idx: 27) TIUninit[TC]:
-; DIS-NEXT:       8c: 00 00 00 00
+; DIS-NEXT:       8c: 00 00 00 04
 ; DIS-NEXT: 0000008c: R_TLS_LD (idx: 39) TIUninit[UL]
 ; DIS:      00000090  (idx: 29) .TGInit[TC]:
 ; DIS-NEXT:       90: 00 00 00 00
