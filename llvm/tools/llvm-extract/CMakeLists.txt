@@ -3,9 +3,10 @@ set(LLVM_LINK_COMPONENTS
   BitWriter
   Core
   IPO
-  IRReader
   IRPrinter
+  IRReader
   Passes
+  SelectionDAG
   Support
   )
 
