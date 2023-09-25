@@ -847,17 +847,17 @@ static bool CanMergeValues(Value *First, Value *Second) {
 /// branch to Succ, into Succ.
 ///
 /// Assumption: Succ is the single successor for BB.
-static bool CanPropagatePredecessorsForPHIs(BasicBlock *BB, BasicBlock *Succ) {
+static bool
+CanPropagatePredecessorsForPHIs(BasicBlock *BB, BasicBlock *Succ,
+                                const SmallPtrSetImpl<BasicBlock *> &BBPreds) {
   assert(*succ_begin(BB) == Succ && "Succ is not successor of BB!");
 
   LLVM_DEBUG(dbgs() << "Looking to fold " << BB->getName() << " into "
                     << Succ->getName() << "\n");
   // Shortcut, if there is only a single predecessor it must be BB and merging
   // is always safe
-  if (Succ->getSinglePredecessor()) return true;
-
-  // Make a list of the predecessors of BB
-  SmallPtrSet<BasicBlock*, 16> BBPreds(pred_begin(BB), pred_end(BB));
+  if (Succ->getSinglePredecessor())
+    return true;
 
   // Look at all the phi nodes in Succ, to see if they present a conflict when
   // merging these blocks
@@ -997,6 +997,35 @@ static void replaceUndefValuesInPhi(PHINode *PN,
   }
 }
 
+// Only when they shares a single common predecessor, return true.
+// Only handles cases when BB can't be merged while its predecessors can be
+// redirected.
+static bool
+CanRedirectPredsOfEmptyBBToSucc(BasicBlock *BB, BasicBlock *Succ,
+                                const SmallPtrSetImpl<BasicBlock *> &BBPreds,
+                                const SmallPtrSetImpl<BasicBlock *> &SuccPreds,
+                                BasicBlock *&CommonPred) {
+
+  // There must be phis in BB, otherwise BB will be merged into Succ directly
+  if (BB->phis().empty() || Succ->phis().empty())
+    return false;
+
+  // BB must have predecessors not shared that can be redirected to Succ
+  if (!BB->hasNPredecessorsOrMore(2))
+    return false;
+
+  // Get single common predecessors of both BB and Succ
+  for (BasicBlock *SuccPred : SuccPreds) {
+    if (BBPreds.count(SuccPred)) {
+      if (CommonPred)
+        return false;
+      CommonPred = SuccPred;
+    }
+  }
+
+  return true;
+}
+
 /// Replace a value flowing from a block to a phi with
 /// potentially multiple instances of that value flowing from the
 /// block's predecessors to the phi.
@@ -1004,9 +1033,11 @@ static void replaceUndefValuesInPhi(PHINode *PN,
 /// \param BB The block with the value flowing into the phi.
 /// \param BBPreds The predecessors of BB.
 /// \param PN The phi that we are updating.
+/// \param CommonPred The common predecessor of BB and PN's BasicBlock
 static void redirectValuesFromPredecessorsToPhi(BasicBlock *BB,
                                                 const PredBlockVector &BBPreds,
-                                                PHINode *PN) {
+                                                PHINode *PN,
+                                                BasicBlock *CommonPred) {
   Value *OldVal = PN->removeIncomingValue(BB, false);
   assert(OldVal && "No entry in PHI for Pred BB!");
 
@@ -1034,26 +1065,39 @@ static void redirectValuesFromPredecessorsToPhi(BasicBlock *BB,
       // will trigger asserts if we try to clean it up now, without also
       // simplifying the corresponding conditional branch).
       BasicBlock *PredBB = OldValPN->getIncomingBlock(i);
+
+      if (PredBB == CommonPred)
+        continue;
+
       Value *PredVal = OldValPN->getIncomingValue(i);
-      Value *Selected = selectIncomingValueForBlock(PredVal, PredBB,
-                                                    IncomingValues);
+      Value *Selected =
+          selectIncomingValueForBlock(PredVal, PredBB, IncomingValues);
 
       // And add a new incoming value for this predecessor for the
       // newly retargeted branch.
       PN->addIncoming(Selected, PredBB);
     }
+    if (CommonPred)
+      PN->addIncoming(OldValPN->getIncomingValueForBlock(CommonPred), BB);
+
   } else {
     for (unsigned i = 0, e = BBPreds.size(); i != e; ++i) {
       // Update existing incoming values in PN for this
       // predecessor of BB.
       BasicBlock *PredBB = BBPreds[i];
-      Value *Selected = selectIncomingValueForBlock(OldVal, PredBB,
-                                                    IncomingValues);
+
+      if (PredBB == CommonPred)
+        continue;
+
+      Value *Selected =
+          selectIncomingValueForBlock(OldVal, PredBB, IncomingValues);
 
       // And add a new incoming value for this predecessor for the
       // newly retargeted branch.
       PN->addIncoming(Selected, PredBB);
     }
+    if (CommonPred)
+      PN->addIncoming(OldVal, BB);
   }
 
   replaceUndefValuesInPhi(PN, IncomingValues);
@@ -1064,13 +1108,30 @@ bool llvm::TryToSimplifyUncondBranchFromEmptyBlock(BasicBlock *BB,
   assert(BB != &BB->getParent()->getEntryBlock() &&
          "TryToSimplifyUncondBranchFromEmptyBlock called on entry block!");
 
-  // We can't eliminate infinite loops.
+  // We can't simplify infinite loops.
   BasicBlock *Succ = cast<BranchInst>(BB->getTerminator())->getSuccessor(0);
-  if (BB == Succ) return false;
+  if (BB == Succ)
+    return false;
 
-  // Check to see if merging these blocks would cause conflicts for any of the
-  // phi nodes in BB or Succ. If not, we can safely merge.
-  if (!CanPropagatePredecessorsForPHIs(BB, Succ)) return false;
+  SmallPtrSet<BasicBlock *, 16> BBPreds(pred_begin(BB), pred_end(BB));
+  SmallPtrSet<BasicBlock *, 16> SuccPreds(pred_begin(Succ), pred_end(Succ));
+
+  // The single common predecessor of BB and Succ when BB cannot be killed
+  BasicBlock *CommonPred = nullptr;
+
+  bool BBKillable = CanPropagatePredecessorsForPHIs(BB, Succ, BBPreds);
+
+  // Even if we can not fold bB into Succ, we may be able to redirect the
+  // predecessors of BB to Succ.
+  bool BBPhisMergeable =
+      BBKillable ||
+      CanRedirectPredsOfEmptyBBToSucc(BB, Succ, BBPreds, SuccPreds, CommonPred);
+
+  if (!BBKillable && !BBPhisMergeable)
+    return false;
+
+  // Check to see if merging these blocks/phis would cause conflicts for any of
+  // the phi nodes in BB or Succ. If not, we can safely merge.
 
   // Check for cases where Succ has multiple predecessors and a PHI node in BB
   // has uses which will not disappear when the PHI nodes are merged.  It is
@@ -1098,6 +1159,11 @@ bool llvm::TryToSimplifyUncondBranchFromEmptyBlock(BasicBlock *BB,
       ++BBI;
     }
   }
+
+  if (BBPhisMergeable && CommonPred)
+    LLVM_DEBUG(dbgs() << "Found Common Predecessor between: " << BB->getName()
+                      << " and " << Succ->getName() << " : "
+                      << CommonPred->getName() << "\n");
 
   // 'BB' and 'BB->Pred' are loop latches, bail out to presrve inner loop
   // metadata.
@@ -1171,25 +1237,37 @@ bool llvm::TryToSimplifyUncondBranchFromEmptyBlock(BasicBlock *BB,
           if (PredTI->hasMetadata(LLVMContext::MD_loop))
             return false;
 
-  LLVM_DEBUG(dbgs() << "Killing Trivial BB: \n" << *BB);
+  if (BBKillable)
+    LLVM_DEBUG(dbgs() << "Killing Trivial BB: \n" << *BB);
+  else if (BBPhisMergeable)
+    LLVM_DEBUG(dbgs() << "Merge Phis in Trivial BB: \n" << *BB);
 
   SmallVector<DominatorTree::UpdateType, 32> Updates;
+
   if (DTU) {
     // To avoid processing the same predecessor more than once.
     SmallPtrSet<BasicBlock *, 8> SeenPreds;
-    // All predecessors of BB will be moved to Succ.
-    SmallPtrSet<BasicBlock *, 8> PredsOfSucc(pred_begin(Succ), pred_end(Succ));
+    // All predecessors of BB (except the common predecessor) will be moved to
+    // Succ.
     Updates.reserve(Updates.size() + 2 * pred_size(BB) + 1);
-    for (auto *PredOfBB : predecessors(BB))
-      // This predecessor of BB may already have Succ as a successor.
-      if (!PredsOfSucc.contains(PredOfBB))
+
+    for (auto *PredOfBB : predecessors(BB)) {
+      // Do not modify those common predecessors of BB and Succ
+      if (!SuccPreds.contains(PredOfBB))
         if (SeenPreds.insert(PredOfBB).second)
           Updates.push_back({DominatorTree::Insert, PredOfBB, Succ});
+    }
+
     SeenPreds.clear();
+
     for (auto *PredOfBB : predecessors(BB))
-      if (SeenPreds.insert(PredOfBB).second)
+      // When BB cannot be killed, do not remove the edge between BB and
+      // CommonPred.
+      if (SeenPreds.insert(PredOfBB).second && PredOfBB != CommonPred)
         Updates.push_back({DominatorTree::Delete, PredOfBB, BB});
-    Updates.push_back({DominatorTree::Delete, BB, Succ});
+
+    if (BBKillable)
+      Updates.push_back({DominatorTree::Delete, BB, Succ});
   }
 
   if (isa<PHINode>(Succ->begin())) {
@@ -1201,21 +1279,19 @@ bool llvm::TryToSimplifyUncondBranchFromEmptyBlock(BasicBlock *BB,
     // Loop over all of the PHI nodes in the successor of BB.
     for (BasicBlock::iterator I = Succ->begin(); isa<PHINode>(I); ++I) {
       PHINode *PN = cast<PHINode>(I);
-
-      redirectValuesFromPredecessorsToPhi(BB, BBPreds, PN);
+      redirectValuesFromPredecessorsToPhi(BB, BBPreds, PN, CommonPred);
     }
   }
 
   if (Succ->getSinglePredecessor()) {
     // BB is the only predecessor of Succ, so Succ will end up with exactly
     // the same predecessors BB had.
-
     // Copy over any phi, debug or lifetime instruction.
     BB->getTerminator()->eraseFromParent();
     Succ->splice(Succ->getFirstNonPHI()->getIterator(), BB);
   } else {
     while (PHINode *PN = dyn_cast<PHINode>(&BB->front())) {
-      // We explicitly check for such uses in CanPropagatePredecessorsForPHIs.
+      // We explicitly check for such uses for merging phis.
       assert(PN->use_empty() && "There shouldn't be any uses here!");
       PN->eraseFromParent();
     }
@@ -1228,21 +1304,35 @@ bool llvm::TryToSimplifyUncondBranchFromEmptyBlock(BasicBlock *BB,
       for (BasicBlock *Pred : predecessors(BB))
         Pred->getTerminator()->setMetadata(LLVMContext::MD_loop, LoopMD);
 
-  // Everything that jumped to BB now goes to Succ.
-  BB->replaceAllUsesWith(Succ);
-  if (!Succ->hasName()) Succ->takeName(BB);
+  if (BBKillable) {
+    // Everything that jumped to BB now goes to Succ.
+    BB->replaceAllUsesWith(Succ);
 
-  // Clear the successor list of BB to match updates applying to DTU later.
-  if (BB->getTerminator())
-    BB->back().eraseFromParent();
-  new UnreachableInst(BB->getContext(), BB);
-  assert(succ_empty(BB) && "The successor list of BB isn't empty before "
-                           "applying corresponding DTU updates.");
+    if (!Succ->hasName())
+      Succ->takeName(BB);
+
+    // Clear the successor list of BB to match updates applying to DTU later.
+    if (BB->getTerminator())
+      BB->back().eraseFromParent();
+
+    new UnreachableInst(BB->getContext(), BB);
+    assert(succ_empty(BB) && "The successor list of BB isn't empty before "
+                             "applying corresponding DTU updates.");
+  } else if (BBPhisMergeable) {
+    //  Everything except CommonPred that jumped to BB now goes to Succ.
+    BB->replaceUsesWithIf(Succ, [BBPreds, CommonPred](Use &U) -> bool {
+      if (Instruction *UseInst = dyn_cast<Instruction>(U.getUser()))
+        return UseInst->getParent() != CommonPred &&
+               BBPreds.contains(UseInst->getParent());
+      return false;
+    });
+  }
 
   if (DTU)
     DTU->applyUpdates(Updates);
 
-  DeleteDeadBlock(BB, DTU);
+  if (BBKillable)
+    DeleteDeadBlock(BB, DTU);
 
   return true;
 }
