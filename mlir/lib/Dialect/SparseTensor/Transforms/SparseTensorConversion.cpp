@@ -299,7 +299,7 @@ public:
     assert(isInitialized() && "Must initialize before genNewCall");
     StringRef name = "newSparseTensor";
     params[kParamAction] = constantAction(builder, loc, action);
-    params[kParamPtr] = ptr ? ptr : builder.create<LLVM::NullOp>(loc, pTp);
+    params[kParamPtr] = ptr ? ptr : builder.create<LLVM::ZeroOp>(loc, pTp);
     return createFuncCall(builder, loc, name, pTp, params, EmitCInterface::On)
         .getResult(0);
   }

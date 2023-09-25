@@ -16,7 +16,7 @@ llvm.func @default_value() -> i32 {
 llvm.func @store_of_ptr() {
   %0 = llvm.mlir.constant(1 : i32) : i32
   %1 = llvm.mlir.constant(4 : i32) : i32
-  %2 = llvm.mlir.null : !llvm.ptr
+  %2 = llvm.mlir.zero : !llvm.ptr
   // CHECK: %[[ALLOCA:.*]] = llvm.alloca
   %3 = llvm.alloca %0 x i32 {alignment = 4 : i64} : (i32) -> !llvm.ptr
   // CHECK: llvm.store %{{.*}}, %[[ALLOCA]]
@@ -55,7 +55,7 @@ llvm.func @unreachable_in_loop() -> i32 {
   llvm.store %1, %3 {alignment = 4 : i64} : i32, !llvm.ptr
   // CHECK: llvm.br ^[[LOOP:.*]]
   llvm.br ^bb1
-  
+
 // CHECK: ^[[LOOP]]:
 ^bb1:  // 2 preds: ^bb0, ^bb3
   // CHECK-NEXT: llvm.br ^[[ENDOFLOOP:.*]]
@@ -66,7 +66,7 @@ llvm.func @unreachable_in_loop() -> i32 {
 ^bb2:  // no predecessors
   // CHECK-NEXT: llvm.br ^[[ENDOFLOOP]]
   llvm.br ^bb3
-  
+
 // CHECK: ^[[ENDOFLOOP]]:
 ^bb3:  // 2 preds: ^bb1, ^bb2
   // CHECK-NEXT: llvm.br ^[[LOOP]]
@@ -421,8 +421,8 @@ llvm.func @ignore_discardable_tree() {
   %1 = llvm.mlir.constant(0 : i16) : i16
   %2 = llvm.mlir.constant(0 : i8) : i8
   %3 = llvm.mlir.undef : !llvm.struct<(i8, i16)>
-  %4 = llvm.insertvalue %2, %3[0] : !llvm.struct<(i8, i16)> 
-  %5 = llvm.insertvalue %1, %4[1] : !llvm.struct<(i8, i16)> 
+  %4 = llvm.insertvalue %2, %3[0] : !llvm.struct<(i8, i16)>
+  %5 = llvm.insertvalue %1, %4[1] : !llvm.struct<(i8, i16)>
   %6 = llvm.alloca %0 x !llvm.struct<(i8, i16)> {alignment = 8 : i64} : (i32) -> !llvm.ptr
   %7 = llvm.getelementptr %6[0, 0] : (!llvm.ptr) -> !llvm.ptr, !llvm.struct<(i8, i16)>
   llvm.intr.lifetime.start 2, %7 : !llvm.ptr
