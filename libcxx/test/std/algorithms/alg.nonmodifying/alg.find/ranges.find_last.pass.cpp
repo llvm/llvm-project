@@ -264,7 +264,7 @@ constexpr bool test() {
   }
 
   {// check that the implicit conversion to bool works
-  
+
     {
       StrictComparable<int> a[] = {1, 2, 2, 3, 4};
       std::same_as<std::ranges::subrange<StrictComparable<int>*>> auto ret = std::ranges::find_last(a, a + 4, StrictComparable<int>{2});

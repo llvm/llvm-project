@@ -68,9 +68,9 @@ static_assert(!HasFindLastIfNotR<InputRangeNotSentinelEqualityComparableWith>);
 
 template <class It, class Sent = It>
 constexpr void test_iterators() {
-  
+
   {// Test with an empty range
-  
+
     {
       int a[] = {};
       std::same_as<std::ranges::subrange<It>> auto ret = std::ranges::find_last_if_not(It(a), Sent(It(a)), [](int) { return false; });
@@ -187,7 +187,7 @@ constexpr bool test() {
       assert(ret.data() == a + 2);
       assert(ret.data()->comp == 0);
       assert(ret.data()->other == 1);
-    }  
+    }
 
     {
       struct S {

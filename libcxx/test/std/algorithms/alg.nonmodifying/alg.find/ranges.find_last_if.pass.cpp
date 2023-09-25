@@ -111,7 +111,7 @@ constexpr void test_iterators() {
       std::same_as<std::ranges::subrange<It>> auto ret = std::ranges::find_last_if(It(a), Sent(It(a + 4)), [](int x) { return x == 5; });
       assert(ret.empty());
     }
-   
+
     {
       int a[] = {1, 2, 3, 4};
       std::same_as<std::ranges::borrowed_subrange_t<int (&)[4]>> auto ret = std::ranges::find_last_if(a, [](int x) { return x == 5; });
@@ -338,7 +338,7 @@ constexpr bool test() {
   }
 
   {// check that the implicit conversion to bool works
-    
+
     {
       int a[] = {1, 2, 3, 3, 4};
       std::same_as<std::ranges::subrange<int*>> auto ret = std::ranges::find_last_if(a, a + 4, [](const int& i) { return BooleanTestable{i == 3}; });
