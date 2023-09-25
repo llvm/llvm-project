@@ -33,23 +33,31 @@ void ActionProfiler::afterExecute(const ActionActiveStack *action) {
 // Print an event in JSON format.
 void ActionProfiler::print(const ActionActiveStack *action,
                            llvm::StringRef phase) {
+  // Create the event.
+  std::string str;
+  llvm::raw_string_ostream event(str);
+  event << "{";
+  event << R"("name": ")" << action->getAction().getTag() << "\", ";
+  event << R"("cat": "PERF", )";
+  event << R"("ph": ")" << phase << "\", ";
+  event << R"("pid": 0, )";
+  event << R"("tid": )" << llvm::get_threadid() << ", ";
+  auto ts = std::chrono::steady_clock::now() - startTime;
+  event << R"("ts": )"
+        << std::chrono::duration_cast<std::chrono::microseconds>(ts).count();
+  if (phase == "B") {
+    event << R"(, "args": {)";
+    event << R"("desc": ")";
+    action->getAction().print(event);
+    event << "\"}";
+  }
+  event << "}";
+
+  // Print the event.
+  std::lock_guard<std::mutex> guard(mutex);
   if (printComma)
     os << ",\n";
   printComma = true;
-  os << "{";
-  os << R"("name": ")" << action->getAction().getTag() << "\", ";
-  os << R"("cat": "PERF", )";
-  os << R"("ph": ")" << phase << "\", ";
-  os << R"("pid": 0, )";
-  os << R"("tid": )" << llvm::get_threadid() << ", ";
-  auto ts = std::chrono::steady_clock::now() - startTime;
-  os << R"("ts": )"
-     << std::chrono::duration_cast<std::chrono::microseconds>(ts).count();
-  if (phase == "B") {
-    os << R"(, "args": {)";
-    os << R"("desc": ")";
-    action->getAction().print(os);
-    os << "\"}";
-  }
-  os << "}";
+  os << event.str();
+  os.flush();
 }

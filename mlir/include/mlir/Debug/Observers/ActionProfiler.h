@@ -14,6 +14,7 @@
 #include "llvm/Support/raw_ostream.h"
 
 #include <chrono>
+#include <mutex>
 
 namespace mlir {
 namespace tracing {
@@ -39,6 +40,9 @@ private:
   raw_ostream &os;
   std::chrono::time_point<std::chrono::steady_clock> startTime;
   bool printComma = false;
+
+  /// A mutex used to guard profiling.
+  std::mutex mutex;
 };
 
 } // namespace tracing
