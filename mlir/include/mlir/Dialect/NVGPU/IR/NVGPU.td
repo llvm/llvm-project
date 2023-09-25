@@ -694,11 +694,11 @@ def NVGPU_WarpgroupMmaOp : NVGPU_Op<"warpgroup.mma"> {
     results are thread-level ownership to the warpgroup-level mma operation 
     shape. The shape is deduced from the descriptor types and output vector.
 
-    The Op corresponds multiple `nvvm.wgmma.mma_async` operations to complete the 
-    given shape. As the instruction `nvvm.wgmma.async` is an asynchronous, 
-    this Op groups the `nvvm.wgmma.async` and surrounds them between 
-    `wgmma.fence.aligned` and `wgmma.commit.group.sync.aligned`, 
-    `wgmma.wait.group.sync.aligned` Ops.
+    The Op encapsulates multiple `nvvm.wgmma.mma_async` operations to complete 
+    the given shape. As `nvvm.wgmma.async` Op, or its corresponding PTX 
+    instruction, is asynchronous, this Op groups the `nvvm.wgmma.async` and 
+    surrounds them between `wgmma.fence.aligned` and 
+    `wgmma.commit.group.sync.aligned`, `wgmma.wait.group.sync.aligned` Ops.
 
     Example:
     ```mlir
