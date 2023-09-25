@@ -1762,6 +1762,19 @@ ParseStatus RISCVAsmParser::parseCSRSystemRegister(OperandVector &Operands) {
   SMLoc S = getLoc();
   const MCExpr *Res;
 
+  auto SysRegFromConstantInt = [](const MCExpr *E, SMLoc S) {
+    if (auto *CE = dyn_cast<MCConstantExpr>(E)) {
+      int64_t Imm = CE->getValue();
+      if (isUInt<12>(Imm)) {
+        auto SysReg = RISCVSysReg::lookupSysRegByEncoding(Imm);
+        // Accept an immediate representing a named or un-named Sys Reg
+        // if the range is valid, regardless of the required features.
+        return RISCVOperand::createSysReg(SysReg ? SysReg->Name : "", S, Imm);
+      }
+    }
+    return std::unique_ptr<RISCVOperand>();
+  };
+
   switch (getLexer().getKind()) {
   default:
     return ParseStatus::NoMatch;
@@ -1775,17 +1788,9 @@ ParseStatus RISCVAsmParser::parseCSRSystemRegister(OperandVector &Operands) {
     if (getParser().parseExpression(Res))
       return ParseStatus::Failure;
 
-    auto *CE = dyn_cast<MCConstantExpr>(Res);
-    if (CE) {
-      int64_t Imm = CE->getValue();
-      if (isUInt<12>(Imm)) {
-        auto SysReg = RISCVSysReg::lookupSysRegByEncoding(Imm);
-        // Accept an immediate representing a named or un-named Sys Reg
-        // if the range is valid, regardless of the required features.
-        Operands.push_back(
-            RISCVOperand::createSysReg(SysReg ? SysReg->Name : "", S, Imm));
-        return ParseStatus::Success;
-      }
+    if (auto SysOpnd = SysRegFromConstantInt(Res, S)) {
+      Operands.push_back(std::move(SysOpnd));
+      return ParseStatus::Success;
     }
 
     return generateImmOutOfRangeError(S, 0, (1 << 12) - 1);
@@ -1849,6 +1854,18 @@ ParseStatus RISCVAsmParser::parseCSRSystemRegister(OperandVector &Operands) {
       Operands.push_back(
           RISCVOperand::createSysReg(Identifier, S, SysReg->Encoding));
       return ParseStatus::Success;
+    }
+
+    // Accept a symbol name that evaluates to an absolute value.
+    MCSymbol *Sym = getContext().lookupSymbol(Identifier);
+    if (Sym && Sym->isVariable()) {
+      // Pass false for SetUsed, since redefining the value later does not
+      // affect this instruction.
+      if (auto SysOpnd = SysRegFromConstantInt(
+              Sym->getVariableValue(/*SetUsed=*/false), S)) {
+        Operands.push_back(std::move(SysOpnd));
+        return ParseStatus::Success;
+      }
     }
 
     return generateImmOutOfRangeError(S, 0, (1 << 12) - 1,
