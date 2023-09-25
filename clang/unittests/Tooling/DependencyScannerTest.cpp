@@ -248,6 +248,7 @@ TEST(DependencyScanner, ScanDepsWithFS) {
 TEST(DependencyScanner, DepScanFSWithCASProvider) {
   std::shared_ptr<ObjectStore> DB = llvm::cas::createInMemoryCAS();
   auto FS = llvm::makeIntrusiveRefCnt<llvm::vfs::InMemoryFileSystem>();
+  FS->setCurrentWorkingDirectory("/root");
   StringRef Path = "a.h";
   StringRef Contents = "a";
   FS->addFile(Path, 0, llvm::MemoryBuffer::getMemBuffer(Contents));
@@ -278,6 +279,7 @@ TEST(DependencyScanner, DepScanFSWithCASProvider) {
     // cas::ObjectRef and will be able to provide it.
     DependencyScanningWorkerFilesystem DepFS(Service.getSharedCache(),
                                              new llvm::vfs::InMemoryFileSystem);
+    DepFS.setCurrentWorkingDirectory("/root");
     llvm::ErrorOr<std::unique_ptr<llvm::vfs::File>> File =
         DepFS.openFileForRead(Path);
     ASSERT_TRUE(File);

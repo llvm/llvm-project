@@ -17,6 +17,7 @@ using namespace dependencies;
 TEST(IncludeTree, IncludeTreeScan) {
   std::shared_ptr<ObjectStore> DB = llvm::cas::createInMemoryCAS();
   auto FS = llvm::makeIntrusiveRefCnt<llvm::vfs::InMemoryFileSystem>();
+  FS->setCurrentWorkingDirectory("/root");
   auto add = [&](StringRef Path, StringRef Contents) {
     FS->addFile(Path, 0, llvm::MemoryBuffer::getMemBuffer(Contents));
   };
