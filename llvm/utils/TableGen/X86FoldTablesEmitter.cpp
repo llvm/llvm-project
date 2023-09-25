@@ -433,7 +433,9 @@ void X86FoldTablesEmitter::addEntryWithFlags(FoldTable &Table,
   // the unfolded load size will be based on the register size. If that’s bigger
   // than the memory operand size, the unfolded load will load more memory and
   // potentially cause a memory fault.
-  if (getRegOperandSize(RegOpRec) > getMemOperandSize(MemOpRec))
+  // And X86 would not unfold RMW instrs.
+  if (getRegOperandSize(RegOpRec) > getMemOperandSize(MemOpRec) ||
+      &Table == &Table2Addr)
     Result.NoReverse = true;
 
   // Check no-kz version's isMoveReg
