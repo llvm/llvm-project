@@ -5,40 +5,40 @@ RUN:    'DATA 0X98' | FileCheck %s
 
 CHECK: bss_global
 CHECK-NEXT: 96 4
-CHECK-NEXT: ??:?
+CHECK-NEXT: /t.cpp:1
 CHECK-EMPTY:
 
 CHECK: bss_global
 CHECK-NEXT: 96 4
-CHECK-NEXT: ??:?
+CHECK-NEXT: /t.cpp:1
 CHECK-EMPTY:
 
 CHECK: data_global
 CHECK-NEXT: 100 4
-CHECK-NEXT: ??:?
+CHECK-NEXT: /t.cpp:2
 CHECK-EMPTY:
 
 CHECK: str
 CHECK-NEXT: 104 4
-CHECK-NEXT: ??:?
+CHECK-NEXT: /t.cpp:4
 CHECK-EMPTY:
 
 FIXME: fix the wrong size 152
 CHECK: f()::function_global
 CHECK-NEXT: 144 152
-CHECK-NEXT: ??:?
+CHECK-NEXT: /t.cpp:8
 CHECK-EMPTY:
 
 FIXME: fix the wrong size 152
 CHECK: beta
 CHECK-NEXT: 148 152
-CHECK-NEXT: ??:?
+CHECK-NEXT: /t.cpp:13
 CHECK-EMPTY:
 
 FIXME: fix the wrong size 152
 CHECK: alpha
 CHECK-NEXT: 152 152
-CHECK-NEXT: ??:?
+CHECK-NEXT: /t.cpp:12
 CHECK-EMPTY:
 
 The case is from `test/tools/llvm-symbolizer/data-location.yaml`, compiled with:
