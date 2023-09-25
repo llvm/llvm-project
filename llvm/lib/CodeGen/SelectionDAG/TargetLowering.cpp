@@ -8366,6 +8366,64 @@ SDValue TargetLowering::expandFMINNUM_FMAXNUM(SDNode *Node,
   return SDValue();
 }
 
+SDValue TargetLowering::expandFMINIMUM_FMAXIMUM(SDNode *N,
+                                                SelectionDAG &DAG) const {
+  SDLoc DL(N);
+  SDValue LHS = N->getOperand(0);
+  SDValue RHS = N->getOperand(1);
+  unsigned Opc = N->getOpcode();
+  EVT VT = N->getValueType(0);
+  EVT CCVT = getSetCCResultType(DAG.getDataLayout(), *DAG.getContext(), VT);
+  bool NoNaN = (N->getFlags().hasNoNaNs() ||
+                (DAG.isKnownNeverNaN(LHS) && DAG.isKnownNeverNaN(RHS)));
+  bool NoZeroSign =
+      (N->getFlags().hasNoSignedZeros() || DAG.isKnownNeverZeroFloat(LHS) ||
+       DAG.isKnownNeverZeroFloat(RHS));
+  bool IsMax = Opc == ISD::FMAXIMUM;
+
+  if (VT.isVector() &&
+      isOperationLegalOrCustomOrPromote(Opc, VT.getScalarType()))
+    return SDValue();
+
+  SDValue MinMax;
+  if (isOperationLegalOrCustom(IsMax ? ISD::FMAXNUM_IEEE : ISD::FMINNUM_IEEE,
+                               VT))
+    MinMax = DAG.getNode(IsMax ? ISD::FMAXNUM_IEEE : ISD::FMINNUM_IEEE, DL, VT,
+                         LHS, RHS);
+  else if (isOperationLegalOrCustom(IsMax ? ISD::FMAXNUM : ISD::FMINNUM, VT))
+    MinMax = DAG.getNode(IsMax ? ISD::FMAXNUM : ISD::FMINNUM, DL, VT, LHS, RHS);
+  else
+    MinMax = DAG.getSelect(
+        DL, VT,
+        DAG.getSetCC(DL, CCVT, LHS, RHS, IsMax ? ISD::SETGT : ISD::SETLT), LHS,
+        RHS);
+
+  // Propagate any NaN of both operands
+  if (!NoNaN) {
+    ConstantFP *FPNaN = ConstantFP::get(
+        *DAG.getContext(), APFloat::getNaN(DAG.EVTToAPFloatSemantics(VT)));
+    MinMax = DAG.getSelect(DL, VT, DAG.getSetCC(DL, CCVT, LHS, RHS, ISD::SETUO),
+                           DAG.getConstantFP(*FPNaN, DL, VT), MinMax);
+  }
+
+  // fminimum/fmaximum requires -0.0 less than +0.0
+  if (!NoZeroSign) {
+    SDValue IsZero = DAG.getSetCC(DL, CCVT, MinMax,
+                                  DAG.getConstantFP(0.0, DL, VT), ISD::SETEQ);
+    SDValue TestZero =
+        DAG.getTargetConstant(IsMax ? fcPosZero : fcNegZero, DL, MVT::i32);
+    SDValue LCmp = DAG.getSelect(
+        DL, VT, DAG.getNode(ISD::IS_FPCLASS, DL, CCVT, LHS, TestZero), LHS,
+        MinMax);
+    SDValue RCmp = DAG.getSelect(
+        DL, VT, DAG.getNode(ISD::IS_FPCLASS, DL, CCVT, RHS, TestZero), RHS,
+        LCmp);
+    MinMax = DAG.getSelect(DL, VT, IsZero, RCmp, MinMax);
+  }
+
+  return MinMax;
+}
+
 /// Returns a true value if if this FPClassTest can be performed with an ordered
 /// fcmp to 0, and a false value if it's an unordered fcmp to 0. Returns
 /// std::nullopt if it cannot be performed as a compare with 0.
