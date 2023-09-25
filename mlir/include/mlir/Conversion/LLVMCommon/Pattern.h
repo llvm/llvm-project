@@ -89,7 +89,7 @@ protected:
   /// `strides[1]` = llvm.mlir.constant(1 : index) : i64
   /// `strides[0]` = `sizes[0]`
   /// %size        = llvm.mul `sizes[0]`, `sizes[1]` : i64
-  /// %nullptr     = llvm.mlir.null : !llvm.ptr<f32>
+  /// %nullptr     = llvm.mlir.zero : !llvm.ptr<f32>
   /// %gep         = llvm.getelementptr %nullptr[%size]
   ///                  : (!llvm.ptr<f32>, i64) -> !llvm.ptr<f32>
   /// `sizeBytes`  = llvm.ptrtoint %gep : !llvm.ptr<f32> to i64

@@ -1438,33 +1438,6 @@ def LLVM_LLVMFuncOp : LLVM_Op<"func", [
   let hasRegionVerifier = 1;
 }
 
-def LLVM_NullOp
-    : LLVM_Op<"mlir.null", [Pure]>,
-      LLVM_Builder<"$res = llvm::ConstantPointerNull::get("
-                   "    cast<llvm::PointerType>($_resultType));"> {
-  let summary = "Defines a value containing a null pointer to LLVM type.";
-  let description = [{
-    Unlike LLVM IR, MLIR does not have first-class null pointers. They must be
-    explicitly created as SSA values using `llvm.mlir.null`. This operation has
-    no operands or attributes, and returns a null value of a wrapped LLVM IR
-    pointer type.
-
-    Examples:
-
-    ```mlir
-    // Null pointer to i8.
-    %0 = llvm.mlir.null : !llvm.ptr<i8>
-
-    // Null pointer to a function with signature void().
-    %1 = llvm.mlir.null : !llvm.ptr<func<void ()>>
-    ```
-  }];
-
-  let results = (outs LLVM_AnyPointer:$res);
-  let builders = [LLVM_OneResultOpBuilder];
-  let assemblyFormat = "attr-dict `:` qualified(type($res))";
-}
-
 def LLVM_NoneTokenOp
     : LLVM_Op<"mlir.none", [Pure]> {
   let summary = "Defines a value containing an empty token to LLVM type.";
