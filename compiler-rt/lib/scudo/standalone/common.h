@@ -112,21 +112,6 @@ template <typename T> inline void shuffle(T *A, u32 N, u32 *RandState) {
   *RandState = State;
 }
 
-// Hardware specific inlinable functions.
-
-inline void yieldProcessor(UNUSED u8 Count) {
-#if defined(__i386__) || defined(__x86_64__)
-  __asm__ __volatile__("" ::: "memory");
-  for (u8 I = 0; I < Count; I++)
-    __asm__ __volatile__("pause");
-#elif defined(__aarch64__) || defined(__arm__)
-  __asm__ __volatile__("" ::: "memory");
-  for (u8 I = 0; I < Count; I++)
-    __asm__ __volatile__("yield");
-#endif
-  __asm__ __volatile__("" ::: "memory");
-}
-
 // Platform specific functions.
 
 extern uptr PageSizeCached;

@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_LIBC_SRC_SUPPORT_STRING_UTIL_TABLES_STDC_ERRORS_H
-#define LLVM_LIBC_SRC_SUPPORT_STRING_UTIL_TABLES_STDC_ERRORS_H
+#ifndef LLVM_LIBC_SRC___SUPPORT_STRING_UTIL_TABLES_STDC_ERRORS_H
+#define LLVM_LIBC_SRC___SUPPORT_STRING_UTIL_TABLES_STDC_ERRORS_H
 
 #include "src/__support/StringUtil/message_mapper.h"
 
@@ -24,4 +24,4 @@ LIBC_INLINE_VAR constexpr const MsgTable<4> STDC_ERRORS = {
 
 } // namespace __llvm_libc
 
-#endif // LLVM_LIBC_SRC_SUPPORT_STRING_UTIL_TABLES_LINUX_ERRORS_H
+#endif // LLVM_LIBC_SRC___SUPPORT_STRING_UTIL_TABLES_LINUX_ERRORS_H

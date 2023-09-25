@@ -2188,7 +2188,7 @@ LogicalResult transform::SequenceOp::verify() {
     }
   }
 
-  if (!getBodyBlock()->hasTerminator())
+  if (!getBodyBlock()->mightHaveTerminator())
     return emitOpError() << "expects to have a terminator in the body";
 
   if (getBodyBlock()->getTerminator()->getOperandTypes() !=
@@ -2311,10 +2311,8 @@ void transform::SequenceOp::build(OpBuilder &builder, OperationState &state,
 
 void transform::PrintOp::build(OpBuilder &builder, OperationState &result,
                                StringRef name) {
-  if (!name.empty()) {
-    result.addAttribute(PrintOp::getNameAttrName(result.name),
-                        builder.getStrArrayAttr(name));
-  }
+  if (!name.empty())
+    result.getOrAddProperties<Properties>().name = builder.getStringAttr(name);
 }
 
 void transform::PrintOp::build(OpBuilder &builder, OperationState &result,

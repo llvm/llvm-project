@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_LIBC_SRC_UNISTD_TCDRAIN_H
-#define LLVM_LIBC_SRC_UNISTD_TCDRAIN_H
+#ifndef LLVM_LIBC_SRC_TERMIOS_TCDRAIN_H
+#define LLVM_LIBC_SRC_TERMIOS_TCDRAIN_H
 
 #include <termios.h>
 
@@ -17,4 +17,4 @@ int tcdrain(int fd);
 
 } // namespace __llvm_libc
 
-#endif // LLVM_LIBC_SRC_UNISTD_TCDRAIN_H
+#endif // LLVM_LIBC_SRC_TERMIOS_TCDRAIN_H

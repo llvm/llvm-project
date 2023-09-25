@@ -226,18 +226,15 @@ CGNVCUDARuntime::CGNVCUDARuntime(CodeGenModule &CGM)
       TheModule(CGM.getModule()),
       RelocatableDeviceCode(CGM.getLangOpts().GPURelocatableDeviceCode),
       DeviceMC(InitDeviceMC(CGM)) {
-  CodeGen::CodeGenTypes &Types = CGM.getTypes();
-  ASTContext &Ctx = CGM.getContext();
-
   IntTy = CGM.IntTy;
   SizeTy = CGM.SizeTy;
   VoidTy = CGM.VoidTy;
   Zeros[0] = llvm::ConstantInt::get(SizeTy, 0);
   Zeros[1] = Zeros[0];
 
-  CharPtrTy = llvm::PointerType::getUnqual(Types.ConvertType(Ctx.CharTy));
-  VoidPtrTy = cast<llvm::PointerType>(Types.ConvertType(Ctx.VoidPtrTy));
-  VoidPtrPtrTy = llvm::PointerType::getUnqual(CGM.getLLVMContext());
+  CharPtrTy = CGM.UnqualPtrTy;
+  VoidPtrTy = CGM.UnqualPtrTy;
+  VoidPtrPtrTy = CGM.UnqualPtrTy;
 }
 
 llvm::FunctionCallee CGNVCUDARuntime::getSetupArgumentFn() const {

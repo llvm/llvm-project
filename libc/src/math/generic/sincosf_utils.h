@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_LIBC_SRC_MATH_SINCOSF_UTILS_H
-#define LLVM_LIBC_SRC_MATH_SINCOSF_UTILS_H
+#ifndef LLVM_LIBC_SRC_MATH_GENERIC_SINCOSF_UTILS_H
+#define LLVM_LIBC_SRC_MATH_GENERIC_SINCOSF_UTILS_H
 
 #include "src/__support/FPUtil/FPBits.h"
 #include "src/__support/FPUtil/PolyEval.h"
@@ -97,4 +97,4 @@ LIBC_INLINE void sincosf_eval(double xd, uint32_t x_abs, double &sin_k,
 
 } // namespace __llvm_libc
 
-#endif // LLVM_LIBC_SRC_MATH_SINCOSF_UTILS_H
+#endif // LLVM_LIBC_SRC_MATH_GENERIC_SINCOSF_UTILS_H

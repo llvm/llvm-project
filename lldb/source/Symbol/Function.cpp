@@ -122,6 +122,13 @@ size_t InlineFunctionInfo::MemorySize() const {
 /// @name Call site related structures
 /// @{
 
+CallEdge::~CallEdge() = default;
+
+CallEdge::CallEdge(AddrType caller_address_type, lldb::addr_t caller_address,
+                   bool is_tail_call, CallSiteParameterArray &&parameters)
+    : caller_address(caller_address), caller_address_type(caller_address_type),
+      is_tail_call(is_tail_call), parameters(std::move(parameters)) {}
+
 lldb::addr_t CallEdge::GetLoadAddress(lldb::addr_t unresolved_pc,
                                       Function &caller, Target &target) {
   Log *log = GetLog(LLDBLog::Step);
@@ -185,11 +192,29 @@ void DirectCallEdge::ParseSymbolFileAndResolve(ModuleList &images) {
   resolved = true;
 }
 
+DirectCallEdge::DirectCallEdge(const char *symbol_name,
+                               AddrType caller_address_type,
+                               lldb::addr_t caller_address, bool is_tail_call,
+                               CallSiteParameterArray &&parameters)
+    : CallEdge(caller_address_type, caller_address, is_tail_call,
+               std::move(parameters)) {
+  lazy_callee.symbol_name = symbol_name;
+}
+
 Function *DirectCallEdge::GetCallee(ModuleList &images, ExecutionContext &) {
   ParseSymbolFileAndResolve(images);
   assert(resolved && "Did not resolve lazy callee");
   return lazy_callee.def;
 }
+
+IndirectCallEdge::IndirectCallEdge(DWARFExpressionList call_target,
+                                   AddrType caller_address_type,
+                                   lldb::addr_t caller_address,
+                                   bool is_tail_call,
+                                   CallSiteParameterArray &&parameters)
+    : CallEdge(caller_address_type, caller_address, is_tail_call,
+               std::move(parameters)),
+      call_target(std::move(call_target)) {}
 
 Function *IndirectCallEdge::GetCallee(ModuleList &images,
                                       ExecutionContext &exe_ctx) {

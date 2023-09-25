@@ -557,9 +557,6 @@ PassBuilder::buildFunctionSimplificationPipeline(OptimizationLevel Level,
   FPM.addPass(InstCombinePass());
   FPM.addPass(AggressiveInstCombinePass());
 
-  if (EnableConstraintElimination)
-    FPM.addPass(ConstraintEliminationPass());
-
   if (!Level.isOptimizingForSize())
     FPM.addPass(LibCallsShrinkWrapPass());
 
@@ -579,6 +576,9 @@ PassBuilder::buildFunctionSimplificationPipeline(OptimizationLevel Level,
   // basic mathematical properties. For example, this will form (nearly)
   // minimal multiplication trees.
   FPM.addPass(ReassociatePass());
+
+  if (EnableConstraintElimination)
+    FPM.addPass(ConstraintEliminationPass());
 
   // Add the primary loop simplification pipeline.
   // FIXME: Currently this is split into two loop pass pipelines because we run

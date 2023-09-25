@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_LIBC_SRC_SUPPORT_CPP_OPTIONAL_H
-#define LLVM_LIBC_SRC_SUPPORT_CPP_OPTIONAL_H
+#ifndef LLVM_LIBC_SRC___SUPPORT_CPP_OPTIONAL_H
+#define LLVM_LIBC_SRC___SUPPORT_CPP_OPTIONAL_H
 
 #include "src/__support/CPP/type_traits.h"
 #include "src/__support/CPP/utility.h"
@@ -120,4 +120,4 @@ public:
 } // namespace cpp
 } // namespace __llvm_libc
 
-#endif // LLVM_LIBC_SRC_SUPPORT_CPP_OPTIONAL_H
+#endif // LLVM_LIBC_SRC___SUPPORT_CPP_OPTIONAL_H

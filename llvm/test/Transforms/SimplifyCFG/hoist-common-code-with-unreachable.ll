@@ -67,9 +67,6 @@ exit:                                             ; preds = %bb2, %bb1, %bb0
   ret i1 %result
 }
 
-declare void @no_return()
-declare void @foo()
-
 define i1 @not_only_unreachable(i64 %a, i64 %b, i64 %c) {
 ; CHECK-LABEL: @not_only_unreachable(
 ; CHECK-NEXT:  start:
@@ -127,3 +124,39 @@ exit:                                             ; preds = %bb2, %bb1, %bb0
   %result = phi i1 [ %0, %bb0 ], [ %1, %bb1 ], [ %2, %bb2 ]
   ret i1 %result
 }
+
+; If we can hoist a musttail call,
+; we can and have to hoist subsequent bitcast and ret instructions.
+define ptr @switch_musttail_call(ptr %arg) {
+; CHECK-LABEL: @switch_musttail_call(
+; CHECK-NEXT:  bb:
+; CHECK-NEXT:    [[P0:%.*]] = musttail call ptr @musttail_call(ptr [[ARG:%.*]])
+; CHECK-NEXT:    ret ptr [[P0]]
+;
+bb:
+  %load = load i16, ptr %arg, align 2
+  switch i16 %load, label %unreachable [
+  i16 0, label %bb0
+  i16 1, label %bb1
+  i16 2, label %bb2
+  ]
+
+unreachable:
+  unreachable
+
+bb0:
+  %p0 = musttail call ptr @musttail_call(ptr %arg)
+  ret ptr %p0
+
+bb1:
+  %p1 = musttail call ptr @musttail_call(ptr %arg)
+  ret ptr %p1
+
+bb2:
+  %p2 = musttail call ptr @musttail_call(ptr %arg)
+  ret ptr %p2
+}
+
+declare void @no_return()
+declare void @foo()
+declare ptr @musttail_call(ptr)

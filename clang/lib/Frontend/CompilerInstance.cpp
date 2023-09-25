@@ -151,9 +151,6 @@ bool CompilerInstance::createTarget() {
   // created. This complexity should be lifted elsewhere.
   getTarget().adjust(getDiagnostics(), getLangOpts());
 
-  // Adjust target options based on codegen options.
-  getTarget().adjustTargetOptions(getCodeGenOpts(), getTargetOpts());
-
   if (auto *Aux = getAuxTarget())
     getTarget().setAuxTarget(Aux);
 

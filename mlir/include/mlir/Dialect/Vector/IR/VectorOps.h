@@ -14,6 +14,7 @@
 #define MLIR_DIALECT_VECTOR_IR_VECTOROPS_H
 
 #include "mlir/Bytecode/BytecodeOpInterface.h"
+#include "mlir/Dialect/Arith/IR/Arith.h"
 #include "mlir/Dialect/Vector/Interfaces/MaskableOpInterface.h"
 #include "mlir/Dialect/Vector/Interfaces/MaskingOpInterface.h"
 #include "mlir/IR/AffineMap.h"
@@ -31,10 +32,10 @@
 #include "llvm/ADT/StringExtras.h"
 
 // Pull in all enum type definitions and utility function declarations.
-#include "mlir/Dialect/Vector/IR/VectorOpsEnums.h.inc"
+#include "mlir/Dialect/Vector/IR/VectorEnums.h.inc"
 
 #define GET_ATTRDEF_CLASSES
-#include "mlir/Dialect/Vector/IR/VectorOpsAttrDefs.h.inc"
+#include "mlir/Dialect/Vector/IR/VectorAttributes.h.inc"
 
 namespace mlir {
 class MLIRContext;
@@ -130,6 +131,24 @@ inline bool isReductionIterator(Attribute attr) {
   return cast<IteratorTypeAttr>(attr).getValue() == IteratorType::reduction;
 }
 
+/// Returns the integer numbers in `values`. `values` are expected to be
+/// constant operations.
+SmallVector<int64_t> getAsIntegers(ArrayRef<Value> values);
+
+/// Returns the integer numbers in `foldResults`. `foldResults` are expected to
+/// be constant operations.
+SmallVector<int64_t> getAsIntegers(ArrayRef<OpFoldResult> foldResults);
+
+/// Convert `foldResults` into Values. Integer attributes are converted to
+/// constant op.
+SmallVector<Value> getAsValues(OpBuilder &builder, Location loc,
+                               ArrayRef<OpFoldResult> foldResults);
+
+/// Returns the constant index ops in `values`. `values` are expected to be
+/// constant operations.
+SmallVector<arith::ConstantIndexOp>
+getAsConstantIndexOps(ArrayRef<Value> values);
+
 //===----------------------------------------------------------------------===//
 // Vector Masking Utilities
 //===----------------------------------------------------------------------===//
@@ -157,7 +176,7 @@ Value selectPassthru(OpBuilder &builder, Value mask, Value newValue,
 } // namespace mlir
 
 #define GET_OP_CLASSES
+#include "mlir/Dialect/Vector/IR/VectorDialect.h.inc"
 #include "mlir/Dialect/Vector/IR/VectorOps.h.inc"
-#include "mlir/Dialect/Vector/IR/VectorOpsDialect.h.inc"
 
 #endif // MLIR_DIALECT_VECTOR_IR_VECTOROPS_H

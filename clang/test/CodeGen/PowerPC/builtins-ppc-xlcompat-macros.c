@@ -167,15 +167,15 @@ void testalignx(const void *pointer) {
 }
 
 // 64BIT-LABEL: @testbcopy(
-// 64BIT:         call void @bcopy(ptr noundef {{%.*}}, ptr noundef {{%.*}}, i64 noundef {{%.*}})
+// 64BIT:         call void @llvm.memmove.p0.p0.i64(ptr align 1 {{%.*}}, ptr align 1 {{%.*}}, i64 {{%.*}}, i1 false)
 // 64BIT-NEXT:    ret void
 //
 // 32BIT-LABEL: @testbcopy(
-// 32BIT:         call void @bcopy(ptr noundef {{%.*}}, ptr noundef {{%.*}}, i32 noundef {{%.*}})
+// 32BIT:         call void @llvm.memmove.p0.p0.i32(ptr align 1 {{%.*}}, ptr align 1 {{%.*}}, i32 {{%.*}}, i1 false)
 // 32BIT-NEXT:    ret void
 //
 void testbcopy(const void *src, void *dest, size_t n) {
-  __bcopy(src, dest, n);
+  bcopy(src, dest, n);
 }
 
 // 64BIT-LABEL: @testbzero(

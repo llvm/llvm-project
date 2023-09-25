@@ -3379,12 +3379,10 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
     IRBuilder<> IRB(&I);
     Value *Addr = I.getArgOperand(0);
     Type *Ty = IRB.getInt32Ty();
-    Type *PtrTy = IRB.getPtrTy();
     Value *ShadowPtr =
         getShadowOriginPtr(Addr, IRB, Ty, Align(1), /*isStore*/ true).first;
 
-    IRB.CreateStore(getCleanShadow(Ty),
-                    IRB.CreatePointerCast(ShadowPtr, PtrTy));
+    IRB.CreateStore(getCleanShadow(Ty), ShadowPtr);
 
     if (ClCheckAccessAddress)
       insertShadowCheck(Addr, &I);

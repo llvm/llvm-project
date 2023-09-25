@@ -987,7 +987,7 @@ FailureOr<Value> ModuleImport::convertConstant(llvm::Constant *constant) {
   // Convert null pointer constants.
   if (auto *nullPtr = dyn_cast<llvm::ConstantPointerNull>(constant)) {
     Type type = convertType(nullPtr->getType());
-    return builder.create<NullOp>(loc, type).getResult();
+    return builder.create<ZeroOp>(loc, type).getResult();
   }
 
   // Convert none token constants.

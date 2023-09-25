@@ -431,7 +431,7 @@ Address PPC32_SVR4_ABIInfo::EmitVAArg(CodeGenFunction &CGF, Address VAList,
 
   llvm::Type *DirectTy = CGF.ConvertType(Ty), *ElementTy = DirectTy;
   if (isIndirect)
-    DirectTy = llvm::PointerType::getUnqual(CGF.getLLVMContext());
+    DirectTy = CGF.UnqualPtrTy;
 
   // Case 1: consume registers.
   Address RegAddr = Address::invalid();

@@ -659,3 +659,17 @@ class RegisterCommandsTestCase(TestBase):
             pthread_self_val.GetValueAsUnsigned(0),
             "fs_base does not equal to pthread_self() value.",
         )
+
+    def test_process_must_be_stopped(self):
+        """Check that all register commands error when the process is not stopped."""
+        self.build()
+        exe = self.getBuildArtifact("a.out")
+        pid = self.spawnSubprocess(exe, ["wait_for_attach"]).pid
+        # Async so we can enter commands while the process is running.
+        self.setAsync(True)
+        self.runCmd("process attach --continue -p %d" % pid)
+
+        err_msg = "Command requires a process which is currently stopped."
+        self.expect("register read pc", substrs=[err_msg], error=True)
+        self.expect("register write pc 0", substrs=[err_msg], error=True)
+        self.expect("register info pc", substrs=[err_msg], error=True)

@@ -31,7 +31,7 @@
 // CHECK-DAG:       %[[IotaP:.*]] = memref.cast %[[Iota]] : memref<2xindex> to memref<?xindex>
 // CHECK-DAG:       memref.store %[[I0]], %[[Iota]]{{\[}}%[[I0]]] : memref<2xindex>
 // CHECK-DAG:       memref.store %[[I1]], %[[Iota]]{{\[}}%[[I1]]] : memref<2xindex>
-// CHECK-DAG:       %[[NullPtr:.*]] = llvm.mlir.null : !llvm.ptr<i8>
+// CHECK-DAG:       %[[NullPtr:.*]] = llvm.mlir.zero : !llvm.ptr<i8>
 // CHECK:           %[[VAL_19:.*]] = call @newSparseTensor(%[[DimSizesP]], %[[LvlSizesP]], %[[LvlTypesP]], %[[IotaP]], %[[IotaP]], %[[C0]], %[[C0]], %[[C1]], %[[C0]], %[[NullPtr]]) : (memref<?xindex>, memref<?xindex>, memref<?xi8>, memref<?xindex>, memref<?xindex>, i32, i32, i32, i32, !llvm.ptr<i8>) -> !llvm.ptr<i8>
 // CHECK:           %[[VAL_20:.*]] = memref.alloc() : memref<300xf64>
 // CHECK:           %[[VAL_21:.*]] = memref.cast %[[VAL_20]] : memref<300xf64> to memref<?xf64>
@@ -121,7 +121,7 @@
 // CHECK:         }
 func.func @fill_zero_after_alloc(%arg0: tensor<100x200xf64, #DCSR>,
                                  %arg1: tensor<200x300xf64, #DCSR>) -> tensor<100x300xf64, #DCSR> {
-  %0 = bufferization.alloc_tensor() : tensor<100x300xf64, #DCSR>
+  %0 = tensor.empty() : tensor<100x300xf64, #DCSR>
   %cst = arith.constant 0.000000e+00 : f64
   %1 = linalg.fill ins(%cst : f64)
                    outs(%0 : tensor<100x300xf64, #DCSR>) -> tensor<100x300xf64, #DCSR>

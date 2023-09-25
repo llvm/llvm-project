@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_LIBC_SRC_SUPPORT_FPUTIL_TRIPLEDOUBLE_H
-#define LLVM_LIBC_SRC_SUPPORT_FPUTIL_TRIPLEDOUBLE_H
+#ifndef LLVM_LIBC_SRC___SUPPORT_FPUTIL_TRIPLE_DOUBLE_H
+#define LLVM_LIBC_SRC___SUPPORT_FPUTIL_TRIPLE_DOUBLE_H
 
 namespace __llvm_libc::fputil {
 
@@ -19,4 +19,4 @@ struct TripleDouble {
 
 } // namespace __llvm_libc::fputil
 
-#endif // LLVM_LIBC_SRC_SUPPORT_FPUTIL_TRIPLEDOUBLE_H
+#endif // LLVM_LIBC_SRC___SUPPORT_FPUTIL_TRIPLE_DOUBLE_H

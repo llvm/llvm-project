@@ -11,6 +11,11 @@ _ZN11__sanitizer16internal_iserrorEjPi U
 _ZN11__sanitizer16internal_iserrorEmPi U
 _ZN11__sanitizer17internal_snprintfEPcjPKcz U
 _ZN11__sanitizer17internal_snprintfEPcmPKcz U
+__aarch64_cas8_acq_rel U
+__aarch64_ldadd4_acq_rel U
+__aarch64_ldadd8_acq_rel U
+__aarch64_ldadd8_relax U
+__aarch64_swp8_acq_rel U
 __ashldi3 U
 __ashrdi3 U
 __ctype_b_loc U

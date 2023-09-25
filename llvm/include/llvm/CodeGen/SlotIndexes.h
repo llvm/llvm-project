@@ -58,20 +58,6 @@ class raw_ostream;
     void setIndex(unsigned index) {
       this->index = index;
     }
-
-#ifdef EXPENSIVE_CHECKS
-    // When EXPENSIVE_CHECKS is defined, "erased" index list entries will
-    // actually be moved to a "graveyard" list, and have their pointers
-    // poisoned, so that dangling SlotIndex access can be reliably detected.
-    void setPoison() {
-      intptr_t tmp = reinterpret_cast<intptr_t>(mi);
-      assert(((tmp & 0x1) == 0x0) && "Pointer already poisoned?");
-      tmp |= 0x1;
-      mi = reinterpret_cast<MachineInstr*>(tmp);
-    }
-
-    bool isPoisoned() const { return (reinterpret_cast<intptr_t>(mi) & 0x1) == 0x1; }
-#endif // EXPENSIVE_CHECKS
   };
 
   template <>
@@ -110,10 +96,6 @@ class raw_ostream;
 
     IndexListEntry* listEntry() const {
       assert(isValid() && "Attempt to compare reserved index.");
-#ifdef EXPENSIVE_CHECKS
-      assert(!lie.getPointer()->isPoisoned() &&
-             "Attempt to access deleted list-entry.");
-#endif // EXPENSIVE_CHECKS
       return lie.getPointer();
     }
 

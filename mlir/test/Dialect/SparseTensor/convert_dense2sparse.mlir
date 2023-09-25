@@ -34,7 +34,7 @@
 //   CHECK-DAG: %[[DimSizesP:.*]] = memref.cast %[[DimSizes]] : memref<1xindex> to memref<?xindex>
 //   CHECK-DAG: %[[LvlSizesP:.*]] = memref.cast %[[LvlSizes]] : memref<1xindex> to memref<?xindex>
 //   CHECK-DAG: %[[IotaP:.*]] = memref.cast %[[Iota]] : memref<1xindex> to memref<?xindex>
-//       CHECK: %[[NP:.*]] = llvm.mlir.null : !llvm.ptr<i8>
+//       CHECK: %[[NP:.*]] = llvm.mlir.zero : !llvm.ptr<i8>
 //       CHECK: %[[C:.*]] = call @newSparseTensor(%[[DimSizesP]], %[[LvlSizesP]], %[[LvlTypesP]], %[[IotaP]], %[[IotaP]], %{{.*}}, %{{.*}}, %{{.*}}, %[[EmptyCOO]], %[[NP]])
 //       CHECK: %[[M:.*]] = memref.alloca() : memref<1xindex>
 //       CHECK: %[[T:.*]] = memref.cast %[[M]] : memref<1xindex> to memref<?xindex>
@@ -92,7 +92,7 @@ func.func @sparse_convert_complex(%arg0: tensor<100xcomplex<f64>>) -> tensor<100
 //   CHECK-DAG: %[[DimSizesP:.*]] = memref.cast %[[DimSizes]] : memref<2xindex> to memref<?xindex>
 //   CHECK-DAG: %[[LvlSizesP:.*]] = memref.cast %[[LvlSizes]] : memref<2xindex> to memref<?xindex>
 //   CHECK-DAG: %[[IotaP:.*]] = memref.cast %[[Iota]] : memref<2xindex> to memref<?xindex>
-//       CHECK: %[[NP:.*]] = llvm.mlir.null : !llvm.ptr<i8>
+//       CHECK: %[[NP:.*]] = llvm.mlir.zero : !llvm.ptr<i8>
 //       CHECK: %[[C:.*]] = call @newSparseTensor(%[[DimSizesP]], %[[LvlSizesP]], %[[LvlTypesP]], %[[IotaP]], %[[IotaP]], %{{.*}}, %{{.*}}, %{{.*}}, %[[EmptyCOO]], %[[NP]])
 //       CHECK: %[[M:.*]] = memref.alloca() : memref<2xindex>
 //       CHECK: %[[T:.*]] = memref.cast %[[M]] : memref<2xindex> to memref<?xindex>
@@ -146,7 +146,7 @@ func.func @sparse_convert_2d(%arg0: tensor<2x4xf64>) -> tensor<2x4xf64, #CSR> {
 //   CHECK-DAG: %[[DimSizesP:.*]] = memref.cast %[[DimSizes]] : memref<2xindex> to memref<?xindex>
 //   CHECK-DAG: %[[LvlSizesP:.*]] = memref.cast %[[LvlSizes]] : memref<2xindex> to memref<?xindex>
 //   CHECK-DAG: %[[IotaP:.*]] = memref.cast %[[Iota]] : memref<2xindex> to memref<?xindex>
-//       CHECK: %[[NP:.*]] = llvm.mlir.null : !llvm.ptr<i8>
+//       CHECK: %[[NP:.*]] = llvm.mlir.zero : !llvm.ptr<i8>
 //       CHECK: %[[C:.*]] = call @newSparseTensor(%[[DimSizesP]], %[[LvlSizesP]], %[[LvlTypesP]], %[[IotaP]], %[[IotaP]], %{{.*}}, %{{.*}}, %{{.*}}, %[[EmptyCOO]], %[[NP]])
 //       CHECK: %[[M:.*]] = memref.alloca() : memref<2xindex>
 //       CHECK: %[[N:.*]] = memref.cast %[[M]] : memref<2xindex> to memref<?xindex>
@@ -220,7 +220,7 @@ func.func @sparse_constant_csc() -> tensor<8x7xf32, #CSC>{
 //   CHECK-DAG: %[[LvlSizesP:.*]] = memref.cast %[[LvlSizes]] : memref<3xindex> to memref<?xindex>
 //   CHECK-DAG: %[[Lvl2DimP:.*]] = memref.cast %[[Lvl2Dim]] : memref<3xindex> to memref<?xindex>
 //   CHECK-DAG: %[[Dim2LvlP:.*]] = memref.cast %[[Dim2Lvl]] : memref<3xindex> to memref<?xindex>
-//       CHECK: %[[NP:.*]] = llvm.mlir.null : !llvm.ptr<i8>
+//       CHECK: %[[NP:.*]] = llvm.mlir.zero : !llvm.ptr<i8>
 //       CHECK: %[[C:.*]] = call @newSparseTensor(%[[DimSizesP]], %[[LvlSizesP]], %[[LvlTypesP]], %[[Lvl2DimP]], %[[Dim2LvlP]], %{{.*}}, %{{.*}}, %{{.*}}, %[[EmptyCOO]], %[[NP]])
 //       CHECK: %[[M:.*]] = memref.alloca() : memref<3xindex>
 //       CHECK: %[[N:.*]] = memref.cast %[[M]] : memref<3xindex> to memref<?xindex>

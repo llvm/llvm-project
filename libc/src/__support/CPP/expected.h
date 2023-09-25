@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_LIBC_SUPPORT_CPP_EXPECTED_H
-#define LLVM_LIBC_SUPPORT_CPP_EXPECTED_H
+#ifndef LLVM_LIBC_SRC___SUPPORT_CPP_EXPECTED_H
+#define LLVM_LIBC_SRC___SUPPORT_CPP_EXPECTED_H
 
 namespace __llvm_libc::cpp {
 
@@ -48,4 +48,4 @@ public:
 
 } // namespace __llvm_libc::cpp
 
-#endif // LLVM_LIBC_SUPPORT_CPP_EXPECTED_H
+#endif // LLVM_LIBC_SRC___SUPPORT_CPP_EXPECTED_H

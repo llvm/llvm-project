@@ -2713,7 +2713,7 @@ private:
                NewEndOffset == NewAllocaEndOffset &&
                (canConvertValue(DL, NewAllocaTy, TargetTy) ||
                 (IsLoadPastEnd && NewAllocaTy->isIntegerTy() &&
-                 TargetTy->isIntegerTy()))) {
+                 TargetTy->isIntegerTy() && !LI.isVolatile()))) {
       Value *NewPtr =
           getPtrToNewAI(LI.getPointerAddressSpace(), LI.isVolatile());
       LoadInst *NewLI = IRB.CreateAlignedLoad(NewAI.getAllocatedType(), NewPtr,
@@ -3126,8 +3126,7 @@ private:
       if (IsDest) {
         // Update the address component of linked dbg.assigns.
         for (auto *DAI : at::getAssignmentMarkers(&II)) {
-          if (any_of(DAI->location_ops(),
-                     [&](Value *V) { return V == II.getDest(); }) ||
+          if (llvm::is_contained(DAI->location_ops(), II.getDest()) ||
               DAI->getAddress() == II.getDest())
             DAI->replaceVariableLocationOp(II.getDest(), AdjustedPtr);
         }
