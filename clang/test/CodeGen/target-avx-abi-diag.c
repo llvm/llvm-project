@@ -5,6 +5,10 @@
 // RUN: %clang_cc1 %s -triple=x86_64-linux-gnu -target-feature +avx512f -target-feature -evex512 -verify=avx512-256 -DAVX512_ERR=1 -o - -S
 // RUN: %clang_cc1 %s -triple=x86_64-linux-gnu -target-feature +avx512f -target-feature -evex512 -verify=avx512-256 -DAVX512_ERR=2 -o - -S
 // RUN: %clang_cc1 %s -triple=x86_64-linux-gnu -target-feature +avx512f -target-feature -evex512 -verify=avx512-256 -DAVX512_ERR=3 -o - -S
+// RUN: %clang_cc1 %s -triple=x86_64-linux-gnu -target-feature +avx10.1-512 -verify=both -o - -S
+// RUN: %clang_cc1 %s -triple=x86_64-linux-gnu -target-feature +avx10.1-256 -verify=avx512-256 -DAVX512_ERR=1 -o - -S
+// RUN: %clang_cc1 %s -triple=x86_64-linux-gnu -target-feature +avx10.1-256 -verify=avx512-256 -DAVX512_ERR=2 -o - -S
+// RUN: %clang_cc1 %s -triple=x86_64-linux-gnu -target-feature +avx10.1-256 -verify=avx512-256 -DAVX512_ERR=3 -o - -S
 // REQUIRES: x86-registered-target
 
 // both-no-diagnostics

@@ -387,6 +387,7 @@ X86 Support
 
 - Added option ``-m[no-]evex512`` to disable ZMM and 64-bit mask instructions
   for AVX512 features.
+- Support ISA of ``AVX10.1``.
 
 Arm and AArch64 Support
 ^^^^^^^^^^^^^^^^^^^^^^^
