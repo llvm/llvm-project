@@ -168,7 +168,7 @@ protected:
       llvmPointerType /* void * */,
       {llvmIntPtrType /* intptr_t sizeBytes */,
        llvmPointerType /* void *stream */,
-       llvmInt64Type /* bool isHostShared */}};
+       llvmInt8Type /* bool isHostShared */}};
   FunctionCallBuilder deallocCallBuilder = {
       "mgpuMemFree",
       llvmVoidType,
@@ -818,7 +818,7 @@ LogicalResult ConvertAllocOpToGpuRuntimeCallPattern::matchAndRewrite(
   auto stream = adaptor.getAsyncDependencies().front();
 
   auto isHostShared = rewriter.create<mlir::LLVM::ConstantOp>(
-      loc, llvmInt64Type, rewriter.getI64IntegerAttr(isShared));
+      loc, llvmInt8Type, rewriter.getI64IntegerAttr(isShared));
 
   Value allocatedPtr =
       allocCallBuilder.create(loc, rewriter, {sizeBytes, stream, isHostShared})
