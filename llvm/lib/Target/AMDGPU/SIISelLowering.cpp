@@ -13872,7 +13872,7 @@ static uint64_t clearUnusedBits(uint64_t Val, unsigned Size) {
 }
 
 void SITargetLowering::LowerAsmOperandForConstraint(SDValue Op,
-                                                    std::string &Constraint,
+                                                    StringRef Constraint,
                                                     std::vector<SDValue> &Ops,
                                                     SelectionDAG &DAG) const {
   if (isImmConstraint(Constraint)) {
@@ -13921,8 +13921,7 @@ bool SITargetLowering::getAsmOperandConstVal(SDValue Op, uint64_t &Val) const {
   return false;
 }
 
-bool SITargetLowering::checkAsmConstraintVal(SDValue Op,
-                                             const std::string &Constraint,
+bool SITargetLowering::checkAsmConstraintVal(SDValue Op, StringRef Constraint,
                                              uint64_t Val) const {
   if (Constraint.size() == 1) {
     switch (Constraint[0]) {
