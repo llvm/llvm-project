@@ -91,6 +91,10 @@ def OpNop: SimpleOp<"OpNop", 0>;
 def OpUndef: Op<1, (outs ID:$res), (ins TYPE:$type), "$res = OpUndef $type">;
 def OpSizeOf: Op<321, (outs ID:$res), (ins TYPE:$ty, ID:$ptr), "$res = OpSizeOf $ty $ptr">;
 
+//  - SPV_KHR_expect_assume : Expect assume instructions
+def OpAssumeTrueKHR: Op<5630, (outs), (ins ID:$cond), "OpAssumeTrueKHR $cond">;
+def OpExpectKHR: Op<5631, (outs ID:$res), (ins TYPE:$ty, ID:$val, ID:$expected), "$res = OpExpectKHR $ty $val $expected">;
+
 // 3.42.2 Debug Instructions
 
 def OpSourceContinued: Op<2, (outs), (ins StringImm:$str, variable_ops),
