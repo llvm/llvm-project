@@ -3511,17 +3511,14 @@ static SDValue lowerBuildVectorOfConstants(SDValue Op, SelectionDAG &DAG,
     }
   }
 
-  if (SDValue Res = lowerBuildVectorViaDominantValues(Op, DAG, Subtarget))
-    return Res;
-
   // If the number of signbits allows, see if we can lower as a <N x i8>.
-  // We restrict this to N <= 4 to ensure the resulting narrow vector is
-  // 32 bits of smaller and can thus be materialized cheaply from scalar.
-  // The main motivation for this is the constant index vector required
-  // by vrgather.vv.  This covers all indice vectors up to size 4.
+  // Our main goal here is to reduce LMUL (and thus work) required to
+  // build the constant, but we will also narrow if the resulting
+  // narrow vector is known to materialize cheaply.
   // TODO: We really should be costing the smaller vector.  There are
   // profitable cases this misses.
-  if (EltBitSize > 8 && NumElts <= 4) {
+  if (EltBitSize > 8 &&
+      (NumElts <= 4 || VT.getSizeInBits() > Subtarget.getRealMinVLen())) {
     unsigned SignBits = DAG.ComputeNumSignBits(Op);
     if (EltBitSize - SignBits < 8) {
       SDValue Source =
@@ -3532,6 +3529,9 @@ static SDValue lowerBuildVectorOfConstants(SDValue Op, SelectionDAG &DAG,
       return convertFromScalableVector(VT, Res, DAG, Subtarget);
     }
   }
+
+  if (SDValue Res = lowerBuildVectorViaDominantValues(Op, DAG, Subtarget))
+    return Res;
 
   // For constant vectors, use generic constant pool lowering.  Otherwise,
   // we'd have to materialize constants in GPRs just to move them into the
