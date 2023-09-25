@@ -422,7 +422,7 @@ TEST(DWARFDebugAbbrevTest, DWARFDebugAbbrevParseError) {
 
   // Afterwards, we're going to write an Abbreviation Decl manually without a
   // termintating sequence.
-  encodeULEB128(FirstCode - 1 , OS);
+  encodeULEB128(FirstCode - 1, OS);
   encodeULEB128(DW_TAG_compile_unit, OS);
   OS << static_cast<uint8_t>(DW_CHILDREN_no);
   encodeULEB128(DW_AT_name, OS);
