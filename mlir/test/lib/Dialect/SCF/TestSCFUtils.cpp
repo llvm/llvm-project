@@ -226,6 +226,24 @@ struct TestSCFPipeliningPass
     });
   }
 };
+
+struct TestSCFForOpDeadArgPass
+    : public PassWrapper<TestSCFForOpDeadArgPass, OperationPass<func::FuncOp>> {
+  MLIR_DEFINE_EXPLICIT_INTERNAL_INLINE_TYPE_ID(TestSCFForOpDeadArgPass)
+
+  TestSCFForOpDeadArgPass() = default;
+  TestSCFForOpDeadArgPass(const TestSCFForOpDeadArgPass &) {}
+  StringRef getArgument() const final { return "test-scf-for-op-dead-cycles"; }
+  StringRef getDescription() const final {
+    return "test removing dead cycles in scf.forOp";
+  }
+
+  void runOnOperation() override {
+    RewritePatternSet patterns(&getContext());
+    scf::populateForOpDeadCycleEliminationPatterns(patterns);
+    (void)applyPatternsAndFoldGreedily(getOperation(), std::move(patterns));
+  }
+};
 } // namespace
 
 namespace mlir {
@@ -234,6 +252,7 @@ void registerTestSCFUtilsPass() {
   PassRegistration<TestSCFForUtilsPass>();
   PassRegistration<TestSCFIfUtilsPass>();
   PassRegistration<TestSCFPipeliningPass>();
+  PassRegistration<TestSCFForOpDeadArgPass>();
 }
 } // namespace test
 } // namespace mlir

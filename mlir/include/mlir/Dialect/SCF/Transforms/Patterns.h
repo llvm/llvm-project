@@ -79,6 +79,12 @@ void populateSCFLoopPipeliningPatterns(RewritePatternSet &patterns,
 /// loop bounds and loop steps are canonicalized.
 void populateSCFForLoopCanonicalizationPatterns(RewritePatternSet &patterns);
 
+/// Applies an expensive dead code elimination to scf.for op loop arguments.
+/// This allows removing dead cycles in loop arguments.
+/// The pattern will first assume that all the arguments are dead and
+/// recursively propagate liveness to values in the loop to a fix point.
+void populateForOpDeadCycleEliminationPatterns(RewritePatternSet &patterns);
+
 } // namespace scf
 } // namespace mlir
 
