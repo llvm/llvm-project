@@ -17258,6 +17258,11 @@ Value *CodeGenFunction::EmitPPCBuiltinExpr(unsigned BuiltinID,
     Value *Op1 = EmitScalarExpr(E->getArg(1));
     return Builder.CreateFDiv(Op0, Op1, "swdiv");
   }
+  case PPC::BI__builtin_ppc_set_fpscr_rn:
+    return Builder.CreateCall(CGM.getIntrinsic(Intrinsic::ppc_setrnd),
+                              {EmitScalarExpr(E->getArg(0))});
+  case PPC::BI__builtin_ppc_mffs:
+    return Builder.CreateCall(CGM.getIntrinsic(Intrinsic::ppc_readflm));
   }
 }
 
