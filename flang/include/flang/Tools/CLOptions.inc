@@ -274,10 +274,8 @@ inline void createHLFIRToFIRPassPipeline(
 inline void createOpenMPFIRPassPipeline(
     mlir::PassManager &pm, bool isTargetDevice) {
   pm.addPass(fir::createOMPMarkDeclareTargetPass());
-  if (isTargetDevice) {
-    pm.addPass(fir::createOMPEarlyOutliningPass());
+  if (isTargetDevice)
     pm.addPass(fir::createOMPFunctionFilteringPass());
-  }
 }
 
 #if !defined(FLANG_EXCLUDE_CODEGEN)
