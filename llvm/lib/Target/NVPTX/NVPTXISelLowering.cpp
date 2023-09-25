@@ -3089,12 +3089,11 @@ NVPTXTargetLowering::LowerReturn(SDValue Chain, CallingConv::ID CallConv,
 }
 
 void NVPTXTargetLowering::LowerAsmOperandForConstraint(
-    SDValue Op, std::string &Constraint, std::vector<SDValue> &Ops,
+    SDValue Op, StringRef Constraint, std::vector<SDValue> &Ops,
     SelectionDAG &DAG) const {
-  if (Constraint.length() > 1)
+  if (Constraint.size() > 1)
     return;
-  else
-    TargetLowering::LowerAsmOperandForConstraint(Op, Constraint, Ops, DAG);
+  TargetLowering::LowerAsmOperandForConstraint(Op, Constraint, Ops, DAG);
 }
 
 static unsigned getOpcForTextureInstr(unsigned Intrinsic) {

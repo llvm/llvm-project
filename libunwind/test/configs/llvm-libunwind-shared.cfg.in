@@ -10,8 +10,9 @@ link_flags = []
 if @LIBUNWIND_ENABLE_CET@:
     compile_flags.append('-fcf-protection=full')
 
-if '@CMAKE_SYSTEM_NAME@' == 'Linux':
-    link_flags.append('-Wl,--export-dynamic')
+# On ELF platforms, add -Wl,--export-dynamic if supported by the linker.
+if len('@CMAKE_EXE_EXPORTS_CXX_FLAG@'):
+    link_flags.append('@CMAKE_EXE_EXPORTS_CXX_FLAG@')
 
 if '@CMAKE_DL_LIBS@':
     link_flags.append('-l@CMAKE_DL_LIBS@')
