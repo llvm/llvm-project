@@ -620,6 +620,9 @@ public:
 
   bool initDwarfEHRegSizeTable(CodeGen::CodeGenFunction &CGF,
                                llvm::Value *Address) const override;
+  void emitTargetMetadata(CodeGen::CodeGenModule &CGM,
+                          const llvm::MapVector<GlobalDecl, StringRef>
+                              &MangledDeclNames) const override;
 };
 
 class PPC64TargetCodeGenInfo : public TargetCodeGenInfo {
@@ -938,6 +941,24 @@ PPC64_SVR4_TargetCodeGenInfo::initDwarfEHRegSizeTable(
   llvm::Value *Address) const {
   return PPC_initDwarfEHRegSizeTable(CGF, Address, /*Is64Bit*/ true,
                                      /*IsAIX*/ false);
+}
+
+void PPC64_SVR4_TargetCodeGenInfo::emitTargetMetadata(
+    CodeGen::CodeGenModule &CGM,
+    const llvm::MapVector<GlobalDecl, StringRef> &MangledDeclNames) const {
+  if (CGM.getTypes().isLongDoubleReferenced()) {
+    llvm::LLVMContext &Ctx = CGM.getLLVMContext();
+    const auto *flt = &CGM.getTarget().getLongDoubleFormat();
+    if (flt == &llvm::APFloat::PPCDoubleDouble())
+      CGM.getModule().addModuleFlag(llvm::Module::Error, "float-abi",
+                                    llvm::MDString::get(Ctx, "doubledouble"));
+    else if (flt == &llvm::APFloat::IEEEquad())
+      CGM.getModule().addModuleFlag(llvm::Module::Error, "float-abi",
+                                    llvm::MDString::get(Ctx, "ieeequad"));
+    else if (flt == &llvm::APFloat::IEEEdouble())
+      CGM.getModule().addModuleFlag(llvm::Module::Error, "float-abi",
+                                    llvm::MDString::get(Ctx, "ieeedouble"));
+  }
 }
 
 bool
