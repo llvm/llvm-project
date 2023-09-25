@@ -322,6 +322,7 @@ public:
   unique_function<Error(LLJIT &)> PrePlatformSetup;
   PlatformSetupFunction SetUpPlatform;
   unsigned NumCompileThreads = 0;
+  bool EnableDebuggerSupport = false;
 
   /// Called prior to JIT class construcion to fix up defaults.
   Error prepareForConstruction();
@@ -451,6 +452,12 @@ public:
   /// a zero argument.
   SetterImpl &setNumCompileThreads(unsigned NumCompileThreads) {
     impl().NumCompileThreads = NumCompileThreads;
+    return impl();
+  }
+
+  /// Enable / disable debugger support (off by default).
+  SetterImpl &setEnableDebuggerSupport(bool EnableDebuggerSupport) {
+    impl().EnableDebuggerSupport = EnableDebuggerSupport;
     return impl();
   }
 
