@@ -70,6 +70,7 @@ Code actions
 ^^^^^^^^^^^^
 
 - The extract variable tweak gained support for extracting lambda expressions to a variable.
+- A new tweak was added for turning unscoped into scoped enums.
 
 Signature help
 ^^^^^^^^^^^^^^
