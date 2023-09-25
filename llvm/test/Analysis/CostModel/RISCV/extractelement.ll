@@ -4,48 +4,48 @@
 
 define void @extractelement_int(i32 %x) {
 ; RV32-LABEL: 'extractelement_int'
-; RV32-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %v2i8 = extractelement <2 x i8> undef, i32 %x
-; RV32-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %v4i8 = extractelement <4 x i8> undef, i32 %x
-; RV32-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %v8i8 = extractelement <8 x i8> undef, i32 %x
-; RV32-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %v16i8 = extractelement <16 x i8> undef, i32 %x
+; RV32-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %v2i8 = extractelement <2 x i8> undef, i32 %x
+; RV32-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: %v4i8 = extractelement <4 x i8> undef, i32 %x
+; RV32-NEXT:  Cost Model: Found an estimated cost of 9 for instruction: %v8i8 = extractelement <8 x i8> undef, i32 %x
+; RV32-NEXT:  Cost Model: Found an estimated cost of 17 for instruction: %v16i8 = extractelement <16 x i8> undef, i32 %x
 ; RV32-NEXT:  Cost Model: Invalid cost for instruction: %nxv16i8 = extractelement <vscale x 16 x i8> undef, i32 %x
-; RV32-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %v2i16 = extractelement <2 x i16> undef, i32 %x
-; RV32-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %v4i16 = extractelement <4 x i16> undef, i32 %x
-; RV32-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %v8i16 = extractelement <8 x i16> undef, i32 %x
-; RV32-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %v16i16 = extractelement <16 x i16> undef, i32 %x
+; RV32-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %v2i16 = extractelement <2 x i16> undef, i32 %x
+; RV32-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: %v4i16 = extractelement <4 x i16> undef, i32 %x
+; RV32-NEXT:  Cost Model: Found an estimated cost of 9 for instruction: %v8i16 = extractelement <8 x i16> undef, i32 %x
+; RV32-NEXT:  Cost Model: Found an estimated cost of 17 for instruction: %v16i16 = extractelement <16 x i16> undef, i32 %x
 ; RV32-NEXT:  Cost Model: Invalid cost for instruction: %nxv16i16 = extractelement <vscale x 16 x i16> undef, i32 %x
-; RV32-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %v2i32 = extractelement <2 x i32> undef, i32 %x
-; RV32-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %v4i32 = extractelement <4 x i32> undef, i32 %x
-; RV32-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %v8i32 = extractelement <8 x i32> undef, i32 %x
-; RV32-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %v16i32 = extractelement <16 x i32> undef, i32 %x
+; RV32-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %v2i32 = extractelement <2 x i32> undef, i32 %x
+; RV32-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: %v4i32 = extractelement <4 x i32> undef, i32 %x
+; RV32-NEXT:  Cost Model: Found an estimated cost of 9 for instruction: %v8i32 = extractelement <8 x i32> undef, i32 %x
+; RV32-NEXT:  Cost Model: Found an estimated cost of 17 for instruction: %v16i32 = extractelement <16 x i32> undef, i32 %x
 ; RV32-NEXT:  Cost Model: Invalid cost for instruction: %nxv16i32 = extractelement <vscale x 16 x i32> undef, i32 %x
-; RV32-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %v2i64 = extractelement <2 x i64> undef, i32 %x
-; RV32-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %v4i64 = extractelement <4 x i64> undef, i32 %x
-; RV32-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %v8i64 = extractelement <8 x i64> undef, i32 %x
-; RV32-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %v16i64 = extractelement <16 x i64> undef, i32 %x
+; RV32-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: %v2i64 = extractelement <2 x i64> undef, i32 %x
+; RV32-NEXT:  Cost Model: Found an estimated cost of 10 for instruction: %v4i64 = extractelement <4 x i64> undef, i32 %x
+; RV32-NEXT:  Cost Model: Found an estimated cost of 18 for instruction: %v8i64 = extractelement <8 x i64> undef, i32 %x
+; RV32-NEXT:  Cost Model: Found an estimated cost of 34 for instruction: %v16i64 = extractelement <16 x i64> undef, i32 %x
 ; RV32-NEXT:  Cost Model: Invalid cost for instruction: %nxv16i64 = extractelement <vscale x 16 x i64> undef, i32 %x
 ; RV32-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret void
 ;
 ; RV64-LABEL: 'extractelement_int'
-; RV64-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %v2i8 = extractelement <2 x i8> undef, i32 %x
-; RV64-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %v4i8 = extractelement <4 x i8> undef, i32 %x
-; RV64-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %v8i8 = extractelement <8 x i8> undef, i32 %x
-; RV64-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %v16i8 = extractelement <16 x i8> undef, i32 %x
+; RV64-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %v2i8 = extractelement <2 x i8> undef, i32 %x
+; RV64-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: %v4i8 = extractelement <4 x i8> undef, i32 %x
+; RV64-NEXT:  Cost Model: Found an estimated cost of 9 for instruction: %v8i8 = extractelement <8 x i8> undef, i32 %x
+; RV64-NEXT:  Cost Model: Found an estimated cost of 17 for instruction: %v16i8 = extractelement <16 x i8> undef, i32 %x
 ; RV64-NEXT:  Cost Model: Invalid cost for instruction: %nxv16i8 = extractelement <vscale x 16 x i8> undef, i32 %x
-; RV64-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %v2i16 = extractelement <2 x i16> undef, i32 %x
-; RV64-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %v4i16 = extractelement <4 x i16> undef, i32 %x
-; RV64-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %v8i16 = extractelement <8 x i16> undef, i32 %x
-; RV64-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %v16i16 = extractelement <16 x i16> undef, i32 %x
+; RV64-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %v2i16 = extractelement <2 x i16> undef, i32 %x
+; RV64-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: %v4i16 = extractelement <4 x i16> undef, i32 %x
+; RV64-NEXT:  Cost Model: Found an estimated cost of 9 for instruction: %v8i16 = extractelement <8 x i16> undef, i32 %x
+; RV64-NEXT:  Cost Model: Found an estimated cost of 17 for instruction: %v16i16 = extractelement <16 x i16> undef, i32 %x
 ; RV64-NEXT:  Cost Model: Invalid cost for instruction: %nxv16i16 = extractelement <vscale x 16 x i16> undef, i32 %x
-; RV64-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %v2i32 = extractelement <2 x i32> undef, i32 %x
-; RV64-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %v4i32 = extractelement <4 x i32> undef, i32 %x
-; RV64-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %v8i32 = extractelement <8 x i32> undef, i32 %x
-; RV64-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %v16i32 = extractelement <16 x i32> undef, i32 %x
+; RV64-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %v2i32 = extractelement <2 x i32> undef, i32 %x
+; RV64-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: %v4i32 = extractelement <4 x i32> undef, i32 %x
+; RV64-NEXT:  Cost Model: Found an estimated cost of 9 for instruction: %v8i32 = extractelement <8 x i32> undef, i32 %x
+; RV64-NEXT:  Cost Model: Found an estimated cost of 17 for instruction: %v16i32 = extractelement <16 x i32> undef, i32 %x
 ; RV64-NEXT:  Cost Model: Invalid cost for instruction: %nxv16i32 = extractelement <vscale x 16 x i32> undef, i32 %x
-; RV64-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %v2i64 = extractelement <2 x i64> undef, i32 %x
-; RV64-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %v4i64 = extractelement <4 x i64> undef, i32 %x
-; RV64-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %v8i64 = extractelement <8 x i64> undef, i32 %x
-; RV64-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %v16i64 = extractelement <16 x i64> undef, i32 %x
+; RV64-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %v2i64 = extractelement <2 x i64> undef, i32 %x
+; RV64-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: %v4i64 = extractelement <4 x i64> undef, i32 %x
+; RV64-NEXT:  Cost Model: Found an estimated cost of 9 for instruction: %v8i64 = extractelement <8 x i64> undef, i32 %x
+; RV64-NEXT:  Cost Model: Found an estimated cost of 17 for instruction: %v16i64 = extractelement <16 x i64> undef, i32 %x
 ; RV64-NEXT:  Cost Model: Invalid cost for instruction: %nxv16i64 = extractelement <vscale x 16 x i64> undef, i32 %x
 ; RV64-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret void
 ;
@@ -78,38 +78,38 @@ define void @extractelement_int(i32 %x) {
 
 define void @extractelement_fp(i32 %x) {
 ; RV32-LABEL: 'extractelement_fp'
-; RV32-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %v2f16 = extractelement <2 x half> undef, i32 %x
-; RV32-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %v4f16 = extractelement <4 x half> undef, i32 %x
-; RV32-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %v8f16 = extractelement <8 x half> undef, i32 %x
-; RV32-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %v16f16 = extractelement <16 x half> undef, i32 %x
+; RV32-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %v2f16 = extractelement <2 x half> undef, i32 %x
+; RV32-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: %v4f16 = extractelement <4 x half> undef, i32 %x
+; RV32-NEXT:  Cost Model: Found an estimated cost of 9 for instruction: %v8f16 = extractelement <8 x half> undef, i32 %x
+; RV32-NEXT:  Cost Model: Found an estimated cost of 17 for instruction: %v16f16 = extractelement <16 x half> undef, i32 %x
 ; RV32-NEXT:  Cost Model: Invalid cost for instruction: %nxv16f16 = extractelement <vscale x 16 x half> undef, i32 %x
-; RV32-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %v2f32 = extractelement <2 x float> undef, i32 %x
-; RV32-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %v4f32 = extractelement <4 x float> undef, i32 %x
-; RV32-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %v8f32 = extractelement <8 x float> undef, i32 %x
-; RV32-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %v16f32 = extractelement <16 x float> undef, i32 %x
+; RV32-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %v2f32 = extractelement <2 x float> undef, i32 %x
+; RV32-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: %v4f32 = extractelement <4 x float> undef, i32 %x
+; RV32-NEXT:  Cost Model: Found an estimated cost of 9 for instruction: %v8f32 = extractelement <8 x float> undef, i32 %x
+; RV32-NEXT:  Cost Model: Found an estimated cost of 17 for instruction: %v16f32 = extractelement <16 x float> undef, i32 %x
 ; RV32-NEXT:  Cost Model: Invalid cost for instruction: %nxv16f32 = extractelement <vscale x 16 x float> undef, i32 %x
-; RV32-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %v2f64 = extractelement <2 x double> undef, i32 %x
-; RV32-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %v4f64 = extractelement <4 x double> undef, i32 %x
-; RV32-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %v8f64 = extractelement <8 x double> undef, i32 %x
-; RV32-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %v16f64 = extractelement <16 x double> undef, i32 %x
+; RV32-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %v2f64 = extractelement <2 x double> undef, i32 %x
+; RV32-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: %v4f64 = extractelement <4 x double> undef, i32 %x
+; RV32-NEXT:  Cost Model: Found an estimated cost of 9 for instruction: %v8f64 = extractelement <8 x double> undef, i32 %x
+; RV32-NEXT:  Cost Model: Found an estimated cost of 17 for instruction: %v16f64 = extractelement <16 x double> undef, i32 %x
 ; RV32-NEXT:  Cost Model: Invalid cost for instruction: %nxv16f64 = extractelement <vscale x 16 x double> undef, i32 %x
 ; RV32-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret void
 ;
 ; RV64-LABEL: 'extractelement_fp'
-; RV64-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %v2f16 = extractelement <2 x half> undef, i32 %x
-; RV64-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %v4f16 = extractelement <4 x half> undef, i32 %x
-; RV64-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %v8f16 = extractelement <8 x half> undef, i32 %x
-; RV64-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %v16f16 = extractelement <16 x half> undef, i32 %x
+; RV64-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %v2f16 = extractelement <2 x half> undef, i32 %x
+; RV64-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: %v4f16 = extractelement <4 x half> undef, i32 %x
+; RV64-NEXT:  Cost Model: Found an estimated cost of 9 for instruction: %v8f16 = extractelement <8 x half> undef, i32 %x
+; RV64-NEXT:  Cost Model: Found an estimated cost of 17 for instruction: %v16f16 = extractelement <16 x half> undef, i32 %x
 ; RV64-NEXT:  Cost Model: Invalid cost for instruction: %nxv16f16 = extractelement <vscale x 16 x half> undef, i32 %x
-; RV64-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %v2f32 = extractelement <2 x float> undef, i32 %x
-; RV64-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %v4f32 = extractelement <4 x float> undef, i32 %x
-; RV64-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %v8f32 = extractelement <8 x float> undef, i32 %x
-; RV64-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %v16f32 = extractelement <16 x float> undef, i32 %x
+; RV64-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %v2f32 = extractelement <2 x float> undef, i32 %x
+; RV64-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: %v4f32 = extractelement <4 x float> undef, i32 %x
+; RV64-NEXT:  Cost Model: Found an estimated cost of 9 for instruction: %v8f32 = extractelement <8 x float> undef, i32 %x
+; RV64-NEXT:  Cost Model: Found an estimated cost of 17 for instruction: %v16f32 = extractelement <16 x float> undef, i32 %x
 ; RV64-NEXT:  Cost Model: Invalid cost for instruction: %nxv16f32 = extractelement <vscale x 16 x float> undef, i32 %x
-; RV64-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %v2f64 = extractelement <2 x double> undef, i32 %x
-; RV64-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %v4f64 = extractelement <4 x double> undef, i32 %x
-; RV64-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %v8f64 = extractelement <8 x double> undef, i32 %x
-; RV64-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %v16f64 = extractelement <16 x double> undef, i32 %x
+; RV64-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %v2f64 = extractelement <2 x double> undef, i32 %x
+; RV64-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: %v4f64 = extractelement <4 x double> undef, i32 %x
+; RV64-NEXT:  Cost Model: Found an estimated cost of 9 for instruction: %v8f64 = extractelement <8 x double> undef, i32 %x
+; RV64-NEXT:  Cost Model: Found an estimated cost of 17 for instruction: %v16f64 = extractelement <16 x double> undef, i32 %x
 ; RV64-NEXT:  Cost Model: Invalid cost for instruction: %nxv16f64 = extractelement <vscale x 16 x double> undef, i32 %x
 ; RV64-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret void
 ;
