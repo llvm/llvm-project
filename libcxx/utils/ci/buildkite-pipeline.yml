@@ -271,25 +271,6 @@ steps:
           limit: 2
     timeout_in_minutes: 120
 
-  - label: "Clang 15"
-    command: "libcxx/utils/ci/run-buildbot generic-cxx23"
-    artifact_paths:
-      - "**/test-results.xml"
-      - "**/*.abilist"
-    env:
-        CC: "clang-15"
-        CXX: "clang++-15"
-        ENABLE_CLANG_TIDY: "On"
-        ENABLE_STD_MODULES: "Off"
-    agents:
-      queue: "libcxx-builders"
-      os: "linux"
-    retry:
-      automatic:
-        - exit_status: -1  # Agent was lost
-          limit: 2
-    timeout_in_minutes: 120
-
   - label: "Clang 16"
     command: "libcxx/utils/ci/run-buildbot generic-cxx23"
     artifact_paths:
