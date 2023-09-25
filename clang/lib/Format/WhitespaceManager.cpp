@@ -1088,9 +1088,9 @@ void WhitespaceManager::alignTrailingComments() {
     else
       ChangeMaxColumn = ChangeMinColumn;
 
-    if (I + 1 < Size && Changes[I + 1].ContinuesPPDirective) {
+    if (I + 1 < Size && Changes[I + 1].ContinuesPPDirective &&
+        ChangeMaxColumn >= 2) {
       ChangeMaxColumn -= 2;
-      assert(ChangeMaxColumn >= 0);
     }
 
     bool WasAlignedWithStartOfNextLine = false;
