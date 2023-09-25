@@ -227,7 +227,7 @@ RewriteRuleWith<std::string> makeRule(const Matcher<clang::Stmt> Matcher,
       DefaultEdit, {{"float", FloatEdit}, {"long double", LongDoubleEdit}});
 
   return makeRule(
-      expr(Matcher,
+      expr(Matcher, unless(isInTemplateInstantiation()),
            hasType(qualType(hasCanonicalType(hasUnqualifiedDesugaredType(anyOf(
                qualType(asString("float")).bind("float"),
                qualType(asString("double")),
