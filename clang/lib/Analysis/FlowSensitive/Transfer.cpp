@@ -43,20 +43,8 @@ const Environment *StmtToEnvMap::getEnvironment(const Stmt &S) const {
   if (!CFCtx.isBlockReachable(*BlockIt->getSecond()))
     return nullptr;
   const auto &State = BlockToState[BlockIt->getSecond()->getBlockID()];
-  if (!(State)) {
-    LLVM_DEBUG({
-      // State can be null when this block is unreachable from the block that
-      // called this method.
-      bool hasUnreachableEdgeFromPred = false;
-      for (auto B : BlockIt->getSecond()->preds())
-        if (!B) {
-          hasUnreachableEdgeFromPred = true;
-          break;
-        }
-      assert(hasUnreachableEdgeFromPred);
-    });
+  if (!(State))
     return nullptr;
-  }
   return &State->Env;
 }
 
