@@ -353,6 +353,10 @@ Bug Fixes to C++ Support
   NTTP types are compared with the 'diff' method.
   (`#66744 https://github.com/llvm/llvm-project/issues/66744`)
 
+- Fix crash caused by a spaceship operator returning a comparision category by
+  reference. Fixes:
+  (`#64162 <https://github.com/llvm/llvm-project/issues/64162>`_)
+
 Bug Fixes to AST Handling
 ^^^^^^^^^^^^^^^^^^^^^^^^^
 - Fixed an import failure of recursive friend class template.
