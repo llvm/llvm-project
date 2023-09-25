@@ -37,6 +37,8 @@
 #include "llvm/Analysis/VectorUtils.h"
 #include "llvm/CodeGen/Analysis.h"
 #include "llvm/CodeGen/CallingConvLower.h"
+#include "llvm/CodeGen/GlobalISel/GenericMachineInstrs.h"
+#include "llvm/CodeGen/GlobalISel/Utils.h"
 #include "llvm/CodeGen/ISDOpcodes.h"
 #include "llvm/CodeGen/MachineBasicBlock.h"
 #include "llvm/CodeGen/MachineFrameInfo.h"
@@ -23613,6 +23615,23 @@ bool AArch64TargetLowering::isUsedByReturnOnly(SDNode *N,
 // instruction.
 bool AArch64TargetLowering::mayBeEmittedAsTailCall(const CallInst *CI) const {
   return CI->isTailCall();
+}
+
+bool AArch64TargetLowering::isIndexingLegal(MachineInstr &MI, Register Base,
+                                            Register Offset, bool IsPre,
+                                            MachineRegisterInfo &MRI) const {
+  // HACK
+  if (IsPre)
+    return false; // Until we implement.
+  
+  auto CstOffset = getIConstantVRegVal(Offset, MRI);
+  if (!CstOffset || CstOffset->isZero())
+    return false;
+
+  // All of the indexed addressing mode instructions take a signed 9 bit
+  // immediate offset. Our CstOffset is a G_PTR_ADD offset so it already
+  // encodes the sign/indexing direction.
+  return isInt<9>(CstOffset->getSExtValue());
 }
 
 bool AArch64TargetLowering::getIndexedAddressParts(SDNode *N, SDNode *Op,

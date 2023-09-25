@@ -4,22 +4,10 @@
 ; RUN: llc < %s -mtriple=arm64_32-apple-ios -aarch64-redzone | FileCheck %s --check-prefixes=CHECK,CHECK32
 
 define ptr @store64(ptr %ptr, i64 %index, i64 %spacing) {
-; CHECK64-LABEL: store64:
-; CHECK64:       ; %bb.0:
-; CHECK64-NEXT:    str x2, [x0], #8
-; CHECK64-NEXT:    ret
-;
-; GISEL-LABEL: store64:
-; GISEL:       ; %bb.0:
-; GISEL-NEXT:    mov x8, x0
-; GISEL-NEXT:    add x0, x0, #8
-; GISEL-NEXT:    str x2, [x8]
-; GISEL-NEXT:    ret
-;
-; CHECK32-LABEL: store64:
-; CHECK32:       ; %bb.0:
-; CHECK32-NEXT:    str x2, [x0], #8
-; CHECK32-NEXT:    ret
+; CHECK-LABEL: store64:
+; CHECK:       ; %bb.0:
+; CHECK-NEXT:    str x2, [x0], #8
+; CHECK-NEXT:    ret
   %incdec.ptr = getelementptr inbounds i64, ptr %ptr, i64 1
   store i64 %spacing, ptr %ptr, align 4
   ret ptr %incdec.ptr
@@ -38,44 +26,20 @@ define ptr @store64idxpos256(ptr %ptr, i64 %index, i64 %spacing) {
 }
 
 define ptr @store64idxneg256(ptr %ptr, i64 %index, i64 %spacing) {
-; CHECK64-LABEL: store64idxneg256:
-; CHECK64:       ; %bb.0:
-; CHECK64-NEXT:    str x2, [x0], #-256
-; CHECK64-NEXT:    ret
-;
-; GISEL-LABEL: store64idxneg256:
-; GISEL:       ; %bb.0:
-; GISEL-NEXT:    mov x8, x0
-; GISEL-NEXT:    sub x0, x0, #256
-; GISEL-NEXT:    str x2, [x8]
-; GISEL-NEXT:    ret
-;
-; CHECK32-LABEL: store64idxneg256:
-; CHECK32:       ; %bb.0:
-; CHECK32-NEXT:    str x2, [x0], #-256
-; CHECK32-NEXT:    ret
+; CHECK-LABEL: store64idxneg256:
+; CHECK:       ; %bb.0:
+; CHECK-NEXT:    str x2, [x0], #-256
+; CHECK-NEXT:    ret
   %incdec.ptr = getelementptr inbounds i64, ptr %ptr, i64 -32
   store i64 %spacing, ptr %ptr, align 4
   ret ptr %incdec.ptr
 }
 
 define ptr @store32(ptr %ptr, i32 %index, i32 %spacing) {
-; CHECK64-LABEL: store32:
-; CHECK64:       ; %bb.0:
-; CHECK64-NEXT:    str w2, [x0], #4
-; CHECK64-NEXT:    ret
-;
-; GISEL-LABEL: store32:
-; GISEL:       ; %bb.0:
-; GISEL-NEXT:    mov x8, x0
-; GISEL-NEXT:    add x0, x0, #4
-; GISEL-NEXT:    str w2, [x8]
-; GISEL-NEXT:    ret
-;
-; CHECK32-LABEL: store32:
-; CHECK32:       ; %bb.0:
-; CHECK32-NEXT:    str w2, [x0], #4
-; CHECK32-NEXT:    ret
+; CHECK-LABEL: store32:
+; CHECK:       ; %bb.0:
+; CHECK-NEXT:    str w2, [x0], #4
+; CHECK-NEXT:    ret
   %incdec.ptr = getelementptr inbounds i32, ptr %ptr, i64 1
   store i32 %spacing, ptr %ptr, align 4
   ret ptr %incdec.ptr
@@ -94,44 +58,20 @@ define ptr @store32idxpos256(ptr %ptr, i32 %index, i32 %spacing) {
 }
 
 define ptr @store32idxneg256(ptr %ptr, i32 %index, i32 %spacing) {
-; CHECK64-LABEL: store32idxneg256:
-; CHECK64:       ; %bb.0:
-; CHECK64-NEXT:    str w2, [x0], #-256
-; CHECK64-NEXT:    ret
-;
-; GISEL-LABEL: store32idxneg256:
-; GISEL:       ; %bb.0:
-; GISEL-NEXT:    mov x8, x0
-; GISEL-NEXT:    sub x0, x0, #256
-; GISEL-NEXT:    str w2, [x8]
-; GISEL-NEXT:    ret
-;
-; CHECK32-LABEL: store32idxneg256:
-; CHECK32:       ; %bb.0:
-; CHECK32-NEXT:    str w2, [x0], #-256
-; CHECK32-NEXT:    ret
+; CHECK-LABEL: store32idxneg256:
+; CHECK:       ; %bb.0:
+; CHECK-NEXT:    str w2, [x0], #-256
+; CHECK-NEXT:    ret
   %incdec.ptr = getelementptr inbounds i32, ptr %ptr, i64 -64
   store i32 %spacing, ptr %ptr, align 4
   ret ptr %incdec.ptr
 }
 
 define ptr @store16(ptr %ptr, i16 %index, i16 %spacing) {
-; CHECK64-LABEL: store16:
-; CHECK64:       ; %bb.0:
-; CHECK64-NEXT:    strh w2, [x0], #2
-; CHECK64-NEXT:    ret
-;
-; GISEL-LABEL: store16:
-; GISEL:       ; %bb.0:
-; GISEL-NEXT:    mov x8, x0
-; GISEL-NEXT:    add x0, x0, #2
-; GISEL-NEXT:    strh w2, [x8]
-; GISEL-NEXT:    ret
-;
-; CHECK32-LABEL: store16:
-; CHECK32:       ; %bb.0:
-; CHECK32-NEXT:    strh w2, [x0], #2
-; CHECK32-NEXT:    ret
+; CHECK-LABEL: store16:
+; CHECK:       ; %bb.0:
+; CHECK-NEXT:    strh w2, [x0], #2
+; CHECK-NEXT:    ret
   %incdec.ptr = getelementptr inbounds i16, ptr %ptr, i64 1
   store i16 %spacing, ptr %ptr, align 4
   ret ptr %incdec.ptr
@@ -150,44 +90,20 @@ define ptr @store16idxpos256(ptr %ptr, i16 %index, i16 %spacing) {
 }
 
 define ptr @store16idxneg256(ptr %ptr, i16 %index, i16 %spacing) {
-; CHECK64-LABEL: store16idxneg256:
-; CHECK64:       ; %bb.0:
-; CHECK64-NEXT:    strh w2, [x0], #-256
-; CHECK64-NEXT:    ret
-;
-; GISEL-LABEL: store16idxneg256:
-; GISEL:       ; %bb.0:
-; GISEL-NEXT:    mov x8, x0
-; GISEL-NEXT:    sub x0, x0, #256
-; GISEL-NEXT:    strh w2, [x8]
-; GISEL-NEXT:    ret
-;
-; CHECK32-LABEL: store16idxneg256:
-; CHECK32:       ; %bb.0:
-; CHECK32-NEXT:    strh w2, [x0], #-256
-; CHECK32-NEXT:    ret
+; CHECK-LABEL: store16idxneg256:
+; CHECK:       ; %bb.0:
+; CHECK-NEXT:    strh w2, [x0], #-256
+; CHECK-NEXT:    ret
   %incdec.ptr = getelementptr inbounds i16, ptr %ptr, i64 -128
   store i16 %spacing, ptr %ptr, align 4
   ret ptr %incdec.ptr
 }
 
 define ptr @store8(ptr %ptr, i8 %index, i8 %spacing) {
-; CHECK64-LABEL: store8:
-; CHECK64:       ; %bb.0:
-; CHECK64-NEXT:    strb w2, [x0], #1
-; CHECK64-NEXT:    ret
-;
-; GISEL-LABEL: store8:
-; GISEL:       ; %bb.0:
-; GISEL-NEXT:    mov x8, x0
-; GISEL-NEXT:    add x0, x0, #1
-; GISEL-NEXT:    strb w2, [x8]
-; GISEL-NEXT:    ret
-;
-; CHECK32-LABEL: store8:
-; CHECK32:       ; %bb.0:
-; CHECK32-NEXT:    strb w2, [x0], #1
-; CHECK32-NEXT:    ret
+; CHECK-LABEL: store8:
+; CHECK:       ; %bb.0:
+; CHECK-NEXT:    strb w2, [x0], #1
+; CHECK-NEXT:    ret
   %incdec.ptr = getelementptr inbounds i8, ptr %ptr, i64 1
   store i8 %spacing, ptr %ptr, align 4
   ret ptr %incdec.ptr
@@ -206,44 +122,20 @@ define ptr @store8idxpos256(ptr %ptr, i8 %index, i8 %spacing) {
 }
 
 define ptr @store8idxneg256(ptr %ptr, i8 %index, i8 %spacing) {
-; CHECK64-LABEL: store8idxneg256:
-; CHECK64:       ; %bb.0:
-; CHECK64-NEXT:    strb w2, [x0], #-256
-; CHECK64-NEXT:    ret
-;
-; GISEL-LABEL: store8idxneg256:
-; GISEL:       ; %bb.0:
-; GISEL-NEXT:    mov x8, x0
-; GISEL-NEXT:    sub x0, x0, #256
-; GISEL-NEXT:    strb w2, [x8]
-; GISEL-NEXT:    ret
-;
-; CHECK32-LABEL: store8idxneg256:
-; CHECK32:       ; %bb.0:
-; CHECK32-NEXT:    strb w2, [x0], #-256
-; CHECK32-NEXT:    ret
+; CHECK-LABEL: store8idxneg256:
+; CHECK:       ; %bb.0:
+; CHECK-NEXT:    strb w2, [x0], #-256
+; CHECK-NEXT:    ret
   %incdec.ptr = getelementptr inbounds i8, ptr %ptr, i64 -256
   store i8 %spacing, ptr %ptr, align 4
   ret ptr %incdec.ptr
 }
 
 define ptr @truncst64to32(ptr %ptr, i32 %index, i64 %spacing) {
-; CHECK64-LABEL: truncst64to32:
-; CHECK64:       ; %bb.0:
-; CHECK64-NEXT:    str w2, [x0], #4
-; CHECK64-NEXT:    ret
-;
-; GISEL-LABEL: truncst64to32:
-; GISEL:       ; %bb.0:
-; GISEL-NEXT:    mov x8, x0
-; GISEL-NEXT:    add x0, x0, #4
-; GISEL-NEXT:    str w2, [x8]
-; GISEL-NEXT:    ret
-;
-; CHECK32-LABEL: truncst64to32:
-; CHECK32:       ; %bb.0:
-; CHECK32-NEXT:    str w2, [x0], #4
-; CHECK32-NEXT:    ret
+; CHECK-LABEL: truncst64to32:
+; CHECK:       ; %bb.0:
+; CHECK-NEXT:    str w2, [x0], #4
+; CHECK-NEXT:    ret
   %incdec.ptr = getelementptr inbounds i32, ptr %ptr, i64 1
   %trunc = trunc i64 %spacing to i32
   store i32 %trunc, ptr %ptr, align 4
@@ -251,22 +143,10 @@ define ptr @truncst64to32(ptr %ptr, i32 %index, i64 %spacing) {
 }
 
 define ptr @truncst64to16(ptr %ptr, i16 %index, i64 %spacing) {
-; CHECK64-LABEL: truncst64to16:
-; CHECK64:       ; %bb.0:
-; CHECK64-NEXT:    strh w2, [x0], #2
-; CHECK64-NEXT:    ret
-;
-; GISEL-LABEL: truncst64to16:
-; GISEL:       ; %bb.0:
-; GISEL-NEXT:    mov x8, x0
-; GISEL-NEXT:    add x0, x0, #2
-; GISEL-NEXT:    strh w2, [x8]
-; GISEL-NEXT:    ret
-;
-; CHECK32-LABEL: truncst64to16:
-; CHECK32:       ; %bb.0:
-; CHECK32-NEXT:    strh w2, [x0], #2
-; CHECK32-NEXT:    ret
+; CHECK-LABEL: truncst64to16:
+; CHECK:       ; %bb.0:
+; CHECK-NEXT:    strh w2, [x0], #2
+; CHECK-NEXT:    ret
   %incdec.ptr = getelementptr inbounds i16, ptr %ptr, i64 1
   %trunc = trunc i64 %spacing to i16
   store i16 %trunc, ptr %ptr, align 4
@@ -274,22 +154,10 @@ define ptr @truncst64to16(ptr %ptr, i16 %index, i64 %spacing) {
 }
 
 define ptr @truncst64to8(ptr %ptr, i8 %index, i64 %spacing) {
-; CHECK64-LABEL: truncst64to8:
-; CHECK64:       ; %bb.0:
-; CHECK64-NEXT:    strb w2, [x0], #1
-; CHECK64-NEXT:    ret
-;
-; GISEL-LABEL: truncst64to8:
-; GISEL:       ; %bb.0:
-; GISEL-NEXT:    mov x8, x0
-; GISEL-NEXT:    add x0, x0, #1
-; GISEL-NEXT:    strb w2, [x8]
-; GISEL-NEXT:    ret
-;
-; CHECK32-LABEL: truncst64to8:
-; CHECK32:       ; %bb.0:
-; CHECK32-NEXT:    strb w2, [x0], #1
-; CHECK32-NEXT:    ret
+; CHECK-LABEL: truncst64to8:
+; CHECK:       ; %bb.0:
+; CHECK-NEXT:    strb w2, [x0], #1
+; CHECK-NEXT:    ret
   %incdec.ptr = getelementptr inbounds i8, ptr %ptr, i64 1
   %trunc = trunc i64 %spacing to i8
   store i8 %trunc, ptr %ptr, align 4
@@ -298,66 +166,30 @@ define ptr @truncst64to8(ptr %ptr, i8 %index, i64 %spacing) {
 
 
 define ptr @storef16(ptr %ptr, half %index, half %spacing) nounwind {
-; CHECK64-LABEL: storef16:
-; CHECK64:       ; %bb.0:
-; CHECK64-NEXT:    str h1, [x0], #2
-; CHECK64-NEXT:    ret
-;
-; GISEL-LABEL: storef16:
-; GISEL:       ; %bb.0:
-; GISEL-NEXT:    mov x8, x0
-; GISEL-NEXT:    add x0, x0, #2
-; GISEL-NEXT:    str h1, [x8]
-; GISEL-NEXT:    ret
-;
-; CHECK32-LABEL: storef16:
-; CHECK32:       ; %bb.0:
-; CHECK32-NEXT:    str h1, [x0], #2
-; CHECK32-NEXT:    ret
+; CHECK-LABEL: storef16:
+; CHECK:       ; %bb.0:
+; CHECK-NEXT:    str h1, [x0], #2
+; CHECK-NEXT:    ret
   %incdec.ptr = getelementptr inbounds half, ptr %ptr, i64 1
   store half %spacing, ptr %ptr, align 2
   ret ptr %incdec.ptr
 }
 
 define ptr @storef32(ptr %ptr, float %index, float %spacing) {
-; CHECK64-LABEL: storef32:
-; CHECK64:       ; %bb.0:
-; CHECK64-NEXT:    str s1, [x0], #4
-; CHECK64-NEXT:    ret
-;
-; GISEL-LABEL: storef32:
-; GISEL:       ; %bb.0:
-; GISEL-NEXT:    mov x8, x0
-; GISEL-NEXT:    add x0, x0, #4
-; GISEL-NEXT:    str s1, [x8]
-; GISEL-NEXT:    ret
-;
-; CHECK32-LABEL: storef32:
-; CHECK32:       ; %bb.0:
-; CHECK32-NEXT:    str s1, [x0], #4
-; CHECK32-NEXT:    ret
+; CHECK-LABEL: storef32:
+; CHECK:       ; %bb.0:
+; CHECK-NEXT:    str s1, [x0], #4
+; CHECK-NEXT:    ret
   %incdec.ptr = getelementptr inbounds float, ptr %ptr, i64 1
   store float %spacing, ptr %ptr, align 4
   ret ptr %incdec.ptr
 }
 
 define ptr @storef64(ptr %ptr, double %index, double %spacing) {
-; CHECK64-LABEL: storef64:
-; CHECK64:       ; %bb.0:
-; CHECK64-NEXT:    str d1, [x0], #8
-; CHECK64-NEXT:    ret
-;
-; GISEL-LABEL: storef64:
-; GISEL:       ; %bb.0:
-; GISEL-NEXT:    mov x8, x0
-; GISEL-NEXT:    add x0, x0, #8
-; GISEL-NEXT:    str d1, [x8]
-; GISEL-NEXT:    ret
-;
-; CHECK32-LABEL: storef64:
-; CHECK32:       ; %bb.0:
-; CHECK32-NEXT:    str d1, [x0], #8
-; CHECK32-NEXT:    ret
+; CHECK-LABEL: storef64:
+; CHECK:       ; %bb.0:
+; CHECK-NEXT:    str d1, [x0], #8
+; CHECK-NEXT:    ret
   %incdec.ptr = getelementptr inbounds double, ptr %ptr, i64 1
   store double %spacing, ptr %ptr, align 4
   ret ptr %incdec.ptr
@@ -1112,8 +944,8 @@ define ptr @postidx_clobber(ptr %addr) nounwind noinline ssp {
 ; GISEL-LABEL: postidx_clobber:
 ; GISEL:       ; %bb.0:
 ; GISEL-NEXT:    mov x8, x0
-; GISEL-NEXT:    add x0, x0, #8
-; GISEL-NEXT:    str x8, [x8]
+; GISEL-NEXT:    str x0, [x8], #8
+; GISEL-NEXT:    mov x0, x8
 ; GISEL-NEXT:    ret
 ;
 ; CHECK32-LABEL: postidx_clobber:
