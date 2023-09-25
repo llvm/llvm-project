@@ -3633,6 +3633,7 @@ cc_library(
         ":BufferizationDialect",
         ":ControlFlowDialect",
         ":ControlFlowInterfaces",
+        ":DestinationStyleOpInterface",
         ":FuncDialect",
         ":FunctionInterfaces",
         ":IR",
