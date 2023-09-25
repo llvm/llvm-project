@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_LIBC_SRC_SUPPORT_CHARVECTOR_H
-#define LLVM_LIBC_SRC_SUPPORT_CHARVECTOR_H
+#ifndef LLVM_LIBC_SRC___SUPPORT_CHARVECTOR_H
+#define LLVM_LIBC_SRC___SUPPORT_CHARVECTOR_H
 
 #include "src/__support/common.h"
 
@@ -75,4 +75,4 @@ public:
 
 } // namespace __llvm_libc
 
-#endif // LLVM_LIBC_SRC_SUPPORT_CHARVECTOR_H
+#endif // LLVM_LIBC_SRC___SUPPORT_CHARVECTOR_H

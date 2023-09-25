@@ -1,7 +1,7 @@
 //
 // NOTE: this test requires gpu-sm80 and cusparselt
 //
-// RUN: mlir-opt --sparse-compiler="enable-runtime-library=false enable-gpu-libgen=true gpu-triple=nvptx64-nvidia-cuda gpu-chip=sm_80 gpu-features=+ptx71" \
+// RUN: mlir-opt --sparse-compiler="enable-runtime-library=false enable-gpu-libgen=true gpu-triple=nvptx64-nvidia-cuda gpu-chip=sm_80 gpu-features=+ptx71 gpu-format=%gpu_compilation_format" \
 // RUN:          %s \
 // RUN: | mlir-cpu-runner \
 // RUN:   --shared-libs=%mlir_cuda_runtime \

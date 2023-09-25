@@ -12,6 +12,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "MCTargetDesc/SPIRVMCTargetDesc.h"
 #include "SPIRV.h"
 #include "SPIRVGlobalRegistry.h"
 #include "SPIRVInstrInfo.h"
@@ -1395,6 +1396,17 @@ bool SPIRVInstructionSelector::selectIntrinsic(Register ResVReg,
     break;
   case Intrinsic::spv_alloca:
     return selectFrameIndex(ResVReg, ResType, I);
+  case Intrinsic::spv_assume:
+    BuildMI(BB, I, I.getDebugLoc(), TII.get(SPIRV::OpAssumeTrueKHR))
+        .addUse(I.getOperand(1).getReg());
+    break;
+  case Intrinsic::spv_expect:
+    BuildMI(BB, I, I.getDebugLoc(), TII.get(SPIRV::OpExpectKHR))
+        .addDef(ResVReg)
+        .addUse(GR.getSPIRVTypeID(ResType))
+        .addUse(I.getOperand(2).getReg())
+        .addUse(I.getOperand(3).getReg());
+    break;
   default:
     llvm_unreachable("Intrinsic selection not implemented");
   }
@@ -1476,9 +1488,21 @@ bool SPIRVInstructionSelector::selectGlobalValue(
   // FIXME: don't use MachineIRBuilder here, replace it with BuildMI.
   MachineIRBuilder MIRBuilder(I);
   const GlobalValue *GV = I.getOperand(1).getGlobal();
-  SPIRVType *ResType = GR.getOrCreateSPIRVType(
-      GV->getType(), MIRBuilder, SPIRV::AccessQualifier::ReadWrite, false);
-
+  Type *GVType = GV->getValueType();
+  SPIRVType *PointerBaseType;
+  if (GVType->isArrayTy()) {
+    SPIRVType *ArrayElementType =
+        GR.getOrCreateSPIRVType(GVType->getArrayElementType(), MIRBuilder,
+                                SPIRV::AccessQualifier::ReadWrite, false);
+    PointerBaseType = GR.getOrCreateSPIRVArrayType(
+        ArrayElementType, GVType->getArrayNumElements(), I, TII);
+  } else {
+    PointerBaseType = GR.getOrCreateSPIRVType(
+        GVType, MIRBuilder, SPIRV::AccessQualifier::ReadWrite, false);
+  }
+  SPIRVType *ResType = GR.getOrCreateSPIRVPointerType(
+      PointerBaseType, I, TII,
+      addressSpaceToStorageClass(GV->getAddressSpace()));
   std::string GlobalIdent = GV->getGlobalIdentifier();
   // We have functions as operands in tests with blocks of instruction e.g. in
   // transcoding/global_block.ll. These operands are not used and should be
@@ -1489,8 +1513,6 @@ bool SPIRVInstructionSelector::selectGlobalValue(
     MachineBasicBlock &BB = *I.getParent();
     Register NewReg = GR.find(ConstVal, GR.CurMF);
     if (!NewReg.isValid()) {
-      SPIRVType *SpvBaseTy = GR.getOrCreateSPIRVIntegerType(8, I, TII);
-      ResType = GR.getOrCreateSPIRVPointerType(SpvBaseTy, I, TII);
       Register NewReg = ResVReg;
       GR.add(ConstVal, GR.CurMF, NewReg);
       return BuildMI(BB, I, I.getDebugLoc(), TII.get(SPIRV::OpConstantNull))

@@ -88,11 +88,11 @@ public:
   static std::optional<TypeAndShape> Characterize(
       const ActualArgument &, FoldingContext &, bool invariantOnly = false);
 
-  // General case for Expr<T>, ActualArgument, &c.
+  // General case for Expr<T>, &c.
   template <typename A>
   static std::optional<TypeAndShape> Characterize(
       const A &x, FoldingContext &context, bool invariantOnly = false) {
-    if (const auto *symbol{UnwrapWholeSymbolOrComponentDataRef(x)}) {
+    if (const auto *symbol{UnwrapWholeSymbolDataRef(x)}) {
       if (auto result{Characterize(*symbol, context, invariantOnly)}) {
         return result;
       }
@@ -116,7 +116,7 @@ public:
   static std::optional<TypeAndShape> Characterize(
       const Designator<Type<TypeCategory::Character, KIND>> &x,
       FoldingContext &context, bool invariantOnly = true) {
-    if (const auto *symbol{UnwrapWholeSymbolOrComponentDataRef(x)}) {
+    if (const auto *symbol{UnwrapWholeSymbolDataRef(x)}) {
       if (auto result{Characterize(*symbol, context, invariantOnly)}) {
         return result;
       }
@@ -184,8 +184,6 @@ private:
   static std::optional<TypeAndShape> Characterize(
       const semantics::AssocEntityDetails &, FoldingContext &,
       bool invariantOnly = true);
-  static std::optional<TypeAndShape> Characterize(
-      const semantics::ProcEntityDetails &, FoldingContext &);
   void AcquireAttrs(const semantics::Symbol &);
   void AcquireLEN();
   void AcquireLEN(const semantics::Symbol &);
@@ -349,6 +347,8 @@ struct Procedure {
       const ProcedureDesignator &, FoldingContext &);
   static std::optional<Procedure> Characterize(
       const ProcedureRef &, FoldingContext &);
+  static std::optional<Procedure> Characterize(
+      const Expr<SomeType> &, FoldingContext &);
   // Characterizes the procedure being referenced, deducing dummy argument
   // types from actual arguments in the case of an implicit interface.
   static std::optional<Procedure> FromActuals(

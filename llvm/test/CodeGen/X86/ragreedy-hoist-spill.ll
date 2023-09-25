@@ -65,18 +65,20 @@ define ptr @SyFgets(ptr %line, i64 %length, i64 %fid) {
 ; CHECK-NEXT:    testb %al, %al
 ; CHECK-NEXT:    je LBB0_54
 ; CHECK-NEXT:  ## %bb.6: ## %SyTime.exit2720
-; CHECK-NEXT:    movq %rdx, %r14
-; CHECK-NEXT:    movq %rdi, %rbx
 ; CHECK-NEXT:    leaq {{[0-9]+}}(%rsp), %rax
 ; CHECK-NEXT:    leaq {{[0-9]+}}(%rsp), %rcx
 ; CHECK-NEXT:    cmpq %rax, %rcx
 ; CHECK-NEXT:    jae LBB0_8
 ; CHECK-NEXT:  ## %bb.7: ## %for.body.lr.ph
+; CHECK-NEXT:    movq %rdx, %rbx
 ; CHECK-NEXT:    movl $512, %edx ## imm = 0x200
 ; CHECK-NEXT:    movl $32, %esi
+; CHECK-NEXT:    movq %rdi, %r14
 ; CHECK-NEXT:    callq _memset
+; CHECK-NEXT:    movq %r14, %rdi
+; CHECK-NEXT:    movq %rbx, %rdx
 ; CHECK-NEXT:  LBB0_8: ## %while.body.preheader
-; CHECK-NEXT:    imulq $1040, %r14, %rax ## imm = 0x410
+; CHECK-NEXT:    imulq $1040, %rdx, %rax ## imm = 0x410
 ; CHECK-NEXT:    movq _syBuf@GOTPCREL(%rip), %rcx
 ; CHECK-NEXT:    leaq 8(%rcx,%rax), %rdx
 ; CHECK-NEXT:    movl $1, %r13d
@@ -90,7 +92,7 @@ define ptr @SyFgets(ptr %line, i64 %length, i64 %fid) {
 ; CHECK-NEXT:    jne LBB0_9
 ; CHECK-NEXT:  ## %bb.10: ## %do.end
 ; CHECK-NEXT:    movq %rdx, {{[-0-9]+}}(%r{{[sb]}}p) ## 8-byte Spill
-; CHECK-NEXT:    movq %rbx, {{[-0-9]+}}(%r{{[sb]}}p) ## 8-byte Spill
+; CHECK-NEXT:    movq %rdi, {{[-0-9]+}}(%r{{[sb]}}p) ## 8-byte Spill
 ; CHECK-NEXT:    xorl %ebp, %ebp
 ; CHECK-NEXT:    testb %bpl, %bpl
 ; CHECK-NEXT:    jne LBB0_11

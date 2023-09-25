@@ -51,6 +51,8 @@ Implemented Papers
 - P2497R0 - Testing for success or failure of ``<charconv>`` functions
 - P2697R1 - Interfacing ``bitset`` with ``string_view``
 - P2443R1 - ``views::chunk_by``
+- P2538R1 - ADL-proof ``std::projected``
+
 
 Improvements and New Features
 -----------------------------
@@ -125,6 +127,10 @@ ABI Affecting Changes
   internal implementation detail (i.e. you use libc++ as a static archive and never export libc++ symbols from your ABI)
   and you notice changes to your exported symbols list, then this means that you were not properly preventing libc++
   symbols from being part of your ABI.
+
+- The name mangling for intantiations of ``std::projected`` has changed in order to implement P2538R1. This technically
+  results in an ABI break, however in practice we expect uses of ``std::projected`` in ABI-sensitive places to be
+  extremely rare. Any error resulting from this change should result in a link-time error.
 
 Build System Changes
 --------------------

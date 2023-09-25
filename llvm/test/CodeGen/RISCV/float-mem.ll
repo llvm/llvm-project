@@ -75,10 +75,10 @@ define dso_local float @flw_fsw_global(float %a, float %b) nounwind {
 ; CHECKIZFINX:       # %bb.0:
 ; CHECKIZFINX-NEXT:    fadd.s a0, a0, a1
 ; CHECKIZFINX-NEXT:    lui a1, %hi(G)
-; CHECKIZFINX-NEXT:    lw a2, %lo(G)(a1)
+; CHECKIZFINX-NEXT:    lw zero, %lo(G)(a1)
 ; CHECKIZFINX-NEXT:    addi a2, a1, %lo(G)
 ; CHECKIZFINX-NEXT:    sw a0, %lo(G)(a1)
-; CHECKIZFINX-NEXT:    lw a1, 36(a2)
+; CHECKIZFINX-NEXT:    lw zero, 36(a2)
 ; CHECKIZFINX-NEXT:    sw a0, 36(a2)
 ; CHECKIZFINX-NEXT:    ret
   %1 = fadd float %a, %b

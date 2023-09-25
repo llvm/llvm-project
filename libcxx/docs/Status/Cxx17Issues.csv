@@ -138,7 +138,7 @@
 "`2328 <https://wg21.link/LWG2328>`__","Rvalue stream extraction should use perfect forwarding","Oulu","|Complete|",""
 "`2393 <https://wg21.link/LWG2393>`__","std::function's Callable definition is broken","Oulu","|Complete|",""
 "`2422 <https://wg21.link/LWG2422>`__","``std::numeric_limits<T>::is_modulo``\  description: ""most machines"" errata","Oulu","|Complete|",""
-"`2426 <https://wg21.link/LWG2426>`__","Issue about compare_exchange","Oulu","",""
+"`2426 <https://wg21.link/LWG2426>`__","Issue about compare_exchange","Oulu","|Complete|",""
 "`2436 <https://wg21.link/LWG2436>`__","Comparators for associative containers should always be CopyConstructible","Oulu","|Complete|",""
 "`2441 <https://wg21.link/LWG2441>`__","Exact-width atomic typedefs should be provided","Oulu","|Complete|",""
 "`2451 <https://wg21.link/LWG2451>`__","[fund.ts.v2] optional should 'forward' T's implicit conversions","Oulu","|Nothing To Do|",""

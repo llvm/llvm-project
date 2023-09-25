@@ -344,16 +344,6 @@ llvm::Constant *mlir::LLVM::detail::getLLVMConstant(
       return nullptr;
     return llvm::ConstantStruct::get(structType, {real, imag});
   }
-  if (auto *targetExtType = dyn_cast<::llvm::TargetExtType>(llvmType)) {
-    // TODO: Replace with 'zeroinitializer' once there is a dedicated
-    // zeroinitializer operation in the LLVM dialect.
-    auto intAttr = dyn_cast<IntegerAttr>(attr);
-    if (!intAttr || intAttr.getInt() != 0)
-      emitError(loc,
-                "Only zero-initialization allowed for target extension type");
-
-    return llvm::ConstantTargetNone::get(targetExtType);
-  }
   // For integer types, we allow a mismatch in sizes as the index type in
   // MLIR might have a different size than the index type in the LLVM module.
   if (auto intAttr = dyn_cast<IntegerAttr>(attr))
@@ -917,6 +907,11 @@ LogicalResult ModuleTranslation::convertOneFunction(LLVMFuncOp func) {
   else if (func.getArmLocallyStreaming())
     llvmFunc->addFnAttr("aarch64_pstate_sm_body");
 
+  if (auto attr = func.getVscaleRange())
+    llvmFunc->addFnAttr(llvm::Attribute::getWithVScaleRangeArgs(
+        getLLVMContext(), attr->getMinRange().getInt(),
+        attr->getMaxRange().getInt()));
+
   // First, create all blocks so we can jump to them.
   llvm::LLVMContext &llvmContext = llvmFunc->getContext();
   for (auto &bb : func) {
@@ -1278,29 +1273,18 @@ SmallVector<llvm::Value *> ModuleTranslation::lookupValues(ValueRange values) {
 llvm::OpenMPIRBuilder *ModuleTranslation::getOpenMPBuilder() {
   if (!ompBuilder) {
     ompBuilder = std::make_unique<llvm::OpenMPIRBuilder>(*llvmModule);
+    ompBuilder->initialize();
 
-    bool isTargetDevice = false, isGPU = false;
-    llvm::StringRef hostIRFilePath = "";
-
-    if (auto deviceAttr =
-            mlirModule->getAttrOfType<mlir::BoolAttr>("omp.is_target_device"))
-      isTargetDevice = deviceAttr.getValue();
-
-    if (auto gpuAttr = mlirModule->getAttrOfType<mlir::BoolAttr>("omp.is_gpu"))
-      isGPU = gpuAttr.getValue();
-
-    if (auto filepathAttr =
-            mlirModule->getAttrOfType<mlir::StringAttr>("omp.host_ir_filepath"))
-      hostIRFilePath = filepathAttr.getValue();
-
-    ompBuilder->initialize(hostIRFilePath);
-
-    // TODO: set the flags when available
-    llvm::OpenMPIRBuilderConfig config(
-        isTargetDevice, isGPU,
-        /* HasRequiresUnifiedSharedMemory */ false,
-        /* OpenMPOffloadMandatory */ false);
-    ompBuilder->setConfig(config);
+    // Flags represented as top-level OpenMP dialect attributes are set in
+    // `OpenMPDialectLLVMIRTranslationInterface::amendOperation()`. Here we set
+    // the default configuration.
+    ompBuilder->setConfig(llvm::OpenMPIRBuilderConfig(
+        /* IsTargetDevice = */ false, /* IsGPU = */ false,
+        /* OpenMPOffloadMandatory = */ false,
+        /* HasRequiresReverseOffload = */ false,
+        /* HasRequiresUnifiedAddress = */ false,
+        /* HasRequiresUnifiedSharedMemory = */ false,
+        /* HasRequiresDynamicAllocators = */ false));
   }
   return ompBuilder.get();
 }

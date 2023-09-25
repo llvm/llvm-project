@@ -1615,16 +1615,18 @@ func.func @omp_threadprivate() {
 // -----
 
 func.func @omp_target(%map1: memref<?xi32>) {
+  %mapv = omp.map_info var_ptr(%map1 : memref<?xi32>)   map_clauses(delete) capture(ByRef) -> memref<?xi32> {name = ""}
   // expected-error @below {{to, from, tofrom and alloc map types are permitted}}
-  omp.target map((delete -> %map1 : memref<?xi32>)){}
+  omp.target map_entries(%mapv : memref<?xi32>){}
   return
 }
 
 // -----
 
 func.func @omp_target_data(%map1: memref<?xi32>) {
+  %mapv = omp.map_info var_ptr(%map1 : memref<?xi32>)  map_clauses(delete) capture(ByRef) -> memref<?xi32> {name = ""}
   // expected-error @below {{to, from, tofrom and alloc map types are permitted}}
-  omp.target_data map((delete -> %map1 : memref<?xi32>)){}
+  omp.target_data map_entries(%mapv : memref<?xi32>){}
   return
 }
 
@@ -1639,16 +1641,18 @@ func.func @omp_target_data() {
 // -----
 
 func.func @omp_target_enter_data(%map1: memref<?xi32>) {
+  %mapv = omp.map_info var_ptr(%map1 : memref<?xi32>)   map_clauses(from) capture(ByRef) -> memref<?xi32> {name = ""}
   // expected-error @below {{to and alloc map types are permitted}}
-  omp.target_enter_data map((from -> %map1 : memref<?xi32>)){}
+  omp.target_enter_data map_entries(%mapv : memref<?xi32>){}
   return
 }
 
 // -----
 
 func.func @omp_target_exit_data(%map1: memref<?xi32>) {
+  %mapv = omp.map_info var_ptr(%map1 : memref<?xi32>)   map_clauses(to) capture(ByRef) -> memref<?xi32> {name = ""}
   // expected-error @below {{from, release and delete map types are permitted}}
-  omp.target_exit_data map((to -> %map1 : memref<?xi32>)){}
+  omp.target_exit_data map_entries(%mapv : memref<?xi32>){}
   return
 }
 

@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_LIBC_SRC_SUPPORT_FPUTIL_FENVIMPL_H
-#define LLVM_LIBC_SRC_SUPPORT_FPUTIL_FENVIMPL_H
+#ifndef LLVM_LIBC_SRC___SUPPORT_FPUTIL_FENVIMPL_H
+#define LLVM_LIBC_SRC___SUPPORT_FPUTIL_FENVIMPL_H
 
 #include "src/__support/macros/attributes.h" // LIBC_INLINE
 #include "src/__support/macros/properties/architectures.h"
@@ -88,4 +88,4 @@ LIBC_INLINE void set_errno_if_required(int err) {
 
 } // namespace __llvm_libc::fputil
 
-#endif // LLVM_LIBC_SRC_SUPPORT_FPUTIL_FENVIMPL_H
+#endif // LLVM_LIBC_SRC___SUPPORT_FPUTIL_FENVIMPL_H

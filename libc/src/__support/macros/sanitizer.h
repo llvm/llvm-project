@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_LIBC_SRC_SUPPORT_MACROS_SANITIZER_H
-#define LLVM_LIBC_SRC_SUPPORT_MACROS_SANITIZER_H
+#ifndef LLVM_LIBC_SRC___SUPPORT_MACROS_SANITIZER_H
+#define LLVM_LIBC_SRC___SUPPORT_MACROS_SANITIZER_H
 
 #include "src/__support/macros/config.h" //LIBC_HAS_FEATURE
 
@@ -65,4 +65,4 @@
 #define ASAN_UNPOISON_MEMORY_REGION(addr, size) ((void)(addr), (void)(size))
 #endif
 
-#endif // LLVM_LIBC_SRC_SUPPORT_MACROS_SANITIZER_H
+#endif // LLVM_LIBC_SRC___SUPPORT_MACROS_SANITIZER_H

@@ -756,7 +756,7 @@ define <4 x i128> @sadd(<4 x i128> %a, <4 x i128> %b) local_unnamed_addr {
 ; CHECK-NEXT:    xxswapd 1, 32
 ; CHECK-NEXT:    xxswapd 6, 42
 ; CHECK-NEXT:    mffprd 5, 1
-; CHECK-NEXT:    cmpld 5, 3
+; CHECK-NEXT:    cmpld 6, 5, 3
 ; CHECK-NEXT:    mffprd 7, 6
 ; CHECK-NEXT:    xxswapd 3, 33
 ; CHECK-NEXT:    xxswapd 7, 43
@@ -765,9 +765,9 @@ define <4 x i128> @sadd(<4 x i128> %a, <4 x i128> %b) local_unnamed_addr {
 ; CHECK-NEXT:    mffprd 6, 5
 ; CHECK-NEXT:    mffprd 7, 7
 ; CHECK-NEXT:    mfvsrd 5, 36
-; CHECK-NEXT:    cmpld 1, 3, 4
+; CHECK-NEXT:    cmpld 3, 4
 ; CHECK-NEXT:    mfvsrd 3, 34
-; CHECK-NEXT:    cmpld 6, 7, 6
+; CHECK-NEXT:    cmpld 1, 7, 6
 ; CHECK-NEXT:    mfvsrd 7, 32
 ; CHECK-NEXT:    mfvsrd 4, 35
 ; CHECK-NEXT:    mfvsrd 6, 37
@@ -775,34 +775,34 @@ define <4 x i128> @sadd(<4 x i128> %a, <4 x i128> %b) local_unnamed_addr {
 ; CHECK-NEXT:    cmpd 2, 7, 3
 ; CHECK-NEXT:    mfvsrd 3, 33
 ; CHECK-NEXT:    crandc 21, 8, 30
-; CHECK-NEXT:    crand 22, 30, 0
-; CHECK-NEXT:    cmpld 3, 4
+; CHECK-NEXT:    crand 22, 30, 24
+; CHECK-NEXT:    cmpld 6, 3, 4
 ; CHECK-NEXT:    cmpd 7, 3, 4
 ; CHECK-NEXT:    mfvsrd 4, 42
 ; CHECK-NEXT:    sradi 3, 3, 63
 ; CHECK-NEXT:    mtocrf 32, 12
 ; CHECK-NEXT:    crnor 21, 22, 21
-; CHECK-NEXT:    crandc 23, 28, 2
-; CHECK-NEXT:    crand 25, 2, 4
+; CHECK-NEXT:    crandc 23, 28, 26
+; CHECK-NEXT:    crand 24, 26, 0
 ; CHECK-NEXT:    cmpld 4, 5
-; CHECK-NEXT:    cmpd 1, 4, 5
+; CHECK-NEXT:    cmpd 7, 4, 5
 ; CHECK-NEXT:    mfvsrd 5, 43
-; CHECK-NEXT:    crnor 22, 25, 23
+; CHECK-NEXT:    crnor 22, 24, 23
 ; CHECK-NEXT:    mtfprd 5, 3
 ; CHECK-NEXT:    sradi 4, 4, 63
 ; CHECK-NEXT:    mtfprd 6, 4
-; CHECK-NEXT:    crandc 26, 4, 2
+; CHECK-NEXT:    crandc 25, 28, 2
 ; CHECK-NEXT:    crand 20, 2, 20
 ; CHECK-NEXT:    cmpld 5, 6
-; CHECK-NEXT:    cmpd 1, 5, 6
+; CHECK-NEXT:    cmpd 7, 5, 6
 ; CHECK-NEXT:    mfvsrd 6, 38
 ; CHECK-NEXT:    sradi 5, 5, 63
-; CHECK-NEXT:    crnor 20, 20, 26
+; CHECK-NEXT:    crnor 20, 20, 25
 ; CHECK-NEXT:    mtfprd 7, 5
 ; CHECK-NEXT:    sradi 6, 6, 63
-; CHECK-NEXT:    crandc 27, 4, 2
-; CHECK-NEXT:    crand 24, 2, 24
-; CHECK-NEXT:    crnor 23, 24, 27
+; CHECK-NEXT:    crandc 26, 28, 2
+; CHECK-NEXT:    crand 27, 2, 4
+; CHECK-NEXT:    crnor 23, 27, 26
 ; CHECK-NEXT:    mtfprd 0, 6
 ; CHECK-NEXT:    mfvsrd 6, 39
 ; CHECK-NEXT:    sradi 6, 6, 63

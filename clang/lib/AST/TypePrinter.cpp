@@ -2218,6 +2218,10 @@ printTo(raw_ostream &OS, ArrayRef<TA> Args, const PrintingPolicy &Policy,
     } else {
       if (!FirstArg)
         OS << Comma;
+      if (Policy.UseClassForTemplateArgument &&
+          Argument.getKind() == TemplateArgument::Type)
+        OS << "class ";
+
       // Tries to print the argument with location info if exists.
       printArgument(Arg, Policy, ArgOS,
                     TemplateParameterList::shouldIncludeTypeForArgument(

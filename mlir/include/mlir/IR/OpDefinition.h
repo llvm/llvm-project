@@ -997,37 +997,6 @@ struct SingleBlockImplicitTerminator {
       ::mlir::impl::ensureRegionTerminator(region, builder, loc,
                                            buildTerminator);
     }
-
-    //===------------------------------------------------------------------===//
-    // Single Region Utilities
-    //===------------------------------------------------------------------===//
-
-    template <typename OpT, typename T = void>
-    using enable_if_single_region =
-        std::enable_if_t<OpT::template hasTrait<OneRegion>(), T>;
-
-    /// Insert the operation into the back of the body, before the terminator.
-    template <typename OpT = ConcreteType>
-    enable_if_single_region<OpT> push_back(Operation *op) {
-      Block *body = static_cast<SingleBlock<ConcreteType> *>(this)->getBody();
-      insert(Block::iterator(body->getTerminator()), op);
-    }
-
-    /// Insert the operation at the given insertion point. Note: The operation
-    /// is never inserted after the terminator, even if the insertion point is
-    /// end().
-    template <typename OpT = ConcreteType>
-    enable_if_single_region<OpT> insert(Operation *insertPt, Operation *op) {
-      insert(Block::iterator(insertPt), op);
-    }
-    template <typename OpT = ConcreteType>
-    enable_if_single_region<OpT> insert(Block::iterator insertPt,
-                                        Operation *op) {
-      Block *body = static_cast<SingleBlock<ConcreteType> *>(this)->getBody();
-      if (insertPt == body->end())
-        insertPt = Block::iterator(body->getTerminator());
-      body->getOperations().insert(insertPt, op);
-    }
   };
 };
 

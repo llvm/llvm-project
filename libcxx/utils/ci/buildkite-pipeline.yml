@@ -908,7 +908,7 @@ steps:
   - group: ":mac: Apple"
     steps:
     - label: "MacOS x86_64"
-      command: "libcxx/utils/ci/run-buildbot generic-cxx20"
+      command: "libcxx/utils/ci/run-buildbot generic-cxx23"
       artifact_paths:
         - "**/test-results.xml"
         - "**/*.abilist"
@@ -923,7 +923,7 @@ steps:
       timeout_in_minutes: 120
 
     - label: "MacOS arm64"
-      command: "libcxx/utils/ci/run-buildbot generic-cxx20"
+      command: "libcxx/utils/ci/run-buildbot generic-cxx23"
       artifact_paths:
         - "**/test-results.xml"
         - "**/*.abilist"

@@ -153,6 +153,8 @@ void EntityDetails::set_type(const DeclTypeSpec &type) {
 }
 
 void AssocEntityDetails::set_rank(int rank) { rank_ = rank; }
+void AssocEntityDetails::set_IsAssumedSize() { rank_ = isAssumedSize; }
+void AssocEntityDetails::set_IsAssumedRank() { rank_ = isAssumedRank; }
 void EntityDetails::ReplaceType(const DeclTypeSpec &type) { type_ = &type; }
 
 ObjectEntityDetails::ObjectEntityDetails(EntityDetails &&d)
@@ -438,8 +440,12 @@ llvm::raw_ostream &operator<<(
 llvm::raw_ostream &operator<<(
     llvm::raw_ostream &os, const AssocEntityDetails &x) {
   os << *static_cast<const EntityDetails *>(&x);
-  if (auto assocRank{x.rank()}) {
-    os << " rank: " << *assocRank;
+  if (x.IsAssumedSize()) {
+    os << " RANK(*)";
+  } else if (x.IsAssumedRank()) {
+    os << " RANK DEFAULT";
+  } else if (auto assocRank{x.rank()}) {
+    os << " RANK(" << *assocRank << ')';
   }
   DumpExpr(os, "expr", x.expr());
   return os;

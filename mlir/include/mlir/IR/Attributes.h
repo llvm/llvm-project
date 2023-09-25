@@ -291,7 +291,7 @@ public:
                                           Attribute, AttributeTrait::TraitBase>;
   using InterfaceBase::InterfaceBase;
 
-private:
+protected:
   /// Returns the impl interface instance for the given type.
   static typename InterfaceBase::Concept *getInterfaceFor(Attribute attr) {
 #ifndef NDEBUG

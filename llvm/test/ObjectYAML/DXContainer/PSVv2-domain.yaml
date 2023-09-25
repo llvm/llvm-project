@@ -19,10 +19,10 @@ Parts:
       TessellatorDomain: 2056
       MinimumWaveLaneCount: 0
       MaximumWaveLaneCount: 4294967295
-      UsesViewID:      128
-      SigPatchConstOrPrimVectors:  128
-      SigInputVectors: 64
-      SigOutputVectors: [ 8, 16, 32, 64 ]
+      UsesViewID:      0
+      SigPatchConstOrPrimVectors:  0
+      SigInputVectors: 0
+      SigOutputVectors: [ 0, 16, 32, 64 ]
       NumThreadsX:     512
       NumThreadsY:     1024
       NumThreadsZ:     2048
@@ -43,6 +43,12 @@ Parts:
       SigInputElements: []
       SigOutputElements: []
       SigPatchOrPrimElements: []
+      InputOutputMap:
+        - [  ]
+        - [  ]
+        - [  ]
+        - [  ]
+      PatchOutputMap: []
   - Name:            DXIL
     Size:            24
     Program:
@@ -64,10 +70,10 @@ Parts:
 # CHECK-NEXT: TessellatorDomain: 2056
 # CHECK-NEXT: MinimumWaveLaneCount: 0
 # CHECK-NEXT: MaximumWaveLaneCount: 4294967295
-# CHECK-NEXT: UsesViewID:      128
-# CHECK-NEXT: SigPatchConstOrPrimVectors:  128
-# CHECK-NEXT: SigInputVectors: 64
-# CHECK-NEXT: SigOutputVectors: [ 8, 16, 32, 64 ]
+# CHECK-NEXT: UsesViewID:      0
+# CHECK-NEXT: SigPatchConstOrPrimVectors:  0
+# CHECK-NEXT: SigInputVectors: 0
+# CHECK-NEXT: SigOutputVectors: [ 0, 16, 32, 64 ]
 # CHECK-NEXT: NumThreadsX:     512
 # CHECK-NEXT: NumThreadsY:     1024
 # CHECK-NEXT: NumThreadsZ:     2048
@@ -88,4 +94,10 @@ Parts:
 # CHECK-NEXT: SigInputElements: []
 # CHECK-NEXT: SigOutputElements: []
 # CHECK-NEXT: SigPatchOrPrimElements: []
+# CHECK-NEXT: InputOutputMap:
+# CHECK-NEXT:   - [  ]
+# CHECK-NEXT:   - [  ]
+# CHECK-NEXT:   - [  ]
+# CHECK-NEXT:   - [  ]
+# CHECK-NEXT: PatchOutputMap: [  ]
 # CHECK-NEXT: Name

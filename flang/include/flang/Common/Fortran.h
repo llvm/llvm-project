@@ -114,5 +114,12 @@ bool AreCompatibleCUDADataAttrs(
 
 static constexpr char blankCommonObjectName[] = "__BLNK__";
 
+// Get the assembly name for a non BIND(C) external symbol other than the blank
+// common block.
+inline std::string GetExternalAssemblyName(
+    std::string symbolName, bool underscoring) {
+  return underscoring ? std::move(symbolName) + "_" : std::move(symbolName);
+}
+
 } // namespace Fortran::common
 #endif // FORTRAN_COMMON_FORTRAN_H_

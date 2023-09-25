@@ -48,6 +48,7 @@ when ``-fexperimental-library`` is passed:
 
 * The parallel algorithms library (``<execution>`` and the associated algorithms)
 * ``std::stop_token``, ``std::stop_source`` and ``std::stop_callback``
+* ``std::jthread``
 * ``std::chrono::tzdb`` and related time zone functionality
 * ``std::ranges::join_view``
 
@@ -186,7 +187,7 @@ and ``operator delete``. For example:
   #include <version> // must include any libc++ header before defining the function (C compatibility headers excluded)
 
   void std::__libcpp_verbose_abort(char const* format, ...) {
-    va_list list;
+    std::va_list list;
     va_start(list, format);
     std::vfprintf(stderr, format, list);
     va_end(list);

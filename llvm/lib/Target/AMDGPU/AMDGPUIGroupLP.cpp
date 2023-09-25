@@ -1152,8 +1152,7 @@ void MFMASmallGemmSingleWaveOpt::applyIGLPStrategy(
       if (Pred.getSUnit()->getInstr()->getOpcode() != AMDGPU::V_PERM_B32_e64)
         continue;
 
-      if (Cand &&
-          std::find(Counted.begin(), Counted.end(), Cand) != Counted.end())
+      if (Cand && llvm::is_contained(Counted, Cand))
         break;
 
       for (auto &Succ : Pred.getSUnit()->Succs) {
@@ -1174,7 +1173,7 @@ void MFMASmallGemmSingleWaveOpt::applyIGLPStrategy(
         }
 
         Cand = VMEMLookup[MI];
-        if (std::find(Counted.begin(), Counted.end(), Cand) != Counted.end()) {
+        if (llvm::is_contained(Counted, Cand)) {
           MissedAny = true;
           break;
         }

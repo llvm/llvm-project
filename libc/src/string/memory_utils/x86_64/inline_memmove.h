@@ -5,8 +5,8 @@
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
-#ifndef LIBC_SRC_STRING_MEMORY_UTILS_X86_64_INLINE_MEMMOVE_H
-#define LIBC_SRC_STRING_MEMORY_UTILS_X86_64_INLINE_MEMMOVE_H
+#ifndef LLVM_LIBC_SRC_STRING_MEMORY_UTILS_X86_64_INLINE_MEMMOVE_H
+#define LLVM_LIBC_SRC_STRING_MEMORY_UTILS_X86_64_INLINE_MEMMOVE_H
 
 #include "src/__support/macros/config.h" // LIBC_INLINE
 #include "src/string/memory_utils/op_builtin.h"
@@ -63,4 +63,4 @@ LIBC_INLINE void inline_memmove_x86(Ptr dst, CPtr src, size_t count) {
 
 } // namespace __llvm_libc
 
-#endif // LIBC_SRC_STRING_MEMORY_UTILS_X86_64_INLINE_MEMMOVE_H
+#endif // LLVM_LIBC_SRC_STRING_MEMORY_UTILS_X86_64_INLINE_MEMMOVE_H

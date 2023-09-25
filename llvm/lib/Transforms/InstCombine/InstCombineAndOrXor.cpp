@@ -2654,6 +2654,18 @@ Instruction *InstCombinerImpl::visitAnd(BinaryOperator &I) {
       A->getType()->isIntOrIntVectorTy(1))
     return SelectInst::Create(A, Constant::getNullValue(Ty), B);
 
+  // (-1 + A) & B --> A ? 0 : B where A is 0/1.
+  if (match(&I, m_c_And(m_OneUse(m_Add(m_ZExtOrSelf(m_Value(A)), m_AllOnes())),
+                        m_Value(B)))) {
+    if (A->getType()->isIntOrIntVectorTy(1))
+      return SelectInst::Create(A, Constant::getNullValue(Ty), B);
+    if (computeKnownBits(A, /* Depth */ 0, &I).countMaxActiveBits() <= 1) {
+      return SelectInst::Create(
+          Builder.CreateICmpEQ(A, Constant::getNullValue(A->getType())), B,
+          Constant::getNullValue(Ty));
+    }
+  }
+
   // (iN X s>> (N-1)) & Y --> (X s< 0) ? Y : 0 -- with optional sext
   if (match(&I, m_c_And(m_OneUse(m_SExtOrSelf(
                             m_AShr(m_Value(X), m_APIntAllowUndef(C)))),
@@ -3646,10 +3658,9 @@ Instruction *InstCombinerImpl::visitOr(BinaryOperator &I) {
     // ((A & B) ^ B) | ((A & B) ^ A) -> A ^ B
     // (B ^ (A & B)) | (A ^ (A & B)) -> A ^ B
     const auto TryXorOpt = [&](Value *Lhs, Value *Rhs) -> Instruction * {
-      if (match(Lhs, m_OneUse(m_c_Xor(m_And(m_Value(A), m_Value(B)),
-                                      m_Deferred(A)))) &&
-          match(Rhs, m_OneUse(m_c_Xor(m_And(m_Specific(A), m_Specific(B)),
-                                      m_Deferred(B))))) {
+      if (match(Lhs, m_c_Xor(m_And(m_Value(A), m_Value(B)), m_Deferred(A))) &&
+          match(Rhs,
+                m_c_Xor(m_And(m_Specific(A), m_Specific(B)), m_Deferred(B)))) {
         return BinaryOperator::CreateXor(A, B);
       }
       return nullptr;

@@ -236,6 +236,13 @@ Status Debugger::SetPropertyValue(const ExecutionContext *exe_ctx,
       // codes.
       SetPrompt(GetPrompt());
     } else if (property_path ==
+                   g_debugger_properties[ePropertyPromptAnsiPrefix].name ||
+               property_path ==
+                   g_debugger_properties[ePropertyPromptAnsiSuffix].name) {
+      // Prompt colors changed. Ping the prompt so it can reset the ansi
+      // terminal codes.
+      SetPrompt(GetPrompt());
+    } else if (property_path ==
                g_debugger_properties[ePropertyUseSourceCache].name) {
       // use-source-cache changed. Wipe out the cache contents if it was
       // disabled.
@@ -297,6 +304,18 @@ bool Debugger::GetNotifyVoid() const {
 
 llvm::StringRef Debugger::GetPrompt() const {
   constexpr uint32_t idx = ePropertyPrompt;
+  return GetPropertyAtIndexAs<llvm::StringRef>(
+      idx, g_debugger_properties[idx].default_cstr_value);
+}
+
+llvm::StringRef Debugger::GetPromptAnsiPrefix() const {
+  const uint32_t idx = ePropertyPromptAnsiPrefix;
+  return GetPropertyAtIndexAs<llvm::StringRef>(
+      idx, g_debugger_properties[idx].default_cstr_value);
+}
+
+llvm::StringRef Debugger::GetPromptAnsiSuffix() const {
+  const uint32_t idx = ePropertyPromptAnsiSuffix;
   return GetPropertyAtIndexAs<llvm::StringRef>(
       idx, g_debugger_properties[idx].default_cstr_value);
 }

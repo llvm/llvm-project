@@ -446,16 +446,19 @@ struct ExpOpConversion : public OpConversionPattern<complex::ExpOp> {
     auto loc = op.getLoc();
     auto type = cast<ComplexType>(adaptor.getComplex().getType());
     auto elementType = cast<FloatType>(type.getElementType());
+    arith::FastMathFlagsAttr fmf = op.getFastMathFlagsAttr();
 
     Value real =
         rewriter.create<complex::ReOp>(loc, elementType, adaptor.getComplex());
     Value imag =
         rewriter.create<complex::ImOp>(loc, elementType, adaptor.getComplex());
-    Value expReal = rewriter.create<math::ExpOp>(loc, real);
-    Value cosImag = rewriter.create<math::CosOp>(loc, imag);
-    Value resultReal = rewriter.create<arith::MulFOp>(loc, expReal, cosImag);
-    Value sinImag = rewriter.create<math::SinOp>(loc, imag);
-    Value resultImag = rewriter.create<arith::MulFOp>(loc, expReal, sinImag);
+    Value expReal = rewriter.create<math::ExpOp>(loc, real, fmf.getValue());
+    Value cosImag = rewriter.create<math::CosOp>(loc, imag, fmf.getValue());
+    Value resultReal =
+        rewriter.create<arith::MulFOp>(loc, expReal, cosImag, fmf.getValue());
+    Value sinImag = rewriter.create<math::SinOp>(loc, imag, fmf.getValue());
+    Value resultImag =
+        rewriter.create<arith::MulFOp>(loc, expReal, sinImag, fmf.getValue());
 
     rewriter.replaceOpWithNewOp<complex::CreateOp>(op, type, resultReal,
                                                    resultImag);
@@ -471,14 +474,15 @@ struct Expm1OpConversion : public OpConversionPattern<complex::Expm1Op> {
                   ConversionPatternRewriter &rewriter) const override {
     auto type = cast<ComplexType>(adaptor.getComplex().getType());
     auto elementType = cast<FloatType>(type.getElementType());
+    arith::FastMathFlagsAttr fmf = op.getFastMathFlagsAttr();
 
     mlir::ImplicitLocOpBuilder b(op.getLoc(), rewriter);
-    Value exp = b.create<complex::ExpOp>(adaptor.getComplex());
+    Value exp = b.create<complex::ExpOp>(adaptor.getComplex(), fmf.getValue());
 
     Value real = b.create<complex::ReOp>(elementType, exp);
     Value one = b.create<arith::ConstantOp>(elementType,
                                             b.getFloatAttr(elementType, 1));
-    Value realMinusOne = b.create<arith::SubFOp>(real, one);
+    Value realMinusOne = b.create<arith::SubFOp>(real, one, fmf.getValue());
     Value imag = b.create<complex::ImOp>(elementType, exp);
 
     rewriter.replaceOpWithNewOp<complex::CreateOp>(op, type, realMinusOne,

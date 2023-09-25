@@ -9,10 +9,7 @@
 # All configuration values have a default; values that are commented out
 # serve to show the default.
 
-import sys, os
 from datetime import date
-from recommonmark.parser import CommonMarkParser
-
 # If extensions (or modules to document with autodoc) are in another directory,
 # add these directories to sys.path here. If the directory is relative to the
 # documentation root, use os.path.abspath to make it absolute, like shown here.
@@ -20,65 +17,22 @@ from recommonmark.parser import CommonMarkParser
 
 # -- General configuration -----------------------------------------------------
 
-# https://github.com/readthedocs/recommonmark/issues/177
-# Method used to remove the warning message.
-class CustomCommonMarkParser(CommonMarkParser):
-    def visit_document(self, node):
-        pass
-
-
 # If your documentation needs a minimal Sphinx version, state it here.
 # needs_sphinx = '1.0'
 # Add any Sphinx extension module names here, as strings. They can be extensions
 # coming with Sphinx (named 'sphinx.ext.*') or your custom ones.
-extensions = ["sphinx.ext.todo", "sphinx.ext.mathjax", "sphinx.ext.intersphinx"]
+extensions = [
+    "myst_parser",
+    "sphinx.ext.todo",
+    "sphinx.ext.mathjax",
+    "sphinx.ext.intersphinx",
+    "sphinx.ext.autodoc",
+]
 
 # Add any paths that contain templates here, relative to this directory.
 templates_path = ["_templates"]
 
-# The suffix of source filenames.
-source_suffix = {
-    ".rst": "restructuredtext",
-}
-try:
-    import recommonmark
-except ImportError:
-    # manpages do not use any .md sources
-    if not tags.has("builder-man"):
-        raise
-else:
-    import sphinx
-
-    if sphinx.version_info >= (3, 0):
-        # This requires 0.5 or later.
-        extensions.append("recommonmark")
-    else:
-        source_parsers = {".md": CustomCommonMarkParser}
-    source_suffix[".md"] = "markdown"
-    extensions.append("sphinx_markdown_tables")
-
-    # Setup AutoStructify for inline .rst toctrees in index.md
-    from recommonmark.transform import AutoStructify
-
-    # Stolen from https://github.com/readthedocs/recommonmark/issues/93
-    # Monkey patch to fix recommonmark 0.4 doc reference issues.
-    from recommonmark.states import DummyStateMachine
-
-    orig_run_role = DummyStateMachine.run_role
-
-    def run_role(self, name, options=None, content=None):
-        if name == "doc":
-            name = "any"
-            return orig_run_role(self, name, options, content)
-
-    DummyStateMachine.run_role = run_role
-
-    def setup(app):
-        # Disable inline math to avoid
-        # https://github.com/readthedocs/recommonmark/issues/120 in Extensions.md
-        app.add_config_value("recommonmark_config", {"enable_inline_math": False}, True)
-        app.add_transform(AutoStructify)
-
+import sphinx
 
 # The encoding of source files.
 # source_encoding = 'utf-8-sig'

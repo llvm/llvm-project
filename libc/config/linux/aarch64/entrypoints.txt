@@ -126,6 +126,9 @@ set(TARGET_LIBC_ENTRYPOINTS
     libc.src.stdio.snprintf
     libc.src.stdio.vsprintf
     libc.src.stdio.vsnprintf
+    #libc.src.stdio.sscanf
+    #libc.src.stdio.scanf
+    #libc.src.stdio.fscanf
 
     # sys/mman.h entrypoints
     libc.src.sys.mman.madvise

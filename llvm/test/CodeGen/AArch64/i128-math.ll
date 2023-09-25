@@ -430,3 +430,28 @@ define i128 @i128_saturating_mul(i128 %x, i128 %y) {
   %7 = select i1 %3, i128 %6, i128 %2
   ret i128 %7
 }
+
+define { i128, i1 } @saddo_not_1(i128 %x) nounwind {
+; CHECK-LABEL: saddo_not_1:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    negs x0, x0
+; CHECK-NEXT:    ngcs x1, x1
+; CHECK-NEXT:    cset w2, vs
+; CHECK-NEXT:    ret
+  %not = xor i128 %x, -1
+  %r = call { i128, i1 } @llvm.sadd.with.overflow.i128(i128 %not, i128 1)
+  ret { i128, i1 } %r
+}
+
+define { i128, i1 } @saddo_carry_not_1(i128 %x) nounwind {
+; CHECK-LABEL: saddo_carry_not_1:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    mov w8, #1 // =0x1
+; CHECK-NEXT:    negs x0, x0
+; CHECK-NEXT:    sbcs x1, x8, x1
+; CHECK-NEXT:    cset w2, vs
+; CHECK-NEXT:    ret
+  %not = xor i128 %x, -1
+  %r = call { i128, i1 } @llvm.sadd.with.overflow.i128(i128 %not, i128 u0x10000000000000001)
+  ret { i128, i1 } %r
+}

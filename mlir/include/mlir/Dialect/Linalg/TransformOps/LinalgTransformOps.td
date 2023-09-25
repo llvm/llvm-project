@@ -1947,37 +1947,39 @@ def TileToForallOp :
 }
 
 //===----------------------------------------------------------------------===//
-// VectorizeOp
+// VectorizeChildrenAndApplyPatternsOp
 //===----------------------------------------------------------------------===//
 
-def VectorizeOp : Op<Transform_Dialect, "structured.vectorize",
+def VectorizeChildrenAndApplyPatternsOp :
+  Op<Transform_Dialect, "structured.vectorize_children_and_apply_patterns",
     [FunctionalStyleTransformOpTrait, MemoryEffectsOpInterface,
      TransformEachOpTrait, TransformOpInterface,
      ReportTrackingListenerFailuresOpTrait]> {
   let description = [{
-    Indicates that the given `target` op all the ops it contains should be
-    vectorized with the configuration specified by the attributes of this op.
-    This vectorization only handles structured ops that operate on shaped types
-    and does not vectorize loops or straight-line. Internally, it applies a
-    set of rewrite patterns, some of which enable vectorization and some of
-    which clean up the results. Therefore, it can only be applied to an op with
-    the "isolated from above property". If finer granularity is required, it can
-    be achieved by outlining the target part of the payload IR into, e.g., a
-    function, performing the transformation, and inlining it back. This
-    transformation only fails if the entire pattern rewriting failed, i.e., it
-    does **not** fail when no ops were vectorized.
+    Vectorizes all children contained in the given `target` using the
+    configuration specified by the attributes of this op. This only vectorizes
+    structured ops that operate on shaped types and does not vectorize loops or
+    straight-line. Internally, it applies a set of rewrite patterns, some of
+    which enable vectorization and some of which clean up the results.
+    Therefore, it can only be applied to an op with the "isolated from above"
+    property. This transformation only fails if the entire pattern rewriting
+    failed, i.e., it does **not** fail when no ops were vectorized.
 
-    Note that this transformation is invalidating the handles to any payload IR
+    Finer granularity can be achieved either with the `VectorizeOp` for
+    individual ops or by outlining the target part of the payload IR into, e.g.,
+    a function, performing this transformation, and inlining it back.
+
+    Note that this transformation invalidates the handles to any payload IR
     operation that is contained inside the vectorization target.
 
     This transformation supports the following attributes:
-      - `vectorize_padding`: a UnitAttr to activate the vectorization of
+    - `vectorize_padding`: a `UnitAttr` to activate the vectorization of
       `tensor.pad` ops. Different pipelines may prefer to lower such ops to
       loops.
-      - `disable_multi_reduction_to_contract_patterns`: a UnitAttr to deactivate
+    - `disable_multi_reduction_to_contract_patterns`: a `UnitAttr` to deactivate
       the rewrite of `vector.multi_reduction` to `vector.contract`. This is
       intended to be used in tests only.
-      - `disable_transfer_permutation_map_lowering_patterns`: a UnitAttr to
+    - `disable_transfer_permutation_map_lowering_patterns`: a `UnitAttr` to
       deactivate the rewrite of `vector.transfer` with permutation maps into
       explicit `vector.transpose` operations. This is intended to be used in
       tests only but may be promoted to a first class attribute in the future.
@@ -2015,7 +2017,7 @@ def VectorizeOp : Op<Transform_Dialect, "structured.vectorize",
   }];
 }
 
-def MaskedVectorizeOp : Op<Transform_Dialect, "structured.masked_vectorize",
+def VectorizeOp : Op<Transform_Dialect, "structured.vectorize",
     [DeclareOpInterfaceMethods<MemoryEffectsOpInterface>,
      TransformOpInterface, ReportTrackingListenerFailuresOpTrait]> {
   let description = [{
@@ -2029,9 +2031,9 @@ def MaskedVectorizeOp : Op<Transform_Dialect, "structured.masked_vectorize",
 
     ```mlir
     # Masked vectorization - vector sizes are specified explicitly
-    transform.structured.masked_vectorize %target vector_sizes [1, 4] : !transform.any_op
+    transform.structured.vectorize %target vector_sizes [1, 4] : !transform.any_op
     # Regular vectorization - vector sizes are inferred from the target Op
-    transform.structured.masked_vectorize %target : !transform.any_op
+    transform.structured.vectorize %target : !transform.any_op
     ```
 
     The vector sizes can be either static or dynamic (SSA values). In case of

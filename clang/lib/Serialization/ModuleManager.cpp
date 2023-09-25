@@ -209,7 +209,7 @@ ModuleManager::addModule(StringRef FileName, ModuleKind Type,
       //
       // RequiresNullTerminator is false because module files don't need it, and
       // this allows the file to still be mmapped.
-      Buf = FileMgr.getBufferForFile(NewModule->File,
+      Buf = FileMgr.getBufferForFile(*NewModule->File,
                                      /*IsVolatile=*/true,
                                      /*RequiresNullTerminator=*/false);
     }
