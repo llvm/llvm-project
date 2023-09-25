@@ -3176,6 +3176,11 @@ def err_alignas_underaligned : Error<
   "requested alignment is less than minimum alignment of %1 for type %0">;
 def warn_aligned_attr_underaligned : Warning<err_alignas_underaligned.Summary>,
   InGroup<IgnoredAttributes>;
+def err_ctor_dtor_attr_on_non_void_func : Error<
+  "%0 attribute can only be applied to a function which accepts no arguments "
+  "and has a 'void' return type">;
+def err_ctor_dtor_member_func : Error<
+  "%0 attribute cannot be applied to a member function">;
 def err_attribute_sizeless_type : Error<
   "%0 attribute cannot be applied to sizeless type %1">;
 def err_attribute_argument_n_type : Error<

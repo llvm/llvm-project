@@ -12,28 +12,20 @@
 // RUN:     -fno-use-cxa-atexit -fregister-global-dtors-with-atexit < %s | \
 // RUN:   FileCheck --check-prefix=REGISTER %s
 
-int bar(void) __attribute__((destructor(100)));
-int bar2(void) __attribute__((destructor(65535)));
-int bar3(int) __attribute__((destructor(65535)));
+void bar(void) __attribute__((destructor(101)));
+void bar2(void) __attribute__((destructor(65535)));
+void bar3(void) __attribute__((destructor(65535)));
 
-int bar(void) {
-  return 1;
-}
+void bar(void) {}
+void bar2(void) {}
+void bar3(void) {}
 
-int bar2(void) {
-  return 2;
-}
+// NO-REGISTER: @llvm.global_dtors = appending global [3 x { i32, ptr, ptr }] [{ i32, ptr, ptr } { i32 101, ptr @bar, ptr null }, { i32, ptr, ptr } { i32 65535, ptr @bar2, ptr null }, { i32, ptr, ptr } { i32 65535, ptr @bar3, ptr null }]
 
-int bar3(int a) {
-  return a;
-}
+// REGISTER: @llvm.global_ctors = appending global [2 x { i32, ptr, ptr }] [{ i32, ptr, ptr } { i32 101, ptr @__GLOBAL_init_101, ptr null }, { i32, ptr, ptr } { i32 65535, ptr @__GLOBAL_init_65535, ptr null }]
+// REGISTER: @llvm.global_dtors = appending global [2 x { i32, ptr, ptr }] [{ i32, ptr, ptr } { i32 101, ptr @__GLOBAL_cleanup_101, ptr null }, { i32, ptr, ptr } { i32 65535, ptr @__GLOBAL_cleanup_65535, ptr null }]
 
-// NO-REGISTER: @llvm.global_dtors = appending global [3 x { i32, ptr, ptr }] [{ i32, ptr, ptr } { i32 100, ptr @bar, ptr null }, { i32, ptr, ptr } { i32 65535, ptr @bar2, ptr null }, { i32, ptr, ptr } { i32 65535, ptr @bar3, ptr null }]
-
-// REGISTER: @llvm.global_ctors = appending global [2 x { i32, ptr, ptr }] [{ i32, ptr, ptr } { i32 100, ptr @__GLOBAL_init_100, ptr null }, { i32, ptr, ptr } { i32 65535, ptr @__GLOBAL_init_65535, ptr null }]
-// REGISTER: @llvm.global_dtors = appending global [2 x { i32, ptr, ptr }] [{ i32, ptr, ptr } { i32 100, ptr @__GLOBAL_cleanup_100, ptr null }, { i32, ptr, ptr } { i32 65535, ptr @__GLOBAL_cleanup_65535, ptr null }]
-
-// REGISTER: define internal void @__GLOBAL_init_100() [[ATTR:#[0-9]+]] {
+// REGISTER: define internal void @__GLOBAL_init_101() [[ATTR:#[0-9]+]] {
 // REGISTER: entry:
 // REGISTER:   %0 = call i32 @atexit(ptr @bar)
 // REGISTER:   ret void
@@ -46,7 +38,7 @@ int bar3(int a) {
 // REGISTER:   ret void
 // REGISTER: }
 
-// REGISTER: define internal void @__GLOBAL_cleanup_100() [[ATTR:#[0-9]+]] {
+// REGISTER: define internal void @__GLOBAL_cleanup_101() [[ATTR:#[0-9]+]] {
 // REGISTER: entry:
 // REGISTER:   %0 = call i32 @unatexit(ptr @bar)
 // REGISTER:   %needs_destruct = icmp eq i32 %0, 0
