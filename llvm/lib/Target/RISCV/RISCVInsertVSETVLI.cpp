@@ -1438,11 +1438,19 @@ void RISCVInsertVSETVLI::doLocalPostpass(MachineBasicBlock &MBB) {
 
     if (!isVectorConfigInstr(MI)) {
       doUnion(Used, getDemanded(MI, MRI));
-      // We can't handle the case when the source AVL
-      // register of *NextMI is defined after MI
-      if (NextMI && NextMI->getOperand(1).isReg() && MI.getOperand(0).isReg() &&
-          MI.getOperand(0).getReg() == NextMI->getOperand(1).getReg())
-        Used.demandVL();
+
+      // We can't handle the case when the source AVL register of *NextMI is
+      // defined after MI
+      if (NextMI && NextMI->getOperand(1).isReg()) {
+        for (const MachineOperand &MO : MI.operands()) {
+          if (MO.isReg() && MO.isDef() &&
+              MO.getReg() == NextMI->getOperand(1).getReg()) {
+            Used.demandVL();
+            break;
+          }
+        }
+      }
+
       continue;
     }
 
