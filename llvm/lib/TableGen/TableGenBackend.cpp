@@ -12,6 +12,7 @@
 
 #include "llvm/TableGen/TableGenBackend.h"
 #include "llvm/ADT/Twine.h"
+#include "llvm/Support/Path.h"
 #include "llvm/Support/raw_ostream.h"
 #include <algorithm>
 #include <cassert>
@@ -57,11 +58,13 @@ void llvm::emitSourceFileHeader(StringRef Desc, raw_ostream &OS,
   printLine(OS, Prefix, ' ', Suffix);
   printLine(OS, Prefix + "Automatically generated file, do not edit!", ' ',
             Suffix);
+
+  // Print the filename of source file
+  if (!Record.getInputFilename().empty())
+    printLine(
+        OS, Prefix + "From: " + sys::path::filename(Record.getInputFilename()),
+        ' ', Suffix);
   printLine(OS, Prefix, ' ', Suffix);
   printLine(OS, "\\*===", '-', "===*/");
   OS << '\n';
-
-  // Print the path of source file
-  if (!Record.getInputFilename().empty())
-    OS << "// Generated from: " << Record.getInputFilename() << "\n\n";
 }
