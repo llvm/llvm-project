@@ -48,7 +48,7 @@ echo "(lang dune 3.2)
 " > "dune-workspace"
 
 if [ $mode = "static" ]; then
-    $llvm_config --link-static --libs
+    $llvm_config --link-static
     if [ $? -ne 0 ]; then
         echo "Static mode is not supported."
         exit 1
@@ -56,7 +56,7 @@ if [ $mode = "static" ]; then
     append_context static --link-static
 fi
 if [ $mode = "shared" ]; then
-    $llvm_config --link-shared --libs
+    $llvm_config --link-shared
     if [ $? -ne 0 ]; then
         echo "Shared mode is not supported."
         exit 1

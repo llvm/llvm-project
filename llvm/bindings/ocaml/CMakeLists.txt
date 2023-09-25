@@ -1,3 +1,9 @@
+add_custom_target(ocaml_make_directory
+  COMMAND "${CMAKE_COMMAND}" "-E" "make_directory" "${LLVM_LIBRARY_DIR}/ocaml/llvm")
+add_custom_target("ocaml_all")
+set_target_properties(ocaml_all PROPERTIES FOLDER "Misc")
+set_target_properties(ocaml_make_directory PROPERTIES FOLDER "Misc")
+
 add_custom_target(ocaml_copy_files)
 
 foreach( file dune-project setup.sh discover.sh llvm.opam )
@@ -24,6 +30,25 @@ add_custom_target(dune_workspace ALL
   DEPENDS
     ocaml_copy_files
     "${CMAKE_BINARY_DIR}/bin/llvm-config")
+
+explicit_map_components_to_libraries(llvm_libs
+  Core Support
+  Analysis
+  BitReader
+  BitWriter
+  ExecutionEngine MCJIT native
+  IRReader
+  Linker
+  Target
+  Passes
+  TransformUtils)
+foreach( llvm_lib ${llvm_libs} )
+  add_dependencies(dune_workspace "${llvm_lib}")
+endforeach()
+explicit_map_components_to_libraries(llvm_libs ${LLVM_TARGETS_TO_BUILD})
+foreach( llvm_lib ${llvm_libs} )
+  add_dependencies(dune_workspace "${llvm_lib}")
+endforeach()
 
 add_custom_target(dune_build_all
   COMMAND "dune" "build" "--release"
