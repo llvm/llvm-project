@@ -13,7 +13,6 @@ from dex.command.CommandBase import CommandBase
 
 class DexLabel(CommandBase):
     def __init__(self, label, **kwargs):
-
         if not isinstance(label, str):
             raise TypeError("invalid argument type")
 

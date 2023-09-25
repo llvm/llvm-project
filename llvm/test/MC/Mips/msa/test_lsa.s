@@ -1,4 +1,4 @@
-# RUN: llvm-mc %s -arch=mips -mcpu=mips32r2 -mattr=+msa -show-encoding | FileCheck %s
+# RUN: llvm-mc %s -triple=mips -mcpu=mips32r2 -mattr=+msa -show-encoding | FileCheck %s
 #
 # CHECK:        lsa        $8, $9, $10, 1              # encoding: [0x01,0x2a,0x40,0x05]
 # CHECK:        lsa        $8, $9, $10, 2              # encoding: [0x01,0x2a,0x40,0x45]

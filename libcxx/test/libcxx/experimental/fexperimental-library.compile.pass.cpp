@@ -12,9 +12,6 @@
 // GCC does not support the -fexperimental-library flag
 // UNSUPPORTED: gcc
 
-// AppleClang does not support the -fexperimental-library flag yet
-// UNSUPPORTED: apple-clang-14.0
-
 // Clang on AIX currently pretends that it is Clang 15, even though it is not (as of writing
 // this, LLVM 15 hasn't even been branched yet).
 // UNSUPPORTED: clang-15 && buildhost=aix
@@ -29,4 +26,8 @@
 
 #ifdef _LIBCPP_HAS_NO_EXPERIMENTAL_STOP_TOKEN
 #  error "-fexperimental-library should enable the stop_token"
+#endif
+
+#ifdef _LIBCPP_HAS_NO_INCOMPLETE_TZDB
+#  error "-fexperimental-library should enable the chrono TZDB"
 #endif

@@ -61,8 +61,8 @@ entry:
 ; CHECK-FM: blr
 
 ; CHECK-FM-VSX: @zerocmp3
-; CHECK-FM-VSX: xsnegdp [[REG2:[0-9]+]], 1
 ; CHECK-FM-VSX: fsel [[REG:[0-9]+]], 1, 2, 3
+; CHECK-FM-VSX: xsnegdp [[REG2:[0-9]+]], 1
 ; CHECK-FM-VSX: fsel 1, [[REG2]], [[REG]], 3
 ; CHECK-FM-VSX: blr
 }
@@ -170,8 +170,8 @@ entry:
 
 ; CHECK-FM-VSX: @cmp3
 ; CHECK-FM-VSX: xssubdp [[REG:[0-9]+]], 1, 2
-; CHECK-FM-VSX: xsnegdp [[REG3:[0-9]+]], [[REG]]
 ; CHECK-FM-VSX: fsel [[REG2:[0-9]+]], [[REG]], 3, 4
+; CHECK-FM-VSX: xsnegdp [[REG3:[0-9]+]], [[REG]]
 ; CHECK-FM-VSX: fsel 1, [[REG3]], [[REG2]], 4
 ; CHECK-FM-VSX: blr
 }

@@ -159,13 +159,16 @@ void Symbolizer::Flush() {
 }
 
 const char *Symbolizer::Demangle(const char *name) {
+  CHECK(name);
   Lock l(&mu_);
   for (auto &tool : tools_) {
     SymbolizerScope sym_scope(this);
     if (const char *demangled = tool.Demangle(name))
       return demangled;
   }
-  return PlatformDemangle(name);
+  if (const char *demangled = PlatformDemangle(name))
+    return demangled;
+  return name;
 }
 
 bool Symbolizer::FindModuleNameAndOffsetForAddress(uptr address,

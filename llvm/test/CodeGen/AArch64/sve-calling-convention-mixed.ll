@@ -18,10 +18,10 @@ define float @foo1(ptr %x0, ptr %x1, ptr %x2) nounwind {
 ; CHECK-NEXT:    ld4d { z16.d - z19.d }, p0/z, [x1]
 ; CHECK-NEXT:    ld1d { z5.d }, p0/z, [x2]
 ; CHECK-NEXT:    ptrue p0.d
-; CHECK-NEXT:    st1d { z16.d }, p0, [sp]
-; CHECK-NEXT:    st1d { z17.d }, p0, [sp, #1, mul vl]
-; CHECK-NEXT:    st1d { z18.d }, p0, [sp, #2, mul vl]
 ; CHECK-NEXT:    st1d { z19.d }, p0, [sp, #3, mul vl]
+; CHECK-NEXT:    st1d { z18.d }, p0, [sp, #2, mul vl]
+; CHECK-NEXT:    st1d { z17.d }, p0, [sp, #1, mul vl]
+; CHECK-NEXT:    st1d { z16.d }, p0, [sp]
 ; CHECK-NEXT:    bl callee1
 ; CHECK-NEXT:    addvl sp, sp, #4
 ; CHECK-NEXT:    ldp x29, x30, [sp], #16 // 16-byte Folded Reload
@@ -73,10 +73,10 @@ define float @foo2(ptr %x0, ptr %x1) nounwind {
 ; CHECK-NEXT:    ld4d { z16.d - z19.d }, p0/z, [x1]
 ; CHECK-NEXT:    ptrue p0.d
 ; CHECK-NEXT:    mov w1, #1 // =0x1
-; CHECK-NEXT:    st1d { z16.d }, p0, [x8]
-; CHECK-NEXT:    st1d { z17.d }, p0, [x8, #1, mul vl]
+; CHECK-NEXT:    st1d { z19.d }, p0, [x8, #3, mul vl]
 ; CHECK-NEXT:    st1d { z18.d }, p0, [x8, #2, mul vl]
-; CHECK-NEXT:    st1d { z19.d }, p0, [x9, #3, mul vl]
+; CHECK-NEXT:    st1d { z17.d }, p0, [x8, #1, mul vl]
+; CHECK-NEXT:    st1d { z16.d }, p0, [x9]
 ; CHECK-NEXT:    str x8, [sp]
 ; CHECK-NEXT:    bl callee2
 ; CHECK-NEXT:    addvl sp, sp, #4
@@ -121,9 +121,9 @@ define float @foo3(ptr %x0, ptr %x1, ptr %x2) nounwind {
 ; CHECK-NEXT:    ld3d { z16.d - z18.d }, p0/z, [x1]
 ; CHECK-NEXT:    ld1d { z6.d }, p0/z, [x2]
 ; CHECK-NEXT:    ptrue p0.d
-; CHECK-NEXT:    st1d { z16.d }, p0, [sp]
-; CHECK-NEXT:    st1d { z17.d }, p0, [sp, #1, mul vl]
 ; CHECK-NEXT:    st1d { z18.d }, p0, [sp, #2, mul vl]
+; CHECK-NEXT:    st1d { z17.d }, p0, [sp, #1, mul vl]
+; CHECK-NEXT:    st1d { z16.d }, p0, [sp]
 ; CHECK-NEXT:    bl callee3
 ; CHECK-NEXT:    addvl sp, sp, #3
 ; CHECK-NEXT:    ldp x29, x30, [sp], #16 // 16-byte Folded Reload
@@ -692,6 +692,40 @@ define <vscale x 4 x float> @sve_ret_caller_non_sve_callee_high_range()  {
 ; CHECK-NEXT:    ret
   call void @non_sve_callee_high_range(float 0.0, float 1.0, float 2.0, float 3.0, float 4.0, float 5.0, float 6.0, float 7.0, <vscale x 4 x float> undef, <vscale x 4 x float> undef)
   ret <vscale x 4 x float> undef
+}
+
+declare void @func_f8_and_v0_passed_via_memory(float %f0, float %f1, float %f2, float %f3, float %f4, float %f5, float %f6, float %f7, float %f8, <vscale x 4 x float> %v0)
+define void @verify_all_operands_are_initialised() {
+; CHECK-LABEL: verify_all_operands_are_initialised:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    stp x29, x30, [sp, #-16]! // 16-byte Folded Spill
+; CHECK-NEXT:    addvl sp, sp, #-1
+; CHECK-NEXT:    sub sp, sp, #16
+; CHECK-NEXT:    .cfi_escape 0x0f, 0x0c, 0x8f, 0x00, 0x11, 0x20, 0x22, 0x11, 0x08, 0x92, 0x2e, 0x00, 0x1e, 0x22 // sp + 32 + 8 * VG
+; CHECK-NEXT:    .cfi_offset w30, -8
+; CHECK-NEXT:    .cfi_offset w29, -16
+; CHECK-NEXT:    ptrue p0.s
+; CHECK-NEXT:    movi d0, #0000000000000000
+; CHECK-NEXT:    fmov s1, #1.00000000
+; CHECK-NEXT:    fmov z16.s, #9.00000000
+; CHECK-NEXT:    mov w8, #1090519040 // =0x41000000
+; CHECK-NEXT:    add x0, sp, #16
+; CHECK-NEXT:    fmov s2, #2.00000000
+; CHECK-NEXT:    fmov s3, #3.00000000
+; CHECK-NEXT:    add x9, sp, #16
+; CHECK-NEXT:    fmov s4, #4.00000000
+; CHECK-NEXT:    fmov s5, #5.00000000
+; CHECK-NEXT:    fmov s6, #6.00000000
+; CHECK-NEXT:    fmov s7, #7.00000000
+; CHECK-NEXT:    st1w { z16.s }, p0, [x9]
+; CHECK-NEXT:    str w8, [sp]
+; CHECK-NEXT:    bl func_f8_and_v0_passed_via_memory
+; CHECK-NEXT:    addvl sp, sp, #1
+; CHECK-NEXT:    add sp, sp, #16
+; CHECK-NEXT:    ldp x29, x30, [sp], #16 // 16-byte Folded Reload
+; CHECK-NEXT:    ret
+  call void @func_f8_and_v0_passed_via_memory(float 0.0, float 1.0, float 2.0, float 3.0, float 4.0, float 5.0, float 6.0, float 7.0, float 8.0, <vscale x 4 x float> shufflevector (<vscale x 4 x float> insertelement (<vscale x 4 x float> poison, float 9.000000e+00, i64 0), <vscale x 4 x float> poison, <vscale x 4 x i32> zeroinitializer))
+  ret void
 }
 
 declare float @callee1(float, <vscale x 8 x double>, <vscale x 8 x double>, <vscale x 2 x double>)

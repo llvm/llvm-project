@@ -294,7 +294,8 @@ class AMDGPULowerModuleLDS {
     // equivalent target specific intrinsic which lasts until immediately after
     // codegen would suffice for that, but one would still need to ensure that
     // the variables are allocated in the anticpated order.
-    IRBuilder<> Builder(Func->getEntryBlock().getFirstNonPHI());
+    BasicBlock *Entry = &Func->getEntryBlock();
+    IRBuilder<> Builder(Entry, Entry->getFirstNonPHIIt());
 
     Function *Decl =
         Intrinsic::getDeclaration(Func->getParent(), Intrinsic::donothing, {});

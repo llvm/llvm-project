@@ -8,7 +8,7 @@ define dso_local i64 @lb(ptr %a) nounwind {
 ; RV64I-LABEL: lb:
 ; RV64I:       # %bb.0:
 ; RV64I-NEXT:    lb a1, 1(a0)
-; RV64I-NEXT:    lbu a0, 0(a0)
+; RV64I-NEXT:    lbu zero, 0(a0)
 ; RV64I-NEXT:    mv a0, a1
 ; RV64I-NEXT:    ret
   %1 = getelementptr i8, ptr %a, i32 1
@@ -23,7 +23,7 @@ define dso_local i64 @lh(ptr %a) nounwind {
 ; RV64I-LABEL: lh:
 ; RV64I:       # %bb.0:
 ; RV64I-NEXT:    lh a1, 4(a0)
-; RV64I-NEXT:    lh a0, 0(a0)
+; RV64I-NEXT:    lh zero, 0(a0)
 ; RV64I-NEXT:    mv a0, a1
 ; RV64I-NEXT:    ret
   %1 = getelementptr i16, ptr %a, i32 2
@@ -38,7 +38,7 @@ define dso_local i64 @lw(ptr %a) nounwind {
 ; RV64I-LABEL: lw:
 ; RV64I:       # %bb.0:
 ; RV64I-NEXT:    lw a1, 12(a0)
-; RV64I-NEXT:    lw a0, 0(a0)
+; RV64I-NEXT:    lw zero, 0(a0)
 ; RV64I-NEXT:    mv a0, a1
 ; RV64I-NEXT:    ret
   %1 = getelementptr i32, ptr %a, i32 3
@@ -141,7 +141,7 @@ define dso_local i64 @ld(ptr %a) nounwind {
 ; RV64I-LABEL: ld:
 ; RV64I:       # %bb.0:
 ; RV64I-NEXT:    ld a1, 80(a0)
-; RV64I-NEXT:    ld a0, 0(a0)
+; RV64I-NEXT:    ld zero, 0(a0)
 ; RV64I-NEXT:    mv a0, a1
 ; RV64I-NEXT:    ret
   %1 = getelementptr i64, ptr %a, i32 10
@@ -168,7 +168,7 @@ define dso_local i64 @load_sext_zext_anyext_i1(ptr %a) nounwind {
 ; RV64I:       # %bb.0:
 ; RV64I-NEXT:    lbu a1, 1(a0)
 ; RV64I-NEXT:    lbu a2, 2(a0)
-; RV64I-NEXT:    lbu a0, 0(a0)
+; RV64I-NEXT:    lbu zero, 0(a0)
 ; RV64I-NEXT:    sub a0, a2, a1
 ; RV64I-NEXT:    ret
   ; sextload i1
@@ -190,7 +190,7 @@ define dso_local i16 @load_sext_zext_anyext_i1_i16(ptr %a) nounwind {
 ; RV64I:       # %bb.0:
 ; RV64I-NEXT:    lbu a1, 1(a0)
 ; RV64I-NEXT:    lbu a2, 2(a0)
-; RV64I-NEXT:    lbu a0, 0(a0)
+; RV64I-NEXT:    lbu zero, 0(a0)
 ; RV64I-NEXT:    sub a0, a2, a1
 ; RV64I-NEXT:    ret
   ; sextload i1
@@ -217,7 +217,7 @@ define dso_local i64 @ld_sd_global(i64 %a) nounwind {
 ; RV64I-NEXT:    ld a1, %lo(G)(a2)
 ; RV64I-NEXT:    addi a3, a2, %lo(G)
 ; RV64I-NEXT:    sd a0, %lo(G)(a2)
-; RV64I-NEXT:    ld a2, 72(a3)
+; RV64I-NEXT:    ld zero, 72(a3)
 ; RV64I-NEXT:    sd a0, 72(a3)
 ; RV64I-NEXT:    mv a0, a1
 ; RV64I-NEXT:    ret

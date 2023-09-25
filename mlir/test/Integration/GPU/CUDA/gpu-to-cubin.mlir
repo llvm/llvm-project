@@ -1,8 +1,5 @@
 // RUN: mlir-opt %s \
-// RUN: | mlir-opt -gpu-kernel-outlining \
-// RUN: | mlir-opt -convert-vector-to-scf -convert-scf-to-cf -convert-cf-to-llvm -convert-vector-to-llvm -convert-arith-to-llvm \
-// RUN: | mlir-opt -pass-pipeline='builtin.module(gpu.module(strip-debuginfo,convert-gpu-to-nvvm,gpu-to-cubin))' \
-// RUN: | mlir-opt -gpu-to-llvm -reconcile-unrealized-casts \
+// RUN: | mlir-opt -test-lower-to-nvvm="cubin-format=%gpu_compilation_format" \
 // RUN: | mlir-cpu-runner \
 // RUN:   --shared-libs=%mlir_cuda_runtime \
 // RUN:   --shared-libs=%mlir_runner_utils \

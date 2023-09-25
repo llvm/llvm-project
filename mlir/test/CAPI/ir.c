@@ -35,6 +35,17 @@ static void registerAllUpstreamDialects(MlirContext ctx) {
   mlirDialectRegistryDestroy(registry);
 }
 
+struct ResourceDeleteUserData {
+  const char *name;
+};
+static struct ResourceDeleteUserData resourceI64BlobUserData = {
+    "resource_i64_blob"};
+static void reportResourceDelete(void *userData, const void *data, size_t size,
+                                 size_t align) {
+  fprintf(stderr, "reportResourceDelete: %s\n",
+          ((struct ResourceDeleteUserData *)userData)->name);
+}
+
 void populateLoopBody(MlirContext ctx, MlirBlock loopBody,
                       MlirLocation location, MlirBlock funcBody) {
   MlirValue iv = mlirBlockGetArgument(loopBody, 0);
@@ -475,6 +486,13 @@ static void printFirstOfEach(MlirContext ctx, MlirOperation operation) {
   // clang-format off
   // CHECK: Op print with all flags: %{{.*}} = "arith.constant"() <{value = 0 : index}> {elts = dense_resource<__elided__> : tensor<4xi32>} : () -> index loc(unknown)
   // clang-format on
+
+  MlirAsmState state = mlirAsmStateCreateForOperation(parentOperation, flags);
+  fprintf(stderr, "With state: |");
+  mlirValuePrintAsOperand(value, state, printToStderr, NULL);
+  // CHECK: With state: |%0|
+  fprintf(stderr, "|\n");
+  mlirAsmStateDestroy(state);
 
   mlirOpPrintingFlagsDestroy(flags);
 }
@@ -1118,7 +1136,8 @@ int printBuiltinAttributes(MlirContext ctx) {
 
   const uint8_t *uint8RawData =
       (const uint8_t *)mlirDenseElementsAttrGetRawData(uint8Elements);
-  const int8_t *int8RawData = (const int8_t *)mlirDenseElementsAttrGetRawData(int8Elements);
+  const int8_t *int8RawData =
+      (const int8_t *)mlirDenseElementsAttrGetRawData(int8Elements);
   const uint32_t *uint32RawData =
       (const uint32_t *)mlirDenseElementsAttrGetRawData(uint32Elements);
   const int32_t *int32RawData =
@@ -1127,7 +1146,8 @@ int printBuiltinAttributes(MlirContext ctx) {
       (const uint64_t *)mlirDenseElementsAttrGetRawData(uint64Elements);
   const int64_t *int64RawData =
       (const int64_t *)mlirDenseElementsAttrGetRawData(int64Elements);
-  const float *floatRawData = (const float *)mlirDenseElementsAttrGetRawData(floatElements);
+  const float *floatRawData =
+      (const float *)mlirDenseElementsAttrGetRawData(floatElements);
   const double *doubleRawData =
       (const double *)mlirDenseElementsAttrGetRawData(doubleElements);
   const uint16_t *bf16RawData =
@@ -1268,6 +1288,14 @@ int printBuiltinAttributes(MlirContext ctx) {
   MlirAttribute doublesBlob = mlirUnmanagedDenseDoubleResourceElementsAttrGet(
       mlirRankedTensorTypeGet(2, shape, mlirF64TypeGet(ctx), encoding),
       mlirStringRefCreateFromCString("resource_f64"), 2, doubles);
+  MlirAttribute blobBlob = mlirUnmanagedDenseResourceElementsAttrGet(
+      mlirRankedTensorTypeGet(2, shape, mlirIntegerTypeGet(ctx, 64), encoding),
+      mlirStringRefCreateFromCString("resource_i64_blob"), /*data=*/uints64,
+      /*dataLength=*/sizeof(uints64),
+      /*dataAlignment=*/_Alignof(uint64_t),
+      /*dataIsMutable=*/false,
+      /*deleter=*/reportResourceDelete,
+      /*userData=*/(void *)&resourceI64BlobUserData);
 
   mlirAttributeDump(uint8Blob);
   mlirAttributeDump(uint16Blob);
@@ -1279,6 +1307,7 @@ int printBuiltinAttributes(MlirContext ctx) {
   mlirAttributeDump(int64Blob);
   mlirAttributeDump(floatsBlob);
   mlirAttributeDump(doublesBlob);
+  mlirAttributeDump(blobBlob);
   // CHECK: dense_resource<resource_ui8> : tensor<1x2xui8>
   // CHECK: dense_resource<resource_ui16> : tensor<1x2xui16>
   // CHECK: dense_resource<resource_ui32> : tensor<1x2xui32>
@@ -1289,6 +1318,7 @@ int printBuiltinAttributes(MlirContext ctx) {
   // CHECK: dense_resource<resource_i64> : tensor<1x2xi64>
   // CHECK: dense_resource<resource_f32> : tensor<1x2xf32>
   // CHECK: dense_resource<resource_f64> : tensor<1x2xf64>
+  // CHECK: dense_resource<resource_i64_blob> : tensor<1x2xi64>
 
   if (mlirDenseUInt8ResourceElementsAttrGetValue(uint8Blob, 1) != 1 ||
       mlirDenseUInt16ResourceElementsAttrGetValue(uint16Blob, 1) != 1 ||
@@ -1302,7 +1332,8 @@ int printBuiltinAttributes(MlirContext ctx) {
       fabsf(mlirDenseFloatResourceElementsAttrGetValue(floatsBlob, 1) - 1.0f) >
           1e-6 ||
       fabs(mlirDenseDoubleResourceElementsAttrGetValue(doublesBlob, 1) - 1.0f) >
-          1e-6)
+          1e-6 ||
+      mlirDenseUInt64ResourceElementsAttrGetValue(blobBlob, 1) != 1)
     return 23;
 
   MlirLocation loc = mlirLocationUnknownGet(ctx);
@@ -2320,9 +2351,13 @@ int main(void) {
   if (testDialectRegistry())
     return 15;
 
-  mlirContextDestroy(ctx);
-
   testExplicitThreadPools();
   testDiagnostics();
+
+  // CHECK: DESTROY MAIN CONTEXT
+  // CHECK: reportResourceDelete: resource_i64_blob
+  fprintf(stderr, "DESTROY MAIN CONTEXT\n");
+  mlirContextDestroy(ctx);
+
   return 0;
 }

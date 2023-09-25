@@ -4,6 +4,7 @@
 # RUN: echo "" | llvm-mc -filetype=obj -triple=x86_64-apple-macos -o %t/empty.o
 # RUN: llvm-mc -filetype=obj -triple=x86_64-apple-macos %t/default.s -o %t/default.o
 # RUN: llvm-mc -filetype=obj -triple=x86_64-apple-macos %t/lazydef.s -o %t/lazydef.o
+# RUN: llvm-mc -filetype=obj -triple=x86_64-apple-macos %t/too-many-warnings.s -o %t/too-many-warnings.o
 # RUN: llvm-ar --format=darwin rcs %t/lazydef.a %t/lazydef.o
 
 ## Check that mixing exported and unexported symbol options yields an error
@@ -209,6 +210,17 @@
 # RUN: llvm-objdump --macho --exports-trie %t/unexport-dylib | FileCheck %s \
 # RUN:   --check-prefix=EMPTY-TRIE
 
+## Check that warnings are truncated to the first 3 only.
+# RUN: %no-fatal-warnings-lld -dylib %t/too-many-warnings.o -o %t/too-many.out \
+# RUN:         -exported_symbol "_private_extern*" 2>&1 | \
+# RUN:     FileCheck --check-prefix=TRUNCATE %s
+
+# TRUNCATE: warning: cannot export hidden symbol _private_extern{{.+}}
+# TRUNCATE: warning: cannot export hidden symbol _private_extern{{.+}}
+# TRUNCATE: warning: cannot export hidden symbol _private_extern{{.+}}
+# TRUNCATE: warning: <... 7 more similar warnings...>
+# TRUNCATE-EMPTY:
+
 #--- default.s
 
 .globl _keep_globl, _hide_globl, _tlv
@@ -282,4 +294,46 @@ _foo:
 .weak_definition _foo
 .private_extern _foo
 _foo:
+  retq
+
+#--- too-many-warnings.s
+.private_extern _private_extern1
+.private_extern _private_extern2
+.private_extern _private_extern3
+.private_extern _private_extern4
+.private_extern _private_extern5
+.private_extern _private_extern6
+.private_extern _private_extern7
+.private_extern _private_extern8
+.private_extern _private_extern9
+.private_extern _private_extern10
+
+_private_extern1:
+  retq
+
+_private_extern2:
+  retq
+
+_private_extern3:
+  retq
+
+_private_extern4:
+  retq
+
+_private_extern5:
+  retq
+
+_private_extern6:
+  retq
+
+_private_extern7:
+  retq
+
+_private_extern8:
+  retq
+
+_private_extern9:
+  retq
+
+_private_extern10:
   retq

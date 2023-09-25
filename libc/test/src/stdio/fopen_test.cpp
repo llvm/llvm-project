@@ -9,7 +9,7 @@
 #include "src/__support/File/file.h"
 #include "src/stdio/fclose.h"
 #include "src/stdio/fopen.h"
-#include "src/stdio/fputs.h"
+#include "src/stdio/fwrite.h"
 #include "src/stdio/fread.h"
 
 #include "test/UnitTest/Test.h"
@@ -21,7 +21,7 @@ TEST(LlvmLibcFOpenTest, PrintToFile) {
   ASSERT_FALSE(file == nullptr);
 
   static constexpr char STRING[] = "A simple string written to a file\n";
-  result = __llvm_libc::fputs(STRING, file);
+  result = __llvm_libc::fwrite(STRING, 1, sizeof(STRING) - 1, file);
   EXPECT_GE(result, 0);
 
   ASSERT_EQ(0, __llvm_libc::fclose(file));

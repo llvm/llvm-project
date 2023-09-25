@@ -37,7 +37,7 @@ entry:
 ; CHECK-DAG: addis [[REG1:[0-9]+]], 13, tls_something@tprel@ha
 ; CHECK-DAG: std 2, 40(1)
 ; CHECK-DAG: addi [[REG3:[0-9]+]], [[REG1]], tls_something@tprel@l
-; CHECK-DAG: ld [[REG2:[0-9]+]], 0([[REG3]])
+; CHECK-DAG: ld [[REG2:[0-9]+]], tls_something@tprel@l([[REG1]])
 ; CHECK-DAG: ld 11, 16([[REG3]])
 ; CHECK-DAG: ld 2, 8([[REG3]])
 ; CHECK-DAG: mtctr [[REG2]]

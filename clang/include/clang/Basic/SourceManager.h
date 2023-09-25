@@ -148,7 +148,7 @@ public:
   ///
   /// Can be different from 'Entry' if we overridden the contents of one file
   /// with the contents of another file.
-  const FileEntry *ContentsEntry;
+  OptionalFileEntryRef ContentsEntry;
 
   /// The filename that is used to access OrigEntry.
   ///
@@ -180,13 +180,13 @@ public:
   mutable unsigned IsBufferInvalid : 1;
 
   ContentCache()
-      : OrigEntry(std::nullopt), ContentsEntry(nullptr),
+      : OrigEntry(std::nullopt), ContentsEntry(std::nullopt),
         BufferOverridden(false), IsFileVolatile(false), IsTransient(false),
         IsBufferInvalid(false) {}
 
   ContentCache(FileEntryRef Ent) : ContentCache(Ent, Ent) {}
 
-  ContentCache(FileEntryRef Ent, const FileEntry *contentEnt)
+  ContentCache(FileEntryRef Ent, FileEntryRef contentEnt)
       : OrigEntry(Ent), ContentsEntry(contentEnt), BufferOverridden(false),
         IsFileVolatile(false), IsTransient(false), IsBufferInvalid(false) {}
 

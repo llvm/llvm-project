@@ -20,8 +20,7 @@ define internal void @_Z12global_writePi(ptr noundef %p) #0 {
 ; CHECK-SAME: (ptr nofree noundef nonnull writeonly align 4 dereferenceable(8) [[P:%.*]]) #[[ATTR0:[0-9]+]] {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[TMP0:%.*]] = addrspacecast ptr [[P]] to ptr addrspace(1)
-; CHECK-NEXT:    [[TMP1:%.*]] = addrspacecast ptr [[P]] to ptr addrspace(1)
-; CHECK-NEXT:    store ptr addrspace(1) [[TMP0]], ptr addrspace(1) [[TMP1]], align 4
+; CHECK-NEXT:    store ptr [[P]], ptr addrspace(1) [[TMP0]], align 4
 ; CHECK-NEXT:    ret void
 ;
 entry:

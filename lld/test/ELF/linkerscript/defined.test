@@ -1,0 +1,45 @@
+# REQUIRES: x86
+# RUN: llvm-mc -filetype=obj -triple=x86_64 %p/Inputs/define.s -o %t.o
+# RUN: ld.lld -o %t --defsym vv=1 --script %s %t.o
+# RUN: llvm-readelf -S -s %t | FileCheck %s
+
+# CHECK:      [Nr] Name   Type     Address          Off    Size   ES Flg Lk Inf Al
+# CHECK-NEXT: [ 0]        NULL     0000000000000000 000000 000000 00      0   0  0
+# CHECK-NEXT: [ 1] .foo   PROGBITS 0000000000011000 001000 000008 00   A  0   0  1
+# CHECK-NEXT: [ 2] .bar   PROGBITS 0000000000013000 003000 000008 00   A  0   0  1
+# CHECK-NEXT: [ 3] .test  PROGBITS 0000000000015000 005000 000008 00   A  0   0  1
+# CHECK-NEXT: [ 4] .text  PROGBITS 0000000000015008 005008 000000 00  AX  0   0  4
+
+# CHECK:         Value          Size Type    Bind   Vis       Ndx Name
+# CHECK-DAG:  0000000000000001     0 NOTYPE  GLOBAL DEFAULT   ABS vv
+# CHECK-DAG:  0000000000000009     0 NOTYPE  GLOBAL DEFAULT   ABS ww
+# CHECK-DAG:  0000000000000001     0 NOTYPE  GLOBAL DEFAULT   ABS x1
+# CHECK-DAG:  0000000000000002     0 NOTYPE  GLOBAL DEFAULT   ABS x2
+# CHECK-DAG:  0000000000000001     0 NOTYPE  GLOBAL DEFAULT   ABS y1
+# CHECK-DAG:  0000000000000002     0 NOTYPE  GLOBAL DEFAULT   ABS y2
+
+EXTERN(extern_defined)
+SECTIONS {
+  . = DEFINED(defined) ? 0x11000 : .;
+  .foo : { *(.foo*) }
+  . = DEFINED(notdefined) ? 0x12000 : 0x13000;
+  .bar : { *(.bar*) }
+  . = DEFINED(extern_defined) ? 0x14000 : 0x15000;
+
+## Take the value from --defsym.
+  vv = DEFINED(vv) ? vv : 9;
+## 9 as ww is undefined.
+  ww = DEFINED(ww) ? ww : 9;
+
+## 1 as xx is not yet defined.
+  x1 = DEFINED(xx) ? 2 : 1;
+  .test : {
+    xx = .;
+    *(.test*)
+  }
+  x2 = DEFINED(xx) ? 2 : 1;
+
+  y1 = DEFINED(yy) ? 2 : 1;
+  yy = .;
+  y2 = DEFINED(yy) ? 2 : 1;
+}

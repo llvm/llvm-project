@@ -342,8 +342,8 @@ void LinkerDriver::enqueueArchiveMember(const Archive::Child &c,
       CHECK(c.getFullName(),
             "could not get the filename for the member defining symbol " +
                 toCOFFString(ctx, sym));
-  auto future = std::make_shared<std::future<MBErrPair>>(
-      createFutureForFile(childName));
+  auto future =
+      std::make_shared<std::future<MBErrPair>>(createFutureForFile(childName));
   enqueueTask([=]() {
     auto mbOrErr = future->get();
     if (mbOrErr.second)
@@ -640,26 +640,28 @@ void LinkerDriver::detectWinSysRoot(const opt::InputArgList &Args) {
 void LinkerDriver::addClangLibSearchPaths(const std::string &argv0) {
   std::string lldBinary = sys::fs::getMainExecutable(argv0.c_str(), nullptr);
   SmallString<128> binDir(lldBinary);
-  sys::path::remove_filename(binDir); // remove lld-link.exe
+  sys::path::remove_filename(binDir);                 // remove lld-link.exe
   StringRef rootDir = sys::path::parent_path(binDir); // remove 'bin'
 
   SmallString<128> libDir(rootDir);
   sys::path::append(libDir, "lib");
   // We need to prepend the paths here in order to make sure that we always
-  // try to link the clang versions of the builtins over the ones supplied by MSVC.
+  // try to link the clang versions of the builtins over the ones supplied by
+  // MSVC.
   searchPaths.insert(searchPaths.begin(), saver().save(libDir.str()));
 
   // Add the resource dir library path
   SmallString<128> runtimeLibDir(rootDir);
-  sys::path::append(runtimeLibDir, "lib", "clang", std::to_string(LLVM_VERSION_MAJOR), "lib");
+  sys::path::append(runtimeLibDir, "lib", "clang",
+                    std::to_string(LLVM_VERSION_MAJOR), "lib");
   searchPaths.insert(searchPaths.begin(), saver().save(runtimeLibDir.str()));
 
   // Resource dir + osname, which is hardcoded to windows since we are in the
   // COFF driver.
   SmallString<128> runtimeLibDirWithOS(runtimeLibDir);
   sys::path::append(runtimeLibDirWithOS, "windows");
-  searchPaths.insert(searchPaths.begin(), saver().save(runtimeLibDirWithOS.str()));
-
+  searchPaths.insert(searchPaths.begin(),
+                     saver().save(runtimeLibDirWithOS.str()));
 }
 
 void LinkerDriver::addWinSysRootLibSearchPaths() {
@@ -1145,8 +1147,7 @@ void LinkerDriver::parseOrderFile(StringRef arg) {
     if (set.count(s) == 0) {
       if (ctx.config.warnMissingOrderSymbol)
         warn("/order:" + arg + ": missing symbol: " + s + " [LNK4037]");
-    }
-    else
+    } else
       ctx.config.order[s] = INT_MIN + ctx.config.order.size();
   }
 
@@ -1313,8 +1314,8 @@ void LinkerDriver::parsePDBAltPath() {
     else if (var.equals_insensitive("%_ext%"))
       buf.append(binaryExtension);
     else {
-      warn("only %_PDB% and %_EXT% supported in /pdbaltpath:, keeping " +
-           var + " as literal");
+      warn("only %_PDB% and %_EXT% supported in /pdbaltpath:, keeping " + var +
+           " as literal");
       buf.append(var);
     }
 
@@ -1448,8 +1449,8 @@ getVFS(const opt::InputArgList &args) {
     return nullptr;
   }
 
-  if (auto ret = vfs::getVFSFromYAML(std::move(*bufOrErr), /*DiagHandler*/ nullptr,
-                             arg->getValue()))
+  if (auto ret = vfs::getVFSFromYAML(std::move(*bufOrErr),
+                                     /*DiagHandler*/ nullptr, arg->getValue()))
     return ret;
 
   error("Invalid vfs overlay");
@@ -2101,7 +2102,7 @@ void LinkerDriver::linkerMain(ArrayRef<const char *> argsArr) {
   // Handle /RELEASE
   if (args.hasArg(OPT_release))
     config->writeCheckSum = true;
-  
+
   // Handle /safeseh, x86 only, on by default, except for mingw.
   if (config->machine == I386) {
     config->safeSEH = args.hasFlag(OPT_safeseh, OPT_safeseh_no, !config->mingw);
@@ -2342,7 +2343,8 @@ void LinkerDriver::linkerMain(ArrayRef<const char *> argsArr) {
   std::vector<WrappedSymbol> wrapped = addWrappedSymbols(ctx, args);
   // Load more object files that might be needed for wrapped symbols.
   if (!wrapped.empty())
-    while (run());
+    while (run())
+      ;
 
   if (config->autoImport || config->stdcallFixup) {
     // MinGW specific.

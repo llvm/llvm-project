@@ -18,5 +18,9 @@ _start:
 // CHECK: auipc t0, %pcrel_hi(d)
 // CHECK-NEXT: ld t0, %pcrel_lo(.Ltmp0)(t0)
   ld t0, d
+// CHECK: .Ltmp1
+// CHECK: auipc t1, %pcrel_hi(d)
+// CHECK-NEXT: sd t0, %pcrel_lo(.Ltmp1)(t1)
+  sd t0, d, t1
   ret
   .size _start, .-_start

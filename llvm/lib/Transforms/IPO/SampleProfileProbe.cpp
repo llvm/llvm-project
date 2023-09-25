@@ -95,13 +95,13 @@ void PseudoProbeVerifier::runAfterPass(StringRef PassID, Any IR) {
   std::string Banner =
       "\n*** Pseudo Probe Verification After " + PassID.str() + " ***\n";
   dbgs() << Banner;
-  if (const auto **M = any_cast<const Module *>(&IR))
+  if (const auto **M = llvm::any_cast<const Module *>(&IR))
     runAfterPass(*M);
-  else if (const auto **F = any_cast<const Function *>(&IR))
+  else if (const auto **F = llvm::any_cast<const Function *>(&IR))
     runAfterPass(*F);
-  else if (const auto **C = any_cast<const LazyCallGraph::SCC *>(&IR))
+  else if (const auto **C = llvm::any_cast<const LazyCallGraph::SCC *>(&IR))
     runAfterPass(*C);
-  else if (const auto **L = any_cast<const Loop *>(&IR))
+  else if (const auto **L = llvm::any_cast<const Loop *>(&IR))
     runAfterPass(*L);
   else
     llvm_unreachable("Unknown IR unit");

@@ -121,6 +121,46 @@ TEST(CompilerInvocationTest, DeepCopyAssignment) {
   ASSERT_EQ(A.getAnalyzerOpts().Config["Key"], "Old");
 }
 
+TEST(CompilerInvocationTest, CopyOnWriteConstructor) {
+  CowCompilerInvocation A;
+  A.getMutFrontendOpts().OutputFile = "x.o";
+
+  // B's FrontendOptions are initially shared with A.
+  CowCompilerInvocation B(A);
+  EXPECT_EQ(&A.getFrontendOpts(), &B.getFrontendOpts());
+
+  // Modifying A's FrontendOptions creates new copy, does not affect other opts.
+  A.getMutFrontendOpts().OutputFile = "y.o";
+  EXPECT_NE(&A.getFrontendOpts(), &B.getFrontendOpts());
+  EXPECT_EQ(&A.getCodeGenOpts(), &B.getCodeGenOpts());
+
+  // The new copy reflects the modification, old instance remains unchanged.
+  EXPECT_EQ(A.getFrontendOpts().OutputFile, "y.o");
+  EXPECT_EQ(B.getFrontendOpts().OutputFile, "x.o");
+}
+
+TEST(CompilerInvocationTest, CopyOnWriteAssignment) {
+  CowCompilerInvocation A;
+  A.getMutFrontendOpts().OutputFile = "x.o";
+
+  // B's FrontendOptions are initially independent of A.
+  CowCompilerInvocation B;
+  EXPECT_NE(&A.getFrontendOpts(), &B.getFrontendOpts());
+
+  // B's FrontendOptions are shared with A after assignment.
+  B = A;
+  EXPECT_EQ(&A.getFrontendOpts(), &B.getFrontendOpts());
+
+  // Modifying A's FrontendOptions creates new copy, does not affect other opts.
+  A.getMutFrontendOpts().OutputFile = "y.o";
+  EXPECT_NE(&A.getFrontendOpts(), &B.getFrontendOpts());
+  EXPECT_EQ(&A.getCodeGenOpts(), &B.getCodeGenOpts());
+
+  // The new copy reflects the modification, old instance remains unchanged.
+  EXPECT_EQ(A.getFrontendOpts().OutputFile, "y.o");
+  EXPECT_EQ(B.getFrontendOpts().OutputFile, "x.o");
+}
+
 // Boolean option with a keypath that defaults to true.
 // The only flag with a negative spelling can set the keypath to false.
 

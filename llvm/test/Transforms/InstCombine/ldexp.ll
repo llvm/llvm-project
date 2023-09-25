@@ -488,8 +488,7 @@ define float @ldexp_ldexp_constants_nsz1(float %x) {
 define float @ldexp_ldexp_opposite_constants(float %x) {
 ; CHECK-LABEL: define float @ldexp_ldexp_opposite_constants
 ; CHECK-SAME: (float [[X:%.*]]) {
-; CHECK-NEXT:    [[LDEXP1:%.*]] = call reassoc float @llvm.ldexp.f32.i32(float [[X]], i32 0)
-; CHECK-NEXT:    ret float [[LDEXP1]]
+; CHECK-NEXT:    ret float [[X]]
 ;
   %ldexp0 = call reassoc float @llvm.ldexp.f32.i32(float %x, i32 8)
   %ldexp1 = call reassoc float @llvm.ldexp.f32.i32(float %ldexp0, i32 -8)
@@ -499,8 +498,7 @@ define float @ldexp_ldexp_opposite_constants(float %x) {
 define float @ldexp_ldexp_negated_variable_reassoc(float %x, i32 %a) {
 ; CHECK-LABEL: define float @ldexp_ldexp_negated_variable_reassoc
 ; CHECK-SAME: (float [[X:%.*]], i32 [[A:%.*]]) {
-; CHECK-NEXT:    [[LDEXP1:%.*]] = call reassoc float @llvm.ldexp.f32.i32(float [[X]], i32 0)
-; CHECK-NEXT:    ret float [[LDEXP1]]
+; CHECK-NEXT:    ret float [[X]]
 ;
   %ldexp0 = call reassoc float @llvm.ldexp.f32.i32(float %x, i32 %a)
   %neg.a = sub i32 0, %a
@@ -628,8 +626,7 @@ define float @ldexp_reassoc_ldexp_reassoc_0(float %x, i32 %y) {
 define float @ldexp_ldexp_0(float %x, i32 %y) {
 ; CHECK-LABEL: define float @ldexp_ldexp_0
 ; CHECK-SAME: (float [[X:%.*]], i32 [[Y:%.*]]) {
-; CHECK-NEXT:    [[LDEXP0:%.*]] = call float @llvm.ldexp.f32.i32(float [[X]], i32 0)
-; CHECK-NEXT:    [[LDEXP1:%.*]] = call float @llvm.ldexp.f32.i32(float [[LDEXP0]], i32 [[Y]])
+; CHECK-NEXT:    [[LDEXP1:%.*]] = call float @llvm.ldexp.f32.i32(float [[X]], i32 [[Y]])
 ; CHECK-NEXT:    ret float [[LDEXP1]]
 ;
   %ldexp0 = call float @llvm.ldexp.f32.i32(float %x, i32 0)
@@ -754,8 +751,7 @@ define float @ldexp_neg1(float %x) {
 define float @ldexp_0(float %x) {
 ; CHECK-LABEL: define float @ldexp_0
 ; CHECK-SAME: (float [[X:%.*]]) {
-; CHECK-NEXT:    [[LDEXP:%.*]] = call float @llvm.ldexp.f32.i32(float [[X]], i32 0)
-; CHECK-NEXT:    ret float [[LDEXP]]
+; CHECK-NEXT:    ret float [[X]]
 ;
   %ldexp = call float @llvm.ldexp.f32.i32(float %x, i32 0)
   ret float %ldexp

@@ -14,7 +14,8 @@
 #include <__chrono/convert_to_timespec.h>
 #include <__chrono/duration.h>
 #include <__config>
-#include <__thread/poll_with_backoff.h>
+#include <__fwd/hash.h>
+#include <ctime>
 #include <errno.h>
 
 #ifdef __MVS__
@@ -101,7 +102,7 @@ typedef cnd_t __libcpp_condvar_t;
 #define _LIBCPP_CONDVAR_INITIALIZER {}
 
 // Execute once
-typedef once_flag __libcpp_exec_once_flag;
+typedef ::once_flag __libcpp_exec_once_flag;
 #define _LIBCPP_EXEC_ONCE_INITIALIZER ONCE_FLAG_INIT
 
 // Thread id

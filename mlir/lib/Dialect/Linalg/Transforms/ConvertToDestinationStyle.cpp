@@ -202,9 +202,11 @@ createAllocationForTensor(RewriterBase &rewriter, Location loc, Value value,
   if (options.allocOp ==
       linalg::BufferizeToAllocationOptions::AllocOp::MemrefAlloc) {
     alloc = rewriter.create<memref::AllocOp>(loc, memrefType, dynamicSizes);
-    // Place deallocation at the end of the block.
-    rewriter.setInsertionPoint(rewriter.getInsertionBlock()->getTerminator());
-    rewriter.create<memref::DeallocOp>(loc, alloc);
+    if (options.emitDealloc) {
+      // Place deallocation at the end of the block.
+      rewriter.setInsertionPoint(rewriter.getInsertionBlock()->getTerminator());
+      rewriter.create<memref::DeallocOp>(loc, alloc);
+    }
   } else if (options.allocOp ==
              linalg::BufferizeToAllocationOptions::AllocOp::MemrefAlloca) {
     alloc = rewriter.create<memref::AllocaOp>(loc, memrefType, dynamicSizes);

@@ -11,7 +11,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Fetch LLVM sources
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
       - name: Run Sync Script
         run: |
           llvm/utils/git/sync-release-repo.sh

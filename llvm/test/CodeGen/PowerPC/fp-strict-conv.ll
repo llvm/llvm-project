@@ -189,9 +189,9 @@ define double @i32_to_d(i32 signext %m) #0 {
 ;
 ; NOVSX-LABEL: i32_to_d:
 ; NOVSX:       # %bb.0: # %entry
-; NOVSX-NEXT:    addi r4, r1, -4
 ; NOVSX-NEXT:    stw r3, -4(r1)
-; NOVSX-NEXT:    lfiwax f0, 0, r4
+; NOVSX-NEXT:    addi r3, r1, -4
+; NOVSX-NEXT:    lfiwax f0, 0, r3
 ; NOVSX-NEXT:    fcfid f1, f0
 ; NOVSX-NEXT:    blr
 entry:
@@ -226,9 +226,9 @@ define double @u32_to_d(i32 zeroext %m) #0 {
 ;
 ; NOVSX-LABEL: u32_to_d:
 ; NOVSX:       # %bb.0: # %entry
-; NOVSX-NEXT:    addi r4, r1, -4
 ; NOVSX-NEXT:    stw r3, -4(r1)
-; NOVSX-NEXT:    lfiwzx f0, 0, r4
+; NOVSX-NEXT:    addi r3, r1, -4
+; NOVSX-NEXT:    lfiwzx f0, 0, r3
 ; NOVSX-NEXT:    fcfidu f1, f0
 ; NOVSX-NEXT:    blr
 entry:
@@ -263,9 +263,9 @@ define float @i32_to_f(i32 signext %m) #0 {
 ;
 ; NOVSX-LABEL: i32_to_f:
 ; NOVSX:       # %bb.0: # %entry
-; NOVSX-NEXT:    addi r4, r1, -4
 ; NOVSX-NEXT:    stw r3, -4(r1)
-; NOVSX-NEXT:    lfiwax f0, 0, r4
+; NOVSX-NEXT:    addi r3, r1, -4
+; NOVSX-NEXT:    lfiwax f0, 0, r3
 ; NOVSX-NEXT:    fcfids f1, f0
 ; NOVSX-NEXT:    blr
 entry:
@@ -300,9 +300,9 @@ define float @u32_to_f(i32 zeroext %m) #0 {
 ;
 ; NOVSX-LABEL: u32_to_f:
 ; NOVSX:       # %bb.0: # %entry
-; NOVSX-NEXT:    addi r4, r1, -4
 ; NOVSX-NEXT:    stw r3, -4(r1)
-; NOVSX-NEXT:    lfiwzx f0, 0, r4
+; NOVSX-NEXT:    addi r3, r1, -4
+; NOVSX-NEXT:    lfiwzx f0, 0, r3
 ; NOVSX-NEXT:    fcfidus f1, f0
 ; NOVSX-NEXT:    blr
 entry:

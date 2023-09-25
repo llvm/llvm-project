@@ -26,6 +26,11 @@ class TestCorefileExceptionReason(TestBase):
         self.runCmd("continue")
 
         self.runCmd("process save-core -s stack " + corefile)
+        live_tids = []
+        if self.TraceOn():
+            self.runCmd("thread list")
+        for t in process.threads:
+            live_tids.append(t.GetThreadID())
         process.Kill()
         self.dbg.DeleteTarget(target)
 
@@ -42,3 +47,9 @@ class TestCorefileExceptionReason(TestBase):
         self.assertEqual(
             thread.GetStopDescription(256), "ESR_EC_DABORT_EL0 (fault address: 0x0)"
         )
+
+        if self.TraceOn():
+            self.runCmd("thread list")
+        for i in range(process.GetNumThreads()):
+            t = process.GetThreadAtIndex(i)
+            self.assertEqual(t.GetThreadID(), live_tids[i])

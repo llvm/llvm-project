@@ -89,3 +89,8 @@ float __attribute__((target_version("rdm"))) rtype(int);
 int __attribute__((target_version("sha2"))) combine(void) { return 1; }
 // expected-error@+1 {{multiversioned function declaration has a different calling convention}}
 int __attribute__((aarch64_vector_pcs, target_version("sha3"))) combine(void) { return 2; }
+
+int __attribute__((target_version("fp+aes+pmull+rcpc"))) unspec_args() { return -1; }
+// expected-error@+1 {{multiversioned function must have a prototype}}
+int __attribute__((target_version("default"))) unspec_args() { return 0; }
+int cargs() { return unspec_args(); }

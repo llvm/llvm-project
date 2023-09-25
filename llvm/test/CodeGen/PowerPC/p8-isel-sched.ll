@@ -30,11 +30,11 @@ entry:
 ; CHECK-NO-ISEL: bc 12, 2, [[TRUE:.LBB[0-9]+]]
 ; CHECK-NO-ISEL: b [[SUCCESSOR:.LBB[0-9]+]]
 ; CHECK-NO-ISEL: [[TRUE]]
-; CHECK-NO-ISEL-NEXT: addi {{[0-9]+}}, {{[0-9]+}}, 0
+; CHECK-NO-ISEL: addi {{[0-9]+}}, {{[0-9]+}}, -2
 ; CHECK: addi
 ; CHECK: isel
 ; CHECK-NO-ISEL: bc 12, 2, [[TRUE:.LBB[0-9]+]]
-; CHECK-NO-ISEL: ori 10, 11, 0
+; CHECK-NO-ISEL: ori 3, 7, 0
 ; CHECK-NO-ISEL-NEXT: b [[SUCCESSOR:.LBB[0-9]+]]
 ; CHECK-NO-ISEL: [[TRUE]]
 ; CHECK: blr

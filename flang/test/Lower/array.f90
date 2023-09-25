@@ -1,6 +1,6 @@
 ! RUN: bbc -o - %s | FileCheck %s
 
-! CHECK-LABEL: fir.global @_QCblock
+! CHECK-LABEL: fir.global @block_
 ! CHECK-DAG: %[[VAL_1:.*]] = arith.constant 1.000000e+00 : f32
 ! CHECK-DAG: %[[VAL_2:.*]] = arith.constant 2.400000e+00 : f32
 ! CHECK-DAG: %[[VAL_3:.*]] = arith.constant 0.000000e+00 : f32

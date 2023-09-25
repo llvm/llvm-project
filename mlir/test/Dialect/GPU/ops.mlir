@@ -127,6 +127,16 @@ module attributes {gpu.container_module} {
 
   gpu.binary @binary_3 <#gpu.select_object<1>> [#gpu.object<#nvvm.target, "">, #gpu.object<#nvvm.target<chip = "sm_90">, "">]
 
+  gpu.binary @binary_4 [#gpu.object<#nvvm.target, bin = "">,
+                        #gpu.object<#nvvm.target, assembly = "">,
+                        #gpu.object<#nvvm.target, offload = "">,
+                        #gpu.object<#nvvm.target, properties = { O = 3 : i32 }, offload = "">
+                        ]
+
+  // Check that fatbin gets ellided as it's the default format.
+  // CHECK: gpu.binary @binary_5 [#gpu.object<#nvvm.target, properties = {O = 3 : i32}, "">]
+  gpu.binary @binary_5 [#gpu.object<#nvvm.target, properties = {O = 3 : i32}, fatbin = "">]
+
   func.func private @two_value_generator() -> (f32, memref<?xf32, 1>)
 
   func.func @foo() {
@@ -137,7 +147,7 @@ module attributes {gpu.container_module} {
     %cstI64 = arith.constant 8 : i64
     %c0 = arith.constant 0 : i32
     %t0 = gpu.wait async
-    %lowStream = llvm.mlir.null : !llvm.ptr
+    %lowStream = llvm.mlir.zero : !llvm.ptr
 
     // CHECK: gpu.launch_func @kernels::@kernel_1 blocks in (%{{.*}}, %{{.*}}, %{{.*}}) threads in (%{{.*}}, %{{.*}}, %{{.*}}) args(%{{.*}} : f32, %{{.*}} : memref<?xf32, 1>)
     gpu.launch_func @kernels::@kernel_1 blocks in (%cst, %cst, %cst) threads in (%cst, %cst, %cst) args(%0 : f32, %1 : memref<?xf32, 1>)

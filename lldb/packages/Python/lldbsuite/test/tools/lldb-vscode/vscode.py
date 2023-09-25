@@ -648,13 +648,15 @@ class DebugCommunication(object):
             "arguments": args_dict,
         }
         return self.send_recv(command_dict)
-    
-    def request_disassemble(self, memoryReference, offset=-50, instructionCount=200, resolveSymbols=True):
+
+    def request_disassemble(
+        self, memoryReference, offset=-50, instructionCount=200, resolveSymbols=True
+    ):
         args_dict = {
             "memoryReference": memoryReference,
             "offset": offset,
             "instructionCount": instructionCount,
-            "resolveSymbols": resolveSymbols
+            "resolveSymbols": resolveSymbols,
         }
         command_dict = {
             "command": "disassemble",
@@ -727,6 +729,8 @@ class DebugCommunication(object):
         sourceMap=None,
         runInTerminal=False,
         postRunCommands=None,
+        enableAutoVariableSummaries=False,
+        enableSyntheticChildDebugging=False,
     ):
         args_dict = {"program": program}
         if args:
@@ -768,6 +772,8 @@ class DebugCommunication(object):
             args_dict["runInTerminal"] = runInTerminal
         if postRunCommands:
             args_dict["postRunCommands"] = postRunCommands
+        args_dict["enableAutoVariableSummaries"] = enableAutoVariableSummaries
+        args_dict["enableSyntheticChildDebugging"] = enableSyntheticChildDebugging
         command_dict = {"command": "launch", "type": "request", "arguments": args_dict}
         response = self.send_recv(command_dict)
 

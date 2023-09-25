@@ -1,4 +1,7 @@
+; RUN: llc -mtriple=thumbv7 -mattr=+crc -o - %s | FileCheck %s
 ; RUN: llc -mtriple=thumbv8 -o - %s | FileCheck %s
+; RUN: llc -mtriple=armv7 -mattr=+crc -o - %s | FileCheck %s
+; RUN: llc -mtriple=armv8 -o - %s | FileCheck %s
 
 define i32 @test_crc32b(i32 %cur, i8 %next) {
 ; CHECK-LABEL: test_crc32b:

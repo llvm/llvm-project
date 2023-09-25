@@ -21,14 +21,14 @@ define i1 @shufeq(<2 x i64> %a) #0 {
 ;
 ; CHECK_LE-LABEL: shufeq:
 ; CHECK_LE:       # %bb.0: # %entry
-; CHECK_LE-NEXT:    xxswapd 35, 34
 ; CHECK_LE-NEXT:    addis 3, 2, .LCPI0_0@toc@ha
+; CHECK_LE-NEXT:    xxswapd 35, 34
 ; CHECK_LE-NEXT:    addi 3, 3, .LCPI0_0@toc@l
 ; CHECK_LE-NEXT:    lxvd2x 0, 0, 3
 ; CHECK_LE-NEXT:    addi 3, 1, -16
 ; CHECK_LE-NEXT:    vcmpequw 2, 2, 3
-; CHECK_LE-NEXT:    xxswapd 35, 0
-; CHECK_LE-NEXT:    vperm 3, 2, 2, 3
+; CHECK_LE-NEXT:    xxswapd 36, 0
+; CHECK_LE-NEXT:    vperm 3, 2, 2, 4
 ; CHECK_LE-NEXT:    xxland 0, 35, 34
 ; CHECK_LE-NEXT:    xxswapd 0, 0
 ; CHECK_LE-NEXT:    stxvd2x 0, 0, 3
@@ -65,14 +65,14 @@ define i1 @shufne(<2 x i64> %a) #0 {
 ;
 ; CHECK_LE-LABEL: shufne:
 ; CHECK_LE:       # %bb.0: # %entry
-; CHECK_LE-NEXT:    xxswapd 35, 34
 ; CHECK_LE-NEXT:    addis 3, 2, .LCPI1_0@toc@ha
+; CHECK_LE-NEXT:    xxswapd 35, 34
 ; CHECK_LE-NEXT:    addi 3, 3, .LCPI1_0@toc@l
 ; CHECK_LE-NEXT:    lxvd2x 0, 0, 3
 ; CHECK_LE-NEXT:    addi 3, 1, -16
 ; CHECK_LE-NEXT:    vcmpequw 2, 2, 3
-; CHECK_LE-NEXT:    xxswapd 35, 0
-; CHECK_LE-NEXT:    vperm 3, 2, 2, 3
+; CHECK_LE-NEXT:    xxswapd 36, 0
+; CHECK_LE-NEXT:    vperm 3, 2, 2, 4
 ; CHECK_LE-NEXT:    xxland 0, 35, 34
 ; CHECK_LE-NEXT:    xxswapd 0, 0
 ; CHECK_LE-NEXT:    stxvd2x 0, 0, 3
@@ -109,8 +109,8 @@ define <2 x i64> @cmpeq(<2 x i64> noundef %a, <2 x i64> noundef %b) {
 ; CHECK_LE-NEXT:    vcmpequw 2, 2, 3
 ; CHECK_LE-NEXT:    addi 3, 3, .LCPI2_0@toc@l
 ; CHECK_LE-NEXT:    lxvd2x 0, 0, 3
-; CHECK_LE-NEXT:    xxswapd 35, 0
-; CHECK_LE-NEXT:    vperm 3, 2, 2, 3
+; CHECK_LE-NEXT:    xxswapd 36, 0
+; CHECK_LE-NEXT:    vperm 3, 2, 2, 4
 ; CHECK_LE-NEXT:    xxland 34, 35, 34
 ; CHECK_LE-NEXT:    blr
 ;
@@ -127,8 +127,8 @@ entry:
 define <2 x i64> @cmpne(<2 x i64> noundef %a, <2 x i64> noundef %b) {
 ; CHECK-LABEL: cmpne:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vcmpequw 2, 2, 3
 ; CHECK-NEXT:    lwz 3, L..C3(2) # %const.0
+; CHECK-NEXT:    vcmpequw 2, 2, 3
 ; CHECK-NEXT:    lxvw4x 35, 0, 3
 ; CHECK-NEXT:    xxlnor 34, 34, 34
 ; CHECK-NEXT:    vperm 3, 2, 2, 3
@@ -141,9 +141,9 @@ define <2 x i64> @cmpne(<2 x i64> noundef %a, <2 x i64> noundef %b) {
 ; CHECK_LE-NEXT:    vcmpequw 2, 2, 3
 ; CHECK_LE-NEXT:    addi 3, 3, .LCPI3_0@toc@l
 ; CHECK_LE-NEXT:    lxvd2x 0, 0, 3
-; CHECK_LE-NEXT:    xxswapd 35, 0
 ; CHECK_LE-NEXT:    xxlnor 34, 34, 34
-; CHECK_LE-NEXT:    vperm 3, 2, 2, 3
+; CHECK_LE-NEXT:    xxswapd 36, 0
+; CHECK_LE-NEXT:    vperm 3, 2, 2, 4
 ; CHECK_LE-NEXT:    xxlor 34, 35, 34
 ; CHECK_LE-NEXT:    blr
 ;

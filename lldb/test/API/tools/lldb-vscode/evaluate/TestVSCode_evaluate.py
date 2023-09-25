@@ -28,13 +28,17 @@ class TestVSCode_variables(lldbvscode_testcase.VSCodeTestCaseBase):
     def isExpressionParsedExpected(self):
         return self.context != "hover"
 
-    def run_test_evaluate_expressions(self, context=None):
+    def run_test_evaluate_expressions(
+        self, context=None, enableAutoVariableSummaries=False
+    ):
         """
         Tests the evaluate expression request at different breakpoints
         """
         self.context = context
         program = self.getBuildArtifact("a.out")
-        self.build_and_launch(program)
+        self.build_and_launch(
+            program, enableAutoVariableSummaries=enableAutoVariableSummaries
+        )
         source = "main.cpp"
         self.set_source_breakpoints(
             source,
@@ -55,7 +59,13 @@ class TestVSCode_variables(lldbvscode_testcase.VSCodeTestCaseBase):
         self.assertEvaluate("var2", "21")
         self.assertEvaluate("static_int", "42")
         self.assertEvaluate("non_static_int", "43")
-        self.assertEvaluate("struct1", "my_struct @ 0x.*")
+        self.assertEvaluate(
+            "struct1", "{foo:15}" if enableAutoVariableSummaries else "my_struct @ 0x"
+        )
+        self.assertEvaluate(
+            "struct2", "0x.* {foo:16}" if enableAutoVariableSummaries else "0x.*"
+        )
+        self.assertEvaluate("struct3", "0x.*0")
         self.assertEvaluate("struct1.foo", "15")
         self.assertEvaluate("struct2->foo", "16")
 
@@ -85,7 +95,9 @@ class TestVSCode_variables(lldbvscode_testcase.VSCodeTestCaseBase):
         self.assertEvaluate(
             "non_static_int", "10"
         )  # different variable with the same name
-        self.assertEvaluate("struct1", "my_struct @ 0x.*")
+        self.assertEvaluate(
+            "struct1", "{foo:15}" if enableAutoVariableSummaries else "my_struct @ 0x"
+        )
         self.assertEvaluate("struct1.foo", "15")
         self.assertEvaluate("struct2->foo", "16")
 
@@ -146,22 +158,22 @@ class TestVSCode_variables(lldbvscode_testcase.VSCodeTestCaseBase):
     @skipIfRemote
     def test_generic_evaluate_expressions(self):
         # Tests context-less expression evaluations
-        self.run_test_evaluate_expressions()
+        self.run_test_evaluate_expressions(enableAutoVariableSummaries=False)
 
     @skipIfWindows
     @skipIfRemote
     def test_repl_evaluate_expressions(self):
         # Tests expression evaluations that are triggered from the Debug Console
-        self.run_test_evaluate_expressions("repl")
+        self.run_test_evaluate_expressions("repl", enableAutoVariableSummaries=True)
 
     @skipIfWindows
     @skipIfRemote
     def test_watch_evaluate_expressions(self):
         # Tests expression evaluations that are triggered from a watch expression
-        self.run_test_evaluate_expressions("watch")
+        self.run_test_evaluate_expressions("watch", enableAutoVariableSummaries=False)
 
     @skipIfWindows
     @skipIfRemote
     def test_hover_evaluate_expressions(self):
         # Tests expression evaluations that are triggered when hovering on the editor
-        self.run_test_evaluate_expressions("hover")
+        self.run_test_evaluate_expressions("hover", enableAutoVariableSummaries=True)

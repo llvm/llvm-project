@@ -139,6 +139,24 @@ void MappingTraits<DXContainerYAML::PSVInfo>::mapping(
   IO.mapRequired("SigInputElements", PSV.SigInputElements);
   IO.mapRequired("SigOutputElements", PSV.SigOutputElements);
   IO.mapRequired("SigPatchOrPrimElements", PSV.SigPatchOrPrimElements);
+
+  Triple::EnvironmentType Stage = dxbc::getShaderStage(PSV.Info.ShaderStage);
+  if (PSV.Info.UsesViewID) {
+    MutableArrayRef<SmallVector<llvm::yaml::Hex32>> MutableOutMasks(
+        PSV.OutputVectorMasks);
+    IO.mapRequired("OutputVectorMasks", MutableOutMasks);
+    if (Stage == Triple::EnvironmentType::Hull)
+      IO.mapRequired("PatchOrPrimMasks", PSV.PatchOrPrimMasks);
+  }
+  MutableArrayRef<SmallVector<llvm::yaml::Hex32>> MutableIOMap(
+      PSV.InputOutputMap);
+  IO.mapRequired("InputOutputMap", MutableIOMap);
+
+  if (Stage == Triple::EnvironmentType::Hull)
+    IO.mapRequired("InputPatchMap", PSV.InputPatchMap);
+
+  if (Stage == Triple::EnvironmentType::Domain)
+    IO.mapRequired("PatchOutputMap", PSV.PatchOutputMap);
 }
 
 void MappingTraits<DXContainerYAML::Part>::mapping(IO &IO,

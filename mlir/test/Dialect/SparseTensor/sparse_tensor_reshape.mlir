@@ -1,7 +1,7 @@
 // RUN: mlir-opt %s --post-sparsification-rewrite="enable-runtime-library=false enable-convert=false" \
 // RUN: --cse --canonicalize  | FileCheck %s
 
-#SparseMatrix = #sparse_tensor.encoding<{ lvlTypes = [ "compressed", "compressed" ] }>
+#SparseMatrix = #sparse_tensor.encoding<{ map = (d0, d1) -> (d0 : compressed, d1 : compressed) }>
 
 // CHECK:         func.func @sparse_reshape(
 // CHECK-SAME:    %[[S:.*]]:

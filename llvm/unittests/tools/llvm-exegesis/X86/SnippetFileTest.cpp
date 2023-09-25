@@ -28,10 +28,8 @@ void InitializeX86ExegesisTarget();
 
 namespace {
 
-using testing::AllOf;
 using testing::ElementsAre;
 using testing::Eq;
-using testing::Field;
 using testing::Property;
 using testing::SizeIs;
 using testing::UnorderedElementsAre;

@@ -140,7 +140,7 @@ subroutine host7()
   common /mycom/ n_common
   call takes_array(return_array())
 ! CHECK:  %[[VAL_0:.*]] = arith.constant 0 : index
-! CHECK:  %[[VAL_2:.*]] = fir.address_of(@_QCmycom) : !fir.ref<!fir.array<4xi8>>
+! CHECK:  %[[VAL_2:.*]] = fir.address_of(@mycom_) : !fir.ref<!fir.array<4xi8>>
 ! CHECK:  %[[VAL_3:.*]] = fir.convert %[[VAL_2]] : (!fir.ref<!fir.array<4xi8>>) -> !fir.ref<!fir.array<?xi8>>
 ! CHECK:  %[[VAL_4:.*]] = fir.coordinate_of %[[VAL_3]], %[[VAL_0]] : (!fir.ref<!fir.array<?xi8>>, index) -> !fir.ref<i8>
 ! CHECK:  %[[VAL_5:.*]] = fir.convert %[[VAL_4]] : (!fir.ref<i8>) -> !fir.ref<i32>
@@ -162,7 +162,7 @@ subroutine host8()
   implicit none
   call takes_array(return_array())
 ! CHECK:  %[[VAL_0:.*]] = arith.constant 0 : index
-! CHECK:  %[[VAL_1:.*]] = fir.address_of(@_QCmycom) : !fir.ref<!fir.array<4xi8>>
+! CHECK:  %[[VAL_1:.*]] = fir.address_of(@mycom_) : !fir.ref<!fir.array<4xi8>>
 ! CHECK:  %[[VAL_2:.*]] = fir.convert %[[VAL_1]] : (!fir.ref<!fir.array<4xi8>>) -> !fir.ref<!fir.array<?xi8>>
 ! CHECK:  %[[VAL_3:.*]] = fir.coordinate_of %[[VAL_2]], %[[VAL_0]] : (!fir.ref<!fir.array<?xi8>>, index) -> !fir.ref<i8>
 ! CHECK:  %[[VAL_4:.*]] = fir.convert %[[VAL_3]] : (!fir.ref<i8>) -> !fir.ref<i32>
@@ -190,7 +190,7 @@ contains
 ! CHECK-LABEL: func @_QFhost9Pinternal_proc_a
   subroutine internal_proc_a()
 ! CHECK:  %[[VAL_0:.*]] = arith.constant 0 : index
-! CHECK:  %[[VAL_1:.*]] = fir.address_of(@_QCmycom) : !fir.ref<!fir.array<4xi8>>
+! CHECK:  %[[VAL_1:.*]] = fir.address_of(@mycom_) : !fir.ref<!fir.array<4xi8>>
 ! CHECK:  %[[VAL_2:.*]] = fir.convert %[[VAL_1]] : (!fir.ref<!fir.array<4xi8>>) -> !fir.ref<!fir.array<?xi8>>
 ! CHECK:  %[[VAL_3:.*]] = fir.coordinate_of %[[VAL_2]], %[[VAL_0]] : (!fir.ref<!fir.array<?xi8>>, index) -> !fir.ref<i8>
 ! CHECK:  %[[VAL_4:.*]] = fir.convert %[[VAL_3]] : (!fir.ref<i8>) -> !fir.ref<i32>
@@ -217,7 +217,7 @@ contains
   subroutine internal_proc_a()
     call takes_array(return_array())
 ! CHECK:  %[[VAL_0:.*]] = arith.constant 0 : index
-! CHECK:  %[[VAL_1:.*]] = fir.address_of(@_QCmycom) : !fir.ref<!fir.array<4xi8>>
+! CHECK:  %[[VAL_1:.*]] = fir.address_of(@mycom_) : !fir.ref<!fir.array<4xi8>>
 ! CHECK:  %[[VAL_2:.*]] = fir.convert %[[VAL_1]] : (!fir.ref<!fir.array<4xi8>>) -> !fir.ref<!fir.array<?xi8>>
 ! CHECK:  %[[VAL_3:.*]] = fir.coordinate_of %[[VAL_2]], %[[VAL_0]] : (!fir.ref<!fir.array<?xi8>>, index) -> !fir.ref<i8>
 ! CHECK:  %[[VAL_4:.*]] = fir.convert %[[VAL_3]] : (!fir.ref<i8>) -> !fir.ref<i32>

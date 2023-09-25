@@ -545,9 +545,9 @@ func.func @invalid_vector_type_5(%a : vector<4xf32>, %idx : i32) -> vector<4xf32
 
 // -----
 
-func.func @null_non_llvm_type() {
-  // expected-error@+1 {{'llvm.mlir.null' op result #0 must be LLVM pointer type, but got 'i32'}}
-  llvm.mlir.null : i32
+func.func @zero_non_llvm_type() {
+  // expected-error@+1 {{'llvm.mlir.zero' op result #0 must be LLVM dialect-compatible type, but got 'tensor<4xi32>'}}
+  llvm.mlir.zero : tensor<4xi32>
 }
 
 // -----
@@ -1336,16 +1336,18 @@ func.func @invalid_target_ext_atomic(%arg0 : !llvm.ptr) {
 
 // -----
 
-func.func @invalid_target_ext_constant() {
+func.func @invalid_target_ext_constant_unsupported() {
   // expected-error@+1 {{target extension type does not support zero-initializer}}
-  %0 = llvm.mlir.constant(0 : index) : !llvm.target<"invalid_constant">
+  %0 = llvm.mlir.zero : !llvm.target<"invalid_constant">
+  llvm.return
 }
 
 // -----
 
 func.func @invalid_target_ext_constant() {
-  // expected-error@+1 {{only zero-initializer allowed for target extension types}}
-  %0 = llvm.mlir.constant(42 : index) : !llvm.target<"spirv.Event">
+  // expected-error@+1 {{does not support target extension type.}}
+  %0 = llvm.mlir.constant(0 : index) : !llvm.target<"spirv.Event">
+  llvm.return
 }
 
 // -----

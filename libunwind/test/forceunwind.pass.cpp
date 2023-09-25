@@ -7,7 +7,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-// REQUIRES: linux
+// REQUIRES: linux || freebsd
 
 // TODO: Figure out why this fails with Memory Sanitizer.
 // XFAIL: msan

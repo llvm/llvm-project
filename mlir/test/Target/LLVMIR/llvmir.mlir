@@ -1438,7 +1438,7 @@ llvm.func @integer_extension_and_truncation(%a : i32) {
 // Check that the auxiliary `null` operation is converted into a `null` value.
 // CHECK-LABEL: @null
 llvm.func @null() -> !llvm.ptr<i32> {
-  %0 = llvm.mlir.null : !llvm.ptr<i32>
+  %0 = llvm.mlir.zero : !llvm.ptr<i32>
   // CHECK: ret ptr null
   llvm.return %0 : !llvm.ptr<i32>
 }
@@ -1536,7 +1536,7 @@ llvm.func @invokeLandingpad() -> i32 attributes { personality = @__gxx_personali
   %1 = llvm.mlir.constant(dense<0> : vector<1xi8>) : !llvm.array<1 x i8>
   %2 = llvm.mlir.addressof @_ZTIi : !llvm.ptr<ptr<i8>>
   %3 = llvm.bitcast %2 : !llvm.ptr<ptr<i8>> to !llvm.ptr<i8>
-  %4 = llvm.mlir.null : !llvm.ptr<ptr<i8>>
+  %4 = llvm.mlir.zero : !llvm.ptr<ptr<i8>>
   %5 = llvm.mlir.constant(1 : i32) : i32
   %6 = llvm.alloca %5 x i8 : (i32) -> !llvm.ptr<i8>
 // CHECK: invoke void @foo(ptr %[[a1]])
@@ -2292,3 +2292,29 @@ llvm.func @locally_streaming_func() attributes {arm_locally_streaming} {
 }
 
 // CHECK: attributes #[[ATTR]] = { "aarch64_pstate_sm_body" }
+
+// -----
+
+//
+// Zero-initialize operation.
+//
+
+// CHECK: @partially_zeroinit_aggregate = linkonce global { i32, i64, [3 x i8] } { i32 0, i64 1, [3 x i8] zeroinitializer }
+llvm.mlir.global linkonce @partially_zeroinit_aggregate() : !llvm.struct<(i32, i64, !llvm.array<3 x i8>)> {
+  %0 = llvm.mlir.zero : !llvm.struct<(i32, i64, !llvm.array<3 x i8>)>
+  %1 = llvm.mlir.constant(1 : i64) : i64
+  %2 = llvm.insertvalue %1, %0[1] : !llvm.struct<(i32, i64, !llvm.array<3 x i8>)>
+  llvm.return %2 : !llvm.struct<(i32, i64, !llvm.array<3 x i8>)>
+}
+
+llvm.func @zeroinit_complex_local_aggregate() {
+  // CHECK: %[[#VAR:]] = alloca [1000 x { i32, [3 x { double, <4 x ptr>, [2 x ptr] }], [6 x ptr] }], i64 1, align 32
+  %0 = llvm.mlir.constant(1 : i64) : i64
+  %1 = llvm.alloca %0 x !llvm.array<1000 x !llvm.struct<(i32, !llvm.array<3 x !llvm.struct<(f64, !llvm.vec<4 x ptr>, !llvm.array<2 x ptr>)>>, !llvm.array<6 x ptr>)>> : (i64) -> !llvm.ptr
+
+  // CHECK: store [1000 x { i32, [3 x { double, <4 x ptr>, [2 x ptr] }], [6 x ptr] }] zeroinitializer, ptr %[[#VAR]], align 32
+  %2 = llvm.mlir.zero : !llvm.array<1000 x !llvm.struct<(i32, !llvm.array<3 x !llvm.struct<(f64, !llvm.vec<4 x ptr>, !llvm.array<2 x ptr>)>>, !llvm.array<6 x ptr>)>>
+  llvm.store %2, %1 : !llvm.array<1000 x !llvm.struct<(i32, !llvm.array<3 x !llvm.struct<(f64, !llvm.vec<4 x ptr>, !llvm.array<2 x ptr>)>>, !llvm.array<6 x ptr>)>>, !llvm.ptr
+
+  llvm.return
+}

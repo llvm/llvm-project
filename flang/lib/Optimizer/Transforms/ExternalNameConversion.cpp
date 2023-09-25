@@ -6,6 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "flang/Common/Fortran.h"
 #include "flang/Optimizer/Dialect/FIRDialect.h"
 #include "flang/Optimizer/Dialect/FIROps.h"
 #include "flang/Optimizer/Support/InternalNames.h"
@@ -36,12 +37,9 @@ mangleExternalName(const std::pair<fir::NameUniquer::NameKind,
                    bool appendUnderscore) {
   if (result.first == fir::NameUniquer::NameKind::COMMON &&
       result.second.name.empty())
-    return "__BLNK__";
-
-  if (appendUnderscore)
-    return result.second.name + "_";
-
-  return result.second.name;
+    return Fortran::common::blankCommonObjectName;
+  return Fortran::common::GetExternalAssemblyName(result.second.name,
+                                                  appendUnderscore);
 }
 
 /// Update the early outlining parent name

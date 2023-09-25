@@ -54,8 +54,8 @@
 //   IntegerToString<uint8_t, radix::Hex::WithWidth<4>::Uppercase>(255) : "00FF"
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_LIBC_SRC_SUPPORT_INTEGER_TO_STRING_H
-#define LLVM_LIBC_SRC_SUPPORT_INTEGER_TO_STRING_H
+#ifndef LLVM_LIBC_SRC___SUPPORT_INTEGER_TO_STRING_H
+#define LLVM_LIBC_SRC___SUPPORT_INTEGER_TO_STRING_H
 
 #include <stdint.h>
 
@@ -318,4 +318,4 @@ public:
 
 } // namespace __llvm_libc
 
-#endif // LLVM_LIBC_SRC_SUPPORT_INTEGER_TO_STRING_H
+#endif // LLVM_LIBC_SRC___SUPPORT_INTEGER_TO_STRING_H

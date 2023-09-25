@@ -1,4 +1,4 @@
-; RUN: llc -march=mips < %s | FileCheck %s
+; RUN: llc -mtriple=mips < %s | FileCheck %s
 
 define float @F(float %a) nounwind {
 ; CHECK: .rodata.cst4,"aM",@progbits 

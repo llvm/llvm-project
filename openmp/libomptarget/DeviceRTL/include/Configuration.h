@@ -46,6 +46,9 @@ void *getIndirectCallTablePtr();
 /// Returns the size of the indirect call table.
 uint64_t getIndirectCallTableSize();
 
+/// Returns the size of the indirect call table.
+uint64_t getHardwareParallelism();
+
 /// Return if debugging is enabled for the given debug kind.
 bool isDebugMode(DebugKind Level);
 

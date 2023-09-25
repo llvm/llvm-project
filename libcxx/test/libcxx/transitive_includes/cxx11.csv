@@ -119,9 +119,11 @@ chrono cstddef
 chrono cstdint
 chrono cstring
 chrono ctime
+chrono forward_list
 chrono limits
 chrono ratio
 chrono stdexcept
+chrono string
 chrono string_view
 chrono tuple
 chrono type_traits
@@ -263,11 +265,9 @@ experimental/regex experimental/string
 experimental/regex regex
 experimental/set experimental/memory_resource
 experimental/set set
-experimental/simd algorithm
-experimental/simd array
 experimental/simd cstddef
-experimental/simd functional
-experimental/simd tuple
+experimental/simd cstdint
+experimental/simd limits
 experimental/string experimental/memory_resource
 experimental/string string
 experimental/unordered_map algorithm
@@ -811,9 +811,9 @@ stop_token cstddef
 stop_token cstdint
 stop_token cstring
 stop_token ctime
+stop_token iosfwd
 stop_token limits
 stop_token ratio
-stop_token thread
 stop_token type_traits
 stop_token version
 streambuf cstdint
@@ -873,6 +873,7 @@ system_error string
 system_error type_traits
 system_error version
 thread array
+thread atomic
 thread cerrno
 thread chrono
 thread compare

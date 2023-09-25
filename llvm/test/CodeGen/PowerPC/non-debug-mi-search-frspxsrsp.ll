@@ -18,25 +18,25 @@ define dso_local void @test(ptr nocapture readonly %Fptr, ptr nocapture %Vptr) l
 ; CHECK-NEXT:    vspltisw 2, 1
 ; CHECK-NEXT:  .Ltmp0:
 ; CHECK-NEXT:    .loc 1 2 38 prologue_end # test.c:2:38
-; CHECK-NEXT:    lfs 1, 0(3)
+; CHECK-NEXT:    lfs 0, 0(3)
 ; CHECK-NEXT:    addis 3, 2, .LCPI0_0@toc@ha
 ; CHECK-NEXT:  .Ltmp1:
 ; CHECK-NEXT:    .loc 1 0 38 is_stmt 0 # test.c:0:38
+; CHECK-NEXT:    xvcvsxwdp 1, 34
 ; CHECK-NEXT:    lfd 2, .LCPI0_0@toc@l(3)
-; CHECK-NEXT:    xvcvsxwdp 0, 34
 ; CHECK-NEXT:    .loc 1 2 27 # test.c:2:27
-; CHECK-NEXT:    xssubdp 0, 0, 1
+; CHECK-NEXT:    xssubdp 1, 1, 0
 ; CHECK-NEXT:    .loc 1 2 45 # test.c:2:45
-; CHECK-NEXT:    xsadddp 0, 0, 2
+; CHECK-NEXT:    xsadddp 1, 1, 2
 ; CHECK-NEXT:  .Ltmp2:
 ; CHECK-NEXT:    #DEBUG_VALUE: test:Val <- undef
 ; CHECK-NEXT:    .loc 1 0 45 # test.c:0:45
 ; CHECK-NEXT:    xxlxor 2, 2, 2
 ; CHECK-NEXT:    .loc 1 3 26 is_stmt 1 # test.c:3:26
-; CHECK-NEXT:    xxmrghd 1, 1, 2
-; CHECK-NEXT:    xxmrghd 0, 2, 0
-; CHECK-NEXT:    xvcvdpsp 34, 1
-; CHECK-NEXT:    xvcvdpsp 35, 0
+; CHECK-NEXT:    xxmrghd 0, 0, 2
+; CHECK-NEXT:    xvcvdpsp 34, 0
+; CHECK-NEXT:    xxmrghd 1, 2, 1
+; CHECK-NEXT:    xvcvdpsp 35, 1
 ; CHECK-NEXT:    vmrgew 2, 2, 3
 ; CHECK-NEXT:    .loc 1 3 9 is_stmt 0 # test.c:3:9
 ; CHECK-NEXT:    xxswapd 0, 34

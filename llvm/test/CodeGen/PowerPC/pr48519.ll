@@ -147,8 +147,8 @@ define void @func_48786() #0 {
 ; CHECK-LABEL: func_48786:
 ; CHECK:       # %bb.0: # %bb
 ; CHECK-NEXT:    mfocrf r12, 32
-; CHECK-NEXT:    mflr r0
 ; CHECK-NEXT:    stw r12, 8(r1)
+; CHECK-NEXT:    mflr r0
 ; CHECK-NEXT:    stdu r1, -48(r1)
 ; CHECK-NEXT:    std r0, 64(r1)
 ; CHECK-NEXT:    std r30, 32(r1) # 8-byte Folded Spill
@@ -183,8 +183,8 @@ define void @func_48786() #0 {
 ; CHECK-NEXT:    addi r1, r1, 48
 ; CHECK-NEXT:    ld r0, 16(r1)
 ; CHECK-NEXT:    lwz r12, 8(r1)
-; CHECK-NEXT:    mtocrf 32, r12
 ; CHECK-NEXT:    mtlr r0
+; CHECK-NEXT:    mtocrf 32, r12
 ; CHECK-NEXT:    blr
 ; CHECK-NEXT:  .LBB2_6: # %bb15
 ;

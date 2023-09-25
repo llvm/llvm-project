@@ -19,10 +19,9 @@ namespace tools {
 
 /// solaris -- Directly call Solaris assembler and linker
 namespace solaris {
-class LLVM_LIBRARY_VISIBILITY Assembler : public Tool {
+class LLVM_LIBRARY_VISIBILITY Assembler : public gnutools::Assembler {
 public:
-  Assembler(const ToolChain &TC)
-      : Tool("solaris::Assembler", "assembler", TC) {}
+  Assembler(const ToolChain &TC) : gnutools::Assembler(TC) {}
 
   bool hasIntegratedCPP() const override { return false; }
 

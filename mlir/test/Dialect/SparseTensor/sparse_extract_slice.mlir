@@ -1,7 +1,7 @@
 // RUN: mlir-opt %s --sparse-tensor-codegen --cse |  FileCheck %s
 
 #CSR = #sparse_tensor.encoding<{
-  lvlTypes = [ "dense", "compressed" ]
+  map = (d0, d1) -> (d0 : dense, d1 : compressed)
 }>
 
 #CSR_SLICE = #sparse_tensor.encoding<{

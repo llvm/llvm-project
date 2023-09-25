@@ -447,7 +447,7 @@ std::unique_ptr<CoverageMapping> CodeCoverageTool::load() {
       ObjectFilenames, PGOFilename, *FS, CoverageArches,
       ViewOpts.CompilationDirectory, BIDFetcher.get(), CheckBinaryIDs);
   if (Error E = CoverageOrErr.takeError()) {
-    error("Failed to load coverage: " + toString(std::move(E)));
+    error("failed to load coverage: " + toString(std::move(E)));
     return nullptr;
   }
   auto Coverage = std::move(CoverageOrErr.get());
@@ -599,7 +599,7 @@ void CodeCoverageTool::demangleSymbols(const CoverageMapping &Coverage) {
   DemanglerData.split(Symbols, '\n', /*MaxSplit=*/NumSymbols,
                       /*KeepEmpty=*/false);
   if (Symbols.size() != NumSymbols) {
-    error("Demangler did not provide expected number of symbols");
+    error("demangler did not provide expected number of symbols");
     return;
   }
 
@@ -623,7 +623,7 @@ void CodeCoverageTool::writeSourceFileView(StringRef SourceFile,
 
   auto OSOrErr = Printer->createViewFile(SourceFile, /*InToplevel=*/false);
   if (Error E = OSOrErr.takeError()) {
-    error("Could not create view file!", toString(std::move(E)));
+    error("could not create view file!", toString(std::move(E)));
     return;
   }
   auto OS = std::move(OSOrErr.get());
@@ -842,7 +842,7 @@ int CodeCoverageTool::run(Command Cmd, int argc, const char **argv) {
     if (!DemanglerOpts.empty()) {
       auto DemanglerPathOrErr = sys::findProgramByName(DemanglerOpts[0]);
       if (!DemanglerPathOrErr) {
-        error("Could not find the demangler!",
+        error("could not find the demangler!",
               DemanglerPathOrErr.getError().message());
         return 1;
       }
@@ -901,14 +901,14 @@ int CodeCoverageTool::run(Command Cmd, int argc, const char **argv) {
     if (!Arches.empty()) {
       for (const std::string &Arch : Arches) {
         if (Triple(Arch).getArch() == llvm::Triple::ArchType::UnknownArch) {
-          error("Unknown architecture: " + Arch);
+          error("unknown architecture: " + Arch);
           return 1;
         }
         CoverageArches.emplace_back(Arch);
       }
       if (CoverageArches.size() != 1 &&
           CoverageArches.size() != ObjectFilenames.size()) {
-        error("Number of architectures doesn't match the number of objects");
+        error("number of architectures doesn't match the number of objects");
         return 1;
       }
     }
@@ -1011,7 +1011,7 @@ int CodeCoverageTool::doShow(int argc, const char **argv,
     return Err;
 
   if (ViewOpts.Format == CoverageViewOptions::OutputFormat::Lcov) {
-    error("Lcov format should be used with 'llvm-cov export'.");
+    error("lcov format should be used with 'llvm-cov export'.");
     return 1;
   }
 
@@ -1073,14 +1073,14 @@ int CodeCoverageTool::doShow(int argc, const char **argv,
 
   if (ViewOpts.hasOutputDirectory()) {
     if (auto E = sys::fs::create_directories(ViewOpts.ShowOutputDirectory)) {
-      error("Could not create output directory!", E.message());
+      error("could not create output directory!", E.message());
       return 1;
     }
   }
 
   sys::fs::file_status Status;
   if (std::error_code EC = sys::fs::status(PGOFilename, Status)) {
-    error("Could not read profile data!" + EC.message(), PGOFilename);
+    error("could not read profile data!" + EC.message(), PGOFilename);
     return 1;
   }
 
@@ -1107,7 +1107,7 @@ int CodeCoverageTool::doShow(int argc, const char **argv,
   // Create an index out of the source files.
   if (ViewOpts.hasOutputDirectory()) {
     if (Error E = Printer->createIndexFile(SourceFiles, *Coverage, Filters)) {
-      error("Could not create index file!", toString(std::move(E)));
+      error("could not create index file!", toString(std::move(E)));
       return 1;
     }
   }
@@ -1128,7 +1128,7 @@ int CodeCoverageTool::doShow(int argc, const char **argv,
 
       auto OSOrErr = Printer->createViewFile(File, /*InToplevel=*/false);
       if (Error E = OSOrErr.takeError()) {
-        error("Could not create view file!", toString(std::move(E)));
+        error("could not create view file!", toString(std::move(E)));
         return 1;
       }
       auto OS = std::move(OSOrErr.get());
@@ -1193,13 +1193,13 @@ int CodeCoverageTool::doReport(int argc, const char **argv,
     error("HTML output for summary reports is not yet supported.");
     return 1;
   } else if (ViewOpts.Format == CoverageViewOptions::OutputFormat::Lcov) {
-    error("Lcov format should be used with 'llvm-cov export'.");
+    error("lcov format should be used with 'llvm-cov export'.");
     return 1;
   }
 
   sys::fs::file_status Status;
   if (std::error_code EC = sys::fs::status(PGOFilename, Status)) {
-    error("Could not read profile data!" + EC.message(), PGOFilename);
+    error("could not read profile data!" + EC.message(), PGOFilename);
     return 1;
   }
 
@@ -1215,7 +1215,7 @@ int CodeCoverageTool::doReport(int argc, const char **argv,
       Report.renderFileReports(llvm::outs(), SourceFiles);
   } else {
     if (SourceFiles.empty()) {
-      error("Source files must be specified when -show-functions=true is "
+      error("source files must be specified when -show-functions=true is "
             "specified");
       return 1;
     }
@@ -1252,20 +1252,20 @@ int CodeCoverageTool::doExport(int argc, const char **argv,
 
   if (ViewOpts.Format != CoverageViewOptions::OutputFormat::Text &&
       ViewOpts.Format != CoverageViewOptions::OutputFormat::Lcov) {
-    error("Coverage data can only be exported as textual JSON or an "
+    error("coverage data can only be exported as textual JSON or an "
           "lcov tracefile.");
     return 1;
   }
 
   sys::fs::file_status Status;
   if (std::error_code EC = sys::fs::status(PGOFilename, Status)) {
-    error("Could not read profile data!" + EC.message(), PGOFilename);
+    error("could not read profile data!" + EC.message(), PGOFilename);
     return 1;
   }
 
   auto Coverage = load();
   if (!Coverage) {
-    error("Could not load coverage information");
+    error("could not load coverage information");
     return 1;
   }
 

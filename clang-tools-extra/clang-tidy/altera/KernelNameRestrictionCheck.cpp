@@ -76,7 +76,7 @@ bool KernelNameRestrictionPPCallbacks::fileNameIsRestricted(
 void KernelNameRestrictionPPCallbacks::EndOfMainFile() {
 
   // Check main file for restricted names.
-  const FileEntry *Entry = SM.getFileEntryForID(SM.getMainFileID());
+  OptionalFileEntryRef Entry = SM.getFileEntryRefForID(SM.getMainFileID());
   StringRef FileName = llvm::sys::path::filename(Entry->getName());
   if (fileNameIsRestricted(FileName))
     Check.diag(SM.getLocForStartOfFile(SM.getMainFileID()),

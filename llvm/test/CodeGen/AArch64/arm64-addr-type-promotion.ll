@@ -10,28 +10,28 @@ target datalayout = "e-p:64:64:64-i1:8:8-i8:8:8-i16:16:16-i32:32:32-i64:64:64-f3
 define zeroext i8 @fullGtU(i32 %i1, i32 %i2) {
 ; CHECK-LABEL: fullGtU:
 ; CHECK:       ; %bb.0: ; %entry
-; CHECK-NEXT:    adrp x8, _block@GOTPAGE
+; CHECK-NEXT:    adrp x9, _block@GOTPAGE
 ; CHECK-NEXT:    ; kill: def $w1 killed $w1 def $x1
 ; CHECK-NEXT:    ; kill: def $w0 killed $w0 def $x0
-; CHECK-NEXT:    sxtw x9, w0
+; CHECK-NEXT:    sxtw x8, w0
 ; CHECK-NEXT:    sxtw x10, w1
-; CHECK-NEXT:    ldr x8, [x8, _block@GOTPAGEOFF]
-; CHECK-NEXT:    ldr x8, [x8]
-; CHECK-NEXT:    ldrb w11, [x8, x9]
-; CHECK-NEXT:    ldrb w12, [x8, x10]
+; CHECK-NEXT:    ldr x9, [x9, _block@GOTPAGEOFF]
+; CHECK-NEXT:    ldr x9, [x9]
+; CHECK-NEXT:    ldrb w11, [x9, x8]
+; CHECK-NEXT:    ldrb w12, [x9, x10]
 ; CHECK-NEXT:    cmp w11, w12
 ; CHECK-NEXT:    b.ne LBB0_3
 ; CHECK-NEXT:  ; %bb.1: ; %if.end
-; CHECK-NEXT:    add x9, x9, x8
-; CHECK-NEXT:    add x8, x10, x8
-; CHECK-NEXT:    ldrb w10, [x9, #1]
-; CHECK-NEXT:    ldrb w11, [x8, #1]
+; CHECK-NEXT:    add x8, x8, x9
+; CHECK-NEXT:    add x9, x10, x9
+; CHECK-NEXT:    ldrb w10, [x8, #1]
+; CHECK-NEXT:    ldrb w11, [x9, #1]
 ; CHECK-NEXT:    cmp w10, w11
 ; CHECK-NEXT:    b.ne LBB0_3
 ; CHECK-NEXT:  ; %bb.2: ; %if.end25
-; CHECK-NEXT:    ldrb w9, [x9, #2]
 ; CHECK-NEXT:    ldrb w8, [x8, #2]
-; CHECK-NEXT:    cmp w9, w8
+; CHECK-NEXT:    ldrb w9, [x9, #2]
+; CHECK-NEXT:    cmp w8, w9
 ; CHECK-NEXT:    cset w8, hi
 ; CHECK-NEXT:    csel w0, wzr, w8, eq
 ; CHECK-NEXT:    ret

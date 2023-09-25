@@ -14,7 +14,6 @@ import re
 
 
 class BreakWin(cui.ListWin):
-
     def __init__(self, driver, x, y, w, h):
         super(BreakWin, self).__init__(x, y, w, h)
         self.driver = driver
@@ -26,7 +25,7 @@ class BreakWin(cui.ListWin):
             if lldb.SBBreakpoint.EventIsBreakpointEvent(event):
                 self.update()
         if isinstance(event, int):
-            if event == ord('d'):
+            if event == ord("d"):
                 self.deleteSelected()
             if event == curses.ascii.NL or event == curses.ascii.SP:
                 self.toggleSelected()
@@ -72,14 +71,14 @@ class BreakWin(cui.ListWin):
                 continue
             text = lldbutil.get_description(bp)
             # FIXME: Use an API for this, not parsing the description.
-            match = re.search('SBBreakpoint: id = ([^,]+), (.*)', text)
+            match = re.search("SBBreakpoint: id = ([^,]+), (.*)", text)
             try:
                 id = match.group(1)
                 desc = match.group(2).strip()
                 if bp.IsEnabled():
-                    text = '%s: %s' % (id, desc)
+                    text = "%s: %s" % (id, desc)
                 else:
-                    text = '%s: (disabled) %s' % (id, desc)
+                    text = "%s: (disabled) %s" % (id, desc)
             except ValueError as e:
                 # bp unparsable
                 pass
@@ -87,7 +86,8 @@ class BreakWin(cui.ListWin):
             if self.showDetails.setdefault(bp.id, False):
                 for location in bp:
                     desc = lldbutil.get_description(
-                        location, lldb.eDescriptionLevelFull)
-                    text += '\n  ' + desc
+                        location, lldb.eDescriptionLevelFull
+                    )
+                    text += "\n  " + desc
             self.addItem(text)
         self.setSelected(selected)

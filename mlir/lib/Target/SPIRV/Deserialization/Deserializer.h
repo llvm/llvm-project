@@ -254,7 +254,9 @@ private:
 
   LogicalResult processArrayType(ArrayRef<uint32_t> operands);
 
-  LogicalResult processCooperativeMatrixType(ArrayRef<uint32_t> operands);
+  LogicalResult processCooperativeMatrixTypeKHR(ArrayRef<uint32_t> operands);
+
+  LogicalResult processCooperativeMatrixTypeNV(ArrayRef<uint32_t> operands);
 
   LogicalResult processFunctionType(ArrayRef<uint32_t> operands);
 

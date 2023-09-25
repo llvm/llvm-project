@@ -779,6 +779,7 @@ private:
     os << "%";
   }
   void printKeywordOrString(StringRef) override {}
+  void printString(StringRef) override {}
   void printResourceHandle(const AsmDialectResourceHandle &) override {}
   void printSymbolName(StringRef) override {}
   void printSuccessor(Block *) override {}
@@ -919,6 +920,7 @@ private:
   /// determining potential aliases.
   void printFloat(const APFloat &) override {}
   void printKeywordOrString(StringRef) override {}
+  void printString(StringRef) override {}
   void printSymbolName(StringRef) override {}
   void printResourceHandle(const AsmDialectResourceHandle &) override {}
 
@@ -2765,6 +2767,13 @@ void AsmPrinter::printAttributeWithoutType(Attribute attr) {
 void AsmPrinter::printKeywordOrString(StringRef keyword) {
   assert(impl && "expected AsmPrinter::printKeywordOrString to be overriden");
   ::printKeywordOrString(keyword, impl->getStream());
+}
+
+void AsmPrinter::printString(StringRef keyword) {
+  assert(impl && "expected AsmPrinter::printString to be overriden");
+  *this << '"';
+  printEscapedString(keyword, getStream());
+  *this << '"';
 }
 
 void AsmPrinter::printSymbolName(StringRef symbolRef) {

@@ -9,7 +9,7 @@
 // This is different from a glibc-based distribution.
 // CHECK-X86-64-LIBCXX: "-resource-dir" "[[RESOURCE_DIR:[^"]+]]"
 // CHECK-X86-64-LIBCXX: "-isysroot" "[[SYSROOT:[^"]+]]"
-// CHECK-X86-64-LIBCXX: "-internal-isystem" "[[SYSROOT]]/usr/include/c++/v1"
+// CHECK-X86-64-LIBCXX: "-internal-isystem" "[[SYSROOT]]{{/|\\\\}}usr{{/|\\\\}}include{{/|\\\\}}c++{{/|\\\\}}v1"
 // CHECK-X86-64-LIBCXX: "-internal-isystem" "[[SYSROOT]]/usr/local/include"
 // CHECK-X86-64-LIBCXX: "-internal-externc-isystem" "[[SYSROOT]]/usr/include"
 // CHECK-X86-64-LIBCXX: "-internal-isystem" "[[RESOURCE_DIR]]{{/|\\\\}}include"

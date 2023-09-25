@@ -9,14 +9,14 @@ define i32 @test(i32 %i) {
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    addis 4, 2, .LC0@toc@ha
 ; CHECK-NEXT:    extsw 3, 3
-; CHECK-NEXT:    addis 5, 2, .LC1@toc@ha
 ; CHECK-NEXT:    ld 4, .LC0@toc@l(4)
 ; CHECK-NEXT:    ld 4, 0(4)
 ; CHECK-NEXT:    lbzx 3, 4, 3
-; CHECK-NEXT:    ld 4, .LC1@toc@l(5)
+; CHECK-NEXT:    addis 4, 2, .LC1@toc@ha
+; CHECK-NEXT:    ld 4, .LC1@toc@l(4)
 ; CHECK-NEXT:    subfic 3, 3, 1
-; CHECK-NEXT:    ld 4, 0(4)
 ; CHECK-NEXT:    extsw 3, 3
+; CHECK-NEXT:    ld 4, 0(4)
 ; CHECK-NEXT:    sldi 3, 3, 2
 ; CHECK-NEXT:    lwzx 3, 4, 3
 ; CHECK-NEXT:    blr

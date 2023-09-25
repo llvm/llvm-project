@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_LIBC_SRC_SUPPORT_NUMBER_PAIR_H
-#define LLVM_LIBC_SRC_SUPPORT_NUMBER_PAIR_H
+#ifndef LLVM_LIBC_SRC___SUPPORT_NUMBER_PAIR_H
+#define LLVM_LIBC_SRC___SUPPORT_NUMBER_PAIR_H
 
 #include "CPP/type_traits.h"
 #include "named_pair.h"
@@ -31,4 +31,4 @@ split(T a) {
 
 } // namespace __llvm_libc
 
-#endif // LLVM_LIBC_SRC_SUPPORT_NUMBER_PAIR_H
+#endif // LLVM_LIBC_SRC___SUPPORT_NUMBER_PAIR_H

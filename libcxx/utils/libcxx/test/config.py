@@ -52,4 +52,4 @@ def configure(parameters, features, config, lit_config):
         note("Using {} substitution: '{}'".format(sub, _getSubstitution(sub, config)))
 
     # Print all available features
-    note("All available features: {}".format(", ".join(config.available_features)))
+    note("All available features: {}".format(", ".join(sorted(config.available_features))))

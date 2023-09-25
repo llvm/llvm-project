@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_LIBC_SRC_SUPPORT_FPUTIL_GPU_FMA_H
-#define LLVM_LIBC_SRC_SUPPORT_FPUTIL_GPU_FMA_H
+#ifndef LLVM_LIBC_SRC___SUPPORT_FPUTIL_GPU_FMA_H
+#define LLVM_LIBC_SRC___SUPPORT_FPUTIL_GPU_FMA_H
 
 #include "src/__support/CPP/type_traits.h"
 #include "src/__support/macros/config.h"
@@ -33,4 +33,4 @@ LIBC_INLINE cpp::enable_if_t<cpp::is_same_v<T, double>, T> fma(T x, T y, T z) {
 } // namespace fputil
 } // namespace __llvm_libc
 
-#endif // LLVM_LIBC_SRC_SUPPORT_FPUTIL_GPU_FMA_H
+#endif // LLVM_LIBC_SRC___SUPPORT_FPUTIL_GPU_FMA_H

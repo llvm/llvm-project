@@ -1,4 +1,4 @@
-# RUN: llvm-mc -arch=amdgcn -mcpu=gfx1100 -disassemble -show-encoding < %s | FileCheck -check-prefixes=GFX11 %s
+# RUN: llvm-mc -triple=amdgcn -mcpu=gfx1100 -disassemble -show-encoding < %s | FileCheck -check-prefixes=GFX11 %s
 
 # GFX11: buffer_gl0_inv                                                                 ; encoding: [0x00,0x00,0xac,0xe0,0x00,0x00,0x00,0x00]
 0x00,0x00,0xac,0xe0,0x00,0x00,0x00,0x00

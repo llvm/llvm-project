@@ -22,6 +22,8 @@
 #include <type_traits>
 #include <utility>
 
+#include "../../types.h"
+
 struct LVal {
   constexpr std::expected<int, int> operator()(int&) { return 1; }
   std::expected<int, int> operator()(const int&)  = delete;
@@ -153,6 +155,7 @@ concept has_and_then = requires(E&& e, F&& f) {
   {std::forward<E>(e).and_then(std::forward<F>(f))};
 };
 
+// clang-format off
 static_assert( has_and_then<std::expected<int, int>&, std::expected<int, int>(int&)>);
 static_assert(!has_and_then<std::expected<int, NonCopyable>&, std::expected<int, NonCopyable>(int&)>);
 static_assert( has_and_then<const std::expected<int, int>&, std::expected<int, int>(const int&)>);
@@ -166,7 +169,11 @@ static_assert(!has_and_then<const std::expected<int, NonMovable>&&, std::expecte
 static_assert(!has_and_then<const std::expected<int, std::unique_ptr<int>>&, int()>);
 static_assert(!has_and_then<const std::expected<int, std::unique_ptr<int>>&&, int()>);
 
-// clang-format off
+// [LWG 3983] https://cplusplus.github.io/LWG/issue3938, check std::expected monadic ops well-formed with move-only error_type.
+// There are no effects for `&` and `const &` overload, because the constraints requires is_constructible_v<E, decltype(error())> is true.
+static_assert(has_and_then<std::expected<int, MoveOnlyErrorType>&&, std::expected<int, MoveOnlyErrorType>(int)>);
+static_assert(has_and_then<const std::expected<int, MoveOnlyErrorType>&&, std::expected<int, MoveOnlyErrorType>(const int)>);
+
 constexpr void test_val_types() {
   // Test & overload
   {
@@ -260,9 +267,26 @@ constexpr void test_sfinae() {
   std::move(e).and_then(l);
 }
 
+constexpr void test_move_only_error_type() {
+  // Test &&
+  {
+    std::expected<int, MoveOnlyErrorType> e;
+    auto l = [](int) { return std::expected<int, MoveOnlyErrorType>{}; };
+    std::move(e).and_then(l);
+  }
+
+  // Test const&&
+  {
+    const std::expected<int, MoveOnlyErrorType> e;
+    auto l = [](const int) { return std::expected<int, MoveOnlyErrorType>{}; };
+    std::move(e).and_then(l);
+  }
+}
+
 constexpr bool test() {
   test_sfinae();
   test_val_types();
+  test_move_only_error_type();
 
   std::expected<int, int> e(std::unexpected<int>(1));
   const auto& ce = e;

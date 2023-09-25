@@ -96,10 +96,9 @@ OUTPUT OPTIONS
 
  Each command is printed before it is executed. This can be valuable for
  debugging test failures, as the last printed command is the one that failed.
- Moreover, :program:`lit` inserts a no-op command (``:`` in the case of bash)
- with argument ``'RUN: at line N'`` before each command pipeline, and those
- no-op commands are also printed to help you locate the source line of the
- failed command.
+ Moreover, :program:`lit` inserts ``'RUN: at line N'`` before each
+ command pipeline in the output to help you locate the source line of
+ the failed command.
 
 .. option:: -vv, --echo-all-commands
 

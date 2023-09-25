@@ -1,4 +1,4 @@
-; RUN: llc < %s -march=xcore | FileCheck %s
+; RUN: llc < %s -mtriple=xcore | FileCheck %s
 
 @size = global i32 0		; <ptr> [#uses=1]
 @g0 = external global i32		; <ptr> [#uses=2]

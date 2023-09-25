@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_LIBC_SRC_MATH_MATH_UTILS_H
-#define LLVM_LIBC_SRC_MATH_MATH_UTILS_H
+#ifndef LLVM_LIBC_SRC_MATH_GENERIC_MATH_UTILS_H
+#define LLVM_LIBC_SRC_MATH_GENERIC_MATH_UTILS_H
 
 #include "src/__support/CPP/bit.h"
 #include "src/__support/CPP/type_traits.h"
@@ -104,4 +104,4 @@ LIBC_INLINE constexpr float invalid(T x) {
 
 } // namespace __llvm_libc
 
-#endif // LLVM_LIBC_SRC_MATH_MATH_UTILS_H
+#endif // LLVM_LIBC_SRC_MATH_GENERIC_MATH_UTILS_H

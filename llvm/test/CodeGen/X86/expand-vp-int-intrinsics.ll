@@ -842,42 +842,117 @@ define void @vp_xor_v4i32(<4 x i32> %a0, <4 x i32> %a1, ptr %out, i32 %vp) nounw
 }
 declare <4 x i32> @llvm.vp.xor.v4i32(<4 x i32>, <4 x i32>, <4 x i1>, i32)
 
-; TODO: llvm.vp.abs.v4i32
-;define void @vp_abs_v4i32(<4 x i32> %a0, <4 x i32> %a1, ptr %out, i32 %vp) nounwind {
-;  %res = call <4 x i32> @llvm.vp.abs.v4i32(<4 x i32> %a0, <4 x i1> <i1 -1, i1 -1, i1 -1, i1 -1>, i32 %vp)
-;  store <4 x i32> %res, ptr %out
-;  ret void
-;}
-;declare <4 x i32> @llvm.vp.abs.v4i32(<4 x i32>, <4 x i1>, i32)
+define void @vp_abs_v4i32(<4 x i32> %a0, ptr %out, i32 %vp) nounwind {
+; SSE-LABEL: vp_abs_v4i32:
+; SSE:       # %bb.0:
+; SSE-NEXT:    movdqa %xmm0, %xmm1
+; SSE-NEXT:    psrad $31, %xmm1
+; SSE-NEXT:    pxor %xmm1, %xmm0
+; SSE-NEXT:    psubd %xmm1, %xmm0
+; SSE-NEXT:    movdqa %xmm0, (%rdi)
+; SSE-NEXT:    retq
+;
+; AVX-LABEL: vp_abs_v4i32:
+; AVX:       # %bb.0:
+; AVX-NEXT:    vpabsd %xmm0, %xmm0
+; AVX-NEXT:    vmovdqa %xmm0, (%rdi)
+; AVX-NEXT:    retq
+  %res = call <4 x i32> @llvm.vp.abs.v4i32(<4 x i32> %a0, i1 false, <4 x i1> <i1 -1, i1 -1, i1 -1, i1 -1>, i32 %vp)
+  store <4 x i32> %res, ptr %out
+  ret void
+}
+declare <4 x i32> @llvm.vp.abs.v4i32(<4 x i32>, i1 immarg, <4 x i1>, i32)
 
-; TODO: llvm.vp.smax.v4i32
-;define void @vp_smax_v4i32(<4 x i32> %a0, <4 x i32> %a1, ptr %out, i32 %vp) nounwind {
-;  %res = call <4 x i32> @llvm.vp.smax.v4i32(<4 x i32> %a0, <4 x i32> %a1, <4 x i1> <i1 -1, i1 -1, i1 -1, i1 -1>, i32 %vp)
-;  store <4 x i32> %res, ptr %out
-;  ret void
-;}
-;declare <4 x i32> @llvm.vp.smax.v4i32(<4 x i32>, <4 x i32>, <4 x i1>, i32)
+define void @vp_smax_v4i32(<4 x i32> %a0, <4 x i32> %a1, ptr %out, i32 %vp) nounwind {
+; SSE-LABEL: vp_smax_v4i32:
+; SSE:       # %bb.0:
+; SSE-NEXT:    movdqa %xmm0, %xmm2
+; SSE-NEXT:    pcmpgtd %xmm1, %xmm2
+; SSE-NEXT:    pand %xmm2, %xmm0
+; SSE-NEXT:    pandn %xmm1, %xmm2
+; SSE-NEXT:    por %xmm0, %xmm2
+; SSE-NEXT:    movdqa %xmm2, (%rdi)
+; SSE-NEXT:    retq
+;
+; AVX-LABEL: vp_smax_v4i32:
+; AVX:       # %bb.0:
+; AVX-NEXT:    vpmaxsd %xmm1, %xmm0, %xmm0
+; AVX-NEXT:    vmovdqa %xmm0, (%rdi)
+; AVX-NEXT:    retq
+  %res = call <4 x i32> @llvm.vp.smax.v4i32(<4 x i32> %a0, <4 x i32> %a1, <4 x i1> <i1 -1, i1 -1, i1 -1, i1 -1>, i32 %vp)
+  store <4 x i32> %res, ptr %out
+  ret void
+}
+declare <4 x i32> @llvm.vp.smax.v4i32(<4 x i32>, <4 x i32>, <4 x i1>, i32)
 
-; TODO: llvm.vp.smin.v4i32
-;define void @vp_smin_v4i32(<4 x i32> %a0, <4 x i32> %a1, ptr %out, i32 %vp) nounwind {
-;  %res = call <4 x i32> @llvm.vp.smin.v4i32(<4 x i32> %a0, <4 x i32> %a1, <4 x i1> <i1 -1, i1 -1, i1 -1, i1 -1>, i32 %vp)
-;  store <4 x i32> %res, ptr %out
-;  ret void
-;}
-;declare <4 x i32> @llvm.vp.smin.v4i32(<4 x i32>, <4 x i32>, <4 x i1>, i32)
+define void @vp_smin_v4i32(<4 x i32> %a0, <4 x i32> %a1, ptr %out, i32 %vp) nounwind {
+; SSE-LABEL: vp_smin_v4i32:
+; SSE:       # %bb.0:
+; SSE-NEXT:    movdqa %xmm1, %xmm2
+; SSE-NEXT:    pcmpgtd %xmm0, %xmm2
+; SSE-NEXT:    pand %xmm2, %xmm0
+; SSE-NEXT:    pandn %xmm1, %xmm2
+; SSE-NEXT:    por %xmm0, %xmm2
+; SSE-NEXT:    movdqa %xmm2, (%rdi)
+; SSE-NEXT:    retq
+;
+; AVX-LABEL: vp_smin_v4i32:
+; AVX:       # %bb.0:
+; AVX-NEXT:    vpminsd %xmm1, %xmm0, %xmm0
+; AVX-NEXT:    vmovdqa %xmm0, (%rdi)
+; AVX-NEXT:    retq
+  %res = call <4 x i32> @llvm.vp.smin.v4i32(<4 x i32> %a0, <4 x i32> %a1, <4 x i1> <i1 -1, i1 -1, i1 -1, i1 -1>, i32 %vp)
+  store <4 x i32> %res, ptr %out
+  ret void
+}
+declare <4 x i32> @llvm.vp.smin.v4i32(<4 x i32>, <4 x i32>, <4 x i1>, i32)
 
-; TODO: llvm.vp.umax.v4i32
-;define void @vp_umax_v4i32(<4 x i32> %a0, <4 x i32> %a1, ptr %out, i32 %vp) nounwind {
-;  %res = call <4 x i32> @llvm.vp.umax.v4i32(<4 x i32> %a0, <4 x i32> %a1, <4 x i1> <i1 -1, i1 -1, i1 -1, i1 -1>, i32 %vp)
-;  store <4 x i32> %res, ptr %out
-;  ret void
-;}
-;declare <4 x i32> @llvm.vp.umax.v4i32(<4 x i32>, <4 x i32>, <4 x i1>, i32)
+define void @vp_umax_v4i32(<4 x i32> %a0, <4 x i32> %a1, ptr %out, i32 %vp) nounwind {
+; SSE-LABEL: vp_umax_v4i32:
+; SSE:       # %bb.0:
+; SSE-NEXT:    movdqa {{.*#+}} xmm2 = [2147483648,2147483648,2147483648,2147483648]
+; SSE-NEXT:    movdqa %xmm1, %xmm3
+; SSE-NEXT:    pxor %xmm2, %xmm3
+; SSE-NEXT:    pxor %xmm0, %xmm2
+; SSE-NEXT:    pcmpgtd %xmm3, %xmm2
+; SSE-NEXT:    pand %xmm2, %xmm0
+; SSE-NEXT:    pandn %xmm1, %xmm2
+; SSE-NEXT:    por %xmm0, %xmm2
+; SSE-NEXT:    movdqa %xmm2, (%rdi)
+; SSE-NEXT:    retq
+;
+; AVX-LABEL: vp_umax_v4i32:
+; AVX:       # %bb.0:
+; AVX-NEXT:    vpmaxud %xmm1, %xmm0, %xmm0
+; AVX-NEXT:    vmovdqa %xmm0, (%rdi)
+; AVX-NEXT:    retq
+  %res = call <4 x i32> @llvm.vp.umax.v4i32(<4 x i32> %a0, <4 x i32> %a1, <4 x i1> <i1 -1, i1 -1, i1 -1, i1 -1>, i32 %vp)
+  store <4 x i32> %res, ptr %out
+  ret void
+}
+declare <4 x i32> @llvm.vp.umax.v4i32(<4 x i32>, <4 x i32>, <4 x i1>, i32)
 
-; TODO: llvm.vp.umin.v4i32
-;define void @vp_umin_v4i32(<4 x i32> %a0, <4 x i32> %a1, ptr %out, i32 %vp) nounwind {
-;  %res = call <4 x i32> @llvm.vp.umin.v4i32(<4 x i32> %a0, <4 x i32> %a1, <4 x i1> <i1 -1, i1 -1, i1 -1, i1 -1>, i32 %vp)
-;  store <4 x i32> %res, ptr %out
-;  ret void
-;}
-;declare <4 x i32> @llvm.vp.umin.v4i32(<4 x i32>, <4 x i32>, <4 x i1>, i32)
+define void @vp_umin_v4i32(<4 x i32> %a0, <4 x i32> %a1, ptr %out, i32 %vp) nounwind {
+; SSE-LABEL: vp_umin_v4i32:
+; SSE:       # %bb.0:
+; SSE-NEXT:    movdqa {{.*#+}} xmm2 = [2147483648,2147483648,2147483648,2147483648]
+; SSE-NEXT:    movdqa %xmm0, %xmm3
+; SSE-NEXT:    pxor %xmm2, %xmm3
+; SSE-NEXT:    pxor %xmm1, %xmm2
+; SSE-NEXT:    pcmpgtd %xmm3, %xmm2
+; SSE-NEXT:    pand %xmm2, %xmm0
+; SSE-NEXT:    pandn %xmm1, %xmm2
+; SSE-NEXT:    por %xmm0, %xmm2
+; SSE-NEXT:    movdqa %xmm2, (%rdi)
+; SSE-NEXT:    retq
+;
+; AVX-LABEL: vp_umin_v4i32:
+; AVX:       # %bb.0:
+; AVX-NEXT:    vpminud %xmm1, %xmm0, %xmm0
+; AVX-NEXT:    vmovdqa %xmm0, (%rdi)
+; AVX-NEXT:    retq
+  %res = call <4 x i32> @llvm.vp.umin.v4i32(<4 x i32> %a0, <4 x i32> %a1, <4 x i1> <i1 -1, i1 -1, i1 -1, i1 -1>, i32 %vp)
+  store <4 x i32> %res, ptr %out
+  ret void
+}
+declare <4 x i32> @llvm.vp.umin.v4i32(<4 x i32>, <4 x i32>, <4 x i1>, i32)

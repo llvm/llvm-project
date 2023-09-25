@@ -1,4 +1,4 @@
-# RUN: llvm-mc %s -arch=mips -mcpu=mips32r2 -mattr=+msa -show-encoding | FileCheck %s
+# RUN: llvm-mc %s -triple=mips -mcpu=mips32r2 -mattr=+msa -show-encoding | FileCheck %s
 #
 # CHECK:        addvi.b         $w3, $w31, 30           # encoding: [0x78,0x1e,0xf8,0xc6]
 # CHECK:        addvi.h         $w24, $w13, 26          # encoding: [0x78,0x3a,0x6e,0x06]

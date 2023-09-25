@@ -256,26 +256,6 @@ public:
       return true;
     }
 
-    // Fix type aliases in value declarations.
-    if (const auto *Value = dyn_cast<ValueDecl>(Decl)) {
-      if (const Type *TypePtr = Value->getType().getTypePtrOrNull()) {
-        if (const auto *Typedef = TypePtr->getAs<TypedefType>())
-          Check->addUsage(Typedef->getDecl(), Value->getSourceRange(), SM);
-      }
-    }
-
-    // Fix type aliases in function declarations.
-    if (const auto *Value = dyn_cast<FunctionDecl>(Decl)) {
-      if (const auto *Typedef =
-              Value->getReturnType().getTypePtr()->getAs<TypedefType>())
-        Check->addUsage(Typedef->getDecl(), Value->getSourceRange(), SM);
-      for (const ParmVarDecl *Param : Value->parameters()) {
-        if (const TypedefType *Typedef =
-                Param->getType().getTypePtr()->getAs<TypedefType>())
-          Check->addUsage(Typedef->getDecl(), Value->getSourceRange(), SM);
-      }
-    }
-
     // Fix overridden methods
     if (const auto *Method = dyn_cast<CXXMethodDecl>(Decl)) {
       if (const CXXMethodDecl *Overridden = getOverrideMethod(Method)) {
@@ -337,6 +317,11 @@ public:
                         DepMemberRef->getMemberNameInfo().getSourceRange(), SM);
     }
 
+    return true;
+  }
+
+  bool VisitTypedefTypeLoc(const TypedefTypeLoc &Loc) {
+    Check->addUsage(Loc.getTypedefNameDecl(), Loc.getSourceRange(), SM);
     return true;
   }
 

@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_LIBC_SRC_SUPPORT_RPC_RPC_CLIENT_H
-#define LLVM_LIBC_SRC_SUPPORT_RPC_RPC_CLIENT_H
+#ifndef LLVM_LIBC_SRC___SUPPORT_RPC_RPC_CLIENT_H
+#define LLVM_LIBC_SRC___SUPPORT_RPC_RPC_CLIENT_H
 
 #include "rpc.h"
 

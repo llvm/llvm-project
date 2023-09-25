@@ -11,7 +11,7 @@
 // UNSUPPORTED: GCC-ALWAYS_INLINE-FIXME
 
 // Clang modules do not work with the definiton of _LIBCPP_TESTING_PRINT_WRITE_TO_WINDOWS_CONSOLE_FUNCTION
-// XFAIL: modules-build
+// XFAIL: clang-modules-build
 
 // XFAIL: availability-fp_to_chars-missing
 

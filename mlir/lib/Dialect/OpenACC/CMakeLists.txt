@@ -14,5 +14,6 @@ add_mlir_dialect_library(MLIROpenACCDialect
   MLIRIR
   MLIRLLVMDialect
   MLIRMemRefDialect
+  MLIROpenACCMPCommon
   )
 

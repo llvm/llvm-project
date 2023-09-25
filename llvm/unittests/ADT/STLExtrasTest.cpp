@@ -1300,4 +1300,10 @@ TEST(STLExtrasTest, LessSecond) {
   }
 }
 
+struct Foo;
+struct Bar {};
+
+static_assert(is_incomplete_v<Foo>, "Foo is incomplete");
+static_assert(!is_incomplete_v<Bar>, "Bar is defined");
+
 } // namespace

@@ -394,15 +394,10 @@ define i8 @fshr_i8_const_fold_overshift_2() {
 }
 
 define i8 @fshr_i8_const_fold_overshift_3() {
-; CHECK-SD-LABEL: fshr_i8_const_fold_overshift_3:
-; CHECK-SD:       // %bb.0:
-; CHECK-SD-NEXT:    mov w0, #255 // =0xff
-; CHECK-SD-NEXT:    ret
-;
-; CHECK-GI-LABEL: fshr_i8_const_fold_overshift_3:
-; CHECK-GI:       // %bb.0:
-; CHECK-GI-NEXT:    mov w0, #-1 // =0xffffffff
-; CHECK-GI-NEXT:    ret
+; CHECK-LABEL: fshr_i8_const_fold_overshift_3:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    mov w0, #255 // =0xff
+; CHECK-NEXT:    ret
   %f = call i8 @llvm.fshr.i8(i8 0, i8 255, i8 8)
   ret i8 %f
 }

@@ -321,3 +321,25 @@ define i8 @rem_euclid_non_const_pow2(i8 %0, i8 %1) {
   %sel = select i1 %cond, i8 %add, i8 %rem
   ret i8 %sel
 }
+
+define i32 @rem_euclid_pow2_true_arm_folded(i32 %n) {
+; CHECK-LABEL: @rem_euclid_pow2_true_arm_folded(
+; CHECK-NEXT:    [[RES:%.*]] = and i32 [[N:%.*]], 1
+; CHECK-NEXT:    ret i32 [[RES]]
+;
+  %rem = srem i32 %n, 2
+  %neg = icmp slt i32 %rem, 0
+  %res = select i1 %neg, i32 1, i32 %rem
+  ret i32 %res
+}
+
+define i32 @rem_euclid_pow2_false_arm_folded(i32 %n) {
+; CHECK-LABEL: @rem_euclid_pow2_false_arm_folded(
+; CHECK-NEXT:    [[RES:%.*]] = and i32 [[N:%.*]], 1
+; CHECK-NEXT:    ret i32 [[RES]]
+;
+  %rem = srem i32 %n, 2
+  %nonneg = icmp sge i32 %rem, 0
+  %res = select i1 %nonneg, i32 %rem, i32 1
+  ret i32 %res
+}

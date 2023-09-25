@@ -33,8 +33,8 @@ mlir::tosa::condenseValues(const SmallVector<Value> &values) {
 
 Value mlir::tosa::clampFloatHelper(Location loc, Value arg, Value min,
                                    Value max, OpBuilder &rewriter) {
-  Value minValue = rewriter.create<arith::MinFOp>(loc, arg, max);
-  return rewriter.create<arith::MaxFOp>(loc, minValue, min);
+  Value minValue = rewriter.create<arith::MinimumFOp>(loc, arg, max);
+  return rewriter.create<arith::MaximumFOp>(loc, minValue, min);
 }
 
 Value mlir::tosa::clampIntHelper(Location loc, Value arg, Value min, Value max,

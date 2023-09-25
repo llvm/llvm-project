@@ -1,5 +1,5 @@
-; RUN: llc -march=bpfel -filetype=obj -o - %s | llvm-objdump -S - | FileCheck %s
-; RUN: llc -march=bpfeb -filetype=obj -o - %s | llvm-objdump -S - | FileCheck %s
+; RUN: llc -mtriple=bpfel -filetype=obj -o - %s | llvm-objdump -S - | FileCheck %s
+; RUN: llc -mtriple=bpfeb -filetype=obj -o - %s | llvm-objdump -S - | FileCheck %s
 ;
 ; Source code:
 ;   __attribute__((section("s1")))

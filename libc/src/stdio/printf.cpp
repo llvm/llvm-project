@@ -15,11 +15,11 @@
 #include <stdarg.h>
 #include <stdio.h>
 
-#ifndef LIBC_COPT_PRINTF_USE_SYSTEM_FILE
+#ifndef LIBC_COPT_STDIO_USE_SYSTEM_FILE
 #define PRINTF_STDOUT __llvm_libc::stdout
-#else // LIBC_COPT_PRINTF_USE_SYSTEM_FILE
+#else // LIBC_COPT_STDIO_USE_SYSTEM_FILE
 #define PRINTF_STDOUT ::stdout
-#endif // LIBC_COPT_PRINTF_USE_SYSTEM_FILE
+#endif // LIBC_COPT_STDIO_USE_SYSTEM_FILE
 
 namespace __llvm_libc {
 
