@@ -1486,9 +1486,16 @@ defm OR  : BITWISE<"or", or>;
 defm AND : BITWISE<"and", and>;
 defm XOR : BITWISE<"xor", xor>;
 
-// Lower logical ops as bitwise ops on b32.
-// By this point the constants get legalized into a bitcast from i32, so that's
-// what we need to match here.
+// Lower logical v2i16 ops as bitwise ops on b32.
+def: Pat<(or (v2i16 Int32Regs:$a), (v2i16 Int32Regs:$b)),
+         (ORb32rr Int32Regs:$a, Int32Regs:$b)>;
+def: Pat<(xor (v2i16 Int32Regs:$a), (v2i16 Int32Regs:$b)),
+         (XORb32rr Int32Regs:$a, Int32Regs:$b)>;
+def: Pat<(and (v2i16 Int32Regs:$a), (v2i16 Int32Regs:$b)),
+         (ANDb32rr Int32Regs:$a, Int32Regs:$b)>;
+
+// The constants get legalized into a bitcast from i32, so that's what we need
+// to match here.
 def: Pat<(or Int32Regs:$a, (v2i16 (bitconvert (i32 imm:$b)))),
          (ORb32ri Int32Regs:$a, imm:$b)>;
 def: Pat<(xor Int32Regs:$a, (v2i16 (bitconvert (i32 imm:$b)))),

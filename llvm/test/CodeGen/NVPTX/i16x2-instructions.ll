@@ -247,6 +247,23 @@ define <2 x i16> @test_or(<2 x i16> %a, <2 x i16> %b) #0 {
   ret <2 x i16> %r
 }
 
+; Ops that operate on computed arguments go though a different lowering path.
+; compared to the ones that operate on loaded data. So we test them separately.
+; COMMON-LABEL: test_or_computed(
+; COMMON:        ld.param.u16    [[A:%rs[0-9+]]], [test_or_computed_param_0];
+; COMMON-DAG:    mov.u16         [[C0:%rs[0-9]+]], 0;
+; COMMON-DAG:    mov.b32         [[R1:%r[0-9]+]], {[[A]], [[C0]]};
+; COMMON-DAG:    mov.u16         [[C5:%rs[0-9]+]], 5;
+; COMMON-DAG:    mov.b32         [[R2:%r[0-9]+]], {[[A]], [[C5]]};
+; COMMON:        or.b32          [[R:%r[0-9]+]], [[R2]], [[R1]];
+; COMMON-NEXT:   st.param.b32    [func_retval0+0], [[R]];
+define <2 x i16> @test_or_computed(i16 %a) {
+  %ins.0 = insertelement <2 x i16> zeroinitializer, i16 %a, i32 0
+  %ins.1 = insertelement <2 x i16> %ins.0, i16 5, i32 1
+  %r = or <2 x i16> %ins.1, %ins.0
+  ret <2 x i16> %r
+}
+
 ; Check that we can lower or with immediate arguments.
 ; COMMON-LABEL: test_or_imm_0(
 ; COMMON-DAG:  ld.param.u32    [[A:%r[0-9]+]], [test_or_imm_0_param_0];
@@ -279,6 +296,21 @@ define <2 x i16> @test_xor(<2 x i16> %a, <2 x i16> %b) #0 {
   ret <2 x i16> %r
 }
 
+; COMMON-LABEL: test_xor_computed(
+; COMMON:        ld.param.u16    [[A:%rs[0-9+]]], [test_xor_computed_param_0];
+; COMMON-DAG:    mov.u16         [[C0:%rs[0-9]+]], 0;
+; COMMON-DAG:    mov.b32         [[R1:%r[0-9]+]], {[[A]], [[C0]]};
+; COMMON-DAG:    mov.u16         [[C5:%rs[0-9]+]], 5;
+; COMMON-DAG:    mov.b32         [[R2:%r[0-9]+]], {[[A]], [[C5]]};
+; COMMON:        xor.b32         [[R:%r[0-9]+]], [[R2]], [[R1]];
+; COMMON-NEXT:   st.param.b32    [func_retval0+0], [[R]];
+define <2 x i16> @test_xor_computed(i16 %a) {
+  %ins.0 = insertelement <2 x i16> zeroinitializer, i16 %a, i32 0
+  %ins.1 = insertelement <2 x i16> %ins.0, i16 5, i32 1
+  %r = xor <2 x i16> %ins.1, %ins.0
+  ret <2 x i16> %r
+}
+
 ; Check that we can lower xor with immediate arguments.
 ; COMMON-LABEL: test_xor_imm_0(
 ; COMMON-DAG:  ld.param.u32    [[A:%r[0-9]+]], [test_xor_imm_0_param_0];
@@ -297,6 +329,55 @@ define <2 x i16> @test_xor_imm_0(<2 x i16> %a) #0 {
 ; COMMON-NEXT: ret;
 define <2 x i16> @test_xor_imm_1(<2 x i16> %a) #0 {
   %r = xor <2 x i16> %a, <i16 1, i16 2>
+  ret <2 x i16> %r
+}
+
+; COMMON-LABEL: test_and(
+; COMMON-DAG:  ld.param.u32    [[A:%r[0-9]+]], [test_and_param_0];
+; COMMON-DAG:  ld.param.u32    [[B:%r[0-9]+]], [test_and_param_1];
+; COMMON-NEXT: and.b32          [[R:%r[0-9]+]], [[A]], [[B]];
+; COMMON-NEXT: st.param.b32    [func_retval0+0], [[R]];
+; COMMON-NEXT: ret;
+define <2 x i16> @test_and(<2 x i16> %a, <2 x i16> %b) #0 {
+  %r = and <2 x i16> %a, %b
+  ret <2 x i16> %r
+}
+
+; Ops that operate on computed arguments go though a different lowering path.
+; compared to the ones that operate on loaded data. So we test them separately.
+; COMMON-LABEL: test_and_computed(
+; COMMON:        ld.param.u16    [[A:%rs[0-9+]]], [test_and_computed_param_0];
+; COMMON-DAG:    mov.u16         [[C0:%rs[0-9]+]], 0;
+; COMMON-DAG:    mov.b32         [[R1:%r[0-9]+]], {[[A]], [[C0]]};
+; COMMON-DAG:    mov.u16         [[C5:%rs[0-9]+]], 5;
+; COMMON-DAG:    mov.b32         [[R2:%r[0-9]+]], {[[A]], [[C5]]};
+; COMMON:        and.b32          [[R:%r[0-9]+]], [[R2]], [[R1]];
+; COMMON-NEXT:   st.param.b32    [func_retval0+0], [[R]];
+define <2 x i16> @test_and_computed(i16 %a) {
+  %ins.0 = insertelement <2 x i16> zeroinitializer, i16 %a, i32 0
+  %ins.1 = insertelement <2 x i16> %ins.0, i16 5, i32 1
+  %r = and <2 x i16> %ins.1, %ins.0
+  ret <2 x i16> %r
+}
+
+; Check that we can lower and with immediate arguments.
+; COMMON-LABEL: test_and_imm_0(
+; COMMON-DAG:  ld.param.u32    [[A:%r[0-9]+]], [test_and_imm_0_param_0];
+; COMMON-NEXT: and.b32          [[R:%r[0-9]+]], [[A]], 131073;
+; COMMON-NEXT: st.param.b32    [func_retval0+0], [[R]];
+; COMMON-NEXT: ret;
+define <2 x i16> @test_and_imm_0(<2 x i16> %a) #0 {
+  %r = and <2 x i16> <i16 1, i16 2>, %a
+  ret <2 x i16> %r
+}
+
+; COMMON-LABEL: test_and_imm_1(
+; COMMON-DAG:  ld.param.u32    [[B:%r[0-9]+]], [test_and_imm_1_param_0];
+; COMMON-NEXT: and.b32          [[R:%r[0-9]+]], [[A]], 131073;
+; COMMON-NEXT: st.param.b32    [func_retval0+0], [[R]];
+; COMMON-NEXT: ret;
+define <2 x i16> @test_and_imm_1(<2 x i16> %a) #0 {
+  %r = and <2 x i16> %a, <i16 1, i16 2>
   ret <2 x i16> %r
 }
 
