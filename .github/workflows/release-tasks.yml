@@ -24,6 +24,9 @@ jobs:
           release_version=$(echo "${{ github.ref_name }}" | sed 's/llvmorg-//g')
           echo "release-version=$release_version" >> "$GITHUB_OUTPUT"
 
+      - name: Checkout LLVM
+        uses: actions/checkout@v4
+
       - name: Install Dependencies
         run: |
           sudo apt-get update
@@ -31,14 +34,9 @@ jobs:
               doxygen \
               graphviz \
               python3-github \
-              python3-recommonmark \
-              python3-sphinx \
               ninja-build \
               texlive-font-utils
-          pip3 install --user sphinx-markdown-tables
-
-      - name: Checkout LLVM
-        uses: actions/checkout@v4
+          pip3 install --user -r ./llvm/docs/requirements.txt
 
       - name: Create Release
         run: |
