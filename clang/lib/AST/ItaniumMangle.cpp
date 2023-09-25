@@ -5788,13 +5788,14 @@ struct CXXNameMangler::TemplateArgManglingInfo {
              "no parameter for argument");
       Param = ResolvedTemplate->getTemplateParameters()->getParam(ParamIdx);
 
-      // If we reach an expanded parameter pack whose argument isn't in pack
-      // form, that means Sema couldn't figure out which arguments belonged to
-      // it, because it contains a pack expansion. Track the expanded pack for
-      // all further template arguments until we hit that pack expansion.
+      // If we reach a parameter pack whose argument isn't in pack form, that
+      // means Sema couldn't or didn't figure out which arguments belonged to
+      // it, because it contains a pack expansion or because Sema bailed out of
+      // computing parameter / argument correspondence before this point. Track
+      // the pack as the corresponding parameter for all further template
+      // arguments until we hit a pack expansion, at which point we don't know
+      // the correspondence between parameters and arguments at all.
       if (Param->isParameterPack() && Arg.getKind() != TemplateArgument::Pack) {
-        assert(getExpandedPackSize(Param) &&
-               "failed to form pack argument for parameter pack");
         UnresolvedExpandedPack = Param;
       }
     }

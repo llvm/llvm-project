@@ -5022,6 +5022,12 @@ InstCombinerImpl::foldICmpWithMinMaxImpl(Instruction &I,
     std::swap(CmpXZ, CmpYZ);
   }
 
+  auto FoldIntoCmpYZ = [&]() -> Instruction * {
+    if (CmpYZ.has_value())
+      return replaceInstUsesWith(I, ConstantInt::getBool(I.getType(), *CmpYZ));
+    return ICmpInst::Create(Instruction::ICmp, Pred, Y, Z);
+  };
+
   switch (Pred) {
   case ICmpInst::ICMP_EQ:
   case ICmpInst::ICMP_NE: {
@@ -5038,12 +5044,32 @@ InstCombinerImpl::foldICmpWithMinMaxImpl(Instruction &I,
         NewPred = ICmpInst::getInversePredicate(NewPred);
       return ICmpInst::Create(Instruction::ICmp, NewPred, X, Y);
     }
-    // Otherwise (X != Z, nofold):
-    //       Expr      Result
-    // min(X, Y) == Z X > Y || Y == Z
-    // max(X, Y) == Z X < Y || Y == Z
-    // min(X, Y) != Z X <= Y && Y != Z
-    // max(X, Y) != Z X >= Y && Y != Z
+    // Otherwise (X != Z):
+    ICmpInst::Predicate NewPred = MinMax->getPredicate();
+    auto MinMaxCmpXZ = IsCondKnownTrue(simplifyICmpInst(NewPred, X, Z, Q));
+    if (!MinMaxCmpXZ.has_value()) {
+      std::swap(X, Y);
+      std::swap(CmpXZ, CmpYZ);
+      MinMaxCmpXZ = IsCondKnownTrue(simplifyICmpInst(NewPred, X, Z, Q));
+    }
+    if (!MinMaxCmpXZ.has_value())
+      break;
+    if (*MinMaxCmpXZ) {
+      //    Expr         Fact    Result
+      // min(X, Y) == Z  X < Z   false
+      // max(X, Y) == Z  X > Z   false
+      // min(X, Y) != Z  X < Z    true
+      // max(X, Y) != Z  X > Z    true
+      return replaceInstUsesWith(
+          I, ConstantInt::getBool(I.getType(), Pred == ICmpInst::ICMP_NE));
+    } else {
+      //    Expr         Fact    Result
+      // min(X, Y) == Z  X > Z   Y == Z
+      // max(X, Y) == Z  X < Z   Y == Z
+      // min(X, Y) != Z  X > Z   Y != Z
+      // max(X, Y) != Z  X < Z   Y != Z
+      return FoldIntoCmpYZ();
+    }
     break;
   }
   case ICmpInst::ICMP_SLT:
@@ -5054,13 +5080,6 @@ InstCombinerImpl::foldICmpWithMinMaxImpl(Instruction &I,
   case ICmpInst::ICMP_UGT:
   case ICmpInst::ICMP_SGE:
   case ICmpInst::ICMP_UGE: {
-    auto FoldIntoCmpYZ = [&]() -> Instruction * {
-      if (CmpYZ.has_value())
-        return replaceInstUsesWith(I,
-                                   ConstantInt::getBool(I.getType(), *CmpYZ));
-      return ICmpInst::Create(Instruction::ICmp, Pred, Y, Z);
-    };
-
     bool IsSame = MinMax->getPredicate() == ICmpInst::getStrictPredicate(Pred);
     if (*CmpXZ) {
       if (IsSame) {
