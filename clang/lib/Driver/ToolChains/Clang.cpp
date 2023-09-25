@@ -1325,6 +1325,7 @@ void Clang::AddPreprocessingOptions(Compilation &C, const JobAction &JA,
         llvm::sys::path::replace_extension(P, "gch");
         if (D.getVFS().exists(P)) {
           FoundPCH = true;
+          D.Diag(diag::warn_drv_include_probe_gch) << A->getAsString(Args) << P;
         }
       }
 

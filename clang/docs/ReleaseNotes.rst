@@ -43,6 +43,8 @@ C/C++ Language Potentially Breaking Changes
 
 - The default extension name for PCH generation (``-c -xc-header`` and ``-c
   -xc++-header``) is now ``.pch`` instead of ``.gch``.
+- ``-include a.h`` probing ``a.h.gch`` is deprecated. Change the extension name
+  to ``.pch`` or use ``-include-pch a.h.gch``.
 
 C++ Specific Potentially Breaking Changes
 -----------------------------------------
