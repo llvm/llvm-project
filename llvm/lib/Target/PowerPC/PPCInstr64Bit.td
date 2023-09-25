@@ -1602,8 +1602,7 @@ def TLSGDAIX8 :
                      "#TLSGDAIX8",
                      [(set i64:$rD,
                        (PPCTlsgdAIX i64:$offset, i64:$handle))]>;
-// This pseudo is expanded to one copy to put the module handle in R3, the call
-// to GETtlsMOD64AIX, and then adds the variable offset to the output from the call.
+// This pseudo is expanded to load module-handle in X3, and the call to GETtlsMOD64AIX.
 def TLSLDAIX8 : PPCEmitTimePseudo<(outs g8rc:$rD), (ins),
                      "#TLSLDAIX8", [(set i64:$rD, (PPCTlsldAIX))]>;
 // Combined op for ADDItlsldL and GETtlsADDR, late expanded.  X3 and LR8

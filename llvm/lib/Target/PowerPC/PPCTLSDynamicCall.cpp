@@ -226,7 +226,7 @@ protected:
               }
             }
 
-            // Generate instructions refer to the "_$TLSML" symbol
+            // Generate instructions to load module-handle.
             Register ModuleHandleHReg;
             if (IsLargeModel) {
               ModuleHandleHReg = RegInfo.createVirtualRegister(GPRNoZero);
@@ -236,15 +236,11 @@ protected:
                   .addReg(Subtarget.getTOCPointerRegister())
                   .addExternalSymbol("_$TLSML[TC]", PPCII::MO_TLSLD_FLAG);
             }
-            Register MHReg = RegInfo.createVirtualRegister(GPRNoZero);
-            BuildMI(MBB, Anchor, DL, TII->get(LDTocOp), MHReg)
+            BuildMI(MBB, Anchor, DL, TII->get(LDTocOp), GPR3)
                 .addExternalSymbol("_$TLSML[TC]", PPCII::MO_TLSLD_FLAG)
                 .addReg(IsLargeModel
                             ? ModuleHandleHReg
                             : Register(Subtarget.getTOCPointerRegister()));
-            // The module handle is copied in r3.
-            BuildMI(MBB, Anchor, DL, TII->get(TargetOpcode::COPY), GPR3)
-                .addReg(MHReg);
             // The call to .__tls_get_mod.
             BuildMI(MBB, Anchor, DL, TII->get(Opc2), GPR3).addReg(GPR3);
           } else if (!IsTLSTPRelMI) {
