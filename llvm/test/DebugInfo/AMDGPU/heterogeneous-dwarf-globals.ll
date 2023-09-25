@@ -1,6 +1,10 @@
 ; RUN: llc -mcpu=gfx900 -O0 -filetype=obj < %s -o %t.o
-; RUN: llvm-dwarfdump -debug-info -show-form %t.o | FileCheck --check-prefixes=DWARF %s
-; RUN: llvm-objdump -r %t.o | FileCheck --check-prefixes=RELOCS %s
+; RUN: llvm-dwarfdump -debug-info -show-form %t.o | FileCheck --check-prefixes=DWARF,DWARF-ORIG-OPS %s
+; RUN: llvm-objdump -r %t.o | FileCheck --check-prefixes=RELOCS,RELOCS-OFF-USER-OPS %s
+
+; RUN: llc -mcpu=gfx900 -O0 -filetype=obj -emit-heterogeneous-dwarf-as-user-ops < %s -o %t.o
+; RUN: llvm-dwarfdump -debug-info -show-form %t.o | FileCheck --check-prefixes=DWARF,DWARF-USER-OPS %s
+; RUN: llvm-objdump -r %t.o | FileCheck --check-prefixes=RELOCS,RELOCS-YES-USER-OPS %s
 
 ; DWARF: .debug_info contents:
 ; DWARF: format = DWARF32
@@ -23,36 +27,44 @@
 ; they are available), and we cannot depend generally on having lld available
 ; to resolve these relocations.
 
-; DWARF: 0x0000001e:   DW_TAG_variable
+; DWARF-ORIG-OPS: 0x0000001e: DW_TAG_variable
+; DWARF-USER-OPS: 0x0000001e: DW_TAG_variable
 ; DWARF-NEXT: DW_AT_name [DW_FORM_strp] ("FileVarDevice")
 ; DWARF-NEXT: DW_AT_type [DW_FORM_ref4]
 ; DWARF-NEXT: DW_AT_external [DW_FORM_flag_present]
 ; DWARF-NEXT: DW_AT_decl_file [DW_FORM_data1]
 ; DWARF-NEXT: DW_AT_decl_line [DW_FORM_data1]
-; DWARF-NEXT: DW_AT_location [DW_FORM_exprloc] (DW_OP_addr 0x0, DW_OP_stack_value, DW_OP_deref_size 0x8, DW_OP_constu 0x0, DW_OP_LLVM_form_aspace_address)
+; DWARF-ORIG-OPS-NEXT: DW_AT_location [DW_FORM_exprloc] (DW_OP_addr 0x0, DW_OP_stack_value, DW_OP_deref_size 0x8, DW_OP_constu 0x0, DW_OP_LLVM_form_aspace_address)
+; DWARF-USER-OPS-NEXT: DW_AT_location [DW_FORM_exprloc] (DW_OP_addr 0x0, DW_OP_stack_value, DW_OP_deref_size 0x8, DW_OP_constu 0x0, DW_OP_LLVM_user DW_OP_LLVM_form_aspace_address)
 
-; DWARF: 0x00000040:   DW_TAG_variable
+; DWARF-ORIG-OPS: 0x00000040: DW_TAG_variable
+; DWARF-USER-OPS: 0x00000041: DW_TAG_variable
 ; DWARF-NEXT: DW_AT_name [DW_FORM_strp] ("FileVarDeviceShared")
 ; DWARF-NEXT: DW_AT_type [DW_FORM_ref4]
 ; DWARF-NEXT: DW_AT_external [DW_FORM_flag_present]
 ; DWARF-NEXT: DW_AT_decl_file [DW_FORM_data1]
 ; DWARF-NEXT: DW_AT_decl_line [DW_FORM_data1]
-; DWARF-NEXT: DW_AT_location [DW_FORM_exprloc] (DW_OP_lit0, DW_OP_stack_value, DW_OP_deref_size 0x4, DW_OP_constu 0x3, DW_OP_LLVM_form_aspace_address)
+; DWARF-ORIG-OPS-NEXT: DW_AT_location [DW_FORM_exprloc] (DW_OP_lit0, DW_OP_stack_value, DW_OP_deref_size 0x4, DW_OP_constu 0x3, DW_OP_LLVM_form_aspace_address)
+; DWARF-USER-OPS-NEXT: DW_AT_location [DW_FORM_exprloc] (DW_OP_lit0, DW_OP_stack_value, DW_OP_deref_size 0x4, DW_OP_constu 0x3, DW_OP_LLVM_user DW_OP_LLVM_form_aspace_address)
 
-; DWARF: 0x00000053: DW_TAG_variable
+; DWARF-ORIG-OPS: 0x00000053: DW_TAG_variable
+; DWARF-USER-OPS: 0x00000055: DW_TAG_variable
 ; DWARF-NEXT: DW_AT_name [DW_FORM_strp]       ("FileVarDeviceConstant")
 ; DWARF-NEXT: DW_AT_type [DW_FORM_ref4]
 ; DWARF-NEXT: DW_AT_external [DW_FORM_flag_present]
 ; DWARF-NEXT: DW_AT_decl_file [DW_FORM_data1]
 ; DWARF-NEXT: DW_AT_decl_line [DW_FORM_data1]
-; DWARF-NEXT: DW_AT_location [DW_FORM_exprloc] (DW_OP_addr 0x0, DW_OP_stack_value, DW_OP_deref_size 0x8, DW_OP_constu 0x0, DW_OP_LLVM_form_aspace_address)
+; DWARF-ORIG-OPS-NEXT: DW_AT_location [DW_FORM_exprloc] (DW_OP_addr 0x0, DW_OP_stack_value, DW_OP_deref_size 0x8, DW_OP_constu 0x0, DW_OP_LLVM_form_aspace_address)
+; DWARF-USER-OPS-NEXT: DW_AT_location [DW_FORM_exprloc] (DW_OP_addr 0x0, DW_OP_stack_value, DW_OP_deref_size 0x8, DW_OP_constu 0x0, DW_OP_LLVM_user DW_OP_LLVM_form_aspace_address)
 
 ; RELOCS: RELOCATION RECORDS FOR [.debug_info]:
-; RELOCS-NOT: RELOCATION RECORDS FOR
+; RELOCS-OFF: RELOCATION RECORDS FOR
 ;       0x1e + 0x0d = 0x2b
 ; RELOCS: 000000000000002b R_AMDGPU_ABS64           FileVarDevice
 ;       0x53 + 0x0d = 0x60
-; RELOCS: 0000000000000060 R_AMDGPU_ABS64           FileVarDeviceConstant
+; RELOCS-OFF-USER-OPS: 0000000000000060 R_AMDGPU_ABS64           FileVarDeviceConstant
+;       0x55 + 0x0d = 0x62
+; RELOCS-YES-USER-OPS: 0000000000000062 R_AMDGPU_ABS64           FileVarDeviceConstant
 
 target datalayout = "e-p:64:64-p1:64:64-p2:32:32-p3:32:32-p4:64:64-p5:32:32-p6:32:32-i64:64-v16:16-v24:32-v32:32-v48:64-v96:128-v192:256-v256:256-v512:512-v1024:1024-v2048:2048-n32:64-S32-A5-G1-ni:7"
 target triple = "amdgcn-amd-amdhsa"

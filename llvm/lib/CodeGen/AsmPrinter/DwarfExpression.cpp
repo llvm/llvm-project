@@ -18,6 +18,7 @@
 #include "llvm/CodeGen/Register.h"
 #include "llvm/CodeGen/TargetRegisterInfo.h"
 #include "llvm/IR/DataLayout.h"
+#include "llvm/MC/MCContext.h"
 #include "llvm/Support/ErrorHandling.h"
 #include <algorithm>
 #include <stack>
@@ -1059,7 +1060,16 @@ void DebugLocDwarfExprAST::emitDwarfData1(uint8_t Data1Value) {
   getActiveStreamer().emitInt8(Data1Value, Twine(Data1Value));
 }
 
-void DebugLocDwarfExprAST::emitDwarfOp(uint8_t DwarfOpValue, const char *Comment) {
+void DebugLocDwarfExprAST::emitDwarfOp(uint8_t DwarfOpValue,
+                                       const char *Comment) {
+  if (EmitHeterogeneousDwarfAsUserOps) {
+    if (auto OptUserOp = dwarf::getUserOp(DwarfOpValue)) {
+      getActiveStreamer().emitInt8(
+          dwarf::DW_OP_LLVM_user,
+          dwarf::OperationEncodingString(dwarf::DW_OP_LLVM_user));
+      DwarfOpValue = *OptUserOp;
+    }
+  }
   getActiveStreamer().emitInt8(
       DwarfOpValue, Comment ? Twine(Comment) + " " +
                                   dwarf::OperationEncodingString(DwarfOpValue)
@@ -1099,6 +1109,12 @@ void DIEDwarfExprAST::emitDwarfData1(uint8_t Data1Value) {
 }
 
 void DIEDwarfExprAST::emitDwarfOp(uint8_t DwarfOpValue, const char *Comment) {
+  if (EmitHeterogeneousDwarfAsUserOps) {
+    if (auto OptUserOp = dwarf::getUserOp(DwarfOpValue)) {
+      CU.addUInt(getActiveDIE(), dwarf::DW_FORM_data1, dwarf::DW_OP_LLVM_user);
+      DwarfOpValue = *OptUserOp;
+    }
+  }
   CU.addUInt(getActiveDIE(), dwarf::DW_FORM_data1, DwarfOpValue);
 }
 

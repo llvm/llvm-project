@@ -130,7 +130,7 @@ TEST_F(DWARFExpressionCompactPrinterTest, Test_OP_nop) {
 }
 
 TEST_F(DWARFExpressionCompactPrinterTest, Test_OP_LLVM_nop) {
-  TestExprPrinter({DW_OP_LLVM_user, DW_OP_LLVM_nop},
+  TestExprPrinter({DW_OP_LLVM_user, DW_OP_LLVM_USER_nop},
                   "<stack of size 0, expected 1>");
 }
 
@@ -139,5 +139,5 @@ TEST_F(DWARFExpressionCompactPrinterTest, Test_OP_nop_OP_reg) {
 }
 
 TEST_F(DWARFExpressionCompactPrinterTest, Test_OP_LLVM_nop_OP_reg) {
-  TestExprPrinter({DW_OP_LLVM_user, DW_OP_LLVM_nop, DW_OP_reg0}, "R0");
+  TestExprPrinter({DW_OP_LLVM_user, DW_OP_LLVM_USER_nop, DW_OP_reg0}, "R0");
 }

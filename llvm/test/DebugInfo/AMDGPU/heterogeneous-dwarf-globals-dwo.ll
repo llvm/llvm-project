@@ -1,9 +1,9 @@
-; RUN: llc -mcpu=gfx900 -O0 -dwarf-version=4 -filetype=obj -split-dwarf-file=foo.dwo -split-dwarf-output=%t.dwo < %s -o %t.o
+; RUN: llc -mcpu=gfx900 -O0 -dwarf-version=4 -filetype=obj -split-dwarf-file=foo.dwo -split-dwarf-output=%t.dwo -emit-heterogeneous-dwarf-as-user-ops < %s -o %t.o
 ; RUN: llvm-dwarfdump -debug-info -show-form %t.o | FileCheck --check-prefixes=COMMON,V4,DWARF,DWARF-V4 %s
 ; RUN: llvm-dwarfdump -debug-info -show-form %t.dwo | FileCheck --check-prefixes=COMMON,V4,DWARF-DWO,DWARF-DWO-V4 %s
 ; RUN: llvm-objdump -r %t.o | FileCheck --check-prefixes=RELOCS,RELOCS-V4 %s
 
-; RUN: llc -mcpu=gfx900 -O0 -dwarf-version=5 -filetype=obj -split-dwarf-file=foo.dwo -split-dwarf-output=%t.dwo < %s -o %t.o
+; RUN: llc -mcpu=gfx900 -O0 -dwarf-version=5 -filetype=obj -split-dwarf-file=foo.dwo -split-dwarf-output=%t.dwo -emit-heterogeneous-dwarf-as-user-ops < %s -o %t.o
 ; RUN: llvm-dwarfdump -debug-info -show-form %t.o | FileCheck --check-prefixes=COMMON,V5,DWARF,DWARF-V5 %s
 ; RUN: llvm-dwarfdump -debug-info -show-form %t.dwo | FileCheck --check-prefixes=COMMON,V5,DWARF-DWO,DWARF-DWO-V5 %s
 ; RUN: llvm-objdump -r %t.o | FileCheck --check-prefixes=RELOCS,RELOCS-V5 %s
@@ -30,8 +30,8 @@
 ; DWARF-DWO-NEXT: DW_AT_external [DW_FORM_flag_present]
 ; DWARF-DWO-NEXT: DW_AT_decl_file [DW_FORM_data1]
 ; DWARF-DWO-NEXT: DW_AT_decl_line [DW_FORM_data1]
-; DWARF-DWO-V4-NEXT: DW_AT_location [DW_FORM_exprloc] (DW_OP_GNU_addr_index 0x0, DW_OP_stack_value, DW_OP_deref_size 0x8, DW_OP_constu 0x0, DW_OP_LLVM_form_aspace_address)
-; DWARF-DWO-V5-NEXT: DW_AT_location [DW_FORM_exprloc] (DW_OP_addrx 0x0, DW_OP_stack_value, DW_OP_deref_size 0x8, DW_OP_constu 0x0, DW_OP_LLVM_form_aspace_address)
+; DWARF-DWO-V4-NEXT: DW_AT_location [DW_FORM_exprloc] (DW_OP_GNU_addr_index 0x0, DW_OP_stack_value, DW_OP_deref_size 0x8, DW_OP_constu 0x0, DW_OP_LLVM_user DW_OP_LLVM_form_aspace_address)
+; DWARF-DWO-V5-NEXT: DW_AT_location [DW_FORM_exprloc] (DW_OP_addrx 0x0, DW_OP_stack_value, DW_OP_deref_size 0x8, DW_OP_constu 0x0, DW_OP_LLVM_user DW_OP_LLVM_form_aspace_address)
 
 ; DWARF-DWO: DW_TAG_variable
 ; DWARF-DWO-NEXT: DW_AT_name [{{DW_FORM_GNU_str_index|DW_FORM_strx1}}] ("FileVarDeviceShared")
@@ -39,7 +39,7 @@
 ; DWARF-DWO-NEXT: DW_AT_external [DW_FORM_flag_present]
 ; DWARF-DWO-NEXT: DW_AT_decl_file [DW_FORM_data1]
 ; DWARF-DWO-NEXT: DW_AT_decl_line [DW_FORM_data1]
-; DWARF-DWO-NEXT: DW_AT_location [DW_FORM_exprloc] (DW_OP_lit0, DW_OP_stack_value, DW_OP_deref_size 0x4, DW_OP_constu 0x3, DW_OP_LLVM_form_aspace_address)
+; DWARF-DWO-NEXT: DW_AT_location [DW_FORM_exprloc] (DW_OP_lit0, DW_OP_stack_value, DW_OP_deref_size 0x4, DW_OP_constu 0x3, DW_OP_LLVM_user DW_OP_LLVM_form_aspace_address)
 
 ; DWARF-DWO: DW_TAG_variable
 ; DWARF-DWO-NEXT: DW_AT_name [{{DW_FORM_GNU_str_index|DW_FORM_strx1}}]       ("FileVarDeviceConstant")
@@ -47,8 +47,8 @@
 ; DWARF-DWO-NEXT: DW_AT_external [DW_FORM_flag_present]
 ; DWARF-DWO-NEXT: DW_AT_decl_file [DW_FORM_data1]
 ; DWARF-DWO-NEXT: DW_AT_decl_line [DW_FORM_data1]
-; DWARF-DWO-V4-NEXT: DW_AT_location [DW_FORM_exprloc] (DW_OP_GNU_addr_index 0x1, DW_OP_stack_value, DW_OP_deref_size 0x8, DW_OP_constu 0x0, DW_OP_LLVM_form_aspace_address)
-; DWARF-DWO-V5-NEXT: DW_AT_location [DW_FORM_exprloc] (DW_OP_addrx 0x1, DW_OP_stack_value, DW_OP_deref_size 0x8, DW_OP_constu 0x0, DW_OP_LLVM_form_aspace_address)
+; DWARF-DWO-V4-NEXT: DW_AT_location [DW_FORM_exprloc] (DW_OP_GNU_addr_index 0x1, DW_OP_stack_value, DW_OP_deref_size 0x8, DW_OP_constu 0x0, DW_OP_LLVM_user DW_OP_LLVM_form_aspace_address)
+; DWARF-DWO-V5-NEXT: DW_AT_location [DW_FORM_exprloc] (DW_OP_addrx 0x1, DW_OP_stack_value, DW_OP_deref_size 0x8, DW_OP_constu 0x0, DW_OP_LLVM_user DW_OP_LLVM_form_aspace_address)
 
 ; RELOCS: RELOCATION RECORDS FOR [.debug_addr]:
 ; RELOCS-V4: 0000000000000000 R_AMDGPU_ABS64           FileVarDevice

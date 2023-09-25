@@ -1,7 +1,7 @@
-; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx900 -filetype=asm -o - %s | FileCheck --check-prefixes=CHECK,WAVE64,GFX900 %s
-; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx90a -amdgpu-spill-vgpr-to-agpr=0 -filetype=asm -o - %s | FileCheck --check-prefixes=CHECK,WAVE64,GFX90A-V2A-DIS %s
-; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx90a -amdgpu-spill-vgpr-to-agpr=1 -filetype=asm -o - %s | FileCheck --check-prefixes=CHECK,WAVE64,GFX90A-V2A-EN %s
-; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx1010 -mattr=+wavefrontsize32,-wavefrontsize64 -filetype=asm -o - %s | FileCheck --check-prefixes=CHECK,WAVE32 %s
+; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx900 -filetype=asm -o - -emit-heterogeneous-dwarf-as-user-ops %s | FileCheck --check-prefixes=CHECK,WAVE64,GFX900 %s
+; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx90a -amdgpu-spill-vgpr-to-agpr=0 -filetype=asm -o - -emit-heterogeneous-dwarf-as-user-ops %s | FileCheck --check-prefixes=CHECK,WAVE64,GFX90A-V2A-DIS %s
+; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx90a -amdgpu-spill-vgpr-to-agpr=1 -filetype=asm -o - -emit-heterogeneous-dwarf-as-user-ops %s | FileCheck --check-prefixes=CHECK,WAVE64,GFX90A-V2A-EN %s
+; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx1010 -mattr=+wavefrontsize32,-wavefrontsize64 -filetype=asm -o - -emit-heterogeneous-dwarf-as-user-ops %s | FileCheck --check-prefixes=CHECK,WAVE32 %s
 
 ; CHECK-LABEL: kern1:
 ; CHECK: .cfi_startproc
@@ -10,11 +10,12 @@
 
 ; CHECK: %bb.0:
 ; DW_CFA_def_cfa_expression [0x0f]
-;   BLOCK_LENGTH ULEB128(3)=[0x03]
+;   BLOCK_LENGTH ULEB128(3)=[0x04]
 ;     DW_OP_lit0 [0x30]
 ;     DW_OP_lit6 [0x36]
-;     DW_OP_LLVM_form_aspace_address [0xe1]
-; CHECK-NEXT: .cfi_escape 0x0f, 0x03, 0x30, 0x36, 0xe1
+;     DW_OP_LLVM_user [0xe9]
+;     DW_OP_LLVM_form_aspace_address [0x02]
+; CHECK-NEXT: .cfi_escape 0x0f, 0x04, 0x30, 0x36, 0xe9, 0x02
 ; PC_64 = 16
 ; CHECK-NEXT: .cfi_undefined 16
 
@@ -559,20 +560,22 @@ declare hidden void @ex() #0
 ; CHECK: v_writelane_b32 v40, [[FP_SCRATCH_COPY]], 2
 
 ; DW_CFA_expression [0x10] SGPR33 ULEB128(65)=[0x41]
-;   BLOCK_LENGTH ULEB128(5)=[0x05]
+;   BLOCK_LENGTH ULEB128(5)=[0x06]
 ;     DW_OP_regx [0x90]
 ;       VGPR40_wave64 ULEB128(2600)=[0xa8, 0x14]
-;     DW_OP_LLVM_offset_uconst [0xe4]
+;     DW_OP_LLVM_user [0xe9]
+;     DW_OP_LLVM_offset_uconst [0x05]
 ;       OFFSET ULEB128(0x08) [0x08]
-; WAVE64-NEXT: .cfi_escape 0x10, 0x41, 0x05, 0x90, 0xa8, 0x14, 0xe4, 0x08
+; WAVE64-NEXT: .cfi_escape 0x10, 0x41, 0x06, 0x90, 0xa8, 0x14, 0xe9, 0x05, 0x08
 
 ; DW_CFA_expression [0x10] SGPR33 ULEB128(65)=[0x41]
-;   BLOCK_LENGTH ULEB128(5)=[0x05]
+;   BLOCK_LENGTH ULEB128(5)=[0x06]
 ;     DW_OP_regx [0x90]
 ;       VGPR40_wave32 ULEB128(1576)=[0xa8, 0x0c]
-;     DW_OP_LLVM_offset_uconst [0xe4]
+;     DW_OP_LLVM_user [0xe9]
+;     DW_OP_LLVM_offset_uconst [0x05]
 ;       OFFSET ULEB128(0x08) [0x08]
-; WAVE32-NEXT: .cfi_escape 0x10, 0x41, 0x05, 0x90, 0xa8, 0x0c, 0xe4, 0x08
+; WAVE32-NEXT: .cfi_escape 0x10, 0x41, 0x06, 0x90, 0xa8, 0x0c, 0xe9, 0x05, 0x08
 
 ; CHECK-NOT: .cfi_{{.*}}
 
@@ -619,39 +622,45 @@ entry:
 
 ; DW_CFA_expression [0x10]
 ;   VGPR40_wave64 ULEB128(1576)=[0xa8, 0x14]
-;   BLOCK_LENGTH ULEB128(14)=[0x0e]
+;   BLOCK_LENGTH ULEB128(14)=[0x11]
 ;     DW_OP_regx [0x90]
 ;       VGPR40_wave64 ULEB128(1576)=[0xa8, 0x14]
 ;     DW_OP_swap [0x16]
-;     DW_OP_LLVM_offset_uconst [0xe4]
+;     DW_OP_LLVM_user [0xe9]
+;     DW_OP_LLVM_offset_uconst [0x05]
 ;       OFFSET ULEB128(256)=[0x80, 0x02] / OFFSET ULEB128(256)=[0x80, 0x06]
-;     DW_OP_LLVM_call_frame_entry_reg [0xe6]
+;     DW_OP_LLVM_user [0xe9]
+;     DW_OP_LLVM_call_frame_entry_reg [0x07]
 ;       EXEC_MASK_wave64 ULEB128(17)=[0x11]
 ;     DW_OP_deref_size [0x94]
 ;       SIZE [0x08]
-;     DW_OP_LLVM_select_bit_piece [0xec]
+;     DW_OP_LLVM_user [0xe9]
+;     DW_OP_LLVM_select_bit_piece [0x0c]
 ;       ELEMENT_SIZE [0x20]
 ;       ELEMENT_COUNT [0x40]
-; GFX900-NEXT: .cfi_escape 0x10, 0xa8, 0x14, 0x0e, 0x90, 0xa8, 0x14, 0x16, 0xe4, 0x80, 0x02, 0xe6, 0x11, 0x94, 0x08, 0xec, 0x20, 0x40
-; GFX90A-V2A-DIS-NEXT: .cfi_escape 0x10, 0xa8, 0x14, 0x0e, 0x90, 0xa8, 0x14, 0x16, 0xe4, 0x80, 0x06, 0xe6, 0x11, 0x94, 0x08, 0xec, 0x20, 0x40
+; GFX900-NEXT: .cfi_escape 0x10, 0xa8, 0x14, 0x11, 0x90, 0xa8, 0x14, 0x16, 0xe9, 0x05, 0x80, 0x02, 0xe9, 0x07, 0x11, 0x94, 0x08, 0xe9, 0x0c, 0x20, 0x40
+; GFX90A-V2A-DIS-NEXT: .cfi_escape 0x10, 0xa8, 0x14, 0x11, 0x90, 0xa8, 0x14, 0x16, 0xe9, 0x05, 0x80, 0x06, 0xe9, 0x07, 0x11, 0x94, 0x08, 0xe9, 0x0c, 0x20, 0x40
 ; GFX90A-V2A-EN-NEXT: .cfi_register [[#VGPR1+2560]], [[#TMP_AGPR1+3072]]
 
 ; DW_CFA_expression [0x10]
 ;   VGPR40_wave32 ULEB128(1576)=[0xa8, 0x0c]
-;   BLOCK_LENGTH ULEB128(14)=[0x0e]
+;   BLOCK_LENGTH ULEB128(14)=[0x11]
 ;     DW_OP_regx [0x90]
 ;       VGPR40_wave32 ULEB128(1576)=[0xa8, 0x0c]
 ;     DW_OP_swap [0x16]
-;     DW_OP_LLVM_offset_uconst [0xe4]
+;     DW_OP_LLVM_user [0xe9]
+;     DW_OP_LLVM_offset_uconst [0x05]
 ;       OFFSET ULEB128(128)=[0x80, 0x01]
-;     DW_OP_LLVM_call_frame_entry_reg [0xe6]
+;     DW_OP_LLVM_user [0xe9]
+;     DW_OP_LLVM_call_frame_entry_reg [0x07]
 ;       EXEC_MASK_wave32 ULEB128(1)=[0x01]
 ;     DW_OP_deref_size [0x94]
 ;       SIZE [0x04]
-;     DW_OP_LLVM_select_bit_piece [0xec]
+;     DW_OP_LLVM_user [0xe9]
+;     DW_OP_LLVM_select_bit_piece [0x0c]
 ;       ELEMENT_SIZE [0x20]
 ;       ELEMENT_COUNT [0x20]
-; WAVE32-NEXT: .cfi_escape 0x10, 0xa8, 0x0c, 0x0e, 0x90, 0xa8, 0x0c, 0x16, 0xe4, 0x80, 0x01, 0xe6, 0x01, 0x94, 0x04, 0xec, 0x20, 0x20
+; WAVE32-NEXT: .cfi_escape 0x10, 0xa8, 0x0c, 0x11, 0x90, 0xa8, 0x0c, 0x16, 0xe9, 0x05, 0x80, 0x01, 0xe9, 0x07, 0x01, 0x94, 0x04, 0xe9, 0x0c, 0x20, 0x20
 
 ; CHECK-NOT: .cfi_{{.*}}
 
@@ -662,59 +671,68 @@ entry:
 
 ; DW_CFA_expression [0x10]
 ;   VGPR41_wave64 ULEB128(2601)=[0xa9, 0x14]
-;   BLOCK_LENGTH ULEB128(13)=[0x0d]
+;   BLOCK_LENGTH ULEB128(13)=[0x10]
 ;     DW_OP_regx [0x90]
 ;       VGPR41_wave64 ULEB128(2601)=[0xa9, 0x14]
 ;     DW_OP_swap [0x16]
-;     DW_OP_LLVM_offset_uconst [0xe4]
+;     DW_OP_LLVM_user [0xe9]
+;     DW_OP_LLVM_offset_uconst [0x05]
 ;       OFFSET ULEB128(0)=[0x00] / OFFSET ULEB128(128)=[0x80, 0x04]
-;     DW_OP_LLVM_call_frame_entry_reg [0xe6]
+;     DW_OP_LLVM_user [0xe9]
+;     DW_OP_LLVM_call_frame_entry_reg [0x07]
 ;       EXEC_MASK_wave64 ULEB128(17)=[0x11]
 ;     DW_OP_deref_size [0x94]
 ;       SIZE [0x08]
-;     DW_OP_LLVM_select_bit_piece [0xec]
+;     DW_OP_LLVM_user [0xe9]
+;     DW_OP_LLVM_select_bit_piece [0x0c]
 ;       ELEMENT_SIZE [0x20]
 ;       ELEMENT_COUNT [0x40]
-; GFX900-NEXT: .cfi_escape 0x10, 0xa9, 0x14, 0x0d, 0x90, 0xa9, 0x14, 0x16, 0xe4, 0x00, 0xe6, 0x11, 0x94, 0x08, 0xec, 0x20, 0x40
-; GFX90A-V2A-DIS-NEXT: .cfi_escape 0x10, 0xa9, 0x14, 0x0e, 0x90, 0xa9, 0x14, 0x16, 0xe4, 0x80, 0x04, 0xe6, 0x11, 0x94, 0x08, 0xec, 0x20, 0x40
+; GFX900-NEXT: .cfi_escape 0x10, 0xa9, 0x14, 0x10, 0x90, 0xa9, 0x14, 0x16, 0xe9, 0x05, 0x00, 0xe9, 0x07, 0x11, 0x94, 0x08, 0xe9, 0x0c, 0x20, 0x40
+; GFX90A-V2A-DIS-NEXT: .cfi_escape 0x10, 0xa9, 0x14, 0x11, 0x90, 0xa9, 0x14, 0x16, 0xe9, 0x05, 0x80, 0x04, 0xe9, 0x07, 0x11, 0x94, 0x08, 0xe9, 0x0c, 0x20, 0x40
 ; GFX90A-V2A-EN-NEXT: .cfi_register [[#VGPR2+2560]], [[#TMP_AGPR2+3072]]
 
 ; DW_CFA_expression [0x10]
 ;   VGPR41_wave32 ULEB128(1577)=[0xa9, 0x0c]
-;   BLOCK_LENGTH ULEB128(13)=[0x0d]
+;   BLOCK_LENGTH ULEB128(13)=[0x10]
 ;     DW_OP_regx [0x90]
 ;       VGPR41_wave32 ULEB128(1577)=[0xa9, 0x0c]
 ;     DW_OP_swap [0x16]
-;     DW_OP_LLVM_offset_uconst [0xe4]
+;     DW_OP_LLVM_user [0xe9]
+;     DW_OP_LLVM_offset_uconst [0x05]
 ;       OFFSET ULEB128(0)=[0x00]
-;     DW_OP_LLVM_call_frame_entry_reg [0xe6]
+;     DW_OP_LLVM_user [0xe9]
+;     DW_OP_LLVM_call_frame_entry_reg [0x07]
 ;       EXEC_MASK_wave32 ULEB128(1)=[0x01]
 ;     DW_OP_deref_size [0x94]
 ;       SIZE [0x04]
-;     DW_OP_LLVM_select_bit_piece [0xec]
+;     DW_OP_LLVM_user [0xe9]
+;     DW_OP_LLVM_select_bit_piece [0x0c]
 ;       ELEMENT_SIZE [0x20]
 ;       ELEMENT_COUNT [0x20]
-; WAVE32: .cfi_escape 0x10, 0xa9, 0x0c, 0x0d, 0x90, 0xa9, 0x0c, 0x16, 0xe4, 0x00, 0xe6, 0x01, 0x94, 0x04, 0xec, 0x20, 0x20
+; WAVE32: .cfi_escape 0x10, 0xa9, 0x0c, 0x10, 0x90, 0xa9, 0x0c, 0x16, 0xe9, 0x05, 0x00, 0xe9, 0x07, 0x01, 0x94, 0x04, 0xe9, 0x0c, 0x20, 0x20
 
 ; GFX90A-V2A-DIS: buffer_store_dword a32, off, s[0:3], s32 offset:4 ; 4-byte Folded Spill
 ; GFX90A-V2A-EN: v_accvgpr_read_b32 v[[#TMP_VGPR1:]], a[[#AGPR1:]]
 
 ; DW_CFA_expression [0x10]
 ;   AGPR32_wave64 ULEB128(3104)=[0xa0, 0x18]
-;   BLOCK_LENGTH ULEB128(14)=[0x0e]
+;   BLOCK_LENGTH ULEB128(14)=[0x11]
 ;     DW_OP_regx [0x90]
 ;       AGPR32_wave64 ULEB128(3104)=[0xa0, 0x18]
 ;     DW_OP_swap [0x16]
-;     DW_OP_LLVM_offset_uconst [0xe4]
+;     DW_OP_LLVM_user [0xe9]
+;     DW_OP_LLVM_offset_uconst [0x05]
 ;       OFFSET ULEB128(256)=[0x80, 0x02]
-;     DW_OP_LLVM_call_frame_entry_reg [0xe6]
+;     DW_OP_LLVM_user [0xe9]
+;     DW_OP_LLVM_call_frame_entry_reg [0x07]
 ;       EXEC_MASK_wave64 ULEB128(17)=[0x11]
 ;     DW_OP_deref_size [0x94]
 ;       SIZE [0x08]
-;     DW_OP_LLVM_select_bit_piece [0xec]
+;     DW_OP_LLVM_user [0xe9]
+;     DW_OP_LLVM_select_bit_piece [0x0c]
 ;       ELEMENT_SIZE [0x20]
 ;       ELEMENT_COUNT [0x40]
-; GFX90A-V2A-DIS-NEXT: .cfi_escape 0x10, 0xa0, 0x18, 0x0e, 0x90, 0xa0, 0x18, 0x16, 0xe4, 0x80, 0x02, 0xe6, 0x11, 0x94, 0x08, 0xec, 0x20, 0x40
+; GFX90A-V2A-DIS-NEXT: .cfi_escape 0x10, 0xa0, 0x18, 0x11, 0x90, 0xa0, 0x18, 0x16, 0xe9, 0x05, 0x80, 0x02, 0xe9, 0x07, 0x11, 0x94, 0x08, 0xe9, 0x0c, 0x20, 0x40
 ; GFX90A-V2A-EN-NEXT: .cfi_register [[#AGPR1+3072]], [[#TMP_VGPR1+2560]]
 
 ; CHECK-NOT: .cfi_{{.*}}
@@ -724,20 +742,23 @@ entry:
 
 ; DW_CFA_expression [0x10]
 ;   AGPR32_wave64 ULEB128(3105)=[0xa1, 0x18]
-;   BLOCK_LENGTH ULEB128(14)=[0x0d]
+;   BLOCK_LENGTH ULEB128(14)=[0x10]
 ;     DW_OP_regx [0x90]
 ;       AGPR32_wave64 ULEB128(3105)=[0xa1, 0x18]
 ;     DW_OP_swap [0x16]
-;     DW_OP_LLVM_offset_uconst [0xe4]
+;     DW_OP_LLVM_user [0xe9]
+;     DW_OP_LLVM_offset_uconst [0x05]
 ;       OFFSET ULEB128(0)=[0x00]
-;     DW_OP_LLVM_call_frame_entry_reg [0xe6]
+;     DW_OP_LLVM_user [0xe9]
+;     DW_OP_LLVM_call_frame_entry_reg [0x07]
 ;       EXEC_MASK_wave64 ULEB128(17)=[0x11]
 ;     DW_OP_deref_size [0x94]
 ;       SIZE [0x08]
-;     DW_OP_LLVM_select_bit_piece [0xec]
+;     DW_OP_LLVM_user [0xe9]
+;     DW_OP_LLVM_select_bit_piece [0x0c]
 ;       ELEMENT_SIZE [0x20]
 ;       ELEMENT_COUNT [0x40]
-; GFX90A-V2A-DIS-NEXT: .cfi_escape 0x10, 0xa1, 0x18, 0x0d, 0x90, 0xa1, 0x18, 0x16, 0xe4, 0x00, 0xe6, 0x11, 0x94, 0x08, 0xec, 0x20, 0x40
+; GFX90A-V2A-DIS-NEXT: .cfi_escape 0x10, 0xa1, 0x18, 0x10, 0x90, 0xa1, 0x18, 0x16, 0xe9, 0x05, 0x00, 0xe9, 0x07, 0x11, 0x94, 0x08, 0xe9, 0x0c, 0x20, 0x40
 ; GFX90A-V2A-EN-NEXT: .cfi_register [[#AGPR2+3072]], [[#TMP_VGPR2+2560]]
 
 ; CHECK-NOT: .cfi_{{.*}}

@@ -14,6 +14,7 @@
 #if !(                                                                         \
     defined HANDLE_DW_TAG || defined HANDLE_DW_AT || defined HANDLE_DW_FORM || \
     defined HANDLE_DW_OP || defined HANDLE_DW_OP_LLVM_USEROP ||                    \
+    defined HANDLE_HETEROGENEOUS_OP ||                                         \
     defined HANDLE_DW_LANG || defined HANDLE_DW_ATE ||                         \
     defined HANDLE_DW_VIRTUALITY || defined HANDLE_DW_DEFAULTED ||             \
     defined HANDLE_DW_CC || defined HANDLE_DW_LNS || defined HANDLE_DW_LNE ||  \
@@ -57,6 +58,10 @@
 
 #ifndef HANDLE_DW_OP_LLVM_USEROP
 #define HANDLE_DW_OP_LLVM_USEROP(ID, NAME)
+#endif
+
+#ifndef HANDLE_HETEROGENEOUS_OP
+#define HANDLE_HETEROGENEOUS_OP(NAME)
 #endif
 
 #ifndef HANDLE_DW_LANG
@@ -949,6 +954,33 @@ HANDLE_DW_OP(0xe9, LLVM_user, 0, LLVM)
 // location stack or any of its values. It is defined as a placeholder for
 // testing purposes.
 HANDLE_DW_OP_LLVM_USEROP(0x0001, nop)
+// Heterogeneous Debugging Extension defined at
+// https://llvm.org/docs/AMDGPUDwarfProposalForHeterogeneousDebugging.html.
+HANDLE_DW_OP_LLVM_USEROP(0x0002, form_aspace_address)
+HANDLE_DW_OP_LLVM_USEROP(0x0003, push_lane)
+HANDLE_DW_OP_LLVM_USEROP(0x0004, offset)
+HANDLE_DW_OP_LLVM_USEROP(0x0005, offset_uconst)
+HANDLE_DW_OP_LLVM_USEROP(0x0006, bit_offset)
+HANDLE_DW_OP_LLVM_USEROP(0x0007, call_frame_entry_reg)
+HANDLE_DW_OP_LLVM_USEROP(0x0008, undefined)
+HANDLE_DW_OP_LLVM_USEROP(0x0009, aspace_bregx)
+HANDLE_DW_OP_LLVM_USEROP(0x000a, piece_end)
+HANDLE_DW_OP_LLVM_USEROP(0x000b, extend)
+HANDLE_DW_OP_LLVM_USEROP(0x000c, select_bit_piece)
+
+// FIXME: This is just to link the two encodings cleanly until we
+// drop support for the non-user encoding.
+HANDLE_HETEROGENEOUS_OP(form_aspace_address)
+HANDLE_HETEROGENEOUS_OP(push_lane)
+HANDLE_HETEROGENEOUS_OP(offset)
+HANDLE_HETEROGENEOUS_OP(offset_uconst)
+HANDLE_HETEROGENEOUS_OP(bit_offset)
+HANDLE_HETEROGENEOUS_OP(call_frame_entry_reg)
+HANDLE_HETEROGENEOUS_OP(undefined)
+HANDLE_HETEROGENEOUS_OP(aspace_bregx)
+HANDLE_HETEROGENEOUS_OP(piece_end)
+HANDLE_HETEROGENEOUS_OP(extend)
+HANDLE_HETEROGENEOUS_OP(select_bit_piece)
 
 // DWARF languages.
 HANDLE_DW_LANG(0x0001, C89, 0, 2, DWARF)
@@ -1314,6 +1346,7 @@ HANDLE_DW_SECT(8, RNGLISTS)
 #undef HANDLE_DW_FORM
 #undef HANDLE_DW_OP
 #undef HANDLE_DW_OP_LLVM_USEROP
+#undef HANDLE_HETEROGENEOUS_OP
 #undef HANDLE_DW_LANG
 #undef HANDLE_DW_ATE
 #undef HANDLE_DW_VIRTUALITY

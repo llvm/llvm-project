@@ -58,6 +58,14 @@
 
 using namespace llvm;
 
+namespace llvm {
+cl::opt<bool> EmitHeterogeneousDwarfAsUserOps(
+    "emit-heterogeneous-dwarf-as-user-ops", cl::init(false), cl::Hidden,
+    cl::desc("When emitting heterogeneous dwarf extension operations, encode "
+             "them as DW_OP_LLVM_user suboperations. The default is false, "
+             "which means we use the old top-level encodings. "));
+} // namespace llvm
+
 static void defaultDiagHandler(const SMDiagnostic &SMD, bool, const SourceMgr &,
                                std::vector<const MDNode *> &) {
   SMD.print(nullptr, errs());

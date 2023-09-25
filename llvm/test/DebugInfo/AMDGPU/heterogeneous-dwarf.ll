@@ -1,21 +1,21 @@
-; RUN: llc -O0 -mtriple=amdgcn-amd-amdhsa -mcpu=gfx906 -verify-machineinstrs -filetype=obj < %s | llvm-dwarfdump -v -debug-info - | FileCheck --check-prefixes=COMMON,FLAT-SCR-DIS %s
-; RUN: llc -O0 -mtriple=amdgcn-amd-amdhsa -mcpu=gfx940 -verify-machineinstrs -filetype=obj < %s | llvm-dwarfdump -v -debug-info - | FileCheck --check-prefixes=COMMON,FLAT-SCR-ENA %s
+; RUN: llc -O0 -mtriple=amdgcn-amd-amdhsa -mcpu=gfx906 -verify-machineinstrs -filetype=obj -emit-heterogeneous-dwarf-as-user-ops < %s | llvm-dwarfdump -v -debug-info - | FileCheck --check-prefixes=COMMON,FLAT-SCR-DIS %s
+; RUN: llc -O0 -mtriple=amdgcn-amd-amdhsa -mcpu=gfx940 -verify-machineinstrs -filetype=obj -emit-heterogeneous-dwarf-as-user-ops < %s | llvm-dwarfdump -v -debug-info - | FileCheck --check-prefixes=COMMON,FLAT-SCR-ENA %s
 
 source_filename = "heterogeneous-dwarf.cl"
 target datalayout = "e-p:64:64-p1:64:64-p2:32:32-p3:32:32-p4:64:64-p5:32:32-p6:32:32-i64:64-v16:16-v24:32-v32:32-v48:64-v96:128-v192:256-v256:256-v512:512-v1024:1024-v2048:2048-n32:64-S32-A5-G1-ni:7"
 target triple = "amdgcn-amd-amdhsa"
 
 ; CHECK: {{.*}}DW_TAG_formal_parameter
-; CHECK-NEXT: DW_AT_location [DW_FORM_exprloc]      (DW_OP_regx SGPR33_LO16, DW_OP_lit6, DW_OP_stack_value, DW_OP_deref_size 0x4, DW_OP_swap, DW_OP_deref_size 0x4, DW_OP_swap, DW_OP_shr, DW_OP_stack_value, DW_OP_deref_size 0x4, DW_OP_constu 0x5, DW_OP_LLVM_form_aspace_address, DW_OP_lit8, DW_OP_stack_value, DW_OP_deref_size 0x4, DW_OP_LLVM_offset)
+; CHECK-NEXT: DW_AT_location [DW_FORM_exprloc]      (DW_OP_regx SGPR33_LO16, DW_OP_lit6, DW_OP_stack_value, DW_OP_deref_size 0x4, DW_OP_swap, DW_OP_deref_size 0x4, DW_OP_swap, DW_OP_shr, DW_OP_stack_value, DW_OP_deref_size 0x4, DW_OP_constu 0x5, DW_OP_LLVM_user DW_OP_LLVM_form_aspace_address, DW_OP_lit8, DW_OP_stack_value, DW_OP_deref_size 0x4, DW_OP_LLVM_user DW_OP_LLVM_offset)
 ; CHECK-NEXT: DW_AT_name {{.*}}"A"
 
 ; CHECK: {{.*}}DW_TAG_variable
-; CHECK-NEXT: DW_AT_location [DW_FORM_exprloc]      (DW_OP_regx SGPR33_LO16, DW_OP_lit6, DW_OP_stack_value, DW_OP_deref_size 0x4, DW_OP_swap, DW_OP_deref_size 0x4, DW_OP_swap, DW_OP_shr, DW_OP_stack_value, DW_OP_deref_size 0x4, DW_OP_constu 0x5, DW_OP_LLVM_form_aspace_address, DW_OP_lit16, DW_OP_stack_value, DW_OP_deref_size 0x4, DW_OP_LLVM_offset)
+; CHECK-NEXT: DW_AT_location [DW_FORM_exprloc]      (DW_OP_regx SGPR33_LO16, DW_OP_lit6, DW_OP_stack_value, DW_OP_deref_size 0x4, DW_OP_swap, DW_OP_deref_size 0x4, DW_OP_swap, DW_OP_shr, DW_OP_stack_value, DW_OP_deref_size 0x4, DW_OP_constu 0x5, DW_OP_LLVM_user DW_OP_LLVM_form_aspace_address, DW_OP_lit16, DW_OP_stack_value, DW_OP_deref_size 0x4, DW_OP_LLVM_user DW_OP_LLVM_offset)
 ; CHECK-NEXT: DW_AT_name {{.*}}"B"
 
 ; COMMON: {{.*}}DW_TAG_variable
-; FLAT-SCR-DIS: DW_AT_location [DW_FORM_exprloc]      (DW_OP_regx SGPR33_LO16, DW_OP_lit6, DW_OP_stack_value, DW_OP_deref_size 0x4, DW_OP_swap, DW_OP_deref_size 0x4, DW_OP_swap, DW_OP_shr, DW_OP_stack_value, DW_OP_deref_size 0x4, DW_OP_constu 0x5, DW_OP_LLVM_form_aspace_address, DW_OP_lit20, DW_OP_stack_value, DW_OP_deref_size 0x4, DW_OP_LLVM_offset)
-; FLAT-SCR-ENA: DW_AT_location [DW_FORM_exprloc]      (DW_OP_regx SGPR33_LO16, DW_OP_deref_size 0x4, DW_OP_constu 0x5, DW_OP_LLVM_form_aspace_address, DW_OP_lit16, DW_OP_stack_value, DW_OP_deref_size 0x4, DW_OP_LLVM_offset)
+; FLAT-SCR-DIS: DW_AT_location [DW_FORM_exprloc]      (DW_OP_regx SGPR33_LO16, DW_OP_lit6, DW_OP_stack_value, DW_OP_deref_size 0x4, DW_OP_swap, DW_OP_deref_size 0x4, DW_OP_swap, DW_OP_shr, DW_OP_stack_value, DW_OP_deref_size 0x4, DW_OP_constu 0x5, DW_OP_LLVM_user DW_OP_LLVM_form_aspace_address, DW_OP_lit20, DW_OP_stack_value, DW_OP_deref_size 0x4, DW_OP_LLVM_user DW_OP_LLVM_offset)
+; FLAT-SCR-ENA: DW_AT_location [DW_FORM_exprloc]      (DW_OP_regx SGPR33_LO16, DW_OP_deref_size 0x4, DW_OP_constu 0x5, DW_OP_LLVM_user DW_OP_LLVM_form_aspace_address, DW_OP_lit16, DW_OP_stack_value, DW_OP_deref_size 0x4, DW_OP_LLVM_user DW_OP_LLVM_offset)
 ; COMMON: DW_AT_name {{.*}}"C"
 
 define protected amdgpu_kernel void @testKernel(i32 addrspace(1)* %A) #0 !dbg !11 !kernel_arg_addr_space !17 !kernel_arg_access_qual !18 !kernel_arg_type !19 !kernel_arg_base_type !19 !kernel_arg_type_qual !20 {

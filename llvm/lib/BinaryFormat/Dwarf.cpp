@@ -177,7 +177,7 @@ static StringRef LlvmUserOperationEncodingString(unsigned Encoding) {
   default:
     llvm_unreachable("unhandled DWARF operation with LLVM user op");
 #define HANDLE_DW_OP_LLVM_USEROP(ID, NAME)                                     \
-  case DW_OP_LLVM_##NAME:                                                      \
+  case DW_OP_LLVM_USER_##NAME:                                                 \
     return "DW_OP_LLVM_" #NAME;
 #include "llvm/BinaryFormat/Dwarf.def"
   }
@@ -186,7 +186,7 @@ static StringRef LlvmUserOperationEncodingString(unsigned Encoding) {
 static unsigned
 getLlvmUserOperationEncoding(StringRef LlvmUserOperationEncodingString) {
   unsigned E = StringSwitch<unsigned>(LlvmUserOperationEncodingString)
-#define HANDLE_DW_OP_LLVM_USEROP(ID, NAME) .Case(#NAME, DW_OP_LLVM_##NAME)
+#define HANDLE_DW_OP_LLVM_USEROP(ID, NAME) .Case(#NAME, DW_OP_LLVM_USER_##NAME)
 #include "llvm/BinaryFormat/Dwarf.def"
                    .Default(0);
   assert(E && "unhandled DWARF operation string with LLVM user op");

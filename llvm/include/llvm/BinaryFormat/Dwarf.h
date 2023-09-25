@@ -147,9 +147,20 @@ enum LocationAtom {
 };
 
 enum LlvmUserLocationAtom {
-#define HANDLE_DW_OP_LLVM_USEROP(ID, NAME) DW_OP_LLVM_##NAME = ID,
+#define HANDLE_DW_OP_LLVM_USEROP(ID, NAME) DW_OP_LLVM_USER_##NAME = ID,
 #include "llvm/BinaryFormat/Dwarf.def"
 };
+
+inline std::optional<LlvmUserLocationAtom> getUserOp(uint8_t Op) {
+  switch (Op) {
+#define HANDLE_HETEROGENEOUS_OP(NAME)                                          \
+  case DW_OP_LLVM_##NAME:                                                      \
+    return DW_OP_LLVM_USER_##NAME;
+#include "llvm/BinaryFormat/Dwarf.def"
+  default:
+    return std::nullopt;
+  }
+}
 
 enum TypeKind : uint8_t {
 #define HANDLE_DW_ATE(ID, NAME, VERSION, VENDOR) DW_ATE_##NAME = ID,

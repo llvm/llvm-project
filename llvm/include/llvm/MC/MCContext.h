@@ -23,6 +23,7 @@
 #include "llvm/MC/MCSection.h"
 #include "llvm/MC/SectionKind.h"
 #include "llvm/Support/Allocator.h"
+#include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Compiler.h"
 #include "llvm/Support/Error.h"
 #include "llvm/Support/MD5.h"
@@ -40,6 +41,8 @@
 #include <vector>
 
 namespace llvm {
+
+extern cl::opt<bool> EmitHeterogeneousDwarfAsUserOps;
 
 class CodeViewContext;
 class MCAsmInfo;
