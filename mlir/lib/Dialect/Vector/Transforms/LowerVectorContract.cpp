@@ -500,19 +500,20 @@ struct UnrolledOuterProductGenerator
       return failure();
     AffineExpr m, k;
     bindDims(rewriter.getContext(), m, k);
+    Value transposedMask = t(mask);
 
     // Case mat-vec: transpose.
     if (layout({{m, k}, {k}, {m}}))
-      return outerProd(t(lhs), rhs, res, lhsType.getDimSize(1), t(mask));
+      return outerProd(t(lhs), rhs, res, lhsType.getDimSize(1), transposedMask);
     // Case mat-trans-vec: ready to go.
     if (layout({{k, m}, {k}, {m}}))
-      return outerProd(lhs, rhs, res, lhsType.getDimSize(0), t(mask));
+      return outerProd(lhs, rhs, res, lhsType.getDimSize(0), transposedMask);
     // Case vec-mat: swap and transpose.
     if (layout({{k}, {m, k}, {m}}))
-      return outerProd(t(rhs), lhs, res, lhsType.getDimSize(0), t(mask));
+      return outerProd(t(rhs), lhs, res, lhsType.getDimSize(0), transposedMask);
     // Case vec-mat-trans: swap and ready to go.
     if (layout({{k}, {k, m}, {m}}))
-      return outerProd(rhs, lhs, res, lhsType.getDimSize(0), t(mask));
+      return outerProd(rhs, lhs, res, lhsType.getDimSize(0), transposedMask);
     return failure();
   }
 
