@@ -57,7 +57,7 @@ entry:
 ; RELOC-NEXT:     Type: R_TOC (0x3)
 ; RELOC-NEXT:   }
 ; RELOC-NEXT:   Relocation {
-; RELOC-NEXT:     Virtual Address: 0x4A
+; RELOC-NEXT:     Virtual Address: 0x3A
 ; RELOC-NEXT:     Symbol: .TGInit (29)
 ; RELOC-NEXT:     IsSigned: No
 ; RELOC-NEXT:     FixupBitValue: 0
@@ -65,7 +65,7 @@ entry:
 ; RELOC-NEXT:     Type: R_TOC (0x3)
 ; RELOC-NEXT:   }
 ; RELOC-NEXT:   Relocation {
-; RELOC-NEXT:     Virtual Address: 0x4E
+; RELOC-NEXT:     Virtual Address: 0x3E
 ; RELOC-NEXT:     Symbol: TGInit (31)
 ; RELOC-NEXT:     IsSigned: No
 ; RELOC-NEXT:     FixupBitValue: 0
@@ -73,7 +73,7 @@ entry:
 ; RELOC-NEXT:     Type: R_TOC (0x3)
 ; RELOC-NEXT:   }
 ; RELOC-NEXT:   Relocation {
-; RELOC-NEXT:     Virtual Address: 0x54
+; RELOC-NEXT:     Virtual Address: 0x44
 ; RELOC-NEXT:     Symbol: .__tls_get_addr (3)
 ; RELOC-NEXT:     IsSigned: No
 ; RELOC-NEXT:     FixupBitValue: 0
@@ -81,7 +81,7 @@ entry:
 ; RELOC-NEXT:     Type: R_RBA (0x18)
 ; RELOC-NEXT:   }
 ; RELOC-NEXT:   Relocation {
-; RELOC-NEXT:     Virtual Address: 0x5A
+; RELOC-NEXT:     Virtual Address: 0x4A
 ; RELOC-NEXT:     Symbol: GInit (33)
 ; RELOC-NEXT:     IsSigned: No
 ; RELOC-NEXT:     FixupBitValue: 0
@@ -91,7 +91,7 @@ entry:
 ; RELOC-NEXT: }
 ; RELOC-NEXT: Section (index: 2) .data {
 ; RELOC-NEXT: Relocation {
-; RELOC-NEXT:   Virtual Address: 0x80
+; RELOC-NEXT:   Virtual Address: 0x70
 ; RELOC-NEXT:   Symbol: .storesTIUninit (7)
 ; RELOC-NEXT:   IsSigned: No
 ; RELOC-NEXT:   FixupBitValue: 0
@@ -99,7 +99,7 @@ entry:
 ; RELOC-NEXT:   Type: R_POS (0x0)
 ; RELOC-NEXT: }
 ; RELOC-NEXT: Relocation {
-; RELOC-NEXT:   Virtual Address: 0x84
+; RELOC-NEXT:   Virtual Address: 0x74
 ; RELOC-NEXT:   Symbol: TOC (23)
 ; RELOC-NEXT:   IsSigned: No
 ; RELOC-NEXT:   FixupBitValue: 0
@@ -107,7 +107,7 @@ entry:
 ; RELOC-NEXT:   Type: R_POS (0x0)
 ; RELOC-NEXT: }
 ; RELOC-NEXT: Relocation {
-; RELOC-NEXT:   Virtual Address: 0x8C
+; RELOC-NEXT:   Virtual Address: 0x7C
 ; RELOC-NEXT:   Symbol: .loadsTGInit (9)
 ; RELOC-NEXT:   IsSigned: No
 ; RELOC-NEXT:   FixupBitValue: 0
@@ -115,7 +115,7 @@ entry:
 ; RELOC-NEXT:   Type: R_POS (0x0)
 ; RELOC-NEXT: }
 ; RELOC-NEXT: Relocation {
-; RELOC-NEXT:   Virtual Address: 0x90
+; RELOC-NEXT:   Virtual Address: 0x80
 ; RELOC-NEXT:   Symbol: TOC (23)
 ; RELOC-NEXT:   IsSigned: No
 ; RELOC-NEXT:   FixupBitValue: 0
@@ -123,7 +123,7 @@ entry:
 ; RELOC-NEXT:   Type: R_POS (0x0)
 ; RELOC-NEXT: }
 ; RELOC-NEXT: Relocation {
-; RELOC-NEXT:   Virtual Address: 0x98
+; RELOC-NEXT:   Virtual Address: 0x88
 ; RELOC-NEXT:   Symbol: _$TLSML (25)
 ; RELOC-NEXT:   IsSigned: No
 ; RELOC-NEXT:   FixupBitValue: 0
@@ -131,7 +131,7 @@ entry:
 ; RELOC-NEXT:   Type: R_TLSML (0x25)
 ; RELOC-NEXT: }
 ; RELOC-NEXT: Relocation {
-; RELOC-NEXT:   Virtual Address: 0x9C
+; RELOC-NEXT:   Virtual Address: 0x8C
 ; RELOC-NEXT:   Symbol: TIUninit (39)
 ; RELOC-NEXT:   IsSigned: No
 ; RELOC-NEXT:   FixupBitValue: 0
@@ -139,7 +139,7 @@ entry:
 ; RELOC-NEXT:   Type: R_TLS_LD (0x22)
 ; RELOC-NEXT: }
 ; RELOC-NEXT: Relocation {
-; RELOC-NEXT:   Virtual Address: 0xA0
+; RELOC-NEXT:   Virtual Address: 0x90
 ; RELOC-NEXT:   Symbol: TGInit (37)
 ; RELOC-NEXT:   IsSigned: No
 ; RELOC-NEXT:   FixupBitValue: 0
@@ -147,7 +147,7 @@ entry:
 ; RELOC-NEXT:   Type: R_TLSM (0x24)
 ; RELOC-NEXT: }
 ; RELOC-NEXT: Relocation {
-; RELOC-NEXT:   Virtual Address: 0xA4
+; RELOC-NEXT:   Virtual Address: 0x94
 ; RELOC-NEXT:   Symbol: TGInit (37)
 ; RELOC-NEXT:   IsSigned: No
 ; RELOC-NEXT:   FixupBitValue: 0
@@ -155,7 +155,7 @@ entry:
 ; RELOC-NEXT:   Type: R_TLS (0x20)
 ; RELOC-NEXT: }
 ; RELOC-NEXT: Relocation {
-; RELOC-NEXT:   Virtual Address: 0xA8
+; RELOC-NEXT:   Virtual Address: 0x98
 ; RELOC-NEXT:   Symbol: GInit (17)
 ; RELOC-NEXT:   IsSigned: No
 ; RELOC-NEXT:   FixupBitValue: 0
@@ -230,7 +230,7 @@ entry:
 ; SYM-NEXT:     NumberOfAuxEntries: 1
 ; SYM-NEXT:     CSECT Auxiliary Entry {
 ; SYM-NEXT:       Index: 6
-; SYM-NEXT:       SectionLen: 120
+; SYM-NEXT:       SectionLen: 104
 ; SYM-NEXT:       ParameterHashIndex: 0x0
 ; SYM-NEXT:       TypeChkSectNum: 0x0
 ; SYM-NEXT:       SymbolAlignmentLog2: 5
@@ -263,7 +263,7 @@ entry:
 ; SYM-NEXT:   Symbol {
 ; SYM-NEXT:     Index: 9
 ; SYM-NEXT:     Name: .loadsTGInit
-; SYM-NEXT:     Value (RelocatableAddress): 0x40
+; SYM-NEXT:     Value (RelocatableAddress): 0x30
 ; SYM-NEXT:     Section: .text
 ; SYM-NEXT:     Type: 0x0
 ; SYM-NEXT:     StorageClass: C_EXT (0x2)
@@ -283,7 +283,7 @@ entry:
 ; SYM-NEXT:   Symbol {
 ; SYM-NEXT:     Index: 11
 ; SYM-NEXT:     Name: .rodata
-; SYM-NEXT:     Value (RelocatableAddress): 0x78
+; SYM-NEXT:     Value (RelocatableAddress): 0x68
 ; SYM-NEXT:     Section: .text
 ; SYM-NEXT:     Type: 0x0
 ; SYM-NEXT:     StorageClass: C_HIDEXT (0x6B)
@@ -303,7 +303,7 @@ entry:
 ; SYM-NEXT:   Symbol {
 ; SYM-NEXT:     Index: 13
 ; SYM-NEXT:     Name: const_ivar
-; SYM-NEXT:     Value (RelocatableAddress): 0x78
+; SYM-NEXT:     Value (RelocatableAddress): 0x68
 ; SYM-NEXT:     Section: .text
 ; SYM-NEXT:     Type: 0x0
 ; SYM-NEXT:     StorageClass: C_EXT (0x2)
@@ -323,7 +323,7 @@ entry:
 ; SYM-NEXT:   Symbol {
 ; SYM-NEXT:     Index: 15
 ; SYM-NEXT:     Name: .data
-; SYM-NEXT:     Value (RelocatableAddress): 0x7C
+; SYM-NEXT:     Value (RelocatableAddress): 0x6C
 ; SYM-NEXT:     Section: .data
 ; SYM-NEXT:     Type: 0x0
 ; SYM-NEXT:     StorageClass: C_HIDEXT (0x6B)
@@ -343,7 +343,7 @@ entry:
 ; SYM-NEXT:   Symbol {
 ; SYM-NEXT:     Index: 17
 ; SYM-NEXT:     Name: GInit
-; SYM-NEXT:     Value (RelocatableAddress): 0x7C
+; SYM-NEXT:     Value (RelocatableAddress): 0x6C
 ; SYM-NEXT:     Section: .data
 ; SYM-NEXT:     Type: 0x0
 ; SYM-NEXT:     StorageClass: C_EXT (0x2)
@@ -363,7 +363,7 @@ entry:
 ; SYM-NEXT:   Symbol {
 ; SYM-NEXT:     Index: 19
 ; SYM-NEXT:     Name: storesTIUninit
-; SYM-NEXT:     Value (RelocatableAddress): 0x80
+; SYM-NEXT:     Value (RelocatableAddress): 0x70
 ; SYM-NEXT:     Section: .data
 ; SYM-NEXT:     Type: 0x0
 ; SYM-NEXT:     StorageClass: C_EXT (0x2)
@@ -383,7 +383,7 @@ entry:
 ; SYM-NEXT:   Symbol {
 ; SYM-NEXT:     Index: 21
 ; SYM-NEXT:     Name: loadsTGInit
-; SYM-NEXT:     Value (RelocatableAddress): 0x8C
+; SYM-NEXT:     Value (RelocatableAddress): 0x7C
 ; SYM-NEXT:     Section: .data
 ; SYM-NEXT:     Type: 0x0
 ; SYM-NEXT:     StorageClass: C_EXT (0x2)
@@ -403,7 +403,7 @@ entry:
 ; SYM-NEXT:   Symbol {
 ; SYM-NEXT:     Index: 23
 ; SYM-NEXT:     Name: TOC
-; SYM-NEXT:     Value (RelocatableAddress): 0x98
+; SYM-NEXT:     Value (RelocatableAddress): 0x88
 ; SYM-NEXT:     Section: .data
 ; SYM-NEXT:     Type: 0x0
 ; SYM-NEXT:     StorageClass: C_HIDEXT (0x6B)
@@ -423,7 +423,7 @@ entry:
 ; SYM-NEXT:   Symbol {
 ; SYM-NEXT:     Index: 25
 ; SYM-NEXT:     Name: _$TLSML
-; SYM-NEXT:     Value (RelocatableAddress): 0x98
+; SYM-NEXT:     Value (RelocatableAddress): 0x88
 ; SYM-NEXT:     Section: .data
 ; SYM-NEXT:     Type: 0x0
 ; SYM-NEXT:     StorageClass: C_HIDEXT (0x6B)
@@ -443,7 +443,7 @@ entry:
 ; SYM-NEXT:   Symbol {
 ; SYM-NEXT:     Index: 27
 ; SYM-NEXT:     Name: TIUninit
-; SYM-NEXT:     Value (RelocatableAddress): 0x9C
+; SYM-NEXT:     Value (RelocatableAddress): 0x8C
 ; SYM-NEXT:     Section: .data
 ; SYM-NEXT:     Type: 0x0
 ; SYM-NEXT:     StorageClass: C_HIDEXT (0x6B)
@@ -463,7 +463,7 @@ entry:
 ; SYM-NEXT:   Symbol {
 ; SYM-NEXT:     Index: 29
 ; SYM-NEXT:     Name: .TGInit
-; SYM-NEXT:     Value (RelocatableAddress): 0xA0
+; SYM-NEXT:     Value (RelocatableAddress): 0x90
 ; SYM-NEXT:     Section: .data
 ; SYM-NEXT:     Type: 0x0
 ; SYM-NEXT:     StorageClass: C_HIDEXT (0x6B)
@@ -483,7 +483,7 @@ entry:
 ; SYM-NEXT:   Symbol {
 ; SYM-NEXT:     Index: 31
 ; SYM-NEXT:     Name: TGInit
-; SYM-NEXT:     Value (RelocatableAddress): 0xA4
+; SYM-NEXT:     Value (RelocatableAddress): 0x94
 ; SYM-NEXT:     Section: .data
 ; SYM-NEXT:     Type: 0x0
 ; SYM-NEXT:     StorageClass: C_HIDEXT (0x6B)
@@ -503,7 +503,7 @@ entry:
 ; SYM-NEXT:   Symbol {
 ; SYM-NEXT:     Index: 33
 ; SYM-NEXT:     Name: GInit
-; SYM-NEXT:     Value (RelocatableAddress): 0xA8
+; SYM-NEXT:     Value (RelocatableAddress): 0x98
 ; SYM-NEXT:     Section: .data
 ; SYM-NEXT:     Type: 0x0
 ; SYM-NEXT:     StorageClass: C_HIDEXT (0x6B)
@@ -595,13 +595,12 @@ entry:
 ; DIS-NEXT: {{0*}}[[#ADDR]]: R_RBA (idx: 1)      .__tls_get_mod[PR]
 ; DIS-NEXT: [[#%x, ADDR:]]: {{.*}}               lwz 4, 4(2)
 ; DIS-NEXT: {{0*}}[[#ADDR + 2]]: R_TOC (idx: 27) TIUninit[TC]
-; DIS-NEXT:                                      add 3, 3, 4
-; DIS-NEXT:                                      stw 6, 0(3)
+; DIS-NEXT:                                      stwx 6, 3, 4
 ; DIS-NEXT:                                      addi 1, 1, 32
 ; DIS-NEXT:                                      lwz 0, 8(1)
 ; DIS-NEXT:                                      mtlr 0
 ; DIS-NEXT:                                      blr
-; DIS:      00000040 (idx: 9) .loadsTGInit:
+; DIS:      00000030 (idx: 9) .loadsTGInit:
 ; DIS-NEXT:                                      mflr 0
 ; DIS-NEXT:                                      stwu 1, -32(1)
 ; DIS-NEXT: [[#%x, ADDR:]]: {{.*}}               lwz 3, 8(2)
@@ -620,39 +619,39 @@ entry:
 ; DIS-NEXT:                                      lwz 0, 8(1)
 ; DIS-NEXT:                                      mtlr 0
 ; DIS-NEXT:                                      blr
-; DIS:      00000078 (idx: 13) const_ivar:
-; DIS-NEXT:       78: 00 00 00 06
+; DIS:      00000068 (idx: 13) const_ivar:
+; DIS-NEXT:       68: 00 00 00 06
 
 ; DIS:      Disassembly of section .data:
-; DIS:      0000007c  (idx: 17) GInit:
-; DIS-NEXT:       7c: 00 00 00 01
-; DIS:      00000080  (idx: 19) storesTIUninit[DS]:
-; DIS-NEXT:       80: 00 00 00 00
-; DIS-NEXT: 00000080: R_POS (idx: 7) .storesTIUninit
-; DIS-NEXT:       84: 00 00 00 98
-; DIS-NEXT: 00000084: R_POS (idx: 23) TOC[TC0]
+; DIS:      0000006c  (idx: 17) GInit:
+; DIS-NEXT:       6c: 00 00 00 01
+; DIS:      00000070  (idx: 19) storesTIUninit[DS]:
+; DIS-NEXT:       70: 00 00 00 00
+; DIS-NEXT: 00000070: R_POS (idx: 7) .storesTIUninit
+; DIS-NEXT:       74: 00 00 00 88
+; DIS-NEXT: 00000074: R_POS (idx: 23) TOC[TC0]
+; DIS-NEXT:       78: 00 00 00 00
+; DIS:      0000007c  (idx: 21) loadsTGInit[DS]:
+; DIS-NEXT:       7c: 00 00 00 30
+; DIS-NEXT: 0000007c: R_POS (idx: 9) .loadsTGInit
+; DIS-NEXT:       80: 00 00 00 88
+; DIS-NEXT: 00000080: R_POS (idx: 23) TOC[TC0]
+; DIS-NEXT:       84: 00 00 00 00
+; DIS:      00000088  (idx: 25) _$TLSML[TC]:
 ; DIS-NEXT:       88: 00 00 00 00
-; DIS:      0000008c  (idx: 21) loadsTGInit[DS]:
-; DIS-NEXT:       8c: 00 00 00 40
-; DIS-NEXT: 0000008c: R_POS (idx: 9) .loadsTGInit
-; DIS-NEXT:       90: 00 00 00 98
-; DIS-NEXT: 00000090: R_POS (idx: 23) TOC[TC0]
+; DIS-NEXT: 00000088: R_TLSML (idx: 25) _$TLSML[TC]
+; DIS:      0000008c  (idx: 27) TIUninit[TC]:
+; DIS-NEXT:       8c: 00 00 00 00
+; DIS-NEXT: 0000008c: R_TLS_LD (idx: 39) TIUninit[UL]
+; DIS:      00000090  (idx: 29) .TGInit[TC]:
+; DIS-NEXT:       90: 00 00 00 00
+; DIS-NEXT: 00000090: R_TLSM (idx: 37) TGInit
+; DIS:      00000094  (idx: 31) TGInit[TC]:
 ; DIS-NEXT:       94: 00 00 00 00
-; DIS:      00000098  (idx: 25) _$TLSML[TC]:
-; DIS-NEXT:       98: 00 00 00 00
-; DIS-NEXT: 00000098: R_TLSML (idx: 25) _$TLSML[TC]
-; DIS:      0000009c  (idx: 27) TIUninit[TC]:
-; DIS-NEXT:       9c: 00 00 00 00
-; DIS-NEXT: 0000009c: R_TLS_LD (idx: 39) TIUninit[UL]
-; DIS:      000000a0  (idx: 29) .TGInit[TC]:
-; DIS-NEXT:       a0: 00 00 00 00
-; DIS-NEXT: 000000a0: R_TLSM (idx: 37) TGInit
-; DIS:      000000a4  (idx: 31) TGInit[TC]:
-; DIS-NEXT:       a4: 00 00 00 00
-; DIS-NEXT: 000000a4: R_TLS (idx: 37) TGInit
-; DIS:      000000a8  (idx: 33) GInit[TC]:
-; DIS-NEXT:       a8: 00 00 00 7c
-; DIS-NEXT: 000000a8: R_POS (idx: 17) GInit
+; DIS-NEXT: 00000094: R_TLS (idx: 37) TGInit
+; DIS:      00000098  (idx: 33) GInit[TC]:
+; DIS-NEXT:       98: 00 00 00 6c
+; DIS-NEXT: 00000098: R_POS (idx: 17) GInit
 
 ; DIS:      Disassembly of section .tdata:
 ; DIS:      00000000 (idx: 37) TGInit:
