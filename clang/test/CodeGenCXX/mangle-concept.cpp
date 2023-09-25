@@ -1,5 +1,5 @@
-// RUN: %clang_cc1 -verify -frelaxed-template-template-args -std=c++20 -emit-llvm -triple %itanium_abi_triple -o - %s | FileCheck %s
-// RUN: %clang_cc1 -verify -frelaxed-template-template-args -std=c++20 -emit-llvm -triple %itanium_abi_triple -o - %s -fclang-abi-compat=16 | FileCheck %s --check-prefix=CLANG16
+// RUN: %clang_cc1 -verify -frelaxed-template-template-args -std=c++20 -fclang-abi-compat=latest -emit-llvm -triple %itanium_abi_triple -o - %s | FileCheck %s
+// RUN: %clang_cc1 -verify -frelaxed-template-template-args -std=c++20 -fclang-abi-compat=latest -emit-llvm -triple %itanium_abi_triple -o - %s -fclang-abi-compat=16 | FileCheck %s --check-prefix=CLANG16
 // expected-no-diagnostics
 
 namespace test1 {
