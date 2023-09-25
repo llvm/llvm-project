@@ -6172,44 +6172,50 @@ LegalizerHelper::LegalizeResult LegalizerHelper::lowerTRUNC(MachineInstr &MI) {
   //   %in16(<8 x s16>) = G_CONCAT_VECTORS %lo16, %hi16
   //   %res(<8 x s8>) = G_TRUNC %in16
 
+  assert(MI.getOpcode() == TargetOpcode::G_TRUNC);
+
   Register DstReg = MI.getOperand(0).getReg();
   Register SrcReg = MI.getOperand(1).getReg();
   LLT DstTy = MRI.getType(DstReg);
   LLT SrcTy = MRI.getType(SrcReg);
 
-  assert(DstTy.isVector() && "This should be a vector operation");
+  if (DstTy.isVector() && isPowerOf2_32(DstTy.getNumElements()) &&
+      isPowerOf2_32(DstTy.getScalarSizeInBits()) &&
+      isPowerOf2_32(SrcTy.getNumElements()) &&
+      isPowerOf2_32(SrcTy.getScalarSizeInBits())) {
+    // Split input type.
+    LLT SplitSrcTy = SrcTy.changeElementCount(
+        SrcTy.getElementCount().divideCoefficientBy(2));
 
-  // Split input type.
-  LLT SplitSrcTy =
-      SrcTy.changeElementCount(SrcTy.getElementCount().divideCoefficientBy(2));
+    // First, split the source into two smaller vectors.
+    SmallVector<Register, 2> SplitSrcs;
+    extractParts(SrcReg, SplitSrcTy, 2, SplitSrcs);
 
-  // First, split the source into two smaller vectors.
-  SmallVector<Register, 2> SplitSrcs;
-  extractParts(SrcReg, SplitSrcTy, 2, SplitSrcs);
+    // Truncate the splits into intermediate narrower elements.
+    LLT InterTy;
+    if (DstTy.getScalarSizeInBits() * 2 < SrcTy.getScalarSizeInBits())
+      InterTy = SplitSrcTy.changeElementSize(DstTy.getScalarSizeInBits() * 2);
+    else
+      InterTy = SplitSrcTy.changeElementSize(DstTy.getScalarSizeInBits());
+    for (unsigned I = 0; I < SplitSrcs.size(); ++I) {
+      SplitSrcs[I] = MIRBuilder.buildTrunc(InterTy, SplitSrcs[I]).getReg(0);
+    }
 
-  // Truncate the splits into intermediate narrower elements.
-  LLT InterTy;
-  if (DstTy.getScalarSizeInBits() * 2 < SrcTy.getScalarSizeInBits())
-    InterTy = SplitSrcTy.changeElementSize(DstTy.getScalarSizeInBits() * 2);
-  else
-    InterTy = SplitSrcTy.changeElementSize(DstTy.getScalarSizeInBits());
-  for (unsigned I = 0; I < SplitSrcs.size(); ++I) {
-    SplitSrcs[I] = MIRBuilder.buildTrunc(InterTy, SplitSrcs[I]).getReg(0);
+    // Combine the new truncates into one vector
+    auto Merge = MIRBuilder.buildMergeLikeInstr(
+        DstTy.changeElementSize(InterTy.getScalarSizeInBits()), SplitSrcs);
+
+    // Truncate the new vector to the final result type
+    if (DstTy.getScalarSizeInBits() * 2 < SrcTy.getScalarSizeInBits())
+      MIRBuilder.buildTrunc(MI.getOperand(0).getReg(), Merge.getReg(0));
+    else
+      MIRBuilder.buildCopy(MI.getOperand(0).getReg(), Merge.getReg(0));
+
+    MI.eraseFromParent();
+
+    return Legalized;
   }
-
-  // Combine the new truncates into one vector
-  auto Merge = MIRBuilder.buildMergeLikeInstr(
-      DstTy.changeElementSize(InterTy.getScalarSizeInBits()), SplitSrcs);
-
-  // Truncate the new vector to the final result type
-  if (DstTy.getScalarSizeInBits() * 2 < SrcTy.getScalarSizeInBits())
-    MIRBuilder.buildTrunc(MI.getOperand(0).getReg(), Merge.getReg(0));
-  else
-    MIRBuilder.buildCopy(MI.getOperand(0).getReg(), Merge.getReg(0));
-
-  MI.eraseFromParent();
-
-  return Legalized;
+  return UnableToLegalize;
 }
 
 LegalizerHelper::LegalizeResult
