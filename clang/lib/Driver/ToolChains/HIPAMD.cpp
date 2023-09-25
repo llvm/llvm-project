@@ -247,7 +247,7 @@ void HIPAMDToolChain::addActionsFromClangTargetOptions(
     AddStaticDeviceLibsLinking(C, *getTool(JA.getKind()), JA, Inputs,
                                DriverArgs, CC1Args, "amdgcn", GpuArch,
                                /* bitcode SDL?*/ true,
-                               /* PostClang Link? */ true);
+                               /* PostClang Link? */ false);
 }
 
 void HIPAMDToolChain::addClangTargetOptions(

@@ -2343,8 +2343,6 @@ bool tools::GetSDLFromOffloadArchive(
   C.addCommand(std::make_unique<Command>(
       JA, T, ResponseFileSupport::AtFileCurCP(), UBProgram, UBArgs, Inputs,
       InputInfo(&JA, C.getArgs().MakeArgString(OutputLib))));
-  if (postClangLink)
-    CC1Args.push_back("-mlink-builtin-bitcode");
 
   CC1Args.push_back(DriverArgs.MakeArgString(OutputLib));
   return true;
@@ -2471,7 +2469,7 @@ void tools::AddStaticDeviceLibs(Compilation *C, const Tool *T,
   for (auto SDLName : SDLNames) {
     // This is the only call to SDLSearch
     if (!SDLSearch(D, DriverArgs, CC1Args, LibraryPaths, SDLName, Arch, Target,
-                   isBitCodeSDL, postClangLink)) {
+                   isBitCodeSDL, postClangLink) && !postClangLink) {
       GetSDLFromOffloadArchive(*C, D, *T, *JA, *Inputs, DriverArgs, CC1Args,
                                LibraryPaths, SDLName, Arch, Target,
                                isBitCodeSDL, postClangLink, unpackage);
