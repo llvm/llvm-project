@@ -320,11 +320,12 @@ namespace {
     }
 
     std::string getIsOmitted() const override {
-      if (type == "IdentifierInfo *")
+      StringRef T = type;
+      if (T == "IdentifierInfo *" || T == "Expr *")
         return "!get" + getUpperName().str() + "()";
-      if (type == "TypeSourceInfo *")
+      if (T == "TypeSourceInfo *")
         return "!get" + getUpperName().str() + "Loc()";
-      if (type == "ParamIdx")
+      if (T == "ParamIdx")
         return "!get" + getUpperName().str() + "().isValid()";
       return "false";
     }
