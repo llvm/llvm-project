@@ -52,6 +52,7 @@ Implemented Papers
 - P2697R1 - Interfacing ``bitset`` with ``string_view``
 - P2443R1 - ``views::chunk_by``
 - P2538R1 - ADL-proof ``std::projected``
+- P2614R2 - Deprecate ``numeric_limits::has_denorm``
 
 
 Improvements and New Features
