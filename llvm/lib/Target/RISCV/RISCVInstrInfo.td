@@ -1774,12 +1774,6 @@ let Predicates = [IsRV64], hasSideEffects = 0, mayLoad = 0, mayStore = 0,
 def PseudoZEXT_W : Pseudo<(outs GPR:$rd), (ins GPR:$rs), [], "zext.w", "$rd, $rs">;
 } // Predicates = [IsRV64], ...
 
-let Predicates = [IsRV64] in
-def: Pat<(i64 (sext i32:$rs)), (ADDIW GPR:$rs, 0)>;
-
-let Predicates = [IsRV64, NotHasStdExtZba] in
-def: Pat<(i64 (zext i32:$rs)), (SRLI (SLLI GPR:$rs, 32), 32)>;
-
 /// Loads
 
 class LdPat<PatFrag LoadOp, RVInst Inst, ValueType vt = XLenVT>

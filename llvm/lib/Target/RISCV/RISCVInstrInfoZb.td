@@ -727,8 +727,6 @@ def : Pat<(mul_const_oneuse GPR:$r, (XLenVT 81)),
 } // Predicates = [HasStdExtZba]
 
 let Predicates = [HasStdExtZba, IsRV64] in {
-def : Pat<(i64 (zext i32:$rs)), (ADD_UW GPR:$rs, (XLenVT X0))>;
-
 def : Pat<(i64 (shl (and GPR:$rs1, 0xFFFFFFFF), uimm5:$shamt)),
           (SLLI_UW GPR:$rs1, uimm5:$shamt)>;
 // Match a shifted 0xffffffff mask. Use SRLI to clear the LSBs and SLLI_UW to

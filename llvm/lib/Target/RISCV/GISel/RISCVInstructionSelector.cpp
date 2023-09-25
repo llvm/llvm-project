@@ -378,12 +378,9 @@ bool RISCVInstructionSelector::selectSExtInreg(MachineInstr &MI,
 
   const MachineOperand &Src = MI.getOperand(1);
   const MachineOperand &Dst = MI.getOperand(0);
-  assert(Src.isReg() && Dst.isReg());
   // addiw rd, rs, 0 (i.e. sext.w rd, rs)
-  MachineInstr *NewMI = MIB.buildInstr(RISCV::ADDIW)
-                            .addDef(Dst.getReg())
-                            .addReg(Src.getReg())
-                            .addImm(0U);
+  MachineInstr *NewMI =
+      MIB.buildInstr(RISCV::ADDIW, {Dst.getReg()}, {Src.getReg()}).addImm(0U);
 
   if (!constrainSelectedInstRegOperands(*NewMI, TII, TRI, RBI))
     return false;
