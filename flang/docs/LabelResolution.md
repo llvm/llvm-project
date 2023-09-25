@@ -8,9 +8,10 @@
 
 # Semantics: Resolving Labels and Construct Names
 
-```eval_rst
-.. contents::
-   :local:
+```{contents}
+---
+local:
+---
 ```
 
 ## Overview

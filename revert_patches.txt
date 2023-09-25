@@ -1,7 +1,3 @@
 Johannes: breakage
   [OpenMP][FIX] Move workaround code to avoid races 
    see smoke-fails, smoke-limbo, smoke, examples
-
-Revert: waiting on pip install myst-parser 
- b6ff03206 "[Documentation] Replace recommonmark by myst-parser
-

@@ -8,9 +8,10 @@
 
 # Fortran Extensions supported by Flang
 
-```eval_rst
-.. contents::
-   :local:
+```{contents}
+---
+local:
+---
 ```
 
 As a general principle, this compiler will accept by default and
