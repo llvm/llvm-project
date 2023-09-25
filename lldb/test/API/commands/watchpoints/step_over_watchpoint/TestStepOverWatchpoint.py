@@ -61,12 +61,6 @@ class TestStepOverWatchpoint(TestBase):
 
         self.step_inst_for_watchpoint(1)
 
-    # Skip everywhere while modify watchpoints are sorted out.
-    @expectedFailureAll(
-        oslist=["freebsd", "linux"],
-        archs=["aarch64", "arm"],
-        bugnumber="llvm.org/pr26031",
-    )
     @add_test_categories(["basic_process"])
     @expectedFailureAll(
         oslist=["ios", "watchos", "tvos", "bridgeos", "macosx"],
