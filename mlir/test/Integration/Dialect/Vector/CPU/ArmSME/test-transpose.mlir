@@ -13,7 +13,7 @@
 
 llvm.func @printCString(!llvm.ptr<i8>)
 
-func.func @printTileBegin() {
+func.func @printTileBegin() attributes { enable_arm_streaming_ignore }  {
   %0 = llvm.mlir.addressof @str_tile_begin : !llvm.ptr<array<11 x i8>>
   %1 = llvm.mlir.constant(0 : index) : i64
   %2 = llvm.getelementptr %0[%1, %1]
@@ -22,7 +22,7 @@ func.func @printTileBegin() {
   return
 }
 
-func.func @printTileEnd() {
+func.func @printTileEnd() attributes { enable_arm_streaming_ignore } {
   %0 = llvm.mlir.addressof @str_tile_end : !llvm.ptr<array<9 x i8>>
   %1 = llvm.mlir.constant(0 : index) : i64
   %2 = llvm.getelementptr %0[%1, %1]
@@ -44,7 +44,6 @@ func.func @entry() {
 
   // Allocate memory.
   %mem1 = memref.alloca(%za_s_size) : memref<?xi32>
-  %mem2 = memref.alloca(%za_s_size) : memref<?xi32>
 
   // Fill each "row" of "mem1" with row number.
   //
@@ -69,13 +68,8 @@ func.func @entry() {
   // Transpose tile.
   %transposed_tile = vector.transpose %tile, [1, 0] : vector<[4]x[4]xi32> to vector<[4]x[4]xi32>
 
-  // Store tile back to "mem2" to print.
-  // TODO: Replace this with vector.print when
-  // https://github.com/llvm/llvm-project/pull/66691 lands.
-  vector.store %transposed_tile, %mem2[%c0] : memref<?xi32>, vector<[4]x[4]xi32>
-
-  // Dump "mem1". The smallest SVL is 128-bits so the tile will be at least
-  // 4x4xi32.
+  // Dump the original tile. The smallest SVL is 128-bits so the tile will be at
+  // least 4x4xi32.
   //
   // CHECK:      TILE BEGIN
   // CHECK-NEXT: ( 0, 0, 0, 0
@@ -84,14 +78,11 @@ func.func @entry() {
   // CHECK-NEXT: ( 3, 3, 3, 3
   // CHECK:      TILE END
   func.call @printTileBegin() : () -> ()
-  scf.for %i = %c0 to %za_s_size step %svl_s {
-    %tileslice = vector.load %mem1[%i] : memref<?xi32>, vector<[4]xi32>
-    vector.print %tileslice : vector<[4]xi32>
-  }
+  vector.print %tile : vector<[4]x[4]xi32>
   func.call @printTileEnd() : () -> ()
 
-  // Dump "mem2". The smallest SVL is 128-bits so the tile will be at least
-  // 4x4xi32.
+  // Dump the transposed tile. The smallest SVL is 128-bits so the tile will be
+  // at least 4x4xi32.
   //
   // CHECK:      TILE BEGIN
   // CHECK-NEXT: ( 0, 1, 2, 3
@@ -100,10 +91,7 @@ func.func @entry() {
   // CHECK-NEXT: ( 0, 1, 2, 3
   // CHECK:      TILE END
   func.call @printTileBegin() : () -> ()
-  scf.for %i = %c0 to %za_s_size step %svl_s {
-    %tileslice = vector.load %mem2[%i] : memref<?xi32>, vector<[4]xi32>
-    vector.print %tileslice : vector<[4]xi32>
-  }
+  vector.print %transposed_tile : vector<[4]x[4]xi32>
   func.call @printTileEnd() : () -> ()
 
   return
