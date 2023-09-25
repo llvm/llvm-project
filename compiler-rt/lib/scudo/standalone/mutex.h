@@ -59,8 +59,10 @@ private:
     // fast operations.
     constexpr u32 SpinTimes = 16;
     volatile u32 V = 0;
-    for (u32 I = 0; I < SpinTimes; ++I)
-      ++V;
+    for (u32 I = 0; I < SpinTimes; ++I) {
+      u32 Tmp = V + 1;
+      V = Tmp;
+    }
   }
 
   void assertHeldImpl();

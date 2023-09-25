@@ -3511,21 +3511,16 @@ static SDValue lowerBuildVectorOfConstants(SDValue Op, SelectionDAG &DAG,
     }
   }
 
-  if (SDValue Res = lowerBuildVectorViaDominantValues(Op, DAG, Subtarget))
-    return Res;
-
   // If the number of signbits allows, see if we can lower as a <N x i8>.
-  // We restrict this to N <= 4 to ensure the resulting narrow vector is
-  // 32 bits of smaller and can thus be materialized cheaply from scalar.
-  // The main motivation for this is the constant index vector required
-  // by vrgather.vv.  This covers all indice vectors up to size 4.
+  // Our main goal here is to reduce LMUL (and thus work) required to
+  // build the constant, but we will also narrow if the resulting
+  // narrow vector is known to materialize cheaply.
   // TODO: We really should be costing the smaller vector.  There are
   // profitable cases this misses.
-  const unsigned ScalarSize =
-    Op.getSimpleValueType().getScalarSizeInBits();
-  if (ScalarSize > 8 && NumElts <= 4) {
+  if (EltBitSize > 8 &&
+      (NumElts <= 4 || VT.getSizeInBits() > Subtarget.getRealMinVLen())) {
     unsigned SignBits = DAG.ComputeNumSignBits(Op);
-    if (ScalarSize - SignBits < 8) {
+    if (EltBitSize - SignBits < 8) {
       SDValue Source =
         DAG.getNode(ISD::TRUNCATE, DL, VT.changeVectorElementType(MVT::i8), Op);
       Source = convertToScalableVector(ContainerVT.changeVectorElementType(MVT::i8),
@@ -3534,6 +3529,9 @@ static SDValue lowerBuildVectorOfConstants(SDValue Op, SelectionDAG &DAG,
       return convertFromScalableVector(VT, Res, DAG, Subtarget);
     }
   }
+
+  if (SDValue Res = lowerBuildVectorViaDominantValues(Op, DAG, Subtarget))
+    return Res;
 
   // For constant vectors, use generic constant pool lowering.  Otherwise,
   // we'd have to materialize constants in GPRs just to move them into the
@@ -14431,11 +14429,11 @@ SDValue RISCVTargetLowering::PerformDAGCombine(SDNode *N,
         return SDValue(N, 0);
 
     // If VL is 1 and the scalar value won't benefit from immediate, we can
-    // use vmv.s.x.  Do this only if legal to avoid breaking i64 sext(i32)
-    // patterns on rv32..
+    // use vmv.s.x.
     ConstantSDNode *Const = dyn_cast<ConstantSDNode>(Scalar);
-    if (isOneConstant(VL) && EltWidth <= Subtarget.getXLen() &&
-        (!Const || Const->isZero() || !isInt<5>(Const->getSExtValue())))
+    if (isOneConstant(VL) &&
+        (!Const || Const->isZero() ||
+         !Const->getAPIntValue().sextOrTrunc(EltWidth).isSignedIntN(5)))
       return DAG.getNode(RISCVISD::VMV_S_X_VL, DL, VT, Passthru, Scalar, VL);
 
     break;
@@ -17741,10 +17739,10 @@ RISCVTargetLowering::getInlineAsmMemConstraint(StringRef ConstraintCode) const {
 }
 
 void RISCVTargetLowering::LowerAsmOperandForConstraint(
-    SDValue Op, std::string &Constraint, std::vector<SDValue> &Ops,
+    SDValue Op, StringRef Constraint, std::vector<SDValue> &Ops,
     SelectionDAG &DAG) const {
   // Currently only support length 1 constraints.
-  if (Constraint.length() == 1) {
+  if (Constraint.size() == 1) {
     switch (Constraint[0]) {
     case 'I':
       // Validate & create a 12-bit signed immediate operand.

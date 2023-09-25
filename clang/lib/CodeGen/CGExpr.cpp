@@ -1212,7 +1212,7 @@ LValue CodeGenFunction::EmitUnsupportedLValue(const Expr *E,
                                               const char *Name) {
   ErrorUnsupported(E, Name);
   llvm::Type *ElTy = ConvertType(E->getType());
-  llvm::Type *Ty = llvm::PointerType::getUnqual(ElTy);
+  llvm::Type *Ty = UnqualPtrTy;
   return MakeAddrLValue(
       Address(llvm::UndefValue::get(Ty), ElTy, CharUnits::One()), E->getType());
 }
@@ -4599,7 +4599,7 @@ std::optional<LValue> HandleConditionalOperatorLValueSimpleCase(
       if (auto *ThrowExpr = dyn_cast<CXXThrowExpr>(Live->IgnoreParens())) {
         CGF.EmitCXXThrowExpr(ThrowExpr);
         llvm::Type *ElemTy = CGF.ConvertType(Dead->getType());
-        llvm::Type *Ty = llvm::PointerType::getUnqual(ElemTy);
+        llvm::Type *Ty = CGF.UnqualPtrTy;
         return CGF.MakeAddrLValue(
             Address(llvm::UndefValue::get(Ty), ElemTy, CharUnits::One()),
             Dead->getType());
@@ -4802,6 +4802,9 @@ LValue CodeGenFunction::EmitCastLValue(const CastExpr *E) {
     // bound and change the IR type.
     // FIXME: Once pointee types are removed from IR, remove this.
     LValue LV = EmitLValue(E->getSubExpr());
+    // Propagate the volatile qualifer to LValue, if exist in E.
+    if (E->changesVolatileQualification())
+      LV.getQuals() = E->getType().getQualifiers();
     if (LV.isSimple()) {
       Address V = LV.getAddress(*this);
       if (V.isValid()) {

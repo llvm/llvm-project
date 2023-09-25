@@ -114,7 +114,7 @@ static std::pair<StringRef, StringRef> getCustomCoders(ArrayRef<Init *> Args) {
 }
 
 VarLenInst::VarLenInst(const DagInit *DI, const RecordVal *TheDef)
-    : TheDef(TheDef), NumBits(0U) {
+    : TheDef(TheDef), NumBits(0U), HasDynamicSegment(false) {
   buildRec(DI);
   for (const auto &S : Segments)
     NumBits += S.BitWidth;

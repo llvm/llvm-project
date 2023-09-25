@@ -3842,7 +3842,7 @@ bool X86InstrInfo::verifyInstruction(const MachineInstr &MI,
     return true;
 
   ExtAddrMode AM = *AMOrNone;
-
+  assert(AM.Form == ExtAddrMode::Formula::Basic);
   if (AM.ScaledReg != X86::NoRegister) {
     switch (AM.Scale) {
     case 1:

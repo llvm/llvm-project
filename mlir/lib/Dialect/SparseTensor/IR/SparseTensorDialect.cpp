@@ -293,8 +293,10 @@ Type SparseTensorEncodingAttr::getCrdType() const {
 SparseTensorEncodingAttr
 SparseTensorEncodingAttr::withDimToLvl(AffineMap dimToLvl) const {
   assert(getImpl() && "Uninitialized SparseTensorEncodingAttr");
+  // TODO: infer lvlToDim
   return SparseTensorEncodingAttr::get(getContext(), getLvlTypes(), dimToLvl,
-                                       getPosWidth(), getCrdWidth());
+                                       /*lvlToDim*/ AffineMap(), getPosWidth(),
+                                       getCrdWidth());
 }
 
 SparseTensorEncodingAttr
@@ -311,7 +313,8 @@ SparseTensorEncodingAttr::withBitWidths(unsigned posWidth,
                                         unsigned crdWidth) const {
   assert(getImpl() && "Uninitialized SparseTensorEncodingAttr");
   return SparseTensorEncodingAttr::get(getContext(), getLvlTypes(),
-                                       getDimToLvl(), posWidth, crdWidth);
+                                       getDimToLvl(), getLvlToDim(), posWidth,
+                                       crdWidth);
 }
 
 SparseTensorEncodingAttr SparseTensorEncodingAttr::withoutBitWidths() const {
@@ -321,8 +324,8 @@ SparseTensorEncodingAttr SparseTensorEncodingAttr::withoutBitWidths() const {
 SparseTensorEncodingAttr SparseTensorEncodingAttr::withDimSlices(
     ArrayRef<SparseTensorDimSliceAttr> dimSlices) const {
   return SparseTensorEncodingAttr::get(getContext(), getLvlTypes(),
-                                       getDimToLvl(), getPosWidth(),
-                                       getCrdWidth(), dimSlices);
+                                       getDimToLvl(), getLvlToDim(),
+                                       getPosWidth(), getCrdWidth(), dimSlices);
 }
 
 SparseTensorEncodingAttr SparseTensorEncodingAttr::withoutDimSlices() const {
@@ -576,8 +579,10 @@ Attribute SparseTensorEncodingAttr::parse(AsmParser &parser, Type type) {
 #undef RETURN_ON_FAIL
 
   // Construct struct-like storage for attribute.
+  AffineMap lvlToDim; // TODO: infer
   return parser.getChecked<SparseTensorEncodingAttr>(
-      parser.getContext(), lvlTypes, dimToLvl, posWidth, crdWidth, dimSlices);
+      parser.getContext(), lvlTypes, dimToLvl, lvlToDim, posWidth, crdWidth,
+      dimSlices);
 }
 
 void SparseTensorEncodingAttr::print(AsmPrinter &printer) const {
@@ -608,10 +613,12 @@ void SparseTensorEncodingAttr::print(AsmPrinter &printer) const {
   printer << " }>";
 }
 
-LogicalResult SparseTensorEncodingAttr::verify(
-    function_ref<InFlightDiagnostic()> emitError,
-    ArrayRef<DimLevelType> lvlTypes, AffineMap dimToLvl, unsigned posWidth,
-    unsigned crdWidth, ArrayRef<SparseTensorDimSliceAttr> dimSlices) {
+LogicalResult
+SparseTensorEncodingAttr::verify(function_ref<InFlightDiagnostic()> emitError,
+                                 ArrayRef<DimLevelType> lvlTypes,
+                                 AffineMap dimToLvl, AffineMap lvlToDim,
+                                 unsigned posWidth, unsigned crdWidth,
+                                 ArrayRef<SparseTensorDimSliceAttr> dimSlices) {
   if (!acceptBitWidth(posWidth))
     return emitError() << "unexpected position bitwidth: " << posWidth;
   if (!acceptBitWidth(crdWidth))
@@ -631,7 +638,7 @@ LogicalResult SparseTensorEncodingAttr::verify(
       return emitError()
              << "level-rank mismatch between dimToLvl and lvlTypes: "
              << dimToLvl.getNumResults() << " != " << lvlRank;
-    // TODO: The following is attempting to match the old error-conditions
+    // TODO:  The following is attempting to match the old error-conditions
     // from prior to merging dimOrdering and higherOrdering into dimToLvl.
     // That is, we currently require `dimToLvl` to be either a permutation
     // (as when higherOrdering is the identity) or expansive (as per the
@@ -674,7 +681,8 @@ LogicalResult SparseTensorEncodingAttr::verifyEncoding(
   // Check structural integrity.  In particular, this ensures that the
   // level-rank is coherent across all the fields.
   RETURN_FAILURE_IF_FAILED(verify(emitError, getLvlTypes(), getDimToLvl(),
-                                  getPosWidth(), getCrdWidth(), getDimSlices()))
+                                  getLvlToDim(), getPosWidth(), getCrdWidth(),
+                                  getDimSlices()))
   // Check integrity with tensor type specifics.  In particular, we
   // need only check that the dimension-rank of the tensor agrees with
   // the dimension-rank of the encoding.
@@ -763,8 +771,9 @@ RankedTensorType sparse_tensor::getCOOFromTypeWithOrdering(RankedTensorType rtt,
   // default value.
   unsigned posWidth = src.getPosWidth();
   unsigned crdWidth = src.getCrdWidth();
+  AffineMap invPerm; // TODO
   auto enc = SparseTensorEncodingAttr::get(src.getContext(), lvlTypes, lvlPerm,
-                                           posWidth, crdWidth);
+                                           invPerm, posWidth, crdWidth);
   return RankedTensorType::get(src.getDimShape(), src.getElementType(), enc);
 }
 
@@ -836,6 +845,7 @@ getNormalizedEncodingForSpecifier(SparseTensorEncodingAttr enc) {
   return SparseTensorEncodingAttr::get(
       enc.getContext(), dlts,
       AffineMap(), // dimToLvl (irrelevant to storage specifier)
+      AffineMap(), // lvlToDim (irrelevant to storage specifier)
       // Always use `index` for memSize and lvlSize instead of reusing
       // `getPosWidth` and `getCrdWidth`. It allows us to reuse the same SSA
       // value for different bitwidth, it also avoids casting between index and

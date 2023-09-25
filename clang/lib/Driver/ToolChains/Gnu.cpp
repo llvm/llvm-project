@@ -2224,6 +2224,12 @@ bool Generic_GCC::GCCInstallationDetector::getBiarchSibling(Multilib &M) const {
 void Generic_GCC::GCCInstallationDetector::AddDefaultGCCPrefixes(
     const llvm::Triple &TargetTriple, SmallVectorImpl<std::string> &Prefixes,
     StringRef SysRoot) {
+
+  if (TargetTriple.isOSHaiku()) {
+    Prefixes.push_back(concat(SysRoot, "/boot/system/develop/tools"));
+    return;
+  }
+
   if (TargetTriple.isOSSolaris()) {
     // Solaris is a special case.
     // The GCC installation is under
@@ -3100,6 +3106,8 @@ Generic_GCC::addLibCxxIncludePaths(const llvm::opt::ArgList &DriverArgs,
                                    llvm::opt::ArgStringList &CC1Args) const {
   const Driver &D = getDriver();
   std::string SysRoot = computeSysRoot();
+  if (SysRoot.empty())
+    SysRoot = llvm::sys::path::get_separator();
 
   auto AddIncludePath = [&](StringRef Path, bool TargetDirRequired = false) {
     std::string Version = detectLibcxxVersion(Path);

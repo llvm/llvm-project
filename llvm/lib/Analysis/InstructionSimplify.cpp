@@ -3410,10 +3410,10 @@ static Value *simplifyICmpWithBinOp(CmpInst::Predicate Pred, Value *LHS,
     }
   }
 
-  // TODO: This is overly constrained. LHS can be any power-of-2.
-  // (1 << X)  >u 0x8000 --> false
-  // (1 << X) <=u 0x8000 --> true
-  if (match(LHS, m_Shl(m_One(), m_Value())) && match(RHS, m_SignMask())) {
+  // If C is a power-of-2:
+  // (C << X)  >u 0x8000 --> false
+  // (C << X) <=u 0x8000 --> true
+  if (match(LHS, m_Shl(m_Power2(), m_Value())) && match(RHS, m_SignMask())) {
     if (Pred == ICmpInst::ICMP_UGT)
       return ConstantInt::getFalse(getCompareTy(RHS));
     if (Pred == ICmpInst::ICMP_ULE)

@@ -66,6 +66,7 @@ class VPBuilder {
 
 public:
   VPBuilder() = default;
+  VPBuilder(VPBasicBlock *InsertBB) { setInsertPoint(InsertBB); }
 
   /// Clear the insertion point: created instructions will not be inserted into
   /// a block.
@@ -120,6 +121,13 @@ public:
     InsertPt = IP;
   }
 
+  /// This specifies that created instructions should be inserted at the
+  /// specified point.
+  void setInsertPoint(VPRecipeBase *IP) {
+    BB = IP->getParent();
+    InsertPt = IP->getIterator();
+  }
+
   /// Create an N-ary operation with \p Opcode, \p Operands and set \p Inst as
   /// its underlying Instruction.
   VPValue *createNaryOp(unsigned Opcode, ArrayRef<VPValue *> Operands,
@@ -136,6 +144,13 @@ public:
     return createInstruction(Opcode, Operands, DL, Name);
   }
 
+  VPInstruction *createOverflowingOp(unsigned Opcode,
+                                     std::initializer_list<VPValue *> Operands,
+                                     VPRecipeWithIRFlags::WrapFlagsTy WrapFlags,
+                                     DebugLoc DL, const Twine &Name = "") {
+    return tryInsertInstruction(
+        new VPInstruction(Opcode, Operands, WrapFlags, DL, Name));
+  }
   VPValue *createNot(VPValue *Operand, DebugLoc DL, const Twine &Name = "") {
     return createInstruction(VPInstruction::Not, {Operand}, DL, Name);
   }

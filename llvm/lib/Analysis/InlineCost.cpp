@@ -612,8 +612,8 @@ class InlineCostCallAnalyzer final : public CallAnalyzer {
 
   /// Handle a capped 'int' increment for Cost.
   void addCost(int64_t Inc) {
-    Inc = std::max<int64_t>(std::min<int64_t>(INT_MAX, Inc), INT_MIN);
-    Cost = std::max<int64_t>(std::min<int64_t>(INT_MAX, Inc + Cost), INT_MIN);
+    Inc = std::clamp<int64_t>(Inc, INT_MIN, INT_MAX);
+    Cost = std::clamp<int64_t>(Inc + Cost, INT_MIN, INT_MAX);
   }
 
   void onDisableSROA(AllocaInst *Arg) override {

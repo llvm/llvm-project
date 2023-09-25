@@ -2103,6 +2103,10 @@ bool isSGPR(unsigned Reg, const MCRegisterInfo* TRI) {
     Reg == AMDGPU::SCC;
 }
 
+bool isHi(unsigned Reg, const MCRegisterInfo &MRI) {
+  return MRI.getEncodingValue(Reg) & AMDGPU::EncValues::IS_HI;
+}
+
 #define MAP_REG2REG \
   using namespace AMDGPU; \
   switch(Reg) { \
@@ -2531,6 +2535,8 @@ bool isArgPassedInSGPR(const Argument *A) {
   case CallingConv::AMDGPU_PS:
   case CallingConv::AMDGPU_CS:
   case CallingConv::AMDGPU_Gfx:
+  case CallingConv::AMDGPU_CS_Chain:
+  case CallingConv::AMDGPU_CS_ChainPreserve:
     // For non-compute shaders, SGPR inputs are marked with either inreg or
     // byval. Everything else is in VGPRs.
     return A->hasAttribute(Attribute::InReg) ||
@@ -2556,6 +2562,8 @@ bool isArgPassedInSGPR(const CallBase *CB, unsigned ArgNo) {
   case CallingConv::AMDGPU_PS:
   case CallingConv::AMDGPU_CS:
   case CallingConv::AMDGPU_Gfx:
+  case CallingConv::AMDGPU_CS_Chain:
+  case CallingConv::AMDGPU_CS_ChainPreserve:
     // For non-compute shaders, SGPR inputs are marked with either inreg or
     // byval. Everything else is in VGPRs.
     return CB->paramHasAttr(ArgNo, Attribute::InReg) ||

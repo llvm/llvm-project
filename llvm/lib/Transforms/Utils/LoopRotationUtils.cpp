@@ -295,33 +295,62 @@ static void updateBranchWeights(BranchInst &PreHeaderBI, BranchInst &LoopBI,
   // We cannot generally deduce how often we had a zero-trip count loop so we
   // have to make a guess for how to distribute x among the new x0 and x1.
 
-  uint32_t ExitWeight0 = 0; // aka x0
-  if (HasConditionalPreHeader) {
-    // Here we cannot know how many 0-trip count loops we have, so we guess:
-    if (OrigLoopBackedgeWeight > OrigLoopExitWeight) {
-      // If the loop count is bigger than the exit count then we set
-      // probabilities as if 0-trip count nearly never happens.
-      ExitWeight0 = ZeroTripCountWeights[0];
-      // Scale up counts if necessary so we can match `ZeroTripCountWeights` for
-      // the `ExitWeight0`:`ExitWeight1` (aka `x0`:`x1` ratio`) ratio.
-      while (OrigLoopExitWeight < ZeroTripCountWeights[1] + ExitWeight0) {
-        // ... but don't overflow.
-        uint32_t const HighBit = uint32_t{1} << (sizeof(uint32_t) * 8 - 1);
-        if ((OrigLoopBackedgeWeight & HighBit) != 0 ||
-            (OrigLoopExitWeight & HighBit) != 0)
-          break;
-        OrigLoopBackedgeWeight <<= 1;
-        OrigLoopExitWeight <<= 1;
+  uint32_t ExitWeight0;    // aka x0
+  uint32_t ExitWeight1;    // aka x1
+  uint32_t EnterWeight;    // aka y0
+  uint32_t LoopBackWeight; // aka y1
+  if (OrigLoopExitWeight > 0 && OrigLoopBackedgeWeight > 0) {
+    ExitWeight0 = 0;
+    if (HasConditionalPreHeader) {
+      // Here we cannot know how many 0-trip count loops we have, so we guess:
+      if (OrigLoopBackedgeWeight >= OrigLoopExitWeight) {
+        // If the loop count is bigger than the exit count then we set
+        // probabilities as if 0-trip count nearly never happens.
+        ExitWeight0 = ZeroTripCountWeights[0];
+        // Scale up counts if necessary so we can match `ZeroTripCountWeights`
+        // for the `ExitWeight0`:`ExitWeight1` (aka `x0`:`x1` ratio`) ratio.
+        while (OrigLoopExitWeight < ZeroTripCountWeights[1] + ExitWeight0) {
+          // ... but don't overflow.
+          uint32_t const HighBit = uint32_t{1} << (sizeof(uint32_t) * 8 - 1);
+          if ((OrigLoopBackedgeWeight & HighBit) != 0 ||
+              (OrigLoopExitWeight & HighBit) != 0)
+            break;
+          OrigLoopBackedgeWeight <<= 1;
+          OrigLoopExitWeight <<= 1;
+        }
+      } else {
+        // If there's a higher exit-count than backedge-count then we set
+        // probabilities as if there are only 0-trip and 1-trip cases.
+        ExitWeight0 = OrigLoopExitWeight - OrigLoopBackedgeWeight;
       }
-    } else {
-      // If there's a higher exit-count than backedge-count then we set
-      // probabilities as if there are only 0-trip and 1-trip cases.
-      ExitWeight0 = OrigLoopExitWeight - OrigLoopBackedgeWeight;
     }
+    ExitWeight1 = OrigLoopExitWeight - ExitWeight0;
+    EnterWeight = ExitWeight1;
+    LoopBackWeight = OrigLoopBackedgeWeight - EnterWeight;
+  } else if (OrigLoopExitWeight == 0) {
+    if (OrigLoopBackedgeWeight == 0) {
+      // degenerate case... keep everything zero...
+      ExitWeight0 = 0;
+      ExitWeight1 = 0;
+      EnterWeight = 0;
+      LoopBackWeight = 0;
+    } else {
+      // Special case "LoopExitWeight == 0" weights which behaves like an
+      // endless where we don't want loop-enttry (y0) to be the same as
+      // loop-exit (x1).
+      ExitWeight0 = 0;
+      ExitWeight1 = 0;
+      EnterWeight = 1;
+      LoopBackWeight = OrigLoopBackedgeWeight;
+    }
+  } else {
+    // loop is never entered.
+    assert(OrigLoopBackedgeWeight == 0 && "remaining case is backedge zero");
+    ExitWeight0 = 1;
+    ExitWeight1 = 1;
+    EnterWeight = 0;
+    LoopBackWeight = 0;
   }
-  uint32_t ExitWeight1 = OrigLoopExitWeight - ExitWeight0;        // aka x1
-  uint32_t EnterWeight = ExitWeight1;                             // aka y0
-  uint32_t LoopBackWeight = OrigLoopBackedgeWeight - EnterWeight; // aka y1
 
   MDBuilder MDB(LoopBI.getContext());
   MDNode *LoopWeightMD =
