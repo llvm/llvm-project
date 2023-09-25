@@ -1062,7 +1062,7 @@ void WhitespaceManager::alignTrailingComments() {
       const int OriginalSpaces =
           C.OriginalWhitespaceRange.getEnd().getRawEncoding() -
           C.OriginalWhitespaceRange.getBegin().getRawEncoding() -
-          C.Tok->NewlinesBefore;
+          C.Tok->LastNewlineOffset;
       assert(OriginalSpaces >= 0);
       const auto RestoredLineLength =
           C.StartOfTokenColumn + C.TokenLength + OriginalSpaces;
@@ -1088,9 +1088,9 @@ void WhitespaceManager::alignTrailingComments() {
     else
       ChangeMaxColumn = ChangeMinColumn;
 
-    if (I + 1 < Size && Changes[I + 1].ContinuesPPDirective) {
+    if (I + 1 < Size && Changes[I + 1].ContinuesPPDirective &&
+        ChangeMaxColumn >= 2) {
       ChangeMaxColumn -= 2;
-      assert(ChangeMaxColumn >= 0);
     }
 
     bool WasAlignedWithStartOfNextLine = false;
