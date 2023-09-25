@@ -15,14 +15,25 @@ extern "C" {
 void __asan_register_image_globals(uptr *flag) {
   __asan_abi_register_image_globals();
 }
-
 void __asan_unregister_image_globals(uptr *flag) {
   __asan_abi_unregister_image_globals();
 }
-void __asan_register_elf_globals(uptr *flag, void *start, void *stop) {}
-void __asan_unregister_elf_globals(uptr *flag, void *start, void *stop) {}
-void __asan_register_globals(__asan_global *globals, uptr n) {}
-void __asan_unregister_globals(__asan_global *globals, uptr n) {}
+void __asan_register_elf_globals(uptr *flag, void *start, void *stop) {
+  bool bFlag = *flag;
+  __asan_abi_register_elf_globals(&bFlag, start, stop);
+  *flag = bFlag;
+}
+void __asan_unregister_elf_globals(uptr *flag, void *start, void *stop) {
+  bool bFlag = *flag;
+  __asan_abi_unregister_elf_globals(&bFlag, start, stop);
+  *flag = bFlag;
+}
+void __asan_register_globals(__asan_global *globals, uptr n) {
+  __asan_abi_register_globals(globals, n);
+}
+void __asan_unregister_globals(__asan_global *globals, uptr n) {
+  __asan_abi_unregister_globals(globals, n);
+}
 
 // Functions concerning dynamic library initialization
 void __asan_before_dynamic_init(const char *module_name) {
@@ -331,25 +342,28 @@ void __asan_unpoison_stack_memory(uptr addr, uptr size) {
 }
 
 // Functions concerning redzone poisoning
-void __asan_poison_intra_object_redzone(uptr p, uptr size) {}
-void __asan_unpoison_intra_object_redzone(uptr p, uptr size) {}
+void __asan_poison_intra_object_redzone(uptr p, uptr size) {
+  __asan_abi_poison_intra_object_redzone((void *)p, size);
+}
+void __asan_unpoison_intra_object_redzone(uptr p, uptr size) {
+  __asan_abi_unpoison_intra_object_redzone((void *)p, size);
+}
 
 // Functions concerning array cookie poisoning
-void __asan_poison_cxx_array_cookie(uptr p) {}
+void __asan_poison_cxx_array_cookie(uptr p) {
+  __asan_abi_poison_cxx_array_cookie((void *)p);
+}
 uptr __asan_load_cxx_array_cookie(uptr *p) {
-  // TBD: Fail here
-  return (uptr)0;
+  return (uptr)__asan_abi_load_cxx_array_cookie((void **)p);
 }
 
 // Functions concerning fake stacks
 void *__asan_get_current_fake_stack(void) {
-  // TBD: Fail here
-  return (void *)0;
+  return __asan_abi_get_current_fake_stack();
 }
 void *__asan_addr_is_in_fake_stack(void *fake_stack, void *addr, void **beg,
                                    void **end) {
-  // TBD: Fail here
-  return (void *)0;
+  return __asan_abi_addr_is_in_fake_stack(fake_stack, addr, beg, end);
 }
 
 // Functions concerning poisoning and unpoisoning fake stack alloca
@@ -467,19 +481,34 @@ void __asan_stack_free_10(uptr ptr, uptr size) {
 
 // Functions concerning introspection (including lldb support)
 uptr __asan_get_alloc_stack(uptr addr, uptr *trace, uptr size, u32 *thread_id) {
-  // TBD: Fail here
-  return (uptr)0;
+  return (uptr)__asan_abi_get_alloc_stack((void *)addr, (void **)trace,
+                                          (size_t)size, (int *)thread_id);
 }
 void __asan_report_error(uptr pc, uptr bp, uptr sp, uptr addr, int is_write,
-                         uptr access_size, u32 exp) {}
-void __asan_set_error_report_callback(void (*callback)(const char *)) {}
-void __asan_describe_address(uptr addr) {}
-int __asan_report_present(void) { return (int)0; }
-uptr __asan_get_report_pc(void) { return (uptr)0; }
-uptr __asan_get_report_bp(void) { return (uptr)0; }
-uptr __asan_get_report_sp(void) { return (uptr)0; }
-uptr __asan_get_report_address(void) { return (uptr)0; }
-int __asan_get_report_access_type(void) { return (int)0; }
-uptr __asan_get_report_access_size(void) { return (uptr)0; }
-const char *__asan_get_report_description(void) { return (const char *)0; }
+                         uptr access_size, u32 exp) {
+  __asan_abi_report_error((void *)pc, (void *)bp, (void *)sp, (void *)addr,
+                          (bool)is_write, (size_t)access_size, (int)exp);
+}
+void __asan_set_error_report_callback(void (*callback)(const char *)) {
+  __asan_abi_set_error_report_callback(callback);
+}
+void __asan_describe_address(uptr addr) {
+  __asan_abi_describe_address((void *)addr);
+}
+int __asan_report_present(void) { return __asan_abi_report_present(); }
+uptr __asan_get_report_pc(void) { return (uptr)__asan_abi_get_report_pc(); }
+uptr __asan_get_report_bp(void) { return (uptr)__asan_abi_get_report_bp(); }
+uptr __asan_get_report_sp(void) { return (uptr)__asan_abi_get_report_sp(); }
+uptr __asan_get_report_address(void) {
+  return (uptr)__asan_abi_get_report_address();
+}
+int __asan_get_report_access_type(void) {
+  return __asan_abi_get_report_access_type();
+}
+uptr __asan_get_report_access_size(void) {
+  return (uptr)__asan_abi_get_report_access_size();
+}
+const char *__asan_get_report_description(void) {
+  return __asan_abi_get_report_description();
+}
 }

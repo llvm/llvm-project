@@ -11,12 +11,18 @@
 
 #include <stdbool.h>
 #include <stddef.h>
+#include <sys/cdefs.h>
 #include <sys/types.h>
 
-extern "C" {
+__BEGIN_DECLS
+
 // Functions concerning instrumented global variables:
 void __asan_abi_register_image_globals();
 void __asan_abi_unregister_image_globals();
+void __asan_abi_register_elf_globals(bool *flag, void *start, void *stop);
+void __asan_abi_unregister_elf_globals(bool *flag, void *start, void *stop);
+void __asan_abi_register_globals(void *globals, size_t n);
+void __asan_abi_unregister_globals(void *globals, size_t n);
 
 // Functions concerning dynamic library initialization
 void __asan_abi_before_dynamic_init(const char *module_name);
@@ -80,5 +86,22 @@ void *__asan_abi_stack_malloc_always_n(size_t scale, size_t size);
 
 // Functions concerning fake stack free
 void __asan_abi_stack_free_n(int scale, void *p, size_t n);
-}
+
+// Functions concerning introspection (including lldb support)
+void *__asan_abi_get_alloc_stack(void *addr, void **trace, size_t size,
+                                 int *thread_id);
+void __asan_abi_report_error(void *pc, void *bp, void *sp, void *addr,
+                             bool is_write, size_t access_size, int exp);
+void __asan_abi_set_error_report_callback(void (*callback)(const char *));
+void __asan_abi_describe_address(void *addr);
+bool __asan_abi_report_present(void);
+void *__asan_abi_get_report_pc(void);
+void *__asan_abi_get_report_bp(void);
+void *__asan_abi_get_report_sp(void);
+void *__asan_abi_get_report_address(void);
+int __asan_abi_get_report_access_type(void);
+size_t __asan_abi_get_report_access_size(void);
+const char *__asan_abi_get_report_description(void);
+
+__END_DECLS
 #endif // ASAN_ABI_H
