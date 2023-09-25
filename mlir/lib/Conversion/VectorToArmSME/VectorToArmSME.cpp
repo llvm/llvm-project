@@ -254,7 +254,7 @@ struct BroadcastOpToArmSMELowering
 ///   %alloca = memref.alloca(%svl_s, %svl_s) : memref<?x?xi32>
 ///   %arm_sme.tile_store %src, <hor>, %alloca[%c0, %c0]
 ///     : memref<?x?xi32>, vector<[4]x[4]xi32>
-///   %transposed_src = arm_sme.tile_load <ver>, %alloca[%c0, %c0]
+///   %transposed_src = arm_sme.tile_load %alloca[%c0, %c0], <vertical>
 ///     : memref<?x?xi32>, vector<[4]x[4]xi32>
 ///
 /// NOTE: Tranposing via memory is obviously expensive, the current intention
@@ -277,7 +277,7 @@ struct TransposeOpToArmSMELowering
       transp.push_back(cast<IntegerAttr>(attr).getInt());
 
     // Bail unless this is a true 2-D matrix transpose.
-    if (transp[0] != 1 && transp[1] != 0)
+    if (transp[0] != 1 || transp[1] != 0)
       return failure();
 
     OpBuilder::InsertionGuard g(rewriter);
@@ -302,13 +302,12 @@ struct TransposeOpToArmSMELowering
 
     // Store input tile.
     auto tileStoreOp = rewriter.create<arm_sme::TileStoreOp>(
-        loc, input, arm_sme::TileSliceLayout::Horizontal, buffer,
-        ValueRange{c0, c0});
+        loc, input, buffer, ValueRange{c0, c0});
 
     // Reload input tile vertically.
     rewriter.replaceOpWithNewOp<arm_sme::TileLoadOp>(
-        transposeOp, tileType, arm_sme::TileSliceLayout::Vertical,
-        tileStoreOp.getBase(), tileStoreOp.getIndices());
+        transposeOp, tileType, tileStoreOp.getBase(), tileStoreOp.getIndices(),
+        arm_sme::TileSliceLayout::Vertical);
 
     return success();
   }
