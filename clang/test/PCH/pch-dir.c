@@ -28,9 +28,11 @@ int FOO;
 
 int get(void) {
 #ifdef __cplusplus
+  // CHECK-CPP: warning: '-include {{.*}}.h' probing .gch is deprecated. Use '-include-pch {{.*}}.h.gch' or switch to .pch instead
   // CHECK-CPP: .h.gch{{[/\\]}}cpp.gch
   return i;
 #else
+  // CHECK-C: warning: '-include {{.*}}.h' probing .gch is deprecated. Use '-include-pch {{.*}}.h.gch' or switch to .pch instead
   // CHECK-C: .h.gch{{[/\\]}}c.gch
   return j;
 #endif
