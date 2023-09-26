@@ -85,11 +85,10 @@ void dragonfly::Linker::ConstructJob(Compilation &C, const JobAction &JA,
     CmdArgs.push_back("elf_i386");
   }
 
+  assert((Output.isFilename() || Output.isNothing()) && "Invalid output.");
   if (Output.isFilename()) {
     CmdArgs.push_back("-o");
     CmdArgs.push_back(Output.getFilename());
-  } else {
-    assert(Output.isNothing() && "Invalid output.");
   }
 
   if (!Args.hasArg(options::OPT_nostdlib, options::OPT_nostartfiles,
