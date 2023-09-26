@@ -212,7 +212,7 @@ convertOperationImpl(Operation &opInst, llvm::IRBuilderBase &builder,
           moduleTranslation.lookupFunction(attr.getValue()), operandsRef);
     } else {
       llvm::FunctionType *calleeType;
-      if (callOp.getCalleeType().has_value())
+      if (callOp.getCalleeType())
         calleeType = llvm::cast<llvm::FunctionType>(
             moduleTranslation.convertType(*callOp.getCalleeType()));
       else
