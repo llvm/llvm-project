@@ -19,3 +19,22 @@ entry:
   call void @use(i1 %cmp2)
   ret void
 }
+
+define void @test2(i8 %start, i8 %high) {
+; CHECK-LABEL: define void @test2
+; CHECK-SAME: (i8 [[START:%.*]], i8 [[HIGH:%.*]]) {
+; CHECK-NEXT:    [[START1:%.*]] = add nsw i8 [[START]], 4
+; CHECK-NEXT:    [[T1:%.*]] = icmp ult i8 [[START1]], [[HIGH]]
+; CHECK-NEXT:    call void @use(i1 [[T1]])
+; CHECK-NEXT:    call void @use(i1 [[T1]])
+; CHECK-NEXT:    ret void
+;
+  %start1 = add nsw i8 %start, 4
+  %t1 = icmp ult i8 %start1, %high
+  call void @use(i1 %t1)
+
+  %start2 = add i8 %start, 4
+  %t2 = icmp ult i8 %start2, %high
+  call void @use(i1 %t2)
+  ret void
+}
