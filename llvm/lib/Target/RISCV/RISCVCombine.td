@@ -18,3 +18,10 @@ def RISCVPreLegalizerCombiner: GICombiner<
 def RISCVO0PreLegalizerCombiner: GICombiner<
   "RISCVO0PreLegalizerCombinerImpl", [optnone_combines]> {
 }
+
+// Post-legalization combines which are primarily optimizations.
+// TODO: Add more combines.
+def RISCVPostLegalizerCombiner
+    : GICombiner<"RISCVPostLegalizerCombinerImpl",
+                 [redundant_and, identity_combines]> {
+}

@@ -1463,7 +1463,7 @@ static Value *simplifyLShrInst(Value *Op0, Value *Op1, bool IsExact,
 
   // (X << A) >> A -> X
   Value *X;
-  if (match(Op0, m_NUWShl(m_Value(X), m_Specific(Op1))))
+  if (Q.IIQ.UseInstrInfo && match(Op0, m_NUWShl(m_Value(X), m_Specific(Op1))))
     return X;
 
   // ((X << A) | Y) >> A -> X  if effective width of Y is not larger than A.
@@ -1473,7 +1473,7 @@ static Value *simplifyLShrInst(Value *Op0, Value *Op1, bool IsExact,
   // optimizers by supporting a simple but common case in InstSimplify.
   Value *Y;
   const APInt *ShRAmt, *ShLAmt;
-  if (match(Op1, m_APInt(ShRAmt)) &&
+  if (Q.IIQ.UseInstrInfo && match(Op1, m_APInt(ShRAmt)) &&
       match(Op0, m_c_Or(m_NUWShl(m_Value(X), m_APInt(ShLAmt)), m_Value(Y))) &&
       *ShRAmt == *ShLAmt) {
     const KnownBits YKnown = computeKnownBits(Y, Q.DL, 0, Q.AC, Q.CxtI, Q.DT);
@@ -2210,7 +2210,7 @@ static Value *simplifyAndInst(Value *Op0, Value *Op1, const SimplifyQuery &Q,
   // SimplifyDemandedBits in InstCombine can optimize the general case.
   // This pattern aims to help other passes for a common case.
   Value *XShifted;
-  if (match(Op1, m_APInt(Mask)) &&
+  if (Q.IIQ.UseInstrInfo && match(Op1, m_APInt(Mask)) &&
       match(Op0, m_c_Or(m_CombineAnd(m_NUWShl(m_Value(X), m_APInt(ShAmt)),
                                      m_Value(XShifted)),
                         m_Value(Y)))) {
@@ -3092,7 +3092,7 @@ static Value *simplifyICmpWithConstant(CmpInst::Predicate Pred, Value *LHS,
   // (mul nuw/nsw X, MulC) != C --> true  (if C is not a multiple of MulC)
   // (mul nuw/nsw X, MulC) == C --> false (if C is not a multiple of MulC)
   const APInt *MulC;
-  if (ICmpInst::isEquality(Pred) &&
+  if (IIQ.UseInstrInfo && ICmpInst::isEquality(Pred) &&
       ((match(LHS, m_NUWMul(m_Value(), m_APIntAllowUndef(MulC))) &&
         *MulC != 0 && C->urem(*MulC) != 0) ||
        (match(LHS, m_NSWMul(m_Value(), m_APIntAllowUndef(MulC))) &&
@@ -3260,9 +3260,9 @@ static Value *simplifyICmpWithBinOpOnLHS(CmpInst::Predicate Pred,
 // *) C2 < C1 && C1 <= 0.
 //
 static bool trySimplifyICmpWithAdds(CmpInst::Predicate Pred, Value *LHS,
-                                    Value *RHS) {
+                                    Value *RHS, const InstrInfoQuery &IIQ) {
   // TODO: only support icmp slt for now.
-  if (Pred != CmpInst::ICMP_SLT)
+  if (Pred != CmpInst::ICMP_SLT || !IIQ.UseInstrInfo)
     return false;
 
   // Canonicalize nsw add as RHS.
@@ -3331,7 +3331,7 @@ static Value *simplifyICmpWithBinOp(CmpInst::Predicate Pred, Value *LHS,
 
     // icmp (X+Y), (X+Z) -> icmp Y,Z for equalities or if there is no overflow.
     bool CanSimplify = (NoLHSWrapProblem && NoRHSWrapProblem) ||
-                       trySimplifyICmpWithAdds(Pred, LHS, RHS);
+                       trySimplifyICmpWithAdds(Pred, LHS, RHS, Q.IIQ);
     if (A && C && (A == C || A == D || B == C || B == D) && CanSimplify) {
       // Determine Y and Z in the form icmp (X+Y), (X+Z).
       Value *Y, *Z;
@@ -3410,10 +3410,10 @@ static Value *simplifyICmpWithBinOp(CmpInst::Predicate Pred, Value *LHS,
     }
   }
 
-  // TODO: This is overly constrained. LHS can be any power-of-2.
-  // (1 << X)  >u 0x8000 --> false
-  // (1 << X) <=u 0x8000 --> true
-  if (match(LHS, m_Shl(m_One(), m_Value())) && match(RHS, m_SignMask())) {
+  // If C is a power-of-2:
+  // (C << X)  >u 0x8000 --> false
+  // (C << X) <=u 0x8000 --> true
+  if (match(LHS, m_Shl(m_Power2(), m_Value())) && match(RHS, m_SignMask())) {
     if (Pred == ICmpInst::ICMP_UGT)
       return ConstantInt::getFalse(getCompareTy(RHS));
     if (Pred == ICmpInst::ICMP_ULE)
@@ -4299,6 +4299,7 @@ Value *llvm::simplifyFCmpInst(unsigned Predicate, Value *LHS, Value *RHS,
 static Value *simplifyWithOpReplaced(Value *V, Value *Op, Value *RepOp,
                                      const SimplifyQuery &Q,
                                      bool AllowRefinement,
+                                     SmallVectorImpl<Instruction *> *DropFlags,
                                      unsigned MaxRecurse) {
   // Trivial replacement.
   if (V == Op)
@@ -4333,7 +4334,7 @@ static Value *simplifyWithOpReplaced(Value *V, Value *Op, Value *RepOp,
   bool AnyReplaced = false;
   for (Value *InstOp : I->operands()) {
     if (Value *NewInstOp = simplifyWithOpReplaced(
-            InstOp, Op, RepOp, Q, AllowRefinement, MaxRecurse)) {
+            InstOp, Op, RepOp, Q, AllowRefinement, DropFlags, MaxRecurse)) {
       NewOps.push_back(NewInstOp);
       AnyReplaced = InstOp != NewInstOp;
     } else {
@@ -4427,16 +4428,23 @@ static Value *simplifyWithOpReplaced(Value *V, Value *Op, Value *RepOp,
   // will be done in InstCombine).
   // TODO: This may be unsound, because it only catches some forms of
   // refinement.
-  if (!AllowRefinement && canCreatePoison(cast<Operator>(I)))
-    return nullptr;
+  if (!AllowRefinement) {
+    if (canCreatePoison(cast<Operator>(I), !DropFlags))
+      return nullptr;
+    Constant *Res = ConstantFoldInstOperands(I, ConstOps, Q.DL, Q.TLI);
+    if (DropFlags && Res && I->hasPoisonGeneratingFlagsOrMetadata())
+      DropFlags->push_back(I);
+    return Res;
+  }
 
   return ConstantFoldInstOperands(I, ConstOps, Q.DL, Q.TLI);
 }
 
 Value *llvm::simplifyWithOpReplaced(Value *V, Value *Op, Value *RepOp,
                                     const SimplifyQuery &Q,
-                                    bool AllowRefinement) {
-  return ::simplifyWithOpReplaced(V, Op, RepOp, Q, AllowRefinement,
+                                    bool AllowRefinement,
+                                    SmallVectorImpl<Instruction *> *DropFlags) {
+  return ::simplifyWithOpReplaced(V, Op, RepOp, Q, AllowRefinement, DropFlags,
                                   RecursionLimit);
 }
 
@@ -4569,11 +4577,11 @@ static Value *simplifySelectWithICmpEq(Value *CmpLHS, Value *CmpRHS,
                                        unsigned MaxRecurse) {
   if (simplifyWithOpReplaced(FalseVal, CmpLHS, CmpRHS, Q,
                              /* AllowRefinement */ false,
-                             MaxRecurse) == TrueVal)
+                             /* DropFlags */ nullptr, MaxRecurse) == TrueVal)
     return FalseVal;
   if (simplifyWithOpReplaced(TrueVal, CmpLHS, CmpRHS, Q,
                              /* AllowRefinement */ true,
-                             MaxRecurse) == FalseVal)
+                             /* DropFlags */ nullptr, MaxRecurse) == FalseVal)
     return FalseVal;
 
   return nullptr;

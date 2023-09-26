@@ -26,9 +26,6 @@ if(NOT LIBC_TARGET_ARCHITECTURE_IS_GPU)
   add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/generic)
 endif()
 
-add_subdirectory(printf_core)
-add_subdirectory(scanf_core)
-
 add_entrypoint_object(
   fflush
   SRCS
@@ -129,6 +126,21 @@ add_entrypoint_object(
     libc.src.__support.File.platform_file
 )
 
+list(APPEND scanf_deps
+      libc.src.__support.arg_list
+      libc.src.stdio.scanf_core.vfscanf_internal
+)
+
+if(LLVM_LIBC_FULL_BUILD)
+  list(APPEND scanf_deps
+      libc.src.__support.File.file
+      libc.src.__support.File.platform_file
+      libc.src.__support.File.platform_stdin
+  )
+else()
+  list(APPEND scanf_copts "-DLIBC_COPT_STDIO_USE_SYSTEM_FILE")
+endif()
+
 add_entrypoint_object(
   sscanf
   SRCS
@@ -137,7 +149,6 @@ add_entrypoint_object(
     sscanf.h
   DEPENDS
     libc.src.__support.arg_list
-    libc.src.stdio.scanf_core.string_reader
     libc.src.stdio.scanf_core.reader
     libc.src.stdio.scanf_core.scanf_main
 )
@@ -149,8 +160,9 @@ add_entrypoint_object(
   HDRS
     fscanf.h
   DEPENDS
-    libc.src.__support.arg_list
-    libc.src.stdio.scanf_core.vfscanf_internal
+    ${scanf_deps}
+  COMPILE_OPTIONS
+    ${scanf_copts}
 )
 
 add_entrypoint_object(
@@ -160,8 +172,9 @@ add_entrypoint_object(
   HDRS
     scanf.h
   DEPENDS
-    libc.src.__support.arg_list
-    libc.src.stdio.scanf_core.vfscanf_internal
+    ${scanf_deps}
+  COMPILE_OPTIONS
+    ${scanf_copts}
 )
 
 add_entrypoint_object(
@@ -211,7 +224,7 @@ if(LLVM_LIBC_FULL_BUILD)
       libc.src.__support.File.platform_stdout
   )
 else()
-  list(APPEND printf_copts "-DLIBC_COPT_PRINTF_USE_SYSTEM_FILE")
+  list(APPEND printf_copts "-DLIBC_COPT_STDIO_USE_SYSTEM_FILE")
 endif()
 
 add_entrypoint_object(
@@ -285,6 +298,9 @@ add_entrypoint_object(
   COMPILE_OPTIONS
     ${printf_copts}
 )
+
+add_subdirectory(printf_core)
+add_subdirectory(scanf_core)
 
 add_entrypoint_object(
   ftell

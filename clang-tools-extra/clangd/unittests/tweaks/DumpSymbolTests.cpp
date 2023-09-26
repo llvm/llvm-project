@@ -12,7 +12,6 @@
 #include <string>
 
 using ::testing::AllOf;
-using ::testing::HasSubstr;
 using ::testing::StartsWith;
 
 namespace clang {

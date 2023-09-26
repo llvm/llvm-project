@@ -91,20 +91,20 @@ define amdgpu_kernel void @rsq_f32(ptr addrspace(1) noalias %out, ptr addrspace(
 ;
 ; SI-IEEE-SAFE-LABEL: rsq_f32:
 ; SI-IEEE-SAFE:       ; %bb.0:
-; SI-IEEE-SAFE-NEXT:    s_load_dwordx4 s[4:7], s[0:1], 0x9
-; SI-IEEE-SAFE-NEXT:    s_mov_b32 s11, 0xf000
-; SI-IEEE-SAFE-NEXT:    s_mov_b32 s10, -1
-; SI-IEEE-SAFE-NEXT:    s_mov_b32 s2, s10
-; SI-IEEE-SAFE-NEXT:    s_mov_b32 s3, s11
+; SI-IEEE-SAFE-NEXT:    s_load_dwordx4 s[8:11], s[0:1], 0x9
+; SI-IEEE-SAFE-NEXT:    s_mov_b32 s7, 0xf000
+; SI-IEEE-SAFE-NEXT:    s_mov_b32 s6, -1
+; SI-IEEE-SAFE-NEXT:    s_mov_b32 s2, s6
+; SI-IEEE-SAFE-NEXT:    s_mov_b32 s3, s7
 ; SI-IEEE-SAFE-NEXT:    s_waitcnt lgkmcnt(0)
-; SI-IEEE-SAFE-NEXT:    s_mov_b32 s0, s6
-; SI-IEEE-SAFE-NEXT:    s_mov_b32 s1, s7
+; SI-IEEE-SAFE-NEXT:    s_mov_b32 s0, s10
+; SI-IEEE-SAFE-NEXT:    s_mov_b32 s1, s11
 ; SI-IEEE-SAFE-NEXT:    buffer_load_dword v0, off, s[0:3], 0
 ; SI-IEEE-SAFE-NEXT:    s_mov_b32 s0, 0xf800000
 ; SI-IEEE-SAFE-NEXT:    v_mov_b32_e32 v1, 0x260
 ; SI-IEEE-SAFE-NEXT:    s_mov_b32 s2, 0x7f800000
-; SI-IEEE-SAFE-NEXT:    s_mov_b32 s8, s4
-; SI-IEEE-SAFE-NEXT:    s_mov_b32 s9, s5
+; SI-IEEE-SAFE-NEXT:    s_mov_b32 s4, s8
+; SI-IEEE-SAFE-NEXT:    s_mov_b32 s5, s9
 ; SI-IEEE-SAFE-NEXT:    s_waitcnt vmcnt(0)
 ; SI-IEEE-SAFE-NEXT:    v_mul_f32_e32 v2, 0x4f800000, v0
 ; SI-IEEE-SAFE-NEXT:    v_cmp_gt_f32_e64 s[0:1], s0, v0
@@ -129,24 +129,24 @@ define amdgpu_kernel void @rsq_f32(ptr addrspace(1) noalias %out, ptr addrspace(
 ; SI-IEEE-SAFE-NEXT:    v_frexp_exp_i32_f32_e32 v0, v0
 ; SI-IEEE-SAFE-NEXT:    v_sub_i32_e32 v0, vcc, 0, v0
 ; SI-IEEE-SAFE-NEXT:    v_ldexp_f32_e32 v0, v1, v0
-; SI-IEEE-SAFE-NEXT:    buffer_store_dword v0, off, s[8:11], 0
+; SI-IEEE-SAFE-NEXT:    buffer_store_dword v0, off, s[4:7], 0
 ; SI-IEEE-SAFE-NEXT:    s_endpgm
 ;
 ; CI-IEEE-SAFE-LABEL: rsq_f32:
 ; CI-IEEE-SAFE:       ; %bb.0:
-; CI-IEEE-SAFE-NEXT:    s_load_dwordx4 s[4:7], s[0:1], 0x9
-; CI-IEEE-SAFE-NEXT:    s_mov_b32 s11, 0xf000
-; CI-IEEE-SAFE-NEXT:    s_mov_b32 s10, -1
-; CI-IEEE-SAFE-NEXT:    s_mov_b32 s2, s10
-; CI-IEEE-SAFE-NEXT:    s_mov_b32 s3, s11
+; CI-IEEE-SAFE-NEXT:    s_load_dwordx4 s[8:11], s[0:1], 0x9
+; CI-IEEE-SAFE-NEXT:    s_mov_b32 s7, 0xf000
+; CI-IEEE-SAFE-NEXT:    s_mov_b32 s6, -1
+; CI-IEEE-SAFE-NEXT:    s_mov_b32 s2, s6
+; CI-IEEE-SAFE-NEXT:    s_mov_b32 s3, s7
 ; CI-IEEE-SAFE-NEXT:    s_waitcnt lgkmcnt(0)
-; CI-IEEE-SAFE-NEXT:    s_mov_b32 s0, s6
-; CI-IEEE-SAFE-NEXT:    s_mov_b32 s1, s7
+; CI-IEEE-SAFE-NEXT:    s_mov_b32 s0, s10
+; CI-IEEE-SAFE-NEXT:    s_mov_b32 s1, s11
 ; CI-IEEE-SAFE-NEXT:    buffer_load_dword v0, off, s[0:3], 0
 ; CI-IEEE-SAFE-NEXT:    s_mov_b32 s0, 0xf800000
 ; CI-IEEE-SAFE-NEXT:    v_mov_b32_e32 v1, 0x260
-; CI-IEEE-SAFE-NEXT:    s_mov_b32 s8, s4
-; CI-IEEE-SAFE-NEXT:    s_mov_b32 s9, s5
+; CI-IEEE-SAFE-NEXT:    s_mov_b32 s4, s8
+; CI-IEEE-SAFE-NEXT:    s_mov_b32 s5, s9
 ; CI-IEEE-SAFE-NEXT:    s_waitcnt vmcnt(0)
 ; CI-IEEE-SAFE-NEXT:    v_mul_f32_e32 v2, 0x4f800000, v0
 ; CI-IEEE-SAFE-NEXT:    v_cmp_gt_f32_e64 s[0:1], s0, v0
@@ -169,7 +169,7 @@ define amdgpu_kernel void @rsq_f32(ptr addrspace(1) noalias %out, ptr addrspace(
 ; CI-IEEE-SAFE-NEXT:    v_frexp_exp_i32_f32_e32 v0, v0
 ; CI-IEEE-SAFE-NEXT:    v_sub_i32_e32 v0, vcc, 0, v0
 ; CI-IEEE-SAFE-NEXT:    v_ldexp_f32_e32 v0, v1, v0
-; CI-IEEE-SAFE-NEXT:    buffer_store_dword v0, off, s[8:11], 0
+; CI-IEEE-SAFE-NEXT:    buffer_store_dword v0, off, s[4:7], 0
 ; CI-IEEE-SAFE-NEXT:    s_endpgm
 ; GCN-UNSAFE-LABEL: rsq_f32:
 ; GCN-UNSAFE:       ; %bb.0:
@@ -605,20 +605,20 @@ define amdgpu_kernel void @neg_rsq_f32(ptr addrspace(1) noalias %out, ptr addrsp
 ;
 ; SI-IEEE-SAFE-LABEL: neg_rsq_f32:
 ; SI-IEEE-SAFE:       ; %bb.0:
-; SI-IEEE-SAFE-NEXT:    s_load_dwordx4 s[4:7], s[0:1], 0x9
-; SI-IEEE-SAFE-NEXT:    s_mov_b32 s11, 0xf000
-; SI-IEEE-SAFE-NEXT:    s_mov_b32 s10, -1
-; SI-IEEE-SAFE-NEXT:    s_mov_b32 s2, s10
-; SI-IEEE-SAFE-NEXT:    s_mov_b32 s3, s11
+; SI-IEEE-SAFE-NEXT:    s_load_dwordx4 s[8:11], s[0:1], 0x9
+; SI-IEEE-SAFE-NEXT:    s_mov_b32 s7, 0xf000
+; SI-IEEE-SAFE-NEXT:    s_mov_b32 s6, -1
+; SI-IEEE-SAFE-NEXT:    s_mov_b32 s2, s6
+; SI-IEEE-SAFE-NEXT:    s_mov_b32 s3, s7
 ; SI-IEEE-SAFE-NEXT:    s_waitcnt lgkmcnt(0)
-; SI-IEEE-SAFE-NEXT:    s_mov_b32 s0, s6
-; SI-IEEE-SAFE-NEXT:    s_mov_b32 s1, s7
+; SI-IEEE-SAFE-NEXT:    s_mov_b32 s0, s10
+; SI-IEEE-SAFE-NEXT:    s_mov_b32 s1, s11
 ; SI-IEEE-SAFE-NEXT:    buffer_load_dword v0, off, s[0:3], 0
 ; SI-IEEE-SAFE-NEXT:    s_mov_b32 s0, 0xf800000
 ; SI-IEEE-SAFE-NEXT:    v_mov_b32_e32 v1, 0x260
 ; SI-IEEE-SAFE-NEXT:    s_mov_b32 s2, 0x7f800000
-; SI-IEEE-SAFE-NEXT:    s_mov_b32 s8, s4
-; SI-IEEE-SAFE-NEXT:    s_mov_b32 s9, s5
+; SI-IEEE-SAFE-NEXT:    s_mov_b32 s4, s8
+; SI-IEEE-SAFE-NEXT:    s_mov_b32 s5, s9
 ; SI-IEEE-SAFE-NEXT:    s_waitcnt vmcnt(0)
 ; SI-IEEE-SAFE-NEXT:    v_mul_f32_e32 v2, 0x4f800000, v0
 ; SI-IEEE-SAFE-NEXT:    v_cmp_gt_f32_e64 s[0:1], s0, v0
@@ -643,24 +643,24 @@ define amdgpu_kernel void @neg_rsq_f32(ptr addrspace(1) noalias %out, ptr addrsp
 ; SI-IEEE-SAFE-NEXT:    v_frexp_exp_i32_f32_e32 v0, v0
 ; SI-IEEE-SAFE-NEXT:    v_sub_i32_e32 v0, vcc, 0, v0
 ; SI-IEEE-SAFE-NEXT:    v_ldexp_f32_e32 v0, v1, v0
-; SI-IEEE-SAFE-NEXT:    buffer_store_dword v0, off, s[8:11], 0
+; SI-IEEE-SAFE-NEXT:    buffer_store_dword v0, off, s[4:7], 0
 ; SI-IEEE-SAFE-NEXT:    s_endpgm
 ;
 ; CI-IEEE-SAFE-LABEL: neg_rsq_f32:
 ; CI-IEEE-SAFE:       ; %bb.0:
-; CI-IEEE-SAFE-NEXT:    s_load_dwordx4 s[4:7], s[0:1], 0x9
-; CI-IEEE-SAFE-NEXT:    s_mov_b32 s11, 0xf000
-; CI-IEEE-SAFE-NEXT:    s_mov_b32 s10, -1
-; CI-IEEE-SAFE-NEXT:    s_mov_b32 s2, s10
-; CI-IEEE-SAFE-NEXT:    s_mov_b32 s3, s11
+; CI-IEEE-SAFE-NEXT:    s_load_dwordx4 s[8:11], s[0:1], 0x9
+; CI-IEEE-SAFE-NEXT:    s_mov_b32 s7, 0xf000
+; CI-IEEE-SAFE-NEXT:    s_mov_b32 s6, -1
+; CI-IEEE-SAFE-NEXT:    s_mov_b32 s2, s6
+; CI-IEEE-SAFE-NEXT:    s_mov_b32 s3, s7
 ; CI-IEEE-SAFE-NEXT:    s_waitcnt lgkmcnt(0)
-; CI-IEEE-SAFE-NEXT:    s_mov_b32 s0, s6
-; CI-IEEE-SAFE-NEXT:    s_mov_b32 s1, s7
+; CI-IEEE-SAFE-NEXT:    s_mov_b32 s0, s10
+; CI-IEEE-SAFE-NEXT:    s_mov_b32 s1, s11
 ; CI-IEEE-SAFE-NEXT:    buffer_load_dword v0, off, s[0:3], 0
 ; CI-IEEE-SAFE-NEXT:    s_mov_b32 s0, 0xf800000
 ; CI-IEEE-SAFE-NEXT:    v_mov_b32_e32 v1, 0x260
-; CI-IEEE-SAFE-NEXT:    s_mov_b32 s8, s4
-; CI-IEEE-SAFE-NEXT:    s_mov_b32 s9, s5
+; CI-IEEE-SAFE-NEXT:    s_mov_b32 s4, s8
+; CI-IEEE-SAFE-NEXT:    s_mov_b32 s5, s9
 ; CI-IEEE-SAFE-NEXT:    s_waitcnt vmcnt(0)
 ; CI-IEEE-SAFE-NEXT:    v_mul_f32_e32 v2, 0x4f800000, v0
 ; CI-IEEE-SAFE-NEXT:    v_cmp_gt_f32_e64 s[0:1], s0, v0
@@ -683,7 +683,7 @@ define amdgpu_kernel void @neg_rsq_f32(ptr addrspace(1) noalias %out, ptr addrsp
 ; CI-IEEE-SAFE-NEXT:    v_frexp_exp_i32_f32_e32 v0, v0
 ; CI-IEEE-SAFE-NEXT:    v_sub_i32_e32 v0, vcc, 0, v0
 ; CI-IEEE-SAFE-NEXT:    v_ldexp_f32_e32 v0, v1, v0
-; CI-IEEE-SAFE-NEXT:    buffer_store_dword v0, off, s[8:11], 0
+; CI-IEEE-SAFE-NEXT:    buffer_store_dword v0, off, s[4:7], 0
 ; CI-IEEE-SAFE-NEXT:    s_endpgm
 ; GCN-UNSAFE-LABEL: neg_rsq_f32:
 ; GCN-UNSAFE:       ; %bb.0:
@@ -786,20 +786,20 @@ define amdgpu_kernel void @neg_rsq_neg_f32(ptr addrspace(1) noalias %out, ptr ad
 ;
 ; SI-IEEE-SAFE-LABEL: neg_rsq_neg_f32:
 ; SI-IEEE-SAFE:       ; %bb.0:
-; SI-IEEE-SAFE-NEXT:    s_load_dwordx4 s[4:7], s[0:1], 0x9
-; SI-IEEE-SAFE-NEXT:    s_mov_b32 s11, 0xf000
-; SI-IEEE-SAFE-NEXT:    s_mov_b32 s10, -1
-; SI-IEEE-SAFE-NEXT:    s_mov_b32 s2, s10
-; SI-IEEE-SAFE-NEXT:    s_mov_b32 s3, s11
+; SI-IEEE-SAFE-NEXT:    s_load_dwordx4 s[8:11], s[0:1], 0x9
+; SI-IEEE-SAFE-NEXT:    s_mov_b32 s7, 0xf000
+; SI-IEEE-SAFE-NEXT:    s_mov_b32 s6, -1
+; SI-IEEE-SAFE-NEXT:    s_mov_b32 s2, s6
+; SI-IEEE-SAFE-NEXT:    s_mov_b32 s3, s7
 ; SI-IEEE-SAFE-NEXT:    s_waitcnt lgkmcnt(0)
-; SI-IEEE-SAFE-NEXT:    s_mov_b32 s0, s6
-; SI-IEEE-SAFE-NEXT:    s_mov_b32 s1, s7
+; SI-IEEE-SAFE-NEXT:    s_mov_b32 s0, s10
+; SI-IEEE-SAFE-NEXT:    s_mov_b32 s1, s11
 ; SI-IEEE-SAFE-NEXT:    buffer_load_dword v0, off, s[0:3], 0
 ; SI-IEEE-SAFE-NEXT:    s_mov_b32 s0, 0x8f800000
 ; SI-IEEE-SAFE-NEXT:    v_mov_b32_e32 v1, 0x260
 ; SI-IEEE-SAFE-NEXT:    s_mov_b32 s2, 0x7f800000
-; SI-IEEE-SAFE-NEXT:    s_mov_b32 s8, s4
-; SI-IEEE-SAFE-NEXT:    s_mov_b32 s9, s5
+; SI-IEEE-SAFE-NEXT:    s_mov_b32 s4, s8
+; SI-IEEE-SAFE-NEXT:    s_mov_b32 s5, s9
 ; SI-IEEE-SAFE-NEXT:    s_waitcnt vmcnt(0)
 ; SI-IEEE-SAFE-NEXT:    v_mul_f32_e32 v2, 0xcf800000, v0
 ; SI-IEEE-SAFE-NEXT:    v_cmp_lt_f32_e64 s[0:1], s0, v0
@@ -824,24 +824,24 @@ define amdgpu_kernel void @neg_rsq_neg_f32(ptr addrspace(1) noalias %out, ptr ad
 ; SI-IEEE-SAFE-NEXT:    v_frexp_exp_i32_f32_e32 v0, v0
 ; SI-IEEE-SAFE-NEXT:    v_sub_i32_e32 v0, vcc, 0, v0
 ; SI-IEEE-SAFE-NEXT:    v_ldexp_f32_e32 v0, v1, v0
-; SI-IEEE-SAFE-NEXT:    buffer_store_dword v0, off, s[8:11], 0
+; SI-IEEE-SAFE-NEXT:    buffer_store_dword v0, off, s[4:7], 0
 ; SI-IEEE-SAFE-NEXT:    s_endpgm
 ;
 ; CI-IEEE-SAFE-LABEL: neg_rsq_neg_f32:
 ; CI-IEEE-SAFE:       ; %bb.0:
-; CI-IEEE-SAFE-NEXT:    s_load_dwordx4 s[4:7], s[0:1], 0x9
-; CI-IEEE-SAFE-NEXT:    s_mov_b32 s11, 0xf000
-; CI-IEEE-SAFE-NEXT:    s_mov_b32 s10, -1
-; CI-IEEE-SAFE-NEXT:    s_mov_b32 s2, s10
-; CI-IEEE-SAFE-NEXT:    s_mov_b32 s3, s11
+; CI-IEEE-SAFE-NEXT:    s_load_dwordx4 s[8:11], s[0:1], 0x9
+; CI-IEEE-SAFE-NEXT:    s_mov_b32 s7, 0xf000
+; CI-IEEE-SAFE-NEXT:    s_mov_b32 s6, -1
+; CI-IEEE-SAFE-NEXT:    s_mov_b32 s2, s6
+; CI-IEEE-SAFE-NEXT:    s_mov_b32 s3, s7
 ; CI-IEEE-SAFE-NEXT:    s_waitcnt lgkmcnt(0)
-; CI-IEEE-SAFE-NEXT:    s_mov_b32 s0, s6
-; CI-IEEE-SAFE-NEXT:    s_mov_b32 s1, s7
+; CI-IEEE-SAFE-NEXT:    s_mov_b32 s0, s10
+; CI-IEEE-SAFE-NEXT:    s_mov_b32 s1, s11
 ; CI-IEEE-SAFE-NEXT:    buffer_load_dword v0, off, s[0:3], 0
 ; CI-IEEE-SAFE-NEXT:    s_mov_b32 s0, 0x8f800000
 ; CI-IEEE-SAFE-NEXT:    v_mov_b32_e32 v1, 0x260
-; CI-IEEE-SAFE-NEXT:    s_mov_b32 s8, s4
-; CI-IEEE-SAFE-NEXT:    s_mov_b32 s9, s5
+; CI-IEEE-SAFE-NEXT:    s_mov_b32 s4, s8
+; CI-IEEE-SAFE-NEXT:    s_mov_b32 s5, s9
 ; CI-IEEE-SAFE-NEXT:    s_waitcnt vmcnt(0)
 ; CI-IEEE-SAFE-NEXT:    v_mul_f32_e32 v2, 0xcf800000, v0
 ; CI-IEEE-SAFE-NEXT:    v_cmp_lt_f32_e64 s[0:1], s0, v0
@@ -864,7 +864,7 @@ define amdgpu_kernel void @neg_rsq_neg_f32(ptr addrspace(1) noalias %out, ptr ad
 ; CI-IEEE-SAFE-NEXT:    v_frexp_exp_i32_f32_e32 v0, v0
 ; CI-IEEE-SAFE-NEXT:    v_sub_i32_e32 v0, vcc, 0, v0
 ; CI-IEEE-SAFE-NEXT:    v_ldexp_f32_e32 v0, v1, v0
-; CI-IEEE-SAFE-NEXT:    buffer_store_dword v0, off, s[8:11], 0
+; CI-IEEE-SAFE-NEXT:    buffer_store_dword v0, off, s[4:7], 0
 ; CI-IEEE-SAFE-NEXT:    s_endpgm
 ; GCN-UNSAFE-LABEL: neg_rsq_neg_f32:
 ; GCN-UNSAFE:       ; %bb.0:

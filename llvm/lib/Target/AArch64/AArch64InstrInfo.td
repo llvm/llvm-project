@@ -1477,6 +1477,15 @@ def : InstAlias<"autia1716", (AUTIA1716), 0>;
 def : InstAlias<"autib1716", (AUTIB1716), 0>;
 def : InstAlias<"xpaclri", (XPACLRI), 0>;
 
+// Pseudos
+
+// Insertion point of LR signing code.
+def PAUTH_PROLOGUE : Pseudo<(outs), (ins), []>, Sched<[]>;
+// Insertion point of LR authentication code.
+// The RET terminator of the containing machine basic block may be replaced
+// with a combined RETA(A|B) instruction when rewriting this Pseudo.
+def PAUTH_EPILOGUE : Pseudo<(outs), (ins), []>, Sched<[]>;
+
 // These pointer authentication instructions require armv8.3a
 let Predicates = [HasPAuth] in {
 

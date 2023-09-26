@@ -904,8 +904,8 @@ getResultsPositionInLoopsToShapeMap(LinalgOp &op) {
   int64_t outputRankSum = 0;
   for (OpOperand *input : op.getDpsInputOperands())
     inputRankSum += op.getRank(input);
-  for (OpOperand *output : op.getDpsInitOperands())
-    outputRankSum += op.getRank(output);
+  for (OpOperand &output : op.getDpsInitsMutable())
+    outputRankSum += op.getRank(&output);
   return {inputRankSum, inputRankSum + outputRankSum};
 }
 
@@ -948,19 +948,18 @@ LinalgOp::reifyResultShapes(OpBuilder &b,
           createFlatListOfOperandDims(b, loc));
   int64_t pos = 0;
   ArrayRef<AffineExpr> shapeExprs = resultShapesFromInputShapesMap.getResults();
-  for (OpOperand *opOperand : getDpsInitOperands()) {
+  for (OpOperand &opOperand : getDpsInitsMutable()) {
     SmallVector<OpFoldResult> shapes;
-    for (int64_t dim : llvm::seq<int64_t>(0, getRank(opOperand))) {
-      auto shapedType = llvm::cast<ShapedType>(opOperand->get().getType());
+    for (int64_t dim : llvm::seq<int64_t>(0, getRank(&opOperand))) {
+      auto shapedType = llvm::cast<ShapedType>(opOperand.get().getType());
       if (!shapedType.isDynamicDim(dim)) {
         // Static dim: Return IntegerAttr.
         shapes.push_back(b.getIndexAttr(shapedType.getDimSize(dim)));
       } else {
         // Dynamic dim: Return Value.
-        OpFoldResult ofr =
-            checkDimExpr.visit(shapeExprs[pos])
-                ? createOrFoldDimOp(b, loc, opOperand->get(), dim)
-                : allResultDimValues[pos];
+        OpFoldResult ofr = checkDimExpr.visit(shapeExprs[pos])
+                               ? createOrFoldDimOp(b, loc, opOperand.get(), dim)
+                               : allResultDimValues[pos];
         shapes.push_back(getValueOrCreateConstantIndexOp(b, loc, ofr));
       }
       pos++;
@@ -977,7 +976,7 @@ int64_t LinalgOp::getIndexingMapIndex(OpOperand *opOperand) {
   auto dpsIface = cast<DestinationStyleOpInterface>(*this->getOperation());
   if (!dpsIface.isDpsInput(opOperand))
     return operandNumber;
-  auto [start, end] = dpsIface.getDpsInitsPositionRange();
+  unsigned start = dpsIface.getDpsInits().getBeginOperandIndex();
   assert(!dpsIface.isDpsInit(opOperand));
   // Account for potential inputs that are not DPS and may not appear in
   // `indexingMaps`.

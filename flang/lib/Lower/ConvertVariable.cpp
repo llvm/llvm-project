@@ -652,26 +652,30 @@ defaultInitializeAtRuntime(Fortran::lower::AbstractConverter &converter,
   }
 }
 
-/// Check whether a variable needs to be finalized according to clause 7.5.6.3
-/// point 3.
-/// Must be nonpointer, nonallocatable object that is not a dummy argument or
-/// function result.
-static bool needEndFinalization(const Fortran::lower::pft::Variable &var) {
+enum class VariableCleanUp { Finalize, Deallocate };
+/// Check whether a local variable needs to be finalized according to clause
+/// 7.5.6.3 point 3 or if it is an allocatable that must be deallocated. Note
+/// that deallocation will trigger finalization if the type has any.
+static std::optional<VariableCleanUp>
+needDeallocationOrFinalization(const Fortran::lower::pft::Variable &var) {
   if (!var.hasSymbol())
-    return false;
+    return std::nullopt;
   const Fortran::semantics::Symbol &sym = var.getSymbol();
   const Fortran::semantics::Scope &owner = sym.owner();
   if (owner.kind() == Fortran::semantics::Scope::Kind::MainProgram) {
     // The standard does not require finalizing main program variables.
-    return false;
+    return std::nullopt;
   }
   if (!Fortran::semantics::IsPointer(sym) &&
-      !Fortran::semantics::IsAllocatable(sym) &&
       !Fortran::semantics::IsDummy(sym) &&
       !Fortran::semantics::IsFunctionResult(sym) &&
-      !Fortran::semantics::IsSaved(sym))
-    return hasFinalization(sym);
-  return false;
+      !Fortran::semantics::IsSaved(sym)) {
+    if (Fortran::semantics::IsAllocatable(sym))
+      return VariableCleanUp::Deallocate;
+    if (hasFinalization(sym))
+      return VariableCleanUp::Finalize;
+  }
+  return std::nullopt;
 }
 
 /// Check whether a variable needs the be finalized according to clause 7.5.6.3
@@ -749,40 +753,17 @@ static void deallocateIntentOut(Fortran::lower::AbstractConverter &converter,
       }
       mlir::Location loc = converter.getCurrentLocation();
       fir::FirOpBuilder &builder = converter.getFirOpBuilder();
-      auto genDeallocateWithTypeDesc = [&]() {
-        if (mutBox->isDerived() || mutBox->isPolymorphic() ||
-            mutBox->isUnlimitedPolymorphic()) {
-          mlir::Value isAlloc = fir::factory::genIsAllocatedOrAssociatedTest(
-              builder, loc, *mutBox);
-          builder.genIfThen(loc, isAlloc)
-              .genThen([&]() {
-                if (mutBox->isPolymorphic()) {
-                  mlir::Value declaredTypeDesc;
-                  assert(sym.GetType());
-                  if (const Fortran::semantics::DerivedTypeSpec
-                          *derivedTypeSpec = sym.GetType()->AsDerived()) {
-                    declaredTypeDesc = Fortran::lower::getTypeDescAddr(
-                        converter, loc, *derivedTypeSpec);
-                  }
-                  genDeallocateBox(converter, *mutBox, loc, declaredTypeDesc);
-                } else {
-                  genDeallocateBox(converter, *mutBox, loc);
-                }
-              })
-              .end();
-        } else {
-          genDeallocateBox(converter, *mutBox, loc);
-        }
-      };
 
       if (Fortran::semantics::IsOptional(sym)) {
         auto isPresent = builder.create<fir::IsPresentOp>(
             loc, builder.getI1Type(), fir::getBase(extVal));
         builder.genIfThen(loc, isPresent)
-            .genThen([&]() { genDeallocateWithTypeDesc(); })
+            .genThen([&]() {
+              Fortran::lower::genDeallocateIfAllocated(converter, *mutBox, loc);
+            })
             .end();
       } else {
-        genDeallocateWithTypeDesc();
+        Fortran::lower::genDeallocateIfAllocated(converter, *mutBox, loc);
       }
     }
   }
@@ -802,15 +783,30 @@ static void instantiateLocal(Fortran::lower::AbstractConverter &converter,
     finalizeAtRuntime(converter, var, symMap);
   if (mustBeDefaultInitializedAtRuntime(var))
     defaultInitializeAtRuntime(converter, var, symMap);
-  if (needEndFinalization(var)) {
+  if (std::optional<VariableCleanUp> cleanup =
+          needDeallocationOrFinalization(var)) {
     auto *builder = &converter.getFirOpBuilder();
     mlir::Location loc = converter.getCurrentLocation();
     fir::ExtendedValue exv =
         converter.getSymbolExtendedValue(var.getSymbol(), &symMap);
-    converter.getFctCtx().attachCleanup([builder, loc, exv]() {
-      mlir::Value box = builder->createBox(loc, exv);
-      fir::runtime::genDerivedTypeDestroy(*builder, loc, box);
-    });
+    switch (*cleanup) {
+    case VariableCleanUp::Finalize:
+      converter.getFctCtx().attachCleanup([builder, loc, exv]() {
+        mlir::Value box = builder->createBox(loc, exv);
+        fir::runtime::genDerivedTypeDestroy(*builder, loc, box);
+      });
+      break;
+    case VariableCleanUp::Deallocate:
+      auto *converterPtr = &converter;
+      converter.getFctCtx().attachCleanup([converterPtr, loc, exv]() {
+        const fir::MutableBoxValue *mutableBox =
+            exv.getBoxOf<fir::MutableBoxValue>();
+        assert(mutableBox &&
+               "trying to deallocate entity not lowered as allocatable");
+        Fortran::lower::genDeallocateIfAllocated(*converterPtr, *mutableBox,
+                                                 loc);
+      });
+    }
   }
 }
 

@@ -2350,9 +2350,8 @@ def TestDestinationStyleOp :
   }];
 
   let extraClassDeclaration = [{
-    std::pair<int64_t, int64_t> getDpsInitsPositionRange() {
-      int64_t numOperands = this->getNumOperands();
-      return {numOperands - getOutputs().size(), numOperands};
+    mlir::MutableOperandRange getDpsInitsMutable() {
+      return getOutputsMutable();
     }
   }];
 }
@@ -2412,9 +2411,8 @@ def TestLinalgConvOp :
       return "";
     }
 
-    std::pair<int64_t, int64_t> getDpsInitsPositionRange() {
-      int64_t getNumOperands = this->getNumOperands();
-      return {getNumOperands - 1, getNumOperands};
+    mlir::MutableOperandRange getDpsInitsMutable() {
+      return getOutputsMutable();
     }
   }];
 }
@@ -2474,9 +2472,8 @@ def TestLinalgFillOp :
       return "";
     }
 
-    std::pair<int64_t, int64_t> getDpsInitsPositionRange() {
-      int64_t getNumOperands = this->getNumOperands();
-      return {getNumOperands - 1, getNumOperands};
+    mlir::MutableOperandRange getDpsInitsMutable() {
+      return getOutputsMutable();
     }
   }];
 }
@@ -2570,7 +2567,7 @@ def TestGraphLoopOp : TEST_Op<"graph_loop",
   }];
 
   let extraClassDeclaration = [{
-    mlir::Region &getLoopBody() { return getBody(); }
+    llvm::SmallVector<mlir::Region *> getLoopRegions() { return {&getBody()}; }
   }];
 }
 

@@ -43,9 +43,33 @@ C/C++ Language Potentially Breaking Changes
 
 - The default extension name for PCH generation (``-c -xc-header`` and ``-c
   -xc++-header``) is now ``.pch`` instead of ``.gch``.
+- ``-include a.h`` probing ``a.h.gch`` is deprecated. Change the extension name
+  to ``.pch`` or use ``-include-pch a.h.gch``.
 
 C++ Specific Potentially Breaking Changes
 -----------------------------------------
+- The name mangling rules for function templates has been changed to take into
+  account the possibility that functions could be overloaded on their template
+  parameter lists or requires-clauses. This causes mangled names to change for
+  function templates in the following cases:
+
+  - When a template parameter in a function template depends on a previous
+    template parameter, such as ``template<typename T, T V> void f()``.
+  - When the function has any constraints, whether from constrained template
+      parameters or requires-clauses.
+  - When the template parameter list includes a deduced type -- either
+      ``auto``, ``decltype(auto)``, or a deduced class template specialization
+      type.
+  - When a template template parameter is given a template template argument
+      that has a different template parameter list.
+
+  This fixes a number of issues where valid programs would be rejected due to
+  mangling collisions, or would in some cases be silently miscompiled. Clang
+  will use the old manglings if ``-fclang-abi-compat=17`` or lower is
+  specified.
+  (`#48216 <https://github.com/llvm/llvm-project/issues/48216>`_),
+  (`#49884 <https://github.com/llvm/llvm-project/issues/49884>`_), and
+  (`#61273 <https://github.com/llvm/llvm-project/issues/61273>`_)
 
 ABI Changes in This Version
 ---------------------------
@@ -163,9 +187,19 @@ Improvements to Clang's diagnostics
 - Clang constexpr evaluator now diagnoses compound assignment operators against
   uninitialized variables as a read of uninitialized object.
   (`#51536 <https://github.com/llvm/llvm-project/issues/51536>`_)
-- Clang's ``-Wfortify-source`` now diagnoses ``snprintf`` call that is known to
+- Clang's ``-Wformat-truncation`` now diagnoses ``snprintf`` call that is known to
   result in string truncation.
   (`#64871: <https://github.com/llvm/llvm-project/issues/64871>`_).
+  Existing warnings that similarly warn about the overflow in ``sprintf``
+  now falls under its own warning group ```-Wformat-overflow`` so that it can
+  be disabled separately from ``Wfortify-source``.
+  These two new warning groups have subgroups ``-Wformat-truncation-non-kprintf``
+  and ``-Wformat-overflow-non-kprintf``, respectively. These subgroups are used when
+  the format string contains ``%p`` format specifier.
+  Because Linux kernel's codebase has format extensions for ``%p``, kernel developers
+  are encouraged to disable these two subgroups by setting ``-Wno-format-truncation-non-kprintf``
+  and ``-Wno-format-overflow-non-kprintf`` in order to avoid false positives on
+  the kernel codebase.
   Also clang no longer emits false positive warnings about the output length of
   ``%g`` format specifier and about ``%o, %x, %X`` with ``#`` flag.
 - Clang now emits ``-Wcast-qual`` for functional-style cast expressions.
@@ -224,8 +258,12 @@ Bug Fixes in This Version
   (`#65156 <https://github.com/llvm/llvm-project/issues/65156>`_)
 - Clang no longer considers the loss of ``__unaligned`` qualifier from objects as
   an invalid conversion during method function overload resolution.
+- Fix lack of comparison of declRefExpr in ASTStructuralEquivalence
+  (`#66047 <https://github.com/llvm/llvm-project/issues/66047>`_)
 - Fix parser crash when dealing with ill-formed objective C++ header code. Fixes
   (`#64836 <https://github.com/llvm/llvm-project/issues/64836>`_)
+- Clang now allows an ``_Atomic`` qualified integer in a switch statement. Fixes
+  (`#65557 <https://github.com/llvm/llvm-project/issues/65557>`_)
 
 Bug Fixes to Compiler Builtins
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -287,6 +325,9 @@ Bug Fixes to C++ Support
   a non-template inner-class between the function and the class template.
   (`#65810 <https://github.com/llvm/llvm-project/issues/65810>`_)
 
+- Fix a crash when calling a non-constant immediate function
+  in the initializer of a static data member.
+  (`#65985 <https://github.com/llvm/llvm-project/issues/65985>_`).
 - Clang now properly converts static lambda call operator to function
   pointers on win32.
   (`#62594 <https://github.com/llvm/llvm-project/issues/62594>`_)
@@ -304,6 +345,17 @@ Bug Fixes to C++ Support
 - Fix crash for a lambda attribute with a statement expression
   that contains a `return`.
   (`#48527 <https://github.com/llvm/llvm-project/issues/48527>`_)
+
+- Clang now no longer asserts when an UnresolvedLookupExpr is used as an
+  expression requirement. (`#66612 https://github.com/llvm/llvm-project/issues/66612`)
+
+- Clang now disambiguates NTTP types when printing diagnostics where the
+  NTTP types are compared with the 'diff' method.
+  (`#66744 https://github.com/llvm/llvm-project/issues/66744`)
+
+- Fix crash caused by a spaceship operator returning a comparision category by
+  reference. Fixes:
+  (`#64162 <https://github.com/llvm/llvm-project/issues/64162>`_)
 
 Bug Fixes to AST Handling
 ^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -449,6 +501,9 @@ Static Analyzer
 - Added a new checker ``core.BitwiseShift`` which reports situations where
   bitwise shift operators produce undefined behavior (because some operand is
   negative or too large).
+
+- Fix false positive in mutation check when using pointer to member function.
+  (`#66204: <https://github.com/llvm/llvm-project/issues/66204>`_).
 
 - The ``alpha.security.taint.TaintPropagation`` checker no longer propagates
   taint on ``strlen`` and ``strnlen`` calls, unless these are marked

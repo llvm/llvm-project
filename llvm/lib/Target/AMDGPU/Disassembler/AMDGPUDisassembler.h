@@ -267,6 +267,7 @@ public:
   bool isGFX12Plus() const;
 
   bool hasArchitectedFlatScratch() const;
+  bool hasKernargPreload() const;
 
   bool isMacDPP(MCInst &MI) const;
 };

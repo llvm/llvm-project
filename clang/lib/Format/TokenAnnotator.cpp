@@ -1698,7 +1698,7 @@ private:
             TT_RecordLBrace, TT_StructLBrace, TT_UnionLBrace, TT_RequiresClause,
             TT_RequiresClauseInARequiresExpression, TT_RequiresExpression,
             TT_RequiresExpressionLParen, TT_RequiresExpressionLBrace,
-            TT_CompoundRequirementLBrace, TT_BracedListLBrace)) {
+            TT_BracedListLBrace)) {
       CurrentToken->setType(TT_Unknown);
     }
     CurrentToken->Role.reset();
@@ -4141,8 +4141,7 @@ bool TokenAnnotator::spaceRequiredBetween(const AnnotatedLine &Line,
             (Style.SpacesInSquareBrackets &&
              Right.MatchingParen->isOneOf(TT_ArraySubscriptLSquare,
                                           TT_StructuredBindingLSquare,
-                                          TT_LambdaLSquare)) ||
-            Right.MatchingParen->is(TT_AttributeParen));
+                                          TT_LambdaLSquare)));
   }
   if (Right.is(tok::l_square) &&
       !Right.isOneOf(TT_ObjCMethodExpr, TT_LambdaLSquare,

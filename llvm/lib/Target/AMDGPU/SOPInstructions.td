@@ -1629,7 +1629,6 @@ def S_WAKEUP : SOPP_Pseudo <"s_wakeup", (ins) > {
   let mayStore = 1;
 }
 
-let hasSideEffects = 1 in
 def S_WAITCNT : SOPP_Pseudo <"s_waitcnt" , (ins SWaitCnt:$simm16), "$simm16",
     [(int_amdgcn_s_waitcnt timm:$simm16)]>;
 def S_SETHALT : SOPP_Pseudo <"s_sethalt" , (ins i32imm:$simm16), "$simm16",
@@ -1642,7 +1641,6 @@ def S_SETKILL : SOPP_Pseudo <"s_setkill" , (ins i16imm:$simm16), "$simm16">;
 // maximum really 15 on VI?
 def S_SLEEP : SOPP_Pseudo <"s_sleep", (ins i32imm:$simm16),
   "$simm16", [(int_amdgcn_s_sleep timm:$simm16)]> {
-  let hasSideEffects = 1;
 }
 
 def S_SLEEP_VAR : SOP1_0_32 <"s_sleep_var", [(int_amdgcn_s_sleep_var SSrc_b32:$src0)]> {
@@ -1651,18 +1649,15 @@ def S_SLEEP_VAR : SOP1_0_32 <"s_sleep_var", [(int_amdgcn_s_sleep_var SSrc_b32:$s
 
 def S_SETPRIO : SOPP_Pseudo <"s_setprio", (ins i16imm:$simm16), "$simm16",
   [(int_amdgcn_s_setprio timm:$simm16)]> {
-  let hasSideEffects = 1;
 }
 
 let Uses = [EXEC, M0] in {
 def S_SENDMSG : SOPP_Pseudo <"s_sendmsg" , (ins SendMsg:$simm16), "$simm16",
   [(int_amdgcn_s_sendmsg (i32 timm:$simm16), M0)]> {
-  let hasSideEffects = 1;
 }
 
 def S_SENDMSGHALT : SOPP_Pseudo <"s_sendmsghalt" , (ins SendMsg:$simm16), "$simm16",
   [(int_amdgcn_s_sendmsghalt (i32 timm:$simm16), M0)]> {
-  let hasSideEffects = 1;
 }
 
 } // End Uses = [EXEC, M0]
@@ -1677,11 +1672,9 @@ def S_ICACHE_INV : SOPP_Pseudo <"s_icache_inv", (ins)> {
 }
 def S_INCPERFLEVEL : SOPP_Pseudo <"s_incperflevel", (ins i32imm:$simm16), "$simm16",
   [(int_amdgcn_s_incperflevel timm:$simm16)]> {
-  let hasSideEffects = 1;
 }
 def S_DECPERFLEVEL : SOPP_Pseudo <"s_decperflevel", (ins i32imm:$simm16), "$simm16",
   [(int_amdgcn_s_decperflevel timm:$simm16)]> {
-  let hasSideEffects = 1;
 }
 def S_TTRACEDATA : SOPP_Pseudo <"s_ttracedata", (ins)> {
   let simm16 = 0;

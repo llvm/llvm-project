@@ -10,6 +10,24 @@
 // RISC-V processors supported.
 //===----------------------------------------------------------------------===//
 
+class RISCVTuneInfo {
+  bits<8> PrefFunctionAlignment = 1;
+  bits<8> PrefLoopAlignment = 1;
+}
+
+def RISCVTuneInfoTable : GenericTable {
+  let FilterClass = "RISCVTuneInfo";
+  let CppTypeName = "RISCVTuneInfo";
+  let Fields = ["Name", "PrefFunctionAlignment", "PrefLoopAlignment"];
+}
+
+def getRISCVTuneInfo : SearchIndex {
+  let Table = RISCVTuneInfoTable;
+  let Key = ["Name"];
+}
+
+class GenericTuneInfo: RISCVTuneInfo;
+
 class RISCVProcessorModel<string n,
                           SchedMachineModel m,
                           list<SubtargetFeature> f,
@@ -27,13 +45,15 @@ class RISCVTuneProcessorModel<string n,
 
 def GENERIC_RV32 : RISCVProcessorModel<"generic-rv32",
                                        NoSchedModel,
-                                       [Feature32Bit]>;
+                                       [Feature32Bit]>,
+                   GenericTuneInfo;
 def GENERIC_RV64 : RISCVProcessorModel<"generic-rv64",
                                        NoSchedModel,
-                                       [Feature64Bit]>;
+                                       [Feature64Bit]>,
+                   GenericTuneInfo;
 // Support generic for compatibility with other targets. The triple will be used
 // to change to the appropriate rv32/rv64 version.
-def : ProcessorModel<"generic", NoSchedModel, []>;
+def : ProcessorModel<"generic", NoSchedModel, []>, GenericTuneInfo;
 
 def ROCKET_RV32 : RISCVProcessorModel<"rocket-rv32",
                                       RocketModel,
@@ -201,3 +221,25 @@ def SYNTACORE_SCR1_MAX : RISCVProcessorModel<"syntacore-scr1-max",
                                               FeatureStdExtM,
                                               FeatureStdExtC],
                                              [TuneNoDefaultUnroll]>;
+
+def VENTANA_VEYRON_V1 : RISCVProcessorModel<"veyron-v1",
+                                            NoSchedModel,
+                                            [Feature64Bit,
+                                             FeatureStdExtZifencei,
+                                             FeatureStdExtZicsr,
+                                             FeatureStdExtZicntr,
+                                             FeatureStdExtZihpm,
+                                             FeatureStdExtZihintpause,
+                                             FeatureStdExtM,
+                                             FeatureStdExtA,
+                                             FeatureStdExtF,
+                                             FeatureStdExtD,
+                                             FeatureStdExtC,
+                                             FeatureStdExtZba,
+                                             FeatureStdExtZbb,
+                                             FeatureStdExtZbc,
+                                             FeatureStdExtZbs,
+                                             FeatureStdExtZicbom,
+                                             FeatureStdExtZicbop,
+                                             FeatureStdExtZicboz,
+                                             FeatureVendorXVentanaCondOps]>;

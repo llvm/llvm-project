@@ -78,6 +78,7 @@
 #include "BPFCORE.h"
 #include "BPFTargetMachine.h"
 #include "llvm/BinaryFormat/Dwarf.h"
+#include "llvm/DebugInfo/BTF/BTF.h"
 #include "llvm/IR/DebugInfoMetadata.h"
 #include "llvm/IR/GlobalVariable.h"
 #include "llvm/IR/Instruction.h"
@@ -369,7 +370,7 @@ bool BPFAbstractMemberAccess::IsPreserveDIAccessIndexCall(const CallInst *Call,
     CInfo.Metadata = nullptr;
     // Check validity of info_kind as clang did not check this.
     uint64_t InfoKind = getConstant(Call->getArgOperand(1));
-    if (InfoKind >= BPFCoreSharedInfo::MAX_FIELD_RELOC_KIND)
+    if (InfoKind >= BTF::MAX_FIELD_RELOC_KIND)
       report_fatal_error("Incorrect info_kind for llvm.bpf.preserve.field.info intrinsic");
     CInfo.AccessIndex = InfoKind;
     return true;
@@ -383,11 +384,11 @@ bool BPFAbstractMemberAccess::IsPreserveDIAccessIndexCall(const CallInst *Call,
     if (Flag >= BPFCoreSharedInfo::MAX_PRESERVE_TYPE_INFO_FLAG)
       report_fatal_error("Incorrect flag for llvm.bpf.preserve.type.info intrinsic");
     if (Flag == BPFCoreSharedInfo::PRESERVE_TYPE_INFO_EXISTENCE)
-      CInfo.AccessIndex = BPFCoreSharedInfo::TYPE_EXISTENCE;
+      CInfo.AccessIndex = BTF::TYPE_EXISTENCE;
     else if (Flag == BPFCoreSharedInfo::PRESERVE_TYPE_INFO_MATCH)
-      CInfo.AccessIndex = BPFCoreSharedInfo::TYPE_MATCH;
+      CInfo.AccessIndex = BTF::TYPE_MATCH;
     else
-      CInfo.AccessIndex = BPFCoreSharedInfo::TYPE_SIZE;
+      CInfo.AccessIndex = BTF::TYPE_SIZE;
     return true;
   }
   if (GV->getName().startswith("llvm.bpf.preserve.enum.value")) {
@@ -399,9 +400,9 @@ bool BPFAbstractMemberAccess::IsPreserveDIAccessIndexCall(const CallInst *Call,
     if (Flag >= BPFCoreSharedInfo::MAX_PRESERVE_ENUM_VALUE_FLAG)
       report_fatal_error("Incorrect flag for llvm.bpf.preserve.enum.value intrinsic");
     if (Flag == BPFCoreSharedInfo::PRESERVE_ENUM_VALUE_EXISTENCE)
-      CInfo.AccessIndex = BPFCoreSharedInfo::ENUM_VALUE_EXISTENCE;
+      CInfo.AccessIndex = BTF::ENUM_VALUE_EXISTENCE;
     else
-      CInfo.AccessIndex = BPFCoreSharedInfo::ENUM_VALUE;
+      CInfo.AccessIndex = BTF::ENUM_VALUE;
     return true;
   }
 
@@ -672,11 +673,11 @@ uint32_t BPFAbstractMemberAccess::GetFieldInfo(uint32_t InfoKind,
                                                uint32_t AccessIndex,
                                                uint32_t PatchImm,
                                                MaybeAlign RecordAlignment) {
-  if (InfoKind == BPFCoreSharedInfo::FIELD_EXISTENCE)
-      return 1;
+  if (InfoKind == BTF::FIELD_EXISTENCE)
+    return 1;
 
   uint32_t Tag = CTy->getTag();
-  if (InfoKind == BPFCoreSharedInfo::FIELD_BYTE_OFFSET) {
+  if (InfoKind == BTF::FIELD_BYTE_OFFSET) {
     if (Tag == dwarf::DW_TAG_array_type) {
       auto *EltTy = stripQualifiers(CTy->getBaseType());
       PatchImm += AccessIndex * calcArraySize(CTy, 1) *
@@ -695,7 +696,7 @@ uint32_t BPFAbstractMemberAccess::GetFieldInfo(uint32_t InfoKind,
     return PatchImm;
   }
 
-  if (InfoKind == BPFCoreSharedInfo::FIELD_BYTE_SIZE) {
+  if (InfoKind == BTF::FIELD_BYTE_SIZE) {
     if (Tag == dwarf::DW_TAG_array_type) {
       auto *EltTy = stripQualifiers(CTy->getBaseType());
       return calcArraySize(CTy, 1) * (EltTy->getSizeInBits() >> 3);
@@ -715,7 +716,7 @@ uint32_t BPFAbstractMemberAccess::GetFieldInfo(uint32_t InfoKind,
     }
   }
 
-  if (InfoKind == BPFCoreSharedInfo::FIELD_SIGNEDNESS) {
+  if (InfoKind == BTF::FIELD_SIGNEDNESS) {
     const DIType *BaseTy;
     if (Tag == dwarf::DW_TAG_array_type) {
       // Signedness only checked when final array elements are accessed.
@@ -741,7 +742,7 @@ uint32_t BPFAbstractMemberAccess::GetFieldInfo(uint32_t InfoKind,
     return (Encoding == dwarf::DW_ATE_signed || Encoding == dwarf::DW_ATE_signed_char);
   }
 
-  if (InfoKind == BPFCoreSharedInfo::FIELD_LSHIFT_U64) {
+  if (InfoKind == BTF::FIELD_LSHIFT_U64) {
     // The value is loaded into a value with FIELD_BYTE_SIZE size,
     // and then zero or sign extended to U64.
     // FIELD_LSHIFT_U64 and FIELD_RSHIFT_U64 are operations
@@ -778,7 +779,7 @@ uint32_t BPFAbstractMemberAccess::GetFieldInfo(uint32_t InfoKind,
       return OffsetInBits + 64 - NextSBitOffset;
   }
 
-  if (InfoKind == BPFCoreSharedInfo::FIELD_RSHIFT_U64) {
+  if (InfoKind == BTF::FIELD_RSHIFT_U64) {
     DIDerivedType *MemberTy = nullptr;
     bool IsBitField = false;
     uint32_t SizeInBits;
@@ -849,7 +850,7 @@ Value *BPFAbstractMemberAccess::computeBaseAndAccessKey(CallInst *Call,
   // we will skip them.
   uint32_t FirstIndex = 0;
   uint32_t PatchImm = 0; // AccessOffset or the requested field info
-  uint32_t InfoKind = BPFCoreSharedInfo::FIELD_BYTE_OFFSET;
+  uint32_t InfoKind = BTF::FIELD_BYTE_OFFSET;
   while (CallStack.size()) {
     auto StackElem = CallStack.top();
     Call = StackElem.first;
@@ -939,7 +940,7 @@ Value *BPFAbstractMemberAccess::computeBaseAndAccessKey(CallInst *Call,
 
     if (CInfo.Kind == BPFPreserveFieldInfoAI) {
       InfoKind = CInfo.AccessIndex;
-      if (InfoKind == BPFCoreSharedInfo::FIELD_EXISTENCE)
+      if (InfoKind == BTF::FIELD_EXISTENCE)
         PatchImm = 1;
       break;
     }
@@ -987,10 +988,10 @@ MDNode *BPFAbstractMemberAccess::computeAccessKey(CallInst *Call,
 
   int64_t PatchImm;
   std::string AccessStr("0");
-  if (CInfo.AccessIndex == BPFCoreSharedInfo::TYPE_EXISTENCE ||
-      CInfo.AccessIndex == BPFCoreSharedInfo::TYPE_MATCH) {
+  if (CInfo.AccessIndex == BTF::TYPE_EXISTENCE ||
+      CInfo.AccessIndex == BTF::TYPE_MATCH) {
     PatchImm = 1;
-  } else if (CInfo.AccessIndex == BPFCoreSharedInfo::TYPE_SIZE) {
+  } else if (CInfo.AccessIndex == BTF::TYPE_SIZE) {
     // typedef debuginfo type has size 0, get the eventual base type.
     DIType *BaseTy = stripQualifiers(Ty, true);
     PatchImm = BaseTy->getSizeInBits() / 8;
@@ -1026,7 +1027,7 @@ MDNode *BPFAbstractMemberAccess::computeAccessKey(CallInst *Call,
       EnumIndex++;
     }
 
-    if (CInfo.AccessIndex == BPFCoreSharedInfo::ENUM_VALUE) {
+    if (CInfo.AccessIndex == BTF::ENUM_VALUE) {
       StringRef EValueStr = ValueStr.substr(Separator + 1);
       PatchImm = std::stoll(std::string(EValueStr));
     } else {

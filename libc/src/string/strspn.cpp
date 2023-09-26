@@ -12,7 +12,7 @@
 #include "src/__support/common.h"
 #include <stddef.h>
 
-namespace __llvm_libc {
+namespace LIBC_NAMESPACE {
 
 LLVM_LIBC_FUNCTION(size_t, strspn, (const char *src, const char *segment)) {
   const char *initial = src;
@@ -26,4 +26,4 @@ LLVM_LIBC_FUNCTION(size_t, strspn, (const char *src, const char *segment)) {
   return src - initial;
 }
 
-} // namespace __llvm_libc
+} // namespace LIBC_NAMESPACE

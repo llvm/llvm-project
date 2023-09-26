@@ -43,7 +43,7 @@
 }>
 
 #BCOO = #sparse_tensor.encoding<{
-  map = (d0, d1, d2) -> (d0 : dense, d1 : compressed(nonunique, high), d2 : singleton)
+  map = (d0, d1, d2) -> (d0 : dense, d1 : loose_compressed(nonunique), d2 : singleton)
 }>
 
 module {

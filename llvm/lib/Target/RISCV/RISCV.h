@@ -33,6 +33,9 @@ class RISCVTargetMachine;
 FunctionPass *createRISCVCodeGenPreparePass();
 void initializeRISCVCodeGenPreparePass(PassRegistry &);
 
+FunctionPass *createRISCVDeadRegisterDefinitionsPass();
+void initializeRISCVDeadRegisterDefinitionsPass(PassRegistry &);
+
 FunctionPass *createRISCVISelDag(RISCVTargetMachine &TM,
                                  CodeGenOptLevel OptLevel);
 
@@ -80,6 +83,9 @@ InstructionSelector *createRISCVInstructionSelector(const RISCVTargetMachine &,
                                                     RISCVSubtarget &,
                                                     RISCVRegisterBankInfo &);
 void initializeRISCVDAGToDAGISelPass(PassRegistry &);
+
+FunctionPass *createRISCVPostLegalizerCombiner();
+void initializeRISCVPostLegalizerCombinerPass(PassRegistry &);
 
 FunctionPass *createRISCVO0PreLegalizerCombiner();
 void initializeRISCVO0PreLegalizerCombinerPass(PassRegistry &);

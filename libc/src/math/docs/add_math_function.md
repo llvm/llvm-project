@@ -30,7 +30,7 @@ added to the following locations:
 ```
   libc/src/math/CMakeLists.txt
 ```
-- Add function declaration (under `__llvm_libc` namespace) to:
+- Add function declaration (under `LIBC_NAMESPACE` namespace) to:
 ```
   libc/src/math/<func>.h
 ```
@@ -56,7 +56,7 @@ located at:
 ```
 - These are preferred to be included as header-only.
 - To manipulate bits of floating point numbers, use the template class
-`__llvm_libc::fputil::FPBits<>` in the header file:
+`LIBC_NAMESPACE::fputil::FPBits<>` in the header file:
 ```
   libc/src/__support/FPUtils/FPBits.h
 ```
@@ -71,7 +71,7 @@ compare your outputs with the corresponding MPFR function.  In
 order for your new function to be supported by these two macros,
 the following files will need to be updated:
 
-- Add the function enum to `__llvm_libc::testing::mpfr::Operation` in the
+- Add the function enum to `LIBC_NAMESPACE::testing::mpfr::Operation` in the
 header file:
 ```
   libc/utils/MPFRWrapper/MPFRUtils.h
@@ -88,12 +88,17 @@ Besides the usual testing macros like `EXPECT_EQ, ASSERT_TRUE, ...` there are
 testing macros specifically used for floating point values, such as
 `EXPECT_FP_EQ, ASSERT_FP_LE, ...`
 
-- Add unit test to:
+- Add smoke tests (simple cases and zeros / inf / nan inputs or outputs) to:
+```
+  libc/test/src/math/smoke/<func>_test.cpp
+```
+- Add unit test that might require MPFR to:
 ```
   libc/test/src/math/<func>_test.cpp
 ```
-- Add the corresponding entry point to:
+- Add the corresponding entry points to:
 ```
+  libc/test/src/math/smoke/CMakeLists.txt
   libc/test/src/math/CMakeLists.txt
 ```
 
@@ -158,6 +163,16 @@ implementation (which is very often glibc).
 - Run all unit tests:
 ```
   $ ninja check-libc
+```
+
+- Run math smoke tests only:
+```
+  $ ninja libc-math-smoke-tests
+```
+
+- Run math smoke and unit tests:
+```
+  $ ninja libc-math-unittests
 ```
 
 - Build and Run a specific unit test:

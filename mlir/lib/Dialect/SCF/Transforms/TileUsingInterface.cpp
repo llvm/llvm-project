@@ -255,7 +255,8 @@ yieldTiledValues(RewriterBase &rewriter, ArrayRef<Value> initValues,
   for (auto tiledOp : tilingResult.tiledOps) {
     if (auto dstOp = dyn_cast<DestinationStyleOpInterface>(tiledOp)) {
       auto innerMostLoop = loops.back();
-      SmallVector<Value> tiledOpDestinationTensors = dstOp.getDpsInitOperands();
+      SmallVector<Value> tiledOpDestinationTensors =
+          llvm::to_vector(dstOp.getDpsInits());
       updateDestinationOperandsForTiledOp(rewriter, tiledOpDestinationTensors,
                                           innerMostLoop.getRegionIterArgs());
     }
@@ -447,7 +448,7 @@ mlir::scf::tileReductionUsingScf(RewriterBase &b,
 
   auto dstOp = cast<DestinationStyleOpInterface>(parallelOp);
   auto innerMostLoop = loops.back();
-  SmallVector<Value> destinationTensors = dstOp.getDpsInitOperands();
+  SmallVector<Value> destinationTensors = llvm::to_vector(dstOp.getDpsInits());
   assert(destinationTensors.size() ==
              innerMostLoop.getRegionIterArgs().size() &&
          "unexpected number of outputs");
@@ -569,8 +570,9 @@ mlir::scf::tileAndFuseProducerOfSlice(RewriterBase &rewriter,
   scf::ForOp outerMostLoop = loops.front();
   if (destinationInitArg &&
       (*destinationInitArg)->getOwner() == outerMostLoop) {
-    std::optional<unsigned> iterArgNumber =
-        outerMostLoop.getIterArgNumberForOpOperand(**destinationInitArg);
+    unsigned iterArgNumber =
+        outerMostLoop.getResultForOpOperand(**destinationInitArg)
+            .getResultNumber();
     int64_t resultNumber = fusableProducer.getResultNumber();
     if (auto dstOp =
             dyn_cast<DestinationStyleOpInterface>(fusableProducer.getOwner())) {
@@ -584,7 +586,7 @@ mlir::scf::tileAndFuseProducerOfSlice(RewriterBase &rewriter,
       scf::ForOp innerMostLoop = loops.back();
       updateDestinationOperandsForTiledOp(
           rewriter, dstOp.getDpsInitOperand(resultNumber)->get(),
-          innerMostLoop.getRegionIterArgs()[iterArgNumber.value()]);
+          innerMostLoop.getRegionIterArgs()[iterArgNumber]);
     }
   }
   return scf::SCFFuseProducerOfSliceResult{fusableProducer,

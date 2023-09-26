@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_LIBC_SRC_SUPPORT_FPUTIL_FMA_H
-#define LLVM_LIBC_SRC_SUPPORT_FPUTIL_FMA_H
+#ifndef LLVM_LIBC_SRC___SUPPORT_FPUTIL_FMA_H
+#define LLVM_LIBC_SRC___SUPPORT_FPUTIL_FMA_H
 
 #include "src/__support/macros/properties/architectures.h"
 #include "src/__support/macros/properties/cpu_features.h" // LIBC_TARGET_CPU_HAS_FMA
@@ -29,7 +29,7 @@
 #include "generic/FMA.h"
 #include "src/__support/CPP/type_traits.h"
 
-namespace __llvm_libc {
+namespace LIBC_NAMESPACE {
 namespace fputil {
 
 template <typename T> LIBC_INLINE T fma(T x, T y, T z) {
@@ -37,8 +37,8 @@ template <typename T> LIBC_INLINE T fma(T x, T y, T z) {
 }
 
 } // namespace fputil
-} // namespace __llvm_libc
+} // namespace LIBC_NAMESPACE
 
 #endif
 
-#endif // LLVM_LIBC_SRC_SUPPORT_FPUTIL_FMA_H
+#endif // LLVM_LIBC_SRC___SUPPORT_FPUTIL_FMA_H

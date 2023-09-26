@@ -6,13 +6,13 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_LIBC_SRC_SUPPORT_C_STRING_H
-#define LLVM_LIBC_SRC_SUPPORT_C_STRING_H
+#ifndef LLVM_LIBC_SRC___SUPPORT_C_STRING_H
+#define LLVM_LIBC_SRC___SUPPORT_C_STRING_H
 
 #include "src/__support/CPP/string.h"
 #include "src/__support/macros/attributes.h" // for LIBC_INLINE
 
-namespace __llvm_libc {
+namespace LIBC_NAMESPACE {
 
 // The CString class is a companion to the cpp::string class. Its use case is as
 // a return value for a function that in C would return a char* and a flag for
@@ -31,6 +31,6 @@ public:
   LIBC_INLINE operator const char *() const { return str.c_str(); }
 };
 
-} // namespace __llvm_libc
+} // namespace LIBC_NAMESPACE
 
-#endif // LLVM_LIBC_SRC_SUPPORT_C_STRING_H
+#endif // LLVM_LIBC_SRC___SUPPORT_C_STRING_H

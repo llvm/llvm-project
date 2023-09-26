@@ -1660,17 +1660,18 @@ ThreadSP ProcessGDBRemote::SetThreadStopInfo(
     gdb_thread->PrivateSetRegisterValue(lldb_regnum, buffer_sp->GetData());
   }
 
-  // AArch64 SVE specific code below calls AArch64SVEReconfigure to update
-  // SVE register sizes and offsets if value of VG register has changed
-  // since last stop.
+  // AArch64 SVE/SME specific code below updates SVE and ZA register sizes and
+  // offsets if value of VG or SVG registers has changed since last stop.
   const ArchSpec &arch = GetTarget().GetArchitecture();
   if (arch.IsValid() && arch.GetTriple().isAArch64()) {
     GDBRemoteRegisterContext *reg_ctx_sp =
         static_cast<GDBRemoteRegisterContext *>(
             gdb_thread->GetRegisterContext().get());
 
-    if (reg_ctx_sp)
-      reg_ctx_sp->AArch64SVEReconfigure();
+    if (reg_ctx_sp) {
+      reg_ctx_sp->AArch64Reconfigure();
+      reg_ctx_sp->InvalidateAllRegisters();
+    }
   }
 
   thread_sp->SetName(thread_name.empty() ? nullptr : thread_name.c_str());
@@ -3108,14 +3109,16 @@ static GDBStoppointType GetGDBStoppointType(Watchpoint *wp) {
   assert(wp);
   bool watch_read = wp->WatchpointRead();
   bool watch_write = wp->WatchpointWrite();
+  bool watch_modify = wp->WatchpointModify();
 
-  // watch_read and watch_write cannot both be false.
-  assert(watch_read || watch_write);
-  if (watch_read && watch_write)
+  // watch_read, watch_write, watch_modify cannot all be false.
+  assert((watch_read || watch_write || watch_modify) &&
+         "watch_read, watch_write, watch_modify cannot all be false.");
+  if (watch_read && (watch_write || watch_modify))
     return eWatchpointReadWrite;
   else if (watch_read)
     return eWatchpointRead;
-  else // Must be watch_write, then.
+  else // Must be watch_write or watch_modify, then.
     return eWatchpointWrite;
 }
 

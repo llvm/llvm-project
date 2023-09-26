@@ -1044,7 +1044,8 @@ struct CounterCoverageMappingBuilder
       for (auto *Initializer : Ctor->inits()) {
         if (Initializer->isWritten()) {
           auto *Init = Initializer->getInit();
-          propagateCounts(BodyCounter, Init);
+          if (getStart(Init).isValid() && getEnd(Init).isValid())
+            propagateCounts(BodyCounter, Init);
         }
       }
     }

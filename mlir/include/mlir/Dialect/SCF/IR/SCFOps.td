@@ -17,6 +17,7 @@ include "mlir/Interfaces/ControlFlowInterfaces.td"
 include "mlir/Interfaces/LoopLikeInterface.td"
 include "mlir/IR/RegionKindInterface.td"
 include "mlir/Dialect/SCF/IR/DeviceMappingInterface.td"
+include "mlir/Interfaces/DestinationStyleOpInterface.td"
 include "mlir/Interfaces/InferTypeOpInterface.td"
 include "mlir/Interfaces/ParallelCombiningOpInterface.td"
 include "mlir/Interfaces/SideEffectInterfaces.td"
@@ -120,8 +121,8 @@ def ExecuteRegionOp : SCF_Op<"execute_region", [
 
 def ForOp : SCF_Op<"for",
       [AutomaticAllocationScope, DeclareOpInterfaceMethods<LoopLikeOpInterface,
-       ["getSingleInductionVar", "getSingleLowerBound", "getSingleStep",
-        "getSingleUpperBound", "promoteIfSingleIteration"]>,
+       ["getInits", "getSingleInductionVar", "getSingleLowerBound",
+        "getSingleStep", "getSingleUpperBound", "promoteIfSingleIteration"]>,
        AllTypesMatch<["lowerBound", "upperBound", "step"]>,
        ConditionallySpeculatable,
        DeclareOpInterfaceMethods<RegionBranchOpInterface,
@@ -263,16 +264,6 @@ def ForOp : SCF_Op<"for",
     }
     /// Number of operands controlling the loop: lb, ub, step
     unsigned getNumControlOperands() { return 3; }
-    /// Get the iter arg number for an operand. If it isnt an iter arg
-    /// operand return std::nullopt.
-    std::optional<unsigned> getIterArgNumberForOpOperand(OpOperand &opOperand) {
-      if (opOperand.getOwner() != getOperation())
-        return std::nullopt;
-      unsigned operandNumber = opOperand.getOperandNumber();
-      if (operandNumber < getNumControlOperands())
-        return std::nullopt;
-      return operandNumber - getNumControlOperands();
-    }
 
     /// Get the region iter arg that corresponds to an OpOperand.
     /// This helper prevents internal op implementation detail leakage to
@@ -343,6 +334,7 @@ def ForallOp : SCF_Op<"forall", [
        RecursiveMemoryEffects,
        SingleBlockImplicitTerminator<"scf::InParallelOp">,
        DeclareOpInterfaceMethods<RegionBranchOpInterface>,
+       DestinationStyleOpInterface
      ]> {
   let summary = "evaluate a block multiple times in parallel";
   let description = [{
@@ -640,6 +632,9 @@ def ForallOp : SCF_Op<"forall", [
                                  Location loc);
 
     InParallelOp getTerminator();
+
+    // Declare the shared_outs as inits/outs to DestinationStyleOpInterface.
+    MutableOperandRange getDpsInitsMutable() { return getOutputsMutable(); }
   }];
 }
 
@@ -958,6 +953,7 @@ def ReduceReturnOp :
 def WhileOp : SCF_Op<"while",
     [DeclareOpInterfaceMethods<RegionBranchOpInterface,
         ["getEntrySuccessorOperands"]>,
+     DeclareOpInterfaceMethods<LoopLikeOpInterface, ["getRegionIterArgs"]>,
      RecursiveMemoryEffects, SingleBlock]> {
   let summary = "a generic 'while' loop";
   let description = [{

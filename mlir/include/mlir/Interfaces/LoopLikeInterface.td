@@ -36,15 +36,15 @@ def LoopLikeOpInterface : OpInterface<"LoopLikeOpInterface"> {
       /*args=*/(ins "::mlir::Value ":$value),
       /*methodBody=*/"",
       /*defaultImplementation=*/[{
-        return value.getParentRegion()->isProperAncestor(&$_op.getLoopBody());
+        return !$_op->isAncestor(value.getParentRegion()->getParentOp());
       }]
     >,
     InterfaceMethod<[{
-        Returns the region that makes up the body of the loop and should be
+        Returns the regions that make up the body of the loop and should be
         inspected for loop-invariant operations.
       }],
-      /*retTy=*/"::mlir::Region &",
-      /*methodName=*/"getLoopBody"
+      /*retTy=*/"::llvm::SmallVector<::mlir::Region *>",
+      /*methodName=*/"getLoopRegions"
     >,
     InterfaceMethod<[{
         Moves the given loop-invariant operation out of the loop.
@@ -114,6 +114,31 @@ def LoopLikeOpInterface : OpInterface<"LoopLikeOpInterface"> {
       /*methodBody=*/"",
       /*defaultImplementation=*/[{
         return std::nullopt;
+      }]
+    >,
+    InterfaceMethod<[{
+        Return the "init" operands that are used as initialization values for
+        the region "iter_args" of this loop.
+      }],
+      /*retTy=*/"::mlir::OperandRange",
+      /*methodName=*/"getInits",
+      /*args=*/(ins),
+      /*methodBody=*/"",
+      /*defaultImplementation=*/[{
+        return ::mlir::OperandRange($_op->operand_end(), $_op->operand_end());
+      }]
+    >,
+    InterfaceMethod<[{
+        Return the region "iter_args" (block arguments) that correspond to the
+        "init" operands. If the op has multiple regions, return the
+        corresponding block arguments of the entry region.
+      }],
+      /*retTy=*/"::mlir::Block::BlockArgListType",
+      /*methodName=*/"getRegionIterArgs",
+      /*args=*/(ins),
+      /*methodBody=*/"",
+      /*defaultImplementation=*/[{
+        return ::mlir::Block::BlockArgListType();
       }]
     >,
   ];

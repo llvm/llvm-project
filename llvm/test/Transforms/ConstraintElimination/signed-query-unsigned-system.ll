@@ -109,8 +109,7 @@ define i1 @sge_no_const_unsigned_uge(i8 %a, i16 %b) {
 ; CHECK-NEXT:    call void @llvm.assume(i1 [[A_UGE_B]])
 ; CHECK-NEXT:    [[B_POS:%.*]] = icmp sge i16 [[B]], 0
 ; CHECK-NEXT:    call void @llvm.assume(i1 [[B_POS]])
-; CHECK-NEXT:    [[CMP:%.*]] = icmp sge i16 [[EXT]], [[B]]
-; CHECK-NEXT:    ret i1 [[CMP]]
+; CHECK-NEXT:    ret i1 true
 ;
   %ext = zext i8 %a to i16
   %a.uge.b = icmp uge i16 %ext, %b
