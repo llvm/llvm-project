@@ -579,9 +579,6 @@ def LLVM_LandingpadOp : LLVM_Op<"landingpad"> {
 // CallOp
 //===----------------------------------------------------------------------===//
 
-// FIXME: Add a type attribute that carries the LLVM function type to support
-// indirect calls to variadic functions. The type attribute is necessary to
-// distinguish normal and variadic arguments.
 def LLVM_CallOp : LLVM_MemAccessOpBase<"call",
                     [DeclareOpInterfaceMethods<FastmathFlagsInterface>,
                      DeclareOpInterfaceMethods<CallOpInterface>,
@@ -597,10 +594,11 @@ def LLVM_CallOp : LLVM_MemAccessOpBase<"call",
     The `call` instruction supports both direct and indirect calls. Direct calls
     start with a function name (`@`-prefixed) and indirect calls start with an
     SSA value (`%`-prefixed). The direct callee, if present, is stored as a
-    function attribute `callee`. The trailing type list contains the optional
-    indirect callee type and the MLIR function type, which differs from the
-    LLVM function type that uses a explicit void type to model functions that do
-    not return a value.
+    function attribute `callee`. If the callee is a variadic function, then the
+    `callee_type` attribute must carry the function type. The trailing type list
+    contains the optional indirect callee type and the MLIR function type, which
+    differs from the LLVM function type that uses a explicit void type to model
+    functions that do not return a value.
 
     Examples:
 
@@ -613,6 +611,12 @@ def LLVM_CallOp : LLVM_MemAccessOpBase<"call",
 
     // Indirect call with an argument and without a result.
     llvm.call %1(%0) : !llvm.ptr, (f32) -> ()
+
+    // Direct varaidic call
+    llvm.call @printf(%0, %1) vararg(!llvm.func<i32 (ptr, ...)>) : (!llvm.ptr, i32) -> i32
+
+    // Indirect variadic call
+    llvm.call %1(%0) vararg(!llvm.func<void (...)>) : !llvm.ptr, (i32) -> ()
     ```
   }];
 
