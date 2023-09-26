@@ -658,42 +658,27 @@ TEST_F(NamespaceEndCommentsFixerTest,
 }
 
 TEST_F(NamespaceEndCommentsFixerTest, KeepsValidEndComment) {
-  EXPECT_EQ("namespace {\n"
-            "int i;\n"
-            "} // end anonymous namespace",
-            fixNamespaceEndComments("namespace {\n"
-                                    "int i;\n"
-                                    "} // end anonymous namespace"));
-  EXPECT_EQ("namespace A {\n"
-            "int i;\n"
-            "} /* end of namespace A */",
-            fixNamespaceEndComments("namespace A {\n"
-                                    "int i;\n"
-                                    "} /* end of namespace A */"));
-  EXPECT_EQ("namespace A {\n"
-            "int i;\n"
-            "}   //   namespace A",
-            fixNamespaceEndComments("namespace A {\n"
-                                    "int i;\n"
-                                    "}   //   namespace A"));
-  EXPECT_EQ("namespace A::B {\n"
-            "int i;\n"
-            "} // end namespace A::B",
-            fixNamespaceEndComments("namespace A::B {\n"
-                                    "int i;\n"
-                                    "} // end namespace A::B"));
-  EXPECT_EQ("namespace A {\n"
-            "int i;\n"
-            "}; // end namespace A",
-            fixNamespaceEndComments("namespace A {\n"
-                                    "int i;\n"
-                                    "}; // end namespace A"));
-  EXPECT_EQ("namespace {\n"
-            "int i;\n"
-            "}; /* unnamed namespace */",
-            fixNamespaceEndComments("namespace {\n"
-                                    "int i;\n"
-                                    "}; /* unnamed namespace */"));
+  EXPECT_TRUE(isFormatted("namespace {\n"
+                          "int i;\n"
+                          "} // end anonymous namespace"));
+  EXPECT_TRUE(isFormatted("namespace A {\n"
+                          "int i;\n"
+                          "} /* end of namespace A */"));
+  EXPECT_TRUE(isFormatted("namespace A {\n"
+                          "int i;\n"
+                          "}   //   namespace A"));
+  EXPECT_TRUE(isFormatted("namespace A::B {\n"
+                          "int i;\n"
+                          "} // end namespace A::B"));
+  EXPECT_TRUE(isFormatted("namespace A {\n"
+                          "int i;\n"
+                          "}; // end namespace A"));
+  EXPECT_TRUE(isFormatted("namespace {\n"
+                          "int i;\n"
+                          "}; /* unnamed namespace */"));
+  EXPECT_TRUE(isFormatted("namespace a::inline b {\n"
+                          "int c;\n"
+                          "}; // namespace a::inline b"));
 }
 
 TEST_F(NamespaceEndCommentsFixerTest, KeepsValidMacroEndComment) {
