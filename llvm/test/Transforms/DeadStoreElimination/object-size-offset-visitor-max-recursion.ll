@@ -61,3 +61,40 @@ b3:
   call void @use(ptr %a5)
   ret void
 }
+
+define void @g(i32 %i, i1 %c1, i1 %c2) {
+; NO-LABEL: define void @g(
+; NO-SAME: i32 [[I:%.*]], i1 [[C1:%.*]], i1 [[C2:%.*]]) {
+; NO-NEXT:    [[A1:%.*]] = alloca i32, align 4
+; NO-NEXT:    [[A2:%.*]] = alloca i32, align 4
+; NO-NEXT:    [[A3:%.*]] = alloca i32, align 4
+; NO-NEXT:    [[A4:%.*]] = select i1 [[C1]], ptr [[A1]], ptr [[A2]]
+; NO-NEXT:    [[A5:%.*]] = select i1 [[C2]], ptr [[A4]], ptr [[A3]]
+; NO-NEXT:    [[G:%.*]] = getelementptr i8, ptr [[A5]], i32 [[I]]
+; NO-NEXT:    store i8 1, ptr [[G]], align 1
+; NO-NEXT:    store i32 0, ptr [[A5]], align 4
+; NO-NEXT:    call void @use(ptr [[A5]])
+; NO-NEXT:    ret void
+;
+; YES-LABEL: define void @g(
+; YES-SAME: i32 [[I:%.*]], i1 [[C1:%.*]], i1 [[C2:%.*]]) {
+; YES-NEXT:    [[A1:%.*]] = alloca i32, align 4
+; YES-NEXT:    [[A2:%.*]] = alloca i32, align 4
+; YES-NEXT:    [[A3:%.*]] = alloca i32, align 4
+; YES-NEXT:    [[A4:%.*]] = select i1 [[C1]], ptr [[A1]], ptr [[A2]]
+; YES-NEXT:    [[A5:%.*]] = select i1 [[C2]], ptr [[A4]], ptr [[A3]]
+; YES-NEXT:    store i32 0, ptr [[A5]], align 4
+; YES-NEXT:    call void @use(ptr [[A5]])
+; YES-NEXT:    ret void
+;
+  %a1 = alloca i32
+  %a2 = alloca i32
+  %a3 = alloca i32
+  %a4 = select i1 %c1, ptr %a1, ptr %a2
+  %a5 = select i1 %c2, ptr %a4, ptr %a3
+  %g = getelementptr i8, ptr %a5, i32 %i
+  store i8 1, ptr %g
+  store i32 0, ptr %a5
+  call void @use(ptr %a5)
+  ret void
+}

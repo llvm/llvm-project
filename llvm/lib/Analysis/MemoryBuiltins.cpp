@@ -55,7 +55,7 @@ static cl::opt<unsigned> ObjectSizeOffsetVisitorMaxRecurseDepth(
     "object-size-offset-visitor-max-recurse-depth",
     cl::desc(
         "Maximum number of PHIs for ObjectSizeOffsetVisitor to look through"),
-    cl::init(100));
+    cl::init(20));
 
 enum AllocType : uint8_t {
   OpNewLike          = 1<<0, // allocates; never returns null
@@ -1018,8 +1018,13 @@ SizeOffsetType ObjectSizeOffsetVisitor::visitPHINode(PHINode &PN) {
 }
 
 SizeOffsetType ObjectSizeOffsetVisitor::visitSelectInst(SelectInst &I) {
-  return combineSizeOffset(compute(I.getTrueValue()),
-                           compute(I.getFalseValue()));
+  if (RecurseDepth >= ObjectSizeOffsetVisitorMaxRecurseDepth)
+    return unknown();
+  ++RecurseDepth;
+  SizeOffsetType Ret =
+      combineSizeOffset(compute(I.getTrueValue()), compute(I.getFalseValue()));
+  --RecurseDepth;
+  return Ret;
 }
 
 SizeOffsetType ObjectSizeOffsetVisitor::visitUndefValue(UndefValue&) {
