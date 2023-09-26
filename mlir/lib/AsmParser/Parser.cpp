@@ -1446,16 +1446,11 @@ Operation *OperationParser::parseGenericOperation() {
   // Try setting the properties for the operation, using a diagnostic to print
   // errors.
   if (properties) {
-    std::unique_ptr<InFlightDiagnostic> diagnostic;
-    auto getDiag = [&]() -> InFlightDiagnostic & {
-      if (!diagnostic) {
-        diagnostic = std::make_unique<InFlightDiagnostic>(
-            mlir::emitError(srcLocation, "invalid properties ")
-            << properties << " for op " << name << ": ");
-      }
-      return *diagnostic;
+    auto emitError = [&]() {
+      return mlir::emitError(srcLocation, "invalid properties ")
+             << properties << " for op " << name << ": ";
     };
-    if (failed(op->setPropertiesFromAttribute(properties, getDiag)))
+    if (failed(op->setPropertiesFromAttribute(properties, emitError)))
       return nullptr;
   }
 
@@ -2009,17 +2004,12 @@ OperationParser::parseCustomOperation(ArrayRef<ResultRecord> resultIDs) {
 
   // Try setting the properties for the operation.
   if (properties) {
-    std::unique_ptr<InFlightDiagnostic> diagnostic;
-    auto getDiag = [&]() -> InFlightDiagnostic & {
-      if (!diagnostic) {
-        diagnostic = std::make_unique<InFlightDiagnostic>(
-            mlir::emitError(srcLocation, "invalid properties ")
-            << properties << " for op " << op->getName().getStringRef()
-            << ": ");
-      }
-      return *diagnostic;
+    auto emitError = [&]() {
+      return mlir::emitError(srcLocation, "invalid properties ")
+             << properties << " for op " << op->getName().getStringRef()
+             << ": ";
     };
-    if (failed(op->setPropertiesFromAttribute(properties, getDiag)))
+    if (failed(op->setPropertiesFromAttribute(properties, emitError)))
       return nullptr;
   }
   return op;

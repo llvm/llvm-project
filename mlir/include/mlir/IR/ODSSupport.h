@@ -28,7 +28,7 @@ namespace mlir {
 /// error message is also emitted.
 LogicalResult
 convertFromAttribute(int64_t &storage, Attribute attr,
-                     function_ref<InFlightDiagnostic &()> getDiag);
+                     function_ref<InFlightDiagnostic()> emitError);
 
 /// Convert the provided int64_t to an IntegerAttr attribute.
 Attribute convertToAttribute(MLIRContext *ctx, int64_t storage);
@@ -39,7 +39,7 @@ Attribute convertToAttribute(MLIRContext *ctx, int64_t storage);
 /// the optional diagnostic is provided an error message is also emitted.
 LogicalResult
 convertFromAttribute(MutableArrayRef<int64_t> storage, Attribute attr,
-                     function_ref<InFlightDiagnostic &()> getDiag);
+                     function_ref<InFlightDiagnostic()> emitError);
 
 /// Convert a DenseI32ArrayAttr to the provided storage. It is expected that the
 /// storage has the same size as the array. An error is returned if the
@@ -47,7 +47,7 @@ convertFromAttribute(MutableArrayRef<int64_t> storage, Attribute attr,
 /// the optional diagnostic is provided an error message is also emitted.
 LogicalResult
 convertFromAttribute(MutableArrayRef<int32_t> storage, Attribute attr,
-                     function_ref<InFlightDiagnostic &()> getDiag);
+                     function_ref<InFlightDiagnostic()> emitError);
 
 /// Convert the provided ArrayRef<int64_t> to a DenseI64ArrayAttr attribute.
 Attribute convertToAttribute(MLIRContext *ctx, ArrayRef<int64_t> storage);

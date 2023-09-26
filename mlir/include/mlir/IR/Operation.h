@@ -901,7 +901,7 @@ public:
   /// generic format. An optional diagnostic can be passed in for richer errors.
   LogicalResult
   setPropertiesFromAttribute(Attribute attr,
-                             function_ref<InFlightDiagnostic &()> getDiag);
+                             function_ref<InFlightDiagnostic()> emitError);
 
   /// Copy properties from an existing other properties object. The two objects
   /// must be the same type.
