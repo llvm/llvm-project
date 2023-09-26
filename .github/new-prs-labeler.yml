@@ -254,9 +254,6 @@ mlir:vector:
 mlir:execution-engine:
   - mlir/**/ExecutionEngine/**
 
-mlir:affine:
-  - mlir/**/Affine/**/*
-
 mlir:presburger:
   - mlir/**/*Presburger*/**
 
