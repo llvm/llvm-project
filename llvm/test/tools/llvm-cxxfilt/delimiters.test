@@ -29,6 +29,8 @@ RUN:      '_Z3Foo}'   \
 RUN:      '_Z3Foo~,,' \
 RUN:      '_Z3Foo⦙_Z3Bar' \
 RUN:      '_Z3Foo,,_Z3Bar::_Z3Baz  _Z3Foo,_Z3Bar:_Z3Baz' \
+RUN:      '_ZN1A3fooEi' \
+RUN:      '._ZN1A3fooEi' \
 COM: Piping the echo output causes '⦙' to be converted to '?' in some
 COM: builds/environments. Redirect echo output to and from %t to work
 COM: around this. See D111072.
@@ -66,4 +68,6 @@ CHECK: Foo}
 CHECK: Foo~,,
 CHECK: Foo⦙Bar
 CHECK: Foo,,Bar::Baz  Foo,Bar:Baz
+CHECK: A::foo(int)
+CHECK: ._ZN1A3fooEi
 CHECK: _Z3Foo$ ._Z3Foo
