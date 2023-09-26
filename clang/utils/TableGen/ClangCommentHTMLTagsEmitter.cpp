@@ -27,7 +27,7 @@ void clang::EmitClangCommentHTMLTags(RecordKeeper &Records, raw_ostream &OS) {
                          "return true;");
   }
 
-  emitSourceFileHeader("HTML tag name matcher", OS);
+  emitSourceFileHeader("HTML tag name matcher", OS, Records);
 
   OS << "bool isHTMLTagName(StringRef Name) {\n";
   StringMatcher("Name", Matches, OS).Emit();
@@ -49,7 +49,7 @@ void clang::EmitClangCommentHTMLTagsProperties(RecordKeeper &Records,
       MatchesEndTagForbidden.push_back(Match);
   }
 
-  emitSourceFileHeader("HTML tag properties", OS);
+  emitSourceFileHeader("HTML tag properties", OS, Records);
 
   OS << "bool isHTMLEndTagOptional(StringRef Name) {\n";
   StringMatcher("Name", MatchesEndTagOptional, OS).Emit();
