@@ -521,6 +521,14 @@ RelExpr LoongArch::getRelExpr(const RelType type, const Symbol &s,
   case R_LARCH_RELAX:
     // LoongArch linker relaxation is not implemented yet.
     return R_NONE;
+  case R_LARCH_ALIGN:
+    // Not just a hint; always padded to the worst-case number of NOPs, so may
+    // not currently be aligned, and without linker relaxation support we can't
+    // delete NOPs to realign.
+    errorOrWarn(getErrorLocation(loc) +
+                "relocation R_LARCH_ALIGN requires "
+                "unimplemented linker relaxation; recompile with -mno-relax");
+    return R_NONE;
 
   // Other known relocs that are explicitly unimplemented:
   //
