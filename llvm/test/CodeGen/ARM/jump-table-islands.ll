@@ -2,8 +2,6 @@
 
 %BigInt = type i8500
 
-declare void @use(%BigInt)
-
 define %BigInt @test_moved_jumptable(i1 %tst, i32 %sw, %BigInt %l) {
 ; CHECK-LABEL: test_moved_jumptable:
 
@@ -36,8 +34,6 @@ other:
 
 end:
   %val = phi %BigInt [ %l, %complex ], [ -1, %simple ]
-; Prevent SimplifyCFG from simplifying the phi node above.
-  call void @use(%BigInt %val)
   ret %BigInt %val
 }
 
