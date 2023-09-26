@@ -1258,7 +1258,7 @@ int main() {
   }
 
   legacy::PassManager pass;
-  auto FileType = CGFT_ObjectFile;
+  auto FileType = CodeGenFileType::ObjectFile;
 
   if (TheTargetMachine->addPassesToEmitFile(pass, dest, nullptr, FileType)) {
     errs() << "TheTargetMachine can't emit a file of this type";

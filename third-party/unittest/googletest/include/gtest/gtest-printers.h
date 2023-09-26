@@ -218,13 +218,24 @@ struct StreamPrinter {
   // ADL (possibly involving implicit conversions).
   // (Use SFINAE via return type, because it seems GCC < 12 doesn't handle name
   // lookup properly when we do it in the template parameter list.)
+
+  // LLVM local change to support llvm printables.
+  //
+  // static auto PrintValue(const T& value, ::std::ostream* os)
+  //     -> decltype((void)(*os << value)) {
+  //   // Call streaming operator found by ADL, possibly with implicit conversions
+  //   // of the arguments.
+  //   // LLVM local change to support llvm printables.
+  //   //
+  //   *os << value;
+  //   // LLVM local change end.
+  // }
   static auto PrintValue(const T& value, ::std::ostream* os)
-      -> decltype((void)(*os << value)) {
+      -> decltype((void)(*os << ::llvm_gtest::printable(value))) {
     // Call streaming operator found by ADL, possibly with implicit conversions
     // of the arguments.
     // LLVM local change to support llvm printables.
     //
-    // *os << value;
     *os << ::llvm_gtest::printable(value);
     // LLVM local change end.
   }

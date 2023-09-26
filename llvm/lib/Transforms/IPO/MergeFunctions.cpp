@@ -375,9 +375,32 @@ bool MergeFunctions::doFunctionalCheck(std::vector<WeakTrackingVH> &Worklist) {
 }
 #endif
 
+/// Check whether \p F has an intrinsic which references
+/// distinct metadata as an operand. The most common
+/// instance of this would be CFI checks for function-local types.
+static bool hasDistinctMetadataIntrinsic(const Function &F) {
+  for (const BasicBlock &BB : F) {
+    for (const Instruction &I : BB.instructionsWithoutDebug()) {
+      if (!isa<IntrinsicInst>(&I))
+        continue;
+
+      for (Value *Op : I.operands()) {
+        auto *MDL = dyn_cast<MetadataAsValue>(Op);
+        if (!MDL)
+          continue;
+        if (MDNode *N = dyn_cast<MDNode>(MDL->getMetadata()))
+          if (N->isDistinct())
+            return true;
+      }
+    }
+  }
+  return false;
+}
+
 /// Check whether \p F is eligible for function merging.
 static bool isEligibleForMerging(Function &F) {
-  return !F.isDeclaration() && !F.hasAvailableExternallyLinkage();
+  return !F.isDeclaration() && !F.hasAvailableExternallyLinkage() &&
+         !hasDistinctMetadataIntrinsic(F);
 }
 
 bool MergeFunctions::runOnModule(Module &M) {

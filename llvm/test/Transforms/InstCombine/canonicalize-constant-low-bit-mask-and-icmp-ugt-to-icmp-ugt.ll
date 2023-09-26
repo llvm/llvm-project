@@ -75,8 +75,8 @@ define <2 x i1> @p2_vec_nonsplat() {
 define <2 x i1> @p2_vec_nonsplat_edgecase0() {
 ; CHECK-LABEL: @p2_vec_nonsplat_edgecase0(
 ; CHECK-NEXT:    [[X:%.*]] = call <2 x i8> @gen2x8()
-; CHECK-NEXT:    [[TMP0:%.*]] = and <2 x i8> [[X]], <i8 3, i8 0>
-; CHECK-NEXT:    [[RET:%.*]] = icmp ugt <2 x i8> [[X]], [[TMP0]]
+; CHECK-NEXT:    [[TMP1:%.*]] = and <2 x i8> [[X]], <i8 -4, i8 -1>
+; CHECK-NEXT:    [[RET:%.*]] = icmp ne <2 x i8> [[TMP1]], zeroinitializer
 ; CHECK-NEXT:    ret <2 x i1> [[RET]]
 ;
   %x = call <2 x i8> @gen2x8()
@@ -201,8 +201,8 @@ define i1 @oneuse0() {
 define i1 @n0() {
 ; CHECK-LABEL: @n0(
 ; CHECK-NEXT:    [[X:%.*]] = call i8 @gen8()
-; CHECK-NEXT:    [[TMP0:%.*]] = and i8 [[X]], 4
-; CHECK-NEXT:    [[RET:%.*]] = icmp ugt i8 [[X]], [[TMP0]]
+; CHECK-NEXT:    [[TMP1:%.*]] = and i8 [[X]], -5
+; CHECK-NEXT:    [[RET:%.*]] = icmp ne i8 [[TMP1]], 0
 ; CHECK-NEXT:    ret i1 [[RET]]
 ;
   %x = call i8 @gen8()
@@ -227,8 +227,8 @@ define i1 @n1(i8 %y, i8 %notx) {
 define <2 x i1> @n2() {
 ; CHECK-LABEL: @n2(
 ; CHECK-NEXT:    [[X:%.*]] = call <2 x i8> @gen2x8()
-; CHECK-NEXT:    [[TMP0:%.*]] = and <2 x i8> [[X]], <i8 3, i8 16>
-; CHECK-NEXT:    [[RET:%.*]] = icmp ugt <2 x i8> [[X]], [[TMP0]]
+; CHECK-NEXT:    [[TMP1:%.*]] = and <2 x i8> [[X]], <i8 -4, i8 -17>
+; CHECK-NEXT:    [[RET:%.*]] = icmp ne <2 x i8> [[TMP1]], zeroinitializer
 ; CHECK-NEXT:    ret <2 x i1> [[RET]]
 ;
   %x = call <2 x i8> @gen2x8()

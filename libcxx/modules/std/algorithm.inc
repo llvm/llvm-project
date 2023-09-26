@@ -154,10 +154,10 @@ export namespace std {
     // [alg.starts.with], starts with
     using std::ranges::starts_with;
 
-#  if 0
     // [alg.ends.with], ends with
     using std::ranges::ends_with;
 
+#  if 0
     // [alg.fold], fold
     using std::ranges::fold_left;
     using std::ranges::fold_left_first;

@@ -258,9 +258,14 @@ Instruction *InstCombinerImpl::visitMul(BinaryOperator &I) {
   if (Op0->hasOneUse() && match(Op1, m_NegatedPower2())) {
     // Interpret  X * (-1<<C)  as  (-X) * (1<<C)  and try to sink the negation.
     // The "* (1<<C)" thus becomes a potential shifting opportunity.
-    if (Value *NegOp0 = Negator::Negate(/*IsNegation*/ true, Op0, *this))
-      return BinaryOperator::CreateMul(
-          NegOp0, ConstantExpr::getNeg(cast<Constant>(Op1)), I.getName());
+    if (Value *NegOp0 =
+            Negator::Negate(/*IsNegation*/ true, HasNSW, Op0, *this)) {
+      auto *Op1C = cast<Constant>(Op1);
+      return replaceInstUsesWith(
+          I, Builder.CreateMul(NegOp0, ConstantExpr::getNeg(Op1C), "",
+                               /* HasNUW */ false,
+                               HasNSW && Op1C->isNotMinSignedValue()));
+    }
 
     // Try to convert multiply of extended operand to narrow negate and shift
     // for better analysis.

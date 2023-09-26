@@ -116,9 +116,9 @@ struct TileLoadOpConversion : public OpRewritePattern<arm_sme::TileLoadOp> {
     getMemrefIndices(tileLoadOp.getIndices(),
                      tileLoadOp.getMemRefType().getRank(), tileSliceIndex,
                      numTileSlices, memrefIndices, loc, rewriter);
-    rewriter.create<arm_sme::LoadTileSliceOp>(loc, tileType,
-                                              tileLoadOp.getBase(), tile,
-                                              memrefIndices, tileSliceIndex);
+    rewriter.create<arm_sme::LoadTileSliceOp>(
+        loc, tileType, tileLoadOp.getBase(), tile, memrefIndices,
+        tileSliceIndex, tileLoadOp.getLayout());
 
     rewriter.setInsertionPointAfter(forOp);
 
@@ -134,7 +134,7 @@ struct TileLoadOpConversion : public OpRewritePattern<arm_sme::TileLoadOp> {
 ///
 ///  BEFORE:
 ///  ```mlir
-///  arm_sme.tile_store %tile, %dest[%c0, %c0]
+///  arm_sme.tile_store %tile, %dest[%c0, %c0], <vertical>
 ///    : memref<?x?xi32>, vector<[4]x[4]xi32
 ///  ```
 ///
@@ -146,8 +146,8 @@ struct TileLoadOpConversion : public OpRewritePattern<arm_sme::TileLoadOp> {
 ///  %min_svl_s = arith.constant 4 : index
 ///  %svl_s = arith.muli %min_svl_s, %vscale : index
 ///  scf.for %tile_slice_idx = %c0 to %svl_s step %c1 {
-///    arm_sme.store_tile_slice %tile, %tile_slice_idx, %dest[%tile_slice_idx]
-///      : memref<?x?xi32>, vector<[4]x[4]xi32>
+///    arm_sme.store_tile_slice %tile, %tile_slice_idx, %dest[%tile_slice_idx],
+///      <vertical> : memref<?x?xi32>, vector<[4]x[4]xi32>
 ///  }
 ///  ```
 struct TileStoreOpConversion : public OpRewritePattern<arm_sme::TileStoreOp> {
@@ -184,8 +184,91 @@ struct TileStoreOpConversion : public OpRewritePattern<arm_sme::TileStoreOp> {
                      numTileSlices, memrefIndices, loc, rewriter);
     rewriter.replaceOpWithNewOp<arm_sme::StoreTileSliceOp>(
         tileStoreOp, tileStoreOp.getValueToStore(), tileSliceIndex,
-        tileStoreOp.getBase(), memrefIndices);
+        tileStoreOp.getBase(), memrefIndices, tileStoreOp.getLayout());
 
+    return success();
+  }
+};
+
+/// Lowers `vector.print` of a tile into a loop over the rows of the tile,
+/// extracting them via a MOVA, then printing with a 1D `vector.print`.
+///
+///  BEFORE:
+///  ```mlir
+///  vector.print %tile : vector<[4]x[4]xf32>
+///  ```
+///  AFTER:
+///  ```mlir
+///  %c0 = arith.constant 0 : index
+///  %c1 = arith.constant 1 : index
+///  %c4 = arith.constant 4 : index
+///  %ptrue = arith.constant dense<true> : vector<[4]xi1>
+///  %tile_id = arm_sme.cast_vector_to_tile %tile : vector<[4]x[4]xf32> to i32
+///  %vscale = vector.vscale
+///  %svl_s = arith.muli %c4, %vscale : index
+///  %cst = arith.constant dense<0.000000e+00> : vector<[4]xf32>
+///  scf.for %i = %c0 to %svl_s step %c1 {
+///    %slice_idx = arith.index_cast %i : index to i32
+///    %tile_slice = "arm_sme.intr.read.horiz"
+///        (%cst, %ptrue, %tile_id, %slice_idx)
+///      : (vector<[4]xf32>, vector<[4]xi1>, i32, i32) -> vector<[4]xf32>
+///    vector.print %tile_slice : vector<[4]xf32>
+///  }
+///  ```
+struct TileVectorPrintOpConversion : public OpRewritePattern<vector::PrintOp> {
+  using OpRewritePattern<vector::PrintOp>::OpRewritePattern;
+
+  LogicalResult matchAndRewrite(vector::PrintOp printOp,
+                                PatternRewriter &rewriter) const override {
+    if (!printOp.getSource())
+      return failure();
+
+    VectorType vectorType = dyn_cast<VectorType>(printOp.getPrintType());
+    if (!vectorType || !arm_sme::isValidSMETileVectorType(vectorType))
+      return failure();
+
+    auto loc = printOp.getLoc();
+
+    // Create an 'all true' predicate for each tile row.
+    auto predicateType =
+        VectorType::get(vectorType.getDimSize(1), rewriter.getI1Type(), true);
+    auto allTruePredicate = rewriter.create<arith::ConstantOp>(
+        loc, DenseElementsAttr::get(predicateType, true));
+
+    // Cast tile to i32 tile ID.
+    auto tileId =
+        rewriter.create<arm_sme::CastVectorToTile>(loc, printOp.getSource());
+    Value tileIdI32 = castTileIDToI32(tileId, loc, rewriter);
+
+    // Zero destination/fallback for tile slice extraction.
+    auto rowType = VectorType::get(vectorType.getDimSize(1),
+                                   vectorType.getElementType(), true);
+    auto zeroVector = rewriter.create<arith::ConstantOp>(
+        loc, rowType, rewriter.getZeroAttr(rowType));
+
+    // Create a loop over the rows of the tile.
+    auto vscale = rewriter.create<vector::VectorScaleOp>(loc);
+    auto minTileRows =
+        rewriter.create<arith::ConstantIndexOp>(loc, vectorType.getDimSize(0));
+    auto lowerBound = rewriter.create<arith::ConstantIndexOp>(loc, 0);
+    auto upperBound = rewriter.create<arith::MulIOp>(loc, minTileRows, vscale);
+    auto step = rewriter.create<arith::ConstantIndexOp>(loc, 1);
+    auto forOp = rewriter.create<scf::ForOp>(loc, lowerBound, upperBound, step);
+    {
+      // Loop body.
+      rewriter.setInsertionPointToStart(forOp.getBody());
+      // Extract the current row from the tile.
+      Value rowIndex = forOp.getInductionVar();
+      auto rowIndexI32 = rewriter.create<arith::IndexCastOp>(
+          loc, rewriter.getI32Type(), rowIndex);
+      auto tileSlice = rewriter.create<arm_sme::aarch64_sme_read_horiz>(
+          loc, rowType, zeroVector, allTruePredicate, tileIdI32, rowIndexI32);
+      // Print the row with a 1D vector.print.
+      rewriter.create<vector::PrintOp>(loc, tileSlice,
+                                       printOp.getPunctuation());
+    }
+
+    rewriter.eraseOp(printOp);
     return success();
   }
 };
@@ -193,8 +276,8 @@ struct TileStoreOpConversion : public OpRewritePattern<arm_sme::TileStoreOp> {
 } // namespace
 
 void mlir::populateArmSMEToSCFConversionPatterns(RewritePatternSet &patterns) {
-  patterns.add<TileLoadOpConversion, TileStoreOpConversion>(
-      patterns.getContext());
+  patterns.add<TileLoadOpConversion, TileStoreOpConversion,
+               TileVectorPrintOpConversion>(patterns.getContext());
 }
 
 namespace {
@@ -208,6 +291,12 @@ struct ConvertArmSMEToSCFPass
     target.addLegalDialect<arm_sme::ArmSMEDialect, vector::VectorDialect,
                            arith::ArithDialect, scf::SCFDialect>();
     target.addIllegalOp<arm_sme::TileLoadOp, arm_sme::TileStoreOp>();
+    target.addDynamicallyLegalOp<vector::PrintOp>([](vector::PrintOp op) {
+      if (!op.getSource())
+        return true;
+      VectorType vectorType = dyn_cast<VectorType>(op.getPrintType());
+      return !vectorType || !arm_sme::isValidSMETileVectorType(vectorType);
+    });
     if (failed(applyPartialConversion(getOperation(), target,
                                       std::move(patterns))))
       signalPassFailure();

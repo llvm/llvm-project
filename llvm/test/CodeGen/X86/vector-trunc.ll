@@ -1948,6 +1948,200 @@ define void @PR34773(ptr %a0, ptr %a1) {
   ret void
 }
 
+define i16 @PR66194(i8 %q) {
+; SSE2-LABEL: PR66194:
+; SSE2:       # %bb.0: # %entry
+; SSE2-NEXT:    xorl %eax, %eax
+; SSE2-NEXT:    xorl %ecx, %ecx
+; SSE2-NEXT:    testb %dil, %dil
+; SSE2-NEXT:    setne %al
+; SSE2-NEXT:    sete %cl
+; SSE2-NEXT:    movl %ecx, %edx
+; SSE2-NEXT:    shll $16, %edx
+; SSE2-NEXT:    orl %eax, %edx
+; SSE2-NEXT:    movd %edx, %xmm0
+; SSE2-NEXT:    pinsrw $2, %eax, %xmm0
+; SSE2-NEXT:    pinsrw $3, %eax, %xmm0
+; SSE2-NEXT:    pinsrw $4, %ecx, %xmm0
+; SSE2-NEXT:    pinsrw $5, %eax, %xmm0
+; SSE2-NEXT:    pinsrw $6, %eax, %xmm0
+; SSE2-NEXT:    pinsrw $7, %ecx, %xmm0
+; SSE2-NEXT:    pcmpeqd %xmm1, %xmm1
+; SSE2-NEXT:    psubw %xmm1, %xmm0
+; SSE2-NEXT:    pand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
+; SSE2-NEXT:    packuswb %xmm0, %xmm0
+; SSE2-NEXT:    pxor %xmm1, %xmm1
+; SSE2-NEXT:    psadbw %xmm0, %xmm1
+; SSE2-NEXT:    movd %xmm1, %eax
+; SSE2-NEXT:    # kill: def $ax killed $ax killed $eax
+; SSE2-NEXT:    retq
+;
+; SSSE3-LABEL: PR66194:
+; SSSE3:       # %bb.0: # %entry
+; SSSE3-NEXT:    xorl %eax, %eax
+; SSSE3-NEXT:    xorl %ecx, %ecx
+; SSSE3-NEXT:    testb %dil, %dil
+; SSSE3-NEXT:    setne %al
+; SSSE3-NEXT:    sete %cl
+; SSSE3-NEXT:    movl %ecx, %edx
+; SSSE3-NEXT:    shll $16, %edx
+; SSSE3-NEXT:    orl %eax, %edx
+; SSSE3-NEXT:    movd %edx, %xmm0
+; SSSE3-NEXT:    pinsrw $2, %eax, %xmm0
+; SSSE3-NEXT:    pinsrw $3, %eax, %xmm0
+; SSSE3-NEXT:    pinsrw $4, %ecx, %xmm0
+; SSSE3-NEXT:    pinsrw $5, %eax, %xmm0
+; SSSE3-NEXT:    pinsrw $6, %eax, %xmm0
+; SSSE3-NEXT:    pinsrw $7, %ecx, %xmm0
+; SSSE3-NEXT:    pcmpeqd %xmm1, %xmm1
+; SSSE3-NEXT:    psubw %xmm1, %xmm0
+; SSSE3-NEXT:    movdqa %xmm0, -{{[0-9]+}}(%rsp)
+; SSSE3-NEXT:    movzbl -{{[0-9]+}}(%rsp), %eax
+; SSSE3-NEXT:    shll $8, %eax
+; SSSE3-NEXT:    movzbl -{{[0-9]+}}(%rsp), %ecx
+; SSSE3-NEXT:    orl %eax, %ecx
+; SSSE3-NEXT:    movzbl -{{[0-9]+}}(%rsp), %eax
+; SSSE3-NEXT:    shll $8, %eax
+; SSSE3-NEXT:    movzbl -{{[0-9]+}}(%rsp), %edx
+; SSSE3-NEXT:    orl %eax, %edx
+; SSSE3-NEXT:    movzbl -{{[0-9]+}}(%rsp), %eax
+; SSSE3-NEXT:    shll $16, %eax
+; SSSE3-NEXT:    orl %edx, %eax
+; SSSE3-NEXT:    movzbl -{{[0-9]+}}(%rsp), %edx
+; SSSE3-NEXT:    shll $24, %edx
+; SSSE3-NEXT:    orl %eax, %edx
+; SSSE3-NEXT:    movd %edx, %xmm0
+; SSSE3-NEXT:    pinsrw $2, %ecx, %xmm0
+; SSSE3-NEXT:    movzbl -{{[0-9]+}}(%rsp), %eax
+; SSSE3-NEXT:    shll $8, %eax
+; SSSE3-NEXT:    movzbl -{{[0-9]+}}(%rsp), %ecx
+; SSSE3-NEXT:    orl %eax, %ecx
+; SSSE3-NEXT:    pinsrw $3, %ecx, %xmm0
+; SSSE3-NEXT:    pxor %xmm1, %xmm1
+; SSSE3-NEXT:    psadbw %xmm0, %xmm1
+; SSSE3-NEXT:    movd %xmm1, %eax
+; SSSE3-NEXT:    # kill: def $ax killed $ax killed $eax
+; SSSE3-NEXT:    retq
+;
+; SSE41-LABEL: PR66194:
+; SSE41:       # %bb.0: # %entry
+; SSE41-NEXT:    xorl %eax, %eax
+; SSE41-NEXT:    xorl %ecx, %ecx
+; SSE41-NEXT:    testb %dil, %dil
+; SSE41-NEXT:    setne %al
+; SSE41-NEXT:    sete %cl
+; SSE41-NEXT:    movd %eax, %xmm0
+; SSE41-NEXT:    pinsrb $2, %ecx, %xmm0
+; SSE41-NEXT:    pinsrb $4, %eax, %xmm0
+; SSE41-NEXT:    pinsrb $6, %eax, %xmm0
+; SSE41-NEXT:    pinsrb $8, %ecx, %xmm0
+; SSE41-NEXT:    pinsrb $10, %eax, %xmm0
+; SSE41-NEXT:    pinsrb $12, %eax, %xmm0
+; SSE41-NEXT:    pinsrb $14, %ecx, %xmm0
+; SSE41-NEXT:    pcmpeqd %xmm1, %xmm1
+; SSE41-NEXT:    psubw %xmm1, %xmm0
+; SSE41-NEXT:    pshufb {{.*#+}} xmm0 = xmm0[0,2,4,6,8,10,12,14,u,u,u,u,u,u,u,u]
+; SSE41-NEXT:    pxor %xmm1, %xmm1
+; SSE41-NEXT:    psadbw %xmm0, %xmm1
+; SSE41-NEXT:    movd %xmm1, %eax
+; SSE41-NEXT:    # kill: def $ax killed $ax killed $eax
+; SSE41-NEXT:    retq
+;
+; AVX1-LABEL: PR66194:
+; AVX1:       # %bb.0: # %entry
+; AVX1-NEXT:    xorl %eax, %eax
+; AVX1-NEXT:    testb %dil, %dil
+; AVX1-NEXT:    setne %al
+; AVX1-NEXT:    sete %cl
+; AVX1-NEXT:    vmovd %eax, %xmm0
+; AVX1-NEXT:    vpinsrb $2, %ecx, %xmm0, %xmm0
+; AVX1-NEXT:    vpinsrb $4, %eax, %xmm0, %xmm0
+; AVX1-NEXT:    vpinsrb $6, %eax, %xmm0, %xmm0
+; AVX1-NEXT:    vpinsrb $8, %ecx, %xmm0, %xmm0
+; AVX1-NEXT:    vpinsrb $10, %eax, %xmm0, %xmm0
+; AVX1-NEXT:    vpinsrb $12, %eax, %xmm0, %xmm0
+; AVX1-NEXT:    vpinsrb $14, %ecx, %xmm0, %xmm0
+; AVX1-NEXT:    vpcmpeqd %xmm1, %xmm1, %xmm1
+; AVX1-NEXT:    vpsubw %xmm1, %xmm0, %xmm0
+; AVX1-NEXT:    vpshufd {{.*#+}} xmm1 = xmm0[2,3,2,3]
+; AVX1-NEXT:    vpaddw %xmm1, %xmm0, %xmm0
+; AVX1-NEXT:    vpshufd {{.*#+}} xmm1 = xmm0[1,1,1,1]
+; AVX1-NEXT:    vpaddw %xmm1, %xmm0, %xmm0
+; AVX1-NEXT:    vpsrld $16, %xmm0, %xmm1
+; AVX1-NEXT:    vpaddw %xmm1, %xmm0, %xmm0
+; AVX1-NEXT:    vmovd %xmm0, %eax
+; AVX1-NEXT:    # kill: def $ax killed $ax killed $eax
+; AVX1-NEXT:    retq
+;
+; AVX2-LABEL: PR66194:
+; AVX2:       # %bb.0: # %entry
+; AVX2-NEXT:    xorl %eax, %eax
+; AVX2-NEXT:    xorl %ecx, %ecx
+; AVX2-NEXT:    testb %dil, %dil
+; AVX2-NEXT:    setne %al
+; AVX2-NEXT:    sete %cl
+; AVX2-NEXT:    vmovd %eax, %xmm0
+; AVX2-NEXT:    vpinsrw $1, %ecx, %xmm0, %xmm0
+; AVX2-NEXT:    vpinsrw $2, %eax, %xmm0, %xmm0
+; AVX2-NEXT:    vpinsrw $3, %eax, %xmm0, %xmm0
+; AVX2-NEXT:    vpinsrw $4, %ecx, %xmm0, %xmm0
+; AVX2-NEXT:    vpinsrw $5, %eax, %xmm0, %xmm0
+; AVX2-NEXT:    vpinsrw $6, %eax, %xmm0, %xmm0
+; AVX2-NEXT:    vpinsrw $7, %ecx, %xmm0, %xmm0
+; AVX2-NEXT:    vpaddw {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
+; AVX2-NEXT:    vpshufd {{.*#+}} xmm1 = xmm0[2,3,2,3]
+; AVX2-NEXT:    vpaddw %xmm1, %xmm0, %xmm0
+; AVX2-NEXT:    vpshufd {{.*#+}} xmm1 = xmm0[1,1,1,1]
+; AVX2-NEXT:    vpaddw %xmm1, %xmm0, %xmm0
+; AVX2-NEXT:    vpsrld $16, %xmm0, %xmm1
+; AVX2-NEXT:    vpaddw %xmm1, %xmm0, %xmm0
+; AVX2-NEXT:    vmovd %xmm0, %eax
+; AVX2-NEXT:    # kill: def $ax killed $ax killed $eax
+; AVX2-NEXT:    retq
+;
+; AVX512-LABEL: PR66194:
+; AVX512:       # %bb.0: # %entry
+; AVX512-NEXT:    xorl %eax, %eax
+; AVX512-NEXT:    xorl %ecx, %ecx
+; AVX512-NEXT:    testb %dil, %dil
+; AVX512-NEXT:    setne %al
+; AVX512-NEXT:    sete %cl
+; AVX512-NEXT:    vmovd %eax, %xmm0
+; AVX512-NEXT:    vpinsrw $1, %ecx, %xmm0, %xmm0
+; AVX512-NEXT:    vpinsrw $2, %eax, %xmm0, %xmm0
+; AVX512-NEXT:    vpinsrw $3, %eax, %xmm0, %xmm0
+; AVX512-NEXT:    vpinsrw $4, %ecx, %xmm0, %xmm0
+; AVX512-NEXT:    vpinsrw $5, %eax, %xmm0, %xmm0
+; AVX512-NEXT:    vpinsrw $6, %eax, %xmm0, %xmm0
+; AVX512-NEXT:    vpinsrw $7, %ecx, %xmm0, %xmm0
+; AVX512-NEXT:    vpaddw {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
+; AVX512-NEXT:    vpshufd {{.*#+}} xmm1 = xmm0[2,3,2,3]
+; AVX512-NEXT:    vpaddw %xmm1, %xmm0, %xmm0
+; AVX512-NEXT:    vpshufd {{.*#+}} xmm1 = xmm0[1,1,1,1]
+; AVX512-NEXT:    vpaddw %xmm1, %xmm0, %xmm0
+; AVX512-NEXT:    vpsrld $16, %xmm0, %xmm1
+; AVX512-NEXT:    vpaddw %xmm1, %xmm0, %xmm0
+; AVX512-NEXT:    vmovd %xmm0, %eax
+; AVX512-NEXT:    # kill: def $ax killed $ax killed $eax
+; AVX512-NEXT:    retq
+entry:
+  %cmp12.i.13 = icmp ne i8 %q, 0
+  %cond.i15.13 = zext i1 %cmp12.i.13 to i16
+  %tobool.not.i.13 = icmp eq i8 %q, 0
+  %cond18.i.13 = zext i1 %tobool.not.i.13 to i16
+  %0 = insertelement <16 x i16> <i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1>, i16 %cond.i15.13, i64 8
+  %1 = insertelement <16 x i16> %0, i16 %cond18.i.13, i64 9
+  %2 = insertelement <16 x i16> %1, i16 %cond.i15.13, i64 10
+  %3 = insertelement <16 x i16> %2, i16 %cond.i15.13, i64 11
+  %4 = insertelement <16 x i16> %3, i16 %cond18.i.13, i64 12
+  %5 = insertelement <16 x i16> %4, i16 %cond.i15.13, i64 13
+  %6 = insertelement <16 x i16> %5, i16 %cond.i15.13, i64 14
+  %7 = insertelement <16 x i16> %6, i16 %cond18.i.13, i64 15
+  %8 = tail call i16 @llvm.vector.reduce.add.v16i16(<16 x i16> %7)
+  ret i16 %8
+}
+declare i16 @llvm.vector.reduce.add.v16i16(<16 x i16>)
+
 ; Store merging must not infinitely fight store splitting.
 
 define void @store_merge_split(<8 x i32> %w1, <8 x i32> %w2, i64 %idx, ptr %p) align 2 {

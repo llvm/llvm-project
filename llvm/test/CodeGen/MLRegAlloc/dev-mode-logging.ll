@@ -26,25 +26,25 @@
 ; CHECK-LABEL: context: SyFgets
 ; CHECK-NEXT: observation: 0
 ; ML: index_to_evict: 9
-; NOML: index_to_evict: 12
+; NOML: index_to_evict: 11
 ; CHECK-NEXT: reward: 0
 ; CHECK-NEXT: observation: 1
 ; CHECK-NEXT: mask:
-; NOML:      observation: 16
+; NOML:      observation: 17
 ; ML:      observation: 83
-; ML: reward: 37.06
-; NOML: reward: 36.64
+; ML: reward: 38.42
+; NOML: reward: 37.06
 
 
 ; CHECK-TWO-FCTS: context: SyFgets
 ; CHECK-TWO-FCTS-NEXT: observation: 0
 ; CHECK-TWO-FCTS-NEXT: mask: 0,0,0,0,0,0,0,0,0,1,1,1,1,1,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1
-; CHECK-TWO-FCTS: index_to_evict: 12
-; CHECK-TWO-FCTS: observation: 16
-; CHECK-TWO-FCTS: reward: 36.64
+; CHECK-TWO-FCTS: index_to_evict: 11
+; CHECK-TWO-FCTS: observation: 17
+; CHECK-TWO-FCTS: reward: 37.06
 ; CHECK-TWO-FCTS: context: SyFgetsCopy
 ; CHECK-TWO-FCTS-NEXT: observation: 0
 ; CHECK-TWO-FCTS-NEXT: mask: 0,0,0,0,0,0,0,0,0,1,1,1,1,1,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1
-; CHECK-TWO-FCTS: index_to_evict: 12
-; CHECK-TWO-FCTS: observation: 16
-; CHECK-TWO-FCTS: reward: 36.64
+; CHECK-TWO-FCTS: index_to_evict: 11
+; CHECK-TWO-FCTS: observation: 17
+; CHECK-TWO-FCTS: reward: 37.06

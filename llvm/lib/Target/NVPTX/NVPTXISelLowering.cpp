@@ -23,6 +23,7 @@
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/CodeGen/Analysis.h"
+#include "llvm/CodeGen/ISDOpcodes.h"
 #include "llvm/CodeGen/MachineFunction.h"
 #include "llvm/CodeGen/MachineMemOperand.h"
 #include "llvm/CodeGen/MachineValueType.h"
@@ -641,10 +642,9 @@ NVPTXTargetLowering::NVPTXTargetLowering(const NVPTXTargetMachine &TM,
   setI16x2OperationAction(ISD::UREM, MVT::v2i16, Legal, Custom);
 
   // Other arithmetic and logic ops are unsupported.
-  setOperationAction({ISD::AND, ISD::OR, ISD::XOR, ISD::SDIV, ISD::UDIV,
-                      ISD::SRA, ISD::SRL, ISD::MULHS, ISD::MULHU,
-                      ISD::FP_TO_SINT, ISD::FP_TO_UINT, ISD::SINT_TO_FP,
-                      ISD::UINT_TO_FP},
+  setOperationAction({ISD::SDIV, ISD::UDIV, ISD::SRA, ISD::SRL, ISD::MULHS,
+                      ISD::MULHU, ISD::FP_TO_SINT, ISD::FP_TO_UINT,
+                      ISD::SINT_TO_FP, ISD::UINT_TO_FP},
                      MVT::v2i16, Expand);
 
   setOperationAction(ISD::ADDC, MVT::i32, Legal);
@@ -672,7 +672,7 @@ NVPTXTargetLowering::NVPTXTargetLowering(const NVPTXTargetMachine &TM,
 
   // We have some custom DAG combine patterns for these nodes
   setTargetDAGCombine({ISD::ADD, ISD::AND, ISD::FADD, ISD::MUL, ISD::SHL,
-                       ISD::SREM, ISD::UREM});
+                       ISD::SREM, ISD::UREM, ISD::EXTRACT_VECTOR_ELT});
 
   // setcc for f16x2 and bf16x2 needs special handling to prevent
   // legalizer's attempt to scalarize it due to v2i1 not being legal.
@@ -3088,12 +3088,11 @@ NVPTXTargetLowering::LowerReturn(SDValue Chain, CallingConv::ID CallConv,
 }
 
 void NVPTXTargetLowering::LowerAsmOperandForConstraint(
-    SDValue Op, std::string &Constraint, std::vector<SDValue> &Ops,
+    SDValue Op, StringRef Constraint, std::vector<SDValue> &Ops,
     SelectionDAG &DAG) const {
-  if (Constraint.length() > 1)
+  if (Constraint.size() > 1)
     return;
-  else
-    TargetLowering::LowerAsmOperandForConstraint(Op, Constraint, Ops, DAG);
+  TargetLowering::LowerAsmOperandForConstraint(Op, Constraint, Ops, DAG);
 }
 
 static unsigned getOpcForTextureInstr(unsigned Intrinsic) {
@@ -4804,13 +4803,13 @@ NVPTXTargetLowering::getRegForInlineAsmConstraint(const TargetRegisterInfo *TRI,
 //===----------------------------------------------------------------------===//
 
 bool NVPTXTargetLowering::allowFMA(MachineFunction &MF,
-                                   CodeGenOpt::Level OptLevel) const {
+                                   CodeGenOptLevel OptLevel) const {
   // Always honor command-line argument
   if (FMAContractLevelOpt.getNumOccurrences() > 0)
     return FMAContractLevelOpt > 0;
 
   // Do not contract if we're not optimizing the code.
-  if (OptLevel == 0)
+  if (OptLevel == CodeGenOptLevel::None)
     return false;
 
   // Honor TargetOptions flags that explicitly say fusion is okay.
@@ -4834,10 +4833,9 @@ bool NVPTXTargetLowering::allowUnsafeFPMath(MachineFunction &MF) const {
 /// operands N0 and N1.  This is a helper for PerformADDCombine that is
 /// called with the default operands, and if that fails, with commuted
 /// operands.
-static SDValue PerformADDCombineWithOperands(SDNode *N, SDValue N0, SDValue N1,
-                                           TargetLowering::DAGCombinerInfo &DCI,
-                                             const NVPTXSubtarget &Subtarget,
-                                             CodeGenOpt::Level OptLevel) {
+static SDValue PerformADDCombineWithOperands(
+    SDNode *N, SDValue N0, SDValue N1, TargetLowering::DAGCombinerInfo &DCI,
+    const NVPTXSubtarget &Subtarget, CodeGenOptLevel OptLevel) {
   SelectionDAG  &DAG = DCI.DAG;
   // Skip non-integer, non-scalar case
   EVT VT=N0.getValueType();
@@ -4852,7 +4850,7 @@ static SDValue PerformADDCombineWithOperands(SDNode *N, SDValue N0, SDValue N1,
     // Since integer multiply-add costs the same as integer multiply
     // but is more costly than integer add, do the fusion only when
     // the mul is only used in the add.
-    if (OptLevel==CodeGenOpt::None || VT != MVT::i32 ||
+    if (OptLevel == CodeGenOptLevel::None || VT != MVT::i32 ||
         !N0.getNode()->hasOneUse())
       return SDValue();
 
@@ -4949,7 +4947,7 @@ static SDValue PerformStoreRetvalCombine(SDNode *N) {
 static SDValue PerformADDCombine(SDNode *N,
                                  TargetLowering::DAGCombinerInfo &DCI,
                                  const NVPTXSubtarget &Subtarget,
-                                 CodeGenOpt::Level OptLevel) {
+                                 CodeGenOptLevel OptLevel) {
   SDValue N0 = N->getOperand(0);
   SDValue N1 = N->getOperand(1);
 
@@ -5039,11 +5037,11 @@ static SDValue PerformANDCombine(SDNode *N,
 
 static SDValue PerformREMCombine(SDNode *N,
                                  TargetLowering::DAGCombinerInfo &DCI,
-                                 CodeGenOpt::Level OptLevel) {
+                                 CodeGenOptLevel OptLevel) {
   assert(N->getOpcode() == ISD::SREM || N->getOpcode() == ISD::UREM);
 
   // Don't do anything at less than -O2.
-  if (OptLevel < CodeGenOpt::Default)
+  if (OptLevel < CodeGenOptLevel::Default)
     return SDValue();
 
   SelectionDAG &DAG = DCI.DAG;
@@ -5209,8 +5207,8 @@ static SDValue TryMULWIDECombine(SDNode *N,
 /// PerformMULCombine - Runs PTX-specific DAG combine patterns on MUL nodes.
 static SDValue PerformMULCombine(SDNode *N,
                                  TargetLowering::DAGCombinerInfo &DCI,
-                                 CodeGenOpt::Level OptLevel) {
-  if (OptLevel > 0) {
+                                 CodeGenOptLevel OptLevel) {
+  if (OptLevel > CodeGenOptLevel::None) {
     // Try mul.wide combining at OptLevel > 0
     if (SDValue Ret = TryMULWIDECombine(N, DCI))
       return Ret;
@@ -5222,8 +5220,8 @@ static SDValue PerformMULCombine(SDNode *N,
 /// PerformSHLCombine - Runs PTX-specific DAG combine patterns on SHL nodes.
 static SDValue PerformSHLCombine(SDNode *N,
                                  TargetLowering::DAGCombinerInfo &DCI,
-                                 CodeGenOpt::Level OptLevel) {
-  if (OptLevel > 0) {
+                                 CodeGenOptLevel OptLevel) {
+  if (OptLevel > CodeGenOptLevel::None) {
     // Try mul.wide combining at OptLevel > 0
     if (SDValue Ret = TryMULWIDECombine(N, DCI))
       return Ret;
@@ -5253,9 +5251,50 @@ static SDValue PerformSETCCCombine(SDNode *N,
                          CCNode.getValue(1));
 }
 
+static SDValue PerformEXTRACTCombine(SDNode *N,
+                                     TargetLowering::DAGCombinerInfo &DCI) {
+  SDValue Vector = N->getOperand(0);
+  EVT VectorVT = Vector.getValueType();
+  if (Vector->getOpcode() == ISD::LOAD && VectorVT.isSimple() &&
+      IsPTXVectorType(VectorVT.getSimpleVT()))
+    return SDValue(); // Native vector loads already combine nicely w/
+                      // extract_vector_elt.
+  // Don't mess with singletons or v2*16 types, we already handle them OK.
+  if (VectorVT.getVectorNumElements() == 1 || Isv2x16VT(VectorVT))
+    return SDValue();
+
+  uint64_t VectorBits = VectorVT.getSizeInBits();
+  // We only handle the types we can extract in-register.
+  if (!(VectorBits == 16 || VectorBits == 32 || VectorBits == 64))
+    return SDValue();
+
+  ConstantSDNode *Index = dyn_cast<ConstantSDNode>(N->getOperand(1));
+  // Index == 0 is handled by generic DAG combiner.
+  if (!Index || Index->getZExtValue() == 0)
+    return SDValue();
+
+  SDLoc DL(N);
+
+  MVT IVT = MVT::getIntegerVT(VectorBits);
+  EVT EltVT = VectorVT.getVectorElementType();
+  EVT EltIVT = EltVT.changeTypeToInteger();
+  uint64_t EltBits = EltVT.getScalarSizeInBits();
+
+  SDValue Result = DCI.DAG.getNode(
+      ISD::TRUNCATE, DL, EltIVT,
+      DCI.DAG.getNode(
+          ISD::SRA, DL, IVT, DCI.DAG.getNode(ISD::BITCAST, DL, IVT, Vector),
+          DCI.DAG.getConstant(Index->getZExtValue() * EltBits, DL, IVT)));
+
+  // If element has non-integer type, bitcast it back to the expected type.
+  if (EltVT != EltIVT)
+    Result = DCI.DAG.getNode(ISD::BITCAST, DL, EltVT, Result);
+  return Result;
+}
+
 SDValue NVPTXTargetLowering::PerformDAGCombine(SDNode *N,
                                                DAGCombinerInfo &DCI) const {
-  CodeGenOpt::Level OptLevel = getTargetMachine().getOptLevel();
+  CodeGenOptLevel OptLevel = getTargetMachine().getOptLevel();
   switch (N->getOpcode()) {
     default: break;
     case ISD::ADD:
@@ -5276,6 +5315,8 @@ SDValue NVPTXTargetLowering::PerformDAGCombine(SDNode *N,
     case NVPTXISD::StoreRetvalV2:
     case NVPTXISD::StoreRetvalV4:
       return PerformStoreRetvalCombine(N);
+    case ISD::EXTRACT_VECTOR_ELT:
+      return PerformEXTRACTCombine(N, DCI);
   }
   return SDValue();
 }

@@ -6,15 +6,15 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_LIBC_SRC_SUPPORT_RPC_RPC_UTILS_H
-#define LLVM_LIBC_SRC_SUPPORT_RPC_RPC_UTILS_H
+#ifndef LLVM_LIBC_SRC___SUPPORT_RPC_RPC_UTILS_H
+#define LLVM_LIBC_SRC___SUPPORT_RPC_RPC_UTILS_H
 
 #include "src/__support/CPP/type_traits.h"
 #include "src/__support/GPU/utils.h"
 #include "src/__support/macros/attributes.h" // LIBC_INLINE
 #include "src/__support/macros/properties/architectures.h"
 
-namespace __llvm_libc {
+namespace LIBC_NAMESPACE {
 namespace rpc {
 
 /// Suspend the thread briefly to assist the thread scheduler during busy loops.
@@ -65,6 +65,6 @@ template <typename T, typename U> LIBC_INLINE T *advance(T *ptr, U bytes) {
 }
 
 } // namespace rpc
-} // namespace __llvm_libc
+} // namespace LIBC_NAMESPACE
 
 #endif

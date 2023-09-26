@@ -398,18 +398,18 @@ std::error_code DataAggregator::writeAutoFDOData(StringRef OutputFilename) {
 
   OutFile << FallthroughLBRs.size() << "\n";
   for (const auto &[Trace, Info] : FallthroughLBRs) {
-    OutFile << formatv("{0:x}-{1:x}:{2}\n", filterAddress(Trace.From),
+    OutFile << formatv("{0:x-}-{1:x-}:{2}\n", filterAddress(Trace.From),
                        filterAddress(Trace.To),
                        Info.InternCount + Info.ExternCount);
   }
 
   OutFile << BasicSamples.size() << "\n";
   for (const auto [PC, HitCount] : BasicSamples)
-    OutFile << formatv("{0:x}:{1}\n", filterAddress(PC), HitCount);
+    OutFile << formatv("{0:x-}:{1}\n", filterAddress(PC), HitCount);
 
   OutFile << BranchLBRs.size() << "\n";
   for (const auto &[Trace, Info] : BranchLBRs) {
-    OutFile << formatv("{0:x}->{1:x}:{2}\n", filterAddress(Trace.From),
+    OutFile << formatv("{0:x-}->{1:x-}:{2}\n", filterAddress(Trace.From),
                        filterAddress(Trace.To), Info.TakenCount);
   }
 

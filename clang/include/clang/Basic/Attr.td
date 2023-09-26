@@ -1158,7 +1158,7 @@ def Constructor : InheritableAttr {
   let Spellings = [GCC<"constructor">];
   let Args = [DefaultIntArgument<"Priority", 65535>];
   let Subjects = SubjectList<[Function]>;
-  let Documentation = [Undocumented];
+  let Documentation = [CtorDtorDocs];
 }
 
 def CPUSpecific : InheritableAttr {
@@ -1424,7 +1424,7 @@ def Destructor : InheritableAttr {
   let Spellings = [GCC<"destructor">];
   let Args = [DefaultIntArgument<"Priority", 65535>];
   let Subjects = SubjectList<[Function]>;
-  let Documentation = [Undocumented];
+  let Documentation = [CtorDtorDocs];
 }
 
 def EmptyBases : InheritableAttr, TargetSpecificAttr<TargetMicrosoftCXXABI> {
@@ -3125,7 +3125,7 @@ def AnyX86Interrupt : InheritableAttr, TargetSpecificAttr<TargetAnyX86> {
   let Subjects = SubjectList<[HasFunctionProto]>;
   let ParseKind = "Interrupt";
   let HasCustomParsing = 1;
-  let Documentation = [Undocumented];
+  let Documentation = [AnyX86InterruptDocs];
 }
 
 def AnyX86NoCallerSavedRegisters : InheritableAttr,

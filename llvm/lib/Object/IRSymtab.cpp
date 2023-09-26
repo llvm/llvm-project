@@ -215,6 +215,11 @@ Expected<int> Builder::getComdatIndex(const Comdat *C, const Module *M) {
   return P.first->second;
 }
 
+static DenseSet<StringRef> buildPreservedSymbolsSet() {
+  return DenseSet<StringRef>(std::begin(PreservedSymbols),
+                             std::end(PreservedSymbols));
+}
+
 Error Builder::addSymbol(const ModuleSymbolTable &Msymtab,
                          const SmallPtrSet<GlobalValue *, 4> &Used,
                          ModuleSymbolTable::Symbol Msym) {
@@ -270,7 +275,9 @@ Error Builder::addSymbol(const ModuleSymbolTable &Msymtab,
 
   setStr(Sym.IRName, GV->getName());
 
-  bool IsPreservedSymbol = llvm::is_contained(PreservedSymbols, GV->getName());
+  static const DenseSet<StringRef> PreservedSymbolsSet =
+      buildPreservedSymbolsSet();
+  bool IsPreservedSymbol = PreservedSymbolsSet.contains(GV->getName());
 
   if (Used.count(GV) || IsPreservedSymbol)
     Sym.Flags |= 1 << storage::Symbol::FB_used;

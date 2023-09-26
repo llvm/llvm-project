@@ -854,15 +854,29 @@ def warn_fortify_strlen_overflow: Warning<
   " but the source string has length %2 (including NUL byte)">,
   InGroup<FortifySource>;
 
-def warn_fortify_source_format_overflow : Warning<
+def subst_format_overflow : TextSubstitution<
   "'%0' will always overflow; destination buffer has size %1,"
-  " but format string expands to at least %2">,
-  InGroup<FortifySource>;
+  " but format string expands to at least %2">;
 
-def warn_fortify_source_format_truncation: Warning<
+def warn_format_overflow : Warning<
+  "%sub{subst_format_overflow}0,1,2">,
+  InGroup<FormatOverflow>;
+
+def warn_format_overflow_non_kprintf : Warning<
+  "%sub{subst_format_overflow}0,1,2">,
+  InGroup<FormatOverflowNonKprintf>;
+
+def subst_format_truncation: TextSubstitution<
   "'%0' will always be truncated; specified size is %1,"
-  " but format string expands to at least %2">,
-  InGroup<FortifySource>;
+  " but format string expands to at least %2">;
+
+def warn_format_truncation: Warning<
+  "%sub{subst_format_truncation}0,1,2">,
+  InGroup<FormatTruncation>;
+
+def warn_format_truncation_non_kprintf: Warning<
+  "%sub{subst_format_truncation}0,1,2">,
+  InGroup<FormatTruncationNonKprintf>;
 
 def warn_fortify_scanf_overflow : Warning<
   "'%0' may overflow; destination buffer in argument %1 has size "
@@ -2850,6 +2864,8 @@ def warn_cxx11_compat_constexpr_body_multiple_return : Warning<
   InGroup<CXXPre14Compat>, DefaultIgnore;
 def note_constexpr_body_previous_return : Note<
   "previous return statement is here">;
+def err_ctordtor_attr_consteval : Error<
+  "%0 attribute cannot be applied to a 'consteval' function">;
 
 // C++20 function try blocks in constexpr
 def ext_constexpr_function_try_block_cxx20 : ExtWarn<
@@ -3162,6 +3178,11 @@ def err_alignas_underaligned : Error<
   "requested alignment is less than minimum alignment of %1 for type %0">;
 def warn_aligned_attr_underaligned : Warning<err_alignas_underaligned.Summary>,
   InGroup<IgnoredAttributes>;
+def err_ctor_dtor_attr_on_non_void_func : Error<
+  "%0 attribute can only be applied to a function which accepts no arguments "
+  "and has a 'void' or 'int' return type">;
+def err_ctor_dtor_member_func : Error<
+  "%0 attribute cannot be applied to a member function">;
 def err_attribute_sizeless_type : Error<
   "%0 attribute cannot be applied to sizeless type %1">;
 def err_attribute_argument_n_type : Error<
@@ -11916,6 +11937,9 @@ def note_unsafe_buffer_operation : Note<
   "used%select{| in pointer arithmetic| in buffer access}0 here">;
 def note_unsafe_buffer_variable_fixit_group : Note<
   "change type of %0 to '%select{std::span|std::array|std::span::iterator}1' to preserve bounds information%select{|, and change %2 to '%select{std::span|std::array|std::span::iterator}1' to propagate bounds information between them}3">;
+def note_unsafe_buffer_variable_fixit_together : Note<
+  "change type of %0 to '%select{std::span|std::array|std::span::iterator}1' to preserve bounds information"
+  "%select{|, and change %2 to safe types to make function %4 bounds-safe}3">;
 def note_safe_buffer_usage_suggestions_disabled : Note<
   "pass -fsafe-buffer-usage-suggestions to receive code hardening suggestions">;
 #ifndef NDEBUG

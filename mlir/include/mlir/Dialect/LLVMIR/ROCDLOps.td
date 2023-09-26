@@ -71,6 +71,14 @@ class ROCDL_IntrPure1Op<string mnemonic> :
   LLVM_IntrOpBase<ROCDL_Dialect, mnemonic,
   "amdgcn_" # !subst(".", "_", mnemonic), [], [], [Pure], 1>;
 
+class ROCDL_IntrOp<string mnemonic, list<int> overloadedResults,
+  list<int> overloadedOperands, list<Trait> traits, int numResults,
+  int requiresAccessGroup = 0, int requiresAliasAnalysis = 0> :
+  LLVM_IntrOpBase<ROCDL_Dialect,  mnemonic,
+    "amdgcn_" # !subst(".", "_", mnemonic), overloadedResults,
+    overloadedOperands, traits, numResults, requiresAccessGroup,
+    requiresAliasAnalysis>;
+
 //===----------------------------------------------------------------------===//
 // ROCDL special register op definitions
 //===----------------------------------------------------------------------===//
@@ -262,7 +270,96 @@ def ROCDL_wmma_bf16_16x16x16_bf16 : ROCDL_Wmma_IntrOp<"wmma.bf16.16x16x16.bf16">
 def ROCDL_wmma_i32_16x16x16_iu8 : ROCDL_Wmma_IntrOp<"wmma.i32.16x16x16.iu8">;
 def ROCDL_wmma_i32_16x16x16_iu4 : ROCDL_Wmma_IntrOp<"wmma.i32.16x16x16.iu4">;
 
+//===---------------------------------------------------------------------===//
+// Operations on raw buffer resources (stride of 0, bounds checks either off or in
+// raw buffer mode).
+//===---------------------------------------------------------------------===//
 
+def ROCDLBufferRsrc : LLVM_OpaquePointerInAddressSpace<8>;
+
+def ROCDL_MakeBufferRsrcOp :
+  ROCDL_IntrOp<"make.buffer.rsrc", [], [0], [Pure], 1>,
+  Arguments<(ins LLVM_AnyPointer:$base,
+                 I16:$stride,
+                 I32:$numRecords,
+                 I32:$flags)> {
+  let results = (outs ROCDLBufferRsrc:$res);
+  let assemblyFormat = "operands attr-dict `:` type($base) `to` type($res)";
+}
+
+def ROCDL_RawPtrBufferLoadOp :
+  ROCDL_IntrOp<"raw.ptr.buffer.load", [0], [], [], 1, 0, 1> {
+  dag args = (ins Arg<ROCDLBufferRsrc, "", [MemRead]>:$rsrc,
+                  I32:$offset,
+                  I32:$soffset,
+                  I32:$aux);
+  let arguments = !con(args, aliasAttrs);
+  let assemblyFormat = "operands attr-dict `:` type($res)";
+  let extraClassDefinition = [{
+    ::llvm::SmallVector<::mlir::Value> $cppClass::getAccessedOperands() {
+      return {getRes()};
+    }
+  }];
+}
+
+def ROCDL_RawPtrBufferStoreOp :
+  ROCDL_IntrOp<"raw.ptr.buffer.store", [], [0], [], 0, 0, 1> {
+  dag args = (ins LLVM_Type:$vdata,
+                  Arg<ROCDLBufferRsrc, "", [MemWrite]>:$rsrc,
+                  I32:$offset,
+                  I32:$soffset,
+                  I32:$aux);
+  let arguments = !con(args, aliasAttrs);
+  let assemblyFormat = "operands attr-dict `:` type($vdata)";
+  let extraClassDefinition = [{
+    ::llvm::SmallVector<::mlir::Value> $cppClass::getAccessedOperands() {
+      return {getRsrc()};
+    }
+  }];
+
+}
+
+def ROCDL_RawPtrBufferAtomicCmpSwap :
+  ROCDL_IntrOp<"raw.ptr.buffer.atomic.cmpswap",
+    [0], [], [AllTypesMatch<["res", "src", "cmp"]>], 1, 0, 1> {
+  dag args = (ins LLVM_Type:$src,
+                  LLVM_Type:$cmp,
+                  Arg<ROCDLBufferRsrc, "", [MemRead, MemWrite]>:$rsrc,
+                  I32:$offset,
+                  I32:$soffset,
+                  I32:$aux);
+  let arguments = !con(args, aliasAttrs);
+  let assemblyFormat = "operands attr-dict `:` type($res)";
+  let extraClassDefinition = [{
+    ::llvm::SmallVector<::mlir::Value> $cppClass::getAccessedOperands() {
+      return {getRsrc()};
+    }
+  }];
+}
+
+class ROCDL_RawPtrBufferAtomicNoRet<string op> :
+  ROCDL_IntrOp<"raw.ptr.buffer.atomic." # op, [], [0], [], 0, 0, 1> {
+  dag args = (ins LLVM_Type:$vdata,
+                  Arg<ROCDLBufferRsrc, "", [MemRead, MemWrite]>:$rsrc,
+                  I32:$offset,
+                  I32:$soffset,
+                  I32:$aux);
+  let arguments = !con(args, aliasAttrs);
+  let assemblyFormat = "operands attr-dict `:` type($vdata)";
+  let extraClassDefinition = [{
+    ::llvm::SmallVector<::mlir::Value> $cppClass::getAccessedOperands() {
+      return {getRsrc()};
+    }
+  }];
+}
+
+def ROCDL_RawPtrBufferAtomicFmaxOp : ROCDL_RawPtrBufferAtomicNoRet<"fmax">;
+def ROCDL_RawPtrBufferAtomicSmaxOp : ROCDL_RawPtrBufferAtomicNoRet<"smax">;
+def ROCDL_RawPtrBufferAtomicUminOp : ROCDL_RawPtrBufferAtomicNoRet<"umin">;
+// Note: not supported on all architectures
+def ROCDL_RawPtrBufferAtomicFaddOp : ROCDL_RawPtrBufferAtomicNoRet<"fadd">;
+
+/// LEGACY BUFFER OPERATIONS. DO NOT USE IN NEW CODE. KEPT FOR IR COMPATIBILITY.
 //===---------------------------------------------------------------------===//
 // Vector buffer load/store intrinsics
 

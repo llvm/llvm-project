@@ -127,6 +127,9 @@ InstructionCost RISCVTTIImpl::getIntImmCostInst(unsigned Opcode, unsigned Idx,
     // Power of 2 is a shift. Negated power of 2 is a shift and a negate.
     if (Imm.isPowerOf2() || Imm.isNegatedPowerOf2())
       return TTI::TCC_Free;
+    // One more or less than a power of 2 can use SLLI+ADD/SUB.
+    if ((Imm + 1).isPowerOf2() || (Imm - 1).isPowerOf2())
+      return TTI::TCC_Free;
     // FIXME: There is no MULI instruction.
     Takes12BitImm = true;
     break;
@@ -1435,6 +1438,15 @@ InstructionCost RISCVTTIImpl::getCmpSelInstrCost(unsigned Opcode, Type *ValTy,
   // TODO: Add cost for scalar type.
 
   return BaseT::getCmpSelInstrCost(Opcode, ValTy, CondTy, VecPred, CostKind, I);
+}
+
+InstructionCost RISCVTTIImpl::getCFInstrCost(unsigned Opcode,
+                                             TTI::TargetCostKind CostKind,
+                                             const Instruction *I) {
+  if (CostKind != TTI::TCK_RecipThroughput)
+    return Opcode == Instruction::PHI ? 0 : 1;
+  // Branches are assumed to be predicted.
+  return 0;
 }
 
 InstructionCost RISCVTTIImpl::getVectorInstrCost(unsigned Opcode, Type *Val,

@@ -853,9 +853,11 @@ void CGOpenMPRuntimeGPU::emitTargetOutlinedFunction(
 
 CGOpenMPRuntimeGPU::CGOpenMPRuntimeGPU(CodeGenModule &CGM)
     : CGOpenMPRuntime(CGM) {
-  llvm::OpenMPIRBuilderConfig Config(CGM.getLangOpts().OpenMPIsTargetDevice,
-                                     isGPU(), hasRequiresUnifiedSharedMemory(),
-                                     CGM.getLangOpts().OpenMPOffloadMandatory);
+  llvm::OpenMPIRBuilderConfig Config(
+      CGM.getLangOpts().OpenMPIsTargetDevice, isGPU(),
+      CGM.getLangOpts().OpenMPOffloadMandatory,
+      /*HasRequiresReverseOffload*/ false, /*HasRequiresUnifiedAddress*/ false,
+      hasRequiresUnifiedSharedMemory(), /*HasRequiresDynamicAllocators*/ false);
   OMPBuilder.setConfig(Config);
 
   if (!CGM.getLangOpts().OpenMPIsTargetDevice)

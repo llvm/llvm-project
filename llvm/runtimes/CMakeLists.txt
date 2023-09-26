@@ -105,8 +105,14 @@ function(builtin_register_target compiler_rt_path name)
     string(FIND "${variable_name}" "BUILTINS_${name}" out)
     if("${out}" EQUAL 0)
       string(REPLACE "BUILTINS_${name}_" "" new_name ${variable_name})
-      string(REPLACE ";" "|" new_value "${${variable_name}}")
-      list(APPEND ${name}_extra_args "-D${new_name}=${new_value}")
+      if(new_name STREQUAL CACHE_FILES)
+        foreach(cache IN LISTS ${variable_name})
+          list(APPEND ${name}_extra_args -C ${cache})
+        endforeach()
+      else()
+        string(REPLACE ";" "|" new_value "${${variable_name}}")
+        list(APPEND ${name}_extra_args "-D${new_name}=${new_value}")
+      endif()
     endif()
   endforeach()
 
@@ -326,8 +332,14 @@ function(runtime_register_target name)
       string(FIND "${variable_name}" "RUNTIMES_${extra_name}_" out)
       if("${out}" EQUAL 0)
         string(REPLACE "RUNTIMES_${extra_name}_" "" new_name ${variable_name})
-        string(REPLACE ";" "|" new_value "${${variable_name}}")
-        list(APPEND ${name}_extra_args "-D${new_name}=${new_value}")
+        if(new_name STREQUAL CACHE_FILES)
+          foreach(cache IN LISTS ${variable_name})
+            list(APPEND ${name}_extra_args -C ${cache})
+          endforeach()
+        else()
+          string(REPLACE ";" "|" new_value "${${variable_name}}")
+          list(APPEND ${name}_extra_args "-D${new_name}=${new_value}")
+        endif()
       endif()
     endforeach()
   endforeach()
@@ -512,6 +524,7 @@ if(runtimes)
         llvm-nm
         llvm-objdump
         llvm-profdata
+        llvm-size
         llvm-xray
         not
         obj2yaml

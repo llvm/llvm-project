@@ -96,14 +96,6 @@ std::string Fortran::lower::mangle::mangleName(
   if (auto *overrideName = ultimateSymbol.GetBindName())
     return *overrideName;
 
-  // TODO: A procedure that inherits BIND(C) through another interface
-  // (procedure(iface)) should be dealt with in GetBindName() or some wrapper.
-  if (!Fortran::semantics::IsPointer(ultimateSymbol) &&
-      Fortran::semantics::IsBindCProcedure(ultimateSymbol) &&
-      Fortran::semantics::ClassifyProcedure(symbol) !=
-          Fortran::semantics::ProcedureDefinitionClass::Internal)
-    return ultimateSymbol.name().ToString();
-
   llvm::StringRef symbolName = toStringRef(ultimateSymbol.name());
   llvm::SmallVector<llvm::StringRef> modules;
   llvm::SmallVector<llvm::StringRef> procs;
@@ -228,6 +220,25 @@ std::string Fortran::lower::mangle::mangleName(
     }
   }
   return fir::NameUniquer::doType(modules, procs, blockId, symbolName, kinds);
+}
+
+std::string Fortran::lower::mangle::getRecordTypeFieldName(
+    const Fortran::semantics::Symbol &component,
+    ScopeBlockIdMap &scopeBlockIdMap) {
+  if (!component.attrs().test(Fortran::semantics::Attr::PRIVATE))
+    return component.name().ToString();
+  const Fortran::semantics::DerivedTypeSpec *componentParentType =
+      component.owner().derivedTypeSpec();
+  assert(componentParentType &&
+         "failed to retrieve private component parent type");
+  // Do not mangle Iso C C_PTR and C_FUNPTR components. This type cannot be
+  // extended as per Fortran 2018 7.5.7.1, mangling them makes the IR unreadable
+  // when using ISO C modules, and lowering needs to know the component way
+  // without access to semantics::Symbol.
+  if (Fortran::semantics::IsIsoCType(componentParentType))
+    return component.name().ToString();
+  return mangleName(*componentParentType, scopeBlockIdMap) + "." +
+         component.name().ToString();
 }
 
 std::string Fortran::lower::mangle::demangleName(llvm::StringRef name) {

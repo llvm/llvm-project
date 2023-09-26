@@ -3608,6 +3608,19 @@ public:
     return FPOptionsOverride();
   }
 
+  /// Return
+  //  True : if this conversion changes the volatile-ness of a gl-value.
+  //         Qualification conversions on gl-values currently use CK_NoOp, but
+  //         it's important to recognize volatile-changing conversions in
+  //         clients code generation that normally eagerly peephole loads. Note
+  //         that the query is answering for this specific node; Sema may
+  //         produce multiple cast nodes for any particular conversion sequence.
+  //  False : Otherwise.
+  bool changesVolatileQualification() const {
+    return (isGLValue() && (getType().isVolatileQualified() !=
+                            getSubExpr()->getType().isVolatileQualified()));
+  }
+
   static const FieldDecl *getTargetFieldForToUnionCast(QualType unionType,
                                                        QualType opType);
   static const FieldDecl *getTargetFieldForToUnionCast(const RecordDecl *RD,

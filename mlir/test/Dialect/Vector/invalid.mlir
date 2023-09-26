@@ -133,7 +133,7 @@ func.func @extract_position_rank_overflow(%arg0: vector<4x8x16xf32>) {
 
 func.func @extract_position_rank_overflow_generic(%arg0: vector<4x8x16xf32>) {
   // expected-error@+1 {{expected position attribute of rank no greater than vector rank}}
-  %1 = "vector.extract" (%arg0) <{position = array<i64: 0, 0, 0, 0>}> : (vector<4x8x16xf32>) -> (vector<16xf32>)
+  %1 = "vector.extract" (%arg0) <{static_position = array<i64: 0, 0, 0, 0>}> : (vector<4x8x16xf32>) -> (vector<16xf32>)
 }
 
 // -----
@@ -995,7 +995,7 @@ func.func @constant_mask_with_zero_mask_dim_size() {
 // -----
 
 func.func @constant_mask_scalable_non_zero_dim_size() {
-  // expected-error@+1 {{expected mask dim sizes for scalable masks to be 0}}
+  // expected-error@+1 {{only supports 'none set' or 'all set' scalable dimensions}}
   %0 = vector.constant_mask [2] : vector<[8]xi1>
 }
 

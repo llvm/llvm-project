@@ -163,8 +163,6 @@ namespace {
 
 std::set<const FileEntry *> GetAffectingModuleMaps(const Preprocessor &PP,
                                                    Module *RootModule) {
-  std::set<const FileEntry *> ModuleMaps{};
-  std::set<const Module *> ProcessedModules;
   SmallVector<const Module *> ModulesToProcess{RootModule};
 
   const HeaderSearch &HS = PP.getHeaderSearchInfo();
@@ -195,42 +193,45 @@ std::set<const FileEntry *> GetAffectingModuleMaps(const Preprocessor &PP,
   const ModuleMap &MM = HS.getModuleMap();
   SourceManager &SourceMgr = PP.getSourceManager();
 
-  auto ForIncludeChain = [&](FileEntryRef F,
-                             llvm::function_ref<void(FileEntryRef)> CB) {
-    CB(F);
+  std::set<const FileEntry *> ModuleMaps{};
+  auto CollectIncludingModuleMaps = [&](FileEntryRef F) {
+    if (!ModuleMaps.insert(F).second)
+      return;
     FileID FID = SourceMgr.translateFile(F);
     SourceLocation Loc = SourceMgr.getIncludeLoc(FID);
     // The include location of inferred module maps can point into the header
     // file that triggered the inferring. Cut off the walk if that's the case.
     while (Loc.isValid() && isModuleMap(SourceMgr.getFileCharacteristic(Loc))) {
       FID = SourceMgr.getFileID(Loc);
-      CB(*SourceMgr.getFileEntryRefForID(FID));
+      if (!ModuleMaps.insert(*SourceMgr.getFileEntryRefForID(FID)).second)
+        break;
       Loc = SourceMgr.getIncludeLoc(FID);
     }
   };
 
-  auto ProcessModuleOnce = [&](const Module *M) {
-    for (const Module *Mod = M; Mod; Mod = Mod->Parent)
-      if (ProcessedModules.insert(Mod).second) {
-        auto Insert = [&](FileEntryRef F) { ModuleMaps.insert(F); };
-        // The containing module map is affecting, because it's being pointed
-        // into by Module::DefinitionLoc.
-        if (auto ModuleMapFile = MM.getContainingModuleMapFile(Mod))
-          ForIncludeChain(*ModuleMapFile, Insert);
-        // For inferred modules, the module map that allowed inferring is not in
-        // the include chain of the virtual containing module map file. It did
-        // affect the compilation, though.
-        if (auto ModuleMapFile = MM.getModuleMapFileForUniquing(Mod))
-          ForIncludeChain(*ModuleMapFile, Insert);
-      }
+  std::set<const Module *> ProcessedModules;
+  auto CollectIncludingMapsFromAncestors = [&](const Module *M) {
+    for (const Module *Mod = M; Mod; Mod = Mod->Parent) {
+      if (!ProcessedModules.insert(Mod).second)
+        break;
+      // The containing module map is affecting, because it's being pointed
+      // into by Module::DefinitionLoc.
+      if (auto ModuleMapFile = MM.getContainingModuleMapFile(Mod))
+        CollectIncludingModuleMaps(*ModuleMapFile);
+      // For inferred modules, the module map that allowed inferring is not in
+      // the include chain of the virtual containing module map file. It did
+      // affect the compilation, though.
+      if (auto ModuleMapFile = MM.getModuleMapFileForUniquing(Mod))
+        CollectIncludingModuleMaps(*ModuleMapFile);
+    }
   };
 
   for (const Module *CurrentModule : ModulesToProcess) {
-    ProcessModuleOnce(CurrentModule);
+    CollectIncludingMapsFromAncestors(CurrentModule);
     for (const Module *ImportedModule : CurrentModule->Imports)
-      ProcessModuleOnce(ImportedModule);
+      CollectIncludingMapsFromAncestors(ImportedModule);
     for (const Module *UndeclaredModule : CurrentModule->UndeclaredUses)
-      ProcessModuleOnce(UndeclaredModule);
+      CollectIncludingMapsFromAncestors(UndeclaredModule);
   }
 
   return ModuleMaps;

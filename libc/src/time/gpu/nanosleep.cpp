@@ -10,7 +10,7 @@
 
 #include "time_utils.h"
 
-namespace __llvm_libc {
+namespace LIBC_NAMESPACE {
 
 constexpr uint64_t TICKS_PER_NS = 1000000000UL;
 
@@ -68,4 +68,4 @@ LLVM_LIBC_FUNCTION(int, nanosleep,
   return 0;
 }
 
-} // namespace __llvm_libc
+} // namespace LIBC_NAMESPACE

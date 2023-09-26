@@ -33,8 +33,11 @@ class RISCVTargetMachine;
 FunctionPass *createRISCVCodeGenPreparePass();
 void initializeRISCVCodeGenPreparePass(PassRegistry &);
 
+FunctionPass *createRISCVDeadRegisterDefinitionsPass();
+void initializeRISCVDeadRegisterDefinitionsPass(PassRegistry &);
+
 FunctionPass *createRISCVISelDag(RISCVTargetMachine &TM,
-                                 CodeGenOpt::Level OptLevel);
+                                 CodeGenOptLevel OptLevel);
 
 FunctionPass *createRISCVMakeCompressibleOptPass();
 void initializeRISCVMakeCompressibleOptPass(PassRegistry &);
@@ -80,6 +83,15 @@ InstructionSelector *createRISCVInstructionSelector(const RISCVTargetMachine &,
                                                     RISCVSubtarget &,
                                                     RISCVRegisterBankInfo &);
 void initializeRISCVDAGToDAGISelPass(PassRegistry &);
+
+FunctionPass *createRISCVPostLegalizerCombiner();
+void initializeRISCVPostLegalizerCombinerPass(PassRegistry &);
+
+FunctionPass *createRISCVO0PreLegalizerCombiner();
+void initializeRISCVO0PreLegalizerCombinerPass(PassRegistry &);
+
+FunctionPass *createRISCVPreLegalizerCombiner();
+void initializeRISCVPreLegalizerCombinerPass(PassRegistry &);
 } // namespace llvm
 
 #endif

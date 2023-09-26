@@ -27,8 +27,8 @@
 // REDEFINE: %{sparse_compiler_opts} = enable-runtime-library=false enable-buffer-initialization=true vl=2 reassociate-fp-reductions=true enable-index-optimizations=true
 // RUN: %{compile} | %{run} | FileCheck %s
 
-#SV = #sparse_tensor.encoding<{ lvlTypes = [ "compressed" ] }>
-#DV = #sparse_tensor.encoding<{ lvlTypes = [ "dense"      ] }>
+#SV = #sparse_tensor.encoding<{ map = (d0) -> (d0 : compressed) }>
+#DV = #sparse_tensor.encoding<{ map = (d0) -> (d0 : dense) }>
 
 #trait_reduction = {
   indexing_maps = [

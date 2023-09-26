@@ -1901,8 +1901,7 @@ void TextNodeDumper::VisitFunctionDecl(const FunctionDecl *D) {
         auto Overrides = MD->overridden_methods();
         OS << "Overrides: [ ";
         dumpOverride(*Overrides.begin());
-        for (const auto *Override :
-             llvm::make_range(Overrides.begin() + 1, Overrides.end())) {
+        for (const auto *Override : llvm::drop_begin(Overrides)) {
           OS << ", ";
           dumpOverride(Override);
         }

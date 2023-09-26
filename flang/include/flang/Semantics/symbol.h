@@ -278,12 +278,33 @@ public:
   AssocEntityDetails &operator=(const AssocEntityDetails &) = default;
   AssocEntityDetails &operator=(AssocEntityDetails &&) = default;
   const MaybeExpr &expr() const { return expr_; }
+
+  // SELECT RANK's rank cases will return a populated result for
+  // RANK(n) and RANK(*), and IsAssumedRank() will be true for
+  // RANK DEFAULT.
+  std::optional<int> rank() const {
+    int r{rank_.value_or(0)};
+    if (r == isAssumedSize) {
+      return 1; // RANK(*)
+    } else if (r == isAssumedRank) {
+      return std::nullopt; // RANK DEFAULT
+    } else {
+      return rank_;
+    }
+  }
+  bool IsAssumedSize() const { return rank_.value_or(0) == isAssumedSize; }
+  bool IsAssumedRank() const { return rank_.value_or(0) == isAssumedRank; }
   void set_rank(int rank);
-  std::optional<int> rank() const { return rank_; }
+  void set_IsAssumedSize();
+  void set_IsAssumedRank();
 
 private:
   MaybeExpr expr_;
-  std::optional<int> rank_; // for SELECT RANK
+  // Populated for SELECT RANK with rank (n>=0) for RANK(n),
+  // isAssumedSize for RANK(*), or isAssumedRank for RANK DEFAULT.
+  static constexpr int isAssumedSize{-1}; // RANK(*)
+  static constexpr int isAssumedRank{-2}; // RANK DEFAULT
+  std::optional<int> rank_;
 };
 llvm::raw_ostream &operator<<(llvm::raw_ostream &, const AssocEntityDetails &);
 
@@ -862,12 +883,14 @@ private:
               return iface ? iface->RankImpl(depth) : 0;
             },
             [](const AssocEntityDetails &aed) {
-              if (const auto &expr{aed.expr()}) {
-                if (auto assocRank{aed.rank()}) {
-                  return *assocRank;
-                } else {
-                  return expr->Rank();
-                }
+              if (auto assocRank{aed.rank()}) {
+                // RANK(n) & RANK(*)
+                return *assocRank;
+              } else if (aed.IsAssumedRank()) {
+                // RANK DEFAULT
+                return 0;
+              } else if (const auto &expr{aed.expr()}) {
+                return expr->Rank();
               } else {
                 return 0;
               }

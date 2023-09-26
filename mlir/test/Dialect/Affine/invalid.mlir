@@ -287,7 +287,7 @@ func.func @affine_parallel(%arg0 : index, %arg1 : index, %arg2 : index) {
 
 func.func @affine_parallel(%arg0 : index, %arg1 : index, %arg2 : index) {
   %0 = memref.alloc() : memref<100x100xi32>
-  %1 = affine.parallel (%i, %j) = (0, 0) to (100, 100) step (10, 10) reduce ("minf") -> (f32) {
+  %1 = affine.parallel (%i, %j) = (0, 0) to (100, 100) step (10, 10) reduce ("minimumf") -> (f32) {
     %2 = affine.load %0[%i, %j] : memref<100x100xi32>
     //  expected-error@+1 {{types mismatch between yield op and its parent}}
     affine.yield %2 : i32

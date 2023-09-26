@@ -1259,3 +1259,16 @@ func.func @test_non_tosa_consumer_extract(%arg0: tensor<4x4xf32>, %arg1: index) 
   %1 = tensor.extract %0[%arg1, %arg1] : tensor<?x?xf32>
   return %1 : f32
 }
+
+// -----
+
+// CHECK-LABEL: test_tosa_use_def_chain
+func.func @test_tosa_use_def_chain(%arg0: tensor<1x32x32x3xf32>, %arg1: tensor<16x3x3x3xf32>, %arg2: tensor<16xf32>) -> tensor<?x16x16x16xf32> {
+  // CHECK: [[CONV:%.+]] = tosa.conv2d %arg0, %arg1, %arg2
+  // CHECK: (tensor<1x32x32x3xf32>, tensor<16x3x3x3xf32>, tensor<16xf32>) -> tensor<1x32x32x16xf32>
+  %0 = tosa.conv2d %arg0, %arg1, %arg2 {dilation = array<i64: 1, 1>, pad = array<i64: 1, 1, 1, 1>, stride = array<i64: 1, 1>} : (tensor<1x32x32x3xf32>, tensor<16x3x3x3xf32>, tensor<16xf32>) -> tensor<?x32x32x16xf32>
+  // CHECK: tosa.max_pool2d [[CONV]]
+  // CHECK: (tensor<1x32x32x16xf32>) -> tensor<1x16x16x16xf32>
+  %1 = tosa.max_pool2d %0 {kernel = array<i64: 2, 2>, pad = array<i64: 0, 0, 0, 0>, stride = array<i64: 2, 2>} : (tensor<?x32x32x16xf32>) -> tensor<?x16x16x16xf32>
+  return %1 : tensor<?x16x16x16xf32>
+}

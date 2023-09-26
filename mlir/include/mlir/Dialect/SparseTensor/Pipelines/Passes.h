@@ -13,7 +13,7 @@
 #ifndef MLIR_DIALECT_SPARSETENSOR_PIPELINES_PASSES_H_
 #define MLIR_DIALECT_SPARSETENSOR_PIPELINES_PASSES_H_
 
-#include "mlir/Conversion/VectorToLLVM/ConvertVectorToLLVM.h"
+#include "mlir/Conversion/VectorToLLVM/ConvertVectorToLLVMPass.h"
 #include "mlir/Dialect/SparseTensor/Transforms/Passes.h"
 #include "mlir/Pass/PassOptions.h"
 
@@ -93,8 +93,7 @@ struct SparseCompilerOptions
       desc("Specify if the temporary buffers created by the sparse "
            "compiler should be deallocated. For compatibility with core "
            "bufferization passes. "
-           "This option is only used when enable-runtime-library=false. "
-           "See also create-deallocs for BufferizationOption."),
+           "This option is only used when enable-runtime-library=false."),
       init(true)};
 
   PassOptions::Option<int32_t> vectorLength{
@@ -144,6 +143,23 @@ struct SparseCompilerOptions
                                            desc("GPU target architecture")};
   PassOptions::Option<std::string> gpuFeatures{*this, "gpu-features",
                                                desc("GPU target features")};
+  /// For NVIDIA GPUs there are 3 compilation format options:
+  /// 1. `isa`: the compiler generates PTX and the driver JITs the PTX.
+  /// 2. `bin`: generates a CUBIN object for `chip=gpuChip`.
+  /// 3. `fatbin`: generates a fat binary with a CUBIN object for `gpuChip` and
+  /// also embeds the PTX in the fat binary.
+  /// Notes:
+  /// Option 1 adds a significant runtime performance hit, however, tests are
+  /// more likely to pass with this option.
+  /// Option 2 is better for execution time as there is no JIT; however, the
+  /// program will fail if there's an architecture mismatch between `gpuChip`
+  /// and the GPU running the program.
+  /// Option 3 is the best compromise between options 1 and 2 as it can JIT in
+  /// case of an architecture mismatch between `gpuChip` and the running
+  /// architecture. However, it's only possible to JIT to a higher CC than
+  /// `gpuChip`.
+  PassOptions::Option<std::string> gpuFormat{
+      *this, "gpu-format", desc("GPU compilation format"), init("fatbin")};
 
   /// This option is used to enable GPU library generation.
   PassOptions::Option<bool> enableGPULibgen{

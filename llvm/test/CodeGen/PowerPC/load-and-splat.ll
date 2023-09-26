@@ -238,16 +238,16 @@ define dso_local void @test4(ptr nocapture %c, ptr nocapture readonly %a) local_
 ;
 ; P7-AIX32-LABEL: test4:
 ; P7-AIX32:       # %bb.0: # %entry
-; P7-AIX32-NEXT:    lwz r5, L..C0(r2) # %const.0
-; P7-AIX32-NEXT:    lwz r6, 24(r4)
+; P7-AIX32-NEXT:    lwz r5, 24(r4)
 ; P7-AIX32-NEXT:    lwz r4, 28(r4)
 ; P7-AIX32-NEXT:    stw r4, -16(r1)
-; P7-AIX32-NEXT:    stw r6, -32(r1)
-; P7-AIX32-NEXT:    lxvw4x v2, 0, r5
+; P7-AIX32-NEXT:    lwz r4, L..C0(r2) # %const.0
+; P7-AIX32-NEXT:    stw r5, -32(r1)
+; P7-AIX32-NEXT:    lxvw4x v2, 0, r4
 ; P7-AIX32-NEXT:    addi r4, r1, -16
-; P7-AIX32-NEXT:    addi r5, r1, -32
 ; P7-AIX32-NEXT:    lxvw4x v3, 0, r4
-; P7-AIX32-NEXT:    lxvw4x v4, 0, r5
+; P7-AIX32-NEXT:    addi r4, r1, -32
+; P7-AIX32-NEXT:    lxvw4x v4, 0, r4
 ; P7-AIX32-NEXT:    vperm v2, v4, v3, v2
 ; P7-AIX32-NEXT:    stxvw4x v2, 0, r3
 ; P7-AIX32-NEXT:    blr
@@ -316,15 +316,15 @@ define void @test5(ptr %a, ptr %in) {
 ; P7-AIX32-LABEL: test5:
 ; P7-AIX32:       # %bb.0: # %entry
 ; P7-AIX32-NEXT:    lwz r4, 0(r4)
-; P7-AIX32-NEXT:    lwz r5, L..C1(r2) # %const.0
-; P7-AIX32-NEXT:    srawi r6, r4, 31
 ; P7-AIX32-NEXT:    stw r4, -16(r1)
+; P7-AIX32-NEXT:    srawi r4, r4, 31
+; P7-AIX32-NEXT:    stw r4, -32(r1)
+; P7-AIX32-NEXT:    lwz r4, L..C1(r2) # %const.0
+; P7-AIX32-NEXT:    lxvw4x v2, 0, r4
 ; P7-AIX32-NEXT:    addi r4, r1, -16
-; P7-AIX32-NEXT:    stw r6, -32(r1)
-; P7-AIX32-NEXT:    lxvw4x v2, 0, r5
-; P7-AIX32-NEXT:    addi r5, r1, -32
 ; P7-AIX32-NEXT:    lxvw4x v3, 0, r4
-; P7-AIX32-NEXT:    lxvw4x v4, 0, r5
+; P7-AIX32-NEXT:    addi r4, r1, -32
+; P7-AIX32-NEXT:    lxvw4x v4, 0, r4
 ; P7-AIX32-NEXT:    vperm v2, v4, v3, v2
 ; P7-AIX32-NEXT:    stxvw4x v2, 0, r3
 ; P7-AIX32-NEXT:    blr
@@ -392,16 +392,16 @@ define void @test6(ptr %a, ptr %in) {
 ;
 ; P7-AIX32-LABEL: test6:
 ; P7-AIX32:       # %bb.0: # %entry
-; P7-AIX32-NEXT:    lwz r5, L..C2(r2) # %const.0
 ; P7-AIX32-NEXT:    lwz r4, 0(r4)
-; P7-AIX32-NEXT:    li r6, 0
-; P7-AIX32-NEXT:    stw r6, -32(r1)
+; P7-AIX32-NEXT:    li r5, 0
+; P7-AIX32-NEXT:    stw r5, -32(r1)
 ; P7-AIX32-NEXT:    stw r4, -16(r1)
+; P7-AIX32-NEXT:    lwz r4, L..C2(r2) # %const.0
+; P7-AIX32-NEXT:    lxvw4x v2, 0, r4
 ; P7-AIX32-NEXT:    addi r4, r1, -32
-; P7-AIX32-NEXT:    lxvw4x v2, 0, r5
-; P7-AIX32-NEXT:    addi r5, r1, -16
 ; P7-AIX32-NEXT:    lxvw4x v3, 0, r4
-; P7-AIX32-NEXT:    lxvw4x v4, 0, r5
+; P7-AIX32-NEXT:    addi r4, r1, -16
+; P7-AIX32-NEXT:    lxvw4x v4, 0, r4
 ; P7-AIX32-NEXT:    vperm v2, v3, v4, v2
 ; P7-AIX32-NEXT:    stxvw4x v2, 0, r3
 ; P7-AIX32-NEXT:    blr
@@ -590,9 +590,9 @@ define <16 x i8> @adjusted_lxvwsx(ptr %s, ptr %t) {
 ; P7-LABEL: adjusted_lxvwsx:
 ; P7:       # %bb.0: # %entry
 ; P7-NEXT:    ld r3, 0(r3)
-; P7-NEXT:    addi r4, r1, -16
 ; P7-NEXT:    std r3, -16(r1)
-; P7-NEXT:    lxvw4x vs0, 0, r4
+; P7-NEXT:    addi r3, r1, -16
+; P7-NEXT:    lxvw4x vs0, 0, r3
 ; P7-NEXT:    xxspltw v2, vs0, 1
 ; P7-NEXT:    blr
 ;
@@ -835,13 +835,13 @@ define <16 x i8> @unadjusted_lxvdsx(ptr %s, ptr %t) {
 ;
 ; P7-AIX32-LABEL: unadjusted_lxvdsx:
 ; P7-AIX32:       # %bb.0: # %entry
-; P7-AIX32-NEXT:    lwz r5, 4(r3)
-; P7-AIX32-NEXT:    addi r4, r1, -16
-; P7-AIX32-NEXT:    stw r5, -16(r1)
+; P7-AIX32-NEXT:    lwz r4, 4(r3)
+; P7-AIX32-NEXT:    stw r4, -16(r1)
 ; P7-AIX32-NEXT:    lwz r3, 0(r3)
 ; P7-AIX32-NEXT:    stw r3, -32(r1)
+; P7-AIX32-NEXT:    addi r3, r1, -16
+; P7-AIX32-NEXT:    lxvw4x vs0, 0, r3
 ; P7-AIX32-NEXT:    addi r3, r1, -32
-; P7-AIX32-NEXT:    lxvw4x vs0, 0, r4
 ; P7-AIX32-NEXT:    lxvw4x vs1, 0, r3
 ; P7-AIX32-NEXT:    xxmrghw vs0, vs1, vs0
 ; P7-AIX32-NEXT:    xxmrghd v2, vs0, vs0
@@ -947,8 +947,8 @@ define <8 x i16> @test_unaligned_v8i16(ptr %Ptr) {
 ;
 ; P7-LABEL: test_unaligned_v8i16:
 ; P7:       # %bb.0: # %entry
-; P7-NEXT:    li r4, 1
 ; P7-NEXT:    addi r3, r3, 6
+; P7-NEXT:    li r4, 1
 ; P7-NEXT:    lvx v2, 0, r3
 ; P7-NEXT:    lvx v3, r4, r3
 ; P7-NEXT:    lvsl v4, 0, r3
@@ -972,8 +972,8 @@ define <8 x i16> @test_unaligned_v8i16(ptr %Ptr) {
 ;
 ; P7-AIX32-LABEL: test_unaligned_v8i16:
 ; P7-AIX32:       # %bb.0: # %entry
-; P7-AIX32-NEXT:    li r4, 1
 ; P7-AIX32-NEXT:    addi r3, r3, 6
+; P7-AIX32-NEXT:    li r4, 1
 ; P7-AIX32-NEXT:    lvx v2, 0, r3
 ; P7-AIX32-NEXT:    lvx v3, r4, r3
 ; P7-AIX32-NEXT:    lvsl v4, 0, r3
@@ -1262,11 +1262,11 @@ define <2 x double> @test_v2f64_multiple_use(ptr nocapture readonly %a, ptr noca
 ; P7-NEXT:    lfs f0, 0(r3)
 ; P7-NEXT:    lfd f1, 0(r4)
 ; P7-NEXT:    xsadddp f1, f1, f0
-; P7-NEXT:    xxspltd v2, vs0, 0
 ; P7-NEXT:    stfd f1, 0(r4)
 ; P7-NEXT:    lfd f1, 0(r5)
-; P7-NEXT:    xsadddp f1, f1, f0
-; P7-NEXT:    stfd f1, 0(r5)
+; P7-NEXT:    xxspltd v2, vs0, 0
+; P7-NEXT:    xsadddp f0, f1, f0
+; P7-NEXT:    stfd f0, 0(r5)
 ; P7-NEXT:    blr
 ;
 ; P9-AIX32-LABEL: test_v2f64_multiple_use:
@@ -1298,11 +1298,11 @@ define <2 x double> @test_v2f64_multiple_use(ptr nocapture readonly %a, ptr noca
 ; P7-AIX32-NEXT:    lfs f0, 0(r3)
 ; P7-AIX32-NEXT:    lfd f1, 0(r4)
 ; P7-AIX32-NEXT:    xsadddp f1, f1, f0
-; P7-AIX32-NEXT:    xxmrghd v2, vs0, vs0
 ; P7-AIX32-NEXT:    stfd f1, 0(r4)
 ; P7-AIX32-NEXT:    lfd f1, 0(r5)
-; P7-AIX32-NEXT:    xsadddp f1, f1, f0
-; P7-AIX32-NEXT:    stfd f1, 0(r5)
+; P7-AIX32-NEXT:    xxmrghd v2, vs0, vs0
+; P7-AIX32-NEXT:    xsadddp f0, f1, f0
+; P7-AIX32-NEXT:    stfd f0, 0(r5)
 ; P7-AIX32-NEXT:    blr
 entry:
   %0 = load float, ptr %a, align 4

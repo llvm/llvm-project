@@ -27,13 +27,11 @@ namespace {
 
 using testing::AnyOf;
 using testing::ElementsAre;
-using testing::Ge;
 using testing::Gt;
 using testing::HasSubstr;
 using testing::IsEmpty;
 using testing::Not;
 using testing::SizeIs;
-using testing::UnorderedElementsAre;
 
 MATCHER(IsInvalid, "") { return !arg.isValid(); }
 MATCHER(IsReg, "") { return arg.isReg(); }

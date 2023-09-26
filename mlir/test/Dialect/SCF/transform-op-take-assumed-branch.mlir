@@ -64,7 +64,7 @@ transform.sequence failures(propagate) {
 ^bb0(%arg1: !transform.any_op):
   %0 = transform.structured.match ops{["tensor.pad"]} in %arg1 
     : (!transform.any_op) -> !transform.any_op
-  transform.structured.tile_to_forall_op %0 tile_sizes[1, 1] 
+  transform.structured.tile_using_forall %0 tile_sizes[1, 1] 
     : (!transform.any_op) -> (!transform.any_op, !transform.any_op)
 
   %if = transform.structured.match ops{["scf.if"]} in %arg1 

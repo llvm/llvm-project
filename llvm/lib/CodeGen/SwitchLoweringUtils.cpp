@@ -95,7 +95,7 @@ void SwitchCG::SwitchLowering::findJumpTables(CaseClusterVector &Clusters,
   }
 
   // The algorithm below is not suitable for -O0.
-  if (TM->getOptLevel() == CodeGenOpt::None)
+  if (TM->getOptLevel() == CodeGenOptLevel::None)
     return;
 
   // Split Clusters into minimum number of dense partitions. The algorithm uses
@@ -278,7 +278,7 @@ void SwitchCG::SwitchLowering::findBitTestClusters(CaseClusterVector &Clusters,
 #endif
 
   // The algorithm below is not suitable for -O0.
-  if (TM->getOptLevel() == CodeGenOpt::None)
+  if (TM->getOptLevel() == CodeGenOptLevel::None)
     return;
 
   // If target does not have legal shift left, do not emit bit tests at all.

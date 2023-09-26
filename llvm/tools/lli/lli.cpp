@@ -405,7 +405,7 @@ static void addCygMingExtraModule(ExecutionEngine &EE, LLVMContext &Context,
   EE.addModule(std::move(M));
 }
 
-CodeGenOpt::Level getOptLevel() {
+CodeGenOptLevel getOptLevel() {
   if (auto Level = CodeGenOpt::parseLevel(OptLevel))
     return *Level;
   WithColor::error(errs(), "lli") << "invalid optimization level.\n";

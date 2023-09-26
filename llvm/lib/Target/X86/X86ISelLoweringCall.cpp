@@ -2645,7 +2645,8 @@ bool MatchingStackOffset(SDValue Arg, unsigned Offset, ISD::ArgFlagsTy Flags,
   for (;;) {
     // Look through nodes that don't alter the bits of the incoming value.
     unsigned Op = Arg.getOpcode();
-    if (Op == ISD::ZERO_EXTEND || Op == ISD::ANY_EXTEND || Op == ISD::BITCAST) {
+    if (Op == ISD::ZERO_EXTEND || Op == ISD::ANY_EXTEND || Op == ISD::BITCAST ||
+        Op == ISD::AssertZext) {
       Arg = Arg.getOperand(0);
       continue;
     }
