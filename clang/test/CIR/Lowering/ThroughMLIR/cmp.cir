@@ -1,31 +1,32 @@
 // RUN: cir-opt %s -cir-to-mlir -o - | FileCheck %s -check-prefix=MLIR
 // RUN: cir-opt %s -cir-to-mlir -cir-mlir-to-llvm -o - | mlir-translate -mlir-to-llvmir | FileCheck %s -check-prefix=LLVM
 
+!s32i = !cir.int<s, 32>
 module {
   cir.func @foo() {
-    %0 = cir.alloca i32, cir.ptr <i32>, ["a"] {alignment = 4 : i64}
-    %1 = cir.alloca i32, cir.ptr <i32>, ["b"] {alignment = 4 : i64}
+    %0 = cir.alloca !s32i, cir.ptr <!s32i>, ["a"] {alignment = 4 : i64}
+    %1 = cir.alloca !s32i, cir.ptr <!s32i>, ["b"] {alignment = 4 : i64}
     %2 = cir.alloca f32, cir.ptr <f32>, ["c"] {alignment = 4 : i64}
     %3 = cir.alloca f32, cir.ptr <f32>, ["d"] {alignment = 4 : i64}
     %4 = cir.alloca !cir.bool, cir.ptr <!cir.bool>, ["e"] {alignment = 1 : i64}
-    %5 = cir.load %0 : cir.ptr <i32>, i32
-    %6 = cir.load %1 : cir.ptr <i32>, i32
-    %7 = cir.cmp(gt, %5, %6) : i32, !cir.bool
-    %8 = cir.load %0 : cir.ptr <i32>, i32
-    %9 = cir.load %1 : cir.ptr <i32>, i32
-    %10 = cir.cmp(eq, %8, %9) : i32, !cir.bool
-    %11 = cir.load %0 : cir.ptr <i32>, i32
-    %12 = cir.load %1 : cir.ptr <i32>, i32
-    %13 = cir.cmp(lt, %11, %12) : i32, !cir.bool
-    %14 = cir.load %0 : cir.ptr <i32>, i32
-    %15 = cir.load %1 : cir.ptr <i32>, i32
-    %16 = cir.cmp(ge, %14, %15) : i32, !cir.bool
-    %17 = cir.load %0 : cir.ptr <i32>, i32
-    %18 = cir.load %1 : cir.ptr <i32>, i32
-    %19 = cir.cmp(ne, %17, %18) : i32, !cir.bool
-    %20 = cir.load %0 : cir.ptr <i32>, i32
-    %21 = cir.load %1 : cir.ptr <i32>, i32
-    %22 = cir.cmp(le, %20, %21) : i32, !cir.bool
+    %5 = cir.load %0 : cir.ptr <!s32i>, !s32i
+    %6 = cir.load %1 : cir.ptr <!s32i>, !s32i
+    %7 = cir.cmp(gt, %5, %6) : !s32i, !cir.bool
+    %8 = cir.load %0 : cir.ptr <!s32i>, !s32i
+    %9 = cir.load %1 : cir.ptr <!s32i>, !s32i
+    %10 = cir.cmp(eq, %8, %9) : !s32i, !cir.bool
+    %11 = cir.load %0 : cir.ptr <!s32i>, !s32i
+    %12 = cir.load %1 : cir.ptr <!s32i>, !s32i
+    %13 = cir.cmp(lt, %11, %12) : !s32i, !cir.bool
+    %14 = cir.load %0 : cir.ptr <!s32i>, !s32i
+    %15 = cir.load %1 : cir.ptr <!s32i>, !s32i
+    %16 = cir.cmp(ge, %14, %15) : !s32i, !cir.bool
+    %17 = cir.load %0 : cir.ptr <!s32i>, !s32i
+    %18 = cir.load %1 : cir.ptr <!s32i>, !s32i
+    %19 = cir.cmp(ne, %17, %18) : !s32i, !cir.bool
+    %20 = cir.load %0 : cir.ptr <!s32i>, !s32i
+    %21 = cir.load %1 : cir.ptr <!s32i>, !s32i
+    %22 = cir.cmp(le, %20, %21) : !s32i, !cir.bool
     %23 = cir.load %2 : cir.ptr <f32>, f32
     %24 = cir.load %3 : cir.ptr <f32>, f32
     %25 = cir.cmp(gt, %23, %24) : f32, !cir.bool
