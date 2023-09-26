@@ -9808,7 +9808,8 @@ void X86InstrInfo::buildClearRegister(Register Reg, MachineBasicBlock &MBB,
     return;
 
   if (TRI.isGeneralPurposeRegister(MF, Reg)) {
-    // Convert register to the 32-bit version.
+    // Convert register to the 32-bit version. Both 'movl' and 'xorl' clear the
+    // upper bits of a 64-bit register automagically.
     Reg = getX86SubSuperRegister(Reg, 32);
 
     if (NoSideEffects)
