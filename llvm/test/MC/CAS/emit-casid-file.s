@@ -1,3 +1,4 @@
+// REQUIRES: aarch64-registered-target
 // RUN: rm -rf %t && mkdir -p %t
 // RUN: llvm-mc --filetype=obj --cas-backend --cas=%t/cas --mccas-native %s --mccas-emit-casid-file -triple arm64-apple-macosx14.0.0 -o %t/test.o
 // RUN: cat %t/test.o.casid | FileCheck %s --check-prefix=NATIVE_FILENAME

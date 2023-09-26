@@ -24,6 +24,8 @@
 ; RUN: llc -O0 -cas-friendly-debug-info --filetype=obj --cas-backend --cas=%t/cas --mccas-casid %s --mccas-emit-casid-file -o -
 ; RUN: not cat %t/test.o.casid
 
+; REQUIRES: aarch64-registered-target
+
 ; ModuleID = '/Users/shubham/Development/test109275485/a.cpp'
 source_filename = "/Users/shubham/Development/test109275485/a.cpp"
 target datalayout = "e-m:o-i64:64-i128:128-n32:64-S128"

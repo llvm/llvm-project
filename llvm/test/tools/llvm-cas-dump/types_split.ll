@@ -2,6 +2,8 @@
 ; RUN: llc -O0 --filetype=obj --cas-backend --cas=%t.casdb --mccas-casid -o %t_DIE.casid %s
 ; RUN: llvm-cas-dump --cas=%t.casdb --casid-file %t_DIE.casid  --die-refs | FileCheck %s --check-prefix=DWARF-DIE
 
+; REQUIRES: aarch64-registered-target
+
 ; DWARF-DIE:        mc:debug_DIE_top_level llvmcas://{{.*}}
 ; DWARF-DIE-NEXT:   Header = [CD 0 0 0 4 0 0 0 0 0 8]
 ; DWARF-DIE-NEXT:   CAS Block: llvmcas://{{.*}}
