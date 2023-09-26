@@ -13343,8 +13343,8 @@ static SDValue performSELECTCombine(SDNode *N, SelectionDAG &DAG,
 /// We assume that materializing a constant build vector will be no more
 /// expensive that performing O(n) binops.
 static SDValue performBUILD_VECTORCombine(SDNode *N, SelectionDAG &DAG,
-                                            const RISCVSubtarget &Subtarget,
-                                            const RISCVTargetLowering &TLI) {
+                                          const RISCVSubtarget &Subtarget,
+                                          const RISCVTargetLowering &TLI) {
   SDLoc DL(N);
   EVT VT = N->getValueType(0);
 
@@ -13357,8 +13357,7 @@ static SDValue performBUILD_VECTORCombine(SDNode *N, SelectionDAG &DAG,
   if (!TLI.isBinOp(Opcode))
     return SDValue();
 
-  if (!TLI.isOperationLegalOrCustom(Opcode, VT) ||
-      !TLI.isTypeLegal(VT))
+  if (!TLI.isOperationLegalOrCustom(Opcode, VT) || !TLI.isTypeLegal(VT))
     return SDValue();
 
   SmallVector<SDValue> LHSOps;
@@ -13383,8 +13382,7 @@ static SDValue performBUILD_VECTORCombine(SDNode *N, SelectionDAG &DAG,
     RHSOps.push_back(Op.getOperand(1));
   }
 
-  return DAG.getNode(Opcode, DL, VT,
-                     DAG.getBuildVector(VT, DL, LHSOps),
+  return DAG.getNode(Opcode, DL, VT, DAG.getBuildVector(VT, DL, LHSOps),
                      DAG.getBuildVector(VT, DL, RHSOps));
 }
 
