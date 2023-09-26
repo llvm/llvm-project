@@ -120,6 +120,13 @@ public:
     InsertPt = IP;
   }
 
+  /// This specifies that created instructions should be inserted at the
+  /// specified point.
+  void setInsertPoint(VPRecipeBase *IP) {
+    BB = IP->getParent();
+    InsertPt = IP->getIterator();
+  }
+
   /// Create an N-ary operation with \p Opcode, \p Operands and set \p Inst as
   /// its underlying Instruction.
   VPValue *createNaryOp(unsigned Opcode, ArrayRef<VPValue *> Operands,
