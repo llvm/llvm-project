@@ -5714,6 +5714,23 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
     }
   }
 
+  if (Arg *A = Args.getLastArg(options::OPT_mlarge_data_threshold_EQ)) {
+    if (!Triple.isX86()) {
+      D.Diag(diag::err_drv_unsupported_opt_for_target)
+          << A->getOption().getName() << TripleStr;
+    } else {
+      bool IsMediumCM = false;
+      if (Arg *A = Args.getLastArg(options::OPT_mcmodel_EQ))
+        IsMediumCM = StringRef(A->getValue()) == "medium";
+      if (!IsMediumCM) {
+        D.Diag(diag::warn_drv_large_data_threshold_invalid_code_model)
+            << A->getOption().getRenderName();
+      } else {
+        A->render(Args, CmdArgs);
+      }
+    }
+  }
+
   if (Arg *A = Args.getLastArg(options::OPT_mtls_size_EQ)) {
     StringRef Value = A->getValue();
     unsigned TLSSize = 0;
