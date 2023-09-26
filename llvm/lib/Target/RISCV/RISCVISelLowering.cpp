@@ -17739,10 +17739,10 @@ RISCVTargetLowering::getInlineAsmMemConstraint(StringRef ConstraintCode) const {
 }
 
 void RISCVTargetLowering::LowerAsmOperandForConstraint(
-    SDValue Op, std::string &Constraint, std::vector<SDValue> &Ops,
+    SDValue Op, StringRef Constraint, std::vector<SDValue> &Ops,
     SelectionDAG &DAG) const {
   // Currently only support length 1 constraints.
-  if (Constraint.length() == 1) {
+  if (Constraint.size() == 1) {
     switch (Constraint[0]) {
     case 'I':
       // Validate & create a 12-bit signed immediate operand.
