@@ -392,7 +392,6 @@ MPInt IntMatrix::normalizeRow(unsigned row) {
   return normalizeRow(row, getNumColumns());
 }
 
-
 FracMatrix FracMatrix::identity(unsigned dimension) {
   FracMatrix matrix(dimension, dimension);
   for (unsigned i = 0; i < dimension; ++i)
@@ -400,60 +399,59 @@ FracMatrix FracMatrix::identity(unsigned dimension) {
   return matrix;
 }
 
-FracMatrix FracMatrix::inverse()
-{
-    // We use Gaussian elimination on the rows of [M | I]
-    // to find the integer inverse. We proceed left-to-right,
-    // top-to-bottom. M is assumed to be a dim x dim matrix.
+FracMatrix FracMatrix::inverse() {
+  // We use Gaussian elimination on the rows of [M | I]
+  // to find the integer inverse. We proceed left-to-right,
+  // top-to-bottom. M is assumed to be a dim x dim matrix.
 
-    unsigned dim = getNumRows();
+  unsigned dim = getNumRows();
 
-    // Construct the augmented matrix [M | I]
-    FracMatrix augmented(dim, dim + dim);
-    for (unsigned i = 0; i < dim; i++)
-    {
-        augmented.fillRow(i, 0);
-        for (unsigned j = 0; j < dim; j++)
-            augmented(i, j) = at(i, j);
-        augmented(i, dim+i).num = 1;
-        augmented(i, dim+i).den = 1;
-    }
-    Fraction a, b;
-    for (unsigned i = 0; i < dim; i++)
-    {
-        if (augmented(i, i) == Fraction(0, 1))
-            for (unsigned j = i+1; j < dim; j++)
-                if (augmented(j, i) != Fraction(0, 1))
-                {
-                    augmented.addToRow(i, augmented.getRow(j), Fraction(1, 1));
-                    break;
-                }
-
-        b = augmented(i, i);
-        for (unsigned j = 0; j < dim; j++)
+  // Construct the augmented matrix [M | I]
+  FracMatrix augmented(dim, dim + dim);
+  for (unsigned i = 0; i < dim; i++)
+  {
+    augmented.fillRow(i, 0);
+    for (unsigned j = 0; j < dim; j++)
+        augmented(i, j) = at(i, j);
+    augmented(i, dim+i).num = 1;
+    augmented(i, dim+i).den = 1;
+  }
+  Fraction a, b;
+  for (unsigned i = 0; i < dim; i++)
+  {
+    if (augmented(i, i) == Fraction(0, 1))
+      for (unsigned j = i+1; j < dim; j++)
+        if (augmented(j, i) != Fraction(0, 1))
         {
-            if (i == j || augmented(j, i) == 0) continue;
-            a = augmented(j, i);
-            // Rj -> Rj - (b/a)Ri
-            augmented.addToRow(j, augmented.getRow(i), - a / b);
-            // Now (Rj)i = 0
+            augmented.addToRow(i, augmented.getRow(j), Fraction(1, 1));
+            break;
         }
-    }
-    
-    // Now only diagonal elements are nonzero, but they are
-    // not necessarily 1.
-    for (unsigned i = 0; i < dim; i++)
+
+    b = augmented(i, i);
+    for (unsigned j = 0; j < dim; j++)
     {
-        a = augmented(i, i);
-        for (unsigned j = dim; j < dim + dim; j++)
-            augmented(i, j) = augmented(i, j) / a;
+      if (i == j || augmented(j, i) == 0) continue;
+      a = augmented(j, i);
+      // Rj -> Rj - (b/a)Ri
+      augmented.addToRow(j, augmented.getRow(i), -a / b);
+      // Now (Rj)i = 0
     }
+  }
+    
+  // Now only diagonal elements are nonzero, but they are
+  // not necessarily 1.
+  for (unsigned i = 0; i < dim; i++)
+  {
+    a = augmented(i, i);
+    for (unsigned j = dim; j < dim + dim; j++)
+      augmented(i, j) = augmented(i, j) / a;
+  }
 
-    // Copy the right half of the augmented matrix.
-    FracMatrix inverse(dim, dim);
-    for (unsigned i = 0; i < dim; i++)
-        for (unsigned j = 0; j < dim; j++)
-            inverse(i, j) = augmented(i, j+dim);
+  // Copy the right half of the augmented matrix.
+  FracMatrix inverse(dim, dim);
+  for (unsigned i = 0; i < dim; i++)
+    for (unsigned j = 0; j < dim; j++)
+      inverse(i, j) = augmented(i, j+dim);
 
-    return inverse;
+  return inverse;
 }
