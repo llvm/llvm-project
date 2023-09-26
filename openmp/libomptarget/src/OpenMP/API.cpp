@@ -83,6 +83,7 @@ EXTERN int omp_get_initial_device(void) {
 }
 
 EXTERN void *omp_target_alloc(size_t Size, int DeviceNum) {
+  TIMESCOPE();
   return targetAllocExplicit(Size, DeviceNum, TARGET_ALLOC_DEFAULT, __func__);
 }
 
@@ -99,6 +100,7 @@ EXTERN void *llvm_omp_target_alloc_shared(size_t Size, int DeviceNum) {
 }
 
 EXTERN void omp_target_free(void *Ptr, int DeviceNum) {
+  TIMESCOPE();
   return targetFreeExplicit(Ptr, DeviceNum, TARGET_ALLOC_DEFAULT, __func__);
 }
 
@@ -162,6 +164,11 @@ EXTERN int omp_target_memcpy(void *Dst, const void *Src, size_t Length,
                              size_t DstOffset, size_t SrcOffset, int DstDevice,
                              int SrcDevice) {
   TIMESCOPE();
+  /*TIMESCOPE_WITH_DETAILS_AND_IDENT("omp_target_memcpy",
+                            "NumArguments="+std::to_string(KernelArgs.NumArgs)
+                            +";NumTeams="+std::to_string(KernelArgs.NumTeams[0])
+                            +";TripCount="+std::to_string(KernelArgs.Tripcount)
+                            , __FUNCTION__);*/
   DP("Call to omp_target_memcpy, dst device %d, src device %d, "
      "dst addr " DPxMOD ", src addr " DPxMOD ", dst offset %zu, "
      "src offset %zu, length %zu\n",
