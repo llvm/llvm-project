@@ -1430,6 +1430,37 @@ define float @caller_float_32(<32 x float> %A) nounwind {
 }
 
 define fastcc double @callee_double_32(<32 x double> %A) nounwind {
+; ZHINX32-LABEL: callee_double_32:
+; ZHINX32:       # %bb.0:
+; ZHINX32-NEXT:    ret
+;
+; ZHINX64-LABEL: callee_double_32:
+; ZHINX64:       # %bb.0:
+; ZHINX64-NEXT:    ret
+;
+; ZFINX32-LABEL: callee_double_32:
+; ZFINX32:       # %bb.0:
+; ZFINX32-NEXT:    ret
+;
+; ZFINX64-LABEL: callee_double_32:
+; ZFINX64:       # %bb.0:
+; ZFINX64-NEXT:    ret
+;
+; ZDINX32-LABEL: callee_double_32:
+; ZDINX32:       # %bb.0:
+; ZDINX32-NEXT:    addi sp, sp, -16
+; ZDINX32-NEXT:    lw a0, 16(sp)
+; ZDINX32-NEXT:    lw a1, 20(sp)
+; ZDINX32-NEXT:    sw a0, 8(sp)
+; ZDINX32-NEXT:    sw a1, 12(sp)
+; ZDINX32-NEXT:    lw a0, 8(sp)
+; ZDINX32-NEXT:    lw a1, 12(sp)
+; ZDINX32-NEXT:    addi sp, sp, 16
+; ZDINX32-NEXT:    ret
+;
+; ZDINX64-LABEL: callee_double_32:
+; ZDINX64:       # %bb.0:
+; ZDINX64-NEXT:    ret
 	%B = extractelement <32 x double> %A, i32 0
 	ret double %B
 }
