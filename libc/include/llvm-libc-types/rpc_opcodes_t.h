@@ -26,6 +26,9 @@ typedef enum : unsigned short {
   RPC_FEOF = 13,
   RPC_FERROR = 14,
   RPC_CLEARERR = 15,
+  RPC_FSEEK = 16,
+  RPC_FTELL = 17,
+  RPC_FFLUSH = 18,
 } rpc_opcode_t;
 
 #endif // __LLVM_LIBC_TYPES_RPC_OPCODE_H__
