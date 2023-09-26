@@ -1873,7 +1873,7 @@ StringRef StaticMatcherHelper::getVerifierName(DagLeaf leaf) {
 }
 
 static void emitRewriters(const RecordKeeper &recordKeeper, raw_ostream &os) {
-  emitSourceFileHeader("Rewriters", os);
+  emitSourceFileHeader("Rewriters", os, recordKeeper);
 
   const auto &patterns = recordKeeper.getAllDerivedDefinitions("Pattern");
 
