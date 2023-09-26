@@ -81,26 +81,22 @@ struct G
 #endif
 
 
-int main(int, char**)
-{
 #if TEST_STD_VER >= 11
-    static_assert((std::is_same<std::pointer_traits<A<int*> >::rebind<double*>, A<double*> >::value), "");
-    static_assert((std::is_same<std::pointer_traits<B<int> >::rebind<double>, B1<double> >::value), "");
-    static_assert((std::is_same<std::pointer_traits<C<char, int> >::rebind<double>, C<double, int> >::value), "");
-    static_assert((std::is_same<std::pointer_traits<D<char, int> >::rebind<double>, D1<double, int> >::value), "");
-    static_assert((std::is_same<std::pointer_traits<E<char, int> >::rebind<double>, E<double, int> >::value), "");
-    static_assert((std::is_same<std::pointer_traits<F<char, int> >::rebind<double>, F<double, int> >::value), "");
+static_assert(std::is_same<std::pointer_traits<A<int*> >::rebind<double*>, A<double*> >::value, "");
+static_assert(std::is_same<std::pointer_traits<B<int> >::rebind<double>, B1<double> >::value, "");
+static_assert(std::is_same<std::pointer_traits<C<char, int> >::rebind<double>, C<double, int> >::value, "");
+static_assert(std::is_same<std::pointer_traits<D<char, int> >::rebind<double>, D1<double, int> >::value, "");
+static_assert(std::is_same<std::pointer_traits<E<char, int> >::rebind<double>, E<double, int> >::value, "");
+static_assert(std::is_same<std::pointer_traits<F<char, int> >::rebind<double>, F<double, int> >::value, "");
 
 #if TEST_STD_VER >= 14
-    static_assert((std::is_same<std::pointer_traits<G<char, int> >::rebind<double>, G<double, int> >::value), "");
-#endif
-#else  // TEST_STD_VER < 11
-    static_assert((std::is_same<std::pointer_traits<A<int*> >::rebind<double*>::other, A<double*> >::value), "");
-    static_assert((std::is_same<std::pointer_traits<B<int> >::rebind<double>::other, B1<double> >::value), "");
-    static_assert((std::is_same<std::pointer_traits<C<char, int> >::rebind<double>::other, C<double, int> >::value), "");
-    static_assert((std::is_same<std::pointer_traits<D<char, int> >::rebind<double>::other, D1<double, int> >::value), "");
-    static_assert((std::is_same<std::pointer_traits<E<char, int> >::rebind<double>::other, E<double, int> >::value), "");
+static_assert(std::is_same<std::pointer_traits<G<char, int> >::rebind<double>, G<double, int> >::value, "");
 #endif
 
-  return 0;
-}
+#else // TEST_STD_VER < 11
+static_assert(std::is_same<std::pointer_traits<A<int*> >::rebind<double*>::other, A<double*> >::value, "");
+static_assert(std::is_same<std::pointer_traits<B<int> >::rebind<double>::other, B1<double> >::value, "");
+static_assert(std::is_same<std::pointer_traits<C<char, int> >::rebind<double>::other, C<double, int> >::value, "");
+static_assert(std::is_same<std::pointer_traits<D<char, int> >::rebind<double>::other, D1<double, int> >::value, "");
+static_assert(std::is_same<std::pointer_traits<E<char, int> >::rebind<double>::other, E<double, int> >::value, "");
+#endif

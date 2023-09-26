@@ -2682,10 +2682,6 @@ public:
     return cast<VPCanonicalIVPHIRecipe>(&*EntryVPBB->begin());
   }
 
-  /// Find and return the VPActiveLaneMaskPHIRecipe from the header - there
-  /// be only one at most. If there isn't one, then return nullptr.
-  VPActiveLaneMaskPHIRecipe *getActiveLaneMaskPhi();
-
   void addLiveOut(PHINode *PN, VPValue *V);
 
   void removeLiveOut(PHINode *PN) {

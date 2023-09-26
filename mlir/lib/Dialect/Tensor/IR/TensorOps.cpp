@@ -22,6 +22,7 @@
 #include "mlir/IR/OpDefinition.h"
 #include "mlir/IR/TypeUtilities.h"
 #include "mlir/Interfaces/DestinationStyleOpInterface.h"
+#include "mlir/Interfaces/LoopLikeInterface.h"
 #include "mlir/Support/MathExtras.h"
 #include "llvm/ADT/DenseSet.h"
 #include "llvm/ADT/STLExtras.h"
@@ -3968,6 +3969,11 @@ struct FoldTensorCastProducerOp
                                 PatternRewriter &rewriter) const override {
     // InsertSliceOp has its own logic about folding tensor.cast ops.
     if (isa<InsertSliceOp>(op.getOperation()))
+      return failure();
+
+    // Exclude DPS ops that are also LoopLike from this interface as they
+    // might need special handling of attached regions.
+    if (isa<LoopLikeOpInterface>(op.getOperation()))
       return failure();
 
     // If no operand comes from a tensor::CastOp and can be folded then fail.

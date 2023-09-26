@@ -8,9 +8,10 @@
 
 # Control Flow Graph
 
-```eval_rst
-.. contents::
-   :local:
+```{contents}
+---
+local:
+---
 ```
 
 ## Concept

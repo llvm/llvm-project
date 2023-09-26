@@ -12,13 +12,6 @@
 // GCC does not support the -fexperimental-library flag
 // UNSUPPORTED: gcc
 
-// AppleClang does not support the -fexperimental-library flag yet
-// UNSUPPORTED: apple-clang-14.0
-
-// Clang on AIX currently pretends that it is Clang 15, even though it is not (as of writing
-// this, LLVM 15 hasn't even been branched yet).
-// UNSUPPORTED: clang-15 && buildhost=aix
-
 // ADDITIONAL_COMPILE_FLAGS: -fexperimental-library
 
 #include <version>

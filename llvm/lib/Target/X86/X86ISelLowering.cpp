@@ -56569,13 +56569,14 @@ SDValue X86TargetLowering::LowerAsmOutputForConstraint(
 /// Lower the specified operand into the Ops vector.
 /// If it is invalid, don't add anything to Ops.
 void X86TargetLowering::LowerAsmOperandForConstraint(SDValue Op,
-                                                     std::string &Constraint,
-                                                     std::vector<SDValue>&Ops,
+                                                     StringRef Constraint,
+                                                     std::vector<SDValue> &Ops,
                                                      SelectionDAG &DAG) const {
   SDValue Result;
 
   // Only support length 1 constraints for now.
-  if (Constraint.length() > 1) return;
+  if (Constraint.size() > 1)
+    return;
 
   char ConstraintLetter = Constraint[0];
   switch (ConstraintLetter) {

@@ -622,8 +622,8 @@ DWARFDebugAbbrev *SymbolFileDWARF::DebugAbbrev() {
   if (debug_abbrev_data.GetByteSize() == 0)
     return nullptr;
 
-  auto abbr = std::make_unique<DWARFDebugAbbrev>();
-  llvm::Error error = abbr->parse(debug_abbrev_data);
+  auto abbr = std::make_unique<DWARFDebugAbbrev>(debug_abbrev_data);
+  llvm::Error error = abbr->parse();
   if (error) {
     Log *log = GetLog(DWARFLog::DebugInfo);
     LLDB_LOG_ERROR(log, std::move(error),

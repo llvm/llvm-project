@@ -360,13 +360,14 @@ CodeGenModule::CodeGenModule(ASTContext &C,
   IntTy = llvm::IntegerType::get(LLVMContext, C.getTargetInfo().getIntWidth());
   IntPtrTy = llvm::IntegerType::get(LLVMContext,
     C.getTargetInfo().getMaxPointerWidth());
-  Int8PtrTy = Int8Ty->getPointerTo(0);
-  Int8PtrPtrTy = Int8PtrTy->getPointerTo(0);
+  Int8PtrTy = llvm::PointerType::get(LLVMContext, 0);
   const llvm::DataLayout &DL = M.getDataLayout();
-  AllocaInt8PtrTy = Int8Ty->getPointerTo(DL.getAllocaAddrSpace());
-  GlobalsInt8PtrTy = Int8Ty->getPointerTo(DL.getDefaultGlobalsAddressSpace());
-  ConstGlobalsPtrTy = Int8Ty->getPointerTo(
-      C.getTargetAddressSpace(GetGlobalConstantAddressSpace()));
+  AllocaInt8PtrTy =
+      llvm::PointerType::get(LLVMContext, DL.getAllocaAddrSpace());
+  GlobalsInt8PtrTy =
+      llvm::PointerType::get(LLVMContext, DL.getDefaultGlobalsAddressSpace());
+  ConstGlobalsPtrTy = llvm::PointerType::get(
+      LLVMContext, C.getTargetAddressSpace(GetGlobalConstantAddressSpace()));
   ASTAllocaAddressSpace = getTargetCodeGenInfo().getASTAllocaAddressSpace();
 
   // Build C++20 Module initializers.
