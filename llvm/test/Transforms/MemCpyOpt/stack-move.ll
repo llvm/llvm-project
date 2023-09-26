@@ -45,6 +45,25 @@ define void @basic_memcpy() {
   ret void
 }
 
+define i32 @use_not_dominated_by_src_alloca() {
+; CHECK-LABEL: define i32 @use_not_dominated_by_src_alloca() {
+; CHECK-NEXT:    [[SRC:%.*]] = alloca i8, align 4
+; CHECK-NEXT:    [[DEST_GEP:%.*]] = getelementptr i64, ptr [[SRC]], i64 -1
+; CHECK-NEXT:    [[DEST_USE:%.*]] = load i8, ptr [[DEST_GEP]], align 1
+; CHECK-NEXT:    ret i32 0
+;
+  %dest = alloca i1, align 1
+  ; Replacing the use of dest with src causes no domination uses.
+  %dest.gep = getelementptr i64, ptr %dest, i64 -1
+  %dest.use = load i8, ptr %dest.gep, align 1
+  %src = alloca i8, align 4
+  %src.val = load i1, ptr %src, align 4
+
+  store i1 %src.val, ptr %dest, align 1
+
+  ret i32 0
+}
+
 define void @basic_memmove() {
 ; CHECK-LABEL: define void @basic_memmove() {
 ; CHECK-NEXT:    [[SRC:%.*]] = alloca [[STRUCT_FOO:%.*]], align 4
@@ -346,7 +365,6 @@ define void @avoid_memory_use_last_user_crash() {
   ret void
 }
 
-; TODO: if the last user is terminator, we won't insert lifetime.end.
 ; For multi-bb patch, we will insert it for next immediate post dominator block.
 define void @terminator_lastuse() personality i32 0 {
 ; CHECK-LABEL: define void @terminator_lastuse() personality i32 0 {
@@ -718,7 +736,6 @@ unr2:
 
 }
 
-; TODO: merge allocas for multi basicblock loop case.
 define void @multi_bb_loop(i32 %n) {
 ; CHECK-LABEL: define void @multi_bb_loop
 ; CHECK-SAME: (i32 [[N:%.*]]) {
@@ -980,32 +997,6 @@ bb2:
 
 
 ; Optimization failures follow:
-
-; TODO: we can merge those alloca if we move src alloca to the start of the BB.
-; Tests that a the optimization isn't performed,
-; when any use that isn't dominated by SrcAlloca exists.
-define i32 @use_not_dominated_by_src_alloca() {
-; CHECK-LABEL: define i32 @use_not_dominated_by_src_alloca() {
-; CHECK-NEXT:    [[DEST:%.*]] = alloca i1, align 1
-; CHECK-NEXT:    [[DEST_GEP:%.*]] = getelementptr i64, ptr [[DEST]], i64 -1
-; CHECK-NEXT:    [[DEST_USE:%.*]] = load i8, ptr [[DEST_GEP]], align 1
-; CHECK-NEXT:    [[SRC:%.*]] = alloca i8, align 4
-; CHECK-NEXT:    [[SRC_VAL:%.*]] = load i1, ptr [[SRC]], align 4
-; CHECK-NEXT:    store i1 [[SRC_VAL]], ptr [[DEST]], align 1
-; CHECK-NEXT:    ret i32 0
-;
-  %dest = alloca i1, align 1
-  ; Replacing the use of dest with src causes no domination uses.
-  %dest.gep = getelementptr i64, ptr %dest, i64 -1
-  %dest.use = load i8, ptr %dest.gep, align 1
-  %src = alloca i8, align 4
-  %src.val = load i1, ptr %src, align 4
-
-  store i1 %src.val, ptr %dest, align 1
-
-  ret i32 0
-}
-
 
 ; Tests that a memcpy that doesn't completely overwrite a stack value is a use
 ; for the purposes of liveness analysis, not a definition.
