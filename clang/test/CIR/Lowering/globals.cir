@@ -75,28 +75,26 @@ module {
   }
   cir.global external @string = #cir.const_array<[#cir.int<119> : !s8i, #cir.int<104> : !s8i, #cir.int<97> : !s8i, #cir.int<116> : !s8i, #cir.int<110> : !s8i, #cir.int<111> : !s8i, #cir.int<119> : !s8i, #cir.int<0> : !s8i]> : !cir.array<!s8i x 8>
   // MLIR: llvm.mlir.global external @string(dense<[119, 104, 97, 116, 110, 111, 119, 0]> : tensor<8xi8>) {addr_space = 0 : i32} : !llvm.array<8 x i8>
-  // LLVM: @string = global [8 x i8] c"whatnow\00"
   cir.global external @uint = #cir.const_array<[#cir.int<255> : !u32i]> : !cir.array<!u32i x 1>
   // MLIR: llvm.mlir.global external @uint(dense<255> : tensor<1xi32>) {addr_space = 0 : i32} : !llvm.array<1 x i32>
-  // LLVM: @uint = global [1 x i32] [i32 255]
   cir.global external @sshort = #cir.const_array<[#cir.int<11111> : !s16i, #cir.int<22222> : !s16i]> : !cir.array<!s16i x 2>
   // MLIR: llvm.mlir.global external @sshort(dense<[11111, 22222]> : tensor<2xi16>) {addr_space = 0 : i32} : !llvm.array<2 x i16>
-  // LLVM: @sshort = global [2 x i16] [i16 11111, i16 22222]
   cir.global external @sint = #cir.const_array<[#cir.int<123> : !s32i, #cir.int<456> : !s32i, #cir.int<789> : !s32i]> : !cir.array<!s32i x 3>
   // MLIR: llvm.mlir.global external @sint(dense<[123, 456, 789]> : tensor<3xi32>) {addr_space = 0 : i32} : !llvm.array<3 x i32>
-  // LLVM: @sint = global [3 x i32] [i32 123, i32 456, i32 789]
   cir.global external @ll = #cir.const_array<[#cir.int<999999999> : !s64i, #cir.int<0> : !s64i, #cir.int<0> : !s64i, #cir.int<0> : !s64i]> : !cir.array<!s64i x 4>
   // MLIR: llvm.mlir.global external @ll(dense<[999999999, 0, 0, 0]> : tensor<4xi64>) {addr_space = 0 : i32} : !llvm.array<4 x i64>
-  // LLVM: @ll = global [4 x i64] [i64 999999999, i64 0, i64 0, i64 0]
   cir.global external @twoDim = #cir.const_array<[#cir.const_array<[#cir.int<1> : !s32i, #cir.int<2> : !s32i]> : !cir.array<!s32i x 2>, #cir.const_array<[#cir.int<3> : !s32i, #cir.int<4> : !s32i]> : !cir.array<!s32i x 2>]> : !cir.array<!cir.array<!s32i x 2> x 2>
   // MLIR: llvm.mlir.global external @twoDim(dense<{{\[\[}}1, 2], [3, 4{{\]\]}}> : tensor<2x2xi32>) {addr_space = 0 : i32} : !llvm.array<2 x array<2 x i32>>
-  // LLVM: @twoDim = global [2 x [2 x i32{{\]\] \[\[}}2 x i32] [i32 1, i32 2], [2 x i32] [i32 3, i32 4{{\]\]}}
+
+  // The following tests check direclty the resulting LLVM IR because the MLIR
+  // version is two long. Always prefer the MLIR prefix when possible.
   cir.global external @nestedTwoDim = #cir.const_struct<{#cir.int<1> : !s32i, #cir.const_array<[#cir.const_array<[#cir.int<2> : !s32i, #cir.int<3> : !s32i]> : !cir.array<!s32i x 2>, #cir.const_array<[#cir.int<4> : !s32i, #cir.int<5> : !s32i]> : !cir.array<!s32i x 2>]> : !cir.array<!cir.array<!s32i x 2> x 2>}> : !ty_22A22
   // LLVM: @nestedTwoDim = global %struct.A { i32 1, [2 x [2 x i32{{\]\] \[\[}}2 x i32] [i32 2, i32 3], [2 x i32] [i32 4, i32 5{{\]\]}} }
   cir.global external @nestedString = #cir.const_struct<{#cir.const_array<"1\00\00" : !cir.array<!s8i x 3>> : !cir.array<!s8i x 3>, #cir.const_array<"\00\00\00" : !cir.array<!s8i x 3>> : !cir.array<!s8i x 3>, #cir.const_array<"\00\00\00" : !cir.array<!s8i x 3>> : !cir.array<!s8i x 3>}> : !ty_22StringStruct22
   // LLVM: @nestedString = global %struct.StringStruct { [3 x i8] c"1\00\00", [3 x i8] zeroinitializer, [3 x i8] zeroinitializer }
   cir.global external @nestedStringPtr = #cir.const_struct<{#cir.global_view<@".str"> : !cir.ptr<!s8i>}> : !ty_22StringStructPtr22
   // LLVM: @nestedStringPtr = global %struct.StringStructPtr { ptr @.str }
+
   cir.func @_Z11get_globalsv() {
     %0 = cir.alloca !cir.ptr<!s8i>, cir.ptr <!cir.ptr<!s8i>>, ["s", init] {alignment = 8 : i64}
     %1 = cir.alloca !cir.ptr<!u32i>, cir.ptr <!cir.ptr<!u32i>>, ["u", init] {alignment = 8 : i64}
@@ -107,31 +105,26 @@ module {
     %6 = cir.cast(array_to_ptrdecay, %5 : !cir.ptr<!cir.array<!s8i x 8>>), !cir.ptr<!s8i>
     // MLIR: %[[RES:[0-9]+]] = llvm.mlir.addressof @string : !llvm.ptr
     // MLIR: %{{[0-9]+}} = llvm.getelementptr %[[RES]][0] : (!llvm.ptr) -> !llvm.ptr
-    // LLVM: store ptr @string, ptr %{{[0-9]+}}
     cir.store %6, %0 : !cir.ptr<!s8i>, cir.ptr <!cir.ptr<!s8i>>
     %7 = cir.get_global @uint : cir.ptr <!cir.array<!u32i x 1>>
     %8 = cir.cast(array_to_ptrdecay, %7 : !cir.ptr<!cir.array<!u32i x 1>>), !cir.ptr<!u32i>
     // MLIR: %[[RES:[0-9]+]] = llvm.mlir.addressof @uint : !llvm.ptr
     // MLIR: %{{[0-9]+}} = llvm.getelementptr %[[RES]][0] : (!llvm.ptr) -> !llvm.ptr
-    // LLVM: store ptr @uint, ptr %{{[0-9]+}}
     cir.store %8, %1 : !cir.ptr<!u32i>, cir.ptr <!cir.ptr<!u32i>>
     %9 = cir.get_global @sshort : cir.ptr <!cir.array<!s16i x 2>>
     %10 = cir.cast(array_to_ptrdecay, %9 : !cir.ptr<!cir.array<!s16i x 2>>), !cir.ptr<!s16i>
     // MLIR: %[[RES:[0-9]+]] = llvm.mlir.addressof @sshort : !llvm.ptr
     // MLIR: %{{[0-9]+}} = llvm.getelementptr %[[RES]][0] : (!llvm.ptr) -> !llvm.ptr
-    // LLVM: store ptr @sshort, ptr %{{[0-9]+}}
     cir.store %10, %2 : !cir.ptr<!s16i>, cir.ptr <!cir.ptr<!s16i>>
     %11 = cir.get_global @sint : cir.ptr <!cir.array<!s32i x 3>>
     %12 = cir.cast(array_to_ptrdecay, %11 : !cir.ptr<!cir.array<!s32i x 3>>), !cir.ptr<!s32i>
     // MLIR: %[[RES:[0-9]+]] = llvm.mlir.addressof @sint : !llvm.ptr
     // MLIR: %{{[0-9]+}} = llvm.getelementptr %[[RES]][0] : (!llvm.ptr) -> !llvm.ptr
-    // LLVM: store ptr @sint, ptr %{{[0-9]+}}
     cir.store %12, %3 : !cir.ptr<!s32i>, cir.ptr <!cir.ptr<!s32i>>
     %13 = cir.get_global @ll : cir.ptr <!cir.array<!s64i x 4>>
     %14 = cir.cast(array_to_ptrdecay, %13 : !cir.ptr<!cir.array<!s64i x 4>>), !cir.ptr<!s64i>
     // MLIR: %[[RES:[0-9]+]] = llvm.mlir.addressof @ll : !llvm.ptr
     // MLIR: %{{[0-9]+}} = llvm.getelementptr %[[RES]][0] : (!llvm.ptr) -> !llvm.ptr
-    // LLVM: store ptr @ll, ptr %{{[0-9]+}}
     cir.store %14, %4 : !cir.ptr<!s64i>, cir.ptr <!cir.ptr<!s64i>>
     cir.return
   }
