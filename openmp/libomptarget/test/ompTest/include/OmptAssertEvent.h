@@ -111,6 +111,7 @@ struct OmptAssertEvent {
 
   /// Allow move construction (due to std::unique_ptr)
   OmptAssertEvent(OmptAssertEvent &&o) = default;
+  OmptAssertEvent &operator=(OmptAssertEvent &&o) = default;
 
   std::string getEventName() const { return Name; }
 

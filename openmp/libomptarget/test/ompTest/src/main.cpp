@@ -1,7 +1,7 @@
 #include "../include/OmptTester.h"
 
 /// Example definition on how to write a test case
-OMPTTESTCASE(TestSuiteOne, ShowCaseTest) {
+OMPTTESTCASE(MacroDemoSuite, ShowCaseTest) {
   /* The Test Body */
   int arr[10] = {0};
 
@@ -21,7 +21,9 @@ OMPTTESTCASE(TestSuiteOne, ShowCaseTest) {
   OMPT_EVENT_ASSERT("MyId", DataMap, H2D, "asd")
 }
 
-OMPTTESTCASE(ManualSuite, ParallelFor) {
+OMPTTESTCASE(ManualSuite, ParallelForSeqSemantics) {
+  OMPT_EVENT_ASSERT_DISABLE()
+
   /* The Test Body */
   int arr[10] = {0};
   SequenceAsserter.insert(omptest::OmptAssertEvent::ParallelBegin(
@@ -36,7 +38,26 @@ OMPTTESTCASE(ManualSuite, ParallelFor) {
     arr[i] = i;
 }
 
+OMPTTESTCASE(ManualSuite, ParallelForSetSemantics) {
+  OMPT_SEQ_ASSERT_DISABLE()
+
+  /* The Test Body */
+  int arr[10] = {0};
+  EventAsserter.insert(
+      omptest::OmptAssertEvent::ParallelEnd("User Parallel End"));
+  EventAsserter.insert(omptest::OmptAssertEvent::ParallelBegin(
+      /*NumThreads=*/2, "User Parallel Begin"));
+  EventAsserter.insert(
+      omptest::OmptAssertEvent::ThreadBegin("User Thread Begin"));
+
+#pragma omp parallel for num_threads(2)
+  for (int i = 0; i < 10; ++i)
+    arr[i] = i;
+}
+
 OMPTTESTCASE(ManualSuite, ParallelForActivation) {
+  OMPT_EVENT_ASSERT_DISABLE()
+
   /* The Test Body */
   int arr[10] = {0};
   SequenceAsserter.insert(omptest::OmptAssertEvent::ParallelBegin(
