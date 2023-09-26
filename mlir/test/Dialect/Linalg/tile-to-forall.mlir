@@ -33,7 +33,7 @@ module {
   transform.sequence failures(propagate) {
   ^bb1(%arg1: !transform.any_op):
     %0 = transform.structured.match ops{["linalg.matmul"]} in %arg1 : (!transform.any_op) -> !transform.any_op
-    %1:2 = transform.structured.tile_to_forall_op %0 num_threads [10, 20] (mapping = [ #gpu.thread<y>, #gpu.thread<x> ] )
+    %1:2 = transform.structured.tile_using_forall %0 num_threads [10, 20] (mapping = [ #gpu.thread<y>, #gpu.thread<x> ] )
          : (!transform.any_op) -> (!transform.any_op, !transform.any_op)
   }
 }
@@ -57,7 +57,7 @@ module {
   transform.sequence failures(propagate) {
   ^bb1(%arg1: !transform.any_op):
     %0 = transform.structured.match ops{["linalg.matmul"]} in %arg1 : (!transform.any_op) -> !transform.any_op
-    %1:2 = transform.structured.tile_to_forall_op %0 num_threads [10, 20] (mapping = [ #gpu.thread<y>, #gpu.thread<x> ] )
+    %1:2 = transform.structured.tile_using_forall %0 num_threads [10, 20] (mapping = [ #gpu.thread<y>, #gpu.thread<x> ] )
          : (!transform.any_op) -> (!transform.any_op, !transform.any_op)
   }
 }
@@ -80,7 +80,7 @@ module {
   transform.sequence failures(propagate) {
   ^bb1(%arg1: !transform.any_op):
     %0 = transform.structured.match ops{["linalg.copy"]} in %arg1 : (!transform.any_op) -> !transform.any_op
-    %1:2 = transform.structured.tile_to_forall_op %0 num_threads [10, 20] (mapping = [ #gpu.thread<y>, #gpu.thread<x> ] )
+    %1:2 = transform.structured.tile_using_forall %0 num_threads [10, 20] (mapping = [ #gpu.thread<y>, #gpu.thread<x> ] )
          : (!transform.any_op) -> (!transform.any_op, !transform.any_op)
   }
 }
@@ -124,7 +124,7 @@ transform.sequence failures(propagate) {
 ^bb1(%arg1: !transform.any_op):
   %0 = transform.structured.match ops{["linalg.matmul"]} in %arg1 : (!transform.any_op) -> !transform.any_op
   %sz = transform.structured.match ops{["test.dummy"]} in %arg1 : (!transform.any_op) -> !transform.any_op
-  %1:2 = transform.structured.tile_to_forall_op %0 tile_sizes *(%sz : !transform.any_op)
+  %1:2 = transform.structured.tile_using_forall %0 tile_sizes *(%sz : !transform.any_op)
          : (!transform.any_op) -> (!transform.any_op, !transform.any_op)
 }
 
@@ -163,7 +163,7 @@ func.func @matmul_static(%A: tensor<100x200xf32>, %B: tensor<200x300xf32>, %C: t
 transform.sequence failures(propagate) {
 ^bb1(%arg1: !transform.any_op):
   %0 = transform.structured.match ops{["linalg.matmul"]} in %arg1 : (!transform.any_op) -> !transform.any_op
-  %1:2 = transform.structured.tile_to_forall_op %0 num_threads [10, 21]
+  %1:2 = transform.structured.tile_using_forall %0 num_threads [10, 21]
          : (!transform.any_op) -> (!transform.any_op, !transform.any_op)
 }
 
@@ -205,7 +205,7 @@ func.func @matmul_tile_size_dynamic(%A: tensor<?x?xf32>, %B: tensor<?x?xf32>, %C
 transform.sequence failures(propagate) {
 ^bb1(%arg1: !transform.any_op):
   %0 = transform.structured.match ops{["linalg.matmul"]} in %arg1 : (!transform.any_op) -> !transform.any_op
-  %1:2 = transform.structured.tile_to_forall_op %0 tile_sizes [10, 20]
+  %1:2 = transform.structured.tile_using_forall %0 tile_sizes [10, 20]
          : (!transform.any_op) -> (!transform.any_op, !transform.any_op)
 }
 
@@ -242,7 +242,7 @@ func.func @matmul_tile_size_static(%A: tensor<100x200xf32>, %B: tensor<200x300xf
 transform.sequence failures(propagate) {
 ^bb1(%arg1: !transform.any_op):
   %0 = transform.structured.match ops{["linalg.matmul"]} in %arg1 : (!transform.any_op) -> !transform.any_op
-  %1:2 = transform.structured.tile_to_forall_op %0 tile_sizes [10, 21]
+  %1:2 = transform.structured.tile_using_forall %0 tile_sizes [10, 21]
          : (!transform.any_op) -> (!transform.any_op, !transform.any_op)
 }
 
@@ -265,7 +265,7 @@ module {
   transform.sequence failures(propagate) {
   ^bb1(%arg1: !transform.any_op):
     %0 = transform.structured.match ops{["linalg.generic"]} in %arg1 : (!transform.any_op) -> !transform.any_op
-    %1:2 = transform.structured.tile_to_forall_op %0 num_threads [2] ( mapping = [#gpu.thread<x>])
+    %1:2 = transform.structured.tile_using_forall %0 num_threads [2] ( mapping = [#gpu.thread<x>])
          : (!transform.any_op) -> (!transform.any_op, !transform.any_op)
   }
 }
@@ -317,7 +317,7 @@ transform.sequence failures(propagate) {
 ^bb1(%arg1: !transform.any_op):
   %0 = transform.structured.match ops{["linalg.matmul"]} in %arg1 : (!transform.any_op) -> !transform.any_op
   %sz = transform.structured.match ops{["test.dummy"]} in %arg1 : (!transform.any_op) -> !transform.any_op
-  %1:2 = transform.structured.tile_to_forall_op %0 tile_sizes [%sz : !transform.any_op, 20]
+  %1:2 = transform.structured.tile_using_forall %0 tile_sizes [%sz : !transform.any_op, 20]
          : (!transform.any_op) -> (!transform.any_op, !transform.any_op)
 }
 
@@ -371,7 +371,7 @@ transform.sequence failures(propagate) {
   transform.sequence failures(propagate) {
   ^bb1(%arg1: !transform.any_op):
     %0 = transform.structured.match ops{["linalg.generic"]} in %arg1 : (!transform.any_op) -> !transform.any_op
-    %forall, %tiled_generic = transform.structured.tile_to_forall_op %0 num_threads [7]
+    %forall, %tiled_generic = transform.structured.tile_using_forall %0 num_threads [7]
          : (!transform.any_op) -> (!transform.any_op, !transform.any_op)
   }
 
@@ -425,7 +425,7 @@ transform.sequence failures(propagate) {
   transform.sequence failures(propagate) {
   ^bb1(%IN_MAT2: !transform.any_op):
     %0 = transform.structured.match ops{["linalg.generic"]} in %IN_MAT2 : (!transform.any_op) -> !transform.any_op
-    %forall, %tiled_generic = transform.structured.tile_to_forall_op %0 num_threads [4]
+    %forall, %tiled_generic = transform.structured.tile_using_forall %0 num_threads [4]
          : (!transform.any_op) -> (!transform.any_op, !transform.any_op)
   }
 

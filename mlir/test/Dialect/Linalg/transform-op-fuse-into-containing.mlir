@@ -651,7 +651,7 @@ transform.sequence failures(propagate) {
     : (!transform.any_op) -> !transform.any_op
   %1 = transform.structured.match ops{["linalg.matmul"]} in %arg1
     : (!transform.any_op) -> !transform.any_op
-  %forall_op, %tiled_op = transform.structured.tile_to_forall_op %1
+  %tiled_op, %forall_op = transform.structured.tile_using_forall %1
     num_threads [] tile_sizes [50, 16]
     : (!transform.any_op) -> (!transform.any_op, !transform.any_op)
   // Note that we pass in %tiled_op, which isn't a container op.

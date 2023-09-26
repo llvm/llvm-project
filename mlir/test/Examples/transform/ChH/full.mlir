@@ -143,10 +143,10 @@ module attributes { transform.with_named_sequence } {
     // inside the loops produced by tiling.
     //
     //                                                             [n  y  x  c]
-    %co, %relu2 = transform.structured.tile_to_forall_op %relu
+    %relu2, %co = transform.structured.tile_using_forall %relu
                                                         tile_sizes [0, 0, 0, 64]
       : (!transform.any_op) -> (!transform.any_op, !transform.any_op)
-    %n_y_xo, %relu3 = transform.structured.tile_to_forall_op %relu2
+    %relu3, %n_y_xo = transform.structured.tile_using_forall %relu2
                                                         tile_sizes [1, 1, 5, 0]
       : (!transform.any_op) -> (!transform.any_op, !transform.any_op)
 
@@ -207,8 +207,8 @@ module attributes { transform.with_named_sequence } {
     // tile_size = 1 along all dimensions, so the reduction is entirely
     // performed by the generated loops. The combiner structured operation is
     // still produced and adds up the reduction result with the initial value.
-    %rz_ry_rx, %red_fill, %conv4, %combining
-    = transform.structured.tile_reduction_using_scf %conv3 by
+    %red_fill, %conv4, %combining, %rz_ry_rx
+    = transform.structured.tile_reduction_using_for %conv3 by
     //            n  y  x  c  rz ry rx
       tile_sizes=[0, 0, 0, 0, 1, 1, 1]
       : (!transform.any_op)

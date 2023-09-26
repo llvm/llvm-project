@@ -39,12 +39,12 @@ func.func @softmax(%arg0: tensor<16x64x256xf32>) -> tensor<16x64x256xf32> {
 transform.sequence failures(propagate) {
   ^bb0(%arg1: !transform.any_op):
     %0 = transform.structured.match ops{["linalg.softmax"]} in %arg1 : (!transform.any_op) -> !transform.any_op
-    %1, %loop:2 = transform.structured.tile %0 [2, 3] : (!transform.any_op) -> (!transform.any_op, !transform.any_op, !transform.any_op)
+    %1, %loop:2 = transform.structured.tile_using_for %0 [2, 3] : (!transform.any_op) -> (!transform.any_op, !transform.any_op, !transform.any_op)
 }
 
 // -----
 
-// Test the softmax tiling interface with the tile_to_forall_op transform and
+// Test the softmax tiling interface with the tile_using_forall transform and
 // check that it composes properly with the fuse transform.
 // This should sink the linalg.generic inside the scf.forall and run that
 // generic on 2x4x256 tensors (2==16/8, 4==64/16).
@@ -105,7 +105,7 @@ transform.sequence failures(propagate) {
   %0 = transform.structured.match ops{["linalg.softmax"]} in %arg1 : (!transform.any_op) -> !transform.any_op
 
   // Tile the root.
-  %forall_op, %tiled_op = transform.structured.tile_to_forall_op %0 num_threads [8, 16]
+  %tiled_op, %forall_op = transform.structured.tile_using_forall %0 num_threads [8, 16]
        : (!transform.any_op) -> (!transform.any_op, !transform.any_op)
 
   // Fuse all producers.
@@ -145,5 +145,5 @@ func.func @softmax_memref(%arg0: memref<16x64x256xf32>, %arg1: memref<16x64x256x
 transform.sequence failures(propagate) {
   ^bb0(%arg1: !transform.any_op):
     %0 = transform.structured.match ops{["linalg.softmax"]} in %arg1 : (!transform.any_op) -> !transform.any_op
-    %1, %loop:2 = transform.structured.tile %0 [2, 3] : (!transform.any_op) -> (!transform.any_op, !transform.any_op, !transform.any_op)
+    %1, %loop:2 = transform.structured.tile_using_for %0 [2, 3] : (!transform.any_op) -> (!transform.any_op, !transform.any_op, !transform.any_op)
 }

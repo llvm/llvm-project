@@ -567,8 +567,8 @@ class SplitOp:
         )
 
 
-class TileOp:
-    """Specialization for TileOp class."""
+class TileUsingForOp:
+    """Specialization for TileUsingForOp class."""
 
     @overload
     def __init__(
@@ -616,7 +616,9 @@ class TileOp:
         if isinstance(loop_types_or_target, (Operation, Value, OpView)):
             loop_types = [transform.AnyOpType.get()] * num_loops
             target = loop_types_or_target
-            assert target_or_none is None, "Cannot construct TileOp with two targets."
+            assert (
+                target_or_none is None
+            ), "Cannot construct TileUsingForOp with two targets."
         else:
             loop_types = (
                 ([loop_types_or_target] * num_loops)
@@ -638,8 +640,8 @@ class TileOp:
         )
 
 
-class TileToForallOp:
-    """Specialization for TileToForallOp class."""
+class TileUsingForallOp:
+    """Specialization for TileUsingForallOp class."""
 
     @overload
     def __init__(
