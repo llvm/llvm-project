@@ -165,5 +165,10 @@ add_unittest_framework_library(
 add_header_library(
   ErrnoSetterMatcher
   HDRS
-    ErrnoSetterMatcher
+    ErrnoSetterMatcher.h
+  DEPENDS
+    libc.src.__support.common
+    libc.src.__support.FPUtil.fp_bits
+    libc.src.__support.StringUtil.error_to_string
+    libc.src.errno.errno
 )
