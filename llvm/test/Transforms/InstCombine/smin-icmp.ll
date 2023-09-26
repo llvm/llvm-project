@@ -1271,5 +1271,27 @@ define i1 @smin_and_bitwise(i32 %x) {
   ret i1 %tobool
 }
 
+; try to fold icmp eq smin(X, Y), Z
+; pre-condition X != Z
+; X < Z fail
+; swap X and Y
+; pre-condition Y != Z fail
+; Y < Z fail
+define i1 @eq_smin_nofold(i32 %x) {
+; CHECK-LABEL: @eq_smin_nofold(
+; CHECK-NEXT:    [[COND:%.*]] = icmp ne i32 [[X:%.*]], 5
+; CHECK-NEXT:    call void @llvm.assume(i1 [[COND]])
+; CHECK-NEXT:    [[MINV:%.*]] = tail call i32 @llvm.smin.i32(i32 [[X]], i32 5)
+; CHECK-NEXT:    [[RET:%.*]] = icmp eq i32 [[MINV]], 5
+; CHECK-NEXT:    ret i1 [[RET]]
+;
+  %cond = icmp ne i32 %x, 5
+  call void @llvm.assume(i1 %cond)
+  %minv = tail call i32 @llvm.smin.i32(i32 %x, i32 5)
+  %ret = icmp eq i32 %minv, 5
+  ret i1 %ret
+}
+
+declare void @llvm.assume(i1)
 declare i32 @llvm.smin.i32(i32, i32)
 declare <2 x i32> @llvm.smin.v2i32(<2 x i32>, <2 x i32>)

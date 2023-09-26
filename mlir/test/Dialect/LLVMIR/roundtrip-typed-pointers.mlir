@@ -39,10 +39,10 @@ func.func @alloca(%size : i64) {
 
 // CHECK-LABEL: @null
 func.func @null() {
-  // CHECK: llvm.mlir.null : !llvm.ptr<i8>
-  %0 = llvm.mlir.null : !llvm.ptr<i8>
-  // CHECK: llvm.mlir.null : !llvm.ptr<struct<(ptr<func<void (i32, ptr<func<void ()>>)>>, i64)>>
-  %1 = llvm.mlir.null : !llvm.ptr<struct<(ptr<func<void (i32, ptr<func<void ()>>)>>, i64)>>
+  // CHECK: llvm.mlir.zero : !llvm.ptr<i8>
+  %0 = llvm.mlir.zero : !llvm.ptr<i8>
+  // CHECK: llvm.mlir.zero : !llvm.ptr<struct<(ptr<func<void (i32, ptr<func<void ()>>)>>, i64)>>
+  %1 = llvm.mlir.zero : !llvm.ptr<struct<(ptr<func<void (i32, ptr<func<void ()>>)>>, i64)>>
   llvm.return
 }
 

@@ -5050,6 +5050,9 @@ InstCombinerImpl::foldICmpWithMinMaxImpl(Instruction &I,
     if (!MinMaxCmpXZ.has_value()) {
       std::swap(X, Y);
       std::swap(CmpXZ, CmpYZ);
+      // Re-check pre-condition X != Z
+      if (!CmpXZ.has_value() || (Pred == ICmpInst::ICMP_EQ) == *CmpXZ)
+        break;
       MinMaxCmpXZ = IsCondKnownTrue(simplifyICmpInst(NewPred, X, Z, Q));
     }
     if (!MinMaxCmpXZ.has_value())

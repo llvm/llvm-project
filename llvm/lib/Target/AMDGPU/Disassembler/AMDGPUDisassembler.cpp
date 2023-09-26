@@ -262,6 +262,61 @@ DECODE_OPERAND_SRC_REG_OR_IMM_DEFERRED_9(VS_32, OPW16, 16)
 DECODE_OPERAND_SRC_REG_OR_IMM_DEFERRED_9(VS_32, OPW32, 32)
 DECODE_OPERAND_SRC_REG_OR_IMM_DEFERRED_9(SReg_32, OPW32, 32)
 
+static DecodeStatus DecodeVGPR_16RegisterClass(MCInst &Inst, unsigned Imm,
+                                               uint64_t /*Addr*/,
+                                               const MCDisassembler *Decoder) {
+  assert(isUInt<10>(Imm) && "10-bit encoding expected");
+  assert((Imm & (1 << 8)) == 0 && "Imm{8} should not be used");
+
+  bool IsHi = Imm & (1 << 9);
+  unsigned RegIdx = Imm & 0xff;
+  auto DAsm = static_cast<const AMDGPUDisassembler *>(Decoder);
+  return addOperand(Inst, DAsm->createVGPR16Operand(RegIdx, IsHi));
+}
+
+static DecodeStatus
+DecodeVGPR_16_Lo128RegisterClass(MCInst &Inst, unsigned Imm, uint64_t /*Addr*/,
+                                 const MCDisassembler *Decoder) {
+  assert(isUInt<8>(Imm) && "8-bit encoding expected");
+
+  bool IsHi = Imm & (1 << 7);
+  unsigned RegIdx = Imm & 0x7f;
+  auto DAsm = static_cast<const AMDGPUDisassembler *>(Decoder);
+  return addOperand(Inst, DAsm->createVGPR16Operand(RegIdx, IsHi));
+}
+
+static DecodeStatus decodeOperand_VSrcT16_Lo128(MCInst &Inst, unsigned Imm,
+                                                uint64_t /*Addr*/,
+                                                const MCDisassembler *Decoder) {
+  assert(isUInt<9>(Imm) && "9-bit encoding expected");
+
+  const auto *DAsm = static_cast<const AMDGPUDisassembler *>(Decoder);
+  bool IsVGPR = Imm & (1 << 8);
+  if (IsVGPR) {
+    bool IsHi = Imm & (1 << 7);
+    unsigned RegIdx = Imm & 0x7f;
+    return addOperand(Inst, DAsm->createVGPR16Operand(RegIdx, IsHi));
+  }
+  return addOperand(Inst, DAsm->decodeNonVGPRSrcOp(AMDGPUDisassembler::OPW16,
+                                                   Imm & 0xFF, false, 16));
+}
+
+static DecodeStatus decodeOperand_VSrcT16(MCInst &Inst, unsigned Imm,
+                                          uint64_t /*Addr*/,
+                                          const MCDisassembler *Decoder) {
+  assert(isUInt<10>(Imm) && "10-bit encoding expected");
+
+  const auto *DAsm = static_cast<const AMDGPUDisassembler *>(Decoder);
+  bool IsVGPR = Imm & (1 << 8);
+  if (IsVGPR) {
+    bool IsHi = Imm & (1 << 9);
+    unsigned RegIdx = Imm & 0xff;
+    return addOperand(Inst, DAsm->createVGPR16Operand(RegIdx, IsHi));
+  }
+  return addOperand(Inst, DAsm->decodeNonVGPRSrcOp(AMDGPUDisassembler::OPW16,
+                                                   Imm & 0xFF, false, 16));
+}
+
 static DecodeStatus decodeOperand_KImmFP(MCInst &Inst, unsigned Imm,
                                          uint64_t Addr,
                                          const MCDisassembler *Decoder) {
@@ -1141,6 +1196,13 @@ MCOperand AMDGPUDisassembler::createSRegOperand(unsigned SRegClassID,
   return createRegOperand(SRegClassID, Val >> shift);
 }
 
+MCOperand AMDGPUDisassembler::createVGPR16Operand(unsigned RegIdx,
+                                                  bool IsHi) const {
+  unsigned RCID =
+      IsHi ? AMDGPU::VGPR_HI16RegClassID : AMDGPU::VGPR_LO16RegClassID;
+  return createRegOperand(RCID, RegIdx);
+}
+
 // Decode Literals for insts which always have a literal in the encoding
 MCOperand
 AMDGPUDisassembler::decodeMandatoryLiteralConstant(unsigned Val) const {
@@ -1397,6 +1459,18 @@ MCOperand AMDGPUDisassembler::decodeSrcOp(const OpWidthTy Width, unsigned Val,
     return createRegOperand(IsAGPR ? getAgprClassId(Width)
                                    : getVgprClassId(Width), Val - VGPR_MIN);
   }
+  return decodeNonVGPRSrcOp(Width, Val & 0xFF, MandatoryLiteral, ImmWidth);
+}
+
+MCOperand AMDGPUDisassembler::decodeNonVGPRSrcOp(const OpWidthTy Width,
+                                                 unsigned Val,
+                                                 bool MandatoryLiteral,
+                                                 unsigned ImmWidth) const {
+  // Cases when Val{8} is 1 (vgpr, agpr or true 16 vgpr) should have been
+  // decoded earlier.
+  assert(Val < (1 << 8) && "9-bit Src encoding when Val{8} is 0");
+  using namespace AMDGPU::EncValues;
+
   if (Val <= SGPR_MAX) {
     // "SGPR_MIN <= Val" is always true and causes compilation warning.
     static_assert(SGPR_MIN == 0);
