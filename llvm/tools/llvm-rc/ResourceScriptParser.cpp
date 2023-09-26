@@ -80,6 +80,8 @@ RCParser::ParseType RCParser::parseSingleResource() {
     Result = parseIconResource();
   else if (TypeToken->equalsLower("MENU"))
     Result = parseMenuResource();
+  else if (TypeToken->equalsLower("MENUEX"))
+    Result = parseMenuExResource();
   else if (TypeToken->equalsLower("RCDATA"))
     Result = parseUserDefinedResource(RkRcData);
   else if (TypeToken->equalsLower("VERSIONINFO"))
@@ -623,6 +625,13 @@ RCParser::ParseType RCParser::parseMenuResource() {
                                          std::move(*Items), MemoryFlags);
 }
 
+RCParser::ParseType RCParser::parseMenuExResource() {
+  uint16_t MemoryFlags =
+      parseMemoryFlags(MenuExResource::getDefaultMemoryFlags());
+  ASSIGN_OR_RETURN(Items, parseMenuExItemsList());
+  return std::make_unique<MenuExResource>(std::move(*Items), MemoryFlags);
+}
+
 Expected<MenuDefinitionList> RCParser::parseMenuItemsList() {
   RETURN_IF_ERROR(consumeType(Kind::BlockBegin));
 
@@ -677,6 +686,97 @@ Expected<MenuDefinitionList> RCParser::parseMenuItemsList() {
     assert(IsMenuItem);
     List.addDefinition(
         std::make_unique<MenuItem>(*CaptionResult, MenuResult, *FlagsResult));
+  }
+
+  return std::move(List);
+}
+
+Expected<MenuDefinitionList> RCParser::parseMenuExItemsList() {
+  RETURN_IF_ERROR(consumeType(Kind::BlockBegin));
+
+  MenuDefinitionList List;
+
+  // Read a set of items. Each item is of one of three kinds:
+  //   MENUITEM caption:String [,[id][, [type][, state]]]]
+  //   POPUP caption:String [,[id][, [type][, [state][, helpID]]]] { popupBody }
+  //   }
+  while (!consumeOptionalType(Kind::BlockEnd)) {
+    ASSIGN_OR_RETURN(ItemTypeResult, readIdentifier());
+
+    bool IsMenuItem = ItemTypeResult->equals_insensitive("MENUITEM");
+    bool IsPopup = ItemTypeResult->equals_insensitive("POPUP");
+    if (!IsMenuItem && !IsPopup)
+      return getExpectedError("MENUITEM, POPUP, END or '}'", true);
+
+    // Not a separator. Read the caption.
+    ASSIGN_OR_RETURN(CaptionResult, readString());
+
+    // If MENUITEM, expect [,[id][, [type][, state]]]]
+    uint32_t MenuId = 0;
+    uint32_t MenuType = 0;
+    uint32_t MenuState = 0;
+
+    if (IsMenuItem) {
+      if (consumeOptionalType(Kind::Comma)) {
+        auto IntId = readInt();
+        if (IntId) {
+          MenuId = *IntId;
+        }
+        if (consumeOptionalType(Kind::Comma)) {
+          auto IntType = readInt();
+          if (IntType) {
+            MenuType = *IntType;
+          }
+          if (consumeOptionalType(Kind::Comma)) {
+            auto IntState = readInt();
+            if (IntState) {
+              MenuState = *IntState;
+            }
+          }
+        }
+      }
+    }
+
+    uint32_t PopupId = 0;
+    uint32_t PopupType = 0;
+    uint32_t PopupState = 0;
+    uint32_t PopupHelpID = 0;
+    if (IsPopup) {
+      if (consumeOptionalType(Kind::Comma)) {
+        auto IntId = readInt();
+        if (IntId) {
+          PopupId = *IntId;
+        }
+        if (consumeOptionalType(Kind::Comma)) {
+          auto IntType = readInt();
+          if (IntType) {
+            PopupType = *IntType;
+          }
+          if (consumeOptionalType(Kind::Comma)) {
+            auto IntState = readInt();
+            if (IntState) {
+              PopupState = *IntState;
+            }
+            if (consumeOptionalType(Kind::Comma)) {
+              auto IntHelpID = readInt();
+              if (IntHelpID) {
+                PopupHelpID = *IntHelpID;
+              }
+            }
+          }
+        }
+      }
+      // If POPUP, read submenu items recursively.
+      ASSIGN_OR_RETURN(SubMenuResult, parseMenuExItemsList());
+      List.addDefinition(std::make_unique<PopupExItem>(
+          *CaptionResult, PopupId, PopupType, PopupState, PopupHelpID,
+          std::move(*SubMenuResult)));
+      continue;
+    }
+
+    assert(IsMenuItem);
+    List.addDefinition(std::make_unique<MenuExItem>(*CaptionResult, MenuId,
+                                                    MenuType, MenuState));
   }
 
   return std::move(List);
