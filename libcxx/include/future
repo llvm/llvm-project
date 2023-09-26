@@ -44,14 +44,15 @@ error_condition make_error_condition(future_errc e) noexcept;
 
 const error_category& future_category() noexcept;
 
-class future_error
-    : public logic_error
-{
+class future_error : public logic_error {
 public:
-    future_error(error_code ec);  // exposition only
-    explicit future_error(future_errc); // C++17
+    explicit future_error(future_errc e); // since C++17
+
     const error_code& code() const noexcept;
     const char*       what() const noexcept;
+
+private:
+    error_code ec_;             // exposition only
 };
 
 template <class R>
@@ -516,12 +517,25 @@ make_error_condition(future_errc __e) _NOEXCEPT
     return error_condition(static_cast<int>(__e), future_category());
 }
 
+_LIBCPP_NORETURN inline _LIBCPP_HIDE_FROM_ABI
+#ifndef _LIBCPP_HAS_NO_EXCEPTIONS
+_LIBCPP_AVAILABILITY_FUTURE_ERROR
+#endif
+void __throw_future_error(future_errc __ev);
+
 class _LIBCPP_EXPORTED_FROM_ABI _LIBCPP_AVAILABILITY_FUTURE_ERROR future_error
     : public logic_error
 {
     error_code __ec_;
+
+    future_error(error_code);
+    friend void __throw_future_error(future_errc);
+    template <class> friend class promise;
+
 public:
-    future_error(error_code __ec);
+#if _LIBCPP_STD_VER >= 17
+    _LIBCPP_HIDE_FROM_ABI explicit future_error(future_errc __ec) : future_error(std::make_error_code(__ec)) {}
+#endif
 
     _LIBCPP_INLINE_VISIBILITY
     const error_code& code() const _NOEXCEPT {return __ec_;}
@@ -530,10 +544,7 @@ public:
     ~future_error() _NOEXCEPT override;
 };
 
-_LIBCPP_NORETURN inline _LIBCPP_INLINE_VISIBILITY
-#ifndef _LIBCPP_HAS_NO_EXCEPTIONS
-_LIBCPP_AVAILABILITY_FUTURE_ERROR
-#endif
+// Declared above std::future_error
 void __throw_future_error(future_errc __ev)
 {
 #ifndef _LIBCPP_HAS_NO_EXCEPTIONS
@@ -1359,9 +1370,7 @@ promise<_Rp>::~promise()
     if (__state_)
     {
         if (!__state_->__has_value() && __state_->use_count() > 1)
-            __state_->set_exception(make_exception_ptr(
-                      future_error(make_error_code(future_errc::broken_promise))
-                                                      ));
+            __state_->set_exception(make_exception_ptr(future_error(make_error_code(future_errc::broken_promise))));
         __state_->__release_shared();
     }
 }
@@ -1502,9 +1511,7 @@ promise<_Rp&>::~promise()
     if (__state_)
     {
         if (!__state_->__has_value() && __state_->use_count() > 1)
-            __state_->set_exception(make_exception_ptr(
-                      future_error(make_error_code(future_errc::broken_promise))
-                                                      ));
+            __state_->set_exception(make_exception_ptr(future_error(make_error_code(future_errc::broken_promise))));
         __state_->__release_shared();
     }
 }
