@@ -5038,11 +5038,11 @@ unsigned SIInstrInfo::getVALUOp(const MachineInstr &MI) const {
   case AMDGPU::S_MIN_F32: return AMDGPU::V_MIN_F32_e64;
   case AMDGPU::S_MAX_F32: return AMDGPU::V_MAX_F32_e64;
   case AMDGPU::S_MUL_F32: return AMDGPU::V_MUL_F32_e64;
-  case AMDGPU::S_ADD_F16: return AMDGPU::V_ADD_F16_t16_e64;
-  case AMDGPU::S_SUB_F16: return AMDGPU::V_SUB_F16_t16_e64;
-  case AMDGPU::S_MIN_F16: return AMDGPU::V_MIN_F16_t16_e64;
-  case AMDGPU::S_MAX_F16: return AMDGPU::V_MAX_F16_t16_e64;
-  case AMDGPU::S_MUL_F16: return AMDGPU::V_MUL_F16_t16_e64;
+  case AMDGPU::S_ADD_F16: return AMDGPU::V_ADD_F16_fake16_e64;
+  case AMDGPU::S_SUB_F16: return AMDGPU::V_SUB_F16_fake16_e64;
+  case AMDGPU::S_MIN_F16: return AMDGPU::V_MIN_F16_fake16_e64;
+  case AMDGPU::S_MAX_F16: return AMDGPU::V_MAX_F16_fake16_e64;
+  case AMDGPU::S_MUL_F16: return AMDGPU::V_MUL_F16_fake16_e64;
   case AMDGPU::S_CVT_PK_RTZ_F16_F32: return AMDGPU::V_CVT_PKRTZ_F16_F32_e64;
   case AMDGPU::S_FMAC_F32: return AMDGPU::V_FMAC_F32_e64;
   case AMDGPU::S_FMAC_F16: return AMDGPU::V_FMAC_F16_t16_e64;
