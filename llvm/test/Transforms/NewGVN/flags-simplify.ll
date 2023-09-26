@@ -47,7 +47,8 @@ define i64 @lshr_lsh_nuw(i64 %tmp) {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[CONV3:%.*]] = shl i64 [[TMP:%.*]], 32
 ; CHECK-NEXT:    store i64 [[CONV3]], ptr @f, align 8
-; CHECK-NEXT:    ret i64 [[TMP]]
+; CHECK-NEXT:    [[LSHR:%.*]] = lshr i64 [[CONV3]], 32
+; CHECK-NEXT:    ret i64 [[LSHR]]
 ;
 entry:
   %conv3 = shl nuw i64 %tmp, 32
