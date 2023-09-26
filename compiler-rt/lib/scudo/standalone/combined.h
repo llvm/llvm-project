@@ -1044,6 +1044,7 @@ private:
       atomic_u32 DeallocationTid;
     };
 
+    MemMapT MemMap;
     atomic_uptr Pos;
     u32 Size;
     // An array of Size (at least one) elements of type Entry is immediately
@@ -1492,12 +1493,15 @@ private:
         static_cast<u32>(getFlags()->allocation_ring_buffer_size);
     if (AllocationRingBufferSize < 1)
       return;
-    RawRingBuffer = static_cast<char *>(
-        map(/*Addr=*/nullptr,
-            roundUp(ringBufferSizeInBytes(AllocationRingBufferSize),
-                    getPageSizeCached()),
-            "scudo:ring_buffer"));
+    MemMapT MemMap;
+    MemMap.map(
+        /*Addr=*/0U,
+        roundUp(ringBufferSizeInBytes(AllocationRingBufferSize),
+                getPageSizeCached()),
+        "scudo:ring_buffer");
+    RawRingBuffer = reinterpret_cast<char *>(MemMap.getBase());
     auto *RingBuffer = reinterpret_cast<AllocationRingBuffer *>(RawRingBuffer);
+    RingBuffer->MemMap = MemMap;
     RingBuffer->Size = AllocationRingBufferSize;
     static_assert(sizeof(AllocationRingBuffer) %
                           alignof(typename AllocationRingBuffer::Entry) ==
@@ -1506,7 +1510,11 @@ private:
   }
 
   void unmapRingBuffer() {
-    unmap(RawRingBuffer, roundUp(getRingBufferSize(), getPageSizeCached()));
+    auto *RingBuffer = getRingBuffer();
+    if (RingBuffer != nullptr) {
+      MemMapT MemMap = RingBuffer->MemMap;
+      MemMap.unmap(MemMap.getBase(), MemMap.getCapacity());
+    }
     RawRingBuffer = nullptr;
   }
 
