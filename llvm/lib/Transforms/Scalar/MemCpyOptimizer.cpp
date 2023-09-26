@@ -1598,7 +1598,8 @@ bool MemCpyOptPass::performStackMoveOptzn(Instruction *Load, Instruction *Store,
   if (!CaptureTrackingWithModRef(SrcAlloca, SrcModRefCallback))
     return false;
 
-  // We can do the transformation. First, move the SrcAlloca to the start of the BB.
+  // We can do the transformation. First, move the SrcAlloca to the start of the
+  // BB.
   if (SrcNotDom)
     SrcAlloca->moveBefore(*SrcAlloca->getParent(),
                           SrcAlloca->getParent()->getFirstInsertionPt());
