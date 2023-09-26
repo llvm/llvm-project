@@ -1,4 +1,4 @@
-//===-- riscv32 floating point env manipulation functions -------*- C++ -*-===//
+//===-- riscv floating point env manipulation functions ---------*- C++ -*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_LIBC_SRC___SUPPORT_FPUTIL_RISCV32_FENVIMPL_H
-#define LLVM_LIBC_SRC___SUPPORT_FPUTIL_RISCV32_FENVIMPL_H
+#ifndef LLVM_LIBC_SRC___SUPPORT_FPUTIL_RISCV_FENVIMPL_H
+#define LLVM_LIBC_SRC___SUPPORT_FPUTIL_RISCV_FENVIMPL_H
 
 #include "src/__support/FPUtil/FPBits.h"
 #include "src/__support/macros/attributes.h" // For LIBC_INLINE_ASM
@@ -177,4 +177,4 @@ LIBC_INLINE int set_env(const fenv_t *envp) {
 } // namespace fputil
 } // namespace LIBC_NAMESPACE
 
-#endif // LLVM_LIBC_SRC___SUPPORT_FPUTIL_RISCV32_FENVIMPL_H
+#endif // LLVM_LIBC_SRC___SUPPORT_FPUTIL_RISCV_FENVIMPL_H
