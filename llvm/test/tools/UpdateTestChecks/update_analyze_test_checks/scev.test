@@ -1,6 +1,6 @@
 ## Basic test checking that update_analyze_test_checks.py works correctly
-# RUN: cp -f %S/Inputs/basic.ll %t.ll && %update_analyze_test_checks %t.ll
-# RUN: diff -u %t.ll %S/Inputs/basic.ll.expected
+# RUN: cp -f %S/Inputs/scev.ll %t.ll && %update_analyze_test_checks %t.ll
+# RUN: diff -u %t.ll %S/Inputs/scev.ll.expected
 ## Check that running the script again does not change the result:
 # RUN: %update_analyze_test_checks %t.ll
-# RUN: diff -u %t.ll %S/Inputs/basic.ll.expected
+# RUN: diff -u %t.ll %S/Inputs/scev.ll.expected
