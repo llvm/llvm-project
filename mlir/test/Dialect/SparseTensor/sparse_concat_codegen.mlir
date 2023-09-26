@@ -267,7 +267,7 @@ func.func @concat_sparse_sparse_dense(%arg0: tensor<2x4xf64, #DCSR>,
 //   CHECK-DAG:  %[[TMP_c9:.*]] = arith.constant 9 : index
 //   CHECK-DAG:  %[[TMP_c4:.*]] = arith.constant 4 : index
 //       CHECK:  %[[TMP_0:.*]] = bufferization.alloc_tensor(%[[TMP_c9]], %[[TMP_c4]]) : tensor<?x?xf64, #sparse_tensor
-//       CHECK:  %[[VAL_0:.*]] = sparse_tensor.values %[[TMP_0]] : tensor<?x?xf64, #sparse_tensor.encoding<{ lvlTypes = [ "dense", "dense" ] }>> to memref<?xf64>
+//       CHECK:  %[[VAL_0:.*]] = sparse_tensor.values %[[TMP_0]] : tensor<?x?xf64, #sparse_tensor.encoding<{{{.*}}}>> to memref<?xf64>
 //       CHECK:  %[[DIM_0:.*]] = memref.alloca() : memref<2xindex>
 //       CHECK:  memref.store %[[TMP_c9]], %[[DIM_0]][%[[TMP_c0]]] : memref<2xindex>
 //       CHECK:  memref.store %[[TMP_c4]], %[[DIM_0]][%[[TMP_c1]]] : memref<2xindex>
@@ -329,7 +329,7 @@ func.func @concat_sparse_sparse_dense(%arg0: tensor<2x4xf64, #DCSR>,
 //       CHECK:    }
 //       CHECK:  }
 //       CHECK:  %[[R:.*]] = sparse_tensor.convert %[[TMP_0]]
-//       CHECK:  return %[[R]] : tensor<?x?xf64, #sparse_tensor.encoding<{ lvlTypes = [ "dense", "dense" ] }>>
+//       CHECK:  return %[[R]] : tensor<?x?xf64, #sparse_tensor.encoding<{{{.*}}}>>
 func.func @concat_sparse_sparse_annotated_dense(%arg0: tensor<2x4xf64, #DCSR>,
                                 %arg1: tensor<3x4xf64, #DCSR>,
                                 %arg2: tensor<4x4xf64, #DCSR>)
@@ -414,7 +414,7 @@ func.func @concat_sparse_sparse_annotated_dense(%arg0: tensor<2x4xf64, #DCSR>,
 //       CHECK:    }
 //       CHECK:  }
 //       CHECK:  %[[R:.*]] = sparse_tensor.convert %[[TMP_0]]
-//       CHECK:  return %[[R]] : tensor<?x?xf64, #sparse_tensor.encoding<{ lvlTypes = [ "dense", "dense" ], dimToLvl = affine_map<(d0, d1) -> (d1, d0)> }>>
+//       CHECK:  return %[[R]] : tensor<?x?xf64, #sparse_tensor.encoding<{{{.*}}}>>
 func.func @concat_sparse_sparse_annotated_dense_permute(%arg0: tensor<2x4xf64, #DCSR>,
                                 %arg1: tensor<3x4xf64, #DCSR>,
                                 %arg2: tensor<4x4xf64, #DCSR>)
