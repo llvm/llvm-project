@@ -142,7 +142,7 @@ uptr __sanitizer_get_current_allocated_bytes() {
   uptr freed = stats.freed;
   // Return sane value if malloced < freed due to racy
   // way we update accumulated stats.
-  return (malloced > freed) ? malloced - freed : 1;
+  return (malloced > freed) ? malloced - freed : 0;
 }
 
 uptr __sanitizer_get_heap_size() {
