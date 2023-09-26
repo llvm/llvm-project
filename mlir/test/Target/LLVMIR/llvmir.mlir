@@ -1238,7 +1238,14 @@ llvm.func @varargs(...)
 // CHECK-LABEL: define void @varargs_call
 llvm.func @varargs_call(%arg0 : i32) {
 // CHECK:  call void (...) @varargs(i32 %{{.*}})
-  llvm.call @varargs(%arg0) : (i32) -> ()
+  llvm.call @varargs(%arg0) vararg(!llvm.func<void (...)>) : (i32) -> ()
+  llvm.return
+}
+
+// CHECK-LABEL: define void @indirect_varargs_call(ptr %0, i32 %1)
+llvm.func @indirect_varargs_call(%arg0 : !llvm.ptr, %arg1 : i32) {
+// CHECK:  call void (...) %0(i32 %1)
+  llvm.call %arg0(%arg1) vararg(!llvm.func<void (...)>) : !llvm.ptr, (i32) -> ()
   llvm.return
 }
 
