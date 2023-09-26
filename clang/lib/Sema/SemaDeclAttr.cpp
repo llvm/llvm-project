@@ -2412,7 +2412,7 @@ static void handleCtorDtorAttr(Sema &S, Decl *D, const ParsedAttr &AL) {
         << AL << FD->getSourceRange();
     return;
   }
-  
+
   D->addAttr(CtorDtorAttr::Create(S.Context, Priority, AL));
 }
 
