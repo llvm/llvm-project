@@ -338,7 +338,62 @@ def GENX_AtomicRMWOp : GENX_Op<"atomic.rmw", [
 //===----------------------------------------------------------------------===//
 // Joint Matrix operations
 //===----------------------------------------------------------------------===//
+
 def GENX_MatrixElemType : AnyTypeOf<[AnyI8, AnyI16, AnyI32, F32, F16, BF16]>;
+
+def GENX_MatrixDPASOp : GENX_Op<"matrix.dpas">,
+  Results<(outs FixedVectorOf<[GENX_MatrixElemType]>:$d)>,
+  Arguments<(ins 
+    FixedVectorOf<[GENX_MatrixElemType]>:$c,
+    FixedVectorOf<[GENX_MatrixElemType]>:$a,
+    FixedVectorOf<[GENX_MatrixElemType]>:$b,
+    I32Attr:$pa,
+    I32Attr:$pb,
+    I32Attr:$sd,
+    I32Attr:$rc
+  )> {
+
+  let summary = "GENX matrix multiply-add";
+
+  string baseDescription = [{
+    The 'genx.matrix.dpas' operation is a matrix multiply-add operation as follows:
+
+       D = C + A x B
+
+       where
+          D : MxN
+          C : MxN
+          A : MxK
+          B : KxN
+
+          M : repeat count ($rc)
+          N : fixed execution size, must be 16 for PVC
+          K : depth * OPS_PER_CHAN
+              OPS_PER_CHAN
+                 1 : for TF32
+                 2 : for 16-bit precision(BF, HF)
+                 4 : for 8-bit precision (FP8, UB, B)
+                 8 : for less-then 8 bit precision (U4/S4, U2/S2).
+
+              If depth is 8, K would be 8, 16, 32, or 64 (based on OPS_PER_CHAN).
+
+    $a, $b, $c, $d - matrix A, B, C, D, respectively
+    $pa, $pb - precision of matrix A and B resepectively
+    $sd - systolic depth
+    $rc - repect count
+  }];
+
+  string llvmBuilder = [{
+    $d = createGenISADPAS(op, builder, moduleTranslation);
+  }];
+    
+  let assemblyFormat = [{
+    operands attr-dict `:` functional-type(operands, results)
+  }];
+
+  let hasVerifier = 1;
+}
+
 def GENX_Matrix2DBlockLoadOp : GENX_Op<"matrix.2Dblockload">,
   Results<(outs FixedVectorOf<[GENX_MatrixElemType]>:$res)>,
   Arguments<(ins 
@@ -356,7 +411,7 @@ def GENX_Matrix2DBlockLoadOp : GENX_Op<"matrix.2Dblockload">,
     I1Attr:$vnni_transform
   )> {
 
-  let summary = "GEN 2D block Load";
+  let summary = "GENX 2D block Load";
 
   string baseDescription = [{
     The 'genx.matrix.2Dblockload' operation loads a submatrix from an array in memory.

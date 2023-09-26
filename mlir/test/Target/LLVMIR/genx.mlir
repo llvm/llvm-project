@@ -135,8 +135,15 @@ llvm.func @genx.atomic.rmw(%ptr : !llvm.ptr<i32, 1>, %sptr : !llvm.ptr<i64, 3>, 
   llvm.return
 }
 
+llvm.func @genx.dpas(%c : vector<8xi32>, %a : vector<8xi32>, %b : vector<8xi32>) {
+  // CHECK: %4 = call <8 x i32> @llvm.genx.GenISA.dpas.v8i32.v8i32.v8i32.v8i32(<8 x i32> %0, <8 x i32> %1, <8 x i32> %2, i32 7, i32 7, i32 8, i32 1, i1 false)
+  %0 = genx.matrix.dpas %c, %a, %b {pa=7:i32, pb=7:i32, sd=8:i32, rc=1:i32} : (vector<8xi32>, vector<8xi32>, vector<8xi32>) -> vector<8xi32>
+  llvm.return
+}
+
 llvm.func @genx.2Dblockload1x4.32.1.0.0(%ptr : !llvm.ptr<i32>, %base_width : i32, %base_height : i32, %base_pitch : i32, %x : i32, %y : i32) {
-  // CHECK: call <4 x i32> @llvm.genx.GenISA.LSC2DBlockRead.v4i32(i64 %7, i32 %1, i32 %2, i32 %3, i32 %4, i32 %5, i32 32, i32 4, i32 1, i32 1, i1 false, i1 false)
+  // CHECK: [[PTR:%.*]] = ptrtoint ptr %0 to i64
+  // CHECK: call <4 x i32> @llvm.genx.GenISA.LSC2DBlockRead.v4i32(i64 [[PTR]], i32 %1, i32 %2, i32 %3, i32 %4, i32 %5, i32 32, i32 4, i32 1, i32 1, i1 false, i1 false)
   %0 = genx.matrix.2Dblockload<1 x 4> 32 1 false false %ptr, %base_width, %base_height, %base_pitch, %x, %y : (!llvm.ptr<i32>, i32, i32, i32, i32, i32) -> vector<4xi32>
   llvm.return
 }

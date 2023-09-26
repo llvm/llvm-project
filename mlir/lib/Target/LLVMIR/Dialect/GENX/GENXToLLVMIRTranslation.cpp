@@ -203,6 +203,30 @@ static llvm::Value *createAtomicRMW(llvm::IRBuilderBase &builder,
                                   {ptr->getType(), val->getType()}, {ptr, val});
 }
 
+// Create a call to GenISA_dpas for matrix multiply-add.
+static llvm::Value *
+createGenISADPAS(GENX::MatrixDPASOp op, llvm::IRBuilderBase &builder,
+                 LLVM::ModuleTranslation &moduleTranslation) {
+  llvm::Module *module = builder.GetInsertBlock()->getModule();
+  auto opTypes = op->getOperandTypes();
+  llvm::Function *fn = llvm::GenISAIntrinsic::getDeclaration(
+      module, llvm::GenISAIntrinsic::GenISA_dpas,
+      {moduleTranslation.convertType(op->getResultTypes()[0]),
+       moduleTranslation.convertType(opTypes[0]),
+       moduleTranslation.convertType(opTypes[1]),
+       moduleTranslation.convertType(opTypes[2])});
+  SmallVector<llvm::Value *> args(
+      moduleTranslation.lookupValues(op.getOperands()));
+  auto int32Ty = builder.getInt32Ty();
+  auto int1Ty = builder.getInt1Ty();
+  args.push_back(llvm::ConstantInt::get(int32Ty, op.getPa()));
+  args.push_back(llvm::ConstantInt::get(int32Ty, op.getPb()));
+  args.push_back(llvm::ConstantInt::get(int32Ty, op.getSd()));
+  args.push_back(llvm::ConstantInt::get(int32Ty, op.getRc()));
+  args.push_back(llvm::ConstantInt::get(int1Ty, false));
+  return builder.CreateCall(fn, args);
+}
+
 // Create a call to GenISA_LSC2DBlockRead for loading a 2D submatrix
 static llvm::Value *createGenISA2DBlockRead(
     llvm::IRBuilderBase &builder, llvm::Value *ptr, llvm::Value *baseWidth,
