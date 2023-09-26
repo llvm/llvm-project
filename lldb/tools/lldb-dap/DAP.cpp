@@ -1610,7 +1610,9 @@ void DAP::RegisterRequests() {
   RegisterRequest<AttachRequestHandler>();
   RegisterRequest<BreakpointLocationsRequestHandler>();
   RegisterRequest<CancelRequestHandler>();
-  RegisterRequest<CompletionsRequestHandler>();
+  // TODO: T164800837 disable auto completion in debug console because it is
+  // causing performance issue.
+  // RegisterRequest<CompletionsRequestHandler>();
   RegisterRequest<ConfigurationDoneRequestHandler>();
   RegisterRequest<ContinueRequestHandler>();
   RegisterRequest<DataBreakpointInfoRequestHandler>();
