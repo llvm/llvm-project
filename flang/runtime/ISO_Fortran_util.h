@@ -18,15 +18,15 @@
 #include <cstdlib>
 
 namespace Fortran::ISO {
-static inline constexpr bool IsCharacterType(CFI_type_t ty) {
+static inline constexpr RT_API_ATTRS bool IsCharacterType(CFI_type_t ty) {
   return ty == CFI_type_char || ty == CFI_type_char16_t ||
       ty == CFI_type_char32_t;
 }
-static inline constexpr bool IsAssumedSize(const CFI_cdesc_t *dv) {
+static inline constexpr RT_API_ATTRS bool IsAssumedSize(const CFI_cdesc_t *dv) {
   return dv->rank > 0 && dv->dim[dv->rank - 1].extent == -1;
 }
 
-static inline std::size_t MinElemLen(CFI_type_t type) {
+static inline RT_API_ATTRS std::size_t MinElemLen(CFI_type_t type) {
   auto typeParams{Fortran::runtime::TypeCode{type}.GetCategoryAndKind()};
   if (!typeParams) {
     Fortran::runtime::Terminator terminator{__FILE__, __LINE__};
@@ -38,7 +38,7 @@ static inline std::size_t MinElemLen(CFI_type_t type) {
       typeParams->first, typeParams->second);
 }
 
-static inline int VerifyEstablishParameters(CFI_cdesc_t *descriptor,
+static inline RT_API_ATTRS int VerifyEstablishParameters(CFI_cdesc_t *descriptor,
     void *base_addr, CFI_attribute_t attribute, CFI_type_t type,
     std::size_t elem_len, CFI_rank_t rank, const CFI_index_t extents[],
     bool external) {
@@ -77,7 +77,7 @@ static inline int VerifyEstablishParameters(CFI_cdesc_t *descriptor,
   return CFI_SUCCESS;
 }
 
-static inline void EstablishDescriptor(CFI_cdesc_t *descriptor, void *base_addr,
+static inline RT_API_ATTRS void EstablishDescriptor(CFI_cdesc_t *descriptor, void *base_addr,
     CFI_attribute_t attribute, CFI_type_t type, std::size_t elem_len,
     CFI_rank_t rank, const CFI_index_t extents[]) {
   descriptor->base_addr = base_addr;
