@@ -250,12 +250,16 @@ TEST(MatrixTest, computeHermiteNormalForm) {
 }
 
 TEST(MatrixTest, inverse) {
-    FracMatrix mat = makeFracMatrix(2, 2, {{Fraction(2, 1), Fraction(1, 1)}, {Fraction(7, 1), Fraction(0, 1)}});
-    FracMatrix inverse = makeFracMatrix(2, 2, {{Fraction(0, 1), Fraction(1, 7)}, {Fraction(1, 1), Fraction(-2, 7)}});
+  FracMatrix mat = makeFracMatrix(
+      2, 2,
+      {{Fraction(2, 1), Fraction(1, 1)}, {Fraction(7, 1), Fraction(0, 1)}});
+  FracMatrix inverse = makeFracMatrix(
+      2, 2,
+      {{Fraction(0, 1), Fraction(1, 7)}, {Fraction(1, 1), Fraction(-2, 7)}});
 
-    FracMatrix inv = mat.inverse();
+  FracMatrix inv = mat.inverse();
 
-    for (unsigned row = 0; row < 2; row++)
-      for (unsigned col = 0; col < 2; col++)
-        EXPECT_EQ(inv(row, col), inverse(row, col));
+  for (unsigned row = 0; row < 2; row++)
+    for (unsigned col = 0; col < 2; col++)
+      EXPECT_EQ(inv(row, col), inverse(row, col));
 }

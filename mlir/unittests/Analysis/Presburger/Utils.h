@@ -41,7 +41,7 @@ inline IntMatrix makeIntMatrix(unsigned numRow, unsigned numColumns,
 }
 
 inline FracMatrix makeFracMatrix(unsigned numRow, unsigned numColumns,
-                         ArrayRef<SmallVector<Fraction, 8>> matrix) {
+                                 ArrayRef<SmallVector<Fraction, 8>> matrix) {
   FracMatrix results(numRow, numColumns);
   assert(matrix.size() == numRow);
   for (unsigned i = 0; i < numRow; ++i) {

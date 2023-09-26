@@ -246,21 +246,20 @@ public:
 // An inherited class for rational matrices, with no new data attributes.
 // This is only used for the matrix-related method which apply only
 // to fractions (inverse).
-class FracMatrix : public Matrix<Fraction>
-{
+class FracMatrix : public Matrix<Fraction> {
 public:
   FracMatrix(unsigned rows, unsigned columns, unsigned reservedRows = 0,
-            unsigned reservedColumns = 0) :
-    Matrix<Fraction>(rows, columns, reservedRows, reservedColumns) {};
+            unsigned reservedColumns = 0)
+      : Matrix<Fraction>(rows, columns, reservedRows, reservedColumns) {};
 
-  FracMatrix(Matrix<Fraction> m) :
-    Matrix<Fraction>(m.getNumRows(), m.getNumColumns(), m.getNumReservedRows(), m.getNumReservedColumns())
-  {
+  FracMatrix(Matrix<Fraction> m)
+      : Matrix<Fraction>(m.getNumRows(), m.getNumColumns(),
+                         m.getNumReservedRows(), m.getNumReservedColumns()) {
     for (unsigned i = 0; i < m.getNumRows(); i++)
       for (unsigned j = 0; j < m.getNumColumns(); j++)
         at(i, j) = m(i, j);
   };
-  
+
   /// Return the identity matrix of the specified dimension.
   static FracMatrix identity(unsigned dimension);
 
