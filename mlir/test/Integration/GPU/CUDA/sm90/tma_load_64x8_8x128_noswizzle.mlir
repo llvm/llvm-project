@@ -1,7 +1,6 @@
 // RUN: mlir-opt %s --convert-nvgpu-to-nvvm \
 // RUN:         -gpu-kernel-outlining \
 // RUN:         -convert-nvvm-to-llvm \
-// RUN:         -convert-nvgpu-to-nvvm \
 // RUN:         -convert-scf-to-cf  \
 // RUN:         -convert-vector-to-llvm \
 // RUN:         -convert-index-to-llvm=index-bitwidth=32 \
@@ -25,7 +24,6 @@
 // RUN: mlir-opt %s --convert-nvgpu-to-nvvm \
 // RUN:         -gpu-kernel-outlining \
 // RUN:         -convert-nvvm-to-llvm \
-// RUN:         -convert-nvgpu-to-nvvm \
 // RUN:         -convert-scf-to-cf  \
 // RUN:         -convert-vector-to-llvm \
 // RUN:         -convert-index-to-llvm=index-bitwidth=32 \
@@ -40,7 +38,6 @@
 // RUN:   --shared-libs=%mlir_runner_utils \
 // RUN:   --entry-point-result=void \
 // RUN:  | FileCheck %s
-
 
 // CHECK: [GPU] TMA BEFORE lhs[45][7] 0.000000
 // CHECK: [GPU] TMA BEFORE rhs[7][0] 0.000000
