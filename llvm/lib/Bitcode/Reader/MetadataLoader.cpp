@@ -1315,7 +1315,7 @@ Error MetadataLoader::MetadataLoaderImpl::parseOneMetadata(
 
     unsigned TyID = Record[0];
     Type *Ty = Callbacks.GetTypeByID(TyID);
-    if (Ty->isMetadataTy() || Ty->isVoidTy()) {
+    if (!Ty || Ty->isMetadataTy() || Ty->isVoidTy()) {
       dropRecord();
       break;
     }
@@ -1366,7 +1366,7 @@ Error MetadataLoader::MetadataLoaderImpl::parseOneMetadata(
 
     unsigned TyID = Record[0];
     Type *Ty = Callbacks.GetTypeByID(TyID);
-    if (Ty->isMetadataTy() || Ty->isVoidTy())
+    if (!Ty || Ty->isMetadataTy() || Ty->isVoidTy())
       return error("Invalid record");
 
     Value *V = ValueList.getValueFwdRef(Record[1], Ty, TyID,
