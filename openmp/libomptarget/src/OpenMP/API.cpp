@@ -83,7 +83,8 @@ EXTERN int omp_get_initial_device(void) {
 }
 
 EXTERN void *omp_target_alloc(size_t Size, int DeviceNum) {
-  TIMESCOPE();
+  TIMESCOPE_WITH_DETAILS("dst_dev="+std::to_string(DeviceNum)
+                        +";size="+std::to_string(Size));
   return targetAllocExplicit(Size, DeviceNum, TARGET_ALLOC_DEFAULT, __func__);
 }
 
@@ -163,12 +164,9 @@ EXTERN int omp_target_is_present(const void *Ptr, int DeviceNum) {
 EXTERN int omp_target_memcpy(void *Dst, const void *Src, size_t Length,
                              size_t DstOffset, size_t SrcOffset, int DstDevice,
                              int SrcDevice) {
-  TIMESCOPE();
-  /*TIMESCOPE_WITH_DETAILS_AND_IDENT("omp_target_memcpy",
-                            "NumArguments="+std::to_string(KernelArgs.NumArgs)
-                            +";NumTeams="+std::to_string(KernelArgs.NumTeams[0])
-                            +";TripCount="+std::to_string(KernelArgs.Tripcount)
-                            , __FUNCTION__);*/
+  TIMESCOPE_WITH_DETAILS("dst_dev="+std::to_string(DstDevice)
+                          +";src_dev="+std::to_string(SrcDevice)
+                          +";size="+std::to_string(Length));
   DP("Call to omp_target_memcpy, dst device %d, src device %d, "
      "dst addr " DPxMOD ", src addr " DPxMOD ", dst offset %zu, "
      "src offset %zu, length %zu\n",
@@ -407,7 +405,9 @@ EXTERN int omp_target_memcpy_async(void *Dst, const void *Src, size_t Length,
                                    size_t DstOffset, size_t SrcOffset,
                                    int DstDevice, int SrcDevice,
                                    int DepObjCount, omp_depend_t *DepObjList) {
-  TIMESCOPE();
+  TIMESCOPE_WITH_DETAILS("dst_dev="+std::to_string(DstDevice)
+                          +";src_dev="+std::to_string(SrcDevice)
+                          +";size="+std::to_string(Length));
   DP("Call to omp_target_memcpy_async, dst device %d, src device %d, "
      "dst addr " DPxMOD ", src addr " DPxMOD ", dst offset %zu, "
      "src offset %zu, length %zu\n",
@@ -436,7 +436,6 @@ omp_target_memcpy_rect(void *Dst, const void *Src, size_t ElementSize,
                        const size_t *DstOffsets, const size_t *SrcOffsets,
                        const size_t *DstDimensions, const size_t *SrcDimensions,
                        int DstDevice, int SrcDevice) {
-  TIMESCOPE();
   DP("Call to omp_target_memcpy_rect, dst device %d, src device %d, "
      "dst addr " DPxMOD ", src addr " DPxMOD ", dst offsets " DPxMOD ", "
      "src offsets " DPxMOD ", dst dims " DPxMOD ", src dims " DPxMOD ", "
@@ -495,7 +494,10 @@ EXTERN int omp_target_memcpy_rect_async(
     const size_t *Volume, const size_t *DstOffsets, const size_t *SrcOffsets,
     const size_t *DstDimensions, const size_t *SrcDimensions, int DstDevice,
     int SrcDevice, int DepObjCount, omp_depend_t *DepObjList) {
-  TIMESCOPE();
+  TIMESCOPE_WITH_DETAILS("dst_dev="+std::to_string(DstDevice)
+                          +";src_dev="+std::to_string(SrcDevice)
+                          +";size="+std::to_string(ElementSize)
+                          +";num_dims="+std::to_string(NumDims));
   DP("Call to omp_target_memcpy_rect_async, dst device %d, src device %d, "
      "dst addr " DPxMOD ", src addr " DPxMOD ", dst offsets " DPxMOD ", "
      "src offsets " DPxMOD ", dst dims " DPxMOD ", src dims " DPxMOD ", "
