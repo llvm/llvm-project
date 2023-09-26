@@ -453,6 +453,8 @@ AIX Support
 
 WebAssembly Support
 ^^^^^^^^^^^^^^^^^^^
+The -mcpu=generic configuration now enables -nontrapping-fptoint. This
+proposal is standardized and available in all major engines.
 
 AVR Support
 ^^^^^^^^^^^

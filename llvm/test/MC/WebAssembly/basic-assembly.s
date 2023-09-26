@@ -1,6 +1,6 @@
-# RUN: llvm-mc -triple=wasm32-unknown-unknown -mattr=+tail-call,+reference-types,atomics,+simd128,+nontrapping-fptoint,+exception-handling < %s | FileCheck %s
+# RUN: llvm-mc -triple=wasm32-unknown-unknown -mattr=+tail-call,+reference-types,atomics,+simd128,+exception-handling < %s | FileCheck %s
 # Check that it converts to .o without errors, but don't check any output:
-# RUN: llvm-mc -triple=wasm32-unknown-unknown -filetype=obj -mattr=+tail-call,+reference-types,+atomics,+simd128,+nontrapping-fptoint,+exception-handling -o %t.o < %s
+# RUN: llvm-mc -triple=wasm32-unknown-unknown -filetype=obj -mattr=+tail-call,+reference-types,+atomics,+simd128,+exception-handling -o %t.o < %s
 
 .functype   something1 () -> ()
 .functype   something2 (i64) -> (i32, f64)

@@ -1,4 +1,4 @@
-# RUN: not llvm-mc -triple=wasm32-unknown-unknown -mattr=+simd128,+nontrapping-fptoint,+exception-handling %s 2>&1 | FileCheck %s
+# RUN: not llvm-mc -triple=wasm32-unknown-unknown -mattr=+simd128,+exception-handling %s 2>&1 | FileCheck %s
 
 # CHECK: invalid operand for instruction
 # (must be 0.0 or similar)
