@@ -2660,7 +2660,7 @@ void UnwrappedLineParser::handleAttributes() {
   // Handle AttributeMacro, e.g. `if (x) UNLIKELY`.
   if (FormatTok->is(TT_AttributeMacro))
     nextToken();
-  if (FormatTok->is(tok::l_square))
+  else if (FormatTok->is(tok::l_square))
     handleCppAttributes();
 }
 
