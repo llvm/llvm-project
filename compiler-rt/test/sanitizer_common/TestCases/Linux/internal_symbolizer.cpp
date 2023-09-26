@@ -1,4 +1,4 @@
-// RUN: %clangxx %s -o %t && %run %t
+// RUN: %clangxx %s -o %t -g && %run %t 2>&1 | FileCheck %s
 
 // REQUIRES: internal_symbolizer
 
@@ -42,13 +42,13 @@ __attribute__((noinline)) void *GetPC() { return __builtin_return_address(0); }
 
 __attribute__((always_inline)) FrameInfo InlineFunction() {
   void *address = GetPC();
-  return {__LINE__ - 1, __FILE__, __FUNCTION__,
+  return {0, "", "",
           reinterpret_cast<void *>(reinterpret_cast<uintptr_t>(address) - 1)};
 }
 
 __attribute__((noinline)) FrameInfo NoInlineFunction() {
   void *address = GetPC();
-  return {__LINE__ - 1, __FILE__, __FUNCTION__,
+  return {0, "", "",
           reinterpret_cast<void *>(reinterpret_cast<uintptr_t>(address) - 1)};
 }
 
@@ -82,8 +82,8 @@ std::string Symbolize(FrameInfo frame) {
   auto modul_offset = GetModuleAndOffset(frame.address);
   char buffer[1024] = {};
   ScopedInSymbolizer in_symbolizer;
-  __sanitizer_symbolize_code(modul_offset.first, modul_offset.second, buffer,
-                             std::size(buffer), true);
+  assert(__sanitizer_symbolize_code(modul_offset.first, modul_offset.second,
+                                    buffer, std::size(buffer), true));
   return buffer;
 }
 
@@ -95,16 +95,24 @@ std::string GetRegex(const FrameInfo &frame) {
 void TestInline() {
   auto frame = InlineFunction();
   fprintf(stderr, "%s: %s\n", __FUNCTION__, Symbolize(frame).c_str());
+  // CHECK-LABEL: TestInline: InlineFunction()
+  // CHECK-NEXT: internal_symbolizer.cpp:[[# @LINE - 55]]
+  // CHECK-NEXT: TestInline()
+  // CHECK-NEXT: internal_symbolizer.cpp:[[# @LINE - 5]]
 }
 
 void TestNoInline() {
   auto frame = NoInlineFunction();
   fprintf(stderr, "%s: %s\n", __FUNCTION__, Symbolize(frame).c_str());
+  // CHECK-LABEL: TestNoInline: NoInlineFunction()
+  // CHECK-NEXT: internal_symbolizer.cpp:[[# @LINE - 58]]
 }
 
 void TestLongFunctionNames() {
   auto frame = A<10>().RecursiveTemplateFunction(0);
   fprintf(stderr, "%s: %s\n", __FUNCTION__, Symbolize(frame).c_str());
+  // CHECK-LABEL: TestLongFunctionNames: NoInlineFunction()
+  // CHECK-NEXT: internal_symbolizer.cpp:[[# @LINE - 65]]
 }
 
 std::string SymbolizeStaticVar() {
@@ -112,13 +120,16 @@ std::string SymbolizeStaticVar() {
   auto modul_offset = GetModuleAndOffset(&var);
   char buffer[1024] = {};
   ScopedInSymbolizer in_symbolizer;
-  __sanitizer_symbolize_data(modul_offset.first, modul_offset.second, buffer,
-                             std::size(buffer));
+  assert(__sanitizer_symbolize_data(modul_offset.first, modul_offset.second,
+                                    buffer, std::size(buffer)));
   return buffer;
 }
 
 void TestData() {
   fprintf(stderr, "%s: %s\n", __FUNCTION__, SymbolizeStaticVar().c_str());
+  // CHECK-LABEL: TestData: SymbolizeStaticVar[abi:cxx11]()::var
+  // CHECK-NEXT: {{[0-9]+ +[0-9]+}}
+  // CHECK-NEXT: internal_symbolizer.cpp:[[# @LINE - 13]]
 }
 
 void TestDemangle() {
