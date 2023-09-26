@@ -10613,6 +10613,25 @@ gentbl_cc_library(
 )
 
 gentbl_cc_library(
+    name = "TosaDialectBytecodeGen",
+    strip_include_prefix = "include",
+    tbl_outs = [
+        (
+            [
+                "-gen-bytecode",
+                "-bytecode-dialect=Tosa",
+            ],
+            "include/mlir/Dialect/Tosa/IR/TosaDialectBytecode.cpp.inc",
+        ),
+    ],
+    tblgen = ":mlir-tblgen",
+    td_file = "include/mlir/Dialect/Tosa/IR/TosaDialectBytecode.td",
+    deps = [
+        ":BytecodeTdFiles",
+    ],
+)
+
+gentbl_cc_library(
     name = "TosaInterfacesIncGen",
     tbl_outs = [
         (
@@ -10689,6 +10708,7 @@ cc_library(
         ":QuantOps",
         ":Support",
         ":TensorDialect",
+        ":TosaDialectBytecodeGen",
         ":TosaDialectIncGen",
         ":TosaInterfacesIncGen",
         ":TosaPassIncGen",
