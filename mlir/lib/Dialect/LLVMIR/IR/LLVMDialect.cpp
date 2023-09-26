@@ -1202,7 +1202,7 @@ LogicalResult CallOp::verifySymbolUses(SymbolTableCollection &symbolTable) {
     return emitOpError("callee does not have a functional type: ") << fnType;
 
   if (funcType.isVarArg() && !getCalleeType().has_value())
-    return emitOpError() << "Missing callee type attribute for vararg call";
+    return emitOpError() << "missing callee type attribute for vararg call";
 
   // Verify that the operand and result types match the callee.
 
