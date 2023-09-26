@@ -2623,14 +2623,14 @@ static int scan_buffer(char *str, size_t size, const char *fmt,
             }
             // get the label associated with the string at the corresponding
             // place
-            dfsan_label l = dfsan_read_label(formatter.str_cur(),
-                                 formatter.num_written_bytes(read_count));
+            dfsan_label l = dfsan_read_label(
+                formatter.str_cur(), formatter.num_written_bytes(read_count));
             dfsan_set_label(l, dst_ptr, write_size);
             if (str_origin != nullptr) {
-              dfsan_set_label(l, dst_ptr, write_size);
-              size_t scan_count = formatter.num_written_bytes(read_count);
-              size_t size = scan_count > write_size ? write_size : scan_count;
-              dfsan_mem_origin_transfer(dst_ptr, formatter.str_cur(), size);
+            dfsan_set_label(l, dst_ptr, write_size);
+            size_t scan_count = formatter.num_written_bytes(read_count);
+            size_t size = scan_count > write_size ? write_size : scan_count;
+            dfsan_mem_origin_transfer(dst_ptr, formatter.str_cur(), size);
             }
           }
           end_fmt = true;
@@ -2649,26 +2649,26 @@ static int scan_buffer(char *str, size_t size, const char *fmt,
             read_count = formatter.scan();
           } else {
             if (*(formatter.fmt_cur - 1) == 'L') {
-              dst_ptr = va_arg(ap, long double *);
-              read_count = formatter.scan((long double *)dst_ptr);
-              write_size = sizeof(long double);
+            dst_ptr = va_arg(ap, long double *);
+            read_count = formatter.scan((long double *)dst_ptr);
+            write_size = sizeof(long double);
             } else if (*(formatter.fmt_cur - 1) == 'l') {
-              dst_ptr = va_arg(ap, double *);
-              read_count = formatter.scan((double *)dst_ptr);
-              write_size = sizeof(double);
+            dst_ptr = va_arg(ap, double *);
+            read_count = formatter.scan((double *)dst_ptr);
+            write_size = sizeof(double);
             } else {
-              dst_ptr = va_arg(ap, float *);
-              read_count = formatter.scan((float *)dst_ptr);
-              write_size = sizeof(float);
+            dst_ptr = va_arg(ap, float *);
+            read_count = formatter.scan((float *)dst_ptr);
+            write_size = sizeof(float);
             }
-            dfsan_label l = dfsan_read_label(formatter.str_cur(),
-                                 formatter.num_written_bytes(read_count));
+            dfsan_label l = dfsan_read_label(
+                formatter.str_cur(), formatter.num_written_bytes(read_count));
             dfsan_set_label(l, dst_ptr, write_size);
             if (str_origin != nullptr) {
-              dfsan_set_label(l, dst_ptr, write_size);
-              size_t scan_count = formatter.num_written_bytes(read_count);
-              size_t size = scan_count > write_size ? write_size : scan_count;
-              dfsan_mem_origin_transfer(dst_ptr, formatter.str_cur(), size);
+            dfsan_set_label(l, dst_ptr, write_size);
+            size_t scan_count = formatter.num_written_bytes(read_count);
+            size_t size = scan_count > write_size ? write_size : scan_count;
+            dfsan_mem_origin_transfer(dst_ptr, formatter.str_cur(), size);
             }
           }
           end_fmt = true;
@@ -2681,13 +2681,13 @@ static int scan_buffer(char *str, size_t size, const char *fmt,
             dst_ptr = va_arg(ap, char *);
             read_count = formatter.scan((char *)dst_ptr);
             write_size = sizeof(char);
-            dfsan_label l = dfsan_read_label(formatter.str_cur(),
-                                 formatter.num_written_bytes(read_count));
+            dfsan_label l = dfsan_read_label(
+                formatter.str_cur(), formatter.num_written_bytes(read_count));
             dfsan_set_label(l, dst_ptr, write_size);
             if (str_origin != nullptr) {
-              size_t scan_count = formatter.num_written_bytes(read_count);
-              size_t size = scan_count > write_size ? write_size : scan_count;
-              dfsan_mem_origin_transfer(dst_ptr, formatter.str_cur(), size);
+            size_t scan_count = formatter.num_written_bytes(read_count);
+            size_t size = scan_count > write_size ? write_size : scan_count;
+            dfsan_mem_origin_transfer(dst_ptr, formatter.str_cur(), size);
             }
           }
           end_fmt = true;
@@ -2700,13 +2700,13 @@ static int scan_buffer(char *str, size_t size, const char *fmt,
             dst_ptr = va_arg(ap, char *);
             read_count = formatter.scan((char *)dst_ptr);
             if (1 == read_count) {
-              // special case: we have parsed a single string and we need to
-              // update read_count with the string size
-              read_count = strlen((char *)dst_ptr);
+            // special case: we have parsed a single string and we need to
+            // update read_count with the string size
+            read_count = strlen((char *)dst_ptr);
             }
             if (str_origin)
-              dfsan_mem_origin_transfer(dst_ptr, formatter.str_cur(),
-                                        formatter.num_written_bytes(read_count));
+            dfsan_mem_origin_transfer(dst_ptr, formatter.str_cur(),
+                                      formatter.num_written_bytes(read_count));
             va_labels++;
             dfsan_mem_shadow_transfer(dst_ptr, formatter.str_cur(),
                                       formatter.num_written_bytes(read_count));
@@ -2725,14 +2725,14 @@ static int scan_buffer(char *str, size_t size, const char *fmt,
                                                  // since we need to call sizeof
             write_size = sizeof(int);
 
-            dfsan_label l = dfsan_read_label(formatter.str_cur(),
-                                 formatter.num_written_bytes(read_count));
+            dfsan_label l = dfsan_read_label(
+                formatter.str_cur(), formatter.num_written_bytes(read_count));
             dfsan_set_label(l, dst_ptr, write_size);
             if (str_origin != nullptr) {
-              dfsan_set_label(l, dst_ptr, write_size);
-              size_t scan_count = formatter.num_written_bytes(read_count);
-              size_t size = scan_count > write_size ? write_size : scan_count;
-              dfsan_mem_origin_transfer(dst_ptr, formatter.str_cur(), size);
+            dfsan_set_label(l, dst_ptr, write_size);
+            size_t scan_count = formatter.num_written_bytes(read_count);
+            size_t size = scan_count > write_size ? write_size : scan_count;
+            dfsan_mem_origin_transfer(dst_ptr, formatter.str_cur(), size);
             }
           }
           end_fmt = true;
@@ -2745,7 +2745,7 @@ static int scan_buffer(char *str, size_t size, const char *fmt,
             *va_labels++ = 0;
             dfsan_set_label(0, ptr, sizeof(*ptr));
             if (str_origin != nullptr)
-              *str_origin++ = 0;
+            *str_origin++ = 0;
           }
           end_fmt = true;
           break;

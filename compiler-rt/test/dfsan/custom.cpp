@@ -2166,13 +2166,13 @@ void test_sscanf() {
   dfsan_set_label(k_label, (void *)(s + 1), 2); // buf[7]-b[9]
   dfsan_origin s_o = dfsan_get_origin((long)(s[1]));
   assert(s[10] == '2');
-  dfsan_set_label(i_label, (void *)(s + 10), 4); // 2014
+  dfsan_set_label(i_label, (void *)(s + 10), 4);    // 2014
   dfsan_origin y_o = dfsan_get_origin((long)s[10]); // buf[16]
   assert(s[17] == '3');
-  dfsan_set_label(j_label, (void *)(s + 17), 2); // 31
+  dfsan_set_label(j_label, (void *)(s + 17), 2);    // 31
   dfsan_origin d_o = dfsan_get_origin((long)s[17]); // buf[23]
   assert(s[20] == '1');
-  dfsan_set_label(m_label, (void *)(s + 20), 5); // 12345
+  dfsan_set_label(m_label, (void *)(s + 20), 5);    // 12345
   dfsan_origin f_o = dfsan_get_origin((long)s[20]); //buf[26]
 
 #ifndef ORIGIN_TRACKING
