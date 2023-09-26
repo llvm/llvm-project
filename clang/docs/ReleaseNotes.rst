@@ -171,6 +171,11 @@ Attribute Changes in Clang
   automatic diagnostic to use parameters of types that the format style
   supports but that are never the result of default argument promotion, such as
   ``float``. (`#59824: <https://github.com/llvm/llvm-project/issues/59824>`_)
+- The ``constructor`` and ``destructor`` attributes now diagnose when:
+  - the priority is not between 101 and 65535, inclusive,
+  - the function it is applied to accepts arguments or has a non-void return
+    type, or
+  - the function it is applied to is a non-static member function (C++).
 
 Improvements to Clang's diagnostics
 -----------------------------------
