@@ -565,7 +565,7 @@ def main():
     parser = _get_parser()
     args = common.parse_commandline_args(parser)
     if not args.llvm_mca_binary:
-          raise Error("--llvm-mca-binary value cannot be empty string")
+        raise Error("--llvm-mca-binary value cannot be empty string")
 
     if "llvm-mca" not in os.path.basename(args.llvm_mca_binary):
         _warn("unexpected binary name: {}".format(args.llvm_mca_binary))
