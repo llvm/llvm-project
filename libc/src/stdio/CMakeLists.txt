@@ -26,6 +26,10 @@ if(NOT LIBC_TARGET_ARCHITECTURE_IS_GPU)
   add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/generic)
 endif()
 
+if(NOT LLVM_LIBC_FULL_BUILD)
+  list(APPEND use_system_file "COMPILE_OPTIONS" "-DLIBC_COPT_STDIO_USE_SYSTEM_FILE")
+endif()
+
 add_entrypoint_object(
   flockfile
   SRCS
@@ -111,8 +115,6 @@ if(LLVM_LIBC_FULL_BUILD)
       libc.src.__support.File.platform_file
       libc.src.__support.File.platform_stdin
   )
-else()
-  list(APPEND scanf_copts "-DLIBC_COPT_STDIO_USE_SYSTEM_FILE")
 endif()
 
 add_entrypoint_object(
@@ -135,8 +137,7 @@ add_entrypoint_object(
     fscanf.h
   DEPENDS
     ${scanf_deps}
-  COMPILE_OPTIONS
-    ${scanf_copts}
+  ${use_system_file}
 )
 
 add_entrypoint_object(
@@ -147,8 +148,7 @@ add_entrypoint_object(
     scanf.h
   DEPENDS
     ${scanf_deps}
-  COMPILE_OPTIONS
-    ${scanf_copts}
+  ${use_system_file}
 )
 
 add_entrypoint_object(
@@ -178,27 +178,12 @@ list(APPEND printf_deps
       libc.src.stdio.printf_core.vfprintf_internal
 )
 
-if(LIBC_CONF_PRINTF_DISABLE_FLOAT)
-  list(APPEND printf_copts "-DLIBC_COPT_PRINTF_DISABLE_FLOAT")
-endif()
-if(LIBC_CONF_PRINTF_DISABLE_INDEX_MODE)
-  list(APPEND printf_copts "-DLIBC_COPT_PRINTF_DISABLE_INDEX_MODE")
-endif()
-if(LIBC_CONF_PRINTF_DISABLE_WRITE_INT)
-  list(APPEND printf_copts "-DLIBC_COPT_PRINTF_DISABLE_WRITE_INT")
-endif()
-if(LIBC_CONF_PRINTF_FLOAT_TO_STR_USE_MEGA_LONG_DOUBLE_TABLE)
-  list(APPEND printf_copts "-DLIBC_COPT_FLOAT_TO_STR_USE_MEGA_LONG_DOUBLE_TABLE")
-endif()
-
 if(LLVM_LIBC_FULL_BUILD)
   list(APPEND printf_deps
       libc.src.__support.File.file
       libc.src.__support.File.platform_file
       libc.src.__support.File.platform_stdout
   )
-else()
-  list(APPEND printf_copts "-DLIBC_COPT_STDIO_USE_SYSTEM_FILE")
 endif()
 
 add_entrypoint_object(
@@ -209,8 +194,7 @@ add_entrypoint_object(
     printf.h
   DEPENDS
     ${printf_deps}
-  COMPILE_OPTIONS
-    ${printf_copts}
+  ${use_system_file}
 )
 
 add_entrypoint_object(
@@ -222,8 +206,7 @@ add_entrypoint_object(
   DEPENDS
     libc.src.__support.arg_list
     libc.src.stdio.printf_core.vfprintf_internal
-  COMPILE_OPTIONS
-    ${printf_copts}
+  ${use_system_file}
 )
 
 add_entrypoint_object(
@@ -256,8 +239,7 @@ add_entrypoint_object(
     vprintf.h
   DEPENDS
     ${printf_deps}
-  COMPILE_OPTIONS
-    ${printf_copts}
+  ${use_system_file}
 )
 
 add_entrypoint_object(
@@ -269,8 +251,7 @@ add_entrypoint_object(
   DEPENDS
     libc.src.__support.arg_list
     libc.src.stdio.printf_core.vfprintf_internal
-  COMPILE_OPTIONS
-    ${printf_copts}
+  ${use_system_file}
 )
 
 add_subdirectory(printf_core)
