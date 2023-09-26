@@ -40,7 +40,7 @@ struct __fn {
             class _Pred,
             class _Proj1,
             class _Proj2,
-            class _Offset>
+            class _Offset = int>
   static _LIBCPP_HIDE_FROM_ABI constexpr bool __contains_subrange_fn_impl(
       _Iter1 __first1,
       _Sent1 __last1,
@@ -85,9 +85,9 @@ struct __fn {
       _Pred __pred   = {},
       _Proj1 __proj1 = {},
       _Proj2 __proj2 = {}) const {
-    auto __n1     = ranges::distance(__first1, __last1);
-    auto __n2     = ranges::distance(__first2, __last2);
-    auto __offset = __n1 - __n2;
+    int __n1     = ranges::distance(__first1, __last1);
+    int __n2     = ranges::distance(__first2, __last2);
+    int __offset = __n1 - __n2;
 
     return __contains_subrange_fn_impl(
         std::move(__first1),
@@ -108,18 +108,18 @@ struct __fn {
     requires indirectly_comparable<iterator_t<_Range1>, iterator_t<_Range2>, _Pred, _Proj1, _Proj2>
   _LIBCPP_NODISCARD_EXT _LIBCPP_HIDE_FROM_ABI constexpr bool operator()(
       _Range1&& __range1, _Range2&& __range2, _Pred __pred = {}, _Proj1 __proj1 = {}, _Proj2 __proj2 = {}) const {
-    auto __n1 = 0;
-    auto __n2 = 0;
+    int __n1 = 0;
+    int __n2 = 0;
 
     if constexpr (sized_range<_Range1> && sized_range<_Range2>) {
       __n1 = ranges::size(__range1);
       __n2 = ranges::size(__range2);
     } else {
-      __n1 = ranges::distance(ranges::begin(__range1), ranges::end(__range1));
-      __n2 = ranges::distance(ranges::begin(__range2), ranges::end(__range2));
+      __n1 = ranges::distance(__range1);
+      __n2 = ranges::distance(__range2);
     }
 
-    auto __offset = __n1 - __n2;
+    int __offset = __n1 - __n2;
     return __contains_subrange_fn_impl(
         ranges::begin(__range1),
         ranges::end(__range1),
