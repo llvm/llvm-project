@@ -397,12 +397,12 @@ void X86FoldTablesEmitter::addEntryWithFlags(FoldTable &Table,
   Record *RegRec = RegInstr->TheDef;
   Record *MemRec = MemInstr->TheDef;
 
-  if (isManual) {
     Result.NoReverse = S & TB_NO_REVERSE;
     Result.NoForward = S & TB_NO_FORWARD;
     Result.FoldLoad = S & TB_FOLDED_LOAD;
     Result.FoldStore = S & TB_FOLDED_STORE;
     Result.Alignment = Align(1ULL << ((S & TB_ALIGN_MASK) >> TB_ALIGN_SHIFT));
+  if (isManual) {
     Table[RegInstr] = Result;
     return;
   }
@@ -433,9 +433,7 @@ void X86FoldTablesEmitter::addEntryWithFlags(FoldTable &Table,
   // the unfolded load size will be based on the register size. If that’s bigger
   // than the memory operand size, the unfolded load will load more memory and
   // potentially cause a memory fault.
-  // And X86 would not unfold RMW instrs.
-  if (getRegOperandSize(RegOpRec) > getMemOperandSize(MemOpRec) ||
-      &Table == &Table2Addr)
+if (getRegOperandSize(RegOpRec) > getMemOperandSize(MemOpRec))
     Result.NoReverse = true;
 
   // Check no-kz version's isMoveReg
@@ -485,7 +483,9 @@ void X86FoldTablesEmitter::updateTables(const CodeGenInstruction *RegInstr,
 
   // Instructions which Read-Modify-Write should be added to Table2Addr.
   if (!MemOutSize && RegOutSize == 1 && MemInSize == RegInSize) {
-    addEntryWithFlags(Table2Addr, RegInstr, MemInstr, S, 0, IsManual);
+    // X86 would not unfold RMW instructions so add TB_NO_REVERSE.
+    addEntryWithFlags(Table2Addr, RegInstr, MemInstr, S | TB_NO_REVERSE, 0,
+                      IsManual);
     return;
   }
 
