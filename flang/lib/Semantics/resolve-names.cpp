@@ -1739,9 +1739,11 @@ bool AttrsVisitor::SetPassNameOn(Symbol &symbol) {
 }
 
 void AttrsVisitor::SetBindNameOn(Symbol &symbol) {
-  if (!attrs_ || !attrs_->test(Attr::BIND_C)) {
+  if ((!attrs_ || !attrs_->test(Attr::BIND_C)) &&
+      !symbol.attrs().test(Attr::BIND_C)) {
     return;
   }
+
   std::optional<std::string> label{
       evaluate::GetScalarConstantValue<evaluate::Ascii>(bindName_)};
   // 18.9.2(2): discard leading and trailing blanks
@@ -1754,6 +1756,9 @@ void AttrsVisitor::SetBindNameOn(Symbol &symbol) {
     }
     auto last{label->find_last_not_of(" ")};
     label = label->substr(first, last - first + 1);
+  } else if (ClassifyProcedure(symbol) == ProcedureDefinitionClass::Internal) {
+    // BIND(C) does not give an implicit binding label to internal procedures.
+    return;
   } else {
     label = symbol.name().ToString();
   }
@@ -4833,6 +4838,13 @@ Symbol &DeclarationVisitor::DeclareProcEntity(
         symbol.set(Symbol::Flag::Function);
       } else if (interface->test(Symbol::Flag::Subroutine)) {
         symbol.set(Symbol::Flag::Subroutine);
+      }
+      if (IsBindCProcedure(*interface) && !IsPointer(symbol) &&
+          !IsDummy(symbol)) {
+        // Inherit BIND_C attribute from the interface, but not the NAME="..."
+        // if any. This is not clearly described in the standard, but matches
+        // the behavior of other compilers.
+        SetImplicitAttr(symbol, Attr::BIND_C);
       }
     } else if (auto *type{GetDeclTypeSpec()}) {
       SetType(name, *type);
