@@ -6,22 +6,17 @@
 //
 //===----------------------------------------------------------------------===//
 
-// TODO: Investigate
-// UNSUPPORTED: LIBCXX-AIX-FIXME
-
-// <iostream>
-
-// istream cin;
+// Make sure that the executor pipes standard input to the test-executable being run.
 
 // RUN: %{build}
-// RUN: echo -n 1234 | %{exec} %t.exe
+// RUN: echo "abc" | %{exec} %t.exe
 
-#include <iostream>
-#include <cassert>
+#include <cstdio>
 
 int main(int, char**) {
-    int i;
-    std::cin >> i;
-    assert(i == 1234);
+  int input[] = {std::getchar(), std::getchar(), std::getchar()};
+
+  if (input[0] == 'a' && input[1] == 'b' && input[2] == 'c')
     return 0;
+  return 1;
 }
