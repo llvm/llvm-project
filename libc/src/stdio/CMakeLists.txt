@@ -137,7 +137,6 @@ add_entrypoint_object(
     fscanf.h
   DEPENDS
     ${scanf_deps}
-  ${use_system_file}
 )
 
 add_entrypoint_object(
@@ -148,7 +147,6 @@ add_entrypoint_object(
     scanf.h
   DEPENDS
     ${scanf_deps}
-  ${use_system_file}
 )
 
 add_entrypoint_object(
@@ -194,7 +192,6 @@ add_entrypoint_object(
     printf.h
   DEPENDS
     ${printf_deps}
-  ${use_system_file}
 )
 
 add_entrypoint_object(
@@ -206,7 +203,6 @@ add_entrypoint_object(
   DEPENDS
     libc.src.__support.arg_list
     libc.src.stdio.printf_core.vfprintf_internal
-  ${use_system_file}
 )
 
 add_entrypoint_object(
@@ -239,7 +235,6 @@ add_entrypoint_object(
     vprintf.h
   DEPENDS
     ${printf_deps}
-  ${use_system_file}
 )
 
 add_entrypoint_object(
@@ -251,7 +246,6 @@ add_entrypoint_object(
   DEPENDS
     libc.src.__support.arg_list
     libc.src.stdio.printf_core.vfprintf_internal
-  ${use_system_file}
 )
 
 add_subdirectory(printf_core)
