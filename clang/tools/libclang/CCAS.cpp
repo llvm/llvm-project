@@ -14,6 +14,7 @@
 
 #include "clang/Basic/LLVM.h"
 #include "clang/CAS/CASOptions.h"
+#include "clang/Driver/Driver.h"
 #include "clang/Frontend/CompileJobCache.h"
 #include "clang/Frontend/CompilerInvocation.h"
 #include "clang/Frontend/TextDiagnosticPrinter.h"
@@ -415,10 +416,22 @@ CXCASReplayResult clang_experimental_cas_replayCompilation(
   auto *DiagsPrinter = new TextDiagnosticPrinter(DiagOS, DiagOpts.get());
   DiagnosticsEngine Diags(DiagID, DiagOpts.get(), DiagsPrinter);
 
+  SmallVector<const char *, 256> Args(argv, argv + argc);
+  llvm::BumpPtrAllocator Alloc;
+  bool CLMode = driver::IsClangCL(
+      driver::getDriverMode(argv[0], ArrayRef(Args).slice(1)));
+
+  if (llvm::Error E = driver::expandResponseFiles(Args, CLMode, Alloc)) {
+    Diags.Report(diag::err_drv_expand_response_file)
+        << llvm::toString(std::move(E));
+    if (OutError)
+      *OutError = cxerror::create(DiagOS.str());
+    return nullptr;
+  }
+
   auto Invok = std::make_shared<CompilerInvocation>();
-  ArrayRef Argv(argv, argc);
-  bool Success = CompilerInvocation::CreateFromArgs(*Invok, Argv.drop_front(),
-                                                    Diags, Argv.front());
+  bool Success = CompilerInvocation::CreateFromArgs(*Invok, ArrayRef(Args).drop_front(),
+                                                    Diags, Args.front());
   if (!Success) {
     if (OutError)
       *OutError = cxerror::create(DiagOS.str());
