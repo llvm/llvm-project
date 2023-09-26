@@ -23,8 +23,8 @@ class Terminator;
 
 // Perform default component initialization, allocate automatic components.
 // Returns a STAT= code (0 when all's well).
-RT_API_ATTRS int Initialize(const Descriptor &, const typeInfo::DerivedType &, Terminator &,
-    bool hasStat = false, const Descriptor *errMsg = nullptr);
+RT_API_ATTRS int Initialize(const Descriptor &, const typeInfo::DerivedType &,
+    Terminator &, bool hasStat = false, const Descriptor *errMsg = nullptr);
 
 // Call FINAL subroutines, if any
 RT_API_ATTRS void Finalize(
@@ -32,8 +32,8 @@ RT_API_ATTRS void Finalize(
 
 // Call FINAL subroutines, deallocate allocatable & automatic components.
 // Does not deallocate the original descriptor.
-RT_API_ATTRS void Destroy(const Descriptor &, bool finalize, const typeInfo::DerivedType &,
-    Terminator *);
+RT_API_ATTRS void Destroy(const Descriptor &, bool finalize,
+    const typeInfo::DerivedType &, Terminator *);
 
 // Return true if the passed descriptor is for a derived type
 // entity that has a dynamic (allocatable, automatic) component.

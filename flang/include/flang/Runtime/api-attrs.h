@@ -105,7 +105,8 @@
  * Note that it can only be used reliably with compilers that perform
  * separate host and device compilations.
  */
-#if ((defined(__CUDACC__) || defined(__CUDA__)) && defined(__CUDA_ARCH__)) || (defined(_OPENMP) && (defined(__AMDGCN__) || defined(__NVPTX__)))
+#if ((defined(__CUDACC__) || defined(__CUDA__)) && defined(__CUDA_ARCH__)) || \
+    (defined(_OPENMP) && (defined(__AMDGCN__) || defined(__NVPTX__)))
 #define RT_DEVICE_COMPILATION 1
 #else
 #undef RT_DEVICE_COMPILATION

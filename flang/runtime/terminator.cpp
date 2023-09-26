@@ -13,8 +13,8 @@
 namespace Fortran::runtime {
 
 #if !defined(RT_DEVICE_COMPILATION)
-[[maybe_unused]] static void (*crashHandler)(const char *, int, const char *, va_list &){
-    nullptr};
+[[maybe_unused]] static void (*crashHandler)(
+    const char *, int, const char *, va_list &){nullptr};
 
 void Terminator::RegisterCrashHandler(
     void (*handler)(const char *, int, const char *, va_list &)) {
@@ -95,7 +95,8 @@ RT_API_ATTRS void Terminator::CrashHeader() const {
       line);
 }
 
-[[noreturn]] RT_API_ATTRS void Terminator::CheckFailed(const char *predicate) const {
+[[noreturn]] RT_API_ATTRS void Terminator::CheckFailed(
+    const char *predicate) const {
   Crash("Internal error: RUNTIME_CHECK(%s) failed at %s(%d)", predicate,
       sourceFileName_, sourceLine_);
 }

@@ -38,10 +38,10 @@ static inline RT_API_ATTRS std::size_t MinElemLen(CFI_type_t type) {
       typeParams->first, typeParams->second);
 }
 
-static inline RT_API_ATTRS int VerifyEstablishParameters(CFI_cdesc_t *descriptor,
-    void *base_addr, CFI_attribute_t attribute, CFI_type_t type,
-    std::size_t elem_len, CFI_rank_t rank, const CFI_index_t extents[],
-    bool external) {
+static inline RT_API_ATTRS int VerifyEstablishParameters(
+    CFI_cdesc_t *descriptor, void *base_addr, CFI_attribute_t attribute,
+    CFI_type_t type, std::size_t elem_len, CFI_rank_t rank,
+    const CFI_index_t extents[], bool external) {
   if (attribute != CFI_attribute_other && attribute != CFI_attribute_pointer &&
       attribute != CFI_attribute_allocatable) {
     return CFI_INVALID_ATTRIBUTE;
@@ -77,9 +77,9 @@ static inline RT_API_ATTRS int VerifyEstablishParameters(CFI_cdesc_t *descriptor
   return CFI_SUCCESS;
 }
 
-static inline RT_API_ATTRS void EstablishDescriptor(CFI_cdesc_t *descriptor, void *base_addr,
-    CFI_attribute_t attribute, CFI_type_t type, std::size_t elem_len,
-    CFI_rank_t rank, const CFI_index_t extents[]) {
+static inline RT_API_ATTRS void EstablishDescriptor(CFI_cdesc_t *descriptor,
+    void *base_addr, CFI_attribute_t attribute, CFI_type_t type,
+    std::size_t elem_len, CFI_rank_t rank, const CFI_index_t extents[]) {
   descriptor->base_addr = base_addr;
   descriptor->elem_len = elem_len;
   descriptor->version = CFI_VERSION;

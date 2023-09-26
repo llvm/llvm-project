@@ -47,8 +47,12 @@ public:
     return raw_ == CFI_type_Bool ||
         (raw_ >= CFI_type_int_least8_t && raw_ <= CFI_type_int_least64_t);
   }
-  constexpr RT_API_ATTRS bool IsDerived() const { return raw_ == CFI_type_struct; }
-  constexpr RT_API_ATTRS bool IsIntrinsic() const { return IsValid() && !IsDerived(); }
+  constexpr RT_API_ATTRS bool IsDerived() const {
+    return raw_ == CFI_type_struct;
+  }
+  constexpr RT_API_ATTRS bool IsIntrinsic() const {
+    return IsValid() && !IsDerived();
+  }
 
   RT_API_ATTRS std::optional<std::pair<TypeCategory, int>>
   GetCategoryAndKind() const;

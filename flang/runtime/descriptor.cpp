@@ -29,9 +29,9 @@ RT_API_ATTRS Descriptor &Descriptor::operator=(const Descriptor &that) {
   return *this;
 }
 
-RT_API_ATTRS void Descriptor::Establish(TypeCode t, std::size_t elementBytes, void *p,
-    int rank, const SubscriptValue *extent, ISO::CFI_attribute_t attribute,
-    bool addendum) {
+RT_API_ATTRS void Descriptor::Establish(TypeCode t, std::size_t elementBytes,
+    void *p, int rank, const SubscriptValue *extent,
+    ISO::CFI_attribute_t attribute, bool addendum) {
   Terminator terminator{__FILE__, __LINE__};
   int cfiStatus{ISO::VerifyEstablishParameters(&raw_, p, attribute, t.raw(),
       elementBytes, rank, extent, /*external=*/false)};
@@ -72,22 +72,23 @@ RT_API_ATTRS std::size_t Descriptor::BytesFor(TypeCategory category, int kind) {
   return ApplyType<TypeSizeGetter, std::size_t>(category, kind, terminator);
 }
 
-RT_API_ATTRS void Descriptor::Establish(TypeCategory c, int kind, void *p, int rank,
-    const SubscriptValue *extent, ISO::CFI_attribute_t attribute,
+RT_API_ATTRS void Descriptor::Establish(TypeCategory c, int kind, void *p,
+    int rank, const SubscriptValue *extent, ISO::CFI_attribute_t attribute,
     bool addendum) {
   Establish(TypeCode(c, kind), BytesFor(c, kind), p, rank, extent, attribute,
       addendum);
 }
 
-RT_API_ATTRS void Descriptor::Establish(int characterKind, std::size_t characters, void *p,
-    int rank, const SubscriptValue *extent, ISO::CFI_attribute_t attribute,
-    bool addendum) {
+RT_API_ATTRS void Descriptor::Establish(int characterKind,
+    std::size_t characters, void *p, int rank, const SubscriptValue *extent,
+    ISO::CFI_attribute_t attribute, bool addendum) {
   Establish(TypeCode{TypeCategory::Character, characterKind},
       characterKind * characters, p, rank, extent, attribute, addendum);
 }
 
-RT_API_ATTRS void Descriptor::Establish(const typeInfo::DerivedType &dt, void *p, int rank,
-    const SubscriptValue *extent, ISO::CFI_attribute_t attribute) {
+RT_API_ATTRS void Descriptor::Establish(const typeInfo::DerivedType &dt,
+    void *p, int rank, const SubscriptValue *extent,
+    ISO::CFI_attribute_t attribute) {
   Establish(TypeCode{TypeCategory::Derived, 0}, dt.sizeInBytes(), p, rank,
       extent, attribute, true);
   DescriptorAddendum *a{Addendum()};
@@ -96,8 +97,8 @@ RT_API_ATTRS void Descriptor::Establish(const typeInfo::DerivedType &dt, void *p
   new (a) DescriptorAddendum{&dt};
 }
 
-RT_API_ATTRS OwningPtr<Descriptor> Descriptor::Create(TypeCode t, std::size_t elementBytes,
-    void *p, int rank, const SubscriptValue *extent,
+RT_API_ATTRS OwningPtr<Descriptor> Descriptor::Create(TypeCode t,
+    std::size_t elementBytes, void *p, int rank, const SubscriptValue *extent,
     ISO::CFI_attribute_t attribute, int derivedTypeLenParameters) {
   std::size_t bytes{SizeInBytes(rank, true, derivedTypeLenParameters)};
   Terminator terminator{__FILE__, __LINE__};
@@ -107,8 +108,9 @@ RT_API_ATTRS OwningPtr<Descriptor> Descriptor::Create(TypeCode t, std::size_t el
   return OwningPtr<Descriptor>{result};
 }
 
-RT_API_ATTRS OwningPtr<Descriptor> Descriptor::Create(TypeCategory c, int kind, void *p,
-    int rank, const SubscriptValue *extent, ISO::CFI_attribute_t attribute) {
+RT_API_ATTRS OwningPtr<Descriptor> Descriptor::Create(TypeCategory c, int kind,
+    void *p, int rank, const SubscriptValue *extent,
+    ISO::CFI_attribute_t attribute) {
   return Create(
       TypeCode(c, kind), BytesFor(c, kind), p, rank, extent, attribute);
 }
@@ -120,9 +122,9 @@ RT_API_ATTRS OwningPtr<Descriptor> Descriptor::Create(int characterKind,
       characterKind * characters, p, rank, extent, attribute);
 }
 
-RT_API_ATTRS OwningPtr<Descriptor> Descriptor::Create(const typeInfo::DerivedType &dt,
-    void *p, int rank, const SubscriptValue *extent,
-    ISO::CFI_attribute_t attribute) {
+RT_API_ATTRS OwningPtr<Descriptor> Descriptor::Create(
+    const typeInfo::DerivedType &dt, void *p, int rank,
+    const SubscriptValue *extent, ISO::CFI_attribute_t attribute) {
   return Create(TypeCode{TypeCategory::Derived, 0}, dt.sizeInBytes(), p, rank,
       extent, attribute, dt.LenParameters());
 }

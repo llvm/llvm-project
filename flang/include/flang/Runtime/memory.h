@@ -39,15 +39,14 @@ template <typename A> void FreeMemoryAndNullify(A *&p) {
 // It should work for any offload device compiler.
 // It uses a fixed memory deleter based on FreeMemory(),
 // and does not support array objects with runtime length.
-template <typename A>
-class OwningPtr {
+template <typename A> class OwningPtr {
 public:
   using pointer_type = A *;
 
   OwningPtr() = default;
   RT_API_ATTRS explicit OwningPtr(pointer_type p) : ptr_(p) {}
   RT_API_ATTRS OwningPtr(const OwningPtr &) = delete;
-  RT_API_ATTRS OwningPtr& operator=(const OwningPtr &) = delete;
+  RT_API_ATTRS OwningPtr &operator=(const OwningPtr &) = delete;
   RT_API_ATTRS OwningPtr(OwningPtr &&other) {
     ptr_ = other.ptr_;
     other.ptr_ = pointer_type{};
@@ -60,7 +59,7 @@ public:
     }
     return *this;
   }
-  constexpr RT_API_ATTRS OwningPtr(std::nullptr_t) : OwningPtr() { }
+  constexpr RT_API_ATTRS OwningPtr(std::nullptr_t) : OwningPtr() {}
 
   // Delete the pointer, if owns one.
   RT_API_ATTRS ~OwningPtr() {
@@ -87,14 +86,10 @@ public:
   }
 
   // Exchange the pointer with another object.
-  RT_API_ATTRS void swap(OwningPtr &other) {
-    std::swap(ptr_, other.ptr_);
-  }
+  RT_API_ATTRS void swap(OwningPtr &other) { std::swap(ptr_, other.ptr_); }
 
   // Get the stored pointer.
-  RT_API_ATTRS pointer_type get() const {
-    return ptr_;
-  }
+  RT_API_ATTRS pointer_type get() const { return ptr_; }
 
   RT_API_ATTRS explicit operator bool() const {
     return get() != pointer_type{};
@@ -105,19 +100,16 @@ public:
     return *get();
   }
 
-  RT_API_ATTRS pointer_type operator->() const {
-    return get();
-  }
+  RT_API_ATTRS pointer_type operator->() const { return get(); }
 
 private:
-  RT_API_ATTRS void delete_ptr(pointer_type p) {
-    FreeMemory(p);
-  }
+  RT_API_ATTRS void delete_ptr(pointer_type p) { FreeMemory(p); }
   pointer_type ptr_{};
 };
 
 template <typename X, typename Y>
-inline RT_API_ATTRS bool operator!=(const OwningPtr<X> &x, const OwningPtr<Y> &y) {
+inline RT_API_ATTRS bool operator!=(
+    const OwningPtr<X> &x, const OwningPtr<Y> &y) {
   return x.get() != y.get();
 }
 

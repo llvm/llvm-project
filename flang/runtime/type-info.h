@@ -39,7 +39,8 @@ public:
     LenParameter = 3
   };
   RT_API_ATTRS Genre genre() const { return genre_; }
-  RT_API_ATTRS std::optional<TypeParameterValue> GetValue(const Descriptor *) const;
+  RT_API_ATTRS std::optional<TypeParameterValue> GetValue(
+      const Descriptor *) const;
 
 private:
   Genre genre_{Genre::Explicit};
@@ -59,7 +60,9 @@ public:
 
   const RT_API_ATTRS Descriptor &name() const { return name_.descriptor(); }
   RT_API_ATTRS Genre genre() const { return genre_; }
-  RT_API_ATTRS TypeCategory category() const { return static_cast<TypeCategory>(category_); }
+  RT_API_ATTRS TypeCategory category() const {
+    return static_cast<TypeCategory>(category_);
+  }
   RT_API_ATTRS int kind() const { return kind_; }
   RT_API_ATTRS int rank() const { return rank_; }
   RT_API_ATTRS std::uint64_t offset() const { return offset_; }
@@ -88,8 +91,9 @@ public:
 
   // Creates a pointer descriptor from this component description, possibly
   // with subscripts
-  RT_API_ATTRS void CreatePointerDescriptor(Descriptor &, const Descriptor &container,
-      Terminator &, const SubscriptValue * = nullptr) const;
+  RT_API_ATTRS void CreatePointerDescriptor(Descriptor &,
+      const Descriptor &container, Terminator &,
+      const SubscriptValue * = nullptr) const;
 
   FILE *Dump(FILE * = stdout) const;
 
@@ -135,8 +139,9 @@ public:
 
   // Special bindings can be created during execution to handle defined
   // I/O procedures that are not type-bound.
-  RT_API_ATTRS  SpecialBinding(Which which, ProcedurePointer proc, std::uint8_t isArgDescSet,
-      std::uint8_t isTypeBound, std::uint8_t isArgContiguousSet)
+  RT_API_ATTRS SpecialBinding(Which which, ProcedurePointer proc,
+      std::uint8_t isArgDescSet, std::uint8_t isTypeBound,
+      std::uint8_t isArgContiguousSet)
       : which_{which}, isArgDescriptorSet_{isArgDescSet},
         isTypeBound_{isTypeBound}, isArgContiguousSet_{isArgContiguousSet},
         proc_{proc} {}
@@ -200,7 +205,9 @@ class DerivedType {
 public:
   ~DerivedType(); // never defined
 
-  const RT_API_ATTRS Descriptor &binding() const { return binding_.descriptor(); }
+  const RT_API_ATTRS Descriptor &binding() const {
+    return binding_.descriptor();
+  }
   const RT_API_ATTRS Descriptor &name() const { return name_.descriptor(); }
   RT_API_ATTRS std::uint64_t sizeInBytes() const { return sizeInBytes_; }
   const RT_API_ATTRS Descriptor &uninstatiated() const {
@@ -212,15 +219,27 @@ public:
   const RT_API_ATTRS Descriptor &lenParameterKind() const {
     return lenParameterKind_.descriptor();
   }
-  const RT_API_ATTRS Descriptor &component() const { return component_.descriptor(); }
-  const RT_API_ATTRS Descriptor &procPtr() const { return procPtr_.descriptor(); }
-  const RT_API_ATTRS Descriptor &special() const { return special_.descriptor(); }
+  const RT_API_ATTRS Descriptor &component() const {
+    return component_.descriptor();
+  }
+  const RT_API_ATTRS Descriptor &procPtr() const {
+    return procPtr_.descriptor();
+  }
+  const RT_API_ATTRS Descriptor &special() const {
+    return special_.descriptor();
+  }
   RT_API_ATTRS bool hasParent() const { return hasParent_; }
-  RT_API_ATTRS bool noInitializationNeeded() const { return noInitializationNeeded_; }
+  RT_API_ATTRS bool noInitializationNeeded() const {
+    return noInitializationNeeded_;
+  }
   RT_API_ATTRS bool noDestructionNeeded() const { return noDestructionNeeded_; }
-  RT_API_ATTRS bool noFinalizationNeeded() const { return noFinalizationNeeded_; }
+  RT_API_ATTRS bool noFinalizationNeeded() const {
+    return noFinalizationNeeded_;
+  }
 
-  RT_API_ATTRS std::size_t LenParameters() const { return lenParameterKind().Elements(); }
+  RT_API_ATTRS std::size_t LenParameters() const {
+    return lenParameterKind().Elements();
+  }
 
   const RT_API_ATTRS DerivedType *GetParentType() const;
 
@@ -229,7 +248,8 @@ public:
       const char *name, std::size_t nameLen) const;
 
   // O(1) look-up of special procedure bindings
-  const RT_API_ATTRS SpecialBinding *FindSpecialBinding(SpecialBinding::Which which) const {
+  const RT_API_ATTRS SpecialBinding *FindSpecialBinding(
+      SpecialBinding::Which which) const {
     auto bitIndex{static_cast<std::uint32_t>(which)};
     auto bit{std::uint32_t{1} << bitIndex};
     if (specialBitSet_ & bit) {

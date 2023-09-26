@@ -31,7 +31,8 @@ public:
   RT_API_ATTRS const char *sourceFileName() const { return sourceFileName_; }
   RT_API_ATTRS int sourceLine() const { return sourceLine_; }
 
-  RT_API_ATTRS void SetLocation(const char *sourceFileName = nullptr, int sourceLine = 0) {
+  RT_API_ATTRS void SetLocation(
+      const char *sourceFileName = nullptr, int sourceLine = 0) {
     sourceFileName_ = sourceFileName;
     sourceLine_ = sourceLine;
   }
@@ -53,7 +54,8 @@ public:
   // to regular printf for the device compilation.
   // Try to keep the inline implementations as small as possible.
   template <typename... Args>
-  [[noreturn]] RT_API_ATTRS const char *Crash(const char *message, Args... args) const  {
+  [[noreturn]] RT_API_ATTRS const char *Crash(
+      const char *message, Args... args) const {
 #if !defined(RT_DEVICE_COMPILATION)
     // Invoke handler set up by the test harness.
     InvokeCrashHandler(message, args...);
@@ -82,8 +84,7 @@ public:
   [[noreturn]] RT_API_ATTRS void CrashFooter() const;
 #if !defined(RT_DEVICE_COMPILATION)
   void InvokeCrashHandler(const char *message, ...) const;
-  [[noreturn]] void CrashArgs(
-      const char *message, va_list &) const;
+  [[noreturn]] void CrashArgs(const char *message, va_list &) const;
 #endif
   [[noreturn]] RT_API_ATTRS void CheckFailed(
       const char *predicate, const char *file, int line) const;
