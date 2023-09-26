@@ -1153,6 +1153,9 @@ libcxx/test/std/algorithms/alg.nonmodifying/alg.find.first.of/find_first_of_pred
 libcxx/test/std/algorithms/alg.nonmodifying/alg.find.first.of/ranges.find_first_of.pass.cpp
 libcxx/test/std/algorithms/alg.nonmodifying/alg.find/ranges.find_if_not.pass.cpp
 libcxx/test/std/algorithms/alg.nonmodifying/alg.find/ranges.find_if.pass.cpp
+libcxx/test/std/algorithms/alg.nonmodifying/alg.find/ranges.find_last_if_not.pass.cpp
+libcxx/test/std/algorithms/alg.nonmodifying/alg.find/ranges.find_last_if.pass.cpp
+libcxx/test/std/algorithms/alg.nonmodifying/alg.find/ranges.find_last.pass.cpp
 libcxx/test/std/algorithms/alg.nonmodifying/alg.find/ranges.find.pass.cpp
 libcxx/test/std/algorithms/alg.nonmodifying/alg.foreach/for_each_n.pass.cpp
 libcxx/test/std/algorithms/alg.nonmodifying/alg.foreach/ranges.for_each_n.pass.cpp
