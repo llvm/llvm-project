@@ -56,7 +56,7 @@ def BufferDeallocationOpInterface :
           method (which is especially important if operations are created that
           cannot be easily canonicalized away anymore).
         }],
-        /*retType=*/"std::pair<Value, Value>",
+        /*retType=*/"FailureOr<std::pair<Value, Value>>",
         /*methodName=*/"materializeUniqueOwnershipForMemref",
         /*args=*/(ins "DeallocationState &":$state,
                       "const DeallocationOptions &":$options,
@@ -65,7 +65,7 @@ def BufferDeallocationOpInterface :
         /*methodBody=*/[{}],
         /*defaultImplementation=*/[{
           return state.getMemrefWithUniqueOwnership(
-            builder, memref, memref.getParentBlock());
+            options, builder, memref, memref.getParentBlock());
         }]>,
   ];
 }

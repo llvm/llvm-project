@@ -223,6 +223,14 @@ def OwnershipBasedBufferDeallocation : Pass<
            "Allows to add additional arguments to private functions to "
            "dynamically pass ownership of memrefs to callees. This can enable "
            "earlier deallocations.">,
+    Option<"allowCloning", "allow-cloning", "bool", /*default=*/"false",
+           "Allows the pass to insert `bufferization.clone` operations. This "
+           "is useful for supporting IR that does not adhere to the function "
+           "boundary ABI initially (excl. external functions) and to support "
+           "operations with results with 'Unknown' ownership. However, it "
+           "requires that all buffer writes dominate all buffer reads (i.e., "
+           "only enable this option if your IR is guaranteed to have this "
+           "property).">,
   ];
   let constructor = "mlir::bufferization::createOwnershipBasedBufferDeallocationPass()";
 

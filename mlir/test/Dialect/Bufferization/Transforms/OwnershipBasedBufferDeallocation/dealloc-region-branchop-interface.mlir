@@ -1,6 +1,8 @@
 // RUN: mlir-opt -allow-unregistered-dialect -verify-diagnostics -ownership-based-buffer-deallocation \
 // RUN:  --buffer-deallocation-simplification -split-input-file %s | FileCheck %s
 // RUN: mlir-opt -allow-unregistered-dialect -verify-diagnostics -ownership-based-buffer-deallocation=private-function-dynamic-ownership=true -split-input-file %s > /dev/null
+// RUN: mlir-opt -allow-unregistered-dialect -verify-diagnostics -ownership-based-buffer-deallocation=allow-cloning=true \
+// RUN:  --buffer-deallocation-simplification -split-input-file %s | FileCheck --check-prefix=CLONES %s
 
 // RUN: mlir-opt %s -buffer-deallocation-pipeline --split-input-file --verify-diagnostics > /dev/null
 
@@ -55,6 +57,8 @@ func.func @nested_regions_and_cond_branch(
 //  CHECK-NEXT:   bufferization.dealloc ([[BASE]] : {{.*}}) if ([[COND0]])
 //       CHECK:   return
 
+// CLONES-LABEL: func @nested_regions_and_cond_branch
+
 // -----
 
 // Test Case: nested region control flow
@@ -85,13 +89,23 @@ func.func @nested_region_control_flow(
 //       CHECK:     bufferization.dealloc ([[ALLOC1]] :{{.*}}) if (%true{{[0-9_]*}})
 //   CHECK-NOT: retain
 //       CHECK:     scf.yield [[ALLOC]], %false
-//       CHECK:   [[V1:%.+]] = scf.if [[V0]]#1
-//       CHECK:     scf.yield [[V0]]#0
-//       CHECK:     [[CLONE:%.+]] = bufferization.clone [[V0]]#0
-//       CHECK:     scf.yield [[CLONE]]
-//       CHECK:   [[BASE:%[a-zA-Z0-9_]+]],{{.*}} = memref.extract_strided_metadata [[V0]]#0
-//       CHECK:   bufferization.dealloc ([[ALLOC]], [[BASE]] : {{.*}}) if (%true{{[0-9_]*}}, [[V0]]#1) retain ([[V1]] :
-//       CHECK:   return [[V1]]
+//       CHECK:   return [[V0]]#0
+
+// CLONES-LABEL: func @nested_region_control_flow
+//       CLONES:   [[ALLOC:%.+]] = memref.alloc(
+//       CLONES:   [[V0:%.+]]:2 = scf.if
+//       CLONES:     scf.yield [[ALLOC]], %false
+//       CLONES:     [[ALLOC1:%.+]] = memref.alloc(
+//       CLONES:     bufferization.dealloc ([[ALLOC1]] :{{.*}}) if (%true{{[0-9_]*}})
+//   CLONES-NOT: retain
+//       CLONES:     scf.yield [[ALLOC]], %false
+//       CLONES:   [[V1:%.+]] = scf.if [[V0]]#1
+//       CLONES:     scf.yield [[V0]]#0
+//       CLONES:     [[CLONE:%.+]] = bufferization.clone [[V0]]#0
+//       CLONES:     scf.yield [[CLONE]]
+//       CLONES:   [[BASE:%[a-zA-Z0-9_]+]],{{.*}} = memref.extract_strided_metadata [[V0]]#0
+//       CLONES:   bufferization.dealloc ([[ALLOC]], [[BASE]] : {{.*}}) if (%true{{[0-9_]*}}, [[V0]]#1) retain ([[V1]] :
+//       CLONES:   return [[V1]]
 
 // -----
 
@@ -120,13 +134,22 @@ func.func @nested_region_control_flow_div(
 //       CHECK:     scf.yield [[ALLOC]], %false
 //       CHECK:     [[ALLOC1:%.+]] = memref.alloc(
 //       CHECK:     scf.yield [[ALLOC1]], %true
-//       CHECK:   [[V1:%.+]] = scf.if [[V0]]#1
-//       CHECK:     scf.yield [[V0]]#0
-//       CHECK:     [[CLONE:%.+]] = bufferization.clone [[V0]]#0
-//       CHECK:     scf.yield [[CLONE]]
-//       CHECK:   [[BASE:%[a-zA-Z0-9_]+]],{{.*}} = memref.extract_strided_metadata [[V0]]#0
-//       CHECK:   bufferization.dealloc ([[ALLOC]], [[BASE]] :{{.*}}) if (%true{{[0-9_]*}}, [[V0]]#1) retain ([[V1]] :
-//       CHECK:   return [[V1]]
+//       CHECK:   bufferization.dealloc ([[ALLOC]] :{{.*}}) if (%true{{[0-9_]*}}) retain ([[V0]]#0 :
+//       CHECK:   return [[V0]]#0
+
+// CLONES-LABEL: func @nested_region_control_flow_div
+//       CLONES:   [[ALLOC:%.+]] = memref.alloc(
+//       CLONES:   [[V0:%.+]]:2 = scf.if
+//       CLONES:     scf.yield [[ALLOC]], %false
+//       CLONES:     [[ALLOC1:%.+]] = memref.alloc(
+//       CLONES:     scf.yield [[ALLOC1]], %true
+//       CLONES:   [[V1:%.+]] = scf.if [[V0]]#1
+//       CLONES:     scf.yield [[V0]]#0
+//       CLONES:     [[CLONE:%.+]] = bufferization.clone [[V0]]#0
+//       CLONES:     scf.yield [[CLONE]]
+//       CLONES:   [[BASE:%[a-zA-Z0-9_]+]],{{.*}} = memref.extract_strided_metadata [[V0]]#0
+//       CLONES:   bufferization.dealloc ([[ALLOC]], [[BASE]] :{{.*}}) if (%true{{[0-9_]*}}, [[V0]]#1) retain ([[V1]] :
+//       CLONES:   return [[V1]]
 
 // -----
 
@@ -158,13 +181,25 @@ func.func @inner_region_control_flow(%arg0 : index) -> memref<?x?xf32> {
 //       CHECK:     test.region_if_yield [[ARG1]], [[ARG2]]
 //       CHECK:   ^bb0([[ARG1:%.+]]: memref<?x?xf32>, [[ARG2:%.+]]: i1):
 //       CHECK:     test.region_if_yield [[ARG1]], [[ARG2]]
-//       CHECK:   [[V1:%.+]] = scf.if [[V0]]#1
-//       CHECK:     scf.yield [[V0]]#0
-//       CHECK:     [[CLONE:%.+]] = bufferization.clone [[V0]]#0
-//       CHECK:     scf.yield [[CLONE]]
-//       CHECK:   [[BASE:%[a-zA-Z0-9_]+]],{{.*}} = memref.extract_strided_metadata [[V0]]#0
-//       CHECK:   bufferization.dealloc ([[ALLOC]], [[BASE]] :{{.*}}) if (%true{{[0-9_]*}}, [[V0]]#1) retain ([[V1]] :
-//       CHECK:   return [[V1]]
+//   CHECK-NOT:   bufferization.dealloc
+//       CHECK:   return [[V0]]#0
+
+// CLONES-LABEL: func.func @inner_region_control_flow
+//       CLONES:   [[ALLOC:%.+]] = memref.alloc(
+//       CLONES:   [[V0:%.+]]:2 = test.region_if [[ALLOC]], %false
+//       CLONES:   ^bb0([[ARG1:%.+]]: memref<?x?xf32>, [[ARG2:%.+]]: i1):
+//       CLONES:     test.region_if_yield [[ARG1]], [[ARG2]]
+//       CLONES:   ^bb0([[ARG1:%.+]]: memref<?x?xf32>, [[ARG2:%.+]]: i1):
+//       CLONES:     test.region_if_yield [[ARG1]], [[ARG2]]
+//       CLONES:   ^bb0([[ARG1:%.+]]: memref<?x?xf32>, [[ARG2:%.+]]: i1):
+//       CLONES:     test.region_if_yield [[ARG1]], [[ARG2]]
+//       CLONES:   [[V1:%.+]] = scf.if [[V0]]#1
+//       CLONES:     scf.yield [[V0]]#0
+//       CLONES:     [[CLONE:%.+]] = bufferization.clone [[V0]]#0
+//       CLONES:     scf.yield [[CLONE]]
+//       CLONES:   [[BASE:%[a-zA-Z0-9_]+]],{{.*}} = memref.extract_strided_metadata [[V0]]#0
+//       CLONES:   bufferization.dealloc ([[ALLOC]], [[BASE]] :{{.*}}) if (%true{{[0-9_]*}}, [[V0]]#1) retain ([[V1]] :
+//       CLONES:   return [[V1]]
 
 // -----
 
@@ -209,6 +244,8 @@ func.func @nestedRegionsAndCondBranchAlloca(
 //       CHECK:   [[BASE:%[a-zA-Z0-9_]+]],{{.*}} = memref.extract_strided_metadata [[A0]]
 //       CHECK:   bufferization.dealloc ([[BASE]] :{{.*}}) if ([[COND]])
 
+// CLONES-LABEL: func @nestedRegionsAndCondBranchAlloca
+
 // -----
 
 func.func @nestedRegionControlFlowAlloca(
@@ -232,13 +269,22 @@ func.func @nestedRegionControlFlowAlloca(
 //       CHECK:   scf.yield [[ALLOC]], %false
 //       CHECK:   memref.alloca(
 //       CHECK:   scf.yield [[ALLOC]], %false
-//       CHECK: [[V1:%.+]] = scf.if [[V0]]#1
-//       CHECK:   scf.yield [[V0]]#0
-//       CHECK:   [[CLONE:%.+]] = bufferization.clone [[V0]]#0
-//       CHECK:   scf.yield [[CLONE]]
-//       CHECK: [[BASE:%[a-zA-Z0-9_]+]],{{.*}} = memref.extract_strided_metadata [[V0]]#0
-//       CHECK: bufferization.dealloc ([[ALLOC]], [[BASE]] :{{.*}}) if (%true{{[0-9_]*}}, [[V0]]#1) retain ([[V1]] :
-//       CHECK: return [[V1]]
+//   CHECK-NOT: bufferization.dealloc
+//       CHECK: return [[V0]]#0
+
+// CLONES-LABEL: func @nestedRegionControlFlowAlloca
+//       CLONES: [[ALLOC:%.+]] = memref.alloc(
+//       CLONES: [[V0:%.+]]:2 = scf.if
+//       CLONES:   scf.yield [[ALLOC]], %false
+//       CLONES:   memref.alloca(
+//       CLONES:   scf.yield [[ALLOC]], %false
+//       CLONES: [[V1:%.+]] = scf.if [[V0]]#1
+//       CLONES:   scf.yield [[V0]]#0
+//       CLONES:   [[CLONE:%.+]] = bufferization.clone [[V0]]#0
+//       CLONES:   scf.yield [[CLONE]]
+//       CLONES: [[BASE:%[a-zA-Z0-9_]+]],{{.*}} = memref.extract_strided_metadata [[V0]]#0
+//       CLONES: bufferization.dealloc ([[ALLOC]], [[BASE]] :{{.*}}) if (%true{{[0-9_]*}}, [[V0]]#1) retain ([[V1]] :
+//       CLONES: return [[V1]]
 
 // -----
 
@@ -278,6 +324,8 @@ func.func @loop_alloc(
 //   CHECK-NOT: retain
 //       CHECK: bufferization.dealloc ([[BASE]] :{{.*}}) if ([[V0]]#1)
 //   CHECK-NOT: retain
+
+// CLONES-LABEL: func @loop_alloc
 
 // -----
 
@@ -326,6 +374,8 @@ func.func @loop_nested_if_no_alloc(
 // TODO: we know statically that the inner dealloc will never deallocate
 //       anything, i.e., we can optimize it away
 
+// CLONES-LABEL: func @loop_nested_if_no_alloc
+
 // -----
 
 // Test Case: structured control-flow loop with a nested if operation using
@@ -364,13 +414,29 @@ func.func @loop_nested_if_alloc(
 //       CHECK:   [[OWN_AGG:%.+]] = arith.ori [[OWN]], [[V1]]#1
 //       CHECK:   scf.yield [[V1]]#0, [[OWN_AGG]]
 //       CHECK: }
-//       CHECK: [[V2:%.+]] = scf.if [[V0]]#1
-//       CHECK:   scf.yield [[V0]]#0
-//       CHECK:   [[CLONE:%.+]] = bufferization.clone [[V0]]#0
-//       CHECK:   scf.yield [[CLONE]]
-//       CHECK: [[BASE:%[a-zA-Z0-9_]+]],{{.*}} = memref.extract_strided_metadata [[V0]]#0
-//       CHECK: bufferization.dealloc ([[ALLOC]], [[BASE]] :{{.*}}) if (%true{{[0-9_]*}}, [[V0]]#1) retain ([[V2]] :
-//       CHECK: return [[V2]]
+//       CHECK: bufferization.dealloc ([[ALLOC]] :{{.*}}) if (%true{{[0-9_]*}}) retain ([[V0]]#0 :
+//       CHECK: return [[V0]]#0
+
+// CLONES-LABEL: func @loop_nested_if_alloc
+//  CLONES-SAME: ({{.*}}, [[ARG3:%.+]]: memref<2xf32>)
+//       CLONES: [[ALLOC:%.+]] = memref.alloc()
+//       CLONES: [[V0:%.+]]:2 = scf.for {{.*}} iter_args([[ARG5:%.+]] = [[ARG3]], [[ARG6:%.+]] = %false
+//       CLONES:   [[V1:%.+]]:2 = scf.if
+//       CLONES:     [[ALLOC1:%.+]] = memref.alloc()
+//       CLONES:     scf.yield [[ALLOC1]], %true
+//       CLONES:     scf.yield [[ALLOC]], %false
+//       CLONES:   [[BASE:%[a-zA-Z0-9_]+]],{{.*}} = memref.extract_strided_metadata [[ARG5]]
+//       CLONES:   [[OWN:%.+]] = bufferization.dealloc ([[BASE]] :{{.*}}) if ([[ARG6]]) retain ([[V1]]#0 :
+//       CLONES:   [[OWN_AGG:%.+]] = arith.ori [[OWN]], [[V1]]#1
+//       CLONES:   scf.yield [[V1]]#0, [[OWN_AGG]]
+//       CLONES: }
+//       CLONES: [[V2:%.+]] = scf.if [[V0]]#1
+//       CLONES:   scf.yield [[V0]]#0
+//       CLONES:   [[CLONE:%.+]] = bufferization.clone [[V0]]#0
+//       CLONES:   scf.yield [[CLONE]]
+//       CLONES: [[BASE:%[a-zA-Z0-9_]+]],{{.*}} = memref.extract_strided_metadata [[V0]]#0
+//       CLONES: bufferization.dealloc ([[ALLOC]], [[BASE]] :{{.*}}) if (%true{{[0-9_]*}}, [[V0]]#1) retain ([[V2]] :
+//       CLONES: return [[V2]]
 
 // -----
 
@@ -447,6 +513,8 @@ func.func @loop_nested_alloc(
 
 // TODO: all the retain operands could be removed by doing some more thorough analysis
 
+// CLONES-LABEL: func @loop_nested_alloc
+
 // -----
 
 func.func @affine_loop() -> f32 {
@@ -465,6 +533,8 @@ func.func @affine_loop() -> f32 {
 //       CHECK: affine.for {{.*}} iter_args(%arg1 = %cst)
 //       CHECK:   affine.yield
 //       CHECK: bufferization.dealloc ([[ALLOC]] :{{.*}}) if (%true
+
+// CLONES-LABEL: func @affine_loop
 
 // -----
 
@@ -507,6 +577,8 @@ func.func @assumingOp(
 //       CHECK: bufferization.dealloc ([[BASE0]] :{{.*}}) if ([[V0]]#1)
 //   CHECK-NOT: retain
 //       CHECK: return
+
+// CLONES-LABEL: func @assumingOp
 
 // -----
 
@@ -570,6 +642,8 @@ func.func @while_two_arg(%arg0: index) {
 //       CHECK: [[BASE1:%[a-zA-Z0-9_]+]],{{.*}} = memref.extract_strided_metadata [[V0]]#1
 //       CHECK: bufferization.dealloc ([[ALLOC]], [[BASE0]], [[BASE1]] :{{.*}}) if (%true{{[0-9_]*}}, [[V0]]#2, [[V0]]#3)
 
+// CLONES-LABEL: func @while_two_arg
+
 // -----
 
 func.func @while_three_arg(%arg0: index) {
@@ -606,6 +680,8 @@ func.func @while_three_arg(%arg0: index) {
 
 // TODO: better alias analysis could simplify the dealloc inside the body further
 
+// CLONES-LABEL: func @while_three_arg
+
 // -----
 
 // Memref allocated in `then` region and passed back to the parent if op.
@@ -626,16 +702,24 @@ func.func @test_affine_if_1(%arg0: memref<10xf32>) -> memref<10xf32> {
 //       CHECK:   [[ALLOC:%.+]] = memref.alloc()
 //       CHECK:   affine.yield [[ALLOC]], %true
 //       CHECK:   affine.yield [[ARG0]], %false
-//       CHECK: [[V1:%.+]] = scf.if [[V0]]#1
-//       CHECK:   scf.yield [[V0]]#0
-//       CHECK:   [[CLONE:%.+]] = bufferization.clone [[V0]]#0
-//       CHECK:   scf.yield [[CLONE]]
-//       CHECK: [[BASE:%[a-zA-Z0-9_]+]],{{.*}} = memref.extract_strided_metadata [[V0]]#0
-//       CHECK: bufferization.dealloc ([[BASE]] :{{.*}}) if ([[V0]]#1) retain ([[V1]] :
-//       CHECK: return [[V1]]
+//       CHECK: return [[V0]]#0
 
 // TODO: the dealloc could be optimized away since the memref to be deallocated
 //       either aliases with V1 or the condition is false
+
+// CLONES-LABEL: func @test_affine_if_1
+//  CLONES-SAME: ([[ARG0:%.*]]: memref<10xf32>)
+//       CLONES: [[V0:%.+]]:2 = affine.if
+//       CLONES:   [[ALLOC:%.+]] = memref.alloc()
+//       CLONES:   affine.yield [[ALLOC]], %true
+//       CLONES:   affine.yield [[ARG0]], %false
+//       CLONES: [[V1:%.+]] = scf.if [[V0]]#1
+//       CLONES:   scf.yield [[V0]]#0
+//       CLONES:   [[CLONE:%.+]] = bufferization.clone [[V0]]#0
+//       CLONES:   scf.yield [[CLONE]]
+//       CLONES: [[BASE:%[a-zA-Z0-9_]+]],{{.*}} = memref.extract_strided_metadata [[V0]]#0
+//       CLONES: bufferization.dealloc ([[BASE]] :{{.*}}) if ([[V0]]#1) retain ([[V1]] :
+//       CLONES: return [[V1]]
 
 // -----
 
@@ -652,19 +736,28 @@ func.func @test_affine_if_2() -> memref<10xf32> {
   }
   return %0 : memref<10xf32>
 }
+
 // CHECK-LABEL: func @test_affine_if_2
 //       CHECK: [[ALLOC:%.+]] = memref.alloc()
 //       CHECK: [[V0:%.+]]:2 = affine.if
 //       CHECK:   affine.yield [[ALLOC]], %false
 //       CHECK:   [[ALLOC1:%.+]] = memref.alloc()
 //       CHECK:   affine.yield [[ALLOC1]], %true
-//       CHECK: [[V1:%.+]] = scf.if [[V0]]#1
-//       CHECK:   scf.yield [[V0]]#0
-//       CHECK:   [[CLONE:%.+]] = bufferization.clone [[V0]]#0
-//       CHECK:   scf.yield [[CLONE]]
-//       CHECK: [[BASE:%[a-zA-Z0-9_]+]],{{.*}} = memref.extract_strided_metadata [[V0]]#0
-//       CHECK: bufferization.dealloc ([[ALLOC]], [[BASE]] :{{.*}}) if (%true{{[0-9_]*}}, [[V0]]#1) retain ([[V1]] :
-//       CHECK: return [[V1]]
+//       CHECK: return [[V0]]#0
+
+// CLONES-LABEL: func @test_affine_if_2
+//       CLONES: [[ALLOC:%.+]] = memref.alloc()
+//       CLONES: [[V0:%.+]]:2 = affine.if
+//       CLONES:   affine.yield [[ALLOC]], %false
+//       CLONES:   [[ALLOC1:%.+]] = memref.alloc()
+//       CLONES:   affine.yield [[ALLOC1]], %true
+//       CLONES: [[V1:%.+]] = scf.if [[V0]]#1
+//       CLONES:   scf.yield [[V0]]#0
+//       CLONES:   [[CLONE:%.+]] = bufferization.clone [[V0]]#0
+//       CLONES:   scf.yield [[CLONE]]
+//       CLONES: [[BASE:%[a-zA-Z0-9_]+]],{{.*}} = memref.extract_strided_metadata [[V0]]#0
+//       CLONES: bufferization.dealloc ([[ALLOC]], [[BASE]] :{{.*}}) if (%true{{[0-9_]*}}, [[V0]]#1) retain ([[V1]] :
+//       CLONES: return [[V1]]
 
 // -----
 
@@ -688,10 +781,18 @@ func.func @test_affine_if_3() -> memref<10xf32> {
 //       CHECK:   [[ALLOC1:%.+]] = memref.alloc()
 //       CHECK:   affine.yield [[ALLOC1]], %true
 //       CHECK:   affine.yield [[ALLOC]], %false
-//       CHECK: [[V1:%.+]] = scf.if [[V0]]#1
-//       CHECK:   scf.yield [[V0]]#0
-//       CHECK:   [[CLONE:%.+]] = bufferization.clone [[V0]]#0
-//       CHECK:   scf.yield [[CLONE]]
-//       CHECK: [[BASE:%[a-zA-Z0-9_]+]],{{.*}} = memref.extract_strided_metadata [[V0]]#0
-//       CHECK: bufferization.dealloc ([[ALLOC]], [[BASE]] :{{.*}}) if (%true{{[0-9_]*}}, [[V0]]#1) retain ([[V1]]
-//       CHECK: return [[V1]]
+//       CHECK: return [[V0]]#0
+
+// CLONES-LABEL: func @test_affine_if_3
+//       CLONES: [[ALLOC:%.+]] = memref.alloc()
+//       CLONES: [[V0:%.+]]:2 = affine.if
+//       CLONES:   [[ALLOC1:%.+]] = memref.alloc()
+//       CLONES:   affine.yield [[ALLOC1]], %true
+//       CLONES:   affine.yield [[ALLOC]], %false
+//       CLONES: [[V1:%.+]] = scf.if [[V0]]#1
+//       CLONES:   scf.yield [[V0]]#0
+//       CLONES:   [[CLONE:%.+]] = bufferization.clone [[V0]]#0
+//       CLONES:   scf.yield [[CLONE]]
+//       CLONES: [[BASE:%[a-zA-Z0-9_]+]],{{.*}} = memref.extract_strided_metadata [[V0]]#0
+//       CLONES: bufferization.dealloc ([[ALLOC]], [[BASE]] :{{.*}}) if (%true{{[0-9_]*}}, [[V0]]#1) retain ([[V1]]
+//       CLONES: return [[V1]]

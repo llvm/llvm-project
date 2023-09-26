@@ -48,89 +48,6 @@ static Value buildBoolValue(OpBuilder &builder, Location loc, bool value) {
 static bool isMemref(Value v) { return v.getType().isa<BaseMemRefType>(); }
 
 //===----------------------------------------------------------------------===//
-// Backedges analysis
-//===----------------------------------------------------------------------===//
-
-namespace {
-
-/// A straight-forward program analysis which detects loop backedges induced by
-/// explicit control flow.
-class Backedges {
-public:
-  using BlockSetT = SmallPtrSet<Block *, 16>;
-  using BackedgeSetT = llvm::DenseSet<std::pair<Block *, Block *>>;
-
-public:
-  /// Constructs a new backedges analysis using the op provided.
-  Backedges(Operation *op) { recurse(op); }
-
-  /// Returns the number of backedges formed by explicit control flow.
-  size_t size() const { return edgeSet.size(); }
-
-  /// Returns the start iterator to loop over all backedges.
-  BackedgeSetT::const_iterator begin() const { return edgeSet.begin(); }
-
-  /// Returns the end iterator to loop over all backedges.
-  BackedgeSetT::const_iterator end() const { return edgeSet.end(); }
-
-private:
-  /// Enters the current block and inserts a backedge into the `edgeSet` if we
-  /// have already visited the current block. The inserted edge links the given
-  /// `predecessor` with the `current` block.
-  bool enter(Block &current, Block *predecessor) {
-    bool inserted = visited.insert(&current).second;
-    if (!inserted)
-      edgeSet.insert(std::make_pair(predecessor, &current));
-    return inserted;
-  }
-
-  /// Leaves the current block.
-  void exit(Block &current) { visited.erase(&current); }
-
-  /// Recurses into the given operation while taking all attached regions into
-  /// account.
-  void recurse(Operation *op) {
-    Block *current = op->getBlock();
-    // If the current op implements the `BranchOpInterface`, there can be
-    // cycles in the scope of all successor blocks.
-    if (isa<BranchOpInterface>(op)) {
-      for (Block *succ : current->getSuccessors())
-        recurse(*succ, current);
-    }
-    // Recurse into all distinct regions and check for explicit control-flow
-    // loops.
-    for (Region &region : op->getRegions()) {
-      if (!region.empty())
-        recurse(region.front(), current);
-    }
-  }
-
-  /// Recurses into explicit control-flow structures that are given by
-  /// the successor relation defined on the block level.
-  void recurse(Block &block, Block *predecessor) {
-    // Try to enter the current block. If this is not possible, we are
-    // currently processing this block and can safely return here.
-    if (!enter(block, predecessor))
-      return;
-
-    // Recurse into all operations and successor blocks.
-    for (Operation &op : block.getOperations())
-      recurse(&op);
-
-    // Leave the current block.
-    exit(block);
-  }
-
-  /// Stores all blocks that are currently visited and on the processing stack.
-  BlockSetT visited;
-
-  /// Stores all backedges in the format (source, target).
-  BackedgeSetT edgeSet;
-};
-
-} // namespace
-
-//===----------------------------------------------------------------------===//
 // BufferDeallocation
 //===----------------------------------------------------------------------===//
 
@@ -139,10 +56,8 @@ namespace {
 /// program have a corresponding de-allocation.
 class BufferDeallocation {
 public:
-  BufferDeallocation(Operation *op, bool privateFuncDynamicOwnership)
-      : state(op) {
-    options.privateFuncDynamicOwnership = privateFuncDynamicOwnership;
-  }
+  BufferDeallocation(Operation *op, DeallocationOptions options)
+      : state(op), options(options) {}
 
   /// Performs the actual placement/creation of all dealloc operations.
   LogicalResult deallocate(FunctionOpInterface op);
@@ -376,8 +291,9 @@ private:
   /// Given an SSA value of MemRef type, returns the same of a new SSA value
   /// which has 'Unique' ownership where the ownership indicator is guaranteed
   /// to be always 'true'.
-  Value materializeMemrefWithGuaranteedOwnership(OpBuilder &builder,
-                                                 Value memref, Block *block);
+  FailureOr<Value> materializeMemrefWithGuaranteedOwnership(OpBuilder &builder,
+                                                            Value memref,
+                                                            Block *block);
 
   /// Returns whether the given operation implements FunctionOpInterface, has
   /// private visibility, and the private-function-dynamic-ownership pass option
@@ -391,14 +307,8 @@ private:
   /// is requested does not match the block in which 'memref' is defined, the
   /// default implementation in
   /// `DeallocationState::getMemrefWithUniqueOwnership` is queried instead.
-  std::pair<Value, Value>
+  FailureOr<std::pair<Value, Value>>
   materializeUniqueOwnership(OpBuilder &builder, Value memref, Block *block);
-
-  /// Checks all the preconditions for operations implementing the
-  /// FunctionOpInterface that have to hold for the deallocation to be
-  /// applicable:
-  /// (1) Checks that there are not explicit control flow loops.
-  static LogicalResult verifyFunctionPreconditions(FunctionOpInterface op);
 
   /// Checks all the preconditions for operations inside the region of
   /// operations implementing the FunctionOpInterface that have to hold for the
@@ -430,7 +340,7 @@ private:
   DeallocationState state;
 
   /// Collects all pass options in a single place.
-  DeallocationOptions options;
+  const DeallocationOptions options;
 };
 
 } // namespace
@@ -439,13 +349,13 @@ private:
 // BufferDeallocation Implementation
 //===----------------------------------------------------------------------===//
 
-std::pair<Value, Value>
+FailureOr<std::pair<Value, Value>>
 BufferDeallocation::materializeUniqueOwnership(OpBuilder &builder, Value memref,
                                                Block *block) {
   // The interface can only materialize ownership indicators in the same block
   // as the defining op.
   if (memref.getParentBlock() != block)
-    return state.getMemrefWithUniqueOwnership(builder, memref, block);
+    return state.getMemrefWithUniqueOwnership(options, builder, memref, block);
 
   Operation *owner = memref.getDefiningOp();
   if (!owner)
@@ -458,7 +368,7 @@ BufferDeallocation::materializeUniqueOwnership(OpBuilder &builder, Value memref,
         state, options, builder, memref);
 
   // Otherwise use the default implementation.
-  return state.getMemrefWithUniqueOwnership(builder, memref, block);
+  return state.getMemrefWithUniqueOwnership(options, builder, memref, block);
 }
 
 static bool regionOperatesOnMemrefValues(Region &region) {
@@ -474,19 +384,6 @@ static bool regionOperatesOnMemrefValues(Region &region) {
     return WalkResult::advance();
   });
   return result.wasInterrupted();
-}
-
-LogicalResult
-BufferDeallocation::verifyFunctionPreconditions(FunctionOpInterface op) {
-  // (1) Ensure that there are supported loops only (no explicit control flow
-  // loops).
-  Backedges backedges(op);
-  if (backedges.size()) {
-    op->emitError("Only structured control-flow loops are supported.");
-    return failure();
-  }
-
-  return success();
 }
 
 LogicalResult BufferDeallocation::verifyOperationPreconditions(Operation *op) {
@@ -571,10 +468,6 @@ BufferDeallocation::updateFunctionSignature(FunctionOpInterface op) {
 }
 
 LogicalResult BufferDeallocation::deallocate(FunctionOpInterface op) {
-  // Stop and emit a proper error message if we don't support the input IR.
-  if (failed(verifyFunctionPreconditions(op)))
-    return failure();
-
   // Process the function block by block.
   auto result = op->walk<WalkOrder::PostOrder, ForwardDominanceIterator<>>(
       [&](Block *block) {
@@ -710,13 +603,17 @@ BufferDeallocation::handleInterface(RegionBranchOpInterface op) {
   return newOp.getOperation();
 }
 
-Value BufferDeallocation::materializeMemrefWithGuaranteedOwnership(
+FailureOr<Value> BufferDeallocation::materializeMemrefWithGuaranteedOwnership(
     OpBuilder &builder, Value memref, Block *block) {
   // First, make sure we at least have 'Unique' ownership already.
-  std::pair<Value, Value> newMemrefAndOnwership =
+  FailureOr<std::pair<Value, Value>> newMemrefAndOnwership =
       materializeUniqueOwnership(builder, memref, block);
-  Value newMemref = newMemrefAndOnwership.first;
-  Value condition = newMemrefAndOnwership.second;
+
+  if (failed(newMemrefAndOnwership))
+    return failure();
+
+  Value newMemref = newMemrefAndOnwership->first;
+  Value condition = newMemrefAndOnwership->second;
 
   // Avoid inserting additional IR if ownership is already guaranteed. In
   // particular, this is already the case when we had 'Unknown' ownership
@@ -817,8 +714,13 @@ FailureOr<Operation *> BufferDeallocation::handleInterface(CallOpInterface op) {
         newOperands.push_back(operand);
         continue;
       }
-      auto [memref, condition] =
+      FailureOr<std::pair<Value, Value>> memrefAndCondition =
           materializeUniqueOwnership(builder, operand, op->getBlock());
+
+      if (failed(memrefAndCondition))
+        return failure();
+
+      auto [memref, condition] = *memrefAndCondition;
       newOperands.push_back(memref);
       ownershipIndicatorsToAdd.push_back(condition);
     }
@@ -901,8 +803,28 @@ BufferDeallocation::handleInterface(RegionBranchTerminatorOpInterface op) {
       if (!isMemref(val.get()))
         continue;
 
-      val.set(materializeMemrefWithGuaranteedOwnership(builder, val.get(),
-                                                       op->getBlock()));
+      if (options.allowCloning) {
+        // Here we assume that all memref write operations dominate all memref
+        // read operations, but the function boundary ABI of non-external
+        // functions does not necessarily have to be adhered to.
+        FailureOr<Value> newMemref = materializeMemrefWithGuaranteedOwnership(
+            builder, val.get(), op->getBlock());
+
+        if (failed(newMemref))
+          return failure();
+
+        val.set(*newMemref);
+      } else {
+        // Here memrew writes don't have to dominate reads, but the function
+        // boundary ABI has to be adhered to from the start.
+        FailureOr<std::pair<Value, Value>> newMemref =
+            materializeUniqueOwnership(builder, val.get(), op->getBlock());
+
+        if (failed(newMemref))
+          return failure();
+
+        val.set(newMemref->first);
+      }
     }
   }
 
@@ -976,17 +898,21 @@ struct OwnershipBasedBufferDeallocationPass
     : public bufferization::impl::OwnershipBasedBufferDeallocationBase<
           OwnershipBasedBufferDeallocationPass> {
   OwnershipBasedBufferDeallocationPass() = default;
-  OwnershipBasedBufferDeallocationPass(bool privateFuncDynamicOwnership)
+  OwnershipBasedBufferDeallocationPass(const DeallocationOptions &options)
       : OwnershipBasedBufferDeallocationPass() {
-    this->privateFuncDynamicOwnership.setValue(privateFuncDynamicOwnership);
+    privateFuncDynamicOwnership.setValue(options.privateFuncDynamicOwnership);
+    allowCloning.setValue(options.allowCloning);
   }
   void runOnOperation() override {
     func::FuncOp func = getOperation();
     if (func.isExternal())
       return;
 
-    if (failed(
-            deallocateBuffersOwnershipBased(func, privateFuncDynamicOwnership)))
+    DeallocationOptions options;
+    options.privateFuncDynamicOwnership =
+        privateFuncDynamicOwnership.getValue();
+    options.allowCloning = allowCloning.getValue();
+    if (failed(deallocateBuffersOwnershipBased(func, options)))
       signalPassFailure();
   }
 };
@@ -998,9 +924,9 @@ struct OwnershipBasedBufferDeallocationPass
 //===----------------------------------------------------------------------===//
 
 LogicalResult bufferization::deallocateBuffersOwnershipBased(
-    FunctionOpInterface op, bool privateFuncDynamicOwnership) {
+    FunctionOpInterface op, const DeallocationOptions &options) {
   // Gather all required allocation nodes and prepare the deallocation phase.
-  BufferDeallocation deallocation(op, privateFuncDynamicOwnership);
+  BufferDeallocation deallocation(op, options);
 
   // Place all required temporary clone and dealloc nodes.
   return deallocation.deallocate(op);
@@ -1012,7 +938,6 @@ LogicalResult bufferization::deallocateBuffersOwnershipBased(
 
 std::unique_ptr<Pass>
 mlir::bufferization::createOwnershipBasedBufferDeallocationPass(
-    bool privateFuncDynamicOwnership) {
-  return std::make_unique<OwnershipBasedBufferDeallocationPass>(
-      privateFuncDynamicOwnership);
+    const DeallocationOptions &options) {
+  return std::make_unique<OwnershipBasedBufferDeallocationPass>(options);
 }

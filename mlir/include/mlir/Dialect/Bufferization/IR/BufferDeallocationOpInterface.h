@@ -96,6 +96,14 @@ struct DeallocationOptions {
   // pass the ownership of MemRef values instead of adhering to the function
   // boundary ABI.
   bool privateFuncDynamicOwnership = false;
+
+  // Allows the pass to insert `bufferization.clone` operations. This is useful
+  // for supporting IR that does not adhere to the function boundary ABI
+  // initially (excl. external functions) and to support operations with results
+  // with 'Unknown' ownership. However, it requires that all buffer writes
+  // dominate all buffer reads (i.e., only enable this option if your IR is
+  // guaranteed to have this property).
+  bool allowCloning = false;
 };
 
 /// This class collects all the state that we need to perform the buffer
@@ -142,8 +150,9 @@ public:
   /// a new SSA value, returned as the first element of the pair, which has
   /// 'Unique' ownership and can be used instead of the passed Value with the
   /// the ownership indicator returned as the second element of the pair.
-  std::pair<Value, Value>
-  getMemrefWithUniqueOwnership(OpBuilder &builder, Value memref, Block *block);
+  FailureOr<std::pair<Value, Value>>
+  getMemrefWithUniqueOwnership(const DeallocationOptions &options,
+                               OpBuilder &builder, Value memref, Block *block);
 
   /// Given two basic blocks and the values passed via block arguments to the
   /// destination block, compute the list of MemRefs that have to be retained in
