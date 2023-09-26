@@ -710,16 +710,13 @@ bool DYLDRendezvous::FindMetadata(const char *name, PThreadField field,
   target.GetImages().FindSymbolsWithNameAndType(ConstString(name),
                                                 eSymbolTypeAny, list);
   if (list.IsEmpty())
-  return false;
-
-  Address address = list[0].symbol->GetAddress();
-  addr_t addr = address.GetLoadAddress(&target);
-  if (addr == LLDB_INVALID_ADDRESS)
     return false;
 
+  Address address = list[0].symbol->GetAddress();
+  address.SetOffset(address.GetOffset() + field * sizeof(uint32_t));
   Status error;
-  value = (uint32_t)m_process->ReadUnsignedIntegerFromMemory(
-      addr + field * sizeof(uint32_t), sizeof(uint32_t), 0, error);
+  value =
+      target.ReadUnsignedIntegerFromMemory(address, sizeof(uint32_t), 0, error);
   if (error.Fail())
     return false;
 

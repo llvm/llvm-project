@@ -71,6 +71,7 @@
   11 // The register that would contain pointer size or less argument 7 (if any)
 #define LLDB_REGNUM_GENERIC_ARG8                                               \
   12 // The register that would contain pointer size or less argument 8 (if any)
+#define LLDB_REGNUM_GENERIC_TP 13 // Thread pointer
 /// Invalid value definitions
 #define LLDB_INVALID_STOP_ID 0
 #define LLDB_INVALID_ADDRESS UINT64_MAX
