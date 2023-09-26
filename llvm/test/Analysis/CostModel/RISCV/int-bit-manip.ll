@@ -33,7 +33,7 @@ define void @bswap() {
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 31 for instruction: %28 = call <vscale x 4 x i64> @llvm.bswap.nxv4i64(<vscale x 4 x i64> undef)
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 31 for instruction: %29 = call <vscale x 8 x i64> @llvm.bswap.nxv8i64(<vscale x 8 x i64> undef)
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 62 for instruction: %30 = call <vscale x 16 x i64> @llvm.bswap.nxv16i64(<vscale x 16 x i64> undef)
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret void
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret void
 ;
   call i16 @llvm.bswap.i16(i16 undef)
   call <2 x i16> @llvm.bswap.v2i16(<2 x i16> undef)
@@ -110,7 +110,7 @@ define void @bitreverse() {
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 52 for instruction: %38 = call <vscale x 4 x i64> @llvm.bitreverse.nxv4i64(<vscale x 4 x i64> undef)
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 52 for instruction: %39 = call <vscale x 8 x i64> @llvm.bitreverse.nxv8i64(<vscale x 8 x i64> undef)
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 104 for instruction: %40 = call <vscale x 16 x i64> @llvm.bitreverse.nxv16i64(<vscale x 16 x i64> undef)
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret void
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret void
 ;
   call i8 @llvm.bitreverse.i8(i8 undef)
   call <2 x i8> @llvm.bitreverse.v2i8(<2 x i8> undef)
@@ -197,7 +197,7 @@ define void @ctpop() {
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 21 for instruction: %38 = call <vscale x 4 x i64> @llvm.ctpop.nxv4i64(<vscale x 4 x i64> undef)
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 21 for instruction: %39 = call <vscale x 8 x i64> @llvm.ctpop.nxv8i64(<vscale x 8 x i64> undef)
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 42 for instruction: %40 = call <vscale x 16 x i64> @llvm.ctpop.nxv16i64(<vscale x 16 x i64> undef)
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret void
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret void
 ;
   call i8 @llvm.ctpop.i8(i8 undef)
   call <2 x i8> @llvm.ctpop.v2i8(<2 x i8> undef)
@@ -271,7 +271,7 @@ define void @vp_bswap() {
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 31 for instruction: %25 = call <vscale x 4 x i64> @llvm.vp.bswap.nxv4i64(<vscale x 4 x i64> undef, <vscale x 4 x i1> undef, i32 undef)
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 31 for instruction: %26 = call <vscale x 8 x i64> @llvm.vp.bswap.nxv8i64(<vscale x 8 x i64> undef, <vscale x 8 x i1> undef, i32 undef)
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 62 for instruction: %27 = call <vscale x 16 x i64> @llvm.vp.bswap.nxv16i64(<vscale x 16 x i64> undef, <vscale x 16 x i1> undef, i32 undef)
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret void
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret void
 ;
   call <2 x i16> @llvm.vp.bswap.v2i16(<2 x i16> undef, <2 x i1> undef, i32 undef)
   call <4 x i16> @llvm.vp.bswap.v4i16(<4 x i16> undef, <4 x i1> undef, i32 undef)
@@ -341,7 +341,7 @@ define void @vp_ctpop() {
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 21 for instruction: %34 = call <vscale x 4 x i64> @llvm.vp.ctpop.nxv4i64(<vscale x 4 x i64> undef, <vscale x 4 x i1> undef, i32 undef)
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 21 for instruction: %35 = call <vscale x 8 x i64> @llvm.vp.ctpop.nxv8i64(<vscale x 8 x i64> undef, <vscale x 8 x i1> undef, i32 undef)
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 42 for instruction: %36 = call <vscale x 16 x i64> @llvm.vp.ctpop.nxv16i64(<vscale x 16 x i64> undef, <vscale x 16 x i1> undef, i32 undef)
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret void
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret void
 ;
   call <2 x i16> @llvm.vp.ctpop.v2i16(<2 x i16> undef, <2 x i1> undef, i32 undef)
   call <4 x i16> @llvm.vp.ctpop.v4i16(<4 x i16> undef, <4 x i1> undef, i32 undef)
@@ -433,7 +433,7 @@ define void @vp_ctlz() {
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 35 for instruction: %47 = call <vscale x 4 x i64> @llvm.vp.ctlz.nxv4i64(<vscale x 4 x i64> undef, i1 false, <vscale x 4 x i1> undef, i32 undef)
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 35 for instruction: %48 = call <vscale x 8 x i64> @llvm.vp.ctlz.nxv8i64(<vscale x 8 x i64> undef, i1 false, <vscale x 8 x i1> undef, i32 undef)
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 70 for instruction: %49 = call <vscale x 16 x i64> @llvm.vp.ctlz.nxv16i64(<vscale x 16 x i64> undef, i1 false, <vscale x 16 x i1> undef, i32 undef)
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret void
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret void
 ;
   call <2 x i8> @llvm.vp.ctlz.v2i8(<2 x i8> undef, i1 false, <2 x i1> undef, i32 undef)
   call <4 x i8> @llvm.vp.ctlz.v4i8(<4 x i8> undef, i1 false, <4 x i1> undef, i32 undef)
@@ -538,7 +538,7 @@ define void @vp_cttz() {
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 25 for instruction: %47 = call <vscale x 4 x i64> @llvm.vp.cttz.nxv4i64(<vscale x 4 x i64> undef, i1 false, <vscale x 4 x i1> undef, i32 undef)
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 25 for instruction: %48 = call <vscale x 8 x i64> @llvm.vp.cttz.nxv8i64(<vscale x 8 x i64> undef, i1 false, <vscale x 8 x i1> undef, i32 undef)
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 50 for instruction: %49 = call <vscale x 16 x i64> @llvm.vp.cttz.nxv16i64(<vscale x 16 x i64> undef, i1 false, <vscale x 16 x i1> undef, i32 undef)
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret void
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret void
 ;
   call <2 x i8> @llvm.vp.cttz.v2i8(<2 x i8> undef, i1 false, <2 x i1> undef, i32 undef)
   call <4 x i8> @llvm.vp.cttz.v4i8(<4 x i8> undef, i1 false, <4 x i1> undef, i32 undef)
