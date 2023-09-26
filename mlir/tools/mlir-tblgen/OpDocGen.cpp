@@ -199,8 +199,6 @@ static void emitOpDoc(const Operator &op, raw_ostream &os) {
 
   // Emit attributes.
   if (op.getNumAttributes() != 0) {
-    // TODO: Attributes are only documented by TableGen name, with no further
-    // info. This should be improved.
     os << "\n#### Attributes:\n\n";
     // Note: This table is HTML rather than markdown so the attribute's
     // description can appear in an expandable region. The description may be
