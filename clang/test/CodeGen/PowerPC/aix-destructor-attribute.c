@@ -12,15 +12,18 @@
 // RUN:     -fno-use-cxa-atexit -fregister-global-dtors-with-atexit < %s | \
 // RUN:   FileCheck --check-prefix=REGISTER %s
 
-void bar(void) __attribute__((destructor(101)));
-void bar2(void) __attribute__((destructor(65535)));
-void bar3(void) __attribute__((destructor(65535)));
+int bar(void) __attribute__((destructor(101)));
+int bar2(void) __attribute__((destructor(65535)));
 
-void bar(void) {}
-void bar2(void) {}
-void bar3(void) {}
+int bar(void) {
+  return 1;
+}
 
-// NO-REGISTER: @llvm.global_dtors = appending global [3 x { i32, ptr, ptr }] [{ i32, ptr, ptr } { i32 101, ptr @bar, ptr null }, { i32, ptr, ptr } { i32 65535, ptr @bar2, ptr null }, { i32, ptr, ptr } { i32 65535, ptr @bar3, ptr null }]
+int bar2(void) {
+  return 2;
+}
+
+// NO-REGISTER: @llvm.global_dtors = appending global [2 x { i32, ptr, ptr }] [{ i32, ptr, ptr } { i32 101, ptr @bar, ptr null }, { i32, ptr, ptr } { i32 65535, ptr @bar2, ptr null }]
 
 // REGISTER: @llvm.global_ctors = appending global [2 x { i32, ptr, ptr }] [{ i32, ptr, ptr } { i32 101, ptr @__GLOBAL_init_101, ptr null }, { i32, ptr, ptr } { i32 65535, ptr @__GLOBAL_init_65535, ptr null }]
 // REGISTER: @llvm.global_dtors = appending global [2 x { i32, ptr, ptr }] [{ i32, ptr, ptr } { i32 101, ptr @__GLOBAL_cleanup_101, ptr null }, { i32, ptr, ptr } { i32 65535, ptr @__GLOBAL_cleanup_65535, ptr null }]
@@ -34,7 +37,6 @@ void bar3(void) {}
 // REGISTER: define internal void @__GLOBAL_init_65535() [[ATTR:#[0-9]+]] {
 // REGISTER: entry:
 // REGISTER:   %0 = call i32 @atexit(ptr @bar2)
-// REGISTER:   %1 = call i32 @atexit(ptr @bar3)
 // REGISTER:   ret void
 // REGISTER: }
 
@@ -54,20 +56,11 @@ void bar3(void) {}
 
 // REGISTER: define internal void @__GLOBAL_cleanup_65535() [[ATTR:#[0-9]+]] {
 // REGISTER: entry:
-// REGISTER:   %0 = call i32 @unatexit(ptr @bar3)
+// REGISTER:   %0 = call i32 @unatexit(ptr @bar2)
 // REGISTER:   %needs_destruct = icmp eq i32 %0, 0
-// REGISTER:   br i1 %needs_destruct, label %destruct.call, label %unatexit.call
+// REGISTER:   br i1 %needs_destruct, label %destruct.call, label %destruct.end
 
 // REGISTER: destruct.call:
-// REGISTER:   call void @bar3()
-// REGISTER:   br label %unatexit.call
-
-// REGISTER: unatexit.call:
-// REGISTER:   %1 = call i32 @unatexit(ptr @bar2)
-// REGISTER:   %needs_destruct1 = icmp eq i32 %1, 0
-// REGISTER:   br i1 %needs_destruct1, label %destruct.call2, label %destruct.end
-
-// REGISTER: destruct.call2:
 // REGISTER:   call void @bar2()
 // REGISTER:   br label %destruct.end
 

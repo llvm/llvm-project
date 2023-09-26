@@ -7,10 +7,18 @@
 
 // CHECK: @llvm.global_ctors = appending global [3 x { i32, ptr, ptr }] [{ i32, ptr, ptr } { i32 65535, ptr @foo3, ptr null }, { i32, ptr, ptr } { i32 180, ptr @foo2, ptr null }, { i32, ptr, ptr } { i32 180, ptr @foo, ptr null }]
 
-void foo(void) __attribute__((constructor(180)));
-void foo2(void) __attribute__((constructor(180)));
-void foo3(void) __attribute__((constructor(65535)));
+int foo(void) __attribute__((constructor(180)));
+int foo2(void) __attribute__((constructor(180)));
+int foo3(void) __attribute__((constructor(65535)));
 
-void foo3(void) {}
-void foo2(void) {}
-void foo(void) {}
+int foo3(void) {
+  return 3;
+}
+
+int foo2(void) {
+  return 2;
+}
+
+int foo(void) {
+  return 1;
+}

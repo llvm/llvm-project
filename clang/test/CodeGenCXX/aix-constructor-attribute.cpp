@@ -8,9 +8,9 @@
 // CHECK: @llvm.global_ctors = appending global [4 x { i32, ptr, ptr }] [{ i32, ptr, ptr } { i32 65535, ptr @_Z4foo3v, ptr null }, { i32, ptr, ptr } { i32 180, ptr @_Z4foo2v, ptr null }, { i32, ptr, ptr } { i32 180, ptr @_Z3foov, ptr null }, { i32, ptr, ptr } { i32 65535, ptr @_GLOBAL__sub_I__, ptr null }]
 // CHECK: @llvm.global_dtors = appending global [1 x { i32, ptr, ptr }] [{ i32, ptr, ptr } { i32 65535, ptr @_GLOBAL__D_a, ptr null }]
 
-void foo() __attribute__((constructor(180)));
-void foo2() __attribute__((constructor(180)));
-void foo3() __attribute__((constructor(65535)));
+int foo() __attribute__((constructor(180)));
+int foo2() __attribute__((constructor(180)));
+int foo3() __attribute__((constructor(65535)));
 
 struct Test {
 public:
@@ -18,6 +18,14 @@ public:
   ~Test() {}
 } t;
 
-void foo3() {}
-void foo2() {}
-void foo() {}
+int foo3() {
+  return 3;
+}
+
+int foo2() {
+  return 2;
+}
+
+int foo() {
+  return 1;
+}
