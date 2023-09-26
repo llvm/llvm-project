@@ -32,7 +32,7 @@
 
 thread_local static int32_t defaultDevice = 0;
 
-extern "C" hipModule_t mgpuModuleLoad(void *data) {
+extern "C" hipModule_t mgpuModuleLoad(void *data, size_t /*gpuBlobSize*/) {
   hipModule_t module = nullptr;
   HIP_REPORT_IF_ERROR(hipModuleLoadData(&module, data));
   return module;
@@ -62,7 +62,7 @@ extern "C" void mgpuLaunchKernel(hipFunction_t function, intptr_t gridX,
                                  intptr_t blockX, intptr_t blockY,
                                  intptr_t blockZ, int32_t smem,
                                  hipStream_t stream, void **params,
-                                 void **extra) {
+                                 void **extra, size_t /*paramsCount*/) {
   HIP_REPORT_IF_ERROR(hipModuleLaunchKernel(function, gridX, gridY, gridZ,
                                             blockX, blockY, blockZ, smem,
                                             stream, params, extra));
