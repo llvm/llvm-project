@@ -138,6 +138,7 @@ struct UnimplementedFeature {
   static bool exceptions() { return false; }
   static bool metaDataNode() { return false; }
   static bool isSEHTryScope() { return false; }
+  static bool emitScalarRangeCheck() { return false; }
 };
 } // namespace cir
 

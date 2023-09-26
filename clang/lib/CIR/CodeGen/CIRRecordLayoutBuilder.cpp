@@ -136,7 +136,8 @@ struct CIRRecordLowering final {
 
   /// Wraps mlir::cir::IntType with some implicit arguments.
   mlir::Type getUIntNType(uint64_t NumBits) {
-    unsigned AlignedBits = llvm::alignTo(NumBits, astContext.getCharWidth());
+    unsigned AlignedBits = llvm::PowerOf2Ceil(NumBits);
+    AlignedBits = std::max(8u, AlignedBits);
     return mlir::cir::IntType::get(&cirGenTypes.getMLIRContext(), AlignedBits,
                                    /*isSigned=*/false);
   }
@@ -214,8 +215,8 @@ CIRRecordLowering::CIRRecordLowering(CIRGenTypes &cirGenTypes,
       cxxRecordDecl{llvm::dyn_cast<CXXRecordDecl>(recordDecl)},
       astRecordLayout{cirGenTypes.getContext().getASTRecordLayout(recordDecl)},
       dataLayout{cirGenTypes.getModule().getModule()},
-      IsZeroInitializable(true), IsZeroInitializableAsBase(true),
-      isPacked{isPacked} {}
+      IsZeroInitializable(true),
+      IsZeroInitializableAsBase(true), isPacked{isPacked} {}
 
 void CIRRecordLowering::setBitFieldInfo(const FieldDecl *FD,
                                         CharUnits StartOffset,
@@ -499,6 +500,8 @@ void CIRRecordLowering::accumulateBitFields(
   // with lower cost.
   auto IsBetterAsSingleFieldRun = [&](uint64_t OffsetInRecord,
                                       uint64_t StartBitOffset) {
+    if (OffsetInRecord >= 64) // See IntType::verify
+      return true;
     if (!cirGenTypes.getModule().getCodeGenOpts().FineGrainedBitfieldAccesses)
       return false;
     llvm_unreachable("NYI");
