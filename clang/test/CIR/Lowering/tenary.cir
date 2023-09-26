@@ -1,4 +1,5 @@
-// RUN: cir-opt %s -cir-to-llvm -reconcile-unrealized-casts -o - | FileCheck %s -check-prefix=MLIR
+// RUN: cir-opt %s -cir-to-llvm -reconcile-unrealized-casts -o %t.cir
+// RUN: FileCheck %s --input-file=%t.cir -check-prefix=MLIR
 
 !s32i = !cir.int<s, 32>
 
@@ -29,7 +30,7 @@ cir.func @_Z1xi(%arg0: !s32i) -> !s32i {
 // MLIR-NEXT:    %2 = llvm.mlir.constant(1 : index) : i64
 // MLIR-NEXT:    %3 = llvm.alloca %2 x i32 {alignment = 4 : i64} : (i64) -> !llvm.ptr
 // MLIR-NEXT:    llvm.store %arg0, %1 : i32, !llvm.ptr
-// MLIR-NEXT:    %4 = llvm.load %1 : !llvm.ptr
+// MLIR-NEXT:    %4 = llvm.load %1 : !llvm.ptr -> i32
 // MLIR-NEXT:    %5 = llvm.mlir.constant(0 : i32) : i32
 // MLIR-NEXT:    %6 = llvm.icmp "sgt" %4, %5 : i32
 // MLIR-NEXT:    %7 = llvm.zext %6 : i1 to i8
@@ -45,6 +46,6 @@ cir.func @_Z1xi(%arg0: !s32i) -> !s32i {
 // MLIR-NEXT:    llvm.br ^bb4
 // MLIR-NEXT:  ^bb4:  // pred: ^bb3
 // MLIR-NEXT:    llvm.store %11, %3 : i32, !llvm.ptr
-// MLIR-NEXT:    %12 = llvm.load %3 : !llvm.ptr
+// MLIR-NEXT:    %12 = llvm.load %3 : !llvm.ptr -> i32
 // MLIR-NEXT:    llvm.return %12 : i32
 // MLIR-NEXT:  }

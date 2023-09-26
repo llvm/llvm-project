@@ -68,8 +68,8 @@ module {
 // MLIR-NEXT:     %7 = llvm.alloca %6 x f64 {alignment = 8 : i64} : (i64) -> !llvm.ptr
 // MLIR-NEXT:     %8 = llvm.mlir.constant(1 : index) : i64
 // MLIR-NEXT:     %9 = llvm.alloca %8 x f64 {alignment = 8 : i64} : (i64) -> !llvm.ptr
-// MLIR-NEXT:     llvm.store %arg0, %1 : !llvm.ptr
-// MLIR-NEXT:     llvm.store %arg1, %3 : !llvm.ptr
+// MLIR-NEXT:     llvm.store %arg0, %1 : !llvm.ptr, !llvm.ptr
+// MLIR-NEXT:     llvm.store %arg1, %3 : !llvm.ptr, !llvm.ptr
 // MLIR-NEXT:     llvm.store %arg2, %5 : i32, !llvm.ptr
 // MLIR-NEXT:     %10 = llvm.mlir.constant(0.000000e+00 : f64) : f64
 // MLIR-NEXT:     llvm.store %10, %9 : f64, !llvm.ptr
@@ -81,8 +81,8 @@ module {
 // MLIR-NEXT:     llvm.store %13, %12 : i32, !llvm.ptr
 // MLIR-NEXT:     llvm.br ^bb2
 // MLIR-NEXT:   ^bb2:  // 2 preds: ^bb1, ^bb6
-// MLIR-NEXT:     %14 = llvm.load %12 : !llvm.ptr
-// MLIR-NEXT:     %15 = llvm.load %5 : !llvm.ptr
+// MLIR-NEXT:     %14 = llvm.load %12 : !llvm.ptr -> i32
+// MLIR-NEXT:     %15 = llvm.load %5 : !llvm.ptr -> i32
 // MLIR-NEXT:     %16 = llvm.icmp "slt" %14, %15 : i32
 // MLIR-NEXT:     %17 = llvm.zext %16 : i1 to i32
 // MLIR-NEXT:     %18 = llvm.mlir.constant(0 : i32) : i32
@@ -95,21 +95,21 @@ module {
 // MLIR-NEXT:   ^bb4:  // pred: ^bb2
 // MLIR-NEXT:     llvm.br ^bb7
 // MLIR-NEXT:   ^bb5:  // pred: ^bb3
-// MLIR-NEXT:     %22 = llvm.load %1 : !llvm.ptr
-// MLIR-NEXT:     %23 = llvm.load %12 : !llvm.ptr
+// MLIR-NEXT:     %22 = llvm.load %1 : !llvm.ptr -> !llvm.ptr
+// MLIR-NEXT:     %23 = llvm.load %12 : !llvm.ptr -> i32
 // MLIR-NEXT:     %24 = llvm.getelementptr %22[%23] : (!llvm.ptr, i32) -> !llvm.ptr
-// MLIR-NEXT:     %25 = llvm.load %24 : !llvm.ptr
-// MLIR-NEXT:     %26 = llvm.load %3 : !llvm.ptr
-// MLIR-NEXT:     %27 = llvm.load %12 : !llvm.ptr
+// MLIR-NEXT:     %25 = llvm.load %24 : !llvm.ptr -> f64
+// MLIR-NEXT:     %26 = llvm.load %3 : !llvm.ptr -> !llvm.ptr
+// MLIR-NEXT:     %27 = llvm.load %12 : !llvm.ptr -> i32
 // MLIR-NEXT:     %28 = llvm.getelementptr %26[%27] : (!llvm.ptr, i32) -> !llvm.ptr
-// MLIR-NEXT:     %29 = llvm.load %28 : !llvm.ptr
+// MLIR-NEXT:     %29 = llvm.load %28 : !llvm.ptr -> f64
 // MLIR-NEXT:     %30 = llvm.fmul %25, %29  : f64
-// MLIR-NEXT:     %31 = llvm.load %9 : !llvm.ptr
+// MLIR-NEXT:     %31 = llvm.load %9 : !llvm.ptr -> f64
 // MLIR-NEXT:     %32 = llvm.fadd %31, %30  : f64
 // MLIR-NEXT:     llvm.store %32, %9 : f64, !llvm.ptr
 // MLIR-NEXT:     llvm.br ^bb6
 // MLIR-NEXT:   ^bb6:  // pred: ^bb5
-// MLIR-NEXT:     %33 = llvm.load %12 : !llvm.ptr
+// MLIR-NEXT:     %33 = llvm.load %12 : !llvm.ptr -> i32
 // MLIR-NEXT:     %34 = llvm.mlir.constant(1 : i32) : i32
 // MLIR-NEXT:     %35 = llvm.add %33, %34  : i32
 // MLIR-NEXT:     llvm.store %35, %12 : i32, !llvm.ptr
@@ -117,9 +117,9 @@ module {
 // MLIR-NEXT:   ^bb7:  // pred: ^bb4
 // MLIR-NEXT:     llvm.br ^bb8
 // MLIR-NEXT:   ^bb8:  // pred: ^bb7
-// MLIR-NEXT:     %36 = llvm.load %9 : !llvm.ptr
+// MLIR-NEXT:     %36 = llvm.load %9 : !llvm.ptr -> f64
 // MLIR-NEXT:     llvm.store %36, %7 : f64, !llvm.ptr
-// MLIR-NEXT:     %37 = llvm.load %7 : !llvm.ptr
+// MLIR-NEXT:     %37 = llvm.load %7 : !llvm.ptr -> f64
 // MLIR-NEXT:     llvm.return %37 : f64
 // MLIR-NEXT:   }
 // MLIR-NEXT: }

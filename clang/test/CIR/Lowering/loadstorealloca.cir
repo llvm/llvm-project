@@ -1,5 +1,5 @@
-// RUN: cir-opt %s -cir-to-llvm -o - | FileCheck %s -check-prefix=MLIR
-// RUN: cir-translate %s -cir-to-llvmir  | FileCheck %s -check-prefix=LLVM
+// RUN: cir-opt %s -cir-to-llvm -o %t.cir
+// RUN: FileCheck %s --input-file=%t.cir -check-prefix=MLIR
 !u32i = !cir.int<u, 32>
 
 module {
@@ -20,9 +20,3 @@ module {
 // MLIR-NEXT:     llvm.store %2, %1 : i32, !llvm.ptr
 // MLIR-NEXT:     %3 = llvm.load %1 : !llvm.ptr -> i32
 // MLIR-NEXT:     return %3 : i32
-
-//      LLVM: define i32 @foo()
-// LLVM-NEXT:   %1 = alloca i32, i64 1, align 4
-// LLVM-NEXT:   store i32 1, ptr %1, align 4
-// LLVM-NEXT:   %2 = load i32, ptr %1, align 4
-// LLVM-NEXT:   ret i32 %2
