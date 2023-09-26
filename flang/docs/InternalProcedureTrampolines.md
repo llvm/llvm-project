@@ -12,7 +12,8 @@
 
 ```fortran
 subroutine host()
-  integer :: local = 10
+  integer :: local
+  local = 10
   call internal()
   return
 
@@ -23,13 +24,13 @@ subroutine host()
 end subroutine host
 ```
 
-Procedure code generated for subprogram `inernal()` must have access to the scope of
+Procedure code generated for subprogram `internal()` must have access to the scope of
 its host procedure, e.g. to access `local` variable. Flang achieves this by passing
 an extra argument to `internal()` that is a tuple of references to all variables
 used via host association inside `internal()`. We will call this extra argument
 a static chain link.
 
-Fortran standard 2008 allowed using internal procedures as actual arguments or
+Fortran standard 2008 allowed using internal procedures as actual arguments for
 procedure pointer targets:
 
 > Fortran 2008 contains several extensions to Fortran 2003; some of these are listed below.
@@ -43,6 +44,10 @@ procedure pointer targets:
 Special handling is required for the internal procedures that might be invoked
 via an argument association or via pointer.
 This document describes Flang implementation to support it.
+
+> NOTE: in some languages/extensions the static chain may contain links
+to more than one stack frame, while Fortra's static chain only ever
+has a link to a single host procedure.
 
 ## Flang current implementation
 
@@ -360,6 +365,28 @@ a handle to the trampoline entry.
 
 `FreeTrampoline` will free the reserved entry.
 
+> NOTE: `FreeTrampoline` may reset the `callee_address` in the trampoline
+being freed to a runtime library function that complains about a dead
+internal procedure being called. This provides some runtime diagnostics
+of dangling procedure pointer usage. Such freed trampolines may still
+have to be reclaimed, if new trampoline is requested and the trampoline
+area is all used.
+
+#### Sample IR
+
+```
+    // Init the trampoline once per host procedure invocation
+    // (i.e. when the procedure address is emboxed).
+    %handle = llvm.call @_FortranAInitTrampoline(%nullptr, %9, %7) : (!llvm.ptr<i8>, !llvm.ptr<i8>, !llvm.ptr<i8>) -> !llvm.ptr<i8>
+    // Get the actual internal procedure address once per host procedure invocation.
+    %10 = llvm.call @_FortranAAdjustTrampoline(%handle) : (!llvm.ptr<i8>) -> !llvm.ptr<i8>
+    %11 = llvm.bitcast %10 : !llvm.ptr<i8> to !llvm.ptr<func<void ()>>
+    llvm.call @_QMotherPfoo(%11) {fastmathFlags = #llvm.fastmath<fast>} : (!llvm.ptr<func<void ()>>) -> ()
+    // The trampoline deallocation must be done only at the exits from the host procedure.
+    llvm.call @_FortranAFreeTrampoline(%handle) : (!llvm.ptr<i8>) -> ()
+```
+
+
 ### Option #2: LLVM/compiler-rt support
 
 It may be beneficial for projects besides Flang to use the alternative trampolines
@@ -380,3 +407,9 @@ We may try to reuse [libffi](https://github.com/libffi/libffi) implementation fo
   If we want to rely on `libffi`, the APIs have to be made public.
 * We may also try to extract the static trampolines implementation from `libffi`
   into separate library (e.g. `libstatictramp` as mentioned [here](https://sourceware.org/pipermail/libffi-discuss/2021/002592.html)).
+
+Flang's own implementation for trampolines have an advantage that,
+having to support the only Fortran/C interoperable calling convention,
+the implementation may reduce the trampoline overhead. For example,
+it may avoid saving/restoring the scratch registers used by the trampoline code,
+and just clobber some of them according to the particular ABI.
