@@ -161,7 +161,7 @@ uptr __sanitizer_get_free_bytes() {
                   + stats.malloced_redzones;
   // Return sane value if total_free < total_used due to racy
   // way we update accumulated stats.
-  return (total_free > total_used) ? total_free - total_used : 1;
+  return (total_free > total_used) ? total_free - total_used : 0;
 }
 
 uptr __sanitizer_get_unmapped_bytes() {
