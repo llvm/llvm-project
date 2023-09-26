@@ -407,24 +407,23 @@ static void printFirstOfEach(MlirContext ctx, MlirOperation operation) {
   fprintf(stderr, "\n");
   // CHECK: Terminator: func.return
 
-  // Get the attribute by index.
-  MlirNamedAttribute namedAttr0 = mlirOperationGetAttribute(operation, 0);
-  fprintf(stderr, "Get attr 0: ");
-  mlirAttributePrint(namedAttr0.attribute, printToStderr, NULL);
-  fprintf(stderr, "\n");
-  // CHECK: Get attr 0: 0 : index
+  // Get the attribute by name.
+  bool hasValueAttr = mlirOperationHasInherentAttributeByName(
+      operation, mlirStringRefCreateFromCString("value"));
+  if (hasValueAttr)
+    // CHECK: Has attr "value"
+    fprintf(stderr, "Has attr \"value\"");
 
-  // Now re-get the attribute by name.
-  MlirAttribute attr0ByName = mlirOperationGetAttributeByName(
-      operation, mlirIdentifierStr(namedAttr0.name));
-  fprintf(stderr, "Get attr 0 by name: ");
-  mlirAttributePrint(attr0ByName, printToStderr, NULL);
+  MlirAttribute valueAttr0 = mlirOperationGetInherentAttributeByName(
+      operation, mlirStringRefCreateFromCString("value"));
+  fprintf(stderr, "Get attr \"value\": ");
+  mlirAttributePrint(valueAttr0, printToStderr, NULL);
   fprintf(stderr, "\n");
-  // CHECK: Get attr 0 by name: 0 : index
+  // CHECK: Get attr "value": 0 : index
 
   // Get a non-existing attribute and assert that it is null (sanity).
   fprintf(stderr, "does_not_exist is null: %d\n",
-          mlirAttributeIsNull(mlirOperationGetAttributeByName(
+          mlirAttributeIsNull(mlirOperationGetDiscardableAttributeByName(
               operation, mlirStringRefCreateFromCString("does_not_exist"))));
   // CHECK: does_not_exist is null: 1
 
@@ -443,10 +442,10 @@ static void printFirstOfEach(MlirContext ctx, MlirOperation operation) {
   fprintf(stderr, "\n");
   // CHECK: Result 0 type: index
 
-  // Set a custom attribute.
-  mlirOperationSetAttributeByName(operation,
-                                  mlirStringRefCreateFromCString("custom_attr"),
-                                  mlirBoolAttrGet(ctx, 1));
+  // Set a discardable attribute.
+  mlirOperationSetDiscardableAttributeByName(
+      operation, mlirStringRefCreateFromCString("custom_attr"),
+      mlirBoolAttrGet(ctx, 1));
   fprintf(stderr, "Op with set attr: ");
   mlirOperationPrint(operation, printToStderr, NULL);
   fprintf(stderr, "\n");
@@ -454,13 +453,13 @@ static void printFirstOfEach(MlirContext ctx, MlirOperation operation) {
 
   // Remove the attribute.
   fprintf(stderr, "Remove attr: %d\n",
-          mlirOperationRemoveAttributeByName(
+          mlirOperationRemoveDiscardableAttributeByName(
               operation, mlirStringRefCreateFromCString("custom_attr")));
   fprintf(stderr, "Remove attr again: %d\n",
-          mlirOperationRemoveAttributeByName(
+          mlirOperationRemoveDiscardableAttributeByName(
               operation, mlirStringRefCreateFromCString("custom_attr")));
   fprintf(stderr, "Removed attr is null: %d\n",
-          mlirAttributeIsNull(mlirOperationGetAttributeByName(
+          mlirAttributeIsNull(mlirOperationGetDiscardableAttributeByName(
               operation, mlirStringRefCreateFromCString("custom_attr"))));
   // CHECK: Remove attr: 1
   // CHECK: Remove attr again: 0
@@ -469,7 +468,7 @@ static void printFirstOfEach(MlirContext ctx, MlirOperation operation) {
   // Add a large attribute to verify printing flags.
   int64_t eltsShape[] = {4};
   int32_t eltsData[] = {1, 2, 3, 4};
-  mlirOperationSetAttributeByName(
+  mlirOperationSetDiscardableAttributeByName(
       operation, mlirStringRefCreateFromCString("elts"),
       mlirDenseElementsAttrInt32Get(
           mlirRankedTensorTypeGet(1, eltsShape, mlirIntegerTypeGet(ctx, 32),
