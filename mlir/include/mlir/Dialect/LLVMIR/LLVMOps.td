@@ -627,6 +627,7 @@ def LLVM_CallOp : LLVM_MemAccessOpBase<"call",
   let results = (outs Optional<LLVM_Type>:$result);
   let builders = [
     OpBuilder<(ins "LLVMFuncOp":$func, "ValueRange":$args)>,
+    OpBuilder<(ins "LLVMFunctionType":$calleeType, "ValueRange":$args)>,
     OpBuilder<(ins "TypeRange":$results, "StringAttr":$callee,
                    CArg<"ValueRange", "{}">:$args)>,
     OpBuilder<(ins "TypeRange":$results, "FlatSymbolRefAttr":$callee,

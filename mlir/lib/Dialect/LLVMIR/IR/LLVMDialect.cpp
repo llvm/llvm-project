@@ -1081,6 +1081,16 @@ void CallOp::build(OpBuilder &builder, OperationState &state,
         /*noalias_scopes=*/nullptr, /*tbaa=*/nullptr);
 }
 
+void CallOp::build(OpBuilder &builder, OperationState &state,
+                   LLVMFunctionType calleeType, ValueRange args) {
+  build(builder, state, getCallOpResults(calleeType), TypeAttr::get(calleeType),
+        /*callee=*/nullptr, args,
+        /*fastmathFlags=*/nullptr,
+        /*branch_weights=*/nullptr,
+        /*access_groups=*/nullptr, /*alias_scopes=*/nullptr,
+        /*noalias_scopes=*/nullptr, /*tbaa=*/nullptr);
+}
+
 void CallOp::build(OpBuilder &builder, OperationState &state, LLVMFuncOp func,
                    ValueRange args) {
   auto calleeType = func.getFunctionType();

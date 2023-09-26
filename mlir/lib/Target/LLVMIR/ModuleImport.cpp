@@ -1349,6 +1349,8 @@ LogicalResult ModuleImport::convertInstruction(llvm::Instruction *inst) {
 
     auto funcTy =
         dyn_cast<LLVMFunctionType>(convertType(callInst->getFunctionType()));
+    if (!funcTy)
+      return failure();
 
     CallOp callOp;
 
@@ -1418,6 +1420,8 @@ LogicalResult ModuleImport::convertInstruction(llvm::Instruction *inst) {
 
     auto funcTy =
         dyn_cast<LLVMFunctionType>(convertType(invokeInst->getFunctionType()));
+    if (!funcTy)
+      return failure();
 
     // Create the invoke operation. Normal destination block arguments will be
     // added later on to handle the case in which the operation result is
