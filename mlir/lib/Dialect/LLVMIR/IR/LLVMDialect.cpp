@@ -1250,14 +1250,11 @@ void CallOp::print(OpAsmPrinter &p) {
   bool isDirect = callee.has_value();
 
   LLVMFunctionType calleeType;
-  bool isVarArg;
+  bool isVarArg = false;
 
-  std::optional<LLVMFunctionType> optionalCalleeType = getCalleeType();
-  if (optionalCalleeType.has_value()) {
+  if (std::optional<LLVMFunctionType> optionalCalleeType = getCalleeType()) {
     calleeType = *optionalCalleeType;
     isVarArg = calleeType.isVarArg();
-  } else {
-    isVarArg = false;
   }
 
   // Print the direct callee if present as a function attribute, or an indirect
