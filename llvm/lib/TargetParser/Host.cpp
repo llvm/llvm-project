@@ -913,6 +913,9 @@ getIntelProcessorTypeAndSubtype(unsigned Family, unsigned Model,
       *Type = X86::INTEL_GOLDMONT_PLUS;
       break;
     case 0x86:
+    case 0x8a: // Lakefield
+    case 0x96: // Elkhart Lake
+    case 0x9c: // Jasper Lake
       CPU = "tremont";
       *Type = X86::INTEL_TREMONT;
       break;
