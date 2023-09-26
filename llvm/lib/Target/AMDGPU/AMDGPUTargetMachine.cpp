@@ -335,7 +335,7 @@ static cl::opt<bool> EnablePromoteKernelArguments(
 
 static cl::opt<bool> EnableImageIntrinsicOptimizer(
     "amdgpu-enable-image-intrinsic-optimizer",
-    cl::desc("Enable image intrinsic optimizer pass"), cl::init(false),
+    cl::desc("Enable image intrinsic optimizer pass"), cl::init(true),
     cl::Hidden);
 
 static cl::opt<bool> EnableMaxIlpSchedStrategy(

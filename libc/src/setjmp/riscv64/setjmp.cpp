@@ -26,7 +26,7 @@
 #define STORE_FP(reg, val) STORE_IMPL(fsd, reg, val)
 #endif
 
-namespace __llvm_libc {
+namespace LIBC_NAMESPACE {
 
 LLVM_LIBC_FUNCTION(int, setjmp, (__jmp_buf * buf)) {
   STORE(ra, buf->__pc);
@@ -64,4 +64,4 @@ LLVM_LIBC_FUNCTION(int, setjmp, (__jmp_buf * buf)) {
   return 0;
 }
 
-} // namespace __llvm_libc
+} // namespace LIBC_NAMESPACE

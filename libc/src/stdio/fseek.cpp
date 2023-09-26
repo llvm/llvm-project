@@ -12,11 +12,11 @@
 #include "src/errno/libc_errno.h"
 #include <stdio.h>
 
-namespace __llvm_libc {
+namespace LIBC_NAMESPACE {
 
 LLVM_LIBC_FUNCTION(int, fseek, (::FILE * stream, long offset, int whence)) {
   auto result =
-      reinterpret_cast<__llvm_libc::File *>(stream)->seek(offset, whence);
+      reinterpret_cast<LIBC_NAMESPACE::File *>(stream)->seek(offset, whence);
   if (!result.has_value()) {
     libc_errno = result.error();
     return -1;
@@ -24,4 +24,4 @@ LLVM_LIBC_FUNCTION(int, fseek, (::FILE * stream, long offset, int whence)) {
   return 0;
 }
 
-} // namespace __llvm_libc
+} // namespace LIBC_NAMESPACE

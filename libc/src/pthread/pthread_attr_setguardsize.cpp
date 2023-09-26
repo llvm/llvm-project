@@ -14,7 +14,7 @@
 #include <linux/param.h> // For EXEC_PAGESIZE.
 #include <pthread.h>
 
-namespace __llvm_libc {
+namespace LIBC_NAMESPACE {
 
 LLVM_LIBC_FUNCTION(int, pthread_attr_setguardsize,
                    (pthread_attr_t *__restrict attr, size_t guardsize)) {
@@ -24,4 +24,4 @@ LLVM_LIBC_FUNCTION(int, pthread_attr_setguardsize,
   return 0;
 }
 
-} // namespace __llvm_libc
+} // namespace LIBC_NAMESPACE

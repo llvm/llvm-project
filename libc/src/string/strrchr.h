@@ -9,10 +9,10 @@
 #ifndef LLVM_LIBC_SRC_STRING_STRRCHR_H
 #define LLVM_LIBC_SRC_STRING_STRRCHR_H
 
-namespace __llvm_libc {
+namespace LIBC_NAMESPACE {
 
 char *strrchr(const char *src, int c);
 
-} // namespace __llvm_libc
+} // namespace LIBC_NAMESPACE
 
 #endif // LLVM_LIBC_SRC_STRING_STRRCHR_H

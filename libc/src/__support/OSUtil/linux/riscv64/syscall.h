@@ -42,7 +42,7 @@
 #define SYSCALL_INSTR(input_constraint)                                        \
   LIBC_INLINE_ASM("ecall\n\t" : "=r"(a0) : input_constraint : "memory")
 
-namespace __llvm_libc {
+namespace LIBC_NAMESPACE {
 
 LIBC_INLINE long syscall_impl(long number) {
   REGISTER_DECL_0;
@@ -89,7 +89,7 @@ LIBC_INLINE long syscall_impl(long number, long arg1, long arg2, long arg3,
   return a0;
 }
 
-} // namespace __llvm_libc
+} // namespace LIBC_NAMESPACE
 
 #undef REGISTER_DECL_0
 #undef REGISTER_DECL_1
