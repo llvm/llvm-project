@@ -345,28 +345,22 @@ static void genDataExitOperations(fir::FirOpBuilder &builder,
 }
 
 template <typename RecipeOp>
-static void
-genPrivateLikeInitRegion(Fortran::lower::AbstractConverter &converter,
-                         mlir::OpBuilder &builder, RecipeOp recipe,
-                         mlir::Type ty, mlir::Location loc) {
+static void genPrivateLikeInitRegion(mlir::OpBuilder &builder, RecipeOp recipe,
+                                     mlir::Type ty, mlir::Location loc) {
   mlir::Value retVal = recipe.getInitRegion().front().getArgument(0);
   if (auto refTy = mlir::dyn_cast_or_null<fir::ReferenceType>(ty)) {
     if (fir::isa_trivial(refTy.getEleTy())) {
-      retVal = builder.create<fir::AllocaOp>(loc, refTy.getEleTy());
-      if (converter.getLoweringOptions().getLowerToHighLevelFIR()) {
-        auto declareOp = builder.create<hlfir::DeclareOp>(
-            loc, retVal, accPrivateInitName, /*shape=*/nullptr,
-            llvm::ArrayRef<mlir::Value>{}, fir::FortranVariableFlagsAttr{});
-        retVal = declareOp.getBase();
-      }
+      auto alloca = builder.create<fir::AllocaOp>(loc, refTy.getEleTy());
+      auto declareOp = builder.create<hlfir::DeclareOp>(
+          loc, alloca, accPrivateInitName, /*shape=*/nullptr,
+          llvm::ArrayRef<mlir::Value>{}, fir::FortranVariableFlagsAttr{});
+      retVal = declareOp.getBase();
     } else if (auto seqTy = mlir::dyn_cast_or_null<fir::SequenceType>(
                    refTy.getEleTy())) {
       if (seqTy.hasDynamicExtents())
         TODO(loc, "private recipe of array with dynamic extents");
-      if (fir::isa_trivial(seqTy.getEleTy()))
-        retVal = builder.create<fir::AllocaOp>(loc, seqTy);
-
-      if (converter.getLoweringOptions().getLowerToHighLevelFIR()) {
+      if (fir::isa_trivial(seqTy.getEleTy())) {
+        auto alloca = builder.create<fir::AllocaOp>(loc, seqTy);
         llvm::SmallVector<mlir::Value> extents;
         mlir::Type idxTy = builder.getIndexType();
         for (auto extent : seqTy.getShape())
@@ -374,7 +368,7 @@ genPrivateLikeInitRegion(Fortran::lower::AbstractConverter &converter,
               loc, idxTy, builder.getIntegerAttr(idxTy, extent)));
         auto shapeOp = builder.create<fir::ShapeOp>(loc, extents);
         auto declareOp = builder.create<hlfir::DeclareOp>(
-            loc, retVal, accPrivateInitName, shapeOp,
+            loc, alloca, accPrivateInitName, shapeOp,
             llvm::ArrayRef<mlir::Value>{}, fir::FortranVariableFlagsAttr{});
         retVal = declareOp.getBase();
       }
@@ -383,9 +377,10 @@ genPrivateLikeInitRegion(Fortran::lower::AbstractConverter &converter,
   builder.create<mlir::acc::YieldOp>(loc, retVal);
 }
 
-mlir::acc::PrivateRecipeOp Fortran::lower::createOrGetPrivateRecipe(
-    Fortran::lower::AbstractConverter &converter, mlir::OpBuilder &builder,
-    llvm::StringRef recipeName, mlir::Location loc, mlir::Type ty) {
+mlir::acc::PrivateRecipeOp
+Fortran::lower::createOrGetPrivateRecipe(mlir::OpBuilder &builder,
+                                         llvm::StringRef recipeName,
+                                         mlir::Location loc, mlir::Type ty) {
   mlir::ModuleOp mod =
       builder.getBlock()->getParent()->getParentOfType<mlir::ModuleOp>();
   if (auto recipe = mod.lookupSymbol<mlir::acc::PrivateRecipeOp>(recipeName))
@@ -398,15 +393,15 @@ mlir::acc::PrivateRecipeOp Fortran::lower::createOrGetPrivateRecipe(
   builder.createBlock(&recipe.getInitRegion(), recipe.getInitRegion().end(),
                       {ty}, {loc});
   builder.setInsertionPointToEnd(&recipe.getInitRegion().back());
-  genPrivateLikeInitRegion<mlir::acc::PrivateRecipeOp>(converter, builder,
-                                                       recipe, ty, loc);
+  genPrivateLikeInitRegion<mlir::acc::PrivateRecipeOp>(builder, recipe, ty,
+                                                       loc);
   builder.restoreInsertionPoint(crtPos);
   return recipe;
 }
 
 mlir::acc::FirstprivateRecipeOp Fortran::lower::createOrGetFirstprivateRecipe(
-    Fortran::lower::AbstractConverter &converter, mlir::OpBuilder &builder,
-    llvm::StringRef recipeName, mlir::Location loc, mlir::Type ty) {
+    mlir::OpBuilder &builder, llvm::StringRef recipeName, mlir::Location loc,
+    mlir::Type ty) {
   mlir::ModuleOp mod =
       builder.getBlock()->getParent()->getParentOfType<mlir::ModuleOp>();
   if (auto recipe =
@@ -420,8 +415,8 @@ mlir::acc::FirstprivateRecipeOp Fortran::lower::createOrGetFirstprivateRecipe(
   builder.createBlock(&recipe.getInitRegion(), recipe.getInitRegion().end(),
                       {ty}, {loc});
   builder.setInsertionPointToEnd(&recipe.getInitRegion().back());
-  genPrivateLikeInitRegion<mlir::acc::FirstprivateRecipeOp>(converter, builder,
-                                                            recipe, ty, loc);
+  genPrivateLikeInitRegion<mlir::acc::FirstprivateRecipeOp>(builder, recipe, ty,
+                                                            loc);
 
   // Add empty copy region for firstprivate. TODO add copy sequence.
   builder.createBlock(&recipe.getCopyRegion(), recipe.getCopyRegion().end(),
@@ -527,8 +522,8 @@ genPrivatizations(const Fortran::parser::AccObjectList &objectList,
     if constexpr (std::is_same_v<RecipeOp, mlir::acc::PrivateRecipeOp>) {
       std::string recipeName =
           fir::getTypeAsString(retTy, converter.getKindMap(), "privatization");
-      recipe = Fortran::lower::createOrGetPrivateRecipe(
-          converter, builder, recipeName, operandLocation, retTy);
+      recipe = Fortran::lower::createOrGetPrivateRecipe(builder, recipeName,
+                                                        operandLocation, retTy);
       auto op = createDataEntryOp<mlir::acc::PrivateOp>(
           builder, operandLocation, baseAddr, asFortran, bounds, true,
           /*implicit=*/false, mlir::acc::DataClause::acc_private, retTy);
@@ -537,7 +532,7 @@ genPrivatizations(const Fortran::parser::AccObjectList &objectList,
       std::string recipeName = fir::getTypeAsString(
           retTy, converter.getKindMap(), "firstprivatization");
       recipe = Fortran::lower::createOrGetFirstprivateRecipe(
-          converter, builder, recipeName, operandLocation, retTy);
+          builder, recipeName, operandLocation, retTy);
       auto op = createDataEntryOp<mlir::acc::FirstprivateOp>(
           builder, operandLocation, baseAddr, asFortran, bounds, true,
           /*implicit=*/false, mlir::acc::DataClause::acc_firstprivate, retTy);

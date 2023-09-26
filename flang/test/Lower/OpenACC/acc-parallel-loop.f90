@@ -6,7 +6,6 @@
 ! CHECK-LABEL: acc.firstprivate.recipe @firstprivatization_ref_10xf32 : !fir.ref<!fir.array<10xf32>> init {
 ! CHECK: ^bb0(%{{.*}}: !fir.ref<!fir.array<10xf32>>):
 ! CHECK:   %[[ALLOCA:.*]] = fir.alloca !fir.array<10xf32>
-! FIR:     acc.yield %[[ALLOCA]] : !fir.ref<!fir.array<10xf32>>
 ! HLFIR:   %[[SHAPE:.*]] = fir.shape %{{.*}} : (index) -> !fir.shape<1>
 ! HLFIR:   %[[DECLARE:.*]]:2 = hlfir.declare %[[ALLOCA]](%[[SHAPE]]) {uniq_name = "acc.private.init"} : (!fir.ref<!fir.array<10xf32>>, !fir.shape<1>) -> (!fir.ref<!fir.array<10xf32>>, !fir.ref<!fir.array<10xf32>>)
 ! HLFIR:   acc.yield %[[DECLARE]]#0 : !fir.ref<!fir.array<10xf32>>
@@ -26,7 +25,6 @@
 
 ! CHECK-LABEL: acc.private.recipe @privatization_ref_10xf32 : !fir.ref<!fir.array<10xf32>> init {
 ! CHECK: ^bb0(%{{.*}}: !fir.ref<!fir.array<10xf32>>):
-! FIR:     acc.yield %{{.*}} : !fir.ref<!fir.array<10xf32>>
 ! HLFIR:   %[[SHAPE:.*]] = fir.shape %{{.*}} : (index) -> !fir.shape<1>
 ! HLFIR:   %[[DECLARE:.*]]:2 = hlfir.declare %[[ALLOCA]](%[[SHAPE]]) {uniq_name = "acc.private.init"} : (!fir.ref<!fir.array<10xf32>>, !fir.shape<1>) -> (!fir.ref<!fir.array<10xf32>>, !fir.ref<!fir.array<10xf32>>)
 ! HLFIR:   acc.yield %[[DECLARE]]#0 : !fir.ref<!fir.array<10xf32>>
