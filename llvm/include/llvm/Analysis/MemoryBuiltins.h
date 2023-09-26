@@ -199,6 +199,7 @@ class ObjectSizeOffsetVisitor
   unsigned IntTyBits;
   APInt Zero;
   SmallDenseMap<Instruction *, SizeOffsetType, 8> SeenInsts;
+  unsigned RecurseDepth = 0;
 
   APInt align(APInt Size, MaybeAlign Align);
 

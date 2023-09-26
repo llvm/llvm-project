@@ -35,6 +35,7 @@
 #include "llvm/IR/Type.h"
 #include "llvm/IR/Value.h"
 #include "llvm/Support/Casting.h"
+#include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/MathExtras.h"
 #include "llvm/Support/raw_ostream.h"
@@ -49,6 +50,12 @@
 using namespace llvm;
 
 #define DEBUG_TYPE "memory-builtins"
+
+static cl::opt<unsigned> ObjectSizeOffsetVisitorMaxRecurseDepth(
+    "object-size-offset-visitor-max-recurse-depth",
+    cl::desc(
+        "Maximum number of PHIs for ObjectSizeOffsetVisitor to look through"),
+    cl::init(100));
 
 enum AllocType : uint8_t {
   OpNewLike          = 1<<0, // allocates; never returns null
@@ -994,14 +1001,20 @@ SizeOffsetType ObjectSizeOffsetVisitor::combineSizeOffset(SizeOffsetType LHS,
 }
 
 SizeOffsetType ObjectSizeOffsetVisitor::visitPHINode(PHINode &PN) {
-  if (PN.getNumIncomingValues() == 0)
+  if (PN.getNumIncomingValues() == 0 ||
+      RecurseDepth >= ObjectSizeOffsetVisitorMaxRecurseDepth)
     return unknown();
+
+  ++RecurseDepth;
   auto IncomingValues = PN.incoming_values();
-  return std::accumulate(IncomingValues.begin() + 1, IncomingValues.end(),
-                         compute(*IncomingValues.begin()),
-                         [this](SizeOffsetType LHS, Value *VRHS) {
-                           return combineSizeOffset(LHS, compute(VRHS));
-                         });
+  SizeOffsetType Ret =
+      std::accumulate(IncomingValues.begin() + 1, IncomingValues.end(),
+                      compute(*IncomingValues.begin()),
+                      [this](SizeOffsetType LHS, Value *VRHS) {
+                        return combineSizeOffset(LHS, compute(VRHS));
+                      });
+  --RecurseDepth;
+  return Ret;
 }
 
 SizeOffsetType ObjectSizeOffsetVisitor::visitSelectInst(SelectInst &I) {
