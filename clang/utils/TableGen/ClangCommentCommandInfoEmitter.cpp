@@ -22,9 +22,8 @@ using namespace llvm;
 
 void clang::EmitClangCommentCommandInfo(RecordKeeper &Records,
                                         raw_ostream &OS) {
-  emitSourceFileHeader("A list of commands useable in documentation "
-                       "comments",
-                       OS);
+  emitSourceFileHeader("A list of commands useable in documentation comments",
+                       OS, Records);
 
   OS << "namespace {\n"
         "const CommandInfo Commands[] = {\n";
@@ -116,9 +115,8 @@ static std::string MangleName(StringRef Str) {
 
 void clang::EmitClangCommentCommandList(RecordKeeper &Records,
                                         raw_ostream &OS) {
-  emitSourceFileHeader("A list of commands useable in documentation "
-                       "comments",
-                       OS);
+  emitSourceFileHeader("A list of commands useable in documentation comments",
+                       OS, Records);
 
   OS << "#ifndef COMMENT_COMMAND\n"
      << "#  define COMMENT_COMMAND(NAME)\n"
