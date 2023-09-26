@@ -5899,7 +5899,6 @@ void TargetLowering::ComputeConstraintToUse(AsmOperandInfo &OpInfo,
       }
     }
 
-    assert(BestIdx < G.size() && "bad index for best constraint");
     OpInfo.ConstraintCode = G[BestIdx].first;
     OpInfo.ConstraintType = G[BestIdx].second;
   }
