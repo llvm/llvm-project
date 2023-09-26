@@ -77,13 +77,16 @@ bool __sanitizer_symbolize_code(const char *ModuleName, uint64_t ModuleOffset,
       auto ResOrErr = getDefaultSymbolizer()->symbolizeInlinedCode(
           ModuleName,
           {ModuleOffset, llvm::object::SectionedAddress::UndefSection});
-      Printer->print(Request,
-                     ResOrErr ? ResOrErr.get() : llvm::DIInliningInfo());
+      Printer->print(Request, ResOrErr.get());
+      if (!ResOrErr)
+        return false;
     } else {
       auto ResOrErr = getDefaultSymbolizer()->symbolizeCode(
           ModuleName,
           {ModuleOffset, llvm::object::SectionedAddress::UndefSection});
-      Printer->print(Request, ResOrErr ? ResOrErr.get() : llvm::DILineInfo());
+      if (!ResOrErr)
+        return false;
+      Printer->print(Request, ResOrErr.get());
     }
   }
   return __sanitizer::internal_snprintf(Buffer, MaxLength, "%s",
@@ -105,7 +108,9 @@ bool __sanitizer_symbolize_data(const char *ModuleName, uint64_t ModuleOffset,
     auto ResOrErr = getDefaultSymbolizer()->symbolizeData(
         ModuleName,
         {ModuleOffset, llvm::object::SectionedAddress::UndefSection});
-    Printer->print(Request, ResOrErr ? ResOrErr.get() : llvm::DIGlobal());
+    if (!ResOrErr)
+      return false;
+    Printer->print(Request, ResOrErr.get());
   }
   return __sanitizer::internal_snprintf(Buffer, MaxLength, "%s",
                                         Result.c_str()) < MaxLength;
