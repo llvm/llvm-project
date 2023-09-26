@@ -213,6 +213,37 @@ TEST(KnownBitsTest, AddSubExhaustive) {
   TestAddSubExhaustive(false);
 }
 
+TEST(KnownBitsTest, SubBorrowExhaustive) {
+  unsigned Bits = 4;
+  ForeachKnownBits(Bits, [&](const KnownBits &Known1) {
+    ForeachKnownBits(Bits, [&](const KnownBits &Known2) {
+      ForeachKnownBits(1, [&](const KnownBits &KnownBorrow) {
+        // Explicitly compute known bits of the addition by trying all
+        // possibilities.
+        KnownBits Known(Bits);
+        Known.Zero.setAllBits();
+        Known.One.setAllBits();
+        ForeachNumInKnownBits(Known1, [&](const APInt &N1) {
+          ForeachNumInKnownBits(Known2, [&](const APInt &N2) {
+            ForeachNumInKnownBits(KnownBorrow, [&](const APInt &Borrow) {
+              APInt Sub = N1 - N2;
+              if (Borrow.getBoolValue())
+                --Sub;
+
+              Known.One &= Sub;
+              Known.Zero &= ~Sub;
+            });
+          });
+        });
+
+        KnownBits KnownComputed =
+            KnownBits::computeForSubBorrow(Known1, Known2, KnownBorrow);
+        EXPECT_EQ(Known, KnownComputed);
+      });
+    });
+  });
+}
+
 TEST(KnownBitsTest, BinaryExhaustive) {
   testBinaryOpExhaustive(
       [](const KnownBits &Known1, const KnownBits &Known2) {
