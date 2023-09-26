@@ -8316,11 +8316,12 @@ SDValue RISCVTargetLowering::LowerINTRINSIC_W_CHAIN(SDValue Op,
 
     SDLoc DL(Op);
     MVT RetContainerVT = getContainerForFixedLengthVector(VT);
+    SDVTList VTs = DAG.getVTList({RetContainerVT, MVT::Other});
     SDValue ScalableVector =
-        DAG.getNode(ISD::INTRINSIC_W_CHAIN, DL, RetContainerVT, Ops);
+        DAG.getNode(ISD::INTRINSIC_W_CHAIN, DL, VTs, Ops);
     SDValue FixedVector =
         convertFromScalableVector(VT, ScalableVector, DAG, Subtarget);
-    return DAG.getMergeValues({FixedVector, Op.getOperand(0)}, DL);
+    return DAG.getMergeValues({FixedVector, ScalableVector.getValue(1)}, DL);
   }
   }
 
