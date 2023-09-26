@@ -385,8 +385,8 @@ void ParseSymbolizeDataOutput(const char *str, DataInfo *info) {
   str = ExtractUptr(str, "\n", &info->line);
 }
 
-static void ParseSymbolizeFrameOutput(const char *str,
-                                      InternalMmapVector<LocalInfo> *locals) {
+void ParseSymbolizeFrameOutput(const char *str,
+                               InternalMmapVector<LocalInfo> *locals) {
   if (internal_strncmp(str, "??", 2) == 0)
     return;
 

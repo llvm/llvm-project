@@ -115,6 +115,29 @@ bool __sanitizer_symbolize_data(const char *ModuleName, uint64_t ModuleOffset,
                                         Result.c_str()) < MaxLength;
 }
 
+bool __sanitizer_symbolize_frame(const char *ModuleName, uint64_t ModuleOffset,
+                                 char *Buffer, int MaxLength) {
+  std::string Result;
+  {
+    llvm::symbolize::PrinterConfig Config = getDefaultPrinterConfig();
+    llvm::raw_string_ostream OS(Result);
+    llvm::symbolize::Request Request{ModuleName, ModuleOffset};
+    auto Printer = std::make_unique<llvm::symbolize::LLVMPrinter>(
+        OS, symbolize_error_handler(OS), Config);
+
+    // TODO: it is neccessary to set proper SectionIndex here.
+    // object::SectionedAddress::UndefSection works for only absolute addresses.
+    auto ResOrErr = getDefaultSymbolizer()->symbolizeFrame(
+        ModuleName,
+        {ModuleOffset, llvm::object::SectionedAddress::UndefSection});
+    if (!ResOrErr)
+      return false;
+    Printer->print(Request, ResOrErr.get());
+  }
+  return __sanitizer::internal_snprintf(Buffer, MaxLength, "%s",
+                                        Result.c_str()) < MaxLength;
+}
+
 void __sanitizer_symbolize_flush() {
   if (Symbolizer)
     Symbolizer->flush();
