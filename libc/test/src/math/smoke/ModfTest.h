@@ -13,7 +13,7 @@
 
 #include <math.h>
 
-template <typename T> class ModfTest : public __llvm_libc::testing::Test {
+template <typename T> class ModfTest : public LIBC_NAMESPACE::testing::Test {
 
   DECLARE_SPECIAL_CONSTANTS(T)
 
@@ -90,8 +90,8 @@ public:
 
       T integral;
       T frac = func(x, &integral);
-      ASSERT_TRUE(__llvm_libc::fputil::abs(frac) < 1.0l);
-      ASSERT_TRUE(__llvm_libc::fputil::trunc(x) == integral);
+      ASSERT_TRUE(LIBC_NAMESPACE::fputil::abs(frac) < 1.0l);
+      ASSERT_TRUE(LIBC_NAMESPACE::fputil::trunc(x) == integral);
       ASSERT_TRUE(integral + frac == x);
     }
   }

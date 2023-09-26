@@ -9,7 +9,7 @@
 #include "rpc_client.h"
 #include "rpc.h"
 
-namespace __llvm_libc {
+namespace LIBC_NAMESPACE {
 namespace rpc {
 
 /// The libc client instance used to communicate with the server.
@@ -18,8 +18,8 @@ Client client;
 /// Externally visible symbol to signify the usage of an RPC client to
 /// whomever needs to run the server as well as provide a way to initialize
 /// the client with a copy..
-extern "C" [[gnu::visibility("protected")]] void *__llvm_libc_rpc_client =
+extern "C" [[gnu::visibility("protected")]] void *LIBC_NAMESPACE_rpc_client =
     &client;
 
 } // namespace rpc
-} // namespace __llvm_libc
+} // namespace LIBC_NAMESPACE
