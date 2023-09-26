@@ -68,10 +68,11 @@
 // RUN: diff -u %t/t1.d %t/a/b/rel.d
 // FIXME: Get clang's `-working-directory` to affect relative path for serialized diagnostics.
 
+// Use relative path to inputs and outputs.
 //--- cdb.json.template
 [{
   "directory": "DIR",
-  "command": "clang -c DIR/main.c -target x86_64-apple-macos11 -MD -MF t1.d -MT deps -o output1.o",
+  "command": "clang -c main.c -target x86_64-apple-macos11 -MD -MF t1.d -MT deps -o output1.o",
   "file": "DIR/main.c"
 }]
 

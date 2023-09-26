@@ -418,10 +418,7 @@ CXCASReplayResult clang_experimental_cas_replayCompilation(
 
   SmallVector<const char *, 256> Args(argv, argv + argc);
   llvm::BumpPtrAllocator Alloc;
-  bool CLMode = driver::IsClangCL(
-      driver::getDriverMode(argv[0], ArrayRef(Args).slice(1)));
-
-  if (llvm::Error E = driver::expandResponseFiles(Args, CLMode, Alloc)) {
+  if (llvm::Error E = driver::expandResponseFiles(Args, /*CLMode=*/false, Alloc)) {
     Diags.Report(diag::err_drv_expand_response_file)
         << llvm::toString(std::move(E));
     if (OutError)
@@ -438,16 +435,12 @@ CXCASReplayResult clang_experimental_cas_replayCompilation(
     return nullptr;
   }
 
-  StringRef WorkingDir = WorkingDirectory;
-  if (!WorkingDir.empty())
-    Invok->getFileSystemOpts().WorkingDir = WorkingDir;
-
   SmallString<256> DiagText;
   std::optional<int> Ret;
-  if (Error E =
-          CompileJobCache::replayCachedResult(std::move(Invok), WComp.CacheKey,
-                                              WComp.CachedResult, DiagText)
-              .moveInto(Ret)) {
+  if (Error E = CompileJobCache::replayCachedResult(
+                    std::move(Invok), WorkingDirectory, WComp.CacheKey,
+                    WComp.CachedResult, DiagText)
+                    .moveInto(Ret)) {
     if (OutError)
       *OutError = cxerror::create(std::move(E));
     else
