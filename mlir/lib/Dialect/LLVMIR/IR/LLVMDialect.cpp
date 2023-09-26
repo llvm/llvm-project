@@ -1352,7 +1352,7 @@ static ParseResult parseOptionalCallFuncPtr(
   return success();
 }
 
-// <operation> ::= `llvm.call` (function-id | ssa-use) var-arg-func-type?
+// <operation> ::= `llvm.call` (function-id | ssa-use) ( `vararg(` var-arg-func-type `)` )?
 //                             `(` ssa-use-list `)`
 //                             attribute-dict? `:` (type `,`)? function-type
 ParseResult CallOp::parse(OpAsmParser &parser, OperationState &result) {
