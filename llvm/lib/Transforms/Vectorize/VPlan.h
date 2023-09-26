@@ -585,6 +585,8 @@ public:
   /// This VPBlockBase must have no successors.
   void setOneSuccessor(VPBlockBase *Successor) {
     assert(Successors.empty() && "Setting one successor when others exist.");
+    assert(Successor->getParent() == getParent() &&
+           "connected blocks must have the same parent");
     appendSuccessor(Successor);
   }
 
@@ -2679,10 +2681,6 @@ public:
     }
     return cast<VPCanonicalIVPHIRecipe>(&*EntryVPBB->begin());
   }
-
-  /// Find and return the VPActiveLaneMaskPHIRecipe from the header - there
-  /// be only one at most. If there isn't one, then return nullptr.
-  VPActiveLaneMaskPHIRecipe *getActiveLaneMaskPhi();
 
   void addLiveOut(PHINode *PN, VPValue *V);
 

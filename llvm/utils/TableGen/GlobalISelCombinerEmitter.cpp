@@ -3652,6 +3652,9 @@ void GICombinerEmitter::gatherRules(
 }
 
 void GICombinerEmitter::run(raw_ostream &OS) {
+  InstructionOpcodeMatcher::initOpcodeValuesMap(Target);
+  LLTOperandMatcher::initTypeIDValuesMap();
+
   Records.startTimer("Gather rules");
   std::vector<RuleMatcher> Rules;
   gatherRules(Rules, Combiner->getValueAsListOfDefs("Rules"));
@@ -3665,6 +3668,16 @@ void GICombinerEmitter::run(raw_ostream &OS) {
   unsigned MaxTemporaries = 0;
   for (const auto &Rule : Rules)
     MaxTemporaries = std::max(MaxTemporaries, Rule.countRendererFns());
+
+  llvm::stable_sort(Rules, [&](const RuleMatcher &A, const RuleMatcher &B) {
+    if (A.isHigherPriorityThan(B)) {
+      assert(!B.isHigherPriorityThan(A) && "Cannot be more important "
+                                           "and less important at "
+                                           "the same time");
+      return true;
+    }
+    return false;
+  });
 
   const MatchTable Table = buildMatchTable(Rules);
 

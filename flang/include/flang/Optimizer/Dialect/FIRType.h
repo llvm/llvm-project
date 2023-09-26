@@ -146,6 +146,11 @@ inline bool isa_integer(mlir::Type t) {
   return t.isa<mlir::IndexType, mlir::IntegerType, fir::IntegerType>();
 }
 
+/// Is `t` a vector type?
+inline bool isa_vector(mlir::Type t) {
+  return t.isa<mlir::VectorType, fir::VectorType>();
+}
+
 mlir::Type parseFirType(FIROpsDialect *, mlir::DialectAsmParser &parser);
 
 void printFirType(FIROpsDialect *, mlir::Type ty, mlir::DialectAsmPrinter &p);
@@ -165,7 +170,7 @@ inline bool isa_char(mlir::Type t) { return t.isa<fir::CharacterType>(); }
 /// Is `t` a trivial intrinsic type? CHARACTER is <em>excluded</em> because it
 /// is a dependent type.
 inline bool isa_trivial(mlir::Type t) {
-  return isa_integer(t) || isa_real(t) || isa_complex(t) ||
+  return isa_integer(t) || isa_real(t) || isa_complex(t) || isa_vector(t) ||
          t.isa<fir::LogicalType>();
 }
 

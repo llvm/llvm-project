@@ -40,8 +40,8 @@ struct TestAllSimdAbiFunctor {
   }
 };
 
-// TODO: Support long double (12 bytes) for MinGW (DLL, i686)
-#ifdef __MINGW32__
+// TODO: Support long double (12 bytes) for 32-bits x86
+#ifdef __i386__
 using arithmetic_no_bool_types = types::concatenate_t<types::integer_types, types::type_list<float, double>>;
 #else
 using arithmetic_no_bool_types = types::concatenate_t<types::integer_types, types::floating_point_types>;

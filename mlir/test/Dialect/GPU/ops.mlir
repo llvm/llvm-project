@@ -147,7 +147,7 @@ module attributes {gpu.container_module} {
     %cstI64 = arith.constant 8 : i64
     %c0 = arith.constant 0 : i32
     %t0 = gpu.wait async
-    %lowStream = llvm.mlir.null : !llvm.ptr
+    %lowStream = llvm.mlir.zero : !llvm.ptr
 
     // CHECK: gpu.launch_func @kernels::@kernel_1 blocks in (%{{.*}}, %{{.*}}, %{{.*}}) threads in (%{{.*}}, %{{.*}}, %{{.*}}) args(%{{.*}} : f32, %{{.*}} : memref<?xf32, 1>)
     gpu.launch_func @kernels::@kernel_1 blocks in (%cst, %cst, %cst) threads in (%cst, %cst, %cst) args(%0 : f32, %1 : memref<?xf32, 1>)

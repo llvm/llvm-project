@@ -13,7 +13,7 @@
 
 #include <stddef.h>
 
-namespace __llvm_libc {
+namespace LIBC_NAMESPACE {
 
 template <typename Comp>
 LIBC_INLINE constexpr static void *
@@ -39,6 +39,6 @@ inline_memmem(const void *haystack, size_t haystack_len, const void *needle,
   return nullptr;
 }
 
-} // namespace __llvm_libc
+} // namespace LIBC_NAMESPACE
 
 #endif // LLVM_LIBC_SRC_STRING_MEMORY_UTILS_INLINE_MEMMEM_H

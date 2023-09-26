@@ -11,6 +11,52 @@ except ImportError as e:
 from typing import Optional, overload, Union
 
 
+class MemRefAllocaToGlobalOp:
+    """Specialization for MemRefAllocaToGlobalOp class."""
+
+    @overload
+    def __init__(
+        self,
+        get_global_type: Type,
+        global_type: Type,
+        alloca: Union[Operation, OpView, Value],
+        *,
+        loc=None,
+        ip=None
+    ):
+        ...
+
+    @overload
+    def __init__(self, alloca: Union[Operation, OpView, Value], *, loc=None, ip=None):
+        ...
+
+    def __init__(
+        self,
+        get_global_type_or_alloca: Union[Operation, OpView, Type, Value],
+        global_type_or_none: Optional[Type] = None,
+        alloca_or_none: Optional[Union[Operation, OpView, Value]] = None,
+        *,
+        loc=None,
+        ip=None
+    ):
+        if isinstance(get_global_type_or_alloca, Type):
+            get_global_type = get_global_type_or_alloca
+            global_type = global_type_or_none
+            alloca = alloca_or_none
+        else:
+            get_global_type = transform.AnyOpType.get()
+            global_type = transform.AnyOpType.get()
+            alloca = get_global_type_or_alloca
+
+        super().__init__(
+            get_global_type,
+            global_type,
+            alloca,
+            loc=loc,
+            ip=ip,
+        )
+
+
 class MemRefMultiBufferOp:
     """Specialization for MemRefMultiBufferOp class."""
 

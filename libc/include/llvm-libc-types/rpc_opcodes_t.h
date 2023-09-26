@@ -15,7 +15,7 @@ typedef enum : unsigned short {
   RPC_WRITE_TO_STDOUT = 2,
   RPC_WRITE_TO_STDERR = 3,
   RPC_WRITE_TO_STREAM = 4,
-  RPC_READ_FROM_STDIN = 5,
+  RPC_WRITE_TO_STDOUT_NEWLINE = 5,
   RPC_READ_FROM_STREAM = 6,
   RPC_OPEN_FILE = 7,
   RPC_CLOSE_FILE = 8,
@@ -26,6 +26,9 @@ typedef enum : unsigned short {
   RPC_FEOF = 13,
   RPC_FERROR = 14,
   RPC_CLEARERR = 15,
+  RPC_FSEEK = 16,
+  RPC_FTELL = 17,
+  RPC_FFLUSH = 18,
 } rpc_opcode_t;
 
 #endif // __LLVM_LIBC_TYPES_RPC_OPCODE_H__

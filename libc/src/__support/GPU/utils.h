@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_LIBC_SRC_SUPPORT_GPU_UTIL_H
-#define LLVM_LIBC_SRC_SUPPORT_GPU_UTIL_H
+#ifndef LLVM_LIBC_SRC___SUPPORT_GPU_UTIL_H
+#define LLVM_LIBC_SRC___SUPPORT_GPU_UTIL_H
 
 #include "src/__support/macros/properties/architectures.h"
 
@@ -19,7 +19,7 @@
 #include "generic/utils.h"
 #endif
 
-namespace __llvm_libc {
+namespace LIBC_NAMESPACE {
 namespace gpu {
 /// Get the first active thread inside the lane.
 LIBC_INLINE uint64_t get_first_lane_id(uint64_t lane_mask) {
@@ -32,6 +32,6 @@ LIBC_INLINE bool is_first_lane(uint64_t lane_mask) {
 }
 
 } // namespace gpu
-} // namespace __llvm_libc
+} // namespace LIBC_NAMESPACE
 
-#endif // LLVM_LIBC_SRC_SUPPORT_OSUTIL_IO_H
+#endif // LLVM_LIBC_SRC___SUPPORT_OSUTIL_IO_H

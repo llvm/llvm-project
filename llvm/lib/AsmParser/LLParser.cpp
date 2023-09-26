@@ -3933,30 +3933,8 @@ bool LLParser::parseValID(ValID &ID, PerFunctionState *PFS, Type *ExpectedTy) {
     if (Val0->getType() != Val1->getType())
       return error(ID.Loc, "operands of constexpr must have same type");
     // Check that the type is valid for the operator.
-    switch (Opc) {
-    case Instruction::Add:
-    case Instruction::Sub:
-    case Instruction::Mul:
-    case Instruction::UDiv:
-    case Instruction::SDiv:
-    case Instruction::URem:
-    case Instruction::SRem:
-    case Instruction::Shl:
-    case Instruction::AShr:
-    case Instruction::LShr:
-      if (!Val0->getType()->isIntOrIntVectorTy())
-        return error(ID.Loc, "constexpr requires integer operands");
-      break;
-    case Instruction::FAdd:
-    case Instruction::FSub:
-    case Instruction::FMul:
-    case Instruction::FDiv:
-    case Instruction::FRem:
-      if (!Val0->getType()->isFPOrFPVectorTy())
-        return error(ID.Loc, "constexpr requires fp operands");
-      break;
-    default: llvm_unreachable("Unknown binary operator!");
-    }
+    if (!Val0->getType()->isIntOrIntVectorTy())
+      return error(ID.Loc, "constexpr requires integer operands");
     unsigned Flags = 0;
     if (NUW)   Flags |= OverflowingBinaryOperator::NoUnsignedWrap;
     if (NSW)   Flags |= OverflowingBinaryOperator::NoSignedWrap;

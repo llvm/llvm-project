@@ -47,10 +47,6 @@ static Value buildBoolValue(OpBuilder &builder, Location loc, bool value) {
 
 static bool isMemref(Value v) { return v.getType().isa<BaseMemRefType>(); }
 
-static bool isMemrefOperand(OpOperand &operand) {
-  return isMemref(operand.get());
-}
-
 //===----------------------------------------------------------------------===//
 // Backedges analysis
 //===----------------------------------------------------------------------===//
@@ -917,35 +913,16 @@ BufferDeallocation::handleInterface(RegionBranchTerminatorOpInterface op) {
   MutableOperandRange operands =
       op.getMutableSuccessorOperands(RegionBranchPoint::parent());
 
-  // Collect the values to deallocate and retain and use them to create the
-  // dealloc operation.
-  Block *block = op->getBlock();
-  SmallVector<Value> memrefs, conditions, toRetain;
-  if (failed(state.getMemrefsAndConditionsToDeallocate(
-          builder, op.getLoc(), block, memrefs, conditions)))
-    return failure();
-
-  state.getMemrefsToRetain(block, nullptr, OperandRange(operands), toRetain);
-  if (memrefs.empty() && toRetain.empty())
-    return op.getOperation();
-
-  auto deallocOp = builder.create<bufferization::DeallocOp>(
-      op.getLoc(), memrefs, conditions, toRetain);
-
-  // We want to replace the current ownership of the retained values with the
-  // result values of the dealloc operation as they are always unique.
-  state.resetOwnerships(deallocOp.getRetained(), block);
-  for (auto [retained, ownership] :
-       llvm::zip(deallocOp.getRetained(), deallocOp.getUpdatedConditions()))
-    state.updateOwnership(retained, ownership, block);
+  SmallVector<Value> updatedOwnerships;
+  auto result = deallocation_impl::insertDeallocOpForReturnLike(
+      state, op, OperandRange(operands), updatedOwnerships);
+  if (failed(result) || !*result)
+    return result;
 
   // Add an additional operand for every MemRef for the ownership indicator.
   if (!funcWithoutDynamicOwnership) {
-    unsigned numMemRefs = llvm::count_if(operands, isMemrefOperand);
     SmallVector<Value> newOperands{OperandRange(operands)};
-    auto ownershipValues =
-        deallocOp.getUpdatedConditions().take_front(numMemRefs);
-    newOperands.append(ownershipValues.begin(), ownershipValues.end());
+    newOperands.append(updatedOwnerships.begin(), updatedOwnerships.end());
     operands.assign(newOperands);
   }
 

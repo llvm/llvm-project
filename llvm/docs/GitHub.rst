@@ -156,7 +156,7 @@ merge:
 ::
 
   git push -f
-  gh pr merge --squash --delete branch
+  gh pr merge --squash --delete-branch
 
 This force push may ask if you intend to push hundreds, or potentially
 thousands of patches (depending on how long it's been since your pull request
@@ -248,7 +248,7 @@ checks:
   git push origin my_change -f
 
   # Now merge it
-  gh pr merge --squash --delete
+  gh pr merge --squash --delete-branch
 
 
 See more in-depth information about how to contribute in the following documentation:

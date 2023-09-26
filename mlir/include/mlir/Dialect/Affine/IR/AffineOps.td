@@ -259,7 +259,7 @@ def AffineForOp : Affine_Op<"for",
     Block::BlockArgListType getRegionIterArgs() {
       return getBody()->getArguments().drop_front();
     }
-    Operation::operand_range getIterOperands() {
+    Operation::operand_range getInits() {
       return getOperands().drop_front(getNumControlOperands());
     }
 

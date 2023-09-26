@@ -161,7 +161,7 @@ private:
 
   // Byte-swap the value if necessary.
   template <class T> T maybeSwap(T Value) const {
-    return Ctx->ShouldSwapBytes ? sys::getSwappedBytes(Value) : Value;
+    return Ctx->ShouldSwapBytes ? llvm::byteswap(Value) : Value;
   }
 };
 

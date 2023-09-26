@@ -715,8 +715,6 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
       setOperationAction({ISD::SMIN, ISD::SMAX, ISD::UMIN, ISD::UMAX}, VT,
                          Legal);
 
-      setOperationAction({ISD::VP_FSHL, ISD::VP_FSHR}, VT, Expand);
-
       // Custom-lower extensions and truncations from/to mask types.
       setOperationAction({ISD::ANY_EXTEND, ISD::SIGN_EXTEND, ISD::ZERO_EXTEND},
                          VT, Custom);
@@ -1297,7 +1295,7 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
     setTargetDAGCombine({ISD::FCOPYSIGN, ISD::MGATHER, ISD::MSCATTER,
                          ISD::VP_GATHER, ISD::VP_SCATTER, ISD::SRA, ISD::SRL,
                          ISD::SHL, ISD::STORE, ISD::SPLAT_VECTOR,
-                         ISD::CONCAT_VECTORS});
+                         ISD::BUILD_VECTOR, ISD::CONCAT_VECTORS});
   if (Subtarget.hasVendorXTHeadMemPair())
     setTargetDAGCombine({ISD::LOAD, ISD::STORE});
   if (Subtarget.useRVVForFixedLengthVectors())
@@ -3513,21 +3511,16 @@ static SDValue lowerBuildVectorOfConstants(SDValue Op, SelectionDAG &DAG,
     }
   }
 
-  if (SDValue Res = lowerBuildVectorViaDominantValues(Op, DAG, Subtarget))
-    return Res;
-
   // If the number of signbits allows, see if we can lower as a <N x i8>.
-  // We restrict this to N <= 4 to ensure the resulting narrow vector is
-  // 32 bits of smaller and can thus be materialized cheaply from scalar.
-  // The main motivation for this is the constant index vector required
-  // by vrgather.vv.  This covers all indice vectors up to size 4.
+  // Our main goal here is to reduce LMUL (and thus work) required to
+  // build the constant, but we will also narrow if the resulting
+  // narrow vector is known to materialize cheaply.
   // TODO: We really should be costing the smaller vector.  There are
   // profitable cases this misses.
-  const unsigned ScalarSize =
-    Op.getSimpleValueType().getScalarSizeInBits();
-  if (ScalarSize > 8 && NumElts <= 4) {
+  if (EltBitSize > 8 &&
+      (NumElts <= 4 || VT.getSizeInBits() > Subtarget.getRealMinVLen())) {
     unsigned SignBits = DAG.ComputeNumSignBits(Op);
-    if (ScalarSize - SignBits < 8) {
+    if (EltBitSize - SignBits < 8) {
       SDValue Source =
         DAG.getNode(ISD::TRUNCATE, DL, VT.changeVectorElementType(MVT::i8), Op);
       Source = convertToScalableVector(ContainerVT.changeVectorElementType(MVT::i8),
@@ -3536,6 +3529,9 @@ static SDValue lowerBuildVectorOfConstants(SDValue Op, SelectionDAG &DAG,
       return convertFromScalableVector(VT, Res, DAG, Subtarget);
     }
   }
+
+  if (SDValue Res = lowerBuildVectorViaDominantValues(Op, DAG, Subtarget))
+    return Res;
 
   // For constant vectors, use generic constant pool lowering.  Otherwise,
   // we'd have to materialize constants in GPRs just to move them into the
@@ -8629,6 +8625,18 @@ SDValue RISCVTargetLowering::lowerINSERT_SUBVECTOR(SDValue Op,
       ContainerVT = getContainerForFixedLengthVector(VecVT);
       Vec = convertToScalableVector(ContainerVT, Vec, DAG, Subtarget);
     }
+
+    // Shrink down Vec so we're performing the slideup on a smaller LMUL.
+    unsigned LastIdx = OrigIdx + SubVecVT.getVectorNumElements() - 1;
+    MVT OrigContainerVT = ContainerVT;
+    SDValue OrigVec = Vec;
+    if (auto ShrunkVT =
+            getSmallestVTForIndex(ContainerVT, LastIdx, DL, DAG, Subtarget)) {
+      ContainerVT = *ShrunkVT;
+      Vec = DAG.getNode(ISD::EXTRACT_SUBVECTOR, DL, ContainerVT, Vec,
+                        DAG.getVectorIdxConstant(0, DL));
+    }
+
     SubVec = DAG.getNode(ISD::INSERT_SUBVECTOR, DL, ContainerVT,
                          DAG.getUNDEF(ContainerVT), SubVec,
                          DAG.getConstant(0, DL, XLenVT));
@@ -8658,6 +8666,12 @@ SDValue RISCVTargetLowering::lowerINSERT_SUBVECTOR(SDValue Op,
       SubVec = getVSlideup(DAG, Subtarget, DL, ContainerVT, Vec, SubVec,
                            SlideupAmt, Mask, VL, Policy);
     }
+
+    // If we performed the slideup on a smaller LMUL, insert the result back
+    // into the rest of the vector.
+    if (ContainerVT != OrigContainerVT)
+      SubVec = DAG.getNode(ISD::INSERT_SUBVECTOR, DL, OrigContainerVT, OrigVec,
+                           SubVec, DAG.getVectorIdxConstant(0, DL));
 
     if (VecVT.isFixedLengthVector())
       SubVec = convertFromScalableVector(VecVT, SubVec, DAG, Subtarget);
@@ -13323,6 +13337,55 @@ static SDValue performSELECTCombine(SDNode *N, SelectionDAG &DAG,
   return tryFoldSelectIntoOp(N, DAG, FalseVal, TrueVal, /*Swapped*/true);
 }
 
+/// IF we have a build_vector where each lane is binop X, C, where C
+/// is a constant (but not necessarily the same constant on all lanes),
+/// form binop (build_vector x1, x2, ...), (build_vector c1, c2, c3, ..).
+/// We assume that materializing a constant build vector will be no more
+/// expensive that performing O(n) binops.
+static SDValue performBUILD_VECTORCombine(SDNode *N, SelectionDAG &DAG,
+                                          const RISCVSubtarget &Subtarget,
+                                          const RISCVTargetLowering &TLI) {
+  SDLoc DL(N);
+  EVT VT = N->getValueType(0);
+
+  assert(!VT.isScalableVector() && "unexpected build vector");
+
+  if (VT.getVectorNumElements() == 1)
+    return SDValue();
+
+  const unsigned Opcode = N->op_begin()->getNode()->getOpcode();
+  if (!TLI.isBinOp(Opcode))
+    return SDValue();
+
+  if (!TLI.isOperationLegalOrCustom(Opcode, VT) || !TLI.isTypeLegal(VT))
+    return SDValue();
+
+  SmallVector<SDValue> LHSOps;
+  SmallVector<SDValue> RHSOps;
+  for (SDValue Op : N->ops()) {
+    if (Op.isUndef()) {
+      LHSOps.push_back(Op);
+      RHSOps.push_back(Op);
+      continue;
+    }
+
+    // TODO: We can handle operations which have an neutral rhs value
+    // (e.g. x + 0, a * 1 or a << 0), but we then have to keep track
+    // of profit in a more explicit manner.
+    if (Op.getOpcode() != Opcode || !Op.hasOneUse())
+      return SDValue();
+
+    LHSOps.push_back(Op.getOperand(0));
+    if (!isa<ConstantSDNode>(Op.getOperand(1)) &&
+        !isa<ConstantFPSDNode>(Op.getOperand(1)))
+      return SDValue();
+    RHSOps.push_back(Op.getOperand(1));
+  }
+
+  return DAG.getNode(Opcode, DL, VT, DAG.getBuildVector(VT, DL, LHSOps),
+                     DAG.getBuildVector(VT, DL, RHSOps));
+}
+
 // If we're concatenating a series of vector loads like
 // concat_vectors (load v4i8, p+0), (load v4i8, p+n), (load v4i8, p+n*2) ...
 // Then we can turn this into a strided load by widening the vector elements
@@ -14055,6 +14118,35 @@ SDValue RISCVTargetLowering::PerformDAGCombine(SDNode *N,
            MGN->getBasePtr(), Index, ScaleOp},
           MGN->getMemOperand(), IndexType, MGN->getExtensionType());
 
+    if (Index.getOpcode() == ISD::BUILD_VECTOR &&
+        MGN->getExtensionType() == ISD::NON_EXTLOAD) {
+      if (std::optional<VIDSequence> SimpleVID = isSimpleVIDSequence(Index);
+          SimpleVID && SimpleVID->StepDenominator == 1) {
+        const int64_t StepNumerator = SimpleVID->StepNumerator;
+        const int64_t Addend = SimpleVID->Addend;
+
+        // Note: We don't need to check alignment here since (by assumption
+        // from the existance of the gather), our offsets must be sufficiently
+        // aligned.
+
+        const EVT PtrVT = getPointerTy(DAG.getDataLayout());
+        assert(MGN->getBasePtr()->getValueType(0) == PtrVT);
+        assert(IndexType == ISD::UNSIGNED_SCALED);
+        SDValue BasePtr = DAG.getNode(ISD::ADD, DL, PtrVT, MGN->getBasePtr(),
+                                      DAG.getConstant(Addend, DL, PtrVT));
+
+        SDVTList VTs = DAG.getVTList({VT, MVT::Other});
+        SDValue IntID =
+          DAG.getTargetConstant(Intrinsic::riscv_masked_strided_load, DL,
+                                XLenVT);
+        SDValue Ops[] =
+          {MGN->getChain(), IntID, MGN->getPassThru(), BasePtr,
+           DAG.getConstant(StepNumerator, DL, XLenVT), MGN->getMask()};
+        return DAG.getMemIntrinsicNode(ISD::INTRINSIC_W_CHAIN, DL, VTs,
+                                       Ops, VT, MGN->getMemOperand());
+      }
+    }
+
     SmallVector<int> ShuffleMask;
     if (MGN->getExtensionType() == ISD::NON_EXTLOAD &&
         matchIndexAsShuffle(VT, Index, MGN->getMask(), ShuffleMask)) {
@@ -14356,6 +14448,10 @@ SDValue RISCVTargetLowering::PerformDAGCombine(SDNode *N,
       return Gather;
     break;
   }
+  case ISD::BUILD_VECTOR:
+    if (SDValue V = performBUILD_VECTORCombine(N, DAG, Subtarget, *this))
+      return V;
+    break;
   case ISD::CONCAT_VECTORS:
     if (SDValue V = performCONCAT_VECTORSCombine(N, DAG, Subtarget, *this))
       return V;
@@ -14386,11 +14482,11 @@ SDValue RISCVTargetLowering::PerformDAGCombine(SDNode *N,
         return SDValue(N, 0);
 
     // If VL is 1 and the scalar value won't benefit from immediate, we can
-    // use vmv.s.x.  Do this only if legal to avoid breaking i64 sext(i32)
-    // patterns on rv32..
+    // use vmv.s.x.
     ConstantSDNode *Const = dyn_cast<ConstantSDNode>(Scalar);
-    if (isOneConstant(VL) && EltWidth <= Subtarget.getXLen() &&
-        (!Const || Const->isZero() || !isInt<5>(Const->getSExtValue())))
+    if (isOneConstant(VL) &&
+        (!Const || Const->isZero() ||
+         !Const->getAPIntValue().sextOrTrunc(EltWidth).isSignedIntN(5)))
       return DAG.getNode(RISCVISD::VMV_S_X_VL, DL, VT, Passthru, Scalar, VL);
 
     break;
@@ -17696,10 +17792,10 @@ RISCVTargetLowering::getInlineAsmMemConstraint(StringRef ConstraintCode) const {
 }
 
 void RISCVTargetLowering::LowerAsmOperandForConstraint(
-    SDValue Op, std::string &Constraint, std::vector<SDValue> &Ops,
+    SDValue Op, StringRef Constraint, std::vector<SDValue> &Ops,
     SelectionDAG &DAG) const {
   // Currently only support length 1 constraints.
-  if (Constraint.length() == 1) {
+  if (Constraint.size() == 1) {
     switch (Constraint[0]) {
     case 'I':
       // Validate & create a 12-bit signed immediate operand.

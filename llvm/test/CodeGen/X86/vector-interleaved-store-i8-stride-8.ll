@@ -4,14 +4,14 @@
 ; RUN: llc < %s -mtriple=x86_64-- -mattr=+avx2 | FileCheck %s --check-prefixes=AVX,AVX1,AVX2,AVX2-ONLY,AVX2-SLOW,FALLBACK2
 ; RUN: llc < %s -mtriple=x86_64-- -mattr=+avx2,+fast-variable-crosslane-shuffle,+fast-variable-perlane-shuffle | FileCheck %s --check-prefixes=AVX,AVX1,AVX2,AVX2-ONLY,AVX2-FAST,FALLBACK3
 ; RUN: llc < %s -mtriple=x86_64-- -mattr=+avx2,+fast-variable-perlane-shuffle | FileCheck %s --check-prefixes=AVX,AVX1,AVX2,AVX2-ONLY,AVX2-FAST-PERLANE,FALLBACK4
-; RUN: llc < %s -mtriple=x86_64-- -mattr=+avx512vl | FileCheck %s --check-prefixes=AVX,AVX2,AVX512,AVX512F,AVX512F-SLOW,AVX512F-ONLY-SLOW,FALLBACK5
-; RUN: llc < %s -mtriple=x86_64-- -mattr=+avx512vl,+fast-variable-crosslane-shuffle,+fast-variable-perlane-shuffle | FileCheck %s --check-prefixes=AVX,AVX2,AVX512,AVX512F,AVX512F-FAST,AVX512F-ONLY-FAST,FALLBACK6
-; RUN: llc < %s -mtriple=x86_64-- -mattr=+avx512vl,+avx512dq | FileCheck %s --check-prefixes=AVX,AVX2,AVX512,AVX512F,AVX512F-SLOW,AVX512DQ-SLOW,FALLBACK7
-; RUN: llc < %s -mtriple=x86_64-- -mattr=+avx512vl,+avx512dq,+fast-variable-crosslane-shuffle,+fast-variable-perlane-shuffle | FileCheck %s --check-prefixes=AVX,AVX2,AVX512,AVX512F,AVX512F-FAST,AVX512DQ-FAST,FALLBACK8
-; RUN: llc < %s -mtriple=x86_64-- -mattr=+avx512vl,+avx512bw | FileCheck %s --check-prefixes=AVX,AVX2,AVX512,AVX512BW,AVX512BW-SLOW,AVX512BW-ONLY-SLOW,FALLBACK9
-; RUN: llc < %s -mtriple=x86_64-- -mattr=+avx512vl,+avx512bw,+fast-variable-crosslane-shuffle,+fast-variable-perlane-shuffle | FileCheck %s --check-prefixes=AVX,AVX2,AVX512,AVX512BW,AVX512BW-FAST,AVX512BW-ONLY-FAST,FALLBACK10
-; RUN: llc < %s -mtriple=x86_64-- -mattr=+avx512vl,+avx512dq,+avx512bw | FileCheck %s --check-prefixes=AVX,AVX2,AVX512,AVX512BW,AVX512BW-SLOW,AVX512DQBW-SLOW,FALLBACK11
-; RUN: llc < %s -mtriple=x86_64-- -mattr=+avx512vl,+avx512dq,+avx512bw,+fast-variable-crosslane-shuffle,+fast-variable-perlane-shuffle | FileCheck %s --check-prefixes=AVX,AVX2,AVX512,AVX512BW,AVX512BW-FAST,AVX512DQBW-FAST,FALLBACK12
+; RUN: llc < %s -mtriple=x86_64-- -mattr=+avx512vl | FileCheck %s --check-prefixes=AVX,AVX2,AVX512,AVX512F,AVX512-SLOW,AVX512F-SLOW,AVX512F-ONLY-SLOW,FALLBACK5
+; RUN: llc < %s -mtriple=x86_64-- -mattr=+avx512vl,+fast-variable-crosslane-shuffle,+fast-variable-perlane-shuffle | FileCheck %s --check-prefixes=AVX,AVX2,AVX512,AVX512F,AVX512-FAST,AVX512F-FAST,AVX512F-ONLY-FAST,FALLBACK6
+; RUN: llc < %s -mtriple=x86_64-- -mattr=+avx512vl,+avx512dq | FileCheck %s --check-prefixes=AVX,AVX2,AVX512,AVX512F,AVX512-SLOW,AVX512F-SLOW,AVX512DQ-SLOW,FALLBACK7
+; RUN: llc < %s -mtriple=x86_64-- -mattr=+avx512vl,+avx512dq,+fast-variable-crosslane-shuffle,+fast-variable-perlane-shuffle | FileCheck %s --check-prefixes=AVX,AVX2,AVX512,AVX512F,AVX512-FAST,AVX512F-FAST,AVX512DQ-FAST,FALLBACK8
+; RUN: llc < %s -mtriple=x86_64-- -mattr=+avx512vl,+avx512bw | FileCheck %s --check-prefixes=AVX,AVX2,AVX512,AVX512BW,AVX512-SLOW,AVX512BW-SLOW,AVX512BW-ONLY-SLOW,FALLBACK9
+; RUN: llc < %s -mtriple=x86_64-- -mattr=+avx512vl,+avx512bw,+fast-variable-crosslane-shuffle,+fast-variable-perlane-shuffle | FileCheck %s --check-prefixes=AVX,AVX2,AVX512,AVX512BW,AVX512-FAST,AVX512BW-FAST,AVX512BW-ONLY-FAST,FALLBACK10
+; RUN: llc < %s -mtriple=x86_64-- -mattr=+avx512vl,+avx512dq,+avx512bw | FileCheck %s --check-prefixes=AVX,AVX2,AVX512,AVX512BW,AVX512-SLOW,AVX512BW-SLOW,AVX512DQBW-SLOW,FALLBACK11
+; RUN: llc < %s -mtriple=x86_64-- -mattr=+avx512vl,+avx512dq,+avx512bw,+fast-variable-crosslane-shuffle,+fast-variable-perlane-shuffle | FileCheck %s --check-prefixes=AVX,AVX2,AVX512,AVX512BW,AVX512-FAST,AVX512BW-FAST,AVX512DQBW-FAST,FALLBACK12
 
 ; These patterns are produced by LoopVectorizer for interleaved stores.
 
@@ -572,45 +572,45 @@ define void @store_i8_stride8_vf8(ptr %in.vecptr0, ptr %in.vecptr1, ptr %in.vecp
 ; AVX512F-SLOW-NEXT:    vzeroupper
 ; AVX512F-SLOW-NEXT:    retq
 ;
-; AVX512F-FAST-LABEL: store_i8_stride8_vf8:
-; AVX512F-FAST:       # %bb.0:
-; AVX512F-FAST-NEXT:    movq {{[0-9]+}}(%rsp), %rax
-; AVX512F-FAST-NEXT:    movq {{[0-9]+}}(%rsp), %r10
-; AVX512F-FAST-NEXT:    movq {{[0-9]+}}(%rsp), %r11
-; AVX512F-FAST-NEXT:    vmovq {{.*#+}} xmm0 = mem[0],zero
-; AVX512F-FAST-NEXT:    vmovq {{.*#+}} xmm1 = mem[0],zero
-; AVX512F-FAST-NEXT:    vpunpcklqdq {{.*#+}} xmm0 = xmm1[0],xmm0[0]
-; AVX512F-FAST-NEXT:    vmovq {{.*#+}} xmm1 = mem[0],zero
-; AVX512F-FAST-NEXT:    vmovq {{.*#+}} xmm2 = mem[0],zero
-; AVX512F-FAST-NEXT:    vpunpcklqdq {{.*#+}} xmm1 = xmm2[0],xmm1[0]
-; AVX512F-FAST-NEXT:    vmovq {{.*#+}} xmm2 = mem[0],zero
-; AVX512F-FAST-NEXT:    vmovq {{.*#+}} xmm3 = mem[0],zero
-; AVX512F-FAST-NEXT:    vpunpcklqdq {{.*#+}} xmm2 = xmm3[0],xmm2[0]
-; AVX512F-FAST-NEXT:    vmovq {{.*#+}} xmm3 = mem[0],zero
-; AVX512F-FAST-NEXT:    vmovq {{.*#+}} xmm4 = mem[0],zero
-; AVX512F-FAST-NEXT:    vpunpcklqdq {{.*#+}} xmm3 = xmm4[0],xmm3[0]
-; AVX512F-FAST-NEXT:    vinserti128 $1, %xmm1, %ymm0, %ymm0
-; AVX512F-FAST-NEXT:    vinserti128 $1, %xmm3, %ymm2, %ymm1
-; AVX512F-FAST-NEXT:    vbroadcasti128 {{.*#+}} ymm2 = [1,3,5,7,1,3,5,7]
-; AVX512F-FAST-NEXT:    # ymm2 = mem[0,1,0,1]
-; AVX512F-FAST-NEXT:    vpermd %ymm1, %ymm2, %ymm3
-; AVX512F-FAST-NEXT:    vmovdqa {{.*#+}} ymm4 = <u,u,u,u,0,4,8,12,u,u,u,u,1,5,9,13,u,u,u,u,2,6,10,14,u,u,u,u,3,7,11,15>
-; AVX512F-FAST-NEXT:    vpshufb %ymm4, %ymm3, %ymm3
-; AVX512F-FAST-NEXT:    vpermd %ymm0, %ymm2, %ymm2
-; AVX512F-FAST-NEXT:    vmovdqa {{.*#+}} ymm5 = <0,4,8,12,u,u,u,u,1,5,9,13,u,u,u,u,2,6,10,14,u,u,u,u,3,7,11,15,u,u,u,u>
-; AVX512F-FAST-NEXT:    vpshufb %ymm5, %ymm2, %ymm2
-; AVX512F-FAST-NEXT:    vpblendd {{.*#+}} ymm2 = ymm2[0],ymm3[1],ymm2[2],ymm3[3],ymm2[4],ymm3[5],ymm2[6],ymm3[7]
-; AVX512F-FAST-NEXT:    vbroadcasti128 {{.*#+}} ymm3 = [0,2,4,6,0,2,4,6]
-; AVX512F-FAST-NEXT:    # ymm3 = mem[0,1,0,1]
-; AVX512F-FAST-NEXT:    vpermd %ymm1, %ymm3, %ymm1
-; AVX512F-FAST-NEXT:    vpshufb %ymm4, %ymm1, %ymm1
-; AVX512F-FAST-NEXT:    vpermd %ymm0, %ymm3, %ymm0
-; AVX512F-FAST-NEXT:    vpshufb %ymm5, %ymm0, %ymm0
-; AVX512F-FAST-NEXT:    vpblendd {{.*#+}} ymm0 = ymm0[0],ymm1[1],ymm0[2],ymm1[3],ymm0[4],ymm1[5],ymm0[6],ymm1[7]
-; AVX512F-FAST-NEXT:    vinserti64x4 $1, %ymm2, %zmm0, %zmm0
-; AVX512F-FAST-NEXT:    vmovdqa64 %zmm0, (%rax)
-; AVX512F-FAST-NEXT:    vzeroupper
-; AVX512F-FAST-NEXT:    retq
+; AVX512-FAST-LABEL: store_i8_stride8_vf8:
+; AVX512-FAST:       # %bb.0:
+; AVX512-FAST-NEXT:    movq {{[0-9]+}}(%rsp), %rax
+; AVX512-FAST-NEXT:    movq {{[0-9]+}}(%rsp), %r10
+; AVX512-FAST-NEXT:    movq {{[0-9]+}}(%rsp), %r11
+; AVX512-FAST-NEXT:    vmovq {{.*#+}} xmm0 = mem[0],zero
+; AVX512-FAST-NEXT:    vmovq {{.*#+}} xmm1 = mem[0],zero
+; AVX512-FAST-NEXT:    vpunpcklqdq {{.*#+}} xmm0 = xmm1[0],xmm0[0]
+; AVX512-FAST-NEXT:    vmovq {{.*#+}} xmm1 = mem[0],zero
+; AVX512-FAST-NEXT:    vmovq {{.*#+}} xmm2 = mem[0],zero
+; AVX512-FAST-NEXT:    vpunpcklqdq {{.*#+}} xmm1 = xmm2[0],xmm1[0]
+; AVX512-FAST-NEXT:    vmovq {{.*#+}} xmm2 = mem[0],zero
+; AVX512-FAST-NEXT:    vmovq {{.*#+}} xmm3 = mem[0],zero
+; AVX512-FAST-NEXT:    vpunpcklqdq {{.*#+}} xmm2 = xmm3[0],xmm2[0]
+; AVX512-FAST-NEXT:    vmovq {{.*#+}} xmm3 = mem[0],zero
+; AVX512-FAST-NEXT:    vmovq {{.*#+}} xmm4 = mem[0],zero
+; AVX512-FAST-NEXT:    vpunpcklqdq {{.*#+}} xmm3 = xmm4[0],xmm3[0]
+; AVX512-FAST-NEXT:    vinserti128 $1, %xmm1, %ymm0, %ymm0
+; AVX512-FAST-NEXT:    vinserti128 $1, %xmm3, %ymm2, %ymm1
+; AVX512-FAST-NEXT:    vbroadcasti128 {{.*#+}} ymm2 = [1,3,5,7,1,3,5,7]
+; AVX512-FAST-NEXT:    # ymm2 = mem[0,1,0,1]
+; AVX512-FAST-NEXT:    vpermd %ymm1, %ymm2, %ymm3
+; AVX512-FAST-NEXT:    vmovdqa {{.*#+}} ymm4 = <u,u,u,u,0,4,8,12,u,u,u,u,1,5,9,13,u,u,u,u,2,6,10,14,u,u,u,u,3,7,11,15>
+; AVX512-FAST-NEXT:    vpshufb %ymm4, %ymm3, %ymm3
+; AVX512-FAST-NEXT:    vpermd %ymm0, %ymm2, %ymm2
+; AVX512-FAST-NEXT:    vmovdqa {{.*#+}} ymm5 = <0,4,8,12,u,u,u,u,1,5,9,13,u,u,u,u,2,6,10,14,u,u,u,u,3,7,11,15,u,u,u,u>
+; AVX512-FAST-NEXT:    vpshufb %ymm5, %ymm2, %ymm2
+; AVX512-FAST-NEXT:    vpblendd {{.*#+}} ymm2 = ymm2[0],ymm3[1],ymm2[2],ymm3[3],ymm2[4],ymm3[5],ymm2[6],ymm3[7]
+; AVX512-FAST-NEXT:    vbroadcasti128 {{.*#+}} ymm3 = [0,2,4,6,0,2,4,6]
+; AVX512-FAST-NEXT:    # ymm3 = mem[0,1,0,1]
+; AVX512-FAST-NEXT:    vpermd %ymm1, %ymm3, %ymm1
+; AVX512-FAST-NEXT:    vpshufb %ymm4, %ymm1, %ymm1
+; AVX512-FAST-NEXT:    vpermd %ymm0, %ymm3, %ymm0
+; AVX512-FAST-NEXT:    vpshufb %ymm5, %ymm0, %ymm0
+; AVX512-FAST-NEXT:    vpblendd {{.*#+}} ymm0 = ymm0[0],ymm1[1],ymm0[2],ymm1[3],ymm0[4],ymm1[5],ymm0[6],ymm1[7]
+; AVX512-FAST-NEXT:    vinserti64x4 $1, %ymm2, %zmm0, %zmm0
+; AVX512-FAST-NEXT:    vmovdqa64 %zmm0, (%rax)
+; AVX512-FAST-NEXT:    vzeroupper
+; AVX512-FAST-NEXT:    retq
 ;
 ; AVX512BW-SLOW-LABEL: store_i8_stride8_vf8:
 ; AVX512BW-SLOW:       # %bb.0:
@@ -655,46 +655,6 @@ define void @store_i8_stride8_vf8(ptr %in.vecptr0, ptr %in.vecptr1, ptr %in.vecp
 ; AVX512BW-SLOW-NEXT:    vmovdqa64 %zmm0, (%rax)
 ; AVX512BW-SLOW-NEXT:    vzeroupper
 ; AVX512BW-SLOW-NEXT:    retq
-;
-; AVX512BW-FAST-LABEL: store_i8_stride8_vf8:
-; AVX512BW-FAST:       # %bb.0:
-; AVX512BW-FAST-NEXT:    movq {{[0-9]+}}(%rsp), %rax
-; AVX512BW-FAST-NEXT:    movq {{[0-9]+}}(%rsp), %r10
-; AVX512BW-FAST-NEXT:    movq {{[0-9]+}}(%rsp), %r11
-; AVX512BW-FAST-NEXT:    vmovq {{.*#+}} xmm0 = mem[0],zero
-; AVX512BW-FAST-NEXT:    vmovq {{.*#+}} xmm1 = mem[0],zero
-; AVX512BW-FAST-NEXT:    vpunpcklqdq {{.*#+}} xmm0 = xmm1[0],xmm0[0]
-; AVX512BW-FAST-NEXT:    vmovq {{.*#+}} xmm1 = mem[0],zero
-; AVX512BW-FAST-NEXT:    vmovq {{.*#+}} xmm2 = mem[0],zero
-; AVX512BW-FAST-NEXT:    vpunpcklqdq {{.*#+}} xmm1 = xmm2[0],xmm1[0]
-; AVX512BW-FAST-NEXT:    vmovq {{.*#+}} xmm2 = mem[0],zero
-; AVX512BW-FAST-NEXT:    vmovq {{.*#+}} xmm3 = mem[0],zero
-; AVX512BW-FAST-NEXT:    vpunpcklqdq {{.*#+}} xmm2 = xmm3[0],xmm2[0]
-; AVX512BW-FAST-NEXT:    vmovq {{.*#+}} xmm3 = mem[0],zero
-; AVX512BW-FAST-NEXT:    vmovq {{.*#+}} xmm4 = mem[0],zero
-; AVX512BW-FAST-NEXT:    vpunpcklqdq {{.*#+}} xmm3 = xmm4[0],xmm3[0]
-; AVX512BW-FAST-NEXT:    vinserti128 $1, %xmm1, %ymm0, %ymm0
-; AVX512BW-FAST-NEXT:    vinserti128 $1, %xmm3, %ymm2, %ymm1
-; AVX512BW-FAST-NEXT:    vbroadcasti128 {{.*#+}} ymm2 = [1,3,5,7,1,3,5,7]
-; AVX512BW-FAST-NEXT:    # ymm2 = mem[0,1,0,1]
-; AVX512BW-FAST-NEXT:    vpermd %ymm1, %ymm2, %ymm3
-; AVX512BW-FAST-NEXT:    vmovdqa {{.*#+}} ymm4 = <u,u,u,u,0,4,8,12,u,u,u,u,1,5,9,13,u,u,u,u,2,6,10,14,u,u,u,u,3,7,11,15>
-; AVX512BW-FAST-NEXT:    vpshufb %ymm4, %ymm3, %ymm3
-; AVX512BW-FAST-NEXT:    vpermd %ymm0, %ymm2, %ymm2
-; AVX512BW-FAST-NEXT:    vmovdqa {{.*#+}} ymm5 = <0,4,8,12,u,u,u,u,1,5,9,13,u,u,u,u,2,6,10,14,u,u,u,u,3,7,11,15,u,u,u,u>
-; AVX512BW-FAST-NEXT:    vpshufb %ymm5, %ymm2, %ymm2
-; AVX512BW-FAST-NEXT:    vpblendd {{.*#+}} ymm2 = ymm2[0],ymm3[1],ymm2[2],ymm3[3],ymm2[4],ymm3[5],ymm2[6],ymm3[7]
-; AVX512BW-FAST-NEXT:    vbroadcasti128 {{.*#+}} ymm3 = [0,2,4,6,0,2,4,6]
-; AVX512BW-FAST-NEXT:    # ymm3 = mem[0,1,0,1]
-; AVX512BW-FAST-NEXT:    vpermd %ymm1, %ymm3, %ymm1
-; AVX512BW-FAST-NEXT:    vpshufb %ymm4, %ymm1, %ymm1
-; AVX512BW-FAST-NEXT:    vpermd %ymm0, %ymm3, %ymm0
-; AVX512BW-FAST-NEXT:    vpshufb %ymm5, %ymm0, %ymm0
-; AVX512BW-FAST-NEXT:    vpblendd {{.*#+}} ymm0 = ymm0[0],ymm1[1],ymm0[2],ymm1[3],ymm0[4],ymm1[5],ymm0[6],ymm1[7]
-; AVX512BW-FAST-NEXT:    vinserti64x4 $1, %ymm2, %zmm0, %zmm0
-; AVX512BW-FAST-NEXT:    vmovdqa64 %zmm0, (%rax)
-; AVX512BW-FAST-NEXT:    vzeroupper
-; AVX512BW-FAST-NEXT:    retq
   %in.vec0 = load <8 x i8>, ptr %in.vecptr0, align 64
   %in.vec1 = load <8 x i8>, ptr %in.vecptr1, align 64
   %in.vec2 = load <8 x i8>, ptr %in.vecptr2, align 64
@@ -7028,6 +6988,7 @@ define void @store_i8_stride8_vf64(ptr %in.vecptr0, ptr %in.vecptr1, ptr %in.vec
 }
 ;; NOTE: These prefixes are unused and the list is autogenerated. Do not add tests below this line:
 ; AVX1: {{.*}}
+; AVX512-SLOW: {{.*}}
 ; AVX512BW: {{.*}}
 ; AVX512BW-ONLY-FAST: {{.*}}
 ; AVX512BW-ONLY-SLOW: {{.*}}

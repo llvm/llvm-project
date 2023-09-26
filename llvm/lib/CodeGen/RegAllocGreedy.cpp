@@ -1218,6 +1218,10 @@ bool RAGreedy::trySplitAroundHintReg(MCPhysReg Hint,
                                      const LiveInterval &VirtReg,
                                      SmallVectorImpl<Register> &NewVRegs,
                                      AllocationOrder &Order) {
+  // Don't allow repeated splitting as a safe guard against looping.
+  if (ExtraInfo->getStage(VirtReg) >= RS_Split2)
+    return false;
+
   BlockFrequency Cost = 0;
   Register Reg = VirtReg.reg();
 

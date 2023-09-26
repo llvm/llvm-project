@@ -20,7 +20,7 @@
 # The last FileCheck directive below checks that the debugging commands for the
 # above RUN line are not killed and do execute at the right time.
 
-# RUN: %{lit} -a %{inputs}/shtest-external-shell-kill | FileCheck %s
+# RUN: %{lit} -a %{inputs}/shtest-external-shell-kill | %{filter-lit} | FileCheck %s
 # END.
 
 #       CHECK: Command Output (stdout):

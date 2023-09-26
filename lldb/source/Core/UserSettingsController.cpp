@@ -30,6 +30,13 @@ class Property;
 using namespace lldb;
 using namespace lldb_private;
 
+Properties::Properties() = default;
+
+Properties::Properties(const lldb::OptionValuePropertiesSP &collection_sp)
+    : m_collection_sp(collection_sp) {}
+
+Properties::~Properties() = default;
+
 lldb::OptionValueSP
 Properties::GetPropertyValue(const ExecutionContext *exe_ctx,
                              llvm::StringRef path, Status &error) const {

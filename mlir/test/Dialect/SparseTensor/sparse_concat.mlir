@@ -99,7 +99,7 @@ func.func @concat_mix_dense(%arg0: tensor<2x4xf64>, %arg1: tensor<3x4xf64, #Spar
 // CHECK-DAG:     %[[IotaP_0:.*]] = memref.cast %[[Iota_0]] : memref<2xindex> to memref<?xindex>
 // CHECK-DAG:     memref.store %[[TMP_c0]], %[[Iota_0]][%[[TMP_c0]]] : memref<2xindex>
 // CHECK-DAG:     memref.store %[[TMP_c1]], %[[Iota_0]][%[[TMP_c1]]] : memref<2xindex>
-// CHECK-DAG:     %[[NullPtr:.*]] = llvm.mlir.null : !llvm.ptr<i8>
+// CHECK-DAG:     %[[NullPtr:.*]] = llvm.mlir.zero : !llvm.ptr<i8>
 // CHECK:         %[[TMP_7:.*]] = call @newSparseTensor(%[[DimSizesP_0]], %[[LvlSizesP_0]], %[[LvlTypesP_0]], %[[IotaP_0]], %[[IotaP_0]], %[[TMP_c0_i32]], %[[TMP_c0_i32]], %[[TMP_c1_i32]], %[[TMP_c4_i32]], %[[NullPtr]])
 // CHECK:         %[[TMP_9:.*]] = memref.alloca() : memref<2xindex>
 // CHECK:         %[[TMP_10:.*]] = memref.cast %[[TMP_9]] : memref<2xindex> to memref<?xindex>
@@ -189,7 +189,7 @@ func.func @concat_mix_sparse(%arg0: tensor<2x4xf64>, %arg1: tensor<3x4xf64, #Spa
 // CHECK-DAG:     %[[Dim2LvlP_0:.*]] = memref.cast %[[Dim2Lvl_0]] : memref<2xindex> to memref<?xindex>
 // CHECK-DAG:     memref.store %[[TMP_c1]], %[[Dim2Lvl_0]][%[[TMP_c0]]] : memref<2xindex>
 // CHECK-DAG:     memref.store %[[TMP_c0]], %[[Dim2Lvl_0]][%[[TMP_c1]]] : memref<2xindex>
-// CHECK-DAG:     %[[NullPtr:.*]] = llvm.mlir.null : !llvm.ptr<i8>
+// CHECK-DAG:     %[[NullPtr:.*]] = llvm.mlir.zero : !llvm.ptr<i8>
 // CHECK:         %[[TMP_7:.*]] = call @newSparseTensor(%[[DimSizesP_0]], %[[LvlSizesP_0]], %[[LvlTypesP_0]], %[[Lvl2DimP_0]], %[[Dim2LvlP_0]], %[[TMP_c0_i32]], %[[TMP_c0_i32]], %[[TMP_c1_i32]], %[[TMP_c4_i32]], %[[NullPtr]])
 // CHECK:         %[[TMP_9:.*]] = memref.alloca() : memref<2xindex>
 // CHECK:         %[[TMP_10:.*]] = memref.cast %[[TMP_9]] : memref<2xindex> to memref<?xindex>
@@ -404,7 +404,7 @@ func.func @concat_mix_dense_perm_dim1_dyn(%arg0: tensor<3x2xf64>, %arg1: tensor<
 // CHECK-DAG:     %[[Dim2LvlP_0:.*]] = memref.cast %[[Dim2Lvl_0]] : memref<2xindex> to memref<?xindex>
 // CHECK-DAG:     memref.store %[[TMP_c1]], %[[Dim2Lvl_0]][%[[TMP_c0]]] : memref<2xindex>
 // CHECK-DAG:     memref.store %[[TMP_c0]], %[[Dim2Lvl_0]][%[[TMP_c1]]] : memref<2xindex>
-// CHECK-DAG:     %[[NullPtr:.*]] = llvm.mlir.null : !llvm.ptr<i8>
+// CHECK-DAG:     %[[NullPtr:.*]] = llvm.mlir.zero : !llvm.ptr<i8>
 // CHECK:         %[[TMP_7:.*]] = call @newSparseTensor(%[[DimSizesP_0]], %[[LvlSizesP_0]], %[[LvlTypesP_0]], %[[Lvl2DimP_0]], %[[Dim2LvlP_0]], %[[TMP_c0_i32]], %[[TMP_c0_i32]], %[[TMP_c1_i32]], %[[TMP_c0_i32]], %[[NullPtr]])
 // CHECK:         %[[Values_r:.*]] = call @sparseValuesF64(%[[TMP_7]]) : (!llvm.ptr<i8>) -> memref<?xf64>
 // CHECK:         %[[Values:.*]] = memref.reshape %[[Values_r]]

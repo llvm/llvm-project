@@ -44,14 +44,13 @@ _LIBCPP_BEGIN_NAMESPACE_STD
 
 namespace ranges {
 
-// TODO(clang-15): in the Standard, it's a `constexpr bool` variable, not a concept, but constexpr variables don't
-// short-circuit properly on Clang 15 (fixed in later versions), so use a concept as a workaround.
 template <class _Container>
-concept __reservable_container = sized_range<_Container> && requires(_Container& __c, range_size_t<_Container> __n) {
-  __c.reserve(__n);
-  { __c.capacity() } -> same_as<decltype(__n)>;
-  { __c.max_size() } -> same_as<decltype(__n)>;
-};
+constexpr bool __reservable_container =
+    sized_range<_Container> && requires(_Container& __c, range_size_t<_Container> __n) {
+      __c.reserve(__n);
+      { __c.capacity() } -> same_as<decltype(__n)>;
+      { __c.max_size() } -> same_as<decltype(__n)>;
+    };
 
 template <class _Container, class _Ref>
 constexpr bool __container_insertable = requires(_Container& __c, _Ref&& __ref) {

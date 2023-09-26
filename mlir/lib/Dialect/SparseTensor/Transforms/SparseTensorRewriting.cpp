@@ -1206,29 +1206,23 @@ private:
       // Retrieve the values-array.
       Value y = genToValues(rewriter, loc, src);
       const auto encSrc = srcTp.getEncoding();
-      // Sort the COO tensor so that its elements are ordered via increasing
-      // coordinates for the storage ordering of the dst tensor.  Use SortCoo
-      // if the COO tensor has the same ordering as the dst tensor.
-      if (dimRank > 1 && srcTp.hasSameDimToLvl(dstTp)) {
-        Value xs = genToCoordinatesBuffer(rewriter, loc, src);
-        rewriter.create<SortCooOp>(
-            loc, nnz, xs, ValueRange{y}, rewriter.getIndexAttr(dimRank),
-            rewriter.getIndexAttr(0), SparseTensorSortKind::HybridQuickSort);
-      } else {
-        // Gather the coordinates-arrays in the dst tensor storage order.
-        SmallVector<Value> xs(dstLvlRank);
-        const Level srcLvlRank = srcTp.getLvlRank();
-        for (Level srcLvl = 0; srcLvl < srcLvlRank; srcLvl++) {
-          // FIXME: `toOrigDim` is deprecated
-          Dimension dim = toOrigDim(encSrc, srcLvl);
-          // FIXME: `toStoredDim` is deprecated
-          Level dstLvl = toStoredDim(encDst, dim);
-          xs[dstLvl] =
-              genToCoordinates(rewriter, loc, src, srcLvl, /*cooStart=*/0);
-        }
-        rewriter.create<SortOp>(loc, nnz, xs, ValueRange{y},
-                                SparseTensorSortKind::HybridQuickSort);
+      // Builds the dstLvl -> srcLvl permutation maps.
+      SmallVector<AffineExpr> es(dstLvlRank);
+      const Level srcLvlRank = srcTp.getLvlRank();
+      for (Level srcLvl = 0; srcLvl < srcLvlRank; srcLvl++) {
+        // FIXME: `toOrigDim` is deprecated
+        Dimension dim = toOrigDim(encSrc, srcLvl);
+        // FIXME: `toStoredDim` is deprecated
+        Level dstLvl = toStoredDim(encDst, dim);
+        es[dstLvl] = rewriter.getAffineDimExpr(srcLvl);
       }
+      auto xPerm = AffineMap::get(dstLvlRank, 0, es, rewriter.getContext());
+      assert(xPerm.isPermutation()); // must be a permutation.
+
+      Value xs = genToCoordinatesBuffer(rewriter, loc, src);
+      rewriter.create<SortCooOp>(loc, nnz, xs, ValueRange{y}, xPerm,
+                                 rewriter.getIndexAttr(0),
+                                 SparseTensorSortKind::HybridQuickSort);
     }
 
     // For each element in the COO tensor, insert the element to the dst tensor.

@@ -52,7 +52,7 @@ module attributes {gpu.container_module} {
   // CHECK: llvm.getelementptr %[[MEMREF]][0, 4] : (!llvm.ptr) -> !llvm.ptr, !llvm.struct[[STRUCT_BODY:<.*>]]
   // CHECK: llvm.getelementptr %[[MEMREF]][0, 5] : (!llvm.ptr) -> !llvm.ptr, !llvm.struct[[STRUCT_BODY:<.*>]]
 
-  // CHECK: [[EXTRA_PARAMS:%.*]] = llvm.mlir.null : !llvm.ptr
+  // CHECK: [[EXTRA_PARAMS:%.*]] = llvm.mlir.zero : !llvm.ptr
 
   // CHECK: llvm.call @mgpuLaunchKernel([[FUNC]], [[C8]], [[C8]], [[C8]],
   // CHECK-SAME: [[C8]], [[C8]], [[C8]], [[C256]], [[STREAM]],

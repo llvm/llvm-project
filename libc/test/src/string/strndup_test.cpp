@@ -13,7 +13,7 @@
 TEST(LlvmLibcstrndupTest, EmptyString) {
   const char *empty = "";
 
-  char *result = __llvm_libc::strndup(empty, 1);
+  char *result = LIBC_NAMESPACE::strndup(empty, 1);
   ASSERT_NE(result, static_cast<char *>(nullptr));
   ASSERT_NE(empty, const_cast<const char *>(result));
   ASSERT_STREQ(empty, result);
@@ -23,21 +23,21 @@ TEST(LlvmLibcstrndupTest, EmptyString) {
 TEST(LlvmLibcstrndupTest, AnyString) {
   const char *abc = "abc";
 
-  char *result = __llvm_libc::strndup(abc, 3);
+  char *result = LIBC_NAMESPACE::strndup(abc, 3);
 
   ASSERT_NE(result, static_cast<char *>(nullptr));
   ASSERT_NE(abc, const_cast<const char *>(result));
   ASSERT_STREQ(abc, result);
   ::free(result);
 
-  result = __llvm_libc::strndup(abc, 1);
+  result = LIBC_NAMESPACE::strndup(abc, 1);
 
   ASSERT_NE(result, static_cast<char *>(nullptr));
   ASSERT_NE(abc, const_cast<const char *>(result));
   ASSERT_STREQ("a", result);
   ::free(result);
 
-  result = __llvm_libc::strndup(abc, 10);
+  result = LIBC_NAMESPACE::strndup(abc, 10);
 
   ASSERT_NE(result, static_cast<char *>(nullptr));
   ASSERT_NE(abc, const_cast<const char *>(result));
@@ -46,7 +46,7 @@ TEST(LlvmLibcstrndupTest, AnyString) {
 }
 
 TEST(LlvmLibcstrndupTest, NullPtr) {
-  char *result = __llvm_libc::strndup(nullptr, 0);
+  char *result = LIBC_NAMESPACE::strndup(nullptr, 0);
 
   ASSERT_EQ(result, static_cast<char *>(nullptr));
 }

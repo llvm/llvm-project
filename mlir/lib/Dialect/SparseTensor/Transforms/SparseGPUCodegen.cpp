@@ -795,10 +795,10 @@ rewriteSpGEMM(PatternRewriter &rewriter, linalg::GenericOp op, bool enableRT,
   Value rowC = e1.getResult(0);
   token = e1.getAsyncToken();
   auto e2 = genAllocBuffer(rewriter, loc, cTp.getCrdType(), zero, token);
-  Value colC = e2.getResult(0);
+  Value colC = e2.getResult(0);  // no free needed
   token = e2.getAsyncToken();
   auto e3 = genAllocBuffer(rewriter, loc, dnCType, zero, token);
-  Value valC = e3.getResult(0);
+  Value valC = e3.getResult(0);  // no free needed
   token = e3.getAsyncToken();
   Operation *spGenC =
       genSpMat(rewriter, loc, spmatHandleTp, tokenTp, token, szm, szn, zero,
@@ -881,6 +881,17 @@ rewriteSpGEMM(PatternRewriter &rewriter, linalg::GenericOp op, bool enableRT,
   token = genCopyMemRef(rewriter, loc, rowH, rowC, token);
   token = genCopyMemRef(rewriter, loc, colH, colC, token);
   token = genCopyMemRef(rewriter, loc, valH, valC, token);
+  token = genDeallocMemRef(rewriter, loc, rowA, token);
+  token = genDeallocMemRef(rewriter, loc, colA, token);
+  token = genDeallocMemRef(rewriter, loc, valA, token);
+  token = genDeallocMemRef(rewriter, loc, rowB, token);
+  token = genDeallocMemRef(rewriter, loc, colB, token);
+  token = genDeallocMemRef(rewriter, loc, valB, token);
+  token = genDeallocMemRef(rewriter, loc, rowC, token);
+  token = genDeallocMemRef(rewriter, loc, colC, token);
+  token = genDeallocMemRef(rewriter, loc, valC, token);
+  token = genDeallocMemRef(rewriter, loc, buffer1, token);
+  token = genDeallocMemRef(rewriter, loc, buffer2, token);
   tokens.push_back(token);
   genBlockingWait(rewriter, loc, tokens);
   tokens.clear();

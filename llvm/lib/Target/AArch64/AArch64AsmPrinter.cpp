@@ -974,6 +974,8 @@ bool AArch64AsmPrinter::PrintAsmOperand(const MachineInstr *MI, unsigned OpNum,
       RegClass = &AArch64::ZPRRegClass;
     } else if (AArch64::PPRRegClass.contains(Reg)) {
       RegClass = &AArch64::PPRRegClass;
+    } else if (AArch64::PNRRegClass.contains(Reg)) {
+      RegClass = &AArch64::PNRRegClass;
     } else {
       RegClass = &AArch64::FPR128RegClass;
       AltName = AArch64::vreg;

@@ -13567,20 +13567,16 @@ define <8 x i16> @mgather_strided_unaligned(ptr %base) {
 define <8 x i16> @mgather_strided_2xSEW(ptr %base) {
 ; RV32-LABEL: mgather_strided_2xSEW:
 ; RV32:       # %bb.0:
-; RV32-NEXT:    vsetivli zero, 4, e8, mf4, ta, ma
-; RV32-NEXT:    vid.v v8
-; RV32-NEXT:    vsll.vi v9, v8, 3
-; RV32-NEXT:    vsetvli zero, zero, e32, m1, ta, ma
-; RV32-NEXT:    vluxei8.v v8, (a0), v9
+; RV32-NEXT:    li a1, 8
+; RV32-NEXT:    vsetivli zero, 4, e32, m1, ta, ma
+; RV32-NEXT:    vlse32.v v8, (a0), a1
 ; RV32-NEXT:    ret
 ;
 ; RV64V-LABEL: mgather_strided_2xSEW:
 ; RV64V:       # %bb.0:
-; RV64V-NEXT:    vsetivli zero, 4, e8, mf4, ta, ma
-; RV64V-NEXT:    vid.v v8
-; RV64V-NEXT:    vsll.vi v9, v8, 3
-; RV64V-NEXT:    vsetvli zero, zero, e32, m1, ta, ma
-; RV64V-NEXT:    vluxei8.v v8, (a0), v9
+; RV64V-NEXT:    li a1, 8
+; RV64V-NEXT:    vsetivli zero, 4, e32, m1, ta, ma
+; RV64V-NEXT:    vlse32.v v8, (a0), a1
 ; RV64V-NEXT:    ret
 ;
 ; RV64ZVE32F-LABEL: mgather_strided_2xSEW:
@@ -13684,22 +13680,18 @@ define <8 x i16> @mgather_strided_2xSEW(ptr %base) {
 define <8 x i16> @mgather_strided_2xSEW_with_offset(ptr %base) {
 ; RV32-LABEL: mgather_strided_2xSEW_with_offset:
 ; RV32:       # %bb.0:
-; RV32-NEXT:    vsetivli zero, 4, e8, mf4, ta, ma
-; RV32-NEXT:    vid.v v8
-; RV32-NEXT:    vsll.vi v8, v8, 3
-; RV32-NEXT:    vadd.vi v9, v8, 4
-; RV32-NEXT:    vsetvli zero, zero, e32, m1, ta, ma
-; RV32-NEXT:    vluxei8.v v8, (a0), v9
+; RV32-NEXT:    addi a0, a0, 4
+; RV32-NEXT:    li a1, 8
+; RV32-NEXT:    vsetivli zero, 4, e32, m1, ta, ma
+; RV32-NEXT:    vlse32.v v8, (a0), a1
 ; RV32-NEXT:    ret
 ;
 ; RV64V-LABEL: mgather_strided_2xSEW_with_offset:
 ; RV64V:       # %bb.0:
-; RV64V-NEXT:    vsetivli zero, 4, e8, mf4, ta, ma
-; RV64V-NEXT:    vid.v v8
-; RV64V-NEXT:    vsll.vi v8, v8, 3
-; RV64V-NEXT:    vadd.vi v9, v8, 4
-; RV64V-NEXT:    vsetvli zero, zero, e32, m1, ta, ma
-; RV64V-NEXT:    vluxei8.v v8, (a0), v9
+; RV64V-NEXT:    addi a0, a0, 4
+; RV64V-NEXT:    li a1, 8
+; RV64V-NEXT:    vsetivli zero, 4, e32, m1, ta, ma
+; RV64V-NEXT:    vlse32.v v8, (a0), a1
 ; RV64V-NEXT:    ret
 ;
 ; RV64ZVE32F-LABEL: mgather_strided_2xSEW_with_offset:
@@ -13804,20 +13796,18 @@ define <8 x i16> @mgather_strided_2xSEW_with_offset(ptr %base) {
 define <8 x i16> @mgather_reverse_unit_strided_2xSEW(ptr %base) {
 ; RV32-LABEL: mgather_reverse_unit_strided_2xSEW:
 ; RV32:       # %bb.0:
-; RV32-NEXT:    lui a1, 65858
-; RV32-NEXT:    addi a1, a1, -2020
+; RV32-NEXT:    addi a0, a0, 28
+; RV32-NEXT:    li a1, -4
 ; RV32-NEXT:    vsetivli zero, 4, e32, m1, ta, ma
-; RV32-NEXT:    vmv.s.x v9, a1
-; RV32-NEXT:    vluxei8.v v8, (a0), v9
+; RV32-NEXT:    vlse32.v v8, (a0), a1
 ; RV32-NEXT:    ret
 ;
 ; RV64V-LABEL: mgather_reverse_unit_strided_2xSEW:
 ; RV64V:       # %bb.0:
-; RV64V-NEXT:    lui a1, 65858
-; RV64V-NEXT:    addiw a1, a1, -2020
+; RV64V-NEXT:    addi a0, a0, 28
+; RV64V-NEXT:    li a1, -4
 ; RV64V-NEXT:    vsetivli zero, 4, e32, m1, ta, ma
-; RV64V-NEXT:    vmv.s.x v9, a1
-; RV64V-NEXT:    vluxei8.v v8, (a0), v9
+; RV64V-NEXT:    vlse32.v v8, (a0), a1
 ; RV64V-NEXT:    ret
 ;
 ; RV64ZVE32F-LABEL: mgather_reverse_unit_strided_2xSEW:
@@ -13922,20 +13912,18 @@ define <8 x i16> @mgather_reverse_unit_strided_2xSEW(ptr %base) {
 define <8 x i16> @mgather_reverse_strided_2xSEW(ptr %base) {
 ; RV32-LABEL: mgather_reverse_strided_2xSEW:
 ; RV32:       # %bb.0:
-; RV32-NEXT:    lui a1, 16577
-; RV32-NEXT:    addi a1, a1, 1052
+; RV32-NEXT:    addi a0, a0, 28
+; RV32-NEXT:    li a1, -8
 ; RV32-NEXT:    vsetivli zero, 4, e32, m1, ta, ma
-; RV32-NEXT:    vmv.s.x v9, a1
-; RV32-NEXT:    vluxei8.v v8, (a0), v9
+; RV32-NEXT:    vlse32.v v8, (a0), a1
 ; RV32-NEXT:    ret
 ;
 ; RV64V-LABEL: mgather_reverse_strided_2xSEW:
 ; RV64V:       # %bb.0:
-; RV64V-NEXT:    lui a1, 16577
-; RV64V-NEXT:    addiw a1, a1, 1052
+; RV64V-NEXT:    addi a0, a0, 28
+; RV64V-NEXT:    li a1, -8
 ; RV64V-NEXT:    vsetivli zero, 4, e32, m1, ta, ma
-; RV64V-NEXT:    vmv.s.x v9, a1
-; RV64V-NEXT:    vluxei8.v v8, (a0), v9
+; RV64V-NEXT:    vlse32.v v8, (a0), a1
 ; RV64V-NEXT:    ret
 ;
 ; RV64ZVE32F-LABEL: mgather_reverse_strided_2xSEW:
@@ -14386,20 +14374,16 @@ define <8 x i16> @mgather_gather_2xSEW_unaligned2(ptr %base) {
 define <8 x i16> @mgather_gather_4xSEW(ptr %base) {
 ; RV32V-LABEL: mgather_gather_4xSEW:
 ; RV32V:       # %bb.0:
-; RV32V-NEXT:    vsetivli zero, 2, e8, mf8, ta, ma
-; RV32V-NEXT:    vid.v v8
-; RV32V-NEXT:    vsll.vi v9, v8, 4
-; RV32V-NEXT:    vsetvli zero, zero, e64, m1, ta, ma
-; RV32V-NEXT:    vluxei8.v v8, (a0), v9
+; RV32V-NEXT:    li a1, 16
+; RV32V-NEXT:    vsetivli zero, 2, e64, m1, ta, ma
+; RV32V-NEXT:    vlse64.v v8, (a0), a1
 ; RV32V-NEXT:    ret
 ;
 ; RV64V-LABEL: mgather_gather_4xSEW:
 ; RV64V:       # %bb.0:
-; RV64V-NEXT:    vsetivli zero, 2, e8, mf8, ta, ma
-; RV64V-NEXT:    vid.v v8
-; RV64V-NEXT:    vsll.vi v9, v8, 4
-; RV64V-NEXT:    vsetvli zero, zero, e64, m1, ta, ma
-; RV64V-NEXT:    vluxei8.v v8, (a0), v9
+; RV64V-NEXT:    li a1, 16
+; RV64V-NEXT:    vsetivli zero, 2, e64, m1, ta, ma
+; RV64V-NEXT:    vlse64.v v8, (a0), a1
 ; RV64V-NEXT:    ret
 ;
 ; RV32ZVE32F-LABEL: mgather_gather_4xSEW:

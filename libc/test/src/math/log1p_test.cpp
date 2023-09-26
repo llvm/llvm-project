@@ -17,19 +17,20 @@
 #include <errno.h>
 #include <stdint.h>
 
-namespace mpfr = __llvm_libc::testing::mpfr;
-using __llvm_libc::testing::tlog;
+namespace mpfr = LIBC_NAMESPACE::testing::mpfr;
+using LIBC_NAMESPACE::testing::tlog;
 
 DECLARE_SPECIAL_CONSTANTS(double)
 
 TEST(LlvmLibcLog1pTest, SpecialNumbers) {
-  EXPECT_FP_EQ(aNaN, __llvm_libc::log1p(aNaN));
-  EXPECT_FP_EQ(inf, __llvm_libc::log1p(inf));
-  EXPECT_FP_IS_NAN_WITH_EXCEPTION(__llvm_libc::log1p(neg_inf), FE_INVALID);
-  EXPECT_FP_IS_NAN_WITH_EXCEPTION(__llvm_libc::log1p(-2.0), FE_INVALID);
-  EXPECT_FP_EQ(zero, __llvm_libc::log1p(0.0));
-  EXPECT_FP_EQ(neg_zero, __llvm_libc::log1p(-0.0));
-  EXPECT_FP_EQ_WITH_EXCEPTION(neg_inf, __llvm_libc::log1p(-1.0), FE_DIVBYZERO);
+  EXPECT_FP_EQ(aNaN, LIBC_NAMESPACE::log1p(aNaN));
+  EXPECT_FP_EQ(inf, LIBC_NAMESPACE::log1p(inf));
+  EXPECT_FP_IS_NAN_WITH_EXCEPTION(LIBC_NAMESPACE::log1p(neg_inf), FE_INVALID);
+  EXPECT_FP_IS_NAN_WITH_EXCEPTION(LIBC_NAMESPACE::log1p(-2.0), FE_INVALID);
+  EXPECT_FP_EQ(zero, LIBC_NAMESPACE::log1p(0.0));
+  EXPECT_FP_EQ(neg_zero, LIBC_NAMESPACE::log1p(-0.0));
+  EXPECT_FP_EQ_WITH_EXCEPTION(neg_inf, LIBC_NAMESPACE::log1p(-1.0),
+                              FE_DIVBYZERO);
 }
 
 TEST(LlvmLibcLog1pTest, TrickyInputs) {
@@ -68,7 +69,7 @@ TEST(LlvmLibcLog1pTest, TrickyInputs) {
   for (int i = 0; i < N; ++i) {
     double x = double(FPBits(INPUTS[i]));
     EXPECT_MPFR_MATCH_ALL_ROUNDING(mpfr::Operation::Log1p, x,
-                                   __llvm_libc::log1p(x), 0.5);
+                                   LIBC_NAMESPACE::log1p(x), 0.5);
   }
 }
 
@@ -76,7 +77,7 @@ TEST(LlvmLibcLog1pTest, AllExponents) {
   double x = 0x1.0p-1074;
   for (int i = -1074; i < 1024; ++i, x *= 2.0) {
     ASSERT_MPFR_MATCH_ALL_ROUNDING(mpfr::Operation::Log1p, x,
-                                   __llvm_libc::log1p(x), 0.5);
+                                   LIBC_NAMESPACE::log1p(x), 0.5);
   }
 }
 
@@ -102,7 +103,7 @@ TEST(LlvmLibcLog1pTest, InDoubleRange) {
       if (isnan(x) || isinf(x) || x < 0.0)
         continue;
       libc_errno = 0;
-      double result = __llvm_libc::log1p(x);
+      double result = LIBC_NAMESPACE::log1p(x);
       ++cc;
       if (isnan(result) || isinf(result))
         continue;

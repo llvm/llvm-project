@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_LIBC_SRC_MEMORY_UTILS_UTILS_H
-#define LLVM_LIBC_SRC_MEMORY_UTILS_UTILS_H
+#ifndef LLVM_LIBC_SRC_STRING_MEMORY_UTILS_UTILS_H
+#define LLVM_LIBC_SRC_STRING_MEMORY_UTILS_UTILS_H
 
 #include "src/__support/CPP/bit.h"
 #include "src/__support/CPP/cstddef.h"
@@ -20,7 +20,7 @@
 #include <stddef.h> // size_t
 #include <stdint.h> // intptr_t / uintptr_t / INT32_MAX / INT32_MIN
 
-namespace __llvm_libc {
+namespace LIBC_NAMESPACE {
 
 // Allows compile time error reporting in `if constexpr` branches.
 template <bool flag = false>
@@ -372,6 +372,6 @@ private:
   uintptr_t offset_;
 };
 
-} // namespace __llvm_libc
+} // namespace LIBC_NAMESPACE
 
-#endif // LLVM_LIBC_SRC_MEMORY_UTILS_UTILS_H
+#endif // LLVM_LIBC_SRC_STRING_MEMORY_UTILS_UTILS_H

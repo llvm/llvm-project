@@ -28,6 +28,14 @@ MLIR_CAPI_EXPORTED bool mlirTypeIsATransformAnyOpType(MlirType type);
 MLIR_CAPI_EXPORTED MlirType mlirTransformAnyOpTypeGet(MlirContext ctx);
 
 //===---------------------------------------------------------------------===//
+// AnyParamType
+//===---------------------------------------------------------------------===//
+
+MLIR_CAPI_EXPORTED bool mlirTypeIsATransformAnyParamType(MlirType type);
+
+MLIR_CAPI_EXPORTED MlirType mlirTransformAnyParamTypeGet(MlirContext ctx);
+
+//===---------------------------------------------------------------------===//
 // AnyValueType
 //===---------------------------------------------------------------------===//
 
@@ -48,6 +56,17 @@ mlirTransformOperationTypeGet(MlirContext ctx, MlirStringRef operationName);
 
 MLIR_CAPI_EXPORTED MlirStringRef
 mlirTransformOperationTypeGetOperationName(MlirType type);
+
+//===---------------------------------------------------------------------===//
+// ParamType
+//===---------------------------------------------------------------------===//
+
+MLIR_CAPI_EXPORTED bool mlirTypeIsATransformParamType(MlirType type);
+
+MLIR_CAPI_EXPORTED MlirType mlirTransformParamTypeGet(MlirContext ctx,
+                                                      MlirType type);
+
+MLIR_CAPI_EXPORTED MlirType mlirTransformParamTypeGetType(MlirType type);
 
 #ifdef __cplusplus
 }

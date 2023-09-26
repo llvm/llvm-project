@@ -4184,6 +4184,22 @@ Value *LoongArchTargetLowering::emitMaskedAtomicCmpXchgIntrinsic(
 Value *LoongArchTargetLowering::emitMaskedAtomicRMWIntrinsic(
     IRBuilderBase &Builder, AtomicRMWInst *AI, Value *AlignedAddr, Value *Incr,
     Value *Mask, Value *ShiftAmt, AtomicOrdering Ord) const {
+  // In the case of an atomicrmw xchg with a constant 0/-1 operand, replace
+  // the atomic instruction with an AtomicRMWInst::And/Or with appropriate
+  // mask, as this produces better code than the LL/SC loop emitted by
+  // int_loongarch_masked_atomicrmw_xchg.
+  if (AI->getOperation() == AtomicRMWInst::Xchg &&
+      isa<ConstantInt>(AI->getValOperand())) {
+    ConstantInt *CVal = cast<ConstantInt>(AI->getValOperand());
+    if (CVal->isZero())
+      return Builder.CreateAtomicRMW(AtomicRMWInst::And, AlignedAddr,
+                                     Builder.CreateNot(Mask, "Inv_Mask"),
+                                     AI->getAlign(), Ord);
+    if (CVal->isMinusOne())
+      return Builder.CreateAtomicRMW(AtomicRMWInst::Or, AlignedAddr, Mask,
+                                     AI->getAlign(), Ord);
+  }
+
   unsigned GRLen = Subtarget.getGRLen();
   Value *Ordering =
       Builder.getIntN(GRLen, static_cast<uint64_t>(AI->getOrdering()));
@@ -4371,10 +4387,10 @@ LoongArchTargetLowering::getRegForInlineAsmConstraint(
 }
 
 void LoongArchTargetLowering::LowerAsmOperandForConstraint(
-    SDValue Op, std::string &Constraint, std::vector<SDValue> &Ops,
+    SDValue Op, StringRef Constraint, std::vector<SDValue> &Ops,
     SelectionDAG &DAG) const {
   // Currently only support length 1 constraints.
-  if (Constraint.length() == 1) {
+  if (Constraint.size() == 1) {
     switch (Constraint[0]) {
     case 'l':
       // Validate & create a 16-bit signed immediate operand.

@@ -6,12 +6,12 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_LIBC_SRC_SUPPORT_CPP_LIMITS_H
-#define LLVM_LIBC_SRC_SUPPORT_CPP_LIMITS_H
+#ifndef LLVM_LIBC_SRC___SUPPORT_CPP_LIMITS_H
+#define LLVM_LIBC_SRC___SUPPORT_CPP_LIMITS_H
 
 #include <limits.h>
 
-namespace __llvm_libc {
+namespace LIBC_NAMESPACE {
 namespace cpp {
 
 // Some older gcc distributions don't define these for 32 bit targets.
@@ -96,6 +96,6 @@ public:
 #endif
 
 } // namespace cpp
-} // namespace __llvm_libc
+} // namespace LIBC_NAMESPACE
 
-#endif // LLVM_LIBC_SRC_SUPPORT_CPP_LIMITS_H
+#endif // LLVM_LIBC_SRC___SUPPORT_CPP_LIMITS_H

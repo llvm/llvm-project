@@ -612,8 +612,8 @@ class InlineCostCallAnalyzer final : public CallAnalyzer {
 
   /// Handle a capped 'int' increment for Cost.
   void addCost(int64_t Inc) {
-    Inc = std::max<int64_t>(std::min<int64_t>(INT_MAX, Inc), INT_MIN);
-    Cost = std::max<int64_t>(std::min<int64_t>(INT_MAX, Inc + Cost), INT_MIN);
+    Inc = std::clamp<int64_t>(Inc, INT_MIN, INT_MAX);
+    Cost = std::clamp<int64_t>(Inc + Cost, INT_MIN, INT_MAX);
   }
 
   void onDisableSROA(AllocaInst *Arg) override {
@@ -787,7 +787,7 @@ class InlineCostCallAnalyzer final : public CallAnalyzer {
         return false;
     } else {
       // Otherwise, require instrumentation profile.
-      if (!PSI->hasInstrumentationProfile())
+      if (!(PSI->hasInstrumentationProfile() || PSI->hasSampleProfile()))
         return false;
     }
 
@@ -855,6 +855,9 @@ class InlineCostCallAnalyzer final : public CallAnalyzer {
                   SimplifiedValues.lookup(BI->getCondition()))) {
             CurrentSavings += InstrCost;
           }
+        } else if (SwitchInst *SI = dyn_cast<SwitchInst>(&I)) {
+          if (isa_and_present<ConstantInt>(SimplifiedValues.lookup(SI->getCondition())))
+            CurrentSavings += InstrCost;
         } else if (Value *V = dyn_cast<Value>(&I)) {
           // Count an instruction as savings if we can fold it.
           if (SimplifiedValues.count(V)) {
@@ -2807,14 +2810,16 @@ LLVM_DUMP_METHOD void InlineCostCallAnalyzer::dump() { print(dbgs()); }
 /// Test that there are no attribute conflicts between Caller and Callee
 ///        that prevent inlining.
 static bool functionsHaveCompatibleAttributes(
-    Function *Caller, Function *Callee,
+    Function *Caller, Function *Callee, TargetTransformInfo &TTI,
     function_ref<const TargetLibraryInfo &(Function &)> &GetTLI) {
   // Note that CalleeTLI must be a copy not a reference. The legacy pass manager
   // caches the most recently created TLI in the TargetLibraryInfoWrapperPass
   // object, and always returns the same object (which is overwritten on each
   // GetTLI call). Therefore we copy the first result.
   auto CalleeTLI = GetTLI(*Callee);
-  return GetTLI(*Caller).areInlineCompatible(CalleeTLI,
+  return (IgnoreTTIInlineCompatible ||
+          TTI.areInlineCompatible(Caller, Callee)) &&
+         GetTLI(*Caller).areInlineCompatible(CalleeTLI,
                                              InlineCallerSupersetNoBuiltin) &&
          AttributeFuncs::areInlineCompatible(*Caller, *Callee);
 }
@@ -2930,12 +2935,6 @@ std::optional<InlineResult> llvm::getAttributeBasedInliningDecision(
                                      " address space");
     }
 
-  // Never inline functions with conflicting target attributes.
-  Function *Caller = Call.getCaller();
-  if (!IgnoreTTIInlineCompatible &&
-      !CalleeTTI.areInlineCompatible(Caller, Callee))
-    return InlineResult::failure("conflicting target attributes");
-
   // Calls to functions with always-inline attributes should be inlined
   // whenever possible.
   if (Call.hasFnAttr(Attribute::AlwaysInline)) {
@@ -2950,12 +2949,8 @@ std::optional<InlineResult> llvm::getAttributeBasedInliningDecision(
 
   // Never inline functions with conflicting attributes (unless callee has
   // always-inline attribute).
-  // FIXME: functionsHaveCompatibleAttributes below checks for compatibilities
-  // of different kinds of function attributes -- sanitizer-related ones,
-  // checkDenormMode, no-builtin-memcpy, etc.  It's unclear if we really want
-  // the always-inline attribute to take precedence over these different types
-  // of function attributes.
-  if (!functionsHaveCompatibleAttributes(Caller, Callee, GetTLI))
+  Function *Caller = Call.getCaller();
+  if (!functionsHaveCompatibleAttributes(Caller, Callee, CalleeTTI, GetTLI))
     return InlineResult::failure("conflicting attributes");
 
   // Don't inline this call if the caller has the optnone attribute.

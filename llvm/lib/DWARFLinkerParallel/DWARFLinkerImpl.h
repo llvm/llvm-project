@@ -294,9 +294,6 @@ protected:
     void emitFDE(uint32_t CIEOffset, uint32_t AddrSize, uint64_t Address,
                  StringRef FDEBytes, SectionDescriptor &Section);
 
-    /// Clone and emit paper trails.
-    Error cloneAndEmitPaperTrails();
-
     std::function<CompileUnit *(uint64_t)> getUnitForOffset =
         [&](uint64_t Offset) -> CompileUnit * {
       auto CU = llvm::upper_bound(

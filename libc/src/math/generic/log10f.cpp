@@ -54,7 +54,7 @@
 // Dept. of Comp. Sci., Rutgets U., Technical Report DCS-TR-758, Nov. 2021.
 // https://arxiv.org/pdf/2111.12852.pdf.
 
-namespace __llvm_libc {
+namespace LIBC_NAMESPACE {
 
 // Lookup table for -log10(r) where r is defined in common_constants.cpp.
 static constexpr double LOG10_R[128] = {
@@ -213,4 +213,4 @@ LLVM_LIBC_FUNCTION(float, log10f, (float x)) {
   return static_cast<float>(r);
 }
 
-} // namespace __llvm_libc
+} // namespace LIBC_NAMESPACE

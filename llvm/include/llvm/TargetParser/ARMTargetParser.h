@@ -14,6 +14,7 @@
 #ifndef LLVM_TARGETPARSER_ARMTARGETPARSER_H
 #define LLVM_TARGETPARSER_ARMTARGETPARSER_H
 
+#include "llvm/ADT/StringMap.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/ARMBuildAttributes.h"
 #include "llvm/TargetParser/ARMTargetParserCommon.h"
@@ -259,7 +260,7 @@ StringRef computeDefaultTargetABI(const Triple &TT, StringRef CPU);
 /// string then the triple's arch name is used.
 StringRef getARMCPUForArch(const llvm::Triple &Triple, StringRef MArch = {});
 
-void PrintSupportedExtensions();
+void PrintSupportedExtensions(StringMap<StringRef> DescMap);
 
 } // namespace ARM
 } // namespace llvm

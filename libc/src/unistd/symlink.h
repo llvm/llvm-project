@@ -11,10 +11,10 @@
 
 #include <unistd.h>
 
-namespace __llvm_libc {
+namespace LIBC_NAMESPACE {
 
 int symlink(const char *, const char *);
 
-} // namespace __llvm_libc
+} // namespace LIBC_NAMESPACE
 
 #endif // LLVM_LIBC_SRC_UNISTD_SYMLINK_H

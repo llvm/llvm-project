@@ -13,10 +13,10 @@
 #include <math.h>
 
 template <typename T>
-class FDimTestTemplate : public __llvm_libc::testing::Test {
+class FDimTestTemplate : public LIBC_NAMESPACE::testing::Test {
 public:
   using FuncPtr = T (*)(T, T);
-  using FPBits = __llvm_libc::fputil::FPBits<T>;
+  using FPBits = LIBC_NAMESPACE::fputil::FPBits<T>;
   using UIntType = typename FPBits::UIntType;
 
   void test_na_n_arg(FuncPtr func) {
@@ -74,9 +74,9 @@ public:
 private:
   // constexpr does not work on FPBits yet, so we cannot have these constants as
   // static.
-  const T nan = T(__llvm_libc::fputil::FPBits<T>::build_quiet_nan(1));
-  const T inf = T(__llvm_libc::fputil::FPBits<T>::inf());
-  const T neg_inf = T(__llvm_libc::fputil::FPBits<T>::neg_inf());
-  const T zero = T(__llvm_libc::fputil::FPBits<T>::zero());
-  const T neg_zero = T(__llvm_libc::fputil::FPBits<T>::neg_zero());
+  const T nan = T(LIBC_NAMESPACE::fputil::FPBits<T>::build_quiet_nan(1));
+  const T inf = T(LIBC_NAMESPACE::fputil::FPBits<T>::inf());
+  const T neg_inf = T(LIBC_NAMESPACE::fputil::FPBits<T>::neg_inf());
+  const T zero = T(LIBC_NAMESPACE::fputil::FPBits<T>::zero());
+  const T neg_zero = T(LIBC_NAMESPACE::fputil::FPBits<T>::neg_zero());
 };

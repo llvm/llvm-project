@@ -1438,7 +1438,7 @@ llvm.func @integer_extension_and_truncation(%a : i32) {
 // Check that the auxiliary `null` operation is converted into a `null` value.
 // CHECK-LABEL: @null
 llvm.func @null() -> !llvm.ptr<i32> {
-  %0 = llvm.mlir.null : !llvm.ptr<i32>
+  %0 = llvm.mlir.zero : !llvm.ptr<i32>
   // CHECK: ret ptr null
   llvm.return %0 : !llvm.ptr<i32>
 }
@@ -1536,7 +1536,7 @@ llvm.func @invokeLandingpad() -> i32 attributes { personality = @__gxx_personali
   %1 = llvm.mlir.constant(dense<0> : vector<1xi8>) : !llvm.array<1 x i8>
   %2 = llvm.mlir.addressof @_ZTIi : !llvm.ptr<ptr<i8>>
   %3 = llvm.bitcast %2 : !llvm.ptr<ptr<i8>> to !llvm.ptr<i8>
-  %4 = llvm.mlir.null : !llvm.ptr<ptr<i8>>
+  %4 = llvm.mlir.zero : !llvm.ptr<ptr<i8>>
   %5 = llvm.mlir.constant(1 : i32) : i32
   %6 = llvm.alloca %5 x i8 : (i32) -> !llvm.ptr<i8>
 // CHECK: invoke void @foo(ptr %[[a1]])
