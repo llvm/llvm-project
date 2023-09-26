@@ -9281,10 +9281,7 @@ ProcessDeclAttribute(Sema &S, Scope *scope, Decl *D, const ParsedAttr &AL,
   case ParsedAttr::AT_NoMerge:
     handleNoMergeAttr(S, D, AL);
     break;
-  case ParsedAttr::AT_MSNoUniqueAddress:
-    handleNoUniqueAddressAttr(S, D, AL);
-    break;
-  case ParsedAttr::AT_ItaniumNoUniqueAddress:
+  case ParsedAttr::AT_NoUniqueAddress:
     handleNoUniqueAddressAttr(S, D, AL);
     break;
 

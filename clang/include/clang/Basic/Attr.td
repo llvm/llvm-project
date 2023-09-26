@@ -417,6 +417,7 @@ class TargetSpec {
 class TargetArch<list<string> arches> : TargetSpec {
   let Arches = arches;
 }
+
 def TargetARM : TargetArch<["arm", "thumb", "armeb", "thumbeb"]>;
 def TargetAArch64 : TargetArch<["aarch64", "aarch64_be", "aarch64_32"]>;
 def TargetAnyArm : TargetArch<!listconcat(TargetARM.Arches, TargetAArch64.Arches)>;
@@ -450,6 +451,12 @@ def TargetELF : TargetSpec {
 def TargetSupportsInitPriority : TargetSpec {
   let CustomCode = [{ !Target.getTriple().isOSzOS() }];
 }
+
+class TargetSpecificSpelling<TargetSpec target, list<Spelling> spellings> {
+  TargetSpec Target = target;
+  list<Spelling> Spellings = spellings;
+}
+
 // Attribute subject match rules that are used for #pragma clang attribute.
 //
 // A instance of AttrSubjectMatcherRule represents an individual match rule.
@@ -576,6 +583,8 @@ class Attr {
   list<Argument> Args = [];
   // Accessors which should be generated for the attribute.
   list<Accessor> Accessors = [];
+  // Specify targets for spellings.
+  list<TargetSpecificSpelling> TargetSpecificSpellings = [];
   // Set to true for attributes with arguments which require delayed parsing.
   bit LateParsed = 0;
   // Set to false to prevent an attribute from being propagated from a template
@@ -1800,21 +1809,11 @@ def ArmMveStrictPolymorphism : TypeAttr, TargetSpecificAttr<TargetARM> {
 
 def NoUniqueAddress : InheritableAttr {
   let Subjects = SubjectList<[NonBitField], ErrorDiag>;
-  // No spellings because instances of this attribute are created by
-  // MSNoUniqueAddress and ItaniumNoUniqueAddress
-  let Spellings = [];
-  let Documentation = [InternalOnly];
-}
-
-def MSNoUniqueAddress : InheritableAttr, TargetSpecificAttr<TargetMicrosoftCXXABI> {
-  let Subjects = SubjectList<[NonBitField], ErrorDiag>;
-  let Spellings = [CXX11<"msvc", "no_unique_address", 201803>];
-  let Documentation = [MSNoUniqueAddressDocs];
-}
-
-def ItaniumNoUniqueAddress : InheritableAttr, TargetSpecificAttr<TargetItaniumCXXABI> {
-  let Subjects = SubjectList<[NonBitField], ErrorDiag>;
-  let Spellings = [CXX11<"", "no_unique_address", 201803>];
+  let Spellings = [CXX11<"", "no_unique_address", 201803>, CXX11<"msvc", "no_unique_address", 201803>];
+  let TargetSpecificSpellings = [
+    TargetSpecificSpelling<TargetItaniumCXXABI, [CXX11<"", "no_unique_address", 201803>]>,
+    TargetSpecificSpelling<TargetMicrosoftCXXABI, [CXX11<"msvc", "no_unique_address", 201803>]>,
+  ];
   let Documentation = [NoUniqueAddressDocs];
 }
 

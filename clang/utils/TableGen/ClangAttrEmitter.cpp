@@ -4251,6 +4251,54 @@ static void GenerateTargetRequirements(const Record &Attr,
   OS << "}\n\n";
 }
 
+static void
+GenerateSpellingTargetRequirements(const Record &Attr,
+                                   const std::vector<Record *> &TargetSpellings,
+                                   raw_ostream &OS) {
+  // If there are no target specific spellings, use the default target handler.
+  if (TargetSpellings.empty())
+    return;
+
+  std::string Test;
+  bool UsesT = false;
+  const std::vector<FlattenedSpelling> SpellingList =
+      GetFlattenedSpellings(Attr);
+  // for (const auto &TargetSpelling : TargetSpellings) {
+  for (unsigned TargetIndex = 0; TargetIndex < TargetSpellings.size();
+       ++TargetIndex) {
+    const auto &TargetSpelling = TargetSpellings[TargetIndex];
+    std::vector<FlattenedSpelling> Spellings =
+        GetFlattenedSpellings(*TargetSpelling);
+
+    Test += "((SpellingListIndex == ";
+    for (unsigned Index = 0; Index < Spellings.size(); ++Index) {
+      Test +=
+          llvm::itostr(getSpellingListIndex(SpellingList, Spellings[Index]));
+      // fprintf(stderr, " -- %d\n", getSpellingListIndex(SpellingList,
+      // Spellings[Index]));
+      if (Index != Spellings.size() - 1)
+        Test += " ||\n    SpellingListIndex == ";
+      else
+        Test += ") && ";
+    }
+
+    const Record *Target = TargetSpelling->getValueAsDef("Target");
+    std::vector<StringRef> Arches = Target->getValueAsListOfStrings("Arches");
+    std::string FnName = "isTargetSpelling";
+    UsesT |= GenerateTargetSpecificAttrChecks(Target, Arches, Test, &FnName);
+    Test += ")";
+    if (TargetIndex != TargetSpellings.size() - 1)
+      Test += " || ";
+  }
+
+  OS << "bool spellingExistsInTarget(const TargetInfo &Target,\n";
+  OS << "                            const unsigned SpellingListIndex) const "
+        "override {\n";
+  if (UsesT)
+    OS << "  const llvm::Triple &T = Target.getTriple(); (void)T;\n";
+  OS << "  return " << Test << ";\n", OS << "}\n\n";
+}
+
 static void GenerateSpellingIndexToSemanticSpelling(const Record &Attr,
                                                     raw_ostream &OS) {
   // If the attribute does not have a semantic form, we can bail out early.
@@ -4465,6 +4513,8 @@ void EmitClangAttrParsedAttrImpl(RecordKeeper &Records, raw_ostream &OS) {
     GenerateMutualExclusionsChecks(Attr, Records, OS, MergeDeclOS, MergeStmtOS);
     GenerateLangOptRequirements(Attr, OS);
     GenerateTargetRequirements(Attr, Dupes, OS);
+    GenerateSpellingTargetRequirements(
+        Attr, Attr.getValueAsListOfDefs("TargetSpecificSpellings"), OS);
     GenerateSpellingIndexToSemanticSpelling(Attr, OS);
     PragmaAttributeSupport.generateStrictConformsTo(*I->second, OS);
     GenerateHandleDeclAttribute(Attr, OS);
