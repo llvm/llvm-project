@@ -2946,7 +2946,7 @@ static void emitAttributes(RecordKeeper &Records, raw_ostream &OS,
 }
 // Emits the class definitions for attributes.
 void clang::EmitClangAttrClass(RecordKeeper &Records, raw_ostream &OS) {
-  emitSourceFileHeader("Attribute classes' definitions", OS);
+  emitSourceFileHeader("Attribute classes' definitions", OS, Records);
 
   OS << "#ifndef LLVM_CLANG_ATTR_CLASSES_INC\n";
   OS << "#define LLVM_CLANG_ATTR_CLASSES_INC\n\n";
@@ -2958,7 +2958,8 @@ void clang::EmitClangAttrClass(RecordKeeper &Records, raw_ostream &OS) {
 
 // Emits the class method definitions for attributes.
 void clang::EmitClangAttrImpl(RecordKeeper &Records, raw_ostream &OS) {
-  emitSourceFileHeader("Attribute classes' member function definitions", OS);
+  emitSourceFileHeader("Attribute classes' member function definitions", OS,
+                       Records);
 
   emitAttributes(Records, OS, false);
 
@@ -3194,7 +3195,8 @@ namespace clang {
 
 // Emits the enumeration list for attributes.
 void EmitClangAttrList(RecordKeeper &Records, raw_ostream &OS) {
-  emitSourceFileHeader("List of all attributes that Clang recognizes", OS);
+  emitSourceFileHeader("List of all attributes that Clang recognizes", OS,
+                       Records);
 
   AttrClassHierarchy Hierarchy(Records);
 
@@ -3236,7 +3238,8 @@ void EmitClangAttrList(RecordKeeper &Records, raw_ostream &OS) {
 void EmitClangAttrPrintList(const std::string &FieldName, RecordKeeper &Records,
                             raw_ostream &OS) {
   emitSourceFileHeader(
-      "List of attributes that can be print on the left side of a decl", OS);
+      "List of attributes that can be print on the left side of a decl", OS,
+      Records);
 
   AttrClassHierarchy Hierarchy(Records);
 
@@ -3265,7 +3268,8 @@ void EmitClangAttrPrintList(const std::string &FieldName, RecordKeeper &Records,
 // Emits the enumeration list for attributes.
 void EmitClangAttrSubjectMatchRuleList(RecordKeeper &Records, raw_ostream &OS) {
   emitSourceFileHeader(
-      "List of all attribute subject matching rules that Clang recognizes", OS);
+      "List of all attribute subject matching rules that Clang recognizes", OS,
+      Records);
   PragmaClangAttributeSupport &PragmaAttributeSupport =
       getPragmaAttributeSupport(Records);
   emitDefaultDefine(OS, "ATTR_MATCH_RULE", nullptr);
@@ -3275,7 +3279,7 @@ void EmitClangAttrSubjectMatchRuleList(RecordKeeper &Records, raw_ostream &OS) {
 
 // Emits the code to read an attribute from a precompiled header.
 void EmitClangAttrPCHRead(RecordKeeper &Records, raw_ostream &OS) {
-  emitSourceFileHeader("Attribute deserialization code", OS);
+  emitSourceFileHeader("Attribute deserialization code", OS, Records);
 
   Record *InhClass = Records.getClass("InheritableAttr");
   std::vector<Record*> Attrs = Records.getAllDerivedDefinitions("Attr"),
@@ -3330,7 +3334,7 @@ void EmitClangAttrPCHRead(RecordKeeper &Records, raw_ostream &OS) {
 
 // Emits the code to write an attribute to a precompiled header.
 void EmitClangAttrPCHWrite(RecordKeeper &Records, raw_ostream &OS) {
-  emitSourceFileHeader("Attribute serialization code", OS);
+  emitSourceFileHeader("Attribute serialization code", OS, Records);
 
   Record *InhClass = Records.getClass("InheritableAttr");
   std::vector<Record*> Attrs = Records.getAllDerivedDefinitions("Attr"), Args;
@@ -3531,7 +3535,8 @@ void EmitClangAttrTokenKinds(RecordKeeper &Records, raw_ostream &OS) {
 
 // Emits the list of spellings for attributes.
 void EmitClangAttrHasAttrImpl(RecordKeeper &Records, raw_ostream &OS) {
-  emitSourceFileHeader("Code to implement the __has_attribute logic", OS);
+  emitSourceFileHeader("Code to implement the __has_attribute logic", OS,
+                       Records);
 
   // Separate all of the attributes out into four group: generic, C++11, GNU,
   // and declspecs. Then generate a big switch statement for each of them.
@@ -3611,9 +3616,9 @@ void EmitClangAttrHasAttrImpl(RecordKeeper &Records, raw_ostream &OS) {
 }
 
 void EmitClangAttrSpellingListIndex(RecordKeeper &Records, raw_ostream &OS) {
-  emitSourceFileHeader("Code to translate different attribute spellings "
-                       "into internal identifiers",
-                       OS);
+  emitSourceFileHeader("Code to translate different attribute spellings into "
+                       "internal identifiers",
+                       OS, Records);
 
   OS << "  switch (getParsedKind()) {\n";
   OS << "    case IgnoredAttribute:\n";
@@ -3643,7 +3648,8 @@ void EmitClangAttrSpellingListIndex(RecordKeeper &Records, raw_ostream &OS) {
 
 // Emits code used by RecursiveASTVisitor to visit attributes
 void EmitClangAttrASTVisitor(RecordKeeper &Records, raw_ostream &OS) {
-  emitSourceFileHeader("Used by RecursiveASTVisitor to visit attributes.", OS);
+  emitSourceFileHeader("Used by RecursiveASTVisitor to visit attributes.", OS,
+                       Records);
 
   std::vector<Record*> Attrs = Records.getAllDerivedDefinitions("Attr");
 
@@ -3768,7 +3774,8 @@ void EmitClangAttrTemplateInstantiateHelper(const std::vector<Record *> &Attrs,
 
 // Emits code to instantiate dependent attributes on templates.
 void EmitClangAttrTemplateInstantiate(RecordKeeper &Records, raw_ostream &OS) {
-  emitSourceFileHeader("Template instantiation code for attributes", OS);
+  emitSourceFileHeader("Template instantiation code for attributes", OS,
+                       Records);
 
   std::vector<Record*> Attrs = Records.getAllDerivedDefinitions("Attr");
 
@@ -3790,7 +3797,8 @@ void EmitClangAttrTemplateInstantiate(RecordKeeper &Records, raw_ostream &OS) {
 
 // Emits the list of parsed attributes.
 void EmitClangAttrParsedAttrList(RecordKeeper &Records, raw_ostream &OS) {
-  emitSourceFileHeader("List of all attributes that Clang recognizes", OS);
+  emitSourceFileHeader("List of all attributes that Clang recognizes", OS,
+                       Records);
 
   OS << "#ifndef PARSED_ATTR\n";
   OS << "#define PARSED_ATTR(NAME) NAME\n";
@@ -4376,7 +4384,7 @@ static bool IsKnownToGCC(const Record &Attr) {
 
 /// Emits the parsed attribute helpers
 void EmitClangAttrParsedAttrImpl(RecordKeeper &Records, raw_ostream &OS) {
-  emitSourceFileHeader("Parsed attribute helpers", OS);
+  emitSourceFileHeader("Parsed attribute helpers", OS, Records);
 
   OS << "#if !defined(WANT_DECL_MERGE_LOGIC) && "
      << "!defined(WANT_STMT_MERGE_LOGIC)\n";
@@ -4538,7 +4546,7 @@ void EmitClangAttrParsedAttrImpl(RecordKeeper &Records, raw_ostream &OS) {
 
 // Emits the kind list of parsed attributes
 void EmitClangAttrParsedAttrKinds(RecordKeeper &Records, raw_ostream &OS) {
-  emitSourceFileHeader("Attribute name matcher", OS);
+  emitSourceFileHeader("Attribute name matcher", OS, Records);
 
   std::vector<Record *> Attrs = Records.getAllDerivedDefinitions("Attr");
   std::vector<StringMatcher::StringPair> GNU, Declspec, Microsoft, CXX11,
@@ -4639,7 +4647,7 @@ void EmitClangAttrParsedAttrKinds(RecordKeeper &Records, raw_ostream &OS) {
 
 // Emits the code to dump an attribute.
 void EmitClangAttrTextNodeDump(RecordKeeper &Records, raw_ostream &OS) {
-  emitSourceFileHeader("Attribute text node dumper", OS);
+  emitSourceFileHeader("Attribute text node dumper", OS, Records);
 
   std::vector<Record*> Attrs = Records.getAllDerivedDefinitions("Attr"), Args;
   for (const auto *Attr : Attrs) {
@@ -4678,7 +4686,7 @@ void EmitClangAttrTextNodeDump(RecordKeeper &Records, raw_ostream &OS) {
 }
 
 void EmitClangAttrNodeTraverse(RecordKeeper &Records, raw_ostream &OS) {
-  emitSourceFileHeader("Attribute text node traverser", OS);
+  emitSourceFileHeader("Attribute text node traverser", OS, Records);
 
   std::vector<Record *> Attrs = Records.getAllDerivedDefinitions("Attr"), Args;
   for (const auto *Attr : Attrs) {
@@ -4707,7 +4715,7 @@ void EmitClangAttrNodeTraverse(RecordKeeper &Records, raw_ostream &OS) {
 }
 
 void EmitClangAttrParserStringSwitches(RecordKeeper &Records, raw_ostream &OS) {
-  emitSourceFileHeader("Parser-related llvm::StringSwitch cases", OS);
+  emitSourceFileHeader("Parser-related llvm::StringSwitch cases", OS, Records);
   emitClangAttrArgContextList(Records, OS);
   emitClangAttrIdentifierArgList(Records, OS);
   emitClangAttrUnevaluatedStringLiteralList(Records, OS);
@@ -4724,7 +4732,7 @@ void EmitClangAttrSubjectMatchRulesParserStringSwitches(RecordKeeper &Records,
 }
 
 void EmitClangAttrDocTable(RecordKeeper &Records, raw_ostream &OS) {
-  emitSourceFileHeader("Clang attribute documentation", OS);
+  emitSourceFileHeader("Clang attribute documentation", OS, Records);
 
   std::vector<Record *> Attrs = Records.getAllDerivedDefinitions("Attr");
   for (const auto *A : Attrs) {
