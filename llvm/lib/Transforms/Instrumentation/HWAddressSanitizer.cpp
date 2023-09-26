@@ -305,19 +305,19 @@ private:
 
   int64_t getAccessInfo(bool IsWrite, unsigned AccessSizeIndex);
   ShadowTagCheckInfo insertShadowTagCheck(Value *Ptr, Instruction *InsertBefore,
-                                          DomTreeUpdater *DTU, LoopInfo *LI);
+                                          DomTreeUpdater &DTU, LoopInfo &LI);
   void instrumentMemAccessOutline(Value *Ptr, bool IsWrite,
                                   unsigned AccessSizeIndex,
                                   Instruction *InsertBefore,
-                                  DomTreeUpdater *DTU, LoopInfo *LI);
+                                  DomTreeUpdater &DTU, LoopInfo &LI);
   void instrumentMemAccessInline(Value *Ptr, bool IsWrite,
                                  unsigned AccessSizeIndex,
-                                 Instruction *InsertBefore, DomTreeUpdater *DTU,
-                                 LoopInfo *LI);
+                                 Instruction *InsertBefore, DomTreeUpdater &DTU,
+                                 LoopInfo &LI);
   bool ignoreMemIntrinsic(MemIntrinsic *MI);
   void instrumentMemIntrinsic(MemIntrinsic *MI);
-  bool instrumentMemAccess(InterestingMemoryOperand &O, DomTreeUpdater *DTU,
-                           LoopInfo *LI);
+  bool instrumentMemAccess(InterestingMemoryOperand &O, DomTreeUpdater &DTU,
+                           LoopInfo &LI);
   bool ignoreAccess(Instruction *Inst, Value *Ptr);
   void getInterestingMemoryOperands(
       Instruction *I, SmallVectorImpl<InterestingMemoryOperand> &Interesting);
@@ -872,7 +872,7 @@ int64_t HWAddressSanitizer::getAccessInfo(bool IsWrite,
 
 HWAddressSanitizer::ShadowTagCheckInfo
 HWAddressSanitizer::insertShadowTagCheck(Value *Ptr, Instruction *InsertBefore,
-                                         DomTreeUpdater *DTU, LoopInfo *LI) {
+                                         DomTreeUpdater &DTU, LoopInfo &LI) {
   ShadowTagCheckInfo R;
 
   IRBuilder<> IRB(InsertBefore);
@@ -893,7 +893,7 @@ HWAddressSanitizer::insertShadowTagCheck(Value *Ptr, Instruction *InsertBefore,
 
   R.TagMismatchTerm = SplitBlockAndInsertIfThen(
       TagMismatch, InsertBefore, false,
-      MDBuilder(*C).createBranchWeights(1, 100000), DTU, LI);
+      MDBuilder(*C).createBranchWeights(1, 100000), &DTU, &LI);
 
   return R;
 }
@@ -901,8 +901,8 @@ HWAddressSanitizer::insertShadowTagCheck(Value *Ptr, Instruction *InsertBefore,
 void HWAddressSanitizer::instrumentMemAccessOutline(Value *Ptr, bool IsWrite,
                                                     unsigned AccessSizeIndex,
                                                     Instruction *InsertBefore,
-                                                    DomTreeUpdater *DTU,
-                                                    LoopInfo *LI) {
+                                                    DomTreeUpdater &DTU,
+                                                    LoopInfo &LI) {
   assert(!UsePageAliases);
   const int64_t AccessInfo = getAccessInfo(IsWrite, AccessSizeIndex);
 
@@ -923,8 +923,8 @@ void HWAddressSanitizer::instrumentMemAccessOutline(Value *Ptr, bool IsWrite,
 void HWAddressSanitizer::instrumentMemAccessInline(Value *Ptr, bool IsWrite,
                                                    unsigned AccessSizeIndex,
                                                    Instruction *InsertBefore,
-                                                   DomTreeUpdater *DTU,
-                                                   LoopInfo *LI) {
+                                                   DomTreeUpdater &DTU,
+                                                   LoopInfo &LI) {
   assert(!UsePageAliases);
   const int64_t AccessInfo = getAccessInfo(IsWrite, AccessSizeIndex);
 
@@ -935,7 +935,7 @@ void HWAddressSanitizer::instrumentMemAccessInline(Value *Ptr, bool IsWrite,
       IRB.CreateICmpUGT(TCI.MemTag, ConstantInt::get(Int8Ty, 15));
   Instruction *CheckFailTerm = SplitBlockAndInsertIfThen(
       OutOfShortGranuleTagRange, TCI.TagMismatchTerm, !Recover,
-      MDBuilder(*C).createBranchWeights(1, 100000), DTU, LI);
+      MDBuilder(*C).createBranchWeights(1, 100000), &DTU, &LI);
 
   IRB.SetInsertPoint(TCI.TagMismatchTerm);
   Value *PtrLowBits = IRB.CreateTrunc(IRB.CreateAnd(TCI.PtrLong, 15), Int8Ty);
@@ -943,8 +943,8 @@ void HWAddressSanitizer::instrumentMemAccessInline(Value *Ptr, bool IsWrite,
       PtrLowBits, ConstantInt::get(Int8Ty, (1 << AccessSizeIndex) - 1));
   Value *PtrLowBitsOOB = IRB.CreateICmpUGE(PtrLowBits, TCI.MemTag);
   SplitBlockAndInsertIfThen(PtrLowBitsOOB, TCI.TagMismatchTerm, false,
-                            MDBuilder(*C).createBranchWeights(1, 100000), DTU,
-                            LI, CheckFailTerm->getParent());
+                            MDBuilder(*C).createBranchWeights(1, 100000), &DTU,
+                            &LI, CheckFailTerm->getParent());
 
   IRB.SetInsertPoint(TCI.TagMismatchTerm);
   Value *InlineTagAddr = IRB.CreateOr(TCI.AddrLong, 15);
@@ -952,8 +952,8 @@ void HWAddressSanitizer::instrumentMemAccessInline(Value *Ptr, bool IsWrite,
   Value *InlineTag = IRB.CreateLoad(Int8Ty, InlineTagAddr);
   Value *InlineTagMismatch = IRB.CreateICmpNE(TCI.PtrTag, InlineTag);
   SplitBlockAndInsertIfThen(InlineTagMismatch, TCI.TagMismatchTerm, false,
-                            MDBuilder(*C).createBranchWeights(1, 100000), DTU,
-                            LI, CheckFailTerm->getParent());
+                            MDBuilder(*C).createBranchWeights(1, 100000), &DTU,
+                            &LI, CheckFailTerm->getParent());
 
   IRB.SetInsertPoint(CheckFailTerm);
   InlineAsm *Asm;
@@ -1029,8 +1029,8 @@ void HWAddressSanitizer::instrumentMemIntrinsic(MemIntrinsic *MI) {
 }
 
 bool HWAddressSanitizer::instrumentMemAccess(InterestingMemoryOperand &O,
-                                             DomTreeUpdater *DTU,
-                                             LoopInfo *LI) {
+                                             DomTreeUpdater &DTU,
+                                             LoopInfo &LI) {
   Value *Addr = O.getPtr();
 
   LLVM_DEBUG(dbgs() << "Instrumenting: " << O.getInsn() << "\n");
@@ -1537,10 +1537,10 @@ void HWAddressSanitizer::sanitizeFunction(Function &F,
                    Mapping.WithFrameRecord &&
                    !SInfo.AllocasToInstrument.empty());
 
-  DominatorTree &DT = FAM.getResult<DominatorTreeAnalysis>(F);
-  PostDominatorTree &PDT = FAM.getResult<PostDominatorTreeAnalysis>(F);
-  LoopInfo &LI = FAM.getResult<LoopAnalysis>(F);
   if (!SInfo.AllocasToInstrument.empty()) {
+    const DominatorTree &DT = FAM.getResult<DominatorTreeAnalysis>(F);
+    const PostDominatorTree &PDT = FAM.getResult<PostDominatorTreeAnalysis>(F);
+    const LoopInfo &LI = FAM.getResult<LoopAnalysis>(F);
     Value *StackTag = getStackBaseTag(EntryIRB);
     Value *UARTag = getUARTag(EntryIRB);
     instrumentStack(SInfo, StackTag, UARTag, DT, PDT, LI);
@@ -1559,9 +1559,12 @@ void HWAddressSanitizer::sanitizeFunction(Function &F,
     }
   }
 
+  DominatorTree *DT = FAM.getCachedResult<DominatorTreeAnalysis>(F);
+  PostDominatorTree *PDT = FAM.getCachedResult<PostDominatorTreeAnalysis>(F);
+  LoopInfo *LI = FAM.getCachedResult<LoopAnalysis>(F);
   DomTreeUpdater DTU(DT, PDT, DomTreeUpdater::UpdateStrategy::Lazy);
   for (auto &Operand : OperandsToInstrument)
-    instrumentMemAccess(Operand, &DTU, &LI);
+    instrumentMemAccess(Operand, DTU, *LI);
   DTU.flush();
 
   if (ClInstrumentMemIntrinsics && !IntrinToInstrument.empty()) {
