@@ -41,6 +41,7 @@
 #include "MisplacedPointerArithmeticInAllocCheck.h"
 #include "MisplacedWideningCastCheck.h"
 #include "MoveForwardingReferenceCheck.h"
+#include "MoveSharedPointerContentsCheck.h"
 #include "MultiLevelImplicitPointerConversionCheck.h"
 #include "MultipleNewInOneExpressionCheck.h"
 #include "MultipleStatementMacroCheck.h"
@@ -155,6 +156,8 @@ public:
         "bugprone-misplaced-widening-cast");
     CheckFactories.registerCheck<MoveForwardingReferenceCheck>(
         "bugprone-move-forwarding-reference");
+    CheckFactories.registerCheck<MoveSharedPointerContentsCheck>(
+        "bugprone-move-shared-pointer-contents");
     CheckFactories.registerCheck<MultiLevelImplicitPointerConversionCheck>(
         "bugprone-multi-level-implicit-pointer-conversion");
     CheckFactories.registerCheck<MultipleNewInOneExpressionCheck>(

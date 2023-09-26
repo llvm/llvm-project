@@ -162,6 +162,12 @@ New checks
   Detects incorrect usages of ``std::enable_if`` that don't name the nested
   ``type`` type.
 
+- New :doc:`bugprone-move-shared-pointer-contents
+  <clang-tidy/checks/bugprone/move-shared-pointer-contents>` check.
+
+  Detects calls to move the contents out of a ``std::shared_ptr`` rather than
+  moving the pointer itself.
+
 - New :doc:`bugprone-multi-level-implicit-pointer-conversion
   <clang-tidy/checks/bugprone/multi-level-implicit-pointer-conversion>` check.
 
@@ -368,8 +374,7 @@ Changes in existing checks
   <clang-tidy/checks/misc/const-correctness>` check to avoid false positive when
   using pointer to member function. Additionally, the check no longer emits
   a diagnostic when a variable that is not type-dependent is an operand of a
-  type-dependent binary operator. Improved performance of the check through
-  optimizations.
+  type-dependent binary operator.
 
 - Improved :doc:`misc-include-cleaner
   <clang-tidy/checks/misc/include-cleaner>` check by adding option
@@ -383,7 +388,7 @@ Changes in existing checks
 
 - Improved :doc:`misc-unused-using-decls
   <clang-tidy/checks/misc/unused-using-decls>` check to avoid false positive when
-  using in elaborated type and only check cpp files.
+  using in elaborated type.
 
 - Improved :doc:`modernize-avoid-bind
   <clang-tidy/checks/modernize/avoid-bind>` check to
