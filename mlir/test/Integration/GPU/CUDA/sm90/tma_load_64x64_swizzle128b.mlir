@@ -1,30 +1,17 @@
-// RUN: mlir-opt %s --convert-nvgpu-to-nvvm \
-// RUN:         -convert-linalg-to-loops \
-// RUN:         -canonicalize -cse \
-// RUN:         -gpu-kernel-outlining \
-// RUN:         -canonicalize -cse \
-// RUN:         -convert-vector-to-scf  \
-// RUN:         -canonicalize -cse \
-// RUN:         -lower-affine \
-// RUN:         -canonicalize -cse \
-// RUN:         -convert-scf-to-cf \
-// RUN:         -canonicalize -cse \
-// RUN:         -convert-nvvm-to-llvm \
-// RUN:         -canonicalize -cse \
-// RUN:         -convert-nvgpu-to-nvvm \
-// RUN:         -canonicalize -cse \
-// RUN:         -convert-scf-to-cf  \
-// RUN:         -convert-vector-to-llvm \
-// RUN:         -canonicalize -cse \
-// RUN:         -convert-math-to-llvm \
-// RUN:         -canonicalize -cse \
-// RUN:         -lower-affine \
-// RUN:         -convert-index-to-llvm=index-bitwidth=32 \
-// RUN:         -convert-arith-to-llvm \
-// RUN:         -finalize-memref-to-llvm='use-opaque-pointers=1' \
-// RUN:         -convert-func-to-llvm \
-// RUN:         -canonicalize -cse \
-// RUN:         -expand-strided-metadata --nvvm-attach-target="module=main_kernel features=+ptx80 chip=sm_90 O=3" \
+// RUN: mlir-opt %s \
+// RUN:    -convert-nvgpu-to-nvvm \
+// RUN:    -canonicalize -cse \
+// RUN:    -gpu-kernel-outlining \
+// RUN:    -convert-vector-to-scf  \
+// RUN:    -convert-scf-to-cf \
+// RUN:    -convert-nvvm-to-llvm \
+// RUN:    -convert-vector-to-llvm \
+// RUN:    -convert-index-to-llvm=index-bitwidth=32 \
+// RUN:    -convert-arith-to-llvm \
+// RUN:    -finalize-memref-to-llvm='use-opaque-pointers=1' \
+// RUN:    -convert-func-to-llvm \
+// RUN:    -canonicalize -cse \
+// RUN:    -expand-strided-metadata --nvvm-attach-target="module=main_kernel features=+ptx80 chip=sm_90 O=3" \
 // RUN:  | mlir-opt -pass-pipeline='builtin.module(gpu.module(strip-debuginfo,convert-gpu-to-nvvm,convert-index-to-llvm{index-bitwidth=32},canonicalize,cse))' \
 // RUN:  | mlir-opt --gpu-to-llvm --gpu-module-to-binary -canonicalize -cse -reconcile-unrealized-casts \
 // RUN:  | mlir-cpu-runner \
