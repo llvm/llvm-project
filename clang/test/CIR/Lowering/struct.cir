@@ -1,6 +1,5 @@
 // RUN: cir-opt %s -cir-to-llvm -o %t.mlir
 // RUN: FileCheck --input-file=%t.mlir %s
-// XFAIL: *
 
 !s32i = !cir.int<s, 32>
 !u8i = !cir.int<u, 8>
@@ -17,9 +16,9 @@ module {
     // CHECK: %[[#ARRSIZE:]] = llvm.mlir.constant(1 : index) : i64
     // CHECK: %[[#STRUCT:]] = llvm.alloca %[[#ARRSIZE]] x !llvm.struct<"struct.S", (i8, i32)>
     %3 = cir.get_member %1[0] {name = "c"} : !cir.ptr<!ty_22S22> -> !cir.ptr<!u8i>
-    // CHECK: = llvm.getelementptr %[[#STRUCT]][0, 0] : (!llvm.ptr) -> !llvm.ptr
+    // CHECK: = llvm.getelementptr %[[#STRUCT]][0, 0] : (!llvm.ptr) -> !llvm.ptr, !llvm.struct<"struct.S", (i8, i32)>
     %5 = cir.get_member %1[1] {name = "i"} : !cir.ptr<!ty_22S22> -> !cir.ptr<!s32i>
-    // CHECK: = llvm.getelementptr %[[#STRUCT]][0, 1] : (!llvm.ptr) -> !llvm.ptr
+    // CHECK: = llvm.getelementptr %[[#STRUCT]][0, 1] : (!llvm.ptr) -> !llvm.ptr, !llvm.struct<"struct.S", (i8, i32)>
     cir.return
   }
 

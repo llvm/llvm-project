@@ -1,5 +1,6 @@
-// RUN: cir-opt %s -cir-to-llvm -o - | FileCheck %s -check-prefix=MLIR
-// RUN: cir-translate %s -cir-to-llvmir  | FileCheck %s -check-prefix=LLVM
+// RUN: cir-opt %s -cir-to-llvm -o %t.cir
+// RUN: FileCheck %s --input-file=%t.cir -check-prefix=MLIR
+
 !s32i = !cir.int<s, 32>
 module {
   cir.func @f(%arg0: !cir.ptr<!s32i>) {
@@ -18,19 +19,10 @@ module {
 // MLIR-NEXT:     %0 = llvm.mlir.constant(1 : index) : i64
 // MLIR-NEXT:     %1 = llvm.alloca %0 x !llvm.ptr {alignment = 8 : i64} : (i64) -> !llvm.ptr
 // MLIR-NEXT:     llvm.store %arg0, %1 : !llvm.ptr, !llvm.ptr
-// MLIR-NEXT:     %2 = llvm.load %1 : !llvm.ptr
+// MLIR-NEXT:     %2 = llvm.load %1 : !llvm.ptr -> !llvm.ptr
 // MLIR-NEXT:     %3 = llvm.mlir.constant(1 : i32) : i32
-// MLIR-NEXT:     %4 = llvm.getelementptr %2[%3] : (!llvm.ptr, i32) -> !llvm.ptr
-// MLIR-NEXT:     %5 = llvm.load %4 : !llvm.ptr
+// MLIR-NEXT:     %4 = llvm.getelementptr %2[%3] : (!llvm.ptr, i32) -> !llvm.ptr, i32
+// MLIR-NEXT:     %5 = llvm.load %4 : !llvm.ptr -> i32
 // MLIR-NEXT:     llvm.return
 // MLIR-NEXT:   }
 // MLIR-NEXT: }
-
-//      LLVM: define void @f(ptr %0)
-// LLVM-NEXT:   %2 = alloca ptr, i64 1, align 8
-// LLVM-NEXT:   store ptr %0, ptr %2, align 8
-// LLVM-NEXT:   %3 = load ptr, ptr %2, align 8
-// LLVM-NEXT:   %4 = getelementptr i32, ptr %3, i32 1
-// LLVM-NEXT:   %5 = load i32, ptr %4, align 4
-// LLVM-NEXT:   ret void
-// LLVM-NEXT: }

@@ -1773,8 +1773,7 @@ public:
       // Since the base address is a pointer to an aggregate, the first offset
       // is always zero. The second offset tell us which member it will access.
       llvm::SmallVector<mlir::LLVM::GEPArg, 2> offset{0, op.getIndex()};
-      const auto elementTy =
-          getTypeConverter()->convertType(structTy.getMembers()[op.getIndex()]);
+      const auto elementTy = getTypeConverter()->convertType(structTy);
       rewriter.replaceOpWithNewOp<mlir::LLVM::GEPOp>(op, llResTy, elementTy,
                                                      adaptor.getAddr(), offset);
       return mlir::success();

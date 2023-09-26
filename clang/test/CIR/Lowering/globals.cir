@@ -104,27 +104,27 @@ module {
     %5 = cir.get_global @string : cir.ptr <!cir.array<!s8i x 8>>
     %6 = cir.cast(array_to_ptrdecay, %5 : !cir.ptr<!cir.array<!s8i x 8>>), !cir.ptr<!s8i>
     // MLIR: %[[RES:[0-9]+]] = llvm.mlir.addressof @string : !llvm.ptr
-    // MLIR: %{{[0-9]+}} = llvm.getelementptr %[[RES]][0] : (!llvm.ptr) -> !llvm.ptr
+    // MLIR: %{{[0-9]+}} = llvm.getelementptr %[[RES]][0] : (!llvm.ptr) -> !llvm.ptr, i8
     cir.store %6, %0 : !cir.ptr<!s8i>, cir.ptr <!cir.ptr<!s8i>>
     %7 = cir.get_global @uint : cir.ptr <!cir.array<!u32i x 1>>
     %8 = cir.cast(array_to_ptrdecay, %7 : !cir.ptr<!cir.array<!u32i x 1>>), !cir.ptr<!u32i>
     // MLIR: %[[RES:[0-9]+]] = llvm.mlir.addressof @uint : !llvm.ptr
-    // MLIR: %{{[0-9]+}} = llvm.getelementptr %[[RES]][0] : (!llvm.ptr) -> !llvm.ptr
+    // MLIR: %{{[0-9]+}} = llvm.getelementptr %[[RES]][0] : (!llvm.ptr) -> !llvm.ptr, i32
     cir.store %8, %1 : !cir.ptr<!u32i>, cir.ptr <!cir.ptr<!u32i>>
     %9 = cir.get_global @sshort : cir.ptr <!cir.array<!s16i x 2>>
     %10 = cir.cast(array_to_ptrdecay, %9 : !cir.ptr<!cir.array<!s16i x 2>>), !cir.ptr<!s16i>
     // MLIR: %[[RES:[0-9]+]] = llvm.mlir.addressof @sshort : !llvm.ptr
-    // MLIR: %{{[0-9]+}} = llvm.getelementptr %[[RES]][0] : (!llvm.ptr) -> !llvm.ptr
+    // MLIR: %{{[0-9]+}} = llvm.getelementptr %[[RES]][0] : (!llvm.ptr) -> !llvm.ptr, i16
     cir.store %10, %2 : !cir.ptr<!s16i>, cir.ptr <!cir.ptr<!s16i>>
     %11 = cir.get_global @sint : cir.ptr <!cir.array<!s32i x 3>>
     %12 = cir.cast(array_to_ptrdecay, %11 : !cir.ptr<!cir.array<!s32i x 3>>), !cir.ptr<!s32i>
     // MLIR: %[[RES:[0-9]+]] = llvm.mlir.addressof @sint : !llvm.ptr
-    // MLIR: %{{[0-9]+}} = llvm.getelementptr %[[RES]][0] : (!llvm.ptr) -> !llvm.ptr
+    // MLIR: %{{[0-9]+}} = llvm.getelementptr %[[RES]][0] : (!llvm.ptr) -> !llvm.ptr, i32
     cir.store %12, %3 : !cir.ptr<!s32i>, cir.ptr <!cir.ptr<!s32i>>
     %13 = cir.get_global @ll : cir.ptr <!cir.array<!s64i x 4>>
     %14 = cir.cast(array_to_ptrdecay, %13 : !cir.ptr<!cir.array<!s64i x 4>>), !cir.ptr<!s64i>
     // MLIR: %[[RES:[0-9]+]] = llvm.mlir.addressof @ll : !llvm.ptr
-    // MLIR: %{{[0-9]+}} = llvm.getelementptr %[[RES]][0] : (!llvm.ptr) -> !llvm.ptr
+    // MLIR: %{{[0-9]+}} = llvm.getelementptr %[[RES]][0] : (!llvm.ptr) -> !llvm.ptr, i64
     cir.store %14, %4 : !cir.ptr<!s64i>, cir.ptr <!cir.ptr<!s64i>>
     cir.return
   }
