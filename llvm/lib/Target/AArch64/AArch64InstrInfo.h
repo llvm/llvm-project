@@ -328,7 +328,7 @@ public:
 
   void buildClearRegister(Register Reg, MachineBasicBlock &MBB,
                           MachineBasicBlock::iterator Iter, DebugLoc &DL,
-                          bool NoSideEffects = false) const override;
+                          bool AllowSideEffects = true) const override;
 
   /// Returns the vector element size (B, H, S or D) of an SVE opcode.
   uint64_t getElementSizeForOpcode(unsigned Opc) const;

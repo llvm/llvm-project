@@ -2088,12 +2088,12 @@ public:
   }
 
   /// Insert an architecture-specific instruction to clear a register. If you
-  /// need to avoid sideeffects (e.g. XOR on x86), set \p NoSideEffects to \p
-  /// true.
+  /// need to avoid sideeffects (e.g. XOR on x86), set \p AllowSideEffects to
+  /// \p false.
   virtual void buildClearRegister(Register Reg, MachineBasicBlock &MBB,
                                   MachineBasicBlock::iterator Iter,
                                   DebugLoc &DL,
-                                  bool NoSideEffects = false) const {
+                                  bool AllowSideEffects = true) const {
     llvm_unreachable(
         "Target didn't implement TargetInstrInfo::buildClearRegister!");
   }

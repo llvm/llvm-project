@@ -9798,7 +9798,8 @@ X86InstrInfo::insertOutlinedCall(Module &M, MachineBasicBlock &MBB,
 
 void X86InstrInfo::buildClearRegister(Register Reg, MachineBasicBlock &MBB,
                                       MachineBasicBlock::iterator Iter,
-                                      DebugLoc &DL, bool NoSideEffects) const {
+                                      DebugLoc &DL,
+                                      bool AllowSideEffects) const {
   const MachineFunction &MF = *MBB.getParent();
   const X86Subtarget &ST = MF.getSubtarget<X86Subtarget>();
   const TargetRegisterInfo &TRI = getRegisterInfo();
@@ -9812,7 +9813,7 @@ void X86InstrInfo::buildClearRegister(Register Reg, MachineBasicBlock &MBB,
     // upper bits of a 64-bit register automagically.
     Reg = getX86SubSuperRegister(Reg, 32);
 
-    if (NoSideEffects)
+    if (!AllowSideEffects)
       // XOR affects flags, so use a MOV instead.
       BuildMI(MBB, Iter, DL, get(X86::MOV32ri), Reg).addImm(0);
     else
