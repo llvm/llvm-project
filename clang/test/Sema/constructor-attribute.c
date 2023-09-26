@@ -1,5 +1,5 @@
 // RUN: %clang_cc1 -fsyntax-only -verify -Wno-strict-prototypes %s
-// RUN: %clang_cc1 -fsyntax-only -verify -x c++ %s
+// RUN: %clang_cc1 -fsyntax-only -verify -x c++ -std=c++20 %s
 
 int x1 __attribute__((constructor)); // expected-warning {{'constructor' attribute only applies to functions}}
 void f(void) __attribute__((constructor));
@@ -43,6 +43,9 @@ struct S {
   static void nonmem5(int) __attribute__((constructor)); // expected-error {{'constructor' attribute can only be applied to a function which accepts no arguments and has a 'void' return type}}
   static void nonmem6(int) __attribute__((destructor));  // expected-error {{'destructor' attribute can only be applied to a function which accepts no arguments and has a 'void' return type}}
 };
+
+consteval void consteval_func1() __attribute__((constructor)); // expected-error {{'constructor' attribute cannot be applied to a 'consteval' function}}
+consteval void consteval_func2() __attribute__((destructor));  // expected-error {{'destructor' attribute cannot be applied to a 'consteval' function}}
 #endif // __cplusplus
 
 # 1 "source.c" 1 3

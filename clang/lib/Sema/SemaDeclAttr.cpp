@@ -2355,13 +2355,16 @@ static void handleUnusedAttr(Sema &S, Decl *D, const ParsedAttr &AL) {
 static bool diagnoseInvalidPriority(Sema &S, uint32_t Priority,
                                     const ParsedAttr &A,
                                     SourceLocation PriorityLoc) {
+  constexpr uint32_t ReservedPriorityLower = 101, ReservedPriorityUpper = 65535;
+
   // Only perform the priority check if the attribute is outside of a system
   // header. Values <= 100 are reserved for the implementation, and libc++
-  // benefits from being able to specify values in that range.
-  if ((Priority < 101 || Priority > 65535) &&
+  // benefits from being able to specify values in that range. Values > 65535
+  // are reserved for historical reasons.
+  if ((Priority < ReservedPriorityLower || Priority > ReservedPriorityUpper) &&
       !S.getSourceManager().isInSystemHeader(A.getLoc())) {
     S.Diag(A.getLoc(), diag::err_attribute_argument_out_of_range)
-        << PriorityLoc << A << 101 << 65535;
+        << PriorityLoc << A << ReservedPriorityLower << ReservedPriorityUpper;
     A.setInvalid();
     return true;
   }
@@ -2389,24 +2392,28 @@ static void handleCtorDtorAttr(Sema &S, Decl *D, const ParsedAttr &AL) {
 
   // Ensure the function we're attaching to is something that is sensible to
   // automatically call before or after main(); it should accept no arguments
-  // and return no value (but it is not an error because it is theoretically
-  // possible to call the function during normal program execution and pass it
-  // valid values). It also cannot be a member function. We allow K&R C
-  // functions because that's a difficult edge case where it depends on how the
-  // function is defined as to whether it does or does not expect arguments.
-  auto *FD = cast<FunctionDecl>(D);
+  // and return no value; we treat it as an error because it's a form of type
+  // system incompatibility. It also cannot be a member function. We allow K&R
+  // C functions because that's a difficult edge case where it depends on how
+  // the function is defined as to whether it does or does not expect arguments.
+  const auto *FD = cast<FunctionDecl>(D);
   if (!FD->getReturnType()->isVoidType() ||
       (FD->hasPrototype() && FD->getNumParams() != 0)) {
     S.Diag(AL.getLoc(), diag::err_ctor_dtor_attr_on_non_void_func)
         << AL << FD->getSourceRange();
     return;
-  } else if (auto *MD = dyn_cast<CXXMethodDecl>(FD); MD && MD->isInstance()) {
+  } else if (const auto *MD = dyn_cast<CXXMethodDecl>(FD);
+             MD && MD->isInstance()) {
     S.Diag(AL.getLoc(), diag::err_ctor_dtor_member_func)
         << AL << FD->getSourceRange();
     return;
+  } else if (FD->isConsteval()) {
+    S.Diag(AL.getLoc(), diag::err_ctordtor_attr_consteval)
+        << AL << FD->getSourceRange();
+    return;
   }
-
-  D->addAttr(::new (S.Context) CtorDtorAttr(S.Context, AL, Priority));
+  
+  D->addAttr(CtorDtorAttr::Create(S.Context, Priority, AL));
 }
 
 template <typename AttrTy>

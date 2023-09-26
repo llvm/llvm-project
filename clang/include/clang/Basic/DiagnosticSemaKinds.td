@@ -2864,6 +2864,8 @@ def warn_cxx11_compat_constexpr_body_multiple_return : Warning<
   InGroup<CXXPre14Compat>, DefaultIgnore;
 def note_constexpr_body_previous_return : Note<
   "previous return statement is here">;
+def err_ctordtor_attr_consteval : Error<
+  "%0 attribute cannot be applied to a 'consteval' function">;
 
 // C++20 function try blocks in constexpr
 def ext_constexpr_function_try_block_cxx20 : ExtWarn<
