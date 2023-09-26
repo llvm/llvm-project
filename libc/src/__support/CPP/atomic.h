@@ -14,7 +14,7 @@
 
 #include "type_traits.h"
 
-namespace __llvm_libc {
+namespace LIBC_NAMESPACE {
 namespace cpp {
 
 enum class MemoryOrder : int {
@@ -116,6 +116,6 @@ LIBC_INLINE void atomic_thread_fence(MemoryOrder mem_ord) {
 }
 
 } // namespace cpp
-} // namespace __llvm_libc
+} // namespace LIBC_NAMESPACE
 
 #endif // LLVM_LIBC_SRC___SUPPORT_CPP_ATOMIC_H

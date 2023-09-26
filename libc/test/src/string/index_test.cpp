@@ -11,4 +11,4 @@
 #include "src/string/index.h"
 #include "test/UnitTest/Test.h"
 
-STRCHR_TEST(Index, __llvm_libc::index)
+STRCHR_TEST(Index, LIBC_NAMESPACE::index)

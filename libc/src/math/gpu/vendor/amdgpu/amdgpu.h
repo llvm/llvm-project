@@ -14,7 +14,7 @@
 
 #include "src/__support/macros/attributes.h"
 
-namespace __llvm_libc {
+namespace LIBC_NAMESPACE {
 namespace internal {
 LIBC_INLINE float acosf(float x) { return __ocml_acos_f32(x); }
 LIBC_INLINE float acoshf(float x) { return __ocml_acosh_f32(x); }
@@ -98,6 +98,6 @@ LIBC_INLINE float remquof(float x, float y, int *q) {
 }
 
 } // namespace internal
-} // namespace __llvm_libc
+} // namespace LIBC_NAMESPACE
 
 #endif // LLVM_LIBC_SRC_MATH_GPU_AMDGPU_H

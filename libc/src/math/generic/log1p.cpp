@@ -18,7 +18,7 @@
 
 #include "common_constants.h"
 
-namespace __llvm_libc {
+namespace LIBC_NAMESPACE {
 
 // 128-bit precision dyadic floating point numbers.
 using Float128 = typename fputil::DyadicFloat<128>;
@@ -1034,4 +1034,4 @@ LLVM_LIBC_FUNCTION(double, log1p, (double x)) {
   return log1p_accurate(x_e, idx, v_dd);
 }
 
-} // namespace __llvm_libc
+} // namespace LIBC_NAMESPACE

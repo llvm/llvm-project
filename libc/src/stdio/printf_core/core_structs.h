@@ -15,7 +15,7 @@
 #include <inttypes.h>
 #include <stddef.h>
 
-namespace __llvm_libc {
+namespace LIBC_NAMESPACE {
 namespace printf_core {
 
 // These length modifiers match the length modifiers in the format string, which
@@ -111,6 +111,6 @@ constexpr int NULLPTR_WRITE_ERROR = -3;
 constexpr int INT_CONVERSION_ERROR = -4;
 
 } // namespace printf_core
-} // namespace __llvm_libc
+} // namespace LIBC_NAMESPACE
 
 #endif // LLVM_LIBC_SRC_STDIO_PRINTF_CORE_CORE_STRUCTS_H

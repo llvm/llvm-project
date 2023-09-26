@@ -23,10 +23,10 @@
 
 namespace scanf_test {
 #ifndef LIBC_COPT_STDIO_USE_SYSTEM_FILE
-using __llvm_libc::fclose;
-using __llvm_libc::ferror;
-using __llvm_libc::fopen;
-using __llvm_libc::fwrite;
+using LIBC_NAMESPACE::fclose;
+using LIBC_NAMESPACE::ferror;
+using LIBC_NAMESPACE::fopen;
+using LIBC_NAMESPACE::fwrite;
 #else  // defined(LIBC_COPT_STDIO_USE_SYSTEM_FILE)
 using ::fclose;
 using ::ferror;
@@ -59,8 +59,8 @@ TEST(LlvmLibcFScanfTest, WriteToFile) {
             scanf_test::fwrite(numbers_and_more, 1,
                                sizeof(numbers_and_more) - 1, file));
 
-  read =
-      __llvm_libc::fscanf(file, "Reading from a write-only file should fail.");
+  read = LIBC_NAMESPACE::fscanf(file,
+                                "Reading from a write-only file should fail.");
   EXPECT_LT(read, 0);
 
   ASSERT_EQ(0, scanf_test::fclose(file));
@@ -69,21 +69,22 @@ TEST(LlvmLibcFScanfTest, WriteToFile) {
   ASSERT_FALSE(file == nullptr);
 
   char data[50];
-  read = __llvm_libc::fscanf(file, "%[A-Za-z .\n]", data);
+  read = LIBC_NAMESPACE::fscanf(file, "%[A-Za-z .\n]", data);
   ASSERT_EQ(read, 1);
   ASSERT_STREQ(simple, data);
 
-  read = __llvm_libc::fscanf(file, "%s", data);
+  read = LIBC_NAMESPACE::fscanf(file, "%s", data);
   ASSERT_EQ(read, 1);
-  ASSERT_EQ(__llvm_libc::cpp::string_view(numbers, 10),
-            __llvm_libc::cpp::string_view(data));
+  ASSERT_EQ(LIBC_NAMESPACE::cpp::string_view(numbers, 10),
+            LIBC_NAMESPACE::cpp::string_view(data));
 
   // The format string starts with a space to handle the fact that the %s leaves
   // a trailing \n and %c doesn't strip leading whitespace.
-  read = __llvm_libc::fscanf(file, " %50c", data);
+  read = LIBC_NAMESPACE::fscanf(file, " %50c", data);
   ASSERT_EQ(read, 1);
-  ASSERT_EQ(__llvm_libc::cpp::string_view(numbers_and_more),
-            __llvm_libc::cpp::string_view(data, sizeof(numbers_and_more) - 1));
+  ASSERT_EQ(
+      LIBC_NAMESPACE::cpp::string_view(numbers_and_more),
+      LIBC_NAMESPACE::cpp::string_view(data, sizeof(numbers_and_more) - 1));
 
   ASSERT_EQ(scanf_test::ferror(file), 0);
   ASSERT_EQ(scanf_test::fclose(file), 0);

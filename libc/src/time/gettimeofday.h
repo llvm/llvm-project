@@ -11,10 +11,10 @@
 
 #include <time.h>
 
-namespace __llvm_libc {
+namespace LIBC_NAMESPACE {
 
 int gettimeofday(struct timeval *tv, void *tz);
 
-} // namespace __llvm_libc
+} // namespace LIBC_NAMESPACE
 
 #endif // LLVM_LIBC_SRC_TIME_GETTIMEOFDAY_H

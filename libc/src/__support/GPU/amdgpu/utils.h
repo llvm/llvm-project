@@ -14,7 +14,7 @@
 
 #include <stdint.h>
 
-namespace __llvm_libc {
+namespace LIBC_NAMESPACE {
 namespace gpu {
 
 /// The number of threads that execute in lock-step in a lane.
@@ -180,6 +180,6 @@ LIBC_INLINE uint64_t fixed_frequency_clock() {
 [[noreturn]] LIBC_INLINE void end_program() { __builtin_amdgcn_endpgm(); }
 
 } // namespace gpu
-} // namespace __llvm_libc
+} // namespace LIBC_NAMESPACE
 
 #endif

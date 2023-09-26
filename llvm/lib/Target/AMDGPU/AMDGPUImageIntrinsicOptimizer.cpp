@@ -36,6 +36,8 @@
 // and TX, but higher vdata. We start by erring on the side of converting these
 // to MSAA_LOAD.
 //
+// clang-format off
+//
 // This pass will combine intrinsics such as (not neccessarily consecutive):
 //  call float @llvm.amdgcn.image.load.2dmsaa.f32.i32(i32 1, i32 %s, i32 %t, i32 0, <8 x i32> %rsrc, i32 0, i32 0)
 //  call float @llvm.amdgcn.image.load.2dmsaa.f32.i32(i32 1, i32 %s, i32 %t, i32 1, <8 x i32> %rsrc, i32 0, i32 0)
@@ -43,6 +45,8 @@
 //  call float @llvm.amdgcn.image.load.2dmsaa.f32.i32(i32 1, i32 %s, i32 %t, i32 3, <8 x i32> %rsrc, i32 0, i32 0)
 // ==>
 //  call <4 x float> @llvm.amdgcn.image.msaa.load.2dmsaa.v4f32.i32(i32 1, i32 %s, i32 %t, i32 0, <8 x i32> %rsrc, i32 0, i32 0)
+//
+// clang-format on
 //
 // Future improvements:
 //
@@ -92,9 +96,10 @@ INITIALIZE_PASS(AMDGPUImageIntrinsicOptimizer, DEBUG_TYPE,
 char AMDGPUImageIntrinsicOptimizer::ID = 0;
 
 void addInstToMergeableList(
-    IntrinsicInst *II, std::list<std::list<IntrinsicInst *>> &MergeableInsts,
+    IntrinsicInst *II,
+    SmallVector<SmallVector<IntrinsicInst *, 4>> &MergeableInsts,
     const AMDGPU::ImageDimIntrinsicInfo *ImageDimIntr) {
-  for (std::list<IntrinsicInst *> &IIList : MergeableInsts) {
+  for (SmallVector<IntrinsicInst *, 4> &IIList : MergeableInsts) {
     // Check Dim.
     if (IIList.front()->getIntrinsicID() != II->getIntrinsicID())
       continue;
@@ -139,9 +144,9 @@ void addInstToMergeableList(
 
 // Collect list of all instructions we know how to merge in a subset of the
 // block. It returns an iterator to the instruction after the last one analyzed.
-BasicBlock::iterator
-collectMergeableInsts(BasicBlock::iterator I, BasicBlock::iterator E,
-                      std::list<std::list<IntrinsicInst *>> &MergeableInsts) {
+BasicBlock::iterator collectMergeableInsts(
+    BasicBlock::iterator I, BasicBlock::iterator E,
+    SmallVector<SmallVector<IntrinsicInst *, 4>> &MergeableInsts) {
   for (; I != E; ++I) {
     // Don't combine if there is a store in the middle or if there is a memory
     // barrier.
@@ -173,11 +178,11 @@ collectMergeableInsts(BasicBlock::iterator I, BasicBlock::iterator E,
   return I;
 }
 
-bool optimizeSection(std::list<std::list<IntrinsicInst *>> &MergeableInsts) {
+bool optimizeSection(ArrayRef<SmallVector<IntrinsicInst *, 4>> MergeableInsts) {
   bool Modified = false;
 
   SmallVector<Instruction *, 4> InstrsToErase;
-  for (auto IIList : MergeableInsts) {
+  for (const auto &IIList : MergeableInsts) {
     if (IIList.size() <= 1)
       continue;
 
@@ -250,33 +255,33 @@ bool optimizeSection(std::list<std::list<IntrinsicInst *>> &MergeableInsts) {
 
     // Create the new extractelement instructions.
     for (auto &II : IIList) {
-      Value *VecOp = UndefValue::get(II->getType());
+      Value *VecOp = nullptr;
       auto Idx = cast<ConstantInt>(II->getArgOperand(FragIdIndex));
+      B.SetCurrentDebugLocation(II->getDebugLoc());
       if (NumElts == 1) {
         VecOp = B.CreateExtractElement(NewCalls[0], Idx->getValue().urem(4));
         LLVM_DEBUG(dbgs() << "Add: " << *VecOp << "\n");
       } else {
+        VecOp = UndefValue::get(II->getType());
         for (unsigned I = 0; I < NumElts; ++I) {
           VecOp = B.CreateInsertElement(
-              VecOp, B.CreateExtractElement(
-                NewCalls[I], Idx->getValue().urem(4)), I);
+              VecOp,
+              B.CreateExtractElement(NewCalls[I], Idx->getValue().urem(4)), I);
           LLVM_DEBUG(dbgs() << "Add: " << *VecOp << "\n");
         }
       }
 
       // Replace the old instruction.
       II->replaceAllUsesWith(VecOp);
+      VecOp->takeName(II);
       InstrsToErase.push_back(II);
     }
 
     Modified = true;
   }
 
-  for (auto I : InstrsToErase) {
+  for (auto I : InstrsToErase)
     I->eraseFromParent();
-  }
-
-  MergeableInsts.clear();
 
   return Modified;
 }
@@ -305,7 +310,7 @@ static bool imageIntrinsicOptimizerImpl(Function &F, const TargetMachine *TM) {
     BasicBlock::iterator SectionEnd;
     for (BasicBlock::iterator I = BB.begin(), E = BB.end(); I != E;
          I = SectionEnd) {
-      std::list<std::list<IntrinsicInst *>> MergeableInsts;
+      SmallVector<SmallVector<IntrinsicInst *, 4>> MergeableInsts;
 
       SectionEnd = collectMergeableInsts(I, E, MergeableInsts);
       Modified |= optimizeSection(MergeableInsts);

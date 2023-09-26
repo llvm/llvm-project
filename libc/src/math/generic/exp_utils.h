@@ -15,7 +15,7 @@
 #define EXP2F_POLY_ORDER 3
 #define N (1 << EXP2F_TABLE_BITS)
 
-namespace __llvm_libc {
+namespace LIBC_NAMESPACE {
 
 struct Exp2fDataTable {
   uint64_t tab[1 << EXP2F_TABLE_BITS];
@@ -28,6 +28,6 @@ struct Exp2fDataTable {
 
 extern const Exp2fDataTable exp2f_data;
 
-} // namespace __llvm_libc
+} // namespace LIBC_NAMESPACE
 
 #endif // LLVM_LIBC_SRC_MATH_EXP_UTILS_H
