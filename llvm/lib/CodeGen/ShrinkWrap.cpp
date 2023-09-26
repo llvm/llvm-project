@@ -886,9 +886,9 @@ bool ShrinkWrap::performShrinkWrapping(
   do {
     LLVM_DEBUG(dbgs() << "Shrink wrap candidates (#, Name, Freq):\nSave: "
                       << printMBBReference(*Save) << ' '
-                      << MBFI->getBlockFreq(Save).getFrequency()
+                      << printBlockFreq(*MBFI, *Save)
                       << "\nRestore: " << printMBBReference(*Restore) << ' '
-                      << MBFI->getBlockFreq(Restore).getFrequency() << '\n');
+                      << printBlockFreq(*MBFI, *Restore) << '\n');
 
     bool IsSaveCheap, TargetCanUseSaveAsPrologue = false;
     if (((IsSaveCheap = EntryFreq >= MBFI->getBlockFreq(Save)) &&
