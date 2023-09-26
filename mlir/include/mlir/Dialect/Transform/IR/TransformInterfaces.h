@@ -170,7 +170,7 @@ private:
   /// should be emitted when the value is used.
   using InvalidatedHandleMap = DenseMap<Value, std::function<void(Location)>>;
 
-#ifndef LLVM_ENABLE_ABI_BREAKING_CHECKS
+#ifdef LLVM_ENABLE_ABI_BREAKING_CHECKS
   /// Debug only: A timestamp is associated with each transform IR value, so
   /// that invalid iterator usage can be detected more reliably.
   using TransformIRTimestampMapping = DenseMap<Value, int64_t>;
@@ -185,7 +185,7 @@ private:
     ValueMapping values;
     ValueMapping reverseValues;
 
-#ifndef LLVM_ENABLE_ABI_BREAKING_CHECKS
+#ifdef LLVM_ENABLE_ABI_BREAKING_CHECKS
     TransformIRTimestampMapping timestamps;
     void incrementTimestamp(Value value) { ++timestamps[value]; }
 #endif // LLVM_ENABLE_ABI_BREAKING_CHECKS
@@ -220,7 +220,7 @@ public:
   auto getPayloadOps(Value value) const {
     ArrayRef<Operation *> view = getPayloadOpsView(value);
 
-#ifndef LLVM_ENABLE_ABI_BREAKING_CHECKS
+#ifdef LLVM_ENABLE_ABI_BREAKING_CHECKS
     // Memorize the current timestamp and make sure that it has not changed
     // when incrementing or dereferencing the iterator returned by this
     // function. The timestamp is incremented when the "direct" mapping is
@@ -231,7 +231,7 @@ public:
     // When ops are replaced/erased, they are replaced with nullptr (until
     // the data structure is compacted). Do not enumerate these ops.
     return llvm::make_filter_range(view, [=](Operation *op) {
-#ifndef LLVM_ENABLE_ABI_BREAKING_CHECKS
+#ifdef LLVM_ENABLE_ABI_BREAKING_CHECKS
       bool sameTimestamp =
           currentTimestamp == this->getMapping(value).timestamps.lookup(value);
       assert(sameTimestamp && "iterator was invalidated during iteration");
@@ -244,9 +244,29 @@ public:
   /// corresponds to.
   ArrayRef<Attribute> getParams(Value value) const;
 
-  /// Returns the list of payload IR values that the given transform IR value
-  /// corresponds to.
-  ArrayRef<Value> getPayloadValues(Value handleValue) const;
+  /// Returns an iterator that enumerates all payload IR values that the given
+  /// transform IR value corresponds to.
+  auto getPayloadValues(Value handleValue) const {
+    ArrayRef<Value> view = getPayloadValuesView(handleValue);
+
+#ifdef LLVM_ENABLE_ABI_BREAKING_CHECKS
+    // Memorize the current timestamp and make sure that it has not changed
+    // when incrementing or dereferencing the iterator returned by this
+    // function. The timestamp is incremented when the "values" mapping is
+    // resized; this would invalidate the iterator returned by this function.
+    int64_t currentTimestamp =
+        getMapping(handleValue).timestamps.lookup(handleValue);
+    return llvm::make_filter_range(view, [=](Value v) {
+      bool sameTimestamp =
+          currentTimestamp ==
+          this->getMapping(handleValue).timestamps.lookup(handleValue);
+      assert(sameTimestamp && "iterator was invalidated during iteration");
+      return true;
+    });
+#else
+    return llvm::make_range(view.begin(), view.end());
+#endif // LLVM_ENABLE_ABI_BREAKING_CHECKS
+  }
 
   /// Populates `handles` with all handles pointing to the given Payload IR op.
   /// Returns success if such handles exist, failure otherwise.
@@ -501,11 +521,14 @@ private:
   LogicalResult updateStateFromResults(const TransformResults &results,
                                        ResultRange opResults);
 
-  /// Returns a list of all ops that the given transform IR value corresponds to
-  /// at the time when this function is called. In case an op was erased, the
-  /// returned list contains nullptr. This function is helpful for
-  /// transformations that apply to a particular handle.
+  /// Returns a list of all ops that the given transform IR value corresponds
+  /// to. In case an op was erased, the returned list contains nullptr. This
+  /// function is helpful for transformations that apply to a particular handle.
   ArrayRef<Operation *> getPayloadOpsView(Value value) const;
+
+  /// Returns a list of payload IR values that the given transform IR value
+  /// corresponds to.
+  ArrayRef<Value> getPayloadValuesView(Value handleValue) const;
 
   /// Sets the payload IR ops associated with the given transform IR value
   /// (handle). A payload op may be associated multiple handles as long as
@@ -806,7 +829,27 @@ public:
   /// set by the transformation exactly once in case of transformation
   /// succeeding. The value must have a type implementing
   /// TransformValueHandleTypeInterface.
-  void setValues(OpResult handle, ValueRange values);
+  template <typename Range>
+  void setValues(OpResult handle, Range &&values) {
+    int64_t position = handle.getResultNumber();
+    assert(position < static_cast<int64_t>(this->values.size()) &&
+           "setting values for a non-existent handle");
+    assert(this->values[position].data() == nullptr && "values already set");
+    assert(operations[position].data() == nullptr &&
+           "another kind of results already set");
+    assert(params[position].data() == nullptr &&
+           "another kind of results already set");
+    this->values.replace(position, std::forward<Range>(values));
+  }
+
+  /// Indicates that the result of the transform IR op at the given position
+  /// corresponds to the given range of payload IR values. Each result must be
+  /// set by the transformation exactly once in case of transformation
+  /// succeeding. The value must have a type implementing
+  /// TransformValueHandleTypeInterface.
+  void setValues(OpResult handle, std::initializer_list<Value> values) {
+    setValues(handle, ArrayRef<Value>(values));
+  }
 
   /// Indicates that the result of the transform IR op at the given position
   /// corresponds to the given range of mapped values. All mapped values are

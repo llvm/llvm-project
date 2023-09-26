@@ -1379,9 +1379,7 @@ transform::GetTypeOp::apply(transform::TransformRewriter &rewriter,
                             transform::TransformResults &results,
                             transform::TransformState &state) {
   SmallVector<Attribute> params;
-  ArrayRef<Value> values = state.getPayloadValues(getValue());
-  params.reserve(values.size());
-  for (Value value : values) {
+  for (Value value : state.getPayloadValues(getValue())) {
     Type type = value.getType();
     if (getElemental()) {
       if (auto shaped = dyn_cast<ShapedType>(type)) {
