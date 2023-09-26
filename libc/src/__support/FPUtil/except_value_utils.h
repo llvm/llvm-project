@@ -15,7 +15,7 @@
 #include "src/__support/CPP/optional.h"
 #include "src/__support/macros/optimization.h" // LIBC_UNLIKELY
 
-namespace __llvm_libc {
+namespace LIBC_NAMESPACE {
 
 namespace fputil {
 
@@ -114,6 +114,6 @@ LIBC_INLINE float round_result_slightly_up(float value_rn) {
 
 } // namespace fputil
 
-} // namespace __llvm_libc
+} // namespace LIBC_NAMESPACE
 
 #endif // LLVM_LIBC_SRC___SUPPORT_FPUTIL_EXCEPT_VALUE_UTILS_H

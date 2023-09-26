@@ -21,38 +21,38 @@ DECLARE_SPECIAL_CONSTANTS(float)
 TEST(LlvmLibcExp2fTest, SpecialNumbers) {
   libc_errno = 0;
 
-  EXPECT_FP_EQ_ALL_ROUNDING(aNaN, __llvm_libc::exp2f(aNaN));
+  EXPECT_FP_EQ_ALL_ROUNDING(aNaN, LIBC_NAMESPACE::exp2f(aNaN));
   EXPECT_MATH_ERRNO(0);
 
-  EXPECT_FP_EQ_ALL_ROUNDING(inf, __llvm_libc::exp2f(inf));
+  EXPECT_FP_EQ_ALL_ROUNDING(inf, LIBC_NAMESPACE::exp2f(inf));
   EXPECT_MATH_ERRNO(0);
 
-  EXPECT_FP_EQ_ALL_ROUNDING(0.0f, __llvm_libc::exp2f(neg_inf));
+  EXPECT_FP_EQ_ALL_ROUNDING(0.0f, LIBC_NAMESPACE::exp2f(neg_inf));
   EXPECT_MATH_ERRNO(0);
 
-  EXPECT_FP_EQ_ALL_ROUNDING(1.0f, __llvm_libc::exp2f(0.0f));
+  EXPECT_FP_EQ_ALL_ROUNDING(1.0f, LIBC_NAMESPACE::exp2f(0.0f));
   EXPECT_MATH_ERRNO(0);
 
-  EXPECT_FP_EQ_ALL_ROUNDING(1.0f, __llvm_libc::exp2f(-0.0f));
+  EXPECT_FP_EQ_ALL_ROUNDING(1.0f, LIBC_NAMESPACE::exp2f(-0.0f));
   EXPECT_MATH_ERRNO(0);
 
-  EXPECT_FP_EQ_ALL_ROUNDING(2.0f, __llvm_libc::exp2f(1.0f));
-  EXPECT_FP_EQ_ALL_ROUNDING(0.5f, __llvm_libc::exp2f(-1.0f));
-  EXPECT_FP_EQ_ALL_ROUNDING(4.0f, __llvm_libc::exp2f(2.0f));
-  EXPECT_FP_EQ_ALL_ROUNDING(0.25f, __llvm_libc::exp2f(-2.0f));
+  EXPECT_FP_EQ_ALL_ROUNDING(2.0f, LIBC_NAMESPACE::exp2f(1.0f));
+  EXPECT_FP_EQ_ALL_ROUNDING(0.5f, LIBC_NAMESPACE::exp2f(-1.0f));
+  EXPECT_FP_EQ_ALL_ROUNDING(4.0f, LIBC_NAMESPACE::exp2f(2.0f));
+  EXPECT_FP_EQ_ALL_ROUNDING(0.25f, LIBC_NAMESPACE::exp2f(-2.0f));
 }
 
 TEST(LlvmLibcExp2fTest, Overflow) {
   libc_errno = 0;
   EXPECT_FP_EQ_WITH_EXCEPTION(
-      inf, __llvm_libc::exp2f(float(FPBits(0x7f7fffffU))), FE_OVERFLOW);
+      inf, LIBC_NAMESPACE::exp2f(float(FPBits(0x7f7fffffU))), FE_OVERFLOW);
   EXPECT_MATH_ERRNO(ERANGE);
 
   EXPECT_FP_EQ_WITH_EXCEPTION(
-      inf, __llvm_libc::exp2f(float(FPBits(0x43000000U))), FE_OVERFLOW);
+      inf, LIBC_NAMESPACE::exp2f(float(FPBits(0x43000000U))), FE_OVERFLOW);
   EXPECT_MATH_ERRNO(ERANGE);
 
   EXPECT_FP_EQ_WITH_EXCEPTION(
-      inf, __llvm_libc::exp2f(float(FPBits(0x43000001U))), FE_OVERFLOW);
+      inf, LIBC_NAMESPACE::exp2f(float(FPBits(0x43000001U))), FE_OVERFLOW);
   EXPECT_MATH_ERRNO(ERANGE);
 }

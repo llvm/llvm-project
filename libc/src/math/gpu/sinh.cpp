@@ -9,8 +9,8 @@
 #include "src/math/sinh.h"
 #include "src/__support/common.h"
 
-namespace __llvm_libc {
+namespace LIBC_NAMESPACE {
 
 LLVM_LIBC_FUNCTION(double, sinh, (double x)) { return __builtin_sinh(x); }
 
-} // namespace __llvm_libc
+} // namespace LIBC_NAMESPACE

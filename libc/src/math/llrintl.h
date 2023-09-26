@@ -9,10 +9,10 @@
 #ifndef LLVM_LIBC_SRC_MATH_LLRINTL_H
 #define LLVM_LIBC_SRC_MATH_LLRINTL_H
 
-namespace __llvm_libc {
+namespace LIBC_NAMESPACE {
 
 long long llrintl(long double x);
 
-} // namespace __llvm_libc
+} // namespace LIBC_NAMESPACE
 
 #endif // LLVM_LIBC_SRC_MATH_LLRINTL_H

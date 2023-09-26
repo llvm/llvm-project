@@ -11,8 +11,8 @@
 
 #include "common.h"
 
-namespace __llvm_libc {
+namespace LIBC_NAMESPACE {
 
 LLVM_LIBC_FUNCTION(float, sinhf, (float x)) { return internal::sinhf(x); }
 
-} // namespace __llvm_libc
+} // namespace LIBC_NAMESPACE

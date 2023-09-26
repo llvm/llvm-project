@@ -11,7 +11,7 @@
 
 #include "src/__support/CPP/array.h"
 
-namespace __llvm_libc {
+namespace LIBC_NAMESPACE {
 
 // A fixed size data store backed by an underlying cpp::array data structure. It
 // supports vector like API but is not resizable like a vector.
@@ -57,6 +57,6 @@ public:
   static void destroy(FixedVector<T, CAPACITY> *store) { store->reset(); }
 };
 
-} // namespace __llvm_libc
+} // namespace LIBC_NAMESPACE
 
 #endif // LLVM_LIBC_SRC___SUPPORT_FIXEDVECTOR_H
