@@ -208,15 +208,9 @@ private:
 class RegionPageMap {
 public:
   RegionPageMap()
-      : Regions(0),
-        NumCounters(0),
-        CounterSizeBitsLog(0),
-        CounterMask(0),
-        PackingRatioLog(0),
-        BitOffsetMask(0),
-        SizePerRegion(0),
-        BufferNumElements(0),
-        Buffer(nullptr) {}
+      : Regions(0), NumCounters(0), CounterSizeBitsLog(0), CounterMask(0),
+        PackingRatioLog(0), BitOffsetMask(0), SizePerRegion(0),
+        BufferNumElements(0), Buffer(nullptr) {}
   RegionPageMap(uptr NumberOfRegions, uptr CountersPerRegion, uptr MaxValue) {
     reset(NumberOfRegions, CountersPerRegion, MaxValue);
   }
