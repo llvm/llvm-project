@@ -31,7 +31,6 @@ void ImplementationInNamespaceCheck::check(
     const MatchFinder::MatchResult &Result) {
   const auto *MatchedDecl =
       Result.Nodes.getNodeAs<Decl>("child_of_translation_unit");
-  MatchedDecl->dump();
   const auto *NS = dyn_cast<NamespaceDecl>(MatchedDecl);
   if (NS == nullptr || NS->isAnonymousNamespace()) {
     diag(MatchedDecl->getLocation(),
