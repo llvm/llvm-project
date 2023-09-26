@@ -624,9 +624,11 @@ function(cxx_link_system_libraries target)
 
 # In order to remove just libc++ from the link step
 # we need to use -nostdlib++ whenever it is supported.
-# Unfortunately this cannot be used universally because for example g++ supports
-# only -nodefaultlibs in which case all libraries will be removed and
+# Unfortunately this cannot be used universally because g++ does not support
+# -nostdlib++ before gcc 13 (https://gcc.gnu.org/gcc-13/changes.html) and needs
+# to use -nodefaultlibs in which case all libraries will be removed and
 # all libraries but c++ have to be added in manually.
+# Once libc++ requires gcc 13+, this can be simplified.
   if (CXX_SUPPORTS_NOSTDLIBXX_FLAG)
     target_add_link_flags_if_supported(${target} PRIVATE "-nostdlib++")
   else()
