@@ -2391,13 +2391,23 @@ static void handleCtorDtorAttr(Sema &S, Decl *D, const ParsedAttr &AL) {
   }
 
   // Ensure the function we're attaching to is something that is sensible to
-  // automatically call before or after main(); it should accept no arguments
-  // and return no value; we treat it as an error because it's a form of type
-  // system incompatibility. It also cannot be a member function. We allow K&R
-  // C functions because that's a difficult edge case where it depends on how
-  // the function is defined as to whether it does or does not expect arguments.
+  // automatically call before or after main(); it should accept no arguments.
+  // In theory, a void return type is the only truly safe return type (consider
+  // that calling conventions may place returned values in a hidden pointer
+  // argument passed to the function that will not be present when called
+  // automatically). However, there is a significant amount of existing code
+  // which uses an int return type. So we will accept void, int, and
+  // unsigned int return types. Any other return type, or a non-void parameter
+  // list is treated as an error because it's a form of type system
+  // incompatibility. The function also cannot be a member function. We allow
+  // K&R C functions because that's a difficult edge case where it depends on
+  // how the function is defined as to whether it does or does not expect
+  // arguments.
   const auto *FD = cast<FunctionDecl>(D);
-  if (!FD->getReturnType()->isVoidType() ||
+  QualType RetTy = FD->getReturnType();
+  if (!(RetTy->isVoidType() ||
+        RetTy->isSpecificBuiltinType(BuiltinType::UInt) ||
+        RetTy->isSpecificBuiltinType(BuiltinType::Int)) ||
       (FD->hasPrototype() && FD->getNumParams() != 0)) {
     S.Diag(AL.getLoc(), diag::err_ctor_dtor_attr_on_non_void_func)
         << AL << FD->getSourceRange();

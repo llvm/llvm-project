@@ -19,13 +19,17 @@ void f(void) __attribute__((destructor(101)));
 void knr1() __attribute__((constructor));
 void knr2() __attribute__((destructor));
 
-// Require a void return type
-int g(void) __attribute__((constructor)); // expected-error {{'constructor' attribute can only be applied to a function which accepts no arguments and has a 'void' return type}}
-int h(void) __attribute__((destructor));  // expected-error {{'destructor' attribute can only be applied to a function which accepts no arguments and has a 'void' return type}}
+// Require a void or (unsigned) int return type
+int g0(void) __attribute__((constructor));
+signed int g1(void) __attribute__((constructor));
+float g2(void) __attribute__((constructor)); // expected-error {{'constructor' attribute can only be applied to a function which accepts no arguments and has a 'void' or 'int' return type}}
+int h0(void) __attribute__((destructor));
+unsigned int h1(void) __attribute__((destructor));
+float h2(void) __attribute__((destructor));  // expected-error {{'destructor' attribute can only be applied to a function which accepts no arguments and has a 'void' or 'int' return type}}
 
 // Require no parameters
-void i(int v) __attribute__((constructor)); // expected-error {{'constructor' attribute can only be applied to a function which accepts no arguments and has a 'void' return type}}
-void j(int v) __attribute__((destructor));  // expected-error {{'destructor' attribute can only be applied to a function which accepts no arguments and has a 'void' return type}}
+void i(int v) __attribute__((constructor)); // expected-error {{'constructor' attribute can only be applied to a function which accepts no arguments and has a 'void' or 'int' return type}}
+void j(int v) __attribute__((destructor));  // expected-error {{'destructor' attribute can only be applied to a function which accepts no arguments and has a 'void' or 'int' return type}}
 
 #ifdef __cplusplus
 struct S {
@@ -34,14 +38,14 @@ struct S {
   void mem1() __attribute__((constructor)); // expected-error {{'constructor' attribute cannot be applied to a member function}}
   void mem2() __attribute__((destructor));  // expected-error {{'destructor' attribute cannot be applied to a member function}}
 
-  static void nonmem1() __attribute__((constructor));
-  static void nonmem2() __attribute__((destructor));
+  static signed nonmem1() __attribute__((constructor));
+  static unsigned nonmem2() __attribute__((destructor));
 
-  static int nonmem3() __attribute__((constructor)); // expected-error {{'constructor' attribute can only be applied to a function which accepts no arguments and has a 'void' return type}}
-  static int nonmem4() __attribute__((destructor));  // expected-error {{'destructor' attribute can only be applied to a function which accepts no arguments and has a 'void' return type}}
+  static _BitInt(32) nonmem3() __attribute__((constructor)); // expected-error {{'constructor' attribute can only be applied to a function which accepts no arguments and has a 'void' or 'int' return type}}
+  static char nonmem4() __attribute__((destructor));         // expected-error {{'destructor' attribute can only be applied to a function which accepts no arguments and has a 'void' or 'int' return type}}
 
-  static void nonmem5(int) __attribute__((constructor)); // expected-error {{'constructor' attribute can only be applied to a function which accepts no arguments and has a 'void' return type}}
-  static void nonmem6(int) __attribute__((destructor));  // expected-error {{'destructor' attribute can only be applied to a function which accepts no arguments and has a 'void' return type}}
+  static void nonmem5(int) __attribute__((constructor)); // expected-error {{'constructor' attribute can only be applied to a function which accepts no arguments and has a 'void' or 'int' return type}}
+  static void nonmem6(int) __attribute__((destructor));  // expected-error {{'destructor' attribute can only be applied to a function which accepts no arguments and has a 'void' or 'int' return type}}
 };
 
 consteval void consteval_func1() __attribute__((constructor)); // expected-error {{'constructor' attribute cannot be applied to a 'consteval' function}}
