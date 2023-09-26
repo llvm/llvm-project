@@ -108,7 +108,8 @@ TEST(DataflowAnalysisTest, DiagnoseFunctionDiagnoserCalledOnEachElement) {
   // `diagnoseFunction` provides no guarantees about the order in which elements
   // are visited, so we use `UnorderedElementsAre`.
   EXPECT_THAT_EXPECTED(Result, llvm::HasValue(UnorderedElementsAre(
-                                   "0\n", "int x = 0;\n", "x\n", "++x\n")));
+                                   "0\n", "int x = 0;\n", "x\n", "++x\n",
+                                   " (Lifetime ends)\n")));
 }
 
 struct NonConvergingLattice {

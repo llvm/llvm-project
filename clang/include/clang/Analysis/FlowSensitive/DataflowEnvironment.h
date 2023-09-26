@@ -260,6 +260,13 @@ public:
   /// if `D` isn't assigned a storage location in the environment.
   StorageLocation *getStorageLocation(const ValueDecl &D) const;
 
+  /// Removes the location assigned to `D` in the environment.
+  ///
+  /// Requirements:
+  ///
+  ///  `D` must have a storage location assigned in the environment.
+  void removeDecl(const ValueDecl &D);
+
   /// Assigns `Loc` as the storage location of the glvalue `E` in the
   /// environment.
   ///

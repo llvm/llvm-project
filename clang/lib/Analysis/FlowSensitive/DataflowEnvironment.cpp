@@ -35,6 +35,20 @@ namespace dataflow {
 static constexpr int MaxCompositeValueDepth = 3;
 static constexpr int MaxCompositeValueSize = 1000;
 
+/// Returns whether all declarations that `DeclToLoc1` and `DeclToLoc2` have in
+/// common map to the same storage location in both maps.
+bool declToLocConsistent(
+    const llvm::DenseMap<const ValueDecl *, StorageLocation *> &DeclToLoc1,
+    const llvm::DenseMap<const ValueDecl *, StorageLocation *> &DeclToLoc2) {
+  for (auto &Entry : DeclToLoc1) {
+    auto It = DeclToLoc2.find(Entry.first);
+    if (It != DeclToLoc2.end() && Entry.second != It->second)
+      return false;
+  }
+
+  return true;
+}
+
 /// Returns a map consisting of key-value entries that are present in both maps.
 template <typename K, typename V>
 llvm::DenseMap<K, V> intersectDenseMaps(const llvm::DenseMap<K, V> &Map1,
@@ -636,10 +650,7 @@ Environment Environment::join(const Environment &EnvA, const Environment &EnvB,
   else
     JoinedEnv.ReturnLoc = nullptr;
 
-  // FIXME: Once we're able to remove declarations from `DeclToLoc` when their
-  // lifetime ends, add an assertion that there aren't any entries in
-  // `DeclToLoc` and `Other.DeclToLoc` that map the same declaration to
-  // different storage locations.
+  assert(declToLocConsistent(EnvA.DeclToLoc, EnvB.DeclToLoc));
   JoinedEnv.DeclToLoc = intersectDenseMaps(EnvA.DeclToLoc, EnvB.DeclToLoc);
 
   JoinedEnv.ExprToLoc = intersectDenseMaps(EnvA.ExprToLoc, EnvB.ExprToLoc);
@@ -689,6 +700,11 @@ StorageLocation *Environment::getStorageLocation(const ValueDecl &D) const {
   StorageLocation *Loc = It->second;
 
   return Loc;
+}
+
+void Environment::removeDecl(const ValueDecl &D) {
+  assert(DeclToLoc.contains(&D));
+  DeclToLoc.erase(&D);
 }
 
 void Environment::setStorageLocation(const Expr &E, StorageLocation &Loc) {
