@@ -111,7 +111,7 @@ func.func @sparse_convert_complex(%arg0: tensor<100xcomplex<f64>>) -> tensor<100
 //       CHECK: return %[[T]] : !llvm.ptr<i8>
 
 // CHECK-RWT-LABEL:   func.func @sparse_convert_2d(
-//  CHECK-RWT-SAME:     %[[T0:.*]]: tensor<2x4xf64>) -> tensor<2x4xf64, #sparse_tensor.encoding<{ lvlTypes = [ "dense", "compressed" ] }>> {
+//  CHECK-RWT-SAME:     %[[T0:.*]]: tensor<2x4xf64>) -> tensor<2x4xf64, #sparse_tensor.encoding<{{{.*}}}>> {
 //       CHECK-RWT:     %[[T1:.*]] = bufferization.alloc_tensor()
 //       CHECK-RWT:     %[[T2:.*]] = sparse_tensor.foreach in %[[T0]] init(%[[T1]])
 //       CHECK-RWT:     ^bb0(%[[L0I0:.*]]: index, %[[L0I1:.*]]: index, %[[L0V:.*]]: f64, %[[L0T:.*]]: tensor
@@ -162,7 +162,7 @@ func.func @sparse_convert_2d(%arg0: tensor<2x4xf64>) -> tensor<2x4xf64, #CSR> {
 //       CHECK: call @delSparseTensorCOOF32(%[[C]])
 //       CHECK: return %[[T]] : !llvm.ptr<i8>
 
-// CHECK-RWT-LABEL:   func.func @sparse_constant() -> tensor<8x7xf32, #sparse_tensor.encoding<{ lvlTypes = [ "dense", "compressed" ] }>> {
+// CHECK-RWT-LABEL:   func.func @sparse_constant() -> tensor<8x7xf32, #sparse_tensor.encoding<{{{.*}}}>> {
 //       CHECK-RWT:     %[[F0:.*]] = arith.constant sparse<{{\[\[}}0, 0], [1, 6]], [1.000000e+00, 5.000000e+00]> : tensor<8x7xf32>
 //       CHECK-RWT:     %[[T0:.*]] = bufferization.alloc_tensor()
 //       CHECK-RWT:     %[[T1:.*]] = sparse_tensor.foreach in %[[F0]] init(%[[T0]])

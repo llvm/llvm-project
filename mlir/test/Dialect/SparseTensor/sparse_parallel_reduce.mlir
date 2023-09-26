@@ -15,7 +15,7 @@
   doc = "x(i) += A(i,j) * b(j)"
 }
 // CHECK-LABEL:  func.func @matvec(
-//  CHECK-SAME:    %[[TMP_arg0:.*]]: tensor<16x32xf32, #sparse_tensor.encoding<{ lvlTypes = [ "dense", "compressed" ] }>>,
+//  CHECK-SAME:    %[[TMP_arg0:.*]]: tensor<16x32xf32, #sparse_tensor.encoding<{{{.*}}}>>,
 //  CHECK-SAME:    %[[TMP_arg1:.*]]: tensor<32xf32>,
 //  CHECK-SAME:    %[[TMP_arg2:.*]]: tensor<16xf32>) -> tensor<16xf32> {
 //   CHECK-DAG:  %[[TMP_c16:.*]] = arith.constant 16 : index
