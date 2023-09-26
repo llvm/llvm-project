@@ -8,17 +8,6 @@ add_custom_target(libc-long-running-tests)
 
 add_subdirectory(UnitTest)
 
-add_header_library(
-  errno_setter_matcher
-  HDRS
-    ErrnoSetterMatcher.h
-  DEPENDS
-    libc.src.__support.common
-    libc.src.__support.FPUtil.fp_bits
-    libc.src.__support.StringUtil.error_to_string
-    libc.src.errno.errno
-)
-
 if(LIBC_TARGET_ARCHITECTURE_IS_GPU AND
    (NOT TARGET libc.utils.gpu.loader OR NOT TARGET libc.startup.gpu.crt1))
   message(WARNING "Cannot build libc GPU tests, missing loader implementation")
