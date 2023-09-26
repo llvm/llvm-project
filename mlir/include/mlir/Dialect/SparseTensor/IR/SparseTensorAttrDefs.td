@@ -217,13 +217,25 @@ def SparseTensorEncodingAttr : SparseTensor_Attr<"SparseTensorEncoding",
     // Block sparse row storage (2x3 blocks).
     #BSR = #sparse_tensor.encoding<{
       map = ( i, j ) ->
-      ( i floordiv 2 : compressed,
+      ( i floordiv 2 : dense,
         j floordiv 3 : compressed,
         i mod 2      : dense,
         j mod 3      : dense
       )
     }>
     ... tensor<20x30xf32, #BSR> ...
+
+    // Same block sparse row storage (2x3 blocks) but this time
+    // also with a redundant reverse mapping, which can be inferred.
+    #BSR_explicit = #sparse_tensor.encoding<{
+      map = ( i = ib * 2 + ii,
+              j = jb * 3 + jj) ->
+      ( ib = i floordiv 2 : dense,
+        jb = j floordiv 3 : compressed,
+        ii = i mod 2 : dense,
+        jj = j mod 3 : dense)
+    }>
+    ... tensor<20x30xf32, #BSR_explicit> ...
 
     // CSR slice (offset = 0, size = 4, stride = 1 on the first dimension;
     // offset = 0, size = 8, and a dynamic stride on the second dimension).
