@@ -1405,11 +1405,12 @@ void InvokeOp::build(OpBuilder &builder, OperationState &state, TypeRange tys,
         callee, ops, normalOps, unwindOps, nullptr, normal, unwind);
 }
 
-void InvokeOp::build(OpBuilder &builder, OperationState &state, TypeRange tys,
+void InvokeOp::build(OpBuilder &builder, OperationState &state,
+                     LLVMFunctionType calleeType, FlatSymbolRefAttr callee,
                      ValueRange ops, Block *normal, ValueRange normalOps,
                      Block *unwind, ValueRange unwindOps) {
-  build(builder, state, tys, TypeAttr::get(getLLVMFuncType(builder, tys, ops)),
-        /*callee=*/nullptr, ops, normalOps, unwindOps, nullptr, normal, unwind);
+  build(builder, state, getCallOpResults(calleeType), TypeAttr::get(calleeType),
+        callee, ops, normalOps, unwindOps, nullptr, normal, unwind);
 }
 
 SuccessorOperands InvokeOp::getSuccessorOperands(unsigned index) {

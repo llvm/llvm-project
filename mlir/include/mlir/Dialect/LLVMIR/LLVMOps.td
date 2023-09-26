@@ -560,8 +560,9 @@ def LLVM_InvokeOp : LLVM_Op<"invoke", [
     OpBuilder<(ins "TypeRange":$tys, "FlatSymbolRefAttr":$callee,
       "ValueRange":$ops, "Block*":$normal, "ValueRange":$normalOps,
       "Block*":$unwind, "ValueRange":$unwindOps)>,
-    OpBuilder<(ins "TypeRange":$tys, "ValueRange":$ops, "Block*":$normal,
-      "ValueRange":$normalOps, "Block*":$unwind, "ValueRange":$unwindOps)>];
+    OpBuilder<(ins "LLVMFunctionType":$calleeType, "FlatSymbolRefAttr":$callee,
+      "ValueRange":$ops, "Block*":$normal, "ValueRange":$normalOps,
+      "Block*":$unwind, "ValueRange":$unwindOps)>];
   let hasCustomAssemblyFormat = 1;
   let hasVerifier = 1;
 }
