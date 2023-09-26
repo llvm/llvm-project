@@ -119,7 +119,8 @@ static bool cusparseLt_initiated = false;
 #endif // MLIR_ENABLE_CUDA_CUSPARSELT
 #endif // MLIR_ENABLE_CUDA_CUSPARSE
 
-extern "C" MLIR_CUDA_WRAPPERS_EXPORT CUmodule mgpuModuleLoad(void *data) {
+extern "C" MLIR_CUDA_WRAPPERS_EXPORT CUmodule
+mgpuModuleLoad(void *data, size_t /*gpuBlobSize*/) {
   ScopedContext scopedContext;
   CUmodule module = nullptr;
   CUDA_REPORT_IF_ERROR(cuModuleLoadData(&module, data));
@@ -165,7 +166,7 @@ extern "C" MLIR_CUDA_WRAPPERS_EXPORT void
 mgpuLaunchKernel(CUfunction function, intptr_t gridX, intptr_t gridY,
                  intptr_t gridZ, intptr_t blockX, intptr_t blockY,
                  intptr_t blockZ, int32_t smem, CUstream stream, void **params,
-                 void **extra) {
+                 void **extra, size_t /*paramsCount*/) {
   ScopedContext scopedContext;
   int32_t maxShmem = 0;
   CUdevice device = getDefaultCuDevice();
