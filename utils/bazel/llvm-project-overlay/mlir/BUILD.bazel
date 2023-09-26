@@ -1954,6 +1954,7 @@ cc_library(
     hdrs = glob(["include/mlir/Dialect/ArmSME/Utils/*.h"]),
     includes = ["include"],
     deps = [
+        ":ArithDialect",
         ":ArmSMEDialect",
         ":Dialect",
         ":IR",
@@ -10330,7 +10331,7 @@ gentbl_cc_library(
     tblgen = ":mlir-tblgen",
     td_file = "include/mlir/Dialect/Vector/IR/Vector.td",
     deps = [
-        ":ArithOpsTdFiles", 
+        ":ArithOpsTdFiles",
         ":VectorOpsTdFiles"
     ],
 )
@@ -10350,7 +10351,7 @@ gentbl_cc_library(
     tblgen = ":mlir-tblgen",
     td_file = "include/mlir/Dialect/Vector/IR/VectorOps.td",
     deps = [
-        ":ArithOpsTdFiles", 
+        ":ArithOpsTdFiles",
         ":VectorOpsTdFiles"
     ],
 )
@@ -10378,7 +10379,7 @@ gentbl_cc_library(
     tblgen = ":mlir-tblgen",
     td_file = "include/mlir/Dialect/Vector/IR/VectorAttributes.td",
     deps = [
-        ":ArithOpsTdFiles", 
+        ":ArithOpsTdFiles",
         ":VectorOpsTdFiles"
     ],
 )
