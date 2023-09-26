@@ -337,12 +337,13 @@ __sanitizer_symbolize_set_inline_frames(bool InlineFrames);
 class InternalSymbolizer final : public SymbolizerTool {
  public:
   static InternalSymbolizer *get(LowLevelAllocator *alloc) {
-    if (__sanitizer_symbolize_set_demangle)
+    if (&__sanitizer_symbolize_set_demangle)
       CHECK(__sanitizer_symbolize_set_demangle(common_flags()->demangle));
-    if (__sanitizer_symbolize_set_inline_frames)
+    if (&__sanitizer_symbolize_set_inline_frames)
       CHECK(__sanitizer_symbolize_set_inline_frames(
           common_flags()->symbolize_inline_frames));
-    if (__sanitizer_symbolize_code && __sanitizer_symbolize_data)
+    // These are essential, we don't have InternalSymbolizer without them.
+    if (&__sanitizer_symbolize_code && &__sanitizer_symbolize_data)
       return new (*alloc) InternalSymbolizer();
     return 0;
   }
@@ -366,7 +367,7 @@ class InternalSymbolizer final : public SymbolizerTool {
   }
 
   void Flush() override {
-    if (__sanitizer_symbolize_flush)
+    if (&__sanitizer_symbolize_flush)
       __sanitizer_symbolize_flush();
   }
 
