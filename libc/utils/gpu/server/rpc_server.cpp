@@ -59,23 +59,27 @@ private:
     switch (port->get_opcode()) {
     case RPC_WRITE_TO_STREAM:
     case RPC_WRITE_TO_STDERR:
-    case RPC_WRITE_TO_STDOUT: {
+    case RPC_WRITE_TO_STDOUT:
+    case RPC_WRITE_TO_STDOUT_NEWLINE: {
       uint64_t sizes[lane_size] = {0};
       void *strs[lane_size] = {nullptr};
       FILE *files[lane_size] = {nullptr};
-      if (port->get_opcode() == RPC_WRITE_TO_STREAM)
+      if (port->get_opcode() == RPC_WRITE_TO_STREAM) {
         port->recv([&](rpc::Buffer *buffer, uint32_t id) {
           files[id] = reinterpret_cast<FILE *>(buffer->data[0]);
         });
+      } else if (port->get_opcode() == RPC_WRITE_TO_STDERR) {
+        std::fill(files, files + lane_size, stderr);
+      } else {
+        std::fill(files, files + lane_size, stdout);
+      }
+
       port->recv_n(strs, sizes, [&](uint64_t size) { return new char[size]; });
       port->send([&](rpc::Buffer *buffer, uint32_t id) {
-        FILE *file =
-            port->get_opcode() == RPC_WRITE_TO_STDOUT
-                ? stdout
-                : (port->get_opcode() == RPC_WRITE_TO_STDERR ? stderr
-                                                             : files[id]);
-        uint64_t ret = fwrite(strs[id], 1, sizes[id], file);
-        std::memcpy(buffer->data, &ret, sizeof(uint64_t));
+        buffer->data[0] = fwrite(strs[id], 1, sizes[id], files[id]);
+        if (port->get_opcode() == RPC_WRITE_TO_STDOUT_NEWLINE &&
+            buffer->data[0] == sizes[id])
+          buffer->data[0] += fwrite("\n", 1, 1, files[id]);
         delete[] reinterpret_cast<uint8_t *>(strs[id]);
       });
       break;
