@@ -937,8 +937,7 @@ defm V_CTZ_I32_B32         : VOP1_Real_FULL_with_name_gfx11_gfx12<0x03a,
   "V_FFBL_B32", "v_ctz_i32_b32">;
 defm V_CLS_I32             : VOP1_Real_FULL_with_name_gfx11_gfx12<0x03b,
   "V_FFBH_I32", "v_cls_i32">;
-
-defm V_PERMLANE64_B32        : VOP1Only_Real_gfx11_gfx12<0x067>;
+defm V_PERMLANE64_B32      : VOP1Only_Real_gfx11_gfx12<0x067>;
 defm V_MOV_B16_t16           : VOP1_Real_FULL_t16_gfx11_gfx12<0x01c, "v_mov_b16">;
 defm V_NOT_B16_t16           : VOP1_Real_FULL_t16_gfx11_gfx12<0x069, "v_not_b16">;
 defm V_CVT_I32_I16_t16       : VOP1_Real_FULL_t16_gfx11_gfx12<0x06a, "v_cvt_i32_i16">;
