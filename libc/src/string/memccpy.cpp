@@ -11,7 +11,7 @@
 #include "src/__support/common.h"
 #include <stddef.h> // For size_t.
 
-namespace __llvm_libc {
+namespace LIBC_NAMESPACE {
 
 LLVM_LIBC_FUNCTION(void *, memccpy,
                    (void *__restrict dest, const void *__restrict src, int c,
@@ -32,4 +32,4 @@ LLVM_LIBC_FUNCTION(void *, memccpy,
   return nullptr;
 }
 
-} // namespace __llvm_libc
+} // namespace LIBC_NAMESPACE

@@ -477,7 +477,7 @@ int load(int argc, char **argv, char **envp, void *image, size_t size,
   // If the clock_freq symbol is missing, no work to do.
   hsa_executable_symbol_t freq_sym;
   if (HSA_STATUS_SUCCESS ==
-      hsa_executable_get_symbol_by_name(executable, "__llvm_libc_clock_freq",
+      hsa_executable_get_symbol_by_name(executable, "LIBC_NAMESPACE_clock_freq",
                                         &dev_agent, &freq_sym)) {
 
     void *host_clock_freq;

@@ -16,7 +16,7 @@
 #include <dirent.h>
 #include <stdlib.h>
 
-namespace __llvm_libc {
+namespace LIBC_NAMESPACE {
 
 // Platform specific function which will open the directory |name|
 // and return its file descriptor. Upon failure, the error value is returned.
@@ -72,6 +72,6 @@ public:
   int getfd() { return fd; }
 };
 
-} // namespace __llvm_libc
+} // namespace LIBC_NAMESPACE
 
 #endif // LLVM_LIBC_SRC___SUPPORT_FILE_DIR_H

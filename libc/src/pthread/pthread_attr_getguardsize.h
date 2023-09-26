@@ -11,11 +11,11 @@
 
 #include <pthread.h>
 
-namespace __llvm_libc {
+namespace LIBC_NAMESPACE {
 
 int pthread_attr_getguardsize(const pthread_attr_t *__restrict attr,
                               size_t *__restrict guardsize);
 
-} // namespace __llvm_libc
+} // namespace LIBC_NAMESPACE
 
 #endif // LLVM_LIBC_SRC_PTHREAD_PTHREAD_ATTR_GETGUARDSIZE_H

@@ -11,11 +11,11 @@
 #include "src/threads/cnd_destroy.h"
 #include "src/__support/common.h"
 
-namespace __llvm_libc {
+namespace LIBC_NAMESPACE {
 
 LLVM_LIBC_FUNCTION(void, cnd_destroy, (cnd_t * cond)) {
   CndVar *cndvar = reinterpret_cast<CndVar *>(cond);
   CndVar::destroy(cndvar);
 }
 
-} // namespace __llvm_libc
+} // namespace LIBC_NAMESPACE

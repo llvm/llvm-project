@@ -13,13 +13,13 @@
 
 extern "C" int main(int argc, char **argv, char **envp);
 
-namespace __llvm_libc {
+namespace LIBC_NAMESPACE {
 
 // The AMDGPU architecture provides a fixed frequency clock used for obtaining
 // real time. However, the frequency of this clock varies between cards and can
 // only be obtained via the driver. The loader will set this so we can use it.
 extern "C" [[gnu::visibility("protected")]] uint64_t
-    [[clang::address_space(4)]] __llvm_libc_clock_freq = 0;
+    [[clang::address_space(4)]] LIBC_NAMESPACE_clock_freq = 0;
 
 extern "C" uintptr_t __init_array_start[];
 extern "C" uintptr_t __init_array_end[];
@@ -41,7 +41,7 @@ static void call_fini_array_callbacks() {
     reinterpret_cast<FiniCallback *>(__fini_array_start[i])();
 }
 
-} // namespace __llvm_libc
+} // namespace LIBC_NAMESPACE
 
 extern "C" [[gnu::visibility("protected"), clang::amdgpu_kernel]] void
 _begin(int argc, char **argv, char **env) {
@@ -49,8 +49,8 @@ _begin(int argc, char **argv, char **env) {
   // callbacks are run. So, we register them before running the init
   // array callbacks as they can potentially register their own atexit
   // callbacks.
-  __llvm_libc::atexit(&__llvm_libc::call_fini_array_callbacks);
-  __llvm_libc::call_init_array_callbacks(argc, argv, env);
+  LIBC_NAMESPACE::atexit(&LIBC_NAMESPACE::call_fini_array_callbacks);
+  LIBC_NAMESPACE::call_init_array_callbacks(argc, argv, env);
 }
 
 extern "C" [[gnu::visibility("protected"), clang::amdgpu_kernel]] void
@@ -65,5 +65,5 @@ _end(int retval) {
   // Only a single thread should call `exit` here, the rest should gracefully
   // return from the kernel. This is so only one thread calls the destructors
   // registred with 'atexit' above.
-  __llvm_libc::exit(retval);
+  LIBC_NAMESPACE::exit(retval);
 }

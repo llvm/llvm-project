@@ -16,18 +16,20 @@
 
 #include <stdint.h>
 
-namespace mpfr = __llvm_libc::testing::mpfr;
+namespace mpfr = LIBC_NAMESPACE::testing::mpfr;
 
 DECLARE_SPECIAL_CONSTANTS(float)
 
 TEST(LlvmLibcLog2fTest, SpecialNumbers) {
-  EXPECT_FP_EQ(aNaN, __llvm_libc::log2f(aNaN));
-  EXPECT_FP_EQ(inf, __llvm_libc::log2f(inf));
-  EXPECT_FP_IS_NAN_WITH_EXCEPTION(__llvm_libc::log2f(neg_inf), FE_INVALID);
-  EXPECT_FP_EQ_WITH_EXCEPTION(neg_inf, __llvm_libc::log2f(0.0f), FE_DIVBYZERO);
-  EXPECT_FP_EQ_WITH_EXCEPTION(neg_inf, __llvm_libc::log2f(-0.0f), FE_DIVBYZERO);
-  EXPECT_FP_IS_NAN_WITH_EXCEPTION(__llvm_libc::log2f(-1.0f), FE_INVALID);
-  EXPECT_FP_EQ_ALL_ROUNDING(zero, __llvm_libc::log2f(1.0f));
+  EXPECT_FP_EQ(aNaN, LIBC_NAMESPACE::log2f(aNaN));
+  EXPECT_FP_EQ(inf, LIBC_NAMESPACE::log2f(inf));
+  EXPECT_FP_IS_NAN_WITH_EXCEPTION(LIBC_NAMESPACE::log2f(neg_inf), FE_INVALID);
+  EXPECT_FP_EQ_WITH_EXCEPTION(neg_inf, LIBC_NAMESPACE::log2f(0.0f),
+                              FE_DIVBYZERO);
+  EXPECT_FP_EQ_WITH_EXCEPTION(neg_inf, LIBC_NAMESPACE::log2f(-0.0f),
+                              FE_DIVBYZERO);
+  EXPECT_FP_IS_NAN_WITH_EXCEPTION(LIBC_NAMESPACE::log2f(-1.0f), FE_INVALID);
+  EXPECT_FP_EQ_ALL_ROUNDING(zero, LIBC_NAMESPACE::log2f(1.0f));
 }
 
 TEST(LlvmLibcLog2fTest, TrickyInputs) {
@@ -39,7 +41,7 @@ TEST(LlvmLibcLog2fTest, TrickyInputs) {
   for (int i = 0; i < N; ++i) {
     float x = float(FPBits(INPUTS[i]));
     EXPECT_MPFR_MATCH_ALL_ROUNDING(mpfr::Operation::Log2, x,
-                                   __llvm_libc::log2f(x), 0.5);
+                                   LIBC_NAMESPACE::log2f(x), 0.5);
   }
 }
 
@@ -51,7 +53,7 @@ TEST(LlvmLibcLog2fTest, InFloatRange) {
     if (isnan(x) || isinf(x))
       continue;
     libc_errno = 0;
-    float result = __llvm_libc::log2f(x);
+    float result = LIBC_NAMESPACE::log2f(x);
     // If the computation resulted in an error or did not produce valid result
     // in the single-precision floating point range, then ignore comparing with
     // MPFR result as MPFR can still produce valid results because of its
@@ -59,6 +61,6 @@ TEST(LlvmLibcLog2fTest, InFloatRange) {
     if (isnan(result) || isinf(result) || libc_errno != 0)
       continue;
     ASSERT_MPFR_MATCH_ALL_ROUNDING(mpfr::Operation::Log2, x,
-                                   __llvm_libc::log2f(x), 0.5);
+                                   LIBC_NAMESPACE::log2f(x), 0.5);
   }
 }

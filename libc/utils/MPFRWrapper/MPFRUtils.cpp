@@ -23,9 +23,9 @@
 
 #include "mpfr_inc.h"
 
-template <typename T> using FPBits = __llvm_libc::fputil::FPBits<T>;
+template <typename T> using FPBits = LIBC_NAMESPACE::fputil::FPBits<T>;
 
-namespace __llvm_libc {
+namespace LIBC_NAMESPACE {
 namespace testing {
 namespace mpfr {
 
@@ -51,7 +51,7 @@ template <> struct ExtraPrecision<long double> {
 template <typename T>
 static inline unsigned int get_precision(double ulp_tolerance) {
   if (ulp_tolerance <= 0.5) {
-    return __llvm_libc::fputil::FloatProperties<T>::MANTISSA_PRECISION;
+    return LIBC_NAMESPACE::fputil::FloatProperties<T>::MANTISSA_PRECISION;
   } else {
     return ExtraPrecision<T>::VALUE;
   }
@@ -1011,4 +1011,4 @@ template long double round<long double>(long double, RoundingMode);
 
 } // namespace mpfr
 } // namespace testing
-} // namespace __llvm_libc
+} // namespace LIBC_NAMESPACE

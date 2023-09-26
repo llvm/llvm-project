@@ -16,7 +16,7 @@
 #include "src/errno/libc_errno.h"
 #include "test/UnitTest/Test.h"
 
-namespace __llvm_libc {
+namespace LIBC_NAMESPACE {
 namespace testing {
 
 namespace internal {
@@ -170,6 +170,6 @@ returns(internal::Comparator<RetT> cmp) {
 } // namespace ErrnoSetterMatcher
 
 } // namespace testing
-} // namespace __llvm_libc
+} // namespace LIBC_NAMESPACE
 
 #endif // LLVM_LIBC_TEST_ERRNOSETTERMATCHER_H

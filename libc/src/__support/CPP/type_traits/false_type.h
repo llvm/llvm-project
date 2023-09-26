@@ -10,11 +10,11 @@
 
 #include "src/__support/CPP/type_traits/bool_constant.h"
 
-namespace __llvm_libc::cpp {
+namespace LIBC_NAMESPACE::cpp {
 
 // false_type
 using false_type = cpp::bool_constant<false>;
 
-} // namespace __llvm_libc::cpp
+} // namespace LIBC_NAMESPACE::cpp
 
 #endif // LLVM_LIBC_SRC___SUPPORT_CPP_TYPE_TRAITS_FALSE_TYPE_H

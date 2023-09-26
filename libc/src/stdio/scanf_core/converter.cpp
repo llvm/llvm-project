@@ -22,7 +22,7 @@
 
 #include <stddef.h>
 
-namespace __llvm_libc {
+namespace LIBC_NAMESPACE {
 namespace scanf_core {
 
 int convert(Reader *reader, const FormatSection &to_conv) {
@@ -99,4 +99,4 @@ int raw_match(Reader *reader, cpp::string_view raw_string) {
 }
 
 } // namespace scanf_core
-} // namespace __llvm_libc
+} // namespace LIBC_NAMESPACE

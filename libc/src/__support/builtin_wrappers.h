@@ -15,7 +15,7 @@
 #include "src/__support/macros/attributes.h" // LIBC_INLINE
 #include "src/__support/macros/config.h"     // LIBC_HAS_BUILTIN
 
-namespace __llvm_libc {
+namespace LIBC_NAMESPACE {
 
 // The following overloads are matched based on what is accepted by
 // __builtin_clz/ctz* rather than using the exactly-sized aliases from stdint.h.
@@ -221,6 +221,6 @@ sub_with_borrow<unsigned long long>(unsigned long long a, unsigned long long b,
 
 #endif // LIBC_HAS_BUILTIN(__builtin_subc)
 
-} // namespace __llvm_libc
+} // namespace LIBC_NAMESPACE
 
 #endif // LLVM_LIBC_SRC___SUPPORT_BUILTIN_WRAPPERS_H

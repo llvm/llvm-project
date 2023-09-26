@@ -12,12 +12,12 @@
 #include <sched.h>
 #include <stddef.h>
 
-namespace __llvm_libc {
+namespace LIBC_NAMESPACE {
 
 // This function is for internal use in the CPU_COUNT macro, but since that's a
 // macro and will be applied to client files, this must be a public entrypoint.
 int __sched_getcpucount(size_t cpuset_size, const cpu_set_t *mask);
 
-} // namespace __llvm_libc
+} // namespace LIBC_NAMESPACE
 
 #endif // LLVM_LIBC_SRC_SCHED_SCHED_GETCPUCOUNT_H

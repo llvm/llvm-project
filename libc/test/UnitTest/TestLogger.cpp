@@ -6,13 +6,13 @@
 
 #include <stdint.h>
 
-namespace __llvm_libc {
+namespace LIBC_NAMESPACE {
 namespace testing {
 
 // cpp::string_view specialization
 template <>
 TestLogger &TestLogger::operator<< <cpp::string_view>(cpp::string_view str) {
-  __llvm_libc::write_to_stderr(str);
+  LIBC_NAMESPACE::write_to_stderr(str);
   return *this;
 }
 
@@ -83,4 +83,4 @@ template TestLogger &TestLogger::operator<< <cpp::UInt<320>>(cpp::UInt<320>);
 TestLogger tlog;
 
 } // namespace testing
-} // namespace __llvm_libc
+} // namespace LIBC_NAMESPACE

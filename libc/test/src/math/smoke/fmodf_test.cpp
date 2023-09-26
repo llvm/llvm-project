@@ -10,4 +10,4 @@
 
 #include "src/math/fmodf.h"
 
-LIST_FMOD_TESTS(float, __llvm_libc::fmodf)
+LIST_FMOD_TESTS(float, LIBC_NAMESPACE::fmodf)

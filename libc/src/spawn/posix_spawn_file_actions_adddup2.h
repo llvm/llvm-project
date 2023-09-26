@@ -11,11 +11,11 @@
 
 #include <spawn.h>
 
-namespace __llvm_libc {
+namespace LIBC_NAMESPACE {
 
 int posix_spawn_file_actions_adddup2(posix_spawn_file_actions_t *actions,
                                      int fd, int newfd);
 
-} // namespace __llvm_libc
+} // namespace LIBC_NAMESPACE
 
 #endif // LLVM_LIBC_SRC_SPAWN_POSIX_SPAWN_FILE_ACTIONS_ADDDUP2_H

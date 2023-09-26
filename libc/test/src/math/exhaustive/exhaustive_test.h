@@ -33,14 +33,14 @@
 //       or test_full_range_all_roundings(start, stop).
 // * For single input single output math function, use the convenient template:
 //   LlvmLibcUnaryOpExhaustiveMathTest<FloatType, Op, Func>.
-namespace mpfr = __llvm_libc::testing::mpfr;
+namespace mpfr = LIBC_NAMESPACE::testing::mpfr;
 
 template <typename T> using UnaryOp = T(T);
 
 template <typename T, mpfr::Operation Op, UnaryOp<T> Func>
-struct UnaryOpChecker : public virtual __llvm_libc::testing::Test {
+struct UnaryOpChecker : public virtual LIBC_NAMESPACE::testing::Test {
   using FloatType = T;
-  using FPBits = __llvm_libc::fputil::FPBits<FloatType>;
+  using FPBits = LIBC_NAMESPACE::fputil::FPBits<FloatType>;
   using UIntType = typename FPBits::UIntType;
 
   static constexpr UnaryOp<FloatType> *FUNC = Func;
@@ -67,11 +67,12 @@ struct UnaryOpChecker : public virtual __llvm_libc::testing::Test {
   }
 };
 
-// Checker class needs inherit from __llvm_libc::testing::Test and provide
+// Checker class needs inherit from LIBC_NAMESPACE::testing::Test and provide
 //   UIntType and check method.
 template <typename Checker>
-struct LlvmLibcExhaustiveMathTest : public virtual __llvm_libc::testing::Test,
-                                    public Checker {
+struct LlvmLibcExhaustiveMathTest
+    : public virtual LIBC_NAMESPACE::testing::Test,
+      public Checker {
   using FloatType = typename Checker::FloatType;
   using FPBits = typename Checker::FPBits;
   using UIntType = typename Checker::UIntType;

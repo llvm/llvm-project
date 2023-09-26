@@ -16,25 +16,25 @@
 #include <errno.h>
 #include <stdint.h>
 
-using FPBits = __llvm_libc::fputil::FPBits<float>;
+using FPBits = LIBC_NAMESPACE::fputil::FPBits<float>;
 
 DECLARE_SPECIAL_CONSTANTS(float)
 
 TEST(LlvmLibcTanfTest, SpecialNumbers) {
   libc_errno = 0;
 
-  EXPECT_FP_EQ(aNaN, __llvm_libc::tanf(aNaN));
+  EXPECT_FP_EQ(aNaN, LIBC_NAMESPACE::tanf(aNaN));
   EXPECT_MATH_ERRNO(0);
 
-  EXPECT_FP_EQ(0.0f, __llvm_libc::tanf(0.0f));
+  EXPECT_FP_EQ(0.0f, LIBC_NAMESPACE::tanf(0.0f));
   EXPECT_MATH_ERRNO(0);
 
-  EXPECT_FP_EQ(-0.0f, __llvm_libc::tanf(-0.0f));
+  EXPECT_FP_EQ(-0.0f, LIBC_NAMESPACE::tanf(-0.0f));
   EXPECT_MATH_ERRNO(0);
 
-  EXPECT_FP_EQ(aNaN, __llvm_libc::tanf(inf));
+  EXPECT_FP_EQ(aNaN, LIBC_NAMESPACE::tanf(inf));
   EXPECT_MATH_ERRNO(EDOM);
 
-  EXPECT_FP_EQ(aNaN, __llvm_libc::tanf(neg_inf));
+  EXPECT_FP_EQ(aNaN, LIBC_NAMESPACE::tanf(neg_inf));
   EXPECT_MATH_ERRNO(EDOM);
 }

@@ -10,7 +10,7 @@
 #include "test/UnitTest/Test.h"
 
 TEST(LlvmLibcFixedVectorTest, PushAndPop) {
-  __llvm_libc::FixedVector<int, 20> fixed_vector;
+  LIBC_NAMESPACE::FixedVector<int, 20> fixed_vector;
   ASSERT_TRUE(fixed_vector.empty());
   for (int i = 0; i < 20; i++)
     ASSERT_TRUE(fixed_vector.push_back(i));
@@ -25,7 +25,7 @@ TEST(LlvmLibcFixedVectorTest, PushAndPop) {
 }
 
 TEST(LlvmLibcFixedVectorTest, Reset) {
-  __llvm_libc::FixedVector<int, 20> fixed_vector;
+  LIBC_NAMESPACE::FixedVector<int, 20> fixed_vector;
   ASSERT_TRUE(fixed_vector.empty());
   for (int i = 0; i < 20; i++)
     ASSERT_TRUE(fixed_vector.push_back(i));
@@ -35,11 +35,11 @@ TEST(LlvmLibcFixedVectorTest, Reset) {
 }
 
 TEST(LlvmLibcFixedVectorTest, Destroy) {
-  __llvm_libc::FixedVector<int, 20> fixed_vector;
+  LIBC_NAMESPACE::FixedVector<int, 20> fixed_vector;
   ASSERT_TRUE(fixed_vector.empty());
   for (int i = 0; i < 20; i++)
     ASSERT_TRUE(fixed_vector.push_back(i));
   ASSERT_FALSE(fixed_vector.empty());
-  __llvm_libc::FixedVector<int, 20>::destroy(&fixed_vector);
+  LIBC_NAMESPACE::FixedVector<int, 20>::destroy(&fixed_vector);
   ASSERT_TRUE(fixed_vector.empty());
 }

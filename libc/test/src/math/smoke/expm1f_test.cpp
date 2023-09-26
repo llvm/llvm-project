@@ -20,33 +20,33 @@ DECLARE_SPECIAL_CONSTANTS(float)
 TEST(LlvmLibcExpm1fTest, SpecialNumbers) {
   libc_errno = 0;
 
-  EXPECT_FP_EQ_ALL_ROUNDING(aNaN, __llvm_libc::expm1f(aNaN));
+  EXPECT_FP_EQ_ALL_ROUNDING(aNaN, LIBC_NAMESPACE::expm1f(aNaN));
   EXPECT_MATH_ERRNO(0);
 
-  EXPECT_FP_EQ_ALL_ROUNDING(inf, __llvm_libc::expm1f(inf));
+  EXPECT_FP_EQ_ALL_ROUNDING(inf, LIBC_NAMESPACE::expm1f(inf));
   EXPECT_MATH_ERRNO(0);
 
-  EXPECT_FP_EQ_ALL_ROUNDING(-1.0f, __llvm_libc::expm1f(neg_inf));
+  EXPECT_FP_EQ_ALL_ROUNDING(-1.0f, LIBC_NAMESPACE::expm1f(neg_inf));
   EXPECT_MATH_ERRNO(0);
 
-  EXPECT_FP_EQ_ALL_ROUNDING(0.0f, __llvm_libc::expm1f(0.0f));
+  EXPECT_FP_EQ_ALL_ROUNDING(0.0f, LIBC_NAMESPACE::expm1f(0.0f));
   EXPECT_MATH_ERRNO(0);
 
-  EXPECT_FP_EQ_ALL_ROUNDING(-0.0f, __llvm_libc::expm1f(-0.0f));
+  EXPECT_FP_EQ_ALL_ROUNDING(-0.0f, LIBC_NAMESPACE::expm1f(-0.0f));
   EXPECT_MATH_ERRNO(0);
 }
 
 TEST(LlvmLibcExpm1fTest, Overflow) {
   libc_errno = 0;
   EXPECT_FP_EQ_WITH_EXCEPTION(
-      inf, __llvm_libc::expm1f(float(FPBits(0x7f7fffffU))), FE_OVERFLOW);
+      inf, LIBC_NAMESPACE::expm1f(float(FPBits(0x7f7fffffU))), FE_OVERFLOW);
   EXPECT_MATH_ERRNO(ERANGE);
 
   EXPECT_FP_EQ_WITH_EXCEPTION(
-      inf, __llvm_libc::expm1f(float(FPBits(0x42cffff8U))), FE_OVERFLOW);
+      inf, LIBC_NAMESPACE::expm1f(float(FPBits(0x42cffff8U))), FE_OVERFLOW);
   EXPECT_MATH_ERRNO(ERANGE);
 
   EXPECT_FP_EQ_WITH_EXCEPTION(
-      inf, __llvm_libc::expm1f(float(FPBits(0x42d00008U))), FE_OVERFLOW);
+      inf, LIBC_NAMESPACE::expm1f(float(FPBits(0x42d00008U))), FE_OVERFLOW);
   EXPECT_MATH_ERRNO(ERANGE);
 }

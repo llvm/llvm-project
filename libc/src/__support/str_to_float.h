@@ -25,7 +25,7 @@
 #include "src/__support/str_to_num_result.h"
 #include "src/errno/libc_errno.h" // For ERANGE
 
-namespace __llvm_libc {
+namespace LIBC_NAMESPACE {
 namespace internal {
 
 template <class T> struct ExpandedFloat {
@@ -1247,6 +1247,6 @@ LIBC_INLINE StrToNumResult<T> strtofloatingpoint(const char *__restrict src) {
 }
 
 } // namespace internal
-} // namespace __llvm_libc
+} // namespace LIBC_NAMESPACE
 
 #endif // LLVM_LIBC_SRC___SUPPORT_STR_TO_FLOAT_H

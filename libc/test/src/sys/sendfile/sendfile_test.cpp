@@ -20,11 +20,11 @@
 #include <fcntl.h>
 #include <sys/stat.h>
 
-namespace cpp = __llvm_libc::cpp;
+namespace cpp = LIBC_NAMESPACE::cpp;
 
 TEST(LlvmLibcSendfileTest, CreateAndTransfer) {
-  using __llvm_libc::testing::ErrnoSetterMatcher::Fails;
-  using __llvm_libc::testing::ErrnoSetterMatcher::Succeeds;
+  using LIBC_NAMESPACE::testing::ErrnoSetterMatcher::Fails;
+  using LIBC_NAMESPACE::testing::ErrnoSetterMatcher::Succeeds;
 
   // The test strategy is to
   //   1. Create a temporary file with known data.
@@ -37,30 +37,30 @@ TEST(LlvmLibcSendfileTest, CreateAndTransfer) {
   constexpr ssize_t IN_SIZE = ssize_t(sizeof(IN_DATA));
   libc_errno = 0;
 
-  int in_fd = __llvm_libc::open(IN_FILE, O_CREAT | O_WRONLY, S_IRWXU);
+  int in_fd = LIBC_NAMESPACE::open(IN_FILE, O_CREAT | O_WRONLY, S_IRWXU);
   ASSERT_GT(in_fd, 0);
   ASSERT_EQ(libc_errno, 0);
-  ASSERT_EQ(__llvm_libc::write(in_fd, IN_DATA, IN_SIZE), IN_SIZE);
-  ASSERT_THAT(__llvm_libc::close(in_fd), Succeeds(0));
+  ASSERT_EQ(LIBC_NAMESPACE::write(in_fd, IN_DATA, IN_SIZE), IN_SIZE);
+  ASSERT_THAT(LIBC_NAMESPACE::close(in_fd), Succeeds(0));
 
-  in_fd = __llvm_libc::open(IN_FILE, O_RDONLY);
+  in_fd = LIBC_NAMESPACE::open(IN_FILE, O_RDONLY);
   ASSERT_GT(in_fd, 0);
   ASSERT_EQ(libc_errno, 0);
-  int out_fd = __llvm_libc::open(OUT_FILE, O_CREAT | O_WRONLY, S_IRWXU);
+  int out_fd = LIBC_NAMESPACE::open(OUT_FILE, O_CREAT | O_WRONLY, S_IRWXU);
   ASSERT_GT(out_fd, 0);
   ASSERT_EQ(libc_errno, 0);
-  ssize_t size = __llvm_libc::sendfile(in_fd, out_fd, nullptr, IN_SIZE);
+  ssize_t size = LIBC_NAMESPACE::sendfile(in_fd, out_fd, nullptr, IN_SIZE);
   ASSERT_EQ(size, IN_SIZE);
-  ASSERT_THAT(__llvm_libc::close(in_fd), Succeeds(0));
-  ASSERT_THAT(__llvm_libc::close(out_fd), Succeeds(0));
+  ASSERT_THAT(LIBC_NAMESPACE::close(in_fd), Succeeds(0));
+  ASSERT_THAT(LIBC_NAMESPACE::close(out_fd), Succeeds(0));
 
-  out_fd = __llvm_libc::open(OUT_FILE, O_RDONLY);
+  out_fd = LIBC_NAMESPACE::open(OUT_FILE, O_RDONLY);
   ASSERT_GT(out_fd, 0);
   ASSERT_EQ(libc_errno, 0);
   char buf[IN_SIZE];
-  ASSERT_EQ(IN_SIZE, __llvm_libc::read(out_fd, buf, IN_SIZE));
+  ASSERT_EQ(IN_SIZE, LIBC_NAMESPACE::read(out_fd, buf, IN_SIZE));
   ASSERT_EQ(cpp::string_view(buf), cpp::string_view(IN_DATA));
 
-  ASSERT_THAT(__llvm_libc::unlink(IN_FILE), Succeeds(0));
-  ASSERT_THAT(__llvm_libc::unlink(OUT_FILE), Succeeds(0));
+  ASSERT_THAT(LIBC_NAMESPACE::unlink(IN_FILE), Succeeds(0));
+  ASSERT_THAT(LIBC_NAMESPACE::unlink(OUT_FILE), Succeeds(0));
 }

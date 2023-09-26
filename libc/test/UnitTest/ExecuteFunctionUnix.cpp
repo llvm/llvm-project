@@ -17,7 +17,7 @@
 #include <sys/wait.h>
 #include <unistd.h>
 
-namespace __llvm_libc {
+namespace LIBC_NAMESPACE {
 namespace testutils {
 
 bool ProcessStatus::exited_normally() { return WIFEXITED(platform_defined); }
@@ -78,4 +78,4 @@ ProcessStatus invoke_in_subprocess(FunctionCaller *func, unsigned timeout_ms) {
 const char *signal_as_string(int signum) { return ::strsignal(signum); }
 
 } // namespace testutils
-} // namespace __llvm_libc
+} // namespace LIBC_NAMESPACE

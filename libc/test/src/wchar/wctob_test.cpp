@@ -17,8 +17,8 @@ TEST(LlvmLibcWctob, DefaultLocale) {
   // itself and everything else returns EOF.
   for (wint_t c = 0; c < 32767; ++c) {
     if (c < 128)
-      EXPECT_EQ(__llvm_libc::wctob(c), static_cast<int>(c));
+      EXPECT_EQ(LIBC_NAMESPACE::wctob(c), static_cast<int>(c));
     else
-      EXPECT_EQ(__llvm_libc::wctob(c), EOF);
+      EXPECT_EQ(LIBC_NAMESPACE::wctob(c), EOF);
   }
 }

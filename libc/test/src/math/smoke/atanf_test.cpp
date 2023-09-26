@@ -16,25 +16,25 @@
 #include <errno.h>
 #include <stdint.h>
 
-using FPBits = __llvm_libc::fputil::FPBits<float>;
+using FPBits = LIBC_NAMESPACE::fputil::FPBits<float>;
 
 DECLARE_SPECIAL_CONSTANTS(float)
 
 TEST(LlvmLibcAtanfTest, SpecialNumbers) {
   libc_errno = 0;
 
-  __llvm_libc::fputil::clear_except(FE_ALL_EXCEPT);
-  EXPECT_FP_EQ_ALL_ROUNDING(aNaN, __llvm_libc::atanf(aNaN));
+  LIBC_NAMESPACE::fputil::clear_except(FE_ALL_EXCEPT);
+  EXPECT_FP_EQ_ALL_ROUNDING(aNaN, LIBC_NAMESPACE::atanf(aNaN));
   EXPECT_FP_EXCEPTION(0);
   EXPECT_MATH_ERRNO(0);
 
-  __llvm_libc::fputil::clear_except(FE_ALL_EXCEPT);
-  EXPECT_FP_EQ_ALL_ROUNDING(0.0f, __llvm_libc::atanf(0.0f));
+  LIBC_NAMESPACE::fputil::clear_except(FE_ALL_EXCEPT);
+  EXPECT_FP_EQ_ALL_ROUNDING(0.0f, LIBC_NAMESPACE::atanf(0.0f));
   EXPECT_FP_EXCEPTION(0);
   EXPECT_MATH_ERRNO(0);
 
-  __llvm_libc::fputil::clear_except(FE_ALL_EXCEPT);
-  EXPECT_FP_EQ_ALL_ROUNDING(-0.0f, __llvm_libc::atanf(-0.0f));
+  LIBC_NAMESPACE::fputil::clear_except(FE_ALL_EXCEPT);
+  EXPECT_FP_EQ_ALL_ROUNDING(-0.0f, LIBC_NAMESPACE::atanf(-0.0f));
   EXPECT_FP_EXCEPTION(0);
   EXPECT_MATH_ERRNO(0);
 }

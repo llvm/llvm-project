@@ -14,12 +14,12 @@
 #include "src/errno/libc_errno.h"
 #include <sys/syscall.h> // For syscall numbers.
 
-namespace __llvm_libc {
+namespace LIBC_NAMESPACE {
 
 // This function is currently linux only. It has to be refactored suitably if
 // mprotect is to be supported on non-linux operating systems also.
 LLVM_LIBC_FUNCTION(int, mprotect, (void *addr, size_t size, int prot)) {
-  int ret = __llvm_libc::syscall_impl<int>(
+  int ret = LIBC_NAMESPACE::syscall_impl<int>(
       SYS_mprotect, reinterpret_cast<long>(addr), size, prot);
 
   // A negative return value indicates an error with the magnitude of the
@@ -32,4 +32,4 @@ LLVM_LIBC_FUNCTION(int, mprotect, (void *addr, size_t size, int prot)) {
   return 0;
 }
 
-} // namespace __llvm_libc
+} // namespace LIBC_NAMESPACE

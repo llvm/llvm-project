@@ -100,7 +100,7 @@ constexpr size_t MID_INT_SIZE = 192;
 // Any block that is all 9s adds one to the max block counter and doesn't clear
 // the buffer because they can cause the block above them to be rounded up.
 
-namespace __llvm_libc {
+namespace LIBC_NAMESPACE {
 
 using BlockInt = uint32_t;
 constexpr size_t BLOCK_SIZE = 9;
@@ -756,6 +756,6 @@ FloatToString<long double>::get_negative_block(int block_index) {
 
 #endif // LONG_DOUBLE_IS_DOUBLE
 
-} // namespace __llvm_libc
+} // namespace LIBC_NAMESPACE
 
 #endif // LLVM_LIBC_SRC___SUPPORT_FLOAT_TO_STRING_H

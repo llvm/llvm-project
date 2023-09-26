@@ -35,7 +35,7 @@
 #error "Unsupported architecture"
 #endif
 
-namespace __llvm_libc {
+namespace LIBC_NAMESPACE {
 
 LIBC_INLINE void inline_memcpy(void *__restrict dst, const void *__restrict src,
                                size_t count) {
@@ -43,6 +43,6 @@ LIBC_INLINE void inline_memcpy(void *__restrict dst, const void *__restrict src,
                                       reinterpret_cast<CPtr>(src), count);
 }
 
-} // namespace __llvm_libc
+} // namespace LIBC_NAMESPACE
 
 #endif // LLVM_LIBC_SRC_STRING_MEMORY_UTILS_INLINE_MEMCPY_H

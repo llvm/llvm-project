@@ -18,29 +18,29 @@
 #include <errno.h>
 #include <stdint.h>
 
-using __llvm_libc::testing::SDCOMP26094_VALUES;
-using FPBits = __llvm_libc::fputil::FPBits<float>;
+using LIBC_NAMESPACE::testing::SDCOMP26094_VALUES;
+using FPBits = LIBC_NAMESPACE::fputil::FPBits<float>;
 
-namespace mpfr = __llvm_libc::testing::mpfr;
+namespace mpfr = LIBC_NAMESPACE::testing::mpfr;
 
 DECLARE_SPECIAL_CONSTANTS(float)
 
 TEST(LlvmLibcCosfTest, SpecialNumbers) {
   libc_errno = 0;
 
-  EXPECT_FP_EQ(aNaN, __llvm_libc::cosf(aNaN));
+  EXPECT_FP_EQ(aNaN, LIBC_NAMESPACE::cosf(aNaN));
   EXPECT_MATH_ERRNO(0);
 
-  EXPECT_FP_EQ(1.0f, __llvm_libc::cosf(0.0f));
+  EXPECT_FP_EQ(1.0f, LIBC_NAMESPACE::cosf(0.0f));
   EXPECT_MATH_ERRNO(0);
 
-  EXPECT_FP_EQ(1.0f, __llvm_libc::cosf(-0.0f));
+  EXPECT_FP_EQ(1.0f, LIBC_NAMESPACE::cosf(-0.0f));
   EXPECT_MATH_ERRNO(0);
 
-  EXPECT_FP_EQ(aNaN, __llvm_libc::cosf(inf));
+  EXPECT_FP_EQ(aNaN, LIBC_NAMESPACE::cosf(inf));
   EXPECT_MATH_ERRNO(EDOM);
 
-  EXPECT_FP_EQ(aNaN, __llvm_libc::cosf(neg_inf));
+  EXPECT_FP_EQ(aNaN, LIBC_NAMESPACE::cosf(neg_inf));
   EXPECT_MATH_ERRNO(EDOM);
 }
 
@@ -52,7 +52,7 @@ TEST(LlvmLibcCosfTest, InFloatRange) {
     if (isnan(x) || isinf(x))
       continue;
     ASSERT_MPFR_MATCH_ALL_ROUNDING(mpfr::Operation::Cos, x,
-                                   __llvm_libc::cosf(x), 0.5);
+                                   LIBC_NAMESPACE::cosf(x), 0.5);
   }
 }
 
@@ -106,9 +106,9 @@ TEST(LlvmLibcCosfTest, SpecificBitPatterns) {
   for (int i = 0; i < N; ++i) {
     float x = float(FPBits(INPUTS[i]));
     EXPECT_MPFR_MATCH_ALL_ROUNDING(mpfr::Operation::Cos, x,
-                                   __llvm_libc::cosf(x), 0.5);
+                                   LIBC_NAMESPACE::cosf(x), 0.5);
     EXPECT_MPFR_MATCH_ALL_ROUNDING(mpfr::Operation::Cos, -x,
-                                   __llvm_libc::cosf(-x), 0.5);
+                                   LIBC_NAMESPACE::cosf(-x), 0.5);
   }
 }
 
@@ -117,6 +117,6 @@ TEST(LlvmLibcCosfTest, SpecificBitPatterns) {
 TEST(LlvmLibcCosfTest, SDCOMP_26094) {
   for (uint32_t v : SDCOMP26094_VALUES) {
     float x = float(FPBits(v));
-    ASSERT_MPFR_MATCH(mpfr::Operation::Cos, x, __llvm_libc::cosf(x), 0.5);
+    ASSERT_MPFR_MATCH(mpfr::Operation::Cos, x, LIBC_NAMESPACE::cosf(x), 0.5);
   }
 }

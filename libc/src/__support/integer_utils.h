@@ -17,7 +17,7 @@
 
 #include <stdint.h>
 
-namespace __llvm_libc {
+namespace LIBC_NAMESPACE {
 
 template <typename T> NumberPair<T> full_mul(T a, T b);
 
@@ -60,6 +60,6 @@ LIBC_INLINE NumberPair<uint64_t> full_mul<uint64_t>(uint64_t a, uint64_t b) {
 #endif // __SIZEOF_INT128__
 }
 
-} // namespace __llvm_libc
+} // namespace LIBC_NAMESPACE
 
 #endif // LLVM_LIBC_SRC___SUPPORT_INTEGER_UTILS_H

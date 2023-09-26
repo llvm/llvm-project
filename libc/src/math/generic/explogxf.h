@@ -22,7 +22,7 @@
 
 #include <errno.h>
 
-namespace __llvm_libc {
+namespace LIBC_NAMESPACE {
 
 struct ExpBase {
   // Base = e
@@ -296,7 +296,7 @@ LIBC_INLINE static double log2_eval(double x) {
 
   // c0 = dx * (1.0 / ln(2)) + LOG_P1_LOG2[p1]
   double c0 = fputil::multiply_add(dx, 0x1.71547652b82fep+0, LOG_P1_LOG2[p1]);
-  result += __llvm_libc::fputil::polyeval(dx * dx, c0, c1, c2, c3, c4);
+  result += LIBC_NAMESPACE::fputil::polyeval(dx * dx, c0, c1, c2, c3, c4);
   return result;
 }
 
@@ -381,6 +381,6 @@ LIBC_INLINE cpp::optional<double> ziv_test_denorm(int hi, double mid, double lo,
   return cpp::nullopt;
 }
 
-} // namespace __llvm_libc
+} // namespace LIBC_NAMESPACE
 
 #endif // LLVM_LIBC_SRC_MATH_GENERIC_EXPLOGXF_H

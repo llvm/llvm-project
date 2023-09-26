@@ -15,9 +15,9 @@
 
 #include <limits.h>
 
-using __llvm_libc::testing::ErrnoSetterMatcher::Fails;
-using __llvm_libc::testing::ErrnoSetterMatcher::Succeeds;
-using __llvm_libc::time_utils::TimeConstants;
+using LIBC_NAMESPACE::testing::ErrnoSetterMatcher::Fails;
+using LIBC_NAMESPACE::testing::ErrnoSetterMatcher::Succeeds;
+using LIBC_NAMESPACE::time_utils::TimeConstants;
 
 TEST(LlvmLibcGmTime, OutOfRange) {
   if (sizeof(time_t) < sizeof(int64_t))
@@ -25,7 +25,7 @@ TEST(LlvmLibcGmTime, OutOfRange) {
   time_t seconds =
       1 + INT_MAX * static_cast<int64_t>(
                         TimeConstants::NUMBER_OF_SECONDS_IN_LEAP_YEAR);
-  struct tm *tm_data = __llvm_libc::gmtime(&seconds);
+  struct tm *tm_data = LIBC_NAMESPACE::gmtime(&seconds);
   EXPECT_TRUE(tm_data == nullptr);
   EXPECT_EQ(libc_errno, EOVERFLOW);
 
@@ -33,7 +33,7 @@ TEST(LlvmLibcGmTime, OutOfRange) {
   seconds = INT_MIN * static_cast<int64_t>(
                           TimeConstants::NUMBER_OF_SECONDS_IN_LEAP_YEAR) -
             1;
-  tm_data = __llvm_libc::gmtime(&seconds);
+  tm_data = LIBC_NAMESPACE::gmtime(&seconds);
   EXPECT_TRUE(tm_data == nullptr);
   EXPECT_EQ(libc_errno, EOVERFLOW);
 }
@@ -43,7 +43,7 @@ TEST(LlvmLibcGmTime, InvalidSeconds) {
   struct tm *tm_data = nullptr;
   // -1 second from 1970-01-01 00:00:00 returns 1969-12-31 23:59:59.
   seconds = -1;
-  tm_data = __llvm_libc::gmtime(&seconds);
+  tm_data = LIBC_NAMESPACE::gmtime(&seconds);
   EXPECT_TM_EQ((tm{59,     // sec
                    59,     // min
                    23,     // hr
@@ -56,7 +56,7 @@ TEST(LlvmLibcGmTime, InvalidSeconds) {
                *tm_data);
   // 60 seconds from 1970-01-01 00:00:00 returns 1970-01-01 00:01:00.
   seconds = 60;
-  tm_data = __llvm_libc::gmtime(&seconds);
+  tm_data = LIBC_NAMESPACE::gmtime(&seconds);
   EXPECT_TM_EQ((tm{0, // sec
                    1, // min
                    0, // hr
@@ -74,7 +74,7 @@ TEST(LlvmLibcGmTime, InvalidMinutes) {
   struct tm *tm_data = nullptr;
   // -1 minute from 1970-01-01 00:00:00 returns 1969-12-31 23:59:00.
   seconds = -TimeConstants::SECONDS_PER_MIN;
-  tm_data = __llvm_libc::gmtime(&seconds);
+  tm_data = LIBC_NAMESPACE::gmtime(&seconds);
   EXPECT_TM_EQ((tm{0,  // sec
                    59, // min
                    23, // hr
@@ -87,7 +87,7 @@ TEST(LlvmLibcGmTime, InvalidMinutes) {
                *tm_data);
   // 60 minutes from 1970-01-01 00:00:00 returns 1970-01-01 01:00:00.
   seconds = 60 * TimeConstants::SECONDS_PER_MIN;
-  tm_data = __llvm_libc::gmtime(&seconds);
+  tm_data = LIBC_NAMESPACE::gmtime(&seconds);
   EXPECT_TM_EQ((tm{0, // sec
                    0, // min
                    1, // hr
@@ -105,7 +105,7 @@ TEST(LlvmLibcGmTime, InvalidHours) {
   struct tm *tm_data = nullptr;
   // -1 hour from 1970-01-01 00:00:00 returns 1969-12-31 23:00:00.
   seconds = -TimeConstants::SECONDS_PER_HOUR;
-  tm_data = __llvm_libc::gmtime(&seconds);
+  tm_data = LIBC_NAMESPACE::gmtime(&seconds);
   EXPECT_TM_EQ((tm{0,  // sec
                    0,  // min
                    23, // hr
@@ -118,7 +118,7 @@ TEST(LlvmLibcGmTime, InvalidHours) {
                *tm_data);
   // 24 hours from 1970-01-01 00:00:00 returns 1970-01-02 00:00:00.
   seconds = 24 * TimeConstants::SECONDS_PER_HOUR;
-  tm_data = __llvm_libc::gmtime(&seconds);
+  tm_data = LIBC_NAMESPACE::gmtime(&seconds);
   EXPECT_TM_EQ((tm{0, // sec
                    0, // min
                    0, // hr
@@ -135,7 +135,7 @@ TEST(LlvmLibcGmTime, InvalidYear) {
   // -1 year from 1970-01-01 00:00:00 returns 1969-01-01 00:00:00.
   time_t seconds =
       -TimeConstants::DAYS_PER_NON_LEAP_YEAR * TimeConstants::SECONDS_PER_DAY;
-  struct tm *tm_data = __llvm_libc::gmtime(&seconds);
+  struct tm *tm_data = LIBC_NAMESPACE::gmtime(&seconds);
   EXPECT_TM_EQ((tm{0, // sec
                    0, // min
                    0, // hr
@@ -153,7 +153,7 @@ TEST(LlvmLibcGmTime, InvalidMonths) {
   struct tm *tm_data = nullptr;
   // -1 month from 1970-01-01 00:00:00 returns 1969-12-01 00:00:00.
   seconds = -31 * TimeConstants::SECONDS_PER_DAY;
-  tm_data = __llvm_libc::gmtime(&seconds);
+  tm_data = LIBC_NAMESPACE::gmtime(&seconds);
   EXPECT_TM_EQ((tm{0,      // sec
                    0,      // min
                    0,      // hr
@@ -167,7 +167,7 @@ TEST(LlvmLibcGmTime, InvalidMonths) {
   // 1970-13-01 00:00:00 returns 1971-01-01 00:00:00.
   seconds =
       TimeConstants::DAYS_PER_NON_LEAP_YEAR * TimeConstants::SECONDS_PER_DAY;
-  tm_data = __llvm_libc::gmtime(&seconds);
+  tm_data = LIBC_NAMESPACE::gmtime(&seconds);
   EXPECT_TM_EQ((tm{0, // sec
                    0, // min
                    0, // hr
@@ -185,7 +185,7 @@ TEST(LlvmLibcGmTime, InvalidDays) {
   struct tm *tm_data = nullptr;
   // -1 day from 1970-01-01 00:00:00 returns 1969-12-31 00:00:00.
   seconds = -1 * TimeConstants::SECONDS_PER_DAY;
-  tm_data = __llvm_libc::gmtime(&seconds);
+  tm_data = LIBC_NAMESPACE::gmtime(&seconds);
   EXPECT_TM_EQ((tm{0,  // sec
                    0,  // min
                    0,  // hr
@@ -199,7 +199,7 @@ TEST(LlvmLibcGmTime, InvalidDays) {
 
   // 1970-01-32 00:00:00 returns 1970-02-01 00:00:00.
   seconds = 31 * TimeConstants::SECONDS_PER_DAY;
-  tm_data = __llvm_libc::gmtime(&seconds);
+  tm_data = LIBC_NAMESPACE::gmtime(&seconds);
   EXPECT_TM_EQ((tm{0, // sec
                    0, // min
                    0, // hr
@@ -213,7 +213,7 @@ TEST(LlvmLibcGmTime, InvalidDays) {
 
   // 1970-02-29 00:00:00 returns 1970-03-01 00:00:00.
   seconds = 59 * TimeConstants::SECONDS_PER_DAY;
-  tm_data = __llvm_libc::gmtime(&seconds);
+  tm_data = LIBC_NAMESPACE::gmtime(&seconds);
   EXPECT_TM_EQ((tm{0, // sec
                    0, // min
                    0, // hr
@@ -228,7 +228,7 @@ TEST(LlvmLibcGmTime, InvalidDays) {
   // 1972-02-30 00:00:00 returns 1972-03-01 00:00:00.
   seconds = ((2 * TimeConstants::DAYS_PER_NON_LEAP_YEAR) + 60) *
             TimeConstants::SECONDS_PER_DAY;
-  tm_data = __llvm_libc::gmtime(&seconds);
+  tm_data = LIBC_NAMESPACE::gmtime(&seconds);
   EXPECT_TM_EQ((tm{0, // sec
                    0, // min
                    0, // hr
@@ -245,7 +245,7 @@ TEST(LlvmLibcGmTime, EndOf32BitEpochYear) {
   // Test for maximum value of a signed 32-bit integer.
   // Test implementation can encode time for Tue 19 January 2038 03:14:07 UTC.
   time_t seconds = 0x7FFFFFFF;
-  struct tm *tm_data = __llvm_libc::gmtime(&seconds);
+  struct tm *tm_data = LIBC_NAMESPACE::gmtime(&seconds);
   EXPECT_TM_EQ((tm{7,  // sec
                    14, // min
                    3,  // hr
@@ -263,7 +263,7 @@ TEST(LlvmLibcGmTime, Max64BitYear) {
     return;
   // Mon Jan 1 12:50:50 2170 (200 years from 1970),
   time_t seconds = 6311479850;
-  struct tm *tm_data = __llvm_libc::gmtime(&seconds);
+  struct tm *tm_data = LIBC_NAMESPACE::gmtime(&seconds);
   EXPECT_TM_EQ((tm{50, // sec
                    50, // min
                    12, // hr
@@ -277,7 +277,7 @@ TEST(LlvmLibcGmTime, Max64BitYear) {
 
   // Test for Tue Jan 1 12:50:50 in 2,147,483,647th year.
   seconds = 67767976202043050;
-  tm_data = __llvm_libc::gmtime(&seconds);
+  tm_data = LIBC_NAMESPACE::gmtime(&seconds);
   EXPECT_TM_EQ((tm{50, // sec
                    50, // min
                    12, // hr

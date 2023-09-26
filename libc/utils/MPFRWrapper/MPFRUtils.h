@@ -15,7 +15,7 @@
 
 #include <stdint.h>
 
-namespace __llvm_libc {
+namespace LIBC_NAMESPACE {
 namespace testing {
 namespace mpfr {
 
@@ -87,12 +87,12 @@ enum class Operation : int {
   EndTernaryOperationsSingleOutput,
 };
 
-using __llvm_libc::fputil::testing::ForceRoundingMode;
-using __llvm_libc::fputil::testing::RoundingMode;
+using LIBC_NAMESPACE::fputil::testing::ForceRoundingMode;
+using LIBC_NAMESPACE::fputil::testing::RoundingMode;
 
 template <typename T> struct BinaryInput {
   static_assert(
-      __llvm_libc::cpp::is_floating_point_v<T>,
+      LIBC_NAMESPACE::cpp::is_floating_point_v<T>,
       "Template parameter of BinaryInput must be a floating point type.");
 
   using Type = T;
@@ -101,7 +101,7 @@ template <typename T> struct BinaryInput {
 
 template <typename T> struct TernaryInput {
   static_assert(
-      __llvm_libc::cpp::is_floating_point_v<T>,
+      LIBC_NAMESPACE::cpp::is_floating_point_v<T>,
       "Template parameter of TernaryInput must be a floating point type.");
 
   using Type = T;
@@ -316,7 +316,7 @@ template <typename T> bool round_to_long(T x, RoundingMode mode, long &result);
 
 } // namespace mpfr
 } // namespace testing
-} // namespace __llvm_libc
+} // namespace LIBC_NAMESPACE
 
 // GET_MPFR_DUMMY_ARG is going to be added to the end of GET_MPFR_MACRO as a
 // simple way to avoid the compiler warning `gnu-zero-variadic-macro-arguments`.
@@ -326,14 +326,15 @@ template <typename T> bool round_to_long(T x, RoundingMode mode, long &result);
 
 #define EXPECT_MPFR_MATCH_DEFAULT(op, input, match_value, ulp_tolerance)       \
   EXPECT_THAT(match_value,                                                     \
-              __llvm_libc::testing::mpfr::get_mpfr_matcher<op>(                \
+              LIBC_NAMESPACE::testing::mpfr::get_mpfr_matcher<op>(             \
                   input, match_value, ulp_tolerance,                           \
-                  __llvm_libc::testing::mpfr::RoundingMode::Nearest))
+                  LIBC_NAMESPACE::testing::mpfr::RoundingMode::Nearest))
 
 #define EXPECT_MPFR_MATCH_ROUNDING(op, input, match_value, ulp_tolerance,      \
                                    rounding)                                   \
-  EXPECT_THAT(match_value, __llvm_libc::testing::mpfr::get_mpfr_matcher<op>(   \
-                               input, match_value, ulp_tolerance, rounding))
+  EXPECT_THAT(match_value,                                                     \
+              LIBC_NAMESPACE::testing::mpfr::get_mpfr_matcher<op>(             \
+                  input, match_value, ulp_tolerance, rounding))
 
 #define EXPECT_MPFR_MATCH(...)                                                 \
   GET_MPFR_MACRO(__VA_ARGS__, EXPECT_MPFR_MATCH_ROUNDING,                      \
@@ -342,8 +343,8 @@ template <typename T> bool round_to_long(T x, RoundingMode mode, long &result);
 
 #define TEST_MPFR_MATCH_ROUNDING(op, input, match_value, ulp_tolerance,        \
                                  rounding)                                     \
-  __llvm_libc::testing::mpfr::get_mpfr_matcher<op>(input, match_value,         \
-                                                   ulp_tolerance, rounding)    \
+  LIBC_NAMESPACE::testing::mpfr::get_mpfr_matcher<op>(input, match_value,      \
+                                                      ulp_tolerance, rounding) \
       .match(match_value)
 
 #define TEST_MPFR_MATCH(...)                                                   \
@@ -353,7 +354,7 @@ template <typename T> bool round_to_long(T x, RoundingMode mode, long &result);
 
 #define EXPECT_MPFR_MATCH_ALL_ROUNDING(op, input, match_value, ulp_tolerance)  \
   {                                                                            \
-    namespace mpfr = __llvm_libc::testing::mpfr;                               \
+    namespace mpfr = LIBC_NAMESPACE::testing::mpfr;                            \
     mpfr::ForceRoundingMode __r1(mpfr::RoundingMode::Nearest);                 \
     if (__r1.success)                                                          \
       EXPECT_MPFR_MATCH(op, input, match_value, ulp_tolerance,                 \
@@ -374,20 +375,21 @@ template <typename T> bool round_to_long(T x, RoundingMode mode, long &result);
 
 #define TEST_MPFR_MATCH_ROUNDING_SILENTLY(op, input, match_value,              \
                                           ulp_tolerance, rounding)             \
-  __llvm_libc::testing::mpfr::get_silent_mpfr_matcher<op>(                     \
+  LIBC_NAMESPACE::testing::mpfr::get_silent_mpfr_matcher<op>(                  \
       input, match_value, ulp_tolerance, rounding)                             \
       .match(match_value)
 
 #define ASSERT_MPFR_MATCH_DEFAULT(op, input, match_value, ulp_tolerance)       \
   ASSERT_THAT(match_value,                                                     \
-              __llvm_libc::testing::mpfr::get_mpfr_matcher<op>(                \
+              LIBC_NAMESPACE::testing::mpfr::get_mpfr_matcher<op>(             \
                   input, match_value, ulp_tolerance,                           \
-                  __llvm_libc::testing::mpfr::RoundingMode::Nearest))
+                  LIBC_NAMESPACE::testing::mpfr::RoundingMode::Nearest))
 
 #define ASSERT_MPFR_MATCH_ROUNDING(op, input, match_value, ulp_tolerance,      \
                                    rounding)                                   \
-  ASSERT_THAT(match_value, __llvm_libc::testing::mpfr::get_mpfr_matcher<op>(   \
-                               input, match_value, ulp_tolerance, rounding))
+  ASSERT_THAT(match_value,                                                     \
+              LIBC_NAMESPACE::testing::mpfr::get_mpfr_matcher<op>(             \
+                  input, match_value, ulp_tolerance, rounding))
 
 #define ASSERT_MPFR_MATCH(...)                                                 \
   GET_MPFR_MACRO(__VA_ARGS__, ASSERT_MPFR_MATCH_ROUNDING,                      \
@@ -396,7 +398,7 @@ template <typename T> bool round_to_long(T x, RoundingMode mode, long &result);
 
 #define ASSERT_MPFR_MATCH_ALL_ROUNDING(op, input, match_value, ulp_tolerance)  \
   {                                                                            \
-    namespace mpfr = __llvm_libc::testing::mpfr;                               \
+    namespace mpfr = LIBC_NAMESPACE::testing::mpfr;                            \
     mpfr::ForceRoundingMode __r1(mpfr::RoundingMode::Nearest);                 \
     if (__r1.success)                                                          \
       ASSERT_MPFR_MATCH(op, input, match_value, ulp_tolerance,                 \

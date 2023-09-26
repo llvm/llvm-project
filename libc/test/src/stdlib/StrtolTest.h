@@ -15,7 +15,7 @@
 #include <limits.h>
 #include <stddef.h>
 
-using __llvm_libc::cpp::is_signed_v;
+using LIBC_NAMESPACE::cpp::is_signed_v;
 
 static inline char int_to_b36_char(int input) {
   if (input < 0 || input > 36)
@@ -26,13 +26,13 @@ static inline char int_to_b36_char(int input) {
 }
 
 template <typename ReturnT>
-struct StrtoTest : public __llvm_libc::testing::Test {
+struct StrtoTest : public LIBC_NAMESPACE::testing::Test {
   using FunctionT = ReturnT (*)(const char *, char **, int);
 
   static constexpr ReturnT T_MAX =
-      __llvm_libc::cpp::numeric_limits<ReturnT>::max();
+      LIBC_NAMESPACE::cpp::numeric_limits<ReturnT>::max();
   static constexpr ReturnT T_MIN =
-      __llvm_libc::cpp::numeric_limits<ReturnT>::min();
+      LIBC_NAMESPACE::cpp::numeric_limits<ReturnT>::min();
 
   void InvalidBase(FunctionT func) {
     const char *ten = "10";

@@ -20,7 +20,7 @@
 #include "src/string/memory_utils/inline_memcpy.h"
 #include <stddef.h> // For size_t
 
-namespace __llvm_libc {
+namespace LIBC_NAMESPACE {
 namespace internal {
 
 template <typename Word> LIBC_INLINE constexpr Word repeat_byte(Word byte) {
@@ -246,6 +246,6 @@ LIBC_INLINE constexpr static char *strrchr_implementation(const char *src,
 }
 
 } // namespace internal
-} // namespace __llvm_libc
+} // namespace LIBC_NAMESPACE
 
 #endif //  LLVM_LIBC_SRC_STRING_STRING_UTILS_H

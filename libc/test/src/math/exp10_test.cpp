@@ -17,20 +17,21 @@
 #include <errno.h>
 #include <stdint.h>
 
-namespace mpfr = __llvm_libc::testing::mpfr;
-using __llvm_libc::testing::tlog;
+namespace mpfr = LIBC_NAMESPACE::testing::mpfr;
+using LIBC_NAMESPACE::testing::tlog;
 
 DECLARE_SPECIAL_CONSTANTS(double)
 
 TEST(LlvmLibcExp10Test, SpecialNumbers) {
-  EXPECT_FP_EQ(aNaN, __llvm_libc::exp10(aNaN));
-  EXPECT_FP_EQ(inf, __llvm_libc::exp10(inf));
-  EXPECT_FP_EQ_ALL_ROUNDING(zero, __llvm_libc::exp10(neg_inf));
-  EXPECT_FP_EQ_WITH_EXCEPTION(zero, __llvm_libc::exp10(-0x1.0p20),
+  EXPECT_FP_EQ(aNaN, LIBC_NAMESPACE::exp10(aNaN));
+  EXPECT_FP_EQ(inf, LIBC_NAMESPACE::exp10(inf));
+  EXPECT_FP_EQ_ALL_ROUNDING(zero, LIBC_NAMESPACE::exp10(neg_inf));
+  EXPECT_FP_EQ_WITH_EXCEPTION(zero, LIBC_NAMESPACE::exp10(-0x1.0p20),
                               FE_UNDERFLOW);
-  EXPECT_FP_EQ_WITH_EXCEPTION(inf, __llvm_libc::exp10(0x1.0p20), FE_OVERFLOW);
-  EXPECT_FP_EQ_ALL_ROUNDING(1.0, __llvm_libc::exp10(0.0));
-  EXPECT_FP_EQ_ALL_ROUNDING(1.0, __llvm_libc::exp10(-0.0));
+  EXPECT_FP_EQ_WITH_EXCEPTION(inf, LIBC_NAMESPACE::exp10(0x1.0p20),
+                              FE_OVERFLOW);
+  EXPECT_FP_EQ_ALL_ROUNDING(1.0, LIBC_NAMESPACE::exp10(0.0));
+  EXPECT_FP_EQ_ALL_ROUNDING(1.0, LIBC_NAMESPACE::exp10(-0.0));
 }
 
 TEST(LlvmLibcExp10Test, TrickyInputs) {
@@ -80,14 +81,14 @@ TEST(LlvmLibcExp10Test, TrickyInputs) {
   for (int i = 0; i < N; ++i) {
     double x = double(FPBits(INPUTS[i]));
     EXPECT_MPFR_MATCH_ALL_ROUNDING(mpfr::Operation::Exp10, x,
-                                   __llvm_libc::exp10(x), 0.5);
+                                   LIBC_NAMESPACE::exp10(x), 0.5);
   }
 }
 
 TEST(LlvmLibcExp10Test, InDoubleRange) {
   constexpr uint64_t COUNT = 1'231;
-  uint64_t START = __llvm_libc::fputil::FPBits<double>(0.25).uintval();
-  uint64_t STOP = __llvm_libc::fputil::FPBits<double>(4.0).uintval();
+  uint64_t START = LIBC_NAMESPACE::fputil::FPBits<double>(0.25).uintval();
+  uint64_t STOP = LIBC_NAMESPACE::fputil::FPBits<double>(4.0).uintval();
   uint64_t STEP = (STOP - START) / COUNT;
 
   auto test = [&](mpfr::RoundingMode rounding_mode) {
@@ -106,7 +107,7 @@ TEST(LlvmLibcExp10Test, InDoubleRange) {
       if (isnan(x) || isinf(x) || x < 0.0)
         continue;
       libc_errno = 0;
-      double result = __llvm_libc::exp10(x);
+      double result = LIBC_NAMESPACE::exp10(x);
       ++cc;
       if (isnan(result) || isinf(result))
         continue;

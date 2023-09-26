@@ -13,10 +13,10 @@
 
 // Note this header file is named time_func.h to avoid conflicts with the
 // public header file time.h.
-namespace __llvm_libc {
+namespace LIBC_NAMESPACE {
 
 time_t time(time_t *tp);
 
-} // namespace __llvm_libc
+} // namespace LIBC_NAMESPACE
 
 #endif // LLVM_LIBC_SRC_TIME_TIME_FUNC_H

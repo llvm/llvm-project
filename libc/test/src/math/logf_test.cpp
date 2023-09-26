@@ -15,18 +15,20 @@
 
 #include <stdint.h>
 
-namespace mpfr = __llvm_libc::testing::mpfr;
+namespace mpfr = LIBC_NAMESPACE::testing::mpfr;
 
 DECLARE_SPECIAL_CONSTANTS(float)
 
 TEST(LlvmLibcLogfTest, SpecialNumbers) {
-  EXPECT_FP_EQ(aNaN, __llvm_libc::logf(aNaN));
-  EXPECT_FP_EQ(inf, __llvm_libc::logf(inf));
-  EXPECT_FP_IS_NAN_WITH_EXCEPTION(__llvm_libc::logf(neg_inf), FE_INVALID);
-  EXPECT_FP_EQ_WITH_EXCEPTION(neg_inf, __llvm_libc::logf(0.0f), FE_DIVBYZERO);
-  EXPECT_FP_EQ_WITH_EXCEPTION(neg_inf, __llvm_libc::logf(-0.0f), FE_DIVBYZERO);
-  EXPECT_FP_IS_NAN_WITH_EXCEPTION(__llvm_libc::logf(-1.0f), FE_INVALID);
-  EXPECT_FP_EQ_ALL_ROUNDING(zero, __llvm_libc::logf(1.0f));
+  EXPECT_FP_EQ(aNaN, LIBC_NAMESPACE::logf(aNaN));
+  EXPECT_FP_EQ(inf, LIBC_NAMESPACE::logf(inf));
+  EXPECT_FP_IS_NAN_WITH_EXCEPTION(LIBC_NAMESPACE::logf(neg_inf), FE_INVALID);
+  EXPECT_FP_EQ_WITH_EXCEPTION(neg_inf, LIBC_NAMESPACE::logf(0.0f),
+                              FE_DIVBYZERO);
+  EXPECT_FP_EQ_WITH_EXCEPTION(neg_inf, LIBC_NAMESPACE::logf(-0.0f),
+                              FE_DIVBYZERO);
+  EXPECT_FP_IS_NAN_WITH_EXCEPTION(LIBC_NAMESPACE::logf(-1.0f), FE_INVALID);
+  EXPECT_FP_EQ_ALL_ROUNDING(zero, LIBC_NAMESPACE::logf(1.0f));
 }
 
 TEST(LlvmLibcLogfTest, TrickyInputs) {
@@ -71,7 +73,7 @@ TEST(LlvmLibcLogfTest, TrickyInputs) {
   for (int i = 0; i < N; ++i) {
     float x = float(FPBits(INPUTS[i]));
     EXPECT_MPFR_MATCH_ALL_ROUNDING(mpfr::Operation::Log, x,
-                                   __llvm_libc::logf(x), 0.5);
+                                   LIBC_NAMESPACE::logf(x), 0.5);
   }
 }
 
@@ -83,6 +85,6 @@ TEST(LlvmLibcLogfTest, InFloatRange) {
     if (isnan(x) || isinf(x))
       continue;
     ASSERT_MPFR_MATCH_ALL_ROUNDING(mpfr::Operation::Log, x,
-                                   __llvm_libc::logf(x), 0.5);
+                                   LIBC_NAMESPACE::logf(x), 0.5);
   }
 }

@@ -11,7 +11,7 @@
 #include "src/__support/str_to_float.h"
 #include "src/errno/libc_errno.h"
 
-namespace __llvm_libc {
+namespace LIBC_NAMESPACE {
 
 LLVM_LIBC_FUNCTION(long double, strtold,
                    (const char *__restrict str, char **__restrict str_end)) {
@@ -25,4 +25,4 @@ LLVM_LIBC_FUNCTION(long double, strtold,
   return result.value;
 }
 
-} // namespace __llvm_libc
+} // namespace LIBC_NAMESPACE

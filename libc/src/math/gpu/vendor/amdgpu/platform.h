@@ -11,7 +11,7 @@
 
 #include <stdint.h>
 
-namespace __llvm_libc {
+namespace LIBC_NAMESPACE {
 
 // The ROCm device library uses control globals to alter codegen for the
 // different targets. To avoid needing to link them in manually we simply
@@ -109,6 +109,6 @@ extern const uint32_t __oclc_ISA_version = 11501;
 #endif
 }
 
-} // namespace __llvm_libc
+} // namespace LIBC_NAMESPACE
 
 #endif // LLVM_LIBC_SRC_MATH_GPU_AMDGPU_PLATFORM_H

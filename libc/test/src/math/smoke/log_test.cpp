@@ -16,16 +16,16 @@
 #include <errno.h>
 #include <stdint.h>
 
-using __llvm_libc::testing::tlog;
+using LIBC_NAMESPACE::testing::tlog;
 
 DECLARE_SPECIAL_CONSTANTS(double)
 
 TEST(LlvmLibcLogTest, SpecialNumbers) {
-  EXPECT_FP_EQ(aNaN, __llvm_libc::log(aNaN));
-  EXPECT_FP_EQ(inf, __llvm_libc::log(inf));
-  EXPECT_FP_IS_NAN_WITH_EXCEPTION(__llvm_libc::log(neg_inf), FE_INVALID);
-  EXPECT_FP_EQ_WITH_EXCEPTION(neg_inf, __llvm_libc::log(0.0), FE_DIVBYZERO);
-  EXPECT_FP_EQ_WITH_EXCEPTION(neg_inf, __llvm_libc::log(-0.0), FE_DIVBYZERO);
-  EXPECT_FP_IS_NAN_WITH_EXCEPTION(__llvm_libc::log(-1.0), FE_INVALID);
-  EXPECT_FP_EQ_ALL_ROUNDING(zero, __llvm_libc::log(1.0));
+  EXPECT_FP_EQ(aNaN, LIBC_NAMESPACE::log(aNaN));
+  EXPECT_FP_EQ(inf, LIBC_NAMESPACE::log(inf));
+  EXPECT_FP_IS_NAN_WITH_EXCEPTION(LIBC_NAMESPACE::log(neg_inf), FE_INVALID);
+  EXPECT_FP_EQ_WITH_EXCEPTION(neg_inf, LIBC_NAMESPACE::log(0.0), FE_DIVBYZERO);
+  EXPECT_FP_EQ_WITH_EXCEPTION(neg_inf, LIBC_NAMESPACE::log(-0.0), FE_DIVBYZERO);
+  EXPECT_FP_IS_NAN_WITH_EXCEPTION(LIBC_NAMESPACE::log(-1.0), FE_INVALID);
+  EXPECT_FP_EQ_ALL_ROUNDING(zero, LIBC_NAMESPACE::log(1.0));
 }

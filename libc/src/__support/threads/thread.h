@@ -21,7 +21,7 @@
 #include <stddef.h> // For size_t
 #include <stdint.h>
 
-namespace __llvm_libc {
+namespace LIBC_NAMESPACE {
 
 using ThreadRunnerPosix = void *(void *);
 using ThreadRunnerStdc = int(void *);
@@ -247,6 +247,6 @@ void call_atexit_callbacks(ThreadAttributes *attrib);
 
 } // namespace internal
 
-} // namespace __llvm_libc
+} // namespace LIBC_NAMESPACE
 
 #endif // LLVM_LIBC_SRC___SUPPORT_THREADS_THREAD_H

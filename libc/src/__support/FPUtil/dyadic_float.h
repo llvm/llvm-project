@@ -18,7 +18,7 @@
 
 #include <stddef.h>
 
-namespace __llvm_libc::fputil {
+namespace LIBC_NAMESPACE::fputil {
 
 // A generic class to perform comuptations of high precision floating points.
 // We store the value in dyadic format, including 3 fields:
@@ -32,7 +32,7 @@ namespace __llvm_libc::fputil {
 // To simplify and improve the efficiency, many functions will assume that the
 // inputs are normal.
 template <size_t Bits> struct DyadicFloat {
-  using MantissaType = __llvm_libc::cpp::UInt<Bits>;
+  using MantissaType = LIBC_NAMESPACE::cpp::UInt<Bits>;
 
   bool sign = false;
   int exponent = 0;
@@ -306,6 +306,6 @@ constexpr DyadicFloat<Bits> mul_pow_2(DyadicFloat<Bits> a, int32_t pow_2) {
   return result;
 }
 
-} // namespace __llvm_libc::fputil
+} // namespace LIBC_NAMESPACE::fputil
 
 #endif // LLVM_LIBC_SRC___SUPPORT_FPUTIL_DYADIC_FLOAT_H

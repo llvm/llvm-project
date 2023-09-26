@@ -10,4 +10,4 @@
 
 #include "src/math/logb.h"
 
-LIST_LOGB_TESTS(double, __llvm_libc::logb)
+LIST_LOGB_TESTS(double, LIBC_NAMESPACE::logb)

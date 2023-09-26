@@ -16,7 +16,7 @@
 
 #include <stdint.h>
 
-namespace __llvm_libc {
+namespace LIBC_NAMESPACE {
 namespace fputil {
 
 // A class which stores the normalized form of a floating point value.
@@ -262,6 +262,6 @@ template <> LIBC_INLINE NormalFloat<long double>::operator long double() const {
 #endif // SPECIAL_X86_LONG_DOUBLE
 
 } // namespace fputil
-} // namespace __llvm_libc
+} // namespace LIBC_NAMESPACE
 
 #endif // LLVM_LIBC_SRC___SUPPORT_FPUTIL_NORMALFLOAT_H

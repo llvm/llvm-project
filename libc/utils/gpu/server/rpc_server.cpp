@@ -19,7 +19,7 @@
 #include <variant>
 #include <vector>
 
-using namespace __llvm_libc;
+using namespace LIBC_NAMESPACE;
 
 static_assert(sizeof(rpc_buffer_t) == sizeof(rpc::Buffer),
               "Buffer size mismatch");

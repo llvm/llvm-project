@@ -14,7 +14,7 @@
 #include <stddef.h>
 #include <stdio.h>
 
-namespace __llvm_libc {
+namespace LIBC_NAMESPACE {
 
 LLVM_LIBC_FUNCTION(char *, fgets,
                    (char *__restrict str, int count,
@@ -33,8 +33,8 @@ LLVM_LIBC_FUNCTION(char *, fgets,
     str[i] = c;
   }
 
-  bool has_error = __llvm_libc::ferror(stream);
-  bool has_eof = __llvm_libc::feof(stream);
+  bool has_error = LIBC_NAMESPACE::ferror(stream);
+  bool has_eof = LIBC_NAMESPACE::feof(stream);
 
   if (has_error || (i == 0 && has_eof))
     return nullptr;
@@ -43,4 +43,4 @@ LLVM_LIBC_FUNCTION(char *, fgets,
   return str;
 }
 
-} // namespace __llvm_libc
+} // namespace LIBC_NAMESPACE

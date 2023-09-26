@@ -15,7 +15,7 @@
 
 #include <stddef.h> // size_t
 
-namespace __llvm_libc {
+namespace LIBC_NAMESPACE {
 
 [[maybe_unused]] LIBC_INLINE static void
 inline_memset_x86(Ptr dst, uint8_t value, size_t count) {
@@ -60,6 +60,6 @@ inline_memset_x86(Ptr dst, uint8_t value, size_t count) {
   align_to_next_boundary<32>(dst, count);
   return generic::Memset<uint256_t>::loop_and_tail(dst, value, count);
 }
-} // namespace __llvm_libc
+} // namespace LIBC_NAMESPACE
 
 #endif // LLVM_LIBC_SRC_STRING_MEMORY_UTILS_X86_64_INLINE_MEMSET_H

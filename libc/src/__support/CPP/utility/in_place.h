@@ -12,7 +12,7 @@
 
 #include <stddef.h> // size_t
 
-namespace __llvm_libc::cpp {
+namespace LIBC_NAMESPACE::cpp {
 
 // in_place
 struct in_place_t {
@@ -31,6 +31,6 @@ template <size_t I> struct in_place_index_t {
 template <size_t I>
 LIBC_INLINE_VAR constexpr in_place_index_t<I> in_place_index{};
 
-} // namespace __llvm_libc::cpp
+} // namespace LIBC_NAMESPACE::cpp
 
 #endif // LLVM_LIBC_SRC___SUPPORT_CPP_UTILITY_IN_PLACE_H

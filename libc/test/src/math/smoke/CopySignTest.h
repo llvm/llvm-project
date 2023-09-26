@@ -11,7 +11,8 @@
 
 #include <math.h>
 
-template <typename T> class CopySignTest : public __llvm_libc::testing::Test {
+template <typename T>
+class CopySignTest : public LIBC_NAMESPACE::testing::Test {
 
   DECLARE_SPECIAL_CONSTANTS(T)
 

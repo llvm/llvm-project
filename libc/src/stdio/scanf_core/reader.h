@@ -12,7 +12,7 @@
 #include "src/__support/macros/attributes.h" // For LIBC_INLINE
 #include <stddef.h>
 
-namespace __llvm_libc {
+namespace LIBC_NAMESPACE {
 namespace scanf_core {
 
 using StreamGetc = int (*)(void *);
@@ -67,6 +67,6 @@ public:
 };
 
 } // namespace scanf_core
-} // namespace __llvm_libc
+} // namespace LIBC_NAMESPACE
 
 #endif // LLVM_LIBC_SRC_STDIO_SCANF_CORE_READER_H
