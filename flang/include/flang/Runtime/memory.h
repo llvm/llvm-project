@@ -50,13 +50,13 @@ public:
   RT_API_ATTRS OwningPtr& operator=(const OwningPtr &) = delete;
   RT_API_ATTRS OwningPtr(OwningPtr &&other) {
     ptr_ = other.ptr_;
-    other.ptr_ = pointer_type();
+    other.ptr_ = pointer_type{};
   }
   RT_API_ATTRS OwningPtr &operator=(OwningPtr &&other) {
     if (this != &other) {
       delete_ptr(ptr_);
       ptr_ = other.ptr_;
-      other.ptr_ = pointer_type();
+      other.ptr_ = pointer_type{};
     }
     return *this;
   }
@@ -64,23 +64,23 @@ public:
 
   // Delete the pointer, if owns one.
   RT_API_ATTRS ~OwningPtr() {
-    if (ptr_ != pointer_type()) {
+    if (ptr_ != pointer_type{}) {
       delete_ptr(ptr_);
-      ptr_ = pointer_type();
+      ptr_ = pointer_type{};
     }
   }
 
   // Release the ownership.
   RT_API_ATTRS pointer_type release() {
     pointer_type p = ptr_;
-    ptr_ = pointer_type();
+    ptr_ = pointer_type{};
     return p;
   }
 
   // Replace the pointer.
-  RT_API_ATTRS void reset(pointer_type p = pointer_type()) {
+  RT_API_ATTRS void reset(pointer_type p = pointer_type{}) {
     std::swap(ptr_, p);
-    if (p != pointer_type()) {
+    if (p != pointer_type{}) {
       // Delete the owned pointer.
       delete_ptr(p);
     }
@@ -97,11 +97,11 @@ public:
   }
 
   RT_API_ATTRS explicit operator bool() const {
-    return get() == pointer_type() ? false : true;
+    return get() != pointer_type{};
   }
 
   RT_API_ATTRS typename std::add_lvalue_reference<A>::type operator*() const {
-    assert(get() != pointer_type());
+    assert(get() != pointer_type{});
     return *get();
   }
 
