@@ -209,6 +209,7 @@ def DeprecatedWritableStr : DiagGroup<"deprecated-writable-strings",
                                       [CXX11CompatDeprecatedWritableStr]>;
 def DeprecatedPragma : DiagGroup<"deprecated-pragma">;
 def DeprecatedType : DiagGroup<"deprecated-type">;
+def DeprecatedIncludeGch : DiagGroup<"deprecated-include-gch">;
 // FIXME: Why is DeprecatedImplementations not in this group?
 def Deprecated : DiagGroup<"deprecated", [DeprecatedAnonEnumEnumConversion,
                                           DeprecatedArrayCompare,
@@ -232,6 +233,7 @@ def Deprecated : DiagGroup<"deprecated", [DeprecatedAnonEnumEnumConversion,
                                           DeprecatedVolatile,
                                           DeprecatedWritableStr,
                                           DeprecatedRedundantConstexprStaticDef,
+                                          DeprecatedIncludeGch
                                           ]>,
                  DiagCategory<"Deprecations">;
 
