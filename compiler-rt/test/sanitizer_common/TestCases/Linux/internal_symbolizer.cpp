@@ -17,6 +17,8 @@ bool __sanitizer_symbolize_code(const char *ModuleName, uint64_t ModuleOffset,
                                 bool SymbolizeInlineFrames);
 bool __sanitizer_symbolize_data(const char *ModuleName, uint64_t ModuleOffset,
                                 char *Buffer, int MaxLength);
+bool __sanitizer_symbolize_frame(const char *ModuleName, uint64_t ModuleOffset,
+                                 char *Buffer, int MaxLength);
 void __sanitizer_print_stack_trace();
 bool __sanitizer_symbolize_demangle(const char *Name, char *Buffer,
                                     int MaxLength);
@@ -132,6 +134,40 @@ void TestData() {
   // CHECK-NEXT: internal_symbolizer.cpp:[[# @LINE - 13]]
 }
 
+__attribute__((noinline)) std::string SymbolizeLocalVars(FrameInfo frame) {
+  auto modul_offset = GetModuleAndOffset(frame.address);
+  char buffer[1024] = {};
+  ScopedInSymbolizer in_symbolizer;
+  __sanitizer_symbolize_frame(modul_offset.first, modul_offset.second, buffer,
+                              std::size(buffer));
+  return buffer;
+}
+
+__attribute__((
+    noinline,
+    no_sanitize_address /* Asan merges allocas destroying variable DI*/)) void
+TestFrame() {
+  volatile int var = 1;
+  void *address = GetPC();
+  fprintf(stderr, "%s: %s\n", __FUNCTION__,
+          SymbolizeLocalVars({
+                                 0,
+                                 "",
+                                 "",
+                                 reinterpret_cast<void *>(
+                                     reinterpret_cast<uintptr_t>(address)),
+                             })
+              .c_str());
+  // CHECK-LABEL: TestFrame: TestFrame
+  // CHECK-NEXT: var
+  // CHECK-NEXT: internal_symbolizer.cpp:[[# @LINE - 13]]
+  // CHECK-NEXT: {{-?[0-9]+ +[0-9]+}}
+  // CHECK-NEXT: TestFrame
+  // CHECK-NEXT: address
+  // CHECK-NEXT: internal_symbolizer.cpp:[[# @LINE - 16]]
+  // CHECK-NEXT: {{-?[0-9]+ +[0-9]+}}
+}
+
 void TestDemangle() {
   char out[128];
   assert(!__sanitizer_symbolize_demangle("1A", out, sizeof(out)));
@@ -149,5 +185,6 @@ int main() {
   TestNoInline();
   TestLongFunctionNames();
   TestData();
+  TestFrame();
   TestDemangle();
 }
