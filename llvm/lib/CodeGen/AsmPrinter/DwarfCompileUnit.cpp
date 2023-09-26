@@ -204,7 +204,7 @@ DIE *DwarfCompileUnit::getOrCreateGlobalVariableDIE(
 
 DIE *DwarfCompileUnit::getOrCreateGlobalVariableDIE(
     const DILifetime &Lifetime,
-    const DenseMap<DIFragment *, const GlobalVariable *> &GVFragmentMap) {
+    const DwarfDebug::GVFragmentMapTy &GVFragmentMap) {
 
   const DIGlobalVariable *GV = dyn_cast<DIGlobalVariable>(Lifetime.getObject());
 
@@ -462,7 +462,7 @@ void DwarfCompileUnit::addLocationAttribute(
 
 void DwarfCompileUnit::addLocationAttribute(
     DIE *VariableDIE, const DIGlobalVariable *GV, const DILifetime &Lifetime,
-    const DenseMap<DIFragment *, const GlobalVariable *> &GVFragmentMap) {
+    const DwarfDebug::GVFragmentMapTy &GVFragmentMap) {
   // FIXME: Determine when this is appropriate, considering the existing
   // implementation.
   bool AddToAccelTable = true;
@@ -505,7 +505,7 @@ DIE *DwarfCompileUnit::getOrCreateCommonBlock(
 
 DIE *DwarfCompileUnit::getOrCreateCommonBlock(
     const DICommonBlock *CB, const DILifetime &Lifetime,
-    const DenseMap<DIFragment *, const GlobalVariable *> &GVFragmentMap) {
+    const DwarfDebug::GVFragmentMapTy &GVFragmentMap) {
   // Check for pre-existence.
   if (DIE *NDie = getDIE(CB))
     return NDie;

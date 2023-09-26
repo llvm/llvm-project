@@ -1159,7 +1159,7 @@ void DwarfDebug::beginModule(Module *M) {
   SingleCU = NumDebugCUs == 1;
   DenseMap<DIGlobalVariable *, SmallVector<DwarfCompileUnit::GlobalExpr, 1>>
       GVMap;
-  for (const GlobalVariable &Global : M->globals()) {
+  for (GlobalVariable &Global : M->globals()) {
     // To support the "inlining" of GV-fragments as an optimization, we record
     // the referrer for each such fragment.
     if (llvm::isHeterogeneousDebug(*M)) {
@@ -2001,10 +2001,10 @@ void DwarfDebug::collectEntityInfo(DwarfCompileUnit &TheCU,
       Entry.finalize(*Asm, List, BT, TheCU);
   }
 
-  const Module &M = *Asm->MF->getFunction().getParent();
-      DenseMap<DICompileUnit *, SmallVector<DILifetime *>> AddCULifetimeMap;
+  Module &M = *Asm->MF->getFunction().getParent();
+  DenseMap<DICompileUnit *, SmallVector<DILifetime *>> AddCULifetimeMap;
   if (isHeterogeneousDebug(M)) {
-    for (const GlobalVariable &Global : M.globals()) {
+    for (GlobalVariable &Global : M.globals()) {
       if (DIFragment *F = Global.getDbgDef()) {
         GVFragmentMap[F] = &Global;
       }

@@ -843,10 +843,10 @@ bool DwarfExprAST::tryInlineArgObject(DIObject *ArgObject) {
   auto *Fragment = dyn_cast<DIFragment>(ArgObject);
   if (!Fragment)
     return false;
-  const auto GV = GVFragmentMap->find(Fragment);
-  if (GV == GVFragmentMap->end())
+  const auto GVRef = GVFragmentMap->find(Fragment);
+  if (GVRef == GVFragmentMap->end() || !GVRef->getSecond())
     return false;
-  const GlobalVariable *Global = GV->getSecond();
+  const GlobalVariable *Global = cast<GlobalVariable>(GVRef->getSecond());
   // FIXME(KZHURAVL): This depends on the target and address space
   // semantics. For AMDGPU, address space 3 is lds/local/shared.
   // Need to replace this with a target hook!

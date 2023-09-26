@@ -452,7 +452,11 @@ class DwarfDebug : public DebugHandlerBase {
   /// Avoid using DW_OP_convert due to consumer incompatibilities.
   bool EnableOpConvert;
 
-  DenseMap<DIFragment *, const GlobalVariable *> GVFragmentMap;
+public:
+  using GVFragmentMapTy = DenseMap<DIFragment *, WeakVH>;
+
+private:
+  GVFragmentMapTy GVFragmentMap;
   DenseMap<DISubprogram *, SmallVector<DILifetime *>> SPLifetimeMap;
   DenseSet<DILifetime *> ProcessedLifetimes;
 

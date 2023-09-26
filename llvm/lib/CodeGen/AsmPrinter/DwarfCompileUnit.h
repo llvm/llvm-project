@@ -194,21 +194,21 @@ public:
 
   DIE *getOrCreateGlobalVariableDIE(
       const DILifetime &Lifetime,
-      const DenseMap<DIFragment *, const GlobalVariable *> &GVFragmentMap);
+      const DwarfDebug::GVFragmentMapTy &GVFragmentMap);
 
   DIE *getOrCreateCommonBlock(const DICommonBlock *CB,
                               ArrayRef<GlobalExpr> GlobalExprs);
 
-  DIE *getOrCreateCommonBlock(
-      const DICommonBlock *CB, const DILifetime &Lifetime,
-      const DenseMap<DIFragment *, const GlobalVariable *> &GVFragmentMap);
+  DIE *getOrCreateCommonBlock(const DICommonBlock *CB,
+                              const DILifetime &Lifetime,
+                              const DwarfDebug::GVFragmentMapTy &GVFragmentMap);
 
   void addLocationAttribute(DIE *ToDIE, const DIGlobalVariable *GV,
                             ArrayRef<GlobalExpr> GlobalExprs);
 
-  void addLocationAttribute(
-      DIE *ToDIE, const DIGlobalVariable *GV, const DILifetime &Lifetime,
-      const DenseMap<DIFragment *, const GlobalVariable *> &GVFragmentMap);
+  void addLocationAttribute(DIE *ToDIE, const DIGlobalVariable *GV,
+                            const DILifetime &Lifetime,
+                            const DwarfDebug::GVFragmentMapTy &GVFragmentMap);
 
   /// addLabelAddress - Add a dwarf label attribute data and value using
   /// either DW_FORM_addr or DW_FORM_GNU_addr_index.

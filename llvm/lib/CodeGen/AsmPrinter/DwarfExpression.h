@@ -14,6 +14,7 @@
 #define LLVM_LIB_CODEGEN_ASMPRINTER_DWARFEXPRESSION_H
 
 #include "ByteStreamer.h"
+#include "DwarfDebug.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/IR/DebugInfoMetadata.h"
@@ -513,7 +514,7 @@ protected:
   // An `std::optional<const DenseMap<_, _>&>` where `nullptr` represents
   // `None`. Only present and applicable as part of an optimization for
   // DIFragments which refer to global variable fragments.
-  const DenseMap<DIFragment *, const GlobalVariable *> *GVFragmentMap;
+  const DwarfDebug::GVFragmentMapTy *GVFragmentMap;
   std::unique_ptr<DwarfExprAST::Node> Root;
   // FIXME(KZHURAVL): This is a temporary boolean variable that indicates
   // whether the lowering of this expression is supported or not. If the
@@ -586,10 +587,10 @@ protected:
   virtual void emitDwarfLabelDelta(const MCSymbol *Hi, const MCSymbol *Lo) = 0;
 
 public:
-  DwarfExprAST(
-      const AsmPrinter &AP, const TargetRegisterInfo *TRI, DwarfCompileUnit &CU,
-      const DILifetime &Lifetime, const MachineOperand *Referrer,
-      const DenseMap<DIFragment *, const GlobalVariable *> *GVFragmentMap)
+  DwarfExprAST(const AsmPrinter &AP, const TargetRegisterInfo *TRI,
+               DwarfCompileUnit &CU, const DILifetime &Lifetime,
+               const MachineOperand *Referrer,
+               const DwarfDebug::GVFragmentMapTy *GVFragmentMap)
       : AP(AP), TRI(TRI), CU(CU), Lifetime(Lifetime), Referrer(Referrer),
         GVFragmentMap(GVFragmentMap) {
     buildDIExprAST();
@@ -610,24 +611,23 @@ class DebugLocDwarfExprAST final : DwarfExprAST {
   void emitDwarfOpAddrx(unsigned Index) override;
   void emitDwarfLabelDelta(const MCSymbol *Hi, const MCSymbol *Lo) override;
 
-  DebugLocDwarfExprAST(
-      const AsmPrinter &AP, const TargetRegisterInfo *TRI, DwarfCompileUnit &CU,
-      BufferByteStreamer &BS, const DILifetime &Lifetime,
-      const MachineOperand *Referrer,
-      const DenseMap<DIFragment *, const GlobalVariable *> *GVFragmentMap)
+  DebugLocDwarfExprAST(const AsmPrinter &AP, const TargetRegisterInfo *TRI,
+                       DwarfCompileUnit &CU, BufferByteStreamer &BS,
+                       const DILifetime &Lifetime,
+                       const MachineOperand *Referrer,
+                       const DwarfDebug::GVFragmentMapTy *GVFragmentMap)
       : DwarfExprAST(AP, TRI, CU, Lifetime, Referrer, GVFragmentMap),
         OutBS(BS) {}
 
-  public:
+public:
   DebugLocDwarfExprAST(const AsmPrinter &AP, const TargetRegisterInfo &TRI,
                        DwarfCompileUnit &CU, BufferByteStreamer &BS,
                        const DILifetime &Lifetime,
                        const MachineOperand &Referrer)
       : DebugLocDwarfExprAST(AP, &TRI, CU, BS, Lifetime, &Referrer, nullptr) {}
-  DebugLocDwarfExprAST(
-      const AsmPrinter &AP, DwarfCompileUnit &CU, BufferByteStreamer &BS,
-      const DILifetime &Lifetime,
-      const DenseMap<DIFragment *, const GlobalVariable *> &GVFragmentMap)
+  DebugLocDwarfExprAST(const AsmPrinter &AP, DwarfCompileUnit &CU,
+                       BufferByteStreamer &BS, const DILifetime &Lifetime,
+                       const DwarfDebug::GVFragmentMapTy &GVFragmentMap)
       : DebugLocDwarfExprAST(AP, nullptr, CU, BS, Lifetime, nullptr,
                              &GVFragmentMap) {}
   DebugLocDwarfExprAST(const DebugLocDwarfExprAST &) = delete;
@@ -653,10 +653,10 @@ class DIEDwarfExprAST final : DwarfExprAST {
   void emitDwarfOpAddrx(unsigned Index) override;
   void emitDwarfLabelDelta(const MCSymbol *Hi, const MCSymbol *Lo) override;
 
-  DIEDwarfExprAST(
-      const AsmPrinter &AP, const TargetRegisterInfo *TRI, DwarfCompileUnit &CU,
-      DIELoc &DIE, const DILifetime &Lifetime, const MachineOperand *Referrer,
-      const DenseMap<DIFragment *, const GlobalVariable *> *GVFragmentMap)
+  DIEDwarfExprAST(const AsmPrinter &AP, const TargetRegisterInfo *TRI,
+                  DwarfCompileUnit &CU, DIELoc &DIE, const DILifetime &Lifetime,
+                  const MachineOperand *Referrer,
+                  const DwarfDebug::GVFragmentMapTy *GVFragmentMap)
       : DwarfExprAST(AP, TRI, CU, Lifetime, Referrer, GVFragmentMap),
         OutDIE(DIE) {}
 
@@ -665,10 +665,9 @@ public:
                   DwarfCompileUnit &CU, DIELoc &DIE, const DILifetime &Lifetime,
                   const MachineOperand &Referrer)
       : DIEDwarfExprAST(AP, &TRI, CU, DIE, Lifetime, &Referrer, nullptr) {}
-  DIEDwarfExprAST(
-      const AsmPrinter &AP, DwarfCompileUnit &CU, DIELoc &DIE,
-      const DILifetime &Lifetime,
-      const DenseMap<DIFragment *, const GlobalVariable *> &GVFragmentMap)
+  DIEDwarfExprAST(const AsmPrinter &AP, DwarfCompileUnit &CU, DIELoc &DIE,
+                  const DILifetime &Lifetime,
+                  const DwarfDebug::GVFragmentMapTy &GVFragmentMap)
       : DIEDwarfExprAST(AP, nullptr, CU, DIE, Lifetime, nullptr,
                         &GVFragmentMap) {}
   DIEDwarfExprAST(const DIEDwarfExprAST &) = delete;
