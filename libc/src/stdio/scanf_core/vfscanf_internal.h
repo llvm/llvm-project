@@ -16,23 +16,24 @@
 
 #include <stdio.h>
 
-namespace __llvm_libc {
+namespace LIBC_NAMESPACE {
 
 namespace internal {
 
 #ifndef LIBC_COPT_STDIO_USE_SYSTEM_FILE
 
 LIBC_INLINE void flockfile(FILE *f) {
-  reinterpret_cast<__llvm_libc::File *>(f)->lock();
+  reinterpret_cast<LIBC_NAMESPACE::File *>(f)->lock();
 }
 
 LIBC_INLINE void funlockfile(FILE *f) {
-  reinterpret_cast<__llvm_libc::File *>(f)->unlock();
+  reinterpret_cast<LIBC_NAMESPACE::File *>(f)->unlock();
 }
 
 LIBC_INLINE int getc(void *f) {
   unsigned char c;
-  auto result = reinterpret_cast<__llvm_libc::File *>(f)->read_unlocked(&c, 1);
+  auto result =
+      reinterpret_cast<LIBC_NAMESPACE::File *>(f)->read_unlocked(&c, 1);
   size_t r = result.value;
   if (result.has_error() || r != 1)
     return '\0';
@@ -41,11 +42,11 @@ LIBC_INLINE int getc(void *f) {
 }
 
 LIBC_INLINE void ungetc(int c, void *f) {
-  reinterpret_cast<__llvm_libc::File *>(f)->ungetc_unlocked(c);
+  reinterpret_cast<LIBC_NAMESPACE::File *>(f)->ungetc_unlocked(c);
 }
 
 LIBC_INLINE int ferror_unlocked(FILE *f) {
-  return reinterpret_cast<__llvm_libc::File *>(f)->error_unlocked();
+  return reinterpret_cast<LIBC_NAMESPACE::File *>(f)->error_unlocked();
 }
 
 #else // defined(LIBC_COPT_STDIO_USE_SYSTEM_FILE)
@@ -83,6 +84,6 @@ LIBC_INLINE int vfscanf_internal(::FILE *__restrict stream,
   return retval;
 }
 } // namespace scanf_core
-} // namespace __llvm_libc
+} // namespace LIBC_NAMESPACE
 
 #endif // LLVM_LIBC_SRC_STDIO_SCANF_CORE_VFSCANF_INTERNAL_H

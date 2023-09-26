@@ -9,10 +9,10 @@
 #ifndef LLVM_LIBC_SRC_STRING_STRSEP_H
 #define LLVM_LIBC_SRC_STRING_STRSEP_H
 
-namespace __llvm_libc {
+namespace LIBC_NAMESPACE {
 
 char *strsep(char **stringp, const char *delim);
 
-} // namespace __llvm_libc
+} // namespace LIBC_NAMESPACE
 
 #endif // LLVM_LIBC_SRC_STRING_STRSEP_H

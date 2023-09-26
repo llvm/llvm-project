@@ -14,7 +14,7 @@
 #include "src/__support/fixedvector.h"
 #include "src/__support/macros/attributes.h"
 
-namespace __llvm_libc {
+namespace LIBC_NAMESPACE {
 
 LIBC_THREAD_LOCAL Thread self;
 
@@ -183,4 +183,4 @@ void *get_tss_value(unsigned int key) {
   return u.payload;
 }
 
-} // namespace __llvm_libc
+} // namespace LIBC_NAMESPACE
