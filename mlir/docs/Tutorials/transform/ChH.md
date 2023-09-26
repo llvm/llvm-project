@@ -218,7 +218,7 @@ Linalg as described below.
     the inner loop having at most the given number of iterations. This can be
     understood as loop _strip-mining_ or a degenerate case of tiling a single
     dimension using any of `linalg.tile_` transform ops. We will be using
-    `transform.structured.tile_to_forall_op` as this kind of loop is best
+    `transform.structured.tile_using_forall` as this kind of loop is best
     supported by bufferization and can also be turned into a parallel loop later
     on. Unlike Halide, this doesn’t add new dimensions to the original
     operation, but rather creates a loop around it and rewrites the operation
@@ -275,9 +275,9 @@ The remaining dimensions can be materialized as loops in one transformation.
 
 ```mlir
     //                                                             [n  y  x  c]
-    %co, %relu2 = transform.structured.tile_to_forall_op %relu
+    %co, %relu2 = transform.structured.tile_using_forall %relu
                                                         tile_sizes [0, 0, 0, 64]
-    %n_y_xo, %relu3 = transform.structured.tile_to_forall_op %relu2
+    %n_y_xo, %relu3 = transform.structured.tile_using_forall %relu2
                                                         tile_sizes [1, 1, 5, 0]
 ```
 
@@ -355,7 +355,7 @@ more than one dimension at the moment of writing.)
 
 ```mlir
 %rz_ry_rx, %red_fill, %conv4, %comb
-  = transform.structured.tile_reduction_using_scf %conv3
+  = transform.structured.tile_reduction_using_for %conv3
 //               n  y  x  c  rz ry rx
   by tile_sizes=[0, 0, 0, 0, 1, 1, 1]
 ```
@@ -386,10 +386,10 @@ dimension:
 
 ```mlir
 //                                                                  n  y  xi ci
-%1, %c5 = transform.structured.tile_to_forall_op %conv4 tile_sizes [0, 0, 1, 16]
-%2, %b4 = transform.structured.tile_to_forall_op %bias3 tile_sizes [0, 0, 1, 16]
-%3, %r4 = transform.structured.tile_to_forall_op %relu3 tile_sizes [0, 0, 1, 16]
-%4, %c2 = transform.structured.tile_to_forall_op %comb  tile_sizes [0, 0, 1, 16]
+%1, %c5 = transform.structured.tile_using_forall %conv4 tile_sizes [0, 0, 1, 16]
+%2, %b4 = transform.structured.tile_using_forall %bias3 tile_sizes [0, 0, 1, 16]
+%3, %r4 = transform.structured.tile_using_forall %relu3 tile_sizes [0, 0, 1, 16]
+%4, %c2 = transform.structured.tile_using_forall %comb  tile_sizes [0, 0, 1, 16]
 ```
 
 Note that the combiner operation produced by reduction tiling is also tiled here.
@@ -638,7 +638,7 @@ bufferization invalidates all loop handles including to loops that we are
 willing to unroll. This hurdle can be overcome by matching the payload IR
 operations after bufferization to produce new handles. We will first change the
 kind of loops produced in the schedule from `scf.for` to `scf.forall` to have
-less operations to match by using `transform.structured.tile_to_forall_op`
+less operations to match by using `transform.structured.tile_using_forall`
 instead of `transform.structured.tile` when tiling with sizes `[0, 0, 1, 16]`.
 Then we can match all `scf.forall` operations in the payload IR and transform
 them into single-iterator `scf.for` loops _after bufferization_.
