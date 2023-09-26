@@ -87,6 +87,9 @@ Deprecations and Removals
   warning). ``_LIBCPP_ENABLE_ASSERTIONS`` will be removed entirely in the next release and setting it will become an
   error. See :ref:`the hardening documentation <using-hardening-modes>` for more details.
 
+- The non-conforming constructor ``std::future_error(std::error_code)`` has been removed. Please use the
+  ``std::future_error(std::future_errc)`` constructor provided in C++17 instead.
+
 Upcoming Deprecations and Removals
 ----------------------------------
 
