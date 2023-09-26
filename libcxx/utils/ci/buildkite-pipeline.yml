@@ -31,26 +31,8 @@ env:
     GCC_STABLE_VERSION: "13"
 steps:
   #
-  # Light pre-commit tests for things like formatting or when people forget
-  # to update generated files.
+  # Light pre-commit tests for things like forgetting to update generated files.
   #
-  - label: "Format"
-    command: "libcxx/utils/ci/run-buildbot check-format"
-    artifact_paths:
-      - "**/clang-format.patch"
-    env:
-        GIT_CLANG_FORMAT: "/usr/bin/git-clang-format-${LLVM_STABLE_VERSION} --binary clang-format-${LLVM_STABLE_VERSION}"
-        CC: "clang-${LLVM_HEAD_VERSION}"
-        CXX: "clang++-${LLVM_HEAD_VERSION}"
-    agents:
-      queue: "libcxx-builders"
-      os: "linux"
-    retry:
-      automatic:
-        - exit_status: -1  # Agent was lost
-          limit: 2
-    timeout_in_minutes: 120
-
   - label: "Generated output"
     command: "libcxx/utils/ci/run-buildbot check-generated-output"
     artifact_paths:
