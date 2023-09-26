@@ -2937,16 +2937,17 @@ _mm_movemask_ps(__m128 __a)
 }
 
 /* Compare */
-#define _CMP_EQ_OQ 0x00    /* Equal (ordered, non-signaling)  */
-#define _CMP_LT_OS 0x01    /* Less-than (ordered, signaling)  */
-#define _CMP_LE_OS 0x02    /* Less-than-or-equal (ordered, signaling)  */
-#define _CMP_UNORD_Q 0x03  /* Unordered (non-signaling)  */
-#define _CMP_NEQ_UQ 0x04   /* Not-equal (unordered, non-signaling)  */
-#define _CMP_NLT_US 0x05   /* Not-less-than (unordered, signaling)  */
-#define _CMP_NLE_US 0x06   /* Not-less-than-or-equal (unordered, signaling)  */
-#define _CMP_ORD_Q 0x07    /* Ordered (non-signaling)   */
-#define _CMP_EQ_UQ 0x08    /* Equal (unordered, non-signaling)  */
-#define _CMP_NGE_US 0x09   /* Not-greater-than-or-equal (unordered, signaling) \
+#define _CMP_EQ_OQ 0x00   /* Equal (ordered, non-signaling)  */
+#define _CMP_LT_OS 0x01   /* Less-than (ordered, signaling)  */
+#define _CMP_LE_OS 0x02   /* Less-than-or-equal (ordered, signaling)  */
+#define _CMP_UNORD_Q 0x03 /* Unordered (non-signaling)  */
+#define _CMP_NEQ_UQ 0x04  /* Not-equal (unordered, non-signaling)  */
+#define _CMP_NLT_US 0x05  /* Not-less-than (unordered, signaling)  */
+#define _CMP_NLE_US 0x06  /* Not-less-than-or-equal (unordered, signaling)  */
+#define _CMP_ORD_Q 0x07   /* Ordered (non-signaling)   */
+#define _CMP_EQ_UQ 0x08   /* Equal (unordered, non-signaling)  */
+#define _CMP_NGE_US                                                            \
+  0x09                     /* Not-greater-than-or-equal (unordered, signaling) \
                             */
 #define _CMP_NGT_US 0x0a   /* Not-greater-than (unordered, signaling)  */
 #define _CMP_FALSE_OQ 0x0b /* False (ordered, non-signaling)  */
