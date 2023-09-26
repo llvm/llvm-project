@@ -535,6 +535,11 @@ Expected<std::optional<int>> CompileJobCache::replayCachedResult(
       new TextDiagnosticPrinter(DiagOS, &Clang.getDiagnosticOpts()));
   Clang.setVerboseOutputStream(DiagOS);
 
+  // FIXME: we should create an include-tree filesystem based on the cache key
+  // to guarantee that the filesystem used during diagnostic replay will match
+  // the cached diagnostics. Currently we rely on the invocation having a
+  // matching -fcas-include-tree option.
+
   auto FinishDiagnosticClient =
       llvm::make_scope_exit([&]() { Clang.getDiagnosticClient().finish(); });
 

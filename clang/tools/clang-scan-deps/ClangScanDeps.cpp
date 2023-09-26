@@ -96,7 +96,7 @@ static bool Verbose;
 static bool PrintTiming;
 static std::vector<const char *> CommandLine;
 static bool EmitCASCompDB;
-static std::string OnDiskCASPath;
+static CASOptions CASOpts;
 static bool InMemoryCAS;
 static std::string PrefixMapToolchain;
 static std::string PrefixMapSDK;
@@ -220,7 +220,14 @@ static void ParseArgs(int argc, char **argv) {
   InMemoryCAS = Args.hasArg(OPT_in_memory_cas);
 
   if (const llvm::opt::Arg *A = Args.getLastArg(OPT_cas_path_EQ))
-    OnDiskCASPath = A->getValue();
+    CASOpts.CASPath = A->getValue();
+  if (const llvm::opt::Arg *A = Args.getLastArg(OPT_fcas_plugin_path_EQ))
+    CASOpts.PluginPath = A->getValue();
+  for (const llvm::opt::Arg *A : Args.filtered(OPT_fcas_plugin_option_EQ)) {
+    auto [L, R] = StringRef(A->getValue()).split('=');
+    CASOpts.PluginOptions.emplace_back(std::string(L), std::string(R));
+  }
+
   if (const llvm::opt::Arg *A = Args.getLastArg(OPT_prefix_map_toolchain_EQ))
     PrefixMapToolchain = A->getValue();
   if (const llvm::opt::Arg *A = Args.getLastArg(OPT_prefix_map_sdk_EQ))
@@ -556,7 +563,7 @@ static bool outputFormatRequiresCAS() {
 }
 
 static bool useCAS() {
-  return InMemoryCAS || !OnDiskCASPath.empty() || outputFormatRequiresCAS();
+  return InMemoryCAS || !CASOpts.CASPath.empty() || outputFormatRequiresCAS();
 }
 
 static llvm::json::Array toJSONSorted(const llvm::StringSet<> &Set) {
@@ -1123,17 +1130,12 @@ int clang_scan_deps_main(int argc, char **argv, const llvm::ToolContext &) {
   DiagnosticsEngine Diags(new DiagnosticIDs(), new DiagnosticOptions());
   Diags.setClient(DiagsConsumer.get(), /*ShouldOwnClient=*/false);
 
-  CASOptions CASOpts;
   std::shared_ptr<llvm::cas::ObjectStore> CAS;
   std::shared_ptr<llvm::cas::ActionCache> Cache;
   IntrusiveRefCntPtr<llvm::cas::CachingOnDiskFileSystem> FS;
   if (useCAS()) {
-    if (!InMemoryCAS) {
-      if (!OnDiskCASPath.empty())
-        CASOpts.CASPath = OnDiskCASPath;
-      else
-        CASOpts.ensurePersistentCAS();
-    }
+    if (!InMemoryCAS)
+      CASOpts.ensurePersistentCAS();
 
     std::tie(CAS, Cache) = CASOpts.getOrCreateDatabases(Diags);
     if (!CAS)

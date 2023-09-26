@@ -35,6 +35,9 @@ def emit_cas_compdb : F<"emit-cas-compdb", "Emit compilation DB with updated cla
 
 defm cas_path : Eq<"cas-path", "Path for on-disk CAS.">;
 
+defm fcas_plugin_path : Eq<"fcas-plugin-path", "Path to a shared library implementing the LLVM CAS plugin API">;
+defm fcas_plugin_option : Eq<"fcas-plugin-option", "Option to pass to the CAS plugin">;
+
 def in_memory_cas : F<"in-memory-cas", "Use an in-memory CAS instead of on-disk.">;
 
 defm prefix_map_toolchain : Eq<"prefix-map-toolchain", "Path to remap toolchain path to.">;
