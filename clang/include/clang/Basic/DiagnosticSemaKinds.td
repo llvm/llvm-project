@@ -2864,8 +2864,6 @@ def warn_cxx11_compat_constexpr_body_multiple_return : Warning<
   InGroup<CXXPre14Compat>, DefaultIgnore;
 def note_constexpr_body_previous_return : Note<
   "previous return statement is here">;
-def err_ctordtor_attr_consteval : Error<
-  "%0 attribute cannot be applied to a 'consteval' function">;
 
 // C++20 function try blocks in constexpr
 def ext_constexpr_function_try_block_cxx20 : ExtWarn<
@@ -3178,11 +3176,6 @@ def err_alignas_underaligned : Error<
   "requested alignment is less than minimum alignment of %1 for type %0">;
 def warn_aligned_attr_underaligned : Warning<err_alignas_underaligned.Summary>,
   InGroup<IgnoredAttributes>;
-def err_ctor_dtor_attr_on_non_void_func : Error<
-  "%0 attribute can only be applied to a function which accepts no arguments "
-  "and has a 'void' or 'int' return type">;
-def err_ctor_dtor_member_func : Error<
-  "%0 attribute cannot be applied to a member function">;
 def err_attribute_sizeless_type : Error<
   "%0 attribute cannot be applied to sizeless type %1">;
 def err_attribute_argument_n_type : Error<
