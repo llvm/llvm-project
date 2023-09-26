@@ -1,12 +1,13 @@
 // RUN: cir-opt %s -cir-to-mlir -o - | FileCheck %s -check-prefix=MLIR
 // RUN: cir-opt %s -cir-to-mlir -cir-mlir-to-llvm -o - | mlir-translate -mlir-to-llvmir | FileCheck %s -check-prefix=LLVM
 
+!u32i = !cir.int<u, 32>
 module {
   cir.func @foo() {
     cir.scope {
-      %0 = cir.alloca i32, cir.ptr <i32>, ["a", init] {alignment = 4 : i64}
-      %1 = cir.const(4 : i32) : i32
-      cir.store %1, %0 : i32, cir.ptr <i32>
+      %0 = cir.alloca !u32i, cir.ptr <!u32i>, ["a", init] {alignment = 4 : i64}
+      %1 = cir.const(#cir.int<4> : !u32i) : !u32i
+      cir.store %1, %0 : !u32i, cir.ptr <!u32i>
     }
     cir.return
   }

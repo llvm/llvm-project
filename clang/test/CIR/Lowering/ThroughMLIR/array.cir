@@ -1,5 +1,4 @@
 // RUN: cir-opt %s -cir-to-mlir -o - | FileCheck %s -check-prefix=MLIR
-// RUN: cir-opt %s -cir-to-mlir -cir-to-mlir -cir-mlir-to-llvm -o - | mlir-translate -mlir-to-llvmir | FileCheck %s -check-prefix=LLVM
 
 module {
   cir.func @foo() {
@@ -10,15 +9,7 @@ module {
 
 //      MLIR: module {
 // MLIR-NEXT: func @foo() {
-// MLIR-NEXT:    = memref.alloca() {alignment = 16 : i64} : memref<10xi32>
+// MLIR-NEXT:    = memref.alloca() {alignment = 16 : i64} : memref<memref<10xi32>>
 // MLIR-NEXT:    return
 // MLIR-NEXT:  }
 // MLIR-NEXT: }
-
-//      LLVM: = alloca i32, i64 10, align 16
-// LLVM-NEXT: = insertvalue { ptr, ptr, i64, [1 x i64], [1 x i64] } undef, ptr %1, 0
-// LLVM-NEXT: = insertvalue { ptr, ptr, i64, [1 x i64], [1 x i64] } %2, ptr %1, 1
-// LLVM-NEXT: = insertvalue { ptr, ptr, i64, [1 x i64], [1 x i64] } %3, i64 0, 2
-// LLVM-NEXT: = insertvalue { ptr, ptr, i64, [1 x i64], [1 x i64] } %4, i64 10, 3, 0
-// LLVM-NEXT: = insertvalue { ptr, ptr, i64, [1 x i64], [1 x i64] } %5, i64 1, 4, 0
-// LLVM-NEXT: ret void

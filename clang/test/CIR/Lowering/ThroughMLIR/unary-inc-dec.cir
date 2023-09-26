@@ -1,21 +1,22 @@
 // RUN: cir-opt %s -cir-to-mlir -o - | FileCheck %s -check-prefix=MLIR
 // RUN: cir-opt %s -cir-to-mlir -cir-mlir-to-llvm -o - | mlir-translate -mlir-to-llvmir | FileCheck %s -check-prefix=LLVM
 
+!s32i = !cir.int<s, 32>
 module {
   cir.func @foo() {
-    %0 = cir.alloca i32, cir.ptr <i32>, ["a", init] {alignment = 4 : i64}
-    %1 = cir.alloca i32, cir.ptr <i32>, ["b", init] {alignment = 4 : i64}
-    %2 = cir.const(2 : i32) : i32
-    cir.store %2, %0 : i32, cir.ptr <i32>
-    cir.store %2, %1 : i32, cir.ptr <i32>
+    %0 = cir.alloca !s32i, cir.ptr <!s32i>, ["a", init] {alignment = 4 : i64}
+    %1 = cir.alloca !s32i, cir.ptr <!s32i>, ["b", init] {alignment = 4 : i64}
+    %2 = cir.const(#cir.int<2> : !s32i) : !s32i
+    cir.store %2, %0 : !s32i, cir.ptr <!s32i>
+    cir.store %2, %1 : !s32i, cir.ptr <!s32i>
 
-    %3 = cir.load %0 : cir.ptr <i32>, i32
-    %4 = cir.unary(inc, %3) : i32, i32
-    cir.store %4, %0 : i32, cir.ptr <i32>
+    %3 = cir.load %0 : cir.ptr <!s32i>, !s32i
+    %4 = cir.unary(inc, %3) : !s32i, !s32i
+    cir.store %4, %0 : !s32i, cir.ptr <!s32i>
 
-    %5 = cir.load %1 : cir.ptr <i32>, i32
-    %6 = cir.unary(dec, %5) : i32, i32
-    cir.store %6, %1 : i32, cir.ptr <i32>
+    %5 = cir.load %1 : cir.ptr <!s32i>, !s32i
+    %6 = cir.unary(dec, %5) : !s32i, !s32i
+    cir.store %6, %1 : !s32i, cir.ptr <!s32i>
     cir.return
   }
 }
