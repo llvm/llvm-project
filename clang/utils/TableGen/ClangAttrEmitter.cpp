@@ -320,12 +320,19 @@ namespace {
     }
 
     std::string getIsOmitted() const override {
-      if (type == "IdentifierInfo *")
+      auto IsOneOf = [](StringRef subject, auto... list) {
+        return ((subject == list) || ...);
+      };
+
+      if (IsOneOf(type, "IdentifierInfo *", "Expr *"))
         return "!get" + getUpperName().str() + "()";
-      if (type == "TypeSourceInfo *")
+      if (IsOneOf(type, "TypeSourceInfo *"))
         return "!get" + getUpperName().str() + "Loc()";
-      if (type == "ParamIdx")
+      if (IsOneOf(type, "ParamIdx"))
         return "!get" + getUpperName().str() + "().isValid()";
+
+      assert(IsOneOf(type, "unsigned", "int", "bool", "FunctionDecl *",
+                     "VarDecl *"));
       return "false";
     }
 
