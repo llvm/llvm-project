@@ -3144,8 +3144,12 @@ static FormatToken *getFunctionName(const AnnotatedLine &Line) {
     }
 
     // Make sure the name is followed by a pair of parentheses.
-    if (Name)
-      return Tok->is(tok::l_paren) && Tok->MatchingParen ? Name : nullptr;
+    if (Name) {
+      return Tok->is(tok::l_paren) && Tok->isNot(TT_FunctionTypeLParen) &&
+                     Tok->MatchingParen
+                 ? Name
+                 : nullptr;
+    }
 
     // Skip keywords that may precede the constructor/destructor name.
     if (Tok->isOneOf(tok::kw_friend, tok::kw_inline, tok::kw_virtual,
