@@ -1,5 +1,6 @@
-// RUN: cir-opt %s -cir-to-llvm -o - | FileCheck %s -check-prefix=MLIR
-// RUN: cir-translate %s -cir-to-llvmir  | FileCheck %s -check-prefix=LLVM
+// RUN: cir-opt %s -cir-to-llvm -o %t.cir
+// RUN: FileCheck %s --input-file=%t.cir
+
 !s16i = !cir.int<s, 16>
 !s32i = !cir.int<s, 32>
 !s64i = !cir.int<s, 64>
@@ -9,27 +10,8 @@
 !u64i = !cir.int<u, 64>
 
 module {
-  cir.func @foo(%arg0: !s32i) -> !s32i {
-    %4 = cir.cast(int_to_bool, %arg0 : !s32i), !cir.bool
-    cir.return %arg0 : !s32i
-  }
-
-//      MLIR:  llvm.func @foo(%arg0: i32) -> i32
-// MLIR-NEXT:    [[v0:%[0-9]]] = llvm.mlir.constant(0 : i32) : i32
-// MLIR-NEXT:    [[v1:%[0-9]]] = llvm.icmp "ne" %arg0, %0 : i32
-// MLIR-NEXT:    [[v2:%[0-9]]] = llvm.zext %1 : i1 to i8
-// MLIR-NEXT:    llvm.return %arg0 : i32
-// MLIR-NEXT:  }
-
-
-//      LLVM: define i32 @foo(i32 %0)
-// LLVM-NEXT:   %2 = icmp ne i32 %0, 0
-// LLVM-NEXT:   %3 = zext i1 %2 to i8
-// LLVM-NEXT:   ret i32 %0
-// LLVM-NEXT: }
-
   cir.func @cStyleCasts(%arg0: !u32i, %arg1: !s32i, %arg2: f32) -> !s32i {
-  // MLIR: llvm.func @cStyleCasts
+  // CHECK: llvm.func @cStyleCasts
     %0 = cir.alloca !u32i, cir.ptr <!u32i>, ["x1", init] {alignment = 4 : i64}
     %1 = cir.alloca !s32i, cir.ptr <!s32i>, ["x2", init] {alignment = 4 : i64}
     %20 = cir.alloca !s16i, cir.ptr <!s16i>, ["x4", init] {alignment = 2 : i64}
@@ -46,47 +28,51 @@ module {
     // Integer casts.
     %9 = cir.load %0 : cir.ptr <!u32i>, !u32i
     %10 = cir.cast(integral, %9 : !u32i), !s8i
-    // MLIR: %{{[0-9]+}} = llvm.trunc %{{[0-9]+}} : i32 to i8
+    // CHECK: %{{[0-9]+}} = llvm.trunc %{{[0-9]+}} : i32 to i8
     cir.store %10, %3 : !s8i, cir.ptr <!s8i>
     %11 = cir.load %1 : cir.ptr <!s32i>, !s32i
     %12 = cir.cast(integral, %11 : !s32i), !s16i
-    // MLIR: %{{[0-9]+}} = llvm.trunc %{{[0-9]+}} : i32 to i16
+    // CHECK: %{{[0-9]+}} = llvm.trunc %{{[0-9]+}} : i32 to i16
     cir.store %12, %4 : !s16i, cir.ptr <!s16i>
     %13 = cir.load %0 : cir.ptr <!u32i>, !u32i
     %14 = cir.cast(integral, %13 : !u32i), !s64i
-    // MLIR: %{{[0-9]+}} = llvm.zext %{{[0-9]+}} : i32 to i64
+    // CHECK: %{{[0-9]+}} = llvm.zext %{{[0-9]+}} : i32 to i64
     cir.store %14, %5 : !s64i, cir.ptr <!s64i>
     %15 = cir.load %1 : cir.ptr <!s32i>, !s32i
     %16 = cir.cast(integral, %15 : !s32i), !s64i
-    // MLIR: %{{[0-9]+}} = llvm.sext %{{[0-9]+}} : i32 to i64
+    // CHECK: %{{[0-9]+}} = llvm.sext %{{[0-9]+}} : i32 to i64
     %30 = cir.cast(integral, %arg1 : !s32i), !u32i
     // Should not produce a cast.
     %32 = cir.cast(integral, %arg0 : !u32i), !s32i
     // Should not produce a cast.
     %21 = cir.load %20 : cir.ptr <!s16i>, !s16i
     %22 = cir.cast(integral, %21 : !s16i), !u64i
-    // MLIR: %[[TMP:[0-9]+]] = llvm.sext %{{[0-9]+}} : i16 to i64
+    // CHECK: %[[TMP:[0-9]+]] = llvm.sext %{{[0-9]+}} : i16 to i64
+    %33 = cir.cast(int_to_bool, %arg1 : !s32i), !cir.bool
+    // CHECK: %[[#ZERO:]] = llvm.mlir.constant(0 : i32) : i32
+    // CHECK: %[[#CMP:]] = llvm.icmp "ne" %arg1, %[[#ZERO]] : i32
+    // CHECK: %{{.+}} = llvm.zext %[[#CMP]] : i1 to i8
 
     // Pointer casts.
     cir.store %16, %6 : !s64i, cir.ptr <!s64i>
     %17 = cir.cast(array_to_ptrdecay, %7 : !cir.ptr<!cir.array<!s32i x 3>>), !cir.ptr<!s32i>
     cir.store %17, %8 : !cir.ptr<!s32i>, cir.ptr <!cir.ptr<!s32i>>
-    // MLIR: %{{[0-9]+}} = llvm.getelementptr %{{[0-9]+}}[0] : (!llvm.ptr) -> !llvm.ptr
+    // CHECK: %{{[0-9]+}} = llvm.getelementptr %{{[0-9]+}}[0] : (!llvm.ptr) -> !llvm.ptr, i32
     %23 = cir.cast(int_to_ptr, %22 : !u64i), !cir.ptr<!u8i>
-    // MLIR: %[[TMP2:[0-9]+]] = llvm.inttoptr %[[TMP]] : i64 to !llvm.ptr
+    // CHECK: %[[TMP2:[0-9]+]] = llvm.inttoptr %[[TMP]] : i64 to !llvm.ptr
     %24 = cir.cast(ptr_to_int, %23 : !cir.ptr<!u8i>), !s32i
-    // MLIR: %{{[0-9]+}} = llvm.ptrtoint %[[TMP2]] : !llvm.ptr to i32
+    // CHECK: %{{[0-9]+}} = llvm.ptrtoint %[[TMP2]] : !llvm.ptr to i32
     %29 = cir.cast(ptr_to_bool, %23 : !cir.ptr<!u8i>), !cir.bool
 
     // Floating point casts.
     %25 = cir.cast(int_to_float, %arg1 : !s32i), f32
-    // MLIR: %{{.+}} = llvm.sitofp %{{.+}} : i32 to f32
+    // CHECK: %{{.+}} = llvm.sitofp %{{.+}} : i32 to f32
     %26 = cir.cast(int_to_float, %arg0 : !u32i), f32
-    // MLIR: %{{.+}} = llvm.uitofp %{{.+}} : i32 to f32
+    // CHECK: %{{.+}} = llvm.uitofp %{{.+}} : i32 to f32
     %27 = cir.cast(float_to_int, %arg2 : f32), !s32i
-    // MLIR: %{{.+}} = llvm.fptosi %{{.+}} : f32 to i32
+    // CHECK: %{{.+}} = llvm.fptosi %{{.+}} : f32 to i32
     %28 = cir.cast(float_to_int, %arg2 : f32), !u32i
-    // MLIR: %{{.+}} = llvm.fptoui %{{.+}} : f32 to i32
+    // CHECK: %{{.+}} = llvm.fptoui %{{.+}} : f32 to i32
     %18 = cir.const(#cir.int<0> : !s32i) : !s32i
 
     cir.store %18, %2 : !s32i, cir.ptr <!s32i>

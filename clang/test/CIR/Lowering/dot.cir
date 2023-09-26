@@ -97,11 +97,11 @@ module {
 // MLIR-NEXT:   ^bb5:  // pred: ^bb3
 // MLIR-NEXT:     %22 = llvm.load %1 : !llvm.ptr -> !llvm.ptr
 // MLIR-NEXT:     %23 = llvm.load %12 : !llvm.ptr -> i32
-// MLIR-NEXT:     %24 = llvm.getelementptr %22[%23] : (!llvm.ptr, i32) -> !llvm.ptr
+// MLIR-NEXT:     %24 = llvm.getelementptr %22[%23] : (!llvm.ptr, i32) -> !llvm.ptr, f64
 // MLIR-NEXT:     %25 = llvm.load %24 : !llvm.ptr -> f64
 // MLIR-NEXT:     %26 = llvm.load %3 : !llvm.ptr -> !llvm.ptr
 // MLIR-NEXT:     %27 = llvm.load %12 : !llvm.ptr -> i32
-// MLIR-NEXT:     %28 = llvm.getelementptr %26[%27] : (!llvm.ptr, i32) -> !llvm.ptr
+// MLIR-NEXT:     %28 = llvm.getelementptr %26[%27] : (!llvm.ptr, i32) -> !llvm.ptr, f64
 // MLIR-NEXT:     %29 = llvm.load %28 : !llvm.ptr -> f64
 // MLIR-NEXT:     %30 = llvm.fmul %25, %29  : f64
 // MLIR-NEXT:     %31 = llvm.load %9 : !llvm.ptr -> f64

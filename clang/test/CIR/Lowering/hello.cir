@@ -25,7 +25,7 @@ module @"/tmp/test.raw" attributes {cir.lang = #cir.lang<c>, cir.sob = #cir.sign
 // CHECK:    %0 = llvm.mlir.constant(1 : index) : i64
 // CHECK:    %1 = llvm.alloca %0 x i32 {alignment = 4 : i64} : (i64) -> !llvm.ptr
 // CHECK:    %2 = llvm.mlir.addressof @".str" : !llvm.ptr
-// CHECK:    %3 = llvm.getelementptr %2[0] : (!llvm.ptr) -> !llvm.ptr
+// CHECK:    %3 = llvm.getelementptr %2[0] : (!llvm.ptr) -> !llvm.ptr, i8
 // CHECK:    %4 = llvm.call @printf(%3) : (!llvm.ptr) -> i32
 // CHECK:    %5 = llvm.mlir.constant(0 : i32) : i32
 // CHECK:    llvm.store %5, %1 : i32, !llvm.ptr

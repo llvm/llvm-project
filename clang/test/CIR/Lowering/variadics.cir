@@ -16,20 +16,20 @@ module {
     cir.store %arg0, %0 : !s32i, cir.ptr <!s32i>
     %4 = cir.cast(array_to_ptrdecay, %2 : !cir.ptr<!cir.array<!ty_22__va_list_tag22 x 1>>), !cir.ptr<!ty_22__va_list_tag22>
     cir.va.start %4 : !cir.ptr<!ty_22__va_list_tag22>
-    //      MLIR: %{{[0-9]+}} = llvm.getelementptr %{{[0-9]+}}[0] : (!llvm.ptr) -> !llvm.ptr
+    //      MLIR: %{{[0-9]+}} = llvm.getelementptr %{{[0-9]+}}[0] : (!llvm.ptr) -> !llvm.ptr, !llvm.struct<"struct.__va_list_tag", (i32, i32, ptr, ptr)>
     // MLIR-NEXT: %{{[0-9]+}} = llvm.bitcast %{{[0-9]+}} : !llvm.ptr to !llvm.ptr
     // MLIR-NEXT: llvm.intr.vastart %{{[0-9]+}} : !llvm.ptr
     %5 = cir.cast(array_to_ptrdecay, %3 : !cir.ptr<!cir.array<!ty_22__va_list_tag22 x 1>>), !cir.ptr<!ty_22__va_list_tag22>
     %6 = cir.cast(array_to_ptrdecay, %2 : !cir.ptr<!cir.array<!ty_22__va_list_tag22 x 1>>), !cir.ptr<!ty_22__va_list_tag22>
     cir.va.copy %6 to %5 : !cir.ptr<!ty_22__va_list_tag22>, !cir.ptr<!ty_22__va_list_tag22>
-    //      MLIR: %{{[0-9]+}} = llvm.getelementptr %{{[0-9]+}}[0] : (!llvm.ptr) -> !llvm.ptr
-    // MLIR-NEXT: %{{[0-9]+}} = llvm.getelementptr %{{[0-9]+}}[0] : (!llvm.ptr) -> !llvm.ptr
+    //      MLIR: %{{[0-9]+}} = llvm.getelementptr %{{[0-9]+}}[0] : (!llvm.ptr) -> !llvm.ptr, !llvm.struct<"struct.__va_list_tag", (i32, i32, ptr, ptr)>
+    // MLIR-NEXT: %{{[0-9]+}} = llvm.getelementptr %{{[0-9]+}}[0] : (!llvm.ptr) -> !llvm.ptr, !llvm.struct<"struct.__va_list_tag", (i32, i32, ptr, ptr)>
     // MLIR-NEXT: %{{[0-9]+}} = llvm.bitcast %{{[0-9]+}} : !llvm.ptr to !llvm.ptr
     // MLIR-NEXT: %{{[0-9]+}} = llvm.bitcast %{{[0-9]+}} : !llvm.ptr to !llvm.ptr
     // MLIR-NEXT: llvm.intr.vacopy %13 to %{{[0-9]+}} : !llvm.ptr, !llvm.ptr
     %7 = cir.cast(array_to_ptrdecay, %2 : !cir.ptr<!cir.array<!ty_22__va_list_tag22 x 1>>), !cir.ptr<!ty_22__va_list_tag22>
     cir.va.end %7 : !cir.ptr<!ty_22__va_list_tag22>
-    //      MLIR: %{{[0-9]+}} = llvm.getelementptr %{{[0-9]+}}[0] : (!llvm.ptr) -> !llvm.ptr
+    //      MLIR: %{{[0-9]+}} = llvm.getelementptr %{{[0-9]+}}[0] : (!llvm.ptr) -> !llvm.ptr, !llvm.struct<"struct.__va_list_tag", (i32, i32, ptr, ptr)>
     // MLIR-NEXT: %{{[0-9]+}} = llvm.bitcast %{{[0-9]+}} : !llvm.ptr to !llvm.ptr
     // MLIR-NEXT: llvm.intr.vaend %{{[0-9]+}} : !llvm.ptr
     %8 = cir.const(#cir.int<0> : !s32i) : !s32i
