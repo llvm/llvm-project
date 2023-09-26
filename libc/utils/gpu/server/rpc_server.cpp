@@ -164,6 +164,26 @@ private:
       });
       break;
     }
+    case RPC_FSEEK: {
+      port->recv_and_send([](rpc::Buffer *buffer) {
+        buffer->data[0] = fseek(file::to_stream(buffer->data[0]),
+                                static_cast<long>(buffer->data[1]),
+                                static_cast<int>(buffer->data[2]));
+      });
+      break;
+    }
+    case RPC_FTELL: {
+      port->recv_and_send([](rpc::Buffer *buffer) {
+        buffer->data[0] = ftell(file::to_stream(buffer->data[0]));
+      });
+      break;
+    }
+    case RPC_FFLUSH: {
+      port->recv_and_send([](rpc::Buffer *buffer) {
+        buffer->data[0] = fflush(file::to_stream(buffer->data[0]));
+      });
+      break;
+    }
     case RPC_NOOP: {
       port->recv([](rpc::Buffer *) {});
       break;
