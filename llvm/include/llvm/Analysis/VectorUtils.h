@@ -174,13 +174,9 @@ static constexpr char const *_LLVM_Scalarize_ = "_LLVM_Scalarize_";
 ///
 /// \param MangledName -> input string in the format
 /// _ZGV<isa><mask><vlen><parameters>_<scalarname>[(<redirection>)].
-/// \param M -> Module used to retrieve informations about the vector
-/// function that are not possible to retrieve from the mangled
-/// name. At the moment, this parameter is needed only to retrieve the
-/// Vectorization Factor of scalable vector functions from their
-/// respective IR declarations.
+/// \param OpTys -> the instruction operand types.
 std::optional<VFInfo> tryDemangleForVFABI(StringRef MangledName,
-                                          const Module &M);
+                                          SmallVector<Type *> OpTys);
 
 /// Retrieve the `VFParamKind` from a string token.
 VFParamKind getVFParamKindFromString(const StringRef Token);
@@ -226,8 +222,11 @@ class VFDatabase {
     if (ListOfStrings.empty())
       return;
     for (const auto &MangledName : ListOfStrings) {
+      SmallVector<Type *> OpTys;
+      for (Value *Op : CI.operands())
+        OpTys.push_back(Op->getType());
       const std::optional<VFInfo> Shape =
-          VFABI::tryDemangleForVFABI(MangledName, *(CI.getModule()));
+          VFABI::tryDemangleForVFABI(MangledName, OpTys);
       // A match is found via scalar and vector names, and also by
       // ensuring that the variant described in the attribute has a
       // corresponding definition or declaration of the vector

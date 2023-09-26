@@ -862,8 +862,8 @@ declare <vscale x 2 x i64> @foo_uniform(i64, <vscale x 2 x i1>)
 declare <vscale x 2 x i64> @foo_vector(<vscale x 2 x i64>, <vscale x 2 x i1>)
 declare <vscale x 2 x i64> @foo_vector_nomask(<vscale x 2 x i64>)
 
-attributes #0 = { nounwind "vector-function-abi-variant"="_ZGV_LLVM_Mxv_foo(foo_vector),_ZGV_LLVM_Mxu_foo(foo_uniform)" }
-attributes #1 = { nounwind "vector-function-abi-variant"="_ZGV_LLVM_Mxv_foo(foo_vector)" }
-attributes #2 = { nounwind "vector-function-abi-variant"="_ZGV_LLVM_Nxv_foo(foo_vector_nomask)" }
-attributes #3 = { nounwind "vector-function-abi-variant"="_ZGV_LLVM_Nxv_foo(foo_vector_nomask),_ZGV_LLVM_Mxv_foo(foo_vector)" }
+attributes #0 = { nounwind "vector-function-abi-variant"="_ZGVsMxv_foo(foo_vector),_ZGVsMxu_foo(foo_uniform)" }
+attributes #1 = { nounwind "vector-function-abi-variant"="_ZGVsMxv_foo(foo_vector)" }
+attributes #2 = { nounwind "vector-function-abi-variant"="_ZGVsNxv_foo(foo_vector_nomask)" }
+attributes #3 = { nounwind "vector-function-abi-variant"="_ZGVsNxv_foo(foo_vector_nomask),_ZGVsMxv_foo(foo_vector)" }
 attributes #4 = { "target-features"="+sve" vscale_range(2,16) "no-trapping-math"="false" }

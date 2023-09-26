@@ -1464,9 +1464,11 @@ void VFABI::getVectorVariantNames(
 
   for (const auto &S : SetVector<StringRef>(ListAttr.begin(), ListAttr.end())) {
 #ifndef NDEBUG
+    SmallVector<Type *> OpTys;
+    for (Value *Op : CI.operands())
+      OpTys.push_back(Op->getType());
     LLVM_DEBUG(dbgs() << "VFABI: adding mapping '" << S << "'\n");
-    std::optional<VFInfo> Info =
-        VFABI::tryDemangleForVFABI(S, *(CI.getModule()));
+    std::optional<VFInfo> Info = VFABI::tryDemangleForVFABI(S, OpTys);
     assert(Info && "Invalid name for a VFABI variant.");
     assert(CI.getModule()->getFunction(Info->VectorName) &&
            "Vector function is missing.");

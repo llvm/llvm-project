@@ -25,7 +25,7 @@ private:
     EXPECT_NE(M.get(), nullptr) << "Loading an invalid module.\n "
                                 << Err.getMessage() << "\n";
     Type *Ty = parseType(IRType, Err, *(M.get()));
-    FunctionType *FTy = dyn_cast<FunctionType>(Ty);
+    FTy = dyn_cast<FunctionType>(Ty);
     EXPECT_NE(FTy, nullptr) << "Invalid function type string: " << IRType
                             << "\n"
                             << Err.getMessage() << "\n";
@@ -40,7 +40,8 @@ private:
   LLVMContext Ctx;
   SMDiagnostic Err;
   std::unique_ptr<Module> M;
-  //  CallInst *CI;
+  FunctionType *FTy;
+
 protected:
   // Referencies to the parser output field.
   ElementCount &VF = Info.Shape.VF;
@@ -73,8 +74,8 @@ protected:
     // Reset the VFInfo and the Module to be able to invoke
     // `invokeParser` multiple times in the same test.
     reset(Name, IRType);
-
-    const auto OptInfo = VFABI::tryDemangleForVFABI(MangledName, *(M.get()));
+    SmallVector<Type *> OpTys(FTy->params());
+    const auto OptInfo = VFABI::tryDemangleForVFABI(MangledName, OpTys);
     if (OptInfo) {
       Info = *OptInfo;
       return true;
@@ -206,7 +207,7 @@ TEST_F(VFABIParserTest, LinearWithCompileTimeNegativeStep) {
 TEST_F(VFABIParserTest, ParseScalableSVE) {
   EXPECT_TRUE(invokeParser(
       "_ZGVsMxv_sin(custom_vg)", "custom_vg",
-      "<vscale x 2 x i32>(<vscale x 2 x i32>, <vscale x 2 x i1>)"));
+      "<vscale x 2 x i64>(<vscale x 2 x i64>, <vscale x 2 x i1>)"));
   EXPECT_EQ(VF, ElementCount::getScalable(2));
   EXPECT_TRUE(IsMasked());
   EXPECT_EQ(ISA, VFISAKind::SVE);
@@ -496,11 +497,11 @@ TEST_F(VFABIParserTest, ParseMaskingLLVM) {
 
 TEST_F(VFABIParserTest, ParseScalableMaskingLLVM) {
   EXPECT_TRUE(invokeParser(
-      "_ZGV_LLVM_Mxv_sin(custom_vector_sin)", "custom_vector_sin",
-      "<vscale x 2 x i32> (<vscale x 2 x i32>, <vscale x 2 x i1>)"));
+      "_ZGVsMxv_sin(custom_vector_sin)", "custom_vector_sin",
+      "<vscale x 2 x i64> (<vscale x 2 x i64>, <vscale x 2 x i1>)"));
   EXPECT_TRUE(IsMasked());
   EXPECT_EQ(VF, ElementCount::getScalable(2));
-  EXPECT_EQ(ISA, VFISAKind::LLVM);
+  EXPECT_EQ(ISA, VFISAKind::SVE);
   EXPECT_EQ(Parameters.size(), (unsigned)2);
   EXPECT_EQ(Parameters[0], VFParameter({0, VFParamKind::Vector}));
   EXPECT_EQ(Parameters[1], VFParameter({1, VFParamKind::GlobalPredicate}));
@@ -509,12 +510,12 @@ TEST_F(VFABIParserTest, ParseScalableMaskingLLVM) {
 }
 
 TEST_F(VFABIParserTest, ParseScalableMaskingLLVMSincos) {
-  EXPECT_TRUE(invokeParser("_ZGV_LLVM_Mxvl8l8_sincos(custom_vector_sincos)",
+  EXPECT_TRUE(invokeParser("_ZGVsMxvl8l8_sincos(custom_vector_sincos)",
                            "custom_vector_sincos",
                            "void(<vscale x 2 x double>, double *, double *)"));
   EXPECT_EQ(VF, ElementCount::getScalable(2));
   EXPECT_TRUE(IsMasked());
-  EXPECT_EQ(ISA, VFISAKind::LLVM);
+  EXPECT_EQ(ISA, VFISAKind::SVE);
   EXPECT_EQ(Parameters.size(), (unsigned)4);
   EXPECT_EQ(Parameters[0], VFParameter({0, VFParamKind::Vector}));
   EXPECT_EQ(Parameters[1], VFParameter({1, VFParamKind::OMP_Linear, 8}));
