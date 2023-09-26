@@ -1299,18 +1299,28 @@ bool SPIRVInstructionSelector::selectExtractElt(Register ResVReg,
 bool SPIRVInstructionSelector::selectGEP(Register ResVReg,
                                          const SPIRVType *ResType,
                                          MachineInstr &I) const {
-  // In general we should also support OpAccessChain instrs here (i.e. not
-  // PtrAccessChain) but SPIRV-LLVM Translator doesn't emit them at all and so
-  // do we to stay compliant with its test and more importantly consumers.
-  unsigned Opcode = I.getOperand(2).getImm() ? SPIRV::OpInBoundsPtrAccessChain
-                                             : SPIRV::OpPtrAccessChain;
+  const bool isGEPInBounds = I.getOperand(2).getImm();
+
+  // OpAccessChain could be used for OpenCL, but the SPIRV-LLVM Translator only
+  // relies on PtrAccessChain, so we'll try not to deviate. For Vulkan however,
+  // we have to use Op[InBounds]AccessChain.
+  const unsigned Opcode = STI.isVulkanEnv()
+                              ? (isGEPInBounds ? SPIRV::OpInBoundsAccessChain
+                                               : SPIRV::OpAccessChain)
+                              : (isGEPInBounds ? SPIRV::OpInBoundsPtrAccessChain
+                                               : SPIRV::OpPtrAccessChain);
+
   auto Res = BuildMI(*I.getParent(), I, I.getDebugLoc(), TII.get(Opcode))
                  .addDef(ResVReg)
                  .addUse(GR.getSPIRVTypeID(ResType))
                  // Object to get a pointer to.
                  .addUse(I.getOperand(3).getReg());
   // Adding indices.
-  for (unsigned i = 4; i < I.getNumExplicitOperands(); ++i)
+  const unsigned StartingIndex =
+      (Opcode == SPIRV::OpAccessChain || Opcode == SPIRV::OpInBoundsAccessChain)
+          ? 5
+          : 4;
+  for (unsigned i = StartingIndex; i < I.getNumExplicitOperands(); ++i)
     Res.addUse(I.getOperand(i).getReg());
   return Res.constrainAllUses(TII, TRI, RBI);
 }
