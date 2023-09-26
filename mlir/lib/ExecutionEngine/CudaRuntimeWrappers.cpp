@@ -232,7 +232,8 @@ extern MLIR_CUDA_WRAPPERS_EXPORT "C" void mgpuEventRecord(CUevent event,
   CUDA_REPORT_IF_ERROR(cuEventRecord(event, stream));
 }
 
-extern "C" void *mgpuMemAlloc(uint64_t sizeBytes, CUstream /*stream*/) {
+extern "C" void *mgpuMemAlloc(uint64_t sizeBytes, CUstream /*stream*/,
+                              bool /*isHostShared*/) {
   ScopedContext scopedContext;
   CUdeviceptr ptr = 0;
   if (sizeBytes != 0)

@@ -8,7 +8,8 @@ module attributes {gpu.container_module} {
     %0 = gpu.wait async
     // CHECK: %[[gep:.*]] = llvm.getelementptr {{.*}}[%[[size]]]
     // CHECK: %[[size_bytes:.*]] = llvm.ptrtoint %[[gep]]
-    // CHECK: llvm.call @mgpuMemAlloc(%[[size_bytes]], %[[stream]])
+    // CHECK: %[[isHostShared:.*]] = llvm.mlir.constant
+    // CHECK: llvm.call @mgpuMemAlloc(%[[size_bytes]], %[[stream]], %[[isHostShared]])
     %1, %2 = gpu.alloc async [%0] (%size) : memref<?xf32>
     // CHECK: %[[float_ptr:.*]] = llvm.extractvalue {{.*}}[0]
     // CHECK: %[[void_ptr:.*]] = llvm.bitcast %[[float_ptr]]
