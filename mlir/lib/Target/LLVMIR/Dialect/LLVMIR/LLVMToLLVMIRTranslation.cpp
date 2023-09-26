@@ -303,9 +303,15 @@ convertOperationImpl(Operation &opInst, llvm::IRBuilderBase &builder,
           moduleTranslation.lookupBlock(invOp.getSuccessor(0)),
           moduleTranslation.lookupBlock(invOp.getSuccessor(1)), operandsRef);
     } else {
+      llvm::FunctionType *calleeType;
+      if (invOp.getCalleeType().has_value())
+        calleeType = llvm::cast<llvm::FunctionType>(
+            moduleTranslation.convertType(*invOp.getCalleeType()));
+      else
+        calleeType = getCalleeFunctionType(invOp.getResultTypes(),
+                                           invOp.getArgOperands());
       result = builder.CreateInvoke(
-          getCalleeFunctionType(invOp.getResultTypes(), invOp.getArgOperands()),
-          operandsRef.front(),
+          calleeType, operandsRef.front(),
           moduleTranslation.lookupBlock(invOp.getSuccessor(0)),
           moduleTranslation.lookupBlock(invOp.getSuccessor(1)),
           operandsRef.drop_front());

@@ -542,7 +542,9 @@ def LLVM_InvokeOp : LLVM_Op<"invoke", [
                       DeclareOpInterfaceMethods<CallOpInterface>,
                       DeclareOpInterfaceMethods<BranchWeightOpInterface>,
                       Terminator]> {
-  let arguments = (ins OptionalAttr<FlatSymbolRefAttr>:$callee,
+  let arguments = (ins
+                   OptionalAttr<TypeAttrOf<LLVM_FunctionType>>:$callee_type,
+                   OptionalAttr<FlatSymbolRefAttr>:$callee,
                    Variadic<LLVM_Type>:$callee_operands,
                    Variadic<LLVM_Type>:$normalDestOperands,
                    Variadic<LLVM_Type>:$unwindDestOperands,
@@ -552,19 +554,14 @@ def LLVM_InvokeOp : LLVM_Op<"invoke", [
                               AnySuccessor:$unwindDest);
 
   let builders = [
+    OpBuilder<(ins "LLVMFuncOp":$func,
+      "ValueRange":$ops, "Block*":$normal, "ValueRange":$normalOps,
+      "Block*":$unwind, "ValueRange":$unwindOps)>,
     OpBuilder<(ins "TypeRange":$tys, "FlatSymbolRefAttr":$callee,
       "ValueRange":$ops, "Block*":$normal, "ValueRange":$normalOps,
-      "Block*":$unwind, "ValueRange":$unwindOps),
-    [{
-      $_state.addAttribute("callee", callee);
-      build($_builder, $_state, tys, ops, normal, normalOps, unwind, unwindOps);
-    }]>,
+      "Block*":$unwind, "ValueRange":$unwindOps)>,
     OpBuilder<(ins "TypeRange":$tys, "ValueRange":$ops, "Block*":$normal,
-      "ValueRange":$normalOps, "Block*":$unwind, "ValueRange":$unwindOps),
-    [{
-      build($_builder, $_state, tys, /*callee=*/FlatSymbolRefAttr(), ops, normalOps,
-            unwindOps, nullptr, normal, unwind);
-    }]>];
+      "ValueRange":$normalOps, "Block*":$unwind, "ValueRange":$unwindOps)>];
   let hasCustomAssemblyFormat = 1;
   let hasVerifier = 1;
 }

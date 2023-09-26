@@ -1018,13 +1018,25 @@ static void printStoreType(OpAsmPrinter &printer, Operation *op,
 // CallOp
 //===----------------------------------------------------------------------===//
 
-/// Get the MLIR Op-like result types of a LLVM fuction type
+/// Get the MLIR Op-like result types of a LLVMFunctionType
 static SmallVector<Type, 1> getCallOpResults(LLVMFunctionType calleeType) {
   SmallVector<Type, 1> results;
   Type resultType = calleeType.getReturnType();
   if (!isa<LLVM::LLVMVoidType>(resultType))
     results.push_back(resultType);
   return results;
+}
+
+/// Construct a LLVMFunctionType from MLIR results and args
+static LLVMFunctionType getLLVMFuncType(OpBuilder &builder, TypeRange results,
+                                        ValueRange args) {
+  Type resultType;
+  if (results.empty())
+    resultType = LLVMVoidType::get(builder.getContext());
+  else
+    resultType = results.front();
+  return LLVMFunctionType::get(resultType, llvm::to_vector(args.getTypes()),
+                               /*isVariadic*/ false);
 }
 
 void CallOp::build(OpBuilder &builder, OperationState &state, TypeRange results,
@@ -1039,14 +1051,8 @@ void CallOp::build(OpBuilder &builder, OperationState &state, TypeRange results,
 
 void CallOp::build(OpBuilder &builder, OperationState &state, TypeRange results,
                    FlatSymbolRefAttr callee, ValueRange args) {
-  Type resultType;
-  if (results.empty())
-    resultType = LLVMVoidType::get(builder.getContext());
-  else
-    resultType = results.front();
-  auto calleeType = LLVMFunctionType::get(
-      resultType, llvm::to_vector(args.getTypes()), /*isVariadic*/ false);
-  build(builder, state, results, TypeAttr::get(calleeType), callee, args,
+  build(builder, state, results,
+        TypeAttr::get(getLLVMFuncType(builder, results, args)), callee, args,
         /*fastmathFlags=*/nullptr,
         /*branch_weights=*/nullptr,
         /*access_groups=*/nullptr, /*alias_scopes=*/nullptr,
@@ -1185,14 +1191,8 @@ LogicalResult CallOp::verifySymbolUses(SymbolTableCollection &symbolTable) {
   if (!funcType)
     return emitOpError("callee does not have a functional type: ") << fnType;
 
-  // Indirect variadic function calls are not supported since the translation to
-  // LLVM IR reconstructs the LLVM function type from the argument and result
-  // types. An additional type attribute that stores the LLVM function type
-  // would be needed to distinguish normal and variadic function arguments.
-  // TODO: Support indirect calls to variadic function pointers.
-  if (isIndirect && funcType.isVarArg())
-    return emitOpError()
-           << "indirect calls to variadic functions are not supported";
+  if (funcType.isVarArg() && !getCalleeType().has_value())
+    return emitOpError() << "Missing callee type attribute for vararg call";
 
   // Verify that the operand and result types match the callee.
 
@@ -1388,6 +1388,30 @@ ParseResult CallOp::parse(OpAsmParser &parser, OperationState &result) {
 /// LLVM::InvokeOp
 ///===---------------------------------------------------------------------===//
 
+void InvokeOp::build(OpBuilder &builder, OperationState &state, LLVMFuncOp func,
+                     ValueRange ops, Block *normal, ValueRange normalOps,
+                     Block *unwind, ValueRange unwindOps) {
+  auto calleeType = func.getFunctionType();
+  build(builder, state, getCallOpResults(calleeType), TypeAttr::get(calleeType),
+        SymbolRefAttr::get(func), ops, normalOps, unwindOps, nullptr, normal,
+        unwind);
+}
+
+void InvokeOp::build(OpBuilder &builder, OperationState &state, TypeRange tys,
+                     FlatSymbolRefAttr callee, ValueRange ops, Block *normal,
+                     ValueRange normalOps, Block *unwind,
+                     ValueRange unwindOps) {
+  build(builder, state, tys, TypeAttr::get(getLLVMFuncType(builder, tys, ops)),
+        callee, ops, normalOps, unwindOps, nullptr, normal, unwind);
+}
+
+void InvokeOp::build(OpBuilder &builder, OperationState &state, TypeRange tys,
+                     ValueRange ops, Block *normal, ValueRange normalOps,
+                     Block *unwind, ValueRange unwindOps) {
+  build(builder, state, tys, TypeAttr::get(getLLVMFuncType(builder, tys, ops)),
+        /*callee=*/nullptr, ops, normalOps, unwindOps, nullptr, normal, unwind);
+}
+
 SuccessorOperands InvokeOp::getSuccessorOperands(unsigned index) {
   assert(index < getNumSuccessors() && "invalid successor index");
   return SuccessorOperands(index == 0 ? getNormalDestOperandsMutable()
@@ -1441,6 +1465,17 @@ void InvokeOp::print(OpAsmPrinter &p) {
   auto callee = getCallee();
   bool isDirect = callee.has_value();
 
+  LLVMFunctionType calleeType;
+  bool isVarArg;
+
+  std::optional<LLVMFunctionType> optionalCalleeType = getCalleeType();
+  if (optionalCalleeType.has_value()) {
+    calleeType = *optionalCalleeType;
+    isVarArg = calleeType.isVarArg();
+  } else {
+    isVarArg = false;
+  }
+
   p << ' ';
 
   // Either function name or pointer
@@ -1455,8 +1490,12 @@ void InvokeOp::print(OpAsmPrinter &p) {
   p << " unwind ";
   p.printSuccessorAndUseList(getUnwindDest(), getUnwindDestOperands());
 
-  p.printOptionalAttrDict((*this)->getAttrs(),
-                          {InvokeOp::getOperandSegmentSizeAttr(), "callee"});
+  if (isVarArg)
+    p << " vararg(" << calleeType << ") ";
+
+  p.printOptionalAttrDict(
+      (*this)->getAttrs(),
+      {InvokeOp::getOperandSegmentSizeAttr(), "callee", "callee_type"});
 
   p << " : ";
   if (!isDirect)
@@ -1473,6 +1512,7 @@ void InvokeOp::print(OpAsmPrinter &p) {
 ParseResult InvokeOp::parse(OpAsmParser &parser, OperationState &result) {
   SmallVector<OpAsmParser::UnresolvedOperand, 8> operands;
   SymbolRefAttr funcAttr;
+  TypeAttr calleeType;
   Block *normalDest, *unwindDest;
   SmallVector<Value, 4> normalOperands, unwindOperands;
   Builder &builder = parser.getBuilder();
@@ -1491,8 +1531,21 @@ ParseResult InvokeOp::parse(OpAsmParser &parser, OperationState &result) {
       parser.parseKeyword("to") ||
       parser.parseSuccessorAndUseList(normalDest, normalOperands) ||
       parser.parseKeyword("unwind") ||
-      parser.parseSuccessorAndUseList(unwindDest, unwindOperands) ||
-      parser.parseOptionalAttrDict(result.attributes))
+      parser.parseSuccessorAndUseList(unwindDest, unwindOperands))
+    return failure();
+
+  bool isVarArg = parser.parseOptionalKeyword("vararg").succeeded();
+  if (isVarArg) {
+    if (parser.parseLParen().failed() ||
+        !parser
+             .parseOptionalAttribute(calleeType, "callee_type",
+                                     result.attributes)
+             .has_value() ||
+        parser.parseRParen().failed())
+      return failure();
+  }
+
+  if (parser.parseOptionalAttrDict(result.attributes))
     return failure();
 
   // Parse the trailing type list and resolve the function operands.
