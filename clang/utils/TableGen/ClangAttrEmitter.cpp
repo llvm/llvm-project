@@ -3612,7 +3612,8 @@ void EmitClangAttrHasAttrImpl(RecordKeeper &Records, raw_ostream &OS) {
 
 void EmitClangAttrSpellingListIndex(RecordKeeper &Records, raw_ostream &OS) {
   emitSourceFileHeader("Code to translate different attribute spellings "
-                       "into internal identifiers", OS);
+                       "into internal identifiers",
+                       OS);
 
   OS << "  switch (getParsedKind()) {\n";
   OS << "    case IgnoredAttribute:\n";
@@ -4705,8 +4706,7 @@ void EmitClangAttrNodeTraverse(RecordKeeper &Records, raw_ostream &OS) {
   }
 }
 
-void EmitClangAttrParserStringSwitches(RecordKeeper &Records,
-                                       raw_ostream &OS) {
+void EmitClangAttrParserStringSwitches(RecordKeeper &Records, raw_ostream &OS) {
   emitSourceFileHeader("Parser-related llvm::StringSwitch cases", OS);
   emitClangAttrArgContextList(Records, OS);
   emitClangAttrIdentifierArgList(Records, OS);
