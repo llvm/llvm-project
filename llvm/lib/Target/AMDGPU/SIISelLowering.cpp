@@ -2240,14 +2240,88 @@ void SITargetLowering::allocateHSAUserSGPRs(CCState &CCInfo,
     CCInfo.AllocateReg(FlatScratchInitReg);
   }
 
+  // TODO: Add GridWorkGroupCount user SGPRs when used. For now with HSA we read
+  // these from the dispatch pointer.
+}
+
+// Allocate pre-loaded kernel arguemtns. Arguments to be preloading must be
+// sequential starting from the first argument.
+void SITargetLowering::allocatePreloadKernArgSGPRs(
+    CCState &CCInfo, SmallVectorImpl<CCValAssign> &ArgLocs,
+    const SmallVectorImpl<ISD::InputArg> &Ins, MachineFunction &MF,
+    const SIRegisterInfo &TRI, SIMachineFunctionInfo &Info) const {
+  Function &F = MF.getFunction();
+  unsigned LastExplicitArgOffset =
+      MF.getSubtarget<GCNSubtarget>().getExplicitKernelArgOffset();
+  GCNUserSGPRUsageInfo &SGPRInfo = Info.getUserSGPRInfo();
+  bool InPreloadSequence = true;
+  unsigned InIdx = 0;
+  for (auto &Arg : F.args()) {
+    if (!InPreloadSequence || !Arg.hasInRegAttr())
+      break;
+
+    int ArgIdx = Arg.getArgNo();
+    // Don't preload non-original args or parts not in the current preload
+    // sequence.
+    if (InIdx < Ins.size() && (!Ins[InIdx].isOrigArg() ||
+                               (int)Ins[InIdx].getOrigArgIndex() != ArgIdx))
+      break;
+
+    for (; InIdx < Ins.size() && Ins[InIdx].isOrigArg() &&
+           (int)Ins[InIdx].getOrigArgIndex() == ArgIdx;
+         InIdx++) {
+      assert(ArgLocs[ArgIdx].isMemLoc());
+      auto &ArgLoc = ArgLocs[InIdx];
+      const Align KernelArgBaseAlign = Align(16);
+      unsigned ArgOffset = ArgLoc.getLocMemOffset();
+      Align Alignment = commonAlignment(KernelArgBaseAlign, ArgOffset);
+      unsigned NumAllocSGPRs =
+          alignTo(ArgLoc.getLocVT().getFixedSizeInBits(), 32) / 32;
+
+      // Arg is preloaded into the previous SGPR.
+      if (ArgLoc.getLocVT().getStoreSize() < 4 && Alignment < 4) {
+        Info.getArgInfo().PreloadKernArgs[InIdx].Regs.push_back(
+            Info.getArgInfo().PreloadKernArgs[InIdx - 1].Regs[0]);
+        continue;
+      }
+
+      unsigned Padding = ArgOffset - LastExplicitArgOffset;
+      unsigned PaddingSGPRs = alignTo(Padding, 4) / 4;
+      // Check for free user SGPRs for preloading.
+      if (PaddingSGPRs + NumAllocSGPRs + 1 /*Synthetic SGPRs*/ >
+          SGPRInfo.getNumFreeUserSGPRs()) {
+        InPreloadSequence = false;
+        break;
+      }
+
+      // Preload this argument.
+      const TargetRegisterClass *RC =
+          TRI.getSGPRClassForBitWidth(NumAllocSGPRs * 32);
+      SmallVectorImpl<MCRegister> *PreloadRegs =
+          Info.addPreloadedKernArg(TRI, RC, NumAllocSGPRs, InIdx, PaddingSGPRs);
+
+      if (PreloadRegs->size() > 1)
+        RC = &AMDGPU::SGPR_32RegClass;
+      for (auto &Reg : *PreloadRegs) {
+        assert(Reg);
+        MF.addLiveIn(Reg, RC);
+        CCInfo.AllocateReg(Reg);
+      }
+
+      LastExplicitArgOffset = NumAllocSGPRs * 4 + ArgOffset;
+    }
+  }
+}
+
+void SITargetLowering::allocateLDSKernelId(CCState &CCInfo, MachineFunction &MF,
+                                           const SIRegisterInfo &TRI,
+                                           SIMachineFunctionInfo &Info) const {
+  // Always allocate this last since it is a synthetic preload.
   if (Info.hasLDSKernelId()) {
     Register Reg = Info.addLDSKernelId();
     MF.addLiveIn(Reg, &AMDGPU::SGPR_32RegClass);
     CCInfo.AllocateReg(Reg);
   }
-
-  // TODO: Add GridWorkGroupCount user SGPRs when used. For now with HSA we read
-  // these from the dispatch pointer.
 }
 
 // Allocate special input registers that are initialized per-wave.
@@ -2554,17 +2628,23 @@ SDValue SITargetLowering::LowerFormalArguments(
     Splits.append(Ins.begin(), Ins.end());
   }
 
+  if (IsKernel)
+    analyzeFormalArgumentsCompute(CCInfo, Ins);
+
   if (IsEntryFunc) {
     allocateSpecialEntryInputVGPRs(CCInfo, MF, *TRI, *Info);
     allocateHSAUserSGPRs(CCInfo, MF, *TRI, *Info);
+    if (IsKernel && Subtarget->hasKernargPreload() &&
+        !Subtarget->needsKernargPreloadBackwardsCompatibility())
+      allocatePreloadKernArgSGPRs(CCInfo, ArgLocs, Ins, MF, *TRI, *Info);
+
+    allocateLDSKernelId(CCInfo, MF, *TRI, *Info);
   } else if (!IsGraphics) {
     // For the fixed ABI, pass workitem IDs in the last argument register.
     allocateSpecialInputVGPRsFixed(CCInfo, MF, *TRI, *Info);
   }
 
-  if (IsKernel) {
-    analyzeFormalArgumentsCompute(CCInfo, Ins);
-  } else {
+  if (!IsKernel) {
     CCAssignFn *AssignFn = CCAssignFnForCall(CallConv, isVarArg);
     CCInfo.AnalyzeFormalArguments(Splits, AssignFn);
   }
@@ -2610,9 +2690,81 @@ SDValue SITargetLowering::LowerFormalArguments(
         continue;
       }
 
-      SDValue Arg = lowerKernargMemParameter(
-        DAG, VT, MemVT, DL, Chain, Offset, Alignment, Ins[i].Flags.isSExt(), &Ins[i]);
-      Chains.push_back(Arg.getValue(1));
+      SDValue NewArg;
+      if (Arg.isOrigArg() && Info->getArgInfo().PreloadKernArgs.count(i)) {
+        if (MemVT.getStoreSize() < 4 && Alignment < 4) {
+          // In this case the argument is packed into the previous preload SGPR.
+          int64_t AlignDownOffset = alignDown(Offset, 4);
+          int64_t OffsetDiff = Offset - AlignDownOffset;
+          EVT IntVT = MemVT.changeTypeToInteger();
+
+          const SIMachineFunctionInfo *Info =
+              MF.getInfo<SIMachineFunctionInfo>();
+          MachineRegisterInfo &MRI = DAG.getMachineFunction().getRegInfo();
+          Register Reg =
+              Info->getArgInfo().PreloadKernArgs.find(i)->getSecond().Regs[0];
+
+          assert(Reg);
+          Register VReg = MRI.getLiveInVirtReg(Reg);
+          SDValue Copy = DAG.getCopyFromReg(Chain, DL, VReg, MVT::i32);
+
+          SDValue ShiftAmt = DAG.getConstant(OffsetDiff * 8, DL, MVT::i32);
+          SDValue Extract = DAG.getNode(ISD::SRL, DL, MVT::i32, Copy, ShiftAmt);
+
+          SDValue ArgVal = DAG.getNode(ISD::TRUNCATE, DL, IntVT, Extract);
+          ArgVal = DAG.getNode(ISD::BITCAST, DL, MemVT, ArgVal);
+          NewArg = convertArgType(DAG, VT, MemVT, DL, ArgVal,
+                                  Ins[i].Flags.isSExt(), &Ins[i]);
+
+          NewArg = DAG.getMergeValues({NewArg, Copy.getValue(1)}, DL);
+        } else {
+          const SIMachineFunctionInfo *Info =
+              MF.getInfo<SIMachineFunctionInfo>();
+          MachineRegisterInfo &MRI = DAG.getMachineFunction().getRegInfo();
+          const SmallVectorImpl<MCRegister> &PreloadRegs =
+              Info->getArgInfo().PreloadKernArgs.find(i)->getSecond().Regs;
+
+          SDValue Copy;
+          if (PreloadRegs.size() == 1) {
+            Register VReg = MRI.getLiveInVirtReg(PreloadRegs[0]);
+            const TargetRegisterClass *RC = MRI.getRegClass(VReg);
+            NewArg = DAG.getCopyFromReg(
+                Chain, DL, VReg,
+                EVT::getIntegerVT(*DAG.getContext(),
+                                  TRI->getRegSizeInBits(*RC)));
+
+          } else {
+            // If the kernarg alignment does not match the alignment of the SGPR
+            // tuple RC that can accommodate this argument, it will be built up
+            // via copies from from the individual SGPRs that the argument was
+            // preloaded to.
+            SmallVector<SDValue, 4> Elts;
+            for (auto Reg : PreloadRegs) {
+              Register VReg = MRI.getLiveInVirtReg(Reg);
+              Copy = DAG.getCopyFromReg(Chain, DL, VReg, MVT::i32);
+              Elts.push_back(Copy);
+            }
+            NewArg =
+                DAG.getBuildVector(EVT::getVectorVT(*DAG.getContext(), MVT::i32,
+                                                    PreloadRegs.size()),
+                                   DL, Elts);
+          }
+
+          SDValue CMemVT;
+          if (VT.isScalarInteger() && VT.bitsLT(NewArg.getSimpleValueType()))
+            CMemVT = DAG.getNode(ISD::TRUNCATE, DL, MemVT, NewArg);
+          else
+            CMemVT = DAG.getBitcast(MemVT, NewArg);
+          NewArg = convertArgType(DAG, VT, MemVT, DL, CMemVT,
+                                  Ins[i].Flags.isSExt(), &Ins[i]);
+          NewArg = DAG.getMergeValues({NewArg, Chain}, DL);
+        }
+      } else {
+        NewArg =
+            lowerKernargMemParameter(DAG, VT, MemVT, DL, Chain, Offset,
+                                     Alignment, Ins[i].Flags.isSExt(), &Ins[i]);
+      }
+      Chains.push_back(NewArg.getValue(1));
 
       auto *ParamTy =
         dyn_cast<PointerType>(FType->getParamType(Ins[i].getOrigArgIndex()));
@@ -2622,11 +2774,11 @@ SDValue SITargetLowering::LowerFormalArguments(
         // On SI local pointers are just offsets into LDS, so they are always
         // less than 16-bits.  On CI and newer they could potentially be
         // real pointers, so we can't guarantee their size.
-        Arg = DAG.getNode(ISD::AssertZext, DL, Arg.getValueType(), Arg,
-                          DAG.getValueType(MVT::i16));
+        NewArg = DAG.getNode(ISD::AssertZext, DL, NewArg.getValueType(), NewArg,
+                             DAG.getValueType(MVT::i16));
       }
 
-      InVals.push_back(Arg);
+      InVals.push_back(NewArg);
       continue;
     } else if (!IsEntryFunc && VA.isMemLoc()) {
       SDValue Val = lowerStackParameter(DAG, VA, DL, Chain, Arg);
