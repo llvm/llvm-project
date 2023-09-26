@@ -1035,8 +1035,8 @@ static LLVMFunctionType getLLVMFuncType(OpBuilder &builder, TypeRange results,
     resultType = LLVMVoidType::get(builder.getContext());
   else
     resultType = results.front();
-  return LLVMFunctionType::get(resultType, args.getTypes(),
-                               /*isVariadic=*/false);
+  return LLVMFunctionType::get(resultType, llvm::to_vector(args.getTypes()),
+                               /*isVarArg=*/false);
 }
 
 void CallOp::build(OpBuilder &builder, OperationState &state, TypeRange results,
