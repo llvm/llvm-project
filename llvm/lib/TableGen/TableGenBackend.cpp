@@ -55,7 +55,7 @@ void llvm::emitSourceFileHeader(StringRef Desc, raw_ostream &OS) {
   } while (Pos < Desc.size());
   printLine(OS, Prefix, ' ', Suffix);
   printLine(OS, Prefix + "Automatically generated file, do not edit!", ' ',
-    Suffix);
+            Suffix);
   printLine(OS, Prefix, ' ', Suffix);
   printLine(OS, "\\*===", '-', "===*/");
   OS << '\n';

@@ -61,4 +61,3 @@ void clang::EmitClangCommentHTMLTagsProperties(RecordKeeper &Records,
   OS << "  return false;\n"
      << "}\n\n";
 }
-
