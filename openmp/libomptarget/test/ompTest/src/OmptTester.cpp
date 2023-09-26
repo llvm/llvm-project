@@ -1,7 +1,6 @@
 #include "../include/OmptTester.h"
 
 std::unordered_map<std::string, TestSuite> TestRegistrar::Tests;
-int a;
 
 // From openmp/runtime/test/ompt/callback.h
 #define register_ompt_callback_t(name, type)                                   \
