@@ -17,11 +17,9 @@ namespace __llvm_libc {
 
 LLVM_LIBC_FUNCTION(int, puts, (const char *__restrict str)) {
   cpp::string_view str_view(str);
-  auto written = file::write(stdout, str, str_view.size());
-  if (written != str_view.size())
-    return EOF;
-  written = file::write(stdout, "\n", 1);
-  if (written != 1)
+  auto written = file::write_impl<RPC_WRITE_TO_STDOUT_NEWLINE>(stdout, str,
+                                                               str_view.size());
+  if (written != str_view.size() + 1)
     return EOF;
   return 0;
 }

@@ -72,7 +72,7 @@ entry:
   ; CHECK: %[[c0:.*]] = llvm.mlir.constant(0 : i32) : i32
   ; CHECK: %[[c1:.*]] = llvm.mlir.constant(1 : i32) : i32
   ; CHECK: %[[c2:.*]] = llvm.mlir.constant(2 : i32) : i32
-  ; CHECK: %[[c20:.*]] = llvm.mlir.constant(20 : i32) : i32  
+  ; CHECK: %[[c20:.*]] = llvm.mlir.constant(20 : i32) : i32
   ; CHECK: llvm.cond_br %[[cond]], ^[[bb1:.*]], ^[[bb2:.*]]
   br i1 %cond, label %call, label %nocall
 ; CHECK: ^[[bb1]]:
@@ -111,7 +111,7 @@ declare void @f2({ptr, i32})
 ; CHECK-LABEL: @landingpad_dominance
 define void @landingpad_dominance() personality ptr @__gxx_personality_v0 {
 entry:
-  ; CHECK:    %[[null:.*]] = llvm.mlir.null : !llvm.ptr
+  ; CHECK:    %[[null:.*]] = llvm.mlir.zero : !llvm.ptr
   ; CHECK:    %[[c1:.*]] = llvm.mlir.constant(0 : i32) : i32
   ; CHECK:    %[[undef:.*]] = llvm.mlir.undef : !llvm.struct<(ptr, i32)>
   ; CHECK:    %[[tmpstruct:.*]] = llvm.insertvalue %[[null]], %[[undef]][0] : !llvm.struct<(ptr, i32)>

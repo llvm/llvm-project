@@ -7241,3 +7241,33 @@ the variables were declared in. It is not possible to check the return value
 (if any) of these ``cleanup`` callback functions.
 }];
 }
+
+def CtorDtorDocs : Documentation {
+  let Category = DocCatFunction;
+  let Content = [{
+The ``constructor`` attribute causes the function to be called before entering
+``main()``, and the ``destructor`` attribute causes the function to be called
+after returning from ``main()`` or when the ``exit()`` function has been
+called. Note, ``quick_exit()``, ``_Exit()``, and ``abort()`` prevent a function
+marked ``destructor`` from being called.
+
+The constructor or destructor function should not accept any arguments and its
+return type should be ``void``.
+
+The attributes accept an optional argument used to specify the priority order
+in which to execute constructor and destructor functions. The priority is
+given as an integer constant expression between 101 and 65535 (inclusive).
+Priorities outside of that range are reserved for use by the implementation. A
+lower value indicates a higher priority of initialization. Note that only the
+relative ordering of values is important. For example:
+
+.. code-block:: c++
+
+  __attribute__((constructor(200))) void foo(void);
+  __attribute__((constructor(101))) void bar(void);
+
+``bar()`` will be called before ``foo()``, and both will be called before
+``main()``. If no argument is given to the ``constructor`` or ``destructor``
+attribute, they default to the value ``65535``.
+}];
+}

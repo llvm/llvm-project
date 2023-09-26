@@ -225,6 +225,12 @@ module {
   llvm.func @any() comdat(@__llvm_comdat::@any) attributes { dso_local } {
     llvm.return
   }
+
+  llvm.func @vscale_roundtrip() vscale_range(1, 2) {
+    // CHECK: @vscale_roundtrip
+    // CHECK-SAME: vscale_range(1, 2)
+    llvm.return
+  }
 }
 
 // -----

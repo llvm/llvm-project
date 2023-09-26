@@ -43,6 +43,8 @@ C/C++ Language Potentially Breaking Changes
 
 - The default extension name for PCH generation (``-c -xc-header`` and ``-c
   -xc++-header``) is now ``.pch`` instead of ``.gch``.
+- ``-include a.h`` probing ``a.h.gch`` is deprecated. Change the extension name
+  to ``.pch`` or use ``-include-pch a.h.gch``.
 
 C++ Specific Potentially Breaking Changes
 -----------------------------------------
@@ -185,9 +187,19 @@ Improvements to Clang's diagnostics
 - Clang constexpr evaluator now diagnoses compound assignment operators against
   uninitialized variables as a read of uninitialized object.
   (`#51536 <https://github.com/llvm/llvm-project/issues/51536>`_)
-- Clang's ``-Wfortify-source`` now diagnoses ``snprintf`` call that is known to
+- Clang's ``-Wformat-truncation`` now diagnoses ``snprintf`` call that is known to
   result in string truncation.
   (`#64871: <https://github.com/llvm/llvm-project/issues/64871>`_).
+  Existing warnings that similarly warn about the overflow in ``sprintf``
+  now falls under its own warning group ```-Wformat-overflow`` so that it can
+  be disabled separately from ``Wfortify-source``.
+  These two new warning groups have subgroups ``-Wformat-truncation-non-kprintf``
+  and ``-Wformat-overflow-non-kprintf``, respectively. These subgroups are used when
+  the format string contains ``%p`` format specifier.
+  Because Linux kernel's codebase has format extensions for ``%p``, kernel developers
+  are encouraged to disable these two subgroups by setting ``-Wno-format-truncation-non-kprintf``
+  and ``-Wno-format-overflow-non-kprintf`` in order to avoid false positives on
+  the kernel codebase.
   Also clang no longer emits false positive warnings about the output length of
   ``%g`` format specifier and about ``%o, %x, %X`` with ``#`` flag.
 - Clang now emits ``-Wcast-qual`` for functional-style cast expressions.
@@ -341,6 +353,10 @@ Bug Fixes to C++ Support
   NTTP types are compared with the 'diff' method.
   (`#66744 https://github.com/llvm/llvm-project/issues/66744`)
 
+- Fix crash caused by a spaceship operator returning a comparision category by
+  reference. Fixes:
+  (`#64162 <https://github.com/llvm/llvm-project/issues/64162>`_)
+
 Bug Fixes to AST Handling
 ^^^^^^^^^^^^^^^^^^^^^^^^^
 - Fixed an import failure of recursive friend class template.
@@ -485,6 +501,9 @@ Static Analyzer
 - Added a new checker ``core.BitwiseShift`` which reports situations where
   bitwise shift operators produce undefined behavior (because some operand is
   negative or too large).
+
+- Fix false positive in mutation check when using pointer to member function.
+  (`#66204: <https://github.com/llvm/llvm-project/issues/66204>`_).
 
 - The ``alpha.security.taint.TaintPropagation`` checker no longer propagates
   taint on ``strlen`` and ``strnlen`` calls, unless these are marked
