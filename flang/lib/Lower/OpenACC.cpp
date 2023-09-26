@@ -34,6 +34,7 @@ static constexpr std::int64_t starCst = -1;
 
 static unsigned routineCounter = 0;
 static constexpr llvm::StringRef accRoutinePrefix = "acc_routine_";
+static constexpr llvm::StringRef accPrivateInitName = "acc.private.init";
 
 static mlir::Location
 genOperandLocation(Fortran::lower::AbstractConverter &converter,
@@ -348,14 +349,29 @@ static void genPrivateLikeInitRegion(mlir::OpBuilder &builder, RecipeOp recipe,
                                      mlir::Type ty, mlir::Location loc) {
   mlir::Value retVal = recipe.getInitRegion().front().getArgument(0);
   if (auto refTy = mlir::dyn_cast_or_null<fir::ReferenceType>(ty)) {
-    if (fir::isa_trivial(refTy.getEleTy()))
-      retVal = builder.create<fir::AllocaOp>(loc, refTy.getEleTy());
-    else if (auto seqTy =
-                 mlir::dyn_cast_or_null<fir::SequenceType>(refTy.getEleTy())) {
+    if (fir::isa_trivial(refTy.getEleTy())) {
+      auto alloca = builder.create<fir::AllocaOp>(loc, refTy.getEleTy());
+      auto declareOp = builder.create<hlfir::DeclareOp>(
+          loc, alloca, accPrivateInitName, /*shape=*/nullptr,
+          llvm::ArrayRef<mlir::Value>{}, fir::FortranVariableFlagsAttr{});
+      retVal = declareOp.getBase();
+    } else if (auto seqTy = mlir::dyn_cast_or_null<fir::SequenceType>(
+                   refTy.getEleTy())) {
       if (seqTy.hasDynamicExtents())
         TODO(loc, "private recipe of array with dynamic extents");
-      if (fir::isa_trivial(seqTy.getEleTy()))
-        retVal = builder.create<fir::AllocaOp>(loc, seqTy);
+      if (fir::isa_trivial(seqTy.getEleTy())) {
+        auto alloca = builder.create<fir::AllocaOp>(loc, seqTy);
+        llvm::SmallVector<mlir::Value> extents;
+        mlir::Type idxTy = builder.getIndexType();
+        for (auto extent : seqTy.getShape())
+          extents.push_back(builder.create<mlir::arith::ConstantOp>(
+              loc, idxTy, builder.getIntegerAttr(idxTy, extent)));
+        auto shapeOp = builder.create<fir::ShapeOp>(loc, extents);
+        auto declareOp = builder.create<hlfir::DeclareOp>(
+            loc, alloca, accPrivateInitName, shapeOp,
+            llvm::ArrayRef<mlir::Value>{}, fir::FortranVariableFlagsAttr{});
+        retVal = declareOp.getBase();
+      }
     }
   }
   builder.create<mlir::acc::YieldOp>(loc, retVal);
