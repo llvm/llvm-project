@@ -14,8 +14,8 @@ int baz(__m256i a) {
 #endif
 
 #if NEED_AVX_2
-__m128 need_avx(__m128 a, __m128 b) {
-  return _mm_cmp_ps(a, b, 0); // expected-error {{'__builtin_ia32_cmpps' needs target feature avx}}
+__m256 need_avx(__m256 a, __m256 b) {
+  return _mm256_cmp_ps(a, b, 0); // expected-error {{'__builtin_ia32_cmpps256' needs target feature avx}}
 }
 #endif
 

@@ -813,3 +813,201 @@ __m128 test_mm_xor_ps(__m128 A, __m128 B) {
   // CHECK: xor <4 x i32>
   return _mm_xor_ps(A, B);
 }
+
+__m128 test_mm_cmp_ps_eq_oq(__m128 a, __m128 b) {
+  // CHECK-LABEL: test_mm_cmp_ps_eq_oq
+  // CHECK: fcmp oeq <4 x float> %{{.*}}, %{{.*}}
+  return _mm_cmp_ps(a, b, _CMP_EQ_OQ);
+}
+
+__m128 test_mm_cmp_ps_lt_os(__m128 a, __m128 b) {
+  // CHECK-LABEL: test_mm_cmp_ps_lt_os
+  // CHECK: fcmp olt <4 x float> %{{.*}}, %{{.*}}
+  return _mm_cmp_ps(a, b, _CMP_LT_OS);
+}
+
+__m128 test_mm_cmp_ps_le_os(__m128 a, __m128 b) {
+  // CHECK-LABEL: test_mm_cmp_ps_le_os
+  // CHECK: fcmp ole <4 x float> %{{.*}}, %{{.*}}
+  return _mm_cmp_ps(a, b, _CMP_LE_OS);
+}
+
+__m128 test_mm_cmp_ps_unord_q(__m128 a, __m128 b) {
+  // CHECK-LABEL: test_mm_cmp_ps_unord_q
+  // CHECK: fcmp uno <4 x float> %{{.*}}, %{{.*}}
+  return _mm_cmp_ps(a, b, _CMP_UNORD_Q);
+}
+
+__m128 test_mm_cmp_ps_neq_uq(__m128 a, __m128 b) {
+  // CHECK-LABEL: test_mm_cmp_ps_neq_uq
+  // CHECK: fcmp une <4 x float> %{{.*}}, %{{.*}}
+  return _mm_cmp_ps(a, b, _CMP_NEQ_UQ);
+}
+
+__m128 test_mm_cmp_ps_nlt_us(__m128 a, __m128 b) {
+  // CHECK-LABEL: test_mm_cmp_ps_nlt_us
+  // CHECK: fcmp uge <4 x float> %{{.*}}, %{{.*}}
+  return _mm_cmp_ps(a, b, _CMP_NLT_US);
+}
+
+__m128 test_mm_cmp_ps_nle_us(__m128 a, __m128 b) {
+  // CHECK-LABEL: test_mm_cmp_ps_nle_us
+  // CHECK: fcmp ugt <4 x float> %{{.*}}, %{{.*}}
+  return _mm_cmp_ps(a, b, _CMP_NLE_US);
+}
+
+__m128 test_mm_cmp_ps_ord_q(__m128 a, __m128 b) {
+  // CHECK-LABEL: test_mm_cmp_ps_ord_q
+  // CHECK: fcmp ord <4 x float> %{{.*}}, %{{.*}}
+  return _mm_cmp_ps(a, b, _CMP_ORD_Q);
+}
+
+__m128 test_mm_cmp_ps_eq_uq(__m128 a, __m128 b) {
+  // CHECK-LABEL: test_mm_cmp_ps_eq_uq
+  // CHECK: fcmp ueq <4 x float> %{{.*}}, %{{.*}}
+  return _mm_cmp_ps(a, b, _CMP_EQ_UQ);
+}
+
+__m128 test_mm_cmp_ps_nge_us(__m128 a, __m128 b) {
+  // CHECK-LABEL: test_mm_cmp_ps_nge_us
+  // CHECK: fcmp ult <4 x float> %{{.*}}, %{{.*}}
+  return _mm_cmp_ps(a, b, _CMP_NGE_US);
+}
+
+__m128 test_mm_cmp_ps_ngt_us(__m128 a, __m128 b) {
+  // CHECK-LABEL: test_mm_cmp_ps_ngt_us
+  // CHECK: fcmp ule <4 x float> %{{.*}}, %{{.*}}
+  return _mm_cmp_ps(a, b, _CMP_NGT_US);
+}
+
+__m128 test_mm_cmp_ps_false_oq(__m128 a, __m128 b) {
+  // CHECK-LABEL: test_mm_cmp_ps_false_oq
+  // CHECK: fcmp false <4 x float> %{{.*}}, %{{.*}}
+  return _mm_cmp_ps(a, b, _CMP_FALSE_OQ);
+}
+
+__m128 test_mm_cmp_ps_neq_oq(__m128 a, __m128 b) {
+  // CHECK-LABEL: test_mm_cmp_ps_neq_oq
+  // CHECK: fcmp one <4 x float> %{{.*}}, %{{.*}}
+  return _mm_cmp_ps(a, b, _CMP_NEQ_OQ);
+}
+
+__m128 test_mm_cmp_ps_ge_os(__m128 a, __m128 b) {
+  // CHECK-LABEL: test_mm_cmp_ps_ge_os
+  // CHECK: fcmp oge <4 x float> %{{.*}}, %{{.*}}
+  return _mm_cmp_ps(a, b, _CMP_GE_OS);
+}
+
+__m128 test_mm_cmp_ps_gt_os(__m128 a, __m128 b) {
+  // CHECK-LABEL: test_mm_cmp_ps_gt_os
+  // CHECK: fcmp ogt <4 x float> %{{.*}}, %{{.*}}
+  return _mm_cmp_ps(a, b, _CMP_GT_OS);
+}
+
+__m128 test_mm_cmp_ps_true_uq(__m128 a, __m128 b) {
+  // CHECK-LABEL: test_mm_cmp_ps_true_uq
+  // CHECK: fcmp true <4 x float> %{{.*}}, %{{.*}}
+  return _mm_cmp_ps(a, b, _CMP_TRUE_UQ);
+}
+
+__m128 test_mm_cmp_ps_eq_os(__m128 a, __m128 b) {
+  // CHECK-LABEL: test_mm_cmp_ps_eq_os
+  // CHECK: fcmp oeq <4 x float> %{{.*}}, %{{.*}}
+  return _mm_cmp_ps(a, b, _CMP_EQ_OS);
+}
+
+__m128 test_mm_cmp_ps_lt_oq(__m128 a, __m128 b) {
+  // CHECK-LABEL: test_mm_cmp_ps_lt_oq
+  // CHECK: fcmp olt <4 x float> %{{.*}}, %{{.*}}
+  return _mm_cmp_ps(a, b, _CMP_LT_OQ);
+}
+
+__m128 test_mm_cmp_ps_le_oq(__m128 a, __m128 b) {
+  // CHECK-LABEL: test_mm_cmp_ps_le_oq
+  // CHECK: fcmp ole <4 x float> %{{.*}}, %{{.*}}
+  return _mm_cmp_ps(a, b, _CMP_LE_OQ);
+}
+
+__m128 test_mm_cmp_ps_unord_s(__m128 a, __m128 b) {
+  // CHECK-LABEL: test_mm_cmp_ps_unord_s
+  // CHECK: fcmp uno <4 x float> %{{.*}}, %{{.*}}
+  return _mm_cmp_ps(a, b, _CMP_UNORD_S);
+}
+
+__m128 test_mm_cmp_ps_neq_us(__m128 a, __m128 b) {
+  // CHECK-LABEL: test_mm_cmp_ps_neq_us
+  // CHECK: fcmp une <4 x float> %{{.*}}, %{{.*}}
+  return _mm_cmp_ps(a, b, _CMP_NEQ_US);
+}
+
+__m128 test_mm_cmp_ps_nlt_uq(__m128 a, __m128 b) {
+  // CHECK-LABEL: test_mm_cmp_ps_nlt_uq
+  // CHECK: fcmp uge <4 x float> %{{.*}}, %{{.*}}
+  return _mm_cmp_ps(a, b, _CMP_NLT_UQ);
+}
+
+__m128 test_mm_cmp_ps_nle_uq(__m128 a, __m128 b) {
+  // CHECK-LABEL: test_mm_cmp_ps_nle_uq
+  // CHECK: fcmp ugt <4 x float> %{{.*}}, %{{.*}}
+  return _mm_cmp_ps(a, b, _CMP_NLE_UQ);
+}
+
+__m128 test_mm_cmp_ps_ord_s(__m128 a, __m128 b) {
+  // CHECK-LABEL: test_mm_cmp_ps_ord_s
+  // CHECK: fcmp ord <4 x float> %{{.*}}, %{{.*}}
+  return _mm_cmp_ps(a, b, _CMP_ORD_S);
+}
+
+__m128 test_mm_cmp_ps_eq_us(__m128 a, __m128 b) {
+  // CHECK-LABEL: test_mm_cmp_ps_eq_us
+  // CHECK: fcmp ueq <4 x float> %{{.*}}, %{{.*}}
+  return _mm_cmp_ps(a, b, _CMP_EQ_US);
+}
+
+__m128 test_mm_cmp_ps_nge_uq(__m128 a, __m128 b) {
+  // CHECK-LABEL: test_mm_cmp_ps_nge_uq
+  // CHECK: fcmp ult <4 x float> %{{.*}}, %{{.*}}
+  return _mm_cmp_ps(a, b, _CMP_NGE_UQ);
+}
+
+__m128 test_mm_cmp_ps_ngt_uq(__m128 a, __m128 b) {
+  // CHECK-LABEL: test_mm_cmp_ps_ngt_uq
+  // CHECK: fcmp ule <4 x float> %{{.*}}, %{{.*}}
+  return _mm_cmp_ps(a, b, _CMP_NGT_UQ);
+}
+
+__m128 test_mm_cmp_ps_false_os(__m128 a, __m128 b) {
+  // CHECK-LABEL: test_mm_cmp_ps_false_os
+  // CHECK: fcmp false <4 x float> %{{.*}}, %{{.*}}
+  return _mm_cmp_ps(a, b, _CMP_FALSE_OS);
+}
+
+__m128 test_mm_cmp_ps_neq_os(__m128 a, __m128 b) {
+  // CHECK-LABEL: test_mm_cmp_ps_neq_os
+  // CHECK: fcmp one <4 x float> %{{.*}}, %{{.*}}
+  return _mm_cmp_ps(a, b, _CMP_NEQ_OS);
+}
+
+__m128 test_mm_cmp_ps_ge_oq(__m128 a, __m128 b) {
+  // CHECK-LABEL: test_mm_cmp_ps_ge_oq
+  // CHECK: fcmp oge <4 x float> %{{.*}}, %{{.*}}
+  return _mm_cmp_ps(a, b, _CMP_GE_OQ);
+}
+
+__m128 test_mm_cmp_ps_gt_oq(__m128 a, __m128 b) {
+  // CHECK-LABEL: test_mm_cmp_ps_gt_oq
+  // CHECK: fcmp ogt <4 x float> %{{.*}}, %{{.*}}
+  return _mm_cmp_ps(a, b, _CMP_GT_OQ);
+}
+
+__m128 test_mm_cmp_ps_true_us(__m128 a, __m128 b) {
+  // CHECK-LABEL: test_mm_cmp_ps_true_us
+  // CHECK: fcmp true <4 x float> %{{.*}}, %{{.*}}
+  return _mm_cmp_ps(a, b, _CMP_TRUE_US);
+}
+
+__m128 test_mm_cmp_ss(__m128 A, __m128 B) {
+  // CHECK-LABEL: test_mm_cmp_ss
+  // CHECK: call <4 x float> @llvm.x86.sse.cmp.ss(<4 x float> %{{.*}}, <4 x float> %{{.*}}, i8 13)
+  return _mm_cmp_ss(A, B, _CMP_GE_OS);
+}
