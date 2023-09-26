@@ -33,7 +33,7 @@
 ! OFFLOAD-HOST-NOT: "-triple" "nvptx64-nvidia-cuda"
 ! OFFLOAD-HOST-NOT: "{{[^"]*}}flang-new" "-fc1" "-triple" "aarch64-unknown-linux-gnu"
 
-! RUN: not %flang -S -### %s -o %t 2>&1 \
+! RUN: %flang -S -### %s 2>&1 \
 ! RUN: -fopenmp --offload-arch=gfx90a --offload-arch=sm_70 --offload-device-only \
 ! RUN: --target=aarch64-unknown-linux-gnu \
 ! RUN:   | FileCheck %s --check-prefix=OFFLOAD-DEVICE
