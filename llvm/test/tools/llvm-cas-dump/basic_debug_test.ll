@@ -5,6 +5,8 @@
 ; RUN: llc -cas-friendly-debug-info -O0 --filetype=obj --cas-backend --cas=%t.casdb --mccas-casid -o %t_DIE.casid %s
 ; RUN: llvm-cas-dump --cas=%t.casdb --casid-file %t_DIE.casid  --die-refs | FileCheck %s --check-prefix=DWARF-DIE
 
+; REQUIRES: aarch64-registered-target
+
 ; This test is created from a C program like:
 ; int foo() { return 10; }
 
