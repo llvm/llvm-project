@@ -1149,7 +1149,7 @@ LogicalResult ConvertLaunchFuncOpToGpuRuntimeCallPattern::matchAndRewrite(
           : adaptor.getAsyncDependencies().front();
   // Create array of pointers to kernel arguments.
   auto kernelParams = generateParamsArray(launchOp, adaptor, rewriter);
-  auto nullpointer = rewriter.create<LLVM::NullOp>(loc, llvmPointerPointerType);
+  auto nullpointer = rewriter.create<LLVM::ZeroOp>(loc, llvmPointerPointerType);
   Value dynamicSharedMemorySize = launchOp.getDynamicSharedMemorySize()
                                       ? launchOp.getDynamicSharedMemorySize()
                                       : zero;
@@ -1211,7 +1211,7 @@ LogicalResult ConvertMemcpyOpToGpuRuntimeCallPattern::matchAndRewrite(
   Value numElements = getNumElements(rewriter, loc, memRefType, srcDesc);
 
   Type elementPtrType = getElementPtrType(memRefType);
-  Value nullPtr = rewriter.create<LLVM::NullOp>(loc, elementPtrType);
+  Value nullPtr = rewriter.create<LLVM::ZeroOp>(loc, elementPtrType);
   Value gepPtr = rewriter.create<LLVM::GEPOp>(
       loc, elementPtrType,
       typeConverter->convertType(memRefType.getElementType()), nullPtr,
