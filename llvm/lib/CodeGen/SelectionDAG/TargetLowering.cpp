@@ -5889,10 +5889,17 @@ void TargetLowering::ComputeConstraintToUse(AsmOperandInfo &OpInfo,
     for (const unsigned E = G.size();
          BestIdx < E && (G[BestIdx].second == TargetLowering::C_Other ||
                          G[BestIdx].second == TargetLowering::C_Immediate);
-         ++BestIdx)
+         ++BestIdx) {
       if (lowerImmediateIfPossible(G[BestIdx], Op, DAG, *this))
         break;
+      // If we're out of constraints, just pick the first one.
+      if (BestIdx + 1 == E) {
+        BestIdx = 0;
+        break;
+      }
+    }
 
+    assert(BestIdx < G.size() && "bad index for best constraint");
     OpInfo.ConstraintCode = G[BestIdx].first;
     OpInfo.ConstraintType = G[BestIdx].second;
   }
