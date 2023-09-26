@@ -426,6 +426,8 @@ exit:                                             ; preds = %for.body
   ret i64 %cond
 }
 
+; The sentinel value for increasing-IV vectorization is -LONG_MAX, and since
+; the IV hits this value, it is impossible to vectorize this case.
 define i64 @not_vectorized_select_icmp_iv_out_of_bound(ptr nocapture readonly %a, ptr nocapture readonly %b, i64 %rdx.start, i64 %n) {
 ; CHECK-LABEL: @not_vectorized_select_icmp_iv_out_of_bound
 ; CHECK-NOT:   vector.body:
@@ -452,6 +454,8 @@ exit:                                             ; preds = %for.body
   ret i64 %cond
 }
 
+; The sentinel value for decreasing-IV vectorization is LONG_MAX, and since
+; the IV hits this value, it is impossible to vectorize this case.
 define i64 @not_vectorized_select_decreasing_induction_icmp_iv_out_of_bound(ptr nocapture readonly %a) {
 ; CHECK-LABEL: @not_vectorized_select_decreasing_induction_icmp_iv_out_of_bound
 ; CHECK-NOT:   vector.body:
