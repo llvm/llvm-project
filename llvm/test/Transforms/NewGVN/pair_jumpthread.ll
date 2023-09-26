@@ -34,11 +34,11 @@ define signext i32 @testBI(i32 signext %v) {
 ; CHECK-NEXT:    [[RETVAL_SROA_0_0_INSERT_INSERT_I11_I:%.*]] = or i64 [[RETVAL_SROA_22_0_INSERT_SHIFT_I9_I]], [[TMP0]]
 ; CHECK-NEXT:    br label [[_ZL6CALLEEI_EXIT]]
 ; CHECK:       _ZL6calleei.exit:
-; CHECK-NEXT:    [[PHIOFOPS1:%.*]] = phi i64 [ [[RETVAL_SROA_22_0_INSERT_EXT_I_I]], [[IF_THEN_I]] ], [ [[RETVAL_SROA_22_0_INSERT_EXT_I8_I]], [[IF_ELSE_I]] ]
-; CHECK-NEXT:    [[PHIOFOPS:%.*]] = phi i64 [ 1, [[IF_THEN_I]] ], [ [[TMP0]], [[IF_ELSE_I]] ]
 ; CHECK-NEXT:    [[RETVAL_SROA_0_0_I:%.*]] = phi i64 [ [[RETVAL_SROA_0_0_INSERT_INSERT_I_I]], [[IF_THEN_I]] ], [ [[RETVAL_SROA_0_0_INSERT_INSERT_I11_I]], [[IF_ELSE_I]] ]
-; CHECK-NEXT:    [[RC_SROA_43_0_EXTRACT_TRUNC:%.*]] = trunc i64 [[PHIOFOPS1]] to i32
-; CHECK-NEXT:    [[TOBOOL:%.*]] = icmp eq i64 [[PHIOFOPS]], 0
+; CHECK-NEXT:    [[RC_SROA_43_0_EXTRACT_SHIFT:%.*]] = lshr i64 [[RETVAL_SROA_0_0_I]], 32
+; CHECK-NEXT:    [[RC_SROA_43_0_EXTRACT_TRUNC:%.*]] = trunc i64 [[RC_SROA_43_0_EXTRACT_SHIFT]] to i32
+; CHECK-NEXT:    [[TMP1:%.*]] = and i64 [[RETVAL_SROA_0_0_I]], 1
+; CHECK-NEXT:    [[TOBOOL:%.*]] = icmp eq i64 [[TMP1]], 0
 ; CHECK-NEXT:    br i1 [[TOBOOL]], label [[IF_END:%.*]], label [[IF_THEN:%.*]]
 ; CHECK:       if.then:
 ; CHECK-NEXT:    [[CALL1:%.*]] = call signext i32 @dummy(i32 signext 0)
@@ -50,27 +50,32 @@ define signext i32 @testBI(i32 signext %v) {
 ; CHECK-JT-NEXT:  entry:
 ; CHECK-JT-NEXT:    [[CALL_I:%.*]] = call signext i32 @dummy(i32 signext [[V:%.*]])
 ; CHECK-JT-NEXT:    [[TOBOOL_I:%.*]] = icmp eq i32 [[CALL_I]], 0
-; CHECK-JT-NEXT:    br i1 [[TOBOOL_I]], label [[_ZL6CALLEEI_EXIT:%.*]], label [[_ZL6CALLEEI_EXIT_THREAD:%.*]]
-; CHECK-JT:       _ZL6calleei.exit.thread:
+; CHECK-JT-NEXT:    br i1 [[TOBOOL_I]], label [[IF_ELSE_I:%.*]], label [[IF_THEN_I:%.*]]
+; CHECK-JT:       if.then.i:
 ; CHECK-JT-NEXT:    [[CALL2_I:%.*]] = call signext i32 @dummy(i32 signext [[CALL_I]])
 ; CHECK-JT-NEXT:    [[RETVAL_SROA_22_0_INSERT_EXT_I_I:%.*]] = zext i32 [[CALL2_I]] to i64
-; CHECK-JT-NEXT:    br label [[IF_THEN:%.*]]
-; CHECK-JT:       _ZL6calleei.exit:
+; CHECK-JT-NEXT:    [[RETVAL_SROA_22_0_INSERT_SHIFT_I_I:%.*]] = shl nuw i64 [[RETVAL_SROA_22_0_INSERT_EXT_I_I]], 32
+; CHECK-JT-NEXT:    [[RETVAL_SROA_0_0_INSERT_INSERT_I_I:%.*]] = or i64 [[RETVAL_SROA_22_0_INSERT_SHIFT_I_I]], 1
+; CHECK-JT-NEXT:    br label [[_ZL6CALLEEI_EXIT:%.*]]
+; CHECK-JT:       if.else.i:
 ; CHECK-JT-NEXT:    [[DOTLOBIT_I:%.*]] = lshr i32 [[V]], 31
 ; CHECK-JT-NEXT:    [[TMP0:%.*]] = zext i32 [[DOTLOBIT_I]] to i64
 ; CHECK-JT-NEXT:    [[RETVAL_SROA_22_0_INSERT_EXT_I8_I:%.*]] = zext i32 [[V]] to i64
 ; CHECK-JT-NEXT:    [[RETVAL_SROA_22_0_INSERT_SHIFT_I9_I:%.*]] = shl nuw i64 [[RETVAL_SROA_22_0_INSERT_EXT_I8_I]], 32
 ; CHECK-JT-NEXT:    [[RETVAL_SROA_0_0_INSERT_INSERT_I11_I:%.*]] = or i64 [[RETVAL_SROA_22_0_INSERT_SHIFT_I9_I]], [[TMP0]]
-; CHECK-JT-NEXT:    [[RC_SROA_43_0_EXTRACT_TRUNC:%.*]] = trunc i64 [[RETVAL_SROA_22_0_INSERT_EXT_I8_I]] to i32
-; CHECK-JT-NEXT:    [[TOBOOL:%.*]] = icmp eq i64 [[TMP0]], 0
-; CHECK-JT-NEXT:    br i1 [[TOBOOL]], label [[IF_END:%.*]], label [[IF_THEN]]
+; CHECK-JT-NEXT:    br label [[_ZL6CALLEEI_EXIT]]
+; CHECK-JT:       _ZL6calleei.exit:
+; CHECK-JT-NEXT:    [[RETVAL_SROA_0_0_I:%.*]] = phi i64 [ [[RETVAL_SROA_0_0_INSERT_INSERT_I_I]], [[IF_THEN_I]] ], [ [[RETVAL_SROA_0_0_INSERT_INSERT_I11_I]], [[IF_ELSE_I]] ]
+; CHECK-JT-NEXT:    [[RC_SROA_43_0_EXTRACT_SHIFT:%.*]] = lshr i64 [[RETVAL_SROA_0_0_I]], 32
+; CHECK-JT-NEXT:    [[RC_SROA_43_0_EXTRACT_TRUNC:%.*]] = trunc i64 [[RC_SROA_43_0_EXTRACT_SHIFT]] to i32
+; CHECK-JT-NEXT:    [[TMP1:%.*]] = and i64 [[RETVAL_SROA_0_0_I]], 1
+; CHECK-JT-NEXT:    [[TOBOOL:%.*]] = icmp eq i64 [[TMP1]], 0
+; CHECK-JT-NEXT:    br i1 [[TOBOOL]], label [[IF_END:%.*]], label [[IF_THEN:%.*]]
 ; CHECK-JT:       if.then:
-; CHECK-JT-NEXT:    [[RC_SROA_43_0_EXTRACT_TRUNC7:%.*]] = phi i32 [ [[CALL2_I]], [[_ZL6CALLEEI_EXIT_THREAD]] ], [ [[RC_SROA_43_0_EXTRACT_TRUNC]], [[_ZL6CALLEEI_EXIT]] ]
 ; CHECK-JT-NEXT:    [[CALL1:%.*]] = call signext i32 @dummy(i32 signext 0)
 ; CHECK-JT-NEXT:    br label [[IF_END]]
 ; CHECK-JT:       if.end:
-; CHECK-JT-NEXT:    [[RC_SROA_43_0_EXTRACT_TRUNC8:%.*]] = phi i32 [ [[RC_SROA_43_0_EXTRACT_TRUNC7]], [[IF_THEN]] ], [ [[RC_SROA_43_0_EXTRACT_TRUNC]], [[_ZL6CALLEEI_EXIT]] ]
-; CHECK-JT-NEXT:    ret i32 [[RC_SROA_43_0_EXTRACT_TRUNC8]]
+; CHECK-JT-NEXT:    ret i32 [[RC_SROA_43_0_EXTRACT_TRUNC]]
 ;
 
 entry:
@@ -141,10 +146,10 @@ define signext i32 @testIB(i32 signext %v) {
 ; CHECK-NEXT:    [[RETVAL_SROA_0_0_INSERT_INSERT_I10_I:%.*]] = or i64 [[RETVAL_SROA_2_0_INSERT_SHIFT_I8_I]], [[RETVAL_SROA_0_0_INSERT_EXT_I9_I]]
 ; CHECK-NEXT:    br label [[_ZL6CALLEEI_EXIT]]
 ; CHECK:       _ZL6calleei.exit:
-; CHECK-NEXT:    [[PHIOFOPS:%.*]] = phi i64 [ 4294967296, [[IF_THEN_I]] ], [ [[RETVAL_SROA_2_0_INSERT_SHIFT_I8_I]], [[IF_ELSE_I]] ]
 ; CHECK-NEXT:    [[RETVAL_SROA_0_0_I:%.*]] = phi i64 [ [[RETVAL_SROA_0_0_INSERT_INSERT_I_I]], [[IF_THEN_I]] ], [ [[RETVAL_SROA_0_0_INSERT_INSERT_I10_I]], [[IF_ELSE_I]] ]
 ; CHECK-NEXT:    [[RC_SROA_0_0_EXTRACT_TRUNC:%.*]] = trunc i64 [[RETVAL_SROA_0_0_I]] to i32
-; CHECK-NEXT:    [[TOBOOL:%.*]] = icmp eq i64 [[PHIOFOPS]], 0
+; CHECK-NEXT:    [[TMP1:%.*]] = and i64 [[RETVAL_SROA_0_0_I]], 4294967296
+; CHECK-NEXT:    [[TOBOOL:%.*]] = icmp eq i64 [[TMP1]], 0
 ; CHECK-NEXT:    br i1 [[TOBOOL]], label [[IF_END:%.*]], label [[IF_THEN:%.*]]
 ; CHECK:       if.then:
 ; CHECK-NEXT:    [[CALL1:%.*]] = call signext i32 @dummy(i32 signext 0)
@@ -156,29 +161,30 @@ define signext i32 @testIB(i32 signext %v) {
 ; CHECK-JT-NEXT:  entry:
 ; CHECK-JT-NEXT:    [[CALL_I:%.*]] = call signext i32 @dummy(i32 signext [[V:%.*]])
 ; CHECK-JT-NEXT:    [[TOBOOL_I:%.*]] = icmp eq i32 [[CALL_I]], 0
-; CHECK-JT-NEXT:    br i1 [[TOBOOL_I]], label [[_ZL6CALLEEI_EXIT:%.*]], label [[_ZL6CALLEEI_EXIT_THREAD:%.*]]
-; CHECK-JT:       _ZL6calleei.exit.thread:
+; CHECK-JT-NEXT:    br i1 [[TOBOOL_I]], label [[IF_ELSE_I:%.*]], label [[IF_THEN_I:%.*]]
+; CHECK-JT:       if.then.i:
 ; CHECK-JT-NEXT:    [[CALL1_I:%.*]] = call signext i32 @dummy(i32 signext [[V]])
 ; CHECK-JT-NEXT:    [[RETVAL_SROA_0_0_INSERT_EXT_I_I:%.*]] = zext i32 [[CALL1_I]] to i64
 ; CHECK-JT-NEXT:    [[RETVAL_SROA_0_0_INSERT_INSERT_I_I:%.*]] = or i64 [[RETVAL_SROA_0_0_INSERT_EXT_I_I]], 4294967296
-; CHECK-JT-NEXT:    [[RC_SROA_0_0_EXTRACT_TRUNC3:%.*]] = trunc i64 [[RETVAL_SROA_0_0_INSERT_INSERT_I_I]] to i32
-; CHECK-JT-NEXT:    br label [[IF_THEN:%.*]]
-; CHECK-JT:       _ZL6calleei.exit:
+; CHECK-JT-NEXT:    br label [[_ZL6CALLEEI_EXIT:%.*]]
+; CHECK-JT:       if.else.i:
 ; CHECK-JT-NEXT:    [[DOTLOBIT_I:%.*]] = lshr i32 [[V]], 31
 ; CHECK-JT-NEXT:    [[TMP0:%.*]] = zext i32 [[DOTLOBIT_I]] to i64
 ; CHECK-JT-NEXT:    [[RETVAL_SROA_2_0_INSERT_SHIFT_I8_I:%.*]] = shl nuw nsw i64 [[TMP0]], 32
 ; CHECK-JT-NEXT:    [[RETVAL_SROA_0_0_INSERT_EXT_I9_I:%.*]] = zext i32 [[V]] to i64
 ; CHECK-JT-NEXT:    [[RETVAL_SROA_0_0_INSERT_INSERT_I10_I:%.*]] = or i64 [[RETVAL_SROA_2_0_INSERT_SHIFT_I8_I]], [[RETVAL_SROA_0_0_INSERT_EXT_I9_I]]
-; CHECK-JT-NEXT:    [[RC_SROA_0_0_EXTRACT_TRUNC:%.*]] = trunc i64 [[RETVAL_SROA_0_0_INSERT_INSERT_I10_I]] to i32
-; CHECK-JT-NEXT:    [[TOBOOL:%.*]] = icmp eq i64 [[RETVAL_SROA_2_0_INSERT_SHIFT_I8_I]], 0
-; CHECK-JT-NEXT:    br i1 [[TOBOOL]], label [[IF_END:%.*]], label [[IF_THEN]]
+; CHECK-JT-NEXT:    br label [[_ZL6CALLEEI_EXIT]]
+; CHECK-JT:       _ZL6calleei.exit:
+; CHECK-JT-NEXT:    [[RETVAL_SROA_0_0_I:%.*]] = phi i64 [ [[RETVAL_SROA_0_0_INSERT_INSERT_I_I]], [[IF_THEN_I]] ], [ [[RETVAL_SROA_0_0_INSERT_INSERT_I10_I]], [[IF_ELSE_I]] ]
+; CHECK-JT-NEXT:    [[RC_SROA_0_0_EXTRACT_TRUNC:%.*]] = trunc i64 [[RETVAL_SROA_0_0_I]] to i32
+; CHECK-JT-NEXT:    [[TMP1:%.*]] = and i64 [[RETVAL_SROA_0_0_I]], 4294967296
+; CHECK-JT-NEXT:    [[TOBOOL:%.*]] = icmp eq i64 [[TMP1]], 0
+; CHECK-JT-NEXT:    br i1 [[TOBOOL]], label [[IF_END:%.*]], label [[IF_THEN:%.*]]
 ; CHECK-JT:       if.then:
-; CHECK-JT-NEXT:    [[RC_SROA_0_0_EXTRACT_TRUNC5:%.*]] = phi i32 [ [[RC_SROA_0_0_EXTRACT_TRUNC3]], [[_ZL6CALLEEI_EXIT_THREAD]] ], [ [[RC_SROA_0_0_EXTRACT_TRUNC]], [[_ZL6CALLEEI_EXIT]] ]
 ; CHECK-JT-NEXT:    [[CALL1:%.*]] = call signext i32 @dummy(i32 signext 0)
 ; CHECK-JT-NEXT:    br label [[IF_END]]
 ; CHECK-JT:       if.end:
-; CHECK-JT-NEXT:    [[RC_SROA_0_0_EXTRACT_TRUNC6:%.*]] = phi i32 [ [[RC_SROA_0_0_EXTRACT_TRUNC5]], [[IF_THEN]] ], [ [[RC_SROA_0_0_EXTRACT_TRUNC]], [[_ZL6CALLEEI_EXIT]] ]
-; CHECK-JT-NEXT:    ret i32 [[RC_SROA_0_0_EXTRACT_TRUNC6]]
+; CHECK-JT-NEXT:    ret i32 [[RC_SROA_0_0_EXTRACT_TRUNC]]
 ;
 
 entry:
