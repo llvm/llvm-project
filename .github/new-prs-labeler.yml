@@ -40,15 +40,6 @@ lld:
 llvm-lit:
   - llvm/utils/lit/**/*
 
-mlir:afine:
-  - mlir/**/Affine/**/*
-
-mlir:python:
-  - mlir/python/**/*
-
-mlir:vectorops:
-  - mlir/**/Vector/**/*
-
 PGO:
   - llvm/lib/Transforms/Instrumentation/CGProfile.cpp
   - llvm/lib/Transforms/Instrumentation/ControlHeightReduction.cpp
@@ -262,6 +253,18 @@ mlir:vector:
 
 mlir:execution-engine:
   - mlir/**/ExecutionEngine/**
+
+mlir:affine:
+  - mlir/**/Affine/**/*
+
+mlir:presburger:
+  - mlir/**/*Presburger*/**
+
+mlir:python:
+  - mlir/python/**/*
+
+mlir:vectorops:
+  - mlir/**/Vector/**/*
 
 coroutines:
   - clang/docs/DebuggingCoroutines.rst
@@ -636,9 +639,6 @@ llvm:regalloc:
   - llvm/include/PBQPRAConstraint.h
   - llvm/include/llvm/CodeGen/Spiller.h
   - llvm/**/*RegAlloc
-
-mlir:presburger:
-  - mlir/**/*Presburger
 
 lldb:
   - lldb/**
