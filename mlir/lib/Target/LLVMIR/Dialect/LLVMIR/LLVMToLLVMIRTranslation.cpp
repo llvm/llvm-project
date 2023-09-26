@@ -211,10 +211,15 @@ convertOperationImpl(Operation &opInst, llvm::IRBuilderBase &builder,
       call = builder.CreateCall(
           moduleTranslation.lookupFunction(attr.getValue()), operandsRef);
     } else {
-      call = builder.CreateCall(
-          llvm::cast<llvm::FunctionType>(
-              moduleTranslation.convertType(*callOp.getCalleeType())),
-          operandsRef.front(), operandsRef.drop_front());
+      llvm::FunctionType *calleeType;
+      if (callOp.getCalleeType().has_value())
+        calleeType = llvm::cast<llvm::FunctionType>(
+            moduleTranslation.convertType(*callOp.getCalleeType()));
+      else
+        calleeType = getCalleeFunctionType(callOp.getResultTypes(),
+                                           callOp.getArgOperands());
+      call = builder.CreateCall(calleeType, operandsRef.front(),
+                                operandsRef.drop_front());
     }
     moduleTranslation.setAccessGroupsMetadata(callOp, call);
     moduleTranslation.setAliasScopeMetadata(callOp, call);

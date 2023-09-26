@@ -1018,15 +1018,14 @@ static void printStoreType(OpAsmPrinter &printer, Operation *op,
 // CallOp
 //===----------------------------------------------------------------------===//
 
-namespace {
-static TypeRange getCallOpResults(LLVMFunctionType calleeType) {
-  SmallVector<Type> results;
+/// Get the MLIR Op-like result types of a LLVM fuction type
+static SmallVector<Type, 1> getCallOpResults(LLVMFunctionType calleeType) {
+  SmallVector<Type, 1> results;
   Type resultType = calleeType.getReturnType();
-  if (!llvm::isa<LLVM::LLVMVoidType>(resultType))
+  if (!isa<LLVM::LLVMVoidType>(resultType))
     results.push_back(resultType);
   return results;
 }
-} // namespace
 
 void CallOp::build(OpBuilder &builder, OperationState &state, TypeRange results,
                    StringRef callee, ValueRange args) {
@@ -1045,9 +1044,8 @@ void CallOp::build(OpBuilder &builder, OperationState &state, TypeRange results,
     resultType = LLVMVoidType::get(builder.getContext());
   else
     resultType = results.front();
-  std::vector<Type> argTypes(args.getTypes().begin(), args.getTypes().end());
-  auto calleeType =
-      LLVMFunctionType::get(resultType, argTypes, /*isVariadic*/ false);
+  auto calleeType = LLVMFunctionType::get(
+      resultType, llvm::to_vector(args.getTypes()), /*isVariadic*/ false);
   build(builder, state, results, TypeAttr::get(calleeType), callee, args,
         /*fastmathFlags=*/nullptr,
         /*branch_weights=*/nullptr,
@@ -1240,8 +1238,17 @@ LogicalResult CallOp::verifySymbolUses(SymbolTableCollection &symbolTable) {
 void CallOp::print(OpAsmPrinter &p) {
   auto callee = getCallee();
   bool isDirect = callee.has_value();
-  auto calleeType = *getCalleeType();
-  bool isVarArg = calleeType.isVarArg();
+
+  LLVMFunctionType calleeType;
+  bool isVarArg;
+
+  std::optional<LLVMFunctionType> optionalCalleeType = getCalleeType();
+  if (optionalCalleeType.has_value()) {
+    calleeType = *optionalCalleeType;
+    isVarArg = calleeType.isVarArg();
+  } else {
+    isVarArg = false;
+  }
 
   // Print the direct callee if present as a function attribute, or an indirect
   // callee (first operand) otherwise.
@@ -1251,11 +1258,12 @@ void CallOp::print(OpAsmPrinter &p) {
   else
     p << getOperand(0);
 
-  if (isVarArg)
-    p << " vararg " << getCalleeType() << ' ';
-
   auto args = getOperands().drop_front(isDirect ? 0 : 1);
   p << '(' << args << ')';
+
+  if (isVarArg)
+    p << " vararg(" << calleeType << ") ";
+
   p.printOptionalAttrDict(processFMFAttr((*this)->getAttrs()),
                           {"callee", "callee_type"});
 
@@ -1355,14 +1363,21 @@ ParseResult CallOp::parse(OpAsmParser &parser, OperationState &result) {
     if (parser.parseAttribute(funcAttr, "callee", result.attributes))
       return failure();
 
-  bool isVarArg = parser.parseOptionalKeyword("vararg").succeeded();
-  if (isVarArg)
-    parser.parseOptionalAttribute(calleeType, "callee_type", result.attributes);
-
   // Parse the function arguments.
   if (parser.parseOperandList(operands, OpAsmParser::Delimiter::Paren) ||
       parser.parseOptionalAttrDict(result.attributes))
     return failure();
+
+  bool isVarArg = parser.parseOptionalKeyword("vararg").succeeded();
+  if (isVarArg) {
+    if (parser.parseLParen().failed() ||
+        !parser
+             .parseOptionalAttribute(calleeType, "callee_type",
+                                     result.attributes)
+             .has_value() ||
+        parser.parseRParen().failed())
+      return failure();
+  }
 
   // Parse the trailing type list and resolve the operands.
   return parseCallTypeAndResolveOperands(parser, result, isDirect, operands,
