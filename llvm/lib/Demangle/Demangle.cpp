@@ -50,6 +50,10 @@ bool llvm::nonMicrosoftDemangle(std::string_view MangledName,
   char *Demangled = nullptr;
   if (isItaniumEncoding(MangledName))
     Demangled = itaniumDemangle(MangledName);
+  // AIX function entries start with '.'.
+  else if (starts_with(MangledName, '.') &&
+           isItaniumEncoding(MangledName.substr(1)))
+    Demangled = itaniumDemangle(MangledName.substr(1));
   else if (isRustEncoding(MangledName))
     Demangled = rustDemangle(MangledName);
   else if (isDLangEncoding(MangledName))

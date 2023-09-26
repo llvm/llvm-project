@@ -69,5 +69,5 @@ CHECK: Foo~,,
 CHECK: Foo⦙Bar
 CHECK: Foo,,Bar::Baz  Foo,Bar:Baz
 CHECK: A::foo(int)
-CHECK: ._ZN1A3fooEi
-CHECK: _Z3Foo$ ._Z3Foo
+CHECK: A::foo(int)
+CHECK: _Z3Foo$ Foo
