@@ -502,6 +502,9 @@ Static Analyzer
   bitwise shift operators produce undefined behavior (because some operand is
   negative or too large).
 
+- Fix false positive in mutation check when using pointer to member function.
+  (`#66204: <https://github.com/llvm/llvm-project/issues/66204>`_).
+
 - The ``alpha.security.taint.TaintPropagation`` checker no longer propagates
   taint on ``strlen`` and ``strnlen`` calls, unless these are marked
   explicitly propagators in the user-provided taint configuration file.
