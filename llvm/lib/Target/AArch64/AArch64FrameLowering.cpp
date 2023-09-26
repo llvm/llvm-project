@@ -334,6 +334,10 @@ bool AArch64FrameLowering::homogeneousPrologEpilog(
   if (Exit && getArgumentStackToRestore(MF, *Exit))
     return false;
 
+  auto *AFI = MF.getInfo<AArch64FunctionInfo>();
+  if (AFI->hasSwiftAsyncContext())
+    return false;
+
   return true;
 }
 
