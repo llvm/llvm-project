@@ -1473,14 +1473,11 @@ void InvokeOp::print(OpAsmPrinter &p) {
   bool isDirect = callee.has_value();
 
   LLVMFunctionType calleeType;
-  bool isVarArg;
+  bool isVarArg = false;
 
-  std::optional<LLVMFunctionType> optionalCalleeType = getCalleeType();
-  if (optionalCalleeType.has_value()) {
+  if (std::optional<LLVMFunctionType> optionalCalleeType = getCalleeType()) {
     calleeType = *optionalCalleeType;
     isVarArg = calleeType.isVarArg();
-  } else {
-    isVarArg = false;
   }
 
   p << ' ';
@@ -1544,10 +1541,8 @@ ParseResult InvokeOp::parse(OpAsmParser &parser, OperationState &result) {
   bool isVarArg = parser.parseOptionalKeyword("vararg").succeeded();
   if (isVarArg) {
     if (parser.parseLParen().failed() ||
-        !parser
-             .parseOptionalAttribute(calleeType, "callee_type",
-                                     result.attributes)
-             .has_value() ||
+        parser.parseAttribute(calleeType, "callee_type", result.attributes)
+            .failed() ||
         parser.parseRParen().failed())
       return failure();
   }
