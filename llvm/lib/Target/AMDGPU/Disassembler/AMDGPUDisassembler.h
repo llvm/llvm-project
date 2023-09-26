@@ -114,6 +114,7 @@ public:
   MCOperand createRegOperand(unsigned int RegId) const;
   MCOperand createRegOperand(unsigned RegClassID, unsigned Val) const;
   MCOperand createSRegOperand(unsigned SRegClassID, unsigned Val) const;
+  MCOperand createVGPR16Operand(unsigned RegIdx, bool IsHi) const;
 
   MCOperand errOperand(unsigned V, const Twine& ErrMsg) const;
 
@@ -233,6 +234,10 @@ public:
   MCOperand decodeSrcOp(const OpWidthTy Width, unsigned Val,
                         bool MandatoryLiteral = false,
                         unsigned ImmWidth = 0) const;
+
+  MCOperand decodeNonVGPRSrcOp(const OpWidthTy Width, unsigned Val,
+                               bool MandatoryLiteral = false,
+                               unsigned ImmWidth = 0) const;
 
   MCOperand decodeVOPDDstYOp(MCInst &Inst, unsigned Val) const;
   MCOperand decodeSpecialReg32(unsigned Val) const;
