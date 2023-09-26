@@ -397,11 +397,11 @@ void X86FoldTablesEmitter::addEntryWithFlags(FoldTable &Table,
   Record *RegRec = RegInstr->TheDef;
   Record *MemRec = MemInstr->TheDef;
 
-    Result.NoReverse = S & TB_NO_REVERSE;
-    Result.NoForward = S & TB_NO_FORWARD;
-    Result.FoldLoad = S & TB_FOLDED_LOAD;
-    Result.FoldStore = S & TB_FOLDED_STORE;
-    Result.Alignment = Align(1ULL << ((S & TB_ALIGN_MASK) >> TB_ALIGN_SHIFT));
+  Result.NoReverse = S & TB_NO_REVERSE;
+  Result.NoForward = S & TB_NO_FORWARD;
+  Result.FoldLoad = S & TB_FOLDED_LOAD;
+  Result.FoldStore = S & TB_FOLDED_STORE;
+  Result.Alignment = Align(1ULL << ((S & TB_ALIGN_MASK) >> TB_ALIGN_SHIFT));
   if (isManual) {
     Table[RegInstr] = Result;
     return;
@@ -433,7 +433,7 @@ void X86FoldTablesEmitter::addEntryWithFlags(FoldTable &Table,
   // the unfolded load size will be based on the register size. If that’s bigger
   // than the memory operand size, the unfolded load will load more memory and
   // potentially cause a memory fault.
-if (getRegOperandSize(RegOpRec) > getMemOperandSize(MemOpRec))
+  if (getRegOperandSize(RegOpRec) > getMemOperandSize(MemOpRec))
     Result.NoReverse = true;
 
   // Check no-kz version's isMoveReg
