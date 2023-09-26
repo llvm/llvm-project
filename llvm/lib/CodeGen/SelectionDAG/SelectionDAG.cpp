@@ -3741,14 +3741,18 @@ KnownBits SelectionDAG::computeKnownBits(SDValue Op, const APInt &DemandedElts,
     assert(Op.getResNo() == 0 &&
            "We only compute knownbits for the difference here.");
 
-    // TODO: Compute influence of the carry operand.
+    // With USUBO_CARRY and SSUBO_CARRY a borrow bit may be added in.
+    KnownBits Borrow(1);
     if (Opcode == ISD::USUBO_CARRY || Opcode == ISD::SSUBO_CARRY)
-      break;
+      // TODO: Compute known bits for the carry operand. Creates
+      // parity with UADDO_CARRY And SADDO_CARRY as of now.
+      Borrow.resetAll();
+    else
+      Borrow.setAllZero();
 
     Known = computeKnownBits(Op.getOperand(0), DemandedElts, Depth + 1);
     Known2 = computeKnownBits(Op.getOperand(1), DemandedElts, Depth + 1);
-    Known = KnownBits::computeForAddSub(/* Add */ false, /* NSW */ false,
-                                        Known, Known2);
+    Known = KnownBits::computeForSubBorrow(Known, Known2, Borrow);
     break;
   }
   case ISD::UADDO:

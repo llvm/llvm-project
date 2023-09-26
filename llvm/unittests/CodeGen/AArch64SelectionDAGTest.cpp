@@ -273,6 +273,30 @@ TEST_F(AArch64SelectionDAGTest, ComputeKnownBits_SUB) {
   EXPECT_EQ(Known.One, APInt(8, 0x1));
 }
 
+// Piggy-backing on the AArch64 tests to verify SelectionDAG::computeKnownBits.
+TEST_F(AArch64SelectionDAGTest, ComputeKnownBits_USUBO_CARRY) {
+  SDLoc Loc;
+  auto IntVT = EVT::getIntegerVT(Context, 8);
+  auto N0 = DAG->getConstant(0x5a, Loc, IntVT);
+  auto UnknownOp1 = DAG->getRegister(0, IntVT);        // ????????
+  auto Mask1_Zero = DAG->getConstant(0x8, Loc, IntVT); // 00001000
+  auto Mask1_One = DAG->getConstant(0x20, Loc, IntVT); // 00100000
+  // N1 = (???????? & 00001000) | 00100000 = 0010?000
+  auto N1 = DAG->getNode(ISD::AND, Loc, IntVT, Mask1_Zero, UnknownOp1);
+  N1 = DAG->getNode(ISD::OR, Loc, IntVT, Mask1_One, N1);
+  auto UnknownOpC = DAG->getRegister(1, IntVT);
+  auto Op = DAG->getNode(ISD::USUBO_CARRY, Loc, IntVT, N0, N1, UnknownOpC);
+  // N0 = 01011010
+  // N1 = 0010?000
+  // C  =        ?
+  //  =>
+  // Known.Zero = 11000100 (0xc4)
+  // Known.One  = 00110000 (0x30)
+  KnownBits Known = DAG->computeKnownBits(Op);
+  EXPECT_EQ(Known.Zero, APInt(8, 0xc4));
+  EXPECT_EQ(Known.One, APInt(8, 0x30));
+}
+
 TEST_F(AArch64SelectionDAGTest, isSplatValue_Fixed_BUILD_VECTOR) {
   TargetLowering TL(*TM);
 
