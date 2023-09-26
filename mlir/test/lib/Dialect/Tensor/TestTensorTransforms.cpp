@@ -32,8 +32,8 @@ struct TestTensorTransforms
   TestTensorTransforms(const TestTensorTransforms &pass) : PassWrapper(pass) {}
 
   void getDependentDialects(DialectRegistry &registry) const override {
-    registry.insert<arith::ArithDialect, scf::SCFDialect, linalg::LinalgDialect,
-                    transform::TransformDialect>();
+    registry
+        .insert<arith::ArithDialect, scf::SCFDialect, linalg::LinalgDialect>();
   }
 
   StringRef getArgument() const final {
@@ -292,10 +292,10 @@ public:
 
   // Expose `findReplacementOp` as a public function, so that it can be tested.
   Operation *getReplacementOp(Operation *op, ValueRange newValues) const {
-    Operation *replacementOp;
-    if (!findReplacementOp(replacementOp, op, newValues).succeeded())
+    FailureOr<Operation *> replacementOp = findReplacementOp(op, newValues);
+    if (failed(replacementOp))
       return nullptr;
-    return replacementOp;
+    return *replacementOp;
   }
 };
 } // namespace
@@ -352,17 +352,8 @@ static LogicalResult testTrackingListenerReplacements(Operation *rootOp) {
   transform::TransformState transformState =
       transform::detail::makeTransformStateForTesting(/*region=*/nullptr,
                                                       /*payloadRoot=*/nullptr);
-  MLIRContext *context = rootOp->getContext();
-  OpBuilder builder(context);
-  auto transformOp = builder.create<transform::NamedSequenceOp>(
-      rootOp->getLoc(),
-      /*sym_name=*/"test_sequence",
-      /*function_type=*/
-      TypeAttr::get(FunctionType::get(context, TypeRange{}, TypeRange{})),
-      /*sym_visibility*/ StringAttr::get(context, "public"),
-      /*arg_attrs=*/ArrayAttr::get(context, ArrayRef<Attribute>()),
-      /*res_attrs=*/ArrayAttr::get(context, ArrayRef<Attribute>()));
-  DummyTrackingListener listener(transformState, transformOp);
+  DummyTrackingListener listener(transformState,
+                                 transform::TransformOpInterface());
   Operation *replacement = listener.getReplacementOp(replaced, replacements);
   if (!replacement) {
     replaced->emitError("listener could not find replacement op");
