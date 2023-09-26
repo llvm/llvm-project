@@ -578,7 +578,10 @@ bool IRTranslator::translateBr(const User &U, MachineIRBuilder &MIRBuilder) {
 
   if (BrInst.isUnconditional()) {
     // If the unconditional target is the layout successor, fallthrough.
+    // Except if the target requires SCFGs. In such case, we should keep the IR
+    // branch.
     if (OptLevel == CodeGenOptLevel::None ||
+        MF->getTarget().requiresStructuredCFG() ||
         !CurMBB.isLayoutSuccessor(Succ0MBB))
       MIRBuilder.buildBr(*Succ0MBB);
 

@@ -82,7 +82,7 @@ SPIRVTargetMachine::SPIRVTargetMachine(const Target &T, const Triple &TT,
   setGlobalISel(true);
   setFastISel(false);
   setO0WantsFastISel(false);
-  setRequiresStructuredCFG(false);
+  setRequiresStructuredCFG(Subtarget.isVulkanEnv());
 }
 
 namespace {
