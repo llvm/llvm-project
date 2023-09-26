@@ -12,6 +12,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "MCTargetDesc/SPIRVMCTargetDesc.h"
 #include "SPIRV.h"
 #include "SPIRVGlobalRegistry.h"
 #include "SPIRVInstrInfo.h"
@@ -1395,6 +1396,17 @@ bool SPIRVInstructionSelector::selectIntrinsic(Register ResVReg,
     break;
   case Intrinsic::spv_alloca:
     return selectFrameIndex(ResVReg, ResType, I);
+  case Intrinsic::spv_assume:
+    BuildMI(BB, I, I.getDebugLoc(), TII.get(SPIRV::OpAssumeTrueKHR))
+        .addUse(I.getOperand(1).getReg());
+    break;
+  case Intrinsic::spv_expect:
+    BuildMI(BB, I, I.getDebugLoc(), TII.get(SPIRV::OpExpectKHR))
+        .addDef(ResVReg)
+        .addUse(GR.getSPIRVTypeID(ResType))
+        .addUse(I.getOperand(2).getReg())
+        .addUse(I.getOperand(3).getReg());
+    break;
   default:
     llvm_unreachable("Intrinsic selection not implemented");
   }
