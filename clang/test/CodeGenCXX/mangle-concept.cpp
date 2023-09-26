@@ -228,3 +228,15 @@ namespace gh67244 {
   // CHECK: define {{.*}} @_ZN7gh672441fITkNS_1CIifEEiEEvT_(
   template void f(int);
 }
+
+namespace gh67356 {
+  template<typename, typename T> concept C = true;
+  template<typename T> void f(T t, C<decltype(t)> auto) {}
+  // CHECK: define {{.*}} @_ZN7gh673561fIiTkNS_1CIDtfL0p_EEEiEEvT_T0_(
+  template void f(int, int);
+
+  // Note, we use `fL0p` not `fp` above because:
+  template<typename T> void g(T t, C<auto (T u) -> decltype(f(t, u))> auto) {}
+  // CHECK: define {{.*}} @_ZN7gh673561gIiTkNS_1CIFDTcl1ffL0p_fp_EET_EEEiEEvS3_T0_(
+  template void g(int, int);
+}

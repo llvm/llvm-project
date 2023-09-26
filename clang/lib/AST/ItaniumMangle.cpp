@@ -841,8 +841,17 @@ void CXXNameMangler::mangleFunctionEncoding(GlobalDecl GD) {
 
   AbiTagList ReturnTypeAbiTags = makeFunctionReturnTypeTags(FD);
   if (ReturnTypeAbiTags.empty()) {
-    // There are no tags for return type, the simplest case.
+    // There are no tags for return type, the simplest case. Enter the function
+    // parameter scope before mangling the name, because a template using
+    // constrained `auto` can have references to its parameters within its
+    // template argument list:
+    //
+    //   template<typename T> void f(T x, C<decltype(x)> auto)
+    // ... is mangled as ...
+    //   template<typename T, C<decltype(param 1)> U> void f(T, U)
+    FunctionTypeDepthState Saved = FunctionTypeDepth.push();
     mangleName(GD);
+    FunctionTypeDepth.pop(Saved);
     mangleFunctionEncodingBareType(FD);
     return;
   }
@@ -855,7 +864,10 @@ void CXXNameMangler::mangleFunctionEncoding(GlobalDecl GD) {
   CXXNameMangler FunctionEncodingMangler(*this, FunctionEncodingStream);
   // Output name of the function.
   FunctionEncodingMangler.disableDerivedAbiTags();
+
+  FunctionTypeDepthState Saved = FunctionTypeDepth.push();
   FunctionEncodingMangler.mangleNameWithAbiTags(FD, nullptr);
+  FunctionTypeDepth.pop(Saved);
 
   // Remember length of the function name in the buffer.
   size_t EncodingPositionStart = FunctionEncodingStream.str().size();
@@ -873,7 +885,9 @@ void CXXNameMangler::mangleFunctionEncoding(GlobalDecl GD) {
       AdditionalAbiTags.end());
 
   // Output name with implicit tags and function encoding from temporary buffer.
+  Saved = FunctionTypeDepth.push();
   mangleNameWithAbiTags(FD, &AdditionalAbiTags);
+  FunctionTypeDepth.pop(Saved);
   Out << FunctionEncodingStream.str().substr(EncodingPositionStart);
 
   // Function encoding could create new substitutions so we have to add
