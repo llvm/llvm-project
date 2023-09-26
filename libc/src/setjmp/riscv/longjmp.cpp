@@ -12,7 +12,7 @@
 
 #include <setjmp.h>
 
-#if !defined(LIBC_TARGET_ARCH_IS_RISCV64)
+#if !defined(LIBC_TARGET_ARCH_IS_ANY_RISCV)
 #error "Invalid file include"
 #endif
 
