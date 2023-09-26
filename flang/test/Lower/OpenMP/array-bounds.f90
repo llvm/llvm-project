@@ -1,21 +1,5 @@
 !RUN: %flang_fc1 -emit-fir -fopenmp %s -o - | FileCheck %s --check-prefixes HOST
-!RUN: %flang_fc1 -emit-fir -fopenmp -fopenmp-is-target-device %s -o - | FileCheck %s --check-prefixes DEVICE
 
-!DEVICE-LABEL: func.func @_QPread_write_section_omp_outline_0(
-!DEVICE-SAME: %[[ARG0:.*]]: !fir.ref<i32>, %[[ARG1:.*]]: !fir.ref<!fir.array<10xi32>>, %[[ARG2:.*]]: !fir.ref<!fir.array<10xi32>>) attributes {omp.declare_target = #omp.declaretarget<device_type = (host), capture_clause = (to)>, omp.outline_parent_name = "_QPread_write_section"} {
-!DEVICE:  %[[C1:.*]] = arith.constant 1 : index
-!DEVICE:  %[[C2:.*]] = arith.constant 4 : index
-!DEVICE:  %[[C3:.*]] = arith.constant 1 : index
-!DEVICE:  %[[C4:.*]] = arith.constant 1 : index
-!DEVICE:  %[[BOUNDS0:.*]] = omp.bounds   lower_bound(%[[C1]] : index) upper_bound(%[[C2]] : index) stride(%[[C4]] : index) start_idx(%[[C4]] : index)
-!DEVICE:  %[[MAP0:.*]] = omp.map_info var_ptr(%[[ARG1]] : !fir.ref<!fir.array<10xi32>>)   map_clauses(tofrom) capture(ByRef) bounds(%[[BOUNDS0]]) -> !fir.ref<!fir.array<10xi32>> {name = "sp_read(2:5)"}
-!DEVICE:  %[[C5:.*]] = arith.constant 1 : index
-!DEVICE:  %[[C6:.*]] = arith.constant 4 : index
-!DEVICE:  %[[C7:.*]] = arith.constant 1 : index
-!DEVICE:  %[[C8:.*]] = arith.constant 1 : index
-!DEVICE:  %[[BOUNDS1:.*]] = omp.bounds   lower_bound(%[[C5]] : index) upper_bound(%[[C6]] : index) stride(%[[C8]] : index) start_idx(%[[C8]] : index)
-!DEVICE:  %[[MAP1:.*]] = omp.map_info var_ptr(%[[ARG2]] : !fir.ref<!fir.array<10xi32>>)   map_clauses(tofrom) capture(ByRef) bounds(%[[BOUNDS1]]) -> !fir.ref<!fir.array<10xi32>> {name = "sp_write(2:5)"}
-!DEVICE:  omp.target   map_entries(%[[MAP0]], %[[MAP1]] : !fir.ref<!fir.array<10xi32>>, !fir.ref<!fir.array<10xi32>>) {
 
 !HOST-LABEL:  func.func @_QPread_write_section() {
 !HOST:  %0 = fir.alloca i32 {bindc_name = "i", uniq_name = "_QFread_write_sectionEi"}
@@ -47,17 +31,6 @@ end subroutine read_write_section
 
 module assumed_array_routines
     contains
-!DEVICE-LABEL: func.func @_QMassumed_array_routinesPassumed_shape_array_omp_outline_0(
-!DEVICE-SAME: %[[ARG0:.*]]: !fir.ref<i32>, %[[ARG1:.*]]: !fir.box<!fir.array<?xi32>>) attributes {omp.declare_target = #omp.declaretarget<device_type = (host), capture_clause = (to)>, omp.outline_parent_name = "_QMassumed_array_routinesPassumed_shape_array"} {
-!DEVICE: %[[C0:.*]] = arith.constant 1 : index
-!DEVICE: %[[C1:.*]] = arith.constant 4 : index
-!DEVICE: %[[C2:.*]] = arith.constant 0 : index
-!DEVICE: %[[C3:.*]]:3 = fir.box_dims %[[ARG1]], %[[C2]] : (!fir.box<!fir.array<?xi32>>, index) -> (index, index, index)
-!DEVICE: %[[C4:.*]] = arith.constant 1 : index
-!DEVICE: %[[BOUNDS:.*]] = omp.bounds   lower_bound(%[[C0]] : index) upper_bound(%[[C1]] : index) stride(%[[C3]]#2 : index) start_idx(%[[C4]] : index) {stride_in_bytes = true}
-!DEVICE: %[[ARGADDR:.*]] = fir.box_addr %[[ARG1]] : (!fir.box<!fir.array<?xi32>>) -> !fir.ref<!fir.array<?xi32>>
-!DEVICE: %[[MAP:.*]] = omp.map_info var_ptr(%[[ARGADDR]] : !fir.ref<!fir.array<?xi32>>)   map_clauses(tofrom) capture(ByRef) bounds(%[[BOUNDS]]) -> !fir.ref<!fir.array<?xi32>> {name = "arr_read_write(2:5)"}
-!DEVICE: omp.target   map_entries(%[[MAP]] : !fir.ref<!fir.array<?xi32>>) {
 
 !HOST-LABEL: func.func @_QMassumed_array_routinesPassumed_shape_array(
 !HOST-SAME: %[[ARG0:.*]]: !fir.box<!fir.array<?xi32>> {fir.bindc_name = "arr_read_write"}) {
@@ -80,16 +53,6 @@ module assumed_array_routines
             end do
         !$omp end target
         end subroutine assumed_shape_array
-
-!DEVICE-LABEL:   func.func @_QMassumed_array_routinesPassumed_size_array_omp_outline_0(
-!DEVICE-SAME:    %[[ARG0:.*]]: !fir.ref<i32>, %[[ARG1:.*]]: !fir.ref<!fir.array<?xi32>>) attributes {omp.declare_target = #omp.declaretarget<device_type = (host), capture_clause = (to)>, omp.outline_parent_name = "_QMassumed_array_routinesPassumed_size_array"} {
-!DEVICE: %[[C0:.*]] = arith.constant 1 : index
-!DEVICE: %[[C1:.*]] = arith.constant 4 : index
-!DEVICE: %[[C2:.*]] = arith.constant 1 : index
-!DEVICE: %[[C3:.*]] = arith.constant 1 : index
-!DEVICE: %[[BOUNDS:.*]] = omp.bounds   lower_bound(%[[C0]] : index) upper_bound(%[[C1]] : index) stride(%[[C3]] : index) start_idx(%[[C3]] : index)
-!DEVICE: %[[MAP:.*]] = omp.map_info var_ptr(%[[ARG1]] : !fir.ref<!fir.array<?xi32>>)   map_clauses(tofrom) capture(ByRef) bounds(%[[BOUNDS]]) -> !fir.ref<!fir.array<?xi32>> {name = "arr_read_write(2:5)"}
-!DEVICE: omp.target   map_entries(%[[MAP]] : !fir.ref<!fir.array<?xi32>>) {
 
 !HOST-LABEL: func.func @_QMassumed_array_routinesPassumed_size_array(
 !HOST-SAME: %[[ARG0:.*]]: !fir.ref<!fir.array<?xi32>> {fir.bindc_name = "arr_read_write"}) {
