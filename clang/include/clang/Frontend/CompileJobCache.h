@@ -82,7 +82,7 @@ public:
   bool finishComputedResult(CompilerInstance &Clang, bool Success);
 
   static llvm::Expected<std::optional<int>> replayCachedResult(
-      std::shared_ptr<CompilerInvocation> Invok,
+      std::shared_ptr<CompilerInvocation> Invok, StringRef WorkingDir,
       const llvm::cas::CASID &CacheKey,
       cas::CompileJobCacheResult &CachedResult, SmallVectorImpl<char> &DiagText,
       bool WriteOutputAsCASID = false, bool UseCASBackend = false,
