@@ -156,3 +156,16 @@ void t() {
   B b;
   b.foo();
 }
+
+struct C : public A {
+  int& ref;
+  C(int& x) : ref(x) {}
+};
+
+// CHECK: cir.func @_Z8test_refv()
+// CHECK: cir.get_member %2[1] {name = "ref"} 
+int test_ref() {
+  int x = 42;
+  C c(x);
+  return c.ref;
+}
