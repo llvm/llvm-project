@@ -1435,7 +1435,7 @@ LogicalResult ModuleImport::convertInstruction(llvm::Instruction *inst) {
           lookupBlock(invokeInst->getUnwindDest()), unwindArgs);
     } else {
       invokeOp = builder.create<InvokeOp>(
-          loc, funcTy, /*callee*/ nullptr, operands, directNormalDest,
+          loc, funcTy, /*callee=*/nullptr, operands, directNormalDest,
           ValueRange(), lookupBlock(invokeInst->getUnwindDest()), unwindArgs);
     }
     if (!invokeInst->getType()->isVoidTy())
