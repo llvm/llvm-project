@@ -2775,8 +2775,6 @@ static bool vectorPseudoHasAllNBitUsers(SDNode *User, unsigned UserOpNo,
       User->getNumOperands() - HasVecPolicyOp - HasChainOp - HasGlueOp - 2;
   const unsigned Log2SEW = User->getConstantOperandVal(VLIdx + 1);
 
-  // TODO: The Largest VL 65,536 occurs for LMUL=8 and SEW=8 with
-  // VLEN=65,536. We could check if Bits < 16 here.
   if (UserOpNo == VLIdx)
     return false;
 
@@ -2787,16 +2785,11 @@ static bool vectorPseudoHasAllNBitUsers(SDNode *User, unsigned UserOpNo,
 
   // 11.6. Vector Single-Width Shift Instructions
   case RISCV::VSLL_VX:
-  case RISCV::VSLL_VI:
   case RISCV::VSRL_VX:
-  case RISCV::VSRL_VI:
   case RISCV::VSRA_VX:
-  case RISCV::VSRA_VI:
   // 12.4. Vector Single-Width Scaling Shift Instructions
   case RISCV::VSSRL_VX:
-  case RISCV::VSSRL_VI:
   case RISCV::VSSRA_VX:
-  case RISCV::VSSRA_VI:
     // Only the low lg2(SEW) bits of the shift-amount value are used.
     if (Bits < Log2SEW)
       return false;
@@ -2804,14 +2797,10 @@ static bool vectorPseudoHasAllNBitUsers(SDNode *User, unsigned UserOpNo,
 
   // 11.7 Vector Narrowing Integer Right Shift Instructions
   case RISCV::VNSRL_WX:
-  case RISCV::VNSRL_WI:
   case RISCV::VNSRA_WX:
-  case RISCV::VNSRA_WI:
   // 12.5. Vector Narrowing Fixed-Point Clip Instructions
   case RISCV::VNCLIPU_WX:
-  case RISCV::VNCLIPU_WI:
   case RISCV::VNCLIP_WX:
-  case RISCV::VNCLIP_WI:
     // Only the low lg2(2*SEW) bits of the shift-amount value are used.
     if (Bits < Log2SEW + 1)
       return false;
@@ -2819,10 +2808,8 @@ static bool vectorPseudoHasAllNBitUsers(SDNode *User, unsigned UserOpNo,
 
   // 11.1. Vector Single-Width Integer Add and Subtract
   case RISCV::VADD_VX:
-  case RISCV::VADD_VI:
   case RISCV::VSUB_VX:
   case RISCV::VRSUB_VX:
-  case RISCV::VRSUB_VI:
   // 11.2. Vector Widening Integer Add/Subtract
   case RISCV::VWADDU_VX:
   case RISCV::VWSUBU_VX:
@@ -2838,32 +2825,22 @@ static bool vectorPseudoHasAllNBitUsers(SDNode *User, unsigned UserOpNo,
   case RISCV::VMADC_VXM:
   case RISCV::VMADC_VIM:
   case RISCV::VMADC_VX:
-  case RISCV::VMADC_VI:
   case RISCV::VSBC_VXM:
   case RISCV::VMSBC_VXM:
   case RISCV::VMSBC_VX:
   // 11.5 Vector Bitwise Logical Instructions
   case RISCV::VAND_VX:
-  case RISCV::VAND_VI:
   case RISCV::VOR_VX:
-  case RISCV::VOR_VI:
   case RISCV::VXOR_VX:
-  case RISCV::VXOR_VI:
   // 11.8. Vector Integer Compare Instructions
   case RISCV::VMSEQ_VX:
-  case RISCV::VMSEQ_VI:
   case RISCV::VMSNE_VX:
-  case RISCV::VMSNE_VI:
   case RISCV::VMSLTU_VX:
   case RISCV::VMSLT_VX:
   case RISCV::VMSLEU_VX:
-  case RISCV::VMSLEU_VI:
   case RISCV::VMSLE_VX:
-  case RISCV::VMSLE_VI:
   case RISCV::VMSGTU_VX:
-  case RISCV::VMSGTU_VI:
   case RISCV::VMSGT_VX:
-  case RISCV::VMSGT_VI:
   // 11.9. Vector Integer Min/Max Instructions
   case RISCV::VMINU_VX:
   case RISCV::VMIN_VX:
@@ -2901,9 +2878,7 @@ static bool vectorPseudoHasAllNBitUsers(SDNode *User, unsigned UserOpNo,
   case RISCV::VMV_V_I:
   // 12.1. Vector Single-Width Saturating Add and Subtract
   case RISCV::VSADDU_VX:
-  case RISCV::VSADDU_VI:
   case RISCV::VSADD_VX:
-  case RISCV::VSADD_VI:
   case RISCV::VSSUBU_VX:
   case RISCV::VSSUB_VX:
   // 12.2. Vector Single-Width Averaging Add and Subtract
