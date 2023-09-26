@@ -196,7 +196,7 @@ void InvalidPtrChecker::postPreviousReturnInvalidatingCall(
       C.getNoteTag([MR](PathSensitiveBugReport &BR, llvm::raw_ostream &Out) {
         if (!BR.isInteresting(MR) || &BR.getBugType() != InvalidPtrBugType)
           return;
-        Out << '\'' << "'previous function call was here" << '\'';
+        Out << "previous function call was here";
       });
 
   C.addTransition(State, Node, PreviousCallNote);
