@@ -18,4 +18,3 @@ entry:
 }
 
 attributes #1 = { "hlsl.numthreads"="4,8,16" "hlsl.shader"="compute" }
-
