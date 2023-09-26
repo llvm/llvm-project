@@ -53,8 +53,8 @@ using namespace llvm;
 
 static cl::opt<unsigned> ObjectSizeOffsetVisitorMaxRecurseDepth(
     "object-size-offset-visitor-max-recurse-depth",
-    cl::desc(
-        "Maximum number of PHIs for ObjectSizeOffsetVisitor to look through"),
+    cl::desc("Maximum number of PHIs/selects for ObjectSizeOffsetVisitor to "
+             "look through"),
     cl::init(20));
 
 enum AllocType : uint8_t {
