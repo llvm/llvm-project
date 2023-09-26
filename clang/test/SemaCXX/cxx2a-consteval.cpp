@@ -1188,4 +1188,12 @@ g ()
                      // expected-note {{in call to 'bar(3)'}}
 }
 
+consteval int undefined(); // expected-note {{declared here}}
+
+consteval void immediate() {
+    int a [undefined()]; // expected-note  {{undefined function 'undefined' cannot be used in a constant expression}} \
+                         // expected-error {{call to consteval function 'GH65520::undefined' is not a constant expression}}
+}
+
+
 }

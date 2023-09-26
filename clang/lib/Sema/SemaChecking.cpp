@@ -13961,7 +13961,7 @@ static bool CheckTautologicalComparison(Sema &S, BinaryOperator *E,
     return false;
 
   IntRange OtherValueRange = GetExprRange(
-      S.Context, Other, S.isConstantEvaluatedContext(), /*Approximate*/ false);
+      S.Context, Other, S.isConstantEvaluatedContext(), /*Approximate=*/ false);
 
   QualType OtherT = Other->getType();
   if (const auto *AT = OtherT->getAs<AtomicType>())
@@ -15195,7 +15195,7 @@ static void CheckImplicitConversion(Sema &S, Expr *E, QualType T,
   IntRange SourceTypeRange =
       IntRange::forTargetOfCanonicalType(S.Context, Source);
   IntRange LikelySourceRange = GetExprRange(
-      S.Context, E, S.isConstantEvaluatedContext(), /*Approximate*/ true);
+      S.Context, E, S.isConstantEvaluatedContext(), /*Approximate=*/ true);
   IntRange TargetRange = IntRange::forTargetOfCanonicalType(S.Context, Target);
 
   if (LikelySourceRange.Width > TargetRange.Width) {
