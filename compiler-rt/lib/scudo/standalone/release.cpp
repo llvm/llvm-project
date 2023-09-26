@@ -10,7 +10,7 @@
 
 namespace scudo {
 
-BufferPool<uptr, RegionPageMap::StaticBufferCount,
+BufferPool<RegionPageMap::StaticBufferCount,
            RegionPageMap::StaticBufferNumElements>
     RegionPageMap::Buffers;
 

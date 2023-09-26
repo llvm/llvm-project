@@ -95,23 +95,23 @@ private:
   uptr ReleasedPagesCount = 0;
 };
 
-// A buffer pool which holds a fixed number of static buffers of `T` elements
+// A buffer pool which holds a fixed number of static buffers of `uptr` elements
 // for fast buffer allocation. If the request size is greater than
 // `StaticBufferNumElements` or if all the static buffers are in use, it'll
 // delegate the allocation to map().
-template <typename T, uptr StaticBufferCount, uptr StaticBufferNumElements>
+template <uptr StaticBufferCount, uptr StaticBufferNumElements>
 class BufferPool {
 public:
   // Preserve 1 bit in the `Mask` so that we don't need to do zero-check while
   // extracting the least significant bit from the `Mask`.
   static_assert(StaticBufferCount < SCUDO_WORDSIZE, "");
-  static_assert(isAligned(StaticBufferNumElements * sizeof(T),
+  static_assert(isAligned(StaticBufferNumElements * sizeof(uptr),
                           SCUDO_CACHE_LINE_SIZE),
                 "");
 
   // Return a zero-initialized buffer which can contain at least the given
   // number of elements, or nullptr on failure.
-  T *getBuffer(const uptr NumElements) {
+  uptr *getBuffer(const uptr NumElements) {
     if (UNLIKELY(NumElements > StaticBufferNumElements))
       return getDynamicBuffer(NumElements);
 
@@ -131,11 +131,11 @@ public:
       return getDynamicBuffer(NumElements);
 
     const uptr Offset = index * StaticBufferNumElements;
-    memset(&RawBuffer[Offset], 0, StaticBufferNumElements * sizeof(T));
+    memset(&RawBuffer[Offset], 0, StaticBufferNumElements * sizeof(uptr));
     return &RawBuffer[Offset];
   }
 
-  void releaseBuffer(T *Buffer, const uptr NumElements) {
+  void releaseBuffer(uptr *Buffer, const uptr NumElements) {
     const uptr index = getStaticBufferIndex(Buffer, NumElements);
     if (index < StaticBufferCount) {
       ScopedLock L(Mutex);
@@ -143,17 +143,17 @@ public:
       Mask |= static_cast<uptr>(1) << index;
     } else {
       const uptr MappedSize =
-          roundUp(NumElements * sizeof(T), getPageSizeCached());
+          roundUp(NumElements * sizeof(uptr), getPageSizeCached());
       unmap(reinterpret_cast<void *>(Buffer), MappedSize);
     }
   }
 
-  bool isStaticBufferTestOnly(T *Buffer, uptr NumElements) {
+  bool isStaticBufferTestOnly(uptr *Buffer, uptr NumElements) {
     return getStaticBufferIndex(Buffer, NumElements) < StaticBufferCount;
   }
 
 private:
-  uptr getStaticBufferIndex(T *Buffer, uptr NumElements) {
+  uptr getStaticBufferIndex(uptr *Buffer, uptr NumElements) {
     if (UNLIKELY(NumElements > StaticBufferNumElements))
       return StaticBufferCount;
 
@@ -166,17 +166,17 @@ private:
     }
 
     DCHECK_LE(NumElements, StaticBufferNumElements);
-    DCHECK_LE(BufferBase + NumElements * sizeof(T),
+    DCHECK_LE(BufferBase + NumElements * sizeof(uptr),
               RawBufferBase + sizeof(RawBuffer));
 
-    const uptr StaticBufferSize = StaticBufferNumElements * sizeof(T);
+    const uptr StaticBufferSize = StaticBufferNumElements * sizeof(uptr);
     DCHECK_EQ((BufferBase - RawBufferBase) % StaticBufferSize, 0U);
     const uptr index = (BufferBase - RawBufferBase) / StaticBufferSize;
     DCHECK_LT(index, StaticBufferCount);
     return index;
   }
 
-  T *getDynamicBuffer(const uptr NumElements) {
+  uptr *getDynamicBuffer(const uptr NumElements) {
     // When using a heap-based buffer, precommit the pages backing the
     // Vmar by passing |MAP_PRECOMMIT| flag. This allows an optimization
     // where page fault exceptions are skipped as the allocated memory
@@ -184,15 +184,15 @@ private:
     // performance benefit on other platforms.
     const uptr MmapFlags = MAP_ALLOWNOMEM | (SCUDO_FUCHSIA ? MAP_PRECOMMIT : 0);
     const uptr MappedSize =
-        roundUp(NumElements * sizeof(T), getPageSizeCached());
-    return reinterpret_cast<T *>(
+        roundUp(NumElements * sizeof(uptr), getPageSizeCached());
+    return reinterpret_cast<uptr *>(
         map(nullptr, MappedSize, "scudo:counters", MmapFlags, &MapData));
   }
 
   HybridMutex Mutex;
   // '1' means that buffer index is not used. '0' means the buffer is in use.
   uptr Mask GUARDED_BY(Mutex) = ~static_cast<uptr>(0);
-  T RawBuffer[StaticBufferCount * StaticBufferNumElements] GUARDED_BY(Mutex);
+  uptr RawBuffer[StaticBufferCount * StaticBufferNumElements] GUARDED_BY(Mutex);
   [[no_unique_address]] MapPlatformData MapData = {};
 };
 
@@ -350,7 +350,7 @@ private:
   // benefit from this.
   static const uptr StaticBufferCount = 2U;
   static const uptr StaticBufferNumElements = 512U;
-  static BufferPool<uptr, StaticBufferCount, StaticBufferNumElements> Buffers;
+  static BufferPool<StaticBufferCount, StaticBufferNumElements> Buffers;
 };
 
 template <class ReleaseRecorderT> class FreePagesRangeTracker {

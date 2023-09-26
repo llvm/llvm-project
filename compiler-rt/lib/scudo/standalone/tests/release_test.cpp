@@ -633,8 +633,8 @@ TEST(ScudoReleaseTest, BufferPool) {
   // Allocate the buffer pool on the heap because it is quite large (slightly
   // more than StaticBufferCount * StaticBufferNumElements * sizeof(uptr)) and
   // it may not fit in the stack on some platforms.
-  using BufferPool = scudo::BufferPool<scudo::uptr, StaticBufferCount,
-                                       StaticBufferNumElements>;
+  using BufferPool =
+      scudo::BufferPool<StaticBufferCount, StaticBufferNumElements>;
   std::unique_ptr<BufferPool> Pool(new BufferPool());
 
   std::vector<std::pair<scudo::uptr *, scudo::uptr>> Buffers;
