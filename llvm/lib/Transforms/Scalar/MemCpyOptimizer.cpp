@@ -1463,6 +1463,7 @@ bool MemCpyOptPass::performStackMoveOptzn(Instruction *Load, Instruction *Store,
 
   SmallVector<Instruction *, 4> LifetimeMarkers;
   SmallSet<Instruction *, 4> NoAliasInstrs;
+  bool SrcNotDom = false;
 
   // Recursively track the user and check whether modified alias exist.
   auto IsDereferenceableOrNull = [](Value *V, const DataLayout &DL) -> bool {
@@ -1483,14 +1484,11 @@ bool MemCpyOptPass::performStackMoveOptzn(Instruction *Load, Instruction *Store,
       Worklist.pop_back();
       for (const Use &U : I->uses()) {
         auto *UI = cast<Instruction>(U.getUser());
-        // TODO: We can perform the transformation if we move src alloca to
-        // before the dominator of all uses. If any use that isn't dominated by
-        // SrcAlloca exists, non-dominating uses will be produced.
-        if (!DT->dominates(SrcAlloca, UI)) {
-          LLVM_DEBUG(dbgs() << "Stack Move: SrcAlloca doesn't dominate all "
-                               "uses for the location, bailing\n");
-          return false;
-        }
+        // If any use that isn't dominated by SrcAlloca exists, we move src
+        // alloca to the entry before the transformation.
+        if (!DT->dominates(SrcAlloca, UI))
+          SrcNotDom = true;
+
         if (Visited.size() >= MaxUsesToExplore) {
           LLVM_DEBUG(
               dbgs()
@@ -1600,7 +1598,12 @@ bool MemCpyOptPass::performStackMoveOptzn(Instruction *Load, Instruction *Store,
   if (!CaptureTrackingWithModRef(SrcAlloca, SrcModRefCallback))
     return false;
 
-  // We can do the transformation. First, align the allocas appropriately.
+  // We can do the transformation. First, move the SrcAlloca to the start of the
+  // BB.
+  if (SrcNotDom)
+    SrcAlloca->moveBefore(*SrcAlloca->getParent(),
+                          SrcAlloca->getParent()->getFirstInsertionPt());
+  // Align the allocas appropriately.
   SrcAlloca->setAlignment(
       std::max(SrcAlloca->getAlign(), DestAlloca->getAlign()));
 
