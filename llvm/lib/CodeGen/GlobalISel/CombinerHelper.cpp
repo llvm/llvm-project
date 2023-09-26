@@ -1078,6 +1078,7 @@ void CombinerHelper::applyCombineIndexedLoadStore(
   MIB.addUse(MatchInfo.Base);
   MIB.addUse(MatchInfo.Offset);
   MIB.addImm(MatchInfo.IsPre);
+  MIB->cloneMemRefs(*MI.getMF(), MI);
   MI.eraseFromParent();
   AddrDef.eraseFromParent();
 

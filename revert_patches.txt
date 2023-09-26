@@ -20,3 +20,7 @@ Revert: breaks build of libdevice
 Revert: waiting on pip install myst-parser 
  b7ff03206 "[Documentation] Replace recommonmark by myst-parser
 
+Revert :  breaks build
+  f726da1193ba [Driver] -include: deprecate probing .gch 
+  [2023-09-26T00:25:26.090Z] /jenkins/workspace/compiler-psdb-amd-stg-open/repos/external/llvm-project/clang/lib/Basic/DiagnosticIDs.cpp:150:69: error: static assertion failed: DIAG_SIZE_DRIVER is insufficient to contain all diagnostics, it may need to be made larger in DiagnosticIDs.h.
+

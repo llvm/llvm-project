@@ -251,6 +251,13 @@ public:
   }
 
   template <typename A>
+  RT_API_ATTRS A *ElementComponent(
+      const SubscriptValue subscript[], std::size_t componentOffset) const {
+    return OffsetElement<A>(
+        SubscriptsToByteOffset(subscript) + componentOffset);
+  }
+
+  template <typename A>
   RT_API_ATTRS A *ZeroBasedIndexedElement(std::size_t n) const {
     SubscriptValue at[maxRank];
     if (SubscriptsForZeroBasedElementNumber(at, n)) {

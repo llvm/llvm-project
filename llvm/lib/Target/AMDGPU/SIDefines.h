@@ -314,6 +314,7 @@ namespace AMDGPU {
 namespace EncValues { // Encoding values of enum9/8/7 operands
 
 enum : unsigned {
+  REG_IDX_MASK = 255,
   SGPR_MIN = 0,
   SGPR_MAX_SI = 101,
   SGPR_MAX_GFX10 = 105,
@@ -329,7 +330,8 @@ enum : unsigned {
   LITERAL_CONST = 255,
   VGPR_MIN = 256,
   VGPR_MAX = 511,
-  IS_VGPR = 256  // Indicates VGPR or AGPR
+  IS_VGPR = 256, // Indicates VGPR or AGPR
+  IS_HI = 512,   // High 16-bit register.
 };
 
 } // namespace EncValues

@@ -2103,6 +2103,10 @@ bool isSGPR(unsigned Reg, const MCRegisterInfo* TRI) {
     Reg == AMDGPU::SCC;
 }
 
+bool isHi(unsigned Reg, const MCRegisterInfo &MRI) {
+  return MRI.getEncodingValue(Reg) & AMDGPU::EncValues::IS_HI;
+}
+
 #define MAP_REG2REG \
   using namespace AMDGPU; \
   switch(Reg) { \
