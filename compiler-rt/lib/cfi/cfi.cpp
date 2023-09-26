@@ -52,7 +52,7 @@ using namespace __sanitizer;
 namespace __cfi {
 
 #if SANITIZER_LOONGARCH64
-#define kCfiShadowLimitsStorageSize 4096 * 4 // 16KiB on loongarch64 per page
+#define kCfiShadowLimitsStorageSize 16384 // 16KiB on loongarch64 per page
 #else
 #define kCfiShadowLimitsStorageSize 4096 // 1 page
 #endif
