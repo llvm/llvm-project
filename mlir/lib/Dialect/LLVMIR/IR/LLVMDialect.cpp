@@ -1379,10 +1379,8 @@ ParseResult CallOp::parse(OpAsmParser &parser, OperationState &result) {
   bool isVarArg = parser.parseOptionalKeyword("vararg").succeeded();
   if (isVarArg) {
     if (parser.parseLParen().failed() ||
-        !parser
-             .parseOptionalAttribute(calleeType, "callee_type",
-                                     result.attributes)
-             .has_value() ||
+        parser.parseAttribute(calleeType, "callee_type", result.attributes)
+            .failed() ||
         parser.parseRParen().failed())
       return failure();
   }
