@@ -4740,15 +4740,8 @@ void Parser::ParseStructUnionBody(SourceLocation RecordLoc,
       continue;
     }
 
-    if (Tok.isOneOf(tok::annot_pragma_openmp, tok::annot_attr_openmp)) {
-      // Result can be ignored, because it must be always empty.
-      AccessSpecifier AS = AS_none;
-      ParsedAttributes Attrs(AttrFactory);
-      (void)ParseOpenMPDeclarativeDirectiveWithExtDecl(AS, Attrs);
-      continue;
-    }
-
-    if (Tok.isOneOf(tok::annot_pragma_openmp_extension,
+    if (Tok.isOneOf(tok::annot_pragma_openmp, tok::annot_attr_openmp,
+                    tok::annot_pragma_openmp_extension,
                     tok::annot_attr_openmp_extension)) {
       // Result can be ignored, because it must be always empty.
       AccessSpecifier AS = AS_none;

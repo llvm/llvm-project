@@ -1177,7 +1177,7 @@ def warn_pragma_extra_tokens_at_eol : Warning<
   "extra tokens at end of '#pragma %0' - ignored">,
   InGroup<IgnoredPragmas>;
 def err_omp_extension_without_ompx : Error<
-  "Using extension directive '%0' in #pragma omp instead of #pragma ompx">;
+  "Expected extension directive '%0' in #pragma omp instead of #pragma ompx">;
 def warn_pragma_expected_comma : Warning<
   "expected ',' in '#pragma %0'">, InGroup<IgnoredPragmas>;
 def warn_pragma_expected_punc : Warning<
@@ -1410,10 +1410,10 @@ def warn_omp_unknown_assumption_clause_without_args
       InGroup<OpenMPClauses>;
 def warn_omp_extension_directive_not_enabled
     : Warning<"OpenMP Extensions not enabled. Ignoring OpenMP Extension Directive '#pragma ompx %0'">,
-      InGroup<IgnoredPragmas>;
+      InGroup<OpenMPClauses>;
 def warn_omp_extension_clause_not_enabled
     : Warning<"OpenMP Extensions not enabled. Ignoring OpenMP Extension Clause '%0'">,
-      InGroup<IgnoredPragmas>;
+      InGroup<OpenMPClauses>;
 def note_omp_assumption_clause_continue_here
     : Note<"the ignored tokens spans until here">;
 def err_omp_declare_target_unexpected_clause: Error<

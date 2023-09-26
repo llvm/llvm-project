@@ -2736,7 +2736,7 @@ public:
 /// #pragma ompx taskgraph
 /// \endcode
 ///
-class OMPTaskgraphDirective : public OMPExecutableDirective {
+class OMPTaskgraphDirective final : public OMPExecutableDirective {
   friend class ASTStmtReader;
   friend class OMPExecutableDirective;
   /// Build directive with the given start and end location.

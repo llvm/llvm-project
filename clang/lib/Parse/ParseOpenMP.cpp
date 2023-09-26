@@ -2093,10 +2093,10 @@ Parser::DeclGroupPtrTy Parser::ParseOpenMPDeclarativeDirectiveWithExtDecl(
   // Extension directives must have extension directives
   // enabled and must use the ompx sentinel
   if (isExtensionDirective(DKind)) {
-    if (!isOmpx)
+    if (!isOmpx) {
       Diag(Loc, diag::err_omp_extension_without_ompx)
           << getOpenMPDirectiveName(DKind);
-    else if (!getLangOpts().OpenMPExtensions) {
+    } else if (!getLangOpts().OpenMPExtensions) {
       Diag(Loc, diag::warn_omp_extension_directive_not_enabled)
           << getOpenMPDirectiveName(DKind);
       ConsumeToken();
@@ -2553,10 +2553,10 @@ StmtResult Parser::ParseOpenMPDeclarativeOrExecutableDirective(
   // Extension directives must have extension directives
   // enabled and must use the ompx sentinel
   if (isExtensionDirective(DKind)) {
-    if (!isOmpx)
+    if (!isOmpx) {
       Diag(Loc, diag::err_omp_extension_without_ompx)
           << getOpenMPDirectiveName(DKind);
-    else if (!getLangOpts().OpenMPExtensions) {
+    } else if (!getLangOpts().OpenMPExtensions) {
       Diag(Loc, diag::warn_omp_extension_directive_not_enabled)
           << getOpenMPDirectiveName(DKind);
       ConsumeToken();

@@ -1,7 +1,7 @@
 // RUN: %clang_cc1 -verify=expected -fopenmp -fno-openmp-extensions -ferror-limit 100 -o - -std=c++11 %s -Wuninitialized
 
 void bad() {
-  #pragma omp taskgraph //  expected-error {{Using extension directive 'taskgraph' in #pragma omp instead of #pragma ompx}}
+  #pragma omp taskgraph //  expected-error {{Expected extension directive 'taskgraph' in #pragma omp instead of #pragma ompx}}
   {} 
   #pragma ompx taskgraph //  expected-warning {{OpenMP Extensions not enabled. Ignoring OpenMP Extension Directive '#pragma ompx taskgraph'}}
   {}
