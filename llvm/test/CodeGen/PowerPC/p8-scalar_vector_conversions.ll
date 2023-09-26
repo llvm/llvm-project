@@ -2204,7 +2204,8 @@ entry:
 define i64 @getvelsl(<2 x i64> %vsl, i32 signext %i) {
 ; CHECK-LABEL: getvelsl:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    andi. r3, r5, 1
+; CHECK-NEXT:    clrldi r3, r5, 32
+; CHECK-NEXT:    andi. r3, r3, 1
 ; CHECK-NEXT:    sldi r3, r3, 3
 ; CHECK-NEXT:    lvsl v3, 0, r3
 ; CHECK-NEXT:    vperm v2, v2, v2, v3
@@ -2224,6 +2225,7 @@ define i64 @getvelsl(<2 x i64> %vsl, i32 signext %i) {
 ;
 ; CHECK-AIX-LABEL: getvelsl:
 ; CHECK-AIX:       # %bb.0: # %entry
+; CHECK-AIX-NEXT:    clrldi 3, 3, 32
 ; CHECK-AIX-NEXT:    andi. 3, 3, 1
 ; CHECK-AIX-NEXT:    sldi 3, 3, 3
 ; CHECK-AIX-NEXT:    lvsl 3, 0, 3
@@ -2240,7 +2242,8 @@ entry:
 define i64 @getvelul(<2 x i64> %vul, i32 signext %i) {
 ; CHECK-LABEL: getvelul:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    andi. r3, r5, 1
+; CHECK-NEXT:    clrldi r3, r5, 32
+; CHECK-NEXT:    andi. r3, r3, 1
 ; CHECK-NEXT:    sldi r3, r3, 3
 ; CHECK-NEXT:    lvsl v3, 0, r3
 ; CHECK-NEXT:    vperm v2, v2, v2, v3
@@ -2260,6 +2263,7 @@ define i64 @getvelul(<2 x i64> %vul, i32 signext %i) {
 ;
 ; CHECK-AIX-LABEL: getvelul:
 ; CHECK-AIX:       # %bb.0: # %entry
+; CHECK-AIX-NEXT:    clrldi 3, 3, 32
 ; CHECK-AIX-NEXT:    andi. 3, 3, 1
 ; CHECK-AIX-NEXT:    sldi 3, 3, 3
 ; CHECK-AIX-NEXT:    lvsl 3, 0, 3
@@ -2457,7 +2461,8 @@ entry:
 define double @getveld(<2 x double> %vd, i32 signext %i) {
 ; CHECK-LABEL: getveld:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    andi. r3, r5, 1
+; CHECK-NEXT:    clrldi r3, r5, 32
+; CHECK-NEXT:    andi. r3, r3, 1
 ; CHECK-NEXT:    sldi r3, r3, 3
 ; CHECK-NEXT:    lvsl v3, 0, r3
 ; CHECK-NEXT:    vperm v2, v2, v2, v3
@@ -2479,6 +2484,7 @@ define double @getveld(<2 x double> %vd, i32 signext %i) {
 ;
 ; CHECK-AIX-LABEL: getveld:
 ; CHECK-AIX:       # %bb.0: # %entry
+; CHECK-AIX-NEXT:    clrldi 3, 3, 32
 ; CHECK-AIX-NEXT:    andi. 3, 3, 1
 ; CHECK-AIX-NEXT:    sldi 3, 3, 3
 ; CHECK-AIX-NEXT:    lvsl 3, 0, 3
