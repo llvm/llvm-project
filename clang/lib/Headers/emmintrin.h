@@ -4756,7 +4756,7 @@ static __inline__ __m128d __DEFAULT_FN_ATTRS _mm_castsi128_pd(__m128i __a) {
 /// __m128d _mm_cmp_pd(__m128d a, __m128d b, const int c);
 /// \endcode
 ///
-/// This intrinsic corresponds to the <c> VCMPPD </c> instruction.
+/// This intrinsic corresponds to the <c> (V)CMPPD </c> instruction.
 ///
 /// \param a
 ///    A 128-bit vector of [2 x double].
@@ -4815,7 +4815,7 @@ static __inline__ __m128d __DEFAULT_FN_ATTRS _mm_castsi128_pd(__m128i __a) {
 /// __m128d _mm_cmp_sd(__m128d a, __m128d b, const int c);
 /// \endcode
 ///
-/// This intrinsic corresponds to the <c> VCMPSD </c> instruction.
+/// This intrinsic corresponds to the <c> (V)CMPSD </c> instruction.
 ///
 /// \param a
 ///    A 128-bit vector of [2 x double].

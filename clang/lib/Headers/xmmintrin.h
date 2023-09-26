@@ -2988,7 +2988,7 @@ _mm_movemask_ps(__m128 __a)
 /// __m128 _mm_cmp_ps(__m128 a, __m128 b, const int c);
 /// \endcode
 ///
-/// This intrinsic corresponds to the <c> VCMPPS </c> instruction.
+/// This intrinsic corresponds to the <c> (V)CMPPS </c> instruction.
 ///
 /// \param a
 ///    A 128-bit vector of [4 x float].
@@ -3046,7 +3046,7 @@ _mm_movemask_ps(__m128 __a)
 /// __m128 _mm_cmp_ss(__m128 a, __m128 b, const int c);
 /// \endcode
 ///
-/// This intrinsic corresponds to the <c> VCMPSS </c> instruction.
+/// This intrinsic corresponds to the <c> (V)CMPSS </c> instruction.
 ///
 /// \param a
 ///    A 128-bit vector of [4 x float].
