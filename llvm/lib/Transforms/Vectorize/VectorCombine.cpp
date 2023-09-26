@@ -13,6 +13,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/Transforms/Vectorize/VectorCombine.h"
+#include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/Statistic.h"
 #include "llvm/Analysis/AssumptionCache.h"
 #include "llvm/Analysis/BasicAliasAnalysis.h"
@@ -1253,15 +1254,13 @@ bool VectorCombine::scalarizeLoadExtract(Instruction &I) {
 
   Instruction *LastCheckedInst = LI;
   unsigned NumInstChecked = 0;
+  DenseMap<ExtractElementInst *, ScalarizationResult> NeedFreeze;
   // Check if all users of the load are extracts with no memory modifications
   // between the load and the extract. Compute the cost of both the original
   // code and the scalarized version.
   for (User *U : LI->users()) {
     auto *UI = dyn_cast<ExtractElementInst>(U);
     if (!UI || UI->getParent() != LI->getParent())
-      return false;
-
-    if (!isGuaranteedNotToBePoison(UI->getOperand(1), &AC, LI, &DT))
       return false;
 
     // Check if any instruction between the load and the extract may modify
@@ -1279,10 +1278,11 @@ bool VectorCombine::scalarizeLoadExtract(Instruction &I) {
     }
 
     auto ScalarIdx = canScalarizeAccess(VecTy, UI->getOperand(1), &I, AC, DT);
-    if (!ScalarIdx.isSafe()) {
-      // TODO: Freeze index if it is safe to do so.
-      ScalarIdx.discard();
+    if (ScalarIdx.isUnsafe())
       return false;
+    if (ScalarIdx.isSafeWithFreeze()) {
+      NeedFreeze.try_emplace(UI, ScalarIdx);
+      ScalarIdx.discard();
     }
 
     auto *Index = dyn_cast<ConstantInt>(UI->getOperand(1));
@@ -1302,9 +1302,14 @@ bool VectorCombine::scalarizeLoadExtract(Instruction &I) {
   // Replace extracts with narrow scalar loads.
   for (User *U : LI->users()) {
     auto *EI = cast<ExtractElementInst>(U);
-    Builder.SetInsertPoint(EI);
-
     Value *Idx = EI->getOperand(1);
+
+    // Insert 'freeze' for poison indexes.
+    auto It = NeedFreeze.find(EI);
+    if (It != NeedFreeze.end())
+      It->second.freeze(Builder, *cast<Instruction>(Idx));
+
+    Builder.SetInsertPoint(EI);
     Value *GEP =
         Builder.CreateInBoundsGEP(VecTy, Ptr, {Builder.getInt32(0), Idx});
     auto *NewLoad = cast<LoadInst>(Builder.CreateLoad(
