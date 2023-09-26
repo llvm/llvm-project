@@ -2352,26 +2352,78 @@ static void handleUnusedAttr(Sema &S, Decl *D, const ParsedAttr &AL) {
   D->addAttr(::new (S.Context) UnusedAttr(S.Context, AL));
 }
 
-static void handleConstructorAttr(Sema &S, Decl *D, const ParsedAttr &AL) {
-  uint32_t priority = ConstructorAttr::DefaultPriority;
+static bool diagnoseInvalidPriority(Sema &S, uint32_t Priority,
+                                    const ParsedAttr &A,
+                                    SourceLocation PriorityLoc) {
+  constexpr uint32_t ReservedPriorityLower = 101, ReservedPriorityUpper = 65535;
+
+  // Only perform the priority check if the attribute is outside of a system
+  // header. Values <= 100 are reserved for the implementation, and libc++
+  // benefits from being able to specify values in that range. Values > 65535
+  // are reserved for historical reasons.
+  if ((Priority < ReservedPriorityLower || Priority > ReservedPriorityUpper) &&
+      !S.getSourceManager().isInSystemHeader(A.getLoc())) {
+    S.Diag(A.getLoc(), diag::err_attribute_argument_out_of_range)
+        << PriorityLoc << A << ReservedPriorityLower << ReservedPriorityUpper;
+    A.setInvalid();
+    return true;
+  }
+  return false;
+}
+
+template <typename CtorDtorAttr>
+static void handleCtorDtorAttr(Sema &S, Decl *D, const ParsedAttr &AL) {
+  uint32_t Priority = CtorDtorAttr::DefaultPriority;
   if (S.getLangOpts().HLSL && AL.getNumArgs()) {
     S.Diag(AL.getLoc(), diag::err_hlsl_init_priority_unsupported);
     return;
   }
-  if (AL.getNumArgs() &&
-      !checkUInt32Argument(S, AL, AL.getArgAsExpr(0), priority))
+
+  // If we're given an argument for the priority, check that it's valid.
+  if (AL.getNumArgs()) {
+    if (!checkUInt32Argument(S, AL, AL.getArgAsExpr(0), Priority))
+      return;
+
+    // Ensure the priority is in a reasonable range.
+    if (diagnoseInvalidPriority(S, Priority, AL,
+                                AL.getArgAsExpr(0)->getExprLoc()))
+      return;
+  }
+
+  // Ensure the function we're attaching to is something that is sensible to
+  // automatically call before or after main(); it should accept no arguments.
+  // In theory, a void return type is the only truly safe return type (consider
+  // that calling conventions may place returned values in a hidden pointer
+  // argument passed to the function that will not be present when called
+  // automatically). However, there is a significant amount of existing code
+  // which uses an int return type. So we will accept void, int, and
+  // unsigned int return types. Any other return type, or a non-void parameter
+  // list is treated as an error because it's a form of type system
+  // incompatibility. The function also cannot be a member function. We allow
+  // K&R C functions because that's a difficult edge case where it depends on
+  // how the function is defined as to whether it does or does not expect
+  // arguments.
+  const auto *FD = cast<FunctionDecl>(D);
+  QualType RetTy = FD->getReturnType();
+  if (!(RetTy->isVoidType() ||
+        RetTy->isSpecificBuiltinType(BuiltinType::UInt) ||
+        RetTy->isSpecificBuiltinType(BuiltinType::Int)) ||
+      (FD->hasPrototype() && FD->getNumParams() != 0)) {
+    S.Diag(AL.getLoc(), diag::err_ctor_dtor_attr_on_non_void_func)
+        << AL << FD->getSourceRange();
     return;
-
-  D->addAttr(::new (S.Context) ConstructorAttr(S.Context, AL, priority));
-}
-
-static void handleDestructorAttr(Sema &S, Decl *D, const ParsedAttr &AL) {
-  uint32_t priority = DestructorAttr::DefaultPriority;
-  if (AL.getNumArgs() &&
-      !checkUInt32Argument(S, AL, AL.getArgAsExpr(0), priority))
+  } else if (const auto *MD = dyn_cast<CXXMethodDecl>(FD);
+             MD && MD->isInstance()) {
+    S.Diag(AL.getLoc(), diag::err_ctor_dtor_member_func)
+        << AL << FD->getSourceRange();
     return;
+  } else if (FD->isConsteval()) {
+    S.Diag(AL.getLoc(), diag::err_ctordtor_attr_consteval)
+        << AL << FD->getSourceRange();
+    return;
+  }
 
-  D->addAttr(::new (S.Context) DestructorAttr(S.Context, AL, priority));
+  D->addAttr(CtorDtorAttr::Create(S.Context, Priority, AL));
 }
 
 template <typename AttrTy>
@@ -3888,16 +3940,9 @@ static void handleInitPriorityAttr(Sema &S, Decl *D, const ParsedAttr &AL) {
     return;
   }
 
-  // Only perform the priority check if the attribute is outside of a system
-  // header. Values <= 100 are reserved for the implementation, and libc++
-  // benefits from being able to specify values in that range.
-  if ((prioritynum < 101 || prioritynum > 65535) &&
-      !S.getSourceManager().isInSystemHeader(AL.getLoc())) {
-    S.Diag(AL.getLoc(), diag::err_attribute_argument_out_of_range)
-        << E->getSourceRange() << AL << 101 << 65535;
-    AL.setInvalid();
+  if (diagnoseInvalidPriority(S, prioritynum, AL, E->getExprLoc()))
     return;
-  }
+
   D->addAttr(::new (S.Context) InitPriorityAttr(S.Context, AL, prioritynum));
 }
 
@@ -8930,13 +8975,13 @@ ProcessDeclAttribute(Sema &S, Scope *scope, Decl *D, const ParsedAttr &AL,
     handlePassObjectSizeAttr(S, D, AL);
     break;
   case ParsedAttr::AT_Constructor:
-      handleConstructorAttr(S, D, AL);
+    handleCtorDtorAttr<ConstructorAttr>(S, D, AL);
     break;
   case ParsedAttr::AT_Deprecated:
     handleDeprecatedAttr(S, D, AL);
     break;
   case ParsedAttr::AT_Destructor:
-      handleDestructorAttr(S, D, AL);
+    handleCtorDtorAttr<DestructorAttr>(S, D, AL);
     break;
   case ParsedAttr::AT_EnableIf:
     handleEnableIfAttr(S, D, AL);
