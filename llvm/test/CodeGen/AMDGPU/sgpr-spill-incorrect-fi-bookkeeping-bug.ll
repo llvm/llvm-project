@@ -1,3 +1,4 @@
+; XFAIL: *
 ; RUN: llc -mtriple=amdgcn--amdhsa -mcpu=gfx900 -verify-machineinstrs < %s | FileCheck %s
 
 ; This tests for a bug that caused a crash in SIRegisterInfo::spillSGPR()

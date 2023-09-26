@@ -770,8 +770,8 @@ define amdgpu_kernel void @global_atomic_fmin_uni_address_div_value_agent_scope_
 ; GFX9-DPP-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX9-DPP-NEXT:    s_swappc_b64 s[30:31], s[16:17]
 ; GFX9-DPP-NEXT:    v_mbcnt_lo_u32_b32 v1, exec_lo, 0
-; GFX9-DPP-NEXT:    v_mbcnt_hi_u32_b32 v1, exec_hi, v1
 ; GFX9-DPP-NEXT:    v_mov_b32_e32 v3, v0
+; GFX9-DPP-NEXT:    v_mbcnt_hi_u32_b32 v1, exec_hi, v1
 ; GFX9-DPP-NEXT:    s_not_b64 exec, exec
 ; GFX9-DPP-NEXT:    v_mov_b32_e32 v3, 0x7f800000
 ; GFX9-DPP-NEXT:    s_not_b64 exec, exec
@@ -1949,8 +1949,8 @@ define amdgpu_kernel void @global_atomic_fmin_uni_address_div_value_one_as_scope
 ; GFX9-DPP-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX9-DPP-NEXT:    s_swappc_b64 s[30:31], s[16:17]
 ; GFX9-DPP-NEXT:    v_mbcnt_lo_u32_b32 v1, exec_lo, 0
-; GFX9-DPP-NEXT:    v_mbcnt_hi_u32_b32 v1, exec_hi, v1
 ; GFX9-DPP-NEXT:    v_mov_b32_e32 v3, v0
+; GFX9-DPP-NEXT:    v_mbcnt_hi_u32_b32 v1, exec_hi, v1
 ; GFX9-DPP-NEXT:    s_not_b64 exec, exec
 ; GFX9-DPP-NEXT:    v_mov_b32_e32 v3, 0x7f800000
 ; GFX9-DPP-NEXT:    s_not_b64 exec, exec
@@ -3128,8 +3128,8 @@ define amdgpu_kernel void @global_atomic_fmin_uni_address_div_value_defalut_scop
 ; GFX9-DPP-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX9-DPP-NEXT:    s_swappc_b64 s[30:31], s[16:17]
 ; GFX9-DPP-NEXT:    v_mbcnt_lo_u32_b32 v1, exec_lo, 0
-; GFX9-DPP-NEXT:    v_mbcnt_hi_u32_b32 v1, exec_hi, v1
 ; GFX9-DPP-NEXT:    v_mov_b32_e32 v3, v0
+; GFX9-DPP-NEXT:    v_mbcnt_hi_u32_b32 v1, exec_hi, v1
 ; GFX9-DPP-NEXT:    s_not_b64 exec, exec
 ; GFX9-DPP-NEXT:    v_mov_b32_e32 v3, 0x7f800000
 ; GFX9-DPP-NEXT:    s_not_b64 exec, exec

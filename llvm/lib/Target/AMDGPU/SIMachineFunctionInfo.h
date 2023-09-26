@@ -709,7 +709,12 @@ public:
 
   // To bring the Physical VGPRs in the highest range allocated for CSR SGPR
   // spilling into the lowest available range.
-  void shiftSpillPhysVGPRsToLowestRange(MachineFunction &MF);
+  void shiftSpillPhysVGPRsToLowestRange(MachineFunction &MF,
+                                        BitVector &SavedVGPRs);
+
+  void shiftWwmVGPRsToLowestRange(MachineFunction &MF,
+                                  SmallVectorImpl<Register> &WWMVGPRs,
+                                  BitVector &SavedVGPRs);
 
   bool allocateSGPRSpillToVGPRLane(MachineFunction &MF, int FI,
                                    bool SpillToPhysVGPRLane = false,

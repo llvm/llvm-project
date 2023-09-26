@@ -33,6 +33,11 @@ using MBBVector = SmallVector<MachineBasicBlock *, 4>;
 
 namespace {
 
+static cl::opt<unsigned> MaxNumVGPRsForWwmAllocation(
+    "amdgpu-num-vgprs-for-wwm-alloc",
+    cl::desc("Max num VGPRs for whole-wave register allocation."),
+    cl::ReallyHidden, cl::init(10));
+
 class SILowerSGPRSpills : public MachineFunctionPass {
 private:
   const SIRegisterInfo *TRI = nullptr;
@@ -57,6 +62,13 @@ public:
   void updateLaneVGPRDomInstr(
       int FI, MachineBasicBlock *MBB, MachineBasicBlock::iterator InsertPt,
       DenseMap<Register, MachineBasicBlock::iterator> &LaneVGPRDomInstr);
+
+  void determineRegsForWWMAllocation(MachineFunction &MF, BitVector &RegMask);
+
+  // Handle the allocation mask for various vector regclasses to help determine
+  // the actual allocatable set for regalloc.
+  void computeAllocationMaskForRCs(MachineFunction &MF,
+                                   std::vector<BitVector> &Reserved);
 
   bool runOnMachineFunction(MachineFunction &MF) override;
 
@@ -315,6 +327,52 @@ void SILowerSGPRSpills::updateLaneVGPRDomInstr(
   }
 }
 
+void SILowerSGPRSpills::determineRegsForWWMAllocation(MachineFunction &MF,
+                                                      BitVector &RegMask) {
+  SIMachineFunctionInfo *MFI = MF.getInfo<SIMachineFunctionInfo>();
+  MachineRegisterInfo &MRI = MF.getRegInfo();
+  BitVector ReservedRegs = TRI->getReservedRegs(MF);
+
+  // TODO: MaxNumVGPRsForWwmAllocation should be tuned in to have a balanced
+  // allocation between WWM values and other vector register operands. It is
+  // currently set to 10. But it can be a lower value.
+  unsigned NumRegs = MaxNumVGPRsForWwmAllocation;
+  NumRegs =
+      std::min(static_cast<unsigned>(MFI->getSGPRSpillVGPRs().size()), NumRegs);
+
+  auto [MaxNumVGPRs, MaxNumAGPRs] = TRI->getMaxNumVectorRegs(MF);
+  // Try to use the highest available registers for now. Later after regalloc,
+  // they can be shifted to the lowest range.
+  unsigned I = 0;
+  for (unsigned Reg = AMDGPU::VGPR0 + MaxNumVGPRs - 1;
+       (I < NumRegs) && (Reg >= AMDGPU::VGPR0); --Reg) {
+    if (!ReservedRegs.test(Reg) &&
+        !MRI.isPhysRegUsed(Reg, /*SkipRegMaskTest=*/true)) {
+      TRI->markSuperRegs(RegMask, Reg);
+      ++I;
+    }
+  }
+
+  assert(I == NumRegs &&
+         "Failed to find enough VGPRs for whole-wave register allocation");
+}
+
+void SILowerSGPRSpills::computeAllocationMaskForRCs(
+    MachineFunction &MF, std::vector<BitVector> &Reserved) {
+  // Determine an optimal number of VGPRs for WWM allocation. The complement
+  // list will be available for allocating other VGPR virtual registers.
+  unsigned NumRegs = TRI->getNumRegs();
+  BitVector NonWwmAllocMask(NumRegs);
+
+  determineRegsForWWMAllocation(MF, NonWwmAllocMask);
+
+  // Allocation mask for WWM classes will be the complement set.
+  BitVector WwmAllocMask(NonWwmAllocMask);
+  WwmAllocMask.flip().clearBitsNotInMask(TRI->getAllVGPRRegMask());
+  std::fill(Reserved.begin(), Reserved.end(), NonWwmAllocMask);
+  Reserved[AMDGPU::WWM_VGPR_32RegClass.getID()] = WwmAllocMask;
+}
+
 bool SILowerSGPRSpills::runOnMachineFunction(MachineFunction &MF) {
   const GCNSubtarget &ST = MF.getSubtarget<GCNSubtarget>();
   TII = ST.getInstrInfo();
@@ -422,6 +480,14 @@ bool SILowerSGPRSpills::runOnMachineFunction(MachineFunction &MF) {
         LIS->InsertMachineInstrInMaps(*MIB);
         LIS->createAndComputeVirtRegInterval(Reg);
       }
+    }
+
+    // Compute the allocation mask for various vector regclasses.
+    if (FuncInfo->getSGPRSpillVGPRs().size()) {
+      std::vector<BitVector> AllocationMaskForRCs(
+          TRI->getNumRegClasses(), BitVector(TRI->getNumRegs(), false));
+      computeAllocationMaskForRCs(MF, AllocationMaskForRCs);
+      MRI.updateAllocationMaskForRCs(std::move(AllocationMaskForRCs));
     }
 
     for (MachineBasicBlock &MBB : MF) {

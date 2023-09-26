@@ -314,31 +314,37 @@ bool SIMachineFunctionInfo::isCalleeSavedReg(const MCPhysReg *CSRegs,
   return false;
 }
 
-void SIMachineFunctionInfo::shiftSpillPhysVGPRsToLowestRange(
-    MachineFunction &MF) {
+void SIMachineFunctionInfo::shiftWwmVGPRsToLowestRange(
+    MachineFunction &MF, SmallVectorImpl<Register> &WWMVGPRs,
+    BitVector &SavedVGPRs) {
   const SIRegisterInfo *TRI = MF.getSubtarget<GCNSubtarget>().getRegisterInfo();
   MachineRegisterInfo &MRI = MF.getRegInfo();
-  for (unsigned I = 0, E = SpillPhysVGPRs.size(); I < E; ++I) {
-    Register Reg = SpillPhysVGPRs[I];
+  for (unsigned I = 0, E = WWMVGPRs.size(); I < E; ++I) {
+    Register Reg = WWMVGPRs[I];
     Register NewReg =
         TRI->findUnusedRegister(MRI, &AMDGPU::VGPR_32RegClass, MF);
     if (!NewReg || NewReg >= Reg)
       break;
 
     MRI.replaceRegWith(Reg, NewReg);
-
     // Update various tables with the new VGPR.
-    SpillPhysVGPRs[I] = NewReg;
+    WWMVGPRs[I] = NewReg;
     WWMReservedRegs.remove(Reg);
     WWMReservedRegs.insert(NewReg);
-    WWMSpills.insert(std::make_pair(NewReg, WWMSpills[Reg]));
-    WWMSpills.erase(Reg);
+
+    // The generic `determineCalleeSaves` might have set the old register if in
+    // the CSR range.
+    SavedVGPRs.reset(Reg);
 
     for (MachineBasicBlock &MBB : MF) {
       MBB.removeLiveIn(Reg);
       MBB.sortUniqueLiveIns();
     }
   }
+}
+void SIMachineFunctionInfo::shiftSpillPhysVGPRsToLowestRange(
+    MachineFunction &MF, BitVector &SavedVGPRs) {
+  shiftWwmVGPRsToLowestRange(MF, SpillPhysVGPRs, SavedVGPRs);
 }
 
 bool SIMachineFunctionInfo::allocateVirtualVGPRForSGPRSpills(
@@ -376,7 +382,9 @@ bool SIMachineFunctionInfo::allocatePhysicalVGPRForSGPRSpills(
       return false;
     }
 
-    allocateWWMSpill(MF, LaneVGPR);
+    if (IsPrologEpilog)
+      allocateWWMSpill(MF, LaneVGPR);
+
     reserveWWMRegister(LaneVGPR);
     for (MachineBasicBlock &MBB : MF) {
       MBB.addLiveIn(LaneVGPR);

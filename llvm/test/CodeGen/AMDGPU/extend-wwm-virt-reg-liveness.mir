@@ -25,10 +25,10 @@ body:             |
     ; GCN-LABEL: name: test_single_block
     ; GCN: liveins: $sgpr4, $vgpr2_vgpr3
     ; GCN-NEXT: {{  $}}
-    ; GCN-NEXT: renamable $vgpr0 = IMPLICIT_DEF
-    ; GCN-NEXT: renamable $vgpr0 = SI_SPILL_S32_TO_VGPR $sgpr4, 0, killed $vgpr0
+    ; GCN-NEXT: renamable $vgpr63 = IMPLICIT_DEF
+    ; GCN-NEXT: renamable $vgpr63 = SI_SPILL_S32_TO_VGPR $sgpr4, 0, killed $vgpr63
     ; GCN-NEXT: S_NOP 0
-    ; GCN-NEXT: $sgpr4 = SI_RESTORE_S32_FROM_VGPR killed $vgpr0, 0
+    ; GCN-NEXT: $sgpr4 = SI_RESTORE_S32_FROM_VGPR killed $vgpr63, 0
     ; GCN-NEXT: renamable $vgpr0 = V_MOV_B32_e32 20, implicit $exec
     ; GCN-NEXT: GLOBAL_STORE_DWORD $vgpr2_vgpr3, killed renamable $vgpr0, 0, 0, implicit $exec
     ; GCN-NEXT: SI_RETURN
@@ -75,10 +75,10 @@ body:             |
   ; GCN-NEXT:   successors: %bb.3(0x80000000)
   ; GCN-NEXT:   liveins: $sgpr6, $sgpr10_sgpr11
   ; GCN-NEXT: {{  $}}
-  ; GCN-NEXT:   renamable $vgpr0 = IMPLICIT_DEF
-  ; GCN-NEXT:   renamable $vgpr0 = SI_SPILL_S32_TO_VGPR $sgpr6, 0, killed $vgpr0
+  ; GCN-NEXT:   renamable $vgpr63 = IMPLICIT_DEF
+  ; GCN-NEXT:   renamable $vgpr63 = SI_SPILL_S32_TO_VGPR $sgpr6, 0, killed $vgpr63
   ; GCN-NEXT:   S_NOP 0
-  ; GCN-NEXT:   $sgpr6 = SI_RESTORE_S32_FROM_VGPR killed $vgpr0, 0
+  ; GCN-NEXT:   $sgpr6 = SI_RESTORE_S32_FROM_VGPR killed $vgpr63, 0
   ; GCN-NEXT:   renamable $vgpr0 = V_MOV_B32_e32 20, implicit $exec
   ; GCN-NEXT:   S_BRANCH %bb.3
   ; GCN-NEXT: {{  $}}
@@ -140,10 +140,10 @@ body:             |
   ; GCN-NEXT:   successors: %bb.2(0x80000000)
   ; GCN-NEXT:   liveins: $sgpr4, $sgpr10_sgpr11
   ; GCN-NEXT: {{  $}}
-  ; GCN-NEXT:   renamable $vgpr0 = IMPLICIT_DEF
-  ; GCN-NEXT:   renamable $vgpr0 = SI_SPILL_S32_TO_VGPR $sgpr4, 0, killed $vgpr0
+  ; GCN-NEXT:   renamable $vgpr63 = IMPLICIT_DEF
+  ; GCN-NEXT:   renamable $vgpr63 = SI_SPILL_S32_TO_VGPR $sgpr4, 0, killed $vgpr63
   ; GCN-NEXT:   S_NOP 0
-  ; GCN-NEXT:   $sgpr4 = SI_RESTORE_S32_FROM_VGPR killed $vgpr0, 0
+  ; GCN-NEXT:   $sgpr4 = SI_RESTORE_S32_FROM_VGPR killed $vgpr63, 0
   ; GCN-NEXT:   renamable $vgpr0 = V_MOV_B32_e32 20, implicit $exec
   ; GCN-NEXT:   S_BRANCH %bb.2
   ; GCN-NEXT: {{  $}}
@@ -241,10 +241,10 @@ body:             |
   ; GCN-NEXT: bb.1:
   ; GCN-NEXT:   liveins: $sgpr4, $vgpr2_vgpr3
   ; GCN-NEXT: {{  $}}
-  ; GCN-NEXT:   renamable $vgpr0 = IMPLICIT_DEF
-  ; GCN-NEXT:   renamable $vgpr0 = SI_SPILL_S32_TO_VGPR $sgpr4, 0, killed $vgpr0
+  ; GCN-NEXT:   renamable $vgpr63 = IMPLICIT_DEF
+  ; GCN-NEXT:   renamable $vgpr63 = SI_SPILL_S32_TO_VGPR $sgpr4, 0, killed $vgpr63
   ; GCN-NEXT:   S_NOP 0
-  ; GCN-NEXT:   $sgpr4 = SI_RESTORE_S32_FROM_VGPR killed $vgpr0, 0
+  ; GCN-NEXT:   $sgpr4 = SI_RESTORE_S32_FROM_VGPR killed $vgpr63, 0
   ; GCN-NEXT:   renamable $vgpr0 = V_MOV_B32_e32 10, implicit $exec
   ; GCN-NEXT:   GLOBAL_STORE_DWORD $vgpr2_vgpr3, killed renamable $vgpr0, 0, 0, implicit $exec
   ; GCN-NEXT:   SI_RETURN
