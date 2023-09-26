@@ -4798,9 +4798,9 @@ static __inline__ __m128d __DEFAULT_FN_ATTRS _mm_castsi128_pd(__m128i __a) {
 ///    0x1E: Greater-than (ordered, non-signaling) \n
 ///    0x1F: True (unordered, signaling)
 /// \returns A 128-bit vector of [2 x double] containing the comparison results.
-#define _mm_cmp_pd(a, b, c) \
-  ((__m128d)__builtin_ia32_cmppd((__v2df)(__m128d)(a), \
-                                 (__v2df)(__m128d)(b), (c)))
+#define _mm_cmp_pd(a, b, c)                                                    \
+  ((__m128d)__builtin_ia32_cmppd((__v2df)(__m128d)(a), (__v2df)(__m128d)(b),   \
+                                 (c)))
 
 /// Compares each of the corresponding scalar double-precision values of
 ///    two 128-bit vectors of [2 x double], using the operation specified by the
@@ -4857,9 +4857,9 @@ static __inline__ __m128d __DEFAULT_FN_ATTRS _mm_castsi128_pd(__m128i __a) {
 ///    0x1E: Greater-than (ordered, non-signaling) \n
 ///    0x1F: True (unordered, signaling)
 /// \returns A 128-bit vector of [2 x double] containing the comparison results.
-#define _mm_cmp_sd(a, b, c) \
-  ((__m128d)__builtin_ia32_cmpsd((__v2df)(__m128d)(a), \
-                                 (__v2df)(__m128d)(b), (c)))
+#define _mm_cmp_sd(a, b, c)                                                    \
+  ((__m128d)__builtin_ia32_cmpsd((__v2df)(__m128d)(a), (__v2df)(__m128d)(b),   \
+                                 (c)))
 
 #if defined(__cplusplus)
 extern "C" {
