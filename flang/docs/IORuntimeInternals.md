@@ -8,9 +8,10 @@
 
 # Fortran I/O Runtime Library Internal Design
 
-```eval_rst
-.. contents::
-   :local:
+```{contents}
+---
+local:
+---
 ```
 
 This note is meant to be an overview of the design of the *implementation*
