@@ -11,10 +11,10 @@
 
 #include <unistd.h>
 
-namespace __llvm_libc {
+namespace LIBC_NAMESPACE {
 
 ssize_t readlink(const char *__restrict, char *__restrict, size_t);
 
-} // namespace __llvm_libc
+} // namespace LIBC_NAMESPACE
 
 #endif // LLVM_LIBC_SRC_UNISTD_READLINK_H

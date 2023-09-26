@@ -21,11 +21,11 @@
   EXPECT_FP_EQ(expected, f(x, y));                                             \
   EXPECT_MATH_ERRNO((dom_err) ? EDOM : 0);                                     \
   EXPECT_FP_EXCEPTION(expected_exception);                                     \
-  __llvm_libc::fputil::clear_except(FE_ALL_EXCEPT)
+  LIBC_NAMESPACE::fputil::clear_except(FE_ALL_EXCEPT)
 
 #define TEST_REGULAR(x, y, expected) TEST_SPECIAL(x, y, expected, false, 0)
 
-template <typename T> class FmodTest : public __llvm_libc::testing::Test {
+template <typename T> class FmodTest : public LIBC_NAMESPACE::testing::Test {
 
   DECLARE_SPECIAL_CONSTANTS(T)
 

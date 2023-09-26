@@ -11,8 +11,8 @@
 
 #include "common.h"
 
-namespace __llvm_libc {
+namespace LIBC_NAMESPACE {
 
 LLVM_LIBC_FUNCTION(double, cosh, (double x)) { return internal::cosh(x); }
 
-} // namespace __llvm_libc
+} // namespace LIBC_NAMESPACE

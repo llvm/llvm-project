@@ -13,11 +13,11 @@
 #include "test/UnitTest/FPMatcher.h"
 #include "utils/MPFRWrapper/MPFRUtils.h"
 
-namespace mpfr = __llvm_libc::testing::mpfr;
+namespace mpfr = LIBC_NAMESPACE::testing::mpfr;
 
-struct HypotfChecker : public virtual __llvm_libc::testing::Test {
+struct HypotfChecker : public virtual LIBC_NAMESPACE::testing::Test {
   using FloatType = float;
-  using FPBits = __llvm_libc::fputil::FPBits<float>;
+  using FPBits = LIBC_NAMESPACE::fputil::FPBits<float>;
   using UIntType = typename FPBits::UIntType;
 
   uint64_t check(uint32_t start, uint32_t stop, mpfr::RoundingMode rounding) {
@@ -35,12 +35,12 @@ struct HypotfChecker : public virtual __llvm_libc::testing::Test {
       uint32_t ybits = Y_START;
       do {
         float y = float(FPBits(ybits));
-        bool correct = TEST_FP_EQ(__llvm_libc::fputil::hypot(x, y),
-                                  __llvm_libc::hypotf(x, y));
+        bool correct = TEST_FP_EQ(LIBC_NAMESPACE::fputil::hypot(x, y),
+                                  LIBC_NAMESPACE::hypotf(x, y));
         // Using MPFR will be much slower.
         // mpfr::BinaryInput<float> input{x, y};
         // bool correct = TEST_MPFR_MATCH_ROUNDING_SILENTLY(
-        //     mpfr::Operation::Hypot, input, __llvm_libc::hypotf(x, y), 0.5,
+        //     mpfr::Operation::Hypot, input, LIBC_NAMESPACE::hypotf(x, y), 0.5,
         //     rounding);
         failed += (!correct);
       } while (ybits++ < Y_STOP);

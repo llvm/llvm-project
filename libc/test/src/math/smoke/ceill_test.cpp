@@ -10,4 +10,4 @@
 
 #include "src/math/ceill.h"
 
-LIST_CEIL_TESTS(long double, __llvm_libc::ceill)
+LIST_CEIL_TESTS(long double, LIBC_NAMESPACE::ceill)

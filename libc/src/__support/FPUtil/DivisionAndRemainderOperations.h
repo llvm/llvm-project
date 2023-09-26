@@ -16,7 +16,7 @@
 #include "src/__support/CPP/type_traits.h"
 #include "src/__support/common.h"
 
-namespace __llvm_libc {
+namespace LIBC_NAMESPACE {
 namespace fputil {
 
 static constexpr int QUOTIENT_LSB_BITS = 3;
@@ -35,7 +35,7 @@ LIBC_INLINE T remquo(T x, T y, int &q) {
 
   if (xbits.is_zero()) {
     q = 0;
-    return __llvm_libc::fputil::copysign(T(0.0), x);
+    return LIBC_NAMESPACE::fputil::copysign(T(0.0), x);
   }
 
   if (ybits.is_inf()) {
@@ -73,7 +73,7 @@ LIBC_INLINE T remquo(T x, T y, int &q) {
     mx = n - my;
     if (mx == 0) {
       q = result_sign ? -q : q;
-      return __llvm_libc::fputil::copysign(T(0.0), x);
+      return LIBC_NAMESPACE::fputil::copysign(T(0.0), x);
     }
   }
 
@@ -109,11 +109,11 @@ LIBC_INLINE T remquo(T x, T y, int &q) {
 
   q = result_sign ? -q : q;
   if (native_remainder == T(0.0))
-    return __llvm_libc::fputil::copysign(T(0.0), x);
+    return LIBC_NAMESPACE::fputil::copysign(T(0.0), x);
   return native_remainder;
 }
 
 } // namespace fputil
-} // namespace __llvm_libc
+} // namespace LIBC_NAMESPACE
 
 #endif // LLVM_LIBC_SRC___SUPPORT_FPUTIL_DIVISIONANDREMAINDEROPERATIONS_H

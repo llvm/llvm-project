@@ -11,10 +11,10 @@
 
 #include <stdio.h>
 
-namespace __llvm_libc {
+namespace LIBC_NAMESPACE {
 
 char *fgets(char *__restrict str, int count, ::FILE *__restrict raw_stream);
 
-} // namespace __llvm_libc
+} // namespace LIBC_NAMESPACE
 
 #endif // LLVM_LIBC_SRC_STDIO_FGETS_H

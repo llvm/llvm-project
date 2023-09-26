@@ -9,10 +9,10 @@
 #ifndef LLVM_LIBC_SRC_STRING_STRSTR_H
 #define LLVM_LIBC_SRC_STRING_STRSTR_H
 
-namespace __llvm_libc {
+namespace LIBC_NAMESPACE {
 
 char *strstr(const char *haystack, const char *needle);
 
-} // namespace __llvm_libc
+} // namespace LIBC_NAMESPACE
 
 #endif // LLVM_LIBC_SRC_STRING_STRSTR_H

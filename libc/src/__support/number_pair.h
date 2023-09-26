@@ -14,7 +14,7 @@
 
 #include <stddef.h>
 
-namespace __llvm_libc {
+namespace LIBC_NAMESPACE {
 
 DEFINE_NAMED_PAIR_TEMPLATE(NumberPair, lo, hi);
 
@@ -29,6 +29,6 @@ split(T a) {
   return result;
 }
 
-} // namespace __llvm_libc
+} // namespace LIBC_NAMESPACE
 
 #endif // LLVM_LIBC_SRC___SUPPORT_NUMBER_PAIR_H
