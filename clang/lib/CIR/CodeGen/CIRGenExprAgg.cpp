@@ -9,7 +9,6 @@
 // This contains code to emit Aggregate Expr nodes as CIR code.
 //
 //===----------------------------------------------------------------------===//
-
 #include "CIRGenCall.h"
 #include "CIRGenFunction.h"
 #include "CIRGenModule.h"
@@ -554,7 +553,7 @@ void AggExprEmitter::VisitLambdaExpr(LambdaExpr *E) {
 
     // Emit initialization
     LValue LV = CGF.buildLValueForFieldInitialization(
-        SlotLV, *CurField, fieldName, CurField->getFieldIndex());
+        SlotLV, *CurField, fieldName);
     if (CurField->hasCapturedVLAType()) {
       llvm_unreachable("NYI");
     }
@@ -819,9 +818,8 @@ void AggExprEmitter::VisitCXXParenListOrInitListExpr(
     if (curInitIndex == NumInitElements && Dest.isZeroed() &&
         CGF.getTypes().isZeroInitializable(ExprToVisit->getType()))
       break;
-
     LValue LV = CGF.buildLValueForFieldInitialization(
-        DestLV, field, field->getName(), field->getFieldIndex());
+        DestLV, field, field->getName());
     // We never generate write-barries for initialized fields.
     assert(!UnimplementedFeature::setNonGC());
 

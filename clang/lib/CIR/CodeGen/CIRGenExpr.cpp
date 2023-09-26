@@ -388,13 +388,15 @@ LValue CIRGenFunction::buildLValueForField(LValue base,
 }
 
 LValue CIRGenFunction::buildLValueForFieldInitialization(
-    LValue Base, const clang::FieldDecl *Field, llvm::StringRef FieldName,
-    unsigned FieldIndex) {
+    LValue Base, const clang::FieldDecl *Field, llvm::StringRef FieldName) {
   QualType FieldType = Field->getType();
 
   if (!FieldType->isReferenceType())
     return buildLValueForField(Base, Field);
 
+  auto& layout = CGM.getTypes().getCIRGenRecordLayout(Field->getParent());
+  unsigned FieldIndex = layout.getCIRFieldNo(Field);
+  
   Address V = buildAddrOfFieldStorage(*this, Base.getAddress(), Field,
                                       FieldName, FieldIndex);
 

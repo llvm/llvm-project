@@ -1531,8 +1531,7 @@ public:
   /// stored in the reference.
   LValue buildLValueForFieldInitialization(LValue Base,
                                            const clang::FieldDecl *Field,
-                                           llvm::StringRef FieldName,
-                                           unsigned FieldIndex);
+                                           llvm::StringRef FieldName);
 
   void buildInitializerForField(clang::FieldDecl *Field, LValue LHS,
                                 clang::Expr *Init);

@@ -207,8 +207,7 @@ static void buildLValueForAnyFieldInitialization(CIRGenFunction &CGF,
   if (MemberInit->isIndirectMemberInitializer()) {
     llvm_unreachable("NYI");
   } else {
-    LHS = CGF.buildLValueForFieldInitialization(LHS, Field, Field->getName(),
-                                                Field->getFieldIndex());
+    LHS = CGF.buildLValueForFieldInitialization(LHS, Field, Field->getName());
   }
 }
 
