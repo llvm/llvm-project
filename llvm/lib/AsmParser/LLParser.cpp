@@ -3903,7 +3903,8 @@ bool LLParser::parseValID(ValID &ID, PerFunctionState *PFS, Type *ExpectedTy) {
   case lltok::kw_mul:
   case lltok::kw_shl:
   case lltok::kw_lshr:
-  case lltok::kw_ashr: {
+  case lltok::kw_ashr:
+  case lltok::kw_xor: {
     bool NUW = false;
     bool NSW = false;
     bool Exact = false;
@@ -3934,34 +3935,13 @@ bool LLParser::parseValID(ValID &ID, PerFunctionState *PFS, Type *ExpectedTy) {
       return error(ID.Loc, "operands of constexpr must have same type");
     // Check that the type is valid for the operator.
     if (!Val0->getType()->isIntOrIntVectorTy())
-      return error(ID.Loc, "constexpr requires integer operands");
+      return error(ID.Loc,
+                   "constexpr requires integer or integer vector operands");
     unsigned Flags = 0;
     if (NUW)   Flags |= OverflowingBinaryOperator::NoUnsignedWrap;
     if (NSW)   Flags |= OverflowingBinaryOperator::NoSignedWrap;
     if (Exact) Flags |= PossiblyExactOperator::IsExact;
-    Constant *C = ConstantExpr::get(Opc, Val0, Val1, Flags);
-    ID.ConstantVal = C;
-    ID.Kind = ValID::t_Constant;
-    return false;
-  }
-
-  // Logical Operations
-  case lltok::kw_xor: {
-    unsigned Opc = Lex.getUIntVal();
-    Constant *Val0, *Val1;
-    Lex.Lex();
-    if (parseToken(lltok::lparen, "expected '(' in logical constantexpr") ||
-        parseGlobalTypeAndValue(Val0) ||
-        parseToken(lltok::comma, "expected comma in logical constantexpr") ||
-        parseGlobalTypeAndValue(Val1) ||
-        parseToken(lltok::rparen, "expected ')' in logical constantexpr"))
-      return true;
-    if (Val0->getType() != Val1->getType())
-      return error(ID.Loc, "operands of constexpr must have same type");
-    if (!Val0->getType()->isIntOrIntVectorTy())
-      return error(ID.Loc,
-                   "constexpr requires integer or integer vector operands");
-    ID.ConstantVal = ConstantExpr::get(Opc, Val0, Val1);
+    ID.ConstantVal = ConstantExpr::get(Opc, Val0, Val1, Flags);
     ID.Kind = ValID::t_Constant;
     return false;
   }
