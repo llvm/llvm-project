@@ -1289,27 +1289,36 @@ Operation *transform::TrackingListener::getCommonDefiningOp(ValueRange values) {
   return defOp;
 }
 
-FailureOr<Operation *>
-transform::TrackingListener::findReplacementOp(Operation *op,
-                                               ValueRange newValues) const {
+DiagnosedSilenceableFailure transform::TrackingListener::findReplacementOp(
+    Operation *&result, Operation *op, ValueRange newValues) const {
   assert(op->getNumResults() == newValues.size() &&
          "invalid number of replacement values");
   SmallVector<Value> values(newValues.begin(), newValues.end());
 
+  DiagnosedSilenceableFailure diag = emitSilenceableFailure(
+      getTransformOp(), "tracking listener failed to find replacement op "
+                        "during application of this transform op");
+
   do {
     // If the replacement values belong to different ops, drop the mapping.
     Operation *defOp = getCommonDefiningOp(values);
-    if (!defOp)
-      return failure();
+    if (!defOp) {
+      diag.attachNote() << "replacement values belong to different ops";
+      return diag;
+    }
 
     // If the defining op has the same type, we take it as a replacement.
-    if (op->getName() == defOp->getName())
-      return defOp;
+    if (op->getName() == defOp->getName()) {
+      result = defOp;
+      return DiagnosedSilenceableFailure::success();
+    }
 
     // Replacing an op with a constant-like equivalent is a common
     // canonicalization.
-    if (defOp->hasTrait<OpTrait::ConstantLike>())
-      return defOp;
+    if (defOp->hasTrait<OpTrait::ConstantLike>()) {
+      result = defOp;
+      return DiagnosedSilenceableFailure::success();
+    }
 
     values.clear();
 
@@ -1317,17 +1326,22 @@ transform::TrackingListener::findReplacementOp(Operation *op,
     if (auto findReplacementOpInterface =
             dyn_cast<FindPayloadReplacementOpInterface>(defOp)) {
       values.assign(findReplacementOpInterface.getNextOperands());
+      diag.attachNote(defOp->getLoc()) << "using operands provided by "
+                                          "'FindPayloadReplacementOpInterface'";
       continue;
     }
 
     // Skip through ops that implement CastOpInterface.
     if (isa<CastOpInterface>(defOp)) {
       values.assign(defOp->getOperands().begin(), defOp->getOperands().end());
+      diag.attachNote(defOp->getLoc())
+          << "using output of 'CastOpInterface' op";
       continue;
     }
   } while (!values.empty());
 
-  return failure();
+  diag.attachNote() << "ran out of suitable replacement values";
+  return diag;
 }
 
 LogicalResult transform::TrackingListener::notifyMatchFailure(
@@ -1396,32 +1410,39 @@ void transform::TrackingListener::notifyOperationReplaced(
   };
 
   // Helper function to check if the handle is alive.
-  auto hasAliveUser = [&]() {
+  auto firstAliveUser = [&]() -> std::optional<OpOperand *> {
     for (Value v : opHandles) {
-      for (Operation *user : v.getUsers())
-        if (user != transformOp && !happensBefore(user, transformOp))
-          return true;
+      for (OpOperand &use : v.getUses())
+        if (use.getOwner() != transformOp &&
+            !happensBefore(use.getOwner(), transformOp))
+          return &use;
     }
-    return false;
-  };
+    return std::nullopt;
+  }();
 
-  if (!hasAliveUser() || handleWasConsumed()) {
+  if (!firstAliveUser.has_value() || handleWasConsumed()) {
     // The op is tracked but the corresponding handles are dead or were
     // consumed. Drop the op form the mapping.
     (void)replacePayloadOp(op, nullptr);
     return;
   }
 
-  FailureOr<Operation *> replacement = findReplacementOp(op, newValues);
+  Operation *replacement;
+  DiagnosedSilenceableFailure diag =
+      findReplacementOp(replacement, op, newValues);
   // If the op is tracked but no replacement op was found, send a
   // notification.
-  if (failed(replacement)) {
-    notifyPayloadReplacementNotFound(op, newValues);
+  if (!diag.succeeded()) {
+    diag.attachNote((*firstAliveUser)->getOwner()->getLoc())
+        << "replacement is required because alive handle(s) exist "
+        << "(first use in this op as operand number "
+        << (*firstAliveUser)->getOperandNumber() << ")";
+    notifyPayloadReplacementNotFound(op, newValues, std::move(diag));
     (void)replacePayloadOp(op, nullptr);
     return;
   }
 
-  (void)replacePayloadOp(op, *replacement);
+  (void)replacePayloadOp(op, replacement);
 }
 
 transform::ErrorCheckingTrackingListener::~ErrorCheckingTrackingListener() {
@@ -1444,17 +1465,20 @@ bool transform::ErrorCheckingTrackingListener::failed() const {
 }
 
 void transform::ErrorCheckingTrackingListener::notifyPayloadReplacementNotFound(
-    Operation *op, ValueRange values) {
-  if (status.succeeded()) {
-    status = emitSilenceableFailure(
-        getTransformOp(), "tracking listener failed to find replacement op");
-  }
+    Operation *op, ValueRange values, DiagnosedSilenceableFailure &&diag) {
 
+  // Merge potentially existing diags and store the result in the listener.
+  SmallVector<Diagnostic> diags;
+  diag.takeDiagnostics(diags);
+  if (!status.succeeded())
+    status.takeDiagnostics(diags);
+  status = DiagnosedSilenceableFailure::silenceableFailure(std::move(diags));
+
+  // Report more details.
   status.attachNote(op->getLoc()) << "[" << errorCounter << "] replaced op";
   for (auto &&[index, value] : llvm::enumerate(values))
     status.attachNote(value.getLoc())
         << "[" << errorCounter << "] replacement value " << index;
-
   ++errorCounter;
 }
 
