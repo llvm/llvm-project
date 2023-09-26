@@ -383,6 +383,8 @@ function(create_object_library fq_target_name)
 
   if(fq_deps_list)
     add_dependencies(${fq_target_name} ${fq_deps_list})
+    # Add deps as link libraries to inherit interface compile and link options.
+    target_link_libraries(${fq_target_name} PUBLIC ${fq_deps_list})
   endif()
 
   if(NOT ADD_OBJECT_CXX_STANDARD)
