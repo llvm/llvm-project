@@ -376,8 +376,8 @@ extern "C" MLIR_CUDA_WRAPPERS_EXPORT void *mgpuTensorMapEncodeTiledMemref(
   CUtensorMap tensorMap;
 
   auto *globalAddress = descriptor->data;
-  uint32_t boxDim[5] = {0}, elementStrides[5] = {0};
-  uint64_t globalDim[5] = {0}, globalStrides[5] = {0};
+  uint32_t boxDim[5] = {1, 1, 1, 1, 1}, elementStrides[5] = {1, 1, 1, 1, 1};
+  uint64_t globalDim[5] = {1, 1, 1, 1, 1}, globalStrides[5] = {0};
   uint32_t tensorRank32 = uint32_t(tensorRank);
 
   static const int elementSizeInBytes[] = {1, 2, 4, 4, 8, 8, 2,
