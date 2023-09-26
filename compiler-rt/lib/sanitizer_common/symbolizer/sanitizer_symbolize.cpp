@@ -77,9 +77,9 @@ bool __sanitizer_symbolize_code(const char *ModuleName, uint64_t ModuleOffset,
       auto ResOrErr = getDefaultSymbolizer()->symbolizeInlinedCode(
           ModuleName,
           {ModuleOffset, llvm::object::SectionedAddress::UndefSection});
-      Printer->print(Request, ResOrErr.get());
       if (!ResOrErr)
         return false;
+      Printer->print(Request, ResOrErr.get());
     } else {
       auto ResOrErr = getDefaultSymbolizer()->symbolizeCode(
           ModuleName,
