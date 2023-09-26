@@ -827,4 +827,40 @@ func.func @sub_() {
     omp.terminator
   }
   return
-} 
+}
+
+// -----
+
+// CHECK-LABEL:  llvm.func @flush_standalone_
+// CHECK-SAME:   %[[ARG_A:.*]]: !llvm.ptr<i32> {fir.bindc_name = "a"}, %[[ARG_B:.*]]: !llvm.ptr<i32> {fir.bindc_name = "b"}, %[[ARG_C:.*]]: !llvm.ptr<i32> {fir.bindc_name = "c"})
+  func.func @flush_standalone_(%arg0: !fir.ref<i32> {fir.bindc_name = "a"}, %arg1: !fir.ref<i32> {fir.bindc_name = "b"}, %arg2: !fir.ref<i32> {fir.bindc_name = "c"}) {
+// CHECK:   omp.flush(%[[ARG_A]], %[[ARG_B]], %[[ARG_C]] : !llvm.ptr<i32>, !llvm.ptr<i32>, !llvm.ptr<i32>)
+    omp.flush(%arg0, %arg1, %arg2 : !fir.ref<i32>, !fir.ref<i32>, !fir.ref<i32>)
+// CHECK:   omp.flush
+    omp.flush
+    return
+  }
+
+// CHECK-LABEL:  llvm.func @flush_parallel_
+// CHECK-SAME:   %[[ARG_A:.*]]: !llvm.ptr<i32> {fir.bindc_name = "a"}, %[[ARG_B:.*]]: !llvm.ptr<i32> {fir.bindc_name = "b"}, %[[ARG_C:.*]]: !llvm.ptr<i32> {fir.bindc_name = "c"})
+  func.func @flush_parallel_(%arg0: !fir.ref<i32> {fir.bindc_name = "a"}, %arg1: !fir.ref<i32> {fir.bindc_name = "b"}, %arg2: !fir.ref<i32> {fir.bindc_name = "c"}) {
+// CHECK:    omp.parallel   {
+    omp.parallel   {
+// CHECK:      omp.flush(%[[ARG_A]], %[[ARG_B]], %[[ARG_C]] : !llvm.ptr<i32>, !llvm.ptr<i32>, !llvm.ptr<i32>)
+      omp.flush(%arg0, %arg1, %arg2 : !fir.ref<i32>, !fir.ref<i32>, !fir.ref<i32>)
+// CHECK:      omp.flush
+      omp.flush
+// CHECK:      %[[A_VAL:.*]] = llvm.load %[[ARG_A]] : !llvm.ptr<i32>
+      %0 = fir.load %arg0 : !fir.ref<i32>
+// CHECK:      %[[B_VAL:.*]] = llvm.load %[[ARG_B]] : !llvm.ptr<i32>
+      %1 = fir.load %arg1 : !fir.ref<i32>
+// CHECK:      %[[C_VAL:.*]] = llvm.add %[[A_VAL]], %[[B_VAL]]  : i32
+      %2 = arith.addi %0, %1 : i32
+// CHECK:      llvm.store %[[C_VAL]], %[[ARG_C]] : !llvm.ptr<i32>
+      fir.store %2 to %arg2 : !fir.ref<i32>
+// CHECK:      omp.terminator
+      omp.terminator
+// CHECK:    }
+    }
+    return
+  }
