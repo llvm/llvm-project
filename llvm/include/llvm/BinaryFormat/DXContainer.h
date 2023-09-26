@@ -460,7 +460,8 @@ struct ProgramSignatureHeader {
 struct ProgramSignatureElement {
   uint32_t Stream;     // Stream index (parameters must appear in non-decreasing
                        // stream order)
-  uint32_t NameOffset; // Offset to LPCSTR from start of ProgramSignatureHeader.
+  uint32_t NameOffset; // Offset from the start of the ProgramSignatureHeader to
+                       // the start of the null terminated string for the name.
   uint32_t Index;      // Semantic Index
   D3DSystemValue SystemValue; // Semantic type. Similar to PSV::SemanticKind.
   SigComponentType CompType;  // Type of bits.
@@ -490,7 +491,6 @@ struct ProgramSignatureElement {
   }
 };
 
-// Easy to get this wrong. Earlier assertions can help determine
 static_assert(sizeof(ProgramSignatureElement) == 32,
               "ProgramSignatureElement is misaligned");
 

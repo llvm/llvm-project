@@ -247,13 +247,13 @@ void DXContainerWriter::writeParts(raw_ostream &OS) {
     case dxbc::PartType::ISG1:
     case dxbc::PartType::OSG1:
     case dxbc::PartType::PSG1: {
-      if (!P.Signature.has_value())
-        continue;
       mcdxbc::Signature Sig;
-      for (const auto &Param : P.Signature->Parameters) {
-        Sig.addParam(Param.Stream, Param.Name, Param.Index, Param.SystemValue,
-                     Param.CompType, Param.Register, Param.Mask,
-                     Param.ExclusiveMask, Param.MinPrecision);
+      if (P.Signature.has_value()) {
+        for (const auto &Param : P.Signature->Parameters) {
+          Sig.addParam(Param.Stream, Param.Name, Param.Index, Param.SystemValue,
+                       Param.CompType, Param.Register, Param.Mask,
+                       Param.ExclusiveMask, Param.MinPrecision);
+        }
       }
       Sig.write(OS);
       break;

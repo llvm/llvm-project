@@ -235,6 +235,7 @@ public:
 
 class Signature {
   ViewArray<dxbc::ProgramSignatureElement> Parameters;
+  uint32_t StringTableOffset;
   StringRef StringTable;
 
 public:
@@ -246,15 +247,11 @@ public:
     return Parameters.end();
   }
 
-  StringRef getName(uint32_t Idx) const {
-    if (Idx == 0)
-      return "";
-
-    // Name offests are from the start of the signature data, not from the start
-    // of the string table.
-    uint32_t TableOffset =
-        Idx - sizeof(dxbc::ProgramSignatureHeader) -
-        (sizeof(dxbc::ProgramSignatureElement) * Parameters.size());
+  StringRef getName(uint32_t Offset) const {
+    // Name offsets are from the start of the signature data, not from the start
+    // of the string table. The header encodes the start offset of the sting
+    // table, so we convert the offset here.
+    uint32_t TableOffset = Offset - StringTableOffset;
     return StringTable.slice(TableOffset, StringTable.find('\0', TableOffset));
   }
 
