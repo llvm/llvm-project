@@ -1197,6 +1197,60 @@ bool PPCMIPeephole::simplifyCode() {
                       combineSEXTAndSHL(MI, ToErase);
         break;
       }
+      case PPC::ANDI_rec:
+      case PPC::ANDI8_rec:
+      case PPC::ANDIS_rec:
+      case PPC::ANDIS8_rec: {
+        Register TrueReg =
+            TRI->lookThruCopyLike(MI.getOperand(1).getReg(), MRI);
+        if (!TrueReg.isVirtual() || !MRI->hasOneNonDBGUse(TrueReg))
+          break;
+
+        MachineInstr *SrcMI = MRI->getVRegDef(TrueReg);
+        if (!SrcMI)
+          break;
+
+        unsigned SrcOpCode = SrcMI->getOpcode();
+        if (SrcOpCode != PPC::RLDICL && SrcOpCode != PPC::RLDICR)
+          break;
+
+        uint64_t AndImm = MI.getOperand(2).getImm();
+        if (MI.getOpcode() == PPC::ANDIS_rec ||
+            MI.getOpcode() == PPC::ANDIS8_rec)
+          AndImm <<= 16;
+        uint64_t LZeroAndImm = llvm::countl_zero<uint64_t>(AndImm);
+        uint64_t RZeroAndImm = llvm::countr_zero<uint64_t>(AndImm);
+        uint64_t ImmSrc = SrcMI->getOperand(3).getImm();
+
+        // We can transfer `RLDICL/RLDICR + ANDI_rec/ANDIS_rec` to `ANDI_rec 0`
+        // if all bits to AND are already zero in the input.
+        bool PatternResultZero =
+            (SrcOpCode == PPC::RLDICL && (RZeroAndImm + ImmSrc > 63)) ||
+            (SrcOpCode == PPC::RLDICR && LZeroAndImm > ImmSrc);
+
+        // We can eliminate RLDICL/RLDICR if it's used to clear bits and all
+        // bits cleared will be ANDed with 0 by ANDI_rec/ANDIS_rec.
+        bool PatternRemoveRotate =
+            SrcMI->getOperand(2).getImm() == 0 &&
+            ((SrcOpCode == PPC::RLDICL && LZeroAndImm >= ImmSrc) ||
+             (SrcOpCode == PPC::RLDICR && (RZeroAndImm + ImmSrc > 63)));
+
+        if (!PatternResultZero && !PatternRemoveRotate)
+          break;
+
+        LLVM_DEBUG(dbgs() << "Combining pair: ");
+        LLVM_DEBUG(SrcMI->dump());
+        LLVM_DEBUG(MI.dump());
+        if (PatternResultZero)
+          MI.getOperand(2).setImm(0);
+        MI.getOperand(1).setReg(SrcMI->getOperand(1).getReg());
+        addRegToUpdate(MI.getOperand(1).getReg());
+        LLVM_DEBUG(dbgs() << "To: ");
+        LLVM_DEBUG(MI.dump());
+        Simplified = true;
+        SrcMI->eraseFromParent();
+        break;
+      }
       case PPC::RLWINM:
       case PPC::RLWINM_rec:
       case PPC::RLWINM8:
