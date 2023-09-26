@@ -1552,7 +1552,7 @@ ParseResult InvokeOp::parse(OpAsmParser &parser, OperationState &result) {
 
   // Parse the trailing type list and resolve the function operands.
   if (parseCallTypeAndResolveOperands(parser, result, isDirect, operands,
-                                      /*isVarArg*/ false))
+                                      isVarArg))
     return failure();
 
   result.addSuccessors({normalDest, unwindDest});
