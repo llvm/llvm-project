@@ -190,10 +190,8 @@ static bool vectorPseudoHasAllNBitUsers(const MachineOperand &UserOp,
   case RISCV::VWMACCUS_VX:
   // 11.15. Vector Integer Merge Instructions
   case RISCV::VMERGE_VXM:
-  case RISCV::VMERGE_VIM:
   // 11.16. Vector Integer Move Instructions
   case RISCV::VMV_V_X:
-  case RISCV::VMV_V_I:
   // 12.1. Vector Single-Width Saturating Add and Subtract
   case RISCV::VSADDU_VX:
   case RISCV::VSADD_VX:
