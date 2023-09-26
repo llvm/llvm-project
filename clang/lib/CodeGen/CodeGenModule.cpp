@@ -1153,6 +1153,12 @@ void CodeGenModule::Release() {
     if (CM != ~0u) {
       llvm::CodeModel::Model codeModel = static_cast<llvm::CodeModel::Model>(CM);
       getModule().setCodeModel(codeModel);
+
+      if (CM == llvm::CodeModel::Medium &&
+          Context.getTargetInfo().getTriple().getArch() ==
+              llvm::Triple::x86_64) {
+        getModule().setLargeDataThreshold(getCodeGenOpts().LargeDataThreshold);
+      }
     }
   }
 
