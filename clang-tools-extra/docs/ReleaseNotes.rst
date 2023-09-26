@@ -167,7 +167,7 @@ New checks
 
   Detects calls to move the contents out of a ``std::shared_ptr`` rather than
   moving the pointer itself.
-
+  
 - New :doc:`bugprone-multi-level-implicit-pointer-conversion
   <clang-tidy/checks/bugprone/multi-level-implicit-pointer-conversion>` check.
 
