@@ -13,7 +13,7 @@
 
 llvm.func @printCString(!llvm.ptr<i8>)
 
-func.func @printTileBegin() {
+func.func @printTileBegin() attributes { enable_arm_streaming_ignore } {
   %0 = llvm.mlir.addressof @str_tile_begin : !llvm.ptr<array<11 x i8>>
   %1 = llvm.mlir.constant(0 : index) : i64
   %2 = llvm.getelementptr %0[%1, %1]
@@ -22,7 +22,7 @@ func.func @printTileBegin() {
   return
 }
 
-func.func @printTileEnd() {
+func.func @printTileEnd() attributes { enable_arm_streaming_ignore } {
   %0 = llvm.mlir.addressof @str_tile_end : !llvm.ptr<array<9 x i8>>
   %1 = llvm.mlir.constant(0 : index) : i64
   %2 = llvm.getelementptr %0[%1, %1]
@@ -32,29 +32,12 @@ func.func @printTileEnd() {
 }
 
 func.func @entry() -> i32 {
-  %c0 = arith.constant 0 : index
-  %c1_index = arith.constant 1 : index
-
-  %min_elts_s = arith.constant 4 : index
-  %vscale = vector.vscale
-
-  // "svl" refers to the Streaming Vector Length and "svl_s" the number of
-  // 32-bit elements in a vector of SVL bits.
-  %svl_s = arith.muli %min_elts_s, %vscale : index
-
-  // Allocate memory.
-  %tilesize = arith.muli %svl_s, %svl_s : index
-  %mem = memref.alloca(%tilesize) : memref<?xi32>
-
   // Fill a tile with '123'. This will get lowered to a 1-d vector splat of
   // '123' and a loop that writes this vector to each tile slice in the ZA
   // tile.
   %tile = arith.constant dense<123> : vector<[4]x[4]xi32>
 
-  // Store tile to memory so it can be dumped.
-  vector.store %tile, %mem[%c0] : memref<?xi32>, vector<[4]x[4]xi32>
-
-  // Dump "mem". The smallest SVL is 128-bits so the tile will be at least
+  // Print the tile. The smallest SVL is 128-bits so the tile will be at least
   // 4x4xi32.
   //
   // CHECK:      TILE BEGIN
@@ -64,10 +47,7 @@ func.func @entry() -> i32 {
   // CHECK-NEXT: ( 123, 123, 123, 123
   // CHECK:      TILE END
   func.call @printTileBegin() : () -> ()
-  scf.for %i = %c0 to %tilesize step %svl_s {
-    %tileslice = vector.load %mem[%i] : memref<?xi32>, vector<[4]xi32>
-    vector.print %tileslice : vector<[4]xi32>
-  }
+  vector.print %tile : vector<[4]x[4]xi32>
   func.call @printTileEnd() : () -> ()
 
   %c0_i32 = arith.constant 0 : i32

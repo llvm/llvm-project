@@ -13,7 +13,7 @@
 
 llvm.func @printCString(!llvm.ptr<i8>)
 
-func.func @printTileBegin() {
+func.func @printTileBegin() attributes { enable_arm_streaming_ignore } {
   %0 = llvm.mlir.addressof @str_tile_begin : !llvm.ptr<array<11 x i8>>
   %1 = llvm.mlir.constant(0 : index) : i64
   %2 = llvm.getelementptr %0[%1, %1]
@@ -22,7 +22,7 @@ func.func @printTileBegin() {
   return
 }
 
-func.func @printTileEnd() {
+func.func @printTileEnd() attributes { enable_arm_streaming_ignore } {
   %0 = llvm.mlir.addressof @str_tile_end : !llvm.ptr<array<9 x i8>>
   %1 = llvm.mlir.constant(0 : index) : i64
   %2 = llvm.getelementptr %0[%1, %1]
@@ -32,7 +32,6 @@ func.func @printTileEnd() {
 }
 
 func.func @test_outerproduct_with_accumulator_2x2xf64() {
-  %c0 = arith.constant 0 : index
   %f1 = arith.constant 1.0 : f64
   %f2 = arith.constant 2.0 : f64
   %f10 = arith.constant 10.0 : f64
@@ -44,30 +43,15 @@ func.func @test_outerproduct_with_accumulator_2x2xf64() {
 
   %tile = vector.outerproduct %a, %b, %c : vector<[2]xf64>, vector<[2]xf64>
 
-  // Calculate the size of a 64-bit tile, e.g. ZA{n}.d.
-  %vscale = vector.vscale
-  %min_elts_d = arith.constant 2 : index
-  %svl_d = arith.muli %min_elts_d, %vscale : index
-  %za_d_size = arith.muli %svl_d, %svl_d : index
-
-  // Allocate memory.
-  %mem = memref.alloca(%za_d_size) : memref<?xf64>
-
-  // Store the tile to memory.
-  vector.store %tile, %mem[%c0] : memref<?xf64>, vector<[2]x[2]xf64>
-
-  // Reload and print. The smallest SVL is 128-bits so the tile will be at
-  // least 2x2xf64.
+  // Print the tile. The smallest SVL is 128-bits so the tile will be at least
+  // 2x2xf64.
   //
   // CHECK:      TILE BEGIN
   // CHECK-NEXT: ( 12, 12
   // CHECK-NEXT: ( 12, 12
   // CHECK:      TILE END
   func.call @printTileBegin() : () -> ()
-  scf.for %i = %c0 to %za_d_size step %svl_d {
-    %tileslice = vector.load %mem[%i] : memref<?xf64>, vector<[2]xf64>
-    vector.print %tileslice : vector<[2]xf64>
-  }
+  vector.print %tile : vector<[2]x[2]xf64>
   func.call @printTileEnd() : () -> ()
 
   return
