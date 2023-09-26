@@ -101,7 +101,7 @@ add_entrypoint_object(
   SRCS
     ftell.cpp
   HDRS
-    ftell.h
+    ../ftell.h
   DEPENDS
     libc.src.errno.errno
     libc.include.stdio
