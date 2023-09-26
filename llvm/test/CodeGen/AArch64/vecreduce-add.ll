@@ -2,6 +2,28 @@
 ; RUN: llc -mtriple=aarch64-none-linux-gnu %s -o - | FileCheck %s --check-prefixes=CHECK,CHECK-BASE
 ; RUN: llc -mtriple=aarch64-none-linux-gnu -mattr=+dotprod %s -o - | FileCheck %s --check-prefixes=CHECK,CHECK-DOT
 
+define i32 @addv_v2i32(<2 x i32> %a) {
+; CHECK-LABEL: addv_v2i32:
+; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    addp v0.2s, v0.2s, v0.2s
+; CHECK-NEXT:    fmov w0, s0
+; CHECK-NEXT:    ret
+entry:
+  %arg1 = call i32 @llvm.vector.reduce.add.v2i32(<2 x i32> %a)
+  ret i32 %arg1
+}
+
+define i16 @addv_v4i16(<4 x i16> %a) {
+; CHECK-LABEL: addv_v4i16:
+; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    addv h0, v0.4h
+; CHECK-NEXT:    fmov w0, s0
+; CHECK-NEXT:    ret
+entry:
+  %arg1 = call i16 @llvm.vector.reduce.add.v4i16(<4 x i16> %a)
+  ret i16 %arg1
+}
+
 define i32 @add_v4i32_v4i32(<4 x i32> %x) {
 ; CHECK-LABEL: add_v4i32_v4i32:
 ; CHECK:       // %bb.0: // %entry
@@ -11,6 +33,17 @@ define i32 @add_v4i32_v4i32(<4 x i32> %x) {
 entry:
   %z = call i32 @llvm.vector.reduce.add.v4i32(<4 x i32> %x)
   ret i32 %z
+}
+
+define i8 @addv_v8i8(<8 x i8> %a) {
+; CHECK-LABEL: addv_v8i8:
+; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    addv b0, v0.8b
+; CHECK-NEXT:    fmov w0, s0
+; CHECK-NEXT:    ret
+entry:
+  %arg1 = call i8 @llvm.vector.reduce.add.v8i8(<8 x i8> %a)
+  ret i8 %arg1
 }
 
 define i64 @add_v4i32_v4i64_zext(<4 x i32> %x) {
@@ -2261,7 +2294,9 @@ entry:
 declare <8 x i32> @llvm.abs.v8i32(<8 x i32>, i1 immarg) #1
 declare i16 @llvm.vector.reduce.add.v16i16(<16 x i16>)
 declare i16 @llvm.vector.reduce.add.v8i16(<8 x i16>)
+declare i16 @llvm.vector.reduce.add.v4i16(<4 x i16>)
 declare i32 @llvm.vector.reduce.add.v16i32(<16 x i32>)
+declare i32 @llvm.vector.reduce.add.v2i32(<2 x i32>)
 declare i32 @llvm.vector.reduce.add.v4i32(<4 x i32>)
 declare i32 @llvm.vector.reduce.add.v8i32(<8 x i32>)
 declare i64 @llvm.vector.reduce.add.v16i64(<16 x i64>)
@@ -2269,3 +2304,4 @@ declare i64 @llvm.vector.reduce.add.v2i64(<2 x i64>)
 declare i64 @llvm.vector.reduce.add.v4i64(<4 x i64>)
 declare i64 @llvm.vector.reduce.add.v8i64(<8 x i64>)
 declare i8 @llvm.vector.reduce.add.v16i8(<16 x i8>)
+declare i8 @llvm.vector.reduce.add.v8i8(<8 x i8>)
