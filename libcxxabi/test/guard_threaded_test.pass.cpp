@@ -42,8 +42,6 @@ constexpr int ConcurrentRunsPerTest = 8;
 constexpr int TestSamples = 10;
 #endif
 
-
-
 void BusyWait() {
   std::this_thread::yield();
 }
