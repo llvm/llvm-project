@@ -27,7 +27,7 @@
 #define LOAD_FP(reg, val) LOAD_IMPL(fld, reg, val)
 #endif
 
-namespace __llvm_libc {
+namespace LIBC_NAMESPACE {
 
 LLVM_LIBC_FUNCTION(void, longjmp, (__jmp_buf * buf, int val)) {
   LOAD(ra, buf->__pc);
@@ -66,4 +66,4 @@ LLVM_LIBC_FUNCTION(void, longjmp, (__jmp_buf * buf, int val)) {
   LIBC_INLINE_ASM("add a0, %0, zero\n\t" : : "r"(val) :);
 }
 
-} // namespace __llvm_libc
+} // namespace LIBC_NAMESPACE
