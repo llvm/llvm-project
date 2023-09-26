@@ -172,8 +172,8 @@ define i1 @eq_const_mask_not_same(i8 %x, i8 %y) {
 define i1 @eq_const_mask_wrong_opcode(i8 %x, i8 %y) {
 ; CHECK-LABEL: @eq_const_mask_wrong_opcode(
 ; CHECK-NEXT:    [[B0:%.*]] = or i8 [[X:%.*]], 5
-; CHECK-NEXT:    [[B1:%.*]] = xor i8 [[Y:%.*]], 5
-; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i8 [[B0]], [[B1]]
+; CHECK-NEXT:    [[TMP1:%.*]] = xor i8 [[B0]], [[Y:%.*]]
+; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i8 [[TMP1]], 5
 ; CHECK-NEXT:    ret i1 [[CMP]]
 ;
   %b0 = or i8 %x, 5
