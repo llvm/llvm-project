@@ -2866,14 +2866,43 @@ bool AArch64InstrInfo::canFoldIntoAddrMode(const MachineInstr &MemI,
   }
 
   // Handle memory instructions with a [Reg, #Imm] addressing mode.
-  auto canFoldAddSubImmIntoAddrMode = [&](int64_t Offset) -> bool {
-    Offset += MemI.getOperand(2).getImm() * OffsetScale;
-    if (!isLegalAddressingMode(NumBytes, Offset, /* Scale */ 0))
+
+  // Check we are not breaking a potential conversion to an LDP.
+  auto validateOffsetForLDP = [](unsigned NumBytes, int64_t OldOffset,
+                                 int64_t NewOffset) -> bool {
+    int64_t MinOffset, MaxOffset;
+    switch (NumBytes) {
+    default:
+      return true;
+    case 4:
+      MinOffset = -256;
+      MaxOffset = 252;
+      break;
+    case 8:
+      MinOffset = -512;
+      MaxOffset = 504;
+      break;
+    case 16:
+      MinOffset = -1024;
+      MaxOffset = 1008;
+      break;
+    }
+    return OldOffset < MinOffset || OldOffset > MaxOffset ||
+           (NewOffset >= MinOffset && NewOffset <= MaxOffset);
+  };
+  auto canFoldAddSubImmIntoAddrMode = [&](int64_t Disp) -> bool {
+    int64_t OldOffset = MemI.getOperand(2).getImm() * OffsetScale;
+    int64_t NewOffset = OldOffset + Disp;
+    if (!isLegalAddressingMode(NumBytes, NewOffset, /* Scale */ 0))
+      return false;
+    // If the old offset would fit into an LDP, but the new offset wouldn't,
+    // bail out.
+    if (!validateOffsetForLDP(NumBytes, OldOffset, NewOffset))
       return false;
     AM.BaseReg = AddrI.getOperand(1).getReg();
     AM.ScaledReg = 0;
     AM.Scale = 0;
-    AM.Displacement = Offset;
+    AM.Displacement = NewOffset;
     AM.Form = ExtAddrMode::Formula::Basic;
     return true;
   };
@@ -2899,7 +2928,7 @@ bool AArch64InstrInfo::canFoldIntoAddrMode(const MachineInstr &MemI,
            Subtarget.isSTRQroSlow();
   };
 
-  int64_t Offset = 0;
+  int64_t Disp = 0;
   const bool OptSize = MemI.getMF()->getFunction().hasOptSize();
   switch (AddrI.getOpcode()) {
   default:
@@ -2910,16 +2939,16 @@ bool AArch64InstrInfo::canFoldIntoAddrMode(const MachineInstr &MemI,
     // ldr Xd, [Xa, #M]
     // ->
     // ldr Xd, [Xn, #N'+M]
-    Offset = AddrI.getOperand(2).getImm() << AddrI.getOperand(3).getImm();
-    return canFoldAddSubImmIntoAddrMode(Offset);
+    Disp = AddrI.getOperand(2).getImm() << AddrI.getOperand(3).getImm();
+    return canFoldAddSubImmIntoAddrMode(Disp);
 
   case AArch64::SUBXri:
     // sub Xa, Xn, #N
     // ldr Xd, [Xa, #M]
     // ->
     // ldr Xd, [Xn, #N'+M]
-    Offset = AddrI.getOperand(2).getImm() << AddrI.getOperand(3).getImm();
-    return canFoldAddSubImmIntoAddrMode(-Offset);
+    Disp = AddrI.getOperand(2).getImm() << AddrI.getOperand(3).getImm();
+    return canFoldAddSubImmIntoAddrMode(-Disp);
 
   case AArch64::ADDXrs: {
     // add Xa, Xn, Xm, lsl #N

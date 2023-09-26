@@ -9,10 +9,10 @@
 #ifndef LLVM_LIBC_SRC_MATH_EXPF_H
 #define LLVM_LIBC_SRC_MATH_EXPF_H
 
-namespace __llvm_libc {
+namespace LIBC_NAMESPACE {
 
 float expf(float x);
 
-} // namespace __llvm_libc
+} // namespace LIBC_NAMESPACE
 
 #endif // LLVM_LIBC_SRC_MATH_EXPF_H

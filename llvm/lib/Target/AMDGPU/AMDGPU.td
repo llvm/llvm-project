@@ -281,6 +281,12 @@ def FeatureMADIntraFwdBug : SubtargetFeature<"mad-intra-fwd-bug",
   "MAD_U64/I64 intra instruction forwarding bug"
 >;
 
+def FeatureMSAALoadDstSelBug : SubtargetFeature<"msaa-load-dst-sel-bug",
+  "HasMSAALoadDstSelBug",
+  "true",
+  "MSAA loads not honoring dst_sel bug"
+>;
+
 class SubtargetFeatureLDSBankCount <int Value> : SubtargetFeature <
   "ldsbankcount"#Value,
   "LDSBankCount",
@@ -1355,7 +1361,8 @@ def FeatureISAVersion11_Common : FeatureSet<
 
 def FeatureISAVersion11_0_Common : FeatureSet<
   !listconcat(FeatureISAVersion11_Common.Features,
-    [FeatureVALUTransUseHazard])>;
+    [FeatureMSAALoadDstSelBug,
+     FeatureVALUTransUseHazard])>;
 
 def FeatureISAVersion11_0_0 : FeatureSet<
   !listconcat(FeatureISAVersion11_0_Common.Features,

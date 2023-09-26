@@ -11,10 +11,10 @@
 
 #include <stdio.h>
 
-namespace __llvm_libc {
+namespace LIBC_NAMESPACE {
 
 LLVM_LIBC_FUNCTION(int, ungetc, (int c, ::FILE *stream)) {
-  return reinterpret_cast<__llvm_libc::File *>(stream)->ungetc(c);
+  return reinterpret_cast<LIBC_NAMESPACE::File *>(stream)->ungetc(c);
 }
 
-} // namespace __llvm_libc
+} // namespace LIBC_NAMESPACE
