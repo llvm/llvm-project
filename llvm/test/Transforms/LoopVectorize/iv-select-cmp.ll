@@ -452,6 +452,28 @@ exit:                                             ; preds = %for.body
   ret i64 %cond
 }
 
+define i64 @not_vectorized_select_decreasing_induction_icmp_iv_out_of_bound(ptr nocapture readonly %a) {
+; CHECK-LABEL: @not_vectorized_select_decreasing_induction_icmp_iv_out_of_bound
+; CHECK-NOT:   vector.body:
+;
+entry:
+  br label %for.body
+
+for.body:                                         ; preds = %entry, %for.body
+  %iv = phi i64 [ 9223372036854775807, %entry ], [ %dec, %for.body ]
+  %rdx = phi i64 [ 331, %entry ], [ %spec.select, %for.body ]
+  %arrayidx = getelementptr inbounds i64, ptr %a, i64 %iv
+  %0 = load i64, ptr %arrayidx, align 8
+  %cmp1 = icmp sgt i64 %0, 3
+  %spec.select = select i1 %cmp1, i64 %iv, i64 %rdx
+  %dec = add nsw i64 %iv, -1
+  %cmp.not = icmp eq i64 %iv, 0
+  br i1 %cmp.not, label %exit, label %for.body
+
+exit:                                             ; preds = %for.body
+  ret i64 %spec.select
+}
+
 define i64 @not_vectorized_select_icmp_non_const_iv_start_value(ptr nocapture readonly %a, ptr nocapture readonly %b, i64 %ivstart, i64 %rdx.start, i64 %n) {
 ; CHECK-LABEL: define i64 @not_vectorized_select_icmp_non_const_iv_start_value
 ; CHECK-NOT:   vector.body:
