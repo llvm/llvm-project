@@ -66,6 +66,7 @@ void RISCVTargetELFStreamer::emitAttribute(unsigned Attribute, unsigned Value) {
 void RISCVTargetELFStreamer::emitTextAttribute(unsigned Attribute,
                                                StringRef String) {
   getStreamer().setAttributeItem(Attribute, String, /*OverwriteExisting=*/true);
+  getStreamer().changeISAMappingSymbol(Attribute, String);
 }
 
 void RISCVTargetELFStreamer::emitIntTextAttribute(unsigned Attribute,
@@ -147,7 +148,10 @@ void RISCVELFStreamer::emitDataMappingSymbol() {
 void RISCVELFStreamer::emitInstructionsMappingSymbol() {
   if (LastEMS == EMS_Instructions)
     return;
-  emitMappingSymbol("$x");
+  if (LastEMS == EMS_ChangeISA)
+    emitMappingSymbol("$x" + ISAString);
+  else
+    emitMappingSymbol("$x");
   LastEMS = EMS_Instructions;
 }
 
@@ -157,6 +161,16 @@ void RISCVELFStreamer::emitMappingSymbol(StringRef Name) {
   emitLabel(Symbol);
   Symbol->setType(ELF::STT_NOTYPE);
   Symbol->setBinding(ELF::STB_LOCAL);
+}
+
+void RISCVELFStreamer::changeISAMappingSymbol(unsigned Attribute,
+                                              StringRef arch) {
+  if (Attribute != RISCVAttrs::ARCH)
+    return;
+  if (arch != ISAString) {
+    LastEMS = EMS_ChangeISA;
+    ISAString = std::string(arch);
+  }
 }
 
 void RISCVELFStreamer::changeSection(MCSection *Section,

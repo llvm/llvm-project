@@ -20,11 +20,13 @@ class RISCVELFStreamer : public MCELFStreamer {
   void emitInstructionsMappingSymbol();
   void emitMappingSymbol(StringRef Name);
 
-  enum ElfMappingSymbol { EMS_None, EMS_Instructions, EMS_Data };
+  enum ElfMappingSymbol { EMS_None, EMS_ChangeISA, EMS_Instructions,
+    EMS_Data };
 
   int64_t MappingSymbolCounter = 0;
   DenseMap<const MCSection *, ElfMappingSymbol> LastMappingSymbols;
   ElfMappingSymbol LastEMS = EMS_None;
+  std::string ISAString;
 
 public:
   RISCVELFStreamer(MCContext &C, std::unique_ptr<MCAsmBackend> MAB,
@@ -37,6 +39,7 @@ public:
   void emitBytes(StringRef Data) override;
   void emitFill(const MCExpr &NumBytes, uint64_t FillValue, SMLoc Loc) override;
   void emitValueImpl(const MCExpr *Value, unsigned Size, SMLoc Loc) override;
+  void changeISAMappingSymbol(unsigned Attribute, StringRef arch);
 };
 
 namespace llvm {
