@@ -39,6 +39,10 @@ def GIImmPlus1 :
   GICustomOperandRenderer<"renderImmPlus1">,
   GISDNodeXFormEquiv<ImmPlus1>;
 
+def GIAddrRegImm :
+  GIComplexOperandMatcher<s32, "selectAddrRegImm">,
+  GIComplexPatternEquiv<AddrRegImm>;
+
 // FIXME: This is labelled as handling 's32', however the ComplexPattern it
 // refers to handles both i32 and i64 based on the HwMode. Currently this LLT
 // parameter appears to be ignored so this pattern works for both, however we
@@ -132,3 +136,9 @@ def : Pat<(XLenVT (setle (Ty GPR:$rs1), (Ty simm12Minus1Nonzero:$imm))),
 def : Pat<(XLenVT (setle (Ty GPR:$rs1), (Ty GPR:$rs2))),
           (XORI (SLT GPR:$rs2, GPR:$rs1), 1)>;
 }
+
+// Define pattern expansions for load/extload operations on pointers
+def : Pat<(PtrVT (load (AddrRegImm (PtrVT GPR:$rs1), simm12:$imm12))),
+          (LW GPR:$rs1, simm12:$imm12)>, Requires<[IsRV32]>;
+def : Pat<(PtrVT (load (AddrRegImm (PtrVT GPR:$rs1), simm12:$imm12))),
+          (LD GPR:$rs1, simm12:$imm12)>, Requires<[IsRV64]>;

@@ -16,6 +16,7 @@
 #include "RISCVSubtarget.h"
 #include "RISCVTargetMachine.h"
 #include "llvm/CodeGen/GlobalISel/GIMatchTableExecutorImpl.h"
+#include "llvm/CodeGen/GlobalISel/GenericMachineInstrs.h"
 #include "llvm/CodeGen/GlobalISel/InstructionSelector.h"
 #include "llvm/CodeGen/GlobalISel/MachineIRBuilder.h"
 #include "llvm/IR/IntrinsicsRISCV.h"
@@ -54,6 +55,7 @@ private:
                         const MachineRegisterInfo &MRI);
 
   ComplexRendererFns selectShiftMask(MachineOperand &Root) const;
+  ComplexRendererFns selectAddrRegImm(MachineOperand &Root) const;
 
   // Custom renderers for tablegen
   void renderNegImm(MachineInstrBuilder &MIB, const MachineInstr &MI,
@@ -105,6 +107,17 @@ RISCVInstructionSelector::selectShiftMask(MachineOperand &Root) const {
   // TODO: Also check if we are seeing the result of an AND operation which
   // could be bypassed since we only check the lower log2(xlen) bits.
   return {{[=](MachineInstrBuilder &MIB) { MIB.add(Root); }}};
+}
+
+
+InstructionSelector::ComplexRendererFns
+RISCVInstructionSelector::selectAddrRegImm(MachineOperand &Root) const {
+  // TODO: Need to get the immediate from a G_PTR_ADD. Should this be done in
+  // the combiner?
+  return {{
+        [=](MachineInstrBuilder &MIB) { MIB.addReg(Root.getReg()); },
+        [=](MachineInstrBuilder &MIB) { MIB.addImm(0); }
+    }};
 }
 
 // Tablegen doesn't allow us to write SRLIW/SRAIW/SLLIW patterns because the
@@ -256,8 +269,8 @@ void RISCVInstructionSelector::renderNegImm(MachineInstrBuilder &MIB,
 }
 
 void RISCVInstructionSelector::renderImmPlus1(MachineInstrBuilder &MIB,
-                                           const MachineInstr &MI,
-                                           int OpIdx) const {
+                                              const MachineInstr &MI,
+                                              int OpIdx) const {
   assert(MI.getOpcode() == TargetOpcode::G_CONSTANT && OpIdx == -1 &&
          "Expected G_CONSTANT");
   int64_t CstVal = MI.getOperand(1).getCImm()->getSExtValue();
