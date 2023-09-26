@@ -4225,7 +4225,7 @@ static void emitOpList(const std::vector<Record *> &defs, raw_ostream &os) {
 }
 
 static bool emitOpDecls(const RecordKeeper &recordKeeper, raw_ostream &os) {
-  emitSourceFileHeader("Op Declarations", os);
+  emitSourceFileHeader("Op Declarations", os, recordKeeper);
 
   std::vector<Record *> defs = getRequestedOpDefinitions(recordKeeper);
   emitOpClasses(recordKeeper, defs, os, /*emitDecl=*/true);
@@ -4234,7 +4234,7 @@ static bool emitOpDecls(const RecordKeeper &recordKeeper, raw_ostream &os) {
 }
 
 static bool emitOpDefs(const RecordKeeper &recordKeeper, raw_ostream &os) {
-  emitSourceFileHeader("Op Definitions", os);
+  emitSourceFileHeader("Op Definitions", os, recordKeeper);
 
   std::vector<Record *> defs = getRequestedOpDefinitions(recordKeeper);
   emitOpList(defs, os);
