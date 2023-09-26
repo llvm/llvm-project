@@ -12,10 +12,11 @@
 // extended bits aren't consumed or because the input was already sign extended
 // by an earlier instruction.
 //
-// Then it removes the -w suffix from each addiw and slliw instructions
+// Then it removes the -w suffix from addw, slliw and mulw instructions
 // whenever all users are dependent only on the lower word of the result of the
-// instruction. We do this only for addiw, slliw, and mulw because the -w forms
-// are less compressible.
+// instruction. We do this only for addw, slliw, and mulw because the -w forms
+// are less compressible: c.add and c.slli have a larger register encoding than
+// their w counterparts, and there's no compressible version of mulw.
 //
 //===---------------------------------------------------------------------===//
 
