@@ -13,7 +13,7 @@
 
 #include <stdint.h>
 
-namespace __llvm_libc {
+namespace LIBC_NAMESPACE {
 
 // Data structure to capture properties of the linux/ELF TLS image.
 struct TLSImage {
@@ -106,6 +106,6 @@ void init_tls(TLSDescriptor &tls);
 // Cleanup the TLS area as described in |tls_descriptor|.
 void cleanup_tls(uintptr_t tls_addr, uintptr_t tls_size);
 
-} // namespace __llvm_libc
+} // namespace LIBC_NAMESPACE
 
 #endif // LLVM_LIBC_CONFIG_LINUX_APP_H

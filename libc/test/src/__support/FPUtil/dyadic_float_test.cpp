@@ -12,9 +12,9 @@
 #include "test/UnitTest/Test.h"
 #include "utils/MPFRWrapper/MPFRUtils.h"
 
-using Float128 = __llvm_libc::fputil::DyadicFloat<128>;
-using Float192 = __llvm_libc::fputil::DyadicFloat<192>;
-using Float256 = __llvm_libc::fputil::DyadicFloat<256>;
+using Float128 = LIBC_NAMESPACE::fputil::DyadicFloat<128>;
+using Float192 = LIBC_NAMESPACE::fputil::DyadicFloat<192>;
+using Float256 = LIBC_NAMESPACE::fputil::DyadicFloat<256>;
 
 TEST(LlvmLibcDyadicFloatTest, BasicConversions) {
   Float128 x(/*sign*/ false, /*exponent*/ 0,

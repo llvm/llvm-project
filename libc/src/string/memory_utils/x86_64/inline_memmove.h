@@ -16,7 +16,7 @@
 
 #include <stddef.h> // size_t
 
-namespace __llvm_libc {
+namespace LIBC_NAMESPACE {
 
 LIBC_INLINE void inline_memmove_x86(Ptr dst, CPtr src, size_t count) {
 #if defined(__AVX512F__)
@@ -61,6 +61,6 @@ LIBC_INLINE void inline_memmove_x86(Ptr dst, CPtr src, size_t count) {
   }
 }
 
-} // namespace __llvm_libc
+} // namespace LIBC_NAMESPACE
 
 #endif // LLVM_LIBC_SRC_STRING_MEMORY_UTILS_X86_64_INLINE_MEMMOVE_H

@@ -20,7 +20,7 @@
 
 #include <stdint.h>
 
-namespace __llvm_libc {
+namespace LIBC_NAMESPACE {
 namespace fputil {
 
 LIBC_INLINE long double nextafter(long double from, long double to) {
@@ -117,6 +117,6 @@ LIBC_INLINE long double nextafter(long double from, long double to) {
 }
 
 } // namespace fputil
-} // namespace __llvm_libc
+} // namespace LIBC_NAMESPACE
 
 #endif // LLVM_LIBC_SRC___SUPPORT_FPUTIL_X86_64_NEXTAFTERLONGDOUBLE_H

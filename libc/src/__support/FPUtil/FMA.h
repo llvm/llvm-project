@@ -29,7 +29,7 @@
 #include "generic/FMA.h"
 #include "src/__support/CPP/type_traits.h"
 
-namespace __llvm_libc {
+namespace LIBC_NAMESPACE {
 namespace fputil {
 
 template <typename T> LIBC_INLINE T fma(T x, T y, T z) {
@@ -37,7 +37,7 @@ template <typename T> LIBC_INLINE T fma(T x, T y, T z) {
 }
 
 } // namespace fputil
-} // namespace __llvm_libc
+} // namespace LIBC_NAMESPACE
 
 #endif
 
