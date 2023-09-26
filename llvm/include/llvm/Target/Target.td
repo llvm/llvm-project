@@ -58,7 +58,7 @@ class ValueTypeByHwMode<list<HwMode> Ms, list<ValueType> Ts>
   list<ValueType> Objects = Ts;
 }
 
-// A cl;ass that implements a counterpart of PtrValueType, which is
+// A class that implements a counterpart of PtrValueType, which is
 // dependent on a HW mode. This class inherits from PtrValueType itself,
 // which makes it possible to use objects of this class where PtrValueType
 // or ValueType could be used. This is specifically applicable to selection
