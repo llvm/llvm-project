@@ -15,5 +15,8 @@
 # CHECK: {{.*}}.s:[[#@LINE+1]]:11: warning: ignoring non-zero fill value in SHT_NOBITS section '.bss'
 .align 4, 42
 
+# CHECK-NOT: {{.*}}.s:[[#@LINE+1]]:11: warning: ignoring non-zero fill value in SHT_NOBITS section '.bss'
+.align 4, 0
+
 # CHECK: <unknown>:0: error: SHT_NOBITS section '.bss' cannot have non-zero initializers
   .long 1

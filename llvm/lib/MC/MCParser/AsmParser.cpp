@@ -3452,7 +3452,7 @@ bool AsmParser::parseDirectiveAlign(bool IsPow2, unsigned ValueSize) {
     }
   }
 
-  if (HasFillExpr) {
+  if (HasFillExpr && FillExpr != 0) {
     MCSection *Sec = getStreamer().getCurrentSectionOnly();
     if (Sec && Sec->isVirtualSection()) {
       ReturnVal |=
