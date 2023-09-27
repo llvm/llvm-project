@@ -1,5 +1,6 @@
 // RUN: %clang_cc1 -fsanitize=local-bounds -emit-llvm -triple x86_64-apple-darwin10 %s -o - | FileCheck %s
 // RUN: %clang_cc1 -fsanitize=array-bounds -O -fsanitize-trap=array-bounds -emit-llvm -triple x86_64-apple-darwin10 -DNO_DYNAMIC %s -o - | FileCheck %s
+// RUN: %clang_cc1 -fsanitize=array-bounds -fsanitize-trap=array-bounds -O3 -mllvm -ubsan-unique-traps -emit-llvm -triple x86_64-apple-darwin10 %s -o - | FileCheck %s --check-prefixes=NOOPTARRAY
 //
 // REQUIRES: x86-registered-target
 
@@ -65,4 +66,16 @@ int f7(union U *u, int i) {
   // c is treated as a flexible array member.
   // CHECK-NOT: @llvm.ubsantrap
   return u->c[i];
+}
+
+
+char B[10];
+char B2[10];
+// CHECK-LABEL: @f8
+void f8(int i, int k) {
+  // NOOPTARRAY: call void @llvm.ubsantrap(i8 2)
+  B[i] = '\0';
+
+  // NOOPTARRAY: call void @llvm.ubsantrap(i8 4)
+  B2[k] = '\0';
 }
