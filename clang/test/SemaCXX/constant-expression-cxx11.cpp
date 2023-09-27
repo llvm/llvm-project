@@ -1961,7 +1961,7 @@ namespace ConstexprConstructorRecovery {
 
 namespace Lifetime {
   void f() {
-    constexpr int &n = n; // expected-error {{constant expression}} expected-note {{use of reference outside its lifetime}} expected-warning {{not yet bound to a value}}
+    constexpr int &n = n; // expected-error {{constant expression}} expected-note {{use of reference outside its lifetime}}
     constexpr int m = m; // expected-error {{constant expression}} expected-note {{read of object outside its lifetime}}
   }
 

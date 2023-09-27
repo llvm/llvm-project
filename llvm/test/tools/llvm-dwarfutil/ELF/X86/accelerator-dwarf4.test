@@ -11,6 +11,16 @@
 # RUN: llvm-dwarfutil --garbage-collection --build-accelerator=DWARF %t.o %t1
 # RUN: llvm-dwarfdump --verify %t1 | FileCheck %s --check-prefix=VERIFY
 # RUN: llvm-dwarfdump -a %t1 | FileCheck %s
+#
+# RUN: llvm-dwarfutil --linker llvm --no-garbage-collection \
+# RUN:   --build-accelerator=DWARF %t.o %t1
+# RUN: llvm-dwarfdump --verify %t1 | FileCheck %s --check-prefix=VERIFY
+# RUN: llvm-dwarfdump -a %t1 | FileCheck %s
+
+# RUN: llvm-dwarfutil --linker llvm --garbage-collection \
+# RUN:   --build-accelerator=DWARF %t.o %t1
+# RUN: llvm-dwarfdump --verify %t1 | FileCheck %s --check-prefix=VERIFY
+# RUN: llvm-dwarfdump -a %t1 | FileCheck %s
 
 # VERIFY: No errors
 

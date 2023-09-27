@@ -86,14 +86,8 @@ void GPUToSPIRVPass::runOnOperation() {
     SPIRVConversionOptions options;
     options.use64bitIndex = this->use64bitIndex;
     SPIRVTypeConverter typeConverter(targetAttr, options);
-
-    typeConverter.addConversion([useNV = this->useCoopMatrixNV.getValue()](
-                                    gpu::MMAMatrixType type) -> Type {
-      if (useNV)
-        return convertMMAToSPIRVCoopMatrixNVType(type);
-
-      return convertMMAToSPIRVCoopMatrixType(type);
-    });
+    populateMMAToSPIRVCoopMatrixTypeConversion(typeConverter,
+                                               this->useCoopMatrixNV);
 
     RewritePatternSet patterns(context);
     populateGPUToSPIRVPatterns(typeConverter, patterns);

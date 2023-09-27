@@ -134,9 +134,10 @@
 ; CHECK-O-NEXT: Running pass: SimplifyCFGPass
 ; CHECK-O-NEXT: Running pass: ReassociatePass
 ; CHECK-O23SZ-NEXT: Running pass: ConstraintEliminationPass
+; CHECK-O23SZ-NEXT: Running analysis: ScalarEvolutionAnalysis
 ; CHECK-O-NEXT: Running pass: LoopSimplifyPass
 ; CHECK-O-NEXT: Running pass: LCSSAPass
-; CHECK-O-NEXT: Running analysis: ScalarEvolutionAnalysis
+; CHECK-O1-NEXT: Running analysis: ScalarEvolutionAnalysis
 ; CHECK-O-NEXT: Running analysis: InnerAnalysisManagerProxy
 ; CHECK-O-NEXT: Running pass: LoopInstSimplifyPass
 ; CHECK-O-NEXT: Running pass: LoopSimplifyCFGPass

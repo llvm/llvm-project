@@ -181,20 +181,21 @@ public:
       ISO::CFI_attribute_t attribute = CFI_attribute_other);
 
   // CUDA_TODO: Clang does not support unique_ptr on device.
-  static OwningPtr<Descriptor> Create(TypeCode t, std::size_t elementBytes,
-      void *p = nullptr, int rank = maxRank,
+  static RT_API_ATTRS OwningPtr<Descriptor> Create(TypeCode t,
+      std::size_t elementBytes, void *p = nullptr, int rank = maxRank,
       const SubscriptValue *extent = nullptr,
       ISO::CFI_attribute_t attribute = CFI_attribute_other,
       int derivedTypeLenParameters = 0);
-  static OwningPtr<Descriptor> Create(TypeCategory, int kind, void *p = nullptr,
-      int rank = maxRank, const SubscriptValue *extent = nullptr,
+  static RT_API_ATTRS OwningPtr<Descriptor> Create(TypeCategory, int kind,
+      void *p = nullptr, int rank = maxRank,
+      const SubscriptValue *extent = nullptr,
       ISO::CFI_attribute_t attribute = CFI_attribute_other);
-  static OwningPtr<Descriptor> Create(int characterKind,
+  static RT_API_ATTRS OwningPtr<Descriptor> Create(int characterKind,
       SubscriptValue characters, void *p = nullptr, int rank = maxRank,
       const SubscriptValue *extent = nullptr,
       ISO::CFI_attribute_t attribute = CFI_attribute_other);
-  static OwningPtr<Descriptor> Create(const typeInfo::DerivedType &dt,
-      void *p = nullptr, int rank = maxRank,
+  static RT_API_ATTRS OwningPtr<Descriptor> Create(
+      const typeInfo::DerivedType &dt, void *p = nullptr, int rank = maxRank,
       const SubscriptValue *extent = nullptr,
       ISO::CFI_attribute_t attribute = CFI_attribute_other);
 

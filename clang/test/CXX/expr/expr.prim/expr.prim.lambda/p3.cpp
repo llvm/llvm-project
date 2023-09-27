@@ -16,4 +16,5 @@ constexpr auto literal = []{};
 #if __cplusplus < 201703L
 // expected-error@-2 {{constexpr variable cannot have non-literal type}}
 // expected-note@-3 {{lambda closure types are non-literal types before C++17}}
+// expected-error@-4 {{a lambda expression may not appear inside of a constant expression}}
 #endif
