@@ -3302,6 +3302,12 @@ static bool isFunctionDeclarationName(bool IsCpp, const FormatToken &Current,
         !Previous->isOneOf(tok::kw_return, tok::kw_co_return)) {
       return true;
     }
+    if (Previous->is(tok::r_paren) && Previous->is(TT_TypeDeclarationParen)) {
+      assert(Previous->MatchingParen);
+      assert(Previous->MatchingParen->is(tok::l_paren));
+      assert(Previous->MatchingParen->is(TT_TypeDeclarationParen));
+      return true;
+    }
     if (!Previous->isOneOf(tok::star, tok::amp, tok::ampamp, TT_TemplateCloser))
       return false;
     Next = skipOperatorName(Next);
