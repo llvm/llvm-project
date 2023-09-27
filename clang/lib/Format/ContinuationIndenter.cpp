@@ -1336,7 +1336,7 @@ unsigned ContinuationIndenter::getNewLineColumn(const LineState &State) {
        (PreviousNonComment->ClosesTemplateDeclaration ||
         PreviousNonComment->ClosesRequiresClause ||
         PreviousNonComment->isOneOf(
-            TT_AttributeParen, TT_AttributeSquare, TT_FunctionAnnotationRParen,
+            TT_AttributeRParen, TT_AttributeSquare, TT_FunctionAnnotationRParen,
             TT_JavaAnnotation, TT_LeadingJavaAnnotation))) ||
       (!Style.IndentWrappedFunctionNames &&
        NextNonComment->isOneOf(tok::kw_operator, TT_FunctionDeclarationName))) {

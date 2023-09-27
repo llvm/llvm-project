@@ -127,6 +127,9 @@ InstructionCost RISCVTTIImpl::getIntImmCostInst(unsigned Opcode, unsigned Idx,
     // Power of 2 is a shift. Negated power of 2 is a shift and a negate.
     if (Imm.isPowerOf2() || Imm.isNegatedPowerOf2())
       return TTI::TCC_Free;
+    // One more or less than a power of 2 can use SLLI+ADD/SUB.
+    if ((Imm + 1).isPowerOf2() || (Imm - 1).isPowerOf2())
+      return TTI::TCC_Free;
     // FIXME: There is no MULI instruction.
     Takes12BitImm = true;
     break;

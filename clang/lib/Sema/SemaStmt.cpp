@@ -933,16 +933,14 @@ StmtResult Sema::ActOnIfStmt(SourceLocation IfLoc,
   }
 
   if (ConstevalOrNegatedConsteval) {
-    bool Immediate = ExprEvalContexts.back().Context ==
-                     ExpressionEvaluationContext::ImmediateFunctionContext;
-    if (CurContext->isFunctionOrMethod()) {
-      const auto *FD =
-          dyn_cast<FunctionDecl>(Decl::castFromDeclContext(CurContext));
-      if (FD && FD->isImmediateFunction())
-        Immediate = true;
-    }
-    if (isUnevaluatedContext() || Immediate)
-      Diags.Report(IfLoc, diag::warn_consteval_if_always_true) << Immediate;
+    bool AlwaysTrue = ExprEvalContexts.back().isConstantEvaluated() ||
+                      ExprEvalContexts.back().isUnevaluated();
+    bool AlwaysFalse = ExprEvalContexts.back().IsRuntimeEvaluated;
+    if (AlwaysTrue || AlwaysFalse)
+      Diags.Report(IfLoc, diag::warn_tautological_consteval_if)
+          << (AlwaysTrue
+                  ? StatementKind == IfStatementKind::ConstevalNegated
+                  : StatementKind == IfStatementKind::ConstevalNonNegated);
   }
 
   return BuildIfStmt(IfLoc, StatementKind, LParenLoc, InitStmt, Cond, RParenLoc,

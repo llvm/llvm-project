@@ -43,12 +43,11 @@ struct Temporary {
 constexpr Temporary t = {3}; // expected-error {{must have constant destruction}} expected-note {{created here}} expected-note {{in call}}
 
 namespace P1073R3 {
-consteval int f() { return 42; } // expected-note 2 {{declared here}}
+consteval int f() { return 42; } // expected-note {{declared here}}
 consteval auto g() { return f; }
 consteval int h(int (*p)() = g()) { return p(); }
 constexpr int r = h();
-constexpr auto e = g();  // expected-error {{call to consteval function 'P1073R3::g' is not a constant expression}} \
-                            expected-error {{constexpr variable 'e' must be initialized by a constant expression}} \
-                            expected-note 2 {{pointer to a consteval declaration is not a constant expression}}
+constexpr auto e = g(); // expected-error {{constexpr variable 'e' must be initialized by a constant expression}} \
+                           expected-note {{pointer to a consteval declaration is not a constant expression}}
 static_assert(r == 42);
 } // namespace P1073R3

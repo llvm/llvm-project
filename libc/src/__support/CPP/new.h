@@ -84,19 +84,23 @@ LIBC_INLINE void *operator new[](size_t size, std::align_val_t align,
 // they will replace operator delete for the entire application. Including this
 // header file in all libc source files where operator delete is called ensures
 // that only libc call sites use these replacement operator delete functions.
-void operator delete(void *) noexcept __asm__("LIBC_NAMESPACE_delete");
+
+#define DELETE_NAME(name)                                                      \
+  __asm__(LIBC_MACRO_TO_STRING(LIBC_NAMESPACE) "_" LIBC_MACRO_TO_STRING(name))
+
+void operator delete(void *) noexcept DELETE_NAME(delete);
 void operator delete(void *, std::align_val_t) noexcept
-    __asm__("LIBC_NAMESPACE_delete_aligned");
-void operator delete(void *, size_t) noexcept
-    __asm__("LIBC_NAMESPACE_delete_sized");
+    DELETE_NAME(delete_aligned);
+void operator delete(void *, size_t) noexcept DELETE_NAME(delete_sized);
 void operator delete(void *, size_t, std::align_val_t) noexcept
-    __asm__("LIBC_NAMESPACE_delete_sized_aligned");
-void operator delete[](void *) noexcept __asm__("LIBC_NAMESPACE_delete_array");
+    DELETE_NAME(delete_sized_aligned);
+void operator delete[](void *) noexcept DELETE_NAME(delete_array);
 void operator delete[](void *, std::align_val_t) noexcept
-    __asm__("LIBC_NAMESPACE_delete_array_aligned");
-void operator delete[](void *, size_t) noexcept
-    __asm__("LIBC_NAMESPACE_delete_array_sized");
+    DELETE_NAME(delete_array_aligned);
+void operator delete[](void *, size_t) noexcept DELETE_NAME(delete_array_sized);
 void operator delete[](void *, size_t, std::align_val_t) noexcept
-    __asm__("LIBC_NAMESPACE_delete_array_sized_aligned");
+    DELETE_NAME(delete_array_sized_aligned);
+
+#undef DELETE_NAME
 
 #endif // LLVM_LIBC_SRC___SUPPORT_CPP_NEW_H

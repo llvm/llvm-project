@@ -2575,6 +2575,58 @@ std::optional<OpFoldResult> AffineForOp::getSingleUpperBound() {
   return OpFoldResult(b.getI64IntegerAttr(getConstantUpperBound()));
 }
 
+FailureOr<LoopLikeOpInterface> AffineForOp::replaceWithAdditionalYields(
+    RewriterBase &rewriter, ValueRange newInitOperands,
+    bool replaceInitOperandUsesInLoop,
+    const NewYieldValuesFn &newYieldValuesFn) {
+  // Create a new loop before the existing one, with the extra operands.
+  OpBuilder::InsertionGuard g(rewriter);
+  rewriter.setInsertionPoint(getOperation());
+  auto inits = llvm::to_vector(getInits());
+  inits.append(newInitOperands.begin(), newInitOperands.end());
+  AffineForOp newLoop = rewriter.create<AffineForOp>(
+      getLoc(), getLowerBoundOperands(), getLowerBoundMap(),
+      getUpperBoundOperands(), getUpperBoundMap(), getStep(), inits);
+
+  // Generate the new yield values and append them to the scf.yield operation.
+  auto yieldOp = cast<AffineYieldOp>(getBody()->getTerminator());
+  ArrayRef<BlockArgument> newIterArgs =
+      newLoop.getBody()->getArguments().take_back(newInitOperands.size());
+  {
+    OpBuilder::InsertionGuard g(rewriter);
+    rewriter.setInsertionPoint(yieldOp);
+    SmallVector<Value> newYieldedValues =
+        newYieldValuesFn(rewriter, getLoc(), newIterArgs);
+    assert(newInitOperands.size() == newYieldedValues.size() &&
+           "expected as many new yield values as new iter operands");
+    rewriter.updateRootInPlace(yieldOp, [&]() {
+      yieldOp.getOperandsMutable().append(newYieldedValues);
+    });
+  }
+
+  // Move the loop body to the new op.
+  rewriter.mergeBlocks(getBody(), newLoop.getBody(),
+                       newLoop.getBody()->getArguments().take_front(
+                           getBody()->getNumArguments()));
+
+  if (replaceInitOperandUsesInLoop) {
+    // Replace all uses of `newInitOperands` with the corresponding basic block
+    // arguments.
+    for (auto it : llvm::zip(newInitOperands, newIterArgs)) {
+      rewriter.replaceUsesWithIf(std::get<0>(it), std::get<1>(it),
+                                 [&](OpOperand &use) {
+                                   Operation *user = use.getOwner();
+                                   return newLoop->isProperAncestor(user);
+                                 });
+    }
+  }
+
+  // Replace the old loop.
+  rewriter.replaceOp(getOperation(),
+                     newLoop->getResults().take_front(getNumResults()));
+  return cast<LoopLikeOpInterface>(newLoop.getOperation());
+}
+
 Speculation::Speculatability AffineForOp::getSpeculatability() {
   // `affine.for (I = Start; I < End; I += 1)` terminates for all values of
   // Start and End.
@@ -2723,50 +2775,6 @@ void mlir::affine::buildAffineLoopNest(
     function_ref<void(OpBuilder &, Location, ValueRange)> bodyBuilderFn) {
   buildAffineLoopNestImpl(builder, loc, lbs, ubs, steps, bodyBuilderFn,
                           buildAffineLoopFromValues);
-}
-
-AffineForOp mlir::affine::replaceForOpWithNewYields(OpBuilder &b,
-                                                    AffineForOp loop,
-                                                    ValueRange newIterOperands,
-                                                    ValueRange newYieldedValues,
-                                                    ValueRange newIterArgs,
-                                                    bool replaceLoopResults) {
-  assert(newIterOperands.size() == newYieldedValues.size() &&
-         "newIterOperands must be of the same size as newYieldedValues");
-  // Create a new loop before the existing one, with the extra operands.
-  OpBuilder::InsertionGuard g(b);
-  b.setInsertionPoint(loop);
-  auto operands = llvm::to_vector<4>(loop.getInits());
-  operands.append(newIterOperands.begin(), newIterOperands.end());
-  SmallVector<Value, 4> lbOperands(loop.getLowerBoundOperands());
-  SmallVector<Value, 4> ubOperands(loop.getUpperBoundOperands());
-  SmallVector<Value, 4> steps(loop.getStep());
-  auto lbMap = loop.getLowerBoundMap();
-  auto ubMap = loop.getUpperBoundMap();
-  AffineForOp newLoop =
-      b.create<AffineForOp>(loop.getLoc(), lbOperands, lbMap, ubOperands, ubMap,
-                            loop.getStep(), operands);
-  // Take the body of the original parent loop.
-  newLoop.getRegion().takeBody(loop.getRegion());
-  for (Value val : newIterArgs)
-    newLoop.getRegion().addArgument(val.getType(), val.getLoc());
-
-  // Update yield operation with new values to be added.
-  if (!newYieldedValues.empty()) {
-    auto yield = cast<AffineYieldOp>(newLoop.getBody()->getTerminator());
-    b.setInsertionPoint(yield);
-    auto yieldOperands = llvm::to_vector<4>(yield.getOperands());
-    yieldOperands.append(newYieldedValues.begin(), newYieldedValues.end());
-    b.create<AffineYieldOp>(yield.getLoc(), yieldOperands);
-    yield.erase();
-  }
-  if (replaceLoopResults) {
-    for (auto it : llvm::zip(loop.getResults(), newLoop.getResults().take_front(
-                                                    loop.getNumResults()))) {
-      std::get<0>(it).replaceAllUsesWith(std::get<1>(it));
-    }
-  }
-  return newLoop;
 }
 
 //===----------------------------------------------------------------------===//

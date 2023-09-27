@@ -46,6 +46,9 @@ LIBC_INLINE constexpr bool same_string(char const *lhs, char const *rhs) {
 } // namespace internal
 } // namespace LIBC_NAMESPACE
 
+#define __LIBC_MACRO_TO_STRING(str) #str
+#define LIBC_MACRO_TO_STRING(str) __LIBC_MACRO_TO_STRING(str)
+
 // LLVM_LIBC_IS_DEFINED checks whether a particular macro is defined.
 // Usage: constexpr bool kUseAvx = LLVM_LIBC_IS_DEFINED(__AVX__);
 //
