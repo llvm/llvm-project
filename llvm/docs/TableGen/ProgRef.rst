@@ -1842,7 +1842,7 @@ and non-0 as true.
     * ``!range(1, 4)`` is equivalent to ``!range(1, 4, 1)`` and the result is
       `[1, 2, 3]`.
     * The result of ``!range(0, 4, 2)`` is `[0, 2]`.
-    * The result of ``!range(0, 4, -1)`` and ``!range(4, 0, 1)`` is empty.
+    * The results of ``!range(0, 4, -1)`` and ``!range(4, 0, 1)`` are empty.
 
 ``!range(``\ *list*\ ``)``
     Equivalent to ``!range(0, !size(list))``.
