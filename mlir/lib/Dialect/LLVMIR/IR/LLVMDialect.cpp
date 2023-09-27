@@ -1286,7 +1286,7 @@ void CallOp::print(OpAsmPrinter &p) {
 /// succeeds. Returns failure otherwise.
 static ParseResult parseCallTypeAndResolveOperands(
     OpAsmParser &parser, OperationState &result, bool isDirect,
-    ArrayRef<OpAsmParser::UnresolvedOperand> operands, bool isVarArg) {
+    ArrayRef<OpAsmParser::UnresolvedOperand> operands) {
   SMLoc trailingTypesLoc = parser.getCurrentLocation();
   SmallVector<Type> types;
   if (parser.parseColonTypeList(types))
@@ -1321,18 +1321,6 @@ static ParseResult parseCallTypeAndResolveOperands(
     return failure();
   if (funcType.getNumResults() != 0)
     result.addTypes(funcType.getResults());
-
-  if (!isVarArg) {
-    Type returnType;
-    if (funcType.getNumResults() == 0)
-      returnType = LLVM::LLVMVoidType::get(result.getContext());
-    else
-      returnType = funcType.getResult(0);
-    result.addAttribute(
-        "callee_type",
-        TypeAttr::get(LLVM::LLVMFunctionType::get(
-            returnType, funcType.getInputs(), /*isVarArg=*/false)));
-  }
 
   return success();
 }
@@ -1386,8 +1374,7 @@ ParseResult CallOp::parse(OpAsmParser &parser, OperationState &result) {
   }
 
   // Parse the trailing type list and resolve the operands.
-  return parseCallTypeAndResolveOperands(parser, result, isDirect, operands,
-                                         isVarArg);
+  return parseCallTypeAndResolveOperands(parser, result, isDirect, operands);
 }
 
 ///===---------------------------------------------------------------------===//
@@ -1552,8 +1539,7 @@ ParseResult InvokeOp::parse(OpAsmParser &parser, OperationState &result) {
     return failure();
 
   // Parse the trailing type list and resolve the function operands.
-  if (parseCallTypeAndResolveOperands(parser, result, isDirect, operands,
-                                      isVarArg))
+  if (parseCallTypeAndResolveOperands(parser, result, isDirect, operands))
     return failure();
 
   result.addSuccessors({normalDest, unwindDest});
