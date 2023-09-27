@@ -390,7 +390,7 @@ BuildInputAnnotations(const SourceMgr &SM, unsigned CheckFileBufferID,
   };
   // How many diagnostics does each pattern have?
   std::map<SMLoc, unsigned, CompareSMLoc> DiagCountPerPattern;
-  for (auto Diag : Diags)
+  for (const FileCheckDiag &Diag : Diags)
     ++DiagCountPerPattern[Diag.CheckLoc];
   // How many diagnostics have we seen so far per pattern?
   std::map<SMLoc, unsigned, CompareSMLoc> DiagIndexPerPattern;
@@ -673,7 +673,7 @@ static void DumpAnnotatedInput(raw_ostream &OS, const FileCheckRequest &Req,
       for (unsigned Col = 1; InputFilePtr != InputFileEnd && !Newline; ++Col) {
         bool WasInMatch = InMatch;
         InMatch = false;
-        for (auto M : FoundAndExpectedMatches) {
+        for (const InputAnnotation &M : FoundAndExpectedMatches) {
           if (M.InputStartCol <= Col && Col < M.InputEndCol) {
             InMatch = true;
             break;
