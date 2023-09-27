@@ -2753,6 +2753,40 @@ bool RISCVDAGToDAGISel::selectSHXADD_UWOp(SDValue N, unsigned ShAmt,
   return false;
 }
 
+static bool vectorPseudoHasAllNBitUsers(SDNode *User, unsigned UserOpNo,
+                                        unsigned Bits,
+                                        const TargetInstrInfo *TII) {
+  const RISCVVPseudosTable::PseudoInfo *PseudoInfo =
+      RISCVVPseudosTable::getPseudoInfo(User->getMachineOpcode());
+
+  if (!PseudoInfo)
+    return false;
+
+  const MCInstrDesc &MCID = TII->get(User->getMachineOpcode());
+  const uint64_t TSFlags = MCID.TSFlags;
+  if (!RISCVII::hasSEWOp(TSFlags))
+    return false;
+  assert(RISCVII::hasVLOp(TSFlags));
+
+  bool HasGlueOp = User->getGluedNode() != nullptr;
+  unsigned ChainOpIdx = User->getNumOperands() - HasGlueOp - 1;
+  bool HasChainOp = User->getOperand(ChainOpIdx).getValueType() == MVT::Other;
+  bool HasVecPolicyOp = RISCVII::hasVecPolicyOp(TSFlags);
+  unsigned VLIdx =
+      User->getNumOperands() - HasVecPolicyOp - HasChainOp - HasGlueOp - 2;
+  const unsigned Log2SEW = User->getConstantOperandVal(VLIdx + 1);
+
+  if (UserOpNo == VLIdx)
+    return false;
+
+  auto NumDemandedBits =
+      RISCV::getVectorLowDemandedScalarBits(PseudoInfo->BaseInstr, Log2SEW);
+  if (!NumDemandedBits || Bits < NumDemandedBits)
+    return false;
+
+  return true;
+}
+
 // Return true if all users of this SDNode* only consume the lower \p Bits.
 // This can be used to form W instructions for add/sub/mul/shl even when the
 // root isn't a sext_inreg. This can allow the ADDW/SUBW/MULW/SLLIW to CSE if
@@ -2783,32 +2817,10 @@ bool RISCVDAGToDAGISel::hasAllNBitUsers(SDNode *Node, unsigned Bits,
 
     // TODO: Add more opcodes?
     switch (User->getMachineOpcode()) {
-    default: {
-      if (const RISCVVPseudosTable::PseudoInfo *PseudoInfo =
-              RISCVVPseudosTable::getPseudoInfo(User->getMachineOpcode())) {
-
-        const MCInstrDesc &MCID = TII->get(User->getMachineOpcode());
-        if (!RISCVII::hasSEWOp(MCID.TSFlags))
-          return false;
-        assert(RISCVII::hasVLOp(MCID.TSFlags));
-
-        bool HasGlueOp = User->getGluedNode() != nullptr;
-        unsigned ChainOpIdx = User->getNumOperands() - HasGlueOp - 1;
-        bool HasChainOp =
-            User->getOperand(ChainOpIdx).getValueType() == MVT::Other;
-        bool HasVecPolicyOp = RISCVII::hasVecPolicyOp(MCID.TSFlags);
-        unsigned VLIdx = User->getNumOperands() - HasVecPolicyOp - HasChainOp -
-                         HasGlueOp - 2;
-        const unsigned Log2SEW = User->getConstantOperandVal(VLIdx + 1);
-
-        if (UI.getOperandNo() == VLIdx)
-          return false;
-        if (RISCVII::vectorInstUsesNBitsOfScalarOp(PseudoInfo->BaseInstr, Bits,
-                                                   Log2SEW))
-          break;
-      }
+    default:
+      if (vectorPseudoHasAllNBitUsers(User, UI.getOperandNo(), Bits, TII))
+        break;
       return false;
-    }
     case RISCV::ADDW:
     case RISCV::ADDIW:
     case RISCV::SUBW:
