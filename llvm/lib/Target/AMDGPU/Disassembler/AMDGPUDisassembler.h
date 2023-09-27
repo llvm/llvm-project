@@ -97,6 +97,7 @@ private:
   const unsigned TargetMaxInstBytes;
   mutable ArrayRef<uint8_t> Bytes;
   mutable uint32_t Literal;
+  mutable uint64_t Literal64;
   mutable bool HasLiteral;
   mutable std::optional<bool> EnableWavefrontSize32;
 
@@ -230,6 +231,7 @@ public:
 
   MCOperand decodeMandatoryLiteralConstant(unsigned Imm) const;
   MCOperand decodeLiteralConstant() const;
+  MCOperand decodeLiteral64Constant() const;
 
   MCOperand decodeSrcOp(const OpWidthTy Width, unsigned Val,
                         bool MandatoryLiteral = false,

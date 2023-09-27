@@ -258,7 +258,7 @@ public:
   }
 
   bool isInlinableImm(MVT type) const;
-  bool isLiteralImm(MVT type) const;
+  bool isLiteralImm(MVT type, bool Allow64Bit = false) const;
 
   bool isRegKind() const {
     return Kind == Register;
@@ -494,7 +494,7 @@ public:
   bool isSSrcB64() const {
     // TODO: Find out how SALU supports extension of 32-bit literals to 64 bits.
     // See isVSrc64().
-    return isSCSrcB64() || isLiteralImm(MVT::i64);
+    return isSCSrcB64() || isLiteralImm(MVT::i64, true);
   }
 
   bool isSSrcF32() const {
@@ -603,6 +603,10 @@ public:
     return isVCSrcF64() || isLiteralImm(MVT::i64);
   }
 
+  bool isVSrc_imm64B64() const {
+    return isVCSrcF64() || isLiteralImm(MVT::i64, true);
+  }
+
   bool isVSrcTB16() const { return isVCSrcTB16() || isLiteralImm(MVT::i16); }
 
   bool isVSrcTB16_Lo128() const {
@@ -643,6 +647,10 @@ public:
 
   bool isVSrcF64() const {
     return isVCSrcF64() || isLiteralImm(MVT::f64);
+  }
+
+  bool isVSrc_imm64F64() const {
+    return isVCSrcF64() || isLiteralImm(MVT::f64, true);
   }
 
   bool isVSrcTF16() const { return isVCSrcTF16() || isLiteralImm(MVT::f16); }
@@ -1953,6 +1961,8 @@ static const fltSemantics *getOpFltSemantics(uint8_t OperandType) {
   case AMDGPU::OPERAND_REG_INLINE_C_INT64:
   case AMDGPU::OPERAND_REG_INLINE_C_FP64:
   case AMDGPU::OPERAND_REG_INLINE_AC_FP64:
+  case AMDGPU::OPERAND_REG_IMM64_INT64:
+  case AMDGPU::OPERAND_REG_IMM64_FP64:
     return &APFloat::IEEEdouble();
   case AMDGPU::OPERAND_REG_IMM_INT16:
   case AMDGPU::OPERAND_REG_IMM_FP16:
@@ -2073,11 +2083,14 @@ bool AMDGPUOperand::isInlinableImm(MVT type) const {
     AsmParser->hasInv2PiInlineImm());
 }
 
-bool AMDGPUOperand::isLiteralImm(MVT type) const {
+bool AMDGPUOperand::isLiteralImm(MVT type, bool Allow64Bit) const {
   // Check that this immediate can be added as literal
   if (!isImmTy(ImmTyNone)) {
     return false;
   }
+
+  if (!AsmParser->getFeatureBits()[AMDGPU::Feature64BitLiterals])
+    Allow64Bit = false;
 
   if (!Imm.IsFPImm) {
     // We got int literal token.
@@ -2090,8 +2103,11 @@ bool AMDGPUOperand::isLiteralImm(MVT type) const {
     }
 
     unsigned Size = type.getSizeInBits();
-    if (Size == 64)
+    if (Size == 64) {
+      if (Allow64Bit)
+        return true;
       Size = 32;
+    }
 
     // FIXME: 64-bit operands can zero extend, sign extend, or pad zeroes for FP
     // types.
@@ -2217,6 +2233,18 @@ void AMDGPUOperand::addLiteralImmOperand(MCInst &Inst, int64_t Val, bool ApplyMo
   APInt Literal(64, Val);
   uint8_t OpTy = InstDesc.operands()[OpNum].OperandType;
 
+  if (InstDesc.getSize() == 4 &&
+      AsmParser->getFeatureBits()[AMDGPU::Feature64BitLiterals]) {
+    switch (OpTy) {
+    default:
+      break;
+    case AMDGPU::OPERAND_REG_IMM64_INT64:
+    case AMDGPU::OPERAND_REG_IMM64_FP64:
+      Inst.addOperand(MCOperand::createImm(Val));
+      return;
+    }
+  }
+
   if (Imm.IsFPImm) { // We got fp literal token
     switch (OpTy) {
     case AMDGPU::OPERAND_REG_IMM_INT64:
@@ -2224,6 +2252,8 @@ void AMDGPUOperand::addLiteralImmOperand(MCInst &Inst, int64_t Val, bool ApplyMo
     case AMDGPU::OPERAND_REG_INLINE_C_INT64:
     case AMDGPU::OPERAND_REG_INLINE_C_FP64:
     case AMDGPU::OPERAND_REG_INLINE_AC_FP64:
+    case AMDGPU::OPERAND_REG_IMM64_INT64:
+    case AMDGPU::OPERAND_REG_IMM64_FP64:
       if (AMDGPU::isInlinableLiteral64(Literal.getZExtValue(),
                                        AsmParser->hasInv2PiInlineImm())) {
         Inst.addOperand(MCOperand::createImm(Literal.getZExtValue()));
@@ -2335,6 +2365,8 @@ void AMDGPUOperand::addLiteralImmOperand(MCInst &Inst, int64_t Val, bool ApplyMo
   case AMDGPU::OPERAND_REG_INLINE_C_INT64:
   case AMDGPU::OPERAND_REG_INLINE_C_FP64:
   case AMDGPU::OPERAND_REG_INLINE_AC_FP64:
+  case AMDGPU::OPERAND_REG_IMM64_INT64:
+  case AMDGPU::OPERAND_REG_IMM64_FP64:
     if (AMDGPU::isInlinableLiteral64(Val, AsmParser->hasInv2PiInlineImm())) {
       Inst.addOperand(MCOperand::createImm(Val));
       setImmKindConst();
@@ -4510,7 +4542,7 @@ bool AMDGPUAsmParser::validateSOPLiteral(const MCInst &Inst) const {
 
   unsigned NumExprs = 0;
   unsigned NumLiterals = 0;
-  uint32_t LiteralValue;
+  uint64_t LiteralValue;
 
   for (int OpIdx : OpIndices) {
     if (OpIdx == -1) break;
@@ -4519,7 +4551,7 @@ bool AMDGPUAsmParser::validateSOPLiteral(const MCInst &Inst) const {
     // Exclude special imm operands (like that used by s_set_gpr_idx_on)
     if (AMDGPU::isSISrcOperand(Desc, OpIdx)) {
       if (MO.isImm() && !isInlineConstant(Inst, OpIdx)) {
-        uint32_t Value = static_cast<uint32_t>(MO.getImm());
+        uint64_t Value = static_cast<uint64_t>(MO.getImm());
         if (NumLiterals == 0 || LiteralValue != Value) {
           LiteralValue = Value;
           ++NumLiterals;
@@ -4651,7 +4683,7 @@ bool AMDGPUAsmParser::validateVOPLiteral(const MCInst &Inst,
 
   unsigned NumExprs = 0;
   unsigned NumLiterals = 0;
-  uint32_t LiteralValue;
+  uint64_t LiteralValue;
 
   for (int OpIdx : OpIndices) {
     if (OpIdx == -1)
@@ -4664,7 +4696,7 @@ bool AMDGPUAsmParser::validateVOPLiteral(const MCInst &Inst,
       continue;
 
     if (MO.isImm() && !isInlineConstant(Inst, OpIdx)) {
-      uint32_t Value = static_cast<uint32_t>(MO.getImm());
+      uint64_t Value = static_cast<uint64_t>(MO.getImm());
       if (NumLiterals == 0 || LiteralValue != Value) {
         LiteralValue = Value;
         ++NumLiterals;

@@ -207,6 +207,11 @@ enum OperandType : unsigned {
   OPERAND_REG_IMM_V2INT32,
   OPERAND_REG_IMM_V2FP32,
 
+  /// Operands with register, or 32-bit immediate, or 64-bit immediate
+  /// on targets supporting 64-bit immediates for single dword instructions.
+  OPERAND_REG_IMM64_INT64,
+  OPERAND_REG_IMM64_FP64,
+
   /// Operands with register or inline constant
   OPERAND_REG_INLINE_C_INT16,
   OPERAND_REG_INLINE_C_INT32,
@@ -244,7 +249,7 @@ enum OperandType : unsigned {
   OPERAND_SDWA_VOPC_DST,
 
   OPERAND_REG_IMM_FIRST = OPERAND_REG_IMM_INT32,
-  OPERAND_REG_IMM_LAST = OPERAND_REG_IMM_V2FP32,
+  OPERAND_REG_IMM_LAST = OPERAND_REG_IMM64_FP64,
 
   OPERAND_REG_INLINE_C_FIRST = OPERAND_REG_INLINE_C_INT16,
   OPERAND_REG_INLINE_C_LAST = OPERAND_REG_INLINE_AC_V2FP32,
@@ -339,6 +344,7 @@ enum : unsigned {
   INLINE_INTEGER_C_MAX = 208,
   INLINE_FLOATING_C_MIN = 240,
   INLINE_FLOATING_C_MAX = 248,
+  LITERAL64_CONST = 254,
   LITERAL_CONST = 255,
   VGPR_MIN = 256,
   VGPR_MAX = 511,

@@ -1450,6 +1450,20 @@ MCOperand AMDGPUDisassembler::decodeLiteralConstant() const {
   return MCOperand::createImm(Literal);
 }
 
+MCOperand AMDGPUDisassembler::decodeLiteral64Constant() const {
+  assert(STI.hasFeature(AMDGPU::Feature64BitLiterals));
+
+  if (!HasLiteral) {
+    if (Bytes.size() < 8) {
+      return errOperand(0, "cannot read literal64, inst bytes left " +
+                        Twine(Bytes.size()));
+    }
+    HasLiteral = true;
+    Literal64 = eatBytes<uint64_t>(Bytes);
+  }
+  return MCOperand::createImm(Literal64);
+}
+
 MCOperand AMDGPUDisassembler::decodeIntImmed(unsigned Imm) {
   using namespace AMDGPU::EncValues;
 
@@ -1711,6 +1725,10 @@ MCOperand AMDGPUDisassembler::decodeNonVGPRSrcOp(const OpWidthTy Width,
       return MCOperand::createImm(LITERAL_CONST);
     else
       return decodeLiteralConstant();
+  }
+
+  if (Val == LITERAL64_CONST && STI.hasFeature(AMDGPU::Feature64BitLiterals)) {
+    return decodeLiteral64Constant();
   }
 
   switch (Width) {

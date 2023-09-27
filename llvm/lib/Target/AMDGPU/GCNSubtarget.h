@@ -200,6 +200,7 @@ protected:
   bool HasVGPRSingleUseHintInsts = false;
   bool HasPseudoScalarTrans = false;
   bool HasRestrictedSOffset = false;
+  bool Has64BitLiterals = false;
   bool Has512AddressableVGPRs = false;
   bool HasBitOp3Insts = false;
   bool HasTanhInsts = false;
@@ -1218,6 +1219,9 @@ public:
   bool hasTanhInsts() const { return HasTanhInsts; }
 
   bool hasPrngInst() const { return HasPrngInst; }
+
+  // A single DWORD instructions can use a 64-bit literal.
+  bool has64BitLiterals() const { return Has64BitLiterals; }
 
   bool has512AddressableVGPRs() const { return Has512AddressableVGPRs; }
 

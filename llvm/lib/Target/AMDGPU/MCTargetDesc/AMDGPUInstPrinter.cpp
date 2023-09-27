@@ -616,7 +616,8 @@ void AMDGPUInstPrinter::printImmediate64(uint64_t Imm,
            STI.hasFeature(AMDGPU::FeatureInv2PiInlineImm))
     O << "0.15915494309189532";
   else {
-    assert(isUInt<32>(Imm) || isInt<32>(Imm));
+    assert(isUInt<32>(Imm) || isInt<32>(Imm) ||
+           STI.hasFeature(AMDGPU::Feature64BitLiterals));
 
     // In rare situations, we will have a 32-bit literal in a 64-bit
     // operand. This is technically allowed for the encoding of s_mov_b64.
@@ -791,6 +792,8 @@ void AMDGPUInstPrinter::printRegularOperand(const MCInst *MI, unsigned OpNo,
     case AMDGPU::OPERAND_REG_INLINE_C_INT64:
     case AMDGPU::OPERAND_REG_INLINE_C_FP64:
     case AMDGPU::OPERAND_REG_INLINE_AC_FP64:
+    case AMDGPU::OPERAND_REG_IMM64_INT64:
+    case AMDGPU::OPERAND_REG_IMM64_FP64:
       printImmediate64(Op.getImm(), STI, O);
       break;
     case AMDGPU::OPERAND_REG_INLINE_C_INT16:

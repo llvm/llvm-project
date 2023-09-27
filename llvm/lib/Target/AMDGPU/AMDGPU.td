@@ -851,6 +851,12 @@ def FeaturePrngInst : SubtargetFeature<"prng-inst",
   "Has v_prng_b32 instruction"
 >;
 
+def Feature64BitLiterals : SubtargetFeature<"64-bit-literals",
+  "Has64BitLiterals",
+  "true",
+  "Can use 64-bit literals with single DWORD instructions"
+>;
+
 def Feature512AddressableVGPRs : SubtargetFeature<"512-addressable-vgprs",
   "Has512AddressableVGPRs",
   "true",
@@ -1528,6 +1534,7 @@ def FeatureISAVersion12_10 : FeatureSet<
    FeatureGFX12_10Insts,
    FeatureCuMode,
    Feature512AddressableVGPRs,
+   Feature64BitLiterals,
    FeatureLDSBankCount32, // TODO-GFX1210: redefine
    FeatureDLInsts,
    FeatureFmacF64Inst,

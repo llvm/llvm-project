@@ -54,3 +54,55 @@ v_dual_cndmask_b32 v7, v1, v2, vcc_lo :: v_dual_cndmask_b32 v2, v4, v1
 // GFX1210-ERR: :[[@LINE-1]]:{{[0-9]+}}: error: too few operands for instruction
 // GFX1210-ERR: v_dual_cndmask_b32 v7, v1, v2, vcc_lo :: v_dual_cndmask_b32 v2, v4, v1
 // GFX1210-ERR: ^
+
+// Check for unique 64-bit literal
+
+s_andn2_b64 s[2:3], 0x10abcdef12345678, 0xabcdef12345678
+// GFX1210-ERR: :[[@LINE-1]]:{{[0-9]+}}: error: only one unique literal operand is allowed
+// GFX1210-ERR: s_andn2_b64 s[2:3], 0x10abcdef12345678, 0xabcdef12345678
+// GFX1210-ERR: ^
+
+s_bfe_u64 s[2:3], 0x10abcdef12345678, 100
+// GFX1210-ERR: :[[@LINE-1]]:{{[0-9]+}}: error: only one unique literal operand is allowed
+// GFX1210-ERR: s_bfe_u64 s[2:3], 0x10abcdef12345678, 100
+// GFX1210-ERR: ^
+
+s_call_b64 s[2:3], 0x10abcdef12345678
+// GFX1210-ERR: :[[@LINE-1]]:{{[0-9]+}}: error: expected a 16-bit signed jump offset
+// GFX1210-ERR: s_call_b64 s[2:3], 0x10abcdef12345678
+// GFX1210-ERR:                    ^
+
+// VOP3 instructions cannot use 64-bit literals
+
+v_ceil_f64_e64 v[254:255], 0x10abcdef12345678
+// GFX1210-ERR: :[[@LINE-1]]:{{[0-9]+}}: error: invalid operand for instruction
+// GFX1210-ERR: v_ceil_f64_e64 v[254:255], 0x10abcdef12345678
+// GFX1210-ERR:                            ^
+
+v_add_f64_e64 v[254:255], 0x10abcdef12345678, v[254:255]
+// GFX1210-ERR: :[[@LINE-1]]:{{[0-9]+}}: error: invalid operand for instruction
+// GFX1210-ERR: v_add_f64_e64 v[254:255], 0x10abcdef12345678, v[254:255]
+// GFX1210-ERR:                           ^
+
+v_cmp_lt_f64_e64 vcc_lo, 0x10abcdef12345678, v[254:255]
+// GFX1210-ERR: :[[@LINE-1]]:{{[0-9]+}}: error: invalid operand for instruction
+// GFX1210-ERR: v_cmp_lt_f64_e64 vcc_lo, 0x10abcdef12345678, v[254:255]
+// GFX1210-ERR:                          ^
+
+v_fma_f64 v[0:1], 0x10abcdef12345678, v[2:3], v[4:5]
+// GFX1210-ERR: :[[@LINE-1]]:{{[0-9]+}}: error: invalid operand for instruction
+// GFX1210-ERR: v_fma_f64 v[0:1], 0x10abcdef12345678, v[2:3], v[4:5]
+// GFX1210-ERR:                   ^
+
+// Do not allow 64-bit literals for 32-bit operands. This may be possible to
+// encode but not practically useful and can be misleading.
+
+s_bfe_u64 s[2:3], 0x10abcdef12345678, 0x10abcdef12345678
+// GFX1210-ERR: :[[@LINE-1]]:{{[0-9]+}}: error: invalid operand for instruction
+// GFX1210-ERR: s_bfe_u64 s[2:3], 0x10abcdef12345678, 0x10abcdef12345678
+// GFX1210-ERR:                                       ^
+
+v_add_f32 v1, 0x12345678abcdef00, v2
+// GFX1210-ERR: :[[@LINE-1]]:{{[0-9]+}}: error: invalid operand for instruction
+// GFX1210-ERR: v_add_f32 v1, 0x12345678abcdef00, v2
+// GFX1210-ERR:               ^
