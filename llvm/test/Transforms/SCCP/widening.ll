@@ -653,7 +653,7 @@ define ptr @wobble(ptr %arg, i32 %arg1) align 2 {
 ; SCCP-NEXT:    [[TMP52:%.*]] = call dereferenceable(1) ptr @spam(ptr [[ARG]], i32 [[TMP51]])
 ; SCCP-NEXT:    [[TMP53:%.*]] = load i8, ptr [[TMP52]], align 1
 ; SCCP-NEXT:    [[TMP54:%.*]] = zext i8 [[TMP53]] to i32
-; SCCP-NEXT:    [[TMP55:%.*]] = icmp sgt i32 [[TMP48]], [[TMP54]]
+; SCCP-NEXT:    [[TMP55:%.*]] = icmp sgt i8 [[TMP47]], [[TMP53]]
 ; SCCP-NEXT:    br i1 [[TMP55]], label [[BB56:%.*]], label [[BB60:%.*]]
 ; SCCP:       bb56:
 ; SCCP-NEXT:    [[TMP57:%.*]] = add nsw i32 [[TMP40]], -1
@@ -734,7 +734,7 @@ define ptr @wobble(ptr %arg, i32 %arg1) align 2 {
 ; IPSCCP-NEXT:    [[TMP52:%.*]] = call dereferenceable(1) ptr @spam(ptr [[ARG]], i32 [[TMP51]])
 ; IPSCCP-NEXT:    [[TMP53:%.*]] = load i8, ptr [[TMP52]], align 1
 ; IPSCCP-NEXT:    [[TMP54:%.*]] = zext i8 [[TMP53]] to i32
-; IPSCCP-NEXT:    [[TMP55:%.*]] = icmp sgt i32 [[TMP48]], [[TMP54]]
+; IPSCCP-NEXT:    [[TMP55:%.*]] = icmp sgt i8 [[TMP47]], [[TMP53]]
 ; IPSCCP-NEXT:    br i1 [[TMP55]], label [[BB56:%.*]], label [[BB60:%.*]]
 ; IPSCCP:       bb56:
 ; IPSCCP-NEXT:    br label [[BB60]]

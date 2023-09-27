@@ -193,6 +193,60 @@ static bool replaceSignedInst(SCCPSolver &Solver,
     NewInst = BinaryOperator::Create(NewOpcode, Op0, Op1, "", &Inst);
     break;
   }
+  case Instruction::ICmp: {
+    ICmpInst &ICmp = cast<ICmpInst>(Inst);
+  
+    ZExtInst *Op0_zext = dyn_cast<ZExtInst>(ICmp.getOperand(0));
+    SExtInst *Op0_sext = dyn_cast<SExtInst>(ICmp.getOperand(0));
+  
+    ZExtInst *Op1_zext = dyn_cast<ZExtInst>(ICmp.getOperand(1));
+    SExtInst *Op1_sext = dyn_cast<SExtInst>(ICmp.getOperand(1));
+  
+    CastInst *Op0;
+    CastInst *Op1;
+  
+    if (Op0_zext) Op0 = Op0_zext; else Op0 = Op0_sext;
+    if (Op1_zext) Op1 = Op1_zext; else Op1 = Op1_sext;
+  
+    bool reversed = false;
+  
+    if (!Op0 || !Op1){
+      // Op0 and Op1 must be defined
+      return false;
+    } 
+  
+    if (Op1_zext && (! Op0_zext)){
+      // We force Op0 to be a zext and reverse the arguments
+      //   at the end if we swap
+      reversed = true; 
+  
+      std::swap(Op0_zext, Op1_zext);
+      std::swap(Op0_sext, Op1_sext);
+      std::swap(Op0, Op1);
+    }
+  
+  
+    if(Op0->getType() != Op1->getType()){
+      // extensions are not of the same type
+      // This optimization is done in InstCombine
+      return false;
+    }
+  
+    // ICMP (sext X) (sext y) => ICMP X, Y
+    // ICMP (zext X) (zext y) => ICMP X, Y
+    // ICMP (zext X) (sext Y) => ICMP X, Y  if X >= 0 and ICMP signed
+    if((Op0_zext && Op1_zext)
+       || (Op0_sext && Op1_sext) 
+       || (ICmp.isSigned() && Op0_zext && Op1_sext && isNonNegative(Op0_zext->getOperand(0)))){
+  
+      Value *X = Op0->getOperand(0);
+      Value *Y = Op1->getOperand(0);
+      NewInst = CmpInst::Create(ICmp.getOpcode(), ICmp.getPredicate(), reversed ? Y : X, reversed ? X : Y, "", &Inst);
+      break;
+    }
+  
+    return false;
+  }
   default:
     return false;
   }
