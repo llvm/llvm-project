@@ -443,8 +443,8 @@ llvm.func @invokeLandingpad() -> i32 attributes { personality = @__gxx_personali
   %14 = llvm.invoke @vararg_foo(%5, %5) to ^bb2 unwind ^bb1 vararg(!llvm.func<struct<(i32, f64, i32)> (i32, ...)>) : (i32, i32) -> !llvm.struct<(i32, f64, i32)>
 
 // CHECK: ^[[BB6:.*]]:
-// CHECK: %[[FUNCV:.*]] = llvm.mlir.addressof @vararg_foo : !llvm.ptr
-// CHECK: %{{.*}} = llvm.invoke %[[FUNCV]]{{.*}} vararg(!llvm.func<struct<(i32, f64, i32)> (i32, ...)>) : !llvm.ptr, (i32, i32) -> !llvm.struct<(i32, f64, i32)>
+// CHECK: %[[FUNC:.*]] = llvm.mlir.addressof @vararg_foo : !llvm.ptr
+// CHECK: %{{.*}} = llvm.invoke %[[FUNC]]{{.*}} vararg(!llvm.func<struct<(i32, f64, i32)> (i32, ...)>) : !llvm.ptr, (i32, i32) -> !llvm.struct<(i32, f64, i32)>
 ^bb6:
   %15 = llvm.mlir.addressof @vararg_foo : !llvm.ptr
   %16 = llvm.invoke %15(%5, %5) to ^bb2 unwind ^bb1 vararg(!llvm.func<!llvm.struct<(i32, f64, i32)> (i32, ...)>) : !llvm.ptr, (i32, i32) -> !llvm.struct<(i32, f64, i32)>
