@@ -59,6 +59,8 @@
 //      element type which is four times as wide as the element type of 'v'
 //   o: computes a vector type identical to what 'v' computes except for the
 //      element type which is eight times as wide as the element type of 'v'
+//   4: computes a vector type with LMUL identical to what 'v' computes except
+//      for the SEW which is 4 times as wide as the SEW of 'v'
 //   m: computes a vector type identical to what 'v' computes except for the
 //      element type which is bool
 //   0: void type, ignores "t"
