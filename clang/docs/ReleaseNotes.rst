@@ -212,6 +212,8 @@ Improvements to Clang's diagnostics
   (`#51567: <https://github.com/llvm/llvm-project/issues/51567>`_)
 - Clang now diagnoses narrowing implicit conversions on variable initializers in immediate
   function context and on constexpr variable template initializers.
+- Clang now prints its 'note' diagnostic in cyan instead of black, to be more compatible
+  with terminals with dark background colors. This is also more consistent with GCC.
 
 Bug Fixes in This Version
 -------------------------
