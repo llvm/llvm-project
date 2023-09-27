@@ -4720,9 +4720,11 @@ void RewriteInstance::patchELFAllocatableRelrSection(
   const uint8_t PSize = BC->AsmInfo->getCodePointerSize();
   const uint64_t MaxDelta = ((CHAR_BIT * DynamicRelrEntrySize) - 1) * PSize;
 
-  auto FixAddend = [&](const BinarySection &Section, const Relocation &Rel) {
+  auto FixAddend = [&](const BinarySection &Section, const Relocation &Rel,
+                       uint64_t FileOffset) {
     // Fix relocation symbol value in place if no static relocation found
-    // on the same address
+    // on the same address. We won't check the BF relocations here since it
+    // is rare case and no optimization is required.
     if (Section.getRelocationAt(Rel.Offset))
       return;
 
@@ -4731,11 +4733,6 @@ void RewriteInstance::patchELFAllocatableRelrSection(
     if (!Addend)
       return;
 
-    uint64_t FileOffset = Section.getOutputFileOffset();
-    if (!FileOffset)
-      FileOffset = Section.getInputFileOffset();
-
-    FileOffset += Rel.Offset;
     OS.pwrite(reinterpret_cast<const char *>(&Addend), PSize, FileOffset);
   };
 
@@ -4757,7 +4754,7 @@ void RewriteInstance::patchELFAllocatableRelrSection(
       RelOffset = RelOffset == 0 ? SectionAddress + Rel.Offset : RelOffset;
       assert((RelOffset & 1) == 0 && "Wrong relocation offset");
       RelOffsets.emplace(RelOffset);
-      FixAddend(Section, Rel);
+      FixAddend(Section, Rel, RelOffset);
     }
   }
 
