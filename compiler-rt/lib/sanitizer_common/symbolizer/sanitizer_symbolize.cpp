@@ -28,6 +28,7 @@ static llvm::symbolize::LLVMSymbolizer *getDefaultSymbolizer() {
     return Symbolizer;
   llvm::symbolize::LLVMSymbolizer::Options Opts;
   Opts.Demangle = Demangle;
+  Opts.UntagAddresses = true;
   Symbolizer = new llvm::symbolize::LLVMSymbolizer(Opts);
   return Symbolizer;
 }
