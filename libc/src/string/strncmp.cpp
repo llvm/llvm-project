@@ -13,7 +13,7 @@
 
 #include <stddef.h>
 
-namespace __llvm_libc {
+namespace LIBC_NAMESPACE {
 
 LLVM_LIBC_FUNCTION(int, strncmp,
                    (const char *left, const char *right, size_t n)) {
@@ -21,4 +21,4 @@ LLVM_LIBC_FUNCTION(int, strncmp,
   return inline_strncmp(left, right, n, comp);
 }
 
-} // namespace __llvm_libc
+} // namespace LIBC_NAMESPACE

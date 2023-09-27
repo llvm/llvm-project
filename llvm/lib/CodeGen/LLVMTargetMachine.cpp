@@ -37,6 +37,11 @@ static cl::opt<bool>
     EnableTrapUnreachable("trap-unreachable", cl::Hidden,
                           cl::desc("Enable generating trap for unreachable"));
 
+static cl::opt<bool> EnableNoTrapAfterNoreturn(
+    "no-trap-after-noreturn", cl::Hidden,
+    cl::desc("Do not emit a trap instruction for 'unreachable' IR instructions "
+             "after noreturn calls, even if --trap-unreachable is set."));
+
 void LLVMTargetMachine::initAsmInfo() {
   MRI.reset(TheTarget.createMCRegInfo(getTargetTriple().str()));
   assert(MRI && "Unable to create reg info");
@@ -95,6 +100,8 @@ LLVMTargetMachine::LLVMTargetMachine(const Target &T,
 
   if (EnableTrapUnreachable)
     this->Options.TrapUnreachable = true;
+  if (EnableNoTrapAfterNoreturn)
+    this->Options.NoTrapAfterNoreturn = true;
 }
 
 TargetTransformInfo

@@ -44,11 +44,6 @@ CMAKE               The CMake binary to use. This variable is optional.
 CLANG_FORMAT        The clang-format binary to use when generating the format
                     ignore list.
 
-GIT_CLANG_FORMAT    The git-clang-format binary to use in the 'format' builder.
-                    When the value is omitted, it defaults to
-                    'git-clang-format'. This variable or its fallback must work
-                    when running the 'format' builder.
-
 ENABLE_CLANG_TIDY   Whether to compile and run clang-tidy checks. This variable
                     is optional.
 
@@ -208,22 +203,6 @@ ${NINJA} --version
 if [ ! -z "${CXX}" ]; then ${CXX} --version; fi
 
 case "${BUILDER}" in
-check-format)
-    clean
-    echo "+++ Checking formatting"
-    # We need to set --extensions so that clang-format checks extensionless files.
-    mkdir -p ${BUILD_DIR}
-    if [ -z "${GIT_CLANG_FORMAT}" ]; then
-       GIT_CLANG_FORMAT=git-clang-format
-    fi
-    ${GIT_CLANG_FORMAT} \
-        --diff \
-        --extensions ',h,hpp,c,cpp,cppm,inc,ipp' HEAD~1 \
-        -- $(find libcxx/{benchmarks,include,modules,src} -type f | grep -vf libcxx/utils/data/ignore_format.txt) \
-        | tee ${BUILD_DIR}/clang-format.patch
-    # Check if the diff is empty, fail otherwise.
-    ! grep -q '^--- a' ${BUILD_DIR}/clang-format.patch
-;;
 check-generated-output)
     # `! foo` doesn't work properly with `set -e`, use `! foo || false` instead.
     # https://stackoverflow.com/questions/57681955/set-e-does-not-respect-logical-not

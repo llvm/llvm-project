@@ -260,6 +260,13 @@ public:
   /// if `D` isn't assigned a storage location in the environment.
   StorageLocation *getStorageLocation(const ValueDecl &D) const;
 
+  /// Removes the location assigned to `D` in the environment.
+  ///
+  /// Requirements:
+  ///
+  ///  `D` must have a storage location assigned in the environment.
+  void removeDecl(const ValueDecl &D);
+
   /// Assigns `Loc` as the storage location of the glvalue `E` in the
   /// environment.
   ///
@@ -466,8 +473,9 @@ public:
 
   /// Returns a symbolic boolean value that models a boolean literal equal to
   /// `Value`
-  BoolValue &getBoolLiteralValue(bool Value) const {
-    return arena().makeBoolValue(arena().makeLiteral(Value));
+  AtomicBoolValue &getBoolLiteralValue(bool Value) const {
+    return cast<AtomicBoolValue>(
+        arena().makeBoolValue(arena().makeLiteral(Value)));
   }
 
   /// Returns an atomic boolean value.

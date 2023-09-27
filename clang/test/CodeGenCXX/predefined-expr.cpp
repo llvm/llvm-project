@@ -101,7 +101,6 @@
 
 
 int printf(const char * _Format, ...);
-int strcmp(const char *, const char *);
 
 class ClassInTopLevelNamespace {
 public:

@@ -8,9 +8,10 @@
 
 # Overview of Compiler Phases
 
-```eval_rst
-.. contents::
-   :local:
+```{contents}
+---
+local:
+---
 ```
 The Flang compiler transforms Fortran source code into an executable file. 
 This transformation proceeds in three high level phases -- analysis, lowering,

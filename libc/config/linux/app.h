@@ -13,7 +13,7 @@
 
 #include <stdint.h>
 
-namespace __llvm_libc {
+namespace LIBC_NAMESPACE {
 
 // Data structure to capture properties of the linux/ELF TLS image.
 struct TLSImage {
@@ -37,7 +37,7 @@ struct TLSImage {
 
 #if defined(LIBC_TARGET_ARCH_IS_X86_64) ||                                     \
     defined(LIBC_TARGET_ARCH_IS_AARCH64) ||                                    \
-    defined(LIBC_TARGET_ARCH_IS_RISCV64)
+    defined(LIBC_TARGET_ARCH_IS_ANY_RISCV)
 // At the language level, argc is an int. But we use uint64_t as the x86_64
 // ABI specifies it as an 8 byte value. Likewise, in the ARM64 ABI, arguments
 // are usually passed in registers.  x0 is a doubleword register, so this is
@@ -106,6 +106,6 @@ void init_tls(TLSDescriptor &tls);
 // Cleanup the TLS area as described in |tls_descriptor|.
 void cleanup_tls(uintptr_t tls_addr, uintptr_t tls_size);
 
-} // namespace __llvm_libc
+} // namespace LIBC_NAMESPACE
 
 #endif // LLVM_LIBC_CONFIG_LINUX_APP_H

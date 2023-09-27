@@ -34,6 +34,8 @@ static constexpr std::int64_t starCst = -1;
 
 static unsigned routineCounter = 0;
 static constexpr llvm::StringRef accRoutinePrefix = "acc_routine_";
+static constexpr llvm::StringRef accPrivateInitName = "acc.private.init";
+static constexpr llvm::StringRef accReductionInitName = "acc.reduction.init";
 
 static mlir::Location
 genOperandLocation(Fortran::lower::AbstractConverter &converter,
@@ -343,19 +345,39 @@ static void genDataExitOperations(fir::FirOpBuilder &builder,
   }
 }
 
+fir::ShapeOp genShapeOp(mlir::OpBuilder &builder, fir::SequenceType seqTy,
+                        mlir::Location loc) {
+  llvm::SmallVector<mlir::Value> extents;
+  mlir::Type idxTy = builder.getIndexType();
+  for (auto extent : seqTy.getShape())
+    extents.push_back(builder.create<mlir::arith::ConstantOp>(
+        loc, idxTy, builder.getIntegerAttr(idxTy, extent)));
+  return builder.create<fir::ShapeOp>(loc, extents);
+}
+
 template <typename RecipeOp>
 static void genPrivateLikeInitRegion(mlir::OpBuilder &builder, RecipeOp recipe,
                                      mlir::Type ty, mlir::Location loc) {
   mlir::Value retVal = recipe.getInitRegion().front().getArgument(0);
   if (auto refTy = mlir::dyn_cast_or_null<fir::ReferenceType>(ty)) {
-    if (fir::isa_trivial(refTy.getEleTy()))
-      retVal = builder.create<fir::AllocaOp>(loc, refTy.getEleTy());
-    else if (auto seqTy =
-                 mlir::dyn_cast_or_null<fir::SequenceType>(refTy.getEleTy())) {
+    if (fir::isa_trivial(refTy.getEleTy())) {
+      auto alloca = builder.create<fir::AllocaOp>(loc, refTy.getEleTy());
+      auto declareOp = builder.create<hlfir::DeclareOp>(
+          loc, alloca, accPrivateInitName, /*shape=*/nullptr,
+          llvm::ArrayRef<mlir::Value>{}, fir::FortranVariableFlagsAttr{});
+      retVal = declareOp.getBase();
+    } else if (auto seqTy = mlir::dyn_cast_or_null<fir::SequenceType>(
+                   refTy.getEleTy())) {
       if (seqTy.hasDynamicExtents())
         TODO(loc, "private recipe of array with dynamic extents");
-      if (fir::isa_trivial(seqTy.getEleTy()))
-        retVal = builder.create<fir::AllocaOp>(loc, seqTy);
+      if (fir::isa_trivial(seqTy.getEleTy())) {
+        auto alloca = builder.create<fir::AllocaOp>(loc, seqTy);
+        auto shapeOp = genShapeOp(builder, seqTy, loc);
+        auto declareOp = builder.create<hlfir::DeclareOp>(
+            loc, alloca, accPrivateInitName, shapeOp,
+            llvm::ArrayRef<mlir::Value>{}, fir::FortranVariableFlagsAttr{});
+        retVal = declareOp.getBase();
+      }
     }
   }
   builder.create<mlir::acc::YieldOp>(loc, retVal);
@@ -692,14 +714,21 @@ static mlir::Value genReductionInitRegion(fir::FirOpBuilder &builder,
   mlir::Value initValue = getReductionInitValue(builder, loc, ty, op);
   if (fir::isa_trivial(ty)) {
     mlir::Value alloca = builder.create<fir::AllocaOp>(loc, ty);
+    auto declareOp = builder.create<hlfir::DeclareOp>(
+        loc, alloca, accReductionInitName, /*shape=*/nullptr,
+        llvm::ArrayRef<mlir::Value>{}, fir::FortranVariableFlagsAttr{});
     builder.create<fir::StoreOp>(loc, builder.createConvert(loc, ty, initValue),
-                                 alloca);
-    return alloca;
+                                 declareOp.getBase());
+    return declareOp.getBase();
   } else if (auto seqTy = mlir::dyn_cast_or_null<fir::SequenceType>(ty)) {
     if (seqTy.hasDynamicExtents())
       TODO(loc, "private recipe of array with dynamic extents");
     if (fir::isa_trivial(seqTy.getEleTy())) {
       mlir::Value alloca = builder.create<fir::AllocaOp>(loc, seqTy);
+      auto shapeOp = genShapeOp(builder, seqTy, loc);
+      auto declareOp = builder.create<hlfir::DeclareOp>(
+          loc, alloca, accReductionInitName, shapeOp,
+          llvm::ArrayRef<mlir::Value>{}, fir::FortranVariableFlagsAttr{});
       mlir::Type idxTy = builder.getIndexType();
       mlir::Type refTy = fir::ReferenceType::get(seqTy.getEleTy());
       llvm::SmallVector<fir::DoLoopOp> loops;
@@ -714,10 +743,11 @@ static mlir::Value genReductionInitRegion(fir::FirOpBuilder &builder,
         loops.push_back(loop);
         ivs.push_back(loop.getInductionVar());
       }
-      auto coord = builder.create<fir::CoordinateOp>(loc, refTy, alloca, ivs);
+      auto coord = builder.create<fir::CoordinateOp>(loc, refTy,
+                                                     declareOp.getBase(), ivs);
       builder.create<fir::StoreOp>(loc, initValue, coord);
       builder.setInsertionPointAfter(loops[0]);
-      return alloca;
+      return declareOp.getBase();
     }
   }
   llvm::report_fatal_error("Unsupported OpenACC reduction type");

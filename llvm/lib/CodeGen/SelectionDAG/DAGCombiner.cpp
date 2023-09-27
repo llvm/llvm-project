@@ -16418,7 +16418,7 @@ SDValue DAGCombiner::combineFMulOrFDivWithIntPow2(SDNode *N) {
   EVT NewIntVT = EVT::getIntegerVT(*DAG.getContext(), VT.getScalarSizeInBits());
   if (VT.isVector())
     NewIntVT = EVT::getVectorVT(*DAG.getContext(), NewIntVT,
-                                VT.getVectorNumElements());
+                                VT.getVectorElementCount());
 
   SDValue Log2 = BuildLogBase2(Pow2Op, DL, DAG.isKnownNeverZero(Pow2Op),
                                /*InexpensiveOnly*/ true, NewIntVT);
@@ -27323,8 +27323,8 @@ static SDValue takeInexpensiveLog2(SelectionDAG &DAG, const SDLoc &DL, EVT VT,
     return SDValue();
 
   auto CastToVT = [&](EVT NewVT, SDValue ToCast) {
-    EVT CurVT = ToCast.getValueType();
     ToCast = PeekThroughCastsAndTrunc(ToCast);
+    EVT CurVT = ToCast.getValueType();
     if (NewVT == CurVT)
       return ToCast;
 

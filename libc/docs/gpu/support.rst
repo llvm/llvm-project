@@ -129,6 +129,9 @@ Function Name  Available  RPC Required
 feof           |check|    |check|
 ferror         |check|    |check|
 clearerr       |check|    |check|
+fseek          |check|    |check|
+ftell          |check|    |check|
+fflush         |check|    |check|
 fgetc          |check|    |check|
 fgets          |check|    |check|
 getc           |check|    |check|

@@ -17,13 +17,13 @@
 #define LLVM_CLANG_AST_INTERP_CONTEXT_H
 
 #include "InterpStack.h"
-#include "clang/AST/APValue.h"
 
 namespace clang {
 class ASTContext;
 class LangOptions;
 class FunctionDecl;
 class VarDecl;
+class APValue;
 
 namespace interp {
 class Function;

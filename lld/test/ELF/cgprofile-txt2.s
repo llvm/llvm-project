@@ -5,17 +5,28 @@
 # RUN: echo "B C 50" >> %t.call_graph
 # RUN: echo "C D 40" >> %t.call_graph
 # RUN: echo "D B 10" >> %t.call_graph
-# RUN: ld.lld -e A %t --call-graph-ordering-file %t.call_graph -o %t2
-# RUN: llvm-readobj --symbols %t2 | FileCheck %s
+# RUN: ld.lld -e A %t --call-graph-ordering-file %t.call_graph --call-graph-profile-sort=hfsort -o %t2
+# RUN: llvm-readobj --symbols %t2 | FileCheck %s --check-prefix=CHECKC3
+# RUN: ld.lld -e A %t --call-graph-ordering-file %t.call_graph --call-graph-profile-sort=cdsort -o %t2
+# RUN: llvm-readobj --symbols %t2 | FileCheck %s --check-prefix=CHECKCDS
 
-# CHECK:      Name: A
-# CHECK-NEXT: Value: 0x201123
-# CHECK:      Name: B
-# CHECK-NEXT: Value: 0x201120
-# CHECK:      Name: C
-# CHECK-NEXT: Value: 0x201121
-# CHECK:      Name: D
-# CHECK-NEXT: Value: 0x201122
+# CHECKC3:      Name: A
+# CHECKC3-NEXT: Value: 0x201123
+# CHECKC3:      Name: B
+# CHECKC3-NEXT: Value: 0x201120
+# CHECKC3:      Name: C
+# CHECKC3-NEXT: Value: 0x201121
+# CHECKC3:      Name: D
+# CHECKC3-NEXT: Value: 0x201122
+
+# CHECKCDS:      Name: A
+# CHECKCDS-NEXT: Value: 0x201120
+# CHECKCDS:      Name: B
+# CHECKCDS-NEXT: Value: 0x201121
+# CHECKCDS:      Name: C
+# CHECKCDS-NEXT: Value: 0x201122
+# CHECKCDS:      Name: D
+# CHECKCDS-NEXT: Value: 0x201123
 
 .section    .text.A,"ax",@progbits
 .globl  A

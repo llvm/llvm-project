@@ -29,7 +29,7 @@ func.func @conv_3d_ndhwc_dhwcf(%arg0: memref<?x?x?x?x?xf32>, %arg1: memref<?x?x?
 transform.sequence failures(propagate) {
   ^bb0(%arg1: !transform.any_op):
     %0 = transform.structured.match ops{["linalg.conv_3d_ndhwc_dhwcf"]} in %arg1 : (!transform.any_op) -> !transform.any_op
-    %1, %loops:3 = transform.structured.tile %0 [0, 5, 5, 5] : (!transform.any_op) -> (!transform.any_op, !transform.any_op, !transform.any_op, !transform.any_op)
+    %1, %loops:3 = transform.structured.tile_using_for %0 [0, 5, 5, 5] : (!transform.any_op) -> (!transform.any_op, !transform.any_op, !transform.any_op, !transform.any_op)
 }
 
 func.func @main() {

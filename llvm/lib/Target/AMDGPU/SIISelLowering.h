@@ -468,13 +468,11 @@ public:
   getRegForInlineAsmConstraint(const TargetRegisterInfo *TRI,
                                StringRef Constraint, MVT VT) const override;
   ConstraintType getConstraintType(StringRef Constraint) const override;
-  void LowerAsmOperandForConstraint(SDValue Op,
-                                    std::string &Constraint,
+  void LowerAsmOperandForConstraint(SDValue Op, StringRef Constraint,
                                     std::vector<SDValue> &Ops,
                                     SelectionDAG &DAG) const override;
   bool getAsmOperandConstVal(SDValue Op, uint64_t &Val) const;
-  bool checkAsmConstraintVal(SDValue Op,
-                             const std::string &Constraint,
+  bool checkAsmConstraintVal(SDValue Op, StringRef Constraint,
                              uint64_t Val) const;
   bool checkAsmConstraintValA(SDValue Op,
                               uint64_t Val,
@@ -547,6 +545,17 @@ public:
                             MachineFunction &MF,
                             const SIRegisterInfo &TRI,
                             SIMachineFunctionInfo &Info) const;
+
+  void allocatePreloadKernArgSGPRs(CCState &CCInfo,
+                                   SmallVectorImpl<CCValAssign> &ArgLocs,
+                                   const SmallVectorImpl<ISD::InputArg> &Ins,
+                                   MachineFunction &MF,
+                                   const SIRegisterInfo &TRI,
+                                   SIMachineFunctionInfo &Info) const;
+
+  void allocateLDSKernelId(CCState &CCInfo, MachineFunction &MF,
+                           const SIRegisterInfo &TRI,
+                           SIMachineFunctionInfo &Info) const;
 
   void allocateSystemSGPRs(CCState &CCInfo,
                            MachineFunction &MF,

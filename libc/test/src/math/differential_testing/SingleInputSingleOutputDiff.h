@@ -11,7 +11,7 @@
 
 #include <fstream>
 
-namespace __llvm_libc {
+namespace LIBC_NAMESPACE {
 namespace testing {
 
 template <typename T> class SingleInputSingleOutputDiff {
@@ -100,18 +100,18 @@ public:
 };
 
 } // namespace testing
-} // namespace __llvm_libc
+} // namespace LIBC_NAMESPACE
 
 #define SINGLE_INPUT_SINGLE_OUTPUT_DIFF(T, myFunc, otherFunc, filename)        \
   int main() {                                                                 \
-    __llvm_libc::testing::SingleInputSingleOutputDiff<T>::runDiff(             \
+    LIBC_NAMESPACE::testing::SingleInputSingleOutputDiff<T>::runDiff(          \
         &myFunc, &otherFunc, filename);                                        \
     return 0;                                                                  \
   }
 
 #define SINGLE_INPUT_SINGLE_OUTPUT_PERF(T, myFunc, otherFunc, filename)        \
   int main() {                                                                 \
-    __llvm_libc::testing::SingleInputSingleOutputDiff<T>::runPerf(             \
+    LIBC_NAMESPACE::testing::SingleInputSingleOutputDiff<T>::runPerf(          \
         &myFunc, &otherFunc, filename);                                        \
     return 0;                                                                  \
   }

@@ -231,3 +231,27 @@ body:             |
     PseudoRET implicit $x10, implicit $x11, implicit $x12
 
 ...
+---
+name:            smulh_i32
+body:             |
+  bb.0.entry:
+    ; CHECK-LABEL: name: smulh_i32
+    ; CHECK: [[COPY:%[0-9]+]]:_(s64) = COPY $x10
+    ; CHECK-NEXT: [[COPY1:%[0-9]+]]:_(s64) = COPY $x11
+    ; CHECK-NEXT: [[SEXT_INREG:%[0-9]+]]:_(s64) = G_SEXT_INREG [[COPY]], 32
+    ; CHECK-NEXT: [[SEXT_INREG1:%[0-9]+]]:_(s64) = G_SEXT_INREG [[COPY1]], 32
+    ; CHECK-NEXT: [[MUL:%[0-9]+]]:_(s64) = G_MUL [[SEXT_INREG]], [[SEXT_INREG1]]
+    ; CHECK-NEXT: [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 32
+    ; CHECK-NEXT: [[ASHR:%[0-9]+]]:_(s64) = G_ASHR [[MUL]], [[C]](s64)
+    ; CHECK-NEXT: $x10 = COPY [[ASHR]](s64)
+    ; CHECK-NEXT: PseudoRET implicit $x10
+    %0:_(s64) = COPY $x10
+    %1:_(s64) = COPY $x11
+    %2:_(s32) = G_TRUNC %0(s64)
+    %3:_(s32) = G_TRUNC %1(s64)
+    %4:_(s32) = G_SMULH %2, %3
+    %5:_(s64) = G_ANYEXT %4(s32)
+    $x10 = COPY %5(s64)
+    PseudoRET implicit $x10
+
+...

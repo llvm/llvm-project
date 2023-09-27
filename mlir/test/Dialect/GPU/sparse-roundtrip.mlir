@@ -128,4 +128,28 @@ module attributes {gpu.container_module} {
     return
   }
 
+  // CHECK-LABEL: func @csc_and_bsr
+  // CHECK: %{{.*}} = gpu.wait async
+  // CHECK: %{{.*}}, %{{.*}} = gpu.alloc async [%{{.*}}] (%{{.*}}) : memref<?xindex>
+  // CHECK: %{{.*}}, %{{.*}} = gpu.alloc async [%{{.*}}] (%{{.*}}) : memref<?xf64>
+  // CHECK: %{{.*}}, %{{.*}} = gpu.create_csc async [%{{.*}}] %{{.*}}, %{{.*}}, %{{.*}}, %{{.*}}, %{{.*}}, %{{.*}} : memref<?xindex>, memref<?xindex>, memref<?xf64>
+  // CHECK: %{{.*}}, %{{.*}} = gpu.create_bsr async [%{{.*}}] %{{.*}}, %{{.*}}, %{{.*}}, %{{.*}}, %{{.*}}, %{{.*}}, %{{.*}}, %{{.*}} : memref<?xindex>, memref<?xindex>, memref<?xf64>
+  // CHECK: gpu.wait [%{{.*}}]
+  // CHECK: return
+  func.func @csc_and_bsr(%arg0: index) {
+    %token0 = gpu.wait async
+    %mem1, %token1 = gpu.alloc async [%token0] (%arg0) : memref<?xindex>
+    %mem2, %token2 = gpu.alloc async [%token1] (%arg0) : memref<?xf64>
+    %csc, %token3 = gpu.create_csc async [%token2]
+      %arg0, %arg0, %arg0, %mem1, %mem1, %mem2
+      : memref<?xindex>, memref<?xindex>, memref<?xf64>
+    %bsr, %token4 = gpu.create_bsr async [%token3]
+      %arg0, %arg0, %arg0, %arg0, %arg0, %mem1, %mem1, %mem2
+      : memref<?xindex>, memref<?xindex>, memref<?xf64>
+    %token5 = gpu.destroy_sp_mat async [%token4] %csc
+    %token6 = gpu.destroy_sp_mat async [%token5] %bsr
+    gpu.wait [%token6]
+    return
+  }
+
 }
