@@ -1,6 +1,11 @@
+; REQUIRES: powerpc-registered-target
 ; RUN: llc -filetype=obj -o %t -mtriple=powerpc-aix-ibm-xcoff < %s
 ; RUN: llvm-symbolizer --obj=%t 'DATA 0x60' 'DATA 0x61' 'DATA 0x64' 'DATA 0X68' \
-; RUN:   'DATA 0x90' 'DATA 0x94' 'DATA 0X98' | FileCheck %s
+; RUN:   'DATA 0x90' 'DATA 0x94' 'DATA 0X98' | \
+; RUN:   FileCheck %s
+
+;; This files tests llvm-symbolizer can successfully symbolize the data symbol
+;; from the DWARF info on AIX. Note that AIX is big endian.
 
 ; CHECK: bss_global
 ; CHECK-NEXT: 96 4
@@ -22,43 +27,43 @@
 ; CHECK-NEXT: /t.cpp:4
 ; CHECK-EMPTY:
 
-; FIXME: fix the wrong size 152
+;; FIXME: fix the wrong size 152
 ; CHECK: f()::function_global
 ; CHECK-NEXT: 144 152
 ; CHECK-NEXT: /t.cpp:8
 ; CHECK-EMPTY:
 
-; FIXME: fix the wrong size 152
+;; FIXME: fix the wrong size 152
 ; CHECK: beta
 ; CHECK-NEXT: 148 152
 ; CHECK-NEXT: /t.cpp:13
 ; CHECK-EMPTY:
 
-; FIXME: fix the wrong size 152
+;; FIXME: fix the wrong size 152
 ; CHECK: alpha
 ; CHECK-NEXT: 152 152
 ; CHECK-NEXT: /t.cpp:12
 ; CHECK-EMPTY:
 
-; The case is from `test/tools/llvm-symbolizer/data-location.yaml`, compiled with:
-; clang++ -g -gdwarf-3 -O3 t.cpp  -nostdlib  -target powerpc-aix-ibm-xcoff -S -emit-llvm
+;; The case is from `test/tools/llvm-symbolizer/data-location.yaml`, compiled with:
+;; clang++ -g -gdwarf-3 -O3 t.cpp -nostdlib -target powerpc-aix-ibm-xcoff -S -emit-llvm
 
-;     cat t.cpp
-;     1	int bss_global;
-;     2	int data_global = 2;
-;     3
-;     4	const char* str =
-;     5	  "12345678";
-;     6
-;     7	int* f() {
-;     8	  static int function_global;
-;     9	  return &function_global;
-;    10	}
-;    11
-;    12	static int alpha;
-;    13	static int beta;
-;    14	int *f(bool b) { return beta ? &alpha : &beta; }
-;    15
+;;     cat t.cpp
+;;     1	int bss_global;
+;;     2	int data_global = 2;
+;;     3
+;;     4	const char* str =
+;;     5	  "12345678";
+;;     6
+;;     7	int* f() {
+;;     8	  static int function_global;
+;;     9	  return &function_global;
+;;    10	}
+;;    11
+;;    12	static int alpha;
+;;    13	static int beta;
+;;    14	int *f(bool b) { return beta ? &alpha : &beta; }
+;;    15
 
 ; ModuleID = 't.cpp'
 source_filename = "t.cpp"
