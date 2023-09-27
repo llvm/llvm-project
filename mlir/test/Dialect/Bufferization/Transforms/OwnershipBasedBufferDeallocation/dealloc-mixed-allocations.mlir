@@ -27,7 +27,7 @@ func.func @mixed_allocations(%cond: i1) -> (memref<f32>, !gpu.async.token) {
 // CHECK: [[ALIAS1:%.+]] = arith.cmpi ne, [[A2_PTR]], [[SELECT_PTR]]
 // CHECK: [[COND1:%.+]] = arith.andi [[ALIAS1]], %true
 // CHECK: scf.if [[COND1]] {
-// TODO: add pass option to lower-deallocation to insert gpu.dealloc here
-// CHECK:   memref.dealloc [[A2_BASE]]
+// CHECK:   [[T:%.+]] = gpu.dealloc async [[A2_BASE]]
+// CHECK:   gpu.wait [[[T]]]
 // CHECK: }
 // CHECK: return [[SELECT]], [[TOKEN]]

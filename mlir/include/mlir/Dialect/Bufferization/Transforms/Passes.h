@@ -18,6 +18,16 @@ class FuncOp;
 namespace bufferization {
 struct OneShotBufferizationOptions;
 
+/// Options for the LowerDeallocation pass and rewrite patterns.
+struct LowerDeallocationOptions {
+  /// Given a MemRef value, build the operation(s) necessary to properly
+  /// deallocate the value.
+  std::function<void(OpBuilder &, Location, Value)> buildDeallocOp =
+      [](OpBuilder &builder, Location loc, Value memref) {
+        builder.create<memref::DeallocOp>(loc, memref);
+      };
+};
+
 //===----------------------------------------------------------------------===//
 // Passes
 //===----------------------------------------------------------------------===//
@@ -41,12 +51,14 @@ std::unique_ptr<Pass> createBufferDeallocationSimplificationPass();
 
 /// Creates an instance of the LowerDeallocations pass to lower
 /// `bufferization.dealloc` operations to the `memref` dialect.
-std::unique_ptr<Pass> createLowerDeallocationsPass();
+std::unique_ptr<Pass> createLowerDeallocationsPass(
+    const LowerDeallocationOptions &options = LowerDeallocationOptions());
 
 /// Adds the conversion pattern of the `bufferization.dealloc` operation to the
 /// given pattern set for use in other transformation passes.
 void populateBufferizationDeallocLoweringPattern(
-    RewritePatternSet &patterns, func::FuncOp deallocLibraryFunc);
+    RewritePatternSet &patterns, func::FuncOp deallocLibraryFunc,
+    const LowerDeallocationOptions &options = LowerDeallocationOptions());
 
 /// Construct the library function needed for the fully generic
 /// `bufferization.dealloc` lowering implemented in the LowerDeallocations pass.

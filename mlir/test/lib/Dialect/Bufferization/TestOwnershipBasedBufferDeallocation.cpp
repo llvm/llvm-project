@@ -54,11 +54,6 @@ struct TestOwnershipBasedBufferDeallocationPass
     func::FuncOp helper = bufferization::buildDeallocationLibraryFunction(
         builder, module.getLoc(), symbolTable);
 
-    RewritePatternSet patterns(module->getContext());
-    bufferization::populateBufferizationDeallocLoweringPattern(patterns,
-                                                               helper);
-    FrozenRewritePatternSet frozenPatterns(std::move(patterns));
-
     WalkResult result = getOperation()->walk([&](FunctionOpInterface funcOp) {
       // Deallocate the `memref.alloc` operations.
       bufferization::DeallocationOptions options;
@@ -70,10 +65,16 @@ struct TestOwnershipBasedBufferDeallocationPass
       // Lower the inserted `bufferization.dealloc` operations.
       ConversionTarget target(getContext());
       target.addLegalDialect<memref::MemRefDialect, arith::ArithDialect,
-                             scf::SCFDialect, func::FuncDialect>();
+                             scf::SCFDialect, func::FuncDialect,
+                             gpu::GPUDialect>();
       target.addIllegalOp<bufferization::DeallocOp>();
 
-      if (failed(applyPartialConversion(funcOp, target, frozenPatterns)))
+      RewritePatternSet memrefPatterns(module->getContext());
+      bufferization::LowerDeallocationOptions loweringOptions;
+      bufferization::populateBufferizationDeallocLoweringPattern(memrefPatterns,
+                                                                 helper);
+      if (failed(applyPartialConversion(funcOp, target,
+                                        std::move(memrefPatterns))))
         return WalkResult::interrupt();
 
       // Deallocate the `gpu.alloc` operations.
@@ -107,10 +108,20 @@ struct TestOwnershipBasedBufferDeallocationPass
 
       // Lower the `bufferization.dealloc` operations inserted in the second
       // deallocation run.
-      // TODO: they are currently also lowered to memref.dealloc, we need to
-      // add pass options to the lowering pass that allow us to select the
-      // dealloc operation to be inserted.
-      if (failed(applyPartialConversion(funcOp, target, frozenPatterns)))
+      RewritePatternSet gpuPatterns(module->getContext());
+      loweringOptions.buildDeallocOp = [](OpBuilder &builder, Location loc,
+                                          Value memref) {
+        Value token =
+            builder
+                .create<gpu::DeallocOp>(
+                    loc, gpu::AsyncTokenType::get(builder.getContext()), memref)
+                .getResult(0);
+        builder.create<gpu::WaitOp>(loc, Type(), token);
+      };
+      bufferization::populateBufferizationDeallocLoweringPattern(
+          gpuPatterns, helper, loweringOptions);
+      if (failed(
+              applyPartialConversion(funcOp, target, std::move(gpuPatterns))))
         return WalkResult::interrupt();
 
       return WalkResult::advance();
