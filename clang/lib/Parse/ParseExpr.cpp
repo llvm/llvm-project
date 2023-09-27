@@ -2093,13 +2093,6 @@ Parser::ParsePostfixExpressionSuffix(ExprResult LHS) {
       };
       if (OpKind == tok::l_paren || !LHS.isInvalid()) {
         if (Tok.isNot(tok::r_paren)) {
-          // FIXME: arguments in consteval functions are constant expression
-          // regardless of the evaluation context of callsite. However, we
-          // cannot know whether the called function is constevasl before the
-          // declaration is resolved.
-          bool IsRuntimeEvaluated =
-              Actions.ExprEvalContexts.back().IsRuntimeEvaluated;
-          Actions.ExprEvalContexts.back().IsRuntimeEvaluated = false;
           if (ParseExpressionList(ArgExprs, [&] {
                 PreferredType.enterFunctionArgument(Tok.getLocation(),
                                                     RunSignatureHelp);
@@ -2116,8 +2109,6 @@ Parser::ParsePostfixExpressionSuffix(ExprResult LHS) {
             for (auto &E : ArgExprs)
               Actions.CorrectDelayedTyposInExpr(E);
           }
-          Actions.ExprEvalContexts.back().IsRuntimeEvaluated =
-              IsRuntimeEvaluated;
         }
       }
 
