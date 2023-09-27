@@ -628,3 +628,16 @@ body:             |
 
     ; GCN: NumVgprs: 259
 ...
+
+# GCN-LABEL: {{^}}pseudo:
+---
+name:            pseudo
+body:             |
+  bb.0:
+    liveins: $vgpr0
+
+    $sgpr0 = SI_ILLEGAL_COPY killed $vgpr0, implicit-def $exec, implicit-def $vcc, implicit $exec
+    ; Just do not assert here.
+    ; GCN: illegal copy v0 to s0
+    SI_RETURN_TO_EPILOG killed $sgpr0
+...

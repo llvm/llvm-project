@@ -240,7 +240,7 @@ bool AMDGPULowerVGPREncoding::runOnMachineInstr(MachineInstr &MI) {
     llvm_unreachable("Image and export VGPR lowering is not implemented and"
                      " these instructions are not expected on gfx1210");
 
-  assert(!TII->hasVGPRUses(MI));
+  assert(!TII->hasVGPRUses(MI) || MI.isMetaInstruction() || MI.isPseudo());
 
   return false;
 }
