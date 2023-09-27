@@ -256,9 +256,11 @@ Register SPIRVGlobalRegistry::buildConstantFP(APFloat Val,
   Register Res = DT.find(ConstFP, &MF);
   if (!Res.isValid()) {
     unsigned BitWidth = SpvType ? getScalarOrVectorBitWidth(SpvType) : 32;
-    Res = MF.getRegInfo().createGenericVirtualRegister(LLT::scalar(BitWidth));
+    LLT LLTy = LLT::scalar(EmitIR ? BitWidth : 32);
+    Res = MF.getRegInfo().createGenericVirtualRegister(LLTy);
     MF.getRegInfo().setRegClass(Res, &SPIRV::IDRegClass);
-    assignTypeToVReg(LLVMFPTy, Res, MIRBuilder);
+    assignTypeToVReg(LLVMFPTy, Res, MIRBuilder,
+                     SPIRV::AccessQualifier::ReadWrite, EmitIR);
     DT.add(ConstFP, &MF, Res);
     if (EmitIR) {
       MIRBuilder.buildFConstant(Res, *ConstFP);
