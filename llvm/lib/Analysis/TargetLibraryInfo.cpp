@@ -1268,21 +1268,22 @@ bool TargetLibraryInfoImpl::isFunctionVectorizable(StringRef funcName) const {
 StringRef TargetLibraryInfoImpl::getVectorizedFunction(StringRef F,
                                                        const ElementCount &VF,
                                                        bool Masked) const {
-  const VecDesc *VD = getMangledTLIVectorName(F, VF, Masked);
+  const VecDesc *VD = getVectorMappingInfo(F, VF, Masked);
   if (VD)
     return VD->getVectorFnName();
   return StringRef();
 }
 
-const VecDesc *TargetLibraryInfoImpl::getMangledTLIVectorName(
-    StringRef F, const ElementCount &VF, bool Masked) const {
+const VecDesc *
+TargetLibraryInfoImpl::getVectorMappingInfo(StringRef F, const ElementCount &VF,
+                                            bool Masked) const {
   F = sanitizeFunctionName(F);
   if (F.empty())
     return nullptr;
   std::vector<VecDesc>::const_iterator I =
       llvm::lower_bound(VectorDescs, F, compareWithScalarFnName);
   while (I != VectorDescs.end() && StringRef(I->getScalarFnName()) == F) {
-    if ((I->getVectorizationFactor() == VF) && (I->getMasked() == Masked))
+    if ((I->getVectorizationFactor() == VF) && (I->isMasked() == Masked))
       return &(*I);
     ++I;
   }

@@ -24,13 +24,13 @@ class Function;
 class Module;
 class Triple;
 
-/// Describes a possible vectorization of a function.
-/// Function 'VectorFnName' is equivalent to 'ScalarFnName' vectorized
-/// by a factor 'VectorizationFactor'.
-/// The MangledName string holds scalar-to-vector mapping:
+/// Provides info so a possible vectorization of a function can be
+/// computed. Function 'VectorFnName' is equivalent to 'ScalarFnName'
+/// vectorized by a factor 'VectorizationFactor'.
+/// The MangledNamePrefix string holds information about isa, mask, vlen,
+/// and vparams so a scalar-to-vector mapping of the form:
 ///    _ZGV<isa><mask><vlen><vparams>_<scalarname>(<vectorname>)
-///
-/// where:
+/// can be constructed where:
 ///
 /// <isa> = "_LLVM_"
 /// <mask> = "M" if masked, "N" if no mask.
@@ -41,26 +41,26 @@ class Triple;
 /// <scalarname> = the name of the scalar function.
 /// <vectorname> = the name of the vector function.
 class VecDesc {
-private:
   StringRef ScalarFnName;
   StringRef VectorFnName;
   ElementCount VectorizationFactor;
   bool Masked;
-  StringRef MangledName;
+  StringRef MangledNamePrefix;
 
 public:
   VecDesc() = delete;
   VecDesc(StringRef ScalarFnName, StringRef VectorFnName,
-          ElementCount VectorizationFactor, bool Masked, StringRef MangledName)
+          ElementCount VectorizationFactor, bool Masked,
+          StringRef MangledNamePrefix)
       : ScalarFnName(ScalarFnName), VectorFnName(VectorFnName),
         VectorizationFactor(VectorizationFactor), Masked(Masked),
-        MangledName(MangledName) {}
+        MangledNamePrefix(MangledNamePrefix) {}
 
   StringRef getScalarFnName() const { return ScalarFnName; }
   StringRef getVectorFnName() const { return VectorFnName; }
   ElementCount getVectorizationFactor() const { return VectorizationFactor; }
-  bool getMasked() const { return Masked; }
-  StringRef getMangledName() const { return MangledName; }
+  bool isMasked() const { return Masked; }
+  StringRef getMangledNamePrefix() const { return MangledNamePrefix; }
 };
 
   enum LibFunc : unsigned {
@@ -200,16 +200,16 @@ public:
   /// vectorization factor.
   bool isFunctionVectorizable(StringRef F) const;
 
-  /// Return the name of the equivalent of F, vectorized with factor VF.
-  /// If no such mapping exists, return empty strings.
+  /// Return the name of the equivalent of F, vectorized with factor VF. If no
+  /// such mapping exists, return the empty string.
   StringRef getVectorizedFunction(StringRef F, const ElementCount &VF,
                                   bool Masked) const;
 
   /// Return a pointer to a VecDesc object holding all info for scalar to vector
   /// mappings in TLI for the equivalent of F, vectorized with factor VF.
   /// If no such mapping exists, return nullpointer.
-  const VecDesc *getMangledTLIVectorName(StringRef F, const ElementCount &VF,
-                                         bool Masked) const;
+  const VecDesc *getVectorMappingInfo(StringRef F, const ElementCount &VF,
+                                      bool Masked) const;
 
   /// Set to true iff i32 parameters to library functions should have signext
   /// or zeroext attributes if they correspond to C-level int or unsigned int,
@@ -389,9 +389,9 @@ public:
                                   bool Masked = false) const {
     return Impl->getVectorizedFunction(F, VF, Masked);
   }
-  const VecDesc *getMangledTLIVectorName(StringRef F, const ElementCount &VF,
-                                         bool Masked) const {
-    return Impl->getMangledTLIVectorName(F, VF, Masked);
+  const VecDesc *getVectorMappingInfo(StringRef F, const ElementCount &VF,
+                                      bool Masked) const {
+    return Impl->getVectorMappingInfo(F, VF, Masked);
   }
 
   /// Tests if the function is both available and a candidate for optimized code
