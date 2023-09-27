@@ -1076,3 +1076,10 @@ define <32 x double> @buildvec_v32f64(double %e0, double %e1, double %e2, double
   %v31 = insertelement <32 x double> %v30, double %e31, i64 31
   ret <32 x double> %v31
 }
+
+; FIXME: These constants have enough sign bits that we could use vmv.v.x/i and
+; vsext, but we don't support this for FP yet.
+define <2 x float> @signbits() {
+entry:
+  ret <2 x float> <float 0x36A0000000000000, float 0.000000e+00>
+}
