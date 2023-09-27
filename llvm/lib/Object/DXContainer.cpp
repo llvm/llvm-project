@@ -111,7 +111,7 @@ Error DirectX::Signature::initialize(StringRef Part) {
     return parseFailed("Signature parameters extend beyond the part boundary");
 
   Parameters.Data = Part.substr(SigHeader.FirstParamOffset, Size);
-  
+
   StringTableOffset = SigHeader.FirstParamOffset + static_cast<uint32_t>(Size);
   StringTable = Part.substr(SigHeader.FirstParamOffset + Size);
 
