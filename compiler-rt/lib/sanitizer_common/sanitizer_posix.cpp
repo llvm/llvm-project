@@ -406,35 +406,6 @@ uptr MmapNamed(void *addr, uptr length, int prot, int flags, const char *name) {
   return res;
 }
 
-void SetSigProcMask(__sanitizer_sigset_t *set, __sanitizer_sigset_t *oldset) {
-  CHECK_EQ(0, internal_sigprocmask(SIG_SETMASK, set, oldset));
-}
-
-void BlockSignals(__sanitizer_sigset_t *oldset) {
-  __sanitizer_sigset_t set;
-  internal_sigfillset(&set);
-#  if SANITIZER_LINUX && !SANITIZER_ANDROID
-  // Glibc uses SIGSETXID signal during setuid call. If this signal is blocked
-  // on any thread, setuid call hangs.
-  // See test/sanitizer_common/TestCases/Linux/setuid.c.
-  internal_sigdelset(&set, 33);
-#  endif
-#  if SANITIZER_LINUX
-  // Seccomp-BPF-sandboxed processes rely on SIGSYS to handle trapped syscalls.
-  // If this signal is blocked, such calls cannot be handled and the process may
-  // hang.
-  internal_sigdelset(&set, 31);
-#  endif
-  SetSigProcMask(&set, oldset);
-}
-
-ScopedBlockSignals::ScopedBlockSignals(__sanitizer_sigset_t *copy) {
-  BlockSignals(&saved_);
-  if (copy)
-    internal_memcpy(copy, &saved_, sizeof(saved_));
-}
-
-ScopedBlockSignals::~ScopedBlockSignals() { SetSigProcMask(&saved_, nullptr); }
 
 } // namespace __sanitizer
 
