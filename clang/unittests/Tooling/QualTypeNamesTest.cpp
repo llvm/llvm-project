@@ -85,7 +85,7 @@ TEST(QualTypeNameTest, Simple) {
   // Namespace alias
   Visitor.ExpectedQualTypeNames["CheckL"] = "A::B::C::MyInt";
   Visitor.ExpectedQualTypeNames["non_dependent_type_var"] =
-      "Foo<X>::non_dependent_type";
+      "Foo<T>::non_dependent_type";
   Visitor.ExpectedQualTypeNames["AnEnumVar"] = "EnumScopeClass::AnEnum";
   Visitor.ExpectedQualTypeNames["AliasTypeVal"] = "A::B::C::InnerAlias<int>";
   Visitor.ExpectedQualTypeNames["AliasInnerTypeVal"] =
@@ -175,20 +175,19 @@ TEST(QualTypeNameTest, Simple) {
 TEST(QualTypeNameTest, Complex) {
   TypeNameVisitor Complex;
   Complex.ExpectedQualTypeNames["CheckTX"] = "B::TX";
-  Complex.runOver(
-      "namespace A {"
-      "  struct X {};"
-      "}"
-      "using A::X;"
-      "namespace fake_std {"
-      "  template<class... Types > class tuple {};"
-      "}"
-      "namespace B {"
-      "  using fake_std::tuple;"
-      "  typedef tuple<X> TX;"
-      "  TX CheckTX;"
-      "  struct A { typedef int X; };"
-      "}");
+  Complex.runOver("namespace A {"
+                  "  struct X {};"
+                  "}"
+                  "using A::X;"
+                  "namespace fake_std {"
+                  "  template<class... Types > class tuple {};"
+                  "}"
+                  "namespace B {"
+                  "  using fake_std::tuple;"
+                  "  typedef tuple<X> TX;"
+                  "  TX CheckTX;"
+                  "  struct A { typedef int X; };"
+                  "}");
 }
 
 TEST(QualTypeNameTest, DoubleUsing) {
@@ -223,33 +222,31 @@ TEST(QualTypeNameTest, GlobalNsPrefix) {
   GlobalNsPrefix.ExpectedQualTypeNames["GlobalZVal"] = "::Z";
   GlobalNsPrefix.ExpectedQualTypeNames["CheckK"] = "D::aStruct";
   GlobalNsPrefix.ExpectedQualTypeNames["YZMPtr"] = "::A::B::X ::A::B::Y::Z::*";
-  GlobalNsPrefix.runOver(
-      "namespace A {\n"
-      "  namespace B {\n"
-      "    int IntVal;\n"
-      "    bool BoolVal;\n"
-      "    struct X {};\n"
-      "    X XVal;\n"
-      "    template <typename T> class CCC { };\n"
-      "    template <typename T>\n"
-      "    using Alias = CCC<T>;\n"
-      "    Alias<int> IntAliasVal;\n"
-      "    struct Y { struct Z { X YZIPtr; }; };\n"
-      "    Y::Z ZVal;\n"
-      "    X Y::Z::*YZMPtr;\n"
-      "  }\n"
-      "}\n"
-      "struct Z {};\n"
-      "Z GlobalZVal;\n"
-      "namespace {\n"
-      "  namespace D {\n"
-      "    namespace {\n"
-      "      class aStruct {};\n"
-      "      aStruct CheckK;\n"
-      "    }\n"
-      "  }\n"
-      "}\n"
-  );
+  GlobalNsPrefix.runOver("namespace A {\n"
+                         "  namespace B {\n"
+                         "    int IntVal;\n"
+                         "    bool BoolVal;\n"
+                         "    struct X {};\n"
+                         "    X XVal;\n"
+                         "    template <typename T> class CCC { };\n"
+                         "    template <typename T>\n"
+                         "    using Alias = CCC<T>;\n"
+                         "    Alias<int> IntAliasVal;\n"
+                         "    struct Y { struct Z { X YZIPtr; }; };\n"
+                         "    Y::Z ZVal;\n"
+                         "    X Y::Z::*YZMPtr;\n"
+                         "  }\n"
+                         "}\n"
+                         "struct Z {};\n"
+                         "Z GlobalZVal;\n"
+                         "namespace {\n"
+                         "  namespace D {\n"
+                         "    namespace {\n"
+                         "      class aStruct {};\n"
+                         "      aStruct CheckK;\n"
+                         "    }\n"
+                         "  }\n"
+                         "}\n");
 }
 
 TEST(QualTypeNameTest, InlineNamespace) {
@@ -297,4 +294,4 @@ TEST(QualTypeNameTest, ConstUsing) {
                         using ::A::S;
                         void foo(const S& param1, const S param2);)");
 }
-}  // end anonymous namespace
+} // end anonymous namespace
