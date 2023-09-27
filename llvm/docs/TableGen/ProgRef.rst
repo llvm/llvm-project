@@ -1831,11 +1831,18 @@ and non-0 as true.
     result. A logical OR can be performed if all the arguments are either
     0 or 1.
 
-``!range([``\ *a*\ ``,``] *b*\ ``)``
-    This operator produces half-open range sequence ``[a : b)`` as ``list<int>``.
-    *a* is ``0`` by default. ``!range(4)`` is equivalent to ``!range(0, 4)``.
-    The result is `[0, 1, 2, 3]`.
-    If *a* ``>=`` *b*, then the result is `[]<list<int>>`.
+``!range([``\ *start*\ ``,]`` *end*\ ``[, ``\ *step*\ ``])``
+    This operator produces half-open range sequence ``[start : end : step)`` as
+    ``list<int>``. *start* is ``0`` and *step* is ``1`` by default. *step* can
+    be negative and cannot be 0. If *start* ``<`` *end* and *step* is negative,
+    or *start* ``>`` *end* and *step* is positive, the result is an empty list
+    ``[]<list<int>>``. For example:
+    * ``!range(4)`` is equivalent to ``!range(0, 4, 1)`` and the result is
+      `[0, 1, 2, 3]`.
+    * ``!range(1, 4)`` is equivalent to ``!range(1, 4, 1)`` and the result is
+      `[1, 2, 3]`.
+    * The result of ``!range(0, 4, 2)`` is `[0, 2]`.
+    * The results of ``!range(0, 4, -1)`` and ``!range(4, 0, 1)`` are empty.
 
 ``!range(``\ *list*\ ``)``
     Equivalent to ``!range(0, !size(list))``.
