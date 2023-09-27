@@ -1438,6 +1438,21 @@ def NVVM_CpAsyncBulkTensorSharedCTAToGlobalOp :
   let hasVerifier = 1;
 }
 
+def NVVM_PrefetchTensorMapOp : NVVM_Op<"prefetch.tensormap",
+                    [DeclareOpInterfaceMethods<BasicPtxBuilderOpInterface>]>,
+  Arguments<(ins LLVM_i64ptr_any:$tmaDescriptor, PtxPredicate:$predicate)> {
+  let description = [{
+    The Op brings the cache line containing the given $tmaDescriptor for 
+    subsequent use by the `cp.async.bulk.tensor` instruction.
+  }];
+  let assemblyFormat = "$tmaDescriptor (`,` `predicate` `=` $predicate^)? attr-dict `:` type(operands)";
+  let extraClassDefinition = [{
+    std::string $cppClass::getPtx() { 
+      return std::string("prefetch.tensormap [%0];");
+    }
+  }];
+}
+
 //===----------------------------------------------------------------------===//
 // NVVM Wgmma Ops
 //===----------------------------------------------------------------------===//
