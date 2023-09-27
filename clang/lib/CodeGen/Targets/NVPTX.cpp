@@ -296,8 +296,8 @@ void CodeGenModule::handleCUDALaunchBoundsAttr(
     NVPTXTargetCodeGenInfo::addNVVMMetadata(F, "maxntidx",
                                             MaxThreads.getExtValue());
 
-  // min and max blocks is an optional argument for CUDALaunchBoundsAttr. If it
-  // was not specified in __launch_bounds__ or if the user specified a 0 value,
+  // min blocks is an optional argument for CUDALaunchBoundsAttr. If it was
+  // not specified in __launch_bounds__ or if the user specified a 0 value,
   // we don't have to add a PTX directive.
   if (Attr->getMinBlocks()) {
     llvm::APSInt MinBlocks(32);
@@ -306,14 +306,6 @@ void CodeGenModule::handleCUDALaunchBoundsAttr(
       // Create !{<func-ref>, metadata !"minctasm", i32 <val>} node
       NVPTXTargetCodeGenInfo::addNVVMMetadata(F, "minctasm",
                                               MinBlocks.getExtValue());
-  }
-  if (Attr->getMaxBlocks()) {
-    llvm::APSInt MaxBlocks(32);
-    MaxBlocks = Attr->getMaxBlocks()->EvaluateKnownConstInt(getContext());
-    if (MaxBlocks > 0)
-      // Create !{<func-ref>, metadata !"maxclusterrank", i32 <val>} node
-      NVPTXTargetCodeGenInfo::addNVVMMetadata(F, "maxclusterrank",
-                                              MaxBlocks.getExtValue());
   }
 }
 

@@ -181,8 +181,6 @@ public:
 
   bool hasBitIntType() const override { return true; }
   bool hasBFloat16Type() const override { return true; }
-
-  CudaArch getGPU() const { return GPU; }
 };
 } // namespace targets
 } // namespace clang
