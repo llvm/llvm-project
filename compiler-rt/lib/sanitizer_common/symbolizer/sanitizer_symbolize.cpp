@@ -53,8 +53,7 @@ static llvm::symbolize::ErrorHandler symbolize_error_handler(
 }
 
 namespace __sanitizer {
-int internal_snprintf(char *buffer, uintptr_t length, const char *format,
-                      ...);
+int internal_snprintf(char *buffer, uintptr_t length, const char *format, ...);
 }  // namespace __sanitizer
 
 extern "C" {
@@ -117,7 +116,7 @@ void __sanitizer_symbolize_flush() {
 }
 
 bool __sanitizer_symbolize_demangle(const char *Name, char *Buffer,
-                                   int MaxLength) {
+                                    int MaxLength) {
   std::string Result;
   if (!llvm::nonMicrosoftDemangle(Name, Result))
     return false;

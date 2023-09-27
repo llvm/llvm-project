@@ -22,3 +22,5 @@ Revert: waiting on pip install myst-parser
 
 Revert: 1afed9f48c2 [Clang][HIP] Remove 'clangPostLink' from SDL handling 
 
+Revert: ea7f43ec [SLP]Do not gather node, if the instruction, that does not require scheduling,
+  Assertion `Ptr != End && "dereferencing end() iterator"' failed.
