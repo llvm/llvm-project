@@ -585,8 +585,7 @@ define signext i32 @vpreduce_umax_v2i32(i32 signext %s, <2 x i32> %v, <2 x i1> %
 ;
 ; RV64-LABEL: vpreduce_umax_v2i32:
 ; RV64:       # %bb.0:
-; RV64-NEXT:    slli a0, a0, 32
-; RV64-NEXT:    srli a0, a0, 32
+; RV64-NEXT:    andi a0, a0, -1
 ; RV64-NEXT:    vsetivli zero, 1, e32, mf2, ta, ma
 ; RV64-NEXT:    vmv.s.x v9, a0
 ; RV64-NEXT:    vsetvli zero, a1, e32, mf2, ta, ma
@@ -626,8 +625,7 @@ define signext i32 @vpreduce_umin_v2i32(i32 signext %s, <2 x i32> %v, <2 x i1> %
 ;
 ; RV64-LABEL: vpreduce_umin_v2i32:
 ; RV64:       # %bb.0:
-; RV64-NEXT:    slli a0, a0, 32
-; RV64-NEXT:    srli a0, a0, 32
+; RV64-NEXT:    andi a0, a0, -1
 ; RV64-NEXT:    vsetivli zero, 1, e32, mf2, ta, ma
 ; RV64-NEXT:    vmv.s.x v9, a0
 ; RV64-NEXT:    vsetvli zero, a1, e32, mf2, ta, ma
@@ -727,8 +725,7 @@ define signext i32 @vpreduce_umax_v4i32(i32 signext %s, <4 x i32> %v, <4 x i1> %
 ;
 ; RV64-LABEL: vpreduce_umax_v4i32:
 ; RV64:       # %bb.0:
-; RV64-NEXT:    slli a0, a0, 32
-; RV64-NEXT:    srli a0, a0, 32
+; RV64-NEXT:    andi a0, a0, -1
 ; RV64-NEXT:    vsetivli zero, 1, e32, m1, ta, ma
 ; RV64-NEXT:    vmv.s.x v9, a0
 ; RV64-NEXT:    vsetvli zero, a1, e32, m1, ta, ma
@@ -768,8 +765,7 @@ define signext i32 @vpreduce_umin_v4i32(i32 signext %s, <4 x i32> %v, <4 x i1> %
 ;
 ; RV64-LABEL: vpreduce_umin_v4i32:
 ; RV64:       # %bb.0:
-; RV64-NEXT:    slli a0, a0, 32
-; RV64-NEXT:    srli a0, a0, 32
+; RV64-NEXT:    andi a0, a0, -1
 ; RV64-NEXT:    vsetivli zero, 1, e32, m1, ta, ma
 ; RV64-NEXT:    vmv.s.x v9, a0
 ; RV64-NEXT:    vsetvli zero, a1, e32, m1, ta, ma

@@ -28,10 +28,11 @@ Error dumpDebugAbbrev(DWARFContext &DCtx, DWARFYAML::Data &Y) {
     uint64_t AbbrevTableID = 0;
     if (Error Err = AbbrevSetPtr->parse())
       return Err;
-    for (auto AbbrvDeclSet : *AbbrevSetPtr) {
+    for (const auto &AbbrvDeclSet : *AbbrevSetPtr) {
       Y.DebugAbbrev.emplace_back();
       Y.DebugAbbrev.back().ID = AbbrevTableID++;
-      for (auto AbbrvDecl : AbbrvDeclSet.second) {
+      for (const DWARFAbbreviationDeclaration &AbbrvDecl :
+           AbbrvDeclSet.second) {
         DWARFYAML::Abbrev Abbrv;
         Abbrv.Code = AbbrvDecl.getCode();
         Abbrv.Tag = AbbrvDecl.getTag();

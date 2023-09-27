@@ -983,12 +983,17 @@ struct OwnershipBasedBufferDeallocationPass
     this->privateFuncDynamicOwnership.setValue(privateFuncDynamicOwnership);
   }
   void runOnOperation() override {
-    func::FuncOp func = getOperation();
-    if (func.isExternal())
-      return;
+    auto status = getOperation()->walk([&](func::FuncOp func) {
+      if (func.isExternal())
+        return WalkResult::skip();
 
-    if (failed(
-            deallocateBuffersOwnershipBased(func, privateFuncDynamicOwnership)))
+      if (failed(deallocateBuffersOwnershipBased(func,
+                                                 privateFuncDynamicOwnership)))
+        return WalkResult::interrupt();
+
+      return WalkResult::advance();
+    });
+    if (status.wasInterrupted())
       signalPassFailure();
   }
 };

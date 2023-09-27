@@ -302,15 +302,7 @@ static void instantiateDependentCUDALaunchBoundsAttr(
     MinBlocks = Result.getAs<Expr>();
   }
 
-  Expr *MaxBlocks = nullptr;
-  if (Attr.getMaxBlocks()) {
-    Result = S.SubstExpr(Attr.getMaxBlocks(), TemplateArgs);
-    if (Result.isInvalid())
-      return;
-    MaxBlocks = Result.getAs<Expr>();
-  }
-
-  S.AddLaunchBoundsAttr(New, Attr, MaxThreads, MinBlocks, MaxBlocks);
+  S.AddLaunchBoundsAttr(New, Attr, MaxThreads, MinBlocks);
 }
 
 static void
@@ -5386,11 +5378,8 @@ void Sema::InstantiateVariableInitializer(
     Var->setImplicitlyInline();
 
   if (OldVar->getInit()) {
-    Sema::ExpressionEvaluationContext InitEvalContext =
-        Var->isConstexpr()
-            ? Sema::ExpressionEvaluationContext::ConstantEvaluated
-            : Sema::ExpressionEvaluationContext::PotentiallyEvaluated;
-    EnterExpressionEvaluationContext Evaluated(*this, InitEvalContext, Var);
+    EnterExpressionEvaluationContext Evaluated(
+        *this, Sema::ExpressionEvaluationContext::PotentiallyEvaluated, Var);
 
     // Instantiate the initializer.
     ExprResult Init;

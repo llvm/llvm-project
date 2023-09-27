@@ -3739,8 +3739,7 @@ OMPClause *Parser::ParseOpenMPOMPXAttributesClause(bool ParseOnly) {
         continue;
       if (auto *A = Actions.CreateLaunchBoundsAttr(
               PA, PA.getArgAsExpr(0),
-              PA.getNumArgs() > 1 ? PA.getArgAsExpr(1) : nullptr,
-              PA.getNumArgs() > 2 ? PA.getArgAsExpr(2) : nullptr))
+              PA.getNumArgs() > 1 ? PA.getArgAsExpr(1) : nullptr))
         Attrs.push_back(A);
       continue;
     default:
