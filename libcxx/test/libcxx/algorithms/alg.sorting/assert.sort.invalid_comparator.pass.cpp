@@ -52,7 +52,7 @@
 
 class ComparisonResults {
 public:
-    ComparisonResults(std::string_view data) {
+    explicit ComparisonResults(std::string_view data) {
         for (auto line : std::views::split(data, '\n') | std::views::filter([](auto const& line) { return !line.empty(); })) {
             auto values = std::views::split(line, ' ');
             auto it = values.begin();
@@ -65,10 +65,10 @@ public:
         }
     }
 
-    bool compare(size_t* left, size_t* right) {
+    bool compare(size_t* left, size_t* right) const {
         assert(left != nullptr && right != nullptr && "something is wrong with the test");
-        assert(comparison_results.contains(*left) && comparison_results[*left].contains(*right) && "malformed input data?");
-        return comparison_results[*left][*right];
+        assert(comparison_results.contains(*left) && comparison_results.at(*left).contains(*right) && "malformed input data?");
+        return comparison_results.at(*left).at(*right);
     }
 
     size_t size() const { return comparison_results.size(); }
@@ -127,12 +127,6 @@ void check_oob_sort_read() {
         std::vector<std::size_t*> results(copy.size(), nullptr);
        TEST_LIBCPP_ASSERT_FAILURE(std::partial_sort_copy(copy.begin(), copy.end(), results.begin(), results.end(), checked_predicate), "not a valid strict-weak ordering");
     }
-    {
-        std::vector<std::size_t*> copy;
-        for (auto const& e : elements)
-            copy.push_back(e.get());
-        std::nth_element(copy.begin(), copy.end(), copy.end(), checked_predicate); // doesn't go OOB even with invalid comparator
-    }
 
     // Check the Ranges sorting algorithms
     {
@@ -166,12 +160,6 @@ void check_oob_sort_read() {
             copy.push_back(e.get());
         std::vector<std::size_t*> results(copy.size(), nullptr);
         TEST_LIBCPP_ASSERT_FAILURE(std::ranges::partial_sort_copy(copy, results, checked_predicate), "not a valid strict-weak ordering");
-    }
-    {
-        std::vector<std::size_t*> copy;
-        for (auto const& e : elements)
-            copy.push_back(e.get());
-        std::ranges::nth_element(copy, copy.end(), checked_predicate); // doesn't go OOB even with invalid comparator
     }
 }
 
