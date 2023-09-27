@@ -203,8 +203,6 @@ enum class LevelFormat : uint8_t {
 enum class LevelNondefaultProperty : uint8_t {
   Nonunique = 1,  // 0b00000_01
   Nonordered = 2, // 0b00000_10
-  High = 32,      // 0b01000_00
-  Block2_4 = 64   // 0b10000_00
 };
 
 /// Returns string representation of the given dimension level type.

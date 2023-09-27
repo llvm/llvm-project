@@ -23,22 +23,6 @@
 #include "flang/Semantics/tools.h"
 #include <optional>
 
-//===----------------------------------------------------------------------===//
-// BIND(C) mangling helpers
-//===----------------------------------------------------------------------===//
-
-// Return the binding label (from BIND(C...)) or the mangled name of a symbol.
-static std::string getMangledName(Fortran::lower::AbstractConverter &converter,
-                                  const Fortran::semantics::Symbol &symbol) {
-  const std::string *bindName = symbol.GetBindName();
-  // TODO: update GetBindName so that it does not return a label for internal
-  // procedures.
-  if (bindName && Fortran::semantics::ClassifyProcedure(symbol) ==
-                      Fortran::semantics::ProcedureDefinitionClass::Internal)
-    TODO(converter.getCurrentLocation(), "BIND(C) internal procedures");
-  return bindName ? *bindName : converter.mangleName(symbol);
-}
-
 mlir::Type Fortran::lower::getUntypedBoxProcType(mlir::MLIRContext *context) {
   llvm::SmallVector<mlir::Type> resultTys;
   llvm::SmallVector<mlir::Type> inputTys;
@@ -72,8 +56,10 @@ bool Fortran::lower::CallerInterface::hasAlternateReturns() const {
 
 std::string Fortran::lower::CallerInterface::getMangledName() const {
   const Fortran::evaluate::ProcedureDesignator &proc = procRef.proc();
+  // Return the binding label (from BIND(C...)) or the mangled name of the
+  // symbol.
   if (const Fortran::semantics::Symbol *symbol = proc.GetSymbol())
-    return ::getMangledName(converter, symbol->GetUltimate());
+    return converter.mangleName(symbol->GetUltimate());
   assert(proc.GetSpecificIntrinsic() &&
          "expected intrinsic procedure in designator");
   return proc.GetName();
@@ -420,7 +406,7 @@ bool Fortran::lower::CalleeInterface::hasAlternateReturns() const {
 std::string Fortran::lower::CalleeInterface::getMangledName() const {
   if (funit.isMainProgram())
     return fir::NameUniquer::doProgramEntry().str();
-  return ::getMangledName(converter, funit.getSubprogramSymbol());
+  return converter.mangleName(funit.getSubprogramSymbol());
 }
 
 const Fortran::semantics::Symbol *

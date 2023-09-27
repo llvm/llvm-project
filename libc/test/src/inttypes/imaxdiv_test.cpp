@@ -12,4 +12,4 @@
 
 #include <inttypes.h>
 
-LIST_DIV_TESTS(intmax_t, imaxdiv_t, __llvm_libc::imaxdiv)
+LIST_DIV_TESTS(intmax_t, imaxdiv_t, LIBC_NAMESPACE::imaxdiv)

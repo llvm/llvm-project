@@ -43,6 +43,8 @@ C/C++ Language Potentially Breaking Changes
 
 - The default extension name for PCH generation (``-c -xc-header`` and ``-c
   -xc++-header``) is now ``.pch`` instead of ``.gch``.
+- ``-include a.h`` probing ``a.h.gch`` is deprecated. Change the extension name
+  to ``.pch`` or use ``-include-pch a.h.gch``.
 
 C++ Specific Potentially Breaking Changes
 -----------------------------------------
@@ -204,6 +206,8 @@ Improvements to Clang's diagnostics
 - Clang no longer emits irrelevant notes about unsatisfied constraint expressions
   on the left-hand side of ``||`` when the right-hand side constraint is satisfied.
   (`#54678: <https://github.com/llvm/llvm-project/issues/54678>`_).
+- Clang now prints its 'note' diagnostic in cyan instead of black, to be more compatible
+  with terminals with dark background colors. This is also more consistent with GCC.
 
 Bug Fixes in This Version
 -------------------------
@@ -351,6 +355,10 @@ Bug Fixes to C++ Support
   NTTP types are compared with the 'diff' method.
   (`#66744 https://github.com/llvm/llvm-project/issues/66744`)
 
+- Fix crash caused by a spaceship operator returning a comparision category by
+  reference. Fixes:
+  (`#64162 <https://github.com/llvm/llvm-project/issues/64162>`_)
+
 Bug Fixes to AST Handling
 ^^^^^^^^^^^^^^^^^^^^^^^^^
 - Fixed an import failure of recursive friend class template.
@@ -495,6 +503,9 @@ Static Analyzer
 - Added a new checker ``core.BitwiseShift`` which reports situations where
   bitwise shift operators produce undefined behavior (because some operand is
   negative or too large).
+
+- Fix false positive in mutation check when using pointer to member function.
+  (`#66204: <https://github.com/llvm/llvm-project/issues/66204>`_).
 
 - The ``alpha.security.taint.TaintPropagation`` checker no longer propagates
   taint on ``strlen`` and ``strnlen`` calls, unless these are marked

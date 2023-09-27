@@ -9,10 +9,10 @@
 #ifndef LLVM_LIBC_SRC_MATH_COPYSIGNL_H
 #define LLVM_LIBC_SRC_MATH_COPYSIGNL_H
 
-namespace __llvm_libc {
+namespace LIBC_NAMESPACE {
 
 long double copysignl(long double x, long double y);
 
-} // namespace __llvm_libc
+} // namespace LIBC_NAMESPACE
 
 #endif // LLVM_LIBC_SRC_MATH_COPYSIGNL_H

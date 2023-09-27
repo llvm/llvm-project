@@ -23,7 +23,7 @@ enum class align_val_t : size_t {};
 
 } // namespace std
 
-namespace __llvm_libc {
+namespace LIBC_NAMESPACE {
 
 class AllocChecker {
   bool success = false;
@@ -52,26 +52,26 @@ public:
   }
 };
 
-} // namespace __llvm_libc
+} // namespace LIBC_NAMESPACE
 
 LIBC_INLINE void *operator new(size_t size,
-                               __llvm_libc::AllocChecker &ac) noexcept {
-  return __llvm_libc::AllocChecker::alloc(size, ac);
+                               LIBC_NAMESPACE::AllocChecker &ac) noexcept {
+  return LIBC_NAMESPACE::AllocChecker::alloc(size, ac);
 }
 
 LIBC_INLINE void *operator new(size_t size, std::align_val_t align,
-                               __llvm_libc::AllocChecker &ac) noexcept {
-  return __llvm_libc::AllocChecker::aligned_alloc(size, align, ac);
+                               LIBC_NAMESPACE::AllocChecker &ac) noexcept {
+  return LIBC_NAMESPACE::AllocChecker::aligned_alloc(size, align, ac);
 }
 
 LIBC_INLINE void *operator new[](size_t size,
-                                 __llvm_libc::AllocChecker &ac) noexcept {
-  return __llvm_libc::AllocChecker::alloc(size, ac);
+                                 LIBC_NAMESPACE::AllocChecker &ac) noexcept {
+  return LIBC_NAMESPACE::AllocChecker::alloc(size, ac);
 }
 
 LIBC_INLINE void *operator new[](size_t size, std::align_val_t align,
-                                 __llvm_libc::AllocChecker &ac) noexcept {
-  return __llvm_libc::AllocChecker::aligned_alloc(size, align, ac);
+                                 LIBC_NAMESPACE::AllocChecker &ac) noexcept {
+  return LIBC_NAMESPACE::AllocChecker::aligned_alloc(size, align, ac);
 }
 
 // The ideal situation would be to define the various flavors of operator delete
@@ -84,19 +84,23 @@ LIBC_INLINE void *operator new[](size_t size, std::align_val_t align,
 // they will replace operator delete for the entire application. Including this
 // header file in all libc source files where operator delete is called ensures
 // that only libc call sites use these replacement operator delete functions.
-void operator delete(void *) noexcept __asm__("__llvm_libc_delete");
+
+#define DELETE_NAME(name)                                                      \
+  __asm__(LIBC_MACRO_TO_STRING(LIBC_NAMESPACE) "_" LIBC_MACRO_TO_STRING(name))
+
+void operator delete(void *) noexcept DELETE_NAME(delete);
 void operator delete(void *, std::align_val_t) noexcept
-    __asm__("__llvm_libc_delete_aligned");
-void operator delete(void *, size_t) noexcept
-    __asm__("__llvm_libc_delete_sized");
+    DELETE_NAME(delete_aligned);
+void operator delete(void *, size_t) noexcept DELETE_NAME(delete_sized);
 void operator delete(void *, size_t, std::align_val_t) noexcept
-    __asm__("__llvm_libc_delete_sized_aligned");
-void operator delete[](void *) noexcept __asm__("__llvm_libc_delete_array");
+    DELETE_NAME(delete_sized_aligned);
+void operator delete[](void *) noexcept DELETE_NAME(delete_array);
 void operator delete[](void *, std::align_val_t) noexcept
-    __asm__("__llvm_libc_delete_array_aligned");
-void operator delete[](void *, size_t) noexcept
-    __asm__("__llvm_libc_delete_array_sized");
+    DELETE_NAME(delete_array_aligned);
+void operator delete[](void *, size_t) noexcept DELETE_NAME(delete_array_sized);
 void operator delete[](void *, size_t, std::align_val_t) noexcept
-    __asm__("__llvm_libc_delete_array_sized_aligned");
+    DELETE_NAME(delete_array_sized_aligned);
+
+#undef DELETE_NAME
 
 #endif // LLVM_LIBC_SRC___SUPPORT_CPP_NEW_H

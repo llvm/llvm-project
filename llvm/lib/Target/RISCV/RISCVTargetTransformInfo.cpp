@@ -127,6 +127,9 @@ InstructionCost RISCVTTIImpl::getIntImmCostInst(unsigned Opcode, unsigned Idx,
     // Power of 2 is a shift. Negated power of 2 is a shift and a negate.
     if (Imm.isPowerOf2() || Imm.isNegatedPowerOf2())
       return TTI::TCC_Free;
+    // One more or less than a power of 2 can use SLLI+ADD/SUB.
+    if ((Imm + 1).isPowerOf2() || (Imm - 1).isPowerOf2())
+      return TTI::TCC_Free;
     // FIXME: There is no MULI instruction.
     Takes12BitImm = true;
     break;
@@ -1074,6 +1077,12 @@ RISCVTTIImpl::getIntrinsicInstrCost(const IntrinsicCostAttributes &ICA,
       return LT.first;
     break;
   }
+  case Intrinsic::ctpop: {
+    auto LT = getTypeLegalizationCost(RetTy);
+    if (ST->hasVInstructions() && ST->hasStdExtZvbb() && LT.second.isVector())
+      return LT.first;
+    break;
+  }
   case Intrinsic::abs: {
     auto LT = getTypeLegalizationCost(RetTy);
     if (ST->hasVInstructions() && LT.second.isVector()) {
@@ -1460,8 +1469,26 @@ InstructionCost RISCVTTIImpl::getVectorInstrCost(unsigned Opcode, Type *Val,
   std::pair<InstructionCost, MVT> LT = getTypeLegalizationCost(Val);
 
   // This type is legalized to a scalar type.
-  if (!LT.second.isVector())
-    return 0;
+  if (!LT.second.isVector()) {
+    auto *FixedVecTy = cast<FixedVectorType>(Val);
+    // If Index is a known constant, cost is zero.
+    if (Index != -1U)
+      return 0;
+    // Extract/InsertElement with non-constant index is very costly when
+    // scalarized; estimate cost of loads/stores sequence via the stack:
+    // ExtractElement cost: store vector to stack, load scalar;
+    // InsertElement cost: store vector to stack, store scalar, load vector.
+    Type *ElemTy = FixedVecTy->getElementType();
+    auto NumElems = FixedVecTy->getNumElements();
+    auto Align = DL.getPrefTypeAlign(ElemTy);
+    InstructionCost LoadCost =
+        getMemoryOpCost(Instruction::Load, ElemTy, Align, 0, CostKind);
+    InstructionCost StoreCost =
+        getMemoryOpCost(Instruction::Store, ElemTy, Align, 0, CostKind);
+    return Opcode == Instruction::ExtractElement
+               ? StoreCost * NumElems + LoadCost
+               : (StoreCost + LoadCost) * NumElems + StoreCost;
+  }
 
   // For unsupported scalable vector.
   if (LT.second.isScalableVector() && !LT.first.isValid())

@@ -17,6 +17,28 @@
 namespace llvm {
 namespace dwarflinker_parallel {
 
+/// Information gathered and exchanged between the various
+/// clone*Attr helpers about the attributes of a particular DIE.
+struct AttributesInfo {
+  /// Short Name.
+  StringEntry *Name = nullptr;
+
+  /// Mangled Name.
+  StringEntry *MangledName = nullptr;
+
+  /// Does the DIE have an address pointing to live code section?
+  bool HasLiveAddress = false;
+
+  /// Is this DIE only a declaration?
+  bool IsDeclaration = false;
+
+  /// Does the DIE have a ranges attribute?
+  bool HasRanges = false;
+
+  /// Does the DIE have a string offset attribute?
+  bool HasStringOffsetBaseAttr = false;
+};
+
 /// This class creates clones of input DIE attributes.
 /// It enumerates attributes of input DIE, creates clone for each
 /// attribute, adds cloned attribute to the output DIE.
@@ -44,29 +66,7 @@ public:
   /// Create abbreviations for the output DIE after all attributes are cloned.
   unsigned finalizeAbbreviations(bool HasChildrenToClone);
 
-  /// Information gathered and exchanged between the various
-  /// clone*Attr helpers about the attributes of a particular DIE.
-  ///
   /// Cannot be used concurrently.
-  struct AttributesInfo {
-    /// Names.
-    StringEntry *Name = nullptr;
-    StringEntry *MangledName = nullptr;
-    StringEntry *NameWithoutTemplate = nullptr;
-
-    /// Does the DIE have a low_pc attribute?
-    bool HasLowPc = false;
-
-    /// Is this DIE only a declaration?
-    bool IsDeclaration = false;
-
-    /// Does the DIE have a ranges attribute?
-    bool HasRanges = false;
-
-    /// Does the DIE have a string offset attribute?
-    bool HasStringOffsetBaseAttr = false;
-  };
-
   AttributesInfo AttrInfo;
 
 protected:

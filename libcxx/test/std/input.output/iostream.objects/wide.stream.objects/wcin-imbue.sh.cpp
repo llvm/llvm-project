@@ -9,10 +9,6 @@
 // TODO: Investigate
 // UNSUPPORTED: LIBCXX-AIX-FIXME
 
-// TODO: Make it possible to run this test when cross-compiling and running via a SSH executor
-//       This is a workaround to silence issues reported in https://github.com/llvm/llvm-project/pull/66842#issuecomment-1728701639
-// XFAIL: buildhost=windows && target={{.+}}-linux-{{.+}}
-
 // <iostream>
 
 // wistream wcin;

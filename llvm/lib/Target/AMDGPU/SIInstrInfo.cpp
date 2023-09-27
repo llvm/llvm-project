@@ -724,24 +724,32 @@ void SIInstrInfo::copyPhysReg(MachineBasicBlock &MBB,
                               const DebugLoc &DL, MCRegister DestReg,
                               MCRegister SrcReg, bool KillSrc) const {
   const TargetRegisterClass *RC = RI.getPhysRegBaseClass(DestReg);
+  unsigned Size = RI.getRegSizeInBits(*RC);
+  const TargetRegisterClass *SrcRC = RI.getPhysRegBaseClass(SrcReg);
+  unsigned SrcSize = RI.getRegSizeInBits(*SrcRC);
 
-  // FIXME: This is hack to resolve copies between 16 bit and 32 bit
-  // registers until all patterns are fixed.
-  if (Fix16BitCopies &&
-      ((RI.getRegSizeInBits(*RC) == 16) ^
-       (RI.getRegSizeInBits(*RI.getPhysRegBaseClass(SrcReg)) == 16))) {
-    MCRegister &RegToFix = (RI.getRegSizeInBits(*RC) == 16) ? DestReg : SrcReg;
-    MCRegister Super = RI.get32BitRegister(RegToFix);
-    assert(RI.getSubReg(Super, AMDGPU::lo16) == RegToFix);
-    RegToFix = Super;
+  // The rest of copyPhysReg assumes Src and Dst size are the same size.
+  // TODO-GFX11_16BIT If all true 16 bit instruction patterns are completed can
+  // we remove Fix16BitCopies and this code block?
+  if (Fix16BitCopies) {
+    if (((Size == 16) != (SrcSize == 16))) {
+      // Non-VGPR Src and Dst will later be expanded back to 32 bits.
+      assert(ST.hasTrue16BitInsts());
+      MCRegister &RegToFix = (Size == 32) ? DestReg : SrcReg;
+      MCRegister SubReg = RI.getSubReg(RegToFix, AMDGPU::lo16);
+      RegToFix = SubReg;
 
-    if (DestReg == SrcReg) {
-      // Insert empty bundle since ExpandPostRA expects an instruction here.
-      BuildMI(MBB, MI, DL, get(AMDGPU::BUNDLE));
-      return;
+      if (DestReg == SrcReg) {
+        // Identity copy. Insert empty bundle since ExpandPostRA expects an
+        // instruction here.
+        BuildMI(MBB, MI, DL, get(AMDGPU::BUNDLE));
+        return;
+      }
+      RC = RI.getPhysRegBaseClass(DestReg);
+      Size = RI.getRegSizeInBits(*RC);
+      SrcRC = RI.getPhysRegBaseClass(SrcReg);
+      SrcSize = RI.getRegSizeInBits(*SrcRC);
     }
-
-    RC = RI.getPhysRegBaseClass(DestReg);
   }
 
   if (RC == &AMDGPU::VGPR_32RegClass) {
@@ -865,10 +873,8 @@ void SIInstrInfo::copyPhysReg(MachineBasicBlock &MBB,
     return;
   }
 
-  const unsigned Size = RI.getRegSizeInBits(*RC);
   if (Size == 16) {
-    assert(AMDGPU::VGPR_LO16RegClass.contains(SrcReg) ||
-           AMDGPU::VGPR_HI16RegClass.contains(SrcReg) ||
+    assert(AMDGPU::VGPR_16RegClass.contains(SrcReg) ||
            AMDGPU::SReg_LO16RegClass.contains(SrcReg) ||
            AMDGPU::AGPR_LO16RegClass.contains(SrcReg));
 
@@ -906,6 +912,25 @@ void SIInstrInfo::copyPhysReg(MachineBasicBlock &MBB,
       return;
     }
 
+    if (ST.hasTrue16BitInsts()) {
+      if (IsSGPRSrc) {
+        assert(SrcLow);
+        SrcReg = NewSrcReg;
+      }
+      // Use the smaller instruction encoding if possible.
+      if (AMDGPU::VGPR_16_Lo128RegClass.contains(DestReg) &&
+          (IsSGPRSrc || AMDGPU::VGPR_16_Lo128RegClass.contains(SrcReg))) {
+        BuildMI(MBB, MI, DL, get(AMDGPU::V_MOV_B16_t16_e32), DestReg)
+            .addReg(SrcReg);
+      } else {
+        BuildMI(MBB, MI, DL, get(AMDGPU::V_MOV_B16_t16_e64), DestReg)
+            .addImm(0) // src0_modifiers
+            .addReg(SrcReg)
+            .addImm(0); // op_sel
+      }
+      return;
+    }
+
     if (IsSGPRSrc && !ST.hasSDWAScalar()) {
       if (!DstLow || !SrcLow) {
         reportIllegalCopy(this, MBB, MI, DL, DestReg, SrcReg, KillSrc,
@@ -932,7 +957,6 @@ void SIInstrInfo::copyPhysReg(MachineBasicBlock &MBB,
     return;
   }
 
-  const TargetRegisterClass *SrcRC = RI.getPhysRegBaseClass(SrcReg);
   if (RC == RI.getVGPR64Class() && (SrcRC == RC || RI.isSGPRClass(SrcRC))) {
     if (ST.hasMovB64()) {
       BuildMI(MBB, MI, DL, get(AMDGPU::V_MOV_B64_e32), DestReg)
@@ -1288,7 +1312,11 @@ unsigned SIInstrInfo::getMovOpcode(const TargetRegisterClass *DstRC) const {
 
   if (RI.isAGPRClass(DstRC))
     return AMDGPU::COPY;
-  if (RI.getRegSizeInBits(*DstRC) == 32) {
+  if (RI.getRegSizeInBits(*DstRC) == 16) {
+    // Assume hi bits are unneeded. Only _e64 true16 instructions are legal
+    // before RA.
+    return RI.isSGPRClass(DstRC) ? AMDGPU::COPY : AMDGPU::V_MOV_B16_t16_e64;
+  } else if (RI.getRegSizeInBits(*DstRC) == 32) {
     return RI.isSGPRClass(DstRC) ? AMDGPU::S_MOV_B32 : AMDGPU::V_MOV_B32_e32;
   } else if (RI.getRegSizeInBits(*DstRC) == 64 && RI.isSGPRClass(DstRC)) {
     return AMDGPU::S_MOV_B64;
@@ -5010,11 +5038,11 @@ unsigned SIInstrInfo::getVALUOp(const MachineInstr &MI) const {
   case AMDGPU::S_MIN_F32: return AMDGPU::V_MIN_F32_e64;
   case AMDGPU::S_MAX_F32: return AMDGPU::V_MAX_F32_e64;
   case AMDGPU::S_MUL_F32: return AMDGPU::V_MUL_F32_e64;
-  case AMDGPU::S_ADD_F16: return AMDGPU::V_ADD_F16_t16_e64;
-  case AMDGPU::S_SUB_F16: return AMDGPU::V_SUB_F16_t16_e64;
-  case AMDGPU::S_MIN_F16: return AMDGPU::V_MIN_F16_t16_e64;
-  case AMDGPU::S_MAX_F16: return AMDGPU::V_MAX_F16_t16_e64;
-  case AMDGPU::S_MUL_F16: return AMDGPU::V_MUL_F16_t16_e64;
+  case AMDGPU::S_ADD_F16: return AMDGPU::V_ADD_F16_fake16_e64;
+  case AMDGPU::S_SUB_F16: return AMDGPU::V_SUB_F16_fake16_e64;
+  case AMDGPU::S_MIN_F16: return AMDGPU::V_MIN_F16_fake16_e64;
+  case AMDGPU::S_MAX_F16: return AMDGPU::V_MAX_F16_fake16_e64;
+  case AMDGPU::S_MUL_F16: return AMDGPU::V_MUL_F16_fake16_e64;
   case AMDGPU::S_CVT_PK_RTZ_F16_F32: return AMDGPU::V_CVT_PKRTZ_F16_F32_e64;
   case AMDGPU::S_FMAC_F32: return AMDGPU::V_FMAC_F32_e64;
   case AMDGPU::S_FMAC_F16: return AMDGPU::V_FMAC_F16_t16_e64;
