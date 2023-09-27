@@ -443,11 +443,12 @@ bool SjLjEHPrepare::setupEntryBlockAndCallSites(Function &F) {
     if (&BB == &F.front())
       continue;
     for (Instruction &I : BB) {
-      // Partially revert b61fd7f modifications.  Stop using "I.mayThrow()"
-      // here.  Using it inserts no-action marker to just before invoke
-      // instructions like "invoke void @__cxa_bad_cast()".  That means
-      // tests having exception and try/catch in the identical function
-      // are broken.  For example, tests like test_aux_runtime.pass.cpp.
+      // A value of -1 at a call site tells the personality function that
+      // this call isn't handled by the current function.
+      //   1. Calls of a function which has no nounwind are not handled
+      //      by the current function
+      //   2. ResumeInsts are converted to calls to _Unwind_SjLj_Resume
+      // Invoke instructions to the EH builtins need to be not marked -1.
       if (CallInst *CI = dyn_cast<CallInst>(&I)) {
         if (!CI->doesNotThrow())
           insertCallSiteStore(CI, -1);
