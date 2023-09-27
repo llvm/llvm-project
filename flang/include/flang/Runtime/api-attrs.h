@@ -43,6 +43,18 @@
 #endif /* !defined(RT_EXT_API_GROUP_END) */
 
 /*
+ * RT_OFFLOAD_API_GROUP_BEGIN/END pair is placed around definitions
+ * of functions that can be referenced in other modules of Flang
+ * runtime. For OpenMP offload these functions are made "declare target"
+ * making sure they are compiled for the target even though direct
+ * references to them from other "declare target" functions may not
+ * be seen. Host-only functions should not be put in between these
+ * two macros.
+ */
+#define RT_OFFLOAD_API_GROUP_BEGIN RT_EXT_API_GROUP_BEGIN
+#define RT_OFFLOAD_API_GROUP_END RT_EXT_API_GROUP_END
+
+/*
  * RT_VAR_GROUP_BEGIN/END pair is placed around definitions
  * of module scope variables referenced by Flang runtime (directly
  * or indirectly).
@@ -87,5 +99,17 @@
 #define RT_CONST_VAR_ATTRS
 #endif
 #endif /* !defined(RT_CONST_VAR_ATTRS) */
+
+/*
+ * RT_DEVICE_COMPILATION is defined for any device compilation.
+ * Note that it can only be used reliably with compilers that perform
+ * separate host and device compilations.
+ */
+#if ((defined(__CUDACC__) || defined(__CUDA__)) && defined(__CUDA_ARCH__)) || \
+    (defined(_OPENMP) && (defined(__AMDGCN__) || defined(__NVPTX__)))
+#define RT_DEVICE_COMPILATION 1
+#else
+#undef RT_DEVICE_COMPILATION
+#endif
 
 #endif /* !FORTRAN_RUNTIME_API_ATTRS_H_ */
