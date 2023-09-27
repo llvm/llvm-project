@@ -537,59 +537,50 @@ void NVPTXAsmPrinter::emitKernelFunctionDirectives(const Function &F,
                                                    raw_ostream &O) const {
   // If the NVVM IR has some of reqntid* specified, then output
   // the reqntid directive, and set the unspecified ones to 1.
-  // If none of reqntid* is specified, don't output reqntid directive.
-  unsigned reqntidx, reqntidy, reqntidz;
-  bool specified = false;
-  if (!getReqNTIDx(F, reqntidx))
-    reqntidx = 1;
-  else
-    specified = true;
-  if (!getReqNTIDy(F, reqntidy))
-    reqntidy = 1;
-  else
-    specified = true;
-  if (!getReqNTIDz(F, reqntidz))
-    reqntidz = 1;
-  else
-    specified = true;
+  // If none of Reqntid* is specified, don't output reqntid directive.
+  unsigned Reqntidx, Reqntidy, Reqntidz;
+  Reqntidx = Reqntidy = Reqntidz = 1;
+  bool ReqSpecified = false;
+  ReqSpecified |= getReqNTIDx(F, Reqntidx);
+  ReqSpecified |= getReqNTIDy(F, Reqntidy);
+  ReqSpecified |= getReqNTIDz(F, Reqntidz);
 
-  if (specified)
-    O << ".reqntid " << reqntidx << ", " << reqntidy << ", " << reqntidz
+  if (ReqSpecified)
+    O << ".reqntid " << Reqntidx << ", " << Reqntidy << ", " << Reqntidz
       << "\n";
 
   // If the NVVM IR has some of maxntid* specified, then output
   // the maxntid directive, and set the unspecified ones to 1.
   // If none of maxntid* is specified, don't output maxntid directive.
-  unsigned maxntidx, maxntidy, maxntidz;
-  specified = false;
-  if (!getMaxNTIDx(F, maxntidx))
-    maxntidx = 1;
-  else
-    specified = true;
-  if (!getMaxNTIDy(F, maxntidy))
-    maxntidy = 1;
-  else
-    specified = true;
-  if (!getMaxNTIDz(F, maxntidz))
-    maxntidz = 1;
-  else
-    specified = true;
+  unsigned Maxntidx, Maxntidy, Maxntidz;
+  Maxntidx = Maxntidy = Maxntidz = 1;
+  bool MaxSpecified = false;
+  MaxSpecified |= getMaxNTIDx(F, Maxntidx);
+  MaxSpecified |= getMaxNTIDy(F, Maxntidy);
+  MaxSpecified |= getMaxNTIDz(F, Maxntidz);
 
-  if (specified)
-    O << ".maxntid " << maxntidx << ", " << maxntidy << ", " << maxntidz
+  if (MaxSpecified)
+    O << ".maxntid " << Maxntidx << ", " << Maxntidy << ", " << Maxntidz
       << "\n";
 
-  unsigned mincta;
-  if (getMinCTASm(F, mincta))
-    O << ".minnctapersm " << mincta << "\n";
+  unsigned Mincta = 0;
+  if (getMinCTASm(F, Mincta))
+    O << ".minnctapersm " << Mincta << "\n";
 
-  unsigned maxnreg;
-  if (getMaxNReg(F, maxnreg))
-    O << ".maxnreg " << maxnreg << "\n";
+  unsigned Maxnreg = 0;
+  if (getMaxNReg(F, Maxnreg))
+    O << ".maxnreg " << Maxnreg << "\n";
+
+  // .maxclusterrank directive requires SM_90 or higher, make sure that we
+  // filter it out for lower SM versions, as it causes a hard ptxas crash.
+  const NVPTXTargetMachine &NTM = static_cast<const NVPTXTargetMachine &>(TM);
+  const auto *STI = static_cast<const NVPTXSubtarget *>(NTM.getSubtargetImpl());
+  unsigned Maxclusterrank = 0;
+  if (getMaxClusterRank(F, Maxclusterrank) && STI->getSmVersion() >= 90)
+    O << ".maxclusterrank " << Maxclusterrank << "\n";
 }
 
-std::string
-NVPTXAsmPrinter::getVirtualRegisterName(unsigned Reg) const {
+std::string NVPTXAsmPrinter::getVirtualRegisterName(unsigned Reg) const {
   const TargetRegisterClass *RC = MRI->getRegClass(Reg);
 
   std::string Name;
