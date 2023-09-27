@@ -229,6 +229,10 @@ SPIRVLegalizerInfo::SPIRVLegalizerInfo(const SPIRVSubtarget &ST) {
   // Control-flow. In some cases (e.g. constants) s1 may be promoted to s32.
   getActionDefinitionsBuilder(G_BRCOND).legalFor({s1, s32});
 
+  // TODO: Review the target OpenCL and GLSL Extended Instruction Set specs to
+  // tighten these requirements. Many of these math functions are only legal on
+  // specific bitwidths, so they are not selectable for
+  // allFloatScalarsAndVectors.
   getActionDefinitionsBuilder({G_FPOW,
                                G_FEXP,
                                G_FEXP2,

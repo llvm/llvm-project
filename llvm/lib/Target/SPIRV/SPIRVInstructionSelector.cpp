@@ -1594,7 +1594,7 @@ bool SPIRVInstructionSelector::selectLog10(Register ResVReg,
   // Build 0.30103.
   assert(ResType->getOpcode() == SPIRV::OpTypeVector ||
          ResType->getOpcode() == SPIRV::OpTypeFloat);
-  // TODO: Add matrix implementeation once supported by the HLSL frontend.
+  // TODO: Add matrix implementation once supported by the HLSL frontend.
   const SPIRVType *SpirvScalarType =
       ResType->getOpcode() == SPIRV::OpTypeVector
           ? GR.getSPIRVTypeForVReg(ResType->getOperand(1).getReg())
