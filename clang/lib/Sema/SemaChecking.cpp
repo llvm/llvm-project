@@ -6276,7 +6276,9 @@ bool Sema::CheckX86BuiltinFunctionCall(const TargetInfo &TI, unsigned BuiltinID,
   case X86::BI__builtin_ia32_cmpss:
   case X86::BI__builtin_ia32_cmppd:
   case X86::BI__builtin_ia32_cmpsd:
-    i = 2; l = 0; u = TI.hasFeature("avx") ? 31 : 7;
+    i = 2;
+    l = 0;
+    u = TI.hasFeature("avx") ? 31 : 7;
     break;
   case X86::BI__builtin_ia32_cmpps256:
   case X86::BI__builtin_ia32_cmppd256:
