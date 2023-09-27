@@ -943,12 +943,12 @@ PrintCompletion(FILE *output_file,
   }
 }
 
-void Editline::DisplayCompletions(
-    Editline &editline, llvm::ArrayRef<CompletionResult::Completion> results) {
+static void
+DisplayCompletions(::EditLine *editline, FILE *output_file,
+                   llvm::ArrayRef<CompletionResult::Completion> results) {
   assert(!results.empty());
 
-  fprintf(editline.m_output_file,
-          "\n" ANSI_CLEAR_BELOW "Available completions:\n");
+  fprintf(output_file, "\n" ANSI_CLEAR_BELOW "Available completions:\n");
   const size_t page_size = 40;
   bool all = false;
 
@@ -960,7 +960,7 @@ void Editline::DisplayCompletions(
   const size_t max_len = longest->GetCompletion().size();
 
   if (results.size() < page_size) {
-    PrintCompletion(editline.m_output_file, results, max_len);
+    PrintCompletion(output_file, results, max_len);
     return;
   }
 
@@ -969,25 +969,17 @@ void Editline::DisplayCompletions(
     size_t remaining = results.size() - cur_pos;
     size_t next_size = all ? remaining : std::min(page_size, remaining);
 
-    PrintCompletion(editline.m_output_file, results.slice(cur_pos, next_size),
-                    max_len);
+    PrintCompletion(output_file, results.slice(cur_pos, next_size), max_len);
 
     cur_pos += next_size;
 
     if (cur_pos >= results.size())
       break;
 
-    fprintf(editline.m_output_file, "More (Y/n/a): ");
+    fprintf(output_file, "More (Y/n/a): ");
     char reply = 'n';
-    int got_char = el_getc(editline.m_editline, &reply);
-    // Check for a ^C or other interruption.
-    if (editline.m_editor_status == EditorStatus::Interrupted) {
-      editline.m_editor_status = EditorStatus::Editing;
-      fprintf(editline.m_output_file, "^C\n");
-      break;
-    }
-
-    fprintf(editline.m_output_file, "\n");
+    int got_char = el_getc(editline, &reply);
+    fprintf(output_file, "\n");
     if (got_char == -1 || reply == 'n')
       break;
     if (reply == 'a')
@@ -1058,7 +1050,7 @@ unsigned char Editline::TabCommand(int ch) {
     return CC_REDISPLAY;
   }
 
-  DisplayCompletions(*this, results);
+  DisplayCompletions(m_editline, m_output_file, results);
 
   DisplayInput();
   MoveCursor(CursorLocation::BlockEnd, CursorLocation::EditingCursor);
