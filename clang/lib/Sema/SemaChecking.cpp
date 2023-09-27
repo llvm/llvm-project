@@ -14832,7 +14832,8 @@ static void DiagnoseIntInBoolContext(Sema &S, Expr *E) {
 static void CheckImplicitConversion(Sema &S, Expr *E, QualType T,
                                     SourceLocation CC,
                                     bool *ICContext = nullptr,
-                                    bool IsListInit = false) {
+                                    bool IsListInit = false,
+                                    bool IsConstexprInit = false) {
   if (E->isTypeDependent() || E->isValueDependent()) return;
 
   const Type *Source = S.Context.getCanonicalType(E->getType()).getTypePtr();
@@ -15141,11 +15142,14 @@ static void CheckImplicitConversion(Sema &S, Expr *E, QualType T,
           SmallString<32> PrettyTargetValue;
           TargetFloatValue.toString(PrettyTargetValue, TargetPrecision);
 
-          S.DiagRuntimeBehavior(
-              E->getExprLoc(), E,
+          PartialDiagnostic PD =
               S.PDiag(diag::warn_impcast_integer_float_precision_constant)
-                  << PrettySourceValue << PrettyTargetValue << E->getType() << T
-                  << E->getSourceRange() << clang::SourceRange(CC));
+              << PrettySourceValue << PrettyTargetValue << E->getType() << T
+              << E->getSourceRange() << clang::SourceRange(CC);
+          if (IsConstexprInit)
+            S.Diag(E->getExprLoc(), PD);
+          else
+            S.DiagRuntimeBehavior(E->getExprLoc(), E, PD);
         }
       } else {
         // Otherwise, the implicit conversion may lose precision.
@@ -15199,11 +15203,14 @@ static void CheckImplicitConversion(Sema &S, Expr *E, QualType T,
       std::string PrettySourceValue = toString(Value, 10);
       std::string PrettyTargetValue = PrettyPrintInRange(Value, TargetRange);
 
-      S.DiagRuntimeBehavior(
-          E->getExprLoc(), E,
+      PartialDiagnostic PD =
           S.PDiag(diag::warn_impcast_integer_precision_constant)
-              << PrettySourceValue << PrettyTargetValue << E->getType() << T
-              << E->getSourceRange() << SourceRange(CC));
+          << PrettySourceValue << PrettyTargetValue << E->getType() << T
+          << E->getSourceRange() << SourceRange(CC);
+      if (IsConstexprInit)
+        S.Diag(E->getExprLoc(), PD);
+      else
+        S.DiagRuntimeBehavior(E->getExprLoc(), E, PD);
       return;
     }
 
@@ -15245,11 +15252,14 @@ static void CheckImplicitConversion(Sema &S, Expr *E, QualType T,
         std::string PrettySourceValue = toString(Value, 10);
         std::string PrettyTargetValue = PrettyPrintInRange(Value, TargetRange);
 
-        S.DiagRuntimeBehavior(
-            E->getExprLoc(), E,
+        PartialDiagnostic PD =
             S.PDiag(diag::warn_impcast_integer_precision_constant)
-                << PrettySourceValue << PrettyTargetValue << E->getType() << T
-                << E->getSourceRange() << SourceRange(CC));
+            << PrettySourceValue << PrettyTargetValue << E->getType() << T
+            << E->getSourceRange() << SourceRange(CC);
+        if (IsConstexprInit)
+          S.Diag(E->getExprLoc(), PD);
+        else
+          S.DiagRuntimeBehavior(E->getExprLoc(), E, PD);
         return;
       }
     }
@@ -15411,6 +15421,17 @@ static void AnalyzeImplicitConversions(
     if (auto *Src = OVE->getSourceExpr())
       SourceExpr = Src;
 
+  bool IsConstexprInit =
+      S.isConstantEvaluated() &&
+      isa_and_present<VarDecl>(S.ExprEvalContexts.back().ManglingContextDecl);
+  // Constant-evaluated initializers are not diagnosed by DiagRuntimeBehavior,
+  // but narrowings from the evaluated result to the variable type should be
+  // diagnosed.
+  if (IsConstexprInit && SourceExpr->getType() != T) {
+    CheckImplicitConversion(S, SourceExpr, T, CC, nullptr, IsListInit,
+                            /*IsConstexprInit=*/true);
+  }
+
   if (const auto *UO = dyn_cast<UnaryOperator>(SourceExpr))
     if (UO->getOpcode() == UO_Not &&
         UO->getSubExpr()->isKnownToHaveBooleanValue())
@@ -15446,7 +15467,7 @@ static void AnalyzeImplicitConversions(
   // Go ahead and check any implicit conversions we might have skipped.
   // The non-canonical typecheck is just an optimization;
   // CheckImplicitConversion will filter out dead implicit conversions.
-  if (SourceExpr->getType() != T)
+  if (!IsConstexprInit && SourceExpr->getType() != T)
     CheckImplicitConversion(S, SourceExpr, T, CC, nullptr, IsListInit);
 
   // Now continue drilling into this expression.
