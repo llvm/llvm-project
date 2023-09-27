@@ -20,15 +20,22 @@
 typedef float src_t;
 typedef uint32_t src_rep_t;
 #define SRC_REP_C UINT32_C
-static const int srcSigBits = 23;
+static const int srcBits = sizeof(src_t) * CHAR_BIT;
+static const int srcSigFracBits = 23;
+// -1 accounts for the sign bit.
+static const int srcExpBits = srcBits - srcSigFracBits - 1;
 #define src_rep_t_clz clzsi
 
 #elif defined SRC_DOUBLE
 typedef double src_t;
 typedef uint64_t src_rep_t;
 #define SRC_REP_C UINT64_C
-static const int srcSigBits = 52;
-static __inline int src_rep_t_clz(src_rep_t a) {
+static const int srcBits = sizeof(src_t) * CHAR_BIT;
+static const int srcSigFracBits = 52;
+// -1 accounts for the sign bit.
+static const int srcExpBits = srcBits - srcSigFracBits - 1;
+
+static inline int src_rep_t_clz_impl(src_rep_t a) {
 #if defined __LP64__
   return __builtin_clzl(a);
 #else
@@ -38,6 +45,18 @@ static __inline int src_rep_t_clz(src_rep_t a) {
     return 32 + clzsi(a & REP_C(0xffffffff));
 #endif
 }
+#define src_rep_t_clz src_rep_t_clz_impl
+
+#elif defined SRC_80
+typedef long double src_t;
+typedef __uint128_t src_rep_t;
+#define SRC_REP_C (__uint128_t)
+// sign bit, exponent and significand occupy the lower 80 bits.
+static const int srcBits = 80;
+static const int srcSigFracBits = 63;
+// -1 accounts for the sign bit.
+// -1 accounts for the explicitly stored integer bit.
+static const int srcExpBits = srcBits - srcSigFracBits - 1 - 1;
 
 #elif defined SRC_HALF
 #ifdef COMPILER_RT_HAS_FLOAT16
@@ -47,7 +66,11 @@ typedef uint16_t src_t;
 #endif
 typedef uint16_t src_rep_t;
 #define SRC_REP_C UINT16_C
-static const int srcSigBits = 10;
+static const int srcBits = sizeof(src_t) * CHAR_BIT;
+static const int srcSigFracBits = 10;
+// -1 accounts for the sign bit.
+static const int srcExpBits = srcBits - srcSigFracBits - 1;
+
 #define src_rep_t_clz __builtin_clz
 
 #else
@@ -58,28 +81,75 @@ static const int srcSigBits = 10;
 typedef float dst_t;
 typedef uint32_t dst_rep_t;
 #define DST_REP_C UINT32_C
-static const int dstSigBits = 23;
+static const int dstBits = sizeof(dst_t) * CHAR_BIT;
+static const int dstSigFracBits = 23;
+// -1 accounts for the sign bit.
+static const int dstExpBits = dstBits - dstSigFracBits - 1;
 
 #elif defined DST_DOUBLE
 typedef double dst_t;
 typedef uint64_t dst_rep_t;
 #define DST_REP_C UINT64_C
-static const int dstSigBits = 52;
+static const int dstBits = sizeof(dst_t) * CHAR_BIT;
+static const int dstSigFracBits = 52;
+// -1 accounts for the sign bit.
+static const int dstExpBits = dstBits - dstSigFracBits - 1;
 
 #elif defined DST_QUAD
+// TODO: use fp_lib.h once QUAD_PRECISION is available on x86_64.
+#if __LDBL_MANT_DIG__ == 113
 typedef long double dst_t;
+#elif defined(__x86_64__) &&                                                   \
+    (defined(__FLOAT128__) || defined(__SIZEOF_FLOAT128__))
+typedef __float128 dst_t;
+#endif
 typedef __uint128_t dst_rep_t;
 #define DST_REP_C (__uint128_t)
-static const int dstSigBits = 112;
+static const int dstBits = sizeof(dst_t) * CHAR_BIT;
+static const int dstSigFracBits = 112;
+// -1 accounts for the sign bit.
+static const int dstExpBits = dstBits - dstSigFracBits - 1;
 
 #else
 #error Destination should be single, double, or quad precision!
 #endif // end destination precision
 
-// End of specialization parameters.  Two helper routines for conversion to and
-// from the representation of floating-point data as integer values follow.
+// End of specialization parameters.
 
-static __inline src_rep_t srcToRep(src_t x) {
+// TODO: These helper routines should be placed into fp_lib.h
+// Currently they depend on macros/constants defined above.
+
+static inline src_rep_t extract_sign_from_src(src_rep_t x) {
+  const src_rep_t srcSignMask = SRC_REP_C(1) << (srcBits - 1);
+  return (x & srcSignMask) >> (srcBits - 1);
+}
+
+static inline src_rep_t extract_exp_from_src(src_rep_t x) {
+  const int srcSigBits = srcBits - 1 - srcExpBits;
+  const src_rep_t srcExpMask = ((SRC_REP_C(1) << srcExpBits) - 1) << srcSigBits;
+  return (x & srcExpMask) >> srcSigBits;
+}
+
+static inline src_rep_t extract_sig_frac_from_src(src_rep_t x) {
+  const src_rep_t srcSigFracMask = (SRC_REP_C(1) << srcSigFracBits) - 1;
+  return x & srcSigFracMask;
+}
+
+#ifdef src_rep_t_clz
+static inline int clz_in_sig_frac(src_rep_t sigFrac) {
+      const int skip = (sizeof(dst_t) * CHAR_BIT - srcBits) + 1 + srcExpBits;
+      return src_rep_t_clz(sigFrac) - skip;
+}
+#endif
+
+static inline dst_rep_t construct_dst_rep(dst_rep_t sign, dst_rep_t exp, dst_rep_t sigFrac) {
+  return (sign << (dstBits - 1)) | (exp << (dstBits - 1 - dstExpBits)) | sigFrac;
+}
+
+// Two helper routines for conversion to and from the representation of
+// floating-point data as integer values follow.
+
+static inline src_rep_t srcToRep(src_t x) {
   const union {
     src_t f;
     src_rep_t i;
@@ -87,7 +157,7 @@ static __inline src_rep_t srcToRep(src_t x) {
   return rep.i;
 }
 
-static __inline dst_t dstFromRep(dst_rep_t x) {
+static inline dst_t dstFromRep(dst_rep_t x) {
   const union {
     dst_t f;
     dst_rep_t i;
