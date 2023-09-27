@@ -1,5 +1,5 @@
-// RUN: %clang_cc1 -fexperimental-new-constant-interpreter %s -verify
-// RUN: %clang_cc1 -fexperimental-new-constant-interpreter %s -S -emit-llvm -o - | FileCheck %s
+// RUN: %clang_cc1 -fexperimental-new-constant-interpreter %s -Wno-constant-evaluated -verify
+// RUN: %clang_cc1 -fexperimental-new-constant-interpreter %s -Wno-constant-evaluated -S -emit-llvm -o - | FileCheck %s
 // RUN: %clang_cc1 -verify=ref %s -Wno-constant-evaluated
 // RUN: %clang_cc1 -verify=ref %s -Wno-constant-evaluated %s -S -emit-llvm -o - | FileCheck %s
 

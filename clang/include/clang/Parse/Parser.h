@@ -2003,12 +2003,10 @@ private:
   //===--------------------------------------------------------------------===//
   // C++ if/switch/while/for condition expression.
   struct ForRangeInfo;
-  Sema::ConditionResult ParseCXXCondition(StmtResult *InitStmt,
-                                          SourceLocation Loc,
-                                          Sema::ConditionKind CK,
-                                          bool MissingOK,
-                                          ForRangeInfo *FRI = nullptr,
-                                          bool EnterForConditionScope = false);
+  Sema::ConditionResult ParseCXXCondition(
+      StmtResult *InitStmt, SourceLocation Loc, Sema::ConditionKind CK,
+      bool MissingOK, ForRangeInfo *FRI = nullptr,
+      bool EnterForConditionScope = false, SourceLocation ConstexprLoc = {});
   DeclGroupPtrTy ParseAliasDeclarationInInitStatement(DeclaratorContext Context,
                                                       ParsedAttributes &Attrs);
 
@@ -2106,7 +2104,8 @@ private:
                                  Sema::ConditionResult &CondResult,
                                  SourceLocation Loc, Sema::ConditionKind CK,
                                  SourceLocation &LParenLoc,
-                                 SourceLocation &RParenLoc);
+                                 SourceLocation &RParenLoc,
+                                 SourceLocation ConstexprLoc = {});
   StmtResult ParseIfStatement(SourceLocation *TrailingElseLoc);
   StmtResult ParseSwitchStatement(SourceLocation *TrailingElseLoc);
   StmtResult ParseWhileStatement(SourceLocation *TrailingElseLoc);

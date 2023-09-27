@@ -1365,6 +1365,9 @@ public:
     bool InDiscardedStatement;
     bool InImmediateFunctionContext;
     bool InImmediateEscalatingFunctionContext;
+    // The immediate occurances of consteval if or std::is_constant_evaluated()
+    // are tautologically false
+    bool IsRuntimeEvaluated;
 
     bool IsCurrentlyCheckingDefaultArgumentOrInitializer = false;
 
@@ -1394,7 +1397,8 @@ public:
           NumCleanupObjects(NumCleanupObjects), NumTypos(0),
           ManglingContextDecl(ManglingContextDecl), ExprContext(ExprContext),
           InDiscardedStatement(false), InImmediateFunctionContext(false),
-          InImmediateEscalatingFunctionContext(false) {}
+          InImmediateEscalatingFunctionContext(false),
+          IsRuntimeEvaluated(false) {}
 
     bool isUnevaluated() const {
       return Context == ExpressionEvaluationContext::Unevaluated ||
@@ -1432,6 +1436,10 @@ public:
 
   /// A stack of expression evaluation contexts.
   SmallVector<ExpressionEvaluationContextRecord, 8> ExprEvalContexts;
+
+  /// Source location of the start of `constexpr` in constexpr-if
+  /// used for diagnostics
+  SourceLocation ConstexprIfLoc;
 
   // Set of failed immediate invocations to avoid double diagnosing.
   llvm::SmallPtrSet<ConstantExpr *, 4> FailedImmediateInvocations;

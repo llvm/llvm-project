@@ -244,8 +244,8 @@ namespace UndefinedBehavior {
     constexpr int n13 = n5 + n5; // expected-error {{constant expression}} expected-note {{value -4294967296 is outside the range of }}
     constexpr int n14 = n3 - n5; // expected-error {{constant expression}} expected-note {{value 4294967295 is outside the range of }}
     constexpr int n15 = n5 * n5; // expected-error {{constant expression}} expected-note {{value 4611686018427387904 is outside the range of }}
-    constexpr signed char c1 = 100 * 2; // ok expected-warning{{changes value}}
-    constexpr signed char c2 = '\x64' * '\2'; // also ok  expected-warning{{changes value}}
+    constexpr signed char c1 = 100 * 2; // ok expected-warning {{changes value from 200 to -56}}
+    constexpr signed char c2 = '\x64' * '\2'; // also ok expected-warning {{changes value from 200 to -56}}
     constexpr long long ll1 = 0x7fffffffffffffff; // ok
     constexpr long long ll2 = ll1 + 1; // expected-error {{constant}} expected-note {{ 9223372036854775808 }}
     constexpr long long ll3 = -ll1 - 1; // ok
