@@ -13,6 +13,7 @@ add_llvm_component_library(LLVMOrcJIT
   CompileUtils.cpp
   Core.cpp
   DebugObjectManagerPlugin.cpp
+  DebuggerSupport.cpp
   DebuggerSupportPlugin.cpp
   DebugUtils.cpp
   EPCDynamicLibrarySearchGenerator.cpp
