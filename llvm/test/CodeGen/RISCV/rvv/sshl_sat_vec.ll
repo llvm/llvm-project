@@ -32,11 +32,13 @@ define <4 x i32> @vec_v4i32(<4 x i32> %x, <4 x i32> %y) nounwind {
 ; CHECK-NEXT:    vsetivli zero, 4, e32, m1, ta, ma
 ; CHECK-NEXT:    vmsle.vi v0, v8, -1
 ; CHECK-NEXT:    lui a0, 524288
-; CHECK-NEXT:    addiw a1, a0, -1
+; CHECK-NEXT:    addiw a0, a0, -1
 ; CHECK-NEXT:    vsll.vv v10, v8, v9
 ; CHECK-NEXT:    vsra.vv v9, v10, v9
 ; CHECK-NEXT:    vmsne.vv v8, v8, v9
-; CHECK-NEXT:    vmv.v.x v9, a1
+; CHECK-NEXT:    vmv.v.x v9, a0
+; CHECK-NEXT:    li a0, 1
+; CHECK-NEXT:    slli a0, a0, 31
 ; CHECK-NEXT:    vmerge.vxm v9, v9, a0, v0
 ; CHECK-NEXT:    vmv.v.v v0, v8
 ; CHECK-NEXT:    vmerge.vvm v8, v10, v9, v0
@@ -114,11 +116,13 @@ define <vscale x 4 x i32> @vec_nxv4i32(<vscale x 4 x i32> %x, <vscale x 4 x i32>
 ; CHECK-NEXT:    vsetvli a0, zero, e32, m2, ta, ma
 ; CHECK-NEXT:    vmsle.vi v0, v8, -1
 ; CHECK-NEXT:    lui a0, 524288
-; CHECK-NEXT:    addiw a1, a0, -1
+; CHECK-NEXT:    addiw a0, a0, -1
 ; CHECK-NEXT:    vsll.vv v12, v8, v10
 ; CHECK-NEXT:    vsra.vv v14, v12, v10
 ; CHECK-NEXT:    vmsne.vv v10, v8, v14
-; CHECK-NEXT:    vmv.v.x v8, a1
+; CHECK-NEXT:    vmv.v.x v8, a0
+; CHECK-NEXT:    li a0, 1
+; CHECK-NEXT:    slli a0, a0, 31
 ; CHECK-NEXT:    vmerge.vxm v8, v8, a0, v0
 ; CHECK-NEXT:    vmv1r.v v0, v10
 ; CHECK-NEXT:    vmerge.vvm v8, v12, v8, v0

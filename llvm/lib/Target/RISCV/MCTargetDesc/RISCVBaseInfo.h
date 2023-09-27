@@ -241,11 +241,6 @@ static inline bool isFirstDefTiedToFirstUse(const MCInstrDesc &Desc) {
          Desc.getOperandConstraint(Desc.getNumDefs(), MCOI::TIED_TO) == 0;
 }
 
-// Returns true if the .vx vector instruction \p Opcode only uses the lower \p
-// Bits for a given SEW.
-bool vectorInstUsesNBitsOfScalarOp(uint16_t Opcode, unsigned Bits,
-                                   unsigned Log2SEW);
-
 // RISC-V Specific Machine Operand Flags
 enum {
   MO_None = 0,
