@@ -25,6 +25,7 @@
 #include "llvm/Support/DJB.h"
 #include "llvm/Support/Debug.h"
 #include <cstdint>
+#include <variant>
 #include <vector>
 
 /// \file
@@ -310,9 +311,13 @@ void emitDWARF5AccelTable(AsmPrinter *Asm,
                           const DwarfDebug &DD,
                           ArrayRef<std::unique_ptr<DwarfCompileUnit>> CUs);
 
+/// Emit a DWARFv5 Accelerator Table consisting of entries in the specified
+/// AccelTable. The \p CUs contains either symbols keeping offsets to the
+/// start of compilation unit, either offsets to the start of compilation
+/// unit themselves.
 void emitDWARF5AccelTable(
     AsmPrinter *Asm, AccelTable<DWARF5AccelTableStaticData> &Contents,
-    ArrayRef<MCSymbol *> CUs,
+    ArrayRef<std::variant<MCSymbol *, uint64_t>> CUs,
     llvm::function_ref<unsigned(const DWARF5AccelTableStaticData &)>
         getCUIndexForEntry);
 
