@@ -117,7 +117,7 @@ bool Symbolizer::SymbolizeData(uptr addr, DataInfo *info) {
       return true;
     }
   }
-  return true;
+  return false;
 }
 
 bool Symbolizer::SymbolizeFrame(uptr addr, FrameInfo *info) {
@@ -133,7 +133,7 @@ bool Symbolizer::SymbolizeFrame(uptr addr, FrameInfo *info) {
       return true;
     }
   }
-  return true;
+  return false;
 }
 
 bool Symbolizer::GetModuleNameAndOffsetForPC(uptr pc, const char **module_name,
