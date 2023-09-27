@@ -629,30 +629,6 @@ static void darwinPrintStab(MachOObjectFile *MachO, const NMSymbol &S) {
     outs() << format("   %02x", NType);
 }
 
-static std::optional<std::string> demangle(StringRef Name) {
-  std::string Demangled;
-  if (nonMicrosoftDemangle(Name, Demangled))
-    return Demangled;
-  return std::nullopt;
-}
-
-static std::optional<std::string> demangleXCOFF(StringRef Name) {
-  if (Name.empty() || Name[0] != '.')
-    return demangle(Name);
-
-  Name = Name.drop_front();
-  std::optional<std::string> DemangledName = demangle(Name);
-  if (DemangledName)
-    return "." + *DemangledName;
-  return std::nullopt;
-}
-
-static std::optional<std::string> demangleMachO(StringRef Name) {
-  if (!Name.empty() && Name[0] == '_')
-    Name = Name.drop_front();
-  return demangle(Name);
-}
-
 static bool symbolIsDefined(const NMSymbol &Sym) {
   return Sym.TypeChar != 'U' && Sym.TypeChar != 'w' && Sym.TypeChar != 'v';
 }
@@ -822,15 +798,8 @@ static void printSymbolList(SymbolicFile &Obj,
 
     std::string Name = S.Name;
     MachOObjectFile *MachO = dyn_cast<MachOObjectFile>(&Obj);
-    if (Demangle) {
-      function_ref<std::optional<std::string>(StringRef)> Fn = ::demangle;
-      if (Obj.isXCOFF())
-        Fn = demangleXCOFF;
-      if (Obj.isMachO())
-        Fn = demangleMachO;
-      if (std::optional<std::string> Opt = Fn(S.Name))
-        Name = *Opt;
-    }
+    if (Demangle)
+      Name = demangle(Name);
 
     if (PrintFileName)
       writeFileName(outs(), ArchiveName, ArchitectureName);
