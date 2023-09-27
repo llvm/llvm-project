@@ -304,7 +304,7 @@ convertOperationImpl(Operation &opInst, llvm::IRBuilderBase &builder,
           moduleTranslation.lookupBlock(invOp.getSuccessor(1)), operandsRef);
     } else {
       llvm::FunctionType *calleeType;
-      if (invOp.getCalleeType().has_value())
+      if (invOp.getCalleeType())
         calleeType = llvm::cast<llvm::FunctionType>(
             moduleTranslation.convertType(*invOp.getCalleeType()));
       else

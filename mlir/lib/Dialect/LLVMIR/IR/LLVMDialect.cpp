@@ -1018,7 +1018,7 @@ static void printStoreType(OpAsmPrinter &printer, Operation *op,
 // CallOp
 //===----------------------------------------------------------------------===//
 
-/// Get the MLIR Op-like result types of a LLVMFunctionType
+/// Gets the MLIR Op-like result types of a LLVMFunctionType.
 static SmallVector<Type, 1> getCallOpResults(LLVMFunctionType calleeType) {
   SmallVector<Type, 1> results;
   Type resultType = calleeType.getReturnType();
@@ -1027,7 +1027,7 @@ static SmallVector<Type, 1> getCallOpResults(LLVMFunctionType calleeType) {
   return results;
 }
 
-/// Construct a LLVMFunctionType from MLIR results and args
+/// Constructs a LLVMFunctionType from MLIR `results` and `args`.
 static LLVMFunctionType getLLVMFuncType(OpBuilder &builder, TypeRange results,
                                         ValueRange args) {
   Type resultType;

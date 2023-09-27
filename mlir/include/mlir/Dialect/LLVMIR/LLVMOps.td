@@ -612,7 +612,7 @@ def LLVM_CallOp : LLVM_MemAccessOpBase<"call",
     // Indirect call with an argument and without a result.
     llvm.call %1(%0) : !llvm.ptr, (f32) -> ()
 
-    // Direct varaidic call
+    // Direct variadic call.
     llvm.call @printf(%0, %1) vararg(!llvm.func<i32 (ptr, ...)>) : (!llvm.ptr, i32) -> i32
 
     // Indirect variadic call
