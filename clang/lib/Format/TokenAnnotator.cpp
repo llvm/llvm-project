@@ -3296,6 +3296,7 @@ static bool isFunctionDeclarationName(bool IsCpp, const FormatToken &Current,
     }
     if (Previous->is(tok::r_paren) && Previous->is(TT_TypeDeclarationParen)) {
       assert(Previous->MatchingParen);
+      assert(Previous->MatchingParen->is(tok::l_paren));
       assert(Previous->MatchingParen->is(TT_TypeDeclarationParen));
       return true;
     }
