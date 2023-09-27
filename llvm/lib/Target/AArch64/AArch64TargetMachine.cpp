@@ -200,7 +200,7 @@ static cl::opt<bool> EnableGISelLoadStoreOptPostLegal(
 static cl::opt<bool>
     EnableSinkFold("aarch64-enable-sink-fold",
                    cl::desc("Enable sinking and folding of instruction copies"),
-                   cl::init(true), cl::Hidden);
+                   cl::init(false), cl::Hidden);
 
 extern "C" LLVM_EXTERNAL_VISIBILITY void LLVMInitializeAArch64Target() {
   // Register the target.
