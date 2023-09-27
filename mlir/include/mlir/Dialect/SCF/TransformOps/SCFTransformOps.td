@@ -142,22 +142,23 @@ def LoopPeelOp : Op<Transform_Dialect, "loop.peel",
 
      This operation ignores non-scf::ForOp ops and drops them in the return.
 
-     This operation returns two scf::ForOp, with the first Op satisfying the
-     postcondition: "the loop trip count is divisible by the step". The second
-     loop Op contains the remaining iteration. Note that even though the
-     Payload IR modification may be performed in-place, this operation consumes
-     the operand handle and produces a new one.
+     This operation always succeeds and returns the scf::ForOp with the
+     postcondition: "the loop trip count is divisible by the step".
+     This operation may return the same unmodified loop handle when peeling did
+     not modify the IR (i.e. the loop trip count was already divisible).
 
-     #### Return Modes
+     Note that even though the Payload IR modification may be performed
+     in-place, this operation consumes the operand handle and produces a new
+     one.
 
-     Produces a definite failure if peeling fails.
+     TODO: Return both the peeled loop and the remainder loop.
   }];
 
   let arguments =
       (ins Transform_ScfForOp:$target,
            DefaultValuedAttr<BoolAttr, "false">:$fail_if_already_divisible);
-  let results = (outs TransformHandleTypeInterface:$peeled_loop,
-                      TransformHandleTypeInterface:$remainder_loop);
+  // TODO: Return both the peeled loop and the remainder loop.
+  let results = (outs TransformHandleTypeInterface:$transformed);
 
   let assemblyFormat =
     "$target attr-dict `:` functional-type(operands, results)";
