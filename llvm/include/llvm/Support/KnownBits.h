@@ -332,7 +332,8 @@ public:
   static KnownBits computeForAddSub(bool Add, bool NSW, const KnownBits &LHS,
                                     KnownBits RHS);
 
-  /// Compute known bits results from subtracting RHS from LHS with 1-bit Borrow.
+  /// Compute known bits results from subtracting RHS from LHS with 1-bit
+  /// Borrow.
   static KnownBits computeForSubBorrow(const KnownBits &LHS, KnownBits RHS,
                                        const KnownBits &Borrow);
 

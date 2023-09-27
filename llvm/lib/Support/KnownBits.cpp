@@ -93,8 +93,8 @@ KnownBits KnownBits::computeForSubBorrow(const KnownBits &LHS, KnownBits RHS,
   // Carry 1 - Borrow in ::computeForAddCarry
   std::swap(RHS.Zero, RHS.One);
   return ::computeForAddCarry(LHS, RHS,
-                              /*CarryZero*/ Borrow.One.getBoolValue(),
-                              /*CarryOne*/ Borrow.Zero.getBoolValue());
+                              /*CarryZero=*/Borrow.One.getBoolValue(),
+                              /*CarryOne=*/Borrow.Zero.getBoolValue());
 }
 
 KnownBits KnownBits::sextInReg(unsigned SrcBitWidth) const {

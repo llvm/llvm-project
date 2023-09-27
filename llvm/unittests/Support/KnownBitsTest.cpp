@@ -218,7 +218,7 @@ TEST(KnownBitsTest, SubBorrowExhaustive) {
   ForeachKnownBits(Bits, [&](const KnownBits &Known1) {
     ForeachKnownBits(Bits, [&](const KnownBits &Known2) {
       ForeachKnownBits(1, [&](const KnownBits &KnownBorrow) {
-        // Explicitly compute known bits of the addition by trying all
+        // Explicitly compute known bits of the subtraction by trying all
         // possibilities.
         KnownBits Known(Bits);
         Known.Zero.setAllBits();
