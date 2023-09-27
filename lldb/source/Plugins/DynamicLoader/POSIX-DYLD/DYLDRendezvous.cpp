@@ -714,6 +714,12 @@ bool DYLDRendezvous::FindMetadata(const char *name, PThreadField field,
 
   Address address = list[0].symbol->GetAddress();
   address.SetOffset(address.GetOffset() + field * sizeof(uint32_t));
+
+  // Read from target memory as this allows us to try process memory and
+  // fallback to reading from read only sections from the object files. Here we
+  // are reading read only data from libpthread.so to find data in the thread
+  // specific area for the data we want and this won't be saved into process
+  // memory due to it being read only.
   Status error;
   value =
       target.ReadUnsignedIntegerFromMemory(address, sizeof(uint32_t), 0, error);
