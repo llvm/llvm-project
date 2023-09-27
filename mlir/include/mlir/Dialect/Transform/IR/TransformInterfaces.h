@@ -617,7 +617,11 @@ private:
   /// Forgets the payload IR ops associated with the given transform IR value,
   /// as well as any association between value handles and the results of said
   /// payload IR op.
-  void forgetMapping(Value opHandle, ValueRange origOpFlatResults);
+  ///
+  /// If `allowOutOfScope` is set to "false", asserts that the handle is in
+  /// scope, based on the current stack of frames.
+  void forgetMapping(Value opHandle, ValueRange origOpFlatResults,
+                     bool allowOutOfScope = false);
 
   void forgetValueMapping(Value valueHandle,
                           ArrayRef<Operation *> payloadOperations);
