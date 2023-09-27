@@ -526,7 +526,7 @@ public:
    }
 };
 
-  class C {};
+class C {};
 struct S {};
 enum E {};
 
