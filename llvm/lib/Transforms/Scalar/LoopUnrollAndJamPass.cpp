@@ -333,8 +333,8 @@ tryToUnrollAndJamLoop(Loop *L, DominatorTree &DT, LoopInfo *LI,
   }
 
   unsigned InnerLoopSize = InnerUCE.getRolledLoopSize();
-  unsigned OuterLoopSize = OuterUCE.getRolledLoopSize();
-  LLVM_DEBUG(dbgs() << "  Outer Loop Size: " << OuterLoopSize << "\n");
+  LLVM_DEBUG(dbgs() << "  Outer Loop Size: " << OuterUCE.getRolledLoopSize()
+                    << "\n");
   LLVM_DEBUG(dbgs() << "  Inner Loop Size: " << InnerLoopSize << "\n");
 
   if (InnerUCE.NumInlineCandidates != 0 || OuterUCE.NumInlineCandidates != 0) {
