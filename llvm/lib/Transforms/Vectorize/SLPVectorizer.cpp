@@ -1183,6 +1183,7 @@ public:
   void deleteTree() {
     VectorizableTree.clear();
     ScalarToTreeEntry.clear();
+    MultiNodeScalars.clear();
     MustGather.clear();
     EntryToLastInstruction.clear();
     ExternalUses.clear();
@@ -2431,7 +2432,7 @@ private:
       return false;
     });
     if (It != VL.end()) {
-      assert(TE->isSame(VL) && "Expedted same scalars.");
+      assert(TE->isSame(VL) && "Expected same scalars.");
       return TE;
     }
     return nullptr;
