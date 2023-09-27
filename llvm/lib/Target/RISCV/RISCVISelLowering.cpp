@@ -3526,7 +3526,7 @@ static SDValue lowerBuildVectorOfConstants(SDValue Op, SelectionDAG &DAG,
   // narrow vector is known to materialize cheaply.
   // TODO: We really should be costing the smaller vector.  There are
   // profitable cases this misses.
-  if (EltBitSize > 8 &&
+  if (EltBitSize > 8 && VT.isInteger() &&
       (NumElts <= 4 || VT.getSizeInBits() > Subtarget.getRealMinVLen())) {
     unsigned SignBits = DAG.ComputeNumSignBits(Op);
     if (EltBitSize - SignBits < 8) {
