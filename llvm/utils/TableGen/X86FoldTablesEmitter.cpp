@@ -397,12 +397,12 @@ void X86FoldTablesEmitter::addEntryWithFlags(FoldTable &Table,
   Record *RegRec = RegInstr->TheDef;
   Record *MemRec = MemInstr->TheDef;
 
+  Result.NoReverse = S & TB_NO_REVERSE;
+  Result.NoForward = S & TB_NO_FORWARD;
+  Result.FoldLoad = S & TB_FOLDED_LOAD;
+  Result.FoldStore = S & TB_FOLDED_STORE;
+  Result.Alignment = Align(1ULL << ((S & TB_ALIGN_MASK) >> TB_ALIGN_SHIFT));
   if (isManual) {
-    Result.NoReverse = S & TB_NO_REVERSE;
-    Result.NoForward = S & TB_NO_FORWARD;
-    Result.FoldLoad = S & TB_FOLDED_LOAD;
-    Result.FoldStore = S & TB_FOLDED_STORE;
-    Result.Alignment = Align(1ULL << ((S & TB_ALIGN_MASK) >> TB_ALIGN_SHIFT));
     Table[RegInstr] = Result;
     return;
   }
@@ -483,7 +483,9 @@ void X86FoldTablesEmitter::updateTables(const CodeGenInstruction *RegInstr,
 
   // Instructions which Read-Modify-Write should be added to Table2Addr.
   if (!MemOutSize && RegOutSize == 1 && MemInSize == RegInSize) {
-    addEntryWithFlags(Table2Addr, RegInstr, MemInstr, S, 0, IsManual);
+    // X86 would not unfold Read-Modify-Write instructions so add TB_NO_REVERSE.
+    addEntryWithFlags(Table2Addr, RegInstr, MemInstr, S | TB_NO_REVERSE, 0,
+                      IsManual);
     return;
   }
 
