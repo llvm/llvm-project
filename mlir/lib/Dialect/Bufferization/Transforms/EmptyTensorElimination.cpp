@@ -110,6 +110,7 @@ LogicalResult mlir::bufferization::eliminateEmptyTensors(
     // be replaced, but the transformation may not be beneficial.
     if (!state.isInPlace(source))
       return WalkResult::skip();
+
     // All values that are needed to create the replacement op.
     SmallVector<Value> neededValues =
         op.getValuesNeededToBuildSubsetExtraction();
