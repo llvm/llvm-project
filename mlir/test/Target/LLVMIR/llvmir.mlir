@@ -1533,6 +1533,7 @@ llvm.func @cmpxchg(%ptr : !llvm.ptr<i32>, %cmp : i32, %val: i32) {
 
 llvm.mlir.global external constant @_ZTIi() : !llvm.ptr<i8>
 llvm.func @foo(!llvm.ptr<i8>)
+llvm.func @vararg_foo(!llvm.ptr<i8>, ...)
 llvm.func @bar(!llvm.ptr<i8>) -> !llvm.ptr<i8>
 llvm.func @__gxx_personality_v0(...) -> i32
 
@@ -1570,6 +1571,19 @@ llvm.func @invokeLandingpad() -> i32 attributes { personality = @__gxx_personali
 // CHECK-NEXT:          to label %[[normal]] unwind label %[[unwind]]
 ^bb3:	// pred: ^bb1
   %8 = llvm.invoke @bar(%6) to ^bb2 unwind ^bb1 : (!llvm.ptr<i8>) -> !llvm.ptr<i8>
+
+// CHECK: [[BB4:.*]]:
+// CHECK: invoke void (ptr, ...) @vararg_foo(ptr %[[a1]], i32 0)
+// CHECK-NEXT: to label %[[normal:[0-9]+]] unwind label %[[unwind:[0-9]+]]
+^bb4:
+  llvm.invoke @vararg_foo(%6, %0) to ^bb2 unwind ^bb1 vararg(!llvm.func<void (ptr<i8>, ...)>) : (!llvm.ptr<i8>, i32) -> ()
+
+// CHECK: [[BB5:.*]]:
+// CHECK: invoke void (ptr, ...) undef(ptr %[[a1]], i32 0)
+// CHECK-NEXT: to label %[[normal:[0-9]+]] unwind label %[[unwind:[0-9]+]]
+^bb5:
+  %9 = llvm.mlir.undef : !llvm.ptr
+  llvm.invoke %9(%6, %0) to ^bb2 unwind ^bb1 vararg(!llvm.func<void (ptr<i8>, ...)>) : !llvm.ptr, (!llvm.ptr<i8>, i32) -> ()
 }
 
 // -----
