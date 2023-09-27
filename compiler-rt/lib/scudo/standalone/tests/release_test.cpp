@@ -23,11 +23,11 @@ TEST(ScudoReleaseTest, RegionPageMap) {
     // Various valid counter's max values packed into one word.
     scudo::RegionPageMap PageMap2N(1U, 1U, 1UL << I);
     ASSERT_TRUE(PageMap2N.isAllocated());
-    EXPECT_EQ(1, PageMap2N.getBufferNumElements());
+    EXPECT_EQ(1U, PageMap2N.getBufferNumElements());
     // Check the "all bit set" values too.
     scudo::RegionPageMap PageMap2N1_1(1U, 1U, ~0UL >> I);
     ASSERT_TRUE(PageMap2N1_1.isAllocated());
-    EXPECT_EQ(1, PageMap2N1_1.getBufferNumElements());
+    EXPECT_EQ(1U, PageMap2N1_1.getBufferNumElements());
     // Verify the packing ratio, the counter is Expected to be packed into the
     // closest power of 2 bits.
     scudo::RegionPageMap PageMap(1U, SCUDO_WORDSIZE, 1UL << I);
