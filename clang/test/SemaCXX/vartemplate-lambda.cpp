@@ -12,7 +12,7 @@ template<typename T> auto v1 = [](int a = T()) { return a; }();
 
 struct S {
   template<class T>
-  static constexpr T t = [](int f = T(7)){return f;}(); // expected-error{{constexpr variable 't<int>' must be initialized by a constant expression}} expected-note{{cannot be used in a constant expression}}
+  static constexpr T t = [](int f = T(7)){return f;}(); // expected-error{{a lambda expression may not appear inside of a constant expression}}
 };
 
 template <typename X>
@@ -21,7 +21,7 @@ int foo2() {
   fn1<char>(a);
   (void)v1<int>;
   (void)v1<int *>; // expected-note{{in instantiation of variable template specialization 'v1' requested here}}
-  (void)S::t<int>; // expected-note{{in instantiation of static data member 'S::t<int>' requested here}}
+  (void)S::t<int>;
   return 0;
 }
 

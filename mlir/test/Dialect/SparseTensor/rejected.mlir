@@ -15,7 +15,7 @@
 
 // CHECK-LABEL:   func.func @sparse_reduction_subi(
 // CHECK-SAME:      %[[VAL_0:.*]]: tensor<i32>,
-// CHECK-SAME:      %[[VAL_1:.*]]: tensor<?xi32, #sparse_tensor.encoding<{ lvlTypes = [ "compressed" ] }>>) -> tensor<i32> {
+// CHECK-SAME:      %[[VAL_1:.*]]: tensor<?xi32, #sparse_tensor.encoding<{{{.*}}}>>) -> tensor<i32> {
 // CHECK:           %[[VAL_2:.*]] = linalg.generic
 // CHECK:           ^bb0(%[[VAL_3:.*]]: i32, %[[VAL_4:.*]]: i32):
 // CHECK:             %[[VAL_5:.*]] = arith.subi %[[VAL_3]], %[[VAL_4]] : i32
