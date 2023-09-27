@@ -1644,7 +1644,7 @@ TEST_F(FileCheckTest, CapturedVarDiags) {
   std::vector<FileCheckDiag> Diags;
   Tester.printVariableDefs(FileCheckDiag::MatchFoundAndExpected, Diags);
   EXPECT_EQ(Diags.size(), 2ul);
-  for (FileCheckDiag Diag : Diags) {
+  for (const FileCheckDiag &Diag : Diags) {
     EXPECT_EQ(Diag.CheckTy, Check::CheckPlain);
     EXPECT_EQ(Diag.MatchTy, FileCheckDiag::MatchFoundAndExpected);
     EXPECT_EQ(Diag.InputStartLine, 1u);

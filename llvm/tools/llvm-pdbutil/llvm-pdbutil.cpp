@@ -842,7 +842,7 @@ static void yamlToPdb(StringRef Path) {
       ExitOnErr(DbiBuilder.addModuleSourceFile(ModiBuilder, S));
     if (MI.Modi) {
       const auto &ModiStream = *MI.Modi;
-      for (auto Symbol : ModiStream.Symbols) {
+      for (const auto &Symbol : ModiStream.Symbols) {
         ModiBuilder.addSymbol(
             Symbol.toCodeViewSymbol(Allocator, CodeViewContainer::Pdb));
       }

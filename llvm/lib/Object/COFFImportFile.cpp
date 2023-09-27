@@ -578,7 +578,7 @@ Error writeImportLibrary(StringRef ImportName, StringRef Path,
   std::vector<uint8_t> NullThunk;
   Members.push_back(OF.createNullThunk(NullThunk));
 
-  for (COFFShortExport E : Exports) {
+  for (const COFFShortExport &E : Exports) {
     if (E.Private)
       continue;
 
