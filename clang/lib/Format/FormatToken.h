@@ -30,8 +30,9 @@ namespace format {
   TYPE(ArrayInitializerLSquare)                                                \
   TYPE(ArraySubscriptLSquare)                                                  \
   TYPE(AttributeColon)                                                         \
+  TYPE(AttributeLParen)                                                        \
   TYPE(AttributeMacro)                                                         \
-  TYPE(AttributeParen)                                                         \
+  TYPE(AttributeRParen)                                                        \
   TYPE(AttributeSquare)                                                        \
   TYPE(BinaryOperator)                                                         \
   TYPE(BitFieldColon)                                                          \
