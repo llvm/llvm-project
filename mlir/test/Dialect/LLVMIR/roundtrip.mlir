@@ -71,6 +71,14 @@ func.func @ops(%arg0: i32, %arg1: f32,
   %20 = llvm.mlir.addressof @foo : !llvm.ptr
   %21 = llvm.call %20(%arg0) : !llvm.ptr, (i32) -> !llvm.struct<(i32, f64, i32)>
 
+// Variadic calls
+// CHECK:  llvm.call @variadic(%arg0, %arg0) vararg(!llvm.func<void (i32, ...)>) : (i32, i32) -> ()
+// CHECK:  %[[VARIADIC_FUNC:.*]] = llvm.mlir.addressof @variadic : !llvm.ptr
+// CHECK:  llvm.call %[[VARIADIC_FUNC]](%[[I32]], %[[I32]]) vararg(!llvm.func<void (i32, ...)>) : !llvm.ptr, (i32, i32) -> ()
+  llvm.call @variadic(%arg0, %arg0) vararg(!llvm.func<void (i32, ...)>) : (i32, i32) -> ()
+  %variadic_func = llvm.mlir.addressof @variadic : !llvm.ptr
+  llvm.call %variadic_func(%arg0, %arg0) vararg(!llvm.func<void (i32, ...)>) : !llvm.ptr, (i32, i32) -> ()
+
 // Terminator operations and their successors.
 //
 // CHECK: llvm.br ^[[BB1:.*]]
@@ -586,3 +594,5 @@ llvm.func @experimental_noalias_scope_decl() {
   llvm.intr.experimental.noalias.scope.decl #alias_scope
   llvm.return
 }
+
+llvm.func @variadic(i32, ...)
