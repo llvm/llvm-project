@@ -25,12 +25,12 @@ DECLARE_SPECIAL_CONSTANTS(double)
 TEST(LlvmLibcExpm1Test, TrickyInputs) {
   constexpr int N = 21;
   constexpr uint64_t INPUTS[N] = {
-      0x3FD79289C6E6A5C0,
-      0x3FD05DE80A173EA0, // 0x1.05de80a173eap-2
-      0xbf1eb7a4cb841fcc, // -0x1.eb7a4cb841fccp-14
-      0xbf19a61fb925970d,
-      0x3fda7b764e2cf47a, // 0x1.a7b764e2cf47ap-2
-      0xc04757852a4b93aa, // -0x1.757852a4b93aap+5
+      0x3FD79289C6E6A5C0, // x=0x1.79289c6e6a5cp-2
+      0x3FD05DE80A173EA0, // x=0x1.05de80a173eap-2
+      0xbf1eb7a4cb841fcc, // x=-0x1.eb7a4cb841fccp-14
+      0xbf19a61fb925970d, // x=-0x1.9a61fb925970dp-14
+      0x3fda7b764e2cf47a, // x=0x1.a7b764e2cf47ap-2
+      0xc04757852a4b93aa, // x=-0x1.757852a4b93aap+5
       0x4044c19e5712e377, // x=0x1.4c19e5712e377p+5
       0xbf19a61fb925970d, // x=-0x1.9a61fb925970dp-14
       0xc039a74cdab36c28, // x=-0x1.9a74cdab36c28p+4
