@@ -1074,8 +1074,8 @@ void CallOp::build(OpBuilder &builder, OperationState &state,
 void CallOp::build(OpBuilder &builder, OperationState &state,
                    LLVMFunctionType calleeType, FlatSymbolRefAttr callee,
                    ValueRange args) {
-  build(builder, state, getCallOpResultTypes(calleeType), TypeAttr::get(calleeType),
-        callee, args, /*fastmathFlags=*/nullptr,
+  build(builder, state, getCallOpResultTypes(calleeType),
+        TypeAttr::get(calleeType), callee, args, /*fastmathFlags=*/nullptr,
         /*branch_weights=*/nullptr,
         /*access_groups=*/nullptr, /*alias_scopes=*/nullptr,
         /*noalias_scopes=*/nullptr, /*tbaa=*/nullptr);
@@ -1083,7 +1083,8 @@ void CallOp::build(OpBuilder &builder, OperationState &state,
 
 void CallOp::build(OpBuilder &builder, OperationState &state,
                    LLVMFunctionType calleeType, ValueRange args) {
-  build(builder, state, getCallOpResultTypes(calleeType), TypeAttr::get(calleeType),
+  build(builder, state, getCallOpResultTypes(calleeType),
+        TypeAttr::get(calleeType),
         /*callee=*/nullptr, args,
         /*fastmathFlags=*/nullptr,
         /*branch_weights=*/nullptr,
@@ -1094,8 +1095,8 @@ void CallOp::build(OpBuilder &builder, OperationState &state,
 void CallOp::build(OpBuilder &builder, OperationState &state, LLVMFuncOp func,
                    ValueRange args) {
   auto calleeType = func.getFunctionType();
-  build(builder, state, getCallOpResultTypes(calleeType), TypeAttr::get(calleeType),
-        SymbolRefAttr::get(func), args,
+  build(builder, state, getCallOpResultTypes(calleeType),
+        TypeAttr::get(calleeType), SymbolRefAttr::get(func), args,
         /*fastmathFlags=*/nullptr,
         /*branch_weights=*/nullptr,
         /*access_groups=*/nullptr, /*alias_scopes=*/nullptr,
@@ -1385,9 +1386,9 @@ void InvokeOp::build(OpBuilder &builder, OperationState &state, LLVMFuncOp func,
                      ValueRange ops, Block *normal, ValueRange normalOps,
                      Block *unwind, ValueRange unwindOps) {
   auto calleeType = func.getFunctionType();
-  build(builder, state, getCallOpResultTypes(calleeType), TypeAttr::get(calleeType),
-        SymbolRefAttr::get(func), ops, normalOps, unwindOps, nullptr, normal,
-        unwind);
+  build(builder, state, getCallOpResultTypes(calleeType),
+        TypeAttr::get(calleeType), SymbolRefAttr::get(func), ops, normalOps,
+        unwindOps, nullptr, normal, unwind);
 }
 
 void InvokeOp::build(OpBuilder &builder, OperationState &state, TypeRange tys,
@@ -1402,8 +1403,9 @@ void InvokeOp::build(OpBuilder &builder, OperationState &state,
                      LLVMFunctionType calleeType, FlatSymbolRefAttr callee,
                      ValueRange ops, Block *normal, ValueRange normalOps,
                      Block *unwind, ValueRange unwindOps) {
-  build(builder, state, getCallOpResultTypes(calleeType), TypeAttr::get(calleeType),
-        callee, ops, normalOps, unwindOps, nullptr, normal, unwind);
+  build(builder, state, getCallOpResultTypes(calleeType),
+        TypeAttr::get(calleeType), callee, ops, normalOps, unwindOps, nullptr,
+        normal, unwind);
 }
 
 SuccessorOperands InvokeOp::getSuccessorOperands(unsigned index) {
