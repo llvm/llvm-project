@@ -246,19 +246,6 @@ static LogicalResult printOperation(CppEmitter &emitter,
   return printConstantOp(emitter, operation, value);
 }
 
-static LogicalResult printOperation(CppEmitter &emitter,
-                                    emitc::AssignOp assignOp) {
-  auto variableOp = cast<emitc::VariableOp>(assignOp.getVar().getDefiningOp());
-  OpResult result = variableOp->getResult(0);
-
-  if (failed(emitter.emitVariableAssignment(result)))
-    return failure();
-
-  emitter.ostream() << emitter.getOrCreateName(assignOp.getValue());
-
-  return success();
-}
-
 static LogicalResult printBinaryOperation(CppEmitter &emitter,
                                           Operation *operation,
                                           StringRef binaryOperator) {
@@ -580,37 +567,45 @@ static LogicalResult printOperation(CppEmitter &emitter, scf::ForOp forOp) {
   return success();
 }
 
-static LogicalResult printOperation(CppEmitter &emitter, emitc::IfOp ifOp) {
+static LogicalResult printOperation(CppEmitter &emitter, scf::IfOp ifOp) {
   raw_indented_ostream &os = emitter.ostream();
 
-  // Helper function to emit all ops except the last one, expected to be
-  // emitc::yield.
-  auto emitAllExceptLast = [&emitter](Region &region) {
-    Region::OpIterator it = region.op_begin(), end = region.op_end();
-    for (; std::next(it) != end; ++it) {
-      if (failed(emitter.emitOperation(*it, /*trailingSemicolon=*/true)))
+  if (!emitter.shouldDeclareVariablesAtTop()) {
+    for (OpResult result : ifOp.getResults()) {
+      if (failed(emitter.emitVariableDeclaration(result,
+                                                 /*trailingSemicolon=*/true)))
         return failure();
     }
-    assert(isa<emitc::YieldOp>(*it) &&
-           "Expected last operation in the region to be emitc::yield");
-    return success();
-  };
+  }
 
   os << "if (";
   if (failed(emitter.emitOperands(*ifOp.getOperation())))
     return failure();
   os << ") {\n";
   os.indent();
-  if (failed(emitAllExceptLast(ifOp.getThenRegion())))
-    return failure();
+
+  Region &thenRegion = ifOp.getThenRegion();
+  for (Operation &op : thenRegion.getOps()) {
+    // Note: This prints a superfluous semicolon if the terminating yield op has
+    // zero results.
+    if (failed(emitter.emitOperation(op, /*trailingSemicolon=*/true)))
+      return failure();
+  }
+
   os.unindent() << "}";
 
   Region &elseRegion = ifOp.getElseRegion();
   if (!elseRegion.empty()) {
     os << " else {\n";
     os.indent();
-    if (failed(emitAllExceptLast(elseRegion)))
-      return failure();
+
+    for (Operation &op : elseRegion.getOps()) {
+      // Note: This prints a superfluous semicolon if the terminating yield op
+      // has zero results.
+      if (failed(emitter.emitOperation(op, /*trailingSemicolon=*/true)))
+        return failure();
+    }
+
     os.unindent() << "}";
   }
 
@@ -746,12 +741,12 @@ static LogicalResult printOperation(CppEmitter &emitter,
         return failure();
     }
     for (Operation &op : block.getOperations()) {
-      // When generating code for an emitc.if or cf.cond_br op no semicolon
-      // needs to be printed after the closing brace.
+      // When generating code for an scf.if or cf.cond_br op no semicolon needs
+      // to be printed after the closing brace.
       // When generating code for an scf.for op, printing a trailing semicolon
       // is handled within the printOperation function.
       bool trailingSemicolon =
-          !isa<cf::CondBranchOp, emitc::LiteralOp, emitc::IfOp, scf::ForOp>(op);
+          !isa<cf::CondBranchOp, emitc::LiteralOp, scf::IfOp, scf::ForOp>(op);
 
       if (failed(emitter.emitOperation(
               op, /*trailingSemicolon=*/trailingSemicolon)))
@@ -1013,16 +1008,15 @@ LogicalResult CppEmitter::emitOperation(Operation &op, bool trailingSemicolon) {
           .Case<cf::BranchOp, cf::CondBranchOp>(
               [&](auto op) { return printOperation(*this, op); })
           // EmitC ops.
-          .Case<emitc::AddOp, emitc::ApplyOp, emitc::AssignOp, emitc::CallOp,
-                emitc::CastOp, emitc::CmpOp, emitc::ConstantOp, emitc::DivOp,
-                emitc::IfOp, emitc::IncludeOp, emitc::MulOp, emitc::RemOp,
-                emitc::SubOp, emitc::VariableOp>(
+          .Case<emitc::AddOp, emitc::ApplyOp, emitc::CallOp, emitc::CastOp,
+                emitc::CmpOp, emitc::ConstantOp, emitc::DivOp, emitc::IncludeOp,
+                emitc::MulOp, emitc::RemOp, emitc::SubOp, emitc::VariableOp>(
               [&](auto op) { return printOperation(*this, op); })
           // Func ops.
           .Case<func::CallOp, func::ConstantOp, func::FuncOp, func::ReturnOp>(
               [&](auto op) { return printOperation(*this, op); })
           // SCF ops.
-          .Case<scf::ForOp, scf::YieldOp>(
+          .Case<scf::ForOp, scf::IfOp, scf::YieldOp>(
               [&](auto op) { return printOperation(*this, op); })
           // Arithmetic ops.
           .Case<arith::ConstantOp>(
