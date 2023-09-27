@@ -720,7 +720,13 @@ transformToReduceLoop(Block *loopHeader, Block *exitBlock,
     auto checkValue = [&](Value value) {
       Value blockArgument;
       for (OpOperand &use : llvm::make_early_inc_range(value.getUses())) {
-        if (loopBlocks.contains(use.getOwner()->getBlock()))
+        // Go through all the parent blocks and find the one part of the region
+        // of the loop. If the block is part of the loop, then the value does
+        // not escape the loop through this use.
+        Block *currBlock = use.getOwner()->getBlock();
+        while (currBlock && currBlock->getParent() != loopHeader->getParent())
+          currBlock = currBlock->getParentOp()->getBlock();
+        if (loopBlocks.contains(currBlock))
           continue;
 
         // Block argument is only created the first time it is required.
