@@ -39,8 +39,7 @@
 }>
 
 #COOSlice = #sparse_tensor.encoding<{
-  lvlTypes = [ "compressed_nu", "singleton" ],
-  dimSlices = [ (2, 2, 1), (12, 13, 1) ]
+  map = (d0 : #sparse_tensor<slice(2, 2, 1)>, d1 : #sparse_tensor<slice(12, 13, 1)>) -> (d0 : compressed(nonunique), d1 : singleton)
 }>
 
 // CHECK-LABEL: func @sparse_nop_convert(

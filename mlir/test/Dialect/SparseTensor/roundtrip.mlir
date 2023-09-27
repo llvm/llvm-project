@@ -143,8 +143,7 @@ func.func @sparse_values(%arg0: tensor<128xf64, #SparseVector>) -> memref<?xf64>
 // -----
 
 #CSR_SLICE = #sparse_tensor.encoding<{
-  lvlTypes = [ "dense", "compressed" ],
-  dimSlices = [ (1, 4, 1), (1, 4, 2) ]
+  map = (d0 : #sparse_tensor<slice(1, 4, 1)>, d1 : #sparse_tensor<slice(1, 4, 2)>) -> (d0 : dense, d1 : compressed)
 }>
 
 // CHECK-LABEL: func @sparse_slice_offset(
@@ -159,8 +158,7 @@ func.func @sparse_slice_offset(%arg0: tensor<2x8xf64, #CSR_SLICE>) -> index {
 // -----
 
 #CSR_SLICE = #sparse_tensor.encoding<{
-  lvlTypes = [ "dense", "compressed" ],
-  dimSlices = [ (1, 4, 1), (1, 4, 2) ]
+  map = (d0 : #sparse_tensor<slice(1, 4, 1)>, d1 : #sparse_tensor<slice(1, 4, 2)>) -> (d0 : dense, d1 : compressed)
 }>
 
 // CHECK-LABEL: func @sparse_slice_stride(
@@ -188,8 +186,7 @@ func.func @sparse_metadata_init() -> !sparse_tensor.storage_specifier<#SparseVec
 
 #SparseVector = #sparse_tensor.encoding<{map = (d0) -> (d0 : compressed)}>
 #SparseVector_Slice = #sparse_tensor.encoding<{
-  lvlTypes = ["compressed"],
-  dimSlices = [ (?, ?, ?) ]
+  map = (d0 : #sparse_tensor<slice(?, ?, ?)>) -> (d0 : compressed)
 }>
 
 // CHECK-LABEL: func @sparse_metadata_init(
@@ -220,8 +217,7 @@ func.func @sparse_get_md(%arg0: !sparse_tensor.storage_specifier<#SparseVector>)
 // -----
 
 #SparseVector_Slice = #sparse_tensor.encoding<{
-  lvlTypes = ["compressed"],
-  dimSlices = [ (?, ?, ?) ]
+  map = (d0 : #sparse_tensor<slice(?, ?, ?)>) -> (d0 : compressed)
 }>
 
 // CHECK-LABEL: func @sparse_get_md(
@@ -237,8 +233,7 @@ func.func @sparse_get_md(%arg0: !sparse_tensor.storage_specifier<#SparseVector_S
 // -----
 
 #SparseVector = #sparse_tensor.encoding<{
-  lvlTypes = ["compressed"],
-  dimSlices = [ (?, ?, ?) ]
+  map = (d0 : #sparse_tensor<slice(?, ?, ?)>) -> (d0 : compressed)
 }>
 
 // CHECK-LABEL: func @sparse_get_md(

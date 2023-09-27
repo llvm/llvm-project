@@ -25,8 +25,7 @@ static int testRoundtripEncoding(MlirContext ctx) {
   // clang-format off
   const char *originalAsm =
     "#sparse_tensor.encoding<{ "
-    "lvlTypes = [ \"dense\", \"compressed\", \"compressed\"], "
-    "dimToLvl = affine_map<(d0, d1)[s0] -> (s0, d0, d1)>, "
+    "map = [s0](d0, d1) -> (s0 : dense, d0 : compressed, d1 : compressed), "
     "posWidth = 32, crdWidth = 64 }>";
   // clang-format on
   MlirAttribute originalAttr =

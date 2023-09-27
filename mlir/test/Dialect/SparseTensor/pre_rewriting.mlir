@@ -13,8 +13,7 @@
 }>
 
 #Slice = #sparse_tensor.encoding<{
-  lvlTypes = [ "compressed_nu", "singleton" ],
-  dimSlices = [ (?, 1, 1), (?, 3, 1) ]
+  map = (d0 : #sparse_tensor<slice(?, 1, 1)>, d1 : #sparse_tensor<slice(?, 3, 1)>) -> (d0 : compressed(nonunique), d1 : singleton)
 }>
 
 #sel_trait = {
