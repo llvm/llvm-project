@@ -384,10 +384,10 @@
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 // RUN: %clangxx -### --target=hexagon-unknown-elf \
 // RUN:   -ccc-install-dir %S/Inputs/hexagon_tree/Tools/bin \
-// RUN:   -mcpu=hexagonv60 \
+// RUN:   -mcpu=hexagonv60 -fuse-ld=lld \
 // RUN:   -s -t -e start_here -uFoo -undefined Bar %s 2>&1 | FileCheck -check-prefix=CHECK33B %s
 // CHECK33B:      "-cc1"
-// CHECK33B:      {{hexagon-link|ld}}
+// CHECK33B:      ld.lld
 // CHECK33B-SAME: "{{.*}}/Inputs/hexagon_tree/Tools/bin/../target/hexagon/lib/v60/crt0_standalone.o"
 // CHECK33B-SAME: "{{.*}}/Inputs/hexagon_tree/Tools/bin/../target/hexagon/lib/v60/crt0.o"
 // CHECK33B-SAME: "{{.*}}/Inputs/hexagon_tree/Tools/bin/../target/hexagon/lib/v60/init.o"
