@@ -378,15 +378,9 @@ class IndexSet<int tuple_index, int nf, int lmul, bit isV0 = false> {
     !foldl([]<int>,
               !if(isV0, [0],
                 !cond(
-                  !eq(lmul, 1):
-                  [8, 9, 10, 11, 12, 13, 14, 15,
-                   16, 17, 18, 19, 20, 21, 22, 23,
-                   24, 25, 26, 27, 28, 29, 30, 31,
-                   1, 2, 3, 4, 5, 6, 7],
-                  !eq(lmul, 2):
-                  [4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 1, 2, 3],
-                  !eq(lmul, 4):
-                  [2, 3, 4, 5, 6, 7, 1])),
+                  !eq(lmul, 1): !listconcat(!range(8, 32), !range(1, 8)),
+                  !eq(lmul, 2): !listconcat(!range(4, 16), !range(1, 4)),
+                  !eq(lmul, 4): !listconcat(!range(2, 8), !range(1, 2)))),
               L, i,
               !listconcat(L,
                           !if(!le(!mul(!add(i, tuple_index), lmul),
