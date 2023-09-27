@@ -5,8 +5,7 @@
 }>
 
 #CSR_SLICE = #sparse_tensor.encoding<{
-  lvlTypes = [ "dense", "compressed" ],
-  dimSlices = [ (0, 4, 1), (0, 8, 1) ]
+  map = (d0 : #sparse_tensor<slice(0, 4, 1)>, d1 : #sparse_tensor<slice(0, 8, 1)>) -> (d0 : dense, d1 : compressed)
 }>
 
 // CHECK-LABEL:   func.func @sparse_slice(

@@ -228,8 +228,9 @@ def SparseTensorEncodingAttr : SparseTensor_Attr<"SparseTensorEncoding",
     // CSR slice (offset = 0, size = 4, stride = 1 on the first dimension;
     // offset = 0, size = 8, and a dynamic stride on the second dimension).
     #CSR_SLICE = #sparse_tensor.encoding<{
-      lvlTypes = [ "dense", "compressed" ],
-      dimSlices = [ (0, 4, 1), (0, 8, ?) ]
+      map = (d0 : #sparse_tensor<slice(0, 4, 1)>,
+             d1 : #sparse_tensor<slice(0, 8, ?)>) ->
+            (d0 : dense, d1 : compressed)
     }>
     ... tensor<?x?xf64, #CSC_SLICE> ...
 
