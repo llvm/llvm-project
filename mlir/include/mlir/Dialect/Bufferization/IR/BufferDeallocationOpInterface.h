@@ -95,7 +95,17 @@ struct DeallocationOptions {
   // A pass option indicating whether private functions should be modified to
   // pass the ownership of MemRef values instead of adhering to the function
   // boundary ABI.
-  bool privateFuncDynamicOwnership = false;
+  bool privateFuncDynamicOwnership = true;
+
+  /// Inserts `cf.assert` operations to verify the function boundary ABI at
+  /// runtime. Currently, it is only checked that the ownership of returned
+  /// MemRefs is 'true'. This makes sure that ownership is yielded and the
+  /// returned MemRef does not originate from the same allocation as a function
+  /// argument. TODO: check that returned MemRefs don't alias each other.
+  /// If it can be determined statically that the ABI is not adhered
+  /// to, an error will already be emitted at compile time. This cannot be
+  /// changed with this option.
+  bool verifyFunctionBoundaryABI = true;
 };
 
 /// This class collects all the state that we need to perform the buffer
@@ -138,12 +148,12 @@ public:
   void getLiveMemrefsIn(Block *block, SmallVectorImpl<Value> &memrefs);
 
   /// Given an SSA value of MemRef type, this function queries the ownership and
-  /// if it is not already in the 'Unique' state, potentially inserts IR to get
-  /// a new SSA value, returned as the first element of the pair, which has
-  /// 'Unique' ownership and can be used instead of the passed Value with the
-  /// the ownership indicator returned as the second element of the pair.
-  std::pair<Value, Value>
-  getMemrefWithUniqueOwnership(OpBuilder &builder, Value memref, Block *block);
+  /// if it is not already in the 'Unique' state, potentially inserts IR to
+  /// determine the ownership (which might involve expensive aliasing checks at
+  /// runtime).
+  Value getMemrefWithUniqueOwnership(const DeallocationOptions &options,
+                                     OpBuilder &builder, Value memref,
+                                     Block *block);
 
   /// Given two basic blocks and the values passed via block arguments to the
   /// destination block, compute the list of MemRefs that have to be retained in
