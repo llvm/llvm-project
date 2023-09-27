@@ -168,7 +168,8 @@ protected:
       "mgpuMemAlloc",
       llvmPointerType /* void * */,
       {llvmIntPtrType /* intptr_t sizeBytes */,
-       llvmPointerType /* void *stream */}};
+       llvmPointerType /* void *stream */,
+       llvmInt8Type /* bool isHostShared */}};
   FunctionCallBuilder deallocCallBuilder = {
       "mgpuMemFree",
       llvmVoidType,
@@ -787,18 +788,22 @@ LogicalResult ConvertHostUnregisterOpToGpuRuntimeCallPattern::matchAndRewrite(
 LogicalResult ConvertAllocOpToGpuRuntimeCallPattern::matchAndRewrite(
     gpu::AllocOp allocOp, OpAdaptor adaptor,
     ConversionPatternRewriter &rewriter) const {
-  if (adaptor.getHostShared())
-    return rewriter.notifyMatchFailure(
-        allocOp, "host_shared allocation is not supported");
 
   MemRefType memRefType = allocOp.getType();
 
   if (failed(areAllLLVMTypes(allocOp, adaptor.getOperands(), rewriter)) ||
-      !isConvertibleAndHasIdentityMaps(memRefType) ||
-      failed(isAsyncWithOneDependency(rewriter, allocOp)))
+      !isConvertibleAndHasIdentityMaps(memRefType))
     return failure();
 
   auto loc = allocOp.getLoc();
+
+  bool isShared = allocOp.getHostShared();
+
+  if (isShared && allocOp.getAsyncToken())
+    return rewriter.notifyMatchFailure(
+        allocOp, "Host Shared allocation cannot be done async");
+  else if (!isShared && failed(isAsyncWithOneDependency(rewriter, allocOp)))
+    return failure();
 
   // Get shape of the memref as values: static sizes are constant
   // values and dynamic sizes are passed to 'alloc' as operands.
@@ -812,8 +817,13 @@ LogicalResult ConvertAllocOpToGpuRuntimeCallPattern::matchAndRewrite(
   // descriptor.
   Type elementPtrType = this->getElementPtrType(memRefType);
   auto stream = adaptor.getAsyncDependencies().front();
+
+  auto isHostShared = rewriter.create<mlir::LLVM::ConstantOp>(
+      loc, llvmInt8Type, rewriter.getI8IntegerAttr(isShared));
+
   Value allocatedPtr =
-      allocCallBuilder.create(loc, rewriter, {sizeBytes, stream}).getResult();
+      allocCallBuilder.create(loc, rewriter, {sizeBytes, stream, isHostShared})
+          .getResult();
   if (!getTypeConverter()->useOpaquePointers())
     allocatedPtr =
         rewriter.create<LLVM::BitcastOp>(loc, elementPtrType, allocatedPtr);
