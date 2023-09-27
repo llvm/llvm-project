@@ -643,6 +643,13 @@ func.func @create_tensor_map(%devicePtr2d : memref<64x128xf32>, %devicePtr1d : m
   func.return
 }
 
+func.func @prefetch(%tensorMap1d: !tensorMap1d, %p : i1) {
+  // CHECK: nvvm.prefetch.tensormap
+  nvgpu.tma.prefetch.descriptor %tensorMap1d: !tensorMap1d
+  // CHECK: nvvm.prefetch.tensormap
+  nvgpu.tma.prefetch.descriptor %tensorMap1d, %p: !tensorMap1d
+}
+
 !lhsTensorMap = !nvgpu.tensormap.descriptor<tensor = memref<128x64xf16, 3>, swizzle = swizzle_128b, l2promo = none, oob = zero, interleave = none>
 !rhsTensorMap = !nvgpu.tensormap.descriptor<tensor = memref<64x128xf16, strided<[128, 1], offset: 8192>, 3>, swizzle = swizzle_128b, l2promo = none, oob = zero, interleave = none>
 
