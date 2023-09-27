@@ -695,10 +695,11 @@ define void @immut_valid_align_branched(i1 %c, ptr noalias align 4 %val) {
   ret void
 }
 
-; FIXME: This is a miscompile.
+; Merge/drop noalias metadata when replacing parameter.
 define void @immut_param_noalias_metadata(ptr align 4 byval(i32) %ptr) {
 ; CHECK-LABEL: @immut_param_noalias_metadata(
-; CHECK-NEXT:    call void @f(ptr noalias nocapture readonly [[PTR:%.*]]), !alias.scope !0
+; CHECK-NEXT:    store i32 1, ptr [[PTR:%.*]], align 4, !noalias !0
+; CHECK-NEXT:    call void @f(ptr noalias nocapture readonly [[PTR]])
 ; CHECK-NEXT:    ret void
 ;
   %tmp = alloca i32, align 4
