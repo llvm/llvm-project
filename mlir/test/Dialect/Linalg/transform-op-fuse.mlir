@@ -48,7 +48,7 @@ transform.sequence failures(propagate) {
   %0 = transform.structured.match ops{["linalg.elemwise_binary"]} in %arg1 : (!transform.any_op) -> !transform.any_op
   %1, %loops:2 = transform.structured.fuse %0 {tile_sizes = [32, 32], tile_interchange = [0, 1]}
     : (!transform.any_op) -> (!transform.any_op, !transform.op<"scf.for">, !transform.any_op)
-  transform.loop.peel %loops#0 : (!transform.op<"scf.for">) -> (!transform.any_op, !transform.any_op)
+  transform.loop.peel %loops#0 : (!transform.op<"scf.for">) -> !transform.any_op
 }
 
 // -----
