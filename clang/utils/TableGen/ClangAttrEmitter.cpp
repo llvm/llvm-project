@@ -3440,9 +3440,11 @@ static void GenerateHasAttrSpellingStringSwitch(
     int Version = 1;
 
     std::vector<FlattenedSpelling> Spellings = GetFlattenedSpellings(*Attr);
+    std::string Name = "";
     for (const auto &Spelling : Spellings) {
       if (Spelling.variety() == Variety &&
           (Spelling.nameSpace().empty() || Scope == Spelling.nameSpace())) {
+        Name = Spelling.name();
         Version = static_cast<int>(
             Spelling.getSpellingRecord().getValueAsInt("Version"));
         // Verify that explicitly specified CXX11 and C23 spellings (i.e.
@@ -3466,6 +3468,26 @@ static void GenerateHasAttrSpellingStringSwitch(
       GenerateTargetSpecificAttrChecks(R, Arches, Test, nullptr);
 
       // If this is the C++11 variety, also add in the LangOpts test.
+      if (Variety == "CXX11")
+        Test += " && LangOpts.CPlusPlus11";
+    } else if (!Attr->getValueAsListOfDefs("TargetSpecificSpellings").empty()) {
+      // Add target checks if this spelling is target-specific.
+      const std::vector<Record *> TargetSpellings =
+          Attr->getValueAsListOfDefs("TargetSpecificSpellings");
+      for (const auto &TargetSpelling : TargetSpellings) {
+        // Find spelling that matches current scope and name.
+        for (const auto &Spelling : GetFlattenedSpellings(*TargetSpelling)) {
+          if (Scope == Spelling.nameSpace() && Name == Spelling.name()) {
+            const Record *Target = TargetSpelling->getValueAsDef("Target");
+            std::vector<StringRef> Arches =
+                Target->getValueAsListOfStrings("Arches");
+            GenerateTargetSpecificAttrChecks(Target, Arches, Test,
+                                             /*FnName=*/nullptr);
+            break;
+          }
+        }
+      }
+
       if (Variety == "CXX11")
         Test += " && LangOpts.CPlusPlus11";
     } else if (Variety == "CXX11")
@@ -4263,7 +4285,6 @@ GenerateSpellingTargetRequirements(const Record &Attr,
   bool UsesT = false;
   const std::vector<FlattenedSpelling> SpellingList =
       GetFlattenedSpellings(Attr);
-  // for (const auto &TargetSpelling : TargetSpellings) {
   for (unsigned TargetIndex = 0; TargetIndex < TargetSpellings.size();
        ++TargetIndex) {
     const auto &TargetSpelling = TargetSpellings[TargetIndex];
@@ -4274,8 +4295,6 @@ GenerateSpellingTargetRequirements(const Record &Attr,
     for (unsigned Index = 0; Index < Spellings.size(); ++Index) {
       Test +=
           llvm::itostr(getSpellingListIndex(SpellingList, Spellings[Index]));
-      // fprintf(stderr, " -- %d\n", getSpellingListIndex(SpellingList,
-      // Spellings[Index]));
       if (Index != Spellings.size() - 1)
         Test += " ||\n    SpellingListIndex == ";
       else
