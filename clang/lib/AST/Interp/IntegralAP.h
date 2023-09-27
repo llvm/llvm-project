@@ -129,7 +129,7 @@ public:
   }
 
   static bool increment(IntegralAP A, IntegralAP *R) {
-    *R = IntegralAP(A.V - 1);
+    *R = IntegralAP(A.V + 1);
     return false;
   }
 
