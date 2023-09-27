@@ -1764,6 +1764,9 @@ def GPU_CreateCsrOp : GPU_Op<"create_csr", [GPU_AsyncOpInterface]> {
     using this operation. The operation returns a handle to the sparse
     matrix descriptor.
 
+    The CSR format has exactly the same memory layout as its transpose
+    in CSC format (and vice versa).
+
     If the `async` keyword is present, the op is executed asynchronously (i.e.
     it does not block until the execution has finished on the device). In
     that case, it returns a !gpu.async.token in addition to the environment.
@@ -1790,6 +1793,94 @@ def GPU_CreateCsrOp : GPU_Op<"create_csr", [GPU_AsyncOpInterface]> {
     custom<AsyncDependencies>(type($asyncToken), $asyncDependencies)
     $rows `,` $cols `,` $nnz `,` $rowPos `,` $colIdxs `,` $values attr-dict
     `:` type($rowPos) `,` type($colIdxs) `,` type($values)
+  }];
+}
+
+def GPU_CreateCscOp : GPU_Op<"create_csc", [GPU_AsyncOpInterface]> {
+  let summary = "Create sparse matrix in CSC format operation";
+  let description = [{
+    The `gpu.create_csc` operation initializes a sparse matrix in CSC format
+    with the given sizes from the given position, index, and values buffers.
+    The buffers must already be copied from the host to the device prior to
+    using this operation. The operation returns a handle to the sparse
+    matrix descriptor.
+
+    The CSC format has exactly the same memory layout as its transpose
+    in CSR format (and vice versa).
+
+    If the `async` keyword is present, the op is executed asynchronously (i.e.
+    it does not block until the execution has finished on the device). In
+    that case, it returns a !gpu.async.token in addition to the environment.
+
+    Example:
+
+    ```mlir
+    %spmat, %token = gpu.create_csc async [%dep] %rows, %cols, %nnz, %colPos,
+        %rowIdx, %values : memref<?xindex>, memref<?xindex>, memref<?xf64>
+    ```
+  }];
+
+  let arguments = (ins Variadic<GPU_AsyncToken>:$asyncDependencies,
+                   Index:$rows,
+                   Index:$cols,
+                   Index:$nnz,
+                   AnyMemRef:$colPos,
+                   AnyMemRef:$rowIdxs,
+                   AnyMemRef:$values);
+  let results = (outs Res<GPU_SparseSpMatHandle>:$spmat,
+                      Optional<GPU_AsyncToken>:$asyncToken);
+
+  let assemblyFormat = [{
+    custom<AsyncDependencies>(type($asyncToken), $asyncDependencies)
+    $rows `,` $cols `,` $nnz `,` $colPos `,` $rowIdxs `,` $values attr-dict
+    `:` type($colPos) `,` type($rowIdxs) `,` type($values)
+  }];
+}
+
+def GPU_CreateBsrOp : GPU_Op<"create_bsr", [GPU_AsyncOpInterface]> {
+  let summary = "Create sparse matrix in BSR format operation";
+  let description = [{
+    The `gpu.create_bsr` operation initializes a sparse matrix in BSR format
+    with the given sizes for the matrix and blocks from the given position,
+    index, and values buffers. The buffers must already be copied from the
+    host to the device prior to using this operation. The operation returns
+    a handle to the sparse matrix descriptor.
+
+    The BSR format is similar to CSR, where the column indices represent
+    two-dimensional blocks instead of a single matrix entry. Note that this
+    operation (currently) only supports storage with **square** blocks,
+    i.e., `rBlockSize == cBlockSize`.
+
+    If the `async` keyword is present, the op is executed asynchronously (i.e.
+    it does not block until the execution has finished on the device). In
+    that case, it returns a !gpu.async.token in addition to the environment.
+
+    Example:
+
+    ```mlir
+    %spmat, %token = gpu.create_bsr async [%dep]
+       %brows, %bcols, %bnnz, %rBlockSize, %cBlockSize,
+       %bRowPos, %bColIdxs, %values : memref<?xindex>, memref<?xindex>, memref<?xf64>
+    ```
+  }];
+
+  let arguments = (ins Variadic<GPU_AsyncToken>:$asyncDependencies,
+                   Index:$brows,
+                   Index:$bcols,
+                   Index:$bnnz,
+                   Index:$rBlockSize,
+                   Index:$cBlockSize,
+                   AnyMemRef:$bRowPos,
+                   AnyMemRef:$bColIdxs,
+                   AnyMemRef:$values);
+  let results = (outs Res<GPU_SparseSpMatHandle>:$spmat,
+                      Optional<GPU_AsyncToken>:$asyncToken);
+
+  let assemblyFormat = [{
+    custom<AsyncDependencies>(type($asyncToken), $asyncDependencies)
+    $brows `,` $bcols `,` $bnnz `,` $rBlockSize `,` $cBlockSize `,`
+    $bRowPos `,` $bColIdxs `,` $values attr-dict
+    `:` type($bRowPos) `,` type($bColIdxs) `,` type($values)
   }];
 }
 
