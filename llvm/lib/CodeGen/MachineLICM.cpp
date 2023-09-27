@@ -58,6 +58,10 @@ using namespace llvm;
 
 #define DEBUG_TYPE "machinelicm"
 
+static cl::opt<bool> EnableMachineLICM("enable-machine-licm",
+                                       cl::desc("Enable MachineLICM"),
+                                       cl::init(true), cl::Hidden);
+
 static cl::opt<bool>
 AvoidSpeculation("avoid-speculation",
                  cl::desc("MachineLICM should avoid speculation"),
@@ -330,7 +334,7 @@ INITIALIZE_PASS_END(EarlyMachineLICM, "early-machinelicm",
                     "Early Machine Loop Invariant Code Motion", false, false)
 
 bool MachineLICMBase::runOnMachineFunction(MachineFunction &MF) {
-  if (skipFunction(MF.getFunction()))
+  if (!EnableMachineLICM || skipFunction(MF.getFunction()))
     return false;
 
   Changed = FirstInLoop = false;
