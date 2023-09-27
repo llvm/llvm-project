@@ -2072,6 +2072,15 @@ TEST_F(TokenAnnotatorTest, UnderstandsJavaScript) {
   EXPECT_TOKEN(Tokens[11], tok::r_brace, TT_Unknown);
 }
 
+TEST_F(TokenAnnotatorTest, UnderstandsAttributes) {
+  auto Tokens = annotate("bool foo __attribute__((unused));");
+  ASSERT_EQ(Tokens.size(), 10u) << Tokens;
+  EXPECT_TOKEN(Tokens[3], tok::l_paren, TT_AttributeLParen);
+  EXPECT_TOKEN(Tokens[4], tok::l_paren, TT_Unknown);
+  EXPECT_TOKEN(Tokens[6], tok::r_paren, TT_Unknown);
+  EXPECT_TOKEN(Tokens[7], tok::r_paren, TT_AttributeRParen);
+}
+
 } // namespace
 } // namespace format
 } // namespace clang
