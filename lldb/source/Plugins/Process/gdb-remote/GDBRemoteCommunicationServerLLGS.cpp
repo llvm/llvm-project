@@ -595,6 +595,8 @@ static llvm::StringRef GetKindGenericOrEmpty(const RegisterInfo &reg_info) {
     return "arg7";
   case LLDB_REGNUM_GENERIC_ARG8:
     return "arg8";
+  case LLDB_REGNUM_GENERIC_TP:
+    return "tp";
   default:
     return "";
   }

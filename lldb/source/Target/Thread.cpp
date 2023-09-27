@@ -1622,7 +1622,11 @@ void Thread::SettingsInitialize() {}
 
 void Thread::SettingsTerminate() {}
 
-lldb::addr_t Thread::GetThreadPointer() { return LLDB_INVALID_ADDRESS; }
+lldb::addr_t Thread::GetThreadPointer() {
+  if (m_reg_context_sp)
+    return m_reg_context_sp->GetThreadPointer();
+  return LLDB_INVALID_ADDRESS;
+}
 
 addr_t Thread::GetThreadLocalData(const ModuleSP module,
                                   lldb::addr_t tls_file_addr) {
