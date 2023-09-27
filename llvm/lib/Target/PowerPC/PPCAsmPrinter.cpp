@@ -876,7 +876,8 @@ void PPCAsmPrinter::emitInstruction(const MachineInstr *MI) {
         // hacked this flag which should have been named MO_TLSLDM_FLAG: on AIX
         // the ML relocation type is only valid for a reference to a TOC symbol
         // from the symbol itself, and right now its only user is the symbol
-        // "_$TLSML". Use symbol name to decide that R_TLSML is expected.
+        // "_$TLSML". The symbol name is used to decide that R_TLSML is
+        // expected.
         return MCSymbolRefExpr::VariantKind::VK_PPC_AIX_TLSML;
       if (IsAIX)
         return MCSymbolRefExpr::VariantKind::VK_PPC_AIX_TLSLD;
@@ -2893,7 +2894,7 @@ void PPCAIXAsmPrinter::emitEndOfAsmFile(Module &M) {
           getObjFileLowering().getSectionForTOCEntry(S, TM));
     } else if (I.first.second ==
                MCSymbolRefExpr::VariantKind::VK_PPC_AIX_TLSML) {
-      // AIX assembler expects TC storage-mapping class for the "_$TLSML"
+      // AIX assembler expects the TC storage-mapping class for the "_$TLSML"
       // symbol.
       MCSection *MCSect = getObjFileLowering().getContext().getXCOFFSection(
           cast<MCSymbolXCOFF>(I.first.first)->getSymbolTableName(),

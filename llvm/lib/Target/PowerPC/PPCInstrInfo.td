@@ -3300,7 +3300,7 @@ def TLSGDAIX : PPCEmitTimePseudo<(outs gprc:$rD), (ins gprc:$offset, gprc:$handl
                           "#TLSGDAIX",
                           [(set i32:$rD,
                             (PPCTlsgdAIX i32:$offset, i32:$handle))]>;
-// This pseudo is expanded to load module-handle in R3, and the call to GETtlsMOD32AIX.
+// This pseudo is expanded to load the module-handle in R3, and the call to GETtlsMOD32AIX.
 def TLSLDAIX : PPCEmitTimePseudo<(outs gprc:$rD), (ins),
                           "#TLSLDAIX", [(set i32:$rD, (PPCTlsldAIX))]>;
 // LR is a true define, while the rest of the Defs are clobbers.  R3 is

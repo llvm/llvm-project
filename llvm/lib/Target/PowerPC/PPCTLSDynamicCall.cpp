@@ -48,8 +48,12 @@ protected:
     bool processBlock(MachineBasicBlock &MBB) {
       bool Changed = false;
       bool NeedFence = true;
-      bool Is64Bit = MBB.getParent()->getSubtarget<PPCSubtarget>().isPPC64();
-      bool IsAIX = MBB.getParent()->getSubtarget<PPCSubtarget>().isAIXABI();
+      const PPCSubtarget &Subtarget =
+          MBB.getParent()->getSubtarget<PPCSubtarget>();
+      bool Is64Bit = Subtarget.isPPC64();
+      bool IsAIX = Subtarget.isAIXABI();
+      bool IsLargeModel =
+          Subtarget.getTargetMachine().getCodeModel() == CodeModel::Large;
       bool IsPCREL = false;
       MachineFunction *MF = MBB.getParent();
       MachineRegisterInfo &RegInfo = MF->getRegInfo();
@@ -64,15 +68,16 @@ protected:
         // There are a number of slight differences in code generation
         // when we call .__get_tpointer (32-bit AIX TLS).
         bool IsTLSTPRelMI = MI.getOpcode() == PPC::GETtlsTpointer32AIX;
+        bool IsTLSLDAIXMI = (MI.getOpcode() == PPC::TLSLDAIX8 ||
+                             MI.getOpcode() == PPC::TLSLDAIX);
 
         if (MI.getOpcode() != PPC::ADDItlsgdLADDR &&
             MI.getOpcode() != PPC::ADDItlsldLADDR &&
             MI.getOpcode() != PPC::ADDItlsgdLADDR32 &&
             MI.getOpcode() != PPC::ADDItlsldLADDR32 &&
-            MI.getOpcode() != PPC::TLSLDAIX &&
-            MI.getOpcode() != PPC::TLSLDAIX8 &&
             MI.getOpcode() != PPC::TLSGDAIX &&
-            MI.getOpcode() != PPC::TLSGDAIX8 && !IsTLSTPRelMI && !IsPCREL) {
+            MI.getOpcode() != PPC::TLSGDAIX8 && !IsTLSTPRelMI && !IsPCREL &&
+            !IsTLSLDAIXMI) {
           // Although we create ADJCALLSTACKDOWN and ADJCALLSTACKUP
           // as scheduling fences, we skip creating fences if we already
           // have existing ADJCALLSTACKDOWN/UP to avoid nesting,
@@ -92,9 +97,7 @@ protected:
         Register InReg = PPC::NoRegister;
         Register GPR3 = Is64Bit ? PPC::X3 : PPC::R3;
         Register GPR4 = Is64Bit ? PPC::X4 : PPC::R4;
-        if (!IsPCREL && !IsTLSTPRelMI &&
-            !(MI.getOpcode() == PPC::TLSLDAIX8 ||
-              MI.getOpcode() == PPC::TLSLDAIX))
+        if (!IsPCREL && !IsTLSTPRelMI && !IsTLSLDAIXMI)
           InReg = MI.getOperand(1).getReg();
         DebugLoc DL = MI.getDebugLoc();
 
@@ -160,15 +163,10 @@ protected:
                                                               .addImm(0);
 
         if (IsAIX) {
-          if (MI.getOpcode() == PPC::TLSLDAIX8 ||
-              MI.getOpcode() == PPC::TLSLDAIX) {
+          if (IsTLSLDAIXMI) {
             // It is better to put TLSLDAIX node before LoadOffsetToc node,
             // because LoadOffsetToc node can use clobbers r4/r5. Search for the
             // first paired LoadOffsetToc node within the same BB.
-            const PPCSubtarget &Subtarget =
-                MBB.getParent()->getSubtarget<PPCSubtarget>();
-            bool IsLargeModel =
-                Subtarget.getTargetMachine().getCodeModel() == CodeModel::Large;
             unsigned LDTocOp =
                 Is64Bit ? (IsLargeModel ? PPC::LDtocL : PPC::LDtoc)
                         : (IsLargeModel ? PPC::LWZtocL : PPC::LWZtoc);
@@ -197,12 +195,13 @@ protected:
                 int MatchCount = 0;
                 for (MachineOperand &MO : UseIter->operands()) {
                   if (MO.isReg() && MO.isUse()) {
-                    if (RegInfo.hasOneDef(MO.getReg())) {
-                      if (RegInfo.getOneDef(MO.getReg())
+                    Register OffsetReg = MO.getReg();
+                    if (RegInfo.hasOneDef(OffsetReg)) {
+                      if (RegInfo.getOneDef(OffsetReg)
                               ->getParent()
                               ->getOpcode() == LDTocOp) {
                         LoadOffsetToc =
-                            RegInfo.getOneDef(MO.getReg())->getParent();
+                            RegInfo.getOneDef(OffsetReg)->getParent();
                         ++MatchCount;
                       }
                     } else {

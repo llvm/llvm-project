@@ -3419,13 +3419,14 @@ SDValue PPCTargetLowering::LowerGlobalTLSAddressAIX(SDValue Op,
 
   if (Model == TLSModel::LocalDynamic) {
     // For local-dynamic on AIX, we need to generate one TOC entry for each
-    // variable offset, and single module-handle TOC entry for the entire file.
+    // variable offset, and a single module-handle TOC entry for the entire
+    // file.
 
-    // We are not (1) create GV node (2) call getTOCEntry for the module-handle
-    // due to the reason that the module-handle should not be materialized (i.e.
-    // there should be no symbol-table entry referring to the module-handle).
-    // Instead we will create reference to __TLSML[TC]@ml in PPCTLSDynamicCall
-    // when processing the TLSLD_AIX pseudo node.
+    // We are not able to (1) create a GV node, and (2) call getTOCEntry for the
+    // module-handle due to the reason that the module-handle should not be
+    // materialized (i.e. there should be no symbol-table entry referring to the
+    // module-handle). Instead we will create reference to __TLSML[TC]@ml in
+    // PPCTLSDynamicCall when processing the TLSLD_AIX pseudo node.
     SDValue ModuleHandle = DAG.getNode(PPCISD::TLSLD_AIX, dl, PtrVT);
     SDValue VariableOffsetTGA =
         DAG.getTargetGlobalAddress(GV, dl, PtrVT, 0, PPCII::MO_TLSLD_FLAG);
