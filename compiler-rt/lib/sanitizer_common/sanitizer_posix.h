@@ -98,8 +98,6 @@ int internal_sigaction(int signum, const void *act, void *oldact);
 void internal_sigfillset(__sanitizer_sigset_t *set);
 void internal_sigemptyset(__sanitizer_sigset_t *set);
 bool internal_sigismember(__sanitizer_sigset_t *set, int signum);
-uptr internal_sigprocmask(int how, __sanitizer_sigset_t *set,
-                          __sanitizer_sigset_t *oldset);
 
 uptr internal_execve(const char *filename, char *const argv[],
                      char *const envp[]);
@@ -125,19 +123,6 @@ void DecorateMapping(uptr addr, uptr size, const char *name);
 #  if !SANITIZER_FREEBSD
 #    define __sanitizer_dirsiz(dp) ((dp)->d_reclen)
 #  endif
-
-void SetSigProcMask(__sanitizer_sigset_t *set, __sanitizer_sigset_t *oldset);
-void BlockSignals(__sanitizer_sigset_t *oldset = nullptr);
-struct ScopedBlockSignals {
-  explicit ScopedBlockSignals(__sanitizer_sigset_t *copy);
-  ~ScopedBlockSignals();
-
-  ScopedBlockSignals &operator=(const ScopedBlockSignals &) = delete;
-  ScopedBlockSignals(const ScopedBlockSignals &) = delete;
-
- private:
-  __sanitizer_sigset_t saved_;
-};
 
 }  // namespace __sanitizer
 
