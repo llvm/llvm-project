@@ -268,7 +268,12 @@ public:
   FunctionRef(ProcedureDesignator &&p, ActualArguments &&a)
       : ProcedureRef{std::move(p), std::move(a)} {}
 
-  std::optional<DynamicType> GetType() const { return proc_.GetType(); }
+  std::optional<DynamicType> GetType() const {
+    if (auto type = proc_.GetType()) {
+      return type->DropNonConstantParameters();
+    }
+    return std::nullopt;
+  }
 };
 } // namespace Fortran::evaluate
 #endif // FORTRAN_EVALUATE_CALL_H_

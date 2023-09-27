@@ -231,6 +231,11 @@ public:
     }
   }
 
+  // Get a copy of this dynamic type where charLengthParamValue_ is reset if it
+  // is not a constant expression. This avoids propagating symbol references in
+  // scopes where they do not belong.
+  DynamicType DropNonConstantParameters() const;
+
 private:
   // Special kind codes are used to distinguish the following Fortran types.
   enum SpecialKind {
