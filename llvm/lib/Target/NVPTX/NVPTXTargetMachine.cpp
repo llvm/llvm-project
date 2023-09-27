@@ -403,9 +403,9 @@ void NVPTXPassConfig::addIRPasses() {
     addPass(createSROAPass());
   }
 
-  const auto &options = getNVPTXTargetMachine().Options;
-  if (!options.TrapUnreachable || options.NoTrapAfterNoreturn)
-    addPass(createNVPTXLowerUnreachablePass());
+  const auto &Options = getNVPTXTargetMachine().Options;
+  addPass(createNVPTXLowerUnreachablePass(Options.TrapUnreachable,
+                                          Options.NoTrapAfterNoreturn));
 }
 
 bool NVPTXPassConfig::addInstSelector() {

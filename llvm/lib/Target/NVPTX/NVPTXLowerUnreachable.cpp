@@ -72,6 +72,7 @@
 #include "llvm/IR/Function.h"
 #include "llvm/IR/InlineAsm.h"
 #include "llvm/IR/Instructions.h"
+#include "llvm/IR/Intrinsics.h"
 #include "llvm/IR/Type.h"
 #include "llvm/Pass.h"
 
@@ -83,14 +84,19 @@ void initializeNVPTXLowerUnreachablePass(PassRegistry &);
 
 namespace {
 class NVPTXLowerUnreachable : public FunctionPass {
+  StringRef getPassName() const override;
   bool runOnFunction(Function &F) override;
+  bool shouldEmitTrap(const UnreachableInst &I) const;
 
 public:
   static char ID; // Pass identification, replacement for typeid
-  NVPTXLowerUnreachable() : FunctionPass(ID) {}
-  StringRef getPassName() const override {
-    return "add an exit instruction before every unreachable";
-  }
+  NVPTXLowerUnreachable(bool TrapUnreachable, bool NoTrapAfterNoreturn)
+      : FunctionPass(ID), TrapUnreachable(TrapUnreachable),
+        NoTrapAfterNoreturn(NoTrapAfterNoreturn) {}
+
+private:
+  bool TrapUnreachable;
+  bool NoTrapAfterNoreturn;
 };
 } // namespace
 
@@ -98,6 +104,24 @@ char NVPTXLowerUnreachable::ID = 1;
 
 INITIALIZE_PASS(NVPTXLowerUnreachable, "nvptx-lower-unreachable",
                 "Lower Unreachable", false, false)
+
+StringRef NVPTXLowerUnreachable::getPassName() const {
+  return "add an exit instruction before every unreachable";
+}
+
+// =============================================================================
+// Returns whether a `trap` intrinsic should be emitted before I.
+//
+// This is a copy of the logic in SelectionDAGBuilder::visitUnreachable().
+// =============================================================================
+bool NVPTXLowerUnreachable::shouldEmitTrap(const UnreachableInst &I) const {
+  if (!TrapUnreachable)
+    return false;
+  if (!NoTrapAfterNoreturn)
+    return true;
+  const CallInst *Call = dyn_cast_or_null<CallInst>(I.getPrevNode());
+  return Call && Call->doesNotReturn();
+}
 
 // =============================================================================
 // Main function for this pass.
@@ -109,18 +133,25 @@ bool NVPTXLowerUnreachable::runOnFunction(Function &F) {
   LLVMContext &C = F.getContext();
   FunctionType *ExitFTy = FunctionType::get(Type::getVoidTy(C), false);
   InlineAsm *Exit = InlineAsm::get(ExitFTy, "exit;", "", true);
+  Function *Trap = nullptr;
 
   bool Changed = false;
   for (auto &BB : F)
     for (auto &I : BB) {
       if (auto unreachableInst = dyn_cast<UnreachableInst>(&I)) {
-        Changed = true;
+        if (shouldEmitTrap(*unreachableInst)) {
+          if (!Trap)
+            Trap = Intrinsic::getDeclaration(F.getParent(), Intrinsic::trap);
+          CallInst::Create(Trap, "", unreachableInst);
+        }
         CallInst::Create(ExitFTy, Exit, "", unreachableInst);
+        Changed = true;
       }
     }
   return Changed;
 }
 
-FunctionPass *llvm::createNVPTXLowerUnreachablePass() {
-  return new NVPTXLowerUnreachable();
+FunctionPass *llvm::createNVPTXLowerUnreachablePass(bool TrapUnreachable,
+                                                    bool NoTrapAfterNoreturn) {
+  return new NVPTXLowerUnreachable(TrapUnreachable, NoTrapAfterNoreturn);
 }
