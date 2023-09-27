@@ -3,6 +3,11 @@
 name: PR Receive
 on:
   pull_request_target:
+    types:
+      - opened
+      - reopened
+      - ready_for_review
+      - synchronize
 
 permissions:
   contents: read
@@ -15,6 +20,7 @@ jobs:
     # to rebase.  We want to ignore these pull requests to avoid excessive
     # notifications.
     if: github.repository == 'llvm/llvm-project' &&
+        github.event.pull_request.draft == false &&
         github.event.pull_request.commits < 10
     steps:
       - name: Store PR Information
