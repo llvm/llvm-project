@@ -93,10 +93,12 @@ constexpr void test_join_view() {
 }
 
 int main(int, char**) {
-  test_containers<std::deque<int>, std::deque<int>>();
-  test_containers<std::deque<int>, std::vector<int>>();
-  test_containers<std::vector<int>, std::deque<int>>();
-  test_containers<std::vector<int>, std::vector<int>>();
+  if (!std::is_constant_evaluated()) {
+    test_containers<std::deque<int>, std::deque<int>>();
+    test_containers<std::deque<int>, std::vector<int>>();
+    test_containers<std::vector<int>, std::deque<int>>();
+    test_containers<std::vector<int>, std::vector<int>>();
+  }
 
   types::for_each(types::forward_iterator_list<int*>{}, []<class Iter> {
     test_join_view<Iter, Iter>();
