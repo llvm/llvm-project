@@ -1175,6 +1175,8 @@ struct T {
     static constexpr auto xx = ns::foo(A{}); // expected-error {{cannot take address of consteval function 'foo' outside of an immediate invocation}}
 };
 
+}
+
 namespace GH65520 {
 
 consteval int bar (int i) { if (i != 1) return 1/0; return 0; }
@@ -1192,7 +1194,8 @@ consteval int undefined(); // expected-note {{declared here}}
 
 consteval void immediate() {
     int a [undefined()]; // expected-note  {{undefined function 'undefined' cannot be used in a constant expression}} \
-                         // expected-error {{call to consteval function 'GH65520::undefined' is not a constant expression}}
+                         // expected-error {{call to consteval function 'GH65520::undefined' is not a constant expression}} \
+                         // expected-error {{variable of non-literal type 'int[undefined()]' cannot be defined in a constexpr function before C++23}}
 }
 
 
