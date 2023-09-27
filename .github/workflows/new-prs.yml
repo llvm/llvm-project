@@ -23,29 +23,29 @@ jobs:
         uses: actions/github-script@v6
         with:
           script: |
-            var artifacts = await github.rest.actions.listWorkflowRunArtifacts({
+            const artifacts = await github.rest.actions.listWorkflowRunArtifacts({
                owner: context.repo.owner,
                repo: context.repo.repo,
-               run_id: context.payload.workflow_run.id,
+               run_id: context.payload.workflow_run.id
             });
-            var matchArtifact = artifacts.data.artifacts.filter((artifact) => {
-              return artifact.name == "pr"
-            })[0];
-            var download = await github.rest.actions.downloadArtifact({
+            const matchArtifact = artifacts.data.artifacts.find((artifact) =>
+              artifact.name === 'pr'
+            );
+            const download = await github.rest.actions.downloadArtifact({
                owner: context.repo.owner,
                repo: context.repo.repo,
                artifact_id: matchArtifact.id,
-               archive_format: 'zip',
+               archive_format: 'zip'
             });
-            var fs = require('fs');
-            fs.writeFileSync('${{github.workspace}}/pr.zip', Buffer.from(download.data));
+            const { writeFileSync } = require('node:fs');
+            writeFileSync('${{ github.workspace }}/pr.zip', Buffer.from(download.data));
 
       - run: unzip pr.zip
 
       - name: "Get PR Number"
         id: vars
         run:
-          echo "pr-number=`cat NR`" >> $GITHUB_OUTPUT
+          echo "pr-number=$(cat NR)" >> "$GITHUB_OUTPUT"
 
       - uses: actions/labeler@v4
         with:
@@ -53,4 +53,4 @@ jobs:
           # workaround for https://github.com/actions/labeler/issues/112
           sync-labels: ''
           repo-token: ${{ secrets.ISSUE_SUBSCRIBER_TOKEN }}
-          pr-number: ${{steps.vars.outputs.pr-number}}
+          pr-number: ${{ steps.vars.outputs.pr-number }}

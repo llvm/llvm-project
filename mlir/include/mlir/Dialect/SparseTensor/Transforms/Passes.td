@@ -31,7 +31,7 @@ def PreSparsificationRewrite : Pass<"pre-sparsification-rewrite", "ModuleOp"> {
 def SparsificationPass : Pass<"sparsification", "ModuleOp"> {
   let summary = "Automatically generate sparse tensor code from sparse tensor types";
   let description = [{
-    A pass that implements the core functionality of a **sparse compiler**.
+    A pass that implements the core functionality of a **sparsifier**.
     Each Linalg operation (MLIR's tensor index notation) that operates on
     sparse tensor types is converted into code in which the sparsity is
     explicit both in terms of co-iterating looping logic as well as
@@ -332,7 +332,7 @@ def SparseVectorization : Pass<"sparse-vectorization", "ModuleOp"> {
 def SparseGPUCodegen : Pass<"sparse-gpu-codegen", "ModuleOp"> {
   let summary = "Generates GPU code during sparsification";
   let description = [{
-    Enables sparse compiler to use GPU acceleration.
+    Enables the sparsifier to use GPU acceleration.
   }];
   let constructor = "mlir::createSparseGPUCodegenPass()";
   let dependentDialects = [

@@ -45,12 +45,13 @@ namespace sparse_tensor {
 ///
 class SparseTensorType {
 public:
-  // We memoize `lvlRank` and `dimToLvl` to avoid repeating the
-  // conditionals throughout the rest of the class.
+  // We memoize `lvlRank`, `dimToLvl`, and `lvlToDim` to avoid repeating
+  // the conditionals throughout the rest of the class.
   SparseTensorType(RankedTensorType rtp)
       : rtp(rtp), enc(getSparseTensorEncoding(rtp)),
         lvlRank(enc ? enc.getLvlRank() : getDimRank()),
-        dimToLvl(enc.isIdentity() ? AffineMap() : enc.getDimToLvl()) {
+        dimToLvl(enc.isIdentity() ? AffineMap() : enc.getDimToLvl()),
+        lvlToDim(enc.isIdentity() ? AffineMap() : enc.getLvlToDim()) {
     assert(rtp && "got null RankedTensorType");
     assert((!isIdentity() || getDimRank() == lvlRank) && "Rank mismatch");
   }
@@ -127,8 +128,8 @@ public:
   /// Allow implicit conversion to `RankedTensorType`, `ShapedType`,
   /// and `Type`.  These are implicit to help alleviate the impedance
   /// mismatch for code that has not been converted to use `SparseTensorType`
-  /// directly.  Once more of the sparse compiler has been converted to
-  /// using `SparseTensorType`, we may want to make these explicit instead.
+  /// directly.  Once more uses have been converted to `SparseTensorType`,
+  /// we may want to make these explicit instead.
   ///
   /// WARNING: This user-defined-conversion method causes overload
   /// ambiguity whenever passing a `SparseTensorType` directly to a
@@ -200,6 +201,9 @@ public:
   /// If you intend to compare the results of this method for equality,
   /// see `hasSameDimToLvl` instead.
   AffineMap getDimToLvl() const { return dimToLvl; }
+
+  /// Returns the lvlToDiml mapping (or the null-map for the identity).
+  AffineMap getLvlToDim() const { return lvlToDim; }
 
   /// Returns the dimToLvl mapping, where the identity map is expanded out
   /// into a full `AffineMap`.  This method is provided as a convenience,
@@ -306,6 +310,7 @@ private:
   // Memoized to avoid frequent redundant conditionals.
   const Level lvlRank;
   const AffineMap dimToLvl;
+  const AffineMap lvlToDim;
 };
 
 /// Convenience method to abbreviate wrapping `getRankedTensorType`.

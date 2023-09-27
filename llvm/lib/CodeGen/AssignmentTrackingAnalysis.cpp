@@ -1979,20 +1979,23 @@ static AssignmentTrackingLowering::OverlapMap buildOverlapMapAndRecordDeclares(
                      I, Fn.getParent()->getDataLayout())) {
         // Find markers linked to this alloca.
         for (DbgAssignIntrinsic *DAI : at::getAssignmentMarkers(Info->Base)) {
-          // Discard the fragment if it covers the entire variable.
-          std::optional<DIExpression::FragmentInfo> FragInfo =
-              [&Info, DAI]() -> std::optional<DIExpression::FragmentInfo> {
-            DIExpression::FragmentInfo F;
-            F.OffsetInBits = Info->OffsetInBits;
-            F.SizeInBits = Info->SizeInBits;
-            if (auto ExistingFrag = DAI->getExpression()->getFragmentInfo())
-              F.OffsetInBits += ExistingFrag->OffsetInBits;
-            if (auto Sz = DAI->getVariable()->getSizeInBits()) {
-              if (F.OffsetInBits == 0 && F.SizeInBits == *Sz)
-                return std::nullopt;
-            }
-            return F;
-          }();
+          std::optional<DIExpression::FragmentInfo> FragInfo;
+
+          // Skip this assignment if the affected bits are outside of the
+          // variable fragment.
+          if (!at::calculateFragmentIntersect(
+                  I.getModule()->getDataLayout(), Info->Base,
+                  Info->OffsetInBits, Info->SizeInBits, DAI, FragInfo) ||
+              (FragInfo && FragInfo->SizeInBits == 0))
+            continue;
+
+          // FragInfo from calculateFragmentIntersect is nullopt if the
+          // resultant fragment matches DAI's fragment or entire variable - in
+          // which case copy the fragment info from DAI. If FragInfo is still
+          // nullopt after the copy it means "no fragment info" instead, which
+          // is how it is usually interpreted.
+          if (!FragInfo)
+            FragInfo = DAI->getExpression()->getFragmentInfo();
 
           DebugVariable DV = DebugVariable(DAI->getVariable(), FragInfo,
                                            DAI->getDebugLoc().getInlinedAt());

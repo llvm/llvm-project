@@ -15,4 +15,4 @@ LLVM_LIBC_FUNCTION(long long, llrint, (double x)) {
   return __builtin_llrint(x);
 }
 
-} // namespace __llvm_libc
+} // namespace LIBC_NAMESPACE

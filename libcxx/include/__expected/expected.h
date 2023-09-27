@@ -928,6 +928,8 @@ private:
     requires(is_trivially_move_constructible_v<_ValueType> && is_trivially_move_constructible_v<_ErrorType>)
   union __union_t<_ValueType, _ErrorType> {
     _LIBCPP_HIDE_FROM_ABI constexpr __union_t() : __empty_() {}
+    _LIBCPP_HIDE_FROM_ABI constexpr __union_t(const __union_t&) = default;
+    _LIBCPP_HIDE_FROM_ABI constexpr __union_t& operator=(const __union_t&) = default;
 
     template <class _Func, class... _Args>
     _LIBCPP_HIDE_FROM_ABI constexpr explicit __union_t(
@@ -1529,6 +1531,8 @@ private:
     requires is_trivially_move_constructible_v<_ErrorType>
   union __union_t<_ErrorType> {
     _LIBCPP_HIDE_FROM_ABI constexpr __union_t() : __empty_() {}
+    _LIBCPP_HIDE_FROM_ABI constexpr __union_t(const __union_t&) = default;
+    _LIBCPP_HIDE_FROM_ABI constexpr __union_t& operator=(const __union_t&) = default;
 
     template <class _Func, class... _Args>
     _LIBCPP_HIDE_FROM_ABI constexpr explicit __union_t(

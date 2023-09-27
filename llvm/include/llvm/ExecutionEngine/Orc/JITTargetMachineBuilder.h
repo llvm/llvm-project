@@ -99,7 +99,7 @@ public:
   const std::optional<CodeModel::Model> &getCodeModel() const { return CM; }
 
   /// Set the LLVM CodeGen optimization level.
-  JITTargetMachineBuilder &setCodeGenOptLevel(CodeGenOpt::Level OptLevel) {
+  JITTargetMachineBuilder &setCodeGenOptLevel(CodeGenOptLevel OptLevel) {
     this->OptLevel = OptLevel;
     return *this;
   }
@@ -150,7 +150,7 @@ private:
   TargetOptions Options;
   std::optional<Reloc::Model> RM;
   std::optional<CodeModel::Model> CM;
-  CodeGenOpt::Level OptLevel = CodeGenOpt::Default;
+  CodeGenOptLevel OptLevel = CodeGenOptLevel::Default;
 };
 
 #ifndef NDEBUG

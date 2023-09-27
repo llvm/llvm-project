@@ -21,7 +21,7 @@ foreach(arch ${LSAN_TEST_ARCH})
   list(APPEND LSAN_TESTSUITES ${CMAKE_CURRENT_BINARY_DIR}/${CONFIG_NAME})
 
   list(FIND ASAN_SUPPORTED_ARCH ${arch} _found)
-  if(NOT _found EQUAL -1)
+  if(NOT _found EQUAL -1 AND COMPILER_RT_HAS_ASAN)
     set(CONFIG_NAME ${ARCH_UPPER_CASE}AsanConfig)
     set(LSAN_LIT_TEST_MODE "AddressSanitizer")
     configure_lit_site_cfg(
@@ -31,7 +31,7 @@ foreach(arch ${LSAN_TEST_ARCH})
   endif()
 
   list(FIND HWASAN_SUPPORTED_ARCH ${arch} _found)
-  if(NOT _found EQUAL -1)
+  if(NOT _found EQUAL -1 AND COMPILER_RT_HAS_HWASAN)
     set(CONFIG_NAME ${ARCH_UPPER_CASE}HWAsanConfig)
     set(LSAN_LIT_TEST_MODE "HWAddressSanitizer")
     configure_lit_site_cfg(
@@ -42,11 +42,9 @@ foreach(arch ${LSAN_TEST_ARCH})
 endforeach()
 
 set(LSAN_TEST_DEPS ${SANITIZER_COMMON_LIT_TEST_DEPS})
-if(NOT COMPILER_RT_STANDALONE_BUILD)
-  list(APPEND LSAN_TEST_DEPS lsan)
-  append_list_if(COMPILER_RT_HAS_ASAN asan LSAN_TEST_DEPS)
-  append_list_if(COMPILER_RT_HAS_HWASAN hwasan LSAN_TEST_DEPS)
-endif()
+list(APPEND LSAN_TEST_DEPS lsan)
+append_list_if(COMPILER_RT_HAS_ASAN asan LSAN_TEST_DEPS)
+append_list_if(COMPILER_RT_HAS_HWASAN hwasan LSAN_TEST_DEPS)
 add_lit_testsuite(check-lsan "Running the LeakSanitizer tests"
   ${LSAN_TESTSUITES}
   DEPENDS ${LSAN_TEST_DEPS})

@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 # ===- cppreference_parser.py -  ------------------------------*- python -*--===#
 #
 # Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
@@ -176,6 +176,10 @@ def _GetSymbols(pool, root_dir, index_page_name, namespace, variants_to_accept):
     return symbols
 
 
+def signal_ignore_initializer():
+    return signal.signal(signal.SIGINT, signal.SIG_IGN)
+
+
 def GetSymbols(parse_pages):
     """Get all symbols by parsing the given pages.
 
@@ -192,9 +196,7 @@ def GetSymbols(parse_pages):
     symbols = []
     # Run many workers to process individual symbol pages under the symbol index.
     # Don't allow workers to capture Ctrl-C.
-    pool = multiprocessing.Pool(
-        initializer=lambda: signal.signal(signal.SIGINT, signal.SIG_IGN)
-    )
+    pool = multiprocessing.Pool(initializer=signal_ignore_initializer)
     try:
         for root_dir, page_name, namespace in parse_pages:
             symbols.extend(

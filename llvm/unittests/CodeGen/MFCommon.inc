@@ -106,7 +106,7 @@ public:
   BogusTargetMachine()
       : LLVMTargetMachine(Target(), "", Triple(""), "", "",
                           getTargetOptionsForBogusMachine(), Reloc::Static,
-                          CodeModel::Small, CodeGenOpt::Default),
+                          CodeModel::Small, CodeGenOptLevel::Default),
         ST(*this) {}
 
   ~BogusTargetMachine() override {}

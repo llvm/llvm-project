@@ -22,3 +22,5 @@ target_link_libraries(ClangReplInterpreterExceptionTests PUBLIC
   clangFrontend
   )
 add_dependencies(ClangReplInterpreterExceptionTests clang-resource-headers)
+
+export_executable_symbols(ClangReplInterpreterExceptionTests)

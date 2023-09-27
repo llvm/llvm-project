@@ -48,6 +48,7 @@ add_mlir_dialect_library(MLIRGPUDialect
 add_mlir_dialect_library(MLIRGPUTransforms
   Transforms/AllReduceLowering.cpp
   Transforms/AsyncRegionRewriter.cpp
+  Transforms/BufferDeallocationOpInterfaceImpl.cpp
   Transforms/DecomposeMemrefs.cpp
   Transforms/GlobalIdRewriter.cpp
   Transforms/KernelOutlining.cpp
@@ -79,6 +80,7 @@ add_mlir_dialect_library(MLIRGPUTransforms
   MLIRAffineUtils
   MLIRArithDialect
   MLIRAsyncDialect
+  MLIRBufferizationDialect
   MLIRBuiltinToLLVMIRTranslation
   MLIRDataLayoutInterfaces
   MLIRExecutionEngineUtils

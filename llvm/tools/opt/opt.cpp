@@ -174,7 +174,7 @@ static cl::opt<bool>
     OptLevelO3("O3", cl::desc("Optimization level 3. Similar to clang -O3. "
                               "Same as -passes='default<O3>'"));
 
-static cl::opt<unsigned> CodeGenOptLevel(
+static cl::opt<unsigned> CodeGenOptLevelCL(
     "codegen-opt-level",
     cl::desc("Override optimization level for codegen hooks, legacy PM only"));
 
@@ -282,8 +282,8 @@ static cl::list<std::string>
 // CodeGen-related helper functions.
 //
 
-static CodeGenOpt::Level GetCodeGenOptLevel() {
-  return static_cast<CodeGenOpt::Level>(unsigned(CodeGenOptLevel));
+static CodeGenOptLevel GetCodeGenOptLevel() {
+  return static_cast<CodeGenOptLevel>(unsigned(CodeGenOptLevelCL));
 }
 
 // Returns the TargetMachine instance or zero if no triple is provided.
@@ -331,6 +331,7 @@ static bool shouldPinPassToLegacyPM(StringRef Pass) {
       "nvvm-reflect",
       "nvvm-intr-range",
       "amdgpu-simplifylib",
+      "amdgpu-image-intrinsic-opt",
       "amdgpu-usenative",
       "amdgpu-promote-alloca",
       "amdgpu-promote-alloca-to-vector",
@@ -568,9 +569,14 @@ int main(int argc, char **argv) {
   // the facility for updating public visibility to linkage unit visibility when
   // specified by an internal option. This is normally done during LTO which is
   // not performed via opt.
-  updateVCallVisibilityInModule(*M,
-                                /* WholeProgramVisibilityEnabledInLTO */ false,
-                                /* DynamicExportSymbols */ {});
+  updateVCallVisibilityInModule(
+      *M,
+      /*WholeProgramVisibilityEnabledInLTO=*/false,
+      // FIXME: These need linker information via a
+      // TBD new interface.
+      /*DynamicExportSymbols=*/{},
+      /*ValidateAllVtablesHaveTypeInfos=*/false,
+      /*IsVisibleToRegularObj=*/[](StringRef) { return true; });
 
   // Figure out what stream we are supposed to write to...
   std::unique_ptr<ToolOutputFile> Out;

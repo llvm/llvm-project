@@ -13,6 +13,7 @@
 #include "BPF.h"
 #include "BPFCORE.h"
 #include "llvm/BinaryFormat/Dwarf.h"
+#include "llvm/DebugInfo/BTF/BTF.h"
 #include "llvm/IR/DebugInfoMetadata.h"
 #include "llvm/IR/GlobalVariable.h"
 #include "llvm/IR/Instruction.h"
@@ -82,9 +83,9 @@ static bool BPFPreserveDITypeImpl(Function &F) {
 
     uint32_t Reloc;
     if (FlagValue == BPFCoreSharedInfo::BTF_TYPE_ID_LOCAL_RELOC) {
-      Reloc = BPFCoreSharedInfo::BTF_TYPE_ID_LOCAL;
+      Reloc = BTF::BTF_TYPE_ID_LOCAL;
     } else {
-      Reloc = BPFCoreSharedInfo::BTF_TYPE_ID_REMOTE;
+      Reloc = BTF::BTF_TYPE_ID_REMOTE;
       DIType *Ty = cast<DIType>(MD);
       while (auto *DTy = dyn_cast<DIDerivedType>(Ty)) {
         unsigned Tag = DTy->getTag();

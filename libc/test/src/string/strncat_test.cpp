@@ -16,12 +16,12 @@ TEST(LlvmLibcStrNCatTest, EmptyDest) {
   dest[0] = '\0';
 
   // Start by copying nothing
-  char *result = __llvm_libc::strncat(dest, abc, 0);
+  char *result = LIBC_NAMESPACE::strncat(dest, abc, 0);
   ASSERT_EQ(dest, result);
   ASSERT_EQ(dest[0], '\0');
 
   // Then copy part of it.
-  result = __llvm_libc::strncat(dest, abc, 1);
+  result = LIBC_NAMESPACE::strncat(dest, abc, 1);
   ASSERT_EQ(dest, result);
   ASSERT_STREQ(dest, "a");
 
@@ -29,7 +29,7 @@ TEST(LlvmLibcStrNCatTest, EmptyDest) {
   dest[0] = '\0';
 
   // Then copy all of it.
-  result = __llvm_libc::strncat(dest, abc, 3);
+  result = LIBC_NAMESPACE::strncat(dest, abc, 3);
   ASSERT_EQ(dest, result);
   ASSERT_STREQ(dest, result);
   ASSERT_STREQ(dest, abc);
@@ -45,19 +45,19 @@ TEST(LlvmLibcStrNCatTest, NonEmptyDest) {
   dest[3] = '\0';
 
   // Copy only part of the string onto the end
-  char *result = __llvm_libc::strncat(dest, abc, 1);
+  char *result = LIBC_NAMESPACE::strncat(dest, abc, 1);
   ASSERT_EQ(dest, result);
   ASSERT_STREQ(dest, "xyza");
 
   // Copy a bit more, but without resetting.
-  result = __llvm_libc::strncat(dest, abc, 2);
+  result = LIBC_NAMESPACE::strncat(dest, abc, 2);
   ASSERT_EQ(dest, result);
   ASSERT_STREQ(dest, "xyzaab");
 
   // Set just the end marker, to make sure it overwrites properly.
   dest[3] = '\0';
 
-  result = __llvm_libc::strncat(dest, abc, 3);
+  result = LIBC_NAMESPACE::strncat(dest, abc, 3);
   ASSERT_EQ(dest, result);
   ASSERT_STREQ(dest, "xyzabc");
 
@@ -65,12 +65,12 @@ TEST(LlvmLibcStrNCatTest, NonEmptyDest) {
   dest[0] = '\0';
   // And that it doesn't write beyond what is necessary.
   dest[4] = 'Z';
-  result = __llvm_libc::strncat(dest, abc, 4);
+  result = LIBC_NAMESPACE::strncat(dest, abc, 4);
   ASSERT_EQ(dest, result);
   ASSERT_STREQ(dest, "abc");
   ASSERT_EQ(dest[4], 'Z');
 
-  result = __llvm_libc::strncat(dest, abc, 5);
+  result = LIBC_NAMESPACE::strncat(dest, abc, 5);
   ASSERT_EQ(dest, result);
   ASSERT_STREQ(dest, "abcabc");
 }

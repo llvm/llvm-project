@@ -1393,7 +1393,8 @@ def LLVM_LLVMFuncOp : LLVM_Op<"func", [
     OptionalAttr<UnitAttr>:$arm_locally_streaming,
     OptionalAttr<StrAttr>:$section,
     OptionalAttr<UnnamedAddr>:$unnamed_addr,
-    OptionalAttr<I64Attr>:$alignment
+    OptionalAttr<I64Attr>:$alignment,
+    OptionalAttr<LLVM_VScaleRangeAttr>:$vscale_range
   );
 
   let regions = (region AnyRegion:$body);
@@ -1438,31 +1439,29 @@ def LLVM_LLVMFuncOp : LLVM_Op<"func", [
   let hasRegionVerifier = 1;
 }
 
-def LLVM_NullOp
-    : LLVM_Op<"mlir.null", [Pure]>,
-      LLVM_Builder<"$res = llvm::ConstantPointerNull::get("
-                   "    cast<llvm::PointerType>($_resultType));"> {
-  let summary = "Defines a value containing a null pointer to LLVM type.";
+def LLVM_NoneTokenOp
+    : LLVM_Op<"mlir.none", [Pure]> {
+  let summary = "Defines a value containing an empty token to LLVM type.";
   let description = [{
-    Unlike LLVM IR, MLIR does not have first-class null pointers. They must be
-    explicitly created as SSA values using `llvm.mlir.null`. This operation has
-    no operands or attributes, and returns a null value of a wrapped LLVM IR
+    Unlike LLVM IR, MLIR does not have first-class token values. They must be
+    explicitly created as SSA values using `llvm.mlir.none`. This operation has
+    no operands or attributes, and returns a none token value of a wrapped LLVM IR
     pointer type.
 
     Examples:
 
     ```mlir
-    // Null pointer to i8.
-    %0 = llvm.mlir.null : !llvm.ptr<i8>
-
-    // Null pointer to a function with signature void().
-    %1 = llvm.mlir.null : !llvm.ptr<func<void ()>>
+    %0 = llvm.mlir.none : !llvm.token
     ```
   }];
 
-  let results = (outs LLVM_AnyPointer:$res);
+  string llvmBuilder = [{
+    $res = llvm::ConstantTokenNone::get(builder.getContext());
+  }];
+
+  let results = (outs LLVM_TokenType:$res);
   let builders = [LLVM_OneResultOpBuilder];
-  let assemblyFormat = "attr-dict `:` qualified(type($res))";
+  let assemblyFormat = "attr-dict `:` type($res)";
 }
 
 def LLVM_UndefOp : LLVM_Op<"mlir.undef", [Pure]>,
@@ -1530,6 +1529,7 @@ def LLVM_ZeroOp
   let results = (outs LLVM_Type:$res);
   let builders = [LLVM_OneResultOpBuilder];
   let assemblyFormat = "attr-dict `:` type($res)";
+  let hasVerifier = 1;
 }
 
 def LLVM_ConstantOp

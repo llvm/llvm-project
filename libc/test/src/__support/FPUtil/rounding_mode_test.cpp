@@ -12,11 +12,11 @@
 
 #include <fenv.h>
 
-using __llvm_libc::testing::mpfr::ForceRoundingMode;
-using __llvm_libc::testing::mpfr::RoundingMode;
+using LIBC_NAMESPACE::testing::mpfr::ForceRoundingMode;
+using LIBC_NAMESPACE::testing::mpfr::RoundingMode;
 
 TEST(LlvmLibcFEnvImplTest, QuickRoundingUpTest) {
-  using __llvm_libc::fputil::fenv_is_round_up;
+  using LIBC_NAMESPACE::fputil::fenv_is_round_up;
   {
     ForceRoundingMode __r(RoundingMode::Upward);
     if (__r.success)
@@ -40,7 +40,7 @@ TEST(LlvmLibcFEnvImplTest, QuickRoundingUpTest) {
 }
 
 TEST(LlvmLibcFEnvImplTest, QuickRoundingDownTest) {
-  using __llvm_libc::fputil::fenv_is_round_down;
+  using LIBC_NAMESPACE::fputil::fenv_is_round_down;
   {
     ForceRoundingMode __r(RoundingMode::Upward);
     if (__r.success)
@@ -64,7 +64,7 @@ TEST(LlvmLibcFEnvImplTest, QuickRoundingDownTest) {
 }
 
 TEST(LlvmLibcFEnvImplTest, QuickRoundingNearestTest) {
-  using __llvm_libc::fputil::fenv_is_round_to_nearest;
+  using LIBC_NAMESPACE::fputil::fenv_is_round_to_nearest;
   {
     ForceRoundingMode __r(RoundingMode::Upward);
     if (__r.success)
@@ -88,7 +88,7 @@ TEST(LlvmLibcFEnvImplTest, QuickRoundingNearestTest) {
 }
 
 TEST(LlvmLibcFEnvImplTest, QuickRoundingTowardZeroTest) {
-  using __llvm_libc::fputil::fenv_is_round_to_zero;
+  using LIBC_NAMESPACE::fputil::fenv_is_round_to_zero;
   {
     ForceRoundingMode __r(RoundingMode::Upward);
     if (__r.success)
@@ -112,7 +112,7 @@ TEST(LlvmLibcFEnvImplTest, QuickRoundingTowardZeroTest) {
 }
 
 TEST(LlvmLibcFEnvImplTest, QuickGetRoundTest) {
-  using __llvm_libc::fputil::quick_get_round;
+  using LIBC_NAMESPACE::fputil::quick_get_round;
   {
     ForceRoundingMode __r(RoundingMode::Upward);
     if (__r.success)

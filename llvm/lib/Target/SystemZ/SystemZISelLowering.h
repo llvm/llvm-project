@@ -487,39 +487,39 @@ public:
   TargetLowering::ConstraintWeight
     getSingleConstraintMatchWeight(AsmOperandInfo &info,
                                    const char *constraint) const override;
-  void LowerAsmOperandForConstraint(SDValue Op,
-                                    std::string &Constraint,
+  void LowerAsmOperandForConstraint(SDValue Op, StringRef Constraint,
                                     std::vector<SDValue> &Ops,
                                     SelectionDAG &DAG) const override;
 
-  unsigned getInlineAsmMemConstraint(StringRef ConstraintCode) const override {
+  InlineAsm::ConstraintCode
+  getInlineAsmMemConstraint(StringRef ConstraintCode) const override {
     if (ConstraintCode.size() == 1) {
       switch(ConstraintCode[0]) {
       default:
         break;
       case 'o':
-        return InlineAsm::Constraint_o;
+        return InlineAsm::ConstraintCode::o;
       case 'Q':
-        return InlineAsm::Constraint_Q;
+        return InlineAsm::ConstraintCode::Q;
       case 'R':
-        return InlineAsm::Constraint_R;
+        return InlineAsm::ConstraintCode::R;
       case 'S':
-        return InlineAsm::Constraint_S;
+        return InlineAsm::ConstraintCode::S;
       case 'T':
-        return InlineAsm::Constraint_T;
+        return InlineAsm::ConstraintCode::T;
       }
     } else if (ConstraintCode.size() == 2 && ConstraintCode[0] == 'Z') {
       switch (ConstraintCode[1]) {
       default:
         break;
       case 'Q':
-        return InlineAsm::Constraint_ZQ;
+        return InlineAsm::ConstraintCode::ZQ;
       case 'R':
-        return InlineAsm::Constraint_ZR;
+        return InlineAsm::ConstraintCode::ZR;
       case 'S':
-        return InlineAsm::Constraint_ZS;
+        return InlineAsm::ConstraintCode::ZS;
       case 'T':
-        return InlineAsm::Constraint_ZT;
+        return InlineAsm::ConstraintCode::ZT;
       }
     }
     return TargetLowering::getInlineAsmMemConstraint(ConstraintCode);

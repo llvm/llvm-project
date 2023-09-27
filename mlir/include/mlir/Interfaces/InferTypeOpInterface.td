@@ -223,7 +223,7 @@ def InferTypeOpAdaptorWithIsCompatible : InferTypeOpAdaptorBase<
 >;
 
 // Convenient trait to define a wrapper to inferReturnTypeComponents that passes
-// in the Op Adaptor directly
+// in the Op Adaptor directly. Only uses the current types of the operands.
 class InferShapedTypeOpAdaptorBase<list<string> overridenMethods = []> : TraitList<
   [
     // Op implements infer type op interface.

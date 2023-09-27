@@ -3,7 +3,9 @@
 
 declare ptr @llvm.ptrmask.p0.i64(ptr, i64)
 declare ptr @llvm.ptrmask.p0.i32(ptr, i32)
+declare <2 x ptr> @llvm.ptrmask.v2p0.v2i64(<2 x ptr>, <2 x i64>)
 declare void @use.ptr(ptr)
+
 define ptr @fold_2x(ptr %p, i64 %m0, i64 %m1) {
 ; CHECK-LABEL: define ptr @fold_2x
 ; CHECK-SAME: (ptr [[P:%.*]], i64 [[M0:%.*]], i64 [[M1:%.*]]) {
@@ -64,4 +66,16 @@ define ptr @fold_2x_fail_type_mismatch2(ptr %p, i64 %m0, i32 %m1) {
   %p0 = call ptr @llvm.ptrmask.p0.i64(ptr %p, i64 %m0)
   %p1 = call ptr @llvm.ptrmask.p0.i32(ptr %p0, i32 %m1)
   ret ptr %p1
+}
+
+define <2 x ptr> @fold_2x_vec(<2 x ptr> %p, <2 x i64> %m0, <2 x i64> %m1) {
+; CHECK-LABEL: define <2 x ptr> @fold_2x_vec
+; CHECK-SAME: (<2 x ptr> [[P:%.*]], <2 x i64> [[M0:%.*]], <2 x i64> [[M1:%.*]]) {
+; CHECK-NEXT:    [[TMP1:%.*]] = and <2 x i64> [[M1]], [[M0]]
+; CHECK-NEXT:    [[P1:%.*]] = call <2 x ptr> @llvm.ptrmask.v2p0.v2i64(<2 x ptr> [[P]], <2 x i64> [[TMP1]])
+; CHECK-NEXT:    ret <2 x ptr> [[P1]]
+;
+  %p0 = call <2 x ptr> @llvm.ptrmask.v2p0.v2i64(<2 x ptr> %p, <2 x i64> %m0)
+  %p1 = call <2 x ptr> @llvm.ptrmask.v2p0.v2i64(<2 x ptr> %p0, <2 x i64> %m1)
+  ret <2 x ptr> %p1
 }

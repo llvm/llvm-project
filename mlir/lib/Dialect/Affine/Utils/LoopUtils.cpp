@@ -114,7 +114,7 @@ getCleanupLoopLowerBound(AffineForOp forOp, unsigned unrollFactor,
 /// yield values while promoting single iteration affine.for ops.
 static void replaceIterArgsAndYieldResults(AffineForOp forOp) {
   // Replace uses of iter arguments with iter operands (initial values).
-  auto iterOperands = forOp.getIterOperands();
+  auto iterOperands = forOp.getInits();
   auto iterArgs = forOp.getRegionIterArgs();
   for (auto e : llvm::zip(iterOperands, iterArgs))
     std::get<1>(e).replaceAllUsesWith(std::get<0>(e));
@@ -987,7 +987,7 @@ static LogicalResult generateCleanupLoopForUnroll(AffineForOp forOp,
   // and produce results for the original users of `forOp` results.
   auto results = forOp.getResults();
   auto cleanupResults = cleanupForOp.getResults();
-  auto cleanupIterOperands = cleanupForOp.getIterOperands();
+  auto cleanupIterOperands = cleanupForOp.getInits();
 
   for (auto e : llvm::zip(results, cleanupResults, cleanupIterOperands)) {
     std::get<0>(e).replaceAllUsesWith(std::get<1>(e));
@@ -1197,10 +1197,10 @@ LogicalResult mlir::affine::loopUnrollJamByFactor(AffineForOp forOp,
   // `unrollJamFactor` copies of its iterOperands, iter_args and yield
   // operands.
   SmallVector<AffineForOp, 4> newLoopsWithIterArgs;
-  OpBuilder builder(forOp.getContext());
+  IRRewriter rewriter(forOp.getContext());
   for (AffineForOp oldForOp : loopsWithIterArgs) {
-    SmallVector<Value, 4> dupIterOperands, dupIterArgs, dupYieldOperands;
-    ValueRange oldIterOperands = oldForOp.getIterOperands();
+    SmallVector<Value> dupIterOperands, dupYieldOperands;
+    ValueRange oldIterOperands = oldForOp.getInits();
     ValueRange oldIterArgs = oldForOp.getRegionIterArgs();
     ValueRange oldYieldOperands =
         cast<AffineYieldOp>(oldForOp.getBody()->getTerminator()).getOperands();
@@ -1208,19 +1208,21 @@ LogicalResult mlir::affine::loopUnrollJamByFactor(AffineForOp forOp,
     // fix iterOperands and yield operands after cloning of sub-blocks.
     for (unsigned i = unrollJamFactor - 1; i >= 1; --i) {
       dupIterOperands.append(oldIterOperands.begin(), oldIterOperands.end());
-      dupIterArgs.append(oldIterArgs.begin(), oldIterArgs.end());
       dupYieldOperands.append(oldYieldOperands.begin(), oldYieldOperands.end());
     }
     // Create a new loop with additional iterOperands, iter_args and yield
     // operands. This new loop will take the loop body of the original loop.
-    AffineForOp newForOp = affine::replaceForOpWithNewYields(
-        builder, oldForOp, dupIterOperands, dupYieldOperands, dupIterArgs);
+    bool forOpReplaced = oldForOp == forOp;
+    AffineForOp newForOp =
+        cast<AffineForOp>(*oldForOp.replaceWithAdditionalYields(
+            rewriter, dupIterOperands, /*replaceInitOperandUsesInLoop=*/false,
+            [&](OpBuilder &b, Location loc, ArrayRef<BlockArgument> newBbArgs) {
+              return dupYieldOperands;
+            }));
     newLoopsWithIterArgs.push_back(newForOp);
     // `forOp` has been replaced with a new loop.
-    if (oldForOp == forOp)
+    if (forOpReplaced)
       forOp = newForOp;
-    assert(oldForOp.use_empty() && "old for op should not have any user");
-    oldForOp.erase();
     // Update `operandMaps` for `newForOp` iterArgs and results.
     ValueRange newIterArgs = newForOp.getRegionIterArgs();
     unsigned oldNumIterArgs = oldIterArgs.size();
@@ -1294,7 +1296,7 @@ LogicalResult mlir::affine::loopUnrollJamByFactor(AffineForOp forOp,
     // into one value. For example, for %0:2 = affine.for ... and addf, we add
     // %1 = arith.addf %0#0, %0#1, and replace the following uses of %0#0 with
     // %1.
-    builder.setInsertionPointAfter(forOp);
+    rewriter.setInsertionPointAfter(forOp);
     auto loc = forOp.getLoc();
     unsigned oldNumResults = forOp.getNumResults() / unrollJamFactor;
     for (LoopReduction &reduction : reductions) {
@@ -1305,7 +1307,7 @@ LogicalResult mlir::affine::loopUnrollJamByFactor(AffineForOp forOp,
       for (unsigned i = unrollJamFactor - 1; i >= 1; --i) {
         rhs = forOp.getResult(i * oldNumResults + pos);
         // Create ops based on reduction type.
-        lhs = arith::getReductionOp(reduction.kind, builder, loc, lhs, rhs);
+        lhs = arith::getReductionOp(reduction.kind, rewriter, loc, lhs, rhs);
         if (!lhs)
           return failure();
         Operation *op = lhs.getDefiningOp();

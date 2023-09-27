@@ -9,7 +9,7 @@
 #ifndef LLVM_LIBC_SRC_MATH_GPU_NVPTX_DECLARATIONS_H
 #define LLVM_LIBC_SRC_MATH_GPU_NVPTX_DECLARATIONS_H
 
-namespace __llvm_libc {
+namespace LIBC_NAMESPACE {
 
 extern "C" {
 double __nv_acos(double);
@@ -74,6 +74,6 @@ double __nv_tgamma(double);
 float __nv_tgammaf(float);
 }
 
-} // namespace __llvm_libc
+} // namespace LIBC_NAMESPACE
 
 #endif // LLVM_LIBC_SRC_MATH_GPU_NVPTX_DECLARATIONS_H

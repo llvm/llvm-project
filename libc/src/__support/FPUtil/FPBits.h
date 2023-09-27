@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_LIBC_SRC_SUPPORT_FPUTIL_FP_BITS_H
-#define LLVM_LIBC_SRC_SUPPORT_FPUTIL_FP_BITS_H
+#ifndef LLVM_LIBC_SRC___SUPPORT_FPUTIL_FPBITS_H
+#define LLVM_LIBC_SRC___SUPPORT_FPUTIL_FPBITS_H
 
 #include "PlatformDefs.h"
 
@@ -19,7 +19,7 @@
 #include "FloatProperties.h"
 #include <stdint.h>
 
-namespace __llvm_libc {
+namespace LIBC_NAMESPACE {
 namespace fputil {
 
 template <typename T> struct MantissaWidth {
@@ -233,10 +233,10 @@ template <typename T> struct FPBits {
 };
 
 } // namespace fputil
-} // namespace __llvm_libc
+} // namespace LIBC_NAMESPACE
 
 #ifdef SPECIAL_X86_LONG_DOUBLE
 #include "x86_64/LongDoubleBits.h"
 #endif
 
-#endif // LLVM_LIBC_SRC_SUPPORT_FPUTIL_FP_BITS_H
+#endif // LLVM_LIBC_SRC___SUPPORT_FPUTIL_FPBITS_H

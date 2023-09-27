@@ -1,6 +1,6 @@
 ! This test checks location of OpenMP constructs and clauses
 
-!RUN: %flang_fc1 -emit-fir -fopenmp -mmlir --mlir-print-debuginfo %s -o - | FileCheck %s
+!RUN: %flang_fc1 -emit-hlfir -fopenmp -mmlir --mlir-print-debuginfo %s -o - | FileCheck %s
 
 !CHECK-LABEL: sub_parallel
 subroutine sub_parallel()
@@ -17,7 +17,7 @@ end
 !CHECK-LABEL: sub_target
 subroutine sub_target()
   print *, x
-!CHECK: omp.target {{.*}}  {
+!CHECK: omp.target  {
   !$omp target
     print *, x
 !CHECK:   omp.terminator loc(#[[TAR_LOC:.*]])

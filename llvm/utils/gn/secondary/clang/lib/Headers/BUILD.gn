@@ -171,6 +171,7 @@ copy("Headers") {
     "cpuid.h",
     "crc32intrin.h",
     "cuda_wrappers/algorithm",
+    "cuda_wrappers/bits/basic_string.h",
     "cuda_wrappers/bits/shared_ptr_base.h",
     "cuda_wrappers/complex",
     "cuda_wrappers/new",

@@ -810,13 +810,9 @@ padThroughLoopIterArg(RewriterBase &rewriter, Value paddedValueBeforeHoisting,
   OpBuilder::InsertionGuard g(rewriter);
   rewriter.setInsertionPointAfter(hoistedPackedTensor.getDefiningOp());
 
-  std::optional<unsigned> maybeOperandNumber =
-      forOp.getIterArgNumberForOpOperand(*pUse);
-  assert(maybeOperandNumber.has_value() && "expected a proper iter arg number");
-
-  int64_t operandNumber = maybeOperandNumber.value();
+  unsigned iterArgNumber = forOp.getResultForOpOperand(*pUse).getResultNumber();
   auto yieldOp = cast<scf::YieldOp>(forOp.getBody(0)->getTerminator());
-  auto yieldingExtractSliceOp = yieldOp->getOperand(operandNumber)
+  auto yieldingExtractSliceOp = yieldOp->getOperand(iterArgNumber)
                                     .getDefiningOp<tensor::ExtractSliceOp>();
   if (!yieldingExtractSliceOp)
     return tensor::ExtractSliceOp();
@@ -829,9 +825,9 @@ padThroughLoopIterArg(RewriterBase &rewriter, Value paddedValueBeforeHoisting,
     return tensor::ExtractSliceOp();
 
   SmallVector<Value> initArgs = forOp.getInitArgs();
-  initArgs[operandNumber] = hoistedPackedTensor;
+  initArgs[iterArgNumber] = hoistedPackedTensor;
   SmallVector<Value> yieldOperands = yieldOp.getOperands();
-  yieldOperands[operandNumber] = yieldingExtractSliceOp.getSource();
+  yieldOperands[iterArgNumber] = yieldingExtractSliceOp.getSource();
 
   int64_t numOriginalForOpResults = initArgs.size();
   LLVM_DEBUG(DBGS() << "numOriginalForOpResults: " << numOriginalForOpResults
@@ -844,29 +840,32 @@ padThroughLoopIterArg(RewriterBase &rewriter, Value paddedValueBeforeHoisting,
         hoistedPackedTensor.getLoc(), hoistedPackedTensor,
         outerSliceOp.getMixedOffsets(), outerSliceOp.getMixedSizes(),
         outerSliceOp.getMixedStrides());
-    rewriter.replaceAllUsesWith(forOp.getResult(operandNumber), extracted);
+    rewriter.replaceAllUsesWith(forOp.getResult(iterArgNumber), extracted);
   }
-  scf::ForOp newForOp =
-      replaceLoopWithNewYields(rewriter, forOp, initArgs, yieldOperands);
+  scf::ForOp newForOp = cast<scf::ForOp>(*forOp.replaceWithAdditionalYields(
+      rewriter, initArgs, /*replaceInitOperandUsesInLoop=*/true,
+      [&](OpBuilder &b, Location loc, ArrayRef<BlockArgument> newBBArgs) {
+        return yieldOperands;
+      }));
 
   LLVM_DEBUG(DBGS() << "newForOp results: " << newForOp.getNumResults()
                     << "\n");
   LLVM_DEBUG(DBGS() << "replace source of: " << extracted << "\n");
   LLVM_DEBUG(DBGS() << "with result #"
-                    << numOriginalForOpResults + operandNumber
+                    << numOriginalForOpResults + iterArgNumber
                     << " of forOp, giving us: " << extracted << "\n");
   rewriter.startRootUpdate(extracted);
   extracted.getSourceMutable().assign(
-      newForOp.getResult(numOriginalForOpResults + operandNumber));
+      newForOp.getResult(numOriginalForOpResults + iterArgNumber));
   rewriter.finalizeRootUpdate(extracted);
 
   LLVM_DEBUG(DBGS() << "replace uses of: " << paddedValueBeforeHoisting
                     << "\n");
   LLVM_DEBUG(DBGS() << "with region iter arg #"
-                    << numOriginalForOpResults + operandNumber << "\n");
+                    << numOriginalForOpResults + iterArgNumber << "\n");
   rewriter.replaceAllUsesWith(
       paddedValueBeforeHoisting,
-      newForOp.getRegionIterArg(numOriginalForOpResults + operandNumber));
+      newForOp.getRegionIterArg(numOriginalForOpResults + iterArgNumber));
 
   return extracted;
 }

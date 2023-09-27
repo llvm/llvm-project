@@ -116,7 +116,7 @@ public:
 
   /// Target can subclass this hook to select a different DAG scheduler.
   virtual RegisterScheduler::FunctionPassCtor
-      getDAGScheduler(CodeGenOpt::Level) const {
+  getDAGScheduler(CodeGenOptLevel) const {
     return nullptr;
   }
 
@@ -265,15 +265,15 @@ public:
 
   // For use with PostRAScheduling: get the minimum optimization level needed
   // to enable post-RA scheduling.
-  virtual CodeGenOpt::Level getOptLevelToEnablePostRAScheduler() const {
-    return CodeGenOpt::Default;
+  virtual CodeGenOptLevel getOptLevelToEnablePostRAScheduler() const {
+    return CodeGenOptLevel::Default;
   }
 
   /// True if the subtarget should run the local reassignment
   /// heuristic of the register allocator.
   /// This heuristic may be compile time intensive, \p OptLevel provides
   /// a finer grain to tune the register allocator.
-  virtual bool enableRALocalReassignment(CodeGenOpt::Level OptLevel) const;
+  virtual bool enableRALocalReassignment(CodeGenOptLevel OptLevel) const;
 
   /// Enable use of alias analysis during code generation (during MI
   /// scheduling, DAGCombine, etc.).

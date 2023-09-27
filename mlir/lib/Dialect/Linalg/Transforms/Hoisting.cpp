@@ -55,8 +55,11 @@ void mlir::linalg::hoistRedundantVectorTransfersOnTensor(func::FuncOp func) {
 static bool noAliasingUseInLoop(vector::TransferReadOp transferRead,
                                 LoopLikeOpInterface loop) {
   Value source = transferRead.getSource();
+  // Skip subview and collapse_shape Ops
   while (auto subView = source.getDefiningOp<memref::SubViewOp>())
     source = subView.getSource();
+  while (auto collapsed = source.getDefiningOp<memref::CollapseShapeOp>())
+    source = collapsed->getOperand(0);
   llvm::SmallVector<Operation *, 32> users(source.getUsers().begin(),
                                            source.getUsers().end());
   llvm::SmallDenseSet<Operation *, 32> processed;
@@ -67,6 +70,10 @@ static bool noAliasingUseInLoop(vector::TransferReadOp transferRead,
       continue;
     if (auto subView = dyn_cast<memref::SubViewOp>(user)) {
       users.append(subView->getUsers().begin(), subView->getUsers().end());
+      continue;
+    }
+    if (auto collapsed = dyn_cast<memref::CollapseShapeOp>(user)) {
+      users.append(collapsed->getUsers().begin(), collapsed->getUsers().end());
       continue;
     }
     if (isMemoryEffectFree(user) || isa<vector::TransferReadOp>(user))
@@ -184,48 +191,24 @@ void mlir::linalg::hoistRedundantVectorTransfers(func::FuncOp func) {
       transferWrite->moveAfter(loop);
 
       // Rewrite `loop` with new yields by cloning and erase the original loop.
-      OpBuilder b(transferRead);
-      NewYieldValueFn yieldFn = [&](OpBuilder &b, Location loc,
-                                    ArrayRef<BlockArgument> newBBArgs) {
+      IRRewriter rewriter(transferRead.getContext());
+      NewYieldValuesFn yieldFn = [&](OpBuilder &b, Location loc,
+                                     ArrayRef<BlockArgument> newBBArgs) {
         return SmallVector<Value>{transferWrite.getVector()};
       };
 
-      // Transfer write has been hoisted, need to update the written vector by
-      // the value yielded by the newForOp.
-      return TypeSwitch<Operation *, WalkResult>(loop)
-          .Case<scf::ForOp>([&](scf::ForOp scfForOp) {
-            auto newForOp = replaceLoopWithNewYields(
-                b, scfForOp, transferRead.getVector(), yieldFn);
-            transferWrite.getVectorMutable().assign(
-                newForOp.getResults().back());
-            changed = true;
-            loop.erase();
-            // Need to interrupt and restart because erasing the loop messes up
-            // the walk.
-            return WalkResult::interrupt();
-          })
-          .Case<affine::AffineForOp>([&](affine::AffineForOp affineForOp) {
-            auto newForOp = replaceForOpWithNewYields(
-                b, affineForOp, transferRead.getVector(),
-                SmallVector<Value>{transferWrite.getVector()},
-                transferWrite.getVector());
-            // Replace all uses of the `transferRead` with the corresponding
-            // basic block argument.
-            transferRead.getVector().replaceUsesWithIf(
-                newForOp.getLoopBody().getArguments().back(),
-                [&](OpOperand &use) {
-                  Operation *user = use.getOwner();
-                  return newForOp->isProperAncestor(user);
-                });
-            transferWrite.getVectorMutable().assign(
-                newForOp.getResults().back());
-            changed = true;
-            loop.erase();
-            // Need to interrupt and restart because erasing the loop messes up
-            // the walk.
-            return WalkResult::interrupt();
-          })
-          .Default([](Operation *) { return WalkResult::interrupt(); });
+      auto maybeNewLoop = loop.replaceWithAdditionalYields(
+          rewriter, transferRead.getVector(),
+          /*replaceInitOperandUsesInLoop=*/true, yieldFn);
+      if (failed(maybeNewLoop))
+        return WalkResult::interrupt();
+
+      transferWrite.getVectorMutable().assign(
+          maybeNewLoop->getOperation()->getResults().back());
+      changed = true;
+      // Need to interrupt and restart because erasing the loop messes up
+      // the walk.
+      return WalkResult::interrupt();
     });
   }
 }

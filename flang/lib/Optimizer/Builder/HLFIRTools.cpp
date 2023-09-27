@@ -1021,3 +1021,12 @@ hlfir::cloneToElementalOp(mlir::Location loc, fir::FirOpBuilder &builder,
                                elementalAddrOp.getShape(), typeParams,
                                genKernel, !elementalAddrOp.isOrdered());
 }
+
+bool hlfir::elementalOpMustProduceTemp(hlfir::ElementalOp elemental) {
+  for (mlir::Operation *useOp : elemental->getUsers())
+    if (auto destroy = mlir::dyn_cast<hlfir::DestroyOp>(useOp))
+      if (destroy.mustFinalizeExpr())
+        return true;
+
+  return false;
+}

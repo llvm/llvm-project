@@ -129,6 +129,24 @@ getSymbolicOperandCapabilities(SPIRV::OperandCategory::OperandCategory Category,
   return Capabilities;
 }
 
+CapabilityList
+getCapabilitiesEnabledByExtension(SPIRV::Extension::Extension Extension) {
+  const SPIRV::ExtensionEntry *Entry =
+      SPIRV::lookupSymbolicOperandsEnabledByExtension(
+          Extension, SPIRV::OperandCategory::CapabilityOperand);
+
+  CapabilityList Capabilities;
+  while (Entry &&
+         Entry->Category == SPIRV::OperandCategory::CapabilityOperand &&
+         Entry->ReqExtension == Extension) {
+    Capabilities.push_back(
+        static_cast<SPIRV::Capability::Capability>(Entry->Value));
+    ++Entry;
+  }
+
+  return Capabilities;
+}
+
 ExtensionList
 getSymbolicOperandExtensions(SPIRV::OperandCategory::OperandCategory Category,
                              uint32_t Value) {
@@ -199,8 +217,7 @@ getExtInstSetFromString(std::string SetName) {
 std::string getExtInstName(SPIRV::InstructionSet::InstructionSet Set,
                            uint32_t InstructionNumber) {
   const SPIRV::ExtendedBuiltin *Lookup =
-      SPIRV::lookupExtendedBuiltinBySetAndNumber(
-          SPIRV::InstructionSet::OpenCL_std, InstructionNumber);
+      SPIRV::lookupExtendedBuiltinBySetAndNumber(Set, InstructionNumber);
 
   if (!Lookup)
     return "UNKNOWN_EXT_INST";

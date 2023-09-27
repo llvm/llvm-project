@@ -592,6 +592,21 @@ __smusdx(int16x2_t __a, int16x2_t __b) {
 }
 #endif
 
+/* 8.6 Floating-point data-processing intrinsics */
+#if (defined(__ARM_FEATURE_DIRECTED_ROUNDING)    &&                         \
+  (__ARM_FEATURE_DIRECTED_ROUNDING))             &&                         \
+  (defined(__ARM_64BIT_STATE) && __ARM_64BIT_STATE)
+static __inline__ double __attribute__((__always_inline__, __nodebug__))
+__rintn(double __a) {
+  return __builtin_roundeven(__a);
+}
+
+static __inline__ float __attribute__((__always_inline__, __nodebug__))
+__rintnf(float __a) {
+  return __builtin_roundevenf(__a);
+}
+#endif
+
 /* 9.7 CRC32 intrinsics */
 #if (defined(__ARM_FEATURE_CRC32) && __ARM_FEATURE_CRC32) ||                   \
     (defined(__ARM_64BIT_STATE) && __ARM_64BIT_STATE)

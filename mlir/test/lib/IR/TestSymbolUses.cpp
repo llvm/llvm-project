@@ -59,7 +59,7 @@ struct SymbolUsesPass
               symbolUse.getUser()->getParentOp(), symbolUse.getSymbolRef())) {
         symbolUse.getUser()->emitRemark()
             << "found use of symbol : " << symbolUse.getSymbolRef() << " : "
-            << symbol->getAttr(SymbolTable::getSymbolAttrName());
+            << *symbol->getInherentAttr(SymbolTable::getSymbolAttrName());
       }
     }
     symbol->emitRemark() << "symbol has " << llvm::size(*symbolUses) << " uses";

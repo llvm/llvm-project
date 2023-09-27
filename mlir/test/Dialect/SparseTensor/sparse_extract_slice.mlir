@@ -1,7 +1,7 @@
 // RUN: mlir-opt %s --sparse-tensor-codegen --cse |  FileCheck %s
 
 #CSR = #sparse_tensor.encoding<{
-  lvlTypes = [ "dense", "compressed" ]
+  map = (d0, d1) -> (d0 : dense, d1 : compressed)
 }>
 
 #CSR_SLICE = #sparse_tensor.encoding<{
@@ -13,7 +13,7 @@
 // CHECK-SAME:                            %[[VAL_0:.*0]]: memref<?xindex>,
 // CHECK-SAME:                            %[[VAL_1:.*1]]: memref<?xindex>,
 // CHECK-SAME:                            %[[VAL_2:.*2]]: memref<?xf64>,
-// CHECK-SAME:                            %[[VAL_3:.*3]]: !sparse_tensor.storage_specifier<#sparse_tensor.encoding<{ lvlTypes = [ "dense", "compressed" ] }>>)
+// CHECK-SAME:                            %[[VAL_3:.*3]]: !sparse_tensor.storage_specifier<#sparse_tensor.encoding<{{{.*}}}>>)
 // CHECK:           %[[VAL_4:.*]] = sparse_tensor.storage_specifier.init with %[[VAL_3]]
 // CHECK:           %[[VAL_5:.*]] = arith.constant 0 : index
 // CHECK:           %[[VAL_6:.*]] = arith.constant 4 : index

@@ -15,4 +15,4 @@ LLVM_LIBC_FUNCTION(long long, llroundf, (float x)) {
   return __builtin_lroundf(x);
 }
 
-} // namespace __llvm_libc
+} // namespace LIBC_NAMESPACE

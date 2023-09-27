@@ -54,13 +54,12 @@ static int testRoundtripEncoding(MlirContext ctx) {
   // CHECK: crdWidth: 64
   int crdWidth = mlirSparseTensorEncodingAttrGetCrdWidth(originalAttr);
   fprintf(stderr, "crdWidth: %d\n", crdWidth);
-
+  // TODO: lvlToDim
   MlirAttribute newAttr = mlirSparseTensorEncodingAttrGet(
       ctx, lvlRank, lvlTypes, dimToLvl, posWidth, crdWidth);
   mlirAttributeDump(newAttr); // For debugging filecheck output.
   // CHECK: equal: 1
   fprintf(stderr, "equal: %d\n", mlirAttributeEqual(originalAttr, newAttr));
-
   free(lvlTypes);
   return 0;
 }

@@ -12,7 +12,7 @@
 // CHECK-NEXT:    ret void
 //
 void test_svstr_vnum_za(uint32_t slice_base, void *ptr) {
-  svstr_vnum_za(slice_base, 0, ptr);
+  svstr_vnum_za(slice_base, ptr, 0);
 }
 
 // CHECK-C-LABEL: @test_svstr_vnum_za_1(
@@ -26,5 +26,15 @@ void test_svstr_vnum_za(uint32_t slice_base, void *ptr) {
 // CHECK-NEXT:    ret void
 //
 void test_svstr_vnum_za_1(uint32_t slice_base, void *ptr) {
-  svstr_vnum_za(slice_base, 15, ptr);
+  svstr_vnum_za(slice_base, ptr, 15);
+}
+
+// CHECK-C-LABEL: @test_svstr_za(
+// CHECK-CXX-LABEL: @_Z13test_svstr_zajPv(
+// CHECK-NEXT:  entry:
+// CHECK-NEXT:    tail call void @llvm.aarch64.sme.str(i32 [[SLICE_BASE:%.*]], ptr [[PTR:%.*]])
+// CHECK-NEXT:    ret void
+//
+void test_svstr_za(uint32_t slice_base, void *ptr) {
+  svstr_za(slice_base, ptr);
 }

@@ -211,9 +211,10 @@ void VectorizerTestPass::testComposeMaps(llvm::raw_ostream &outs) {
   maps.reserve(matches.size());
   for (auto m : llvm::reverse(matches)) {
     auto *opInst = m.getMatchedOperation();
-    auto map = cast<AffineMapAttr>(
-                   opInst->getAttr(VectorizerTestPass::kTestAffineMapAttrName))
-                   .getValue();
+    auto map =
+        cast<AffineMapAttr>(opInst->getDiscardableAttr(
+                                VectorizerTestPass::kTestAffineMapAttrName))
+            .getValue();
     maps.push_back(map);
   }
   if (maps.empty())

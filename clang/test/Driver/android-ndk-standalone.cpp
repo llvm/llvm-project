@@ -8,7 +8,7 @@
 // RUN:   | FileCheck  %s
 // CHECK: "-cc1"
 // CHECK: "-resource-dir" "[[RESOURCE_DIR:[^"]+]]"
-// CHECK: "-internal-isystem" "{{.*}}/include/c++/v1"
+// CHECK: "-internal-isystem" "{{.*}}{{/|\\\\}}include{{/|\\\\}}c++{{/|\\\\}}v1"
 // CHECK: "-internal-isystem" "[[RESOURCE_DIR]]{{(/|\\\\)}}include"
 // CHECK: "-internal-isystem" "{{.*}}/sysroot/usr/local/include"
 // CHECK: "-internal-externc-isystem" "{{.*}}/sysroot/usr/include/arm-linux-androideabi"
@@ -81,7 +81,7 @@
 // RUN:   | FileCheck  --check-prefix=CHECK-ARMV7 %s
 // CHECK-ARMV7: "-cc1"
 // CHECK-ARMV7: "-resource-dir" "[[RESOURCE_DIR:[^"]+]]"
-// CHECK-ARMV7: "-internal-isystem" "{{.*}}/include/c++/v1"
+// CHECK-ARMV7: "-internal-isystem" "{{.*}}{{/|\\\\}}include{{/|\\\\}}c++{{/|\\\\}}v1"
 // CHECK-ARMV7: "-internal-isystem" "[[RESOURCE_DIR]]{{(/|\\\\)}}include"
 // CHECK-ARMV7: "-internal-isystem" "{{.*}}/sysroot/usr/local/include"
 // CHECK-ARMV7: "-internal-externc-isystem" "{{.*}}/sysroot/usr/include/arm-linux-androideabi"
@@ -134,7 +134,7 @@
 // RUN:   | FileCheck  --check-prefix=CHECK-THUMB %s
 // CHECK-THUMB: "-cc1"
 // CHECK-THUMB: "-resource-dir" "[[RESOURCE_DIR:[^"]+]]"
-// CHECK-THUMB: "-internal-isystem" "{{.*}}/include/c++/v1"
+// CHECK-THUMB: "-internal-isystem" "{{.*}}{{/|\\\\}}include{{/|\\\\}}c++{{/|\\\\}}v1"
 // CHECK-THUMB: "-internal-isystem" "[[RESOURCE_DIR]]{{(/|\\\\)}}include"
 // CHECK-THUMB: "-internal-isystem" "{{.*}}/sysroot/usr/local/include"
 // CHECK-THUMB: "-internal-externc-isystem" "{{.*}}/sysroot/usr/include/arm-linux-androideabi"
@@ -168,7 +168,7 @@
 // RUN:   | FileCheck  --check-prefix=CHECK-ARMV7THUMB %s
 // CHECK-ARMV7THUMB: "-cc1"
 // CHECK-ARMV7THUMB: "-resource-dir" "[[RESOURCE_DIR:[^"]+]]"
-// CHECK-ARMV7THUMB: "-internal-isystem" "{{.*}}/include/c++/v1"
+// CHECK-ARMV7THUMB: "-internal-isystem" "{{.*}}{{/|\\\\}}include{{/|\\\\}}c++{{/|\\\\}}v1"
 // CHECK-ARMV7THUMB: "-internal-isystem" "[[RESOURCE_DIR]]{{(/|\\\\)}}include"
 // CHECK-ARMV7THUMB: "-internal-isystem" "{{.*}}/sysroot/usr/local/include"
 // CHECK-ARMV7THUMB: "-internal-externc-isystem" "{{.*}}/sysroot/usr/include/arm-linux-androideabi"
@@ -219,7 +219,7 @@
 // RUN:     --sysroot=%S/Inputs/basic_android_ndk_tree/sysroot \
 // RUN:   | FileCheck --check-prefix=CHECK-AARCH64 %s
 // CHECK-AARCH64: "-cc1"
-// CHECK-AARCH64: "-internal-isystem" "{{.*}}/include/c++/v1"
+// CHECK-AARCH64: "-internal-isystem" "{{.*}}{{/|\\\\}}include{{/|\\\\}}c++{{/|\\\\}}v1"
 // CHECK-AARCH64: "-internal-externc-isystem" "{{.*}}/sysroot/usr/include/aarch64-linux-android"
 // CHECK-AARCH64: "-internal-externc-isystem" "{{.*}}/sysroot/include"
 // CHECK-AARCH64: "-internal-externc-isystem" "{{.*}}/sysroot/usr/include"
@@ -235,7 +235,7 @@
 // RUN:     --sysroot=%S/Inputs/basic_android_ndk_tree/sysroot \
 // RUN:   | FileCheck --check-prefix=CHECK-ARM64 %s
 // CHECK-ARM64: "-cc1"
-// CHECK-ARM64: "-internal-isystem" "{{.*}}/include/c++/v1"
+// CHECK-ARM64: "-internal-isystem" "{{.*}}{{/|\\\\}}include{{/|\\\\}}c++{{/|\\\\}}v1"
 // CHECK-ARM64: "-internal-externc-isystem" "{{.*}}/sysroot/usr/include/aarch64-linux-android"
 // CHECK-ARM64: "-internal-externc-isystem" "{{.*}}/sysroot/include"
 // CHECK-ARM64: "-internal-externc-isystem" "{{.*}}/sysroot/usr/include"
@@ -251,7 +251,7 @@
 // RUN:     --sysroot=%S/Inputs/basic_android_ndk_tree/sysroot \
 // RUN:   | FileCheck --check-prefix=CHECK-I686 %s
 // CHECK-I686: "-cc1"
-// CHECK-I686: "-internal-isystem" "{{.*}}/include/c++/v1"
+// CHECK-I686: "-internal-isystem" "{{.*}}{{/|\\\\}}include{{/|\\\\}}c++{{/|\\\\}}v1"
 // CHECK-I686: "-internal-externc-isystem" "{{.*}}/sysroot/usr/include/i686-linux-android"
 // CHECK-I686: "-internal-externc-isystem" "{{.*}}/sysroot/include"
 // CHECK-I686: "-internal-externc-isystem" "{{.*}}/sysroot/usr/include"
@@ -267,7 +267,7 @@
 // RUN:     --sysroot=%S/Inputs/basic_android_ndk_tree/sysroot \
 // RUN:   | FileCheck --check-prefix=CHECK-X86_64 %s
 // CHECK-X86_64: "-cc1"
-// CHECK-X86_64: "-internal-isystem" "{{.*}}/include/c++/v1"
+// CHECK-X86_64: "-internal-isystem" "{{.*}}{{/|\\\\}}include{{/|\\\\}}c++{{/|\\\\}}v1"
 // CHECK-X86_64: "-internal-externc-isystem" "{{.*}}/sysroot/usr/include/x86_64-linux-android"
 // CHECK-X86_64: "-internal-externc-isystem" "{{.*}}/sysroot/include"
 // CHECK-X86_64: "-internal-externc-isystem" "{{.*}}/sysroot/usr/include"

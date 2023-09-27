@@ -17,8 +17,9 @@ include "mlir/IR/OpBase.td"
 
 def LoopLikeOpInterface : OpInterface<"LoopLikeOpInterface"> {
   let description = [{
-    Encodes properties of a loop. Operations that implement this interface will
-    be considered by loop-invariant code motion.
+    Contains helper functions to query properties and perform transformations
+    of a loop. Operations that implement this interface will be considered by
+    loop-invariant code motion.
   }];
   let cppNamespace = "::mlir";
 
@@ -30,23 +31,29 @@ def LoopLikeOpInterface : OpInterface<"LoopLikeOpInterface"> {
         explicit capture of dependencies, an implementation could check whether
         the value corresponds to a captured dependency.
       }],
-      "bool", "isDefinedOutsideOfLoop", (ins "::mlir::Value ":$value), [{}], [{
-        return value.getParentRegion()->isProperAncestor(&$_op.getLoopBody());
+      /*retTy=*/"bool",
+      /*methodName=*/"isDefinedOutsideOfLoop",
+      /*args=*/(ins "::mlir::Value ":$value),
+      /*methodBody=*/"",
+      /*defaultImplementation=*/[{
+        return !$_op->isAncestor(value.getParentRegion()->getParentOp());
       }]
     >,
     InterfaceMethod<[{
-        Returns the region that makes up the body of the loop and should be
+        Returns the regions that make up the body of the loop and should be
         inspected for loop-invariant operations.
       }],
-      "::mlir::Region &", "getLoopBody"
+      /*retTy=*/"::llvm::SmallVector<::mlir::Region *>",
+      /*methodName=*/"getLoopRegions"
     >,
     InterfaceMethod<[{
         Moves the given loop-invariant operation out of the loop.
       }],
-      "void", "moveOutOfLoop",
-      (ins "::mlir::Operation *":$op), [{}], [{
-        op->moveBefore($_op);
-      }]
+      /*retTy=*/"void",
+      /*methodName=*/"moveOutOfLoop",
+      /*args=*/(ins "::mlir::Operation *":$op),
+      /*methodBody=*/"",
+      /*defaultImplementation=*/"op->moveBefore($_op);"
     >,
     InterfaceMethod<[{
         Promotes the loop body to its containing block if the loop is known to
@@ -109,6 +116,56 @@ def LoopLikeOpInterface : OpInterface<"LoopLikeOpInterface"> {
         return std::nullopt;
       }]
     >,
+    InterfaceMethod<[{
+        Return the "init" operands that are used as initialization values for
+        the region "iter_args" of this loop.
+      }],
+      /*retTy=*/"::mlir::OperandRange",
+      /*methodName=*/"getInits",
+      /*args=*/(ins),
+      /*methodBody=*/"",
+      /*defaultImplementation=*/[{
+        return ::mlir::OperandRange($_op->operand_end(), $_op->operand_end());
+      }]
+    >,
+    InterfaceMethod<[{
+        Return the region "iter_args" (block arguments) that correspond to the
+        "init" operands. If the op has multiple regions, return the
+        corresponding block arguments of the entry region.
+      }],
+      /*retTy=*/"::mlir::Block::BlockArgListType",
+      /*methodName=*/"getRegionIterArgs",
+      /*args=*/(ins),
+      /*methodBody=*/"",
+      /*defaultImplementation=*/[{
+        return ::mlir::Block::BlockArgListType();
+      }]
+    >,
+    InterfaceMethod<[{
+        Append the specified additional "init" operands: replace this loop with
+        a new loop that has the additional init operands. The loop body of
+        this loop is moved over to the new loop.
+
+        `newInitOperands` specifies the additional "init" operands.
+        `newYieldValuesFn` is a function that returns the yielded values (which
+        can be computed based on the additional region iter_args). If
+        `replaceInitOperandUsesInLoop` is set, all uses of the additional init
+        operands inside of this loop are replaced with the corresponding, newly
+        added region iter_args.
+
+        Note: Loops that do not support init/iter_args should return "failure".
+      }],
+      /*retTy=*/"::mlir::FailureOr<::mlir::LoopLikeOpInterface>",
+      /*methodName=*/"replaceWithAdditionalYields",
+      /*args=*/(ins "::mlir::RewriterBase &":$rewriter,
+                    "::mlir::ValueRange":$newInitOperands,
+                    "bool":$replaceInitOperandUsesInLoop,
+                    "const ::mlir::NewYieldValuesFn &":$newYieldValuesFn),
+      /*methodBody=*/"",
+      /*defaultImplementation=*/[{
+        return ::mlir::failure();
+      }]
+    >,
   ];
 
   let extraClassDeclaration = [{
@@ -116,6 +173,24 @@ def LoopLikeOpInterface : OpInterface<"LoopLikeOpInterface"> {
     /// can either be because the block is nested inside a LoopLikeInterface, or
     /// because the control flow graph is cyclic
     static bool blockIsInLoop(Block *block);
+  }];
+
+  let extraSharedClassDeclaration = [{
+    /// Append the specified additional "init" operands: replace this loop with
+    /// a new loop that has the additional init operands. The loop body of this
+    /// loop is moved over to the new loop.
+    ///
+    /// The newly added region iter_args are yielded from the loop.
+    ::mlir::FailureOr<::mlir::LoopLikeOpInterface>
+        replaceWithAdditionalIterOperands(::mlir::RewriterBase &rewriter,
+                                          ::mlir::ValueRange newInitOperands,
+                                          bool replaceInitOperandUsesInLoop) {
+      return $_op.replaceWithAdditionalYields(
+          rewriter, newInitOperands, replaceInitOperandUsesInLoop,
+          [](OpBuilder &b, Location loc, ArrayRef<BlockArgument> newBBArgs) {
+            return SmallVector<Value>(newBBArgs);
+          });
+    }
   }];
 }
 

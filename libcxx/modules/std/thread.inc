@@ -15,7 +15,9 @@ export namespace std {
   using std::swap;
 
   // [thread.jthread.class], class jthread
-  // using std::jthread;
+#  if !defined(_LIBCPP_HAS_NO_EXPERIMENTAL_STOP_TOKEN)
+  using std::jthread;
+#  endif
 
   // [thread.thread.this], namespace this_thread
   namespace this_thread {

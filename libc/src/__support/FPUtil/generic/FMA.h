@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_LIBC_SRC_SUPPORT_FPUTIL_GENERIC_FMA_H
-#define LLVM_LIBC_SRC_SUPPORT_FPUTIL_GENERIC_FMA_H
+#ifndef LLVM_LIBC_SRC___SUPPORT_FPUTIL_GENERIC_FMA_H
+#define LLVM_LIBC_SRC___SUPPORT_FPUTIL_GENERIC_FMA_H
 
 #include "src/__support/CPP/type_traits.h"
 #include "src/__support/FPUtil/FEnvImpl.h"
@@ -19,7 +19,7 @@
 #include "src/__support/macros/attributes.h"   // LIBC_INLINE
 #include "src/__support/macros/optimization.h" // LIBC_UNLIKELY
 
-namespace __llvm_libc {
+namespace LIBC_NAMESPACE {
 namespace fputil {
 namespace generic {
 
@@ -290,6 +290,6 @@ template <> LIBC_INLINE double fma<double>(double x, double y, double z) {
 
 } // namespace generic
 } // namespace fputil
-} // namespace __llvm_libc
+} // namespace LIBC_NAMESPACE
 
-#endif // LLVM_LIBC_SRC_SUPPORT_FPUTIL_GENERIC_FMA_H
+#endif // LLVM_LIBC_SRC___SUPPORT_FPUTIL_GENERIC_FMA_H

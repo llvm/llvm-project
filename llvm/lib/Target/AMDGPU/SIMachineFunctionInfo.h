@@ -16,10 +16,12 @@
 #include "AMDGPUArgumentUsageInfo.h"
 #include "AMDGPUMachineFunction.h"
 #include "AMDGPUTargetMachine.h"
+#include "GCNSubtarget.h"
 #include "MCTargetDesc/AMDGPUMCTargetDesc.h"
 #include "SIInstrInfo.h"
 #include "SIModeRegisterDefaults.h"
 #include "llvm/ADT/SetVector.h"
+#include "llvm/ADT/SmallVector.h"
 #include "llvm/CodeGen/MIRYamlMapping.h"
 #include "llvm/CodeGen/PseudoSourceValue.h"
 #include "llvm/Support/raw_ostream.h"
@@ -436,13 +438,9 @@ private:
   unsigned NumSpilledSGPRs = 0;
   unsigned NumSpilledVGPRs = 0;
 
-  // Feature bits required for inputs passed in user SGPRs.
-  bool PrivateSegmentBuffer : 1;
-  bool DispatchPtr : 1;
-  bool QueuePtr : 1;
-  bool KernargSegmentPtr : 1;
-  bool DispatchID : 1;
-  bool FlatScratchInit : 1;
+  // Tracks information about user SGPRs that will be setup by hardware which
+  // will apply to all wavefronts of the grid.
+  GCNUserSGPRUsageInfo UserSGPRInfo;
 
   // Feature bits required for inputs passed in system SGPRs.
   bool WorkGroupIDX : 1; // Always initialized.
@@ -455,11 +453,6 @@ private:
   bool WorkItemIDX : 1; // Always initialized.
   bool WorkItemIDY : 1;
   bool WorkItemIDZ : 1;
-
-  // Private memory buffer
-  // Compute directly in sgpr[0:1]
-  // Other shaders indirect 64-bits at sgpr[0:1]
-  bool ImplicitBufferPtr : 1;
 
   // Pointer to where the ABI inserts special kernel arguments separate from the
   // user arguments. This is an offset from the KernargSegmentPtr.
@@ -601,6 +594,10 @@ public:
     return PrologEpilogSGPRSpills;
   }
 
+  GCNUserSGPRUsageInfo &getUserSGPRInfo() { return UserSGPRInfo; }
+
+  const GCNUserSGPRUsageInfo &getUserSGPRInfo() const { return UserSGPRInfo; }
+
   void addToPrologEpilogSGPRSpills(Register Reg,
                                    PrologEpilogSGPRSaveRestoreInfo SI) {
     PrologEpilogSGPRSpills.insert(std::make_pair(Reg, SI));
@@ -733,6 +730,10 @@ public:
   Register addFlatScratchInit(const SIRegisterInfo &TRI);
   Register addImplicitBufferPtr(const SIRegisterInfo &TRI);
   Register addLDSKernelId();
+  SmallVectorImpl<MCRegister> *
+  addPreloadedKernArg(const SIRegisterInfo &TRI, const TargetRegisterClass *RC,
+                      unsigned AllocSizeDWord, int KernArgIdx,
+                      int PaddingSGPRs);
 
   /// Increment user SGPRs used for padding the argument list only.
   Register addReservedUserSGPR() {
@@ -780,6 +781,8 @@ public:
     return ArgInfo.WorkGroupInfo.getRegister();
   }
 
+  bool hasLDSKernelId() const { return LDSKernelId; }
+
   // Add special VGPR inputs
   void setWorkItemIDX(ArgDescriptor Arg) {
     ArgInfo.WorkItemIDX = Arg;
@@ -804,30 +807,6 @@ public:
     ArgInfo.PrivateSegmentWaveByteOffset = ArgDescriptor::createRegister(Reg);
   }
 
-  bool hasPrivateSegmentBuffer() const {
-    return PrivateSegmentBuffer;
-  }
-
-  bool hasDispatchPtr() const {
-    return DispatchPtr;
-  }
-
-  bool hasQueuePtr() const {
-    return QueuePtr;
-  }
-
-  bool hasKernargSegmentPtr() const {
-    return KernargSegmentPtr;
-  }
-
-  bool hasDispatchID() const {
-    return DispatchID;
-  }
-
-  bool hasFlatScratchInit() const {
-    return FlatScratchInit;
-  }
-
   bool hasWorkGroupIDX() const {
     return WorkGroupIDX;
   }
@@ -843,8 +822,6 @@ public:
   bool hasWorkGroupInfo() const {
     return WorkGroupInfo;
   }
-
-  bool hasLDSKernelId() const { return LDSKernelId; }
 
   bool hasPrivateSegmentWaveByteOffset() const {
     return PrivateSegmentWaveByteOffset;
@@ -864,10 +841,6 @@ public:
 
   bool hasImplicitArgPtr() const {
     return ImplicitArgPtr;
-  }
-
-  bool hasImplicitBufferPtr() const {
-    return ImplicitBufferPtr;
   }
 
   AMDGPUFunctionArgInfo &getArgInfo() {
@@ -904,6 +877,10 @@ public:
 
   unsigned getNumPreloadedSGPRs() const {
     return NumUserSGPRs + NumSystemSGPRs;
+  }
+
+  unsigned getNumKernargPreloadedSGPRs() const {
+    return UserSGPRInfo.getNumKernargPreloadSGPRs();
   }
 
   Register getPrivateSegmentWaveByteOffsetSystemSGPR() const {

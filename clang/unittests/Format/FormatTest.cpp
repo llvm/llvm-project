@@ -7108,6 +7108,29 @@ TEST_F(FormatTest, ExpressionIndentationBreakingBeforeOperators) {
                "(someOtherLongishConditionPart1 || "
                "someOtherEvenLongerNestedConditionPart2);",
                Style);
+
+  Style = getLLVMStyleWithColumns(20);
+  Style.AlignAfterOpenBracket = FormatStyle::BAS_AlwaysBreak;
+  Style.BinPackParameters = false;
+  Style.BreakBeforeBinaryOperators = FormatStyle::BOS_NonAssignment;
+  Style.ContinuationIndentWidth = 2;
+  verifyFormat("struct Foo {\n"
+               "  Foo(\n"
+               "    int arg1,\n"
+               "    int arg2)\n"
+               "      : Base(\n"
+               "          arg1,\n"
+               "          arg2) {}\n"
+               "};",
+               Style);
+  verifyFormat("return abc\n"
+               "         ? foo(\n"
+               "             a,\n"
+               "             b,\n"
+               "             bar(\n"
+               "               abc))\n"
+               "         : g(abc);",
+               Style);
 }
 
 TEST_F(FormatTest, ExpressionIndentationStrictAlign) {

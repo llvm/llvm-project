@@ -20,7 +20,7 @@
 // CHECK-NEXT:    ret <vscale x 16 x i8> [[TMP0]]
 //
 svint8_t test_svread_hor_za8_s8(svint8_t zd, svbool_t pg, uint32_t slice_base) {
-    return SME_ACLE_FUNC(svread_hor_za8, _s8, _m)(zd, pg, 0, slice_base, 0);
+    return SME_ACLE_FUNC(svread_hor_za8, _s8, _m)(zd, pg, 0, slice_base);
 }
 
 // CHECK-C-LABEL: @test_svread_hor_za8_s8_1(
@@ -31,7 +31,8 @@ svint8_t test_svread_hor_za8_s8(svint8_t zd, svbool_t pg, uint32_t slice_base) {
 // CHECK-NEXT:    ret <vscale x 16 x i8> [[TMP0]]
 //
 svint8_t test_svread_hor_za8_s8_1(svint8_t zd, svbool_t pg, uint32_t slice_base) {
-    return SME_ACLE_FUNC(svread_hor_za8, _s8, _m)(zd, pg, 0, slice_base, 15);
+    uint32_t slice = slice_base + 15;
+    return SME_ACLE_FUNC(svread_hor_za8, _s8, _m)(zd, pg, 0, slice);
 }
 
 // CHECK-C-LABEL: @test_svread_hor_za16_s16(
@@ -42,19 +43,20 @@ svint8_t test_svread_hor_za8_s8_1(svint8_t zd, svbool_t pg, uint32_t slice_base)
 // CHECK-NEXT:    ret <vscale x 8 x i16> [[TMP1]]
 //
 svint16_t test_svread_hor_za16_s16(svint16_t zd, svbool_t pg, uint32_t slice_base) {
-     return SME_ACLE_FUNC(svread_hor_za16, _s16, _m)(zd, pg, 0, slice_base, 0);
+     return SME_ACLE_FUNC(svread_hor_za16, _s16, _m)(zd, pg, 0, slice_base);
 }
 
 // CHECK-C-LABEL: @test_svread_hor_za16_s16_1(
 // CHECK-CXX-LABEL: @_Z26test_svread_hor_za16_s16_1u11__SVInt16_tu10__SVBool_tj(
 // CHECK-NEXT:  entry:
-// CHECK-NEXT:    [[TMP0:%.*]] = tail call <vscale x 8 x i1> @llvm.aarch64.sve.convert.from.svbool.nxv8i1(<vscale x 16 x i1> [[PG:%.*]])
 // CHECK-NEXT:    [[TILESLICE:%.*]] = add i32 [[SLICE_BASE:%.*]], 7
+// CHECK-NEXT:    [[TMP0:%.*]] = tail call <vscale x 8 x i1> @llvm.aarch64.sve.convert.from.svbool.nxv8i1(<vscale x 16 x i1> [[PG:%.*]])
 // CHECK-NEXT:    [[TMP1:%.*]] = tail call <vscale x 8 x i16> @llvm.aarch64.sme.read.horiz.nxv8i16(<vscale x 8 x i16> [[ZD:%.*]], <vscale x 8 x i1> [[TMP0]], i32 1, i32 [[TILESLICE]])
 // CHECK-NEXT:    ret <vscale x 8 x i16> [[TMP1]]
 //
 svint16_t test_svread_hor_za16_s16_1(svint16_t zd, svbool_t pg, uint32_t slice_base) {
-     return SME_ACLE_FUNC(svread_hor_za16, _s16, _m)(zd, pg, 1, slice_base, 7);
+     uint32_t slice = slice_base + 7;
+     return SME_ACLE_FUNC(svread_hor_za16, _s16, _m)(zd, pg, 1, slice);
 }
 
 // CHECK-C-LABEL: @test_svread_hor_za32_s32(
@@ -65,19 +67,20 @@ svint16_t test_svread_hor_za16_s16_1(svint16_t zd, svbool_t pg, uint32_t slice_b
 // CHECK-NEXT:    ret <vscale x 4 x i32> [[TMP1]]
 //
 svint32_t test_svread_hor_za32_s32(svint32_t zd, svbool_t pg, uint32_t slice_base) {
-    return SME_ACLE_FUNC(svread_hor_za32, _s32, _m)(zd, pg, 0, slice_base, 0);
+    return SME_ACLE_FUNC(svread_hor_za32, _s32, _m)(zd, pg, 0, slice_base);
 }
 
 // CHECK-C-LABEL: @test_svread_hor_za32_s32_1(
 // CHECK-CXX-LABEL: @_Z26test_svread_hor_za32_s32_1u11__SVInt32_tu10__SVBool_tj(
 // CHECK-NEXT:  entry:
-// CHECK-NEXT:    [[TMP0:%.*]] = tail call <vscale x 4 x i1> @llvm.aarch64.sve.convert.from.svbool.nxv4i1(<vscale x 16 x i1> [[PG:%.*]])
 // CHECK-NEXT:    [[TILESLICE:%.*]] = add i32 [[SLICE_BASE:%.*]], 3
+// CHECK-NEXT:    [[TMP0:%.*]] = tail call <vscale x 4 x i1> @llvm.aarch64.sve.convert.from.svbool.nxv4i1(<vscale x 16 x i1> [[PG:%.*]])
 // CHECK-NEXT:    [[TMP1:%.*]] = tail call <vscale x 4 x i32> @llvm.aarch64.sme.read.horiz.nxv4i32(<vscale x 4 x i32> [[ZD:%.*]], <vscale x 4 x i1> [[TMP0]], i32 3, i32 [[TILESLICE]])
 // CHECK-NEXT:    ret <vscale x 4 x i32> [[TMP1]]
 //
 svint32_t test_svread_hor_za32_s32_1(svint32_t zd, svbool_t pg, uint32_t slice_base)  {
-    return SME_ACLE_FUNC(svread_hor_za32, _s32, _m)(zd, pg, 3, slice_base, 3);
+    uint32_t slice = slice_base + 3;
+    return SME_ACLE_FUNC(svread_hor_za32, _s32, _m)(zd, pg, 3, slice);
 }
 
 // CHECK-C-LABEL: @test_svread_hor_za64_s64(
@@ -88,19 +91,20 @@ svint32_t test_svread_hor_za32_s32_1(svint32_t zd, svbool_t pg, uint32_t slice_b
 // CHECK-NEXT:    ret <vscale x 2 x i64> [[TMP1]]
 //
 svint64_t test_svread_hor_za64_s64(svint64_t zd, svbool_t pg, uint32_t slice_base)  {
-    return SME_ACLE_FUNC(svread_hor_za64, _s64, _m)(zd, pg, 0, slice_base, 0);
+    return SME_ACLE_FUNC(svread_hor_za64, _s64, _m)(zd, pg, 0, slice_base);
 }
 
 // CHECK-C-LABEL: @test_svread_hor_za64_s64_1(
 // CHECK-CXX-LABEL: @_Z26test_svread_hor_za64_s64_1u11__SVInt64_tu10__SVBool_tj(
 // CHECK-NEXT:  entry:
-// CHECK-NEXT:    [[TMP0:%.*]] = tail call <vscale x 2 x i1> @llvm.aarch64.sve.convert.from.svbool.nxv2i1(<vscale x 16 x i1> [[PG:%.*]])
 // CHECK-NEXT:    [[TILESLICE:%.*]] = add i32 [[SLICE_BASE:%.*]], 1
+// CHECK-NEXT:    [[TMP0:%.*]] = tail call <vscale x 2 x i1> @llvm.aarch64.sve.convert.from.svbool.nxv2i1(<vscale x 16 x i1> [[PG:%.*]])
 // CHECK-NEXT:    [[TMP1:%.*]] = tail call <vscale x 2 x i64> @llvm.aarch64.sme.read.horiz.nxv2i64(<vscale x 2 x i64> [[ZD:%.*]], <vscale x 2 x i1> [[TMP0]], i32 7, i32 [[TILESLICE]])
 // CHECK-NEXT:    ret <vscale x 2 x i64> [[TMP1]]
 //
 svint64_t test_svread_hor_za64_s64_1(svint64_t zd, svbool_t pg, uint32_t slice_base)  {
-    return SME_ACLE_FUNC(svread_hor_za64, _s64, _m)(zd, pg, 7, slice_base, 1);
+    uint32_t slice = slice_base + 1;
+    return SME_ACLE_FUNC(svread_hor_za64, _s64, _m)(zd, pg, 7, slice);
 }
 
 // CHECK-C-LABEL: @test_svread_hor_za8_u8(
@@ -110,7 +114,7 @@ svint64_t test_svread_hor_za64_s64_1(svint64_t zd, svbool_t pg, uint32_t slice_b
 // CHECK-NEXT:    ret <vscale x 16 x i8> [[TMP0]]
 //
 svuint8_t test_svread_hor_za8_u8(svuint8_t zd, svbool_t pg, uint32_t slice_base)  {
-    return SME_ACLE_FUNC(svread_hor_za8, _u8, _m)(zd, pg, 0, slice_base, 0);
+    return SME_ACLE_FUNC(svread_hor_za8, _u8, _m)(zd, pg, 0, slice_base);
 }
 
 // CHECK-C-LABEL: @test_svread_hor_za8_u8_1(
@@ -121,7 +125,8 @@ svuint8_t test_svread_hor_za8_u8(svuint8_t zd, svbool_t pg, uint32_t slice_base)
 // CHECK-NEXT:    ret <vscale x 16 x i8> [[TMP0]]
 //
 svuint8_t test_svread_hor_za8_u8_1(svuint8_t zd, svbool_t pg, uint32_t slice_base)  {
-    return SME_ACLE_FUNC(svread_hor_za8, _u8, _m)(zd, pg, 0, slice_base, 15);
+    uint32_t slice = slice_base + 15;
+    return SME_ACLE_FUNC(svread_hor_za8, _u8, _m)(zd, pg, 0, slice);
 }
 
 // CHECK-C-LABEL: @test_svread_hor_za16_u16(
@@ -132,19 +137,20 @@ svuint8_t test_svread_hor_za8_u8_1(svuint8_t zd, svbool_t pg, uint32_t slice_bas
 // CHECK-NEXT:    ret <vscale x 8 x i16> [[TMP1]]
 //
 svuint16_t test_svread_hor_za16_u16(svuint16_t zd, svbool_t pg, uint32_t slice_base)  {
-    return SME_ACLE_FUNC(svread_hor_za16, _u16, _m)(zd, pg, 0, slice_base, 0);
+    return SME_ACLE_FUNC(svread_hor_za16, _u16, _m)(zd, pg, 0, slice_base);
 }
 
 // CHECK-C-LABEL: @test_svread_hor_za16_u16_1(
 // CHECK-CXX-LABEL: @_Z26test_svread_hor_za16_u16_1u12__SVUint16_tu10__SVBool_tj(
 // CHECK-NEXT:  entry:
-// CHECK-NEXT:    [[TMP0:%.*]] = tail call <vscale x 8 x i1> @llvm.aarch64.sve.convert.from.svbool.nxv8i1(<vscale x 16 x i1> [[PG:%.*]])
 // CHECK-NEXT:    [[TILESLICE:%.*]] = add i32 [[SLICE_BASE:%.*]], 7
+// CHECK-NEXT:    [[TMP0:%.*]] = tail call <vscale x 8 x i1> @llvm.aarch64.sve.convert.from.svbool.nxv8i1(<vscale x 16 x i1> [[PG:%.*]])
 // CHECK-NEXT:    [[TMP1:%.*]] = tail call <vscale x 8 x i16> @llvm.aarch64.sme.read.horiz.nxv8i16(<vscale x 8 x i16> [[ZD:%.*]], <vscale x 8 x i1> [[TMP0]], i32 1, i32 [[TILESLICE]])
 // CHECK-NEXT:    ret <vscale x 8 x i16> [[TMP1]]
 //
 svuint16_t test_svread_hor_za16_u16_1(svuint16_t zd, svbool_t pg, uint32_t slice_base)  {
-    return SME_ACLE_FUNC(svread_hor_za16, _u16, _m)(zd, pg, 1, slice_base, 7);
+    uint32_t slice = slice_base + 7;
+    return SME_ACLE_FUNC(svread_hor_za16, _u16, _m)(zd, pg, 1, slice);
 }
 
 // CHECK-C-LABEL: @test_svread_hor_za32_u32(
@@ -155,19 +161,20 @@ svuint16_t test_svread_hor_za16_u16_1(svuint16_t zd, svbool_t pg, uint32_t slice
 // CHECK-NEXT:    ret <vscale x 4 x i32> [[TMP1]]
 //
 svuint32_t test_svread_hor_za32_u32(svuint32_t zd, svbool_t pg, uint32_t slice_base)  {
-    return SME_ACLE_FUNC(svread_hor_za32, _u32, _m)(zd, pg, 0, slice_base, 0);
+    return SME_ACLE_FUNC(svread_hor_za32, _u32, _m)(zd, pg, 0, slice_base);
 }
 
 // CHECK-C-LABEL: @test_svread_hor_za32_u32_1(
 // CHECK-CXX-LABEL: @_Z26test_svread_hor_za32_u32_1u12__SVUint32_tu10__SVBool_tj(
 // CHECK-NEXT:  entry:
-// CHECK-NEXT:    [[TMP0:%.*]] = tail call <vscale x 4 x i1> @llvm.aarch64.sve.convert.from.svbool.nxv4i1(<vscale x 16 x i1> [[PG:%.*]])
 // CHECK-NEXT:    [[TILESLICE:%.*]] = add i32 [[SLICE_BASE:%.*]], 3
+// CHECK-NEXT:    [[TMP0:%.*]] = tail call <vscale x 4 x i1> @llvm.aarch64.sve.convert.from.svbool.nxv4i1(<vscale x 16 x i1> [[PG:%.*]])
 // CHECK-NEXT:    [[TMP1:%.*]] = tail call <vscale x 4 x i32> @llvm.aarch64.sme.read.horiz.nxv4i32(<vscale x 4 x i32> [[ZD:%.*]], <vscale x 4 x i1> [[TMP0]], i32 3, i32 [[TILESLICE]])
 // CHECK-NEXT:    ret <vscale x 4 x i32> [[TMP1]]
 //
 svuint32_t test_svread_hor_za32_u32_1(svuint32_t zd, svbool_t pg, uint32_t slice_base)  {
-    return SME_ACLE_FUNC(svread_hor_za32, _u32, _m)(zd, pg, 3, slice_base, 3);
+    uint32_t slice = slice_base + 3;
+    return SME_ACLE_FUNC(svread_hor_za32, _u32, _m)(zd, pg, 3, slice);
 }
 
 // CHECK-C-LABEL: @test_svread_hor_za64_u64(
@@ -178,19 +185,20 @@ svuint32_t test_svread_hor_za32_u32_1(svuint32_t zd, svbool_t pg, uint32_t slice
 // CHECK-NEXT:    ret <vscale x 2 x i64> [[TMP1]]
 //
 svuint64_t test_svread_hor_za64_u64(svuint64_t zd, svbool_t pg, uint32_t slice_base)  {
-    return SME_ACLE_FUNC(svread_hor_za64, _u64, _m)(zd, pg, 0, slice_base, 0);
+    return SME_ACLE_FUNC(svread_hor_za64, _u64, _m)(zd, pg, 0, slice_base);
 }
 
 // CHECK-C-LABEL: @test_svread_hor_za64_u64_1(
 // CHECK-CXX-LABEL: @_Z26test_svread_hor_za64_u64_1u12__SVUint64_tu10__SVBool_tj(
 // CHECK-NEXT:  entry:
-// CHECK-NEXT:    [[TMP0:%.*]] = tail call <vscale x 2 x i1> @llvm.aarch64.sve.convert.from.svbool.nxv2i1(<vscale x 16 x i1> [[PG:%.*]])
 // CHECK-NEXT:    [[TILESLICE:%.*]] = add i32 [[SLICE_BASE:%.*]], 1
+// CHECK-NEXT:    [[TMP0:%.*]] = tail call <vscale x 2 x i1> @llvm.aarch64.sve.convert.from.svbool.nxv2i1(<vscale x 16 x i1> [[PG:%.*]])
 // CHECK-NEXT:    [[TMP1:%.*]] = tail call <vscale x 2 x i64> @llvm.aarch64.sme.read.horiz.nxv2i64(<vscale x 2 x i64> [[ZD:%.*]], <vscale x 2 x i1> [[TMP0]], i32 7, i32 [[TILESLICE]])
 // CHECK-NEXT:    ret <vscale x 2 x i64> [[TMP1]]
 //
 svuint64_t test_svread_hor_za64_u64_1(svuint64_t zd, svbool_t pg, uint32_t slice_base)  {
-    return SME_ACLE_FUNC(svread_hor_za64, _u64, _m)(zd, pg, 7, slice_base, 1);
+    uint32_t slice = slice_base + 1;
+    return SME_ACLE_FUNC(svread_hor_za64, _u64, _m)(zd, pg, 7, slice);
 }
 
 // CHECK-C-LABEL: @test_svread_hor_za16_f16(
@@ -201,19 +209,20 @@ svuint64_t test_svread_hor_za64_u64_1(svuint64_t zd, svbool_t pg, uint32_t slice
 // CHECK-NEXT:    ret <vscale x 8 x half> [[TMP1]]
 //
 svfloat16_t test_svread_hor_za16_f16(svfloat16_t zd, svbool_t pg, uint32_t slice_base)  {
-    return SME_ACLE_FUNC(svread_hor_za16, _f16, _m)(zd, pg, 0, slice_base, 0);
+    return SME_ACLE_FUNC(svread_hor_za16, _f16, _m)(zd, pg, 0, slice_base);
 }
 
 // CHECK-C-LABEL: @test_svread_hor_za16_f16_1(
 // CHECK-CXX-LABEL: @_Z26test_svread_hor_za16_f16_1u13__SVFloat16_tu10__SVBool_tj(
 // CHECK-NEXT:  entry:
-// CHECK-NEXT:    [[TMP0:%.*]] = tail call <vscale x 8 x i1> @llvm.aarch64.sve.convert.from.svbool.nxv8i1(<vscale x 16 x i1> [[PG:%.*]])
 // CHECK-NEXT:    [[TILESLICE:%.*]] = add i32 [[SLICE_BASE:%.*]], 7
+// CHECK-NEXT:    [[TMP0:%.*]] = tail call <vscale x 8 x i1> @llvm.aarch64.sve.convert.from.svbool.nxv8i1(<vscale x 16 x i1> [[PG:%.*]])
 // CHECK-NEXT:    [[TMP1:%.*]] = tail call <vscale x 8 x half> @llvm.aarch64.sme.read.horiz.nxv8f16(<vscale x 8 x half> [[ZD:%.*]], <vscale x 8 x i1> [[TMP0]], i32 1, i32 [[TILESLICE]])
 // CHECK-NEXT:    ret <vscale x 8 x half> [[TMP1]]
 //
 svfloat16_t test_svread_hor_za16_f16_1(svfloat16_t zd, svbool_t pg, uint32_t slice_base)  {
-    return SME_ACLE_FUNC(svread_hor_za16, _f16, _m)(zd, pg, 1, slice_base, 7);
+    uint32_t slice = slice_base + 7;
+    return SME_ACLE_FUNC(svread_hor_za16, _f16, _m)(zd, pg, 1, slice);
 }
 
 // CHECK-C-LABEL: @test_svread_hor_za16_bf16(
@@ -224,19 +233,20 @@ svfloat16_t test_svread_hor_za16_f16_1(svfloat16_t zd, svbool_t pg, uint32_t sli
 // CHECK-NEXT:    ret <vscale x 8 x bfloat> [[TMP1]]
 //
 svbfloat16_t test_svread_hor_za16_bf16(svbfloat16_t zd, svbool_t pg, uint32_t slice_base)  {
-    return SME_ACLE_FUNC(svread_hor_za16, _bf16, _m)(zd, pg, 0, slice_base, 0);
+    return SME_ACLE_FUNC(svread_hor_za16, _bf16, _m)(zd, pg, 0, slice_base);
 }
 
 // CHECK-C-LABEL: @test_svread_hor_za16_bf16_1(
 // CHECK-CXX-LABEL: @_Z27test_svread_hor_za16_bf16_1u14__SVBFloat16_tu10__SVBool_tj(
 // CHECK-NEXT:  entry:
-// CHECK-NEXT:    [[TMP0:%.*]] = tail call <vscale x 8 x i1> @llvm.aarch64.sve.convert.from.svbool.nxv8i1(<vscale x 16 x i1> [[PG:%.*]])
 // CHECK-NEXT:    [[TILESLICE:%.*]] = add i32 [[SLICE_BASE:%.*]], 7
+// CHECK-NEXT:    [[TMP0:%.*]] = tail call <vscale x 8 x i1> @llvm.aarch64.sve.convert.from.svbool.nxv8i1(<vscale x 16 x i1> [[PG:%.*]])
 // CHECK-NEXT:    [[TMP1:%.*]] = tail call <vscale x 8 x bfloat> @llvm.aarch64.sme.read.horiz.nxv8bf16(<vscale x 8 x bfloat> [[ZD:%.*]], <vscale x 8 x i1> [[TMP0]], i32 1, i32 [[TILESLICE]])
 // CHECK-NEXT:    ret <vscale x 8 x bfloat> [[TMP1]]
 //
 svbfloat16_t test_svread_hor_za16_bf16_1(svbfloat16_t zd, svbool_t pg, uint32_t slice_base)  {
-    return SME_ACLE_FUNC(svread_hor_za16, _bf16, _m)(zd, pg, 1, slice_base, 7);
+    uint32_t slice = slice_base + 7;
+    return SME_ACLE_FUNC(svread_hor_za16, _bf16, _m)(zd, pg, 1, slice);
 }
 
 // CHECK-C-LABEL: @test_svread_hor_za32_f32(
@@ -247,19 +257,20 @@ svbfloat16_t test_svread_hor_za16_bf16_1(svbfloat16_t zd, svbool_t pg, uint32_t 
 // CHECK-NEXT:    ret <vscale x 4 x float> [[TMP1]]
 //
 svfloat32_t test_svread_hor_za32_f32(svfloat32_t zd, svbool_t pg, uint32_t slice_base)  {
-    return SME_ACLE_FUNC(svread_hor_za32, _f32, _m)(zd, pg, 0, slice_base, 0);
+    return SME_ACLE_FUNC(svread_hor_za32, _f32, _m)(zd, pg, 0, slice_base);
 }
 
 // CHECK-C-LABEL: @test_svread_hor_za32_f32_1(
 // CHECK-CXX-LABEL: @_Z26test_svread_hor_za32_f32_1u13__SVFloat32_tu10__SVBool_tj(
 // CHECK-NEXT:  entry:
-// CHECK-NEXT:    [[TMP0:%.*]] = tail call <vscale x 4 x i1> @llvm.aarch64.sve.convert.from.svbool.nxv4i1(<vscale x 16 x i1> [[PG:%.*]])
 // CHECK-NEXT:    [[TILESLICE:%.*]] = add i32 [[SLICE_BASE:%.*]], 3
+// CHECK-NEXT:    [[TMP0:%.*]] = tail call <vscale x 4 x i1> @llvm.aarch64.sve.convert.from.svbool.nxv4i1(<vscale x 16 x i1> [[PG:%.*]])
 // CHECK-NEXT:    [[TMP1:%.*]] = tail call <vscale x 4 x float> @llvm.aarch64.sme.read.horiz.nxv4f32(<vscale x 4 x float> [[ZD:%.*]], <vscale x 4 x i1> [[TMP0]], i32 3, i32 [[TILESLICE]])
 // CHECK-NEXT:    ret <vscale x 4 x float> [[TMP1]]
 //
 svfloat32_t test_svread_hor_za32_f32_1(svfloat32_t zd, svbool_t pg, uint32_t slice_base)  {
-    return SME_ACLE_FUNC(svread_hor_za32, _f32, _m)(zd, pg, 3, slice_base, 3);
+    uint32_t slice = slice_base + 3;
+    return SME_ACLE_FUNC(svread_hor_za32, _f32, _m)(zd, pg, 3, slice);
 }
 
 // CHECK-C-LABEL: @test_svread_hor_za64_f64(
@@ -270,19 +281,20 @@ svfloat32_t test_svread_hor_za32_f32_1(svfloat32_t zd, svbool_t pg, uint32_t sli
 // CHECK-NEXT:    ret <vscale x 2 x double> [[TMP1]]
 //
 svfloat64_t test_svread_hor_za64_f64(svfloat64_t zd, svbool_t pg, uint32_t slice_base)  {
-    return SME_ACLE_FUNC(svread_hor_za64, _f64, _m)(zd, pg, 0, slice_base, 0);
+    return SME_ACLE_FUNC(svread_hor_za64, _f64, _m)(zd, pg, 0, slice_base);
 }
 
 // CHECK-C-LABEL: @test_svread_hor_za64_f64_1(
 // CHECK-CXX-LABEL: @_Z26test_svread_hor_za64_f64_1u13__SVFloat64_tu10__SVBool_tj(
 // CHECK-NEXT:  entry:
-// CHECK-NEXT:    [[TMP0:%.*]] = tail call <vscale x 2 x i1> @llvm.aarch64.sve.convert.from.svbool.nxv2i1(<vscale x 16 x i1> [[PG:%.*]])
 // CHECK-NEXT:    [[TILESLICE:%.*]] = add i32 [[SLICE_BASE:%.*]], 1
+// CHECK-NEXT:    [[TMP0:%.*]] = tail call <vscale x 2 x i1> @llvm.aarch64.sve.convert.from.svbool.nxv2i1(<vscale x 16 x i1> [[PG:%.*]])
 // CHECK-NEXT:    [[TMP1:%.*]] = tail call <vscale x 2 x double> @llvm.aarch64.sme.read.horiz.nxv2f64(<vscale x 2 x double> [[ZD:%.*]], <vscale x 2 x i1> [[TMP0]], i32 7, i32 [[TILESLICE]])
 // CHECK-NEXT:    ret <vscale x 2 x double> [[TMP1]]
 //
 svfloat64_t test_svread_hor_za64_f64_1(svfloat64_t zd, svbool_t pg, uint32_t slice_base)  {
-    return SME_ACLE_FUNC(svread_hor_za64, _f64, _m)(zd, pg, 7, slice_base, 1);
+    uint32_t slice = slice_base + 1;
+    return SME_ACLE_FUNC(svread_hor_za64, _f64, _m)(zd, pg, 7, slice);
 }
 
 // CHECK-C-LABEL: @test_svread_hor_za128_s8(
@@ -292,7 +304,7 @@ svfloat64_t test_svread_hor_za64_f64_1(svfloat64_t zd, svbool_t pg, uint32_t sli
 // CHECK-NEXT:    ret <vscale x 16 x i8> [[TMP0]]
 //
 svint8_t test_svread_hor_za128_s8(svint8_t zd, svbool_t pg, uint32_t slice_base)  {
-    return SME_ACLE_FUNC(svread_hor_za128, _s8, _m)(zd, pg, 0, slice_base, 0);
+    return SME_ACLE_FUNC(svread_hor_za128, _s8, _m)(zd, pg, 0, slice_base);
 }
 
 // CHECK-C-LABEL: @test_svread_hor_za128_s8_1(
@@ -302,7 +314,7 @@ svint8_t test_svread_hor_za128_s8(svint8_t zd, svbool_t pg, uint32_t slice_base)
 // CHECK-NEXT:    ret <vscale x 16 x i8> [[TMP0]]
 //
 svint8_t test_svread_hor_za128_s8_1(svint8_t zd, svbool_t pg, uint32_t slice_base)  {
-    return SME_ACLE_FUNC(svread_hor_za128, _s8, _m)(zd, pg, 15, slice_base, 0);
+    return SME_ACLE_FUNC(svread_hor_za128, _s8, _m)(zd, pg, 15, slice_base);
 }
 
 // CHECK-C-LABEL: @test_svread_hor_za128_s16(
@@ -313,7 +325,7 @@ svint8_t test_svread_hor_za128_s8_1(svint8_t zd, svbool_t pg, uint32_t slice_bas
 // CHECK-NEXT:    ret <vscale x 8 x i16> [[TMP1]]
 //
 svint16_t test_svread_hor_za128_s16(svint16_t zd, svbool_t pg, uint32_t slice_base)  {
-    return SME_ACLE_FUNC(svread_hor_za128, _s16, _m)(zd, pg, 0, slice_base, 0);
+    return SME_ACLE_FUNC(svread_hor_za128, _s16, _m)(zd, pg, 0, slice_base);
 }
 
 // CHECK-C-LABEL: @test_svread_hor_za128_s16_1(
@@ -324,7 +336,7 @@ svint16_t test_svread_hor_za128_s16(svint16_t zd, svbool_t pg, uint32_t slice_ba
 // CHECK-NEXT:    ret <vscale x 8 x i16> [[TMP1]]
 //
 svint16_t test_svread_hor_za128_s16_1(svint16_t zd, svbool_t pg, uint32_t slice_base)  {
-    return SME_ACLE_FUNC(svread_hor_za128, _s16, _m)(zd, pg, 15, slice_base, 0);
+    return SME_ACLE_FUNC(svread_hor_za128, _s16, _m)(zd, pg, 15, slice_base);
 }
 
 // CHECK-C-LABEL: @test_svread_hor_za128_s32(
@@ -335,7 +347,7 @@ svint16_t test_svread_hor_za128_s16_1(svint16_t zd, svbool_t pg, uint32_t slice_
 // CHECK-NEXT:    ret <vscale x 4 x i32> [[TMP1]]
 //
 svint32_t test_svread_hor_za128_s32(svint32_t zd, svbool_t pg, uint32_t slice_base)  {
-    return SME_ACLE_FUNC(svread_hor_za128, _s32, _m)(zd, pg, 0, slice_base, 0);
+    return SME_ACLE_FUNC(svread_hor_za128, _s32, _m)(zd, pg, 0, slice_base);
 }
 
 // CHECK-C-LABEL: @test_svread_hor_za128_s32_1(
@@ -346,7 +358,7 @@ svint32_t test_svread_hor_za128_s32(svint32_t zd, svbool_t pg, uint32_t slice_ba
 // CHECK-NEXT:    ret <vscale x 4 x i32> [[TMP1]]
 //
 svint32_t test_svread_hor_za128_s32_1(svint32_t zd, svbool_t pg, uint32_t slice_base)  {
-    return SME_ACLE_FUNC(svread_hor_za128, _s32, _m)(zd, pg, 15, slice_base, 0);
+    return SME_ACLE_FUNC(svread_hor_za128, _s32, _m)(zd, pg, 15, slice_base);
 }
 
 // CHECK-C-LABEL: @test_svread_hor_za128_s64(
@@ -357,7 +369,7 @@ svint32_t test_svread_hor_za128_s32_1(svint32_t zd, svbool_t pg, uint32_t slice_
 // CHECK-NEXT:    ret <vscale x 2 x i64> [[TMP1]]
 //
 svint64_t test_svread_hor_za128_s64(svint64_t zd, svbool_t pg, uint32_t slice_base)  {
-    return SME_ACLE_FUNC(svread_hor_za128, _s64, _m)(zd, pg, 0, slice_base, 0);
+    return SME_ACLE_FUNC(svread_hor_za128, _s64, _m)(zd, pg, 0, slice_base);
 }
 
 // CHECK-C-LABEL: @test_svread_hor_za128_s64_1(
@@ -368,7 +380,7 @@ svint64_t test_svread_hor_za128_s64(svint64_t zd, svbool_t pg, uint32_t slice_ba
 // CHECK-NEXT:    ret <vscale x 2 x i64> [[TMP1]]
 //
 svint64_t test_svread_hor_za128_s64_1(svint64_t zd, svbool_t pg, uint32_t slice_base)  {
-    return SME_ACLE_FUNC(svread_hor_za128, _s64, _m)(zd, pg, 15, slice_base, 0);
+    return SME_ACLE_FUNC(svread_hor_za128, _s64, _m)(zd, pg, 15, slice_base);
 }
 
 // CHECK-C-LABEL: @test_svread_hor_za128_u8(
@@ -378,7 +390,7 @@ svint64_t test_svread_hor_za128_s64_1(svint64_t zd, svbool_t pg, uint32_t slice_
 // CHECK-NEXT:    ret <vscale x 16 x i8> [[TMP0]]
 //
 svuint8_t test_svread_hor_za128_u8(svuint8_t zd, svbool_t pg, uint32_t slice_base)  {
-    return SME_ACLE_FUNC(svread_hor_za128, _u8, _m)(zd, pg, 0, slice_base, 0);
+    return SME_ACLE_FUNC(svread_hor_za128, _u8, _m)(zd, pg, 0, slice_base);
 }
 
 // CHECK-C-LABEL: @test_svread_hor_za128_u8_1(
@@ -388,7 +400,7 @@ svuint8_t test_svread_hor_za128_u8(svuint8_t zd, svbool_t pg, uint32_t slice_bas
 // CHECK-NEXT:    ret <vscale x 16 x i8> [[TMP0]]
 //
 svuint8_t test_svread_hor_za128_u8_1(svuint8_t zd, svbool_t pg, uint32_t slice_base)  {
-    return SME_ACLE_FUNC(svread_hor_za128, _u8, _m)(zd, pg, 15, slice_base, 0);
+    return SME_ACLE_FUNC(svread_hor_za128, _u8, _m)(zd, pg, 15, slice_base);
 }
 
 // CHECK-C-LABEL: @test_svread_hor_za128_u16(
@@ -399,7 +411,7 @@ svuint8_t test_svread_hor_za128_u8_1(svuint8_t zd, svbool_t pg, uint32_t slice_b
 // CHECK-NEXT:    ret <vscale x 8 x i16> [[TMP1]]
 //
 svuint16_t test_svread_hor_za128_u16(svuint16_t zd, svbool_t pg, uint32_t slice_base)  {
-    return SME_ACLE_FUNC(svread_hor_za128, _u16, _m)(zd, pg, 0, slice_base, 0);
+    return SME_ACLE_FUNC(svread_hor_za128, _u16, _m)(zd, pg, 0, slice_base);
 }
 
 // CHECK-C-LABEL: @test_svread_hor_za128_u16_1(
@@ -410,7 +422,7 @@ svuint16_t test_svread_hor_za128_u16(svuint16_t zd, svbool_t pg, uint32_t slice_
 // CHECK-NEXT:    ret <vscale x 8 x i16> [[TMP1]]
 //
 svuint16_t test_svread_hor_za128_u16_1(svuint16_t zd, svbool_t pg, uint32_t slice_base)  {
-    return SME_ACLE_FUNC(svread_hor_za128, _u16, _m)(zd, pg, 15, slice_base, 0);
+    return SME_ACLE_FUNC(svread_hor_za128, _u16, _m)(zd, pg, 15, slice_base);
 }
 
 // CHECK-C-LABEL: @test_svread_hor_za128_u32(
@@ -421,7 +433,7 @@ svuint16_t test_svread_hor_za128_u16_1(svuint16_t zd, svbool_t pg, uint32_t slic
 // CHECK-NEXT:    ret <vscale x 4 x i32> [[TMP1]]
 //
 svuint32_t test_svread_hor_za128_u32(svuint32_t zd, svbool_t pg, uint32_t slice_base)  {
-    return SME_ACLE_FUNC(svread_hor_za128, _u32, _m)(zd, pg, 0, slice_base, 0);
+    return SME_ACLE_FUNC(svread_hor_za128, _u32, _m)(zd, pg, 0, slice_base);
 }
 
 // CHECK-C-LABEL: @test_svread_hor_za128_u32_1(
@@ -432,7 +444,7 @@ svuint32_t test_svread_hor_za128_u32(svuint32_t zd, svbool_t pg, uint32_t slice_
 // CHECK-NEXT:    ret <vscale x 4 x i32> [[TMP1]]
 //
 svuint32_t test_svread_hor_za128_u32_1(svuint32_t zd, svbool_t pg, uint32_t slice_base)  {
-    return SME_ACLE_FUNC(svread_hor_za128, _u32, _m)(zd, pg, 15, slice_base, 0);
+    return SME_ACLE_FUNC(svread_hor_za128, _u32, _m)(zd, pg, 15, slice_base);
 }
 
 // CHECK-C-LABEL: @test_svread_hor_za128_u64(
@@ -443,7 +455,7 @@ svuint32_t test_svread_hor_za128_u32_1(svuint32_t zd, svbool_t pg, uint32_t slic
 // CHECK-NEXT:    ret <vscale x 2 x i64> [[TMP1]]
 //
 svuint64_t test_svread_hor_za128_u64(svuint64_t zd, svbool_t pg, uint32_t slice_base)  {
-    return SME_ACLE_FUNC(svread_hor_za128, _u64, _m)(zd, pg, 0, slice_base, 0);
+    return SME_ACLE_FUNC(svread_hor_za128, _u64, _m)(zd, pg, 0, slice_base);
 }
 
 // CHECK-C-LABEL: @test_svread_hor_za128_u64_1(
@@ -454,7 +466,7 @@ svuint64_t test_svread_hor_za128_u64(svuint64_t zd, svbool_t pg, uint32_t slice_
 // CHECK-NEXT:    ret <vscale x 2 x i64> [[TMP1]]
 //
 svuint64_t test_svread_hor_za128_u64_1(svuint64_t zd, svbool_t pg, uint32_t slice_base)  {
-    return SME_ACLE_FUNC(svread_hor_za128, _u64, _m)(zd, pg, 15, slice_base, 0);
+    return SME_ACLE_FUNC(svread_hor_za128, _u64, _m)(zd, pg, 15, slice_base);
 }
 
 // CHECK-C-LABEL: @test_svread_hor_za128_f16(
@@ -465,7 +477,7 @@ svuint64_t test_svread_hor_za128_u64_1(svuint64_t zd, svbool_t pg, uint32_t slic
 // CHECK-NEXT:    ret <vscale x 8 x half> [[TMP1]]
 //
 svfloat16_t test_svread_hor_za128_f16(svfloat16_t zd, svbool_t pg, uint32_t slice_base)  {
-    return SME_ACLE_FUNC(svread_hor_za128, _f16, _m)(zd, pg, 0, slice_base, 0);
+    return SME_ACLE_FUNC(svread_hor_za128, _f16, _m)(zd, pg, 0, slice_base);
 }
 
 // CHECK-C-LABEL: @test_svread_hor_za128_f16_1(
@@ -476,7 +488,7 @@ svfloat16_t test_svread_hor_za128_f16(svfloat16_t zd, svbool_t pg, uint32_t slic
 // CHECK-NEXT:    ret <vscale x 8 x half> [[TMP1]]
 //
 svfloat16_t test_svread_hor_za128_f16_1(svfloat16_t zd, svbool_t pg, uint32_t slice_base)  {
-    return SME_ACLE_FUNC(svread_hor_za128, _f16, _m)(zd, pg, 15, slice_base, 0);
+    return SME_ACLE_FUNC(svread_hor_za128, _f16, _m)(zd, pg, 15, slice_base);
 }
 
 // CHECK-C-LABEL: @test_svread_hor_za128_bf16(
@@ -487,7 +499,7 @@ svfloat16_t test_svread_hor_za128_f16_1(svfloat16_t zd, svbool_t pg, uint32_t sl
 // CHECK-NEXT:    ret <vscale x 8 x bfloat> [[TMP1]]
 //
 svbfloat16_t test_svread_hor_za128_bf16(svbfloat16_t zd, svbool_t pg, uint32_t slice_base)  {
-    return SME_ACLE_FUNC(svread_hor_za128, _bf16, _m)(zd, pg, 0, slice_base, 0);
+    return SME_ACLE_FUNC(svread_hor_za128, _bf16, _m)(zd, pg, 0, slice_base);
 }
 
 // CHECK-C-LABEL: @test_svread_hor_za128_bf16_1(
@@ -498,7 +510,7 @@ svbfloat16_t test_svread_hor_za128_bf16(svbfloat16_t zd, svbool_t pg, uint32_t s
 // CHECK-NEXT:    ret <vscale x 8 x bfloat> [[TMP1]]
 //
 svbfloat16_t test_svread_hor_za128_bf16_1(svbfloat16_t zd, svbool_t pg, uint32_t slice_base)  {
-    return SME_ACLE_FUNC(svread_hor_za128, _bf16, _m)(zd, pg, 15, slice_base, 0);
+    return SME_ACLE_FUNC(svread_hor_za128, _bf16, _m)(zd, pg, 15, slice_base);
 }
 
 // CHECK-C-LABEL: @test_svread_hor_za128_f32(
@@ -509,7 +521,7 @@ svbfloat16_t test_svread_hor_za128_bf16_1(svbfloat16_t zd, svbool_t pg, uint32_t
 // CHECK-NEXT:    ret <vscale x 4 x float> [[TMP1]]
 //
 svfloat32_t test_svread_hor_za128_f32(svfloat32_t zd, svbool_t pg, uint32_t slice_base)  {
-    return SME_ACLE_FUNC(svread_hor_za128, _f32, _m)(zd, pg, 0, slice_base, 0);
+    return SME_ACLE_FUNC(svread_hor_za128, _f32, _m)(zd, pg, 0, slice_base);
 }
 
 // CHECK-C-LABEL: @test_svread_hor_za128_f32_1(
@@ -520,7 +532,7 @@ svfloat32_t test_svread_hor_za128_f32(svfloat32_t zd, svbool_t pg, uint32_t slic
 // CHECK-NEXT:    ret <vscale x 4 x float> [[TMP1]]
 //
 svfloat32_t test_svread_hor_za128_f32_1(svfloat32_t zd, svbool_t pg, uint32_t slice_base)  {
-    return SME_ACLE_FUNC(svread_hor_za128, _f32, _m)(zd, pg, 15, slice_base, 0);
+    return SME_ACLE_FUNC(svread_hor_za128, _f32, _m)(zd, pg, 15, slice_base);
 }
 
 // CHECK-C-LABEL: @test_svread_hor_za128_f64(
@@ -531,7 +543,7 @@ svfloat32_t test_svread_hor_za128_f32_1(svfloat32_t zd, svbool_t pg, uint32_t sl
 // CHECK-NEXT:    ret <vscale x 2 x double> [[TMP1]]
 //
 svfloat64_t test_svread_hor_za128_f64(svfloat64_t zd, svbool_t pg, uint32_t slice_base)  {
-    return SME_ACLE_FUNC(svread_hor_za128, _f64, _m)(zd, pg, 0, slice_base, 0);
+    return SME_ACLE_FUNC(svread_hor_za128, _f64, _m)(zd, pg, 0, slice_base);
 }
 
 // CHECK-C-LABEL: @test_svread_hor_za128_f64_1(
@@ -542,7 +554,7 @@ svfloat64_t test_svread_hor_za128_f64(svfloat64_t zd, svbool_t pg, uint32_t slic
 // CHECK-NEXT:    ret <vscale x 2 x double> [[TMP1]]
 //
 svfloat64_t test_svread_hor_za128_f64_1(svfloat64_t zd, svbool_t pg, uint32_t slice_base)  {
-    return SME_ACLE_FUNC(svread_hor_za128, _f64, _m)(zd, pg, 15, slice_base, 0);
+    return SME_ACLE_FUNC(svread_hor_za128, _f64, _m)(zd, pg, 15, slice_base);
 }
 
 // CHECK-C-LABEL: @test_svread_ver_za8_s8(
@@ -552,7 +564,7 @@ svfloat64_t test_svread_hor_za128_f64_1(svfloat64_t zd, svbool_t pg, uint32_t sl
 // CHECK-NEXT:    ret <vscale x 16 x i8> [[TMP0]]
 //
 svint8_t test_svread_ver_za8_s8(svint8_t zd, svbool_t pg, uint32_t slice_base)  {
-    return SME_ACLE_FUNC(svread_ver_za8, _s8, _m)(zd, pg, 0, slice_base, 0);
+    return SME_ACLE_FUNC(svread_ver_za8, _s8, _m)(zd, pg, 0, slice_base);
 }
 
 // CHECK-C-LABEL: @test_svread_ver_za8_s8_1(
@@ -563,7 +575,8 @@ svint8_t test_svread_ver_za8_s8(svint8_t zd, svbool_t pg, uint32_t slice_base)  
 // CHECK-NEXT:    ret <vscale x 16 x i8> [[TMP0]]
 //
 svint8_t test_svread_ver_za8_s8_1(svint8_t zd, svbool_t pg, uint32_t slice_base)  {
-    return SME_ACLE_FUNC(svread_ver_za8, _s8, _m)(zd, pg, 0, slice_base, 15);
+    uint32_t slice = slice_base + 15;
+    return SME_ACLE_FUNC(svread_ver_za8, _s8, _m)(zd, pg, 0, slice);
 }
 
 // CHECK-C-LABEL: @test_svread_ver_za16_s16(
@@ -574,19 +587,20 @@ svint8_t test_svread_ver_za8_s8_1(svint8_t zd, svbool_t pg, uint32_t slice_base)
 // CHECK-NEXT:    ret <vscale x 8 x i16> [[TMP1]]
 //
 svint16_t test_svread_ver_za16_s16(svint16_t zd, svbool_t pg, uint32_t slice_base)  {
-     return SME_ACLE_FUNC(svread_ver_za16, _s16, _m)(zd, pg, 0, slice_base, 0);
+     return SME_ACLE_FUNC(svread_ver_za16, _s16, _m)(zd, pg, 0, slice_base);
 }
 
 // CHECK-C-LABEL: @test_svread_ver_za16_s16_1(
 // CHECK-CXX-LABEL: @_Z26test_svread_ver_za16_s16_1u11__SVInt16_tu10__SVBool_tj(
 // CHECK-NEXT:  entry:
-// CHECK-NEXT:    [[TMP0:%.*]] = tail call <vscale x 8 x i1> @llvm.aarch64.sve.convert.from.svbool.nxv8i1(<vscale x 16 x i1> [[PG:%.*]])
 // CHECK-NEXT:    [[TILESLICE:%.*]] = add i32 [[SLICE_BASE:%.*]], 7
+// CHECK-NEXT:    [[TMP0:%.*]] = tail call <vscale x 8 x i1> @llvm.aarch64.sve.convert.from.svbool.nxv8i1(<vscale x 16 x i1> [[PG:%.*]])
 // CHECK-NEXT:    [[TMP1:%.*]] = tail call <vscale x 8 x i16> @llvm.aarch64.sme.read.vert.nxv8i16(<vscale x 8 x i16> [[ZD:%.*]], <vscale x 8 x i1> [[TMP0]], i32 1, i32 [[TILESLICE]])
 // CHECK-NEXT:    ret <vscale x 8 x i16> [[TMP1]]
 //
 svint16_t test_svread_ver_za16_s16_1(svint16_t zd, svbool_t pg, uint32_t slice_base)  {
-     return SME_ACLE_FUNC(svread_ver_za16, _s16, _m)(zd, pg, 1, slice_base, 7);
+     uint32_t slice = slice_base + 7;
+     return SME_ACLE_FUNC(svread_ver_za16, _s16, _m)(zd, pg, 1, slice);
 }
 
 // CHECK-C-LABEL: @test_svread_ver_za32_s32(
@@ -597,19 +611,20 @@ svint16_t test_svread_ver_za16_s16_1(svint16_t zd, svbool_t pg, uint32_t slice_b
 // CHECK-NEXT:    ret <vscale x 4 x i32> [[TMP1]]
 //
 svint32_t test_svread_ver_za32_s32(svint32_t zd, svbool_t pg, uint32_t slice_base)  {
-    return SME_ACLE_FUNC(svread_ver_za32, _s32, _m)(zd, pg, 0, slice_base, 0);
+    return SME_ACLE_FUNC(svread_ver_za32, _s32, _m)(zd, pg, 0, slice_base);
 }
 
 // CHECK-C-LABEL: @test_svread_ver_za32_s32_1(
 // CHECK-CXX-LABEL: @_Z26test_svread_ver_za32_s32_1u11__SVInt32_tu10__SVBool_tj(
 // CHECK-NEXT:  entry:
-// CHECK-NEXT:    [[TMP0:%.*]] = tail call <vscale x 4 x i1> @llvm.aarch64.sve.convert.from.svbool.nxv4i1(<vscale x 16 x i1> [[PG:%.*]])
 // CHECK-NEXT:    [[TILESLICE:%.*]] = add i32 [[SLICE_BASE:%.*]], 3
+// CHECK-NEXT:    [[TMP0:%.*]] = tail call <vscale x 4 x i1> @llvm.aarch64.sve.convert.from.svbool.nxv4i1(<vscale x 16 x i1> [[PG:%.*]])
 // CHECK-NEXT:    [[TMP1:%.*]] = tail call <vscale x 4 x i32> @llvm.aarch64.sme.read.vert.nxv4i32(<vscale x 4 x i32> [[ZD:%.*]], <vscale x 4 x i1> [[TMP0]], i32 3, i32 [[TILESLICE]])
 // CHECK-NEXT:    ret <vscale x 4 x i32> [[TMP1]]
 //
 svint32_t test_svread_ver_za32_s32_1(svint32_t zd, svbool_t pg, uint32_t slice_base)  {
-    return SME_ACLE_FUNC(svread_ver_za32, _s32, _m)(zd, pg, 3, slice_base, 3);
+    uint32_t slice = slice_base + 3;
+    return SME_ACLE_FUNC(svread_ver_za32, _s32, _m)(zd, pg, 3, slice);
 }
 
 // CHECK-C-LABEL: @test_svread_ver_za64_s64(
@@ -620,19 +635,20 @@ svint32_t test_svread_ver_za32_s32_1(svint32_t zd, svbool_t pg, uint32_t slice_b
 // CHECK-NEXT:    ret <vscale x 2 x i64> [[TMP1]]
 //
 svint64_t test_svread_ver_za64_s64(svint64_t zd, svbool_t pg, uint32_t slice_base)  {
-    return SME_ACLE_FUNC(svread_ver_za64, _s64, _m)(zd, pg, 0, slice_base, 0);
+    return SME_ACLE_FUNC(svread_ver_za64, _s64, _m)(zd, pg, 0, slice_base);
 }
 
 // CHECK-C-LABEL: @test_svread_ver_za64_s64_1(
 // CHECK-CXX-LABEL: @_Z26test_svread_ver_za64_s64_1u11__SVInt64_tu10__SVBool_tj(
 // CHECK-NEXT:  entry:
-// CHECK-NEXT:    [[TMP0:%.*]] = tail call <vscale x 2 x i1> @llvm.aarch64.sve.convert.from.svbool.nxv2i1(<vscale x 16 x i1> [[PG:%.*]])
 // CHECK-NEXT:    [[TILESLICE:%.*]] = add i32 [[SLICE_BASE:%.*]], 1
+// CHECK-NEXT:    [[TMP0:%.*]] = tail call <vscale x 2 x i1> @llvm.aarch64.sve.convert.from.svbool.nxv2i1(<vscale x 16 x i1> [[PG:%.*]])
 // CHECK-NEXT:    [[TMP1:%.*]] = tail call <vscale x 2 x i64> @llvm.aarch64.sme.read.vert.nxv2i64(<vscale x 2 x i64> [[ZD:%.*]], <vscale x 2 x i1> [[TMP0]], i32 7, i32 [[TILESLICE]])
 // CHECK-NEXT:    ret <vscale x 2 x i64> [[TMP1]]
 //
 svint64_t test_svread_ver_za64_s64_1(svint64_t zd, svbool_t pg, uint32_t slice_base)  {
-    return SME_ACLE_FUNC(svread_ver_za64, _s64, _m)(zd, pg, 7, slice_base, 1);
+    uint32_t slice = slice_base + 1;
+    return SME_ACLE_FUNC(svread_ver_za64, _s64, _m)(zd, pg, 7, slice);
 }
 
 // CHECK-C-LABEL: @test_svread_ver_za8_u8(
@@ -642,7 +658,7 @@ svint64_t test_svread_ver_za64_s64_1(svint64_t zd, svbool_t pg, uint32_t slice_b
 // CHECK-NEXT:    ret <vscale x 16 x i8> [[TMP0]]
 //
 svuint8_t test_svread_ver_za8_u8(svuint8_t zd, svbool_t pg, uint32_t slice_base)  {
-    return SME_ACLE_FUNC(svread_ver_za8, _u8, _m)(zd, pg, 0, slice_base, 0);
+    return SME_ACLE_FUNC(svread_ver_za8, _u8, _m)(zd, pg, 0, slice_base);
 }
 
 // CHECK-C-LABEL: @test_svread_ver_za8_u8_1(
@@ -653,7 +669,8 @@ svuint8_t test_svread_ver_za8_u8(svuint8_t zd, svbool_t pg, uint32_t slice_base)
 // CHECK-NEXT:    ret <vscale x 16 x i8> [[TMP0]]
 //
 svuint8_t test_svread_ver_za8_u8_1(svuint8_t zd, svbool_t pg, uint32_t slice_base)  {
-    return SME_ACLE_FUNC(svread_ver_za8, _u8, _m)(zd, pg, 0, slice_base, 15);
+    uint32_t slice = slice_base + 15;
+    return SME_ACLE_FUNC(svread_ver_za8, _u8, _m)(zd, pg, 0, slice);
 }
 
 // CHECK-C-LABEL: @test_svread_ver_za16_u16(
@@ -664,19 +681,20 @@ svuint8_t test_svread_ver_za8_u8_1(svuint8_t zd, svbool_t pg, uint32_t slice_bas
 // CHECK-NEXT:    ret <vscale x 8 x i16> [[TMP1]]
 //
 svuint16_t test_svread_ver_za16_u16(svuint16_t zd, svbool_t pg, uint32_t slice_base)  {
-    return SME_ACLE_FUNC(svread_ver_za16, _u16, _m)(zd, pg, 0, slice_base, 0);
+    return SME_ACLE_FUNC(svread_ver_za16, _u16, _m)(zd, pg, 0, slice_base);
 }
 
 // CHECK-C-LABEL: @test_svread_ver_za16_u16_1(
 // CHECK-CXX-LABEL: @_Z26test_svread_ver_za16_u16_1u12__SVUint16_tu10__SVBool_tj(
 // CHECK-NEXT:  entry:
-// CHECK-NEXT:    [[TMP0:%.*]] = tail call <vscale x 8 x i1> @llvm.aarch64.sve.convert.from.svbool.nxv8i1(<vscale x 16 x i1> [[PG:%.*]])
 // CHECK-NEXT:    [[TILESLICE:%.*]] = add i32 [[SLICE_BASE:%.*]], 7
+// CHECK-NEXT:    [[TMP0:%.*]] = tail call <vscale x 8 x i1> @llvm.aarch64.sve.convert.from.svbool.nxv8i1(<vscale x 16 x i1> [[PG:%.*]])
 // CHECK-NEXT:    [[TMP1:%.*]] = tail call <vscale x 8 x i16> @llvm.aarch64.sme.read.vert.nxv8i16(<vscale x 8 x i16> [[ZD:%.*]], <vscale x 8 x i1> [[TMP0]], i32 1, i32 [[TILESLICE]])
 // CHECK-NEXT:    ret <vscale x 8 x i16> [[TMP1]]
 //
 svuint16_t test_svread_ver_za16_u16_1(svuint16_t zd, svbool_t pg, uint32_t slice_base)  {
-    return SME_ACLE_FUNC(svread_ver_za16, _u16, _m)(zd, pg, 1, slice_base, 7);
+    uint32_t slice = slice_base + 7;
+    return SME_ACLE_FUNC(svread_ver_za16, _u16, _m)(zd, pg, 1, slice);
 }
 
 // CHECK-C-LABEL: @test_svread_ver_za32_u32(
@@ -687,19 +705,20 @@ svuint16_t test_svread_ver_za16_u16_1(svuint16_t zd, svbool_t pg, uint32_t slice
 // CHECK-NEXT:    ret <vscale x 4 x i32> [[TMP1]]
 //
 svuint32_t test_svread_ver_za32_u32(svuint32_t zd, svbool_t pg, uint32_t slice_base)  {
-    return SME_ACLE_FUNC(svread_ver_za32, _u32, _m)(zd, pg, 0, slice_base, 0);
+    return SME_ACLE_FUNC(svread_ver_za32, _u32, _m)(zd, pg, 0, slice_base);
 }
 
 // CHECK-C-LABEL: @test_svread_ver_za32_u32_1(
 // CHECK-CXX-LABEL: @_Z26test_svread_ver_za32_u32_1u12__SVUint32_tu10__SVBool_tj(
 // CHECK-NEXT:  entry:
-// CHECK-NEXT:    [[TMP0:%.*]] = tail call <vscale x 4 x i1> @llvm.aarch64.sve.convert.from.svbool.nxv4i1(<vscale x 16 x i1> [[PG:%.*]])
 // CHECK-NEXT:    [[TILESLICE:%.*]] = add i32 [[SLICE_BASE:%.*]], 3
+// CHECK-NEXT:    [[TMP0:%.*]] = tail call <vscale x 4 x i1> @llvm.aarch64.sve.convert.from.svbool.nxv4i1(<vscale x 16 x i1> [[PG:%.*]])
 // CHECK-NEXT:    [[TMP1:%.*]] = tail call <vscale x 4 x i32> @llvm.aarch64.sme.read.vert.nxv4i32(<vscale x 4 x i32> [[ZD:%.*]], <vscale x 4 x i1> [[TMP0]], i32 3, i32 [[TILESLICE]])
 // CHECK-NEXT:    ret <vscale x 4 x i32> [[TMP1]]
 //
 svuint32_t test_svread_ver_za32_u32_1(svuint32_t zd, svbool_t pg, uint32_t slice_base)  {
-    return SME_ACLE_FUNC(svread_ver_za32, _u32, _m)(zd, pg, 3, slice_base, 3);
+    uint32_t slice = slice_base + 3;
+    return SME_ACLE_FUNC(svread_ver_za32, _u32, _m)(zd, pg, 3, slice);
 }
 
 // CHECK-C-LABEL: @test_svread_ver_za64_u64(
@@ -710,19 +729,20 @@ svuint32_t test_svread_ver_za32_u32_1(svuint32_t zd, svbool_t pg, uint32_t slice
 // CHECK-NEXT:    ret <vscale x 2 x i64> [[TMP1]]
 //
 svuint64_t test_svread_ver_za64_u64(svuint64_t zd, svbool_t pg, uint32_t slice_base)  {
-    return SME_ACLE_FUNC(svread_ver_za64, _u64, _m)(zd, pg, 0, slice_base, 0);
+    return SME_ACLE_FUNC(svread_ver_za64, _u64, _m)(zd, pg, 0, slice_base);
 }
 
 // CHECK-C-LABEL: @test_svread_ver_za64_u64_1(
 // CHECK-CXX-LABEL: @_Z26test_svread_ver_za64_u64_1u12__SVUint64_tu10__SVBool_tj(
 // CHECK-NEXT:  entry:
-// CHECK-NEXT:    [[TMP0:%.*]] = tail call <vscale x 2 x i1> @llvm.aarch64.sve.convert.from.svbool.nxv2i1(<vscale x 16 x i1> [[PG:%.*]])
 // CHECK-NEXT:    [[TILESLICE:%.*]] = add i32 [[SLICE_BASE:%.*]], 1
+// CHECK-NEXT:    [[TMP0:%.*]] = tail call <vscale x 2 x i1> @llvm.aarch64.sve.convert.from.svbool.nxv2i1(<vscale x 16 x i1> [[PG:%.*]])
 // CHECK-NEXT:    [[TMP1:%.*]] = tail call <vscale x 2 x i64> @llvm.aarch64.sme.read.vert.nxv2i64(<vscale x 2 x i64> [[ZD:%.*]], <vscale x 2 x i1> [[TMP0]], i32 7, i32 [[TILESLICE]])
 // CHECK-NEXT:    ret <vscale x 2 x i64> [[TMP1]]
 //
 svuint64_t test_svread_ver_za64_u64_1(svuint64_t zd, svbool_t pg, uint32_t slice_base)  {
-    return SME_ACLE_FUNC(svread_ver_za64, _u64, _m)(zd, pg, 7, slice_base, 1);
+    uint32_t slice = slice_base + 1;
+    return SME_ACLE_FUNC(svread_ver_za64, _u64, _m)(zd, pg, 7, slice);
 }
 
 // CHECK-C-LABEL: @test_svread_ver_za16_f16(
@@ -733,19 +753,20 @@ svuint64_t test_svread_ver_za64_u64_1(svuint64_t zd, svbool_t pg, uint32_t slice
 // CHECK-NEXT:    ret <vscale x 8 x half> [[TMP1]]
 //
 svfloat16_t test_svread_ver_za16_f16(svfloat16_t zd, svbool_t pg, uint32_t slice_base)  {
-    return SME_ACLE_FUNC(svread_ver_za16, _f16, _m)(zd, pg, 0, slice_base, 0);
+    return SME_ACLE_FUNC(svread_ver_za16, _f16, _m)(zd, pg, 0, slice_base);
 }
 
 // CHECK-C-LABEL: @test_svread_ver_za16_f16_1(
 // CHECK-CXX-LABEL: @_Z26test_svread_ver_za16_f16_1u13__SVFloat16_tu10__SVBool_tj(
 // CHECK-NEXT:  entry:
-// CHECK-NEXT:    [[TMP0:%.*]] = tail call <vscale x 8 x i1> @llvm.aarch64.sve.convert.from.svbool.nxv8i1(<vscale x 16 x i1> [[PG:%.*]])
 // CHECK-NEXT:    [[TILESLICE:%.*]] = add i32 [[SLICE_BASE:%.*]], 7
+// CHECK-NEXT:    [[TMP0:%.*]] = tail call <vscale x 8 x i1> @llvm.aarch64.sve.convert.from.svbool.nxv8i1(<vscale x 16 x i1> [[PG:%.*]])
 // CHECK-NEXT:    [[TMP1:%.*]] = tail call <vscale x 8 x half> @llvm.aarch64.sme.read.vert.nxv8f16(<vscale x 8 x half> [[ZD:%.*]], <vscale x 8 x i1> [[TMP0]], i32 1, i32 [[TILESLICE]])
 // CHECK-NEXT:    ret <vscale x 8 x half> [[TMP1]]
 //
 svfloat16_t test_svread_ver_za16_f16_1(svfloat16_t zd, svbool_t pg, uint32_t slice_base)  {
-    return SME_ACLE_FUNC(svread_ver_za16, _f16, _m)(zd, pg, 1, slice_base, 7);
+    uint32_t slice = slice_base + 7;
+    return SME_ACLE_FUNC(svread_ver_za16, _f16, _m)(zd, pg, 1, slice);
 }
 
 // CHECK-C-LABEL: @test_svread_ver_za16_bf16(
@@ -756,19 +777,20 @@ svfloat16_t test_svread_ver_za16_f16_1(svfloat16_t zd, svbool_t pg, uint32_t sli
 // CHECK-NEXT:    ret <vscale x 8 x bfloat> [[TMP1]]
 //
 svbfloat16_t test_svread_ver_za16_bf16(svbfloat16_t zd, svbool_t pg, uint32_t slice_base)  {
-    return SME_ACLE_FUNC(svread_ver_za16, _bf16, _m)(zd, pg, 0, slice_base, 0);
+    return SME_ACLE_FUNC(svread_ver_za16, _bf16, _m)(zd, pg, 0, slice_base);
 }
 
 // CHECK-C-LABEL: @test_svread_ver_za16_bf16_1(
 // CHECK-CXX-LABEL: @_Z27test_svread_ver_za16_bf16_1u14__SVBFloat16_tu10__SVBool_tj(
 // CHECK-NEXT:  entry:
-// CHECK-NEXT:    [[TMP0:%.*]] = tail call <vscale x 8 x i1> @llvm.aarch64.sve.convert.from.svbool.nxv8i1(<vscale x 16 x i1> [[PG:%.*]])
 // CHECK-NEXT:    [[TILESLICE:%.*]] = add i32 [[SLICE_BASE:%.*]], 7
+// CHECK-NEXT:    [[TMP0:%.*]] = tail call <vscale x 8 x i1> @llvm.aarch64.sve.convert.from.svbool.nxv8i1(<vscale x 16 x i1> [[PG:%.*]])
 // CHECK-NEXT:    [[TMP1:%.*]] = tail call <vscale x 8 x bfloat> @llvm.aarch64.sme.read.vert.nxv8bf16(<vscale x 8 x bfloat> [[ZD:%.*]], <vscale x 8 x i1> [[TMP0]], i32 1, i32 [[TILESLICE]])
 // CHECK-NEXT:    ret <vscale x 8 x bfloat> [[TMP1]]
 //
 svbfloat16_t test_svread_ver_za16_bf16_1(svbfloat16_t zd, svbool_t pg, uint32_t slice_base)  {
-    return SME_ACLE_FUNC(svread_ver_za16, _bf16, _m)(zd, pg, 1, slice_base, 7);
+    uint32_t slice = slice_base + 7;
+    return SME_ACLE_FUNC(svread_ver_za16, _bf16, _m)(zd, pg, 1, slice);
 }
 
 // CHECK-C-LABEL: @test_svread_ver_za32_f32(
@@ -779,19 +801,20 @@ svbfloat16_t test_svread_ver_za16_bf16_1(svbfloat16_t zd, svbool_t pg, uint32_t 
 // CHECK-NEXT:    ret <vscale x 4 x float> [[TMP1]]
 //
 svfloat32_t test_svread_ver_za32_f32(svfloat32_t zd, svbool_t pg, uint32_t slice_base)  {
-    return SME_ACLE_FUNC(svread_ver_za32, _f32, _m)(zd, pg, 0, slice_base, 0);
+    return SME_ACLE_FUNC(svread_ver_za32, _f32, _m)(zd, pg, 0, slice_base);
 }
 
 // CHECK-C-LABEL: @test_svread_ver_za32_f32_1(
 // CHECK-CXX-LABEL: @_Z26test_svread_ver_za32_f32_1u13__SVFloat32_tu10__SVBool_tj(
 // CHECK-NEXT:  entry:
-// CHECK-NEXT:    [[TMP0:%.*]] = tail call <vscale x 4 x i1> @llvm.aarch64.sve.convert.from.svbool.nxv4i1(<vscale x 16 x i1> [[PG:%.*]])
 // CHECK-NEXT:    [[TILESLICE:%.*]] = add i32 [[SLICE_BASE:%.*]], 3
+// CHECK-NEXT:    [[TMP0:%.*]] = tail call <vscale x 4 x i1> @llvm.aarch64.sve.convert.from.svbool.nxv4i1(<vscale x 16 x i1> [[PG:%.*]])
 // CHECK-NEXT:    [[TMP1:%.*]] = tail call <vscale x 4 x float> @llvm.aarch64.sme.read.vert.nxv4f32(<vscale x 4 x float> [[ZD:%.*]], <vscale x 4 x i1> [[TMP0]], i32 3, i32 [[TILESLICE]])
 // CHECK-NEXT:    ret <vscale x 4 x float> [[TMP1]]
 //
 svfloat32_t test_svread_ver_za32_f32_1(svfloat32_t zd, svbool_t pg, uint32_t slice_base)  {
-    return SME_ACLE_FUNC(svread_ver_za32, _f32, _m)(zd, pg, 3, slice_base, 3);
+    uint32_t slice = slice_base + 3;
+    return SME_ACLE_FUNC(svread_ver_za32, _f32, _m)(zd, pg, 3, slice);
 }
 
 // CHECK-C-LABEL: @test_svread_ver_za64_f64(
@@ -802,19 +825,20 @@ svfloat32_t test_svread_ver_za32_f32_1(svfloat32_t zd, svbool_t pg, uint32_t sli
 // CHECK-NEXT:    ret <vscale x 2 x double> [[TMP1]]
 //
 svfloat64_t test_svread_ver_za64_f64(svfloat64_t zd, svbool_t pg, uint32_t slice_base)  {
-    return SME_ACLE_FUNC(svread_ver_za64, _f64, _m)(zd, pg, 0, slice_base, 0);
+    return SME_ACLE_FUNC(svread_ver_za64, _f64, _m)(zd, pg, 0, slice_base);
 }
 
 // CHECK-C-LABEL: @test_svread_ver_za64_f64_1(
 // CHECK-CXX-LABEL: @_Z26test_svread_ver_za64_f64_1u13__SVFloat64_tu10__SVBool_tj(
 // CHECK-NEXT:  entry:
-// CHECK-NEXT:    [[TMP0:%.*]] = tail call <vscale x 2 x i1> @llvm.aarch64.sve.convert.from.svbool.nxv2i1(<vscale x 16 x i1> [[PG:%.*]])
 // CHECK-NEXT:    [[TILESLICE:%.*]] = add i32 [[SLICE_BASE:%.*]], 1
+// CHECK-NEXT:    [[TMP0:%.*]] = tail call <vscale x 2 x i1> @llvm.aarch64.sve.convert.from.svbool.nxv2i1(<vscale x 16 x i1> [[PG:%.*]])
 // CHECK-NEXT:    [[TMP1:%.*]] = tail call <vscale x 2 x double> @llvm.aarch64.sme.read.vert.nxv2f64(<vscale x 2 x double> [[ZD:%.*]], <vscale x 2 x i1> [[TMP0]], i32 7, i32 [[TILESLICE]])
 // CHECK-NEXT:    ret <vscale x 2 x double> [[TMP1]]
 //
 svfloat64_t test_svread_ver_za64_f64_1(svfloat64_t zd, svbool_t pg, uint32_t slice_base)  {
-    return SME_ACLE_FUNC(svread_ver_za64, _f64, _m)(zd, pg, 7, slice_base, 1);
+    uint32_t slice = slice_base + 1;
+    return SME_ACLE_FUNC(svread_ver_za64, _f64, _m)(zd, pg, 7, slice);
 }
 
 // CHECK-C-LABEL: @test_svread_ver_za128_s8(
@@ -824,7 +848,7 @@ svfloat64_t test_svread_ver_za64_f64_1(svfloat64_t zd, svbool_t pg, uint32_t sli
 // CHECK-NEXT:    ret <vscale x 16 x i8> [[TMP0]]
 //
 svint8_t test_svread_ver_za128_s8(svint8_t zd, svbool_t pg, uint32_t slice_base)  {
-    return SME_ACLE_FUNC(svread_ver_za128, _s8, _m)(zd, pg, 0, slice_base, 0);
+    return SME_ACLE_FUNC(svread_ver_za128, _s8, _m)(zd, pg, 0, slice_base);
 }
 
 // CHECK-C-LABEL: @test_svread_ver_za128_s8_1(
@@ -834,7 +858,7 @@ svint8_t test_svread_ver_za128_s8(svint8_t zd, svbool_t pg, uint32_t slice_base)
 // CHECK-NEXT:    ret <vscale x 16 x i8> [[TMP0]]
 //
 svint8_t test_svread_ver_za128_s8_1(svint8_t zd, svbool_t pg, uint32_t slice_base)  {
-    return SME_ACLE_FUNC(svread_ver_za128, _s8, _m)(zd, pg, 15, slice_base, 0);
+    return SME_ACLE_FUNC(svread_ver_za128, _s8, _m)(zd, pg, 15, slice_base);
 }
 
 // CHECK-C-LABEL: @test_svread_ver_za128_s16(
@@ -845,7 +869,7 @@ svint8_t test_svread_ver_za128_s8_1(svint8_t zd, svbool_t pg, uint32_t slice_bas
 // CHECK-NEXT:    ret <vscale x 8 x i16> [[TMP1]]
 //
 svint16_t test_svread_ver_za128_s16(svint16_t zd, svbool_t pg, uint32_t slice_base)  {
-    return SME_ACLE_FUNC(svread_ver_za128, _s16, _m)(zd, pg, 0, slice_base, 0);
+    return SME_ACLE_FUNC(svread_ver_za128, _s16, _m)(zd, pg, 0, slice_base);
 }
 
 // CHECK-C-LABEL: @test_svread_ver_za128_s16_1(
@@ -856,7 +880,7 @@ svint16_t test_svread_ver_za128_s16(svint16_t zd, svbool_t pg, uint32_t slice_ba
 // CHECK-NEXT:    ret <vscale x 8 x i16> [[TMP1]]
 //
 svint16_t test_svread_ver_za128_s16_1(svint16_t zd, svbool_t pg, uint32_t slice_base)  {
-    return SME_ACLE_FUNC(svread_ver_za128, _s16, _m)(zd, pg, 15, slice_base, 0);
+    return SME_ACLE_FUNC(svread_ver_za128, _s16, _m)(zd, pg, 15, slice_base);
 }
 
 // CHECK-C-LABEL: @test_svread_ver_za128_s32(
@@ -867,7 +891,7 @@ svint16_t test_svread_ver_za128_s16_1(svint16_t zd, svbool_t pg, uint32_t slice_
 // CHECK-NEXT:    ret <vscale x 4 x i32> [[TMP1]]
 //
 svint32_t test_svread_ver_za128_s32(svint32_t zd, svbool_t pg, uint32_t slice_base)  {
-    return SME_ACLE_FUNC(svread_ver_za128, _s32, _m)(zd, pg, 0, slice_base, 0);
+    return SME_ACLE_FUNC(svread_ver_za128, _s32, _m)(zd, pg, 0, slice_base);
 }
 
 // CHECK-C-LABEL: @test_svread_ver_za128_s32_1(
@@ -878,7 +902,7 @@ svint32_t test_svread_ver_za128_s32(svint32_t zd, svbool_t pg, uint32_t slice_ba
 // CHECK-NEXT:    ret <vscale x 4 x i32> [[TMP1]]
 //
 svint32_t test_svread_ver_za128_s32_1(svint32_t zd, svbool_t pg, uint32_t slice_base)  {
-    return SME_ACLE_FUNC(svread_ver_za128, _s32, _m)(zd, pg, 15, slice_base, 0);
+    return SME_ACLE_FUNC(svread_ver_za128, _s32, _m)(zd, pg, 15, slice_base);
 }
 
 // CHECK-C-LABEL: @test_svread_ver_za128_s64(
@@ -889,7 +913,7 @@ svint32_t test_svread_ver_za128_s32_1(svint32_t zd, svbool_t pg, uint32_t slice_
 // CHECK-NEXT:    ret <vscale x 2 x i64> [[TMP1]]
 //
 svint64_t test_svread_ver_za128_s64(svint64_t zd, svbool_t pg, uint32_t slice_base)  {
-    return SME_ACLE_FUNC(svread_ver_za128, _s64, _m)(zd, pg, 0, slice_base, 0);
+    return SME_ACLE_FUNC(svread_ver_za128, _s64, _m)(zd, pg, 0, slice_base);
 }
 
 // CHECK-C-LABEL: @test_svread_ver_za128_s64_1(
@@ -900,7 +924,7 @@ svint64_t test_svread_ver_za128_s64(svint64_t zd, svbool_t pg, uint32_t slice_ba
 // CHECK-NEXT:    ret <vscale x 2 x i64> [[TMP1]]
 //
 svint64_t test_svread_ver_za128_s64_1(svint64_t zd, svbool_t pg, uint32_t slice_base)  {
-    return SME_ACLE_FUNC(svread_ver_za128, _s64, _m)(zd, pg, 15, slice_base, 0);
+    return SME_ACLE_FUNC(svread_ver_za128, _s64, _m)(zd, pg, 15, slice_base);
 }
 
 // CHECK-C-LABEL: @test_svread_ver_za128_u8(
@@ -910,7 +934,7 @@ svint64_t test_svread_ver_za128_s64_1(svint64_t zd, svbool_t pg, uint32_t slice_
 // CHECK-NEXT:    ret <vscale x 16 x i8> [[TMP0]]
 //
 svuint8_t test_svread_ver_za128_u8(svuint8_t zd, svbool_t pg, uint32_t slice_base)  {
-    return SME_ACLE_FUNC(svread_ver_za128, _u8, _m)(zd, pg, 0, slice_base, 0);
+    return SME_ACLE_FUNC(svread_ver_za128, _u8, _m)(zd, pg, 0, slice_base);
 }
 
 // CHECK-C-LABEL: @test_svread_ver_za128_u8_1(
@@ -920,7 +944,7 @@ svuint8_t test_svread_ver_za128_u8(svuint8_t zd, svbool_t pg, uint32_t slice_bas
 // CHECK-NEXT:    ret <vscale x 16 x i8> [[TMP0]]
 //
 svuint8_t test_svread_ver_za128_u8_1(svuint8_t zd, svbool_t pg, uint32_t slice_base)  {
-    return SME_ACLE_FUNC(svread_ver_za128, _u8, _m)(zd, pg, 15, slice_base, 0);
+    return SME_ACLE_FUNC(svread_ver_za128, _u8, _m)(zd, pg, 15, slice_base);
 }
 
 // CHECK-C-LABEL: @test_svread_ver_za128_u16(
@@ -931,7 +955,7 @@ svuint8_t test_svread_ver_za128_u8_1(svuint8_t zd, svbool_t pg, uint32_t slice_b
 // CHECK-NEXT:    ret <vscale x 8 x i16> [[TMP1]]
 //
 svuint16_t test_svread_ver_za128_u16(svuint16_t zd, svbool_t pg, uint32_t slice_base)  {
-    return SME_ACLE_FUNC(svread_ver_za128, _u16, _m)(zd, pg, 0, slice_base, 0);
+    return SME_ACLE_FUNC(svread_ver_za128, _u16, _m)(zd, pg, 0, slice_base);
 }
 
 // CHECK-C-LABEL: @test_svread_ver_za128_u16_1(
@@ -942,7 +966,7 @@ svuint16_t test_svread_ver_za128_u16(svuint16_t zd, svbool_t pg, uint32_t slice_
 // CHECK-NEXT:    ret <vscale x 8 x i16> [[TMP1]]
 //
 svuint16_t test_svread_ver_za128_u16_1(svuint16_t zd, svbool_t pg, uint32_t slice_base)  {
-    return SME_ACLE_FUNC(svread_ver_za128, _u16, _m)(zd, pg, 15, slice_base, 0);
+    return SME_ACLE_FUNC(svread_ver_za128, _u16, _m)(zd, pg, 15, slice_base);
 }
 
 // CHECK-C-LABEL: @test_svread_ver_za128_u32(
@@ -953,7 +977,7 @@ svuint16_t test_svread_ver_za128_u16_1(svuint16_t zd, svbool_t pg, uint32_t slic
 // CHECK-NEXT:    ret <vscale x 4 x i32> [[TMP1]]
 //
 svuint32_t test_svread_ver_za128_u32(svuint32_t zd, svbool_t pg, uint32_t slice_base)  {
-    return SME_ACLE_FUNC(svread_ver_za128, _u32, _m)(zd, pg, 0, slice_base, 0);
+    return SME_ACLE_FUNC(svread_ver_za128, _u32, _m)(zd, pg, 0, slice_base);
 }
 
 // CHECK-C-LABEL: @test_svread_ver_za128_u32_1(
@@ -964,7 +988,7 @@ svuint32_t test_svread_ver_za128_u32(svuint32_t zd, svbool_t pg, uint32_t slice_
 // CHECK-NEXT:    ret <vscale x 4 x i32> [[TMP1]]
 //
 svuint32_t test_svread_ver_za128_u32_1(svuint32_t zd, svbool_t pg, uint32_t slice_base)  {
-    return SME_ACLE_FUNC(svread_ver_za128, _u32, _m)(zd, pg, 15, slice_base, 0);
+    return SME_ACLE_FUNC(svread_ver_za128, _u32, _m)(zd, pg, 15, slice_base);
 }
 
 // CHECK-C-LABEL: @test_svread_ver_za128_u64(
@@ -975,7 +999,7 @@ svuint32_t test_svread_ver_za128_u32_1(svuint32_t zd, svbool_t pg, uint32_t slic
 // CHECK-NEXT:    ret <vscale x 2 x i64> [[TMP1]]
 //
 svuint64_t test_svread_ver_za128_u64(svuint64_t zd, svbool_t pg, uint32_t slice_base)  {
-    return SME_ACLE_FUNC(svread_ver_za128, _u64, _m)(zd, pg, 0, slice_base, 0);
+    return SME_ACLE_FUNC(svread_ver_za128, _u64, _m)(zd, pg, 0, slice_base);
 }
 
 // CHECK-C-LABEL: @test_svread_ver_za128_u64_1(
@@ -986,7 +1010,7 @@ svuint64_t test_svread_ver_za128_u64(svuint64_t zd, svbool_t pg, uint32_t slice_
 // CHECK-NEXT:    ret <vscale x 2 x i64> [[TMP1]]
 //
 svuint64_t test_svread_ver_za128_u64_1(svuint64_t zd, svbool_t pg, uint32_t slice_base)  {
-    return SME_ACLE_FUNC(svread_ver_za128, _u64, _m)(zd, pg, 15, slice_base, 0);
+    return SME_ACLE_FUNC(svread_ver_za128, _u64, _m)(zd, pg, 15, slice_base);
 }
 
 // CHECK-C-LABEL: @test_svread_ver_za128_f16(
@@ -997,7 +1021,7 @@ svuint64_t test_svread_ver_za128_u64_1(svuint64_t zd, svbool_t pg, uint32_t slic
 // CHECK-NEXT:    ret <vscale x 8 x half> [[TMP1]]
 //
 svfloat16_t test_svread_ver_za128_f16(svfloat16_t zd, svbool_t pg, uint32_t slice_base)  {
-    return SME_ACLE_FUNC(svread_ver_za128, _f16, _m)(zd, pg, 0, slice_base, 0);
+    return SME_ACLE_FUNC(svread_ver_za128, _f16, _m)(zd, pg, 0, slice_base);
 }
 
 // CHECK-C-LABEL: @test_svread_ver_za128_f16_1(
@@ -1008,7 +1032,7 @@ svfloat16_t test_svread_ver_za128_f16(svfloat16_t zd, svbool_t pg, uint32_t slic
 // CHECK-NEXT:    ret <vscale x 8 x half> [[TMP1]]
 //
 svfloat16_t test_svread_ver_za128_f16_1(svfloat16_t zd, svbool_t pg, uint32_t slice_base)  {
-    return SME_ACLE_FUNC(svread_ver_za128, _f16, _m)(zd, pg, 15, slice_base, 0);
+    return SME_ACLE_FUNC(svread_ver_za128, _f16, _m)(zd, pg, 15, slice_base);
 }
 
 // CHECK-C-LABEL: @test_svread_ver_za128_bf16(
@@ -1019,7 +1043,7 @@ svfloat16_t test_svread_ver_za128_f16_1(svfloat16_t zd, svbool_t pg, uint32_t sl
 // CHECK-NEXT:    ret <vscale x 8 x bfloat> [[TMP1]]
 //
 svbfloat16_t test_svread_ver_za128_bf16(svbfloat16_t zd, svbool_t pg, uint32_t slice_base)  {
-    return SME_ACLE_FUNC(svread_ver_za128, _bf16, _m)(zd, pg, 0, slice_base, 0);
+    return SME_ACLE_FUNC(svread_ver_za128, _bf16, _m)(zd, pg, 0, slice_base);
 }
 
 // CHECK-C-LABEL: @test_svread_ver_za128_bf16_1(
@@ -1030,7 +1054,7 @@ svbfloat16_t test_svread_ver_za128_bf16(svbfloat16_t zd, svbool_t pg, uint32_t s
 // CHECK-NEXT:    ret <vscale x 8 x bfloat> [[TMP1]]
 //
 svbfloat16_t test_svread_ver_za128_bf16_1(svbfloat16_t zd, svbool_t pg, uint32_t slice_base)  {
-    return SME_ACLE_FUNC(svread_ver_za128, _bf16, _m)(zd, pg, 15, slice_base, 0);
+    return SME_ACLE_FUNC(svread_ver_za128, _bf16, _m)(zd, pg, 15, slice_base);
 }
 
 // CHECK-C-LABEL: @test_svread_ver_za128_f32(
@@ -1041,7 +1065,7 @@ svbfloat16_t test_svread_ver_za128_bf16_1(svbfloat16_t zd, svbool_t pg, uint32_t
 // CHECK-NEXT:    ret <vscale x 4 x float> [[TMP1]]
 //
 svfloat32_t test_svread_ver_za128_f32(svfloat32_t zd, svbool_t pg, uint32_t slice_base)  {
-    return SME_ACLE_FUNC(svread_ver_za128, _f32, _m)(zd, pg, 0, slice_base, 0);
+    return SME_ACLE_FUNC(svread_ver_za128, _f32, _m)(zd, pg, 0, slice_base);
 }
 
 // CHECK-C-LABEL: @test_svread_ver_za128_f32_1(
@@ -1052,7 +1076,7 @@ svfloat32_t test_svread_ver_za128_f32(svfloat32_t zd, svbool_t pg, uint32_t slic
 // CHECK-NEXT:    ret <vscale x 4 x float> [[TMP1]]
 //
 svfloat32_t test_svread_ver_za128_f32_1(svfloat32_t zd, svbool_t pg, uint32_t slice_base)  {
-    return SME_ACLE_FUNC(svread_ver_za128, _f32, _m)(zd, pg, 15, slice_base, 0);
+    return SME_ACLE_FUNC(svread_ver_za128, _f32, _m)(zd, pg, 15, slice_base);
 }
 
 // CHECK-C-LABEL: @test_svread_ver_za128_f64(
@@ -1063,7 +1087,7 @@ svfloat32_t test_svread_ver_za128_f32_1(svfloat32_t zd, svbool_t pg, uint32_t sl
 // CHECK-NEXT:    ret <vscale x 2 x double> [[TMP1]]
 //
 svfloat64_t test_svread_ver_za128_f64(svfloat64_t zd, svbool_t pg, uint32_t slice_base)  {
-    return SME_ACLE_FUNC(svread_ver_za128, _f64, _m)(zd, pg, 0, slice_base, 0);
+    return SME_ACLE_FUNC(svread_ver_za128, _f64, _m)(zd, pg, 0, slice_base);
 }
 
 // CHECK-C-LABEL: @test_svread_ver_za128_f64_1(
@@ -1074,5 +1098,5 @@ svfloat64_t test_svread_ver_za128_f64(svfloat64_t zd, svbool_t pg, uint32_t slic
 // CHECK-NEXT:    ret <vscale x 2 x double> [[TMP1]]
 //
 svfloat64_t test_svread_ver_za128_f64_1(svfloat64_t zd, svbool_t pg, uint32_t slice_base)  {
-    return SME_ACLE_FUNC(svread_ver_za128, _f64, _m)(zd, pg, 15, slice_base, 0);
+    return SME_ACLE_FUNC(svread_ver_za128, _f64, _m)(zd, pg, 15, slice_base);
 }

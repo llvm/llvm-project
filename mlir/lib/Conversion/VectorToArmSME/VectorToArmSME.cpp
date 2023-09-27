@@ -10,6 +10,7 @@
 
 #include "mlir/Dialect/ArmSME/IR/ArmSME.h"
 #include "mlir/Dialect/ArmSME/Utils/Utils.h"
+#include "mlir/Dialect/MemRef/IR/MemRef.h"
 #include "mlir/IR/BuiltinTypes.h"
 #include "llvm/Support/Casting.h"
 
@@ -239,11 +240,84 @@ struct BroadcastOpToArmSMELowering
   }
 };
 
+/// Conversion pattern for vector.transpose.
+///
+/// Stores the input tile to memory and reloads vertically.
+///
+/// Example:
+///
+///   %transposed_src = vector.transpose %src, [1, 0]
+///     : vector<[4]x[4]xi32> to vector<[4]x[4]xi32>
+///
+/// is converted to:
+///
+///   %alloca = memref.alloca(%svl_s, %svl_s) : memref<?x?xi32>
+///   %arm_sme.tile_store %src, <hor>, %alloca[%c0, %c0]
+///     : memref<?x?xi32>, vector<[4]x[4]xi32>
+///   %transposed_src = arm_sme.tile_load %alloca[%c0, %c0], <vertical>
+///     : memref<?x?xi32>, vector<[4]x[4]xi32>
+///
+/// NOTE: Tranposing via memory is obviously expensive, the current intention
+/// is to avoid the transpose if possible, this is therefore intended as a
+/// fallback and to provide base support for Vector ops. If it turns out
+/// transposes can't be avoided then this should be replaced with a more optimal
+/// implementation, perhaps with tile <-> vector (MOVA) ops.
+struct TransposeOpToArmSMELowering
+    : public OpRewritePattern<vector::TransposeOp> {
+  using OpRewritePattern<vector::TransposeOp>::OpRewritePattern;
+
+  LogicalResult matchAndRewrite(vector::TransposeOp transposeOp,
+                                PatternRewriter &rewriter) const final {
+    auto tileType = transposeOp.getResultVectorType();
+    if (!tileType || !arm_sme::isValidSMETileVectorType(tileType))
+      return failure();
+
+    SmallVector<int64_t> transp;
+    for (auto attr : transposeOp.getTransp())
+      transp.push_back(cast<IntegerAttr>(attr).getInt());
+
+    // Bail unless this is a true 2-D matrix transpose.
+    if (transp[0] != 1 || transp[1] != 0)
+      return failure();
+
+    OpBuilder::InsertionGuard g(rewriter);
+    auto loc = transposeOp.getLoc();
+
+    // Allocate buffer to store input tile to.
+    Value vscale =
+        rewriter.create<vector::VectorScaleOp>(loc, rewriter.getIndexType());
+    Value minTileSlices = rewriter.create<arith::ConstantOp>(
+        loc, rewriter.getIndexAttr(tileType.getDimSize(0)));
+    Value c0 =
+        rewriter.create<arith::ConstantOp>(loc, rewriter.getIndexAttr(0));
+    Value numTileSlices =
+        rewriter.create<arith::MulIOp>(loc, vscale, minTileSlices);
+    auto bufferType =
+        MemRefType::get({ShapedType::kDynamic, ShapedType::kDynamic},
+                        tileType.getElementType());
+    auto buffer = rewriter.create<memref::AllocaOp>(
+        loc, bufferType, ValueRange{numTileSlices, numTileSlices});
+
+    Value input = transposeOp.getVector();
+
+    // Store input tile.
+    auto tileStoreOp = rewriter.create<arm_sme::TileStoreOp>(
+        loc, input, buffer, ValueRange{c0, c0});
+
+    // Reload input tile vertically.
+    rewriter.replaceOpWithNewOp<arm_sme::TileLoadOp>(
+        transposeOp, tileType, tileStoreOp.getBase(), tileStoreOp.getIndices(),
+        arm_sme::TileSliceLayout::Vertical);
+
+    return success();
+  }
+};
+
 } // namespace
 
 void mlir::populateVectorToArmSMEPatterns(RewritePatternSet &patterns,
                                           MLIRContext &ctx) {
   patterns.add<TransferWriteToArmSMELowering, VectorLoadToArmSMELowering,
                VectorStoreToArmSMELowering, ConstantOpToArmSMELowering,
-               BroadcastOpToArmSMELowering>(&ctx);
+               BroadcastOpToArmSMELowering, TransposeOpToArmSMELowering>(&ctx);
 }

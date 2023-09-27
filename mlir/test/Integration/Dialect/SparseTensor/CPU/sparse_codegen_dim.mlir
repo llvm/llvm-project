@@ -31,7 +31,7 @@
 // RUN: %if mlir_arm_sve_tests %{ %{compile_sve} | %{run_sve} | FileCheck %s %}
 
 #DCSR  = #sparse_tensor.encoding<{
-  lvlTypes = [ "compressed", "compressed"]
+  map = (d0, d1) -> (d0 : compressed, d1 : compressed)
 }>
 
 module {
@@ -43,8 +43,8 @@ module {
     %c1 = arith.constant 1 : index
     %c2 = arith.constant 2 : index
     %c3 = arith.constant 3 : index
-    %t1 = bufferization.alloc_tensor() : tensor<4x5xf64, #DCSR>
-    %t2 = bufferization.alloc_tensor(%c2, %c3) : tensor<?x?xf64, #DCSR>
+    %t1 = tensor.empty() : tensor<4x5xf64, #DCSR>
+    %t2 = tensor.empty(%c2, %c3) : tensor<?x?xf64, #DCSR>
 
     %d1_0 = tensor.dim %t1, %c0 : tensor<4x5xf64, #DCSR>
     %d2_0 = tensor.dim %t2, %c0 : tensor<?x?xf64, #DCSR>

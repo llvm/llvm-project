@@ -5,12 +5,12 @@
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
-#ifndef LLVM_LIBC_SRC_SUPPORT_CPP_TYPE_TRAITS_ADD_LVALUE_REFERENCE_H
-#define LLVM_LIBC_SRC_SUPPORT_CPP_TYPE_TRAITS_ADD_LVALUE_REFERENCE_H
+#ifndef LLVM_LIBC_SRC___SUPPORT_CPP_TYPE_TRAITS_ADD_LVALUE_REFERENCE_H
+#define LLVM_LIBC_SRC___SUPPORT_CPP_TYPE_TRAITS_ADD_LVALUE_REFERENCE_H
 
 #include "src/__support/CPP/type_traits/type_identity.h"
 
-namespace __llvm_libc::cpp {
+namespace LIBC_NAMESPACE::cpp {
 
 // add_lvalue_reference
 namespace detail {
@@ -25,6 +25,6 @@ struct add_lvalue_reference : decltype(detail::try_add_lvalue_reference<T>(0)) {
 template <class T>
 using add_lvalue_reference_t = typename add_lvalue_reference<T>::type;
 
-} // namespace __llvm_libc::cpp
+} // namespace LIBC_NAMESPACE::cpp
 
-#endif // LLVM_LIBC_SRC_SUPPORT_CPP_TYPE_TRAITS_ADD_LVALUE_REFERENCE_H
+#endif // LLVM_LIBC_SRC___SUPPORT_CPP_TYPE_TRAITS_ADD_LVALUE_REFERENCE_H

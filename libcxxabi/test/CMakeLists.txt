@@ -8,8 +8,6 @@ macro(pythonize_bool var)
 endmacro()
 
 pythonize_bool(LIBCXXABI_USE_LLVM_UNWINDER)
-set(LIBCXXABI_EXECUTOR "\\\"${Python3_EXECUTABLE}\\\" ${LIBCXXABI_LIBCXX_PATH}/utils/run.py" CACHE STRING
-    "Executor to use when running tests.")
 
 if (LIBCXXABI_ENABLE_SHARED)
   set(LIBCXXABI_TEST_DEPS cxxabi_shared)
@@ -28,6 +26,11 @@ set(SERIALIZED_LIT_PARAMS "# Lit parameters serialized here for llvm-lit to pick
 macro(serialize_lit_param param value)
   string(APPEND SERIALIZED_LIT_PARAMS "config.${param} = ${value}\n")
 endmacro()
+
+if (LIBCXXABI_EXECUTOR)
+  message(DEPRECATION "LIBCXXABI_EXECUTOR is deprecated, please add executor=... to LIBCXXABI_TEST_PARAMS")
+  serialize_lit_param(executor "\"${LIBCXXABI_EXECUTOR}\"")
+endif()
 
 if (NOT LIBCXXABI_ENABLE_EXCEPTIONS)
   serialize_lit_param(enable_exceptions False)

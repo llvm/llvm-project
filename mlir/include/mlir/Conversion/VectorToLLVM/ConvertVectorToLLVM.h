@@ -12,10 +12,6 @@
 
 namespace mlir {
 class LLVMTypeConverter;
-class Pass;
-
-#define GEN_PASS_DECL_CONVERTVECTORTOLLVMPASS
-#include "mlir/Conversion/Passes.h.inc"
 
 /// Collect a set of patterns to convert from Vector contractions to LLVM Matrix
 /// Intrinsics. To lower to assembly, the LLVM flag -lower-matrix-intrinsics

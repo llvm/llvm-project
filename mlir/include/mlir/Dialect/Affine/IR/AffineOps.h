@@ -117,7 +117,7 @@ public:
   /// Returns the affine map used to access the source memref.
   AffineMap getSrcMap() { return getSrcMapAttr().getValue(); }
   AffineMapAttr getSrcMapAttr() {
-    return cast<AffineMapAttr>((*this)->getAttr(getSrcMapAttrStrName()));
+    return cast<AffineMapAttr>(*(*this)->getInherentAttr(getSrcMapAttrStrName()));
   }
 
   /// Returns the source memref affine map indices for this DMA operation.
@@ -156,7 +156,7 @@ public:
   /// Returns the affine map used to access the destination memref.
   AffineMap getDstMap() { return getDstMapAttr().getValue(); }
   AffineMapAttr getDstMapAttr() {
-    return cast<AffineMapAttr>((*this)->getAttr(getDstMapAttrStrName()));
+    return cast<AffineMapAttr>(*(*this)->getInherentAttr(getDstMapAttrStrName()));
   }
 
   /// Returns the destination memref indices for this DMA operation.
@@ -185,7 +185,7 @@ public:
   /// Returns the affine map used to access the tag memref.
   AffineMap getTagMap() { return getTagMapAttr().getValue(); }
   AffineMapAttr getTagMapAttr() {
-    return cast<AffineMapAttr>((*this)->getAttr(getTagMapAttrStrName()));
+    return cast<AffineMapAttr>(*(*this)->getInherentAttr(getTagMapAttrStrName()));
   }
 
   /// Returns the tag memref indices for this DMA operation.
@@ -307,7 +307,7 @@ public:
   /// Returns the affine map used to access the tag memref.
   AffineMap getTagMap() { return getTagMapAttr().getValue(); }
   AffineMapAttr getTagMapAttr() {
-    return cast<AffineMapAttr>((*this)->getAttr(getTagMapAttrStrName()));
+    return cast<AffineMapAttr>(*(*this)->getInherentAttr(getTagMapAttrStrName()));
   }
 
   /// Returns the tag memref index for this DMA operation.
@@ -489,20 +489,6 @@ void buildAffineLoopNest(OpBuilder &builder, Location loc, ValueRange lbs,
                          ValueRange ubs, ArrayRef<int64_t> steps,
                          function_ref<void(OpBuilder &, Location, ValueRange)>
                              bodyBuilderFn = nullptr);
-
-/// Replace `loop` with a new loop where `newIterOperands` are appended with
-/// new initialization values and `newYieldedValues` are added as new yielded
-/// values. The returned ForOp has `newYieldedValues.size()` new result values.
-/// Additionally, if `replaceLoopResults` is true, all uses of
-/// `loop.getResults()` are replaced with the first `loop.getNumResults()`
-/// return values  of the original loop respectively. The original loop is
-/// deleted and the new loop returned.
-/// Prerequisite: `newIterOperands.size() == newYieldedValues.size()`.
-AffineForOp replaceForOpWithNewYields(OpBuilder &b, AffineForOp loop,
-                                      ValueRange newIterOperands,
-                                      ValueRange newYieldedValues,
-                                      ValueRange newIterArgs,
-                                      bool replaceLoopResults = true);
 
 /// AffineBound represents a lower or upper bound in the for operation.
 /// This class does not own the underlying operands. Instead, it refers

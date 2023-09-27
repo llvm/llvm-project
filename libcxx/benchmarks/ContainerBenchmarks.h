@@ -70,16 +70,6 @@ void BM_ConstructIterIter(benchmark::State& st, Container, GenInputs gen) {
 }
 
 template <class Container, class GenInputs>
-void BM_ConstructFromRange(benchmark::State& st, Container, GenInputs gen) {
-  auto in = gen(st.range(0));
-  benchmark::DoNotOptimize(&in);
-  while (st.KeepRunning()) {
-    Container c(std::from_range, in);
-    DoNotOptimizeData(c);
-  }
-}
-
-template <class Container, class GenInputs>
 void BM_InsertValue(benchmark::State& st, Container c, GenInputs gen) {
   auto in        = gen(st.range(0));
   const auto end = in.end();
@@ -175,6 +165,37 @@ static void BM_Rehash(benchmark::State& st, Container c, GenInputs gen) {
   while (st.KeepRunning()) {
     c.rehash(bucket_count + 1);
     c.rehash(bucket_count);
+    benchmark::ClobberMemory();
+  }
+}
+
+template <class Container, class GenInputs>
+static void BM_Compare_same_container(benchmark::State& st, Container, GenInputs gen) {
+  auto in = gen(st.range(0));
+  Container c1(in.begin(), in.end());
+  Container c2 = c1;
+
+  benchmark::DoNotOptimize(&(*c1.begin()));
+  benchmark::DoNotOptimize(&(*c2.begin()));
+  while (st.KeepRunning()) {
+    bool res = c1 == c2;
+    benchmark::DoNotOptimize(&res);
+    benchmark::ClobberMemory();
+  }
+}
+
+template <class Container, class GenInputs>
+static void BM_Compare_different_containers(benchmark::State& st, Container, GenInputs gen) {
+  auto in1 = gen(st.range(0));
+  auto in2 = gen(st.range(0));
+  Container c1(in1.begin(), in1.end());
+  Container c2(in2.begin(), in2.end());
+
+  benchmark::DoNotOptimize(&(*c1.begin()));
+  benchmark::DoNotOptimize(&(*c2.begin()));
+  while (st.KeepRunning()) {
+    bool res = c1 == c2;
+    benchmark::DoNotOptimize(&res);
     benchmark::ClobberMemory();
   }
 }

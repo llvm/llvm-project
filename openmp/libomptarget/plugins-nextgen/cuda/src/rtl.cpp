@@ -576,6 +576,17 @@ struct CUDADeviceTy : public GenericDeviceTy {
     if (auto Err = getStream(AsyncInfoWrapper, Stream))
       return Err;
 
+    // If there is already pending work on the stream it could be waiting for
+    // someone to check the RPC server.
+    if (auto RPCServer = getRPCServer()) {
+      CUresult Res = cuStreamQuery(Stream);
+      while (Res == CUDA_ERROR_NOT_READY) {
+        if (auto Err = RPCServer->runServer(*this))
+          return Err;
+        Res = cuStreamQuery(Stream);
+      }
+    }
+
     CUresult Res = cuMemcpyDtoHAsync(HstPtr, (CUdeviceptr)TgtPtr, Size, Stream);
     return Plugin::check(Res, "Error in cuMemcpyDtoHAsync: %s");
   }

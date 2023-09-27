@@ -29,6 +29,7 @@
 #include "llvm/Support/Allocator.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/ErrorOr.h"
+#include "llvm/Support/RWMutex.h"
 #include <cassert>
 #include <cstdint>
 #include <map>
@@ -166,10 +167,15 @@ protected:
   /// Names of non-standard annotations.
   SmallVector<std::string, 8> AnnotationNames;
 
+  /// A mutex that is used to control parallel accesses to
+  /// AnnotationNameIndexMap and AnnotationsNames.
+  mutable llvm::sys::RWMutex AnnotationNameMutex;
+
   /// Allocate the TailCall annotation value. Clients of the target-specific
   /// MCPlusBuilder classes must use convert/lower/create* interfaces instead.
   void setTailCall(MCInst &Inst);
 
+public:
   /// Transfer annotations from \p SrcInst to \p DstInst.
   void moveAnnotations(MCInst &&SrcInst, MCInst &DstInst) const {
     assert(!getAnnotationInst(DstInst) &&
@@ -182,7 +188,6 @@ protected:
     removeAnnotationInst(SrcInst);
   }
 
-public:
   /// Return iterator range covering def operands.
   iterator_range<MCInst::iterator> defOperands(MCInst &Inst) const {
     return make_range(Inst.begin(),
@@ -437,7 +442,7 @@ public:
   virtual bool isUnsupportedBranch(const MCInst &Inst) const { return false; }
 
   /// Return true of the instruction is of pseudo kind.
-  bool isPseudo(const MCInst &Inst) const {
+  virtual bool isPseudo(const MCInst &Inst) const {
     return Info->get(Inst.getOpcode()).isPseudo();
   }
 
@@ -619,6 +624,11 @@ public:
 
   virtual bool mayStore(const MCInst &Inst) const {
     return Info->get(Inst.getOpcode()).mayStore();
+  }
+
+  virtual bool isAArch64Exclusive(const MCInst &Inst) const {
+    llvm_unreachable("not implemented");
+    return false;
   }
 
   virtual bool isCleanRegXOR(const MCInst &Inst) const {
@@ -1775,6 +1785,7 @@ public:
 
   /// Return annotation index matching the \p Name.
   std::optional<unsigned> getAnnotationIndex(StringRef Name) const {
+    std::shared_lock<llvm::sys::RWMutex> Lock(AnnotationNameMutex);
     auto AI = AnnotationNameIndexMap.find(Name);
     if (AI != AnnotationNameIndexMap.end())
       return AI->second;
@@ -1784,10 +1795,10 @@ public:
   /// Return annotation index matching the \p Name. Create a new index if the
   /// \p Name wasn't registered previously.
   unsigned getOrCreateAnnotationIndex(StringRef Name) {
-    auto AI = AnnotationNameIndexMap.find(Name);
-    if (AI != AnnotationNameIndexMap.end())
-      return AI->second;
+    if (std::optional<unsigned> Index = getAnnotationIndex(Name))
+      return *Index;
 
+    std::unique_lock<llvm::sys::RWMutex> Lock(AnnotationNameMutex);
     const unsigned Index =
         AnnotationNameIndexMap.size() + MCPlus::MCAnnotation::kGeneric;
     AnnotationNameIndexMap.insert(std::make_pair(Name, Index));

@@ -681,9 +681,12 @@ static std::optional<Procedure> CharacterizeProcedure(
       },
       symbol.details())};
   if (result && !symbol.has<semantics::ProcBindingDetails>()) {
-    CopyAttrs<Procedure, Procedure::Attr>(DEREF(GetMainEntry(&symbol)), *result,
+    CopyAttrs<Procedure, Procedure::Attr>(symbol, *result,
         {
             {semantics::Attr::BIND_C, Procedure::Attr::BindC},
+        });
+    CopyAttrs<Procedure, Procedure::Attr>(DEREF(GetMainEntry(&symbol)), *result,
+        {
             {semantics::Attr::ELEMENTAL, Procedure::Attr::Elemental},
         });
     if (IsPureProcedure(symbol) || // works for ENTRY too
@@ -1266,6 +1269,22 @@ std::optional<Procedure> Procedure::Characterize(
     }
   }
   return std::nullopt;
+}
+
+std::optional<Procedure> Procedure::Characterize(
+    const Expr<SomeType> &expr, FoldingContext &context) {
+  if (const auto *procRef{UnwrapProcedureRef(expr)}) {
+    return Characterize(*procRef, context);
+  } else if (const auto *procDesignator{
+                 std::get_if<ProcedureDesignator>(&expr.u)}) {
+    return Characterize(*procDesignator, context);
+  } else if (const Symbol * symbol{UnwrapWholeSymbolOrComponentDataRef(expr)}) {
+    return Characterize(*symbol, context);
+  } else {
+    context.messages().Say(
+        "Expression '%s' is not a procedure"_err_en_US, expr.AsFortran());
+    return std::nullopt;
+  }
 }
 
 std::optional<Procedure> Procedure::FromActuals(const ProcedureDesignator &proc,

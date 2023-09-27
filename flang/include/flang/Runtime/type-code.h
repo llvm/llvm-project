@@ -26,37 +26,50 @@ public:
 
   RT_API_ATTRS int raw() const { return raw_; }
 
-  constexpr bool IsValid() const {
+  constexpr RT_API_ATTRS bool IsValid() const {
     return raw_ >= CFI_type_signed_char && raw_ <= CFI_TYPE_LAST;
   }
-  constexpr bool IsInteger() const {
+  constexpr RT_API_ATTRS bool IsInteger() const {
     return raw_ >= CFI_type_signed_char && raw_ <= CFI_type_ptrdiff_t;
   }
-  constexpr bool IsReal() const {
+  constexpr RT_API_ATTRS bool IsReal() const {
     return raw_ >= CFI_type_half_float && raw_ <= CFI_type_float128;
   }
-  constexpr bool IsComplex() const {
+  constexpr RT_API_ATTRS bool IsComplex() const {
     return raw_ >= CFI_type_half_float_Complex &&
         raw_ <= CFI_type_float128_Complex;
   }
-  constexpr bool IsCharacter() const {
+  constexpr RT_API_ATTRS bool IsCharacter() const {
     return raw_ == CFI_type_char || raw_ == CFI_type_char16_t ||
         raw_ == CFI_type_char32_t;
   }
-  constexpr bool IsLogical() const {
+  constexpr RT_API_ATTRS bool IsLogical() const {
     return raw_ == CFI_type_Bool ||
         (raw_ >= CFI_type_int_least8_t && raw_ <= CFI_type_int_least64_t);
   }
-  constexpr bool IsDerived() const { return raw_ == CFI_type_struct; }
-  constexpr bool IsIntrinsic() const { return IsValid() && !IsDerived(); }
+  constexpr RT_API_ATTRS bool IsDerived() const {
+    return raw_ == CFI_type_struct;
+  }
+  constexpr RT_API_ATTRS bool IsIntrinsic() const {
+    return IsValid() && !IsDerived();
+  }
 
   RT_API_ATTRS std::optional<std::pair<TypeCategory, int>>
   GetCategoryAndKind() const;
 
-  RT_API_ATTRS bool operator==(const TypeCode &that) const {
-    return raw_ == that.raw_;
+  RT_API_ATTRS bool operator==(TypeCode that) const {
+    if (raw_ == that.raw_) { // fast path
+      return true;
+    } else {
+      // Multiple raw CFI_type_... codes can represent the same Fortran
+      // type category + kind type parameter, e.g. CFI_type_int and
+      // CFI_type_int32_t.
+      auto thisCK{GetCategoryAndKind()};
+      auto thatCK{that.GetCategoryAndKind()};
+      return thisCK && thatCK && *thisCK == *thatCK;
+    }
   }
-  bool operator!=(const TypeCode &that) const { return raw_ != that.raw_; }
+  RT_API_ATTRS bool operator!=(TypeCode that) const { return !(*this == that); }
 
 private:
   ISO::CFI_type_t raw_{CFI_type_other};

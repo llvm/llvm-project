@@ -10,33 +10,32 @@
 // RUN: --canonicalize --cse | FileCheck %s --check-prefix=CHECK-RWT
 
 #SparseVector64 = #sparse_tensor.encoding<{
-  lvlTypes = ["compressed"],
+  map = (d0) -> (d0 : compressed),
   posWidth = 64,
   crdWidth = 64
 }>
 
 #SparseVector32 = #sparse_tensor.encoding<{
-  lvlTypes = ["compressed"],
+  map = (d0) -> (d0 : compressed),
   posWidth = 32,
   crdWidth = 32
 }>
 
 #SparseVector = #sparse_tensor.encoding<{
-  lvlTypes = ["compressed"]
+  map = (d0) -> (d0 : compressed)
 }>
 
 #SortedCOO2D = #sparse_tensor.encoding<{
-  lvlTypes = [ "compressed_nu", "singleton" ],
+  map = (d0, d1) -> (d0 : compressed(nonunique), d1 : singleton),
 }>
 
 #SortedCOO3D = #sparse_tensor.encoding<{
-  lvlTypes = [ "compressed_nu", "singleton_nu", "singleton" ]
+  map = (d0, d1, d2) -> (d0 : compressed(nonunique), d1 : singleton(nonunique), d2 : singleton)
 
 }>
 
 #TsssPermuted = #sparse_tensor.encoding<{
-  lvlTypes = [ "compressed", "compressed", "compressed" ],
-  dimToLvl = affine_map<(i,j,k) -> (k,i,j)>
+  map = (d0, d1, d2) -> (d2 : compressed, d0 : compressed, d1 : compressed)
 }>
 
 #COOSlice = #sparse_tensor.encoding<{
@@ -115,13 +114,13 @@ func.func @sparse_convert(%arg0: tensor<?xf32, #SparseVector64>) -> tensor<?xf32
 }
 
 #SparseSingleton64 = #sparse_tensor.encoding<{
-  lvlTypes = ["singleton"],
+  map = (d0) -> (d0 : singleton),
   posWidth = 64,
   crdWidth = 64
 }>
 
 #SparseSingleton32 = #sparse_tensor.encoding<{
-  lvlTypes = ["singleton"],
+  map = (d0) -> (d0 : singleton),
   posWidth = 32,
   crdWidth = 32
 }>
@@ -179,7 +178,7 @@ func.func @sparse_convert_singleton(%arg0: tensor<?xf32, #SparseSingleton64>) ->
 //       CHECK-RWT: %[[VAL_16:.*]] = sparse_tensor.load %[[VAL_17:.*]] hasInserts : tensor<?x?x?xf32, #{{.*}}>>
 //       CHECK-RWT: %[[VAL_18:.*]] = sparse_tensor.values %[[VAL_16]] : tensor<?x?x?xf32, #{{.*}}>> to memref<?xf32>
 //       CHECK-RWT: %[[VAL_19:.*]] = sparse_tensor.coordinates_buffer %[[VAL_16]] : tensor<?x?x?xf32, #{{.*}}>> to memref<?xindex>
-//       CHECK-RWT: sparse_tensor.sort_coo  hybrid_quick_sort %[[VAL_7]], %[[VAL_19]] jointly %[[VAL_18]] {nx = 3 : index, ny = 0 : index}
+//       CHECK-RWT: sparse_tensor.sort_coo  hybrid_quick_sort %[[VAL_7]], %[[VAL_19]] jointly %[[VAL_18]] {ny = 0 : index, perm_map = #map}
 //       CHECK-RWT: %[[VAL_20:.*]] = bufferization.alloc_tensor(%[[VAL_4]], %[[VAL_5]], %[[VAL_6]]) size_hint=%[[VAL_7]]
 //       CHECK-RWT: %[[VAL_21:.*]] = sparse_tensor.foreach in %[[VAL_16]] init(%[[VAL_20]])
 //       CHECK-RWT: ^bb0(%[[VAL_22:.*]]: index, %[[VAL_23:.*]]: index, %[[VAL_24:.*]]: index, %[[VAL_25:.*]]: f32, %[[VAL_26:.*]]: tensor<?x?x?xf32, #{{.*}}>>):

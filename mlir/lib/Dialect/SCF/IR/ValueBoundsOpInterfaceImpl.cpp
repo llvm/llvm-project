@@ -35,11 +35,8 @@ struct ForOpInterface
 
     // An EQ constraint can be added if the yielded value (dimension size)
     // equals the corresponding block argument (dimension size).
-    assert(forOp.getLoopBody().hasOneBlock() &&
-           "multiple blocks not supported");
-    Value yieldedValue =
-        cast<scf::YieldOp>(forOp.getLoopBody().front().getTerminator())
-            .getOperand(iterArgIdx);
+    Value yieldedValue = cast<scf::YieldOp>(forOp.getBody()->getTerminator())
+                             .getOperand(iterArgIdx);
     Value iterArg = forOp.getRegionIterArg(iterArgIdx);
     Value initArg = forOp.getInitArgs()[iterArgIdx];
 
@@ -68,7 +65,7 @@ struct ForOpInterface
           // Stop when reaching a value that is defined outside of the loop. It
           // is impossible to reach an iter_arg from there.
           Operation *op = v.getDefiningOp();
-          return forOp.getLoopBody().findAncestorOpInRegion(*op) == nullptr;
+          return forOp.getRegion().findAncestorOpInRegion(*op) == nullptr;
         });
     if (failed(status))
       return;
