@@ -756,4 +756,3 @@ func.func @nested_region_outside_loop_use() {
 
 // CHECK: scf.execute_region
 // CHECK-NEXT: "test.foo"(%[[RES]])
-
