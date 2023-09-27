@@ -531,33 +531,35 @@ LogicalResult WarpgroupMmaOp::verify() {
 }
 
 LogicalResult WarpgroupMmaStoreOp::verify() {
-  Type stype = getMatrixD()
-                   .front()
-                   .getType()
-                   .cast<WarpgroupAccumulatorType>()
-                   .getFragmented();
+  MemRefType dstMemrefType = getDstMemref().getType();
+  VectorType firstVtype = getMatrixD()
+                              .front()
+                              .getType()
+                              .cast<WarpgroupAccumulatorType>()
+                              .getFragmented();
 
+  int64_t totalFirstDimension = 0;
   for (auto result : getMatrixD()) {
-    auto resultStype = result.getType()
-                           .cast<WarpgroupAccumulatorType>()
-                           .getFragmented()
-                           .dyn_cast<LLVM::LLVMStructType>();
-    if (!resultStype)
-      return emitOpError() << "result is " << result.getType()
-                           << "  but must keep type of llvm struct";
-    if (stype != resultStype)
-      return emitOpError() << "all results must be the same type";
-
-    // todo improve this limitation
-    if (!resultStype.getBody().front().isF32()) {
-      return emitOpError() << "supporst only f32 results for the time being";
+    VectorType vtype =
+        result.getType().cast<WarpgroupAccumulatorType>().getFragmented();
+    if (vtype != firstVtype)
+      return emitOpError() << "all fragmented types must be the same";
+    // Limitation
+    if (!vtype.getElementType().isF32()) {
+      return emitOpError()
+             << "hit a limitation: only f32 results for the time being";
     }
+    totalFirstDimension += vtype.getDimSize(0);
   }
-
-  if (!llvm::all_equal(stype.cast<LLVM::LLVMStructType>().getBody())) {
-    return emitOpError() << "all element types must be equal  ";
+  if (totalFirstDimension != dstMemrefType.getDimSize(0) ||
+      firstVtype.getDimSize(1) != dstMemrefType.getDimSize(1)) {
+    return emitOpError() << "results [" << totalFirstDimension << "]["
+                         << firstVtype.getDimSize(1)
+                         << "] values. However, destination memref["
+                         << dstMemrefType.getDimSize(0) << "]["
+                         << dstMemrefType.getDimSize(1)
+                         << "]  does not have same size as results";
   }
-
   return success();
 }
 
