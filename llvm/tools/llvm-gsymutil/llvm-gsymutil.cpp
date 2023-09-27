@@ -213,14 +213,14 @@ static bool filterArch(MachOObjectFile &Obj) {
   Triple ObjTriple(Obj.getArchTriple());
   StringRef ObjArch = ObjTriple.getArchName();
 
-  for (auto Arch : ArchFilters) {
+  for (StringRef Arch : ArchFilters) {
     // Match name.
     if (Arch == ObjArch)
       return true;
 
     // Match architecture number.
     unsigned Value;
-    if (!StringRef(Arch).getAsInteger(0, Value))
+    if (!Arch.getAsInteger(0, Value))
       if (Value == getCPUType(Obj))
         return true;
   }
@@ -469,10 +469,9 @@ static llvm::Error convertFileToGSYM(raw_ostream &OS) {
     error(DsymObjectsOrErr.takeError());
   }
 
-  for (auto Object : Objects) {
-    if (auto Err = handleFileConversionToGSYM(Object, OutFile))
+  for (StringRef Object : Objects)
+    if (Error Err = handleFileConversionToGSYM(Object, OutFile))
       return Err;
-  }
   return Error::success();
 }
 
