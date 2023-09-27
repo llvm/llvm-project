@@ -40,6 +40,12 @@ struct BufferDeallocationPipelineOptions
           "statically that the ABI is not adhered to, an error will already be "
           "emitted at compile time. This cannot be changed with this option."),
       llvm::cl::init(true)};
+  PassOptions::Option<bool> removeExistingDeallocations{
+      *this, "remove-existing-deallocations",
+      llvm::cl::desc("Removes all pre-existing memref.dealloc operations and "
+                     "insert all deallocations according to the buffer "
+                     "deallocation rules."),
+      llvm::cl::init(false)};
 
   /// Convert this BufferDeallocationPipelineOptions struct to a
   /// DeallocationOptions struct to be passed to the

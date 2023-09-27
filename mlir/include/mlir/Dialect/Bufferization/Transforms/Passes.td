@@ -233,6 +233,11 @@ def OwnershipBasedBufferDeallocation : Pass<
            "If it can be determined statically that the ABI is not adhered "
            "to, an error will already be emitted at compile time. This cannot "
            "be changed with this option.">,
+    Option<"removeExistingDeallocations", "remove-existing-deallocations",
+           "bool", /*default=*/"false",
+           "Remove already existing MemRef deallocation operations and let the "
+           "deallocation pass insert the deallocation operations according to "
+           "its rules.">,
   ];
   let constructor = "mlir::bufferization::createOwnershipBasedBufferDeallocationPass()";
 

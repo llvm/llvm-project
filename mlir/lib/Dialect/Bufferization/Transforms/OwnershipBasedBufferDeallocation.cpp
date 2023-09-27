@@ -816,15 +816,28 @@ FailureOr<Operation *>
 BufferDeallocation::handleInterface(MemoryEffectOpInterface op) {
   auto *block = op->getBlock();
 
-  for (auto operand : llvm::make_filter_range(op->getOperands(), isMemref))
-    if (op.getEffectOnValue<MemoryEffects::Free>(operand).has_value())
+  for (auto operand : llvm::make_filter_range(op->getOperands(), isMemref)) {
+    if (op.getEffectOnValue<MemoryEffects::Free>(operand).has_value() &&
+        options.isRelevantDeallocOp(op)) {
+      if (auto repl = options.getDeallocReplacement(op);
+          succeeded(repl) && options.removeExistingDeallocations) {
+        op->replaceAllUsesWith(repl.value());
+        op.erase();
+        return FailureOr<Operation *>(nullptr);
+      }
+
       return op->emitError(
           "memory free side-effect on MemRef value not supported!");
+    }
+  }
 
   OpBuilder builder = OpBuilder::atBlockBegin(block);
   for (auto res : llvm::make_filter_range(op->getResults(), isMemref)) {
     auto allocEffect = op.getEffectOnValue<MemoryEffects::Allocate>(res);
     if (allocEffect.has_value()) {
+      // Assuming that an alloc effect is interpreted as MUST and not MAY.
+      state.resetOwnerships(res, block);
+
       if (isa<SideEffects::AutomaticAllocationScopeResource>(
               allocEffect->getResource())) {
         // Make sure that the ownership of auto-managed allocations is set to
@@ -839,8 +852,15 @@ BufferDeallocation::handleInterface(MemoryEffectOpInterface op) {
         continue;
       }
 
-      state.updateOwnership(res, buildBoolValue(builder, op.getLoc(), true));
-      state.addMemrefToDeallocate(res, block);
+      if (options.isRelevantAllocOp(op)) {
+        state.updateOwnership(res, buildBoolValue(builder, op.getLoc(), true));
+        state.addMemrefToDeallocate(res, block);
+        continue;
+      }
+
+      // Alloc operations from other dialects are expected to have matching
+      // deallocation operations inserted by another pass.
+      state.updateOwnership(res, buildBoolValue(builder, op.getLoc(), false));
     }
   }
 
@@ -943,16 +963,18 @@ struct OwnershipBasedBufferDeallocationPass
     : public bufferization::impl::OwnershipBasedBufferDeallocationBase<
           OwnershipBasedBufferDeallocationPass> {
   OwnershipBasedBufferDeallocationPass() = default;
-  OwnershipBasedBufferDeallocationPass(const DeallocationOptions &options)
-      : OwnershipBasedBufferDeallocationPass() {
+  OwnershipBasedBufferDeallocationPass(const DeallocationOptions &options) {
     privateFuncDynamicOwnership.setValue(options.privateFuncDynamicOwnership);
     verifyFunctionBoundaryABI.setValue(options.verifyFunctionBoundaryABI);
+    removeExistingDeallocations.setValue(options.removeExistingDeallocations);
   }
   void runOnOperation() override {
     DeallocationOptions options;
     options.privateFuncDynamicOwnership =
         privateFuncDynamicOwnership.getValue();
     options.verifyFunctionBoundaryABI = verifyFunctionBoundaryABI.getValue();
+    options.removeExistingDeallocations =
+        removeExistingDeallocations.getValue();
 
     auto status = getOperation()->walk([&](func::FuncOp func) {
       if (func.isExternal())

@@ -27,6 +27,7 @@ BufferDeallocationPipelineOptions::asDeallocationOptions() const {
   DeallocationOptions opts;
   opts.privateFuncDynamicOwnership = privateFunctionDynamicOwnership.getValue();
   opts.verifyFunctionBoundaryABI = verifyFunctionBoundaryABI.getValue();
+  opts.removeExistingDeallocations = removeExistingDeallocations.getValue();
   return opts;
 }
 
