@@ -43,7 +43,7 @@ void cant_construct_data_handle_type() {
   int data;
   std::mdspan<int, std::extents<int>, std::layout_right, convertible_accessor_but_not_handle<int>> m_nc(&data);
   // expected-error-re@*:* {{{{.*}}no matching constructor for initialization of {{.*}} (aka 'not_const_convertible_handle<const int>')}}
-  // expected-error-re@*:* {{{{(static_assert|static assertion)}} failed {{.*}}mdspan: incompatible data_handle_type for mdspan construction}}
+  // expected-error-re@*:* {{static assertion failed {{.*}}mdspan: incompatible data_handle_type for mdspan construction}}
   [[maybe_unused]] std::
       mdspan<const int, std::extents<int>, std::layout_right, convertible_accessor_but_not_handle<const int>>
           m_c(m_nc);
@@ -52,6 +52,6 @@ void cant_construct_data_handle_type() {
 void mapping_constructible_despite_extents_compatibility() {
   int data;
   std::mdspan<int, std::extents<int>, always_convertible_layout> m(&data);
-  // expected-error-re@*:* {{{{(static_assert|static assertion)}} failed {{.*}}mdspan: incompatible extents for mdspan construction}}
+  // expected-error-re@*:* {{static assertion failed {{.*}}mdspan: incompatible extents for mdspan construction}}
   [[maybe_unused]] std::mdspan<int, std::extents<int, 5>, always_convertible_layout> m2(m);
 }
