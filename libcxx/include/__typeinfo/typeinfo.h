@@ -280,7 +280,7 @@ public:
 class _LIBCPP_EXPORTED_FROM_ABI bad_cast : public exception {
 public:
   bad_cast() _NOEXCEPT;
-  _LIBCPP_HIDE_FROM_ABI bad_cast(const bad_cast&) _NOEXCEPT = default;
+  _LIBCPP_HIDE_FROM_ABI bad_cast(const bad_cast&) _NOEXCEPT            = default;
   _LIBCPP_HIDE_FROM_ABI bad_cast& operator=(const bad_cast&) _NOEXCEPT = default;
   ~bad_cast() _NOEXCEPT override;
   const char* what() const _NOEXCEPT override;
@@ -289,7 +289,7 @@ public:
 class _LIBCPP_EXPORTED_FROM_ABI bad_typeid : public exception {
 public:
   bad_typeid() _NOEXCEPT;
-  _LIBCPP_HIDE_FROM_ABI bad_typeid(const bad_typeid&) _NOEXCEPT = default;
+  _LIBCPP_HIDE_FROM_ABI bad_typeid(const bad_typeid&) _NOEXCEPT            = default;
   _LIBCPP_HIDE_FROM_ABI bad_typeid& operator=(const bad_typeid&) _NOEXCEPT = default;
   ~bad_typeid() _NOEXCEPT override;
   const char* what() const _NOEXCEPT override;
