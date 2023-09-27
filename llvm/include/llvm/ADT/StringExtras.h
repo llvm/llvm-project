@@ -26,7 +26,6 @@
 #include <cstring>
 #include <iterator>
 #include <string>
-#include <type_traits>
 #include <utility>
 
 namespace llvm {
@@ -418,13 +417,8 @@ inline std::string join_impl(IteratorT Begin, IteratorT End,
     return S;
 
   size_t Len = (std::distance(Begin, End) - 1) * Separator.size();
-  for (IteratorT I = Begin; I != End; ++I) {
-    if constexpr (std::is_same_v<std::remove_reference_t<decltype(*I)>,
-                                 const char *>)
-      Len += strlen(*I);
-    else
-      Len += (*I).size();
-  }
+  for (IteratorT I = Begin; I != End; ++I)
+    Len += StringRef(*I).size();
   S.reserve(Len);
   size_t PrevCapacity = S.capacity();
   (void)PrevCapacity;
