@@ -773,8 +773,8 @@ std::string PredefinedExpr::ComputeName(IdentKind IK, const Decl *CurrentDecl) {
   }
   if (const FunctionDecl *FD = dyn_cast<FunctionDecl>(CurrentDecl)) {
     const auto &LO = Context.getLangOpts();
-    if (((IK == Func || IK == Function) && !LO.MicrosoftExt) ||
-        (IK == LFunction && LO.MicrosoftExt))
+    if (((IK == Function || IK == Func) && !LO.MicrosoftExt) ||
+        ((IK == LFunction || IK == Func) && LO.MicrosoftExt))
       return FD->getNameAsString();
 
     SmallString<256> Name;
@@ -804,7 +804,10 @@ std::string PredefinedExpr::ComputeName(IdentKind IK, const Decl *CurrentDecl) {
     PrintingPolicy Policy(LO);
     PrettyCallbacks PrettyCB(LO);
     Policy.Callbacks = &PrettyCB;
-    Policy.UseClassForTemplateArgument = LO.MicrosoftExt;
+    if (IK == Function && LO.MicrosoftExt) {
+      Policy.UseClassForTemplateArgument = LO.MicrosoftExt;
+      Policy.MSVCFormatting = LO.MicrosoftExt;
+    }
     std::string Proto;
     llvm::raw_string_ostream POut(Proto);
 

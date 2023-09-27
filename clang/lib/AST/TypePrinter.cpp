@@ -2195,6 +2195,7 @@ printTo(raw_ostream &OS, ArrayRef<TA> Args, const PrintingPolicy &Policy,
     llvm::SmallVector<TemplateArgument, 8> OrigArgs;
     for (const TA &A : Args)
       OrigArgs.push_back(getArgument(A));
+
     while (!Args.empty() && getArgument(Args.back()).getIsDefaulted())
       Args = Args.drop_back();
   }
@@ -2218,10 +2219,24 @@ printTo(raw_ostream &OS, ArrayRef<TA> Args, const PrintingPolicy &Policy,
     } else {
       if (!FirstArg)
         OS << Comma;
-      if (Policy.UseClassForTemplateArgument &&
-          Argument.getKind() == TemplateArgument::Type)
-        OS << "class ";
 
+      if (Policy.MSVCFormatting && Policy.UseClassForTemplateArgument &&
+          Argument.getKind() == TemplateArgument::Type &&
+          !Argument.getAsType()->isBuiltinType()) {
+        const Type *Ty = Argument.getAsType().getTypePtr();
+        const char *kw;
+        if (Ty->isStructureType())
+          kw = "struct ";
+        else if (Ty->isClassType())
+          kw = "class ";
+        else if (Ty->isUnionType())
+          kw = "union ";
+        else if (Ty->isEnumeralType())
+          kw = "enum ";
+        else
+          llvm_unreachable("argument type not expected");
+        OS << kw;
+      }
       // Tries to print the argument with location info if exists.
       printArgument(Arg, Policy, ArgOS,
                     TemplateParameterList::shouldIncludeTypeForArgument(

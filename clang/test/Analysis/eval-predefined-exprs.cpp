@@ -56,7 +56,7 @@ struct A {
     clang_analyzer_dump(__FUNCTION__);
     clang_analyzer_dump(__PRETTY_FUNCTION__);
 #ifdef ANALYZER_MS
-    // expected-warning@-4 {{&Element{"A::A",0 S64b,char}}}
+    // expected-warning@-4 {{&Element{"A",0 S64b,char}}}
     // expected-warning@-4 {{&Element{"A::A",0 S64b,char}}}
 #else
     // expected-warning@-7 {{&Element{"A",0 S64b,char}}}
@@ -80,7 +80,7 @@ struct A {
     clang_analyzer_dump(__FUNCTION__);
     clang_analyzer_dump(__PRETTY_FUNCTION__);
 #ifdef ANALYZER_MS
-    // expected-warning@-4 {{&Element{"A::~A",0 S64b,char}}}
+    // expected-warning@-4 {{&Element{"~A",0 S64b,char}}}
     // expected-warning@-4 {{&Element{"A::~A",0 S64b,char}}}
 #else
     // expected-warning@-7 {{&Element{"~A",0 S64b,char}}}

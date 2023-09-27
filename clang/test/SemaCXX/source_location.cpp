@@ -423,10 +423,17 @@ constexpr const char *test_func_simple(const char *__f = __builtin_FUNCTION()) {
 constexpr const char *get_function() {
   return __func__;
 }
+#ifdef MS
 constexpr bool test_function() {
+  return !is_equal(__func__, test_func_simple()) &&
+         !is_equal(get_function(), test_func_simple());
+}
+#else
+  constexpr bool test_function() {
   return is_equal(__func__, test_func_simple()) &&
          !is_equal(get_function(), test_func_simple());
 }
+#endif
 static_assert(test_function());
 
 template <class T, class U = SL>
@@ -463,7 +470,72 @@ void ctor_tests() {
 constexpr SL global_sl = SL::current();
 static_assert(is_equal(global_sl.function(), ""));
 
+template <class T>
+class TestBI {
+public:
+   TestBI() {
+#ifdef MS
+      static_assert(is_equal(__FUNCTION__, "test_func::TestBI<int>::TestBI"));
+      static_assert(is_equal(__func__, "TestBI"));
+#else
+      static_assert(is_equal(__func__, "TestBI"));
+      static_assert(is_equal(__func__, "TestBI"));
+#endif
+   }
+};
+
+template <class T>
+class TestClass {
+public:
+   TestClass() {
+#ifdef MS
+      static_assert(is_equal(__FUNCTION__, "test_func::TestClass<class test_func::C>::TestClass"));
+      static_assert(is_equal(__func__, "TestClass"));
+#else
+      static_assert(is_equal(__func__, "TestClass"));
+      static_assert(is_equal(__func__, "TestClass"));
+#endif
+   }
+};
+
+template <class T>
+class TestStruct {
+public:
+   TestStruct() {
+#ifdef MS
+      static_assert(is_equal(__FUNCTION__, "test_func::TestStruct<struct test_func::S>::TestStruct"));
+      static_assert(is_equal(__func__, "TestStruct"));
+#else
+      static_assert(is_equal(__func__, "TestStruct"));
+      static_assert(is_equal(__func__, "TestStruct"));
+#endif
+   }
+};
+
+template <class T>
+class TestEnum {
+public:
+   TestEnum() {
+#ifdef MS
+      static_assert(is_equal(__FUNCTION__, "test_func::TestEnum<enum test_func::E>::TestEnum"));
+      static_assert(is_equal(__func__, "TestEnum"));
+#else
+      static_assert(is_equal(__func__, "TestEnum"));
+      static_assert(is_equal(__func__, "TestEnum"));
+#endif
+   }
+};
+
+  class C {};
+struct S {};
+enum E {};
+
+test_func::TestBI<int> t1;
+test_func::TestClass<C> t2;
+test_func::TestStruct<S> t3;
+test_func::TestEnum<E> t4;
 } // namespace test_func
+
 
 //===----------------------------------------------------------------------===//
 //                            __builtin_FUNCSIG()
