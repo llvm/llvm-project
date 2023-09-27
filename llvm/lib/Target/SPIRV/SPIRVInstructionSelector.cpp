@@ -1299,15 +1299,15 @@ bool SPIRVInstructionSelector::selectExtractElt(Register ResVReg,
 bool SPIRVInstructionSelector::selectGEP(Register ResVReg,
                                          const SPIRVType *ResType,
                                          MachineInstr &I) const {
-  const bool isGEPInBounds = I.getOperand(2).getImm();
+  const bool IsGEPInBounds = I.getOperand(2).getImm();
 
   // OpAccessChain could be used for OpenCL, but the SPIRV-LLVM Translator only
   // relies on PtrAccessChain, so we'll try not to deviate. For Vulkan however,
   // we have to use Op[InBounds]AccessChain.
   const unsigned Opcode = STI.isVulkanEnv()
-                              ? (isGEPInBounds ? SPIRV::OpInBoundsAccessChain
+                              ? (IsGEPInBounds ? SPIRV::OpInBoundsAccessChain
                                                : SPIRV::OpAccessChain)
-                              : (isGEPInBounds ? SPIRV::OpInBoundsPtrAccessChain
+                              : (IsGEPInBounds ? SPIRV::OpInBoundsPtrAccessChain
                                                : SPIRV::OpPtrAccessChain);
 
   auto Res = BuildMI(*I.getParent(), I, I.getDebugLoc(), TII.get(Opcode))
