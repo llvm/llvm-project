@@ -2997,6 +2997,7 @@ _mm_movemask_ps(__m128 __a)
 /// \param c
 ///    An immediate integer operand, with bits [4:0] specifying which comparison
 ///    operation to use: \n
+///    (Note that without avx enabled, only bits [2:0] are supported) \n
 ///    0x00: Equal (ordered, non-signaling) \n
 ///    0x01: Less-than (ordered, signaling) \n
 ///    0x02: Less-than-or-equal (ordered, signaling) \n
@@ -3055,6 +3056,7 @@ _mm_movemask_ps(__m128 __a)
 /// \param c
 ///    An immediate integer operand, with bits [4:0] specifying which comparison
 ///    operation to use: \n
+///    (Note that without avx enabled, only bits [2:0] are supported) \n
 ///    0x00: Equal (ordered, non-signaling) \n
 ///    0x01: Less-than (ordered, signaling) \n
 ///    0x02: Less-than-or-equal (ordered, signaling) \n

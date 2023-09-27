@@ -4765,6 +4765,7 @@ static __inline__ __m128d __DEFAULT_FN_ATTRS _mm_castsi128_pd(__m128i __a) {
 /// \param c
 ///    An immediate integer operand, with bits [4:0] specifying which comparison
 ///    operation to use: \n
+///    (Note that without avx enabled, only bits [2:0] are supported) \n
 ///    0x00: Equal (ordered, non-signaling) \n
 ///    0x01: Less-than (ordered, signaling) \n
 ///    0x02: Less-than-or-equal (ordered, signaling) \n
@@ -4824,6 +4825,7 @@ static __inline__ __m128d __DEFAULT_FN_ATTRS _mm_castsi128_pd(__m128i __a) {
 /// \param c
 ///    An immediate integer operand, with bits [4:0] specifying which comparison
 ///    operation to use: \n
+///    (Note that without avx enabled, only bits [2:0] are supported) \n
 ///    0x00: Equal (ordered, non-signaling) \n
 ///    0x01: Less-than (ordered, signaling) \n
 ///    0x02: Less-than-or-equal (ordered, signaling) \n
