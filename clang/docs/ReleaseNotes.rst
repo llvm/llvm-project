@@ -357,6 +357,10 @@ Bug Fixes to C++ Support
   reference. Fixes:
   (`#64162 <https://github.com/llvm/llvm-project/issues/64162>`_)
 
+- Fix crash when fold expression was used in the initialization of default
+  argument. Fixes:
+  (`#67395 <https://github.com/llvm/llvm-project/issues/67395>`_)
+
 Bug Fixes to AST Handling
 ^^^^^^^^^^^^^^^^^^^^^^^^^
 - Fixed an import failure of recursive friend class template.
