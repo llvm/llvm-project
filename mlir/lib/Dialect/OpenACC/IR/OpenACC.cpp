@@ -619,7 +619,7 @@ Value ParallelOp::getDataOperand(unsigned i) {
 LogicalResult acc::ParallelOp::verify() {
   if (failed(checkSymOperandList<mlir::acc::PrivateRecipeOp>(
           *this, getPrivatizations(), getGangPrivateOperands(), "private",
-          "privatizations")))
+          "privatizations", false)))
     return failure();
   if (failed(checkSymOperandList<mlir::acc::ReductionRecipeOp>(
           *this, getReductionRecipes(), getReductionOperands(), "reduction",
@@ -860,7 +860,7 @@ LogicalResult acc::LoopOp::verify() {
 
   if (failed(checkSymOperandList<mlir::acc::PrivateRecipeOp>(
           *this, getPrivatizations(), getPrivateOperands(), "private",
-          "privatizations")))
+          "privatizations", false)))
     return failure();
 
   if (failed(checkSymOperandList<mlir::acc::ReductionRecipeOp>(
