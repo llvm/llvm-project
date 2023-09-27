@@ -3968,16 +3968,12 @@ class VPatUnaryNoMask<string intrinsic_name,
                       int log2sew,
                       LMULInfo vlmul,
                       VReg result_reg_class,
-                      VReg op2_reg_class,
-                      bit isSEWAware = 0> :
+                      VReg op2_reg_class> :
   Pat<(result_type (!cast<Intrinsic>(intrinsic_name)
                    (result_type result_reg_class:$merge),
                    (op2_type op2_reg_class:$rs2),
                    VLOpFrag)),
-                   (!cast<Instruction>(
-                      !if(isSEWAware,
-                          inst#"_"#kind#"_"#vlmul.MX#"_E"#!shl(1, log2sew),
-                          inst#"_"#kind#"_"#vlmul.MX))
+                   (!cast<Instruction>(inst#"_"#kind#"_"#vlmul.MX)
                    (result_type result_reg_class:$merge),
                    (op2_type op2_reg_class:$rs2),
                    GPR:$vl, log2sew, TU_MU)>;
@@ -4016,17 +4012,13 @@ class VPatUnaryMask<string intrinsic_name,
                     int log2sew,
                     LMULInfo vlmul,
                     VReg result_reg_class,
-                    VReg op2_reg_class,
-                    bit isSEWAware = 0> :
+                    VReg op2_reg_class> :
   Pat<(result_type (!cast<Intrinsic>(intrinsic_name#"_mask")
                    (result_type result_reg_class:$merge),
                    (op2_type op2_reg_class:$rs2),
                    (mask_type V0),
                    VLOpFrag, (XLenVT timm:$policy))),
-                   (!cast<Instruction>(
-                      !if(isSEWAware,
-                          inst#"_"#kind#"_"#vlmul.MX#"_E"#!shl(1, log2sew)#"_MASK",
-                          inst#"_"#kind#"_"#vlmul.MX#"_MASK"))
+                   (!cast<Instruction>(inst#"_"#kind#"_"#vlmul.MX#"_MASK")
                    (result_type result_reg_class:$merge),
                    (op2_type op2_reg_class:$rs2),
                    (mask_type V0), GPR:$vl, log2sew, (XLenVT timm:$policy))>;
@@ -4712,15 +4704,15 @@ multiclass VPatUnaryV_VF<string intrinsic, string instruction, string suffix,
 }
 
 multiclass VPatUnaryV_V<string intrinsic, string instruction,
-                        list<VTypeInfo> vtilist, bit isSEWAware = 0> {
+                        list<VTypeInfo> vtilist> {
   foreach vti = vtilist in {
     let Predicates = GetVTypePredicates<vti>.Predicates in {
       def : VPatUnaryNoMask<intrinsic, instruction, "V",
                             vti.Vector, vti.Vector, vti.Log2SEW,
-                            vti.LMul, vti.RegClass, vti.RegClass, isSEWAware>;
+                            vti.LMul, vti.RegClass, vti.RegClass>;
       def : VPatUnaryMask<intrinsic, instruction, "V",
                           vti.Vector, vti.Vector, vti.Mask, vti.Log2SEW,
-                          vti.LMul, vti.RegClass, vti.RegClass, isSEWAware>;
+                          vti.LMul, vti.RegClass, vti.RegClass>;
     }
   }
 }
