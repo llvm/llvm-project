@@ -95,7 +95,7 @@ public:
   mlir::Attribute asAttribute(mlir::MLIRContext *ctx) const;
   static mlir::LogicalResult
   setFromAttr(MyPropStruct &prop, mlir::Attribute attr,
-              llvm::function_ref<mlir::InFlightDiagnostic &()> getDiag);
+              llvm::function_ref<mlir::InFlightDiagnostic()> emitError);
   llvm::hash_code hash() const;
   bool operator==(const MyPropStruct &rhs) const {
     return content == rhs.content;
