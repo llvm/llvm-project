@@ -1587,7 +1587,7 @@ bool SPIRVInstructionSelector::selectLog10(Register ResVReg,
           .addDef(VarReg)
           .addUse(GR.getSPIRVTypeID(ResType))
           .addImm(static_cast<uint32_t>(SPIRV::InstructionSet::GLSL_std_450))
-          .addImm(GL::Log)
+          .addImm(GL::Log2)
           .add(I.getOperand(1))
           .constrainAllUses(TII, TRI, RBI);
 

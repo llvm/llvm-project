@@ -1,6 +1,6 @@
 ; RUN: llc -O0 -mtriple=spirv-unknown-linux %s -o - | FileCheck %s
 
-; CHECK: OpExtInstImport "GLSL.std.450"
+; CHECK: %[[#extinst:]] = OpExtInstImport "GLSL.std.450"
 
 ; CHECK: %[[#float:]] = OpTypeFloat 32
 ; CHECK: %[[#v4float:]] = OpTypeVector %[[#float]] 4
@@ -20,7 +20,7 @@ entry:
   %logf4 = alloca <4 x float>, align 16
 
 ; CHECK: %[[#load:]] = OpLoad %[[#float]] %[[#f]] Aligned 4
-; CHECK: %[[#log2:]] = OpExtInst %[[#float]] %15 Log %[[#load]]
+; CHECK: %[[#log2:]] = OpExtInst %[[#float]] %[[#extinst]] Log2 %[[#load]]
 ; CHECK: %[[#res:]] = OpFMul %[[#float]] %[[#log2]] %[[#float_0_30103001]]
 ; CHECK: OpStore %[[#logf]] %[[#res]] Aligned 4
   %0 = load float, ptr %f, align 4
@@ -28,7 +28,7 @@ entry:
   store float %elt.log10, ptr %logf, align 4
 
 ; CHECK: %[[#load:]] = OpLoad %[[#v4float]] %[[#f4]] Aligned 16
-; CHECK: %[[#log2:]] = OpExtInst %[[#v4float]] %15 Log %[[#load]]
+; CHECK: %[[#log2:]] = OpExtInst %[[#v4float]] %[[#extinst]] Log2 %[[#load]]
 ; CHECK: %[[#res:]] = OpVectorTimesScalar %[[#v4float]] %[[#log2]] %[[#float_0_30103001]]
 ; CHECK: OpStore %[[#logf4]] %[[#res]] Aligned 16
   %1 = load <4 x float>, ptr %f4, align 16
