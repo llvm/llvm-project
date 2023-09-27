@@ -1836,7 +1836,10 @@ and non-0 as true.
     ``list<int>``. *start* is ``0`` and *step* is ``1`` by default. *step* can
     be negative and cannot be 0. If *start* ``<`` *end* and *step* is negative,
     or *start* ``>`` *end* and *step* is positive, the result is an empty list
-    ``[]<list<int>>``. For example:
+    ``[]<list<int>>``.
+
+    For example:
+
     * ``!range(4)`` is equivalent to ``!range(0, 4, 1)`` and the result is
       `[0, 1, 2, 3]`.
     * ``!range(1, 4)`` is equivalent to ``!range(1, 4, 1)`` and the result is
