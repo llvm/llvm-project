@@ -799,7 +799,7 @@ static void printSymbolList(SymbolicFile &Obj,
     std::string Name = S.Name;
     MachOObjectFile *MachO = dyn_cast<MachOObjectFile>(&Obj);
     if (Demangle)
-      Name = llvm::demangle(Name);
+      Name = demangle(Name);
 
     if (PrintFileName)
       writeFileName(outs(), ArchiveName, ArchitectureName);
