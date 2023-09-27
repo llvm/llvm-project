@@ -36,11 +36,12 @@ struct Server {
 
   rpc_status_t handle_server(
       const std::unordered_map<rpc_opcode_t, rpc_opcode_callback_ty> &callbacks,
-      const std::unordered_map<rpc_opcode_t, void *> &callback_data) {
+      const std::unordered_map<rpc_opcode_t, void *> &callback_data,
+      uint32_t &index) {
     rpc_status_t ret = RPC_STATUS_SUCCESS;
     std::visit(
         [&](auto &server) {
-          ret = handle_server(*server, callbacks, callback_data);
+          ret = handle_server(*server, callbacks, callback_data, index);
         },
         server);
     return ret;
@@ -51,8 +52,9 @@ private:
   rpc_status_t handle_server(
       rpc::Server<lane_size> &server,
       const std::unordered_map<rpc_opcode_t, rpc_opcode_callback_ty> &callbacks,
-      const std::unordered_map<rpc_opcode_t, void *> &callback_data) {
-    auto port = server.try_open();
+      const std::unordered_map<rpc_opcode_t, void *> &callback_data,
+      uint32_t &index) {
+    auto port = server.try_open(index);
     if (!port)
       return RPC_STATUS_SUCCESS;
 
@@ -203,6 +205,9 @@ private:
       (handler->second)(port_ref, data);
     }
     }
+
+    // Increment the index so we start the scan after this port.
+    index = port->get_index() + 1;
     port->close();
     return RPC_STATUS_CONTINUE;
   }
@@ -333,10 +338,11 @@ rpc_status_t rpc_handle_server(uint32_t device_id) {
   if (!state->devices[device_id])
     return RPC_STATUS_ERROR;
 
+  uint32_t index = 0;
   for (;;) {
     auto &device = *state->devices[device_id];
-    rpc_status_t status =
-        device.server.handle_server(device.callbacks, device.callback_data);
+    rpc_status_t status = device.server.handle_server(
+        device.callbacks, device.callback_data, index);
     if (status != RPC_STATUS_CONTINUE)
       return status;
   }
