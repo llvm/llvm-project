@@ -3528,8 +3528,8 @@ static int32_t computeHeuristicUnrollFactor(CanonicalLoopInfo *CLI) {
     return 1;
   }
 
-  unsigned LoopSize = UCE.getRolledLoopSize();
-  LLVM_DEBUG(dbgs() << "Estimated loop size is " << LoopSize << "\n");
+  LLVM_DEBUG(dbgs() << "Estimated loop size is " << UCE.getRolledLoopSize()
+                    << "\n");
 
   // TODO: Determine trip count of \p CLI if constant, computeUnrollCount might
   // be able to use it.
