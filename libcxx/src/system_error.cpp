@@ -272,9 +272,8 @@ __throw_system_error(int ev, const char* what_arg)
 #ifndef _LIBCPP_HAS_NO_EXCEPTIONS
     std::__throw_system_error(error_code(ev, system_category()), what_arg);
 #else
-  // The above could also handle the no-exception case, but for size, avoid referencing system_category() unnecessarily.
-  _LIBCPP_VERBOSE_ABORT(
-      "system_error was thrown in -fno-exceptions mode with error %i and message \"%s\"", ev, what_arg);
+    // The above could also handle the no-exception case, but for size, avoid referencing system_category() unnecessarily.
+    _LIBCPP_VERBOSE_ABORT("system_error was thrown in -fno-exceptions mode with error %i and message \"%s\"", ev, what_arg);
 #endif
 }
 
