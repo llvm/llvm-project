@@ -380,8 +380,8 @@ namespace llvm {
     GET_TLS_MOD_AIX,
 
     /// [GP|G8]RC = TLSLD_AIX, TOC_ENTRY(variable offset)
-    /// Op that internally creates TOC entry for the "_$TLSML" symbol, generates
-    /// a GET_TLS_MOD_AIX node which will be expanded into a call to
+    /// Op that internally creates a TOC entry for the "_$TLSML" symbol, and
+    /// generates a GET_TLS_MOD_AIX node which will be expanded into a call to
     /// .__tls_get_mod, and then adds the variable offset with the result from
     /// the call. This node is used in both 32-bit and 64-bit modes. The only
     /// difference is register class.
