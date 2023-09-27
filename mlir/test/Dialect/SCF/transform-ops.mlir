@@ -110,7 +110,7 @@ transform.sequence failures(propagate) {
   %0 = transform.structured.match ops{["arith.addi"]} in %arg1 : (!transform.any_op) -> !transform.any_op
   %1 = transform.loop.get_parent_for %0 : (!transform.any_op) -> !transform.op<"scf.for">
   %main_loop, %remainder = transform.loop.peel %1 : (!transform.op<"scf.for">) -> (!transform.op<"scf.for">, !transform.op<"scf.for">)
-  // Make sure 
+  // Verify that both of the generated loop handles are valid
   transform.test_print_remark_at_operand %main_loop, "main loop" : !transform.op<"scf.for">
   transform.test_print_remark_at_operand %remainder, "remainder loop" : !transform.op<"scf.for">
 }
