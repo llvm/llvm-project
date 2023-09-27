@@ -20,9 +20,8 @@ define void @test_monotonic_ptr_iv_inc_1_eq_to_uge(i8 %len.n, i16 %a) {
 ; CHECK-NEXT:    [[C:%.*]] = icmp eq i16 [[IV]], [[LEN]]
 ; CHECK-NEXT:    br i1 [[C]], label [[EXIT]], label [[FOR_BODY:%.*]]
 ; CHECK:       for.body:
-; CHECK-NEXT:    [[T_1:%.*]] = icmp uge i16 [[IV]], 0
 ; CHECK-NEXT:    [[T_2:%.*]] = icmp ult i16 [[IV]], [[A]]
-; CHECK-NEXT:    [[AND:%.*]] = and i1 [[T_1]], [[T_2]]
+; CHECK-NEXT:    [[AND:%.*]] = and i1 true, [[T_2]]
 ; CHECK-NEXT:    br i1 [[AND]], label [[LOOP_LATCH]], label [[EXIT]]
 ; CHECK:       loop.latch:
 ; CHECK-NEXT:    call void @use(i16 [[IV]])
@@ -112,9 +111,8 @@ define void @test_monotonic_ptr_iv_inc_2_eq_to_uge(i8 %len.n, i16 %a) {
 ; CHECK-NEXT:    [[C:%.*]] = icmp eq i16 [[IV]], [[LEN]]
 ; CHECK-NEXT:    br i1 [[C]], label [[EXIT]], label [[FOR_BODY:%.*]]
 ; CHECK:       for.body:
-; CHECK-NEXT:    [[T_1:%.*]] = icmp uge i16 [[IV]], 0
 ; CHECK-NEXT:    [[T_2:%.*]] = icmp ult i16 [[IV]], [[A]]
-; CHECK-NEXT:    [[AND:%.*]] = and i1 [[T_1]], [[T_2]]
+; CHECK-NEXT:    [[AND:%.*]] = and i1 true, [[T_2]]
 ; CHECK-NEXT:    br i1 [[AND]], label [[LOOP_LATCH]], label [[EXIT]]
 ; CHECK:       loop.latch:
 ; CHECK-NEXT:    call void @use(i16 [[IV]])

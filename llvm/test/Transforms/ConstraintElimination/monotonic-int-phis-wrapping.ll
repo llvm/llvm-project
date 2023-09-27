@@ -55,8 +55,7 @@ define void @test_iv_nuw_nsw_1_uge_start(i8 %len.n, i8 %a) {
 ; CHECK-NEXT:    [[C_2:%.*]] = call i1 @cond()
 ; CHECK-NEXT:    br i1 [[C_2]], label [[LOOP_LATCH]], label [[EXIT]]
 ; CHECK:       loop.latch:
-; CHECK-NEXT:    [[T_1:%.*]] = icmp uge i8 [[IV]], -1
-; CHECK-NEXT:    call void @use.i1(i1 [[T_1]])
+; CHECK-NEXT:    call void @use.i1(i1 true)
 ; CHECK-NEXT:    [[IV_NEXT]] = add nuw nsw i8 [[IV]], 1
 ; CHECK-NEXT:    br label [[LOOP_HEADER]]
 ; CHECK:       exit:
@@ -97,8 +96,7 @@ define void @test_iv_nuw_nsw_2_uge_start(i8 %len.n, i8 %a) {
 ; CHECK-NEXT:    [[C_2:%.*]] = call i1 @cond()
 ; CHECK-NEXT:    br i1 [[C_2]], label [[LOOP_LATCH]], label [[EXIT]]
 ; CHECK:       loop.latch:
-; CHECK-NEXT:    [[T_1:%.*]] = icmp uge i8 [[IV]], -1
-; CHECK-NEXT:    call void @use.i1(i1 [[T_1]])
+; CHECK-NEXT:    call void @use.i1(i1 true)
 ; CHECK-NEXT:    [[IV_NEXT]] = add nuw nsw i8 [[IV]], 1
 ; CHECK-NEXT:    br label [[LOOP_HEADER]]
 ; CHECK:       exit:
@@ -139,8 +137,7 @@ define void @test_iv_nsw_nuw_1_ult_end(i8 %len.n, i8 %a) {
 ; CHECK-NEXT:    [[C_2:%.*]] = call i1 @cond()
 ; CHECK-NEXT:    br i1 [[C_2]], label [[LOOP_LATCH]], label [[EXIT]]
 ; CHECK:       loop.latch:
-; CHECK-NEXT:    [[T_1:%.*]] = icmp ult i8 [[IV]], 1
-; CHECK-NEXT:    call void @use.i1(i1 [[T_1]])
+; CHECK-NEXT:    call void @use.i1(i1 false)
 ; CHECK-NEXT:    [[IV_NEXT]] = add nuw nsw i8 [[IV]], 1
 ; CHECK-NEXT:    br label [[LOOP_HEADER]]
 ; CHECK:       exit:
@@ -222,8 +219,7 @@ define void @test_iv_nsw_nuw_3_ult_start_var(i8 %len.n, i8 %a, i8 %b) {
 ; CHECK-NEXT:    [[C_2:%.*]] = call i1 @cond()
 ; CHECK-NEXT:    br i1 [[C_2]], label [[LOOP_LATCH]], label [[EXIT]]
 ; CHECK:       loop.latch:
-; CHECK-NEXT:    [[T_1:%.*]] = icmp ult i8 [[IV]], [[A]]
-; CHECK-NEXT:    call void @use.i1(i1 [[T_1]])
+; CHECK-NEXT:    call void @use.i1(i1 false)
 ; CHECK-NEXT:    [[IV_NEXT]] = add nuw nsw i8 [[IV]], 1
 ; CHECK-NEXT:    br label [[LOOP_HEADER]]
 ; CHECK:       exit:
@@ -263,8 +259,7 @@ define void @test_iv_nsw_nuw_inc_2_ult_start_var(i8 %len.n, i8 %a, i8 %b) {
 ; CHECK-NEXT:    [[C_2:%.*]] = call i1 @cond()
 ; CHECK-NEXT:    br i1 [[C_2]], label [[LOOP_LATCH]], label [[EXIT]]
 ; CHECK:       loop.latch:
-; CHECK-NEXT:    [[T_1:%.*]] = icmp ult i8 [[IV]], [[A]]
-; CHECK-NEXT:    call void @use.i1(i1 [[T_1]])
+; CHECK-NEXT:    call void @use.i1(i1 false)
 ; CHECK-NEXT:    [[IV_NEXT]] = add nuw nsw i8 [[IV]], 2
 ; CHECK-NEXT:    br label [[LOOP_HEADER]]
 ; CHECK:       exit:
