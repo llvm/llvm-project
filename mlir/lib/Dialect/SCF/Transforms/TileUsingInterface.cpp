@@ -197,7 +197,7 @@ yieldTiledValues(RewriterBase &rewriter, ValueRange initValues,
                  ArrayRef<SmallVector<OpFoldResult>> tileOffsetsList,
                  ArrayRef<SmallVector<OpFoldResult>> tileSizesList,
                  MutableArrayRef<scf::ForOp> loops) {
-  NewYieldValueFn yieldValueFn =
+  NewYieldValuesFn yieldValueFn =
       [&](OpBuilder &b, Location loc,
           ArrayRef<BlockArgument> newBBArgs) -> SmallVector<Value> {
     SmallVector<Value> inserts;
@@ -219,7 +219,6 @@ yieldTiledValues(RewriterBase &rewriter, ValueRange initValues,
       replaceLoopNestWithNewYields(rewriter, loops, initValues, yieldValueFn,
                                    /*replaceIterOperandsUsesInLoop =*/false);
   for (const auto &loop : llvm::enumerate(loops)) {
-    rewriter.eraseOp(loop.value());
     loops[loop.index()] = newLoops[loop.index()];
   }
   return llvm::to_vector(llvm::map_range(
