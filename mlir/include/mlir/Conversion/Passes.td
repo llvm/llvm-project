@@ -932,6 +932,16 @@ def ConvertParallelLoopToGpu : Pass<"convert-parallel-loops-to-gpu"> {
 }
 
 //===----------------------------------------------------------------------===//
+// SCFToEmitC
+//===----------------------------------------------------------------------===//
+
+def SCFToEmitC : Pass<"convert-scf-to-emitc"> {
+  let summary = "Convert SCF dialect to EmitC dialect, maintaining structured"
+                " control flow";
+  let dependentDialects = ["emitc::EmitCDialect"];
+}
+
+//===----------------------------------------------------------------------===//
 // ShapeToStandard
 //===----------------------------------------------------------------------===//
 
