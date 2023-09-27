@@ -1,12 +1,47 @@
-RUN: cat %p/../Inputs/basic.macho.x86_64 > %t1
+RUN: cp %p/../Inputs/basic.macho.x86_64 %t1
 RUN: dsymutil -accelerator=Pub -f -oso-prepend-path=%p/.. %t1
 RUN: llvm-dwarfdump -a %t1.dwarf | FileCheck %s
-RUN: dsymutil -accelerator=Pub -f -o %t2 -oso-prepend-path=%p/.. %p/../Inputs/basic.macho.x86_64
+RUN: dsymutil -accelerator=Pub -f -o %t2 -oso-prepend-path=%p/.. \
+RUN:   %p/../Inputs/basic.macho.x86_64
 RUN: llvm-dwarfdump -a %t2 | FileCheck %s
-RUN: dsymutil -accelerator=Pub -f -o - -oso-prepend-path=%p/.. %p/../Inputs/basic.macho.x86_64 | llvm-dwarfdump -a - | FileCheck %s --check-prefixes=CHECK,BASIC,PUB
-RUN: dsymutil -accelerator=Pub -f -o - -oso-prepend-path=%p/.. %p/../Inputs/basic-archive.macho.x86_64 | llvm-dwarfdump -a - | FileCheck %s --check-prefixes=CHECK,ARCHIVE,PUB
-RUN: dsymutil -accelerator=Pub -dump-debug-map -oso-prepend-path=%p/.. %p/../Inputs/basic.macho.x86_64 | dsymutil -accelerator=Pub -f -y -o - - | llvm-dwarfdump -a - | FileCheck %s --check-prefixes=CHECK,BASIC,PUB
-RUN: dsymutil -accelerator=Pub -dump-debug-map -oso-prepend-path=%p/.. %p/../Inputs/basic-archive.macho.x86_64 | dsymutil -accelerator=Pub -f -o - -y - | llvm-dwarfdump -a - | FileCheck %s --check-prefixes=CHECK,ARCHIVE,PUB
+RUN: dsymutil -accelerator=Pub -f -o - -oso-prepend-path=%p/.. \
+RUN:   %p/../Inputs/basic.macho.x86_64 | llvm-dwarfdump -a - | \
+RUN:   FileCheck %s --check-prefixes=CHECK,BASIC,PUB
+RUN: dsymutil -accelerator=Pub -f -o - -oso-prepend-path=%p/.. \
+RUN:   %p/../Inputs/basic-archive.macho.x86_64 | llvm-dwarfdump -a - \
+RUN:   | FileCheck %s --check-prefixes=CHECK,ARCHIVE,PUB
+RUN: dsymutil -accelerator=Pub -dump-debug-map -oso-prepend-path=%p/.. \
+RUN:   %p/../Inputs/basic.macho.x86_64 | dsymutil -accelerator=Pub -f -y \
+RUN:   -o - - | llvm-dwarfdump -a - | FileCheck %s \
+RUN:   --check-prefixes=CHECK,BASIC,PUB
+RUN: dsymutil -accelerator=Pub -dump-debug-map -oso-prepend-path=%p/.. \
+RUN:   %p/../Inputs/basic-archive.macho.x86_64 | dsymutil -accelerator=Pub \
+RUN:   -f -o - -y - | llvm-dwarfdump -a - | FileCheck %s \
+RUN:   --check-prefixes=CHECK,ARCHIVE,PUB
+
+### ---------------------------------------
+### Repeat the same steps for --linker llvm
+
+RUN: cp %p/../Inputs/basic.macho.x86_64 %t1
+RUN: dsymutil --linker llvm -accelerator=Pub -f -oso-prepend-path=%p/.. %t1
+RUN: llvm-dwarfdump -a %t1.dwarf | FileCheck %s
+RUN: dsymutil --linker llvm  -accelerator=Pub -f -o %t2 -oso-prepend-path=%p/.. \
+RUN:   %p/../Inputs/basic.macho.x86_64
+RUN: llvm-dwarfdump -a %t2 | FileCheck %s
+RUN: dsymutil --linker llvm  -accelerator=Pub -f -o - -oso-prepend-path=%p/.. \
+RUN:   %p/../Inputs/basic.macho.x86_64 | llvm-dwarfdump -a - | \
+RUN:   FileCheck %s --check-prefixes=CHECK,BASIC,PUB
+RUN: dsymutil --linker llvm -accelerator=Pub -f -o - -oso-prepend-path=%p/.. \
+RUN:   %p/../Inputs/basic-archive.macho.x86_64 | llvm-dwarfdump -a - | \
+RUN:   FileCheck %s --check-prefixes=CHECK,ARCHIVE,PUB
+RUN: dsymutil --linker llvm -accelerator=Pub -dump-debug-map \
+RUN:  -oso-prepend-path=%p/.. %p/../Inputs/basic.macho.x86_64 \
+RUN:  | dsymutil -accelerator=Pub -f -y -o - - | llvm-dwarfdump \
+RUN:  -a - | FileCheck %s --check-prefixes=CHECK,BASIC,PUB
+RUN: dsymutil --linker llvm -accelerator=Pub -dump-debug-map \
+RUN:   -oso-prepend-path=%p/.. %p/../Inputs/basic-archive.macho.x86_64 \
+RUN:   | dsymutil -accelerator=Pub -f -o - -y - | llvm-dwarfdump -a - | \
+RUN:   FileCheck %s --check-prefixes=CHECK,ARCHIVE,PUB
 
 CHECK: file format Mach-O 64-bit x86-64
 

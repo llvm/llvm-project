@@ -21,7 +21,7 @@ foreach(arch ${LSAN_TEST_ARCH})
   list(APPEND LSAN_TESTSUITES ${CMAKE_CURRENT_BINARY_DIR}/${CONFIG_NAME})
 
   list(FIND ASAN_SUPPORTED_ARCH ${arch} _found)
-  if(NOT _found EQUAL -1)
+  if(NOT _found EQUAL -1 AND COMPILER_RT_HAS_ASAN)
     set(CONFIG_NAME ${ARCH_UPPER_CASE}AsanConfig)
     set(LSAN_LIT_TEST_MODE "AddressSanitizer")
     configure_lit_site_cfg(
@@ -31,7 +31,7 @@ foreach(arch ${LSAN_TEST_ARCH})
   endif()
 
   list(FIND HWASAN_SUPPORTED_ARCH ${arch} _found)
-  if(NOT _found EQUAL -1)
+  if(NOT _found EQUAL -1 AND COMPILER_RT_HAS_HWASAN)
     set(CONFIG_NAME ${ARCH_UPPER_CASE}HWAsanConfig)
     set(LSAN_LIT_TEST_MODE "HWAddressSanitizer")
     configure_lit_site_cfg(

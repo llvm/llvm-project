@@ -225,11 +225,15 @@ namespace SizeOf {
 #if __cplusplus >= 202002L
   /// FIXME: The following code should be accepted.
   consteval int foo(int n) { // ref-error {{consteval function never produces a constant expression}}
-    return sizeof(int[n]); // ref-note 2 {{not valid in a constant expression}}
+    return sizeof(int[n]); // ref-note 3{{not valid in a constant expression}} \
+                           // expected-note {{not valid in a constant expression}}
   }
-  constinit int var = foo(5); // ref-note {{in call to}} \
+  constinit int var = foo(5); // ref-error {{not a constant expression}} \
+                              // ref-note 2{{in call to}} \
                               // ref-error {{does not have a constant initializer}} \
                               // ref-note {{required by 'constinit' specifier}} \
+                              // expected-error  {{is not a constant expression}} \
+                              // expected-note {{in call to}} \
                               // expected-error {{does not have a constant initializer}} \
                               // expected-note {{required by 'constinit' specifier}} \
 
@@ -1042,8 +1046,8 @@ namespace PredefinedExprs {
     static_assert(strings_match(__FUNCSIG__, "void __cdecl PredefinedExprs::foo(void)"), "");
     static_assert(strings_match(L__FUNCSIG__, L"void __cdecl PredefinedExprs::foo(void)"), "");
     static_assert(strings_match(L__FUNCTION__, L"foo"), "");
-    static_assert(strings_match(__FUNCTION__, "PredefinedExprs::foo"), "");
-    static_assert(strings_match(__func__, "PredefinedExprs::foo"), "");
+    static_assert(strings_match(__FUNCTION__, "foo"), "");
+    static_assert(strings_match(__func__, "foo"), "");
     static_assert(strings_match(__PRETTY_FUNCTION__, "void PredefinedExprs::foo()"), "");
   }
 
@@ -1054,9 +1058,9 @@ namespace PredefinedExprs {
                                 // expected-warning {{result unused}}
     return __FUNCTION__[index];
   }
-  static_assert(heh(0) == 'P', "");
-  static_assert(heh(1) == 'r', "");
-  static_assert(heh(2) == 'e', "");
+  static_assert(heh(0) == 'h', "");
+  static_assert(heh(1) == 'e', "");
+  static_assert(heh(2) == 'h', "");
 #endif
 }
 
