@@ -3523,7 +3523,7 @@ static int32_t computeHeuristicUnrollFactor(CanonicalLoopInfo *CLI) {
   UnrollCostEstimator UCE(L, TTI, EphValues, UP.BEInsns);
 
   // Loop is not unrollable if the loop contains certain instructions.
-  if (UCE.canUnroll() || UCE.Convergent) {
+  if (!UCE.canUnroll() || UCE.Convergent) {
     LLVM_DEBUG(dbgs() << "Loop not considered unrollable\n");
     return 1;
   }
