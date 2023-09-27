@@ -227,9 +227,7 @@ define void @test.decompose.nonconst(i8 %a, i8 %b, i8 %c, i8 %d) {
 ; CHECK-NEXT:    [[AND_0:%.*]] = and i1 [[C_0]], [[C_1]]
 ; CHECK-NEXT:    br i1 [[AND_0]], label [[IF_THEN:%.*]], label [[IF_END:%.*]]
 ; CHECK:       if.then:
-; CHECK-NEXT:    [[C_2:%.*]] = icmp uge i8 [[A]], 0
-; CHECK-NEXT:    [[C_3:%.*]] = icmp uge i8 [[B]], 0
-; CHECK-NEXT:    [[AND_1:%.*]] = and i1 [[C_2]], [[C_3]]
+; CHECK-NEXT:    [[AND_1:%.*]] = and i1 true, true
 ; CHECK-NEXT:    br i1 [[AND_1]], label [[IF_THEN_2:%.*]], label [[IF_END]]
 ; CHECK:       if.then.2:
 ; CHECK-NEXT:    [[ADD_0:%.*]] = add nuw i8 [[A]], [[B]]

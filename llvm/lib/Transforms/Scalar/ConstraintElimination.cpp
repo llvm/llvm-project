@@ -676,6 +676,17 @@ ConstraintInfo::getConstraint(CmpInst::Predicate Pred, Value *Op0, Value *Op1,
 ConstraintTy ConstraintInfo::getConstraintForSolving(CmpInst::Predicate Pred,
                                                      Value *Op0,
                                                      Value *Op1) const {
+  Constant *NullC = Constant::getNullValue(Op0->getType());
+  // Handle trivially true compares directly to avoid adding V UGE 0 constraints
+  // for all variables in the unsigned system.
+  if ((Pred == CmpInst::ICMP_ULE && Op0 == NullC) ||
+      (Pred == CmpInst::ICMP_UGE && Op1 == NullC)) {
+    auto &Value2Index = getValue2Index(false);
+    // Return constraint that's trivially true.
+    return ConstraintTy(SmallVector<int64_t, 8>(Value2Index.size(), 0), false,
+                        false, false);
+  }
+
   // If both operands are known to be non-negative, change signed predicates to
   // unsigned ones. This increases the reasoning effectiveness in combination
   // with the signed <-> unsigned transfer logic.
