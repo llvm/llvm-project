@@ -1,5 +1,4 @@
-// FIXME: Remove -hwasan-globals=0 when implemented.
-// RUN: %clangxx %s -o %t -g -mllvm -hwasan-globals=0 && %run %t 2>&1 | FileCheck %s
+// RUN: %clangxx %s -o %t -g && %run %t 2>&1 | FileCheck %s
 
 // REQUIRES: internal_symbolizer
 
