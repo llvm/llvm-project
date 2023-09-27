@@ -913,9 +913,14 @@ static void simplifyRecipe(VPRecipeBase &R, VPTypeAnalysis &TypeInfo) {
         unsigned ExtOpcode = match(R.getOperand(0), m_SExt(m_VPValue()))
                                  ? Instruction::SExt
                                  : Instruction::ZExt;
-        auto *VPC =
-            new VPWidenCastRecipe(Instruction::CastOps(ExtOpcode), A, TruncTy);
-        VPC->insertBefore(&R);
+        VPValue *VPC;
+        if (auto *UV = R.getOperand(0)->getUnderlyingValue())
+          VPC = new VPWidenCastRecipe(Instruction::CastOps(ExtOpcode), A,
+                                      TruncTy, *cast<CastInst>(UV));
+        else
+          VPC = new VPWidenCastRecipe(Instruction::CastOps(ExtOpcode), A,
+                                      TruncTy);
+        VPC->getDefiningRecipe()->insertBefore(&R);
         Trunc->replaceAllUsesWith(VPC);
       } else if (ATy->getScalarSizeInBits() > TruncTy->getScalarSizeInBits()) {
         auto *VPC = new VPWidenCastRecipe(Instruction::Trunc, A, TruncTy);
