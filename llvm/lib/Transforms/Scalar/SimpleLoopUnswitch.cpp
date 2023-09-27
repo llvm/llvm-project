@@ -3060,7 +3060,6 @@ injectPendingInvariantConditions(NonTrivialUnswitchCandidate Candidate, Loop &L,
   auto *InjectedCond =
       ICmpInst::Create(Instruction::ICmp, Pred, LHS, RHS, "injected.cond",
                        Preheader->getTerminator());
-  auto *OldCond = TI->getCondition();
 
   BasicBlock *CheckBlock = BasicBlock::Create(Ctx, BB->getName() + ".check",
                                               BB->getParent(), InLoopSucc);
@@ -3069,7 +3068,8 @@ injectPendingInvariantConditions(NonTrivialUnswitchCandidate Candidate, Loop &L,
       Builder.CreateCondBr(InjectedCond, InLoopSucc, CheckBlock);
 
   Builder.SetInsertPoint(CheckBlock);
-  auto *NewTerm = Builder.CreateCondBr(OldCond, InLoopSucc, OutOfLoopSucc);
+  auto *NewTerm = Builder.CreateCondBr(TI->getCondition(), TI->getSuccessor(0),
+                                       TI->getSuccessor(1));
 
   TI->eraseFromParent();
   // Prevent infinite unswitching.
