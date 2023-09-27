@@ -6,15 +6,15 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_LIBC_SRC_THREADS_PTHREAD_SELF_H
-#define LLVM_LIBC_SRC_THREADS_PTHREAD_SELF_H
+#ifndef LLVM_LIBC_SRC_PTHREAD_PTHREAD_SELF_H
+#define LLVM_LIBC_SRC_PTHREAD_PTHREAD_SELF_H
 
 #include <pthread.h>
 
-namespace __llvm_libc {
+namespace LIBC_NAMESPACE {
 
 pthread_t pthread_self();
 
-} // namespace __llvm_libc
+} // namespace LIBC_NAMESPACE
 
-#endif // LLVM_LIBC_SRC_THREADS_PTHREAD_SELF_H
+#endif // LLVM_LIBC_SRC_PTHREAD_PTHREAD_SELF_H

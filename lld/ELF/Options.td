@@ -128,9 +128,12 @@ defm as_needed: B<"as-needed",
 defm call_graph_ordering_file:
   Eq<"call-graph-ordering-file", "Layout sections to optimize the given callgraph">;
 
-defm call_graph_profile_sort: BB<"call-graph-profile-sort",
-    "Reorder sections with call graph profile (default)",
-    "Do not reorder sections with call graph profile">;
+def call_graph_profile_sort: JJ<"call-graph-profile-sort=">,
+  HelpText<"Reorder input sections with call graph profile using the specified algorithm (default: hfsort)">,
+  MetaVarName<"[none,hfsort]">,
+  Values<"none,hfsort">;
+def : FF<"no-call-graph-profile-sort">, Alias<call_graph_profile_sort>, AliasArgs<["none"]>,
+  Flags<[HelpHidden]>;
 
 // --chroot doesn't have a help text because it is an internal option.
 def chroot: Separate<["--"], "chroot">;
@@ -604,9 +607,14 @@ def lto_cs_profile_file: JJ<"lto-cs-profile-file=">,
 defm lto_pgo_warn_mismatch: BB<"lto-pgo-warn-mismatch",
   "turn on warnings about profile cfg mismatch (default)",
   "turn off warnings about profile cfg mismatch">;
+defm lto_known_safe_vtables : EEq<"lto-known-safe-vtables",
+  "When --lto-validate-all-vtables-have-type-infos is enabled, skip validation on these vtables (_ZTV symbols)">;
 def lto_obj_path_eq: JJ<"lto-obj-path=">;
 def lto_sample_profile: JJ<"lto-sample-profile=">,
   HelpText<"Sample profile file path">;
+defm lto_validate_all_vtables_have_type_infos: BB<"lto-validate-all-vtables-have-type-infos",
+  "Validate that all vtables have type infos for LTO link",
+  "Do not validate that all vtables have type infos for LTO link">;
 defm lto_whole_program_visibility: BB<"lto-whole-program-visibility",
   "Asserts that the LTO link has whole program visibility",
   "Asserts that the LTO link does not have whole program visibility">;
@@ -673,8 +681,6 @@ def: J<"plugin-opt=cs-profile-path=">,
 def: J<"plugin-opt=obj-path=">,
   Alias<lto_obj_path_eq>,
   HelpText<"Alias for --lto-obj-path=">;
-def plugin_opt_opaque_pointers: F<"plugin-opt=opaque-pointers">,
-  HelpText<"Use opaque pointers in IR during LTO (default)">;
 def: J<"plugin-opt=opt-remarks-filename=">,
   Alias<opt_remarks_filename>,
   HelpText<"Alias for --opt-remarks-filename">;

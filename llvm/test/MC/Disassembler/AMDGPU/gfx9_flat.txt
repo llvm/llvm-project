@@ -1,4 +1,4 @@
-# RUN: llvm-mc -arch=amdgcn -mcpu=gfx900 -disassemble -show-encoding < %s | FileCheck -strict-whitespace %s
+# RUN: llvm-mc -triple=amdgcn -mcpu=gfx900 -disassemble -show-encoding < %s | FileCheck -strict-whitespace %s
 
 # CHECK: flat_load_ubyte v5, v[1:2] offset:4095  ; encoding: [0xff,0x0f,0x40,0xdc,0x01,0x00,0x00,0x05]
 0xff,0x0f,0x40,0xdc,0x01,0x00,0x00,0x05

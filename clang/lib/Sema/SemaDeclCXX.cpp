@@ -2514,12 +2514,15 @@ void Sema::DiagnoseImmediateEscalatingReason(FunctionDecl *FD) {
         Range = CurrentInit->isWritten() ? CurrentInit->getSourceRange()
                                          : SourceRange();
       }
+
+      FieldDecl* InitializedField = CurrentInit ? CurrentInit->getAnyMember() : nullptr;
+
       SemaRef.Diag(Loc, diag::note_immediate_function_reason)
           << ImmediateFn << Fn << Fn->isConsteval() << IsCall
           << isa<CXXConstructorDecl>(Fn) << ImmediateFnIsConstructor
-          << (CurrentInit != nullptr)
+          << (InitializedField != nullptr)
           << (CurrentInit && !CurrentInit->isWritten())
-          << (CurrentInit ? CurrentInit->getAnyMember() : nullptr) << Range;
+          << InitializedField << Range;
     }
     bool TraverseCallExpr(CallExpr *E) {
       if (const auto *DR =
@@ -18238,15 +18241,6 @@ void Sema::ActOnPureSpecifier(Decl *D, SourceLocation ZeroLoc) {
     Diag(D->getLocation(), diag::err_illegal_initializer);
 }
 
-/// Determine whether the given declaration is a global variable or
-/// static data member.
-static bool isNonlocalVariable(const Decl *D) {
-  if (const VarDecl *Var = dyn_cast_or_null<VarDecl>(D))
-    return Var->hasGlobalStorage();
-
-  return false;
-}
-
 /// Invoked when we are about to parse an initializer for the declaration
 /// 'Dcl'.
 ///
@@ -18269,9 +18263,6 @@ void Sema::ActOnCXXEnterDeclInitializer(Scope *S, Decl *D) {
   // If we are parsing the initializer for a static data member, push a
   // new expression evaluation context that is associated with this static
   // data member.
-  if (isNonlocalVariable(D))
-    PushExpressionEvaluationContext(
-        ExpressionEvaluationContext::PotentiallyEvaluated, D);
 }
 
 /// Invoked after we are finished parsing an initializer for the declaration D.
@@ -18279,9 +18270,6 @@ void Sema::ActOnCXXExitDeclInitializer(Scope *S, Decl *D) {
   // If there is no declaration, there was an error parsing it.
   if (!D || D->isInvalidDecl())
     return;
-
-  if (isNonlocalVariable(D))
-    PopExpressionEvaluationContext();
 
   if (S && D->isOutOfLine())
     ExitDeclaratorContext(S);

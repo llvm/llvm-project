@@ -25,6 +25,11 @@ namespace llvm {
 namespace jitlink {
 namespace aarch32 {
 
+/// Check whether the given target flags are set for this Symbol.
+bool hasTargetFlags(Symbol &Sym, TargetFlagsType Flags) {
+  return static_cast<TargetFlagsType>(Sym.getTargetFlags()) & Flags;
+}
+
 /// Encode 22-bit immediate value for branch instructions without J1J2 range
 /// extension (formats B T4, BL T1 and BLX T2).
 ///
@@ -78,6 +83,24 @@ int64_t decodeImmBT4BlT1BlxT2_J1J2(uint32_t Hi, uint32_t Lo) {
   return SignExtend64<25>(S << 14 | I1 | I2 | Imm10 << 12 | Imm11 << 1);
 }
 
+/// Encode 26-bit immediate value for branch instructions
+/// (formats B A1, BL A1 and BLX A2).
+///
+///   Imm24:00 ->  00000000:Imm24
+///
+uint32_t encodeImmBA1BlA1BlxA2(int64_t Value) {
+  return (Value >> 2) & 0x00ffffff;
+}
+
+/// Decode 26-bit immediate value for branch instructions
+/// (formats B A1, BL A1 and BLX A2).
+///
+///   00000000:Imm24 ->  Imm24:00
+///
+int64_t decodeImmBA1BlA1BlxA2(int64_t Value) {
+  return SignExtend64<26>((Value & 0x00ffffff) << 2);
+}
+
 /// Encode 16-bit immediate value for move instruction formats MOVT T1 and
 /// MOVW T3.
 ///
@@ -124,6 +147,48 @@ int64_t decodeRegMovtT1MovwT3(uint32_t Hi, uint32_t Lo) {
   return Rd4;
 }
 
+/// Encode 16-bit immediate value for move instruction formats MOVT A1 and
+/// MOVW A2.
+///
+///   Imm4:Imm12 -> 000000000000:Imm4:0000:Imm12
+///
+uint32_t encodeImmMovtA1MovwA2(uint16_t Value) {
+  uint32_t Imm4 = (Value >> 12) & 0x0f;
+  uint32_t Imm12 = Value & 0x0fff;
+  return (Imm4 << 16) | Imm12;
+}
+
+/// Decode 16-bit immediate value for move instruction formats MOVT A1 and
+/// MOVW A2.
+///
+///   000000000000:Imm4:0000:Imm12 -> Imm4:Imm12
+///
+uint16_t decodeImmMovtA1MovwA2(uint64_t Value) {
+  uint32_t Imm4 = (Value >> 16) & 0x0f;
+  uint32_t Imm12 = Value & 0x0fff;
+  return (Imm4 << 12) | Imm12;
+}
+
+/// Encode register ID for instruction formats MOVT A1 and
+/// MOVW A2.
+///
+///   Rd4 -> 0000000000000000:Rd4:000000000000
+///
+uint32_t encodeRegMovtA1MovwA2(int64_t Value) {
+  uint32_t Rd4 = (Value & 0x00000f) << 12;
+  return Rd4;
+}
+
+/// Decode register ID for instruction formats MOVT A1 and
+/// MOVW A2.
+///
+///   0000000000000000:Rd4:000000000000 -> Rd4
+///
+int64_t decodeRegMovtA1MovwA2(uint64_t Value) {
+  uint32_t Rd4 = (Value >> 12) & 0x00000f;
+  return Rd4;
+}
+
 /// 32-bit Thumb instructions are stored as two little-endian halfwords.
 /// An instruction at address A encodes bytes A+1, A in the first halfword (Hi),
 /// followed by bytes A+3, A+2 in the second halfword (Lo).
@@ -151,18 +216,47 @@ struct ThumbRelocation {
   const support::ulittle16_t &Lo; // Second halfword
 };
 
+struct WritableArmRelocation {
+  WritableArmRelocation(char *FixupPtr)
+      : Wd{*reinterpret_cast<support::ulittle32_t *>(FixupPtr)} {}
+
+  support::ulittle32_t &Wd;
+};
+
+struct ArmRelocation {
+
+  ArmRelocation(const char *FixupPtr)
+      : Wd{*reinterpret_cast<const support::ulittle32_t *>(FixupPtr)} {}
+
+  ArmRelocation(WritableArmRelocation &Writable) : Wd{Writable.Wd} {}
+
+  const support::ulittle32_t &Wd;
+};
+
 Error makeUnexpectedOpcodeError(const LinkGraph &G, const ThumbRelocation &R,
                                 Edge::Kind Kind) {
   return make_error<JITLinkError>(
-      formatv("Invalid opcode [ 0x{0:x4}, 0x{1:x4} ] for relocation: {2}",
+      formatv("Invalid opcode [ {0:x4}, {1:x4} ] for relocation: {2}",
               static_cast<uint16_t>(R.Hi), static_cast<uint16_t>(R.Lo),
               G.getEdgeKindName(Kind)));
+}
+
+Error makeUnexpectedOpcodeError(const LinkGraph &G, const ArmRelocation &R,
+                                Edge::Kind Kind) {
+  return make_error<JITLinkError>(
+      formatv("Invalid opcode {0:x8} for relocation: {1}",
+              static_cast<uint32_t>(R.Wd), G.getEdgeKindName(Kind)));
 }
 
 template <EdgeKind_aarch32 Kind> bool checkOpcode(const ThumbRelocation &R) {
   uint16_t Hi = R.Hi & FixupInfo<Kind>::OpcodeMask.Hi;
   uint16_t Lo = R.Lo & FixupInfo<Kind>::OpcodeMask.Lo;
   return Hi == FixupInfo<Kind>::Opcode.Hi && Lo == FixupInfo<Kind>::Opcode.Lo;
+}
+
+template <EdgeKind_aarch32 Kind> bool checkOpcode(const ArmRelocation &R) {
+  uint32_t Wd = R.Wd & FixupInfo<Kind>::OpcodeMask;
+  return Wd == FixupInfo<Kind>::Opcode;
 }
 
 template <EdgeKind_aarch32 Kind>
@@ -173,21 +267,41 @@ bool checkRegister(const ThumbRelocation &R, HalfWords Reg) {
 }
 
 template <EdgeKind_aarch32 Kind>
+bool checkRegister(const ArmRelocation &R, uint32_t Reg) {
+  uint32_t Wd = R.Wd & FixupInfo<Kind>::RegMask;
+  return Wd == Reg;
+}
+
+template <EdgeKind_aarch32 Kind>
 void writeRegister(WritableThumbRelocation &R, HalfWords Reg) {
   static constexpr HalfWords Mask = FixupInfo<Kind>::RegMask;
-  assert((Mask.Hi & Reg.Hi) == Reg.Hi && (Mask.Hi & Reg.Hi) == Reg.Hi &&
+  assert((Mask.Hi & Reg.Hi) == Reg.Hi && (Mask.Lo & Reg.Lo) == Reg.Lo &&
          "Value bits exceed bit range of given mask");
   R.Hi = (R.Hi & ~Mask.Hi) | Reg.Hi;
   R.Lo = (R.Lo & ~Mask.Lo) | Reg.Lo;
 }
 
 template <EdgeKind_aarch32 Kind>
+void writeRegister(WritableArmRelocation &R, uint32_t Reg) {
+  static constexpr uint32_t Mask = FixupInfo<Kind>::RegMask;
+  assert((Mask & Reg) == Reg && "Value bits exceed bit range of given mask");
+  R.Wd = (R.Wd & ~Mask) | Reg;
+}
+
+template <EdgeKind_aarch32 Kind>
 void writeImmediate(WritableThumbRelocation &R, HalfWords Imm) {
   static constexpr HalfWords Mask = FixupInfo<Kind>::ImmMask;
-  assert((Mask.Hi & Imm.Hi) == Imm.Hi && (Mask.Hi & Imm.Hi) == Imm.Hi &&
+  assert((Mask.Hi & Imm.Hi) == Imm.Hi && (Mask.Lo & Imm.Lo) == Imm.Lo &&
          "Value bits exceed bit range of given mask");
   R.Hi = (R.Hi & ~Mask.Hi) | Imm.Hi;
   R.Lo = (R.Lo & ~Mask.Lo) | Imm.Lo;
+}
+
+template <EdgeKind_aarch32 Kind>
+void writeImmediate(WritableArmRelocation &R, uint32_t Imm) {
+  static constexpr uint32_t Mask = FixupInfo<Kind>::ImmMask;
+  assert((Mask & Imm) == Imm && "Value bits exceed bit range of given mask");
+  R.Wd = (R.Wd & ~Mask) | Imm;
 }
 
 Expected<int64_t> readAddendData(LinkGraph &G, Block &B, const Edge &E) {
@@ -211,13 +325,30 @@ Expected<int64_t> readAddendData(LinkGraph &G, Block &B, const Edge &E) {
 }
 
 Expected<int64_t> readAddendArm(LinkGraph &G, Block &B, const Edge &E) {
+  ArmRelocation R(B.getContent().data() + E.getOffset());
   Edge::Kind Kind = E.getKind();
 
   switch (Kind) {
   case Arm_Call:
-    return make_error<JITLinkError>(
-        "Addend extraction for relocation type not yet implemented: " +
-        StringRef(G.getEdgeKindName(Kind)));
+    if (!checkOpcode<Arm_Call>(R))
+      return makeUnexpectedOpcodeError(G, R, Kind);
+    return decodeImmBA1BlA1BlxA2(R.Wd);
+
+  case Arm_Jump24:
+    if (!checkOpcode<Arm_Jump24>(R))
+      return makeUnexpectedOpcodeError(G, R, Kind);
+    return decodeImmBA1BlA1BlxA2(R.Wd);
+
+  case Arm_MovwAbsNC:
+    if (!checkOpcode<Arm_MovwAbsNC>(R))
+      return makeUnexpectedOpcodeError(G, R, Kind);
+    return decodeImmMovtA1MovwA2(R.Wd);
+
+  case Arm_MovtAbs:
+    if (!checkOpcode<Arm_MovtAbs>(R))
+      return makeUnexpectedOpcodeError(G, R, Kind);
+    return decodeImmMovtA1MovwA2(R.Wd);
+
   default:
     return make_error<JITLinkError>(
         "In graph " + G.getName() + ", section " + B.getSection().getName() +
@@ -242,10 +373,6 @@ Expected<int64_t> readAddendThumb(LinkGraph &G, Block &B, const Edge &E,
   case Thumb_Jump24:
     if (!checkOpcode<Thumb_Jump24>(R))
       return makeUnexpectedOpcodeError(G, R, Kind);
-    if (R.Lo & FixupInfo<Thumb_Jump24>::LoBitConditional)
-      return make_error<JITLinkError>("Relocation expects an unconditional "
-                                      "B.W branch instruction: " +
-                                      StringRef(G.getEdgeKindName(Kind)));
     return LLVM_LIKELY(ArmCfg.J1J2BranchEncoding)
                   ? decodeImmBT4BlT1BlxT2_J1J2(R.Hi, R.Lo)
                   : decodeImmBT4BlT1BlxT2(R.Hi, R.Lo);
@@ -291,7 +418,6 @@ Error applyFixupData(LinkGraph &G, Block &B, const Edge &E) {
   int64_t Addend = E.getAddend();
   Symbol &TargetSymbol = E.getTarget();
   uint64_t TargetAddress = TargetSymbol.getAddress().getValue();
-  assert(!TargetSymbol.hasTargetFlags(ThumbSymbol));
 
   // Regular data relocations have size 4, alignment 1 and write the full 32-bit
   // result to the place; no need for overflow checking. There are three
@@ -320,13 +446,76 @@ Error applyFixupData(LinkGraph &G, Block &B, const Edge &E) {
 }
 
 Error applyFixupArm(LinkGraph &G, Block &B, const Edge &E) {
+  WritableArmRelocation R(B.getAlreadyMutableContent().data() + E.getOffset());
   Edge::Kind Kind = E.getKind();
+  uint64_t FixupAddress = (B.getAddress() + E.getOffset()).getValue();
+  int64_t Addend = E.getAddend();
+  Symbol &TargetSymbol = E.getTarget();
+  uint64_t TargetAddress = TargetSymbol.getAddress().getValue();
 
   switch (Kind) {
-  case Arm_Call:
-    return make_error<JITLinkError>(
-        "Fix-up for relocation type not yet implemented: " +
-        StringRef(G.getEdgeKindName(Kind)));
+  case Arm_Jump24: {
+    if (!checkOpcode<Arm_Jump24>(R))
+      return makeUnexpectedOpcodeError(G, R, Kind);
+    if (hasTargetFlags(TargetSymbol, ThumbSymbol))
+      return make_error<JITLinkError>("Branch relocation needs interworking "
+                                      "stub when bridging to Thumb: " +
+                                      StringRef(G.getEdgeKindName(Kind)));
+
+    int64_t Value = TargetAddress - FixupAddress + Addend;
+
+    if (!isInt<26>(Value))
+      return makeTargetOutOfRangeError(G, B, E);
+    writeImmediate<Arm_Jump24>(R, encodeImmBA1BlA1BlxA2(Value));
+
+    return Error::success();
+  }
+  case Arm_Call: {
+    if (!checkOpcode<Arm_Call>(R))
+      return makeUnexpectedOpcodeError(G, R, Kind);
+    if ((R.Wd & FixupInfo<Arm_Call>::CondMask) !=
+        FixupInfo<Arm_Call>::Unconditional)
+      return make_error<JITLinkError>("Relocation expects an unconditional "
+                                      "BL/BLX branch instruction: " +
+                                      StringRef(G.getEdgeKindName(Kind)));
+
+    int64_t Value = TargetAddress - FixupAddress + Addend;
+
+    // The call instruction itself is Arm. The call destination can either be
+    // Thumb or Arm. We use BL to stay in Arm and BLX to change to Thumb.
+    bool TargetIsThumb = hasTargetFlags(TargetSymbol, ThumbSymbol);
+    bool InstrIsBlx = (~R.Wd & FixupInfo<Arm_Call>::BitBlx) == 0;
+    if (TargetIsThumb != InstrIsBlx) {
+      if (LLVM_LIKELY(TargetIsThumb)) {
+        // Change opcode BL -> BLX
+        R.Wd = R.Wd | FixupInfo<Arm_Call>::BitBlx;
+        R.Wd = R.Wd & ~FixupInfo<Arm_Call>::BitH;
+      } else {
+        // Change opcode BLX -> BL
+        R.Wd = R.Wd & ~FixupInfo<Arm_Call>::BitBlx;
+      }
+    }
+
+    if (!isInt<26>(Value))
+      return makeTargetOutOfRangeError(G, B, E);
+    writeImmediate<Arm_Call>(R, encodeImmBA1BlA1BlxA2(Value));
+
+    return Error::success();
+  }
+  case Arm_MovwAbsNC: {
+    if (!checkOpcode<Arm_MovwAbsNC>(R))
+      return makeUnexpectedOpcodeError(G, R, Kind);
+    uint16_t Value = (TargetAddress + Addend) & 0xffff;
+    writeImmediate<Arm_MovwAbsNC>(R, encodeImmMovtA1MovwA2(Value));
+    return Error::success();
+  }
+  case Arm_MovtAbs: {
+    if (!checkOpcode<Arm_MovtAbs>(R))
+      return makeUnexpectedOpcodeError(G, R, Kind);
+    uint16_t Value = ((TargetAddress + Addend) >> 16) & 0xffff;
+    writeImmediate<Arm_MovtAbs>(R, encodeImmMovtA1MovwA2(Value));
+    return Error::success();
+  }
   default:
     return make_error<JITLinkError>(
         "In graph " + G.getName() + ", section " + B.getSection().getName() +
@@ -345,18 +534,12 @@ Error applyFixupThumb(LinkGraph &G, Block &B, const Edge &E,
   int64_t Addend = E.getAddend();
   Symbol &TargetSymbol = E.getTarget();
   uint64_t TargetAddress = TargetSymbol.getAddress().getValue();
-  if (TargetSymbol.hasTargetFlags(ThumbSymbol))
-    TargetAddress |= 0x01;
 
   switch (Kind) {
   case Thumb_Jump24: {
     if (!checkOpcode<Thumb_Jump24>(R))
       return makeUnexpectedOpcodeError(G, R, Kind);
-    if (R.Lo & FixupInfo<Thumb_Jump24>::LoBitConditional)
-      return make_error<JITLinkError>("Relocation expects an unconditional "
-                                      "B.W branch instruction: " +
-                                      StringRef(G.getEdgeKindName(Kind)));
-    if (!(TargetSymbol.hasTargetFlags(ThumbSymbol)))
+    if (!hasTargetFlags(TargetSymbol, ThumbSymbol))
       return make_error<JITLinkError>("Branch relocation needs interworking "
                                       "stub when bridging to ARM: " +
                                       StringRef(G.getEdgeKindName(Kind)));
@@ -383,20 +566,18 @@ Error applyFixupThumb(LinkGraph &G, Block &B, const Edge &E,
 
     // The call instruction itself is Thumb. The call destination can either be
     // Thumb or Arm. We use BL to stay in Thumb and BLX to change to Arm.
-    bool TargetIsArm = !TargetSymbol.hasTargetFlags(ThumbSymbol);
+    bool TargetIsArm = !hasTargetFlags(TargetSymbol, ThumbSymbol);
     bool InstrIsBlx = (R.Lo & FixupInfo<Thumb_Call>::LoBitNoBlx) == 0;
     if (TargetIsArm != InstrIsBlx) {
       if (LLVM_LIKELY(TargetIsArm)) {
-        // Change opcode BL -> BLX and fix range value (account for 4-byte
+        // Change opcode BL -> BLX and fix range value: account for 4-byte
         // aligned destination while instruction may only be 2-byte aligned
-        // and clear Thumb bit).
         R.Lo = R.Lo & ~FixupInfo<Thumb_Call>::LoBitNoBlx;
         R.Lo = R.Lo & ~FixupInfo<Thumb_Call>::LoBitH;
         Value = alignTo(Value, 4);
       } else {
-        // Change opcode BLX -> BL and set Thumb bit
+        // Change opcode BLX -> BL
         R.Lo = R.Lo & ~FixupInfo<Thumb_Call>::LoBitNoBlx;
-        Value |= 0x01;
       }
     }
 
@@ -471,7 +652,11 @@ const char *getEdgeKindName(Edge::Kind K) {
 
   switch (K) {
     KIND_NAME_CASE(Data_Delta32)
+    KIND_NAME_CASE(Data_Pointer32)
     KIND_NAME_CASE(Arm_Call)
+    KIND_NAME_CASE(Arm_Jump24)
+    KIND_NAME_CASE(Arm_MovwAbsNC)
+    KIND_NAME_CASE(Arm_MovtAbs)
     KIND_NAME_CASE(Thumb_Call)
     KIND_NAME_CASE(Thumb_Jump24)
     KIND_NAME_CASE(Thumb_MovwAbsNC)

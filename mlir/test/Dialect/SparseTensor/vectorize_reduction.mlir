@@ -9,13 +9,13 @@
 
 // CHECK-ON-LABEL:   func.func @sparse_reduction_ori(
 // CHECK-ON-SAME:      %[[VAL_0:.*]]: tensor<i13>,
-// CHECK-ON-SAME:      %[[VAL_1:.*]]: tensor<?xi13, #sparse_tensor.encoding<{ lvlTypes = [ "compressed" ] }>>) -> tensor<i13> {
+// CHECK-ON-SAME:      %[[VAL_1:.*]]: tensor<?xi13, #sparse_tensor.encoding<{{{.*}}}>>) -> tensor<i13> {
 // CHECK-ON-DAG:       %[[VAL_2:.*]] = arith.constant 8 : index
 // CHECK-ON-DAG:       %[[VAL_3:.*]] = arith.constant dense<0> : vector<8xi13>
 // CHECK-ON-DAG:       %[[VAL_4:.*]] = arith.constant 0 : index
 // CHECK-ON-DAG:       %[[VAL_5:.*]] = arith.constant 1 : index
-// CHECK-ON:           %[[VAL_6:.*]] = sparse_tensor.positions %[[VAL_1]] {level = 0 : index} : tensor<?xi13, #sparse_tensor.encoding<{ lvlTypes = [ "compressed" ] }>> to memref<?xindex>
-// CHECK-ON:           %[[VAL_7:.*]] = sparse_tensor.values %[[VAL_1]] : tensor<?xi13, #sparse_tensor.encoding<{ lvlTypes = [ "compressed" ] }>> to memref<?xi13>
+// CHECK-ON:           %[[VAL_6:.*]] = sparse_tensor.positions %[[VAL_1]] {level = 0 : index} : tensor<?xi13, #sparse_tensor.encoding<{{{.*}}}>> to memref<?xindex>
+// CHECK-ON:           %[[VAL_7:.*]] = sparse_tensor.values %[[VAL_1]] : tensor<?xi13, #sparse_tensor.encoding<{{{.*}}}>> to memref<?xi13>
 // CHECK-ON:           %[[VAL_8:.*]] = bufferization.to_memref %[[VAL_0]] : memref<i13>
 // CHECK-ON:           %[[VAL_9:.*]] = memref.load %[[VAL_8]][] : memref<i13>
 // CHECK-ON:           %[[VAL_10:.*]] = memref.load %[[VAL_6]]{{\[}}%[[VAL_4]]] : memref<?xindex>
@@ -37,11 +37,11 @@
 //
 // CHECK-OFF-LABEL:   func.func @sparse_reduction_ori(
 // CHECK-OFF-SAME:      %[[VAL_0:.*]]: tensor<i13>,
-// CHECK-OFF-SAME:      %[[VAL_1:.*]]: tensor<?xi13, #sparse_tensor.encoding<{ lvlTypes = [ "compressed" ] }>>) -> tensor<i13> {
+// CHECK-OFF-SAME:      %[[VAL_1:.*]]: tensor<?xi13, #sparse_tensor.encoding<{{{.*}}}>>) -> tensor<i13> {
 // CHECK-OFF-DAG:       %[[VAL_2:.*]] = arith.constant 0 : index
 // CHECK-OFF-DAG:       %[[VAL_3:.*]] = arith.constant 1 : index
-// CHECK-OFF:           %[[VAL_4:.*]] = sparse_tensor.positions %[[VAL_1]] {level = 0 : index} : tensor<?xi13, #sparse_tensor.encoding<{ lvlTypes = [ "compressed" ] }>> to memref<?xindex>
-// CHECK-OFF:           %[[VAL_5:.*]] = sparse_tensor.values %[[VAL_1]] : tensor<?xi13, #sparse_tensor.encoding<{ lvlTypes = [ "compressed" ] }>> to memref<?xi13>
+// CHECK-OFF:           %[[VAL_4:.*]] = sparse_tensor.positions %[[VAL_1]] {level = 0 : index} : tensor<?xi13, #sparse_tensor.encoding<{{{.*}}}>> to memref<?xindex>
+// CHECK-OFF:           %[[VAL_5:.*]] = sparse_tensor.values %[[VAL_1]] : tensor<?xi13, #sparse_tensor.encoding<{{{.*}}}>> to memref<?xi13>
 // CHECK-OFF:           %[[VAL_6:.*]] = bufferization.to_memref %[[VAL_0]] : memref<i13>
 // CHECK-OFF:           %[[VAL_7:.*]] = memref.load %[[VAL_6]][] : memref<i13>
 // CHECK-OFF:           %[[VAL_8:.*]] = memref.load %[[VAL_4]]{{\[}}%[[VAL_2]]] : memref<?xindex>
@@ -55,7 +55,7 @@
 // CHECK-OFF:           %[[VAL_16:.*]] = bufferization.to_tensor %[[VAL_6]] : memref<i13>
 // CHECK-OFF:           return %[[VAL_16]] : tensor<i13>
 // CHECK-OFF:         }
-#SparseVector = #sparse_tensor.encoding<{lvlTypes = ["compressed"]}>
+#SparseVector = #sparse_tensor.encoding<{map = (d0) -> (d0 : compressed)}>
 
 #trait = {
   indexing_maps = [
@@ -86,13 +86,13 @@ func.func @sparse_reduction_ori(%argx: tensor<i13>,
 
 // CHECK-ON-LABEL:   func.func @sparse_reduction_ori_accumulator_on_rhs(
 // CHECK-ON-SAME:      %[[VAL_0:.*]]: tensor<i13>,
-// CHECK-ON-SAME:      %[[VAL_1:.*]]: tensor<?xi13, #sparse_tensor.encoding<{ lvlTypes = [ "compressed" ] }>>) -> tensor<i13> {
+// CHECK-ON-SAME:      %[[VAL_1:.*]]: tensor<?xi13, #sparse_tensor.encoding<{{{.*}}}>>) -> tensor<i13> {
 // CHECK-ON-DAG:       %[[VAL_2:.*]] = arith.constant 8 : index
 // CHECK-ON-DAG:       %[[VAL_3:.*]] = arith.constant dense<0> : vector<8xi13>
 // CHECK-ON-DAG:       %[[VAL_4:.*]] = arith.constant 0 : index
 // CHECK-ON-DAG:       %[[VAL_5:.*]] = arith.constant 1 : index
-// CHECK-ON:           %[[VAL_6:.*]] = sparse_tensor.positions %[[VAL_1]] {level = 0 : index} : tensor<?xi13, #sparse_tensor.encoding<{ lvlTypes = [ "compressed" ] }>> to memref<?xindex>
-// CHECK-ON:           %[[VAL_7:.*]] = sparse_tensor.values %[[VAL_1]] : tensor<?xi13, #sparse_tensor.encoding<{ lvlTypes = [ "compressed" ] }>> to memref<?xi13>
+// CHECK-ON:           %[[VAL_6:.*]] = sparse_tensor.positions %[[VAL_1]] {level = 0 : index} : tensor<?xi13, #sparse_tensor.encoding<{{{.*}}}>> to memref<?xindex>
+// CHECK-ON:           %[[VAL_7:.*]] = sparse_tensor.values %[[VAL_1]] : tensor<?xi13, #sparse_tensor.encoding<{{{.*}}}>> to memref<?xi13>
 // CHECK-ON:           %[[VAL_8:.*]] = bufferization.to_memref %[[VAL_0]] : memref<i13>
 // CHECK-ON:           %[[VAL_9:.*]] = memref.load %[[VAL_8]][] : memref<i13>
 // CHECK-ON:           %[[VAL_10:.*]] = memref.load %[[VAL_6]]{{\[}}%[[VAL_4]]] : memref<?xindex>
@@ -114,11 +114,11 @@ func.func @sparse_reduction_ori(%argx: tensor<i13>,
 //
 // CHECK-OFF-LABEL:   func.func @sparse_reduction_ori_accumulator_on_rhs(
 // CHECK-OFF-SAME:      %[[VAL_0:.*]]: tensor<i13>,
-// CHECK-OFF-SAME:      %[[VAL_1:.*]]: tensor<?xi13, #sparse_tensor.encoding<{ lvlTypes = [ "compressed" ] }>>) -> tensor<i13> {
+// CHECK-OFF-SAME:      %[[VAL_1:.*]]: tensor<?xi13, #sparse_tensor.encoding<{{{.*}}}>>) -> tensor<i13> {
 // CHECK-OFF-DAG:       %[[VAL_2:.*]] = arith.constant 0 : index
 // CHECK-OFF-DAG:       %[[VAL_3:.*]] = arith.constant 1 : index
-// CHECK-OFF:           %[[VAL_4:.*]] = sparse_tensor.positions %[[VAL_1]] {level = 0 : index} : tensor<?xi13, #sparse_tensor.encoding<{ lvlTypes = [ "compressed" ] }>> to memref<?xindex>
-// CHECK-OFF:           %[[VAL_5:.*]] = sparse_tensor.values %[[VAL_1]] : tensor<?xi13, #sparse_tensor.encoding<{ lvlTypes = [ "compressed" ] }>> to memref<?xi13>
+// CHECK-OFF:           %[[VAL_4:.*]] = sparse_tensor.positions %[[VAL_1]] {level = 0 : index} : tensor<?xi13, #sparse_tensor.encoding<{{{.*}}}>> to memref<?xindex>
+// CHECK-OFF:           %[[VAL_5:.*]] = sparse_tensor.values %[[VAL_1]] : tensor<?xi13, #sparse_tensor.encoding<{{{.*}}}>> to memref<?xi13>
 // CHECK-OFF:           %[[VAL_6:.*]] = bufferization.to_memref %[[VAL_0]] : memref<i13>
 // CHECK-OFF:           %[[VAL_7:.*]] = memref.load %[[VAL_6]][] : memref<i13>
 // CHECK-OFF:           %[[VAL_8:.*]] = memref.load %[[VAL_4]]{{\[}}%[[VAL_2]]] : memref<?xindex>
@@ -132,7 +132,7 @@ func.func @sparse_reduction_ori(%argx: tensor<i13>,
 // CHECK-OFF:           %[[VAL_16:.*]] = bufferization.to_tensor %[[VAL_6]] : memref<i13>
 // CHECK-OFF:           return %[[VAL_16]] : tensor<i13>
 // CHECK-OFF:         }
-#SparseVector = #sparse_tensor.encoding<{lvlTypes = ["compressed"]}>
+#SparseVector = #sparse_tensor.encoding<{map = (d0) -> (d0 : compressed)}>
 
 #trait = {
   indexing_maps = [
@@ -161,13 +161,13 @@ func.func @sparse_reduction_ori_accumulator_on_rhs(%argx: tensor<i13>,
 //
 // CHECK-ON-LABEL:   func.func @sparse_reduction_subi(
 // CHECK-ON-SAME:      %[[VAL_0:.*]]: tensor<i32>,
-// CHECK-ON-SAME:      %[[VAL_1:.*]]: tensor<?xi32, #sparse_tensor.encoding<{ lvlTypes = [ "compressed" ] }>>) -> tensor<i32> {
+// CHECK-ON-SAME:      %[[VAL_1:.*]]: tensor<?xi32, #sparse_tensor.encoding<{{{.*}}}>>) -> tensor<i32> {
 // CHECK-ON-DAG:       %[[VAL_2:.*]] = arith.constant 8 : index
 // CHECK-ON-DAG:       %[[VAL_3:.*]] = arith.constant 0 : index
 // CHECK-ON-DAG:       %[[VAL_4:.*]] = arith.constant dense<0> : vector<8xi32>
 // CHECK-ON-DAG:       %[[VAL_5:.*]] = arith.constant 1 : index
-// CHECK-ON:           %[[VAL_6:.*]] = sparse_tensor.positions %[[VAL_1]] {level = 0 : index} : tensor<?xi32, #sparse_tensor.encoding<{ lvlTypes = [ "compressed" ] }>> to memref<?xindex>
-// CHECK-ON:           %[[VAL_7:.*]] = sparse_tensor.values %[[VAL_1]] : tensor<?xi32, #sparse_tensor.encoding<{ lvlTypes = [ "compressed" ] }>> to memref<?xi32>
+// CHECK-ON:           %[[VAL_6:.*]] = sparse_tensor.positions %[[VAL_1]] {level = 0 : index} : tensor<?xi32, #sparse_tensor.encoding<{{{.*}}}>> to memref<?xindex>
+// CHECK-ON:           %[[VAL_7:.*]] = sparse_tensor.values %[[VAL_1]] : tensor<?xi32, #sparse_tensor.encoding<{{{.*}}}>> to memref<?xi32>
 // CHECK-ON:           %[[VAL_8:.*]] = bufferization.to_memref %[[VAL_0]] : memref<i32>
 // CHECK-ON:           %[[VAL_9:.*]] = memref.load %[[VAL_8]][] : memref<i32>
 // CHECK-ON:           %[[VAL_10:.*]] = memref.load %[[VAL_6]]{{\[}}%[[VAL_3]]] : memref<?xindex>
@@ -189,11 +189,11 @@ func.func @sparse_reduction_ori_accumulator_on_rhs(%argx: tensor<i13>,
 //
 // CHECK-OFF-LABEL:   func.func @sparse_reduction_subi(
 // CHECK-OFF-SAME:      %[[VAL_0:.*]]: tensor<i32>,
-// CHECK-OFF-SAME:      %[[VAL_1:.*]]: tensor<?xi32, #sparse_tensor.encoding<{ lvlTypes = [ "compressed" ] }>>) -> tensor<i32> {
+// CHECK-OFF-SAME:      %[[VAL_1:.*]]: tensor<?xi32, #sparse_tensor.encoding<{{{.*}}}>>) -> tensor<i32> {
 // CHECK-OFF-DAG:       %[[VAL_2:.*]] = arith.constant 0 : index
 // CHECK-OFF-DAG:       %[[VAL_3:.*]] = arith.constant 1 : index
-// CHECK-OFF:           %[[VAL_4:.*]] = sparse_tensor.positions %[[VAL_1]] {level = 0 : index} : tensor<?xi32, #sparse_tensor.encoding<{ lvlTypes = [ "compressed" ] }>> to memref<?xindex>
-// CHECK-OFF:           %[[VAL_5:.*]] = sparse_tensor.values %[[VAL_1]] : tensor<?xi32, #sparse_tensor.encoding<{ lvlTypes = [ "compressed" ] }>> to memref<?xi32>
+// CHECK-OFF:           %[[VAL_4:.*]] = sparse_tensor.positions %[[VAL_1]] {level = 0 : index} : tensor<?xi32, #sparse_tensor.encoding<{{{.*}}}>> to memref<?xindex>
+// CHECK-OFF:           %[[VAL_5:.*]] = sparse_tensor.values %[[VAL_1]] : tensor<?xi32, #sparse_tensor.encoding<{{{.*}}}>> to memref<?xi32>
 // CHECK-OFF:           %[[VAL_6:.*]] = bufferization.to_memref %[[VAL_0]] : memref<i32>
 // CHECK-OFF:           %[[VAL_7:.*]] = memref.load %[[VAL_6]][] : memref<i32>
 // CHECK-OFF:           %[[VAL_8:.*]] = memref.load %[[VAL_4]]{{\[}}%[[VAL_2]]] : memref<?xindex>
@@ -207,7 +207,7 @@ func.func @sparse_reduction_ori_accumulator_on_rhs(%argx: tensor<i13>,
 // CHECK-OFF:           %[[VAL_16:.*]] = bufferization.to_tensor %[[VAL_6]] : memref<i32>
 // CHECK-OFF:           return %[[VAL_16]] : tensor<i32>
 // CHECK-OFF:         }
-#SparseVector = #sparse_tensor.encoding<{lvlTypes = ["compressed"]}>
+#SparseVector = #sparse_tensor.encoding<{map = (d0) -> (d0 : compressed)}>
 
 #trait = {
   indexing_maps = [
@@ -236,13 +236,13 @@ func.func @sparse_reduction_subi(%argx: tensor<i32>,
 
 // CHECK-ON-LABEL: func.func @sparse_reduction_xor(
 // CHECK-ON-SAME: %[[VAL_0:.*]]: tensor<i32>,
-// CHECK-ON-SAME: %[[VAL_1:.*]]: tensor<?xi32, #sparse_tensor.encoding<{ lvlTypes = [ "compressed" ] }>>) -> tensor<i32> {
+// CHECK-ON-SAME: %[[VAL_1:.*]]: tensor<?xi32, #sparse_tensor.encoding<{{{.*}}}>>) -> tensor<i32> {
 // CHECK-ON-DAG:  %[[VAL_2:.*]] = arith.constant 8 : index
 // CHECK-ON-DAG:  %[[VAL_3:.*]] = arith.constant dense<0> : vector<8xi32>
 // CHECK-ON-DAG:  %[[VAL_4:.*]] = arith.constant 0 : index
 // CHECK-ON-DAG:  %[[VAL_5:.*]] = arith.constant 1 : index
-// CHECK-ON:  %[[VAL_6:.*]] = sparse_tensor.positions %[[VAL_1]] {level = 0 : index} : tensor<?xi32, #sparse_tensor.encoding<{ lvlTypes = [ "compressed" ] }>> to memref<?xindex>
-// CHECK-ON:  %[[VAL_7:.*]] = sparse_tensor.values %[[VAL_1]] : tensor<?xi32, #sparse_tensor.encoding<{ lvlTypes = [ "compressed" ] }>> to memref<?xi32>
+// CHECK-ON:  %[[VAL_6:.*]] = sparse_tensor.positions %[[VAL_1]] {level = 0 : index} : tensor<?xi32, #sparse_tensor.encoding<{{{.*}}}>> to memref<?xindex>
+// CHECK-ON:  %[[VAL_7:.*]] = sparse_tensor.values %[[VAL_1]] : tensor<?xi32, #sparse_tensor.encoding<{{{.*}}}>> to memref<?xi32>
 // CHECK-ON:  %[[VAL_8:.*]] = bufferization.to_memref %[[VAL_0]] : memref<i32>
 // CHECK-ON:  %[[VAL_9:.*]] = memref.load %[[VAL_8]][] : memref<i32>
 // CHECK-ON:  %[[VAL_10:.*]] = memref.load %[[VAL_6]]{{\[}}%[[VAL_4]]] : memref<?xindex>
@@ -264,11 +264,11 @@ func.func @sparse_reduction_subi(%argx: tensor<i32>,
 //
 // CHECK-OFF-LABEL: func.func @sparse_reduction_xor(
 // CHECK-OFF-SAME:  %[[VAL_0:.*]]: tensor<i32>,
-// CHECK-OFF-SAME:  %[[VAL_1:.*]]: tensor<?xi32, #sparse_tensor.encoding<{ lvlTypes = [ "compressed" ] }>>) -> tensor<i32> {
+// CHECK-OFF-SAME:  %[[VAL_1:.*]]: tensor<?xi32, #sparse_tensor.encoding<{{{.*}}}>>) -> tensor<i32> {
 // CHECK-OFF-DAG:   %[[VAL_2:.*]] = arith.constant 0 : index
 // CHECK-OFF-DAG:   %[[VAL_3:.*]] = arith.constant 1 : index
-// CHECK-OFF:   %[[VAL_4:.*]] = sparse_tensor.positions %[[VAL_1]] {level = 0 : index} : tensor<?xi32, #sparse_tensor.encoding<{ lvlTypes = [ "compressed" ] }>> to memref<?xindex>
-// CHECK-OFF:   %[[VAL_5:.*]] = sparse_tensor.values %[[VAL_1]] : tensor<?xi32, #sparse_tensor.encoding<{ lvlTypes = [ "compressed" ] }>> to memref<?xi32>
+// CHECK-OFF:   %[[VAL_4:.*]] = sparse_tensor.positions %[[VAL_1]] {level = 0 : index} : tensor<?xi32, #sparse_tensor.encoding<{{{.*}}}>> to memref<?xindex>
+// CHECK-OFF:   %[[VAL_5:.*]] = sparse_tensor.values %[[VAL_1]] : tensor<?xi32, #sparse_tensor.encoding<{{{.*}}}>> to memref<?xi32>
 // CHECK-OFF:   %[[VAL_6:.*]] = bufferization.to_memref %[[VAL_0]] : memref<i32>
 // CHECK-OFF:   %[[VAL_7:.*]] = memref.load %[[VAL_6]][] : memref<i32>
 // CHECK-OFF:   %[[VAL_8:.*]] = memref.load %[[VAL_4]]{{\[}}%[[VAL_2]]] : memref<?xindex>
@@ -283,7 +283,7 @@ func.func @sparse_reduction_subi(%argx: tensor<i32>,
 // CHECK-OFF:   return %[[VAL_16]] : tensor<i32>
 // CHECK-OFF: }
 
-#SparseVector = #sparse_tensor.encoding<{lvlTypes = ["compressed"]}>
+#SparseVector = #sparse_tensor.encoding<{map = (d0) -> (d0 : compressed)}>
 
 #trait = {
   indexing_maps = [
@@ -312,13 +312,13 @@ func.func @sparse_reduction_xor(%argx: tensor<i32>,
 
 // CHECK-ON-LABEL: func.func @sparse_reduction_addi(
 // CHECK-ON-SAME:   %[[VAL_0:.*]]: tensor<i32>,
-// CHECK-ON-SAME:   %[[VAL_1:.*]]: tensor<?xi32, #sparse_tensor.encoding<{ lvlTypes = [ "compressed" ] }>>) -> tensor<i32> {
+// CHECK-ON-SAME:   %[[VAL_1:.*]]: tensor<?xi32, #sparse_tensor.encoding<{{{.*}}}>>) -> tensor<i32> {
 // CHECK-ON-DAG:   %[[VAL_2:.*]] = arith.constant 8 : index
 // CHECK-ON-DAG:   %[[VAL_3:.*]] = arith.constant dense<0> : vector<8xi32>
 // CHECK-ON-DAG:   %[[VAL_4:.*]] = arith.constant 0 : index
 // CHECK-ON-DAG:   %[[VAL_5:.*]] = arith.constant 1 : index
-// CHECK-ON:   %[[VAL_6:.*]] = sparse_tensor.positions %[[VAL_1]] {level = 0 : index} : tensor<?xi32, #sparse_tensor.encoding<{ lvlTypes = [ "compressed" ] }>> to memref<?xindex>
-// CHECK-ON:   %[[VAL_7:.*]] = sparse_tensor.values %[[VAL_1]] : tensor<?xi32, #sparse_tensor.encoding<{ lvlTypes = [ "compressed" ] }>> to memref<?xi32>
+// CHECK-ON:   %[[VAL_6:.*]] = sparse_tensor.positions %[[VAL_1]] {level = 0 : index} : tensor<?xi32, #sparse_tensor.encoding<{{{.*}}}>> to memref<?xindex>
+// CHECK-ON:   %[[VAL_7:.*]] = sparse_tensor.values %[[VAL_1]] : tensor<?xi32, #sparse_tensor.encoding<{{{.*}}}>> to memref<?xi32>
 // CHECK-ON:   %[[VAL_8:.*]] = bufferization.to_memref %[[VAL_0]] : memref<i32>
 // CHECK-ON:   %[[VAL_9:.*]] = memref.load %[[VAL_8]][] : memref<i32>
 // CHECK-ON:   %[[VAL_10:.*]] = memref.load %[[VAL_6]]{{\[}}%[[VAL_4]]] : memref<?xindex>
@@ -340,11 +340,11 @@ func.func @sparse_reduction_xor(%argx: tensor<i32>,
 //
 // CHECK-OFF-LABEL: func.func @sparse_reduction_addi(
 // CHECK-OFF-SAME:   %[[VAL_0:.*]]: tensor<i32>,
-// CHECK-OFF-SAME:   %[[VAL_1:.*]]: tensor<?xi32, #sparse_tensor.encoding<{ lvlTypes = [ "compressed" ] }>>) -> tensor<i32> {
+// CHECK-OFF-SAME:   %[[VAL_1:.*]]: tensor<?xi32, #sparse_tensor.encoding<{{{.*}}}>>) -> tensor<i32> {
 // CHECK-OFF-DAG:   %[[VAL_2:.*]] = arith.constant 0 : index
 // CHECK-OFF-DAG:   %[[VAL_3:.*]] = arith.constant 1 : index
-// CHECK-OFF:   %[[VAL_4:.*]] = sparse_tensor.positions %[[VAL_1]] {level = 0 : index} : tensor<?xi32, #sparse_tensor.encoding<{ lvlTypes = [ "compressed" ] }>> to memref<?xindex>
-// CHECK-OFF:   %[[VAL_5:.*]] = sparse_tensor.values %[[VAL_1]] : tensor<?xi32, #sparse_tensor.encoding<{ lvlTypes = [ "compressed" ] }>> to memref<?xi32>
+// CHECK-OFF:   %[[VAL_4:.*]] = sparse_tensor.positions %[[VAL_1]] {level = 0 : index} : tensor<?xi32, #sparse_tensor.encoding<{{{.*}}}>> to memref<?xindex>
+// CHECK-OFF:   %[[VAL_5:.*]] = sparse_tensor.values %[[VAL_1]] : tensor<?xi32, #sparse_tensor.encoding<{{{.*}}}>> to memref<?xi32>
 // CHECK-OFF:   %[[VAL_6:.*]] = bufferization.to_memref %[[VAL_0]] : memref<i32>
 // CHECK-OFF:   %[[VAL_7:.*]] = memref.load %[[VAL_6]][] : memref<i32>
 // CHECK-OFF:   %[[VAL_8:.*]] = memref.load %[[VAL_4]]{{\[}}%[[VAL_2]]] : memref<?xindex>
@@ -359,7 +359,7 @@ func.func @sparse_reduction_xor(%argx: tensor<i32>,
 // CHECK-OFF:   return %[[VAL_16]] : tensor<i32>
 // CHECK-OFF: }
 
-#SparseVector = #sparse_tensor.encoding<{lvlTypes = ["compressed"]}>
+#SparseVector = #sparse_tensor.encoding<{map = (d0) -> (d0 : compressed)}>
 
 #trait = {
   indexing_maps = [
@@ -388,13 +388,13 @@ func.func @sparse_reduction_addi(%argx: tensor<i32>,
 
 // CHECK-ON-LABEL: func.func @sparse_reduction_subf(
 // CHECK-ON-SAME:   %[[VAL_0:.*]]: tensor<f32>,
-// CHECK-ON-SAME:   %[[VAL_1:.*]]: tensor<?xf32, #sparse_tensor.encoding<{ lvlTypes = [ "compressed" ] }>>) -> tensor<f32> {
+// CHECK-ON-SAME:   %[[VAL_1:.*]]: tensor<?xf32, #sparse_tensor.encoding<{{{.*}}}>>) -> tensor<f32> {
 // CHECK-ON-DAG:   %[[VAL_2:.*]] = arith.constant 8 : index
 // CHECK-ON-DAG:   %[[VAL_3:.*]] = arith.constant dense<0.000000e+00> : vector<8xf32>
 // CHECK-ON-DAG:   %[[VAL_4:.*]] = arith.constant 0 : index
 // CHECK-ON-DAG:   %[[VAL_5:.*]] = arith.constant 1 : index
-// CHECK-ON:   %[[VAL_6:.*]] = sparse_tensor.positions %[[VAL_1]] {level = 0 : index} : tensor<?xf32, #sparse_tensor.encoding<{ lvlTypes = [ "compressed" ] }>> to memref<?xindex>
-// CHECK-ON:   %[[VAL_7:.*]] = sparse_tensor.values %[[VAL_1]] : tensor<?xf32, #sparse_tensor.encoding<{ lvlTypes = [ "compressed" ] }>> to memref<?xf32>
+// CHECK-ON:   %[[VAL_6:.*]] = sparse_tensor.positions %[[VAL_1]] {level = 0 : index} : tensor<?xf32, #sparse_tensor.encoding<{{{.*}}}>> to memref<?xindex>
+// CHECK-ON:   %[[VAL_7:.*]] = sparse_tensor.values %[[VAL_1]] : tensor<?xf32, #sparse_tensor.encoding<{{{.*}}}>> to memref<?xf32>
 // CHECK-ON:   %[[VAL_8:.*]] = bufferization.to_memref %[[VAL_0]] : memref<f32>
 // CHECK-ON:   %[[VAL_9:.*]] = memref.load %[[VAL_8]][] : memref<f32>
 // CHECK-ON:   %[[VAL_10:.*]] = memref.load %[[VAL_6]]{{\[}}%[[VAL_4]]] : memref<?xindex>
@@ -416,11 +416,11 @@ func.func @sparse_reduction_addi(%argx: tensor<i32>,
 //
 // CHECK-OFF-LABEL: func.func @sparse_reduction_subf(
 // CHECK-OFF-SAME:   %[[VAL_0:.*]]: tensor<f32>,
-// CHECK-OFF-SAME:   %[[VAL_1:.*]]: tensor<?xf32, #sparse_tensor.encoding<{ lvlTypes = [ "compressed" ] }>>) -> tensor<f32> {
+// CHECK-OFF-SAME:   %[[VAL_1:.*]]: tensor<?xf32, #sparse_tensor.encoding<{{{.*}}}>>) -> tensor<f32> {
 // CHECK-OFF-DAG:   %[[VAL_2:.*]] = arith.constant 0 : index
 // CHECK-OFF-DAG:   %[[VAL_3:.*]] = arith.constant 1 : index
-// CHECK-OFF:   %[[VAL_4:.*]] = sparse_tensor.positions %[[VAL_1]] {level = 0 : index} : tensor<?xf32, #sparse_tensor.encoding<{ lvlTypes = [ "compressed" ] }>> to memref<?xindex>
-// CHECK-OFF:   %[[VAL_5:.*]] = sparse_tensor.values %[[VAL_1]] : tensor<?xf32, #sparse_tensor.encoding<{ lvlTypes = [ "compressed" ] }>> to memref<?xf32>
+// CHECK-OFF:   %[[VAL_4:.*]] = sparse_tensor.positions %[[VAL_1]] {level = 0 : index} : tensor<?xf32, #sparse_tensor.encoding<{{{.*}}}>> to memref<?xindex>
+// CHECK-OFF:   %[[VAL_5:.*]] = sparse_tensor.values %[[VAL_1]] : tensor<?xf32, #sparse_tensor.encoding<{{{.*}}}>> to memref<?xf32>
 // CHECK-OFF:   %[[VAL_6:.*]] = bufferization.to_memref %[[VAL_0]] : memref<f32>
 // CHECK-OFF:   %[[VAL_7:.*]] = memref.load %[[VAL_6]][] : memref<f32>
 // CHECK-OFF:   %[[VAL_8:.*]] = memref.load %[[VAL_4]]{{\[}}%[[VAL_2]]] : memref<?xindex>
@@ -435,7 +435,7 @@ func.func @sparse_reduction_addi(%argx: tensor<i32>,
 // CHECK-OFF:   return %[[VAL_16]] : tensor<f32>
 // CHECK-OFF: }
 
-#SparseVector = #sparse_tensor.encoding<{lvlTypes = ["compressed"]}>
+#SparseVector = #sparse_tensor.encoding<{map = (d0) -> (d0 : compressed)}>
 
 #trait = {
   indexing_maps = [
@@ -464,13 +464,13 @@ func.func @sparse_reduction_subf(%argx: tensor<f32>,
 
 // CHECK-ON-LABEL: func.func @sparse_reduction_addf(
 // CHECK-ON-SAME:  %[[VAL_0:.*]]: tensor<f32>,
-// CHECK-ON-SAME:  %[[VAL_1:.*]]: tensor<?xf32, #sparse_tensor.encoding<{ lvlTypes = [ "compressed" ] }>>) -> tensor<f32> {
+// CHECK-ON-SAME:  %[[VAL_1:.*]]: tensor<?xf32, #sparse_tensor.encoding<{{{.*}}}>>) -> tensor<f32> {
 // CHECK-ON-DAG:   %[[VAL_2:.*]] = arith.constant 8 : index
 // CHECK-ON-DAG:   %[[VAL_3:.*]] = arith.constant dense<0.000000e+00> : vector<8xf32>
 // CHECK-ON-DAG:   %[[VAL_4:.*]] = arith.constant 0 : index
 // CHECK-ON-DAG:   %[[VAL_5:.*]] = arith.constant 1 : index
-// CHECK-ON:   %[[VAL_6:.*]] = sparse_tensor.positions %[[VAL_1]] {level = 0 : index} : tensor<?xf32, #sparse_tensor.encoding<{ lvlTypes = [ "compressed" ] }>> to memref<?xindex>
-// CHECK-ON:   %[[VAL_7:.*]] = sparse_tensor.values %[[VAL_1]] : tensor<?xf32, #sparse_tensor.encoding<{ lvlTypes = [ "compressed" ] }>> to memref<?xf32>
+// CHECK-ON:   %[[VAL_6:.*]] = sparse_tensor.positions %[[VAL_1]] {level = 0 : index} : tensor<?xf32, #sparse_tensor.encoding<{{{.*}}}>> to memref<?xindex>
+// CHECK-ON:   %[[VAL_7:.*]] = sparse_tensor.values %[[VAL_1]] : tensor<?xf32, #sparse_tensor.encoding<{{{.*}}}>> to memref<?xf32>
 // CHECK-ON:   %[[VAL_8:.*]] = bufferization.to_memref %[[VAL_0]] : memref<f32>
 // CHECK-ON:   %[[VAL_9:.*]] = memref.load %[[VAL_8]][] : memref<f32>
 // CHECK-ON:   %[[VAL_10:.*]] = memref.load %[[VAL_6]]{{\[}}%[[VAL_4]]] : memref<?xindex>
@@ -492,11 +492,11 @@ func.func @sparse_reduction_subf(%argx: tensor<f32>,
 //
 // CHECK-OFF-LABEL: func.func @sparse_reduction_addf(
 // CHECK-OFF-SAME:  %[[VAL_0:.*]]: tensor<f32>,
-// CHECK-OFF-SAME:  %[[VAL_1:.*]]: tensor<?xf32, #sparse_tensor.encoding<{ lvlTypes = [ "compressed" ] }>>) -> tensor<f32> {
+// CHECK-OFF-SAME:  %[[VAL_1:.*]]: tensor<?xf32, #sparse_tensor.encoding<{{{.*}}}>>) -> tensor<f32> {
 // CHECK-OFF-DAG:   %[[VAL_2:.*]] = arith.constant 0 : index
 // CHECK-OFF-DAG:   %[[VAL_3:.*]] = arith.constant 1 : index
-// CHECK-OFF:   %[[VAL_4:.*]] = sparse_tensor.positions %[[VAL_1]] {level = 0 : index} : tensor<?xf32, #sparse_tensor.encoding<{ lvlTypes = [ "compressed" ] }>> to memref<?xindex>
-// CHECK-OFF:   %[[VAL_5:.*]] = sparse_tensor.values %[[VAL_1]] : tensor<?xf32, #sparse_tensor.encoding<{ lvlTypes = [ "compressed" ] }>> to memref<?xf32>
+// CHECK-OFF:   %[[VAL_4:.*]] = sparse_tensor.positions %[[VAL_1]] {level = 0 : index} : tensor<?xf32, #sparse_tensor.encoding<{{{.*}}}>> to memref<?xindex>
+// CHECK-OFF:   %[[VAL_5:.*]] = sparse_tensor.values %[[VAL_1]] : tensor<?xf32, #sparse_tensor.encoding<{{{.*}}}>> to memref<?xf32>
 // CHECK-OFF:   %[[VAL_6:.*]] = bufferization.to_memref %[[VAL_0]] : memref<f32>
 // CHECK-OFF:   %[[VAL_7:.*]] = memref.load %[[VAL_6]][] : memref<f32>
 // CHECK-OFF:   %[[VAL_8:.*]] = memref.load %[[VAL_4]]{{\[}}%[[VAL_2]]] : memref<?xindex>
@@ -511,7 +511,7 @@ func.func @sparse_reduction_subf(%argx: tensor<f32>,
 // CHECK-OFF:   return %[[VAL_16]] : tensor<f32>
 // CHECK-OFF: }
 
-#SparseVector = #sparse_tensor.encoding<{lvlTypes = ["compressed"]}>
+#SparseVector = #sparse_tensor.encoding<{map = (d0) -> (d0 : compressed)}>
 
 #trait = {
   indexing_maps = [

@@ -17,6 +17,7 @@
 
 #include "llvm/DebugInfo/Symbolize/DIPrinter.h"
 #include "llvm/DebugInfo/Symbolize/Symbolize.h"
+#include "llvm/Demangle/Demangle.h"
 
 static llvm::symbolize::LLVMSymbolizer *Symbolizer = nullptr;
 static bool Demangle = true;
@@ -52,8 +53,7 @@ static llvm::symbolize::ErrorHandler symbolize_error_handler(
 }
 
 namespace __sanitizer {
-int internal_snprintf(char *buffer, uintptr_t length, const char *format,
-                      ...);
+int internal_snprintf(char *buffer, uintptr_t length, const char *format, ...);
 }  // namespace __sanitizer
 
 extern "C" {
@@ -76,13 +76,16 @@ bool __sanitizer_symbolize_code(const char *ModuleName, uint64_t ModuleOffset,
       auto ResOrErr = getDefaultSymbolizer()->symbolizeInlinedCode(
           ModuleName,
           {ModuleOffset, llvm::object::SectionedAddress::UndefSection});
-      Printer->print(Request,
-                     ResOrErr ? ResOrErr.get() : llvm::DIInliningInfo());
+      if (!ResOrErr)
+        return false;
+      Printer->print(Request, ResOrErr.get());
     } else {
       auto ResOrErr = getDefaultSymbolizer()->symbolizeCode(
           ModuleName,
           {ModuleOffset, llvm::object::SectionedAddress::UndefSection});
-      Printer->print(Request, ResOrErr ? ResOrErr.get() : llvm::DILineInfo());
+      if (!ResOrErr)
+        return false;
+      Printer->print(Request, ResOrErr.get());
     }
   }
   return __sanitizer::internal_snprintf(Buffer, MaxLength, "%s",
@@ -104,7 +107,32 @@ bool __sanitizer_symbolize_data(const char *ModuleName, uint64_t ModuleOffset,
     auto ResOrErr = getDefaultSymbolizer()->symbolizeData(
         ModuleName,
         {ModuleOffset, llvm::object::SectionedAddress::UndefSection});
-    Printer->print(Request, ResOrErr ? ResOrErr.get() : llvm::DIGlobal());
+    if (!ResOrErr)
+      return false;
+    Printer->print(Request, ResOrErr.get());
+  }
+  return __sanitizer::internal_snprintf(Buffer, MaxLength, "%s",
+                                        Result.c_str()) < MaxLength;
+}
+
+bool __sanitizer_symbolize_frame(const char *ModuleName, uint64_t ModuleOffset,
+                                 char *Buffer, int MaxLength) {
+  std::string Result;
+  {
+    llvm::symbolize::PrinterConfig Config = getDefaultPrinterConfig();
+    llvm::raw_string_ostream OS(Result);
+    llvm::symbolize::Request Request{ModuleName, ModuleOffset};
+    auto Printer = std::make_unique<llvm::symbolize::LLVMPrinter>(
+        OS, symbolize_error_handler(OS), Config);
+
+    // TODO: it is neccessary to set proper SectionIndex here.
+    // object::SectionedAddress::UndefSection works for only absolute addresses.
+    auto ResOrErr = getDefaultSymbolizer()->symbolizeFrame(
+        ModuleName,
+        {ModuleOffset, llvm::object::SectionedAddress::UndefSection});
+    if (!ResOrErr)
+      return false;
+    Printer->print(Request, ResOrErr.get());
   }
   return __sanitizer::internal_snprintf(Buffer, MaxLength, "%s",
                                         Result.c_str()) < MaxLength;
@@ -115,14 +143,13 @@ void __sanitizer_symbolize_flush() {
     Symbolizer->flush();
 }
 
-int __sanitizer_symbolize_demangle(const char *Name, char *Buffer,
-                                   int MaxLength) {
-  std::string Result =
-      llvm::symbolize::LLVMSymbolizer::DemangleName(Name, nullptr);
+bool __sanitizer_symbolize_demangle(const char *Name, char *Buffer,
+                                    int MaxLength) {
+  std::string Result;
+  if (!llvm::nonMicrosoftDemangle(Name, Result))
+    return false;
   return __sanitizer::internal_snprintf(Buffer, MaxLength, "%s",
-                                        Result.c_str()) < MaxLength
-             ? static_cast<int>(Result.size() + 1)
-             : 0;
+                                        Result.c_str()) < MaxLength;
 }
 
 bool __sanitizer_symbolize_set_demangle(bool Value) {

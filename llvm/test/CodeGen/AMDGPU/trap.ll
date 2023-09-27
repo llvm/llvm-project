@@ -20,8 +20,8 @@
 ; RUN: llc -global-isel=0 -mtriple=amdgcn-unknown-mesa3d -mattr=-trap-handler -verify-machineinstrs < %s 2>&1 | FileCheck -check-prefix=GCN -check-prefix=GCN-WARNING -check-prefix=NO-TRAP-BIT %s
 ; RUN: llc -global-isel=1 -mtriple=amdgcn-unknown-mesa3d -mattr=-trap-handler -verify-machineinstrs < %s 2>&1 | FileCheck -check-prefix=GCN -check-prefix=GCN-WARNING -check-prefix=NO-TRAP-BIT %s
 
-; RUN: llc -global-isel=0 -march=amdgcn -verify-machineinstrs < %s 2>&1 | FileCheck -check-prefix=GCN -check-prefix=GCN-WARNING %s
-; RUN: llc -global-isel=1 -march=amdgcn -verify-machineinstrs < %s 2>&1 | FileCheck -check-prefix=GCN -check-prefix=GCN-WARNING %s
+; RUN: llc -global-isel=0 -mtriple=amdgcn -verify-machineinstrs < %s 2>&1 | FileCheck -check-prefix=GCN -check-prefix=GCN-WARNING %s
+; RUN: llc -global-isel=1 -mtriple=amdgcn -verify-machineinstrs < %s 2>&1 | FileCheck -check-prefix=GCN -check-prefix=GCN-WARNING %s
 
 ; GCN-WARNING: warning: <unknown>:0:0: in function hsa_debugtrap void (ptr addrspace(1)): debugtrap handler not supported
 
@@ -38,12 +38,11 @@ declare void @llvm.debugtrap() #1
 ; NOMESA-TRAP-NEXT: .long   144
 
 ; GCN-LABEL: {{^}}hsa_trap:
-; HSA-TRAP: enable_trap_handler = 0
 ; HSA-TRAP: s_mov_b64 s[0:1], s[4:5]
 ; HSA-TRAP: s_trap 2
+; HSA-TRAP: COMPUTE_PGM_RSRC2:TRAP_HANDLER: 0
 
 ; for llvm.trap in hsa path without ABI, direct generate s_endpgm instruction without any warning information
-; NO-HSA-TRAP: enable_trap_handler = 0
 ; NO-HSA-TRAP: s_endpgm
 ; NO-HSA-TRAP: COMPUTE_PGM_RSRC2:TRAP_HANDLER: 0
 
@@ -67,12 +66,11 @@ define amdgpu_kernel void @hsa_trap(ptr addrspace(1) nocapture readonly %arg0) {
 ; NOMESA-TRAP-NEXT: .long   140
 
 ; GCN-LABEL: {{^}}hsa_debugtrap:
-; HSA-TRAP: enable_trap_handler = 0
 ; HSA-TRAP: s_trap 3
 ; HSA-TRAP: flat_store_dword v[0:1], v3
+; HSA-TRAP: COMPUTE_PGM_RSRC2:TRAP_HANDLER: 0
 
 ; for llvm.debugtrap in non-hsa path without ABI, generate a warning and a s_endpgm instruction
-; NO-HSA-TRAP: enable_trap_handler = 0
 ; NO-HSA-TRAP: s_endpgm
 
 ; TRAP-BIT: enable_trap_handler = 1
@@ -148,4 +146,4 @@ attributes #0 = { nounwind noreturn }
 attributes #1 = { nounwind }
 
 !llvm.module.flags = !{!0}
-!0 = !{i32 1, !"amdgpu_code_object_version", i32 200}
+!0 = !{i32 1, !"amdgpu_code_object_version", i32 400}

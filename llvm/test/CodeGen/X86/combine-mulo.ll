@@ -88,3 +88,42 @@ define <4 x i32> @combine_vec_umul_two(<4 x i32> %a0, <4 x i32> %a1) {
   %4 = select <4 x i1> %3, <4 x i32> %a1, <4 x i32> %2
   ret <4 x i32> %4
 }
+
+define { i32, i1 } @combine_smul_nsw(i32 %a, i32 %b) {
+; CHECK-LABEL: combine_smul_nsw:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    movl %esi, %eax
+; CHECK-NEXT:    andl $4095, %edi # imm = 0xFFF
+; CHECK-NEXT:    andl $524287, %eax # imm = 0x7FFFF
+; CHECK-NEXT:    imull %edi, %eax
+; CHECK-NEXT:    xorl %edx, %edx
+; CHECK-NEXT:    retq
+  %aa = and i32 %a, 4095 ; 0xfff
+  %bb = and i32 %b, 524287; 0x7ffff
+  %x = call { i32, i1 } @llvm.smul.with.overflow.i32(i32 %aa, i32 %bb)
+  ret { i32, i1 } %x
+}
+
+define { <4 x i32>, <4 x i1> } @combine_vec_smul_nsw(<4 x i32> %a, <4 x i32> %b) {
+; SSE-LABEL: combine_vec_smul_nsw:
+; SSE:       # %bb.0:
+; SSE-NEXT:    pand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
+; SSE-NEXT:    pand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm1
+; SSE-NEXT:    pmulld %xmm1, %xmm0
+; SSE-NEXT:    pxor %xmm1, %xmm1
+; SSE-NEXT:    retq
+;
+; AVX-LABEL: combine_vec_smul_nsw:
+; AVX:       # %bb.0:
+; AVX-NEXT:    vpbroadcastd {{.*#+}} xmm2 = [4095,4095,4095,4095]
+; AVX-NEXT:    vpand %xmm2, %xmm0, %xmm0
+; AVX-NEXT:    vpbroadcastd {{.*#+}} xmm2 = [524287,524287,524287,524287]
+; AVX-NEXT:    vpand %xmm2, %xmm1, %xmm1
+; AVX-NEXT:    vpmulld %xmm1, %xmm0, %xmm0
+; AVX-NEXT:    vpxor %xmm1, %xmm1, %xmm1
+; AVX-NEXT:    retq
+  %aa = and <4 x i32> %a, <i32 4095, i32 4095, i32 4095, i32 4095>
+  %bb = and <4 x i32> %b, <i32 524287, i32 524287, i32 524287, i32 524287>
+  %x = call { <4 x i32>, <4 x i1> } @llvm.smul.with.overflow.v4i32(<4 x i32> %aa, <4 x i32> %bb)
+  ret { <4 x i32>, <4 x i1> } %x
+}

@@ -97,7 +97,7 @@ bool Dialect::isValidNamespace(StringRef str) {
 /// Register a set of dialect interfaces with this dialect instance.
 void Dialect::addInterface(std::unique_ptr<DialectInterface> interface) {
   // Handle the case where the models resolve a promised interface.
-  handleAdditionOfUndefinedPromisedInterface(interface->getID());
+  handleAdditionOfUndefinedPromisedInterface(getTypeID(), interface->getID());
 
   auto it = registeredInterfaces.try_emplace(interface->getID(),
                                              std::move(interface));
@@ -125,8 +125,8 @@ DialectInterfaceCollectionBase::DialectInterfaceCollectionBase(
     MLIRContext *ctx, TypeID interfaceKind, StringRef interfaceName) {
   for (auto *dialect : ctx->getLoadedDialects()) {
 #ifndef NDEBUG
-    dialect->handleUseOfUndefinedPromisedInterface(interfaceKind,
-                                                   interfaceName);
+    dialect->handleUseOfUndefinedPromisedInterface(
+        dialect->getTypeID(), interfaceKind, interfaceName);
 #endif
     if (auto *interface = dialect->getRegisteredInterface(interfaceKind)) {
       interfaces.insert(interface);
@@ -151,13 +151,22 @@ DialectInterfaceCollectionBase::getInterfaceFor(Operation *op) const {
 DialectExtensionBase::~DialectExtensionBase() = default;
 
 void dialect_extension_detail::handleUseOfUndefinedPromisedInterface(
-    Dialect &dialect, TypeID interfaceID, StringRef interfaceName) {
-  dialect.handleUseOfUndefinedPromisedInterface(interfaceID, interfaceName);
+    Dialect &dialect, TypeID interfaceRequestorID, TypeID interfaceID,
+    StringRef interfaceName) {
+  dialect.handleUseOfUndefinedPromisedInterface(interfaceRequestorID,
+                                                interfaceID, interfaceName);
 }
 
 void dialect_extension_detail::handleAdditionOfUndefinedPromisedInterface(
-    Dialect &dialect, TypeID interfaceID) {
-  dialect.handleAdditionOfUndefinedPromisedInterface(interfaceID);
+    Dialect &dialect, TypeID interfaceRequestorID, TypeID interfaceID) {
+  dialect.handleAdditionOfUndefinedPromisedInterface(interfaceRequestorID,
+                                                     interfaceID);
+}
+
+bool dialect_extension_detail::hasPromisedInterface(Dialect &dialect,
+                                                    TypeID interfaceRequestorID,
+                                                    TypeID interfaceID) {
+  return dialect.hasPromisedInterface(interfaceRequestorID, interfaceID);
 }
 
 //===----------------------------------------------------------------------===//

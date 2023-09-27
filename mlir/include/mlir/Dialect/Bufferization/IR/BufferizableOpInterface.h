@@ -243,10 +243,6 @@ struct BufferizationOptions {
   /// dynamic extents and alignment.
   using AllocationFn = std::function<FailureOr<Value>(
       OpBuilder &, Location, MemRefType, ValueRange, unsigned int)>;
-  /// Deallocator function: Deallocate a buffer that was allocated with
-  /// AllocatorFn.
-  using DeallocationFn =
-      std::function<LogicalResult(OpBuilder &, Location, Value)>;
   /// Memcpy function: Generate a memcpy between two buffers.
   using MemCpyFn =
       std::function<LogicalResult(OpBuilder &, Location, Value, Value)>;
@@ -279,19 +275,13 @@ struct BufferizationOptions {
   /// Return `true` if the given op should be bufferized.
   bool isOpAllowed(Operation *op) const;
 
-  /// Helper functions for allocation, deallocation, memory copying.
+  /// Helper functions for allocation and memory copying.
   std::optional<AllocationFn> allocationFn;
-  std::optional<DeallocationFn> deallocationFn;
   std::optional<MemCpyFn> memCpyFn;
 
   /// Create a memref allocation with the given type and dynamic extents.
   FailureOr<Value> createAlloc(OpBuilder &b, Location loc, MemRefType type,
                                ValueRange dynShape) const;
-
-  /// Creates a memref deallocation. The given memref buffer must have been
-  /// allocated using `createAlloc`.
-  LogicalResult createDealloc(OpBuilder &b, Location loc,
-                              Value allocatedBuffer) const;
 
   /// Creates a memcpy between two given buffers.
   LogicalResult createMemCpy(OpBuilder &b, Location loc, Value from,
@@ -360,10 +350,6 @@ struct BufferizationOptions {
   /// converter that returns a memref type with a fully dynamic layout map is
   /// used.
   UnknownTypeConverterFn unknownTypeConverterFn = nullptr;
-
-  /// Specifies whether dealloc ops should be generated along with alloc ops. If
-  /// not, new memory allocations will leak.
-  bool createDeallocs = true;
 
   /// Seed for the analysis fuzzer. If set to `0`, the fuzzer is deactivated.
   /// Should be used only with `testAnalysisOnly = true`.
@@ -532,13 +518,6 @@ public:
   /// Return `true` if the given tensor has undefined contents.
   virtual bool hasUndefinedContents(OpOperand *opOperand) const;
 
-  /// Return true if the given tensor (or an aliasing tensor) is yielded from
-  /// the containing block. Also include all aliasing tensors in the same block.
-  ///
-  /// Note: In the absence of an analysis, an implementation may return true for
-  /// any given tensor.
-  virtual bool isTensorYielded(Value tensor) const;
-
   /// Return a reference to the BufferizationOptions.
   const BufferizationOptions &getOptions() const { return options; }
 
@@ -588,12 +567,8 @@ private:
 /// undefined contents is allocated.
 FailureOr<Value>
 allocateTensorForShapedValue(OpBuilder &b, Location loc, Value shapedValue,
-                             bool escape, const BufferizationOptions &options,
+                             const BufferizationOptions &options,
                              bool copy = true);
-
-/// Return `true` if the allocation of the given op is guaranteed to not escape
-/// the containing block.
-bool allocationDoesNotEscape(OpResult opResult);
 
 /// Lookup the buffer for the given value. If the value was not bufferized
 /// yet, wrap it in a ToMemrefOp. Otherwise, it is the result of a ToTensorOp,
@@ -641,12 +616,6 @@ OpTy replaceOpWithNewBufferizedOp(RewriterBase &rewriter, Operation *op,
   return newOp;
 }
 
-/// Return `true` if the buffer of given OpResult should be deallocated. This
-/// function should be called during `BufferizableOpInterface::bufferize`
-/// implementations that allocate a new buffer for the given OpResult.
-bool shouldDeallocateOpResult(OpResult opResult,
-                              const BufferizationOptions &options);
-
 /// Return a MemRefType to which the type of the given value can be bufferized.
 ///
 /// If possible, op bufferization implementations should not use this function
@@ -683,6 +652,14 @@ Operation *getOwnerOfValue(Value value);
 /// repetitive region.
 Region *getNextEnclosingRepetitiveRegion(Region *region,
                                          const BufferizationOptions &options);
+
+/// If `region` is a parallel region, return `region`. Otherwise, find the first
+/// enclosing parallel region of `region`. If there is no such region, return
+/// "nullptr".
+///
+/// Note: Whether a region is parallel or sequential is queried from the
+/// `BufferizableOpInterface`.
+Region *getParallelRegion(Region *region, const BufferizationOptions &options);
 
 namespace detail {
 /// This is the default implementation of

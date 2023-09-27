@@ -1128,6 +1128,8 @@ ExprResult Parser::ParseCastExpression(CastParseKind ParseKind,
           REVERTIBLE_TYPE_TRAIT(__is_unsigned);
           REVERTIBLE_TYPE_TRAIT(__is_void);
           REVERTIBLE_TYPE_TRAIT(__is_volatile);
+          REVERTIBLE_TYPE_TRAIT(__reference_binds_to_temporary);
+          REVERTIBLE_TYPE_TRAIT(__reference_constructs_from_temporary);
 #define TRANSFORM_TYPE_TRAIT_DEF(_, Trait)                                     \
   REVERTIBLE_TYPE_TRAIT(RTT_JOIN(__, Trait));
 #include "clang/Basic/TransformTypeTraits.def"
@@ -2091,6 +2093,13 @@ Parser::ParsePostfixExpressionSuffix(ExprResult LHS) {
       };
       if (OpKind == tok::l_paren || !LHS.isInvalid()) {
         if (Tok.isNot(tok::r_paren)) {
+          // FIXME: arguments in consteval functions are constant expression
+          // regardless of the evaluation context of callsite. However, we
+          // cannot know whether the called function is constevasl before the
+          // declaration is resolved.
+          bool IsRuntimeEvaluated =
+              Actions.ExprEvalContexts.back().IsRuntimeEvaluated;
+          Actions.ExprEvalContexts.back().IsRuntimeEvaluated = false;
           if (ParseExpressionList(ArgExprs, [&] {
                 PreferredType.enterFunctionArgument(Tok.getLocation(),
                                                     RunSignatureHelp);
@@ -2107,6 +2116,8 @@ Parser::ParsePostfixExpressionSuffix(ExprResult LHS) {
             for (auto &E : ArgExprs)
               Actions.CorrectDelayedTyposInExpr(E);
           }
+          Actions.ExprEvalContexts.back().IsRuntimeEvaluated =
+              IsRuntimeEvaluated;
         }
       }
 

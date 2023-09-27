@@ -3532,14 +3532,14 @@ IsInitializerListConstructorConversion(Sema &S, Expr *From, QualType ToType,
   case OR_Success: {
     // Record the standard conversion we used and the conversion function.
     CXXConstructorDecl *Constructor = cast<CXXConstructorDecl>(Best->Function);
-    QualType ThisType = Constructor->getThisType();
+    QualType ThisType = Constructor->getThisObjectType();
     // Initializer lists don't have conversions as such.
     User.Before.setAsIdentityConversion();
     User.HadMultipleCandidates = HadMultipleCandidates;
     User.ConversionFunction = Constructor;
     User.FoundConversionFunction = Best->FoundDecl;
     User.After.setAsIdentityConversion();
-    User.After.setFromType(ThisType->castAs<PointerType>()->getPointeeType());
+    User.After.setFromType(ThisType);
     User.After.setAllToTypes(ToType);
     return Result;
   }
@@ -3719,7 +3719,6 @@ IsUserDefinedConversion(Sema &S, Expr *From, QualType ToType,
       //   sequence converts the source type to the type required by
       //   the argument of the constructor.
       //
-      QualType ThisType = Constructor->getThisType();
       if (isa<InitListExpr>(From)) {
         // Initializer lists don't have conversions as such.
         User.Before.setAsIdentityConversion();
@@ -3735,7 +3734,7 @@ IsUserDefinedConversion(Sema &S, Expr *From, QualType ToType,
       User.ConversionFunction = Constructor;
       User.FoundConversionFunction = Best->FoundDecl;
       User.After.setAsIdentityConversion();
-      User.After.setFromType(ThisType->castAs<PointerType>()->getPointeeType());
+      User.After.setFromType(Constructor->getThisObjectType());
       User.After.setAllToTypes(ToType);
       return Result;
     }
@@ -5557,9 +5556,11 @@ TryObjectArgumentInitialization(Sema &S, SourceLocation Loc, QualType FromType,
 
   // First check the qualifiers.
   QualType FromTypeCanon = S.Context.getCanonicalType(FromType);
-  if (ImplicitParamType.getCVRQualifiers()
-                                    != FromTypeCanon.getLocalCVRQualifiers() &&
-      !ImplicitParamType.isAtLeastAsQualifiedAs(FromTypeCanon)) {
+  // MSVC ignores __unaligned qualifier for overload candidates; do the same.
+  if (ImplicitParamType.getCVRQualifiers() !=
+          FromTypeCanon.getLocalCVRQualifiers() &&
+      !ImplicitParamType.isAtLeastAsQualifiedAs(
+          withoutUnaligned(S.Context, FromTypeCanon))) {
     ICS.setBad(BadConversionSequence::bad_qualifiers,
                FromType, ImplicitParamType);
     return ICS;
@@ -5639,8 +5640,7 @@ Sema::PerformObjectArgumentInitialization(Expr *From,
                                           NamedDecl *FoundDecl,
                                           CXXMethodDecl *Method) {
   QualType FromRecordType, DestType;
-  QualType ImplicitParamRecordType  =
-    Method->getThisType()->castAs<PointerType>()->getPointeeType();
+  QualType ImplicitParamRecordType = Method->getThisObjectType();
 
   Expr::Classification FromClassification;
   if (const PointerType *PT = From->getType()->getAs<PointerType>()) {
@@ -6302,10 +6302,12 @@ ExprResult Sema::PerformContextualImplicitConversion(
     From = result.get();
   }
 
+  // Try converting the expression to an Lvalue first, to get rid of qualifiers.
+  ExprResult Converted = DefaultLvalueConversion(From);
+  QualType T = Converted.isUsable() ? Converted.get()->getType() : QualType();
   // If the expression already has a matching type, we're golden.
-  QualType T = From->getType();
   if (Converter.match(T))
-    return DefaultLvalueConversion(From);
+    return Converted;
 
   // FIXME: Check for missing '()' if T is a function type?
 
@@ -6699,17 +6701,19 @@ void Sema::AddOverloadCandidate(
   }
 
   // (CUDA B.1): Check for invalid calls between targets.
-  if (getLangOpts().CUDA)
-    if (const FunctionDecl *Caller = getCurFunctionDecl(/*AllowLambda=*/true))
-      // Skip the check for callers that are implicit members, because in this
-      // case we may not yet know what the member's target is; the target is
-      // inferred for the member automatically, based on the bases and fields of
-      // the class.
-      if (!Caller->isImplicit() && !IsAllowedCUDACall(Caller, Function)) {
-        Candidate.Viable = false;
-        Candidate.FailureKind = ovl_fail_bad_target;
-        return;
-      }
+  if (getLangOpts().CUDA) {
+    const FunctionDecl *Caller = getCurFunctionDecl(/*AllowLambda=*/true);
+    // Skip the check for callers that are implicit members, because in this
+    // case we may not yet know what the member's target is; the target is
+    // inferred for the member automatically, based on the bases and fields of
+    // the class.
+    if (!(Caller && Caller->isImplicit()) &&
+        !IsAllowedCUDACall(Caller, Function)) {
+      Candidate.Viable = false;
+      Candidate.FailureKind = ovl_fail_bad_target;
+      return;
+    }
+  }
 
   if (Function->getTrailingRequiresClause()) {
     ConstraintSatisfaction Satisfaction;
@@ -7221,12 +7225,11 @@ Sema::AddMethodCandidate(CXXMethodDecl *Method, DeclAccessPair FoundDecl,
 
   // (CUDA B.1): Check for invalid calls between targets.
   if (getLangOpts().CUDA)
-    if (const FunctionDecl *Caller = getCurFunctionDecl(/*AllowLambda=*/true))
-      if (!IsAllowedCUDACall(Caller, Method)) {
-        Candidate.Viable = false;
-        Candidate.FailureKind = ovl_fail_bad_target;
-        return;
-      }
+    if (!IsAllowedCUDACall(getCurFunctionDecl(/*AllowLambda=*/true), Method)) {
+      Candidate.Viable = false;
+      Candidate.FailureKind = ovl_fail_bad_target;
+      return;
+    }
 
   if (Method->getTrailingRequiresClause()) {
     ConstraintSatisfaction Satisfaction;
@@ -12497,10 +12500,12 @@ private:
       return false;
 
     if (FunctionDecl *FunDecl = dyn_cast<FunctionDecl>(Fn)) {
-      if (S.getLangOpts().CUDA)
-        if (FunctionDecl *Caller = S.getCurFunctionDecl(/*AllowLambda=*/true))
-          if (!Caller->isImplicit() && !S.IsAllowedCUDACall(Caller, FunDecl))
-            return false;
+      if (S.getLangOpts().CUDA) {
+        FunctionDecl *Caller = S.getCurFunctionDecl(/*AllowLambda=*/true);
+        if (!(Caller && Caller->isImplicit()) &&
+            !S.IsAllowedCUDACall(Caller, FunDecl))
+          return false;
+      }
       if (FunDecl->isMultiVersion()) {
         const auto *TA = FunDecl->getAttr<TargetAttr>();
         if (TA && !TA->isDefaultVersion())

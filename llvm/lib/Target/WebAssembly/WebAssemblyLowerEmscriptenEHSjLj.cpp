@@ -1290,9 +1290,9 @@ bool WebAssemblyLowerEmscriptenEHSjLj::runSjLjOnFunction(Function &F) {
   // setjmpTable = (int *) malloc(40);
   Type *IntPtrTy = getAddrIntType(&M);
   Constant *size = ConstantInt::get(IntPtrTy, 40);
-  Instruction *SetjmpTable =
-      CallInst::CreateMalloc(SetjmpTableSize, IntPtrTy, IRB.getInt32Ty(), size,
-                             nullptr, nullptr, "setjmpTable");
+  IRB.SetInsertPoint(SetjmpTableSize);
+  auto *SetjmpTable = IRB.CreateMalloc(IntPtrTy, IRB.getInt32Ty(), size,
+                                       nullptr, nullptr, "setjmpTable");
   SetjmpTable->setDebugLoc(FirstDL);
   // CallInst::CreateMalloc may return a bitcast instruction if the result types
   // mismatch. We need to set the debug loc for the original call too.
@@ -1301,7 +1301,6 @@ bool WebAssemblyLowerEmscriptenEHSjLj::runSjLjOnFunction(Function &F) {
     MallocCallI->setDebugLoc(FirstDL);
   }
   // setjmpTable[0] = 0;
-  IRB.SetInsertPoint(SetjmpTableSize);
   IRB.CreateStore(IRB.getInt32(0), SetjmpTable);
   SetjmpTableInsts.push_back(SetjmpTable);
   SetjmpTableSizeInsts.push_back(SetjmpTableSize);
@@ -1336,7 +1335,7 @@ bool WebAssemblyLowerEmscriptenEHSjLj::runSjLjOnFunction(Function &F) {
     // Add a phi to the tail, which will be the output of setjmp, which
     // indicates if this is the first call or a longjmp back. The phi directly
     // uses the right value based on where we arrive from
-    IRB.SetInsertPoint(Tail->getFirstNonPHI());
+    IRB.SetInsertPoint(Tail, Tail->getFirstNonPHIIt());
     PHINode *SetjmpRet = IRB.CreatePHI(IRB.getInt32Ty(), 2, "setjmp.ret");
 
     // setjmp initial call returns 0
@@ -1402,14 +1401,9 @@ bool WebAssemblyLowerEmscriptenEHSjLj::runSjLjOnFunction(Function &F) {
     if (auto *CB = dyn_cast<CallBase>(I))
       if (auto Bundle = CB->getOperandBundle(LLVMContext::OB_funclet))
         Bundles.push_back(OperandBundleDef(*Bundle));
-    auto *Free = CallInst::CreateFree(SetjmpTable, Bundles, I);
+    IRB.SetInsertPoint(I);
+    auto *Free = IRB.CreateFree(SetjmpTable, Bundles);
     Free->setDebugLoc(DL);
-    // CallInst::CreateFree may create a bitcast instruction if its argument
-    // types mismatch. We need to set the debug loc for the bitcast too.
-    if (auto *FreeCallI = dyn_cast<CallInst>(Free)) {
-      if (auto *BitCastI = dyn_cast<BitCastInst>(FreeCallI->getArgOperand(0)))
-        BitCastI->setDebugLoc(DL);
-    }
   }
 
   // Every call to saveSetjmp can change setjmpTable and setjmpTableSize

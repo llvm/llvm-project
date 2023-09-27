@@ -704,10 +704,9 @@ public:
   }
 
   // Implementation of the MCTargetAsmParser interface:
-  bool parseRegister(MCRegister &RegNo, SMLoc &StartLoc,
-                     SMLoc &EndLoc) override;
-  OperandMatchResultTy tryParseRegister(MCRegister &RegNo, SMLoc &StartLoc,
-                                        SMLoc &EndLoc) override;
+  bool parseRegister(MCRegister &Reg, SMLoc &StartLoc, SMLoc &EndLoc) override;
+  ParseStatus tryParseRegister(MCRegister &Reg, SMLoc &StartLoc,
+                               SMLoc &EndLoc) override;
   bool ParseInstruction(ParseInstructionInfo &Info, StringRef Name,
                         SMLoc NameLoc, OperandVector &Operands) override;
   bool ParseDirective(AsmToken DirectiveID) override;
@@ -4050,22 +4049,21 @@ static unsigned MatchRegisterName(StringRef Name);
 
 /// }
 
-bool ARMAsmParser::parseRegister(MCRegister &RegNo, SMLoc &StartLoc,
+bool ARMAsmParser::parseRegister(MCRegister &Reg, SMLoc &StartLoc,
                                  SMLoc &EndLoc) {
   const AsmToken &Tok = getParser().getTok();
   StartLoc = Tok.getLoc();
   EndLoc = Tok.getEndLoc();
-  RegNo = tryParseRegister();
+  Reg = tryParseRegister();
 
-  return (RegNo == (unsigned)-1);
+  return Reg == (unsigned)-1;
 }
 
-OperandMatchResultTy ARMAsmParser::tryParseRegister(MCRegister &RegNo,
-                                                    SMLoc &StartLoc,
-                                                    SMLoc &EndLoc) {
-  if (parseRegister(RegNo, StartLoc, EndLoc))
-    return MatchOperand_NoMatch;
-  return MatchOperand_Success;
+ParseStatus ARMAsmParser::tryParseRegister(MCRegister &Reg, SMLoc &StartLoc,
+                                           SMLoc &EndLoc) {
+  if (parseRegister(Reg, StartLoc, EndLoc))
+    return ParseStatus::NoMatch;
+  return ParseStatus::Success;
 }
 
 /// Try to parse a register name.  The token must be an Identifier when called,

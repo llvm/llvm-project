@@ -117,9 +117,9 @@ nl = '\\\\n'
 print(
     f"""\
 //--- module_std.sh.cpp
-// UNSUPPORTED{BLOCKLIT}: c++03, c++11, c++14, c++17, c++20
+// UNSUPPORTED{BLOCKLIT}: c++03, c++11, c++14, c++17
 // UNSUPPORTED{BLOCKLIT}: libcpp-has-no-std-modules
-// UNSUPPORTED{BLOCKLIT}: modules-build
+// UNSUPPORTED{BLOCKLIT}: clang-modules-build
 
 // REQUIRES{BLOCKLIT}: has-clang-tidy
 

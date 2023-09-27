@@ -84,8 +84,7 @@ public:
     //   %x = [%b,%b,%b,%b] : n-D
     if (srcRank < dstRank) {
       // Duplication.
-      VectorType resType =
-          VectorType::get(dstType.getShape().drop_front(), eltType);
+      VectorType resType = VectorType::Builder(dstType).dropDim(0);
       Value bcst =
           rewriter.create<vector::BroadcastOp>(loc, resType, op.getSource());
       Value result = rewriter.create<arith::ConstantOp>(

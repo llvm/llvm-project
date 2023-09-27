@@ -139,12 +139,9 @@ end subroutine
 !CHECK-NEXT: run 2 evaluate: where/region_assign1
 !CHECK-NEXT: run 3 evaluate: where/region_assign2
 !CHECK-LABEL: ------------ scheduling where in _QPrhs_lhs_conflict ------------
-!CHECK-NEXT: unknown effect: %{{.*}} = hlfir.transpose %{{.*}} : (!fir.box<!fir.array<?x?xf32>>) -> !hlfir.expr<?x?xf32>
-!CHECK-NEXT: conflict: R/W: %6 = hlfir.designate %{{.*}} (%{{.*}}, %{{.*}})  : (!fir.box<!fir.array<?x?xf32>>, index, index) -> !fir.ref<f32> W:<unknown>
-!CHECK-NEXT: run 1 save    : where/mask
-!CHECK-NEXT: unknown effect: %{{.*}} = hlfir.transpose %{{.*}} : (!fir.box<!fir.array<?x?xf32>>) -> !hlfir.expr<?x?xf32>
-!CHECK-NEXT: run 2 save  (w): where/region_assign1/rhs
-!CHECK-NEXT: run 3 evaluate: where/region_assign1
+!CHECK-NEXT: conflict: R/W: <block argument> of type '!fir.box<!fir.array<?x?xf32>>' at index: 0 W:<block argument> of type '!fir.box<!fir.array<?x?xf32>>' at index: 0
+!CHECK-NEXT: run 1 save    : where/region_assign1/rhs
+!CHECK-NEXT: run 2 evaluate: where/region_assign1
 !CHECK-LABEL: ------------ scheduling where in _QPwhere_construct_no_conflict ------------
 !CHECK-NEXT: run 1 evaluate: where/region_assign1
 !CHECK-NEXT: run 2 evaluate: where/elsewhere1/region_assign1

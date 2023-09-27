@@ -184,10 +184,11 @@ private:
     // If the op doesn't have tensor semantics or outputs should not be removed,
     // keep all the outputs as preserved.
     if (!genericOp.hasTensorSemantics() || !removeOutputs) {
-      for (const auto &en : llvm::enumerate(genericOp.getDpsInitOperands())) {
+      for (const auto &en : llvm::enumerate(genericOp.getDpsInitsMutable())) {
         origToNewPos[en.index()] = newOutputOperands.size();
-        newOutputOperands.push_back(en.value()->get());
-        newIndexingMaps.push_back(genericOp.getMatchingIndexingMap(en.value()));
+        newOutputOperands.push_back(en.value().get());
+        newIndexingMaps.push_back(
+            genericOp.getMatchingIndexingMap(&en.value()));
       }
       return origToNewPos;
     }
@@ -198,25 +199,25 @@ private:
     //   computation.
     auto yieldOp = cast<YieldOp>(genericOp.getBody()->getTerminator());
     for (const auto &outputOpOperand :
-         llvm::enumerate(genericOp.getDpsInitOperands())) {
-      OpResult result = genericOp.getTiedOpResult(outputOpOperand.value());
+         llvm::enumerate(genericOp.getDpsInitsMutable())) {
+      OpResult result = genericOp.getTiedOpResult(&outputOpOperand.value());
       AffineMap indexingMap =
-          genericOp.getMatchingIndexingMap(outputOpOperand.value());
-      auto key = std::make_tuple(outputOpOperand.value()->get(), indexingMap,
+          genericOp.getMatchingIndexingMap(&outputOpOperand.value());
+      auto key = std::make_tuple(outputOpOperand.value().get(), indexingMap,
                                  yieldOp->getOperand(outputOpOperand.index()));
       if (isResultValueDead(genericOp, result)) {
         // Check if the opoperand can be dropped without affecting loop
         // bound computation. Add the operand to the list of dropped op
         // operand for checking. If it cannot be dropped, need to pop the
         // value back.
-        droppedOpOperands.push_back(outputOpOperand.value());
+        droppedOpOperands.push_back(&outputOpOperand.value());
         if (genericOp.canOpOperandsBeDropped(droppedOpOperands)) {
           continue;
         }
         droppedOpOperands.pop_back();
       }
 
-      if (!genericOp.payloadUsesValueFromOperand(outputOpOperand.value())) {
+      if (!genericOp.payloadUsesValueFromOperand(&outputOpOperand.value())) {
         // The out operand can also be dropped if it is computed redundantly
         // by another result, the conditions for that are
         // - The same operand is used as the out operand
@@ -225,16 +226,16 @@ private:
         auto it = dedupedOutpts.find(key);
         if (it != dedupedOutpts.end()) {
           origToNewPos[outputOpOperand.index()] = it->second;
-          droppedOpOperands.push_back(outputOpOperand.value());
+          droppedOpOperands.push_back(&outputOpOperand.value());
           continue;
         }
       }
 
       origToNewPos[outputOpOperand.index()] = newOutputOperands.size();
       dedupedOutpts[key] = newOutputOperands.size();
-      newOutputOperands.push_back(outputOpOperand.value()->get());
+      newOutputOperands.push_back(outputOpOperand.value().get());
       newIndexingMaps.push_back(
-          genericOp.getMatchingIndexingMap(outputOpOperand.value()));
+          genericOp.getMatchingIndexingMap(&outputOpOperand.value()));
     }
     return origToNewPos;
   }
@@ -254,7 +255,8 @@ private:
     // Replace all arguments in the original op, with arguments from the
     // canonicalized op.
     auto updateReplacements =
-        [&](OpOperandVector &origOperands, OpOperandVector &newOperands,
+        [&](SmallVector<OpOperand *> &origOperands,
+            SmallVector<OpOperand *> &newOperands,
             const llvm::SmallDenseMap<unsigned, unsigned> &map) {
           for (const auto &origOperand : llvm::enumerate(origOperands)) {
             auto it = map.find(origOperand.index());
@@ -266,12 +268,17 @@ private:
           }
         };
 
-    OpOperandVector origInputOperands = genericOp.getDpsInputOperands();
-    OpOperandVector newInputOperands = newOp.getDpsInputOperands();
+    SmallVector<OpOperand *> origInputOperands =
+        genericOp.getDpsInputOperands();
+    SmallVector<OpOperand *> newInputOperands = newOp.getDpsInputOperands();
     updateReplacements(origInputOperands, newInputOperands, origInsToNewInsPos);
 
-    OpOperandVector origOutputOperands = genericOp.getDpsInitOperands();
-    OpOperandVector newOutputOperands = newOp.getDpsInitOperands();
+    SmallVector<OpOperand *> origOutputOperands =
+        llvm::to_vector(llvm::map_range(genericOp.getDpsInitsMutable(),
+                                        [](OpOperand &o) { return &o; }));
+    SmallVector<OpOperand *> newOutputOperands =
+        llvm::to_vector(llvm::map_range(newOp.getDpsInitsMutable(),
+                                        [](OpOperand &o) { return &o; }));
     updateReplacements(origOutputOperands, newOutputOperands,
                        origOutsToNewOutsPos);
 
@@ -316,7 +323,7 @@ struct RemoveUnusedCycleInGenericOp : public OpRewritePattern<GenericOp> {
     bool hasRemovedCycles = false;
     // Iterate over output operands and remove any unused cycles.
     for (const auto &outputOpOperand :
-         llvm::enumerate(genericOp.getDpsInitOperands())) {
+         llvm::enumerate(genericOp.getDpsInits())) {
 
       // Check that result from out operand is dead.
       Value result = genericOp.getResult(outputOpOperand.index());

@@ -1,4 +1,4 @@
-; RUN: llc -march=lanai < %s | FileCheck %s
+; RUN: llc -mtriple=lanai < %s | FileCheck %s
 
 ; Test the in place lowering of mul i32.
 

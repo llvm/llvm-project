@@ -15,7 +15,6 @@ define void @testExpandPostRAPseudo(ptr nocapture readonly %ptr) {
 ; CHECK-P8:    ld r4, .LC0@toc@l(r4)
 ; CHECK-P8:    xxspltw vs0, vs0, 1
 ; CHECK-P8;    stxvd2x vs0, 0, r4
-; CHECK-P8:    lis r4, 1024
 ; CHECK-P8:    lfiwax f0, 0, r3
 ; CHECK-P8:    addis r3, r2, .LC1@toc@ha
 ; CHECK-P8:    ld r3, .LC1@toc@l(r3)

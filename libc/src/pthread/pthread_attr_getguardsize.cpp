@@ -12,7 +12,7 @@
 
 #include <pthread.h>
 
-namespace __llvm_libc {
+namespace LIBC_NAMESPACE {
 
 LLVM_LIBC_FUNCTION(int, pthread_attr_getguardsize,
                    (const pthread_attr_t *__restrict attr,
@@ -21,4 +21,4 @@ LLVM_LIBC_FUNCTION(int, pthread_attr_getguardsize,
   return 0;
 }
 
-} // namespace __llvm_libc
+} // namespace LIBC_NAMESPACE

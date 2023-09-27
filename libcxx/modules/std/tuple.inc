@@ -13,9 +13,11 @@ export namespace std {
 
   // [tuple.like], concept tuple-like
 
+#if _LIBCPP_STD_VER >= 23
   // [tuple.common.ref], common_reference related specializations
   using std::basic_common_reference;
   using std::common_type;
+#endif
 
   // [tuple.creation], tuple creation functions
   using std::ignore;

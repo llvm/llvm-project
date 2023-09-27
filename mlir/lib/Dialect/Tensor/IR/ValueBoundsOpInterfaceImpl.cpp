@@ -120,11 +120,9 @@ void mlir::tensor::registerValueBoundsOpInterfaceExternalModels(
     tensor::EmptyOp::attachInterface<tensor::EmptyOpInterface>(*ctx);
     tensor::ExtractSliceOp::attachInterface<tensor::ExtractSliceOpInterface>(
         *ctx);
-    tensor::InsertOp::attachInterface<
-        DstValueBoundsOpInterfaceExternalModel<tensor::InsertOp>>(*ctx);
-    tensor::InsertSliceOp::attachInterface<
-        DstValueBoundsOpInterfaceExternalModel<tensor::InsertSliceOp>>(*ctx);
     tensor::PadOp::attachInterface<tensor::PadOpInterface>(*ctx);
     tensor::RankOp::attachInterface<tensor::RankOpInterface>(*ctx);
+    // Note: ValueBoundsOpInterface implementation is not required for ops that
+    // implement `DestinationStyleOpInterface` (for querying shaped OpResults).
   });
 }

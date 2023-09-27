@@ -13,28 +13,28 @@
 #include "test/UnitTest/ErrnoSetterMatcher.h"
 #include "test/UnitTest/Test.h"
 
-namespace cpp = __llvm_libc::cpp;
+namespace cpp = LIBC_NAMESPACE::cpp;
 
 TEST(LlvmLibcGettimeofday, SmokeTest) {
-  using __llvm_libc::testing::ErrnoSetterMatcher::Succeeds;
+  using LIBC_NAMESPACE::testing::ErrnoSetterMatcher::Succeeds;
   void *tz = nullptr;
   struct timeval tv;
 
   int sleep_times[2] = {200, 1000};
   for (int i = 0; i < 2; i++) {
-    int ret = __llvm_libc::gettimeofday(&tv, tz);
+    int ret = LIBC_NAMESPACE::gettimeofday(&tv, tz);
     ASSERT_EQ(ret, 0);
 
-    int sleep_time = -sleep_times[i];
+    int sleep_time = sleep_times[i];
     // Sleep for {sleep_time} microsceconds.
     struct timespec tim = {0, sleep_time * 1000};
     struct timespec tim2 = {0, 0};
-    ret = __llvm_libc::nanosleep(&tim, &tim2);
+    ret = LIBC_NAMESPACE::nanosleep(&tim, &tim2);
 
     // Call gettimeofday again and verify that it is more {sleep_time}
     // microscecods.
     struct timeval tv1;
-    ret = __llvm_libc::gettimeofday(&tv1, tz);
+    ret = LIBC_NAMESPACE::gettimeofday(&tv1, tz);
     ASSERT_EQ(ret, 0);
     ASSERT_GE(tv1.tv_usec - tv.tv_usec, sleep_time);
   }

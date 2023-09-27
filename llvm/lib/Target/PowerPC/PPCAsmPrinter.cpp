@@ -68,6 +68,7 @@
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/Process.h"
 #include "llvm/Support/raw_ostream.h"
+#include "llvm/Support/Threading.h"
 #include "llvm/Target/TargetMachine.h"
 #include "llvm/TargetParser/Triple.h"
 #include "llvm/Transforms/Utils/ModuleUtils.h"
@@ -1533,6 +1534,22 @@ void PPCAsmPrinter::emitInstruction(const MachineInstr *MI) {
     EmitToStreamer(*OutStreamer, MCInstBuilder(PPC::EnforceIEIO));
     return;
   }
+  case PPC::ADDI8: {
+    // The faster non-TOC-based local-exec sequence is represented by `addi`
+    // with an immediate operand having the MO_TPREL_FLAG. Such an instruction
+    // does not otherwise arise.
+    const MachineOperand &MO = MI->getOperand(2);
+    if ((MO.getTargetFlags() & PPCII::MO_TPREL_FLAG) != 0) {
+      assert(
+          Subtarget->hasAIXSmallLocalExecTLS() &&
+          "addi with thread-pointer only expected with local-exec small TLS");
+      LowerPPCMachineInstrToMCInst(MI, TmpInst, *this);
+      TmpInst.setOpcode(PPC::LA8);
+      EmitToStreamer(*OutStreamer, TmpInst);
+      return;
+    }
+    break;
+  }
   }
 
   LowerPPCMachineInstrToMCInst(MI, TmpInst, *this);
@@ -2740,14 +2757,18 @@ bool PPCAIXAsmPrinter::doInitialization(Module &M) {
           // and add a format indicator as a part of function name in case we
           // will support more than one format.
           FormatIndicatorAndUniqueModId = "clang_" + UniqueModuleId.substr(1);
-        else
-          // Use the Pid and current time as the unique module id when we cannot
-          // generate one based on a module's strong external symbols.
-          // FIXME: Adjust the comment accordingly after we use source file full
-          // path instead.
+        else {
+          // Use threadId, Pid, and current time as the unique module id when we
+          // cannot generate one based on a module's strong external symbols.
+          auto CurTime =
+              std::chrono::duration_cast<std::chrono::nanoseconds>(
+                  std::chrono::steady_clock::now().time_since_epoch())
+                  .count();
           FormatIndicatorAndUniqueModId =
-              "clangPidTime_" + llvm::itostr(sys::Process::getProcessId()) +
-              "_" + llvm::itostr(time(nullptr));
+              "clangPidTidTime_" + llvm::itostr(sys::Process::getProcessId()) +
+              "_" + llvm::itostr(llvm::get_threadid()) + "_" +
+              llvm::itostr(CurTime);
+        }
       }
 
       emitSpecialLLVMGlobal(&G);

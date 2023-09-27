@@ -20,7 +20,6 @@
 #include "llvm/CodeGen/GlobalISel/Combiner.h"
 #include "llvm/CodeGen/GlobalISel/CombinerHelper.h"
 #include "llvm/CodeGen/GlobalISel/CombinerInfo.h"
-#include "llvm/CodeGen/GlobalISel/GIMatchTableExecutor.h"
 #include "llvm/CodeGen/GlobalISel/GIMatchTableExecutorImpl.h"
 #include "llvm/CodeGen/GlobalISel/GISelKnownBits.h"
 #include "llvm/CodeGen/GlobalISel/MIPatternMatch.h"
@@ -43,29 +42,27 @@ namespace {
 #include "AMDGPUGenRegBankGICombiner.inc"
 #undef GET_GICOMBINER_TYPES
 
-class AMDGPURegBankCombinerImpl : public GIMatchTableExecutor {
+class AMDGPURegBankCombinerImpl : public Combiner {
 protected:
   const AMDGPURegBankCombinerImplRuleConfig &RuleConfig;
-
-  MachineIRBuilder &B;
-  MachineFunction &MF;
-  MachineRegisterInfo &MRI;
   const GCNSubtarget &STI;
   const RegisterBankInfo &RBI;
   const TargetRegisterInfo &TRI;
   const SIInstrInfo &TII;
-  CombinerHelper &Helper;
-  GISelChangeObserver &Observer;
+  // TODO: Make CombinerHelper methods const.
+  mutable CombinerHelper Helper;
 
 public:
   AMDGPURegBankCombinerImpl(
+      MachineFunction &MF, CombinerInfo &CInfo, const TargetPassConfig *TPC,
+      GISelKnownBits &KB, GISelCSEInfo *CSEInfo,
       const AMDGPURegBankCombinerImplRuleConfig &RuleConfig,
-      MachineIRBuilder &B, CombinerHelper &Helper,
-      GISelChangeObserver &Observer);
+      const GCNSubtarget &STI, MachineDominatorTree *MDT,
+      const LegalizerInfo *LI);
 
   static const char *getName() { return "AMDGPURegBankCombinerImpl"; }
 
-  bool tryCombineAll(MachineInstr &I) const;
+  bool tryCombineAll(MachineInstr &I) const override;
 
   bool isVgprRegBank(Register Reg) const;
   Register getAsVgpr(Register Reg) const;
@@ -114,12 +111,14 @@ private:
 #undef GET_GICOMBINER_IMPL
 
 AMDGPURegBankCombinerImpl::AMDGPURegBankCombinerImpl(
-    const AMDGPURegBankCombinerImplRuleConfig &RuleConfig, MachineIRBuilder &B,
-    CombinerHelper &Helper, GISelChangeObserver &Observer)
-    : RuleConfig(RuleConfig), B(B), MF(B.getMF()), MRI(*B.getMRI()),
-      STI(MF.getSubtarget<GCNSubtarget>()), RBI(*STI.getRegBankInfo()),
-      TRI(*STI.getRegisterInfo()), TII(*STI.getInstrInfo()), Helper(Helper),
-      Observer(Observer),
+    MachineFunction &MF, CombinerInfo &CInfo, const TargetPassConfig *TPC,
+    GISelKnownBits &KB, GISelCSEInfo *CSEInfo,
+    const AMDGPURegBankCombinerImplRuleConfig &RuleConfig,
+    const GCNSubtarget &STI, MachineDominatorTree *MDT, const LegalizerInfo *LI)
+    : Combiner(MF, CInfo, TPC, &KB, CSEInfo), RuleConfig(RuleConfig), STI(STI),
+      RBI(*STI.getRegBankInfo()), TRI(*STI.getRegisterInfo()),
+      TII(*STI.getInstrInfo()),
+      Helper(Observer, B, /*IsPreLegalize*/ false, &KB, MDT, LI),
 #define GET_GICOMBINER_CONSTRUCTOR_INITS
 #include "AMDGPUGenRegBankGICombiner.inc"
 #undef GET_GICOMBINER_CONSTRUCTOR_INITS
@@ -396,36 +395,6 @@ bool AMDGPURegBankCombinerImpl::isClampZeroToOne(MachineInstr *K0,
   return false;
 }
 
-class AMDGPURegBankCombinerInfo final : public CombinerInfo {
-  GISelKnownBits *KB;
-  MachineDominatorTree *MDT;
-  AMDGPURegBankCombinerImplRuleConfig RuleConfig;
-
-public:
-  AMDGPURegBankCombinerInfo(bool EnableOpt, bool OptSize, bool MinSize,
-                            const AMDGPULegalizerInfo *LI, GISelKnownBits *KB,
-                            MachineDominatorTree *MDT)
-      : CombinerInfo(/*AllowIllegalOps*/ false, /*ShouldLegalizeIllegal*/ true,
-                     /*LegalizerInfo*/ LI, EnableOpt, OptSize, MinSize),
-        KB(KB), MDT(MDT) {
-    if (!RuleConfig.parseCommandLineOption())
-      report_fatal_error("Invalid rule identifier");
-  }
-
-  bool combine(GISelChangeObserver &Observer, MachineInstr &MI,
-               MachineIRBuilder &B) const override;
-};
-
-bool AMDGPURegBankCombinerInfo::combine(GISelChangeObserver &Observer,
-                                        MachineInstr &MI,
-                                        MachineIRBuilder &B) const {
-  CombinerHelper Helper(Observer, B, /* IsPreLegalize*/ false, KB, MDT);
-  // TODO: Do not re-create the Impl on every inst, it should be per function.
-  AMDGPURegBankCombinerImpl Impl(RuleConfig, B, Helper, Observer);
-  Impl.setupMF(*MI.getMF(), KB);
-  return Impl.tryCombineAll(MI);
-}
-
 // Pass boilerplate
 // ================
 
@@ -440,8 +409,10 @@ public:
   bool runOnMachineFunction(MachineFunction &MF) override;
 
   void getAnalysisUsage(AnalysisUsage &AU) const override;
+
 private:
   bool IsOptNone;
+  AMDGPURegBankCombinerImplRuleConfig RuleConfig;
 };
 } // end anonymous namespace
 
@@ -461,6 +432,9 @@ void AMDGPURegBankCombiner::getAnalysisUsage(AnalysisUsage &AU) const {
 AMDGPURegBankCombiner::AMDGPURegBankCombiner(bool IsOptNone)
     : MachineFunctionPass(ID), IsOptNone(IsOptNone) {
   initializeAMDGPURegBankCombinerPass(*PassRegistry::getPassRegistry());
+
+  if (!RuleConfig.parseCommandLineOption())
+    report_fatal_error("Invalid rule identifier");
 }
 
 bool AMDGPURegBankCombiner::runOnMachineFunction(MachineFunction &MF) {
@@ -470,19 +444,20 @@ bool AMDGPURegBankCombiner::runOnMachineFunction(MachineFunction &MF) {
   auto *TPC = &getAnalysis<TargetPassConfig>();
   const Function &F = MF.getFunction();
   bool EnableOpt =
-      MF.getTarget().getOptLevel() != CodeGenOpt::None && !skipFunction(F);
+      MF.getTarget().getOptLevel() != CodeGenOptLevel::None && !skipFunction(F);
 
   const GCNSubtarget &ST = MF.getSubtarget<GCNSubtarget>();
-  const AMDGPULegalizerInfo *LI =
-      static_cast<const AMDGPULegalizerInfo *>(ST.getLegalizerInfo());
-
   GISelKnownBits *KB = &getAnalysis<GISelKnownBitsAnalysis>().get(MF);
+
+  const auto *LI = ST.getLegalizerInfo();
   MachineDominatorTree *MDT =
       IsOptNone ? nullptr : &getAnalysis<MachineDominatorTree>();
-  AMDGPURegBankCombinerInfo PCInfo(EnableOpt, F.hasOptSize(), F.hasMinSize(),
-                                   LI, KB, MDT);
-  Combiner C(PCInfo, TPC);
-  return C.combineMachineInstrs(MF, /*CSEInfo*/ nullptr);
+
+  CombinerInfo CInfo(/*AllowIllegalOps*/ false, /*ShouldLegalizeIllegal*/ true,
+                     LI, EnableOpt, F.hasOptSize(), F.hasMinSize());
+  AMDGPURegBankCombinerImpl Impl(MF, CInfo, TPC, *KB, /*CSEInfo*/ nullptr,
+                                 RuleConfig, ST, MDT, LI);
+  return Impl.combineMachineInstrs();
 }
 
 char AMDGPURegBankCombiner::ID = 0;

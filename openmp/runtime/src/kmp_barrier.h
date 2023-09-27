@@ -21,7 +21,10 @@
 #define KMP_ALIGNED_ALLOCATE(size, alignment) _mm_malloc(size, alignment)
 #define KMP_ALIGNED_FREE(ptr) _mm_free(ptr)
 #elif KMP_HAVE_ALIGNED_ALLOC
-#define KMP_ALIGNED_ALLOCATE(size, alignment) aligned_alloc(alignment, size)
+#define KMP_ALGIN_UP(val, alignment)                                           \
+  (((val) + (alignment)-1) / (alignment) * (alignment))
+#define KMP_ALIGNED_ALLOCATE(size, alignment)                                  \
+  aligned_alloc(alignment, KMP_ALGIN_UP(size, alignment))
 #define KMP_ALIGNED_FREE(ptr) free(ptr)
 #elif KMP_HAVE_POSIX_MEMALIGN
 static inline void *KMP_ALIGNED_ALLOCATE(size_t size, size_t alignment) {

@@ -1733,6 +1733,21 @@ bool Attributor::isAssumedDead(const BasicBlock &BB,
   return false;
 }
 
+bool Attributor::checkForAllCallees(
+    function_ref<bool(ArrayRef<const Function *>)> Pred,
+    const AbstractAttribute &QueryingAA, const CallBase &CB) {
+  if (const Function *Callee = dyn_cast<Function>(CB.getCalledOperand()))
+    return Pred(Callee);
+
+  const auto *CallEdgesAA = getAAFor<AACallEdges>(
+      QueryingAA, IRPosition::callsite_function(CB), DepClassTy::OPTIONAL);
+  if (!CallEdgesAA || CallEdgesAA->hasUnknownCallee())
+    return false;
+
+  const auto &Callees = CallEdgesAA->getOptimisticEdges();
+  return Pred(Callees.getArrayRef());
+}
+
 bool Attributor::checkForAllUses(
     function_ref<bool(const Use &, bool &)> Pred,
     const AbstractAttribute &QueryingAA, const Value &V,

@@ -285,11 +285,11 @@ define signext i32 @loadITLUninit2() {
 ; SMALL32-NEXT:    mflr r0
 ; SMALL32-NEXT:    stwu r1, -32(r1)
 ; SMALL32-NEXT:    lwz r4, L..C0(r2) # target-flags(ppc-tprel) @IThreadLocalVarUninit
-; SMALL32-NEXT:    lwz r5, L..C4(r2) # @VarInit
 ; SMALL32-NEXT:    stw r0, 40(r1)
 ; SMALL32-NEXT:    bla .__get_tpointer[PR]
 ; SMALL32-NEXT:    lwzx r3, r3, r4
-; SMALL32-NEXT:    lwz r4, 0(r5)
+; SMALL32-NEXT:    lwz r4, L..C4(r2) # @VarInit
+; SMALL32-NEXT:    lwz r4, 0(r4)
 ; SMALL32-NEXT:    add r3, r4, r3
 ; SMALL32-NEXT:    addi r1, r1, 32
 ; SMALL32-NEXT:    lwz r0, 8(r1)
@@ -395,11 +395,11 @@ define signext i32 @loadITLInit2() {
 ; SMALL32-NEXT:    mflr r0
 ; SMALL32-NEXT:    stwu r1, -32(r1)
 ; SMALL32-NEXT:    lwz r4, L..C1(r2) # target-flags(ppc-tprel) @IThreadLocalVarInit
-; SMALL32-NEXT:    lwz r5, L..C4(r2) # @VarInit
 ; SMALL32-NEXT:    stw r0, 40(r1)
 ; SMALL32-NEXT:    bla .__get_tpointer[PR]
 ; SMALL32-NEXT:    lwzx r3, r3, r4
-; SMALL32-NEXT:    lwz r4, 0(r5)
+; SMALL32-NEXT:    lwz r4, L..C4(r2) # @VarInit
+; SMALL32-NEXT:    lwz r4, 0(r4)
 ; SMALL32-NEXT:    add r3, r4, r3
 ; SMALL32-NEXT:    addi r1, r1, 32
 ; SMALL32-NEXT:    lwz r0, 8(r1)
@@ -505,11 +505,11 @@ define signext i32 @loadTLUninit2() {
 ; SMALL32-NEXT:    mflr r0
 ; SMALL32-NEXT:    stwu r1, -32(r1)
 ; SMALL32-NEXT:    lwz r4, L..C2(r2) # target-flags(ppc-tprel) @ThreadLocalVarUninit
-; SMALL32-NEXT:    lwz r5, L..C4(r2) # @VarInit
 ; SMALL32-NEXT:    stw r0, 40(r1)
 ; SMALL32-NEXT:    bla .__get_tpointer[PR]
 ; SMALL32-NEXT:    lwzx r3, r3, r4
-; SMALL32-NEXT:    lwz r4, 0(r5)
+; SMALL32-NEXT:    lwz r4, L..C4(r2) # @VarInit
+; SMALL32-NEXT:    lwz r4, 0(r4)
 ; SMALL32-NEXT:    add r3, r4, r3
 ; SMALL32-NEXT:    addi r1, r1, 32
 ; SMALL32-NEXT:    lwz r0, 8(r1)
@@ -615,11 +615,11 @@ define signext i32 @loadTLInit2() {
 ; SMALL32-NEXT:    mflr r0
 ; SMALL32-NEXT:    stwu r1, -32(r1)
 ; SMALL32-NEXT:    lwz r4, L..C3(r2) # target-flags(ppc-tprel) @ThreadLocalVarInit
-; SMALL32-NEXT:    lwz r5, L..C4(r2) # @VarInit
 ; SMALL32-NEXT:    stw r0, 40(r1)
 ; SMALL32-NEXT:    bla .__get_tpointer[PR]
 ; SMALL32-NEXT:    lwzx r3, r3, r4
-; SMALL32-NEXT:    lwz r4, 0(r5)
+; SMALL32-NEXT:    lwz r4, L..C4(r2) # @VarInit
+; SMALL32-NEXT:    lwz r4, 0(r4)
 ; SMALL32-NEXT:    add r3, r4, r3
 ; SMALL32-NEXT:    addi r1, r1, 32
 ; SMALL32-NEXT:    lwz r0, 8(r1)

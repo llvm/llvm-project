@@ -2041,7 +2041,8 @@ Parser::ParseAliasDeclarationInInitStatement(DeclaratorContext Context,
 Sema::ConditionResult
 Parser::ParseCXXCondition(StmtResult *InitStmt, SourceLocation Loc,
                           Sema::ConditionKind CK, bool MissingOK,
-                          ForRangeInfo *FRI, bool EnterForConditionScope) {
+                          ForRangeInfo *FRI, bool EnterForConditionScope,
+                          SourceLocation ConstexprLoc) {
   // Helper to ensure we always enter a continue/break scope if requested.
   struct ForConditionScopeRAII {
     Scope *S;
@@ -2098,9 +2099,28 @@ Parser::ParseCXXCondition(StmtResult *InitStmt, SourceLocation Loc,
       *InitStmt = Actions.ActOnNullStmt(SemiLoc);
       return ParseCXXCondition(nullptr, Loc, CK, MissingOK);
     }
+    bool InitStmtIsExprStmt = false;
+    if (InitStmt) {
+      RevertingTentativeParsingAction PA(*this);
+      SkipUntil(tok::r_paren, tok::semi, StopBeforeMatch);
+      InitStmtIsExprStmt = Tok.is(tok::semi);
+    }
 
-    // Parse the expression.
-    ExprResult Expr = ParseExpression(); // expression
+    ExprResult Expr; // expression
+    {
+      EnterExpressionEvaluationContext Consteval(
+          Actions, Sema::ExpressionEvaluationContext::ConstantEvaluated,
+          /*LambdaContextDecl=*/nullptr,
+          Sema::ExpressionEvaluationContextRecord::EK_Other,
+          /*ShouldEnter=*/CK == Sema::ConditionKind::ConstexprIf &&
+              !InitStmtIsExprStmt);
+      SourceLocation OuterConstexprIfLoc = Actions.ConstexprIfLoc;
+      Actions.ConstexprIfLoc = ConstexprLoc;
+
+      // Parse the expression.
+      Expr = ParseExpression(); // expression
+      Actions.ConstexprIfLoc = OuterConstexprIfLoc;
+    }
     if (Expr.isInvalid())
       return Sema::ConditionError();
 
@@ -2188,6 +2208,21 @@ Parser::ParseCXXCondition(StmtResult *InitStmt, SourceLocation Loc,
   if (CopyInitialization)
     ConsumeToken();
 
+  Sema::ExpressionEvaluationContext NewEEC =
+      Actions.ExprEvalContexts.back().Context;
+  bool RuntimeEvaluated = Actions.ExprEvalContexts.back().IsRuntimeEvaluated;
+  if (DS.getTypeQualifiers() == DeclSpec::TQ_const)
+    RuntimeEvaluated = false;
+
+  if (CK == Sema::ConditionKind::ConstexprIf || DS.hasConstexprSpecifier()) {
+    RuntimeEvaluated = false;
+    NewEEC = Sema::ExpressionEvaluationContext::ConstantEvaluated;
+  }
+  EnterExpressionEvaluationContext Initializer(Actions, NewEEC, DeclOut);
+  Actions.ExprEvalContexts.back().IsRuntimeEvaluated = RuntimeEvaluated;
+  SourceLocation OuterConstexprIfLoc = Actions.ConstexprIfLoc;
+  Actions.ConstexprIfLoc = ConstexprLoc;
+
   ExprResult InitExpr = ExprError();
   if (getLangOpts().CPlusPlus11 && Tok.is(tok::l_brace)) {
     Diag(Tok.getLocation(),
@@ -2214,6 +2249,7 @@ Parser::ParseCXXCondition(StmtResult *InitStmt, SourceLocation Loc,
     Actions.ActOnInitializerError(DeclOut);
 
   Actions.FinalizeDeclaration(DeclOut);
+  Actions.ConstexprIfLoc = OuterConstexprIfLoc;
   return Actions.ActOnConditionVariable(DeclOut, Loc, CK);
 }
 
@@ -3493,11 +3529,11 @@ ExprResult Parser::ParseRequiresExpression() {
   SourceLocation RequiresKWLoc = ConsumeToken(); // Consume 'requires'
 
   llvm::SmallVector<ParmVarDecl *, 2> LocalParameterDecls;
+  BalancedDelimiterTracker Parens(*this, tok::l_paren);
   if (Tok.is(tok::l_paren)) {
     // requirement parameter list is present.
     ParseScope LocalParametersScope(this, Scope::FunctionPrototypeScope |
                                     Scope::DeclScope);
-    BalancedDelimiterTracker Parens(*this, tok::l_paren);
     Parens.consumeOpen();
     if (!Tok.is(tok::r_paren)) {
       ParsedAttributes FirstArgAttrs(getAttrFactory());
@@ -3769,8 +3805,9 @@ ExprResult Parser::ParseRequiresExpression() {
   Braces.consumeClose();
   Actions.ActOnFinishRequiresExpr();
   ParsingBodyDecl.complete(Body);
-  return Actions.ActOnRequiresExpr(RequiresKWLoc, Body, LocalParameterDecls,
-                                   Requirements, Braces.getCloseLocation());
+  return Actions.ActOnRequiresExpr(
+      RequiresKWLoc, Body, Parens.getOpenLocation(), LocalParameterDecls,
+      Parens.getCloseLocation(), Requirements, Braces.getCloseLocation());
 }
 
 static TypeTrait TypeTraitFromTokKind(tok::TokenKind kind) {

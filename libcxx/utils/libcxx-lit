@@ -6,10 +6,11 @@ PROGNAME="$(basename "${0}")"
 function usage() {
 cat <<EOF
 Usage:
-${PROGNAME} [-h|--help] <build-directory> [lit options...] tests...
+${PROGNAME} [-h|--help] [-b|--bootstrap] <build-directory> [lit options...] tests...
 
 Shortcut to build the libc++ testing dependencies and run the libc++ tests with Lit.
 
+[-b|--bootstrap]   Configure tests to run against a bootstrap build of libcxx.
 <build-directory>  The path to the build directory to use for building the library.
 [lit options...]   Optional options to pass to 'llvm-lit'.
 tests...           Paths of the tests to run. Those paths are relative to '<monorepo-root>'.
@@ -21,12 +22,16 @@ $ libcxx-lit build/ -sv libcxx/test/std/utilities/
 EOF
 }
 
-for arg in $@; do
-    if [[ "${arg}" == "-h" || "${arg}" == "--help" ]]; then
-        usage
-        exit 0
-    fi
-done
+type="cxx"
+if [[ "${1}" == "-h" || "${1}" == "--help" ]]; then
+    usage
+    exit 0
+fi
+
+if [[ "${1}" == "-b" || "${1}" == "--bootstrap" ]]; then
+    type="runtimes"
+		shift
+fi
 
 if [[ $# -lt 1 ]]; then
     usage
@@ -36,5 +41,9 @@ fi
 build_dir="${1}"
 shift
 
-cmake --build "${build_dir}" --target cxx-test-depends
+if [[ "${type}" == "runtimes" ]]; then
+        echo "N.B.: In a bootstrap build, lit needs a prefix to work correctly;"
+        echo "      See libcxx/docs/Testinglibcxx.rst for more information."
+fi
+cmake --build "${build_dir}" --target ${type}-test-depends
 "${build_dir}/bin/llvm-lit" ${@}

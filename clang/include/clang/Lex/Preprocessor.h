@@ -277,6 +277,9 @@ class Preprocessor {
   /// Empty line handler.
   EmptylineHandler *Emptyline = nullptr;
 
+  /// True to avoid tearing down the lexer etc on EOF
+  bool IncrementalProcessing = false;
+
 public:
   /// The kind of translation unit we are processing.
   const TranslationUnitKind TUKind;
@@ -1910,14 +1913,11 @@ public:
   void recomputeCurLexerKind();
 
   /// Returns true if incremental processing is enabled
-  bool isIncrementalProcessingEnabled() const {
-    return getLangOpts().IncrementalExtensions;
-  }
+  bool isIncrementalProcessingEnabled() const { return IncrementalProcessing; }
 
   /// Enables the incremental processing
   void enableIncrementalProcessing(bool value = true) {
-    // FIXME: Drop this interface.
-    const_cast<LangOptions &>(getLangOpts()).IncrementalExtensions = value;
+    IncrementalProcessing = value;
   }
 
   /// Specify the point at which code-completion will be performed.
@@ -2718,8 +2718,8 @@ public:
   /// \return A file that can be #included to provide the desired effect. Null
   ///         if no such file could be determined or if a #include is not
   ///         appropriate (eg, if a module should be imported instead).
-  const FileEntry *getHeaderToIncludeForDiagnostics(SourceLocation IncLoc,
-                                                    SourceLocation MLoc);
+  OptionalFileEntryRef getHeaderToIncludeForDiagnostics(SourceLocation IncLoc,
+                                                        SourceLocation MLoc);
 
   bool isRecordingPreamble() const {
     return PreambleConditionalStack.isRecording();

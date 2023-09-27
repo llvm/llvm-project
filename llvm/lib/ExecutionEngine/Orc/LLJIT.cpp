@@ -752,6 +752,12 @@ Error LLJITBuilderState::prepareForConstruction() {
     case Triple::x86_64:
       UseJITLink = !TT.isOSBinFormatCOFF();
       break;
+    case Triple::ppc64:
+      UseJITLink = TT.isPPC64ELFv2ABI();
+      break;
+    case Triple::ppc64le:
+      UseJITLink = TT.isOSBinFormatELF();
+      break;
     default:
       break;
     }
@@ -1048,6 +1054,13 @@ LLJIT::LLJIT(LLJITBuilderState &S, Error &Err)
     }
   }
 
+  if (S.PrePlatformSetup) {
+    if (auto Err2 = S.PrePlatformSetup(*this)) {
+      Err = std::move(Err2);
+      return;
+    }
+  }
+
   if (!S.SetUpPlatform)
     S.SetUpPlatform = setUpGenericLLVMIRPlatform;
 
@@ -1134,7 +1147,7 @@ Expected<JITDylibSP> ExecutorNativePlatform::operator()(LLJIT &J) {
 
   if (!ObjLinkingLayer)
     return make_error<StringError>(
-        "SetUpTargetPlatform requires ObjectLinkingLayer",
+        "ExecutorNativePlatform requires ObjectLinkingLayer",
         inconvertibleErrorCode());
 
   std::unique_ptr<MemoryBuffer> RuntimeArchiveBuffer;

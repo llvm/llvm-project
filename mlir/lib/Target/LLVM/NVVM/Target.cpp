@@ -47,6 +47,10 @@ public:
   std::optional<SmallVector<char, 0>>
   serializeToObject(Attribute attribute, Operation *module,
                     const gpu::TargetOptions &options) const;
+
+  Attribute createObject(Attribute attribute,
+                         const SmallVector<char, 0> &object,
+                         const gpu::TargetOptions &options) const;
 };
 } // namespace
 
@@ -122,7 +126,7 @@ ArrayRef<std::string> SerializeGPUModuleBase::getFileList() const {
 // Try to append `libdevice` from a CUDA toolkit installation.
 LogicalResult SerializeGPUModuleBase::appendStandardLibs() {
   StringRef pathRef = getToolkitPath();
-  if (pathRef.size()) {
+  if (!pathRef.empty()) {
     SmallVector<char, 256> path;
     path.insert(path.begin(), pathRef.begin(), pathRef.end());
     pathRef = StringRef(path.data(), path.size());
@@ -180,11 +184,12 @@ private:
   // Create a temp file.
   std::optional<TmpFile> createTemp(StringRef name, StringRef suffix);
 
-  // Find the PTXAS compiler. The search order is:
+  // Find the `tool` path, where `tool` is the name of the binary to search,
+  // i.e. `ptxas` or `fatbinary`. The search order is:
   // 1. The toolkit path in `targetOptions`.
   // 2. In the system PATH.
   // 3. The path from `getCUDAToolkitPath()`.
-  std::optional<std::string> findPtxas() const;
+  std::optional<std::string> findTool(StringRef tool);
 
   // Target options.
   gpu::TargetOptions targetOptions;
@@ -213,32 +218,37 @@ gpu::GPUModuleOp NVPTXSerializer::getOperation() {
   return dyn_cast<gpu::GPUModuleOp>(&SerializeGPUModuleBase::getOperation());
 }
 
-std::optional<std::string> NVPTXSerializer::findPtxas() const {
-  // Find the `ptxas` compiler.
+std::optional<std::string> NVPTXSerializer::findTool(StringRef tool) {
+  // Find the `tool` path.
   // 1. Check the toolkit path given in the command line.
   StringRef pathRef = targetOptions.getToolkitPath();
   SmallVector<char, 256> path;
   if (pathRef.size()) {
     path.insert(path.begin(), pathRef.begin(), pathRef.end());
-    llvm::sys::path::append(path, "bin", "ptxas");
+    llvm::sys::path::append(path, "bin", tool);
     if (llvm::sys::fs::can_execute(path))
       return StringRef(path.data(), path.size()).str();
   }
 
   // 2. Check PATH.
-  if (std::optional<std::string> ptxasCompiler =
-          llvm::sys::Process::FindInEnvPath("PATH", "ptxas"))
-    return *ptxasCompiler;
+  if (std::optional<std::string> toolPath =
+          llvm::sys::Process::FindInEnvPath("PATH", tool))
+    return *toolPath;
 
   // 3. Check `getCUDAToolkitPath()`.
   pathRef = getCUDAToolkitPath();
   path.clear();
   if (pathRef.size()) {
     path.insert(path.begin(), pathRef.begin(), pathRef.end());
-    llvm::sys::path::append(path, "bin", "ptxas");
+    llvm::sys::path::append(path, "bin", tool);
     if (llvm::sys::fs::can_execute(path))
       return StringRef(path.data(), path.size()).str();
   }
+  getOperation().emitError()
+      << "Couldn't find the `" << tool
+      << "` binary. Please specify the toolkit "
+         "path, add the compiler to $PATH, or set one of the environment "
+         "variables in `NVVM::getCUDAToolkitPath()`.";
   return std::nullopt;
 }
 
@@ -246,15 +256,19 @@ std::optional<std::string> NVPTXSerializer::findPtxas() const {
 // with this mechanism and let another stage take care of it.
 std::optional<SmallVector<char, 0>>
 NVPTXSerializer::compileToBinary(const std::string &ptxCode) {
-  // Find the PTXAS compiler.
-  std::optional<std::string> ptxasCompiler = findPtxas();
-  if (!ptxasCompiler) {
-    getOperation().emitError()
-        << "Couldn't find the `ptxas` compiler. Please specify the toolkit "
-           "path, add the compiler to $PATH, or set one of the environment "
-           "variables in `NVVM::getCUDAToolkitPath()`.";
+  // Determine if the serializer should create a fatbinary with the PTX embeded
+  // or a simple CUBIN binary.
+  const bool createFatbin =
+      targetOptions.getCompilationTarget() == gpu::CompilationTarget::Fatbin;
+
+  // Find the `ptxas` & `fatbinary` tools.
+  std::optional<std::string> ptxasCompiler = findTool("ptxas");
+  if (!ptxasCompiler)
     return std::nullopt;
-  }
+  std::optional<std::string> fatbinaryTool = findTool("fatbinary");
+  if (createFatbin && !fatbinaryTool)
+    return std::nullopt;
+  Location loc = getOperation().getLoc();
 
   // Base name for all temp files: mlir-<module name>-<target triple>-<chip>.
   std::string basename =
@@ -268,99 +282,154 @@ NVPTXSerializer::compileToBinary(const std::string &ptxCode) {
   std::optional<TmpFile> logFile = createTemp(basename, "log");
   if (!logFile)
     return std::nullopt;
-  std::optional<TmpFile> cubinFile = createTemp(basename, "cubin");
-  if (!cubinFile)
+  std::optional<TmpFile> binaryFile = createTemp(basename, "bin");
+  if (!binaryFile)
     return std::nullopt;
+  TmpFile cubinFile;
+  if (createFatbin) {
+    Twine cubinFilename = ptxFile->first + ".cubin";
+    cubinFile = TmpFile(cubinFilename.str(), llvm::FileRemover(cubinFilename));
+  } else {
+    cubinFile.first = binaryFile->first;
+  }
 
   std::error_code ec;
   // Dump the PTX to a temp file.
   {
     llvm::raw_fd_ostream ptxStream(ptxFile->first, ec);
     if (ec) {
-      getOperation().emitError()
-          << "Couldn't open the file: `" << ptxFile->first
-          << "`, error message: " << ec.message();
+      emitError(loc) << "Couldn't open the file: `" << ptxFile->first
+                     << "`, error message: " << ec.message();
       return std::nullopt;
     }
     ptxStream << ptxCode;
     if (ptxStream.has_error()) {
-      getOperation().emitError()
-          << "An error occurred while writing the PTX to: `" << ptxFile->first
-          << "`.";
+      emitError(loc) << "An error occurred while writing the PTX to: `"
+                     << ptxFile->first << "`.";
       return std::nullopt;
     }
     ptxStream.flush();
   }
 
-  // Create PTX args.
-  std::string optLevel = std::to_string(this->optLevel);
-  SmallVector<StringRef, 12> ptxasArgs(
-      {StringRef("ptxas"), StringRef("-arch"), getTarget().getChip(),
-       StringRef(ptxFile->first), StringRef("-o"), StringRef(cubinFile->first),
-       "--opt-level", optLevel});
-
-  std::pair<llvm::BumpPtrAllocator, SmallVector<const char *>> cmdOpts =
-      targetOptions.tokenizeCmdOptions();
-  for (auto arg : cmdOpts.second)
-    ptxasArgs.push_back(arg);
-
+  // Command redirects.
   std::optional<StringRef> redirects[] = {
       std::nullopt,
       logFile->first,
       logFile->first,
   };
 
-  // Invoke PTXAS.
+  // Get any extra args passed in `targetOptions`.
+  std::pair<llvm::BumpPtrAllocator, SmallVector<const char *>> cmdOpts =
+      targetOptions.tokenizeCmdOptions();
+
+  // Create ptxas args.
+  std::string optLevel = std::to_string(this->optLevel);
+  SmallVector<StringRef, 12> ptxasArgs(
+      {StringRef("ptxas"), StringRef("-arch"), getTarget().getChip(),
+       StringRef(ptxFile->first), StringRef("-o"), StringRef(cubinFile.first),
+       "--opt-level", optLevel});
+
+  bool useFatbin32 = false;
+  for (auto cArg : cmdOpts.second) {
+    // All `cmdOpts` are for `ptxas` except `-32` which passes `-32` to
+    // `fatbinary`, indicating a 32-bit target. By default a 64-bit target is
+    // assumed.
+    if (StringRef arg(cArg); arg != "-32")
+      ptxasArgs.push_back(arg);
+    else
+      useFatbin32 = true;
+  }
+
+  // Create the `fatbinary` args.
+  StringRef chip = getTarget().getChip();
+  // Remove the arch prefix to obtain the compute capability.
+  chip.consume_front("sm_"), chip.consume_front("compute_");
+  // Embed the cubin object.
+  std::string cubinArg =
+      llvm::formatv("--image3=kind=elf,sm={0},file={1}", chip, cubinFile.first)
+          .str();
+  // Embed the PTX file so the driver can JIT if needed.
+  std::string ptxArg =
+      llvm::formatv("--image3=kind=ptx,sm={0},file={1}", chip, ptxFile->first)
+          .str();
+  SmallVector<StringRef, 6> fatbinArgs({StringRef("fatbinary"),
+                                        useFatbin32 ? "-32" : "-64", cubinArg,
+                                        ptxArg, "--create", binaryFile->first});
+
+  // Dump tool invocation commands.
+#define DEBUG_TYPE "serialize-to-binary"
+  LLVM_DEBUG({
+    llvm::dbgs() << "Tool invocation for module: "
+                 << getOperation().getNameAttr() << "\n";
+    llvm::interleave(ptxasArgs, llvm::dbgs(), " ");
+    llvm::dbgs() << "\n";
+    if (createFatbin) {
+      llvm::interleave(fatbinArgs, llvm::dbgs(), " ");
+      llvm::dbgs() << "\n";
+    }
+  });
+#undef DEBUG_TYPE
+
+  // Helper function for printing tool error logs.
   std::string message;
+  auto emitLogError =
+      [&](StringRef toolName) -> std::optional<SmallVector<char, 0>> {
+    if (message.empty()) {
+      llvm::ErrorOr<std::unique_ptr<llvm::MemoryBuffer>> toolStderr =
+          llvm::MemoryBuffer::getFile(logFile->first);
+      if (toolStderr)
+        emitError(loc) << toolName << " invocation failed. Log:\n"
+                       << toolStderr->get()->getBuffer();
+      else
+        emitError(loc) << toolName << " invocation failed.";
+      return std::nullopt;
+    }
+    emitError(loc) << toolName
+                   << " invocation failed, error message: " << message;
+    return std::nullopt;
+  };
+
+  // Invoke PTXAS.
   if (llvm::sys::ExecuteAndWait(ptxasCompiler.value(), ptxasArgs,
                                 /*Env=*/std::nullopt,
                                 /*Redirects=*/redirects,
                                 /*SecondsToWait=*/0,
                                 /*MemoryLimit=*/0,
-                                /*ErrMsg=*/&message)) {
-    if (message.empty()) {
-      llvm::ErrorOr<std::unique_ptr<llvm::MemoryBuffer>> ptxasStderr =
-          llvm::MemoryBuffer::getFile(logFile->first);
-      if (ptxasStderr)
-        getOperation().emitError() << "PTXAS invocation failed. PTXAS log:\n"
-                                   << ptxasStderr->get()->getBuffer();
-      else
-        getOperation().emitError() << "PTXAS invocation failed.";
-      return std::nullopt;
-    }
-    getOperation().emitError()
-        << "PTXAS invocation failed, error message: " << message;
-    return std::nullopt;
-  }
+                                /*ErrMsg=*/&message))
+    return emitLogError("`ptxas`");
 
-// Dump the output of PTXAS, helpful if the verbose flag was passed.
+  // Invoke `fatbin`.
+  message.clear();
+  if (createFatbin && llvm::sys::ExecuteAndWait(*fatbinaryTool, fatbinArgs,
+                                                /*Env=*/std::nullopt,
+                                                /*Redirects=*/redirects,
+                                                /*SecondsToWait=*/0,
+                                                /*MemoryLimit=*/0,
+                                                /*ErrMsg=*/&message))
+    return emitLogError("`fatbinary`");
+
+// Dump the output of the tools, helpful if the verbose flag was passed.
 #define DEBUG_TYPE "serialize-to-binary"
   LLVM_DEBUG({
-    llvm::dbgs() << "PTXAS invocation for module: "
-                 << getOperation().getNameAttr() << "\n";
-    llvm::dbgs() << "Command: ";
-    llvm::interleave(ptxasArgs, llvm::dbgs(), " ");
-    llvm::dbgs() << "\n";
-    llvm::ErrorOr<std::unique_ptr<llvm::MemoryBuffer>> ptxasLog =
+    llvm::ErrorOr<std::unique_ptr<llvm::MemoryBuffer>> logBuffer =
         llvm::MemoryBuffer::getFile(logFile->first);
-    if (ptxasLog && (*ptxasLog)->getBuffer().size()) {
-      llvm::dbgs() << "Output:\n" << (*ptxasLog)->getBuffer() << "\n";
+    if (logBuffer && (*logBuffer)->getBuffer().size()) {
+      llvm::dbgs() << "Output:\n" << (*logBuffer)->getBuffer() << "\n";
       llvm::dbgs().flush();
     }
   });
 #undef DEBUG_TYPE
 
-  // Read the cubin file.
-  llvm::ErrorOr<std::unique_ptr<llvm::MemoryBuffer>> cubinBuffer =
-      llvm::MemoryBuffer::getFile(cubinFile->first);
-  if (!cubinBuffer) {
-    getOperation().emitError()
-        << "Couldn't open the file: `" << cubinFile->first
-        << "`, error message: " << cubinBuffer.getError().message();
+  // Read the fatbin.
+  llvm::ErrorOr<std::unique_ptr<llvm::MemoryBuffer>> binaryBuffer =
+      llvm::MemoryBuffer::getFile(binaryFile->first);
+  if (!binaryBuffer) {
+    emitError(loc) << "Couldn't open the file: `" << binaryFile->first
+                   << "`, error message: " << binaryBuffer.getError().message();
     return std::nullopt;
   }
-  StringRef cubinStr = (*cubinBuffer)->getBuffer();
-  return SmallVector<char, 0>(cubinStr.begin(), cubinStr.end());
+  StringRef fatbin = (*binaryBuffer)->getBuffer();
+  return SmallVector<char, 0>(fatbin.begin(), fatbin.end());
 }
 
 #if MLIR_NVPTXCOMPILER_ENABLED == 1
@@ -456,7 +525,7 @@ NVPTXSerializer::moduleToObject(llvm::Module &llvmModule,
     llvm::dbgs().flush();
   });
 #undef DEBUG_TYPE
-  if (targetOptions.getCompilationTarget() == gpu::TargetOptions::offload)
+  if (targetOptions.getCompilationTarget() == gpu::CompilationTarget::Offload)
     return SerializeGPUModuleBase::moduleToObject(llvmModule, targetMachine);
 
   // Emit PTX code.
@@ -475,8 +544,12 @@ NVPTXSerializer::moduleToObject(llvm::Module &llvmModule,
 #undef DEBUG_TYPE
 
   // Return PTX if the compilation target is assembly.
-  if (targetOptions.getCompilationTarget() == gpu::TargetOptions::assembly)
-    return SmallVector<char, 0>(serializedISA->begin(), serializedISA->end());
+  if (targetOptions.getCompilationTarget() ==
+      gpu::CompilationTarget::Assembly) {
+    // Make sure to include the null terminator.
+    StringRef bin(serializedISA->c_str(), serializedISA->size() + 1);
+    return SmallVector<char, 0>(bin.begin(), bin.end());
+  }
 
     // Compile to binary.
 #if MLIR_NVPTXCOMPILER_ENABLED == 1
@@ -506,4 +579,21 @@ NVVMTargetAttrImpl::serializeToObject(Attribute attribute, Operation *module,
       "The `NVPTX` target was not built. Please enable it when building LLVM.");
   return std::nullopt;
 #endif // MLIR_CUDA_CONVERSIONS_ENABLED == 1
+}
+
+Attribute
+NVVMTargetAttrImpl::createObject(Attribute attribute,
+                                 const SmallVector<char, 0> &object,
+                                 const gpu::TargetOptions &options) const {
+  auto target = cast<NVVMTargetAttr>(attribute);
+  gpu::CompilationTarget format = options.getCompilationTarget();
+  DictionaryAttr objectProps;
+  Builder builder(attribute.getContext());
+  if (format == gpu::CompilationTarget::Assembly)
+    objectProps = builder.getDictionaryAttr(
+        {builder.getNamedAttr("O", builder.getI32IntegerAttr(target.getO()))});
+  return builder.getAttr<gpu::ObjectAttr>(
+      attribute, format,
+      builder.getStringAttr(StringRef(object.data(), object.size())),
+      objectProps);
 }

@@ -439,19 +439,17 @@ static void builtinTransfer(const CFGElement &Elt,
   case CFGElement::Initializer:
     builtinTransferInitializer(Elt.castAs<CFGInitializer>(), State);
     break;
+  case CFGElement::LifetimeEnds:
+    // Removing declarations when their lifetime ends serves two purposes:
+    // - Eliminate unnecessary clutter from `Environment::DeclToLoc`
+    // - Allow us to assert that, when joining two `Environment`s, the two
+    //   `DeclToLoc` maps never contain entries that map the same declaration to
+    //   different storage locations.
+    if (const ValueDecl *VD = Elt.castAs<CFGLifetimeEnds>().getVarDecl())
+      State.Env.removeDecl(*VD);
+    break;
   default:
-    // FIXME: Evaluate other kinds of `CFGElement`, including:
-    // - When encountering `CFGLifetimeEnds`, remove the declaration from
-    //   `Environment::DeclToLoc`. This would serve two purposes:
-    //   a) Eliminate unnecessary clutter from `Environment::DeclToLoc`
-    //   b) Allow us to implement an assertion that, when joining two
-    //      `Environments`, the two `DeclToLoc` maps never contain entries that
-    //      map the same declaration to different storage locations.
-    //   Unfortunately, however, we can't currently process `CFGLifetimeEnds`
-    //   because the corresponding CFG option `AddLifetime` is incompatible with
-    //   the option 'AddImplicitDtors`, which we already use. We will first
-    //   need to modify the CFG implementation to make these two options
-    //   compatible before we can process `CFGLifetimeEnds`.
+    // FIXME: Evaluate other kinds of `CFGElement`
     break;
   }
 }
@@ -469,7 +467,7 @@ transferCFGBlock(const CFGBlock &Block, AnalysisContext &AC,
                  std::function<void(const CFGElement &,
                                     const TypeErasedDataflowAnalysisState &)>
                      PostVisitCFG = nullptr) {
-  AC.Log.enterBlock(Block);
+  AC.Log.enterBlock(Block, PostVisitCFG != nullptr);
   auto State = computeBlockInputState(Block, AC);
   AC.Log.recordState(State);
   int ElementIdx = 1;
@@ -493,18 +491,6 @@ transferCFGBlock(const CFGBlock &Block, AnalysisContext &AC,
     AC.Log.recordState(State);
   }
   return State;
-}
-
-TypeErasedDataflowAnalysisState transferBlock(
-    const ControlFlowContext &CFCtx,
-    llvm::ArrayRef<std::optional<TypeErasedDataflowAnalysisState>> BlockStates,
-    const CFGBlock &Block, const Environment &InitEnv,
-    TypeErasedDataflowAnalysis &Analysis,
-    std::function<void(const CFGElement &,
-                       const TypeErasedDataflowAnalysisState &)>
-        PostVisitCFG) {
-  AnalysisContext AC(CFCtx, Analysis, InitEnv, BlockStates);
-  return transferCFGBlock(Block, AC, PostVisitCFG);
 }
 
 llvm::Expected<std::vector<std::optional<TypeErasedDataflowAnalysisState>>>

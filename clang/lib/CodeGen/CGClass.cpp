@@ -138,7 +138,7 @@ Address CodeGenFunction::LoadCXXThisAddress() {
     CXXThisAlignment = CGM.getClassPointerAlignment(MD->getParent());
   }
 
-  llvm::Type *Ty = ConvertType(MD->getThisType()->getPointeeType());
+  llvm::Type *Ty = ConvertType(MD->getThisObjectType());
   return Address(LoadCXXThis(), Ty, CXXThisAlignment, KnownNonNull);
 }
 
@@ -2114,8 +2114,7 @@ void CodeGenFunction::EmitCXXConstructorCall(const CXXConstructorDecl *D,
   CallArgList Args;
   Address This = ThisAVS.getAddress();
   LangAS SlotAS = ThisAVS.getQualifiers().getAddressSpace();
-  QualType ThisType = D->getThisType();
-  LangAS ThisAS = ThisType.getTypePtr()->getPointeeType().getAddressSpace();
+  LangAS ThisAS = D->getThisObjectType().getAddressSpace();
   llvm::Value *ThisPtr = This.getPointer();
 
   if (SlotAS != ThisAS) {

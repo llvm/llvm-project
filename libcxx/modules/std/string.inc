@@ -68,7 +68,7 @@ export namespace std {
   using std::hash;
 
   // TODO MODULES is this a bug?
-#if 1
+#if _LIBCPP_STD_VER >= 23
   using std::operator""s;
 #else
   inline namespace literals {

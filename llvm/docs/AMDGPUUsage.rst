@@ -999,6 +999,13 @@ The AMDGPU backend implements the following LLVM IR intrinsics.
   :ref:`llvm.stacksave.p5 <int_stacksave>`         Implemented, must use the alloca address space.
   :ref:`llvm.stackrestore.p5 <int_stackrestore>`   Implemented, must use the alloca address space.
 
+  :ref:`llvm.get.fpmode.i32 <int_get_fpmode>`      The natural floating-point mode type is i32. This
+                                                   implemented by extracting relevant bits out of the MODE
+                                                   register with s_getreg_b32. The first 10 bits are the
+                                                   core floating-point mode. Bits 12:18 are the exception
+                                                   mask. On gfx9+, bit 23 is FP16_OVFL. Bitfields not
+                                                   relevant to floating-point instructions are 0s.
+
   :ref:`llvm.get.rounding<int_get_rounding>`       AMDGPU supports two separately controllable rounding
                                                    modes depending on the floating-point type. One
                                                    controls float, and the other controls both double and
@@ -1698,8 +1705,7 @@ Code Object V2 Note Records
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 .. warning::
-  Code object V2 is not the default code object version emitted by
-  this version of LLVM.
+  Code object V2 generation is no longer supported by this version of LLVM.
 
 The AMDGPU backend code object uses the following ELF note record in the
 ``.note`` section when compiling for code object V2.
@@ -2967,8 +2973,7 @@ Code Object V2 Metadata
 +++++++++++++++++++++++
 
 .. warning::
-  Code object V2 is not the default code object version emitted by this version
-  of LLVM.
+  Code object V2 generation is no longer supported by this version of LLVM.
 
 Code object V2 metadata is specified by the ``NT_AMD_HSA_METADATA`` note record
 (see :ref:`amdgpu-note-records-v2`).
@@ -14948,8 +14953,7 @@ Code Object V2 Predefined Symbols
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 .. warning::
-  Code object V2 is not the default code object version emitted by
-  this version of LLVM.
+  Code object V2 generation is no longer supported by this version of LLVM.
 
 The AMDGPU assembler defines and updates some symbols automatically. These
 symbols do not affect code generation.
@@ -15004,8 +15008,7 @@ Code Object V2 Directives
 ~~~~~~~~~~~~~~~~~~~~~~~~~
 
 .. warning::
-  Code object V2 is not the default code object version emitted by
-  this version of LLVM.
+  Code object V2 generation is no longer supported by this version of LLVM.
 
 AMDGPU ABI defines auxiliary data in output code object. In assembly source,
 one can specify them with assembler directives.
@@ -15080,8 +15083,7 @@ Code Object V2 Example Source Code
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 .. warning::
-  Code Object V2 is not the default code object version emitted by
-  this version of LLVM.
+  Code object V2 generation is no longer supported by this version of LLVM.
 
 Here is an example of a minimal assembly source file, defining one HSA kernel:
 

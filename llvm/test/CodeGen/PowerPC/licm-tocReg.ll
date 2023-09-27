@@ -67,35 +67,34 @@
 define signext i32 @test(ptr nocapture %FP) local_unnamed_addr #0 {
 ; CHECKLX-LABEL: test:
 ; CHECKLX:       # %bb.0: # %entry
-; CHECKLX-NEXT:    addis 4, 2, .LC0@toc@ha
-; CHECKLX-NEXT:    addis 5, 2, .LC1@toc@ha
 ; CHECKLX-NEXT:    mr 12, 3
-; CHECKLX-NEXT:    ld 4, .LC0@toc@l(4)
-; CHECKLX-NEXT:    ld 5, .LC1@toc@l(5)
-; CHECKLX-NEXT:    lwz 6, 0(4)
-; CHECKLX-NEXT:    lwz 7, 0(5)
-; CHECKLX-NEXT:    cmpw 6, 7
-; CHECKLX-NEXT:    lwz 6, 0(4)
-; CHECKLX-NEXT:    bgt 0, .LBB0_2
+; CHECKLX-NEXT:    addis 3, 2, .LC0@toc@ha
+; CHECKLX-NEXT:    addis 4, 2, .LC1@toc@ha
+; CHECKLX-NEXT:    ld 3, .LC0@toc@l(3)
+; CHECKLX-NEXT:    ld 5, .LC1@toc@l(4)
+; CHECKLX-NEXT:    lwz 6, 0(3)
 ; CHECKLX-NEXT:    .p2align 5
 ; CHECKLX-NEXT:  .LBB0_1: # %if.end
 ; CHECKLX-NEXT:    #
-; CHECKLX-NEXT:    addi 3, 6, 1
-; CHECKLX-NEXT:    stw 3, 0(4)
-; CHECKLX-NEXT:    lwz 3, 0(4)
-; CHECKLX-NEXT:    lwz 6, 0(5)
-; CHECKLX-NEXT:    cmpw 3, 6
-; CHECKLX-NEXT:    lwz 6, 0(4)
-; CHECKLX-NEXT:    ble 0, .LBB0_1
-; CHECKLX-NEXT:  .LBB0_2: # %if.then
+; CHECKLX-NEXT:    lwz 7, 0(5)
+; CHECKLX-NEXT:    lwz 4, 0(3)
+; CHECKLX-NEXT:    cmpw 6, 7
+; CHECKLX-NEXT:    bgt 0, .LBB0_3
+; CHECKLX-NEXT:  # %bb.2: # %if.end
+; CHECKLX-NEXT:    #
+; CHECKLX-NEXT:    addi 4, 4, 1
+; CHECKLX-NEXT:    stw 4, 0(3)
+; CHECKLX-NEXT:    lwz 6, 0(3)
+; CHECKLX-NEXT:    b .LBB0_1
+; CHECKLX-NEXT:  .LBB0_3: # %if.then
 ; CHECKLX-NEXT:    mflr 0
 ; CHECKLX-NEXT:    stdu 1, -32(1)
 ; CHECKLX-NEXT:    std 2, 24(1)
 ; CHECKLX-NEXT:    std 0, 48(1)
 ; CHECKLX-NEXT:    .cfi_def_cfa_offset 32
 ; CHECKLX-NEXT:    .cfi_offset lr, 16
-; CHECKLX-NEXT:    extsw 3, 6
 ; CHECKLX-NEXT:    mtctr 12
+; CHECKLX-NEXT:    extsw 3, 4
 ; CHECKLX-NEXT:    bctrl
 ; CHECKLX-NEXT:    ld 2, 24(1)
 ; CHECKLX-NEXT:    addi 1, 1, 32

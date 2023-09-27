@@ -12,7 +12,7 @@
 # CHECK:      ldsb [%g1], %o4
 0xd8 0x48 0x40 0x00
 
-# CHECK:      ldsba [%i0+%l6] 131, %o2
+# CHECK:      ldsba [%i0+%l6] #ASI_SNF, %o2
 0xd4 0xce 0x10 0x76
 
 # CHECK:      ldsh [%i0+%l6], %o2
@@ -27,7 +27,7 @@
 # CHECK:      ldsh [%g1], %o4
 0xd8 0x50 0x40 0x00
 
-# CHECK:      ldsha [%i0+%l6] 131, %o2
+# CHECK:      ldsha [%i0+%l6] #ASI_SNF, %o2
 0xd4 0xd6 0x10 0x76
 
 # CHECK:      ldub [%i0+%l6], %o2
@@ -42,7 +42,7 @@
 # CHECK:      ldub [%g1], %o2
 0xd4 0x08 0x40 0x00
 
-# CHECK:      lduba [%i0+%l6] 131, %o2
+# CHECK:      lduba [%i0+%l6] #ASI_SNF, %o2
 0xd4 0x8e 0x10 0x76
 
 # CHECK:      lduh [%i0+%l6], %o2
@@ -57,7 +57,7 @@
 # CHECK:      lduh [%g1], %o2
 0xd4 0x10 0x40 0x00
 
-# CHECK:      lduha [%i0+%l6] 131, %o2
+# CHECK:      lduha [%i0+%l6] #ASI_SNF, %o2
 0xd4 0x96 0x10 0x76
 
 # CHECK:      ld [%i0+%l6], %o2
@@ -72,7 +72,7 @@
 # CHECK:      ld [%g1], %o2
 0xd4 0x00 0x40 0x00
 
-# CHECK:      lda [%i0+%l6] 131, %o2
+# CHECK:      lda [%i0+%l6] #ASI_SNF, %o2
 0xd4 0x86 0x10 0x76
 
 # CHECK:     ld [%i0+%l6], %f2
@@ -87,7 +87,7 @@
 # CHECK:     ld [%g1], %f2
 0xc5 0x00 0x40 0x00
 
-# CHECK:     lda [%i0+%l6] 131, %f2
+# CHECK:     lda [%i0+%l6] #ASI_SNF, %f2
 0xc5 0x86 0x10 0x76
 
 # CHECK:     ldd [%i0+%l6], %f2
@@ -102,7 +102,7 @@
 # CHECK:     ldd [%g1], %f2
 0xc5 0x18 0x40 0x00
 
-# CHECK:     ldda [%i0+%l6] 131, %f2
+# CHECK:     ldda [%i0+%l6] #ASI_SNF, %f2
 0xc5 0x9e 0x10 0x76
 
 # CHECK:     ldq [%i0+%l6], %f4
@@ -153,7 +153,7 @@
 # CHECK:      stb %o2, [%g1]
 0xd4 0x28 0x40 0x00
 
-# CHECK:      stba %o2, [%i0+%l6] 131
+# CHECK:      stba %o2, [%i0+%l6] #ASI_SNF
 0xd4 0xae 0x10 0x76
 
 # CHECK:      sth %o2, [%i0+%l6]
@@ -168,7 +168,7 @@
 # CHECK:      sth %o2, [%g1]
 0xd4 0x30 0x40 0x00
 
-# CHECK:      stha %o2, [%i0+%l6] 131
+# CHECK:      stha %o2, [%i0+%l6] #ASI_SNF
 0xd4 0xb6 0x10 0x76
 
 # CHECK:      st %o2, [%i0+%l6]
@@ -183,7 +183,7 @@
 # CHECK:      st %o2, [%g1]
 0xd4 0x20 0x40 0x00
 
-# CHECK:      sta %o2, [%i0+%l6] 131
+# CHECK:      sta %o2, [%i0+%l6] #ASI_SNF
 0xd4 0xa6 0x10 0x76
 
 # CHECK:      st %f2, [%i0+%l6]
@@ -198,7 +198,7 @@
 # CHECK:      st %f2, [%g1]
 0xc5 0x20 0x40 0x00
 
-# CHECK:      sta %f2, [%i0+%l6] 131
+# CHECK:      sta %f2, [%i0+%l6] #ASI_SNF
 0xc5 0xa6 0x10 0x76
 
 # CHECK:      std %f2, [%i0+%l6]
@@ -213,7 +213,7 @@
 # CHECK:      std %f2, [%g1]
 0xc5 0x38 0x40 0x00
 
-# CHECK:      stda %f2, [%i0+%l6] 131
+# CHECK:      stda %f2, [%i0+%l6] #ASI_SNF
 0xc5 0xbe 0x10 0x76
 
 # CHECK:      stq %f4, [%i0+%l6]
@@ -252,10 +252,10 @@
 # CHECK:     swap [%g1], %o2
 0xd4 0x78 0x40 0x00
 
-# CHECK:     swapa [%i0+%l6] 131, %o2
+# CHECK:     swapa [%i0+%l6] #ASI_SNF, %o2
 0xd4 0xfe 0x10 0x76
 
-# CHECK:     swapa [%g1] 131, %o2
+# CHECK:     swapa [%g1] #ASI_SNF, %o2
 0xd4 0xf8 0x50 0x60
 
 # CHECK:     ldd [%i0+%l6], %o2
@@ -282,7 +282,7 @@
 # CHECK:     std %o2, [%g1]
 0xd4 0x38 0x40 0x00
 
-# CHECK:     stda %o2, [%i0+%l6] 131
+# CHECK:     stda %o2, [%i0+%l6] #ASI_SNF
 0xd4 0xbe 0x10 0x76
 
 # CHECK:     ldstub [%i0+%l6], %o2
@@ -297,10 +297,10 @@
 # CHECK:     ldstub [%g1], %o2
 0xd4 0x68 0x40 0x00
 
-# CHECK:     ldstuba [%i0+%l6] 131, %o2
+# CHECK:     ldstuba [%i0+%l6] #ASI_SNF, %o2
 0xd4 0xee 0x10 0x76
 
-# CHECK:     ldstuba [%g1] 131, %o2
+# CHECK:     ldstuba [%g1] #ASI_SNF, %o2
 0xd4 0xe8 0x50 0x60
 
 # CHECK:     flush %g1+%g2

@@ -168,27 +168,51 @@ define void @store_constant_v4i8(ptr %p) {
 }
 
 define void @store_constant_v4i16(ptr %p) {
-; CHECK-LABEL: store_constant_v4i16:
-; CHECK:       # %bb.0:
-; CHECK-NEXT:    lui a1, %hi(.LCPI13_0)
-; CHECK-NEXT:    addi a1, a1, %lo(.LCPI13_0)
-; CHECK-NEXT:    vsetivli zero, 4, e16, mf2, ta, ma
-; CHECK-NEXT:    vle16.v v8, (a1)
-; CHECK-NEXT:    vse16.v v8, (a0)
-; CHECK-NEXT:    ret
+; RV32-LABEL: store_constant_v4i16:
+; RV32:       # %bb.0:
+; RV32-NEXT:    lui a1, 4176
+; RV32-NEXT:    addi a1, a1, 1539
+; RV32-NEXT:    vsetivli zero, 4, e32, m1, ta, ma
+; RV32-NEXT:    vmv.s.x v8, a1
+; RV32-NEXT:    vsetvli zero, zero, e16, mf2, ta, ma
+; RV32-NEXT:    vsext.vf2 v9, v8
+; RV32-NEXT:    vse16.v v9, (a0)
+; RV32-NEXT:    ret
+;
+; RV64-LABEL: store_constant_v4i16:
+; RV64:       # %bb.0:
+; RV64-NEXT:    lui a1, 4176
+; RV64-NEXT:    addiw a1, a1, 1539
+; RV64-NEXT:    vsetivli zero, 4, e32, m1, ta, ma
+; RV64-NEXT:    vmv.s.x v8, a1
+; RV64-NEXT:    vsetvli zero, zero, e16, mf2, ta, ma
+; RV64-NEXT:    vsext.vf2 v9, v8
+; RV64-NEXT:    vse16.v v9, (a0)
+; RV64-NEXT:    ret
   store <4 x i16> <i16 3, i16 6, i16 5, i16 1>, ptr %p
   ret void
 }
 
 define void @store_constant_v4i32(ptr %p) {
-; CHECK-LABEL: store_constant_v4i32:
-; CHECK:       # %bb.0:
-; CHECK-NEXT:    lui a1, %hi(.LCPI14_0)
-; CHECK-NEXT:    addi a1, a1, %lo(.LCPI14_0)
-; CHECK-NEXT:    vsetivli zero, 4, e32, m1, ta, ma
-; CHECK-NEXT:    vle32.v v8, (a1)
-; CHECK-NEXT:    vse32.v v8, (a0)
-; CHECK-NEXT:    ret
+; RV32-LABEL: store_constant_v4i32:
+; RV32:       # %bb.0:
+; RV32-NEXT:    lui a1, 4176
+; RV32-NEXT:    addi a1, a1, 1539
+; RV32-NEXT:    vsetivli zero, 4, e32, m1, ta, ma
+; RV32-NEXT:    vmv.s.x v8, a1
+; RV32-NEXT:    vsext.vf4 v9, v8
+; RV32-NEXT:    vse32.v v9, (a0)
+; RV32-NEXT:    ret
+;
+; RV64-LABEL: store_constant_v4i32:
+; RV64:       # %bb.0:
+; RV64-NEXT:    lui a1, 4176
+; RV64-NEXT:    addiw a1, a1, 1539
+; RV64-NEXT:    vsetivli zero, 4, e32, m1, ta, ma
+; RV64-NEXT:    vmv.s.x v8, a1
+; RV64-NEXT:    vsext.vf4 v9, v8
+; RV64-NEXT:    vse32.v v9, (a0)
+; RV64-NEXT:    ret
   store <4 x i32> <i32 3, i32 6, i32 5, i32 1>, ptr %p
   ret void
 }

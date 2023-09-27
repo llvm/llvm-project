@@ -9,12 +9,15 @@
 #include <utility>
 
 #include "TestingSupport.h"
+#include "clang/Analysis/FlowSensitive/Arena.h"
 #include "clang/Analysis/FlowSensitive/Formula.h"
 #include "clang/Analysis/FlowSensitive/Solver.h"
 #include "clang/Analysis/FlowSensitive/WatchedLiteralsSolver.h"
+#include "clang/Basic/LLVM.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
+#include <vector>
 
 namespace {
 
@@ -29,6 +32,21 @@ using testing::UnorderedElementsAre;
 
 constexpr auto AssignedTrue = Solver::Result::Assignment::AssignedTrue;
 constexpr auto AssignedFalse = Solver::Result::Assignment::AssignedFalse;
+
+std::vector<const Formula *> parseAll(Arena &A, StringRef Lines) {
+  std::vector<const Formula *> Result;
+  while (!Lines.empty()) {
+    auto [First, Rest] = Lines.split('\n');
+    Lines = Rest;
+    if (First.trim().empty())
+      continue;
+    if (auto F = A.parseFormula(First))
+      Result.push_back(&*F);
+    else
+      ADD_FAILURE() << llvm::toString(F.takeError());
+  }
+  return Result;
+}
 
 // Checks if the conjunction of `Vals` is satisfiable and returns the
 // corresponding result.
@@ -258,115 +276,100 @@ TEST(SolverTest, IffWithUnits) {
 }
 
 TEST(SolverTest, IffWithUnitsConflict) {
-  ConstraintContext Ctx;
-  auto X = Ctx.atom();
-  auto Y = Ctx.atom();
-  auto XEqY = Ctx.iff(X, Y);
-  auto NotY = Ctx.neg(Y);
-
-  // (X <=> Y) ^ X  !Y
-  EXPECT_THAT(solve({XEqY, X, NotY}), unsat());
+  Arena A;
+  auto Constraints = parseAll(A, R"(
+     (V0 = V1)
+     V0
+     !V1
+  )");
+  EXPECT_THAT(solve(Constraints), unsat());
 }
 
 TEST(SolverTest, IffTransitiveConflict) {
-  ConstraintContext Ctx;
-  auto X = Ctx.atom();
-  auto Y = Ctx.atom();
-  auto Z = Ctx.atom();
-  auto XEqY = Ctx.iff(X, Y);
-  auto YEqZ = Ctx.iff(Y, Z);
-  auto NotX = Ctx.neg(X);
-
-  // (X <=> Y) ^ (Y <=> Z) ^ Z ^ !X
-  EXPECT_THAT(solve({XEqY, YEqZ, Z, NotX}), unsat());
+  Arena A;
+  auto Constraints = parseAll(A, R"(
+     (V0 = V1)
+     (V1 = V2)
+     V2
+     !V0
+  )");
+  EXPECT_THAT(solve(Constraints), unsat());
 }
 
 TEST(SolverTest, DeMorgan) {
-  ConstraintContext Ctx;
-  auto X = Ctx.atom();
-  auto Y = Ctx.atom();
-  auto Z = Ctx.atom();
-  auto W = Ctx.atom();
-
-  // !(X v Y) <=> !X ^ !Y
-  auto A = Ctx.iff(Ctx.neg(Ctx.disj(X, Y)), Ctx.conj(Ctx.neg(X), Ctx.neg(Y)));
-
-  // !(Z ^ W) <=> !Z v !W
-  auto B = Ctx.iff(Ctx.neg(Ctx.conj(Z, W)), Ctx.disj(Ctx.neg(Z), Ctx.neg(W)));
-
-  // A ^ B
-  EXPECT_THAT(solve({A, B}), sat(_));
+  Arena A;
+  auto Constraints = parseAll(A, R"(
+     (!(V0 | V1) = (!V0 & !V1))
+     (!(V2 & V3) = (!V2 | !V3))
+  )");
+  EXPECT_THAT(solve(Constraints), sat(_));
 }
 
 TEST(SolverTest, RespectsAdditionalConstraints) {
-  ConstraintContext Ctx;
-  auto X = Ctx.atom();
-  auto Y = Ctx.atom();
-  auto XEqY = Ctx.iff(X, Y);
-  auto NotY = Ctx.neg(Y);
-
-  // (X <=> Y) ^ X ^ !Y
-  EXPECT_THAT(solve({XEqY, X, NotY}), unsat());
+  Arena A;
+  auto Constraints = parseAll(A, R"(
+     (V0 = V1)
+     V0
+     !V1
+  )");
+  EXPECT_THAT(solve(Constraints), unsat());
 }
 
 TEST(SolverTest, ImplicationIsEquivalentToDNF) {
-  ConstraintContext Ctx;
-  auto X = Ctx.atom();
-  auto Y = Ctx.atom();
-  auto XImpliesY = Ctx.impl(X, Y);
-  auto XImpliesYDNF = Ctx.disj(Ctx.neg(X), Y);
-  auto NotEquivalent = Ctx.neg(Ctx.iff(XImpliesY, XImpliesYDNF));
-
-  // !((X => Y) <=> (!X v Y))
-  EXPECT_THAT(solve({NotEquivalent}), unsat());
+  Arena A;
+  auto Constraints = parseAll(A, R"(
+     !((V0 => V1) = (!V0 | V1))
+  )");
+  EXPECT_THAT(solve(Constraints), unsat());
 }
 
 TEST(SolverTest, ImplicationConflict) {
-  ConstraintContext Ctx;
-  auto X = Ctx.atom();
-  auto Y = Ctx.atom();
-  auto *XImplY = Ctx.impl(X, Y);
-  auto *XAndNotY = Ctx.conj(X, Ctx.neg(Y));
-
-  // X => Y ^ X ^ !Y
-  EXPECT_THAT(solve({XImplY, XAndNotY}), unsat());
-}
-
-TEST(SolverTest, LowTimeoutResultsInTimedOut) {
-  WatchedLiteralsSolver solver(10);
-  ConstraintContext Ctx;
-  auto X = Ctx.atom();
-  auto Y = Ctx.atom();
-  auto Z = Ctx.atom();
-  auto W = Ctx.atom();
-
-  // !(X v Y) <=> !X ^ !Y
-  auto A = Ctx.iff(Ctx.neg(Ctx.disj(X, Y)), Ctx.conj(Ctx.neg(X), Ctx.neg(Y)));
-
-  // !(Z ^ W) <=> !Z v !W
-  auto B = Ctx.iff(Ctx.neg(Ctx.conj(Z, W)), Ctx.disj(Ctx.neg(Z), Ctx.neg(W)));
-
-  // A ^ B
-  EXPECT_EQ(solver.solve({A, B}).getStatus(), Solver::Result::Status::TimedOut);
+  Arena A;
+  auto Constraints = parseAll(A, R"(
+     (V0 => V1)
+     (V0 & !V1)
+  )");
+  EXPECT_THAT(solve(Constraints), unsat());
 }
 
 TEST(SolverTest, ReachedLimitsReflectsTimeouts) {
+  Arena A;
+  auto Constraints = parseAll(A, R"(
+     (!(V0 | V1) = (!V0 & !V1))
+     (!(V2 & V3) = (!V2 & !V3))
+  )");
+  WatchedLiteralsSolver solver(10);
+  ASSERT_EQ(solver.solve(Constraints).getStatus(),
+            Solver::Result::Status::TimedOut);
+  EXPECT_TRUE(solver.reachedLimit());
+}
+
+TEST(SolverTest, SimpleButLargeContradiction) {
+  // This test ensures that the solver takes a short-cut on known
+  // contradictory inputs, without using max_iterations. At the time
+  // this test is added, formulas that are easily recognized to be
+  // contradictory at CNF construction time would lead to timeout.
   WatchedLiteralsSolver solver(10);
   ConstraintContext Ctx;
-  auto X = Ctx.atom();
-  auto Y = Ctx.atom();
-  auto Z = Ctx.atom();
-  auto W = Ctx.atom();
+  auto first = Ctx.atom();
+  auto last = first;
+  for (int i = 1; i < 10000; ++i) {
+    last = Ctx.conj(last, Ctx.atom());
+  }
+  last = Ctx.conj(Ctx.neg(first), last);
+  ASSERT_EQ(solver.solve({last}).getStatus(),
+            Solver::Result::Status::Unsatisfiable);
+  EXPECT_FALSE(solver.reachedLimit());
 
-  // !(X v Y) <=> !X ^ !Y
-  auto A = Ctx.iff(Ctx.neg(Ctx.disj(X, Y)), Ctx.conj(Ctx.neg(X), Ctx.neg(Y)));
-
-  // !(Z ^ W) <=> !Z v !W
-  auto B = Ctx.iff(Ctx.neg(Ctx.conj(Z, W)), Ctx.disj(Ctx.neg(Z), Ctx.neg(W)));
-
-  // A ^ B
-  ASSERT_EQ(solver.solve({A, B}).getStatus(), Solver::Result::Status::TimedOut);
-  EXPECT_TRUE(solver.reachedLimit());
+  first = Ctx.atom();
+  last = Ctx.neg(first);
+  for (int i = 1; i < 10000; ++i) {
+    last = Ctx.conj(last, Ctx.neg(Ctx.atom()));
+  }
+  last = Ctx.conj(first, last);
+  ASSERT_EQ(solver.solve({last}).getStatus(),
+            Solver::Result::Status::Unsatisfiable);
+  EXPECT_FALSE(solver.reachedLimit());
 }
 
 } // namespace

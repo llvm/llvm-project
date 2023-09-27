@@ -114,7 +114,7 @@ ContentCache::getBufferOrNone(DiagnosticsEngine &Diag, FileManager &FM,
   // return paths.
   IsBufferInvalid = true;
 
-  auto BufferOrError = FM.getBufferForFile(ContentsEntry, IsFileVolatile);
+  auto BufferOrError = FM.getBufferForFile(*ContentsEntry, IsFileVolatile);
 
   // If we were unable to open the file, then we are in an inconsistent
   // situation where the content cache referenced a file which no longer
@@ -1018,7 +1018,7 @@ SourceLocation SourceManager::getImmediateSpellingLoc(SourceLocation Loc) const{
 
 /// Return the filename of the file containing a SourceLocation.
 StringRef SourceManager::getFilename(SourceLocation SpellingLoc) const {
-  if (const FileEntry *F = getFileEntryForID(getFileID(SpellingLoc)))
+  if (OptionalFileEntryRef F = getFileEntryRefForID(getFileID(SpellingLoc)))
     return F->getName();
   return StringRef();
 }

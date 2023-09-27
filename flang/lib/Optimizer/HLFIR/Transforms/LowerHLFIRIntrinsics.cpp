@@ -220,6 +220,10 @@ public:
       opName = "sum";
     } else if constexpr (std::is_same_v<OP, hlfir::ProductOp>) {
       opName = "product";
+    } else if constexpr (std::is_same_v<OP, hlfir::MaxvalOp>) {
+      opName = "maxval";
+    } else if constexpr (std::is_same_v<OP, hlfir::MinvalOp>) {
+      opName = "minval";
     } else if constexpr (std::is_same_v<OP, hlfir::AnyOp>) {
       opName = "any";
     } else if constexpr (std::is_same_v<OP, hlfir::AllOp>) {
@@ -238,7 +242,9 @@ public:
     llvm::SmallVector<fir::ExtendedValue, 0> args;
 
     if constexpr (std::is_same_v<OP, hlfir::SumOp> ||
-                  std::is_same_v<OP, hlfir::ProductOp>) {
+                  std::is_same_v<OP, hlfir::ProductOp> ||
+                  std::is_same_v<OP, hlfir::MaxvalOp> ||
+                  std::is_same_v<OP, hlfir::MinvalOp>) {
       args = buildNumericalArgs(operation, i32, logicalType, rewriter, opName);
     } else {
       args = buildLogicalArgs(operation, i32, logicalType, rewriter, opName);
@@ -258,6 +264,10 @@ public:
 using SumOpConversion = HlfirReductionIntrinsicConversion<hlfir::SumOp>;
 
 using ProductOpConversion = HlfirReductionIntrinsicConversion<hlfir::ProductOp>;
+
+using MaxvalOpConversion = HlfirReductionIntrinsicConversion<hlfir::MaxvalOp>;
+
+using MinvalOpConversion = HlfirReductionIntrinsicConversion<hlfir::MinvalOp>;
 
 using AnyOpConversion = HlfirReductionIntrinsicConversion<hlfir::AnyOp>;
 
@@ -431,17 +441,20 @@ public:
     mlir::ModuleOp module = this->getOperation();
     mlir::MLIRContext *context = &getContext();
     mlir::RewritePatternSet patterns(context);
-    patterns.insert<MatmulOpConversion, MatmulTransposeOpConversion,
-                    AllOpConversion, AnyOpConversion, SumOpConversion,
-                    ProductOpConversion, TransposeOpConversion,
-                    CountOpConversion, DotProductOpConversion>(context);
+    patterns
+        .insert<MatmulOpConversion, MatmulTransposeOpConversion,
+                AllOpConversion, AnyOpConversion, SumOpConversion,
+                ProductOpConversion, TransposeOpConversion, CountOpConversion,
+                DotProductOpConversion, MaxvalOpConversion, MinvalOpConversion>(
+            context);
     mlir::ConversionTarget target(*context);
     target.addLegalDialect<mlir::BuiltinDialect, mlir::arith::ArithDialect,
                            mlir::func::FuncDialect, fir::FIROpsDialect,
                            hlfir::hlfirDialect>();
     target.addIllegalOp<hlfir::MatmulOp, hlfir::MatmulTransposeOp, hlfir::SumOp,
                         hlfir::ProductOp, hlfir::TransposeOp, hlfir::AnyOp,
-                        hlfir::AllOp, hlfir::DotProductOp, hlfir::CountOp>();
+                        hlfir::AllOp, hlfir::DotProductOp, hlfir::CountOp,
+                        hlfir::MaxvalOp, hlfir::MinvalOp>();
     target.markUnknownOpDynamicallyLegal(
         [](mlir::Operation *) { return true; });
     if (mlir::failed(

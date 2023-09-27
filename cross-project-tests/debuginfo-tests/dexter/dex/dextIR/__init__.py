@@ -7,7 +7,6 @@
 """dextIR: DExTer Intermediate Representation of DExTer's debugger trace output.
 """
 
-from dex.dextIR.BuilderIR import BuilderIR
 from dex.dextIR.DextIR import DextIR
 from dex.dextIR.DebuggerIR import DebuggerIR
 from dex.dextIR.FrameIR import FrameIR

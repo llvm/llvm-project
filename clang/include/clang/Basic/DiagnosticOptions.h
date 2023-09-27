@@ -72,6 +72,7 @@ class DiagnosticOptions : public RefCountedBase<DiagnosticOptions>{
                                   clang::DiagnosticsEngine *, bool);
 
   friend class CompilerInvocation;
+  friend class CompilerInvocationBase;
 
 public:
   enum TextDiagnosticFormat { Clang, MSVC, Vi, SARIF };

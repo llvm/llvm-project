@@ -8,12 +8,14 @@
 //===----------------------------------------------------------------------===//
 
 export namespace std {
+#if _LIBCPP_STD_VER >= 23
   // [print.fun], print functions
   using std::print;
   using std::println;
 
   using std::vprint_nonunicode;
-#ifndef _LIBCPP_HAS_NO_UNICODE
+#  ifndef _LIBCPP_HAS_NO_UNICODE
   using std::vprint_unicode;
-#endif // _LIBCPP_HAS_NO_UNICODE
+#  endif // _LIBCPP_HAS_NO_UNICODE
+#endif   // _LIBCPP_STD_VER >= 23
 } // namespace std

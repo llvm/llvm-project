@@ -1,6 +1,6 @@
 // RUN: mlir-opt %s \
-// RUN: | mlir-opt -pass-pipeline='builtin.module(gpu.module(strip-debuginfo,convert-gpu-to-rocdl{index-bitwidth=32 runtime=HIP},gpu-to-hsaco{chip=%chip}))' \
-// RUN: | mlir-opt -gpu-to-llvm \
+// RUN: | mlir-opt -pass-pipeline='builtin.module(gpu.module(strip-debuginfo,convert-gpu-to-rocdl{index-bitwidth=32 runtime=HIP}),rocdl-attach-target{chip=%chip})' \
+// RUN: | mlir-opt -gpu-to-llvm -gpu-module-to-binary \
 // RUN: | mlir-cpu-runner \
 // RUN:   --shared-libs=%mlir_rocm_runtime \
 // RUN:   --shared-libs=%mlir_runner_utils \

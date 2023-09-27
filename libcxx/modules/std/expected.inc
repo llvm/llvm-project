@@ -8,6 +8,7 @@
 //===----------------------------------------------------------------------===//
 
 export namespace std {
+#if _LIBCPP_STD_VER >= 23
   // [expected.unexpected], class template unexpected
   using std::unexpected;
 
@@ -20,4 +21,5 @@ export namespace std {
 
   // [expected.expected], class template expected
   using std::expected;
+#endif // _LIBCPP_STD_VER >= 23
 } // namespace std

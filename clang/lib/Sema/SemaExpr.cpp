@@ -3220,8 +3220,8 @@ Sema::PerformObjectMemberConversion(Expr *From,
     if (Method->isStatic())
       return From;
 
-    DestType = Method->getThisType();
-    DestRecordType = DestType->getPointeeType();
+    DestType = Method->getThisType().getNonReferenceType();
+    DestRecordType = Method->getThisObjectType();
 
     if (FromType->getAs<PointerType>()) {
       FromRecordType = FromType->getPointeeType();
@@ -7091,6 +7091,32 @@ static void DiagnosedUnqualifiedCallsToStdFunctions(Sema &S,
       << FixItHint::CreateInsertion(DRE->getLocation(), "std::");
 }
 
+// Diagnose uses of std::is_constant_evaluated or
+// __builtin_is_constant_evaluated in contexts where the result is known at
+// compile time.
+static void DiagnoseTautologicalCallToIsConstantEvaluated(Sema &S,
+                                                          const CallExpr *CE) {
+  if (S.inTemplateInstantiation() || CE->getBeginLoc().isMacroID())
+    return;
+  if (const FunctionDecl *FD = CE->getDirectCallee()) {
+    bool IsBuiltin =
+        FD->getBuiltinID() == Builtin::BI__builtin_is_constant_evaluated;
+    SourceLocation ConstexprIfLoc = S.ConstexprIfLoc;
+
+    if ((FD->isInStdNamespace() &&
+         FD->getNameAsString() == "is_constant_evaluated") ||
+        IsBuiltin) {
+      bool AlwaysTrue = S.ExprEvalContexts.back().isConstantEvaluated() ||
+                        S.ExprEvalContexts.back().isUnevaluated();
+      bool AlwaysFalse = S.ExprEvalContexts.back().IsRuntimeEvaluated;
+      if (AlwaysTrue || AlwaysFalse)
+        S.Diag(CE->getBeginLoc(), diag::warn_tautological_is_constant_evaluated)
+            << IsBuiltin << AlwaysTrue
+            << FixItHint::CreateRemoval(ConstexprIfLoc);
+    }
+  }
+}
+
 ExprResult Sema::ActOnCallExpr(Scope *Scope, Expr *Fn, SourceLocation LParenLoc,
                                MultiExprArg ArgExprs, SourceLocation RParenLoc,
                                Expr *ExecConfig) {
@@ -7115,8 +7141,10 @@ ExprResult Sema::ActOnCallExpr(Scope *Scope, Expr *Fn, SourceLocation LParenLoc,
     Call = ActOnOpenMPCall(Call, Scope, LParenLoc, ArgExprs, RParenLoc,
                            ExecConfig);
   if (LangOpts.CPlusPlus) {
-    if (const auto *CE = dyn_cast<CallExpr>(Call.get()))
+    if (const auto *CE = dyn_cast<CallExpr>(Call.get())) {
       DiagnosedUnqualifiedCallsToStdFunctions(*this, CE);
+      DiagnoseTautologicalCallToIsConstantEvaluated(*this, CE);
+    }
   }
   return Call;
 }
@@ -18608,6 +18636,8 @@ void Sema::PopExpressionEvaluationContext() {
       } else
         llvm_unreachable("Couldn't infer lambda error message.");
 
+      if (auto *VD = dyn_cast_if_present<VarDecl>(Rec.ManglingContextDecl))
+        VD->setInvalidDecl();
       for (const auto *L : Rec.Lambdas)
         Diag(L->getBeginLoc(), D);
     }
@@ -19136,6 +19166,7 @@ MarkVarDeclODRUsed(ValueDecl *V, SourceLocation Loc, Sema &SemaRef,
                                : diag::note_cuda_host_var);
       }
     } else if (VarTarget == Sema::CVT_Device &&
+               !Var->hasAttr<CUDASharedAttr>() &&
                (UserTarget == Sema::CFT_Host ||
                 UserTarget == Sema::CFT_HostDevice)) {
       // Record a CUDA/HIP device side variable if it is ODR-used

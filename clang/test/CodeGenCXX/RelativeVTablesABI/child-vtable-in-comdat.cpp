@@ -14,7 +14,7 @@
 // CHECK-DAG: @_ZTV1B.local = linkonce_odr hidden unnamed_addr constant { [3 x i32] } { [3 x i32] [i32 0, i32 trunc (i64 sub (i64 ptrtoint (ptr @_ZTI1B.rtti_proxy to i64), i64 ptrtoint (ptr getelementptr inbounds ({ [3 x i32] }, ptr @_ZTV1B.local, i32 0, i32 0, i32 2) to i64)) to i32), i32 trunc (i64 sub (i64 ptrtoint (ptr dso_local_equivalent @_ZN1B3fooEv to i64), i64 ptrtoint (ptr getelementptr inbounds ({ [3 x i32] }, ptr @_ZTV1B.local, i32 0, i32 0, i32 2) to i64)) to i32)] }, comdat($_ZTV1B), align 4
 
 // The RTTI objects aren’t that important, but it is good to know that they are emitted here since they are used in the vtable for B, and external references are used for RTTI stuff from A.
-// CHECK-DAG: @_ZTVN10__cxxabiv120__si_class_type_infoE = external global ptr
+// CHECK-DAG: @_ZTVN10__cxxabiv120__si_class_type_infoE = external global [0 x ptr]
 // CHECK-DAG: @_ZTS1B =
 // CHECK-DAG: @_ZTI1A =
 // CHECK-DAG: @_ZTI1B =

@@ -301,8 +301,9 @@ struct CUDADeviceTy : public GenericDeviceTy {
     if (auto Err = getDeviceAttr(CU_DEVICE_ATTRIBUTE_MULTIPROCESSOR_COUNT,
                                  NumMuliprocessors))
       return Err;
-    if (auto Err = getDeviceAttr(CU_DEVICE_ATTRIBUTE_MAX_THREADS_PER_MULTIPROCESSOR,
-                                 MaxThreadsPerSM))
+    if (auto Err =
+            getDeviceAttr(CU_DEVICE_ATTRIBUTE_MAX_THREADS_PER_MULTIPROCESSOR,
+                          MaxThreadsPerSM))
       return Err;
     if (auto Err = getDeviceAttr(CU_DEVICE_ATTRIBUTE_WARP_SIZE, WarpSize))
       return Err;
@@ -373,16 +374,21 @@ struct CUDADeviceTy : public GenericDeviceTy {
     return Plugin::check(Res, "Error in cuCtxSetCurrent: %s");
   }
 
+  /// NVIDIA returns the product of the SM count and the number of warps that
+  /// fit if the maximum number of threads were scheduled on each SM.
+  uint64_t getHardwareParallelism() const override {
+    return HardwareParallelism;
+  }
+
   /// We want to set up the RPC server for host services to the GPU if it is
   /// availible.
   bool shouldSetupRPCServer() const override {
     return libomptargetSupportsRPC();
   }
 
-  /// NVIDIA returns the product of the SM count and the number of warps that
-  /// fit if the maximum number of threads were scheduled on each SM.
+  /// The RPC interface should have enough space for all availible parallelism.
   uint64_t requestedRPCPortCount() const override {
-    return HardwareParallelism;
+    return getHardwareParallelism();
   }
 
   /// Get the stream of the asynchronous info sructure or get a new one.
@@ -569,6 +575,17 @@ struct CUDADeviceTy : public GenericDeviceTy {
     CUstream Stream;
     if (auto Err = getStream(AsyncInfoWrapper, Stream))
       return Err;
+
+    // If there is already pending work on the stream it could be waiting for
+    // someone to check the RPC server.
+    if (auto RPCServer = getRPCServer()) {
+      CUresult Res = cuStreamQuery(Stream);
+      while (Res == CUDA_ERROR_NOT_READY) {
+        if (auto Err = RPCServer->runServer(*this))
+          return Err;
+        Res = cuStreamQuery(Stream);
+      }
+    }
 
     CUresult Res = cuMemcpyDtoHAsync(HstPtr, (CUdeviceptr)TgtPtr, Size, Stream);
     return Plugin::check(Res, "Error in cuMemcpyDtoHAsync: %s");

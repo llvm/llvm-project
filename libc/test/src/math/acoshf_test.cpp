@@ -17,28 +17,28 @@
 #include <errno.h>
 #include <stdint.h>
 
-using FPBits_t = __llvm_libc::fputil::FPBits<float>;
+using FPBits_t = LIBC_NAMESPACE::fputil::FPBits<float>;
 
-namespace mpfr = __llvm_libc::testing::mpfr;
+namespace mpfr = LIBC_NAMESPACE::testing::mpfr;
 
 DECLARE_SPECIAL_CONSTANTS(float)
 
 TEST(LlvmLibcAcoshfTest, SpecialNumbers) {
   libc_errno = 0;
 
-  EXPECT_FP_EQ(aNaN, __llvm_libc::acoshf(aNaN));
+  EXPECT_FP_EQ_ALL_ROUNDING(aNaN, LIBC_NAMESPACE::acoshf(aNaN));
   EXPECT_MATH_ERRNO(0);
 
-  EXPECT_FP_EQ(aNaN, __llvm_libc::acoshf(0.0f));
+  EXPECT_FP_EQ_ALL_ROUNDING(aNaN, LIBC_NAMESPACE::acoshf(0.0f));
   EXPECT_MATH_ERRNO(EDOM);
 
-  EXPECT_FP_EQ(0.0f, __llvm_libc::acoshf(1.0f));
+  EXPECT_FP_EQ_ALL_ROUNDING(0.0f, LIBC_NAMESPACE::acoshf(1.0f));
   EXPECT_MATH_ERRNO(0);
 
-  EXPECT_FP_EQ(inf, __llvm_libc::acoshf(inf));
+  EXPECT_FP_EQ_ALL_ROUNDING(inf, LIBC_NAMESPACE::acoshf(inf));
   EXPECT_MATH_ERRNO(0);
 
-  EXPECT_FP_EQ(aNaN, __llvm_libc::acoshf(neg_inf));
+  EXPECT_FP_EQ_ALL_ROUNDING(aNaN, LIBC_NAMESPACE::acoshf(neg_inf));
   EXPECT_MATH_ERRNO(EDOM);
 }
 
@@ -50,7 +50,7 @@ TEST(LlvmLibcAcoshfTest, InFloatRange) {
     if (isnan(x) || isinf(x))
       continue;
     ASSERT_MPFR_MATCH_ALL_ROUNDING(mpfr::Operation::Acosh, x,
-                                   __llvm_libc::acoshf(x), 0.5);
+                                   LIBC_NAMESPACE::acoshf(x), 0.5);
   }
 }
 
@@ -74,6 +74,6 @@ TEST(LlvmLibcAcoshfTest, SpecificBitPatterns) {
   for (int i = 0; i < N; ++i) {
     float x = float(FPBits_t(INPUTS[i]));
     EXPECT_MPFR_MATCH_ALL_ROUNDING(mpfr::Operation::Acosh, x,
-                                   __llvm_libc::acoshf(x), 0.5);
+                                   LIBC_NAMESPACE::acoshf(x), 0.5);
   }
 }

@@ -12,6 +12,8 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/TargetParser/AArch64TargetParser.h"
+#include "llvm/Support/Format.h"
+#include "llvm/Support/raw_ostream.h"
 #include "llvm/TargetParser/ARMTargetParserCommon.h"
 #include "llvm/TargetParser/Triple.h"
 #include <cctype>
@@ -54,11 +56,12 @@ uint64_t AArch64::getCpuSupportsMask(ArrayRef<StringRef> FeatureStrs) {
   return FeaturesMask;
 }
 
-bool AArch64::getExtensionFeatures(uint64_t InputExts,
-                                   std::vector<StringRef> &Features) {
+bool AArch64::getExtensionFeatures(
+    const AArch64::ExtensionBitset &InputExts,
+    std::vector<StringRef> &Features) {
   for (const auto &E : Extensions)
     /* INVALID and NONE have no feature name. */
-    if ((InputExts & E.ID) && !E.Feature.empty())
+    if (InputExts.test(E.ID) && !E.Feature.empty())
       Features.push_back(E.Feature);
 
   return true;
@@ -131,4 +134,19 @@ std::optional<AArch64::CpuInfo> AArch64::parseCpu(StringRef Name) {
       return C;
 
   return {};
+}
+
+void AArch64::PrintSupportedExtensions(StringMap<StringRef> DescMap) {
+  outs() << "All available -march extensions for AArch64\n\n"
+         << "    " << left_justify("Name", 20)
+         << (DescMap.empty() ? "\n" : "Description\n");
+  for (const auto &Ext : Extensions) {
+    // Extensions without a feature cannot be used with -march.
+    if (!Ext.Feature.empty()) {
+      std::string Description = DescMap[Ext.Name].str();
+      outs() << "    "
+             << format(Description.empty() ? "%s\n" : "%-20s%s\n",
+                       Ext.Name.str().c_str(), Description.c_str());
+    }
+  }
 }

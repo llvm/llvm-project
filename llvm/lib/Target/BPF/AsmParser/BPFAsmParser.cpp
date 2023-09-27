@@ -39,10 +39,9 @@ class BPFAsmParser : public MCTargetAsmParser {
                                uint64_t &ErrorInfo,
                                bool MatchingInlineAsm) override;
 
-  bool parseRegister(MCRegister &RegNo, SMLoc &StartLoc,
-                     SMLoc &EndLoc) override;
-  OperandMatchResultTy tryParseRegister(MCRegister &RegNo, SMLoc &StartLoc,
-                                        SMLoc &EndLoc) override;
+  bool parseRegister(MCRegister &Reo, SMLoc &StartLoc, SMLoc &EndLoc) override;
+  ParseStatus tryParseRegister(MCRegister &Reg, SMLoc &StartLoc,
+                               SMLoc &EndLoc) override;
 
   bool ParseInstruction(ParseInstructionInfo &Info, StringRef Name,
                         SMLoc NameLoc, OperandVector &Operands) override;
@@ -136,9 +135,13 @@ public:
     return static_cast<const MCConstantExpr *>(Val)->getValue();
   }
 
-  bool isSImm12() const {
-    return (isConstantImm() && isInt<12>(getConstantImm()));
+  bool isSImm16() const {
+    return (isConstantImm() && isInt<16>(getConstantImm()));
   }
+
+  bool isSymbolRef() const { return isImm() && isa<MCSymbolRefExpr>(getImm()); }
+
+  bool isBrTarget() const { return isSymbolRef() || isSImm16(); }
 
   /// getStartLoc - Gets location of the first token of this operand
   SMLoc getStartLoc() const override { return StartLoc; }
@@ -333,33 +336,38 @@ bool BPFAsmParser::MatchAndEmitInstruction(SMLoc IDLoc, unsigned &Opcode,
     }
 
     return Error(ErrorLoc, "invalid operand for instruction");
+  case Match_InvalidBrTarget:
+    return Error(Operands[ErrorInfo]->getStartLoc(),
+                 "operand is not an identifier or 16-bit signed integer");
+  case Match_InvalidSImm16:
+    return Error(Operands[ErrorInfo]->getStartLoc(),
+                 "operand is not a 16-bit signed integer");
   }
 
   llvm_unreachable("Unknown match type detected!");
 }
 
-bool BPFAsmParser::parseRegister(MCRegister &RegNo, SMLoc &StartLoc,
+bool BPFAsmParser::parseRegister(MCRegister &Reg, SMLoc &StartLoc,
                                  SMLoc &EndLoc) {
-  if (tryParseRegister(RegNo, StartLoc, EndLoc) != MatchOperand_Success)
+  if (!tryParseRegister(Reg, StartLoc, EndLoc).isSuccess())
     return Error(StartLoc, "invalid register name");
   return false;
 }
 
-OperandMatchResultTy BPFAsmParser::tryParseRegister(MCRegister &RegNo,
-                                                    SMLoc &StartLoc,
-                                                    SMLoc &EndLoc) {
+ParseStatus BPFAsmParser::tryParseRegister(MCRegister &Reg, SMLoc &StartLoc,
+                                           SMLoc &EndLoc) {
   const AsmToken &Tok = getParser().getTok();
   StartLoc = Tok.getLoc();
   EndLoc = Tok.getEndLoc();
-  RegNo = 0;
+  Reg = BPF::NoRegister;
   StringRef Name = getLexer().getTok().getIdentifier();
 
   if (!MatchRegisterName(Name)) {
     getParser().Lex(); // Eat identifier token.
-    return MatchOperand_Success;
+    return ParseStatus::Success;
   }
 
-  return MatchOperand_NoMatch;
+  return ParseStatus::NoMatch;
 }
 
 ParseStatus BPFAsmParser::parseOperandAsOperator(OperandVector &Operands) {

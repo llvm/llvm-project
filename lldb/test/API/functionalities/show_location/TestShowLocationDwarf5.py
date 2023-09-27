@@ -7,11 +7,6 @@ from lldbsuite.test.decorators import *
 
 
 class TestTargetSourceMap(TestBase):
-    @skipIf(
-        archs="aarch64",
-        oslist="linux",
-        bugnumber="https://bugs.llvm.org/show_bug.cgi?id=44180",
-    )
     def test_source_map(self):
         # Set the target soure map to map "./" to the current test directory.
         yaml_path = os.path.join(self.getSourceDir(), "a.yaml")

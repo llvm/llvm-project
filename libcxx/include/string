@@ -1969,7 +1969,8 @@ private:
                     allocator_type __a = __str.__alloc();
                     auto __allocation = std::__allocate_at_least(__a, __str.__get_long_cap());
                     __begin_lifetime(__allocation.ptr, __allocation.count);
-                    __alloc_traits::deallocate(__alloc(), __get_long_pointer(), __get_long_cap());
+                    if (__is_long())
+                        __alloc_traits::deallocate(__alloc(), __get_long_pointer(), __get_long_cap());
                     __alloc() = std::move(__a);
                     __set_long_pointer(__allocation.ptr);
                     __set_long_cap(__allocation.count);

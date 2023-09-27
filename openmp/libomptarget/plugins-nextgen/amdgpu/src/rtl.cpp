@@ -506,19 +506,19 @@ private:
 /// between asynchronous operations: kernel launches and memory transfers.
 struct AMDGPUSignalTy {
   /// Create an empty signal.
-  AMDGPUSignalTy() : Signal({0}), UseCount() {}
-  AMDGPUSignalTy(AMDGPUDeviceTy &Device) : Signal({0}), UseCount() {}
+  AMDGPUSignalTy() : HSASignal({0}), UseCount() {}
+  AMDGPUSignalTy(AMDGPUDeviceTy &Device) : HSASignal({0}), UseCount() {}
 
   /// Initialize the signal with an initial value.
   Error init(uint32_t InitialValue = 1) {
     hsa_status_t Status =
-        hsa_amd_signal_create(InitialValue, 0, nullptr, 0, &Signal);
+        hsa_amd_signal_create(InitialValue, 0, nullptr, 0, &HSASignal);
     return Plugin::check(Status, "Error in hsa_signal_create: %s");
   }
 
   /// Deinitialize the signal.
   Error deinit() {
-    hsa_status_t Status = hsa_signal_destroy(Signal);
+    hsa_status_t Status = hsa_signal_destroy(HSASignal);
     return Plugin::check(Status, "Error in hsa_signal_destroy: %s");
   }
 
@@ -527,7 +527,7 @@ struct AMDGPUSignalTy {
              GenericDeviceTy *Device = nullptr) const {
     if (ActiveTimeout && !RPCServer) {
       hsa_signal_value_t Got = 1;
-      Got = hsa_signal_wait_scacquire(Signal, HSA_SIGNAL_CONDITION_EQ, 0,
+      Got = hsa_signal_wait_scacquire(HSASignal, HSA_SIGNAL_CONDITION_EQ, 0,
                                       ActiveTimeout, HSA_WAIT_STATE_ACTIVE);
       if (Got == 0)
         return Plugin::success();
@@ -536,7 +536,7 @@ struct AMDGPUSignalTy {
     // If there is an RPC device attached to this stream we run it as a server.
     uint64_t Timeout = RPCServer ? 8192 : UINT64_MAX;
     auto WaitState = RPCServer ? HSA_WAIT_STATE_ACTIVE : HSA_WAIT_STATE_BLOCKED;
-    while (hsa_signal_wait_scacquire(Signal, HSA_SIGNAL_CONDITION_EQ, 0,
+    while (hsa_signal_wait_scacquire(HSASignal, HSA_SIGNAL_CONDITION_EQ, 0,
                                      Timeout, WaitState) != 0) {
       if (RPCServer && Device)
         if (auto Err = RPCServer->runServer(*Device))
@@ -546,18 +546,20 @@ struct AMDGPUSignalTy {
   }
 
   /// Load the value on the signal.
-  hsa_signal_value_t load() const { return hsa_signal_load_scacquire(Signal); }
+  hsa_signal_value_t load() const {
+    return hsa_signal_load_scacquire(HSASignal);
+  }
 
   /// Signal decrementing by one.
   void signal() {
     assert(load() > 0 && "Invalid signal value");
-    hsa_signal_subtract_screlease(Signal, 1);
+    hsa_signal_subtract_screlease(HSASignal, 1);
   }
 
   /// Reset the signal value before reusing the signal. Do not call this
   /// function if the signal is being currently used by any watcher, such as a
   /// plugin thread or the HSA runtime.
-  void reset() { hsa_signal_store_screlease(Signal, 1); }
+  void reset() { hsa_signal_store_screlease(HSASignal, 1); }
 
   /// Increase the number of concurrent uses.
   void increaseUseCount() { UseCount.increase(); }
@@ -565,11 +567,11 @@ struct AMDGPUSignalTy {
   /// Decrease the number of concurrent uses and return whether was the last.
   bool decreaseUseCount() { return UseCount.decrease(); }
 
-  hsa_signal_t get() const { return Signal; }
+  hsa_signal_t get() const { return HSASignal; }
 
 private:
   /// The underlying HSA signal.
-  hsa_signal_t Signal;
+  hsa_signal_t HSASignal;
 
   /// Reference counter for tracking the concurrent use count. This is mainly
   /// used for knowing how many streams are using the signal.
@@ -870,7 +872,7 @@ private:
       return Plugin::success();
     }
 
-    /// Schedule a release buffer action on the slot.
+    /// Schedule a signal release action on the slot.
     Error schedReleaseSignal(AMDGPUSignalTy *SignalToRelease,
                              AMDGPUSignalManagerTy *SignalManager) {
       ActionFunction = releaseSignalAction;
@@ -1053,7 +1055,7 @@ private:
     return false;
   }
 
-  // Callback for host-to-host memory copies.
+  // Callback for host-to-host memory copies. This is an asynchronous action.
   static Error memcpyAction(void *Data) {
     MemcpyArgsTy *Args = reinterpret_cast<MemcpyArgsTy *>(Data);
     assert(Args && "Invalid arguments");
@@ -1065,7 +1067,19 @@ private:
     return Plugin::success();
   }
 
-  // Callback for releasing a memory buffer to a memory manager.
+  /// Releasing a memory buffer to a memory manager. This is a post completion
+  /// action. There are two kinds of memory buffers:
+  ///   1. For kernel arguments. This buffer can be freed after receiving the
+  ///   kernel completion signal.
+  ///   2. For H2D tranfers that need pinned memory space for staging. This
+  ///   buffer can be freed after receiving the transfer completion signal.
+  ///   3. For D2H tranfers that need pinned memory space for staging. This
+  ///   buffer cannot be freed after receiving the transfer completion signal
+  ///   because of the following asynchronous H2H callback.
+  ///      For this reason, This action can only be taken at
+  ///      AMDGPUStreamTy::complete()
+  /// Because of the case 3, all releaseBufferActions are taken at
+  /// AMDGPUStreamTy::complete() in the current implementation.
   static Error releaseBufferAction(void *Data) {
     ReleaseBufferArgsTy *Args = reinterpret_cast<ReleaseBufferArgsTy *>(Data);
     assert(Args && "Invalid arguments");
@@ -1076,6 +1090,8 @@ private:
     return Args->MemoryManager->deallocate(Args->Buffer);
   }
 
+  /// Releasing a signal object back to SignalManager. This is a post completion
+  /// action. This action can only be taken at AMDGPUStreamTy::complete()
   static Error releaseSignalAction(void *Data) {
     ReleaseSignalArgsTy *Args = reinterpret_cast<ReleaseSignalArgsTy *>(Data);
     assert(Args && "Invalid arguments");
@@ -1942,16 +1958,21 @@ struct AMDGPUDeviceTy : public GenericDeviceTy, AMDGenericDeviceTy {
   /// AMDGPU devices do not have the concept of contexts.
   Error setContext() override { return Plugin::success(); }
 
+  /// AMDGPU returns the product of the number of compute units and the waves
+  /// per compute unit.
+  uint64_t getHardwareParallelism() const override {
+    return HardwareParallelism;
+  }
+
   /// We want to set up the RPC server for host services to the GPU if it is
   /// availible.
   bool shouldSetupRPCServer() const override {
     return libomptargetSupportsRPC();
   }
 
-  /// AMDGPU returns the product of the number of compute units and the waves
-  /// per compute unit.
-  uint64_t requestedRPCPortCount() const override  {
-    return HardwareParallelism;
+  /// The RPC interface should have enough space for all availible parallelism.
+  uint64_t requestedRPCPortCount() const override {
+    return getHardwareParallelism();
   }
 
   /// Get the stream of the asynchronous info sructure or get a new one.

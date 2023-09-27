@@ -1,4 +1,5 @@
 // RUN: %clang -### --target=x86_64 -fprofile-use=default.profdata -fsplit-machine-functions %s 2>&1 | FileCheck %s --check-prefixes=CHECK,LTO-NEG
+// RUN: %clang -### --target=aarch64 -fprofile-use=default.profdata -fsplit-machine-functions %s 2>&1 | FileCheck %s --check-prefixes=CHECK,LTO-NEG
 // RUN: %clang -### --target=x86_64 -fprofile-use=default.profdata -fsplit-machine-functions -fno-split-machine-functions %s -c 2>&1 | FileCheck -check-prefix=NEG %s
 
 // CHECK:      "-fsplit-machine-functions"

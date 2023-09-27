@@ -17,7 +17,6 @@
 #include "llvm/CodeGen/GlobalISel/Combiner.h"
 #include "llvm/CodeGen/GlobalISel/CombinerHelper.h"
 #include "llvm/CodeGen/GlobalISel/CombinerInfo.h"
-#include "llvm/CodeGen/GlobalISel/GIMatchTableExecutor.h"
 #include "llvm/CodeGen/GlobalISel/GIMatchTableExecutorImpl.h"
 #include "llvm/CodeGen/GlobalISel/GISelKnownBits.h"
 #include "llvm/CodeGen/GlobalISel/MIPatternMatch.h"
@@ -215,7 +214,7 @@ void applyFoldGlobalOffset(MachineInstr &MI, MachineRegisterInfo &MRI,
   //  %ptrN = G_PTR_ADD %offset_g, cstN - min_cst
   uint64_t Offset, MinOffset;
   std::tie(Offset, MinOffset) = MatchInfo;
-  B.setInstrAndDebugLoc(MI);
+  B.setInstrAndDebugLoc(*std::next(MI.getIterator()));
   Observer.changingInstr(MI);
   auto &GlobalOp = MI.getOperand(1);
   auto *GV = GlobalOp.getGlobal();
@@ -343,27 +342,26 @@ bool tryToSimplifyUADDO(MachineInstr &MI, MachineIRBuilder &B,
   return true;
 }
 
-class AArch64PreLegalizerCombinerImpl : public GIMatchTableExecutor {
+class AArch64PreLegalizerCombinerImpl : public Combiner {
 protected:
-  CombinerHelper &Helper;
+  // TODO: Make CombinerHelper methods const.
+  mutable CombinerHelper Helper;
   const AArch64PreLegalizerCombinerImplRuleConfig &RuleConfig;
-
   const AArch64Subtarget &STI;
-  GISelChangeObserver &Observer;
-  MachineIRBuilder &B;
-  MachineFunction &MF;
-
-  MachineRegisterInfo &MRI;
 
 public:
   AArch64PreLegalizerCombinerImpl(
+      MachineFunction &MF, CombinerInfo &CInfo, const TargetPassConfig *TPC,
+      GISelKnownBits &KB, GISelCSEInfo *CSEInfo,
       const AArch64PreLegalizerCombinerImplRuleConfig &RuleConfig,
-      const AArch64Subtarget &STI, GISelChangeObserver &Observer,
-      MachineIRBuilder &B, CombinerHelper &Helper);
+      const AArch64Subtarget &STI, MachineDominatorTree *MDT,
+      const LegalizerInfo *LI);
 
   static const char *getName() { return "AArch6400PreLegalizerCombiner"; }
 
-  bool tryCombineAll(MachineInstr &I) const;
+  bool tryCombineAll(MachineInstr &I) const override;
+
+  bool tryCombineAllImpl(MachineInstr &I) const;
 
 private:
 #define GET_GICOMBINER_CLASS_MEMBERS
@@ -376,46 +374,22 @@ private:
 #undef GET_GICOMBINER_IMPL
 
 AArch64PreLegalizerCombinerImpl::AArch64PreLegalizerCombinerImpl(
+    MachineFunction &MF, CombinerInfo &CInfo, const TargetPassConfig *TPC,
+    GISelKnownBits &KB, GISelCSEInfo *CSEInfo,
     const AArch64PreLegalizerCombinerImplRuleConfig &RuleConfig,
-    const AArch64Subtarget &STI, GISelChangeObserver &Observer,
-    MachineIRBuilder &B, CombinerHelper &Helper)
-    : Helper(Helper), RuleConfig(RuleConfig), STI(STI), Observer(Observer),
-      B(B), MF(B.getMF()), MRI(*B.getMRI()),
+    const AArch64Subtarget &STI, MachineDominatorTree *MDT,
+    const LegalizerInfo *LI)
+    : Combiner(MF, CInfo, TPC, &KB, CSEInfo),
+      Helper(Observer, B, /*IsPreLegalize*/ true, &KB, MDT, LI),
+      RuleConfig(RuleConfig), STI(STI),
 #define GET_GICOMBINER_CONSTRUCTOR_INITS
 #include "AArch64GenPreLegalizeGICombiner.inc"
 #undef GET_GICOMBINER_CONSTRUCTOR_INITS
 {
 }
 
-class AArch64PreLegalizerCombinerInfo : public CombinerInfo {
-  GISelKnownBits *KB;
-  MachineDominatorTree *MDT;
-  AArch64PreLegalizerCombinerImplRuleConfig RuleConfig;
-
-public:
-  AArch64PreLegalizerCombinerInfo(bool EnableOpt, bool OptSize, bool MinSize,
-                                  GISelKnownBits *KB, MachineDominatorTree *MDT)
-      : CombinerInfo(/*AllowIllegalOps*/ true, /*ShouldLegalizeIllegal*/ false,
-                     /*LegalizerInfo*/ nullptr, EnableOpt, OptSize, MinSize),
-        KB(KB), MDT(MDT) {
-    if (!RuleConfig.parseCommandLineOption())
-      report_fatal_error("Invalid rule identifier");
-  }
-
-  bool combine(GISelChangeObserver &Observer, MachineInstr &MI,
-               MachineIRBuilder &B) const override;
-};
-
-bool AArch64PreLegalizerCombinerInfo::combine(GISelChangeObserver &Observer,
-                                              MachineInstr &MI,
-                                              MachineIRBuilder &B) const {
-  const auto &STI = MI.getMF()->getSubtarget<AArch64Subtarget>();
-  const auto *LI = STI.getLegalizerInfo();
-  CombinerHelper Helper(Observer, B, /* IsPreLegalize*/ true, KB, MDT, LI);
-  AArch64PreLegalizerCombinerImpl Impl(RuleConfig, STI, Observer, B, Helper);
-  Impl.setupMF(*MI.getMF(), KB);
-
-  if (Impl.tryCombineAll(MI))
+bool AArch64PreLegalizerCombinerImpl::tryCombineAll(MachineInstr &MI) const {
+  if (tryCombineAllImpl(MI))
     return true;
 
   unsigned Opc = MI.getOpcode();
@@ -433,12 +407,12 @@ bool AArch64PreLegalizerCombinerInfo::combine(GISelChangeObserver &Observer,
   case TargetOpcode::G_MEMSET: {
     // If we're at -O0 set a maxlen of 32 to inline, otherwise let the other
     // heuristics decide.
-    unsigned MaxLen = EnableOpt ? 0 : 32;
+    unsigned MaxLen = CInfo.EnableOpt ? 0 : 32;
     // Try to inline memcpy type calls if optimizations are enabled.
     if (Helper.tryCombineMemCpyFamily(MI, MaxLen))
       return true;
     if (Opc == TargetOpcode::G_MEMSET)
-      return llvm::AArch64GISelUtils::tryEmitBZero(MI, B, EnableMinSize);
+      return llvm::AArch64GISelUtils::tryEmitBZero(MI, B, CInfo.EnableMinSize);
     return false;
   }
   }
@@ -462,6 +436,9 @@ public:
   bool runOnMachineFunction(MachineFunction &MF) override;
 
   void getAnalysisUsage(AnalysisUsage &AU) const override;
+
+private:
+  AArch64PreLegalizerCombinerImplRuleConfig RuleConfig;
 };
 } // end anonymous namespace
 
@@ -481,6 +458,9 @@ void AArch64PreLegalizerCombiner::getAnalysisUsage(AnalysisUsage &AU) const {
 AArch64PreLegalizerCombiner::AArch64PreLegalizerCombiner()
     : MachineFunctionPass(ID) {
   initializeAArch64PreLegalizerCombinerPass(*PassRegistry::getPassRegistry());
+
+  if (!RuleConfig.parseCommandLineOption())
+    report_fatal_error("Invalid rule identifier");
 }
 
 bool AArch64PreLegalizerCombiner::runOnMachineFunction(MachineFunction &MF) {
@@ -494,15 +474,20 @@ bool AArch64PreLegalizerCombiner::runOnMachineFunction(MachineFunction &MF) {
       getAnalysis<GISelCSEAnalysisWrapperPass>().getCSEWrapper();
   auto *CSEInfo = &Wrapper.get(TPC.getCSEConfig());
 
+  const AArch64Subtarget &ST = MF.getSubtarget<AArch64Subtarget>();
+  const auto *LI = ST.getLegalizerInfo();
+
   const Function &F = MF.getFunction();
   bool EnableOpt =
-      MF.getTarget().getOptLevel() != CodeGenOpt::None && !skipFunction(F);
+      MF.getTarget().getOptLevel() != CodeGenOptLevel::None && !skipFunction(F);
   GISelKnownBits *KB = &getAnalysis<GISelKnownBitsAnalysis>().get(MF);
   MachineDominatorTree *MDT = &getAnalysis<MachineDominatorTree>();
-  AArch64PreLegalizerCombinerInfo PCInfo(EnableOpt, F.hasOptSize(),
-                                         F.hasMinSize(), KB, MDT);
-  Combiner C(PCInfo, &TPC);
-  return C.combineMachineInstrs(MF, CSEInfo);
+  CombinerInfo CInfo(/*AllowIllegalOps*/ true, /*ShouldLegalizeIllegal*/ false,
+                     /*LegalizerInfo*/ nullptr, EnableOpt, F.hasOptSize(),
+                     F.hasMinSize());
+  AArch64PreLegalizerCombinerImpl Impl(MF, CInfo, &TPC, *KB, CSEInfo,
+                                       RuleConfig, ST, MDT, LI);
+  return Impl.combineMachineInstrs();
 }
 
 char AArch64PreLegalizerCombiner::ID = 0;

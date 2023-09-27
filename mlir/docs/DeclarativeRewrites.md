@@ -736,10 +736,10 @@ For example, we can write
 def GetOwner: NativeCodeCall<"$0.getOwner()">;
 
 def CopyAttrFoo: NativeCodeCallVoid<
-  "$1->setAttr($_builder.getStringAttr(\"foo\"), $0->getAttr(\"foo\"))">;
+  "$1->setAttr($_builder.getStringAttr(\"foo\"), $0->getInherentAttr(\"foo\"))">;
 
 def CopyAttrBar: NativeCodeCallVoid<
-  "$1->setAttr($_builder.getStringAttr(\"bar\"), $0->getAttr(\"bar\"))">;
+  "$1->setAttr($_builder.getStringAttr(\"bar\"), $0->getInherentAttr(\"bar\"))">;
 
 
 def : Pattern<

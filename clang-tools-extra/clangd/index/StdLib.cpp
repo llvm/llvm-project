@@ -207,7 +207,7 @@ SymbolSlab indexStandardLibrary(llvm::StringRef HeaderSources,
   }
   const FrontendInputFile &Input = CI->getFrontendOpts().Inputs.front();
   trace::Span Tracer("StandardLibraryIndex");
-  LangStandard::Kind LangStd = standardFromOpts(*CI->getLangOpts());
+  LangStandard::Kind LangStd = standardFromOpts(CI->getLangOpts());
   log("Indexing {0} standard library in the context of {1}",
       LangStandard::getLangStandardForKind(LangStd).getName(), Input.getFile());
 
@@ -267,7 +267,7 @@ SymbolSlab indexStandardLibrary(llvm::StringRef HeaderSources,
 SymbolSlab indexStandardLibrary(std::unique_ptr<CompilerInvocation> Invocation,
                                 const StdLibLocation &Loc,
                                 const ThreadsafeFS &TFS) {
-  llvm::StringRef Header = getStdlibUmbrellaHeader(*Invocation->getLangOpts());
+  llvm::StringRef Header = getStdlibUmbrellaHeader(Invocation->getLangOpts());
   return indexStandardLibrary(Header, std::move(Invocation), Loc, TFS);
 }
 

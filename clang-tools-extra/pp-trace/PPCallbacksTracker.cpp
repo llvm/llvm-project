@@ -476,7 +476,8 @@ void PPCallbacksTracker::appendArgument(const char *Name, FileID Value) {
     appendArgument(Name, "(invalid)");
     return;
   }
-  const FileEntry *FileEntry = PP.getSourceManager().getFileEntryForID(Value);
+  OptionalFileEntryRef FileEntry =
+      PP.getSourceManager().getFileEntryRefForID(Value);
   if (!FileEntry) {
     appendArgument(Name, "(getFileEntryForID failed)");
     return;

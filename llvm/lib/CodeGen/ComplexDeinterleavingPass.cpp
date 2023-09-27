@@ -60,6 +60,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/CodeGen/ComplexDeinterleavingPass.h"
+#include "llvm/ADT/MapVector.h"
 #include "llvm/ADT/Statistic.h"
 #include "llvm/Analysis/TargetLibraryInfo.h"
 #include "llvm/Analysis/TargetTransformInfo.h"
@@ -258,7 +259,7 @@ private:
   ///
   /// %OutsideUser can be `llvm.vector.reduce.fadd` or `fadd` preceding
   /// `llvm.vector.reduce.fadd` when unroll factor isn't one.
-  std::map<Instruction *, std::pair<PHINode *, Instruction *>> ReductionInfo;
+  MapVector<Instruction *, std::pair<PHINode *, Instruction *>> ReductionInfo;
 
   /// In the process of detecting a reduction, we consider a pair of
   /// %ReductionOP, which we refer to as real and imag (or vice versa), and

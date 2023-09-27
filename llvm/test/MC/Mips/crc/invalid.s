@@ -1,8 +1,8 @@
 # Instructions that are invalid.
 #
-# RUN: not llvm-mc %s -arch=mips -mcpu=mips32r6 -mattr=+crc 2>%t1
+# RUN: not llvm-mc %s -triple=mips -mcpu=mips32r6 -mattr=+crc 2>%t1
 # RUN: FileCheck %s < %t1
-# RUN: not llvm-mc %s -arch=mips64 -mcpu=mips64r6 -mattr=+crc 2>%t1
+# RUN: not llvm-mc %s -triple=mips64 -mcpu=mips64r6 -mattr=+crc 2>%t1
 # RUN: FileCheck %s < %t1
 
   .set noat

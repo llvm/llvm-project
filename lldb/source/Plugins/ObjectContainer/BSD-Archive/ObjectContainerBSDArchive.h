@@ -93,15 +93,6 @@ protected:
     /// Object modification time in the archive.
     uint32_t modification_time = 0;
 
-    /// Object user id in the archive.
-    uint16_t uid = 0;
-
-    /// Object group id in the archive.
-    uint16_t gid = 0;
-
-    /// Object octal file permissions in the archive.
-    uint16_t mode = 0;
-
     /// Object size in bytes in the archive.
     uint32_t size = 0;
 
@@ -110,6 +101,8 @@ protected:
 
     /// Length of the object data.
     lldb::offset_t file_size = 0;
+
+    void Dump() const;
   };
 
   class Archive {

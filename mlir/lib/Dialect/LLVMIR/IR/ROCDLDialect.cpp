@@ -16,7 +16,7 @@
 
 #include "mlir/Dialect/LLVMIR/ROCDLDialect.h"
 
-#include "mlir/Dialect/GPU/IR/GPUDialect.h"
+#include "mlir/Dialect/GPU/IR/CompilationInterfaces.h"
 #include "mlir/Dialect/LLVMIR/LLVMDialect.h"
 #include "mlir/IR/Builders.h"
 #include "mlir/IR/BuiltinTypes.h"
@@ -247,7 +247,7 @@ void ROCDLDialect::initialize() {
 
   // Support unknown operations because not all ROCDL operations are registered.
   allowUnknownOperations();
-  declarePromisedInterface<gpu::TargetAttrInterface>();
+  declarePromisedInterface<ROCDLTargetAttr, gpu::TargetAttrInterface>();
 }
 
 LogicalResult ROCDLDialect::verifyOperationAttribute(Operation *op,

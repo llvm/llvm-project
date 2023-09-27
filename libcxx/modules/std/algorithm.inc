@@ -150,13 +150,14 @@ export namespace std {
   }
 
   namespace ranges {
+#if _LIBCPP_STD_VER >= 23
     // [alg.starts.with], starts with
     using std::ranges::starts_with;
 
-#if 0
     // [alg.ends.with], ends with
     using std::ranges::ends_with;
 
+#  if 0
     // [alg.fold], fold
     using std::ranges::fold_left;
     using std::ranges::fold_left_first;
@@ -167,8 +168,9 @@ export namespace std {
     using std::ranges::fold_left_with_iter;
     using std::ranges::fold_left_first_with_iter;
     using std::ranges::fold_left_first_with_iter;
-#endif
-  } // namespace ranges
+#  endif
+#endif // _LIBCPP_STD_VER >= 23
+  }    // namespace ranges
 
   // [alg.modifying.operations], mutating sequence operations
   // [alg.copy], copy

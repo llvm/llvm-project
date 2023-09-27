@@ -396,8 +396,10 @@ public:
   static InputSection discarded;
 
 private:
-  template <class ELFT, class RelTy>
-  void copyRelocations(uint8_t *buf, llvm::ArrayRef<RelTy> rels);
+  template <class ELFT, class RelTy> void copyRelocations(uint8_t *buf);
+
+  template <class ELFT, class RelTy, class RelIt>
+  void copyRelocations(uint8_t *buf, llvm::iterator_range<RelIt> rels);
 
   template <class ELFT> void copyShtGroup(uint8_t *buf);
 };

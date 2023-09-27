@@ -9,7 +9,9 @@
 #ifndef LLVM_LIBC_SRC_MATH_GPU_AMDGPU_DECLARATIONS_H
 #define LLVM_LIBC_SRC_MATH_GPU_AMDGPU_DECLARATIONS_H
 
-namespace __llvm_libc {
+#include "src/__support/GPU/utils.h"
+
+namespace LIBC_NAMESPACE {
 
 extern "C" {
 float __ocml_acos_f32(float);
@@ -52,8 +54,10 @@ float __ocml_tan_f32(float);
 double __ocml_tan_f64(double);
 float __ocml_tanh_f32(float);
 double __ocml_tanh_f64(double);
+float __ocml_remquo_f32(float, float, gpu::Private<int> *);
+double __ocml_remquo_f64(double, double, gpu::Private<int> *);
 }
 
-} // namespace __llvm_libc
+} // namespace LIBC_NAMESPACE
 
 #endif // LLVM_LIBC_SRC_MATH_GPU_AMDGPU_DECLARATIONS_H

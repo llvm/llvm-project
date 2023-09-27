@@ -12,7 +12,7 @@ declare_args() {
   # Build libc++ as a static library.
   libcxx_enable_static = true
 
-  # Build filesystem as part of libc++fs.a.
+  # Build filesystem as part of libc++.
   libcxx_enable_filesystem = target_os != "win"
 
   # Build libc++experimental.a.
@@ -119,6 +119,7 @@ cxx_sources = [
   "chrono.cpp",
   "condition_variable.cpp",
   "condition_variable_destructor.cpp",
+  "error_category.cpp",
   "exception.cpp",
   "functional.cpp",
   "future.cpp",
@@ -306,6 +307,12 @@ if (libcxx_enable_experimental) {
     output_dir = runtimes_dir
     output_name = "c++experimental"
     sources = [ "experimental/memory_resource.cpp" ]
+    if (libcxx_enable_filesystem && libcxx_enable_time_zone_database) {
+      sources += [
+        "tz.cpp",
+        "tzdb_list.cpp",
+      ]
+    }
     deps = [ "//libcxx/include" ]
     configs += [ ":cxx_config" ]
     configs -= [

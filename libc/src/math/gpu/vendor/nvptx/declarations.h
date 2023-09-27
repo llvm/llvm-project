@@ -9,7 +9,7 @@
 #ifndef LLVM_LIBC_SRC_MATH_GPU_NVPTX_DECLARATIONS_H
 #define LLVM_LIBC_SRC_MATH_GPU_NVPTX_DECLARATIONS_H
 
-namespace __llvm_libc {
+namespace LIBC_NAMESPACE {
 
 extern "C" {
 float __nv_acosf(float);
@@ -52,8 +52,14 @@ double __nv_tan(double);
 float __nv_tanf(float);
 double __nv_tanh(double);
 float __nv_tanhf(float);
+double __nv_frexp(double, int *);
+float __nv_frexpf(float, int *);
+double __nv_scalbn(double, int);
+float __nv_scalbnf(float, int);
+double __nv_remquo(double, double, int *);
+float __nv_remquof(float, float, int *);
 }
 
-} // namespace __llvm_libc
+} // namespace LIBC_NAMESPACE
 
 #endif // LLVM_LIBC_SRC_MATH_GPU_NVPTX_DECLARATIONS_H

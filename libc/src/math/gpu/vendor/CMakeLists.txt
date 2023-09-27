@@ -294,6 +294,29 @@ add_entrypoint_object(
 )
 
 add_entrypoint_object(
+  remquo
+  SRCS
+    remquo.cpp
+  HDRS
+    ../../remquo.h
+  COMPILE_OPTIONS
+    ${bitcode_link_flags}
+    -O2
+)
+
+add_entrypoint_object(
+  remquof
+  SRCS
+    remquof.cpp
+  HDRS
+    ../../remquof.h
+  COMPILE_OPTIONS
+    ${bitcode_link_flags}
+    -O2
+)
+
+
+add_entrypoint_object(
   llround
   SRCS
     llround.cpp
@@ -314,6 +337,29 @@ add_entrypoint_object(
     ${bitcode_link_flags}
     -O2
 )
+
+add_entrypoint_object(
+  scalbn
+  SRCS
+    scalbn.cpp
+  HDRS
+    ../../scalbn.h
+  COMPILE_OPTIONS
+    ${bitcode_link_flags}
+    -O2
+)
+
+add_entrypoint_object(
+  scalbnf
+  SRCS
+    scalbnf.cpp
+  HDRS
+    ../../scalbnf.h
+  COMPILE_OPTIONS
+    ${bitcode_link_flags}
+    -O2
+)
+
 
 add_entrypoint_object(
   nextafter
@@ -464,6 +510,28 @@ add_entrypoint_object(
     tanhf.cpp
   HDRS
     ../../tanhf.h
+  COMPILE_OPTIONS
+    ${bitcode_link_flags}
+    -O2
+)
+
+add_entrypoint_object(
+  frexp
+  SRCS
+    frexp.cpp
+  HDRS
+    ../../frexp.h
+  COMPILE_OPTIONS
+    ${bitcode_link_flags}
+    -O2
+)
+
+add_entrypoint_object(
+  frexpf
+  SRCS
+    frexpf.cpp
+  HDRS
+    ../../frexpf.h
   COMPILE_OPTIONS
     ${bitcode_link_flags}
     -O2

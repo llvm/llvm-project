@@ -80,9 +80,9 @@ define void @foo7(ptr noalias readonly %from, ptr %to) {
 }
 
 ; SM20-LABEL: .visible .entry foo8(
-; SM20: ld.global.v2.u16
+; SM20: ld.global.u32
 ; SM35-LABEL: .visible .entry foo8(
-; SM35: ld.global.nc.v2.u16
+; SM35: ld.global.nc.u32
 define void @foo8(ptr noalias readonly %from, ptr %to) {
   %1 = load <2 x i16>, ptr %from
   store <2 x i16> %1, ptr %to

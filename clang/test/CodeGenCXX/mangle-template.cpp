@@ -1,5 +1,5 @@
-// RUN: %clang_cc1 -verify -Wno-return-type -Wno-main -std=c++11 -emit-llvm -triple %itanium_abi_triple -o - %s | FileCheck %s
-// RUN: %clang_cc1 -verify -Wno-return-type -Wno-main -std=c++20 -emit-llvm -triple x86_64-linux-gnu -o - %s | FileCheck %s --check-prefixes=CHECK,CXX20
+// RUN: %clang_cc1 -verify -Wno-return-type -Wno-main -std=c++11 -fclang-abi-compat=latest -emit-llvm -triple %itanium_abi_triple -o - %s | FileCheck %s
+// RUN: %clang_cc1 -verify -Wno-return-type -Wno-main -std=c++20 -fclang-abi-compat=latest -emit-llvm -triple x86_64-linux-gnu -o - %s | FileCheck %s --check-prefixes=CHECK,CXX20
 // expected-no-diagnostics
 
 namespace test1 {
@@ -158,13 +158,13 @@ namespace test12 {
   const int n = 10;
   template<typename T, T v> void test() {}
   void use() {
-    // CHECK-LABEL: define internal {{.*}}void @_ZN6test124testIFivEXadL_ZNS_L1fEvEEEEvv(
+    // CHECK-LABEL: define internal {{.*}}void @_ZN6test124testIFivETnT_XadL_ZNS_L1fEvEEEEvv(
     test<int(), &f>();
-    // CHECK-LABEL: define internal {{.*}}void @_ZN6test124testIRFivEL_ZNS_L1fEvEEEvv(
+    // CHECK-LABEL: define internal {{.*}}void @_ZN6test124testIRFivETnT_L_ZNS_L1fEvEEEvv(
     test<int(&)(), f>();
-    // CHECK-LABEL: define internal {{.*}}void @_ZN6test124testIPKiXadL_ZNS_L1nEEEEEvv(
+    // CHECK-LABEL: define internal {{.*}}void @_ZN6test124testIPKiTnT_XadL_ZNS_L1nEEEEEvv(
     test<const int*, &n>();
-    // CHECK-LABEL: define internal {{.*}}void @_ZN6test124testIRKiL_ZNS_L1nEEEEvv(
+    // CHECK-LABEL: define internal {{.*}}void @_ZN6test124testIRKiTnT_L_ZNS_L1nEEEEvv(
     test<const int&, n>();
   }
 }

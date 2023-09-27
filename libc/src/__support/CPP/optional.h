@@ -6,20 +6,15 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_LIBC_SRC_SUPPORT_CPP_OPTIONAL_H
-#define LLVM_LIBC_SRC_SUPPORT_CPP_OPTIONAL_H
+#ifndef LLVM_LIBC_SRC___SUPPORT_CPP_OPTIONAL_H
+#define LLVM_LIBC_SRC___SUPPORT_CPP_OPTIONAL_H
 
 #include "src/__support/CPP/type_traits.h"
 #include "src/__support/CPP/utility.h"
 #include "src/__support/macros/attributes.h"
 
-namespace __llvm_libc {
+namespace LIBC_NAMESPACE {
 namespace cpp {
-
-// Trivial in_place_t struct.
-struct in_place_t {
-  LIBC_INLINE constexpr explicit in_place_t() = default;
-};
 
 // Trivial nullopt_t struct.
 struct nullopt_t {
@@ -28,9 +23,6 @@ struct nullopt_t {
 
 // nullopt that can be used and returned.
 LIBC_INLINE_VAR constexpr nullopt_t nullopt{};
-
-// in_place that can be used in the constructor.
-LIBC_INLINE_VAR constexpr in_place_t in_place{};
 
 // This is very simple implementation of the std::optional class. It makes
 // several assumptions that the underlying type is trivially constructable,
@@ -126,6 +118,6 @@ public:
 };
 
 } // namespace cpp
-} // namespace __llvm_libc
+} // namespace LIBC_NAMESPACE
 
-#endif // LLVM_LIBC_SRC_SUPPORT_CPP_OPTIONAL_H
+#endif // LLVM_LIBC_SRC___SUPPORT_CPP_OPTIONAL_H

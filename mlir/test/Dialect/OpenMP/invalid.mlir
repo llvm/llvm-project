@@ -874,7 +874,7 @@ func.func @omp_atomic_update(%x: memref<i32>, %expr: i32) {
 // -----
 
 func.func @omp_atomic_capture(%x: memref<i32>, %v: memref<i32>, %expr: i32) {
-  // expected-error @below {{expected three operations in omp.atomic.capture region}}
+  // expected-error @below {{expected three operations in atomic.capture region}}
   omp.atomic.capture {
     omp.atomic.read %v = %x : memref<i32>, i32
     omp.terminator
@@ -974,7 +974,7 @@ func.func @omp_atomic_capture(%x: memref<i32>, %v: memref<i32>, %expr: i32) {
 
 func.func @omp_atomic_capture(%x: memref<i32>, %y: memref<i32>, %v: memref<i32>, %expr: i32) {
   omp.atomic.capture {
-    // expected-error @below {{updated variable in omp.atomic.update must be captured in second operation}}
+    // expected-error @below {{updated variable in atomic.update must be captured in second operation}}
     omp.atomic.update %x : memref<i32> {
     ^bb0(%xval: i32):
       %newval = llvm.add %xval, %expr : i32
@@ -989,7 +989,7 @@ func.func @omp_atomic_capture(%x: memref<i32>, %y: memref<i32>, %v: memref<i32>,
 
 func.func @omp_atomic_capture(%x: memref<i32>, %y: memref<i32>, %v: memref<i32>, %expr: i32) {
   omp.atomic.capture {
-    // expected-error @below {{captured variable in omp.atomic.read must be updated in second operation}}
+    // expected-error @below {{captured variable in atomic.read must be updated in second operation}}
     omp.atomic.read %v = %y : memref<i32>, i32
     omp.atomic.update %x : memref<i32> {
     ^bb0(%xval: i32):
@@ -1004,7 +1004,7 @@ func.func @omp_atomic_capture(%x: memref<i32>, %y: memref<i32>, %v: memref<i32>,
 
 func.func @omp_atomic_capture(%x: memref<i32>, %y: memref<i32>, %v: memref<i32>, %expr: i32) {
   omp.atomic.capture {
-    // expected-error @below {{captured variable in omp.atomic.read must be updated in second operation}}
+    // expected-error @below {{captured variable in atomic.read must be updated in second operation}}
     omp.atomic.read %v = %x : memref<i32>, i32
     omp.atomic.write %y = %expr : memref<i32>, i32
     omp.terminator
@@ -1615,16 +1615,18 @@ func.func @omp_threadprivate() {
 // -----
 
 func.func @omp_target(%map1: memref<?xi32>) {
+  %mapv = omp.map_info var_ptr(%map1 : memref<?xi32>)   map_clauses(delete) capture(ByRef) -> memref<?xi32> {name = ""}
   // expected-error @below {{to, from, tofrom and alloc map types are permitted}}
-  omp.target map((delete -> %map1 : memref<?xi32>)){}
+  omp.target map_entries(%mapv : memref<?xi32>){}
   return
 }
 
 // -----
 
 func.func @omp_target_data(%map1: memref<?xi32>) {
+  %mapv = omp.map_info var_ptr(%map1 : memref<?xi32>)  map_clauses(delete) capture(ByRef) -> memref<?xi32> {name = ""}
   // expected-error @below {{to, from, tofrom and alloc map types are permitted}}
-  omp.target_data map((delete -> %map1 : memref<?xi32>)){}
+  omp.target_data map_entries(%mapv : memref<?xi32>){}
   return
 }
 
@@ -1639,16 +1641,18 @@ func.func @omp_target_data() {
 // -----
 
 func.func @omp_target_enter_data(%map1: memref<?xi32>) {
+  %mapv = omp.map_info var_ptr(%map1 : memref<?xi32>)   map_clauses(from) capture(ByRef) -> memref<?xi32> {name = ""}
   // expected-error @below {{to and alloc map types are permitted}}
-  omp.target_enter_data map((from -> %map1 : memref<?xi32>)){}
+  omp.target_enter_data map_entries(%mapv : memref<?xi32>){}
   return
 }
 
 // -----
 
 func.func @omp_target_exit_data(%map1: memref<?xi32>) {
+  %mapv = omp.map_info var_ptr(%map1 : memref<?xi32>)   map_clauses(to) capture(ByRef) -> memref<?xi32> {name = ""}
   // expected-error @below {{from, release and delete map types are permitted}}
-  omp.target_exit_data map((to -> %map1 : memref<?xi32>)){}
+  omp.target_exit_data map_entries(%mapv : memref<?xi32>){}
   return
 }
 

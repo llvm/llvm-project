@@ -32,7 +32,7 @@
 // RUN: %if mlir_arm_sve_tests %{ %{compile_sve} | %{run_sve} | FileCheck %s %}
 
 #SortedCOO = #sparse_tensor.encoding<{
-  lvlTypes = [ "compressed_nu", "singleton" ]
+  map = (d0, d1) -> (d0 : compressed(nonunique), d1 : singleton)
 }>
 
 module {
@@ -40,7 +40,7 @@ module {
   // A linalg representation of some higher "transpose" op.
   func.func @transpose_coo(%arga: tensor<10x5xf32, #SortedCOO>)
                                -> tensor<5x10xf32, #SortedCOO> {
-    %0 = bufferization.alloc_tensor() : tensor<5x10xf32, #SortedCOO>
+    %0 = tensor.empty() : tensor<5x10xf32, #SortedCOO>
     %1 = linalg.generic {
       indexing_maps = [affine_map<(d0, d1) -> (d1, d0)>,
                        affine_map<(d0, d1) -> (d0, d1)>],

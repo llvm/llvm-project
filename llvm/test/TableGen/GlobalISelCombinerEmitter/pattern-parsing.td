@@ -297,7 +297,8 @@ def VariadicsOutTest : GICombineRule<
   (apply (COPY $a, (i32 0)),
          (COPY $b, (i32 0)))>;
 
-def MyCombiner: GICombinerHelper<"GenMyCombiner", [
+
+def MyCombiner: GICombiner<"GenMyCombiner", [
   WipOpcodeTest0,
   WipOpcodeTest1,
   InstTest0,

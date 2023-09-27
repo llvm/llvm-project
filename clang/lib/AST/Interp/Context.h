@@ -17,13 +17,13 @@
 #define LLVM_CLANG_AST_INTERP_CONTEXT_H
 
 #include "InterpStack.h"
-#include "clang/AST/APValue.h"
 
 namespace clang {
 class ASTContext;
 class LangOptions;
 class FunctionDecl;
 class VarDecl;
+class APValue;
 
 namespace interp {
 class Function;
@@ -72,6 +72,9 @@ public:
   getOverridingFunction(const CXXRecordDecl *DynamicDecl,
                         const CXXRecordDecl *StaticDecl,
                         const CXXMethodDecl *InitialFunction) const;
+
+  const Function *getOrCreateFunction(const FunctionDecl *FD);
+
   /// Returns whether we should create a global variable for the
   /// given ValueDecl.
   static bool shouldBeGloballyIndexed(const ValueDecl *VD) {

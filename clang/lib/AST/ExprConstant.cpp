@@ -3463,8 +3463,7 @@ static APSInt extractStringLiteralCharacter(EvalInfo &Info, const Expr *Lit,
   assert(CAT && "string literal isn't an array");
   QualType CharType = CAT->getElementType();
   assert(CharType->isIntegerType() && "unexpected character type");
-
-  APSInt Value(S->getCharByteWidth() * Info.Ctx.getCharWidth(),
+  APSInt Value(Info.Ctx.getTypeSize(CharType),
                CharType->isUnsignedIntegerType());
   if (Index < S->getLength())
     Value = S->getCodeUnit(Index);
@@ -3487,7 +3486,7 @@ static void expandStringLiteral(EvalInfo &Info, const StringLiteral *S,
   unsigned Elts = CAT->getSize().getZExtValue();
   Result = APValue(APValue::UninitArray(),
                    std::min(S->getLength(), Elts), Elts);
-  APSInt Value(S->getCharByteWidth() * Info.Ctx.getCharWidth(),
+  APSInt Value(Info.Ctx.getTypeSize(CharType),
                CharType->isUnsignedIntegerType());
   if (Result.hasArrayFiller())
     Result.getArrayFiller() = APValue(Value);
@@ -3712,7 +3711,8 @@ findSubobject(EvalInfo &Info, const Expr *E, const CompleteObject &Obj,
          !isValidIndeterminateAccess(handler.AccessKind))) {
       if (!Info.checkingPotentialConstantExpression())
         Info.FFDiag(E, diag::note_constexpr_access_uninit)
-            << handler.AccessKind << O->isIndeterminate();
+            << handler.AccessKind << O->isIndeterminate()
+            << E->getSourceRange();
       return handler.failed();
     }
 
@@ -4444,7 +4444,8 @@ struct CompoundAssignSubobjectHandler {
       return foundVector(Subobj, SubobjType);
     case APValue::Indeterminate:
       Info.FFDiag(E, diag::note_constexpr_access_uninit)
-          << /*read of=*/0 << /*uninitialized object=*/1;
+          << /*read of=*/0 << /*uninitialized object=*/1
+          << E->getLHS()->getSourceRange();
       return false;
     default:
       // FIXME: can this happen?
@@ -6061,8 +6062,9 @@ const AccessKinds StartLifetimeOfUnionMemberHandler::AccessKind;
 /// operator whose left-hand side might involve a union member access. If it
 /// does, implicitly start the lifetime of any accessed union elements per
 /// C++20 [class.union]5.
-static bool HandleUnionActiveMemberChange(EvalInfo &Info, const Expr *LHSExpr,
-                                          const LValue &LHS) {
+static bool MaybeHandleUnionActiveMemberChange(EvalInfo &Info,
+                                               const Expr *LHSExpr,
+                                               const LValue &LHS) {
   if (LHS.InvalidBase || LHS.Designator.Invalid)
     return false;
 
@@ -6117,8 +6119,14 @@ static bool HandleUnionActiveMemberChange(EvalInfo &Info, const Expr *LHSExpr,
         break;
       // Walk path backwards as we walk up from the base to the derived class.
       for (const CXXBaseSpecifier *Elt : llvm::reverse(ICE->path())) {
+        if (Elt->isVirtual()) {
+          // A class with virtual base classes never has a trivial default
+          // constructor, so S(E) is empty in this case.
+          E = nullptr;
+          break;
+        }
+
         --PathLength;
-        (void)Elt;
         assert(declaresSameEntity(Elt->getType()->getAsCXXRecordDecl(),
                                   LHS.Designator.Entries[PathLength]
                                       .getAsBaseOrMember().getPointer()));
@@ -7805,7 +7813,7 @@ public:
         // per C++20 [class.union]5.
         if (Info.getLangOpts().CPlusPlus20 && OCE &&
             OCE->getOperator() == OO_Equal && MD->isTrivial() &&
-            !HandleUnionActiveMemberChange(Info, Args[0], ThisVal))
+            !MaybeHandleUnionActiveMemberChange(Info, Args[0], ThisVal))
           return false;
 
         Args = Args.slice(1);
@@ -8678,7 +8686,7 @@ bool LValueExprEvaluator::VisitBinAssign(const BinaryOperator *E) {
     return false;
 
   if (Info.getLangOpts().CPlusPlus20 &&
-      !HandleUnionActiveMemberChange(Info, E->getLHS(), Result))
+      !MaybeHandleUnionActiveMemberChange(Info, E->getLHS(), Result))
     return false;
 
   return handleAssignment(this->Info, E, Result, E->getLHS()->getType(),
@@ -12170,22 +12178,6 @@ bool IntExprEvaluator::VisitBuiltinCallExpr(const CallExpr *E,
   }
 
   case Builtin::BI__builtin_is_constant_evaluated: {
-    const auto *Callee = Info.CurrentCall->getCallee();
-    if (Info.InConstantContext && !Info.CheckingPotentialConstantExpression &&
-        (Info.CallStackDepth == 1 ||
-         (Info.CallStackDepth == 2 && Callee->isInStdNamespace() &&
-          Callee->getIdentifier() &&
-          Callee->getIdentifier()->isStr("is_constant_evaluated")))) {
-      // FIXME: Find a better way to avoid duplicated diagnostics.
-      if (Info.EvalStatus.Diag)
-        Info.report((Info.CallStackDepth == 1)
-                        ? E->getExprLoc()
-                        : Info.CurrentCall->getCallRange().getBegin(),
-                    diag::warn_is_constant_evaluated_always_true_constexpr)
-            << (Info.CallStackDepth == 1 ? "__builtin_is_constant_evaluated"
-                                         : "std::is_constant_evaluated");
-    }
-
     return Success(Info.InConstantContext, E);
   }
 

@@ -389,6 +389,9 @@ void matchWeightsByHashes(BinaryContext &BC,
     assert(YamlBB.Hash != 0 && "empty hash of BinaryBasicBlockProfile");
     BlendedBlockHash YamlHash(YamlBB.Hash);
     const FlowBlock *MatchedBlock = Matcher.matchBlock(YamlHash);
+    // Always match the entry block.
+    if (MatchedBlock == nullptr && YamlBB.Index == 0)
+      MatchedBlock = Blocks[0];
     if (MatchedBlock != nullptr) {
       MatchedBlocks[YamlBB.Index] = MatchedBlock;
       BlendedBlockHash BinHash = BlendedHashes[MatchedBlock->Index - 1];

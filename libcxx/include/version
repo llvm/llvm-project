@@ -435,7 +435,7 @@ __cpp_lib_within_lifetime                               202306L <type_traits>
 // # define __cpp_lib_print                                202207L
 # define __cpp_lib_ranges_as_rvalue                     202207L
 // # define __cpp_lib_ranges_chunk                         202202L
-// # define __cpp_lib_ranges_chunk_by                      202202L
+# define __cpp_lib_ranges_chunk_by                      202202L
 // # define __cpp_lib_ranges_iota                          202202L
 // # define __cpp_lib_ranges_join_with                     202202L
 # define __cpp_lib_ranges_repeat                        202207L

@@ -708,6 +708,9 @@ bool SILowerI1Copies::lowerCopiesToI1() {
             .addImm(0);
         MI.getOperand(1).setReg(TmpReg);
         SrcReg = TmpReg;
+      } else {
+        // SrcReg needs to be live beyond copy.
+        MI.getOperand(1).setIsKill(false);
       }
 
       // Defs in a loop that are observed outside the loop must be transformed

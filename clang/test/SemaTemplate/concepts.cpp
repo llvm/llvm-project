@@ -135,21 +135,21 @@ namespace PackInTypeConstraint {
 
 namespace BuiltinIsConstantEvaluated {
   // Check that we do all satisfaction and diagnostic checks in a constant context.
-  template<typename T> concept C = __builtin_is_constant_evaluated(); // expected-warning {{always}}
+  template<typename T> concept C = __builtin_is_constant_evaluated(); // expected-warning {{always evaluate to true}}
   static_assert(C<int>);
 
-  template<typename T> concept D = __builtin_is_constant_evaluated() == true; // expected-warning {{always}}
+  template<typename T> concept D = __builtin_is_constant_evaluated() == true; // expected-warning {{always evaluate to true}}
   static_assert(D<int>);
 
-  template<typename T> concept E = __builtin_is_constant_evaluated() == true && // expected-warning {{always}}
+  template<typename T> concept E = __builtin_is_constant_evaluated() == true && // expected-warning {{always evaluate to true}}
                                    false; // expected-note {{'false' evaluated to false}}
   static_assert(E<int>); // expected-error {{failed}} expected-note {{because 'int' does not satisfy 'E'}}
 
-  template<typename T> concept F = __builtin_is_constant_evaluated() == false; // expected-warning {{always}}
+  template<typename T> concept F = __builtin_is_constant_evaluated() == false; // expected-warning {{always evaluate to true}}
   // expected-note@-1 {{'__builtin_is_constant_evaluated() == false' (1 == 0)}}
   static_assert(F<int>); // expected-error {{failed}} expected-note {{because 'int' does not satisfy 'F'}}
 
-  template<typename T> concept G = __builtin_is_constant_evaluated() && // expected-warning {{always}}
+  template<typename T> concept G = __builtin_is_constant_evaluated() && // expected-warning {{always evaluate to true}}
                                    false; // expected-note {{'false' evaluated to false}}
   static_assert(G<int>); // expected-error {{failed}} expected-note {{because 'int' does not satisfy 'G'}}
 }
@@ -993,4 +993,74 @@ void test_params() {
     params<int, false>(); // expected-note {{in instantiation of function template specialization 'GH63181::params<int, false>' requested here}}
 }
 
+}
+
+namespace GH54678 {
+template<class>
+concept True = true;
+
+template<class>
+concept False = false; // expected-note 9 {{'false' evaluated to false}}
+
+template<class>
+concept Irrelevant = false;
+
+template <typename T>
+concept ErrorRequires = requires(ErrorRequires auto x) { x; }; // expected-error {{unknown type name 'ErrorRequires'}}
+
+template<class T> void aaa(T t) // expected-note {{candidate template ignored: constraints not satisfied}}
+requires (False<T> || False<T>) || False<T> {} // expected-note 3 {{'int' does not satisfy 'False'}}
+template<class T> void bbb(T t) // expected-note {{candidate template ignored: constraints not satisfied}}
+requires (False<T> || False<T>) && True<T> {} // expected-note 2 {{'long' does not satisfy 'False'}}
+template<class T> void ccc(T t) // expected-note {{candidate template ignored: constraints not satisfied}}
+requires (True<T> || Irrelevant<T>) && False<T> {} // expected-note {{'unsigned long' does not satisfy 'False'}}
+template<class T> void ddd(T t) // expected-note {{candidate template ignored: constraints not satisfied}}
+requires (Irrelevant<T> || True<T>) && False<T> {} // expected-note {{'int' does not satisfy 'False'}}
+template<class T> void eee(T t) // expected-note {{candidate template ignored: constraints not satisfied}}
+requires (Irrelevant<T> || Irrelevant<T> || True<T>) && False<T> {} // expected-note {{'long' does not satisfy 'False'}}
+
+template<class T> void fff(T t) // expected-note {{candidate template ignored: constraints not satisfied}}
+requires((ErrorRequires<T> || False<T> || True<T>) && False<T>) {} // expected-note {{'unsigned long' does not satisfy 'False'}}
+
+void test() {
+    aaa(42); // expected-error {{no matching function}}
+    bbb(42L); // expected-error{{no matching function}}
+    ccc(42UL); // expected-error {{no matching function}}
+    ddd(42); // expected-error {{no matching function}}
+    eee(42L); // expected-error {{no matching function}}
+    fff(42UL); // expected-error {{no matching function}}
+}
+}
+
+namespace GH66612 {
+  template<typename C>
+    auto end(C c) ->int;
+
+  template <typename T>
+    concept Iterator = true;
+
+  template <typename CT>
+    concept Container = requires(CT b) {
+        { end } -> Iterator; // #66612GH_END
+    };
+
+  static_assert(Container<int>);// expected-error{{static assertion failed}}
+  // expected-note@-1{{because 'int' does not satisfy 'Container'}}
+  // expected-note@#66612GH_END{{because 'end' would be invalid: reference to overloaded function could not be resolved; did you mean to call it?}}
+}
+
+namespace GH66938 {
+template <class>
+concept True = true;
+
+template <class>
+concept False = false;
+
+template <class T>
+void cand(T t)
+  requires False<T> || False<T> || False<T> || False<T> || False<T> ||
+           False<T> || False<T> || False<T> || False<T> || True<T>
+{}
+
+void test() { cand(42); }
 }

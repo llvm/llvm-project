@@ -550,12 +550,16 @@ public:
   bool ReadHeaderSearchOptions(const HeaderSearchOptions &HSOpts,
                                StringRef SpecificModuleCachePath,
                                bool Complain) override {
-    // Preserve previously set header search paths.
+    // llvm::SaveAndRestore doesn't support bit field.
+    auto ForceCheckCXX20ModulesInputFiles =
+        this->HSOpts.ForceCheckCXX20ModulesInputFiles;
     llvm::SaveAndRestore X(this->HSOpts.UserEntries);
     llvm::SaveAndRestore Y(this->HSOpts.SystemHeaderPrefixes);
     llvm::SaveAndRestore Z(this->HSOpts.VFSOverlayFiles);
 
     this->HSOpts = HSOpts;
+    this->HSOpts.ForceCheckCXX20ModulesInputFiles =
+        ForceCheckCXX20ModulesInputFiles;
 
     return false;
   }
@@ -1335,7 +1339,7 @@ ASTUnit::getMainBufferWithPrecompiledPreamble(
     return nullptr;
 
   PreambleBounds Bounds = ComputePreambleBounds(
-      *PreambleInvocationIn.getLangOpts(), *MainFileBuffer, MaxLines);
+      PreambleInvocationIn.getLangOpts(), *MainFileBuffer, MaxLines);
   if (!Bounds.Size)
     return nullptr;
 
@@ -1493,8 +1497,8 @@ StringRef ASTUnit::getMainFileName() const {
   }
 
   if (SourceMgr) {
-    if (const FileEntry *
-          FE = SourceMgr->getFileEntryForID(SourceMgr->getMainFileID()))
+    if (OptionalFileEntryRef FE =
+            SourceMgr->getFileEntryRefForID(SourceMgr->getMainFileID()))
       return FE->getName();
   }
 
@@ -2198,7 +2202,7 @@ void ASTUnit::CodeComplete(
   FrontendOpts.CodeCompletionAt.Column = Column;
 
   // Set the language options appropriately.
-  LangOpts = *CCInvocation->getLangOpts();
+  LangOpts = CCInvocation->getLangOpts();
 
   // Spell-checking and warnings are wasteful during code-completion.
   LangOpts.SpellChecking = false;

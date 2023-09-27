@@ -77,6 +77,10 @@ OPTIONS
  ``GNU`` (the default) output mimics the equivalent GNU :program:`readelf`
  output. ``JSON`` is JSON formatted output intended for machine consumption.
 
+.. option:: --extra-sym-info
+
+ Display extra information (section name) when showing symbols.
+
 .. option:: --section-groups, -g
 
  Display section groups.

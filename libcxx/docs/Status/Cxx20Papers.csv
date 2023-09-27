@@ -17,7 +17,7 @@
 "`P0768R1 <https://wg21.link/P0768R1>`__","CWG","Library Support for the Spaceship (Comparison) Operator","Albuquerque","|Complete|",""
 "`P0777R1 <https://wg21.link/P0777R1>`__","LWG","Treating Unnecessary ``decay``\ ","Albuquerque","|Complete|","7.0"
 "`P0122R7 <https://wg21.link/P0122R7>`__","LWG","<span>","Jacksonville","|Complete|","7.0"
-"`P0355R7 <https://wg21.link/P0355R7>`__","LWG","Extending chrono to Calendars and Time Zones","Jacksonville","|In Progress|",""
+"`P0355R7 <https://wg21.link/P0355R7>`__","LWG","Extending chrono to Calendars and Time Zones","Jacksonville","|Partial| [#note-P0355]_",""
 "`P0551R3 <https://wg21.link/P0551R3>`__","LWG","Thou Shalt Not Specialize ``std``\  Function Templates!","Jacksonville","|Complete|","11.0"
 "`P0753R2 <https://wg21.link/P0753R2>`__","LWG","Manipulators for C++ Synchronized Buffered Ostream","Jacksonville","",""
 "`P0754R2 <https://wg21.link/P0754R2>`__","LWG","<version>","Jacksonville","|Complete|","7.0"

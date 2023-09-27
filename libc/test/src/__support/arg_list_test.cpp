@@ -13,7 +13,7 @@
 int get_nth_int(int n, ...) {
   va_list vlist;
   va_start(vlist, n);
-  __llvm_libc::internal::ArgList v(vlist);
+  LIBC_NAMESPACE::internal::ArgList v(vlist);
   va_end(vlist);
 
   for (int i = 0; i < n; ++i) {
@@ -29,10 +29,10 @@ TEST(LlvmLibcArgListTest, BasicUsage) {
 int sum_two_nums(int first, int second, ...) {
   va_list vlist;
   va_start(vlist, second);
-  __llvm_libc::internal::ArgList v1(vlist);
+  LIBC_NAMESPACE::internal::ArgList v1(vlist);
   va_end(vlist);
 
-  __llvm_libc::internal::ArgList v2 = v1;
+  LIBC_NAMESPACE::internal::ArgList v2 = v1;
 
   int first_val;
   for (int i = 0; i < first; ++i) {
@@ -60,7 +60,7 @@ TEST(LlvmLibcArgListTest, CopyConstructor) {
 long int check_primitives(int first, ...) {
   va_list vlist;
   va_start(vlist, first);
-  __llvm_libc::internal::ArgList args(vlist);
+  LIBC_NAMESPACE::internal::ArgList args(vlist);
   va_end(vlist);
 
   long int count = 0;
@@ -106,7 +106,7 @@ struct S {
 long int check_struct_type(int first, ...) {
   va_list vlist;
   va_start(vlist, first);
-  __llvm_libc::internal::ArgList args(vlist);
+  LIBC_NAMESPACE::internal::ArgList args(vlist);
   va_end(vlist);
 
   S s = args.next_var<S>();
@@ -130,7 +130,7 @@ using int4 = int __attribute__((ext_vector_type(4)));
 int check_vector_type(int first, ...) {
   va_list vlist;
   va_start(vlist, first);
-  __llvm_libc::internal::ArgList args(vlist);
+  LIBC_NAMESPACE::internal::ArgList args(vlist);
   va_end(vlist);
 
   int1 v1 = args.next_var<int1>();

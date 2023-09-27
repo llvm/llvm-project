@@ -469,6 +469,8 @@ protected:
   std::vector<Record *> RequiredFeatures;
   std::vector<std::unique_ptr<PredicateMatcher>> EpilogueMatchers;
 
+  DenseSet<unsigned> ErasedInsnIDs;
+
   ArrayRef<SMLoc> SrcLoc;
 
   typedef std::tuple<Record *, unsigned, unsigned>
@@ -507,6 +509,11 @@ public:
 
   void addRequiredSimplePredicate(StringRef PredName);
   const std::vector<std::string> &getRequiredSimplePredicates();
+
+  /// Attempts to mark \p ID as erased (GIR_EraseFromParent called on it).
+  /// If \p ID has already been erased, returns false and GIR_EraseFromParent
+  /// should NOT be emitted.
+  bool tryEraseInsnID(unsigned ID) { return ErasedInsnIDs.insert(ID).second; }
 
   // Emplaces an action of the specified Kind at the end of the action list.
   //
@@ -2086,6 +2093,8 @@ public:
     AK_DebugComment,
     AK_CustomCXX,
     AK_BuildMI,
+    AK_EraseInst,
+    AK_ReplaceReg,
     AK_ConstraintOpsToDef,
     AK_ConstraintOpsToRC,
     AK_MakeTempReg,
@@ -2096,6 +2105,10 @@ public:
   ActionKind getKind() const { return Kind; }
 
   virtual ~MatchAction() {}
+
+  // Some actions may need to add extra predicates to ensure they can run.
+  virtual void emitAdditionalPredicates(MatchTable &Table,
+                                        RuleMatcher &Rule) const {}
 
   /// Emit the MatchTable opcodes to implement the action.
   virtual void emitActionOpcodes(MatchTable &Table,
@@ -2171,6 +2184,46 @@ public:
     return *static_cast<Kind *>(OperandRenderers.back().get());
   }
 
+  void emitActionOpcodes(MatchTable &Table, RuleMatcher &Rule) const override;
+};
+
+class EraseInstAction : public MatchAction {
+  unsigned InsnID;
+
+public:
+  EraseInstAction(unsigned InsnID)
+      : MatchAction(AK_EraseInst), InsnID(InsnID) {}
+
+  static bool classof(const MatchAction *A) {
+    return A->getKind() == AK_EraseInst;
+  }
+
+  void emitActionOpcodes(MatchTable &Table, RuleMatcher &Rule) const override;
+  static void emitActionOpcodes(MatchTable &Table, RuleMatcher &Rule,
+                                unsigned InsnID);
+};
+
+class ReplaceRegAction : public MatchAction {
+  unsigned OldInsnID, OldOpIdx;
+  unsigned NewInsnId = -1, NewOpIdx;
+  unsigned TempRegID = -1;
+
+public:
+  ReplaceRegAction(unsigned OldInsnID, unsigned OldOpIdx, unsigned NewInsnId,
+                   unsigned NewOpIdx)
+      : MatchAction(AK_EraseInst), OldInsnID(OldInsnID), OldOpIdx(OldOpIdx),
+        NewInsnId(NewInsnId), NewOpIdx(NewOpIdx) {}
+
+  ReplaceRegAction(unsigned OldInsnID, unsigned OldOpIdx, unsigned TempRegID)
+      : MatchAction(AK_EraseInst), OldInsnID(OldInsnID), OldOpIdx(OldOpIdx),
+        TempRegID(TempRegID) {}
+
+  static bool classof(const MatchAction *A) {
+    return A->getKind() == AK_ReplaceReg;
+  }
+
+  void emitAdditionalPredicates(MatchTable &Table,
+                                RuleMatcher &Rule) const override;
   void emitActionOpcodes(MatchTable &Table, RuleMatcher &Rule) const override;
 };
 

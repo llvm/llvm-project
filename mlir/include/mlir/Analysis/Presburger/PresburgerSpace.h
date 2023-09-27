@@ -28,6 +28,90 @@ namespace presburger {
 /// as relations with zero domain vars.
 enum class VarKind { Symbol, Local, Domain, Range, SetDim = Range };
 
+/// An Identifier stores a pointer to an object, such as a Value or an
+/// Operation. Identifiers are intended to be attached to a variable in a
+/// PresburgerSpace and can be used to check if two variables correspond to the
+/// same object.
+///
+/// Take for example the following code:
+///
+/// for i = 0 to 100
+///   for j = 0 to 100
+///     S0: A[j] = 0
+///   for k = 0 to 100
+///     S1: A[k] = 1
+///
+/// If we represent the space of iteration variables surrounding S0, S1 we have:
+/// space(S0): {d0, d1}
+/// space(S1): {d0, d1}
+///
+/// Since the variables are in different spaces, without an identifier, there
+/// is no way to distinguish if the variables in the two spaces correspond to
+/// different SSA values in the program. So, we attach an Identifier
+/// corresponding to the loop iteration variable to them. Now,
+///
+/// space(S0) = {d0(id = i), d1(id = j)}
+/// space(S1) = {d0(id = i), d1(id = k)}.
+///
+/// Using the identifier, we can check that the first iteration variable in
+/// both the spaces correspond to the same variable in the program, while they
+/// are different for second iteration variable.
+///
+/// The equality of Identifiers is checked by comparing the stored pointers.
+/// Checking equality asserts that the type of the equal identifiers is same.
+/// Identifiers storing null pointers are treated as having no attachment and
+/// are considered unequal to any other identifier, including other identifiers
+/// with no attachments.
+///
+/// The type of the pointer stored must have an `llvm::PointerLikeTypeTraits`
+/// specialization.
+class Identifier {
+public:
+  Identifier() = default;
+
+  // Create an identifier from a pointer.
+  template <typename T>
+  explicit Identifier(T value)
+      : value(llvm::PointerLikeTypeTraits<T>::getAsVoidPointer(value)) {
+#ifdef LLVM_ENABLE_ABI_BREAKING_CHECKS
+    idType = TypeID::get<T>();
+#endif
+  }
+
+  /// Get the value of the identifier casted to type `T`. `T` here should match
+  /// the type of the identifier used to create it.
+  template <typename T>
+  T getValue() const {
+#ifdef LLVM_ENABLE_ABI_BREAKING_CHECKS
+    assert(TypeID::get<T>() == idType &&
+           "Identifier was initialized with a different type than the one used "
+           "to retrieve it.");
+#endif
+    return llvm::PointerLikeTypeTraits<T>::getFromVoidPointer(value);
+  }
+
+  bool hasValue() const { return value != nullptr; }
+
+  /// Check if the two identifiers are equal. Null identifiers are considered
+  /// not equal. Asserts if two identifiers are equal but their types are not.
+  bool isEqual(const Identifier &other) const;
+
+  bool operator==(const Identifier &other) const { return isEqual(other); }
+  bool operator!=(const Identifier &other) const { return !isEqual(other); }
+
+  void print(llvm::raw_ostream &os) const;
+  void dump() const;
+
+private:
+  /// The value of the identifier.
+  void *value = nullptr;
+
+#ifdef LLVM_ENABLE_ABI_BREAKING_CHECKS
+  /// TypeID of the identifiers in space. This should be used in asserts only.
+  TypeID idType = TypeID::get<void>();
+#endif
+};
+
 /// PresburgerSpace is the space of all possible values of a tuple of integer
 /// valued variables/variables. Each variable has one of the three types:
 ///
@@ -66,14 +150,12 @@ enum class VarKind { Symbol, Local, Domain, Range, SetDim = Range };
 /// other than Locals are equal. Equality of two spaces implies that number of
 /// variables of each kind are equal.
 ///
-/// PresburgerSpace optionally also supports attaching some information to each
-/// variable in space, called "identifier" of that variable. `resetIds<IdType>`
-/// is used to enable/reset these identifiers. All identifiers must be of the
-/// same type, `IdType`. `IdType` must have a `llvm::PointerLikeTypeTraits`
-/// specialization available and should be supported via `mlir::TypeID`.
-///
-/// These identifiers can be used to check if two variables in two different
-/// spaces are actually same variable.
+/// PresburgerSpace optionally also supports attaching an Identifier with each
+/// non-local variable in the space. This is disabled by default. `resetIds` is
+/// used to enable/reset these identifiers. The user can identify each variable
+/// in the space as corresponding to some Identifier. Some example use cases
+/// are described in the `Identifier` documentation above. The type attached to
+/// the Identifier can be different for different variables in the space.
 class PresburgerSpace {
 public:
   static PresburgerSpace getRelationSpace(unsigned numDomain = 0,
@@ -142,6 +224,20 @@ public:
   /// varLimit). The range is relative to the kind of variable.
   void removeVarRange(VarKind kind, unsigned varStart, unsigned varLimit);
 
+  /// Converts variables of the specified kind in the column range [srcPos,
+  /// srcPos + num) to variables of the specified kind at position dstPos. The
+  /// ranges are relative to the kind of variable.
+  ///
+  /// srcKind and dstKind must be different.
+  void convertVarKind(VarKind srcKind, unsigned srcPos, unsigned num,
+                      VarKind dstKind, unsigned dstPos);
+
+  /// Changes the partition between dimensions and symbols. Depending on the new
+  /// symbol count, either a chunk of dimensional variables immediately before
+  /// the split become symbols, or some of the symbols immediately after the
+  /// split become dimensions.
+  void setVarSymbolSeperation(unsigned newSymbolCount);
+
   /// Swaps the posA^th variable of kindA and posB^th variable of kindB.
   void swapVar(VarKind kindA, VarKind kindB, unsigned posA, unsigned posB);
 
@@ -154,77 +250,29 @@ public:
   /// locals).
   bool isEqual(const PresburgerSpace &other) const;
 
-  /// Changes the partition between dimensions and symbols. Depending on the new
-  /// symbol count, either a chunk of dimensional variables immediately before
-  /// the split become symbols, or some of the symbols immediately after the
-  /// split become dimensions.
-  void setVarSymbolSeperation(unsigned newSymbolCount);
-
-  void print(llvm::raw_ostream &os) const;
-  void dump() const;
-
-  //===--------------------------------------------------------------------===//
-  //     Identifier Interactions
-  //===--------------------------------------------------------------------===//
-
-  /// Set the identifier for `i^th` variable to `id`. `T` here should match the
-  /// type used to enable identifiers.
-  template <typename T>
-  void setId(VarKind kind, unsigned i, T id) {
-#ifdef LLVM_ENABLE_ABI_BREAKING_CHECKS
-    assert(TypeID::get<T>() == idType && "Type mismatch");
-#endif
-    atId(kind, i) = llvm::PointerLikeTypeTraits<T>::getAsVoidPointer(id);
+  /// Get the identifier of the specified variable.
+  Identifier &getId(VarKind kind, unsigned pos) {
+    assert(kind != VarKind::Local && "Local variables have no identifiers");
+    return identifiers[getVarKindOffset(kind) + pos];
+  }
+  Identifier getId(VarKind kind, unsigned pos) const {
+    assert(kind != VarKind::Local && "Local variables have no identifiers");
+    return identifiers[getVarKindOffset(kind) + pos];
   }
 
-  /// Get the identifier for `i^th` variable casted to type `T`. `T` here
-  /// should match the type used to enable identifiers.
-  template <typename T>
-  T getId(VarKind kind, unsigned i) const {
-#ifdef LLVM_ENABLE_ABI_BREAKING_CHECKS
-    assert(TypeID::get<T>() == idType && "Type mismatch");
-#endif
-    return llvm::PointerLikeTypeTraits<T>::getFromVoidPointer(atId(kind, i));
+  ArrayRef<Identifier> getIds(VarKind kind) const {
+    assert(kind != VarKind::Local && "Local variables have no identifiers");
+    return {identifiers.data() + getVarKindOffset(kind), getNumVarKind(kind)};
   }
-
-  /// Check if the i^th variable of the specified kind has a non-null
-  /// identifier.
-  bool hasId(VarKind kind, unsigned i) const {
-    return atId(kind, i) != nullptr;
-  }
-
-  /// Check if the spaces are compatible, as well as have the same identifiers
-  /// for each variable.
-  bool isAligned(const PresburgerSpace &other) const;
-  /// Check if the number of variables of the specified kind match, and have
-  /// same identifiers with the other space.
-  bool isAligned(const PresburgerSpace &other, VarKind kind) const;
-
-  /// Find the variable of the specified kind with identifier `id`.
-  /// Returns PresburgerSpace::kIdNotFound if identifier is not found.
-  template <typename T>
-  unsigned findId(VarKind kind, T id) const {
-    unsigned i = 0;
-    for (unsigned e = getNumVarKind(kind); i < e; ++i)
-      if (hasId(kind, i) && getId<T>(kind, i) == id)
-        return i;
-    return kIdNotFound;
-  }
-  static const unsigned kIdNotFound = UINT_MAX;
 
   /// Returns if identifiers are being used.
   bool isUsingIds() const { return usingIds; }
 
   /// Reset the stored identifiers in the space. Enables `usingIds` if it was
   /// `false` before.
-  template <typename T>
   void resetIds() {
     identifiers.clear();
     identifiers.resize(getNumDimAndSymbolVars());
-#ifdef LLVM_ENABLE_ABI_BREAKING_CHECKS
-    idType = TypeID::get<T>();
-#endif
-
     usingIds = true;
   }
 
@@ -234,25 +282,22 @@ public:
     usingIds = false;
   }
 
+  /// Check if the spaces are compatible, and the non-local variables having
+  /// same identifiers are in the same positions. If the space is not using
+  /// Identifiers, this check is same as isCompatible.
+  bool isAligned(const PresburgerSpace &other) const;
+  /// Same as above but only check the specified VarKind. Useful to check if
+  /// the symbols in two spaces are aligned.
+  bool isAligned(const PresburgerSpace &other, VarKind kind) const;
+
+  void print(llvm::raw_ostream &os) const;
+  void dump() const;
+
 protected:
-  PresburgerSpace(unsigned numDomain = 0, unsigned numRange = 0,
-                  unsigned numSymbols = 0, unsigned numLocals = 0)
+  PresburgerSpace(unsigned numDomain, unsigned numRange, unsigned numSymbols,
+                  unsigned numLocals)
       : numDomain(numDomain), numRange(numRange), numSymbols(numSymbols),
         numLocals(numLocals) {}
-
-  void *&atId(VarKind kind, unsigned i) {
-    assert(usingIds && "Cannot access identifiers when `usingIds` is false.");
-    assert(kind != VarKind::Local &&
-           "Local variables cannot have identifiers.");
-    return identifiers[getVarKindOffset(kind) + i];
-  }
-
-  void *atId(VarKind kind, unsigned i) const {
-    assert(usingIds && "Cannot access identifiers when `usingIds` is false.");
-    assert(kind != VarKind::Local &&
-           "Local variables cannot have identifiers.");
-    return identifiers[getVarKindOffset(kind) + i];
-  }
 
 private:
   // Number of variables corresponding to domain variables.
@@ -272,13 +317,8 @@ private:
   /// Stores whether or not identifiers are being used in this space.
   bool usingIds = false;
 
-#ifdef LLVM_ENABLE_ABI_BREAKING_CHECKS
-  /// TypeID of the identifiers in space. This should be used in asserts only.
-  TypeID idType;
-#endif
-
   /// Stores an identifier for each non-local variable as a `void` pointer.
-  SmallVector<void *, 0> identifiers;
+  SmallVector<Identifier, 0> identifiers;
 };
 
 } // namespace presburger

@@ -1641,8 +1641,10 @@ def : ClampPat<V_MAX_F32_e64, f32>;
 def : ClampPat<V_MAX_F64_e64, f64>;
 let SubtargetPredicate = NotHasTrue16BitInsts in
 def : ClampPat<V_MAX_F16_e64, f16>;
-let SubtargetPredicate = HasTrue16BitInsts in
+let SubtargetPredicate = UseRealTrue16Insts in
 def : ClampPat<V_MAX_F16_t16_e64, f16>;
+let SubtargetPredicate = UseFakeTrue16Insts in
+def : ClampPat<V_MAX_F16_fake16_e64, f16>;
 
 let SubtargetPredicate = HasVOP3PInsts in {
 def : GCNPat <
@@ -2696,12 +2698,12 @@ def : GCNPat<
 let OtherPredicates = [HasTrue16BitInsts] in {
 def : GCNPat<
   (fcanonicalize (f16 (VOP3Mods f16:$src, i32:$src_mods))),
-  (V_MUL_F16_t16_e64 0, (i32 CONST.FP16_ONE), $src_mods, $src)
+  (V_MUL_F16_fake16_e64 0, (i32 CONST.FP16_ONE), $src_mods, $src)
 >;
 
 def : GCNPat<
   (fcanonicalize (f16 (fneg (VOP3Mods f16:$src, i32:$src_mods)))),
-  (V_MUL_F16_t16_e64 0, (i32 CONST.FP16_NEG_ONE), $src_mods, $src)
+  (V_MUL_F16_fake16_e64 0, (i32 CONST.FP16_NEG_ONE), $src_mods, $src)
 >;
 } // End OtherPredicates
 
@@ -2719,6 +2721,13 @@ def : GCNPat<
   (fcanonicalize (f32 (fneg (VOP3Mods f32:$src, i32:$src_mods)))),
   (V_MUL_F32_e64 0, (i32 CONST.FP32_NEG_ONE), $src_mods, $src)
 >;
+
+let SubtargetPredicate = HasPackedFP32Ops in {
+def : GCNPat<
+  (fcanonicalize (v2f32 (VOP3PMods v2f32:$src, i32:$src_mods))),
+  (V_PK_MUL_F32 0, CONST.FP32_ONE, $src_mods, $src)
+>;
+}
 
 // TODO: Handle fneg like other types.
 def : GCNPat<
@@ -2751,7 +2760,7 @@ multiclass SelectCanonicalizeAsMax<
 
   def : GCNPat<
     (fcanonicalize (f16 (VOP3Mods f16:$src, i32:$src_mods))),
-    (V_MAX_F16_t16_e64 $src_mods, $src, $src_mods, $src, 0, 0)> {
+    (V_MAX_F16_fake16_e64 $src_mods, $src, $src_mods, $src, 0, 0)> {
     let OtherPredicates = !listconcat(f16_preds, [Has16BitInsts, HasTrue16BitInsts]);
   }
 

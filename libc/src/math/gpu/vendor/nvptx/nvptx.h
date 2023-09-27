@@ -13,7 +13,7 @@
 
 #include "src/__support/macros/attributes.h"
 
-namespace __llvm_libc {
+namespace LIBC_NAMESPACE {
 namespace internal {
 LIBC_INLINE float acosf(float x) { return __nv_acosf(x); }
 LIBC_INLINE float acoshf(float x) { return __nv_acoshf(x); }
@@ -61,8 +61,18 @@ LIBC_INLINE double tan(double x) { return __nv_tan(x); }
 LIBC_INLINE float tanf(float x) { return __nv_tanf(x); }
 LIBC_INLINE double tanh(double x) { return __nv_tanh(x); }
 LIBC_INLINE float tanhf(float x) { return __nv_tanhf(x); }
+LIBC_INLINE double scalbn(double x, int i) { return __nv_scalbn(x, i); }
+LIBC_INLINE float scalbnf(float x, int i) { return __nv_scalbnf(x, i); }
+LIBC_INLINE double frexp(double x, int *i) { return __nv_frexp(x, i); }
+LIBC_INLINE float frexpf(float x, int *i) { return __nv_frexpf(x, i); }
+LIBC_INLINE double remquo(double x, double y, int *i) {
+  return __nv_remquo(x, y, i);
+}
+LIBC_INLINE float remquof(float x, float y, int *i) {
+  return __nv_remquof(x, y, i);
+}
 
 } // namespace internal
-} // namespace __llvm_libc
+} // namespace LIBC_NAMESPACE
 
 #endif // LLVM_LIBC_SRC_MATH_GPU_NVPTX_H

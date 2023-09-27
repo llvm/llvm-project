@@ -11,6 +11,7 @@
 #include "clang-include-cleaner/Analysis.h"
 #include "clang-include-cleaner/Record.h"
 #include "clang-include-cleaner/Types.h"
+#include "clang/AST/Expr.h"
 #include "clang/AST/RecursiveASTVisitor.h"
 #include "clang/Basic/FileEntry.h"
 #include "clang/Basic/FileManager.h"
@@ -63,8 +64,8 @@ protected:
             /*Line=*/1, /*Col=*/1),
         AST->sourceManager(), &PI);
   }
-  const FileEntry *physicalHeader(llvm::StringRef FileName) {
-    return AST->fileManager().getFile(FileName).get();
+  FileEntryRef physicalHeader(llvm::StringRef FileName) {
+    return *AST->fileManager().getOptionalFileRef(FileName);
   };
 };
 
@@ -344,7 +345,7 @@ TEST_F(HeadersForSymbolTest, RankByName) {
 }
 
 TEST_F(HeadersForSymbolTest, Ranking) {
-  // Sorting is done over (canonical, public, complete, origin)-tuple.
+  // Sorting is done over (public, complete, canonical, origin)-tuple.
   Inputs.Code = R"cpp(
     #include "private.h"
     #include "public.h"
@@ -363,11 +364,11 @@ TEST_F(HeadersForSymbolTest, Ranking) {
   )cpp");
   Inputs.ExtraFiles["public_complete.h"] = guard("struct foo {};");
   buildAST();
-  EXPECT_THAT(headersForFoo(), ElementsAre(Header("\"canonical.h\""),
-                                           physicalHeader("public_complete.h"),
-                                           physicalHeader("public.h"),
-                                           physicalHeader("exporter.h"),
-                                           physicalHeader("private.h")));
+  EXPECT_THAT(headersForFoo(),
+              ElementsAre(physicalHeader("public_complete.h"),
+                          Header("\"canonical.h\""), physicalHeader("public.h"),
+                          physicalHeader("exporter.h"),
+                          physicalHeader("private.h")));
 }
 
 TEST_F(HeadersForSymbolTest, PreferPublicOverComplete) {
@@ -391,14 +392,11 @@ TEST_F(HeadersForSymbolTest, PreferNameMatch) {
     #include "public_complete.h"
     #include "test/foo.fwd.h"
   )cpp";
-  Inputs.ExtraFiles["public_complete.h"] = guard(R"cpp(
-    struct foo {};
-  )cpp");
+  Inputs.ExtraFiles["public_complete.h"] = guard("struct foo {};");
   Inputs.ExtraFiles["test/foo.fwd.h"] = guard("struct foo;");
   buildAST();
-  EXPECT_THAT(headersForFoo(),
-              ElementsAre(physicalHeader("test/foo.fwd.h"),
-                          physicalHeader("public_complete.h")));
+  EXPECT_THAT(headersForFoo(), ElementsAre(physicalHeader("public_complete.h"),
+                                           physicalHeader("test/foo.fwd.h")));
 }
 
 TEST_F(HeadersForSymbolTest, MainFile) {
@@ -412,9 +410,10 @@ TEST_F(HeadersForSymbolTest, MainFile) {
   buildAST();
   auto &SM = AST->sourceManager();
   // FIXME: Symbols provided by main file should be treated specially.
-  EXPECT_THAT(headersForFoo(),
-              ElementsAre(physicalHeader("public_complete.h"),
-                          Header(SM.getFileEntryForID(SM.getMainFileID()))));
+  EXPECT_THAT(
+      headersForFoo(),
+      ElementsAre(physicalHeader("public_complete.h"),
+                  Header(*SM.getFileEntryRefForID(SM.getMainFileID()))));
 }
 
 TEST_F(HeadersForSymbolTest, PreferExporterOfPrivate) {
@@ -549,6 +548,16 @@ TEST_F(HeadersForSymbolTest, AmbiguousStdSymbols) {
       {
           R"cpp(
             namespace std {
+             template<class ExecutionPolicy, class ForwardIt1, class ForwardIt2>
+             ForwardIt2 move(ExecutionPolicy&& policy,
+                 ForwardIt1 first, ForwardIt1 last, ForwardIt2 d_first);
+            })cpp",
+          "move",
+          "<algorithm>",
+      },
+      {
+          R"cpp(
+            namespace std {
               template<typename T> constexpr T move(T&& t) noexcept;
             })cpp",
           "move",
@@ -578,6 +587,36 @@ TEST_F(HeadersForSymbolTest, AmbiguousStdSymbols) {
                     Header(*tooling::stdlib::Header::named(T.ExpectedHeader))));
   }
 }
+
+TEST_F(HeadersForSymbolTest, AmbiguousStdSymbolsUsingShadow) {
+  Inputs.Code = R"cpp(
+    void remove(char*);
+    namespace std { using ::remove; }
+
+    void k() {
+      std::remove("abc");
+    }
+  )cpp";
+  buildAST();
+
+  // Find the DeclRefExpr in the std::remove("abc") function call.
+  struct Visitor : public RecursiveASTVisitor<Visitor> {
+    const DeclRefExpr *Out = nullptr;
+    bool VisitDeclRefExpr(const DeclRefExpr *DRE) {
+      EXPECT_TRUE(Out == nullptr) << "Found multiple DeclRefExpr!";
+      Out = DRE;
+      return true;
+    }
+  };
+  Visitor V;
+  V.TraverseDecl(AST->context().getTranslationUnitDecl());
+  ASSERT_TRUE(V.Out) << "Couldn't find a DeclRefExpr!";
+  EXPECT_THAT(headersForSymbol(*(V.Out->getFoundDecl()),
+                               AST->sourceManager(), &PI),
+              UnorderedElementsAre(
+                  Header(*tooling::stdlib::Header::named("<cstdio>"))));
+}
+
 
 TEST_F(HeadersForSymbolTest, StandardHeaders) {
   Inputs.Code = "void assert();";

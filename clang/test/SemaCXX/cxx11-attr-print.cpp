@@ -3,8 +3,7 @@
 // CHECK: int x __attribute__((aligned(4)));
 int x __attribute__((aligned(4)));
 
-// FIXME: Print this at a valid location for a __declspec attr.
-// CHECK: int y __declspec(align(4));
+// CHECK: __declspec(align(4)) int y;
 __declspec(align(4)) int y;
 
 // CHECK: int z {{\[}}[gnu::aligned(4)]];
@@ -66,7 +65,7 @@ void f8 (void *, const char *, ...) __attribute__ ((format (printf, 2, 3)));
 // CHECK: int m __attribute__((aligned(4
 // CHECK: int n alignas(4
 // CHECK: int p alignas(int
-// CHECK: static int f() __attribute__((pure))
+// CHECK: __attribute__((pure)) static int f()
 // CHECK: static int g() {{\[}}[gnu::pure]]
 template <typename T> struct S {
   __attribute__((aligned(4))) int m;
@@ -82,7 +81,7 @@ template <typename T> struct S {
 
 // CHECK: int m __attribute__((aligned(4
 // CHECK: int n alignas(4
-// CHECK: static int f() __attribute__((pure))
+// CHECK: __attribute__((pure)) static int f()
 // CHECK: static int g() {{\[}}[gnu::pure]]
 template struct S<int>;
 

@@ -13,22 +13,13 @@
 #ifndef LLVM_CLANG_PARSE_PARSER_H
 #define LLVM_CLANG_PARSE_PARSER_H
 
-#include "clang/AST/Availability.h"
-#include "clang/Basic/BitmaskEnum.h"
-#include "clang/Basic/OpenMPKinds.h"
 #include "clang/Basic/OperatorPrecedence.h"
-#include "clang/Basic/Specifiers.h"
-#include "clang/Basic/TokenKinds.h"
 #include "clang/Lex/CodeCompletionHandler.h"
 #include "clang/Lex/Preprocessor.h"
-#include "clang/Sema/DeclSpec.h"
 #include "clang/Sema/Sema.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/Frontend/OpenMP/OMPContext.h"
-#include "llvm/Support/Compiler.h"
-#include "llvm/Support/PrettyStackTrace.h"
 #include "llvm/Support/SaveAndRestore.h"
-#include <memory>
 #include <optional>
 #include <stack>
 
@@ -2012,12 +2003,10 @@ private:
   //===--------------------------------------------------------------------===//
   // C++ if/switch/while/for condition expression.
   struct ForRangeInfo;
-  Sema::ConditionResult ParseCXXCondition(StmtResult *InitStmt,
-                                          SourceLocation Loc,
-                                          Sema::ConditionKind CK,
-                                          bool MissingOK,
-                                          ForRangeInfo *FRI = nullptr,
-                                          bool EnterForConditionScope = false);
+  Sema::ConditionResult ParseCXXCondition(
+      StmtResult *InitStmt, SourceLocation Loc, Sema::ConditionKind CK,
+      bool MissingOK, ForRangeInfo *FRI = nullptr,
+      bool EnterForConditionScope = false, SourceLocation ConstexprLoc = {});
   DeclGroupPtrTy ParseAliasDeclarationInInitStatement(DeclaratorContext Context,
                                                       ParsedAttributes &Attrs);
 
@@ -2115,7 +2104,8 @@ private:
                                  Sema::ConditionResult &CondResult,
                                  SourceLocation Loc, Sema::ConditionKind CK,
                                  SourceLocation &LParenLoc,
-                                 SourceLocation &RParenLoc);
+                                 SourceLocation &RParenLoc,
+                                 SourceLocation ConstexprLoc = {});
   StmtResult ParseIfStatement(SourceLocation *TrailingElseLoc);
   StmtResult ParseSwitchStatement(SourceLocation *TrailingElseLoc);
   StmtResult ParseWhileStatement(SourceLocation *TrailingElseLoc);

@@ -368,6 +368,12 @@ void AMDGPUTargetAsmStreamer::EmitAmdhsaKernelDescriptor(
     PRINT_FIELD(OS, ".amdhsa_user_sgpr_flat_scratch_init", KD,
                 kernel_code_properties,
                 amdhsa::KERNEL_CODE_PROPERTY_ENABLE_SGPR_FLAT_SCRATCH_INIT);
+  if (hasKernargPreload(STI)) {
+    PRINT_FIELD(OS, ".amdhsa_user_sgpr_kernarg_preload_length ", KD,
+                kernarg_preload, amdhsa::KERNARG_PRELOAD_SPEC_LENGTH);
+    PRINT_FIELD(OS, ".amdhsa_user_sgpr_kernarg_preload_offset ", KD,
+                kernarg_preload, amdhsa::KERNARG_PRELOAD_SPEC_OFFSET);
+  }
   PRINT_FIELD(OS, ".amdhsa_user_sgpr_private_segment_size", KD,
               kernel_code_properties,
               amdhsa::KERNEL_CODE_PROPERTY_ENABLE_SGPR_PRIVATE_SEGMENT_SIZE);
@@ -417,8 +423,6 @@ void AMDGPUTargetAsmStreamer::EmitAmdhsaKernelDescriptor(
 
   switch (CodeObjectVersion) {
   default:
-    break;
-  case AMDGPU::AMDHSA_COV2:
     break;
   case AMDGPU::AMDHSA_COV3:
   case AMDGPU::AMDHSA_COV4:
@@ -539,7 +543,7 @@ void AMDGPUTargetELFStreamer::EmitNote(
   unsigned NoteFlags = 0;
   // TODO Apparently, this is currently needed for OpenCL as mentioned in
   // https://reviews.llvm.org/D74995
-  if (STI.getTargetTriple().getOS() == Triple::AMDHSA)
+  if (isHsaAbi(STI))
     NoteFlags = ELF::SHF_ALLOC;
 
   S.pushSection();
@@ -598,11 +602,10 @@ unsigned AMDGPUTargetELFStreamer::getEFlagsUnknownOS() {
 }
 
 unsigned AMDGPUTargetELFStreamer::getEFlagsAMDHSA() {
-  assert(STI.getTargetTriple().getOS() == Triple::AMDHSA);
+  assert(isHsaAbi(STI));
 
   if (std::optional<uint8_t> HsaAbiVer = getHsaAbiVersion(&STI)) {
     switch (*HsaAbiVer) {
-    case ELF::ELFABIVERSION_AMDGPU_HSA_V2:
     case ELF::ELFABIVERSION_AMDGPU_HSA_V3:
       return getEFlagsV3();
     case ELF::ELFABIVERSION_AMDGPU_HSA_V4:
@@ -827,6 +830,24 @@ bool AMDGPUTargetELFStreamer::EmitHSAMetadata(
   return true;
 }
 
+bool AMDGPUTargetAsmStreamer::EmitKernargPreloadHeader(
+    const MCSubtargetInfo &STI) {
+  for (int i = 0; i < 64; ++i) {
+    OS << "\ts_nop 0\n";
+  }
+  return true;
+}
+
+bool AMDGPUTargetELFStreamer::EmitKernargPreloadHeader(
+    const MCSubtargetInfo &STI) {
+  const uint32_t Encoded_s_nop = 0xbf800000;
+  MCStreamer &OS = getStreamer();
+  for (int i = 0; i < 64; ++i) {
+    OS.emitInt32(Encoded_s_nop);
+  }
+  return true;
+}
+
 bool AMDGPUTargetELFStreamer::EmitCodeEnd(const MCSubtargetInfo &STI) {
   const uint32_t Encoded_s_code_end = 0xbf9f0000;
   const uint32_t Encoded_s_nop = 0xbf800000;
@@ -906,6 +927,7 @@ void AMDGPUTargetELFStreamer::EmitAmdhsaKernelDescriptor(
   Streamer.emitInt32(KernelDescriptor.compute_pgm_rsrc1);
   Streamer.emitInt32(KernelDescriptor.compute_pgm_rsrc2);
   Streamer.emitInt16(KernelDescriptor.kernel_code_properties);
-  for (uint8_t Res : KernelDescriptor.reserved2)
+  Streamer.emitInt16(KernelDescriptor.kernarg_preload);
+  for (uint8_t Res : KernelDescriptor.reserved3)
     Streamer.emitInt8(Res);
 }

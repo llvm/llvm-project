@@ -107,7 +107,7 @@ public:
 
   Type *GetType();
 
-  Scalar &ResolveValue(ExecutionContext *exe_ctx);
+  Scalar &ResolveValue(ExecutionContext *exe_ctx, Module *module = nullptr);
 
   const Scalar &GetScalar() const { return m_value; }
 

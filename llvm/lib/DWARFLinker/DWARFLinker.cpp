@@ -1587,51 +1587,25 @@ unsigned DWARFLinker::DIECloner::cloneAttribute(
   return 0;
 }
 
-static bool isObjCSelector(StringRef Name) {
-  return Name.size() > 2 && (Name[0] == '-' || Name[0] == '+') &&
-         (Name[1] == '[');
-}
-
 void DWARFLinker::DIECloner::addObjCAccelerator(CompileUnit &Unit,
                                                 const DIE *Die,
                                                 DwarfStringPoolEntryRef Name,
                                                 OffsetsStringPool &StringPool,
                                                 bool SkipPubSection) {
-  assert(isObjCSelector(Name.getString()) && "not an objc selector");
-  // Objective C method or class function.
-  // "- [Class(Category) selector :withArg ...]"
-  StringRef ClassNameStart(Name.getString().drop_front(2));
-  size_t FirstSpace = ClassNameStart.find(' ');
-  if (FirstSpace == StringRef::npos)
+  std::optional<ObjCSelectorNames> Names =
+      getObjCNamesIfSelector(Name.getString());
+  if (!Names)
     return;
-
-  StringRef SelectorStart(ClassNameStart.data() + FirstSpace + 1);
-  if (!SelectorStart.size())
-    return;
-
-  StringRef Selector(SelectorStart.data(), SelectorStart.size() - 1);
-  Unit.addNameAccelerator(Die, StringPool.getEntry(Selector), SkipPubSection);
-
-  // Add an entry for the class name that points to this
-  // method/class function.
-  StringRef ClassName(ClassNameStart.data(), FirstSpace);
-  Unit.addObjCAccelerator(Die, StringPool.getEntry(ClassName), SkipPubSection);
-
-  if (ClassName[ClassName.size() - 1] == ')') {
-    size_t OpenParens = ClassName.find('(');
-    if (OpenParens != StringRef::npos) {
-      StringRef ClassNameNoCategory(ClassName.data(), OpenParens);
-      Unit.addObjCAccelerator(Die, StringPool.getEntry(ClassNameNoCategory),
-                              SkipPubSection);
-
-      std::string MethodNameNoCategory(Name.getString().data(), OpenParens + 2);
-      // FIXME: The missing space here may be a bug, but
-      //        dsymutil-classic also does it this way.
-      MethodNameNoCategory.append(std::string(SelectorStart));
-      Unit.addNameAccelerator(Die, StringPool.getEntry(MethodNameNoCategory),
-                              SkipPubSection);
-    }
-  }
+  Unit.addNameAccelerator(Die, StringPool.getEntry(Names->Selector),
+                          SkipPubSection);
+  Unit.addObjCAccelerator(Die, StringPool.getEntry(Names->ClassName),
+                          SkipPubSection);
+  if (Names->ClassNameNoCategory)
+    Unit.addObjCAccelerator(
+        Die, StringPool.getEntry(*Names->ClassNameNoCategory), SkipPubSection);
+  if (Names->MethodNameNoCategory)
+    Unit.addNameAccelerator(
+        Die, StringPool.getEntry(*Names->MethodNameNoCategory), SkipPubSection);
 }
 
 static bool
@@ -1781,7 +1755,7 @@ DIE *DWARFLinker::DIECloner::cloneDIE(const DWARFDie &InputDIE,
       Unit.addNameAccelerator(Die, AttrInfo.Name,
                               Tag == dwarf::DW_TAG_inlined_subroutine);
     }
-    if (AttrInfo.Name && isObjCSelector(AttrInfo.Name.getString()))
+    if (AttrInfo.Name)
       addObjCAccelerator(Unit, Die, AttrInfo.Name, DebugStrPool,
                          /* SkipPubSection =*/true);
 
@@ -2610,69 +2584,6 @@ uint64_t DWARFLinker::DIECloner::cloneAllCompileUnits(
   return OutputDebugInfoSize - StartOutputDebugInfoSize;
 }
 
-bool DWARFLinker::emitPaperTrailWarnings(const DWARFFile &File,
-                                         OffsetsStringPool &StringPool) {
-
-  if (File.Warnings.empty())
-    return false;
-
-  DIE *CUDie = DIE::get(DIEAlloc, dwarf::DW_TAG_compile_unit);
-  CUDie->setOffset(11);
-  StringRef Producer;
-  StringRef WarningHeader;
-
-  switch (DwarfLinkerClientID) {
-  case DwarfLinkerClient::Dsymutil:
-    Producer = StringPool.internString("dsymutil");
-    WarningHeader = "dsymutil_warning";
-    break;
-
-  default:
-    Producer = StringPool.internString("dwarfopt");
-    WarningHeader = "dwarfopt_warning";
-    break;
-  }
-
-  StringRef FileName = StringPool.internString(File.FileName);
-  CUDie->addValue(DIEAlloc, dwarf::DW_AT_producer, dwarf::DW_FORM_strp,
-                  DIEInteger(StringPool.getStringOffset(Producer)));
-  DIEBlock *String = new (DIEAlloc) DIEBlock();
-  DIEBlocks.push_back(String);
-  for (auto &C : FileName)
-    String->addValue(DIEAlloc, dwarf::Attribute(0), dwarf::DW_FORM_data1,
-                     DIEInteger(C));
-  String->addValue(DIEAlloc, dwarf::Attribute(0), dwarf::DW_FORM_data1,
-                   DIEInteger(0));
-
-  CUDie->addValue(DIEAlloc, dwarf::DW_AT_name, dwarf::DW_FORM_string, String);
-  for (const auto &Warning : File.Warnings) {
-    DIE &ConstDie = CUDie->addChild(DIE::get(DIEAlloc, dwarf::DW_TAG_constant));
-    ConstDie.addValue(DIEAlloc, dwarf::DW_AT_name, dwarf::DW_FORM_strp,
-                      DIEInteger(StringPool.getStringOffset(WarningHeader)));
-    ConstDie.addValue(DIEAlloc, dwarf::DW_AT_artificial, dwarf::DW_FORM_flag,
-                      DIEInteger(1));
-    ConstDie.addValue(DIEAlloc, dwarf::DW_AT_const_value, dwarf::DW_FORM_strp,
-                      DIEInteger(StringPool.getStringOffset(Warning)));
-  }
-  unsigned Size = 4 /* FORM_strp */ + FileName.size() + 1 +
-                  File.Warnings.size() * (4 + 1 + 4) + 1 /* End of children */;
-  DIEAbbrev Abbrev = CUDie->generateAbbrev();
-  assignAbbrev(Abbrev);
-  CUDie->setAbbrevNumber(Abbrev.getNumber());
-  Size += getULEB128Size(Abbrev.getNumber());
-  // Abbreviation ordering needed for classic compatibility.
-  for (auto &Child : CUDie->children()) {
-    Abbrev = Child.generateAbbrev();
-    assignAbbrev(Abbrev);
-    Child.setAbbrevNumber(Abbrev.getNumber());
-    Size += getULEB128Size(Abbrev.getNumber());
-  }
-  CUDie->setSize(Size);
-  TheDwarfEmitter->emitPaperTrailWarningsDie(*CUDie);
-
-  return true;
-}
-
 void DWARFLinker::copyInvariantDebugSection(DWARFContext &Dwarf) {
   TheDwarfEmitter->emitSectionContents(Dwarf.getDWARFObj().getLocSection().Data,
                                        "debug_loc");
@@ -2736,9 +2647,6 @@ Error DWARFLinker::link() {
       else
         outs() << "OBJECT FILE: " << OptContext.File.FileName << "\n";
     }
-
-    if (emitPaperTrailWarnings(OptContext.File, DebugStrPool))
-      continue;
 
     if (!OptContext.File.Dwarf)
       continue;

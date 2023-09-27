@@ -22,6 +22,7 @@
 #include "mlir/IR/OpDefinition.h"
 #include "mlir/IR/TypeUtilities.h"
 #include "mlir/Interfaces/DestinationStyleOpInterface.h"
+#include "mlir/Interfaces/LoopLikeInterface.h"
 #include "mlir/Support/MathExtras.h"
 #include "llvm/ADT/DenseSet.h"
 #include "llvm/ADT/STLExtras.h"
@@ -579,11 +580,32 @@ struct DimOfCastOp : public OpRewritePattern<DimOp> {
     return success();
   }
 };
+
+/// Fold dim of a destination passing style op into the dim of the corresponding
+/// init.
+struct DimOfDestStyleOp : public OpRewritePattern<DimOp> {
+  using OpRewritePattern<DimOp>::OpRewritePattern;
+
+  LogicalResult matchAndRewrite(DimOp dimOp,
+                                PatternRewriter &rewriter) const override {
+    auto source = dimOp.getSource();
+    auto destOp = source.getDefiningOp<DestinationStyleOpInterface>();
+    if (!destOp)
+      return failure();
+
+    auto resultIndex = source.cast<OpResult>().getResultNumber();
+    auto initOperand = destOp.getDpsInitOperand(resultIndex);
+
+    rewriter.updateRootInPlace(
+        dimOp, [&]() { dimOp.getSourceMutable().assign(initOperand->get()); });
+    return success();
+  }
+};
 } // namespace
 
 void DimOp::getCanonicalizationPatterns(RewritePatternSet &results,
                                         MLIRContext *context) {
-  results.add<DimOfCastOp>(context);
+  results.add<DimOfCastOp, DimOfDestStyleOp>(context);
 }
 
 //===----------------------------------------------------------------------===//
@@ -691,6 +713,9 @@ struct ReplaceEmptyTensorStaticShapeDims : OpRewritePattern<EmptyOp> {
         Value dynamicSize = op.getDynamicSizes()[ctr++];
         std::optional<int64_t> cst = getConstantIntValue(dynamicSize);
         if (cst.has_value()) {
+          // dynamic size must be non-negative.
+          if (cst.value() < 0)
+            return failure();
           staticShape[i] = *cst;
           changedType = true;
         } else {
@@ -3944,6 +3969,11 @@ struct FoldTensorCastProducerOp
                                 PatternRewriter &rewriter) const override {
     // InsertSliceOp has its own logic about folding tensor.cast ops.
     if (isa<InsertSliceOp>(op.getOperation()))
+      return failure();
+
+    // Exclude DPS ops that are also LoopLike from this interface as they
+    // might need special handling of attached regions.
+    if (isa<LoopLikeOpInterface>(op.getOperation()))
       return failure();
 
     // If no operand comes from a tensor::CastOp and can be folded then fail.

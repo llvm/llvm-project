@@ -56,7 +56,7 @@ inline llvm::raw_ostream &operator<<(llvm::raw_ostream &OS,
   return OS;
 }
 
-constexpr bool isIntegralType(PrimType T) { return T <= PT_Uint64; }
+constexpr bool isIntegralType(PrimType T) { return T <= PT_Bool; }
 
 /// Mapping from primitive types to their representation.
 template <PrimType T> struct PrimConv;

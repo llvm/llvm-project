@@ -137,7 +137,7 @@ private:
   bool parseAngle() {
     if (!CurrentToken || !CurrentToken->Previous)
       return false;
-    if (NonTemplateLess.count(CurrentToken->Previous))
+    if (NonTemplateLess.count(CurrentToken->Previous) > 0)
       return false;
 
     const FormatToken &Previous = *CurrentToken->Previous; // The '<'.
@@ -1698,7 +1698,7 @@ private:
             TT_RecordLBrace, TT_StructLBrace, TT_UnionLBrace, TT_RequiresClause,
             TT_RequiresClauseInARequiresExpression, TT_RequiresExpression,
             TT_RequiresExpressionLParen, TT_RequiresExpressionLBrace,
-            TT_CompoundRequirementLBrace, TT_BracedListLBrace)) {
+            TT_BracedListLBrace)) {
       CurrentToken->setType(TT_Unknown);
     }
     CurrentToken->Role.reset();
@@ -2535,8 +2535,9 @@ private:
       return TT_BinaryOperator;
 
     if (!NextToken ||
-        NextToken->isOneOf(tok::arrow, tok::equal, tok::kw_noexcept, tok::comma,
-                           tok::r_paren, TT_RequiresClause) ||
+        NextToken->isOneOf(tok::arrow, tok::equal, tok::comma, tok::r_paren,
+                           TT_RequiresClause) ||
+        (NextToken->is(tok::kw_noexcept) && !IsExpression) ||
         NextToken->canBePointerOrReferenceQualifier() ||
         (NextToken->is(tok::l_brace) && !NextToken->getNextNonComment())) {
       return TT_PointerOrReference;
@@ -2597,9 +2598,12 @@ private:
     if (InTemplateArgument && NextToken->Tok.isAnyIdentifier())
       return TT_BinaryOperator;
 
-    // "&&(" is quite unlikely to be two successive unary "&".
-    if (Tok.is(tok::ampamp) && NextToken->is(tok::l_paren))
+    // "&&" followed by "(", "*", or "&" is quite unlikely to be two successive
+    // unary "&".
+    if (Tok.is(tok::ampamp) &&
+        NextToken->isOneOf(tok::l_paren, tok::star, tok::amp)) {
       return TT_BinaryOperator;
+    }
 
     // This catches some cases where evaluation order is used as control flow:
     //   aaa && aaa->f();
@@ -3140,8 +3144,12 @@ static FormatToken *getFunctionName(const AnnotatedLine &Line) {
     }
 
     // Make sure the name is followed by a pair of parentheses.
-    if (Name)
-      return Tok->is(tok::l_paren) && Tok->MatchingParen ? Name : nullptr;
+    if (Name) {
+      return Tok->is(tok::l_paren) && Tok->isNot(TT_FunctionTypeLParen) &&
+                     Tok->MatchingParen
+                 ? Name
+                 : nullptr;
+    }
 
     // Skip keywords that may precede the constructor/destructor name.
     if (Tok->isOneOf(tok::kw_friend, tok::kw_inline, tok::kw_virtual,
@@ -4137,8 +4145,7 @@ bool TokenAnnotator::spaceRequiredBetween(const AnnotatedLine &Line,
             (Style.SpacesInSquareBrackets &&
              Right.MatchingParen->isOneOf(TT_ArraySubscriptLSquare,
                                           TT_StructuredBindingLSquare,
-                                          TT_LambdaLSquare)) ||
-            Right.MatchingParen->is(TT_AttributeParen));
+                                          TT_LambdaLSquare)));
   }
   if (Right.is(tok::l_square) &&
       !Right.isOneOf(TT_ObjCMethodExpr, TT_LambdaLSquare,
@@ -5651,6 +5658,17 @@ bool TokenAnnotator::canBreakBefore(const AnnotatedLine &Line,
       return !isItAnEmptyLambdaAllowed(Left, ShortLambdaOption);
     if (isAllmanLambdaBrace(Right))
       return !isItAnEmptyLambdaAllowed(Right, ShortLambdaOption);
+  }
+
+  if (Right.is(tok::kw_noexcept) && Right.is(TT_TrailingAnnotation)) {
+    switch (Style.AllowBreakBeforeNoexceptSpecifier) {
+    case FormatStyle::BBNSS_Never:
+      return false;
+    case FormatStyle::BBNSS_Always:
+      return true;
+    case FormatStyle::BBNSS_OnlyWithParen:
+      return Right.Next && Right.Next->is(tok::l_paren);
+    }
   }
 
   return Left.isOneOf(tok::comma, tok::coloncolon, tok::semi, tok::l_brace,

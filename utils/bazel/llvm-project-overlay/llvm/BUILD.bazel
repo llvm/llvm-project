@@ -2022,6 +2022,7 @@ llvm_target_lib_list = [lib for lib in [
             ("-gen-callingconv", "lib/Target/Sparc/SparcGenCallingConv.inc"),
             ("-gen-subtarget", "lib/Target/Sparc/SparcGenSubtargetInfo.inc"),
             ("-gen-disassembler", "lib/Target/Sparc/SparcGenDisassemblerTables.inc"),
+            ("-gen-searchable-tables", "lib/Target/Sparc/SparcGenSearchableTables.inc"),
         ],
     },
     {
@@ -2048,7 +2049,6 @@ llvm_target_lib_list = [lib for lib in [
             ("-gen-compress-inst-emitter", "lib/Target/RISCV/RISCVGenCompressInstEmitter.inc"),
             ("-gen-dag-isel", "lib/Target/RISCV/RISCVGenDAGISel.inc"),
             ("-gen-disassembler", "lib/Target/RISCV/RISCVGenDisassemblerTables.inc"),
-            ("-gen-global-isel", "lib/Target/RISCV/RISCVGenGlobalISel.inc"),
             ("-gen-instr-info", "lib/Target/RISCV/RISCVGenInstrInfo.inc"),
             ("-gen-emitter", "lib/Target/RISCV/RISCVGenMCCodeEmitter.inc"),
             ("-gen-pseudo-lowering", "lib/Target/RISCV/RISCVGenMCPseudoLowering.inc"),
@@ -2056,6 +2056,9 @@ llvm_target_lib_list = [lib for lib in [
             ("-gen-register-info", "lib/Target/RISCV/RISCVGenRegisterInfo.inc"),
             ("-gen-subtarget", "lib/Target/RISCV/RISCVGenSubtargetInfo.inc"),
             ("-gen-searchable-tables", "lib/Target/RISCV/RISCVGenSearchableTables.inc"),
+        ],
+        "tbl_deps": [
+            ":riscv_isel_target_gen",
         ],
     },
     {
@@ -2179,6 +2182,24 @@ gentbl(
         ":common_target_td_sources",
     ] + glob([
         "lib/Target/AMDGPU/*.td",
+    ]),
+)
+
+gentbl(
+    name = "riscv_isel_target_gen",
+    strip_include_prefix = "lib/Target/RISCV",
+    tbl_outs = [
+      ("-gen-global-isel", "lib/Target/RISCV/RISCVGenGlobalISel.inc"),
+      ("-gen-global-isel-combiner -combiners=RISCVO0PreLegalizerCombiner", "lib/Target/RISCV/RISCVGenO0PreLegalizeGICombiner.inc"),
+      ("-gen-global-isel-combiner -combiners=RISCVPostLegalizerCombiner", "lib/Target/RISCV/RISCVGenPostLegalizeGICombiner.inc"),
+      ("-gen-global-isel-combiner -combiners=RISCVPreLegalizerCombiner", "lib/Target/RISCV/RISCVGenPreLegalizeGICombiner.inc"),
+    ],
+    tblgen = ":llvm-tblgen",
+    td_file = "lib/Target/RISCV/RISCVGISel.td",
+    td_srcs = [
+        ":common_target_td_sources",
+    ] + glob([
+        "lib/Target/RISCV/**/*.td",
     ]),
 )
 
@@ -2683,6 +2704,7 @@ cc_library(
         ":BitReader",
         ":BitWriter",
         ":Core",
+        ":DebugInfoDWARF",
         ":ExecutionEngine",
         ":JITLink",
         ":MC",
@@ -4053,6 +4075,7 @@ cc_binary(
         ":Object",
         ":Option",
         ":Support",
+        ":Symbolize",
         ":TargetParser",
     ],
 )

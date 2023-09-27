@@ -51,14 +51,14 @@ define dso_local void @foo1_int_be_reuse4B(ptr nocapture noundef writeonly %a) l
 ; P8-LE-LABEL: foo1_int_be_reuse4B:
 ; P8-LE:       # %bb.0: # %entry
 ; P8-LE-NEXT:    addis 4, 2, .LCPI0_0@toc@ha
-; P8-LE-NEXT:    li 5, 2312
 ; P8-LE-NEXT:    addi 4, 4, .LCPI0_0@toc@l
 ; P8-LE-NEXT:    lxvd2x 0, 0, 4
 ; P8-LE-NEXT:    lis 4, 1798
 ; P8-LE-NEXT:    ori 4, 4, 1284
 ; P8-LE-NEXT:    stxvd2x 0, 0, 3
 ; P8-LE-NEXT:    stw 4, 16(3)
-; P8-LE-NEXT:    sth 5, 20(3)
+; P8-LE-NEXT:    li 4, 2312
+; P8-LE-NEXT:    sth 4, 20(3)
 ; P8-LE-NEXT:    blr
 ;
 ; P9-LE-LABEL: foo1_int_be_reuse4B:
@@ -139,14 +139,14 @@ define dso_local void @foo2_int_le_reuse4B(ptr nocapture noundef writeonly %a) l
 ; P8-LE-LABEL: foo2_int_le_reuse4B:
 ; P8-LE:       # %bb.0: # %entry
 ; P8-LE-NEXT:    addis 4, 2, .LCPI1_0@toc@ha
-; P8-LE-NEXT:    li 5, 3340
 ; P8-LE-NEXT:    addi 4, 4, .LCPI1_0@toc@l
 ; P8-LE-NEXT:    lxvd2x 0, 0, 4
 ; P8-LE-NEXT:    lis 4, 2826
 ; P8-LE-NEXT:    ori 4, 4, 2312
 ; P8-LE-NEXT:    stxvd2x 0, 0, 3
 ; P8-LE-NEXT:    stw 4, 16(3)
-; P8-LE-NEXT:    sth 5, 20(3)
+; P8-LE-NEXT:    li 4, 3340
+; P8-LE-NEXT:    sth 4, 20(3)
 ; P8-LE-NEXT:    blr
 ;
 ; P9-LE-LABEL: foo2_int_le_reuse4B:
@@ -227,14 +227,14 @@ define dso_local void @foo3_int_be_reuse4B(ptr nocapture noundef writeonly %a) l
 ; P8-LE-LABEL: foo3_int_be_reuse4B:
 ; P8-LE:       # %bb.0: # %entry
 ; P8-LE-NEXT:    addis 4, 2, .LCPI2_0@toc@ha
-; P8-LE-NEXT:    li 5, 2057
 ; P8-LE-NEXT:    addi 4, 4, .LCPI2_0@toc@l
 ; P8-LE-NEXT:    lxvd2x 0, 0, 4
 ; P8-LE-NEXT:    lis 4, 1543
 ; P8-LE-NEXT:    ori 4, 4, 1029
 ; P8-LE-NEXT:    stxvd2x 0, 0, 3
 ; P8-LE-NEXT:    stw 4, 16(3)
-; P8-LE-NEXT:    sth 5, 20(3)
+; P8-LE-NEXT:    li 4, 2057
+; P8-LE-NEXT:    sth 4, 20(3)
 ; P8-LE-NEXT:    blr
 ;
 ; P9-LE-LABEL: foo3_int_be_reuse4B:
@@ -309,14 +309,14 @@ define dso_local void @foo4_int_le_reuse4B(ptr nocapture noundef writeonly %a) l
 ; P8-LE-LABEL: foo4_int_le_reuse4B:
 ; P8-LE:       # %bb.0: # %entry
 ; P8-LE-NEXT:    addis 4, 2, .LCPI3_0@toc@ha
-; P8-LE-NEXT:    li 5, 3085
 ; P8-LE-NEXT:    addi 4, 4, .LCPI3_0@toc@l
 ; P8-LE-NEXT:    lxvd2x 0, 0, 4
 ; P8-LE-NEXT:    lis 4, 2571
 ; P8-LE-NEXT:    ori 4, 4, 2057
 ; P8-LE-NEXT:    stxvd2x 0, 0, 3
 ; P8-LE-NEXT:    stw 4, 16(3)
-; P8-LE-NEXT:    sth 5, 20(3)
+; P8-LE-NEXT:    li 4, 3085
+; P8-LE-NEXT:    sth 4, 20(3)
 ; P8-LE-NEXT:    blr
 ;
 ; P9-LE-LABEL: foo4_int_le_reuse4B:
@@ -488,13 +488,13 @@ define dso_local void @foo7_int_be_reuse8B(ptr nocapture noundef writeonly %a) l
 ; P8-BE-LABEL: foo7_int_be_reuse8B:
 ; P8-BE:       # %bb.0: # %entry
 ; P8-BE-NEXT:    ld 4, L..C6(2) # %const.0
-; P8-BE-NEXT:    lis 5, 1
-; P8-BE-NEXT:    ori 5, 5, 515
 ; P8-BE-NEXT:    lxvw4x 0, 0, 4
-; P8-BE-NEXT:    rldic 4, 5, 32, 15
+; P8-BE-NEXT:    lis 4, 1
+; P8-BE-NEXT:    ori 4, 4, 515
+; P8-BE-NEXT:    rldic 4, 4, 32, 15
+; P8-BE-NEXT:    stxvw4x 0, 0, 3
 ; P8-BE-NEXT:    oris 4, 4, 1029
 ; P8-BE-NEXT:    ori 4, 4, 1543
-; P8-BE-NEXT:    stxvw4x 0, 0, 3
 ; P8-BE-NEXT:    std 4, 16(3)
 ; P8-BE-NEXT:    blr
 ;
@@ -525,14 +525,14 @@ define dso_local void @foo7_int_be_reuse8B(ptr nocapture noundef writeonly %a) l
 ; P8-LE-LABEL: foo7_int_be_reuse8B:
 ; P8-LE:       # %bb.0: # %entry
 ; P8-LE-NEXT:    addis 4, 2, .LCPI6_0@toc@ha
-; P8-LE-NEXT:    lis 5, 449
 ; P8-LE-NEXT:    addi 4, 4, .LCPI6_0@toc@l
-; P8-LE-NEXT:    ori 5, 5, 33089
 ; P8-LE-NEXT:    lxvd2x 0, 0, 4
-; P8-LE-NEXT:    rldic 4, 5, 34, 5
+; P8-LE-NEXT:    lis 4, 449
+; P8-LE-NEXT:    ori 4, 4, 33089
+; P8-LE-NEXT:    rldic 4, 4, 34, 5
+; P8-LE-NEXT:    stxvd2x 0, 0, 3
 ; P8-LE-NEXT:    oris 4, 4, 770
 ; P8-LE-NEXT:    ori 4, 4, 256
-; P8-LE-NEXT:    stxvd2x 0, 0, 3
 ; P8-LE-NEXT:    std 4, 16(3)
 ; P8-LE-NEXT:    blr
 ;
@@ -584,13 +584,13 @@ define dso_local void @foo8_int_le_reuse8B(ptr nocapture noundef writeonly %a) l
 ; P8-BE-LABEL: foo8_int_le_reuse8B:
 ; P8-BE:       # %bb.0: # %entry
 ; P8-BE-NEXT:    ld 4, L..C7(2) # %const.0
-; P8-BE-NEXT:    lis 5, 2057
-; P8-BE-NEXT:    ori 5, 5, 2571
 ; P8-BE-NEXT:    lxvw4x 0, 0, 4
-; P8-BE-NEXT:    rldic 4, 5, 32, 4
+; P8-BE-NEXT:    lis 4, 2057
+; P8-BE-NEXT:    ori 4, 4, 2571
+; P8-BE-NEXT:    rldic 4, 4, 32, 4
+; P8-BE-NEXT:    stxvw4x 0, 0, 3
 ; P8-BE-NEXT:    oris 4, 4, 3085
 ; P8-BE-NEXT:    ori 4, 4, 3599
-; P8-BE-NEXT:    stxvw4x 0, 0, 3
 ; P8-BE-NEXT:    std 4, 16(3)
 ; P8-BE-NEXT:    blr
 ;
@@ -621,14 +621,14 @@ define dso_local void @foo8_int_le_reuse8B(ptr nocapture noundef writeonly %a) l
 ; P8-LE-LABEL: foo8_int_le_reuse8B:
 ; P8-LE:       # %bb.0: # %entry
 ; P8-LE-NEXT:    addis 4, 2, .LCPI7_0@toc@ha
-; P8-LE-NEXT:    lis 5, 963
 ; P8-LE-NEXT:    addi 4, 4, .LCPI7_0@toc@l
-; P8-LE-NEXT:    ori 5, 5, 33603
 ; P8-LE-NEXT:    lxvd2x 0, 0, 4
-; P8-LE-NEXT:    rldic 4, 5, 34, 4
+; P8-LE-NEXT:    lis 4, 963
+; P8-LE-NEXT:    ori 4, 4, 33603
+; P8-LE-NEXT:    rldic 4, 4, 34, 4
+; P8-LE-NEXT:    stxvd2x 0, 0, 3
 ; P8-LE-NEXT:    oris 4, 4, 2826
 ; P8-LE-NEXT:    ori 4, 4, 2312
-; P8-LE-NEXT:    stxvd2x 0, 0, 3
 ; P8-LE-NEXT:    std 4, 16(3)
 ; P8-LE-NEXT:    blr
 ;
@@ -680,13 +680,13 @@ define dso_local void @foo9_int_be_reuse8B(ptr nocapture noundef writeonly %a) l
 ; P8-BE-LABEL: foo9_int_be_reuse8B:
 ; P8-BE:       # %bb.0: # %entry
 ; P8-BE-NEXT:    ld 4, L..C8(2) # %const.0
-; P8-BE-NEXT:    lis 5, 1
-; P8-BE-NEXT:    ori 5, 5, 515
 ; P8-BE-NEXT:    lxvw4x 0, 0, 4
-; P8-BE-NEXT:    rldic 4, 5, 32, 15
+; P8-BE-NEXT:    lis 4, 1
+; P8-BE-NEXT:    ori 4, 4, 515
+; P8-BE-NEXT:    rldic 4, 4, 32, 15
+; P8-BE-NEXT:    stxvw4x 0, 0, 3
 ; P8-BE-NEXT:    oris 4, 4, 1029
 ; P8-BE-NEXT:    ori 4, 4, 1543
-; P8-BE-NEXT:    stxvw4x 0, 0, 3
 ; P8-BE-NEXT:    std 4, 16(3)
 ; P8-BE-NEXT:    blr
 ;
@@ -717,14 +717,14 @@ define dso_local void @foo9_int_be_reuse8B(ptr nocapture noundef writeonly %a) l
 ; P8-LE-LABEL: foo9_int_be_reuse8B:
 ; P8-LE:       # %bb.0: # %entry
 ; P8-LE-NEXT:    addis 4, 2, .LCPI8_0@toc@ha
-; P8-LE-NEXT:    lis 5, 1543
 ; P8-LE-NEXT:    addi 4, 4, .LCPI8_0@toc@l
-; P8-LE-NEXT:    ori 5, 5, 1029
 ; P8-LE-NEXT:    lxvd2x 0, 0, 4
-; P8-LE-NEXT:    rldic 4, 5, 32, 5
+; P8-LE-NEXT:    lis 4, 1543
+; P8-LE-NEXT:    ori 4, 4, 1029
+; P8-LE-NEXT:    rldic 4, 4, 32, 5
+; P8-LE-NEXT:    stxvd2x 0, 0, 3
 ; P8-LE-NEXT:    oris 4, 4, 515
 ; P8-LE-NEXT:    ori 4, 4, 1
-; P8-LE-NEXT:    stxvd2x 0, 0, 3
 ; P8-LE-NEXT:    std 4, 16(3)
 ; P8-LE-NEXT:    blr
 ;
@@ -768,13 +768,13 @@ define dso_local void @foo10_int_le_reuse8B(ptr nocapture noundef writeonly %a) 
 ; P8-BE-LABEL: foo10_int_le_reuse8B:
 ; P8-BE:       # %bb.0: # %entry
 ; P8-BE-NEXT:    ld 4, L..C9(2) # %const.0
-; P8-BE-NEXT:    lis 5, 2057
-; P8-BE-NEXT:    ori 5, 5, 2571
 ; P8-BE-NEXT:    lxvw4x 0, 0, 4
-; P8-BE-NEXT:    rldic 4, 5, 32, 4
+; P8-BE-NEXT:    lis 4, 2057
+; P8-BE-NEXT:    ori 4, 4, 2571
+; P8-BE-NEXT:    rldic 4, 4, 32, 4
+; P8-BE-NEXT:    stxvw4x 0, 0, 3
 ; P8-BE-NEXT:    oris 4, 4, 3085
 ; P8-BE-NEXT:    ori 4, 4, 3599
-; P8-BE-NEXT:    stxvw4x 0, 0, 3
 ; P8-BE-NEXT:    std 4, 16(3)
 ; P8-BE-NEXT:    blr
 ;
@@ -805,14 +805,14 @@ define dso_local void @foo10_int_le_reuse8B(ptr nocapture noundef writeonly %a) 
 ; P8-LE-LABEL: foo10_int_le_reuse8B:
 ; P8-LE:       # %bb.0: # %entry
 ; P8-LE-NEXT:    addis 4, 2, .LCPI9_0@toc@ha
-; P8-LE-NEXT:    lis 5, 3599
 ; P8-LE-NEXT:    addi 4, 4, .LCPI9_0@toc@l
-; P8-LE-NEXT:    ori 5, 5, 3085
 ; P8-LE-NEXT:    lxvd2x 0, 0, 4
-; P8-LE-NEXT:    rldic 4, 5, 32, 4
+; P8-LE-NEXT:    lis 4, 3599
+; P8-LE-NEXT:    ori 4, 4, 3085
+; P8-LE-NEXT:    rldic 4, 4, 32, 4
+; P8-LE-NEXT:    stxvd2x 0, 0, 3
 ; P8-LE-NEXT:    oris 4, 4, 2571
 ; P8-LE-NEXT:    ori 4, 4, 2057
-; P8-LE-NEXT:    stxvd2x 0, 0, 3
 ; P8-LE-NEXT:    std 4, 16(3)
 ; P8-LE-NEXT:    blr
 ;
@@ -856,13 +856,13 @@ define dso_local void @foo11_int_be_reuse8B(ptr nocapture noundef writeonly %a) 
 ; P8-BE-LABEL: foo11_int_be_reuse8B:
 ; P8-BE:       # %bb.0: # %entry
 ; P8-BE-NEXT:    ld 4, L..C10(2) # %const.0
-; P8-BE-NEXT:    lis 5, 1
-; P8-BE-NEXT:    ori 5, 5, 515
 ; P8-BE-NEXT:    lxvw4x 0, 0, 4
-; P8-BE-NEXT:    rldic 4, 5, 32, 15
+; P8-BE-NEXT:    lis 4, 1
+; P8-BE-NEXT:    ori 4, 4, 515
+; P8-BE-NEXT:    rldic 4, 4, 32, 15
+; P8-BE-NEXT:    stxvw4x 0, 0, 3
 ; P8-BE-NEXT:    oris 4, 4, 1029
 ; P8-BE-NEXT:    ori 4, 4, 1543
-; P8-BE-NEXT:    stxvw4x 0, 0, 3
 ; P8-BE-NEXT:    std 4, 16(3)
 ; P8-BE-NEXT:    blr
 ;
@@ -893,14 +893,14 @@ define dso_local void @foo11_int_be_reuse8B(ptr nocapture noundef writeonly %a) 
 ; P8-LE-LABEL: foo11_int_be_reuse8B:
 ; P8-LE:       # %bb.0: # %entry
 ; P8-LE-NEXT:    addis 4, 2, .LCPI10_0@toc@ha
-; P8-LE-NEXT:    lis 5, 1029
 ; P8-LE-NEXT:    addi 4, 4, .LCPI10_0@toc@l
-; P8-LE-NEXT:    ori 5, 5, 1543
 ; P8-LE-NEXT:    lxvd2x 0, 0, 4
-; P8-LE-NEXT:    rldic 4, 5, 32, 5
+; P8-LE-NEXT:    lis 4, 1029
+; P8-LE-NEXT:    ori 4, 4, 1543
+; P8-LE-NEXT:    rldic 4, 4, 32, 5
+; P8-LE-NEXT:    stxvd2x 0, 0, 3
 ; P8-LE-NEXT:    oris 4, 4, 1
 ; P8-LE-NEXT:    ori 4, 4, 515
-; P8-LE-NEXT:    stxvd2x 0, 0, 3
 ; P8-LE-NEXT:    std 4, 16(3)
 ; P8-LE-NEXT:    blr
 ;
@@ -940,13 +940,13 @@ define dso_local void @foo12_int_le_reuse8B(ptr nocapture noundef writeonly %a) 
 ; P8-BE-LABEL: foo12_int_le_reuse8B:
 ; P8-BE:       # %bb.0: # %entry
 ; P8-BE-NEXT:    ld 4, L..C11(2) # %const.0
-; P8-BE-NEXT:    lis 5, 2057
-; P8-BE-NEXT:    ori 5, 5, 2571
 ; P8-BE-NEXT:    lxvw4x 0, 0, 4
-; P8-BE-NEXT:    rldic 4, 5, 32, 4
+; P8-BE-NEXT:    lis 4, 2057
+; P8-BE-NEXT:    ori 4, 4, 2571
+; P8-BE-NEXT:    rldic 4, 4, 32, 4
+; P8-BE-NEXT:    stxvw4x 0, 0, 3
 ; P8-BE-NEXT:    oris 4, 4, 3085
 ; P8-BE-NEXT:    ori 4, 4, 3599
-; P8-BE-NEXT:    stxvw4x 0, 0, 3
 ; P8-BE-NEXT:    std 4, 16(3)
 ; P8-BE-NEXT:    blr
 ;
@@ -977,14 +977,14 @@ define dso_local void @foo12_int_le_reuse8B(ptr nocapture noundef writeonly %a) 
 ; P8-LE-LABEL: foo12_int_le_reuse8B:
 ; P8-LE:       # %bb.0: # %entry
 ; P8-LE-NEXT:    addis 4, 2, .LCPI11_0@toc@ha
-; P8-LE-NEXT:    lis 5, 3085
 ; P8-LE-NEXT:    addi 4, 4, .LCPI11_0@toc@l
-; P8-LE-NEXT:    ori 5, 5, 3599
 ; P8-LE-NEXT:    lxvd2x 0, 0, 4
-; P8-LE-NEXT:    rldic 4, 5, 32, 4
+; P8-LE-NEXT:    lis 4, 3085
+; P8-LE-NEXT:    ori 4, 4, 3599
+; P8-LE-NEXT:    rldic 4, 4, 32, 4
+; P8-LE-NEXT:    stxvd2x 0, 0, 3
 ; P8-LE-NEXT:    oris 4, 4, 2057
 ; P8-LE-NEXT:    ori 4, 4, 2571
-; P8-LE-NEXT:    stxvd2x 0, 0, 3
 ; P8-LE-NEXT:    std 4, 16(3)
 ; P8-LE-NEXT:    blr
 ;
@@ -1024,13 +1024,13 @@ define dso_local void @foo13_int_be_reuse8B(ptr nocapture noundef writeonly %a) 
 ; P8-BE-LABEL: foo13_int_be_reuse8B:
 ; P8-BE:       # %bb.0: # %entry
 ; P8-BE-NEXT:    ld 4, L..C12(2) # %const.0
-; P8-BE-NEXT:    lis 5, 1
-; P8-BE-NEXT:    ori 5, 5, 515
 ; P8-BE-NEXT:    lxvd2x 0, 0, 4
-; P8-BE-NEXT:    rldic 4, 5, 32, 15
+; P8-BE-NEXT:    lis 4, 1
+; P8-BE-NEXT:    ori 4, 4, 515
+; P8-BE-NEXT:    rldic 4, 4, 32, 15
+; P8-BE-NEXT:    stxvd2x 0, 0, 3
 ; P8-BE-NEXT:    oris 4, 4, 1029
 ; P8-BE-NEXT:    ori 4, 4, 1543
-; P8-BE-NEXT:    stxvd2x 0, 0, 3
 ; P8-BE-NEXT:    std 4, 16(3)
 ; P8-BE-NEXT:    blr
 ;
@@ -1061,14 +1061,14 @@ define dso_local void @foo13_int_be_reuse8B(ptr nocapture noundef writeonly %a) 
 ; P8-LE-LABEL: foo13_int_be_reuse8B:
 ; P8-LE:       # %bb.0: # %entry
 ; P8-LE-NEXT:    addis 4, 2, .LCPI12_0@toc@ha
-; P8-LE-NEXT:    lis 5, 1
 ; P8-LE-NEXT:    addi 4, 4, .LCPI12_0@toc@l
-; P8-LE-NEXT:    ori 5, 5, 515
 ; P8-LE-NEXT:    lxvd2x 0, 0, 4
-; P8-LE-NEXT:    rldic 4, 5, 32, 15
+; P8-LE-NEXT:    lis 4, 1
+; P8-LE-NEXT:    ori 4, 4, 515
+; P8-LE-NEXT:    rldic 4, 4, 32, 15
+; P8-LE-NEXT:    stxvd2x 0, 0, 3
 ; P8-LE-NEXT:    oris 4, 4, 1029
 ; P8-LE-NEXT:    ori 4, 4, 1543
-; P8-LE-NEXT:    stxvd2x 0, 0, 3
 ; P8-LE-NEXT:    std 4, 16(3)
 ; P8-LE-NEXT:    blr
 ;
@@ -1106,13 +1106,13 @@ define dso_local void @foo14_int_le_reuse8B(ptr nocapture noundef writeonly %a) 
 ; P8-BE-LABEL: foo14_int_le_reuse8B:
 ; P8-BE:       # %bb.0: # %entry
 ; P8-BE-NEXT:    ld 4, L..C13(2) # %const.0
-; P8-BE-NEXT:    lis 5, 2057
-; P8-BE-NEXT:    ori 5, 5, 2571
 ; P8-BE-NEXT:    lxvd2x 0, 0, 4
-; P8-BE-NEXT:    rldic 4, 5, 32, 4
+; P8-BE-NEXT:    lis 4, 2057
+; P8-BE-NEXT:    ori 4, 4, 2571
+; P8-BE-NEXT:    rldic 4, 4, 32, 4
+; P8-BE-NEXT:    stxvd2x 0, 0, 3
 ; P8-BE-NEXT:    oris 4, 4, 3085
 ; P8-BE-NEXT:    ori 4, 4, 3599
-; P8-BE-NEXT:    stxvd2x 0, 0, 3
 ; P8-BE-NEXT:    std 4, 16(3)
 ; P8-BE-NEXT:    blr
 ;
@@ -1143,14 +1143,14 @@ define dso_local void @foo14_int_le_reuse8B(ptr nocapture noundef writeonly %a) 
 ; P8-LE-LABEL: foo14_int_le_reuse8B:
 ; P8-LE:       # %bb.0: # %entry
 ; P8-LE-NEXT:    addis 4, 2, .LCPI13_0@toc@ha
-; P8-LE-NEXT:    lis 5, 2057
 ; P8-LE-NEXT:    addi 4, 4, .LCPI13_0@toc@l
-; P8-LE-NEXT:    ori 5, 5, 2571
 ; P8-LE-NEXT:    lxvd2x 0, 0, 4
-; P8-LE-NEXT:    rldic 4, 5, 32, 4
+; P8-LE-NEXT:    lis 4, 2057
+; P8-LE-NEXT:    ori 4, 4, 2571
+; P8-LE-NEXT:    rldic 4, 4, 32, 4
+; P8-LE-NEXT:    stxvd2x 0, 0, 3
 ; P8-LE-NEXT:    oris 4, 4, 3085
 ; P8-LE-NEXT:    ori 4, 4, 3599
-; P8-LE-NEXT:    stxvd2x 0, 0, 3
 ; P8-LE-NEXT:    std 4, 16(3)
 ; P8-LE-NEXT:    blr
 ;
@@ -1254,13 +1254,13 @@ define dso_local void @foo16_int_noreuse8B(ptr nocapture noundef writeonly %a) l
 ; P8-BE-LABEL: foo16_int_noreuse8B:
 ; P8-BE:       # %bb.0: # %entry
 ; P8-BE-NEXT:    ld 4, L..C15(2) # %const.0
-; P8-BE-NEXT:    lis 5, 1
-; P8-BE-NEXT:    ori 5, 5, 515
 ; P8-BE-NEXT:    lxvw4x 0, 0, 4
-; P8-BE-NEXT:    rldic 4, 5, 32, 15
+; P8-BE-NEXT:    lis 4, 1
+; P8-BE-NEXT:    ori 4, 4, 515
+; P8-BE-NEXT:    rldic 4, 4, 32, 15
+; P8-BE-NEXT:    stxvw4x 0, 0, 3
 ; P8-BE-NEXT:    oris 4, 4, 1029
 ; P8-BE-NEXT:    ori 4, 4, 1544
-; P8-BE-NEXT:    stxvw4x 0, 0, 3
 ; P8-BE-NEXT:    std 4, 16(3)
 ; P8-BE-NEXT:    blr
 ;
@@ -1291,14 +1291,14 @@ define dso_local void @foo16_int_noreuse8B(ptr nocapture noundef writeonly %a) l
 ; P8-LE-LABEL: foo16_int_noreuse8B:
 ; P8-LE:       # %bb.0: # %entry
 ; P8-LE-NEXT:    addis 4, 2, .LCPI15_0@toc@ha
-; P8-LE-NEXT:    lis 5, 128
 ; P8-LE-NEXT:    addi 4, 4, .LCPI15_0@toc@l
-; P8-LE-NEXT:    ori 5, 5, 41153
 ; P8-LE-NEXT:    lxvd2x 0, 0, 4
-; P8-LE-NEXT:    rldic 4, 5, 35, 5
+; P8-LE-NEXT:    lis 4, 128
+; P8-LE-NEXT:    ori 4, 4, 41153
+; P8-LE-NEXT:    rldic 4, 4, 35, 5
+; P8-LE-NEXT:    stxvd2x 0, 0, 3
 ; P8-LE-NEXT:    oris 4, 4, 1
 ; P8-LE-NEXT:    ori 4, 4, 515
-; P8-LE-NEXT:    stxvd2x 0, 0, 3
 ; P8-LE-NEXT:    std 4, 16(3)
 ; P8-LE-NEXT:    blr
 ;
@@ -1538,12 +1538,12 @@ define dso_local void @foo20_fp_le_reuse8B(ptr nocapture noundef writeonly %a) l
 ; P8-BE-LABEL: foo20_fp_le_reuse8B:
 ; P8-BE:       # %bb.0: # %entry
 ; P8-BE-NEXT:    ld 4, L..C19(2) # %const.0
-; P8-BE-NEXT:    lis 5, 16420
 ; P8-BE-NEXT:    lxvd2x 0, 0, 4
-; P8-BE-NEXT:    ori 4, 5, 13107
+; P8-BE-NEXT:    lis 4, 16420
+; P8-BE-NEXT:    ori 4, 4, 13107
 ; P8-BE-NEXT:    rldimi 4, 4, 32, 0
-; P8-BE-NEXT:    rlwimi 4, 4, 16, 0, 15
 ; P8-BE-NEXT:    stxvd2x 0, 0, 3
+; P8-BE-NEXT:    rlwimi 4, 4, 16, 0, 15
 ; P8-BE-NEXT:    std 4, 16(3)
 ; P8-BE-NEXT:    blr
 ;
@@ -1573,13 +1573,13 @@ define dso_local void @foo20_fp_le_reuse8B(ptr nocapture noundef writeonly %a) l
 ; P8-LE-LABEL: foo20_fp_le_reuse8B:
 ; P8-LE:       # %bb.0: # %entry
 ; P8-LE-NEXT:    addis 4, 2, .LCPI19_0@toc@ha
-; P8-LE-NEXT:    lis 5, 16420
 ; P8-LE-NEXT:    addi 4, 4, .LCPI19_0@toc@l
 ; P8-LE-NEXT:    lxvd2x 0, 0, 4
-; P8-LE-NEXT:    ori 4, 5, 13107
+; P8-LE-NEXT:    lis 4, 16420
+; P8-LE-NEXT:    ori 4, 4, 13107
 ; P8-LE-NEXT:    rldimi 4, 4, 32, 0
-; P8-LE-NEXT:    rlwimi 4, 4, 16, 0, 15
 ; P8-LE-NEXT:    stxvd2x 0, 0, 3
+; P8-LE-NEXT:    rlwimi 4, 4, 16, 0, 15
 ; P8-LE-NEXT:    std 4, 16(3)
 ; P8-LE-NEXT:    blr
 ;

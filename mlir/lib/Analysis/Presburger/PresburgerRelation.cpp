@@ -9,6 +9,7 @@
 #include "mlir/Analysis/Presburger/PresburgerRelation.h"
 #include "mlir/Analysis/Presburger/IntegerRelation.h"
 #include "mlir/Analysis/Presburger/PWMAFunction.h"
+#include "mlir/Analysis/Presburger/PresburgerSpace.h"
 #include "mlir/Analysis/Presburger/Simplex.h"
 #include "mlir/Analysis/Presburger/Utils.h"
 #include "llvm/ADT/STLExtras.h"
@@ -36,6 +37,23 @@ void PresburgerRelation::insertVarInPlace(VarKind kind, unsigned pos,
   for (IntegerRelation &cs : disjuncts)
     cs.insertVar(kind, pos, num);
   space.insertVar(kind, pos, num);
+}
+
+void PresburgerRelation::convertVarKind(VarKind srcKind, unsigned srcPos,
+                                        unsigned num, VarKind dstKind,
+                                        unsigned dstPos) {
+  assert(srcKind != VarKind::Local && dstKind != VarKind::Local &&
+      "srcKind/dstKind cannot be local");
+  assert(srcKind != dstKind && "cannot convert variables to the same kind");
+  assert(srcPos + num <= space.getNumVarKind(srcKind) &&
+         "invalid range for source variables");
+  assert(dstPos <= space.getNumVarKind(dstKind) &&
+         "invalid position for destination variables");
+
+  space.convertVarKind(srcKind, srcPos, num, dstKind, dstPos);
+
+  for (IntegerRelation &disjunct : disjuncts)
+    disjunct.convertVarKind(srcKind, srcPos, srcPos + num, dstKind, dstPos);
 }
 
 unsigned PresburgerRelation::getNumDisjuncts() const {
@@ -159,7 +177,7 @@ PresburgerRelation::intersectDomain(const PresburgerSet &set) const {
          "Domain of `this` must be compatible with range of `set`");
 
   PresburgerRelation other = set;
-  other.insertVarInPlace(VarKind::Domain, 0, getNumDomainVars());
+  other.insertVarInPlace(VarKind::Domain, 0, getNumRangeVars());
   other.inverse();
   return intersect(other);
 }

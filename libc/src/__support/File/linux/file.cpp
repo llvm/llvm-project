@@ -11,6 +11,7 @@
 #include "src/__support/File/file.h"
 
 #include "src/__support/CPP/new.h"
+#include "src/__support/File/linux/lseekImpl.h"
 #include "src/__support/OSUtil/syscall.h" // For internal syscall function.
 #include "src/errno/libc_errno.h"         // For error macros
 
@@ -18,11 +19,12 @@
 #include <stdio.h>
 #include <sys/syscall.h> // For syscall numbers
 
-namespace __llvm_libc {
+namespace LIBC_NAMESPACE {
 
 FileIOResult linux_file_write(File *f, const void *data, size_t size) {
   auto *lf = reinterpret_cast<LinuxFile *>(f);
-  int ret = __llvm_libc::syscall_impl<int>(SYS_write, lf->get_fd(), data, size);
+  int ret =
+      LIBC_NAMESPACE::syscall_impl<int>(SYS_write, lf->get_fd(), data, size);
   if (ret < 0) {
     return {0, -ret};
   }
@@ -31,7 +33,8 @@ FileIOResult linux_file_write(File *f, const void *data, size_t size) {
 
 FileIOResult linux_file_read(File *f, void *buf, size_t size) {
   auto *lf = reinterpret_cast<LinuxFile *>(f);
-  int ret = __llvm_libc::syscall_impl<int>(SYS_read, lf->get_fd(), buf, size);
+  int ret =
+      LIBC_NAMESPACE::syscall_impl<int>(SYS_read, lf->get_fd(), buf, size);
   if (ret < 0) {
     return {0, -ret};
   }
@@ -40,37 +43,15 @@ FileIOResult linux_file_read(File *f, void *buf, size_t size) {
 
 ErrorOr<long> linux_file_seek(File *f, long offset, int whence) {
   auto *lf = reinterpret_cast<LinuxFile *>(f);
-  long result;
-#ifdef SYS_lseek
-  int ret =
-      __llvm_libc::syscall_impl<int>(SYS_lseek, lf->get_fd(), offset, whence);
-  result = ret;
-#elif defined(SYS_llseek)
-  int ret = __llvm_libc::syscall_impl<int>(SYS_llseek, lf->get_fd(),
-                                           (long)(((uint64_t)(offset)) >> 32),
-                                           (long)offset, &result, whence);
-  result = ret;
-#elif defined(SYS_llseek)
-  int ret = __llvm_libc::syscall_impl<int>(SYS_llseek, lf->get_fd(),
-                                           (long)(((uint64_t)(offset)) >> 32),
-                                           (long)offset, &result, whence);
-  result = ret;
-#elif defined(SYS__llseek)
-  int ret = __llvm_libc::syscall_impl<int>(
-      SYS__llseek, lf->get_fd(), offset >> 32, offset, &result, whence);
-#else
-#error "lseek, llseek and _llseek syscalls not available."
-#endif
-
-  if (ret < 0)
-    return Error(-ret);
-
-  return result;
+  auto result = internal::lseekimpl(lf->get_fd(), offset, whence);
+  if (!result.has_value())
+    return result.error();
+  return result.value();
 }
 
 int linux_file_close(File *f) {
   auto *lf = reinterpret_cast<LinuxFile *>(f);
-  int ret = __llvm_libc::syscall_impl<int>(SYS_close, lf->get_fd());
+  int ret = LIBC_NAMESPACE::syscall_impl<int>(SYS_close, lf->get_fd());
   if (ret < 0) {
     return -ret;
   }
@@ -111,10 +92,10 @@ ErrorOr<File *> openfile(const char *path, const char *mode) {
 
 #ifdef SYS_open
   int fd =
-      __llvm_libc::syscall_impl<int>(SYS_open, path, open_flags, OPEN_MODE);
+      LIBC_NAMESPACE::syscall_impl<int>(SYS_open, path, open_flags, OPEN_MODE);
 #elif defined(SYS_openat)
-  int fd = __llvm_libc::syscall_impl<int>(SYS_openat, AT_FDCWD, path,
-                                          open_flags, OPEN_MODE);
+  int fd = LIBC_NAMESPACE::syscall_impl<int>(SYS_openat, AT_FDCWD, path,
+                                             open_flags, OPEN_MODE);
 #else
 #error "open and openat syscalls not available."
 #endif
@@ -142,4 +123,4 @@ int get_fileno(File *f) {
   return lf->get_fd();
 }
 
-} // namespace __llvm_libc
+} // namespace LIBC_NAMESPACE

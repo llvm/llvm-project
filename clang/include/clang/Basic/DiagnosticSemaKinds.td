@@ -854,15 +854,29 @@ def warn_fortify_strlen_overflow: Warning<
   " but the source string has length %2 (including NUL byte)">,
   InGroup<FortifySource>;
 
-def warn_fortify_source_format_overflow : Warning<
+def subst_format_overflow : TextSubstitution<
   "'%0' will always overflow; destination buffer has size %1,"
-  " but format string expands to at least %2">,
-  InGroup<FortifySource>;
+  " but format string expands to at least %2">;
 
-def warn_fortify_source_format_truncation: Warning<
+def warn_format_overflow : Warning<
+  "%sub{subst_format_overflow}0,1,2">,
+  InGroup<FormatOverflow>;
+
+def warn_format_overflow_non_kprintf : Warning<
+  "%sub{subst_format_overflow}0,1,2">,
+  InGroup<FormatOverflowNonKprintf>;
+
+def subst_format_truncation: TextSubstitution<
   "'%0' will always be truncated; specified size is %1,"
-  " but format string expands to at least %2">,
-  InGroup<FortifySource>;
+  " but format string expands to at least %2">;
+
+def warn_format_truncation: Warning<
+  "%sub{subst_format_truncation}0,1,2">,
+  InGroup<FormatTruncation>;
+
+def warn_format_truncation_non_kprintf: Warning<
+  "%sub{subst_format_truncation}0,1,2">,
+  InGroup<FormatTruncationNonKprintf>;
 
 def warn_fortify_scanf_overflow : Warning<
   "'%0' may overflow; destination buffer in argument %1 has size "
@@ -1577,8 +1591,8 @@ def err_static_assert_message_constexpr : Error<
   "the message in a static assertion must be produced by a "
   "constant expression">;
 
-def warn_consteval_if_always_true : Warning<
-  "consteval if is always true in an %select{unevaluated|immediate}0 context">,
+def warn_tautological_consteval_if : Warning<
+  "consteval if is always %select{true|false}0 in this context">,
   InGroup<DiagGroup<"redundant-consteval-if">>;
 
 def ext_inline_variable : ExtWarn<
@@ -8883,6 +8897,9 @@ def warn_side_effects_unevaluated_context : Warning<
 def warn_side_effects_typeid : Warning<
   "expression with side effects will be evaluated despite being used as an "
   "operand to 'typeid'">, InGroup<PotentiallyEvaluatedExpression>;
+def warn_tautological_is_constant_evaluated : Warning<
+  "'%select{std::is_constant_evaluated|__builtin_is_constant_evaluated}0' will always evaluate to %select{false|true}1 in this context">,
+  InGroup<DiagGroup<"constant-evaluated">>;
 def warn_unused_result : Warning<
   "ignoring return value of function declared with %0 attribute">,
   InGroup<UnusedResult>;
@@ -11916,6 +11933,9 @@ def note_unsafe_buffer_operation : Note<
   "used%select{| in pointer arithmetic| in buffer access}0 here">;
 def note_unsafe_buffer_variable_fixit_group : Note<
   "change type of %0 to '%select{std::span|std::array|std::span::iterator}1' to preserve bounds information%select{|, and change %2 to '%select{std::span|std::array|std::span::iterator}1' to propagate bounds information between them}3">;
+def note_unsafe_buffer_variable_fixit_together : Note<
+  "change type of %0 to '%select{std::span|std::array|std::span::iterator}1' to preserve bounds information"
+  "%select{|, and change %2 to safe types to make function %4 bounds-safe}3">;
 def note_safe_buffer_usage_suggestions_disabled : Note<
   "pass -fsafe-buffer-usage-suggestions to receive code hardening suggestions">;
 #ifndef NDEBUG

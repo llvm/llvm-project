@@ -466,21 +466,20 @@ def Builtin_DenseResourceElementsAttr : Builtin_Attr<"DenseResourceElements", [
   let builders = [
     AttrBuilderWithInferredContext<(ins
       "ShapedType":$type, "DenseResourceElementsHandle":$handle
-    )>
-  ];
-  let extraClassDeclaration = [{
-  protected:
+    )>,
     /// A builder that inserts a new resource into the builtin dialect's blob
     /// manager using the provided blob. The handle of the inserted blob is used
     /// when building the attribute. The provided `blobName` is used as a hint
     /// for the key of the new handle for the `blob` resource, but may be
     /// changed if necessary to ensure uniqueness during insertion.
-    static DenseResourceElementsAttr get(
-      ShapedType type, StringRef blobName, AsmResourceBlob blob
-    );
+    /// This base class builder does no element type specific size or alignment 
+    /// checking. Use the typed subclasses for more safety unless if performing
+    /// generic operations.
+    AttrBuilderWithInferredContext<(ins
+      "ShapedType":$type, "StringRef":$blobName, "AsmResourceBlob":$blob
+    )>
+  ];
 
-  public:
-  }];
   let skipDefaultBuilders = 1;
 }
 
@@ -1063,6 +1062,9 @@ def Builtin_StringAttr : Builtin_Attr<"String", [TypedAttrInterface]> {
 
     /// Return the number of bytes in this string.
     size_t size() const { return getValue().size(); }
+
+    /// Return whether the string is empty.
+    bool empty() const { return getValue().empty(); }
 
     /// Iterate over the underlying string data.
     StringRef::iterator begin() const { return getValue().begin(); }

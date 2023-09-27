@@ -1,7 +1,7 @@
 // RUN: mlir-opt %s --canonicalize --post-sparsification-rewrite="enable-runtime-library=false" --sparse-tensor-codegen -cse --canonicalize | FileCheck %s
 
 #COO = #sparse_tensor.encoding<{
-  lvlTypes = ["compressed_nu", "singleton"],
+  map = (d0, d1) -> (d0 : compressed(nonunique), d1 : singleton),
   crdWidth=32
 }>
 
@@ -40,7 +40,7 @@ func.func @sparse_pack(%values: tensor<6xf64>, %pos:tensor<2xindex>, %coordinate
 // CHECK-SAME:      %[[VAL_0:.*]]: memref<?xindex>,
 // CHECK-SAME:      %[[VAL_1:.*]]: memref<?xi32>,
 // CHECK-SAME:      %[[VAL_2:.*]]: memref<?xf64>,
-// CHECK-SAME:      %[[VAL_3:.*]]: !sparse_tensor.storage_specifier<#sparse_tensor.encoding<{ lvlTypes = [ "compressed", "singleton" ] }>>,
+// CHECK-SAME:      %[[VAL_3:.*]]: !sparse_tensor.storage_specifier<#sparse_tensor.encoding<{{{.*}}}>>,
 // CHECK-SAME:      %[[VAL_4:.*]]: tensor<6xf64>,
 // CHECK-SAME:      %[[VAL_5:.*]]: tensor<2xindex>,
 // CHECK-SAME:      %[[VAL_6:.*]]: tensor<6x2xi32>) -> (tensor<6xf64>, tensor<2xindex>, tensor<6x2xi32>) {

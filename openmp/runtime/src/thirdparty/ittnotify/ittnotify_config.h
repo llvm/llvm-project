@@ -162,6 +162,10 @@
 #define ITT_ARCH_ARM64 6
 #endif /* ITT_ARCH_ARM64 */
 
+#ifndef ITT_ARCH_VE
+#define ITT_ARCH_VE 8
+#endif /* ITT_ARCH_VE */
+
 #ifndef ITT_ARCH
 #if defined _M_IX86 || defined __i386__
 #define ITT_ARCH ITT_ARCH_IA32
@@ -175,6 +179,8 @@
 #define ITT_ARCH ITT_ARCH_ARM64
 #elif defined __powerpc64__
 #define ITT_ARCH ITT_ARCH_PPC64
+#elif defined __ve__
+#define ITT_ARCH ITT_ARCH_VE
 #endif
 #endif
 

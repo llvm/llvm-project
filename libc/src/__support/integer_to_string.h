@@ -54,8 +54,8 @@
 //   IntegerToString<uint8_t, radix::Hex::WithWidth<4>::Uppercase>(255) : "00FF"
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_LIBC_SRC_SUPPORT_INTEGER_TO_STRING_H
-#define LLVM_LIBC_SRC_SUPPORT_INTEGER_TO_STRING_H
+#ifndef LLVM_LIBC_SRC___SUPPORT_INTEGER_TO_STRING_H
+#define LLVM_LIBC_SRC___SUPPORT_INTEGER_TO_STRING_H
 
 #include <stdint.h>
 
@@ -69,7 +69,7 @@
 #include "src/__support/CPP/type_traits.h"
 #include "src/__support/common.h"
 
-namespace __llvm_libc {
+namespace LIBC_NAMESPACE {
 
 namespace details {
 
@@ -316,6 +316,6 @@ public:
   }
 };
 
-} // namespace __llvm_libc
+} // namespace LIBC_NAMESPACE
 
-#endif // LLVM_LIBC_SRC_SUPPORT_INTEGER_TO_STRING_H
+#endif // LLVM_LIBC_SRC___SUPPORT_INTEGER_TO_STRING_H

@@ -84,12 +84,20 @@ ControlFlowContext::build(const Decl &D, Stmt &S, ASTContext &C) {
         std::make_error_code(std::errc::invalid_argument),
         "Cannot analyze templated declarations");
 
+  // The shape of certain elements of the AST can vary depending on the
+  // language. We currently only support C++.
+  if (!C.getLangOpts().CPlusPlus)
+    return llvm::createStringError(
+        std::make_error_code(std::errc::invalid_argument),
+        "Can only analyze C++");
+
   CFG::BuildOptions Options;
   Options.PruneTriviallyFalseEdges = true;
   Options.AddImplicitDtors = true;
   Options.AddTemporaryDtors = true;
   Options.AddInitializers = true;
   Options.AddCXXDefaultInitExprInCtors = true;
+  Options.AddLifetime = true;
 
   // Ensure that all sub-expressions in basic blocks are evaluated.
   Options.setAllAlwaysAdd();

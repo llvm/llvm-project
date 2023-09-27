@@ -100,7 +100,7 @@ define dso_local i32 @test4a(ptr readonly %0, i1 %cond) {
 ; CHECK:       A:
 ; CHECK-NEXT:    br i1 false, label [[TMP4:%.*]], label [[TMP2:%.*]]
 ; CHECK:       2:
-; CHECK-NEXT:    [[TMP3:%.*]] = load i32, ptr [[TMP0]], align 8
+; CHECK-NEXT:    [[TMP3:%.*]] = load i32, ptr [[TMP0]], align 4
 ; CHECK-NEXT:    br label [[TMP4]]
 ; CHECK:       4:
 ; CHECK-NEXT:    [[TMP5:%.*]] = phi i32 [ [[TMP3]], [[TMP2]] ], [ poison, [[A]] ]

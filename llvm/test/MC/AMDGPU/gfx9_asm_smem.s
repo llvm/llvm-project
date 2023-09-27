@@ -1,4 +1,4 @@
-// RUN: llvm-mc -arch=amdgcn -mcpu=gfx900 -show-encoding %s | FileCheck %s
+// RUN: llvm-mc -triple=amdgcn -mcpu=gfx900 -show-encoding %s | FileCheck %s
 
 s_load_dword s5, s[2:3], s0
 // CHECK: [0x41,0x01,0x00,0xc0,0x00,0x00,0x00,0x00]

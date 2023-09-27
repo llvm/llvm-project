@@ -27,7 +27,6 @@ class _CONSOLE_SCREEN_BUFFER_INFO(ctypes.Structure):
 
 
 class PrettyOutput(PrettyOutputBase):
-
     stdout = Stream(sys.stdout, ctypes.windll.kernel32.GetStdHandle(-11))
     stderr = Stream(sys.stderr, ctypes.windll.kernel32.GetStdHandle(-12))
 

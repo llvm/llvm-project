@@ -14,6 +14,7 @@
 #include "clang/AST/PrettyDeclStackTrace.h"
 #include "clang/Basic/Attributes.h"
 #include "clang/Basic/PrettyStackTrace.h"
+#include "clang/Basic/TargetInfo.h"
 #include "clang/Basic/TokenKinds.h"
 #include "clang/Parse/LoopHint.h"
 #include "clang/Parse/Parser.h"
@@ -1292,18 +1293,17 @@ StmtResult Parser::ParseCompoundStatementBody(bool isStmtExpr) {
 /// errors in the condition.
 /// Additionally, it will assign the location of the outer-most '(' and ')',
 /// to LParenLoc and RParenLoc, respectively.
-bool Parser::ParseParenExprOrCondition(StmtResult *InitStmt,
-                                       Sema::ConditionResult &Cond,
-                                       SourceLocation Loc,
-                                       Sema::ConditionKind CK,
-                                       SourceLocation &LParenLoc,
-                                       SourceLocation &RParenLoc) {
+bool Parser::ParseParenExprOrCondition(
+    StmtResult *InitStmt, Sema::ConditionResult &Cond, SourceLocation Loc,
+    Sema::ConditionKind CK, SourceLocation &LParenLoc,
+    SourceLocation &RParenLoc, SourceLocation ConstexprLoc) {
   BalancedDelimiterTracker T(*this, tok::l_paren);
   T.consumeOpen();
   SourceLocation Start = Tok.getLocation();
 
   if (getLangOpts().CPlusPlus) {
-    Cond = ParseCXXCondition(InitStmt, Loc, CK, false);
+    Cond = ParseCXXCondition(InitStmt, Loc, CK, false, nullptr, false,
+                             ConstexprLoc);
   } else {
     ExprResult CondExpr = ParseExpression();
 
@@ -1463,12 +1463,13 @@ StmtResult Parser::ParseIfStatement(SourceLocation *TrailingElseLoc) {
   bool IsConsteval = false;
   SourceLocation NotLocation;
   SourceLocation ConstevalLoc;
+  SourceLocation ConstexprLoc;
 
   if (Tok.is(tok::kw_constexpr)) {
     Diag(Tok, getLangOpts().CPlusPlus17 ? diag::warn_cxx14_compat_constexpr_if
                                         : diag::ext_constexpr_if);
     IsConstexpr = true;
-    ConsumeToken();
+    ConstexprLoc = ConsumeToken();
   } else {
     if (Tok.is(tok::exclaim)) {
       NotLocation = ConsumeToken();
@@ -1514,7 +1515,7 @@ StmtResult Parser::ParseIfStatement(SourceLocation *TrailingElseLoc) {
     if (ParseParenExprOrCondition(&InitStmt, Cond, IfLoc,
                                   IsConstexpr ? Sema::ConditionKind::ConstexprIf
                                               : Sema::ConditionKind::Boolean,
-                                  LParen, RParen))
+                                  LParen, RParen, ConstexprLoc))
       return StmtError();
 
     if (IsConstexpr)
@@ -1557,11 +1558,16 @@ StmtResult Parser::ParseIfStatement(SourceLocation *TrailingElseLoc) {
     if (NotLocation.isInvalid() && IsConsteval) {
       Context = Sema::ExpressionEvaluationContext::ImmediateFunctionContext;
       ShouldEnter = true;
+    } else if (NotLocation.isValid() && IsConsteval) {
+      Context = Actions.ExprEvalContexts.back().Context;
+      ShouldEnter = true;
     }
 
     EnterExpressionEvaluationContext PotentiallyDiscarded(
         Actions, Context, nullptr,
         Sema::ExpressionEvaluationContextRecord::EK_Other, ShouldEnter);
+    if (NotLocation.isValid() && IsConsteval)
+      Actions.ExprEvalContexts.back().IsRuntimeEvaluated = true;
     ThenStmt = ParseStatement(&InnerStatementTrailingElseLoc);
   }
 
@@ -1602,11 +1608,16 @@ StmtResult Parser::ParseIfStatement(SourceLocation *TrailingElseLoc) {
     if (NotLocation.isValid() && IsConsteval) {
       Context = Sema::ExpressionEvaluationContext::ImmediateFunctionContext;
       ShouldEnter = true;
+    } else if (NotLocation.isInvalid() && IsConsteval) {
+      Context = Actions.ExprEvalContexts.back().Context;
+      ShouldEnter = true;
     }
 
     EnterExpressionEvaluationContext PotentiallyDiscarded(
         Actions, Context, nullptr,
         Sema::ExpressionEvaluationContextRecord::EK_Other, ShouldEnter);
+    if (NotLocation.isInvalid() && IsConsteval)
+      Actions.ExprEvalContexts.back().IsRuntimeEvaluated = true;
     ElseStmt = ParseStatement();
 
     if (ElseStmt.isUsable())
@@ -2158,11 +2169,13 @@ StmtResult Parser::ParseForStatement(SourceLocation *TrailingElseLoc) {
         // for-range-declaration next.
         bool MightBeForRangeStmt = !ForRangeInfo.ParsedForRangeDecl();
         ColonProtectionRAIIObject ColonProtection(*this, MightBeForRangeStmt);
+        SourceLocation SecondPartStart = Tok.getLocation();
+        Sema::ConditionKind CK = Sema::ConditionKind::Boolean;
         SecondPart = ParseCXXCondition(
-            nullptr, ForLoc, Sema::ConditionKind::Boolean,
+            /*InitStmt=*/nullptr, ForLoc, CK,
             // FIXME: recovery if we don't see another semi!
             /*MissingOK=*/true, MightBeForRangeStmt ? &ForRangeInfo : nullptr,
-            /*EnterForConditionScope*/ true);
+            /*EnterForConditionScope=*/true);
 
         if (ForRangeInfo.ParsedForRangeDecl()) {
           Diag(FirstPart.get() ? FirstPart.get()->getBeginLoc()
@@ -2178,6 +2191,19 @@ StmtResult Parser::ParseForStatement(SourceLocation *TrailingElseLoc) {
                 << FixItHint::CreateRemoval(EmptyInitStmtSemiLoc);
           }
         }
+
+        if (SecondPart.isInvalid()) {
+          ExprResult CondExpr = Actions.CreateRecoveryExpr(
+              SecondPartStart,
+              Tok.getLocation() == SecondPartStart ? SecondPartStart
+                                                   : PrevTokLocation,
+              {}, Actions.PreferredConditionType(CK));
+          if (!CondExpr.isInvalid())
+            SecondPart = Actions.ActOnCondition(getCurScope(), ForLoc,
+                                                CondExpr.get(), CK,
+                                                /*MissingOK=*/false);
+        }
+
       } else {
         // We permit 'continue' and 'break' in the condition of a for loop.
         getCurScope()->AddFlags(Scope::BreakScope | Scope::ContinueScope);

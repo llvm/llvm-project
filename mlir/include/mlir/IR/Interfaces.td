@@ -114,7 +114,7 @@ class Interface<string name, list<Interface> baseInterfacesArg = []> {
   // be used to better enable "optional" interfaces, where an entity only
   // implements the interface if some dynamic characteristic holds.
   // `$_attr`/`$_op`/`$_type` may be used to refer to an instance of the
-  // entity being checked.
+  // interface instance being checked.
   code extraClassOf = "";
 
   // An optional set of base interfaces that this interface

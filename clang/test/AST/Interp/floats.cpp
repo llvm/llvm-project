@@ -102,6 +102,38 @@ namespace compound {
     return a[1];
   }
   static_assert(ff() == 3, "");
+
+  constexpr float intPlusDouble() {
+   int a = 0;
+   a += 2.0;
+
+   return a;
+  }
+  static_assert(intPlusDouble() == 2, "");
+
+  constexpr double doublePlusInt() {
+   double a = 0.0;
+   a += 2;
+
+   return a;
+  }
+  static_assert(doublePlusInt() == 2, "");
+
+  constexpr float boolPlusDouble() {
+   bool a = 0;
+   a += 1.0;
+
+   return a;
+  }
+  static_assert(boolPlusDouble(), "");
+
+  constexpr bool doublePlusbool() {
+   double a = 0.0;
+   a += true;
+
+   return a;
+  }
+  static_assert(doublePlusbool() == 1.0, "");
 }
 
 namespace unary {
@@ -169,4 +201,19 @@ namespace Compare {
   static_assert(nan != nan, "");
   static_assert(!(inf < nan), "");
   static_assert(!(inf > nan), "");
+}
+
+namespace nan {
+  constexpr double nan = __builtin_nan("");
+  static_assert(nan);
+
+  constexpr double D1 = 1 + nan; // ref-error {{must be initialized by a constant expression}} \
+                                 // ref-note {{produces a NaN}} \
+                                 // expected-error {{must be initialized by a constant expression}} \
+                                 // expected-note {{produces a NaN}}
+
+  constexpr double D2 = __builtin_inf() / __builtin_inf(); // ref-error {{must be initialized by a constant expression}} \
+                                                           // ref-note {{produces a NaN}} \
+                                                           // expected-error {{must be initialized by a constant expression}} \
+                                                           // expected-note {{produces a NaN}}
 }

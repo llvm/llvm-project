@@ -29,11 +29,9 @@ private:
 
 public:
   typedef ConstString KeyType;
-  typedef TypeCategoryImpl ValueType;
-  typedef ValueType::SharedPointer ValueSP;
-  typedef std::map<KeyType, ValueSP> MapType;
+  typedef std::map<KeyType, lldb::TypeCategoryImplSP> MapType;
   typedef MapType::iterator MapIterator;
-  typedef std::function<bool(const ValueSP &)> ForEachCallback;
+  typedef std::function<bool(const lldb::TypeCategoryImplSP &)> ForEachCallback;
 
   typedef uint32_t Position;
 
@@ -43,7 +41,7 @@ public:
 
   TypeCategoryMap(IFormatChangeListener *lst);
 
-  void Add(KeyType name, const ValueSP &entry);
+  void Add(KeyType name, const lldb::TypeCategoryImplSP &entry);
 
   bool Delete(KeyType name);
 
@@ -51,9 +49,9 @@ public:
 
   bool Disable(KeyType category_name);
 
-  bool Enable(ValueSP category, Position pos = Default);
+  bool Enable(lldb::TypeCategoryImplSP category, Position pos = Default);
 
-  bool Disable(ValueSP category);
+  bool Disable(lldb::TypeCategoryImplSP category);
 
   void EnableAllCategories();
 
@@ -61,9 +59,7 @@ public:
 
   void Clear();
 
-  bool Get(KeyType name, ValueSP &entry);
-
-  bool Get(uint32_t pos, ValueSP &entry);
+  bool Get(KeyType name, lldb::TypeCategoryImplSP &entry);
 
   void ForEach(ForEachCallback callback);
 

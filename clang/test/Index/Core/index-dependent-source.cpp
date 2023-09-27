@@ -1,3 +1,4 @@
+// XFAIL: target={{.*}}-aix{{.*}}
 // RUN: c-index-test core -print-source-symbols -- %s -std=c++14 -target x86_64-apple-macosx10.7 | FileCheck %s
 
 int invalid;
