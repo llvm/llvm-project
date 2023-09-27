@@ -12,19 +12,22 @@
 #ifndef FORTRAN_RUNTIME_MEMORY_H_
 #define FORTRAN_RUNTIME_MEMORY_H_
 
+#include "flang/Runtime/api-attrs.h"
+#include <cassert>
 #include <memory>
+#include <type_traits>
 
 namespace Fortran::runtime {
 
 class Terminator;
 
-[[nodiscard]] void *AllocateMemoryOrCrash(
+[[nodiscard]] RT_API_ATTRS void *AllocateMemoryOrCrash(
     const Terminator &, std::size_t bytes);
 template <typename A> [[nodiscard]] A &AllocateOrCrash(const Terminator &t) {
   return *reinterpret_cast<A *>(AllocateMemoryOrCrash(t, sizeof(A)));
 }
-void FreeMemory(void *);
-template <typename A> void FreeMemory(A *p) {
+RT_API_ATTRS void FreeMemory(void *);
+template <typename A> RT_API_ATTRS void FreeMemory(A *p) {
   FreeMemory(reinterpret_cast<void *>(p));
 }
 template <typename A> void FreeMemoryAndNullify(A *&p) {
@@ -32,11 +35,93 @@ template <typename A> void FreeMemoryAndNullify(A *&p) {
   p = nullptr;
 }
 
-template <typename A> struct OwningPtrDeleter {
-  void operator()(A *p) { FreeMemory(p); }
+// Very basic implementation mimicking std::unique_ptr.
+// It should work for any offload device compiler.
+// It uses a fixed memory deleter based on FreeMemory(),
+// and does not support array objects with runtime length.
+template <typename A> class OwningPtr {
+public:
+  using pointer_type = A *;
+
+  OwningPtr() = default;
+  RT_API_ATTRS explicit OwningPtr(pointer_type p) : ptr_(p) {}
+  RT_API_ATTRS OwningPtr(const OwningPtr &) = delete;
+  RT_API_ATTRS OwningPtr &operator=(const OwningPtr &) = delete;
+  RT_API_ATTRS OwningPtr(OwningPtr &&other) {
+    ptr_ = other.ptr_;
+    other.ptr_ = pointer_type{};
+  }
+  RT_API_ATTRS OwningPtr &operator=(OwningPtr &&other) {
+    if (this != &other) {
+      delete_ptr(ptr_);
+      ptr_ = other.ptr_;
+      other.ptr_ = pointer_type{};
+    }
+    return *this;
+  }
+  constexpr RT_API_ATTRS OwningPtr(std::nullptr_t) : OwningPtr() {}
+
+  // Delete the pointer, if owns one.
+  RT_API_ATTRS ~OwningPtr() {
+    if (ptr_ != pointer_type{}) {
+      delete_ptr(ptr_);
+      ptr_ = pointer_type{};
+    }
+  }
+
+  // Release the ownership.
+  RT_API_ATTRS pointer_type release() {
+    pointer_type p = ptr_;
+    ptr_ = pointer_type{};
+    return p;
+  }
+
+  // Replace the pointer.
+  RT_API_ATTRS void reset(pointer_type p = pointer_type{}) {
+    std::swap(ptr_, p);
+    if (p != pointer_type{}) {
+      // Delete the owned pointer.
+      delete_ptr(p);
+    }
+  }
+
+  // Exchange the pointer with another object.
+  RT_API_ATTRS void swap(OwningPtr &other) { std::swap(ptr_, other.ptr_); }
+
+  // Get the stored pointer.
+  RT_API_ATTRS pointer_type get() const { return ptr_; }
+
+  RT_API_ATTRS explicit operator bool() const {
+    return get() != pointer_type{};
+  }
+
+  RT_API_ATTRS typename std::add_lvalue_reference<A>::type operator*() const {
+    assert(get() != pointer_type{});
+    return *get();
+  }
+
+  RT_API_ATTRS pointer_type operator->() const { return get(); }
+
+private:
+  RT_API_ATTRS void delete_ptr(pointer_type p) { FreeMemory(p); }
+  pointer_type ptr_{};
 };
 
-template <typename A> using OwningPtr = std::unique_ptr<A, OwningPtrDeleter<A>>;
+template <typename X, typename Y>
+inline RT_API_ATTRS bool operator!=(
+    const OwningPtr<X> &x, const OwningPtr<Y> &y) {
+  return x.get() != y.get();
+}
+
+template <typename X>
+inline RT_API_ATTRS bool operator!=(const OwningPtr<X> &x, std::nullptr_t) {
+  return (bool)x;
+}
+
+template <typename X>
+inline RT_API_ATTRS bool operator!=(std::nullptr_t, const OwningPtr<X> &x) {
+  return (bool)x;
+}
 
 template <typename A> class SizedNew {
 public:
