@@ -2476,7 +2476,7 @@ InstructionCost AArch64TTIImpl::getCastInstrCost(unsigned Opcode, Type *Dst,
     InstructionCost Part1 = AArch64TTIImpl::getCastInstrCost(
         Opcode, LegalTy, Src, CCH, CostKind, I);
     InstructionCost Part2 = AArch64TTIImpl::getCastInstrCost(
-        Opcode, Dst, LegalTy, CCH, CostKind, I);
+        Opcode, Dst, LegalTy, TTI::CastContextHint::None, CostKind, I);
     return Part1 + Part2;
   }
 
