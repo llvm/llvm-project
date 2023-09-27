@@ -1724,8 +1724,14 @@ SDValue WebAssemblyTargetLowering::LowerGlobalAddress(SDValue Op,
     fail(DL, DAG, "Invalid address space for WebAssembly target");
 
   unsigned OperandFlags = 0;
-  if (isPositionIndependent()) {
-    const GlobalValue *GV = GA->getGlobal();
+  const GlobalValue *GV = GA->getGlobal();
+  // is PIC but not a WebAssembly table.
+  // Since WebAssembly tables cannot yet be shared accross modules, we don't need special
+  // treatment for tables in PIC mode.
+  if (isPositionIndependent() && 
+      !(GV->getValueType()->isArrayTy() && 
+        WebAssembly::isWebAssemblyReferenceType(GV->getValueType()->getArrayElementType()))) {
+    
     if (getTargetMachine().shouldAssumeDSOLocal(*GV->getParent(), GV)) {
       MachineFunction &MF = DAG.getMachineFunction();
       MVT PtrVT = getPointerTy(MF.getDataLayout());
