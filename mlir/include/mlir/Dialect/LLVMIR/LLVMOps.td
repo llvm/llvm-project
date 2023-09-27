@@ -646,6 +646,10 @@ def LLVM_CallOp : LLVM_MemAccessOpBase<"call",
                    CArg<"ValueRange", "{}">:$args)>
   ];
   let hasCustomAssemblyFormat = 1;
+  let extraClassDeclaration = [{
+    /// Returns the callee function type.
+    LLVMFunctionType getCalleeFunctionType();
+  }];
 }
 
 //===----------------------------------------------------------------------===//

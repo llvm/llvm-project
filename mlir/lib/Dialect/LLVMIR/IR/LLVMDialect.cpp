@@ -1028,11 +1028,11 @@ static SmallVector<Type, 1> getCallOpResultTypes(LLVMFunctionType calleeType) {
 }
 
 /// Constructs a LLVMFunctionType from MLIR `results` and `args`.
-static LLVMFunctionType getLLVMFuncType(OpBuilder &builder, TypeRange results,
+static LLVMFunctionType getLLVMFuncType(MLIRContext *context, TypeRange results,
                                         ValueRange args) {
   Type resultType;
   if (results.empty())
-    resultType = LLVMVoidType::get(builder.getContext());
+    resultType = LLVMVoidType::get(context);
   else
     resultType = results.front();
   return LLVMFunctionType::get(resultType, llvm::to_vector(args.getTypes()),
@@ -1052,7 +1052,8 @@ void CallOp::build(OpBuilder &builder, OperationState &state, TypeRange results,
 void CallOp::build(OpBuilder &builder, OperationState &state, TypeRange results,
                    FlatSymbolRefAttr callee, ValueRange args) {
   build(builder, state, results,
-        TypeAttr::get(getLLVMFuncType(builder, results, args)), callee, args,
+        TypeAttr::get(getLLVMFuncType(builder.getContext(), results, args)),
+        callee, args,
         /*fastmathFlags=*/nullptr,
         /*branch_weights=*/nullptr,
         /*access_groups=*/nullptr, /*alias_scopes=*/nullptr,
@@ -1378,6 +1379,13 @@ ParseResult CallOp::parse(OpAsmParser &parser, OperationState &result) {
   return parseCallTypeAndResolveOperands(parser, result, isDirect, operands);
 }
 
+LLVMFunctionType CallOp::getCalleeFunctionType() {
+  if (!getCalleeType())
+    setCalleeTypeAttr(TypeAttr::get(
+        getLLVMFuncType(getContext(), getResultTypes(), getOperands())));
+  return *getCalleeType();
+}
+
 ///===---------------------------------------------------------------------===//
 /// LLVM::InvokeOp
 ///===---------------------------------------------------------------------===//
@@ -1395,8 +1403,9 @@ void InvokeOp::build(OpBuilder &builder, OperationState &state, TypeRange tys,
                      FlatSymbolRefAttr callee, ValueRange ops, Block *normal,
                      ValueRange normalOps, Block *unwind,
                      ValueRange unwindOps) {
-  build(builder, state, tys, TypeAttr::get(getLLVMFuncType(builder, tys, ops)),
-        callee, ops, normalOps, unwindOps, nullptr, normal, unwind);
+  build(builder, state, tys,
+        TypeAttr::get(getLLVMFuncType(builder.getContext(), tys, ops)), callee,
+        ops, normalOps, unwindOps, nullptr, normal, unwind);
 }
 
 void InvokeOp::build(OpBuilder &builder, OperationState &state,
