@@ -1269,7 +1269,7 @@ void CallOp::print(OpAsmPrinter &p) {
   p << '(' << args << ')';
 
   if (isVarArg)
-    p << " vararg(" << calleeType << ") ";
+    p << " vararg(" << calleeType << ")";
 
   p.printOptionalAttrDict(processFMFAttr((*this)->getAttrs()),
                           {"callee", "callee_type"});
@@ -1495,7 +1495,7 @@ void InvokeOp::print(OpAsmPrinter &p) {
   p.printSuccessorAndUseList(getUnwindDest(), getUnwindDestOperands());
 
   if (isVarArg)
-    p << " vararg(" << calleeType << ") ";
+    p << " vararg(" << calleeType << ")";
 
   p.printOptionalAttrDict(
       (*this)->getAttrs(),
