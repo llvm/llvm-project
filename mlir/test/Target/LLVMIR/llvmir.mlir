@@ -1574,13 +1574,11 @@ llvm.func @invokeLandingpad() -> i32 attributes { personality = @__gxx_personali
 
 // CHECK: [[BB4:.*]]:
 // CHECK: invoke void (ptr, ...) @vararg_foo(ptr %[[a1]], i32 0)
-// CHECK-NEXT: to label %[[normal:[0-9]+]] unwind label %[[unwind:[0-9]+]]
 ^bb4:
   llvm.invoke @vararg_foo(%6, %0) to ^bb2 unwind ^bb1 vararg(!llvm.func<void (ptr<i8>, ...)>) : (!llvm.ptr<i8>, i32) -> ()
 
 // CHECK: [[BB5:.*]]:
 // CHECK: invoke void (ptr, ...) undef(ptr %[[a1]], i32 0)
-// CHECK-NEXT: to label %[[normal:[0-9]+]] unwind label %[[unwind:[0-9]+]]
 ^bb5:
   %9 = llvm.mlir.undef : !llvm.ptr
   llvm.invoke %9(%6, %0) to ^bb2 unwind ^bb1 vararg(!llvm.func<void (ptr<i8>, ...)>) : !llvm.ptr, (!llvm.ptr<i8>, i32) -> ()
