@@ -97,33 +97,3 @@ func.func @cmp(%arg0 : i32, %arg1 : f32, %arg2 : i64, %arg3 : f64, %arg4 : !emit
   %14 = emitc.cmp three_way, %arg6, %arg6 : (!emitc.opaque<"custom">, !emitc.opaque<"custom">) -> !emitc.opaque<"custom">
   return
 }
-
-func.func @test_if(%arg0: i1, %arg1: f32) {
-  emitc.if %arg0 {
-     %0 = emitc.call "func_const"(%arg1) : (f32) -> i32
-  }
-  return
-}
-
-func.func @test_explicit_yield(%arg0: i1, %arg1: f32) {
-  emitc.if %arg0 {
-     %0 = emitc.call "func_const"(%arg1) : (f32) -> i32
-     emitc.yield
-  }
-  return
-}
-
-func.func @test_if_else(%arg0: i1, %arg1: f32) {
-  emitc.if %arg0 {
-    %0 = emitc.call "func_true"(%arg1) : (f32) -> i32
-  } else {
-    %0 = emitc.call "func_false"(%arg1) : (f32) -> i32
-  }
-  return
-}
-
-func.func @test_assign(%arg1: f32) {
-  %v = "emitc.variable"() <{value = #emitc.opaque<"">}> : () -> f32
-  emitc.assign %arg1 : f32 to %v : f32
-  return
-}

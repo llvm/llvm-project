@@ -30,7 +30,7 @@
 #include "gtest/gtest.h"
 
 // Disable LSan for this test.
-// FIXME: Re-enable this once we track down the leak described in
+// FIXME: Re-enable once we can assume GCC 13.2 or higher.
 // https://llvm.org/github.com/llvm/llvm-project/issues/67586.
 #if LLVM_ADDRESS_SANITIZER_BUILD || LLVM_HWADDRESS_SANITIZER_BUILD
 #include <sanitizer/lsan_interface.h>
@@ -60,9 +60,7 @@ TEST(InterpreterTest, CatchException) {
   llvm::InitializeNativeTargetAsmPrinter();
 
   {
-    auto J = llvm::orc::LLJITBuilder()
-                 .setEnableDebuggerSupport(true)
-                 .create();
+    auto J = llvm::orc::LLJITBuilder().create();
     if (!J) {
       // The platform does not support JITs.
       // Using llvm::consumeError will require typeinfo for ErrorInfoBase, we
