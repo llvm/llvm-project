@@ -12,3 +12,22 @@ subroutine test_storage_size(n)
   !CHECK: PRINT *, sizeof(return_char(n))
   print*, sizeof(return_char(n))
 end subroutine
+
+module pdts
+  type t(l)
+    integer, len :: l
+    character(l) :: c
+  end type
+contains
+  function return_pdt(n)
+    type(t(n)) :: return_pdt
+  end function
+  subroutine test(k)
+    ! NOTE: flang design for length parametrized derived type
+    ! is to use allocatables for the automatic components. Hence,
+    ! their size is independent from the length parameters and is
+    ! a compile time constant.
+    !CHECK: PRINT *, 192_4
+    print *, storage_size(return_pdt(k))
+  end subroutine
+end module

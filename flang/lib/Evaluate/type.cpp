@@ -836,9 +836,9 @@ bool IsCUDAIntrinsicType(const DynamicType &type) {
   }
 }
 
-DynamicType DynamicType::DropNonConstantParameters() const {
+DynamicType DynamicType::DropNonConstantCharacterLength() const {
   if (charLengthParamValue_ && charLengthParamValue_->isExplicit()) {
-    if (std::optional<std::int64_t> len = knownLength()) {
+    if (std::optional<std::int64_t> len{knownLength()}) {
       return DynamicType(kind_, *len);
     } else {
       return DynamicType(category_, kind_);
