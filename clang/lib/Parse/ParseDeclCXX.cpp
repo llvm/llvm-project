@@ -3234,14 +3234,9 @@ ExprResult Parser::ParseCXXMemberInitializer(Decl *D, bool IsFunction,
 
   bool IsFieldInitialization = isa_and_present<FieldDecl>(D);
 
-  bool IsConstexpr = false;
-  if (const auto *VD = dyn_cast_if_present<VarDecl>(D))
-    IsConstexpr = VD->isConstexpr();
-
   EnterExpressionEvaluationContext Context(
       Actions,
-      IsConstexpr ? Sema::ExpressionEvaluationContext::ConstantEvaluated
-      : IsFieldInitialization
+      IsFieldInitialization
           ? Sema::ExpressionEvaluationContext::PotentiallyEvaluatedIfUsed
           : Sema::ExpressionEvaluationContext::PotentiallyEvaluated,
       D);

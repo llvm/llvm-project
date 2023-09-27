@@ -38,8 +38,7 @@ void test_consteval() {
   }() == 1);
 
   if consteval [[likely]] { // expected-warning {{attribute 'likely' has no effect when annotating an 'if consteval' statement}}\
-                            // expected-note 2{{annotating the 'if consteval' statement here}} \
-                            // expected-warning {{consteval if is always false}}
+                            // expected-note 2{{annotating the 'if consteval' statement here}}
 
 
   }
@@ -50,8 +49,7 @@ void test_consteval() {
 }
 
 void test_consteval_jumps() {
-  if consteval { // expected-warning {{consteval if is always false}} \
-                 // expected-note 4{{jump enters controlled statement of consteval if}}
+  if consteval { // expected-note 4{{jump enters controlled statement of consteval if}}
     goto a;
     goto b; // expected-error {{cannot jump from this goto statement to its label}}
   a:;
@@ -67,16 +65,14 @@ void test_consteval_jumps() {
 void test_consteval_switch() {
   int x = 42;
   switch (x) {
-    if consteval { // expected-warning {{consteval if is always false}} \
-                   // expected-note 2{{jump enters controlled statement of consteval if}}
+    if consteval { // expected-note 2{{jump enters controlled statement of consteval if}}
     case 1:;       // expected-error {{cannot jump from switch statement to this case label}}
     default:;      // expected-error {{cannot jump from switch statement to this case label}}
     } else {
     }
   }
   switch (x) {
-    if consteval { // expected-warning {{consteval if is always false}} \
-                   // expected-note 2{{jump enters controlled statement of consteval if}}
+    if consteval { // expected-note 2{{jump enters controlled statement of consteval if}}
     } else {
     case 2:;  // expected-error {{cannot jump from switch statement to this case label}}
     default:; // expected-error {{cannot jump from switch statement to this case label}}
@@ -103,32 +99,32 @@ constexpr int h(int i) { // expected-note {{declared here}}
 }
 
 consteval void warn_in_consteval() {
-  if consteval { // expected-warning {{consteval if is always true in this context}}
-    if consteval {} // expected-warning {{consteval if is always true in this context}}
+  if consteval { // expected-warning {{consteval if is always true in an immediate context}}
+    if consteval {} // expected-warning {{consteval if is always true in an immediate context}}
   }
 }
 
 constexpr void warn_in_consteval2() {
   if consteval {
-    if consteval {} // expected-warning {{consteval if is always true in this context}}
+    if consteval {} // expected-warning {{consteval if is always true in an immediate context}}
   }
 }
 
 auto y = []() consteval {
-  if consteval { // expected-warning {{consteval if is always true in this context}}
-    if consteval {} // expected-warning {{consteval if is always true in this context}}
+  if consteval { // expected-warning {{consteval if is always true in an immediate context}}
+    if consteval {} // expected-warning {{consteval if is always true in an immediate context}}
   }
 };
 
 namespace test_transform {
 int f(auto n) {
-  if consteval { // expected-warning {{consteval if is always false}}
+  if consteval {
     n.foo; //expected-error {{no member named}}
   }
   else {
   }
 
-  if !consteval { // expected-warning {{consteval if is always true}}
+  if !consteval {
     n.foo; //expected-error {{no member named}}
   }
   else {

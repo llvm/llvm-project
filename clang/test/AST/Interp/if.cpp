@@ -1,5 +1,5 @@
-// RUN: %clang_cc1 -std=c++23 -fsyntax-only -fexperimental-new-constant-interpreter -Wno-redundant-consteval-if %s -verify
-// RUN: %clang_cc1 -std=c++23 -fsyntax-only -Wno-redundant-consteval-if %s -verify=ref
+// RUN: %clang_cc1 -std=c++23 -fsyntax-only -fexperimental-new-constant-interpreter %s -verify
+// RUN: %clang_cc1 -std=c++23 -fsyntax-only %s -verify=ref
 
 // expected-no-diagnostics
 // ref-no-diagnostics

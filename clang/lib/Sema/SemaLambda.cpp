@@ -1444,13 +1444,12 @@ void Sema::ActOnStartOfLambdaDefinition(LambdaIntroducer &Intro,
 
   // Enter a new evaluation context to insulate the lambda from any
   // cleanups from the enclosing full-expression.
-  bool InImmediateFunctionContext = isImmediateFunctionContext();
   PushExpressionEvaluationContext(
-      LSI->CallOperator->isConsteval() || InImmediateFunctionContext
+      LSI->CallOperator->isConsteval()
           ? ExpressionEvaluationContext::ImmediateFunctionContext
           : ExpressionEvaluationContext::PotentiallyEvaluated);
   ExprEvalContexts.back().InImmediateFunctionContext =
-      LSI->CallOperator->isConsteval() || InImmediateFunctionContext;
+      LSI->CallOperator->isConsteval();
   ExprEvalContexts.back().InImmediateEscalatingFunctionContext =
       getLangOpts().CPlusPlus20 && LSI->CallOperator->isImmediateEscalating();
 }
