@@ -99,12 +99,19 @@ RT_API_ATTRS void Descriptor::Establish(const typeInfo::DerivedType &dt,
 
 RT_API_ATTRS OwningPtr<Descriptor> Descriptor::Create(TypeCode t,
     std::size_t elementBytes, void *p, int rank, const SubscriptValue *extent,
-    ISO::CFI_attribute_t attribute, int derivedTypeLenParameters) {
-  std::size_t bytes{SizeInBytes(rank, true, derivedTypeLenParameters)};
+    ISO::CFI_attribute_t attribute, bool addendum,
+    const typeInfo::DerivedType *dt) {
   Terminator terminator{__FILE__, __LINE__};
+  RUNTIME_CHECK(terminator, t.IsDerived() == (dt != nullptr));
+  int derivedTypeLenParameters = dt ? dt->LenParameters() : 0;
+  std::size_t bytes{SizeInBytes(rank, addendum, derivedTypeLenParameters)};
   Descriptor *result{
       reinterpret_cast<Descriptor *>(AllocateMemoryOrCrash(terminator, bytes))};
-  result->Establish(t, elementBytes, p, rank, extent, attribute, true);
+  if (dt) {
+    result->Establish(*dt, p, rank, extent, attribute);
+  } else {
+    result->Establish(t, elementBytes, p, rank, extent, attribute, addendum);
+  }
   return OwningPtr<Descriptor>{result};
 }
 
@@ -126,7 +133,7 @@ RT_API_ATTRS OwningPtr<Descriptor> Descriptor::Create(
     const typeInfo::DerivedType &dt, void *p, int rank,
     const SubscriptValue *extent, ISO::CFI_attribute_t attribute) {
   return Create(TypeCode{TypeCategory::Derived, 0}, dt.sizeInBytes(), p, rank,
-      extent, attribute, dt.LenParameters());
+      extent, attribute, /*addendum=*/true, &dt);
 }
 
 RT_API_ATTRS std::size_t Descriptor::SizeInBytes() const {
