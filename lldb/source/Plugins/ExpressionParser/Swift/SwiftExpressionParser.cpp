@@ -532,11 +532,17 @@ lldb::VariableSP SwiftExpressionParser::FindSelfVariable(Block *block) {
   return variable_list_sp->FindVariable(ConstString("self"));
 }
 
-static void AddRequiredAliases(Block *block, lldb::StackFrameSP &stack_frame_sp,
-                               SwiftASTContextForExpressions &swift_ast_context,
-                               SwiftASTManipulator &manipulator,
-                               lldb::DynamicValueType use_dynamic,
-                               lldb::BindGenericTypes bind_generic_types) {
+/// Adds the type aliases the type-checker needs to type-check the expression.
+///
+/// - Returns: A `Status` instance that indicates whether the method finished
+/// successfully. If the method returns an error status, it contains a string
+/// that explain the failure.
+static Status
+AddRequiredAliases(Block *block, lldb::StackFrameSP &stack_frame_sp,
+                   SwiftASTContextForExpressions &swift_ast_context,
+                   SwiftASTManipulator &manipulator,
+                   lldb::DynamicValueType use_dynamic,
+                   lldb::BindGenericTypes bind_generic_types) {
   LLDB_SCOPED_TIMER();
 
   // Alias builtin types, since we can't use them directly in source code.
@@ -548,12 +554,13 @@ static void AddRequiredAliases(Block *block, lldb::StackFrameSP &stack_frame_sp,
   manipulator.MakeTypealias(
       swift_ast_context.GetASTContext()->getIdentifier("$__lldb_builtin_int_t"),
       builtin_int_t, false);
-  
+
   // First emit the typealias for "$__lldb_context".
   lldb::VariableSP self_var_sp = SwiftExpressionParser::FindSelfVariable(block);
 
+  // If there is no self we don't need to add the "$__lldb_context" alias.
   if (!self_var_sp)
-    return;
+    return Status();
 
   auto *swift_runtime =
       SwiftLanguageRuntime::Get(stack_frame_sp->GetThread()->GetProcess());
@@ -569,7 +576,8 @@ static void AddRequiredAliases(Block *block, lldb::StackFrameSP &stack_frame_sp,
 
   if (!self_type.IsValid() ||
       !self_type.GetTypeSystem()->SupportsLanguage(lldb::eLanguageTypeSwift))
-    return;
+    return Status("Unable to add the aliases the expression needs because "
+                  "self isn't valid.");
 
   // Import before getting the unbound version, because the unbound
   // version may not be in the mangled name map.
@@ -577,42 +585,51 @@ static void AddRequiredAliases(Block *block, lldb::StackFrameSP &stack_frame_sp,
   CompilerType imported_self_type = ImportType(swift_ast_context, self_type);
 
   if (!imported_self_type.IsValid())
-    return;
+    return Status("Unable to add the aliases the expression needs because the "
+                  "self type from an import isn't valid.");
 
   auto *stack_frame = stack_frame_sp.get();
   if (bind_generic_types != lldb::eDontBind) {
     imported_self_type = swift_runtime->BindGenericTypeParameters(
         *stack_frame, imported_self_type);
     if (!imported_self_type)
-      return;
+      return Status(
+          "Unable to add the aliases the expression needs because the Swift "
+          "expression parser couldn't bind the type parameters for self.");
   }
 
   {
     auto swift_type_system =
         imported_self_type.GetTypeSystem().dyn_cast_or_null<TypeSystemSwift>();
     if (!swift_type_system)
-      return;
+      return Status("Unable to add the aliases the expression needs because "
+                    "self is not a Swift type.");
 
     // This might be a referenced type, in which case we really want to
     // extend the referent:
     imported_self_type = swift_type_system->GetReferentType(
         imported_self_type.GetOpaqueQualType());
     if (!imported_self_type)
-      return;
+      return Status("Unable to add the aliases the expression needs because "
+                    "the Swift expression parser couldn't get the referent "
+                    "type for self.");
   }
 
   {
     auto swift_type_system =
         imported_self_type.GetTypeSystem().dyn_cast_or_null<TypeSystemSwift>();
     if (!swift_type_system)
-      return;
+      return Status("Unable to add the aliases the expression needs because "
+                    "self is not a Swift type.");
 
     // If we are extending a generic class it's going to be a metatype,
     // and we have to grab the instance type:
     imported_self_type = swift_type_system->GetInstanceType(
         imported_self_type.GetOpaqueQualType());
     if (!imported_self_type)
-      return;
+      return Status(
+          "Unable to add the aliases the expression needs because the Swift "
+          "expression parser couldn't get the instance type for self.");
   }
 
   Flags imported_self_type_flags(imported_self_type.GetTypeInfo());
@@ -622,8 +639,9 @@ static void AddRequiredAliases(Block *block, lldb::StackFrameSP &stack_frame_sp,
     LLDB_LOG(GetLog(LLDBLog::Types | LLDBLog::Expressions),
              "Couldn't get SwiftASTContext type for self type {0}.",
              imported_self_type.GetDisplayTypeName());
-
-    return;
+    return Status(
+        "Unable to add the aliases the expression needs because the Swift "
+        "expression parser couldn't get the Swift type for self.");
   }
 
   swift::Type object_type = swift_self_type->getWithoutSpecifierType();
@@ -640,36 +658,45 @@ static void AddRequiredAliases(Block *block, lldb::StackFrameSP &stack_frame_sp,
     swift::BoundGenericEnumType *optional_type =
         referent_type->getAs<swift::BoundGenericEnumType>();
 
-    if (!optional_type)
-      return;
+    if (!optional_type || optional_type->getGenericArgs().empty())
+      return Status(
+          "Unable to add the aliases the expression needs because the Swift "
+          "expression parser couldn't get an optional type for self.");
 
     swift::Type first_arg_type = optional_type->getGenericArgs()[0];
 
-    swift::ClassType *self_class_type =
-        first_arg_type->getAs<swift::ClassType>();
+    // In Swift only class types can be weakly captured.
+    if (!llvm::isa<swift::ClassType>(first_arg_type) &&
+        !llvm::isa<swift::BoundGenericClassType>(first_arg_type))
+      return Status("Unable to add the aliases the expression needs because "
+                    "weakly captured type is not a class type.");
 
-    if (!self_class_type)
-      return;
-
-    imported_self_type = ToCompilerType(self_class_type);
+    imported_self_type = ToCompilerType(first_arg_type);
   }
 
   imported_self_type_flags.Reset(imported_self_type.GetTypeInfo());
-  if (imported_self_type_flags.AllClear(lldb::eTypeIsGenericTypeParam)) {
-    swift::ValueDecl *type_alias_decl = nullptr;
-
-    type_alias_decl = manipulator.MakeTypealias(
-        swift_ast_context.GetASTContext()->getIdentifier("$__lldb_context"),
-        imported_self_type);
-
-    if (!type_alias_decl)
-      LLDB_LOG(GetLog(LLDBLog::Expressions),
-               "SEP:AddRequiredAliases: Failed to make the $__lldb_context "
-               "typealias.");
-  } else
+  if (imported_self_type_flags.Test(lldb::eTypeIsGenericTypeParam)) {
     LLDB_LOG(GetLog(LLDBLog::Expressions),
              "SEP:AddRequiredAliases: Failed to resolve the self archetype - "
              "could not make the $__lldb_context typealias.");
+    return Status(
+        "Unable to add the aliases the expression needs because the "
+        "Swift expression parser couldn't resolve the self archetype.");
+  }
+  swift::ValueDecl *type_alias_decl = manipulator.MakeTypealias(
+      swift_ast_context.GetASTContext()->getIdentifier("$__lldb_context"),
+      imported_self_type);
+
+  if (!type_alias_decl) {
+    LLDB_LOG(GetLog(LLDBLog::Expressions),
+             "SEP:AddRequiredAliases: Failed to make the $__lldb_context "
+             "typealias.");
+    return Status("Unable to add the aliases the expression needs because the "
+                  "Swift expression parser couldn't create a context type "
+                  "alias for lldb");
+  }
+
+  return Status();
 }
 
 static void ResolveSpecialNames(
@@ -1407,9 +1434,11 @@ static llvm::Expected<ParsedExpression> ParseAndImport(
     }
 
     if (local_context_is_swift) {
-      AddRequiredAliases(sc.block, stack_frame_sp, swift_ast_context,
-                         *code_manipulator, options.GetUseDynamic(),
-                         options.GetBindGenericTypes());
+      Status error = AddRequiredAliases(
+          sc.block, stack_frame_sp, swift_ast_context, *code_manipulator,
+          options.GetUseDynamic(), options.GetBindGenericTypes());
+      if (error.Fail())
+        return error.ToError();
     }
     //
     // Register all magic variables.
