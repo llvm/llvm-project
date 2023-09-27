@@ -237,11 +237,33 @@ def SparseTensorEncodingAttr : SparseTensor_Attr<"SparseTensorEncoding",
     }>
     ... tensor<20x30xf32, #BSR_explicit> ...
 
+    // ELL format. 
+    // In the simple format for matrix, one array stores values and another
+    // array stores column indices. The arrays have the same number of rows
+    // as the original matrix, but only have as many columns as 
+    // the maximum number of nonzeros on a row of the original matrix.
+    // There are many variants for ELL such as jagged diagonal scheme.
+    // To implement ELL, map provides a notion of "counting a
+    // dimension", where every stored element with the same coordinate
+    // is mapped to a new slice. For instance, ELL storage of a 2-d
+    // tensor can be defined with the mapping (i, j) -> (#i, i, j)
+    // using the notation of [Chou20]. Lacking the # symbol in MLIR's
+    // affine mapping, we use a free symbol c to define such counting,
+    // together with a constant that denotes the number of resulting
+    // slices. For example, the mapping [c](i, j) -> (c * 3 * i, i, j)
+    // with the level-types ["dense", "dense", "compressed"] denotes ELL
+    // storage with three jagged diagonals that count the dimension i.
+    #ELL = #sparse_tensor.encoding<{
+      map = [c](i, j) -> (c * 3 * i : dense, i : dense, j : compressed)
+    }>
+    ... tensor<?x?xf64, #ELL> ...
+
     // CSR slice (offset = 0, size = 4, stride = 1 on the first dimension;
     // offset = 0, size = 8, and a dynamic stride on the second dimension).
     #CSR_SLICE = #sparse_tensor.encoding<{
-      lvlTypes = [ "dense", "compressed" ],
-      dimSlices = [ (0, 4, 1), (0, 8, ?) ]
+      map = (i : #sparse_tensor<slice(0, 4, 1)>,
+             j : #sparse_tensor<slice(0, 8, ?)>) ->
+            (i : dense, j : compressed)
     }>
     ... tensor<?x?xf64, #CSC_SLICE> ...
 

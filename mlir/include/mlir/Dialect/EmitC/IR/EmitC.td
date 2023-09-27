@@ -17,6 +17,7 @@ include "mlir/Dialect/EmitC/IR/EmitCAttributes.td"
 include "mlir/Dialect/EmitC/IR/EmitCTypes.td"
 
 include "mlir/Interfaces/CastInterfaces.td"
+include "mlir/Interfaces/ControlFlowInterfaces.td"
 include "mlir/Interfaces/SideEffectInterfaces.td"
 
 //===----------------------------------------------------------------------===//
@@ -400,6 +401,104 @@ def EmitC_VariableOp : EmitC_Op<"variable", []> {
   let results = (outs AnyType);
 
   let hasVerifier = 1;
+}
+
+def EmitC_AssignOp : EmitC_Op<"assign", []> {
+  let summary = "Assign operation";
+  let description = [{
+    The `assign` operation stores an SSA value to the location designated by an
+    EmitC variable. This operation doesn't return any value. The assigned value
+    must be of the same type as the variable being assigned. The operation is
+    emitted as a C/C++ '=' operator.
+
+    Example:
+
+    ```mlir
+    // Integer variable
+    %0 = "emitc.variable"(){value = 42 : i32} : () -> i32
+    %1 = emitc.call "foo"() : () -> (i32)
+
+    // Assign emitted as `... = ...;`
+    "emitc.assign"(%0, %1) : (i32, i32) -> ()
+    ```
+  }];
+
+  let arguments = (ins AnyType:$var, AnyType:$value);
+  let results = (outs);
+
+  let hasVerifier = 1;
+  let assemblyFormat = "$value `:` type($value) `to` $var `:` type($var) attr-dict";
+}
+
+def EmitC_YieldOp : EmitC_Op<"yield", [Pure, Terminator, ParentOneOf<["IfOp"]>]> {
+  let summary = "block termination operation";
+  let description = [{
+    "yield" terminates blocks within EmitC control-flow operations. Since
+    control-flow constructs in C do not return values, this operation doesn't
+    take any arguments.
+  }];
+
+  let arguments = (ins);
+  let builders = [OpBuilder<(ins), [{ /* nothing to do */ }]>];
+
+  let assemblyFormat = [{ attr-dict }];
+}
+
+def EmitC_IfOp : EmitC_Op<"if",
+    [DeclareOpInterfaceMethods<RegionBranchOpInterface, [
+    "getNumRegionInvocations", "getRegionInvocationBounds",
+    "getEntrySuccessorRegions"]>, SingleBlock,
+    SingleBlockImplicitTerminator<"emitc::YieldOp">,
+    RecursiveMemoryEffects, NoRegionArguments]> {
+  let summary = "if-then-else operation";
+  let description = [{
+    The `if` operation represents an if-then-else construct for
+    conditionally executing two regions of code. The operand to an if operation
+    is a boolean value. For example:
+
+    ```mlir
+    emitc.if %b  {
+      ...
+    } else {
+      ...
+    }
+    ```
+
+    The "then" region has exactly 1 block. The "else" region may have 0 or 1
+    blocks. The blocks are always terminated with `emitc.yield`, which can be
+    left out to be inserted implicitly. This operation doesn't produce any
+    results.
+  }];
+  let arguments = (ins I1:$condition);
+  let results = (outs);
+  let regions = (region SizedRegion<1>:$thenRegion,
+                        MaxSizedRegion<1>:$elseRegion);
+
+  let skipDefaultBuilders = 1;
+  let builders = [
+    OpBuilder<(ins "Value":$cond)>,
+    OpBuilder<(ins "Value":$cond, "bool":$addThenBlock, "bool":$addElseBlock)>,
+    OpBuilder<(ins "Value":$cond, "bool":$withElseRegion)>,
+    OpBuilder<(ins "Value":$cond,
+      CArg<"function_ref<void(OpBuilder &, Location)>",
+           "buildTerminatedBody">:$thenBuilder,
+      CArg<"function_ref<void(OpBuilder &, Location)>",
+           "nullptr">:$elseBuilder)>,
+  ];
+
+  let extraClassDeclaration = [{
+    OpBuilder getThenBodyBuilder(OpBuilder::Listener *listener = nullptr) {
+      Block* body = getBody(0);
+      return OpBuilder::atBlockEnd(body, listener);
+    }
+    OpBuilder getElseBodyBuilder(OpBuilder::Listener *listener = nullptr) {
+      Block* body = getBody(1);
+      return OpBuilder::atBlockEnd(body, listener);
+    }
+    Block* thenBlock();
+    Block* elseBlock();
+  }];
+  let hasCustomAssemblyFormat = 1;
 }
 
 #endif // MLIR_DIALECT_EMITC_IR_EMITC
