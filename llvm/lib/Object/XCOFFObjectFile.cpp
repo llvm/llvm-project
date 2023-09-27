@@ -1252,7 +1252,7 @@ bool XCOFFSymbolRef::isFunction() const {
     return false;
 
   const int16_t SectNum = getSectionNumber();
-  Expected<DataRefImpl> SI = OwningObjectPtr->getSectionByNum(SectNum);
+  Expected<DataRefImpl> SI = getObject()->getSectionByNum(SectNum);
   if (!SI) {
     // If we could not get the section, then this symbol should not be
     // a function. So consume the error and return `false` to move on.
@@ -1260,7 +1260,7 @@ bool XCOFFSymbolRef::isFunction() const {
     return false;
   }
 
-  return (OwningObjectPtr->getSectionFlags(SI.get()) & XCOFF::STYP_TEXT);
+  return (getObject()->getSectionFlags(SI.get()) & XCOFF::STYP_TEXT);
 }
 
 bool XCOFFSymbolRef::isCsectSymbol() const {
@@ -1279,13 +1279,13 @@ Expected<XCOFFCsectAuxRef> XCOFFSymbolRef::getXCOFFCsectAuxRef() const {
   if (auto Err = NameOrErr.takeError())
     return std::move(Err);
 
-  uint32_t SymbolIdx = OwningObjectPtr->getSymbolIndex(getEntryAddress());
+  uint32_t SymbolIdx = getObject()->getSymbolIndex(getEntryAddress());
   if (!NumberOfAuxEntries) {
     return createError("csect symbol \"" + *NameOrErr + "\" with index " +
                        Twine(SymbolIdx) + " contains no auxiliary entry");
   }
 
-  if (!OwningObjectPtr->is64Bit()) {
+  if (!getObject()->is64Bit()) {
     // In XCOFF32, the csect auxilliary entry is always the last auxiliary
     // entry for the symbol.
     uintptr_t AuxAddr = XCOFFObjectFile::getAdvancedSymbolEntryAddress(
@@ -1298,10 +1298,10 @@ Expected<XCOFFCsectAuxRef> XCOFFSymbolRef::getXCOFFCsectAuxRef() const {
   for (uint8_t Index = NumberOfAuxEntries; Index > 0; --Index) {
     uintptr_t AuxAddr = XCOFFObjectFile::getAdvancedSymbolEntryAddress(
         getEntryAddress(), Index);
-    if (*OwningObjectPtr->getSymbolAuxType(AuxAddr) ==
+    if (*getObject()->getSymbolAuxType(AuxAddr) ==
         XCOFF::SymbolAuxType::AUX_CSECT) {
 #ifndef NDEBUG
-      OwningObjectPtr->checkSymbolEntryPointer(AuxAddr);
+      getObject()->checkSymbolEntryPointer(AuxAddr);
 #endif
       return XCOFFCsectAuxRef(viewAs<XCOFFCsectAuxEnt64>(AuxAddr));
     }
@@ -1322,10 +1322,10 @@ Expected<StringRef> XCOFFSymbolRef::getName() const {
     if (Entry32->NameInStrTbl.Magic != XCOFFSymbolRef::NAME_IN_STR_TBL_MAGIC)
       return generateXCOFFFixedNameStringRef(Entry32->SymbolName);
 
-    return OwningObjectPtr->getStringTableEntry(Entry32->NameInStrTbl.Offset);
+    return getObject()->getStringTableEntry(Entry32->NameInStrTbl.Offset);
   }
 
-  return OwningObjectPtr->getStringTableEntry(Entry64->Offset);
+  return getObject()->getStringTableEntry(Entry64->Offset);
 }
 
 // Explictly instantiate template classes.

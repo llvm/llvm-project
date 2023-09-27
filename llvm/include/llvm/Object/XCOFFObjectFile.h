@@ -774,7 +774,7 @@ public:
 
   XCOFFSymbolRef(DataRefImpl SymEntDataRef,
                  const XCOFFObjectFile *OwningObjectPtr)
-      : OwningObjectPtr(OwningObjectPtr) {
+      : SymbolRef(SymEntDataRef, OwningObjectPtr) {
     assert(OwningObjectPtr && "OwningObjectPtr cannot be nullptr!");
     assert(SymEntDataRef.p != 0 &&
            "Symbol table entry pointer cannot be nullptr!");
@@ -795,8 +795,7 @@ public:
   uint64_t getValue64() const { return Entry64->Value; }
 
   uint64_t getSize() const {
-    return cast<XCOFFObjectFile>(BasicSymbolRef::getObject())
-        ->getSymbolSize(getRawDataRefImpl());
+    return getObject()->getSymbolSize(getRawDataRefImpl());
   }
 
 #define GETVALUE(X) Entry32 ? Entry32->X : Entry64->X
@@ -834,7 +833,10 @@ public:
   Expected<XCOFFCsectAuxRef> getXCOFFCsectAuxRef() const;
 
 private:
-  const XCOFFObjectFile *OwningObjectPtr;
+  const XCOFFObjectFile *getObject() const {
+    return cast<XCOFFObjectFile>(BasicSymbolRef::getObject());
+  }
+
   const XCOFFSymbolEntry32 *Entry32 = nullptr;
   const XCOFFSymbolEntry64 *Entry64 = nullptr;
 };
