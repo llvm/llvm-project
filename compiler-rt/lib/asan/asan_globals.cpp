@@ -87,11 +87,9 @@ static void ReportGlobal(const Global &g, const char *prefix) {
       g.module_name, g.has_dynamic_init, (void *)g.odr_indicator);
 
   DataInfo info;
-  Symbolizer::GetOrInit()->SymbolizeData(g.beg, &info);
-  if (info.line != 0) {
+  if (Symbolizer::GetOrInit()->SymbolizeData(g.beg, &info) && info.line != 0) {
     Report("  location: name=%s, %d\n", info.file, static_cast<int>(info.line));
-  }
-  else if (g.gcc_location != 0) {
+  } else if (g.gcc_location != 0) {
     // Fallback to Global::gcc_location
     Report("  location: name=%s, %d\n", g.gcc_location->filename, g.gcc_location->line_no);
   }
@@ -301,9 +299,7 @@ void PrintGlobalNameIfASCII(InternalScopedString *str, const __asan_global &g) {
 
 void PrintGlobalLocation(InternalScopedString *str, const __asan_global &g) {
   DataInfo info;
-  Symbolizer::GetOrInit()->SymbolizeData(g.beg, &info);
-
-  if (info.line != 0) {
+  if (Symbolizer::GetOrInit()->SymbolizeData(g.beg, &info) && info.line != 0) {
     str->AppendF("%s:%d", info.file, static_cast<int>(info.line));
   } else if (g.gcc_location != 0) {
     // Fallback to Global::gcc_location
