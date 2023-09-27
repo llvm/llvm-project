@@ -18,7 +18,7 @@ constexpr auto h() {
 
 constexpr auto i() {
   if consteval {
-    if consteval { // expected-warning {{consteval if is always true in an immediate context}}
+    if consteval { // expected-warning {{consteval if is always true in this context}}
       return 1;
     }
     return 2;

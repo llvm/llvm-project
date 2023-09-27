@@ -225,15 +225,11 @@ namespace SizeOf {
 #if __cplusplus >= 202002L
   /// FIXME: The following code should be accepted.
   consteval int foo(int n) { // ref-error {{consteval function never produces a constant expression}}
-    return sizeof(int[n]); // ref-note 3{{not valid in a constant expression}} \
-                           // expected-note {{not valid in a constant expression}}
+    return sizeof(int[n]); // ref-note 2 {{not valid in a constant expression}}
   }
-  constinit int var = foo(5); // ref-error {{not a constant expression}} \
-                              // ref-note 2{{in call to}} \
+  constinit int var = foo(5); // ref-note {{in call to}} \
                               // ref-error {{does not have a constant initializer}} \
                               // ref-note {{required by 'constinit' specifier}} \
-                              // expected-error  {{is not a constant expression}} \
-                              // expected-note {{in call to}} \
                               // expected-error {{does not have a constant initializer}} \
                               // expected-note {{required by 'constinit' specifier}} \
 

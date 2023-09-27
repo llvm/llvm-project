@@ -1591,8 +1591,8 @@ def err_static_assert_message_constexpr : Error<
   "the message in a static assertion must be produced by a "
   "constant expression">;
 
-def warn_consteval_if_always_true : Warning<
-  "consteval if is always true in an %select{unevaluated|immediate}0 context">,
+def warn_tautological_consteval_if : Warning<
+  "consteval if is always %select{true|false}0 in this context">,
   InGroup<DiagGroup<"redundant-consteval-if">>;
 
 def ext_inline_variable : ExtWarn<
@@ -8897,6 +8897,9 @@ def warn_side_effects_unevaluated_context : Warning<
 def warn_side_effects_typeid : Warning<
   "expression with side effects will be evaluated despite being used as an "
   "operand to 'typeid'">, InGroup<PotentiallyEvaluatedExpression>;
+def warn_tautological_is_constant_evaluated : Warning<
+  "'%select{std::is_constant_evaluated|__builtin_is_constant_evaluated}0' will always evaluate to %select{false|true}1 in this context">,
+  InGroup<DiagGroup<"constant-evaluated">>;
 def warn_unused_result : Warning<
   "ignoring return value of function declared with %0 attribute">,
   InGroup<UnusedResult>;

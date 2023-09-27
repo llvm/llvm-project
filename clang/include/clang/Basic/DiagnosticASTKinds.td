@@ -413,10 +413,6 @@ def warn_constexpr_unscoped_enum_out_of_range : Warning<
 def note_unimplemented_constexpr_lambda_feature_ast : Note<
     "unimplemented constexpr lambda feature: %0 (coming soon!)">;
 
-def warn_is_constant_evaluated_always_true_constexpr : Warning<
-  "'%0' will always evaluate to 'true' in a manifestly constant-evaluated expression">,
-  InGroup<DiagGroup<"constant-evaluated">>;
-
 // inline asm related.
 let CategoryName = "Inline Assembly Issue" in {
   def err_asm_invalid_escape : Error<

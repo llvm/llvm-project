@@ -188,7 +188,6 @@ Frontend
 | EvaluateAsBooleanCondition (<test.cc:8:21, col:25>)
 | | EvaluateAsRValue (<test.cc:8:21, col:25>)
 | EvaluateAsInitializer (slow_value)
-| EvaluateAsConstantExpr (<test.cc:17:33, col:59>)
 | EvaluateAsConstantExpr (<test.cc:18:11, col:37>)
 | EvaluateAsRValue (<test.cc:22:14, line:23:58>)
 | EvaluateAsInitializer (slow_init_list)

@@ -24,7 +24,7 @@ int main(int, char**)
 #else
   // expected-error-re@+1 {{{{(static_assert|static assertion)}} failed}}
   static_assert(!std::is_constant_evaluated(), "");
-  // expected-warning@-1 0-1 {{'std::is_constant_evaluated' will always evaluate to 'true' in a manifestly constant-evaluated expression}}
+  // expected-warning-re@-1 0-1 {{'std::is_constant_evaluated' will always evaluate to {{('true' in a manifestly constant-evaluated expression|true in this context)}}}}
 #endif
   return 0;
 }
