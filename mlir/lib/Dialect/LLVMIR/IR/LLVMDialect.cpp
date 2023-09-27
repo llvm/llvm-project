@@ -1019,7 +1019,7 @@ static void printStoreType(OpAsmPrinter &printer, Operation *op,
 //===----------------------------------------------------------------------===//
 
 /// Gets the MLIR Op-like result types of a LLVMFunctionType.
-static SmallVector<Type, 1> getCallOpResults(LLVMFunctionType calleeType) {
+static SmallVector<Type, 1> getCallOpResultTypes(LLVMFunctionType calleeType) {
   SmallVector<Type, 1> results;
   Type resultType = calleeType.getReturnType();
   if (!isa<LLVM::LLVMVoidType>(resultType))
@@ -1074,7 +1074,7 @@ void CallOp::build(OpBuilder &builder, OperationState &state,
 void CallOp::build(OpBuilder &builder, OperationState &state,
                    LLVMFunctionType calleeType, FlatSymbolRefAttr callee,
                    ValueRange args) {
-  build(builder, state, getCallOpResults(calleeType), TypeAttr::get(calleeType),
+  build(builder, state, getCallOpResultTypes(calleeType), TypeAttr::get(calleeType),
         callee, args, /*fastmathFlags=*/nullptr,
         /*branch_weights=*/nullptr,
         /*access_groups=*/nullptr, /*alias_scopes=*/nullptr,
@@ -1083,7 +1083,7 @@ void CallOp::build(OpBuilder &builder, OperationState &state,
 
 void CallOp::build(OpBuilder &builder, OperationState &state,
                    LLVMFunctionType calleeType, ValueRange args) {
-  build(builder, state, getCallOpResults(calleeType), TypeAttr::get(calleeType),
+  build(builder, state, getCallOpResultTypes(calleeType), TypeAttr::get(calleeType),
         /*callee=*/nullptr, args,
         /*fastmathFlags=*/nullptr,
         /*branch_weights=*/nullptr,
@@ -1094,7 +1094,7 @@ void CallOp::build(OpBuilder &builder, OperationState &state,
 void CallOp::build(OpBuilder &builder, OperationState &state, LLVMFuncOp func,
                    ValueRange args) {
   auto calleeType = func.getFunctionType();
-  build(builder, state, getCallOpResults(calleeType), TypeAttr::get(calleeType),
+  build(builder, state, getCallOpResultTypes(calleeType), TypeAttr::get(calleeType),
         SymbolRefAttr::get(func), args,
         /*fastmathFlags=*/nullptr,
         /*branch_weights=*/nullptr,
@@ -1398,7 +1398,7 @@ void InvokeOp::build(OpBuilder &builder, OperationState &state, LLVMFuncOp func,
                      ValueRange ops, Block *normal, ValueRange normalOps,
                      Block *unwind, ValueRange unwindOps) {
   auto calleeType = func.getFunctionType();
-  build(builder, state, getCallOpResults(calleeType), TypeAttr::get(calleeType),
+  build(builder, state, getCallOpResultTypes(calleeType), TypeAttr::get(calleeType),
         SymbolRefAttr::get(func), ops, normalOps, unwindOps, nullptr, normal,
         unwind);
 }
@@ -1415,7 +1415,7 @@ void InvokeOp::build(OpBuilder &builder, OperationState &state,
                      LLVMFunctionType calleeType, FlatSymbolRefAttr callee,
                      ValueRange ops, Block *normal, ValueRange normalOps,
                      Block *unwind, ValueRange unwindOps) {
-  build(builder, state, getCallOpResults(calleeType), TypeAttr::get(calleeType),
+  build(builder, state, getCallOpResultTypes(calleeType), TypeAttr::get(calleeType),
         callee, ops, normalOps, unwindOps, nullptr, normal, unwind);
 }
 
