@@ -1015,19 +1015,6 @@ class ThreadSafetyAnalyzer {
 
   BeforeSet *GlobalBeforeSet;
 
-  void warnIfMutexNotHeld(const FactSet &FSet, const NamedDecl *D,
-                          const Expr *Exp, AccessKind AK, Expr *MutexExp,
-                          ProtectedOperationKind POK, til::LiteralPtr *Self,
-                          SourceLocation Loc);
-  void warnIfMutexHeld(const FactSet &FSet, const NamedDecl *D, const Expr *Exp,
-                       Expr *MutexExp, til::LiteralPtr *Self,
-                       SourceLocation Loc);
-
-  void checkAccess(const FactSet &FSet, const Expr *Exp, AccessKind AK,
-                   ProtectedOperationKind POK);
-  void checkPtAccess(const FactSet &FSet, const Expr *Exp, AccessKind AK,
-                     ProtectedOperationKind POK);
-
 public:
   ThreadSafetyAnalyzer(ThreadSafetyHandler &H, BeforeSet* Bset)
       : Arena(&Bpa), SxBuilder(Arena), Handler(H), GlobalBeforeSet(Bset) {}
@@ -1547,15 +1534,16 @@ class BuildLockset : public ConstStmtVisitor<BuildLockset> {
   unsigned CtxIndex;
 
   // helper functions
+  void warnIfMutexNotHeld(const NamedDecl *D, const Expr *Exp, AccessKind AK,
+                          Expr *MutexExp, ProtectedOperationKind POK,
+                          til::LiteralPtr *Self, SourceLocation Loc);
+  void warnIfMutexHeld(const NamedDecl *D, const Expr *Exp, Expr *MutexExp,
+                       til::LiteralPtr *Self, SourceLocation Loc);
 
   void checkAccess(const Expr *Exp, AccessKind AK,
-                   ProtectedOperationKind POK = POK_VarAccess) {
-    Analyzer->checkAccess(FSet, Exp, AK, POK);
-  }
+                   ProtectedOperationKind POK = POK_VarAccess);
   void checkPtAccess(const Expr *Exp, AccessKind AK,
-                     ProtectedOperationKind POK = POK_VarAccess) {
-    Analyzer->checkPtAccess(FSet, Exp, AK, POK);
-  }
+                     ProtectedOperationKind POK = POK_VarAccess);
 
   void handleCall(const Expr *Exp, const NamedDecl *D,
                   til::LiteralPtr *Self = nullptr,
@@ -1583,14 +1571,17 @@ public:
 
 /// Warn if the LSet does not contain a lock sufficient to protect access
 /// of at least the passed in AccessKind.
-void ThreadSafetyAnalyzer::warnIfMutexNotHeld(
-    const FactSet &FSet, const NamedDecl *D, const Expr *Exp, AccessKind AK,
-    Expr *MutexExp, ProtectedOperationKind POK, til::LiteralPtr *Self,
-    SourceLocation Loc) {
+void BuildLockset::warnIfMutexNotHeld(const NamedDecl *D, const Expr *Exp,
+                                      AccessKind AK, Expr *MutexExp,
+                                      ProtectedOperationKind POK,
+                                      til::LiteralPtr *Self,
+                                      SourceLocation Loc) {
   LockKind LK = getLockKindFromAccessKind(AK);
-  CapabilityExpr Cp = SxBuilder.translateAttrExpr(MutexExp, D, Exp, Self);
+
+  CapabilityExpr Cp =
+      Analyzer->SxBuilder.translateAttrExpr(MutexExp, D, Exp, Self);
   if (Cp.isInvalid()) {
-    warnInvalidLock(Handler, MutexExp, D, Exp, Cp.getKind());
+    warnInvalidLock(Analyzer->Handler, MutexExp, D, Exp, Cp.getKind());
     return;
   } else if (Cp.shouldIgnore()) {
     return;
@@ -1598,67 +1589,68 @@ void ThreadSafetyAnalyzer::warnIfMutexNotHeld(
 
   if (Cp.negative()) {
     // Negative capabilities act like locks excluded
-    const FactEntry *LDat = FSet.findLock(FactMan, !Cp);
+    const FactEntry *LDat = FSet.findLock(Analyzer->FactMan, !Cp);
     if (LDat) {
-        Handler.handleFunExcludesLock(Cp.getKind(), D->getNameAsString(),
-                                      (!Cp).toString(), Loc);
-        return;
+      Analyzer->Handler.handleFunExcludesLock(
+          Cp.getKind(), D->getNameAsString(), (!Cp).toString(), Loc);
+      return;
     }
 
     // If this does not refer to a negative capability in the same class,
     // then stop here.
-    if (!inCurrentScope(Cp))
-        return;
+    if (!Analyzer->inCurrentScope(Cp))
+      return;
 
     // Otherwise the negative requirement must be propagated to the caller.
-    LDat = FSet.findLock(FactMan, Cp);
+    LDat = FSet.findLock(Analyzer->FactMan, Cp);
     if (!LDat) {
-        Handler.handleNegativeNotHeld(D, Cp.toString(), Loc);
+      Analyzer->Handler.handleNegativeNotHeld(D, Cp.toString(), Loc);
     }
     return;
   }
 
-  const FactEntry *LDat = FSet.findLockUniv(FactMan, Cp);
+  const FactEntry *LDat = FSet.findLockUniv(Analyzer->FactMan, Cp);
   bool NoError = true;
   if (!LDat) {
     // No exact match found.  Look for a partial match.
-    LDat = FSet.findPartialMatch(FactMan, Cp);
+    LDat = FSet.findPartialMatch(Analyzer->FactMan, Cp);
     if (LDat) {
       // Warn that there's no precise match.
       std::string PartMatchStr = LDat->toString();
       StringRef   PartMatchName(PartMatchStr);
-      Handler.handleMutexNotHeld(Cp.getKind(), D, POK, Cp.toString(), LK, Loc,
-                                 &PartMatchName);
+      Analyzer->Handler.handleMutexNotHeld(Cp.getKind(), D, POK, Cp.toString(),
+                                           LK, Loc, &PartMatchName);
     } else {
       // Warn that there's no match at all.
-      Handler.handleMutexNotHeld(Cp.getKind(), D, POK, Cp.toString(), LK, Loc);
+      Analyzer->Handler.handleMutexNotHeld(Cp.getKind(), D, POK, Cp.toString(),
+                                           LK, Loc);
     }
     NoError = false;
   }
   // Make sure the mutex we found is the right kind.
   if (NoError && LDat && !LDat->isAtLeast(LK)) {
-    Handler.handleMutexNotHeld(Cp.getKind(), D, POK, Cp.toString(), LK, Loc);
+    Analyzer->Handler.handleMutexNotHeld(Cp.getKind(), D, POK, Cp.toString(),
+                                         LK, Loc);
   }
 }
 
 /// Warn if the LSet contains the given lock.
-void ThreadSafetyAnalyzer::warnIfMutexHeld(const FactSet &FSet,
-                                           const NamedDecl *D, const Expr *Exp,
-                                           Expr *MutexExp,
-                                           til::LiteralPtr *Self,
-                                           SourceLocation Loc) {
-  CapabilityExpr Cp = SxBuilder.translateAttrExpr(MutexExp, D, Exp, Self);
+void BuildLockset::warnIfMutexHeld(const NamedDecl *D, const Expr *Exp,
+                                   Expr *MutexExp, til::LiteralPtr *Self,
+                                   SourceLocation Loc) {
+  CapabilityExpr Cp =
+      Analyzer->SxBuilder.translateAttrExpr(MutexExp, D, Exp, Self);
   if (Cp.isInvalid()) {
-    warnInvalidLock(Handler, MutexExp, D, Exp, Cp.getKind());
+    warnInvalidLock(Analyzer->Handler, MutexExp, D, Exp, Cp.getKind());
     return;
   } else if (Cp.shouldIgnore()) {
     return;
   }
 
-  const FactEntry *LDat = FSet.findLock(FactMan, Cp);
+  const FactEntry *LDat = FSet.findLock(Analyzer->FactMan, Cp);
   if (LDat) {
-    Handler.handleFunExcludesLock(Cp.getKind(), D->getNameAsString(),
-                                  Cp.toString(), Loc);
+    Analyzer->Handler.handleFunExcludesLock(Cp.getKind(), D->getNameAsString(),
+                                            Cp.toString(), Loc);
   }
 }
 
@@ -1667,9 +1659,8 @@ void ThreadSafetyAnalyzer::warnIfMutexHeld(const FactSet &FSet,
 /// marked with guarded_by, we must ensure the appropriate mutexes are held.
 /// Similarly, we check if the access is to an expression that dereferences
 /// a pointer marked with pt_guarded_by.
-void ThreadSafetyAnalyzer::checkAccess(const FactSet &FSet, const Expr *Exp,
-                                       AccessKind AK,
-                                       ProtectedOperationKind POK) {
+void BuildLockset::checkAccess(const Expr *Exp, AccessKind AK,
+                               ProtectedOperationKind POK) {
   Exp = Exp->IgnoreImplicit()->IgnoreParenCasts();
 
   SourceLocation Loc = Exp->getExprLoc();
@@ -1693,50 +1684,49 @@ void ThreadSafetyAnalyzer::checkAccess(const FactSet &FSet, const Expr *Exp,
   if (const auto *UO = dyn_cast<UnaryOperator>(Exp)) {
     // For dereferences
     if (UO->getOpcode() == UO_Deref)
-      checkPtAccess(FSet, UO->getSubExpr(), AK, POK);
+      checkPtAccess(UO->getSubExpr(), AK, POK);
     return;
   }
 
   if (const auto *BO = dyn_cast<BinaryOperator>(Exp)) {
     switch (BO->getOpcode()) {
     case BO_PtrMemD: // .*
-      return checkAccess(FSet, BO->getLHS(), AK, POK);
+      return checkAccess(BO->getLHS(), AK, POK);
     case BO_PtrMemI: // ->*
-      return checkPtAccess(FSet, BO->getLHS(), AK, POK);
+      return checkPtAccess(BO->getLHS(), AK, POK);
     default:
       return;
     }
   }
 
   if (const auto *AE = dyn_cast<ArraySubscriptExpr>(Exp)) {
-    checkPtAccess(FSet, AE->getLHS(), AK, POK);
+    checkPtAccess(AE->getLHS(), AK, POK);
     return;
   }
 
   if (const auto *ME = dyn_cast<MemberExpr>(Exp)) {
     if (ME->isArrow())
-      checkPtAccess(FSet, ME->getBase(), AK, POK);
+      checkPtAccess(ME->getBase(), AK, POK);
     else
-      checkAccess(FSet, ME->getBase(), AK, POK);
+      checkAccess(ME->getBase(), AK, POK);
   }
 
   const ValueDecl *D = getValueDecl(Exp);
   if (!D || !D->hasAttrs())
     return;
 
-  if (D->hasAttr<GuardedVarAttr>() && FSet.isEmpty(FactMan)) {
-    Handler.handleNoMutexHeld(D, POK, AK, Loc);
+  if (D->hasAttr<GuardedVarAttr>() && FSet.isEmpty(Analyzer->FactMan)) {
+    Analyzer->Handler.handleNoMutexHeld(D, POK, AK, Loc);
   }
 
   for (const auto *I : D->specific_attrs<GuardedByAttr>())
-    warnIfMutexNotHeld(FSet, D, Exp, AK, I->getArg(), POK, nullptr, Loc);
+    warnIfMutexNotHeld(D, Exp, AK, I->getArg(), POK, nullptr, Loc);
 }
 
 /// Checks pt_guarded_by and pt_guarded_var attributes.
 /// POK is the same  operationKind that was passed to checkAccess.
-void ThreadSafetyAnalyzer::checkPtAccess(const FactSet &FSet, const Expr *Exp,
-                                         AccessKind AK,
-                                         ProtectedOperationKind POK) {
+void BuildLockset::checkPtAccess(const Expr *Exp, AccessKind AK,
+                                 ProtectedOperationKind POK) {
   while (true) {
     if (const auto *PE = dyn_cast<ParenExpr>(Exp)) {
       Exp = PE->getSubExpr();
@@ -1746,7 +1736,7 @@ void ThreadSafetyAnalyzer::checkPtAccess(const FactSet &FSet, const Expr *Exp,
       if (CE->getCastKind() == CK_ArrayToPointerDecay) {
         // If it's an actual array, and not a pointer, then it's elements
         // are protected by GUARDED_BY, not PT_GUARDED_BY;
-        checkAccess(FSet, CE->getSubExpr(), AK, POK);
+        checkAccess(CE->getSubExpr(), AK, POK);
         return;
       }
       Exp = CE->getSubExpr();
@@ -1763,11 +1753,11 @@ void ThreadSafetyAnalyzer::checkPtAccess(const FactSet &FSet, const Expr *Exp,
   if (!D || !D->hasAttrs())
     return;
 
-  if (D->hasAttr<PtGuardedVarAttr>() && FSet.isEmpty(FactMan))
-    Handler.handleNoMutexHeld(D, PtPOK, AK, Exp->getExprLoc());
+  if (D->hasAttr<PtGuardedVarAttr>() && FSet.isEmpty(Analyzer->FactMan))
+    Analyzer->Handler.handleNoMutexHeld(D, PtPOK, AK, Exp->getExprLoc());
 
   for (auto const *I : D->specific_attrs<PtGuardedByAttr>())
-    warnIfMutexNotHeld(FSet, D, Exp, AK, I->getArg(), PtPOK, nullptr,
+    warnIfMutexNotHeld(D, Exp, AK, I->getArg(), PtPOK, nullptr,
                        Exp->getExprLoc());
 }
 
@@ -1879,9 +1869,8 @@ void BuildLockset::handleCall(const Expr *Exp, const NamedDecl *D,
       case attr::RequiresCapability: {
         const auto *A = cast<RequiresCapabilityAttr>(At);
         for (auto *Arg : A->args()) {
-          Analyzer->warnIfMutexNotHeld(FSet, D, Exp,
-                                       A->isShared() ? AK_Read : AK_Written,
-                                       Arg, POK_FunctionCall, Self, Loc);
+          warnIfMutexNotHeld(D, Exp, A->isShared() ? AK_Read : AK_Written, Arg,
+                             POK_FunctionCall, Self, Loc);
           // use for adopting a lock
           if (!Scp.shouldIgnore())
             Analyzer->getMutexIDs(ScopedReqsAndExcludes, A, Exp, D, Self);
@@ -1892,7 +1881,7 @@ void BuildLockset::handleCall(const Expr *Exp, const NamedDecl *D,
       case attr::LocksExcluded: {
         const auto *A = cast<LocksExcludedAttr>(At);
         for (auto *Arg : A->args()) {
-          Analyzer->warnIfMutexHeld(FSet, D, Exp, Arg, Self, Loc);
+          warnIfMutexHeld(D, Exp, Arg, Self, Loc);
           // use for deferring a lock
           if (!Scp.shouldIgnore())
             Analyzer->getMutexIDs(ScopedReqsAndExcludes, A, Exp, D, Self);
