@@ -483,7 +483,7 @@ void X86FoldTablesEmitter::updateTables(const CodeGenInstruction *RegInstr,
 
   // Instructions which Read-Modify-Write should be added to Table2Addr.
   if (!MemOutSize && RegOutSize == 1 && MemInSize == RegInSize) {
-    // X86 would not unfold RMW instructions so add TB_NO_REVERSE.
+    // X86 would not unfold Read-Modify-Write instructions so add TB_NO_REVERSE.
     addEntryWithFlags(Table2Addr, RegInstr, MemInstr, S | TB_NO_REVERSE, 0,
                       IsManual);
     return;
