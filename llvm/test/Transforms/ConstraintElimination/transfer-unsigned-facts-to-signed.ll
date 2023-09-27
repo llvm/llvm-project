@@ -87,9 +87,8 @@ else:
 define i1 @idx_not_known_positive_via_len_uge(i8 %len, i8 %idx) {
 ; CHECK-LABEL: @idx_not_known_positive_via_len_uge(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[LEN_POS:%.*]] = icmp uge i8 [[LEN:%.*]], 0
-; CHECK-NEXT:    [[IDX_ULT_LEN:%.*]] = icmp ult i8 [[IDX:%.*]], [[LEN]]
-; CHECK-NEXT:    [[AND_1:%.*]] = and i1 [[LEN_POS]], [[IDX_ULT_LEN]]
+; CHECK-NEXT:    [[IDX_ULT_LEN:%.*]] = icmp ult i8 [[IDX:%.*]], [[LEN:%.*]]
+; CHECK-NEXT:    [[AND_1:%.*]] = and i1 true, [[IDX_ULT_LEN]]
 ; CHECK-NEXT:    br i1 [[AND_1]], label [[THEN_1:%.*]], label [[ELSE:%.*]]
 ; CHECK:       then.1:
 ; CHECK-NEXT:    [[C_2:%.*]] = icmp sge i8 [[IDX]], 0
