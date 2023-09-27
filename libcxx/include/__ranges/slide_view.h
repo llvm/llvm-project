@@ -14,16 +14,17 @@
 #include <__concepts/constructible.h>
 #include <__concepts/convertible_to.h>
 #include <__config>
+#include <__functional/bind_back.h>
 #include <__iterator/concepts.h>
 #include <__iterator/default_sentinel.h>
 #include <__iterator/distance.h>
 #include <__iterator/iterator_traits.h>
 #include <__iterator/next.h>
 #include <__iterator/prev.h>
-#include <__memory/addressof.h>
 #include <__ranges/all.h>
 #include <__ranges/concepts.h>
 #include <__ranges/counted.h>
+#include <__ranges/empty_view.h>
 #include <__ranges/non_propagating_cache.h>
 #include <__ranges/range_adaptor.h>
 #include <__ranges/view_interface.h>
@@ -134,6 +135,7 @@ public:
     if (__size < 0) {
       __size = 0;
     }
+    return __size;
   }
 };
 
@@ -158,21 +160,21 @@ struct __slide_view_iterator_concept<_View> {
 template <forward_range _View>
   requires view<_View>
 template <bool _Const>
-class slide_view<_View>::__iterator {
+class slide_view<_View>::__iterator : public __slide_view_iterator_concept<_View> {
   friend slide_view;
 
-  using _Base                                            = __maybe_const<_Const, _View>;
-  slide_view* __parent_                                  = nullptr;
+  using _Base           = __maybe_const<_Const, _View>;
+  using _Last           = _If<__slide_caches_first<_Base>, iterator_t<_Base>, empty_view<_Base>>;
+  slide_view* __parent_ = nullptr;
   _LIBCPP_NO_UNIQUE_ADDRESS iterator_t<_Base> __current_ = iterator_t<_Base>();
-  _LIBCPP_NO_UNIQUE_ADDRESS iterator_t<_Base> __last_    = iterator_t<_Base>();
+  _LIBCPP_NO_UNIQUE_ADDRESS _Last __last_                = {};
   range_difference_t<_Base> __n_                         = 0;
 
   _LIBCPP_HIDE_FROM_ABI constexpr __iterator(iterator_t<_Base> __current, range_difference_t<_Base> __n)
     requires(!(__slide_caches_first<_Base>))
       : __current_(__current), __n_(__n) {}
 
-  _LIBCPP_HIDE_FROM_ABI constexpr __iterator(
-      iterator_t<_Base> __current, iterator_t<_Base> __last, range_difference_t<_Base> __n)
+  _LIBCPP_HIDE_FROM_ABI constexpr __iterator(iterator_t<_Base> __current, _Last __last, range_difference_t<_Base> __n)
     requires(__slide_caches_first<_Base>)
       : __current_(__current), __last_(__last), __n_(__n) {}
 
@@ -188,7 +190,72 @@ public:
     requires _Const && convertible_to<iterator_t<_View>, iterator_t<_Base>>
       : __current_(std::move(__i.__current_)), __n_(__i.__n_) {}
 
-  // TODO ...
+  _LIBCPP_HIDE_FROM_ABI constexpr auto operator*() const { return views::counted(__current_, __n_); }
+
+  _LIBCPP_HIDE_FROM_ABI constexpr __iterator& operator++() {
+    __current_ = ranges::next(__current_);
+    if constexpr (__slide_caches_first<_Base>) {
+      __last_ = ranges::next(__last_);
+    }
+    return *this;
+  }
+
+  _LIBCPP_HIDE_FROM_ABI constexpr __iterator operator++(int) {
+    auto __tmp = *this;
+    ++*this;
+    return __tmp;
+    // TODO ...
+  }
+
+  _LIBCPP_HIDE_FROM_ABI constexpr __iterator& operator--()
+    requires bidirectional_range<_View>
+  {
+    __current_ = ranges::prev(__current_);
+    if constexpr (__slide_caches_first<_Base>) {
+      __last_ = std::prev(__last_);
+    }
+    return *this;
+  }
+
+  _LIBCPP_HIDE_FROM_ABI constexpr __iterator operator--(int)
+    requires bidirectional_range<_View>
+  {
+    auto __tmp = *this;
+    --*this;
+    return __tmp;
+  }
+
+  _LIBCPP_HIDE_FROM_ABI constexpr __iterator& operator-=(difference_type __x)
+    requires random_access_range<_Base>
+  {
+    __current_ = std::prev(__current_, __x);
+    if constexpr (__slide_caches_first<_Base>) {
+      __last_ = std::prev(__last_, __x);
+    }
+    return *this;
+  }
+  _LIBCPP_HIDE_FROM_ABI constexpr __iterator operator+=(difference_type __x)
+    requires random_access_range<_Base>
+  {
+    __current_ = std::next(__current_, __x);
+    if constexpr (__slide_caches_first<_Base>) {
+      __last_ = std::next(__last_, __x);
+    }
+    return *this;
+  }
+
+  _LIBCPP_HIDE_FROM_ABI constexpr auto operator[](difference_type __x) const
+    requires random_access_range<_Base>
+  {
+    return views::counted(__current_ + __x, __n_);
+  }
+
+  _LIBCPP_HIDE_FROM_ABI friend constexpr bool operator==(const __iterator& __x, const __iterator& __y) {
+    if constexpr (__slide_caches_first<_Base>) {
+      __x.__last_ == __y.__last_;
+    }
+    return __x.__current_ == __y.__current_;
+  }
 };
 
 template <forward_range _View>
@@ -200,7 +267,17 @@ class slide_view<_View>::__sentinel {
 namespace views {
 namespace __slide {
 struct __fn {
-  // TODO ...
+  template <viewable_range _Range>
+  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr auto operator()(_Range&& __range, range_difference_t<_Range> __n) const
+      noexcept(noexcept(slide_view{std::forward<_Range>(__range), __n}))
+          -> decltype(slide_view{std::forward<_Range>(__range), __n}) {
+    return slide_view{std::forward<_Range>(__range), __n};
+  }
+
+  template <class _Np>
+  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr auto operator()(_Np&& __n) const {
+    return __range_adaptor_closure_t(std::__bind_back(*this, std::forward<_Np>(__n)));
+  }
 };
 } // namespace __slide
 
