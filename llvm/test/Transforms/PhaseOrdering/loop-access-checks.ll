@@ -145,13 +145,7 @@ define void @foo(ptr noundef nonnull align 8 dereferenceable(24) noalias %vec) #
 ; CHECK:       for.cond.cleanup:
 ; CHECK-NEXT:    ret void
 ; CHECK:       for.body:
-; CHECK-NEXT:    [[I_010:%.*]] = phi i64 [ [[INC:%.*]], [[OPERATOR_ACC_EXIT:%.*]] ], [ 0, [[ENTRY:%.*]] ]
-; CHECK-NEXT:    [[CMP_NOT_I:%.*]] = icmp ugt i64 [[SUB_PTR_DIV_I_I]], [[I_010]]
-; CHECK-NEXT:    br i1 [[CMP_NOT_I]], label [[OPERATOR_ACC_EXIT]], label [[IF_THEN_I:%.*]]
-; CHECK:       if.then.i:
-; CHECK-NEXT:    tail call void @abort() #[[ATTR1:[0-9]+]]
-; CHECK-NEXT:    unreachable
-; CHECK:       operator_acc.exit:
+; CHECK-NEXT:    [[I_010:%.*]] = phi i64 [ [[INC:%.*]], [[FOR_BODY]] ], [ 0, [[ENTRY:%.*]] ]
 ; CHECK-NEXT:    [[ADD_PTR_I:%.*]] = getelementptr inbounds double, ptr [[TMP1]], i64 [[I_010]]
 ; CHECK-NEXT:    [[TMP2:%.*]] = load double, ptr [[ADD_PTR_I]], align 8
 ; CHECK-NEXT:    [[ADD:%.*]] = fadd double [[TMP2]], 1.000000e+00
