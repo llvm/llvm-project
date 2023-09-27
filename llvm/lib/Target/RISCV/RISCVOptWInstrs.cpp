@@ -107,8 +107,23 @@ static bool hasAllNBitUsers(const MachineInstr &OrigMI,
       unsigned OpIdx = UserOp.getOperandNo();
 
       switch (UserMI->getOpcode()) {
-      default:
+      default: {
+        if (const RISCVVPseudosTable::PseudoInfo *PseudoInfo =
+                RISCVVPseudosTable::getPseudoInfo(UserMI->getOpcode())) {
+          const MCInstrDesc &MCID = UserMI->getDesc();
+          if (!RISCVII::hasSEWOp(MCID.TSFlags))
+            return false;
+          assert(RISCVII::hasVLOp(MCID.TSFlags));
+          const unsigned Log2SEW =
+              UserMI->getOperand(RISCVII::getSEWOpNum(MCID)).getImm();
+          if (UserOp.getOperandNo() == RISCVII::getVLOpNum(MCID))
+            return false;
+          if (RISCVII::vectorInstUsesNBitsOfScalarOp(PseudoInfo->BaseInstr,
+                                                     Bits, Log2SEW))
+            break;
+        }
         return false;
+      }
 
       case RISCV::ADDIW:
       case RISCV::ADDW:
