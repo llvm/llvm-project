@@ -721,10 +721,17 @@ std::string PredefinedExpr::ComputeName(PredefinedIdentKind IK,
     return std::string(Out.str());
   }
   if (const FunctionDecl *FD = dyn_cast<FunctionDecl>(CurrentDecl)) {
-    if (IK != PredefinedIdentKind::PrettyFunction &&
-        IK != PredefinedIdentKind::PrettyFunctionNoVirtual &&
-        IK != PredefinedIdentKind::FuncSig &&
-        IK != PredefinedIdentKind::LFuncSig)
+    const auto &LO = Context.getLangOpts();
+    if ((ForceElaboratedPrinting &&
+         (((IK == PredefinedIdentKind::Func ||
+            IK == PredefinedIdentKind ::Function) &&
+           !LO.MicrosoftExt) ||
+          (IK == PredefinedIdentKind::LFunction && LO.MicrosoftExt))) ||
+        (!ForceElaboratedPrinting &&
+         (IK != PredefinedIdentKind::PrettyFunction &&
+          IK != PredefinedIdentKind::PrettyFunctionNoVirtual &&
+          IK != PredefinedIdentKind::FuncSig &&
+          IK != PredefinedIdentKind::LFuncSig)))
       return FD->getNameAsString();
 
     SmallString<256> Name;
@@ -752,6 +759,8 @@ std::string PredefinedExpr::ComputeName(PredefinedIdentKind IK,
     PrintingPolicy Policy(Context.getLangOpts());
     PrettyCallbacks PrettyCB(Context.getLangOpts());
     Policy.Callbacks = &PrettyCB;
+    if (IK == PredefinedIdentKind::Function && ForceElaboratedPrinting)
+      Policy.SuppressTagKeyword = !LO.MicrosoftExt;
     std::string Proto;
     llvm::raw_string_ostream POut(Proto);
 

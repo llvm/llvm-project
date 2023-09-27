@@ -2237,6 +2237,7 @@ printTo(raw_ostream &OS, ArrayRef<TA> Args, const PrintingPolicy &Policy,
     llvm::SmallVector<TemplateArgument, 8> OrigArgs;
     for (const TA &A : Args)
       OrigArgs.push_back(getArgument(A));
+
     while (!Args.empty() && getArgument(Args.back()).getIsDefaulted())
       Args = Args.drop_back();
   }
@@ -2260,10 +2261,16 @@ printTo(raw_ostream &OS, ArrayRef<TA> Args, const PrintingPolicy &Policy,
     } else {
       if (!FirstArg)
         OS << Comma;
-      // Tries to print the argument with location info if exists.
-      printArgument(Arg, Policy, ArgOS,
-                    TemplateParameterList::shouldIncludeTypeForArgument(
-                        Policy, TPL, ParmIndex));
+
+      if (!Policy.SuppressTagKeyword &&
+          Argument.getKind() == TemplateArgument::Type &&
+          isa<TagType>(Argument.getAsType()))
+        OS << Argument.getAsType().getAsString().data();
+      else
+        // Tries to print the argument with location info if exists.
+        printArgument(Arg, Policy, ArgOS,
+                      TemplateParameterList::shouldIncludeTypeForArgument(
+                          Policy, TPL, ParmIndex));
     }
     StringRef ArgString = ArgOS.str();
 
