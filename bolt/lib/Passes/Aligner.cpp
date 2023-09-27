@@ -158,24 +158,26 @@ void AlignerPass::runOnFunctions(BinaryContext &BC) {
     BinaryContext::IndependentCodeEmitter Emitter =
         BC.createIndependentMCCodeEmitter();
 
+    // Align objects that contains constant islands and no code
+    // to at least 8 bytes.
+    if (!BF.size() && BF.hasIslandsInfo()) {
+      uint16_t Alignment = BF.getConstantIslandAlignment();
+      // Check if we're forcing output alignment and it is greater than minimal
+      // CI required one
+      if (!opts::UseCompactAligner && Alignment < opts::AlignFunctions &&
+          opts::AlignFunctions <= opts::AlignFunctionsMaxBytes)
+        Alignment = opts::AlignFunctions;
+
+      BF.setAlignment(Alignment);
+      BF.setMaxAlignmentBytes(Alignment);
+      BF.setMaxColdAlignmentBytes(Alignment);
+      return;
+    }
+
     if (opts::UseCompactAligner)
       alignCompact(BF, Emitter.MCE.get());
     else
       alignMaxBytes(BF);
-
-    // Align objects that contains constant islands and no code
-    // to at least 8 bytes.
-    if (!BF.size() && BF.hasIslandsInfo()) {
-      const uint16_t Alignment = BF.getConstantIslandAlignment();
-      if (BF.getAlignment() < Alignment)
-        BF.setAlignment(Alignment);
-
-      if (BF.getMaxAlignmentBytes() < Alignment)
-        BF.setMaxAlignmentBytes(Alignment);
-
-      if (BF.getMaxColdAlignmentBytes() < Alignment)
-        BF.setMaxColdAlignmentBytes(Alignment);
-    }
 
     if (opts::AlignBlocks && !opts::PreserveBlocksAlignment)
       alignBlocks(BF, Emitter.MCE.get());
