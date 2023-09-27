@@ -88,6 +88,9 @@ set(TARGET_LIBC_ENTRYPOINTS
     # stdio.h entrypoints
     libc.src.stdio.feof
     libc.src.stdio.ferror
+    libc.src.stdio.fseek
+    libc.src.stdio.fflush
+    libc.src.stdio.ftell
     libc.src.stdio.clearerr
     libc.src.stdio.puts
     libc.src.stdio.fopen
