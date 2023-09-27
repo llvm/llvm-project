@@ -20,10 +20,6 @@
 namespace mlir {
 class SPIRVTypeConverter;
 
-namespace gpu {
-class MMAMatrixType;
-} // namespace gpu
-
 /// Appends to a pattern list additional patterns for translating GPU Ops to
 /// SPIR-V ops. For a gpu.func to be converted, it should have a
 /// spirv.entry_point_abi attribute.
@@ -40,15 +36,11 @@ void populateGpuWMMAToSPIRVCoopMatrixKHRConversionPatterns(
 void populateGpuWMMAToSPIRVCoopMatrixNVConversionPatterns(
     SPIRVTypeConverter &typeConverter, RewritePatternSet &patterns);
 
-/// Returns a KHR cooperative matrix type corresponding to the MMAMatrixType
-/// `type`.
-spirv::CooperativeMatrixType
-convertMMAToSPIRVCoopMatrixType(gpu::MMAMatrixType type);
-
-/// Returns an NV cooperative matrix type corresponding to the MMAMatrixType
-/// `type`.
-spirv::CooperativeMatrixNVType
-convertMMAToSPIRVCoopMatrixNVType(gpu::MMAMatrixType type);
+/// Adds `MMAMatrixType` conversions to SPIR-V cooperative matrix type
+/// conversion to the type converter. Defaults to KHR cooperative matrix types.
+/// When `useNVTypes` is `true`, uses the NV cooperative matrix types.
+void populateMMAToSPIRVCoopMatrixTypeConversion(
+    SPIRVTypeConverter &typeConverter, bool useNVTypes = false);
 } // namespace mlir
 
 #endif // MLIR_CONVERSION_GPUTOSPIRV_GPUTOSPIRV_H
