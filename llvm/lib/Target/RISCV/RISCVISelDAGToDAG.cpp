@@ -2783,32 +2783,8 @@ bool RISCVDAGToDAGISel::hasAllNBitUsers(SDNode *Node, unsigned Bits,
 
     // TODO: Add more opcodes?
     switch (User->getMachineOpcode()) {
-    default: {
-      if (const RISCVVPseudosTable::PseudoInfo *PseudoInfo =
-              RISCVVPseudosTable::getPseudoInfo(User->getMachineOpcode())) {
-
-        const MCInstrDesc &MCID = TII->get(User->getMachineOpcode());
-        if (!RISCVII::hasSEWOp(MCID.TSFlags))
-          return false;
-        assert(RISCVII::hasVLOp(MCID.TSFlags));
-
-        bool HasGlueOp = User->getGluedNode() != nullptr;
-        unsigned ChainOpIdx = User->getNumOperands() - HasGlueOp - 1;
-        bool HasChainOp =
-            User->getOperand(ChainOpIdx).getValueType() == MVT::Other;
-        bool HasVecPolicyOp = RISCVII::hasVecPolicyOp(MCID.TSFlags);
-        unsigned VLIdx = User->getNumOperands() - HasVecPolicyOp - HasChainOp -
-                         HasGlueOp - 2;
-        const unsigned Log2SEW = User->getConstantOperandVal(VLIdx + 1);
-
-        if (UI.getOperandNo() == VLIdx)
-          return false;
-        if (RISCVII::vectorInstUsesNBitsOfScalarOp(PseudoInfo->BaseInstr, Bits,
-                                                   Log2SEW))
-          break;
-      }
+    default:
       return false;
-    }
     case RISCV::ADDW:
     case RISCV::ADDIW:
     case RISCV::SUBW:
