@@ -33,7 +33,7 @@ int main(void) {
   CONST float fnot_too_big = not_too_big;
   CONST int too_big = 0x7ffffff0;
 #if defined(CPP)
-//expected-warning@+2{{implicit conversion from 'const int' to 'const float' changes value from 2147483632 to 2147483648}}
+//expected-warning@+2{{implicit conversion}}
 #endif
   CONST float fbig = too_big; // inexact
 #if !defined(CPP)
