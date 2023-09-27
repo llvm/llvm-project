@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -std=c++11 -fsyntax-only -triple nvptx-unknown-unknown -target-cpu sm_75 -verify %s
+// RUN: %clang_cc1 -std=c++11 -fsyntax-only -verify %s
 
 #include "Inputs/cuda.h"
 
@@ -11,9 +11,8 @@ __launch_bounds__(0x10000000000000000) void TestWayTooBigArg(void); // expected-
 
 __launch_bounds__(-128, 7) void TestNegArg1(void); // expected-warning {{'launch_bounds' attribute parameter 0 is negative and will be ignored}}
 __launch_bounds__(128, -7) void TestNegArg2(void); // expected-warning {{'launch_bounds' attribute parameter 1 is negative and will be ignored}}
-__launch_bounds__(128, 2, -8) void TestNegArg2(void); // expected-warning {{maxclusterrank requires sm_90 or higher, CUDA arch provided: sm_75, ignoring 'launch_bounds' attribute}}
 
-__launch_bounds__(1, 2, 3, 4) void Test4Args(void); // expected-error {{'launch_bounds' attribute takes no more than 3 arguments}}
+__launch_bounds__(1, 2, 3) void Test3Args(void); // expected-error {{'launch_bounds' attribute takes no more than 2 arguments}}
 __launch_bounds__() void TestNoArgs(void); // expected-error {{'launch_bounds' attribute takes at least 1 argument}}
 
 int TestNoFunction __launch_bounds__(128, 7); // expected-warning {{'launch_bounds' attribute only applies to Objective-C methods, functions, and function pointers}}
@@ -48,5 +47,3 @@ __launch_bounds__(Args) void TestTemplateVariadicArgs(void) {} // expected-error
 
 template <int... Args>
 __launch_bounds__(1, Args) void TestTemplateVariadicArgs2(void) {} // expected-error {{expression contains unexpanded parameter pack 'Args'}}
-
-__launch_bounds__(1, 2, 3) void Test3Args(void); // expected-warning {{maxclusterrank requires sm_90 or higher, CUDA arch provided: sm_75, ignoring 'launch_bounds' attribute}}

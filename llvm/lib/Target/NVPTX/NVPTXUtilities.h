@@ -55,7 +55,6 @@ bool getReqNTIDx(const Function &, unsigned &);
 bool getReqNTIDy(const Function &, unsigned &);
 bool getReqNTIDz(const Function &, unsigned &);
 
-bool getMaxClusterRank(const Function &, unsigned &);
 bool getMinCTASm(const Function &, unsigned &);
 bool getMaxNReg(const Function &, unsigned &);
 bool isKernelFunction(const Function &);

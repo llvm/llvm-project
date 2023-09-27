@@ -262,10 +262,6 @@ bool getMaxNTIDz(const Function &F, unsigned &z) {
   return findOneNVVMAnnotation(&F, "maxntidz", z);
 }
 
-bool getMaxClusterRank(const Function &F, unsigned &x) {
-  return findOneNVVMAnnotation(&F, "maxclusterrank", x);
-}
-
 bool getReqNTIDx(const Function &F, unsigned &x) {
   return findOneNVVMAnnotation(&F, "reqntidx", x);
 }

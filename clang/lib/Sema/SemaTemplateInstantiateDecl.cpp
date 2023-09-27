@@ -302,15 +302,7 @@ static void instantiateDependentCUDALaunchBoundsAttr(
     MinBlocks = Result.getAs<Expr>();
   }
 
-  Expr *MaxBlocks = nullptr;
-  if (Attr.getMaxBlocks()) {
-    Result = S.SubstExpr(Attr.getMaxBlocks(), TemplateArgs);
-    if (Result.isInvalid())
-      return;
-    MaxBlocks = Result.getAs<Expr>();
-  }
-
-  S.AddLaunchBoundsAttr(New, Attr, MaxThreads, MinBlocks, MaxBlocks);
+  S.AddLaunchBoundsAttr(New, Attr, MaxThreads, MinBlocks);
 }
 
 static void
