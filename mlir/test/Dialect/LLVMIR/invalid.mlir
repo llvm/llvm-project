@@ -1421,3 +1421,13 @@ llvm.func @invalid_variadic_call(%arg: i32)  {
   "llvm.call"(%arg) <{callee = @variadic}> : (i32) -> ()
   llvm.return
 }
+
+// -----
+
+llvm.func @variadic(...)
+
+llvm.func @invalid_variadic_call(%arg: i32)  {
+  // expected-error@+1 {{missing callee type attribute for vararg call}}
+  "llvm.call"(%arg) <{callee = @variadic}> : (i32) -> ()
+  llvm.return
+}
