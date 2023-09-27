@@ -822,11 +822,11 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
 
     // TODO: support more ops.
     static const unsigned ZvfhminPromoteOps[] = {
-        ISD::FMINNUM,    ISD::FMAXNUM,    ISD::FADD,        ISD::FSUB,
-        ISD::FMUL,       ISD::FMA,        ISD::FDIV,        ISD::FSQRT,
-        ISD::FABS,       ISD::FNEG,       ISD::FCOPYSIGN,   ISD::FCEIL,
-        ISD::FFLOOR,     ISD::FROUND,     ISD::FROUNDEVEN,  ISD::FRINT,
-        ISD::FNEARBYINT, ISD::IS_FPCLASS, ISD::SPLAT_VECTOR};
+        ISD::FMINNUM,    ISD::FMAXNUM,    ISD::FADD,         ISD::FSUB,
+        ISD::FMUL,       ISD::FMA,        ISD::FDIV,         ISD::FSQRT,
+        ISD::FABS,       ISD::FNEG,       ISD::FCOPYSIGN,    ISD::FCEIL,
+        ISD::FFLOOR,     ISD::FROUND,     ISD::FROUNDEVEN,   ISD::FRINT,
+        ISD::FNEARBYINT, ISD::IS_FPCLASS, ISD::SPLAT_VECTOR, ISD::SETCC};
 
     // TODO: support more vp ops.
     static const unsigned ZvfhminPromoteVPOps[] = {
@@ -837,7 +837,7 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
         ISD::VP_FMINNUM,     ISD::VP_FMAXNUM,      ISD::VP_FCEIL,
         ISD::VP_FFLOOR,      ISD::VP_FROUND,       ISD::VP_FROUNDEVEN,
         ISD::VP_FCOPYSIGN,   ISD::VP_FROUNDTOZERO, ISD::VP_FRINT,
-        ISD::VP_FNEARBYINT};
+        ISD::VP_FNEARBYINT,  ISD::VP_SETCC};
 
     // Sets common operation actions on RVV floating-point vector types.
     const auto SetCommonVFPActions = [&](MVT VT) {
@@ -5392,6 +5392,11 @@ static SDValue SplitVPOp(SDValue Op, SelectionDAG &DAG) {
           DAG.SplitEVL(Op.getOperand(j), Op.getValueType(), DL);
       continue;
     }
+    if (!Op.getOperand(j).getValueType().isVector()) {
+      LoOperands[j] = Op.getOperand(j);
+      HiOperands[j] = Op.getOperand(j);
+      continue;
+    }
     std::tie(LoOperands[j], HiOperands[j]) =
         DAG.SplitVector(Op.getOperand(j), DL);
   }
@@ -6079,6 +6084,11 @@ SDValue RISCVTargetLowering::LowerOperation(SDValue Op,
       return DAG.getSetCC(DL, VT, RHS, LHS, CCVal);
     }
 
+    if (Op.getOperand(0).getSimpleValueType() == MVT::nxv32f16 &&
+        (Subtarget.hasVInstructionsF16Minimal() &&
+         !Subtarget.hasVInstructionsF16()))
+      return SplitVectorOp(Op, DAG);
+
     return lowerFixedLengthVectorSetccToRVV(Op, DAG);
   }
   case ISD::ADD:
@@ -6246,6 +6256,10 @@ SDValue RISCVTargetLowering::LowerOperation(SDValue Op,
   case ISD::VP_FP_TO_UINT:
     return lowerVPFPIntConvOp(Op, DAG);
   case ISD::VP_SETCC:
+    if (Op.getOperand(0).getSimpleValueType() == MVT::nxv32f16 &&
+        (Subtarget.hasVInstructionsF16Minimal() &&
+         !Subtarget.hasVInstructionsF16()))
+      return SplitVPOp(Op, DAG);
     if (Op.getOperand(0).getSimpleValueType().getVectorElementType() == MVT::i1)
       return lowerVPSetCCMaskOp(Op, DAG);
     [[fallthrough]];
