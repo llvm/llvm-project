@@ -248,6 +248,9 @@ public:
   }
 
   StringRef getName(uint32_t Offset) const {
+    assert(Offset >= StringTableOffset &&
+           Offset < StringTableOffset + StringTable.size() &&
+           "Offset out of range.");
     // Name offsets are from the start of the signature data, not from the start
     // of the string table. The header encodes the start offset of the sting
     // table, so we convert the offset here.
