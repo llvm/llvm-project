@@ -59,23 +59,3 @@ transform.sequence failures(propagate) {
   // expected-error @below {{failed to outline}}
   transform.loop.outline %0 {func_name = "foo"} : (!transform.any_op) -> (!transform.any_op, !transform.any_op)
 }
-
-// -----
-
-func.func @test_loops_do_not_get_peeled() {
-  %lb = arith.constant 0 : index
-  %ub = arith.constant 40 : index
-  %step = arith.constant 5 : index
-  scf.for %i = %lb to %ub step %step {
-    arith.addi %i, %i : index
-  }
-  return
-}
-
-transform.sequence failures(propagate) {
-^bb1(%arg1: !transform.any_op):
-  %0 = transform.structured.match ops{["arith.addi"]} in %arg1 : (!transform.any_op) -> !transform.any_op
-  %1 = transform.loop.get_parent_for %0 : (!transform.any_op) -> !transform.op<"scf.for">
-  // expected-error @below {{failed to peel}}
-  transform.loop.peel %1 : (!transform.op<"scf.for">) -> (!transform.any_op, !transform.any_op)
-}

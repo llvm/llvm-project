@@ -226,16 +226,14 @@ transform::LoopPeelOp::applyToOne(transform::TransformRewriter &rewriter,
                                   transform::ApplyToEachResultList &results,
                                   transform::TransformState &state) {
   scf::ForOp result;
+  // This helper returns failure when peeling does not occur (i.e. when the IR
+  // is not modified). This is not a failure for the op as the postcondition:
+  //    "the loop trip count is divisible by the step"
+  // is valid.
   LogicalResult status =
       scf::peelForLoopAndSimplifyBounds(rewriter, target, result);
-  if (failed(status)) {
-    DiagnosedSilenceableFailure diag = emitSilenceableError()
-                                       << "failed to peel";
-    return diag;
-  }
-  results.push_back(target);
-  results.push_back(result);
-
+  // TODO: Return both the peeled loop and the remainder loop.
+  results.push_back(failed(status) ? target : result);
   return DiagnosedSilenceableFailure::success();
 }
 
