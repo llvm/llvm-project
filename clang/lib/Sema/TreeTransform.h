@@ -5490,7 +5490,7 @@ TreeTransform<Derived>::TransformDependentSizedArrayType(TypeLocBuilder &TLB,
   EnterExpressionEvaluationContext Unevaluated(
       SemaRef, Sema::ExpressionEvaluationContext::ConstantEvaluated);
 
-  // VLA bounds are not truly constant.
+  // If we have a VLA then it won't be a constant.
   SemaRef.ExprEvalContexts.back().InConditionallyConstantEvaluateContext = true;
 
   // Prefer the expression from the TypeLoc;  the other may have been uniqued.
