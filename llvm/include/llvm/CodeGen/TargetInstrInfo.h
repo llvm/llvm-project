@@ -2088,8 +2088,8 @@ public:
   }
 
   /// Insert an architecture-specific instruction to clear a register. If you
-  /// need to avoid sideeffects (e.g. XOR on x86), set \p AllowSideEffects to
-  /// \p false.
+  /// need to avoid sideeffects (e.g. avoid XOR on x86, which sets EFLAGS), set
+  /// \p AllowSideEffects to \p false.
   virtual void buildClearRegister(Register Reg, MachineBasicBlock &MBB,
                                   MachineBasicBlock::iterator Iter,
                                   DebugLoc &DL,

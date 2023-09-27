@@ -9074,15 +9074,15 @@ void AArch64InstrInfo::buildClearRegister(Register Reg, MachineBasicBlock &MBB,
 
   if (TRI.isGeneralPurposeRegister(MF, Reg)) {
     BuildMI(MBB, Iter, DL, get(AArch64::MOVZXi), Reg)
-        .addImm(0)
-        .addImm(0);
+      .addImm(0)
+      .addImm(0);
   } else if (STI.hasSVE()) {
     BuildMI(MBB, Iter, DL, get(AArch64::DUP_ZI_D), Reg)
-        .addImm(0)
-        .addImm(0);
+      .addImm(0)
+      .addImm(0);
   } else {
     BuildMI(MBB, Iter, DL, get(AArch64::MOVIv2d_ns), Reg)
-        .addImm(0);
+      .addImm(0);
   }
 }
 
