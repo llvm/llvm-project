@@ -101,9 +101,10 @@ static bool tileDividesIterationDomain(Range loopRange) {
 /// `tileSize`, i.e., `min(tileSize, range.end() - iv)`.
 static OpFoldResult getBoundedTileSize(OpBuilder &b, Location loc,
                                        Range loopRange, Value iv,
-                                       OpFoldResult tileSize) {
-  if (isConstantIntValue(tileSize, 1))
-    return tileSize;
+                                       Value tileSize) {
+  std::optional<int64_t> ts = getConstantIntValue(tileSize);
+  if (ts && ts.value() == 1)
+    return getAsOpFoldResult(tileSize);
 
   if (tileDividesIterationDomain(
           Range{loopRange.offset, loopRange.size, tileSize}))
