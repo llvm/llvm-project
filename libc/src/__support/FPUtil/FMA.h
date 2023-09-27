@@ -18,8 +18,8 @@
 #include "x86_64/FMA.h"
 #elif defined(LIBC_TARGET_ARCH_IS_AARCH64)
 #include "aarch64/FMA.h"
-#elif defined(LIBC_TARGET_ARCH_IS_RISCV64)
-#include "riscv64/FMA.h"
+#elif defined(LIBC_TARGET_ARCH_IS_ANY_RISCV)
+#include "riscv/FMA.h"
 #elif defined(LIBC_TARGET_ARCH_IS_GPU)
 #include "gpu/FMA.h"
 #endif

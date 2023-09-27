@@ -1515,8 +1515,8 @@ genIntrinsicRefCore(Fortran::lower::PreparedActualArguments &loweredActuals,
     scalarResultType = hlfir::getFortranElementType(*callContext.resultType);
   const std::string intrinsicName = callContext.getProcedureName();
   // Let the intrinsic library lower the intrinsic procedure call.
-  auto [resultExv, mustBeFreed] =
-      genIntrinsicCall(builder, loc, intrinsicName, scalarResultType, operands);
+  auto [resultExv, mustBeFreed] = genIntrinsicCall(
+      builder, loc, intrinsicName, scalarResultType, operands, &converter);
   for (const hlfir::CleanupFunction &fn : cleanupFns)
     fn();
   if (!fir::getBase(resultExv))

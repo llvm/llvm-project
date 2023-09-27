@@ -30,10 +30,8 @@
 #include "x86_64/FEnvImpl.h"
 #elif defined(LIBC_TARGET_ARCH_IS_ARM)
 #include "arm/FEnvImpl.h"
-#elif defined(LIBC_TARGET_ARCH_IS_RISCV32)
-#include "riscv32/FEnvImpl.h"
-#elif defined(LIBC_TARGET_ARCH_IS_RISCV64)
-#include "riscv64/FEnvImpl.h"
+#elif defined(LIBC_TARGET_ARCH_IS_ANY_RISCV)
+#include "riscv/FEnvImpl.h"
 #else
 
 namespace LIBC_NAMESPACE::fputil {
