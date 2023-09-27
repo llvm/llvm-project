@@ -1077,6 +1077,12 @@ RISCVTTIImpl::getIntrinsicInstrCost(const IntrinsicCostAttributes &ICA,
       return LT.first;
     break;
   }
+  case Intrinsic::ctpop: {
+    auto LT = getTypeLegalizationCost(RetTy);
+    if (ST->hasVInstructions() && ST->hasStdExtZvbb() && LT.second.isVector())
+      return LT.first;
+    break;
+  }
   case Intrinsic::abs: {
     auto LT = getTypeLegalizationCost(RetTy);
     if (ST->hasVInstructions() && LT.second.isVector()) {
