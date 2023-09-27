@@ -681,9 +681,12 @@ static std::optional<Procedure> CharacterizeProcedure(
       },
       symbol.details())};
   if (result && !symbol.has<semantics::ProcBindingDetails>()) {
-    CopyAttrs<Procedure, Procedure::Attr>(DEREF(GetMainEntry(&symbol)), *result,
+    CopyAttrs<Procedure, Procedure::Attr>(symbol, *result,
         {
             {semantics::Attr::BIND_C, Procedure::Attr::BindC},
+        });
+    CopyAttrs<Procedure, Procedure::Attr>(DEREF(GetMainEntry(&symbol)), *result,
+        {
             {semantics::Attr::ELEMENTAL, Procedure::Attr::Elemental},
         });
     if (IsPureProcedure(symbol) || // works for ENTRY too
