@@ -492,11 +492,13 @@ void IRPromoter::PromoteTree() {
         // SafeWrap because SafeWrap.size() is used elsewhere.
         // For cmp, we need to sign extend a constant appearing in either
         // operand. For add, we should only sign extend the RHS.
-        Constant *NewConst = (SafeWrap.contains(I) &&
+        Constant *NewConst =
+            ConstantInt::get(Const->getContext(),
+                             (SafeWrap.contains(I) &&
                               (I->getOpcode() == Instruction::ICmp || i == 1) &&
                               I->getOpcode() != Instruction::Sub)
-                                 ? ConstantExpr::getSExt(Const, ExtTy)
-                                 : ConstantExpr::getZExt(Const, ExtTy);
+                                 ? Const->getValue().sext(PromotedWidth)
+                                 : Const->getValue().zext(PromotedWidth));
         I->setOperand(i, NewConst);
       } else if (isa<UndefValue>(Op))
         I->setOperand(i, ConstantInt::get(ExtTy, 0));
