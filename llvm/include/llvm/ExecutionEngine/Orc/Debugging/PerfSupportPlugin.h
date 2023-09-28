@@ -29,7 +29,8 @@ public:
   PerfSupportPlugin(ExecutorProcessControl &EPC,
                     ExecutorAddr RegisterPerfStartAddr,
                     ExecutorAddr RegisterPerfEndAddr,
-                    ExecutorAddr RegisterPerfImplAddr, bool EmitUnwindInfo);
+                    ExecutorAddr RegisterPerfImplAddr, bool EmitDebugInfo,
+                    bool EmitUnwindInfo);
   ~PerfSupportPlugin();
 
   void modifyPassConfig(MaterializationResponsibility &MR,
@@ -48,7 +49,8 @@ public:
                                    ResourceKey SrcKey) override {}
 
   static Expected<std::unique_ptr<PerfSupportPlugin>>
-  Create(ExecutorProcessControl &EPC, JITDylib &JD, bool EmitUnwindInfo);
+  Create(ExecutorProcessControl &EPC, JITDylib &JD, bool EmitDebugInfo,
+         bool EmitUnwindInfo);
 
 private:
   ExecutorProcessControl &EPC;
@@ -56,6 +58,7 @@ private:
   ExecutorAddr RegisterPerfEndAddr;
   ExecutorAddr RegisterPerfImplAddr;
   std::atomic<uint64_t> CodeIndex;
+  bool EmitDebugInfo;
   bool EmitUnwindInfo;
 };
 
