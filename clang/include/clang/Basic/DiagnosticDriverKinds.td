@@ -182,8 +182,8 @@ def err_drv_invalid_Xopenmp_target_with_args : Error<
   "invalid -Xopenmp-target argument: '%0', options requiring arguments are unsupported">;
 def err_drv_argument_only_allowed_with : Error<
   "invalid argument '%0' only allowed with '%1'">;
-def err_drv_minws_unsupported_input_type : Error<
-  "'-fminimize-whitespace' invalid for input of type %0">;
+def err_drv_opt_unsupported_input_type : Error<
+  "'%0' invalid for input of type %1">;
 def err_drv_amdgpu_ieee_without_no_honor_nans : Error<
   "invalid argument '-mno-amdgpu-ieee' only allowed with relaxed NaN handling">;
 def err_drv_argument_not_allowed_with : Error<

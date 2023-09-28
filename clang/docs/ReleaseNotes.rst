@@ -152,6 +152,7 @@ Non-comprehensive list of changes in this release
 
 New Compiler Flags
 ------------------
+
 * ``-fverify-intermediate-code`` and its complement ``-fno-verify-intermediate-code``.
   Enables or disables verification of the generated LLVM IR.
   Users can pass this to turn on extra verification to catch certain types of
@@ -159,6 +160,10 @@ New Compiler Flags
   Since enabling the verifier adds a non-trivial cost of a few percent impact on
   build times, it's disabled by default, unless your LLVM distribution itself is
   compiled with runtime checks enabled.
+* ``-fkeep-system-includes`` modifies the behavior of the ``-E`` option,
+  preserving ``#include`` directives for "system" headers instead of copying
+  the preprocessed text to the output. This can greatly reduce the size of the
+  preprocessed output, which can be helpful when trying to reduce a test case.
 
 Deprecated Compiler Flags
 -------------------------
