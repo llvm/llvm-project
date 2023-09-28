@@ -10950,6 +10950,9 @@ bool ArrayExprEvaluator::VisitCXXParenListOrInitListExpr(
 }
 
 bool ArrayExprEvaluator::VisitArrayInitLoopExpr(const ArrayInitLoopExpr *E) {
+
+  FullExpressionRAII Scope(Info);
+
   LValue CommonLV;
   if (E->getCommonExpr() &&
       !Evaluate(Info.CurrentCall->createTemporary(
@@ -10967,20 +10970,19 @@ bool ArrayExprEvaluator::VisitArrayInitLoopExpr(const ArrayInitLoopExpr *E) {
   LValue Subobject = This;
   Subobject.addArray(Info, E, CAT);
 
+  bool Success = true;
   for (EvalInfo::ArrayInitLoopIndex Index(Info); Index != Elements; ++Index) {
     if (!EvaluateInPlace(Result.getArrayInitializedElt(Index),
                          Info, Subobject, E->getSubExpr()) ||
         !HandleLValueArrayAdjustment(Info, E, Subobject,
                                      CAT->getElementType(), 1)) {
-
-      // There's no need to try and evaluate the rest, as those are the exact
-      // same expressions.
-      std::ignore = Info.noteFailure();
-      return false;
+      if (!Info.noteFailure())
+        return false;
+      Success = false;
     }
   }
 
-  return true;
+  return Success;
 }
 
 bool ArrayExprEvaluator::VisitCXXConstructExpr(const CXXConstructExpr *E) {
