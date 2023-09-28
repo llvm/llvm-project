@@ -59,6 +59,67 @@ getSMETileAndCastToVector(PatternRewriter &rewriter, Location loc,
 
 namespace {
 
+/// Conversion pattern for vector.transfer_read op with transpose permutation
+/// map to vertical arm_sme.tile_load (in-flight transpose).
+///
+///   vector.transfer_read ...  permutation_map: (d0, d1) -> (d1, d0)
+///
+/// is converted to:
+///
+///   arm_sme.tile_load ... <vertical>
+struct TransferReadPermutationToArmSMELowering
+    : public OpRewritePattern<vector::TransferReadOp> {
+  using OpRewritePattern<vector::TransferReadOp>::OpRewritePattern;
+
+  LogicalResult matchAndRewrite(vector::TransferReadOp transferReadOp,
+                                PatternRewriter &rewriter) const final {
+    // The permutation map must have two results.
+    if (transferReadOp.getTransferRank() != 2)
+      return rewriter.notifyMatchFailure(transferReadOp,
+                                         "not a 2 result permutation map");
+
+    AffineMap map = transferReadOp.getPermutationMap();
+
+    // Permutation map doesn't perform permutation, can be lowered to
+    // vector.load by TransferReadToVectorLoadLowering and then
+    // arm_sme.tile_load by VectorLoadToArmSMELowering.
+    if (map.isIdentity())
+      return rewriter.notifyMatchFailure(
+          transferReadOp, "map is an identity, apply another pattern");
+
+    auto vectorType = transferReadOp.getVectorType();
+    if (!arm_sme::isValidSMETileVectorType(vectorType))
+      return rewriter.notifyMatchFailure(transferReadOp,
+                                         "not a valid vector type for SME");
+
+    if (!llvm::isa<MemRefType>(transferReadOp.getSource().getType()))
+      return rewriter.notifyMatchFailure(transferReadOp, "not a memref source");
+
+    if (transferReadOp.getMask())
+      // TODO: support masking.
+      return rewriter.notifyMatchFailure(transferReadOp,
+                                         "masking not yet supported");
+
+    // Out-of-bounds dims are not supported.
+    if (transferReadOp.hasOutOfBoundsDim())
+      return rewriter.notifyMatchFailure(transferReadOp,
+                                         "not inbounds transfer read");
+
+    AffineExpr d0, d1;
+    bindDims(transferReadOp.getContext(), d0, d1);
+    if (map != AffineMap::get(map.getNumDims(), 0, {d1, d0},
+                              transferReadOp.getContext()))
+      return rewriter.notifyMatchFailure(transferReadOp,
+                                         "not true 2-D matrix transpose");
+
+    rewriter.replaceOpWithNewOp<arm_sme::TileLoadOp>(
+        transferReadOp, vectorType, transferReadOp.getSource(),
+        transferReadOp.getIndices(), arm_sme::TileSliceLayout::Vertical);
+
+    return success();
+  }
+};
+
 /// Conversion pattern for vector.transfer_write.
 ///
 ///   vector.transfer_write %vector, %source[%c0, %c0] : vector<[16]x[16]xi8>,
@@ -317,7 +378,8 @@ struct TransposeOpToArmSMELowering
 
 void mlir::populateVectorToArmSMEPatterns(RewritePatternSet &patterns,
                                           MLIRContext &ctx) {
-  patterns.add<TransferWriteToArmSMELowering, VectorLoadToArmSMELowering,
+  patterns.add<TransferReadPermutationToArmSMELowering,
+               TransferWriteToArmSMELowering, VectorLoadToArmSMELowering,
                VectorStoreToArmSMELowering, ConstantOpToArmSMELowering,
                BroadcastOpToArmSMELowering, TransposeOpToArmSMELowering>(&ctx);
 }
