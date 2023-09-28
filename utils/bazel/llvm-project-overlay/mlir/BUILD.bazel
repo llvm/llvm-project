@@ -3520,6 +3520,7 @@ cc_library(
     deps = [
         ":AMDGPUToROCDL",
         ":AffineToStandard",
+        ":ArithToAMDGPU",
         ":ArithToLLVM",
         ":ArithToSPIRV",
         ":ArmNeon2dToIntr",
@@ -7497,6 +7498,25 @@ cc_library(
 )
 
 cc_library(
+    name = "ArithToAMDGPU",
+    srcs = glob(["lib/Conversion/ArithToAMDGPU/*.cpp"]),
+    hdrs = glob(["include/mlir/Conversion/ArithToAMDGPU/*.h"]),
+    includes = ["include"],
+    deps = [
+        ":AMDGPUDialect",
+        ":ArithDialect",
+        ":ConversionPassIncGen",
+        ":ConvertToLLVM",
+        ":IR",
+        ":LLVMDialect",
+        ":Pass",
+        ":Support",
+        ":Transforms",
+        ":VectorDialect",
+    ],
+)
+
+cc_library(
     name = "ArithToLLVM",
     srcs = glob(["lib/Conversion/ArithToLLVM/*.cpp"]),
     hdrs = glob(["include/mlir/Conversion/ArithToLLVM/*.h"]),
@@ -8303,6 +8323,7 @@ cc_library(
         ":AffineTransformOps",
         ":AffineTransforms",
         ":ArithDialect",
+        ":ArithToAMDGPU",
         ":ArithToLLVM",
         ":ArithToSPIRV",
         ":ArithTransforms",

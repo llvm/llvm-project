@@ -100,15 +100,17 @@ template <typename T, size_t N> struct ExceptValues {
 };
 
 // Helper functions to set results for exceptional cases.
-LIBC_INLINE float round_result_slightly_down(float value_rn) {
-  volatile float tmp = value_rn;
-  tmp = tmp - 0x1.0p-100f;
+template <typename T> LIBC_INLINE T round_result_slightly_down(T value_rn) {
+  volatile T tmp = value_rn;
+  constexpr T MIN_NORMAL = FPBits<T>::min_normal().get_val();
+  tmp = tmp - MIN_NORMAL;
   return tmp;
 }
 
-LIBC_INLINE float round_result_slightly_up(float value_rn) {
-  volatile float tmp = value_rn;
-  tmp = tmp + 0x1.0p-100f;
+template <typename T> LIBC_INLINE T round_result_slightly_up(T value_rn) {
+  volatile T tmp = value_rn;
+  const T MIN_NORMAL = FPBits<T>::min_normal().get_val();
+  tmp = tmp + MIN_NORMAL;
   return tmp;
 }
 

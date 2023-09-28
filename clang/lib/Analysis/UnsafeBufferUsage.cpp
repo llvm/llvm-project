@@ -2295,7 +2295,7 @@ static void eraseVarsForUnfixableGroupMates(
   // Variables will be removed from `FixItsForVariable`:
   SmallVector<const VarDecl *, 8> ToErase;
 
-  for (auto [VD, Ignore] : FixItsForVariable) {
+  for (const auto &[VD, Ignore] : FixItsForVariable) {
     VarGrpRef Grp = VarGrpMgr.getGroupOfVar(VD);
     if (llvm::any_of(Grp,
                      [&FixItsForVariable](const VarDecl *GrpMember) -> bool {
