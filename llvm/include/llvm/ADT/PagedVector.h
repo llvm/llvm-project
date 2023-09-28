@@ -101,9 +101,7 @@ public:
     return PageToDataPtrs.size() * PageSize;
   }
 
-  /// Return the size of the vector. I.e. the maximum index that can be
-  /// accessed, i.e. the maximum value which was used as argument of the
-  /// resize method.
+  /// Return the size of the vector.
   [[nodiscard]] size_t size() const { return Size; }
 
   /// Resize the vector. Notice that the constructor of the elements will not
