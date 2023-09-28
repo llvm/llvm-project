@@ -1769,12 +1769,9 @@ Value *CodeGenFunction::EmitCheckedArgForBuiltin(const Expr *E,
 }
 
 static Value *EmitAbs(CodeGenFunction &CGF, Value *ArgValue, bool HasNSW) {
-  // X < 0 ? -X : X
-  // TODO: Use phi-node (for better SimplifyCFGPass)
-  Value *NegOp = CGF.Builder.CreateNeg(ArgValue, "neg", false, HasNSW);
-  Constant *Zero = llvm::Constant::getNullValue(ArgValue->getType());
-  Value *CmpResult = CGF.Builder.CreateICmpSLT(ArgValue, Zero, "abscond");
-  return CGF.Builder.CreateSelect(CmpResult, NegOp, ArgValue, "abs");
+  return CGF.Builder.CreateBinaryIntrinsic(
+      Intrinsic::abs, ArgValue,
+      ConstantInt::get(CGF.Builder.getInt1Ty(), HasNSW));
 }
 
 static Value *EmitOverflowCheckedAbs(CodeGenFunction &CGF, const CallExpr *E,
