@@ -17297,7 +17297,7 @@ bool PPCTargetLowering::isFMAFasterThanFMulAndFAdd(const MachineFunction &MF,
 
 bool PPCTargetLowering::isFMAFasterThanFMulAndFAdd(const Function &F,
                                                    Type *Ty) const {
-  if (Subtarget.hasSPE())
+  if (Subtarget.hasSPE() || Subtarget.useSoftFloat())
     return false;
   switch (Ty->getScalarType()->getTypeID()) {
   case Type::FloatTyID:
