@@ -314,19 +314,19 @@ func.func @transfer_write_progressive(%A : memref<?x?xf32>, %base: index, %vec: 
   // FULL-UNROLL: %[[DIM:.*]] = memref.dim %[[A]], %[[C0]] : memref<?x?xf32>
   // FULL-UNROLL: %[[CMP0:.*]] = arith.cmpi sgt, %[[DIM]], %[[base]] : index
   // FULL-UNROLL: scf.if %[[CMP0]] {
-  // FULL-UNROLL:   %[[V0:.*]] = vector.extract %[[vec]][0] : vector<3x15xf32>
+  // FULL-UNROLL:   %[[V0:.*]] = vector.extract %[[vec]][0] : vector<15xf32> from vector<3x15xf32>
   // FULL-UNROLL:   vector.transfer_write %[[V0]], %[[A]][%[[base]], %[[base]]] : vector<15xf32>, memref<?x?xf32>
   // FULL-UNROLL: }
   // FULL-UNROLL: %[[I1:.*]] = affine.apply #[[$MAP1]]()[%[[base]]]
   // FULL-UNROLL: %[[CMP1:.*]] = arith.cmpi sgt, %{{.*}}, %[[I1]] : index
   // FULL-UNROLL: scf.if %[[CMP1]] {
-  // FULL-UNROLL:   %[[V1:.*]] = vector.extract %[[vec]][1] : vector<3x15xf32>
+  // FULL-UNROLL:   %[[V1:.*]] = vector.extract %[[vec]][1] : vector<15xf32> from vector<3x15xf32>
   // FULL-UNROLL:   vector.transfer_write %[[V1]], %[[A]][%{{.*}}, %[[base]]] : vector<15xf32>, memref<?x?xf32>
   // FULL-UNROLL: }
   // FULL-UNROLL: %[[I2:.*]] = affine.apply #[[$MAP2]]()[%[[base]]]
   // FULL-UNROLL: %[[CMP2:.*]] = arith.cmpi sgt, %{{.*}}, %[[I2]] : index
   // FULL-UNROLL: scf.if %[[CMP2]] {
-  // FULL-UNROLL:   %[[V2:.*]] = vector.extract %[[vec]][2] : vector<3x15xf32>
+  // FULL-UNROLL:   %[[V2:.*]] = vector.extract %[[vec]][2] : vector<15xf32> from vector<3x15xf32>
   // FULL-UNROLL:   vector.transfer_write %[[V2]], %[[A]][%{{.*}}, %[[base]]] : vector<15xf32>, memref<?x?xf32>
   // FULL-UNROLL: }
 
@@ -362,13 +362,13 @@ func.func @transfer_write_progressive_inbounds(%A : memref<?x?xf32>, %base: inde
   // CHECK-NEXT:   %[[vec_1d:.*]] = memref.load %[[vmemref]][%[[I]]] : memref<3xvector<15xf32>>
   // CHECK-NEXT:   vector.transfer_write %[[vec_1d]], %[[A]][%[[add]], %[[base]]] {in_bounds = [true]} : vector<15xf32>, memref<?x?xf32>
 
-  // FULL-UNROLL: %[[VEC0:.*]] = vector.extract %[[vec]][0] : vector<3x15xf32>
+  // FULL-UNROLL: %[[VEC0:.*]] = vector.extract %[[vec]][0] : vector<15xf32> from vector<3x15xf32>
   // FULL-UNROLL: vector.transfer_write %[[VEC0]], %[[A]][%[[base]], %[[base]]] {in_bounds = [true]} : vector<15xf32>, memref<?x?xf32>
   // FULL-UNROLL: %[[I1:.*]] = affine.apply #[[$MAP1]]()[%[[base]]]
-  // FULL-UNROLL: %[[VEC1:.*]] = vector.extract %[[vec]][1] : vector<3x15xf32>
+  // FULL-UNROLL: %[[VEC1:.*]] = vector.extract %[[vec]][1] : vector<15xf32> from vector<3x15xf32>
   // FULL-UNROLL: vector.transfer_write %2, %[[A]][%[[I1]], %[[base]]] {in_bounds = [true]} : vector<15xf32>, memref<?x?xf32>
   // FULL-UNROLL: %[[I2:.*]] = affine.apply #[[$MAP2]]()[%[[base]]]
-  // FULL-UNROLL: %[[VEC2:.*]] = vector.extract %[[vec]][2] : vector<3x15xf32>
+  // FULL-UNROLL: %[[VEC2:.*]] = vector.extract %[[vec]][2] : vector<15xf32> from vector<3x15xf32>
   // FULL-UNROLL: vector.transfer_write %[[VEC2:.*]], %[[A]][%[[I2]], %[[base]]] {in_bounds = [true]} : vector<15xf32>, memref<?x?xf32>
   vector.transfer_write %vec, %A[%base, %base] {in_bounds = [true, true]} :
     vector<3x15xf32>, memref<?x?xf32>

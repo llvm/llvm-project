@@ -3,20 +3,20 @@
 
 // CHECK-LABEL: @gather_memref_1d
 // CHECK-SAME:    ([[BASE:%.+]]: memref<?xf32>, [[IDXVEC:%.+]]: vector<2xindex>, [[MASK:%.+]]: vector<2xi1>, [[PASS:%.+]]: vector<2xf32>)
-// CHECK-DAG:     [[M0:%.+]]    = vector.extract [[MASK]][0] : vector<2xi1>
-// CHECK-DAG:     %[[IDX0:.+]]  = vector.extract [[IDXVEC]][0] : vector<2xindex>
+// CHECK-DAG:     [[M0:%.+]]    = vector.extract [[MASK]][0] : i1 from vector<2xi1>
+// CHECK-DAG:     %[[IDX0:.+]]  = vector.extract [[IDXVEC]][0] : index from vector<2xindex>
 // CHECK-NEXT:    [[RES0:%.+]]  = scf.if [[M0]] -> (vector<2xf32>)
 // CHECK-NEXT:      [[LD0:%.+]]   = vector.load [[BASE]][%[[IDX0]]] : memref<?xf32>, vector<1xf32>
-// CHECK-NEXT:      [[ELEM0:%.+]] = vector.extract [[LD0]][0] : vector<1xf32>
+// CHECK-NEXT:      [[ELEM0:%.+]] = vector.extract [[LD0]][0] : f32 from vector<1xf32>
 // CHECK-NEXT:      [[INS0:%.+]]  = vector.insert [[ELEM0]], [[PASS]] [0] : f32 into vector<2xf32>
 // CHECK-NEXT:      scf.yield [[INS0]] : vector<2xf32>
 // CHECK-NEXT:    else
 // CHECK-NEXT:      scf.yield [[PASS]] : vector<2xf32>
-// CHECK-DAG:     [[M1:%.+]]    = vector.extract [[MASK]][1] : vector<2xi1>
-// CHECK-DAG:     %[[IDX1:.+]]  = vector.extract [[IDXVEC]][1] : vector<2xindex>
+// CHECK-DAG:     [[M1:%.+]]    = vector.extract [[MASK]][1] : i1 from vector<2xi1>
+// CHECK-DAG:     %[[IDX1:.+]]  = vector.extract [[IDXVEC]][1] : index from vector<2xindex>
 // CHECK-NEXT:    [[RES1:%.+]]  = scf.if [[M1]] -> (vector<2xf32>)
 // CHECK-NEXT:      [[LD1:%.+]]   = vector.load [[BASE]][%[[IDX1]]] : memref<?xf32>, vector<1xf32>
-// CHECK-NEXT:      [[ELEM1:%.+]] = vector.extract [[LD1]][0] : vector<1xf32>
+// CHECK-NEXT:      [[ELEM1:%.+]] = vector.extract [[LD1]][0] : f32 from vector<1xf32>
 // CHECK-NEXT:      [[INS1:%.+]]  = vector.insert [[ELEM1]], [[RES0]] [1] : f32 into vector<2xf32>
 // CHECK-NEXT:      scf.yield [[INS1]] : vector<2xf32>
 // CHECK-NEXT:    else
@@ -32,12 +32,12 @@ func.func @gather_memref_1d(%base: memref<?xf32>, %v: vector<2xindex>, %mask: ve
 // CHECK-SAME:    ([[BASE:%.+]]: memref<?xf32>, [[IDXVEC:%.+]]: vector<2xi32>, [[MASK:%.+]]: vector<2xi1>, [[PASS:%.+]]: vector<2xf32>)
 // CHECK-DAG:     [[C42:%.+]]   = arith.constant 42 : index
 // CHECK-DAG:     [[IDXS:%.+]]  = arith.index_cast [[IDXVEC]] : vector<2xi32> to vector<2xindex>
-// CHECK-DAG:     [[IDX0:%.+]]  = vector.extract [[IDXS]][0] : vector<2xindex>
+// CHECK-DAG:     [[IDX0:%.+]]  = vector.extract [[IDXS]][0] : index from vector<2xindex>
 // CHECK-NEXT:    %[[OFF0:.+]]  = arith.addi [[IDX0]], [[C42]] : index
 // CHECK-NEXT:    [[RES0:%.+]]  = scf.if
 // CHECK-NEXT:      [[LD0:%.+]]   = vector.load [[BASE]][%[[OFF0]]] : memref<?xf32>, vector<1xf32>
 // CHECK:         else
-// CHECK:         [[IDX1:%.+]]  = vector.extract [[IDXS]][1] : vector<2xindex>
+// CHECK:         [[IDX1:%.+]]  = vector.extract [[IDXS]][1] : index from vector<2xindex>
 // CHECK:         %[[OFF1:.+]]  = arith.addi [[IDX1]], [[C42]] : index
 // CHECK:         [[RES1:%.+]]  = scf.if
 // CHECK-NEXT:      [[LD1:%.+]]   = vector.load [[BASE]][%[[OFF1]]] : memref<?xf32>, vector<1xf32>
@@ -53,13 +53,13 @@ func.func @gather_memref_1d_i32_index(%base: memref<?xf32>, %v: vector<2xi32>, %
 // CHECK-SAME:    ([[BASE:%.+]]: memref<?x?xf32>, [[IDXVEC:%.+]]: vector<2x3xindex>, [[MASK:%.+]]: vector<2x3xi1>, [[PASS:%.+]]: vector<2x3xf32>)
 // CHECK-DAG:     %[[C0:.+]]    = arith.constant 0 : index
 // CHECK-DAG:     %[[C1:.+]]    = arith.constant 1 : index
-// CHECK-DAG:     [[PTV0:%.+]]  = vector.extract [[PASS]][0] : vector<2x3xf32>
-// CHECK-DAG:     [[M0:%.+]]    = vector.extract [[MASK]][0, 0] : vector<2x3xi1>
-// CHECK-DAG:     [[IDX0:%.+]]  = vector.extract [[IDXVEC]][0, 0] : vector<2x3xindex>
+// CHECK-DAG:     [[PTV0:%.+]]  = vector.extract [[PASS]][0] : vector<3xf32> from vector<2x3xf32>
+// CHECK-DAG:     [[M0:%.+]]    = vector.extract [[MASK]][0, 0] : i1 from vector<2x3xi1>
+// CHECK-DAG:     [[IDX0:%.+]]  = vector.extract [[IDXVEC]][0, 0] : index from vector<2x3xindex>
 // CHECK-NEXT:    %[[OFF0:.+]]  = arith.addi [[IDX0]], %[[C1]] : index
 // CHECK-NEXT:    [[RES0:%.+]]  = scf.if [[M0]] -> (vector<3xf32>)
 // CHECK-NEXT:      [[LD0:%.+]]   = vector.load [[BASE]][%[[C0]], %[[OFF0]]] : memref<?x?xf32>, vector<1xf32>
-// CHECK-NEXT:      [[ELEM0:%.+]] = vector.extract [[LD0]][0] : vector<1xf32>
+// CHECK-NEXT:      [[ELEM0:%.+]] = vector.extract [[LD0]][0] : f32 from vector<1xf32>
 // CHECK-NEXT:      [[INS0:%.+]]  = vector.insert [[ELEM0]], [[PTV0]] [0] : f32 into vector<3xf32>
 // CHECK-NEXT:      scf.yield [[INS0]] : vector<3xf32>
 // CHECK-NEXT:    else
@@ -76,16 +76,16 @@ func.func @gather_memref_1d_i32_index(%base: memref<?xf32>, %v: vector<2xi32>, %
 
 // CHECK-LABEL: @gather_tensor_1d
 // CHECK-SAME:    ([[BASE:%.+]]: tensor<?xf32>, [[IDXVEC:%.+]]: vector<2xindex>, [[MASK:%.+]]: vector<2xi1>, [[PASS:%.+]]: vector<2xf32>)
-// CHECK-DAG:     [[M0:%.+]]    = vector.extract [[MASK]][0] : vector<2xi1>
-// CHECK-DAG:     %[[IDX0:.+]]  = vector.extract [[IDXVEC]][0] : vector<2xindex>
+// CHECK-DAG:     [[M0:%.+]]    = vector.extract [[MASK]][0] : i1 from vector<2xi1>
+// CHECK-DAG:     %[[IDX0:.+]]  = vector.extract [[IDXVEC]][0] : index from vector<2xindex>
 // CHECK-NEXT:    [[RES0:%.+]]  = scf.if [[M0]] -> (vector<2xf32>)
 // CHECK-NEXT:      [[ELEM0:%.+]] = tensor.extract [[BASE]][%[[IDX0]]] : tensor<?xf32>
 // CHECK-NEXT:      [[INS0:%.+]]  = vector.insert [[ELEM0]], [[PASS]] [0] : f32 into vector<2xf32>
 // CHECK-NEXT:      scf.yield [[INS0]] : vector<2xf32>
 // CHECK-NEXT:    else
 // CHECK-NEXT:      scf.yield [[PASS]] : vector<2xf32>
-// CHECK-DAG:     [[M1:%.+]]    = vector.extract [[MASK]][1] : vector<2xi1>
-// CHECK-DAG:     %[[IDX1:.+]]  = vector.extract [[IDXVEC]][1] : vector<2xindex>
+// CHECK-DAG:     [[M1:%.+]]    = vector.extract [[MASK]][1] : i1 from vector<2xi1>
+// CHECK-DAG:     %[[IDX1:.+]]  = vector.extract [[IDXVEC]][1] : index from vector<2xindex>
 // CHECK-NEXT:    [[RES1:%.+]]  = scf.if [[M1]] -> (vector<2xf32>)
 // CHECK-NEXT:      [[ELEM1:%.+]] = tensor.extract [[BASE]][%[[IDX1]]] : tensor<?xf32>
 // CHECK-NEXT:      [[INS1:%.+]]  = vector.insert [[ELEM1]], [[RES0]] [1] : f32 into vector<2xf32>

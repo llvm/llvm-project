@@ -542,7 +542,9 @@ def LLVM_InvokeOp : LLVM_Op<"invoke", [
                       DeclareOpInterfaceMethods<CallOpInterface>,
                       DeclareOpInterfaceMethods<BranchWeightOpInterface>,
                       Terminator]> {
-  let arguments = (ins OptionalAttr<FlatSymbolRefAttr>:$callee,
+  let arguments = (ins
+                   OptionalAttr<TypeAttrOf<LLVM_FunctionType>>:$callee_type,
+                   OptionalAttr<FlatSymbolRefAttr>:$callee,
                    Variadic<LLVM_Type>:$callee_operands,
                    Variadic<LLVM_Type>:$normalDestOperands,
                    Variadic<LLVM_Type>:$unwindDestOperands,
@@ -552,21 +554,21 @@ def LLVM_InvokeOp : LLVM_Op<"invoke", [
                               AnySuccessor:$unwindDest);
 
   let builders = [
+    OpBuilder<(ins "LLVMFuncOp":$func,
+      "ValueRange":$ops, "Block*":$normal, "ValueRange":$normalOps,
+      "Block*":$unwind, "ValueRange":$unwindOps)>,
     OpBuilder<(ins "TypeRange":$tys, "FlatSymbolRefAttr":$callee,
       "ValueRange":$ops, "Block*":$normal, "ValueRange":$normalOps,
-      "Block*":$unwind, "ValueRange":$unwindOps),
-    [{
-      $_state.addAttribute("callee", callee);
-      build($_builder, $_state, tys, ops, normal, normalOps, unwind, unwindOps);
-    }]>,
-    OpBuilder<(ins "TypeRange":$tys, "ValueRange":$ops, "Block*":$normal,
-      "ValueRange":$normalOps, "Block*":$unwind, "ValueRange":$unwindOps),
-    [{
-      build($_builder, $_state, tys, /*callee=*/FlatSymbolRefAttr(), ops, normalOps,
-            unwindOps, nullptr, normal, unwind);
-    }]>];
+      "Block*":$unwind, "ValueRange":$unwindOps)>,
+    OpBuilder<(ins "LLVMFunctionType":$calleeType, "FlatSymbolRefAttr":$callee,
+      "ValueRange":$ops, "Block*":$normal, "ValueRange":$normalOps,
+      "Block*":$unwind, "ValueRange":$unwindOps)>];
   let hasCustomAssemblyFormat = 1;
   let hasVerifier = 1;
+  let extraClassDeclaration = [{
+    /// Returns the callee function type.
+    LLVMFunctionType getCalleeFunctionType();
+  }];
 }
 
 def LLVM_LandingpadOp : LLVM_Op<"landingpad"> {
@@ -581,9 +583,6 @@ def LLVM_LandingpadOp : LLVM_Op<"landingpad"> {
 // CallOp
 //===----------------------------------------------------------------------===//
 
-// FIXME: Add a type attribute that carries the LLVM function type to support
-// indirect calls to variadic functions. The type attribute is necessary to
-// distinguish normal and variadic arguments.
 def LLVM_CallOp : LLVM_MemAccessOpBase<"call",
                     [DeclareOpInterfaceMethods<FastmathFlagsInterface>,
                      DeclareOpInterfaceMethods<CallOpInterface>,
@@ -599,10 +598,11 @@ def LLVM_CallOp : LLVM_MemAccessOpBase<"call",
     The `call` instruction supports both direct and indirect calls. Direct calls
     start with a function name (`@`-prefixed) and indirect calls start with an
     SSA value (`%`-prefixed). The direct callee, if present, is stored as a
-    function attribute `callee`. The trailing type list contains the optional
-    indirect callee type and the MLIR function type, which differs from the
-    LLVM function type that uses a explicit void type to model functions that do
-    not return a value.
+    function attribute `callee`. If the callee is a variadic function, then the
+    `callee_type` attribute must carry the function type. The trailing type list
+    contains the optional indirect callee type and the MLIR function type, which
+    differs from the LLVM function type that uses a explicit void type to model
+    functions that do not return a value.
 
     Examples:
 
@@ -615,10 +615,17 @@ def LLVM_CallOp : LLVM_MemAccessOpBase<"call",
 
     // Indirect call with an argument and without a result.
     llvm.call %1(%0) : !llvm.ptr, (f32) -> ()
+
+    // Direct variadic call.
+    llvm.call @printf(%0, %1) vararg(!llvm.func<i32 (ptr, ...)>) : (!llvm.ptr, i32) -> i32
+
+    // Indirect variadic call
+    llvm.call %1(%0) vararg(!llvm.func<void (...)>) : !llvm.ptr, (i32) -> ()
     ```
   }];
 
-  dag args = (ins OptionalAttr<FlatSymbolRefAttr>:$callee,
+  dag args = (ins OptionalAttr<TypeAttrOf<LLVM_FunctionType>>:$callee_type,
+                  OptionalAttr<FlatSymbolRefAttr>:$callee,
                   Variadic<LLVM_Type>:$callee_operands,
                   DefaultValuedAttr<LLVM_FastmathFlagsAttr,
                                    "{}">:$fastmathFlags,
@@ -628,14 +635,25 @@ def LLVM_CallOp : LLVM_MemAccessOpBase<"call",
   let results = (outs Optional<LLVM_Type>:$result);
   let builders = [
     OpBuilder<(ins "LLVMFuncOp":$func, "ValueRange":$args)>,
+    OpBuilder<(ins "LLVMFunctionType":$calleeType, "ValueRange":$args)>,
     OpBuilder<(ins "TypeRange":$results, "StringAttr":$callee,
                    CArg<"ValueRange", "{}">:$args)>,
     OpBuilder<(ins "TypeRange":$results, "FlatSymbolRefAttr":$callee,
                    CArg<"ValueRange", "{}">:$args)>,
     OpBuilder<(ins "TypeRange":$results, "StringRef":$callee,
+                   CArg<"ValueRange", "{}">:$args)>,
+    OpBuilder<(ins "LLVMFunctionType":$calleeType, "StringAttr":$callee,
+                   CArg<"ValueRange", "{}">:$args)>,
+    OpBuilder<(ins "LLVMFunctionType":$calleeType, "FlatSymbolRefAttr":$callee,
+                   CArg<"ValueRange", "{}">:$args)>,
+    OpBuilder<(ins "LLVMFunctionType":$calleeType, "StringRef":$callee,
                    CArg<"ValueRange", "{}">:$args)>
   ];
   let hasCustomAssemblyFormat = 1;
+  let extraClassDeclaration = [{
+    /// Returns the callee function type.
+    LLVMFunctionType getCalleeFunctionType();
+  }];
 }
 
 //===----------------------------------------------------------------------===//

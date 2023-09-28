@@ -128,19 +128,6 @@ inline void loadHeader(u32 Cookie, const void *Ptr,
     reportHeaderCorruption(const_cast<void *>(Ptr));
 }
 
-inline void compareExchangeHeader(u32 Cookie, void *Ptr,
-                                  UnpackedHeader *NewUnpackedHeader,
-                                  UnpackedHeader *OldUnpackedHeader) {
-  NewUnpackedHeader->Checksum =
-      computeHeaderChecksum(Cookie, Ptr, NewUnpackedHeader);
-  PackedHeader NewPackedHeader = bit_cast<PackedHeader>(*NewUnpackedHeader);
-  PackedHeader OldPackedHeader = bit_cast<PackedHeader>(*OldUnpackedHeader);
-  if (UNLIKELY(!atomic_compare_exchange_strong(
-          getAtomicHeader(Ptr), &OldPackedHeader, NewPackedHeader,
-          memory_order_relaxed)))
-    reportHeaderRace(Ptr);
-}
-
 inline bool isValid(u32 Cookie, const void *Ptr,
                     UnpackedHeader *NewUnpackedHeader) {
   PackedHeader NewPackedHeader = atomic_load_relaxed(getConstAtomicHeader(Ptr));
