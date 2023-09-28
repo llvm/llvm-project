@@ -4273,7 +4273,7 @@ static SDValue getWideningInterleave(SDValue EvenV, SDValue OddV,
                                            Subtarget.getXLenVT()));
     Interleaved = DAG.getNode(RISCVISD::VWSLL_VL, DL, WideContainerVT, OddV,
                               OffsetVec, Passthru, Mask, VL);
-    Interleaved = DAG.getNode(RISCVISD::VWADD_W_VL, DL, WideContainerVT,
+    Interleaved = DAG.getNode(RISCVISD::VWADDU_W_VL, DL, WideContainerVT,
                               Interleaved, EvenV, Passthru, Mask, VL);
   } else {
     // Widen EvenV and OddV with 0s and add one copy of OddV to EvenV with
