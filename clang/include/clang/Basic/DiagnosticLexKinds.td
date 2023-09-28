@@ -422,6 +422,22 @@ def warn_cxx23_compat_warning_directive : Warning<
 def warn_c23_compat_warning_directive : Warning<
   "#warning is incompatible with C standards before C23">,
   InGroup<CPre23Compat>, DefaultIgnore;
+def warn_c23_pp_embed : Warning<
+  "'__has_embed' is a C23 extension">,
+  InGroup<CPre23Compat>,
+  DefaultIgnore;
+def warn_c23_pp_has_embed : Warning<
+  "'__has_embed' is a C23 extension">,
+  InGroup<CPre23Compat>,
+  DefaultIgnore;
+def warn_cxx26_pp_embed : Warning<
+  "'__has_embed' is a C++26 extension">,
+  InGroup<CXXPre26Compat>,
+  DefaultIgnore;
+def warn_cxx26_pp_has_embed : Warning<
+  "'__has_embed' is a C++26 extension">,
+  InGroup<CXXPre26Compat>,
+  DefaultIgnore;
 
 def ext_pp_extra_tokens_at_eol : ExtWarn<
   "extra tokens at end of #%0 directive">, InGroup<ExtraTokens>;
@@ -483,7 +499,13 @@ def ext_pp_gnu_line_directive : Extension<
 def err_pp_invalid_directive : Error<
   "invalid preprocessing directive%select{|, did you mean '#%1'?}0">;
 def warn_pp_invalid_directive : Warning<
-  err_pp_invalid_directive.Summary>, InGroup<DiagGroup<"unknown-directives">>;
+  err_pp_invalid_directive.Summary>,
+  InGroup<UnsupportedDirective>;
+def warn_pp_unknown_parameter_ignored : Warning<
+  "unknown%select{ | embed}0 preprocessor parameter '%1' ignored">,
+  InGroup<UnknownDirectiveParameters>;
+def err_pp_unsupported_directive : Error<
+  "unsupported%select{ | embed}0 directive: %1">;
 def err_pp_directive_required : Error<
   "%0 must be used within a preprocessing directive">;
 def err_pp_file_not_found : Error<"'%0' file not found">, DefaultFatal;

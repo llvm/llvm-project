@@ -84,6 +84,47 @@ public:
                            SrcMgr::CharacteristicKind FileType) {}
 
   /// Callback invoked whenever the preprocessor cannot find a file for an
+  /// embed directive.
+  ///
+  /// \param FileName The name of the file being included, as written in the
+  /// source code.
+  ///
+  /// \returns true to indicate that the preprocessor should skip this file
+  /// and not issue any diagnostic.
+  virtual bool EmbedFileNotFound(StringRef FileName) { return false; }
+
+  /// Callback invoked whenever an embed directive has been processed,
+  /// regardless of whether the embed will actually find a file.
+  ///
+  /// \param HashLoc The location of the '#' that starts the embed directive.
+  ///
+  /// \param FileName The name of the file being included, as written in the
+  /// source code.
+  ///
+  /// \param IsAngled Whether the file name was enclosed in angle brackets;
+  /// otherwise, it was enclosed in quotes.
+  ///
+  /// \param FilenameRange The character range of the quotes or angle brackets
+  /// for the written file name.
+  ///
+  /// \param ParametersRange The character range of the embed parameters. An
+  /// empty range if there were no parameters.
+  ///
+  /// \param File The actual file that may be included by this embed directive.
+  ///
+  /// \param SearchPath Contains the search path which was used to find the file
+  /// in the file system. If the file was found via an absolute path,
+  /// SearchPath will be empty.
+  ///
+  /// \param RelativePath The path relative to SearchPath, at which the resource
+  /// file was found. This is equal to FileName.
+  virtual void EmbedDirective(SourceLocation HashLoc, StringRef FileName,
+                              bool IsAngled, CharSourceRange FilenameRange,
+                              CharSourceRange ParametersRange,
+                              OptionalFileEntryRef File, StringRef SearchPath,
+                              StringRef RelativePath) {}
+
+  /// Callback invoked whenever the preprocessor cannot find a file for an
   /// inclusion directive.
   ///
   /// \param FileName The name of the file being included, as written in the
@@ -330,11 +371,15 @@ public:
                        SourceRange Range) {
   }
 
+  /// Hook called when a '__has_embed' directive is read.
+  virtual void HasEmbed(SourceLocation Loc, StringRef FileName, bool IsAngled,
+                        OptionalFileEntryRef File) {}
+
   /// Hook called when a '__has_include' or '__has_include_next' directive is
   /// read.
   virtual void HasInclude(SourceLocation Loc, StringRef FileName, bool IsAngled,
                           OptionalFileEntryRef File,
-                          SrcMgr::CharacteristicKind FileType);
+                          SrcMgr::CharacteristicKind FileType) {}
 
   /// Hook called when a source range is skipped.
   /// \param Range The SourceRange that was skipped. The range begins at the
@@ -461,6 +506,25 @@ public:
     Second->FileSkipped(SkippedFile, FilenameTok, FileType);
   }
 
+  bool EmbedFileNotFound(StringRef FileName) override {
+    bool Skip = First->FileNotFound(FileName);
+    // Make sure to invoke the second callback, no matter if the first already
+    // returned true to skip the file.
+    Skip |= Second->FileNotFound(FileName);
+    return Skip;
+  }
+
+  void EmbedDirective(SourceLocation HashLoc, StringRef FileName, bool IsAngled,
+                      CharSourceRange FilenameRange,
+                      CharSourceRange ParametersRange,
+                      OptionalFileEntryRef File, StringRef SearchPath,
+                      StringRef RelativePath) override {
+    First->EmbedDirective(HashLoc, FileName, IsAngled, FilenameRange,
+                          ParametersRange, File, SearchPath, RelativePath);
+    Second->EmbedDirective(HashLoc, FileName, IsAngled, FilenameRange,
+                           ParametersRange, File, SearchPath, RelativePath);
+  }
+
   bool FileNotFound(StringRef FileName) override {
     bool Skip = First->FileNotFound(FileName);
     // Make sure to invoke the second callback, no matter if the first already
@@ -561,9 +625,18 @@ public:
     Second->PragmaDiagnostic(Loc, Namespace, mapping, Str);
   }
 
+  void HasEmbed(SourceLocation Loc, StringRef FileName, bool IsAngled,
+                OptionalFileEntryRef File) override {
+    First->HasEmbed(Loc, FileName, IsAngled, File);
+    Second->HasEmbed(Loc, FileName, IsAngled, File);
+  }
+
   void HasInclude(SourceLocation Loc, StringRef FileName, bool IsAngled,
                   OptionalFileEntryRef File,
-                  SrcMgr::CharacteristicKind FileType) override;
+                  SrcMgr::CharacteristicKind FileType) override {
+    First->HasInclude(Loc, FileName, IsAngled, File, FileType);
+    Second->HasInclude(Loc, FileName, IsAngled, File, FileType);
+  }
 
   void PragmaOpenCLExtension(SourceLocation NameLoc, const IdentifierInfo *Name,
                              SourceLocation StateLoc, unsigned State) override {

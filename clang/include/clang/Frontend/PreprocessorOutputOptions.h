@@ -22,6 +22,7 @@ public:
   unsigned ShowMacroComments : 1;  ///< Show comments, even in macros.
   unsigned ShowMacros : 1;         ///< Print macro definitions.
   unsigned ShowIncludeDirectives : 1;  ///< Print includes, imports etc. within preprocessed output.
+  unsigned ShowEmbedDirectives : 1;  ///< Print embeds, etc. within preprocessed output.
   unsigned RewriteIncludes : 1;    ///< Preprocess include directives only.
   unsigned RewriteImports  : 1;    ///< Include contents of transitively-imported modules.
   unsigned MinimizeWhitespace : 1; ///< Ignore whitespace from input.
@@ -37,6 +38,7 @@ public:
     ShowMacroComments = 0;
     ShowMacros = 0;
     ShowIncludeDirectives = 0;
+    ShowEmbedDirectives = 0;
     RewriteIncludes = 0;
     RewriteImports = 0;
     MinimizeWhitespace = 0;

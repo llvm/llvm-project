@@ -300,6 +300,7 @@ configure_file(
   ${CMAKE_CURRENT_BINARY_DIR}/include/clang/Basic/Version.inc)
 
 # Add appropriate flags for GCC
+option(CLANG_ENABLE_PEDANTIC "Compile with pedantic enabled." ON)
 if (LLVM_COMPILER_IS_GCC_COMPATIBLE)
   set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fno-common -Woverloaded-virtual")
   if (NOT "${CMAKE_CXX_COMPILER_ID}" MATCHES "Clang")
@@ -307,7 +308,7 @@ if (LLVM_COMPILER_IS_GCC_COMPATIBLE)
   endif ()
 
   # Enable -pedantic for Clang even if it's not enabled for LLVM.
-  if (NOT LLVM_ENABLE_PEDANTIC)
+  if (NOT LLVM_ENABLE_PEDANTIC AND CLANG_ENABLE_PEDANTIC)
     set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -pedantic -Wno-long-long")
   endif ()
 

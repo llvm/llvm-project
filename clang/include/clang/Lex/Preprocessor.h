@@ -31,6 +31,7 @@
 #include "clang/Lex/PPCallbacks.h"
 #include "clang/Lex/Token.h"
 #include "clang/Lex/TokenLexer.h"
+#include "llvm/ADT/APSInt.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/FoldingSet.h"
@@ -53,6 +54,7 @@
 #include <optional>
 #include <string>
 #include <utility>
+#include <variant>
 #include <vector>
 
 namespace llvm {
@@ -165,6 +167,7 @@ class Preprocessor {
   IdentifierInfo *Ident__has_builtin;              // __has_builtin
   IdentifierInfo *Ident__has_constexpr_builtin;    // __has_constexpr_builtin
   IdentifierInfo *Ident__has_attribute;            // __has_attribute
+  IdentifierInfo *Ident__has_embed;                // __has_embed
   IdentifierInfo *Ident__has_include;              // __has_include
   IdentifierInfo *Ident__has_include_next;         // __has_include_next
   IdentifierInfo *Ident__has_warning;              // __has_warning
@@ -206,7 +209,10 @@ class Preprocessor {
 
   enum {
     /// Maximum depth of \#includes.
-    MaxAllowedIncludeStackDepth = 200
+    MaxAllowedIncludeStackDepth = 200,
+    VALUE__STDC_EMBED_NOT_FOUND__ = 0,
+    VALUE__STDC_EMBED_FOUND__ = 1,
+    VALUE__STDC_EMBED_EMPTY__ = 2,
   };
 
   // State that is set before the preprocessor begins.
@@ -1728,6 +1734,22 @@ public:
   /// Lex a token, forming a header-name token if possible.
   bool LexHeaderName(Token &Result, bool AllowMacroExpansion = true);
 
+  struct LexEmbedParametersResult {
+    bool Successful;
+    std::optional<size_t> MaybeLimitParam;
+    std::optional<size_t> MaybeOffsetParam;
+    std::optional<SmallVector<Token, 2>> MaybeIfEmptyParam;
+    std::optional<SmallVector<Token, 2>> MaybePrefixParam;
+    std::optional<SmallVector<Token, 2>> MaybeSuffixParam;
+    int UnrecognizedParams;
+    SourceLocation StartLoc;
+    SourceLocation EndLoc;
+  };
+
+  LexEmbedParametersResult LexEmbedParameters(Token &Current,
+                                              bool InHasEmbed = false,
+                                              bool DiagnoseUnknown = true);
+
   bool LexAfterModuleImport(Token &Result);
   void CollectPpImportSuffix(SmallVectorImpl<Token> &Toks);
 
@@ -2413,6 +2435,17 @@ public:
              bool *IsFrameworkFound, bool SkipCache = false,
              bool OpenFile = true, bool CacheFailures = true);
 
+  /// Given a "foo" or \<foo> reference, look up the indicated embed resource.
+  ///
+  /// Returns std::nullopt on failure.  \p isAngled indicates whether the file
+  /// reference is for system \#include's or not (i.e. using <> instead of "").
+  OptionalFileEntryRef
+  LookupEmbedFile(SourceLocation FilenameLoc, StringRef Filename, bool isAngled,
+                  bool OpenFile,
+                  const FileEntry *LookupFromFile = nullptr,
+                  SmallVectorImpl<char> *SearchPath = nullptr,
+                  SmallVectorImpl<char> *RelativePath = nullptr);
+
   /// Return true if we're in the top-level file, not in a \#include.
   bool isInPrimaryFile() const;
 
@@ -2517,6 +2550,9 @@ private:
   /// Information about the result for evaluating an expression for a
   /// preprocessor directive.
   struct DirectiveEvalResult {
+    /// The integral value of the expression.
+    std::optional<llvm::APSInt> Value;
+
     /// Whether the expression was evaluated as true or not.
     bool Conditional;
 
@@ -2531,7 +2567,24 @@ private:
   /// \#if or \#elif directive and return a \p DirectiveEvalResult object.
   ///
   /// If the expression is equivalent to "!defined(X)" return X in IfNDefMacro.
-  DirectiveEvalResult EvaluateDirectiveExpression(IdentifierInfo *&IfNDefMacro);
+  DirectiveEvalResult EvaluateDirectiveExpression(IdentifierInfo *&IfNDefMacro,
+                                                  bool CheckForEoD = true,
+                                                  bool Parenthesized = false);
+
+  /// Evaluate an integer constant expression that may occur after a
+  /// \#if or \#elif directive and return a \p DirectiveEvalResult object.
+  ///
+  /// If the expression is equivalent to "!defined(X)" return X in IfNDefMacro.
+  DirectiveEvalResult EvaluateDirectiveExpression(IdentifierInfo *&IfNDefMacro,
+                                                  Token &Tok,
+                                                  bool CheckForEoD = true,
+                                                  bool Parenthesized = false);
+
+  /// Process a '__has_embed("path" [, ...])' expression.
+  ///
+  /// Returns predefined `__STDC_EMBED_*` macro values if
+  /// successful.
+  int EvaluateHasEmbed(Token &Tok, IdentifierInfo *II);
 
   /// Process a '__has_include("path")' expression.
   ///
@@ -2679,6 +2732,15 @@ private:
       const FileEntry *LookupFromFile, StringRef &LookupFilename,
       SmallVectorImpl<char> &RelativePath, SmallVectorImpl<char> &SearchPath,
       ModuleMap::KnownHeader &SuggestedModule, bool isAngled);
+  // Binary data inclusion
+  void HandleEmbedDirective(SourceLocation HashLoc, Token &Tok,
+                            const FileEntry *LookupFromFile = nullptr);
+  void HandleEmbedDirectiveNaive(
+      SourceLocation FilenameTok, LexEmbedParametersResult &Params,
+      StringRef BinaryContents, const size_t TargetCharWidth);
+  void HandleEmbedDirectiveBuiltin(
+      SourceLocation FilenameTok, LexEmbedParametersResult &Params,
+      StringRef BinaryContents, const size_t TargetCharWidth);
 
   // File inclusion.
   void HandleIncludeDirective(SourceLocation HashLoc, Token &Tok,

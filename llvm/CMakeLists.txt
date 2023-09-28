@@ -777,6 +777,13 @@ if(NOT DEFINED LLVM_DYLIB_COMPONENTS)
     "Semicolon-separated list of components to include in libLLVM, or \"all\".")
 endif()
 
+option(LLVM_ENABLE_MSSTL_SECURE_WARNINGS "Turn on security warnings for use specific functions in Microsoft's STL." ON)
+# Quiet down MSVC-style secure CRT warnings
+if(NOT LLVM_ENABLE_MSSTL_SECURE_WARNINGS)
+  add_compile_definitions(_CRT_SECURE_NO_WARNINGS=1 _CRT_NONSTDC_NO_WARNINGS=1)
+endif()
+
+
 if(MSVC)
   option(LLVM_BUILD_LLVM_C_DYLIB "Build LLVM-C.dll (Windows only)" ON)
   # Set this variable to OFF here so it can't be set with a command-line

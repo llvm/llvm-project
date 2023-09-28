@@ -71,6 +71,11 @@ private:
                    FileID PrevFID) override;
   void FileSkipped(const FileEntryRef &SkippedFile, const Token &FilenameTok,
                    SrcMgr::CharacteristicKind FileType) override;
+  void EmbedDirective(SourceLocation HashLoc, StringRef FileName, bool IsAngled,
+                      CharSourceRange FilenameRange,
+                      CharSourceRange ParametersRange,
+                      OptionalFileEntryRef File, StringRef SearchPath,
+                      StringRef RelativePath) override;
   void InclusionDirective(SourceLocation HashLoc, const Token &IncludeTok,
                           StringRef FileName, bool IsAngled,
                           CharSourceRange FilenameRange,
@@ -176,6 +181,14 @@ void InclusionRewriter::FileSkipped(const FileEntryRef & /*SkippedFile*/,
          "A file, that wasn't found via an inclusion directive, was skipped");
   LastInclusionLocation = SourceLocation();
 }
+
+/// This should be called whenever the preprocessor encounters embed
+/// directives.
+void InclusionRewriter::EmbedDirective(
+    SourceLocation /*HashLoc*/, StringRef /*FileName*/, bool /*IsAngled*/,
+    CharSourceRange /*FilenameRange*/, CharSourceRange /*ParametersRange*/,
+    OptionalFileEntryRef /*File*/, StringRef /*SearchPath*/,
+    StringRef /*RelativePath*/) {}
 
 /// This should be called whenever the preprocessor encounters include
 /// directives. It does not say whether the file has been included, but it

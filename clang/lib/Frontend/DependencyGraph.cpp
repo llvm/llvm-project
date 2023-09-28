@@ -26,6 +26,14 @@ namespace DOT = llvm::DOT;
 
 namespace {
 class DependencyGraphCallback : public PPCallbacks {
+public:
+  enum DirectiveBehavior {
+    Normal = 0,
+    IgnoreEmbed = 0b01,
+    IgnoreInclude = 0b10,
+  };
+
+private:
   const Preprocessor *PP;
   std::string OutputFile;
   std::string SysRoot;
@@ -34,6 +42,7 @@ class DependencyGraphCallback : public PPCallbacks {
       llvm::DenseMap<FileEntryRef, SmallVector<FileEntryRef, 2>>;
 
   DependencyMap Dependencies;
+  DirectiveBehavior Behavior;
 
 private:
   raw_ostream &writeNodeReference(raw_ostream &OS,
@@ -42,7 +51,8 @@ private:
 
 public:
   DependencyGraphCallback(const Preprocessor *_PP, StringRef OutputFile,
-                          StringRef SysRoot)
+                          StringRef SysRoot,
+                          DirectiveBehavior Action = IgnoreEmbed)
     : PP(_PP), OutputFile(OutputFile.str()), SysRoot(SysRoot.str()) { }
 
   void InclusionDirective(SourceLocation HashLoc, const Token &IncludeTok,
@@ -51,6 +61,12 @@ public:
                           OptionalFileEntryRef File, StringRef SearchPath,
                           StringRef RelativePath, const Module *Imported,
                           SrcMgr::CharacteristicKind FileType) override;
+
+  void EmbedDirective(SourceLocation HashLoc, StringRef FileName, bool IsAngled,
+                      CharSourceRange FilenameRange,
+                      CharSourceRange ParametersRange,
+                      OptionalFileEntryRef File, StringRef SearchPath,
+                      StringRef RelativePath) override;
 
   void EndOfMainFile() override {
     OutputGraphFile();
@@ -70,6 +86,31 @@ void DependencyGraphCallback::InclusionDirective(
     bool IsAngled, CharSourceRange FilenameRange, OptionalFileEntryRef File,
     StringRef SearchPath, StringRef RelativePath, const Module *Imported,
     SrcMgr::CharacteristicKind FileType) {
+  if ((Behavior & IgnoreInclude) == IgnoreInclude) {
+    return;
+  }
+  if (!File)
+    return;
+
+  SourceManager &SM = PP->getSourceManager();
+  OptionalFileEntryRef FromFile =
+      SM.getFileEntryRefForID(SM.getFileID(SM.getExpansionLoc(HashLoc)));
+  if (!FromFile)
+    return;
+
+  Dependencies[*FromFile].push_back(*File);
+
+  AllFiles.insert(*File);
+  AllFiles.insert(*FromFile);
+}
+
+void DependencyGraphCallback::EmbedDirective(
+    SourceLocation HashLoc, StringRef FileName, bool IsAngled,
+    CharSourceRange FilenameRange, CharSourceRange ParametersRange,
+    OptionalFileEntryRef File, StringRef SearchPath, StringRef RelativePath) {
+  if ((Behavior & IgnoreEmbed) == IgnoreEmbed) {
+    return;
+  }
   if (!File)
     return;
 

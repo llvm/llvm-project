@@ -18,7 +18,9 @@
 #include "clang/Basic/Module.h"
 #include "clang/Basic/SourceLocation.h"
 #include "clang/Basic/SourceManager.h"
+#include "clang/Basic/TargetInfo.h"
 #include "clang/Basic/TokenKinds.h"
+#include "clang/Frontend/FrontendOptions.h"
 #include "clang/Lex/CodeCompletionHandler.h"
 #include "clang/Lex/HeaderSearch.h"
 #include "clang/Lex/LexDiagnostic.h"
@@ -1079,6 +1081,101 @@ OptionalFileEntryRef Preprocessor::LookupFile(
   return std::nullopt;
 }
 
+OptionalFileEntryRef Preprocessor::LookupEmbedFile(
+    SourceLocation FilenameLoc, StringRef Filename, bool isAngled,
+    bool OpenFile, const FileEntry *LookupFromFile,
+    SmallVectorImpl<char> *SearchPath, SmallVectorImpl<char> *RelativePath) {
+  FileManager &FM = this->getFileManager();
+  if (llvm::sys::path::is_absolute(Filename)) {
+    // lookup path or immediately fail
+    llvm::Expected<FileEntryRef> ShouldBeEntry =
+        FM.getFileRef(Filename, true, OpenFile);
+    return llvm::expectedToOptional(std::move(ShouldBeEntry));
+  }
+
+  // Otherwise, it's search time!
+  SmallString<512> LookupPath;
+  // Non-angled lookup
+  if (!isAngled) {
+    bool TryLocalLookup = false;
+    if (SearchPath) {
+      // use the provided search path as the local lookup path
+      llvm::sys::path::native(*SearchPath, LookupPath);
+      TryLocalLookup = true;
+    } else if (LookupFromFile) {
+      // Use file-based lookup here
+      StringRef FullFileDir = LookupFromFile->tryGetRealPathName();
+      if (!FullFileDir.empty()) {
+        llvm::sys::path::native(FullFileDir, LookupPath);
+        llvm::sys::path::remove_filename(LookupPath);
+        TryLocalLookup = true;
+      }
+    } else {
+      // Cannot do local lookup: give up.
+      TryLocalLookup = false;
+    }
+    if (TryLocalLookup) {
+      if (!LookupPath.empty() &&
+          !llvm::sys::path::is_separator(LookupPath.back())) {
+        LookupPath.append(llvm::sys::path::get_separator());
+      }
+      LookupPath.append(Filename);
+      llvm::Expected<FileEntryRef> ShouldBeEntry =
+          FM.getFileRef(LookupPath, true, OpenFile);
+      if (ShouldBeEntry) {
+        return std::move(*ShouldBeEntry);
+      } else {
+        llvm::consumeError(ShouldBeEntry.takeError());
+      }
+    }
+  }
+
+  if (!isAngled) {
+    // do working directory lookup
+    LookupPath.clear();
+    auto MaybeWorkingDirEntry = FM.getDirectoryRef(".");
+    if (MaybeWorkingDirEntry) {
+      DirectoryEntryRef WorkingDirEntry = *MaybeWorkingDirEntry;
+      StringRef WorkingDir = WorkingDirEntry.getName();
+      if (!WorkingDir.empty()) {
+        llvm::sys::path::native(WorkingDir, LookupPath);
+        if (!LookupPath.empty() &&
+            !llvm::sys::path::is_separator(LookupPath.back())) {
+          LookupPath.append(llvm::sys::path::get_separator());
+        }
+        LookupPath.append(llvm::sys::path::get_separator());
+        LookupPath.append(Filename);
+        llvm::Expected<FileEntryRef> ShouldBeEntry =
+            FM.getFileRef(LookupPath, true, OpenFile);
+        if (ShouldBeEntry) {
+          return std::move(*ShouldBeEntry);
+        } else {
+          llvm::consumeError(ShouldBeEntry.takeError());
+        }
+      }
+    }
+  }
+
+  for (const auto &Entry : PPOpts->EmbedEntries) {
+    LookupPath.clear();
+    llvm::sys::path::native(Entry, LookupPath);
+    if (!LookupPath.empty() &&
+        !llvm::sys::path::is_separator(LookupPath.back())) {
+      LookupPath.append(llvm::sys::path::get_separator());
+    }
+    LookupPath.append(Filename.begin(), Filename.end());
+    llvm::sys::path::native(LookupPath);
+    llvm::Expected<FileEntryRef> ShouldBeEntry =
+        FM.getFileRef(LookupPath, true, OpenFile);
+    if (ShouldBeEntry) {
+      return std::move(*ShouldBeEntry);
+    } else {
+      llvm::consumeError(ShouldBeEntry.takeError());
+    }
+  }
+  return std::nullopt;
+}
+
 //===----------------------------------------------------------------------===//
 // Preprocessor Directive Handling.
 //===----------------------------------------------------------------------===//
@@ -1174,6 +1271,7 @@ void Preprocessor::HandleDirective(Token &Result) {
       case tok::pp_include_next:
       case tok::pp___include_macros:
       case tok::pp_pragma:
+      case tok::pp_embed:
         Diag(Result, diag::err_embedded_directive) << II->getName();
         Diag(*ArgMacro, diag::note_macro_expansion_here)
             << ArgMacro->getIdentifierInfo();
@@ -1288,6 +1386,11 @@ void Preprocessor::HandleDirective(Token &Result) {
       return HandleIdentSCCSDirective(Result);
     case tok::pp_sccs:
       return HandleIdentSCCSDirective(Result);
+    case tok::pp_embed:
+      return HandleEmbedDirective(SavedHash.getLocation(), Result,
+                                  getCurrentFileLexer()
+                                      ? getCurrentFileLexer()->getFileEntry()
+                                      : nullptr);
     case tok::pp_assert:
       //isExtension = true;  // FIXME: implement #assert
       break;
@@ -3516,4 +3619,401 @@ void Preprocessor::HandleElifFamilyDirective(Token &ElifToken,
   SkipExcludedConditionalBlock(
       HashToken.getLocation(), CI.IfLoc, /*Foundnonskip*/ true,
       /*FoundElse*/ CI.FoundElse, ElifToken.getLocation());
+}
+
+enum class BracketType { Brace, Paren, Square };
+
+Preprocessor::LexEmbedParametersResult
+Preprocessor::LexEmbedParameters(Token &CurTok, bool InHasEmbed,
+                                 bool DiagnoseUnknown) {
+  LexEmbedParametersResult Result{};
+  SmallString<32> Parameter;
+  SmallVector<Token, 2> ParameterTokens;
+  tok::TokenKind EndTokenKind = InHasEmbed ? tok::r_paren : tok::eod;
+  Result.StartLoc = CurTok.getLocation();
+  for (LexNonComment(CurTok); CurTok.isNot(EndTokenKind);) {
+    Parameter.clear();
+    // Lex identifier [:: identifier ...]
+    if (!CurTok.is(tok::identifier)) {
+      Diag(CurTok, diag::err_expected) << "identifier";
+      DiscardUntilEndOfDirective();
+      return Result;
+    }
+    Token ParameterStartTok = CurTok;
+    IdentifierInfo *InitialID = CurTok.getIdentifierInfo();
+    Parameter.append(InitialID->getName());
+    for (LexNonComment(CurTok); CurTok.is(tok::coloncolon);
+         LexNonComment(CurTok)) {
+      Parameter.append("::");
+      LexNonComment(CurTok);
+      if (!CurTok.is(tok::identifier)) {
+        Diag(CurTok, diag::err_expected) << "identifier";
+        DiscardUntilEndOfDirective();
+        return Result;
+      }
+      IdentifierInfo *NextID = CurTok.getIdentifierInfo();
+      Parameter.append(NextID->getName());
+    }
+    // Lex the parameters (dependent on the parameter type we want!)
+    if (Parameter == "limit") {
+      // we have a limit parameter and its internals are processed using
+      // evaluation rules from #if - handle here
+      if (CurTok.isNot(tok::l_paren)) {
+        Diag(CurTok, diag::err_pp_expected_after) << "(" << Parameter;
+        DiscardUntilEndOfDirective();
+        return Result;
+      }
+      IdentifierInfo *ParameterIfNDef = nullptr;
+      DirectiveEvalResult LimitEvalResult =
+          EvaluateDirectiveExpression(ParameterIfNDef, CurTok, false, true);
+      if (!LimitEvalResult.Value) {
+        return Result;
+      }
+      const llvm::APSInt &LimitResult = *LimitEvalResult.Value;
+      const bool ValueDoesNotFit =
+          LimitResult.getBitWidth() > 64
+              ? true
+              : (LimitResult.isUnsigned() ||
+                 (LimitResult.isSigned() && LimitResult.isNegative()));
+      if (ValueDoesNotFit) {
+        Diag(CurTok, diag::warn_pp_expr_overflow);
+        // just truncate and roll with that, I guess?
+        Result.MaybeLimitParam =
+            static_cast<size_t>(LimitResult.getRawData()[0]);
+      } else {
+        Result.MaybeLimitParam =
+            static_cast<size_t>(LimitResult.getZExtValue());
+      }
+      LexNonComment(CurTok);
+    } else if (Parameter == "clang::offset") {
+      // we have a limit parameter and its internals are processed using
+      // evaluation rules from #if - handle here
+      if (CurTok.isNot(tok::l_paren)) {
+        Diag(CurTok, diag::err_pp_expected_after) << "(" << Parameter;
+        DiscardUntilEndOfDirective();
+        return Result;
+      }
+      IdentifierInfo *ParameterIfNDef = nullptr;
+      DirectiveEvalResult OffsetEvalResult =
+          EvaluateDirectiveExpression(ParameterIfNDef, CurTok, false, true);
+      if (!OffsetEvalResult.Value) {
+        return Result;
+      }
+      const llvm::APSInt &OffsetResult = *OffsetEvalResult.Value;
+      if (OffsetResult.getBitWidth() > 64) {
+        Diag(CurTok, diag::warn_pp_expr_overflow);
+        // just truncate and roll with that, I guess?
+        Result.MaybeOffsetParam =
+            static_cast<size_t>(OffsetResult.getRawData()[0]);
+      } else {
+        Result.MaybeOffsetParam =
+            static_cast<size_t>(OffsetResult.getZExtValue());
+      }
+      LexNonComment(CurTok);
+    } else {
+      if (CurTok.is(tok::l_paren)) {
+        SmallVector<BracketType, 4> Brackets;
+        Brackets.push_back(BracketType::Paren);
+        auto ParseArgToken = [&]() {
+          for (LexNonComment(CurTok); CurTok.isNot(tok::eod);
+               LexNonComment(CurTok)) {
+            switch (CurTok.getKind()) {
+            default:
+              break;
+            case tok::l_paren:
+              Brackets.push_back(BracketType::Paren);
+              break;
+            case tok::r_paren:
+              if (Brackets.back() != BracketType::Paren) {
+                Diag(CurTok, diag::err_pp_expected_rparen);
+                return false;
+              }
+              Brackets.pop_back();
+              if (Brackets.empty()) {
+                return true;
+              }
+              break;
+            case tok::l_brace:
+              Brackets.push_back(BracketType::Brace);
+              break;
+            case tok::r_brace:
+              if (Brackets.back() != BracketType::Brace) {
+                Diag(CurTok, diag::err_expected) << "}";
+                return false;
+              }
+              Brackets.pop_back();
+              break;
+            case tok::l_square:
+              Brackets.push_back(BracketType::Square);
+              break;
+            case tok::r_square:
+              if (Brackets.back() != BracketType::Square) {
+                Diag(CurTok, diag::err_expected) << "]";
+                return false;
+              }
+              Brackets.pop_back();
+              break;
+            }
+            ParameterTokens.push_back(CurTok);
+          }
+          if (!Brackets.empty()) {
+            Diag(CurTok, diag::err_pp_expected_rparen);
+            DiscardUntilEndOfDirective();
+            return false;
+          }
+          return true;
+        };
+        if (!ParseArgToken()) {
+          return Result;
+        }
+        if (!CurTok.is(tok::r_paren)) {
+          Diag(CurTok, diag::err_pp_expected_rparen);
+          DiscardUntilEndOfDirective();
+          return Result;
+        }
+        Lex(CurTok);
+      }
+      // "Token-soup" parameters
+      if (Parameter == "if_empty") {
+        // TODO: integer list optimization
+        Result.MaybeIfEmptyParam = std::move(ParameterTokens);
+      } else if (Parameter == "prefix") {
+        // TODO: integer list optimization
+        Result.MaybePrefixParam = std::move(ParameterTokens);
+      } else if (Parameter == "suffix") {
+        // TODO: integer list optimization
+        Result.MaybeSuffixParam = std::move(ParameterTokens);
+      } else {
+        ++Result.UnrecognizedParams;
+        if (DiagnoseUnknown) {
+          Diag(ParameterStartTok, diag::warn_pp_unknown_parameter_ignored)
+              << 1 << Parameter;
+        }
+      }
+    }
+  }
+  Result.Successful = true;
+  return Result;
+}
+
+// This array must survive for an extended period of time
+inline constexpr const char *IntegerLiterals[] = {
+    "0",   "1",   "2",   "3",   "4",   "5",   "6",   "7",   "8",   "9",   "10",
+    "11",  "12",  "13",  "14",  "15",  "16",  "17",  "18",  "19",  "20",  "21",
+    "22",  "23",  "24",  "25",  "26",  "27",  "28",  "29",  "30",  "31",  "32",
+    "33",  "34",  "35",  "36",  "37",  "38",  "39",  "40",  "41",  "42",  "43",
+    "44",  "45",  "46",  "47",  "48",  "49",  "50",  "51",  "52",  "53",  "54",
+    "55",  "56",  "57",  "58",  "59",  "60",  "61",  "62",  "63",  "64",  "65",
+    "66",  "67",  "68",  "69",  "70",  "71",  "72",  "73",  "74",  "75",  "76",
+    "77",  "78",  "79",  "80",  "81",  "82",  "83",  "84",  "85",  "86",  "87",
+    "88",  "89",  "90",  "91",  "92",  "93",  "94",  "95",  "96",  "97",  "98",
+    "99",  "100", "101", "102", "103", "104", "105", "106", "107", "108", "109",
+    "110", "111", "112", "113", "114", "115", "116", "117", "118", "119", "120",
+    "121", "122", "123", "124", "125", "126", "127", "128", "129", "130", "131",
+    "132", "133", "134", "135", "136", "137", "138", "139", "140", "141", "142",
+    "143", "144", "145", "146", "147", "148", "149", "150", "151", "152", "153",
+    "154", "155", "156", "157", "158", "159", "160", "161", "162", "163", "164",
+    "165", "166", "167", "168", "169", "170", "171", "172", "173", "174", "175",
+    "176", "177", "178", "179", "180", "181", "182", "183", "184", "185", "186",
+    "187", "188", "189", "190", "191", "192", "193", "194", "195", "196", "197",
+    "198", "199", "200", "201", "202", "203", "204", "205", "206", "207", "208",
+    "209", "210", "211", "212", "213", "214", "215", "216", "217", "218", "219",
+    "220", "221", "222", "223", "224", "225", "226", "227", "228", "229", "230",
+    "231", "232", "233", "234", "235", "236", "237", "238", "239", "240", "241",
+    "242", "243", "244", "245", "246", "247", "248", "249", "250", "251", "252",
+    "253", "254", "255"};
+
+void Preprocessor::HandleEmbedDirectiveNaive(SourceLocation FilenameLoc,
+                                              LexEmbedParametersResult &Params,
+                                              StringRef BinaryContents,
+                                              const size_t TargetCharWidth) {
+  (void)TargetCharWidth; // for later, when we support various sizes
+  size_t TokenIndex = 0;
+  const size_t InitListTokensSize = [&]() {
+    if (BinaryContents.empty()) {
+      if (Params.MaybeIfEmptyParam) {
+        return Params.MaybeIfEmptyParam->size();
+      } else {
+        return static_cast<size_t>(0);
+      }
+    } else {
+      return static_cast<size_t>(
+          (Params.MaybePrefixParam ? Params.MaybePrefixParam->size() : 0) +
+          (BinaryContents.size() * 2 - 1) +
+          (Params.MaybeSuffixParam ? Params.MaybeSuffixParam->size() : 0));
+    }
+  }();
+  std::unique_ptr<Token[]> InitListTokens(new Token[InitListTokensSize]());
+
+  if (BinaryContents.empty()) {
+    if (Params.MaybeIfEmptyParam) {
+      std::copy(Params.MaybeIfEmptyParam->begin(),
+                Params.MaybeIfEmptyParam->end(), InitListTokens.get());
+      TokenIndex += Params.MaybeIfEmptyParam->size();
+      assert(TokenIndex == InitListTokensSize);
+      EnterTokenStream(std::move(InitListTokens), InitListTokensSize, true,
+                       true);
+    }
+    return;
+  }
+
+  // FIXME: this does not take the target's byte size into account;
+  // will fail on many DSPs and embedded machines!
+  if (Params.MaybePrefixParam) {
+    std::copy(Params.MaybePrefixParam->begin(), Params.MaybePrefixParam->end(),
+              InitListTokens.get() + TokenIndex);
+    TokenIndex += Params.MaybePrefixParam->size();
+  }
+  for (size_t I = 0; I < BinaryContents.size(); ++I) {
+    unsigned char ByteValue = BinaryContents[I];
+    StringRef ByteRepresentation = IntegerLiterals[ByteValue];
+    const size_t InitListIndex = TokenIndex;
+    Token &IntToken = InitListTokens[InitListIndex];
+    IntToken.setKind(tok::numeric_constant);
+    IntToken.setLiteralData(ByteRepresentation.data());
+    IntToken.setLength(ByteRepresentation.size());
+    IntToken.setLocation(FilenameLoc);
+    ++TokenIndex;
+    bool AtEndOfContents = I == (BinaryContents.size() - 1);
+    if (!AtEndOfContents) {
+      const size_t CommaInitListIndex = InitListIndex + 1;
+      Token &CommaToken = InitListTokens[CommaInitListIndex];
+      CommaToken.setKind(tok::comma);
+      CommaToken.setLocation(FilenameLoc);
+      ++TokenIndex;
+    }
+  }
+  if (Params.MaybeSuffixParam) {
+    std::copy(Params.MaybeSuffixParam->begin(), Params.MaybeSuffixParam->end(),
+              InitListTokens.get() + TokenIndex);
+    TokenIndex += Params.MaybeSuffixParam->size();
+  }
+  assert(TokenIndex == InitListTokensSize);
+  EnterTokenStream(std::move(InitListTokens), InitListTokensSize, true, false);
+}
+
+void Preprocessor::HandleEmbedDirectiveBuiltin(SourceLocation FilenameLoc,
+                                               LexEmbedParametersResult &Params,
+                                               StringRef BinaryContents,
+                                               const size_t TargetCharWidth) {
+  // TODO: implement direct built-in support
+  HandleEmbedDirectiveNaive(FilenameLoc, Params, BinaryContents,
+                             TargetCharWidth);
+}
+
+void Preprocessor::HandleEmbedDirective(SourceLocation HashLoc, Token &EmbedTok,
+                                        const FileEntry *LookupFromFile) {
+  if (!LangOpts.C23 || !LangOpts.CPlusPlus26) {
+    auto EitherDiag = (LangOpts.CPlusPlus ? diag::warn_c23_pp_embed
+                                          : diag::warn_cxx26_pp_embed);
+    Diag(EmbedTok, EitherDiag);
+  }
+
+  // Parse the filename header
+  Token FilenameTok;
+  if (LexHeaderName(FilenameTok))
+    return;
+
+  if (FilenameTok.isNot(tok::header_name)) {
+    Diag(FilenameTok.getLocation(), diag::err_pp_expects_filename);
+    if (FilenameTok.isNot(tok::eod))
+      DiscardUntilEndOfDirective();
+    return;
+  }
+
+  // Parse the optional sequence of
+  // directive-parameters:
+  //     identifier parameter-name-list[opt] directive-argument-list[opt]
+  // directive-argument-list:
+  //    '(' balanced-token-sequence ')'
+  // parameter-name-list:
+  //    '::' identifier parameter-name-list[opt]
+  Token CurTok;
+  LexEmbedParametersResult Params = LexEmbedParameters(
+      CurTok, /*InHasEmbed=*/false, /*DiagnoseUnknown=*/true);
+
+  // Now, splat the data out!
+  SmallString<128> FilenameBuffer;
+  SmallString<512> SearchPath;
+  SmallString<512> RelativePath;
+  StringRef Filename = getSpelling(FilenameTok, FilenameBuffer);
+  SourceLocation FilenameLoc = FilenameTok.getLocation();
+  StringRef OriginalFilename = Filename;
+  bool isAngled =
+      GetIncludeFilenameSpelling(FilenameTok.getLocation(), Filename);
+  // If GetIncludeFilenameSpelling set the start ptr to null, there was an
+  // error.
+  assert(!Filename.empty());
+  OptionalFileEntryRef MaybeFileRef =
+      this->LookupEmbedFile(FilenameLoc, Filename, isAngled, false,
+                            LookupFromFile, &SearchPath, &RelativePath);
+  if (!MaybeFileRef) {
+    // could not find file
+    if (Callbacks && Callbacks->EmbedFileNotFound(OriginalFilename)) {
+      return;
+    }
+    Diag(FilenameTok, diag::err_pp_file_not_found)
+        << Filename;
+    return;
+  }
+  std::optional<int64_t> MaybeSignedLimit{};
+  if (Params.MaybeLimitParam) {
+    if (static_cast<uint64_t>(INT64_MAX) >= *Params.MaybeLimitParam) {
+      MaybeSignedLimit = static_cast<int64_t>(*Params.MaybeLimitParam);
+    }
+  }
+  llvm::ErrorOr<std::unique_ptr<llvm::MemoryBuffer>> MaybeFile = getFileManager().getBufferForFile(
+      *MaybeFileRef, false, false, MaybeSignedLimit);
+  if (!MaybeFile) {
+    // could not find file
+    Diag(FilenameTok, diag::err_cannot_open_file)
+        << Filename << "a buffer to the contents could not be created";
+    return;
+  }
+  StringRef BinaryContents = MaybeFile.get()->getBuffer();
+  if (Params.MaybeOffsetParam) {
+    // offsets all the way to the end of the file make for an empty file.
+    const size_t OffsetParam = *Params.MaybeOffsetParam;
+    BinaryContents = BinaryContents.substr(OffsetParam);
+  }
+  const size_t TargetCharWidth = getTargetInfo().getCharWidth();
+  if (TargetCharWidth > 64) {
+    // Too wide for us to handle
+    Diag(EmbedTok, diag::err_pp_unsupported_directive)
+        << 1
+        << "CHAR_BIT is too wide for the target architecture to handle "
+           "properly";
+    return;
+  }
+  if (TargetCharWidth != 8) {
+    Diag(EmbedTok, diag::err_pp_unsupported_directive)
+        << 1
+        << "At the moment, we do not have the machinery to support non 8-bit "
+           "CHAR_BIT targets!";
+    return;
+  }
+  if (CHAR_BIT % TargetCharWidth != 0) {
+    Diag(EmbedTok, diag::err_pp_unsupported_directive)
+        << 1
+        << "CHAR_BIT is not evenly divisible by host architecture's byte "
+           "definition";
+    return;
+  }
+  if (Callbacks) {
+    CharSourceRange FilenameSourceRange(
+        SourceRange(FilenameTok.getLocation(), FilenameTok.getEndLoc()), true);
+    CharSourceRange ParametersRange(SourceRange(Params.StartLoc, Params.EndLoc),
+                                    true);
+    Callbacks->EmbedDirective(HashLoc, Filename, isAngled, FilenameSourceRange,
+                              ParametersRange, MaybeFileRef, SearchPath,
+                              RelativePath);
+  }
+  if (PPOpts->NoBuiltinPPEmbed) {
+    HandleEmbedDirectiveNaive(FilenameLoc, Params, BinaryContents,
+                              TargetCharWidth);
+  } else {
+    // emit a token directly, handle it internally.
+    HandleEmbedDirectiveBuiltin(FilenameLoc, Params, BinaryContents,
+                                TargetCharWidth);
+  }
 }

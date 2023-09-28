@@ -1766,6 +1766,9 @@ BUILTIN(__builtin_ms_va_copy, "vc*&c*&", "n")
 // Arithmetic Fence: to prevent FP reordering and reassociation optimizations
 LANGBUILTIN(__arithmetic_fence, "v.", "tE", ALL_LANGUAGES)
 
+// preprocessor embed builtin
+LANGBUILTIN(__builtin_pp_embed, "v.", "tE", ALL_LANGUAGES)
+
 #undef BUILTIN
 #undef LIBBUILTIN
 #undef LANGBUILTIN

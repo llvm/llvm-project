@@ -380,6 +380,7 @@ void Preprocessor::RegisterBuiltinMacros() {
     Ident__has_c_attribute = nullptr;
 
   Ident__has_declspec = RegisterBuiltinMacro(*this, "__has_declspec_attribute");
+  Ident__has_embed = RegisterBuiltinMacro(*this, "__has_embed");
   Ident__has_include      = RegisterBuiltinMacro(*this, "__has_include");
   Ident__has_include_next = RegisterBuiltinMacro(*this, "__has_include_next");
   Ident__has_warning      = RegisterBuiltinMacro(*this, "__has_warning");
@@ -1264,6 +1265,114 @@ static bool EvaluateHasIncludeCommon(Token &Tok, IdentifierInfo *II,
   return File.has_value();
 }
 
+/// EvaluateHasEmbed - Process a '__has_embed("foo" params...)' expression.
+/// Returns a filled optional with the value if successful; otherwise, empty.
+int Preprocessor::EvaluateHasEmbed(Token &Tok, IdentifierInfo *II) {
+  // pedwarn for not being on C23
+  if (!LangOpts.C23 || !LangOpts.CPlusPlus26) {
+    auto EitherDiag = (LangOpts.CPlusPlus ? diag::warn_c23_pp_has_embed
+                                          : diag::warn_cxx26_pp_has_embed);
+    Diag(Tok, EitherDiag);
+  }
+
+  // Save the location of the current token.  If a '(' is later found, use
+  // that location.  If not, use the end of this location instead.
+  SourceLocation LParenLoc = Tok.getLocation();
+
+  // These expressions are only allowed within a preprocessor directive.
+  if (!this->isParsingIfOrElifDirective()) {
+    Diag(LParenLoc, diag::err_pp_directive_required) << II;
+    // Return a valid identifier token.
+    assert(Tok.is(tok::identifier));
+    Tok.setIdentifierInfo(II);
+    return VALUE__STDC_EMBED_NOT_FOUND__;
+  }
+
+  // Get '('. If we don't have a '(', try to form a header-name token.
+  do {
+    if (this->LexHeaderName(Tok)) {
+      return VALUE__STDC_EMBED_NOT_FOUND__;
+    }
+  } while (Tok.getKind() == tok::comment);
+
+  // Ensure we have a '('.
+  if (Tok.isNot(tok::l_paren)) {
+    // No '(', use end of last token.
+    LParenLoc = this->getLocForEndOfToken(LParenLoc);
+    this->Diag(LParenLoc, diag::err_pp_expected_after) << II << tok::l_paren;
+    // If the next token looks like a filename or the start of one,
+    // assume it is and process it as such.
+    if (Tok.isNot(tok::header_name)) {
+      return VALUE__STDC_EMBED_NOT_FOUND__;
+    }
+  } else {
+    // Save '(' location for possible missing ')' message.
+    LParenLoc = Tok.getLocation();
+    if (this->LexHeaderName(Tok)) {
+      return VALUE__STDC_EMBED_NOT_FOUND__;
+    }
+  }
+
+  if (Tok.isNot(tok::header_name)) {
+    Diag(Tok.getLocation(), diag::err_pp_expects_filename);
+    return VALUE__STDC_EMBED_NOT_FOUND__;
+  }
+
+  SourceLocation FilenameLoc = Tok.getLocation();
+  Token FilenameTok = Tok;
+
+  Preprocessor::LexEmbedParametersResult Params = this->LexEmbedParameters(Tok, true, false);
+  if (!Params.Successful) {
+    if (Tok.isNot(tok::eod))
+      this->DiscardUntilEndOfDirective();
+    return VALUE__STDC_EMBED_NOT_FOUND__;
+  }
+  if (Params.UnrecognizedParams > 0) {
+    return VALUE__STDC_EMBED_NOT_FOUND__;
+  }
+
+  if (!Tok.is(tok::r_paren)) {
+    Diag(this->getLocForEndOfToken(FilenameLoc), diag::err_pp_expected_after)
+        << II << tok::r_paren;
+    Diag(LParenLoc, diag::note_matching) << tok::l_paren;
+    DiscardUntilEndOfDirective();
+    return VALUE__STDC_EMBED_NOT_FOUND__;
+  }
+
+
+  SmallString<128> FilenameBuffer;
+  SmallString<256> RelativePath;
+  StringRef Filename = this->getSpelling(FilenameTok, FilenameBuffer);
+  StringRef OriginalFilename = Filename;
+  bool isAngled =
+      this->GetIncludeFilenameSpelling(FilenameTok.getLocation(), Filename);
+  // If GetIncludeFilenameSpelling set the start ptr to null, there was an
+  // error.
+  assert(!Filename.empty());
+  const FileEntry *LookupFromFile =
+      this->getCurrentFileLexer() ? this->getCurrentFileLexer()->getFileEntry()
+                               : nullptr;
+  OptionalFileEntryRef MaybeFileEntry =
+      this->LookupEmbedFile(FilenameLoc, Filename, isAngled, false,
+                            LookupFromFile, nullptr,
+                            &RelativePath);
+  if (Callbacks) {
+    Callbacks->HasEmbed(LParenLoc, Filename, isAngled, MaybeFileEntry);
+  }
+  if (!MaybeFileEntry) {
+    return VALUE__STDC_EMBED_NOT_FOUND__;
+  }
+  size_t FileSize = MaybeFileEntry->getSize();
+  if (FileSize == 0 ||
+      (Params.MaybeLimitParam ? *Params.MaybeLimitParam == 0 : false)) {
+    return VALUE__STDC_EMBED_EMPTY__;
+  }
+  if (Params.MaybeOffsetParam && *Params.MaybeOffsetParam >= FileSize) {
+    return VALUE__STDC_EMBED_EMPTY__;
+  }
+  return VALUE__STDC_EMBED_FOUND__;
+}
+
 bool Preprocessor::EvaluateHasInclude(Token &Tok, IdentifierInfo *II) {
   return EvaluateHasIncludeCommon(Tok, II, *this, nullptr, nullptr);
 }
@@ -1800,6 +1909,17 @@ void Preprocessor::ExpandBuiltinMacro(Token &Tok) {
     if (Tok.isNot(tok::r_paren))
       return;
     OS << (int)Value;
+    Tok.setKind(tok::numeric_constant);
+  } else if (II == Ident__has_embed) {
+    // The argument to these two builtins should be a parenthesized
+    // file name string literal using angle brackets (<>) or
+    // double-quotes (""), optionally followed by a series of
+    // arguments similar to form like attributes.
+    int Value = EvaluateHasEmbed(Tok, II);
+
+    if (Tok.isNot(tok::r_paren))
+      return;
+    OS << Value;
     Tok.setKind(tok::numeric_constant);
   } else if (II == Ident__has_warning) {
     // The argument should be a parenthesized string literal.
