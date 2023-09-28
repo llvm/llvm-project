@@ -9,7 +9,7 @@
 #map0 = affine_map<(d0, d1)[s0] -> ((d1 - d0) ceildiv s0)>
 #map1 = affine_map<(d0, d1)[s0] -> ((d0 - d1) ceildiv s0)>
 
-func.func @init_and_dot(%arg0: tensor<64xf32>, %arg1: tensor<64xf32>, %arg2: tensor<f32>) -> tensor<f32> {
+func.func private @init_and_dot(%arg0: tensor<64xf32>, %arg1: tensor<64xf32>, %arg2: tensor<f32>) -> tensor<f32> {
   %c64 = arith.constant 64 : index
   %cst = arith.constant 0.000000e+00 : f32
   %c2 = arith.constant 2 : index
