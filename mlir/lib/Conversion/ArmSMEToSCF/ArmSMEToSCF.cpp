@@ -191,7 +191,8 @@ struct TileStoreOpConversion : public OpRewritePattern<arm_sme::TileStoreOp> {
 };
 
 /// Lowers `vector.print` of a tile into a loop over the rows of the tile,
-/// extracting them via a MOVA, then printing with a 1D `vector.print`.
+/// extracting them via `arm_sme.move_tile_slice_to_vector`, then printing with
+/// a 1D `vector.print`.
 ///
 ///  BEFORE:
 ///  ```mlir
