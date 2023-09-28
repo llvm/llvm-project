@@ -10950,16 +10950,8 @@ bool ArrayExprEvaluator::VisitCXXParenListOrInitListExpr(
 }
 
 bool ArrayExprEvaluator::VisitArrayInitLoopExpr(const ArrayInitLoopExpr *E) {
-  LValue CommonLV;
-  if (E->getCommonExpr() &&
-      !Evaluate(Info.CurrentCall->createTemporary(
-                    E->getCommonExpr(),
-                    getStorageType(Info.Ctx, E->getCommonExpr()),
-                    ScopeKind::FullExpression, CommonLV),
-                Info, E->getCommonExpr()->getSourceExpr()))
-    return false;
-
-  auto *CAT = cast<ConstantArrayType>(E->getType()->castAsArrayTypeUnsafe());
+  const auto *CAT =
+      cast<ConstantArrayType>(E->getType()->castAsArrayTypeUnsafe());
 
   uint64_t Elements = CAT->getSize().getZExtValue();
   Result = APValue(APValue::UninitArray(), Elements, Elements);
