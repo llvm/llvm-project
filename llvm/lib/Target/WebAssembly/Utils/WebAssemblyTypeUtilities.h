@@ -45,8 +45,8 @@ inline bool isWebAssemblyReferenceType(const Type *Ty) {
 
 /// Return true if the table represents a WebAssembly table type.
 inline bool isWebAssemblyTableType(const Type *Ty) {
-  return Ty->isArrayTy() && 
-     isWebAssemblyReferenceType(Ty->getArrayElementType());
+  return Ty->isArrayTy() &&
+         isWebAssemblyReferenceType(Ty->getArrayElementType());
 }
 
 // Convert StringRef to ValType / HealType / BlockType

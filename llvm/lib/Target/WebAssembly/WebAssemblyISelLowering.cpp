@@ -1726,9 +1726,10 @@ SDValue WebAssemblyTargetLowering::LowerGlobalAddress(SDValue Op,
   unsigned OperandFlags = 0;
   const GlobalValue *GV = GA->getGlobal();
   // is PIC but not a WebAssembly table.
-  // Since WebAssembly tables cannot yet be shared accross modules, we don't need special
-  // treatment for tables in PIC mode.
-  if (isPositionIndependent() && !WebAssembly::isWebAssemblyTableType(GV->getValueType())) {
+  // Since WebAssembly tables cannot yet be shared accross modules, we don't
+  // need special treatment for tables in PIC mode.
+  if (isPositionIndependent() &&
+      !WebAssembly::isWebAssemblyTableType(GV->getValueType())) {
     if (getTargetMachine().shouldAssumeDSOLocal(*GV->getParent(), GV)) {
       MachineFunction &MF = DAG.getMachineFunction();
       MVT PtrVT = getPointerTy(MF.getDataLayout());
