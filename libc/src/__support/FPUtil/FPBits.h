@@ -116,7 +116,7 @@ template <typename T> struct FPBits {
 
   FPBits() : bits(0) {}
 
-  LIBC_INLINE T get_val() const { return cpp::bit_cast<T>(bits); }
+  LIBC_INLINE constexpr T get_val() const { return cpp::bit_cast<T>(bits); }
 
   LIBC_INLINE void set_val(T value) { bits = cpp::bit_cast<UIntType>(value); }
 
@@ -183,6 +183,10 @@ template <typename T> struct FPBits {
     FPBits<T> bits = inf();
     bits.set_sign(1);
     return bits;
+  }
+
+  LIBC_INLINE static constexpr FPBits<T> min_normal() {
+    return FPBits<T>(MIN_NORMAL);
   }
 
   LIBC_INLINE static constexpr T build_nan(UIntType v) {
