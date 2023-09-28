@@ -9,7 +9,7 @@
 #include "src/__support/CPP/cstddef.h"
 #include "test/UnitTest/Test.h"
 
-namespace __llvm_libc::cpp {
+namespace LIBC_NAMESPACE::cpp {
 
 TEST(LlvmLibcByteTest, to_integer) {
   const char str[] = "abc";
@@ -41,4 +41,4 @@ TEST(LlvmLibcByteTest, bitwise) {
   ASSERT_EQ(b, byte{0b00001111});
 }
 
-} // namespace __llvm_libc::cpp
+} // namespace LIBC_NAMESPACE::cpp

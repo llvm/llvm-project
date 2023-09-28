@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "mlir/Interfaces/LoopLikeInterface.h"
+
 #include "mlir/Interfaces/FunctionInterfaces.h"
 #include "llvm/ADT/DenseSet.h"
 

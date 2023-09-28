@@ -24,12 +24,6 @@
 using namespace llvm;
 using namespace llvm::AMDGPU;
 
-static cl::opt<bool> Keep16BitSuffixes(
-  "amdgpu-keep-16-bit-reg-suffixes",
-  cl::desc("Keep .l and .h suffixes in asm for debugging purposes"),
-  cl::init(false),
-  cl::ReallyHidden);
-
 void AMDGPUInstPrinter::printRegName(raw_ostream &OS, MCRegister Reg) const {
   // FIXME: The current implementation of
   // AsmParser::parseRegisterOrRegisterNumber in MC implies we either emit this
@@ -278,12 +272,7 @@ void AMDGPUInstPrinter::printRegOperand(unsigned RegNo, raw_ostream &O,
   }
 #endif
 
-  StringRef RegName(getRegisterName(RegNo));
-  if (!Keep16BitSuffixes)
-    if (!RegName.consume_back(".l"))
-      RegName.consume_back(".h");
-
-  O << RegName;
+  O << getRegisterName(RegNo);
 }
 
 void AMDGPUInstPrinter::printVOPDst(const MCInst *MI, unsigned OpNo,
@@ -532,21 +521,15 @@ void AMDGPUInstPrinter::printDefaultVccOperand(bool FirstOperand,
 void AMDGPUInstPrinter::printWaitVDST(const MCInst *MI, unsigned OpNo,
                                       const MCSubtargetInfo &STI,
                                       raw_ostream &O) {
-  uint8_t Imm = MI->getOperand(OpNo).getImm();
-  if (Imm != 0) {
-    O << " wait_vdst:";
-    printU4ImmDecOperand(MI, OpNo, O);
-  }
+  O << " wait_vdst:";
+  printU4ImmDecOperand(MI, OpNo, O);
 }
 
 void AMDGPUInstPrinter::printWaitEXP(const MCInst *MI, unsigned OpNo,
                                     const MCSubtargetInfo &STI,
                                     raw_ostream &O) {
-  uint8_t Imm = MI->getOperand(OpNo).getImm();
-  if (Imm != 0) {
-    O << " wait_exp:";
-    printU4ImmDecOperand(MI, OpNo, O);
-  }
+  O << " wait_exp:";
+  printU4ImmDecOperand(MI, OpNo, O);
 }
 
 bool AMDGPUInstPrinter::needsImpliedVcc(const MCInstrDesc &Desc,

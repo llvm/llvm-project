@@ -17,7 +17,7 @@
 #include "mlir/Dialect/LLVMIR/NVVMDialect.h"
 
 #include "mlir/Conversion/ConvertToLLVM/ToLLVMInterface.h"
-#include "mlir/Dialect/GPU/IR/GPUDialect.h"
+#include "mlir/Dialect/GPU/IR/CompilationInterfaces.h"
 #include "mlir/Dialect/Utils/StaticValueUtils.h"
 #include "mlir/IR/Builders.h"
 #include "mlir/IR/BuiltinAttributes.h"
@@ -76,6 +76,12 @@ ParseResult VoteBallotOp::parse(OpAsmParser &parser, OperationState &result) {
 void VoteBallotOp::print(OpAsmPrinter &p) { printNVVMIntrinsicOp(p, *this); }
 
 LogicalResult CpAsyncBulkTensorGlobalToSharedClusterOp::verify() {
+  if (getCoordinates().size() > 5)
+    return emitError("Maximum 5 coordinates and dimension is supported.");
+  return success();
+}
+
+LogicalResult CpAsyncBulkTensorSharedCTAToGlobalOp::verify() {
   if (getCoordinates().size() > 5)
     return emitError("Maximum 5 coordinates and dimension is supported.");
   return success();

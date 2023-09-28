@@ -30,7 +30,7 @@
 // generated with Sollya using the following command:
 //   fpminimax(log(1 + x)/x, 7, [|D...|], [-2^-6; 2^-6]);
 
-namespace __llvm_libc {
+namespace LIBC_NAMESPACE {
 
 namespace internal {
 
@@ -153,4 +153,4 @@ LLVM_LIBC_FUNCTION(float, log1pf, (float x)) {
   return static_cast<float>(r);
 }
 
-} // namespace __llvm_libc
+} // namespace LIBC_NAMESPACE

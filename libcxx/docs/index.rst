@@ -116,8 +116,8 @@ velocity, libc++ drops support for older compilers as newer ones are released.
 ============ =============== ========================== =====================
 Compiler     Versions        Restrictions               Support policy
 ============ =============== ========================== =====================
-Clang        15, 16, 17-git                             latest two stable releases per `LLVM's release page <https://releases.llvm.org>`_ and the development version
-AppleClang   14                                         latest stable release per `Xcode's release page <https://developer.apple.com/documentation/xcode-release-notes>`_
+Clang        16, 17, 18-git                             latest two stable releases per `LLVM's release page <https://releases.llvm.org>`_ and the development version
+AppleClang   15                                         latest stable release per `Xcode's release page <https://developer.apple.com/documentation/xcode-release-notes>`_
 Open XL      17.1 (AIX)                                 latest stable release per `Open XL's documentation page <https://www.ibm.com/docs/en/openxl-c-and-cpp-aix>`_
 GCC          12              In C++11 or later only     latest stable release per `GCC's release page <https://gcc.gnu.org/releases.html>`_
 ============ =============== ========================== =====================

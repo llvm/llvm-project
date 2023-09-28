@@ -120,7 +120,7 @@ def AffineForOp : Affine_Op<"for",
     [AutomaticAllocationScope, ImplicitAffineTerminator, ConditionallySpeculatable,
      RecursiveMemoryEffects, DeclareOpInterfaceMethods<LoopLikeOpInterface,
      ["getSingleInductionVar", "getSingleLowerBound", "getSingleStep",
-      "getSingleUpperBound"]>,
+      "getSingleUpperBound", "replaceWithAdditionalYields"]>,
      DeclareOpInterfaceMethods<RegionBranchOpInterface,
      ["getEntrySuccessorOperands"]>]> {
   let summary = "for operation";
@@ -259,7 +259,7 @@ def AffineForOp : Affine_Op<"for",
     Block::BlockArgListType getRegionIterArgs() {
       return getBody()->getArguments().drop_front();
     }
-    Operation::operand_range getIterOperands() {
+    Operation::operand_range getInits() {
       return getOperands().drop_front(getNumControlOperands());
     }
 

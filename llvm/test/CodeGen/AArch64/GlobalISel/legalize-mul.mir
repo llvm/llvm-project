@@ -175,12 +175,8 @@ body:             |
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(<2 x s64>) = COPY $q0
     ; CHECK-NEXT: [[COPY1:%[0-9]+]]:_(<2 x s64>) = COPY $q1
-    ; CHECK-NEXT: [[UV:%[0-9]+]]:_(s64), [[UV1:%[0-9]+]]:_(s64) = G_UNMERGE_VALUES [[COPY]](<2 x s64>)
-    ; CHECK-NEXT: [[UV2:%[0-9]+]]:_(s64), [[UV3:%[0-9]+]]:_(s64) = G_UNMERGE_VALUES [[COPY1]](<2 x s64>)
-    ; CHECK-NEXT: [[MUL:%[0-9]+]]:_(s64) = G_MUL [[UV]], [[UV2]]
-    ; CHECK-NEXT: [[MUL1:%[0-9]+]]:_(s64) = G_MUL [[UV1]], [[UV3]]
-    ; CHECK-NEXT: [[BUILD_VECTOR:%[0-9]+]]:_(<2 x s64>) = G_BUILD_VECTOR [[MUL]](s64), [[MUL1]](s64)
-    ; CHECK-NEXT: $q0 = COPY [[BUILD_VECTOR]](<2 x s64>)
+    ; CHECK-NEXT: [[MUL:%[0-9]+]]:_(<2 x s64>) = G_MUL [[COPY]], [[COPY1]]
+    ; CHECK-NEXT: $q0 = COPY [[MUL]](<2 x s64>)
     ; CHECK-NEXT: RET_ReallyLR implicit $q0
     %0:_(<2 x s64>) = COPY $q0
     %1:_(<2 x s64>) = COPY $q1

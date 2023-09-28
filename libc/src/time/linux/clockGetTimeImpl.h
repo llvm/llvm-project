@@ -18,22 +18,22 @@
 #include <sys/syscall.h> // For syscall numbers.
 #include <time.h>
 
-namespace __llvm_libc {
+namespace LIBC_NAMESPACE {
 namespace internal {
 
 LIBC_INLINE ErrorOr<int> clock_gettimeimpl(clockid_t clockid,
                                            struct timespec *ts) {
 #if SYS_clock_gettime
-  int ret = __llvm_libc::syscall_impl<int>(SYS_clock_gettime,
-                                           static_cast<long>(clockid),
-                                           reinterpret_cast<long>(ts));
+  int ret = LIBC_NAMESPACE::syscall_impl<int>(SYS_clock_gettime,
+                                              static_cast<long>(clockid),
+                                              reinterpret_cast<long>(ts));
 #elif defined(SYS_clock_gettime64)
   static_assert(
       sizeof(time_t) == sizeof(int64_t),
       "SYS_clock_gettime64 requires struct timespec with 64-bit members.");
-  int ret = __llvm_libc::syscall_impl<int>(SYS_clock_gettime64,
-                                           static_cast<long>(clockid),
-                                           reinterpret_cast<long>(ts));
+  int ret = LIBC_NAMESPACE::syscall_impl<int>(SYS_clock_gettime64,
+                                              static_cast<long>(clockid),
+                                              reinterpret_cast<long>(ts));
 #else
 #error "SYS_clock_gettime and SYS_clock_gettime64 syscalls not available."
 #endif
@@ -43,6 +43,6 @@ LIBC_INLINE ErrorOr<int> clock_gettimeimpl(clockid_t clockid,
 }
 
 } // namespace internal
-} // namespace __llvm_libc
+} // namespace LIBC_NAMESPACE
 
 #endif // LLVM_LIBC_SRC_TIME_LINUX_CLOCKGETTIMEIMPL_H

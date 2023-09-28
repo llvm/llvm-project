@@ -197,6 +197,11 @@ static cl::opt<bool> EnableGISelLoadStoreOptPostLegal(
     cl::desc("Enable GlobalISel's post-legalizer load/store optimization pass"),
     cl::init(false), cl::Hidden);
 
+static cl::opt<bool>
+    EnableSinkFold("aarch64-enable-sink-fold",
+                   cl::desc("Enable sinking and folding of instruction copies"),
+                   cl::init(false), cl::Hidden);
+
 extern "C" LLVM_EXTERNAL_VISIBILITY void LLVMInitializeAArch64Target() {
   // Register the target.
   RegisterTargetMachine<AArch64leTargetMachine> X(getTheAArch64leTarget());
@@ -221,6 +226,7 @@ extern "C" LLVM_EXTERNAL_VISIBILITY void LLVMInitializeAArch64Target() {
   initializeAArch64SIMDInstrOptPass(*PR);
   initializeAArch64O0PreLegalizerCombinerPass(*PR);
   initializeAArch64PreLegalizerCombinerPass(*PR);
+  initializeAArch64PointerAuthPass(*PR);
   initializeAArch64PostLegalizerCombinerPass(*PR);
   initializeAArch64PostLegalizerLoweringPass(*PR);
   initializeAArch64PostSelectOptimizePass(*PR);
@@ -471,6 +477,7 @@ public:
       : TargetPassConfig(TM, PM) {
     if (TM.getOptLevel() != CodeGenOptLevel::None)
       substitutePass(&PostRASchedulerID, &PostMachineSchedulerID);
+    setEnableSinkAndFold(EnableSinkFold);
   }
 
   AArch64TargetMachine &getAArch64TargetMachine() const {
@@ -811,9 +818,6 @@ void AArch64PassConfig::addPreEmitPass() {
 
   addPass(createAArch64A53Fix835769());
 
-  if (EnableBranchTargets)
-    addPass(createAArch64BranchTargetsPass());
-
   if (TM->getTargetTriple().isOSWindows()) {
     // Identify valid longjmp targets for Windows Control Flow Guard.
     addPass(createCFGuardLongjmpPass());
@@ -827,6 +831,9 @@ void AArch64PassConfig::addPreEmitPass() {
 }
 
 void AArch64PassConfig::addPostBBSections() {
+  addPass(createAArch64PointerAuthPass());
+  if (EnableBranchTargets)
+    addPass(createAArch64BranchTargetsPass());
   // Relax conditional branch instructions if they're otherwise out of
   // range of their destination.
   if (BranchRelaxation)

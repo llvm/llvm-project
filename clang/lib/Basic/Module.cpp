@@ -44,7 +44,7 @@ Module::Module(StringRef Name, SourceLocation DefinitionLoc, Module *Parent,
       InferSubmodules(false), InferExplicitSubmodules(false),
       InferExportWildcard(false), ConfigMacrosExhaustive(false),
       NoUndeclaredIncludes(false), ModuleMapIsPrivate(false),
-      NameVisibility(Hidden) {
+      NamedModuleHasNoInit(false), NameVisibility(Hidden) {
   if (Parent) {
     IsAvailable = Parent->isAvailable();
     IsUnimportable = Parent->isUnimportable();
@@ -368,6 +368,28 @@ Module *Module::findOrInferSubmodule(StringRef Name) {
   if (Result->InferExportWildcard)
     Result->Exports.push_back(Module::ExportDecl(nullptr, true));
   return Result;
+}
+
+Module *Module::getGlobalModuleFragment() const {
+  assert(isNamedModuleUnit() && "We should only query the global module "
+                                "fragment from the C++ 20 Named modules");
+
+  for (auto *SubModule : SubModules)
+    if (SubModule->isExplicitGlobalModule())
+      return SubModule;
+
+  return nullptr;
+}
+
+Module *Module::getPrivateModuleFragment() const {
+  assert(isNamedModuleUnit() && "We should only query the private module "
+                                "fragment from the C++ 20 Named modules");
+
+  for (auto *SubModule : SubModules)
+    if (SubModule->isPrivateModule())
+      return SubModule;
+
+  return nullptr;
 }
 
 void Module::getExportedModules(SmallVectorImpl<Module *> &Exported) const {

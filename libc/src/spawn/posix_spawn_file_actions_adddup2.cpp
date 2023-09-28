@@ -15,7 +15,7 @@
 #include <errno.h>
 #include <spawn.h>
 
-namespace __llvm_libc {
+namespace LIBC_NAMESPACE {
 
 LLVM_LIBC_FUNCTION(int, posix_spawn_file_actions_adddup2,
                    (posix_spawn_file_actions_t * actions, int fd, int newfd)) {
@@ -33,4 +33,4 @@ LLVM_LIBC_FUNCTION(int, posix_spawn_file_actions_adddup2,
   return 0;
 }
 
-} // namespace __llvm_libc
+} // namespace LIBC_NAMESPACE

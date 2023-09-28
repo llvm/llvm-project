@@ -11,7 +11,7 @@
 
 #include <fstream>
 
-namespace __llvm_libc {
+namespace LIBC_NAMESPACE {
 namespace testing {
 
 template <typename T> class BinaryOpSingleOutputDiff {
@@ -141,18 +141,18 @@ public:
 };
 
 } // namespace testing
-} // namespace __llvm_libc
+} // namespace LIBC_NAMESPACE
 
 #define BINARY_OP_SINGLE_OUTPUT_DIFF(T, myFunc, otherFunc, filename)           \
   int main() {                                                                 \
-    __llvm_libc::testing::BinaryOpSingleOutputDiff<T>::run_diff(               \
+    LIBC_NAMESPACE::testing::BinaryOpSingleOutputDiff<T>::run_diff(            \
         &myFunc, &otherFunc, filename);                                        \
     return 0;                                                                  \
   }
 
 #define BINARY_OP_SINGLE_OUTPUT_PERF(T, myFunc, otherFunc, filename)           \
   int main() {                                                                 \
-    __llvm_libc::testing::BinaryOpSingleOutputDiff<T>::run_perf(               \
+    LIBC_NAMESPACE::testing::BinaryOpSingleOutputDiff<T>::run_perf(            \
         &myFunc, &otherFunc, filename);                                        \
     return 0;                                                                  \
   }

@@ -59,7 +59,7 @@ def loopPeel():
         transform.OperationType.get("scf.for"),
     )
     with InsertionPoint(sequence.body):
-        loop.LoopPeelOp(pdl.OperationType.get(), sequence.bodyTarget)
+        loop.LoopPeelOp(transform.AnyOpType.get(), transform.AnyOpType.get(), sequence.bodyTarget)
         transform.YieldOp()
     # CHECK-LABEL: TEST: loopPeel
     # CHECK: = transform.loop.peel %

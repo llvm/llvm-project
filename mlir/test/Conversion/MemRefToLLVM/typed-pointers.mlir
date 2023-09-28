@@ -100,7 +100,7 @@ func.func @mixed_alloc(%arg0: index, %arg1: index) -> memref<?x42x?xf32> {
 //  CHECK-NEXT:  %[[one:.*]] = llvm.mlir.constant(1 : index) : i64
 //  CHECK-NEXT:  %[[st0:.*]] = llvm.mul %[[N]], %[[c42]] : i64
 //  CHECK-NEXT:  %[[sz:.*]] = llvm.mul %[[st0]], %[[M]] : i64
-//  CHECK-NEXT:  %[[null:.*]] = llvm.mlir.null : !llvm.ptr<f32>
+//  CHECK-NEXT:  %[[null:.*]] = llvm.mlir.zero : !llvm.ptr<f32>
 //  CHECK-NEXT:  %[[gep:.*]] = llvm.getelementptr %[[null]][%[[sz]]] : (!llvm.ptr<f32>, i64) -> !llvm.ptr<f32>
 //  CHECK-NEXT:  %[[sz_bytes:.*]] = llvm.ptrtoint %[[gep]] : !llvm.ptr<f32> to i64
 //  CHECK-NEXT:  llvm.call @malloc(%[[sz_bytes]]) : (i64) -> !llvm.ptr<i8>
@@ -140,7 +140,7 @@ func.func @dynamic_alloc(%arg0: index, %arg1: index) -> memref<?x?xf32> {
 //   CHECK-DAG:  %[[N:.*]] = builtin.unrealized_conversion_cast %[[Narg]]
 //  CHECK-NEXT:  %[[one:.*]] = llvm.mlir.constant(1 : index) : i64
 //  CHECK-NEXT:  %[[sz:.*]] = llvm.mul %[[N]], %[[M]] : i64
-//  CHECK-NEXT:  %[[null:.*]] = llvm.mlir.null : !llvm.ptr<f32>
+//  CHECK-NEXT:  %[[null:.*]] = llvm.mlir.zero : !llvm.ptr<f32>
 //  CHECK-NEXT:  %[[gep:.*]] = llvm.getelementptr %[[null]][%[[sz]]] : (!llvm.ptr<f32>, i64) -> !llvm.ptr<f32>
 //  CHECK-NEXT:  %[[sz_bytes:.*]] = llvm.ptrtoint %[[gep]] : !llvm.ptr<f32> to i64
 //  CHECK-NEXT:  llvm.call @malloc(%[[sz_bytes]]) : (i64) -> !llvm.ptr<i8>

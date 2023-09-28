@@ -61,8 +61,8 @@ namespace llvm {
 namespace yaml {
 template <>
 struct ScalarEnumerationTraits<FormatStyle::BreakBeforeNoexceptSpecifierStyle> {
-  static void enumeration(IO &IO,
-                          FormatStyle::BreakBeforeNoexceptSpecifierStyle &Value) {
+  static void
+  enumeration(IO &IO, FormatStyle::BreakBeforeNoexceptSpecifierStyle &Value) {
     IO.enumCase(Value, "Never", FormatStyle::BBNSS_Never);
     IO.enumCase(Value, "OnlyWithParen", FormatStyle::BBNSS_OnlyWithParen);
     IO.enumCase(Value, "Always", FormatStyle::BBNSS_Always);
@@ -3777,16 +3777,6 @@ tooling::Replacements fixNamespaceEndComments(const FormatStyle &Style,
   if (!Env)
     return {};
   return NamespaceEndCommentsFixer(*Env, Style).process().first;
-}
-
-tooling::Replacements separateDefinitionBlocks(const FormatStyle &Style,
-                                               StringRef Code,
-                                               ArrayRef<tooling::Range> Ranges,
-                                               StringRef FileName) {
-  auto Env = Environment::make(Code, FileName, Ranges);
-  if (!Env)
-    return {};
-  return DefinitionBlockSeparator(*Env, Style).process().first;
 }
 
 tooling::Replacements sortUsingDeclarations(const FormatStyle &Style,

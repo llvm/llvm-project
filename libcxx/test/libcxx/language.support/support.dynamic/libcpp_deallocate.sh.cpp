@@ -19,7 +19,7 @@
 
 // XFAIL: sanitizer-new-delete && !hwasan
 
-// It fails with clang-14 or clang-16, but passes with clang-15.
+// TODO: Investigate this failure
 // UNSUPPORTED: ubsan
 
 // GCC doesn't support the aligned-allocation flags.

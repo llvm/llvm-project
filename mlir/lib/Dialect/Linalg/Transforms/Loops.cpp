@@ -149,11 +149,12 @@ static void emitScalarImplementation(OpBuilder &b, Location loc,
         b.create<LoadOpTy>(loc, inputOperand->get(), indexing));
   }
   // 1.b. Emit load from output views.
-  for (OpOperand *outputOperand : linalgOp.getDpsInitOperands()) {
+  for (OpOperand &outputOperand : linalgOp.getDpsInitsMutable()) {
     SmallVector<Value> indexing = makeCanonicalAffineApplies(
-        b, loc, linalgOp.getMatchingIndexingMap(outputOperand), allIvsPlusDims);
+        b, loc, linalgOp.getMatchingIndexingMap(&outputOperand),
+        allIvsPlusDims);
     indexedValues.push_back(
-        b.create<LoadOpTy>(loc, outputOperand->get(), indexing));
+        b.create<LoadOpTy>(loc, outputOperand.get(), indexing));
   }
 
   // TODO: When a region inliner exists, use it.
@@ -161,13 +162,13 @@ static void emitScalarImplementation(OpBuilder &b, Location loc,
   // 3. Emit store.
   SmallVector<SmallVector<Value>, 8> indexing;
   SmallVector<Value> outputBuffers;
-  for (OpOperand *outputOperand : linalgOp.getDpsInitOperands()) {
-    if (!isa<MemRefType>(outputOperand->get().getType()))
+  for (OpOperand &outputOperand : linalgOp.getDpsInitsMutable()) {
+    if (!isa<MemRefType>(outputOperand.get().getType()))
       continue;
     indexing.push_back(makeCanonicalAffineApplies(
-        b, loc, linalgOp.getMatchingIndexingMap(outputOperand),
+        b, loc, linalgOp.getMatchingIndexingMap(&outputOperand),
         allIvsPlusDims));
-    outputBuffers.push_back(outputOperand->get());
+    outputBuffers.push_back(outputOperand.get());
   }
   inlineRegionAndEmitStore<LoadOpTy, StoreOpTy>(b, loc, linalgOp, indexedValues,
                                                 indexing, outputBuffers);

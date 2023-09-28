@@ -406,8 +406,9 @@ public:
   CommandObjectRegisterInfo(CommandInterpreter &interpreter)
       : CommandObjectParsed(interpreter, "register info",
                             "View information about a register.", nullptr,
-                            eCommandRequiresRegContext |
-                                eCommandProcessMustBeLaunched) {
+                            eCommandRequiresFrame | eCommandRequiresRegContext |
+                                eCommandProcessMustBeLaunched |
+                                eCommandProcessMustBePaused) {
     SetHelpLong(R"(
 Name             The name lldb uses for the register, optionally with an alias.
 Size             The size of the register in bytes and again in bits.

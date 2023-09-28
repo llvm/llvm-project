@@ -6,14 +6,14 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_LIBC_SRC_SUPPORT_CPP_OPTIONAL_H
-#define LLVM_LIBC_SRC_SUPPORT_CPP_OPTIONAL_H
+#ifndef LLVM_LIBC_SRC___SUPPORT_CPP_OPTIONAL_H
+#define LLVM_LIBC_SRC___SUPPORT_CPP_OPTIONAL_H
 
 #include "src/__support/CPP/type_traits.h"
 #include "src/__support/CPP/utility.h"
 #include "src/__support/macros/attributes.h"
 
-namespace __llvm_libc {
+namespace LIBC_NAMESPACE {
 namespace cpp {
 
 // Trivial nullopt_t struct.
@@ -118,6 +118,6 @@ public:
 };
 
 } // namespace cpp
-} // namespace __llvm_libc
+} // namespace LIBC_NAMESPACE
 
-#endif // LLVM_LIBC_SRC_SUPPORT_CPP_OPTIONAL_H
+#endif // LLVM_LIBC_SRC___SUPPORT_CPP_OPTIONAL_H

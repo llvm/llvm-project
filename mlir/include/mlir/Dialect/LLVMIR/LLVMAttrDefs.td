@@ -850,4 +850,14 @@ def LLVM_TBAATagArrayAttr
   let constBuilderCall = ?;
 }
 
+//===----------------------------------------------------------------------===//
+// VScaleRangeAttr
+//===----------------------------------------------------------------------===//
+
+def LLVM_VScaleRangeAttr : LLVM_Attr<"VScaleRange", "vscale_range"> {
+  let parameters =  (ins
+    "IntegerAttr":$minRange,
+    "IntegerAttr":$maxRange);
+  let assemblyFormat = "`<` struct(params) `>`";
+}
 #endif // LLVMIR_ATTRDEFS

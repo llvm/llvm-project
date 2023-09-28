@@ -215,6 +215,18 @@ def G_PREFETCH : AArch64GenericInstruction {
   let hasSideEffects = 1;
 }
 
+def G_UMULL : AArch64GenericInstruction {
+  let OutOperandList = (outs type0:$dst);
+  let InOperandList = (ins type0:$src1, type0:$src2);
+  let hasSideEffects = 0;
+}
+
+def G_SMULL : AArch64GenericInstruction {
+  let OutOperandList = (outs type0:$dst);
+  let InOperandList = (ins type0:$src1, type0:$src2);
+  let hasSideEffects = 0;
+}
+
 // Generic instruction for the BSP pseudo. It is expanded into BSP, which
 // expands into BSL/BIT/BIF after register allocation.
 def G_BSP : AArch64GenericInstruction {
@@ -254,6 +266,9 @@ def : GINodeEquiv<G_FCMLEZ, AArch64fcmlez>;
 def : GINodeEquiv<G_FCMLTZ, AArch64fcmltz>;
 
 def : GINodeEquiv<G_BSP, AArch64bsp>;
+
+def : GINodeEquiv<G_UMULL, AArch64umull>;
+def : GINodeEquiv<G_SMULL, AArch64smull>;
 
 def : GINodeEquiv<G_EXTRACT_VECTOR_ELT, vector_extract>;
 
@@ -496,20 +511,3 @@ let AddedComplexity = 19 in {
   defm : VecROStoreLane64_0Pat<ro16, store, v4i16, i16, hsub, STRHroW, STRHroX>;
   defm : VecROStoreLane64_0Pat<ro32, store, v2i32, i32, ssub, STRSroW, STRSroX>;
 }
-
-def : Pat<(v8i8 (AArch64dup (i8 (load (am_indexed8 GPR64sp:$Rn))))),
-          (LD1Rv8b GPR64sp:$Rn)>;
-def : Pat<(v16i8 (AArch64dup (i8 (load GPR64sp:$Rn)))),
-          (LD1Rv16b GPR64sp:$Rn)>;
-def : Pat<(v4i16 (AArch64dup (i16 (load GPR64sp:$Rn)))),
-          (LD1Rv4h GPR64sp:$Rn)>;
-def : Pat<(v8i16 (AArch64dup (i16 (load GPR64sp:$Rn)))),
-          (LD1Rv8h GPR64sp:$Rn)>;
-def : Pat<(v2i32 (AArch64dup (i32 (load GPR64sp:$Rn)))),
-          (LD1Rv2s GPR64sp:$Rn)>;
-def : Pat<(v4i32 (AArch64dup (i32 (load GPR64sp:$Rn)))),
-          (LD1Rv4s GPR64sp:$Rn)>;
-def : Pat<(v2i64 (AArch64dup (i64 (load GPR64sp:$Rn)))),
-          (LD1Rv2d GPR64sp:$Rn)>;
-def : Pat<(v1i64 (AArch64dup (i64 (load GPR64sp:$Rn)))),
-          (LD1Rv1d GPR64sp:$Rn)>;

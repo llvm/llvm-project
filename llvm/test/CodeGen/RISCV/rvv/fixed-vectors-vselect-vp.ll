@@ -3,6 +3,10 @@
 ; RUN:   -verify-machineinstrs < %s | FileCheck %s
 ; RUN: llc -mtriple=riscv64 -mattr=+d,+zfh,+zvfh,+v,+m -target-abi=lp64d \
 ; RUN:   -verify-machineinstrs < %s | FileCheck %s
+; RUN: llc -mtriple=riscv32 -mattr=+d,+zfh,+zvfhmin,+v,+m -target-abi=ilp32d -riscv-v-vector-bits-min=128 \
+; RUN:   -verify-machineinstrs < %s | FileCheck %s
+; RUN: llc -mtriple=riscv64 -mattr=+d,+zfh,+zvfhmin,+v,+m -target-abi=lp64d -riscv-v-vector-bits-min=128 \
+; RUN:   -verify-machineinstrs < %s | FileCheck %s
 
 declare <1 x i1> @llvm.vp.select.v1i1(<1 x i1>, <1 x i1>, <1 x i1>, i32)
 

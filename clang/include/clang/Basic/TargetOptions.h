@@ -82,7 +82,7 @@ public:
   /// code object version times 100.
   enum CodeObjectVersionKind {
     COV_None,
-    COV_2 = 200,
+    COV_2 = 200, // Unsupported.
     COV_3 = 300,
     COV_4 = 400,
     COV_5 = 500,
@@ -108,6 +108,10 @@ public:
   // "default" for the case when the user has not explicitly specified a
   // code model.
   std::string CodeModel;
+
+  // The large data threshold used for certain code models on certain
+  // architectures.
+  uint64_t LargeDataThreshold;
 
   /// The version of the SDK which was used during the compilation.
   /// The option is used for two different purposes:

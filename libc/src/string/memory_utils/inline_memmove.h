@@ -27,13 +27,13 @@
 #error "Unsupported architecture"
 #endif
 
-namespace __llvm_libc {
+namespace LIBC_NAMESPACE {
 
 LIBC_INLINE void inline_memmove(void *dst, const void *src, size_t count) {
   LIBC_SRC_STRING_MEMORY_UTILS_MEMMOVE(reinterpret_cast<Ptr>(dst),
                                        reinterpret_cast<CPtr>(src), count);
 }
 
-} // namespace __llvm_libc
+} // namespace LIBC_NAMESPACE
 
 #endif /* LLVM_LIBC_SRC_STRING_MEMORY_UTILS_INLINE_MEMMOVE_H */

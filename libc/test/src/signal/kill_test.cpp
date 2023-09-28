@@ -15,16 +15,16 @@
 #include <signal.h>
 #include <sys/syscall.h> // For syscall numbers.
 
-using __llvm_libc::testing::ErrnoSetterMatcher::Succeeds;
+using LIBC_NAMESPACE::testing::ErrnoSetterMatcher::Succeeds;
 
 TEST(LlvmLibcKillTest, TargetSelf) {
-  pid_t parent_pid = __llvm_libc::syscall_impl<pid_t>(SYS_getpid);
-  ASSERT_THAT(__llvm_libc::kill(parent_pid, 0), Succeeds(0));
+  pid_t parent_pid = LIBC_NAMESPACE::syscall_impl<pid_t>(SYS_getpid);
+  ASSERT_THAT(LIBC_NAMESPACE::kill(parent_pid, 0), Succeeds(0));
 
   EXPECT_DEATH(
       [] {
-        pid_t child_pid = __llvm_libc::syscall_impl<pid_t>(SYS_getpid);
-        __llvm_libc::kill(child_pid, SIGKILL);
+        pid_t child_pid = LIBC_NAMESPACE::syscall_impl<pid_t>(SYS_getpid);
+        LIBC_NAMESPACE::kill(child_pid, SIGKILL);
       },
       WITH_SIGNAL(SIGKILL));
 }

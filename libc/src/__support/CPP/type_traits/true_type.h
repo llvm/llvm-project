@@ -5,16 +5,16 @@
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
-#ifndef LLVM_LIBC_SRC_SUPPORT_CPP_TYPE_TRAITS_TRUE_TYPE_H
-#define LLVM_LIBC_SRC_SUPPORT_CPP_TYPE_TRAITS_TRUE_TYPE_H
+#ifndef LLVM_LIBC_SRC___SUPPORT_CPP_TYPE_TRAITS_TRUE_TYPE_H
+#define LLVM_LIBC_SRC___SUPPORT_CPP_TYPE_TRAITS_TRUE_TYPE_H
 
 #include "src/__support/CPP/type_traits/bool_constant.h"
 
-namespace __llvm_libc::cpp {
+namespace LIBC_NAMESPACE::cpp {
 
 // true_type
 using true_type = cpp::bool_constant<true>;
 
-} // namespace __llvm_libc::cpp
+} // namespace LIBC_NAMESPACE::cpp
 
-#endif // LLVM_LIBC_SRC_SUPPORT_CPP_TYPE_TRAITS_TRUE_TYPE_H
+#endif // LLVM_LIBC_SRC___SUPPORT_CPP_TYPE_TRAITS_TRUE_TYPE_H
