@@ -367,3 +367,28 @@ transform.sequence failures(propagate) {
     transform.apply_patterns.vector.transfer_permutation_patterns
   } : !transform.op<"func.func">
 }
+
+// -----
+
+/// Verify vector.maskedload and vector.maskedstore ops that operate on 1-D
+/// vectors aren't generated for rank > 1 transfer ops.
+
+// CHECK-LABEL: @transfer_2D_masked
+// CHECK-NOT: vector.maskedload
+// CHECK-NOT: vector.maskedstore
+// CHECK: vector.transfer_read
+// CHECK: vector.transfer_write
+func.func @transfer_2D_masked(%mem : memref<?x?xf32>, %mask : vector<2x4xi1>) -> vector<2x4xf32> {
+  %c0 = arith.constant 0 : index
+  %pad = arith.constant 0.0 : f32
+  %res = vector.transfer_read %mem[%c0, %c0], %pad, %mask {in_bounds = [true, true]} : memref<?x?xf32>, vector<2x4xf32>
+  vector.transfer_write %res, %mem[%c0, %c0], %mask {in_bounds = [true, true]} : vector<2x4xf32>, memref<?x?xf32>
+  return %res : vector<2x4xf32>
+}
+
+transform.sequence failures(propagate) {
+^bb1(%func_op: !transform.op<"func.func">):
+  transform.apply_patterns to %func_op {
+    transform.apply_patterns.vector.lower_transfer max_transfer_rank = 2
+  } : !transform.op<"func.func">
+}
