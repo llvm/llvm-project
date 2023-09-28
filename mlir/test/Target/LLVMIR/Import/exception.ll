@@ -3,6 +3,7 @@
 @_ZTIi = external dso_local constant ptr
 @_ZTIii= external dso_local constant ptr
 declare void @foo(ptr)
+declare void @vararg_foo(ptr, ...)
 declare ptr @bar(ptr)
 declare i32 @__gxx_personality_v0(...)
 
@@ -29,6 +30,14 @@ define i32 @invokeLandingpad() personality ptr @__gxx_personality_v0 {
   %6 = invoke ptr @bar(ptr %1) to label %4 unwind label %2
 
 ; CHECK: ^bb4:
+  ; CHECK: llvm.invoke @vararg_foo(%[[a3]], %{{.*}}) to ^bb2 unwind ^bb1 vararg(!llvm.func<void (ptr, ...)>) : (!llvm.ptr, i32) -> ()
+  invoke void (ptr, ...) @vararg_foo(ptr %1, i32 0) to label %4 unwind label %2
+
+; CHECK: ^bb5:
+  ; CHECK: llvm.invoke %{{.*}}(%[[a3]], %{{.*}}) to ^bb2 unwind ^bb1 vararg(!llvm.func<void (ptr, ...)>) : !llvm.ptr, (!llvm.ptr, i32) -> ()
+  invoke void (ptr, ...) undef(ptr %1, i32 0) to label %4 unwind label %2
+
+; CHECK: ^bb6:
   ; CHECK: llvm.return %{{[0-9]+}} : i32
   ret i32 0
 }
