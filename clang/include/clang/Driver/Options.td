@@ -3609,6 +3609,29 @@ def fpass_plugin_EQ : Joined<["-"], "fpass-plugin=">,
   MetaVarName<"<dsopath>">,
   HelpText<"Load pass plugin from a dynamic shared object file (only with new pass manager).">,
   MarshallingInfoStringVector<CodeGenOpts<"PassPlugins">>;
+def mtocdata : Flag<["-"], "mtocdata">,
+  Visibility<[ClangOption, CLOption, DXCOption, CC1Option]>,
+  Flags<[TargetSpecific]>,
+  HelpText<"All suitable variables will have the TOC data transformation applied.">,
+  MarshallingInfoFlag<CodeGenOpts<"AllTocData">>;
+def mno_tocdata : Flag<["-"], "mno-tocdata">,
+  Visibility<[ClangOption, CLOption, DXCOption, CC1Option]>,
+  Flags<[TargetSpecific]>,
+  HelpText<"This is the default. TOC data transformation is not applied to any"
+           "variables. Only variables specified explicitly in -mtocdata= will"
+           "have the TOC data transformation.">;
+def mtocdata_EQ : CommaJoined<["-"], "mtocdata=">,
+  Visibility<[ClangOption, CLOption, DXCOption, CC1Option]>,
+  Flags<[TargetSpecific]>,
+  HelpText<"Specifies a list of variables to which the TOC data transformation"
+           "will be applied.">,
+  MarshallingInfoStringVector<CodeGenOpts<"TocDataVarsUserSpecified">>;
+def mno_tocdata_EQ : CommaJoined<["-"], "mno-tocdata=">,
+  Visibility<[ClangOption, CLOption, DXCOption, CC1Option]>,
+  Flags<[TargetSpecific]>,
+  HelpText<"Specifies a list of variables to be exempt from the TOC data"
+           "transformation.">,
+  MarshallingInfoStringVector<CodeGenOpts<"NoTocDataVars">>;
 defm preserve_as_comments : BoolFOption<"preserve-as-comments",
   CodeGenOpts<"PreserveAsmComments">, DefaultTrue,
   NegFlag<SetFalse, [], [ClangOption, CC1Option],

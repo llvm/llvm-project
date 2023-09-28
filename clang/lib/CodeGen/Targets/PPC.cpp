@@ -8,6 +8,7 @@
 
 #include "ABIInfoImpl.h"
 #include "TargetInfo.h"
+#include "clang/Basic/DiagnosticFrontend.h"
 
 using namespace clang;
 using namespace clang::CodeGen;
@@ -145,6 +146,9 @@ public:
 
   bool initDwarfEHRegSizeTable(CodeGen::CodeGenFunction &CGF,
                                llvm::Value *Address) const override;
+
+  void setTargetAttributes(const Decl *D, llvm::GlobalValue *GV,
+                           CodeGen::CodeGenModule &M) const override;
 };
 } // namespace
 
@@ -263,6 +267,63 @@ Address AIXABIInfo::EmitVAArg(CodeGenFunction &CGF, Address VAListAddr,
 bool AIXTargetCodeGenInfo::initDwarfEHRegSizeTable(
     CodeGen::CodeGenFunction &CGF, llvm::Value *Address) const {
   return PPC_initDwarfEHRegSizeTable(CGF, Address, Is64Bit, /*IsAIX*/ true);
+}
+
+void AIXTargetCodeGenInfo::setTargetAttributes(
+    const Decl *D, llvm::GlobalValue *GV, CodeGen::CodeGenModule &M) const {
+  if (auto *GVar = dyn_cast<llvm::GlobalVariable>(GV)) {
+    auto GVId = M.getMangledName(dyn_cast<NamedDecl>(D));
+
+    // Is this a global variable specified by the user as toc-data?
+    bool UserSpecifiedTOC =
+        llvm::binary_search(M.getCodeGenOpts().TocDataVarsUserSpecified, GVId);
+    // Assumes the same variable cannot be in both TocVarsUserSpecified and
+    // NoTocVars.
+    if (UserSpecifiedTOC ||
+        ((M.getCodeGenOpts().AllTocData) &&
+         !llvm::binary_search(M.getCodeGenOpts().NoTocDataVars, GVId))) {
+      const unsigned long PointerSize =
+          GV->getParent()->getDataLayout().getPointerSizeInBits() / 8;
+      ASTContext &Context = D->getASTContext();
+      auto *VarD = dyn_cast<VarDecl>(D);
+      assert(VarD && "Invalid declaration of global variable.");
+
+      unsigned Alignment = Context.toBits(Context.getDeclAlign(D)) / 8;
+      const auto *Ty = VarD->getType().getTypePtr();
+      const RecordDecl *RDecl =
+          Ty->isRecordType() ? Ty->getAs<RecordType>()->getDecl() : nullptr;
+
+      bool EmitDiagnostic = UserSpecifiedTOC && GV->hasExternalLinkage();
+      if (!Ty || Ty->isIncompleteType()) {
+        if (EmitDiagnostic)
+          M.getDiags().Report(D->getLocation(), diag::warn_toc_unsupported_type)
+              << GVId << "of incomplete type";
+      } else if (RDecl && RDecl->hasFlexibleArrayMember()) {
+        if (UserSpecifiedTOC)
+          M.getDiags().Report(D->getLocation(), diag::warn_toc_unsupported_type)
+              << GVId << "it contains a flexible array member";
+      } else if (VarD->getTLSKind() != VarDecl::TLS_None) {
+        if (EmitDiagnostic)
+          M.getDiags().Report(D->getLocation(), diag::warn_toc_unsupported_type)
+              << GVId << "of thread local storage model";
+      } else if (PointerSize < Context.getTypeInfo(VarD->getType()).Width / 8) {
+        if (EmitDiagnostic)
+          M.getDiags().Report(D->getLocation(), diag::warn_toc_unsupported_type)
+              << GVId << "variable is larger than a pointer";
+      } else if (PointerSize < Alignment) {
+        if (EmitDiagnostic)
+          M.getDiags().Report(D->getLocation(), diag::warn_toc_unsupported_type)
+              << GVId << "variable is aligned wider than a pointer";
+      } else if (D->hasAttr<SectionAttr>()) {
+        if (EmitDiagnostic)
+          M.getDiags().Report(D->getLocation(), diag::warn_toc_unsupported_type)
+              << GVId << "of a section attribute";
+      } else if ((GV->hasExternalLinkage() || M.getCodeGenOpts().AllTocData) &&
+                 !GV->hasInternalLinkage()) {
+        GVar->addAttribute("toc-data");
+      }
+    }
+  }
 }
 
 // PowerPC-32

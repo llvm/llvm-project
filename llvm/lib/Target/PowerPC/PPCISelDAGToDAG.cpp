@@ -535,21 +535,11 @@ static bool hasTocDataAttr(SDValue Val, unsigned PointerSize) {
   assert(GVType->isSized() && "A GlobalVariable's size must be known to be "
                               "supported by the toc data transformation.");
 
-  if (GVType->isVectorTy())
-    report_fatal_error("A GlobalVariable of Vector type is not currently "
-                       "supported by the toc data transformation.");
-
-  if (GVType->isArrayTy())
-    report_fatal_error("A GlobalVariable of Array type is not currently "
-                       "supported by the toc data transformation.");
-
-  if (GVType->isStructTy())
-    report_fatal_error("A GlobalVariable of Struct type is not currently "
-                       "supported by the toc data transformation.");
-
-  assert(GVType->getPrimitiveSizeInBits() <= PointerSize * 8 &&
-         "A GlobalVariable with size larger than a TOC entry is not currently "
-         "supported by the toc data transformation.");
+  if (GV->getParent()->getDataLayout().getTypeSizeInBits(GVType) >
+      PointerSize * 8)
+    report_fatal_error(
+        "A GlobalVariable with size larger than a TOC entry is not currently "
+        "supported by the toc data transformation.");
 
   if (GV->hasPrivateLinkage())
     report_fatal_error("A GlobalVariable with private linkage is not "
