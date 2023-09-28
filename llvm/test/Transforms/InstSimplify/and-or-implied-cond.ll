@@ -131,9 +131,7 @@ define i1 @uaddo_and(i64 %a, i64 %b){
 ; CHECK-LABEL: @uaddo_and(
 ; CHECK-NEXT:    [[S:%.*]] = add i64 [[A:%.*]], [[B:%.*]]
 ; CHECK-NEXT:    [[COND_A:%.*]] = icmp uge i64 [[S]], [[A]]
-; CHECK-NEXT:    [[COND_B:%.*]] = icmp uge i64 [[S]], [[B]]
-; CHECK-NEXT:    [[COND:%.*]] = and i1 [[COND_A]], [[COND_B]]
-; CHECK-NEXT:    ret i1 [[COND]]
+; CHECK-NEXT:    ret i1 [[COND_A]]
 ;
   %s = add i64 %a, %b
   %cond_a = icmp uge i64 %s, %a
@@ -146,9 +144,7 @@ define i1 @uaddo_and_commuted1(i64 %a, i64 %b){
 ; CHECK-LABEL: @uaddo_and_commuted1(
 ; CHECK-NEXT:    [[S:%.*]] = add i64 [[A:%.*]], [[B:%.*]]
 ; CHECK-NEXT:    [[COND_A:%.*]] = icmp ule i64 [[A]], [[S]]
-; CHECK-NEXT:    [[COND_B:%.*]] = icmp uge i64 [[S]], [[B]]
-; CHECK-NEXT:    [[COND:%.*]] = and i1 [[COND_A]], [[COND_B]]
-; CHECK-NEXT:    ret i1 [[COND]]
+; CHECK-NEXT:    ret i1 [[COND_A]]
 ;
   %s = add i64 %a, %b
   %cond_a = icmp ule i64 %a, %s
@@ -161,9 +157,7 @@ define i1 @uaddo_and_commuted2(i64 %a, i64 %b){
 ; CHECK-LABEL: @uaddo_and_commuted2(
 ; CHECK-NEXT:    [[S:%.*]] = add i64 [[A:%.*]], [[B:%.*]]
 ; CHECK-NEXT:    [[COND_A:%.*]] = icmp uge i64 [[S]], [[A]]
-; CHECK-NEXT:    [[COND_B:%.*]] = icmp ule i64 [[B]], [[S]]
-; CHECK-NEXT:    [[COND:%.*]] = and i1 [[COND_A]], [[COND_B]]
-; CHECK-NEXT:    ret i1 [[COND]]
+; CHECK-NEXT:    ret i1 [[COND_A]]
 ;
   %s = add i64 %a, %b
   %cond_a = icmp uge i64 %s, %a
@@ -176,9 +170,7 @@ define i1 @uaddo_and_commuted3(i64 %a, i64 %b){
 ; CHECK-LABEL: @uaddo_and_commuted3(
 ; CHECK-NEXT:    [[S:%.*]] = add i64 [[A:%.*]], [[B:%.*]]
 ; CHECK-NEXT:    [[COND_A:%.*]] = icmp ule i64 [[A]], [[S]]
-; CHECK-NEXT:    [[COND_B:%.*]] = icmp ule i64 [[B]], [[S]]
-; CHECK-NEXT:    [[COND:%.*]] = and i1 [[COND_A]], [[COND_B]]
-; CHECK-NEXT:    ret i1 [[COND]]
+; CHECK-NEXT:    ret i1 [[COND_A]]
 ;
   %s = add i64 %a, %b
   %cond_a = icmp ule i64 %a, %s
@@ -191,9 +183,7 @@ define i1 @uaddo_or(i64 %a, i64 %b){
 ; CHECK-LABEL: @uaddo_or(
 ; CHECK-NEXT:    [[S:%.*]] = add i64 [[A:%.*]], [[B:%.*]]
 ; CHECK-NEXT:    [[COND_A:%.*]] = icmp ult i64 [[S]], [[A]]
-; CHECK-NEXT:    [[COND_B:%.*]] = icmp ult i64 [[S]], [[B]]
-; CHECK-NEXT:    [[COND:%.*]] = or i1 [[COND_A]], [[COND_B]]
-; CHECK-NEXT:    ret i1 [[COND]]
+; CHECK-NEXT:    ret i1 [[COND_A]]
 ;
   %s = add i64 %a, %b
   %cond_a = icmp ult i64 %s, %a
@@ -206,9 +196,7 @@ define i1 @uaddo_or_commuted1(i64 %a, i64 %b){
 ; CHECK-LABEL: @uaddo_or_commuted1(
 ; CHECK-NEXT:    [[S:%.*]] = add i64 [[A:%.*]], [[B:%.*]]
 ; CHECK-NEXT:    [[COND_A:%.*]] = icmp ugt i64 [[A]], [[S]]
-; CHECK-NEXT:    [[COND_B:%.*]] = icmp ult i64 [[S]], [[B]]
-; CHECK-NEXT:    [[COND:%.*]] = or i1 [[COND_A]], [[COND_B]]
-; CHECK-NEXT:    ret i1 [[COND]]
+; CHECK-NEXT:    ret i1 [[COND_A]]
 ;
   %s = add i64 %a, %b
   %cond_a = icmp ugt i64 %a, %s
@@ -221,9 +209,7 @@ define i1 @uaddo_or_commuted2(i64 %a, i64 %b){
 ; CHECK-LABEL: @uaddo_or_commuted2(
 ; CHECK-NEXT:    [[S:%.*]] = add i64 [[A:%.*]], [[B:%.*]]
 ; CHECK-NEXT:    [[COND_A:%.*]] = icmp ult i64 [[S]], [[A]]
-; CHECK-NEXT:    [[COND_B:%.*]] = icmp ugt i64 [[B]], [[S]]
-; CHECK-NEXT:    [[COND:%.*]] = or i1 [[COND_A]], [[COND_B]]
-; CHECK-NEXT:    ret i1 [[COND]]
+; CHECK-NEXT:    ret i1 [[COND_A]]
 ;
   %s = add i64 %a, %b
   %cond_a = icmp ult i64 %s, %a
@@ -236,9 +222,7 @@ define i1 @uaddo_or_commuted3(i64 %a, i64 %b){
 ; CHECK-LABEL: @uaddo_or_commuted3(
 ; CHECK-NEXT:    [[S:%.*]] = add i64 [[A:%.*]], [[B:%.*]]
 ; CHECK-NEXT:    [[COND_A:%.*]] = icmp ugt i64 [[A]], [[S]]
-; CHECK-NEXT:    [[COND_B:%.*]] = icmp ugt i64 [[B]], [[S]]
-; CHECK-NEXT:    [[COND:%.*]] = or i1 [[COND_A]], [[COND_B]]
-; CHECK-NEXT:    ret i1 [[COND]]
+; CHECK-NEXT:    ret i1 [[COND_A]]
 ;
   %s = add i64 %a, %b
   %cond_a = icmp ugt i64 %a, %s
