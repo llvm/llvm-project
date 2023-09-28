@@ -129,6 +129,9 @@ bool NVPTXLowerUnreachable::isLoweredToTrap(const UnreachableInst &I) const {
 bool NVPTXLowerUnreachable::runOnFunction(Function &F) {
   if (skipFunction(F))
     return false;
+  // Early out iff isLoweredToTrap() always returns true.
+  if (TrapUnreachable && !NoTrapAfterNoreturn)
+    return false;
 
   LLVMContext &C = F.getContext();
   FunctionType *ExitFTy = FunctionType::get(Type::getVoidTy(C), false);
