@@ -3284,9 +3284,9 @@ bool X86FastISel::fastLowerCall(CallLoweringInfo &CLI) {
     if (auto *CI = dyn_cast<ConstantInt>(Val)) {
       if (CI->getBitWidth() < 32) {
         if (Flags.isSExt())
-          Val = ConstantExpr::getSExt(CI, Type::getInt32Ty(CI->getContext()));
+          Val = ConstantInt::get(CI->getContext(), CI->getValue().sext(32));
         else
-          Val = ConstantExpr::getZExt(CI, Type::getInt32Ty(CI->getContext()));
+          Val = ConstantInt::get(CI->getContext(), CI->getValue().zext(32));
       }
     }
 
