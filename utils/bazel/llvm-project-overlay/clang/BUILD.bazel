@@ -14,6 +14,7 @@ load(
     "LLVM_VERSION_MINOR",
     "LLVM_VERSION_PATCH",
 )
+load("defs.bzl", "BUILTIN_HEADERS_GEN_DIR")
 
 package(
     default_visibility = ["//visibility:public"],
@@ -1696,14 +1697,17 @@ builtin_headers = glob(
 genrule(
     name = "builtin_headers_gen",
     srcs = builtin_headers,
-    outs = [hdr.replace("lib/Headers/", "staging/include/") for hdr in builtin_headers],
+    outs = [
+        header.replace("lib/Headers/", BUILTIN_HEADERS_GEN_DIR)
+        for header in builtin_headers
+    ],
     cmd = """
        for src in $(SRCS); do
-         relsrc=$${src#*"$(WORKSPACE_ROOT)"/clang/lib/Headers}
-         target=$(@D)/staging/include/$$relsrc
+         relsrc=$${{src#*"$(WORKSPACE_ROOT)"/clang/lib/Headers}}
+         target=$(@D)/{resource_dir}$$relsrc
          mkdir -p $$(dirname $$target)
          cp $$src $$target
-       done""",
+       done""".format(resource_dir = BUILTIN_HEADERS_GEN_DIR),
     output_to_bindir = 1,
     toolchains = [
         ":workspace_root",
