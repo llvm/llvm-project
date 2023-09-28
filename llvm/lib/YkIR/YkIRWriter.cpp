@@ -242,7 +242,6 @@ public:
   }
 
   void serialiseConstantInt(ConstantInt *CI) {
-    // OutStreamer.emitInt8(OperandKind::Constant);
     OutStreamer.emitSizeT(typeIndex(CI->getType()));
     OutStreamer.emitSizeT(CI->getBitWidth() / 8);
     for (size_t I = 0; I < CI->getBitWidth(); I += 8) {
