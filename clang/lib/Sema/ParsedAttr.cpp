@@ -193,7 +193,9 @@ bool ParsedAttr::isTypeAttr() const { return getInfo().IsType; }
 bool ParsedAttr::isStmtAttr() const { return getInfo().IsStmt; }
 
 bool ParsedAttr::existsInTarget(const TargetInfo &Target) const {
-  return getInfo().existsInTarget(Target);
+  return getInfo().existsInTarget(Target) &&
+         getInfo().spellingExistsInTarget(Target,
+                                          getAttributeSpellingListIndex());
 }
 
 bool ParsedAttr::isKnownToGCC() const { return getInfo().IsKnownToGCC; }
