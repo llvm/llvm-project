@@ -363,6 +363,10 @@ Bug Fixes to C++ Support
   in the enclosing expression of a lambda expression with a noexcept specifier.
   (`#67492 <https://github.com/llvm/llvm-project/issues/67492>`_)
 
+- Fix crash when fold expression was used in the initialization of default
+  argument. Fixes:
+  (`#67395 <https://github.com/llvm/llvm-project/issues/67395>`_)
+
 Bug Fixes to AST Handling
 ^^^^^^^^^^^^^^^^^^^^^^^^^
 - Fixed an import failure of recursive friend class template.
