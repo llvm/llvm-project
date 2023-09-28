@@ -1360,6 +1360,8 @@ def warn_clause_expected_string : Warning<
   "expected string literal in 'clause %0' - ignoring">, InGroup<IgnoredPragmas>;
 def err_omp_unexpected_clause : Error<
   "unexpected OpenMP clause '%0' in directive '#pragma omp %1'">;
+def err_omp_unexpected_clause_extension_only : Error<
+  "OpenMP clause '%0' is only available as extension, use '-fopenmp-extensions'">;
 def err_omp_immediate_directive : Error<
   "'#pragma omp %0' %select{|with '%2' clause }1cannot be an immediate substatement">;
 def err_omp_expected_identifier_for_critical : Error<
@@ -1452,6 +1454,8 @@ def warn_unknown_declare_variant_isa_trait
               "spelling or consider restricting the context selector with the "
               "'arch' selector further">,
       InGroup<SourceUsesOpenMP>;
+def note_ompx_bare_clause : Note<
+  "OpenMP extension clause '%0' only allowed with '#pragma omp %1'">;
 def note_omp_declare_variant_ctx_options
     : Note<"context %select{set|selector|property}0 options are: %1">;
 def warn_omp_declare_variant_expected

@@ -12447,6 +12447,10 @@ public:
                                          SourceLocation LParenLoc,
                                          SourceLocation EndLoc);
 
+  /// Called on a well-formed 'ompx_bare' clause.
+  OMPClause *ActOnOpenMPXBareClause(SourceLocation StartLoc,
+                                    SourceLocation EndLoc);
+
   /// The kind of conversion being performed.
   enum CheckedConversionKind {
     /// An implicit conversion.
