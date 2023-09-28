@@ -144,12 +144,21 @@ define i32 @oversized_ADDV_512(ptr %arr)  {
 }
 
 define i8 @addv_combine_i8(<8 x i8> %a1, <8 x i8> %a2) {
-; CHECK-LABEL: addv_combine_i8:
-; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    add v0.8b, v0.8b, v1.8b
-; CHECK-NEXT:    addv b0, v0.8b
-; CHECK-NEXT:    fmov w0, s0
-; CHECK-NEXT:    ret
+; SDAG-LABEL: addv_combine_i8:
+; SDAG:       // %bb.0: // %entry
+; SDAG-NEXT:    add v0.8b, v0.8b, v1.8b
+; SDAG-NEXT:    addv b0, v0.8b
+; SDAG-NEXT:    fmov w0, s0
+; SDAG-NEXT:    ret
+;
+; GISEL-LABEL: addv_combine_i8:
+; GISEL:       // %bb.0: // %entry
+; GISEL-NEXT:    addv b0, v0.8b
+; GISEL-NEXT:    addv b1, v1.8b
+; GISEL-NEXT:    fmov w8, s0
+; GISEL-NEXT:    fmov w9, s1
+; GISEL-NEXT:    add w0, w9, w8, uxtb
+; GISEL-NEXT:    ret
 entry:
   %rdx.1 = call i8 @llvm.vector.reduce.add.v8i8(<8 x i8> %a1)
   %rdx.2 = call i8 @llvm.vector.reduce.add.v8i8(<8 x i8> %a2)
@@ -158,12 +167,21 @@ entry:
 }
 
 define i16 @addv_combine_i16(<4 x i16> %a1, <4 x i16> %a2) {
-; CHECK-LABEL: addv_combine_i16:
-; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    add v0.4h, v0.4h, v1.4h
-; CHECK-NEXT:    addv h0, v0.4h
-; CHECK-NEXT:    fmov w0, s0
-; CHECK-NEXT:    ret
+; SDAG-LABEL: addv_combine_i16:
+; SDAG:       // %bb.0: // %entry
+; SDAG-NEXT:    add v0.4h, v0.4h, v1.4h
+; SDAG-NEXT:    addv h0, v0.4h
+; SDAG-NEXT:    fmov w0, s0
+; SDAG-NEXT:    ret
+;
+; GISEL-LABEL: addv_combine_i16:
+; GISEL:       // %bb.0: // %entry
+; GISEL-NEXT:    addv h0, v0.4h
+; GISEL-NEXT:    addv h1, v1.4h
+; GISEL-NEXT:    fmov w8, s0
+; GISEL-NEXT:    fmov w9, s1
+; GISEL-NEXT:    add w0, w9, w8, uxth
+; GISEL-NEXT:    ret
 entry:
   %rdx.1 = call i16 @llvm.vector.reduce.add.v4i16(<4 x i16> %a1)
   %rdx.2 = call i16 @llvm.vector.reduce.add.v4i16(<4 x i16> %a2)

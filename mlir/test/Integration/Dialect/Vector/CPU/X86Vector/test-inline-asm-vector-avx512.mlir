@@ -27,11 +27,11 @@ module {
       : (!llvm.ptr<vector<16xi32>>) -> vector<16xi32>
 
     // CHECK: 0
-    %v0 = vector.extract %v[0]: vector<16xi32>
+    %v0 = vector.extract %v[0]: i32 from vector<16xi32>
     vector.print %v0 : i32
 
     // CHECK: 9
-    %v9 = vector.extract %v[9]: vector<16xi32>
+    %v9 = vector.extract %v[9]: i32 from vector<16xi32>
     vector.print %v9 : i32
 
     %i0 = arith.constant 0 : i32
