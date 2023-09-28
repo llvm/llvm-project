@@ -61,6 +61,10 @@ public:
   ElementCount getVectorizationFactor() const { return VectorizationFactor; }
   bool isMasked() const { return Masked; }
   StringRef getMangledNamePrefix() const { return MangledNamePrefix; }
+
+  /// Returns a vector function ABI variant string on the form:
+  ///    _ZGV<isa><mask><vlen><vparams>_<scalarname>(<vectorname>)
+  std::string getVectorFunctionABIVariantString() const;
 };
 
   enum LibFunc : unsigned {

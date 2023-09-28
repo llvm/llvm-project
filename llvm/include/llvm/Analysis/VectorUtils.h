@@ -182,26 +182,6 @@ static constexpr char const *_LLVM_Scalarize_ = "_LLVM_Scalarize_";
 std::optional<VFInfo> tryDemangleForVFABI(StringRef MangledName,
                                           const Module &M);
 
-/// Describes a possible vectorization of a function.
-/// Function 'VectorFnName' is equivalent to 'ScalarFnName' vectorized
-/// by a factor 'VectorizationFactor'.
-/// The MangledName string holds scalar-to-vector mapping:
-///    _ZGV<isa><mask><vlen><vparams>_<scalarname>(<vectorname>)
-///
-/// where:
-///
-/// <isa> = "_LLVM_"
-/// <mask> = "M" if masked, "N" if no mask.
-/// <vlen> = Number of concurrent lanes, stored in the `VectorizationFactor`
-///          field of the `VecDesc` struct. If the number of lanes is scalable
-///          then 'x' is printed instead.
-/// <vparams> = "v", as many as the function arguments.
-/// <scalarname> = the name of the scalar function.
-/// <vectorname> = the name of the vector function.
-std::string getVectorFunctionABIVariantString(const StringRef MangledNamePrefix,
-                                              const StringRef ScalarFnName,
-                                              const StringRef VectorFnName);
-
 /// Retrieve the `VFParamKind` from a string token.
 VFParamKind getVFParamKindFromString(const StringRef Token);
 

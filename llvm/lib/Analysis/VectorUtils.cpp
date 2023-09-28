@@ -1453,16 +1453,6 @@ void InterleaveGroup<Instruction>::addMetadata(Instruction *NewInst) const {
 }
 }
 
-std::string
-VFABI::getVectorFunctionABIVariantString(const StringRef MangledNamePrefix,
-                                         const StringRef ScalarFnName,
-                                         const StringRef VectorFnName) {
-  SmallString<256> Buffer;
-  llvm::raw_svector_ostream Out(Buffer);
-  Out << MangledNamePrefix << "_" << ScalarFnName << "(" << VectorFnName << ")";
-  return std::string(Out.str());
-}
-
 void VFABI::getVectorVariantNames(
     const CallInst &CI, SmallVectorImpl<std::string> &VariantMappings) {
   const StringRef S = CI.getFnAttr(VFABI::MappingsAttrName).getValueAsString();
