@@ -264,6 +264,7 @@ struct SplatOpToArmSMELowering : public OpRewritePattern<vector::SplatOp> {
     if (!tileType || !arm_sme::isValidSMETileVectorType(tileType))
       return failure();
 
+    OpBuilder::InsertionGuard g(rewriter);
     auto loc = splatOp.getLoc();
 
     auto srcType = splatOp.getOperand().getType();
