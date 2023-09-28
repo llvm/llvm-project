@@ -176,3 +176,34 @@ Predefined Macros
    * - ``HIP_API_PER_THREAD_DEFAULT_STREAM``
      - Alias to ``__HIP_API_PER_THREAD_DEFAULT_STREAM__``. Deprecated.
 
+C++20 Concepts with HIP and CUDA
+--------------------------------
+
+In Clang, when working with HIP or CUDA, it's important to note that all constraints in C++20 concepts are assumed to be for the host side only. This behavior is consistent across both programming models, and developers should be aware of this assumption when writing code that utilizes C++20 concepts.
+
+Example:
+.. code-block:: c++
+
+   template <class T>
+   concept MyConcept = requires(T& obj) {
+     my_function(obj);  // Assumed to be a host-side requirement
+   };
+
+   template <MyConcept T>
+   __global__ void kernel() {
+      // Kernel code
+   }
+
+   struct MyType {};
+
+   inline void my_function(MyType& obj) {}
+
+   int main() {
+      kernel<MyType><<<1,1>>>();
+      return 0;
+   }
+
+In the above example, the ``MyConcept`` concept is assumed to check the host-side requirements, even though it's being used in a device kernel. Developers should structure their code accordingly to ensure correct behavior and to satisfy the host-side constraints assumed by Clang.
+
+This assumption helps maintain a consistent behavior when dealing with template constraints, and simplifies the compilation model by reducing the complexity associated with differentiating between host and device-side requirements.
+
