@@ -170,7 +170,7 @@ bool validEndComment(const FormatToken *RBraceTok, StringRef NamespaceName,
   // Valid namespace end comments don't need to be edited.
   static const llvm::Regex NamespaceCommentPattern =
       llvm::Regex("^/[/*] *(end (of )?)? *(anonymous|unnamed)? *"
-                  "namespace( +([a-zA-Z0-9:_]+))?\\.? *(\\*/)?$",
+                  "namespace( +([a-zA-Z0-9:_ ]+))?\\.? *(\\*/)?$",
                   llvm::Regex::IgnoreCase);
   static const llvm::Regex NamespaceMacroCommentPattern =
       llvm::Regex("^/[/*] *(end (of )?)? *(anonymous|unnamed)? *"
@@ -189,7 +189,7 @@ bool validEndComment(const FormatToken *RBraceTok, StringRef NamespaceName,
     // Comment does not match regex.
     return false;
   }
-  StringRef NamespaceNameInComment = Groups.size() > 5 ? Groups[5] : "";
+  StringRef NamespaceNameInComment = Groups.size() > 5 ? Groups[5].rtrim() : "";
   // Anonymous namespace comments must not mention a namespace name.
   if (NamespaceName.empty() && !NamespaceNameInComment.empty())
     return false;

@@ -753,6 +753,16 @@ TEST_F(TokenAnnotatorTest, UnderstandsOverloadedOperators) {
   EXPECT_TOKEN(Tokens[8], tok::r_paren, TT_OverloadedOperator);
   EXPECT_TOKEN(Tokens[9], tok::l_paren, TT_OverloadedOperatorLParen);
   EXPECT_TOKEN(Tokens[11], tok::amp, TT_PointerOrReference);
+
+  Tokens = annotate("decltype(auto) operator()(T &x);");
+  ASSERT_EQ(Tokens.size(), 14u) << Tokens;
+  EXPECT_TOKEN(Tokens[1], tok::l_paren, TT_TypeDeclarationParen);
+  EXPECT_TOKEN(Tokens[3], tok::r_paren, TT_TypeDeclarationParen);
+  EXPECT_TOKEN(Tokens[4], tok::kw_operator, TT_FunctionDeclarationName);
+  EXPECT_TOKEN(Tokens[5], tok::l_paren, TT_OverloadedOperator);
+  EXPECT_TOKEN(Tokens[6], tok::r_paren, TT_OverloadedOperator);
+  EXPECT_TOKEN(Tokens[7], tok::l_paren, TT_OverloadedOperatorLParen);
+  EXPECT_TOKEN(Tokens[9], tok::amp, TT_PointerOrReference);
 }
 
 TEST_F(TokenAnnotatorTest, OverloadedOperatorInTemplate) {
@@ -1655,6 +1665,13 @@ TEST_F(TokenAnnotatorTest, UnderstandsFunctionDeclarationNames) {
                     "FOO Foo();");
   ASSERT_EQ(Tokens.size(), 11u) << Tokens;
   EXPECT_TOKEN(Tokens[6], tok::identifier, TT_FunctionDeclarationName);
+
+  Tokens = annotate("struct Foo {\n"
+                    "  Bar (*func)();\n"
+                    "};");
+  ASSERT_EQ(Tokens.size(), 14u) << Tokens;
+  EXPECT_TOKEN(Tokens[3], tok::identifier, TT_Unknown);
+  EXPECT_TOKEN(Tokens[4], tok::l_paren, TT_FunctionTypeLParen);
 }
 
 TEST_F(TokenAnnotatorTest, UnderstandsC11GenericSelection) {
@@ -2063,6 +2080,15 @@ TEST_F(TokenAnnotatorTest, UnderstandsJavaScript) {
   EXPECT_BRACE_KIND(Tokens[3], BK_Unknown);
   EXPECT_BRACE_KIND(Tokens[11], BK_Unknown);
   EXPECT_TOKEN(Tokens[11], tok::r_brace, TT_Unknown);
+}
+
+TEST_F(TokenAnnotatorTest, UnderstandsAttributes) {
+  auto Tokens = annotate("bool foo __attribute__((unused));");
+  ASSERT_EQ(Tokens.size(), 10u) << Tokens;
+  EXPECT_TOKEN(Tokens[3], tok::l_paren, TT_AttributeLParen);
+  EXPECT_TOKEN(Tokens[4], tok::l_paren, TT_Unknown);
+  EXPECT_TOKEN(Tokens[6], tok::r_paren, TT_Unknown);
+  EXPECT_TOKEN(Tokens[7], tok::r_paren, TT_AttributeRParen);
 }
 
 } // namespace

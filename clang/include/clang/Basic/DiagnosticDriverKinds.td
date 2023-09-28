@@ -456,6 +456,9 @@ def warn_unsupported_branch_protection: Warning <
   "invalid branch protection option '%0' in '%1'">, InGroup<BranchProtection>;
 def err_sls_hardening_arm_not_supported : Error<
   "-mharden-sls is only supported on armv7-a or later">;
+def warn_drv_large_data_threshold_invalid_code_model: Warning<
+  "'%0' only applies to medium code model">,
+  InGroup<UnusedCommandLineArgument>;
 
 def note_drv_command_failed_diag_msg : Note<
   "diagnostic msg: %0">;
