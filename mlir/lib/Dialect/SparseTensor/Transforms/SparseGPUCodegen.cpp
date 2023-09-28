@@ -39,7 +39,7 @@ enum class CuSparseFormat {
   kCOO,
   kCSR,
   kCSC,
-  kBSR,  // TODO: coming soon!
+  kBSR, // TODO: coming soon!
 };
 
 //===----------------------------------------------------------------------===//
