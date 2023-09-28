@@ -254,8 +254,7 @@ struct BroadcastOpToArmSMELowering
 ///       %tile_slice_index : vector<[4]xi32> into vector<[4]x[4]xi32>
 ///   }
 ///
-/// This should, in practice, be identical to vector.broadcast when
-/// broadcasting a scalar.
+/// This is identical to vector.broadcast of a scalar.
 struct SplatOpToArmSMELowering : public OpRewritePattern<vector::SplatOp> {
   using OpRewritePattern<vector::SplatOp>::OpRewritePattern;
 
@@ -265,7 +264,6 @@ struct SplatOpToArmSMELowering : public OpRewritePattern<vector::SplatOp> {
     if (!tileType || !arm_sme::isValidSMETileVectorType(tileType))
       return failure();
 
-    OpBuilder::InsertionGuard g(rewriter);
     auto loc = splatOp.getLoc();
 
     auto srcType = splatOp.getOperand().getType();
@@ -274,11 +272,9 @@ struct SplatOpToArmSMELowering : public OpRewritePattern<vector::SplatOp> {
     assert(srcType.isIntOrFloat() && "Invalid source type for vector.splat");
 
     // First, broadcast the scalar to a 1-d vector.
-    auto tileSliceType =
-        VectorType::get(tileType.getShape().drop_front(), tileElementType,
-                        /*scalableDims=*/{true});
+    VectorType tileSliceType = VectorType::Builder(tileType).dropDim(0);
     Value broadcastOp1D = rewriter.create<vector::BroadcastOp>(
-        loc, tileSliceType, splatOp.getOperand());
+        loc, tileSliceType, splatOp.getInput());
 
     arm_sme::CastTileToVector tile =
         getSMETileAndCastToVector(rewriter, loc, tileType);
