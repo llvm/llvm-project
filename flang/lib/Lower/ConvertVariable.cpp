@@ -504,25 +504,20 @@ static fir::GlobalOp defineGlobal(Fortran::lower::AbstractConverter &converter,
   } else {
     TODO(loc, "global"); // Procedure pointer or something else
   }
-  // Creates zero or undefined initializer for globals without initializers
-  // Zero initializer is used for "simple types" (integer, real and logical),
-  // undefined is used for types aside from those types.
+  // Creates zero initializer for globals without initializers, this is a common
+  // and expected behavior (although not required by the standard)
   if (!globalIsInitialized(global)) {
-    // TODO: Is it really required to add the undef init if the Public
-    // visibility is set ? We need to make sure the global is not optimized out
-    // by LLVM if unused in the current compilation unit, but at least for
-    // BIND(C) variables, an initial value may be given in another compilation
-    // unit (on the C side), and setting an undef init here creates linkage
-    // conflicts.
+    // TODO: For BIND(C) variables, an initial value may be given in another
+    // compilation unit (on the C side), and setting an zero init here creates
+    // linkage conflicts. See if there is a way to get it zero initialized if
+    // not initialized elsewhere. MLIR also used to drop globals without
+    // initializers that are not used in the file, but this may not be true
+    // anymore.
     if (sym.attrs().test(Fortran::semantics::Attr::BIND_C))
       TODO(loc, "BIND(C) module variable linkage");
     Fortran::lower::createGlobalInitialization(
         builder, global, [&](fir::FirOpBuilder &builder) {
-          mlir::Value initValue;
-          if (symTy.isa<mlir::IntegerType, mlir::FloatType, fir::LogicalType>())
-            initValue = builder.create<fir::ZeroOp>(loc, symTy);
-          else
-            initValue = builder.create<fir::UndefOp>(loc, symTy);
+          mlir::Value initValue = builder.create<fir::ZeroOp>(loc, symTy);
           builder.create<fir::HasValueOp>(loc, initValue);
         });
   }
