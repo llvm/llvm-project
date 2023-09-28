@@ -4272,24 +4272,37 @@ static SDValue getWideningInterleave(SDValue EvenV, SDValue OddV,
   auto [Mask, VL] = getDefaultVLOps(VecVT, VecContainerVT, DL, DAG, Subtarget);
   SDValue Passthru = DAG.getUNDEF(WideContainerVT);
 
-  // Widen EvenV and OddV with 0s and add one copy of OddV to EvenV with
-  // vwaddu.vv
-  SDValue Interleaved = DAG.getNode(RISCVISD::VWADDU_VL, DL, WideContainerVT,
-                                    EvenV, OddV, Passthru, Mask, VL);
+  SDValue Interleaved;
+  if (Subtarget.hasStdExtZvbb()) {
+    // Interleaved = (OddV << VecVT.getScalarSizeInBits()) + EvenV.
+    SDValue OffsetVec =
+        DAG.getSplatVector(VecContainerVT, DL,
+                           DAG.getConstant(VecVT.getScalarSizeInBits(), DL,
+                                           Subtarget.getXLenVT()));
+    Interleaved = DAG.getNode(RISCVISD::VWSLL_VL, DL, WideContainerVT, OddV,
+                              OffsetVec, Passthru, Mask, VL);
+    Interleaved = DAG.getNode(RISCVISD::VWADDU_W_VL, DL, WideContainerVT,
+                              Interleaved, EvenV, Passthru, Mask, VL);
+  } else {
+    // Widen EvenV and OddV with 0s and add one copy of OddV to EvenV with
+    // vwaddu.vv
+    Interleaved = DAG.getNode(RISCVISD::VWADDU_VL, DL, WideContainerVT, EvenV,
+                              OddV, Passthru, Mask, VL);
 
-  // Then get OddV * by 2^(VecVT.getScalarSizeInBits() - 1)
-  SDValue AllOnesVec = DAG.getSplatVector(
-      VecContainerVT, DL, DAG.getAllOnesConstant(DL, Subtarget.getXLenVT()));
-  SDValue OddsMul = DAG.getNode(RISCVISD::VWMULU_VL, DL, WideContainerVT, OddV,
-                                AllOnesVec, Passthru, Mask, VL);
+    // Then get OddV * by 2^(VecVT.getScalarSizeInBits() - 1)
+    SDValue AllOnesVec = DAG.getSplatVector(
+        VecContainerVT, DL, DAG.getAllOnesConstant(DL, Subtarget.getXLenVT()));
+    SDValue OddsMul = DAG.getNode(RISCVISD::VWMULU_VL, DL, WideContainerVT,
+                                  OddV, AllOnesVec, Passthru, Mask, VL);
 
-  // Add the two together so we get
-  //   (OddV * 0xff...ff) + (OddV + EvenV)
-  // = (OddV * 0x100...00) + EvenV
-  // = (OddV << VecVT.getScalarSizeInBits()) + EvenV
-  // Note the ADD_VL and VLMULU_VL should get selected as vwmaccu.vx
-  Interleaved = DAG.getNode(RISCVISD::ADD_VL, DL, WideContainerVT, Interleaved,
-                            OddsMul, Passthru, Mask, VL);
+    // Add the two together so we get
+    //   (OddV * 0xff...ff) + (OddV + EvenV)
+    // = (OddV * 0x100...00) + EvenV
+    // = (OddV << VecVT.getScalarSizeInBits()) + EvenV
+    // Note the ADD_VL and VLMULU_VL should get selected as vwmaccu.vx
+    Interleaved = DAG.getNode(RISCVISD::ADD_VL, DL, WideContainerVT,
+                              Interleaved, OddsMul, Passthru, Mask, VL);
+  }
 
   // Bitcast from <vscale x n * ty*2> to <vscale x 2*n x ty>
   MVT ResultContainerVT = MVT::getVectorVT(
@@ -5323,7 +5336,7 @@ static bool hasMergeOp(unsigned Opcode) {
          Opcode <= RISCVISD::LAST_RISCV_STRICTFP_OPCODE &&
          "not a RISC-V target specific op");
   static_assert(RISCVISD::LAST_VL_VECTOR_OP - RISCVISD::FIRST_VL_VECTOR_OP ==
-                    124 &&
+                    125 &&
                 RISCVISD::LAST_RISCV_STRICTFP_OPCODE -
                         ISD::FIRST_TARGET_STRICTFP_OPCODE ==
                     21 &&
@@ -5347,7 +5360,7 @@ static bool hasMaskOp(unsigned Opcode) {
          Opcode <= RISCVISD::LAST_RISCV_STRICTFP_OPCODE &&
          "not a RISC-V target specific op");
   static_assert(RISCVISD::LAST_VL_VECTOR_OP - RISCVISD::FIRST_VL_VECTOR_OP ==
-                    124 &&
+                    125 &&
                 RISCVISD::LAST_RISCV_STRICTFP_OPCODE -
                         ISD::FIRST_TARGET_STRICTFP_OPCODE ==
                     21 &&
@@ -17579,6 +17592,7 @@ const char *RISCVTargetLowering::getTargetNodeName(unsigned Opcode) const {
   NODE_NAME_CASE(VWADDU_W_VL)
   NODE_NAME_CASE(VWSUB_W_VL)
   NODE_NAME_CASE(VWSUBU_W_VL)
+  NODE_NAME_CASE(VWSLL_VL)
   NODE_NAME_CASE(VFWMUL_VL)
   NODE_NAME_CASE(VFWADD_VL)
   NODE_NAME_CASE(VFWSUB_VL)
