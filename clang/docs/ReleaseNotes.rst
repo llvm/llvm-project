@@ -359,6 +359,10 @@ Bug Fixes to C++ Support
   reference. Fixes:
   (`#64162 <https://github.com/llvm/llvm-project/issues/64162>`_)
 
+- Clang no longer tries to capture non-odr-used variables that appear
+  in the enclosing expression of a lambda expression with a noexcept specifier.
+  (`#67492 <https://github.com/llvm/llvm-project/issues/67492>`_)
+
 Bug Fixes to AST Handling
 ^^^^^^^^^^^^^^^^^^^^^^^^^
 - Fixed an import failure of recursive friend class template.
