@@ -14,5 +14,6 @@ int main(int argc, char **argv) {
   free(p);
   memcpy(p, a, sizeof(a));
   // CHECK: HWAddressSanitizer: tag-mismatch on address
+  // CHECK: Cause: use-after-free
   return memcmp(p, a, sizeof(a));
 }
