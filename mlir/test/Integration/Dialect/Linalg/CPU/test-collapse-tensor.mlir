@@ -33,7 +33,7 @@ func.func @main() {
 
 func.func private @printMemrefF32(%ptr : tensor<*xf32>)
 
-func.func private @collapse_dynamic_shape(%arg0 : tensor<2x?x?x?xf32>) -> tensor<2x?x?xf32> {
+func.func @collapse_dynamic_shape(%arg0 : tensor<2x?x?x?xf32>) -> tensor<2x?x?xf32> {
   %0 = tensor.collapse_shape %arg0 [[0], [1, 2], [3]]: tensor<2x?x?x?xf32> into tensor<2x?x?xf32>
   return %0 : tensor<2x?x?xf32>
 }
