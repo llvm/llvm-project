@@ -148,7 +148,7 @@ public:
       }
       for (size_t I = NewLastPage + 1, N = PageToDataPtrs.size(); I < N; ++I) {
         T *Page = PageToDataPtrs[I];
-        if (Page != nullptr)
+        if (Page)
           Allocator.getPointer()->Deallocate(Page);
         // We mark the page invalid, to avoid double deletion.
         PageToDataPtrs[I] = nullptr;
