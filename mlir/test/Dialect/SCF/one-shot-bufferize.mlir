@@ -921,3 +921,34 @@ func.func @elide_copy_of_non_writing_scf_if(%c: i1, %p1: index, %p2: index, %f: 
   %r3 = tensor.extract %r[%p2] : tensor<10xf32>
   return %r2, %r3 : tensor<10xf32>, f32
 }
+
+// -----
+
+// CHECK-LABEL: func @index_switch(
+//  CHECK-SAME:     %[[pred:.*]]: index, %[[b:.*]]: memref<{{.*}}>, %[[c:.*]]: memref<{{.*}}>) -> memref<{{.*}}>
+func.func @index_switch(%pred: index, %b: tensor<5xf32>, %c: tensor<5xf32>) -> tensor<5xf32> {
+  // Throw in a tensor that bufferizes to a different layout map.
+  // CHECK: %[[a:.*]] = memref.alloc() {{.*}} : memref<5xf32>
+  %a = bufferization.alloc_tensor() : tensor<5xf32>
+
+  // CHECK: %[[r:.*]] = scf.index_switch %[[pred]] -> memref<5xf32, strided<[?], offset: ?>>
+  %0 = scf.index_switch %pred -> tensor<5xf32>
+  // CHECK: case 2 {
+  // CHECK:   %[[cast:.*]] = memref.cast %[[a]] : memref<5xf32> to memref<5xf32, strided<[?], offset: ?>>
+  // CHECK:   scf.yield %[[cast]]
+  case 2 {
+    scf.yield %a: tensor<5xf32>
+  }
+  // CHECK: case 5 {
+  // CHECK:   scf.yield %[[b]] : memref<5xf32, strided<[?], offset: ?>>
+  case 5 {
+    scf.yield %b: tensor<5xf32>
+  }
+  // CHECK: default {
+  // CHECK:   scf.yield %[[c]] : memref<5xf32, strided<[?], offset: ?>>
+  default {
+    scf.yield %c: tensor<5xf32>
+  }
+  // CHECK: return %[[r]]
+  return %0 : tensor<5xf32>
+}
