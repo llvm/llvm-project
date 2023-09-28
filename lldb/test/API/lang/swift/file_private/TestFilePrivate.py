@@ -32,19 +32,6 @@ class TestFilePrivate(TestBase):
         self.main_source = "main.swift"
         self.main_source_spec = lldb.SBFileSpec(self.main_source)
 
-    def check_expression(self, expression, expected_result, use_summary=True):
-        value = self.frame().EvaluateExpression(expression)
-        self.assertTrue(value.IsValid(), expression + "returned a valid value")
-        # print value.GetSummary()
-        # print value.GetValue()
-        if use_summary:
-            answer = value.GetSummary()
-        else:
-            answer = value.GetValue()
-        report_str = "%s expected: %s got: %s" % (
-            expression, expected_result, answer)
-        self.assertTrue(answer == expected_result, report_str)
-
     @swiftTest
     def test(self):
         """Test that we find the right file-local private decls using the discriminator"""
@@ -74,14 +61,14 @@ class TestFilePrivate(TestBase):
             process, a_breakpoint)
 
         self.assertTrue(len(threads) == 1)
-        self.check_expression("privateVariable", "\"five\"")
+        lldbutil.check_expression(self, self.frame(), "privateVariable", "\"five\"", use_summary=True)
 
         process.Continue()
         threads = lldbutil.get_threads_stopped_at_breakpoint(
             process, b_breakpoint)
 
         self.assertTrue(len(threads) == 1)
-        self.check_expression("privateVariable", "3", False)
+        lldbutil.check_expression(self, self.frame(), "privateVariable", "3", use_summary=False)
 
         process.Continue()
         threads = lldbutil.get_threads_stopped_at_breakpoint(
@@ -89,7 +76,6 @@ class TestFilePrivate(TestBase):
 
         self.assertTrue(len(threads) == 1)
 
-        self.check_expression("privateVariable", None)
-        self.check_expression("privateVariable as Int", "3", False)
-        self.check_expression("privateVariable as String", "\"five\"")
-
+        lldbutil.check_expression(self, self.frame(), "privateVariable", None, use_summary=True)
+        lldbutil.check_expression(self, self.frame(), "privateVariable as Int", "3", use_summary=False)
+        lldbutil.check_expression(self, self.frame(), "privateVariable as String", "\"five\"", use_summary=True)
