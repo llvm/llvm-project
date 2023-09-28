@@ -2519,6 +2519,17 @@ defm minimize_whitespace : BoolFOption<"minimize-whitespace",
           "whitespace such that two files with only formatting changes are "
           "equal.\n\nOnly valid with -E on C-like inputs and incompatible "
           "with -traditional-cpp.">, NegFlag<SetFalse>>;
+defm keep_system_includes : BoolFOption<"keep-system-includes",
+  PreprocessorOutputOpts<"KeepSystemIncludes">, DefaultFalse,
+  PosFlag<SetTrue, [], [ClangOption, CC1Option],
+          "Instead of expanding system headers when emitting preprocessor "
+          "output, preserve the #include directive. Useful when producing "
+          "preprocessed output for test case reduction. May produce incorrect "
+          "output if preprocessor symbols that control the included content "
+          "(e.g. _XOPEN_SOURCE) are defined in the including source file. The "
+          "portability of the resulting source to other compilation environments "
+          "is not guaranteed.\n\nOnly valid with -E.">,
+  NegFlag<SetFalse>>;
 
 def ffreestanding : Flag<["-"], "ffreestanding">, Group<f_Group>,
   Visibility<[ClangOption, CC1Option]>,

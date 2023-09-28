@@ -97,6 +97,9 @@ private:
   bool IsFirstFileEntered;
   bool MinimizeWhitespace;
   bool DirectivesOnly;
+  bool KeepSystemIncludes;
+  raw_ostream *OrigOS;
+  std::unique_ptr<llvm::raw_null_ostream> NullOS;
 
   Token PrevTok;
   Token PrevPrevTok;
@@ -105,12 +108,13 @@ public:
   PrintPPOutputPPCallbacks(Preprocessor &pp, raw_ostream *os, bool lineMarkers,
                            bool defines, bool DumpIncludeDirectives,
                            bool UseLineDirectives, bool MinimizeWhitespace,
-                           bool DirectivesOnly)
+                           bool DirectivesOnly, bool KeepSystemIncludes)
       : PP(pp), SM(PP.getSourceManager()), ConcatInfo(PP), OS(os),
         DisableLineMarkers(lineMarkers), DumpDefines(defines),
         DumpIncludeDirectives(DumpIncludeDirectives),
         UseLineDirectives(UseLineDirectives),
-        MinimizeWhitespace(MinimizeWhitespace), DirectivesOnly(DirectivesOnly) {
+        MinimizeWhitespace(MinimizeWhitespace), DirectivesOnly(DirectivesOnly),
+        KeepSystemIncludes(KeepSystemIncludes), OrigOS(os) {
     CurLine = 0;
     CurFilename += "<uninit>";
     EmittedTokensOnThisLine = false;
@@ -118,6 +122,8 @@ public:
     FileType = SrcMgr::C_User;
     Initialized = false;
     IsFirstFileEntered = false;
+    if (KeepSystemIncludes)
+      NullOS = std::make_unique<llvm::raw_null_ostream>();
 
     PrevTok.startToken();
     PrevPrevTok.startToken();
@@ -350,6 +356,10 @@ void PrintPPOutputPPCallbacks::FileChanged(SourceLocation Loc,
 
   CurLine = NewLine;
 
+  // In KeepSystemIncludes mode, redirect OS as needed.
+  if (KeepSystemIncludes && (isSystem(FileType) != isSystem(NewFileType)))
+    OS = isSystem(FileType) ? OrigOS : NullOS.get();
+
   CurFilename.clear();
   CurFilename += UserLoc.getFilename();
   FileType = NewFileType;
@@ -394,14 +404,16 @@ void PrintPPOutputPPCallbacks::InclusionDirective(
     StringRef SearchPath, StringRef RelativePath, const Module *Imported,
     SrcMgr::CharacteristicKind FileType) {
   // In -dI mode, dump #include directives prior to dumping their content or
-  // interpretation.
-  if (DumpIncludeDirectives) {
+  // interpretation. Similar for -fkeep-system-includes.
+  if (DumpIncludeDirectives || (KeepSystemIncludes && isSystem(FileType))) {
     MoveToLine(HashLoc, /*RequireStartOfLine=*/true);
     const std::string TokenText = PP.getSpelling(IncludeTok);
     assert(!TokenText.empty());
     *OS << "#" << TokenText << " "
         << (IsAngled ? '<' : '"') << FileName << (IsAngled ? '>' : '"')
-        << " /* clang -E -dI */";
+        << " /* clang -E "
+        << (DumpIncludeDirectives ? "-dI" : "-fkeep-system-includes")
+        << " */";
     setEmittedDirectiveOnThisLine();
   }
 
@@ -412,7 +424,8 @@ void PrintPPOutputPPCallbacks::InclusionDirective(
     case tok::pp_import:
     case tok::pp_include_next:
       MoveToLine(HashLoc, /*RequireStartOfLine=*/true);
-      *OS << "#pragma clang module import " << Imported->getFullModuleName(true)
+      *OS << "#pragma clang module import "
+          << Imported->getFullModuleName(true)
           << " /* clang -E: implicit import for "
           << "#" << PP.getSpelling(IncludeTok) << " "
           << (IsAngled ? '<' : '"') << FileName << (IsAngled ? '>' : '"')
@@ -794,8 +807,7 @@ struct UnknownPragmaHandler : public PragmaHandler {
 
 
 static void PrintPreprocessedTokens(Preprocessor &PP, Token &Tok,
-                                    PrintPPOutputPPCallbacks *Callbacks,
-                                    raw_ostream *OS) {
+                                    PrintPPOutputPPCallbacks *Callbacks) {
   bool DropComments = PP.getLangOpts().TraditionalCPP &&
                       !PP.getCommentRetentionState();
 
@@ -863,7 +875,7 @@ static void PrintPreprocessedTokens(Preprocessor &PP, Token &Tok,
       // components. We don't have a good way to round-trip those.
       Module *M = reinterpret_cast<Module *>(Tok.getAnnotationValue());
       std::string Name = M->getFullModuleName();
-      OS->write(Name.data(), Name.size());
+      Callbacks->OS->write(Name.data(), Name.size());
       Callbacks->HandleNewlinesInToken(Name.data(), Name.size());
     } else if (Tok.isAnnotation()) {
       // Ignore annotation tokens created by pragmas - the pragmas themselves
@@ -871,14 +883,14 @@ static void PrintPreprocessedTokens(Preprocessor &PP, Token &Tok,
       PP.Lex(Tok);
       continue;
     } else if (IdentifierInfo *II = Tok.getIdentifierInfo()) {
-      *OS << II->getName();
+      *Callbacks->OS << II->getName();
     } else if (Tok.isLiteral() && !Tok.needsCleaning() &&
                Tok.getLiteralData()) {
-      OS->write(Tok.getLiteralData(), Tok.getLength());
+      Callbacks->OS->write(Tok.getLiteralData(), Tok.getLength());
     } else if (Tok.getLength() < std::size(Buffer)) {
       const char *TokPtr = Buffer;
       unsigned Len = PP.getSpelling(Tok, TokPtr);
-      OS->write(TokPtr, Len);
+      Callbacks->OS->write(TokPtr, Len);
 
       // Tokens that can contain embedded newlines need to adjust our current
       // line number.
@@ -895,7 +907,7 @@ static void PrintPreprocessedTokens(Preprocessor &PP, Token &Tok,
       }
     } else {
       std::string S = PP.getSpelling(Tok);
-      OS->write(S.data(), S.size());
+      Callbacks->OS->write(S.data(), S.size());
 
       // Tokens that can contain embedded newlines need to adjust our current
       // line number.
@@ -970,7 +982,7 @@ void clang::DoPrintPreprocessedInput(Preprocessor &PP, raw_ostream *OS,
   PrintPPOutputPPCallbacks *Callbacks = new PrintPPOutputPPCallbacks(
       PP, OS, !Opts.ShowLineMarkers, Opts.ShowMacros,
       Opts.ShowIncludeDirectives, Opts.UseLineDirectives,
-      Opts.MinimizeWhitespace, Opts.DirectivesOnly);
+      Opts.MinimizeWhitespace, Opts.DirectivesOnly, Opts.KeepSystemIncludes);
 
   // Expand macros in pragmas with -fms-extensions.  The assumption is that
   // the majority of pragmas in such a file will be Microsoft pragmas.
@@ -1028,7 +1040,7 @@ void clang::DoPrintPreprocessedInput(Preprocessor &PP, raw_ostream *OS,
   } while (true);
 
   // Read all the preprocessed tokens, printing them out to the stream.
-  PrintPreprocessedTokens(PP, Tok, Callbacks, OS);
+  PrintPreprocessedTokens(PP, Tok, Callbacks);
   *OS << '\n';
 
   // Remove the handlers we just added to leave the preprocessor in a sane state
