@@ -66,7 +66,8 @@ class LoopPeelOp:
 
     def __init__(
         self,
-        result_type: Type,
+        main_loop_type: Type,
+        remainder_loop_type: Type,
         target: Union[Operation, Value],
         *,
         fail_if_already_divisible: Union[bool, BoolAttr] = False,
@@ -74,7 +75,8 @@ class LoopPeelOp:
         loc=None,
     ):
         super().__init__(
-            result_type,
+            main_loop_type,
+            remainder_loop_type,
             _get_op_result_or_value(target),
             fail_if_already_divisible=(
                 fail_if_already_divisible
