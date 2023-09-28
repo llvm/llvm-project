@@ -510,7 +510,7 @@ def MoveTileSliceToVectorOp : ArmSME_Op<"move_tile_slice_to_vector", [Pure,
   let summary = "Move slice of a 2-D tile to a 1-D scalable vector";
   let description = [{
     The tile slice to vector operation extracts a 1-D scalable slice from a 2-D
-    scalable tile at the give index. A tile slice is a 1-D vector of
+    scalable tile at the given index. A tile slice is a 1-D vector of
     horizontally or vertically contiguous elements within a ZA tile. Horizontal
     tile slices are currently assumed when lowering to intrinsics.
 
