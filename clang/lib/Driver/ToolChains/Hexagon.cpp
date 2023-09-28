@@ -377,7 +377,8 @@ constructHexagonLinkArgs(Compilation &C, const JobAction &JA,
         linkXRayRuntimeDeps(HTC, Args, CmdArgs);
 
       CmdArgs.push_back("-lclang_rt.builtins-hexagon");
-      CmdArgs.push_back("-lc");
+      if (!Args.hasArg(options::OPT_nolibc))
+        CmdArgs.push_back("-lc");
     }
     if (D.CCCIsCXX()) {
       if (HTC.ShouldLinkCXXStdlib(Args))
@@ -470,7 +471,8 @@ constructHexagonLinkArgs(Compilation &C, const JobAction &JA,
     if (!IsShared) {
       for (StringRef Lib : OsLibs)
         CmdArgs.push_back(Args.MakeArgString("-l" + Lib));
-      CmdArgs.push_back("-lc");
+      if (!Args.hasArg(options::OPT_nolibc))
+        CmdArgs.push_back("-lc");
     }
     CmdArgs.push_back("-lgcc");
 
