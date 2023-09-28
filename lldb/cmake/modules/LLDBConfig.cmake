@@ -122,14 +122,8 @@ if(APPLE AND CMAKE_GENERATOR STREQUAL Xcode)
   endif()
 endif()
 
-if (NOT CMAKE_SYSTEM_NAME MATCHES "Windows")
-  set(LLDB_EXPORT_ALL_SYMBOLS 0 CACHE BOOL
-    "Causes lldb to export all symbols when building liblldb.")
-else()
-  # Windows doesn't support toggling this, so don't bother making it a
-  # cache variable.
-  set(LLDB_EXPORT_ALL_SYMBOLS 0)
-endif()
+set(LLDB_EXPORT_ALL_SYMBOLS 0 CACHE BOOL
+  "Causes lldb to export all symbols when building liblldb.")
 
 if ((NOT MSVC) OR MSVC12)
   add_definitions( -DHAVE_ROUND )
