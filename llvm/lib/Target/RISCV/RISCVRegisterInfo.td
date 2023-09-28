@@ -337,14 +337,15 @@ defvar LMULList = [1, 2, 4, 8];
 // Utility classes for segment load/store.
 //===----------------------------------------------------------------------===//
 // The set of legal NF for LMUL = lmul.
-// LMUL == 1, NF = 2, 3, 4, 5, 6, 7, 8
+// LMUL <= 1, NF = 2, 3, 4, 5, 6, 7, 8
 // LMUL == 2, NF = 2, 3, 4
 // LMUL == 4, NF = 2
+// LMUL == 8, no legal NF
 class NFList<int lmul> {
-  list<int> L = !cond(!eq(lmul, 1): [2, 3, 4, 5, 6, 7, 8],
-                      !eq(lmul, 2): [2, 3, 4],
+  list<int> L = !cond(!eq(lmul, 8): [],
                       !eq(lmul, 4): [2],
-                      !eq(lmul, 8): []);
+                      !eq(lmul, 2): [2, 3, 4],
+                      true: [2, 3, 4, 5, 6, 7, 8]);
 }
 
 // Generate [start, end) SubRegIndex list.
