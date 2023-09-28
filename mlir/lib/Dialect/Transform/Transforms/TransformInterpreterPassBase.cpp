@@ -413,8 +413,24 @@ LogicalResult transform::detail::interpreterBaseRunOnOperationImpl(
   // transform is embedded in the payload IR. If debugTransformRootTag was
   // passed, then we are in user-specified selection of the transforming IR.
   // This corresponds to REPL debug mode.
-  Operation *transformContainer =
-      hasSharedTransformModule ? sharedTransformModule->get() : target;
+
+  OwningOpRef<Operation *> transformContainerClone;
+  Operation *transformContainer;
+  if (hasTransformLibraryModule) {
+    // If we have a library module, then the transform script is embedded in the
+    // target, which we don't want to modify when loading the library. We thus
+    // clone the target and use that as transform container.
+    assert(!hasSharedTransformModule);
+    transformContainerClone = target->clone();
+    transformContainer = transformContainerClone.get();
+  } else {
+    // If we have a shared library, which is private to us, we can modify it
+    // when loading the library, so we use that. Otherwise, we don't have any
+    // library to load, so we can use the target and won't modify it.
+    transformContainer =
+        hasSharedTransformModule ? sharedTransformModule->get() : target;
+  }
+
   Operation *transformRoot =
       debugTransformRootTag.empty()
           ? findTopLevelTransform(transformContainer,
@@ -436,7 +452,7 @@ LogicalResult transform::detail::interpreterBaseRunOnOperationImpl(
   // concurrent execution (normally, the error shouldn't be triggered unless the
   // transform IR modifies itself in a pass, which is also forbidden elsewhere).
   if (hasTransformLibraryModule) {
-    if (!target->isProperAncestor(transformRoot)) {
+    if (!transformContainer->isProperAncestor(transformRoot)) {
       InFlightDiagnostic diag =
           transformRoot->emitError()
           << "cannot inject transform definitions next to pass anchor op";
