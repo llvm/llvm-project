@@ -4683,7 +4683,7 @@ Error BitcodeReader::parseFunctionBody(Function *F) {
       case bitc::METADATA_BLOCK_ID:
         assert(DeferredMetadataInfo.empty() &&
                "Must read all module-level metadata before function-level");
-        if (Error Err = MDLoader->parseFunctionMetadata())
+        if (Error Err = MDLoader->parseFunctionMetadata(CurBB))
           return Err;
         break;
       case bitc::USELIST_BLOCK_ID:
