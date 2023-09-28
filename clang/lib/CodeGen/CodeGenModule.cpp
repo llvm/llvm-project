@@ -2915,6 +2915,9 @@ static void addLinkOptionsPostorder(CodeGenModule &CGM, Module *Mod,
 }
 
 void CodeGenModule::EmitModuleInitializers(clang::Module *Primary) {
+  assert(Primary->isNamedModuleUnit() &&
+         "We should only emit module initializers for named modules.");
+
   // Emit the initializers in the order that sub-modules appear in the
   // source, first Global Module Fragments, if present.
   if (auto GMF = Primary->getGlobalModuleFragment()) {

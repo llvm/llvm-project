@@ -4120,7 +4120,11 @@ void Parser::ParseDeclarationSpecifiers(
           ExprResult ExplicitExpr(static_cast<Expr *>(nullptr));
           BalancedDelimiterTracker Tracker(*this, tok::l_paren);
           Tracker.consumeOpen();
-          ExplicitExpr = ParseConstantExpression();
+
+          EnterExpressionEvaluationContext ConstantEvaluated(
+              Actions, Sema::ExpressionEvaluationContext::ConstantEvaluated);
+
+          ExplicitExpr = ParseConstantExpressionInExprEvalContext();
           ConsumedEnd = Tok.getLocation();
           if (ExplicitExpr.isUsable()) {
             CloseParenLoc = Tok.getLocation();

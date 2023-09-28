@@ -3550,7 +3550,6 @@ libcxx/test/std/iterators/iterator.primitives/std.iterator.tags/forward_iterator
 libcxx/test/std/iterators/iterator.primitives/std.iterator.tags/input_iterator_tag.pass.cpp
 libcxx/test/std/iterators/iterator.primitives/std.iterator.tags/output_iterator_tag.pass.cpp
 libcxx/test/std/iterators/iterator.primitives/std.iterator.tags/random_access_iterator_tag.pass.cpp
-libcxx/test/std/iterators/iterator.range/begin-end.pass.cpp
 libcxx/test/std/iterators/iterator.requirements/alg.req.ind.copy/indirectly_copyable.compile.pass.cpp
 libcxx/test/std/iterators/iterator.requirements/alg.req.ind.copy/indirectly_copyable_storable.compile.pass.cpp
 libcxx/test/std/iterators/iterator.requirements/alg.req.ind.copy/indirectly_copyable_storable.subsumption.compile.pass.cpp
@@ -3901,7 +3900,6 @@ libcxx/test/std/language.support/support.general/nothing_to_do.pass.cpp
 libcxx/test/std/language.support/support.initlist/include_cxx03.pass.cpp
 libcxx/test/std/language.support/support.initlist/support.initlist.access/access.pass.cpp
 libcxx/test/std/language.support/support.initlist/support.initlist.cons/default.pass.cpp
-libcxx/test/std/language.support/support.initlist/support.initlist.range/begin_end.pass.cpp
 libcxx/test/std/language.support/support.initlist/types.pass.cpp
 libcxx/test/std/language.support/support.limits/c.limits/cfloat.pass.cpp
 libcxx/test/std/language.support/support.limits/c.limits/climits.pass.cpp
