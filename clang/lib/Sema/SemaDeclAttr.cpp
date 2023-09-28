@@ -2460,8 +2460,7 @@ static void handleCtorDtorAttr(Sema &S, Decl *D, const ParsedAttr &AL) {
         << AL << FD->getSourceRange();
     return;
   }
-  if (const auto *MD = dyn_cast<CXXMethodDecl>(FD);
-             MD && MD->isInstance()) {
+  if (const auto *MD = dyn_cast<CXXMethodDecl>(FD); MD && MD->isInstance()) {
     S.Diag(AL.getLoc(), diag::err_ctor_dtor_member_func)
         << AL << FD->getSourceRange();
     return;
