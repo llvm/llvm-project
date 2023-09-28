@@ -144,6 +144,16 @@ public:
   size_t getSize() const override;
 };
 
+// .note.AARCH64-PAUTH-ABI-tag section. See
+// https://github.com/ARM-software/abi-aa/blob/main/pauthabielf64/pauthabielf64.rst#elf-marking
+class AArch64PauthAbiTag final : public SyntheticSection {
+public:
+  AArch64PauthAbiTag();
+  void writeTo(uint8_t *buf) override;
+  size_t getSize() const override;
+  bool isNeeded() const override;
+};
+
 // .note.gnu.build-id section.
 class BuildIdSection : public SyntheticSection {
   // First 16 bytes are a header.
@@ -543,7 +553,8 @@ public:
   static bool classof(const SectionBase *d) {
     return SyntheticSection::classof(d) &&
            (d->type == llvm::ELF::SHT_RELA || d->type == llvm::ELF::SHT_REL ||
-            d->type == llvm::ELF::SHT_RELR);
+            d->type == llvm::ELF::SHT_RELR ||
+            d->type == llvm::ELF::SHT_AARCH64_AUTH_RELR);
   }
   int32_t dynamicTag, sizeDynamicTag;
   SmallVector<DynamicReloc, 0> relocs;
@@ -599,7 +610,7 @@ struct RelativeReloc {
 
 class RelrBaseSection : public SyntheticSection {
 public:
-  RelrBaseSection(unsigned concurrency);
+  RelrBaseSection(unsigned concurrency, bool isAArch64Auth = false);
   void mergeRels();
   bool isNeeded() const override {
     return !relocs.empty() ||
@@ -617,7 +628,7 @@ template <class ELFT> class RelrSection final : public RelrBaseSection {
   using Elf_Relr = typename ELFT::Relr;
 
 public:
-  RelrSection(unsigned concurrency);
+  RelrSection(unsigned concurrency, bool isAArch64Auth = false);
 
   bool updateAllocSize() override;
   size_t getSize() const override { return relrRelocs.size() * this->entsize; }
@@ -1319,6 +1330,7 @@ struct Partition {
   std::unique_ptr<PackageMetadataNote> packageMetadataNote;
   std::unique_ptr<RelocationBaseSection> relaDyn;
   std::unique_ptr<RelrBaseSection> relrDyn;
+  std::unique_ptr<RelrBaseSection> relrAuthDyn;
   std::unique_ptr<VersionDefinitionSection> verDef;
   std::unique_ptr<SyntheticSection> verNeed;
   std::unique_ptr<VersionTableSection> verSym;
@@ -1363,6 +1375,7 @@ struct InStruct {
   std::unique_ptr<StringTableSection> strTab;
   std::unique_ptr<SymbolTableBaseSection> symTab;
   std::unique_ptr<SymtabShndxSection> symTabShndx;
+  std::unique_ptr<AArch64PauthAbiTag> aarch64PauthAbiTag;
 
   void reset();
 };

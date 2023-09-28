@@ -187,6 +187,7 @@ struct Config {
   llvm::StringRef cmseOutputLib;
   StringRef zBtiReport = "none";
   StringRef zCetReport = "none";
+  StringRef zPauthReport = "none";
   llvm::StringRef ltoBasicBlockSections;
   std::pair<llvm::StringRef, llvm::StringRef> thinLTOObjectSuffixReplace;
   llvm::StringRef thinLTOPrefixReplaceOld;
@@ -275,6 +276,7 @@ struct Config {
   bool relocatable;
   bool relrGlibc = false;
   bool relrPackDynRelocs = false;
+  bool relrPackAuthDynRelocs = false;
   llvm::DenseSet<llvm::StringRef> saveTempsArgs;
   llvm::SmallVector<std::pair<llvm::GlobPattern, uint32_t>, 0> shuffleSections;
   bool singleRoRx;
@@ -492,6 +494,8 @@ struct Ctx {
   void reset();
 
   llvm::raw_fd_ostream openAuxiliaryFile(llvm::StringRef, std::error_code &);
+
+  SmallVector<uint8_t, 0> aarch64PauthAbiTag;
 };
 
 LLVM_LIBRARY_VISIBILITY extern Ctx ctx;

@@ -112,6 +112,7 @@ RelExpr AArch64::getRelExpr(RelType type, const Symbol &s,
   case R_AARCH64_MOVW_UABS_G2:
   case R_AARCH64_MOVW_UABS_G2_NC:
   case R_AARCH64_MOVW_UABS_G3:
+  case R_AARCH64_AUTH_ABS64:
     return R_ABS;
   case R_AARCH64_TLSDESC_ADR_PAGE21:
     return R_AARCH64_TLSDESC_PAGE;
@@ -394,6 +395,10 @@ void AArch64::relocate(uint8_t *loc, const Relocation &rel,
     break;
   case R_AARCH64_PREL64:
     write64(loc, val);
+    break;
+  case R_AARCH64_AUTH_ABS64:
+    checkIntUInt(loc, val, 32, rel);
+    write32(loc, val);
     break;
   case R_AARCH64_ADD_ABS_LO12_NC:
     or32AArch64Imm(loc, val);

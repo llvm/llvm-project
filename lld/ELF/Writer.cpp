@@ -445,6 +445,12 @@ template <class ELFT> void elf::createSyntheticSections() {
       add(*part.relrDyn);
     }
 
+    if (config->relrPackAuthDynRelocs) {
+      part.relrAuthDyn = std::make_unique<RelrSection<ELFT>>(
+          threadCount, /*isAArch64Auth=*/true);
+      add(*part.relrAuthDyn);
+    }
+
     if (!config->relocatable) {
       if (config->ehFrameHdr) {
         part.ehFrameHdr = std::make_unique<EhFrameHeader>();
@@ -565,6 +571,11 @@ template <class ELFT> void elf::createSyntheticSections() {
 
   if (config->andFeatures)
     add(*make<GnuPropertySection>());
+
+  if (!ctx.aarch64PauthAbiTag.empty()) {
+    in.aarch64PauthAbiTag = std::make_unique<AArch64PauthAbiTag>();
+    add(*in.aarch64PauthAbiTag);
+  }
 
   // .note.GNU-stack is always added when we are creating a re-linkable
   // object file. Other linkers are using the presence of this marker
@@ -1725,6 +1736,8 @@ template <class ELFT> void Writer<ELFT>::finalizeAddressDependentContent() {
       changed |= part.relaDyn->updateAllocSize();
       if (part.relrDyn)
         changed |= part.relrDyn->updateAllocSize();
+      if (part.relrAuthDyn)
+        changed |= part.relrAuthDyn->updateAllocSize();
       if (part.memtagDescriptors)
         changed |= part.memtagDescriptors->updateAllocSize();
     }
@@ -2178,6 +2191,10 @@ template <class ELFT> void Writer<ELFT>::finalizeSections() {
       if (part.relrDyn) {
         part.relrDyn->mergeRels();
         finalizeSynthetic(part.relrDyn.get());
+      }
+      if (part.relrAuthDyn) {
+        part.relrAuthDyn->mergeRels();
+        finalizeSynthetic(part.relrAuthDyn.get());
       }
 
       finalizeSynthetic(part.dynSymTab.get());

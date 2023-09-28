@@ -331,6 +331,29 @@ void GnuPropertySection::writeTo(uint8_t *buf) {
 
 size_t GnuPropertySection::getSize() const { return config->is64 ? 32 : 28; }
 
+AArch64PauthAbiTag::AArch64PauthAbiTag()
+    : SyntheticSection(llvm::ELF::SHF_ALLOC, llvm::ELF::SHT_NOTE,
+                       config->wordsize, ".note.AARCH64-PAUTH-ABI-tag") {}
+
+bool AArch64PauthAbiTag::isNeeded() const {
+  return !ctx.aarch64PauthAbiTag.empty();
+}
+
+void AArch64PauthAbiTag::writeTo(uint8_t *buf) {
+  const SmallVector<uint8_t, 0> &data = ctx.aarch64PauthAbiTag;
+  write32(buf, 4);                             // Name size
+  write32(buf + 4, data.size());               // Content size
+  write32(buf + 8, NT_ARM_TYPE_PAUTH_ABI_TAG); // Type
+  memcpy(buf + 12, "ARM", 4);                  // Name string
+  memcpy(buf + 16, data.data(), data.size());
+  memset(buf + 16 + data.size(), 0, getSize() - 16 - data.size()); // Padding
+}
+
+size_t AArch64PauthAbiTag::getSize() const {
+  return alignToPowerOf2(16 + ctx.aarch64PauthAbiTag.size(),
+                         config->is64 ? 8 : 4);
+}
+
 BuildIdSection::BuildIdSection()
     : SyntheticSection(SHF_ALLOC, SHT_NOTE, 4, ".note.gnu.build-id"),
       hashSize(getHashSize()) {}
@@ -1406,6 +1429,12 @@ DynamicSection<ELFT>::computeContents() {
     addInt(config->useAndroidRelrTags ? DT_ANDROID_RELRENT : DT_RELRENT,
            sizeof(Elf_Relr));
   }
+  if (part.relrAuthDyn && part.relrAuthDyn->getParent() &&
+      !part.relrAuthDyn->relocs.empty()) {
+    addInSec(DT_AARCH64_AUTH_RELR, *part.relrAuthDyn);
+    addInt(DT_AARCH64_AUTH_RELRSZ, part.relrAuthDyn->getParent()->size);
+    addInt(DT_AARCH64_AUTH_RELRENT, sizeof(Elf_Relr));
+  }
   // .rel[a].plt section usually consists of two parts, containing plt and
   // iplt relocations. It is possible to have only iplt relocations in the
   // output. In that case relaPlt is empty and have zero offset, the same offset
@@ -1717,10 +1746,13 @@ template <class ELFT> void RelocationSection<ELFT>::writeTo(uint8_t *buf) {
   }
 }
 
-RelrBaseSection::RelrBaseSection(unsigned concurrency)
-    : SyntheticSection(SHF_ALLOC,
-                       config->useAndroidRelrTags ? SHT_ANDROID_RELR : SHT_RELR,
-                       config->wordsize, ".relr.dyn"),
+RelrBaseSection::RelrBaseSection(unsigned concurrency, bool isAArch64Auth)
+    : SyntheticSection(
+          SHF_ALLOC,
+          isAArch64Auth
+              ? SHT_AARCH64_AUTH_RELR
+              : (config->useAndroidRelrTags ? SHT_ANDROID_RELR : SHT_RELR),
+          config->wordsize, isAArch64Auth ? ".relr.auth.dyn" : ".relr.dyn"),
       relocsVec(concurrency) {}
 
 void RelrBaseSection::mergeRels() {
@@ -1988,8 +2020,8 @@ bool AndroidPackedRelocationSection<ELFT>::updateAllocSize() {
 }
 
 template <class ELFT>
-RelrSection<ELFT>::RelrSection(unsigned concurrency)
-    : RelrBaseSection(concurrency) {
+RelrSection<ELFT>::RelrSection(unsigned concurrency, bool isAArch64Auth)
+    : RelrBaseSection(concurrency, isAArch64Auth) {
   this->entsize = config->wordsize;
 }
 
