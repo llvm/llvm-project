@@ -4808,6 +4808,89 @@ llvm::DILocalVariable *CGDebugInfo::EmitDeclare(const VarDecl *VD,
   return D;
 }
 
+llvm::DILocalVariable *CGDebugInfo::EmitDef(const BindingDecl *BD,
+                                            llvm::Value *Storage,
+                                            std::optional<unsigned> ArgNo,
+                                            CGBuilderTy &Builder,
+                                            const bool UsePointerValue) {
+  assert(CGM.getCodeGenOpts().hasReducedDebugInfo());
+  assert(!LexicalBlockStack.empty() && "Region stack mismatch, stack empty!");
+  if (BD->hasAttr<NoDebugAttr>())
+    return nullptr;
+
+  // Skip the tuple like case, we don't handle that here
+  if (isa<DeclRefExpr>(BD->getBinding()))
+    return nullptr;
+
+  llvm::DIType *Ty = CreateBindingDeclType(BD);
+  if (!Ty)
+    return nullptr;
+
+  auto Align = getDeclAlignIfRequired(BD, CGM.getContext());
+
+  llvm::Type *ValueTy = CGM.getTypes().ConvertTypeForMem(BD->getType());
+  llvm::Type *DecomposedTy =
+      CGM.getTypes().ConvertTypeForMem(BD->getDecomposedDecl()->getType());
+
+  llvm::DIExprBuilder ExprBuilder(CGM.getLLVMContext());
+  ExprBuilder.append<llvm::DIOp::Referrer>(Storage->getType());
+  ExprBuilder.append<llvm::DIOp::Deref>(DecomposedTy);
+
+  if (UsePointerValue) {
+    llvm::Type *PointeeTy = CGM.getTypes().ConvertTypeForMem(
+        BD->getDecomposedDecl()->getType()->getPointeeType());
+    ExprBuilder.append<llvm::DIOp::Deref>(PointeeTy);
+  }
+
+  unsigned Line = getLineNumber(BD->getLocation());
+  unsigned Column = getColumnNumber(BD->getLocation());
+  StringRef Name = BD->getName();
+  auto *Scope = cast<llvm::DIScope>(LexicalBlockStack.back());
+  llvm::DIFile *Unit = getOrCreateFile(BD->getLocation());
+  // Create the descriptor for the variable.
+  llvm::DILocalVariable *D = DBuilder.createAutoVariable(
+      Scope, Name, Unit, Line, Ty, CGM.getLangOpts().Optimize,
+      llvm::DINode::FlagZero, getDWARFMemorySpace(BD), Align);
+
+  if (const MemberExpr *ME = dyn_cast<MemberExpr>(BD->getBinding())) {
+    if (const FieldDecl *FD = dyn_cast<FieldDecl>(ME->getMemberDecl())) {
+      const unsigned fieldIndex = FD->getFieldIndex();
+      const clang::CXXRecordDecl *parent =
+          (const CXXRecordDecl *)FD->getParent();
+      const ASTRecordLayout &layout =
+          CGM.getContext().getASTRecordLayout(parent);
+      const uint64_t fieldOffset = layout.getFieldOffset(fieldIndex);
+
+      if (fieldOffset % CGM.getContext().getCharWidth() != 0)
+        return nullptr;
+
+      auto *I32 = llvm::Type::getInt32Ty(CGM.getLLVMContext());
+      auto *Offset = llvm::ConstantInt::get(I32, fieldOffset);
+      ExprBuilder.append<llvm::DIOp::Constant>(Offset);
+      ExprBuilder.append<llvm::DIOp::BitOffset>(ValueTy);
+    }
+  } else if (const ArraySubscriptExpr *ASE =
+                 dyn_cast<ArraySubscriptExpr>(BD->getBinding())) {
+    if (const IntegerLiteral *IL = dyn_cast<IntegerLiteral>(ASE->getIdx())) {
+      const uint64_t value = IL->getValue().getZExtValue();
+      const uint64_t typeSize = CGM.getContext().getTypeSize(BD->getType());
+      const uint64_t index =
+          CGM.getContext().toCharUnitsFromBits(value * typeSize).getQuantity();
+      auto *I32 = llvm::Type::getInt32Ty(CGM.getLLVMContext());
+      auto *Index = llvm::ConstantInt::get(I32, index);
+      ExprBuilder.append<llvm::DIOp::Constant>(Index);
+      ExprBuilder.append<llvm::DIOp::ByteOffset>(ValueTy);
+    }
+  }
+
+  DBuilder.insertDef(DBuilder.createBoundedLifetime(D, ExprBuilder.intoExpr()),
+                     Storage,
+                     llvm::DILocation::get(CGM.getLLVMContext(), Line, Column,
+                                           Scope, CurInlinedAt),
+                     Builder.GetInsertBlock());
+  return D;
+}
+
 llvm::DILocalVariable *CGDebugInfo::EmitDef(const VarDecl *VD,
                                             llvm::Value *Storage,
                                             std::optional<unsigned> ArgNo,
@@ -5043,6 +5126,10 @@ llvm::DILocalVariable *CGDebugInfo::EmitDeclare(const BindingDecl *BD,
                                                 std::optional<unsigned> ArgNo,
                                                 CGBuilderTy &Builder,
                                                 const bool UsePointerValue) {
+
+  if (CGM.getCodeGenOpts().HeterogeneousDwarf)
+    return EmitDef(BD, Storage, ArgNo, Builder, UsePointerValue);
+
   assert(CGM.getCodeGenOpts().hasReducedDebugInfo());
   assert(!LexicalBlockStack.empty() && "Region stack mismatch, stack empty!");
   if (BD->hasAttr<NoDebugAttr>())

@@ -627,6 +627,14 @@ private:
                                  CGBuilderTy &Builder,
                                  const bool UsePointerValue = false);
 
+  /// Emit call to llvm.dbg.def for a structured binding definition.
+  /// Returns a pointer to the DILocalVariable associated with the
+  /// llvm.dbg.def, or nullptr otherwise.
+  llvm::DILocalVariable *EmitDef(const BindingDecl *decl, llvm::Value *AI,
+                                 std::optional<unsigned> ArgNo,
+                                 CGBuilderTy &Builder,
+                                 const bool UsePointerValue = false);
+
   /// Emit call to llvm.dbg.declare for a binding declaration.
   /// Returns a pointer to the DILocalVariable associated with the
   /// llvm.dbg.declare, or nullptr otherwise.
