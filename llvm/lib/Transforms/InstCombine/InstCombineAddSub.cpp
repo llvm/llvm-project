@@ -830,15 +830,15 @@ static Instruction *foldNoWrapAdd(BinaryOperator &Add,
   // (sext (X +nsw NarrowC)) + C --> (sext X) + (sext(NarrowC) + C)
   Constant *NarrowC;
   if (match(Op0, m_OneUse(m_SExt(m_NSWAdd(m_Value(X), m_Constant(NarrowC)))))) {
-    Constant *WideC = ConstantExpr::getSExt(NarrowC, Ty);
-    Constant *NewC = ConstantExpr::getAdd(WideC, Op1C);
+    Value *WideC = Builder.CreateSExt(NarrowC, Ty);
+    Value *NewC = Builder.CreateAdd(WideC, Op1C);
     Value *WideX = Builder.CreateSExt(X, Ty);
     return BinaryOperator::CreateAdd(WideX, NewC);
   }
   // (zext (X +nuw NarrowC)) + C --> (zext X) + (zext(NarrowC) + C)
   if (match(Op0, m_OneUse(m_ZExt(m_NUWAdd(m_Value(X), m_Constant(NarrowC)))))) {
-    Constant *WideC = ConstantExpr::getZExt(NarrowC, Ty);
-    Constant *NewC = ConstantExpr::getAdd(WideC, Op1C);
+    Value *WideC = Builder.CreateZExt(NarrowC, Ty);
+    Value *NewC = Builder.CreateAdd(WideC, Op1C);
     Value *WideX = Builder.CreateZExt(X, Ty);
     return BinaryOperator::CreateAdd(WideX, NewC);
   }
