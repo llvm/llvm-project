@@ -641,6 +641,33 @@ foreach vtiToWti = AllWidenableIntVectors in {
               (!cast<Instruction>("PseudoVWSLL_VI_"#vti.LMul.MX#"_MASK")
                  wti.RegClass:$merge, vti.RegClass:$rs2, uimm5:$rs1,
                  (vti.Mask V0), GPR:$vl, vti.Log2SEW, TAIL_AGNOSTIC)>;
+
+    def : Pat<(riscv_vwsll_vl
+                 (vti.Vector vti.RegClass:$rs2),
+                 (vti.Vector vti.RegClass:$rs1),
+                 (wti.Vector wti.RegClass:$merge),
+                 (vti.Mask V0), VLOpFrag),
+              (!cast<Instruction>("PseudoVWSLL_VV_"#vti.LMul.MX#"_MASK")
+                 wti.RegClass:$merge, vti.RegClass:$rs2, vti.RegClass:$rs1,
+                 (vti.Mask V0), GPR:$vl, vti.Log2SEW, TAIL_AGNOSTIC)>;
+
+    def : Pat<(riscv_vwsll_vl
+                 (vti.Vector vti.RegClass:$rs2),
+                 (vti.Vector (Low8BitsSplatPat (XLenVT GPR:$rs1))),
+                 (wti.Vector wti.RegClass:$merge),
+                 (vti.Mask V0), VLOpFrag),
+              (!cast<Instruction>("PseudoVWSLL_VX_"#vti.LMul.MX#"_MASK")
+                 wti.RegClass:$merge, vti.RegClass:$rs2, GPR:$rs1,
+                 (vti.Mask V0), GPR:$vl, vti.Log2SEW, TAIL_AGNOSTIC)>;
+
+    def : Pat<(riscv_vwsll_vl
+                 (vti.Vector vti.RegClass:$rs2),
+                 (vti.Vector (SplatPat_uimm5 uimm5:$rs1)),
+                 (wti.Vector wti.RegClass:$merge),
+                 (vti.Mask V0), VLOpFrag),
+              (!cast<Instruction>("PseudoVWSLL_VI_"#vti.LMul.MX#"_MASK")
+                 wti.RegClass:$merge, vti.RegClass:$rs2, uimm5:$rs1,
+                 (vti.Mask V0), GPR:$vl, vti.Log2SEW, TAIL_AGNOSTIC)>;
   }
 }
 
