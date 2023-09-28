@@ -1375,7 +1375,7 @@ def Target_ExitDataOp: OpenMP_Op<"target_exit_data",
 // 2.14.5 target construct
 //===----------------------------------------------------------------------===//
 
-def TargetOp : OpenMP_Op<"target",[AttrSizedOperandSegments]> {
+def TargetOp : OpenMP_Op<"target",[OutlineableOpenMPOpInterface, AttrSizedOperandSegments]> {
   let summary = "target construct";
   let description = [{
     The target construct includes a region of code which is to be executed
