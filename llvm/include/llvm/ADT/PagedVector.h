@@ -174,7 +174,7 @@ public:
         Allocator.getPointer()->Deallocate(Page);
     }
     // If we own the allocator, simply reset it.
-    if (Allocator.getInt() == true)
+    if (Allocator.getInt())
       Allocator.getPointer()->Reset();
     PageToDataPtrs.clear();
   }
