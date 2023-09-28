@@ -617,7 +617,7 @@ void FileManager::GetUniqueIDMapping(
   UIDToFiles.resize(NextFileUID);
 
   for (const auto &Entry : SeenFileEntries) {
-    // Only return existing non-virtual files.
+    // Only return files that exist and are not redirected.
     if (!Entry.getValue() || !Entry.getValue()->V.is<FileEntry *>())
       continue;
     FileEntryRef FE(Entry);
