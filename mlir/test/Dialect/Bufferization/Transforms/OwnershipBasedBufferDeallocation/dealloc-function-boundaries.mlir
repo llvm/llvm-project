@@ -1,6 +1,6 @@
 // RUN: mlir-opt --allow-unregistered-dialect -verify-diagnostics -ownership-based-buffer-deallocation=private-function-dynamic-ownership=false \
 // RUN:  --buffer-deallocation-simplification -split-input-file %s | FileCheck %s
-// RUN: mlir-opt --allow-unregistered-dialect -verify-diagnostics -ownership-based-buffer-deallocation \
+// RUN: mlir-opt --allow-unregistered-dialect -verify-diagnostics -ownership-based-buffer-deallocation=private-function-dynamic-ownership=true \
 // RUN:  --buffer-deallocation-simplification -split-input-file %s | FileCheck %s --check-prefix=CHECK-DYNAMIC
 
 // RUN: mlir-opt %s -buffer-deallocation-pipeline --split-input-file > /dev/null
@@ -94,26 +94,34 @@ func.func private @redundantOperations(%arg0: memref<2xf32>) {
 
 func.func private @memref_in_function_results(
   %arg0: memref<5xf32>,
-  %arg2: memref<5xf32>) -> (memref<15xf32>) {
+  %arg1: memref<10xf32>,
+  %arg2: memref<5xf32>) -> (memref<10xf32>, memref<15xf32>) {
   %x = memref.alloc() : memref<15xf32>
   %y = memref.alloc() : memref<5xf32>
   test.buffer_based in(%arg0: memref<5xf32>) out(%y: memref<5xf32>)
   test.copy(%y, %arg2) : (memref<5xf32>, memref<5xf32>)
-  return %x : memref<15xf32>
+  return %arg1, %x : memref<10xf32>, memref<15xf32>
 }
 
 // CHECK-LABEL: func private @memref_in_function_results
-//       CHECK: (%[[ARG0:.*]]: memref<5xf32>,
+//       CHECK: (%[[ARG0:.*]]: memref<5xf32>, %[[ARG1:.*]]: memref<10xf32>,
 //  CHECK-SAME: %[[RESULT:.*]]: memref<5xf32>)
 //       CHECK: %[[X:.*]] = memref.alloc()
 //       CHECK: %[[Y:.*]] = memref.alloc()
 //       CHECK: test.copy
+//  CHECK-NEXT: %[[V0:.+]] = scf.if %false
+//  CHECK-NEXT:   scf.yield %[[ARG1]]
+//  CHECK-NEXT: } else {
+//  CHECK-NEXT:   %[[CLONE:.+]] = bufferization.clone %[[ARG1]]
+//  CHECK-NEXT:   scf.yield %[[CLONE]]
+//  CHECK-NEXT: }
 //       CHECK: bufferization.dealloc (%[[Y]] : {{.*}}) if (%true{{[0-9_]*}})
 //   CHECK-NOT: retain
-//       CHECK: return %[[X]]
+//       CHECK: return %[[V0]], %[[X]]
 
 // CHECK-DYNAMIC-LABEL: func private @memref_in_function_results
-//  CHECK-DYNAMIC-SAME: (%[[ARG0:.*]]: memref<5xf32>, %[[RESULT:.*]]: memref<5xf32>, %[[ARG3:.*]]: i1, %[[ARG5:.*]]: i1)
+//       CHECK-DYNAMIC: (%[[ARG0:.*]]: memref<5xf32>, %[[ARG1:.*]]: memref<10xf32>,
+//  CHECK-DYNAMIC-SAME: %[[RESULT:.*]]: memref<5xf32>, %[[ARG3:.*]]: i1, %[[ARG4:.*]]: i1, %[[ARG5:.*]]: i1)
 //       CHECK-DYNAMIC: %[[X:.*]] = memref.alloc()
 //       CHECK-DYNAMIC: %[[Y:.*]] = memref.alloc()
 //       CHECK-DYNAMIC: test.copy
@@ -121,6 +129,6 @@ func.func private @memref_in_function_results(
 //       CHECK-DYNAMIC: %[[BASE1:[a-zA-Z0-9_]+]], {{.+}} = memref.extract_strided_metadata %[[RESULT]]
 //       CHECK-DYNAMIC: bufferization.dealloc (%[[Y]] : {{.*}}) if (%true{{[0-9_]*}})
 //   CHECK-DYNAMIC-NOT: retain
-//       CHECK-DYNAMIC: bufferization.dealloc (%[[BASE0]], %[[BASE1]] : {{.*}}) if (%[[ARG3]], %[[ARG5]])
-//   CHECK-DYNAMIC-NOT: retain
-//       CHECK-DYNAMIC: return %[[X]], %true
+//       CHECK-DYNAMIC: [[OWN:%.+]] = bufferization.dealloc (%[[BASE0]], %[[BASE1]] : {{.*}}) if (%[[ARG3]], %[[ARG5]]) retain (%[[ARG1]] :
+//       CHECK-DYNAMIC: [[OR:%.+]] = arith.ori [[OWN]], %[[ARG4]]
+//       CHECK-DYNAMIC: return %[[ARG1]], %[[X]], [[OR]], %true
