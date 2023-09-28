@@ -35,8 +35,6 @@ add_integration_test(
   SUITE libc-startup-tests
   SRCS
     init_fini_array_test.cpp
-  COMPILE_OPTIONS
-    -Wno-prio-ctor-dtor
 )
 
 add_integration_test(

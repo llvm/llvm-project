@@ -48,7 +48,7 @@ __attribute__((constructor(65535))) void run_after() {
 __attribute__((constructor)) void set_initval() {
   initval = INITVAL_INITIALIZER;
 }
-__attribute__((destructor(1))) void reset_initval() {
+__attribute__((destructor(101))) void reset_initval() {
   ASSERT_TRUE(global_destroyed);
   initval = 0;
 }
