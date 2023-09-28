@@ -219,6 +219,24 @@ public:
   bool fmulByZeroIsZero(Value *MulVal, FastMathFlags FMF,
                         const Instruction *CtxI) const;
 
+  Constant *getLosslessUnsignedTrunc(Constant *C, Type *TruncTy) {
+    Constant *TruncC = ConstantExpr::getTrunc(C, TruncTy);
+    Constant *ExtTruncC =
+        ConstantFoldCastOperand(Instruction::ZExt, TruncC, C->getType(), DL);
+    if (ExtTruncC && ExtTruncC == C)
+      return TruncC;
+    return nullptr;
+  }
+
+  Constant *getLosslessSignedTrunc(Constant *C, Type *TruncTy) {
+    Constant *TruncC = ConstantExpr::getTrunc(C, TruncTy);
+    Constant *ExtTruncC =
+        ConstantFoldCastOperand(Instruction::SExt, TruncC, C->getType(), DL);
+    if (ExtTruncC && ExtTruncC == C)
+      return TruncC;
+    return nullptr;
+  }
+
 private:
   bool annotateAnyAllocSite(CallBase &Call, const TargetLibraryInfo *TLI);
   bool isDesirableIntType(unsigned BitWidth) const;
