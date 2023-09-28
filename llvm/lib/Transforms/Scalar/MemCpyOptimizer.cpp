@@ -332,6 +332,17 @@ static bool writtenBetween(MemorySSA *MSSA, BatchAAResults &AA,
   return !MSSA->dominates(Clobber, Start);
 }
 
+// Update AA metadata
+static void combineAAMetadata(Instruction *ReplInst, Instruction *I) {
+  // FIXME: MD_tbaa_struct and MD_mem_parallel_loop_access should also be
+  // handled here, but combineMetadata doesn't support them yet
+  unsigned KnownIDs[] = {LLVMContext::MD_tbaa, LLVMContext::MD_alias_scope,
+                         LLVMContext::MD_noalias,
+                         LLVMContext::MD_invariant_group,
+                         LLVMContext::MD_access_group};
+  combineMetadata(ReplInst, I, KnownIDs, true);
+}
+
 /// When scanning forward over instructions, we look for some other patterns to
 /// fold away. In particular, this looks for stores to neighboring locations of
 /// memory. If it sees enough consecutive ones, it attempts to merge them
@@ -1086,16 +1097,9 @@ bool MemCpyOptPass::performCallSlotOptzn(Instruction *cpyLoad,
                       MSSA->getMemoryAccess(C));
   }
 
-  // Update AA metadata
-  // FIXME: MD_tbaa_struct and MD_mem_parallel_loop_access should also be
-  // handled here, but combineMetadata doesn't support them yet
-  unsigned KnownIDs[] = {LLVMContext::MD_tbaa, LLVMContext::MD_alias_scope,
-                         LLVMContext::MD_noalias,
-                         LLVMContext::MD_invariant_group,
-                         LLVMContext::MD_access_group};
-  combineMetadata(C, cpyLoad, KnownIDs, true);
+  combineAAMetadata(C, cpyLoad);
   if (cpyLoad != cpyStore)
-    combineMetadata(C, cpyStore, KnownIDs, true);
+    combineAAMetadata(C, cpyStore);
 
   ++NumCallSlot;
   return true;
@@ -1694,6 +1698,7 @@ bool MemCpyOptPass::processImmutArgument(CallBase &CB, unsigned ArgNo) {
                     << "  " << CB << "\n");
 
   // Otherwise we're good!  Update the immut argument.
+  combineAAMetadata(&CB, MDep);
   CB.setArgOperand(ArgNo, MDep->getSource());
   ++NumMemCpyInstr;
   return true;
