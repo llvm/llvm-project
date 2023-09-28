@@ -16958,6 +16958,18 @@ SDValue DAGCombiner::visitFREM(SDNode *N) {
   if (SDValue NewSel = foldBinOpIntoSelect(N))
     return NewSel;
 
+  // (frem x, y) -> (fma (fneg (ftrunc (fdiv x, y))), y, x)
+  if (Flags.hasApproximateFuncs() && Flags.hasNoSignedZeros() &&
+      Flags.hasNoInfs() && !TLI.isOperationLegalOrCustom(ISD::FREM, VT) &&
+      TLI.isOperationLegalOrCustom(ISD::FTRUNC, VT) &&
+      TLI.isOperationLegalOrCustom(ISD::FMA, VT)) {
+    SDLoc Loc(N);
+    SDValue Div = DAG.getNode(ISD::FDIV, Loc, VT, N0, N1);
+    SDValue Trunc = DAG.getNode(ISD::FTRUNC, Loc, VT, Div);
+    return DAG.getNode(ISD::FMA, Loc, VT,
+                       DAG.getNode(ISD::FNEG, Loc, VT, Trunc), N1, N0);
+  }
+
   return SDValue();
 }
 

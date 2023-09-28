@@ -4,16 +4,13 @@
 define float @frem32(float %a, float %b) {
 ; CHECK-LABEL: frem32:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    mflr 0
-; CHECK-NEXT:    stdu 1, -32(1)
-; CHECK-NEXT:    std 0, 48(1)
-; CHECK-NEXT:    .cfi_def_cfa_offset 32
-; CHECK-NEXT:    .cfi_offset lr, 16
-; CHECK-NEXT:    bl fmodf
-; CHECK-NEXT:    nop
-; CHECK-NEXT:    addi 1, 1, 32
-; CHECK-NEXT:    ld 0, 16(1)
-; CHECK-NEXT:    mtlr 0
+; CHECK-NEXT:    xsresp 0, 2
+; CHECK-NEXT:    fmr 4, 1
+; CHECK-NEXT:    xsmulsp 3, 1, 0
+; CHECK-NEXT:    xsnmsubasp 4, 2, 3
+; CHECK-NEXT:    xsmaddasp 3, 0, 4
+; CHECK-NEXT:    xsrdpiz 0, 3
+; CHECK-NEXT:    xsnmsubasp 1, 0, 2
 ; CHECK-NEXT:    blr
 entry:
   %rem = frem fast float %a, %b
@@ -23,16 +20,17 @@ entry:
 define double @frem64(double %a, double %b) {
 ; CHECK-LABEL: frem64:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    mflr 0
-; CHECK-NEXT:    stdu 1, -32(1)
-; CHECK-NEXT:    std 0, 48(1)
-; CHECK-NEXT:    .cfi_def_cfa_offset 32
-; CHECK-NEXT:    .cfi_offset lr, 16
-; CHECK-NEXT:    bl fmod
-; CHECK-NEXT:    nop
-; CHECK-NEXT:    addi 1, 1, 32
-; CHECK-NEXT:    ld 0, 16(1)
-; CHECK-NEXT:    mtlr 0
+; CHECK-NEXT:    vspltisw 2, -1
+; CHECK-NEXT:    xsredp 0, 2
+; CHECK-NEXT:    fmr 4, 1
+; CHECK-NEXT:    xvcvsxwdp 3, 34
+; CHECK-NEXT:    xsmaddadp 3, 2, 0
+; CHECK-NEXT:    xsnmsubadp 0, 0, 3
+; CHECK-NEXT:    xsmuldp 3, 1, 0
+; CHECK-NEXT:    xsnmsubadp 4, 2, 3
+; CHECK-NEXT:    xsmaddadp 3, 0, 4
+; CHECK-NEXT:    xsrdpiz 0, 3
+; CHECK-NEXT:    xsnmsubadp 1, 0, 2
 ; CHECK-NEXT:    blr
 entry:
   %rem = frem fast double %a, %b
@@ -42,59 +40,13 @@ entry:
 define <4 x float> @frem4x32(<4 x float> %a, <4 x float> %b) {
 ; CHECK-LABEL: frem4x32:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    mflr 0
-; CHECK-NEXT:    stdu 1, -96(1)
-; CHECK-NEXT:    std 0, 112(1)
-; CHECK-NEXT:    .cfi_def_cfa_offset 96
-; CHECK-NEXT:    .cfi_offset lr, 16
-; CHECK-NEXT:    .cfi_offset v28, -64
-; CHECK-NEXT:    .cfi_offset v29, -48
-; CHECK-NEXT:    .cfi_offset v30, -32
-; CHECK-NEXT:    .cfi_offset v31, -16
-; CHECK-NEXT:    xxsldwi 0, 34, 34, 3
-; CHECK-NEXT:    stxv 60, 32(1) # 16-byte Folded Spill
-; CHECK-NEXT:    xscvspdpn 1, 0
-; CHECK-NEXT:    xxsldwi 0, 35, 35, 3
-; CHECK-NEXT:    stxv 61, 48(1) # 16-byte Folded Spill
-; CHECK-NEXT:    stxv 62, 64(1) # 16-byte Folded Spill
-; CHECK-NEXT:    stxv 63, 80(1) # 16-byte Folded Spill
-; CHECK-NEXT:    xscvspdpn 2, 0
-; CHECK-NEXT:    vmr 31, 3
-; CHECK-NEXT:    vmr 30, 2
-; CHECK-NEXT:    bl fmodf
-; CHECK-NEXT:    nop
-; CHECK-NEXT:    xxsldwi 0, 62, 62, 1
-; CHECK-NEXT:    xscpsgndp 61, 1, 1
-; CHECK-NEXT:    xscvspdpn 1, 0
-; CHECK-NEXT:    xxsldwi 0, 63, 63, 1
-; CHECK-NEXT:    xscvspdpn 2, 0
-; CHECK-NEXT:    bl fmodf
-; CHECK-NEXT:    nop
-; CHECK-NEXT:    # kill: def $f1 killed $f1 def $vsl1
-; CHECK-NEXT:    xxmrghd 0, 1, 61
-; CHECK-NEXT:    xscvspdpn 1, 62
-; CHECK-NEXT:    xscvspdpn 2, 63
-; CHECK-NEXT:    xvcvdpsp 60, 0
-; CHECK-NEXT:    bl fmodf
-; CHECK-NEXT:    nop
-; CHECK-NEXT:    xxswapd 0, 62
-; CHECK-NEXT:    xscpsgndp 61, 1, 1
-; CHECK-NEXT:    xscvspdpn 1, 0
-; CHECK-NEXT:    xxswapd 0, 63
-; CHECK-NEXT:    xscvspdpn 2, 0
-; CHECK-NEXT:    bl fmodf
-; CHECK-NEXT:    nop
-; CHECK-NEXT:    # kill: def $f1 killed $f1 def $vsl1
-; CHECK-NEXT:    xxmrghd 0, 61, 1
-; CHECK-NEXT:    lxv 63, 80(1) # 16-byte Folded Reload
-; CHECK-NEXT:    lxv 62, 64(1) # 16-byte Folded Reload
-; CHECK-NEXT:    lxv 61, 48(1) # 16-byte Folded Reload
-; CHECK-NEXT:    xvcvdpsp 34, 0
-; CHECK-NEXT:    vmrgew 2, 2, 28
-; CHECK-NEXT:    lxv 60, 32(1) # 16-byte Folded Reload
-; CHECK-NEXT:    addi 1, 1, 96
-; CHECK-NEXT:    ld 0, 16(1)
-; CHECK-NEXT:    mtlr 0
+; CHECK-NEXT:    xvresp 0, 35
+; CHECK-NEXT:    vmr 4, 2
+; CHECK-NEXT:    xvmulsp 1, 34, 0
+; CHECK-NEXT:    xvnmsubasp 36, 35, 1
+; CHECK-NEXT:    xvmaddasp 1, 0, 36
+; CHECK-NEXT:    xvrspiz 0, 1
+; CHECK-NEXT:    xvnmsubasp 34, 0, 35
 ; CHECK-NEXT:    blr
 entry:
   %rem = frem fast <4 x float> %a, %b
@@ -104,38 +56,18 @@ entry:
 define <2 x double> @frem2x64(<2 x double> %a, <2 x double> %b) {
 ; CHECK-LABEL: frem2x64:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    mflr 0
-; CHECK-NEXT:    stdu 1, -80(1)
-; CHECK-NEXT:    std 0, 96(1)
-; CHECK-NEXT:    .cfi_def_cfa_offset 80
-; CHECK-NEXT:    .cfi_offset lr, 16
-; CHECK-NEXT:    .cfi_offset v29, -48
-; CHECK-NEXT:    .cfi_offset v30, -32
-; CHECK-NEXT:    .cfi_offset v31, -16
-; CHECK-NEXT:    stxv 62, 48(1) # 16-byte Folded Spill
-; CHECK-NEXT:    stxv 63, 64(1) # 16-byte Folded Spill
-; CHECK-NEXT:    vmr 31, 3
-; CHECK-NEXT:    xscpsgndp 2, 63, 63
-; CHECK-NEXT:    vmr 30, 2
-; CHECK-NEXT:    xscpsgndp 1, 62, 62
-; CHECK-NEXT:    stxv 61, 32(1) # 16-byte Folded Spill
-; CHECK-NEXT:    bl fmod
-; CHECK-NEXT:    nop
-; CHECK-NEXT:    xscpsgndp 61, 1, 1
-; CHECK-NEXT:    xxswapd 1, 62
-; CHECK-NEXT:    xxswapd 2, 63
-; CHECK-NEXT:    # kill: def $f1 killed $f1 killed $vsl1
-; CHECK-NEXT:    # kill: def $f2 killed $f2 killed $vsl2
-; CHECK-NEXT:    bl fmod
-; CHECK-NEXT:    nop
-; CHECK-NEXT:    # kill: def $f1 killed $f1 def $vsl1
-; CHECK-NEXT:    xxmrghd 34, 61, 1
-; CHECK-NEXT:    lxv 63, 64(1) # 16-byte Folded Reload
-; CHECK-NEXT:    lxv 62, 48(1) # 16-byte Folded Reload
-; CHECK-NEXT:    lxv 61, 32(1) # 16-byte Folded Reload
-; CHECK-NEXT:    addi 1, 1, 80
-; CHECK-NEXT:    ld 0, 16(1)
-; CHECK-NEXT:    mtlr 0
+; CHECK-NEXT:    addis 3, 2, .LCPI3_0@toc@ha
+; CHECK-NEXT:    xvredp 0, 35
+; CHECK-NEXT:    vmr 4, 2
+; CHECK-NEXT:    addi 3, 3, .LCPI3_0@toc@l
+; CHECK-NEXT:    lxv 1, 0(3)
+; CHECK-NEXT:    xvmaddadp 1, 35, 0
+; CHECK-NEXT:    xvnmsubadp 0, 0, 1
+; CHECK-NEXT:    xvmuldp 1, 34, 0
+; CHECK-NEXT:    xvnmsubadp 36, 35, 1
+; CHECK-NEXT:    xvmaddadp 1, 0, 36
+; CHECK-NEXT:    xvrdpiz 0, 1
+; CHECK-NEXT:    xvnmsubadp 34, 0, 35
 ; CHECK-NEXT:    blr
 entry:
   %rem = frem fast <2 x double> %a, %b
