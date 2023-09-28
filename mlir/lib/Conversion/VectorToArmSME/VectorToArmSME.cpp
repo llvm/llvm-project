@@ -332,6 +332,8 @@ struct SplatOpToArmSMELowering : public OpRewritePattern<vector::SplatOp> {
     auto tileElementType = tileType.getElementType();
 
     assert(srcType.isIntOrFloat() && "Invalid source type for vector.splat");
+    // Avoid unused-variable warning when building without assertions.
+    (void)srcType;
 
     // First, broadcast the scalar to a 1-d vector.
     VectorType tileSliceType = VectorType::Builder(tileType).dropDim(0);
