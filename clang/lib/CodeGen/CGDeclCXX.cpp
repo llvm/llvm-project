@@ -675,6 +675,10 @@ void CodeGenModule::EmitCXXModuleInitFunc(Module *Primary) {
     // No Itanium initializer in header like modules.
     if (M->isHeaderLikeModule())
       continue; // TODO: warn of mixed use of module map modules and C++20?
+    // We're allowed to skip the initialization if we are sure it doesn't
+    // do any thing.
+    if (M->isNamedModuleInterfaceHasNoInit())
+      continue;
     llvm::FunctionType *FTy = llvm::FunctionType::get(VoidTy, false);
     SmallString<256> FnName;
     {
@@ -731,8 +735,7 @@ void CodeGenModule::EmitCXXModuleInitFunc(Module *Primary) {
     // If we have a completely empty initializer then we do not want to create
     // the guard variable.
     ConstantAddress GuardAddr = ConstantAddress::invalid();
-    if (!AllImports.empty() || !PrioritizedCXXGlobalInits.empty() ||
-        !CXXGlobalInits.empty()) {
+    if (!ModuleInits.empty()) {
       // Create the guard var.
       llvm::GlobalVariable *Guard = new llvm::GlobalVariable(
           getModule(), Int8Ty, /*isConstant=*/false,

@@ -358,6 +358,10 @@ public:
   /// to a regular (public) module map.
   unsigned ModuleMapIsPrivate : 1;
 
+  /// Whether this C++20 named modules doesn't need an initializer.
+  /// This is only meaningful for C++20 modules.
+  unsigned NamedModuleHasNoInit : 1;
+
   /// Describes the visibility of the various names within a
   /// particular module.
   enum NameVisibilityKind {
@@ -595,6 +599,8 @@ public:
   bool isModuleInterfaceUnit() const {
     return Kind == ModuleInterfaceUnit || Kind == ModulePartitionInterface;
   }
+
+  bool isNamedModuleInterfaceHasNoInit() const { return NamedModuleHasNoInit; }
 
   /// Get the primary module interface name from a partition.
   StringRef getPrimaryModuleInterfaceName() const {
