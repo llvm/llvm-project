@@ -11,8 +11,8 @@ int main(int argc, char **argv) {
   __hwasan_enable_allocator_tagging();
   char a[] = {static_cast<char>(argc), 2, 3, 4};
   char *p = (char *)malloc(sizeof(a));
-  free(p);
   memcpy(p, a, sizeof(a));
+  free(p);
   // CHECK: HWAddressSanitizer: tag-mismatch on address
   // CHECK: Cause: use-after-free
   return memcmp(p, a, sizeof(a));
