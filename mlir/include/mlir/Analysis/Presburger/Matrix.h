@@ -17,7 +17,6 @@
 
 #include "mlir/Support/LLVM.h"
 #include "mlir/Analysis/Presburger/Fraction.h"
-#include "mlir/Analysis/Presburger/Matrix.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/Support/raw_ostream.h"
 

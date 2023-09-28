@@ -272,6 +272,12 @@ void memref::populateMemRefNarrowTypeEmulationConversions(
 
         StridedLayoutAttr layoutAttr;
         if (offset != 0) {
+          // Check if the number of bytes are a multiple of the loadStoreWidth
+          // and if so, divide it by the loadStoreWidth to get the offset.
+          if ((offset * width) % loadStoreWidth != 0)
+            return std::nullopt;
+          offset = (offset * width) / loadStoreWidth;
+
           layoutAttr = StridedLayoutAttr::get(ty.getContext(), offset,
                                               ArrayRef<int64_t>{1});
         }

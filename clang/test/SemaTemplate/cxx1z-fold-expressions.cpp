@@ -124,3 +124,11 @@ namespace PR30738 {
   int test_h3 = h<struct X>(1, 2, 3);
   N::S test_h4 = h<struct X>(N::S(), N::S(), N::S()); // expected-note {{instantiation of}}
 }
+
+namespace GH67395 {
+template <typename>
+bool f();
+
+template <typename... T>
+void g(bool = (f<T>() || ...));
+}

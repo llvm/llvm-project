@@ -1347,12 +1347,19 @@ LogicalResult ModuleImport::convertInstruction(llvm::Instruction *inst) {
     if (failed(convertCallTypeAndOperands(callInst, types, operands)))
       return failure();
 
+    auto funcTy =
+        dyn_cast<LLVMFunctionType>(convertType(callInst->getFunctionType()));
+    if (!funcTy)
+      return failure();
+
     CallOp callOp;
+
     if (llvm::Function *callee = callInst->getCalledFunction()) {
       callOp = builder.create<CallOp>(
-          loc, types, SymbolRefAttr::get(context, callee->getName()), operands);
+          loc, funcTy, SymbolRefAttr::get(context, callee->getName()),
+          operands);
     } else {
-      callOp = builder.create<CallOp>(loc, types, operands);
+      callOp = builder.create<CallOp>(loc, funcTy, operands);
     }
     setFastmathFlagsAttr(inst, callOp);
     if (!callInst->getType()->isVoidTy())
@@ -1411,20 +1418,25 @@ LogicalResult ModuleImport::convertInstruction(llvm::Instruction *inst) {
                                  unwindArgs)))
       return failure();
 
+    auto funcTy =
+        dyn_cast<LLVMFunctionType>(convertType(invokeInst->getFunctionType()));
+    if (!funcTy)
+      return failure();
+
     // Create the invoke operation. Normal destination block arguments will be
     // added later on to handle the case in which the operation result is
     // included in this list.
     InvokeOp invokeOp;
     if (llvm::Function *callee = invokeInst->getCalledFunction()) {
       invokeOp = builder.create<InvokeOp>(
-          loc, types,
+          loc, funcTy,
           SymbolRefAttr::get(builder.getContext(), callee->getName()), operands,
           directNormalDest, ValueRange(),
           lookupBlock(invokeInst->getUnwindDest()), unwindArgs);
     } else {
       invokeOp = builder.create<InvokeOp>(
-          loc, types, operands, directNormalDest, ValueRange(),
-          lookupBlock(invokeInst->getUnwindDest()), unwindArgs);
+          loc, funcTy, /*callee=*/nullptr, operands, directNormalDest,
+          ValueRange(), lookupBlock(invokeInst->getUnwindDest()), unwindArgs);
     }
     if (!invokeInst->getType()->isVoidTy())
       mapValue(inst, invokeOp.getResults().front());

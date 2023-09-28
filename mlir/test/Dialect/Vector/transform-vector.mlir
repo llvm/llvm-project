@@ -5,7 +5,7 @@ func.func @matmul_tensors(
   %arg0: tensor<8x16xf32>, %arg1: tensor<16x32xf32>, %arg2: tensor<8x32xf32>)
     -> tensor<8x32xf32> {
 // CHECK-NOT: linalg
-// CHECK: vector.extract {{.*}} : vector<8x4xf32>
+// CHECK: vector.extract {{.*}} : vector<4xf32> from vector<8x4xf32>
 // CHECK: vector.store {{.*}} : memref<8x32xf32>, vector<4xf32>
   %0 = linalg.matmul  ins(%arg0, %arg1: tensor<8x16xf32>, tensor<16x32xf32>)
                      outs(%arg2: tensor<8x32xf32>)

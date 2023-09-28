@@ -32,7 +32,7 @@ bool hasSymbols(const jitlink::Block &B) {
 Error markSectionsLive(jitlink::LinkGraph &G) {
   for (auto &Section : G.sections()) {
     // We only need allocatable sections.
-    if (Section.getMemLifetimePolicy() == orc::MemLifetimePolicy::NoAlloc)
+    if (Section.getMemLifetime() == orc::MemLifetime::NoAlloc)
       continue;
 
     // Skip empty sections.

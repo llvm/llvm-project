@@ -23,7 +23,6 @@ void NORETURN reportInvalidFlag(const char *FlagType, const char *Value);
 
 // Chunk header related errors.
 void NORETURN reportHeaderCorruption(void *Ptr);
-void NORETURN reportHeaderRace(void *Ptr);
 
 // Sanity checks related error.
 void NORETURN reportSanityCheckError(const char *Field);
