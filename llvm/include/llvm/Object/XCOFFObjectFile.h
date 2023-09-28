@@ -844,8 +844,7 @@ private:
 class xcoff_symbol_iterator : public symbol_iterator {
 public:
   xcoff_symbol_iterator(const basic_symbol_iterator &B)
-      : symbol_iterator(SymbolRef(B->getRawDataRefImpl(),
-                                  cast<XCOFFObjectFile>(B->getObject()))) {}
+      : symbol_iterator(B) {}
 
   const XCOFFSymbolRef *operator->() const {
     return static_cast<const XCOFFSymbolRef *>(symbol_iterator::operator->());
