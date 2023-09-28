@@ -123,21 +123,10 @@ code.line:has(.bb-select):before {
   font-size: x-small;
   flex-grow: 1;
 }
-.value > summary {
+.value summary {
   background-color: #ace;
   display: flex;
-  cursor: pointer;
-}
-.value > summary::before {
-  content: '►';
-  margin-right: 0.5em;
-  font-size: 0.9em;
-}
-.value[open] > summary::before {
-  content: '▼';
-}
-.value > summary > .location {
-  margin-left: auto;
+  justify-content: space-between;
 }
 .value .address {
   font-size: xx-small;
