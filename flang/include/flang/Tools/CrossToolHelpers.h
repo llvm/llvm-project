@@ -18,6 +18,24 @@
 
 #include "mlir/Dialect/OpenMP/OpenMPDialect.h"
 #include "mlir/IR/BuiltinOps.h"
+#include "llvm/Frontend/Debug/Options.h"
+#include "llvm/Passes/OptimizationLevel.h"
+
+/// Configuriation for the MLIR to LLVM pass pipeline.
+struct MLIRToLLVMPassPipelineConfig {
+  MLIRToLLVMPassPipelineConfig(llvm::OptimizationLevel level) {
+    OptLevel = level;
+    StackArrays = false;
+    Underscoring = true;
+    LoopVersioning = false;
+    DebugInfo = llvm::codegenoptions::NoDebugInfo;
+  }
+  llvm::OptimizationLevel OptLevel; ///< optimisation level
+  bool StackArrays; ///< convert memory allocations to alloca.
+  bool Underscoring; ///< add underscores to function names.
+  bool LoopVersioning; ///< Run the version loop pass.
+  llvm::codegenoptions::DebugInfoKind DebugInfo; ///< Debug info generation.
+};
 
 struct OffloadModuleOpts {
   OffloadModuleOpts() {}
