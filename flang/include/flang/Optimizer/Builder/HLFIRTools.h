@@ -418,6 +418,10 @@ hlfir::ElementalOp cloneToElementalOp(mlir::Location loc,
 /// would be incorrect.
 bool elementalOpMustProduceTemp(hlfir::ElementalOp elemental);
 
+std::pair<hlfir::Entity, mlir::Value>
+createTempFromMold(mlir::Location loc, fir::FirOpBuilder &builder,
+                   hlfir::Entity mold);
+
 } // namespace hlfir
 
 #endif // FORTRAN_OPTIMIZER_BUILDER_HLFIRTOOLS_H
