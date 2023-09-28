@@ -2109,8 +2109,6 @@ CHECK_SIMPLE_CLAUSE(Read, OMPC_read)
 CHECK_SIMPLE_CLAUSE(Threadprivate, OMPC_threadprivate)
 CHECK_SIMPLE_CLAUSE(Threads, OMPC_threads)
 CHECK_SIMPLE_CLAUSE(Inbranch, OMPC_inbranch)
-CHECK_SIMPLE_CLAUSE(IsDevicePtr, OMPC_is_device_ptr)
-CHECK_SIMPLE_CLAUSE(HasDeviceAddr, OMPC_has_device_addr)
 CHECK_SIMPLE_CLAUSE(Link, OMPC_link)
 CHECK_SIMPLE_CLAUSE(Indirect, OMPC_indirect)
 CHECK_SIMPLE_CLAUSE(Mergeable, OMPC_mergeable)
@@ -2824,6 +2822,57 @@ void OmpStructureChecker::Enter(const parser::OmpClause::UseDeviceAddr &x) {
     }
     CheckMultipleOccurrence(listVars, useDeviceAddrNameList,
         itr->second->source, "USE_DEVICE_ADDR");
+  }
+}
+
+void OmpStructureChecker::Enter(const parser::OmpClause::IsDevicePtr &x) {
+  CheckAllowed(llvm::omp::Clause::OMPC_is_device_ptr);
+  SymbolSourceMap currSymbols;
+  GetSymbolsInObjectList(x.v, currSymbols);
+  semantics::UnorderedSymbolSet listVars;
+  auto isDevicePtrClauses{FindClauses(llvm::omp::Clause::OMPC_is_device_ptr)};
+  for (auto itr = isDevicePtrClauses.first; itr != isDevicePtrClauses.second;
+       ++itr) {
+    const auto &isDevicePtrClause{
+        std::get<parser::OmpClause::IsDevicePtr>(itr->second->u)};
+    const auto &isDevicePtrList{isDevicePtrClause.v};
+    std::list<parser::Name> isDevicePtrNameList;
+    for (const auto &ompObject : isDevicePtrList.v) {
+      if (const auto *name{parser::Unwrap<parser::Name>(ompObject)}) {
+        if (name->symbol) {
+          if (!(IsBuiltinCPtr(*(name->symbol)))) {
+            context_.Say(itr->second->source,
+                "Variable '%s' in IS_DEVICE_PTR clause must be of type C_PTR"_err_en_US,
+                name->ToString());
+          } else {
+            isDevicePtrNameList.push_back(*name);
+          }
+        }
+      }
+    }
+  }
+}
+
+void OmpStructureChecker::Enter(const parser::OmpClause::HasDeviceAddr &x) {
+  CheckAllowed(llvm::omp::Clause::OMPC_has_device_addr);
+  SymbolSourceMap currSymbols;
+  GetSymbolsInObjectList(x.v, currSymbols);
+  semantics::UnorderedSymbolSet listVars;
+  auto hasDeviceAddrClauses{
+      FindClauses(llvm::omp::Clause::OMPC_has_device_addr)};
+  for (auto itr = hasDeviceAddrClauses.first;
+       itr != hasDeviceAddrClauses.second; ++itr) {
+    const auto &hasDeviceAddrClause{
+        std::get<parser::OmpClause::HasDeviceAddr>(itr->second->u)};
+    const auto &hasDeviceAddrList{hasDeviceAddrClause.v};
+    std::list<parser::Name> hasDeviceAddrNameList;
+    for (const auto &ompObject : hasDeviceAddrList.v) {
+      if (const auto *name{parser::Unwrap<parser::Name>(ompObject)}) {
+        if (name->symbol) {
+          hasDeviceAddrNameList.push_back(*name);
+        }
+      }
+    }
   }
 }
 

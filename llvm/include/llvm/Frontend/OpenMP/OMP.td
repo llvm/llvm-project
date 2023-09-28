@@ -299,13 +299,11 @@ def OMPC_UseDevicePtr : Clause<"use_device_ptr"> {
 }
 def OMPC_IsDevicePtr : Clause<"is_device_ptr"> {
   let clangClass = "OMPIsDevicePtrClause";
-  let flangClass = "Name";
-  let isValueList = true;
+  let flangClass = "OmpObjectList";
 }
 def OMPC_HasDeviceAddr : Clause<"has_device_addr"> {
   let clangClass = "OMPHasDeviceAddrClause";
-  let flangClass = "Name";
-  let isValueList = true;
+  let flangClass = "OmpObjectList";
 }
 def OMPC_TaskReduction : Clause<"task_reduction"> {
   let clangClass = "OMPTaskReductionClause";
