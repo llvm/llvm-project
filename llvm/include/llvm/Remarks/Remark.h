@@ -136,7 +136,7 @@ private:
   /// In order to avoid unwanted copies, "delete" the copy constructor.
   /// If a copy is needed, it should be done through `Remark::clone()`.
   Remark(const Remark &) = default;
-  Remark &operator=(const Remark &) = default;
+  Remark& operator=(const Remark &) = default;
 };
 
 // Create wrappers for C Binding types (see CBindingWrapping.h).
