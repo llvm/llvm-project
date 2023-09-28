@@ -89,3 +89,11 @@ func.func @arm_sme_move_vector_to_tile_slice_f32__bad_vector_type(%vector : vect
   %0 = arm_sme.move_vector_to_tile_slice %vector, %tile, %tile_slice_index : vector<[8]xf32> into vector<[4]x[4]xf32>
   return %0 : vector<[4]x[4]xf32>
 }
+
+// -----
+
+func.func @arm_sme_move_tile_slice_to_vector__bad_result_type(%tile : vector<[4]x[4]xf32>, %tile_slice_index : index) -> vector<[2]xf64> {
+  // expected-error@+1 {{op failed to verify that type of 'result' matches type of 'tile' slice}}
+  %0 = arm_sme.move_tile_slice_to_vector %tile[%tile_slice_index] : vector<[2]xf64> from vector<[4]x[4]xf32>
+  return %0 : vector<[2]xf64>
+}
