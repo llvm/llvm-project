@@ -4428,8 +4428,6 @@ bool Parser::ParseCXX11AttributeArgs(
       !hasAttribute(LO.CPlusPlus ? AttributeCommonInfo::Syntax::AS_CXX11
                                  : AttributeCommonInfo::Syntax::AS_C23,
                     ScopeName, AttrName, getTargetInfo(), getLangOpts())) {
-    if (getLangOpts().MicrosoftExt || getLangOpts().HLSL) {
-    }
     // Eat the left paren, then skip to the ending right paren.
     ConsumeParen();
     SkipUntil(tok::r_paren);
