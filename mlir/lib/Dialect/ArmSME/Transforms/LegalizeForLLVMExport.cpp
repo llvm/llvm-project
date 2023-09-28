@@ -550,6 +550,113 @@ struct VectorOuterProductToArmSMELowering
   }
 };
 
+/// Lower `vector.extract` using SME MOVA intrinsics.
+///
+/// Example:
+/// ```
+/// %el = vector.extract %tile[%y,%x]: i32 from vector<[4]x[4]xi32>
+/// ```
+/// Becomes:
+/// ```
+/// %slice = arm_sme.move_tile_slice_to_vector %tile[%y]
+///            : vector<[4]xi32> from vector<[4]x[4]xi32>
+/// %el = vector.extract %slice[%x] : i32 from vector<[4]xi32>
+/// ```
+struct VectorExtractToArmSMELowering
+    : public ConvertOpToLLVMPattern<vector::ExtractOp> {
+  using ConvertOpToLLVMPattern<vector::ExtractOp>::ConvertOpToLLVMPattern;
+
+  LogicalResult
+  matchAndRewrite(vector::ExtractOp extractOp, OpAdaptor adaptor,
+                  ConversionPatternRewriter &rewriter) const override {
+    VectorType sourceType = extractOp.getSourceVectorType();
+    if (!isValidSMETileVectorType(sourceType))
+      return failure();
+
+    auto loc = extractOp.getLoc();
+    auto position = extractOp.getMixedPosition();
+
+    Value sourceVector = extractOp.getVector();
+
+    if (position.empty()) {
+      rewriter.replaceOp(extractOp, sourceVector);
+      return success();
+    }
+
+    Value sliceIndex = vector::getAsValues(rewriter, loc, position[0])[0];
+    auto moveTileSliceToVector =
+        rewriter.create<arm_sme::MoveTileSliceToVectorOp>(loc, sourceVector,
+                                                          sliceIndex);
+
+    if (position.size() == 1) {
+      // Single index case: Extracts a 1D slice.
+      rewriter.replaceOp(extractOp, moveTileSliceToVector);
+      return success();
+    }
+
+    // Two indices case: Extracts a single element.
+    assert(position.size() == 2);
+    rewriter.replaceOpWithNewOp<vector::ExtractOp>(
+        extractOp, moveTileSliceToVector, position[1]);
+
+    return success();
+  }
+};
+
+/// Lower `vector.insert` using SME MOVA intrinsics.
+///
+/// Example:
+/// ```
+/// %new_tile = vector.insert %el, %tile[%y,%x] : i32 into vector<[4]x[4]xi32>
+/// ```
+/// Becomes:
+/// ```
+/// %slice = arm_sme.move_tile_slice_to_vector %tile[%y]
+///            : vector<[4]xi32> from vector<[4]x[4]xi32>
+/// %new_slice = vector.insert %el, %slice[%x] : i32 into vector<[4]xi32>
+/// %new_tile = arm_sme.move_vector_to_tile_slice %new_slice, %tile, %y
+///               : vector<[4]xi32> into vector<[4]x[4]xi32>
+/// ```
+struct VectorInsertToArmSMELowering
+    : public ConvertOpToLLVMPattern<vector::InsertOp> {
+  using ConvertOpToLLVMPattern<vector::InsertOp>::ConvertOpToLLVMPattern;
+
+  LogicalResult
+  matchAndRewrite(vector::InsertOp insertOp, OpAdaptor adaptor,
+                  ConversionPatternRewriter &rewriter) const override {
+    VectorType resultType = insertOp.getResult().getType();
+
+    if (!isValidSMETileVectorType(resultType))
+      return failure();
+
+    auto loc = insertOp.getLoc();
+    auto position = insertOp.getMixedPosition();
+
+    Value source = adaptor.getSource();
+
+    if (position.empty()) {
+      rewriter.replaceOp(insertOp, source);
+      return success();
+    }
+
+    Value tileSlice = source;
+    Value sliceIndex = vector::getAsValues(rewriter, loc, position[0])[0];
+    if (position.size() == 2) {
+      // Two indices case: Insert signle element into tile.
+      // We need to first extract the existing slice and update the element.
+      tileSlice = rewriter.create<arm_sme::MoveTileSliceToVectorOp>(
+          loc, adaptor.getDest(), sliceIndex);
+      tileSlice = rewriter.create<vector::InsertOp>(loc, source, tileSlice,
+                                                    position[1]);
+    }
+
+    // Insert the slice into the destination tile.
+    rewriter.replaceOpWithNewOp<arm_sme::MoveVectorToTileSliceOp>(
+        insertOp, tileSlice, adaptor.getDest(), sliceIndex);
+    return success();
+  }
+};
+
 } // namespace
 
 void mlir::configureArmSMELegalizeForExportTarget(
@@ -604,5 +711,6 @@ void mlir::populateArmSMELegalizeForLLVMExportPatterns(
   patterns.add<
       LoadTileSliceToArmSMELowering, MoveTileSliceToVectorArmSMELowering,
       MoveVectorToTileSliceToArmSMELowering, StoreTileSliceToArmSMELowering,
-      VectorOuterProductToArmSMELowering, ZeroOpConversion>(converter);
+      VectorOuterProductToArmSMELowering, ZeroOpConversion,
+      VectorExtractToArmSMELowering, VectorInsertToArmSMELowering>(converter);
 }

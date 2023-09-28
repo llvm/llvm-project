@@ -496,3 +496,81 @@ func.func @vector_outerproduct_add_masked_f32(%lhs : vector<[4]xf32>, %rhs : vec
   %0 = vector.mask %mask { vector.outerproduct %lhs, %rhs, %acc {kind = #vector.kind<add>} : vector<[4]xf32>, vector<[4]xf32> } : vector<[4]x[4]xi1> -> vector<[4]x[4]xf32>
   "prevent.dce"(%0) : (vector<[4]x[4]xf32>) -> ()
 }
+
+//===----------------------------------------------------------------------===//
+// vector.insert
+//===----------------------------------------------------------------------===//
+
+// -----
+
+// CHECK-LABEL: @vector_insert_slice(
+// CHECK-SAME:                       %[[TILE:.*]]: vector<[4]x[4]xi32>,
+// CHECK-SAME:                       %[[SLICE:.*]]: vector<[4]xi32>,
+// CHECK-SAME:                       %[[INDEX:.*]]: index)
+func.func @vector_insert_slice(%tile: vector<[4]x[4]xi32>, %slice: vector<[4]xi32>, %y: index) -> vector<[4]x[4]xi32>{
+  // CHECK-NEXT: %[[PTRUE:.*]] = arith.constant dense<true> : vector<[4]xi1>
+  // CHECK-NEXT: %[[TILE_ID:.*]] = arm_sme.cast_vector_to_tile %[[TILE]] : vector<[4]x[4]xi32> to i32
+  // CHECK-NEXT: %[[TILE_SLICE_INDEX:.*]] = arith.index_castui %[[INDEX]] : index to i32
+  // CHECK-NEXT: "arm_sme.intr.write.horiz"(%[[TILE_ID]], %[[TILE_SLICE_INDEX]], %[[PTRUE]], %[[SLICE]]) : (i32, i32, vector<[4]xi1>, vector<[4]xi32>) -> ()
+  %new_tile = vector.insert %slice, %tile[%y] : vector<[4]xi32> into vector<[4]x[4]xi32>
+  return %new_tile : vector<[4]x[4]xi32>
+}
+
+// -----
+
+
+// CHECK-LABEL: @vector_insert_element(
+// CHECK-SAME:                         %[[TILE:.*]]: vector<[4]x[4]xi32>,
+// CHECK-SAME:                         %[[EL:.*]]: i32,
+// CHECK-SAME:                         %[[ROW:.*]]: index,
+// CHECK-SAME:                         %[[COL:.*]]: index)
+func.func @vector_insert_element(%tile: vector<[4]x[4]xi32>, %el: i32, %y: index, %x: index) -> vector<[4]x[4]xi32> {
+  // CHECK-NEXT: %[[ZERO_VEC:.*]] = arith.constant dense<0> : vector<[4]xi32>
+  // CHECK-NEXT: %[[PTRUE:.*]] = arith.constant dense<true> : vector<[4]xi1>
+  // CHECK-NEXT: %[[COL_I32:.*]] = builtin.unrealized_conversion_cast %[[COL]] : index to i64
+  // CHECK-NEXT: %[[TILE_ID:.*]] = arm_sme.cast_vector_to_tile %[[TILE]] : vector<[4]x[4]xi32> to i32
+  // CHECK-NEXT: %[[ROW_I32:.*]] = arith.index_cast %[[ROW]] : index to i32
+  // CHECK-NEXT: %[[SLICE:.*]] = "arm_sme.intr.read.horiz"(%[[ZERO_VEC]], %[[PTRUE]], %[[TILE_ID]], %[[ROW_I32]]) : (vector<[4]xi32>, vector<[4]xi1>, i32, i32) -> vector<[4]xi32>
+  // CHECK-NEXT: %[[NEW_SLICE:.*]] = llvm.insertelement %[[EL]], %[[SLICE]]{{\[}}%[[COL_I32]] : i64] : vector<[4]xi32>
+  // CHECK-NEXT: %[[SLICE_INDEX:.*]] = arith.index_castui %[[ROW]] : index to i32
+  // CHECK-NEXT: "arm_sme.intr.write.horiz"(%[[TILE_ID]], %[[SLICE_INDEX]], %[[PTRUE]], %[[NEW_SLICE]]) : (i32, i32, vector<[4]xi1>, vector<[4]xi32>) -> ()
+  %new_tile = vector.insert %el, %tile[%y,%x] : i32 into vector<[4]x[4]xi32>
+  return %new_tile : vector<[4]x[4]xi32>
+}
+
+//===----------------------------------------------------------------------===//
+// vector.extract
+//===----------------------------------------------------------------------===//
+
+// -----
+
+// CHECK-LABEL: @vector_extract_slice(
+// CHECK-SAME:                        %[[TILE:.*]]: vector<[4]x[4]xi32>,
+// CHECK-SAME:                        %[[INDEX:.*]]: index)
+func.func @vector_extract_slice(%tile: vector<[4]x[4]xi32>, %y: index) -> vector<[4]xi32> {
+  // CHECK-NEXT: %[[ZERO_VEC:.*]] = arith.constant dense<0> : vector<[4]xi32>
+  // CHECK-NEXT: %[[PTRUE:.*]] = arith.constant dense<true> : vector<[4]xi1>
+  // CHECK-NEXT: %[[TILE_ID:.*]] = arm_sme.cast_vector_to_tile %[[TILE]] : vector<[4]x[4]xi32> to i32
+  // CHECK-NEXT: %[[TILE_SLICE_INDEX:.*]] = arith.index_cast %[[INDEX]] : index to i32
+  // CHECK-NEXT: %[[SLICE:.*]] = "arm_sme.intr.read.horiz"(%[[ZERO_VEC]], %[[PTRUE]], %[[TILE_ID]], %[[TILE_SLICE_INDEX]]) : (vector<[4]xi32>, vector<[4]xi1>, i32, i32) -> vector<[4]xi32>
+  %slice = vector.extract %tile[%y] : vector<[4]xi32> from vector<[4]x[4]xi32>
+  return %slice : vector<[4]xi32>
+}
+
+// -----
+
+// CHECK-LABEL: @vector_extract_element(
+// CHECK-SAME:                          %[[TILE:.*]]: vector<[4]x[4]xi32>,
+// CHECK-SAME:                          %[[ROW:.*]]: index,
+// CHECK-SAME:                          %[[COL:.*]]: index)
+func.func @vector_extract_element(%tile: vector<[4]x[4]xi32>, %y: index, %x: index) -> i32 {
+  // CHECK-NEXT: %[[ZERO_VEC:.*]] = arith.constant dense<0> : vector<[4]xi32>
+  // CHECK-NEXT: %[[PTRUE:.*]] = arith.constant dense<true> : vector<[4]xi1>
+  // CHECK-NEXT: %[[COL_I32:.*]] = builtin.unrealized_conversion_cast %[[COL]] : index to i64
+  // CHECK-NEXT: %[[TILE_ID:.*]] = arm_sme.cast_vector_to_tile %[[TILE]] : vector<[4]x[4]xi32> to i32
+  // CHECK-NEXT: %[[ROW_I32:.*]] = arith.index_cast %[[ROW]] : index to i32
+  // CHECK-NEXT: %[[SLICE:.*]] = "arm_sme.intr.read.horiz"(%[[ZERO_VEC]], %[[PTRUE]], %[[TILE_ID]], %[[ROW_I32]]) : (vector<[4]xi32>, vector<[4]xi1>, i32, i32) -> vector<[4]xi32>
+  // CHECK-NEXT: %[[EL:.*]] = llvm.extractelement %[[SLICE]]{{\[}}%[[COL_I32]] : i64] : vector<[4]xi32>
+  %el = vector.extract %tile[%y,%x] : i32 from vector<[4]x[4]xi32>
+  return %el : i32
+}
