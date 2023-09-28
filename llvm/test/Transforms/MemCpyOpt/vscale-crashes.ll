@@ -87,29 +87,3 @@ define void @callslotoptzn(<vscale x 4 x float> %val, ptr %out) {
 
 declare <vscale x 4 x i32> @llvm.experimental.stepvector.nxv4i32()
 declare void @llvm.masked.scatter.nxv4f32.nxv4p0f32(<vscale x 4 x float> , <vscale x 4 x ptr> , i32, <vscale x 4 x i1>)
-
-; Make sure we don't crash calling performStackMoveOptzn from processStoreOfLoad.
-define void @load_store(<vscale x 4 x i32> %x) {
-; CHECK-LABEL: @load_store(
-; CHECK-NEXT:    [[SRC:%.*]] = alloca <vscale x 4 x i32>, align 16
-; CHECK-NEXT:    [[DEST:%.*]] = alloca <vscale x 4 x i32>, align 16
-; CHECK-NEXT:    store <vscale x 4 x i32> [[X:%.*]], ptr [[SRC]], align 16
-; CHECK-NEXT:    [[TMP1:%.*]] = call i32 @use_nocapture(ptr nocapture [[SRC]])
-; CHECK-NEXT:    [[SRC_VAL:%.*]] = load <vscale x 4 x i32>, ptr [[SRC]], align 16
-; CHECK-NEXT:    store <vscale x 4 x i32> [[SRC_VAL]], ptr [[DEST]], align 16
-; CHECK-NEXT:    [[TMP2:%.*]] = call i32 @use_nocapture(ptr nocapture [[DEST]])
-; CHECK-NEXT:    ret void
-;
-  %src = alloca <vscale x 4 x i32>
-  %dest = alloca <vscale x 4 x i32>
-  store <vscale x 4 x i32> %x, ptr %src
-  %1 = call i32 @use_nocapture(ptr nocapture %src)
-
-  %src.val = load <vscale x 4 x i32>, ptr %src
-  store <vscale x 4 x i32> %src.val, ptr %dest
-
-  %2 = call i32 @use_nocapture(ptr nocapture %dest)
-  ret void
-}
-
-declare i32 @use_nocapture(ptr nocapture)
