@@ -1723,7 +1723,8 @@ TEST(Support, FindProgramName) {
                          path::Style::posix);
   EXPECT_EQ(PosixProgNameSh, "x86_64-portbld-freebsd13.2-llvm-ar.sh");
 
-  StringRef OnlyExe = path::program_name("/var/empty/.exe", path::Style::posix);
+  StringRef OnlyExe =
+      path::program_name("/var/empty/.exe", path::Style::posix);
   EXPECT_EQ(OnlyExe, "");
 }
 
