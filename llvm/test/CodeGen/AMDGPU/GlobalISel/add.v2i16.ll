@@ -165,9 +165,8 @@ define <2 x i16> @v_add_v2i16_neg_inline_imm_splat(<2 x i16> %a) {
 ; GFX7-LABEL: v_add_v2i16_neg_inline_imm_splat:
 ; GFX7:       ; %bb.0:
 ; GFX7-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX7-NEXT:    s_movk_i32 s4, 0xffc0
-; GFX7-NEXT:    v_add_i32_e32 v0, vcc, s4, v0
-; GFX7-NEXT:    v_add_i32_e32 v1, vcc, s4, v1
+; GFX7-NEXT:    v_add_i32_e32 v0, vcc, 0xffffffc0, v0
+; GFX7-NEXT:    v_add_i32_e32 v1, vcc, 0xffffffc0, v1
 ; GFX7-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX9-LABEL: v_add_v2i16_neg_inline_imm_splat:

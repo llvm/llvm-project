@@ -929,6 +929,7 @@
 ; GCN-O2-NEXT:        SI Fold Operands
 ; GCN-O2-NEXT:        Remove dead machine instructions
 ; GCN-O2-NEXT:        SI Shrink Instructions
+; GCN-O2-NEXT:        SI Fold Operands
 ; GCN-O2-NEXT:        Register Usage Information Propagation
 ; GCN-O2-NEXT:        Detect Dead Lanes
 ; GCN-O2-NEXT:        Remove dead machine instructions
@@ -1248,6 +1249,7 @@
 ; GCN-O3-NEXT:        SI Fold Operands
 ; GCN-O3-NEXT:        Remove dead machine instructions
 ; GCN-O3-NEXT:        SI Shrink Instructions
+; GCN-O3-NEXT:        SI Fold Operands
 ; GCN-O3-NEXT:        Register Usage Information Propagation
 ; GCN-O3-NEXT:        Detect Dead Lanes
 ; GCN-O3-NEXT:        Remove dead machine instructions
