@@ -601,7 +601,7 @@ void MachineLICMBase::AddToLiveIns(MCRegister Reg, MachineLoop *CurLoop) {
       for (MachineOperand &MO : MI.all_uses()) {
         if (!MO.getReg())
           continue;
-        if (TRI->isSuperRegisterEq(Reg, MO.getReg()))
+        if (TRI->regsOverlap(Reg, MO.getReg()))
           MO.setIsKill(false);
       }
     }
