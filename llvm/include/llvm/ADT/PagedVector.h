@@ -60,7 +60,7 @@ public:
   /// Default constructor. We build our own allocator and mark it as such with
   /// `true` in the second pair element.
   PagedVector() : Allocator(new BumpPtrAllocator, true) {}
-  PagedVector(BumpPtrAllocator *A) : Allocator(A, false) {
+  explicit PagedVector(BumpPtrAllocator *A) : Allocator(A, false) {
     assert(A != nullptr && "Allocator cannot be nullptr");
   }
 
