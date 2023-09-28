@@ -1,44 +1,51 @@
+;; This file shows that llvm-symbolizer can symbolize data symbols
+;; from the DWARF info on AIX. Note that AIX is big endian.
+
 ; REQUIRES: powerpc-registered-target
 ; RUN: llc -filetype=obj -o %t -mtriple=powerpc-aix-ibm-xcoff < %s
 ; RUN: llvm-symbolizer --obj=%t 'DATA 0x60' 'DATA 0x61' 'DATA 0x64' 'DATA 0X68' \
 ; RUN:   'DATA 0x90' 'DATA 0x94' 'DATA 0X98' | \
 ; RUN:   FileCheck %s
 
-;; This files tests llvm-symbolizer can successfully symbolize the data symbol
-;; from the DWARF info on AIX. Note that AIX is big endian.
-
+;; Test an uninitialized global variable from offset 0.
 ; CHECK: bss_global
 ; CHECK-NEXT: 96 4
 ; CHECK-NEXT: /t.cpp:1
 ; CHECK-EMPTY:
 
+;; Test an uninitialized global variable from offset 1.
 ; CHECK: bss_global
 ; CHECK-NEXT: 96 4
 ; CHECK-NEXT: /t.cpp:1
 ; CHECK-EMPTY:
 
+;; Test an initialized global variable.
 ; CHECK: data_global
 ; CHECK-NEXT: 100 4
 ; CHECK-NEXT: /t.cpp:2
 ; CHECK-EMPTY:
 
+;; Test a pointer type global variable.
 ; CHECK: str
 ; CHECK-NEXT: 104 4
 ; CHECK-NEXT: /t.cpp:4
 ; CHECK-EMPTY:
 
+;; Test a function scope static variable.
 ;; FIXME: fix the wrong size 152
 ; CHECK: f()::function_global
 ; CHECK-NEXT: 144 152
 ; CHECK-NEXT: /t.cpp:8
 ; CHECK-EMPTY:
 
+;; Test a global scope static variable that is used in current compilation unit.
 ;; FIXME: fix the wrong size 152
 ; CHECK: beta
 ; CHECK-NEXT: 148 152
 ; CHECK-NEXT: /t.cpp:13
 ; CHECK-EMPTY:
 
+;; Test another global scope static variable that is used in current compilation unit.
 ;; FIXME: fix the wrong size 152
 ; CHECK: alpha
 ; CHECK-NEXT: 152 152
