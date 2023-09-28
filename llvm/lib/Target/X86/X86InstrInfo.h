@@ -150,6 +150,11 @@ class X86InstrInfo final : public X86GenInstrInfo {
 public:
   explicit X86InstrInfo(X86Subtarget &STI);
 
+  const TargetRegisterClass *
+  getRegClass(const MCInstrDesc &MCID, unsigned OpNum,
+              const TargetRegisterInfo *TRI,
+              const MachineFunction &MF) const override;
+
   /// getRegisterInfo - TargetInstrInfo is a superset of MRegister info.  As
   /// such, whenever a client has an instance of instruction info, it should
   /// always be able to get register info as well (through this method).
