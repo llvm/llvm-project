@@ -1,7 +1,6 @@
 #ifndef MLIR_DIALECT_BUFFERIZATION_TRANSFORMS_PASSES_H
 #define MLIR_DIALECT_BUFFERIZATION_TRANSFORMS_PASSES_H
 
-#include "mlir/Dialect/Bufferization/IR/BufferDeallocationOpInterface.h"
 #include "mlir/Pass/Pass.h"
 
 namespace mlir {
@@ -32,7 +31,7 @@ std::unique_ptr<Pass> createBufferDeallocationPass();
 /// Creates an instance of the OwnershipBasedBufferDeallocation pass to free all
 /// allocated buffers.
 std::unique_ptr<Pass> createOwnershipBasedBufferDeallocationPass(
-    const DeallocationOptions &options = DeallocationOptions());
+    bool privateFuncDynamicOwnership = false);
 
 /// Creates a pass that optimizes `bufferization.dealloc` operations. For
 /// example, it reduces the number of alias checks needed at runtime using
@@ -135,9 +134,8 @@ func::FuncOp buildDeallocationLibraryFunction(OpBuilder &builder, Location loc,
 LogicalResult deallocateBuffers(Operation *op);
 
 /// Run ownership basedbuffer deallocation.
-LogicalResult deallocateBuffersOwnershipBased(
-    FunctionOpInterface op,
-    const DeallocationOptions &options = DeallocationOptions());
+LogicalResult deallocateBuffersOwnershipBased(FunctionOpInterface op,
+                                              bool privateFuncDynamicOwnership);
 
 /// Creates a pass that moves allocations upwards to reduce the number of
 /// required copies that are inserted during the BufferDeallocation pass.

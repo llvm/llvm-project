@@ -132,83 +132,30 @@ void DeallocationState::getLiveMemrefsIn(Block *block,
   memrefs.append(liveMemrefs);
 }
 
-Value DeallocationState::materializeMemRefOwnership(
-    const DeallocationOptions &options, OpBuilder &builder, Value memref,
-    Block *block) {
-  // NOTE: Starts at the operation defining `memref` and performs a DFS along
-  // the reverse def/use chain until MemRef values with 'Unique' ownership are
-  // found. For the operation being currently processed:
-  // * if none of the operands have the same allocated pointer (i.e., originate
-  //   from the same allocation), a new memref was allocated and thus the
-  //   operation should have the allocate side-effect defined on that result
-  //   value and thus the correct unique ownership is pre-populated by the
-  //   ownership pass (unless an interface implementation is incorrect). Note
-  //   that this is problematic for operations of unregistered dialects because
-  //   the allocation side-effect cannot be represented in the assembly format.
-  // * if exactly one operand has the same allocated pointer, this returnes the
-  //   ownership of exactly that operand
-  // * if multiple operands match the allocated pointer of the result, the
-  //   ownership indicators of all of them always have to evaluate to the same
-  //   value because no dealloc operations may be present and because of the
-  //   rules they are passed to nested regions and successor blocks.  This could
-  //   be verified at runtime by inserting `cf.assert` operations, but would
-  //   require O(|operands|^2) additional operations to check and is thus not
-  //   implemented yet (would need to insert a library function to avoid
-  //   code-size explosion which would make the deallocation pass a module pass)
-  auto ipSave = builder.saveInsertionPoint();
-  SmallVector<Value> worklist;
-  worklist.push_back(memref);
+std::pair<Value, Value>
+DeallocationState::getMemrefWithUniqueOwnership(OpBuilder &builder,
+                                                Value memref, Block *block) {
+  auto iter = ownershipMap.find({memref, block});
+  assert(iter != ownershipMap.end() &&
+         "Value must already have been registered in the ownership map");
 
-  while (!worklist.empty()) {
-    Value curr = worklist.back();
+  Ownership ownership = iter->second;
+  if (ownership.isUnique())
+    return {memref, ownership.getIndicator()};
 
-    // If the value already has unique ownership, we don't have to process it
-    // anymore.
-    Ownership ownership = getOwnership(curr, block);
-    if (ownership.isUnique()) {
-      worklist.pop_back();
-      continue;
-    }
-
-    // Check if all operands of MemRef type have unique ownership.
-    Operation *defOp = curr.getDefiningOp();
-    assert(defOp &&
-           "the ownership-based deallocation pass should be written in a way "
-           "that pre-populates ownership for block arguments");
-
-    bool allKnown = true;
-    for (Value val : llvm::make_filter_range(defOp->getOperands(), isMemref)) {
-      Ownership ownership = getOwnership(val, block);
-      if (ownership.isUnique())
-        continue;
-
-      worklist.push_back(val);
-      allKnown = false;
-    }
-
-    // If all MemRef operands have unique ownership, we can check if the op
-    // implements the BufferDeallocationOpInterface and call that or, otherwise,
-    // we call the generic implementation manually here.
-    if (allKnown) {
-      builder.setInsertionPointAfter(defOp);
-      if (auto deallocInterface =
-              dyn_cast<BufferDeallocationOpInterface>(defOp);
-          deallocInterface && curr.getParentBlock() == block)
-        ownership = deallocInterface.materializeUniqueOwnershipForMemref(
-            *this, options, builder, curr);
-      else
-        ownership = deallocation_impl::defaultComputeMemRefOwnership(
-            options, *this, builder, curr, block);
-
-      // Ownership is already 'Unknown', so we need to override instead of
-      // joining.
-      resetOwnerships(curr, block);
-      updateOwnership(curr, ownership, block);
-    }
-  }
-
-  builder.restoreInsertionPoint(ipSave);
-  return getOwnership(memref, block).getIndicator();
+  // Instead of inserting a clone operation we could also insert a dealloc
+  // operation earlier in the block and use the updated ownerships returned by
+  // the op for the retained values. Alternatively, we could insert code to
+  // check aliasing at runtime and use this information to combine two unique
+  // ownerships more intelligently to not end up with an 'Unknown' ownership in
+  // the first place.
+  auto cloneOp =
+      builder.create<bufferization::CloneOp>(memref.getLoc(), memref);
+  Value condition = buildBoolValue(builder, memref.getLoc(), true);
+  Value newMemref = cloneOp.getResult();
+  updateOwnership(newMemref, condition);
+  memrefsToDeallocatePerBlock[newMemref.getParentBlock()].push_back(newMemref);
+  return {newMemref, condition};
 }
 
 void DeallocationState::getMemrefsToRetain(
@@ -365,26 +312,4 @@ FailureOr<Operation *> deallocation_impl::insertDeallocOpForReturnLike(
                                   newOperandOwnerships.end());
 
   return op;
-}
-
-Value deallocation_impl::defaultComputeMemRefOwnership(
-    const DeallocationOptions &options, DeallocationState &state,
-    OpBuilder &builder, Value memref, Block *block) {
-  Operation *defOp = memref.getDefiningOp();
-  SmallVector<Value> operands(
-      llvm::make_filter_range(defOp->getOperands(), isMemref));
-  Value resultPtr = builder.create<memref::ExtractAlignedPointerAsIndexOp>(
-      defOp->getLoc(), memref);
-  Value ownership = state.getOwnership(operands.front(), block).getIndicator();
-
-  for (Value val : ArrayRef(operands).drop_front()) {
-    Value operandPtr = builder.create<memref::ExtractAlignedPointerAsIndexOp>(
-        defOp->getLoc(), val);
-    Value isSameBuffer = builder.create<arith::CmpIOp>(
-        defOp->getLoc(), arith::CmpIPredicate::eq, resultPtr, operandPtr);
-    Value newOwnership = state.getOwnership(val, block).getIndicator();
-    ownership = builder.create<arith::SelectOp>(defOp->getLoc(), isSameBuffer,
-                                                newOwnership, ownership);
-  }
-  return ownership;
 }
