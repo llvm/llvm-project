@@ -1361,9 +1361,9 @@ private:
   /// ```
   /// %ins = vector.insert %source, %vest[1]: vector<3x4> into vector<2x3x4x5>
   /// // extractPosition == [1, 2, 3]
-  /// %ext = vector.extract %ins[1, 0]: vector<3x4x5>
+  /// %ext = vector.extract %ins[1, 0]: vector<5> from vector<3x4x5>
   /// // can fold to vector.extract %source[0, 3]
-  /// %ext = vector.extract %source[3]: vector<5x6>
+  /// %ext = vector.extract %source[3]: vector<6> from vector<5x6>
   /// ```
   /// To traverse through %source, we need to set the leading dims to 0 and
   /// drop the extra leading dims.

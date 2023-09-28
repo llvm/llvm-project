@@ -607,24 +607,24 @@ func.func @minui_extsi_i8(%lhs: i8, %rhs: i8) -> i32 {
 
 // CHECK-LABEL: func.func @extsi_over_extract_3xi16
 // CHECK-SAME:    (%[[ARG:.+]]: vector<3xi16>)
-// CHECK-NEXT:    %[[EXTR:.+]] = vector.extract %[[ARG]][1] : vector<3xi16>
+// CHECK-NEXT:    %[[EXTR:.+]] = vector.extract %[[ARG]][1] : i16 from vector<3xi16>
 // CHECK-NEXT:    %[[RET:.+]]  = arith.sitofp %[[EXTR]] : i16 to f16
 // CHECK-NEXT:    return %[[RET]] : f16
 func.func @extsi_over_extract_3xi16(%a: vector<3xi16>) -> f16 {
   %b = arith.extsi %a : vector<3xi16> to vector<3xi32>
-  %c = vector.extract %b[1] : vector<3xi32>
+  %c = vector.extract %b[1] : i32 from vector<3xi32>
   %f = arith.sitofp %c : i32 to f16
   return %f : f16
 }
 
 // CHECK-LABEL: func.func @extui_over_extract_3xi16
 // CHECK-SAME:    (%[[ARG:.+]]: vector<3xi16>)
-// CHECK-NEXT:    %[[EXTR:.+]] = vector.extract %[[ARG]][1] : vector<3xi16>
+// CHECK-NEXT:    %[[EXTR:.+]] = vector.extract %[[ARG]][1] : i16 from vector<3xi16>
 // CHECK-NEXT:    %[[RET:.+]]  = arith.uitofp %[[EXTR]] : i16 to f16
 // CHECK-NEXT:    return %[[RET]] : f16
 func.func @extui_over_extract_3xi16(%a: vector<3xi16>) -> f16 {
   %b = arith.extui %a : vector<3xi16> to vector<3xi32>
-  %c = vector.extract %b[1] : vector<3xi32>
+  %c = vector.extract %b[1] : i32 from vector<3xi32>
   %f = arith.uitofp %c : i32 to f16
   return %f : f16
 }

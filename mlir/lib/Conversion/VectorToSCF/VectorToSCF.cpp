@@ -1155,12 +1155,12 @@ struct UnrollTransferReadConversion
 /// ```
 /// is rewritten to IR such as (simplified):
 /// ```
-/// %v0 = vector.extract %vec[0] : vector<5x4xf32>
+/// %v0 = vector.extract %vec[0] : vector<4xf32> from vector<5x4xf32>
 /// vector.transfer_write %v0, %A[%a, %b, %c] : vector<4xf32>, memref<...>
-/// %v1 = vector.extract %vec[1] : vector<5x4xf32>
+/// %v1 = vector.extract %vec[1] : vector<4xf32> from vector<5x4xf32>
 /// vector.transfer_write %v1, %A[%a, %b + 1, %c] : vector<4xf32>, memref<...>
 /// ...
-/// %v4 = vector.extract %vec[4] : vector<5x4xf32>
+/// %v4 = vector.extract %vec[4] : vector<4xf32> from vector<5x4xf32>
 /// vector.transfer_write %v4, %A[%a, %b + 4, %c] : vector<4xf32>, memref<...>
 /// ```
 ///

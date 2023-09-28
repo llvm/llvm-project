@@ -532,11 +532,11 @@ def Vector_ExtractOp :
     Example:
 
     ```mlir
-    %1 = vector.extract %0[3]: vector<4x8x16xf32>
-    %2 = vector.extract %0[2, 1, 3]: vector<4x8x16xf32>
-    %3 = vector.extract %1[]: vector<f32>
-    %4 = vector.extract %0[%a, %b, %c]: vector<4x8x16xf32>
-    %5 = vector.extract %0[2, %b]: vector<4x8x16xf32>
+    %1 = vector.extract %0[3]: vector<8x16xf32> from vector<4x8x16xf32>
+    %2 = vector.extract %0[2, 1, 3]: f32 from vector<4x8x16xf32>
+    %3 = vector.extract %1[]: vector<f32> from vector<f32>
+    %4 = vector.extract %0[%a, %b, %c]: f32 from vector<4x8x16xf32>
+    %5 = vector.extract %0[2, %b]: vector<16xf32> from vector<4x8x16xf32>
     ```
   }];
 
@@ -579,7 +579,7 @@ def Vector_ExtractOp :
   let assemblyFormat = [{
     $vector ``
     custom<DynamicIndexList>($dynamic_position, $static_position)
-    attr-dict `:` type($vector)
+    attr-dict `:` type($result) `from` type($vector)
   }];
 
   let hasCanonicalizer = 1;

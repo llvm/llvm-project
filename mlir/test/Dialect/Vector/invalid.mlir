@@ -119,14 +119,14 @@ func.func @extract_element(%arg0: vector<4x4xf32>) {
 
 func.func @extract_vector_type(%arg0: index) {
   // expected-error@+1 {{invalid kind of type specified}}
-  %1 = vector.extract %arg0[] : index
+  %1 = vector.extract %arg0[] : index from index
 }
 
 // -----
 
 func.func @extract_position_rank_overflow(%arg0: vector<4x8x16xf32>) {
   // expected-error@+1 {{expected position attribute of rank no greater than vector rank}}
-  %1 = vector.extract %arg0[0, 0, 0, 0] : vector<4x8x16xf32>
+  %1 = vector.extract %arg0[0, 0, 0, 0] : f32 from vector<4x8x16xf32>
 }
 
 // -----
@@ -140,28 +140,28 @@ func.func @extract_position_rank_overflow_generic(%arg0: vector<4x8x16xf32>) {
 
 func.func @extract_position_overflow(%arg0: vector<4x8x16xf32>) {
   // expected-error@+1 {{expected position attribute #2 to be a non-negative integer smaller than the corresponding vector dimension}}
-  %1 = vector.extract %arg0[0, 43, 0] : vector<4x8x16xf32>
+  %1 = vector.extract %arg0[0, 43, 0] : f32 from vector<4x8x16xf32>
 }
 
 // -----
 
 func.func @extract_precise_position_overflow(%arg0: vector<4x8x16xf32>) {
   // expected-error@+1 {{expected position attribute #3 to be a non-negative integer smaller than the corresponding vector dimension}}
-  %1 = vector.extract %arg0[3, 7, 16] : vector<4x8x16xf32>
+  %1 = vector.extract %arg0[3, 7, 16] : f32 from vector<4x8x16xf32>
 }
 
 // -----
 
 func.func @extract_0d(%arg0: vector<f32>) {
   // expected-error@+1 {{expected position attribute of rank no greater than vector rank}}
-  %1 = vector.extract %arg0[0] : vector<f32>
+  %1 = vector.extract %arg0[0] : f32 from vector<f32>
 }
 
 // -----
 
 func.func @extract_position_overflow(%arg0: vector<4x8x16xf32>) {
   // expected-error@+1 {{expected position attribute #3 to be a non-negative integer smaller than the corresponding vector dimension}}
-  %1 = vector.extract %arg0[0, 0, -1] : vector<4x8x16xf32>
+  %1 = vector.extract %arg0[0, 0, -1] : f32 from vector<4x8x16xf32>
 }
 
 // -----

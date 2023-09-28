@@ -672,7 +672,7 @@ func.func @extract_element_index(%arg0: vector<16xf32>) -> f32 {
 // -----
 
 func.func @extract_element_from_vec_1d(%arg0: vector<16xf32>) -> f32 {
-  %0 = vector.extract %arg0[15]: vector<16xf32>
+  %0 = vector.extract %arg0[15]: f32 from vector<16xf32>
   return %0 : f32
 }
 // CHECK-LABEL: @extract_element_from_vec_1d
@@ -683,7 +683,7 @@ func.func @extract_element_from_vec_1d(%arg0: vector<16xf32>) -> f32 {
 // -----
 
 func.func @extract_index_element_from_vec_1d(%arg0: vector<16xindex>) -> index {
-  %0 = vector.extract %arg0[15]: vector<16xindex>
+  %0 = vector.extract %arg0[15]: index from vector<16xindex>
   return %0 : index
 }
 // CHECK-LABEL: @extract_index_element_from_vec_1d(
@@ -697,7 +697,7 @@ func.func @extract_index_element_from_vec_1d(%arg0: vector<16xindex>) -> index {
 // -----
 
 func.func @extract_vec_2d_from_vec_3d(%arg0: vector<4x3x16xf32>) -> vector<3x16xf32> {
-  %0 = vector.extract %arg0[0]: vector<4x3x16xf32>
+  %0 = vector.extract %arg0[0]: vector<3x16xf32> from vector<4x3x16xf32>
   return %0 : vector<3x16xf32>
 }
 // CHECK-LABEL: @extract_vec_2d_from_vec_3d
@@ -707,7 +707,7 @@ func.func @extract_vec_2d_from_vec_3d(%arg0: vector<4x3x16xf32>) -> vector<3x16x
 // -----
 
 func.func @extract_vec_1d_from_vec_3d(%arg0: vector<4x3x16xf32>) -> vector<16xf32> {
-  %0 = vector.extract %arg0[0, 0]: vector<4x3x16xf32>
+  %0 = vector.extract %arg0[0, 0]: vector<16xf32> from vector<4x3x16xf32>
   return %0 : vector<16xf32>
 }
 // CHECK-LABEL: @extract_vec_1d_from_vec_3d
@@ -717,7 +717,7 @@ func.func @extract_vec_1d_from_vec_3d(%arg0: vector<4x3x16xf32>) -> vector<16xf3
 // -----
 
 func.func @extract_element_from_vec_3d(%arg0: vector<4x3x16xf32>) -> f32 {
-  %0 = vector.extract %arg0[0, 0, 0]: vector<4x3x16xf32>
+  %0 = vector.extract %arg0[0, 0, 0]: f32 from vector<4x3x16xf32>
   return %0 : f32
 }
 // CHECK-LABEL: @extract_element_from_vec_3d
@@ -729,7 +729,7 @@ func.func @extract_element_from_vec_3d(%arg0: vector<4x3x16xf32>) -> f32 {
 // -----
 
 func.func @extract_element_with_value_1d(%arg0: vector<16xf32>, %arg1: index) -> f32 {
-  %0 = vector.extract %arg0[%arg1]: vector<16xf32>
+  %0 = vector.extract %arg0[%arg1]: f32 from vector<16xf32>
   return %0 : f32
 }
 // CHECK-LABEL: @extract_element_with_value_1d
