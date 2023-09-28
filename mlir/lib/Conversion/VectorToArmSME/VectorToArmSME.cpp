@@ -78,6 +78,15 @@ struct TransferReadPermutationToArmSMELowering
       return rewriter.notifyMatchFailure(transferReadOp,
                                          "not a 2 result permutation map");
 
+    AffineMap map = transferReadOp.getPermutationMap();
+
+    // Permutation map doesn't perform permutation, can be lowered to
+    // vector.load by TransferReadToVectorLoadLowering and then
+    // arm_sme.tile_load by VectorLoadToArmSMELowering.
+    if (map.isIdentity())
+      return rewriter.notifyMatchFailure(
+          transferReadOp, "map is an identity, apply another pattern");
+
     auto vectorType = transferReadOp.getVectorType();
     if (!arm_sme::isValidSMETileVectorType(vectorType))
       return rewriter.notifyMatchFailure(transferReadOp,
@@ -95,15 +104,6 @@ struct TransferReadPermutationToArmSMELowering
     if (transferReadOp.hasOutOfBoundsDim())
       return rewriter.notifyMatchFailure(transferReadOp,
                                          "not inbounds transfer read");
-
-    AffineMap map = transferReadOp.getPermutationMap();
-
-    // Permutation map doesn't perform permutation, can be lowered to
-    // vector.load by TransferReadToVectorLoadLowering and then
-    // arm_sme.tile_load by VectorLoadToArmSMELowering.
-    if (map.isIdentity())
-      return rewriter.notifyMatchFailure(
-          transferReadOp, "map is an identity, apply another pattern");
 
     AffineExpr d0, d1;
     bindDims(transferReadOp.getContext(), d0, d1);
