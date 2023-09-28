@@ -75,6 +75,12 @@ class IOHandlerCompletionTest(PExpectTest):
         self.child.send("n")
         self.expect_prompt()
 
+        # Start tab completion and abort showing more commands with '^C'.
+        self.child.send("\t")
+        self.child.expect_exact("More (Y/n/a)")
+        self.child.sendcontrol("c")
+        self.expect_prompt()
+
         # Shouldn't crash or anything like that.
         self.child.send("regoinvalid\t")
         self.expect_prompt()

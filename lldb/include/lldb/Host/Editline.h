@@ -161,6 +161,10 @@ public:
   /// of Editline.
   static Editline *InstanceFor(::EditLine *editline);
 
+  static void
+  DisplayCompletions(Editline &editline,
+                     llvm::ArrayRef<CompletionResult::Completion> results);
+
   /// Sets a string to be used as a prompt, or combined with a line number to
   /// form a prompt.
   void SetPrompt(const char *prompt);
