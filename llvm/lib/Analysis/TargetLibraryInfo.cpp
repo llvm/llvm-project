@@ -48,7 +48,7 @@ StringLiteral const TargetLibraryInfoImpl::StandardNames[LibFunc::NumLibFuncs] =
 std::string VecDesc::getVectorFunctionABIVariantString() const {
   SmallString<256> Buffer;
   llvm::raw_svector_ostream Out(Buffer);
-  Out << MangledNamePrefix << "_" << ScalarFnName << "(" << VectorFnName << ")";
+  Out << VABIPrefix << "_" << ScalarFnName << "(" << VectorFnName << ")";
   return std::string(Out.str());
 }
 

@@ -27,7 +27,7 @@ class Triple;
 /// Provides info so a possible vectorization of a function can be
 /// computed. Function 'VectorFnName' is equivalent to 'ScalarFnName'
 /// vectorized by a factor 'VectorizationFactor'.
-/// The MangledNamePrefix string holds information about isa, mask, vlen,
+/// The VABIPrefix string holds information about isa, mask, vlen,
 /// and vparams so a scalar-to-vector mapping of the form:
 ///    _ZGV<isa><mask><vlen><vparams>_<scalarname>(<vectorname>)
 /// can be constructed where:
@@ -45,22 +45,21 @@ class VecDesc {
   StringRef VectorFnName;
   ElementCount VectorizationFactor;
   bool Masked;
-  StringRef MangledNamePrefix;
+  StringRef VABIPrefix;
 
 public:
   VecDesc() = delete;
   VecDesc(StringRef ScalarFnName, StringRef VectorFnName,
-          ElementCount VectorizationFactor, bool Masked,
-          StringRef MangledNamePrefix)
+          ElementCount VectorizationFactor, bool Masked, StringRef VABIPrefix)
       : ScalarFnName(ScalarFnName), VectorFnName(VectorFnName),
         VectorizationFactor(VectorizationFactor), Masked(Masked),
-        MangledNamePrefix(MangledNamePrefix) {}
+        VABIPrefix(VABIPrefix) {}
 
   StringRef getScalarFnName() const { return ScalarFnName; }
   StringRef getVectorFnName() const { return VectorFnName; }
   ElementCount getVectorizationFactor() const { return VectorizationFactor; }
   bool isMasked() const { return Masked; }
-  StringRef getMangledNamePrefix() const { return MangledNamePrefix; }
+  StringRef getVABIPrefix() const { return VABIPrefix; }
 
   /// Returns a vector function ABI variant string on the form:
   ///    _ZGV<isa><mask><vlen><vparams>_<scalarname>(<vectorname>)
