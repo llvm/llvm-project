@@ -4096,11 +4096,11 @@ ASTReader::ReadModuleMapFileBlock(RecordData &Record, ModuleFile &F,
       return OutOfDate;
     }
 
-    llvm::SmallPtrSet<const FileEntry *, 1> AdditionalStoredMaps;
+    llvm::SmallPtrSet<FileEntryRef, 1> AdditionalStoredMaps;
     for (unsigned I = 0, N = Record[Idx++]; I < N; ++I) {
       // FIXME: we should use input files rather than storing names.
       std::string Filename = ReadPath(F, Record, Idx);
-      auto SF = FileMgr.getFile(Filename, false, false);
+      auto SF = FileMgr.getOptionalFileRef(Filename, false, false);
       if (!SF) {
         if (!canRecoverFromOutOfDate(F.FileName, ClientLoadCapabilities))
           Error("could not find file '" + Filename +"' referenced by AST file");
@@ -4126,10 +4126,10 @@ ASTReader::ReadModuleMapFileBlock(RecordData &Record, ModuleFile &F,
 
     // Check any additional module map files that are in the pcm, but not
     // found in header search. Cases that match are already removed.
-    for (const FileEntry *ModMap : AdditionalStoredMaps) {
+    for (FileEntryRef ModMap : AdditionalStoredMaps) {
       if (!canRecoverFromOutOfDate(F.FileName, ClientLoadCapabilities))
         Diag(diag::err_module_different_modmap)
-          << F.ModuleName << /*not new*/1 << ModMap->getName();
+          << F.ModuleName << /*not new*/1 << ModMap.getName();
       return OutOfDate;
     }
   }
