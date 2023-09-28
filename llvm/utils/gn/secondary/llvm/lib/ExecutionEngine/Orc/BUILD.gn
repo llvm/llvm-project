@@ -22,6 +22,7 @@ static_library("Orc") {
     "Core.cpp",
     "DebugObjectManagerPlugin.cpp",
     "DebugUtils.cpp",
+    "DebuggerSupport.cpp",
     "DebuggerSupportPlugin.cpp",
     "ELFNixPlatform.cpp",
     "EPCDebugObjectRegistrar.cpp",
