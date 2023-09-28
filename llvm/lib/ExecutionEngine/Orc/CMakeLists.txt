@@ -42,7 +42,6 @@ add_llvm_component_library(LLVMOrcJIT
   ObjectTransformLayer.cpp
   OrcABISupport.cpp
   OrcV2CBindings.cpp
-  PerfSupportPlugin.cpp
   RTDyldObjectLinkingLayer.cpp
   SimpleRemoteEPC.cpp
   Speculation.cpp
@@ -78,6 +77,7 @@ add_llvm_component_library(LLVMOrcJIT
   TransformUtils
   )
 
+add_subdirectory(Debugging)
 add_subdirectory(Shared)
 add_subdirectory(TargetProcess)
 
