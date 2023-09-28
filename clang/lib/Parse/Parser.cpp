@@ -2564,6 +2564,10 @@ Decl *Parser::ParseModuleImport(SourceLocation AtLoc,
     SeenError = false;
     break;
   case Sema::ModuleImportState::FirstDecl:
+    // If we found an import decl as the first declaration, we must be not in
+    // a C++20 module unit or we are in an invalid state.
+    ImportState = Sema::ModuleImportState::NotACXX20Module;
+    [[fallthrough]];
   case Sema::ModuleImportState::NotACXX20Module:
     // We can only import a partition within a module purview.
     if (IsPartition)
