@@ -799,6 +799,8 @@ static Triple::ObjectFormatType getDefaultFormat(const Triple &T) {
   case Triple::x86_64:
     if (T.isOSWindows())
       return Triple::COFF;
+    else if (T.isUEFI())
+      return Triple::COFF;
     return Triple::ELF;
 
   case Triple::aarch64_be:
