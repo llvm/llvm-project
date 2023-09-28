@@ -876,7 +876,7 @@ static void genCombiner(fir::FirOpBuilder &builder, mlir::Location loc,
     unsigned nbRangeArgs = recipe.getCombinerRegion().getArguments().size() - 2;
     assert((nbRangeArgs / 3 == seqTy.getDimension()) &&
            "Expect 3 block arguments per dimension");
-    (ovid) nbRangeArgs;
+    (void)nbRangeArgs;
     llvm::SmallVector<fir::DoLoopOp> loops;
     llvm::SmallVector<mlir::Value> ivs;
     for (unsigned i = 2; i < recipe.getCombinerRegion().getArguments().size();
