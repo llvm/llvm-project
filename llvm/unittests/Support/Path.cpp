@@ -1723,10 +1723,7 @@ TEST(Support, FindProgramName) {
                          path::Style::posix);
   EXPECT_EQ(PosixProgNameSh, "x86_64-portbld-freebsd13.2-llvm-ar.sh");
 
-  // TODO: determine if this is correct. What happens on windows with an executable
-  // named ".exe"?
-  StringRef OnlyExe =
-      path::program_name("/var/empty/.exe", path::Style::posix);
+  StringRef OnlyExe = path::program_name("/var/empty/.exe", path::Style::posix);
   EXPECT_EQ(OnlyExe, "");
 }
 
