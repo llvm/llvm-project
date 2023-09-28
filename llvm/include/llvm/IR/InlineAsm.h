@@ -277,14 +277,19 @@ public:
   // on INLINEASM and INLINEASM_BR MachineInstr's.
   //
   // The encoding of Flag is currently:
-  //   Bits 2-0 - A Kind::* value indicating the kind of the operand. (KindField)
-  //   Bits 15-3 - The number of SDNode operands associated with
-  //               this inline assembly operand. (NumOperands)
-  //   Bit 31 - determines if this is a matched operand. (IsMatched)
+  //   Bits 2-0  - A Kind::* value indicating the kind of the operand.
+  //               (KindField)
+  //   Bits 15-3 - The number of SDNode operands associated with this inline
+  //               assembly operand. Once lowered to MIR, this represents the
+  //               number of MachineOperands necessary to refer to a
+  //               MachineOperandType::MO_FrameIndex. (NumOperands)
+  //   Bit 31    - Determines if this is a matched operand. (IsMatched)
   //   If bit 31 is set:
-  //     Bits 30-16 - The operand number that this operand must match. (MatchedOperandNo)
+  //     Bits 30-16 - The operand number that this operand must match.
+  //                  (MatchedOperandNo)
   //   Else if bits 2-0 are Kind::Mem:
-  //     Bits 30-16 - A ConstraintCode:: value indicating the original constraint code. (MemConstraintCode)
+  //     Bits 30-16 - A ConstraintCode:: value indicating the original
+  //                  constraint code. (MemConstraintCode)
   //   Else:
   //     Bits 30-16 - The register class ID to use for the operand. (RegClass)
   //
