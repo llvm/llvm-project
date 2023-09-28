@@ -2475,3 +2475,24 @@ MachineInstr::getFirst5RegLLTs() const {
       Reg2, getRegInfo()->getType(Reg2), Reg3, getRegInfo()->getType(Reg3),
       Reg4, getRegInfo()->getType(Reg4));
 }
+
+void MachineInstr::insert(mop_iterator It, ArrayRef<MachineOperand> Ops) {
+  assert(isVariadic() && "can only modify variadic instructions");
+  assert(It->getParent() == this && "iterator points to operand of other inst");
+
+  const unsigned OpIdx = getOperandNo(It);
+  const unsigned NumOperands = getNumOperands();
+  const unsigned OpsToMove = NumOperands - OpIdx;
+
+  SmallVector<MachineOperand> MovingOps;
+  MovingOps.reserve(OpsToMove);
+
+  for (unsigned I = 0; I < OpsToMove; ++I) {
+    MovingOps.emplace_back(getOperand(OpIdx));
+    removeOperand(OpIdx);
+  }
+  for (const MachineOperand &MO : Ops)
+    addOperand(MO);
+  for (const MachineOperand &OpMoved : MovingOps)
+    addOperand(OpMoved);
+}

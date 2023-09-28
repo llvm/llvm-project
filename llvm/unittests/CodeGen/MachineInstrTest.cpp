@@ -478,4 +478,57 @@ TEST(MachineInstrBuilder, BuildMI) {
 
 static_assert(std::is_trivially_copyable_v<MCOperand>, "trivially copyable");
 
+TEST(MachineInstrTest, SpliceOperands) {
+  LLVMContext Ctx;
+  Module Mod("Module", Ctx);
+  std::unique_ptr<MachineFunction> MF = createMachineFunction(Ctx, Mod);
+  MachineBasicBlock *MBB = MF->CreateMachineBasicBlock();
+  MCInstrDesc MCID = {TargetOpcode::INLINEASM,
+                      0,
+                      0,
+                      0,
+                      0,
+                      0,
+                      0,
+                      0,
+                      0,
+                      (1ULL << MCID::Pseudo) | (1ULL << MCID::Variadic),
+                      0};
+  MachineInstr *MI = MF->CreateMachineInstr(MCID, DebugLoc());
+  MBB->insert(MBB->begin(), MI);
+  MI->addOperand(MachineOperand::CreateImm(0));
+  MI->addOperand(MachineOperand::CreateImm(1));
+  MI->addOperand(MachineOperand::CreateImm(2));
+  MI->addOperand(MachineOperand::CreateImm(3));
+  MI->addOperand(MachineOperand::CreateImm(4));
+
+  MI->removeOperand(1);
+  EXPECT_EQ(MI->getOperand(1).getImm(), MachineOperand::CreateImm(2).getImm());
+  EXPECT_EQ(MI->getNumOperands(), 4U);
+
+  MachineOperand Ops[] = {
+      MachineOperand::CreateImm(42),   MachineOperand::CreateImm(1024),
+      MachineOperand::CreateImm(2048), MachineOperand::CreateImm(4096),
+      MachineOperand::CreateImm(8192),
+  };
+  auto *It = MI->operands_begin();
+  ++It;
+  MI->insert(It, Ops);
+
+  EXPECT_EQ(MI->getNumOperands(), 9U);
+  EXPECT_EQ(MI->getOperand(0).getImm(), MachineOperand::CreateImm(0).getImm());
+  EXPECT_EQ(MI->getOperand(1).getImm(), MachineOperand::CreateImm(42).getImm());
+  EXPECT_EQ(MI->getOperand(2).getImm(),
+            MachineOperand::CreateImm(1024).getImm());
+  EXPECT_EQ(MI->getOperand(3).getImm(),
+            MachineOperand::CreateImm(2048).getImm());
+  EXPECT_EQ(MI->getOperand(4).getImm(),
+            MachineOperand::CreateImm(4096).getImm());
+  EXPECT_EQ(MI->getOperand(5).getImm(),
+            MachineOperand::CreateImm(8192).getImm());
+  EXPECT_EQ(MI->getOperand(6).getImm(), MachineOperand::CreateImm(2).getImm());
+  EXPECT_EQ(MI->getOperand(7).getImm(), MachineOperand::CreateImm(3).getImm());
+  EXPECT_EQ(MI->getOperand(8).getImm(), MachineOperand::CreateImm(4).getImm());
+}
+
 } // end namespace
