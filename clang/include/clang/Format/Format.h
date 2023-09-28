@@ -2879,8 +2879,8 @@ struct FormatStyle {
     ///        });
     /// \endcode
     LBI_Signature,
-    /// Align lambda body relative to the indentation level of the outer scope
-    /// the lambda signature resides in.
+    /// For statements within block scope, align lambda body relative to the
+    /// indentation level of the outer scope the lambda signature resides in.
     /// \code
     ///    someMethod(
     ///        [](SomeReallyLongLambdaSignatureArgument foo) {
