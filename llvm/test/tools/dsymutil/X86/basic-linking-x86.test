@@ -22,7 +22,6 @@ RUN:   --check-prefixes=CHECK,ARCHIVE,PUB
 ### ---------------------------------------
 ### Repeat the same steps for --linker llvm
 
-RUN: cp %p/../Inputs/basic.macho.x86_64 %t1
 RUN: dsymutil --linker llvm -accelerator=Pub -f -oso-prepend-path=%p/.. %t1
 RUN: llvm-dwarfdump -a %t1.dwarf | FileCheck %s
 RUN: dsymutil --linker llvm  -accelerator=Pub -f -o %t2 -oso-prepend-path=%p/.. \
