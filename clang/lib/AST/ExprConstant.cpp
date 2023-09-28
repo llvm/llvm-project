@@ -10967,19 +10967,20 @@ bool ArrayExprEvaluator::VisitArrayInitLoopExpr(const ArrayInitLoopExpr *E) {
   LValue Subobject = This;
   Subobject.addArray(Info, E, CAT);
 
-  bool Success = true;
   for (EvalInfo::ArrayInitLoopIndex Index(Info); Index != Elements; ++Index) {
     if (!EvaluateInPlace(Result.getArrayInitializedElt(Index),
                          Info, Subobject, E->getSubExpr()) ||
         !HandleLValueArrayAdjustment(Info, E, Subobject,
                                      CAT->getElementType(), 1)) {
-      if (!Info.noteFailure())
-        return false;
-      Success = false;
+
+      // There's no need to try and evaluate the rest, as those are the exact
+      // same expressions.
+      std::ignore = Info.noteFailure();
+      return false;
     }
   }
 
-  return Success;
+  return true;
 }
 
 bool ArrayExprEvaluator::VisitCXXConstructExpr(const CXXConstructExpr *E) {
