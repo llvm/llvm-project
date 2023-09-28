@@ -3227,8 +3227,8 @@ void SelectionDAGBuilder::visitUnreachable(const UnreachableInst &I) {
   // We may be able to ignore unreachable behind a noreturn call.
   if (DAG.getTarget().Options.NoTrapAfterNoreturn) {
     if (const CallInst *Call = dyn_cast_or_null<CallInst>(I.getPrevNode())) {
-        if (Call->doesNotReturn())
-          return;
+      if (Call->doesNotReturn())
+        return;
     }
   }
 
