@@ -227,11 +227,16 @@ Constant *FoldBitCast(Constant *C, Type *DestTy, const DataLayout &DL) {
           return ConstantExpr::getBitCast(C, DestTy);
 
         // Zero extend the element to the right size.
-        Src = ConstantExpr::getZExt(Src, Elt->getType());
+        Src = ConstantFoldCastOperand(Instruction::ZExt, Src, Elt->getType(),
+                                      DL);
+        assert(Src && "Constant folding cannot fail on plain integers");
 
         // Shift it to the right place, depending on endianness.
-        Src = ConstantExpr::getShl(Src,
-                                   ConstantInt::get(Src->getType(), ShiftAmt));
+        Src = ConstantFoldBinaryOpOperands(
+            Instruction::Shl, Src, ConstantInt::get(Src->getType(), ShiftAmt),
+            DL);
+        assert(Src && "Constant folding cannot fail on plain integers");
+
         ShiftAmt += isLittleEndian ? SrcBitSize : -SrcBitSize;
 
         // Mix it in.
