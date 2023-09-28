@@ -1600,7 +1600,7 @@ bool SPIRVInstructionSelector::selectLog10(Register ResVReg,
           ? GR.getSPIRVTypeForVReg(ResType->getOperand(1).getReg())
           : ResType;
   Register ScaleReg =
-      GR.buildConstantFP(APFloat(0.30103f), MIRBuilder, SpirvScalarType, false);
+      GR.buildConstantFP(APFloat(0.30103f), MIRBuilder, SpirvScalarType);
 
   // Multiply log2(x) by 0.30103 to get log10(x) result.
   auto Opcode = ResType->getOpcode() == SPIRV::OpTypeVector

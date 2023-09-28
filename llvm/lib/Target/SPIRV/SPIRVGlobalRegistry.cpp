@@ -242,36 +242,27 @@ Register SPIRVGlobalRegistry::buildConstantInt(uint64_t Val,
 
 Register SPIRVGlobalRegistry::buildConstantFP(APFloat Val,
                                               MachineIRBuilder &MIRBuilder,
-                                              SPIRVType *SpvType, bool EmitIR) {
+                                              SPIRVType *SpvType) {
   auto &MF = MIRBuilder.getMF();
-  const Type *LLVMFPTy;
-  if (SpvType) {
-    LLVMFPTy = getTypeForSPIRVType(SpvType);
-    assert(LLVMFPTy->isFloatingPointTy());
-  } else {
-    LLVMFPTy = IntegerType::getFloatTy(MF.getFunction().getContext());
+  auto &Ctx = MF.getFunction().getContext();
+  if (!SpvType) {
+    const Type *LLVMFPTy = Type::getFloatTy(Ctx);
+    SpvType = getOrCreateSPIRVType(LLVMFPTy, MIRBuilder);
   }
   // Find a constant in DT or build a new one.
-  const auto ConstFP = ConstantFP::get(LLVMFPTy->getContext(), Val);
+  const auto ConstFP = ConstantFP::get(Ctx, Val);
   Register Res = DT.find(ConstFP, &MF);
   if (!Res.isValid()) {
-    unsigned BitWidth = SpvType ? getScalarOrVectorBitWidth(SpvType) : 32;
-    LLT LLTy = LLT::scalar(EmitIR ? BitWidth : 32);
-    Res = MF.getRegInfo().createGenericVirtualRegister(LLTy);
+    Res = MF.getRegInfo().createGenericVirtualRegister(LLT::scalar(32));
     MF.getRegInfo().setRegClass(Res, &SPIRV::IDRegClass);
-    assignTypeToVReg(LLVMFPTy, Res, MIRBuilder,
-                     SPIRV::AccessQualifier::ReadWrite, EmitIR);
+    assignSPIRVTypeToVReg(SpvType, Res, MF);
     DT.add(ConstFP, &MF, Res);
-    if (EmitIR) {
-      MIRBuilder.buildFConstant(Res, *ConstFP);
-    } else {
-      MachineInstrBuilder MIB;
-      assert(SpvType);
-      MIB = MIRBuilder.buildInstr(SPIRV::OpConstantF)
-                .addDef(Res)
-                .addUse(getSPIRVTypeID(SpvType));
-      addNumImm(ConstFP->getValueAPF().bitcastToAPInt(), MIB);
-    }
+
+    MachineInstrBuilder MIB;
+    MIB = MIRBuilder.buildInstr(SPIRV::OpConstantF)
+              .addDef(Res)
+              .addUse(getSPIRVTypeID(SpvType));
+    addNumImm(ConstFP->getValueAPF().bitcastToAPInt(), MIB);
   }
 
   return Res;
