@@ -35,14 +35,6 @@ func.func @gep_too_few_dynamic(%base : !llvm.ptr<f32>) {
 
 // -----
 
-func.func @call_variadic(%callee : !llvm.ptr<func<i8 (i8, ...)>>, %arg : i8) {
-  // expected-error@+1 {{indirect calls to variadic functions are not supported}}
-  llvm.call %callee(%arg) : !llvm.ptr<func<i8 (i8, ...)>>, (i8) -> (i8)
-  llvm.return
-}
-
-// -----
-
 func.func @indirect_callee_arg_mismatch(%arg0 : i32, %callee : !llvm.ptr<func<void(i8)>>) {
   // expected-error@+1 {{'llvm.call' op operand type mismatch for operand 0: 'i32' != 'i8'}}
   "llvm.call"(%callee, %arg0) : (!llvm.ptr<func<void(i8)>>, i32) -> ()
