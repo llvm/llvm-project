@@ -109,15 +109,12 @@ RISCVInstructionSelector::selectShiftMask(MachineOperand &Root) const {
   return {{[=](MachineInstrBuilder &MIB) { MIB.add(Root); }}};
 }
 
-
 InstructionSelector::ComplexRendererFns
 RISCVInstructionSelector::selectAddrRegImm(MachineOperand &Root) const {
   // TODO: Need to get the immediate from a G_PTR_ADD. Should this be done in
   // the combiner?
-  return {{
-        [=](MachineInstrBuilder &MIB) { MIB.addReg(Root.getReg()); },
-        [=](MachineInstrBuilder &MIB) { MIB.addImm(0); }
-    }};
+  return {{[=](MachineInstrBuilder &MIB) { MIB.addReg(Root.getReg()); },
+           [=](MachineInstrBuilder &MIB) { MIB.addImm(0); }}};
 }
 
 // Tablegen doesn't allow us to write SRLIW/SRAIW/SLLIW patterns because the
