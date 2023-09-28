@@ -36,7 +36,15 @@ public:
   /// llvm::ErrorSuccess() on success, and an appropriate llvm::Error object
   /// otherwise.
   llvm::Error parse();
-  void GetUnsupportedForms(std::set<dw_form_t> &invalid_forms) const;
+
+  DWARFAbbreviationDeclarationCollMapConstIter begin() const {
+    assert(!m_data && "Must call parse before iterating over DWARFDebugAbbrev");
+    return m_abbrevCollMap.begin();
+  }
+
+  DWARFAbbreviationDeclarationCollMapConstIter end() const {
+    return m_abbrevCollMap.end();
+  }
 
 protected:
   DWARFAbbreviationDeclarationCollMap m_abbrevCollMap;

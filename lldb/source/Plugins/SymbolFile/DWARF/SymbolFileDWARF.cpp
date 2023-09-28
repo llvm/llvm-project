@@ -511,6 +511,20 @@ bool SymbolFileDWARF::SupportedVersion(uint16_t version) {
   return version >= 2 && version <= 5;
 }
 
+static std::set<dw_form_t> GetUnsupportedForms(DWARFDebugAbbrev *debug_abbrev) {
+  if (!debug_abbrev)
+    return {};
+
+  std::set<dw_form_t> unsupported_forms;
+  for (const auto &[_, decl_set] : *debug_abbrev)
+    for (const auto &decl : decl_set)
+      for (const auto &attr : decl.attributes())
+        if (!DWARFFormValue::FormIsSupported(attr.Form))
+          unsupported_forms.insert(attr.Form);
+
+  return unsupported_forms;
+}
+
 uint32_t SymbolFileDWARF::CalculateAbilities() {
   uint32_t abilities = 0;
   if (m_objfile_sp != nullptr) {
@@ -540,19 +554,15 @@ uint32_t SymbolFileDWARF::CalculateAbilities() {
         debug_abbrev_file_size = section->GetFileSize();
 
       DWARFDebugAbbrev *abbrev = DebugAbbrev();
-      if (abbrev) {
-        std::set<dw_form_t> invalid_forms;
-        abbrev->GetUnsupportedForms(invalid_forms);
-        if (!invalid_forms.empty()) {
-          StreamString error;
-          error.Printf("unsupported DW_FORM value%s:",
-                       invalid_forms.size() > 1 ? "s" : "");
-          for (auto form : invalid_forms)
-            error.Printf(" %#x", form);
-          m_objfile_sp->GetModule()->ReportWarning(
-              "{0}", error.GetString().str().c_str());
-          return 0;
-        }
+      std::set<dw_form_t> unsupported_forms = GetUnsupportedForms(abbrev);
+      if (!unsupported_forms.empty()) {
+        StreamString error;
+        error.Printf("unsupported DW_FORM value%s:",
+                     unsupported_forms.size() > 1 ? "s" : "");
+        for (auto form : unsupported_forms)
+          error.Printf(" %#x", form);
+        m_objfile_sp->GetModule()->ReportWarning("{0}", error.GetString());
+        return 0;
       }
 
       section =
