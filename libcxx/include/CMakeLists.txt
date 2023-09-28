@@ -63,6 +63,7 @@ set(files
   __algorithm/next_permutation.h
   __algorithm/none_of.h
   __algorithm/nth_element.h
+  __algorithm/out_value_result.h
   __algorithm/partial_sort.h
   __algorithm/partial_sort_copy.h
   __algorithm/partition.h
@@ -561,6 +562,7 @@ set(files
   __numeric/partial_sum.h
   __numeric/pstl_reduce.h
   __numeric/pstl_transform_reduce.h
+  __numeric/ranges_iota.h
   __numeric/reduce.h
   __numeric/transform_exclusive_scan.h
   __numeric/transform_inclusive_scan.h
