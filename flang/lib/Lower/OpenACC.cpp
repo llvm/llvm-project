@@ -865,21 +865,24 @@ static mlir::Value genScalarCombiner(fir::FirOpBuilder &builder,
 
 static void genCombiner(fir::FirOpBuilder &builder, mlir::Location loc,
                         mlir::acc::ReductionOperator op, mlir::Type ty,
-                        mlir::Value value1, mlir::Value value2) {
+                        mlir::Value value1, mlir::Value value2,
+                        mlir::acc::ReductionRecipeOp &recipe) {
   ty = fir::unwrapRefType(ty);
 
   if (auto seqTy = mlir::dyn_cast<fir::SequenceType>(ty)) {
     assert(!seqTy.hasDynamicExtents() &&
            "Assumed shaped array should be boxed for reduction");
-    mlir::Type idxTy = builder.getIndexType();
     mlir::Type refTy = fir::ReferenceType::get(seqTy.getEleTy());
-
+    unsigned nbRangeArgs = recipe.getCombinerRegion().getArguments().size() - 2;
+    assert((nbRangeArgs / 3 == seqTy.getDimension()) &&
+           "Expect 3 block arguments per dimension");
     llvm::SmallVector<fir::DoLoopOp> loops;
     llvm::SmallVector<mlir::Value> ivs;
-    for (auto ext : llvm::reverse(seqTy.getShape())) {
-      auto lb = builder.createIntegerConstant(loc, idxTy, 0);
-      auto ub = builder.createIntegerConstant(loc, idxTy, ext - 1);
-      auto step = builder.createIntegerConstant(loc, idxTy, 1);
+    for (unsigned i = 2; i < recipe.getCombinerRegion().getArguments().size();
+         i += 3) {
+      mlir::Value lb = recipe.getCombinerRegion().getArgument(i);
+      mlir::Value ub = recipe.getCombinerRegion().getArgument(i + 1);
+      mlir::Value step = recipe.getCombinerRegion().getArgument(i + 2);
       auto loop = builder.create<fir::DoLoopOp>(loc, lb, ub, step,
                                                 /*unordered=*/false);
       builder.setInsertionPointToStart(loop.getBody());
@@ -942,12 +945,27 @@ mlir::acc::ReductionRecipeOp Fortran::lower::createOrGetReductionRecipe(
   mlir::Value initValue = genReductionInitRegion(builder, loc, ty, op);
   builder.create<mlir::acc::YieldOp>(loc, initValue);
 
+  // The two first block arguments are the two values to be combined.
+  // The next arguments are the iteration ranges (lb, ub, step) to be used
+  // for the combiner if needed.
+  llvm::SmallVector<mlir::Type> argsTy{ty, ty};
+  llvm::SmallVector<mlir::Location> argsLoc{loc, loc};
+  for (mlir::Value bound : llvm::reverse(bounds)) {
+    auto dataBound =
+        mlir::dyn_cast<mlir::acc::DataBoundsOp>(bound.getDefiningOp());
+    argsTy.push_back(dataBound.getLowerbound().getType());
+    argsLoc.push_back(dataBound.getLowerbound().getLoc());
+    argsTy.push_back(dataBound.getUpperbound().getType());
+    argsLoc.push_back(dataBound.getUpperbound().getLoc());
+    argsTy.push_back(dataBound.getStartIdx().getType());
+    argsLoc.push_back(dataBound.getStartIdx().getLoc());
+  }
   builder.createBlock(&recipe.getCombinerRegion(),
-                      recipe.getCombinerRegion().end(), {ty, ty}, {loc, loc});
+                      recipe.getCombinerRegion().end(), argsTy, argsLoc);
   builder.setInsertionPointToEnd(&recipe.getCombinerRegion().back());
   mlir::Value v1 = recipe.getCombinerRegion().front().getArgument(0);
   mlir::Value v2 = recipe.getCombinerRegion().front().getArgument(1);
-  genCombiner(builder, loc, op, ty, v1, v2);
+  genCombiner(builder, loc, op, ty, v1, v2, recipe);
   builder.create<mlir::acc::YieldOp>(loc, v1);
   builder.restoreInsertionPoint(crtPos);
   return recipe;
