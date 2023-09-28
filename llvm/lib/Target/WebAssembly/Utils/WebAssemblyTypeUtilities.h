@@ -43,6 +43,12 @@ inline bool isWebAssemblyReferenceType(const Type *Ty) {
   return isWebAssemblyExternrefType(Ty) || isWebAssemblyFuncrefType(Ty);
 }
 
+/// Return true if the table represents a WebAssembly table type.
+inline bool isWebAssemblyTableType(const Type *Ty) {
+  return Ty->isArrayTy() && 
+     isWebAssemblyReferenceType(Ty->getArrayElementType());
+}
+
 // Convert StringRef to ValType / HealType / BlockType
 
 MVT parseMVT(StringRef Type);

@@ -1728,10 +1728,7 @@ SDValue WebAssemblyTargetLowering::LowerGlobalAddress(SDValue Op,
   // is PIC but not a WebAssembly table.
   // Since WebAssembly tables cannot yet be shared accross modules, we don't need special
   // treatment for tables in PIC mode.
-  if (isPositionIndependent() && 
-      !(GV->getValueType()->isArrayTy() && 
-        WebAssembly::isWebAssemblyReferenceType(GV->getValueType()->getArrayElementType()))) {
-    
+  if (isPositionIndependent() && !WebAssembly::isWebAssemblyTableType(GV->getValueType())) {
     if (getTargetMachine().shouldAssumeDSOLocal(*GV->getParent(), GV)) {
       MachineFunction &MF = DAG.getMachineFunction();
       MVT PtrVT = getPointerTy(MF.getDataLayout());
