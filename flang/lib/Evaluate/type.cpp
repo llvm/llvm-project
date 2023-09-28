@@ -836,4 +836,15 @@ bool IsCUDAIntrinsicType(const DynamicType &type) {
   }
 }
 
+DynamicType DynamicType::DropNonConstantCharacterLength() const {
+  if (charLengthParamValue_ && charLengthParamValue_->isExplicit()) {
+    if (std::optional<std::int64_t> len{knownLength()}) {
+      return DynamicType(kind_, *len);
+    } else {
+      return DynamicType(category_, kind_);
+    }
+  }
+  return *this;
+}
+
 } // namespace Fortran::evaluate
