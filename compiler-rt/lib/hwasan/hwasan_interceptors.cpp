@@ -41,10 +41,10 @@ struct HWAsanInterceptorContext {
                                                               size);        \
     } while (0)
 
-#define HWASAN_READ_RANGE(ctx, offset, size) \
-  ACCESS_MEMORY_RANGE(ctx, offset, size, AccessType::Load)
-#define HWASAN_WRITE_RANGE(ctx, offset, size) \
-  ACCESS_MEMORY_RANGE(ctx, offset, size, AccessType::Store)
+#  define HWASAN_READ_RANGE(ctx, offset, size) \
+    ACCESS_MEMORY_RANGE(ctx, offset, size, AccessType::Load)
+#  define HWASAN_WRITE_RANGE(ctx, offset, size) \
+    ACCESS_MEMORY_RANGE(ctx, offset, size, AccessType::Store)
 
 #  if !SANITIZER_APPLE
 #    define HWASAN_INTERCEPT_FUNC(name)                                        \

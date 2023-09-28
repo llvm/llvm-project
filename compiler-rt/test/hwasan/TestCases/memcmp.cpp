@@ -3,9 +3,9 @@
 // RUN: %clangxx_hwasan -O2 %s -o %t && not %run %t 2>&1 | FileCheck %s
 // RUN: %clangxx_hwasan -O3 %s -o %t && not %run %t 2>&1 | FileCheck %s
 
-#include <string.h>
-#include <stdlib.h>
 #include <sanitizer/hwasan_interface.h>
+#include <stdlib.h>
+#include <string.h>
 
 int main(int argc, char **argv) {
   __hwasan_enable_allocator_tagging();
