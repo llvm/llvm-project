@@ -17,23 +17,24 @@
 #include <errno.h>
 #include <stdint.h>
 
-namespace mpfr = __llvm_libc::testing::mpfr;
-using __llvm_libc::testing::tlog;
+namespace mpfr = LIBC_NAMESPACE::testing::mpfr;
+using LIBC_NAMESPACE::testing::tlog;
 
 DECLARE_SPECIAL_CONSTANTS(double)
 
 TEST(LlvmLibcExpm1Test, SpecialNumbers) {
-  EXPECT_FP_EQ(aNaN, __llvm_libc::expm1(aNaN));
-  EXPECT_FP_EQ(inf, __llvm_libc::expm1(inf));
-  EXPECT_FP_EQ_ALL_ROUNDING(-1.0, __llvm_libc::expm1(neg_inf));
-  EXPECT_FP_EQ_WITH_EXCEPTION(inf, __llvm_libc::expm1(0x1.0p20), FE_OVERFLOW);
-  EXPECT_FP_EQ_ALL_ROUNDING(zero, __llvm_libc::expm1(zero));
-  EXPECT_FP_EQ_ALL_ROUNDING(neg_zero, __llvm_libc::expm1(neg_zero));
+  EXPECT_FP_EQ(aNaN, LIBC_NAMESPACE::expm1(aNaN));
+  EXPECT_FP_EQ(inf, LIBC_NAMESPACE::expm1(inf));
+  EXPECT_FP_EQ_ALL_ROUNDING(-1.0, LIBC_NAMESPACE::expm1(neg_inf));
+  EXPECT_FP_EQ_WITH_EXCEPTION(inf, LIBC_NAMESPACE::expm1(0x1.0p20),
+                              FE_OVERFLOW);
+  EXPECT_FP_EQ_ALL_ROUNDING(zero, LIBC_NAMESPACE::expm1(zero));
+  EXPECT_FP_EQ_ALL_ROUNDING(neg_zero, LIBC_NAMESPACE::expm1(neg_zero));
   // |x| < 2^-53, expm1(x) = x
   EXPECT_FP_EQ(-0x1.23456789abcdep-55,
-               __llvm_libc::expm1(-0x1.23456789abcdep-55));
+               LIBC_NAMESPACE::expm1(-0x1.23456789abcdep-55));
   EXPECT_FP_EQ(0x1.23456789abcdep-55,
-               __llvm_libc::expm1(0x1.23456789abcdep-55));
+               LIBC_NAMESPACE::expm1(0x1.23456789abcdep-55));
   // log(2^-54)
-  EXPECT_FP_EQ(0x1.23456789a, __llvm_libc::expm1(-0x1.2b708872320e2p5));
+  EXPECT_FP_EQ(-1.0, LIBC_NAMESPACE::expm1(-0x1.2b708872320e2p5));
 }
