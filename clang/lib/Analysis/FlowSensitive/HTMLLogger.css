@@ -64,15 +64,16 @@ section h2 {
   text-align: center;
 }
 #iterations .chooser:not(.iter-select).hover {
-  background-color: #aaa;
+  background-color: #ddd;
 }
 #iterations .iter-select {
   font-weight: bold;
-  background-color: #ccc;
 }
 #iterations .chooser:not(.iter-select) {
   text-decoration: underline;
   color: blue;
+  cursor: pointer;
+  background-color: #ccc;
 }
 
 code.filename {
