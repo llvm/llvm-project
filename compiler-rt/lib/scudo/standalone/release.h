@@ -151,7 +151,7 @@ public:
   }
 
   void releaseBuffer(Buffer Buf) {
-    DCHECK(Buf.Data != nullptr);
+    DCHECK_NE(Buf.Data, nullptr);
     DCHECK_LE(Buf.BufferIndex, StaticBufferCount);
     if (Buf.BufferIndex != StaticBufferCount) {
       ScopedLock L(Mutex);
@@ -163,7 +163,7 @@ public:
   }
 
   bool isStaticBufferTestOnly(const Buffer &Buf) {
-    DCHECK(Buf.Data != nullptr);
+    DCHECK_NE(Buf.Data, nullptr);
     DCHECK_LE(Buf.BufferIndex, StaticBufferCount);
     return Buf.BufferIndex != StaticBufferCount;
   }
