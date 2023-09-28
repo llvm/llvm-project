@@ -366,7 +366,7 @@ template <typename ELFT> Error ELFLinkGraphBuilder<ELFT>::graphifySections() {
       GraphSec = &G->createSection(*Name, Prot);
       // Non-SHF_ALLOC sections get NoAlloc memory lifetimes.
       if (!(Sec.sh_flags & ELF::SHF_ALLOC)) {
-        GraphSec->setMemLifetimePolicy(orc::MemLifetimePolicy::NoAlloc);
+        GraphSec->setMemLifetime(orc::MemLifetime::NoAlloc);
         LLVM_DEBUG({
           dbgs() << "      " << SecIndex << ": \"" << *Name
                  << "\" is not a SHF_ALLOC section. Using NoAlloc lifetime.\n";

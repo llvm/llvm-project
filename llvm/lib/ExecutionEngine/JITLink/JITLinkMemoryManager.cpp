@@ -26,10 +26,10 @@ BasicLayout::BasicLayout(LinkGraph &G) : G(G) {
   for (auto &Sec : G.sections()) {
     // Skip empty sections, and sections with NoAlloc lifetime policies.
     if (Sec.blocks().empty() ||
-        Sec.getMemLifetimePolicy() == orc::MemLifetimePolicy::NoAlloc)
+        Sec.getMemLifetime() == orc::MemLifetime::NoAlloc)
       continue;
 
-    auto &Seg = Segments[{Sec.getMemProt(), Sec.getMemLifetimePolicy()}];
+    auto &Seg = Segments[{Sec.getMemProt(), Sec.getMemLifetime()}];
     for (auto *B : Sec.blocks())
       if (LLVM_LIKELY(!B->isZeroFill()))
         Seg.ContentBlocks.push_back(B);
@@ -90,7 +90,7 @@ BasicLayout::getContiguousPageBasedLayoutSizes(uint64_t PageSize) {
                                      inconvertibleErrorCode());
 
     uint64_t SegSize = alignTo(Seg.ContentSize + Seg.ZeroFillSize, PageSize);
-    if (AG.getMemLifetimePolicy() == orc::MemLifetimePolicy::Standard)
+    if (AG.getMemLifetime() == orc::MemLifetime::Standard)
       SegsSizes.StandardSegs += SegSize;
     else
       SegsSizes.FinalizeSegs += SegSize;
@@ -164,15 +164,15 @@ void SimpleSegmentAlloc::Create(JITLinkMemoryManager &MemMgr,
     auto &AG = KV.first;
     auto &Seg = KV.second;
 
-    assert(AG.getMemLifetimePolicy() != orc::MemLifetimePolicy::NoAlloc &&
+    assert(AG.getMemLifetime() != orc::MemLifetime::NoAlloc &&
            "NoAlloc segments are not supported by SimpleSegmentAlloc");
 
     auto AGSectionName =
         AGSectionNames[static_cast<unsigned>(AG.getMemProt()) |
-                       static_cast<bool>(AG.getMemLifetimePolicy()) << 3];
+                       static_cast<bool>(AG.getMemLifetime()) << 3];
 
     auto &Sec = G->createSection(AGSectionName, AG.getMemProt());
-    Sec.setMemLifetimePolicy(AG.getMemLifetimePolicy());
+    Sec.setMemLifetime(AG.getMemLifetime());
 
     if (Seg.ContentSize != 0) {
       NextAddr =
@@ -419,10 +419,9 @@ void InProcessMemoryManager::allocate(const JITLinkDylib *JD, LinkGraph &G,
     auto &AG = KV.first;
     auto &Seg = KV.second;
 
-    auto &SegAddr =
-        (AG.getMemLifetimePolicy() == orc::MemLifetimePolicy::Standard)
-            ? NextStandardSegAddr
-            : NextFinalizeSegAddr;
+    auto &SegAddr = (AG.getMemLifetime() == orc::MemLifetime::Standard)
+                        ? NextStandardSegAddr
+                        : NextFinalizeSegAddr;
 
     Seg.WorkingMem = SegAddr.toPtr<char *>();
     Seg.Addr = SegAddr;

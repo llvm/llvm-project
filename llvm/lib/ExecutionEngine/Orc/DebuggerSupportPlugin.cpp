@@ -110,7 +110,7 @@ public:
 
       if (isDebugSection(Sec))
         DebugSections.push_back({&Sec, nullptr});
-      else if (Sec.getMemLifetimePolicy() != MemLifetimePolicy::NoAlloc)
+      else if (Sec.getMemLifetime() != MemLifetime::NoAlloc)
         NonDebugSections.push_back({&Sec, nullptr});
     }
 
