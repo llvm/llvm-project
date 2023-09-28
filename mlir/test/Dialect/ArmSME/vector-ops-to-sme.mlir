@@ -428,6 +428,40 @@ func.func @broadcast_vec2d_from_vec1d(%arg0: vector<[8]xi16>) {
 }
 
 //===----------------------------------------------------------------------===//
+// vector.splat
+//===----------------------------------------------------------------------===//
+
+// -----
+
+// CHECK-LABEL:   func.func @splat_vec2d_from_i32(
+// CHECK-SAME:      %[[SRC:.*]]: i32) {
+// CHECK:   %[[BCST:.*]] = vector.broadcast %[[SRC]] : i32 to vector<[4]xi32>
+// CHECK:   %[[TILE_ID:.*]] = arm_sme.get_tile_id : i32
+// CHECK:   arm_sme.cast_tile_to_vector %[[TILE_ID]] : i32 to vector<[4]x[4]xi32>
+// CHECK:   %[[VSCALE:.*]] = vector.vscale
+// CHECK:   %[[NUM_TILE_SLICES:.*]] = arith.muli %[[VSCALE]], %{{.*}} : index
+// CHECK:   scf.for {{.*}} to %[[NUM_TILE_SLICES]] {{.*}} {
+// CHECK:     arm_sme.move_vector_to_tile_slice %[[BCST]], {{.*}} : vector<[4]xi32> into vector<[4]x[4]xi32>
+func.func @splat_vec2d_from_i32(%arg0: i32) {
+  %0 = vector.splat %arg0 : vector<[4]x[4]xi32>
+  "prevent.dce"(%0) : (vector<[4]x[4]xi32>) -> ()
+  return
+}
+
+// -----
+
+// CHECK-LABEL:   func.func @splat_vec2d_from_f16(
+// CHECK-SAME:      %[[SRC:.*]]: f16) {
+// CHECK:   %[[BCST:.*]] = vector.broadcast %[[SRC]] : f16 to vector<[8]xf16>
+// CHECK:   scf.for
+// CHECK:     arm_sme.move_vector_to_tile_slice %[[BCST]], {{.*}} : vector<[8]xf16> into vector<[8]x[8]xf16>
+func.func @splat_vec2d_from_f16(%arg0: f16) {
+  %0 = vector.splat %arg0 : vector<[8]x[8]xf16>
+  "prevent.dce"(%0) : (vector<[8]x[8]xf16>) -> ()
+  return
+}
+
+//===----------------------------------------------------------------------===//
 // vector.transpose
 //===----------------------------------------------------------------------===//
 

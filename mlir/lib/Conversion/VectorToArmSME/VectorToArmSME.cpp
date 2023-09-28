@@ -301,6 +301,60 @@ struct BroadcastOpToArmSMELowering
   }
 };
 
+/// Conversion pattern for vector.splat.
+///
+/// Example:
+///
+///   %splat_to_tile = vector.splat %src : i32 to vector<[4]x[4]xi32>
+///
+/// is converted to:
+///
+///   %broadcast_to_1d = vector.broadcast %src : i32 to vector<[4]xi32>
+///   scf.for %tile_slice_index = %c0 to %num_tile_slices step %c1 {
+///     arm_sme.move_vector_to_tile_slice %broadcast_to_1d, %tile,
+///       %tile_slice_index : vector<[4]xi32> into vector<[4]x[4]xi32>
+///   }
+///
+/// This is identical to vector.broadcast of a scalar.
+struct SplatOpToArmSMELowering : public OpRewritePattern<vector::SplatOp> {
+  using OpRewritePattern<vector::SplatOp>::OpRewritePattern;
+
+  LogicalResult matchAndRewrite(vector::SplatOp splatOp,
+                                PatternRewriter &rewriter) const final {
+    auto tileType = splatOp.getResult().getType();
+    if (!tileType || !arm_sme::isValidSMETileVectorType(tileType))
+      return failure();
+
+    OpBuilder::InsertionGuard g(rewriter);
+    auto loc = splatOp.getLoc();
+
+    auto srcType = splatOp.getOperand().getType();
+    auto tileElementType = tileType.getElementType();
+
+    assert(srcType.isIntOrFloat() && "Invalid source type for vector.splat");
+
+    // First, broadcast the scalar to a 1-d vector.
+    VectorType tileSliceType = VectorType::Builder(tileType).dropDim(0);
+    Value broadcastOp1D = rewriter.create<vector::BroadcastOp>(
+        loc, tileSliceType, splatOp.getInput());
+
+    arm_sme::CastTileToVector tile =
+        getSMETileAndCastToVector(rewriter, loc, tileType);
+
+    // Next, create a loop over ZA tile slices and "move" the generated 1-d
+    // vector to each slice.
+    auto forOp = getLoopOverTileSlices(rewriter, loc, tileElementType);
+    auto tileSliceIndex = forOp.getInductionVar();
+
+    rewriter.create<arm_sme::MoveVectorToTileSliceOp>(
+        loc, tileType, broadcastOp1D, tile, tileSliceIndex);
+
+    rewriter.replaceOp(splatOp, tile);
+
+    return success();
+  }
+};
+
 /// Conversion pattern for vector.transpose.
 ///
 /// Stores the input tile to memory and reloads vertically.
@@ -381,5 +435,6 @@ void mlir::populateVectorToArmSMEPatterns(RewritePatternSet &patterns,
   patterns.add<TransferReadPermutationToArmSMELowering,
                TransferWriteToArmSMELowering, VectorLoadToArmSMELowering,
                VectorStoreToArmSMELowering, ConstantOpToArmSMELowering,
-               BroadcastOpToArmSMELowering, TransposeOpToArmSMELowering>(&ctx);
+               BroadcastOpToArmSMELowering, SplatOpToArmSMELowering,
+               TransposeOpToArmSMELowering>(&ctx);
 }
