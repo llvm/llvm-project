@@ -656,6 +656,18 @@ define i31 @load_with_non_power_of_2_element_type(ptr %x) {
   ret i31 %r
 }
 
+; FIXME: This is a miscompile.
+define i1 @load_with_non_power_of_2_element_type_2(ptr %x) {
+; CHECK-LABEL: @load_with_non_power_of_2_element_type_2(
+; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr inbounds <8 x i1>, ptr [[X:%.*]], i32 0, i32 1
+; CHECK-NEXT:    [[R:%.*]] = load i1, ptr [[TMP1]], align 1
+; CHECK-NEXT:    ret i1 [[R]]
+;
+  %lv = load <8 x i1>, ptr %x
+  %r = extractelement <8 x i1> %lv, i32 1
+  ret i1 %r
+}
+
 ; Scalarizing the load for multiple constant indices may not be profitable.
 define i32 @load_multiple_extracts_with_constant_idx(ptr %x) {
 ; CHECK-LABEL: @load_multiple_extracts_with_constant_idx(
