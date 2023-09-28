@@ -59,8 +59,8 @@ TEST(StringExtrasTest, isUpper) {
   EXPECT_FALSE(isUpper('\?'));
 }
 
-TEST(StringExtrasTest, Join) {
-  std::vector<std::string> Items;
+template <class ContainerT> void testJoin() {
+  ContainerT Items;
   EXPECT_EQ("", join(Items.begin(), Items.end(), " <sep> "));
 
   Items = {"foo"};
@@ -72,6 +72,17 @@ TEST(StringExtrasTest, Join) {
   Items = {"foo", "bar", "baz"};
   EXPECT_EQ("foo <sep> bar <sep> baz",
             join(Items.begin(), Items.end(), " <sep> "));
+}
+
+TEST(StringExtrasTest, Join) {
+  {
+    SCOPED_TRACE("std::vector<std::string>");
+    testJoin<std::vector<std::string>>();
+  }
+  {
+    SCOPED_TRACE("std::vector<const char*>");
+    testJoin<std::vector<const char *>>();
+  }
 }
 
 TEST(StringExtrasTest, JoinItems) {
