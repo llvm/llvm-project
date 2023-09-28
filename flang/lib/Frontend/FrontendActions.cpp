@@ -42,7 +42,6 @@
 #include "mlir/Target/LLVMIR/ModuleTranslation.h"
 #include "clang/Basic/Diagnostic.h"
 #include "clang/Basic/DiagnosticFrontend.h"
-#include "clang/Basic/TargetInfo.h"
 #include "clang/Driver/DriverDiagnostic.h"
 #include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/StringRef.h"

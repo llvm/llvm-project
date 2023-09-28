@@ -6,7 +6,6 @@
 //
 //===----------------------------------------------------------------------===//
 
-
 #include "Flang.h"
 #include "CommonArgs.h"
 
@@ -170,7 +169,6 @@ void Flang::addPicOptions(const ArgList &Args, ArgStringList &CmdArgs) const {
   }
 }
 
-
 void Flang::AddAArch64TargetArgs(const ArgList &Args,
                                  ArgStringList &CmdArgs) const {
   // Handle -msve_vector_bits=<bits>
@@ -185,17 +183,17 @@ void Flang::AddAArch64TargetArgs(const ArgList &Args,
       if (Val.endswith("+"))
         Val = Val.substr(0, Val.size() - 1);
       else {
-        bool Invalid = Val.getAsInteger(10, Bits); (void)Invalid;
+        [[maybe_unused]] bool Invalid = Val.getAsInteger(10, Bits);
         assert(!Invalid && "Failed to parse value");
         CmdArgs.push_back(
             Args.MakeArgString("-mvscale-max=" + llvm::Twine(Bits / 128)));
       }
 
-      bool Invalid = Val.getAsInteger(10, Bits); (void)Invalid;
+      [[maybe_unused]] bool Invalid = Val.getAsInteger(10, Bits);
       assert(!Invalid && "Failed to parse value");
       CmdArgs.push_back(
           Args.MakeArgString("-mvscale-min=" + llvm::Twine(Bits / 128)));
-    // Silently drop requests for vector-length agnostic code as it's implied.
+      // Silently drop requests for vector-length agnostic code as it's implied.
     } else if (!Val.equals("scalable"))
       // Handle the unsupported values passed to msve-vector-bits.
       D.Diag(diag::err_drv_unsupported_option_argument)
