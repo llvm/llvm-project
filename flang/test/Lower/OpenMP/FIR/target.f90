@@ -302,3 +302,42 @@ subroutine omp_target_parallel_do
    !CHECK: }
    !$omp end target parallel do
 end subroutine omp_target_parallel_do
+
+!===============================================================================
+! Target `is_device_ptr` clause
+!===============================================================================
+
+!CHECK-LABEL: func.func @_QPomp_target_is_device_ptr() {
+subroutine omp_target_is_device_ptr
+   use iso_c_binding, only : c_ptr, c_loc
+   !CHECK: %[[DEV_PTR:.*]] = fir.alloca !fir.type<_QM__fortran_builtinsT__builtin_c_ptr{__address:i64}> {bindc_name = "a", uniq_name = "_QFomp_target_is_device_ptrEa"}
+   type(c_ptr) :: a
+   integer, target :: b
+   !CHECK: %[[MAP_0:.*]] = omp.map_info var_ptr(%[[VAL_0]] : !fir.ref<!fir.type<_QM__fortran_builtinsT__builtin_c_ptr{__address:i64}>>)   map_clauses(tofrom) capture(ByRef) -> !fir.ref<!fir.type<_QM__fortran_builtinsT__builtin_c_ptr{__address:i64}>> {name = "a"}
+   !CHECK: %[[MAP_1:.*]] = omp.map_info var_ptr(%[[VAL_1]] : !fir.ref<i32>)   map_clauses(tofrom) capture(ByRef) -> !fir.ref<i32> {name = "b"}
+   !CHECK: omp.target is_device_ptr(%0 : !fir.ref<!fir.type<_QM__fortran_builtinsT__builtin_c_ptr{__address:i64}>>) map_entries(%[[MAP_0:.*]], %[[MAP_1:.*]] : !fir.ref<!fir.type<_QM__fortran_builtinsT__builtin_c_ptr{__address:i64}>>, !fir.ref<i32>) {
+   !$omp target map(tofrom: a,b) is_device_ptr(a)
+      !!!CHECK: {{.*}} = fir.coordinate_of %[[DEV_PTR:.*]], {{.*}} : (!fir.ref<!fir.type<_QM__fortran_builtinsT__builtin_c_ptr{__address:i64}>>, !fir.field) -> !fir.ref<i64>
+      a = c_loc(b)
+   !CHECK: omp.terminator
+   !$omp end target
+   !CHECK: }
+end subroutine omp_target_is_device_ptr
+
+ !===============================================================================
+ ! Target `has_device_addr` clause
+ !===============================================================================
+
+ !CHECK-LABEL: func.func @_QPomp_target_has_device_addr() {
+ subroutine omp_target_has_device_addr
+   integer, pointer :: a
+   !CHECK: %[[VAL_0:.*]] = fir.alloca !fir.box<!fir.ptr<i32>> {bindc_name = "a", uniq_name = "_QFomp_target_has_device_addrEa"}
+   !CHECK: %[[MAP:.*]] = omp.map_info var_ptr({{.*}})   map_clauses(tofrom) capture(ByRef) -> {{.*}} {name = "a"}
+   !CHECK: omp.target has_device_addr(%[[VAL_0]] : !fir.ref<!fir.box<!fir.ptr<i32>>>) map_entries(%[[MAP]] : {{.*}}) {
+   !$omp target map(tofrom: a) has_device_addr(a)
+   !CHECK: {{.*}} = fir.load %[[VAL_0]] : !fir.ref<!fir.box<!fir.ptr<i32>>>
+      a = 10
+   !CHECK: omp.terminator
+   !$omp end target
+   !CHECK: }
+end subroutine omp_target_has_device_addr

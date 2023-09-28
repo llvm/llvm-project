@@ -1390,10 +1390,19 @@ def TargetOp : OpenMP_Op<"target",[OutlineableOpenMPOpInterface, AttrSizedOperan
 
     The optional $thread_limit specifies the limit on the number of threads
 
-    The optional $nowait elliminates the implicit barrier so the parent task can make progress
+    The optional $nowait eliminates the implicit barrier so the parent task can make progress
     even if the target task is not yet completed.
 
-    TODO:  is_device_ptr, depend, defaultmap, in_reduction
+    The optional $is_device_ptr indicates list items are device pointers
+
+    The optional $use_device_addr indicates that list items already have device
+    addresses, so may be directly accessed from target device. May include array
+    sections.
+
+    The optional $map_operands maps data from the task’s environment to the
+    device environment.
+
+    TODO:  depend, defaultmap, in_reduction
 
   }];
 
@@ -1401,6 +1410,8 @@ def TargetOp : OpenMP_Op<"target",[OutlineableOpenMPOpInterface, AttrSizedOperan
                        Optional<AnyInteger>:$device,
                        Optional<AnyInteger>:$thread_limit,
                        UnitAttr:$nowait,
+                       Variadic<OpenMP_PointerLikeType>:$is_device_ptr,
+                       Variadic<OpenMP_PointerLikeType>:$has_device_addr,
                        Variadic<OpenMP_PointerLikeType>:$map_operands);
 
   let regions = (region AnyRegion:$region);
@@ -1410,6 +1421,8 @@ def TargetOp : OpenMP_Op<"target",[OutlineableOpenMPOpInterface, AttrSizedOperan
     | `device` `(` $device `:` type($device) `)`
     | `thread_limit` `(` $thread_limit `:` type($thread_limit) `)`
     | `nowait` $nowait
+    | `is_device_ptr` `(` $is_device_ptr `:` type($is_device_ptr) `)`
+    | `has_device_addr` `(` $has_device_addr `:` type($has_device_addr) `)`
     | `map_entries` `(` $map_operands `:` type($map_operands) `)`
     ) $region attr-dict
   }];

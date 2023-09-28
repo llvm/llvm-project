@@ -557,6 +557,18 @@ public:
                       llvm::SmallVectorImpl<mlir::Location> &useDeviceLocs,
                       llvm::SmallVectorImpl<const Fortran::semantics::Symbol *>
                           &useDeviceSymbols) const;
+  bool
+  processIsDevicePtr(llvm::SmallVectorImpl<mlir::Value> &operands,
+                     llvm::SmallVectorImpl<mlir::Type> &isDeviceTypes,
+                     llvm::SmallVectorImpl<mlir::Location> &isDeviceLocs,
+                     llvm::SmallVectorImpl<const Fortran::semantics::Symbol *>
+                         &isDeviceSymbols) const;
+  bool
+  processHasDeviceAddr(llvm::SmallVectorImpl<mlir::Value> &operands,
+                       llvm::SmallVectorImpl<mlir::Type> &isDeviceTypes,
+                       llvm::SmallVectorImpl<mlir::Location> &isDeviceLocs,
+                       llvm::SmallVectorImpl<const Fortran::semantics::Symbol *>
+                           &isDeviceSymbols) const;
 
   // Call this method for these clauses that should be supported but are not
   // implemented yet. It triggers a compilation error if any of the given
@@ -1824,6 +1836,34 @@ bool ClauseProcessor::processUseDevicePtr(
       });
 }
 
+bool ClauseProcessor::processIsDevicePtr(
+    llvm::SmallVectorImpl<mlir::Value> &operands,
+    llvm::SmallVectorImpl<mlir::Type> &isDeviceTypes,
+    llvm::SmallVectorImpl<mlir::Location> &isDeviceLocs,
+    llvm::SmallVectorImpl<const Fortran::semantics::Symbol *> &isDeviceSymbols)
+    const {
+  return findRepeatableClause<ClauseTy::IsDevicePtr>(
+      [&](const ClauseTy::IsDevicePtr *devPtrClause,
+          const Fortran::parser::CharBlock &) {
+        addUseDeviceClause(converter, devPtrClause->v, operands, isDeviceTypes,
+                           isDeviceLocs, isDeviceSymbols);
+      });
+}
+
+bool ClauseProcessor::processHasDeviceAddr(
+    llvm::SmallVectorImpl<mlir::Value> &operands,
+    llvm::SmallVectorImpl<mlir::Type> &isDeviceTypes,
+    llvm::SmallVectorImpl<mlir::Location> &isDeviceLocs,
+    llvm::SmallVectorImpl<const Fortran::semantics::Symbol *> &isDeviceSymbols)
+    const {
+  return findRepeatableClause<ClauseTy::HasDeviceAddr>(
+      [&](const ClauseTy::HasDeviceAddr *devAddrClause,
+          const Fortran::parser::CharBlock &) {
+        addUseDeviceClause(converter, devAddrClause->v, operands, isDeviceTypes,
+                           isDeviceLocs, isDeviceSymbols);
+      });
+}
+
 template <typename... Ts>
 void ClauseProcessor::processTODO(mlir::Location currentLocation,
                                   llvm::omp::Directive directive) const {
@@ -2411,6 +2451,10 @@ genTargetOp(Fortran::lower::AbstractConverter &converter,
   mlir::Value ifClauseOperand, deviceOperand, threadLimitOperand;
   mlir::UnitAttr nowaitAttr;
   llvm::SmallVector<mlir::Value> mapOperands;
+  llvm::SmallVector<mlir::Value> devicePtrOperands, deviceAddrOperands;
+  llvm::SmallVector<mlir::Type> useDeviceTypes;
+  llvm::SmallVector<mlir::Location> useDeviceLocs;
+  llvm::SmallVector<const Fortran::semantics::Symbol *> useDeviceSymbols;
 
   ClauseProcessor cp(converter, clauseList);
   cp.processIf(stmtCtx,
@@ -2421,11 +2465,13 @@ genTargetOp(Fortran::lower::AbstractConverter &converter,
   cp.processNowait(nowaitAttr);
   cp.processMap(currentLocation, directive, semanticsContext, stmtCtx,
                 mapOperands);
+  cp.processIsDevicePtr(devicePtrOperands, useDeviceTypes, useDeviceLocs,
+                        useDeviceSymbols);
+  cp.processHasDeviceAddr(deviceAddrOperands, useDeviceTypes, useDeviceLocs,
+                          useDeviceSymbols);
   cp.processTODO<Fortran::parser::OmpClause::Private,
                  Fortran::parser::OmpClause::Depend,
                  Fortran::parser::OmpClause::Firstprivate,
-                 Fortran::parser::OmpClause::IsDevicePtr,
-                 Fortran::parser::OmpClause::HasDeviceAddr,
                  Fortran::parser::OmpClause::Reduction,
                  Fortran::parser::OmpClause::InReduction,
                  Fortran::parser::OmpClause::Allocate,
@@ -2436,7 +2482,7 @@ genTargetOp(Fortran::lower::AbstractConverter &converter,
   return genOpWithBody<mlir::omp::TargetOp>(
       converter, eval, currentLocation, outerCombined, &clauseList,
       ifClauseOperand, deviceOperand, threadLimitOperand, nowaitAttr,
-      mapOperands);
+      devicePtrOperands, deviceAddrOperands, mapOperands);
 }
 
 static mlir::omp::TeamsOp
@@ -2830,6 +2876,8 @@ genOMP(Fortran::lower::AbstractConverter &converter,
         !std::get_if<Fortran::parser::OmpClause::Map>(&clause.u) &&
         !std::get_if<Fortran::parser::OmpClause::UseDevicePtr>(&clause.u) &&
         !std::get_if<Fortran::parser::OmpClause::UseDeviceAddr>(&clause.u) &&
+        !std::get_if<Fortran::parser::OmpClause::IsDevicePtr>(&clause.u) &&
+        !std::get_if<Fortran::parser::OmpClause::HasDeviceAddr>(&clause.u) &&
         !std::get_if<Fortran::parser::OmpClause::ThreadLimit>(&clause.u) &&
         !std::get_if<Fortran::parser::OmpClause::NumTeams>(&clause.u)) {
       TODO(clauseLocation, "OpenMP Block construct clause");
