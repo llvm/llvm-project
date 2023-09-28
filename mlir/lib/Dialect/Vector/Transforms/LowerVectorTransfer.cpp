@@ -455,6 +455,11 @@ struct TransferReadToVectorLoadLowering
     // Create vector load op.
     Operation *loadOp;
     if (read.getMask()) {
+      if (read.getVectorType().getRank() != 1)
+        // vector.maskedload operates on 1-D vectors.
+        return rewriter.notifyMatchFailure(
+            read, "vector type is not rank 1, can't create masked load");
+
       Value fill = rewriter.create<vector::SplatOp>(
           read.getLoc(), unbroadcastedVectorType, read.getPadding());
       loadOp = rewriter.create<vector::MaskedLoadOp>(
@@ -598,6 +603,14 @@ struct TransferWriteToVectorStoreLowering
         diag << "out of bounds dim: " << write;
       });
     if (write.getMask()) {
+      if (write.getVectorType().getRank() != 1)
+        // vector.maskedstore operates on 1-D vectors.
+        return rewriter.notifyMatchFailure(
+            write.getLoc(), [=](Diagnostic &diag) {
+              diag << "vector type is not rank 1, can't create masked store: "
+                   << write;
+            });
+
       rewriter.replaceOpWithNewOp<vector::MaskedStoreOp>(
           write, write.getSource(), write.getIndices(), write.getMask(),
           write.getVector());
