@@ -123,10 +123,21 @@ code.line:has(.bb-select):before {
   font-size: x-small;
   flex-grow: 1;
 }
-.value summary {
+.value > summary {
   background-color: #ace;
   display: flex;
-  justify-content: space-between;
+  cursor: pointer;
+}
+.value > summary::before {
+  content: '\25ba';  /* Black Right-Pointing Pointer */
+  margin-right: 0.5em;
+  font-size: 0.9em;
+}
+.value[open] > summary::before {
+  content: '\25bc';  /* Black Down-Pointing Triangle */
+}
+.value > summary > .location {
+  margin-left: auto;
 }
 .value .address {
   font-size: xx-small;
