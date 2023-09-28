@@ -396,9 +396,8 @@ define i64 @add_v2i16_v2i64_zext(<2 x i16> %x) {
 ;
 ; CHECK-GI-LABEL: add_v2i16_v2i64_zext:
 ; CHECK-GI:       // %bb.0: // %entry
-; CHECK-GI-NEXT:    adrp x8, .LCPI17_0
+; CHECK-GI-NEXT:    movi v1.2d, #0x0000000000ffff
 ; CHECK-GI-NEXT:    ushll v0.2d, v0.2s, #0
-; CHECK-GI-NEXT:    ldr q1, [x8, :lo12:.LCPI17_0]
 ; CHECK-GI-NEXT:    and v0.16b, v0.16b, v1.16b
 ; CHECK-GI-NEXT:    addp d0, v0.2d
 ; CHECK-GI-NEXT:    fmov x0, d0
@@ -583,9 +582,8 @@ define i32 @add_v4i8_v4i32_zext(<4 x i8> %x) {
 ;
 ; CHECK-GI-LABEL: add_v4i8_v4i32_zext:
 ; CHECK-GI:       // %bb.0: // %entry
-; CHECK-GI-NEXT:    adrp x8, .LCPI23_0
+; CHECK-GI-NEXT:    movi v1.2d, #0x0000ff000000ff
 ; CHECK-GI-NEXT:    ushll v0.4s, v0.4h, #0
-; CHECK-GI-NEXT:    ldr q1, [x8, :lo12:.LCPI23_0]
 ; CHECK-GI-NEXT:    and v0.16b, v0.16b, v1.16b
 ; CHECK-GI-NEXT:    addv s0, v0.4s
 ; CHECK-GI-NEXT:    fmov w0, s0
@@ -959,13 +957,12 @@ define i64 @add_v4i8_v4i64_zext(<4 x i8> %x) {
 ; CHECK-GI-LABEL: add_v4i8_v4i64_zext:
 ; CHECK-GI:       // %bb.0: // %entry
 ; CHECK-GI-NEXT:    ushll v0.4s, v0.4h, #0
-; CHECK-GI-NEXT:    adrp x8, .LCPI34_0
-; CHECK-GI-NEXT:    ldr q2, [x8, :lo12:.LCPI34_0]
-; CHECK-GI-NEXT:    ushll v1.2d, v0.2s, #0
+; CHECK-GI-NEXT:    movi v1.2d, #0x000000000000ff
+; CHECK-GI-NEXT:    ushll v2.2d, v0.2s, #0
 ; CHECK-GI-NEXT:    ushll2 v0.2d, v0.4s, #0
-; CHECK-GI-NEXT:    and v1.16b, v1.16b, v2.16b
-; CHECK-GI-NEXT:    and v0.16b, v0.16b, v2.16b
-; CHECK-GI-NEXT:    add v0.2d, v1.2d, v0.2d
+; CHECK-GI-NEXT:    and v2.16b, v2.16b, v1.16b
+; CHECK-GI-NEXT:    and v0.16b, v0.16b, v1.16b
+; CHECK-GI-NEXT:    add v0.2d, v2.2d, v0.2d
 ; CHECK-GI-NEXT:    addp d0, v0.2d
 ; CHECK-GI-NEXT:    fmov x0, d0
 ; CHECK-GI-NEXT:    ret
@@ -1041,9 +1038,8 @@ define i64 @add_v2i8_v2i64_zext(<2 x i8> %x) {
 ;
 ; CHECK-GI-LABEL: add_v2i8_v2i64_zext:
 ; CHECK-GI:       // %bb.0: // %entry
-; CHECK-GI-NEXT:    adrp x8, .LCPI36_0
+; CHECK-GI-NEXT:    movi v1.2d, #0x000000000000ff
 ; CHECK-GI-NEXT:    ushll v0.2d, v0.2s, #0
-; CHECK-GI-NEXT:    ldr q1, [x8, :lo12:.LCPI36_0]
 ; CHECK-GI-NEXT:    and v0.16b, v0.16b, v1.16b
 ; CHECK-GI-NEXT:    addp d0, v0.2d
 ; CHECK-GI-NEXT:    fmov x0, d0
@@ -1482,9 +1478,8 @@ define i64 @add_v2i16_v2i64_acc_zext(<2 x i16> %x, i64 %a) {
 ;
 ; CHECK-GI-LABEL: add_v2i16_v2i64_acc_zext:
 ; CHECK-GI:       // %bb.0: // %entry
-; CHECK-GI-NEXT:    adrp x8, .LCPI53_0
+; CHECK-GI-NEXT:    movi v1.2d, #0x0000000000ffff
 ; CHECK-GI-NEXT:    ushll v0.2d, v0.2s, #0
-; CHECK-GI-NEXT:    ldr q1, [x8, :lo12:.LCPI53_0]
 ; CHECK-GI-NEXT:    and v0.16b, v0.16b, v1.16b
 ; CHECK-GI-NEXT:    addp d0, v0.2d
 ; CHECK-GI-NEXT:    fmov x8, d0
@@ -1691,9 +1686,8 @@ define i32 @add_v4i8_v4i32_acc_zext(<4 x i8> %x, i32 %a) {
 ;
 ; CHECK-GI-LABEL: add_v4i8_v4i32_acc_zext:
 ; CHECK-GI:       // %bb.0: // %entry
-; CHECK-GI-NEXT:    adrp x8, .LCPI59_0
+; CHECK-GI-NEXT:    movi v1.2d, #0x0000ff000000ff
 ; CHECK-GI-NEXT:    ushll v0.4s, v0.4h, #0
-; CHECK-GI-NEXT:    ldr q1, [x8, :lo12:.LCPI59_0]
 ; CHECK-GI-NEXT:    and v0.16b, v0.16b, v1.16b
 ; CHECK-GI-NEXT:    addv s0, v0.4s
 ; CHECK-GI-NEXT:    fmov w8, s0
@@ -2111,13 +2105,12 @@ define i64 @add_v4i8_v4i64_acc_zext(<4 x i8> %x, i64 %a) {
 ; CHECK-GI-LABEL: add_v4i8_v4i64_acc_zext:
 ; CHECK-GI:       // %bb.0: // %entry
 ; CHECK-GI-NEXT:    ushll v0.4s, v0.4h, #0
-; CHECK-GI-NEXT:    adrp x8, .LCPI70_0
-; CHECK-GI-NEXT:    ldr q2, [x8, :lo12:.LCPI70_0]
-; CHECK-GI-NEXT:    ushll v1.2d, v0.2s, #0
+; CHECK-GI-NEXT:    movi v1.2d, #0x000000000000ff
+; CHECK-GI-NEXT:    ushll v2.2d, v0.2s, #0
 ; CHECK-GI-NEXT:    ushll2 v0.2d, v0.4s, #0
-; CHECK-GI-NEXT:    and v1.16b, v1.16b, v2.16b
-; CHECK-GI-NEXT:    and v0.16b, v0.16b, v2.16b
-; CHECK-GI-NEXT:    add v0.2d, v1.2d, v0.2d
+; CHECK-GI-NEXT:    and v2.16b, v2.16b, v1.16b
+; CHECK-GI-NEXT:    and v0.16b, v0.16b, v1.16b
+; CHECK-GI-NEXT:    add v0.2d, v2.2d, v0.2d
 ; CHECK-GI-NEXT:    addp d0, v0.2d
 ; CHECK-GI-NEXT:    fmov x8, d0
 ; CHECK-GI-NEXT:    add x0, x8, x0
@@ -2201,9 +2194,8 @@ define i64 @add_v2i8_v2i64_acc_zext(<2 x i8> %x, i64 %a) {
 ;
 ; CHECK-GI-LABEL: add_v2i8_v2i64_acc_zext:
 ; CHECK-GI:       // %bb.0: // %entry
-; CHECK-GI-NEXT:    adrp x8, .LCPI72_0
+; CHECK-GI-NEXT:    movi v1.2d, #0x000000000000ff
 ; CHECK-GI-NEXT:    ushll v0.2d, v0.2s, #0
-; CHECK-GI-NEXT:    ldr q1, [x8, :lo12:.LCPI72_0]
 ; CHECK-GI-NEXT:    and v0.16b, v0.16b, v1.16b
 ; CHECK-GI-NEXT:    addp d0, v0.2d
 ; CHECK-GI-NEXT:    fmov x8, d0
@@ -2838,10 +2830,9 @@ define i64 @add_pair_v2i16_v2i64_zext(<2 x i16> %x, <2 x i16> %y) {
 ;
 ; CHECK-GI-LABEL: add_pair_v2i16_v2i64_zext:
 ; CHECK-GI:       // %bb.0: // %entry
-; CHECK-GI-NEXT:    adrp x8, .LCPI89_0
+; CHECK-GI-NEXT:    movi v2.2d, #0x0000000000ffff
 ; CHECK-GI-NEXT:    ushll v0.2d, v0.2s, #0
 ; CHECK-GI-NEXT:    ushll v1.2d, v1.2s, #0
-; CHECK-GI-NEXT:    ldr q2, [x8, :lo12:.LCPI89_0]
 ; CHECK-GI-NEXT:    and v0.16b, v0.16b, v2.16b
 ; CHECK-GI-NEXT:    and v1.16b, v1.16b, v2.16b
 ; CHECK-GI-NEXT:    addp d0, v0.2d
@@ -3134,10 +3125,9 @@ define i32 @add_pair_v4i8_v4i32_zext(<4 x i8> %x, <4 x i8> %y) {
 ;
 ; CHECK-GI-LABEL: add_pair_v4i8_v4i32_zext:
 ; CHECK-GI:       // %bb.0: // %entry
-; CHECK-GI-NEXT:    adrp x8, .LCPI95_0
+; CHECK-GI-NEXT:    movi v2.2d, #0x0000ff000000ff
 ; CHECK-GI-NEXT:    ushll v0.4s, v0.4h, #0
 ; CHECK-GI-NEXT:    ushll v1.4s, v1.4h, #0
-; CHECK-GI-NEXT:    ldr q2, [x8, :lo12:.LCPI95_0]
 ; CHECK-GI-NEXT:    and v0.16b, v0.16b, v2.16b
 ; CHECK-GI-NEXT:    and v1.16b, v1.16b, v2.16b
 ; CHECK-GI-NEXT:    addv s0, v0.4s
@@ -3747,8 +3737,7 @@ define i64 @add_pair_v4i8_v4i64_zext(<4 x i8> %x, <4 x i8> %y) {
 ; CHECK-GI:       // %bb.0: // %entry
 ; CHECK-GI-NEXT:    ushll v0.4s, v0.4h, #0
 ; CHECK-GI-NEXT:    ushll v1.4s, v1.4h, #0
-; CHECK-GI-NEXT:    adrp x8, .LCPI106_0
-; CHECK-GI-NEXT:    ldr q2, [x8, :lo12:.LCPI106_0]
+; CHECK-GI-NEXT:    movi v2.2d, #0x000000000000ff
 ; CHECK-GI-NEXT:    ushll v3.2d, v0.2s, #0
 ; CHECK-GI-NEXT:    ushll2 v0.2d, v0.4s, #0
 ; CHECK-GI-NEXT:    ushll v4.2d, v1.2s, #0
@@ -3871,10 +3860,9 @@ define i64 @add_pair_v2i8_v2i64_zext(<2 x i8> %x, <2 x i8> %y) {
 ;
 ; CHECK-GI-LABEL: add_pair_v2i8_v2i64_zext:
 ; CHECK-GI:       // %bb.0: // %entry
-; CHECK-GI-NEXT:    adrp x8, .LCPI108_0
+; CHECK-GI-NEXT:    movi v2.2d, #0x000000000000ff
 ; CHECK-GI-NEXT:    ushll v0.2d, v0.2s, #0
 ; CHECK-GI-NEXT:    ushll v1.2d, v1.2s, #0
-; CHECK-GI-NEXT:    ldr q2, [x8, :lo12:.LCPI108_0]
 ; CHECK-GI-NEXT:    and v0.16b, v0.16b, v2.16b
 ; CHECK-GI-NEXT:    and v1.16b, v1.16b, v2.16b
 ; CHECK-GI-NEXT:    addp d0, v0.2d
