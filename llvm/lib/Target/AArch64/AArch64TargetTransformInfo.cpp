@@ -798,10 +798,31 @@ instCombineConvertFromSVBool(InstCombiner &IC, IntrinsicInst &II) {
   return IC.replaceInstUsesWith(II, EarliestReplacement);
 }
 
+static bool isAllActivePredicate(Value *Pred) {
+  // Look through convert.from.svbool(convert.to.svbool(...) chain.
+  Value *UncastedPred;
+  if (match(Pred, m_Intrinsic<Intrinsic::aarch64_sve_convert_from_svbool>(
+                      m_Intrinsic<Intrinsic::aarch64_sve_convert_to_svbool>(
+                          m_Value(UncastedPred)))))
+    // If the predicate has the same or less lanes than the uncasted
+    // predicate then we know the casting has no effect.
+    if (cast<ScalableVectorType>(Pred->getType())->getMinNumElements() <=
+        cast<ScalableVectorType>(UncastedPred->getType())->getMinNumElements())
+      Pred = UncastedPred;
+
+  return match(Pred, m_Intrinsic<Intrinsic::aarch64_sve_ptrue>(
+                         m_ConstantInt<AArch64SVEPredPattern::all>()));
+}
+
 static std::optional<Instruction *> instCombineSVESel(InstCombiner &IC,
                                                       IntrinsicInst &II) {
-  auto Select = IC.Builder.CreateSelect(II.getOperand(0), II.getOperand(1),
-                                        II.getOperand(2));
+  // svsel(ptrue, x, y) => x
+  auto *OpPredicate = II.getOperand(0);
+  if (isAllActivePredicate(OpPredicate))
+    return IC.replaceInstUsesWith(II, II.getOperand(1));
+
+  auto Select =
+      IC.Builder.CreateSelect(OpPredicate, II.getOperand(1), II.getOperand(2));
   return IC.replaceInstUsesWith(II, Select);
 }
 
@@ -1198,22 +1219,6 @@ instCombineSVEVectorFuseMulAddSub(InstCombiner &IC, IntrinsicInst &II,
                                      {P, MulOp0, MulOp1, AddendOp}, FMFSource);
 
   return IC.replaceInstUsesWith(II, Res);
-}
-
-static bool isAllActivePredicate(Value *Pred) {
-  // Look through convert.from.svbool(convert.to.svbool(...) chain.
-  Value *UncastedPred;
-  if (match(Pred, m_Intrinsic<Intrinsic::aarch64_sve_convert_from_svbool>(
-                      m_Intrinsic<Intrinsic::aarch64_sve_convert_to_svbool>(
-                          m_Value(UncastedPred)))))
-    // If the predicate has the same or less lanes than the uncasted
-    // predicate then we know the casting has no effect.
-    if (cast<ScalableVectorType>(Pred->getType())->getMinNumElements() <=
-        cast<ScalableVectorType>(UncastedPred->getType())->getMinNumElements())
-      Pred = UncastedPred;
-
-  return match(Pred, m_Intrinsic<Intrinsic::aarch64_sve_ptrue>(
-                         m_ConstantInt<AArch64SVEPredPattern::all>()));
 }
 
 static std::optional<Instruction *>
