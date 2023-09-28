@@ -125,7 +125,7 @@ code.line:has(.bb-select):before {
 .value > summary {
   background-color: #ace;
   display: flex;
-  justify-content: space-between;
+  justify-content: start;
   cursor: pointer;
 }
 .value > summary::before {
