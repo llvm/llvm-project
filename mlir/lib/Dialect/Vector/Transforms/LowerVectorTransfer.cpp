@@ -458,7 +458,8 @@ struct TransferReadToVectorLoadLowering
       if (read.getVectorType().getRank() != 1)
         // vector.maskedload operates on 1-D vectors.
         return rewriter.notifyMatchFailure(
-            read, "vector type is not rank 1, can't create masked load");
+            read, "vector type is not rank 1, can't create masked load, needs "
+                  "VectorToSCF");
 
       Value fill = rewriter.create<vector::SplatOp>(
           read.getLoc(), unbroadcastedVectorType, read.getPadding());
@@ -607,7 +608,8 @@ struct TransferWriteToVectorStoreLowering
         // vector.maskedstore operates on 1-D vectors.
         return rewriter.notifyMatchFailure(
             write.getLoc(), [=](Diagnostic &diag) {
-              diag << "vector type is not rank 1, can't create masked store: "
+              diag << "vector type is not rank 1, can't create masked store, "
+                      "needs VectorToSCF: "
                    << write;
             });
 
