@@ -3422,10 +3422,10 @@ SDValue PPCTargetLowering::LowerGlobalTLSAddressAIX(SDValue Op,
     // variable offset, and a single module-handle TOC entry for the entire
     // file.
 
-    // We are not able to (1) create a GV node, and (2) call getTOCEntry for the
-    // module-handle due to the reason that the module-handle should not be
-    // materialized (i.e. there should be no symbol-table entry referring to the
-    // module-handle). Instead we will create reference to __TLSML[TC]@ml in
+    // FIXME: We are not able to (1) create a GV node, and (2) call getTOCEntry
+    // for the module-handle due to the reason that the module-handle should not
+    // be materialized (i.e. there should be no symbol-table entry referring to
+    // the module-handle). Instead we will create reference to __TLSML[TC]@ml in
     // PPCTLSDynamicCall when processing the TLSLD_AIX pseudo node.
     SDValue ModuleHandle = DAG.getNode(PPCISD::TLSLD_AIX, dl, PtrVT);
     SDValue VariableOffsetTGA =
