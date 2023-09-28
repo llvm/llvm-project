@@ -105,8 +105,8 @@ Some existing Arith and Vector Dialect on `n-D` `vector` types comprise:
 // Produces a vector<3x7x8xf32>
 %c = vector.splat %1 : vector<3x7x8xf32>
 
-%d = vector.extract %0[1]: vector<3x7x8xf32>     // -> vector<7x8xf32>
-%e = vector.extract %0[1, 5]: vector<3x7x8xf32>  // -> vector<8xf32>
+%d = vector.extract %0[1]: vector<7x8xf32> from vector<3x7x8xf32>
+%e = vector.extract %0[1, 5]: vector<8xf32> from vector<3x7x8xf32>
 %f = vector.outerproduct %0, %1: vector<4xf32>, vector<8xf32>      // -> vector<4x8xf32>
 %g = vector.outerproduct %0, %1, %2: vector<4xf32>, vector<8xf32>  // fma when adding %2
 
