@@ -1493,15 +1493,15 @@ public:
 };
 
 /// Sparse conversion rule for the sparse_tensor.pack operator.
-class SparseTensorPackConverter : public OpConversionPattern<PackOp> {
+class SparseTensorAssembleConverter : public OpConversionPattern<AssembleOp> {
 public:
   using OpConversionPattern::OpConversionPattern;
   LogicalResult
-  matchAndRewrite(PackOp op, OpAdaptor adaptor,
+  matchAndRewrite(AssembleOp op, OpAdaptor adaptor,
                   ConversionPatternRewriter &rewriter) const override {
     const Location loc = op->getLoc();
     const auto dstTp = getSparseTensorType(op.getResult());
-    // PackOps always returns a static shaped tensor result.
+    // AssembleOps always returns a static shaped tensor result.
     assert(dstTp.hasStaticDimShape());
     SmallVector<Value> dimSizes = getDimSizes(rewriter, loc, dstTp);
     Value dst =
@@ -1546,7 +1546,7 @@ void mlir::populateSparseTensorConversionPatterns(
            SparseTensorToValuesConverter, SparseNumberOfEntriesConverter,
            SparseTensorLoadConverter, SparseTensorInsertConverter,
            SparseTensorExpandConverter, SparseTensorCompressConverter,
-           SparseTensorOutConverter, SparseTensorPackConverter>(
+           SparseTensorOutConverter, SparseTensorAssembleConverter>(
           typeConverter, patterns.getContext());
   patterns.add<SparseTensorConvertConverter>(typeConverter,
                                              patterns.getContext(), options);

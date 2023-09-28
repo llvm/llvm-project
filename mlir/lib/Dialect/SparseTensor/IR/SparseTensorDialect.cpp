@@ -974,14 +974,14 @@ static LogicalResult verifyPackUnPack(Operation *op, bool requiresStaticShape,
   return success();
 }
 
-LogicalResult PackOp::verify() {
+LogicalResult AssembleOp::verify() {
   const auto valuesTp = getRankedTensorType(getValues());
   const auto lvlsTp = getLevels().getTypes();
   const auto resTp = getSparseTensorType(getResult());
   return verifyPackUnPack(*this, true, resTp, valuesTp, lvlsTp);
 }
 
-LogicalResult UnpackOp::verify() {
+LogicalResult DisassembleOp::verify() {
   if (getOutValues().getType() != getRetValues().getType())
     return emitError("output values and return value type mismatch");
 

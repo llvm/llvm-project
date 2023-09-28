@@ -53,14 +53,14 @@ def SparseTensor_NewOp : SparseTensor_Op<"new", [Pure]>,
   let assemblyFormat = "$source attr-dict `:` type($source) `to` type($result)";
 }
 
-def SparseTensor_PackOp : SparseTensor_Op<"pack", [Pure]>,
+def SparseTensor_AssembleOp : SparseTensor_Op<"assemble", [Pure]>,
     Arguments<(ins TensorOf<[AnyType]>:$values,
                    Variadic<TensorOf<[AnySignlessIntegerOrIndex]>>:$levels)>,
     Results<(outs AnySparseTensor: $result)> {
   let summary = "Returns a sparse tensor from the given values, levels";
 
   let description = [{
-    Packs the values and per-level coordinate or postion arrays into a sparse tensor.
+    Assembles the values and per-level coordinate or postion arrays into a sparse tensor.
     The order and types of provided levels must be consistent with the actual storage
     layout of the returned sparse tensor described below.
 
@@ -87,7 +87,7 @@ def SparseTensor_PackOp : SparseTensor_Op<"pack", [Pure]>,
     ```mlir
     %values      = arith.constant dense<[ 1.1,   2.2,   3.3 ]> : tensor<3xf64>
     %coordinates = arith.constant dense<[[0,0], [1,2], [1,3]]> : tensor<3x2xindex>
-    %st = sparse_tensor.pack %values, %coordinates
+    %st = sparse_tensor.assemble %values, %coordinates
         : tensor<3xf64>, tensor<3x2xindex> to tensor<3x4xf64, #COO>
     // yields COO format |1.1, 0.0, 0.0, 0.0|
     //     of 3x4 matrix |0.0, 0.0, 2.2, 3.3|
@@ -102,7 +102,7 @@ def SparseTensor_PackOp : SparseTensor_Op<"pack", [Pure]>,
   let hasVerifier = 1;
 }
 
-def SparseTensor_UnpackOp : SparseTensor_Op<"unpack", [Pure, SameVariadicResultSize]>,
+def SparseTensor_DisassembleOp : SparseTensor_Op<"disassemble", [Pure, SameVariadicResultSize]>,
     Arguments<(ins AnySparseTensor:$tensor,
                    TensorOf<[AnyType]>:$out_values,
                    Variadic<TensorOf<[AnySignlessIntegerOrIndex]>>:$out_levels)>,
@@ -113,7 +113,7 @@ def SparseTensor_UnpackOp : SparseTensor_Op<"unpack", [Pure, SameVariadicResultS
   let summary = "Returns the (values, coordinates) pair unpacked from the input tensor";
 
   let description = [{
-    The unpack operation is the inverse of `sparse_tensor::pack`.  It returns
+    The disassemble operation is the inverse of `sparse_tensor::assemble`.  It returns
     the values and per-level position and coordinate array to the user
     from the sparse tensor along with the actual length of the memory used in
     each returned buffer. This operation can be used for returning an
@@ -132,7 +132,7 @@ def SparseTensor_UnpackOp : SparseTensor_Op<"unpack", [Pure, SameVariadicResultS
     //    of 3x4 matrix |0.0, 0.0, 2.2, 3.3|
     //                  |0.0, 0.0, 0.0, 0.0|
     %v, %p, %c, %v_len, %p_len, %c_len =
-        sparse_tensor.unpack %sp : tensor<3x4xf64, #COO>
+        sparse_tensor.disassemble %sp : tensor<3x4xf64, #COO>
           outs(%od, %op, %oi : tensor<3xf64>, tensor<2xindex>, tensor<3x2xindex>)
                             -> tensor<3xf64>, (tensor<2xindex>, tensor<3x2xindex>), index, (index, index)
     // %v = arith.constant dense<[ 1.1,   2.2,   3.3 ]> : tensor<3xf64>
