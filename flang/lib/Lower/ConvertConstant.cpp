@@ -323,7 +323,8 @@ genScalarLit(fir::FirOpBuilder &builder, mlir::Location loc,
 
   auto size = builder.getKindMap().getCharacterBitsize(KIND) / 8 * value.size();
   llvm::StringRef strVal(reinterpret_cast<const char *>(value.c_str()), size);
-  std::string globalName = fir::factory::uniqueCGIdent("cl", strVal);
+  std::string globalName = fir::factory::uniqueCGIdent(
+      KIND == 1 ? "cl"s : "cl"s + std::to_string(KIND), strVal);
   fir::GlobalOp global = builder.getNamedGlobal(globalName);
   fir::CharacterType type =
       fir::CharacterType::get(builder.getContext(), KIND, len);
