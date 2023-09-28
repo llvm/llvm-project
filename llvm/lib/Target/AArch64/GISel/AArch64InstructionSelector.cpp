@@ -3574,8 +3574,12 @@ bool AArch64InstructionSelector::selectReduction(MachineInstr &I,
     unsigned Opc = 0;
     if (VecTy == LLT::fixed_vector(16, 8))
       Opc = AArch64::ADDVv16i8v;
+    else if (VecTy == LLT::fixed_vector(8, 8))
+      Opc = AArch64::ADDVv8i8v;
     else if (VecTy == LLT::fixed_vector(8, 16))
       Opc = AArch64::ADDVv8i16v;
+    else if (VecTy == LLT::fixed_vector(4, 16))
+      Opc = AArch64::ADDVv4i16v;
     else if (VecTy == LLT::fixed_vector(4, 32))
       Opc = AArch64::ADDVv4i32v;
     else if (VecTy == LLT::fixed_vector(2, 64))
