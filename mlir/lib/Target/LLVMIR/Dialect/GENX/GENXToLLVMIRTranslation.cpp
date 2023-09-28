@@ -227,46 +227,33 @@ createGenISADPAS(GENX::MatrixDPASOp op, llvm::IRBuilderBase &builder,
   return builder.CreateCall(fn, args);
 }
 
-// Create a call to GenISA_LSC2DBlockRead for loading a 2D submatrix
-static llvm::Value *createGenISA2DBlockRead(
-    llvm::IRBuilderBase &builder, llvm::Value *ptr, llvm::Value *baseWidth,
-    llvm::Value *baseHeight, llvm::Value *basePitch, llvm::Value *x,
-    llvm::Value *y, uint32_t elemSizeInBits, uint32_t tileWidth,
-    uint32_t tileHeight, uint32_t vBlocks, uint32_t transpose,
-    uint32_t vnniTransform, ArrayRef<llvm::Type *> retTys) {
-  assert(isa<llvm::PointerType>(ptr->getType()) && "Expecting a pointer type");
-  llvm::ConstantInt *width = dyn_cast<llvm::ConstantInt>(baseWidth);
-  llvm::ConstantInt *pitch = dyn_cast<llvm::ConstantInt>(basePitch);
-  assert((!width || !pitch || width->getZExtValue() <= pitch->getZExtValue()) &&
-         "Base pitch should be >= base width");
-  assert(((elemSizeInBits == 8) || (elemSizeInBits == 16) ||
-          (elemSizeInBits == 32)) &&
-         "Unexpected element size");
-  assert(!(transpose && vnniTransform) &&
-         "Transpose and vnni transform are mutually exclusive");
-
+// Create a call to GenISA_LSC2DBlockRead for loading a 2D submatrix.
+static llvm::Value *
+createGenISA2DBlockRead(GENX::Matrix2DBlockLoadOp op,
+                        llvm::IRBuilderBase &builder,
+                        LLVM::ModuleTranslation &moduleTranslation) {
   llvm::Module *module = builder.GetInsertBlock()->getModule();
   llvm::Function *fn = llvm::GenISAIntrinsic::getDeclaration(
-      module, llvm::GenISAIntrinsic::GenISA_LSC2DBlockRead, retTys);
+      module, llvm::GenISAIntrinsic::GenISA_LSC2DBlockRead,
+      {moduleTranslation.convertType(op->getResultTypes()[0])});
   assert(fn && "GenISAIntrinsic::getDeclaration() returns NULL");
 
+  SmallVector<llvm::Value *> args(
+      moduleTranslation.lookupValues(op.getOperands()));
+
   // The IGC intrinsic requires the first argument be int64
-  auto base = builder.CreatePointerCast(ptr, builder.getInt64Ty());
+  assert(isa<llvm::PointerType>(args[0]->getType()) &&
+         "Expecting a pointer type");
+  args[0] = builder.CreatePointerCast(args[0], builder.getInt64Ty());
+
   auto int32Ty = builder.getInt32Ty();
   auto int1Ty = builder.getInt1Ty();
-  llvm::SmallVector<llvm::Value *, 12> args;
-  args.push_back(base);
-  args.push_back(baseWidth);
-  args.push_back(baseHeight);
-  args.push_back(basePitch);
-  args.push_back(x);
-  args.push_back(y);
-  args.push_back(llvm::ConstantInt::get(int32Ty, elemSizeInBits));
-  args.push_back(llvm::ConstantInt::get(int32Ty, tileWidth));
-  args.push_back(llvm::ConstantInt::get(int32Ty, tileHeight));
-  args.push_back(llvm::ConstantInt::get(int32Ty, vBlocks));
-  args.push_back(llvm::ConstantInt::get(int1Ty, transpose));
-  args.push_back(llvm::ConstantInt::get(int1Ty, vnniTransform));
+  args.push_back(llvm::ConstantInt::get(int32Ty, op.getElemSizeInBits()));
+  args.push_back(llvm::ConstantInt::get(int32Ty, op.getTileWidth()));
+  args.push_back(llvm::ConstantInt::get(int32Ty, op.getTileHeight()));
+  args.push_back(llvm::ConstantInt::get(int32Ty, op.getVBlocks()));
+  args.push_back(llvm::ConstantInt::get(int1Ty, op.getTranspose()));
+  args.push_back(llvm::ConstantInt::get(int1Ty, op.getVnniTransform()));
   return builder.CreateCall(fn, args);
 }
 

@@ -411,7 +411,7 @@ def GENX_Matrix2DBlockLoadOp : GENX_Op<"matrix.2Dblockload">,
     I1Attr:$vnni_transform
   )> {
 
-  let summary = "GENX 2D block Load";
+  let summary = "GENX 2D block load";
 
   string baseDescription = [{
     The 'genx.matrix.2Dblockload' operation loads a submatrix from an array in memory.
@@ -431,14 +431,14 @@ def GENX_Matrix2DBlockLoadOp : GENX_Op<"matrix.2Dblockload">,
   }];
 
   string llvmBuilder = [{
-    $res = createGenISA2DBlockRead(builder,
-      $ptr, $base_width, $base_height, $base_pitch, $x, $y, $elem_size_in_bits, $tile_width, 
-      $tile_height, $v_blocks, $transpose, $vnni_transform, {$_resultType});
+    $res = createGenISA2DBlockRead(op, builder, moduleTranslation);
   }];
     
   let assemblyFormat = [{
-   `<` $tile_height `x` $tile_width `>` $elem_size_in_bits $v_blocks $transpose $vnni_transform operands attr-dict `:` `(` type(operands) `)` `->` type($res)
+    operands attr-dict `:` functional-type(operands, results)
   }];
+
+  let hasVerifier = 1;
 }
 
 def GENX_IsJointMatrixType :

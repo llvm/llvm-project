@@ -120,8 +120,8 @@ llvm.func @genx.dpas(%c : vector<8xi32>, %a : vector<8xi32>, %b : vector<8xi32>)
 }
 
 func.func @genx.2Dblockload1x4.32.1.0.0(%ptr : !llvm.ptr<i32>, %base_width : i32, %base_height : i32, %base_pitch : i32, %x : i32, %y : i32) {
-  // CHECK: genx.matrix.2Dblockload<1 x 4> 32 1 false false %arg0, %arg1, %arg2, %arg3, %arg4, %arg5 : (!llvm.ptr<i32>, i32, i32, i32, i32, i32) -> vector<4xi32>
-  %0 = genx.matrix.2Dblockload<1 x 4> 32 1 false false %ptr, %base_width, %base_height, %base_pitch, %x, %y : (!llvm.ptr<i32>, i32, i32, i32, i32, i32) -> vector<4xi32>
+  // CHECK: %0 = genx.matrix.2Dblockload %arg0, %arg1, %arg2, %arg3, %arg4, %arg5 {elem_size_in_bits = 32 : i32, tile_height = 1 : i32, tile_width = 4 : i32, transpose = false, v_blocks = 1 : i32, vnni_transform = false} : (!llvm.ptr<i32>, i32, i32, i32, i32, i32) -> vector<4xi32>
+  %0 = genx.matrix.2Dblockload %ptr, %base_width, %base_height, %base_pitch, %x, %y {elem_size_in_bits=32:i32, tile_width=4:i32, tile_height=1:i32, v_blocks=1:i32, transpose=false, vnni_transform=false} : (!llvm.ptr<i32>, i32, i32, i32, i32, i32) -> vector<4xi32>
   llvm.return
 }
 

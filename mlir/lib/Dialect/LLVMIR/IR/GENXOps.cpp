@@ -12,6 +12,7 @@
 
 #include "mlir/Dialect/LLVMIR/GENXDialect.h"
 #include "mlir/Dialect/LLVMIR/GENXTypes.h"
+#include "mlir/IR/OpDefinition.h"
 
 using namespace mlir;
 
@@ -21,6 +22,48 @@ using namespace mlir;
 
 LogicalResult GENX::MatrixDPASOp::verify() {
   // TODO
+  return success();
+}
+
+//===----------------------------------------------------------------------===//
+// genx.matrix.2Dblockload
+//===----------------------------------------------------------------------===//
+
+static std::optional<int> getConstantInt(Value v) {
+  Operation *op = v.getDefiningOp();
+  if (!op)
+    return std::nullopt;
+
+  if (!op->hasTrait<OpTrait::ConstantLike>())
+    return std::nullopt;
+
+  llvm::SmallVector<OpFoldResult> folded;
+  if (failed(op->fold({}, folded)) || folded.size() != 1)
+    return std::nullopt;
+
+  if (!folded.front().is<Attribute>() ||
+      !isa<IntegerAttr>(folded.front().get<Attribute>()))
+    return std::nullopt;
+
+  return cast<IntegerAttr>(folded.front().get<Attribute>()).getInt();
+}
+
+LogicalResult GENX::Matrix2DBlockLoadOp::verify() {
+  if (getElemSizeInBits() != 8 && getElemSizeInBits() != 16 &&
+      getElemSizeInBits() != 32)
+    return this->emitOpError(
+        "expecting 'elem_size_in_bits' to be 8, 16, or 32");
+
+  if (getTranspose() && getVnniTransform())
+    return this->emitOpError(
+        "transpose and vnni transform are mutually exclusive");
+
+  std::optional<int> width = getConstantInt(getBaseWidth());
+  std::optional<int> pitch = getConstantInt(getBasePitch());
+  if (pitch && width && *pitch < *width)
+    return this->emitOpError(
+        "4th operand (base pitch) should be >= 2nd operand (base width)");
+
   return success();
 }
 
