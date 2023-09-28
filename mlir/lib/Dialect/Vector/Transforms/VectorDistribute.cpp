@@ -1035,11 +1035,12 @@ struct WarpOpExtract : public OpRewritePattern<WarpExecuteOnLane0Op> {
     VectorType extractSrcType = extractOp.getSourceVectorType();
     Location loc = extractOp.getLoc();
 
-    // "vector.extract %v[] : vector<f32>" is an invalid op.
+    // "vector.extract %v[] : vector<f32> from vector<f32>" is an invalid op.
     assert(extractSrcType.getRank() > 0 &&
            "vector.extract does not support rank 0 sources");
 
-    // "vector.extract %v[] : vector<...xf32>" can be canonicalized to %v.
+    // "vector.extract %v[] : vector<...xf32> from vector<...xf32>" can be
+    // canonicalized to %v.
     if (extractOp.getNumIndices() == 0)
       return failure();
 
