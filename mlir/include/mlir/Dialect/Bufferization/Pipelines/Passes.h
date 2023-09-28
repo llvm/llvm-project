@@ -17,6 +17,7 @@
 
 namespace mlir {
 namespace bufferization {
+struct DeallocationOptions;
 
 /// Options for the buffer deallocation pipeline.
 struct BufferDeallocationPipelineOptions
@@ -27,7 +28,23 @@ struct BufferDeallocationPipelineOptions
           "Allows to add additional arguments to private functions to "
           "dynamically pass ownership of memrefs to callees. This can enable "
           "earlier deallocations."),
-      llvm::cl::init(false)};
+      llvm::cl::init(true)};
+  PassOptions::Option<bool> verifyFunctionBoundaryABI{
+      *this, "verify-function-boundary-abi",
+      llvm::cl::desc(
+          "Inserts `cf.assert` operations to verify the function boundary ABI "
+          "at runtime. Currently, it is only checked that the ownership of "
+          "returned MemRefs is 'true'. This makes sure that ownership is "
+          "yielded and the returned MemRef does not originate from the same "
+          "allocation as a function argument. If it can be determined "
+          "statically that the ABI is not adhered to, an error will already be "
+          "emitted at compile time. This cannot be changed with this option."),
+      llvm::cl::init(true)};
+
+  /// Convert this BufferDeallocationPipelineOptions struct to a
+  /// DeallocationOptions struct to be passed to the
+  /// OwnershipBasedBufferDeallocationPass.
+  DeallocationOptions asDeallocationOptions() const;
 };
 
 //===----------------------------------------------------------------------===//

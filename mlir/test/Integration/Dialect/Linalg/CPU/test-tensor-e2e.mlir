@@ -5,7 +5,7 @@
 // RUN:   -shared-libs=%mlir_runner_utils \
 // RUN: | FileCheck %s
 
-func.func @foo() -> tensor<4xf32> {
+func.func private @foo() -> tensor<4xf32> {
   %0 = arith.constant dense<[1.0, 2.0, 3.0, 4.0]> : tensor<4xf32>
   return %0 : tensor<4xf32>
 }
