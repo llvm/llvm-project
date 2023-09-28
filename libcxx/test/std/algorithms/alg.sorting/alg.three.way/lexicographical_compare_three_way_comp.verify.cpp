@@ -29,19 +29,19 @@ constexpr bool incorrect_comparator(int a, int b) { return a < b; }
 auto test_incorrect_comparator() {
   std::array a{90, 81};
   std::array b{10, 11};
-  // expected-error-re@*:* {{{{(static_assert|static assertion)}} failed{{.*}}The comparator passed to lexicographical_compare_three_way must return a comparison category type}}
+  // expected-error-re@*:* {{static assertion failed{{.*}}The comparator passed to lexicographical_compare_three_way must return a comparison category type}}
   // expected-error@*:* {{no viable conversion}}
   return std::lexicographical_compare_three_way(a.begin(), a.end(), b.begin(), b.end(), incorrect_comparator);
 }
 
 auto test_invalid_difference_type_first(
     RandomAccessIteratorBadDifferenceType a, RandomAccessIteratorBadDifferenceType b, int* c, int* d) {
-  // expected-error-re@*:* {{{{(static_assert|static assertion)}} failed{{.*}}Using a non-integral difference_type is undefined behavior}}}}
+  // expected-error-re@*:* {{static assertion failed{{.*}}Using a non-integral difference_type is undefined behavior}}}}
   return std::lexicographical_compare_three_way(a, b, c, d, std::compare_three_way());
 }
 
 auto test_invalid_difference_type_second(
     int* a, int* b, RandomAccessIteratorBadDifferenceType c, RandomAccessIteratorBadDifferenceType d) {
-  // expected-error-re@*:* {{{{(static_assert|static assertion)}} failed{{.*}}Using a non-integral difference_type is undefined behavior}}}}
+  // expected-error-re@*:* {{static assertion failed{{.*}}Using a non-integral difference_type is undefined behavior}}}}
   return std::lexicographical_compare_three_way(a, b, c, d, std::compare_three_way());
 }
