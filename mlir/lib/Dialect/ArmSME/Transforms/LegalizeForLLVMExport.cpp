@@ -414,7 +414,7 @@ struct MoveTileSliceToVectorArmSMELowering
                   OpAdaptor,
                   ConversionPatternRewriter &rewriter) const override {
     auto loc = moveTileSliceToVector.getLoc();
-    auto sliceType = moveTileSliceToVector.getResult().getType();
+    auto sliceType = moveTileSliceToVector.getSliceType();
     auto tile = moveTileSliceToVector.getTile();
     auto sliceIndex = moveTileSliceToVector.getTileSliceIndex();
 

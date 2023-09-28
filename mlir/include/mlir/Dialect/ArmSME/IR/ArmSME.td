@@ -528,6 +528,10 @@ def MoveTileSliceToVectorOp : ArmSME_Op<"move_tile_slice_to_vector", [Pure,
   let arguments = (ins SMETile:$tile, Index:$tile_slice_index);
   let results = (outs SVEVector:$result);
 
+  let extraClassDeclaration = [{
+    VectorType getSliceType() { return getResult().getType(); }
+  }];
+
   let assemblyFormat = [{
       $tile `[` $tile_slice_index `]` attr-dict
       `:` type($result) `from` type($tile)
