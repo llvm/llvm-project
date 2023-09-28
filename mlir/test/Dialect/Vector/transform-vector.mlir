@@ -5,7 +5,7 @@ func.func @matmul_tensors(
   %arg0: tensor<8x16xf32>, %arg1: tensor<16x32xf32>, %arg2: tensor<8x32xf32>)
     -> tensor<8x32xf32> {
 // CHECK-NOT: linalg
-// CHECK: vector.extract {{.*}} : vector<8x4xf32>
+// CHECK: vector.extract {{.*}} : vector<4xf32> from vector<8x4xf32>
 // CHECK: vector.store {{.*}} : memref<8x32xf32>, vector<4xf32>
   %0 = linalg.matmul  ins(%arg0, %arg1: tensor<8x16xf32>, tensor<16x32xf32>)
                      outs(%arg2: tensor<8x32xf32>)
@@ -16,7 +16,7 @@ func.func @matmul_tensors(
 transform.sequence failures(propagate) {
 ^bb1(%module_op: !transform.any_op):
   %0 = transform.structured.match ops{["linalg.matmul"]} in %module_op : (!transform.any_op) -> !transform.any_op
-  %1, %loops:3 = transform.structured.tile %0 [8, 4, 2]
+  %1, %loops:3 = transform.structured.tile_using_for %0 [8, 4, 2]
     : (!transform.any_op) -> (!transform.any_op, !transform.any_op, !transform.any_op, !transform.any_op)
   %2 = get_parent_op %1 {isolated_from_above} : (!transform.any_op) -> !transform.any_op
   transform.structured.vectorize_children_and_apply_patterns %2 : (!transform.any_op) -> !transform.any_op

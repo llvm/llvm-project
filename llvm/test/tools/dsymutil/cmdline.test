@@ -21,7 +21,6 @@ CHECK: -object-prefix-map <prefix=remapped>
 CHECK: -oso-prepend-path <path>
 CHECK: -out <filename>
 CHECK: {{-o <filename>}}
-CHECK: -papertrail
 CHECK: -remarks-drop-without-debug
 CHECK: -remarks-output-format <format>
 CHECK: -remarks-prepend-path <path>

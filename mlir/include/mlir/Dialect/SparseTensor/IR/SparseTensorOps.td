@@ -74,7 +74,7 @@ def SparseTensor_PackOp : SparseTensor_Op<"pack", [Pure]>,
     sources; e.g., when passing two numpy arrays from Python.
 
     Disclaimer: This is the user's responsibility to provide input that can be
-    correctly interpreted by the sparse compiler, which does not perform
+    correctly interpreted by the sparsifier, which does not perform
     any sanity test during runtime to verify data integrity.
 
     TODO: The returned tensor is allowed (in principle) to have non-identity
@@ -120,7 +120,7 @@ def SparseTensor_UnpackOp : SparseTensor_Op<"unpack", [Pure, SameVariadicResultS
     unpacked MLIR sparse tensor to frontend; e.g., returning two numpy arrays to Python.
 
     Disclaimer: This is the user's responsibility to allocate large enough buffers
-    to hold the sparse tensor. The sparse compiler simply copies each fields
+    to hold the sparse tensor. The sparsifier simply copies each fields
     of the sparse tensor into the user-supplied buffer without bound checking.
 
     TODO: the current implementation does not yet support non-identity mappings.
@@ -362,7 +362,7 @@ def SparseTensor_ToSliceOffsetOp : SparseTensor_Op<"slice.offset", [Pure]>,
     Extracts the offset of the sparse tensor slice at the given dimension.
 
     Currently, sparse tensor slices are still a work in progress, and only
-    works when runtime library is disabled (i.e., running sparse compiler
+    works when runtime library is disabled (i.e., running the sparsifier
     with `enable-runtime-library=false`).
 
     Example:
@@ -389,7 +389,7 @@ def SparseTensor_ToSliceStrideOp : SparseTensor_Op<"slice.stride", [Pure]>,
     Extracts the stride of the sparse tensor slice at the given dimension.
 
     Currently, sparse tensor slices are still a work in progress, and only
-    works when runtime library is disabled (i.e., running sparse compiler
+    works when runtime library is disabled (i.e., running the sparsifier
     with `enable-runtime-library=false`).
 
     Example:

@@ -37,6 +37,6 @@ func.func @gemm(%a : memref<?x?xf32>, %b : memref<?x?xf32>, %c : memref<?x?xf32>
 transform.sequence failures(propagate) {
 ^bb0(%arg1: !transform.any_op):
   %0 = transform.structured.match ops{["linalg.matmul"]} in %arg1 : (!transform.any_op) -> !transform.any_op
-  %1, %loops:3 = transform.structured.tile %0 [16, 16, 16] : (!transform.any_op) -> (!transform.any_op, !transform.any_op, !transform.any_op, !transform.any_op)
+  %1, %loops:3 = transform.structured.tile_using_for %0 [16, 16, 16] : (!transform.any_op) -> (!transform.any_op, !transform.any_op, !transform.any_op, !transform.any_op)
   %2 = transform.structured.promote %1 { operands_to_promote = [0, 2], force_full_tiles = [false, false], use_full_tiles_by_default } : (!transform.any_op) -> !transform.any_op
 }

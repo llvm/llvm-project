@@ -334,6 +334,15 @@ enabled sub-projects. Nearly all of these variable names begin with
   need revision info can disable this option to avoid re-linking most binaries
   after a branch switch. Defaults to ON.
 
+**LLVM_FORCE_VC_REVISION**:STRING
+  Force a specific Git revision id rather than calling to git to determine it.
+  This is useful in environments where git is not available or non-functional
+  but the VC revision is available through other means.
+
+**LLVM_FORCE_VC_REPOSITORY**:STRING
+  Set the git repository to include in version info rather than calling git to
+  determine it.
+
 **LLVM_BUILD_32_BITS**:BOOL
   Build 32-bit executables and libraries on 64-bit systems. This option is
   available only on some 64-bit Unix systems. Defaults to OFF.

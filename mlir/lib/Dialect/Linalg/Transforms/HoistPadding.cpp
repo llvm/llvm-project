@@ -842,8 +842,11 @@ padThroughLoopIterArg(RewriterBase &rewriter, Value paddedValueBeforeHoisting,
         outerSliceOp.getMixedStrides());
     rewriter.replaceAllUsesWith(forOp.getResult(iterArgNumber), extracted);
   }
-  scf::ForOp newForOp =
-      replaceLoopWithNewYields(rewriter, forOp, initArgs, yieldOperands);
+  scf::ForOp newForOp = cast<scf::ForOp>(*forOp.replaceWithAdditionalYields(
+      rewriter, initArgs, /*replaceInitOperandUsesInLoop=*/true,
+      [&](OpBuilder &b, Location loc, ArrayRef<BlockArgument> newBBArgs) {
+        return yieldOperands;
+      }));
 
   LLVM_DEBUG(DBGS() << "newForOp results: " << newForOp.getNumResults()
                     << "\n");

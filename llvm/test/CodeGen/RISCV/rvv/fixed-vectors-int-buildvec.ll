@@ -292,7 +292,8 @@ define <4 x i64> @buildvec_vid_step1_add0_v4i64() {
 ; RV32-NEXT:    lui a0, %hi(.LCPI25_0)
 ; RV32-NEXT:    addi a0, a0, %lo(.LCPI25_0)
 ; RV32-NEXT:    vsetivli zero, 8, e32, m2, ta, ma
-; RV32-NEXT:    vle32.v v8, (a0)
+; RV32-NEXT:    vle8.v v10, (a0)
+; RV32-NEXT:    vsext.vf4 v8, v10
 ; RV32-NEXT:    ret
 ;
 ; RV64-LABEL: buildvec_vid_step1_add0_v4i64:
@@ -309,7 +310,8 @@ define <4 x i64> @buildvec_vid_step2_add0_v4i64() {
 ; RV32-NEXT:    lui a0, %hi(.LCPI26_0)
 ; RV32-NEXT:    addi a0, a0, %lo(.LCPI26_0)
 ; RV32-NEXT:    vsetivli zero, 8, e32, m2, ta, ma
-; RV32-NEXT:    vle32.v v8, (a0)
+; RV32-NEXT:    vle8.v v10, (a0)
+; RV32-NEXT:    vsext.vf4 v8, v10
 ; RV32-NEXT:    ret
 ;
 ; RV64-LABEL: buildvec_vid_step2_add0_v4i64:

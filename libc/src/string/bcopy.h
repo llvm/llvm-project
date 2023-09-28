@@ -11,10 +11,10 @@
 
 #include <stddef.h> // size_t
 
-namespace __llvm_libc {
+namespace LIBC_NAMESPACE {
 
 void bcopy(const void *src, void *dest, size_t count);
 
-} // namespace __llvm_libc
+} // namespace LIBC_NAMESPACE
 
 #endif // LLVM_LIBC_SRC_STRING_BCOPY_H

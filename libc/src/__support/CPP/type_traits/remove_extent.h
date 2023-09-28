@@ -11,7 +11,7 @@
 #include "src/__support/CPP/type_traits/type_identity.h"
 #include "stddef.h" // size_t
 
-namespace __llvm_libc::cpp {
+namespace LIBC_NAMESPACE::cpp {
 
 // remove_extent
 template <class T> struct remove_extent : cpp::type_identity<T> {};
@@ -20,6 +20,6 @@ template <class T, size_t N>
 struct remove_extent<T[N]> : cpp::type_identity<T> {};
 template <class T> using remove_extent_t = typename remove_extent<T>::type;
 
-} // namespace __llvm_libc::cpp
+} // namespace LIBC_NAMESPACE::cpp
 
 #endif // LLVM_LIBC_SRC___SUPPORT_CPP_TYPE_TRAITS_REMOVE_EXTENT_H

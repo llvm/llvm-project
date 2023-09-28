@@ -23,15 +23,15 @@
 }
 
 // CHECK-HIR-LABEL:   func @matvec(
-// CHECK-HIR-SAME:                 %[[VAL_0:.*]]: tensor<32x64xf64, #sparse_tensor.encoding<{ lvlTypes = [ "dense", "compressed" ], dimToLvl = affine_map<(d0, d1) -> (d1, d0)> }>>,
+// CHECK-HIR-SAME:                 %[[VAL_0:.*]]: tensor<32x64xf64, #sparse_tensor.encoding<{{{.*}}}>>,
 // CHECK-HIR-SAME:                 %[[VAL_1:.*]]: tensor<64xf64>,
 // CHECK-HIR-SAME:                 %[[VAL_2:.*]]: tensor<32xf64>) -> tensor<32xf64> {
 // CHECK-HIR-DAG:       %[[VAL_3:.*]] = arith.constant 64 : index
 // CHECK-HIR-DAG:       %[[VAL_4:.*]] = arith.constant 0 : index
 // CHECK-HIR-DAG:       %[[VAL_5:.*]] = arith.constant 1 : index
-// CHECK-HIR-DAG:       %[[VAL_6:.*]] = sparse_tensor.positions %[[VAL_0]] {level = 1 : index} : tensor<32x64xf64, #sparse_tensor.encoding<{ lvlTypes = [ "dense", "compressed" ], dimToLvl = affine_map<(d0, d1) -> (d1, d0)> }>> to memref<?xindex>
-// CHECK-HIR-DAG:       %[[VAL_7:.*]] = sparse_tensor.coordinates %[[VAL_0]] {level = 1 : index} : tensor<32x64xf64, #sparse_tensor.encoding<{ lvlTypes = [ "dense", "compressed" ], dimToLvl = affine_map<(d0, d1) -> (d1, d0)> }>> to memref<?xindex>
-// CHECK-HIR-DAG:       %[[VAL_8:.*]] = sparse_tensor.values %[[VAL_0]] : tensor<32x64xf64, #sparse_tensor.encoding<{ lvlTypes = [ "dense", "compressed" ], dimToLvl = affine_map<(d0, d1) -> (d1, d0)> }>> to memref<?xf64>
+// CHECK-HIR-DAG:       %[[VAL_6:.*]] = sparse_tensor.positions %[[VAL_0]] {level = 1 : index} : tensor<32x64xf64, #sparse_tensor.encoding<{{{.*}}}>> to memref<?xindex>
+// CHECK-HIR-DAG:       %[[VAL_7:.*]] = sparse_tensor.coordinates %[[VAL_0]] {level = 1 : index} : tensor<32x64xf64, #sparse_tensor.encoding<{{{.*}}}>> to memref<?xindex>
+// CHECK-HIR-DAG:       %[[VAL_8:.*]] = sparse_tensor.values %[[VAL_0]] : tensor<32x64xf64, #sparse_tensor.encoding<{{{.*}}}>> to memref<?xf64>
 // CHECK-HIR-DAG:       %[[VAL_9:.*]] = bufferization.to_memref %[[VAL_1]] : memref<64xf64>
 // CHECK-HIR-DAG:       %[[VAL_11:.*]] = bufferization.to_memref %[[VAL_2]] : memref<32xf64>
 // CHECK-HIR:           scf.for %[[VAL_12:.*]] = %[[VAL_4]] to %[[VAL_3]] step %[[VAL_5]] {

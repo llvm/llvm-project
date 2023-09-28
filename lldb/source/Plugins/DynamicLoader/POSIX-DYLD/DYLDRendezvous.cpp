@@ -482,7 +482,7 @@ bool DYLDRendezvous::RemoveSOEntriesFromRemote(
 
     // Only add shared libraries and not the executable.
     if (!SOEntryIsMainExecutable(entry)) {
-      auto pos = std::find(m_soentries.begin(), m_soentries.end(), entry);
+      auto pos = llvm::find(m_soentries, entry);
       if (pos == m_soentries.end())
         return false;
 
@@ -710,16 +710,19 @@ bool DYLDRendezvous::FindMetadata(const char *name, PThreadField field,
   target.GetImages().FindSymbolsWithNameAndType(ConstString(name),
                                                 eSymbolTypeAny, list);
   if (list.IsEmpty())
-  return false;
-
-  Address address = list[0].symbol->GetAddress();
-  addr_t addr = address.GetLoadAddress(&target);
-  if (addr == LLDB_INVALID_ADDRESS)
     return false;
 
+  Address address = list[0].symbol->GetAddress();
+  address.SetOffset(address.GetOffset() + field * sizeof(uint32_t));
+
+  // Read from target memory as this allows us to try process memory and
+  // fallback to reading from read only sections from the object files. Here we
+  // are reading read only data from libpthread.so to find data in the thread
+  // specific area for the data we want and this won't be saved into process
+  // memory due to it being read only.
   Status error;
-  value = (uint32_t)m_process->ReadUnsignedIntegerFromMemory(
-      addr + field * sizeof(uint32_t), sizeof(uint32_t), 0, error);
+  value =
+      target.ReadUnsignedIntegerFromMemory(address, sizeof(uint32_t), 0, error);
   if (error.Fail())
     return false;
 

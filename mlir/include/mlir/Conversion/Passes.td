@@ -569,7 +569,7 @@ def ConvertGPUToSPIRV : Pass<"convert-gpu-to-spirv", "ModuleOp"> {
            "bool", /*default=*/"false",
            "Use 64-bit integers to convert index types">,
     Option<"useCoopMatrixNV", "use-coop-matrix-nv",
-           "bool", /*default=*/"true",
+           "bool", /*default=*/"false",
            "Use the NV cooperative matrix extension insted of the KHR extension"
            " to lower GPU WMMA ops">,
   ];
@@ -929,6 +929,16 @@ def ConvertParallelLoopToGpu : Pass<"convert-parallel-loops-to-gpu"> {
   let summary = "Convert mapped scf.parallel ops to gpu launch operations";
   let constructor = "mlir::createParallelLoopToGpuPass()";
   let dependentDialects = ["affine::AffineDialect", "gpu::GPUDialect"];
+}
+
+//===----------------------------------------------------------------------===//
+// SCFToEmitC
+//===----------------------------------------------------------------------===//
+
+def SCFToEmitC : Pass<"convert-scf-to-emitc"> {
+  let summary = "Convert SCF dialect to EmitC dialect, maintaining structured"
+                " control flow";
+  let dependentDialects = ["emitc::EmitCDialect"];
 }
 
 //===----------------------------------------------------------------------===//

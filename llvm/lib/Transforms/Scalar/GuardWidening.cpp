@@ -209,7 +209,8 @@ class GuardWideningImpl {
 
   void makeAvailableAt(const SmallVectorImpl<Value *> &Checks,
                        Instruction *InsertPos) const {
-    for_each(Checks, [&](Value *V) { makeAvailableAt(V, InsertPos); });
+    for (Value *V : Checks)
+      makeAvailableAt(V, InsertPos);
   }
 
   /// Common helper used by \c widenGuard and \c isWideningCondProfitable.  Try

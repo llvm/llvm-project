@@ -19,10 +19,12 @@
 #include "clang/Driver/Driver.h"
 #include "clang/Frontend/CompilerInstance.h"
 #include "llvm/ADT/ArrayRef.h"
+#include "llvm/ADT/StringExtras.h"
 #include "llvm/MC/TargetRegistry.h"
 #include "llvm/Support/TargetSelect.h"
 #include "llvm/Support/VirtualFileSystem.h"
 #include "llvm/Support/raw_ostream.h"
+#include "gmock/gmock.h"
 #include "gtest/gtest.h"
 #include <memory>
 
@@ -313,6 +315,53 @@ TEST(ToolChainTest, VFSSolarisMultiGCCInstallation) {
               "Candidate multilib: sparcv8plus;@m32\n"
               "Selected multilib: .;@m64\n",
               S);
+  }
+}
+
+MATCHER_P(jobHasArgs, Substr, "") {
+  const driver::Command &C = arg;
+  std::string Args = "";
+  llvm::ListSeparator Sep(" ");
+  for (const char *Arg : C.getArguments()) {
+    Args += Sep;
+    Args += Arg;
+  }
+  if (is_style_windows(llvm::sys::path::Style::native))
+    std::replace(Args.begin(), Args.end(), '\\', '/');
+  if (llvm::StringRef(Args).contains(Substr))
+    return true;
+  *result_listener << "whose args are '" << Args << "'";
+  return false;
+}
+
+TEST(ToolChainTest, VFSGnuLibcxxPathNoSysroot) {
+  IntrusiveRefCntPtr<DiagnosticOptions> DiagOpts = new DiagnosticOptions();
+
+  IntrusiveRefCntPtr<DiagnosticIDs> DiagID(new DiagnosticIDs());
+  struct TestDiagnosticConsumer : public DiagnosticConsumer {};
+  IntrusiveRefCntPtr<llvm::vfs::InMemoryFileSystem> InMemoryFileSystem(
+      new llvm::vfs::InMemoryFileSystem);
+
+  const char *EmptyFiles[] = {
+      "foo.cpp",
+      "/bin/clang",
+      "/usr/include/c++/v1/cstdio",
+  };
+
+  for (const char *Path : EmptyFiles)
+    InMemoryFileSystem->addFile(Path, 0,
+                                llvm::MemoryBuffer::getMemBuffer("\n"));
+
+  {
+    DiagnosticsEngine Diags(DiagID, &*DiagOpts, new TestDiagnosticConsumer);
+    Driver TheDriver("/bin/clang", "x86_64-unknown-linux-gnu", Diags,
+                     "clang LLVM compiler", InMemoryFileSystem);
+    std::unique_ptr<Compilation> C(TheDriver.BuildCompilation(
+        {"/bin/clang", "-fsyntax-only", "-stdlib=libc++",
+         "--sysroot=", "foo.cpp"}));
+    ASSERT_TRUE(C);
+    EXPECT_THAT(C->getJobs(), testing::ElementsAre(jobHasArgs(
+                                  "-internal-isystem /usr/include/c++/v1")));
   }
 }
 

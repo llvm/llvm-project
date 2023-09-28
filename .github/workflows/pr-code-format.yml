@@ -1,0 +1,54 @@
+name: "Check code formatting"
+on: pull_request_target
+permissions:
+  pull-requests: write
+
+jobs:
+  code_formatter:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Fetch LLVM sources
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 2
+
+      - name: Get changed files
+        id: changed-files
+        uses: tj-actions/changed-files@v39
+        with:
+          separator: ","
+          fetch_depth: 100 # Fetches only the last 10 commits
+
+      - name: "Listed files"
+        run: |
+          echo "Formatting files:"
+          echo "${{ steps.changed-files.outputs.all_changed_files }}"
+
+      - name: Install clang-format
+        uses: aminya/setup-cpp@v1
+        with:
+          clangformat: 17.0.1
+
+      - name: Setup Python env
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.11'
+          cache: 'pip'
+          cache-dependency-path: 'llvm/utils/git/requirements_formatting.txt'
+
+      - name: Install python dependencies
+        run: pip install -r llvm/utils/git/requirements_formatting.txt
+
+      - name: Run code formatter
+        env:
+          GITHUB_PR_NUMBER: ${{ github.event.pull_request.number }}
+          START_REV: ${{ github.event.pull_request.base.sha }}
+          END_REV: ${{ github.event.pull_request.head.sha }}
+          CHANGED_FILES: ${{ steps.changed-files.outputs.all_changed_files }}
+        run: |
+          python llvm/utils/git/code-format-helper.py \
+            --token ${{ secrets.GITHUB_TOKEN }} \
+            --issue-number $GITHUB_PR_NUMBER \
+            --start-rev $START_REV \
+            --end-rev $END_REV \
+            --changed-files "$CHANGED_FILES"

@@ -3520,20 +3520,16 @@ static int32_t computeHeuristicUnrollFactor(CanonicalLoopInfo *CLI) {
     }
   }
 
-  unsigned NumInlineCandidates;
-  bool NotDuplicatable;
-  bool Convergent;
-  InstructionCost LoopSizeIC =
-      ApproximateLoopSize(L, NumInlineCandidates, NotDuplicatable, Convergent,
-                          TTI, EphValues, UP.BEInsns);
-  LLVM_DEBUG(dbgs() << "Estimated loop size is " << LoopSizeIC << "\n");
+  UnrollCostEstimator UCE(L, TTI, EphValues, UP.BEInsns);
 
   // Loop is not unrollable if the loop contains certain instructions.
-  if (NotDuplicatable || Convergent || !LoopSizeIC.isValid()) {
+  if (!UCE.canUnroll() || UCE.Convergent) {
     LLVM_DEBUG(dbgs() << "Loop not considered unrollable\n");
     return 1;
   }
-  unsigned LoopSize = *LoopSizeIC.getValue();
+
+  LLVM_DEBUG(dbgs() << "Estimated loop size is " << UCE.getRolledLoopSize()
+                    << "\n");
 
   // TODO: Determine trip count of \p CLI if constant, computeUnrollCount might
   // be able to use it.
@@ -3544,7 +3540,7 @@ static int32_t computeHeuristicUnrollFactor(CanonicalLoopInfo *CLI) {
 
   bool UseUpperBound = false;
   computeUnrollCount(L, TTI, DT, &LI, &AC, SE, EphValues, &ORE, TripCount,
-                     MaxTripCount, MaxOrZero, TripMultiple, LoopSize, UP, PP,
+                     MaxTripCount, MaxOrZero, TripMultiple, UCE, UP, PP,
                      UseUpperBound);
   unsigned Factor = UP.Count;
   LLVM_DEBUG(dbgs() << "Suggesting unroll factor of " << Factor << "\n");
@@ -5731,6 +5727,129 @@ OpenMPIRBuilder::InsertPointTy OpenMPIRBuilder::createAtomicCompare(
   }
 
   checkAndEmitFlushAfterAtomic(Loc, AO, AtomicKind::Compare);
+
+  return Builder.saveIP();
+}
+
+OpenMPIRBuilder::InsertPointTy
+OpenMPIRBuilder::createTeams(const LocationDescription &Loc,
+                             BodyGenCallbackTy BodyGenCB) {
+  if (!updateToLocation(Loc))
+    return InsertPointTy();
+
+  uint32_t SrcLocStrSize;
+  Constant *SrcLocStr = getOrCreateSrcLocStr(Loc, SrcLocStrSize);
+  Value *Ident = getOrCreateIdent(SrcLocStr, SrcLocStrSize);
+  Function *CurrentFunction = Builder.GetInsertBlock()->getParent();
+
+  // Outer allocation basicblock is the entry block of the current function.
+  BasicBlock &OuterAllocaBB = CurrentFunction->getEntryBlock();
+  if (&OuterAllocaBB == Builder.GetInsertBlock()) {
+    BasicBlock *BodyBB = splitBB(Builder, /*CreateBranch=*/true, "teams.entry");
+    Builder.SetInsertPoint(BodyBB, BodyBB->begin());
+  }
+
+  // The current basic block is split into four basic blocks. After outlining,
+  // they will be mapped as follows:
+  // ```
+  // def current_fn() {
+  //   current_basic_block:
+  //     br label %teams.exit
+  //   teams.exit:
+  //     ; instructions after teams
+  // }
+  //
+  // def outlined_fn() {
+  //   teams.alloca:
+  //     br label %teams.body
+  //   teams.body:
+  //     ; instructions within teams body
+  // }
+  // ```
+  BasicBlock *ExitBB = splitBB(Builder, /*CreateBranch=*/true, "teams.exit");
+  BasicBlock *BodyBB = splitBB(Builder, /*CreateBranch=*/true, "teams.body");
+  BasicBlock *AllocaBB =
+      splitBB(Builder, /*CreateBranch=*/true, "teams.alloca");
+
+  OutlineInfo OI;
+  OI.EntryBB = AllocaBB;
+  OI.ExitBB = ExitBB;
+  OI.OuterAllocaBB = &OuterAllocaBB;
+  OI.PostOutlineCB = [this, Ident](Function &OutlinedFn) {
+    // The input IR here looks like the following-
+    // ```
+    // func @current_fn() {
+    //   outlined_fn(%args)
+    // }
+    // func @outlined_fn(%args) { ... }
+    // ```
+    //
+    // This is changed to the following-
+    //
+    // ```
+    // func @current_fn() {
+    //   runtime_call(..., wrapper_fn, ...)
+    // }
+    // func @wrapper_fn(..., %args) {
+    //   outlined_fn(%args)
+    // }
+    // func @outlined_fn(%args) { ... }
+    // ```
+
+    // The stale call instruction will be replaced with a new call instruction
+    // for runtime call with a wrapper function.
+
+    assert(OutlinedFn.getNumUses() == 1 &&
+           "there must be a single user for the outlined function");
+    CallInst *StaleCI = cast<CallInst>(OutlinedFn.user_back());
+
+    // Create the wrapper function.
+    SmallVector<Type *> WrapperArgTys{Builder.getPtrTy(), Builder.getPtrTy()};
+    for (auto &Arg : OutlinedFn.args())
+      WrapperArgTys.push_back(Arg.getType());
+    FunctionCallee WrapperFuncVal = M.getOrInsertFunction(
+        (Twine(OutlinedFn.getName()) + ".teams").str(),
+        FunctionType::get(Builder.getVoidTy(), WrapperArgTys, false));
+    Function *WrapperFunc = dyn_cast<Function>(WrapperFuncVal.getCallee());
+    WrapperFunc->getArg(0)->setName("global_tid");
+    WrapperFunc->getArg(1)->setName("bound_tid");
+    if (WrapperFunc->arg_size() > 2)
+      WrapperFunc->getArg(2)->setName("data");
+
+    // Emit the body of the wrapper function - just a call to outlined function
+    // and return statement.
+    BasicBlock *WrapperEntryBB =
+        BasicBlock::Create(M.getContext(), "entrybb", WrapperFunc);
+    Builder.SetInsertPoint(WrapperEntryBB);
+    SmallVector<Value *> Args;
+    for (size_t ArgIndex = 2; ArgIndex < WrapperFunc->arg_size(); ArgIndex++)
+      Args.push_back(WrapperFunc->getArg(ArgIndex));
+    Builder.CreateCall(&OutlinedFn, Args);
+    Builder.CreateRetVoid();
+
+    OutlinedFn.addFnAttr(Attribute::AttrKind::AlwaysInline);
+
+    // Call to the runtime function for teams in the current function.
+    assert(StaleCI && "Error while outlining - no CallInst user found for the "
+                      "outlined function.");
+    Builder.SetInsertPoint(StaleCI);
+    Args = {Ident, Builder.getInt32(StaleCI->arg_size()), WrapperFunc};
+    for (Use &Arg : StaleCI->args())
+      Args.push_back(Arg);
+    Builder.CreateCall(getOrCreateRuntimeFunctionPtr(
+                           omp::RuntimeFunction::OMPRTL___kmpc_fork_teams),
+                       Args);
+    StaleCI->eraseFromParent();
+  };
+
+  addOutlineInfo(std::move(OI));
+
+  // Generate the body of teams.
+  InsertPointTy AllocaIP(AllocaBB, AllocaBB->begin());
+  InsertPointTy CodeGenIP(BodyBB, BodyBB->begin());
+  BodyGenCB(AllocaIP, CodeGenIP);
+
+  Builder.SetInsertPoint(ExitBB, ExitBB->begin());
 
   return Builder.saveIP();
 }

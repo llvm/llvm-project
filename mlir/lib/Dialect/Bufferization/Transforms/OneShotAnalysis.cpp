@@ -181,40 +181,6 @@ void OneShotAnalysisState::createAliasInfoEntry(Value v) {
   equivalentInfo.insert(v);
 }
 
-// Gather yielded tensors in `yieldedTensors` by querying all aliases. This is
-// to ensure that such information is available during bufferization time.
-// Alias information can no longer be queried once we have started modifying
-// the IR.
-void OneShotAnalysisState::gatherYieldedTensors(Operation *op) {
-  op->walk([&](Operation *returnOp) {
-    if (!isa<RegionBranchTerminatorOpInterface>(returnOp) ||
-        !getOptions().isOpAllowed(returnOp))
-      return WalkResult::advance();
-
-    for (OpOperand &returnValOperand : returnOp->getOpOperands()) {
-      Value returnVal = returnValOperand.get();
-      // Skip non-tensor values.
-      if (!isa<TensorType>(returnVal.getType()))
-        continue;
-
-      // Add all aliases of the returned value. But only the ones that are in
-      // the same block.
-      applyOnAliases(returnVal, [&](Value v) {
-        if (auto bbArg = dyn_cast<BlockArgument>(v)) {
-          if (bbArg.getOwner()->getParentOp() == returnOp->getParentOp())
-            yieldedTensors.insert(bbArg);
-          return;
-        }
-        Operation *definingOp = v.getDefiningOp();
-        if (definingOp->getParentOp() == returnOp->getParentOp())
-          yieldedTensors.insert(v);
-      });
-    }
-
-    return WalkResult::advance();
-  });
-}
-
 void OneShotAnalysisState::gatherUndefinedTensorUses(Operation *op) {
   op->walk([&](Operation *op) {
     // Skip unknown ops.
@@ -244,10 +210,6 @@ bool OneShotAnalysisState::hasUndefinedContents(OpOperand *opOperand) const {
 
 bool OneShotAnalysisState::isInPlace(OpOperand &opOperand) const {
   return inplaceBufferized.contains(&opOperand);
-}
-
-bool OneShotAnalysisState::isTensorYielded(Value tensor) const {
-  return yieldedTensors.contains(tensor);
 }
 
 bool OneShotAnalysisState::isValueWritten(Value value) const {
@@ -1328,7 +1290,6 @@ LogicalResult bufferization::analyzeOp(Operation *op,
   bool failedAnalysis = false;
 
   // Gather some extra analysis data.
-  state.gatherYieldedTensors(op);
   state.gatherUndefinedTensorUses(op);
 
   // Analysis verification: After setting up alias/equivalence sets, each op

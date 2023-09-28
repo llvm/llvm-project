@@ -18,7 +18,7 @@
 
 #include <immintrin.h>
 
-namespace __llvm_libc {
+namespace LIBC_NAMESPACE {
 namespace fputil {
 
 // Cubic polynomials:
@@ -80,6 +80,6 @@ LIBC_INLINE double polyeval(double x, double a0, double a1, double a2,
 }
 
 } // namespace fputil
-} // namespace __llvm_libc
+} // namespace LIBC_NAMESPACE
 
 #endif // LLVM_LIBC_SRC___SUPPORT_FPUTIL_X86_64_POLYEVAL_H

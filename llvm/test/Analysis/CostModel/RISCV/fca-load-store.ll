@@ -8,7 +8,7 @@ define void @load(ptr %p) {
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %2 = load [4 x i64], ptr %p, align 4
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %3 = load { i64, i64 }, ptr %p, align 4
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %4 = load { i64, i32 }, ptr %p, align 4
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret void
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret void
 ;
   load [2 x i64], ptr %p
   load [4 x i64], ptr %p
@@ -24,7 +24,7 @@ define void @store(ptr %p) {
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: store [4 x i64] undef, ptr %p, align 4
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: store { i64, i64 } undef, ptr %p, align 4
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: store { i64, i32 } undef, ptr %p, align 4
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret void
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret void
 ;
   store [2 x i64] undef, ptr %p
   store [4 x i64] undef, ptr %p

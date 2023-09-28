@@ -1743,7 +1743,9 @@ def int_is_constant : DefaultAttrsIntrinsic<[llvm_i1_ty], [llvm_any_ty],
                                 "llvm.is.constant">;
 
 // Intrinsic to mask out bits of a pointer.
-def int_ptrmask: DefaultAttrsIntrinsic<[llvm_anyptr_ty], [LLVMMatchType<0>, llvm_anyint_ty],
+// First argument must be pointer or vector of pointer. This is checked by the
+// verifier.
+def int_ptrmask: DefaultAttrsIntrinsic<[llvm_any_ty], [LLVMMatchType<0>, llvm_anyint_ty],
                            [IntrNoMem, IntrSpeculatable, IntrWillReturn]>;
 
 // Intrinsic to wrap a thread local variable.

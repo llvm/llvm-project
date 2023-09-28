@@ -545,9 +545,9 @@ func.func @invalid_vector_type_5(%a : vector<4xf32>, %idx : i32) -> vector<4xf32
 
 // -----
 
-func.func @null_non_llvm_type() {
-  // expected-error@+1 {{'llvm.mlir.null' op result #0 must be LLVM pointer type, but got 'i32'}}
-  llvm.mlir.null : i32
+func.func @zero_non_llvm_type() {
+  // expected-error@+1 {{'llvm.mlir.zero' op result #0 must be LLVM dialect-compatible type, but got 'tensor<4xi32>'}}
+  llvm.mlir.zero : tensor<4xi32>
 }
 
 // -----
@@ -1410,4 +1410,24 @@ func.func @invalid_zext_target_type(%arg: i32)  {
 func.func @invalid_zext_target_type_two(%arg: vector<1xi32>)  {
   // expected-error@+1 {{input type is a vector but output type is an integer}}
   %0 = llvm.zext %arg : vector<1xi32> to i64
+}
+
+// -----
+
+llvm.func @variadic(...)
+
+llvm.func @invalid_variadic_call(%arg: i32)  {
+  // expected-error@+1 {{missing callee type attribute for vararg call}}
+  "llvm.call"(%arg) <{callee = @variadic}> : (i32) -> ()
+  llvm.return
+}
+
+// -----
+
+llvm.func @variadic(...)
+
+llvm.func @invalid_variadic_call(%arg: i32)  {
+  // expected-error@+1 {{missing callee type attribute for vararg call}}
+  "llvm.call"(%arg) <{callee = @variadic}> : (i32) -> ()
+  llvm.return
 }

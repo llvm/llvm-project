@@ -35,6 +35,10 @@ public:
   /// variables, where `Var` is in, contains parameters.
   virtual VarGrpRef getGroupOfVar(const VarDecl *Var,
                                   bool *HasParm = nullptr) const =0;
+
+  /// Returns the non-empty group of variables that include parameters of the
+  /// analyzing function, if such a group exists.  An empty group, otherwise.
+  virtual VarGrpRef getGroupOfParms() const =0;
 };
 
 /// The interface that lets the caller handle unsafe buffer usage analysis

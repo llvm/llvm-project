@@ -193,7 +193,7 @@ private:
       next = *result;
     }
     if (!next)
-      return nullptr;
+      return FailureOr<Operation *>(nullptr);
     return handleOp<InterfacesU...>(next);
   }
 
@@ -640,6 +640,8 @@ LogicalResult BufferDeallocation::deallocate(Block *block) {
     FailureOr<Operation *> result = handleAllInterfaces(&op);
     if (failed(result))
       return failure();
+    if (!*result)
+      continue;
 
     populateRemainingOwnerships(*result);
   }
@@ -803,7 +805,7 @@ FailureOr<Operation *> BufferDeallocation::handleInterface(CallOpInterface op) {
   Operation *funcOp = op.resolveCallable(state.getSymbolTable());
   bool isPrivate = true;
   if (auto symbol = dyn_cast<SymbolOpInterface>(funcOp))
-    isPrivate &= (symbol.getVisibility() == SymbolTable::Visibility::Private);
+    isPrivate = symbol.isPrivate() && !symbol.isDeclaration();
 
   // If the private-function-dynamic-ownership option is enabled and we are
   // calling a private function, we need to add an additional `i1`
@@ -932,7 +934,7 @@ BufferDeallocation::handleInterface(RegionBranchTerminatorOpInterface op) {
 bool BufferDeallocation::isFunctionWithoutDynamicOwnership(Operation *op) {
   auto funcOp = dyn_cast<FunctionOpInterface>(op);
   return funcOp && (!options.privateFuncDynamicOwnership ||
-                    funcOp.getVisibility() != SymbolTable::Visibility::Private);
+                    !funcOp.isPrivate() || funcOp.isExternal());
 }
 
 void BufferDeallocation::populateRemainingOwnerships(Operation *op) {
@@ -981,12 +983,17 @@ struct OwnershipBasedBufferDeallocationPass
     this->privateFuncDynamicOwnership.setValue(privateFuncDynamicOwnership);
   }
   void runOnOperation() override {
-    func::FuncOp func = getOperation();
-    if (func.isExternal())
-      return;
+    auto status = getOperation()->walk([&](func::FuncOp func) {
+      if (func.isExternal())
+        return WalkResult::skip();
 
-    if (failed(
-            deallocateBuffersOwnershipBased(func, privateFuncDynamicOwnership)))
+      if (failed(deallocateBuffersOwnershipBased(func,
+                                                 privateFuncDynamicOwnership)))
+        return WalkResult::interrupt();
+
+      return WalkResult::advance();
+    });
+    if (status.wasInterrupted())
       signalPassFailure();
   }
 };

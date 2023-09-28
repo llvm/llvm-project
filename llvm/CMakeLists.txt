@@ -325,6 +325,12 @@ include(VersionFromVCS)
 option(LLVM_APPEND_VC_REV
   "Embed the version control system revision in LLVM" ON)
 
+set(LLVM_FORCE_VC_REVISION
+  "" CACHE STRING "Force custom VC revision for LLVM_APPEND_VC_REV")
+
+set(LLVM_FORCE_VC_REPOSITORY
+  "" CACHE STRING "Force custom VC repository for LLVM_APPEND_VC_REV")
+
 option(LLVM_TOOL_LLVM_DRIVER_BUILD "Enables building the llvm multicall tool" OFF)
 
 set(PACKAGE_NAME LLVM)

@@ -10,8 +10,8 @@ define i1 @test_order_1(ptr %this, ptr noalias %other, i1 %tobool9.not, i32 %cal
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    br i1 [[TOBOOL9_NOT]], label [[EXIT:%.*]], label [[FOR_COND_PREHEADER:%.*]]
 ; CHECK:       for.cond.preheader:
-; CHECK-NEXT:    [[CMP40_NOT4:%.*]] = icmp slt i32 [[CALL]], 1
-; CHECK-NEXT:    br i1 [[CMP40_NOT4]], label [[FOR_COND41_PREHEADER_PREHEADER:%.*]], label [[FOR_COND_CLEANUP:%.*]]
+; CHECK-NEXT:    [[CMP40_NOT3:%.*]] = icmp slt i32 [[CALL]], 1
+; CHECK-NEXT:    br i1 [[CMP40_NOT3]], label [[FOR_COND41_PREHEADER_PREHEADER:%.*]], label [[FOR_COND_CLEANUP:%.*]]
 ; CHECK:       for.cond41.preheader.preheader:
 ; CHECK-NEXT:    [[TMP0:%.*]] = sext i32 [[CALL]] to i64
 ; CHECK-NEXT:    br label [[FOR_COND41_PREHEADER:%.*]]
@@ -19,20 +19,16 @@ define i1 @test_order_1(ptr %this, ptr noalias %other, i1 %tobool9.not, i32 %cal
 ; CHECK-NEXT:    [[INDVARS_IV_NEXT:%.*]] = add nsw i64 [[INDVARS_IV:%.*]], 1
 ; CHECK-NEXT:    [[TMP1:%.*]] = and i64 [[INDVARS_IV_NEXT]], 4294967295
 ; CHECK-NEXT:    [[EXITCOND_NOT:%.*]] = icmp eq i64 [[TMP1]], 1
-; CHECK-NEXT:    br i1 [[EXITCOND_NOT]], label [[FOR_COND_CLEANUP_LOOPEXIT:%.*]], label [[FOR_COND41_PREHEADER]]
+; CHECK-NEXT:    br i1 [[EXITCOND_NOT]], label [[FOR_COND_CLEANUP]], label [[FOR_COND41_PREHEADER]]
 ; CHECK:       for.cond41.preheader:
 ; CHECK-NEXT:    [[INDVARS_IV]] = phi i64 [ [[TMP0]], [[FOR_COND41_PREHEADER_PREHEADER]] ], [ [[INDVARS_IV_NEXT]], [[FOR_COND:%.*]] ]
-; CHECK-NEXT:    [[CALL432:%.*]] = load volatile i32, ptr [[OTHER]], align 4
-; CHECK-NEXT:    [[CMP443:%.*]] = icmp sgt i32 [[CALL432]], 0
-; CHECK-NEXT:    br i1 [[CMP443]], label [[FOR_BODY45_LR_PH:%.*]], label [[FOR_COND]]
+; CHECK-NEXT:    [[CALL431:%.*]] = load volatile i32, ptr [[OTHER]], align 4
+; CHECK-NEXT:    [[CMP442:%.*]] = icmp sgt i32 [[CALL431]], 0
+; CHECK-NEXT:    br i1 [[CMP442]], label [[FOR_BODY45_LR_PH:%.*]], label [[FOR_COND]]
 ; CHECK:       for.body45.lr.ph:
 ; CHECK-NEXT:    [[ARRAYIDX_I_I:%.*]] = getelementptr ptr, ptr [[OTHER]], i64 [[INDVARS_IV]]
 ; CHECK-NEXT:    br label [[FOR_BODY45:%.*]]
-; CHECK:       for.cond.cleanup.loopexit:
-; CHECK-NEXT:    [[CMP40_NOT:%.*]] = icmp slt i64 [[INDVARS_IV]], 0
-; CHECK-NEXT:    br label [[FOR_COND_CLEANUP]]
 ; CHECK:       for.cond.cleanup:
-; CHECK-NEXT:    [[CMP40_NOT_LCSSA:%.*]] = phi i1 [ false, [[FOR_COND_PREHEADER]] ], [ [[CMP40_NOT]], [[FOR_COND_CLEANUP_LOOPEXIT]] ]
 ; CHECK-NEXT:    store i32 0, ptr [[THIS]], align 4
 ; CHECK-NEXT:    br label [[EXIT]]
 ; CHECK:       for.body45:
@@ -41,8 +37,7 @@ define i1 @test_order_1(ptr %this, ptr noalias %other, i1 %tobool9.not, i32 %cal
 ; CHECK-NEXT:    [[CMP44:%.*]] = icmp sgt i32 [[CALL43]], 0
 ; CHECK-NEXT:    br i1 [[CMP44]], label [[FOR_BODY45]], label [[FOR_COND]]
 ; CHECK:       exit:
-; CHECK-NEXT:    [[TMP2:%.*]] = phi i1 [ false, [[ENTRY:%.*]] ], [ [[CMP40_NOT_LCSSA]], [[FOR_COND_CLEANUP]] ]
-; CHECK-NEXT:    ret i1 [[TMP2]]
+; CHECK-NEXT:    ret i1 false
 ;
 entry:
   %retval1 = alloca i1, i32 0, align 1

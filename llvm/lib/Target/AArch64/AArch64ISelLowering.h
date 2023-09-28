@@ -690,6 +690,10 @@ public:
   bool isDesirableToCommuteWithShift(const SDNode *N,
                                      CombineLevel Level) const override;
 
+  bool isDesirableToPullExtFromShl(const MachineInstr &MI) const override {
+    return false;
+  }
+
   /// Returns false if N is a bit extraction pattern of (X >> C) & Mask.
   bool isDesirableToCommuteXorWithShift(const SDNode *N) const override;
 
@@ -1164,7 +1168,7 @@ private:
 
   const char *LowerXConstraint(EVT ConstraintVT) const override;
 
-  void LowerAsmOperandForConstraint(SDValue Op, std::string &Constraint,
+  void LowerAsmOperandForConstraint(SDValue Op, StringRef Constraint,
                                     std::vector<SDValue> &Ops,
                                     SelectionDAG &DAG) const override;
 
@@ -1238,9 +1242,6 @@ private:
   // compatible, this generates a call to __arm_sme_state.
   SDValue getPStateSM(SelectionDAG &DAG, SDValue Chain, SMEAttrs Attrs,
                       SDLoc DL, EVT VT) const;
-
-  bool isConstantUnsignedBitfieldExtractLegal(unsigned Opc, LLT Ty1,
-                                              LLT Ty2) const override;
 
   bool preferScalarizeSplat(SDNode *N) const override;
 };

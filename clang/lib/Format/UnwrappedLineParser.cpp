@@ -2660,7 +2660,7 @@ void UnwrappedLineParser::handleAttributes() {
   // Handle AttributeMacro, e.g. `if (x) UNLIKELY`.
   if (FormatTok->is(TT_AttributeMacro))
     nextToken();
-  if (FormatTok->is(tok::l_square))
+  else if (FormatTok->is(tok::l_square))
     handleCppAttributes();
 }
 
@@ -3362,9 +3362,12 @@ bool clang::format::UnwrappedLineParser::parseRequires() {
     case tok::kw_volatile:
     case tok::kw_const:
     case tok::comma:
-      FormatTok = Tokens->setPosition(StoredPosition);
-      parseRequiresExpression(RequiresToken);
-      return false;
+      if (OpenAngles == 0) {
+        FormatTok = Tokens->setPosition(StoredPosition);
+        parseRequiresExpression(RequiresToken);
+        return false;
+      }
+      break;
     case tok::r_paren:
     case tok::pipepipe:
       FormatTok = Tokens->setPosition(StoredPosition);

@@ -767,7 +767,11 @@ class FunctionTestBuilder:
             )
             if "analysis" in m.groupdict():
                 analysis = m.group("analysis")
-                if analysis.lower() != "cost model analysis":
+                supported_analyses = {
+                    "cost model analysis",
+                    "scalar evolution analysis",
+                }
+                if analysis.lower() not in supported_analyses:
                     warn("Unsupported analysis mode: %r!" % (analysis,))
             if func.startswith("stress"):
                 # We only use the last line of the function body for stress tests.

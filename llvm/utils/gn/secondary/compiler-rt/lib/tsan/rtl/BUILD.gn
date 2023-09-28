@@ -151,6 +151,7 @@ target(tsan_target_type, "rtl") {
       "-Wl,-U,___sanitizer_sandbox_on_notify",
       "-Wl,-U,___sanitizer_symbolize_code",
       "-Wl,-U,___sanitizer_symbolize_data",
+      "-Wl,-U,___sanitizer_symbolize_frame",
       "-Wl,-U,___sanitizer_symbolize_demangle",
       "-Wl,-U,___sanitizer_symbolize_flush",
       "-Wl,-U,___sanitizer_symbolize_set_demangle",
