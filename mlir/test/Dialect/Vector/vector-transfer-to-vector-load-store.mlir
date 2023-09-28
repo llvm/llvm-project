@@ -14,7 +14,7 @@ func.func @vector_transfer_ops_0d_memref(%M: memref<f32>, %v: vector<1x1x1xf32>)
 //  CHECK-NEXT:   memref.store %[[ss]], %[[MEM]][] : memref<f32>
     vector.transfer_write %0, %M[] : vector<f32>, memref<f32>
 
-//  CHECK-NEXT:   %[[VV:.*]] = vector.extract %arg1[0, 0, 0] : vector<1x1x1xf32>
+//  CHECK-NEXT:   %[[VV:.*]] = vector.extract %arg1[0, 0, 0] : f32 from vector<1x1x1xf32>
 //  CHECK-NEXT:   memref.store %[[VV]], %[[MEM]][] : memref<f32>
     vector.store %v, %M[] : memref<f32>, vector<1x1x1xf32>
 
