@@ -131,6 +131,10 @@ TEST_F(RegexTest, Substitution) {
   EXPECT_EQ("012345", Regex("a([0-9]+).*").sub("0\\g<1>5", "a1234ber", &Error));
   EXPECT_EQ("", Error);
 
+  EXPECT_EQ("0A5", Regex("a(.)(.)(.)(.)(.)(.)(.)(.)(.)(.).*")
+                       .sub("0\\g<10>5", "a123456789Aber", &Error));
+  EXPECT_EQ("", Error);
+
   EXPECT_EQ("0g<15", Regex("a([0-9]+).*").sub("0\\g<15", "a1234ber", &Error));
   EXPECT_EQ("", Error);
 
