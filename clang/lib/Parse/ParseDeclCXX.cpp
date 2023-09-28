@@ -3983,7 +3983,11 @@ ExceptionSpecificationType Parser::tryParseExceptionSpecification(
     // There is an argument.
     BalancedDelimiterTracker T(*this, tok::l_paren);
     T.consumeOpen();
-    NoexceptExpr = ParseConstantExpression();
+
+    EnterExpressionEvaluationContext ConstantEvaluated(
+        Actions, Sema::ExpressionEvaluationContext::ConstantEvaluated);
+    NoexceptExpr = ParseConstantExpressionInExprEvalContext();
+
     T.consumeClose();
     if (!NoexceptExpr.isInvalid()) {
       NoexceptExpr =
