@@ -9276,6 +9276,49 @@ bool llvm::checkConvertToNonDenormSingle(APFloat &ArgAPFloat) {
   return (!LosesInfo && !APFloatToConvert.isDenormal());
 }
 
+// Use rldimi/rlwimi to construct vectors:
+//   i32 = (i8 << 24) | (i8 << 16) | (i8 << 8) | i
+//   i32 = (i16 << 16) | i16
+//   i64 = (i32 << 32) | i32
+// And put two i64 together to get a vector.
+static SDValue tryMaskInsertVector(SDValue Op, SelectionDAG &DAG,
+                                   bool LittleEndian) {
+  EVT VT = Op.getValueType();
+  SDLoc dl(Op);
+
+  // There are already patterns for v4i32 and v2i64 construction.
+  if (VT == MVT::v16i8 || VT == MVT::v8i16) {
+    int NumElt = VT.getVectorNumElements();
+    int ScalarSize = VT.getScalarSizeInBits();
+    int EltsFor32 = NumElt / 4;
+    SDValue NewVecElts[4];
+    SDValue Parts[4];
+    for (int i = 0; i < 4; ++i) {
+      for (int j = 0; j < EltsFor32; ++j) {
+        SDValue Elt = LittleEndian
+                          ? Op.getOperand(i * EltsFor32 + EltsFor32 - j - 1)
+                          : Op.getOperand(i * EltsFor32 + j);
+        Parts[j] = DAG.getZExtOrTrunc(Elt, dl, MVT::i32);
+
+        // Left-shift elements to insert, except the last, because offset is 0.
+        if (j != EltsFor32 - 1)
+          Parts[j] =
+              DAG.getNode(ISD::SHL, dl, MVT::i32, Parts[j],
+                          DAG.getTargetConstant(
+                              ScalarSize * (EltsFor32 - j - 1), dl, MVT::i32));
+        if (j > 0)
+          Parts[j] = DAG.getNode(ISD::OR, dl, MVT::i32, Parts[j - 1], Parts[j]);
+      }
+      NewVecElts[i] = Parts[EltsFor32 - 1];
+    }
+
+    // Count on v4i32 to get optimized BUILD_VECTOR pattern.
+    return DAG.getBitcast(VT, DAG.getBuildVector(MVT::v4i32, dl, NewVecElts));
+  }
+
+  return SDValue();
+}
+
 static bool isValidSplatLoad(const PPCSubtarget &Subtarget, const SDValue &Op,
                              unsigned &Opcode) {
   LoadSDNode *InputNode = dyn_cast<LoadSDNode>(Op.getOperand(0));
@@ -9457,6 +9500,13 @@ SDValue PPCTargetLowering::LowerBUILD_VECTOR(SDValue Op,
         haveEfficientBuildVectorPattern(BVN, Subtarget.hasDirectMove(),
                                         Subtarget.hasP8Vector()))
       return Op;
+
+    // Try to construct vector using masked insert.
+    if (!BVN->isConstant() && !DAG.isSplatValue(Op, true))
+      if (SDValue Res =
+              tryMaskInsertVector(Op, DAG, Subtarget.isLittleEndian()))
+        return Res;
+
     return SDValue();
   }
 

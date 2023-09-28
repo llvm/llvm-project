@@ -176,27 +176,26 @@ entry:
 define noundef <8 x i16> @vec_promote_short_zeroed(ptr nocapture noundef readonly %p) {
 ; CHECK-BE-LABEL: vec_promote_short_zeroed:
 ; CHECK-BE:       # %bb.0: # %entry
-; CHECK-BE-NEXT:    addis 4, 2, .LCPI8_0@toc@ha
 ; CHECK-BE-NEXT:    lhz 3, 0(3)
-; CHECK-BE-NEXT:    addi 4, 4, .LCPI8_0@toc@l
-; CHECK-BE-NEXT:    mtvsrwz 36, 3
-; CHECK-BE-NEXT:    lxvw4x 34, 0, 4
 ; CHECK-BE-NEXT:    li 4, 0
-; CHECK-BE-NEXT:    mtvsrwz 35, 4
-; CHECK-BE-NEXT:    vperm 2, 4, 3, 2
+; CHECK-BE-NEXT:    li 5, 0
+; CHECK-BE-NEXT:    rldimi 4, 4, 32, 0
+; CHECK-BE-NEXT:    slwi 3, 3, 16
+; CHECK-BE-NEXT:    mtfprd 1, 4
+; CHECK-BE-NEXT:    rldimi 5, 3, 32, 0
+; CHECK-BE-NEXT:    mtfprd 0, 5
+; CHECK-BE-NEXT:    xxmrghd 34, 0, 1
 ; CHECK-BE-NEXT:    blr
 ;
 ; CHECK-LE-LABEL: vec_promote_short_zeroed:
 ; CHECK-LE:       # %bb.0: # %entry
-; CHECK-LE-NEXT:    addis 4, 2, .LCPI8_0@toc@ha
 ; CHECK-LE-NEXT:    lhz 3, 0(3)
-; CHECK-LE-NEXT:    addi 4, 4, .LCPI8_0@toc@l
-; CHECK-LE-NEXT:    mtvsrd 36, 3
-; CHECK-LE-NEXT:    lxvd2x 0, 0, 4
 ; CHECK-LE-NEXT:    li 4, 0
-; CHECK-LE-NEXT:    mtvsrd 35, 4
-; CHECK-LE-NEXT:    xxswapd 34, 0
-; CHECK-LE-NEXT:    vperm 2, 3, 4, 2
+; CHECK-LE-NEXT:    rldimi 3, 4, 32, 0
+; CHECK-LE-NEXT:    rldimi 4, 4, 32, 0
+; CHECK-LE-NEXT:    mtfprd 0, 3
+; CHECK-LE-NEXT:    mtfprd 1, 4
+; CHECK-LE-NEXT:    xxmrghd 34, 1, 0
 ; CHECK-LE-NEXT:    blr
 entry:
   %0 = load i16, ptr %p, align 2
@@ -227,27 +226,26 @@ entry:
 define noundef <16 x i8> @vec_promote_char_zeroed(ptr nocapture noundef readonly %p) {
 ; CHECK-BE-LABEL: vec_promote_char_zeroed:
 ; CHECK-BE:       # %bb.0: # %entry
-; CHECK-BE-NEXT:    addis 4, 2, .LCPI10_0@toc@ha
 ; CHECK-BE-NEXT:    lbz 3, 0(3)
-; CHECK-BE-NEXT:    addi 4, 4, .LCPI10_0@toc@l
-; CHECK-BE-NEXT:    mtvsrwz 36, 3
-; CHECK-BE-NEXT:    lxvw4x 34, 0, 4
 ; CHECK-BE-NEXT:    li 4, 0
-; CHECK-BE-NEXT:    mtvsrwz 35, 4
-; CHECK-BE-NEXT:    vperm 2, 4, 3, 2
+; CHECK-BE-NEXT:    li 5, 0
+; CHECK-BE-NEXT:    rldimi 4, 4, 32, 0
+; CHECK-BE-NEXT:    slwi 3, 3, 24
+; CHECK-BE-NEXT:    mtfprd 1, 4
+; CHECK-BE-NEXT:    rldimi 5, 3, 32, 0
+; CHECK-BE-NEXT:    mtfprd 0, 5
+; CHECK-BE-NEXT:    xxmrghd 34, 0, 1
 ; CHECK-BE-NEXT:    blr
 ;
 ; CHECK-LE-LABEL: vec_promote_char_zeroed:
 ; CHECK-LE:       # %bb.0: # %entry
-; CHECK-LE-NEXT:    addis 4, 2, .LCPI10_0@toc@ha
 ; CHECK-LE-NEXT:    lbz 3, 0(3)
-; CHECK-LE-NEXT:    addi 4, 4, .LCPI10_0@toc@l
-; CHECK-LE-NEXT:    mtvsrd 36, 3
-; CHECK-LE-NEXT:    lxvd2x 0, 0, 4
 ; CHECK-LE-NEXT:    li 4, 0
-; CHECK-LE-NEXT:    mtvsrd 35, 4
-; CHECK-LE-NEXT:    xxswapd 34, 0
-; CHECK-LE-NEXT:    vperm 2, 3, 4, 2
+; CHECK-LE-NEXT:    rldimi 3, 4, 32, 0
+; CHECK-LE-NEXT:    rldimi 4, 4, 32, 0
+; CHECK-LE-NEXT:    mtfprd 0, 3
+; CHECK-LE-NEXT:    mtfprd 1, 4
+; CHECK-LE-NEXT:    xxmrghd 34, 1, 0
 ; CHECK-LE-NEXT:    blr
 entry:
   %0 = load i8, ptr %p, align 1
