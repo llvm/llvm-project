@@ -1446,9 +1446,10 @@ void Verifier::visitDISubprogram(const DISubprogram &N) {
     CheckDI(Node, "invalid retained nodes list", &N, RawNode);
     for (Metadata *Op : Node->operands()) {
       CheckDI(Op && (isa<DILocalVariable>(Op) || isa<DILabel>(Op) ||
-                     isa<DILifetime>(Op) || isa<DIImportedEntity>(Op)),
-              "invalid retained nodes, expected DILocalVariable, DILabel or "
-              "DIImportedEntity",
+                     isa<DILifetime>(Op) || isa<DIImportedEntity>(Op) 
+		     || isa<DIType>(Op)),
+              "invalid retained nodes, expected DILocalVariable, DILabel, "
+              "DIImportedEntity or DIType",
               &N, Node, Op);
     }
   }
@@ -6029,6 +6030,25 @@ void Verifier::visitIntrinsicCall(Intrinsic::ID ID, CallBase &Call) {
     break;
   case Intrinsic::experimental_convergence_loop:
     break;
+  case Intrinsic::ptrmask: {
+    Type *Ty0 = Call.getArgOperand(0)->getType();
+    Type *Ty1 = Call.getArgOperand(1)->getType();
+    Check(Ty0->isPtrOrPtrVectorTy(),
+          "llvm.ptrmask intrinsic first argument must be pointer or vector "
+          "of pointers",
+          &Call);
+    Check(
+        Ty0->isVectorTy() == Ty1->isVectorTy(),
+        "llvm.ptrmask intrinsic arguments must be both scalars or both vectors",
+        &Call);
+    if (Ty0->isVectorTy())
+      Check(cast<VectorType>(Ty0)->getElementCount() ==
+                cast<VectorType>(Ty1)->getElementCount(),
+            "llvm.ptrmask intrinsic arguments must have the same number of "
+            "elements",
+            &Call);
+    break;
+  }
   };
 
   // Verify that there aren't any unmediated control transfers between funclets.

@@ -29,3 +29,16 @@ define i8* @test2(i8* %src) {
   %ptr = call i8* @llvm.ptrmask.p0i8.i32(i8* %src, i32 10000)
   ret i8* %ptr
 }
+
+declare <2 x ptr> @llvm.ptrmask.v2p0.v2i64(<2 x ptr>, <2 x i64>)
+
+; CHECK-LABEL: name: test3
+; CHECK: %0:vr128 = COPY $xmm0
+; CHECK-NEXT: %1:vr128 = PANDrm %0, $rip, 1, $noreg, %const.0, $noreg :: (load (s128) from constant-pool)
+; CHECK-NEXT: $xmm0 = COPY %1
+; CHECK-NEXT: RET 0, $xmm0
+
+define <2 x ptr> @test3(<2 x ptr> %src) {
+  %ptr = call <2 x ptr> @llvm.ptrmask.v2p0.v2i64(<2 x ptr> %src, <2 x i64> <i64 10000, i64 10000>)
+  ret <2 x ptr> %ptr
+}

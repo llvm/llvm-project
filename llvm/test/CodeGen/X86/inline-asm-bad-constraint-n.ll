@@ -8,3 +8,9 @@ define void @foo() {
   call void asm sideeffect "foo $0", "n"(i32* %a) nounwind
   ret void
 }
+
+; CHECK: error: invalid operand for inline asm constraint 'i'
+define void @bar(i32 %v) {
+  call void asm "", "in"(i32 %v)
+  ret void
+}

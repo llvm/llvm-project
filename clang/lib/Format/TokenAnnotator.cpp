@@ -377,7 +377,7 @@ private:
     // detected one yet.
     if (PrevNonComment && OpeningParen.is(TT_Unknown)) {
       if (PrevNonComment->is(tok::kw___attribute)) {
-        OpeningParen.setType(TT_AttributeParen);
+        OpeningParen.setType(TT_AttributeLParen);
       } else if (PrevNonComment->isOneOf(TT_TypenameMacro, tok::kw_decltype,
                                          tok::kw_typeof,
 #define TRANSFORM_TYPE_TRAIT_DEF(_, Trait) tok::kw___##Trait,
@@ -475,8 +475,8 @@ private:
           }
         }
 
-        if (OpeningParen.is(TT_AttributeParen))
-          CurrentToken->setType(TT_AttributeParen);
+        if (OpeningParen.is(TT_AttributeLParen))
+          CurrentToken->setType(TT_AttributeRParen);
         if (OpeningParen.is(TT_TypeDeclarationParen))
           CurrentToken->setType(TT_TypeDeclarationParen);
         if (OpeningParen.Previous &&
@@ -2382,11 +2382,15 @@ private:
       // Strip trailing qualifiers such as const or volatile when checking
       // whether the parens could be a cast to a pointer/reference type.
       while (T) {
-        if (T->is(TT_AttributeParen)) {
+        if (T->is(TT_AttributeRParen)) {
           // Handle `x = (foo *__attribute__((foo)))&v;`:
-          if (T->MatchingParen && T->MatchingParen->Previous &&
-              T->MatchingParen->Previous->is(tok::kw___attribute)) {
-            T = T->MatchingParen->Previous->Previous;
+          assert(T->is(tok::r_paren));
+          assert(T->MatchingParen);
+          assert(T->MatchingParen->is(tok::l_paren));
+          assert(T->MatchingParen->is(TT_AttributeLParen));
+          if (const auto *Tok = T->MatchingParen->Previous;
+              Tok && Tok->is(tok::kw___attribute)) {
+            T = Tok->Previous;
             continue;
           }
         } else if (T->is(TT_AttributeSquare)) {
@@ -3144,8 +3148,12 @@ static FormatToken *getFunctionName(const AnnotatedLine &Line) {
     }
 
     // Make sure the name is followed by a pair of parentheses.
-    if (Name)
-      return Tok->is(tok::l_paren) && Tok->MatchingParen ? Name : nullptr;
+    if (Name) {
+      return Tok->is(tok::l_paren) && Tok->isNot(TT_FunctionTypeLParen) &&
+                     Tok->MatchingParen
+                 ? Name
+                 : nullptr;
+    }
 
     // Skip keywords that may precede the constructor/destructor name.
     if (Tok->isOneOf(tok::kw_friend, tok::kw_inline, tok::kw_virtual,
@@ -3292,6 +3300,12 @@ static bool isFunctionDeclarationName(bool IsCpp, const FormatToken &Current,
     const auto *Previous = Current.Previous;
     if (Previous->Tok.getIdentifierInfo() &&
         !Previous->isOneOf(tok::kw_return, tok::kw_co_return)) {
+      return true;
+    }
+    if (Previous->is(tok::r_paren) && Previous->is(TT_TypeDeclarationParen)) {
+      assert(Previous->MatchingParen);
+      assert(Previous->MatchingParen->is(tok::l_paren));
+      assert(Previous->MatchingParen->is(TT_TypeDeclarationParen));
       return true;
     }
     if (!Previous->isOneOf(tok::star, tok::amp, tok::ampamp, TT_TemplateCloser))
@@ -3989,7 +4003,7 @@ bool TokenAnnotator::spaceRequiredBetween(const AnnotatedLine &Line,
     // after pointer qualifiers.
     if ((Style.SpaceAroundPointerQualifiers == FormatStyle::SAPQ_After ||
          Style.SpaceAroundPointerQualifiers == FormatStyle::SAPQ_Both) &&
-        (Left.is(TT_AttributeParen) ||
+        (Left.is(TT_AttributeRParen) ||
          Left.canBePointerOrReferenceQualifier())) {
       return true;
     }
@@ -4182,7 +4196,7 @@ bool TokenAnnotator::spaceRequiredBetween(const AnnotatedLine &Line,
       return Style.SpaceBeforeParensOptions.AfterRequiresInExpression ||
              spaceRequiredBeforeParens(Right);
     }
-    if ((Left.is(tok::r_paren) && Left.is(TT_AttributeParen)) ||
+    if (Left.is(TT_AttributeRParen) ||
         (Left.is(tok::r_square) && Left.is(TT_AttributeSquare))) {
       return true;
     }
@@ -4361,7 +4375,7 @@ bool TokenAnnotator::spaceRequiredBefore(const AnnotatedLine &Line,
       return false;
     }
     // Space in __attribute__((attr)) ::type.
-    if (Left.is(TT_AttributeParen) && Right.is(tok::coloncolon))
+    if (Left.is(TT_AttributeRParen) && Right.is(tok::coloncolon))
       return true;
 
     if (Left.is(tok::kw_operator))
@@ -5190,7 +5204,7 @@ bool TokenAnnotator::mustBreakBefore(const AnnotatedLine &Line,
   }
 
   // Ensure wrapping after __attribute__((XX)) and @interface etc.
-  if (Left.is(TT_AttributeParen) && Right.is(TT_ObjCDecl))
+  if (Left.is(TT_AttributeRParen) && Right.is(TT_ObjCDecl))
     return true;
 
   if (Left.is(TT_LambdaLBrace)) {
@@ -5552,8 +5566,8 @@ bool TokenAnnotator::canBreakBefore(const AnnotatedLine &Line,
       !Style.Cpp11BracedListStyle) {
     return false;
   }
-  if (Left.is(tok::l_paren) &&
-      Left.isOneOf(TT_AttributeParen, TT_TypeDeclarationParen)) {
+  if (Left.is(TT_AttributeLParen) ||
+      (Left.is(tok::l_paren) && Left.is(TT_TypeDeclarationParen))) {
     return false;
   }
   if (Left.is(tok::l_paren) && Left.Previous &&

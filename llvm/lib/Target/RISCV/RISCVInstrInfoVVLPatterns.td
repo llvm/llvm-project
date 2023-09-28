@@ -2478,7 +2478,8 @@ foreach fvti = AllFloatVectors in {
   // Floating-point vselects:
   // 11.15. Vector Integer Merge Instructions
   // 13.15. Vector Floating-Point Merge Instruction
-  let Predicates = GetVTypePredicates<fvti>.Predicates in {
+  defvar ivti = GetIntVTypeInfo<fvti>.Vti;
+  let Predicates = GetVTypePredicates<ivti>.Predicates in {
     def : Pat<(fvti.Vector (riscv_vselect_vl (fvti.Mask V0),
                                              fvti.RegClass:$rs1,
                                              fvti.RegClass:$rs2,
@@ -2487,16 +2488,6 @@ foreach fvti = AllFloatVectors in {
                    (fvti.Vector (IMPLICIT_DEF)),
                    fvti.RegClass:$rs2, fvti.RegClass:$rs1, (fvti.Mask V0),
                    GPR:$vl, fvti.Log2SEW)>;
-
-    def : Pat<(fvti.Vector (riscv_vselect_vl (fvti.Mask V0),
-                                             (SplatFPOp fvti.ScalarRegClass:$rs1),
-                                             fvti.RegClass:$rs2,
-                                             VLOpFrag)),
-              (!cast<Instruction>("PseudoVFMERGE_V"#fvti.ScalarSuffix#"M_"#fvti.LMul.MX)
-                   (fvti.Vector (IMPLICIT_DEF)),
-                   fvti.RegClass:$rs2,
-                   (fvti.Scalar fvti.ScalarRegClass:$rs1),
-                   (fvti.Mask V0), GPR:$vl, fvti.Log2SEW)>;
 
     def : Pat<(fvti.Vector (riscv_vselect_vl (fvti.Mask V0),
                                              (SplatFPOp (SelectFPImm (XLenVT GPR:$imm))),
@@ -2525,6 +2516,26 @@ foreach fvti = AllFloatVectors in {
                    GPR:$vl, fvti.Log2SEW)>;
 
     def : Pat<(fvti.Vector (riscv_vp_merge_vl (fvti.Mask V0),
+                                              (SplatFPOp (fvti.Scalar fpimm0)),
+                                              fvti.RegClass:$rs2,
+                                              VLOpFrag)),
+              (!cast<Instruction>("PseudoVMERGE_VIM_"#fvti.LMul.MX)
+                   fvti.RegClass:$rs2, fvti.RegClass:$rs2, 0, (fvti.Mask V0),
+                   GPR:$vl, fvti.Log2SEW)>;
+  }
+
+  let Predicates = GetVTypePredicates<fvti>.Predicates in {
+    def : Pat<(fvti.Vector (riscv_vselect_vl (fvti.Mask V0),
+                                             (SplatFPOp fvti.ScalarRegClass:$rs1),
+                                             fvti.RegClass:$rs2,
+                                             VLOpFrag)),
+              (!cast<Instruction>("PseudoVFMERGE_V"#fvti.ScalarSuffix#"M_"#fvti.LMul.MX)
+                   (fvti.Vector (IMPLICIT_DEF)),
+                   fvti.RegClass:$rs2,
+                   (fvti.Scalar fvti.ScalarRegClass:$rs1),
+                   (fvti.Mask V0), GPR:$vl, fvti.Log2SEW)>;
+
+    def : Pat<(fvti.Vector (riscv_vp_merge_vl (fvti.Mask V0),
                                               (SplatFPOp fvti.ScalarRegClass:$rs1),
                                               fvti.RegClass:$rs2,
                                               VLOpFrag)),
@@ -2532,14 +2543,6 @@ foreach fvti = AllFloatVectors in {
                    fvti.RegClass:$rs2, fvti.RegClass:$rs2,
                    (fvti.Scalar fvti.ScalarRegClass:$rs1),
                    (fvti.Mask V0), GPR:$vl, fvti.Log2SEW)>;
-
-    def : Pat<(fvti.Vector (riscv_vp_merge_vl (fvti.Mask V0),
-                                              (SplatFPOp (fvti.Scalar fpimm0)),
-                                              fvti.RegClass:$rs2,
-                                              VLOpFrag)),
-              (!cast<Instruction>("PseudoVMERGE_VIM_"#fvti.LMul.MX)
-                   fvti.RegClass:$rs2, fvti.RegClass:$rs2, 0, (fvti.Mask V0),
-                   GPR:$vl, fvti.Log2SEW)>;
 
     // 13.16. Vector Floating-Point Move Instruction
     // If we're splatting fpimm0, use vmv.v.x vd, x0.

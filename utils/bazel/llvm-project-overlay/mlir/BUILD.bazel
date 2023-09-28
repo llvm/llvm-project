@@ -1541,6 +1541,7 @@ td_library(
     deps = [
         ":BuiltinDialectTdFiles",
         ":CastInterfacesTdFiles",
+        ":ControlFlowInterfacesTdFiles",
         ":OpBaseTdFiles",
         ":SideEffectInterfacesTdFiles",
     ],
@@ -3317,6 +3318,7 @@ cc_library(
     includes = ["include"],
     deps = [
         ":CastInterfaces",
+        ":ControlFlowInterfaces",
         ":EmitCAttributesIncGen",
         ":EmitCOpsIncGen",
         ":IR",
@@ -3556,6 +3558,7 @@ cc_library(
         ":PDLToPDLInterp",
         ":ReconcileUnrealizedCasts",
         ":SCFToControlFlow",
+        ":SCFToEmitC",
         ":SCFToGPU",
         ":SCFToOpenMP",
         ":SCFToSPIRV",
@@ -7168,6 +7171,26 @@ cc_library(
         ":Pass",
         ":SCFDialect",
         ":SideEffectInterfaces",
+        ":Support",
+        ":TransformUtils",
+        ":Transforms",
+        "//llvm:Support",
+    ],
+)
+
+cc_library(
+    name = "SCFToEmitC",
+    srcs = glob(["lib/Conversion/SCFToEmitC/*.cpp"]),
+    hdrs = glob(["include/mlir/Conversion/SCFToEmitC/*.h"]),
+    includes = ["include"],
+    deps = [
+        ":ArithDialect",
+        ":ControlFlowInterfaces",
+        ":ConversionPassIncGen",
+        ":EmitCDialect",
+        ":IR",
+        ":Pass",
+        ":SCFDialect",
         ":Support",
         ":TransformUtils",
         ":Transforms",

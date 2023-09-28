@@ -57,151 +57,83 @@ TEST_CONSTEXPR_CXX20 void test3(S&& lhs, S&& rhs, const S& x) {
 }
 #endif
 
-TEST_CONSTEXPR_CXX20 bool test() {
-  {
-    typedef std::string S;
-    test0(S(""), S(""), S(""));
-    test0(S(""), S("12345"), S("12345"));
-    test0(S(""), S("1234567890"), S("1234567890"));
-    test0(S(""), S("12345678901234567890"), S("12345678901234567890"));
-    test0(S("abcde"), S(""), S("abcde"));
-    test0(S("abcde"), S("12345"), S("abcde12345"));
-    test0(S("abcde"), S("1234567890"), S("abcde1234567890"));
-    test0(S("abcde"), S("12345678901234567890"), S("abcde12345678901234567890"));
-    test0(S("abcdefghij"), S(""), S("abcdefghij"));
-    test0(S("abcdefghij"), S("12345"), S("abcdefghij12345"));
-    test0(S("abcdefghij"), S("1234567890"), S("abcdefghij1234567890"));
-    test0(S("abcdefghij"), S("12345678901234567890"), S("abcdefghij12345678901234567890"));
-    test0(S("abcdefghijklmnopqrst"), S(""), S("abcdefghijklmnopqrst"));
-    test0(S("abcdefghijklmnopqrst"), S("12345"), S("abcdefghijklmnopqrst12345"));
-    test0(S("abcdefghijklmnopqrst"), S("1234567890"), S("abcdefghijklmnopqrst1234567890"));
-    test0(S("abcdefghijklmnopqrst"), S("12345678901234567890"), S("abcdefghijklmnopqrst12345678901234567890"));
-  }
+template <class S>
+TEST_CONSTEXPR_CXX20 void test_string() {
+  test0(S(""), S(""), S(""));
+  test0(S(""), S("12345"), S("12345"));
+  test0(S(""), S("1234567890"), S("1234567890"));
+  test0(S(""), S("12345678901234567890"), S("12345678901234567890"));
+  test0(S("abcde"), S(""), S("abcde"));
+  test0(S("abcde"), S("12345"), S("abcde12345"));
+  test0(S("abcde"), S("1234567890"), S("abcde1234567890"));
+  test0(S("abcde"), S("12345678901234567890"), S("abcde12345678901234567890"));
+  test0(S("abcdefghij"), S(""), S("abcdefghij"));
+  test0(S("abcdefghij"), S("12345"), S("abcdefghij12345"));
+  test0(S("abcdefghij"), S("1234567890"), S("abcdefghij1234567890"));
+  test0(S("abcdefghij"), S("12345678901234567890"), S("abcdefghij12345678901234567890"));
+  test0(S("abcdefghijklmnopqrst"), S(""), S("abcdefghijklmnopqrst"));
+  test0(S("abcdefghijklmnopqrst"), S("12345"), S("abcdefghijklmnopqrst12345"));
+  test0(S("abcdefghijklmnopqrst"), S("1234567890"), S("abcdefghijklmnopqrst1234567890"));
+  test0(S("abcdefghijklmnopqrst"), S("12345678901234567890"), S("abcdefghijklmnopqrst12345678901234567890"));
 #if TEST_STD_VER >= 11
-  {
-    typedef std::string S;
-    test1(S(""), S(""), S(""));
-    test1(S(""), S("12345"), S("12345"));
-    test1(S(""), S("1234567890"), S("1234567890"));
-    test1(S(""), S("12345678901234567890"), S("12345678901234567890"));
-    test1(S("abcde"), S(""), S("abcde"));
-    test1(S("abcde"), S("12345"), S("abcde12345"));
-    test1(S("abcde"), S("1234567890"), S("abcde1234567890"));
-    test1(S("abcde"), S("12345678901234567890"), S("abcde12345678901234567890"));
-    test1(S("abcdefghij"), S(""), S("abcdefghij"));
-    test1(S("abcdefghij"), S("12345"), S("abcdefghij12345"));
-    test1(S("abcdefghij"), S("1234567890"), S("abcdefghij1234567890"));
-    test1(S("abcdefghij"), S("12345678901234567890"), S("abcdefghij12345678901234567890"));
-    test1(S("abcdefghijklmnopqrst"), S(""), S("abcdefghijklmnopqrst"));
-    test1(S("abcdefghijklmnopqrst"), S("12345"), S("abcdefghijklmnopqrst12345"));
-    test1(S("abcdefghijklmnopqrst"), S("1234567890"), S("abcdefghijklmnopqrst1234567890"));
-    test1(S("abcdefghijklmnopqrst"), S("12345678901234567890"), S("abcdefghijklmnopqrst12345678901234567890"));
+  test1(S(""), S(""), S(""));
+  test1(S(""), S("12345"), S("12345"));
+  test1(S(""), S("1234567890"), S("1234567890"));
+  test1(S(""), S("12345678901234567890"), S("12345678901234567890"));
+  test1(S("abcde"), S(""), S("abcde"));
+  test1(S("abcde"), S("12345"), S("abcde12345"));
+  test1(S("abcde"), S("1234567890"), S("abcde1234567890"));
+  test1(S("abcde"), S("12345678901234567890"), S("abcde12345678901234567890"));
+  test1(S("abcdefghij"), S(""), S("abcdefghij"));
+  test1(S("abcdefghij"), S("12345"), S("abcdefghij12345"));
+  test1(S("abcdefghij"), S("1234567890"), S("abcdefghij1234567890"));
+  test1(S("abcdefghij"), S("12345678901234567890"), S("abcdefghij12345678901234567890"));
+  test1(S("abcdefghijklmnopqrst"), S(""), S("abcdefghijklmnopqrst"));
+  test1(S("abcdefghijklmnopqrst"), S("12345"), S("abcdefghijklmnopqrst12345"));
+  test1(S("abcdefghijklmnopqrst"), S("1234567890"), S("abcdefghijklmnopqrst1234567890"));
+  test1(S("abcdefghijklmnopqrst"), S("12345678901234567890"), S("abcdefghijklmnopqrst12345678901234567890"));
 
-    test2(S(""), S(""), S(""));
-    test2(S(""), S("12345"), S("12345"));
-    test2(S(""), S("1234567890"), S("1234567890"));
-    test2(S(""), S("12345678901234567890"), S("12345678901234567890"));
-    test2(S("abcde"), S(""), S("abcde"));
-    test2(S("abcde"), S("12345"), S("abcde12345"));
-    test2(S("abcde"), S("1234567890"), S("abcde1234567890"));
-    test2(S("abcde"), S("12345678901234567890"), S("abcde12345678901234567890"));
-    test2(S("abcdefghij"), S(""), S("abcdefghij"));
-    test2(S("abcdefghij"), S("12345"), S("abcdefghij12345"));
-    test2(S("abcdefghij"), S("1234567890"), S("abcdefghij1234567890"));
-    test2(S("abcdefghij"), S("12345678901234567890"), S("abcdefghij12345678901234567890"));
-    test2(S("abcdefghijklmnopqrst"), S(""), S("abcdefghijklmnopqrst"));
-    test2(S("abcdefghijklmnopqrst"), S("12345"), S("abcdefghijklmnopqrst12345"));
-    test2(S("abcdefghijklmnopqrst"), S("1234567890"), S("abcdefghijklmnopqrst1234567890"));
-    test2(S("abcdefghijklmnopqrst"), S("12345678901234567890"), S("abcdefghijklmnopqrst12345678901234567890"));
+  test2(S(""), S(""), S(""));
+  test2(S(""), S("12345"), S("12345"));
+  test2(S(""), S("1234567890"), S("1234567890"));
+  test2(S(""), S("12345678901234567890"), S("12345678901234567890"));
+  test2(S("abcde"), S(""), S("abcde"));
+  test2(S("abcde"), S("12345"), S("abcde12345"));
+  test2(S("abcde"), S("1234567890"), S("abcde1234567890"));
+  test2(S("abcde"), S("12345678901234567890"), S("abcde12345678901234567890"));
+  test2(S("abcdefghij"), S(""), S("abcdefghij"));
+  test2(S("abcdefghij"), S("12345"), S("abcdefghij12345"));
+  test2(S("abcdefghij"), S("1234567890"), S("abcdefghij1234567890"));
+  test2(S("abcdefghij"), S("12345678901234567890"), S("abcdefghij12345678901234567890"));
+  test2(S("abcdefghijklmnopqrst"), S(""), S("abcdefghijklmnopqrst"));
+  test2(S("abcdefghijklmnopqrst"), S("12345"), S("abcdefghijklmnopqrst12345"));
+  test2(S("abcdefghijklmnopqrst"), S("1234567890"), S("abcdefghijklmnopqrst1234567890"));
+  test2(S("abcdefghijklmnopqrst"), S("12345678901234567890"), S("abcdefghijklmnopqrst12345678901234567890"));
 
-    test3(S(""), S(""), S(""));
-    test3(S(""), S("12345"), S("12345"));
-    test3(S(""), S("1234567890"), S("1234567890"));
-    test3(S(""), S("12345678901234567890"), S("12345678901234567890"));
-    test3(S("abcde"), S(""), S("abcde"));
-    test3(S("abcde"), S("12345"), S("abcde12345"));
-    test3(S("abcde"), S("1234567890"), S("abcde1234567890"));
-    test3(S("abcde"), S("12345678901234567890"), S("abcde12345678901234567890"));
-    test3(S("abcdefghij"), S(""), S("abcdefghij"));
-    test3(S("abcdefghij"), S("12345"), S("abcdefghij12345"));
-    test3(S("abcdefghij"), S("1234567890"), S("abcdefghij1234567890"));
-    test3(S("abcdefghij"), S("12345678901234567890"), S("abcdefghij12345678901234567890"));
-    test3(S("abcdefghijklmnopqrst"), S(""), S("abcdefghijklmnopqrst"));
-    test3(S("abcdefghijklmnopqrst"), S("12345"), S("abcdefghijklmnopqrst12345"));
-    test3(S("abcdefghijklmnopqrst"), S("1234567890"), S("abcdefghijklmnopqrst1234567890"));
-    test3(S("abcdefghijklmnopqrst"), S("12345678901234567890"), S("abcdefghijklmnopqrst12345678901234567890"));
-  }
-  {
-    typedef std::basic_string<char, std::char_traits<char>, min_allocator<char> > S;
-    test0(S(""), S(""), S(""));
-    test0(S(""), S("12345"), S("12345"));
-    test0(S(""), S("1234567890"), S("1234567890"));
-    test0(S(""), S("12345678901234567890"), S("12345678901234567890"));
-    test0(S("abcde"), S(""), S("abcde"));
-    test0(S("abcde"), S("12345"), S("abcde12345"));
-    test0(S("abcde"), S("1234567890"), S("abcde1234567890"));
-    test0(S("abcde"), S("12345678901234567890"), S("abcde12345678901234567890"));
-    test0(S("abcdefghij"), S(""), S("abcdefghij"));
-    test0(S("abcdefghij"), S("12345"), S("abcdefghij12345"));
-    test0(S("abcdefghij"), S("1234567890"), S("abcdefghij1234567890"));
-    test0(S("abcdefghij"), S("12345678901234567890"), S("abcdefghij12345678901234567890"));
-    test0(S("abcdefghijklmnopqrst"), S(""), S("abcdefghijklmnopqrst"));
-    test0(S("abcdefghijklmnopqrst"), S("12345"), S("abcdefghijklmnopqrst12345"));
-    test0(S("abcdefghijklmnopqrst"), S("1234567890"), S("abcdefghijklmnopqrst1234567890"));
-    test0(S("abcdefghijklmnopqrst"), S("12345678901234567890"), S("abcdefghijklmnopqrst12345678901234567890"));
+  test3(S(""), S(""), S(""));
+  test3(S(""), S("12345"), S("12345"));
+  test3(S(""), S("1234567890"), S("1234567890"));
+  test3(S(""), S("12345678901234567890"), S("12345678901234567890"));
+  test3(S("abcde"), S(""), S("abcde"));
+  test3(S("abcde"), S("12345"), S("abcde12345"));
+  test3(S("abcde"), S("1234567890"), S("abcde1234567890"));
+  test3(S("abcde"), S("12345678901234567890"), S("abcde12345678901234567890"));
+  test3(S("abcdefghij"), S(""), S("abcdefghij"));
+  test3(S("abcdefghij"), S("12345"), S("abcdefghij12345"));
+  test3(S("abcdefghij"), S("1234567890"), S("abcdefghij1234567890"));
+  test3(S("abcdefghij"), S("12345678901234567890"), S("abcdefghij12345678901234567890"));
+  test3(S("abcdefghijklmnopqrst"), S(""), S("abcdefghijklmnopqrst"));
+  test3(S("abcdefghijklmnopqrst"), S("12345"), S("abcdefghijklmnopqrst12345"));
+  test3(S("abcdefghijklmnopqrst"), S("1234567890"), S("abcdefghijklmnopqrst1234567890"));
+  test3(S("abcdefghijklmnopqrst"), S("12345678901234567890"), S("abcdefghijklmnopqrst12345678901234567890"));
+#endif
+}
 
-    test1(S(""), S(""), S(""));
-    test1(S(""), S("12345"), S("12345"));
-    test1(S(""), S("1234567890"), S("1234567890"));
-    test1(S(""), S("12345678901234567890"), S("12345678901234567890"));
-    test1(S("abcde"), S(""), S("abcde"));
-    test1(S("abcde"), S("12345"), S("abcde12345"));
-    test1(S("abcde"), S("1234567890"), S("abcde1234567890"));
-    test1(S("abcde"), S("12345678901234567890"), S("abcde12345678901234567890"));
-    test1(S("abcdefghij"), S(""), S("abcdefghij"));
-    test1(S("abcdefghij"), S("12345"), S("abcdefghij12345"));
-    test1(S("abcdefghij"), S("1234567890"), S("abcdefghij1234567890"));
-    test1(S("abcdefghij"), S("12345678901234567890"), S("abcdefghij12345678901234567890"));
-    test1(S("abcdefghijklmnopqrst"), S(""), S("abcdefghijklmnopqrst"));
-    test1(S("abcdefghijklmnopqrst"), S("12345"), S("abcdefghijklmnopqrst12345"));
-    test1(S("abcdefghijklmnopqrst"), S("1234567890"), S("abcdefghijklmnopqrst1234567890"));
-    test1(S("abcdefghijklmnopqrst"), S("12345678901234567890"), S("abcdefghijklmnopqrst12345678901234567890"));
-
-    test2(S(""), S(""), S(""));
-    test2(S(""), S("12345"), S("12345"));
-    test2(S(""), S("1234567890"), S("1234567890"));
-    test2(S(""), S("12345678901234567890"), S("12345678901234567890"));
-    test2(S("abcde"), S(""), S("abcde"));
-    test2(S("abcde"), S("12345"), S("abcde12345"));
-    test2(S("abcde"), S("1234567890"), S("abcde1234567890"));
-    test2(S("abcde"), S("12345678901234567890"), S("abcde12345678901234567890"));
-    test2(S("abcdefghij"), S(""), S("abcdefghij"));
-    test2(S("abcdefghij"), S("12345"), S("abcdefghij12345"));
-    test2(S("abcdefghij"), S("1234567890"), S("abcdefghij1234567890"));
-    test2(S("abcdefghij"), S("12345678901234567890"), S("abcdefghij12345678901234567890"));
-    test2(S("abcdefghijklmnopqrst"), S(""), S("abcdefghijklmnopqrst"));
-    test2(S("abcdefghijklmnopqrst"), S("12345"), S("abcdefghijklmnopqrst12345"));
-    test2(S("abcdefghijklmnopqrst"), S("1234567890"), S("abcdefghijklmnopqrst1234567890"));
-    test2(S("abcdefghijklmnopqrst"), S("12345678901234567890"), S("abcdefghijklmnopqrst12345678901234567890"));
-
-    test3(S(""), S(""), S(""));
-    test3(S(""), S("12345"), S("12345"));
-    test3(S(""), S("1234567890"), S("1234567890"));
-    test3(S(""), S("12345678901234567890"), S("12345678901234567890"));
-    test3(S("abcde"), S(""), S("abcde"));
-    test3(S("abcde"), S("12345"), S("abcde12345"));
-    test3(S("abcde"), S("1234567890"), S("abcde1234567890"));
-    test3(S("abcde"), S("12345678901234567890"), S("abcde12345678901234567890"));
-    test3(S("abcdefghij"), S(""), S("abcdefghij"));
-    test3(S("abcdefghij"), S("12345"), S("abcdefghij12345"));
-    test3(S("abcdefghij"), S("1234567890"), S("abcdefghij1234567890"));
-    test3(S("abcdefghij"), S("12345678901234567890"), S("abcdefghij12345678901234567890"));
-    test3(S("abcdefghijklmnopqrst"), S(""), S("abcdefghijklmnopqrst"));
-    test3(S("abcdefghijklmnopqrst"), S("12345"), S("abcdefghijklmnopqrst12345"));
-    test3(S("abcdefghijklmnopqrst"), S("1234567890"), S("abcdefghijklmnopqrst1234567890"));
-    test3(S("abcdefghijklmnopqrst"), S("12345678901234567890"), S("abcdefghijklmnopqrst12345678901234567890"));
-  }
-#endif // TEST_STD_VER >= 11
+TEST_CONSTEXPR_CXX20 bool test() {
+  test_string<std::string>();
+#if TEST_STD_VER >= 11
+  test_string<std::basic_string<char, std::char_traits<char>, min_allocator<char> > >();
+#endif
 
   return true;
 }
