@@ -24,18 +24,6 @@ class TestExpressionsInSwiftMethodsPureSwift(TestBase):
 
     mydir = TestBase.compute_mydir(__file__)
 
-    def check_expression(self, expression, expected_result, use_summary=True):
-        value = self.frame().EvaluateExpression(expression)
-        self.assertTrue(value.IsValid(), expression + "returned a valid value")
-
-        if use_summary:
-            answer = value.GetSummary()
-        else:
-            answer = value.GetValue()
-        report_str = "%s expected: %s got: %s" % (
-            expression, expected_result, answer)
-        self.assertTrue(answer == expected_result, report_str)
-
     @swiftTest
     def test_expressions_in_methods(self):
         """Tests that we can run simple Swift expressions correctly"""
@@ -43,7 +31,6 @@ class TestExpressionsInSwiftMethodsPureSwift(TestBase):
         lldbutil.run_to_source_breakpoint(
             self, 'Stop here in Pure Swift class', lldb.SBFileSpec('main.swift'))
 
-        self.check_expression("m_computed_ivar == 5", "true")
-        self.check_expression("m_ivar", "10", use_summary=False)
-        self.check_expression("self.m_ivar == 11", "false")
-
+        lldbutil.check_expression(self, self.frame(), "m_computed_ivar == 5", "true")
+        lldbutil.check_expression(self, self.frame(), "m_ivar", "10", use_summary=False)
+        lldbutil.check_expression(self, self.frame(), "self.m_ivar == 11", "false")

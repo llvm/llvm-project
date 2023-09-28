@@ -35,21 +35,6 @@ class TestSwiftExpressionScopes(TestBase):
         self.main_source = "main.swift"
         self.main_source_spec = lldb.SBFileSpec(self.main_source)
 
-    def check_expression(self, expression, expected_result, use_summary=True):
-        value = self.frame().EvaluateExpression(expression)
-        self.assertTrue(value.IsValid(), expression + "returned a valid value")
-        if use_summary:
-            answer = value.GetSummary()
-        else:
-            answer = value.GetValue()
-        report_str = "%s expected: %s got: %s" % (
-            expression, expected_result, answer)
-        if answer != expected_result:
-            print(report_str)
-            print(value.GetError())
-
-        self.assertTrue(answer == expected_result, report_str)
-
     def continue_to_bkpt(self, process, bkpt):
         threads = lldbutil.continue_to_breakpoint(process, bkpt)
         self.assertTrue(len(threads) == 1)
@@ -92,8 +77,8 @@ class TestSwiftExpressionScopes(TestBase):
 
         self.assertTrue(len(threads) == 1)
 
-        self.check_expression("in_class_a", "20", use_summary=False)
-        self.check_expression("self.in_class_a", "20", use_summary=False)
+        lldbutil.check_expression(self, self.frame(), "in_class_a", "20", use_summary=False)
+        lldbutil.check_expression(self, self.frame(), "self.in_class_a", "20", use_summary=False)
 
         # Disable the init breakpoint so we don't have to hit it again:
         init_bkpt.SetEnabled(False)
@@ -101,10 +86,10 @@ class TestSwiftExpressionScopes(TestBase):
         # Now continue to shadowed_in_a:
         self.continue_to_bkpt(process, shadow_a_bkpt)
 
-        self.check_expression("in_class_a", "10", use_summary=False)
-        self.check_expression("self.in_class_a", "20", use_summary=False)
-        self.check_expression("self.also_in_a", "21", use_summary=False)
-        self.check_expression("also_in_a", "21", use_summary=False)
+        lldbutil.check_expression(self, self.frame(), "in_class_a", "10", use_summary=False)
+        lldbutil.check_expression(self, self.frame(), "self.in_class_a", "20", use_summary=False)
+        lldbutil.check_expression(self, self.frame(), "self.also_in_a", "21", use_summary=False)
+        lldbutil.check_expression(self, self.frame(), "also_in_a", "21", use_summary=False)
 
         shadow_a_bkpt.SetEnabled(False)
 
@@ -115,10 +100,10 @@ class TestSwiftExpressionScopes(TestBase):
 
         self.continue_to_bkpt(process, static_bkpt)
 
-        self.check_expression("input", "10", use_summary=False)
+        lldbutil.check_expression(self, self.frame(), "input", "10", use_summary=False)
         # This test fails on Bryce.  The self metatype doesn't generate a valid
         # type.
-        self.check_expression("self.return_ten()", "10", use_summary=False)
+        lldbutil.check_expression(self, self.frame(), "self.return_ten()", "10", use_summary=False)
         static_bkpt.SetEnabled(False)
 
         # Now run into the setters & getters:
@@ -127,7 +112,7 @@ class TestSwiftExpressionScopes(TestBase):
         self.assertTrue(set_bkpt.GetNumLocations() > 0, VALID_BREAKPOINT)
 
         self.continue_to_bkpt(process, set_bkpt)
-        self.check_expression("self.backing_int", "10", use_summary=False)
+        lldbutil.check_expression(self, self.frame(), "self.backing_int", "10", use_summary=False)
         set_bkpt.SetEnabled(False)
 
         get_bkpt = target.BreakpointCreateBySourceRegex(
@@ -135,7 +120,7 @@ class TestSwiftExpressionScopes(TestBase):
         self.assertTrue(get_bkpt.GetNumLocations() > 0, VALID_BREAKPOINT)
 
         self.continue_to_bkpt(process, get_bkpt)
-        self.check_expression("self.backing_int", "41", use_summary=False)
+        lldbutil.check_expression(self, self.frame(), "self.backing_int", "41", use_summary=False)
         get_bkpt.SetEnabled(False)
 
         deinit_bkpt = target.BreakpointCreateBySourceRegex(
@@ -143,7 +128,7 @@ class TestSwiftExpressionScopes(TestBase):
         self.assertTrue(deinit_bkpt.GetNumLocations() > 0, VALID_BREAKPOINT)
 
         self.continue_to_bkpt(process, deinit_bkpt)
-        self.check_expression("self.backing_int", "41", use_summary=False)
+        lldbutil.check_expression(self, self.frame(), "self.backing_int", "41", use_summary=False)
         deinit_bkpt.SetEnabled(False)
 
         # Now let's try the subscript getter & make sure that that works:
@@ -155,7 +140,7 @@ class TestSwiftExpressionScopes(TestBase):
             VALID_BREAKPOINT)
 
         self.continue_to_bkpt(process, str_sub_get_bkpt)
-        self.check_expression("self.backing_int", "10", use_summary=False)
+        lldbutil.check_expression(self, self.frame(), "self.backing_int", "10", use_summary=False)
 
         str_sub_get_bkpt.SetEnabled(False)
 
@@ -166,11 +151,10 @@ class TestSwiftExpressionScopes(TestBase):
         self.assertTrue(closure_bkpt.GetNumLocations() > 0, VALID_BREAKPOINT)
 
         self.continue_to_bkpt(process, closure_bkpt)
-        self.check_expression("self.backing_int", "10", use_summary=False)
-        self.check_expression("a_string", '"abcde"', use_summary=True)
+        lldbutil.check_expression(self, self.frame(), "self.backing_int", "10", use_summary=False)
+        lldbutil.check_expression(self, self.frame(), "a_string", '"abcde"', use_summary=True)
 
         # Now set a breakpoint in the struct method and run to there:
         self.continue_by_pattern('Break here in struct')
-        self.check_expression("a", "\"foo\"", use_summary=True)
-        self.check_expression("self.b", "5", use_summary=False)
-
+        lldbutil.check_expression(self, self.frame(), "a", "\"foo\"", use_summary=True)
+        lldbutil.check_expression(self, self.frame(), "self.b", "5", use_summary=False)
