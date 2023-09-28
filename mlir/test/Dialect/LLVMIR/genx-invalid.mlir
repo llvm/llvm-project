@@ -23,6 +23,33 @@ func.func @matrix_2Dblockload(%ptr : !llvm.ptr<i32>, %base_height : i32, %x : i3
   %0 = genx.matrix.2Dblockload %ptr, %base_width, %base_height, %base_pitch, %x, %y {elem_size_in_bits=32:i32, tile_width=4:i32, tile_height=1:i32, v_blocks=1:i32, transpose=false, vnni_transform=false} : (!llvm.ptr<i32>, i32, i32, i32, i32, i32) -> vector<4xi32>
   llvm.return
 }
+
+// -----
+
+func.func @matrix_2Dblockstore(%ptr : !llvm.ptr<i32>, %base_width : i32, %base_height : i32, %base_pitch : i32, %x : i32, %y : i32, %stored_val : vector<4xi32>) {
+  // expected-error @+1 {{'genx.matrix.2Dblockstore' op expecting 'elem_size_in_bits' to be 8, 16, or 32}}
+  genx.matrix.2Dblockstore %ptr, %base_width, %base_height, %base_pitch, %x, %y, %stored_val {elem_size_in_bits=64:i32, tile_width=4:i32, tile_height=1:i32, v_blocks=1:i32, transpose=false, vnni_transform=false} : (!llvm.ptr<i32>, i32, i32, i32, i32, i32, vector<4xi32>)
+  llvm.return
+}
+
+// -----
+
+func.func @matrix_2Dblockstore(%ptr : !llvm.ptr<i32>, %base_width : i32, %base_height : i32, %base_pitch : i32, %x : i32, %y : i32, %stored_val : vector<4xi32>) {
+  // expected-error @+1 {{'genx.matrix.2Dblockstore' op transpose and vnni transform are mutually exclusive}}
+  genx.matrix.2Dblockstore %ptr, %base_width, %base_height, %base_pitch, %x, %y, %stored_val {elem_size_in_bits=32:i32, tile_width=4:i32, tile_height=1:i32, v_blocks=1:i32, transpose=true, vnni_transform=true} : (!llvm.ptr<i32>, i32, i32, i32, i32, i32, vector<4xi32>)
+  llvm.return
+}
+
+// -----
+
+func.func @matrix_2Dblockstore(%ptr : !llvm.ptr<i32>, %base_height : i32, %x : i32, %y : i32, %stored_val : vector<4xi32>) {
+  %base_width = llvm.mlir.constant(4 : i32) : i32
+  %base_pitch = llvm.mlir.constant(2 : i32) : i32
+  // expected-error @+1 {{'genx.matrix.2Dblockstore' op 4th operand (base pitch) should be >= 2nd operand (base width)}}
+  genx.matrix.2Dblockstore %ptr, %base_width, %base_height, %base_pitch, %x, %y, %stored_val {elem_size_in_bits=32:i32, tile_width=4:i32, tile_height=1:i32, v_blocks=1:i32, transpose=false, vnni_transform=false} : (!llvm.ptr<i32>, i32, i32, i32, i32, i32, vector<4xi32>)
+  llvm.return
+}
+
 // -----
 
 func.func @joint_matrix_load(%ptr : !llvm.ptr<i32>, %stride : index) {

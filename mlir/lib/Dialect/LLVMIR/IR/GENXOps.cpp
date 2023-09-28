@@ -68,6 +68,29 @@ LogicalResult GENX::Matrix2DBlockLoadOp::verify() {
 }
 
 //===----------------------------------------------------------------------===//
+// genx.matrix.2Dblockstore
+//===----------------------------------------------------------------------===//
+
+LogicalResult GENX::Matrix2DBlockStoreOp::verify() {
+  if (getElemSizeInBits() != 8 && getElemSizeInBits() != 16 &&
+      getElemSizeInBits() != 32)
+    return this->emitOpError(
+        "expecting 'elem_size_in_bits' to be 8, 16, or 32");
+
+  if (getTranspose() && getVnniTransform())
+    return this->emitOpError(
+        "transpose and vnni transform are mutually exclusive");
+
+  std::optional<int> width = getConstantInt(getBaseWidth());
+  std::optional<int> pitch = getConstantInt(getBasePitch());
+  if (pitch && width && *pitch < *width)
+    return this->emitOpError(
+        "4th operand (base pitch) should be >= 2nd operand (base width)");
+
+  return success();
+}
+
+//===----------------------------------------------------------------------===//
 // genx.matrix.load
 //===----------------------------------------------------------------------===//
 

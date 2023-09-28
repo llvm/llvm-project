@@ -441,6 +441,54 @@ def GENX_Matrix2DBlockLoadOp : GENX_Op<"matrix.2Dblockload">,
   let hasVerifier = 1;
 }
 
+def GENX_Matrix2DBlockStoreOp : GENX_Op<"matrix.2Dblockstore">,
+  Arguments<(ins 
+    Arg<LLVM_PointerTo<GENX_MatrixElemType>, "", [MemWrite]>:$ptr,
+    I32:$base_width,
+    I32:$base_height,
+    I32:$base_pitch,
+    I32:$x,
+    I32:$y,
+    I32Attr:$elem_size_in_bits,
+    I32Attr:$tile_width,
+    I32Attr:$tile_height,
+    I32Attr:$v_blocks,
+    I1Attr:$transpose,
+    I1Attr:$vnni_transform,
+    FixedVectorOf<[GENX_MatrixElemType]>:$stored_val
+  )> {
+
+  let summary = "GENX 2D block store";
+
+  string baseDescription = [{
+    The 'genx.matrix.2Dblockstore' operation stores to a submatrix from an array in memory.
+    $ptr - the base address of the memory array
+    $base_width, $base_height, $base_pitch - the shape of the memory array
+    $x, $y, $tile_width, $tile_height - the starting offets and shape of the submatrix to load
+    $elem_size_in_bits - 32 for f32, bf32; 16 for f16, int16, bf16; 8 for int8, int4, int2 and etc
+    $v_blocks - number of blocks to store
+    $transpose - transpose the submatrix in vector register (useful for 32 bit element types)
+    $vnni_transform - transpose and pack the submatrix in register (useful for < 32 bit element types)
+    $stored_val - block to store
+
+    The $transpose and $vnni_transform are mutual exclusive. These transformations are used for
+    the B matrix in MMA (DPAS) operations D = C + A * B, where A should have row-major layout in register
+    and B should have column-major layout.
+
+    If the submatrix contains out of bound elements of the memory array, they are filled with 0.
+  }];
+
+  string llvmBuilder = [{
+    createGenISA2DBlockWrite(op, builder, moduleTranslation);
+  }];
+    
+  let assemblyFormat = [{
+    operands attr-dict `:` `(` type(operands) `)`
+  }];
+
+  let hasVerifier = 1;
+}
+
 def GENX_IsJointMatrixType :
   CPred<"$_self.isa<::mlir::GENX::JointMatrixType>()">;
 
