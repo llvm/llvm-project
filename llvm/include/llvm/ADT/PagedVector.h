@@ -86,12 +86,10 @@ public:
     T *&PagePtr = PageToDataPtrs[Index / PageSize];
     // If the page was not yet allocated, allocate it.
     if (!PagePtr) {
-      T *NewPagePtr = Allocator.getPointer()->template Allocate<T>(PageSize);
+      PagePtr = Allocator.getPointer()->template Allocate<T>(PageSize);
       // We need to invoke the default constructor on all the elements of the
       // page.
-      std::uninitialized_value_construct_n(NewPagePtr, PageSize);
-
-      PagePtr = NewPagePtr;
+      std::uninitialized_value_construct_n(PagePtr, PageSize);
     }
     // Dereference the element in the page.
     return PagePtr[Index % PageSize];
