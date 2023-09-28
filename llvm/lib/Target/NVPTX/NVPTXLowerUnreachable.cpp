@@ -63,8 +63,9 @@
 // `bar.sync` instruction happen divergently.
 //
 // To work around this, we add an `exit` instruction before every `unreachable`,
-// as `ptxas` understands that exit terminates the CFG. Note that `trap` is not
-// equivalent, and only future versions of `ptxas` will model it like `exit`.
+// as `ptxas` understands that exit terminates the CFG. We do only do this if
+// `unreachable` is not lowered to `trap`, which has the same effect (although
+// with current versions of `ptxas` only because it is emited as `trap; exit;`).
 //
 //===----------------------------------------------------------------------===//
 
@@ -72,7 +73,6 @@
 #include "llvm/IR/Function.h"
 #include "llvm/IR/InlineAsm.h"
 #include "llvm/IR/Instructions.h"
-#include "llvm/IR/Intrinsics.h"
 #include "llvm/IR/Type.h"
 #include "llvm/Pass.h"
 
@@ -86,7 +86,7 @@ namespace {
 class NVPTXLowerUnreachable : public FunctionPass {
   StringRef getPassName() const override;
   bool runOnFunction(Function &F) override;
-  bool shouldEmitTrap(const UnreachableInst &I) const;
+  bool isLoweredToTrap(const UnreachableInst &I) const;
 
 public:
   static char ID; // Pass identification, replacement for typeid
@@ -114,7 +114,7 @@ StringRef NVPTXLowerUnreachable::getPassName() const {
 //
 // This is a copy of the logic in SelectionDAGBuilder::visitUnreachable().
 // =============================================================================
-bool NVPTXLowerUnreachable::shouldEmitTrap(const UnreachableInst &I) const {
+bool NVPTXLowerUnreachable::isLoweredToTrap(const UnreachableInst &I) const {
   if (!TrapUnreachable)
     return false;
   if (!NoTrapAfterNoreturn)
@@ -133,17 +133,13 @@ bool NVPTXLowerUnreachable::runOnFunction(Function &F) {
   LLVMContext &C = F.getContext();
   FunctionType *ExitFTy = FunctionType::get(Type::getVoidTy(C), false);
   InlineAsm *Exit = InlineAsm::get(ExitFTy, "exit;", "", true);
-  Function *Trap = nullptr;
 
   bool Changed = false;
   for (auto &BB : F)
     for (auto &I : BB) {
       if (auto unreachableInst = dyn_cast<UnreachableInst>(&I)) {
-        if (shouldEmitTrap(*unreachableInst)) {
-          if (!Trap)
-            Trap = Intrinsic::getDeclaration(F.getParent(), Intrinsic::trap);
-          CallInst::Create(Trap, "", unreachableInst);
-        }
+        if (isLoweredToTrap(*unreachableInst))
+          continue; // trap is emitted as `trap; exit;`.
         CallInst::Create(ExitFTy, Exit, "", unreachableInst);
         Changed = true;
       }
