@@ -142,7 +142,7 @@ public:
              ++I) {
           T *Page = PageToDataPtrs[I];
           // We need to invoke the destructor on all the elements of the page.
-          if (Page != nullptr)
+          if (Page)
             std::destroy_n(Page, PageSize);
         }
       }
