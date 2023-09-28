@@ -656,11 +656,10 @@ define i31 @load_with_non_power_of_2_element_type(ptr %x) {
   ret i31 %r
 }
 
-; FIXME: This is a miscompile.
 define i1 @load_with_non_power_of_2_element_type_2(ptr %x) {
 ; CHECK-LABEL: @load_with_non_power_of_2_element_type_2(
-; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr inbounds <8 x i1>, ptr [[X:%.*]], i32 0, i32 1
-; CHECK-NEXT:    [[R:%.*]] = load i1, ptr [[TMP1]], align 1
+; CHECK-NEXT:    [[LV:%.*]] = load <8 x i1>, ptr [[X:%.*]], align 1
+; CHECK-NEXT:    [[R:%.*]] = extractelement <8 x i1> [[LV]], i32 1
 ; CHECK-NEXT:    ret i1 [[R]]
 ;
   %lv = load <8 x i1>, ptr %x
