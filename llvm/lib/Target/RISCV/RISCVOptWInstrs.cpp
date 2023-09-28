@@ -99,10 +99,7 @@ static bool vectorPseudoHasAllNBitUsers(const MachineOperand &UserOp,
 
   auto NumDemandedBits =
       RISCV::getVectorLowDemandedScalarBits(PseudoInfo->BaseInstr, Log2SEW);
-  if (!NumDemandedBits || Bits < NumDemandedBits)
-    return false;
-
-  return true;
+  return NumDemandedBits && Bits >= *NumDemandedBits;
 }
 
 // Checks if all users only demand the lower \p OrigBits of the original

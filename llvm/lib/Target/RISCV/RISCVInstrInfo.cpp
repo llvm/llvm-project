@@ -2956,6 +2956,6 @@ RISCV::getVectorLowDemandedScalarBits(uint16_t Opcode, unsigned Log2SEW) {
   case RISCV::VSMUL_VX:
   // 16.1. Integer Scalar Move Instructions
   case RISCV::VMV_S_X:
-    return 1 << Log2SEW;
+    return 1U << Log2SEW;
   }
 }

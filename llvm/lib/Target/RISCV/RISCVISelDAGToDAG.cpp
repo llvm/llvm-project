@@ -2781,10 +2781,7 @@ static bool vectorPseudoHasAllNBitUsers(SDNode *User, unsigned UserOpNo,
 
   auto NumDemandedBits =
       RISCV::getVectorLowDemandedScalarBits(PseudoInfo->BaseInstr, Log2SEW);
-  if (!NumDemandedBits || Bits < NumDemandedBits)
-    return false;
-
-  return true;
+  return NumDemandedBits && Bits >= *NumDemandedBits;
 }
 
 // Return true if all users of this SDNode* only consume the lower \p Bits.
