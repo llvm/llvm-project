@@ -35,6 +35,7 @@
 #include "llvm/IR/Function.h"
 #include "llvm/IR/GlobalVariable.h"
 #include "llvm/IR/IRBuilder.h"
+#include "llvm/IR/InstIterator.h"
 #include "llvm/IR/LLVMContext.h"
 #include "llvm/IR/MDBuilder.h"
 #include "llvm/IR/Metadata.h"
@@ -1496,6 +1497,14 @@ OpenMPIRBuilder::createTask(const LocationDescription &Loc,
                             InsertPointTy AllocaIP, BodyGenCallbackTy BodyGenCB,
                             bool Tied, Value *Final, Value *IfCondition,
                             SmallVector<DependData> Dependencies) {
+  // We create a temporary i32 value that will represent the global tid after
+  // outlining.
+  SmallVector<Instruction *, 4> ToBeDeleted;
+  Builder.restoreIP(AllocaIP);
+  AllocaInst *TIDAddr = Builder.CreateAlloca(Int32, nullptr, "tid.addr");
+  LoadInst *TID = Builder.CreateLoad(Int32, TIDAddr, "tid.addr.use");
+  ToBeDeleted.append({TID, TIDAddr});
+
   if (!updateToLocation(Loc))
     return InsertPointTy();
 
@@ -1523,41 +1532,27 @@ OpenMPIRBuilder::createTask(const LocationDescription &Loc,
   BasicBlock *TaskAllocaBB =
       splitBB(Builder, /*CreateBranch=*/true, "task.alloca");
 
+  // Fake use of TID
+  Builder.SetInsertPoint(TaskAllocaBB, TaskAllocaBB->begin());
+  BinaryOperator *AddInst =
+      dyn_cast<BinaryOperator>(Builder.CreateAdd(TID, Builder.getInt32(10)));
+  ToBeDeleted.push_back(AddInst);
+
   OutlineInfo OI;
   OI.EntryBB = TaskAllocaBB;
   OI.OuterAllocaBB = AllocaIP.getBlock();
   OI.ExitBB = TaskExitBB;
-  OI.PostOutlineCB = [this, Ident, Tied, Final, IfCondition,
-                      Dependencies](Function &OutlinedFn) {
-    // The input IR here looks like the following-
-    // ```
-    // func @current_fn() {
-    //   outlined_fn(%args)
-    // }
-    // func @outlined_fn(%args) { ... }
-    // ```
-    //
-    // This is changed to the following-
-    //
-    // ```
-    // func @current_fn() {
-    //   runtime_call(..., wrapper_fn, ...)
-    // }
-    // func @wrapper_fn(..., %args) {
-    //   outlined_fn(%args)
-    // }
-    // func @outlined_fn(%args) { ... }
-    // ```
-
-    // The stale call instruction will be replaced with a new call instruction
-    // for runtime call with a wrapper function.
+  OI.ExcludeArgsFromAggregate = {TID};
+  OI.PostOutlineCB = [this, Ident, Tied, Final, IfCondition, Dependencies,
+                      TaskAllocaBB, ToBeDeleted](Function &OutlinedFn) {
+    // Replace the Stale CI by appropriate RTL function call.
     assert(OutlinedFn.getNumUses() == 1 &&
            "there must be a single user for the outlined function");
     CallInst *StaleCI = cast<CallInst>(OutlinedFn.user_back());
 
     // HasShareds is true if any variables are captured in the outlined region,
     // false otherwise.
-    bool HasShareds = StaleCI->arg_size() > 0;
+    bool HasShareds = StaleCI->arg_size() > 1;
     Builder.SetInsertPoint(StaleCI);
 
     // Gather the arguments for emitting the runtime call for
@@ -1595,7 +1590,7 @@ OpenMPIRBuilder::createTask(const LocationDescription &Loc,
     Value *SharedsSize = Builder.getInt64(0);
     if (HasShareds) {
       AllocaInst *ArgStructAlloca =
-          dyn_cast<AllocaInst>(StaleCI->getArgOperand(0));
+          dyn_cast<AllocaInst>(StaleCI->getArgOperand(1));
       assert(ArgStructAlloca &&
              "Unable to find the alloca instruction corresponding to arguments "
              "for extracted function");
@@ -1606,31 +1601,17 @@ OpenMPIRBuilder::createTask(const LocationDescription &Loc,
       SharedsSize =
           Builder.getInt64(M.getDataLayout().getTypeStoreSize(ArgStructType));
     }
-
-    // Argument - task_entry (the wrapper function)
-    // If the outlined function has some captured variables (i.e. HasShareds is
-    // true), then the wrapper function will have an additional argument (the
-    // struct containing captured variables). Otherwise, no such argument will
-    // be present.
-    SmallVector<Type *> WrapperArgTys{Builder.getInt32Ty()};
-    if (HasShareds)
-      WrapperArgTys.push_back(OutlinedFn.getArg(0)->getType());
-    FunctionCallee WrapperFuncVal = M.getOrInsertFunction(
-        (Twine(OutlinedFn.getName()) + ".wrapper").str(),
-        FunctionType::get(Builder.getInt32Ty(), WrapperArgTys, false));
-    Function *WrapperFunc = dyn_cast<Function>(WrapperFuncVal.getCallee());
-
     // Emit the @__kmpc_omp_task_alloc runtime call
     // The runtime call returns a pointer to an area where the task captured
     // variables must be copied before the task is run (TaskData)
     CallInst *TaskData = Builder.CreateCall(
         TaskAllocFn, {/*loc_ref=*/Ident, /*gtid=*/ThreadID, /*flags=*/Flags,
                       /*sizeof_task=*/TaskSize, /*sizeof_shared=*/SharedsSize,
-                      /*task_func=*/WrapperFunc});
+                      /*task_func=*/&OutlinedFn});
 
     // Copy the arguments for outlined function
     if (HasShareds) {
-      Value *Shareds = StaleCI->getArgOperand(0);
+      Value *Shareds = StaleCI->getArgOperand(1);
       Align Alignment = TaskData->getPointerAlignment(M.getDataLayout());
       Value *TaskShareds = Builder.CreateLoad(VoidPtr, TaskData);
       Builder.CreateMemCpy(TaskShareds, Alignment, Shareds, Alignment,
@@ -1697,10 +1678,9 @@ OpenMPIRBuilder::createTask(const LocationDescription &Loc,
     if (IfCondition) {
       // `SplitBlockAndInsertIfThenElse` requires the block to have a
       // terminator.
-      BasicBlock *NewBasicBlock =
-          splitBB(Builder, /*CreateBranch=*/true, "if.end");
+      splitBB(Builder, /*CreateBranch=*/true, "if.end");
       Instruction *IfTerminator =
-          NewBasicBlock->getSinglePredecessor()->getTerminator();
+          Builder.GetInsertPoint()->getParent()->getTerminator();
       Instruction *ThenTI = IfTerminator, *ElseTI = nullptr;
       Builder.SetInsertPoint(IfTerminator);
       SplitBlockAndInsertIfThenElse(IfCondition, IfTerminator, &ThenTI,
@@ -1711,10 +1691,12 @@ OpenMPIRBuilder::createTask(const LocationDescription &Loc,
       Function *TaskCompleteFn =
           getOrCreateRuntimeFunctionPtr(OMPRTL___kmpc_omp_task_complete_if0);
       Builder.CreateCall(TaskBeginFn, {Ident, ThreadID, TaskData});
+      CallInst *CI = nullptr;
       if (HasShareds)
-        Builder.CreateCall(WrapperFunc, {ThreadID, TaskData});
+        CI = Builder.CreateCall(&OutlinedFn, {ThreadID, TaskData});
       else
-        Builder.CreateCall(WrapperFunc, {ThreadID});
+        CI = Builder.CreateCall(&OutlinedFn, {ThreadID});
+      CI->setDebugLoc(StaleCI->getDebugLoc());
       Builder.CreateCall(TaskCompleteFn, {Ident, ThreadID, TaskData});
       Builder.SetInsertPoint(ThenTI);
     }
@@ -1736,18 +1718,28 @@ OpenMPIRBuilder::createTask(const LocationDescription &Loc,
 
     StaleCI->eraseFromParent();
 
-    // Emit the body for wrapper function
-    BasicBlock *WrapperEntryBB =
-        BasicBlock::Create(M.getContext(), "", WrapperFunc);
-    Builder.SetInsertPoint(WrapperEntryBB);
+    Builder.SetInsertPoint(TaskAllocaBB, TaskAllocaBB->begin());
     if (HasShareds) {
-      llvm::Value *Shareds =
-          Builder.CreateLoad(VoidPtr, WrapperFunc->getArg(1));
-      Builder.CreateCall(&OutlinedFn, {Shareds});
-    } else {
-      Builder.CreateCall(&OutlinedFn);
+      LoadInst *Shareds = Builder.CreateLoad(VoidPtr, OutlinedFn.getArg(1));
+      OutlinedFn.getArg(1)->replaceUsesWithIf(
+          Shareds, [Shareds](Use &U) { return U.getUser() != Shareds; });
     }
-    Builder.CreateRet(Builder.getInt32(0));
+
+    // Replace kmpc_global_thread_num() calls with the global thread id
+    // argument.
+    OutlinedFn.getArg(0)->setName("global.tid");
+    FunctionCallee TIDRTLFn =
+        getOrCreateRuntimeFunctionPtr(OMPRTL___kmpc_global_thread_num);
+    for (Instruction &Inst : instructions(OutlinedFn)) {
+      CallInst *CI = dyn_cast<CallInst>(&Inst);
+      if (!CI)
+        continue;
+      if (CI->getCalledFunction() == TIDRTLFn.getCallee())
+        CI->replaceAllUsesWith(OutlinedFn.getArg(0));
+    }
+
+    for (Instruction *I : ToBeDeleted)
+      I->eraseFromParent();
   };
 
   addOutlineInfo(std::move(OI));
