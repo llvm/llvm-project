@@ -359,6 +359,7 @@ cc_test(
         "//llvm:Passes",
         "//llvm:Scalar",
         "//llvm:Support",
+        "//llvm:TargetParser",
         "//llvm:TestingSupport",
         "//llvm:TransformUtils",
         "//llvm:config",
