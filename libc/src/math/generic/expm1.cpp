@@ -1,4 +1,4 @@
-//===-- Double-precision e^x function -------------------------------------===//
+//===-- Double-precision e^x - 1 function ---------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -6,7 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "src/math/exp.h"
+#include "src/math/expm1.h"
 #include "common_constants.h" // Lookup tables EXP_M1 and EXP_M2.
 #include "explogxf.h"         // ziv_test_denorm.
 #include "src/__support/CPP/bit.h"
@@ -16,6 +16,7 @@
 #include "src/__support/FPUtil/PolyEval.h"
 #include "src/__support/FPUtil/double_double.h"
 #include "src/__support/FPUtil/dyadic_float.h"
+#include "src/__support/FPUtil/except_value_utils.h"
 #include "src/__support/FPUtil/multiply_add.h"
 #include "src/__support/FPUtil/nearest_integer.h"
 #include "src/__support/FPUtil/rounding_mode.h"
@@ -24,6 +25,13 @@
 #include "src/__support/macros/optimization.h" // LIBC_UNLIKELY
 
 #include <errno.h>
+
+// #define DEBUGDEBUG
+
+#ifdef DEBUGDEBUG
+#include <iomanip>
+#include <iostream>
+#endif
 
 namespace LIBC_NAMESPACE {
 
@@ -36,9 +44,11 @@ constexpr double LOG2_E = 0x1.71547652b82fep+0;
 
 // Error bounds:
 // Errors when using double precision.
-constexpr double ERR_D = 0x1.8p-63;
+// 0x1.8p-63;
+constexpr uint64_t ERR_D = 0x3c08000000000000;
 // Errors when using double-double precision.
-constexpr double ERR_DD = 0x1.0p-99;
+// 0x1.0p-99
+constexpr uint64_t ERR_DD = 0x39c0000000000000;
 
 // -2^-12 * log(2)
 // > a = -2^-12 * log(2);
@@ -69,19 +79,19 @@ LIBC_INLINE double poly_approx_d(double dx) {
 }
 
 // Polynomial approximation with double-double precision:
-// Return exp(dx) ~ 1 + dx + dx^2 / 2 + ... + dx^6 / 720
+// Return expm1(dx) / dx ~ 1 + dx / 2 + dx^2 / 6 + ... + dx^6 / 5040
 // For |dx| < 2^-13 + 2^-30:
-//   | output - exp(dx) | < 2^-101
+//   | output - expm1(dx) | < 2^-101
 DoubleDouble poly_approx_dd(const DoubleDouble &dx) {
   // Taylor polynomial.
   constexpr DoubleDouble COEFFS[] = {
-      {0, 0x1p0},                                      // 1
       {0, 0x1p0},                                      // 1
       {0, 0x1p-1},                                     // 1/2
       {0x1.5555555555555p-57, 0x1.5555555555555p-3},   // 1/6
       {0x1.5555555555555p-59, 0x1.5555555555555p-5},   // 1/24
       {0x1.1111111111111p-63, 0x1.1111111111111p-7},   // 1/120
       {-0x1.f49f49f49f49fp-65, 0x1.6c16c16c16c17p-10}, // 1/720
+      {0x1.a01a01a01a01ap-73, 0x1.a01a01a01a01ap-13},  // 1/5040
   };
 
   DoubleDouble p = fputil::polyeval(dx, COEFFS[0], COEFFS[1], COEFFS[2],
@@ -90,14 +100,13 @@ DoubleDouble poly_approx_dd(const DoubleDouble &dx) {
 }
 
 // Polynomial approximation with 128-bit precision:
-// Return exp(dx) ~ 1 + dx + dx^2 / 2 + ... + dx^7 / 5040
+// Return (exp(dx) - 1)/dx ~ 1 + dx / 2 + dx^2 / 6 + ... + dx^6 / 5040
 // For |dx| < 2^-13 + 2^-30:
 //   | output - exp(dx) | < 2^-126.
 Float128 poly_approx_f128(const Float128 &dx) {
   using MType = typename Float128::MantissaType;
 
   constexpr Float128 COEFFS_128[]{
-      {false, -127, MType({0, 0x8000000000000000})},                  // 1.0
       {false, -127, MType({0, 0x8000000000000000})},                  // 1.0
       {false, -128, MType({0, 0x8000000000000000})},                  // 0.5
       {false, -130, MType({0xaaaaaaaaaaaaaaab, 0xaaaaaaaaaaaaaaaa})}, // 1/6
@@ -109,14 +118,28 @@ Float128 poly_approx_f128(const Float128 &dx) {
 
   Float128 p = fputil::polyeval(dx, COEFFS_128[0], COEFFS_128[1], COEFFS_128[2],
                                 COEFFS_128[3], COEFFS_128[4], COEFFS_128[5],
-                                COEFFS_128[6], COEFFS_128[7]);
+                                COEFFS_128[6]);
   return p;
 }
 
-// Compute exp(x) using 128-bit precision.
+#ifdef DEBUGDEBUG
+std::ostream &operator<<(std::ostream &OS, const Float128 &r) {
+  OS << (r.sign ? "-(" : "(") << r.mantissa.val[0] << " + " << r.mantissa.val[1]
+     << " * 2^64) * 2^" << r.exponent << "\n";
+  return OS;
+}
+
+std::ostream &operator<<(std::ostream &OS, const DoubleDouble &r) {
+  OS << std::hexfloat << r.hi << " + " << r.lo << std::defaultfloat << "\n";
+  return OS;
+}
+#endif
+
+// Compute exp(x) - 1 using 128-bit precision.
 // TODO(lntue): investigate triple-double precision implementation for this
 // step.
-Float128 exp_f128(double x, double kd, int idx1, int idx2) {
+Float128 expm1_f128(double x, double kd, int idx1, int idx2) {
+  using MType = typename Float128::MantissaType;
   // Recalculate dx:
 
   double t1 = fputil::multiply_add(kd, MLOG_2_EXP2_M12_HI, x); // exact
@@ -139,18 +162,34 @@ Float128 exp_f128(double x, double kd, int idx1, int idx2) {
 
   Float128 exp_mid = fputil::quick_mul(exp_mid1, exp_mid2);
 
+  int hi = static_cast<int>(kd) >> 12;
+  Float128 minus_one{true, -127 - hi, MType({0, 0x8000000000000000})};
+
+  Float128 exp_mid_m1 = fputil::quick_add(exp_mid, minus_one);
+
   Float128 p = poly_approx_f128(dx);
 
-  Float128 r = fputil::quick_mul(exp_mid, p);
+  // r = exp_mid * (1 + dx * P) - 1
+  //   = (exp_mid - 1) + (dx * exp_mid) * P
+  Float128 r =
+      fputil::multiply_add(fputil::quick_mul(exp_mid, dx), p, exp_mid_m1);
 
-  r.exponent += static_cast<int>(kd) >> 12;
+  r.exponent += hi;
+
+#ifdef DEBUGDEBUG
+  std::cout << "=== VERY SLOW PASS ===\n"
+            << "        kd: " << kd << "\n"
+            << "        dx: " << dx << "exp_mid_m1: " << exp_mid_m1
+            << "   exp_mid: " << exp_mid << "         p: " << p
+            << "         r: " << r << std::endl;
+#endif
 
   return r;
 }
 
-// Compute exp(x) with double-double precision.
-DoubleDouble exp_double_double(double x, double kd,
-                               const DoubleDouble &exp_mid) {
+// Compute exp(x) - 1 with double-double precision.
+DoubleDouble exp_double_double(double x, double kd, const DoubleDouble &exp_mid,
+                               const DoubleDouble &hi_part) {
   // Recalculate dx:
   //   dx = x - k * 2^-12 * log(2)
   double t1 = fputil::multiply_add(kd, MLOG_2_EXP2_M12_HI, x); // exact
@@ -165,13 +204,19 @@ DoubleDouble exp_double_double(double x, double kd,
   DoubleDouble p = poly_approx_dd(dx);
 
   // Error bounds: 2^-99.
-  DoubleDouble r = fputil::quick_mult(exp_mid, p);
+  DoubleDouble r =
+      fputil::multiply_add(fputil::quick_mult(exp_mid, dx), p, hi_part);
+
+#ifdef DEBUGDEBUG
+  std::cout << "=== SLOW PASS ===\n"
+            << "   dx: " << dx << "    p: " << p << "    r: " << r << std::endl;
+#endif
 
   return r;
 }
 
 // Check for exceptional cases when
-// |x| <= 2^-53 or x < log(2^-1075) or x >= 0x1.6232bdd7abcd3p+9
+// |x| <= 2^-53 or x < log(2^-54) or x >= 0x1.6232bdd7abcd3p+9
 double set_exceptional(double x) {
   using FPBits = typename fputil::FPBits<double>;
   using FloatProp = typename fputil::FloatProperties<double>;
@@ -180,29 +225,35 @@ double set_exceptional(double x) {
   uint64_t x_u = xbits.uintval();
   uint64_t x_abs = x_u & FloatProp::EXP_MANT_MASK;
 
-  // |x| <= 2^-53
+  // |x| <= 2^-53.
   if (x_abs <= 0x3ca0'0000'0000'0000ULL) {
-    // exp(x) ~ 1 + x
-    return 1 + x;
+    // expm1(x) ~ x.
+
+    if (LIBC_UNLIKELY(x_abs <= 0x0370'0000'0000'0000ULL)) {
+      if (LIBC_UNLIKELY(x_abs == 0))
+        return x;
+      // |x| <= 2^-968, need to scale up a bit before rounding, then scale it
+      // back down.
+      return 0x1.0p-200 * fputil::multiply_add(x, 0x1.0p+200, 0x1.0p-1022);
+    }
+
+    // 2^-968 < |x| <= 2^-53.
+    return fputil::round_result_slightly_up(x);
   }
 
-  // x <= log(2^-1075) || x >= 0x1.6232bdd7abcd3p+9 or inf/nan.
+  // x < log(2^-54) || x >= 0x1.6232bdd7abcd3p+9 or inf/nan.
 
-  // x <= log(2^-1075) or -inf/nan
-  if (x_u >= 0xc087'4910'd52d'3052ULL) {
-    // exp(-Inf) = 0
+  // x < log(2^-54) or -inf/nan
+  if (x_u >= 0xc042'b708'8723'20e2ULL) {
+    // expm1(-Inf) = -1
     if (xbits.is_inf())
-      return 0.0;
+      return -1.0;
 
     // exp(nan) = nan
     if (xbits.is_nan())
       return x;
 
-    if (fputil::quick_get_round() == FE_UPWARD)
-      return static_cast<double>(FPBits(FPBits::MIN_SUBNORMAL));
-    fputil::set_errno_if_required(ERANGE);
-    fputil::raise_except_if_required(FE_UNDERFLOW);
-    return 0.0;
+    return fputil::round_result_slightly_up(-1.0);
   }
 
   // x >= round(log(MAX_NORMAL), D, RU) = 0x1.62e42fefa39fp+9 or +inf/nan
@@ -219,11 +270,12 @@ double set_exceptional(double x) {
   return x + static_cast<double>(FPBits::inf());
 }
 
-LLVM_LIBC_FUNCTION(double, exp, (double x)) {
+LLVM_LIBC_FUNCTION(double, expm1, (double x)) {
   using FPBits = typename fputil::FPBits<double>;
   using FloatProp = typename fputil::FloatProperties<double>;
   FPBits xbits(x);
 
+  bool x_sign = xbits.get_sign();
   uint64_t x_u = xbits.uintval();
 
   // Upper bound: max normal number = 2^1023 * (2 - 2^-52)
@@ -232,20 +284,18 @@ LLVM_LIBC_FUNCTION(double, exp, (double x)) {
   // > round(log (2^1023 ( 2 - 2^-52 )), D, RN) = 0x1.62e42fefa39efp+9
   // > round(exp(0x1.62e42fefa39fp+9), D, RN) = infty
 
-  // Lower bound: min denormal number / 2 = 2^-1075
-  // > round(log(2^-1075), D, RN) = -0x1.74910d52d3052p9
+  // Lower bound: log(2^-54) = -0x1.2b708872320e2p5
+  // > round(log(2^-54), D, RN) = -0x1.2b708872320e2p5
 
-  // Another lower bound: min normal number = 2^-1022
-  // > round(log(2^-1022), D, RN) = -0x1.6232bdd7abcd2p9
+  // x < log(2^-54) or x >= 0x1.6232bdd7abcd3p+9 or |x| <= 2^-53.
 
-  // x < log(2^-1075) or x >= 0x1.6232bdd7abcd3p+9 or |x| < 2^-53.
-  if (LIBC_UNLIKELY(x_u >= 0xc0874910d52d3052 ||
-                    (x_u < 0xbca0000000000000 && x_u >= 0x40862e42fefa39f0) ||
-                    x_u < 0x3ca0000000000000)) {
+  if (LIBC_UNLIKELY(x_u >= 0xc042b708872320e2 ||
+                    (x_u <= 0xbca0000000000000 && x_u >= 0x40862e42fefa39f0) ||
+                    x_u <= 0x3ca0000000000000)) {
     return set_exceptional(x);
   }
 
-  // Now log(2^-1075) <= x <= -2^-53 or 2^-53 <= x < log(2^1023 * (2 - 2^-52))
+  // Now log(2^-54) <= x <= -2^-53 or 2^-53 <= x < log(2^1023 * (2 - 2^-52))
 
   // Range reduction:
   // Let x = log(2) * (hi + mid1 + mid2) + lo
@@ -333,12 +383,20 @@ LLVM_LIBC_FUNCTION(double, exp, (double x)) {
   uint32_t idx2 = k & 0x3f;
   int hi = k >> 12;
 
-  bool denorm = (hi <= -1022);
-
   DoubleDouble exp_mid1{EXP2_MID1[idx1].mid, EXP2_MID1[idx1].hi};
   DoubleDouble exp_mid2{EXP2_MID2[idx2].mid, EXP2_MID2[idx2].hi};
 
   DoubleDouble exp_mid = fputil::quick_mult(exp_mid1, exp_mid2);
+
+  // -2^(-hi)
+  double one_scaled =
+      FPBits::create_value(true, FPBits::EXPONENT_BIAS - hi, 0).get_val();
+
+  // 2^(mid1 + mid2) - 2^(-hi)
+  DoubleDouble hi_part = x_sign ? fputil::exact_add(one_scaled, exp_mid.hi)
+                                : fputil::exact_add(exp_mid.hi, one_scaled);
+
+  hi_part.lo += exp_mid.lo;
 
   // |x - (hi + mid1 + mid2) * log(2) - dx| < 2^11 * eps(M_LOG_2_EXP2_M12.lo)
   //                                        = 2^11 * 2^-13 * 2^-52
@@ -364,51 +422,70 @@ LLVM_LIBC_FUNCTION(double, exp, (double x)) {
   //  ~ exp_mid.hi + (exp_mid.hi * dx * P_(dx) + exp_mid.lo)
   // with errors bounded by 1.5 * 2^-63.
 
+  // Finally, we have the following approximation formula:
+  //   expm1(x) = 2^hi * 2^(mid1 + mid2) * exp(lo) - 1
+  //            = 2^hi * ( 2^(mid1 + mid2) * exp(lo) - 2^(-hi) )
+  //            ~ 2^hi * ( (exp_mid.hi - 2^-hi) +
+  //                       + (exp_mid.hi * dx * P_(dx) + exp_mid.lo))
+
   double mid_lo = dx * exp_mid.hi;
 
   // Approximate expm1(dx)/dx ~ 1 + dx / 2 + dx^2 / 6 + dx^3 / 24.
   double p = poly_approx_d(dx);
 
-  double lo = fputil::multiply_add(p, mid_lo, exp_mid.lo);
+  double lo = fputil::multiply_add(p, mid_lo, hi_part.lo);
 
-  if (LIBC_UNLIKELY(denorm)) {
-    if (auto r = ziv_test_denorm(hi, exp_mid.hi, lo, ERR_D);
-        LIBC_LIKELY(r.has_value()))
-      return r.value();
-  } else {
-    double upper = exp_mid.hi + (lo + ERR_D);
-    double lower = exp_mid.hi + (lo - ERR_D);
+  uint64_t err = x_sign ? (static_cast<uint64_t>(-hi) << 52) : 0;
 
-    if (LIBC_LIKELY(upper == lower)) {
-      // to multiply by 2^hi, a fast way is to simply add hi to the exponent
-      // field.
-      int64_t exp_hi = static_cast<int64_t>(hi) << FloatProp::MANTISSA_WIDTH;
-      double r = cpp::bit_cast<double>(exp_hi + cpp::bit_cast<int64_t>(upper));
-      return r;
-    }
+  double err_d = cpp::bit_cast<double>(ERR_D + err);
+
+  double upper = hi_part.hi + (lo + err_d);
+  double lower = hi_part.hi + (lo - err_d);
+
+#ifdef DEBUGDEBUG
+  std::cout << "=== FAST PASS ===\n"
+            << "      x: " << std::hexfloat << x << std::defaultfloat << "\n"
+            << "      k: " << k << "\n"
+            << "   idx1: " << idx1 << "\n"
+            << "   idx2: " << idx2 << "\n"
+            << "     hi: " << hi << "\n"
+            << "     dx: " << std::hexfloat << dx << std::defaultfloat << "\n"
+            << "exp_mid: " << exp_mid << "hi_part: " << hi_part
+            << " mid_lo: " << std::hexfloat << mid_lo << std::defaultfloat
+            << "\n"
+            << "      p: " << std::hexfloat << p << std::defaultfloat << "\n"
+            << "     lo: " << std::hexfloat << lo << std::defaultfloat << "\n"
+            << "  upper: " << std::hexfloat << upper << std::defaultfloat
+            << "\n"
+            << "  lower: " << std::hexfloat << lower << std::defaultfloat
+            << "\n"
+            << std::endl;
+#endif
+
+  if (LIBC_LIKELY(upper == lower)) {
+    // to multiply by 2^hi, a fast way is to simply add hi to the exponent
+    // field.
+    int64_t exp_hi = static_cast<int64_t>(hi) << FloatProp::MANTISSA_WIDTH;
+    double r = cpp::bit_cast<double>(exp_hi + cpp::bit_cast<int64_t>(upper));
+    return r;
   }
 
   // Use double-double
-  DoubleDouble r_dd = exp_double_double(x, kd, exp_mid);
+  DoubleDouble r_dd = exp_double_double(x, kd, exp_mid, hi_part);
 
-  if (LIBC_UNLIKELY(denorm)) {
-    if (auto r = ziv_test_denorm(hi, r_dd.hi, r_dd.lo, ERR_DD);
-        LIBC_LIKELY(r.has_value()))
-      return r.value();
-  } else {
-    double upper_dd = r_dd.hi + (r_dd.lo + ERR_DD);
-    double lower_dd = r_dd.hi + (r_dd.lo - ERR_DD);
+  double err_dd = cpp::bit_cast<double>(ERR_DD + err);
 
-    if (LIBC_LIKELY(upper_dd == lower_dd)) {
-      int64_t exp_hi = static_cast<int64_t>(hi) << FloatProp::MANTISSA_WIDTH;
-      double r =
-          cpp::bit_cast<double>(exp_hi + cpp::bit_cast<int64_t>(upper_dd));
-      return r;
-    }
+  double upper_dd = r_dd.hi + (r_dd.lo + err_dd);
+  double lower_dd = r_dd.hi + (r_dd.lo - err_dd);
+
+  if (LIBC_LIKELY(upper_dd == lower_dd)) {
+    int64_t exp_hi = static_cast<int64_t>(hi) << FloatProp::MANTISSA_WIDTH;
+    double r = cpp::bit_cast<double>(exp_hi + cpp::bit_cast<int64_t>(upper_dd));
+    return r;
   }
 
   // Use 128-bit precision
-  Float128 r_f128 = exp_f128(x, kd, idx1, idx2);
+  Float128 r_f128 = expm1_f128(x, kd, idx1, idx2);
 
   return static_cast<double>(r_f128);
 }
