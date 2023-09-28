@@ -30,37 +30,37 @@ static cl::list<std::string>
 static cl::list<std::string> RKeys(
     "rargs",
     cl::desc(
-        "Specify remark argument/s to count by. using regular expressions"),
+        "Specify remark argument/s to count (accepts regular expressions)."),
     cl::value_desc("arguments"), cl::sub(CountSub), cl::ValueOptional);
 static cl::opt<std::string>
     RemarkNameOpt("remark-name",
-                  cl::desc("optional remark name to filter collection by."),
+                  cl::desc("Optional remark name to filter collection by."),
                   cl::ValueOptional, cl::sub(CountSub));
 static cl::opt<std::string>
     PassNameOpt("pass-name", cl::ValueOptional,
-                cl::desc("optional remark pass name to filter collection by."),
+                cl::desc("Optional remark pass name to filter collection by."),
                 cl::sub(CountSub));
 
 static cl::opt<std::string> RemarkFilterArgByOpt(
-    "filter-arg-by", cl::desc("optional remark arg to filter collection by."),
+    "filter-arg-by", cl::desc("Optional remark arg to filter collection by."),
     cl::ValueOptional, cl::sub(CountSub));
 static cl::opt<std::string>
     RemarkNameOptRE("rremark-name",
-                    cl::desc("optional remark name to filter collection by "
+                    cl::desc("Optional remark name to filter collection by "
                              "(accepts regular expressions)."),
                     cl::ValueOptional, cl::sub(CountSub));
 static cl::opt<std::string>
     RemarkArgFilterOptRE("rfilter-arg-by",
-                         cl::desc("optional remark arg to filter collection by "
+                         cl::desc("Optional remark arg to filter collection by "
                                   "(accepts regular expressions)."),
                          cl::sub(CountSub), cl::ValueOptional);
 static cl::opt<std::string>
     PassNameOptRE("rpass-name", cl::ValueOptional,
-                  cl::desc("optional remark pass name to filter collection "
+                  cl::desc("Optional remark pass name to filter collection "
                            "by (accepts regular expressions)."),
                   cl::sub(CountSub));
 static cl::opt<Type> RemarkTypeOpt(
-    "remark-type", cl::desc("filter collection by remark type."),
+    "remark-type", cl::desc("Optional remark type to filter collection by."),
     cl::values(clEnumValN(Type::Unknown, "unknown", "UNKOWN"),
                clEnumValN(Type::Passed, "passed", "PASSED"),
                clEnumValN(Type::Missed, "missed", "MISSED"),
@@ -72,11 +72,11 @@ static cl::opt<Type> RemarkTypeOpt(
                clEnumValN(Type::Failure, "failure", "FAILURE")),
     cl::init(Type::Failure), cl::sub(CountSub));
 static cl::opt<CountBy> CountByOpt(
-    "count-by", cl::desc("Specify the property to collect remarks by"),
+    "count-by", cl::desc("Specify the property to collect remarks by."),
     cl::values(
-        clEnumValN(
-            CountBy::REMARK, "remark-name",
-            "Counts individual remarks based on how many of the remark exists"),
+        clEnumValN(CountBy::REMARK, "remark-name",
+                   "Counts individual remarks based on how many of the remark "
+                   "exists."),
         clEnumValN(CountBy::ARGUMENT, "arg",
                    "Counts based on the value each specified argument has. The "
                    "argument has to have a number value to be considered.")),
@@ -99,8 +99,8 @@ static cl::opt<GroupBy> GroupByOpt(
                    "provided input file.")),
     cl::init(GroupBy::PER_SOURCE), cl::sub(CountSub));
 
-/// Look for matching argument for \p Key in \p Remark and return the parsed
-/// integer value.
+/// Look for matching argument with \p Key in \p Remark and return the parsed
+/// integer value or 0 if it is has no integer value.
 static unsigned getValForKey(StringRef Key, const Remark &Remark) {
   auto *RemarkArg = find_if(Remark.Args, [&Key](const Argument &Arg) {
     return Arg.Key == Key && Arg.isValInt();
@@ -131,17 +131,15 @@ bool Filters::filterRemark(const Remark &Remark) {
   if (RemarkTypeFilter)
     return *RemarkTypeFilter == Remark.RemarkType;
   if (ArgFilter) {
-    bool IsMatch = false;
-    for (auto Arg : Remark.Args)
-      IsMatch |= ArgFilter->match(Arg.Val);
-    if (!IsMatch)
+    if (!any_of(Remark.Args,
+                [this](Argument Arg) { return ArgFilter->match(Arg.Val); }))
       return false;
   }
   return true;
 }
 
 Error KeyCounter::getAllKeysInRemarks(StringRef Buffer,
-                                      SmallVector<FilterMatcher, 4> &Keys,
+                                      ArrayRef<FilterMatcher> Keys,
                                       Filters &Filter) {
   auto MaybeParser = createRemarkParser(InputFormat, Buffer);
   if (!MaybeParser)
@@ -169,12 +167,11 @@ Error KeyCounter::getAllKeysInRemarks(StringRef Buffer,
 
 std::optional<std::string> Counter::getGroupByKey(const Remark &Remark) {
 
-  std::string Key;
   switch (GroupBy) {
   case GroupBy::PER_FUNCTION:
-    return Key = Remark.FunctionName;
+    return Remark.FunctionName.str();
   case GroupBy::TOTAL:
-    return Key = "Total";
+    return "Total";
   case GroupBy::PER_SOURCE:
   case GroupBy::PER_FUNCTION_WITH_DEBUG_LOC:
     if (!Remark.Loc.has_value())
@@ -187,10 +184,10 @@ std::optional<std::string> Counter::getGroupByKey(const Remark &Remark) {
 }
 
 void KeyCounter::collect(const Remark &Remark) {
-  SmallVector<int, 4> Row(KeySetIdxMap.size());
+  SmallVector<unsigned, 4> Row(KeySetIdxMap.size());
   std::optional<std::string> GroupByKey = getGroupByKey(Remark);
   // Early return if we don't have a value
-  if (!GroupByKey.has_value())
+  if (!GroupByKey)
     return;
   auto GroupVal = *GroupByKey;
   CountByKeysMap.insert({GroupVal, Row});

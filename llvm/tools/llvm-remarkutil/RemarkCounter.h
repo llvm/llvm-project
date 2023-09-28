@@ -59,7 +59,7 @@ struct FilterMatcher {
       FilterStr = Filter;
   }
 
-  bool match(StringRef StringToMatch) {
+  bool match(StringRef StringToMatch) const {
     if (IsRegex)
       return std::get<Regex>(FilterRE).match(StringToMatch);
     std::string FString = std::get<std::string>(FilterStr);
@@ -113,6 +113,9 @@ struct Counter {
   GroupBy GroupBy;
   Counter(){};
   Counter(enum GroupBy GroupBy) : GroupBy(GroupBy) {}
+  /// Obtain the field for collecting remark info based on how we are
+  /// collecting. Remarks are grouped by FunctionName, Source, Source and
+  /// Function or collect by file.
   std::optional<std::string> getGroupByKey(const Remark &Remark);
 
   /// Collect count information from \p Remark organized based on \p GroupBy
@@ -146,18 +149,18 @@ struct KeyCounter : Counter {
   /// corresponds to the property we are collecting for this can be either a
   /// source or function. The second argument is a row of integers where each
   /// item in the row is the count for a specified key.
-  std::map<std::string, SmallVector<int, 4>> CountByKeysMap;
+  std::map<std::string, SmallVector<unsigned, 4>> CountByKeysMap;
   /// A set of all the keys found in the remark file. The second argument is the
   /// index of each of those keys which can be used in `CountByKeysMap` to fill
   /// count information for that key.
-  MapVector<StringRef, int> KeySetIdxMap;
-  KeyCounter(){};
-  /// Create a key counte. If the provided \p Keys represent a regex vector then
-  /// we need to check that the provided regular expressions are valid if not we
-  /// return an Error.
-  static Expected<KeyCounter>
-  createKeyCounter(enum GroupBy GroupBy, SmallVector<FilterMatcher, 4> &Keys,
-                   StringRef Buffer, Filters &Filter) {
+  MapVector<StringRef, unsigned> KeySetIdxMap;
+  /// Create a key counter. If the provided \p Keys represent a regex vector
+  /// then we need to check that the provided regular expressions are valid if
+  /// not we return an Error.
+  static Expected<KeyCounter> createKeyCounter(enum GroupBy GroupBy,
+                                               ArrayRef<FilterMatcher> Keys,
+                                               StringRef Buffer,
+                                               Filters &Filter) {
     KeyCounter KC;
     KC.GroupBy = GroupBy;
     for (auto &Key : Keys) {
@@ -170,15 +173,17 @@ struct KeyCounter : Counter {
       return E;
     return KC;
   }
+
+  /// collect remark count for the passed remark.
   void collect(const Remark &) override;
+
   Error print(StringRef OutputFileName) override;
 
 private:
   /// collect all the keys that match the list of \p Keys provided by parsing
   /// through \p Buffer of remarks and filling \p KeySetIdxMap acting as a row
   /// for for all the keys that we are interested in collecting information for.
-  Error getAllKeysInRemarks(StringRef Buffer,
-                            SmallVector<FilterMatcher, 4> &Keys,
+  Error getAllKeysInRemarks(StringRef Buffer, ArrayRef<FilterMatcher> Keys,
                             Filters &Filter);
 };
 
@@ -187,7 +192,7 @@ private:
 /// by reporting count for functions, source or total count for the provided
 /// remark file.
 struct RemarkCounter : Counter {
-  std::map<std::string, int> CountedByRemarksMap;
+  std::map<std::string, unsigned> CountedByRemarksMap;
   RemarkCounter(enum GroupBy GroupBy) : Counter(GroupBy) {}
   void collect(const Remark &) override;
   Error print(StringRef OutputFileName) override;
