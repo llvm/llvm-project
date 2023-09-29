@@ -1939,9 +1939,9 @@ void AsmPrinter::emitFunctionBody() {
         getAnalysis<LazyMachineBlockFrequencyInfoPass>().getBFI();
     // The entry count and the entry basic block frequency aren't the same. We
     // want to capture "absolute" frequencies, i.e. the frequency with which a
-    // MBB is executed when the program is executed - from there, we can derive
-    // Function-relative frequencies (divide by the value for the first MBB),
-    // and we also have the information about frequency with which functions
+    // MBB is executed when the program is executed. From there, we can derive
+    // Function-relative frequencies (divide by the value for the first MBB).
+    // We also have the information about frequency with which functions
     // were called. This helps, for example, in a type of integration tests
     // where we want to cross-validate the compiler's profile with a real
     // profile.
