@@ -97,9 +97,7 @@ define ptr @alloca_load_store_ptr64_full_ivec(ptr %arg) {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[TMP0:%.*]] = ptrtoint ptr [[ARG]] to i64
 ; CHECK-NEXT:    [[TMP1:%.*]] = bitcast i64 [[TMP0]] to <8 x i8>
-; CHECK-NEXT:    [[TMP2:%.*]] = bitcast <8 x i8> [[TMP1]] to i64
-; CHECK-NEXT:    [[TMP3:%.*]] = inttoptr i64 [[TMP2]] to ptr
-; CHECK-NEXT:    ret ptr [[TMP3]]
+; CHECK-NEXT:    ret ptr [[ARG]]
 ;
 entry:
   %alloca = alloca [8 x i8], align 8, addrspace(5)
@@ -114,9 +112,7 @@ define ptr addrspace(3) @alloca_load_store_ptr32_full_ivec(ptr addrspace(3) %arg
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[TMP0:%.*]] = ptrtoint ptr addrspace(3) [[ARG]] to i32
 ; CHECK-NEXT:    [[TMP1:%.*]] = bitcast i32 [[TMP0]] to <4 x i8>
-; CHECK-NEXT:    [[TMP2:%.*]] = bitcast <4 x i8> [[TMP1]] to i32
-; CHECK-NEXT:    [[TMP3:%.*]] = inttoptr i32 [[TMP2]] to ptr addrspace(3)
-; CHECK-NEXT:    ret ptr addrspace(3) [[TMP3]]
+; CHECK-NEXT:    ret ptr addrspace(3) [[ARG]]
 ;
 entry:
   %alloca = alloca [4 x i8], align 8, addrspace(5)
@@ -147,9 +143,8 @@ define <8 x i16> @ptralloca_load_store_ints_full(<2 x i64> %arg) {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[TMP0:%.*]] = bitcast <2 x i64> [[ARG]] to <4 x i32>
 ; CHECK-NEXT:    [[TMP1:%.*]] = inttoptr <4 x i32> [[TMP0]] to <4 x ptr addrspace(5)>
-; CHECK-NEXT:    [[TMP2:%.*]] = ptrtoint <4 x ptr addrspace(5)> [[TMP1]] to <4 x i32>
-; CHECK-NEXT:    [[TMP3:%.*]] = bitcast <4 x i32> [[TMP2]] to <8 x i16>
-; CHECK-NEXT:    ret <8 x i16> [[TMP3]]
+; CHECK-NEXT:    [[TMP2:%.*]] = bitcast <4 x i32> [[TMP0]] to <8 x i16>
+; CHECK-NEXT:    ret <8 x i16> [[TMP2]]
 ;
 entry:
   %stack = alloca [4 x ptr addrspace(5)], align 4, addrspace(5)
