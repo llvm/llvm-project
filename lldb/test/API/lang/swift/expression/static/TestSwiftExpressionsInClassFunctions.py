@@ -54,7 +54,7 @@ class TestSwiftExpressionsInClassFunctions(TestBase):
             self.assertTrue(len(threads) == 1)
             lldbutil.check_expression(self, self.frame(), "i", str(i), False)
             if i == 6:
-              lldbutil.check_expression(self, self.frame(), "self", "a.H<Int>", use_summary=False)
+              lldbutil.check_expression(self, self.frame(), "self", "a.H<Int>")
               frame = threads[0].GetFrameAtIndex(0)
               lldbutil.check_variable(self, frame.FindVariable("self"),
                                       # FIXME: This should be '@thick a.H<Swift.Int>.Type'
