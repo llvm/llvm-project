@@ -1,5 +1,5 @@
-; RUN: llc -mtriple=spirv32-unknown-unknown < %s | FileCheck %s
-; RUN: llc -mtriple=spirv64-unknown-unknown < %s | FileCheck %s
+; RUN: llc -mtriple=spirv32-unknown-unknown --spirv-extensions=SPV_KHR_expect_assume < %s | FileCheck %s
+; RUN: llc -mtriple=spirv64-unknown-unknown --spirv-extensions=SPV_KHR_expect_assume < %s | FileCheck %s
 
 ; CHECK:      OpCapability ExpectAssumeKHR
 ; CHECK-NEXT: OpExtension "SPV_KHR_expect_assume"
