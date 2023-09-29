@@ -17,6 +17,7 @@ add_llvm_component_library(LLVMOrcDebugging
 
   LINK_COMPONENTS
   DebugInfoDWARF
+  JITLink
   OrcJIT
   OrcShared
   Support
