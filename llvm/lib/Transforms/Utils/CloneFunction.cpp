@@ -300,12 +300,7 @@ void llvm::CloneFunctionInto(Function *NewFunc, const Function *OldFunc,
       mapToSelfIfNew(CU);
 
     for (DIType *Type : DIFinder->types())
-      // Don't skip subprogram's local types.
-      if (!isa_and_present<DILocalScope>(Type->getScope()) ||
-          SPClonedWithinModule == nullptr ||
-          dyn_cast<DILocalScope>(Type->getScope())->getSubprogram() !=
-              SPClonedWithinModule)
-        mapToSelfIfNew(Type);
+      mapToSelfIfNew(Type);
 
     for (DIGlobalVariable *DGV : DIFinder->heterogeneous_global_variables())
       mapToSelfIfNew(DGV);

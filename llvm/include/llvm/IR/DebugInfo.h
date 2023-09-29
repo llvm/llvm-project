@@ -123,7 +123,6 @@ private:
   void processCompileUnit(DICompileUnit *CU);
   void processScope(DIScope *Scope);
   void processType(DIType *DT);
-  void processLocalVariable(DILocalVariable *DV);
   bool addCompileUnit(DICompileUnit *CU);
   bool addGlobalVariable(DIGlobalVariableExpression *DIG);
   // FIXME: The use of "heterogeneous" is just to disambiguate from the

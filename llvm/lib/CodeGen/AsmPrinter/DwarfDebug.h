@@ -112,6 +112,11 @@ struct DbgDefProxy {
       : Lifetime(Lifetime), Referrer(Referrer) {}
 };
 
+bool operator<(const struct FrameIndexExpr &LHS,
+               const struct FrameIndexExpr &RHS);
+bool operator<(const struct EntryValueInfo &LHS,
+               const struct EntryValueInfo &RHS);
+
 /// Proxy for one MMI entry.
 struct FrameIndexExpr {
   int FI;

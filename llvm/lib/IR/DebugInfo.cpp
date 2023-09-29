@@ -271,12 +271,6 @@ void DebugInfoFinder::processSubprogram(DISubprogram *SP) {
       processType(TVal->getType());
     }
   }
-
-  for (auto *N : SP->getRetainedNodes()) {
-    if (auto *Var = dyn_cast<DILocalVariable>(N)) {
-      processLocalVariable(Var);
-    }
-  }
 }
 
 void DebugInfoFinder::processVariable(const Module &M,
@@ -285,10 +279,7 @@ void DebugInfoFinder::processVariable(const Module &M,
   if (!N)
     return;
 
-  processLocalVariable(dyn_cast<DILocalVariable>(N));
-}
-
-void DebugInfoFinder::processLocalVariable(DILocalVariable *DV) {
+  auto *DV = dyn_cast<DILocalVariable>(N);
   if (!DV)
     return;
 

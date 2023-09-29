@@ -51,7 +51,7 @@ namespace llvm {
     Function *DefFn;         ///< llvm.dbg.def
     Function *KillFn;        ///< llvm.dbg.kill
 
-    SmallVector<TrackingMDNodeRef, 4> EnumTypes;
+    SmallVector<TrackingMDNodeRef, 4> AllEnumTypes;
     /// Track the RetainTypes, since they can be updated later on.
     SmallVector<TrackingMDNodeRef, 4> AllRetainTypes;
     SmallVector<DISubprogram *, 4> AllSubprograms;
@@ -66,8 +66,8 @@ namespace llvm {
     SmallVector<TrackingMDNodeRef, 4> UnresolvedNodes;
     bool AllowUnresolvedNodes;
 
-    /// Each subprogram's preserved local variables, labels, imported entities,
-    /// and types.
+    /// Each subprogram's preserved local variables, labels and imported
+    /// entities.
     ///
     /// Do not use a std::vector.  Some versions of libc++ apparently copy
     /// instead of move on grow operations, and TrackingMDRef is expensive to

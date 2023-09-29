@@ -136,9 +136,14 @@ Value *InstCombinerImpl::reassociateShiftAmtsOfTwoSameDirectionShifts(
 
   assert(IdenticalShOpcodes && "Should not get here with different shifts.");
 
-  // All good, we can do this fold.
-  NewShAmt = ConstantExpr::getZExtOrBitCast(NewShAmt, X->getType());
+  if (NewShAmt->getType() != X->getType()) {
+    NewShAmt = ConstantFoldCastOperand(Instruction::ZExt, NewShAmt,
+                                       X->getType(), SQ.DL);
+    if (!NewShAmt)
+      return nullptr;
+  }
 
+  // All good, we can do this fold.
   BinaryOperator *NewShift = BinaryOperator::Create(ShiftOpcode, X, NewShAmt);
 
   // The flags can only be propagated if there wasn't a trunc.
