@@ -352,6 +352,9 @@ namespace ZeroInit {
 }
 
 namespace ArrayInitLoop {
+  /// FIXME: The ArrayInitLoop for the decomposition initializer in g() has
+  /// f(n) as its CommonExpr. We need to evaluate that exactly once and not
+  /// N times as we do right now.
   struct X {
       int arr[3];
   };

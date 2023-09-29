@@ -372,8 +372,8 @@ Bug Fixes to C++ Support
   argument. Fixes:
   (`#67395 <https://github.com/llvm/llvm-project/issues/67395>`_)
 
-- Fix a bug when destructors in a ``constexpr`` structured binding were
-  called at the wrong place.
+- Fixed a bug causing destructors of constant-evaluated structured bindings 
+  initialized by array elements to be called in the wrong evaluation context.
 
 Bug Fixes to AST Handling
 ^^^^^^^^^^^^^^^^^^^^^^^^^
