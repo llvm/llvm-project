@@ -21,13 +21,15 @@ body:             |
     ; CHECK-NEXT: [[XOR:%[0-9]+]]:_(s32) = G_XOR [[COPY2]], [[C1]]
     ; CHECK-NEXT: [[COPY3:%[0-9]+]]:_(s32) = COPY [[C]](s32)
     ; CHECK-NEXT: [[AND1:%[0-9]+]]:_(s32) = G_AND [[XOR]], [[COPY3]]
-    ; CHECK-NEXT: [[SHL:%[0-9]+]]:_(s32) = G_SHL [[COPY]], [[AND]](s32)
     ; CHECK-NEXT: [[C2:%[0-9]+]]:_(s32) = G_CONSTANT i32 255
-    ; CHECK-NEXT: [[AND2:%[0-9]+]]:_(s32) = G_AND [[COPY1]], [[C2]]
+    ; CHECK-NEXT: [[AND2:%[0-9]+]]:_(s32) = G_AND [[AND]], [[C2]]
+    ; CHECK-NEXT: [[SHL:%[0-9]+]]:_(s32) = G_SHL [[COPY]], [[AND2]](s32)
+    ; CHECK-NEXT: [[AND3:%[0-9]+]]:_(s32) = G_AND [[COPY1]], [[C2]]
     ; CHECK-NEXT: [[C3:%[0-9]+]]:_(s64) = G_CONSTANT i64 1
-    ; CHECK-NEXT: [[LSHR:%[0-9]+]]:_(s32) = G_LSHR [[AND2]], [[C3]](s64)
-    ; CHECK-NEXT: [[AND3:%[0-9]+]]:_(s32) = G_AND [[LSHR]], [[C2]]
-    ; CHECK-NEXT: [[LSHR1:%[0-9]+]]:_(s32) = G_LSHR [[AND3]], [[AND1]](s32)
+    ; CHECK-NEXT: [[LSHR:%[0-9]+]]:_(s32) = G_LSHR [[AND3]], [[C3]](s64)
+    ; CHECK-NEXT: [[AND4:%[0-9]+]]:_(s32) = G_AND [[AND1]], [[C2]]
+    ; CHECK-NEXT: [[AND5:%[0-9]+]]:_(s32) = G_AND [[LSHR]], [[C2]]
+    ; CHECK-NEXT: [[LSHR1:%[0-9]+]]:_(s32) = G_LSHR [[AND5]], [[AND4]](s32)
     ; CHECK-NEXT: [[OR:%[0-9]+]]:_(s32) = G_OR [[SHL]], [[LSHR1]]
     ; CHECK-NEXT: $w0 = COPY [[OR]](s32)
     ; CHECK-NEXT: RET_ReallyLR implicit $w0
@@ -64,13 +66,15 @@ body:             |
     ; CHECK-NEXT: [[XOR:%[0-9]+]]:_(s32) = G_XOR [[COPY2]], [[C1]]
     ; CHECK-NEXT: [[COPY3:%[0-9]+]]:_(s32) = COPY [[C]](s32)
     ; CHECK-NEXT: [[AND1:%[0-9]+]]:_(s32) = G_AND [[XOR]], [[COPY3]]
-    ; CHECK-NEXT: [[SHL:%[0-9]+]]:_(s32) = G_SHL [[COPY]], [[AND]](s32)
     ; CHECK-NEXT: [[C2:%[0-9]+]]:_(s32) = G_CONSTANT i32 65535
-    ; CHECK-NEXT: [[AND2:%[0-9]+]]:_(s32) = G_AND [[COPY1]], [[C2]]
+    ; CHECK-NEXT: [[AND2:%[0-9]+]]:_(s32) = G_AND [[AND]], [[C2]]
+    ; CHECK-NEXT: [[SHL:%[0-9]+]]:_(s32) = G_SHL [[COPY]], [[AND2]](s32)
+    ; CHECK-NEXT: [[AND3:%[0-9]+]]:_(s32) = G_AND [[COPY1]], [[C2]]
     ; CHECK-NEXT: [[C3:%[0-9]+]]:_(s64) = G_CONSTANT i64 1
-    ; CHECK-NEXT: [[LSHR:%[0-9]+]]:_(s32) = G_LSHR [[AND2]], [[C3]](s64)
-    ; CHECK-NEXT: [[AND3:%[0-9]+]]:_(s32) = G_AND [[LSHR]], [[C2]]
-    ; CHECK-NEXT: [[LSHR1:%[0-9]+]]:_(s32) = G_LSHR [[AND3]], [[AND1]](s32)
+    ; CHECK-NEXT: [[LSHR:%[0-9]+]]:_(s32) = G_LSHR [[AND3]], [[C3]](s64)
+    ; CHECK-NEXT: [[AND4:%[0-9]+]]:_(s32) = G_AND [[AND1]], [[C2]]
+    ; CHECK-NEXT: [[AND5:%[0-9]+]]:_(s32) = G_AND [[LSHR]], [[C2]]
+    ; CHECK-NEXT: [[LSHR1:%[0-9]+]]:_(s32) = G_LSHR [[AND5]], [[AND4]](s32)
     ; CHECK-NEXT: [[OR:%[0-9]+]]:_(s32) = G_OR [[SHL]], [[LSHR1]]
     ; CHECK-NEXT: $w0 = COPY [[OR]](s32)
     ; CHECK-NEXT: RET_ReallyLR implicit $w0

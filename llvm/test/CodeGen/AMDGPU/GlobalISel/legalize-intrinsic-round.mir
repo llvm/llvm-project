@@ -811,9 +811,10 @@ body: |
     ; GFX6-NEXT: [[SHL1:%[0-9]+]]:_(s32) = G_SHL [[AND6]], [[C]](s32)
     ; GFX6-NEXT: [[OR4:%[0-9]+]]:_(s32) = G_OR [[ZEXT2]], [[SHL1]]
     ; GFX6-NEXT: [[BITCAST5:%[0-9]+]]:_(<2 x s16>) = G_BITCAST [[OR4]](s32)
-    ; GFX6-NEXT: [[AND7:%[0-9]+]]:_(s32) = G_AND [[BITCAST3]], [[C6]]
-    ; GFX6-NEXT: [[SHL2:%[0-9]+]]:_(s32) = G_SHL [[AND7]], [[C]](s32)
-    ; GFX6-NEXT: [[OR5:%[0-9]+]]:_(s32) = G_OR [[LSHR1]], [[SHL2]]
+    ; GFX6-NEXT: [[AND7:%[0-9]+]]:_(s32) = G_AND [[LSHR1]], [[C6]]
+    ; GFX6-NEXT: [[AND8:%[0-9]+]]:_(s32) = G_AND [[BITCAST3]], [[C6]]
+    ; GFX6-NEXT: [[SHL2:%[0-9]+]]:_(s32) = G_SHL [[AND8]], [[C]](s32)
+    ; GFX6-NEXT: [[OR5:%[0-9]+]]:_(s32) = G_OR [[AND7]], [[SHL2]]
     ; GFX6-NEXT: [[BITCAST6:%[0-9]+]]:_(<2 x s16>) = G_BITCAST [[OR5]](s32)
     ; GFX6-NEXT: [[CONCAT_VECTORS:%[0-9]+]]:_(<6 x s16>) = G_CONCAT_VECTORS [[BITCAST4]](<2 x s16>), [[BITCAST5]](<2 x s16>), [[BITCAST6]](<2 x s16>)
     ; GFX6-NEXT: $vgpr0_vgpr1_vgpr2 = COPY [[CONCAT_VECTORS]](<6 x s16>)
@@ -878,9 +879,10 @@ body: |
     ; GFX8-NEXT: [[SHL1:%[0-9]+]]:_(s32) = G_SHL [[AND6]], [[C]](s32)
     ; GFX8-NEXT: [[OR4:%[0-9]+]]:_(s32) = G_OR [[ZEXT2]], [[SHL1]]
     ; GFX8-NEXT: [[BITCAST5:%[0-9]+]]:_(<2 x s16>) = G_BITCAST [[OR4]](s32)
-    ; GFX8-NEXT: [[AND7:%[0-9]+]]:_(s32) = G_AND [[BITCAST3]], [[C6]]
-    ; GFX8-NEXT: [[SHL2:%[0-9]+]]:_(s32) = G_SHL [[AND7]], [[C]](s32)
-    ; GFX8-NEXT: [[OR5:%[0-9]+]]:_(s32) = G_OR [[LSHR1]], [[SHL2]]
+    ; GFX8-NEXT: [[AND7:%[0-9]+]]:_(s32) = G_AND [[LSHR1]], [[C6]]
+    ; GFX8-NEXT: [[AND8:%[0-9]+]]:_(s32) = G_AND [[BITCAST3]], [[C6]]
+    ; GFX8-NEXT: [[SHL2:%[0-9]+]]:_(s32) = G_SHL [[AND8]], [[C]](s32)
+    ; GFX8-NEXT: [[OR5:%[0-9]+]]:_(s32) = G_OR [[AND7]], [[SHL2]]
     ; GFX8-NEXT: [[BITCAST6:%[0-9]+]]:_(<2 x s16>) = G_BITCAST [[OR5]](s32)
     ; GFX8-NEXT: [[CONCAT_VECTORS:%[0-9]+]]:_(<6 x s16>) = G_CONCAT_VECTORS [[BITCAST4]](<2 x s16>), [[BITCAST5]](<2 x s16>), [[BITCAST6]](<2 x s16>)
     ; GFX8-NEXT: $vgpr0_vgpr1_vgpr2 = COPY [[CONCAT_VECTORS]](<6 x s16>)

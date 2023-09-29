@@ -2,7 +2,7 @@
 
 # Check that when we combine SEXT we assign the correct debug location.
 # CHECK: !9 = !DILocation(line: 36, column: 21, scope: !4)
-# CHECK: G_AND %4, %5, debug-location !9
+# CHECK: G_AND %5, %4, debug-location !9
 
 --- |
   target datalayout = "e-m:e-i8:8:32-i16:16:32-i64:64-i128:128-n32:64-S128"

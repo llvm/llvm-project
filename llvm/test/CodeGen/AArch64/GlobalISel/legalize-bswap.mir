@@ -145,8 +145,8 @@ body:             |
     ; CHECK: [[BSWAP:%[0-9]+]]:_(s32) = G_BSWAP [[DEF]]
     ; CHECK: [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 28
     ; CHECK: [[LSHR:%[0-9]+]]:_(s32) = G_LSHR [[BSWAP]], [[C]](s64)
-    ; CHECK: [[ANYEXT:%[0-9]+]]:_(s64) = G_ANYEXT [[LSHR]](s32)
     ; CHECK: [[C1:%[0-9]+]]:_(s64) = G_CONSTANT i64 15
+    ; CHECK: [[ANYEXT:%[0-9]+]]:_(s64) = G_ANYEXT [[LSHR]](s32)
     ; CHECK: %ext:_(s64) = G_AND [[ANYEXT]], [[C1]]
     ; CHECK: $x0 = COPY %ext(s64)
     ; CHECK: RET_ReallyLR implicit $x0

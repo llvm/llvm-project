@@ -118,7 +118,11 @@ public:
   GISelKnownBitsAnalysis() : MachineFunctionPass(ID) {
     initializeGISelKnownBitsAnalysisPass(*PassRegistry::getPassRegistry());
   }
-  GISelKnownBits &get(MachineFunction &MF);
+  GISelKnownBits &get(MachineFunction &MF) {
+    if (!Info)
+      Info = std::make_unique<GISelKnownBits>(MF);
+    return *Info.get();
+  }
   void getAnalysisUsage(AnalysisUsage &AU) const override;
   bool runOnMachineFunction(MachineFunction &MF) override;
   void releaseMemory() override { Info.reset(); }

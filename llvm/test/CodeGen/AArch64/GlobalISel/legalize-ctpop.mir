@@ -172,8 +172,8 @@ body:             |
     ; CHECK: liveins: $w0
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: %copy:_(s32) = COPY $w0
-    ; CHECK-NEXT: [[ANYEXT:%[0-9]+]]:_(s64) = G_ANYEXT %copy(s32)
     ; CHECK-NEXT: [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 65535
+    ; CHECK-NEXT: [[ANYEXT:%[0-9]+]]:_(s64) = G_ANYEXT %copy(s32)
     ; CHECK-NEXT: [[AND:%[0-9]+]]:_(s64) = G_AND [[ANYEXT]], [[C]]
     ; CHECK-NEXT: [[BITCAST:%[0-9]+]]:_(<8 x s8>) = G_BITCAST [[AND]](s64)
     ; CHECK-NEXT: [[CTPOP:%[0-9]+]]:_(<8 x s8>) = G_CTPOP [[BITCAST]](<8 x s8>)
@@ -211,8 +211,8 @@ body:             |
     ; CHECK: liveins: $w0
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: %copy:_(s32) = COPY $w0
-    ; CHECK-NEXT: [[ANYEXT:%[0-9]+]]:_(s64) = G_ANYEXT %copy(s32)
     ; CHECK-NEXT: [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 255
+    ; CHECK-NEXT: [[ANYEXT:%[0-9]+]]:_(s64) = G_ANYEXT %copy(s32)
     ; CHECK-NEXT: [[AND:%[0-9]+]]:_(s64) = G_AND [[ANYEXT]], [[C]]
     ; CHECK-NEXT: [[BITCAST:%[0-9]+]]:_(<8 x s8>) = G_BITCAST [[AND]](s64)
     ; CHECK-NEXT: [[CTPOP:%[0-9]+]]:_(<8 x s8>) = G_CTPOP [[BITCAST]](<8 x s8>)
@@ -250,8 +250,8 @@ body:             |
     ; CHECK: liveins: $w0
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: %copy:_(s32) = COPY $w0
-    ; CHECK-NEXT: [[ANYEXT:%[0-9]+]]:_(s64) = G_ANYEXT %copy(s32)
     ; CHECK-NEXT: [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 7
+    ; CHECK-NEXT: [[ANYEXT:%[0-9]+]]:_(s64) = G_ANYEXT %copy(s32)
     ; CHECK-NEXT: [[AND:%[0-9]+]]:_(s64) = G_AND [[ANYEXT]], [[C]]
     ; CHECK-NEXT: [[BITCAST:%[0-9]+]]:_(<8 x s8>) = G_BITCAST [[AND]](s64)
     ; CHECK-NEXT: [[CTPOP:%[0-9]+]]:_(<8 x s8>) = G_CTPOP [[BITCAST]](<8 x s8>)
@@ -288,8 +288,8 @@ body:             |
     ; CHECK: liveins: $w0
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: %copy:_(s32) = COPY $w0
-    ; CHECK-NEXT: [[ANYEXT:%[0-9]+]]:_(s64) = G_ANYEXT %copy(s32)
     ; CHECK-NEXT: [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 255
+    ; CHECK-NEXT: [[ANYEXT:%[0-9]+]]:_(s64) = G_ANYEXT %copy(s32)
     ; CHECK-NEXT: [[AND:%[0-9]+]]:_(s64) = G_AND [[ANYEXT]], [[C]]
     ; CHECK-NEXT: [[BITCAST:%[0-9]+]]:_(<8 x s8>) = G_BITCAST [[AND]](s64)
     ; CHECK-NEXT: [[CTPOP:%[0-9]+]]:_(<8 x s8>) = G_CTPOP [[BITCAST]](<8 x s8>)
