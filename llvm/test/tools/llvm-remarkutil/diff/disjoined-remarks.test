@@ -1,0 +1,26 @@
+RUN: llvm-remarkutil diff %p/Inputs/1-loc-2-args.yaml %p/Inputs/1-loc-2-args-3.yaml --parser=yaml | FileCheck %s 
+
+; CHECK-LABEL: File A: {{.*}}/Inputs/1-loc-2-args.yaml
+; CHECK: File B: {{.*}}/Inputs/1-loc-2-args-3.yaml
+; CHECK: ----------
+; CHECK: path/to/anno.c:func0  Ln: 1 Col: 2
+; CHECK: Only at A >>>>
+; CHECK: Name: RemarkName
+; CHECK: FunctionName: func0
+; CHECK: PassName: Pass
+; CHECK: Type: Analysis
+; CHECK: Args:
+; CHECK: 	String: 1
+; CHECK: 	String: Info
+; CHECK: =====
+; CHECK: ----------
+; CHECK: path/to/anno2.c:func0  Ln: 1 Col: 2
+; CHECK: Only at B <<<<
+; CHECK: Name: RemarkName
+; CHECK: FunctionName: func0
+; CHECK: PassName: Pass
+; CHECK: Type: Analysis
+; CHECK: Args:
+; CHECK: 	String: 2
+; CHECK: 	String: Info
+; CHECK: =====
