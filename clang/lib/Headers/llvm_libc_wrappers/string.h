@@ -13,10 +13,31 @@
 #error "This file is for GPU offloading compilation only"
 #endif
 
-// FIXME: The GNU headers provide C++ standard compliant headers when in C++
-// mode and the LLVM libc does not. We cannot enable memchr, strchr, strchrnul,
-// strpbrk, strrchr, strstr, or strcasestr until this is addressed.
+// The GNU headers provide C++ standard compliant headers when in C++ mode and
+// the LLVM libc does not. We need to perform a pretty nasty hack to trick the
+// GNU headers into emitting the C compatible definitions so we can use them.
+#if defined(__cplusplus) && defined(__GLIBC__)
+
+// We need to make sure that the GNU C library has done its setup before we mess
+// with the expected macro values.
+#if !defined(__GLIBC_INTERNAL_STARTING_HEADER_IMPLEMENTATION) &&               \
+    __has_include(<bits/libc-header-start.h>)
+#define __GLIBC_INTERNAL_STARTING_HEADER_IMPLEMENTATION
+#include <bits/libc-header-start.h>
+#endif
+
+// Trick the GNU headers into thinking that this clang is too old for the C++
+// definitions.
+#pragma push_macro("__clang_major__")
+#define __clang_major__ 3
+#endif
+
 #include_next <string.h>
+
+// Resore the original macros if they were changed.
+#if defined(__cplusplus) && defined(__GLIBC__)
+#pragma pop_macro("__clang_major__")
+#endif
 
 #if __has_include(<llvm-libc-decls/string.h>)
 
