@@ -322,7 +322,10 @@ InstructionCost RISCVTTIImpl::getShuffleCost(TTI::ShuffleKind Kind,
           LT.second.getVectorElementType().getSizeInBits() ==
               Tp->getElementType()->getPrimitiveSizeInBits() &&
           LT.second.getVectorNumElements() <
-              cast<FixedVectorType>(Tp)->getNumElements()) {
+              cast<FixedVectorType>(Tp)->getNumElements() &&
+          divideCeil(Mask.size(),
+                     cast<FixedVectorType>(Tp)->getNumElements()) ==
+              static_cast<unsigned>(*LT.first.getValue())) {
         unsigned NumRegs = *LT.first.getValue();
         unsigned VF = cast<FixedVectorType>(Tp)->getNumElements();
         unsigned SubVF = PowerOf2Ceil(VF / NumRegs);
@@ -498,7 +501,7 @@ InstructionCost RISCVTTIImpl::getInterleavedMemoryOpCost(
     InstructionCost Cost = MemCost;
     for (unsigned Index : Indices) {
       FixedVectorType *SubVecTy =
-          FixedVectorType::get(FVTy->getElementType(), VF);
+          FixedVectorType::get(FVTy->getElementType(), VF * Factor);
       auto Mask = createStrideMask(Index, Factor, VF);
       InstructionCost ShuffleCost =
           getShuffleCost(TTI::ShuffleKind::SK_PermuteSingleSrc, SubVecTy, Mask,
