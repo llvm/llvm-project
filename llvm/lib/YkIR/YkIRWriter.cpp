@@ -180,6 +180,7 @@ public:
   /// Does a naiave serialisation of an LLVM instruction by iterating over its
   /// operands and serialising them in turn.
   void serialiseInstGeneric(Instruction *I, OpCode Opc) {
+    OutStreamer.emitSizeT(typeIndex(I->getType()));
     serialiseOpcode(Opc);
     OutStreamer.emitInt32(I->getNumOperands());
     for (Value *O : I->operands()) {
