@@ -171,11 +171,8 @@ struct AsExprOpConversion : public mlir::OpConversionPattern<hlfir::AsExprOp> {
     fir::FirOpBuilder builder(rewriter, module);
     if (asExpr.isMove()) {
       // Move variable storage for the hlfir.expr buffer.
-      hlfir::Entity varEntity = hlfir::Entity{adaptor.getVar()};
-      varEntity = hlfir::derefPointersAndAllocatables(loc, builder, varEntity);
-
       mlir::Value bufferizedExpr = packageBufferizedExpr(
-          loc, builder, hlfir::Entity{varEntity}, adaptor.getMustFree());
+          loc, builder, hlfir::Entity{adaptor.getVar()}, adaptor.getMustFree());
       rewriter.replaceOp(asExpr, bufferizedExpr);
       return mlir::success();
     }

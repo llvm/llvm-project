@@ -1237,10 +1237,7 @@ genUserCall(Fortran::lower::PreparedActualArguments &loweredActuals,
       extendedValueToHlfirEntity(loc, builder, result, ".tmp.func_result");
 
   if (!fir::isPointerType(fir::getBase(result).getType())) {
-    // Just load trivial scalars right away.
-    if (resultEntity.isScalar() &&
-        fir::isa_trivial(resultEntity.getFortranElementType()))
-      resultEntity = loadTrivialScalar(loc, builder, resultEntity);
+    resultEntity = loadTrivialScalar(loc, builder, resultEntity);
 
     if (resultEntity.isVariable()) {
       // Function result must not be freed, since it is allocated on the stack.
