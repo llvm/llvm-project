@@ -61,13 +61,3 @@ DWARFDebugAbbrev::GetAbbreviationDeclarationSet(
     return &(pos->second);
   return nullptr;
 }
-
-// DWARFDebugAbbrev::GetUnsupportedForms()
-void DWARFDebugAbbrev::GetUnsupportedForms(
-    std::set<dw_form_t> &invalid_forms) const {
-  for (const auto &pair : m_abbrevCollMap)
-    for (const auto &decl : pair.second)
-      for (const auto &attr : decl.attributes())
-        if (!DWARFFormValue::FormIsSupported(attr.Form))
-          invalid_forms.insert(attr.Form);
-}

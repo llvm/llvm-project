@@ -278,6 +278,7 @@ EXTENSION(matrix_types, LangOpts.MatrixTypes)
 EXTENSION(matrix_types_scalar_division, true)
 EXTENSION(cxx_attributes_on_using_declarations, LangOpts.CPlusPlus11)
 
+FEATURE(builtin_headers_in_system_modules, LangOpts.BuiltinHeadersInSystemModules)
 FEATURE(cxx_abi_relative_vtable, LangOpts.CPlusPlus && LangOpts.RelativeCXXABIVTables)
 
 // CUDA/HIP Features
