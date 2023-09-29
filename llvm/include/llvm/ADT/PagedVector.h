@@ -227,7 +227,7 @@ public:
     // materialized elements.
     assert(LHS.ElementIdx == LHS.PV->Size ||
            (LHS.ElementIdx < LHS.PV->Size &&
-            LHS.PV->PageToDataPtrs[LHS.ElementIdx / PageSize] != nullptr));
+            LHS.PV->PageToDataPtrs[LHS.ElementIdx / PageSize]));
     assert(RHS.ElementIdx == RHS.PV->Size ||
            (RHS.ElementIdx < RHS.PV->Size &&
             RHS.PV->PageToDataPtrs[RHS.ElementIdx / PageSize] != nullptr));
