@@ -48,7 +48,7 @@ define amdgpu_kernel void @simple_nested_if(ptr addrspace(1) nocapture %arg) {
 ; GCN-O0-NEXT:    s_mov_b32 s15, 0xe8f000
 ; GCN-O0-NEXT:    s_add_u32 s12, s12, s9
 ; GCN-O0-NEXT:    s_addc_u32 s13, s13, 0
-; GCN-O0-NEXT:    ; implicit-def: $vgpr1
+; GCN-O0-NEXT:    ; implicit-def: $vgpr1 : SGPR spill to VGPR lane
 ; GCN-O0-NEXT:    s_load_dwordx2 s[0:1], s[2:3], 0x9
 ; GCN-O0-NEXT:    s_waitcnt lgkmcnt(0)
 ; GCN-O0-NEXT:    v_writelane_b32 v1, s0, 0
@@ -234,7 +234,7 @@ define amdgpu_kernel void @uncollapsable_nested_if(ptr addrspace(1) nocapture %a
 ; GCN-O0-NEXT:    s_mov_b32 s15, 0xe8f000
 ; GCN-O0-NEXT:    s_add_u32 s12, s12, s9
 ; GCN-O0-NEXT:    s_addc_u32 s13, s13, 0
-; GCN-O0-NEXT:    ; implicit-def: $vgpr1
+; GCN-O0-NEXT:    ; implicit-def: $vgpr1 : SGPR spill to VGPR lane
 ; GCN-O0-NEXT:    s_load_dwordx2 s[0:1], s[2:3], 0x9
 ; GCN-O0-NEXT:    s_waitcnt lgkmcnt(0)
 ; GCN-O0-NEXT:    v_writelane_b32 v1, s0, 0
@@ -454,7 +454,7 @@ define amdgpu_kernel void @nested_if_if_else(ptr addrspace(1) nocapture %arg) {
 ; GCN-O0-NEXT:    s_mov_b32 s15, 0xe8f000
 ; GCN-O0-NEXT:    s_add_u32 s12, s12, s9
 ; GCN-O0-NEXT:    s_addc_u32 s13, s13, 0
-; GCN-O0-NEXT:    ; implicit-def: $vgpr1
+; GCN-O0-NEXT:    ; implicit-def: $vgpr1 : SGPR spill to VGPR lane
 ; GCN-O0-NEXT:    s_load_dwordx2 s[0:1], s[2:3], 0x9
 ; GCN-O0-NEXT:    s_waitcnt lgkmcnt(0)
 ; GCN-O0-NEXT:    s_mov_b64 s[2:3], s[0:1]
@@ -709,7 +709,7 @@ define amdgpu_kernel void @nested_if_else_if(ptr addrspace(1) nocapture %arg) {
 ; GCN-O0-NEXT:    s_mov_b32 s15, 0xe8f000
 ; GCN-O0-NEXT:    s_add_u32 s12, s12, s9
 ; GCN-O0-NEXT:    s_addc_u32 s13, s13, 0
-; GCN-O0-NEXT:    ; implicit-def: $vgpr1
+; GCN-O0-NEXT:    ; implicit-def: $vgpr1 : SGPR spill to VGPR lane
 ; GCN-O0-NEXT:    s_load_dwordx2 s[4:5], s[2:3], 0x9
 ; GCN-O0-NEXT:    v_mov_b32_e32 v1, v0
 ; GCN-O0-NEXT:    buffer_store_dword v1, off, s[12:15], 0 offset:12 ; 4-byte Folded Spill
@@ -969,7 +969,7 @@ define amdgpu_kernel void @s_endpgm_unsafe_barrier(ptr addrspace(1) nocapture %a
 ; GCN-O0-NEXT:    s_mov_b32 s15, 0xe8f000
 ; GCN-O0-NEXT:    s_add_u32 s12, s12, s9
 ; GCN-O0-NEXT:    s_addc_u32 s13, s13, 0
-; GCN-O0-NEXT:    ; implicit-def: $vgpr1
+; GCN-O0-NEXT:    ; implicit-def: $vgpr1 : SGPR spill to VGPR lane
 ; GCN-O0-NEXT:    s_load_dwordx2 s[0:1], s[2:3], 0x9
 ; GCN-O0-NEXT:    s_waitcnt lgkmcnt(0)
 ; GCN-O0-NEXT:    v_writelane_b32 v1, s0, 0
@@ -1125,7 +1125,7 @@ define void @scc_liveness(i32 %arg) local_unnamed_addr #0 {
 ; GCN-O0-NEXT:    buffer_store_dword v1, off, s[0:3], s32 offset:76 ; 4-byte Folded Spill
 ; GCN-O0-NEXT:    buffer_store_dword v4, off, s[0:3], s32 offset:80 ; 4-byte Folded Spill
 ; GCN-O0-NEXT:    s_mov_b64 exec, s[4:5]
-; GCN-O0-NEXT:    ; implicit-def: $vgpr1
+; GCN-O0-NEXT:    ; implicit-def: $vgpr1 : SGPR spill to VGPR lane
 ; GCN-O0-NEXT:    buffer_store_dword v0, off, s[0:3], s32 ; 4-byte Folded Spill
 ; GCN-O0-NEXT:    s_or_saveexec_b64 s[14:15], -1
 ; GCN-O0-NEXT:    s_waitcnt expcnt(0)
