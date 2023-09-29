@@ -795,10 +795,10 @@ rewriteSpGEMM(PatternRewriter &rewriter, linalg::GenericOp op, bool enableRT,
   Value rowC = e1.getResult(0);
   token = e1.getAsyncToken();
   auto e2 = genAllocBuffer(rewriter, loc, cTp.getCrdType(), zero, token);
-  Value colC = e2.getResult(0);  // no free needed
+  Value colC = e2.getResult(0); // no free needed
   token = e2.getAsyncToken();
   auto e3 = genAllocBuffer(rewriter, loc, dnCType, zero, token);
-  Value valC = e3.getResult(0);  // no free needed
+  Value valC = e3.getResult(0); // no free needed
   token = e3.getAsyncToken();
   Operation *spGenC =
       genSpMat(rewriter, loc, spmatHandleTp, tokenTp, token, szm, szn, zero,
@@ -900,7 +900,8 @@ rewriteSpGEMM(PatternRewriter &rewriter, linalg::GenericOp op, bool enableRT,
   Value vt = rewriter.create<bufferization::ToTensorOp>(loc, valH);
   Value rt = rewriter.create<bufferization::ToTensorOp>(loc, rowH);
   Value ct = rewriter.create<bufferization::ToTensorOp>(loc, colH);
-  rewriter.replaceOpWithNewOp<PackOp>(op, c.getType(), vt, ValueRange{rt, ct});
+  rewriter.replaceOpWithNewOp<AssembleOp>(op, c.getType(), vt,
+                                          ValueRange{rt, ct});
   return success();
 }
 
