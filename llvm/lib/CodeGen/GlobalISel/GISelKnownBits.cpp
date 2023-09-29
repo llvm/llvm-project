@@ -19,7 +19,6 @@
 #include "llvm/CodeGen/TargetLowering.h"
 #include "llvm/CodeGen/TargetOpcodes.h"
 #include "llvm/IR/Module.h"
-#include "llvm/Target/TargetMachine.h"
 
 #define DEBUG_TYPE "gisel-known-bits"
 
@@ -773,13 +772,4 @@ void GISelKnownBitsAnalysis::getAnalysisUsage(AnalysisUsage &AU) const {
 
 bool GISelKnownBitsAnalysis::runOnMachineFunction(MachineFunction &MF) {
   return false;
-}
-
-GISelKnownBits &GISelKnownBitsAnalysis::get(MachineFunction &MF) {
-  if (!Info) {
-    unsigned MaxDepth =
-        MF.getTarget().getOptLevel() == CodeGenOptLevel::None ? 2 : 6;
-    Info = std::make_unique<GISelKnownBits>(MF, MaxDepth);
-  }
-  return *Info.get();
 }
