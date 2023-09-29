@@ -13,7 +13,7 @@
 /// Checking include-path
 
 // RUN: %clangxx -### --target=ve-unknown-linux-gnu \
-// RUN:     --sysroot %S/Inputs/basic_ve_tree %s \
+// RUN:     --sysroot %S/Inputs/basic_ve_tree %s -fuse-ld=ld \
 // RUN:     -ccc-install-dir %S/Inputs/basic_ve_tree/bin \
 // RUN:     -resource-dir=%S/Inputs/basic_ve_tree/resource_dir \
 // RUN:     2>&1 | FileCheck -check-prefix=DEFINC %s
