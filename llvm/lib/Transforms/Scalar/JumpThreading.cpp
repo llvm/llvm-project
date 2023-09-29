@@ -568,6 +568,8 @@ bool JumpThreadingPass::computeValueKnownInPredecessorsImpl(
     Value *V, BasicBlock *BB, PredValueInfo &Result,
     ConstantPreference Preference, DenseSet<Value *> &RecursionSet,
     Instruction *CxtI) {
+  const DataLayout &DL = BB->getModule()->getDataLayout();
+
   // This method walks up use-def chains recursively.  Because of this, we could
   // get into an infinite loop going around loops in the use-def chain.  To
   // prevent this, keep track of what (value, block) pairs we've already visited
@@ -635,16 +637,19 @@ bool JumpThreadingPass::computeValueKnownInPredecessorsImpl(
   // Handle Cast instructions.
   if (CastInst *CI = dyn_cast<CastInst>(I)) {
     Value *Source = CI->getOperand(0);
-    computeValueKnownInPredecessorsImpl(Source, BB, Result, Preference,
+    PredValueInfoTy Vals;
+    computeValueKnownInPredecessorsImpl(Source, BB, Vals, Preference,
                                         RecursionSet, CxtI);
-    if (Result.empty())
+    if (Vals.empty())
       return false;
 
     // Convert the known values.
-    for (auto &R : Result)
-      R.first = ConstantExpr::getCast(CI->getOpcode(), R.first, CI->getType());
+    for (auto &Val : Vals)
+      if (Constant *Folded = ConstantFoldCastOperand(CI->getOpcode(), Val.first,
+                                                     CI->getType(), DL))
+        Result.emplace_back(Folded, Val.second);
 
-    return true;
+    return !Result.empty();
   }
 
   if (FreezeInst *FI = dyn_cast<FreezeInst>(I)) {
@@ -726,7 +731,6 @@ bool JumpThreadingPass::computeValueKnownInPredecessorsImpl(
     if (Preference != WantInteger)
       return false;
     if (ConstantInt *CI = dyn_cast<ConstantInt>(BO->getOperand(1))) {
-      const DataLayout &DL = BO->getModule()->getDataLayout();
       PredValueInfoTy LHSVals;
       computeValueKnownInPredecessorsImpl(BO->getOperand(0), BB, LHSVals,
                                           WantInteger, RecursionSet, CxtI);
