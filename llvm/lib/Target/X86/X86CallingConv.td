@@ -525,12 +525,31 @@ def RetCC_X86_64 : CallingConv<[
   CCDelegateTo<RetCC_X86_64_C>
 ]>;
 
+// Intel_SVML return-value convention.
+def RetCC_Intel_SVML : CallingConv<[
+  // Vector types are returned in XMM0,XMM1
+  CCIfType<[v4f32, v2f64],
+            CCAssignToReg<[XMM0,XMM1]>>,
+
+  // 256-bit FP vectors
+  CCIfType<[v8f32, v4f64],
+            CCAssignToReg<[YMM0,YMM1]>>,
+
+  // 512-bit FP vectors
+  CCIfType<[v16f32, v8f64],
+            CCAssignToReg<[ZMM0,ZMM1]>>
+]>;
+
 // This is the return-value convention used for the entire X86 backend.
 let Entry = 1 in
 def RetCC_X86 : CallingConv<[
 
   // Check if this is the Intel OpenCL built-ins calling convention
   CCIfCC<"CallingConv::Intel_OCL_BI", CCDelegateTo<RetCC_Intel_OCL_BI>>,
+
+  CCIfCC<"CallingConv::Intel_SVML128", CCDelegateTo<RetCC_Intel_SVML>>,
+  CCIfCC<"CallingConv::Intel_SVML256", CCDelegateTo<RetCC_Intel_SVML>>,
+  CCIfCC<"CallingConv::Intel_SVML512", CCDelegateTo<RetCC_Intel_SVML>>,
 
   CCIfSubtarget<"is64Bit()", CCDelegateTo<RetCC_X86_64>>,
   CCDelegateTo<RetCC_X86_32>
@@ -1082,6 +1101,30 @@ def CC_Intel_OCL_BI : CallingConv<[
   CCDelegateTo<CC_X86_32_C>
 ]>;
 
+// X86-64 Intel Short Vector Math Library calling convention.
+def CC_Intel_SVML : CallingConv<[
+
+  // The SSE vector arguments are passed in XMM registers.
+  CCIfType<[v4f32, v2f64],
+           CCAssignToReg<[XMM0, XMM1, XMM2]>>,
+
+  // The 256-bit vector arguments are passed in YMM registers.
+  CCIfType<[v8f32, v4f64],
+           CCAssignToReg<[YMM0, YMM1, YMM2]>>,
+
+  // The 512-bit vector arguments are passed in ZMM registers.
+  CCIfType<[v16f32, v8f64],
+           CCAssignToReg<[ZMM0, ZMM1, ZMM2]>>
+]>;
+
+def CC_X86_32_Intr : CallingConv<[
+  CCAssignToStack<4, 4>
+]>;
+
+def CC_X86_64_Intr : CallingConv<[
+  CCAssignToStack<8, 8>
+]>;
+
 //===----------------------------------------------------------------------===//
 // X86 Root Argument Calling Conventions
 //===----------------------------------------------------------------------===//
@@ -1135,6 +1178,9 @@ def CC_X86_64 : CallingConv<[
 let Entry = 1 in
 def CC_X86 : CallingConv<[
   CCIfCC<"CallingConv::Intel_OCL_BI", CCDelegateTo<CC_Intel_OCL_BI>>,
+  CCIfCC<"CallingConv::Intel_SVML128", CCDelegateTo<CC_Intel_SVML>>,
+  CCIfCC<"CallingConv::Intel_SVML256", CCDelegateTo<CC_Intel_SVML>>,
+  CCIfCC<"CallingConv::Intel_SVML512", CCDelegateTo<CC_Intel_SVML>>,
   CCIfSubtarget<"is64Bit()", CCDelegateTo<CC_X86_64>>,
   CCDelegateTo<CC_X86_32>
 ]>;
@@ -1244,3 +1290,27 @@ def CSR_SysV64_RegCall_NoSSE : CalleeSavedRegs<(add RBX, RBP,
                                                (sequence "R%u", 12, 15))>;
 def CSR_SysV64_RegCall       : CalleeSavedRegs<(add CSR_SysV64_RegCall_NoSSE,               
                                                (sequence "XMM%u", 8, 15))>;
+
+// SVML calling convention
+def CSR_32_Intel_SVML        : CalleeSavedRegs<(add CSR_32_RegCall_NoSSE)>;
+def CSR_32_Intel_SVML_AVX512 : CalleeSavedRegs<(add CSR_32_Intel_SVML,
+                                                K4, K5, K6, K7)>;
+
+def CSR_64_Intel_SVML_NoSSE : CalleeSavedRegs<(add RBX, RSI, RDI, RBP, RSP, R12, R13, R14, R15)>;
+
+def CSR_64_Intel_SVML       : CalleeSavedRegs<(add CSR_64_Intel_SVML_NoSSE,
+                                               (sequence "XMM%u", 8, 15))>;
+def CSR_Win64_Intel_SVML    : CalleeSavedRegs<(add CSR_64_Intel_SVML_NoSSE,
+                                               (sequence "XMM%u", 6, 15))>;
+
+def CSR_64_Intel_SVML_AVX        : CalleeSavedRegs<(add CSR_64_Intel_SVML_NoSSE,
+                                                    (sequence "YMM%u", 8, 15))>;
+def CSR_Win64_Intel_SVML_AVX     : CalleeSavedRegs<(add CSR_64_Intel_SVML_NoSSE,
+                                                    (sequence "YMM%u", 6, 15))>;
+
+def CSR_64_Intel_SVML_AVX512     : CalleeSavedRegs<(add CSR_64_Intel_SVML_NoSSE,
+                                                    (sequence "ZMM%u", 16, 31),
+                                                    K4, K5, K6, K7)>;
+def CSR_Win64_Intel_SVML_AVX512  : CalleeSavedRegs<(add CSR_64_Intel_SVML_NoSSE,
+                                                    (sequence "ZMM%u", 6, 21),
+                                                    K4, K5, K6, K7)>;

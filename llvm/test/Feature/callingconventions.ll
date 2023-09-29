@@ -60,3 +60,15 @@ define void @ghc_caller() {
 }
 
 declare i32 @__gxx_personality_v0(...)
+
+define intel_svmlcc128 void @svmlcc128() {
+        ret void
+}
+
+define intel_svmlcc256 void @svmlcc256() {
+        ret void
+}
+
+define intel_svmlcc512 void @svmlcc512() {
+        ret void
+}
