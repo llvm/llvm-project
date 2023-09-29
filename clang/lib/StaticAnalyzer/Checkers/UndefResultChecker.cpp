@@ -58,21 +58,6 @@ static bool isArrayIndexOutOfBounds(CheckerContext &C, const Expr *Ex) {
   return StOutBound && !StInBound;
 }
 
-static bool isShiftOverflow(const BinaryOperator *B, CheckerContext &C) {
-  return C.isGreaterOrEqual(
-      B->getRHS(), C.getASTContext().getIntWidth(B->getLHS()->getType()));
-}
-
-static bool isLeftShiftResultUnrepresentable(const BinaryOperator *B,
-                                             CheckerContext &C) {
-  SValBuilder &SB = C.getSValBuilder();
-  ProgramStateRef State = C.getState();
-  const llvm::APSInt *LHS = SB.getKnownValue(State, C.getSVal(B->getLHS()));
-  const llvm::APSInt *RHS = SB.getKnownValue(State, C.getSVal(B->getRHS()));
-  assert(LHS && RHS && "Values unknown, inconsistent state");
-  return (unsigned)RHS->getZExtValue() > LHS->countl_zero();
-}
-
 void UndefResultChecker::checkPostStmt(const BinaryOperator *B,
                                        CheckerContext &C) const {
   if (C.getSVal(B).isUndef()) {
