@@ -28,7 +28,7 @@ namespace internal {
 LIBC_INLINE cpp::optional<int> wctob(wint_t c) {
   // This needs to be translated to EOF at the callsite. This is to avoid
   // including stdio.h in this file.
-  if (c > 127 || c < 0)
+  if (c > 127)
     return cpp::nullopt;
   return static_cast<int>(c);
 }
