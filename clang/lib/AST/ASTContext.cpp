@@ -12935,7 +12935,8 @@ static QualType getCommonNonSugarTypeNode(ASTContext &Ctx, const Type *X,
         As, X->getCanonicalTypeInternal());
   }
   case Type::Decltype: {
-    const auto *DX = cast<DecltypeType>(X), *DY = cast<DecltypeType>(Y);
+    const auto *DX = cast<DecltypeType>(X);
+    [[maybe_unused]] const auto *DY = cast<DecltypeType>(Y);
     assert(DX->isDependentType());
     assert(DY->isDependentType());
     assert(Ctx.hasSameExpr(DX->getUnderlyingExpr(), DY->getUnderlyingExpr()));
