@@ -855,7 +855,7 @@ static MCSectionELF *selectELFSectionForGlobal(
     Group = C->getName();
     IsComdat = C->getSelectionKind() == Comdat::Any;
   }
-  if (isa<GlobalVariable>(GO)) {
+  if (isa<GlobalVariable>(GO) && !cast<GlobalVariable>(GO)->isThreadLocal()) {
     if (TM.isLargeData()) {
       assert(TM.getTargetTriple().getArch() == Triple::x86_64);
       Flags |= ELF::SHF_X86_64_LARGE;
