@@ -35,11 +35,7 @@ if (LLVM_USE_SANITIZER)
   serialize_lit_string_param(SERIALIZED_LIT_PARAMS use_sanitizer "${LLVM_USE_SANITIZER}")
 endif()
 
-foreach(param IN LISTS LIBCXX_TEST_PARAMS)
-  string(REGEX REPLACE "(.+)=(.+)" "\\1" name "${param}")
-  string(REGEX REPLACE "(.+)=(.+)" "\\2" value "${param}")
-  serialize_lit_string_param(SERIALIZED_LIT_PARAMS "${name}" "${value}")
-endforeach()
+serialize_lit_params_list(SERIALIZED_LIT_PARAMS LIBCXX_TEST_PARAMS)
 
 if (NOT DEFINED LIBCXX_TEST_DEPS)
   message(FATAL_ERROR "Expected LIBCXX_TEST_DEPS to be defined")

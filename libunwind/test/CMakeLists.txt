@@ -32,11 +32,7 @@ else()
   serialize_lit_string_param(SERIALIZED_LIT_PARAMS target_triple "${LLVM_DEFAULT_TARGET_TRIPLE}")
 endif()
 
-foreach(param IN LISTS LIBUNWIND_TEST_PARAMS)
-  string(REGEX REPLACE "(.+)=(.+)" "\\1" name "${param}")
-  string(REGEX REPLACE "(.+)=(.+)" "\\2" value "${param}")
-  serialize_lit_string_param(SERIALIZED_LIT_PARAMS "${name}" "${value}")
-endforeach()
+serialize_lit_params_list(SERIALIZED_LIT_PARAMS LIBUNWIND_TEST_PARAMS)
 
 configure_file("${CMAKE_CURRENT_SOURCE_DIR}/configs/cmake-bridge.cfg.in"
                "${CMAKE_CURRENT_BINARY_DIR}/cmake-bridge.cfg"
