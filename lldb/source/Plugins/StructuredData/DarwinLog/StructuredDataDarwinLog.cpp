@@ -1254,8 +1254,6 @@ void StructuredDataDarwinLog::ModulesDidLoad(Process &process,
     return;
   }
 
-  const ConstString logging_module_name = ConstString(logging_module_cstr);
-
   // We need to see libtrace in the list of modules before we can enable
   // tracing for the target process.
   bool found_logging_support_module = false;
@@ -1266,7 +1264,7 @@ void StructuredDataDarwinLog::ModulesDidLoad(Process &process,
 
     auto &file_spec = module_sp->GetFileSpec();
     found_logging_support_module =
-        (file_spec.GetFilename() == logging_module_name);
+        (file_spec.GetFilename() == logging_module_cstr);
     if (found_logging_support_module)
       break;
   }
@@ -1276,8 +1274,7 @@ void StructuredDataDarwinLog::ModulesDidLoad(Process &process,
               "StructuredDataDarwinLog::%s logging module %s "
               "has not yet been loaded, can't set a breakpoint "
               "yet (process uid %u)",
-              __FUNCTION__, logging_module_name.AsCString(),
-              process.GetUniqueID());
+              __FUNCTION__, logging_module_cstr, process.GetUniqueID());
     return;
   }
 
@@ -1287,8 +1284,7 @@ void StructuredDataDarwinLog::ModulesDidLoad(Process &process,
   LLDB_LOGF(log,
             "StructuredDataDarwinLog::%s post-init hook breakpoint "
             "set for logging module %s (process uid %u)",
-            __FUNCTION__, logging_module_name.AsCString(),
-            process.GetUniqueID());
+            __FUNCTION__, logging_module_cstr, process.GetUniqueID());
 
   // We need to try the enable here as well, which will succeed in the event
   // that we're attaching to (rather than launching) the process and the
