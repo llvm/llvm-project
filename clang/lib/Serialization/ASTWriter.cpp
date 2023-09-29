@@ -7258,8 +7258,6 @@ void OMPClauseWriter::VisitOMPXAttributeClause(OMPXAttributeClause *C) {
   Record.AddSourceLocation(C->getEndLoc());
 }
 
-void OMPClauseWriter::VisitOMPXBareClause(OMPXBareClause *C) {}
-
 void ASTRecordWriter::writeOMPTraitInfo(const OMPTraitInfo *TI) {
   writeUInt32(TI->Sets.size());
   for (const auto &Set : TI->Sets) {

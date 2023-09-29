@@ -9220,27 +9220,6 @@ private:
   }
 };
 
-/// This represents 'ompx_bare' clause in the '#pragma omp target teams ...'
-/// directive.
-///
-/// \code
-/// #pragma omp target teams ompx_bare
-/// \endcode
-/// In this example directive '#pragma omp target teams' has a 'ompx_bare'
-/// clause.
-class OMPXBareClause : public OMPNoChildClause<llvm::omp::OMPC_ompx_bare> {
-public:
-  /// Build 'ompx_bare' clause.
-  ///
-  /// \param StartLoc Starting location of the clause.
-  /// \param EndLoc Ending location of the clause.
-  OMPXBareClause(SourceLocation StartLoc, SourceLocation EndLoc)
-      : OMPNoChildClause(StartLoc, EndLoc) {}
-
-  /// Build an empty clause.
-  OMPXBareClause() = default;
-};
-
 } // namespace clang
 
 #endif // LLVM_CLANG_AST_OPENMPCLAUSE_H
