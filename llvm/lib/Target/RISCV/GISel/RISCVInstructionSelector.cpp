@@ -164,8 +164,8 @@ RISCVInstructionSelector::selectSHXADDOp(MachineOperand &Root,
     if (Mask.isShiftedMask()) {
       unsigned Leading = XLen - Mask.getActiveBits();
       unsigned Trailing = Mask.countr_zero();
-      // Given (and (shl y, c2), mask) in which mask has no leading zeros and c3
-      // trailing zeros. We can use an SRLI by c3 - c2 followed by a SHXADD.
+      // Given (and (shl y, c2), mask) in which mask has no leading zeros and
+      // c3 trailing zeros. We can use an SRLI by c3 - c2 followed by a SHXADD.
       if (*LeftShift && Leading == 0 && C2.ult(Trailing) && Trailing == ShAmt) {
         Register DstReg =
             MRI.createGenericVirtualRegister(MRI.getType(RootReg));
