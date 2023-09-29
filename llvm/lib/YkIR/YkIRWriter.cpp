@@ -51,7 +51,7 @@ enum OpCode {
 enum OperandKind {
   Constant = 0,
   LocalVariable,
-  String,
+  UnimplementedOperand = 255,
 };
 
 enum TypeKind {
@@ -153,7 +153,7 @@ public:
   }
 
   void serialiseStringOperand(const char *S) {
-    OutStreamer.emitInt8(OperandKind::String);
+    OutStreamer.emitInt8(OperandKind::UnimplementedOperand);
     serialiseString(S);
   }
 
@@ -161,7 +161,7 @@ public:
   // lowering for to compile. For now We just emit a string operand containing
   // the unhandled LLVM operand in textual form.
   void serialiseUnimplementedOperand(Value *V) {
-    OutStreamer.emitInt8(OperandKind::String);
+    OutStreamer.emitInt8(OperandKind::UnimplementedOperand);
     serialiseString(toString(V));
   }
 
@@ -203,13 +203,15 @@ public:
     serialiseUnimplementedInstruction(I);
   }
 
+  // An unimplemented instruction is lowered to an instruction with one
+  // unimplemented operand containing the textual LLVM IR we couldn't handle.
   void serialiseUnimplementedInstruction(Instruction *I) {
     // opcode:
     serialiseOpcode(UnimplementedInstruction);
     // num_operands:
     OutStreamer.emitInt32(1);
     // problem instruction:
-    serialiseStringOperand(toString(I).data());
+    serialiseUnimplementedOperand(I);
   }
 
   void serialiseBlock(BasicBlock &BB) {
