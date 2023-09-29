@@ -100,6 +100,7 @@ public:
     return IntegralAP(0);
   }
 
+  // FIXME: This can't be static if the bitwidth depends on V.
   static constexpr unsigned bitWidth() { return 128; }
 
   APSInt toAPSInt(unsigned Bits = 0) const { return V; }
@@ -117,7 +118,11 @@ public:
 
   void print(llvm::raw_ostream &OS) const { OS << V; }
 
-  IntegralAP truncate(unsigned bitWidth) const { return V; }
+  IntegralAP truncate(unsigned bitWidth) const {
+    assert(false);
+    return V;
+  }
+
   IntegralAP<false> toUnsigned() const {
     APSInt Copy = V;
     Copy.setIsSigned(false);
@@ -129,11 +134,13 @@ public:
   }
 
   static bool increment(IntegralAP A, IntegralAP *R) {
+    assert(false);
     *R = IntegralAP(A.V + 1);
     return false;
   }
 
   static bool decrement(IntegralAP A, IntegralAP *R) {
+    assert(false);
     *R = IntegralAP(A.V - 1);
     return false;
   }
