@@ -50,7 +50,7 @@ Module::Module(StringRef Name, SourceLocation DefinitionLoc, Module *Parent,
       // conflicts.
       IsSwiftInferImportAsMember(false),
 
-      NamedModuleHasNoInit(false), NameVisibility(Hidden) {
+      NamedModuleHasInit(true), NameVisibility(Hidden) {
   if (Parent) {
     IsAvailable = Parent->isAvailable();
     IsUnimportable = Parent->isUnimportable();
