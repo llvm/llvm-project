@@ -10052,18 +10052,21 @@ static PredicateConstraint parsePredicateConstraint(StringRef Constraint) {
 
 static const TargetRegisterClass *
 getPredicateRegisterClass(PredicateConstraint Constraint, EVT VT) {
-  if (!VT.isScalableVector() || VT.getVectorElementType() != MVT::i1)
+  if (VT != MVT::aarch64svcount &&
+      (!VT.isScalableVector() || VT.getVectorElementType() != MVT::i1))
     return nullptr;
 
   switch (Constraint) {
   default:
     return nullptr;
   case PredicateConstraint::Uph:
-    return &AArch64::PPR_p8to15RegClass;
+    return VT == MVT::aarch64svcount ? &AArch64::PNR_p8to15RegClass
+                                     : &AArch64::PPR_p8to15RegClass;
   case PredicateConstraint::Upl:
-    return &AArch64::PPR_3bRegClass;
+    return VT == MVT::aarch64svcount ? nullptr : &AArch64::PPR_3bRegClass;
   case PredicateConstraint::Upa:
-    return &AArch64::PPRRegClass;
+    return VT == MVT::aarch64svcount ? &AArch64::PNRRegClass
+                                     : &AArch64::PPRRegClass;
   }
 }
 
