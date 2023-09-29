@@ -1021,7 +1021,7 @@ static Value createMask(AffineForOp vecForOp, VectorizationState &state) {
   if (vecForOp.hasConstantBounds()) {
     int64_t originalTripCount =
         vecForOp.getConstantUpperBound() - vecForOp.getConstantLowerBound();
-    if (originalTripCount % vecForOp.getStep() == 0)
+    if (originalTripCount % vecForOp.getStepAsInt() == 0)
       return nullptr;
   }
 
@@ -1296,9 +1296,9 @@ static Operation *vectorizeAffineForOp(AffineForOp forOp,
     unsigned vectorDim = loopToVecDimIt->second;
     assert(vectorDim < strategy.vectorSizes.size() && "vector dim overflow");
     int64_t forOpVecFactor = strategy.vectorSizes[vectorDim];
-    newStep = forOp.getStep() * forOpVecFactor;
+    newStep = forOp.getStepAsInt() * forOpVecFactor;
   } else {
-    newStep = forOp.getStep();
+    newStep = forOp.getStepAsInt();
   }
 
   // Get information about reduction kinds.

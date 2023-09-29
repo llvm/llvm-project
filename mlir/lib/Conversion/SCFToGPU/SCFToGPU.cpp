@@ -86,7 +86,7 @@ static Operation::operand_range getUpperBoundOperands(AffineForOp forOp) {
 // materialize a corresponding constant using builder.
 static Value getOrCreateStep(AffineForOp forOp, OpBuilder &builder) {
   return builder.create<arith::ConstantIndexOp>(forOp.getLoc(),
-                                                forOp.getStep());
+                                                forOp.getStepAsInt());
 }
 
 // Get a Value for the loop lower bound.  If the value requires computation,
