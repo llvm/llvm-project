@@ -279,18 +279,18 @@ public:
       serialiseFunc(F);
     }
 
-    // num_types:
-    OutStreamer.emitSizeT(Types.size());
-    // types:
-    for (Type *&Ty : Types) {
-      serialiseType(Ty);
-    }
-
     // num_constants:
     OutStreamer.emitSizeT(Constants.size());
     // constants:
     for (class Constant *&C : Constants) {
       serialiseConstant(C);
+    }
+
+    // num_types:
+    OutStreamer.emitSizeT(Types.size());
+    // types:
+    for (Type *&Ty : Types) {
+      serialiseType(Ty);
     }
   }
 };
