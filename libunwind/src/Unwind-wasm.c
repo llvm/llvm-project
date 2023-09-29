@@ -12,6 +12,7 @@
 
 #include <stdbool.h>
 #include <threads.h>
+
 #include "config.h"
 #include "unwind.h"
 
