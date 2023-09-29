@@ -283,6 +283,38 @@ template <typename T> bool Matrix<T>::hasConsistentState() const {
   return true;
 }
 
+template<typename T> T Matrix<T>::determinant()
+{
+    unsigned r = getNumRows();
+    unsigned c = getNumColumns();
+    if (r == 1)
+        return at(0, 0);
+    if (r == 2)
+        return (at(0, 0) * at(1, 1) - at(0, 1) * at(1, 0));
+
+    T sign(-1), determinant(0);
+    Matrix<T> cofactor(r-1, c-1);
+
+    // Cofactor matrix consists of all columns other than the
+    // current one, and all rows except the first.
+    for (unsigned i = 0; i < c; i++)
+    {
+        sign = -sign;
+        unsigned n = 0;
+        for (unsigned j = 0; j < c; j++)
+        {
+            if (j == i) continue;
+            for (unsigned k = 0; k < r-1; k++)
+                cofactor(k, n) = at(k+1, j);
+            n++;
+        }
+
+        determinant = determinant + at(0, i) * sign * cofactor.determinant();
+    }
+
+    return determinant;
+}
+
 namespace mlir {
 namespace presburger {
 template class Matrix<MPInt>;

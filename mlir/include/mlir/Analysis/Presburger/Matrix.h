@@ -189,6 +189,10 @@ public:
   /// invariants satisfied.
   bool hasConsistentState() const;
 
+  // Compute the determinant of the matrix by converting it to row echelon
+  // form and then taking the product of the diagonal.
+  T determinant();
+
 private:
   /// The current number of rows, columns, and reserved columns. The underlying
   /// data vector is viewed as an nRows x nReservedColumns matrix, of which the
