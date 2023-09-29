@@ -28,10 +28,18 @@ namespace linalg {
 ///   3. No uses of the memref either dominate the transfer_read or are
 ///   dominated by the transfer_write (i.e. no aliasing between the write and
 ///   the read across the loop)
+///   4. The source operands for vector.transfer_{read|write} do not originate
+///   from Ops implementing ViewLikeOpInterface (to reduce the risk of
+///   aliasing).
 /// To improve hoisting opportunities, call the `moveLoopInvariantCode` helper
 /// function on the candidate loop above which to hoist. Hoisting the transfers
 /// results in scf::ForOp yielding the value that originally transited through
 /// memory.
+///
+/// TODO: To further improve hoisting opportunities, fold aliasing memref
+/// operations into respective vector.transfer{read|write} operations and
+/// avoid using ops implementing ViewLikeOpInterface as the source for transfer
+/// Ops.
 ///
 /// WARNING: This hoisting does not model parallelism and is generally incorrect
 /// when used on distributed loops with memref semantics!
