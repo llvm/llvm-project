@@ -1465,10 +1465,20 @@ void AArch64FrameLowering::emitPrologue(MachineFunction &MF,
         BuildMI(MBB, MBBI, DL, TII->get(AArch64::LOADgot), AArch64::X16)
             .addExternalSymbol("swift_async_extendedFramePointerFlags",
                                AArch64II::MO_GOT);
+        if (NeedsWinCFI) {
+          BuildMI(MBB, MBBI, DL, TII->get(AArch64::SEH_Nop))
+              .setMIFlags(MachineInstr::FrameSetup);
+          HasWinCFI = true;
+        }
         BuildMI(MBB, MBBI, DL, TII->get(AArch64::ORRXrs), AArch64::FP)
             .addUse(AArch64::FP)
             .addUse(AArch64::X16)
             .addImm(Subtarget.isTargetILP32() ? 32 : 0);
+        if (NeedsWinCFI) {
+          BuildMI(MBB, MBBI, DL, TII->get(AArch64::SEH_Nop))
+              .setMIFlags(MachineInstr::FrameSetup);
+          HasWinCFI = true;
+        }
         break;
       }
       [[fallthrough]];
@@ -1479,6 +1489,11 @@ void AArch64FrameLowering::emitPrologue(MachineFunction &MF,
           .addUse(AArch64::FP)
           .addImm(0x1100)
           .setMIFlag(MachineInstr::FrameSetup);
+      if (NeedsWinCFI) {
+        BuildMI(MBB, MBBI, DL, TII->get(AArch64::SEH_Nop))
+            .setMIFlags(MachineInstr::FrameSetup);
+        HasWinCFI = true;
+      }
       break;
 
     case SwiftAsyncFramePointerMode::Never:
@@ -1593,6 +1608,30 @@ void AArch64FrameLowering::emitPrologue(MachineFunction &MF,
 
     if (CombineSPBump)
       FPOffset += AFI->getLocalStackSize();
+
+    if (AFI->hasSwiftAsyncContext()) {
+      // Before we update the live FP we have to ensure there's a valid (or
+      // null) asynchronous context in its slot just before FP in the frame
+      // record, so store it now.
+      const auto &Attrs = MF.getFunction().getAttributes();
+      bool HaveInitialContext = Attrs.hasAttrSomewhere(Attribute::SwiftAsync);
+      if (HaveInitialContext)
+        MBB.addLiveIn(AArch64::X22);
+      Register Reg = HaveInitialContext ? AArch64::X22 : AArch64::XZR;
+      BuildMI(MBB, MBBI, DL, TII->get(AArch64::StoreSwiftAsyncContext))
+          .addUse(Reg)
+          .addUse(AArch64::SP)
+          .addImm(FPOffset - 8)
+          .setMIFlags(MachineInstr::FrameSetup);
+      if (NeedsWinCFI) {
+        // WinCFI and arm64e, where StoreSwiftAsyncContext is expanded
+        // to multiple instructions, should be mutually-exclusive.
+        assert(Subtarget.getTargetTriple().getArchName() != "arm64e");
+        BuildMI(MBB, MBBI, DL, TII->get(AArch64::SEH_Nop))
+            .setMIFlags(MachineInstr::FrameSetup);
+        HasWinCFI = true;
+      }
+    }
 
     if (HomPrologEpilog) {
       auto Prolog = MBBI;
@@ -2104,6 +2143,11 @@ void AArch64FrameLowering::emitEpilogue(MachineFunction &MF,
           .addUse(AArch64::FP)
           .addImm(0x10fe)
           .setMIFlag(MachineInstr::FrameDestroy);
+      if (NeedsWinCFI) {
+        BuildMI(MBB, MBBI, DL, TII->get(AArch64::SEH_Nop))
+            .setMIFlags(MachineInstr::FrameDestroy);
+        HasWinCFI = true;
+      }
       break;
 
     case SwiftAsyncFramePointerMode::Never:
