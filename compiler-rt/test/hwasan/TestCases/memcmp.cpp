@@ -6,14 +6,25 @@
 #include <sanitizer/hwasan_interface.h>
 #include <stdlib.h>
 #include <string.h>
+#include <unistd.h>
+
+static __attribute__ ((__noinline__))
+char *MakeArray(char* a, int size, int* new_size) {
+  char *p = (char *)malloc(size);
+  *new_size = size;
+  memcpy(p, a, size);
+  return p;
+}
 
 int main(int argc, char **argv) {
   __hwasan_enable_allocator_tagging();
   char a[] = {static_cast<char>(argc), 2, 3, 4};
-  char *p = (char *)malloc(sizeof(a));
-  memcpy(p, a, sizeof(a));
+  int size = 0;
+  char *p = MakeArray(a, sizeof(a), &size);
   free(p);
   // CHECK: HWAddressSanitizer: tag-mismatch on address
+  // CHECK: MemcmpInterceptorCommon
   // CHECK: Cause: use-after-free
-  return memcmp(p, a, sizeof(a));
+  int res = memcmp(p, a, size);
+  return res;
 }
