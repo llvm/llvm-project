@@ -4,6 +4,8 @@ endif()
 
 add_llvm_component_library(LLVMOrcDebugging
   DebugInfoSupport.cpp
+  DebuggerSupport.cpp
+  DebuggerSupportPlugin.cpp
   PerfSupportPlugin.cpp
 
   ADDITIONAL_HEADER_DIRS
