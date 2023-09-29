@@ -151,6 +151,7 @@ define i32 @f32tou32(float %a) {
 ; MIPS32-NEXT:    addiu $3, $zero, 1
 ; MIPS32-NEXT:    c.ult.s $f12, $f0
 ; MIPS32-NEXT:    movf $3, $zero, $fcc0
+; MIPS32-NEXT:    andi $3, $3, 1
 ; MIPS32-NEXT:    movn $2, $1, $3
 ; MIPS32-NEXT:    jr $ra
 ; MIPS32-NEXT:    nop
@@ -174,6 +175,7 @@ define zeroext i16 @f32tou16(float %a) {
 ; MIPS32-NEXT:    addiu $3, $zero, 1
 ; MIPS32-NEXT:    c.ult.s $f12, $f0
 ; MIPS32-NEXT:    movf $3, $zero, $fcc0
+; MIPS32-NEXT:    andi $3, $3, 1
 ; MIPS32-NEXT:    movn $1, $2, $3
 ; MIPS32-NEXT:    andi $2, $1, 65535
 ; MIPS32-NEXT:    jr $ra
@@ -198,6 +200,7 @@ define zeroext i8 @f32tou8(float %a) {
 ; MIPS32-NEXT:    addiu $3, $zero, 1
 ; MIPS32-NEXT:    c.ult.s $f12, $f0
 ; MIPS32-NEXT:    movf $3, $zero, $fcc0
+; MIPS32-NEXT:    andi $3, $3, 1
 ; MIPS32-NEXT:    movn $1, $2, $3
 ; MIPS32-NEXT:    andi $2, $1, 255
 ; MIPS32-NEXT:    jr $ra
@@ -242,6 +245,7 @@ define i32 @f64tou32(double %a) {
 ; FP32-NEXT:    addiu $3, $zero, 1
 ; FP32-NEXT:    c.ult.d $f12, $f0
 ; FP32-NEXT:    movf $3, $zero, $fcc0
+; FP32-NEXT:    andi $3, $3, 1
 ; FP32-NEXT:    movn $2, $1, $3
 ; FP32-NEXT:    jr $ra
 ; FP32-NEXT:    nop
@@ -262,6 +266,7 @@ define i32 @f64tou32(double %a) {
 ; FP64-NEXT:    addiu $3, $zero, 1
 ; FP64-NEXT:    c.ult.d $f12, $f0
 ; FP64-NEXT:    movf $3, $zero, $fcc0
+; FP64-NEXT:    andi $3, $3, 1
 ; FP64-NEXT:    movn $2, $1, $3
 ; FP64-NEXT:    jr $ra
 ; FP64-NEXT:    nop
@@ -287,6 +292,7 @@ define zeroext i16 @f64tou16(double %a) {
 ; FP32-NEXT:    addiu $3, $zero, 1
 ; FP32-NEXT:    c.ult.d $f12, $f0
 ; FP32-NEXT:    movf $3, $zero, $fcc0
+; FP32-NEXT:    andi $3, $3, 1
 ; FP32-NEXT:    movn $1, $2, $3
 ; FP32-NEXT:    andi $2, $1, 65535
 ; FP32-NEXT:    jr $ra
@@ -308,6 +314,7 @@ define zeroext i16 @f64tou16(double %a) {
 ; FP64-NEXT:    addiu $3, $zero, 1
 ; FP64-NEXT:    c.ult.d $f12, $f0
 ; FP64-NEXT:    movf $3, $zero, $fcc0
+; FP64-NEXT:    andi $3, $3, 1
 ; FP64-NEXT:    movn $1, $2, $3
 ; FP64-NEXT:    andi $2, $1, 65535
 ; FP64-NEXT:    jr $ra
@@ -334,6 +341,7 @@ define zeroext i8 @f64tou8(double %a) {
 ; FP32-NEXT:    addiu $3, $zero, 1
 ; FP32-NEXT:    c.ult.d $f12, $f0
 ; FP32-NEXT:    movf $3, $zero, $fcc0
+; FP32-NEXT:    andi $3, $3, 1
 ; FP32-NEXT:    movn $1, $2, $3
 ; FP32-NEXT:    andi $2, $1, 255
 ; FP32-NEXT:    jr $ra
@@ -355,6 +363,7 @@ define zeroext i8 @f64tou8(double %a) {
 ; FP64-NEXT:    addiu $3, $zero, 1
 ; FP64-NEXT:    c.ult.d $f12, $f0
 ; FP64-NEXT:    movf $3, $zero, $fcc0
+; FP64-NEXT:    andi $3, $3, 1
 ; FP64-NEXT:    movn $1, $2, $3
 ; FP64-NEXT:    andi $2, $1, 255
 ; FP64-NEXT:    jr $ra

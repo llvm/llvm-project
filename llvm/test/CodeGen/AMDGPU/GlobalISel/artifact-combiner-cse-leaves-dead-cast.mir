@@ -50,8 +50,8 @@ body:             |
     ; CHECK-NEXT: %and5:_(s1) = G_XOR %unmerge3_5, %negone
     ; CHECK-NEXT: %and6:_(s1) = G_XOR %unmerge3_6, %negone
     ; CHECK-NEXT: %and7:_(s1) = G_XOR %unmerge3_7, %negone
-    ; CHECK-NEXT: [[SEXT:%[0-9]+]]:_(s32) = G_SEXT %and0(s1)
     ; CHECK-NEXT: [[C10:%[0-9]+]]:_(s32) = G_CONSTANT i32 255
+    ; CHECK-NEXT: [[SEXT:%[0-9]+]]:_(s32) = G_SEXT %and0(s1)
     ; CHECK-NEXT: [[AND:%[0-9]+]]:_(s32) = G_AND [[SEXT]], [[C10]]
     ; CHECK-NEXT: [[SEXT1:%[0-9]+]]:_(s32) = G_SEXT %and1(s1)
     ; CHECK-NEXT: [[AND1:%[0-9]+]]:_(s32) = G_AND [[SEXT1]], [[C10]]

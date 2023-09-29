@@ -90,6 +90,7 @@ define i64 @sub_i64(i64 %a, i64 %b) {
 ; MIPS32-NEXT:    subu $2, $6, $4
 ; MIPS32-NEXT:    sltu $3, $6, $4
 ; MIPS32-NEXT:    subu $1, $7, $5
+; MIPS32-NEXT:    andi $3, $3, 1
 ; MIPS32-NEXT:    subu $3, $1, $3
 ; MIPS32-NEXT:    jr $ra
 ; MIPS32-NEXT:    nop
@@ -114,7 +115,8 @@ define i128 @sub_i128(i128 %a, i128 %b) {
 ; MIPS32-NEXT:    sltu $9, $8, $9
 ; MIPS32-NEXT:    subu $8, $3, $5
 ; MIPS32-NEXT:    sltu $5, $3, $8
-; MIPS32-NEXT:    subu $3, $8, $9
+; MIPS32-NEXT:    andi $3, $9, 1
+; MIPS32-NEXT:    subu $3, $8, $3
 ; MIPS32-NEXT:    sltiu $8, $8, 1
 ; MIPS32-NEXT:    and $8, $8, $9
 ; MIPS32-NEXT:    or $8, $5, $8

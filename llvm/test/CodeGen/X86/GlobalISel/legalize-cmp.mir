@@ -48,16 +48,14 @@ body:             |
     liveins: $edi, $esi
 
     ; CHECK-LABEL: name: test_cmp_i8
-    ; CHECK: liveins: $edi, $esi
-    ; CHECK-NEXT: {{  $}}
-    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(s8) = COPY $dil
-    ; CHECK-NEXT: [[COPY1:%[0-9]+]]:_(s8) = COPY $sil
-    ; CHECK-NEXT: [[ICMP:%[0-9]+]]:_(s8) = G_ICMP intpred(ult), [[COPY]](s8), [[COPY1]]
-    ; CHECK-NEXT: [[ANYEXT:%[0-9]+]]:_(s32) = G_ANYEXT [[ICMP]](s8)
-    ; CHECK-NEXT: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 1
-    ; CHECK-NEXT: [[AND:%[0-9]+]]:_(s32) = G_AND [[ANYEXT]], [[C]]
-    ; CHECK-NEXT: $eax = COPY [[AND]](s32)
-    ; CHECK-NEXT: RET 0, implicit $eax
+    ; CHECK: [[COPY:%[0-9]+]]:_(s8) = COPY $dil
+    ; CHECK: [[COPY1:%[0-9]+]]:_(s8) = COPY $sil
+    ; CHECK: [[ICMP:%[0-9]+]]:_(s8) = G_ICMP intpred(ult), [[COPY]](s8), [[COPY1]]
+    ; CHECK: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 1
+    ; CHECK: [[ANYEXT:%[0-9]+]]:_(s32) = G_ANYEXT [[ICMP]](s8)
+    ; CHECK: [[AND:%[0-9]+]]:_(s32) = G_AND [[ANYEXT]], [[C]]
+    ; CHECK: $eax = COPY [[AND]](s32)
+    ; CHECK: RET 0, implicit $eax
     %0(s8) = COPY $dil
     %1(s8) = COPY $sil
     %2(s1) = G_ICMP intpred(ult), %0(s8), %1
@@ -81,16 +79,14 @@ body:             |
     liveins: $edi, $esi
 
     ; CHECK-LABEL: name: test_cmp_i16
-    ; CHECK: liveins: $edi, $esi
-    ; CHECK-NEXT: {{  $}}
-    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(s16) = COPY $di
-    ; CHECK-NEXT: [[COPY1:%[0-9]+]]:_(s16) = COPY $si
-    ; CHECK-NEXT: [[ICMP:%[0-9]+]]:_(s8) = G_ICMP intpred(ult), [[COPY]](s16), [[COPY1]]
-    ; CHECK-NEXT: [[ANYEXT:%[0-9]+]]:_(s32) = G_ANYEXT [[ICMP]](s8)
-    ; CHECK-NEXT: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 1
-    ; CHECK-NEXT: [[AND:%[0-9]+]]:_(s32) = G_AND [[ANYEXT]], [[C]]
-    ; CHECK-NEXT: $eax = COPY [[AND]](s32)
-    ; CHECK-NEXT: RET 0, implicit $eax
+    ; CHECK: [[COPY:%[0-9]+]]:_(s16) = COPY $di
+    ; CHECK: [[COPY1:%[0-9]+]]:_(s16) = COPY $si
+    ; CHECK: [[ICMP:%[0-9]+]]:_(s8) = G_ICMP intpred(ult), [[COPY]](s16), [[COPY1]]
+    ; CHECK: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 1
+    ; CHECK: [[ANYEXT:%[0-9]+]]:_(s32) = G_ANYEXT [[ICMP]](s8)
+    ; CHECK: [[AND:%[0-9]+]]:_(s32) = G_AND [[ANYEXT]], [[C]]
+    ; CHECK: $eax = COPY [[AND]](s32)
+    ; CHECK: RET 0, implicit $eax
     %0(s16) = COPY $di
     %1(s16) = COPY $si
     %2(s1) = G_ICMP intpred(ult), %0(s16), %1
@@ -114,16 +110,14 @@ body:             |
     liveins: $edi, $esi
 
     ; CHECK-LABEL: name: test_cmp_i32
-    ; CHECK: liveins: $edi, $esi
-    ; CHECK-NEXT: {{  $}}
-    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(s32) = COPY $edi
-    ; CHECK-NEXT: [[COPY1:%[0-9]+]]:_(s32) = COPY $esi
-    ; CHECK-NEXT: [[ICMP:%[0-9]+]]:_(s8) = G_ICMP intpred(ult), [[COPY]](s32), [[COPY1]]
-    ; CHECK-NEXT: [[ANYEXT:%[0-9]+]]:_(s32) = G_ANYEXT [[ICMP]](s8)
-    ; CHECK-NEXT: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 1
-    ; CHECK-NEXT: [[AND:%[0-9]+]]:_(s32) = G_AND [[ANYEXT]], [[C]]
-    ; CHECK-NEXT: $eax = COPY [[AND]](s32)
-    ; CHECK-NEXT: RET 0, implicit $eax
+    ; CHECK: [[COPY:%[0-9]+]]:_(s32) = COPY $edi
+    ; CHECK: [[COPY1:%[0-9]+]]:_(s32) = COPY $esi
+    ; CHECK: [[ICMP:%[0-9]+]]:_(s8) = G_ICMP intpred(ult), [[COPY]](s32), [[COPY1]]
+    ; CHECK: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 1
+    ; CHECK: [[ANYEXT:%[0-9]+]]:_(s32) = G_ANYEXT [[ICMP]](s8)
+    ; CHECK: [[AND:%[0-9]+]]:_(s32) = G_AND [[ANYEXT]], [[C]]
+    ; CHECK: $eax = COPY [[AND]](s32)
+    ; CHECK: RET 0, implicit $eax
     %0(s32) = COPY $edi
     %1(s32) = COPY $esi
     %2(s1) = G_ICMP intpred(ult), %0(s32), %1
@@ -147,16 +141,14 @@ body:             |
     liveins: $rdi, $rsi
 
     ; CHECK-LABEL: name: test_cmp_i64
-    ; CHECK: liveins: $rdi, $rsi
-    ; CHECK-NEXT: {{  $}}
-    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(s64) = COPY $rdi
-    ; CHECK-NEXT: [[COPY1:%[0-9]+]]:_(s64) = COPY $rsi
-    ; CHECK-NEXT: [[ICMP:%[0-9]+]]:_(s8) = G_ICMP intpred(ult), [[COPY]](s64), [[COPY1]]
-    ; CHECK-NEXT: [[ANYEXT:%[0-9]+]]:_(s32) = G_ANYEXT [[ICMP]](s8)
-    ; CHECK-NEXT: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 1
-    ; CHECK-NEXT: [[AND:%[0-9]+]]:_(s32) = G_AND [[ANYEXT]], [[C]]
-    ; CHECK-NEXT: $eax = COPY [[AND]](s32)
-    ; CHECK-NEXT: RET 0, implicit $eax
+    ; CHECK: [[COPY:%[0-9]+]]:_(s64) = COPY $rdi
+    ; CHECK: [[COPY1:%[0-9]+]]:_(s64) = COPY $rsi
+    ; CHECK: [[ICMP:%[0-9]+]]:_(s8) = G_ICMP intpred(ult), [[COPY]](s64), [[COPY1]]
+    ; CHECK: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 1
+    ; CHECK: [[ANYEXT:%[0-9]+]]:_(s32) = G_ANYEXT [[ICMP]](s8)
+    ; CHECK: [[AND:%[0-9]+]]:_(s32) = G_AND [[ANYEXT]], [[C]]
+    ; CHECK: $eax = COPY [[AND]](s32)
+    ; CHECK: RET 0, implicit $eax
     %0(s64) = COPY $rdi
     %1(s64) = COPY $rsi
     %2(s1) = G_ICMP intpred(ult), %0(s64), %1
@@ -180,16 +172,14 @@ body:             |
     liveins: $rdi, $rsi
 
     ; CHECK-LABEL: name: test_cmp_p0
-    ; CHECK: liveins: $rdi, $rsi
-    ; CHECK-NEXT: {{  $}}
-    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(p0) = COPY $rdi
-    ; CHECK-NEXT: [[COPY1:%[0-9]+]]:_(p0) = COPY $rsi
-    ; CHECK-NEXT: [[ICMP:%[0-9]+]]:_(s8) = G_ICMP intpred(ult), [[COPY]](p0), [[COPY1]]
-    ; CHECK-NEXT: [[ANYEXT:%[0-9]+]]:_(s32) = G_ANYEXT [[ICMP]](s8)
-    ; CHECK-NEXT: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 1
-    ; CHECK-NEXT: [[AND:%[0-9]+]]:_(s32) = G_AND [[ANYEXT]], [[C]]
-    ; CHECK-NEXT: $eax = COPY [[AND]](s32)
-    ; CHECK-NEXT: RET 0, implicit $eax
+    ; CHECK: [[COPY:%[0-9]+]]:_(p0) = COPY $rdi
+    ; CHECK: [[COPY1:%[0-9]+]]:_(p0) = COPY $rsi
+    ; CHECK: [[ICMP:%[0-9]+]]:_(s8) = G_ICMP intpred(ult), [[COPY]](p0), [[COPY1]]
+    ; CHECK: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 1
+    ; CHECK: [[ANYEXT:%[0-9]+]]:_(s32) = G_ANYEXT [[ICMP]](s8)
+    ; CHECK: [[AND:%[0-9]+]]:_(s32) = G_AND [[ANYEXT]], [[C]]
+    ; CHECK: $eax = COPY [[AND]](s32)
+    ; CHECK: RET 0, implicit $eax
     %0(p0) = COPY $rdi
     %1(p0) = COPY $rsi
     %2(s1) = G_ICMP intpred(ult), %0(p0), %1

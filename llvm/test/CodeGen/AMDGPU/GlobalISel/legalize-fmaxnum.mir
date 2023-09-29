@@ -23,7 +23,6 @@ body: |
     ; SI-NEXT: [[FCANONICALIZE1:%[0-9]+]]:_(s32) = G_FCANONICALIZE [[COPY1]]
     ; SI-NEXT: [[FMAXNUM_IEEE:%[0-9]+]]:_(s32) = G_FMAXNUM_IEEE [[FCANONICALIZE]], [[FCANONICALIZE1]]
     ; SI-NEXT: $vgpr0 = COPY [[FMAXNUM_IEEE]](s32)
-    ;
     ; VI-LABEL: name: test_fmaxnum_s32_ieee_mode_on
     ; VI: liveins: $vgpr0, $vgpr1
     ; VI-NEXT: {{  $}}
@@ -33,7 +32,6 @@ body: |
     ; VI-NEXT: [[FCANONICALIZE1:%[0-9]+]]:_(s32) = G_FCANONICALIZE [[COPY1]]
     ; VI-NEXT: [[FMAXNUM_IEEE:%[0-9]+]]:_(s32) = G_FMAXNUM_IEEE [[FCANONICALIZE]], [[FCANONICALIZE1]]
     ; VI-NEXT: $vgpr0 = COPY [[FMAXNUM_IEEE]](s32)
-    ;
     ; GFX9-LABEL: name: test_fmaxnum_s32_ieee_mode_on
     ; GFX9: liveins: $vgpr0, $vgpr1
     ; GFX9-NEXT: {{  $}}
@@ -65,7 +63,6 @@ body: |
     ; SI-NEXT: [[COPY1:%[0-9]+]]:_(s32) = COPY $vgpr1
     ; SI-NEXT: [[FMAXNUM:%[0-9]+]]:_(s32) = G_FMAXNUM [[COPY]], [[COPY1]]
     ; SI-NEXT: $vgpr0 = COPY [[FMAXNUM]](s32)
-    ;
     ; VI-LABEL: name: test_fmaxnum_s32_ieee_mode_off
     ; VI: liveins: $vgpr0, $vgpr1
     ; VI-NEXT: {{  $}}
@@ -73,7 +70,6 @@ body: |
     ; VI-NEXT: [[COPY1:%[0-9]+]]:_(s32) = COPY $vgpr1
     ; VI-NEXT: [[FMAXNUM:%[0-9]+]]:_(s32) = G_FMAXNUM [[COPY]], [[COPY1]]
     ; VI-NEXT: $vgpr0 = COPY [[FMAXNUM]](s32)
-    ;
     ; GFX9-LABEL: name: test_fmaxnum_s32_ieee_mode_off
     ; GFX9: liveins: $vgpr0, $vgpr1
     ; GFX9-NEXT: {{  $}}
@@ -100,7 +96,6 @@ body: |
     ; SI-NEXT: [[COPY1:%[0-9]+]]:_(s32) = COPY $vgpr1
     ; SI-NEXT: [[FMAXNUM_IEEE:%[0-9]+]]:_(s32) = nnan G_FMAXNUM_IEEE [[COPY]], [[COPY1]]
     ; SI-NEXT: $vgpr0 = COPY [[FMAXNUM_IEEE]](s32)
-    ;
     ; VI-LABEL: name: test_fmaxnum_s32_nnan
     ; VI: liveins: $vgpr0, $vgpr1
     ; VI-NEXT: {{  $}}
@@ -108,7 +103,6 @@ body: |
     ; VI-NEXT: [[COPY1:%[0-9]+]]:_(s32) = COPY $vgpr1
     ; VI-NEXT: [[FMAXNUM_IEEE:%[0-9]+]]:_(s32) = nnan G_FMAXNUM_IEEE [[COPY]], [[COPY1]]
     ; VI-NEXT: $vgpr0 = COPY [[FMAXNUM_IEEE]](s32)
-    ;
     ; GFX9-LABEL: name: test_fmaxnum_s32_nnan
     ; GFX9: liveins: $vgpr0, $vgpr1
     ; GFX9-NEXT: {{  $}}
@@ -137,7 +131,6 @@ body: |
     ; SI-NEXT: [[FCANONICALIZE:%[0-9]+]]:_(s32) = G_FCANONICALIZE [[COPY1]]
     ; SI-NEXT: [[FMAXNUM_IEEE:%[0-9]+]]:_(s32) = G_FMAXNUM_IEEE [[COPY]], [[FCANONICALIZE]]
     ; SI-NEXT: $vgpr0 = COPY [[FMAXNUM_IEEE]](s32)
-    ;
     ; VI-LABEL: name: test_fmaxnum_s32_nnan_lhs
     ; VI: liveins: $vgpr0, $vgpr1
     ; VI-NEXT: {{  $}}
@@ -146,7 +139,6 @@ body: |
     ; VI-NEXT: [[FCANONICALIZE:%[0-9]+]]:_(s32) = G_FCANONICALIZE [[COPY1]]
     ; VI-NEXT: [[FMAXNUM_IEEE:%[0-9]+]]:_(s32) = G_FMAXNUM_IEEE [[COPY]], [[FCANONICALIZE]]
     ; VI-NEXT: $vgpr0 = COPY [[FMAXNUM_IEEE]](s32)
-    ;
     ; GFX9-LABEL: name: test_fmaxnum_s32_nnan_lhs
     ; GFX9: liveins: $vgpr0, $vgpr1
     ; GFX9-NEXT: {{  $}}
@@ -176,7 +168,6 @@ body: |
     ; SI-NEXT: [[FCANONICALIZE:%[0-9]+]]:_(s32) = G_FCANONICALIZE [[COPY]]
     ; SI-NEXT: [[FMAXNUM_IEEE:%[0-9]+]]:_(s32) = G_FMAXNUM_IEEE [[FCANONICALIZE]], [[COPY1]]
     ; SI-NEXT: $vgpr0 = COPY [[FMAXNUM_IEEE]](s32)
-    ;
     ; VI-LABEL: name: test_fmaxnum_s32_nnan_rhs
     ; VI: liveins: $vgpr0, $vgpr1
     ; VI-NEXT: {{  $}}
@@ -185,7 +176,6 @@ body: |
     ; VI-NEXT: [[FCANONICALIZE:%[0-9]+]]:_(s32) = G_FCANONICALIZE [[COPY]]
     ; VI-NEXT: [[FMAXNUM_IEEE:%[0-9]+]]:_(s32) = G_FMAXNUM_IEEE [[FCANONICALIZE]], [[COPY1]]
     ; VI-NEXT: $vgpr0 = COPY [[FMAXNUM_IEEE]](s32)
-    ;
     ; GFX9-LABEL: name: test_fmaxnum_s32_nnan_rhs
     ; GFX9: liveins: $vgpr0, $vgpr1
     ; GFX9-NEXT: {{  $}}
@@ -213,7 +203,6 @@ body: |
     ; SI-NEXT: [[COPY1:%[0-9]+]]:_(s32) = nnan COPY $vgpr1
     ; SI-NEXT: [[FMAXNUM_IEEE:%[0-9]+]]:_(s32) = G_FMAXNUM_IEEE [[COPY]], [[COPY1]]
     ; SI-NEXT: $vgpr0 = COPY [[FMAXNUM_IEEE]](s32)
-    ;
     ; VI-LABEL: name: test_fmaxnum_s32_nnan_lhs_rhs
     ; VI: liveins: $vgpr0, $vgpr1
     ; VI-NEXT: {{  $}}
@@ -221,7 +210,6 @@ body: |
     ; VI-NEXT: [[COPY1:%[0-9]+]]:_(s32) = nnan COPY $vgpr1
     ; VI-NEXT: [[FMAXNUM_IEEE:%[0-9]+]]:_(s32) = G_FMAXNUM_IEEE [[COPY]], [[COPY1]]
     ; VI-NEXT: $vgpr0 = COPY [[FMAXNUM_IEEE]](s32)
-    ;
     ; GFX9-LABEL: name: test_fmaxnum_s32_nnan_lhs_rhs
     ; GFX9: liveins: $vgpr0, $vgpr1
     ; GFX9-NEXT: {{  $}}
@@ -250,7 +238,6 @@ body: |
     ; SI-NEXT: [[FCANONICALIZE1:%[0-9]+]]:_(s64) = G_FCANONICALIZE [[COPY1]]
     ; SI-NEXT: [[FMAXNUM_IEEE:%[0-9]+]]:_(s64) = G_FMAXNUM_IEEE [[FCANONICALIZE]], [[FCANONICALIZE1]]
     ; SI-NEXT: $vgpr0_vgpr1 = COPY [[FMAXNUM_IEEE]](s64)
-    ;
     ; VI-LABEL: name: test_fmaxnum_s64
     ; VI: liveins: $vgpr0_vgpr1, $vgpr2_vgpr3
     ; VI-NEXT: {{  $}}
@@ -260,7 +247,6 @@ body: |
     ; VI-NEXT: [[FCANONICALIZE1:%[0-9]+]]:_(s64) = G_FCANONICALIZE [[COPY1]]
     ; VI-NEXT: [[FMAXNUM_IEEE:%[0-9]+]]:_(s64) = G_FMAXNUM_IEEE [[FCANONICALIZE]], [[FCANONICALIZE1]]
     ; VI-NEXT: $vgpr0_vgpr1 = COPY [[FMAXNUM_IEEE]](s64)
-    ;
     ; GFX9-LABEL: name: test_fmaxnum_s64
     ; GFX9: liveins: $vgpr0_vgpr1, $vgpr2_vgpr3
     ; GFX9-NEXT: {{  $}}
@@ -295,7 +281,6 @@ body: |
     ; SI-NEXT: [[FPTRUNC:%[0-9]+]]:_(s16) = G_FPTRUNC [[FMAXNUM_IEEE]](s32)
     ; SI-NEXT: [[ANYEXT:%[0-9]+]]:_(s32) = G_ANYEXT [[FPTRUNC]](s16)
     ; SI-NEXT: $vgpr0 = COPY [[ANYEXT]](s32)
-    ;
     ; VI-LABEL: name: test_fmaxnum_s16
     ; VI: liveins: $vgpr0, $vgpr1
     ; VI-NEXT: {{  $}}
@@ -308,7 +293,6 @@ body: |
     ; VI-NEXT: [[FMAXNUM_IEEE:%[0-9]+]]:_(s16) = G_FMAXNUM_IEEE [[FCANONICALIZE]], [[FCANONICALIZE1]]
     ; VI-NEXT: [[ANYEXT:%[0-9]+]]:_(s32) = G_ANYEXT [[FMAXNUM_IEEE]](s16)
     ; VI-NEXT: $vgpr0 = COPY [[ANYEXT]](s32)
-    ;
     ; GFX9-LABEL: name: test_fmaxnum_s16
     ; GFX9: liveins: $vgpr0, $vgpr1
     ; GFX9-NEXT: {{  $}}
@@ -351,7 +335,6 @@ body: |
     ; SI-NEXT: [[FMAXNUM_IEEE1:%[0-9]+]]:_(s32) = G_FMAXNUM_IEEE [[FCANONICALIZE2]], [[FCANONICALIZE3]]
     ; SI-NEXT: [[BUILD_VECTOR:%[0-9]+]]:_(<2 x s32>) = G_BUILD_VECTOR [[FMAXNUM_IEEE]](s32), [[FMAXNUM_IEEE1]](s32)
     ; SI-NEXT: $vgpr0_vgpr1 = COPY [[BUILD_VECTOR]](<2 x s32>)
-    ;
     ; VI-LABEL: name: test_fmaxnum_v2s32
     ; VI: liveins: $vgpr0_vgpr1, $vgpr2_vgpr3
     ; VI-NEXT: {{  $}}
@@ -367,7 +350,6 @@ body: |
     ; VI-NEXT: [[FMAXNUM_IEEE1:%[0-9]+]]:_(s32) = G_FMAXNUM_IEEE [[FCANONICALIZE2]], [[FCANONICALIZE3]]
     ; VI-NEXT: [[BUILD_VECTOR:%[0-9]+]]:_(<2 x s32>) = G_BUILD_VECTOR [[FMAXNUM_IEEE]](s32), [[FMAXNUM_IEEE1]](s32)
     ; VI-NEXT: $vgpr0_vgpr1 = COPY [[BUILD_VECTOR]](<2 x s32>)
-    ;
     ; GFX9-LABEL: name: test_fmaxnum_v2s32
     ; GFX9: liveins: $vgpr0_vgpr1, $vgpr2_vgpr3
     ; GFX9-NEXT: {{  $}}
@@ -423,7 +405,6 @@ body: |
     ; SI-NEXT: [[OR:%[0-9]+]]:_(s32) = G_OR [[ZEXT]], [[SHL]]
     ; SI-NEXT: [[BITCAST2:%[0-9]+]]:_(<2 x s16>) = G_BITCAST [[OR]](s32)
     ; SI-NEXT: $vgpr0 = COPY [[BITCAST2]](<2 x s16>)
-    ;
     ; VI-LABEL: name: test_fmaxnum_v2s16
     ; VI: liveins: $vgpr0, $vgpr1
     ; VI-NEXT: {{  $}}
@@ -450,7 +431,6 @@ body: |
     ; VI-NEXT: [[OR:%[0-9]+]]:_(s32) = G_OR [[ZEXT]], [[SHL]]
     ; VI-NEXT: [[BITCAST2:%[0-9]+]]:_(<2 x s16>) = G_BITCAST [[OR]](s32)
     ; VI-NEXT: $vgpr0 = COPY [[BITCAST2]](<2 x s16>)
-    ;
     ; GFX9-LABEL: name: test_fmaxnum_v2s16
     ; GFX9: liveins: $vgpr0, $vgpr1
     ; GFX9-NEXT: {{  $}}
@@ -519,13 +499,13 @@ body: |
     ; SI-NEXT: [[SHL1:%[0-9]+]]:_(s32) = G_SHL [[AND]], [[C]](s32)
     ; SI-NEXT: [[OR1:%[0-9]+]]:_(s32) = G_OR [[ZEXT2]], [[SHL1]]
     ; SI-NEXT: [[BITCAST7:%[0-9]+]]:_(<2 x s16>) = G_BITCAST [[OR1]](s32)
-    ; SI-NEXT: [[AND1:%[0-9]+]]:_(s32) = G_AND [[BITCAST5]], [[C1]]
-    ; SI-NEXT: [[SHL2:%[0-9]+]]:_(s32) = G_SHL [[AND1]], [[C]](s32)
-    ; SI-NEXT: [[OR2:%[0-9]+]]:_(s32) = G_OR [[LSHR2]], [[SHL2]]
+    ; SI-NEXT: [[AND1:%[0-9]+]]:_(s32) = G_AND [[LSHR2]], [[C1]]
+    ; SI-NEXT: [[AND2:%[0-9]+]]:_(s32) = G_AND [[BITCAST5]], [[C1]]
+    ; SI-NEXT: [[SHL2:%[0-9]+]]:_(s32) = G_SHL [[AND2]], [[C]](s32)
+    ; SI-NEXT: [[OR2:%[0-9]+]]:_(s32) = G_OR [[AND1]], [[SHL2]]
     ; SI-NEXT: [[BITCAST8:%[0-9]+]]:_(<2 x s16>) = G_BITCAST [[OR2]](s32)
     ; SI-NEXT: [[CONCAT_VECTORS:%[0-9]+]]:_(<6 x s16>) = G_CONCAT_VECTORS [[BITCAST6]](<2 x s16>), [[BITCAST7]](<2 x s16>), [[BITCAST8]](<2 x s16>)
     ; SI-NEXT: $vgpr0_vgpr1_vgpr2 = COPY [[CONCAT_VECTORS]](<6 x s16>)
-    ;
     ; VI-LABEL: name: test_fmaxnum_v3s16
     ; VI: liveins: $vgpr0_vgpr1_vgpr2, $vgpr3_vgpr4_vgpr5
     ; VI-NEXT: {{  $}}
@@ -571,13 +551,13 @@ body: |
     ; VI-NEXT: [[SHL1:%[0-9]+]]:_(s32) = G_SHL [[AND]], [[C]](s32)
     ; VI-NEXT: [[OR1:%[0-9]+]]:_(s32) = G_OR [[ZEXT2]], [[SHL1]]
     ; VI-NEXT: [[BITCAST7:%[0-9]+]]:_(<2 x s16>) = G_BITCAST [[OR1]](s32)
-    ; VI-NEXT: [[AND1:%[0-9]+]]:_(s32) = G_AND [[BITCAST5]], [[C1]]
-    ; VI-NEXT: [[SHL2:%[0-9]+]]:_(s32) = G_SHL [[AND1]], [[C]](s32)
-    ; VI-NEXT: [[OR2:%[0-9]+]]:_(s32) = G_OR [[LSHR2]], [[SHL2]]
+    ; VI-NEXT: [[AND1:%[0-9]+]]:_(s32) = G_AND [[LSHR2]], [[C1]]
+    ; VI-NEXT: [[AND2:%[0-9]+]]:_(s32) = G_AND [[BITCAST5]], [[C1]]
+    ; VI-NEXT: [[SHL2:%[0-9]+]]:_(s32) = G_SHL [[AND2]], [[C]](s32)
+    ; VI-NEXT: [[OR2:%[0-9]+]]:_(s32) = G_OR [[AND1]], [[SHL2]]
     ; VI-NEXT: [[BITCAST8:%[0-9]+]]:_(<2 x s16>) = G_BITCAST [[OR2]](s32)
     ; VI-NEXT: [[CONCAT_VECTORS:%[0-9]+]]:_(<6 x s16>) = G_CONCAT_VECTORS [[BITCAST6]](<2 x s16>), [[BITCAST7]](<2 x s16>), [[BITCAST8]](<2 x s16>)
     ; VI-NEXT: $vgpr0_vgpr1_vgpr2 = COPY [[CONCAT_VECTORS]](<6 x s16>)
-    ;
     ; GFX9-LABEL: name: test_fmaxnum_v3s16
     ; GFX9: liveins: $vgpr0_vgpr1_vgpr2, $vgpr3_vgpr4_vgpr5
     ; GFX9-NEXT: {{  $}}
@@ -687,7 +667,6 @@ body: |
     ; SI-NEXT: [[BITCAST5:%[0-9]+]]:_(<2 x s16>) = G_BITCAST [[OR1]](s32)
     ; SI-NEXT: [[CONCAT_VECTORS:%[0-9]+]]:_(<4 x s16>) = G_CONCAT_VECTORS [[BITCAST4]](<2 x s16>), [[BITCAST5]](<2 x s16>)
     ; SI-NEXT: $vgpr0_vgpr1 = COPY [[CONCAT_VECTORS]](<4 x s16>)
-    ;
     ; VI-LABEL: name: test_fmaxnum_v4s16
     ; VI: liveins: $vgpr0_vgpr1, $vgpr2_vgpr3
     ; VI-NEXT: {{  $}}
@@ -736,7 +715,6 @@ body: |
     ; VI-NEXT: [[BITCAST5:%[0-9]+]]:_(<2 x s16>) = G_BITCAST [[OR1]](s32)
     ; VI-NEXT: [[CONCAT_VECTORS:%[0-9]+]]:_(<4 x s16>) = G_CONCAT_VECTORS [[BITCAST4]](<2 x s16>), [[BITCAST5]](<2 x s16>)
     ; VI-NEXT: $vgpr0_vgpr1 = COPY [[CONCAT_VECTORS]](<4 x s16>)
-    ;
     ; GFX9-LABEL: name: test_fmaxnum_v4s16
     ; GFX9: liveins: $vgpr0_vgpr1, $vgpr2_vgpr3
     ; GFX9-NEXT: {{  $}}
@@ -780,7 +758,6 @@ body: |
     ; SI-NEXT: [[FCANONICALIZE3:%[0-9]+]]:_(s32) = G_FCANONICALIZE [[COPY2]]
     ; SI-NEXT: [[FMAXNUM_IEEE1:%[0-9]+]]:_(s32) = G_FMAXNUM_IEEE [[FCANONICALIZE2]], [[FCANONICALIZE3]]
     ; SI-NEXT: $vgpr0 = COPY [[FMAXNUM_IEEE1]](s32)
-    ;
     ; VI-LABEL: name: test_fmaxnum_with_fmaxnum_argument_s32_ieee_mode_on
     ; VI: liveins: $vgpr0, $vgpr1, $vgpr2
     ; VI-NEXT: {{  $}}
@@ -794,7 +771,6 @@ body: |
     ; VI-NEXT: [[FCANONICALIZE3:%[0-9]+]]:_(s32) = G_FCANONICALIZE [[COPY2]]
     ; VI-NEXT: [[FMAXNUM_IEEE1:%[0-9]+]]:_(s32) = G_FMAXNUM_IEEE [[FCANONICALIZE2]], [[FCANONICALIZE3]]
     ; VI-NEXT: $vgpr0 = COPY [[FMAXNUM_IEEE1]](s32)
-    ;
     ; GFX9-LABEL: name: test_fmaxnum_with_fmaxnum_argument_s32_ieee_mode_on
     ; GFX9: liveins: $vgpr0, $vgpr1, $vgpr2
     ; GFX9-NEXT: {{  $}}
@@ -836,7 +812,6 @@ body: |
     ; SI-NEXT: [[FCANONICALIZE1:%[0-9]+]]:_(s32) = G_FCANONICALIZE [[COPY1]]
     ; SI-NEXT: [[FMAXNUM_IEEE1:%[0-9]+]]:_(s32) = G_FMAXNUM_IEEE [[FMAXNUM_IEEE]], [[FCANONICALIZE1]]
     ; SI-NEXT: $vgpr0 = COPY [[FMAXNUM_IEEE1]](s32)
-    ;
     ; VI-LABEL: name: test_fmaxnum_with_nonNaN_fmaxnum_argument_s32_ieee_mode_on
     ; VI: liveins: $vgpr0, $vgpr1
     ; VI-NEXT: {{  $}}
@@ -848,7 +823,6 @@ body: |
     ; VI-NEXT: [[FCANONICALIZE1:%[0-9]+]]:_(s32) = G_FCANONICALIZE [[COPY1]]
     ; VI-NEXT: [[FMAXNUM_IEEE1:%[0-9]+]]:_(s32) = G_FMAXNUM_IEEE [[FMAXNUM_IEEE]], [[FCANONICALIZE1]]
     ; VI-NEXT: $vgpr0 = COPY [[FMAXNUM_IEEE1]](s32)
-    ;
     ; GFX9-LABEL: name: test_fmaxnum_with_nonNaN_fmaxnum_argument_s32_ieee_mode_on
     ; GFX9: liveins: $vgpr0, $vgpr1
     ; GFX9-NEXT: {{  $}}
@@ -890,7 +864,6 @@ body: |
     ; SI-NEXT: [[FCANONICALIZE3:%[0-9]+]]:_(s32) = G_FCANONICALIZE [[COPY2]]
     ; SI-NEXT: [[FMAXNUM_IEEE:%[0-9]+]]:_(s32) = G_FMAXNUM_IEEE [[FCANONICALIZE2]], [[FCANONICALIZE3]]
     ; SI-NEXT: $vgpr0 = COPY [[FMAXNUM_IEEE]](s32)
-    ;
     ; VI-LABEL: name: test_fmaxnum_with_fminnum_argument_s32_ieee_mode_on
     ; VI: liveins: $vgpr0, $vgpr1, $vgpr2
     ; VI-NEXT: {{  $}}
@@ -904,7 +877,6 @@ body: |
     ; VI-NEXT: [[FCANONICALIZE3:%[0-9]+]]:_(s32) = G_FCANONICALIZE [[COPY2]]
     ; VI-NEXT: [[FMAXNUM_IEEE:%[0-9]+]]:_(s32) = G_FMAXNUM_IEEE [[FCANONICALIZE2]], [[FCANONICALIZE3]]
     ; VI-NEXT: $vgpr0 = COPY [[FMAXNUM_IEEE]](s32)
-    ;
     ; GFX9-LABEL: name: test_fmaxnum_with_fminnum_argument_s32_ieee_mode_on
     ; GFX9: liveins: $vgpr0, $vgpr1, $vgpr2
     ; GFX9-NEXT: {{  $}}
@@ -946,7 +918,6 @@ body: |
     ; SI-NEXT: [[FCANONICALIZE1:%[0-9]+]]:_(s32) = G_FCANONICALIZE [[COPY1]]
     ; SI-NEXT: [[FMAXNUM_IEEE:%[0-9]+]]:_(s32) = G_FMAXNUM_IEEE [[FMINNUM_IEEE]], [[FCANONICALIZE1]]
     ; SI-NEXT: $vgpr0 = COPY [[FMAXNUM_IEEE]](s32)
-    ;
     ; VI-LABEL: name: test_fmaxnum_with_nonNaN_fminnum_argument_s32_ieee_mode_on
     ; VI: liveins: $vgpr0, $vgpr1
     ; VI-NEXT: {{  $}}
@@ -958,7 +929,6 @@ body: |
     ; VI-NEXT: [[FCANONICALIZE1:%[0-9]+]]:_(s32) = G_FCANONICALIZE [[COPY1]]
     ; VI-NEXT: [[FMAXNUM_IEEE:%[0-9]+]]:_(s32) = G_FMAXNUM_IEEE [[FMINNUM_IEEE]], [[FCANONICALIZE1]]
     ; VI-NEXT: $vgpr0 = COPY [[FMAXNUM_IEEE]](s32)
-    ;
     ; GFX9-LABEL: name: test_fmaxnum_with_nonNaN_fminnum_argument_s32_ieee_mode_on
     ; GFX9: liveins: $vgpr0, $vgpr1
     ; GFX9-NEXT: {{  $}}
@@ -995,7 +965,6 @@ body: |
     ; SI-NEXT: [[FCANONICALIZE:%[0-9]+]]:_(s32) = G_FCANONICALIZE [[COPY]]
     ; SI-NEXT: [[FMAXNUM_IEEE:%[0-9]+]]:_(s32) = G_FMAXNUM_IEEE [[FCANONICALIZE]], [[C]]
     ; SI-NEXT: $vgpr0 = COPY [[FMAXNUM_IEEE]](s32)
-    ;
     ; VI-LABEL: name: test_fmaxnum_with_constant_argument_s32_ieee_mode_on
     ; VI: liveins: $vgpr0
     ; VI-NEXT: {{  $}}
@@ -1004,7 +973,6 @@ body: |
     ; VI-NEXT: [[FCANONICALIZE:%[0-9]+]]:_(s32) = G_FCANONICALIZE [[COPY]]
     ; VI-NEXT: [[FMAXNUM_IEEE:%[0-9]+]]:_(s32) = G_FMAXNUM_IEEE [[FCANONICALIZE]], [[C]]
     ; VI-NEXT: $vgpr0 = COPY [[FMAXNUM_IEEE]](s32)
-    ;
     ; GFX9-LABEL: name: test_fmaxnum_with_constant_argument_s32_ieee_mode_on
     ; GFX9: liveins: $vgpr0
     ; GFX9-NEXT: {{  $}}
@@ -1052,7 +1020,6 @@ body: |
     ; SI-NEXT: [[OR:%[0-9]+]]:_(s32) = G_OR [[ZEXT]], [[SHL]]
     ; SI-NEXT: [[BITCAST1:%[0-9]+]]:_(<2 x s16>) = G_BITCAST [[OR]](s32)
     ; SI-NEXT: $vgpr0 = COPY [[BITCAST1]](<2 x s16>)
-    ;
     ; VI-LABEL: name: test_fmaxnum_with_constant_vector_argument_v2s16_ieee_mode_on
     ; VI: liveins: $vgpr0, $vgpr1
     ; VI-NEXT: {{  $}}
@@ -1075,7 +1042,6 @@ body: |
     ; VI-NEXT: [[OR:%[0-9]+]]:_(s32) = G_OR [[ZEXT]], [[SHL]]
     ; VI-NEXT: [[BITCAST1:%[0-9]+]]:_(<2 x s16>) = G_BITCAST [[OR]](s32)
     ; VI-NEXT: $vgpr0 = COPY [[BITCAST1]](<2 x s16>)
-    ;
     ; GFX9-LABEL: name: test_fmaxnum_with_constant_vector_argument_v2s16_ieee_mode_on
     ; GFX9: liveins: $vgpr0, $vgpr1
     ; GFX9-NEXT: {{  $}}

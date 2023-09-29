@@ -24,14 +24,14 @@ body:             |
     ; CHECK-NEXT: [[TRUNC4:%[0-9]+]]:_(s32) = G_TRUNC [[COPY]](s64)
     ; CHECK-NEXT: [[SEXT_INREG1:%[0-9]+]]:_(s32) = G_SEXT_INREG [[TRUNC4]], 1
     ; CHECK-NEXT: $w0 = COPY [[SEXT_INREG1]](s32)
-    ; CHECK-NEXT: [[TRUNC5:%[0-9]+]]:_(s32) = G_TRUNC [[COPY]](s64)
     ; CHECK-NEXT: [[C1:%[0-9]+]]:_(s32) = G_CONSTANT i32 255
+    ; CHECK-NEXT: [[TRUNC5:%[0-9]+]]:_(s32) = G_TRUNC [[COPY]](s64)
     ; CHECK-NEXT: [[AND1:%[0-9]+]]:_(s32) = G_AND [[TRUNC5]], [[C1]]
     ; CHECK-NEXT: $w0 = COPY [[AND1]](s32)
     ; CHECK-NEXT: [[TRUNC6:%[0-9]+]]:_(s32) = G_TRUNC [[COPY]](s64)
     ; CHECK-NEXT: $w0 = COPY [[TRUNC6]](s32)
-    ; CHECK-NEXT: [[TRUNC7:%[0-9]+]]:_(s32) = G_TRUNC [[COPY]](s64)
     ; CHECK-NEXT: [[C2:%[0-9]+]]:_(s32) = G_CONSTANT i32 1
+    ; CHECK-NEXT: [[TRUNC7:%[0-9]+]]:_(s32) = G_TRUNC [[COPY]](s64)
     ; CHECK-NEXT: [[AND2:%[0-9]+]]:_(s32) = G_AND [[TRUNC7]], [[C2]]
     ; CHECK-NEXT: $w0 = COPY [[AND2]](s32)
     ; CHECK-NEXT: [[TRUNC8:%[0-9]+]]:_(s32) = G_TRUNC [[COPY]](s64)
