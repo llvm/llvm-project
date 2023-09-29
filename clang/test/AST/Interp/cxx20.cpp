@@ -646,3 +646,57 @@ namespace ImplicitFunction {
                                     // expected-error {{not an integral constant expression}} \
                                     // expected-note {{in call to 'callMe()'}}
 }
+
+/// FIXME: Unfortunately, the similar tests in test/SemaCXX/{compare-cxx2a.cpp use member pointers,
+/// which we don't support yet.
+namespace std {
+  class strong_ordering {
+  public:
+    int n;
+    static const strong_ordering less, equal, greater;
+    constexpr bool operator==(int n) const noexcept { return this->n == n;}
+    constexpr bool operator!=(int n) const noexcept { return this->n != n;}
+  };
+  constexpr strong_ordering strong_ordering::less = {-1};
+  constexpr strong_ordering strong_ordering::equal = {0};
+  constexpr strong_ordering strong_ordering::greater = {1};
+
+  class partial_ordering {
+  public:
+    long n;
+    static const partial_ordering less, equal, greater, equivalent, unordered;
+    constexpr bool operator==(long n) const noexcept { return this->n == n;}
+    constexpr bool operator!=(long n) const noexcept { return this->n != n;}
+  };
+  constexpr partial_ordering partial_ordering::less = {-1};
+  constexpr partial_ordering partial_ordering::equal = {0};
+  constexpr partial_ordering partial_ordering::greater = {1};
+  constexpr partial_ordering partial_ordering::equivalent = {0};
+  constexpr partial_ordering partial_ordering::unordered = {-127};
+} // namespace std
+
+namespace ThreeWayCmp {
+  static_assert(1 <=> 2 == -1, "");
+  static_assert(1 <=> 1 == 0, "");
+  static_assert(2 <=> 1 == 1, "");
+  static_assert(1.0 <=> 2.f == -1, "");
+  static_assert(1.0 <=> 1.0 == 0, "");
+  static_assert(2.0 <=> 1.0 == 1, "");
+  constexpr int k = (1 <=> 1, 0); // expected-warning {{comparison result unused}} \
+                                  // ref-warning {{comparison result unused}}
+  static_assert(k== 0, "");
+
+  /// Pointers.
+  constexpr int a[] = {1,2,3};
+  constexpr int b[] = {1,2,3};
+  constexpr const int *pa1 = &a[1];
+  constexpr const int *pa2 = &a[2];
+  constexpr const int *pb1 = &b[1];
+  static_assert(pa1 <=> pb1 != 0, ""); // expected-error {{not an integral constant expression}} \
+                                       // expected-note {{has unspecified value}} \
+                                       // ref-error {{not an integral constant expression}} \
+                                       // ref-note {{has unspecified value}}
+  static_assert(pa1 <=> pa1 == 0, "");
+  static_assert(pa1 <=> pa2 == -1, "");
+  static_assert(pa2 <=> pa1 == 1, "");
+}

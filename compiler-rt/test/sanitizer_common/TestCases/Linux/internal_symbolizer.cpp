@@ -5,6 +5,7 @@
 #include <assert.h>
 #include <dlfcn.h>
 #include <link.h>
+#include <sanitizer/hwasan_interface.h>
 #include <sanitizer/msan_interface.h>
 #include <string.h>
 
@@ -17,6 +18,8 @@ bool __sanitizer_symbolize_code(const char *ModuleName, uint64_t ModuleOffset,
                                 bool SymbolizeInlineFrames);
 bool __sanitizer_symbolize_data(const char *ModuleName, uint64_t ModuleOffset,
                                 char *Buffer, int MaxLength);
+bool __sanitizer_symbolize_frame(const char *ModuleName, uint64_t ModuleOffset,
+                                 char *Buffer, int MaxLength);
 void __sanitizer_print_stack_trace();
 bool __sanitizer_symbolize_demangle(const char *Name, char *Buffer,
                                     int MaxLength);
@@ -70,9 +73,12 @@ __attribute__((noinline)) FrameInfo A<0>::RecursiveTemplateFunction(const T &) {
 }
 
 __attribute__((no_sanitize_memory)) std::pair<const char *, uint64_t>
-GetModuleAndOffset(void *address) {
+GetModuleAndOffset(const void *address) {
   Dl_info di;
   link_map *lm = nullptr;
+#if __has_feature(hwaddress_sanitizer)
+  address = __hwasan_tag_pointer(address, 0);
+#endif
   assert(
       dladdr1(address, &di, reinterpret_cast<void **>(&lm), RTLD_DL_LINKMAP));
   return {di.dli_fname, reinterpret_cast<uint64_t>(address) - lm->l_addr};
@@ -96,7 +102,7 @@ void TestInline() {
   auto frame = InlineFunction();
   fprintf(stderr, "%s: %s\n", __FUNCTION__, Symbolize(frame).c_str());
   // CHECK-LABEL: TestInline: InlineFunction()
-  // CHECK-NEXT: internal_symbolizer.cpp:[[# @LINE - 55]]
+  // CHECK-NEXT: internal_symbolizer.cpp:[[# @LINE - 58]]
   // CHECK-NEXT: TestInline()
   // CHECK-NEXT: internal_symbolizer.cpp:[[# @LINE - 5]]
 }
@@ -105,14 +111,14 @@ void TestNoInline() {
   auto frame = NoInlineFunction();
   fprintf(stderr, "%s: %s\n", __FUNCTION__, Symbolize(frame).c_str());
   // CHECK-LABEL: TestNoInline: NoInlineFunction()
-  // CHECK-NEXT: internal_symbolizer.cpp:[[# @LINE - 58]]
+  // CHECK-NEXT: internal_symbolizer.cpp:[[# @LINE - 61]]
 }
 
 void TestLongFunctionNames() {
   auto frame = A<10>().RecursiveTemplateFunction(0);
   fprintf(stderr, "%s: %s\n", __FUNCTION__, Symbolize(frame).c_str());
   // CHECK-LABEL: TestLongFunctionNames: NoInlineFunction()
-  // CHECK-NEXT: internal_symbolizer.cpp:[[# @LINE - 65]]
+  // CHECK-NEXT: internal_symbolizer.cpp:[[# @LINE - 68]]
 }
 
 std::string SymbolizeStaticVar() {
@@ -132,6 +138,33 @@ void TestData() {
   // CHECK-NEXT: internal_symbolizer.cpp:[[# @LINE - 13]]
 }
 
+__attribute__((noinline)) std::string SymbolizeLocalVars(const void *pc) {
+  auto modul_offset = GetModuleAndOffset(pc);
+  char buffer[1024] = {};
+  ScopedInSymbolizer in_symbolizer;
+  __sanitizer_symbolize_frame(modul_offset.first, modul_offset.second, buffer,
+                              std::size(buffer));
+  return buffer;
+}
+
+__attribute__((
+    noinline,
+    no_sanitize_address /* Asan merges allocas destroying variable DI */)) void
+TestFrame() {
+  volatile int var = 1;
+  void *address = GetPC();
+  fprintf(stderr, "%s: %s\n", __FUNCTION__,
+          SymbolizeLocalVars(address).c_str());
+  // CHECK-LABEL: TestFrame: TestFrame
+  // CHECK-NEXT: var
+  // CHECK-NEXT: internal_symbolizer.cpp:[[# @LINE - 6]]
+  // CHECK-NEXT: {{-?[0-9]+ +[0-9]+}}
+  // CHECK-NEXT: TestFrame
+  // CHECK-NEXT: address
+  // CHECK-NEXT: internal_symbolizer.cpp:[[# @LINE - 9]]
+  // CHECK-NEXT: {{-?[0-9]+ +[0-9]+}}
+}
+
 void TestDemangle() {
   char out[128];
   assert(!__sanitizer_symbolize_demangle("1A", out, sizeof(out)));
@@ -149,5 +182,6 @@ int main() {
   TestNoInline();
   TestLongFunctionNames();
   TestData();
+  TestFrame();
   TestDemangle();
 }

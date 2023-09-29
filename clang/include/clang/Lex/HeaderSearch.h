@@ -516,7 +516,7 @@ public:
   ///
   /// \return false if \#including the file will have no effect or true
   /// if we should include it.
-  bool ShouldEnterIncludeFile(Preprocessor &PP, const FileEntry *File,
+  bool ShouldEnterIncludeFile(Preprocessor &PP, FileEntryRef File,
                               bool isImport, bool ModulesEnabled, Module *M,
                               bool &IsFirstIncludeOfFile);
 
@@ -677,7 +677,7 @@ public:
   /// Like \ref findAllModulesForHeader, but do not attempt to infer module
   /// ownership from umbrella headers if we've not already done so.
   ArrayRef<ModuleMap::KnownHeader>
-  findResolvedModulesForHeader(const FileEntry *File) const;
+  findResolvedModulesForHeader(FileEntryRef File) const;
 
   /// Read the contents of the given module map file.
   ///

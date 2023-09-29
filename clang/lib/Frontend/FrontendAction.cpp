@@ -742,7 +742,7 @@ bool FrontendAction::BeginSourceFile(CompilerInstance &CI,
   // Set up embedding for any specified files. Do this before we load any
   // source files, including the primary module map for the compilation.
   for (const auto &F : CI.getFrontendOpts().ModulesEmbedFiles) {
-    if (auto FE = CI.getFileManager().getFile(F, /*openFile*/true))
+    if (auto FE = CI.getFileManager().getOptionalFileRef(F, /*openFile*/true))
       CI.getSourceManager().setFileIsTransient(*FE);
     else
       CI.getDiagnostics().Report(diag::err_modules_embed_file_not_found) << F;

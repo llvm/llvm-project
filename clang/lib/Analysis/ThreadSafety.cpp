@@ -1015,19 +1015,6 @@ class ThreadSafetyAnalyzer {
 
   BeforeSet *GlobalBeforeSet;
 
-  void warnIfMutexNotHeld(const FactSet &FSet, const NamedDecl *D,
-                          const Expr *Exp, AccessKind AK, Expr *MutexExp,
-                          ProtectedOperationKind POK, til::LiteralPtr *Self,
-                          SourceLocation Loc);
-  void warnIfMutexHeld(const FactSet &FSet, const NamedDecl *D, const Expr *Exp,
-                       Expr *MutexExp, til::LiteralPtr *Self,
-                       SourceLocation Loc);
-
-  void checkAccess(const FactSet &FSet, const Expr *Exp, AccessKind AK,
-                   ProtectedOperationKind POK);
-  void checkPtAccess(const FactSet &FSet, const Expr *Exp, AccessKind AK,
-                     ProtectedOperationKind POK);
-
 public:
   ThreadSafetyAnalyzer(ThreadSafetyHandler &H, BeforeSet* Bset)
       : Arena(&Bpa), SxBuilder(Arena), Handler(H), GlobalBeforeSet(Bset) {}
@@ -1068,6 +1055,19 @@ public:
   }
 
   void runAnalysis(AnalysisDeclContext &AC);
+
+  void warnIfMutexNotHeld(const FactSet &FSet, const NamedDecl *D,
+                          const Expr *Exp, AccessKind AK, Expr *MutexExp,
+                          ProtectedOperationKind POK, til::LiteralPtr *Self,
+                          SourceLocation Loc);
+  void warnIfMutexHeld(const FactSet &FSet, const NamedDecl *D, const Expr *Exp,
+                       Expr *MutexExp, til::LiteralPtr *Self,
+                       SourceLocation Loc);
+
+  void checkAccess(const FactSet &FSet, const Expr *Exp, AccessKind AK,
+                   ProtectedOperationKind POK);
+  void checkPtAccess(const FactSet &FSet, const Expr *Exp, AccessKind AK,
+                     ProtectedOperationKind POK);
 };
 
 } // namespace
@@ -1600,20 +1600,20 @@ void ThreadSafetyAnalyzer::warnIfMutexNotHeld(
     // Negative capabilities act like locks excluded
     const FactEntry *LDat = FSet.findLock(FactMan, !Cp);
     if (LDat) {
-        Handler.handleFunExcludesLock(Cp.getKind(), D->getNameAsString(),
-                                      (!Cp).toString(), Loc);
-        return;
+      Handler.handleFunExcludesLock(Cp.getKind(), D->getNameAsString(),
+                                    (!Cp).toString(), Loc);
+      return;
     }
 
     // If this does not refer to a negative capability in the same class,
     // then stop here.
     if (!inCurrentScope(Cp))
-        return;
+      return;
 
     // Otherwise the negative requirement must be propagated to the caller.
     LDat = FSet.findLock(FactMan, Cp);
     if (!LDat) {
-        Handler.handleNegativeNotHeld(D, Cp.toString(), Loc);
+      Handler.handleNegativeNotHeld(D, Cp.toString(), Loc);
     }
     return;
   }

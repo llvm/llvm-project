@@ -649,7 +649,7 @@ class SourceManager : public RefCountedBase<SourceManager> {
   /// This map allows us to merge ContentCache entries based
   /// on their FileEntry*.  All ContentCache objects will thus have unique,
   /// non-null, FileEntry pointers.
-  llvm::DenseMap<const FileEntry*, SrcMgr::ContentCache*> FileInfos;
+  llvm::DenseMap<FileEntryRef, SrcMgr::ContentCache*> FileInfos;
 
   /// True if the ContentCache for files that are overridden by other
   /// files, should report the original file name. Defaults to true.
@@ -1006,7 +1006,7 @@ public:
   OptionalFileEntryRef bypassFileContentsOverride(FileEntryRef File);
 
   /// Specify that a file is transient.
-  void setFileIsTransient(const FileEntry *SourceFile);
+  void setFileIsTransient(FileEntryRef SourceFile);
 
   /// Specify that all files that are read during this compilation are
   /// transient.
@@ -1680,12 +1680,12 @@ public:
 
   // Iterators over FileInfos.
   using fileinfo_iterator =
-      llvm::DenseMap<const FileEntry*, SrcMgr::ContentCache*>::const_iterator;
+      llvm::DenseMap<FileEntryRef, SrcMgr::ContentCache *>::const_iterator;
 
   fileinfo_iterator fileinfo_begin() const { return FileInfos.begin(); }
   fileinfo_iterator fileinfo_end() const { return FileInfos.end(); }
   bool hasFileInfo(const FileEntry *File) const {
-    return FileInfos.contains(File);
+    return FileInfos.find_as(File) != FileInfos.end();
   }
 
   /// Print statistics to stderr.

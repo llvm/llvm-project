@@ -324,6 +324,9 @@ __sanitizer_symbolize_code(const char *ModuleName, u64 ModuleOffset,
 SANITIZER_INTERFACE_ATTRIBUTE SANITIZER_WEAK_ATTRIBUTE bool
 __sanitizer_symbolize_data(const char *ModuleName, u64 ModuleOffset,
                            char *Buffer, int MaxLength);
+SANITIZER_INTERFACE_ATTRIBUTE SANITIZER_WEAK_ATTRIBUTE bool
+__sanitizer_symbolize_frame(const char *ModuleName, u64 ModuleOffset,
+                            char *Buffer, int MaxLength);
 SANITIZER_INTERFACE_ATTRIBUTE SANITIZER_WEAK_ATTRIBUTE void
 __sanitizer_symbolize_flush();
 SANITIZER_INTERFACE_ATTRIBUTE SANITIZER_WEAK_ATTRIBUTE bool
@@ -363,6 +366,16 @@ class InternalSymbolizer final : public SymbolizerTool {
       ParseSymbolizeDataOutput(buffer_, info);
       info->start += (addr - info->module_offset);  // Add the base address.
     }
+    return result;
+  }
+
+  bool SymbolizeFrame(uptr addr, FrameInfo *info) override {
+    if (&__sanitizer_symbolize_frame == nullptr)
+      return false;
+    bool result = __sanitizer_symbolize_frame(info->module, info->module_offset,
+                                              buffer_, sizeof(buffer_));
+    if (result)
+      ParseSymbolizeFrameOutput(buffer_, &info->locals);
     return result;
   }
 

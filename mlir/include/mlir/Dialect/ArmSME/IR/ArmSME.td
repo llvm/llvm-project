@@ -501,6 +501,43 @@ def MoveVectorToTileSliceOp : ArmSME_Op<"move_vector_to_tile_slice", [
   }];
 }
 
+def MoveTileSliceToVectorOp : ArmSME_Op<"move_tile_slice_to_vector", [Pure,
+    TypesMatchWith<
+      "type of 'result' matches type of 'tile' slice",
+      "tile", "result",
+      "VectorType(VectorType::Builder(::llvm::cast<mlir::VectorType>($_self)).dropDim(0))">,
+]> {
+  let summary = "Move slice of a 2-D tile to a 1-D scalable vector";
+  let description = [{
+    The tile slice to vector operation extracts a 1-D scalable slice from a 2-D
+    scalable tile at the given index. A tile slice is a 1-D vector of
+    horizontally or vertically contiguous elements within a ZA tile. Horizontal
+    tile slices are currently assumed when lowering to intrinsics.
+
+    Example 1: Extract `vector<[16]xi8>` from tile at the given index.
+    ```mlir
+    %slice = arm_sme.move_tile_slice_to_vector %tile[%tile_slice_index] : vector<[16]xi8> from vector<[16]x[16]xi8>
+    ```
+
+    Example 2: Extract `vector<[2]xf64>` from tile at the given index.
+    ```mlir
+    %slice = arm_sme.move_tile_slice_to_vector %tile[%tile_slice_index] : vector<[2]xf64> from vector<[2]x[2]xf64>
+    ```
+  }];
+
+  let arguments = (ins SMETile:$tile, Index:$tile_slice_index);
+  let results = (outs SVEVector:$result);
+
+  let extraClassDeclaration = [{
+    VectorType getSliceType() { return getResult().getType(); }
+  }];
+
+  let assemblyFormat = [{
+      $tile `[` $tile_slice_index `]` attr-dict
+      `:` type($result) `from` type($tile)
+  }];
+}
+
 //===----------------------------------------------------------------------===//
 // ArmSME Intrinsic op definitions
 //===----------------------------------------------------------------------===//

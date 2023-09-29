@@ -26865,7 +26865,8 @@ Syntax:
 Arguments:
 """"""""""
 
-The first argument is a pointer. The second argument is an integer.
+The first argument is a pointer or vector of pointers. The second argument is
+an integer or vector of integers.
 
 Overview:
 """"""""""
@@ -26880,7 +26881,7 @@ Semantics:
 
 The result of ``ptrmask(ptr, mask)`` is equivalent to
 ``getelementptr ptr, (ptrtoint(ptr) & mask) - ptrtoint(ptr)``. Both the returned
-pointer and the first argument are based on the same underlying object (for more
+pointer(s) and the first argument are based on the same underlying object (for more
 information on the *based on* terminology see
 :ref:`the pointer aliasing rules <pointeraliasing>`). If the bitwidth of the
 mask argument does not match the pointer size of the target, the mask is

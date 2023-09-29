@@ -232,7 +232,8 @@ extern MLIR_CUDA_WRAPPERS_EXPORT "C" void mgpuEventRecord(CUevent event,
   CUDA_REPORT_IF_ERROR(cuEventRecord(event, stream));
 }
 
-extern "C" void *mgpuMemAlloc(uint64_t sizeBytes, CUstream /*stream*/) {
+extern "C" void *mgpuMemAlloc(uint64_t sizeBytes, CUstream /*stream*/,
+                              bool /*isHostShared*/) {
   ScopedContext scopedContext;
   CUdeviceptr ptr = 0;
   if (sizeBytes != 0)
@@ -522,6 +523,36 @@ mgpuCreateCsr(intptr_t rows, intptr_t cols, intptr_t nnz, void *rowPos,
   CUSPARSE_REPORT_IF_ERROR(cusparseCreateCsr(&mat, rows, cols, nnz, rowPos,
                                              colIdxs, values, pTp, iTp,
                                              CUSPARSE_INDEX_BASE_ZERO, dTp))
+  return reinterpret_cast<void *>(mat);
+}
+
+extern "C" MLIR_CUDA_WRAPPERS_EXPORT void *
+mgpuCreateCsc(intptr_t rows, intptr_t cols, intptr_t nnz, void *colPos,
+              void *rowIdxs, void *values, int32_t ptp, int32_t itp,
+              int32_t dtp, CUstream /*stream*/) {
+  cusparseSpMatDescr_t mat = nullptr;
+  auto pTp = static_cast<cusparseIndexType_t>(ptp);
+  auto iTp = static_cast<cusparseIndexType_t>(itp);
+  auto dTp = static_cast<cudaDataType_t>(dtp);
+  CUSPARSE_REPORT_IF_ERROR(cusparseCreateCsc(&mat, rows, cols, nnz, colPos,
+                                             rowIdxs, values, pTp, iTp,
+                                             CUSPARSE_INDEX_BASE_ZERO, dTp))
+  return reinterpret_cast<void *>(mat);
+}
+
+extern "C" MLIR_CUDA_WRAPPERS_EXPORT void *
+mgpuCreateBsr(intptr_t brows, intptr_t bcols, intptr_t bnnz, intptr_t rBsz,
+              intptr_t cBsz, void *rowPos, void *colIdxs, void *values,
+              int32_t ptp, int32_t itp, int32_t dtp, CUstream /*stream*/) {
+  cusparseSpMatDescr_t mat = nullptr;
+#if CUSPARSE_VERSION >= 12100
+  auto pTp = static_cast<cusparseIndexType_t>(ptp);
+  auto iTp = static_cast<cusparseIndexType_t>(itp);
+  auto dTp = static_cast<cudaDataType_t>(dtp);
+  CUSPARSE_REPORT_IF_ERROR(cusparseCreateBsr(
+      &mat, brows, bcols, bnnz, rBsz, cBsz, rowPos, colIdxs, values, pTp, iTp,
+      CUSPARSE_INDEX_BASE_ZERO, dTp, CUSPARSE_ORDER_ROW))
+#endif
   return reinterpret_cast<void *>(mat);
 }
 

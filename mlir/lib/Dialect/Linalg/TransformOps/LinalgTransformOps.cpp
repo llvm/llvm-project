@@ -434,16 +434,12 @@ static LogicalResult applyTilingToAll(
     SmallVector<Operation *> opsToReplace{target};
     llvm::append_range(opsToReplace, tiledResults->fusedProducers);
     for (Operation *toReplace : opsToReplace) {
-      SmallVector<Value> replacements;
-      replacements.reserve(toReplace->getNumResults());
-      for (OpResult res : toReplace->getResults()) {
-        auto it = tiledResults->replacements.find(res);
-        if (it == tiledResults->replacements.end())
-          replacements.push_back(res);
-        else
-          replacements.push_back(it->getSecond());
+      for (OpResult res : toReplace->getResults())
+        if (auto replacement = tiledResults->replacements.lookup(res))
+          rewriter.replaceAllUsesWith(res, replacement);
+      if (toReplace->use_empty()) {
+        rewriter.eraseOp(toReplace);
       }
-      rewriter.replaceOp(toReplace, replacements);
     }
 
     // Report back the relevant handles to the transform op.

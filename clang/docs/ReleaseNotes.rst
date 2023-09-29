@@ -206,6 +206,8 @@ Improvements to Clang's diagnostics
 - Clang no longer emits irrelevant notes about unsatisfied constraint expressions
   on the left-hand side of ``||`` when the right-hand side constraint is satisfied.
   (`#54678: <https://github.com/llvm/llvm-project/issues/54678>`_).
+- Clang now prints its 'note' diagnostic in cyan instead of black, to be more compatible
+  with terminals with dark background colors. This is also more consistent with GCC.
 
 Bug Fixes in This Version
 -------------------------
@@ -264,6 +266,9 @@ Bug Fixes in This Version
   (`#64836 <https://github.com/llvm/llvm-project/issues/64836>`_)
 - Clang now allows an ``_Atomic`` qualified integer in a switch statement. Fixes
   (`#65557 <https://github.com/llvm/llvm-project/issues/65557>`_)
+- Fixes crash when trying to obtain the common sugared type of
+  `decltype(instantiation-dependent-expr)`.
+  Fixes (`#67603 <https://github.com/llvm/llvm-project/issues/67603>`_)
 
 Bug Fixes to Compiler Builtins
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -356,6 +361,18 @@ Bug Fixes to C++ Support
 - Fix crash caused by a spaceship operator returning a comparision category by
   reference. Fixes:
   (`#64162 <https://github.com/llvm/llvm-project/issues/64162>`_)
+
+- Clang no longer tries to capture non-odr-used variables that appear
+  in the enclosing expression of a lambda expression with a noexcept specifier.
+  (`#67492 <https://github.com/llvm/llvm-project/issues/67492>`_)
+
+- Fix crash when fold expression was used in the initialization of default
+  argument. Fixes:
+  (`#67395 <https://github.com/llvm/llvm-project/issues/67395>`_)
+
+- Fix crash where ill-formed code was being treated as a deduction guide and
+  we now produce a diagnostic. Fixes:
+  (`65522 <https://github.com/llvm/llvm-project/issues/65522>`_)
 
 Bug Fixes to AST Handling
 ^^^^^^^^^^^^^^^^^^^^^^^^^

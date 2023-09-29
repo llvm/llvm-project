@@ -5803,11 +5803,15 @@ TargetLowering::ConstraintWeight
 
 /// If there are multiple different constraints that we could pick for this
 /// operand (e.g. "imr") try to pick the 'best' one.
-/// This is somewhat tricky: constraints fall into four classes:
-///    Other         -> immediates and magic values
+/// This is somewhat tricky: constraints (TargetLowering::ConstraintType) fall
+/// into seven classes:
 ///    Register      -> one specific register
 ///    RegisterClass -> a group of regs
 ///    Memory        -> memory
+///    Address       -> a symbolic memory reference
+///    Immediate     -> immediate values
+///    Other         -> magic values (such as "Flag Output Operands")
+///    Unknown       -> something we don't recognize yet and can't handle
 /// Ideally, we would pick the most specific constraint possible: if we have
 /// something that fits into a register, we would pick it.  The problem here
 /// is that if we have something that could either be in a register or in
@@ -5889,9 +5893,15 @@ void TargetLowering::ComputeConstraintToUse(AsmOperandInfo &OpInfo,
     for (const unsigned E = G.size();
          BestIdx < E && (G[BestIdx].second == TargetLowering::C_Other ||
                          G[BestIdx].second == TargetLowering::C_Immediate);
-         ++BestIdx)
+         ++BestIdx) {
       if (lowerImmediateIfPossible(G[BestIdx], Op, DAG, *this))
         break;
+      // If we're out of constraints, just pick the first one.
+      if (BestIdx + 1 == E) {
+        BestIdx = 0;
+        break;
+      }
+    }
 
     OpInfo.ConstraintCode = G[BestIdx].first;
     OpInfo.ConstraintType = G[BestIdx].second;

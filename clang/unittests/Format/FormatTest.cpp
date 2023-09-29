@@ -18677,6 +18677,12 @@ TEST_F(FormatTest, AlignConsecutiveDeclarations) {
   verifyFormat("int    a(int x);\n"
                "double b();",
                Alignment);
+  verifyFormat("struct Test {\n"
+               "  Test(const Test &) = default;\n"
+               "  ~Test() = default;\n"
+               "  Test &operator=(const Test &) = default;\n"
+               "};",
+               Alignment);
   unsigned OldColumnLimit = Alignment.ColumnLimit;
   // We need to set ColumnLimit to zero, in order to stress nested alignments,
   // otherwise the function parameters will be re-flowed onto a single line.
@@ -18713,6 +18719,12 @@ TEST_F(FormatTest, AlignConsecutiveDeclarations) {
                "double b();",
                Alignment);
   Alignment.AlignConsecutiveAssignments.Enabled = true;
+  verifyFormat("struct Test {\n"
+               "  Test(const Test &)            = default;\n"
+               "  ~Test()                       = default;\n"
+               "  Test &operator=(const Test &) = default;\n"
+               "};",
+               Alignment);
   // Ensure recursive alignment is broken by function braces, so that the
   // "a = 1" does not align with subsequent assignments inside the function
   // body.
@@ -22537,10 +22549,12 @@ TEST_F(FormatTest, FormatsLambdas) {
                "  }\n"
                "}",
                Style);
-  verifyFormat("std::sort(v.begin(), v.end(),\n"
-               "          [](const auto &foo, const auto &bar) {\n"
-               "  return foo.baz < bar.baz;\n"
-               "});",
+  verifyFormat("void test() {\n"
+               "  std::sort(v.begin(), v.end(),\n"
+               "            [](const auto &foo, const auto &bar) {\n"
+               "    return foo.baz < bar.baz;\n"
+               "  });\n"
+               "};",
                Style);
   verifyFormat("void test() {\n"
                "  (\n"
@@ -22566,6 +22580,12 @@ TEST_F(FormatTest, FormatsLambdas) {
                "        xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx);            \\\n"
                "  }",
                Style);
+  verifyFormat("#define SORT(v)                                            \\\n"
+               "  std::sort(v.begin(), v.end(),                            \\\n"
+               "            [](const auto &foo, const auto &bar) {         \\\n"
+               "    return foo.baz < bar.baz;                              \\\n"
+               "  });",
+               Style);
   verifyFormat("void foo() {\n"
                "  aFunction(1, b(c(foo, bar, baz, [](d) {\n"
                "    auto f = e(d);\n"
@@ -22589,9 +22609,40 @@ TEST_F(FormatTest, FormatsLambdas) {
   verifyFormat("Namespace::Foo::Foo(LongClassName bar,\n"
                "                    AnotherLongClassName baz)\n"
                "    : baz{baz}, func{[&] {\n"
-               "  auto qux = bar;\n"
-               "  return aFunkyFunctionCall(qux);\n"
-               "}} {}",
+               "        auto qux = bar;\n"
+               "        return aFunkyFunctionCall(qux);\n"
+               "      }} {}",
+               Style);
+  verifyFormat("void foo() {\n"
+               "  class Foo {\n"
+               "  public:\n"
+               "    Foo()\n"
+               "        : qux{[](int quux) {\n"
+               "            auto tmp = quux;\n"
+               "            return tmp;\n"
+               "          }} {}\n"
+               "\n"
+               "  private:\n"
+               "    std::function<void(int quux)> qux;\n"
+               "  };\n"
+               "}",
+               Style);
+  Style.BreakConstructorInitializers = FormatStyle::BCIS_AfterColon;
+  verifyFormat("Namespace::Foo::Foo(LongClassName bar,\n"
+               "                    AnotherLongClassName baz) :\n"
+               "    baz{baz}, func{[&] {\n"
+               "      auto qux = bar;\n"
+               "      return aFunkyFunctionCall(qux);\n"
+               "    }} {}",
+               Style);
+  Style.PackConstructorInitializers = FormatStyle::PCIS_Never;
+  verifyFormat("Namespace::Foo::Foo(LongClassName bar,\n"
+               "                    AnotherLongClassName baz) :\n"
+               "    baz{baz},\n"
+               "    func{[&] {\n"
+               "      auto qux = bar;\n"
+               "      return aFunkyFunctionCall(qux);\n"
+               "    }} {}",
                Style);
   Style.AlignAfterOpenBracket = FormatStyle::BAS_AlwaysBreak;
   // FIXME: The following test should pass, but fails at the time of writing.

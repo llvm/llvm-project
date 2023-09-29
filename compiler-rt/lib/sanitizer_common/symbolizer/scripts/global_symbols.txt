@@ -59,6 +59,7 @@ __sanitizer_symbolize_code T
 __sanitizer_symbolize_data T
 __sanitizer_symbolize_demangle T
 __sanitizer_symbolize_flush T
+__sanitizer_symbolize_frame T
 __sanitizer_symbolize_set_demangle T
 __sanitizer_symbolize_set_inline_frames T
 __strdup U

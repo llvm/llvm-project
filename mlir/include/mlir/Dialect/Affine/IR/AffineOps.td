@@ -117,10 +117,11 @@ def AffineApplyOp : Affine_Op<"apply", [Pure]> {
 }
 
 def AffineForOp : Affine_Op<"for",
-    [AutomaticAllocationScope, ImplicitAffineTerminator, ConditionallySpeculatable,
+    [AttrSizedOperandSegments, AutomaticAllocationScope,
+     ImplicitAffineTerminator, ConditionallySpeculatable,
      RecursiveMemoryEffects, DeclareOpInterfaceMethods<LoopLikeOpInterface,
      ["getSingleInductionVar", "getSingleLowerBound", "getSingleStep",
-      "getSingleUpperBound"]>,
+      "getSingleUpperBound", "replaceWithAdditionalYields"]>,
      DeclareOpInterfaceMethods<RegionBranchOpInterface,
      ["getEntrySuccessorOperands"]>]> {
   let summary = "for operation";
@@ -147,7 +148,7 @@ def AffineForOp : Affine_Op<"for",
     from a lower bound to an upper bound by a stride. The stride, represented by
     `step`, is a positive constant integer which defaults to "1" if not present.
     The lower and upper bounds specify a half-open range: the range includes the
-    lower bound but does not include the upper bound.
+    lower bound but does not include the upper bound.
 
     The lower and upper bounds of a `affine.for` operation are represented as an
     application of an affine mapping to a list of SSA values passed to the map.
@@ -229,7 +230,12 @@ def AffineForOp : Affine_Op<"for",
     explicitly present. The number and types of the "affine.for" results must
     match the initial values in the `iter_args` binding and the yield operands.
   }];
-  let arguments = (ins Variadic<AnyType>);
+  let arguments = (ins Variadic<Index>:$lowerBoundOperands,
+                       Variadic<Index>:$upperBoundOperands,
+                       Variadic<AnyType>:$inits,
+                       AffineMapAttr:$lowerBoundMap,
+                       AffineMapAttr:$upperBoundMap,
+                       IndexAttr:$step);
   let results = (outs Variadic<AnyType>:$results);
   let regions = (region SizedRegion<1>:$region);
 
@@ -251,26 +257,10 @@ def AffineForOp : Affine_Op<"for",
     using BodyBuilderFn =
         function_ref<void(OpBuilder &, Location, Value, ValueRange)>;
 
-    static StringRef getStepAttrStrName() { return "step"; }
-    static StringRef getLowerBoundAttrStrName() { return "lower_bound"; }
-    static StringRef getUpperBoundAttrStrName() { return "upper_bound"; }
-
     BlockArgument getInductionVar() { return getBody()->getArgument(0); }
     Block::BlockArgListType getRegionIterArgs() {
       return getBody()->getArguments().drop_front();
     }
-    Operation::operand_range getInits() {
-      return getOperands().drop_front(getNumControlOperands());
-    }
-
-    // TODO: provide iterators for the lower and upper bound operands
-    // if the current access via getLowerBound(), getUpperBound() is too slow.
-
-    /// Returns operands for the lower bound map.
-    operand_range getLowerBoundOperands();
-
-    /// Returns operands for the upper bound map.
-    operand_range getUpperBoundOperands();
 
     /// Returns operands for the lower and upper bound maps with the operands
     /// for the lower bound map in front of those for the upper bound map.
@@ -283,20 +273,7 @@ def AffineForOp : Affine_Op<"for",
     AffineBound getUpperBound();
 
     /// Returns loop step.
-    int64_t getStep() {
-      return ::llvm::cast<IntegerAttr>(*(*this)->getInherentAttr(getStepAttrStrName())).getInt();
-    }
-
-    /// Returns affine map for the lower bound.
-    AffineMap getLowerBoundMap() { return getLowerBoundMapAttr().getValue(); }
-    AffineMapAttr getLowerBoundMapAttr() {
-      return ::llvm::cast<AffineMapAttr>(*(*this)->getInherentAttr(getLowerBoundAttrStrName()));
-    }
-    /// Returns affine map for the upper bound. The upper bound is exclusive.
-    AffineMap getUpperBoundMap() { return getUpperBoundMapAttr().getValue(); }
-    AffineMapAttr getUpperBoundMapAttr() {
-      return ::llvm::cast<AffineMapAttr>(*(*this)->getInherentAttr(getUpperBoundAttrStrName()));
-    }
+    int64_t getStepAsInt() { return getStep().getSExtValue(); }
 
     /// Set lower bound. The new bound must have the same number of operands as
     /// the current bound map. Otherwise, 'replaceForLowerBound' should be used.
@@ -305,18 +282,10 @@ def AffineForOp : Affine_Op<"for",
     /// current bound map. Otherwise, 'replaceForUpperBound' should be used.
     void setUpperBound(ValueRange operands, AffineMap map);
 
-    /// Set the lower bound map without changing operands.
-    void setLowerBoundMap(AffineMap map);
-
-    /// Set the upper bound map without changing operands.
-    void setUpperBoundMap(AffineMap map);
-
     /// Set loop step.
     void setStep(int64_t step) {
       assert(step > 0 && "step has to be a positive integer constant");
-      auto *context = getLowerBoundMap().getContext();
-      (*this)->setAttr(StringAttr::get(context, getStepAttrStrName()),
-                       IntegerAttr::get(IndexType::get(context), step));
+      setStep(APInt(/*numBits=*/64, step, /*isSigned=*/true));
     }
 
     /// Returns number of region arguments for loop-carried values.
@@ -325,7 +294,9 @@ def AffineForOp : Affine_Op<"for",
     }
 
     /// Number of operands controlling the loop: lb and ub.
-    unsigned getNumControlOperands() { return getOperation()->getNumOperands() - getNumIterOperands(); }
+    unsigned getNumControlOperands() {
+      return getOperation()->getNumOperands() - getNumIterOperands();
+    }
 
     /// Get the number of loop-carried values.
     unsigned getNumIterOperands();

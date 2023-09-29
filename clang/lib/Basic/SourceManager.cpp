@@ -324,8 +324,7 @@ SourceManager::~SourceManager() {
       ContentCacheAlloc.Deallocate(MemBufferInfos[i]);
     }
   }
-  for (llvm::DenseMap<const FileEntry*, SrcMgr::ContentCache*>::iterator
-       I = FileInfos.begin(), E = FileInfos.end(); I != E; ++I) {
+  for (auto I = FileInfos.begin(), E = FileInfos.end(); I != E; ++I) {
     if (I->second) {
       I->second->~ContentCache();
       ContentCacheAlloc.Deallocate(I->second);
@@ -702,7 +701,7 @@ void SourceManager::overrideFileContents(const FileEntry *SourceFile,
   assert(SourceFile->getSize() == NewFile.getSize() &&
          "Different sizes, use the FileManager to create a virtual file with "
          "the correct size");
-  assert(FileInfos.count(SourceFile) == 0 &&
+  assert(FileInfos.find_as(SourceFile) == FileInfos.end() &&
          "This function should be called at the initialization stage, before "
          "any parsing occurs.");
   // FileEntryRef is not default-constructible.
@@ -725,8 +724,8 @@ SourceManager::bypassFileContentsOverride(FileEntryRef File) {
   return BypassFile;
 }
 
-void SourceManager::setFileIsTransient(const FileEntry *File) {
-  getOrCreateContentCache(File->getLastRef()).IsTransient = true;
+void SourceManager::setFileIsTransient(FileEntryRef File) {
+  getOrCreateContentCache(File).IsTransient = true;
 }
 
 std::optional<StringRef>
@@ -1371,7 +1370,7 @@ unsigned SourceManager::getLineNumber(FileID FID, unsigned FilePos,
   }
 
   // If this is the first use of line information for this buffer, compute the
-  /// SourceLineCache for it on demand.
+  // SourceLineCache for it on demand.
   if (!Content->SourceLineCache) {
     std::optional<llvm::MemoryBufferRef> Buffer =
         Content->getBufferOrNone(Diag, getFileManager(), SourceLocation());

@@ -1243,9 +1243,6 @@ private:
   SDValue getPStateSM(SelectionDAG &DAG, SDValue Chain, SMEAttrs Attrs,
                       SDLoc DL, EVT VT) const;
 
-  bool isConstantUnsignedBitfieldExtractLegal(unsigned Opc, LLT Ty1,
-                                              LLT Ty2) const override;
-
   bool preferScalarizeSplat(SDNode *N) const override;
 };
 

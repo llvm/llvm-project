@@ -864,3 +864,30 @@ func.func @sub_() {
     }
     return
   }
+
+// -----
+
+// CHECK:  omp.critical.declare @help   hint(contended)
+omp.critical.declare @help hint(contended)
+
+// CHECK: llvm.func @omp_critical_() {
+func.func @omp_critical_() {
+// CHECK: %[[X_REF:.*]] = llvm.alloca %{{.*}} x i32 {bindc_name = "x", in_type = i32, operandSegmentSizes = array<i32: 0, 0>, uniq_name = "_QFomp_criticalEx"} : (i64) -> !llvm.ptr<i32>
+  %0 = fir.alloca i32 {bindc_name = "x", uniq_name = "_QFomp_criticalEx"}
+// CHECK: %[[Y_REF:.*]] = llvm.alloca %{{.*}} x i32 {bindc_name = "y", in_type = i32, operandSegmentSizes = array<i32: 0, 0>, uniq_name = "_QFomp_criticalEy"} : (i64) -> !llvm.ptr<i32>
+  %1 = fir.alloca i32 {bindc_name = "y", uniq_name = "_QFomp_criticalEy"}
+// CHECK: omp.critical(@help)
+  omp.critical(@help) {
+// CHECK: %[[X_VAL:.*]] = llvm.load %[[X_REF]] : !llvm.ptr<i32>
+    %2 = fir.load %0 : !fir.ref<i32>
+// CHECK: %[[Y_VAL:.*]] = llvm.load %[[Y_REF]] : !llvm.ptr<i32>
+    %3 = fir.load %1 : !fir.ref<i32>
+// CHECK: %[[RESULT:.*]] = llvm.add %[[X_VAL]], %[[Y_VAL]]  : i32
+    %4 = arith.addi %2, %3 : i32
+// CHECK: llvm.store %[[RESULT]], %[[X_REF]] : !llvm.ptr<i32>
+    fir.store %4 to %0 : !fir.ref<i32>
+// CHECK: omp.terminator
+    omp.terminator
+  }
+  return
+}
