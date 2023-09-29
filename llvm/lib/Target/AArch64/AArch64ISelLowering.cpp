@@ -10063,7 +10063,8 @@ getPredicateRegisterClass(PredicateConstraint Constraint, EVT VT) {
     return VT == MVT::aarch64svcount ? &AArch64::PNR_p8to15RegClass
                                      : &AArch64::PPR_p8to15RegClass;
   case PredicateConstraint::Upl:
-    return VT == MVT::aarch64svcount ? nullptr : &AArch64::PPR_3bRegClass;
+    return VT == MVT::aarch64svcount ? &AArch64::PNR_3bRegClass
+                                     : &AArch64::PPR_3bRegClass;
   case PredicateConstraint::Upa:
     return VT == MVT::aarch64svcount ? &AArch64::PNRRegClass
                                      : &AArch64::PPRRegClass;
