@@ -84,6 +84,12 @@ class Boolean final {
   Boolean truncate(unsigned TruncBits) const { return *this; }
 
   void print(llvm::raw_ostream &OS) const { OS << (V ? "true" : "false"); }
+  std::string toDiagnosticString(const ASTContext &Ctx) const {
+    std::string NameStr;
+    llvm::raw_string_ostream OS(NameStr);
+    print(OS);
+    return NameStr;
+  }
 
   static Boolean min(unsigned NumBits) { return Boolean(false); }
   static Boolean max(unsigned NumBits) { return Boolean(true); }

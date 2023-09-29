@@ -2650,6 +2650,12 @@ Instruction *InstCombinerImpl::visitAnd(BinaryOperator &I) {
       A->getType()->isIntOrIntVectorTy(1))
     return SelectInst::Create(A, Constant::getNullValue(Ty), B);
 
+  // and(zext(A), B) -> A ? (B & 1) : 0
+  if (match(&I, m_c_And(m_OneUse(m_ZExt(m_Value(A))), m_Value(B))) &&
+      A->getType()->isIntOrIntVectorTy(1))
+    return SelectInst::Create(A, Builder.CreateAnd(B, ConstantInt::get(Ty, 1)),
+                              Constant::getNullValue(Ty));
+
   // (-1 + A) & B --> A ? 0 : B where A is 0/1.
   if (match(&I, m_c_And(m_OneUse(m_Add(m_ZExtOrSelf(m_Value(A)), m_AllOnes())),
                         m_Value(B)))) {

@@ -1383,13 +1383,13 @@ void ASTWriter::WriteControlBlock(Preprocessor &PP, ASTContext &Context,
     if (auto *AdditionalModMaps =
             Map.getAdditionalModuleMapFiles(WritingModule)) {
       Record.push_back(AdditionalModMaps->size());
-      SmallVector<const FileEntry *, 1> ModMaps(AdditionalModMaps->begin(),
-                                                AdditionalModMaps->end());
-      llvm::sort(ModMaps, [](const FileEntry *A, const FileEntry *B) {
-        return A->getName() < B->getName();
+      SmallVector<FileEntryRef, 1> ModMaps(AdditionalModMaps->begin(),
+                                           AdditionalModMaps->end());
+      llvm::sort(ModMaps, [](FileEntryRef A, FileEntryRef B) {
+        return A.getName() < B.getName();
       });
-      for (const FileEntry *F : ModMaps)
-        AddPath(F->getName(), Record);
+      for (FileEntryRef F : ModMaps)
+        AddPath(F.getName(), Record);
     } else {
       Record.push_back(0);
     }
@@ -2890,7 +2890,7 @@ void ASTWriter::WriteSubmodules(Module *WritingModule) {
                                          Mod->InferExportWildcard,
                                          Mod->ConfigMacrosExhaustive,
                                          Mod->ModuleMapIsPrivate,
-                                         Mod->NamedModuleHasNoInit};
+                                         Mod->NamedModuleHasInit};
       Stream.EmitRecordWithBlob(DefinitionAbbrev, Record, Mod->Name);
     }
 
@@ -7257,6 +7257,8 @@ void OMPClauseWriter::VisitOMPXAttributeClause(OMPXAttributeClause *C) {
   Record.AddSourceLocation(C->getLParenLoc());
   Record.AddSourceLocation(C->getEndLoc());
 }
+
+void OMPClauseWriter::VisitOMPXBareClause(OMPXBareClause *C) {}
 
 void ASTRecordWriter::writeOMPTraitInfo(const OMPTraitInfo *TI) {
   writeUInt32(TI->Sets.size());

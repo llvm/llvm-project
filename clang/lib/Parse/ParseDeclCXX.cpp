@@ -4466,6 +4466,14 @@ bool Parser::ParseCXX11AttributeArgs(
   if (!Attrs.empty() &&
       IsBuiltInOrStandardCXX11Attribute(AttrName, ScopeName)) {
     ParsedAttr &Attr = Attrs.back();
+
+    // Ignore attributes that don't exist for the target.
+    if (!Attr.existsInTarget(getTargetInfo())) {
+      Diag(LParenLoc, diag::warn_unknown_attribute_ignored) << AttrName;
+      Attr.setInvalid(true);
+      return true;
+    }
+
     // If the attribute is a standard or built-in attribute and we are
     // parsing an argument list, we need to determine whether this attribute
     // was allowed to have an argument list (such as [[deprecated]]), and how

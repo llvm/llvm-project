@@ -10,13 +10,12 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "llvm/ExecutionEngine/Orc/PerfSupportPlugin.h"
+#include "llvm/ExecutionEngine/Orc/Debugging/PerfSupportPlugin.h"
 
-#include "llvm/ExecutionEngine/Orc/Shared/WrapperFunctionUtils.h"
-
-#include "llvm/DebugInfo/DWARF/DWARFContext.h"
 #include "llvm/ExecutionEngine/JITLink/x86_64.h"
+#include "llvm/ExecutionEngine/Orc/Debugging/DebugInfoSupport.h"
 #include "llvm/ExecutionEngine/Orc/LookupAndRecordAddrs.h"
+#include "llvm/ExecutionEngine/Orc/Shared/WrapperFunctionUtils.h"
 
 #define DEBUG_TYPE "orc"
 
@@ -114,11 +113,7 @@ getCodeLoadRecord(const Symbol &Sym, std::atomic<uint64_t> &CodeIndex) {
 }
 
 static std::optional<PerfJITDebugInfoRecord>
-getDebugInfoRecord(const Symbol &Sym, DWARFContext *DC) {
-  if (!DC) {
-    LLVM_DEBUG(dbgs() << "No debug info available\n");
-    return std::nullopt;
-  }
+getDebugInfoRecord(const Symbol &Sym, DWARFContext &DC) {
   auto &Section = Sym.getBlock().getSection();
   auto Addr = Sym.getAddress();
   auto Size = Sym.getSize();
@@ -127,7 +122,7 @@ getDebugInfoRecord(const Symbol &Sym, DWARFContext *DC) {
                     << " at address " << Addr.getValue() << " with size "
                     << Size << "\n"
                     << "Section ordinal: " << Section.getOrdinal() << "\n");
-  auto LInfo = DC->getLineInfoForAddressRange(
+  auto LInfo = DC.getLineInfoForAddressRange(
       SAddr, Size, DILineInfoSpecifier::FileLineInfoKind::AbsoluteFilePath);
   if (LInfo.empty()) {
     // No line info available
@@ -218,16 +213,29 @@ getUnwindingRecord(LinkGraph &G) {
 }
 
 static PerfJITRecordBatch getRecords(ExecutionSession &ES, LinkGraph &G,
-                                     DWARFContext *DC,
                                      std::atomic<uint64_t> &CodeIndex,
-                                     bool EmitUnwindInfo) {
+                                     bool EmitDebugInfo, bool EmitUnwindInfo) {
+  std::unique_ptr<DWARFContext> DC;
+  StringMap<std::unique_ptr<MemoryBuffer>> DCBacking;
+  if (EmitDebugInfo) {
+    auto EDC = createDWARFContext(G);
+    if (!EDC) {
+      ES.reportError(EDC.takeError());
+      EmitDebugInfo = false;
+    } else {
+      DC = std::move(EDC->first);
+      DCBacking = std::move(EDC->second);
+    }
+  }
   PerfJITRecordBatch Batch;
   for (auto Sym : G.defined_symbols()) {
     if (!Sym->hasName() || !Sym->isCallable())
       continue;
-    auto DebugInfo = getDebugInfoRecord(*Sym, DC);
-    if (DebugInfo)
-      Batch.DebugInfoRecords.push_back(std::move(*DebugInfo));
+    if (EmitDebugInfo) {
+      auto DebugInfo = getDebugInfoRecord(*Sym, *DC);
+      if (DebugInfo)
+        Batch.DebugInfoRecords.push_back(std::move(*DebugInfo));
+    }
     Batch.CodeLoadRecords.push_back(getCodeLoadRecord(*Sym, CodeIndex));
   }
   if (EmitUnwindInfo) {
@@ -248,11 +256,11 @@ PerfSupportPlugin::PerfSupportPlugin(ExecutorProcessControl &EPC,
                                      ExecutorAddr RegisterPerfStartAddr,
                                      ExecutorAddr RegisterPerfEndAddr,
                                      ExecutorAddr RegisterPerfImplAddr,
-                                     bool EmitUnwindInfo)
+                                     bool EmitDebugInfo, bool EmitUnwindInfo)
     : EPC(EPC), RegisterPerfStartAddr(RegisterPerfStartAddr),
       RegisterPerfEndAddr(RegisterPerfEndAddr),
       RegisterPerfImplAddr(RegisterPerfImplAddr), CodeIndex(0),
-      EmitUnwindInfo(EmitUnwindInfo) {
+      EmitDebugInfo(EmitDebugInfo), EmitUnwindInfo(EmitUnwindInfo) {
   cantFail(EPC.callSPSWrapper<void()>(RegisterPerfStartAddr));
 }
 PerfSupportPlugin::~PerfSupportPlugin() {
@@ -263,10 +271,8 @@ void PerfSupportPlugin::modifyPassConfig(MaterializationResponsibility &MR,
                                          LinkGraph &G,
                                          PassConfiguration &Config) {
   Config.PostFixupPasses.push_back([this](LinkGraph &G) {
-    // TODO get an actual DWARFContext for line info
-    DWARFContext *DWC = nullptr;
-    auto Batch = getRecords(EPC.getExecutionSession(), G, DWC, CodeIndex,
-                            EmitUnwindInfo);
+    auto Batch = getRecords(EPC.getExecutionSession(), G, CodeIndex,
+                            EmitDebugInfo, EmitUnwindInfo);
     G.allocActions().push_back(
         {cantFail(shared::WrapperFunctionCall::Create<
                   shared::SPSArgList<shared::SPSPerfJITRecordBatch>>(
@@ -278,7 +284,7 @@ void PerfSupportPlugin::modifyPassConfig(MaterializationResponsibility &MR,
 
 Expected<std::unique_ptr<PerfSupportPlugin>>
 PerfSupportPlugin::Create(ExecutorProcessControl &EPC, JITDylib &JD,
-                          bool EmitUnwindInfo) {
+                          bool EmitDebugInfo, bool EmitUnwindInfo) {
   if (!EPC.getTargetTriple().isOSBinFormatELF()) {
     return make_error<StringError>(
         "Perf support only available for ELF LinkGraphs!",
@@ -293,5 +299,5 @@ PerfSupportPlugin::Create(ExecutorProcessControl &EPC, JITDylib &JD,
            {ES.intern(RegisterPerfImplSymbolName), &ImplAddr}}))
     return std::move(Err);
   return std::make_unique<PerfSupportPlugin>(EPC, StartAddr, EndAddr, ImplAddr,
-                                             EmitUnwindInfo);
+                                             EmitDebugInfo, EmitUnwindInfo);
 }

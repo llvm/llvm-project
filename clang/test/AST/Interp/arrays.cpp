@@ -350,3 +350,22 @@ namespace ZeroInit {
   static_assert(b.f[0] == 0.0, "");
   static_assert(b.f[1] == 0.0, "");
 }
+
+namespace ArrayInitLoop {
+  /// FIXME: The ArrayInitLoop for the decomposition initializer in g() has
+  /// f(n) as its CommonExpr. We need to evaluate that exactly once and not
+  /// N times as we do right now.
+  struct X {
+      int arr[3];
+  };
+  constexpr X f(int &r) {
+      return {++r, ++r, ++r};
+  }
+  constexpr int g() {
+      int n = 0;
+      auto [a, b, c] = f(n).arr;
+      return a + b + c;
+  }
+  static_assert(g() == 6); // expected-error {{failed}} \
+                           // expected-note {{15 == 6}}
+}

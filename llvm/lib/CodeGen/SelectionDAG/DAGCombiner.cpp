@@ -6299,6 +6299,33 @@ static SDValue foldAndOrOfSETCC(SDNode *LogicOp, SelectionDAG &DAG) {
   return SDValue();
 }
 
+// Combine `(select c, (X & 1), 0)` -> `(and (zext c), X)`.
+// We canonicalize to the `select` form in the middle end, but the `and` form
+// gets better codegen and all tested targets (arm, x86, riscv)
+static SDValue combineSelectAsExtAnd(SDValue Cond, SDValue T, SDValue F,
+                                     const SDLoc &DL, SelectionDAG &DAG) {
+  const TargetLowering &TLI = DAG.getTargetLoweringInfo();
+  if (!isNullConstant(F))
+    return SDValue();
+
+  EVT CondVT = Cond.getValueType();
+  if (TLI.getBooleanContents(CondVT) !=
+      TargetLoweringBase::ZeroOrOneBooleanContent)
+    return SDValue();
+
+  if (T.getOpcode() != ISD::AND)
+    return SDValue();
+
+  if (!isOneConstant(T.getOperand(1)))
+    return SDValue();
+
+  EVT OpVT = T.getValueType();
+
+  SDValue CondMask =
+      OpVT == CondVT ? Cond : DAG.getBoolExtOrTrunc(Cond, DL, OpVT, CondVT);
+  return DAG.getNode(ISD::AND, DL, OpVT, CondMask, T.getOperand(0));
+}
+
 /// This contains all DAGCombine rules which reduce two values combined by
 /// an And operation to a single value. This makes them reusable in the context
 /// of visitSELECT(). Rules involving constants are not included as
@@ -11609,6 +11636,9 @@ SDValue DAGCombiner::visitSELECT(SDNode *N) {
     if (SDValue BinOp = foldSelectOfBinops(N))
       return BinOp;
 
+  if (SDValue R = combineSelectAsExtAnd(N0, N1, N2, DL, DAG))
+    return R;
+
   return SDValue();
 }
 
@@ -15466,7 +15496,7 @@ SDValue DAGCombiner::visitFADDForFMACombine(SDNode *N) {
         DAG.ReplaceAllUsesOfValueWith(FMul, CDE);
         // Replacing the inner FMul could cause the outer FMA to be simplified
         // away.
-        return FMA.getOpcode() == ISD::DELETED_NODE ? SDValue() : FMA;
+        return FMA.getOpcode() == ISD::DELETED_NODE ? SDValue(N, 0) : FMA;
       }
 
       TmpFMA = TmpFMA->getOperand(2);
@@ -16024,7 +16054,8 @@ SDValue DAGCombiner::visitVP_FADD(SDNode *N) {
 
   // FADD -> FMA combines:
   if (SDValue Fused = visitFADDForFMACombine<VPMatchContext>(N)) {
-    AddToWorklist(Fused.getNode());
+    if (Fused.getOpcode() != ISD::DELETED_NODE)
+      AddToWorklist(Fused.getNode());
     return Fused;
   }
   return SDValue();
@@ -16216,7 +16247,8 @@ SDValue DAGCombiner::visitFADD(SDNode *N) {
 
   // FADD -> FMA combines:
   if (SDValue Fused = visitFADDForFMACombine<EmptyMatchContext>(N)) {
-    AddToWorklist(Fused.getNode());
+    if (Fused.getOpcode() != ISD::DELETED_NODE)
+      AddToWorklist(Fused.getNode());
     return Fused;
   }
   return SDValue();
@@ -24119,7 +24151,7 @@ static SDValue foldExtractSubvectorFromShuffleVector(SDNode *N,
 
   // Profitability check: only deal with extractions from the first subvector
   // unless the mask becomes an identity mask.
-  if (!ShuffleVectorInst::isIdentityMask(NewMask, NewMask.size()) ||
+  if (!ShuffleVectorInst::isIdentityMask(NewMask) ||
       any_of(NewMask, [](int M) { return M < 0; }))
     for (auto &DemandedSubvector : DemandedSubvectors)
       if (DemandedSubvector.second != 0)

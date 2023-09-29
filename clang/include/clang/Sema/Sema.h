@@ -11053,12 +11053,13 @@ public:
   /// Create an CUDALaunchBoundsAttr attribute.
   CUDALaunchBoundsAttr *CreateLaunchBoundsAttr(const AttributeCommonInfo &CI,
                                                Expr *MaxThreads,
-                                               Expr *MinBlocks);
+                                               Expr *MinBlocks,
+                                               Expr *MaxBlocks);
 
   /// AddLaunchBoundsAttr - Adds a launch_bounds attribute to a particular
   /// declaration.
   void AddLaunchBoundsAttr(Decl *D, const AttributeCommonInfo &CI,
-                           Expr *MaxThreads, Expr *MinBlocks);
+                           Expr *MaxThreads, Expr *MinBlocks, Expr *MaxBlocks);
 
   /// AddModeAttr - Adds a mode attribute to a particular declaration.
   void AddModeAttr(Decl *D, const AttributeCommonInfo &CI, IdentifierInfo *Name,
@@ -12446,6 +12447,10 @@ public:
                                          SourceLocation StartLoc,
                                          SourceLocation LParenLoc,
                                          SourceLocation EndLoc);
+
+  /// Called on a well-formed 'ompx_bare' clause.
+  OMPClause *ActOnOpenMPXBareClause(SourceLocation StartLoc,
+                                    SourceLocation EndLoc);
 
   /// The kind of conversion being performed.
   enum CheckedConversionKind {
