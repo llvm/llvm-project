@@ -380,6 +380,13 @@ static void genPrivateLikeInitRegion(mlir::OpBuilder &builder, RecipeOp recipe,
         retVal = declareOp.getBase();
       }
     }
+  } else if (auto boxTy = mlir::dyn_cast_or_null<fir::BaseBoxType>(ty)) {
+    if (!mlir::isa<fir::SequenceType>(boxTy.getEleTy()))
+      TODO(loc, "Unsupported boxed type in OpenACC privatization");
+    fir::FirOpBuilder firBuilder{builder, recipe.getOperation()};
+    hlfir::Entity source = hlfir::Entity{retVal};
+    auto [temp, cleanup] = hlfir::createTempFromMold(loc, firBuilder, source);
+    retVal = temp;
   }
   builder.create<mlir::acc::YieldOp>(loc, retVal);
 }
