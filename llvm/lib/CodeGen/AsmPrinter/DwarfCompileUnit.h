@@ -234,9 +234,14 @@ public:
   /// DIE to represent this concrete inlined copy of the function.
   DIE *constructInlinedScopeDIE(LexicalScope *Scope, DIE &ParentScopeDIE);
 
-  /// Get if available or create a new DW_TAG_lexical_block for the given
-  /// LexicalScope and attach DW_AT_low_pc/DW_AT_high_pc labels.
-  DIE *getOrCreateLexicalBlockDIE(LexicalScope *Scope, DIE &ParentDIE);
+  /// Construct new DW_TAG_lexical_block for this scope and
+  /// attach DW_AT_low_pc/DW_AT_high_pc labels.
+  DIE *constructLexicalScopeDIE(LexicalScope *Scope);
+
+  /// Get a DIE for the given DILexicalBlock.
+  /// Note that this function assumes that the DIE has been already created
+  /// and it's an error, if it hasn't.
+  DIE *getLexicalBlockDIE(const DILexicalBlock *LB);
 
   /// Construct a DIE for the given DbgVariable.
   DIE *constructVariableDIE(DbgVariable &DV, bool Abstract = false);
@@ -254,11 +259,6 @@ public:
   /// Construct a DIE for a given scope.
   /// This instance of 'getOrCreateContextDIE()' can handle DILocalScope.
   DIE *getOrCreateContextDIE(const DIScope *Ty) override;
-
-  /// Get DW_TAG_lexical_block for the given DILexicalBlock if available,
-  /// or the most close parent DIE, if no correspoding DW_TAG_lexical_block
-  /// exists.
-  DIE *getLocalContextDIE(const DILexicalBlock *LB);
 
   /// Construct a DIE for this subprogram scope.
   DIE &constructSubprogramScopeDIE(const DISubprogram *Sub,
