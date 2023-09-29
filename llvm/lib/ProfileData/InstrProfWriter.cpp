@@ -634,19 +634,22 @@ Error InstrProfWriter::writeImpl(ProfOStream &OS) {
       OS.writeByte(0);
   }
 
-  // if version >= the version with vtable profile metadata
-  // Intentionally put vtable names before temporal profile section.
+  // if version >= the version with vtable profile metadata.
   uint64_t VTableNamesSectionStart = 0;
   if (IndexedInstrProf::ProfVersion::CurrentVersion >= 11) {
     VTableNamesSectionStart = OS.tell();
 
-    // Reserve space for vtable record table offset.
+    // Reserve space for vtable records offset.
     OS.write(0ULL);
 
     OnDiskChainedHashTableGenerator<llvm::InstrProfRecordVTableTrait>
         VTableNamesGenerator;
     for (const auto &kv : VTableNames) {
-      // printf("InstrProfWriter.cpp key is %s\n", kv.getKey().str().c_str());
+      // Use a char '0' as value placeholder, only keys (vtable names)
+      // are used.
+      // FIXME: It might make sense to have a OnDiskChainedHashSetGenerator if
+      // there are more use cases. Use a hash table for now, with one unused
+      // 'char' per entry.
       VTableNamesGenerator.insert(kv.getKey(), '0');
     }
 
@@ -656,9 +659,6 @@ Error InstrProfWriter::writeImpl(ProfOStream &OS) {
     uint64_t VTableNamesTableOffset =
         VTableNamesGenerator.Emit(OS.OS, *VTableNamesWriter);
 
-    // printf("InstrProfWriter.cpp:VTableNamesSectionStart is %"PRIu64"\n",
-    // VTableNamesSectionStart); printf("\tVTableNamesTableOffset is
-    // %"PRIu64"\n", VTableNamesTableOffset);
     PatchItem PatchItems[] = {
         {VTableNamesSectionStart, &VTableNamesTableOffset, 1}};
     OS.patch(PatchItems, 1);

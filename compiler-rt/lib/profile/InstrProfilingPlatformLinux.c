@@ -76,10 +76,10 @@ COMPILER_RT_VISIBILITY const char *__llvm_profile_begin_names(void) {
 COMPILER_RT_VISIBILITY const char *__llvm_profile_end_names(void) {
   return &PROF_NAME_STOP;
 }
-COMPILER_RT_VISIBILITY const char *__llvm_profile_begin_vnames(void) {
+COMPILER_RT_VISIBILITY const char *__llvm_profile_begin_vtabnames(void) {
   return &PROF_VNAME_START;
 }
-COMPILER_RT_VISIBILITY const char *__llvm_profile_end_vnames(void) {
+COMPILER_RT_VISIBILITY const char *__llvm_profile_end_vtabnames(void) {
   return &PROF_VNAME_STOP;
 }
 COMPILER_RT_VISIBILITY VTableProfData *__llvm_profile_begin_vtables(void) {

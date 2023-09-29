@@ -45,6 +45,8 @@ catch.dispatch:                                   ; preds = %entry
 catch:                                            ; preds = %catch.dispatch
   %tmp1 = catchpad within %tmp [ptr null, i32 64, ptr null]
   %vtable = load ptr, ptr %b, align 8
+  %0 = tail call i1 @llvm.type.test(ptr %vtable, metadata !"_ZTS4base")
+  tail call void @llvm.assume(i1 %0)
   %tmp3 = load ptr, ptr %vtable, align 8
   call void %tmp3(ptr %b) [ "funclet"(token %tmp1) ]
   catchret from %tmp1 to label %try.cont
@@ -64,3 +66,5 @@ try.cont:                                         ; preds = %catch, %entry
 
 declare dso_local void @"?may_throw@@YAXH@Z"(i32)
 declare dso_local i32 @__CxxFrameHandler3(...)
+declare i1 @llvm.type.test(ptr, metadata)
+declare void @llvm.assume(i1 noundef)
