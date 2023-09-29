@@ -187,7 +187,7 @@ public:
       ++ElementIdx;
       if (ElementIdx % PageSize == 0) {
         while (ElementIdx < PV->Size &&
-               PV->PageToDataPtrs[ElementIdx / PageSize] == nullptr)
+               !PV->PageToDataPtrs[ElementIdx / PageSize])
           ElementIdx += PageSize;
         if (ElementIdx > PV->Size)
           ElementIdx = PV->Size;
