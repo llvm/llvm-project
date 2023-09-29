@@ -9,8 +9,8 @@ define amdgpu_kernel void @partial_no_vgprs_last_sgpr_spill(ptr addrspace(1) %ou
 ; GCN:       ; %bb.0:
 ; GCN-NEXT:    s_add_u32 s0, s0, s15
 ; GCN-NEXT:    s_addc_u32 s1, s1, 0
-; GCN-NEXT:    ; implicit-def: $vgpr0
-; GCN-NEXT:    ; implicit-def: $vgpr0
+; GCN-NEXT:    ; implicit-def: $vgpr0 : SGPR spill to VGPR lane
+; GCN-NEXT:    ; implicit-def: $vgpr0 : SGPR spill to VGPR lane
 ; GCN-NEXT:    s_load_dword s4, s[8:9], 0x2
 ; GCN-NEXT:    ;;#ASMSTART
 ; GCN-NEXT:    ;;#ASMEND
