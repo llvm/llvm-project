@@ -68,7 +68,7 @@ parseTransformModuleFromFile(MLIRContext *context,
   if (!memoryBuffer) {
     return emitError(FileLineColLoc::get(
                StringAttr::get(context, transformFileName), 0, 0))
-           << "failed to parse transform file";
+           << "failed to open transform file: " << errorMessage;
   }
   // Tell sourceMgr about this buffer, the parser will pick it up.
   llvm::SourceMgr sourceMgr;
