@@ -1,5 +1,5 @@
 // RUN: %clang_cc1 -fexperimental-new-constant-interpreter -verify %s
-// RUN: %clang_cc1 -verify=ref -DCUR_INTERP %s
+// RUN: %clang_cc1 -verify=ref %s
 
 constexpr int m = 3;
 constexpr const int *foo[][5] = {
@@ -355,7 +355,6 @@ namespace ArrayInitLoop {
   /// FIXME: The ArrayInitLoop for the decomposition initializer in g() has
   /// f(n) as its CommonExpr. We need to evaluate that exactly once and not
   /// N times as we do right now.
-#ifndef CUR_INTERP
   struct X {
       int arr[3];
   };
@@ -369,5 +368,4 @@ namespace ArrayInitLoop {
   }
   static_assert(g() == 6); // expected-error {{failed}} \
                            // expected-note {{15 == 6}}
-#endif
 }

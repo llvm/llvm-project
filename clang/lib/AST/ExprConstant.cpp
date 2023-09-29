@@ -10969,6 +10969,16 @@ bool ArrayExprEvaluator::VisitArrayInitLoopExpr(const ArrayInitLoopExpr *E) {
 
   bool Success = true;
   for (EvalInfo::ArrayInitLoopIndex Index(Info); Index != Elements; ++Index) {
+    // C++ [class.temporary]/5
+    // There are four contexts in which temporaries are destroyed at a different
+    // point than the end of the full-expression. [...] The second context is
+    // when a copy constructor is called to copy an element of an array while
+    // the entire array is copied [...]. In either case, if the constructor has
+    // one or more default arguments, the destruction of every temporary created
+    // in a default argument is sequenced before the construction of the next
+    // array element, if any.
+    FullExpressionRAII Scope(Info);
+
     if (!EvaluateInPlace(Result.getArrayInitializedElt(Index),
                          Info, Subobject, E->getSubExpr()) ||
         !HandleLValueArrayAdjustment(Info, E, Subobject,
@@ -10977,6 +10987,9 @@ bool ArrayExprEvaluator::VisitArrayInitLoopExpr(const ArrayInitLoopExpr *E) {
         return false;
       Success = false;
     }
+
+    // Make sure we run the destructors too.
+    Scope.destroy();
   }
 
   return Success;

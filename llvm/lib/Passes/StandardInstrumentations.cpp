@@ -295,7 +295,8 @@ void unwrapAndPrint(raw_ostream &OS, Any IR) {
 bool isIgnored(StringRef PassID) {
   return isSpecialPass(PassID,
                        {"PassManager", "PassAdaptor", "AnalysisManagerProxy",
-                        "DevirtSCCRepeatedPass", "ModuleInlinerWrapperPass"});
+                        "DevirtSCCRepeatedPass", "ModuleInlinerWrapperPass",
+                        "VerifierPass", "PrintModulePass"});
 }
 
 std::string makeHTMLReady(StringRef SR) {
