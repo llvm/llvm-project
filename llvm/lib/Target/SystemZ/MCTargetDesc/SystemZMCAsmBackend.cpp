@@ -106,10 +106,9 @@ static uint64_t extractBitsForFixup(MCFixupKind Kind, uint64_t Value,
 
 namespace {
 class SystemZMCAsmBackend : public MCAsmBackend {
-  uint8_t OSABI;
 public:
-  SystemZMCAsmBackend(uint8_t osABI)
-      : MCAsmBackend(support::big), OSABI(osABI) {}
+  SystemZMCAsmBackend()
+      : MCAsmBackend(support::big) {}
 
   // Override MCAsmBackend
   unsigned getNumFixupKinds() const override {
@@ -130,10 +129,6 @@ public:
   }
   bool writeNopData(raw_ostream &OS, uint64_t Count,
                     const MCSubtargetInfo *STI) const override;
-  std::unique_ptr<MCObjectTargetWriter>
-  createObjectTargetWriter() const override {
-    return createSystemZObjectWriter(OSABI);
-  }
 };
 } // end anonymous namespace
 
@@ -208,11 +203,39 @@ bool SystemZMCAsmBackend::writeNopData(raw_ostream &OS, uint64_t Count,
   return true;
 }
 
+namespace {
+class ELFSystemZAsmBackend : public SystemZMCAsmBackend {
+  uint8_t OSABI;
+
+public:
+  ELFSystemZAsmBackend(uint8_t OsABI) : SystemZMCAsmBackend(), OSABI(OsABI){};
+
+  std::unique_ptr<MCObjectTargetWriter>
+  createObjectTargetWriter() const override {
+    return createSystemZELFObjectWriter(OSABI);
+  }
+};
+
+class GOFFSystemZAsmBackend : public SystemZMCAsmBackend {
+public:
+  GOFFSystemZAsmBackend() : SystemZMCAsmBackend(){};
+
+  std::unique_ptr<MCObjectTargetWriter>
+  createObjectTargetWriter() const override {
+    return createSystemZGOFFObjectWriter();
+  }
+};
+} // namespace
+
 MCAsmBackend *llvm::createSystemZMCAsmBackend(const Target &T,
                                               const MCSubtargetInfo &STI,
                                               const MCRegisterInfo &MRI,
                                               const MCTargetOptions &Options) {
+  if (STI.getTargetTriple().isOSzOS()) {
+    return new GOFFSystemZAsmBackend();
+  }
+
   uint8_t OSABI =
       MCELFObjectTargetWriter::getOSABI(STI.getTargetTriple().getOS());
-  return new SystemZMCAsmBackend(OSABI);
+  return new ELFSystemZAsmBackend(OSABI);
 }

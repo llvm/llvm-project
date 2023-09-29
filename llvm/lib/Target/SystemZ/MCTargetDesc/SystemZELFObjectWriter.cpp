@@ -1,4 +1,4 @@
-//===-- SystemZMCObjectWriter.cpp - SystemZ ELF writer --------------------===//
+//===-- SystemZELFObjectWriter.cpp - SystemZ ELF writer -------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -23,10 +23,10 @@ using namespace llvm;
 
 namespace {
 
-class SystemZObjectWriter : public MCELFObjectTargetWriter {
+class SystemZELFObjectWriter : public MCELFObjectTargetWriter {
 public:
-  SystemZObjectWriter(uint8_t OSABI);
-  ~SystemZObjectWriter() override = default;
+  SystemZELFObjectWriter(uint8_t OSABI);
+  ~SystemZELFObjectWriter() override = default;
 
 protected:
   // Override MCELFObjectTargetWriter.
@@ -36,9 +36,9 @@ protected:
 
 } // end anonymous namespace
 
-SystemZObjectWriter::SystemZObjectWriter(uint8_t OSABI)
-  : MCELFObjectTargetWriter(/*Is64Bit_=*/true, OSABI, ELF::EM_S390,
-                            /*HasRelocationAddend_=*/ true) {}
+SystemZELFObjectWriter::SystemZELFObjectWriter(uint8_t OSABI)
+    : MCELFObjectTargetWriter(/*Is64Bit_=*/true, OSABI, ELF::EM_S390,
+                              /*HasRelocationAddend_=*/true) {}
 
 // Return the relocation type for an absolute value of MCFixupKind Kind.
 static unsigned getAbsoluteReloc(MCContext &Ctx, SMLoc Loc, unsigned Kind) {
@@ -146,10 +146,10 @@ static unsigned getPLTReloc(MCContext &Ctx, SMLoc Loc, unsigned Kind) {
   return 0;
 }
 
-unsigned SystemZObjectWriter::getRelocType(MCContext &Ctx,
-                                           const MCValue &Target,
-                                           const MCFixup &Fixup,
-                                           bool IsPCRel) const {
+unsigned SystemZELFObjectWriter::getRelocType(MCContext &Ctx,
+                                              const MCValue &Target,
+                                              const MCFixup &Fixup,
+                                              bool IsPCRel) const {
   SMLoc Loc = Fixup.getLoc();
   unsigned Kind = Fixup.getKind();
   if (Kind >= FirstLiteralRelocationKind)
@@ -199,6 +199,6 @@ unsigned SystemZObjectWriter::getRelocType(MCContext &Ctx,
 }
 
 std::unique_ptr<MCObjectTargetWriter>
-llvm::createSystemZObjectWriter(uint8_t OSABI) {
-  return std::make_unique<SystemZObjectWriter>(OSABI);
+llvm::createSystemZELFObjectWriter(uint8_t OSABI) {
+  return std::make_unique<SystemZELFObjectWriter>(OSABI);
 }
