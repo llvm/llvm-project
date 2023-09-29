@@ -1,5 +1,5 @@
 // RUN: %clang_cc1 -fexperimental-new-constant-interpreter -verify %s
-// RUN: %clang_cc1 -verify=ref %s
+// RUN: %clang_cc1 -verify=ref -DCUR_INTERP %s
 
 constexpr int m = 3;
 constexpr const int *foo[][5] = {
@@ -349,4 +349,25 @@ namespace ZeroInit {
   constexpr B b = {};
   static_assert(b.f[0] == 0.0, "");
   static_assert(b.f[1] == 0.0, "");
+}
+
+namespace ArrayInitLoop {
+  /// FIXME: The ArrayInitLoop for the decomposition initializer in g() has
+  /// f(n) as its CommonExpr. We need to evaluate that exactly once and not
+  /// N times as we do right now.
+#ifndef CUR_INTERP
+  struct X {
+      int arr[3];
+  };
+  constexpr X f(int &r) {
+      return {++r, ++r, ++r};
+  }
+  constexpr int g() {
+      int n = 0;
+      auto [a, b, c] = f(n).arr;
+      return a + b + c;
+  }
+  static_assert(g() == 6); // expected-error {{failed}} \
+                           // expected-note {{15 == 6}}
+#endif
 }
