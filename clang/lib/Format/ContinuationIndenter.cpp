@@ -1955,7 +1955,8 @@ void ContinuationIndenter::moveStatePastScopeCloser(LineState &State) {
 
 void ContinuationIndenter::moveStateToNewBlock(LineState &State) {
   if (Style.LambdaBodyIndentation == FormatStyle::LBI_OuterScope &&
-      State.NextToken->is(TT_LambdaLBrace)) {
+      State.NextToken->is(TT_LambdaLBrace) &&
+      !State.Line->MightBeFunctionDecl) {
     State.Stack.back().NestedBlockIndent = State.FirstIndent;
   }
   unsigned NestedBlockIndent = State.Stack.back().NestedBlockIndent;

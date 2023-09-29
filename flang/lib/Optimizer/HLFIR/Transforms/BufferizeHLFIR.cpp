@@ -102,67 +102,6 @@ static mlir::Value getBufferizedExprMustFreeFlag(mlir::Value bufferizedExpr) {
 }
 
 static std::pair<hlfir::Entity, mlir::Value>
-createTempFromMold(mlir::Location loc, fir::FirOpBuilder &builder,
-                   hlfir::Entity mold) {
-  llvm::SmallVector<mlir::Value> lenParams;
-  hlfir::genLengthParameters(loc, builder, mold, lenParams);
-  llvm::StringRef tmpName{".tmp"};
-  mlir::Value alloc;
-  mlir::Value isHeapAlloc;
-  mlir::Value shape{};
-  fir::FortranVariableFlagsAttr declAttrs;
-
-  if (mold.isPolymorphic()) {
-    // Create unallocated polymorphic temporary using the dynamic type
-    // of the mold. The static type of the temporary matches
-    // the static type of the mold, but then the dynamic type
-    // of the mold is applied to the temporary's descriptor.
-
-    if (mold.isArray())
-      hlfir::genShape(loc, builder, mold);
-
-    // Create polymorphic allocatable box on the stack.
-    mlir::Type boxHeapType = fir::HeapType::get(fir::unwrapRefType(
-        mlir::cast<fir::BaseBoxType>(mold.getType()).getEleTy()));
-    // The box must be initialized, because AllocatableApplyMold
-    // may read its contents (e.g. for checking whether it is allocated).
-    alloc = fir::factory::genNullBoxStorage(builder, loc,
-                                            fir::ClassType::get(boxHeapType));
-    // The temporary is unallocated even after AllocatableApplyMold below.
-    // If the temporary is used as assignment LHS it will be automatically
-    // allocated on the heap, as long as we use Assign family
-    // runtime functions. So set MustFree to true.
-    isHeapAlloc = builder.createBool(loc, true);
-    declAttrs = fir::FortranVariableFlagsAttr::get(
-        builder.getContext(), fir::FortranVariableFlagsEnum::allocatable);
-  } else if (mold.isArray()) {
-    mlir::Type sequenceType =
-        hlfir::getFortranElementOrSequenceType(mold.getType());
-    shape = hlfir::genShape(loc, builder, mold);
-    auto extents = hlfir::getIndexExtents(loc, builder, shape);
-    alloc = builder.createHeapTemporary(loc, sequenceType, tmpName, extents,
-                                        lenParams);
-    isHeapAlloc = builder.createBool(loc, true);
-  } else {
-    alloc = builder.createTemporary(loc, mold.getFortranElementType(), tmpName,
-                                    /*shape=*/std::nullopt, lenParams);
-    isHeapAlloc = builder.createBool(loc, false);
-  }
-  auto declareOp = builder.create<hlfir::DeclareOp>(loc, alloc, tmpName, shape,
-                                                    lenParams, declAttrs);
-  if (mold.isPolymorphic()) {
-    int rank = mold.getRank();
-    // TODO: should probably read rank from the mold.
-    if (rank < 0)
-      TODO(loc, "create temporary for assumed rank polymorphic");
-    fir::runtime::genAllocatableApplyMold(builder, loc, alloc,
-                                          mold.getFirBase(), rank);
-  }
-
-  return {hlfir::Entity{declareOp.getBase()}, isHeapAlloc};
-}
-
-static std::pair<hlfir::Entity, mlir::Value>
 createArrayTemp(mlir::Location loc, fir::FirOpBuilder &builder,
                 mlir::Type exprType, mlir::Value shape,
                 mlir::ValueRange extents, mlir::ValueRange lenParams,
@@ -239,7 +178,7 @@ struct AsExprOpConversion : public mlir::OpConversionPattern<hlfir::AsExprOp> {
     }
     // Otherwise, create a copy in a new buffer.
     hlfir::Entity source = hlfir::Entity{adaptor.getVar()};
-    auto [temp, cleanup] = createTempFromMold(loc, builder, source);
+    auto [temp, cleanup] = hlfir::createTempFromMold(loc, builder, source);
     builder.create<hlfir::AssignOp>(loc, source, temp, temp.isAllocatable(),
                                     /*keep_lhs_length_if_realloc=*/false,
                                     /*temporary_lhs=*/true);
@@ -596,7 +535,7 @@ struct AssociateOpConversion
     // non-trivial value with more than one use. We will have to make a copy and
     // use that
     hlfir::Entity source = hlfir::Entity{bufferizedExpr};
-    auto [temp, cleanup] = createTempFromMold(loc, builder, source);
+    auto [temp, cleanup] = hlfir::createTempFromMold(loc, builder, source);
     builder.create<hlfir::AssignOp>(loc, source, temp, temp.isAllocatable(),
                                     /*keep_lhs_length_if_realloc=*/false,
                                     /*temporary_lhs=*/true);

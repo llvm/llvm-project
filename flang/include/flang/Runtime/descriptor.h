@@ -180,12 +180,16 @@ public:
       const SubscriptValue *extent = nullptr,
       ISO::CFI_attribute_t attribute = CFI_attribute_other);
 
-  // CUDA_TODO: Clang does not support unique_ptr on device.
+  // To create a descriptor for a derived type the caller
+  // must provide non-null dt argument.
+  // The addendum argument is only used for testing purposes,
+  // and it may force a descriptor with an addendum while
+  // dt may be null.
   static RT_API_ATTRS OwningPtr<Descriptor> Create(TypeCode t,
       std::size_t elementBytes, void *p = nullptr, int rank = maxRank,
       const SubscriptValue *extent = nullptr,
       ISO::CFI_attribute_t attribute = CFI_attribute_other,
-      int derivedTypeLenParameters = 0);
+      bool addendum = false, const typeInfo::DerivedType *dt = nullptr);
   static RT_API_ATTRS OwningPtr<Descriptor> Create(TypeCategory, int kind,
       void *p = nullptr, int rank = maxRank,
       const SubscriptValue *extent = nullptr,

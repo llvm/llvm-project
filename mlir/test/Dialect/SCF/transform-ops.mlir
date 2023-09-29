@@ -87,16 +87,18 @@ transform.sequence failures(propagate) {
 // CHECK-LABEL: @loop_peel_op
 func.func @loop_peel_op() {
   // CHECK: %[[C0:.+]] = arith.constant 0
-  // CHECK: %[[C42:.+]] = arith.constant 42
+  // CHECK: %[[C41:.+]] = arith.constant 41
   // CHECK: %[[C5:.+]] = arith.constant 5
   // CHECK: %[[C40:.+]] = arith.constant 40
   // CHECK: scf.for %{{.+}} = %[[C0]] to %[[C40]] step %[[C5]]
   // CHECK:   arith.addi
-  // CHECK: scf.for %{{.+}} = %[[C40]] to %[[C42]] step %[[C5]]
+  // CHECK: scf.for %{{.+}} = %[[C40]] to %[[C41]] step %[[C5]]
   // CHECK:   arith.addi
   %0 = arith.constant 0 : index
-  %1 = arith.constant 42 : index
+  %1 = arith.constant 41 : index
   %2 = arith.constant 5 : index
+  // expected-remark @below {{main loop}}
+  // expected-remark @below {{remainder loop}}
   scf.for %i = %0 to %1 step %2 {
     arith.addi %i, %i : index
   }
@@ -107,7 +109,10 @@ transform.sequence failures(propagate) {
 ^bb1(%arg1: !transform.any_op):
   %0 = transform.structured.match ops{["arith.addi"]} in %arg1 : (!transform.any_op) -> !transform.any_op
   %1 = transform.loop.get_parent_for %0 : (!transform.any_op) -> !transform.op<"scf.for">
-  transform.loop.peel %1 : (!transform.op<"scf.for">) -> !transform.any_op
+  %main_loop, %remainder = transform.loop.peel %1 : (!transform.op<"scf.for">) -> (!transform.op<"scf.for">, !transform.op<"scf.for">)
+  // Make sure 
+  transform.test_print_remark_at_operand %main_loop, "main loop" : !transform.op<"scf.for">
+  transform.test_print_remark_at_operand %remainder, "remainder loop" : !transform.op<"scf.for">
 }
 
 // -----
