@@ -70,6 +70,8 @@ exit:                                           ; preds = %for.body
   ret i32 %spec.select
 }
 
+; Without loop guard, the maximum constant trip count that can be vectorized is
+; the signed maximum value of reduction type.
 define i32 @select_fcmp_max_valid_const_ub(ptr %a) {
 ; CHECK-LABEL: define i32 @select_fcmp_max_valid_const_ub
 ; CHECK-NOT:   vector.body:
@@ -193,6 +195,8 @@ exit:                                             ; preds = %for.body
   ret i32 %spec.select
 }
 
+; Forbidding vectorization of the FindLastIV pattern involving a truncated
+; induction variable in the absence of any loop guard.
 define i32 @not_vectorized_select_iv_icmp_no_guard(ptr %a, ptr %b, i32 %start, i32 %n) {
 ; CHECK-LABEL: define i32 @not_vectorized_select_iv_icmp_no_guard
 ; CHECK-NOT:   vector.body:
@@ -219,6 +223,10 @@ exit:                                             ; preds = %for.body
   ret i32 %cond
 }
 
+; Without loop guard, when the constant trip count exceeds the maximum signed
+; value of the reduction type, truncation may cause overflow. Therefore,
+; vectorizer is unable to guarantee that the induction variable is monotonic
+; increasing.
 define i32 @not_vectorized_select_fcmp_invalid_const_ub(ptr %a) {
 ; CHECK-LABEL: define i32 @not_vectorized_select_fcmp_invalid_const_ub
 ; CHECK-NOT:   vector.body:
@@ -242,6 +250,9 @@ exit:                                            ; preds = %for.body
   ret i32 %spec.select
 }
 
+; Even with loop guard protection, if the destination type of the truncation
+; instruction is smaller than the trip count type before extension, overflow
+; could still occur.
 define i16 @not_vectorized_select_iv_icmp_overflow_unwidened_tripcount(ptr %a, ptr %b, i16 %start, i32 %n) {
 ; CHECK-LABEL: define i16 @not_vectorized_select_iv_icmp_overflow_unwidened_tripcount
 ; CHECK-NOT:   vector.body:
