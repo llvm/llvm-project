@@ -1,5 +1,4 @@
-//===- llvm/ADT/PagedVector.h - 'Lazyly allocated' vectors --------*- C++
-//-*-===//
+//===- llvm/ADT/PagedVector.h - 'Lazily allocated' vectors --*- C++ -*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
