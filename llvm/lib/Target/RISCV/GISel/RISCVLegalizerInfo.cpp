@@ -145,10 +145,6 @@ RISCVLegalizerInfo::RISCVLegalizerInfo(const RISCVSubtarget &ST) {
         .legalFor({XLenLLT})
         .lower();
     // clang-format on
-
-    getActionDefinitionsBuilder({G_SMULO, G_UMULO})
-        .minScalar(0, XLenLLT)
-        .lower();
   } else {
     getActionDefinitionsBuilder(G_MUL)
         .libcallFor({XLenLLT, DoubleXLenLLT})
@@ -156,11 +152,11 @@ RISCVLegalizerInfo::RISCVLegalizerInfo(const RISCVSubtarget &ST) {
         .clampScalar(0, XLenLLT, DoubleXLenLLT);
 
     getActionDefinitionsBuilder({G_SMULH, G_UMULH}).lowerFor({XLenLLT});
-
-    getActionDefinitionsBuilder({G_SMULO, G_UMULO})
-        .minScalar(0, XLenLLT)
-        .lower();
   }
+
+  getActionDefinitionsBuilder({G_SMULO, G_UMULO})
+      .minScalar(0, XLenLLT)
+      .lower();
 
   if (ST.hasStdExtM()) {
     getActionDefinitionsBuilder({G_UDIV, G_SDIV, G_UREM, G_SREM})
