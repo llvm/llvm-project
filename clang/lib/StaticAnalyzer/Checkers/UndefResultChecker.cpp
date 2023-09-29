@@ -115,59 +115,9 @@ void UndefResultChecker::checkPostStmt(const BinaryOperator *B,
         OS << " due to array index out of bounds";
     } else {
       // Neither operand was undefined, but the result is undefined.
-      if ((B->getOpcode() == BinaryOperatorKind::BO_Shl ||
-           B->getOpcode() == BinaryOperatorKind::BO_Shr) &&
-          C.isNegative(B->getRHS())) {
-        OS << "The result of the "
-           << ((B->getOpcode() == BinaryOperatorKind::BO_Shl) ? "left"
-                                                              : "right")
-           << " shift is undefined because the right operand is negative";
-        Ex = B->getRHS();
-      } else if ((B->getOpcode() == BinaryOperatorKind::BO_Shl ||
-                  B->getOpcode() == BinaryOperatorKind::BO_Shr) &&
-                 isShiftOverflow(B, C)) {
-
-        OS << "The result of the "
-           << ((B->getOpcode() == BinaryOperatorKind::BO_Shl) ? "left"
-                                                              : "right")
-           << " shift is undefined due to shifting by ";
-        Ex = B->getRHS();
-
-        SValBuilder &SB = C.getSValBuilder();
-        const llvm::APSInt *I =
-            SB.getKnownValue(C.getState(), C.getSVal(B->getRHS()));
-        if (!I)
-          OS << "a value that is";
-        else if (I->isUnsigned())
-          OS << '\'' << I->getZExtValue() << "\', which is";
-        else
-          OS << '\'' << I->getSExtValue() << "\', which is";
-
-        OS << " greater or equal to the width of type '"
-           << B->getLHS()->getType() << "'.";
-      } else if (B->getOpcode() == BinaryOperatorKind::BO_Shl &&
-                 C.isNegative(B->getLHS())) {
-        OS << "The result of the left shift is undefined because the left "
-              "operand is negative";
-        Ex = B->getLHS();
-      } else if (B->getOpcode() == BinaryOperatorKind::BO_Shl &&
-                 isLeftShiftResultUnrepresentable(B, C)) {
-        ProgramStateRef State = C.getState();
-        SValBuilder &SB = C.getSValBuilder();
-        const llvm::APSInt *LHS =
-            SB.getKnownValue(State, C.getSVal(B->getLHS()));
-        const llvm::APSInt *RHS =
-            SB.getKnownValue(State, C.getSVal(B->getRHS()));
-        OS << "The result of the left shift is undefined due to shifting \'"
-           << LHS->getSExtValue() << "\' by \'" << RHS->getZExtValue()
-           << "\', which is unrepresentable in the unsigned version of "
-           << "the return type \'" << B->getLHS()->getType() << "\'";
-        Ex = B->getLHS();
-      } else {
-        OS << "The result of the '"
-           << BinaryOperator::getOpcodeStr(B->getOpcode())
-           << "' expression is undefined";
-      }
+      OS << "The result of the '"
+         << BinaryOperator::getOpcodeStr(B->getOpcode())
+         << "' expression is undefined";
     }
     auto report = std::make_unique<PathSensitiveBugReport>(*BT, OS.str(), N);
     if (Ex) {
