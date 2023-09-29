@@ -59,10 +59,10 @@ enum TypeKind {
   UnimplementedType = 255, // YKFIXME: Will eventually be deleted.
 };
 
-string valueToString(Value *V) {
+template <class T> string toString(T *X) {
   string S;
   raw_string_ostream SS(S);
-  V->print(SS);
+  X->print(SS);
   return S;
 }
 
@@ -163,7 +163,7 @@ public:
   void serialiseUnimplementedOperand(Value *V) {
     OutStreamer.emitInt8(OperandKind::String);
     OutStreamer.emitInt8('?');
-    serialiseString(valueToString(V));
+    serialiseString(toString(V));
   }
 
   void serialiseOperand(Instruction *Parent, Value *V) {
@@ -209,7 +209,7 @@ public:
     // num_operands:
     OutStreamer.emitInt32(1);
     // problem instruction:
-    serialiseStringOperand(valueToString(I).data());
+    serialiseStringOperand(toString(I).data());
   }
 
   void serialiseBlock(BasicBlock &BB) {
@@ -238,6 +238,7 @@ public:
       OutStreamer.emitInt32(ITy->getBitWidth());
     } else {
       OutStreamer.emitInt8(TypeKind::UnimplementedType);
+      serialiseString(toString(Ty));
     }
   }
 
