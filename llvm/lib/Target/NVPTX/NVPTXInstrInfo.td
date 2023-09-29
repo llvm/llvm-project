@@ -1486,23 +1486,24 @@ defm OR  : BITWISE<"or", or>;
 defm AND : BITWISE<"and", and>;
 defm XOR : BITWISE<"xor", xor>;
 
-// Lower logical v2i16 ops as bitwise ops on b32.
-def: Pat<(or (v2i16 Int32Regs:$a), (v2i16 Int32Regs:$b)),
-         (ORb32rr Int32Regs:$a, Int32Regs:$b)>;
-def: Pat<(xor (v2i16 Int32Regs:$a), (v2i16 Int32Regs:$b)),
-         (XORb32rr Int32Regs:$a, Int32Regs:$b)>;
-def: Pat<(and (v2i16 Int32Regs:$a), (v2i16 Int32Regs:$b)),
-         (ANDb32rr Int32Regs:$a, Int32Regs:$b)>;
+// Lower logical v2i16/v4i8 ops as bitwise ops on b32.
+foreach vt = [v2i16, v4i8] in {
+  def: Pat<(or (vt Int32Regs:$a), (vt Int32Regs:$b)),
+           (ORb32rr Int32Regs:$a, Int32Regs:$b)>;
+  def: Pat<(xor (vt Int32Regs:$a), (vt Int32Regs:$b)),
+           (XORb32rr Int32Regs:$a, Int32Regs:$b)>;
+  def: Pat<(and (vt Int32Regs:$a), (vt Int32Regs:$b)),
+           (ANDb32rr Int32Regs:$a, Int32Regs:$b)>;
 
-// The constants get legalized into a bitcast from i32, so that's what we need
-// to match here.
-def: Pat<(or Int32Regs:$a, (v2i16 (bitconvert (i32 imm:$b)))),
-         (ORb32ri Int32Regs:$a, imm:$b)>;
-def: Pat<(xor Int32Regs:$a, (v2i16 (bitconvert (i32 imm:$b)))),
-         (XORb32ri Int32Regs:$a, imm:$b)>;
-def: Pat<(and Int32Regs:$a, (v2i16 (bitconvert (i32 imm:$b)))),
-         (ANDb32ri Int32Regs:$a, imm:$b)>;
-
+  // The constants get legalized into a bitcast from i32, so that's what we need
+  // to match here.
+  def: Pat<(or Int32Regs:$a, (vt (bitconvert (i32 imm:$b)))),
+           (ORb32ri Int32Regs:$a, imm:$b)>;
+  def: Pat<(xor Int32Regs:$a, (vt (bitconvert (i32 imm:$b)))),
+           (XORb32ri Int32Regs:$a, imm:$b)>;
+  def: Pat<(and Int32Regs:$a, (vt (bitconvert (i32 imm:$b)))),
+           (ANDb32ri Int32Regs:$a, imm:$b)>;
+}
 
 def NOT1  : NVPTXInst<(outs Int1Regs:$dst), (ins Int1Regs:$src),
                       "not.pred \t$dst, $src;",
@@ -2682,7 +2683,7 @@ foreach vt = [f16, bf16] in {
   def: Pat<(vt (ProxyReg  vt:$src)), (ProxyRegI16 Int16Regs:$src)>;
 }
 
-foreach vt = [v2f16, v2bf16, v2i16] in {
+foreach vt = [v2f16, v2bf16, v2i16, v4i8] in {
   def: Pat<(vt (ProxyReg  vt:$src)), (ProxyRegI32 Int32Regs:$src)>;
 }
 
@@ -2995,8 +2996,8 @@ def: Pat<(i16 (bitconvert (vt Int16Regs:$a))),
          (ProxyRegI16 Int16Regs:$a)>;
 }
 
-foreach ta = [v2f16, v2bf16, v2i16, i32] in {
-  foreach tb = [v2f16, v2bf16, v2i16, i32] in {
+foreach ta = [v2f16, v2bf16, v2i16, v4i8, i32] in {
+  foreach tb = [v2f16, v2bf16, v2i16, v4i8, i32] in {
     if !ne(ta, tb) then {
       def: Pat<(ta (bitconvert (tb Int32Regs:$a))),
              (ProxyRegI32 Int32Regs:$a)>;
@@ -3292,6 +3293,10 @@ let hasSideEffects = false in {
                              (ins Int16Regs:$s1, Int16Regs:$s2,
                                   Int16Regs:$s3, Int16Regs:$s4),
                              "mov.b64 \t$d, {{$s1, $s2, $s3, $s4}};", []>;
+  def V4I8toI32  : NVPTXInst<(outs Int32Regs:$d),
+                             (ins Int16Regs:$s1, Int16Regs:$s2,
+                                  Int16Regs:$s3, Int16Regs:$s4),
+                             "mov.b32 \t$d, {{$s1, $s2, $s3, $s4}};", []>;
   def V2I16toI32 : NVPTXInst<(outs Int32Regs:$d),
                              (ins Int16Regs:$s1, Int16Regs:$s2),
                              "mov.b32 \t$d, {{$s1, $s2}};", []>;
@@ -3307,6 +3312,10 @@ let hasSideEffects = false in {
                                    Int16Regs:$d3, Int16Regs:$d4),
                              (ins Int64Regs:$s),
                              "mov.b64 \t{{$d1, $d2, $d3, $d4}}, $s;", []>;
+  def I32toV4I8  : NVPTXInst<(outs Int16Regs:$d1, Int16Regs:$d2,
+                                   Int16Regs:$d3, Int16Regs:$d4),
+                             (ins Int32Regs:$s),
+                             "mov.b32 \t{{$d1, $d2, $d3, $d4}}, $s;", []>;
   def I32toV2I16 : NVPTXInst<(outs Int16Regs:$d1, Int16Regs:$d2),
                              (ins Int32Regs:$s),
                              "mov.b32 \t{{$d1, $d2}}, $s;", []>;
@@ -3354,6 +3363,9 @@ def : Pat<(v2bf16 (build_vector (bf16 Int16Regs:$a), (bf16 Int16Regs:$b))),
           (V2I16toI32 Int16Regs:$a, Int16Regs:$b)>;
 def : Pat<(v2i16 (build_vector (i16 Int16Regs:$a), (i16 Int16Regs:$b))),
           (V2I16toI32 Int16Regs:$a, Int16Regs:$b)>;
+def : Pat<(v4i8 (build_vector (i16 Int16Regs:$a), (i16 Int16Regs:$b),
+                              (i16 Int16Regs:$c), (i16 Int16Regs:$d))),
+          (V4I8toI32 Int16Regs:$a, Int16Regs:$b, Int16Regs:$c, Int16Regs:$d)>;
 
 // Count leading zeros
 let hasSideEffects = false in {

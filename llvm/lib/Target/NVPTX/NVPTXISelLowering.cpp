@@ -221,6 +221,11 @@ static void ComputePTXValueVTs(const TargetLowering &TLI, const DataLayout &DL,
           llvm_unreachable("Unexpected type");
         }
         NumElts /= 2;
+      } else if (EltVT.getSimpleVT() == MVT::i8 &&
+                 (NumElts % 4 == 0 || NumElts == 3)) {
+        // v*i8 are formally lowered as v4i8
+        EltVT = MVT::v4i8;
+        NumElts = (NumElts + 3) / 4;
       }
       for (unsigned j = 0; j != NumElts; ++j) {
         ValueVTs.push_back(EltVT);
@@ -458,6 +463,7 @@ NVPTXTargetLowering::NVPTXTargetLowering(const NVPTXTargetMachine &TM,
   addRegisterClass(MVT::i1, &NVPTX::Int1RegsRegClass);
   addRegisterClass(MVT::i16, &NVPTX::Int16RegsRegClass);
   addRegisterClass(MVT::v2i16, &NVPTX::Int32RegsRegClass);
+  addRegisterClass(MVT::v4i8, &NVPTX::Int32RegsRegClass);
   addRegisterClass(MVT::i32, &NVPTX::Int32RegsRegClass);
   addRegisterClass(MVT::i64, &NVPTX::Int64RegsRegClass);
   addRegisterClass(MVT::f32, &NVPTX::Float32RegsRegClass);
@@ -2631,7 +2637,7 @@ SDValue NVPTXTargetLowering::LowerSTORE(SDValue Op, SelectionDAG &DAG) const {
     return expandUnalignedStore(Store, DAG);
 
   // v2f16, v2bf16 and v2i16 don't need special handling.
-  if (Isv2x16VT(VT))
+  if (Isv2x16VT(VT) || VT == MVT::v4i8)
     return SDValue();
 
   if (VT.isVector())
@@ -2903,7 +2909,7 @@ SDValue NVPTXTargetLowering::LowerFormalArguments(
           EVT LoadVT = EltVT;
           if (EltVT == MVT::i1)
             LoadVT = MVT::i8;
-          else if (Isv2x16VT(EltVT))
+          else if (Isv2x16VT(EltVT) || EltVT == MVT::v4i8)
             // getLoad needs a vector type, but it can't handle
             // vectors which contain v2f16 or v2bf16 elements. So we must load
             // using i32 here and then bitcast back.
@@ -2929,7 +2935,7 @@ SDValue NVPTXTargetLowering::LowerFormalArguments(
             if (EltVT == MVT::i1)
               Elt = DAG.getNode(ISD::TRUNCATE, dl, MVT::i1, Elt);
             // v2f16 was loaded as an i32. Now we must bitcast it back.
-            else if (Isv2x16VT(EltVT))
+            else if (EltVT != LoadVT)
               Elt = DAG.getNode(ISD::BITCAST, dl, EltVT, Elt);
 
             // If a promoted integer type is used, truncate down to the original
@@ -5256,9 +5262,9 @@ static SDValue PerformEXTRACTCombine(SDNode *N,
   SDValue Vector = N->getOperand(0);
   EVT VectorVT = Vector.getValueType();
   if (Vector->getOpcode() == ISD::LOAD && VectorVT.isSimple() &&
-      IsPTXVectorType(VectorVT.getSimpleVT()))
+      IsPTXVectorType(VectorVT.getSimpleVT()) && VectorVT != MVT::v4i8)
     return SDValue(); // Native vector loads already combine nicely w/
-                      // extract_vector_elt.
+                      // extract_vector_elt, except for v4i8.
   // Don't mess with singletons or v2*16 types, we already handle them OK.
   if (VectorVT.getVectorNumElements() == 1 || Isv2x16VT(VectorVT))
     return SDValue();
@@ -5289,6 +5295,10 @@ static SDValue PerformEXTRACTCombine(SDNode *N,
   // If element has non-integer type, bitcast it back to the expected type.
   if (EltVT != EltIVT)
     Result = DCI.DAG.getNode(ISD::BITCAST, DL, EltVT, Result);
+  // Past legalizer, we may need to extent i8 -> i16 to match the register type.
+  if (EltVT != N->getValueType(0))
+    Result = DCI.DAG.getNode(ISD::ANY_EXTEND, DL, N->getValueType(0), Result);
+
   return Result;
 }
 
