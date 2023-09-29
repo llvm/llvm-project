@@ -18677,6 +18677,12 @@ TEST_F(FormatTest, AlignConsecutiveDeclarations) {
   verifyFormat("int    a(int x);\n"
                "double b();",
                Alignment);
+  verifyFormat("struct Test {\n"
+               "  Test(const Test &) = default;\n"
+               "  ~Test() = default;\n"
+               "  Test &operator=(const Test &) = default;\n"
+               "};",
+               Alignment);
   unsigned OldColumnLimit = Alignment.ColumnLimit;
   // We need to set ColumnLimit to zero, in order to stress nested alignments,
   // otherwise the function parameters will be re-flowed onto a single line.
@@ -18713,6 +18719,12 @@ TEST_F(FormatTest, AlignConsecutiveDeclarations) {
                "double b();",
                Alignment);
   Alignment.AlignConsecutiveAssignments.Enabled = true;
+  verifyFormat("struct Test {\n"
+               "  Test(const Test &)            = default;\n"
+               "  ~Test()                       = default;\n"
+               "  Test &operator=(const Test &) = default;\n"
+               "};",
+               Alignment);
   // Ensure recursive alignment is broken by function braces, so that the
   // "a = 1" does not align with subsequent assignments inside the function
   // body.
