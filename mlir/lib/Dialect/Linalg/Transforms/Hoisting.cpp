@@ -151,7 +151,6 @@ void mlir::linalg::hoistRedundantVectorTransfers(func::FuncOp func) {
           transferRead.getPermutationMap() != transferWrite.getPermutationMap())
         return WalkResult::advance();
 
-
       auto *source = transferRead.getSource().getDefiningOp();
       if (source && isa_and_nonnull<ViewLikeOpInterface>(source))
         return WalkResult::advance();
