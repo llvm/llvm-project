@@ -58,10 +58,10 @@ OptionalParseResult Parser::parseOptionalType(Type &type) {
 ///   type ::= function-type
 ///          | non-function-type
 ///
-Type Parser::parseType() {
+Type Parser::parseType(StringRef aliasDefName) {
   if (getToken().is(Token::l_paren))
     return parseFunctionType();
-  return parseNonFunctionType();
+  return parseNonFunctionType(aliasDefName);
 }
 
 /// Parse a function result type.
@@ -130,6 +130,10 @@ Type Parser::parseComplexType() {
   if (!elementType ||
       parseToken(Token::greater, "expected '>' in complex type"))
     return nullptr;
+
+  if (syntaxOnly())
+    return state.syntaxOnlyType;
+
   if (!isa<FloatType>(elementType) && !isa<IntegerType>(elementType))
     return emitError(elementTypeLoc, "invalid element type for complex"),
            nullptr;
@@ -149,6 +153,9 @@ Type Parser::parseFunctionType() {
       parseToken(Token::arrow, "expected '->' in function type") ||
       parseFunctionResultTypes(results))
     return nullptr;
+
+  if (syntaxOnly())
+    return state.syntaxOnlyType;
 
   return builder.getFunctionType(arguments, results);
 }
@@ -195,9 +202,10 @@ Type Parser::parseMemRefType() {
   if (!elementType)
     return nullptr;
 
-  // Check that memref is formed from allowed types.
-  if (!BaseMemRefType::isValidElementType(elementType))
-    return emitError(typeLoc, "invalid memref element type"), nullptr;
+  if (!syntaxOnly()) { // Check that memref is formed from allowed types.
+    if (!BaseMemRefType::isValidElementType(elementType))
+      return emitError(typeLoc, "invalid memref element type"), nullptr;
+  }
 
   MemRefLayoutAttrInterface layout;
   Attribute memorySpace;
@@ -207,6 +215,9 @@ Type Parser::parseMemRefType() {
     Attribute attr = parseAttribute();
     if (!attr)
       return failure();
+
+    if (syntaxOnly())
+      return success();
 
     if (isa<MemRefLayoutAttrInterface>(attr)) {
       layout = cast<MemRefLayoutAttrInterface>(attr);
@@ -235,6 +246,9 @@ Type Parser::parseMemRefType() {
     }
   }
 
+  if (syntaxOnly())
+    return state.syntaxOnlyType;
+
   if (isUnranked)
     return getChecked<UnrankedMemRefType>(loc, elementType, memorySpace);
 
@@ -259,7 +273,7 @@ Type Parser::parseMemRefType() {
 ///   float-type ::= `f16` | `bf16` | `f32` | `f64` | `f80` | `f128`
 ///   none-type ::= `none`
 ///
-Type Parser::parseNonFunctionType() {
+Type Parser::parseNonFunctionType(StringRef aliasDefName) {
   switch (getToken().getKind()) {
   default:
     return (emitWrongTokenError("expected non-function type"), nullptr);
@@ -342,7 +356,7 @@ Type Parser::parseNonFunctionType() {
 
   // extended type
   case Token::exclamation_identifier:
-    return parseExtendedType();
+    return parseExtendedType(aliasDefName);
 
   // Handle completion of a dialect type.
   case Token::code_complete:
@@ -441,7 +455,7 @@ Type Parser::parseTupleType() {
 /// vector-dim-list := (static-dim-list `x`)? (`[` static-dim-list `]` `x`)?
 /// static-dim-list ::= decimal-literal (`x` decimal-literal)*
 ///
-VectorType Parser::parseVectorType() {
+Type Parser::parseVectorType() {
   consumeToken(Token::kw_vector);
 
   if (parseToken(Token::less, "expected '<' in vector type"))
@@ -461,6 +475,9 @@ VectorType Parser::parseVectorType() {
   auto elementType = parseType();
   if (!elementType || parseToken(Token::greater, "expected '>' in vector type"))
     return nullptr;
+
+  if (syntaxOnly())
+    return state.syntaxOnlyType;
 
   if (!VectorType::isValidElementType(elementType))
     return emitError(typeLoc, "vector elements must be int/index/float type"),

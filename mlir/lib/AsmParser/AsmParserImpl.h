@@ -570,8 +570,9 @@ public:
     return parser.parseXInDimensionList();
   }
 
-  LogicalResult pushCyclicParsing(const void *opaquePointer) override {
-    return success(parser.getState().cyclicParsingStack.insert(opaquePointer));
+  LogicalResult
+  pushCyclicParsing(PointerUnion<Attribute, Type> attrOrType) override {
+    return success(parser.getState().cyclicParsingStack.insert(attrOrType));
   }
 
   void popCyclicParsing() override {

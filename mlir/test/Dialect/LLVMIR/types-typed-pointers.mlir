@@ -106,7 +106,7 @@ func.func @ptr_elem_interface(%arg0: !llvm.ptr<!test.smpla>) {
 !baz = i64
 !qux = !llvm.struct<(!baz)>
 
-!rec = !llvm.struct<"a", (ptr<struct<"a">>)>
+!rec = !llvm.struct<"a", (ptr<!rec>)>
 
 // CHECK: aliases
 llvm.func @aliases() {

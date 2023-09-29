@@ -1201,21 +1201,10 @@ void AliasState::printAliases(AsmPrinter::Impl &p, NewLineCounter &newLine,
     alias.print(p.getStream());
     p.getStream() << " = ";
 
-    if (alias.isTypeAlias()) {
-      // TODO: Support nested aliases in mutable types.
-      Type type = Type::getFromOpaquePointer(opaqueSymbol);
-      if (type.hasTrait<TypeTrait::IsMutable>())
-        p.getStream() << type;
-      else
-        p.printTypeImpl(type);
-    } else {
-      // TODO: Support nested aliases in mutable attributes.
-      Attribute attr = Attribute::getFromOpaquePointer(opaqueSymbol);
-      if (attr.hasTrait<AttributeTrait::IsMutable>())
-        p.getStream() << attr;
-      else
-        p.printAttributeImpl(attr);
-    }
+    if (alias.isTypeAlias())
+      p.printTypeImpl(Type::getFromOpaquePointer(opaqueSymbol));
+    else
+      p.printAttributeImpl(Attribute::getFromOpaquePointer(opaqueSymbol));
 
     p.getStream() << newLine;
   }

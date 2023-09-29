@@ -32,6 +32,15 @@ struct SymbolState {
   /// A map from type alias identifier to Type.
   llvm::StringMap<Type> typeAliasDefinitions;
 
+  /// Parser functions set during the parsing of alias-block-defs to parse an
+  /// unknown attribute or type alias. The parameter is the name of the alias.
+  /// The function should return failure if no such alias could be found.
+  /// If any errors occurred during parsing, a null attribute or type should
+  /// be returned.
+  llvm::unique_function<FailureOr<Attribute>(StringRef)>
+      parseUnknownAttributeAlias;
+  llvm::unique_function<FailureOr<Type>(StringRef)> parseUnknownTypeAlias;
+
   /// A map of dialect resource keys to the resolved resource name and handle
   /// to use during parsing.
   DenseMap<const OpAsmDialectInterface *,
@@ -73,7 +82,7 @@ struct ParserState {
 
   /// Stack of potentially cyclic mutable attributes or type currently being
   /// parsed.
-  SetVector<const void *> cyclicParsingStack;
+  SetVector<PointerUnion<Attribute, Type>> cyclicParsingStack;
 
   /// An optional pointer to a struct containing high level parser state to be
   /// populated during parsing.
@@ -88,6 +97,17 @@ struct ParserState {
   // popped when done. At the top-level we start with "builtin" as the
   // default, so that the top-level `module` operation parses as-is.
   SmallVector<StringRef> defaultDialectStack{"builtin"};
+
+  /// Controls whether the parser is in syntax-only mode.
+  bool syntaxOnly = false;
+
+  /// Attribute and type returned by `parseType`, `parseAttribute` and the more
+  /// specific parsing function to signal syntactic correctness if an attribute
+  /// or type cannot be created without verifying the parsed data as well.
+  /// Callers of such function should only check for null or not null return
+  /// values for error signaling.
+  Type syntaxOnlyType = NoneType::get(config.getContext());
+  Attribute syntaxOnlyAttr = UnitAttr::get(config.getContext());
 };
 
 } // namespace detail

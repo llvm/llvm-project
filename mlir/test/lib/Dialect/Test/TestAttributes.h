@@ -33,6 +33,37 @@ class TestDialect;
 /// A handle used to reference external elements instances.
 using TestDialectResourceBlobHandle =
     mlir::DialectResourceBlobHandle<TestDialect>;
+
+/// Storage for simple named recursive attribute, where the attribute is
+/// identified by its name and can "contain" another attribute, including
+/// itself.
+struct TestRecursiveAttrStorage : public ::mlir::AttributeStorage {
+  using KeyTy = ::llvm::StringRef;
+
+  explicit TestRecursiveAttrStorage(::llvm::StringRef key) : name(key) {}
+
+  bool operator==(const KeyTy &other) const { return name == other; }
+
+  static TestRecursiveAttrStorage *
+  construct(::mlir::AttributeStorageAllocator &allocator, const KeyTy &key) {
+    return new (allocator.allocate<TestRecursiveAttrStorage>())
+        TestRecursiveAttrStorage(allocator.copyInto(key));
+  }
+
+  ::mlir::LogicalResult mutate(::mlir::AttributeStorageAllocator &allocator,
+                               ::mlir::Attribute newBody) {
+    // Cannot set a different body than before.
+    if (body && body != newBody)
+      return ::mlir::failure();
+
+    body = newBody;
+    return ::mlir::success();
+  }
+
+  ::llvm::StringRef name;
+  ::mlir::Attribute body;
+};
+
 } // namespace test
 
 #define GET_ATTRDEF_CLASSES

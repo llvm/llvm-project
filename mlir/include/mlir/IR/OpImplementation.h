@@ -1362,7 +1362,7 @@ public:
                           AttrOrTypeT> ||
             std::is_base_of_v<TypeTrait::IsMutable<AttrOrTypeT>, AttrOrTypeT>,
         "Only mutable attributes or types can be cyclic");
-    if (failed(pushCyclicParsing(attrOrType.getAsOpaquePointer())))
+    if (failed(pushCyclicParsing(attrOrType)))
       return failure();
 
     return CyclicParseReset(this);
@@ -1374,11 +1374,11 @@ protected:
   virtual FailureOr<AsmDialectResourceHandle>
   parseResourceHandle(Dialect *dialect) = 0;
 
-  /// Pushes a new attribute or type in the form of a type erased pointer
-  /// into an internal set.
+  /// Pushes a new attribute or type into an internal set.
   /// Returns success if the type or attribute was inserted in the set or
   /// failure if it was already contained.
-  virtual LogicalResult pushCyclicParsing(const void *opaquePointer) = 0;
+  virtual LogicalResult
+  pushCyclicParsing(PointerUnion<Attribute, Type> attrOrType) = 0;
 
   /// Removes the element that was last inserted with a successful call to
   /// `pushCyclicParsing`. There must be exactly one `popCyclicParsing` call

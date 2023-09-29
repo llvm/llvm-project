@@ -176,6 +176,62 @@ static void printTrueFalse(AsmPrinter &p, std::optional<int> result) {
 }
 
 //===----------------------------------------------------------------------===//
+// TestRecursiveAttr
+//===----------------------------------------------------------------------===//
+
+Attribute TestRecursiveAliasAttr::getBody() const { return getImpl()->body; }
+
+void TestRecursiveAliasAttr::setBody(Attribute attribute) {
+  (void)Base::mutate(attribute);
+}
+
+StringRef TestRecursiveAliasAttr::getName() const { return getImpl()->name; }
+
+Attribute TestRecursiveAliasAttr::parse(AsmParser &parser, Type type) {
+  StringRef name;
+  if (parser.parseLess() || parser.parseKeyword(&name))
+    return nullptr;
+  auto rec = TestRecursiveAliasAttr::get(parser.getContext(), name);
+
+  FailureOr<AsmParser::CyclicParseReset> cyclicParse =
+      parser.tryStartCyclicParse(rec);
+
+  // If this type already has been parsed above in the stack, expect just the
+  // name.
+  if (failed(cyclicParse)) {
+    if (failed(parser.parseGreater()))
+      return nullptr;
+    return rec;
+  }
+
+  // Otherwise, parse the body and update the type.
+  if (failed(parser.parseComma()))
+    return nullptr;
+  Attribute subAttr;
+  if (parser.parseAttribute(subAttr))
+    return nullptr;
+  if (!subAttr || failed(parser.parseGreater()))
+    return nullptr;
+
+  rec.setBody(subAttr);
+
+  return rec;
+}
+
+void TestRecursiveAliasAttr::print(AsmPrinter &printer) const {
+
+  FailureOr<AsmPrinter::CyclicPrintReset> cyclicPrint =
+      printer.tryStartCyclicPrint(*this);
+
+  printer << "<" << getName();
+  if (succeeded(cyclicPrint)) {
+    printer << ", ";
+    printer << getBody();
+  }
+  printer << ">";
+}
+
+//===----------------------------------------------------------------------===//
 // Tablegen Generated Definitions
 //===----------------------------------------------------------------------===//
 

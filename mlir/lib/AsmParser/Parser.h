@@ -12,6 +12,7 @@
 #include "ParserState.h"
 #include "mlir/IR/Builders.h"
 #include "mlir/IR/OpImplementation.h"
+#include "llvm/ADT/ScopeExit.h"
 #include <optional>
 
 namespace mlir {
@@ -132,6 +133,22 @@ public:
     state.curToken = state.lex.lexToken();
   }
 
+  /// Temporarily resets the parser to the given lexer position. The previous
+  /// lexer position is saved and restored on destruction of the returned
+  /// object.
+  [[nodiscard]] auto saveAndResetToken(const char *tokPos) {
+    const char *previous = getToken().getLoc().getPointer();
+    resetToken(tokPos);
+    return llvm::make_scope_exit([this, previous] { resetToken(previous); });
+  }
+
+  /// Returns true if the parser is in syntax-only mode. In this mode, the
+  /// parser only checks the syntactic validity of the parsed elements but does
+  /// not verify the correctness of the parsed data. Syntax-only mode is
+  /// currently only supported for attribute and type parsing and skips parsing
+  /// dialect attributes and types entirely.
+  bool syntaxOnly() { return state.syntaxOnly; }
+
   /// Consume the specified token if present and return success.  On failure,
   /// output a diagnostic and return failure.
   ParseResult parseToken(Token::Kind expectedToken, const Twine &message);
@@ -185,13 +202,13 @@ public:
   OptionalParseResult parseOptionalType(Type &type);
 
   /// Parse an arbitrary type.
-  Type parseType();
+  Type parseType(StringRef aliasDefName = "");
 
   /// Parse a complex type.
   Type parseComplexType();
 
   /// Parse an extended type.
-  Type parseExtendedType();
+  Type parseExtendedType(StringRef aliasDefName = "");
 
   /// Parse a function type.
   Type parseFunctionType();
@@ -200,7 +217,7 @@ public:
   Type parseMemRefType();
 
   /// Parse a non function type.
-  Type parseNonFunctionType();
+  Type parseNonFunctionType(StringRef aliasDefName = "");
 
   /// Parse a tensor type.
   Type parseTensorType();
@@ -209,7 +226,7 @@ public:
   Type parseTupleType();
 
   /// Parse a vector type.
-  VectorType parseVectorType();
+  Type parseVectorType();
   ParseResult parseVectorDimensionList(SmallVectorImpl<int64_t> &dimensions,
                                        SmallVectorImpl<bool> &scalableDims);
   ParseResult parseDimensionListRanked(SmallVectorImpl<int64_t> &dimensions,
@@ -223,7 +240,7 @@ public:
   //===--------------------------------------------------------------------===//
 
   /// Parse an arbitrary attribute with an optional type.
-  Attribute parseAttribute(Type type = {});
+  Attribute parseAttribute(Type type = {}, StringRef aliasDefName = "");
 
   /// Parse an optional attribute with the provided type.
   OptionalParseResult parseOptionalAttribute(Attribute &attribute,
@@ -254,7 +271,7 @@ public:
   Attribute parseDistinctAttr(Type type);
 
   /// Parse an extended attribute.
-  Attribute parseExtendedAttr(Type type);
+  Attribute parseExtendedAttr(Type type, StringRef aliasDefName = "");
 
   /// Parse a float attribute.
   Attribute parseFloatAttr(Type type, bool isNegative);
@@ -265,7 +282,7 @@ public:
 
   /// Parse a dense elements attribute.
   Attribute parseDenseElementsAttr(Type attrType);
-  ShapedType parseElementsLiteralType(Type type);
+  Type parseElementsLiteralType(Type type);
 
   /// Parse a dense resource elements attribute.
   Attribute parseDenseResourceElementsAttr(Type attrType);

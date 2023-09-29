@@ -323,5 +323,22 @@ def Test_IteratorTypeArrayAttr
     : TypedArrayAttrBase<Test_IteratorTypeEnum,
   "Iterator type should be an enum.">;
 
+def TestRecursiveAliasAttr
+    : Test_Attr<"TestRecursiveAlias", [NativeAttrTrait<"IsMutable">]> {
+  let mnemonic = "test_rec_alias";
+  let storageClass = "TestRecursiveAttrStorage";
+  let storageNamespace = "test";
+  let genStorageClass = 0;
+
+  let parameters = (ins "llvm::StringRef":$name);
+
+  let hasCustomAssemblyFormat = 1;
+
+  let extraClassDeclaration = [{
+    Attribute getBody() const;
+
+    void setBody(Attribute attribute);
+  }];
+}
 
 #endif // TEST_ATTRDEFS

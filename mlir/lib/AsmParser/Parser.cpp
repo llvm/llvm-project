@@ -29,6 +29,7 @@
 #include "llvm/Support/Endian.h"
 #include "llvm/Support/MathExtras.h"
 #include "llvm/Support/PrettyStackTrace.h"
+#include "llvm/Support/SaveAndRestore.h"
 #include "llvm/Support/SourceMgr.h"
 #include <algorithm>
 #include <memory>
@@ -2407,17 +2408,12 @@ public:
   ParseResult parse(Block *topLevelBlock, Location parserLoc);
 
 private:
-  /// Parse an attribute alias declaration.
+  /// Parse an alias block definition.
   ///
   ///   attribute-alias-def ::= '#' alias-name `=` attribute-value
-  ///
-  ParseResult parseAttributeAliasDef();
-
-  /// Parse a type alias declaration.
-  ///
   ///   type-alias-def ::= '!' alias-name `=` type
-  ///
-  ParseResult parseTypeAliasDef();
+  ///   alias-block-def ::= (type-alias-def | attribute-alias-def)+
+  ParseResult parseAliasBlockDef();
 
   /// Parse a top-level file metadata dictionary.
   ///
@@ -2518,69 +2514,184 @@ private:
   Token value;
   Parser &p;
 };
+
+/// Convenient subclass of `ParserState` which configures the parser for
+/// syntax-only parsing. This only copies config and other required state for
+/// parsing but does not copy side-effecting state such as the code completion
+/// context.
+struct SyntaxParserState : ParserState {
+  explicit SyntaxParserState(ParserState &state)
+      : ParserState(state.lex.getSourceMgr(), state.config, state.symbols,
+                    /*asmState=*/nullptr,
+                    /*codeCompleteContext=*/nullptr) {
+    syntaxOnly = true;
+  }
+};
+
 } // namespace
 
-ParseResult TopLevelOperationParser::parseAttributeAliasDef() {
-  assert(getToken().is(Token::hash_identifier));
-  StringRef aliasName = getTokenSpelling().drop_front();
+ParseResult TopLevelOperationParser::parseAliasBlockDef() {
 
-  // Check for redefinitions.
-  if (state.symbols.attributeAliasDefinitions.count(aliasName) > 0)
-    return emitError("redefinition of attribute alias id '" + aliasName + "'");
+  struct UnparsedData {
+    SMRange location;
+    StringRef text;
+  };
 
-  // Make sure this isn't invading the dialect attribute namespace.
-  if (aliasName.contains('.'))
-    return emitError("attribute names with a '.' are reserved for "
-                     "dialect-defined names");
+  // Use a map vector as StringMap has non-deterministic iteration order.
+  using StringMapVector =
+      llvm::MapVector<StringRef, UnparsedData, llvm::StringMap<unsigned>>;
 
-  SMRange location = getToken().getLocRange();
-  consumeToken(Token::hash_identifier);
+  StringMapVector unparsedAttributeAliases;
+  StringMapVector unparsedTypeAliases;
 
-  // Parse the '='.
-  if (parseToken(Token::equal, "expected '=' in attribute alias definition"))
+  // Returns true if this alias has already been defined, either in this block
+  // or a previous one.
+  auto isRedefinition = [&](bool isType, StringRef aliasName) {
+    if (isType)
+      return state.symbols.typeAliasDefinitions.contains(aliasName) ||
+             unparsedTypeAliases.contains(aliasName);
+
+    return state.symbols.attributeAliasDefinitions.contains(aliasName) ||
+           unparsedAttributeAliases.contains(aliasName);
+  };
+
+  // Collect all attribute or type alias definitions in unparsed form first.
+  while (
+      getToken().isAny(Token::exclamation_identifier, Token::hash_identifier)) {
+    StringRef aliasName = getTokenSpelling().drop_front();
+
+    bool isType = getToken().is(mlir::Token::exclamation_identifier);
+    StringRef kind = isType ? "type" : "attribute";
+
+    // Check for redefinitions.
+    if (isRedefinition(isType, aliasName))
+      return emitError("redefinition of ")
+             << kind << " alias id '" << aliasName << "'";
+
+    // Make sure this isn't invading the dialect namespace.
+    if (aliasName.contains('.'))
+      return emitError(kind) << " names with a '.' are reserved for "
+                                "dialect-defined names";
+
+    SMRange location = getToken().getLocRange();
+    consumeToken();
+
+    // Parse the '='.
+    if (parseToken(Token::equal,
+                   "expected '=' in " + kind + " alias definition"))
+      return failure();
+
+    SyntaxParserState skippingParserState(state);
+    Parser syntaxOnlyParser(skippingParserState);
+    const char *start = getToken().getLoc().getPointer();
+    syntaxOnlyParser.resetToken(start);
+
+    // Parse just the syntax of the value, moving the lexer past the definition.
+    if (isType ? !syntaxOnlyParser.parseType()
+               : !syntaxOnlyParser.parseAttribute())
+      return failure();
+
+    // Get the location from the lexers new position.
+    const char *end = syntaxOnlyParser.getToken().getLoc().getPointer();
+    size_t length = end - start;
+
+    StringMapVector &unparsedMap =
+        isType ? unparsedTypeAliases : unparsedAttributeAliases;
+
+    unparsedMap[aliasName] =
+        UnparsedData{location, StringRef(start, length).rtrim()};
+
+    // Move the top-level parser past the alias definition.
+    resetToken(end);
+  }
+
+  auto parseAttributeAlias = [&](StringRef aliasName,
+                                 const UnparsedData &unparsedData) {
+    llvm::SaveAndRestore<SetVector<PointerUnion<Attribute, Type>>> cyclicStack(
+        getState().cyclicParsingStack, {});
+    auto exit = saveAndResetToken(unparsedData.text.data());
+    Attribute attribute = parseAttribute(Type(), aliasName);
+    if (!attribute)
+      return attribute;
+
+    // Register this alias with the parser state.
+    if (state.asmState)
+      state.asmState->addAttrAliasDefinition(aliasName, unparsedData.location,
+                                             attribute);
+
+    return attribute;
+  };
+
+  auto parseTypeAlias = [&](StringRef aliasName,
+                            const UnparsedData &unparsedData) {
+    llvm::SaveAndRestore<SetVector<PointerUnion<Attribute, Type>>> cyclicStack(
+        getState().cyclicParsingStack, {});
+    auto exit = saveAndResetToken(unparsedData.text.data());
+    Type type = parseType(aliasName);
+    if (!type)
+      return type;
+
+    // Register this alias with the parser state.
+    if (state.asmState)
+      state.asmState->addTypeAliasDefinition(aliasName, unparsedData.location,
+                                             type);
+
+    return type;
+  };
+
+  // Set the callbacks for the lazy parsing of alias definitions in the parser.
+  state.symbols.parseUnknownAttributeAlias =
+      [&](StringRef aliasName) -> FailureOr<Attribute> {
+    auto *iter = unparsedAttributeAliases.find(aliasName);
+    if (iter == unparsedAttributeAliases.end())
+      return failure();
+
+    return parseAttributeAlias(aliasName, iter->second);
+  };
+  state.symbols.parseUnknownTypeAlias =
+      [&](StringRef aliasName) -> FailureOr<Type> {
+    auto *iter = unparsedTypeAliases.find(aliasName);
+    if (iter == unparsedTypeAliases.end())
+      return failure();
+
+    return parseTypeAlias(aliasName, iter->second);
+  };
+
+  // Reset them to nullptr at the end. Keeping them around would lead to the
+  // access of local variables captured in this scope after we've returned from
+  // this function.
+  auto exit = llvm::make_scope_exit([&] {
+    state.symbols.parseUnknownTypeAlias = nullptr;
+    state.symbols.parseUnknownAttributeAlias = nullptr;
+  });
+
+  // Now go through all the unparsed definitions in the block and parse them.
+  // The order here is not significant for correctness, but should be
+  // deterministic. The order can also have an impact on the maximum stack usage
+  // during parsing. This can be improved in the future.
+  auto parse = [](auto &unparsed, auto &definitions, auto &parseFn) {
+    for (auto &&[aliasName, unparsedData] : unparsed) {
+      // Avoid parsing twice.
+      if (definitions.contains(aliasName))
+        continue;
+
+      auto symbol = parseFn(aliasName, unparsedData);
+      if (!symbol)
+        return failure();
+      definitions[aliasName] = symbol;
+    }
+    return success();
+  };
+
+  if (failed(parse(unparsedAttributeAliases,
+                   state.symbols.attributeAliasDefinitions,
+                   parseAttributeAlias)))
     return failure();
 
-  // Parse the attribute value.
-  Attribute attr = parseAttribute();
-  if (!attr)
+  if (failed(parse(unparsedTypeAliases, state.symbols.typeAliasDefinitions,
+                   parseTypeAlias)))
     return failure();
 
-  // Register this alias with the parser state.
-  if (state.asmState)
-    state.asmState->addAttrAliasDefinition(aliasName, location, attr);
-  state.symbols.attributeAliasDefinitions[aliasName] = attr;
-  return success();
-}
-
-ParseResult TopLevelOperationParser::parseTypeAliasDef() {
-  assert(getToken().is(Token::exclamation_identifier));
-  StringRef aliasName = getTokenSpelling().drop_front();
-
-  // Check for redefinitions.
-  if (state.symbols.typeAliasDefinitions.count(aliasName) > 0)
-    return emitError("redefinition of type alias id '" + aliasName + "'");
-
-  // Make sure this isn't invading the dialect type namespace.
-  if (aliasName.contains('.'))
-    return emitError("type names with a '.' are reserved for "
-                     "dialect-defined names");
-
-  SMRange location = getToken().getLocRange();
-  consumeToken(Token::exclamation_identifier);
-
-  // Parse the '='.
-  if (parseToken(Token::equal, "expected '=' in type alias definition"))
-    return failure();
-
-  // Parse the type.
-  Type aliasedType = parseType();
-  if (!aliasedType)
-    return failure();
-
-  // Register this alias with the parser state.
-  if (state.asmState)
-    state.asmState->addTypeAliasDefinition(aliasName, location, aliasedType);
-  state.symbols.typeAliasDefinitions.try_emplace(aliasName, aliasedType);
   return success();
 }
 
@@ -2719,15 +2830,10 @@ ParseResult TopLevelOperationParser::parse(Block *topLevelBlock,
     case Token::error:
       return failure();
 
-    // Parse an attribute alias.
+    // Parse an alias def block.
     case Token::hash_identifier:
-      if (parseAttributeAliasDef())
-        return failure();
-      break;
-
-    // Parse a type alias.
     case Token::exclamation_identifier:
-      if (parseTypeAliasDef())
+      if (parseAliasBlockDef())
         return failure();
       break;
 

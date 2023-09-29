@@ -15,6 +15,7 @@
 #include "mlir/IR/BuiltinTypes.h"
 #include "mlir/IR/Dialect.h"
 #include "mlir/IR/DialectImplementation.h"
+#include "llvm/ADT/ScopeExit.h"
 #include "llvm/Support/SourceMgr.h"
 
 using namespace mlir;
@@ -28,18 +29,37 @@ namespace {
 /// hooking into the main MLIR parsing logic.
 class CustomDialectAsmParser : public AsmParserImpl<DialectAsmParser> {
 public:
-  CustomDialectAsmParser(StringRef fullSpec, Parser &parser)
+  CustomDialectAsmParser(StringRef fullSpec, Parser &parser,
+                         StringRef aliasDefName)
       : AsmParserImpl<DialectAsmParser>(parser.getToken().getLoc(), parser),
-        fullSpec(fullSpec) {}
+        fullSpec(fullSpec), aliasDefName(aliasDefName) {}
   ~CustomDialectAsmParser() override = default;
 
   /// Returns the full specification of the symbol being parsed. This allows
   /// for using a separate parser if necessary.
   StringRef getFullSymbolSpec() const override { return fullSpec; }
 
+  LogicalResult
+  pushCyclicParsing(PointerUnion<Attribute, Type> attrOrType) override {
+    // If this is an alias definition, register the mutable attribute or type.
+    if (!aliasDefName.empty()) {
+      if (auto attr = dyn_cast<Attribute>(attrOrType))
+        parser.getState().symbols.attributeAliasDefinitions[aliasDefName] =
+            attr;
+      else
+        parser.getState().symbols.typeAliasDefinitions[aliasDefName] =
+            cast<Type>(attrOrType);
+    }
+    return AsmParserImpl::pushCyclicParsing(attrOrType);
+  }
+
 private:
   /// The full symbol specification.
   StringRef fullSpec;
+
+  /// If this parser is used to parse an alias definition, the name of the alias
+  /// definition. Empty otherwise.
+  StringRef aliasDefName;
 };
 } // namespace
 
@@ -156,9 +176,11 @@ ParseResult Parser::parseDialectSymbolBody(StringRef &body,
 }
 
 /// Parse an extended dialect symbol.
-template <typename Symbol, typename SymbolAliasMap, typename CreateFn>
+template <typename Symbol, typename SymbolAliasMap, typename ParseAliasFn,
+          typename CreateFn>
 static Symbol parseExtendedSymbol(Parser &p, AsmParserState *asmState,
                                   SymbolAliasMap &aliases,
+                                  ParseAliasFn &parseAliasFn,
                                   CreateFn &&createSymbol) {
   Token tok = p.getToken();
 
@@ -185,12 +207,32 @@ static Symbol parseExtendedSymbol(Parser &p, AsmParserState *asmState,
   // If there is no '<' token following this, and if the typename contains no
   // dot, then we are parsing a symbol alias.
   if (!hasTrailingData && !isPrettyName) {
+
+    // Don't check the validity of alias reference in syntax-only mode.
+    if (p.syntaxOnly()) {
+      if constexpr (std::is_same_v<Symbol, Type>)
+        return p.getState().syntaxOnlyType;
+      else
+        return p.getState().syntaxOnlyAttr;
+    }
+
     // Check for an alias for this type.
     auto aliasIt = aliases.find(identifier);
-    if (aliasIt == aliases.end())
-      return (p.emitWrongTokenError("undefined symbol alias id '" + identifier +
-                                    "'"),
-              nullptr);
+    if (aliasIt == aliases.end()) {
+      FailureOr<Symbol> symbol = failure();
+      // Try the parse alias function if set.
+      if (parseAliasFn)
+        symbol = parseAliasFn(identifier);
+
+      if (failed(symbol)) {
+        p.emitWrongTokenError("undefined symbol alias id '" + identifier + "'");
+        return nullptr;
+      }
+      if (!*symbol)
+        return nullptr;
+
+      aliasIt = aliases.insert({identifier, *symbol}).first;
+    }
     if (asmState) {
       if constexpr (std::is_same_v<Symbol, Type>)
         asmState->addTypeAliasUses(identifier, range);
@@ -237,15 +279,19 @@ static Symbol parseExtendedSymbol(Parser &p, AsmParserState *asmState,
 ///                        | `#` alias-name pretty-dialect-sym-body? (`:` type)?
 ///   attribute-alias    ::= `#` alias-name
 ///
-Attribute Parser::parseExtendedAttr(Type type) {
+Attribute Parser::parseExtendedAttr(Type type, StringRef aliasDefName) {
   MLIRContext *ctx = getContext();
   Attribute attr = parseExtendedSymbol<Attribute>(
       *this, state.asmState, state.symbols.attributeAliasDefinitions,
+      state.symbols.parseUnknownAttributeAlias,
       [&](StringRef dialectName, StringRef symbolData, SMLoc loc) -> Attribute {
         // Parse an optional trailing colon type.
         Type attrType = type;
         if (consumeIf(Token::colon) && !(attrType = parseType()))
           return Attribute();
+
+        if (syntaxOnly())
+          return state.syntaxOnlyAttr;
 
         // If we found a registered dialect, then ask it to parse the attribute.
         if (Dialect *dialect =
@@ -255,7 +301,7 @@ Attribute Parser::parseExtendedAttr(Type type) {
           resetToken(symbolData.data());
 
           // Parse the attribute.
-          CustomDialectAsmParser customParser(symbolData, *this);
+          CustomDialectAsmParser customParser(symbolData, *this, aliasDefName);
           Attribute attr = dialect->parseAttribute(customParser, attrType);
           resetToken(curLexerPos);
           return attr;
@@ -284,11 +330,15 @@ Attribute Parser::parseExtendedAttr(Type type) {
 ///   dialect-type  ::= `!` alias-name pretty-dialect-attribute-body?
 ///   type-alias    ::= `!` alias-name
 ///
-Type Parser::parseExtendedType() {
+Type Parser::parseExtendedType(StringRef aliasDefName) {
   MLIRContext *ctx = getContext();
   return parseExtendedSymbol<Type>(
       *this, state.asmState, state.symbols.typeAliasDefinitions,
+      state.symbols.parseUnknownTypeAlias,
       [&](StringRef dialectName, StringRef symbolData, SMLoc loc) -> Type {
+        if (syntaxOnly())
+          return state.syntaxOnlyType;
+
         // If we found a registered dialect, then ask it to parse the type.
         if (auto *dialect = ctx->getOrLoadDialect(dialectName)) {
           // Temporarily reset the lexer to let the dialect parse the type.
@@ -296,7 +346,7 @@ Type Parser::parseExtendedType() {
           resetToken(symbolData.data());
 
           // Parse the type.
-          CustomDialectAsmParser customParser(symbolData, *this);
+          CustomDialectAsmParser customParser(symbolData, *this, aliasDefName);
           Type type = dialect->parseType(customParser);
           resetToken(curLexerPos);
           return type;

@@ -49,7 +49,7 @@ using namespace mlir::detail;
 ///                    | distinct-attribute
 ///                    | extended-attribute
 ///
-Attribute Parser::parseAttribute(Type type) {
+Attribute Parser::parseAttribute(Type type, StringRef aliasDefName) {
   switch (getToken().getKind()) {
   // Parse an AffineMap or IntegerSet attribute.
   case Token::kw_affine_map: {
@@ -117,7 +117,7 @@ Attribute Parser::parseAttribute(Type type) {
 
   // Parse an extended attribute, i.e. alias or dialect attribute.
   case Token::hash_identifier:
-    return parseExtendedAttr(type);
+    return parseExtendedAttr(type, aliasDefName);
 
   // Parse floating point and integer attributes.
   case Token::floatliteral:
@@ -145,6 +145,10 @@ Attribute Parser::parseAttribute(Type type) {
         parseLocationInstance(locAttr) ||
         parseToken(Token::r_paren, "expected ')' in inline location"))
       return Attribute();
+
+    if (syntaxOnly())
+      return state.syntaxOnlyAttr;
+
     return locAttr;
   }
 
@@ -429,6 +433,9 @@ Attribute Parser::parseDecOrHexAttr(Type type, bool isNegative) {
       return Attribute();
     return FloatAttr::get(floatType, *result);
   }
+
+  if (syntaxOnly())
+    return state.syntaxOnlyAttr;
 
   if (!isa<IntegerType, IndexType>(type))
     return emitError(loc, "integer literal not valid for specified type"),
@@ -1003,7 +1010,9 @@ Attribute Parser::parseDenseElementsAttr(Type attrType) {
   auto type = parseElementsLiteralType(attrType);
   if (!type)
     return nullptr;
-  return literalParser.getAttr(loc, type);
+  if (syntaxOnly())
+    return state.syntaxOnlyAttr;
+  return literalParser.getAttr(loc, cast<ShapedType>(type));
 }
 
 Attribute Parser::parseDenseResourceElementsAttr(Type attrType) {
@@ -1030,6 +1039,9 @@ Attribute Parser::parseDenseResourceElementsAttr(Type attrType) {
       return nullptr;
   }
 
+  if (syntaxOnly())
+    return state.syntaxOnlyAttr;
+
   ShapedType shapedType = dyn_cast<ShapedType>(attrType);
   if (!shapedType) {
     emitError(typeLoc, "`dense_resource` expected a shaped type");
@@ -1044,7 +1056,7 @@ Attribute Parser::parseDenseResourceElementsAttr(Type attrType) {
 ///   elements-literal-type ::= vector-type | ranked-tensor-type
 ///
 /// This method also checks the type has static shape.
-ShapedType Parser::parseElementsLiteralType(Type type) {
+Type Parser::parseElementsLiteralType(Type type) {
   // If the user didn't provide a type, parse the colon type for the literal.
   if (!type) {
     if (parseToken(Token::colon, "expected ':'"))
@@ -1052,6 +1064,9 @@ ShapedType Parser::parseElementsLiteralType(Type type) {
     if (!(type = parseType()))
       return nullptr;
   }
+
+  if (syntaxOnly())
+    return state.syntaxOnlyType;
 
   auto sType = dyn_cast<ShapedType>(type);
   if (!sType) {
@@ -1077,17 +1092,23 @@ Attribute Parser::parseSparseElementsAttr(Type attrType) {
   // of the type.
   Type indiceEltType = builder.getIntegerType(64);
   if (consumeIf(Token::greater)) {
-    ShapedType type = parseElementsLiteralType(attrType);
+    Type type = parseElementsLiteralType(attrType);
     if (!type)
       return nullptr;
 
+    if (syntaxOnly())
+      return state.syntaxOnlyAttr;
+
     // Construct the sparse elements attr using zero element indice/value
     // attributes.
+    ShapedType shapedType = cast<ShapedType>(type);
     ShapedType indicesType =
-        RankedTensorType::get({0, type.getRank()}, indiceEltType);
-    ShapedType valuesType = RankedTensorType::get({0}, type.getElementType());
+        RankedTensorType::get({0, shapedType.getRank()}, indiceEltType);
+    ShapedType valuesType =
+        RankedTensorType::get({0}, shapedType.getElementType());
     return getChecked<SparseElementsAttr>(
-        loc, type, DenseElementsAttr::get(indicesType, ArrayRef<Attribute>()),
+        loc, shapedType,
+        DenseElementsAttr::get(indicesType, ArrayRef<Attribute>()),
         DenseElementsAttr::get(valuesType, ArrayRef<Attribute>()));
   }
 
@@ -1114,6 +1135,11 @@ Attribute Parser::parseSparseElementsAttr(Type attrType) {
   if (!type)
     return nullptr;
 
+  if (syntaxOnly())
+    return state.syntaxOnlyAttr;
+
+  ShapedType shapedType = cast<ShapedType>(type);
+
   // If the indices are a splat, i.e. the literal parser parsed an element and
   // not a list, we set the shape explicitly. The indices are represented by a
   // 2-dimensional shape where the second dimension is the rank of the type.
@@ -1121,7 +1147,8 @@ Attribute Parser::parseSparseElementsAttr(Type attrType) {
   // indice and thus one for the first dimension.
   ShapedType indicesType;
   if (indiceParser.getShape().empty()) {
-    indicesType = RankedTensorType::get({1, type.getRank()}, indiceEltType);
+    indicesType =
+        RankedTensorType::get({1, shapedType.getRank()}, indiceEltType);
   } else {
     // Otherwise, set the shape to the one parsed by the literal parser.
     indicesType = RankedTensorType::get(indiceParser.getShape(), indiceEltType);
@@ -1131,7 +1158,7 @@ Attribute Parser::parseSparseElementsAttr(Type attrType) {
   // If the values are a splat, set the shape explicitly based on the number of
   // indices. The number of indices is encoded in the first dimension of the
   // indice shape type.
-  auto valuesEltType = type.getElementType();
+  auto valuesEltType = shapedType.getElementType();
   ShapedType valuesType =
       valuesParser.getShape().empty()
           ? RankedTensorType::get({indicesType.getDimSize(0)}, valuesEltType)
@@ -1139,7 +1166,7 @@ Attribute Parser::parseSparseElementsAttr(Type attrType) {
   auto values = valuesParser.getAttr(valuesLoc, valuesType);
 
   // Build the sparse elements attribute by the indices and values.
-  return getChecked<SparseElementsAttr>(loc, type, indices, values);
+  return getChecked<SparseElementsAttr>(loc, shapedType, indices, values);
 }
 
 Attribute Parser::parseStridedLayoutAttr() {
@@ -1259,6 +1286,9 @@ Attribute Parser::parseDistinctAttr(Type type) {
     if (parseToken(Token::greater, "expected '>' to close distinct attribute"))
       return {};
   }
+
+  if (syntaxOnly())
+    return state.syntaxOnlyAttr;
 
   // Add the distinct attribute to the parser state, if it has not been parsed
   // before. Otherwise, check if the parsed reference attribute matches the one
