@@ -51,7 +51,7 @@ enum OpCode {
 enum OperandKind {
   Constant = 0,
   LocalVariable,
-  String,
+  UnimplementedOperand = 255,
 };
 
 enum TypeKind {
@@ -59,10 +59,10 @@ enum TypeKind {
   UnimplementedType = 255, // YKFIXME: Will eventually be deleted.
 };
 
-string valueToString(Value *V) {
+template <class T> string toString(T *X) {
   string S;
   raw_string_ostream SS(S);
-  V->print(SS);
+  X->print(SS);
   return S;
 }
 
@@ -153,7 +153,7 @@ public:
   }
 
   void serialiseStringOperand(const char *S) {
-    OutStreamer.emitInt8(OperandKind::String);
+    OutStreamer.emitInt8(OperandKind::UnimplementedOperand);
     serialiseString(S);
   }
 
@@ -161,9 +161,8 @@ public:
   // lowering for to compile. For now We just emit a string operand containing
   // the unhandled LLVM operand in textual form.
   void serialiseUnimplementedOperand(Value *V) {
-    OutStreamer.emitInt8(OperandKind::String);
-    OutStreamer.emitInt8('?');
-    serialiseString(valueToString(V));
+    OutStreamer.emitInt8(OperandKind::UnimplementedOperand);
+    serialiseString(toString(V));
   }
 
   void serialiseOperand(Instruction *Parent, Value *V) {
@@ -180,6 +179,7 @@ public:
   /// Does a naiave serialisation of an LLVM instruction by iterating over its
   /// operands and serialising them in turn.
   void serialiseInstGeneric(Instruction *I, OpCode Opc) {
+    OutStreamer.emitSizeT(typeIndex(I->getType()));
     serialiseOpcode(Opc);
     OutStreamer.emitInt32(I->getNumOperands());
     for (Value *O : I->operands()) {
@@ -203,13 +203,15 @@ public:
     serialiseUnimplementedInstruction(I);
   }
 
+  // An unimplemented instruction is lowered to an instruction with one
+  // unimplemented operand containing the textual LLVM IR we couldn't handle.
   void serialiseUnimplementedInstruction(Instruction *I) {
     // opcode:
     serialiseOpcode(UnimplementedInstruction);
     // num_operands:
     OutStreamer.emitInt32(1);
     // problem instruction:
-    serialiseStringOperand(valueToString(I).data());
+    serialiseUnimplementedOperand(I);
   }
 
   void serialiseBlock(BasicBlock &BB) {
@@ -238,11 +240,11 @@ public:
       OutStreamer.emitInt32(ITy->getBitWidth());
     } else {
       OutStreamer.emitInt8(TypeKind::UnimplementedType);
+      serialiseString(toString(Ty));
     }
   }
 
   void serialiseConstantInt(ConstantInt *CI) {
-    // OutStreamer.emitInt8(OperandKind::Constant);
     OutStreamer.emitSizeT(typeIndex(CI->getType()));
     OutStreamer.emitSizeT(CI->getBitWidth() / 8);
     for (size_t I = 0; I < CI->getBitWidth(); I += 8) {
