@@ -1804,6 +1804,7 @@ cc_library(
         "//llvm:ExecutionEngine",
         "//llvm:MC",
         "//llvm:Option",
+        "//llvm:OrcDebugging",
         "//llvm:OrcJIT",
         "//llvm:OrcShared",
         "//llvm:OrcTargetProcess",
