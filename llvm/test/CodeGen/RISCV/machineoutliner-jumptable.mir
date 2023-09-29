@@ -1,6 +1,6 @@
-# RUN: llc -march=riscv32 -x mir -run-pass=machine-outliner -simplify-mir -verify-machineinstrs < %s \
+# RUN: llc -mtriple=riscv32 -x mir -run-pass=machine-outliner -simplify-mir -verify-machineinstrs < %s \
 # RUN: | FileCheck -check-prefix=RV32I-MO %s
-# RUN: llc -march=riscv64 -x mir -run-pass=machine-outliner -simplify-mir -verify-machineinstrs < %s \
+# RUN: llc -mtriple=riscv64 -x mir -run-pass=machine-outliner -simplify-mir -verify-machineinstrs < %s \
 # RUN: | FileCheck -check-prefix=RV64I-MO %s
 
 --- |
