@@ -8375,7 +8375,7 @@ bool ARMTargetLowering::isShuffleMaskLegal(ArrayRef<int> M, EVT VT) const {
   unsigned EltSize = VT.getScalarSizeInBits();
   if (EltSize >= 32 ||
       ShuffleVectorSDNode::isSplatMask(&M[0], VT) ||
-      ShuffleVectorInst::isIdentityMask(M, M.size()) ||
+      ShuffleVectorInst::isIdentityMask(M) ||
       isVREVMask(M, VT, 64) ||
       isVREVMask(M, VT, 32) ||
       isVREVMask(M, VT, 16))
