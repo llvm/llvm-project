@@ -264,6 +264,9 @@ Bug Fixes in This Version
   (`#66047 <https://github.com/llvm/llvm-project/issues/66047>`_)
 - Fix parser crash when dealing with ill-formed objective C++ header code. Fixes
   (`#64836 <https://github.com/llvm/llvm-project/issues/64836>`_)
+- Fix crash in implicit conversions from initialize list to arrays of unknown
+  bound for C++20. Fixes
+  (`#62945 <https://github.com/llvm/llvm-project/issues/62945>`_)
 - Clang now allows an ``_Atomic`` qualified integer in a switch statement. Fixes
   (`#65557 <https://github.com/llvm/llvm-project/issues/65557>`_)
 - Fixes crash when trying to obtain the common sugared type of
