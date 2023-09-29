@@ -9,8 +9,8 @@ define i1 @src_add_eq_p2(i8 %x, i8 %yy) {
 ; CHECK-NEXT:    [[Y:%.*]] = and i8 [[NY]], [[YY]]
 ; CHECK-NEXT:    [[X1:%.*]] = add i8 [[Y]], [[X:%.*]]
 ; CHECK-NEXT:    call void @use.i8(i8 [[X1]])
-; CHECK-NEXT:    [[V:%.*]] = and i8 [[X1]], [[Y]]
-; CHECK-NEXT:    [[R:%.*]] = icmp eq i8 [[V]], [[Y]]
+; CHECK-NEXT:    [[TMP1:%.*]] = and i8 [[Y]], [[X]]
+; CHECK-NEXT:    [[R:%.*]] = icmp eq i8 [[TMP1]], 0
 ; CHECK-NEXT:    ret i1 [[R]]
 ;
   %ny = sub i8 0, %yy
@@ -49,8 +49,8 @@ define i1 @src_xor_ne_zero(i8 %x, i8 %yy) {
 ; CHECK-NEXT:    [[Y:%.*]] = and i8 [[NY]], [[YY]]
 ; CHECK-NEXT:    [[X1:%.*]] = xor i8 [[Y]], [[X:%.*]]
 ; CHECK-NEXT:    call void @use.i8(i8 [[X1]])
-; CHECK-NEXT:    [[V:%.*]] = and i8 [[X1]], [[Y]]
-; CHECK-NEXT:    [[R:%.*]] = icmp ne i8 [[V]], 0
+; CHECK-NEXT:    [[TMP1:%.*]] = and i8 [[Y]], [[X]]
+; CHECK-NEXT:    [[R:%.*]] = icmp ne i8 [[TMP1]], [[Y]]
 ; CHECK-NEXT:    ret i1 [[R]]
 ;
   %ny = sub i8 0, %yy
@@ -89,8 +89,8 @@ define <2 x i1> @src_sub_ne_p2(<2 x i8> %x, <2 x i8> %yy) {
 ; CHECK-NEXT:    [[Y:%.*]] = and <2 x i8> [[NY]], [[YY]]
 ; CHECK-NEXT:    [[X1:%.*]] = sub <2 x i8> [[X:%.*]], [[Y]]
 ; CHECK-NEXT:    call void @use.v2i8(<2 x i8> [[X1]])
-; CHECK-NEXT:    [[V:%.*]] = and <2 x i8> [[X1]], [[Y]]
-; CHECK-NEXT:    [[R:%.*]] = icmp ne <2 x i8> [[V]], [[Y]]
+; CHECK-NEXT:    [[TMP1:%.*]] = and <2 x i8> [[Y]], [[X]]
+; CHECK-NEXT:    [[R:%.*]] = icmp ne <2 x i8> [[TMP1]], zeroinitializer
 ; CHECK-NEXT:    ret <2 x i1> [[R]]
 ;
   %ny = sub <2 x i8> zeroinitializer, %yy
@@ -107,8 +107,8 @@ define <2 x i1> @src_sub_eq_zero(<2 x i8> %x, <2 x i8> %yy) {
 ; CHECK-NEXT:    [[Y:%.*]] = shl <2 x i8> <i8 1, i8 2>, [[YY:%.*]]
 ; CHECK-NEXT:    [[X1:%.*]] = sub <2 x i8> [[X:%.*]], [[Y]]
 ; CHECK-NEXT:    call void @use.v2i8(<2 x i8> [[X1]])
-; CHECK-NEXT:    [[V:%.*]] = and <2 x i8> [[X1]], [[Y]]
-; CHECK-NEXT:    [[R:%.*]] = icmp eq <2 x i8> [[V]], zeroinitializer
+; CHECK-NEXT:    [[TMP1:%.*]] = and <2 x i8> [[Y]], [[X]]
+; CHECK-NEXT:    [[R:%.*]] = icmp eq <2 x i8> [[TMP1]], [[Y]]
 ; CHECK-NEXT:    ret <2 x i1> [[R]]
 ;
   %y = shl <2 x i8> <i8 1, i8 2>, %yy
