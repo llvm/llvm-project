@@ -377,9 +377,8 @@ AMDGPUSerializer::compileToBinary(const std::string &serializedISA) {
   }
 
   // Create a temp file for HSA code object.
-  int tempHsacoFD = -1;
   SmallString<128> tempHsacoFilename;
-  if (llvm::sys::fs::createTemporaryFile("kernel", "hsaco", tempHsacoFD,
+  if (llvm::sys::fs::createTemporaryFile("kernel", "hsaco",
                                          tempHsacoFilename)) {
     getOperation().emitError()
         << "Failed to create a temporary file for the HSA code object.";
@@ -398,14 +397,15 @@ AMDGPUSerializer::compileToBinary(const std::string &serializedISA) {
   }
 
   // Load the HSA code object.
-  auto hsacoFile = openInputFile(tempHsacoFilename);
+  auto hsacoFile =
+      llvm::MemoryBuffer::getFile(tempHsacoFilename, /*IsText=*/false);
   if (!hsacoFile) {
     getOperation().emitError()
         << "Failed to read the HSA code object from the temp file.";
     return std::nullopt;
   }
 
-  StringRef buffer = hsacoFile->getBuffer();
+  StringRef buffer = (*hsacoFile)->getBuffer();
 
   return SmallVector<char, 0>(buffer.begin(), buffer.end());
 }
