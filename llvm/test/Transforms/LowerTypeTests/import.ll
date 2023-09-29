@@ -37,11 +37,13 @@ define i1 @allones7(ptr %p) {
 ; X86-SAME: ptr [[P:%.*]]) {
 ; X86-NEXT:    [[TMP1:%.*]] = ptrtoint ptr [[P]] to i64
 ; X86-NEXT:    [[TMP2:%.*]] = sub i64 [[TMP1]], ptrtoint (ptr @__typeid_allones7_global_addr to i64)
-; X86-NEXT:    [[TMP3:%.*]] = lshr i64 [[TMP2]], zext (i8 ptrtoint (ptr @__typeid_allones7_align to i8) to i64)
-; X86-NEXT:    [[TMP4:%.*]] = shl i64 [[TMP2]], zext (i8 sub (i8 64, i8 ptrtoint (ptr @__typeid_allones7_align to i8)) to i64)
-; X86-NEXT:    [[TMP5:%.*]] = or i64 [[TMP3]], [[TMP4]]
-; X86-NEXT:    [[TMP6:%.*]] = icmp ule i64 [[TMP5]], ptrtoint (ptr @__typeid_allones7_size_m1 to i64)
-; X86-NEXT:    ret i1 [[TMP6]]
+; X86-NEXT:    [[TMP3:%.*]] = zext i8 ptrtoint (ptr @__typeid_allones7_align to i8) to i64
+; X86-NEXT:    [[TMP4:%.*]] = lshr i64 [[TMP2]], [[TMP3]]
+; X86-NEXT:    [[TMP5:%.*]] = zext i8 sub (i8 64, i8 ptrtoint (ptr @__typeid_allones7_align to i8)) to i64
+; X86-NEXT:    [[TMP6:%.*]] = shl i64 [[TMP2]], [[TMP5]]
+; X86-NEXT:    [[TMP7:%.*]] = or i64 [[TMP4]], [[TMP6]]
+; X86-NEXT:    [[TMP8:%.*]] = icmp ule i64 [[TMP7]], ptrtoint (ptr @__typeid_allones7_size_m1 to i64)
+; X86-NEXT:    ret i1 [[TMP8]]
 ;
 ; ARM-LABEL: define i1 @allones7(
 ; ARM-SAME: ptr [[P:%.*]]) {
@@ -62,11 +64,13 @@ define i1 @allones32(ptr %p) {
 ; X86-SAME: ptr [[P:%.*]]) {
 ; X86-NEXT:    [[TMP1:%.*]] = ptrtoint ptr [[P]] to i64
 ; X86-NEXT:    [[TMP2:%.*]] = sub i64 [[TMP1]], ptrtoint (ptr @__typeid_allones32_global_addr to i64)
-; X86-NEXT:    [[TMP3:%.*]] = lshr i64 [[TMP2]], zext (i8 ptrtoint (ptr @__typeid_allones32_align to i8) to i64)
-; X86-NEXT:    [[TMP4:%.*]] = shl i64 [[TMP2]], zext (i8 sub (i8 64, i8 ptrtoint (ptr @__typeid_allones32_align to i8)) to i64)
-; X86-NEXT:    [[TMP5:%.*]] = or i64 [[TMP3]], [[TMP4]]
-; X86-NEXT:    [[TMP6:%.*]] = icmp ule i64 [[TMP5]], ptrtoint (ptr @__typeid_allones32_size_m1 to i64)
-; X86-NEXT:    ret i1 [[TMP6]]
+; X86-NEXT:    [[TMP3:%.*]] = zext i8 ptrtoint (ptr @__typeid_allones32_align to i8) to i64
+; X86-NEXT:    [[TMP4:%.*]] = lshr i64 [[TMP2]], [[TMP3]]
+; X86-NEXT:    [[TMP5:%.*]] = zext i8 sub (i8 64, i8 ptrtoint (ptr @__typeid_allones32_align to i8)) to i64
+; X86-NEXT:    [[TMP6:%.*]] = shl i64 [[TMP2]], [[TMP5]]
+; X86-NEXT:    [[TMP7:%.*]] = or i64 [[TMP4]], [[TMP6]]
+; X86-NEXT:    [[TMP8:%.*]] = icmp ule i64 [[TMP7]], ptrtoint (ptr @__typeid_allones32_size_m1 to i64)
+; X86-NEXT:    ret i1 [[TMP8]]
 ;
 ; ARM-LABEL: define i1 @allones32(
 ; ARM-SAME: ptr [[P:%.*]]) {
@@ -87,20 +91,22 @@ define i1 @bytearray7(ptr %p) {
 ; X86-SAME: ptr [[P:%.*]]) {
 ; X86-NEXT:    [[TMP1:%.*]] = ptrtoint ptr [[P]] to i64
 ; X86-NEXT:    [[TMP2:%.*]] = sub i64 [[TMP1]], ptrtoint (ptr @__typeid_bytearray7_global_addr to i64)
-; X86-NEXT:    [[TMP3:%.*]] = lshr i64 [[TMP2]], zext (i8 ptrtoint (ptr @__typeid_bytearray7_align to i8) to i64)
-; X86-NEXT:    [[TMP4:%.*]] = shl i64 [[TMP2]], zext (i8 sub (i8 64, i8 ptrtoint (ptr @__typeid_bytearray7_align to i8)) to i64)
-; X86-NEXT:    [[TMP5:%.*]] = or i64 [[TMP3]], [[TMP4]]
-; X86-NEXT:    [[TMP6:%.*]] = icmp ule i64 [[TMP5]], ptrtoint (ptr @__typeid_bytearray7_size_m1 to i64)
-; X86-NEXT:    br i1 [[TMP6]], label [[TMP7:%.*]], label [[TMP12:%.*]]
-; X86:       7:
-; X86-NEXT:    [[TMP8:%.*]] = getelementptr i8, ptr @__typeid_bytearray7_byte_array, i64 [[TMP5]]
-; X86-NEXT:    [[TMP9:%.*]] = load i8, ptr [[TMP8]], align 1
-; X86-NEXT:    [[TMP10:%.*]] = and i8 [[TMP9]], ptrtoint (ptr @__typeid_bytearray7_bit_mask to i8)
-; X86-NEXT:    [[TMP11:%.*]] = icmp ne i8 [[TMP10]], 0
-; X86-NEXT:    br label [[TMP12]]
-; X86:       12:
-; X86-NEXT:    [[TMP13:%.*]] = phi i1 [ false, [[TMP0:%.*]] ], [ [[TMP11]], [[TMP7]] ]
-; X86-NEXT:    ret i1 [[TMP13]]
+; X86-NEXT:    [[TMP3:%.*]] = zext i8 ptrtoint (ptr @__typeid_bytearray7_align to i8) to i64
+; X86-NEXT:    [[TMP4:%.*]] = lshr i64 [[TMP2]], [[TMP3]]
+; X86-NEXT:    [[TMP5:%.*]] = zext i8 sub (i8 64, i8 ptrtoint (ptr @__typeid_bytearray7_align to i8)) to i64
+; X86-NEXT:    [[TMP6:%.*]] = shl i64 [[TMP2]], [[TMP5]]
+; X86-NEXT:    [[TMP7:%.*]] = or i64 [[TMP4]], [[TMP6]]
+; X86-NEXT:    [[TMP8:%.*]] = icmp ule i64 [[TMP7]], ptrtoint (ptr @__typeid_bytearray7_size_m1 to i64)
+; X86-NEXT:    br i1 [[TMP8]], label [[TMP9:%.*]], label [[TMP14:%.*]]
+; X86:       9:
+; X86-NEXT:    [[TMP10:%.*]] = getelementptr i8, ptr @__typeid_bytearray7_byte_array, i64 [[TMP7]]
+; X86-NEXT:    [[TMP11:%.*]] = load i8, ptr [[TMP10]], align 1
+; X86-NEXT:    [[TMP12:%.*]] = and i8 [[TMP11]], ptrtoint (ptr @__typeid_bytearray7_bit_mask to i8)
+; X86-NEXT:    [[TMP13:%.*]] = icmp ne i8 [[TMP12]], 0
+; X86-NEXT:    br label [[TMP14]]
+; X86:       14:
+; X86-NEXT:    [[TMP15:%.*]] = phi i1 [ false, [[TMP0:%.*]] ], [ [[TMP13]], [[TMP9]] ]
+; X86-NEXT:    ret i1 [[TMP15]]
 ;
 ; ARM-LABEL: define i1 @bytearray7(
 ; ARM-SAME: ptr [[P:%.*]]) {
@@ -130,20 +136,22 @@ define i1 @bytearray32(ptr %p) {
 ; X86-SAME: ptr [[P:%.*]]) {
 ; X86-NEXT:    [[TMP1:%.*]] = ptrtoint ptr [[P]] to i64
 ; X86-NEXT:    [[TMP2:%.*]] = sub i64 [[TMP1]], ptrtoint (ptr @__typeid_bytearray32_global_addr to i64)
-; X86-NEXT:    [[TMP3:%.*]] = lshr i64 [[TMP2]], zext (i8 ptrtoint (ptr @__typeid_bytearray32_align to i8) to i64)
-; X86-NEXT:    [[TMP4:%.*]] = shl i64 [[TMP2]], zext (i8 sub (i8 64, i8 ptrtoint (ptr @__typeid_bytearray32_align to i8)) to i64)
-; X86-NEXT:    [[TMP5:%.*]] = or i64 [[TMP3]], [[TMP4]]
-; X86-NEXT:    [[TMP6:%.*]] = icmp ule i64 [[TMP5]], ptrtoint (ptr @__typeid_bytearray32_size_m1 to i64)
-; X86-NEXT:    br i1 [[TMP6]], label [[TMP7:%.*]], label [[TMP12:%.*]]
-; X86:       7:
-; X86-NEXT:    [[TMP8:%.*]] = getelementptr i8, ptr @__typeid_bytearray32_byte_array, i64 [[TMP5]]
-; X86-NEXT:    [[TMP9:%.*]] = load i8, ptr [[TMP8]], align 1
-; X86-NEXT:    [[TMP10:%.*]] = and i8 [[TMP9]], ptrtoint (ptr @__typeid_bytearray32_bit_mask to i8)
-; X86-NEXT:    [[TMP11:%.*]] = icmp ne i8 [[TMP10]], 0
-; X86-NEXT:    br label [[TMP12]]
-; X86:       12:
-; X86-NEXT:    [[TMP13:%.*]] = phi i1 [ false, [[TMP0:%.*]] ], [ [[TMP11]], [[TMP7]] ]
-; X86-NEXT:    ret i1 [[TMP13]]
+; X86-NEXT:    [[TMP3:%.*]] = zext i8 ptrtoint (ptr @__typeid_bytearray32_align to i8) to i64
+; X86-NEXT:    [[TMP4:%.*]] = lshr i64 [[TMP2]], [[TMP3]]
+; X86-NEXT:    [[TMP5:%.*]] = zext i8 sub (i8 64, i8 ptrtoint (ptr @__typeid_bytearray32_align to i8)) to i64
+; X86-NEXT:    [[TMP6:%.*]] = shl i64 [[TMP2]], [[TMP5]]
+; X86-NEXT:    [[TMP7:%.*]] = or i64 [[TMP4]], [[TMP6]]
+; X86-NEXT:    [[TMP8:%.*]] = icmp ule i64 [[TMP7]], ptrtoint (ptr @__typeid_bytearray32_size_m1 to i64)
+; X86-NEXT:    br i1 [[TMP8]], label [[TMP9:%.*]], label [[TMP14:%.*]]
+; X86:       9:
+; X86-NEXT:    [[TMP10:%.*]] = getelementptr i8, ptr @__typeid_bytearray32_byte_array, i64 [[TMP7]]
+; X86-NEXT:    [[TMP11:%.*]] = load i8, ptr [[TMP10]], align 1
+; X86-NEXT:    [[TMP12:%.*]] = and i8 [[TMP11]], ptrtoint (ptr @__typeid_bytearray32_bit_mask to i8)
+; X86-NEXT:    [[TMP13:%.*]] = icmp ne i8 [[TMP12]], 0
+; X86-NEXT:    br label [[TMP14]]
+; X86:       14:
+; X86-NEXT:    [[TMP15:%.*]] = phi i1 [ false, [[TMP0:%.*]] ], [ [[TMP13]], [[TMP9]] ]
+; X86-NEXT:    ret i1 [[TMP15]]
 ;
 ; ARM-LABEL: define i1 @bytearray32(
 ; ARM-SAME: ptr [[P:%.*]]) {
@@ -173,21 +181,23 @@ define i1 @inline5(ptr %p) {
 ; X86-SAME: ptr [[P:%.*]]) {
 ; X86-NEXT:    [[TMP1:%.*]] = ptrtoint ptr [[P]] to i64
 ; X86-NEXT:    [[TMP2:%.*]] = sub i64 [[TMP1]], ptrtoint (ptr @__typeid_inline5_global_addr to i64)
-; X86-NEXT:    [[TMP3:%.*]] = lshr i64 [[TMP2]], zext (i8 ptrtoint (ptr @__typeid_inline5_align to i8) to i64)
-; X86-NEXT:    [[TMP4:%.*]] = shl i64 [[TMP2]], zext (i8 sub (i8 64, i8 ptrtoint (ptr @__typeid_inline5_align to i8)) to i64)
-; X86-NEXT:    [[TMP5:%.*]] = or i64 [[TMP3]], [[TMP4]]
-; X86-NEXT:    [[TMP6:%.*]] = icmp ule i64 [[TMP5]], ptrtoint (ptr @__typeid_inline5_size_m1 to i64)
-; X86-NEXT:    br i1 [[TMP6]], label [[TMP7:%.*]], label [[TMP13:%.*]]
-; X86:       7:
-; X86-NEXT:    [[TMP8:%.*]] = trunc i64 [[TMP5]] to i32
-; X86-NEXT:    [[TMP9:%.*]] = and i32 [[TMP8]], 31
-; X86-NEXT:    [[TMP10:%.*]] = shl i32 1, [[TMP9]]
-; X86-NEXT:    [[TMP11:%.*]] = and i32 ptrtoint (ptr @__typeid_inline5_inline_bits to i32), [[TMP10]]
-; X86-NEXT:    [[TMP12:%.*]] = icmp ne i32 [[TMP11]], 0
-; X86-NEXT:    br label [[TMP13]]
-; X86:       13:
-; X86-NEXT:    [[TMP14:%.*]] = phi i1 [ false, [[TMP0:%.*]] ], [ [[TMP12]], [[TMP7]] ]
-; X86-NEXT:    ret i1 [[TMP14]]
+; X86-NEXT:    [[TMP3:%.*]] = zext i8 ptrtoint (ptr @__typeid_inline5_align to i8) to i64
+; X86-NEXT:    [[TMP4:%.*]] = lshr i64 [[TMP2]], [[TMP3]]
+; X86-NEXT:    [[TMP5:%.*]] = zext i8 sub (i8 64, i8 ptrtoint (ptr @__typeid_inline5_align to i8)) to i64
+; X86-NEXT:    [[TMP6:%.*]] = shl i64 [[TMP2]], [[TMP5]]
+; X86-NEXT:    [[TMP7:%.*]] = or i64 [[TMP4]], [[TMP6]]
+; X86-NEXT:    [[TMP8:%.*]] = icmp ule i64 [[TMP7]], ptrtoint (ptr @__typeid_inline5_size_m1 to i64)
+; X86-NEXT:    br i1 [[TMP8]], label [[TMP9:%.*]], label [[TMP15:%.*]]
+; X86:       9:
+; X86-NEXT:    [[TMP10:%.*]] = trunc i64 [[TMP7]] to i32
+; X86-NEXT:    [[TMP11:%.*]] = and i32 [[TMP10]], 31
+; X86-NEXT:    [[TMP12:%.*]] = shl i32 1, [[TMP11]]
+; X86-NEXT:    [[TMP13:%.*]] = and i32 ptrtoint (ptr @__typeid_inline5_inline_bits to i32), [[TMP12]]
+; X86-NEXT:    [[TMP14:%.*]] = icmp ne i32 [[TMP13]], 0
+; X86-NEXT:    br label [[TMP15]]
+; X86:       15:
+; X86-NEXT:    [[TMP16:%.*]] = phi i1 [ false, [[TMP0:%.*]] ], [ [[TMP14]], [[TMP9]] ]
+; X86-NEXT:    ret i1 [[TMP16]]
 ;
 ; ARM-LABEL: define i1 @inline5(
 ; ARM-SAME: ptr [[P:%.*]]) {
@@ -218,20 +228,22 @@ define i1 @inline6(ptr %p) {
 ; X86-SAME: ptr [[P:%.*]]) {
 ; X86-NEXT:    [[TMP1:%.*]] = ptrtoint ptr [[P]] to i64
 ; X86-NEXT:    [[TMP2:%.*]] = sub i64 [[TMP1]], ptrtoint (ptr @__typeid_inline6_global_addr to i64)
-; X86-NEXT:    [[TMP3:%.*]] = lshr i64 [[TMP2]], zext (i8 ptrtoint (ptr @__typeid_inline6_align to i8) to i64)
-; X86-NEXT:    [[TMP4:%.*]] = shl i64 [[TMP2]], zext (i8 sub (i8 64, i8 ptrtoint (ptr @__typeid_inline6_align to i8)) to i64)
-; X86-NEXT:    [[TMP5:%.*]] = or i64 [[TMP3]], [[TMP4]]
-; X86-NEXT:    [[TMP6:%.*]] = icmp ule i64 [[TMP5]], ptrtoint (ptr @__typeid_inline6_size_m1 to i64)
-; X86-NEXT:    br i1 [[TMP6]], label [[TMP7:%.*]], label [[TMP12:%.*]]
-; X86:       7:
-; X86-NEXT:    [[TMP8:%.*]] = and i64 [[TMP5]], 63
-; X86-NEXT:    [[TMP9:%.*]] = shl i64 1, [[TMP8]]
-; X86-NEXT:    [[TMP10:%.*]] = and i64 ptrtoint (ptr @__typeid_inline6_inline_bits to i64), [[TMP9]]
-; X86-NEXT:    [[TMP11:%.*]] = icmp ne i64 [[TMP10]], 0
-; X86-NEXT:    br label [[TMP12]]
-; X86:       12:
-; X86-NEXT:    [[TMP13:%.*]] = phi i1 [ false, [[TMP0:%.*]] ], [ [[TMP11]], [[TMP7]] ]
-; X86-NEXT:    ret i1 [[TMP13]]
+; X86-NEXT:    [[TMP3:%.*]] = zext i8 ptrtoint (ptr @__typeid_inline6_align to i8) to i64
+; X86-NEXT:    [[TMP4:%.*]] = lshr i64 [[TMP2]], [[TMP3]]
+; X86-NEXT:    [[TMP5:%.*]] = zext i8 sub (i8 64, i8 ptrtoint (ptr @__typeid_inline6_align to i8)) to i64
+; X86-NEXT:    [[TMP6:%.*]] = shl i64 [[TMP2]], [[TMP5]]
+; X86-NEXT:    [[TMP7:%.*]] = or i64 [[TMP4]], [[TMP6]]
+; X86-NEXT:    [[TMP8:%.*]] = icmp ule i64 [[TMP7]], ptrtoint (ptr @__typeid_inline6_size_m1 to i64)
+; X86-NEXT:    br i1 [[TMP8]], label [[TMP9:%.*]], label [[TMP14:%.*]]
+; X86:       9:
+; X86-NEXT:    [[TMP10:%.*]] = and i64 [[TMP7]], 63
+; X86-NEXT:    [[TMP11:%.*]] = shl i64 1, [[TMP10]]
+; X86-NEXT:    [[TMP12:%.*]] = and i64 ptrtoint (ptr @__typeid_inline6_inline_bits to i64), [[TMP11]]
+; X86-NEXT:    [[TMP13:%.*]] = icmp ne i64 [[TMP12]], 0
+; X86-NEXT:    br label [[TMP14]]
+; X86:       14:
+; X86-NEXT:    [[TMP15:%.*]] = phi i1 [ false, [[TMP0:%.*]] ], [ [[TMP13]], [[TMP9]] ]
+; X86-NEXT:    ret i1 [[TMP15]]
 ;
 ; ARM-LABEL: define i1 @inline6(
 ; ARM-SAME: ptr [[P:%.*]]) {
