@@ -55,6 +55,15 @@
 #define RT_OFFLOAD_API_GROUP_END RT_EXT_API_GROUP_END
 
 /*
+ * RT_OFFLOAD_VAR_GROUP_BEGIN/END pair is placed around definitions
+ * of variables (e.g. globals or static class members) that can be
+ * referenced in functions marked with RT_OFFLOAD_API_GROUP_BEGIN/END.
+ * For OpenMP offload these variables are made "declare target".
+ */
+#define RT_OFFLOAD_VAR_GROUP_BEGIN RT_EXT_API_GROUP_BEGIN
+#define RT_OFFLOAD_VAR_GROUP_END RT_EXT_API_GROUP_END
+
+/*
  * RT_VAR_GROUP_BEGIN/END pair is placed around definitions
  * of module scope variables referenced by Flang runtime (directly
  * or indirectly).
