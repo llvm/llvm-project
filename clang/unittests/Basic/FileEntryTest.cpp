@@ -180,7 +180,7 @@ TEST(FileEntryTest, DenseMapInfo) {
     EXPECT_TRUE(Set.find(R2)->isSameRef(R2));
   }
 
-  // Insert R1Also second and confirm R1 "wins" when looked up as FileEntry.
+  // Insert R1Also first and confirm it "wins" when looked up as FileEntry.
   {
     SmallDenseSet<FileEntryRef, 8> Set;
     Set.insert(R1Also);
