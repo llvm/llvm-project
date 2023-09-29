@@ -8,7 +8,7 @@
 define amdgpu_kernel void @kernel0(ptr addrspace(1) %out, i32 %in) #1 {
 ; CHECK-LABEL: kernel0:
 ; CHECK:       ; %bb.0:
-; CHECK-NEXT:    ; implicit-def: $vgpr23
+; CHECK-NEXT:    ; implicit-def: $vgpr23 : SGPR spill to VGPR lane
 ; CHECK-NEXT:    ;;#ASMSTART
 ; CHECK-NEXT:    ;;#ASMEND
 ; CHECK-NEXT:    ;;#ASMSTART

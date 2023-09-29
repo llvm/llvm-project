@@ -13,7 +13,7 @@ define amdgpu_kernel void @kernel() {
 ; GCN-NEXT:    s_mov_b32 s37, SCRATCH_RSRC_DWORD1
 ; GCN-NEXT:    s_mov_b32 s38, -1
 ; GCN-NEXT:    s_mov_b32 s39, 0xe00000
-; GCN-NEXT:    ; implicit-def: $vgpr3
+; GCN-NEXT:    ; implicit-def: $vgpr3 : SGPR spill to VGPR lane
 ; GCN-NEXT:    s_add_u32 s36, s36, s11
 ; GCN-NEXT:    v_writelane_b32 v3, s4, 0
 ; GCN-NEXT:    s_movk_i32 s32, 0x400

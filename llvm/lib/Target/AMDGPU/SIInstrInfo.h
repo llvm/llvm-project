@@ -1397,6 +1397,13 @@ namespace AMDGPU {
 
 } // end namespace AMDGPU
 
+namespace AMDGPU {
+enum AsmComments {
+  // For sgpr to vgpr spill instructions
+  SGPR_SPILL = MachineInstr::TAsmComments
+};
+} // namespace AMDGPU
+
 namespace SI {
 namespace KernelInputOffsets {
 
