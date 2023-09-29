@@ -688,8 +688,8 @@ body:             |
     ; CHECK-NEXT: %ptr:_(p0) = COPY $x0
     ; CHECK-NEXT: [[LOAD:%[0-9]+]]:_(s8) = G_LOAD %ptr(p0) :: (load (s8))
     ; CHECK-NEXT: [[ASSERT_ZEXT:%[0-9]+]]:_(s8) = G_ASSERT_ZEXT [[LOAD]], 1
-    ; CHECK-NEXT: [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 1
     ; CHECK-NEXT: [[ANYEXT:%[0-9]+]]:_(s64) = G_ANYEXT [[ASSERT_ZEXT]](s8)
+    ; CHECK-NEXT: [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 1
     ; CHECK-NEXT: %ext:_(s64) = G_AND [[ANYEXT]], [[C]]
     ; CHECK-NEXT: $x0 = COPY %ext(s64)
     ; CHECK-NEXT: RET_ReallyLR implicit $x0

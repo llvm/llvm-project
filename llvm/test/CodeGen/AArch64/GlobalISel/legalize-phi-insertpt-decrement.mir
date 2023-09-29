@@ -52,8 +52,8 @@ body:             |
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT:   [[PHI:%[0-9]+]]:_(p0) = G_PHI %6(p0), %bb.2, [[DEF]](p0), %bb.0
   ; CHECK-NEXT:   [[PHI1:%[0-9]+]]:_(s16) = G_PHI %22(s16), %bb.2, [[DEF1]](s16), %bb.0
-  ; CHECK-NEXT:   [[C1:%[0-9]+]]:_(s32) = G_CONSTANT i32 1
   ; CHECK-NEXT:   [[ANYEXT:%[0-9]+]]:_(s32) = G_ANYEXT [[PHI1]](s16)
+  ; CHECK-NEXT:   [[C1:%[0-9]+]]:_(s32) = G_CONSTANT i32 1
   ; CHECK-NEXT:   [[AND:%[0-9]+]]:_(s32) = G_AND [[ANYEXT]], [[C1]]
   ; CHECK-NEXT:   G_BRCOND [[AND]](s32), %bb.3
   ; CHECK-NEXT: {{  $}}
@@ -71,10 +71,8 @@ body:             |
   ; CHECK-NEXT:   [[COPY:%[0-9]+]]:_(s32) = COPY [[C3]](s32)
   ; CHECK-NEXT:   [[ICMP1:%[0-9]+]]:_(s32) = G_ICMP intpred(eq), [[ZEXT1]](s32), [[COPY]]
   ; CHECK-NEXT:   [[PTR_ADD1:%[0-9]+]]:_(p0) = G_PTR_ADD [[PHI]], [[C2]](s64)
-  ; CHECK-NEXT:   [[C4:%[0-9]+]]:_(s32) = G_CONSTANT i32 1
-  ; CHECK-NEXT:   [[AND1:%[0-9]+]]:_(s32) = G_AND [[ICMP]], [[C4]]
   ; CHECK-NEXT:   [[TRUNC:%[0-9]+]]:_(s16) = G_TRUNC [[ICMP1]](s32)
-  ; CHECK-NEXT:   G_BRCOND [[AND1]](s32), %bb.3
+  ; CHECK-NEXT:   G_BRCOND [[ICMP]](s32), %bb.3
   ; CHECK-NEXT:   G_BR %bb.1
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.3.bb10:
