@@ -191,7 +191,7 @@ MachineOperand *GCNDPPCombine::getOldOpndValue(MachineOperand &OldOpnd) const {
   return &OldOpnd;
 }
 
-static unsigned getOperandSize(MachineInstr &MI, unsigned Idx,
+[[maybe_unused]] static unsigned getOperandSize(MachineInstr &MI, unsigned Idx,
                                MachineRegisterInfo &MRI) {
   int16_t RegClass = MI.getDesc().operands()[Idx].RegClass;
   if (RegClass == -1)
