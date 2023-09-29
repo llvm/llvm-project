@@ -17,7 +17,6 @@
 #include <stdbool.h>
 #include <threads.h>
 
-
 _Unwind_Reason_Code __gxx_personality_wasm0(int version, _Unwind_Action actions,
                                             uint64_t exceptionClass,
                                             _Unwind_Exception *unwind_exception,
