@@ -677,7 +677,7 @@ public:
   /// Like \ref findAllModulesForHeader, but do not attempt to infer module
   /// ownership from umbrella headers if we've not already done so.
   ArrayRef<ModuleMap::KnownHeader>
-  findResolvedModulesForHeader(const FileEntry *File) const;
+  findResolvedModulesForHeader(FileEntryRef File) const;
 
   /// Read the contents of the given module map file.
   ///
