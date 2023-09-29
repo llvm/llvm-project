@@ -1461,7 +1461,7 @@ void RISCVInsertVSETVLI::doLocalPostpass(MachineBasicBlock &MBB) {
         // do not track uses by *NextMI since we will deal with them explicitly,
         // and also ignore uses by instructions that will be removed
         if ((!NextMI || !UserMI.isIdenticalTo(*NextMI)) &&
-            ToDelete.find(&UserMI) == ToDelete.end()) {
+            !ToDelete.contains(&UserMI)) {
           Used.demandVL();
           break;
         }
