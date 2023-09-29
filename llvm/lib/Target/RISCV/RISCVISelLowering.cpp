@@ -11182,13 +11182,12 @@ static SDValue combineBinOpOfExtractToReduceTree(SDNode *N, SelectionDAG &DAG,
   SDValue ReduceVec = LHS.getOperand(0);
   if (ReduceVec.getOpcode() == ISD::EXTRACT_SUBVECTOR &&
       ReduceVec.hasOneUse() && ReduceVec.getOperand(0) == RHS.getOperand(0) &&
-      isNullConstant(ReduceVec.getOperand(1)) &&
-      isa<ConstantSDNode>(RHS.getOperand(1))) {
+      isNullConstant(ReduceVec.getOperand(1))) {
     uint64_t Idx = cast<ConstantSDNode>(RHS.getOperand(1))->getLimitedValue();
     if (ReduceVec.getValueType().getVectorNumElements() == Idx) {
       // For illegal types (e.g. 3xi32), most will be combined again into a
       // wider (hopefully legal) type.  If this is a terminal state, we are
-      // relying on type legalization here to poduce something reasonable
+      // relying on type legalization here to produce something reasonable
       // and this lowering quality could probably be improved. (TODO)
       EVT ReduceVT = EVT::getVectorVT(*DAG.getContext(), VT, Idx+1);
       SDValue Vec = DAG.getNode(ISD::EXTRACT_SUBVECTOR, DL, ReduceVT, SrcVec,
