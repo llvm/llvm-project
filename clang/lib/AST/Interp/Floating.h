@@ -76,6 +76,12 @@ public:
     F.toString(Buffer);
     OS << Buffer;
   }
+  std::string toDiagnosticString(const ASTContext &Ctx) const {
+    std::string NameStr;
+    llvm::raw_string_ostream OS(NameStr);
+    print(OS);
+    return NameStr;
+  }
 
   unsigned bitWidth() const { return F.semanticsSizeInBits(F.getSemantics()); }
 
