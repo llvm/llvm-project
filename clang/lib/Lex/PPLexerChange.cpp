@@ -366,8 +366,8 @@ bool Preprocessor::HandleEndOfFile(Token &Result, bool isEndOfMacro) {
     if (const IdentifierInfo *ControllingMacro =
           CurPPLexer->MIOpt.GetControllingMacroAtEndOfFile()) {
       // Okay, this has a controlling macro, remember in HeaderFileInfo.
-      if (const FileEntry *FE = CurPPLexer->getFileEntry()) {
-        HeaderInfo.SetFileControllingMacro(FE, ControllingMacro);
+      if (OptionalFileEntryRef FE = CurPPLexer->getFileEntry()) {
+        HeaderInfo.SetFileControllingMacro(*FE, ControllingMacro);
         if (MacroInfo *MI =
               getMacroInfo(const_cast<IdentifierInfo*>(ControllingMacro)))
           MI->setUsedForHeaderGuard(true);
