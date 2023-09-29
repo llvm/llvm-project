@@ -62,21 +62,6 @@ if (LLDB_ENABLE_SWIFT_SUPPORT)
   endif()
 endif()
 
-# When we have the early SwiftSyntax build, we can include its parser.
-if (LLDB_ENABLE_SWIFT_SUPPORT)
-  if(SWIFT_PATH_TO_EARLYSWIFTSYNTAX_BUILD_DIR)
-    set(SWIFT_PATH_TO_EARLYSWIFTSYNTAX_TARGETS
-      ${SWIFT_PATH_TO_EARLYSWIFTSYNTAX_BUILD_DIR}/cmake/SwiftSyntaxTargets.cmake)
-    if(NOT EXISTS "${SWIFT_PATH_TO_EARLYSWIFTSYNTAX_TARGETS}")
-      message(STATUS "Skipping Swift Swift parser integration due to missing early SwiftSyntax")
-    else()
-      set(SWIFT_SWIFT_PARSER TRUE)
-      include(${SWIFT_PATH_TO_EARLYSWIFTSYNTAX_TARGETS})
-    endif()
-  endif()
-endif()
-# END - Swift Mods
-
 # Define the LLDB_CONFIGURATION_xxx matching the build type.
 if(uppercase_CMAKE_BUILD_TYPE STREQUAL "DEBUG" )
   add_definitions(-DLLDB_CONFIGURATION_DEBUG)
