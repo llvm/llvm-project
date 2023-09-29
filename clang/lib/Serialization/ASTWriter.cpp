@@ -2890,7 +2890,7 @@ void ASTWriter::WriteSubmodules(Module *WritingModule) {
                                          Mod->InferExportWildcard,
                                          Mod->ConfigMacrosExhaustive,
                                          Mod->ModuleMapIsPrivate,
-                                         Mod->NamedModuleHasNoInit};
+                                         Mod->NamedModuleHasInit};
       Stream.EmitRecordWithBlob(DefinitionAbbrev, Record, Mod->Name);
     }
 
