@@ -1,5 +1,6 @@
 // RUN: llvm-mc -arch=amdgcn -mcpu=gfx1200 -mattr=+wavefrontsize32,-wavefrontsize64 -show-encoding %s | FileCheck --check-prefixes=GFX12 %s
 // RUN: llvm-mc -arch=amdgcn -mcpu=gfx1200 -mattr=-wavefrontsize32,+wavefrontsize64 -show-encoding %s | FileCheck --check-prefixes=GFX12 %s
+// RUN: llvm-mc -arch=amdgcn -mcpu=gfx1210 -mattr=+wavefrontsize32,-wavefrontsize64 -show-encoding %s | FileCheck --check-prefixes=GFX12 %s
 
 v_cmpx_class_f16_e64 v1, v2
 // GFX12: encoding: [0x7e,0x00,0xfd,0xd4,0x01,0x05,0x02,0x00]

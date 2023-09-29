@@ -193,7 +193,8 @@ static uint32_t getLit32Encoding(uint32_t Val, const MCSubtargetInfo &STI) {
   return 255;
 }
 
-static uint32_t getLit64Encoding(uint64_t Val, const MCSubtargetInfo &STI) {
+static uint32_t getLit64Encoding(uint64_t Val, const MCSubtargetInfo &STI,
+                                 bool IsFP) {
   uint32_t IntImm = getIntInlineImmEncoding(static_cast<int64_t>(Val));
   if (IntImm != 0)
     return IntImm;
@@ -227,7 +228,7 @@ static uint32_t getLit64Encoding(uint64_t Val, const MCSubtargetInfo &STI) {
     return 248;
 
   if (STI.hasFeature(AMDGPU::Feature64BitLiterals) &&
-      !isUInt<32>(Val) && !isInt<32>(Val))
+      !AMDGPU::isValid32BitLiteral(Val, IsFP))
     return 254;
 
   return 255;
@@ -270,13 +271,15 @@ AMDGPUMCCodeEmitter::getLitEncoding(const MCOperand &MO,
     return getLit32Encoding(static_cast<uint32_t>(Imm), STI);
 
   case AMDGPU::OPERAND_REG_IMM_INT64:
-  case AMDGPU::OPERAND_REG_IMM_FP64:
   case AMDGPU::OPERAND_REG_INLINE_C_INT64:
+  case AMDGPU::OPERAND_REG_IMM64_INT64:
+     return getLit64Encoding(static_cast<uint64_t>(Imm), STI, false);
+
   case AMDGPU::OPERAND_REG_INLINE_C_FP64:
   case AMDGPU::OPERAND_REG_INLINE_AC_FP64:
-  case AMDGPU::OPERAND_REG_IMM64_INT64:
+  case AMDGPU::OPERAND_REG_IMM_FP64:
   case AMDGPU::OPERAND_REG_IMM64_FP64:
-    return getLit64Encoding(static_cast<uint64_t>(Imm), STI);
+    return getLit64Encoding(static_cast<uint64_t>(Imm), STI, true);
 
   case AMDGPU::OPERAND_REG_IMM_INT16:
   case AMDGPU::OPERAND_REG_INLINE_C_INT16:
@@ -421,8 +424,18 @@ void AMDGPUMCCodeEmitter::encodeInstruction(const MCInst &MI,
     if (*Enc == 254) {
       assert(STI.hasFeature(AMDGPU::Feature64BitLiterals));
       support::endian::write<uint64_t>(CB, Imm, support::endianness::little);
-    } else
+    } else {
+      switch (Desc.operands()[i].OperandType) {
+      default:
+        break;
+      case AMDGPU::OPERAND_REG_IMM_FP64:
+      case AMDGPU::OPERAND_REG_IMM64_FP64:
+        if (AMDGPU::isValid32BitLiteral(Imm, true))
+          Imm = Hi_32(Imm);
+        break;
+      }
       support::endian::write<uint32_t>(CB, Imm, support::endianness::little);
+    }
 
     // Only one literal value allowed
     break;

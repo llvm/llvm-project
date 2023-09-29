@@ -2104,7 +2104,7 @@ bool AMDGPUOperand::isLiteralImm(MVT type, bool Allow64Bit) const {
 
     unsigned Size = type.getSizeInBits();
     if (Size == 64) {
-      if (Allow64Bit)
+      if (Allow64Bit && !AMDGPU::isValid32BitLiteral(Imm.Val, false))
         return true;
       Size = 32;
     }
@@ -2233,18 +2233,6 @@ void AMDGPUOperand::addLiteralImmOperand(MCInst &Inst, int64_t Val, bool ApplyMo
   APInt Literal(64, Val);
   uint8_t OpTy = InstDesc.operands()[OpNum].OperandType;
 
-  if (InstDesc.getSize() == 4 &&
-      AsmParser->getFeatureBits()[AMDGPU::Feature64BitLiterals]) {
-    switch (OpTy) {
-    default:
-      break;
-    case AMDGPU::OPERAND_REG_IMM64_INT64:
-    case AMDGPU::OPERAND_REG_IMM64_FP64:
-      Inst.addOperand(MCOperand::createImm(Val));
-      return;
-    }
-  }
-
   if (Imm.IsFPImm) { // We got fp literal token
     switch (OpTy) {
     case AMDGPU::OPERAND_REG_IMM_INT64:
@@ -2264,13 +2252,16 @@ void AMDGPUOperand::addLiteralImmOperand(MCInst &Inst, int64_t Val, bool ApplyMo
       // Non-inlineable
       if (AMDGPU::isSISrcFPOperand(InstDesc, OpNum)) { // Expected 64-bit fp operand
         // For fp operands we check if low 32 bits are zeros
-        if (Literal.getLoBits(32) != 0) {
+        if (Literal.getLoBits(32) != 0 &&
+            (InstDesc.getSize() != 4 ||
+             !AsmParser->getFeatureBits()[AMDGPU::Feature64BitLiterals])) {
           const_cast<AMDGPUAsmParser *>(AsmParser)->Warning(Inst.getLoc(),
           "Can't encode literal as exact 64-bit floating-point operand. "
           "Low 32-bits will be set to zero");
+          Val &= 0xffffffff00000000u;
         }
 
-        Inst.addOperand(MCOperand::createImm(Literal.lshr(32).getZExtValue()));
+        Inst.addOperand(MCOperand::createImm(Val));
         setImmKindLiteral();
         return;
       }
@@ -2373,7 +2364,10 @@ void AMDGPUOperand::addLiteralImmOperand(MCInst &Inst, int64_t Val, bool ApplyMo
       return;
     }
 
-    Inst.addOperand(MCOperand::createImm(Lo_32(Val)));
+    if (isInt<32>(Val) || isUInt<32>(Val))
+      Val = AMDGPU::isSISrcFPOperand(InstDesc, OpNum) ? Val << 32 : Lo_32(Val);
+
+    Inst.addOperand(MCOperand::createImm(Val));
     setImmKindLiteral();
     return;
 
@@ -4697,6 +4691,11 @@ bool AMDGPUAsmParser::validateVOPLiteral(const MCInst &Inst,
 
     if (MO.isImm() && !isInlineConstant(Inst, OpIdx)) {
       uint64_t Value = static_cast<uint64_t>(MO.getImm());
+      if (AMDGPU::isSISrcFPOperand(Desc, OpIdx) &&
+          AMDGPU::getOperandSize(Desc.operands()[OpIdx]) == 8 &&
+          AMDGPU::isValid32BitLiteral(Value, true))
+        Value = Hi_32(Value);
+
       if (NumLiterals == 0 || LiteralValue != Value) {
         LiteralValue = Value;
         ++NumLiterals;

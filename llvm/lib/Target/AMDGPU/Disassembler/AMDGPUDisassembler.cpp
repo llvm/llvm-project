@@ -394,6 +394,15 @@ static DecodeStatus decodeOperand_AVLdSt_Any(MCInst &Inst, unsigned Imm,
   return addOperand(Inst, DAsm->decodeSrcOp(Opw, Imm | 256));
 }
 
+static DecodeStatus decodeOperand_VSrc_f64(MCInst &Inst, unsigned Imm,
+                                           uint64_t Addr,
+                                           const MCDisassembler *Decoder) {
+  assert(Imm < (1 << 9) && "9-bit encoding");
+  auto DAsm = static_cast<const AMDGPUDisassembler *>(Decoder);
+  return addOperand(
+      Inst, DAsm->decodeSrcOp(AMDGPUDisassembler::OPW64, Imm, false, 64, true));
+}
+
 static DecodeStatus
 DecodeAVLdSt_32RegisterClass(MCInst &Inst, unsigned Imm, uint64_t Addr,
                              const MCDisassembler *Decoder) {
@@ -1435,7 +1444,7 @@ AMDGPUDisassembler::decodeMandatoryLiteralConstant(unsigned Val) const {
   return MCOperand::createImm(Literal);
 }
 
-MCOperand AMDGPUDisassembler::decodeLiteralConstant() const {
+MCOperand AMDGPUDisassembler::decodeLiteralConstant(bool ExtendFP64) const {
   // For now all literal constants are supposed to be unsigned integer
   // ToDo: deal with signed/unsigned 64-bit integer constants
   // ToDo: deal with float/double constants
@@ -1445,9 +1454,11 @@ MCOperand AMDGPUDisassembler::decodeLiteralConstant() const {
                         Twine(Bytes.size()));
     }
     HasLiteral = true;
-    Literal = eatBytes<uint32_t>(Bytes);
+    Literal = Literal64 = eatBytes<uint32_t>(Bytes);
+    if (ExtendFP64)
+      Literal64 <<= 32;
   }
-  return MCOperand::createImm(Literal);
+  return MCOperand::createImm(ExtendFP64 ? Literal64 : Literal);
 }
 
 MCOperand AMDGPUDisassembler::decodeLiteral64Constant() const {
@@ -1678,7 +1689,7 @@ int AMDGPUDisassembler::getTTmpIdx(unsigned Val) const {
 
 MCOperand AMDGPUDisassembler::decodeSrcOp(const OpWidthTy Width, unsigned Val,
                                           bool MandatoryLiteral,
-                                          unsigned ImmWidth) const {
+                                          unsigned ImmWidth, bool IsFP) const {
   using namespace AMDGPU::EncValues;
 
   assert(Val < 1024); // enum10
@@ -1690,13 +1701,15 @@ MCOperand AMDGPUDisassembler::decodeSrcOp(const OpWidthTy Width, unsigned Val,
     return createRegOperand(IsAGPR ? getAgprClassId(Width)
                                    : getVgprClassId(Width), Val - VGPR_MIN);
   }
-  return decodeNonVGPRSrcOp(Width, Val & 0xFF, MandatoryLiteral, ImmWidth);
+  return decodeNonVGPRSrcOp(Width, Val & 0xFF, MandatoryLiteral, ImmWidth,
+                            IsFP);
 }
 
 MCOperand AMDGPUDisassembler::decodeNonVGPRSrcOp(const OpWidthTy Width,
                                                  unsigned Val,
                                                  bool MandatoryLiteral,
-                                                 unsigned ImmWidth) const {
+                                                 unsigned ImmWidth,
+                                                 bool IsFP) const {
   // Cases when Val{8} is 1 (vgpr, agpr or true 16 vgpr) should have been
   // decoded earlier.
   assert(Val < (1 << 8) && "9-bit Src encoding when Val{8} is 0");
@@ -1724,7 +1737,7 @@ MCOperand AMDGPUDisassembler::decodeNonVGPRSrcOp(const OpWidthTy Width,
       // Keep a sentinel value for deferred setting
       return MCOperand::createImm(LITERAL_CONST);
     else
-      return decodeLiteralConstant();
+      return decodeLiteralConstant(IsFP && ImmWidth == 64);
   }
 
   if (Val == LITERAL64_CONST && STI.hasFeature(AMDGPU::Feature64BitLiterals)) {
