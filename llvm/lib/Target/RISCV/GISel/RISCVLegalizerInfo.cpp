@@ -154,9 +154,7 @@ RISCVLegalizerInfo::RISCVLegalizerInfo(const RISCVSubtarget &ST) {
     getActionDefinitionsBuilder({G_SMULH, G_UMULH}).lowerFor({XLenLLT});
   }
 
-  getActionDefinitionsBuilder({G_SMULO, G_UMULO})
-      .minScalar(0, XLenLLT)
-      .lower();
+  getActionDefinitionsBuilder({G_SMULO, G_UMULO}).minScalar(0, XLenLLT).lower();
 
   if (ST.hasStdExtM()) {
     getActionDefinitionsBuilder({G_UDIV, G_SDIV, G_UREM, G_SREM})
