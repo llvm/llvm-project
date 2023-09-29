@@ -6,38 +6,23 @@
 //
 //===----------------------------------------------------------------------===//
 
-// REQUIRES: stdlib=apple-libc++
+// REQUIRES: stdlib=libc++ && target={{.+}}-apple-{{.+}}
 
-// This file checks various properties of the installation of libc++abi when built
-// as a system library on Apple platforms.
+// This file checks various properties of the installation of libc++abi when built as
+// part of the LLVM releases, on Apple platforms.
 
 // Make sure we install the libc++abi headers in the right location.
-// TODO: We don't currently install them, but we should.
 //
-// XRUNX: stat "%{include}/cxxabi.h"
+// RUN: stat "%{include}/cxxabi.h"
 
 // Make sure we install libc++abi.dylib in the right location.
 //
+// RUN: stat "%{lib}/libc++abi.1.dylib"
+
+// Make sure we install a symlink from libc++abi.dylib to libc++abi.1.dylib.
+//
 // RUN: stat "%{lib}/libc++abi.dylib"
-
-// Make sure we don't install a symlink from libc++abi.dylib to libc++abi.1.dylib,
-// unlike what we do for libc++.dylib.
-// TODO: We currently don't do that correctly in the CMake build.
-//
-// XRUNX: ! readlink "%{lib}/libc++abi.dylib"
-// XRUNX: ! stat "%{lib}/libc++abi.1.dylib"
-
-// Make sure the install_name is /usr/lib.
-//
-// In particular, make sure we don't use any @rpath in the load commands. When building as
-// a system library, it is important to hardcode the installation paths in the dylib, because
-// various tools like dyld and ld64 will treat us specially if they recognize us as being a
-// system library.
-//
-// TODO: We currently don't do that correctly in the CMake build.
-//
-// XRUNX: otool -L "%{lib}/libc++abi.dylib" | grep '/usr/lib/libc++abi.dylib'
-// XRUNX: otool -l "%{lib}/libc++abi.dylib" | grep --invert-match -E "LC_RPATH|@loader_path|@rpath"
+// RUN: readlink "%{lib}/libc++abi.dylib" | grep "libc++abi.1.dylib"
 
 // Make sure we don't set a RPATH when we build the library. Since we are building a system
 // library, we are supposed to find our dependencies at the usual system-provided locations,

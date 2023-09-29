@@ -6,10 +6,10 @@
 //
 //===----------------------------------------------------------------------===//
 
-// REQUIRES: stdlib=apple-libc++
+// REQUIRES: stdlib=libc++ && target={{.+}}-apple-{{.+}}
 
 // This file checks various properties of the installation of libc++ when built as
-// a system library on Apple platforms.
+// part of the LLVM releases, on Apple platforms.
 
 // Make sure we install the libc++ headers in the right location.
 //
@@ -25,18 +25,6 @@
 // RUN: stat "%{lib}/libc++.dylib"
 // RUN: readlink "%{lib}/libc++.dylib" | grep "libc++.1.dylib"
 
-// Make sure the install_name is /usr/lib.
-//
-// In particular, make sure we don't use any @rpath-relative paths in the load commands.
-// When building as a system library, it is important to hardcode the installation paths
-// in the dylib, because various tools like dyld and ld64 will treat us specially if they
-// recognize us as being a system library.
-//
-// TODO: We currently don't do that correctly in the CMake build.
-//
-// XRUNX: otool -L "%{lib}/libc++.1.dylib" | grep '/usr/lib/libc++.1.dylib'
-// XRUNX: otool -l "%{lib}/libc++.1.dylib" | grep --invert-match -E "@loader_path|@rpath"
-
 // Make sure we don't set a RPATH when we build the library. Since we are building a system
 // library, we are supposed to find our dependencies at the usual system-provided locations,
 // which doesn't require setting a RPATH in the library itself.
@@ -48,7 +36,3 @@
 // when they are loaded by dyld, if the compatibility version was bumped.
 //
 // RUN: otool -L "%{lib}/libc++.1.dylib" | grep "libc++.1.dylib" | grep "compatibility version 1.0.0"
-
-// Make sure we use the libdispatch backend for the PSTL.
-//
-// RUN: grep "%{include}/__config_site" -e '#define _LIBCPP_PSTL_CPU_BACKEND_LIBDISPATCH'
