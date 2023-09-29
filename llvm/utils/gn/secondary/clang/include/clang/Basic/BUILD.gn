@@ -67,6 +67,16 @@ clang_tablegen("AttrList") {
   td_file = "Attr.td"
 }
 
+clang_tablegen("AttrLeftSideCanPrintList") {
+  args = [ "-gen-clang-attr-can-print-left-list" ]
+  td_file = "Attr.td"
+}
+
+clang_tablegen("AttrLeftSideMustPrintList") {
+  args = [ "-gen-clang-attr-must-print-left-list" ]
+  td_file = "Attr.td"
+}
+
 clang_tablegen("AttrSubMatchRulesList") {
   args = [ "-gen-clang-attr-subject-match-rule-list" ]
   td_file = "Attr.td"

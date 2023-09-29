@@ -3,9 +3,9 @@
 
 # RUN: llvm-mc -filetype=obj -relax-relocations -triple=x86_64-unknown-linux %s -o %t.o
 # RUN: ld.lld %t.o -o %t1 --no-apply-dynamic-relocs
-# RUN: llvm-readobj -x .got.plt -r %t1 | FileCheck --check-prefixes=RELOC,NO-APPLY-DYNAMIC-RELOCS %s
+# RUN: llvm-readelf -S -r -x .got.plt %t1 | FileCheck --check-prefixes=CHECK,NOAPPLY %s
 # RUN: ld.lld %t.o -o %t1 --apply-dynamic-relocs
-# RUN: llvm-readobj -x .got.plt -r %t1 | FileCheck --check-prefixes=RELOC,APPLY-DYNAMIC-RELOCS %s
+# RUN: llvm-readelf -S -r -x .got.plt %t1 | FileCheck --check-prefixes=CHECK,APPLY %s
 # RUN: ld.lld %t.o -o %t1
 # RUN: llvm-objdump --no-print-imm-hex -d %t1 | FileCheck --check-prefix=DISASM %s
 
@@ -13,16 +13,18 @@
 # RUN: ld.lld --no-relax %t.o -o %t2
 # RUN: llvm-objdump --no-print-imm-hex -d %t2 | FileCheck --check-prefix=NORELAX %s
 
+## .got is removed as all GOT-generating relocations are optimized.
+# CHECK:      Name              Type            Address          Off    Size   ES Flg Lk Inf Al
+# CHECK:      .iplt             PROGBITS        0000000000201210 000210 000010 00  AX  0   0 16
+# CHECK-NEXT: .got.plt          PROGBITS        0000000000202220 000220 000008 00  WA  0   0  8
+
 ## There is one R_X86_64_IRELATIVE relocations.
-# RELOC-LABEL: Relocations [
-# RELOC-NEXT:    Section (1) .rela.dyn {
-# RELOC-NEXT:      0x202220 R_X86_64_IRELATIVE - 0x201172
-# RELOC-NEXT:    }
-# RELOC-NEXT:  ]
-# RELOC-LABEL: Hex dump of section '.got.plt':
-# NO-APPLY-DYNAMIC-RELOCS-NEXT:  0x00202220 00000000 00000000
-# APPLY-DYNAMIC-RELOCS-NEXT:     0x00202220 72112000 00000000
-# RELOC-EMPTY:
+# RELOC-LABEL: Relocation section '.rela.dyn' at offset {{.*}} contains 1 entry:
+# CHECK:           Offset             Info             Type               Symbol's Value  Symbol's Name + Addend
+# CHECK:       0000000000202220  0000000000000025 R_X86_64_IRELATIVE                        201172
+# CHECK-LABEL: Hex dump of section '.got.plt':
+# NOAPPLY-NEXT:  0x00202220 00000000 00000000
+# APPLY-NEXT:    0x00202220 72112000 00000000
 
 # 0x201173 + 7 - 10 = 0x201170
 # 0x20117a + 7 - 17 = 0x201170

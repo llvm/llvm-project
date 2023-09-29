@@ -86,7 +86,8 @@ public:
 bool CheckDefaultArgumentVisitor::VisitExpr(const Expr *Node) {
   bool IsInvalid = false;
   for (const Stmt *SubStmt : Node->children())
-    IsInvalid |= Visit(SubStmt);
+    if (SubStmt)
+      IsInvalid |= Visit(SubStmt);
   return IsInvalid;
 }
 
@@ -2514,12 +2515,15 @@ void Sema::DiagnoseImmediateEscalatingReason(FunctionDecl *FD) {
         Range = CurrentInit->isWritten() ? CurrentInit->getSourceRange()
                                          : SourceRange();
       }
+
+      FieldDecl* InitializedField = CurrentInit ? CurrentInit->getAnyMember() : nullptr;
+
       SemaRef.Diag(Loc, diag::note_immediate_function_reason)
           << ImmediateFn << Fn << Fn->isConsteval() << IsCall
           << isa<CXXConstructorDecl>(Fn) << ImmediateFnIsConstructor
-          << (CurrentInit != nullptr)
+          << (InitializedField != nullptr)
           << (CurrentInit && !CurrentInit->isWritten())
-          << (CurrentInit ? CurrentInit->getAnyMember() : nullptr) << Range;
+          << InitializedField << Range;
     }
     bool TraverseCallExpr(CallExpr *E) {
       if (const auto *DR =

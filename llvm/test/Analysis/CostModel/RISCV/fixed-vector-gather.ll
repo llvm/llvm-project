@@ -72,7 +72,7 @@ define i32 @masked_gather() {
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 15 for instruction: %V4I16.u = call <4 x i16> @llvm.masked.gather.v4i16.v4p0(<4 x ptr> undef, i32 1, <4 x i1> undef, <4 x i16> undef)
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 7 for instruction: %V2I16.u = call <2 x i16> @llvm.masked.gather.v2i16.v2p0(<2 x ptr> undef, i32 1, <2 x i1> undef, <2 x i16> undef)
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %V1I16.u = call <1 x i16> @llvm.masked.gather.v1i16.v1p0(<1 x ptr> undef, i32 1, <1 x i1> undef, <1 x i16> undef)
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret i32 0
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret i32 0
 ;
   %V8F64 = call <8 x double> @llvm.masked.gather.v8f64.v8p0(<8 x ptr> undef, i32 8, <8 x i1> undef, <8 x double> undef)
   %V4F64 = call <4 x double> @llvm.masked.gather.v4f64.v4p0(<4 x ptr> undef, i32 8, <4 x i1> undef, <4 x double> undef)

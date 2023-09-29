@@ -54,7 +54,7 @@ transform.sequence failures(propagate) {
     padding_dimensions=[0, 1, 2],
     pack_paddings=[1, 1, 1]
   } : (!transform.any_op) -> (!transform.any_op, !transform.any_op, !transform.any_op)
-  %buffer, %new_ops = transform.structured.bufferize_to_allocation %pad {memory_space = 3} : !transform.any_op
+  %buffer, %new_ops = transform.structured.bufferize_to_allocation %pad {memory_space = 3, emit_dealloc} : !transform.any_op
   %2 = transform.bufferization.one_shot_bufferize %arg1 {bufferize_function_boundaries=true} : (!transform.any_op) -> !transform.any_op
 
 }
@@ -111,9 +111,9 @@ transform.sequence failures(propagate) {
     padding_dimensions=[0, 1, 2],
     pack_paddings=[1, 1, 1]
   } : (!transform.any_op) -> (!transform.any_op, !transform.any_op, !transform.any_op)
-  transform.structured.masked_vectorize %pad vector_sizes [10, 12] : !transform.any_op
+  transform.structured.vectorize %pad vector_sizes [10, 12] : !transform.any_op
   %vector_write = transform.structured.match ops{["vector.transfer_write"]} in %arg1 : (!transform.any_op) -> !transform.any_op
   %mask_op = transform.get_parent_op %vector_write {op_name = "vector.mask"} : (!transform.any_op) -> !transform.any_op
-  %buffer, %new_ops = transform.structured.bufferize_to_allocation %mask_op {memory_space = 3} : !transform.any_op
+  %buffer, %new_ops = transform.structured.bufferize_to_allocation %mask_op {memory_space = 3, emit_dealloc} : !transform.any_op
   %2 = transform.bufferization.one_shot_bufferize %arg1 {bufferize_function_boundaries=true} : (!transform.any_op) -> !transform.any_op
 }

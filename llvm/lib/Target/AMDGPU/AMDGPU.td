@@ -281,6 +281,12 @@ def FeatureMADIntraFwdBug : SubtargetFeature<"mad-intra-fwd-bug",
   "MAD_U64/I64 intra instruction forwarding bug"
 >;
 
+def FeatureMSAALoadDstSelBug : SubtargetFeature<"msaa-load-dst-sel-bug",
+  "HasMSAALoadDstSelBug",
+  "true",
+  "MSAA loads not honoring dst_sel bug"
+>;
+
 class SubtargetFeatureLDSBankCount <int Value> : SubtargetFeature <
   "ldsbankcount"#Value,
   "LDSBankCount",
@@ -375,6 +381,12 @@ def FeatureTrue16BitInsts : SubtargetFeature<"true16",
   "True 16-bit operand instructions"
 >;
 
+def FeatureRealTrue16Insts : SubtargetFeature<"real-true16",
+  "EnableRealTrue16Insts",
+  "true",
+  "Use true 16-bit registers"
+>;
+
 def FeatureVOP3P : SubtargetFeature<"vop3p",
   "HasVOP3PInsts",
   "true",
@@ -458,6 +470,12 @@ def FeatureDPALU_DPP : SubtargetFeature<"dpp-64bit",
   "HasDPALU_DPP",
   "true",
   "Support DPP (Data Parallel Primitives) extension in DP ALU"
+>;
+
+def FeatureDPPSrc1SGPR : SubtargetFeature<"dpp-src1-sgpr",
+  "HasDPPSrc1SGPR",
+  "true",
+  "Support SGPR for Src1 of DPP instructions"
 >;
 
 def FeaturePackedFP32Ops : SubtargetFeature<"packed-fp32-ops",
@@ -773,6 +791,12 @@ def FeatureForceStoreSC0SC1 : SubtargetFeature<"force-store-sc0-sc1",
   "Has SC0 and SC1 on stores"
 >;
 
+def FeatureSALUFloatInsts : SubtargetFeature<"salu-float",
+  "HasSALUFloatInsts",
+  "true",
+  "Has SALU floating point instructions"
+>;
+
 //===------------------------------------------------------------===//
 // Subtarget Features (options and debugging)
 //===------------------------------------------------------------===//
@@ -870,6 +894,12 @@ def FeatureTrigReducedRange : SubtargetFeature<"trig-reduced-range",
   "HasTrigReducedRange",
   "true",
   "Requires use of fract on arguments to trig instructions"
+>;
+
+def FeatureKernargPreload : SubtargetFeature <"kernarg-preload",
+  "KernargPreload",
+  "true",
+  "Hardware supports preloading of kernel arguments in user SGPRs."
 >;
 
 // Alignment enforcement is controlled by a configuration register:
@@ -1185,7 +1215,8 @@ def FeatureISAVersion9_0_A : FeatureSet<
      FeatureAtomicBufferGlobalPkAddF16Insts,
      FeaturePackedTID,
      FullRate64Ops,
-     FeatureBackOffBarrier])>;
+     FeatureBackOffBarrier,
+     FeatureKernargPreload])>;
 
 def FeatureISAVersion9_0_C : FeatureSet<
   !listconcat(FeatureISAVersion9_0_Common.Features,
@@ -1227,7 +1258,8 @@ def FeatureISAVersion9_4_Common : FeatureSet<
    FeaturePackedTID,
    FeatureArchitectedFlatScratch,
    FullRate64Ops,
-   FeatureBackOffBarrier]>;
+   FeatureBackOffBarrier,
+   FeatureKernargPreload]>;
 
 def FeatureISAVersion9_4_0 : FeatureSet<
   !listconcat(FeatureISAVersion9_4_Common.Features,
@@ -1335,7 +1367,8 @@ def FeatureISAVersion11_Common : FeatureSet<
 
 def FeatureISAVersion11_0_Common : FeatureSet<
   !listconcat(FeatureISAVersion11_Common.Features,
-    [FeatureVALUTransUseHazard])>;
+    [FeatureMSAALoadDstSelBug,
+     FeatureVALUTransUseHazard])>;
 
 def FeatureISAVersion11_0_0 : FeatureSet<
   !listconcat(FeatureISAVersion11_0_Common.Features,
@@ -1356,11 +1389,14 @@ def FeatureISAVersion11_0_3 : FeatureSet<
 
 def FeatureISAVersion11_5_0 : FeatureSet<
   !listconcat(FeatureISAVersion11_Common.Features,
-    [])>;
+    [FeatureSALUFloatInsts,
+     FeatureDPPSrc1SGPR])>;
 
 def FeatureISAVersion11_5_1 : FeatureSet<
   !listconcat(FeatureISAVersion11_Common.Features,
-    [FeatureGFX11FullVGPRs])>;
+    [FeatureSALUFloatInsts,
+     FeatureDPPSrc1SGPR,
+     FeatureGFX11FullVGPRs])>;
 
 //===----------------------------------------------------------------------===//
 
@@ -1672,6 +1708,15 @@ def HasTrue16BitInsts : Predicate<"Subtarget->hasTrue16BitInsts()">,
   AssemblerPredicate<(all_of FeatureTrue16BitInsts)>;
 def NotHasTrue16BitInsts : Predicate<"!Subtarget->hasTrue16BitInsts()">;
 
+// Control use of True16 instructions. The real True16 instructions are
+// True16 instructions as they are defined in the ISA. Fake True16
+// instructions have the same encoding as real ones but syntactically
+// only allow 32-bit registers in operands and use low halves thereof.
+def UseRealTrue16Insts : Predicate<"Subtarget->useRealTrue16Insts()">,
+  AssemblerPredicate<(all_of FeatureTrue16BitInsts, FeatureRealTrue16Insts)>;
+def UseFakeTrue16Insts : Predicate<"Subtarget->hasTrue16BitInsts() && "
+                                   "!Subtarget->useRealTrue16Insts()">;
+
 def HasVOP3PInsts : Predicate<"Subtarget->hasVOP3PInsts()">,
   AssemblerPredicate<(all_of FeatureVOP3P)>;
 
@@ -1860,6 +1905,9 @@ def HasUnalignedAccessMode : Predicate<"Subtarget->hasUnalignedAccessMode()">,
 def HasMADIntraFwdBug : Predicate<"Subtarget->hasMADIntraFwdBug()">;
 
 def HasNotMADIntraFwdBug : Predicate<"!Subtarget->hasMADIntraFwdBug()">;
+
+def HasSALUFloatInsts : Predicate<"Subtarget->hasSALUFloatInsts()">,
+  AssemblerPredicate<(all_of FeatureSALUFloatInsts)>;
 
 def HasGDS : Predicate<"Subtarget->hasGDS()">;
 

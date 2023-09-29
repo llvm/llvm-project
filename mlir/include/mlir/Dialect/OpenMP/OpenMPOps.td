@@ -20,6 +20,7 @@ include "mlir/Interfaces/SideEffectInterfaces.td"
 include "mlir/Interfaces/ControlFlowInterfaces.td"
 include "mlir/IR/SymbolInterfaces.td"
 include "mlir/Dialect/LLVMIR/LLVMOpBase.td"
+include "mlir/Dialect/OpenACCMPCommon/Interfaces/AtomicInterfaces.td"
 include "mlir/Dialect/OpenMP/OpenMPOpsInterfaces.td"
 include "mlir/Dialect/OpenMP/OpenMPTypeInterfaces.td"
 
@@ -28,6 +29,7 @@ def OpenMP_Dialect : Dialect {
   let cppNamespace = "::mlir::omp";
   let dependentDialects = ["::mlir::LLVM::LLVMDialect, ::mlir::func::FuncDialect"];
   let useDefaultAttributePrinterParser = 1;
+  let useDefaultTypePrinterParser = 1;
 }
 
 // OmpCommon requires definition of OpenACC_Dialect.
@@ -87,6 +89,10 @@ def IntLikeType : AnyTypeOf<[AnyInteger, Index]>;
 
 def OpenMP_PointerLikeType : TypeAlias<OpenMP_PointerLikeTypeInterface,
 	"OpenMP-compatible variable type">;
+
+class OpenMP_Type<string name, string typeMnemonic> : TypeDef<OpenMP_Dialect, name> {
+  let mnemonic = typeMnemonic;
+}
 
 //===----------------------------------------------------------------------===//
 //  2.12.7 Declare Target Directive
@@ -1003,6 +1009,220 @@ def FlushOp : OpenMP_Op<"flush"> {
   }];
 }
 
+//===----------------------------------------------------------------------===//
+// Map related constructs
+//===----------------------------------------------------------------------===//
+
+def CaptureThis : I32EnumAttrCase<"This", 0>;
+def CaptureByRef : I32EnumAttrCase<"ByRef", 1>;
+def CaptureByCopy : I32EnumAttrCase<"ByCopy", 2>;
+def CaptureVLAType : I32EnumAttrCase<"VLAType", 3>;
+
+def VariableCaptureKind : I32EnumAttr<
+    "VariableCaptureKind",
+    "variable capture kind",
+    [CaptureThis, CaptureByRef, CaptureByCopy, CaptureVLAType]> {
+  let genSpecializedAttr = 0;
+  let cppNamespace = "::mlir::omp";
+}
+
+def VariableCaptureKindAttr : EnumAttr<OpenMP_Dialect, VariableCaptureKind,
+                                       "variable_capture_kind"> {
+  let assemblyFormat = "`(` $value `)`";
+}
+
+def DataBoundsType : OpenMP_Type<"DataBounds", "data_bounds_ty"> {
+  let summary = "Type for representing omp data clause bounds information";
+}
+
+def DataBoundsOp : OpenMP_Op<"bounds",
+    [AttrSizedOperandSegments, NoMemoryEffect]> {
+  let summary = "Represents normalized bounds information for map clauses.";
+
+  let description = [{
+    This operation is a variation on the OpenACC dialects DataBoundsOp. Within
+    the OpenMP dialect it stores the bounds/range of data to be mapped to a
+    device specified by map clauses on target directives. Within,
+    the OpenMP dialect the DataBoundsOp is associated with MapInfoOp,
+    helping to store bounds information for the mapped variable.
+
+    It is used to support OpenMP array sectioning, Fortran pointer and
+    allocatable mapping and pointer/allocatable member of derived types.
+    In all cases the DataBoundsOp holds information on the section of
+    data to be mapped. Such as the upper bound and lower bound of the
+    section of data to be mapped. This information is currently
+    utilised by the LLVM-IR lowering to help generate instructions to
+    copy data to and from the device when processing target operations.
+
+    The example below copys a section of a 10-element array; all except the
+    first element, utilising OpenMP array sectioning syntax where array
+    subscripts are provided to specify the bounds to be mapped to device.
+    To simplify the examples, the constants are used directly, in reality
+    they will be MLIR SSA values.
+
+    C++:
+    ```
+    int array[10];
+    #pragma target map(array[1:9])
+    ```
+    =>
+    ```mlir
+    omp.bounds lower_bound(1) upper_bound(9) extent(9) start_idx(0)
+    ```
+
+    Fortran:
+    ```
+    integer :: array(1:10)
+    !$target map(array(2:10))
+    ```
+    =>
+    ```mlir
+    omp.bounds lower_bound(1) upper_bound(9) extent(9) start_idx(1)
+    ```
+
+    For Fortran pointers and allocatables (as well as those that are
+    members of derived types) the bounds information is provided by
+    the Fortran compiler and runtime through descriptor information.
+
+    A basic pointer example can be found below (constants again
+    provided for simplicity, where in reality SSA values will be
+    used, in this case that point to data yielded by Fortran's
+    descriptors):
+
+    Fortran:
+    ```
+    integer, pointer :: ptr(:)
+    allocate(ptr(10))
+    !$target map(ptr)
+    ```
+    =>
+    ```mlir
+    omp.bounds lower_bound(0) upper_bound(9) extent(10) start_idx(1)
+    ```
+
+    This operation records the bounds information in a normalized fashion
+    (zero-based). This works well with the `PointerLikeType`
+    requirement in data clauses - since a `lower_bound` of 0 means looking
+    at data at the zero offset from pointer.
+
+    This operation must have an `upper_bound` or `extent` (or both are allowed -
+    but not checked for consistency). When the source language's arrays are
+    not zero-based, the `start_idx` must specify the zero-position index.
+  }];
+
+  let arguments = (ins Optional<IntLikeType>:$lower_bound,
+                       Optional<IntLikeType>:$upper_bound,
+                       Optional<IntLikeType>:$extent,
+                       Optional<IntLikeType>:$stride,
+                       DefaultValuedAttr<BoolAttr, "false">:$stride_in_bytes,
+                       Optional<IntLikeType>:$start_idx);
+  let results = (outs DataBoundsType:$result);
+
+  let assemblyFormat = [{
+    oilist(
+        `lower_bound` `(` $lower_bound `:` type($lower_bound) `)`
+      | `upper_bound` `(` $upper_bound `:` type($upper_bound) `)`
+      | `extent` `(` $extent `:` type($extent) `)`
+      | `stride` `(` $stride `:` type($stride) `)`
+      | `start_idx` `(` $start_idx `:` type($start_idx) `)`
+    ) attr-dict
+  }];
+
+  let extraClassDeclaration = [{
+    /// The number of variable operands.
+    unsigned getNumVariableOperands() {
+      return getNumOperands();
+    }
+
+    /// The i-th variable operand passed.
+    Value getVariableOperand(unsigned i) {
+      return getOperands()[i];
+    }
+  }];
+
+  let hasVerifier = 1;
+}
+
+def MapInfoOp : OpenMP_Op<"map_info", [AttrSizedOperandSegments]> {
+  let arguments = (ins OpenMP_PointerLikeType:$var_ptr,
+                       Optional<OpenMP_PointerLikeType>:$var_ptr_ptr,
+                       Variadic<DataBoundsType>:$bounds, /* rank-0 to rank-{n-1} */
+                       OptionalAttr<UI64Attr>:$map_type,
+                       OptionalAttr<VariableCaptureKindAttr>:$map_capture_type,
+                       DefaultValuedAttr<BoolAttr, "false">:$implicit,
+                       OptionalAttr<StrAttr>:$name);
+  let results = (outs OpenMP_PointerLikeType:$omp_ptr);
+
+  let description = [{
+    The MapInfoOp captures information relating to individual OpenMP map clauses
+    that are applied to certain OpenMP directives such as Target and Target Data.
+
+    For example, the map type modifier; such as from, tofrom and to, the variable
+    being captured or the bounds of an array section being mapped.
+
+    It can be used to capture both implicit and explicit map information, where
+    explicit is an argument directly specified to an OpenMP map clause or implicit
+    where a variable is utilised in a target region but is defined externally to
+    the target region.
+
+    This map information is later used to aid the lowering of the target operations
+    they are attached to providing argument input and output context for kernels
+    generated or the target data mapping environment.
+
+    Example (Fortran):
+
+    ```
+    integer :: index
+    !$target map(to: index)
+    ```
+    =>
+    ```mlir
+    omp.map_info var_ptr(%index_ssa) map_type(to) map_capture_type(ByRef) implicit(false)
+      name(index)
+    ```
+
+    Description of arguments:
+    - `var_ptr`: The address of variable to copy.
+    - `var_ptr_ptr`: Used when the variable copied is a member of a class, structure
+      or derived type and refers to the originating struct.
+    - `bounds`: Used when copying slices of array's, pointers or pointer members of
+      objects (e.g. derived types or classes), indicates the bounds to be copied
+      of the variable. When it's an array slice it is in rank order where rank 0
+      is the inner-most dimension.
+    - `implicit`: indicates where the map item has been specified explicitly in a
+      map clause or captured implicitly by being used in a target region with no
+      map or other data mapping construct.
+    - 'map_clauses': OpenMP map type for this map capture, for example: from, to and
+      always. It's a bitfield composed of the OpenMP runtime flags stored in
+      OpenMPOffloadMappingFlags.
+    - 'map_capture_type': Capture type for the variable e.g. this, byref, byvalue, byvla
+       this can affect how the variable is lowered.
+    - `name`: Holds the name of variable as specified in user clause (including bounds).
+  }];
+
+  let assemblyFormat = [{
+    `var_ptr` `(` $var_ptr `:` type($var_ptr) `)`
+    oilist(
+        `var_ptr_ptr` `(` $var_ptr_ptr `:` type($var_ptr_ptr) `)`
+      | `map_clauses` `(` custom<MapClause>($map_type) `)`
+      | `capture` `(` custom<CaptureType>($map_capture_type) `)`
+      | `bounds` `(` $bounds `)`
+    ) `->` type($omp_ptr) attr-dict
+  }];
+
+  let extraClassDeclaration = [{
+    /// The number of variable operands.
+    unsigned getNumVariableOperands() {
+      return getNumOperands();
+    }
+
+    /// The i-th variable operand passed.
+    Value getVariableOperand(unsigned i) {
+      return getOperands()[i];
+    }
+  }];
+}
+
 //===---------------------------------------------------------------------===//
 // 2.14.2 target data Construct
 //===---------------------------------------------------------------------===//
@@ -1043,16 +1263,14 @@ def Target_DataOp: OpenMP_Op<"target_data", [AttrSizedOperandSegments]>{
                        Optional<AnyInteger>:$device,
                        Variadic<OpenMP_PointerLikeType>:$use_device_ptr,
                        Variadic<OpenMP_PointerLikeType>:$use_device_addr,
-                       Variadic<OpenMP_PointerLikeType>:$map_operands,
-                       OptionalAttr<I64ArrayAttr>:$map_types);
+                       Variadic<OpenMP_PointerLikeType>:$map_operands);
 
   let regions = (region AnyRegion:$region);
 
   let assemblyFormat = [{
     oilist(`if` `(` $if_expr `:` type($if_expr) `)`
     | `device` `(` $device `:` type($device) `)`
-    | `map`
-      `(` custom<MapClause>($map_operands, type($map_operands), $map_types) `)`
+    | `map_entries` `(` $map_operands `:` type($map_operands) `)`
     | `use_device_ptr` `(` $use_device_ptr `:` type($use_device_ptr) `)`
     | `use_device_addr` `(` $use_device_addr `:` type($use_device_addr) `)`)
     $region attr-dict
@@ -1094,15 +1312,14 @@ def Target_EnterDataOp: OpenMP_Op<"target_enter_data",
   let arguments = (ins Optional<I1>:$if_expr,
                        Optional<AnyInteger>:$device,
                        UnitAttr:$nowait,
-                       Variadic<OpenMP_PointerLikeType>:$map_operands,
-                       I64ArrayAttr:$map_types);
+                       Variadic<OpenMP_PointerLikeType>:$map_operands);
 
   let assemblyFormat = [{
     oilist(`if` `(` $if_expr `:` type($if_expr) `)`
     | `device` `(` $device `:` type($device) `)`
-    | `nowait` $nowait)
-    `map` `(` custom<MapClause>($map_operands, type($map_operands), $map_types) `)`
-    attr-dict
+    | `nowait` $nowait
+    | `map_entries` `(` $map_operands `:` type($map_operands) `)`
+    ) attr-dict
    }];
 
   let hasVerifier = 1;
@@ -1141,15 +1358,14 @@ def Target_ExitDataOp: OpenMP_Op<"target_exit_data",
   let arguments = (ins Optional<I1>:$if_expr,
                        Optional<AnyInteger>:$device,
                        UnitAttr:$nowait,
-                       Variadic<OpenMP_PointerLikeType>:$map_operands,
-                       I64ArrayAttr:$map_types);
+                       Variadic<OpenMP_PointerLikeType>:$map_operands);
 
   let assemblyFormat = [{
     oilist(`if` `(` $if_expr `:` type($if_expr) `)`
     | `device` `(` $device `:` type($device) `)`
-    | `nowait` $nowait)
-    `map` `(` custom<MapClause>($map_operands, type($map_operands), $map_types) `)`
-    attr-dict
+    | `nowait` $nowait
+    | `map_entries` `(` $map_operands `:` type($map_operands) `)`
+    ) attr-dict
    }];
 
   let hasVerifier = 1;
@@ -1159,7 +1375,7 @@ def Target_ExitDataOp: OpenMP_Op<"target_exit_data",
 // 2.14.5 target construct
 //===----------------------------------------------------------------------===//
 
-def TargetOp : OpenMP_Op<"target",[AttrSizedOperandSegments]> {
+def TargetOp : OpenMP_Op<"target",[OutlineableOpenMPOpInterface, AttrSizedOperandSegments]> {
   let summary = "target construct";
   let description = [{
     The target construct includes a region of code which is to be executed
@@ -1185,8 +1401,7 @@ def TargetOp : OpenMP_Op<"target",[AttrSizedOperandSegments]> {
                        Optional<AnyInteger>:$device,
                        Optional<AnyInteger>:$thread_limit,
                        UnitAttr:$nowait,
-                       Variadic<OpenMP_PointerLikeType>:$map_operands,
-                       OptionalAttr<I64ArrayAttr>:$map_types);
+                       Variadic<OpenMP_PointerLikeType>:$map_operands);
 
   let regions = (region AnyRegion:$region);
 
@@ -1195,7 +1410,7 @@ def TargetOp : OpenMP_Op<"target",[AttrSizedOperandSegments]> {
     | `device` `(` $device `:` type($device) `)`
     | `thread_limit` `(` $thread_limit `:` type($thread_limit) `)`
     | `nowait` $nowait
-    | `map` `(` custom<MapClause>($map_operands, type($map_operands), $map_types) `)`
+    | `map_entries` `(` $map_operands `:` type($map_operands) `)`
     ) $region attr-dict
   }];
 
@@ -1366,7 +1581,8 @@ def TaskwaitOp : OpenMP_Op<"taskwait"> {
 // value of the clause) here decomposes handling of this construct into a
 // two-step process.
 
-def AtomicReadOp : OpenMP_Op<"atomic.read", [AllTypesMatch<["x", "v"]>]> {
+def AtomicReadOp : OpenMP_Op<"atomic.read", [AllTypesMatch<["x", "v"]>,
+                                            AtomicReadOpInterface]> {
 
   let summary = "performs an atomic read";
 
@@ -1412,17 +1628,17 @@ def AtomicReadOp : OpenMP_Op<"atomic.read", [AllTypesMatch<["x", "v"]>]> {
   }];
 }
 
-def AtomicWriteOp : OpenMP_Op<"atomic.write"> {
+def AtomicWriteOp : OpenMP_Op<"atomic.write", [AtomicWriteOpInterface]> {
 
   let summary = "performs an atomic write";
 
   let description = [{
     This operation performs an atomic write.
 
-    The operand `address` is the address to where the `value` is atomically
-    written w.r.t. multiple threads. The evaluation of `value` need not be
-    atomic w.r.t. the write to address. In general, the type(address) must
-    dereference to type(value).
+    The operand `x` is the address to where the `expr` is atomically
+    written w.r.t. multiple threads. The evaluation of `expr` need not be
+    atomic w.r.t. the write to address. In general, the type(x) must
+    dereference to type(expr).
 
     `hint` is the value of hint (as specified in the hint clause). It is a
     compile time constant. As the name suggests, this is just a hint for
@@ -1432,37 +1648,38 @@ def AtomicWriteOp : OpenMP_Op<"atomic.write"> {
     can be one of `seq_cst`, `release` or `relaxed`.
   }];
 
-  let arguments = (ins OpenMP_PointerLikeType:$address,
-                       AnyType:$value,
+  let arguments = (ins OpenMP_PointerLikeType:$x,
+                       AnyType:$expr,
                        DefaultValuedOptionalAttr<I64Attr, "0">:$hint_val,
                        OptionalAttr<MemoryOrderKindAttr>:$memory_order_val);
   let assemblyFormat = [{
-    $address `=` $value
+    $x `=` $expr
     oilist( `hint` `(` custom<SynchronizationHint>($hint_val) `)`
           | `memory_order` `(` custom<ClauseAttr>($memory_order_val) `)`)
-    `:` type($address) `,` type($value)
+    `:` type($x) `,` type($expr)
     attr-dict
   }];
   let hasVerifier = 1;
   let extraClassDeclaration = [{
     /// The number of variable operands.
     unsigned getNumVariableOperands() {
-      assert(getAddress() && "expected address operand");
-      assert(getValue() && "expected value operand");
+      assert(getX() && "expected address operand");
+      assert(getExpr() && "expected value operand");
       return 2;
     }
 
     /// The i-th variable operand passed.
     Value getVariableOperand(unsigned i) {
       assert(i < 2 && "invalid index position for an operand");
-      return i == 0 ? getAddress() : getValue();
+      return i == 0 ? getX() : getExpr();
     }
   }];
 }
 
 def AtomicUpdateOp : OpenMP_Op<"atomic.update",
                                [SingleBlockImplicitTerminator<"YieldOp">,
-                                RecursiveMemoryEffects]> {
+                                RecursiveMemoryEffects,
+                                AtomicUpdateOpInterface]> {
 
   let summary = "performs an atomic update";
 
@@ -1510,18 +1727,6 @@ def AtomicUpdateOp : OpenMP_Op<"atomic.update",
   let hasRegionVerifier = 1;
   let hasCanonicalizeMethod = 1;
   let extraClassDeclaration = [{
-    Operation* getFirstOp() {
-      return &getRegion().front().getOperations().front();
-    }
-
-    /// Returns true if the new value is same as old value and the operation is
-    /// a no-op, false otherwise.
-    bool isNoOp();
-
-    /// Returns the new value if the operation is equivalent to just a write
-    /// operation. Otherwise, returns nullptr.
-    Value getWriteOpVal();
-
     /// The number of variable operands.
     unsigned getNumVariableOperands() {
       assert(getX() && "expected 'x' operand");
@@ -1537,7 +1742,8 @@ def AtomicUpdateOp : OpenMP_Op<"atomic.update",
 }
 
 def AtomicCaptureOp : OpenMP_Op<"atomic.capture",
-    [SingleBlockImplicitTerminator<"TerminatorOp">]> {
+    [SingleBlockImplicitTerminator<"TerminatorOp">,
+     RecursiveMemoryEffects, AtomicCaptureOpInterface]> {
   let summary = "performs an atomic capture";
   let description = [{
     This operation performs an atomic capture.
@@ -1583,12 +1789,6 @@ def AtomicCaptureOp : OpenMP_Op<"atomic.capture",
   let hasRegionVerifier = 1;
   let hasVerifier = 1;
   let extraClassDeclaration = [{
-    /// Returns the first operation in atomic capture region
-    Operation* getFirstOp();
-
-    /// Returns the second operation in atomic capture region
-    Operation* getSecondOp();
-
     /// Returns the `atomic.read` operation inside the region, if any.
     /// Otherwise, it returns nullptr.
     AtomicReadOp getAtomicReadOp();

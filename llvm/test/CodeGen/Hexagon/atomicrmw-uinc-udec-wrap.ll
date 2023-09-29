@@ -350,16 +350,16 @@ define i64 @atomicrmw_udec_wrap_i64(ptr %ptr, i64 %val) {
 ; CHECK-NEXT:     r13:12 = add(r5:4,r7:6)
 ; CHECK-NEXT:    }
 ; CHECK-NEXT:    {
-; CHECK-NEXT:     p0 = cmp.gtu(r5:4,r3:2)
-; CHECK-NEXT:     p1 = cmp.eq(r5:4,r9:8)
+; CHECK-NEXT:     p1 = cmp.gtu(r5:4,r3:2)
+; CHECK-NEXT:     p0 = cmp.eq(r5:4,r9:8)
 ; CHECK-NEXT:    }
 ; CHECK-NEXT:    {
-; CHECK-NEXT:     r1 = mux(p0,r2,r12)
-; CHECK-NEXT:     r14 = mux(p0,r3,r13)
+; CHECK-NEXT:     r1 = mux(p1,r2,r12)
+; CHECK-NEXT:     r14 = mux(p1,r3,r13)
 ; CHECK-NEXT:    }
 ; CHECK-NEXT:    {
-; CHECK-NEXT:     r10 = mux(p1,r2,r1)
-; CHECK-NEXT:     r11 = mux(p1,r3,r14)
+; CHECK-NEXT:     r10 = mux(p0,r2,r1)
+; CHECK-NEXT:     r11 = mux(p0,r3,r14)
 ; CHECK-NEXT:    }
 ; CHECK-NEXT:    {
 ; CHECK-NEXT:     memd_locked(r0,p0) = r11:10

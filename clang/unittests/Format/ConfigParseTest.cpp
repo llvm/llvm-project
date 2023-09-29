@@ -953,6 +953,14 @@ TEST(ConfigParseTest, ParsesConfiguration) {
               FormatStyle::RPS_ReturnStatement);
   CHECK_PARSE("RemoveParentheses: Leave", RemoveParentheses,
               FormatStyle::RPS_Leave);
+
+  CHECK_PARSE("AllowBreakBeforeNoexceptSpecifier: Always",
+              AllowBreakBeforeNoexceptSpecifier, FormatStyle::BBNSS_Always);
+  CHECK_PARSE("AllowBreakBeforeNoexceptSpecifier: OnlyWithParen",
+              AllowBreakBeforeNoexceptSpecifier,
+              FormatStyle::BBNSS_OnlyWithParen);
+  CHECK_PARSE("AllowBreakBeforeNoexceptSpecifier: Never",
+              AllowBreakBeforeNoexceptSpecifier, FormatStyle::BBNSS_Never);
 }
 
 TEST(ConfigParseTest, ParsesConfigurationWithLanguages) {

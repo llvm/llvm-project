@@ -263,6 +263,12 @@ private:
       return AddMemDefError;
 
     pid_t ParentOrChildPID = fork();
+
+    if (ParentOrChildPID == -1) {
+      return make_error<Failure>("Failed to create child process: " +
+                                 Twine(strerror(errno)));
+    }
+
     if (ParentOrChildPID == 0) {
       // We are in the child process, close the write end of the pipe
       close(PipeFiles[1]);

@@ -43,14 +43,10 @@
 using testing::AllOf;
 using testing::Contains;
 using testing::ElementsAre;
-using testing::ElementsAreArray;
-using testing::Eq;
 using testing::Field;
-using testing::HasSubstr;
 using testing::IsEmpty;
 using testing::Matcher;
 using testing::MatchesRegex;
-using testing::Not;
 using testing::UnorderedElementsAre;
 using testing::UnorderedElementsAreArray;
 
@@ -892,9 +888,9 @@ TEST(PreamblePatch, PatchFileEntry) {
   }
   {
     auto AST = createPatchedAST(Code.code(), NewCode.code());
-    auto *FE =
+    auto FE =
         PreamblePatch::getPatchEntry(AST->tuPath(), AST->getSourceManager());
-    ASSERT_NE(FE, nullptr);
+    ASSERT_NE(FE, std::nullopt);
     EXPECT_THAT(FE->getName().str(),
                 testing::EndsWith(PreamblePatch::HeaderName.str()));
   }

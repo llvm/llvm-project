@@ -96,7 +96,7 @@ define { i32, i1 } @combine_smul_nsw(i32 %a, i32 %b) {
 ; CHECK-NEXT:    andl $4095, %edi # imm = 0xFFF
 ; CHECK-NEXT:    andl $524287, %eax # imm = 0x7FFFF
 ; CHECK-NEXT:    imull %edi, %eax
-; CHECK-NEXT:    seto %dl
+; CHECK-NEXT:    xorl %edx, %edx
 ; CHECK-NEXT:    retq
   %aa = and i32 %a, 4095 ; 0xfff
   %bb = and i32 %b, 524287; 0x7ffff
@@ -109,19 +109,8 @@ define { <4 x i32>, <4 x i1> } @combine_vec_smul_nsw(<4 x i32> %a, <4 x i32> %b)
 ; SSE:       # %bb.0:
 ; SSE-NEXT:    pand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
 ; SSE-NEXT:    pand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm1
-; SSE-NEXT:    pshufd {{.*#+}} xmm2 = xmm1[1,1,3,3]
-; SSE-NEXT:    pshufd {{.*#+}} xmm3 = xmm0[1,1,3,3]
-; SSE-NEXT:    pmuldq %xmm2, %xmm3
-; SSE-NEXT:    movdqa %xmm0, %xmm2
-; SSE-NEXT:    pmuldq %xmm1, %xmm2
-; SSE-NEXT:    pshufd {{.*#+}} xmm2 = xmm2[1,1,3,3]
-; SSE-NEXT:    pblendw {{.*#+}} xmm2 = xmm2[0,1],xmm3[2,3],xmm2[4,5],xmm3[6,7]
-; SSE-NEXT:    pxor %xmm3, %xmm3
-; SSE-NEXT:    pcmpeqd %xmm2, %xmm3
-; SSE-NEXT:    pcmpeqd %xmm2, %xmm2
-; SSE-NEXT:    pxor %xmm3, %xmm2
 ; SSE-NEXT:    pmulld %xmm1, %xmm0
-; SSE-NEXT:    movdqa %xmm2, %xmm1
+; SSE-NEXT:    pxor %xmm1, %xmm1
 ; SSE-NEXT:    retq
 ;
 ; AVX-LABEL: combine_vec_smul_nsw:
@@ -129,18 +118,9 @@ define { <4 x i32>, <4 x i1> } @combine_vec_smul_nsw(<4 x i32> %a, <4 x i32> %b)
 ; AVX-NEXT:    vpbroadcastd {{.*#+}} xmm2 = [4095,4095,4095,4095]
 ; AVX-NEXT:    vpand %xmm2, %xmm0, %xmm0
 ; AVX-NEXT:    vpbroadcastd {{.*#+}} xmm2 = [524287,524287,524287,524287]
-; AVX-NEXT:    vpand %xmm2, %xmm1, %xmm2
-; AVX-NEXT:    vpshufd {{.*#+}} xmm1 = xmm2[1,1,3,3]
-; AVX-NEXT:    vpshufd {{.*#+}} xmm3 = xmm0[1,1,3,3]
-; AVX-NEXT:    vpmuldq %xmm1, %xmm3, %xmm1
-; AVX-NEXT:    vpmuldq %xmm2, %xmm0, %xmm3
-; AVX-NEXT:    vpshufd {{.*#+}} xmm3 = xmm3[1,1,3,3]
-; AVX-NEXT:    vpblendd {{.*#+}} xmm1 = xmm3[0],xmm1[1],xmm3[2],xmm1[3]
-; AVX-NEXT:    vpxor %xmm3, %xmm3, %xmm3
-; AVX-NEXT:    vpcmpeqd %xmm3, %xmm1, %xmm1
-; AVX-NEXT:    vpcmpeqd %xmm3, %xmm3, %xmm3
-; AVX-NEXT:    vpxor %xmm3, %xmm1, %xmm1
-; AVX-NEXT:    vpmulld %xmm2, %xmm0, %xmm0
+; AVX-NEXT:    vpand %xmm2, %xmm1, %xmm1
+; AVX-NEXT:    vpmulld %xmm1, %xmm0, %xmm0
+; AVX-NEXT:    vpxor %xmm1, %xmm1, %xmm1
 ; AVX-NEXT:    retq
   %aa = and <4 x i32> %a, <i32 4095, i32 4095, i32 4095, i32 4095>
   %bb = and <4 x i32> %b, <i32 524287, i32 524287, i32 524287, i32 524287>

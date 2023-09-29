@@ -52,7 +52,7 @@ void mlir::sparse_tensor::buildSparseCompiler(
     pm.addPass(createSparseGPUCodegenPass());
     pm.addNestedPass<gpu::GPUModuleOp>(createStripDebugInfoPass());
     pm.addNestedPass<gpu::GPUModuleOp>(createConvertSCFToCFPass());
-    pm.addNestedPass<gpu::GPUModuleOp>(createLowerGpuOpsToNVVMOpsPass());
+    pm.addNestedPass<gpu::GPUModuleOp>(createConvertGpuOpsToNVVMOps());
   }
 
   // TODO(springerm): Add sparse support to the BufferDeallocation pass and add
@@ -78,11 +78,15 @@ void mlir::sparse_tensor::buildSparseCompiler(
 
   // Finalize GPU code generation.
   if (gpuCodegen) {
-#if MLIR_GPU_TO_CUBIN_PASS_ENABLE
-    pm.addNestedPass<gpu::GPUModuleOp>(createGpuSerializeToCubinPass(
-        options.gpuTriple, options.gpuChip, options.gpuFeatures));
-#endif
+    GpuNVVMAttachTargetOptions nvvmTargetOptions;
+    nvvmTargetOptions.triple = options.gpuTriple;
+    nvvmTargetOptions.chip = options.gpuChip;
+    nvvmTargetOptions.features = options.gpuFeatures;
+    pm.addPass(createGpuNVVMAttachTarget(nvvmTargetOptions));
     pm.addPass(createGpuToLLVMConversionPass());
+    GpuModuleToBinaryPassOptions gpuModuleToBinaryPassOptions;
+    gpuModuleToBinaryPassOptions.compilationTarget = options.gpuFormat;
+    pm.addPass(createGpuModuleToBinaryPass(gpuModuleToBinaryPassOptions));
   }
 
   pm.addPass(createReconcileUnrealizedCastsPass());

@@ -691,6 +691,28 @@ transform.with_pdl_patterns {
 
 // -----
 
+// CHECK-LABEL: func @consume_in_foreach()
+//  CHECK-NEXT:   return
+func.func @consume_in_foreach() {
+  %0 = arith.constant 0 : index
+  %1 = arith.constant 1 : index
+  %2 = arith.constant 2 : index
+  %3 = arith.constant 3 : index
+  return
+}
+
+transform.sequence failures(propagate) {
+^bb1(%arg1: !transform.any_op):
+  %f = transform.structured.match ops{["arith.constant"]} in %arg1 : (!transform.any_op) -> !transform.any_op
+  transform.foreach %f : !transform.any_op {
+  ^bb2(%arg2: !transform.any_op):
+    // expected-remark @below {{erasing}}
+    transform.test_emit_remark_and_erase_operand %arg2, "erasing" : !transform.any_op
+  }
+}
+
+// -----
+
 func.func @bar() {
   scf.execute_region {
     // expected-remark @below {{transform applied}}
@@ -1867,6 +1889,18 @@ transform.sequence failures(propagate) {
   %4 = transform.get_parent_op %3 {deduplicate} : (!transform.any_op) -> !transform.any_op
   // expected-remark @below{{1}}
   test_print_number_of_associated_payload_ir_ops %4 : !transform.any_op
+}
+
+
+// -----
+
+// expected-note @below {{target op}}
+module {
+  transform.sequence  failures(propagate) {
+  ^bb0(%arg0: !transform.any_op):
+    // expected-error @below{{could not find a parent op that matches all requirements}}
+    %3 = get_parent_op %arg0 {op_name = "builtin.module"} : (!transform.any_op) -> !transform.any_op
+  }
 }
 
 // -----

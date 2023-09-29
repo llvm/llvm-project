@@ -10,10 +10,10 @@
 #include "src/__support/FPUtil/ManipulationFunctions.h"
 #include "src/__support/common.h"
 
-namespace __llvm_libc {
+namespace LIBC_NAMESPACE {
 
 LLVM_LIBC_FUNCTION(double, nextafter, (double x, double y)) {
   return fputil::nextafter(x, y);
 }
 
-} // namespace __llvm_libc
+} // namespace LIBC_NAMESPACE

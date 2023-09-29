@@ -639,7 +639,7 @@ func.func @test_transpose_conv2d_stride_x(%arg0: tensor<1x32x32x8xf32>, %arg1: t
 
 func.func @test_resize_scale_y(%arg0: tensor<1x32x32x8xf32>) -> tensor<1x64x64x8xf32> {
   // expected-error@+1 {{'tosa.resize' op failed level check: scale_y_n/scale_y_d <= MAX_SCALE}}
-  %1 = "tosa.resize"(%arg0) { scale = array<i64: 65, 1, 4, 2>, offset = array<i64: -1, -1>, border = array<i64: 1, 1>, mode = "BILINEAR"} :
+  %1 = "tosa.resize"(%arg0) { scale = array<i64: 257, 1, 4, 2>, offset = array<i64: -1, -1>, border = array<i64: 1, 1>, mode = "BILINEAR"} :
                 (tensor<1x32x32x8xf32>) -> tensor<1x64x64x8xf32>
   return %1 : tensor<1x64x64x8xf32>
 }
@@ -648,7 +648,7 @@ func.func @test_resize_scale_y(%arg0: tensor<1x32x32x8xf32>) -> tensor<1x64x64x8
 
 func.func @test_resize_scale_x(%arg0: tensor<1x32x32x8xf32>) -> tensor<1x64x64x8xf32> {
   // expected-error@+1 {{'tosa.resize' op failed level check: scale_x_n/scale_x_d <= MAX_SCALE}}
-  %1 = "tosa.resize"(%arg0) { scale = array<i64: 4, 2, 65, 1>, offset = array<i64: -1, -1>, border = array<i64: 1, 1>, mode = "BILINEAR"} :
+  %1 = "tosa.resize"(%arg0) { scale = array<i64: 4, 2, 257, 1>, offset = array<i64: -1, -1>, border = array<i64: 1, 1>, mode = "BILINEAR"} :
                 (tensor<1x32x32x8xf32>) -> tensor<1x64x64x8xf32>
   return %1 : tensor<1x64x64x8xf32>
 }

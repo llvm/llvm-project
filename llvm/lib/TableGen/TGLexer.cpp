@@ -723,16 +723,15 @@ tgtok::TokKind TGLexer::lexPreprocessor(
 
     bool MacroIsDefined = DefinedMacros.count(MacroName) != 0;
 
-    // Canonicalize ifndef to ifdef equivalent
-    if (Kind == tgtok::Ifndef) {
+    // Canonicalize ifndef's MacroIsDefined to its ifdef equivalent.
+    if (Kind == tgtok::Ifndef)
       MacroIsDefined = !MacroIsDefined;
-      Kind = tgtok::Ifdef;
-    }
 
     // Regardless of whether we are processing tokens or not,
     // we put the #ifdef control on stack.
+    // Note that MacroIsDefined has been canonicalized against ifdef.
     PrepIncludeStack.back()->push_back(
-        {Kind, MacroIsDefined, SMLoc::getFromPointer(TokStart)});
+        {tgtok::Ifdef, MacroIsDefined, SMLoc::getFromPointer(TokStart)});
 
     if (!prepSkipDirectiveEnd())
       return ReturnError(CurPtr, "Only comments are supported after " +

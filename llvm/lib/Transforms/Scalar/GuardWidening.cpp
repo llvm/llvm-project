@@ -51,6 +51,7 @@
 #include "llvm/Analysis/ValueTracking.h"
 #include "llvm/IR/ConstantRange.h"
 #include "llvm/IR/Dominators.h"
+#include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/IntrinsicInst.h"
 #include "llvm/IR/PatternMatch.h"
 #include "llvm/InitializePasses.h"
@@ -123,10 +124,12 @@ static void eliminateGuard(Instruction *GuardInst, MemorySSAUpdater *MSSAU) {
 /// condition should stay invariant. Otherwise there can be a miscompile, like
 /// the one described at https://github.com/llvm/llvm-project/issues/60234. The
 /// safest way to do it is to expand the new condition at WC's block.
-static Instruction *findInsertionPointForWideCondition(Instruction *Guard) {
-  if (auto WC = extractWidenableCondition(Guard))
+static Instruction *findInsertionPointForWideCondition(Instruction *WCOrGuard) {
+  if (isGuard(WCOrGuard))
+    return WCOrGuard;
+  if (auto WC = extractWidenableCondition(WCOrGuard))
     return cast<Instruction>(WC);
-  return Guard;
+  return nullptr;
 }
 
 class GuardWideningImpl {
@@ -179,9 +182,12 @@ class GuardWideningImpl {
   static StringRef scoreTypeToString(WideningScore WS);
 
   /// Compute the score for widening the condition in \p DominatedInstr
-  /// into \p DominatingGuard.
+  /// into \p WideningPoint.
   WideningScore computeWideningScore(Instruction *DominatedInstr,
-                                     Instruction *DominatingGuard);
+                                     Instruction *ToWiden,
+                                     Instruction *WideningPoint,
+                                     SmallVectorImpl<Value *> &ChecksToHoist,
+                                     SmallVectorImpl<Value *> &ChecksToWiden);
 
   /// Helper to check if \p V can be hoisted to \p InsertPos.
   bool canBeHoistedTo(const Value *V, const Instruction *InsertPos) const {
@@ -192,22 +198,36 @@ class GuardWideningImpl {
   bool canBeHoistedTo(const Value *V, const Instruction *InsertPos,
                       SmallPtrSetImpl<const Instruction *> &Visited) const;
 
+  bool canBeHoistedTo(const SmallVectorImpl<Value *> &Checks,
+                      const Instruction *InsertPos) const {
+    return all_of(Checks,
+                  [&](const Value *V) { return canBeHoistedTo(V, InsertPos); });
+  }
   /// Helper to hoist \p V to \p InsertPos.  Guaranteed to succeed if \c
   /// canBeHoistedTo returned true.
   void makeAvailableAt(Value *V, Instruction *InsertPos) const;
 
+  void makeAvailableAt(const SmallVectorImpl<Value *> &Checks,
+                       Instruction *InsertPos) const {
+    for (Value *V : Checks)
+      makeAvailableAt(V, InsertPos);
+  }
+
   /// Common helper used by \c widenGuard and \c isWideningCondProfitable.  Try
-  /// to generate an expression computing the logical AND of \p Cond0 and Cond1.
-  /// Return true if the expression computing the AND is only as
-  /// expensive as computing one of the two. If \p InsertPt is true then
-  /// actually generate the resulting expression, make it available at \p
-  /// InsertPt and return it in \p Result (else no change to the IR is made).
-  std::optional<Value *> mergeChecks(Value *Cond0, Value *Cond1,
+  /// to generate an expression computing the logical AND of \p ChecksToHoist
+  /// and \p ChecksToWiden. Return true if the expression computing the AND is
+  /// only as expensive as computing one of the set of expressions. If \p
+  /// InsertPt is true then actually generate the resulting expression, make it
+  /// available at \p InsertPt and return it in \p Result (else no change to the
+  /// IR is made).
+  std::optional<Value *> mergeChecks(SmallVectorImpl<Value *> &ChecksToHoist,
+                                     SmallVectorImpl<Value *> &ChecksToWiden,
                                      Instruction *InsertPt);
 
-  /// Generate the logical AND of \p Cond0 and \p Cond1 and make it available at
-  /// \p InsertPt
-  Value *hoistChecks(Value *Cond0, Value *Cond1, Instruction *InsertPt);
+  /// Generate the logical AND of \p ChecksToHoist and \p OldCondition and make
+  /// it available at InsertPt
+  Value *hoistChecks(SmallVectorImpl<Value *> &ChecksToHoist,
+                     Value *OldCondition, Instruction *InsertPt);
 
   /// Adds freeze to Orig and push it as far as possible very aggressively.
   /// Also replaces all uses of frozen instruction with frozen version.
@@ -252,16 +272,19 @@ class GuardWideningImpl {
     }
   };
 
-  /// Parse \p CheckCond into a conjunction (logical-and) of range checks; and
+  /// Parse \p ToParse into a conjunction (logical-and) of range checks; and
   /// append them to \p Checks.  Returns true on success, may clobber \c Checks
   /// on failure.
-  bool parseRangeChecks(Value *CheckCond, SmallVectorImpl<RangeCheck> &Checks) {
-    SmallPtrSet<const Value *, 8> Visited;
-    return parseRangeChecks(CheckCond, Checks, Visited);
+  bool parseRangeChecks(SmallVectorImpl<Value *> &ToParse,
+                        SmallVectorImpl<RangeCheck> &Checks) {
+    for (auto CheckCond : ToParse) {
+      if (!parseRangeChecks(CheckCond, Checks))
+        return false;
+    }
+    return true;
   }
 
-  bool parseRangeChecks(Value *CheckCond, SmallVectorImpl<RangeCheck> &Checks,
-                        SmallPtrSetImpl<const Value *> &Visited);
+  bool parseRangeChecks(Value *CheckCond, SmallVectorImpl<RangeCheck> &Checks);
 
   /// Combine the checks in \p Checks into a smaller set of checks and append
   /// them into \p CombinedChecks.  Return true on success (i.e. all of checks
@@ -270,20 +293,23 @@ class GuardWideningImpl {
   bool combineRangeChecks(SmallVectorImpl<RangeCheck> &Checks,
                           SmallVectorImpl<RangeCheck> &CombinedChecks) const;
 
-  /// Can we compute the logical AND of \p Cond0 and \p Cond1 for the price of
-  /// computing only one of the two expressions?
-  bool isWideningCondProfitable(Value *Cond0, Value *Cond1) {
-    return mergeChecks(Cond0, Cond1, /*InsertPt=*/nullptr).has_value();
+  /// Can we compute the logical AND of \p ChecksToHoist and \p ChecksToWiden
+  /// for the price of computing only one of the set of expressions?
+  bool isWideningCondProfitable(SmallVectorImpl<Value *> &ChecksToHoist,
+                                SmallVectorImpl<Value *> &ChecksToWiden) {
+    return mergeChecks(ChecksToHoist, ChecksToWiden, /*InsertPt=*/nullptr)
+        .has_value();
   }
 
-  /// Widen \p ToWiden to fail if \p NewCondition is false
-  void widenGuard(Instruction *ToWiden, Value *NewCondition) {
+  /// Widen \p ChecksToWiden to fail if any of \p ChecksToHoist is false
+  void widenGuard(SmallVectorImpl<Value *> &ChecksToHoist,
+                  SmallVectorImpl<Value *> &ChecksToWiden,
+                  Instruction *ToWiden) {
     Instruction *InsertPt = findInsertionPointForWideCondition(ToWiden);
-    auto MergedCheck =
-        mergeChecks(getCondition(ToWiden), NewCondition, InsertPt);
+    auto MergedCheck = mergeChecks(ChecksToHoist, ChecksToWiden, InsertPt);
     Value *Result = MergedCheck ? *MergedCheck
-                                : hoistChecks(getCondition(ToWiden),
-                                              NewCondition, InsertPt);
+                                : hoistChecks(ChecksToHoist,
+                                              getCondition(ToWiden), InsertPt);
 
     if (isGuardAsWidenableBranch(ToWiden)) {
       setWidenableBranchCond(cast<BranchInst>(ToWiden), Result);
@@ -352,10 +378,13 @@ bool GuardWideningImpl::eliminateInstrViaWidening(
     Instruction *Instr, const df_iterator<DomTreeNode *> &DFSI,
     const DenseMap<BasicBlock *, SmallVector<Instruction *, 8>>
         &GuardsInBlock) {
+  SmallVector<Value *> ChecksToHoist;
+  parseWidenableGuard(Instr, ChecksToHoist);
   // Ignore trivial true or false conditions. These instructions will be
   // trivially eliminated by any cleanup pass. Do not erase them because other
   // guards can possibly be widened into them.
-  if (isa<ConstantInt>(getCondition(Instr)))
+  if (ChecksToHoist.empty() ||
+      (ChecksToHoist.size() == 1 && isa<ConstantInt>(ChecksToHoist.front())))
     return false;
 
   Instruction *BestSoFar = nullptr;
@@ -391,10 +420,15 @@ bool GuardWideningImpl::eliminateInstrViaWidening(
     assert((i == (e - 1)) == (Instr->getParent() == CurBB) && "Bad DFS?");
 
     for (auto *Candidate : make_range(I, E)) {
-      auto Score = computeWideningScore(Instr, Candidate);
-      LLVM_DEBUG(dbgs() << "Score between " << *getCondition(Instr)
-                        << " and " << *getCondition(Candidate) << " is "
-                        << scoreTypeToString(Score) << "\n");
+      auto *WideningPoint = findInsertionPointForWideCondition(Candidate);
+      if (!WideningPoint)
+        continue;
+      SmallVector<Value *> CandidateChecks;
+      parseWidenableGuard(Candidate, CandidateChecks);
+      auto Score = computeWideningScore(Instr, Candidate, WideningPoint,
+                                        ChecksToHoist, CandidateChecks);
+      LLVM_DEBUG(dbgs() << "Score between " << *Instr << " and " << *Candidate
+                        << " is " << scoreTypeToString(Score) << "\n");
       if (Score > BestScoreSoFar) {
         BestScoreSoFar = Score;
         BestSoFar = Candidate;
@@ -413,7 +447,9 @@ bool GuardWideningImpl::eliminateInstrViaWidening(
   LLVM_DEBUG(dbgs() << "Widening " << *Instr << " into " << *BestSoFar
                     << " with score " << scoreTypeToString(BestScoreSoFar)
                     << "\n");
-  widenGuard(BestSoFar, getCondition(Instr));
+  SmallVector<Value *> ChecksToWiden;
+  parseWidenableGuard(BestSoFar, ChecksToWiden);
+  widenGuard(ChecksToHoist, ChecksToWiden, BestSoFar);
   auto NewGuardCondition = ConstantInt::getTrue(Instr->getContext());
   setCondition(Instr, NewGuardCondition);
   EliminatedGuardsAndBranches.push_back(Instr);
@@ -421,11 +457,12 @@ bool GuardWideningImpl::eliminateInstrViaWidening(
   return true;
 }
 
-GuardWideningImpl::WideningScore
-GuardWideningImpl::computeWideningScore(Instruction *DominatedInstr,
-                                        Instruction *DominatingGuard) {
+GuardWideningImpl::WideningScore GuardWideningImpl::computeWideningScore(
+    Instruction *DominatedInstr, Instruction *ToWiden,
+    Instruction *WideningPoint, SmallVectorImpl<Value *> &ChecksToHoist,
+    SmallVectorImpl<Value *> &ChecksToWiden) {
   Loop *DominatedInstrLoop = LI.getLoopFor(DominatedInstr->getParent());
-  Loop *DominatingGuardLoop = LI.getLoopFor(DominatingGuard->getParent());
+  Loop *DominatingGuardLoop = LI.getLoopFor(WideningPoint->getParent());
   bool HoistingOutOfLoop = false;
 
   if (DominatingGuardLoop != DominatedInstrLoop) {
@@ -438,10 +475,12 @@ GuardWideningImpl::computeWideningScore(Instruction *DominatedInstr,
     HoistingOutOfLoop = true;
   }
 
-  auto *WideningPoint = findInsertionPointForWideCondition(DominatingGuard);
-  if (!canBeHoistedTo(getCondition(DominatedInstr), WideningPoint))
+  if (!canBeHoistedTo(ChecksToHoist, WideningPoint))
     return WS_IllegalOrNegative;
-  if (!canBeHoistedTo(getCondition(DominatingGuard), WideningPoint))
+  // Further in the GuardWideningImpl::hoistChecks the entire condition might be
+  // widened, not the parsed list of checks. So we need to check the possibility
+  // of that condition hoisting.
+  if (!canBeHoistedTo(getCondition(ToWiden), WideningPoint))
     return WS_IllegalOrNegative;
 
   // If the guard was conditional executed, it may never be reached
@@ -452,8 +491,7 @@ GuardWideningImpl::computeWideningScore(Instruction *DominatedInstr,
   // here.  TODO: evaluate cost model for spurious deopt
   // NOTE: As written, this also lets us hoist right over another guard which
   // is essentially just another spelling for control flow.
-  if (isWideningCondProfitable(getCondition(DominatedInstr),
-                               getCondition(DominatingGuard)))
+  if (isWideningCondProfitable(ChecksToHoist, ChecksToWiden))
     return HoistingOutOfLoop ? WS_VeryPositive : WS_Positive;
 
   if (HoistingOutOfLoop)
@@ -489,7 +527,7 @@ GuardWideningImpl::computeWideningScore(Instruction *DominatedInstr,
   // control flow (guards, calls which throw, etc...).  That choice appears
   // arbitrary (we assume that implicit control flow exits are all rare).
   auto MaybeHoistingToHotterBlock = [&]() {
-    const auto *DominatingBlock = DominatingGuard->getParent();
+    const auto *DominatingBlock = WideningPoint->getParent();
     const auto *DominatedBlock = DominatedInstr->getParent();
 
     // Descend as low as we can, always taking the likely successor.
@@ -515,7 +553,8 @@ GuardWideningImpl::computeWideningScore(Instruction *DominatedInstr,
     if (!DT.dominates(DominatingBlock, DominatedBlock))
       return true;
     // TODO: diamond, triangle cases
-    if (!PDT) return true;
+    if (!PDT)
+      return true;
     return !PDT->dominates(DominatedBlock, DominatingBlock);
   };
 
@@ -661,9 +700,10 @@ Value *GuardWideningImpl::freezeAndPush(Value *Orig, Instruction *InsertPt) {
   return Result;
 }
 
-std::optional<Value *> GuardWideningImpl::mergeChecks(Value *Cond0,
-                                                      Value *Cond1,
-                                                      Instruction *InsertPt) {
+std::optional<Value *>
+GuardWideningImpl::mergeChecks(SmallVectorImpl<Value *> &ChecksToHoist,
+                               SmallVectorImpl<Value *> &ChecksToWiden,
+                               Instruction *InsertPt) {
   using namespace llvm::PatternMatch;
 
   Value *Result = nullptr;
@@ -672,8 +712,13 @@ std::optional<Value *> GuardWideningImpl::mergeChecks(Value *Cond0,
     ConstantInt *RHS0, *RHS1;
     Value *LHS;
     ICmpInst::Predicate Pred0, Pred1;
-    if (match(Cond0, m_ICmp(Pred0, m_Value(LHS), m_ConstantInt(RHS0))) &&
-        match(Cond1, m_ICmp(Pred1, m_Specific(LHS), m_ConstantInt(RHS1)))) {
+    // TODO: Support searching for pairs to merge from both whole lists of
+    // ChecksToHoist and ChecksToWiden.
+    if (ChecksToWiden.size() == 1 && ChecksToHoist.size() == 1 &&
+        match(ChecksToWiden.front(),
+              m_ICmp(Pred0, m_Value(LHS), m_ConstantInt(RHS0))) &&
+        match(ChecksToHoist.front(),
+              m_ICmp(Pred1, m_Specific(LHS), m_ConstantInt(RHS1)))) {
 
       ConstantRange CR0 =
           ConstantRange::makeExactICmpRegion(Pred0, RHS0->getValue());
@@ -690,7 +735,7 @@ std::optional<Value *> GuardWideningImpl::mergeChecks(Value *Cond0,
         if (Intersect->getEquivalentICmp(Pred, NewRHSAP)) {
           if (InsertPt) {
             ConstantInt *NewRHS =
-                ConstantInt::get(Cond0->getContext(), NewRHSAP);
+                ConstantInt::get(InsertPt->getContext(), NewRHSAP);
             assert(canBeHoistedTo(LHS, InsertPt) && "must be");
             makeAvailableAt(LHS, InsertPt);
             Result = new ICmpInst(InsertPt, Pred, LHS, NewRHS, "wide.chk");
@@ -703,7 +748,8 @@ std::optional<Value *> GuardWideningImpl::mergeChecks(Value *Cond0,
 
   {
     SmallVector<GuardWideningImpl::RangeCheck, 4> Checks, CombinedChecks;
-    if (parseRangeChecks(Cond0, Checks) && parseRangeChecks(Cond1, Checks) &&
+    if (parseRangeChecks(ChecksToWiden, Checks) &&
+        parseRangeChecks(ChecksToHoist, Checks) &&
         combineRangeChecks(Checks, CombinedChecks)) {
       if (InsertPt) {
         for (auto &RC : CombinedChecks) {
@@ -721,32 +767,28 @@ std::optional<Value *> GuardWideningImpl::mergeChecks(Value *Cond0,
       return Result;
     }
   }
-  // We were not able to compute Cond0 AND Cond1 for the price of one.
+  // We were not able to compute ChecksToHoist AND ChecksToWiden for the price
+  // of one.
   return std::nullopt;
 }
 
-Value *GuardWideningImpl::hoistChecks(Value *Cond0, Value *Cond1,
+Value *GuardWideningImpl::hoistChecks(SmallVectorImpl<Value *> &ChecksToHoist,
+                                      Value *OldCondition,
                                       Instruction *InsertPt) {
-  makeAvailableAt(Cond0, InsertPt);
-  makeAvailableAt(Cond1, InsertPt);
-  Cond1 = freezeAndPush(Cond1, InsertPt);
-  return BinaryOperator::CreateAnd(Cond0, Cond1, "wide.chk", InsertPt);
+  assert(!ChecksToHoist.empty());
+  IRBuilder<> Builder(InsertPt);
+  makeAvailableAt(ChecksToHoist, InsertPt);
+  makeAvailableAt(OldCondition, InsertPt);
+  Value *Result = Builder.CreateAnd(ChecksToHoist);
+  Result = freezeAndPush(Result, InsertPt);
+  Result = Builder.CreateAnd(OldCondition, Result);
+  Result->setName("wide.chk");
+  return Result;
 }
 
 bool GuardWideningImpl::parseRangeChecks(
-    Value *CheckCond, SmallVectorImpl<GuardWideningImpl::RangeCheck> &Checks,
-    SmallPtrSetImpl<const Value *> &Visited) {
-  if (!Visited.insert(CheckCond).second)
-    return true;
-
+    Value *CheckCond, SmallVectorImpl<GuardWideningImpl::RangeCheck> &Checks) {
   using namespace llvm::PatternMatch;
-
-  {
-    Value *AndLHS, *AndRHS;
-    if (match(CheckCond, m_And(m_Value(AndLHS), m_Value(AndRHS))))
-      return parseRangeChecks(AndLHS, Checks) &&
-             parseRangeChecks(AndRHS, Checks);
-  }
 
   auto *IC = dyn_cast<ICmpInst>(CheckCond);
   if (!IC || !IC->getOperand(0)->getType()->isIntegerTy() ||

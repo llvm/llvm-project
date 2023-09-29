@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_LIBC_SRC_SUPPORT_WCTYPE_UTILS_H
-#define LLVM_LIBC_SRC_SUPPORT_WCTYPE_UTILS_H
+#ifndef LLVM_LIBC_SRC___SUPPORT_WCTYPE_UTILS_H
+#define LLVM_LIBC_SRC___SUPPORT_WCTYPE_UTILS_H
 
 #include "src/__support/CPP/optional.h"
 #include "src/__support/macros/attributes.h" // LIBC_INLINE
@@ -16,7 +16,7 @@
 #define __need_wchar_t
 #include <stddef.h> // needed for wint_t and wchar_t
 
-namespace __llvm_libc {
+namespace LIBC_NAMESPACE {
 namespace internal {
 
 // ------------------------------------------------------
@@ -40,6 +40,6 @@ LIBC_INLINE cpp::optional<wint_t> btowc(int c) {
 }
 
 } // namespace internal
-} // namespace __llvm_libc
+} // namespace LIBC_NAMESPACE
 
-#endif // LLVM_LIBC_SRC_SUPPORT_WCTYPE_UTILS_H
+#endif // LLVM_LIBC_SRC___SUPPORT_WCTYPE_UTILS_H

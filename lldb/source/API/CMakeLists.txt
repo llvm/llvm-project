@@ -91,6 +91,7 @@ add_lldb_library(liblldb SHARED ${option_framework}
   SBValueList.cpp
   SBVariablesOptions.cpp
   SBWatchpoint.cpp
+  SBWatchpointOptions.cpp
   SBUnixSignals.cpp
   SystemInitializerFull.cpp
   ${lldb_python_wrapper}

@@ -61,13 +61,26 @@ def BPFNoMovsx : Predicate<"!Subtarget->hasMovsx()">;
 def BPFNoBswap : Predicate<"!Subtarget->hasBswap()">;
 def BPFHasStoreImm : Predicate<"Subtarget->hasStoreImm()">;
 
+class ImmediateAsmOperand<string name> : AsmOperandClass {
+  let Name = name;
+  let RenderMethod = "addImmOperands";
+  let DiagnosticType = !strconcat("Invalid", name);
+}
+
+def SImm16AsmOperand : ImmediateAsmOperand<"SImm16">;
+
 def brtarget : Operand<OtherVT> {
   let PrintMethod = "printBrTargetOperand";
+  let ParserMatchClass = ImmediateAsmOperand<"BrTarget">;
 }
 def calltarget : Operand<i64>;
 
 def u64imm   : Operand<i64> {
   let PrintMethod = "printImm64Operand";
+}
+
+def s16imm : Operand<i16> {
+  let ParserMatchClass = SImm16AsmOperand;
 }
 
 def gpr_or_imm : Operand<i64>;
@@ -92,7 +105,7 @@ def MEMri : Operand<i64> {
   let PrintMethod = "printMemOperand";
   let EncoderMethod = "getMemoryOpValue";
   let DecoderMethod = "decodeMemoryOpValue";
-  let MIOperandInfo = (ops GPR, i16imm);
+  let MIOperandInfo = (ops GPR, s16imm);
 }
 
 // Conditional code predicates - used for pattern matching for jump instructions

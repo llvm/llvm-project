@@ -661,22 +661,18 @@ void LiveVariables::recomputeForSingleDefVirtReg(Register Reg) {
   MachineInstr &DefMI = *MRI->getUniqueVRegDef(Reg);
   MachineBasicBlock &DefBB = *DefMI.getParent();
 
-  // Handle the case where all uses have been removed.
-  if (MRI->use_nodbg_empty(Reg)) {
-    VI.Kills.push_back(&DefMI);
-    DefMI.addRegisterDead(Reg, nullptr);
-    return;
-  }
-  DefMI.clearRegisterDeads(Reg);
-
   // Initialize a worklist of BBs that Reg is live-to-end of. (Here
   // "live-to-end" means Reg is live at the end of a block even if it is only
   // live because of phi uses in a successor. This is different from isLiveOut()
   // which does not consider phi uses.)
   SmallVector<MachineBasicBlock *> LiveToEndBlocks;
   SparseBitVector<> UseBlocks;
+  unsigned NumRealUses = 0;
   for (auto &UseMO : MRI->use_nodbg_operands(Reg)) {
     UseMO.setIsKill(false);
+    if (!UseMO.readsReg())
+      continue;
+    ++NumRealUses;
     MachineInstr &UseMI = *UseMO.getParent();
     MachineBasicBlock &UseBB = *UseMI.getParent();
     UseBlocks.set(UseBB.getNumber());
@@ -692,6 +688,14 @@ void LiveVariables::recomputeForSingleDefVirtReg(Register Reg) {
       LiveToEndBlocks.append(UseBB.pred_begin(), UseBB.pred_end());
     }
   }
+
+  // Handle the case where all uses have been removed.
+  if (NumRealUses == 0) {
+    VI.Kills.push_back(&DefMI);
+    DefMI.addRegisterDead(Reg, nullptr);
+    return;
+  }
+  DefMI.clearRegisterDeads(Reg);
 
   // Iterate over the worklist adding blocks to AliveBlocks.
   bool LiveToEndOfDefBB = false;
@@ -721,7 +725,7 @@ void LiveVariables::recomputeForSingleDefVirtReg(Register Reg) {
         continue;
       if (MI.isPHI())
         break;
-      if (MI.readsRegister(Reg)) {
+      if (MI.readsVirtualRegister(Reg)) {
         assert(!MI.killsRegister(Reg));
         MI.addRegisterKilled(Reg, nullptr);
         VI.Kills.push_back(&MI);

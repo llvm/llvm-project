@@ -52,8 +52,10 @@ class SVESIMDRegistersTestCase(TestBase):
         # These are 128 bit registers, so getting them from the API as unsigned
         # values doesn't work. Check the command output instead.
         for i in range(32):
-            self.expect("register read v{}".format(i),
-                substrs=[self.make_simd_value(i+value_offset)])
+            self.expect(
+                "register read v{}".format(i),
+                substrs=[self.make_simd_value(i + value_offset)],
+            )
 
     def sve_simd_registers_impl(self, mode):
         self.skip_if_needed(mode)

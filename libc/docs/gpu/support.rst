@@ -52,7 +52,7 @@ memcmp         |check|
 memcpy         |check|
 memmove        |check|
 mempcpy        |check|
-memrchr        |check|
+memrchr
 memset         |check|
 stpcpy         |check|
 stpncpy        |check|
@@ -96,6 +96,9 @@ llabs          |check|
 div            |check|
 ldiv           |check|
 lldiv          |check|
+bsearch        |check|
+qsort          |check|
+qsort_r        |check|
 strtod         |check|
 strtof         |check|
 strtol         |check|
@@ -106,7 +109,7 @@ strtoull       |check|
 =============  =========  ============
 
 inttypes.h
---------
+----------
 
 =============  =========  ============
 Function Name  Available  RPC Required
@@ -118,20 +121,34 @@ strtoumax      |check|
 =============  =========  ============
 
 stdio.h
---------
+-------
 
 =============  =========  ============
 Function Name  Available  RPC Required
 =============  =========  ============
+feof           |check|    |check|
+ferror         |check|    |check|
+clearerr       |check|    |check|
+fseek          |check|    |check|
+ftell          |check|    |check|
+fflush         |check|    |check|
+fgetc          |check|    |check|
+fgets          |check|    |check|
+getc           |check|    |check|
+getchar        |check|    |check|
 puts           |check|    |check|
 fputs          |check|    |check|
+fputc          |check|    |check|
+fwrite         |check|    |check|
+putc           |check|    |check|
+putchar        |check|    |check|
 fclose         |check|    |check|
 fopen          |check|    |check|
 fread          |check|    |check|
 =============  =========  ============
 
 time.h
---------
+------
 
 =============  =========  ============
 Function Name  Available  RPC Required

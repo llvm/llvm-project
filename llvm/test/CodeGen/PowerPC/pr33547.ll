@@ -16,9 +16,9 @@ define void @main() {
 ; CHECK-NEXT:    .cfi_def_cfa_offset 32
 ; CHECK-NEXT:    .cfi_offset lr, 16
 ; CHECK-NEXT:    addis 3, 2, .LC0@toc@ha
-; CHECK-NEXT:    addis 4, 2, .LC1@toc@ha
-; CHECK-NEXT:    ld 3, .LC0@toc@l(3)
-; CHECK-NEXT:    ld 4, .LC1@toc@l(4)
+; CHECK-NEXT:    addis 5, 2, .LC1@toc@ha
+; CHECK-NEXT:    ld 4, .LC0@toc@l(3)
+; CHECK-NEXT:    ld 3, .LC1@toc@l(5)
 ; CHECK-NEXT:    addi 3, 3, 124
 ; CHECK-NEXT:    bl testFunc
 ; CHECK-NEXT:    nop

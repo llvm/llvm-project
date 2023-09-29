@@ -3,7 +3,7 @@
 transform.sequence failures(propagate) {
 ^bb0(%arg1: !transform.any_op):
   %0 = transform.structured.match ops{["linalg.matmul"]} in %arg1 : (!transform.any_op) -> !transform.any_op
-  %1, %loops:3 = transform.structured.tile %0 [4, 4, 4] : (!transform.any_op) -> (!transform.any_op, !transform.any_op, !transform.any_op, !transform.any_op)
+  %1, %loops:3 = transform.structured.tile_using_for %0 [4, 4, 4] : (!transform.any_op) -> (!transform.any_op, !transform.any_op, !transform.any_op, !transform.any_op)
 }
 
 // CHECK-LABEL: func @tile_linalg_matmul(
@@ -40,7 +40,7 @@ transform.sequence failures(propagate) {
 ^bb0(%arg1: !transform.any_op):
   %0 = transform.structured.match ops{["linalg.matmul"]} in %arg1 : (!transform.any_op) -> !transform.any_op
   %1 = transform.structured.match ops{["func.call"]} in %arg1 : (!transform.any_op) -> !transform.any_op
-  %2, %loops:3 = transform.structured.tile %0 [%1, %1, 4] : (!transform.any_op, !transform.any_op, !transform.any_op) -> (!transform.any_op, !transform.any_op, !transform.any_op, !transform.any_op)
+  %2, %loops:3 = transform.structured.tile_using_for %0 [%1, %1, 4] : (!transform.any_op, !transform.any_op, !transform.any_op) -> (!transform.any_op, !transform.any_op, !transform.any_op, !transform.any_op)
 }
 
 func.func private @get_dynamic_tile_size() -> index
@@ -82,7 +82,7 @@ transform.sequence failures(propagate) {
   // expected-note @below {{for this parameter}}
   %1 = transform.test_produce_param (0 : i64) : !transform.param<i64>
   // expected-error @below {{expected as many parameter values (0) as target ops (2)}}
-  transform.structured.tile %0 [%1, %1, %1]
+  transform.structured.tile_using_for %0 [%1, %1, %1]
     : (!transform.any_op, !transform.param<i64>, !transform.param<i64>, !transform.param<i64>)
     -> (!transform.any_op, !transform.any_op, !transform.any_op, !transform.any_op)
 }
@@ -107,7 +107,7 @@ transform.sequence failures(propagate) {
   // expected-note @below {{for this handle}}
   %1 = transform.structured.match ops{["arith.constant"]} in %arg1 : (!transform.any_op) -> !transform.any_op
   // expected-error @below {{expected as many dynamic size-producing operations (0) as target ops (2)}}
-  transform.structured.tile %0 [%1, %1, 1]
+  transform.structured.tile_using_for %0 [%1, %1, 1]
     : (!transform.any_op, !transform.any_op, !transform.any_op)
     -> (!transform.any_op, !transform.any_op, !transform.any_op, !transform.any_op)
 }
@@ -146,7 +146,7 @@ func.func @tile_tensor_pad(
 transform.sequence failures(propagate) {
 ^bb0(%arg1: !transform.any_op):
   %0 = transform.structured.match ops{["tensor.pad"]} in %arg1 : (!transform.any_op) -> !transform.any_op
-  transform.structured.tile_to_forall_op %0 tile_sizes[1, 1]
+  transform.structured.tile_using_forall %0 tile_sizes[1, 1]
          : (!transform.any_op) -> (!transform.any_op, !transform.any_op)
 }
 
@@ -184,22 +184,22 @@ module {
 transform.sequence failures(propagate) {
   ^bb0(%arg1: !transform.any_op):
     %0 = transform.structured.match ops{["linalg.generic"]} in %arg1 : (!transform.any_op) -> !transform.any_op
-    %1, %loop = transform.structured.tile %0 [[4]] : (!transform.any_op) -> (!transform.any_op, !transform.any_op)
+    %1, %loop = transform.structured.tile_using_for %0 [[4]] : (!transform.any_op) -> (!transform.any_op, !transform.any_op)
 }
 
 // -----
 
 // CHECK-LABEL:   func.func @scalable_and_fixed_length_tile
-// CHECK:           %[[STEP_0:.*]] = arith.constant 4 : index
-// CHECK:           %[[STEP_1:.*]] = arith.constant 4 : index
 // CHECK:           %[[C4:.*]] = arith.constant 4 : index
 // CHECK:           %[[VS:.*]] = vector.vscale
 // CHECK:           %[[STEP_2:.*]] = arith.muli %[[C4]], %[[VS]] : index
 // CHECK:           %[[C0:.*]] = arith.constant 0 : index
 // CHECK:           %[[C128:.*]] = arith.constant 128 : index
+// CHECK:           %[[STEP_0:.*]] = arith.constant 4 : index
 // CHECK:           scf.for %[[VAL_11:.*]] = %[[C0]] to %[[C128]] step %[[STEP_0]]
 // CHECK:             %[[C0_1:.*]] = arith.constant 0 : index
 // CHECK:             %[[C128_1:.*]] = arith.constant 128 : index
+// CHECK:             %[[STEP_1:.*]] = arith.constant 4 : index
 // CHECK:             scf.for %[[VAL_16:.*]] = %[[C0_1]] to %[[C128_1]] step %[[STEP_1]]
 // CHECK:               %[[C0_2:.*]] = arith.constant 0 : index
 // CHECK:               %[[C128_2:.*]] = arith.constant 128 : index
@@ -218,5 +218,22 @@ func.func @scalable_and_fixed_length_tile(
 transform.sequence failures(propagate) {
 ^bb0(%arg1: !transform.any_op):
   %0 = transform.structured.match ops{["linalg.matmul"]} in %arg1 : (!transform.any_op) -> !transform.any_op
-  %1, %loops:3 = transform.structured.tile %0 [4, 4, [4]] : (!transform.any_op) -> (!transform.any_op, !transform.any_op, !transform.any_op, !transform.any_op)
+  %1, %loops:3 = transform.structured.tile_using_for %0 [4, 4, [4]] : (!transform.any_op) -> (!transform.any_op, !transform.any_op, !transform.any_op, !transform.any_op)
+}
+
+// -----
+
+func.func @too_many_tiles(%arg0: tensor<128x128xf32>, %arg1: tensor<128x128xf32>,
+                          %arg2: tensor<128x128xf32>) ->  tensor<128x128xf32> {
+  // expected-note @below {{target op}}
+  %0 = linalg.matmul ins(%arg0, %arg1: tensor<128x128xf32>, tensor<128x128xf32>)
+                     outs(%arg2: tensor<128x128xf32>) -> tensor<128x128xf32>
+  return %0 : tensor<128x128xf32>
+}
+
+transform.sequence failures(propagate) {
+^bb0(%arg1: !transform.any_op):
+  %0 = transform.structured.match ops{["linalg.matmul"]} in %arg1 : (!transform.any_op) -> !transform.any_op
+  // expected-error @below {{too many tiles provided, expected at most 3 found 4}}
+  %1, %loops = transform.structured.tile_using_for %0 [1, 0, 0, 0] : (!transform.any_op) -> (!transform.any_op, !transform.any_op)
 }

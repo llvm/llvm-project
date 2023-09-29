@@ -18,17 +18,17 @@ define i32 @foo(i32 %n) local_unnamed_addr #0 "stack-probe-size"="32768" nounwin
 ; CHECK-LE-NEXT:    std r31, -8(r1)
 ; CHECK-LE-NEXT:    stdu r1, -48(r1)
 ; CHECK-LE-NEXT:    rldic r3, r3, 2, 30
-; CHECK-LE-NEXT:    li r5, -32768
+; CHECK-LE-NEXT:    li r6, -32768
 ; CHECK-LE-NEXT:    mr r31, r1
 ; CHECK-LE-NEXT:    addi r3, r3, 15
 ; CHECK-LE-NEXT:    rldicl r3, r3, 60, 4
 ; CHECK-LE-NEXT:    rldicl r3, r3, 4, 29
-; CHECK-LE-NEXT:    neg r4, r3
+; CHECK-LE-NEXT:    neg r5, r3
 ; CHECK-LE-NEXT:    addi r3, r31, 48
-; CHECK-LE-NEXT:    divd r6, r4, r5
-; CHECK-LE-NEXT:    mulld r5, r6, r5
-; CHECK-LE-NEXT:    sub r5, r4, r5
-; CHECK-LE-NEXT:    add r4, r1, r4
+; CHECK-LE-NEXT:    divd r7, r5, r6
+; CHECK-LE-NEXT:    add r4, r1, r5
+; CHECK-LE-NEXT:    mulld r6, r7, r6
+; CHECK-LE-NEXT:    sub r5, r5, r6
 ; CHECK-LE-NEXT:    stdux r3, r1, r5
 ; CHECK-LE-NEXT:    cmpd r1, r4
 ; CHECK-LE-NEXT:    beq cr0, .LBB0_2
@@ -154,17 +154,17 @@ define i32 @bar(i32 %n) local_unnamed_addr #0 nounwind {
 ; CHECK-LE-NEXT:    std r31, -8(r1)
 ; CHECK-LE-NEXT:    stdu r1, -48(r1)
 ; CHECK-LE-NEXT:    rldic r4, r3, 2, 30
-; CHECK-LE-NEXT:    li r6, -4096
+; CHECK-LE-NEXT:    li r7, -4096
 ; CHECK-LE-NEXT:    mr r31, r1
 ; CHECK-LE-NEXT:    addi r4, r4, 15
 ; CHECK-LE-NEXT:    rldicl r4, r4, 60, 4
 ; CHECK-LE-NEXT:    rldicl r4, r4, 4, 29
-; CHECK-LE-NEXT:    neg r5, r4
+; CHECK-LE-NEXT:    neg r6, r4
 ; CHECK-LE-NEXT:    addi r4, r31, 48
-; CHECK-LE-NEXT:    divd r7, r5, r6
-; CHECK-LE-NEXT:    mulld r6, r7, r6
-; CHECK-LE-NEXT:    sub r6, r5, r6
-; CHECK-LE-NEXT:    add r5, r1, r5
+; CHECK-LE-NEXT:    divd r8, r6, r7
+; CHECK-LE-NEXT:    add r5, r1, r6
+; CHECK-LE-NEXT:    mulld r7, r8, r7
+; CHECK-LE-NEXT:    sub r6, r6, r7
 ; CHECK-LE-NEXT:    stdux r4, r1, r6
 ; CHECK-LE-NEXT:    cmpd r1, r5
 ; CHECK-LE-NEXT:    beq cr0, .LBB1_2
@@ -300,24 +300,24 @@ define i32 @f(i32 %n) local_unnamed_addr #0 "stack-probe-size"="65536" nounwind 
 ; CHECK-LE-NEXT:    std r31, -8(r1)
 ; CHECK-LE-NEXT:    stdu r1, -48(r1)
 ; CHECK-LE-NEXT:    rldic r3, r3, 2, 30
-; CHECK-LE-NEXT:    lis r4, -1
+; CHECK-LE-NEXT:    lis r5, -1
 ; CHECK-LE-NEXT:    mr r31, r1
 ; CHECK-LE-NEXT:    addi r3, r3, 15
-; CHECK-LE-NEXT:    ori r4, r4, 0
+; CHECK-LE-NEXT:    ori r5, r5, 0
 ; CHECK-LE-NEXT:    rldicl r3, r3, 60, 4
 ; CHECK-LE-NEXT:    rldicl r3, r3, 4, 29
-; CHECK-LE-NEXT:    neg r5, r3
+; CHECK-LE-NEXT:    neg r6, r3
 ; CHECK-LE-NEXT:    addi r3, r31, 48
-; CHECK-LE-NEXT:    divd r6, r5, r4
-; CHECK-LE-NEXT:    mulld r6, r6, r4
-; CHECK-LE-NEXT:    sub r6, r5, r6
-; CHECK-LE-NEXT:    add r5, r1, r5
+; CHECK-LE-NEXT:    divd r7, r6, r5
+; CHECK-LE-NEXT:    add r4, r1, r6
+; CHECK-LE-NEXT:    mulld r7, r7, r5
+; CHECK-LE-NEXT:    sub r6, r6, r7
 ; CHECK-LE-NEXT:    stdux r3, r1, r6
-; CHECK-LE-NEXT:    cmpd r1, r5
+; CHECK-LE-NEXT:    cmpd r1, r4
 ; CHECK-LE-NEXT:    beq cr0, .LBB2_2
 ; CHECK-LE-NEXT:  .LBB2_1:
-; CHECK-LE-NEXT:    stdux r3, r1, r4
-; CHECK-LE-NEXT:    cmpd r1, r5
+; CHECK-LE-NEXT:    stdux r3, r1, r5
+; CHECK-LE-NEXT:    cmpd r1, r4
 ; CHECK-LE-NEXT:    bne cr0, .LBB2_1
 ; CHECK-LE-NEXT:  .LBB2_2:
 ; CHECK-LE-NEXT:    li r4, 1

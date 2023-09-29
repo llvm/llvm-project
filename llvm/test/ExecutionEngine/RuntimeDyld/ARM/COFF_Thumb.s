@@ -101,7 +101,7 @@ rel11:
 	bx r0
 	trap
 
-	.data
+	.text
 
 	.p2align 2
 

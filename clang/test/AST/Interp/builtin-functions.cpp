@@ -248,4 +248,15 @@ namespace SourceLocation {
   };
 
   static_assert(Foo{}.a == __LINE__, "");
+
+  struct AA {
+    int n = __builtin_LINE();
+  };
+  struct B {
+    AA a = {};
+  };
+  constexpr void f() {
+    constexpr B c = {};
+    static_assert(c.a.n == __LINE__ - 1, "");
+  }
 }

@@ -33,11 +33,11 @@ cleanup:
   call void @free(ptr %mem)
   br label %suspend
 suspend:
-  call i1 @llvm.coro.end(ptr %hdl, i1 0)
+  call i1 @llvm.coro.end(ptr %hdl, i1 0, token none)
   ret ptr %hdl
 }
 
-; See if the i8* for coro.begin was added to f.Frame
+; See if the ptr for coro.begin was added to f.Frame
 ; CHECK-LABEL: %f.Frame = type { ptr, ptr, ptr, i1 }
 
 ; See if the g's coro.begin was spilled into the frame
@@ -62,7 +62,7 @@ declare i8  @llvm.coro.suspend(token, i1)
 declare token @llvm.coro.id(i32, ptr, ptr, ptr)
 declare i1 @llvm.coro.alloc(token)
 declare ptr @llvm.coro.begin(token, ptr)
-declare i1 @llvm.coro.end(ptr, i1)
+declare i1 @llvm.coro.end(ptr, i1, token)
 
 declare noalias ptr @malloc(i32)
 declare void @print.i32(i32)

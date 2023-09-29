@@ -351,8 +351,7 @@ static bool findDepIdxSet(Merger &merger, TensorId tensor, Level lvl,
 /// Get the total number of compound affine expressions in the
 /// `getMatchingIndexingMap` for the given tensor.  For the following inputs:
 ///
-/// map = (d0, d1, d2) => (d0 + d1, d2)
-/// lvlTypes = ["compressed", "compressed"]
+/// map = (d0, d1, d2) => (d0 + d1 : compressed, d2 : compressed)
 ///
 /// Returns 1 (because the first level is compressed and its corresponding
 /// indexing-expression is `d0 + d1`)

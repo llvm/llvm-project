@@ -1,0 +1,51 @@
+# This file is licensed under the Apache License v2.0 with LLVM Exceptions.
+# See https://llvm.org/LICENSE.txt for license information.
+# SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+
+package(
+    default_visibility = ["//visibility:public"],
+    features = ["layering_check"],
+)
+
+licenses(["notice"])
+
+cc_library(
+    name = "config",
+    defines = select({
+        "@platforms//os:linux": [
+            "COMPILER_RT_HAS_ATOMICS=1",
+            "COMPILER_RT_HAS_FCNTL_LCK=1",
+            "COMPILER_RT_HAS_UNAME=1",
+        ],
+        # Will raise error unless supported platforms.
+    }),
+)
+
+WIN32_ONLY_FILES = [
+    "lib/profile/WindowsMMap.c",
+]
+
+cc_library(
+    name = "profile",
+    srcs = glob(
+        [
+            "lib/profile/*.c",
+            "lib/profile/*.cpp",
+            "lib/profile/*.h",
+        ],
+        exclude = WIN32_ONLY_FILES,
+    ) + select({
+        "@platforms//os:windows": WIN32_ONLY_FILES,
+        "//conditions:default": []
+    }),
+    hdrs = glob([
+        "include/profile/*.inc",
+    ]),
+    includes = [
+        "include",
+    ],
+    deps = [
+        ":config",
+    ],
+    linkstatic = True,
+)

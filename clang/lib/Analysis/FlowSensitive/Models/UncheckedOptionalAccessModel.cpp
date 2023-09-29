@@ -34,7 +34,6 @@
 #include <memory>
 #include <optional>
 #include <utility>
-#include <vector>
 
 namespace clang {
 namespace dataflow {
@@ -913,8 +912,8 @@ auto buildTransferMatchSwitch() {
       .Build();
 }
 
-std::vector<SourceLocation> diagnoseUnwrapCall(const Expr *ObjectExpr,
-                                               const Environment &Env) {
+llvm::SmallVector<SourceLocation> diagnoseUnwrapCall(const Expr *ObjectExpr,
+                                                     const Environment &Env) {
   if (auto *OptionalVal = getValueBehindPossiblePointer(*ObjectExpr, Env)) {
     auto *Prop = OptionalVal->getProperty("has_value");
     if (auto *HasValueVal = cast_or_null<BoolValue>(Prop)) {
@@ -935,7 +934,8 @@ auto buildDiagnoseMatchSwitch(
   // lot of duplicated work (e.g. string comparisons), consider providing APIs
   // that avoid it through memoization.
   auto IgnorableOptional = ignorableOptional(Options);
-  return CFGMatchSwitchBuilder<const Environment, std::vector<SourceLocation>>()
+  return CFGMatchSwitchBuilder<const Environment,
+                               llvm::SmallVector<SourceLocation>>()
       // optional::value
       .CaseOfCFGStmt<CXXMemberCallExpr>(
           valueCall(IgnorableOptional),

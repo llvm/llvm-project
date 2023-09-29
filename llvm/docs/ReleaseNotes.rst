@@ -78,7 +78,7 @@ Changes to the AArch64 Backend
 Changes to the AMDGPU Backend
 -----------------------------
 
-* `llvm.sqrt.f64` is now lowered correctly. Use `llvm.amdgcn.sqrt.f64`
+* `llvm.sqrt.f32` is now lowered correctly. Use `llvm.amdgcn.sqrt.f32`
   for raw instruction access.
 
 * Implemented `llvm.stacksave` and `llvm.stackrestore` intrinsics.
@@ -116,6 +116,14 @@ Changes to the WebAssembly Backend
 
 Changes to the Windows Target
 -----------------------------
+
+* The LLVM filesystem class ``UniqueID`` and function ``equivalent()``
+  no longer determine that distinct different path names for the same
+  hard linked file actually are equal. This is an intentional tradeoff in a
+  bug fix, where the bug used to cause distinct files to be considered
+  equivalent on some file systems. This change fixed the issues
+  https://github.com/llvm/llvm-project/issues/61401 and
+  https://github.com/llvm/llvm-project/issues/22079.
 
 Changes to the X86 Backend
 --------------------------
@@ -166,6 +174,11 @@ Changes to the LLVM tools
 
 * llvm-symbolizer now treats invalid input as an address for which source
   information is not found.
+* llvm-readelf now supports ``--extra-sym-info`` (``-X``) to display extra
+  information (section name) when showing symbols.
+
+* ``llvm-nm`` now supports the ``--line-numbers`` (``-l``) option to use
+  debugging information to print symbols' filenames and line numbers.
 
 Changes to LLDB
 ---------------------------------

@@ -12,7 +12,6 @@ import csv
 import re
 import pickle
 
-from dex.builder import run_external_build_script
 from dex.command.ParseCommand import get_command_infos
 from dex.debugger.Debuggers import run_debugger_subprocess
 from dex.debugger.DebuggerControllers.DefaultController import DefaultController

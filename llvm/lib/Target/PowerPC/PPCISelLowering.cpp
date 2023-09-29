@@ -148,6 +148,12 @@ static SDValue widenVec(SelectionDAG &DAG, SDValue Vec, const SDLoc &dl);
 
 static const char AIXSSPCanaryWordName[] = "__ssp_canary_word";
 
+// A faster local-exec TLS access sequence (enabled with the
+// -maix-small-local-exec-tls option) can be produced for TLS variables;
+// consistent with the IBM XL compiler, we apply a max size of slightly under
+// 32KB.
+constexpr uint64_t AIXSmallTlsPolicySizeLimit = 32751;
+
 // FIXME: Remove this once the bug has been fixed!
 extern cl::opt<bool> ANDIGlueBug;
 
@@ -393,7 +399,7 @@ PPCTargetLowering::PPCTargetLowering(const PPCTargetMachine &TM,
 
   // MASS transformation for LLVM intrinsics with replicating fast-math flag
   // to be consistent to PPCGenScalarMASSEntries pass
-  if (TM.getOptLevel() == CodeGenOpt::Aggressive) {
+  if (TM.getOptLevel() == CodeGenOptLevel::Aggressive) {
     setOperationAction(ISD::FSIN , MVT::f64, Custom);
     setOperationAction(ISD::FCOS , MVT::f64, Custom);
     setOperationAction(ISD::FPOW , MVT::f64, Custom);
@@ -3355,14 +3361,16 @@ SDValue PPCTargetLowering::LowerGlobalTLSAddressAIX(SDValue Op,
   const GlobalValue *GV = GA->getGlobal();
   EVT PtrVT = getPointerTy(DAG.getDataLayout());
   bool Is64Bit = Subtarget.isPPC64();
+  bool HasAIXSmallLocalExecTLS = Subtarget.hasAIXSmallLocalExecTLS();
   TLSModel::Model Model = getTargetMachine().getTLSModel(GV);
+  bool IsTLSLocalExecModel = Model == TLSModel::LocalExec;
 
-  if (Model == TLSModel::LocalExec || Model == TLSModel::InitialExec) {
+  if (IsTLSLocalExecModel || Model == TLSModel::InitialExec) {
     SDValue VariableOffsetTGA =
         DAG.getTargetGlobalAddress(GV, dl, PtrVT, 0, PPCII::MO_TPREL_FLAG);
     SDValue VariableOffset = getTOCEntry(DAG, dl, VariableOffsetTGA);
     SDValue TLSReg;
-    if (Is64Bit)
+    if (Is64Bit) {
       // For local-exec and initial-exec on AIX (64-bit), the sequence generated
       // involves a load of the variable offset (from the TOC), followed by an
       // add of the loaded variable offset to R13 (the thread pointer).
@@ -3370,7 +3378,22 @@ SDValue PPCTargetLowering::LowerGlobalTLSAddressAIX(SDValue Op,
       //    ld reg1,var[TC](2)
       //    add reg2, reg1, r13     // r13 contains the thread pointer
       TLSReg = DAG.getRegister(PPC::X13, MVT::i64);
-    else
+
+      // With the -maix-small-local-exec-tls option, produce a faster access
+      // sequence for local-exec TLS variables where the offset from the TLS
+      // base is encoded as an immediate operand.
+      //
+      // We only utilize the faster local-exec access sequence when the TLS
+      // variable has a size within the policy limit. We treat types that are
+      // not sized or are empty as being over the policy size limit.
+      if (HasAIXSmallLocalExecTLS && IsTLSLocalExecModel) {
+        Type *GVType = GV->getValueType();
+        if (GVType->isSized() && !GVType->isEmptyTy() &&
+            GV->getParent()->getDataLayout().getTypeAllocSize(GVType) <=
+                AIXSmallTlsPolicySizeLimit)
+          return DAG.getNode(PPCISD::Lo, dl, PtrVT, VariableOffsetTGA, TLSReg);
+      }
+    } else {
       // For local-exec and initial-exec on AIX (32-bit), the sequence generated
       // involves loading the variable offset from the TOC, generating a call to
       // .__get_tpointer to get the thread pointer (which will be in R3), and
@@ -3379,6 +3402,13 @@ SDValue PPCTargetLowering::LowerGlobalTLSAddressAIX(SDValue Op,
       //    bla .__get_tpointer
       //    add reg2, reg1, r3
       TLSReg = DAG.getNode(PPCISD::GET_TPOINTER, dl, PtrVT);
+
+      // We do not implement the 32-bit version of the faster access sequence
+      // for local-exec that is controlled by -maix-small-local-exec-tls.
+      if (HasAIXSmallLocalExecTLS)
+        report_fatal_error("The small-local-exec TLS access sequence is "
+                           "currently only supported on AIX (64-bit mode).");
+    }
     return DAG.getNode(PPCISD::ADD_TLS, dl, PtrVT, TLSReg, VariableOffset);
   }
 
@@ -3793,11 +3823,12 @@ SDValue PPCTargetLowering::LowerINLINEASM(SDValue Op, SelectionDAG &DAG) const {
 
   // Check all operands that may contain the LR.
   for (unsigned i = InlineAsm::Op_FirstOperand; i != NumOps;) {
-    unsigned Flags = cast<ConstantSDNode>(Op.getOperand(i))->getZExtValue();
-    unsigned NumVals = InlineAsm::getNumOperandRegisters(Flags);
+    const InlineAsm::Flag Flags(
+        cast<ConstantSDNode>(Op.getOperand(i))->getZExtValue());
+    unsigned NumVals = Flags.getNumOperandRegisters();
     ++i; // Skip the ID value.
 
-    switch (InlineAsm::getKind(Flags)) {
+    switch (Flags.getKind()) {
     default:
       llvm_unreachable("Bad flags!");
     case InlineAsm::Kind::RegUse:
@@ -10283,11 +10314,6 @@ SDValue PPCTargetLowering::LowerVPERM(SDValue Op, SelectionDAG &DAG,
   bool isLittleEndian = Subtarget.isLittleEndian();
   bool isPPC64 = Subtarget.isPPC64();
 
-  // Only need to place items backwards in LE,
-  // the mask will be properly calculated.
-  if (isLittleEndian)
-    std::swap(V1, V2);
-
   if (Subtarget.hasVSX() && Subtarget.hasP9Vector() &&
       (V1->hasOneUse() || V2->hasOneUse())) {
     LLVM_DEBUG(dbgs() << "At least one of two input vectors are dead - using "
@@ -10297,7 +10323,8 @@ SDValue PPCTargetLowering::LowerVPERM(SDValue Op, SelectionDAG &DAG,
     // The second input to XXPERM is also an output so if the second input has
     // multiple uses then copying is necessary, as a result we want the
     // single-use operand to be used as the second input to prevent copying.
-    if (!V2->hasOneUse() && V1->hasOneUse()) {
+    if ((!isLittleEndian && !V2->hasOneUse() && V1->hasOneUse()) ||
+        (isLittleEndian && !V1->hasOneUse() && V2->hasOneUse())) {
       std::swap(V1, V2);
       NeedSwap = !NeedSwap;
     }
@@ -10336,27 +10363,24 @@ SDValue PPCTargetLowering::LowerVPERM(SDValue Op, SelectionDAG &DAG,
   for (unsigned i = 0, e = VT.getVectorNumElements(); i != e; ++i) {
     unsigned SrcElt = PermMask[i] < 0 ? 0 : PermMask[i];
 
-    if (Opcode == PPCISD::XXPERM) {
-      if (V1HasXXSWAPD) {
-        if (SrcElt < 8)
-          SrcElt += 8;
-        else if (SrcElt < 16)
-          SrcElt -= 8;
-      }
-      if (V2HasXXSWAPD) {
-        if (SrcElt > 23)
-          SrcElt -= 8;
-        else if (SrcElt > 15)
-          SrcElt += 8;
-      }
-      if (NeedSwap) {
-        if (SrcElt < 16)
-          SrcElt += 16;
-        else
-          SrcElt -= 16;
-      }
+    if (V1HasXXSWAPD) {
+      if (SrcElt < 8)
+        SrcElt += 8;
+      else if (SrcElt < 16)
+        SrcElt -= 8;
     }
-
+    if (V2HasXXSWAPD) {
+      if (SrcElt > 23)
+        SrcElt -= 8;
+      else if (SrcElt > 15)
+        SrcElt += 8;
+    }
+    if (NeedSwap) {
+      if (SrcElt < 16)
+        SrcElt += 16;
+      else
+        SrcElt -= 16;
+    }
     for (unsigned j = 0; j != BytesPerElement; ++j)
       if (isLittleEndian)
         ResultMask.push_back(
@@ -10366,18 +10390,19 @@ SDValue PPCTargetLowering::LowerVPERM(SDValue Op, SelectionDAG &DAG,
             DAG.getConstant(SrcElt * BytesPerElement + j, dl, MVT::i32));
   }
 
-  if (Opcode == PPCISD::XXPERM && (V1HasXXSWAPD || V2HasXXSWAPD)) {
-    if (V1HasXXSWAPD) {
-      dl = SDLoc(V1->getOperand(0));
-      V1 = V1->getOperand(0)->getOperand(1);
-    }
-    if (V2HasXXSWAPD) {
-      dl = SDLoc(V2->getOperand(0));
-      V2 = V2->getOperand(0)->getOperand(1);
-    }
-    if (isPPC64 && ValType != MVT::v2f64)
+  if (V1HasXXSWAPD) {
+    dl = SDLoc(V1->getOperand(0));
+    V1 = V1->getOperand(0)->getOperand(1);
+  }
+  if (V2HasXXSWAPD) {
+    dl = SDLoc(V2->getOperand(0));
+    V2 = V2->getOperand(0)->getOperand(1);
+  }
+
+  if (isPPC64 && (V1HasXXSWAPD || V2HasXXSWAPD)) {
+    if (ValType != MVT::v2f64)
       V1 = DAG.getBitcast(MVT::v2f64, V1);
-    if (isPPC64 && V2.getValueType() != MVT::v2f64)
+    if (V2.getValueType() != MVT::v2f64)
       V2 = DAG.getBitcast(MVT::v2f64, V2);
   }
 
@@ -10397,6 +10422,11 @@ SDValue PPCTargetLowering::LowerVPERM(SDValue Op, SelectionDAG &DAG,
 
   if (Opcode == PPCISD::XXPERM)
     VPermMask = DAG.getBitcast(MVT::v4i32, VPermMask);
+
+  // Only need to place items backwards in LE,
+  // the mask was properly calculated.
+  if (isLittleEndian)
+    std::swap(V1, V2);
 
   SDValue VPERMNode =
       DAG.getNode(Opcode, dl, V1.getValueType(), V1, V2, VPermMask);
@@ -16688,13 +16718,14 @@ PPCTargetLowering::getRegForInlineAsmConstraint(const TargetRegisterInfo *TRI,
 /// LowerAsmOperandForConstraint - Lower the specified operand into the Ops
 /// vector.  If it is invalid, don't add anything to Ops.
 void PPCTargetLowering::LowerAsmOperandForConstraint(SDValue Op,
-                                                     std::string &Constraint,
-                                                     std::vector<SDValue>&Ops,
+                                                     StringRef Constraint,
+                                                     std::vector<SDValue> &Ops,
                                                      SelectionDAG &DAG) const {
   SDValue Result;
 
   // Only support length 1 constraints.
-  if (Constraint.length() > 1) return;
+  if (Constraint.size() > 1)
+    return;
 
   char Letter = Constraint[0];
   switch (Letter) {
@@ -17104,7 +17135,7 @@ bool PPCTargetLowering::getTgtMemIntrinsic(IntrinsicInfo &Info,
 /// target-independent logic.
 EVT PPCTargetLowering::getOptimalMemOpType(
     const MemOp &Op, const AttributeList &FuncAttributes) const {
-  if (getTargetMachine().getOptLevel() != CodeGenOpt::None) {
+  if (getTargetMachine().getOptLevel() != CodeGenOptLevel::None) {
     // We should use Altivec/VSX loads and stores when available. For unaligned
     // addresses, unaligned VSX loads are only fast starting with the P8.
     if (Subtarget.hasAltivec() && Op.size() >= 16) {
@@ -17266,7 +17297,7 @@ bool PPCTargetLowering::isFMAFasterThanFMulAndFAdd(const MachineFunction &MF,
 
 bool PPCTargetLowering::isFMAFasterThanFMulAndFAdd(const Function &F,
                                                    Type *Ty) const {
-  if (Subtarget.hasSPE())
+  if (Subtarget.hasSPE() || Subtarget.useSoftFloat())
     return false;
   switch (Ty->getScalarType()->getTypeID()) {
   case Type::FloatTyID:

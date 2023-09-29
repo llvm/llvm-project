@@ -647,6 +647,10 @@ void request_attach(const llvm::json::Object &request) {
   std::vector<std::string> postRunCommands =
       GetStrings(arguments, "postRunCommands");
   const llvm::StringRef debuggerRoot = GetString(arguments, "debuggerRoot");
+  g_vsc.enable_auto_variable_summaries =
+      GetBoolean(arguments, "enableAutoVariableSummaries", false);
+  g_vsc.enable_synthetic_child_debugging =
+      GetBoolean(arguments, "enableSyntheticChildDebugging", false);
 
   // This is a hack for loading DWARF in .o files on Mac where the .o files
   // in the debug map of the main executable have relative paths which require
@@ -1794,6 +1798,10 @@ void request_launch(const llvm::json::Object &request) {
       GetStrings(arguments, "postRunCommands");
   g_vsc.stop_at_entry = GetBoolean(arguments, "stopOnEntry", false);
   const llvm::StringRef debuggerRoot = GetString(arguments, "debuggerRoot");
+  g_vsc.enable_auto_variable_summaries =
+      GetBoolean(arguments, "enableAutoVariableSummaries", false);
+  g_vsc.enable_synthetic_child_debugging =
+      GetBoolean(arguments, "enableSyntheticChildDebugging", false);
 
   // This is a hack for loading DWARF in .o files on Mac where the .o files
   // in the debug map of the main executable have relative paths which require
@@ -3251,7 +3259,7 @@ void request_variables(const llvm::json::Object &request) {
         break;
 
       int64_t var_ref = 0;
-      if (variable.MightHaveChildren()) {
+      if (variable.MightHaveChildren() || variable.IsSynthetic()) {
         var_ref = g_vsc.variables.InsertExpandableVariable(
             variable, /*is_permanent=*/false);
       }
@@ -3264,23 +3272,37 @@ void request_variables(const llvm::json::Object &request) {
     // children.
     lldb::SBValue variable = g_vsc.variables.GetVariable(variablesReference);
     if (variable.IsValid()) {
-      const auto num_children = variable.GetNumChildren();
-      const int64_t end_idx = start + ((count == 0) ? num_children : count);
-      for (auto i = start; i < end_idx; ++i) {
-        lldb::SBValue child = variable.GetChildAtIndex(i);
+      auto addChild = [&](lldb::SBValue child,
+                          std::optional<std::string> custom_name = {}) {
         if (!child.IsValid())
-          break;
+          return;
         if (child.MightHaveChildren()) {
           auto is_permanent =
               g_vsc.variables.IsPermanentVariableReference(variablesReference);
           auto childVariablesReferences =
               g_vsc.variables.InsertExpandableVariable(child, is_permanent);
-          variables.emplace_back(CreateVariable(child, childVariablesReferences,
-                                                childVariablesReferences, hex));
+          variables.emplace_back(CreateVariable(
+              child, childVariablesReferences, childVariablesReferences, hex,
+              /*is_name_duplicated=*/false, custom_name));
         } else {
-          variables.emplace_back(CreateVariable(child, 0, INT64_MAX, hex));
+          variables.emplace_back(CreateVariable(child, 0, INT64_MAX, hex,
+                                                /*is_name_duplicated=*/false,
+                                                custom_name));
         }
-      }
+      };
+      const int64_t num_children = variable.GetNumChildren();
+      int64_t end_idx = start + ((count == 0) ? num_children : count);
+      int64_t i = start;
+      for (; i < end_idx && i < num_children; ++i)
+        addChild(variable.GetChildAtIndex(i));
+
+      // If we haven't filled the count quota from the request, we insert a new
+      // "[raw]" child that can be used to inspect the raw version of a
+      // synthetic member. That eliminates the need for the user to go to the
+      // debug console and type `frame var <variable> to get these values.
+      if (g_vsc.enable_synthetic_child_debugging && variable.IsSynthetic() &&
+          i == num_children)
+        addChild(variable.GetNonSyntheticValue(), "[raw]");
     }
   }
   llvm::json::Object body;

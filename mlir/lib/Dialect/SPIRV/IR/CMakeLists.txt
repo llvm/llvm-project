@@ -43,4 +43,5 @@ add_mlir_dialect_library(MLIRSPIRVDialect
   MLIRSideEffectInterfaces
   MLIRSupport
   MLIRTransforms
+  MLIRUBDialect
 )

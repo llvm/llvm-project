@@ -71,7 +71,6 @@ Some of the current limitations
  * Only C++23 and C++26 are tested
  * Libc++ is not tested with modules instead of headers
  * The module ``.cppm`` files are not installed
- * The experimental ``PSTL`` library is not supported
  * Clang supports modules using GNU extensions, but libc++ does not work using
    GNU extensions.
  * Clang:

@@ -325,6 +325,15 @@ func.func @const_fold_vector_iadd() -> vector<3xi32> {
   return %0: vector<3xi32>
 }
 
+// CHECK-LABEL: @iadd_poison
+//       CHECK:   %[[P:.*]] = ub.poison : i32
+//       CHECK:   return %[[P]]
+func.func @iadd_poison(%arg0: i32) -> i32 {
+  %0 = ub.poison : i32
+  %1 = spirv.IAdd %arg0, %0 : i32
+  return %1: i32
+}
+
 // -----
 
 //===----------------------------------------------------------------------===//

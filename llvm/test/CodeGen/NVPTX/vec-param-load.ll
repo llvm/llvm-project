@@ -70,14 +70,10 @@ define <8 x i64> @test_v8i64(<8 x i64> %a) {
 
 define <16 x i16> @test_v16i16(<16 x i16> %a) {
 ; CHECK-LABEL: test_v16i16(
-; CHECK-DAG: ld.param.v4.u16     {[[V_12_15:(%rs[0-9]+[, ]*){4}]]}, [test_v16i16_param_0+24];
-; CHECK-DAG: ld.param.v4.u16     {[[V_8_11:(%rs[0-9]+[, ]*){4}]]}, [test_v16i16_param_0+16];
-; CHECK-DAG: ld.param.v4.u16     {[[V_4_7:(%rs[0-9]+[, ]*){4}]]}, [test_v16i16_param_0+8];
-; CHECK-DAG: ld.param.v4.u16     {[[V_0_3:(%rs[0-9]+[, ]*){4}]]}, [test_v16i16_param_0];
-; CHECK-DAG: st.param.v4.b16     [func_retval0+0], {[[V_0_3]]}
-; CHECK-DAG: st.param.v4.b16     [func_retval0+8], {[[V_4_7]]}
-; CHECK-DAG: st.param.v4.b16     [func_retval0+16], {[[V_8_11]]}
-; CHECK-DAG: st.param.v4.b16     [func_retval0+24], {[[V_12_15]]}
+; CHECK-DAG: ld.param.v4.u32     {[[V_8_15:(%r[0-9]+[, ]*){4}]]}, [test_v16i16_param_0+16];
+; CHECK-DAG: ld.param.v4.u32     {[[V_0_7:(%r[0-9]+[, ]*){4}]]}, [test_v16i16_param_0];
+; CHECK-DAG: st.param.v4.b32     [func_retval0+0], {[[V_0_7]]}
+; CHECK-DAG: st.param.v4.b32     [func_retval0+16], {[[V_8_15]]}
 ; CHECK: ret;
   ret <16 x i16> %a
 }

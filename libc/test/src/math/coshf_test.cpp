@@ -18,43 +18,43 @@
 #include <errno.h>
 #include <stdint.h>
 
-using FPBits = __llvm_libc::fputil::FPBits<float>;
+using FPBits = LIBC_NAMESPACE::fputil::FPBits<float>;
 
-namespace mpfr = __llvm_libc::testing::mpfr;
+namespace mpfr = LIBC_NAMESPACE::testing::mpfr;
 
 DECLARE_SPECIAL_CONSTANTS(float)
 
 TEST(LlvmLibcCoshfTest, SpecialNumbers) {
   libc_errno = 0;
 
-  EXPECT_FP_EQ(aNaN, __llvm_libc::coshf(aNaN));
+  EXPECT_FP_EQ(aNaN, LIBC_NAMESPACE::coshf(aNaN));
   EXPECT_MATH_ERRNO(0);
 
-  EXPECT_FP_EQ(inf, __llvm_libc::coshf(inf));
+  EXPECT_FP_EQ(inf, LIBC_NAMESPACE::coshf(inf));
   EXPECT_MATH_ERRNO(0);
 
-  EXPECT_FP_EQ(inf, __llvm_libc::coshf(neg_inf));
+  EXPECT_FP_EQ(inf, LIBC_NAMESPACE::coshf(neg_inf));
   EXPECT_MATH_ERRNO(0);
 
-  EXPECT_FP_EQ(1.0f, __llvm_libc::coshf(0.0f));
+  EXPECT_FP_EQ(1.0f, LIBC_NAMESPACE::coshf(0.0f));
   EXPECT_MATH_ERRNO(0);
 
-  EXPECT_FP_EQ(1.0f, __llvm_libc::coshf(-0.0f));
+  EXPECT_FP_EQ(1.0f, LIBC_NAMESPACE::coshf(-0.0f));
   EXPECT_MATH_ERRNO(0);
 }
 
 TEST(LlvmLibcCoshfTest, Overflow) {
   libc_errno = 0;
   EXPECT_FP_EQ_WITH_EXCEPTION(
-      inf, __llvm_libc::coshf(float(FPBits(0x7f7fffffU))), FE_OVERFLOW);
+      inf, LIBC_NAMESPACE::coshf(float(FPBits(0x7f7fffffU))), FE_OVERFLOW);
   EXPECT_MATH_ERRNO(ERANGE);
 
   EXPECT_FP_EQ_WITH_EXCEPTION(
-      inf, __llvm_libc::coshf(float(FPBits(0x42cffff8U))), FE_OVERFLOW);
+      inf, LIBC_NAMESPACE::coshf(float(FPBits(0x42cffff8U))), FE_OVERFLOW);
   EXPECT_MATH_ERRNO(ERANGE);
 
   EXPECT_FP_EQ_WITH_EXCEPTION(
-      inf, __llvm_libc::coshf(float(FPBits(0x42d00008U))), FE_OVERFLOW);
+      inf, LIBC_NAMESPACE::coshf(float(FPBits(0x42d00008U))), FE_OVERFLOW);
   EXPECT_MATH_ERRNO(ERANGE);
 }
 
@@ -65,18 +65,18 @@ TEST(LlvmLibcCoshfTest, InFloatRange) {
     float x = float(FPBits(v));
     if (isnan(x) || isinf(x))
       continue;
-    ASSERT_MPFR_MATCH(mpfr::Operation::Cosh, x, __llvm_libc::coshf(x), 0.5);
+    ASSERT_MPFR_MATCH(mpfr::Operation::Cosh, x, LIBC_NAMESPACE::coshf(x), 0.5);
   }
 }
 
 TEST(LlvmLibcCoshfTest, SmallValues) {
   float x = float(FPBits(0x17800000U));
-  float result = __llvm_libc::coshf(x);
+  float result = LIBC_NAMESPACE::coshf(x);
   EXPECT_MPFR_MATCH(mpfr::Operation::Cosh, x, result, 0.5);
   EXPECT_FP_EQ(1.0f, result);
 
   x = float(FPBits(0x0040000U));
-  result = __llvm_libc::coshf(x);
+  result = LIBC_NAMESPACE::coshf(x);
   EXPECT_MPFR_MATCH(mpfr::Operation::Cosh, x, result, 0.5);
   EXPECT_FP_EQ(1.0f, result);
 }

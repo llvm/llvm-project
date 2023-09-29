@@ -13,6 +13,7 @@
 #ifndef LLVM_TEXTAPI_PACKEDVERSION_H
 #define LLVM_TEXTAPI_PACKEDVERSION_H
 
+#include "llvm/Support/VersionTuple.h"
 #include <cstdint>
 #include <string>
 #include <utility>
@@ -28,9 +29,18 @@ class PackedVersion {
 
 public:
   constexpr PackedVersion() = default;
-  explicit constexpr PackedVersion(uint32_t RawVersion) : Version(RawVersion) {}
+  constexpr PackedVersion(uint32_t RawVersion) : Version(RawVersion) {}
   PackedVersion(unsigned Major, unsigned Minor, unsigned Subminor)
       : Version((Major << 16) | ((Minor & 0xff) << 8) | (Subminor & 0xff)) {}
+
+  PackedVersion(VersionTuple VT) {
+    unsigned Minor = 0, Subminor = 0;
+    if (auto VTMinor = VT.getMinor())
+      Minor = *VTMinor;
+    if (auto VTSub = VT.getSubminor())
+      Subminor = *VTSub;
+    *this = PackedVersion(VT.getMajor(), Minor, Subminor);
+  }
 
   bool empty() const { return Version == 0; }
 

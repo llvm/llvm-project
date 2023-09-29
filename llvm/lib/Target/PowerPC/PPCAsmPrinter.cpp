@@ -68,6 +68,7 @@
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/Process.h"
 #include "llvm/Support/raw_ostream.h"
+#include "llvm/Support/Threading.h"
 #include "llvm/Target/TargetMachine.h"
 #include "llvm/TargetParser/Triple.h"
 #include "llvm/Transforms/Utils/ModuleUtils.h"
@@ -170,11 +171,6 @@ public:
     TOCType_BlockAddress,
     TOCType_EHBlock
   };
-
-  // Controls whether or not to emit a .ref reference to __tls_get_addr.
-  // This is currently used for TLS models that do not generate calls to
-  // TLS functions, such as for the local-exec model on AIX 64-bit.
-  bool HasRefGetTLSAddr = false;
 
   MCSymbol *lookUpOrCreateTOCEntry(const MCSymbol *Sym, TOCEntryType Type,
                                    MCSymbolRefExpr::VariantKind Kind =
@@ -284,7 +280,7 @@ public:
 
   void emitFunctionBodyEnd() override;
 
-  void emitPGORefs();
+  void emitPGORefs(Module &M);
 
   void emitEndOfAsmFile(Module &) override;
 
@@ -620,17 +616,12 @@ void PPCAsmPrinter::LowerPATCHPOINT(StackMaps &SM, const MachineInstr &MI) {
 /// This helper function creates the TlsGetAddr MCSymbol for AIX. We will
 /// create the csect and use the qual-name symbol instead of creating just the
 /// external symbol.
-static MCSymbol *
-createMCSymbolForTlsGetAddr(MCContext &Ctx, unsigned MIOpc,
-                            XCOFF::StorageMappingClass SMC = XCOFF::XMC_PR) {
-  StringRef SymName;
-  if (MIOpc == PPC::GETtlsTpointer32AIX)
-    SymName = ".__get_tpointer";
-  else
-    SymName = (SMC == XCOFF::XMC_DS) ? "__tls_get_addr" : ".__tls_get_addr";
+static MCSymbol *createMCSymbolForTlsGetAddr(MCContext &Ctx, unsigned MIOpc) {
+  StringRef SymName =
+      MIOpc == PPC::GETtlsTpointer32AIX ? ".__get_tpointer" : ".__tls_get_addr";
   return Ctx
       .getXCOFFSection(SymName, SectionKind::getText(),
-                       XCOFF::CsectProperties(SMC, XCOFF::XTY_ER))
+                       XCOFF::CsectProperties(XCOFF::XMC_PR, XCOFF::XTY_ER))
       ->getQualNameSymbol();
 }
 
@@ -842,11 +833,8 @@ void PPCAsmPrinter::emitInstruction(const MachineInstr *MI) {
     if (MO.getTargetFlags() & PPCII::MO_TPREL_FLAG) {
       assert(MO.isGlobal() && "Only expecting a global MachineOperand here!\n");
       TLSModel::Model Model = TM.getTLSModel(MO.getGlobal());
-      if (Model == TLSModel::LocalExec) {
-        if (IsPPC64)
-          HasRefGetTLSAddr = true;
+      if (Model == TLSModel::LocalExec)
         return MCSymbolRefExpr::VariantKind::VK_PPC_AIX_TLSLE;
-      }
       if (Model == TLSModel::InitialExec)
         return MCSymbolRefExpr::VariantKind::VK_PPC_AIX_TLSIE;
       llvm_unreachable("Only expecting local-exec or initial-exec accesses!");
@@ -1545,6 +1533,22 @@ void PPCAsmPrinter::emitInstruction(const MachineInstr *MI) {
         MCInstBuilder(PPC::ORI).addReg(PPC::X2).addReg(PPC::X2).addImm(0));
     EmitToStreamer(*OutStreamer, MCInstBuilder(PPC::EnforceIEIO));
     return;
+  }
+  case PPC::ADDI8: {
+    // The faster non-TOC-based local-exec sequence is represented by `addi`
+    // with an immediate operand having the MO_TPREL_FLAG. Such an instruction
+    // does not otherwise arise.
+    const MachineOperand &MO = MI->getOperand(2);
+    if ((MO.getTargetFlags() & PPCII::MO_TPREL_FLAG) != 0) {
+      assert(
+          Subtarget->hasAIXSmallLocalExecTLS() &&
+          "addi with thread-pointer only expected with local-exec small TLS");
+      LowerPPCMachineInstrToMCInst(MI, TmpInst, *this);
+      TmpInst.setOpcode(PPC::LA8);
+      EmitToStreamer(*OutStreamer, TmpInst);
+      return;
+    }
+    break;
   }
   }
 
@@ -2648,10 +2652,28 @@ void PPCAIXAsmPrinter::emitFunctionEntryLabel() {
         getObjFileLowering().getFunctionEntryPointSymbol(Alias, TM));
 }
 
-void PPCAIXAsmPrinter::emitPGORefs() {
-  if (OutContext.hasXCOFFSection(
+void PPCAIXAsmPrinter::emitPGORefs(Module &M) {
+  if (!OutContext.hasXCOFFSection(
           "__llvm_prf_cnts",
-          XCOFF::CsectProperties(XCOFF::XMC_RW, XCOFF::XTY_SD))) {
+          XCOFF::CsectProperties(XCOFF::XMC_RW, XCOFF::XTY_SD)))
+    return;
+
+  // When inside a csect `foo`, a .ref directive referring to a csect `bar`
+  // translates into a relocation entry from `foo` to` bar`. The referring
+  // csect, `foo`, is identified by its address.  If multiple csects have the
+  // same address (because one or more of them are zero-length), the referring
+  // csect cannot be determined. Hence, we don't generate the .ref directives
+  // if `__llvm_prf_cnts` is an empty section.
+  bool HasNonZeroLengthPrfCntsSection = false;
+  const DataLayout &DL = M.getDataLayout();
+  for (GlobalVariable &GV : M.globals())
+    if (GV.hasSection() && GV.getSection().equals("__llvm_prf_cnts") &&
+        DL.getTypeAllocSize(GV.getValueType()) > 0) {
+      HasNonZeroLengthPrfCntsSection = true;
+      break;
+    }
+
+  if (HasNonZeroLengthPrfCntsSection) {
     MCSection *CntsSection = OutContext.getXCOFFSection(
         "__llvm_prf_cnts", SectionKind::getData(),
         XCOFF::CsectProperties(XCOFF::XMC_RW, XCOFF::XTY_SD),
@@ -2685,7 +2707,7 @@ void PPCAIXAsmPrinter::emitEndOfAsmFile(Module &M) {
   if (M.empty() && TOCDataGlobalVars.empty())
     return;
 
-  emitPGORefs();
+  emitPGORefs(M);
 
   // Switch to section to emit TOC base.
   OutStreamer->switchSection(getObjFileLowering().getTOCBaseSection());
@@ -2753,14 +2775,18 @@ bool PPCAIXAsmPrinter::doInitialization(Module &M) {
           // and add a format indicator as a part of function name in case we
           // will support more than one format.
           FormatIndicatorAndUniqueModId = "clang_" + UniqueModuleId.substr(1);
-        else
-          // Use the Pid and current time as the unique module id when we cannot
-          // generate one based on a module's strong external symbols.
-          // FIXME: Adjust the comment accordingly after we use source file full
-          // path instead.
+        else {
+          // Use threadId, Pid, and current time as the unique module id when we
+          // cannot generate one based on a module's strong external symbols.
+          auto CurTime =
+              std::chrono::duration_cast<std::chrono::nanoseconds>(
+                  std::chrono::steady_clock::now().time_since_epoch())
+                  .count();
           FormatIndicatorAndUniqueModId =
-              "clangPidTime_" + llvm::itostr(sys::Process::getProcessId()) +
-              "_" + llvm::itostr(time(nullptr));
+              "clangPidTidTime_" + llvm::itostr(sys::Process::getProcessId()) +
+              "_" + llvm::itostr(llvm::get_threadid()) + "_" +
+              llvm::itostr(CurTime);
+        }
       }
 
       emitSpecialLLVMGlobal(&G);
@@ -2874,22 +2900,6 @@ bool PPCAIXAsmPrinter::doFinalization(Module &M) {
   if (!MAI->usesDwarfFileAndLocDirectives() && MMI->hasDebugInfo())
     OutStreamer->doFinalizationAtSectionEnd(
         OutStreamer->getContext().getObjectFileInfo()->getTextSection());
-
-  // Add a single .ref reference to __tls_get_addr[DS] for the local-exec TLS
-  // model on AIX 64-bit. For TLS models that do not generate calls to TLS
-  // functions, this reference to __tls_get_addr helps generate a linker error
-  // to an undefined symbol to __tls_get_addr, which indicates to the user that
-  // compiling with -pthread is required for programs that use TLS variables.
-  if (HasRefGetTLSAddr) {
-    // Specifically for 64-bit AIX, a load from the TOC is generated to load
-    // the variable offset needed for local-exec accesses.
-    MCSymbol *TlsGetAddrDescriptor =
-        createMCSymbolForTlsGetAddr(OutContext, PPC::GETtlsADDR64AIX,
-                                    XCOFF::XMC_DS);
-
-    ExtSymSDNodeSymbols.insert(TlsGetAddrDescriptor);
-    OutStreamer->emitXCOFFRefDirective(TlsGetAddrDescriptor);
-  }
 
   for (MCSymbol *Sym : ExtSymSDNodeSymbols)
     OutStreamer->emitSymbolAttribute(Sym, MCSA_Extern);

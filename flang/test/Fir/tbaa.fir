@@ -205,7 +205,7 @@ module {
 
 // CHECK-LABEL:   llvm.mlir.global internal @_QFEx() {addr_space = 0 : i32} : !llvm.struct<(ptr<struct<()>>, i64, i32, i8, i8, i8, i8, array<1 x array<3 x i64>>, ptr<i8>, array<1 x i64>)> {
 // CHECK:           %[[VAL_0:.*]] = llvm.mlir.constant(0 : index) : i64
-// CHECK:           %[[VAL_1:.*]] = llvm.mlir.null : !llvm.ptr<struct<()>>
+// CHECK:           %[[VAL_1:.*]] = llvm.mlir.zero : !llvm.ptr<struct<()>>
 // CHECK:           %[[VAL_2:.*]] = llvm.mlir.constant(0 : i64) : i64
 // CHECK:           %[[VAL_3:.*]] = llvm.mlir.constant(-1 : i32) : i32
 // CHECK:           %[[VAL_4:.*]] = llvm.mlir.undef : !llvm.struct<(ptr<struct<()>>, i64, i32, i8, i8, i8, i8, array<1 x array<3 x i64>>, ptr<i8>, array<1 x i64>)>
@@ -223,7 +223,7 @@ module {
 // CHECK:           %[[VAL_16:.*]] = llvm.mlir.constant(1 : i32) : i32
 // CHECK:           %[[VAL_17:.*]] = llvm.trunc %[[VAL_16]] : i32 to i8
 // CHECK:           %[[VAL_18:.*]] = llvm.insertvalue %[[VAL_17]], %[[VAL_15]][6] : !llvm.struct<(ptr<struct<()>>, i64, i32, i8, i8, i8, i8, array<1 x array<3 x i64>>, ptr<i8>, array<1 x i64>)>
-// CHECK:           %[[VAL_19:.*]] = llvm.mlir.null : !llvm.ptr<i8>
+// CHECK:           %[[VAL_19:.*]] = llvm.mlir.zero : !llvm.ptr<i8>
 // CHECK:           %[[VAL_20:.*]] = llvm.bitcast %[[VAL_19]] : !llvm.ptr<i8> to !llvm.ptr<i8>
 // CHECK:           %[[VAL_21:.*]] = llvm.insertvalue %[[VAL_20]], %[[VAL_18]][8] : !llvm.struct<(ptr<struct<()>>, i64, i32, i8, i8, i8, i8, array<1 x array<3 x i64>>, ptr<i8>, array<1 x i64>)>
 // CHECK:           %[[VAL_22:.*]] = llvm.mlir.constant(0 : i64) : i64

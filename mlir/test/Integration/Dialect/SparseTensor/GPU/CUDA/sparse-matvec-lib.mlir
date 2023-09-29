@@ -2,7 +2,7 @@
 // NOTE: this test requires gpu-sm80
 //
 // DEFINE: %{compile} = mlir-opt %s \
-// DEFINE:   --sparse-compiler="enable-gpu-libgen gpu-triple=nvptx64-nvidia-cuda gpu-chip=sm_80 gpu-features=+ptx71
+// DEFINE:   --sparse-compiler="enable-gpu-libgen gpu-triple=nvptx64-nvidia-cuda gpu-chip=sm_80 gpu-features=+ptx71 gpu-format=%gpu_compilation_format
 // DEFINE: %{run} = mlir-cpu-runner \
 // DEFINE:   --shared-libs=%mlir_cuda_runtime \
 // DEFINE:   --shared-libs=%mlir_c_runner_utils \
@@ -25,13 +25,19 @@
 //
 
 #SortedCOO = #sparse_tensor.encoding<{
-  lvlTypes = [ "compressed_nu", "singleton" ]
+  map = (d0, d1) -> (d0 : compressed(nonunique), d1 : singleton)
 }>
 
 #CSR = #sparse_tensor.encoding<{
-  lvlTypes = [ "dense", "compressed" ],
+  map = (d0, d1) -> (d0 : dense, d1 : compressed),
   posWidth = 32,
   crdWidth = 32
+}>
+
+#CSC = #sparse_tensor.encoding<{
+  map = (d0, d1) -> (d1 : dense, d0 : compressed),
+  posWidth = 64,
+  crdWidth = 64
 }>
 
 module {
@@ -50,6 +56,14 @@ module {
   func.func @matvecCSR(%A: tensor<?x?xf64, #CSR>, %x: tensor<?xf64>, %y_in: tensor<?xf64>) -> tensor<?xf64> {
     %y_out = linalg.matvec
       ins(%A, %x: tensor<?x?xf64, #CSR>, tensor<?xf64>)
+      outs(%y_in: tensor<?xf64>) -> tensor<?xf64>
+    return %y_out : tensor<?xf64>
+  }
+
+  // Compute matrix vector y = Ax on CSC with 64-bit positions and coordinates.
+  func.func @matvecCSC(%A: tensor<?x?xf64, #CSC>, %x: tensor<?xf64>, %y_in: tensor<?xf64>) -> tensor<?xf64> {
+    %y_out = linalg.matvec
+      ins(%A, %x: tensor<?x?xf64, #CSC>, tensor<?xf64>)
       outs(%y_in: tensor<?xf64>) -> tensor<?xf64>
     return %y_out : tensor<?xf64>
   }
@@ -73,6 +87,7 @@ module {
     // Convert to a "sparse" m x n matrix A.
     %Acoo = sparse_tensor.convert %DA : tensor<64x64xf64> to tensor<?x?xf64, #SortedCOO>
     %Acsr = sparse_tensor.convert %DA : tensor<64x64xf64> to tensor<?x?xf64, #CSR>
+    %Acsc = sparse_tensor.convert %DA : tensor<64x64xf64> to tensor<?x?xf64, #CSC>
 
     // Initialize dense vector with n elements:
     //   (1, 2, 3, 4, ..., n)
@@ -103,19 +118,25 @@ module {
     %1 = call @matvecCSR(%Acsr, %x, %y0) : (tensor<?x?xf64, #CSR>,
                                             tensor<?xf64>,
 					    tensor<?xf64>) -> tensor<?xf64>
-    %2 = call @matvecCOO(%Acoo, %x, %y1) : (tensor<?x?xf64, #SortedCOO>,
+    %2 = call @matvecCSC(%Acsc, %x, %y0) : (tensor<?x?xf64, #CSC>,
                                             tensor<?xf64>,
 					    tensor<?xf64>) -> tensor<?xf64>
-    %3 = call @matvecCSR(%Acsr, %x, %y1) : (tensor<?x?xf64, #CSR>,
+    %3 = call @matvecCOO(%Acoo, %x, %y1) : (tensor<?x?xf64, #SortedCOO>,
+                                            tensor<?xf64>,
+					    tensor<?xf64>) -> tensor<?xf64>
+    %4 = call @matvecCSR(%Acsr, %x, %y1) : (tensor<?x?xf64, #CSR>,
+                                            tensor<?xf64>,
+					    tensor<?xf64>) -> tensor<?xf64>
+    %5 = call @matvecCSC(%Acsc, %x, %y1) : (tensor<?x?xf64, #CSC>,
                                             tensor<?xf64>,
 					    tensor<?xf64>) -> tensor<?xf64>
 
     //
     // Sanity check on the results.
     //
-    // CHECK-COUNT-2: ( 87360, 89440, 91520, 93600, 95680, 97760, 99840, 101920, 104000, 106080, 108160, 110240, 112320, 114400, 116480, 118560, 120640, 122720, 124800, 126880, 128960, 131040, 133120, 135200, 137280, 139360, 141440, 143520, 145600, 147680, 149760, 151840, 153920, 156000, 158080, 160160, 162240, 164320, 166400, 168480, 170560, 172640, 174720, 176800, 178880, 180960, 183040, 185120, 187200, 189280, 191360, 193440, 195520, 197600, 199680, 201760, 203840, 205920, 208000, 210080, 212160, 214240, 216320, 218400 )
+    // CHECK-COUNT-3: ( 87360, 89440, 91520, 93600, 95680, 97760, 99840, 101920, 104000, 106080, 108160, 110240, 112320, 114400, 116480, 118560, 120640, 122720, 124800, 126880, 128960, 131040, 133120, 135200, 137280, 139360, 141440, 143520, 145600, 147680, 149760, 151840, 153920, 156000, 158080, 160160, 162240, 164320, 166400, 168480, 170560, 172640, 174720, 176800, 178880, 180960, 183040, 185120, 187200, 189280, 191360, 193440, 195520, 197600, 199680, 201760, 203840, 205920, 208000, 210080, 212160, 214240, 216320, 218400 )
     //
-    // CHECK-COUNT-2: ( 87361, 89441, 91521, 93601, 95681, 97761, 99841, 101921, 104001, 106081, 108161, 110241, 112321, 114401, 116481, 118561, 120641, 122721, 124801, 126881, 128961, 131041, 133121, 135201, 137281, 139361, 141441, 143521, 145601, 147681, 149761, 151841, 153921, 156001, 158081, 160161, 162241, 164321, 166401, 168481, 170561, 172641, 174721, 176801, 178881, 180961, 183041, 185121, 187201, 189281, 191361, 193441, 195521, 197601, 199681, 201761, 203841, 205921, 208001, 210081, 212161, 214241, 216321, 218401 )
+    // CHECK-COUNT-3: ( 87361, 89441, 91521, 93601, 95681, 97761, 99841, 101921, 104001, 106081, 108161, 110241, 112321, 114401, 116481, 118561, 120641, 122721, 124801, 126881, 128961, 131041, 133121, 135201, 137281, 139361, 141441, 143521, 145601, 147681, 149761, 151841, 153921, 156001, 158081, 160161, 162241, 164321, 166401, 168481, 170561, 172641, 174721, 176801, 178881, 180961, 183041, 185121, 187201, 189281, 191361, 193441, 195521, 197601, 199681, 201761, 203841, 205921, 208001, 210081, 212161, 214241, 216321, 218401 )
     //
     %pb0 = vector.transfer_read %0[%c0], %f0 : tensor<?xf64>, vector<64xf64>
     vector.print %pb0 : vector<64xf64>
@@ -125,10 +146,15 @@ module {
     vector.print %pb2 : vector<64xf64>
     %pb3 = vector.transfer_read %3[%c0], %f0 : tensor<?xf64>, vector<64xf64>
     vector.print %pb3 : vector<64xf64>
+    %pb4 = vector.transfer_read %4[%c0], %f0 : tensor<?xf64>, vector<64xf64>
+    vector.print %pb4 : vector<64xf64>
+    %pb5 = vector.transfer_read %5[%c0], %f0 : tensor<?xf64>, vector<64xf64>
+    vector.print %pb5 : vector<64xf64>
 
     // Release the resources.
     bufferization.dealloc_tensor %Acoo : tensor<?x?xf64, #SortedCOO>
     bufferization.dealloc_tensor %Acsr : tensor<?x?xf64, #CSR>
+    bufferization.dealloc_tensor %Acsc : tensor<?x?xf64, #CSC>
 
     llvm.call @mgpuDestroySparseEnv() : () -> ()
     return

@@ -563,9 +563,8 @@ def {0} : LinalgStructuredBase_Op<"{1}", !listconcat([AttrSizedOperandSegments],
         return regionBuilder;
       }
 
-      std::pair<int64_t, int64_t> getDpsInitsPositionRange() {{
-        int64_t getNumOperands = this->getNumOperands();
-        return {{getNumOperands - getOutputs().size(), getNumOperands};
+      ::mlir::MutableOperandRange getDpsInitsMutable() {{
+        return getOutputsMutable();
       }
 
       // Generic methods.
@@ -661,7 +660,7 @@ void {0}::getEffects(SmallVectorImpl<
     SideEffects::EffectInstance<MemoryEffects::Effect> >&effects) {{
       if (hasTensorSemantics()) return;
       getGenericEffectsImpl(effects,
-        getOperation()->getResults(), getDpsInputOperands(), getDpsInitOperands());
+        getOperation()->getResults(), getDpsInputs(), getDpsInits());
 }
 )FMT";
 

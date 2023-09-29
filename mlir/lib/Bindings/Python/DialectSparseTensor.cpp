@@ -43,6 +43,7 @@ static void populateDialectSparseTensorSubmodule(const py::module &m) {
           [](py::object cls, std::vector<MlirSparseTensorDimLevelType> lvlTypes,
              std::optional<MlirAffineMap> dimToLvl, int posWidth, int crdWidth,
              MlirContext context) {
+            // TODO: provide dimToLvl
             return cls(mlirSparseTensorEncodingAttrGet(
                 context, lvlTypes.size(), lvlTypes.data(),
                 dimToLvl ? *dimToLvl : MlirAffineMap{nullptr}, posWidth,

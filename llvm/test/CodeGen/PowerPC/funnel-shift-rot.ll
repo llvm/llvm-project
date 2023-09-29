@@ -50,27 +50,16 @@ define i64 @rotl_i64_const_shift(i64 %x) {
 ; When first 2 operands match, it's a rotate (by variable amount).
 
 define i16 @rotl_i16(i16 %x, i16 %z) {
-; CHECK32-LABEL: rotl_i16:
-; CHECK32:       # %bb.0:
-; CHECK32-NEXT:    clrlwi 6, 4, 28
-; CHECK32-NEXT:    neg 4, 4
-; CHECK32-NEXT:    clrlwi 5, 3, 16
-; CHECK32-NEXT:    clrlwi 4, 4, 28
-; CHECK32-NEXT:    slw 3, 3, 6
-; CHECK32-NEXT:    srw 4, 5, 4
-; CHECK32-NEXT:    or 3, 3, 4
-; CHECK32-NEXT:    blr
-;
-; CHECK64-LABEL: rotl_i16:
-; CHECK64:       # %bb.0:
-; CHECK64-NEXT:    neg 5, 4
-; CHECK64-NEXT:    clrlwi 6, 3, 16
-; CHECK64-NEXT:    clrlwi 4, 4, 28
-; CHECK64-NEXT:    clrlwi 5, 5, 28
-; CHECK64-NEXT:    slw 3, 3, 4
-; CHECK64-NEXT:    srw 4, 6, 5
-; CHECK64-NEXT:    or 3, 3, 4
-; CHECK64-NEXT:    blr
+; CHECK-LABEL: rotl_i16:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    clrlwi 6, 4, 28
+; CHECK-NEXT:    neg 4, 4
+; CHECK-NEXT:    clrlwi 5, 3, 16
+; CHECK-NEXT:    clrlwi 4, 4, 28
+; CHECK-NEXT:    slw 3, 3, 6
+; CHECK-NEXT:    srw 4, 5, 4
+; CHECK-NEXT:    or 3, 3, 4
+; CHECK-NEXT:    blr
   %f = call i16 @llvm.fshl.i16(i16 %x, i16 %x, i16 %z)
   ret i16 %f
 }
@@ -210,27 +199,16 @@ define i32 @rotr_i32_const_shift(i32 %x) {
 ; When first 2 operands match, it's a rotate (by variable amount).
 
 define i16 @rotr_i16(i16 %x, i16 %z) {
-; CHECK32-LABEL: rotr_i16:
-; CHECK32:       # %bb.0:
-; CHECK32-NEXT:    clrlwi 6, 4, 28
-; CHECK32-NEXT:    neg 4, 4
-; CHECK32-NEXT:    clrlwi 5, 3, 16
-; CHECK32-NEXT:    clrlwi 4, 4, 28
-; CHECK32-NEXT:    srw 5, 5, 6
-; CHECK32-NEXT:    slw 3, 3, 4
-; CHECK32-NEXT:    or 3, 5, 3
-; CHECK32-NEXT:    blr
-;
-; CHECK64-LABEL: rotr_i16:
-; CHECK64:       # %bb.0:
-; CHECK64-NEXT:    neg 5, 4
-; CHECK64-NEXT:    clrlwi 6, 3, 16
-; CHECK64-NEXT:    clrlwi 4, 4, 28
-; CHECK64-NEXT:    clrlwi 5, 5, 28
-; CHECK64-NEXT:    srw 4, 6, 4
-; CHECK64-NEXT:    slw 3, 3, 5
-; CHECK64-NEXT:    or 3, 4, 3
-; CHECK64-NEXT:    blr
+; CHECK-LABEL: rotr_i16:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    clrlwi 6, 4, 28
+; CHECK-NEXT:    neg 4, 4
+; CHECK-NEXT:    clrlwi 5, 3, 16
+; CHECK-NEXT:    clrlwi 4, 4, 28
+; CHECK-NEXT:    srw 5, 5, 6
+; CHECK-NEXT:    slw 3, 3, 4
+; CHECK-NEXT:    or 3, 5, 3
+; CHECK-NEXT:    blr
   %f = call i16 @llvm.fshr.i16(i16 %x, i16 %x, i16 %z)
   ret i16 %f
 }

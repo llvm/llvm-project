@@ -35,7 +35,6 @@ target_sources(std
     std.cppm
 )
 
-target_compile_definitions(std PRIVATE _LIBCPP_ENABLE_EXPERIMENTAL)
 target_include_directories(std SYSTEM PRIVATE @LIBCXX_CONFIGURED_INCLUDE_DIRS@)
 
 if (NOT @LIBCXX_ENABLE_EXCEPTIONS@)

@@ -53,6 +53,9 @@ def ArgRoundingMode : ArgType { let Name = "llvm::RoundingMode"; }
 def ArgLETD: ArgType { let Name = "const LifetimeExtendedTemporaryDecl *"; }
 def ArgCastKind : ArgType { let Name = "CastKind"; }
 def ArgCallExpr : ArgType { let Name = "const CallExpr *"; }
+def ArgOffsetOfExpr : ArgType { let Name = "const OffsetOfExpr *"; }
+def ArgDeclRef : ArgType { let Name = "const DeclRefExpr *"; }
+def ArgCCI : ArgType { let Name = "const ComparisonCategoryInfo *"; }
 
 //===----------------------------------------------------------------------===//
 // Classes of types instructions operate on.
@@ -196,6 +199,12 @@ def CallBI : Opcode {
 def CallPtr : Opcode {
   let Args = [];
   let Types = [];
+}
+
+def OffsetOf : Opcode {
+  let Types = [IntegerTypeClass];
+  let Args = [ArgOffsetOfExpr];
+  let HasGroup = 1;
 }
 
 //===----------------------------------------------------------------------===//
@@ -599,6 +608,10 @@ class ComparisonOpcode : Opcode {
   let HasGroup = 1;
 }
 
+def CMP3 : ComparisonOpcode {
+  let Args = [ArgCCI];
+}
+
 def LT : ComparisonOpcode;
 def LE : ComparisonOpcode;
 def GT : ComparisonOpcode;
@@ -624,4 +637,8 @@ def Dup : Opcode {
 def Invalid : Opcode {}
 def InvalidCast : Opcode {
   let Args = [ArgCastKind];
+}
+
+def InvalidDeclRef : Opcode {
+  let Args = [ArgDeclRef];
 }

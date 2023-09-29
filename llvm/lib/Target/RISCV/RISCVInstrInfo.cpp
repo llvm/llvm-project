@@ -518,10 +518,6 @@ void RISCVInstrInfo::storeRegToStackSlot(MachineBasicBlock &MBB,
                                          const TargetRegisterClass *RC,
                                          const TargetRegisterInfo *TRI,
                                          Register VReg) const {
-  DebugLoc DL;
-  if (I != MBB.end())
-    DL = I->getDebugLoc();
-
   MachineFunction *MF = MBB.getParent();
   MachineFrameInfo &MFI = MF->getFrameInfo();
 
@@ -582,7 +578,7 @@ void RISCVInstrInfo::storeRegToStackSlot(MachineBasicBlock &MBB,
         MemoryLocation::UnknownSize, MFI.getObjectAlign(FI));
 
     MFI.setStackID(FI, TargetStackID::ScalableVector);
-    BuildMI(MBB, I, DL, get(Opcode))
+    BuildMI(MBB, I, DebugLoc(), get(Opcode))
         .addReg(SrcReg, getKillRegState(IsKill))
         .addFrameIndex(FI)
         .addMemOperand(MMO);
@@ -591,7 +587,7 @@ void RISCVInstrInfo::storeRegToStackSlot(MachineBasicBlock &MBB,
         MachinePointerInfo::getFixedStack(*MF, FI), MachineMemOperand::MOStore,
         MFI.getObjectSize(FI), MFI.getObjectAlign(FI));
 
-    BuildMI(MBB, I, DL, get(Opcode))
+    BuildMI(MBB, I, DebugLoc(), get(Opcode))
         .addReg(SrcReg, getKillRegState(IsKill))
         .addFrameIndex(FI)
         .addImm(0)
@@ -605,10 +601,6 @@ void RISCVInstrInfo::loadRegFromStackSlot(MachineBasicBlock &MBB,
                                           const TargetRegisterClass *RC,
                                           const TargetRegisterInfo *TRI,
                                           Register VReg) const {
-  DebugLoc DL;
-  if (I != MBB.end())
-    DL = I->getDebugLoc();
-
   MachineFunction *MF = MBB.getParent();
   MachineFrameInfo &MFI = MF->getFrameInfo();
 
@@ -669,7 +661,7 @@ void RISCVInstrInfo::loadRegFromStackSlot(MachineBasicBlock &MBB,
         MemoryLocation::UnknownSize, MFI.getObjectAlign(FI));
 
     MFI.setStackID(FI, TargetStackID::ScalableVector);
-    BuildMI(MBB, I, DL, get(Opcode), DstReg)
+    BuildMI(MBB, I, DebugLoc(), get(Opcode), DstReg)
         .addFrameIndex(FI)
         .addMemOperand(MMO);
   } else {
@@ -677,7 +669,7 @@ void RISCVInstrInfo::loadRegFromStackSlot(MachineBasicBlock &MBB,
         MachinePointerInfo::getFixedStack(*MF, FI), MachineMemOperand::MOLoad,
         MFI.getObjectSize(FI), MFI.getObjectAlign(FI));
 
-    BuildMI(MBB, I, DL, get(Opcode), DstReg)
+    BuildMI(MBB, I, DebugLoc(), get(Opcode), DstReg)
         .addFrameIndex(FI)
         .addImm(0)
         .addMemOperand(MMO);
@@ -764,19 +756,19 @@ void RISCVInstrInfo::movImm(MachineBasicBlock &MBB,
       break;
     case RISCVMatInt::RegX0:
       BuildMI(MBB, MBBI, DL, get(Inst.getOpcode()), DstReg)
-          .addReg(SrcReg, RegState::Kill)
+          .addReg(SrcReg, getKillRegState(SrcReg != RISCV::X0))
           .addReg(RISCV::X0)
           .setMIFlag(Flag);
       break;
     case RISCVMatInt::RegReg:
       BuildMI(MBB, MBBI, DL, get(Inst.getOpcode()), DstReg)
-          .addReg(SrcReg, RegState::Kill)
-          .addReg(SrcReg, RegState::Kill)
+          .addReg(SrcReg, getKillRegState(SrcReg != RISCV::X0))
+          .addReg(SrcReg, getKillRegState(SrcReg != RISCV::X0))
           .setMIFlag(Flag);
       break;
     case RISCVMatInt::RegImm:
       BuildMI(MBB, MBBI, DL, get(Inst.getOpcode()), DstReg)
-          .addReg(SrcReg, RegState::Kill)
+          .addReg(SrcReg, getKillRegState(SrcReg != RISCV::X0))
           .addImm(Inst.getImm())
           .setMIFlag(Flag);
       break;
@@ -1114,12 +1106,31 @@ unsigned getPredicatedOpcode(unsigned Opcode) {
   switch (Opcode) {
   case RISCV::ADD:   return RISCV::PseudoCCADD;   break;
   case RISCV::SUB:   return RISCV::PseudoCCSUB;   break;
+  case RISCV::SLL:   return RISCV::PseudoCCSLL;   break;
+  case RISCV::SRL:   return RISCV::PseudoCCSRL;   break;
+  case RISCV::SRA:   return RISCV::PseudoCCSRA;   break;
   case RISCV::AND:   return RISCV::PseudoCCAND;   break;
   case RISCV::OR:    return RISCV::PseudoCCOR;    break;
   case RISCV::XOR:   return RISCV::PseudoCCXOR;   break;
 
+  case RISCV::ADDI:  return RISCV::PseudoCCADDI;  break;
+  case RISCV::SLLI:  return RISCV::PseudoCCSLLI;  break;
+  case RISCV::SRLI:  return RISCV::PseudoCCSRLI;  break;
+  case RISCV::SRAI:  return RISCV::PseudoCCSRAI;  break;
+  case RISCV::ANDI:  return RISCV::PseudoCCANDI;  break;
+  case RISCV::ORI:   return RISCV::PseudoCCORI;   break;
+  case RISCV::XORI:  return RISCV::PseudoCCXORI;  break;
+
   case RISCV::ADDW:  return RISCV::PseudoCCADDW;  break;
   case RISCV::SUBW:  return RISCV::PseudoCCSUBW;  break;
+  case RISCV::SLLW:  return RISCV::PseudoCCSLLW;  break;
+  case RISCV::SRLW:  return RISCV::PseudoCCSRLW;  break;
+  case RISCV::SRAW:  return RISCV::PseudoCCSRAW;  break;
+
+  case RISCV::ADDIW: return RISCV::PseudoCCADDIW; break;
+  case RISCV::SLLIW: return RISCV::PseudoCCSLLIW; break;
+  case RISCV::SRLIW: return RISCV::PseudoCCSRLIW; break;
+  case RISCV::SRAIW: return RISCV::PseudoCCSRAIW; break;
   }
 
   return RISCV::INSTRUCTION_LIST_END;
@@ -1139,6 +1150,10 @@ static MachineInstr *canFoldAsPredicatedOp(Register Reg,
     return nullptr;
   // Check if MI can be predicated and folded into the CCMOV.
   if (getPredicatedOpcode(MI->getOpcode()) == RISCV::INSTRUCTION_LIST_END)
+    return nullptr;
+  // Don't predicate li idiom.
+  if (MI->getOpcode() == RISCV::ADDI && MI->getOperand(1).isReg() &&
+      MI->getOperand(1).getReg() == RISCV::X0)
     return nullptr;
   // Check if MI has any other defs or physreg uses.
   for (const MachineOperand &MO : llvm::drop_begin(MI->operands())) {

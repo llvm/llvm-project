@@ -178,7 +178,12 @@ int __kmp_get_global_thread_id() {
       if (stack_diff <= stack_size) {
         /* The only way we can be closer than the allocated */
         /* stack size is if we are running on this thread. */
-        KMP_DEBUG_ASSERT(__kmp_gtid_get_specific() == i);
+        // __kmp_gtid_get_specific can return negative value because this
+        // function can be called by thread destructor. However, before the
+        // thread destructor is called, the value of the corresponding
+        // thread-specific data will be reset to NULL.
+        KMP_DEBUG_ASSERT(__kmp_gtid_get_specific() < 0 ||
+                         __kmp_gtid_get_specific() == i);
         return i;
       }
     }
@@ -6712,6 +6717,8 @@ static inline char *__kmp_reg_status_name() {
 } // __kmp_reg_status_get
 
 #if defined(KMP_USE_SHM)
+bool __kmp_shm_available = false;
+bool __kmp_tmp_available = false;
 // If /dev/shm is not accessible, we will create a temporary file under /tmp.
 char *temp_reg_status_file_name = nullptr;
 #endif
@@ -6741,60 +6748,108 @@ void __kmp_register_library_startup(void) {
     char *value = NULL; // Actual value of the environment variable.
 
 #if defined(KMP_USE_SHM)
-    char *shm_name = __kmp_str_format("/%s", name);
-    int shm_preexist = 0;
-    char *data1;
-    int fd1 = shm_open(shm_name, O_CREAT | O_EXCL | O_RDWR, 0666);
-    if ((fd1 == -1) && (errno == EEXIST)) {
-      // file didn't open because it already exists.
-      // try opening existing file
-      fd1 = shm_open(shm_name, O_RDWR, 0666);
-      if (fd1 == -1) { // file didn't open
-        // error out here
-        __kmp_fatal(KMP_MSG(FunctionError, "Can't open SHM"), KMP_ERR(0),
-                    __kmp_msg_null);
-      } else {
-        // able to open existing file
-        shm_preexist = 1;
+    char *shm_name = nullptr;
+    char *data1 = nullptr;
+    __kmp_shm_available = __kmp_detect_shm();
+    if (__kmp_shm_available) {
+      int fd1 = -1;
+      shm_name = __kmp_str_format("/%s", name);
+      int shm_preexist = 0;
+      fd1 = shm_open(shm_name, O_CREAT | O_EXCL | O_RDWR, 0666);
+      if ((fd1 == -1) && (errno == EEXIST)) {
+        // file didn't open because it already exists.
+        // try opening existing file
+        fd1 = shm_open(shm_name, O_RDWR, 0666);
+        if (fd1 == -1) { // file didn't open
+          KMP_WARNING(FunctionError, "Can't open SHM");
+          __kmp_shm_available = false;
+        } else { // able to open existing file
+          shm_preexist = 1;
+        }
       }
-    } else if (fd1 == -1) {
-      // SHM didn't open; it was due to error other than already exists. Try to
-      // create a temp file under /tmp.
+      if (__kmp_shm_available && shm_preexist == 0) { // SHM created, set size
+        if (ftruncate(fd1, SHM_SIZE) == -1) { // error occured setting size;
+          KMP_WARNING(FunctionError, "Can't set size of SHM");
+          __kmp_shm_available = false;
+        }
+      }
+      if (__kmp_shm_available) { // SHM exists, now map it
+        data1 = (char *)mmap(0, SHM_SIZE, PROT_READ | PROT_WRITE, MAP_SHARED,
+                             fd1, 0);
+        if (data1 == MAP_FAILED) { // failed to map shared memory
+          KMP_WARNING(FunctionError, "Can't map SHM");
+          __kmp_shm_available = false;
+        }
+      }
+      if (__kmp_shm_available) { // SHM mapped
+        if (shm_preexist == 0) { // set data to SHM, set value
+          KMP_STRCPY_S(data1, SHM_SIZE, __kmp_registration_str);
+        }
+        // Read value from either what we just wrote or existing file.
+        value = __kmp_str_format("%s", data1); // read value from SHM
+        munmap(data1, SHM_SIZE);
+      }
+      if (fd1 != -1)
+        close(fd1);
+    }
+    if (!__kmp_shm_available)
+      __kmp_tmp_available = __kmp_detect_tmp();
+    if (!__kmp_shm_available && __kmp_tmp_available) {
+      // SHM failed to work due to an error other than that the file already
+      // exists. Try to create a temp file under /tmp.
+      // If /tmp isn't accessible, fall back to using environment variable.
       // TODO: /tmp might not always be the temporary directory. For now we will
-      // not consider TMPDIR. If /tmp is not accessible, we simply error out.
-      char *temp_file_name = __kmp_str_format("/tmp/%sXXXXXX", name);
-      fd1 = mkstemp(temp_file_name);
-      if (fd1 == -1) {
-        // error out here.
-        __kmp_fatal(KMP_MSG(FunctionError, "Can't open TEMP"), KMP_ERR(errno),
-                    __kmp_msg_null);
+      // not consider TMPDIR.
+      int fd1 = -1;
+      temp_reg_status_file_name = __kmp_str_format("/tmp/%s", name);
+      int tmp_preexist = 0;
+      fd1 = open(temp_reg_status_file_name, O_CREAT | O_EXCL | O_RDWR, 0666);
+      if ((fd1 == -1) && (errno == EEXIST)) {
+        // file didn't open because it already exists.
+        // try opening existing file
+        fd1 = open(temp_reg_status_file_name, O_RDWR, 0666);
+        if (fd1 == -1) { // file didn't open if (fd1 == -1) {
+          KMP_WARNING(FunctionError, "Can't open TEMP");
+          __kmp_tmp_available = false;
+        } else {
+          tmp_preexist = 1;
+        }
       }
-      temp_reg_status_file_name = temp_file_name;
-    }
-    if (shm_preexist == 0) {
-      // we created SHM now set size
-      if (ftruncate(fd1, SHM_SIZE) == -1) {
-        // error occured setting size;
-        __kmp_fatal(KMP_MSG(FunctionError, "Can't set size of SHM"),
-                    KMP_ERR(errno), __kmp_msg_null);
+      if (__kmp_tmp_available && tmp_preexist == 0) {
+        // we created /tmp file now set size
+        if (ftruncate(fd1, SHM_SIZE) == -1) { // error occured setting size;
+          KMP_WARNING(FunctionError, "Can't set size of /tmp file");
+          __kmp_tmp_available = false;
+        }
       }
+      if (__kmp_tmp_available) {
+        data1 = (char *)mmap(0, SHM_SIZE, PROT_READ | PROT_WRITE, MAP_SHARED,
+                             fd1, 0);
+        if (data1 == MAP_FAILED) { // failed to map /tmp
+          KMP_WARNING(FunctionError, "Can't map /tmp");
+          __kmp_tmp_available = false;
+        }
+      }
+      if (__kmp_tmp_available) {
+        if (tmp_preexist == 0) { // set data to TMP, set value
+          KMP_STRCPY_S(data1, SHM_SIZE, __kmp_registration_str);
+        }
+        // Read value from either what we just wrote or existing file.
+        value = __kmp_str_format("%s", data1); // read value from SHM
+        munmap(data1, SHM_SIZE);
+      }
+      if (fd1 != -1)
+        close(fd1);
     }
-    data1 =
-        (char *)mmap(0, SHM_SIZE, PROT_READ | PROT_WRITE, MAP_SHARED, fd1, 0);
-    if (data1 == MAP_FAILED) {
-      // failed to map shared memory
-      __kmp_fatal(KMP_MSG(FunctionError, "Can't map SHM"), KMP_ERR(errno),
-                  __kmp_msg_null);
+    if (!__kmp_shm_available && !__kmp_tmp_available) {
+      // no /dev/shm and no /tmp -- fall back to environment variable
+      // Set environment variable, but do not overwrite if it exists.
+      __kmp_env_set(name, __kmp_registration_str, 0);
+      // read value to see if it got set
+      value = __kmp_env_get(name);
     }
-    if (shm_preexist == 0) { // set data to SHM, set value
-      KMP_STRCPY_S(data1, SHM_SIZE, __kmp_registration_str);
-    }
-    // Read value from either what we just wrote or existing file.
-    value = __kmp_str_format("%s", data1); // read value from SHM
-    munmap(data1, SHM_SIZE);
-    close(fd1);
 #else // Windows and unix with static library
-    // Set environment variable, but do not overwrite if it is exist.
+    // Set environment variable, but do not overwrite if it exists.
     __kmp_env_set(name, __kmp_registration_str, 0);
     // read value to see if it got set
     value = __kmp_env_get(name);
@@ -6854,8 +6909,14 @@ void __kmp_register_library_startup(void) {
       case 2: { // Neighbor is dead.
 
 #if defined(KMP_USE_SHM)
-        // close shared memory.
-        shm_unlink(shm_name); // this removes file in /dev/shm
+        if (__kmp_shm_available) { // close shared memory.
+          shm_unlink(shm_name); // this removes file in /dev/shm
+        } else if (__kmp_tmp_available) {
+          unlink(temp_reg_status_file_name); // this removes the temp file
+        } else {
+          // Clear the variable and try to register library again.
+          __kmp_env_unset(name);
+        }
 #else
         // Clear the variable and try to register library again.
         __kmp_env_unset(name);
@@ -6868,7 +6929,8 @@ void __kmp_register_library_startup(void) {
     }
     KMP_INTERNAL_FREE((void *)value);
 #if defined(KMP_USE_SHM)
-    KMP_INTERNAL_FREE((void *)shm_name);
+    if (shm_name)
+      KMP_INTERNAL_FREE((void *)shm_name);
 #endif
   } // while
   KMP_INTERNAL_FREE((void *)name);
@@ -6881,25 +6943,32 @@ void __kmp_unregister_library(void) {
   char *value = NULL;
 
 #if defined(KMP_USE_SHM)
-  bool use_shm = true;
-  char *shm_name = __kmp_str_format("/%s", name);
-  int fd1 = shm_open(shm_name, O_RDONLY, 0666);
-  if (fd1 == -1) {
-    // File did not open. Try the temporary file.
-    use_shm = false;
-    KMP_DEBUG_ASSERT(temp_reg_status_file_name);
-    fd1 = open(temp_reg_status_file_name, O_RDONLY);
-    if (fd1 == -1) {
-      // give it up now.
-      return;
+  char *shm_name = nullptr;
+  int fd1;
+  if (__kmp_shm_available) {
+    shm_name = __kmp_str_format("/%s", name);
+    fd1 = shm_open(shm_name, O_RDONLY, 0666);
+    if (fd1 != -1) { // File opened successfully
+      char *data1 = (char *)mmap(0, SHM_SIZE, PROT_READ, MAP_SHARED, fd1, 0);
+      if (data1 != MAP_FAILED) {
+        value = __kmp_str_format("%s", data1); // read value from SHM
+        munmap(data1, SHM_SIZE);
+      }
+      close(fd1);
     }
+  } else if (__kmp_tmp_available) { // try /tmp
+    fd1 = open(temp_reg_status_file_name, O_RDONLY);
+    if (fd1 != -1) { // File opened successfully
+      char *data1 = (char *)mmap(0, SHM_SIZE, PROT_READ, MAP_SHARED, fd1, 0);
+      if (data1 != MAP_FAILED) {
+        value = __kmp_str_format("%s", data1); // read value from /tmp
+        munmap(data1, SHM_SIZE);
+      }
+      close(fd1);
+    }
+  } else { // fall back to envirable
+    value = __kmp_env_get(name);
   }
-  char *data1 = (char *)mmap(0, SHM_SIZE, PROT_READ, MAP_SHARED, fd1, 0);
-  if (data1 != MAP_FAILED) {
-    value = __kmp_str_format("%s", data1); // read value from SHM
-    munmap(data1, SHM_SIZE);
-  }
-  close(fd1);
 #else
   value = __kmp_env_get(name);
 #endif
@@ -6909,11 +6978,12 @@ void __kmp_unregister_library(void) {
   if (value != NULL && strcmp(value, __kmp_registration_str) == 0) {
 //  Ok, this is our variable. Delete it.
 #if defined(KMP_USE_SHM)
-    if (use_shm) {
+    if (__kmp_shm_available) {
       shm_unlink(shm_name); // this removes file in /dev/shm
-    } else {
-      KMP_DEBUG_ASSERT(temp_reg_status_file_name);
+    } else if (__kmp_tmp_available) {
       unlink(temp_reg_status_file_name); // this removes the temp file
+    } else {
+      __kmp_env_unset(name);
     }
 #else
     __kmp_env_unset(name);
@@ -6921,11 +6991,10 @@ void __kmp_unregister_library(void) {
   }
 
 #if defined(KMP_USE_SHM)
-  KMP_INTERNAL_FREE(shm_name);
-  if (!use_shm) {
-    KMP_DEBUG_ASSERT(temp_reg_status_file_name);
+  if (shm_name)
+    KMP_INTERNAL_FREE(shm_name);
+  if (temp_reg_status_file_name)
     KMP_INTERNAL_FREE(temp_reg_status_file_name);
-  }
 #endif
 
   KMP_INTERNAL_FREE(__kmp_registration_str);
@@ -8825,7 +8894,7 @@ __kmp_determine_reduction_method(
     int atomic_available = FAST_REDUCTION_ATOMIC_METHOD_GENERATED;
 
 #if KMP_ARCH_X86_64 || KMP_ARCH_PPC64 || KMP_ARCH_AARCH64 ||                   \
-    KMP_ARCH_MIPS64 || KMP_ARCH_RISCV64 || KMP_ARCH_LOONGARCH64
+    KMP_ARCH_MIPS64 || KMP_ARCH_RISCV64 || KMP_ARCH_LOONGARCH64 || KMP_ARCH_VE
 
 #if KMP_OS_LINUX || KMP_OS_DRAGONFLY || KMP_OS_FREEBSD || KMP_OS_NETBSD ||     \
     KMP_OS_OPENBSD || KMP_OS_WINDOWS || KMP_OS_DARWIN || KMP_OS_HURD

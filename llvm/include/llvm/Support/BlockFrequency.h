@@ -15,6 +15,7 @@
 
 #include <cassert>
 #include <cstdint>
+#include <optional>
 
 namespace llvm {
 
@@ -75,6 +76,9 @@ public:
     NewFreq -= Freq;
     return NewFreq;
   }
+
+  /// Multiplies frequency with `Factor`. Returns `nullopt` in case of overflow.
+  std::optional<BlockFrequency> mul(uint64_t Factor) const;
 
   /// Shift block frequency to the right by count digits saturating to 1.
   BlockFrequency &operator>>=(const unsigned count) {

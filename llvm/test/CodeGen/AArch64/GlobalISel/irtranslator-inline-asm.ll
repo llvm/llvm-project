@@ -26,7 +26,7 @@ define void @asm_simple_register_clobber() {
 define i64 @asm_register_early_clobber() {
   ; CHECK-LABEL: name: asm_register_early_clobber
   ; CHECK: bb.1 (%ir-block.0):
-  ; CHECK-NEXT:   INLINEASM &"mov $0, 7; mov $1, 7", 1 /* sideeffect attdialect */, 2555915 /* regdef-ec:GPR64common */, def early-clobber %0, 2555915 /* regdef-ec:GPR64common */, def early-clobber %1, !0
+  ; CHECK-NEXT:   INLINEASM &"mov $0, 7; mov $1, 7", 1 /* sideeffect attdialect */, 2686987 /* regdef-ec:GPR64common */, def early-clobber %0, 2686987 /* regdef-ec:GPR64common */, def early-clobber %1, !0
   ; CHECK-NEXT:   [[COPY:%[0-9]+]]:_(s64) = COPY %0
   ; CHECK-NEXT:   [[COPY1:%[0-9]+]]:_(s64) = COPY %1
   ; CHECK-NEXT:   [[ADD:%[0-9]+]]:_(s64) = G_ADD [[COPY]], [[COPY1]]
@@ -54,7 +54,7 @@ entry:
 define i32 @test_single_register_output() nounwind ssp {
   ; CHECK-LABEL: name: test_single_register_output
   ; CHECK: bb.1.entry:
-  ; CHECK-NEXT:   INLINEASM &"mov ${0:w}, 7", 0 /* attdialect */, 1507338 /* regdef:GPR32common */, def %0
+  ; CHECK-NEXT:   INLINEASM &"mov ${0:w}, 7", 0 /* attdialect */, 1638410 /* regdef:GPR32common */, def %0
   ; CHECK-NEXT:   [[COPY:%[0-9]+]]:_(s32) = COPY %0
   ; CHECK-NEXT:   $w0 = COPY [[COPY]](s32)
   ; CHECK-NEXT:   RET_ReallyLR implicit $w0
@@ -66,7 +66,7 @@ entry:
 define i64 @test_single_register_output_s64() nounwind ssp {
   ; CHECK-LABEL: name: test_single_register_output_s64
   ; CHECK: bb.1.entry:
-  ; CHECK-NEXT:   INLINEASM &"mov $0, 7", 0 /* attdialect */, 2555914 /* regdef:GPR64common */, def %0
+  ; CHECK-NEXT:   INLINEASM &"mov $0, 7", 0 /* attdialect */, 2686986 /* regdef:GPR64common */, def %0
   ; CHECK-NEXT:   [[COPY:%[0-9]+]]:_(s64) = COPY %0
   ; CHECK-NEXT:   $x0 = COPY [[COPY]](s64)
   ; CHECK-NEXT:   RET_ReallyLR implicit $x0
@@ -79,7 +79,7 @@ entry:
 define float @test_multiple_register_outputs_same() #0 {
   ; CHECK-LABEL: name: test_multiple_register_outputs_same
   ; CHECK: bb.1 (%ir-block.0):
-  ; CHECK-NEXT:   INLINEASM &"mov $0, #0; mov $1, #0", 0 /* attdialect */, 1507338 /* regdef:GPR32common */, def %0, 1507338 /* regdef:GPR32common */, def %1
+  ; CHECK-NEXT:   INLINEASM &"mov $0, #0; mov $1, #0", 0 /* attdialect */, 1638410 /* regdef:GPR32common */, def %0, 1638410 /* regdef:GPR32common */, def %1
   ; CHECK-NEXT:   [[COPY:%[0-9]+]]:_(s32) = COPY %0
   ; CHECK-NEXT:   [[COPY1:%[0-9]+]]:_(s32) = COPY %1
   ; CHECK-NEXT:   [[FADD:%[0-9]+]]:_(s32) = G_FADD [[COPY]], [[COPY1]]
@@ -96,7 +96,7 @@ define float @test_multiple_register_outputs_same() #0 {
 define double @test_multiple_register_outputs_mixed() #0 {
   ; CHECK-LABEL: name: test_multiple_register_outputs_mixed
   ; CHECK: bb.1 (%ir-block.0):
-  ; CHECK-NEXT:   INLINEASM &"mov $0, #0; mov $1, #0", 0 /* attdialect */, 1507338 /* regdef:GPR32common */, def %0, 2359306 /* regdef:FPR64 */, def %1
+  ; CHECK-NEXT:   INLINEASM &"mov $0, #0; mov $1, #0", 0 /* attdialect */, 1638410 /* regdef:GPR32common */, def %0, 2490378 /* regdef:FPR64 */, def %1
   ; CHECK-NEXT:   [[COPY:%[0-9]+]]:_(s32) = COPY %0
   ; CHECK-NEXT:   [[COPY1:%[0-9]+]]:_(s64) = COPY %1
   ; CHECK-NEXT:   $d0 = COPY [[COPY1]](s64)
@@ -120,13 +120,12 @@ entry:
 }
 
 define zeroext i8 @test_register_output_trunc(ptr %src) nounwind {
-  ;
   ; CHECK-LABEL: name: test_register_output_trunc
   ; CHECK: bb.1.entry:
   ; CHECK-NEXT:   liveins: $x0
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT:   [[COPY:%[0-9]+]]:_(p0) = COPY $x0
-  ; CHECK-NEXT:   INLINEASM &"mov ${0:w}, 32", 0 /* attdialect */, 1507338 /* regdef:GPR32common */, def %1
+  ; CHECK-NEXT:   INLINEASM &"mov ${0:w}, 32", 0 /* attdialect */, 1638410 /* regdef:GPR32common */, def %1
   ; CHECK-NEXT:   [[COPY1:%[0-9]+]]:_(s32) = COPY %1
   ; CHECK-NEXT:   [[TRUNC:%[0-9]+]]:_(s8) = G_TRUNC [[COPY1]](s32)
   ; CHECK-NEXT:   [[ZEXT:%[0-9]+]]:_(s32) = G_ZEXT [[TRUNC]](s8)
@@ -156,7 +155,7 @@ define void @test_input_register_imm() {
   ; CHECK: bb.1 (%ir-block.0):
   ; CHECK-NEXT:   [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 42
   ; CHECK-NEXT:   [[COPY:%[0-9]+]]:gpr64common = COPY [[C]](s64)
-  ; CHECK-NEXT:   INLINEASM &"mov x0, $0", 1 /* sideeffect attdialect */, 2555913 /* reguse:GPR64common */, [[COPY]]
+  ; CHECK-NEXT:   INLINEASM &"mov x0, $0", 1 /* sideeffect attdialect */, 2686985 /* reguse:GPR64common */, [[COPY]]
   ; CHECK-NEXT:   RET_ReallyLR
   call void asm sideeffect "mov x0, $0", "r"(i64 42)
   ret void
@@ -191,7 +190,7 @@ define zeroext i8 @test_input_register(ptr %src) nounwind {
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT:   [[COPY:%[0-9]+]]:_(p0) = COPY $x0
   ; CHECK-NEXT:   [[COPY1:%[0-9]+]]:gpr64common = COPY [[COPY]](p0)
-  ; CHECK-NEXT:   INLINEASM &"ldtrb ${0:w}, [$1]", 0 /* attdialect */, 1507338 /* regdef:GPR32common */, def %1, 2555913 /* reguse:GPR64common */, [[COPY1]]
+  ; CHECK-NEXT:   INLINEASM &"ldtrb ${0:w}, [$1]", 0 /* attdialect */, 1638410 /* regdef:GPR32common */, def %1, 2686985 /* reguse:GPR64common */, [[COPY1]]
   ; CHECK-NEXT:   [[COPY2:%[0-9]+]]:_(s32) = COPY %1
   ; CHECK-NEXT:   [[TRUNC:%[0-9]+]]:_(s8) = G_TRUNC [[COPY2]](s32)
   ; CHECK-NEXT:   [[ZEXT:%[0-9]+]]:_(s32) = G_ZEXT [[TRUNC]](s8)
@@ -208,7 +207,7 @@ define i32 @test_memory_constraint(ptr %a) nounwind {
   ; CHECK-NEXT:   liveins: $x0
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT:   [[COPY:%[0-9]+]]:_(p0) = COPY $x0
-  ; CHECK-NEXT:   INLINEASM &"ldr $0, $1", 8 /* mayload attdialect */, 1507338 /* regdef:GPR32common */, def %1, 262158 /* mem:m */, [[COPY]](p0)
+  ; CHECK-NEXT:   INLINEASM &"ldr $0, $1", 8 /* mayload attdialect */, 1638410 /* regdef:GPR32common */, def %1, 262158 /* mem:m */, [[COPY]](p0)
   ; CHECK-NEXT:   [[COPY1:%[0-9]+]]:_(s32) = COPY %1
   ; CHECK-NEXT:   $w0 = COPY [[COPY1]](s32)
   ; CHECK-NEXT:   RET_ReallyLR implicit $w0
@@ -222,7 +221,7 @@ define i16 @test_anyext_input() {
   ; CHECK-NEXT:   [[C:%[0-9]+]]:_(s16) = G_CONSTANT i16 1
   ; CHECK-NEXT:   [[ANYEXT:%[0-9]+]]:_(s32) = G_ANYEXT [[C]](s16)
   ; CHECK-NEXT:   [[COPY:%[0-9]+]]:gpr32common = COPY [[ANYEXT]](s32)
-  ; CHECK-NEXT:   INLINEASM &"", 1 /* sideeffect attdialect */, 1507338 /* regdef:GPR32common */, def %0, 1507337 /* reguse:GPR32common */, [[COPY]]
+  ; CHECK-NEXT:   INLINEASM &"", 1 /* sideeffect attdialect */, 1638410 /* regdef:GPR32common */, def %0, 1638409 /* reguse:GPR32common */, [[COPY]]
   ; CHECK-NEXT:   [[COPY1:%[0-9]+]]:_(s32) = COPY %0
   ; CHECK-NEXT:   [[TRUNC:%[0-9]+]]:_(s16) = G_TRUNC [[COPY1]](s32)
   ; CHECK-NEXT:   [[ANYEXT1:%[0-9]+]]:_(s32) = G_ANYEXT [[TRUNC]](s16)
@@ -238,7 +237,7 @@ define i16 @test_anyext_input_with_matching_constraint() {
   ; CHECK-NEXT:   [[C:%[0-9]+]]:_(s16) = G_CONSTANT i16 1
   ; CHECK-NEXT:   [[ANYEXT:%[0-9]+]]:_(s32) = G_ANYEXT [[C]](s16)
   ; CHECK-NEXT:   [[COPY:%[0-9]+]]:gpr32common = COPY [[ANYEXT]](s32)
-  ; CHECK-NEXT:   INLINEASM &"", 1 /* sideeffect attdialect */, 1507338 /* regdef:GPR32common */, def %0, 2147483657 /* reguse tiedto:$0 */, [[COPY]](tied-def 3)
+  ; CHECK-NEXT:   INLINEASM &"", 1 /* sideeffect attdialect */, 1638410 /* regdef:GPR32common */, def %0, 2147483657 /* reguse tiedto:$0 */, [[COPY]](tied-def 3)
   ; CHECK-NEXT:   [[COPY1:%[0-9]+]]:_(s32) = COPY %0
   ; CHECK-NEXT:   [[TRUNC:%[0-9]+]]:_(s16) = G_TRUNC [[COPY1]](s32)
   ; CHECK-NEXT:   [[ANYEXT1:%[0-9]+]]:_(s32) = G_ANYEXT [[TRUNC]](s16)

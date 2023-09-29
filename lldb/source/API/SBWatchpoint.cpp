@@ -354,7 +354,8 @@ bool SBWatchpoint::IsWatchingWrites() {
     std::lock_guard<std::recursive_mutex> guard(
         watchpoint_sp->GetTarget().GetAPIMutex());
 
-    return watchpoint_sp->WatchpointWrite();
+    return watchpoint_sp->WatchpointWrite() ||
+           watchpoint_sp->WatchpointModify();
   }
 
   return false;

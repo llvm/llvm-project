@@ -152,9 +152,9 @@ public:
       SourceLocation IncludeLoc = SM.getIncludeLoc(SM.getFileID(Loc));
       if (IncludeLoc.isValid()) {
         if (llvm::timeTraceProfilerEnabled()) {
-          const FileEntry *FE = SM.getFileEntryForID(SM.getFileID(Loc));
-          llvm::timeTraceProfilerBegin(
-              "Source", FE != nullptr ? FE->getName() : StringRef("<unknown>"));
+          OptionalFileEntryRef FE = SM.getFileEntryRefForID(SM.getFileID(Loc));
+          llvm::timeTraceProfilerBegin("Source", FE ? FE->getName()
+                                                    : StringRef("<unknown>"));
         }
 
         IncludeStack.push_back(IncludeLoc);
@@ -1243,6 +1243,27 @@ void Sema::ActOnEndOfTranslationUnit() {
         auto SubmodulesRange = Mod->submodules();
         Stack.append(SubmodulesRange.begin(), SubmodulesRange.end());
       }
+    }
+
+    // Now we can decide whether the modules we're building need an initializer.
+    if (Module *CurrentModule = getCurrentModule();
+        CurrentModule && CurrentModule->isInterfaceOrPartition()) {
+      auto DoesModNeedInit = [this](Module *M) {
+        if (!getASTContext().getModuleInitializers(M).empty())
+          return false;
+        for (auto [Exported, _] : M->Exports)
+          if (!Exported->isNamedModuleInterfaceHasNoInit())
+            return false;
+        for (Module *I : M->Imports)
+          if (!I->isNamedModuleInterfaceHasNoInit())
+            return false;
+
+        return true;
+      };
+
+      CurrentModule->NamedModuleHasNoInit = DoesModNeedInit(CurrentModule);
+      for (Module *SubModules : CurrentModule->submodules())
+        CurrentModule->NamedModuleHasNoInit &= DoesModNeedInit(SubModules);
     }
 
     // Warnings emitted in ActOnEndOfTranslationUnit() should be emitted for

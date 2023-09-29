@@ -47,7 +47,7 @@ RISCVLegalizerInfo::RISCVLegalizerInfo(const RISCVSubtarget &ST) {
       .lowerFor({{XLenLLT, s1}});
 
   getActionDefinitionsBuilder({G_ASHR, G_LSHR, G_SHL})
-      .legalFor({{s32, s32}, {s32, XLenLLT}, {XLenLLT, XLenLLT}})
+      .legalFor({{s32, s32}, {XLenLLT, XLenLLT}})
       .widenScalarToNextPow2(0)
       .clampScalar(1, s32, XLenLLT)
       .clampScalar(0, s32, XLenLLT);
@@ -166,6 +166,8 @@ RISCVLegalizerInfo::RISCVLegalizerInfo(const RISCVSubtarget &ST) {
         .clampScalar(0, XLenLLT, DoubleXLenLLT)
         .widenScalarToNextPow2(0);
   }
+
+  getActionDefinitionsBuilder(G_ABS).lower();
 
   getLegacyLegalizerInfo().computeTables();
 }

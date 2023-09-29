@@ -1,4 +1,4 @@
-//===--- GPU helper functions--------------------===//
+//===--- GPU helper functions for file I/O using RPC ----------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -11,73 +11,77 @@
 
 #include <stdio.h>
 
-namespace __llvm_libc {
+namespace LIBC_NAMESPACE {
 namespace file {
 
-LIBC_INLINE uint64_t write_to_stdout(const void *data, size_t size) {
-  uint64_t ret = 0;
-  rpc::Client::Port port = rpc::client.open<RPC_WRITE_TO_STDOUT>();
-  port.send_n(data, size);
-  port.recv([&](rpc::Buffer *buffer) {
-    ret = reinterpret_cast<uint64_t *>(buffer->data)[0];
-  });
-  port.close();
-  return ret;
-}
+enum Stream {
+  File = 0,
+  Stdin = 1,
+  Stdout = 2,
+  Stderr = 3,
+};
 
-LIBC_INLINE uint64_t write_to_stderr(const void *data, size_t size) {
-  uint64_t ret = 0;
-  rpc::Client::Port port = rpc::client.open<RPC_WRITE_TO_STDERR>();
-  port.send_n(data, size);
-  port.recv([&](rpc::Buffer *buffer) {
-    ret = reinterpret_cast<uint64_t *>(buffer->data)[0];
-  });
-  port.close();
-  return ret;
-}
-
-LIBC_INLINE uint64_t write_to_stream(uintptr_t file, const void *data,
-                                     size_t size) {
-  uint64_t ret = 0;
-  rpc::Client::Port port = rpc::client.open<RPC_WRITE_TO_STREAM>();
-  port.send([&](rpc::Buffer *buffer) {
-    reinterpret_cast<uintptr_t *>(buffer->data)[0] = file;
-  });
-  port.send_n(data, size);
-  port.recv([&](rpc::Buffer *buffer) {
-    ret = reinterpret_cast<uint64_t *>(buffer->data)[0];
-  });
-  port.close();
-  return ret;
-}
-
-LIBC_INLINE uint64_t write(FILE *f, const void *data, size_t size) {
+// When copying between the client and server we need to indicate if this is one
+// of the special streams. We do this by enocding the low order bits of the
+// pointer to indicate if we need to use the host's standard stream.
+LIBC_INLINE uintptr_t from_stream(::FILE *f) {
+  if (f == stdin)
+    return reinterpret_cast<uintptr_t>(f) | Stdin;
   if (f == stdout)
-    return write_to_stdout(data, size);
-  else if (f == stderr)
-    return write_to_stderr(data, size);
-  else
-    return write_to_stream(reinterpret_cast<uintptr_t>(f), data, size);
+    return reinterpret_cast<uintptr_t>(f) | Stdout;
+  if (f == stderr)
+    return reinterpret_cast<uintptr_t>(f) | Stderr;
+  return reinterpret_cast<uintptr_t>(f);
 }
 
-LIBC_INLINE uint64_t read_from_stdin(void *buf, size_t size) {
+// Get the associated stream out of an encoded number.
+LIBC_INLINE ::FILE *to_stream(uintptr_t f) {
+  ::FILE *stream = reinterpret_cast<FILE *>(f & ~0x3ull);
+  Stream type = static_cast<Stream>(f & 0x3ull);
+  if (type == Stdin)
+    return stdin;
+  if (type == Stdout)
+    return stdout;
+  if (type == Stderr)
+    return stderr;
+  return stream;
+}
+
+template <uint16_t opcode>
+LIBC_INLINE uint64_t write_impl(::FILE *file, const void *data, size_t size) {
   uint64_t ret = 0;
-  uint64_t recv_size;
-  rpc::Client::Port port = rpc::client.open<RPC_READ_FROM_STDIN>();
-  port.send([=](rpc::Buffer *buffer) { buffer->data[0] = size; });
-  port.recv_n(&buf, &recv_size, [&](uint64_t) { return buf; });
-  port.recv([&](rpc::Buffer *buffer) { ret = buffer->data[0]; });
+  rpc::Client::Port port = rpc::client.open<opcode>();
+
+  if constexpr (opcode == RPC_WRITE_TO_STREAM) {
+    port.send([&](rpc::Buffer *buffer) {
+      buffer->data[0] = reinterpret_cast<uintptr_t>(file);
+    });
+  }
+
+  port.send_n(data, size);
+  port.recv([&](rpc::Buffer *buffer) {
+    ret = reinterpret_cast<uint64_t *>(buffer->data)[0];
+  });
   port.close();
   return ret;
 }
 
-LIBC_INLINE uint64_t read_from_stream(uintptr_t file, void *buf, size_t size) {
+LIBC_INLINE uint64_t write(::FILE *f, const void *data, size_t size) {
+  if (f == stdout)
+    return write_impl<RPC_WRITE_TO_STDOUT>(f, data, size);
+  else if (f == stderr)
+    return write_impl<RPC_WRITE_TO_STDERR>(f, data, size);
+  else
+    return write_impl<RPC_WRITE_TO_STREAM>(f, data, size);
+}
+
+LIBC_INLINE uint64_t read_from_stream(::FILE *file, void *buf, size_t size) {
   uint64_t ret = 0;
   uint64_t recv_size;
   rpc::Client::Port port = rpc::client.open<RPC_READ_FROM_STREAM>();
   port.send([=](rpc::Buffer *buffer) {
     buffer->data[0] = size;
-    buffer->data[1] = file;
+    buffer->data[1] = from_stream(file);
   });
   port.recv_n(&buf, &recv_size, [&](uint64_t) { return buf; });
   port.recv([&](rpc::Buffer *buffer) { ret = buffer->data[0]; });
@@ -85,12 +89,9 @@ LIBC_INLINE uint64_t read_from_stream(uintptr_t file, void *buf, size_t size) {
   return ret;
 }
 
-LIBC_INLINE uint64_t read(FILE *f, void *data, size_t size) {
-  if (f == stdin)
-    return read_from_stdin(data, size);
-  else
-    return read_from_stream(reinterpret_cast<uintptr_t>(f), data, size);
+LIBC_INLINE uint64_t read(::FILE *f, void *data, size_t size) {
+  return read_from_stream(f, data, size);
 }
 
 } // namespace file
-} // namespace __llvm_libc
+} // namespace LIBC_NAMESPACE

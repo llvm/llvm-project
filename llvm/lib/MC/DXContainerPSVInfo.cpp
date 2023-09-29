@@ -147,4 +147,17 @@ void PSVRuntimeInfo::write(raw_ostream &OS, uint32_t Version) const {
     OS.write(reinterpret_cast<const char *>(&SignatureElements[0]),
              SignatureElements.size() * sizeof(v0::SignatureElement));
   }
+
+  for (const auto &MaskVector : OutputVectorMasks)
+    support::endian::write_array(OS, ArrayRef<uint32_t>(MaskVector),
+                                 support::little);
+  support::endian::write_array(OS, ArrayRef<uint32_t>(PatchOrPrimMasks),
+                               support::little);
+  for (const auto &MaskVector : InputOutputMap)
+    support::endian::write_array(OS, ArrayRef<uint32_t>(MaskVector),
+                                 support::little);
+  support::endian::write_array(OS, ArrayRef<uint32_t>(InputPatchMap),
+                               support::little);
+  support::endian::write_array(OS, ArrayRef<uint32_t>(PatchOutputMap),
+                               support::little);
 }

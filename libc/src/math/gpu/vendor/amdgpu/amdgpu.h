@@ -14,7 +14,7 @@
 
 #include "src/__support/macros/attributes.h"
 
-namespace __llvm_libc {
+namespace LIBC_NAMESPACE {
 namespace internal {
 LIBC_INLINE float acosf(float x) { return __ocml_acos_f32(x); }
 LIBC_INLINE float acoshf(float x) { return __ocml_acosh_f32(x); }
@@ -72,8 +72,32 @@ LIBC_INLINE double tan(double x) { return __ocml_tan_f64(x); }
 LIBC_INLINE float tanf(float x) { return __ocml_tan_f32(x); }
 LIBC_INLINE double tanh(double x) { return __ocml_tanh_f64(x); }
 LIBC_INLINE float tanhf(float x) { return __ocml_tanh_f32(x); }
+LIBC_INLINE double scalbn(double x, int i) {
+  return __builtin_amdgcn_ldexp(x, i);
+}
+LIBC_INLINE float scalbnf(float x, int i) {
+  return __builtin_amdgcn_ldexpf(x, i);
+}
+LIBC_INLINE double frexp(double x, int *nptr) {
+  return __builtin_frexp(x, nptr);
+}
+LIBC_INLINE float frexpf(float x, int *nptr) {
+  return __builtin_frexpf(x, nptr);
+}
+LIBC_INLINE double remquo(double x, double y, int *q) {
+  int tmp;
+  double r = __ocml_remquo_f64(x, y, (gpu::Private<int> *)&tmp);
+  *q = tmp;
+  return r;
+}
+LIBC_INLINE float remquof(float x, float y, int *q) {
+  int tmp;
+  float r = __ocml_remquo_f32(x, y, (gpu::Private<int> *)&tmp);
+  *q = tmp;
+  return r;
+}
 
 } // namespace internal
-} // namespace __llvm_libc
+} // namespace LIBC_NAMESPACE
 
 #endif // LLVM_LIBC_SRC_MATH_GPU_AMDGPU_H

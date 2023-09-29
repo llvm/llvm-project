@@ -13,7 +13,7 @@
 
 #include <math.h>
 
-namespace mpfr = __llvm_libc::testing::mpfr;
+namespace mpfr = LIBC_NAMESPACE::testing::mpfr;
 
 DECLARE_SPECIAL_CONSTANTS(double)
 
@@ -27,6 +27,6 @@ TEST(LlvmLibccosTest, Range) {
     if (isnan(x) || isinf(x) || x > _2pi || x < -_2pi)
       continue;
 
-    ASSERT_MPFR_MATCH(mpfr::Operation::Cos, x, __llvm_libc::cos(x), 1.0);
+    ASSERT_MPFR_MATCH(mpfr::Operation::Cos, x, LIBC_NAMESPACE::cos(x), 1.0);
   }
 }

@@ -1261,44 +1261,16 @@ SparcAsmParser::parseSparcAsmOperand(std::unique_ptr<SparcOperand> &Op,
 
   case AsmToken::Percent: {
     Parser.Lex(); // Eat the '%'.
-    MCRegister RegNo;
+    MCRegister Reg;
     unsigned RegKind;
-    if (matchRegisterName(Parser.getTok(), RegNo, RegKind)) {
-      StringRef name = Parser.getTok().getString();
+    if (matchRegisterName(Parser.getTok(), Reg, RegKind)) {
+      StringRef Name = Parser.getTok().getString();
       Parser.Lex(); // Eat the identifier token.
       E = SMLoc::getFromPointer(Parser.getTok().getLoc().getPointer() - 1);
-      switch (RegNo) {
-      default:
-        Op = SparcOperand::CreateReg(RegNo, RegKind, S, E);
-        break;
-      case Sparc::PSR:
-        Op = SparcOperand::CreateToken("%psr", S);
-        break;
-      case Sparc::FSR:
-        Op = SparcOperand::CreateToken("%fsr", S);
-        break;
-      case Sparc::FQ:
-        Op = SparcOperand::CreateToken("%fq", S);
-        break;
-      case Sparc::CPSR:
-        Op = SparcOperand::CreateToken("%csr", S);
-        break;
-      case Sparc::CPQ:
-        Op = SparcOperand::CreateToken("%cq", S);
-        break;
-      case Sparc::WIM:
-        Op = SparcOperand::CreateToken("%wim", S);
-        break;
-      case Sparc::TBR:
-        Op = SparcOperand::CreateToken("%tbr", S);
-        break;
-      case Sparc::ICC:
-        if (name == "xcc")
-          Op = SparcOperand::CreateToken("%xcc", S);
-        else
-          Op = SparcOperand::CreateToken("%icc", S);
-        break;
-      }
+      if (Reg == Sparc::ICC && Name == "xcc")
+        Op = SparcOperand::CreateToken("%xcc", S);
+      else
+        Op = SparcOperand::CreateReg(Reg, RegKind, S, E);
       break;
     }
     if (matchSparcAsmModifiers(EVal, E)) {

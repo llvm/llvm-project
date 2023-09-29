@@ -184,6 +184,10 @@ public:
   /// has any special or non-printable characters in it.
   virtual void printKeywordOrString(StringRef keyword);
 
+  /// Print the given string as a quoted string, escaping any special or
+  /// non-printable characters in it.
+  virtual void printString(StringRef string);
+
   /// Print the given string as a symbol reference, i.e. a form representable by
   /// a SymbolRefAttr. A symbol reference is represented as a string prefixed
   /// with '@'. The reference is surrounded with ""'s and escaped if it has any
@@ -1238,10 +1242,7 @@ public:
   }
 
   /// Parse a type list.
-  ParseResult parseTypeList(SmallVectorImpl<Type> &result) {
-    return parseCommaSeparatedList(
-        [&]() { return parseType(result.emplace_back()); });
-  }
+  ParseResult parseTypeList(SmallVectorImpl<Type> &result);
 
   /// Parse an arrow followed by a type list.
   virtual ParseResult parseArrowTypeList(SmallVectorImpl<Type> &result) = 0;

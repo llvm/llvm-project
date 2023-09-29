@@ -153,6 +153,8 @@ void EntityDetails::set_type(const DeclTypeSpec &type) {
 }
 
 void AssocEntityDetails::set_rank(int rank) { rank_ = rank; }
+void AssocEntityDetails::set_IsAssumedSize() { rank_ = isAssumedSize; }
+void AssocEntityDetails::set_IsAssumedRank() { rank_ = isAssumedRank; }
 void EntityDetails::ReplaceType(const DeclTypeSpec &type) { type_ = &type; }
 
 ObjectEntityDetails::ObjectEntityDetails(EntityDetails &&d)
@@ -438,8 +440,12 @@ llvm::raw_ostream &operator<<(
 llvm::raw_ostream &operator<<(
     llvm::raw_ostream &os, const AssocEntityDetails &x) {
   os << *static_cast<const EntityDetails *>(&x);
-  if (auto assocRank{x.rank()}) {
-    os << " rank: " << *assocRank;
+  if (x.IsAssumedSize()) {
+    os << " RANK(*)";
+  } else if (x.IsAssumedRank()) {
+    os << " RANK DEFAULT";
+  } else if (auto assocRank{x.rank()}) {
+    os << " RANK(" << *assocRank << ')';
   }
   DumpExpr(os, "expr", x.expr());
   return os;
@@ -755,6 +761,57 @@ SourceName GenericKind::AsFortran(common::DefinedIo x) {
 bool GenericKind::Is(GenericKind::OtherKind x) const {
   const OtherKind *y{std::get_if<OtherKind>(&u)};
   return y && *y == x;
+}
+
+std::string Symbol::OmpFlagToClauseName(Symbol::Flag ompFlag) {
+  std::string clauseName;
+  switch (ompFlag) {
+  case Symbol::Flag::OmpShared:
+    clauseName = "SHARED";
+    break;
+  case Symbol::Flag::OmpPrivate:
+    clauseName = "PRIVATE";
+    break;
+  case Symbol::Flag::OmpLinear:
+    clauseName = "LINEAR";
+    break;
+  case Symbol::Flag::OmpFirstPrivate:
+    clauseName = "FIRSTPRIVATE";
+    break;
+  case Symbol::Flag::OmpLastPrivate:
+    clauseName = "LASTPRIVATE";
+    break;
+  case Symbol::Flag::OmpMapTo:
+  case Symbol::Flag::OmpMapFrom:
+  case Symbol::Flag::OmpMapToFrom:
+  case Symbol::Flag::OmpMapAlloc:
+  case Symbol::Flag::OmpMapRelease:
+  case Symbol::Flag::OmpMapDelete:
+    clauseName = "MAP";
+    break;
+  case Symbol::Flag::OmpUseDevicePtr:
+    clauseName = "USE_DEVICE_PTR";
+    break;
+  case Symbol::Flag::OmpUseDeviceAddr:
+    clauseName = "USE_DEVICE_ADDR";
+    break;
+  case Symbol::Flag::OmpCopyIn:
+    clauseName = "COPYIN";
+    break;
+  case Symbol::Flag::OmpCopyPrivate:
+    clauseName = "COPYPRIVATE";
+    break;
+  case Symbol::Flag::OmpIsDevicePtr:
+    clauseName = "IS_DEVICE_PTR";
+    break;
+  case Symbol::Flag::OmpHasDeviceAddr:
+    clauseName = "HAS_DEVICE_ADDR";
+    break;
+  default:
+    clauseName = "";
+    break;
+  }
+  return clauseName;
 }
 
 bool SymbolOffsetCompare::operator()(

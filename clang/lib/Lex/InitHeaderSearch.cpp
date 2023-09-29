@@ -77,12 +77,6 @@ public:
     SystemHeaderPrefixes.emplace_back(std::string(Prefix), IsSystemHeader);
   }
 
-  /// Add the necessary paths to support a gnu libstdc++.
-  /// Returns true if the \p Base path was found, false if it does not exist.
-  bool AddGnuCPlusPlusIncludePaths(StringRef Base, StringRef ArchDir,
-                                   StringRef Dir32, StringRef Dir64,
-                                   const llvm::Triple &triple);
-
   /// Add the necessary paths to support a MinGW libstdc++.
   void AddMinGWCPlusPlusIncludePaths(StringRef Base,
                                      StringRef Arch,
@@ -173,7 +167,7 @@ bool InitHeaderSearch::AddUnmappedPath(const Twine &Path, IncludeDirGroup Group,
   // Check to see if this is an apple-style headermap (which are not allowed to
   // be frameworks).
   if (!isFramework) {
-    if (auto FE = FM.getFile(MappedPathStr)) {
+    if (auto FE = FM.getOptionalFileRef(MappedPathStr)) {
       if (const HeaderMap *HM = Headers.CreateHeaderMap(*FE)) {
         // It is a headermap, add it to the search path.
         IncludePath.emplace_back(
@@ -188,27 +182,6 @@ bool InitHeaderSearch::AddUnmappedPath(const Twine &Path, IncludeDirGroup Group,
     llvm::errs() << "ignoring nonexistent directory \""
                  << MappedPathStr << "\"\n";
   return false;
-}
-
-bool InitHeaderSearch::AddGnuCPlusPlusIncludePaths(StringRef Base,
-                                                   StringRef ArchDir,
-                                                   StringRef Dir32,
-                                                   StringRef Dir64,
-                                                   const llvm::Triple &triple) {
-  // Add the base dir
-  bool IsBaseFound = AddPath(Base, CXXSystem, false);
-
-  // Add the multilib dirs
-  llvm::Triple::ArchType arch = triple.getArch();
-  bool is64bit = arch == llvm::Triple::ppc64 || arch == llvm::Triple::x86_64;
-  if (is64bit)
-    AddPath(Base + "/" + ArchDir + "/" + Dir64, CXXSystem, false);
-  else
-    AddPath(Base + "/" + ArchDir + "/" + Dir32, CXXSystem, false);
-
-  // Add the backward dir
-  AddPath(Base + "/backward", CXXSystem, false);
-  return IsBaseFound;
 }
 
 void InitHeaderSearch::AddMinGWCPlusPlusIncludePaths(StringRef Base,

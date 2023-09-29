@@ -214,7 +214,7 @@ void applyFoldGlobalOffset(MachineInstr &MI, MachineRegisterInfo &MRI,
   //  %ptrN = G_PTR_ADD %offset_g, cstN - min_cst
   uint64_t Offset, MinOffset;
   std::tie(Offset, MinOffset) = MatchInfo;
-  B.setInstrAndDebugLoc(MI);
+  B.setInstrAndDebugLoc(*std::next(MI.getIterator()));
   Observer.changingInstr(MI);
   auto &GlobalOp = MI.getOperand(1);
   auto *GV = GlobalOp.getGlobal();
@@ -479,7 +479,7 @@ bool AArch64PreLegalizerCombiner::runOnMachineFunction(MachineFunction &MF) {
 
   const Function &F = MF.getFunction();
   bool EnableOpt =
-      MF.getTarget().getOptLevel() != CodeGenOpt::None && !skipFunction(F);
+      MF.getTarget().getOptLevel() != CodeGenOptLevel::None && !skipFunction(F);
   GISelKnownBits *KB = &getAnalysis<GISelKnownBitsAnalysis>().get(MF);
   MachineDominatorTree *MDT = &getAnalysis<MachineDominatorTree>();
   CombinerInfo CInfo(/*AllowIllegalOps*/ true, /*ShouldLegalizeIllegal*/ false,

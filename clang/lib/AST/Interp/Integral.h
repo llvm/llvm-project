@@ -128,6 +128,13 @@ public:
     return Compare(V, RHS.V);
   }
 
+  std::string toDiagnosticString(const ASTContext &Ctx) const {
+    std::string NameStr;
+    llvm::raw_string_ostream OS(NameStr);
+    OS << V;
+    return NameStr;
+  }
+
   unsigned countLeadingZeros() const {
     if constexpr (!Signed)
       return llvm::countl_zero<ReprT>(V);
@@ -163,13 +170,6 @@ public:
   static std::enable_if_t<SrcBits != 0, Integral>
   from(Integral<SrcBits, SrcSign> Value) {
     return Integral(Value.V);
-  }
-
-  template <bool SrcSign> static Integral from(Integral<0, SrcSign> Value) {
-    if constexpr (SrcSign)
-      return Integral(Value.V.getSExtValue());
-    else
-      return Integral(Value.V.getZExtValue());
   }
 
   static Integral zero() { return from(0); }

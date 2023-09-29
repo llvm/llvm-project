@@ -52,7 +52,7 @@ static const char *const builderOpState = "odsState";
 static const char *const propertyStorage = "propStorage";
 static const char *const propertyValue = "propValue";
 static const char *const propertyAttr = "propAttr";
-static const char *const propertyDiag = "propDiag";
+static const char *const propertyDiag = "emitError";
 
 /// The names of the implicit attributes that contain variadic operand and
 /// result segment sizes.
@@ -1212,7 +1212,9 @@ void OpEmitter::genPropertiesSupport() {
               "::mlir::LogicalResult", "setPropertiesFromAttr",
               MethodParameter("Properties &", "prop"),
               MethodParameter("::mlir::Attribute", "attr"),
-              MethodParameter("::mlir::InFlightDiagnostic *", "diag"))
+              MethodParameter(
+                  "::llvm::function_ref<::mlir::InFlightDiagnostic()>",
+                  "emitError"))
           ->body();
   auto &getPropMethod =
       opClass
@@ -1254,7 +1256,7 @@ void OpEmitter::genPropertiesSupport() {
               MethodParameter("::mlir::NamedAttrList &", "attrs"),
               MethodParameter(
                   "llvm::function_ref<::mlir::InFlightDiagnostic()>",
-                  "getDiag"))
+                  "emitError"))
           ->body();
 
   opClass.declare<UsingDeclaration>("Properties", "FoldAdaptor::Properties");
@@ -1264,8 +1266,7 @@ void OpEmitter::genPropertiesSupport() {
   setPropMethod << R"decl(
   ::mlir::DictionaryAttr dict = ::llvm::dyn_cast<::mlir::DictionaryAttr>(attr);
   if (!dict) {
-    if (diag)
-      *diag << "expected DictionaryAttr to set properties";
+    emitError() << "expected DictionaryAttr to set properties";
     return ::mlir::failure();
   }
     )decl";
@@ -1273,17 +1274,16 @@ void OpEmitter::genPropertiesSupport() {
   const char *propFromAttrFmt = R"decl(;
     {{
       auto setFromAttr = [] (auto &propStorage, ::mlir::Attribute propAttr,
-                             ::mlir::InFlightDiagnostic *propDiag) {{
+               ::llvm::function_ref<::mlir::InFlightDiagnostic()> emitError) {{
         {0};
       };
       {2};
       if (!attr) {{
-        if (diag)
-          *diag << "expected key entry for {1} in DictionaryAttr to set "
+        emitError() << "expected key entry for {1} in DictionaryAttr to set "
                    "Properties.";
         return ::mlir::failure();
       }
-      if (::mlir::failed(setFromAttr(prop.{1}, attr, diag)))
+      if (::mlir::failed(setFromAttr(prop.{1}, attr, emitError)))
         return ::mlir::failure();
     }
 )decl";
@@ -1338,8 +1338,7 @@ void OpEmitter::genPropertiesSupport() {
     {2}
     if (attr || /*isRequired=*/{1}) {{
       if (!attr) {{
-        if (diag)
-          *diag << "expected key entry for {0} in DictionaryAttr to set "
+        emitError() << "expected key entry for {0} in DictionaryAttr to set "
                    "Properties.";
         return ::mlir::failure();
       }
@@ -1347,8 +1346,7 @@ void OpEmitter::genPropertiesSupport() {
       if (convertedAttr) {{
         propStorage = convertedAttr;
       } else {{
-        if (diag)
-          *diag << "Invalid attribute `{0}` in property conversion: " << attr;
+        emitError() << "Invalid attribute `{0}` in property conversion: " << attr;
         return ::mlir::failure();
       }
     }
@@ -1537,7 +1535,7 @@ void OpEmitter::genPropertiesSupport() {
           << formatv(R"(
     {{
       ::mlir::Attribute attr = attrs.get({0}AttrName(opName));
-      if (attr && ::mlir::failed({1}(attr, "{2}", getDiag)))
+      if (attr && ::mlir::failed({1}(attr, "{2}", emitError)))
         return ::mlir::failure();
     }
 )",
@@ -4227,7 +4225,7 @@ static void emitOpList(const std::vector<Record *> &defs, raw_ostream &os) {
 }
 
 static bool emitOpDecls(const RecordKeeper &recordKeeper, raw_ostream &os) {
-  emitSourceFileHeader("Op Declarations", os);
+  emitSourceFileHeader("Op Declarations", os, recordKeeper);
 
   std::vector<Record *> defs = getRequestedOpDefinitions(recordKeeper);
   emitOpClasses(recordKeeper, defs, os, /*emitDecl=*/true);
@@ -4236,7 +4234,7 @@ static bool emitOpDecls(const RecordKeeper &recordKeeper, raw_ostream &os) {
 }
 
 static bool emitOpDefs(const RecordKeeper &recordKeeper, raw_ostream &os) {
-  emitSourceFileHeader("Op Definitions", os);
+  emitSourceFileHeader("Op Definitions", os, recordKeeper);
 
   std::vector<Record *> defs = getRequestedOpDefinitions(recordKeeper);
   emitOpList(defs, os);

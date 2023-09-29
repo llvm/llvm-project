@@ -58,9 +58,19 @@ private:
   lldb_private::DataExtractor m_sve_data;
   lldb_private::DataExtractor m_pac_data;
   lldb_private::DataExtractor m_tls_data;
+  lldb_private::DataExtractor m_za_data;
 
-  SVEState m_sve_state;
+  SVEState m_sve_state = SVEState::Unknown;
   uint16_t m_sve_vector_length = 0;
+
+  // These are pseudo registers derived from the values in SSVE and ZA data.
+  struct __attribute__((packed)) sme_pseudo_regs {
+    uint64_t ctrl_reg;
+    uint64_t svg_reg;
+  };
+  static_assert(sizeof(sme_pseudo_regs) == 16);
+
+  struct sme_pseudo_regs m_sme_pseudo_regs;
 
   const uint8_t *GetSVEBuffer(uint64_t offset = 0);
 

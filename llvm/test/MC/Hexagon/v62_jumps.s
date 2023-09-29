@@ -1,4 +1,4 @@
-# RUN: llvm-mc -arch=hexagon -mcpu=hexagonv62 -filetype=obj %s | llvm-objdump --arch=hexagon --mcpu=hexagonv62 -d - | FileCheck %s
+# RUN: llvm-mc -triple=hexagon -mcpu=hexagonv62 -filetype=obj %s | llvm-objdump --triple=hexagon --mcpu=hexagonv62 -d - | FileCheck %s
 
 # verify compound is split into single instructions if needed
 {

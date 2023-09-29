@@ -132,7 +132,7 @@ class Preprocessor {
   llvm::unique_function<void(const clang::Token &)> OnToken;
   std::shared_ptr<PreprocessorOptions> PPOpts;
   DiagnosticsEngine        *Diags;
-  LangOptions       &LangOpts;
+  const LangOptions &LangOpts;
   const TargetInfo *Target = nullptr;
   const TargetInfo *AuxTarget = nullptr;
   FileManager       &FileMgr;
@@ -276,6 +276,9 @@ class Preprocessor {
 
   /// Empty line handler.
   EmptylineHandler *Emptyline = nullptr;
+
+  /// True to avoid tearing down the lexer etc on EOF
+  bool IncrementalProcessing = false;
 
 public:
   /// The kind of translation unit we are processing.
@@ -1158,8 +1161,9 @@ private:
 
 public:
   Preprocessor(std::shared_ptr<PreprocessorOptions> PPOpts,
-               DiagnosticsEngine &diags, LangOptions &opts, SourceManager &SM,
-               HeaderSearch &Headers, ModuleLoader &TheModuleLoader,
+               DiagnosticsEngine &diags, const LangOptions &LangOpts,
+               SourceManager &SM, HeaderSearch &Headers,
+               ModuleLoader &TheModuleLoader,
                IdentifierInfoLookup *IILookup = nullptr,
                bool OwnsHeaderSearch = false,
                TranslationUnitKind TUKind = TU_Complete);
@@ -1910,14 +1914,11 @@ public:
   void recomputeCurLexerKind();
 
   /// Returns true if incremental processing is enabled
-  bool isIncrementalProcessingEnabled() const {
-    return getLangOpts().IncrementalExtensions;
-  }
+  bool isIncrementalProcessingEnabled() const { return IncrementalProcessing; }
 
   /// Enables the incremental processing
   void enableIncrementalProcessing(bool value = true) {
-    // FIXME: Drop this interface.
-    const_cast<LangOptions &>(getLangOpts()).IncrementalExtensions = value;
+    IncrementalProcessing = value;
   }
 
   /// Specify the point at which code-completion will be performed.
@@ -2718,8 +2719,8 @@ public:
   /// \return A file that can be #included to provide the desired effect. Null
   ///         if no such file could be determined or if a #include is not
   ///         appropriate (eg, if a module should be imported instead).
-  const FileEntry *getHeaderToIncludeForDiagnostics(SourceLocation IncLoc,
-                                                    SourceLocation MLoc);
+  OptionalFileEntryRef getHeaderToIncludeForDiagnostics(SourceLocation IncLoc,
+                                                        SourceLocation MLoc);
 
   bool isRecordingPreamble() const {
     return PreambleConditionalStack.isRecording();

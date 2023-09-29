@@ -1,4 +1,4 @@
-! RUN: llvm-mc %s -arch=sparcv9 -show-encoding | FileCheck %s
+! RUN: llvm-mc %s -triple=sparcv9 -show-encoding | FileCheck %s
 
         ! CHECK: fitos %f0, %f4                  ! encoding: [0x89,0xa0,0x18,0x80]
         ! CHECK: fitod %f0, %f4                  ! encoding: [0x89,0xa0,0x19,0x00]

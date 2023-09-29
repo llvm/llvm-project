@@ -2,7 +2,7 @@
 // NOTE: this test requires gpu-sm80
 //
 // DEFINE: %{compile} = mlir-opt %s \
-// DEFINE:    --sparse-compiler="enable-gpu-libgen gpu-triple=nvptx64-nvidia-cuda gpu-chip=sm_80 gpu-features=+ptx71
+// DEFINE:    --sparse-compiler="enable-gpu-libgen gpu-triple=nvptx64-nvidia-cuda gpu-chip=sm_80 gpu-features=+ptx71 gpu-format=%gpu_compilation_format
 // DEFINE: %{run} = mlir-cpu-runner \
 // DEFINE:   --shared-libs=%mlir_cuda_runtime \
 // DEFINE:   --shared-libs=%mlir_c_runner_utils \
@@ -25,13 +25,19 @@
 // RUNNOT: %{compile} enable-runtime-library=false gpu-data-transfer-strategy=zero-copy" | %{run}
 
 #SortedCOO = #sparse_tensor.encoding<{
-  lvlTypes = [ "compressed_nu", "singleton" ]
+  map = (d0, d1) -> (d0 : compressed(nonunique), d1 : singleton)
 }>
 
 #CSR = #sparse_tensor.encoding<{
-  lvlTypes = [ "dense", "compressed" ],
+  map = (d0, d1) -> (d0 : dense, d1 : compressed),
   posWidth = 32,
   crdWidth = 32
+}>
+
+#CSC = #sparse_tensor.encoding<{
+  map = (d0, d1) -> (d1 : dense, d0 : compressed),
+  posWidth = 64,
+  crdWidth = 64
 }>
 
 module {
@@ -54,6 +60,16 @@ module {
                        %C: tensor<8x8xf32>) -> tensor<8x8xf32> {
     %D = linalg.matmul
       ins(%A, %B: tensor<8x8xf32, #CSR>, tensor<8x8xf32>)
+      outs(%C: tensor<8x8xf32>) -> tensor<8x8xf32>
+    return %D: tensor<8x8xf32>
+  }
+
+  // Computes C = A x B with A sparse CSC.
+  func.func @matmulCSC(%A: tensor<8x8xf32, #CSC>,
+                       %B: tensor<8x8xf32>,
+                       %C: tensor<8x8xf32>) -> tensor<8x8xf32> {
+    %D = linalg.matmul
+      ins(%A, %B: tensor<8x8xf32, #CSC>, tensor<8x8xf32>)
       outs(%C: tensor<8x8xf32>) -> tensor<8x8xf32>
     return %D: tensor<8x8xf32>
   }
@@ -107,6 +123,7 @@ module {
     // Convert to a "sparse" matrix A.
     %Acoo = sparse_tensor.convert %DA : tensor<8x8xf32> to tensor<8x8xf32, #SortedCOO>
     %Acsr = sparse_tensor.convert %DA : tensor<8x8xf32> to tensor<8x8xf32, #CSR>
+    %Acsc = sparse_tensor.convert %DA : tensor<8x8xf32> to tensor<8x8xf32, #CSC>
 
     // Initial C matrices.
     %C0 = tensor.generate {
@@ -125,10 +142,16 @@ module {
     %1 = call @matmulCSR(%Acsr, %DA, %C0) : (tensor<8x8xf32, #CSR>,
                                              tensor<8x8xf32>,
 					     tensor<8x8xf32>) -> tensor<8x8xf32>
-    %2 = call @matmulCOO(%Acoo, %DA, %C1) : (tensor<8x8xf32, #SortedCOO>,
+    %2 = call @matmulCSC(%Acsc, %DA, %C0) : (tensor<8x8xf32, #CSC>,
                                              tensor<8x8xf32>,
 					     tensor<8x8xf32>) -> tensor<8x8xf32>
-    %3 = call @matmulCSR(%Acsr, %DA, %C1) : (tensor<8x8xf32, #CSR>,
+    %3 = call @matmulCOO(%Acoo, %DA, %C1) : (tensor<8x8xf32, #SortedCOO>,
+                                             tensor<8x8xf32>,
+					     tensor<8x8xf32>) -> tensor<8x8xf32>
+    %4 = call @matmulCSR(%Acsr, %DA, %C1) : (tensor<8x8xf32, #CSR>,
+                                             tensor<8x8xf32>,
+					     tensor<8x8xf32>) -> tensor<8x8xf32>
+    %5 = call @matmulCSC(%Acsc, %DA, %C1) : (tensor<8x8xf32, #CSC>,
                                              tensor<8x8xf32>,
 					     tensor<8x8xf32>) -> tensor<8x8xf32>
 
@@ -153,6 +176,24 @@ module {
     // CHECK-NEXT: ( 308, 384, 460, 536, 612, 688, 764, 840 )
     // CHECK-NEXT: ( 336, 420, 504, 588, 672, 756, 840, 924 )
     //
+    // CHECK:      ( 140, 168, 196, 224, 252, 280, 308, 336 )
+    // CHECK-NEXT: ( 168, 204, 240, 276, 312, 348, 384, 420 )
+    // CHECK-NEXT: ( 196, 240, 284, 328, 372, 416, 460, 504 )
+    // CHECK-NEXT: ( 224, 276, 328, 380, 432, 484, 536, 588 )
+    // CHECK-NEXT: ( 252, 312, 372, 432, 492, 552, 612, 672 )
+    // CHECK-NEXT: ( 280, 348, 416, 484, 552, 620, 688, 756 )
+    // CHECK-NEXT: ( 308, 384, 460, 536, 612, 688, 764, 840 )
+    // CHECK-NEXT: ( 336, 420, 504, 588, 672, 756, 840, 924 )
+    //
+    // CHECK:      ( 141, 169, 197, 225, 253, 281, 309, 337 )
+    // CHECK-NEXT: ( 169, 205, 241, 277, 313, 349, 385, 421 )
+    // CHECK-NEXT: ( 197, 241, 285, 329, 373, 417, 461, 505 )
+    // CHECK-NEXT: ( 225, 277, 329, 381, 433, 485, 537, 589 )
+    // CHECK-NEXT: ( 253, 313, 373, 433, 493, 553, 613, 673 )
+    // CHECK-NEXT: ( 281, 349, 417, 485, 553, 621, 689, 757 )
+    // CHECK-NEXT: ( 309, 385, 461, 537, 613, 689, 765, 841 )
+    // CHECK-NEXT: ( 337, 421, 505, 589, 673, 757, 841, 925 )
+    //
     // CHECK:      ( 141, 169, 197, 225, 253, 281, 309, 337 )
     // CHECK-NEXT: ( 169, 205, 241, 277, 313, 349, 385, 421 )
     // CHECK-NEXT: ( 197, 241, 285, 329, 373, 417, 461, 505 )
@@ -175,10 +216,13 @@ module {
     call @dump(%1) : (tensor<8x8xf32>) -> ()
     call @dump(%2) : (tensor<8x8xf32>) -> ()
     call @dump(%3) : (tensor<8x8xf32>) -> ()
+    call @dump(%4) : (tensor<8x8xf32>) -> ()
+    call @dump(%5) : (tensor<8x8xf32>) -> ()
 
     // Release the resources.
     bufferization.dealloc_tensor %Acoo : tensor<8x8xf32, #SortedCOO>
     bufferization.dealloc_tensor %Acsr : tensor<8x8xf32, #CSR>
+    bufferization.dealloc_tensor %Acsc : tensor<8x8xf32, #CSC>
 
     llvm.call @mgpuDestroySparseEnv(): () -> ()
 

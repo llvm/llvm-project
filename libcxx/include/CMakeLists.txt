@@ -110,6 +110,7 @@ set(files
   __algorithm/ranges_copy_n.h
   __algorithm/ranges_count.h
   __algorithm/ranges_count_if.h
+  __algorithm/ranges_ends_with.h
   __algorithm/ranges_equal.h
   __algorithm/ranges_equal_range.h
   __algorithm/ranges_fill.h
@@ -283,6 +284,8 @@ set(files
   __chrono/steady_clock.h
   __chrono/system_clock.h
   __chrono/time_point.h
+  __chrono/tzdb.h
+  __chrono/tzdb_list.h
   __chrono/weekday.h
   __chrono/year.h
   __chrono/year_month.h
@@ -675,6 +678,7 @@ set(files
   __system_error/system_error.h
   __thread/formatter.h
   __thread/id.h
+  __thread/jthread.h
   __thread/poll_with_backoff.h
   __thread/this_thread.h
   __thread/thread.h
@@ -901,6 +905,17 @@ set(files
   expected
   experimental/__config
   experimental/__memory
+  experimental/__simd/abi_tag.h
+  experimental/__simd/aligned_tag.h
+  experimental/__simd/declaration.h
+  experimental/__simd/internal_declaration.h
+  experimental/__simd/reference.h
+  experimental/__simd/scalar.h
+  experimental/__simd/simd.h
+  experimental/__simd/simd_mask.h
+  experimental/__simd/traits.h
+  experimental/__simd/utility.h
+  experimental/__simd/vec_ext.h
   experimental/deque
   experimental/forward_list
   experimental/iterator
@@ -1027,8 +1042,10 @@ add_custom_target(generate-cxx-headers ALL DEPENDS ${_all_includes})
 add_library(cxx-headers INTERFACE)
 target_link_libraries(cxx-headers INTERFACE libcxx-abi-headers)
 add_dependencies(cxx-headers generate-cxx-headers)
-target_include_directories(cxx-headers INTERFACE ${LIBCXX_GENERATED_INCLUDE_DIR}
-                                                 ${LIBCXX_GENERATED_INCLUDE_TARGET_DIR})
+# It's important that the arch directory be included first so that its header files
+# which interpose on the default include dir be included instead of the default ones.
+target_include_directories(cxx-headers INTERFACE ${LIBCXX_GENERATED_INCLUDE_TARGET_DIR}
+                                                 ${LIBCXX_GENERATED_INCLUDE_DIR})
 
 if (LIBCXX_INSTALL_HEADERS)
   foreach(file ${files})

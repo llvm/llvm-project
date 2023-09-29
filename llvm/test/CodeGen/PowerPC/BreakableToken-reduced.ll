@@ -202,58 +202,52 @@ define void @_ZN5clang6format22BreakableStringLiteral11insertBreakEjjSt4pairImjE
 ; CHECK-LABEL: _ZN5clang6format22BreakableStringLiteral11insertBreakEjjSt4pairImjERNS0_17WhitespaceManagerE:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    ld 10, 56(3)
-; CHECK-NEXT:    lwz 0, 40(3)
+; CHECK-NEXT:    lwz 4, 40(3)
 ; CHECK-NEXT:    mr 12, 8
 ; CHECK-NEXT:    cmpldi 10, 0
 ; CHECK-NEXT:    beq 0, .LBB0_2
 ; CHECK-NEXT:  # %bb.1: # %if.end.i.i
 ; CHECK-NEXT:    ld 9, 48(3)
-; CHECK-NEXT:    lbz 4, 0(9)
-; CHECK-NEXT:    cmpwi 4, 64
+; CHECK-NEXT:    lbz 8, 0(9)
+; CHECK-NEXT:    cmpwi 8, 64
 ; CHECK-NEXT:    b .LBB0_3
 ; CHECK-NEXT:  .LBB0_2: # %entry._ZNK4llvm9StringRef10startswithES0_.exit_crit_edge
 ; CHECK-NEXT:    ld 9, 48(3)
 ; CHECK-NEXT:    crxor 2, 2, 2
 ; CHECK-NEXT:  .LBB0_3: # %_ZNK4llvm9StringRef10startswithES0_.exit
-; CHECK-NEXT:    mflr 4
-; CHECK-NEXT:    .cfi_def_cfa_offset 160
+; CHECK-NEXT:    mflr 0
+; CHECK-NEXT:    .cfi_def_cfa_offset 144
 ; CHECK-NEXT:    .cfi_offset lr, 16
-; CHECK-NEXT:    .cfi_offset r28, -32
-; CHECK-NEXT:    .cfi_offset r29, -24
 ; CHECK-NEXT:    .cfi_offset r30, -16
-; CHECK-NEXT:    std 28, -32(1) # 8-byte Folded Spill
-; CHECK-NEXT:    std 29, -24(1) # 8-byte Folded Spill
 ; CHECK-NEXT:    std 30, -16(1) # 8-byte Folded Spill
-; CHECK-NEXT:    stdu 1, -160(1)
-; CHECK-NEXT:    std 4, 176(1)
+; CHECK-NEXT:    stdu 1, -144(1)
 ; CHECK-NEXT:    li 8, 0
 ; CHECK-NEXT:    li 11, 1
+; CHECK-NEXT:    std 0, 160(1)
 ; CHECK-NEXT:    add 5, 6, 5
-; CHECK-NEXT:    iseleq 30, 11, 8
+; CHECK-NEXT:    lbz 30, 20(3)
+; CHECK-NEXT:    clrldi 6, 7, 32
+; CHECK-NEXT:    iseleq 8, 11, 8
 ; CHECK-NEXT:    ld 11, 64(3)
-; CHECK-NEXT:    lbz 29, 20(3)
-; CHECK-NEXT:    lwz 28, 16(3)
 ; CHECK-NEXT:    add 5, 5, 10
+; CHECK-NEXT:    clrldi 5, 5, 32
+; CHECK-NEXT:    mr 7, 11
+; CHECK-NEXT:    sub 0, 4, 8
 ; CHECK-NEXT:    ld 4, 8(3)
 ; CHECK-NEXT:    ld 8, 72(3)
-; CHECK-NEXT:    sub 3, 0, 30
-; CHECK-NEXT:    clrldi 5, 5, 32
-; CHECK-NEXT:    li 0, 1
-; CHECK-NEXT:    clrldi 6, 7, 32
-; CHECK-NEXT:    extsw 30, 3
+; CHECK-NEXT:    lwz 3, 16(3)
+; CHECK-NEXT:    std 30, 96(1)
+; CHECK-NEXT:    extsw 0, 0
+; CHECK-NEXT:    std 3, 112(1)
+; CHECK-NEXT:    li 3, 1
+; CHECK-NEXT:    std 0, 120(1)
+; CHECK-NEXT:    std 3, 104(1)
 ; CHECK-NEXT:    mr 3, 12
-; CHECK-NEXT:    mr 7, 11
-; CHECK-NEXT:    std 0, 104(1)
-; CHECK-NEXT:    std 28, 112(1)
-; CHECK-NEXT:    std 29, 96(1)
-; CHECK-NEXT:    std 30, 120(1)
 ; CHECK-NEXT:    bl _ZN5clang6format17WhitespaceManager24replaceWhitespaceInTokenERKNS0_11FormatTokenEjjN4llvm9StringRefES6_bjji
 ; CHECK-NEXT:    nop
-; CHECK-NEXT:    addi 1, 1, 160
+; CHECK-NEXT:    addi 1, 1, 144
 ; CHECK-NEXT:    ld 0, 16(1)
 ; CHECK-NEXT:    ld 30, -16(1) # 8-byte Folded Reload
-; CHECK-NEXT:    ld 29, -24(1) # 8-byte Folded Reload
-; CHECK-NEXT:    ld 28, -32(1) # 8-byte Folded Reload
 ; CHECK-NEXT:    mtlr 0
 ; CHECK-NEXT:    blr
 entry:

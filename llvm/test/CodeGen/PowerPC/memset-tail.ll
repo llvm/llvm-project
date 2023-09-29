@@ -852,10 +852,10 @@ entry:
 define dso_local void @memset2TailV1B2(ptr nocapture noundef writeonly %p) local_unnamed_addr {
 ; P8-BE-LABEL: memset2TailV1B2:
 ; P8-BE:       # %bb.0: # %entry
-; P8-BE-NEXT:    ld 4, L..C7(2) # %const.0
-; P8-BE-NEXT:    lxvw4x 0, 0, 4
 ; P8-BE-NEXT:    li 4, -23131
 ; P8-BE-NEXT:    sth 4, 16(3)
+; P8-BE-NEXT:    ld 4, L..C7(2) # %const.0
+; P8-BE-NEXT:    lxvw4x 0, 0, 4
 ; P8-BE-NEXT:    stxvw4x 0, 0, 3
 ; P8-BE-NEXT:    blr
 ;
@@ -877,11 +877,11 @@ define dso_local void @memset2TailV1B2(ptr nocapture noundef writeonly %p) local
 ;
 ; P8-LE-LABEL: memset2TailV1B2:
 ; P8-LE:       # %bb.0: # %entry
+; P8-LE-NEXT:    li 4, -23131
+; P8-LE-NEXT:    sth 4, 16(3)
 ; P8-LE-NEXT:    addis 4, 2, .LCPI16_0@toc@ha
 ; P8-LE-NEXT:    addi 4, 4, .LCPI16_0@toc@l
 ; P8-LE-NEXT:    lxvd2x 0, 0, 4
-; P8-LE-NEXT:    li 4, -23131
-; P8-LE-NEXT:    sth 4, 16(3)
 ; P8-LE-NEXT:    stxvd2x 0, 0, 3
 ; P8-LE-NEXT:    blr
 ;
@@ -908,10 +908,10 @@ entry:
 define dso_local void @memset2TailV1B1(ptr nocapture noundef writeonly %p) local_unnamed_addr {
 ; P8-BE-LABEL: memset2TailV1B1:
 ; P8-BE:       # %bb.0: # %entry
-; P8-BE-NEXT:    ld 4, L..C8(2) # %const.0
-; P8-BE-NEXT:    lxvw4x 0, 0, 4
 ; P8-BE-NEXT:    li 4, -91
 ; P8-BE-NEXT:    stb 4, 16(3)
+; P8-BE-NEXT:    ld 4, L..C8(2) # %const.0
+; P8-BE-NEXT:    lxvw4x 0, 0, 4
 ; P8-BE-NEXT:    stxvw4x 0, 0, 3
 ; P8-BE-NEXT:    blr
 ;
@@ -933,11 +933,11 @@ define dso_local void @memset2TailV1B1(ptr nocapture noundef writeonly %p) local
 ;
 ; P8-LE-LABEL: memset2TailV1B1:
 ; P8-LE:       # %bb.0: # %entry
+; P8-LE-NEXT:    li 4, -91
+; P8-LE-NEXT:    stb 4, 16(3)
 ; P8-LE-NEXT:    addis 4, 2, .LCPI17_0@toc@ha
 ; P8-LE-NEXT:    addi 4, 4, .LCPI17_0@toc@l
 ; P8-LE-NEXT:    lxvd2x 0, 0, 4
-; P8-LE-NEXT:    li 4, -91
-; P8-LE-NEXT:    stb 4, 16(3)
 ; P8-LE-NEXT:    stxvd2x 0, 0, 3
 ; P8-LE-NEXT:    blr
 ;
@@ -1082,10 +1082,10 @@ entry:
 define dso_local void @memsetTailV0B9(ptr nocapture noundef writeonly %p) local_unnamed_addr {
 ; P8-BE-LABEL: memsetTailV0B9:
 ; P8-BE:       # %bb.0: # %entry
+; P8-BE-NEXT:    li 4, 15
+; P8-BE-NEXT:    stb 4, 8(3)
 ; P8-BE-NEXT:    lis 4, 3855
-; P8-BE-NEXT:    li 5, 15
 ; P8-BE-NEXT:    ori 4, 4, 3855
-; P8-BE-NEXT:    stb 5, 8(3)
 ; P8-BE-NEXT:    rldimi 4, 4, 32, 0
 ; P8-BE-NEXT:    std 4, 0(3)
 ; P8-BE-NEXT:    blr
@@ -1111,10 +1111,10 @@ define dso_local void @memsetTailV0B9(ptr nocapture noundef writeonly %p) local_
 ;
 ; P8-LE-LABEL: memsetTailV0B9:
 ; P8-LE:       # %bb.0: # %entry
+; P8-LE-NEXT:    li 4, 15
+; P8-LE-NEXT:    stb 4, 8(3)
 ; P8-LE-NEXT:    lis 4, 3855
-; P8-LE-NEXT:    li 5, 15
 ; P8-LE-NEXT:    ori 4, 4, 3855
-; P8-LE-NEXT:    stb 5, 8(3)
 ; P8-LE-NEXT:    rldimi 4, 4, 32, 0
 ; P8-LE-NEXT:    std 4, 0(3)
 ; P8-LE-NEXT:    blr
@@ -1247,10 +1247,10 @@ entry:
 define dso_local void @memsetTailV0B5(ptr nocapture noundef writeonly %p) local_unnamed_addr {
 ; P8-BE-LABEL: memsetTailV0B5:
 ; P8-BE:       # %bb.0: # %entry
+; P8-BE-NEXT:    li 4, 15
+; P8-BE-NEXT:    stb 4, 4(3)
 ; P8-BE-NEXT:    lis 4, 3855
-; P8-BE-NEXT:    li 5, 15
 ; P8-BE-NEXT:    ori 4, 4, 3855
-; P8-BE-NEXT:    stb 5, 4(3)
 ; P8-BE-NEXT:    stw 4, 0(3)
 ; P8-BE-NEXT:    blr
 ;
@@ -1273,10 +1273,10 @@ define dso_local void @memsetTailV0B5(ptr nocapture noundef writeonly %p) local_
 ;
 ; P8-LE-LABEL: memsetTailV0B5:
 ; P8-LE:       # %bb.0: # %entry
+; P8-LE-NEXT:    li 4, 15
+; P8-LE-NEXT:    stb 4, 4(3)
 ; P8-LE-NEXT:    lis 4, 3855
-; P8-LE-NEXT:    li 5, 15
 ; P8-LE-NEXT:    ori 4, 4, 3855
-; P8-LE-NEXT:    stb 5, 4(3)
 ; P8-LE-NEXT:    stw 4, 0(3)
 ; P8-LE-NEXT:    blr
 ;
