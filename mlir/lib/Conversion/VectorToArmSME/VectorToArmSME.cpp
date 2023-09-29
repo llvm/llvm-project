@@ -431,9 +431,8 @@ struct TransposeOpToArmSMELowering
 
 void mlir::populateVectorToArmSMEPatterns(RewritePatternSet &patterns,
                                           MLIRContext &ctx) {
-  patterns.add<TransferReadPermutationToArmSMELowering,
-               TransferWriteToArmSMELowering, VectorLoadToArmSMELowering,
-               VectorStoreToArmSMELowering, ConstantOpToArmSMELowering,
-               BroadcastOpToArmSMELowering, SplatOpToArmSMELowering,
-               TransposeOpToArmSMELowering>(&ctx);
+  patterns.add<BroadcastOpToArmSMELowering, ConstantOpToArmSMELowering,
+               SplatOpToArmSMELowering, TransferReadPermutationToArmSMELowering,
+               TransferWriteToArmSMELowering, TransposeOpToArmSMELowering,
+               VectorLoadToArmSMELowering, VectorStoreToArmSMELowering>(&ctx);
 }
