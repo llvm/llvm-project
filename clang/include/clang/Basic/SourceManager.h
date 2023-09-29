@@ -474,9 +474,10 @@ static_assert(sizeof(FileInfo) <= sizeof(ExpansionInfo),
 /// SourceManager keeps an array of these objects, and they are uniquely
 /// identified by the FileID datatype.
 class SLocEntry {
-  static constexpr int OffsetBits = 8 * sizeof(SourceLocation::UIntTy) - 1;
+  static constexpr int OffsetBits = 8 * sizeof(SourceLocation::UIntTy) - 2;
   SourceLocation::UIntTy Offset : OffsetBits;
   SourceLocation::UIntTy IsExpansion : 1;
+  SourceLocation::UIntTy Loaded : 1;
   union {
     FileInfo File;
     ExpansionInfo Expansion;
@@ -489,6 +490,8 @@ public:
 
   bool isExpansion() const { return IsExpansion; }
   bool isFile() const { return !isExpansion(); }
+  [[nodiscard]] bool isLoaded() const { return Loaded; }
+  void setLoaded(bool Value) { Loaded = Value; }
 
   const FileInfo &getFile() const {
     assert(isFile() && "Not a file SLocEntry!");
@@ -716,13 +719,7 @@ class SourceManager : public RefCountedBase<SourceManager> {
   /// The highest possible offset is 2^31-1 (2^63-1 for 64-bit source
   /// locations), so CurrentLoadedOffset starts at 2^31 (2^63 resp.).
   static const SourceLocation::UIntTy MaxLoadedOffset =
-      1ULL << (8 * sizeof(SourceLocation::UIntTy) - 1);
-
-  /// A bitmap that indicates whether the entries of LoadedSLocEntryTable
-  /// have already been loaded from the external source.
-  ///
-  /// Same indexing as LoadedSLocEntryTable.
-  llvm::BitVector SLocEntryLoaded;
+      1ULL << (8 * sizeof(SourceLocation::UIntTy) - 2);
 
   /// An external source for source location entries.
   ExternalSLocEntrySource *ExternalSLocEntries = nullptr;
@@ -1710,7 +1707,8 @@ public:
   const SrcMgr::SLocEntry &getLoadedSLocEntry(unsigned Index,
                                               bool *Invalid = nullptr) const {
     assert(Index < LoadedSLocEntryTable.size() && "Invalid index");
-    if (SLocEntryLoaded[Index])
+    if (LoadedSLocEntryTable.isMaterialized(Index) &&
+        LoadedSLocEntryTable[Index].isLoaded())
       return LoadedSLocEntryTable[Index];
     return loadSLocEntry(Index, Invalid);
   }

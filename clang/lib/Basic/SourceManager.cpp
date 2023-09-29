@@ -336,7 +336,6 @@ void SourceManager::clearIDTables() {
   MainFileID = FileID();
   LocalSLocEntryTable.clear();
   LoadedSLocEntryTable.clear();
-  SLocEntryLoaded.clear();
   LastLineNoFileIDQuery = FileID();
   LastLineNoContentCache = nullptr;
   LastFileIDLookup = FileID();
@@ -373,7 +372,8 @@ void SourceManager::initializeForReplay(const SourceManager &Old) {
 
   // Ensure all SLocEntries are loaded from the external source.
   for (unsigned I = 0, N = Old.LoadedSLocEntryTable.size(); I != N; ++I)
-    if (!Old.SLocEntryLoaded[I])
+    if (!Old.LoadedSLocEntryTable.isMaterialized(I) ||
+        !Old.LoadedSLocEntryTable[I].isLoaded())
       Old.loadSLocEntry(I, nullptr);
 
   // Inherit any content cache data from the old source manager.
@@ -430,12 +430,14 @@ ContentCache &SourceManager::createMemBufferContentCache(
 
 const SrcMgr::SLocEntry &SourceManager::loadSLocEntry(unsigned Index,
                                                       bool *Invalid) const {
-  assert(!SLocEntryLoaded[Index]);
+  assert(!LoadedSLocEntryTable.isMaterialized(Index) ||
+         !LoadedSLocEntryTable[Index].isLoaded());
   if (ExternalSLocEntries->ReadSLocEntry(-(static_cast<int>(Index) + 2))) {
     if (Invalid)
       *Invalid = true;
     // If the file of the SLocEntry changed we could still have loaded it.
-    if (!SLocEntryLoaded[Index]) {
+    if (!LoadedSLocEntryTable.isMaterialized(Index) ||
+        !LoadedSLocEntryTable[Index].isLoaded()) {
       // Try to recover; create a SLocEntry so the rest of clang can handle it.
       if (!FakeSLocEntryForRecovery)
         FakeSLocEntryForRecovery = std::make_unique<SLocEntry>(SLocEntry::get(
@@ -458,7 +460,6 @@ SourceManager::AllocateLoadedSLocEntries(unsigned NumSLocEntries,
     return std::make_pair(0, 0);
   }
   LoadedSLocEntryTable.resize(LoadedSLocEntryTable.size() + NumSLocEntries);
-  SLocEntryLoaded.resize(LoadedSLocEntryTable.size());
   CurrentLoadedOffset -= TotalSize;
   int ID = LoadedSLocEntryTable.size();
   return std::make_pair(-ID - 1, CurrentLoadedOffset);
@@ -604,10 +605,12 @@ FileID SourceManager::createFileIDImpl(ContentCache &File, StringRef Filename,
     assert(LoadedID != -1 && "Loading sentinel FileID");
     unsigned Index = unsigned(-LoadedID) - 2;
     assert(Index < LoadedSLocEntryTable.size() && "FileID out of range");
-    assert(!SLocEntryLoaded[Index] && "FileID already loaded");
+    assert((!LoadedSLocEntryTable.isMaterialized(Index) ||
+            !LoadedSLocEntryTable[Index].isLoaded()) &&
+           "FileID already loaded");
     LoadedSLocEntryTable[Index] = SLocEntry::get(
         LoadedOffset, FileInfo::get(IncludePos, File, FileCharacter, Filename));
-    SLocEntryLoaded[Index] = true;
+    LoadedSLocEntryTable[Index].setLoaded(true);
     return FileID::get(LoadedID);
   }
   unsigned FileSize = File.getSize();
@@ -665,9 +668,11 @@ SourceManager::createExpansionLocImpl(const ExpansionInfo &Info,
     assert(LoadedID != -1 && "Loading sentinel FileID");
     unsigned Index = unsigned(-LoadedID) - 2;
     assert(Index < LoadedSLocEntryTable.size() && "FileID out of range");
-    assert(!SLocEntryLoaded[Index] && "FileID already loaded");
+    assert((!LoadedSLocEntryTable.isMaterialized(Index) ||
+            !LoadedSLocEntryTable[Index].isLoaded()) &&
+           "FileID already loaded");
     LoadedSLocEntryTable[Index] = SLocEntry::get(LoadedOffset, Info);
-    SLocEntryLoaded[Index] = true;
+    LoadedSLocEntryTable[Index].setLoaded(true);
     return SourceLocation::getMacroLoc(LoadedOffset);
   }
   LocalSLocEntryTable.push_back(SLocEntry::get(NextLocalOffset, Info));
@@ -2223,7 +2228,8 @@ LLVM_DUMP_METHOD void SourceManager::dump() const {
   std::optional<SourceLocation::UIntTy> NextStart;
   for (unsigned Index = 0; Index != LoadedSLocEntryTable.size(); ++Index) {
     int ID = -(int)Index - 2;
-    if (SLocEntryLoaded[Index]) {
+    if (LoadedSLocEntryTable.isMaterialized(Index) &&
+        LoadedSLocEntryTable[Index].isLoaded()) {
       DumpSLocEntry(ID, LoadedSLocEntryTable[Index], NextStart);
       NextStart = LoadedSLocEntryTable[Index].getOffset();
     } else {
@@ -2346,7 +2352,6 @@ size_t SourceManager::getDataStructureSizes() const {
   size_t size = llvm::capacity_in_bytes(MemBufferInfos) +
                 llvm::capacity_in_bytes(LocalSLocEntryTable) +
                 llvm::capacity_in_bytes(LoadedSLocEntryTable) +
-                llvm::capacity_in_bytes(SLocEntryLoaded) +
                 llvm::capacity_in_bytes(FileInfos);
 
   if (OverriddenFilesInfo)
