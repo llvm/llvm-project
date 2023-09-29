@@ -5450,7 +5450,7 @@ Instruction *InstCombinerImpl::foldICmpEquality(ICmpInst &I) {
   Constant *Cst;
   if (match(&I, m_c_ICmp(PredUnused,
                          m_OneUse(m_Xor(m_Value(A), m_ImmConstant(Cst))),
-                         m_Value(B))))
+                         m_CombineAnd(m_Value(B), m_Unless(m_ImmConstant())))))
     return new ICmpInst(Pred, Builder.CreateXor(A, B), Cst);
 
   return nullptr;
