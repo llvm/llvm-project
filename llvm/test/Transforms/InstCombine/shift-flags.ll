@@ -5,7 +5,7 @@ define i8 @shl_add_nuw(i8 %amt_in, i8 %cnt_in) {
 ; CHECK-LABEL: @shl_add_nuw(
 ; CHECK-NEXT:    [[AMT:%.*]] = and i8 [[AMT_IN:%.*]], 63
 ; CHECK-NEXT:    [[CNT:%.*]] = and i8 [[CNT_IN:%.*]], 2
-; CHECK-NEXT:    [[R:%.*]] = shl i8 [[AMT]], [[CNT]]
+; CHECK-NEXT:    [[R:%.*]] = shl nuw i8 [[AMT]], [[CNT]]
 ; CHECK-NEXT:    ret i8 [[R]]
 ;
   %amt = and i8 %amt_in, 63
@@ -31,7 +31,7 @@ define i8 @shl_add_nuw_and_nsw(i8 %amt_in, i8 %cnt_in) {
 ; CHECK-LABEL: @shl_add_nuw_and_nsw(
 ; CHECK-NEXT:    [[AMT:%.*]] = and i8 [[AMT_IN:%.*]], 31
 ; CHECK-NEXT:    [[CNT:%.*]] = and i8 [[CNT_IN:%.*]], 2
-; CHECK-NEXT:    [[R:%.*]] = shl i8 [[AMT]], [[CNT]]
+; CHECK-NEXT:    [[R:%.*]] = shl nuw nsw i8 [[AMT]], [[CNT]]
 ; CHECK-NEXT:    ret i8 [[R]]
 ;
   %amt = and i8 %amt_in, 31
@@ -44,7 +44,7 @@ define i8 @shl_add_nsw(i8 %amt_in, i8 %cnt_in) {
 ; CHECK-LABEL: @shl_add_nsw(
 ; CHECK-NEXT:    [[AMT:%.*]] = or i8 [[AMT_IN:%.*]], -32
 ; CHECK-NEXT:    [[CNT:%.*]] = and i8 [[CNT_IN:%.*]], 2
-; CHECK-NEXT:    [[R:%.*]] = shl i8 [[AMT]], [[CNT]]
+; CHECK-NEXT:    [[R:%.*]] = shl nsw i8 [[AMT]], [[CNT]]
 ; CHECK-NEXT:    ret i8 [[R]]
 ;
   %amt = or i8 %amt_in, 224
@@ -70,7 +70,7 @@ define i8 @lshr_add_exact(i8 %amt_in, i8 %cnt_in) {
 ; CHECK-LABEL: @lshr_add_exact(
 ; CHECK-NEXT:    [[AMT:%.*]] = and i8 [[AMT_IN:%.*]], -4
 ; CHECK-NEXT:    [[CNT:%.*]] = and i8 [[CNT_IN:%.*]], 2
-; CHECK-NEXT:    [[R:%.*]] = lshr i8 [[AMT]], [[CNT]]
+; CHECK-NEXT:    [[R:%.*]] = lshr exact i8 [[AMT]], [[CNT]]
 ; CHECK-NEXT:    ret i8 [[R]]
 ;
   %amt = and i8 %amt_in, -4
@@ -96,7 +96,7 @@ define i8 @ashr_add_exact(i8 %amt_in, i8 %cnt_in) {
 ; CHECK-LABEL: @ashr_add_exact(
 ; CHECK-NEXT:    [[AMT:%.*]] = and i8 [[AMT_IN:%.*]], -14
 ; CHECK-NEXT:    [[CNT:%.*]] = and i8 [[CNT_IN:%.*]], 1
-; CHECK-NEXT:    [[R:%.*]] = ashr i8 [[AMT]], [[CNT]]
+; CHECK-NEXT:    [[R:%.*]] = ashr exact i8 [[AMT]], [[CNT]]
 ; CHECK-NEXT:    ret i8 [[R]]
 ;
   %amt = and i8 %amt_in, -14

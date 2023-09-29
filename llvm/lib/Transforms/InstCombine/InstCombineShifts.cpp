@@ -941,6 +941,60 @@ Instruction *InstCombinerImpl::foldLShrOverflowBit(BinaryOperator &I) {
   return new ZExtInst(Overflow, Ty);
 }
 
+// Try to set nuw/nsw flags on shl or exact flag on lshr/ashr using knownbits.
+static bool setShiftFlags(BinaryOperator &I, const SimplifyQuery &Q) {
+  assert(I.isShift() && "Expected a shift as input");
+  // We already have all the flags.
+  if (I.getOpcode() == Instruction::Shl) {
+    if (I.hasNoUnsignedWrap() && I.hasNoSignedWrap())
+      return false;
+  } else {
+    if (I.isExact())
+      return false;
+  }
+
+  // Compute what we know about shift count.
+  KnownBits KnownCnt =
+      computeKnownBits(I.getOperand(1), Q.DL, /*Depth*/ 0, Q.AC, Q.CxtI, Q.DT);
+  // If we know nothing about shift count or its a poison shift, we won't be
+  // able to prove anything so return before computing shift amount.
+  if (KnownCnt.isUnknown())
+    return false;
+  unsigned BitWidth = KnownCnt.getBitWidth();
+  APInt MaxCnt = KnownCnt.getMaxValue();
+  if (MaxCnt.uge(BitWidth))
+    return false;
+
+  KnownBits KnownAmt =
+      computeKnownBits(I.getOperand(0), Q.DL, /*Depth*/ 0, Q.AC, Q.CxtI, Q.DT);
+  bool Changed = false;
+
+  if (I.getOpcode() == Instruction::Shl) {
+    // If we have as many leading zeros than maximum shift cnt we have nuw.
+    if (!I.hasNoUnsignedWrap() && MaxCnt.ule(KnownAmt.countMinLeadingZeros())) {
+      I.setHasNoUnsignedWrap();
+      Changed = true;
+    }
+    // If we have more sign bits than maximum shift cnt we have nsw.
+    if (!I.hasNoSignedWrap()) {
+      if (MaxCnt.ult(KnownAmt.countMinSignBits()) ||
+          MaxCnt.ult(ComputeNumSignBits(I.getOperand(0), Q.DL, /*Depth*/ 0,
+                                        Q.AC, Q.CxtI, Q.DT))) {
+        I.setHasNoSignedWrap();
+        Changed = true;
+      }
+    }
+    return Changed;
+  }
+  if (!I.isExact()) {
+    // If we have at least as many trailing zeros as maximum count then we have
+    // exact.
+    Changed = MaxCnt.ule(KnownAmt.countMinTrailingZeros());
+    I.setIsExact(Changed);
+  }
+  return Changed;
+}
+
 Instruction *InstCombinerImpl::visitShl(BinaryOperator &I) {
   const SimplifyQuery Q = SQ.getWithInstruction(&I);
 
@@ -1121,21 +1175,10 @@ Instruction *InstCombinerImpl::visitShl(BinaryOperator &I) {
       Value *NewShift = Builder.CreateShl(X, Op1);
       return BinaryOperator::CreateSub(NewLHS, NewShift);
     }
-
-    // If the shifted-out value is known-zero, then this is a NUW shift.
-    if (!I.hasNoUnsignedWrap() &&
-        MaskedValueIsZero(Op0, APInt::getHighBitsSet(BitWidth, ShAmtC), 0,
-                          &I)) {
-      I.setHasNoUnsignedWrap();
-      return &I;
-    }
-
-    // If the shifted-out value is all signbits, then this is a NSW shift.
-    if (!I.hasNoSignedWrap() && ComputeNumSignBits(Op0, 0, &I) > ShAmtC) {
-      I.setHasNoSignedWrap();
-      return &I;
-    }
   }
+
+  if (setShiftFlags(I, Q))
+    return &I;
 
   // Transform  (x >> y) << y  to  x & (-1 << y)
   // Valid for any type of right-shift.
@@ -1427,14 +1470,11 @@ Instruction *InstCombinerImpl::visitLShr(BinaryOperator &I) {
       Value *And = Builder.CreateAnd(BoolX, BoolY);
       return new ZExtInst(And, Ty);
     }
-
-    // If the shifted-out value is known-zero, then this is an exact shift.
-    if (!I.isExact() &&
-        MaskedValueIsZero(Op0, APInt::getLowBitsSet(BitWidth, ShAmtC), 0, &I)) {
-      I.setIsExact();
-      return &I;
-    }
   }
+
+  const SimplifyQuery Q = SQ.getWithInstruction(&I);
+  if (setShiftFlags(I, Q))
+    return &I;
 
   // Transform  (x << y) >> y  to  x & (-1 >> y)
   if (match(Op0, m_OneUse(m_Shl(m_Value(X), m_Specific(Op1))))) {
@@ -1594,14 +1634,11 @@ Instruction *InstCombinerImpl::visitAShr(BinaryOperator &I) {
       if (match(Op0, m_OneUse(m_NSWSub(m_Value(X), m_Value(Y)))))
         return new SExtInst(Builder.CreateICmpSLT(X, Y), Ty);
     }
-
-    // If the shifted-out value is known-zero, then this is an exact shift.
-    if (!I.isExact() &&
-        MaskedValueIsZero(Op0, APInt::getLowBitsSet(BitWidth, ShAmt), 0, &I)) {
-      I.setIsExact();
-      return &I;
-    }
   }
+
+  const SimplifyQuery Q = SQ.getWithInstruction(&I);
+  if (setShiftFlags(I, Q))
+    return &I;
 
   // Prefer `-(x & 1)` over `(x << (bitwidth(x)-1)) a>> (bitwidth(x)-1)`
   // as the pattern to splat the lowest bit.
