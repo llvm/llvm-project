@@ -903,10 +903,6 @@ static void genCombiner(fir::FirOpBuilder &builder, mlir::Location loc,
     assert(!seqTy.hasDynamicExtents() &&
            "Assumed shaped array should be boxed for reduction");
     mlir::Type refTy = fir::ReferenceType::get(seqTy.getEleTy());
-    unsigned nbRangeArgs = recipe.getCombinerRegion().getArguments().size() - 2;
-    assert((nbRangeArgs / 3 == seqTy.getDimension()) &&
-           "Expect 3 block arguments per dimension");
-    (void)nbRangeArgs;
     llvm::SmallVector<fir::DoLoopOp> loops;
     llvm::SmallVector<mlir::Value> ivs;
     if (allConstantBound) {
