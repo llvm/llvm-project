@@ -245,6 +245,8 @@ public:
   /// Returns the GCD of the columns of the specified row.
   MPInt normalizeRow(unsigned row);
 
+  // Return the integer inverse of the matrix, leaving the calling object unmodified.
+  IntMatrix integerInverse();
 };
 
 // An inherited class for rational matrices, with no new data attributes.

@@ -424,6 +424,25 @@ MPInt IntMatrix::normalizeRow(unsigned row) {
   return normalizeRow(row, getNumColumns());
 }
 
+IntMatrix IntMatrix::integerInverse()
+{
+    Fraction det = Fraction(determinant(), 1);
+    FracMatrix newMat(getNumRows(), getNumColumns());
+    for (unsigned i = 0; i < getNumRows(); i++)
+      for (unsigned j = 0; j < getNumColumns(); j++)
+        newMat(i, j) = Fraction(at(i, j), 1);
+
+    FracMatrix fracInverse = newMat.inverse();
+    
+    IntMatrix intInverse(getNumRows(), getNumColumns());
+    for (unsigned i = 0; i < getNumRows(); i++)
+      for (unsigned j = 0; j < getNumColumns(); j++)
+        intInverse(i, j) = (fracInverse(i, j) * det).getAsInteger();
+
+    return intInverse;
+}
+
+
 FracMatrix FracMatrix::identity(unsigned dimension) {
   FracMatrix matrix(dimension, dimension);
   for (unsigned i = 0; i < dimension; ++i)
