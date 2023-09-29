@@ -2747,6 +2747,27 @@ cc_library(
 )
 
 cc_library(
+    name = "OrcDebugging",
+    srcs = glob([
+        "lib/ExecutionEngine/Orc/Debugging/*.cpp",
+    ]),
+    hdrs = glob([
+        "include/llvm/ExecutionEngine/Orc/Debugging/*.h",
+    ]),
+    copts = llvm_copts,
+    deps = [
+        ":BinaryFormat",
+        ":DebugInfo",
+        ":OrcShared",
+        ":OrcJIT",
+        ":JITLink",
+        ":Support",
+        ":TargetParser",
+    ],
+)
+
+
+cc_library(
     name = "OrcTargetProcess",
     srcs = glob([
         "lib/ExecutionEngine/Orc/TargetProcess/*.cpp",
@@ -3734,6 +3755,7 @@ cc_binary(
         ":MCDisassembler",
         ":MCJIT",
         ":Object",
+        ":OrcDebugging",
         ":OrcJIT",
         ":OrcShared",
         ":OrcTargetProcess",
