@@ -45,9 +45,8 @@ TEST(PagedVectorTest, FullPageFillingTest) {
   EXPECT_EQ(V.empty(), false);
   EXPECT_EQ(V.size(), 10ULL);
   EXPECT_EQ(V.capacity(), 10ULL);
-  for (int I = 0; I < 10; ++I) {
+  for (int I = 0; I < 10; ++I)
     V[I] = I;
-  }
   EXPECT_EQ(V.empty(), false);
   EXPECT_EQ(V.size(), 10ULL);
   EXPECT_EQ(V.capacity(), 10ULL);
