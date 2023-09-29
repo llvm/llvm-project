@@ -292,6 +292,18 @@ template <> struct DenseMapInfo<clang::FileEntryRef> {
     // It's safe to use operator==.
     return LHS == RHS;
   }
+
+  /// Support for finding `const FileEntry *` in a `DenseMap<FileEntryRef, T>`.
+  /// @{
+  static unsigned getHashValue(const clang::FileEntry *Val) {
+    return llvm::hash_value(Val);
+  }
+  static bool isEqual(const clang::FileEntry *LHS, clang::FileEntryRef RHS) {
+    if (RHS.isSpecialDenseMapKey())
+      return false;
+    return LHS == RHS;
+  }
+  /// @}
 };
 
 } // end namespace llvm

@@ -2913,8 +2913,8 @@ void CGOpenMPRuntime::createOffloadEntriesAndInfoMetadata() {
       for (auto I = CGM.getContext().getSourceManager().fileinfo_begin(),
                 E = CGM.getContext().getSourceManager().fileinfo_end();
            I != E; ++I) {
-        if (I->getFirst()->getUniqueID().getDevice() == EntryInfo.DeviceID &&
-            I->getFirst()->getUniqueID().getFile() == EntryInfo.FileID) {
+        if (I->getFirst().getUniqueID().getDevice() == EntryInfo.DeviceID &&
+            I->getFirst().getUniqueID().getFile() == EntryInfo.FileID) {
           Loc = CGM.getContext().getSourceManager().translateFileLineCol(
               I->getFirst(), EntryInfo.Line, 1);
           break;
