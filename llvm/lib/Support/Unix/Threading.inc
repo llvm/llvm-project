@@ -55,10 +55,6 @@
 #include <unistd.h>      // For syscall()
 #endif
 
-#if defined(_AIX)
-#include <sys/systemcfg.h>
-#endif
-
 namespace llvm {
 pthread_t
 llvm_execute_on_thread_impl(void *(*ThreadFunc)(void *), void *Arg,
@@ -375,7 +371,7 @@ static int computeHostNumPhysicalCores() {
   }
   return CPU_COUNT(&Enabled);
 }
-#elif defined(__linux__) && defined(__s390x__)
+#elif (defined(__linux__) && defined(__s390x__)) || defined(_AIX)
 static int computeHostNumPhysicalCores() {
   return sysconf(_SC_NPROCESSORS_ONLN);
 }
@@ -436,8 +432,6 @@ static int computeHostNumPhysicalCores() {
       static_cast<uintptr_t>(reinterpret_cast<unsigned int &>(CVT[CVTCSD])));
   return reinterpret_cast<int &>(CSD[CSD_NUMBER_ONLINE_STANDARD_CPS]);
 }
-#elif defined(_AIX)
-static int computeHostNumPhysicalCores() { return _system_configuration.ncpus; }
 #else
 // On other systems, return -1 to indicate unknown.
 static int computeHostNumPhysicalCores() { return -1; }
