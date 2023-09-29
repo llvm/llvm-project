@@ -1011,7 +1011,7 @@ public:
   OptionalFileEntryRef bypassFileContentsOverride(FileEntryRef File);
 
   /// Specify that a file is transient.
-  void setFileIsTransient(const FileEntry *SourceFile);
+  void setFileIsTransient(FileEntryRef SourceFile);
 
   /// Specify that all files that are read during this compilation are
   /// transient.
