@@ -472,6 +472,12 @@ def FeatureDPALU_DPP : SubtargetFeature<"dpp-64bit",
   "Support DPP (Data Parallel Primitives) extension in DP ALU"
 >;
 
+def FeatureDPPSrc1SGPR : SubtargetFeature<"dpp-src1-sgpr",
+  "HasDPPSrc1SGPR",
+  "true",
+  "Support SGPR for Src1 of DPP instructions"
+>;
+
 def FeaturePackedFP32Ops : SubtargetFeature<"packed-fp32-ops",
   "HasPackedFP32Ops",
   "true",
@@ -1383,11 +1389,13 @@ def FeatureISAVersion11_0_3 : FeatureSet<
 
 def FeatureISAVersion11_5_0 : FeatureSet<
   !listconcat(FeatureISAVersion11_Common.Features,
-    [FeatureSALUFloatInsts])>;
+    [FeatureSALUFloatInsts,
+     FeatureDPPSrc1SGPR])>;
 
 def FeatureISAVersion11_5_1 : FeatureSet<
   !listconcat(FeatureISAVersion11_Common.Features,
     [FeatureSALUFloatInsts,
+     FeatureDPPSrc1SGPR,
      FeatureGFX11FullVGPRs])>;
 
 //===----------------------------------------------------------------------===//

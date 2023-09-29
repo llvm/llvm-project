@@ -128,6 +128,7 @@ protected:
   bool HasDPP = false;
   bool HasDPP8 = false;
   bool HasDPALU_DPP = false;
+  bool HasDPPSrc1SGPR = false;
   bool HasPackedFP32Ops = false;
   bool HasImageInsts = false;
   bool HasExtendedImageInsts = false;
@@ -915,6 +916,8 @@ public:
   bool hasDPALU_DPP() const {
     return HasDPALU_DPP;
   }
+
+  bool hasDPPSrc1SGPR() const { return HasDPPSrc1SGPR; }
 
   bool hasPackedFP32Ops() const {
     return HasPackedFP32Ops;
