@@ -1077,13 +1077,14 @@ ClangExpressionParser::ParseInternal(DiagnosticManager &diagnostic_manager,
   // While parsing the Sema will call this consumer with the provided
   // completion suggestions.
   if (completion_consumer) {
-    auto main_file = source_mgr.getFileEntryForID(source_mgr.getMainFileID());
+    auto main_file =
+        source_mgr.getFileEntryRefForID(source_mgr.getMainFileID());
     auto &PP = m_compiler->getPreprocessor();
     // Lines and columns start at 1 in Clang, but code completion positions are
     // indexed from 0, so we need to add 1 to the line and column here.
     ++completion_line;
     ++completion_column;
-    PP.SetCodeCompletionPoint(main_file, completion_line, completion_column);
+    PP.SetCodeCompletionPoint(*main_file, completion_line, completion_column);
   }
 
   ASTConsumer *ast_transformer =
