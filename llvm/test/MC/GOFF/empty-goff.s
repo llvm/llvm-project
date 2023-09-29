@@ -1,5 +1,6 @@
 * RUN: llvm-mc <%s --triple s390x-ibm-zos --filetype=obj -o - | \
 * RUN:   od -Ax -tx1 -v | FileCheck --ignore-case %s
+* REQUIRES: systemz-registered-target
 
 * Header record:
 *  03 is prefix byte
