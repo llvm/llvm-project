@@ -2085,6 +2085,10 @@ bool hasVOPD(const MCSubtargetInfo &STI) {
   return STI.hasFeature(AMDGPU::FeatureVOPD);
 }
 
+bool hasDPPSrc1SGPR(const MCSubtargetInfo &STI) {
+  return STI.hasFeature(AMDGPU::FeatureDPPSrc1SGPR);
+}
+
 unsigned hasKernargPreload(const MCSubtargetInfo &STI) {
   return STI.hasFeature(AMDGPU::FeatureKernargPreload);
 }
