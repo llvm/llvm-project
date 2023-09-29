@@ -35,10 +35,10 @@ static int unused;
 // CHECK-NEXT: {{^}}# 1 "{{.*[/\\]Inputs(/|\\\\)}}rewrite-includes1.h" 1{{$}}
 // CHECK-NEXT: {{^}}#if 0 /* expanded by -frewrite-includes */{{$}}
 // CHECK-NEXT: {{^}}#pragma clang system_header{{$}}
-// CHECK-NEXT: {{^}}#endif /*  expanded by -frewrite-includes */{{$}}
+// CHECK-NEXT: {{^}}#endif /* expanded by -frewrite-includes */{{$}}
 // CHECK-NEXT: {{^}}# 2 "{{.*[/\\]Inputs(/|\\\\)}}rewrite-includes1.h" 3{{$}}
 // CHECK-NEXT: {{^}}int included_line1;{{$}}
-// CHECK-NEXT: {{^}}#if defined(__CLANG_REWRITTEN_INCLUDES) /* rewrite-includes2.h expanded by -frewrite-includes */{{$}}
+// CHECK-NEXT: {{^}}#if defined(__CLANG_REWRITTEN_INCLUDES) || defined(__CLANG_REWRITTEN_SYSTEM_INCLUDES) /* rewrite-includes2.h expanded by -frewrite-includes */{{$}}
 // CHECK-NEXT: {{^}}#include "rewrite-includes2.h"{{$}}
 // CHECK-NEXT: {{^}}#else /* rewrite-includes2.h expanded by -frewrite-includes */{{$}}
 // CHECK-NEXT: {{^}}# 3 "{{.*[/\\]Inputs(/|\\\\)}}rewrite-includes1.h" 3{{$}}
@@ -62,7 +62,7 @@ static int unused;
 // CHECK-NEXT: {{^}}# 12 "{{.*}}rewrite-includes.c"{{$}}
 // CHECK-NEXT: {{^}}#if 0 /* expanded by -frewrite-includes */{{$}}
 // CHECK-NEXT: {{^}}#include "rewrite-includes4.h"{{$}}
-// CHECK-NEXT: {{^}}#endif /*  expanded by -frewrite-includes */{{$}}
+// CHECK-NEXT: {{^}}#endif /* expanded by -frewrite-includes */{{$}}
 // CHECK-NEXT: {{^}}# 12 "{{.*}}rewrite-includes.c"{{$}}
 // CHECK-NEXT: {{^}}# 13 "{{.*}}rewrite-includes.c"{{$}}
 // CHECK-NEXT: {{^}}#endif{{$}}
@@ -84,7 +84,7 @@ static int unused;
 // CHECK-NEXT: {{^}}# 1 "{{.*[/\\]Inputs(/|\\\\)}}rewrite-includes6.h" 1{{$}}
 // CHECK-NEXT: {{^}}#if 0 /* expanded by -frewrite-includes */{{$}}
 // CHECK-NEXT: {{^}}#pragma once{{$}}
-// CHECK-NEXT: {{^}}#endif /*  expanded by -frewrite-includes */{{$}}
+// CHECK-NEXT: {{^}}#endif /* expanded by -frewrite-includes */{{$}}
 // CHECK-NEXT: {{^}}# 2 "{{.*[/\\]Inputs(/|\\\\)}}rewrite-includes6.h"{{$}}
 // CHECK-NEXT: {{^}}int included_line6;{{$}}
 // CHECK-NEXT: {{^}}#endif /* rewrite-includes6.h expanded by -frewrite-includes */{{$}}
@@ -93,7 +93,7 @@ static int unused;
 // CHECK-NEXT: {{^}}#if 0 /* expanded by -frewrite-includes */{{$}}
 // CHECK-NEXT: {{^}}#include "rewrite-includes6.h" /* comment{{$}}
 // CHECK-NEXT: {{^}}                                  continues */{{$}}
-// CHECK-NEXT: {{^}}#endif /*  expanded by -frewrite-includes */{{$}}
+// CHECK-NEXT: {{^}}#endif /* expanded by -frewrite-includes */{{$}}
 // CHECK-NEXT: {{^}}# 20 "{{.*}}rewrite-includes.c"{{$}}
 // CHECK-NEXT: {{^}}# 21 "{{.*}}rewrite-includes.c"{{$}}
 // CHECK-NEXT: {{^}}#if defined(__CLANG_REWRITTEN_INCLUDES) /* rewrite-includes7.h expanded by -frewrite-includes */{{$}}
@@ -110,7 +110,7 @@ static int unused;
 // CHECK-NEXT: {{^}}# 22 "{{.*}}rewrite-includes.c" 2{{$}}
 // CHECK-NEXT: {{^}}#if 0 /* expanded by -frewrite-includes */{{$}}
 // CHECK-NEXT: {{^}}#include "rewrite-includes7.h"{{$}}
-// CHECK-NEXT: {{^}}#endif /*  expanded by -frewrite-includes */{{$}}
+// CHECK-NEXT: {{^}}#endif /* expanded by -frewrite-includes */{{$}}
 // CHECK-NEXT: {{^}}# 22 "{{.*}}rewrite-includes.c"{{$}}
 // CHECK-NEXT: {{^}}# 23 "{{.*}}rewrite-includes.c"{{$}}
 // CHECK-NEXT: {{^}}#if defined(__CLANG_REWRITTEN_INCLUDES) /* rewrite-includes8.h expanded by -frewrite-includes */{{$}}
@@ -177,9 +177,9 @@ static int unused;
 // CHECKNL-NEXT: {{^}}#else /* rewrite-includes1.h expanded by -frewrite-includes */{{$}}
 // CHECKNL-NEXT: {{^}}#if 0 /* expanded by -frewrite-includes */{{$}}
 // CHECKNL-NEXT: {{^}}#pragma clang system_header{{$}}
-// CHECKNL-NEXT: {{^}}#endif /*  expanded by -frewrite-includes */{{$}}
+// CHECKNL-NEXT: {{^}}#endif /* expanded by -frewrite-includes */{{$}}
 // CHECKNL-NEXT: {{^}}int included_line1;{{$}}
-// CHECKNL-NEXT: {{^}}#if defined(__CLANG_REWRITTEN_INCLUDES) /* rewrite-includes2.h expanded by -frewrite-includes */{{$}}
+// CHECKNL-NEXT: {{^}}#if defined(__CLANG_REWRITTEN_INCLUDES) || defined(__CLANG_REWRITTEN_SYSTEM_INCLUDES) /* rewrite-includes2.h expanded by -frewrite-includes */{{$}}
 // CHECKNL-NEXT: {{^}}#include "rewrite-includes2.h"{{$}}
 // CHECKNL-NEXT: {{^}}#else /* rewrite-includes2.h expanded by -frewrite-includes */{{$}}
 // CHECKNL-NEXT: {{^}}int included_line2;{{$}}
@@ -195,7 +195,7 @@ static int unused;
 // CHECKNL-NEXT: {{^}}#else{{$}}
 // CHECKNL-NEXT: {{^}}#if 0 /* expanded by -frewrite-includes */{{$}}
 // CHECKNL-NEXT: {{^}}#include "rewrite-includes4.h"{{$}}
-// CHECKNL-NEXT: {{^}}#endif /*  expanded by -frewrite-includes */{{$}}
+// CHECKNL-NEXT: {{^}}#endif /* expanded by -frewrite-includes */{{$}}
 // CHECKNL-NEXT: {{^}}#endif{{$}}
 // CHECKNL-NEXT: {{^}}  // indented{{$}}
 // CHECKNL-NEXT: {{^}}#if defined(__CLANG_REWRITTEN_INCLUDES) /* rewrite-includes5.h expanded by -frewrite-includes */{{$}}
@@ -209,14 +209,14 @@ static int unused;
 // CHECKNL-NEXT: {{^}}#else /* rewrite-includes6.h expanded by -frewrite-includes */{{$}}
 // CHECKNL-NEXT: {{^}}#if 0 /* expanded by -frewrite-includes */{{$}}
 // CHECKNL-NEXT: {{^}}#pragma once{{$}}
-// CHECKNL-NEXT: {{^}}#endif /*  expanded by -frewrite-includes */{{$}}
+// CHECKNL-NEXT: {{^}}#endif /* expanded by -frewrite-includes */{{$}}
 // CHECKNL-NEXT: {{^}}int included_line6;{{$}}
 // CHECKNL-NEXT: {{^}}#endif /* rewrite-includes6.h expanded by -frewrite-includes */{{$}}
 // CHECKNL-NEXT: {{^}} {{$}}
 // CHECKNL-NEXT: {{^}}#if 0 /* expanded by -frewrite-includes */{{$}}
 // CHECKNL-NEXT: {{^}}#include "rewrite-includes6.h" /* comment{{$}}
 // CHECKNL-NEXT: {{^}}                                  continues */{{$}}
-// CHECKNL-NEXT: {{^}}#endif /*  expanded by -frewrite-includes */{{$}}
+// CHECKNL-NEXT: {{^}}#endif /* expanded by -frewrite-includes */{{$}}
 // CHECKNL-NEXT: {{^}}#if defined(__CLANG_REWRITTEN_INCLUDES) /* rewrite-includes7.h expanded by -frewrite-includes */{{$}}
 // CHECKNL-NEXT: {{^}}#include "rewrite-includes7.h"{{$}}
 // CHECKNL-NEXT: {{^}}#else /* rewrite-includes7.h expanded by -frewrite-includes */{{$}}
@@ -227,7 +227,7 @@ static int unused;
 // CHECKNL-NEXT: {{^}}#endif /* rewrite-includes7.h expanded by -frewrite-includes */{{$}}
 // CHECKNL-NEXT: {{^}}#if 0 /* expanded by -frewrite-includes */{{$}}
 // CHECKNL-NEXT: {{^}}#include "rewrite-includes7.h"{{$}}
-// CHECKNL-NEXT: {{^}}#endif /*  expanded by -frewrite-includes */{{$}}
+// CHECKNL-NEXT: {{^}}#endif /* expanded by -frewrite-includes */{{$}}
 // CHECKNL-NEXT: {{^}}#if defined(__CLANG_REWRITTEN_INCLUDES) /* rewrite-includes8.h expanded by -frewrite-includes */{{$}}
 // CHECKNL-NEXT: {{^}}#include "rewrite-includes8.h"{{$}}
 // CHECKNL-NEXT: {{^}}#else /* rewrite-includes8.h expanded by -frewrite-includes */{{$}}
