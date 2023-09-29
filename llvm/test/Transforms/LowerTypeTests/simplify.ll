@@ -11,17 +11,19 @@ define i1 @bytearray7(ptr %p) {
 ; CHECK-SAME: ptr [[P:%.*]]) {
 ; CHECK-NEXT:    [[TMP1:%.*]] = ptrtoint ptr [[P]] to i64
 ; CHECK-NEXT:    [[TMP2:%.*]] = sub i64 [[TMP1]], ptrtoint (ptr @__typeid_bytearray7_global_addr to i64)
-; CHECK-NEXT:    [[TMP3:%.*]] = lshr i64 [[TMP2]], zext (i8 ptrtoint (ptr @__typeid_bytearray7_align to i8) to i64)
-; CHECK-NEXT:    [[TMP4:%.*]] = shl i64 [[TMP2]], zext (i8 sub (i8 64, i8 ptrtoint (ptr @__typeid_bytearray7_align to i8)) to i64)
-; CHECK-NEXT:    [[TMP5:%.*]] = or i64 [[TMP3]], [[TMP4]]
-; CHECK-NEXT:    [[TMP6:%.*]] = icmp ule i64 [[TMP5]], ptrtoint (ptr @__typeid_bytearray7_size_m1 to i64)
-; CHECK-NEXT:    br i1 [[TMP6]], label [[TMP7:%.*]], label [[F:%.*]]
-; CHECK:       7:
-; CHECK-NEXT:    [[TMP8:%.*]] = getelementptr i8, ptr @__typeid_bytearray7_byte_array, i64 [[TMP5]]
-; CHECK-NEXT:    [[TMP9:%.*]] = load i8, ptr [[TMP8]], align 1
-; CHECK-NEXT:    [[TMP10:%.*]] = and i8 [[TMP9]], ptrtoint (ptr @__typeid_bytearray7_bit_mask to i8)
-; CHECK-NEXT:    [[TMP11:%.*]] = icmp ne i8 [[TMP10]], 0
-; CHECK-NEXT:    br i1 [[TMP11]], label [[T:%.*]], label [[F]]
+; CHECK-NEXT:    [[TMP3:%.*]] = zext i8 ptrtoint (ptr @__typeid_bytearray7_align to i8) to i64
+; CHECK-NEXT:    [[TMP4:%.*]] = lshr i64 [[TMP2]], [[TMP3]]
+; CHECK-NEXT:    [[TMP5:%.*]] = zext i8 sub (i8 64, i8 ptrtoint (ptr @__typeid_bytearray7_align to i8)) to i64
+; CHECK-NEXT:    [[TMP6:%.*]] = shl i64 [[TMP2]], [[TMP5]]
+; CHECK-NEXT:    [[TMP7:%.*]] = or i64 [[TMP4]], [[TMP6]]
+; CHECK-NEXT:    [[TMP8:%.*]] = icmp ule i64 [[TMP7]], ptrtoint (ptr @__typeid_bytearray7_size_m1 to i64)
+; CHECK-NEXT:    br i1 [[TMP8]], label [[TMP9:%.*]], label [[F:%.*]]
+; CHECK:       9:
+; CHECK-NEXT:    [[TMP10:%.*]] = getelementptr i8, ptr @__typeid_bytearray7_byte_array, i64 [[TMP7]]
+; CHECK-NEXT:    [[TMP11:%.*]] = load i8, ptr [[TMP10]], align 1
+; CHECK-NEXT:    [[TMP12:%.*]] = and i8 [[TMP11]], ptrtoint (ptr @__typeid_bytearray7_bit_mask to i8)
+; CHECK-NEXT:    [[TMP13:%.*]] = icmp ne i8 [[TMP12]], 0
+; CHECK-NEXT:    br i1 [[TMP13]], label [[T:%.*]], label [[F]]
 ; CHECK:       t:
 ; CHECK-NEXT:    ret i1 true
 ; CHECK:       f:
