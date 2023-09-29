@@ -9941,10 +9941,7 @@ const SCEV *ScalarEvolution::computeSCEVAtScope(const SCEV *V, const Loop *L) {
       Constant *C = BuildConstantFromSCEV(OpV);
       if (!C)
         return V;
-      if (C->getType() != Op->getType())
-        C = ConstantExpr::getCast(
-            CastInst::getCastOpcode(C, false, Op->getType(), false), C,
-            Op->getType());
+      assert(C->getType() == Op->getType() && "Type mismatch");
       Operands.push_back(C);
     }
 
