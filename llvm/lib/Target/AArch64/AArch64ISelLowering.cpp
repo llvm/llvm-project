@@ -19390,17 +19390,6 @@ static SDValue performIntrinsicCombine(SDNode *N,
   case Intrinsic::aarch64_neon_sshl:
   case Intrinsic::aarch64_neon_ushl:
     return tryCombineShiftImm(IID, N, DAG);
-  case Intrinsic::aarch64_neon_rshrn: {
-    EVT VT = N->getOperand(1).getValueType();
-    SDLoc DL(N);
-    SDValue Imm =
-        DAG.getConstant(1LLU << (N->getConstantOperandVal(2) - 1), DL, VT);
-    SDValue Add = DAG.getNode(ISD::ADD, DL, VT, N->getOperand(1), Imm);
-    SDValue Sht =
-        DAG.getNode(ISD::SRL, DL, VT, Add,
-                    DAG.getConstant(N->getConstantOperandVal(2), DL, VT));
-    return DAG.getNode(ISD::TRUNCATE, DL, N->getValueType(0), Sht);
-  }
   case Intrinsic::aarch64_neon_sabd:
     return DAG.getNode(ISD::ABDS, SDLoc(N), N->getValueType(0),
                        N->getOperand(1), N->getOperand(2));
