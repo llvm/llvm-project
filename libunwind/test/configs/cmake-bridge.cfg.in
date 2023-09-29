@@ -28,6 +28,14 @@ if @LIBUNWIND_USES_ARM_EHABI@:
 if not @LIBUNWIND_ENABLE_THREADS@:
     config.available_features.add('libunwind-no-threads')
 
+config.extra_executor_env = ""
+if "Memory" in getattr(config, "use_sanitizer", ""):
+    # Avoid calling back into libunwind if we detect a MSan error
+    config.extra_executor_env += " --env MSAN_OPTIONS=fast_unwind_on_fatal=1"
+if "Address" in getattr(config, "use_sanitizer", ""):
+    # Avoid calling back into libunwind if we detect an ASan error
+    config.extra_executor_env += " --env ASAN_OPTIONS=fast_unwind_on_fatal=1"
+
 # Add substitutions for bootstrapping the test suite configuration
 import shlex
 config.substitutions.append(('%{cxx}', shlex.quote('@CMAKE_CXX_COMPILER@')))

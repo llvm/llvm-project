@@ -11,7 +11,7 @@ config.substitutions.append(('%{link_flags}',
     '-nostdlib++ -L %{lib} -lunwind -ldl -Wl,-bbigtoc'
 ))
 config.substitutions.append(('%{exec}',
-    '%{executor} --execdir %T --env LIBPATH=%{lib} -- '
+    f'%{{executor}} --execdir %T --env LIBPATH=%{{lib}}{config.extra_executor_env} -- '
 ))
 
 import os, site

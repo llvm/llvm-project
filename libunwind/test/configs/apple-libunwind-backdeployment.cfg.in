@@ -51,7 +51,7 @@ config.substitutions.append(('%{link_flags}',
     '-nostdlib++ -L %{lib} -lc++ -lc++abi -lunwind'
 ))
 config.substitutions.append(('%{exec}',
-    '%{executor} --execdir %T --env DYLD_LIBRARY_PATH="%{cxx-runtime-root}:%{abi-runtime-root}:%{unwind-runtime-root}" -- '
+    f'%{{executor}} --execdir %T --env DYLD_LIBRARY_PATH="%{{cxx-runtime-root}}:%{{abi-runtime-root}}:%{{unwind-runtime-root}}"{config.extra_executor_env} -- '
 ))
 
 config.stdlib = 'apple-libc++'
