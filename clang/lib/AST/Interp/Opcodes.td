@@ -55,6 +55,7 @@ def ArgCastKind : ArgType { let Name = "CastKind"; }
 def ArgCallExpr : ArgType { let Name = "const CallExpr *"; }
 def ArgOffsetOfExpr : ArgType { let Name = "const OffsetOfExpr *"; }
 def ArgDeclRef : ArgType { let Name = "const DeclRefExpr *"; }
+def ArgCCI : ArgType { let Name = "const ComparisonCategoryInfo *"; }
 
 //===----------------------------------------------------------------------===//
 // Classes of types instructions operate on.
@@ -605,6 +606,10 @@ def NE : EqualityOpcode;
 class ComparisonOpcode : Opcode {
   let Types = [ComparableTypeClass];
   let HasGroup = 1;
+}
+
+def CMP3 : ComparisonOpcode {
+  let Args = [ArgCCI];
 }
 
 def LT : ComparisonOpcode;
