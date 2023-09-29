@@ -14,11 +14,11 @@
 ! HLFIR:   hlfir.assign %[[INIT_VALUE]] to %[[DECLARE]]#0 : f32, !fir.box<!fir.array<?xf32>>
 ! HLFIR:   acc.yield %[[DECLARE]]#0 : !fir.box<!fir.array<?xf32>>
 ! CHECK: } combiner {
-! CHECK: ^bb0(%[[ARG0:.*]]: !fir.box<!fir.array<?xf32>>, %[[ARG1:.*]]: !fir.box<!fir.array<?xf32>>):
+! CHECK: ^bb0(%[[ARG0:.*]]: !fir.box<!fir.array<?xf32>>, %[[ARG1:.*]]: !fir.box<!fir.array<?xf32>>
 ! HLFIR:   %[[BOX_DIMS:.*]]:3 = fir.box_dims %[[ARG0]], %{{.*}} : (!fir.box<!fir.array<?xf32>>, index) -> (index, index, index)
 ! HLFIR:   %[[SHAPE:.*]] = fir.shape %[[BOX_DIMS]]#1 : (index) -> !fir.shape<1>
 ! HLFIR:   %[[ELEMENTAL:.*]] = hlfir.elemental %[[SHAPE]] unordered : (!fir.shape<1>) -> !hlfir.expr<?xf32> {
-! HLFIR:   ^bb0(%arg2: index):
+! HLFIR:   ^bb0(%{{.*}}: index):
 ! HLFIR:     %[[DES_V1:.*]] = hlfir.designate %[[ARG0]] (%{{.*}})  : (!fir.box<!fir.array<?xf32>>, index) -> !fir.ref<f32>
 ! HLFIR:     %[[DES_V2:.*]] = hlfir.designate %[[ARG1]] (%{{.*}})  : (!fir.box<!fir.array<?xf32>>, index) -> !fir.ref<f32>
 ! HLFIR:     %[[LOAD_V1:.*]] = fir.load %[[DES_V1]] : !fir.ref<f32>
@@ -42,7 +42,7 @@
 ! HLFIR:   hlfir.assign %[[INIT_VALUE]] to %[[DECLARE]]#0 : i32, !fir.box<!fir.array<?xi32>>
 ! HLFIR:   acc.yield %[[DECLARE]]#0 : !fir.box<!fir.array<?xi32>>
 ! CHECK: } combiner {
-! CHECK: ^bb0(%[[V1:.*]]: !fir.box<!fir.array<?xi32>>, %[[V2:.*]]: !fir.box<!fir.array<?xi32>>):
+! CHECK: ^bb0(%[[V1:.*]]: !fir.box<!fir.array<?xi32>>, %[[V2:.*]]: !fir.box<!fir.array<?xi32>>
 ! HLFIR:   %[[BOX_DIMS]]:3 = fir.box_dims %[[V1]], %{{.*}} : (!fir.box<!fir.array<?xi32>>, index) -> (index, index, index)
 ! HLFIR:   %[[SHAPE:.*]] = fir.shape %[[BOX_DIMS]]#1 : (index) -> !fir.shape<1>
 ! HLFIR:   %[[ELEMENTAL:.*]] = hlfir.elemental %[[SHAPE]] unordered : (!fir.shape<1>) -> !hlfir.expr<?xi32> {
@@ -241,10 +241,7 @@
 ! CHECK:   }
 ! HLFIR:   acc.yield %[[DECLARE]]#0 : !fir.ref<!fir.array<100xf32>>
 ! CHECK: } combiner {
-! CHECK: ^bb0(%[[ARG0:.*]]: !fir.ref<!fir.array<100xf32>>, %[[ARG1:.*]]: !fir.ref<!fir.array<100xf32>>):
-! CHECK:   %[[LB0:.*]] = arith.constant 0 : index
-! CHECK:   %[[UB0:.*]] = arith.constant 99 : index
-! CHECK:   %[[STEP0:.*]] = arith.constant 1 : index
+! CHECK: ^bb0(%[[ARG0:.*]]: !fir.ref<!fir.array<100xf32>>, %[[ARG1:.*]]: !fir.ref<!fir.array<100xf32>>, %[[LB0:.*]]: index, %[[UB0:.*]]: index, %[[STEP0:.*]]: index):
 ! CHECK:   fir.do_loop %[[IV0:.*]] = %[[LB0]] to %[[UB0]] step %[[STEP0]] {
 ! CHECK:     %[[COORD1:.*]] = fir.coordinate_of %[[ARG0]], %[[IV0]] : (!fir.ref<!fir.array<100xf32>>, index) -> !fir.ref<f32>
 ! CHECK:     %[[COORD2:.*]] = fir.coordinate_of %[[ARG1]], %[[IV0]] : (!fir.ref<!fir.array<100xf32>>, index) -> !fir.ref<f32>
@@ -282,14 +279,8 @@
 ! HLFIR:   %[[DECLARE:.*]]:2 = hlfir.declare %[[ALLOCA]](%[[SHAPE]]) {uniq_name = "acc.reduction.init"} : (!fir.ref<!fir.array<100x10xi32>>, !fir.shape<2>) -> (!fir.ref<!fir.array<100x10xi32>>, !fir.ref<!fir.array<100x10xi32>>)
 ! HLFIR:   acc.yield %[[DECLARE]]#0 : !fir.ref<!fir.array<100x10xi32>>
 ! CHECK: } combiner {
-! CHECK: ^bb0(%[[ARG0:.*]]: !fir.ref<!fir.array<100x10xi32>>, %[[ARG1:.*]]: !fir.ref<!fir.array<100x10xi32>>):
-! CHECK:   %[[LB0:.*]] = arith.constant 0 : index
-! CHECK:   %[[UB0:.*]] = arith.constant 9 : index
-! CHECK:   %[[STEP0:.*]] = arith.constant 1 : index
+! CHECK: ^bb0(%[[ARG0:.*]]: !fir.ref<!fir.array<100x10xi32>>, %[[ARG1:.*]]: !fir.ref<!fir.array<100x10xi32>>, %[[LB0:.*]]: index, %[[UB0:.*]]: index, %[[STEP0:.*]]: index, %[[LB1:.*]]: index, %[[UB1:.*]]: index, %[[STEP1:.*]]: index):
 ! CHECK:   fir.do_loop %[[IV0:.*]] = %[[LB0]] to %[[UB0]] step %[[STEP0]] {
-! CHECK:     %[[LB1:.*]] = arith.constant 0 : index
-! CHECK:     %[[UB1:.*]] = arith.constant 99 : index
-! CHECK:     %[[STEP1:.*]] = arith.constant 1 : index
 ! CHECK:     fir.do_loop %[[IV1:.*]] = %[[LB1]] to %[[UB1]] step %[[STEP1]] {
 ! CHECK:       %[[COORD1:.*]] = fir.coordinate_of %[[ARG0:.*]], %[[IV0]], %[[IV1]] : (!fir.ref<!fir.array<100x10xi32>>, index, index) -> !fir.ref<i32>
 ! CHECK:       %[[COORD2:.*]] = fir.coordinate_of %[[ARG1:.*]], %[[IV0]], %[[IV1]] : (!fir.ref<!fir.array<100x10xi32>>, index, index) -> !fir.ref<i32>
@@ -328,14 +319,8 @@
 ! HLFIR:   %[[DECLARE:.*]]:2 = hlfir.declare %[[ALLOCA]](%[[SHAPE]]) {uniq_name = "acc.reduction.init"} : (!fir.ref<!fir.array<100x10xf32>>, !fir.shape<2>) -> (!fir.ref<!fir.array<100x10xf32>>, !fir.ref<!fir.array<100x10xf32>>)
 ! HLFIR:   acc.yield %[[DECLARE]]#0 : !fir.ref<!fir.array<100x10xf32>>
 ! CHECK: } combiner {
-! CHECK: ^bb0(%[[ARG0:.*]]: !fir.ref<!fir.array<100x10xf32>>, %[[ARG1:.*]]: !fir.ref<!fir.array<100x10xf32>>):
-! CHECK:   %[[LB0:.*]] = arith.constant 0 : index
-! CHECK:   %[[UB0:.*]] = arith.constant 9 : index
-! CHECK:   %[[STEP0:.*]] = arith.constant 1 : index
+! CHECK: ^bb0(%[[ARG0:.*]]: !fir.ref<!fir.array<100x10xf32>>, %[[ARG1:.*]]: !fir.ref<!fir.array<100x10xf32>>, %[[LB0:.*]]: index, %[[UB0:.*]]: index, %[[STEP0:.*]]: index, %[[LB1:.*]]: index, %[[UB1:.*]]: index, %[[STEP1:.*]]: index):
 ! CHECK:   fir.do_loop %[[IV0:.*]] = %[[LB0]] to %[[UB0]] step %[[STEP0]] {
-! CHECK:     %[[LB1:.*]] = arith.constant 0 : index
-! CHECK:     %[[UB1:.*]] = arith.constant 99 : index
-! CHECK:     %[[STEP1:.*]] = arith.constant 1 : index
 ! CHECK:     fir.do_loop %[[IV1:.*]] = %[[LB1]] to %[[UB1]] step %[[STEP1]] {
 ! CHECK:       %[[COORD1:.*]] = fir.coordinate_of %[[ARG0]], %[[IV0]], %[[IV1]] : (!fir.ref<!fir.array<100x10xf32>>, index, index) -> !fir.ref<f32>
 ! CHECK:       %[[COORD2:.*]] = fir.coordinate_of %[[ARG1]], %[[IV0]], %[[IV1]] : (!fir.ref<!fir.array<100x10xf32>>, index, index) -> !fir.ref<f32>
@@ -374,10 +359,7 @@
 ! HLFIR:   %[[DECLARE:.*]]:2 = hlfir.declare %[[ALLOCA]](%[[SHAPE]]) {uniq_name = "acc.reduction.init"} : (!fir.ref<!fir.array<100xi32>>, !fir.shape<1>) -> (!fir.ref<!fir.array<100xi32>>, !fir.ref<!fir.array<100xi32>>)
 ! HLFIR:   acc.yield %[[DECLARE]]#0 : !fir.ref<!fir.array<100xi32>>
 ! CHECK: } combiner {
-! CHECK: ^bb0(%[[ARG0:.*]]: !fir.ref<!fir.array<100xi32>>, %[[ARG1:.*]]: !fir.ref<!fir.array<100xi32>>):
-! CHECK:   %[[LB0:.*]] = arith.constant 0 : index
-! CHECK:   %[[UB0:.*]] = arith.constant 99 : index
-! CHECK:   %[[STEP0:.*]] = arith.constant 1 : index
+! CHECK: ^bb0(%[[ARG0:.*]]: !fir.ref<!fir.array<100xi32>>, %[[ARG1:.*]]: !fir.ref<!fir.array<100xi32>>, %[[LB0:.*]]: index, %[[UB0:.*]]: index, %[[STEP0:.*]]: index):
 ! CHECK:   fir.do_loop %[[IV0:.*]] = %[[LB0]] to %[[UB0]] step %[[STEP0]] {
 ! CHECK:     %[[COORD1:.*]] = fir.coordinate_of %[[ARG0]], %[[IV0]] : (!fir.ref<!fir.array<100xi32>>, index) -> !fir.ref<i32>
 ! CHECK:     %[[COORD2:.*]] = fir.coordinate_of %[[ARG1]], %[[IV0]] : (!fir.ref<!fir.array<100xi32>>, index) -> !fir.ref<i32>
@@ -431,11 +413,8 @@
 ! HLFIR:   %[[DECLARE:.*]]:2 = hlfir.declare %[[ALLOCA]](%[[SHAPE]]) {uniq_name = "acc.reduction.init"} : (!fir.ref<!fir.array<100xi32>>, !fir.shape<1>) -> (!fir.ref<!fir.array<100xi32>>, !fir.ref<!fir.array<100xi32>>)
 ! HLFIR:   acc.yield %[[DECLARE]]#0 : !fir.ref<!fir.array<100xi32>>
 ! CHECK: } combiner {
-! CHECK: ^bb0(%[[ARG0:.*]]: !fir.ref<!fir.array<100xi32>>, %[[ARG1:.*]]: !fir.ref<!fir.array<100xi32>>):
-! CHECK:   %[[LB:.*]] = arith.constant 0 : index
-! CHECK:   %[[UB:.*]] = arith.constant 99 : index
-! CHECK:   %[[STEP:.*]] = arith.constant 1 : index
-! CHECK:   fir.do_loop %[[IV:.*]] = %[[LB]] to %[[UB]] step %[[STEP]] {
+! CHECK: ^bb0(%[[ARG0:.*]]: !fir.ref<!fir.array<100xi32>>, %[[ARG1:.*]]: !fir.ref<!fir.array<100xi32>>, %[[LB0:.*]]: index, %[[UB0:.*]]: index, %[[STEP0:.*]]: index):
+! CHECK:   fir.do_loop %[[IV:.*]] = %[[LB0]] to %[[UB0]] step %[[STEP0]] {
 ! CHECK:     %[[COORD1:.*]] = fir.coordinate_of %[[ARG0]], %[[IV]] : (!fir.ref<!fir.array<100xi32>>, index) -> !fir.ref<i32>
 ! CHECK:     %[[COORD2:.*]] = fir.coordinate_of %[[ARG1]], %[[IV]] : (!fir.ref<!fir.array<100xi32>>, index) -> !fir.ref<i32>
 ! CHECK:     %[[LOAD1:.*]] = fir.load %[[COORD1]] : !fir.ref<i32>
@@ -470,11 +449,8 @@
 ! HLFIR:   %[[DECLARE:.*]]:2 = hlfir.declare %[[ALLOCA]](%[[SHAPE]]) {uniq_name = "acc.reduction.init"} : (!fir.ref<!fir.array<100xf32>>, !fir.shape<1>) -> (!fir.ref<!fir.array<100xf32>>, !fir.ref<!fir.array<100xf32>>)
 ! HLFIR:   acc.yield %[[DECLARE]]#0 : !fir.ref<!fir.array<100xf32>>
 ! CHECK: } combiner {
-! CHECK: ^bb0(%[[ARG0:.*]]: !fir.ref<!fir.array<100xf32>>, %[[ARG1:.*]]: !fir.ref<!fir.array<100xf32>>):
-! CHECK:   %[[LB:.*]] = arith.constant 0 : index
-! CHECK:   %[[UB:.*]] = arith.constant 99 : index
-! CHECK:   %[[STEP:.*]] = arith.constant 1 : index
-! CHECK:   fir.do_loop %[[IV:.*]] = %[[LB]] to %[[UB]] step %[[STEP]] {
+! CHECK: ^bb0(%[[ARG0:.*]]: !fir.ref<!fir.array<100xf32>>, %[[ARG1:.*]]: !fir.ref<!fir.array<100xf32>>, %[[LB0:.*]]: index, %[[UB0:.*]]: index, %[[STEP0:.*]]: index):
+! CHECK:   fir.do_loop %[[IV:.*]] = %[[LB0]] to %[[UB0]] step %[[STEP0]] {
 ! CHECK:   %[[COORD1:.*]] = fir.coordinate_of %[[ARG0]], %[[IV]] : (!fir.ref<!fir.array<100xf32>>, index) -> !fir.ref<f32>
 ! CHECK:   %[[COORD2:.*]] = fir.coordinate_of %[[ARG1]], %[[IV]] : (!fir.ref<!fir.array<100xf32>>, index) -> !fir.ref<f32>
 ! CHECK:   %[[LOAD1:.*]] = fir.load %[[COORD1]] : !fir.ref<f32>
@@ -509,18 +485,9 @@
 ! HLFIR:   %[[DECLARE:.*]]:2 = hlfir.declare %[[ALLOCA]](%[[SHAPE]]) {uniq_name = "acc.reduction.init"} : (!fir.ref<!fir.array<100x10x2xi32>>, !fir.shape<3>) -> (!fir.ref<!fir.array<100x10x2xi32>>, !fir.ref<!fir.array<100x10x2xi32>>)
 ! HLFIR:   acc.yield %[[DECLARE]]#0 : !fir.ref<!fir.array<100x10x2xi32>>
 ! CHECK: } combiner {
-! CHECK: ^bb0(%[[ARG0:.*]]: !fir.ref<!fir.array<100x10x2xi32>>, %[[ARG1:.*]]: !fir.ref<!fir.array<100x10x2xi32>>):
-! CHECK:   %[[LB0:.*]] = arith.constant 0 : index
-! CHECK:   %[[UB0:.*]] = arith.constant 1 : index
-! CHECK:   %[[STEP0:.*]] = arith.constant 1 : index
+! CHECK: ^bb0(%[[ARG0:.*]]: !fir.ref<!fir.array<100x10x2xi32>>, %[[ARG1:.*]]: !fir.ref<!fir.array<100x10x2xi32>>, %[[LB0:.*]]: index, %[[UB0:.*]]: index, %[[STEP0:.*]]: index, %[[LB1:.*]]: index, %[[UB1:.*]]: index, %[[STEP1:.*]]: index, %[[LB2:.*]]: index, %[[UB2:.*]]: index, %[[STEP2:.*]]: index):
 ! CHECK:   fir.do_loop %[[IV0:.*]] = %[[LB0]] to %[[UB0]] step %[[STEP0]] {
-! CHECK:     %[[LB1:.*]] = arith.constant 0 : index
-! CHECK:     %[[UB1:.*]] = arith.constant 9 : index
-! CHECK:     %[[STEP1:.*]] = arith.constant 1 : index
 ! CHECK:     fir.do_loop %[[IV1:.*]] = %[[LB1]] to %[[UB1]] step %[[STEP1]] {
-! CHECK:       %[[LB2:.*]] = arith.constant 0 : index
-! CHECK:       %[[UB2:.*]] = arith.constant 99 : index
-! CHECK:       %[[STEP2:.*]] = arith.constant 1 : index
 ! CHECK:       fir.do_loop %[[IV2:.*]] = %[[LB2]] to %[[UB2]] step %[[STEP2]] {
 ! CHECK:         %[[COORD1:.*]] = fir.coordinate_of %[[ARG0]], %[[IV0]], %[[IV1]], %[[IV2]] : (!fir.ref<!fir.array<100x10x2xi32>>, index, index, index) -> !fir.ref<i32>
 ! CHECK:         %[[COORD2:.*]] = fir.coordinate_of %[[ARG1]], %[[IV0]], %[[IV1]], %[[IV2]] : (!fir.ref<!fir.array<100x10x2xi32>>, index, index, index) -> !fir.ref<i32>
@@ -542,14 +509,8 @@
 ! HLFIR:   %[[DECLARE:.*]]:2 = hlfir.declare %[[ALLOCA]](%[[SHAPE]]) {uniq_name = "acc.reduction.init"} : (!fir.ref<!fir.array<100x10xi32>>, !fir.shape<2>) -> (!fir.ref<!fir.array<100x10xi32>>, !fir.ref<!fir.array<100x10xi32>>)
 ! HLFIR:   acc.yield %[[DECLARE]]#0 : !fir.ref<!fir.array<100x10xi32>>
 ! CHECK: } combiner {
-! CHECK: ^bb0(%[[ARG0:.*]]: !fir.ref<!fir.array<100x10xi32>>, %[[ARG1:.*]]: !fir.ref<!fir.array<100x10xi32>>):
-! CHECK:   %[[LB0:.*]] = arith.constant 0 : index
-! CHECK:   %[[UB0:.*]] = arith.constant 9 : index
-! CHECK:   %[[STEP0:.*]] = arith.constant 1 : index
+! CHECK: ^bb0(%[[ARG0:.*]]: !fir.ref<!fir.array<100x10xi32>>, %[[ARG1:.*]]: !fir.ref<!fir.array<100x10xi32>>, %[[LB0:.*]]: index, %[[UB0:.*]]: index, %[[STEP0:.*]]: index, %[[LB1:.*]]: index, %[[UB1:.*]]: index, %[[STEP1:.*]]: index):
 ! CHECK:   fir.do_loop %[[IV0:.*]] = %[[LB0]] to %[[UB0]] step %[[STEP0]] {
-! CHECK:     %[[LB1:.*]] = arith.constant 0 : index
-! CHECK:     %[[UB1:.*]] = arith.constant 99 : index
-! CHECK:     %[[STEP1:.*]] = arith.constant 1 : index
 ! CHECK:     fir.do_loop %[[IV1:.*]] = %[[LB1]] to %[[UB1]] step %[[STEP1]] {
 ! CHECK:       %[[COORD1:.*]] = fir.coordinate_of %[[ARG0]], %[[IV0]], %[[IV1]] : (!fir.ref<!fir.array<100x10xi32>>, index, index) -> !fir.ref<i32>
 ! CHECK:       %[[COORD2:.*]] = fir.coordinate_of %[[ARG1]], %[[IV0]], %[[IV1]] : (!fir.ref<!fir.array<100x10xi32>>, index, index) -> !fir.ref<i32>
@@ -570,11 +531,8 @@
 ! HLFIR:   %[[DECLARE:.*]]:2 = hlfir.declare %[[ALLOCA]](%[[SHAPE]]) {uniq_name = "acc.reduction.init"} : (!fir.ref<!fir.array<100xi32>>, !fir.shape<1>) -> (!fir.ref<!fir.array<100xi32>>, !fir.ref<!fir.array<100xi32>>)
 ! HFLIR:   acc.yield %[[DECLARE]]#0 : !fir.ref<!fir.array<100xi32>>
 ! CHECK: } combiner {
-! CHECK: ^bb0(%[[ARG0:.*]]: !fir.ref<!fir.array<100xi32>>, %[[ARG1:.*]]: !fir.ref<!fir.array<100xi32>>):
-! CHECK:   %[[LB:.*]] = arith.constant 0 : index
-! CHECK:   %[[UB:.*]] = arith.constant 99 : index
-! CHECK:   %[[STEP:.*]] = arith.constant 1 : index
-! CHECK:   fir.do_loop %[[IV:.*]] = %[[LB]] to %[[UB]] step %[[STEP]] {
+! CHECK: ^bb0(%[[ARG0:.*]]: !fir.ref<!fir.array<100xi32>>, %[[ARG1:.*]]: !fir.ref<!fir.array<100xi32>>, %[[LB0:.*]]: index, %[[UB0:.*]]: index, %[[STEP0:.*]]: index):
+! CHECK:   fir.do_loop %[[IV:.*]] = %[[LB0]] to %[[UB0]] step %[[STEP0]] {
 ! CHECK:     %[[COORD1:.*]] = fir.coordinate_of %[[ARG0]], %[[IV]] : (!fir.ref<!fir.array<100xi32>>, index) -> !fir.ref<i32>
 ! CHECK:     %[[COORD2:.*]] = fir.coordinate_of %[[ARG1]], %[[IV]] : (!fir.ref<!fir.array<100xi32>>, index) -> !fir.ref<i32>
 ! CHECK:     %[[LOAD1:.*]] = fir.load %[[COORD1]] : !fir.ref<i32>
