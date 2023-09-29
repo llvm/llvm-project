@@ -525,7 +525,11 @@ function(add_integration_test test_name)
                            --target=${LIBC_GPU_TARGET_TRIPLE})
   endif()
 
-  target_link_options(${fq_build_target_name} PRIVATE -nolibc -nostartfiles -nostdlib++ -static)
+  if(LIBC_TARGET_ARCHITECTURE_IS_GPU)
+    target_link_options(${fq_build_target_name} PRIVATE -nostdlib -static)
+  else()
+    target_link_options(${fq_build_target_name} PRIVATE -nolibc -nostartfiles -nostdlib++ -static)
+  endif()
   target_link_libraries(
     ${fq_build_target_name}
     # The NVIDIA 'nvlink' linker does not currently support static libraries.
