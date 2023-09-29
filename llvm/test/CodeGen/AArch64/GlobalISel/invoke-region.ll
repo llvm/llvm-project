@@ -38,8 +38,8 @@ define i1 @test_lpad_phi_widen_into_pred() personality ptr @__gxx_personality_v0
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.3.continue:
   ; CHECK-NEXT:   [[PHI1:%[0-9]+]]:_(s16) = G_PHI [[C2]](s16), %bb.1, [[C3]](s16), %bb.2
-  ; CHECK-NEXT:   [[ANYEXT:%[0-9]+]]:_(s32) = G_ANYEXT [[PHI1]](s16)
   ; CHECK-NEXT:   [[C4:%[0-9]+]]:_(s32) = G_CONSTANT i32 1
+  ; CHECK-NEXT:   [[ANYEXT:%[0-9]+]]:_(s32) = G_ANYEXT [[PHI1]](s16)
   ; CHECK-NEXT:   [[AND:%[0-9]+]]:_(s32) = G_AND [[ANYEXT]], [[C4]]
   ; CHECK-NEXT:   $w0 = COPY [[AND]](s32)
   ; CHECK-NEXT:   RET_ReallyLR implicit $w0
@@ -95,8 +95,8 @@ define i1 @test_lpad_phi_widen_into_pred_ext(ptr %ptr) personality ptr @__gxx_pe
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.3.continue:
   ; CHECK-NEXT:   [[PHI1:%[0-9]+]]:_(s16) = G_PHI [[ANYEXT]](s16), %bb.1, [[C2]](s16), %bb.2
-  ; CHECK-NEXT:   [[ANYEXT1:%[0-9]+]]:_(s32) = G_ANYEXT [[PHI1]](s16)
   ; CHECK-NEXT:   [[C3:%[0-9]+]]:_(s32) = G_CONSTANT i32 1
+  ; CHECK-NEXT:   [[ANYEXT1:%[0-9]+]]:_(s32) = G_ANYEXT [[PHI1]](s16)
   ; CHECK-NEXT:   [[AND:%[0-9]+]]:_(s32) = G_AND [[ANYEXT1]], [[C3]]
   ; CHECK-NEXT:   $w0 = COPY [[AND]](s32)
   ; CHECK-NEXT:   RET_ReallyLR implicit $w0
