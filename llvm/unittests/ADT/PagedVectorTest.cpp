@@ -221,7 +221,7 @@ TEST(PagedVectorTest, FillNonTrivialConstructorDestructor) {
     EXPECT_EQ(TestHelper2::constructed, 20);
   }
   EXPECT_EQ(std::distance(V.materialized_begin(), V.materialized_end()), 19LL);
-  // We initialise the whole page, not just the materialized part
+  // We initialize the whole page, not just the materialized part
   // EXPECT_EQ(TestHelper2::constructed, 20);
   V.resize(18);
   EXPECT_EQ(TestHelper2::destroyed, 0);
