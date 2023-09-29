@@ -677,7 +677,7 @@ void CodeGenModule::EmitCXXModuleInitFunc(Module *Primary) {
       continue; // TODO: warn of mixed use of module map modules and C++20?
     // We're allowed to skip the initialization if we are sure it doesn't
     // do any thing.
-    if (M->isNamedModuleInterfaceHasNoInit())
+    if (!M->isNamedModuleInterfaceHasInit())
       continue;
     llvm::FunctionType *FTy = llvm::FunctionType::get(VoidTy, false);
     SmallString<256> FnName;
