@@ -375,7 +375,7 @@ public:
 
   /// Whether this C++20 named modules doesn't need an initializer.
   /// This is only meaningful for C++20 modules.
-  unsigned NamedModuleHasNoInit : 1;
+  unsigned NamedModuleHasInit : 1;
 
   /// Describes the visibility of the various names within a
   /// particular module.
@@ -615,7 +615,7 @@ public:
     return Kind == ModuleInterfaceUnit || Kind == ModulePartitionInterface;
   }
 
-  bool isNamedModuleInterfaceHasNoInit() const { return NamedModuleHasNoInit; }
+  bool isNamedModuleInterfaceHasInit() const { return NamedModuleHasInit; }
 
   /// Get the primary module interface name from a partition.
   StringRef getPrimaryModuleInterfaceName() const {
