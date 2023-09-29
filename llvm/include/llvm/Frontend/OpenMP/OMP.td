@@ -450,10 +450,6 @@ def OMPC_OMPX_Attribute : Clause<"ompx_attribute"> {
   let clangClass = "OMPXAttributeClause";
 }
 
-def OMPC_OMX_Bare : Clause<"ompx_bare"> {
-  let clangClass = "OMPXBareClause";
-}
-
 //===----------------------------------------------------------------------===//
 // Definition of OpenMP directives
 //===----------------------------------------------------------------------===//
@@ -1524,7 +1520,6 @@ def OMP_TargetTeams : Directive<"target teams"> {
     VersionedClause<OMPC_NumTeams>,
     VersionedClause<OMPC_ThreadLimit>,
     VersionedClause<OMPC_OMPX_DynCGroupMem>,
-    VersionedClause<OMPC_OMX_Bare>,
   ];
 }
 def OMP_TargetTeamsDistribute : Directive<"target teams distribute"> {
