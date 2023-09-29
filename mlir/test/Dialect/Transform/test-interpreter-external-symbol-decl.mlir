@@ -4,13 +4,11 @@
 // RUN: mlir-opt %s --pass-pipeline="builtin.module(test-transform-dialect-interpreter{transform-library-file-name=%p/test-interpreter-external-symbol-def.mlir}, test-transform-dialect-interpreter)" \
 // RUN:             --verify-diagnostics --split-input-file | FileCheck %s
 
-// XXX: This currently fails.
-// RoooooN: mlir-opt %s --pass-pipeline="builtin.module(test-transform-dialect-interpreter{transform-library-file-name=%p/test-interpreter-external-symbol-def.mlir}, test-transform-dialect-interpreter{transform-library-file-name=%p/test-interpreter-external-symbol-def.mlir})" \
-// RoooooN:             --verify-diagnostics --split-input-file | FileCheck %s
-
 // The definition of the @print_message named sequence is provided in another
-// file. It will be included because of the pass option. Repeated application of
-// the same pass, with or without the library option, should not be a problem.
+// file. It will be included because of the pass option. Subsequent application
+// of the same pass works but only without the library file (since the first
+// application loads external symbols and loading them again woul make them
+// clash).
 // Note that the same diagnostic produced twice at the same location only
 // needs to be matched once.
 

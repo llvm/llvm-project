@@ -50,6 +50,8 @@ constexpr static llvm::StringLiteral kTransformDialectTagPayloadRootValue =
 constexpr static llvm::StringLiteral
     kTransformDialectTagTransformContainerValue = "transform_container";
 
+namespace {
+
 /// Utility to parse the content of a `transformFileName` MLIR file containing
 /// a transform dialect specification.
 static LogicalResult
@@ -302,42 +304,142 @@ static void performOptionalDebugActions(
     transform->removeAttr(kTransformDialectTagAttrName);
 }
 
-/// Merge all symbols from `other` into `target`. Both ops need to implement the
-/// `SymbolTable` trait. Operations are moved from `other`, i.e., `other` may be
-/// modified by this function. Upon merging, private symbols may be renamed in
-/// order to avoid collisions in the result. Public symbols may not collide,
-/// with the exception of `SymbolInterfaceOp`s, where collisions are allowed if
-/// at least one of the two is external, in which case the other op preserved
-/// (or one of the two if both are external). The `target` op might not verify
-/// after this function returns.
-// XXX: Make `other` argument an `OwningOpRef`?
-static LogicalResult mergeSymbolsInto(Operation *target, Operation *other) {
-  assert(target->hasTrait<OpTrait::SymbolTable>() &&
-         "requires target to implement the 'SymbolTable' trait");
-  assert(other->hasTrait<OpTrait::SymbolTable>() &&
-         "requires target to implement the 'SymbolTable' trait");
+/// Rename `op` to avoid a collision with `otherOp`. `symbolTable` and
+/// `otherSymbolTable` are the symbol tables of the two ops, respectively.
+/// `uniqueId` is used to generate a unique name in the context of the caller.
+LogicalResult renameToUnique(SymbolOpInterface op, SymbolOpInterface otherOp,
+                             SymbolTable &symbolTable,
+                             SymbolTable &otherSymbolTable, int &uniqueId) {
+  assert(symbolTable.lookup(op.getNameAttr()) == op &&
+         "symbol table does not contain op");
+  assert(otherSymbolTable.lookup(otherOp.getNameAttr()) == otherOp &&
+         "other symbol table does not contain other op");
 
-  MLIRContext *context = other->getContext();
+  // Determine new name that is unique in both symbol tables.
+  StringAttr oldName = op.getNameAttr();
+  StringAttr newName;
+  {
+    MLIRContext *context = op->getContext();
+    SmallString<64> prefix = oldName.getValue();
+    prefix.push_back('_');
+    while (true) {
+      newName = StringAttr::get(context, prefix + Twine(uniqueId++));
+      if (!symbolTable.lookup(newName) && !otherSymbolTable.lookup(newName)) {
+        break;
+      }
+    }
+  }
+
+  // Apply renaming.
+  LLVM_DEBUG(llvm::dbgs() << ", renaming to @" << newName.getValue() << "\n");
+  Operation *symbolTableOp = SymbolTable::getNearestSymbolTable(op);
+  if (failed(SymbolTable::replaceAllSymbolUses(op, newName, symbolTableOp))) {
+    InFlightDiagnostic diag =
+        emitError(op->getLoc(),
+                  Twine("failed to rename symbol to @") + newName.getValue());
+    diag.attachNote(otherOp->getLoc())
+        << "attempted renaming due to collision with this op";
+    return diag;
+  }
+
+  // Change the symbol in the op itself and update the symbol table.
+  symbolTable.remove(op);
+  SymbolTable::setSymbolName(op, newName);
+  symbolTable.insert(op);
+
+  assert(symbolTable.lookup(newName) == op &&
+         "symbol table does not resolve to renamed op");
+  assert(symbolTable.lookup(oldName) == nullptr &&
+         "symbol table still resolves old name");
+
+  return success();
+}
+
+/// Return whether `func1` can be merged into `func2`.
+bool canMergeInto(FunctionOpInterface func1, FunctionOpInterface func2) {
+  return func1.isExternal() && (func2.isPublic() || func2.isExternal());
+}
+
+/// Merge `func1` into `func2`. The two ops must be inside the same parent op
+/// and mergable according to `canMergeInto`. The function erases `func1` such
+/// that only `func2` exists when the function returns.
+LogicalResult mergeInto(FunctionOpInterface func1, FunctionOpInterface func2) {
+  assert(canMergeInto(func1, func2));
+  assert(func1->getParentOp() == func2->getParentOp() &&
+         "expected func1 and func2 to be in the same parent op");
+
+  MLIRContext *context = func1->getContext();
   auto consumedName = StringAttr::get(
       context, transform::TransformDialect::kArgConsumedAttrName);
   auto readOnlyName = StringAttr::get(
       context, transform::TransformDialect::kArgReadOnlyAttrName);
 
+  // Check that function signatures match.
+  if (func1.getFunctionType() != func2.getFunctionType()) {
+    return func1.emitError()
+           << "external definition has a mismatching signature ("
+           << func2.getFunctionType() << ")";
+  }
+
+  // Check and merge argument attributes.
+  for (unsigned i = 0, e = func1.getNumArguments(); i < e; ++i) {
+    bool isExternalConsumed = func2.getArgAttr(i, consumedName) != nullptr;
+    bool isExternalReadonly = func2.getArgAttr(i, readOnlyName) != nullptr;
+    bool isConsumed = func1.getArgAttr(i, consumedName) != nullptr;
+    bool isReadonly = func1.getArgAttr(i, readOnlyName) != nullptr;
+    if (!isExternalConsumed && !isExternalReadonly) {
+      if (isConsumed)
+        func2.setArgAttr(i, consumedName, UnitAttr::get(context));
+      else if (isReadonly)
+        func2.setArgAttr(i, readOnlyName, UnitAttr::get(context));
+      continue;
+    }
+
+    if ((isExternalConsumed && !isConsumed) ||
+        (isExternalReadonly && !isReadonly)) {
+      return func1.emitError()
+             << "external definition has mismatching consumption "
+                "annotations for argument #"
+             << i;
+    }
+  }
+
+  // `func1` is the external one, so we can remove it.
+  assert(func1.isExternal());
+  func1->erase();
+
+  return success();
+}
+
+/// Merge all symbols from `other` into `target`. Both ops need to implement the
+/// `SymbolTable` trait. Operations are moved from `other`, i.e., `other` may be
+/// modified by this function and might not verify after the function returns.
+/// Upon merging, private symbols may be renamed in order to avoid collisions in
+/// the result. Public symbols may not collide, with the exception of
+/// instances of `SymbolOpInterface`, where collisions are allowed if at least
+/// one of the two is external, in which case the other op preserved (or any one
+/// of the two if both are external).
+static LogicalResult mergeSymbolsInto(Operation *target,
+                                      OwningOpRef<Operation *> other) {
+  assert(target->hasTrait<OpTrait::SymbolTable>() &&
+         "requires target to implement the 'SymbolTable' trait");
+  assert(other->hasTrait<OpTrait::SymbolTable>() &&
+         "requires target to implement the 'SymbolTable' trait");
+
+  SymbolTable targetSymbolTable(target);
+  SymbolTable otherSymbolTable(*other);
+
   int uniqueId = 0;
 
-  auto canBeMerged = [](FunctionOpInterface func1, FunctionOpInterface func2) {
-    return func1.isExternal() && (func2.isPublic() || func2.isExternal());
-    ;
-  };
-
+  // Step 1:
+  //
   // Rename private symbols in both ops in order to resolve conflicts that can
   // be resolved that way.
   LLVM_DEBUG(DBGS() << "renaming private symbols to resolve conflicts:\n");
-  for (auto [symbolTableOp, otherSymbolTableOp] :
-       llvm::zip(SmallVector<Operation *>{target, other},
-                 SmallVector<Operation *>{other, target})) {
-    SymbolTable symbolTable(symbolTableOp); // XXX: build only once
-    SymbolTable otherSymbolTable(otherSymbolTableOp);
+  for (auto [symbolTable, otherSymbolTable] : llvm::zip(
+           SmallVector<SymbolTable *>{&targetSymbolTable, &otherSymbolTable},
+           SmallVector<SymbolTable *>{&otherSymbolTable, &targetSymbolTable})) {
+    Operation *symbolTableOp = symbolTable->getOp();
     for (Operation &op : symbolTableOp->getRegion(0).front()) {
       auto symbolOp = dyn_cast<SymbolOpInterface>(op);
       if (!symbolOp)
@@ -347,7 +449,7 @@ static LogicalResult mergeSymbolsInto(Operation *target, Operation *other) {
 
       // Check if there is a colliding op in the other module.
       auto collidingOp =
-          cast_or_null<SymbolOpInterface>(otherSymbolTable.lookup(name));
+          cast_or_null<SymbolOpInterface>(otherSymbolTable->lookup(name));
       if (!collidingOp)
         continue;
 
@@ -358,8 +460,8 @@ static LogicalResult mergeSymbolsInto(Operation *target, Operation *other) {
           collidingFuncOp =
               dyn_cast<FunctionOpInterface>(collidingOp.getOperation());
           funcOp && collidingFuncOp) {
-        if (canBeMerged(funcOp, collidingFuncOp) ||
-            canBeMerged(collidingFuncOp, funcOp)) {
+        if (canMergeInto(funcOp, collidingFuncOp) ||
+            canMergeInto(collidingFuncOp, funcOp)) {
           LLVM_DEBUG(llvm::dbgs() << " but both ops are functions and "
                                      "will be merged\n");
           continue;
@@ -369,58 +471,16 @@ static LogicalResult mergeSymbolsInto(Operation *target, Operation *other) {
         LLVM_DEBUG(llvm::dbgs() << " and both ops are function definitions");
       }
 
-      /// Rename `op` inside `symbolTableOp` with symbol table `symbolTable`
-      /// to avoid a collision with `otherOp`.
-      auto renameToUnique =
-          [&uniqueId =
-               uniqueId](SymbolOpInterface op, SymbolOpInterface otherOp,
-                         Operation *symbolTableOp, SymbolTable &symbolTable,
-                         SymbolTable &otherSymbolTable) -> LogicalResult {
-        assert(SymbolTable::getNearestSymbolTable(op) == symbolTableOp &&
-               "expected 'op' to be inside of 'symbolTableOp'");
-        MLIRContext *context = op->getContext();
-
-        // Determine new name that is unique in both symbol tables.
-        StringAttr newName;
-        {
-          SmallString<64> prefix = op.getNameAttr().getValue();
-          prefix.push_back('_');
-          while (true) {
-            newName = StringAttr::get(context, prefix + Twine(uniqueId++));
-            if (!symbolTable.lookup(newName) &&
-                !otherSymbolTable.lookup(newName)) {
-              break;
-            }
-          }
-        }
-
-        // Apply renaming.
-        LLVM_DEBUG(llvm::dbgs()
-                   << ", renaming to @" << newName.getValue() << "\n");
-        if (failed(SymbolTable::replaceAllSymbolUses(op, newName,
-                                                     symbolTableOp))) {
-          InFlightDiagnostic diag =
-              emitError(op->getLoc(), Twine("failed to rename symbol to @") +
-                                          newName.getValue());
-          diag.attachNote(otherOp->getLoc())
-              << "renaming due to collision with this op";
-          return diag;
-        }
-        op.setName(newName); // XXX: Why is this necessary? Why does
-                             // SymbolTable::renameAllSymbolUses not do it?
-        return success();
-      };
-
       // Collision can be resolved if one of the ops is private.
       if (symbolOp.isPrivate()) {
-        if (failed(renameToUnique(symbolOp, collidingOp, symbolTableOp,
-                                  symbolTable, otherSymbolTable)))
+        if (failed(renameToUnique(symbolOp, collidingOp, *symbolTable,
+                                  *otherSymbolTable, uniqueId)))
           return failure();
         continue;
       }
       if (collidingOp.isPrivate()) {
-        if (failed(renameToUnique(collidingOp, symbolOp, otherSymbolTableOp,
-                                  symbolTable, otherSymbolTable)))
+        if (failed(renameToUnique(collidingOp, symbolOp, *otherSymbolTable,
+                                  *symbolTable, uniqueId)))
           return failure();
         continue;
       }
@@ -434,12 +494,15 @@ static LogicalResult mergeSymbolsInto(Operation *target, Operation *other) {
     }
   }
 
-  for (auto *op : SmallVector<Operation *>{target, other}) {
+  for (auto *op : SmallVector<Operation *>{target, *other}) {
     if (failed(mlir::verify(op)))
       return emitError(op->getLoc(),
                        "failed to verify input op after renaming");
   }
 
+  // Step 2:
+  //
+  // Move all ops from `other` into target and merge public symbols.
   LLVM_DEBUG(DBGS() << "moving all symbols into target\n");
   {
     SmallVector<SymbolOpInterface> opsToMove;
@@ -448,11 +511,10 @@ static LogicalResult mergeSymbolsInto(Operation *target, Operation *other) {
         opsToMove.push_back(symbol);
     }
 
-    SymbolTable symbolTable(target);
     for (SymbolOpInterface op : opsToMove) {
       // Remember potentially colliding op in the target module.
-      auto collidingOp =
-          cast_or_null<SymbolOpInterface>(symbolTable.lookup(op.getNameAttr()));
+      auto collidingOp = cast_or_null<SymbolOpInterface>(
+          targetSymbolTable.lookup(op.getNameAttr()));
 
       // Move op even if we get a collision.
       LLVM_DEBUG(DBGS() << "  moving @" << op.getName());
@@ -465,65 +527,34 @@ static LogicalResult mergeSymbolsInto(Operation *target, Operation *other) {
         continue;
       }
 
-      // We now have a collision that we resolve through merging. The merging
-      // may bring the symbol table out of date but we don't need to access the
-      // table for that symbol anymore.
-
-      // The two colliding ops must bot be functions because we have already
+      // The two colliding ops must both be functions because we have already
       // emitted errors otherwise earlier.
-      auto symbolFunc = cast<FunctionOpInterface>(op.getOperation());
-      auto externalSymbolFunc =
+      auto funcOp = cast<FunctionOpInterface>(op.getOperation());
+      auto collidingFuncOp =
           cast<FunctionOpInterface>(collidingOp.getOperation());
 
       // Both ops are in the target module now and can be treated symmetrically,
       // so w.l.o.g. we can reduce to merging `funcOp` into `collidingFuncOp`.
-      if (!canBeMerged(symbolFunc, externalSymbolFunc))
-        std::swap(symbolFunc, externalSymbolFunc);
-      assert(canBeMerged(symbolFunc, externalSymbolFunc));
+      if (!canMergeInto(funcOp, collidingFuncOp)) {
+        std::swap(funcOp, collidingFuncOp);
+      }
+      assert(canMergeInto(funcOp, collidingFuncOp));
 
       LLVM_DEBUG(llvm::dbgs() << " with collision, trying to keep op at "
-                              << externalSymbolFunc.getLoc() << ":\n"
-                              << externalSymbolFunc << "\n");
+                              << collidingFuncOp.getLoc() << ":\n"
+                              << collidingFuncOp << "\n");
 
-      // Check that function signatures match.
-      // XXX: Do that check earlier?
-      if (symbolFunc.getFunctionType() !=
-          externalSymbolFunc.getFunctionType()) {
-        return symbolFunc.emitError()
-               << "external definition has a mismatching signature ("
-               << externalSymbolFunc.getFunctionType() << ")";
+      // Update symbol table. This works with or without the previous `swap`.
+      targetSymbolTable.remove(funcOp);
+      targetSymbolTable.insert(collidingFuncOp);
+      assert(targetSymbolTable.lookup(funcOp.getName()) == collidingFuncOp);
+
+      // Do the actual merging.
+      if (failed(mergeInto(funcOp, collidingFuncOp))) {
+        return failure();
       }
 
-      // Check and merge argument attributes.
-      for (unsigned i = 0, e = symbolFunc.getNumArguments(); i < e; ++i) {
-        bool isExternalConsumed =
-            externalSymbolFunc.getArgAttr(i, consumedName) != nullptr;
-        bool isExternalReadonly =
-            externalSymbolFunc.getArgAttr(i, readOnlyName) != nullptr;
-        bool isConsumed = symbolFunc.getArgAttr(i, consumedName) != nullptr;
-        bool isReadonly = symbolFunc.getArgAttr(i, readOnlyName) != nullptr;
-        if (!isExternalConsumed && !isExternalReadonly) {
-          if (isConsumed)
-            externalSymbolFunc.setArgAttr(i, consumedName,
-                                          UnitAttr::get(context));
-          else if (isReadonly)
-            externalSymbolFunc.setArgAttr(i, readOnlyName,
-                                          UnitAttr::get(context));
-          continue;
-        }
-
-        if ((isExternalConsumed && !isConsumed) ||
-            (isExternalReadonly && !isReadonly)) {
-          return symbolFunc.emitError()
-                 << "external definition has mismatching consumption "
-                    "annotations for argument #"
-                 << i;
-        }
-      }
-
-      // `funcOp` is the external one, so we can remove it.
-      assert(symbolFunc.isExternal());
-      symbolFunc->erase();
+      assert(succeeded(mlir::verify(target)));
     }
   }
 
@@ -534,6 +565,8 @@ static LogicalResult mergeSymbolsInto(Operation *target, Operation *other) {
   LLVM_DEBUG(DBGS() << "done merging ops\n");
   return success();
 }
+
+} // namespace
 
 LogicalResult transform::detail::interpreterBaseRunOnOperationImpl(
     Operation *target, StringRef passName,
@@ -604,7 +637,7 @@ LogicalResult transform::detail::interpreterBaseRunOnOperationImpl(
     }
     if (failed(
             mergeSymbolsInto(SymbolTable::getNearestSymbolTable(transformRoot),
-                             transformLibraryModule->get())))
+                             transformLibraryModule->get()->clone())))
       return failure();
   }
 
@@ -667,7 +700,7 @@ LogicalResult transform::detail::interpreterBaseInitializeImpl(
 
   if (sharedTransformModule && *sharedTransformModule) {
     if (failed(mergeSymbolsInto(sharedTransformModule->get(),
-                                parsedLibraryModule.get())))
+                                std::move(parsedLibraryModule))))
       return failure();
   } else {
     transformLibraryModule =
