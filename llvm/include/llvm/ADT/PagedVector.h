@@ -130,22 +130,13 @@ public:
     // constructed not only the one effectively needed.
     size_t NewLastPage = (NewSize - 1) / PageSize;
     if (NewSize < Size) {
-      // Destroy the elements in the pages that are not needed anymore.
-      // Notice that we need to do this only if the constructor of the elements
-      // is not trivial.
-      if constexpr (!std::is_trivially_destructible_v<T>) {
-        for (size_t I = NewLastPage + 1, N = PageToDataPtrs.size(); I < N;
-             ++I) {
-          T *Page = PageToDataPtrs[I];
-          // We need to invoke the destructor on all the elements of the page.
-          if (Page)
-            std::destroy_n(Page, PageSize);
-        }
-      }
       for (size_t I = NewLastPage + 1, N = PageToDataPtrs.size(); I < N; ++I) {
         T *Page = PageToDataPtrs[I];
-        if (Page)
-          Allocator.getPointer()->Deallocate(Page);
+        if (!Page)
+          continue;
+        // We need to invoke the destructor on all the elements of the page.
+        std::destroy_n(Page, PageSize);
+        Allocator.getPointer()->Deallocate(Page);
       }
     }
 
