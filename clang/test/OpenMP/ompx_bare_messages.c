@@ -1,6 +1,6 @@
-// RUN: %clang_cc1 -verify -fopenmp %s
-// RUN: %clang_cc1 -verify -fopenmp-simd %s
-// RUN: %clang_cc1 -verify -fopenmp -fopenmp-targets=nvptx64 %s
+// RUN: %clang_cc1 -verify -fopenmp -triple x86_64-unknown-unknown %s
+// RUN: %clang_cc1 -verify -fopenmp-simd -triple x86_64-unknown-unknown %s
+// RUN: %clang_cc1 -verify -fopenmp -triple x86_64-unknown-unknown -fopenmp-targets=nvptx64 %s
 
 void foo() {
 }
