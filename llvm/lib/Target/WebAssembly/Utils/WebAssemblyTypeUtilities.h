@@ -28,13 +28,13 @@ namespace WebAssembly {
 
 /// Return true if this is a WebAssembly Externref Type.
 inline bool isWebAssemblyExternrefType(const Type *Ty) {
-  return Ty->getPointerAddressSpace() ==
+  return Ty->isPointerTy() && Ty->getPointerAddressSpace() ==
          WebAssembly::WasmAddressSpace::WASM_ADDRESS_SPACE_EXTERNREF;
 }
 
 /// Return true if this is a WebAssembly Funcref Type.
 inline bool isWebAssemblyFuncrefType(const Type *Ty) {
-  return Ty->getPointerAddressSpace() ==
+  return Ty->isPointerTy() && Ty->getPointerAddressSpace() ==
          WebAssembly::WasmAddressSpace::WASM_ADDRESS_SPACE_FUNCREF;
 }
 
