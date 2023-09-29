@@ -309,10 +309,6 @@ tools:llvm-mca:
   - llvm/include/llvm/MCA/**
   - llvm/lib/MCA/**
 
-vectorizers:
-  - llvm/lib/Transforms/Vectorize/**
-  - llvm/include/llvm/Transforms/Vectorize/**
-
 clang:
   - any:
     - clang/**
