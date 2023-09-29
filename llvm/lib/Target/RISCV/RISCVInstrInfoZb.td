@@ -235,10 +235,7 @@ def SimmShiftRightBy3XForm : SDNodeXForm<imm, [{
 }]>;
 
 // Pattern to exclude simm12 immediates from matching.
-def non_imm12 : PatLeaf<(XLenVT GPR:$a), [{
-  auto *C = dyn_cast<ConstantSDNode>(N);
-  return !C || !isInt<12>(C->getSExtValue());
-}]>;
+def non_imm12 : ComplexPattern<XLenVT, 1, "selectNonImm12", [], [], 0>;
 
 def Shifted32OnesMask : PatLeaf<(imm), [{
   uint64_t Imm = N->getZExtValue();
@@ -651,19 +648,19 @@ let Predicates = [HasStdExtZbb, IsRV64] in
 def : Pat<(i64 (and GPR:$rs, 0xFFFF)), (ZEXT_H_RV64 GPR:$rs)>;
 
 let Predicates = [HasStdExtZba] in {
-def : Pat<(add (shl GPR:$rs1, (XLenVT 1)), non_imm12:$rs2),
+def : Pat<(add (shl GPR:$rs1, (XLenVT 1)), (non_imm12 (XLenVT GPR:$rs2))),
           (SH1ADD GPR:$rs1, GPR:$rs2)>;
-def : Pat<(add (shl GPR:$rs1, (XLenVT 2)), non_imm12:$rs2),
+def : Pat<(add (shl GPR:$rs1, (XLenVT 2)), (non_imm12 (XLenVT GPR:$rs2))),
           (SH2ADD GPR:$rs1, GPR:$rs2)>;
-def : Pat<(add (shl GPR:$rs1, (XLenVT 3)), non_imm12:$rs2),
+def : Pat<(add (shl GPR:$rs1, (XLenVT 3)), (non_imm12 (XLenVT GPR:$rs2))),
           (SH3ADD GPR:$rs1, GPR:$rs2)>;
 
 // More complex cases use a ComplexPattern.
-def : Pat<(add sh1add_op:$rs1, non_imm12:$rs2),
+def : Pat<(add sh1add_op:$rs1, (non_imm12 (XLenVT GPR:$rs2))),
           (SH1ADD sh1add_op:$rs1, GPR:$rs2)>;
-def : Pat<(add sh2add_op:$rs1, non_imm12:$rs2),
+def : Pat<(add sh2add_op:$rs1, (non_imm12 (XLenVT GPR:$rs2))),
           (SH2ADD sh2add_op:$rs1, GPR:$rs2)>;
-def : Pat<(add sh3add_op:$rs1, non_imm12:$rs2),
+def : Pat<(add sh3add_op:$rs1, (non_imm12 (XLenVT GPR:$rs2))),
           (SH3ADD sh3add_op:$rs1, GPR:$rs2)>;
 
 def : Pat<(add (mul_oneuse GPR:$rs1, (XLenVT 6)), GPR:$rs2),
@@ -735,48 +732,48 @@ def : Pat<(i64 (and GPR:$rs1, Shifted32OnesMask:$mask)),
           (SLLI_UW (SRLI GPR:$rs1, Shifted32OnesMask:$mask),
                    Shifted32OnesMask:$mask)>;
 
-def : Pat<(i64 (add (and GPR:$rs1, 0xFFFFFFFF), non_imm12:$rs2)),
+def : Pat<(i64 (add (and GPR:$rs1, 0xFFFFFFFF), (non_imm12 (XLenVT GPR:$rs2)))),
           (ADD_UW GPR:$rs1, GPR:$rs2)>;
 def : Pat<(i64 (and GPR:$rs, 0xFFFFFFFF)), (ADD_UW GPR:$rs, (XLenVT X0))>;
 
-def : Pat<(i64 (or_is_add (and GPR:$rs1, 0xFFFFFFFF), non_imm12:$rs2)),
+def : Pat<(i64 (or_is_add (and GPR:$rs1, 0xFFFFFFFF), (non_imm12 (XLenVT GPR:$rs2)))),
           (ADD_UW GPR:$rs1, GPR:$rs2)>;
 
-def : Pat<(i64 (add (shl (and GPR:$rs1, 0xFFFFFFFF), (i64 1)), non_imm12:$rs2)),
+def : Pat<(i64 (add (shl (and GPR:$rs1, 0xFFFFFFFF), (i64 1)), (non_imm12 (XLenVT GPR:$rs2)))),
           (SH1ADD_UW GPR:$rs1, GPR:$rs2)>;
-def : Pat<(i64 (add (shl (and GPR:$rs1, 0xFFFFFFFF), (i64 2)), non_imm12:$rs2)),
+def : Pat<(i64 (add (shl (and GPR:$rs1, 0xFFFFFFFF), (i64 2)), (non_imm12 (XLenVT GPR:$rs2)))),
           (SH2ADD_UW GPR:$rs1, GPR:$rs2)>;
-def : Pat<(i64 (add (shl (and GPR:$rs1, 0xFFFFFFFF), (i64 3)), non_imm12:$rs2)),
+def : Pat<(i64 (add (shl (and GPR:$rs1, 0xFFFFFFFF), (i64 3)), (non_imm12 (XLenVT GPR:$rs2)))),
           (SH3ADD_UW GPR:$rs1, GPR:$rs2)>;
 
-def : Pat<(i64 (add (and (shl GPR:$rs1, (i64 1)), 0x1FFFFFFFF), non_imm12:$rs2)),
+def : Pat<(i64 (add (and (shl GPR:$rs1, (i64 1)), 0x1FFFFFFFF), (non_imm12 (XLenVT GPR:$rs2)))),
           (SH1ADD_UW GPR:$rs1, GPR:$rs2)>;
-def : Pat<(i64 (add (and (shl GPR:$rs1, (i64 2)), 0x3FFFFFFFF), non_imm12:$rs2)),
+def : Pat<(i64 (add (and (shl GPR:$rs1, (i64 2)), 0x3FFFFFFFF), (non_imm12 (XLenVT GPR:$rs2)))),
           (SH2ADD_UW GPR:$rs1, GPR:$rs2)>;
-def : Pat<(i64 (add (and (shl GPR:$rs1, (i64 3)), 0x7FFFFFFFF), non_imm12:$rs2)),
+def : Pat<(i64 (add (and (shl GPR:$rs1, (i64 3)), 0x7FFFFFFFF), (non_imm12 (XLenVT GPR:$rs2)))),
           (SH3ADD_UW GPR:$rs1, GPR:$rs2)>;
 
 // More complex cases use a ComplexPattern.
-def : Pat<(i64 (add sh1add_uw_op:$rs1, non_imm12:$rs2)),
+def : Pat<(i64 (add sh1add_uw_op:$rs1, (non_imm12 (XLenVT GPR:$rs2)))),
           (SH1ADD_UW sh1add_uw_op:$rs1, GPR:$rs2)>;
-def : Pat<(i64 (add sh2add_uw_op:$rs1, non_imm12:$rs2)),
+def : Pat<(i64 (add sh2add_uw_op:$rs1, (non_imm12 (XLenVT GPR:$rs2)))),
           (SH2ADD_UW sh2add_uw_op:$rs1, GPR:$rs2)>;
-def : Pat<(i64 (add sh3add_uw_op:$rs1, non_imm12:$rs2)),
+def : Pat<(i64 (add sh3add_uw_op:$rs1, (non_imm12 (XLenVT GPR:$rs2)))),
           (SH3ADD_UW sh3add_uw_op:$rs1, GPR:$rs2)>;
 
-def : Pat<(i64 (add (and GPR:$rs1, 0xFFFFFFFE), non_imm12:$rs2)),
+def : Pat<(i64 (add (and GPR:$rs1, 0xFFFFFFFE), (non_imm12 (XLenVT GPR:$rs2)))),
           (SH1ADD (SRLIW GPR:$rs1, 1), GPR:$rs2)>;
-def : Pat<(i64 (add (and GPR:$rs1, 0xFFFFFFFC), non_imm12:$rs2)),
+def : Pat<(i64 (add (and GPR:$rs1, 0xFFFFFFFC), (non_imm12 (XLenVT GPR:$rs2)))),
           (SH2ADD (SRLIW GPR:$rs1, 2), GPR:$rs2)>;
-def : Pat<(i64 (add (and GPR:$rs1, 0xFFFFFFF8), non_imm12:$rs2)),
+def : Pat<(i64 (add (and GPR:$rs1, 0xFFFFFFF8), (non_imm12 (XLenVT GPR:$rs2)))),
           (SH3ADD (SRLIW GPR:$rs1, 3), GPR:$rs2)>;
 
 // Use SRLI to clear the LSBs and SHXADD_UW to mask and shift.
-def : Pat<(i64 (add (and GPR:$rs1, 0x1FFFFFFFE), non_imm12:$rs2)),
+def : Pat<(i64 (add (and GPR:$rs1, 0x1FFFFFFFE), (non_imm12 (XLenVT GPR:$rs2)))),
           (SH1ADD_UW (SRLI GPR:$rs1, 1), GPR:$rs2)>;
-def : Pat<(i64 (add (and GPR:$rs1, 0x3FFFFFFFC), non_imm12:$rs2)),
+def : Pat<(i64 (add (and GPR:$rs1, 0x3FFFFFFFC), (non_imm12 (XLenVT GPR:$rs2)))),
           (SH2ADD_UW (SRLI GPR:$rs1, 2), GPR:$rs2)>;
-def : Pat<(i64 (add (and GPR:$rs1, 0x7FFFFFFF8), non_imm12:$rs2)),
+def : Pat<(i64 (add (and GPR:$rs1, 0x7FFFFFFF8), (non_imm12 (XLenVT GPR:$rs2)))),
           (SH3ADD_UW (SRLI GPR:$rs1, 3), GPR:$rs2)>;
 
 def : Pat<(i64 (mul (and_oneuse GPR:$r, 0xFFFFFFFF), C3LeftShiftUW:$i)),
