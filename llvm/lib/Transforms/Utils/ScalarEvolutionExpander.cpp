@@ -2101,7 +2101,7 @@ Value *SCEVExpander::generateOverflowCheck(const SCEVAddRecExpr *AR,
     bool NeedPosCheck = !SE.isKnownNegative(Step);
     bool NeedNegCheck = !SE.isKnownPositive(Step);
 
-    if (PointerType *ARPtrTy = dyn_cast<PointerType>(ARTy)) {
+    if (isa<PointerType>(ARTy)) {
       Value *NegMulV = Builder.CreateNeg(MulV);
       if (NeedPosCheck)
         Add = Builder.CreateGEP(Builder.getInt8Ty(), StartValue, MulV);
