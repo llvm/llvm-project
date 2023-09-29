@@ -112,6 +112,11 @@ bool CheckCtorCall(InterpState &S, CodePtr OpPC, const Pointer &This);
 bool CheckPotentialReinterpretCast(InterpState &S, CodePtr OpPC,
                                    const Pointer &Ptr);
 
+/// Sets the given integral value to the pointer, which is of
+/// a std::{weak,partial,strong}_ordering type.
+bool SetThreeWayComparisonField(InterpState &S, CodePtr OpPC,
+                                const Pointer &Ptr, const APSInt &IntValue);
+
 /// Checks if the shift operation is legal.
 template <typename LT, typename RT>
 bool CheckShift(InterpState &S, CodePtr OpPC, const LT &LHS, const RT &RHS,
@@ -779,6 +784,30 @@ bool EQ(InterpState &S, CodePtr OpPC) {
   return CmpHelperEQ<T>(S, OpPC, [](ComparisonCategoryResult R) {
     return R == ComparisonCategoryResult::Equal;
   });
+}
+
+template <PrimType Name, class T = typename PrimConv<Name>::T>
+bool CMP3(InterpState &S, CodePtr OpPC, const ComparisonCategoryInfo *CmpInfo) {
+  const T &RHS = S.Stk.pop<T>();
+  const T &LHS = S.Stk.pop<T>();
+  const Pointer &P = S.Stk.peek<Pointer>();
+
+  ComparisonCategoryResult CmpResult = LHS.compare(RHS);
+  if (CmpResult == ComparisonCategoryResult::Unordered) {
+    // This should only happen with pointers.
+    const SourceInfo &Loc = S.Current->getSource(OpPC);
+    S.FFDiag(Loc, diag::note_constexpr_pointer_comparison_unspecified)
+        << LHS.toDiagnosticString(S.getCtx())
+        << RHS.toDiagnosticString(S.getCtx());
+    return false;
+  }
+
+  assert(CmpInfo);
+  const auto *CmpValueInfo = CmpInfo->getValueInfo(CmpResult);
+  assert(CmpValueInfo);
+  assert(CmpValueInfo->hasValidIntValue());
+  APSInt IntValue = CmpValueInfo->getIntValue();
+  return SetThreeWayComparisonField(S, OpPC, P, IntValue);
 }
 
 template <PrimType Name, class T = typename PrimConv<Name>::T>
