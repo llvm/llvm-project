@@ -10,9 +10,6 @@
 // TODO: Investigate this failure on x86_64 macOS back deployment
 // XFAIL: stdlib=apple-libc++ && target=x86_64-apple-macosx{{10.9|10.10|10.11|10.12|10.13|10.14|10.15|11.0|12.0}}
 
-// TODO: Figure out why this fails with Memory Sanitizer.
-// XFAIL: msan
-
 #include <libunwind.h>
 #include <stdlib.h>
 #include <stdio.h>

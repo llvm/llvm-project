@@ -15,9 +15,6 @@
 // GCC doesn't support __attribute__((naked)) on AArch64.
 // UNSUPPORTED: gcc
 
-// Inline assembly is incompatible with MSAN.
-// UNSUPPORTED: msan
-
 #undef NDEBUG
 #include <assert.h>
 #include <libunwind.h>

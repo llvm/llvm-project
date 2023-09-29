@@ -43,6 +43,12 @@
   #define LIBUNWIND_AVAIL
 #endif
 
+#if defined(__SANITIZE_MEMORY__) ||                                            \
+    (defined(__has_feature) && __has_feature(memory_sanitizer))
+#define LIBUNWIND_HAVE_MSAN
+#include <sanitizer/msan_interface.h>
+#endif
+
 #if defined(_WIN32) && defined(__SEH__)
   #define LIBUNWIND_CURSOR_ALIGNMENT_ATTR __attribute__((__aligned__(16)))
 #else
@@ -114,6 +120,18 @@ extern int unw_get_fpreg(unw_cursor_t *, unw_regnum_t, unw_fpreg_t *) LIBUNWIND_
 extern int unw_set_reg(unw_cursor_t *, unw_regnum_t, unw_word_t) LIBUNWIND_AVAIL;
 extern int unw_set_fpreg(unw_cursor_t *, unw_regnum_t, unw_fpreg_t)  LIBUNWIND_AVAIL;
 extern int unw_resume(unw_cursor_t *) LIBUNWIND_AVAIL;
+
+#ifdef LIBUNWIND_HAVE_MSAN
+// unw_getcontext is implemented in assembly so it is rather difficult to
+// mark the MSan shadow as initialized from within the function. Instead we
+// use a macro wrapper when compiling with MSan to avoid false-positives.
+#define unw_getcontext(context)                                                \
+  ({                                                                           \
+    int _result = (unw_getcontext)(context);                                   \
+    __msan_unpoison((context), sizeof(unw_context_t));                         \
+    _result;                                                                   \
+  })
+#endif
 
 #ifdef __arm__
 /* Save VFP registers in FSTMX format (instead of FSTMD). */

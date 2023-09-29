@@ -7,9 +7,6 @@
 //
 //===----------------------------------------------------------------------===//
 
-// TODO: Figure out why this fails with Memory Sanitizer.
-// XFAIL: msan
-
 #undef NDEBUG
 #include <assert.h>
 #include <stdlib.h>
