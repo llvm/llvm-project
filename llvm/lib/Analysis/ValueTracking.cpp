@@ -2048,20 +2048,19 @@ bool isKnownToBeAPowerOfTwo(const Value *V, bool OrZero, unsigned Depth,
       return isKnownToBeAPowerOfTwo(I->getOperand(0), OrZero, Depth, Q);
     return false;
   case Instruction::Mul:
-    return OrZero &&
-           isKnownToBeAPowerOfTwo(I->getOperand(1), OrZero, Depth, Q) &&
-           isKnownToBeAPowerOfTwo(I->getOperand(0), OrZero, Depth, Q);
+    return isKnownToBeAPowerOfTwo(I->getOperand(1), OrZero, Depth, Q) &&
+           isKnownToBeAPowerOfTwo(I->getOperand(0), OrZero, Depth, Q) &&
+           (OrZero || isKnownNonZero(I, Depth, Q));
   case Instruction::And:
-    if (OrZero) {
-      // A power of two and'd with anything is a power of two or zero.
-      if (isKnownToBeAPowerOfTwo(I->getOperand(1), /*OrZero*/ true, Depth, Q) ||
-          isKnownToBeAPowerOfTwo(I->getOperand(0), /*OrZero*/ true, Depth, Q))
-        return true;
-      // X & (-X) is always a power of two or zero.
-      if (match(I->getOperand(0), m_Neg(m_Specific(I->getOperand(1)))) ||
-          match(I->getOperand(1), m_Neg(m_Specific(I->getOperand(0)))))
-        return true;
-    }
+    // A power of two and'd with anything is a power of two or zero.
+    if (OrZero &&
+        (isKnownToBeAPowerOfTwo(I->getOperand(1), /*OrZero*/ true, Depth, Q) ||
+         isKnownToBeAPowerOfTwo(I->getOperand(0), /*OrZero*/ true, Depth, Q)))
+      return true;
+    // X & (-X) is always a power of two or zero.
+    if (match(I->getOperand(0), m_Neg(m_Specific(I->getOperand(1)))) ||
+        match(I->getOperand(1), m_Neg(m_Specific(I->getOperand(0)))))
+      return OrZero || isKnownNonZero(I->getOperand(0), Depth, Q);
     return false;
   case Instruction::Add: {
     // Adding a power-of-two or zero to the same power-of-two or zero yields
