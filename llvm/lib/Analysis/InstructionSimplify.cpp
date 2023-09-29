@@ -2019,7 +2019,8 @@ static Value *simplifyAndOrOfCmps(const SimplifyQuery &Q, Value *Op0,
   // If we looked through casts, we can only handle a constant simplification
   // because we are not allowed to create a cast instruction here.
   if (auto *C = dyn_cast<Constant>(V))
-    return ConstantExpr::getCast(Cast0->getOpcode(), C, Cast0->getType());
+    return ConstantFoldCastOperand(Cast0->getOpcode(), C, Cast0->getType(),
+                                   Q.DL);
 
   return nullptr;
 }
@@ -3876,9 +3877,15 @@ static Value *simplifyICmpInst(unsigned Predicate, Value *LHS, Value *RHS,
 
         // Compute the constant that would happen if we truncated to SrcTy then
         // reextended to DstTy.
-        Constant *Trunc = ConstantExpr::getTrunc(C, SrcTy);
-        Constant *RExt = ConstantExpr::getCast(CastInst::ZExt, Trunc, DstTy);
-        Constant *AnyEq = ConstantExpr::getICmp(ICmpInst::ICMP_EQ, RExt, C);
+        Constant *Trunc =
+            ConstantFoldCastOperand(Instruction::Trunc, C, SrcTy, Q.DL);
+        assert(Trunc && "Constant-fold of ImmConstant should not fail");
+        Constant *RExt =
+            ConstantFoldCastOperand(CastInst::ZExt, Trunc, DstTy, Q.DL);
+        assert(RExt && "Constant-fold of ImmConstant should not fail");
+        Constant *AnyEq =
+            ConstantFoldCompareInstOperands(ICmpInst::ICMP_EQ, RExt, C, Q.DL);
+        assert(AnyEq && "Constant-fold of ImmConstant should not fail");
 
         // If the re-extended constant didn't change any of the elements then
         // this is effectively also a case of comparing two zero-extended
@@ -3947,9 +3954,15 @@ static Value *simplifyICmpInst(unsigned Predicate, Value *LHS, Value *RHS,
 
         // Compute the constant that would happen if we truncated to SrcTy then
         // reextended to DstTy.
-        Constant *Trunc = ConstantExpr::getTrunc(C, SrcTy);
-        Constant *RExt = ConstantExpr::getCast(CastInst::SExt, Trunc, DstTy);
-        Constant *AnyEq = ConstantExpr::getICmp(ICmpInst::ICMP_EQ, RExt, C);
+        Constant *Trunc =
+            ConstantFoldCastOperand(Instruction::Trunc, C, SrcTy, Q.DL);
+        assert(Trunc && "Constant-fold of ImmConstant should not fail");
+        Constant *RExt =
+            ConstantFoldCastOperand(CastInst::SExt, Trunc, DstTy, Q.DL);
+        assert(RExt && "Constant-fold of ImmConstant should not fail");
+        Constant *AnyEq =
+            ConstantFoldCompareInstOperands(ICmpInst::ICMP_EQ, RExt, C, Q.DL);
+        assert(AnyEq && "Constant-fold of ImmConstant should not fail");
 
         // If the re-extended constant didn't change then this is effectively
         // also a case of comparing two sign-extended values.
