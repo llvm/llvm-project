@@ -902,11 +902,8 @@ void tools::addOpenMPRuntimeLibraryPath(const ToolChain &TC,
 
 void tools::addArchSpecificRPath(const ToolChain &TC, const ArgList &Args,
                                  ArgStringList &CmdArgs) {
-  // Enable -frtlib-add-rpath by default for the case of VE.
-  const bool IsVE = TC.getTriple().isVE();
-  bool DefaultValue = IsVE;
   if (!Args.hasFlag(options::OPT_frtlib_add_rpath,
-                    options::OPT_fno_rtlib_add_rpath, DefaultValue))
+                    options::OPT_fno_rtlib_add_rpath, false))
     return;
 
   for (const auto &CandidateRPath : TC.getArchSpecificLibPaths()) {
