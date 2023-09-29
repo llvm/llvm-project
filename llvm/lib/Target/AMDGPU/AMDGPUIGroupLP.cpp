@@ -900,6 +900,11 @@ void MFMASmallGemmOpt::applyIGLPStrategy(
   }
 }
 
+static unsigned DSWCount = 0;
+static unsigned DSWWithPermCount = 0;
+static unsigned DSWWithSharedVMEMCount = 0;
+static bool HasDSWCounts = false;
+
 class MFMASmallGemmSingleWaveOpt final : public IGLPStrategy {
 private:
   // Whether the DS_READ is a predecessor of first four MFMA in region
@@ -1076,9 +1081,12 @@ private:
               Cache->push_back(Pred.getSUnit());
           }
         }
+
+        // If the other group has no PERM preds, then this group won't share any
+        if (!Cache->size())
+          return false;
       }
 
-      assert(Cache->size());
       auto DAG = SyncPipe[0].DAG;
       // Does the previous DS_WRITE share a V_PERM predecessor with this
       // VMEM_READ
@@ -1109,9 +1117,6 @@ void MFMASmallGemmSingleWaveOpt::applyIGLPStrategy(
     DenseMap<int, SUnitsToCandidateSGsMap> &SyncedInstrs,
     DenseMap<int, SmallVector<SchedGroup, 4>> &SyncedSchedGroups) {
   unsigned MFMACount = 0;
-  unsigned DSWCount = 0;
-  unsigned DSWWithPermCount = 0;
-  unsigned DSWWithSharedVMEMCount = 0;
   unsigned DSRCount = 0;
   SmallVector<SUnit *, 6> DSWithPerms;
   for (auto &SU : DAG->SUnits) {
@@ -1121,7 +1126,7 @@ void MFMASmallGemmSingleWaveOpt::applyIGLPStrategy(
     else if (TII->isDS(*I)) {
       if (I->mayLoad())
         ++DSRCount;
-      else if (I->mayStore()) {
+      else if (I->mayStore() && !HasDSWCounts) {
         ++DSWCount;
         for (auto Pred : SU.Preds) {
           if (Pred.getSUnit()->getInstr()->getOpcode() ==
@@ -1133,58 +1138,62 @@ void MFMASmallGemmSingleWaveOpt::applyIGLPStrategy(
       }
     }
   }
-  DSWWithPermCount = DSWithPerms.size();
-  auto I = DSWithPerms.begin();
-  auto E = DSWithPerms.end();
 
-  // Get the count of DS_WRITES with V_PERM predecessors which
-  // have loop carried dependencies (WAR) on the same VMEM_READs.
-  // We consider partial overlap as a miss -- in other words,
-  // for a given DS_W, we only consider another DS_W as matching
-  // if there is a corresponding (in terms of the VMEM_R it uses) V_PERM pred
-  // for every V_PERM pred of this DS_W.
-  DenseMap<MachineInstr *, SUnit *> VMEMLookup;
-  SmallVector<SUnit *, 6> Counted;
-  for (; I != E; I++) {
-    SUnit *Cand = nullptr;
-    bool MissedAny = false;
-    for (auto &Pred : (*I)->Preds) {
-      if (Pred.getSUnit()->getInstr()->getOpcode() != AMDGPU::V_PERM_B32_e64)
-        continue;
+  if (!HasDSWCounts) {
+    DSWWithPermCount = DSWithPerms.size();
+    auto I = DSWithPerms.begin();
+    auto E = DSWithPerms.end();
 
-      if (Cand && llvm::is_contained(Counted, Cand))
-        break;
-
-      for (auto &Succ : Pred.getSUnit()->Succs) {
-        auto MI = Succ.getSUnit()->getInstr();
-        if (!TII->isVMEM(*MI) || !MI->mayLoad())
+    // Get the count of DS_WRITES with V_PERM predecessors which
+    // have loop carried dependencies (WAR) on the same VMEM_READs.
+    // We consider partial overlap as a miss -- in other words,
+    // for a given DS_W, we only consider another DS_W as matching
+    // if there is a corresponding (in terms of the VMEM_R it uses) V_PERM pred
+    // for every V_PERM pred of this DS_W.
+    DenseMap<MachineInstr *, SUnit *> VMEMLookup;
+    SmallVector<SUnit *, 6> Counted;
+    for (; I != E; I++) {
+      SUnit *Cand = nullptr;
+      bool MissedAny = false;
+      for (auto &Pred : (*I)->Preds) {
+        if (Pred.getSUnit()->getInstr()->getOpcode() != AMDGPU::V_PERM_B32_e64)
           continue;
 
-        if (MissedAny || !VMEMLookup.size()) {
-          MissedAny = true;
-          VMEMLookup[MI] = *I;
-          continue;
-        }
-
-        if (!VMEMLookup.contains(MI)) {
-          MissedAny = true;
-          VMEMLookup[MI] = *I;
-          continue;
-        }
-
-        Cand = VMEMLookup[MI];
-        if (llvm::is_contained(Counted, Cand)) {
-          MissedAny = true;
+        if (Cand && llvm::is_contained(Counted, Cand))
           break;
+
+        for (auto &Succ : Pred.getSUnit()->Succs) {
+          auto MI = Succ.getSUnit()->getInstr();
+          if (!TII->isVMEM(*MI) || !MI->mayLoad())
+            continue;
+
+          if (MissedAny || !VMEMLookup.size()) {
+            MissedAny = true;
+            VMEMLookup[MI] = *I;
+            continue;
+          }
+
+          if (!VMEMLookup.contains(MI)) {
+            MissedAny = true;
+            VMEMLookup[MI] = *I;
+            continue;
+          }
+
+          Cand = VMEMLookup[MI];
+          if (llvm::is_contained(Counted, Cand)) {
+            MissedAny = true;
+            break;
+          }
         }
       }
-    }
-    if (!MissedAny && Cand) {
-      DSWWithSharedVMEMCount += 2;
-      Counted.push_back(Cand);
-      Counted.push_back(*I);
+      if (!MissedAny && Cand) {
+        DSWWithSharedVMEMCount += 2;
+        Counted.push_back(Cand);
+        Counted.push_back(*I);
+      }
     }
   }
+  HasDSWCounts = true;
 
   assert(DSWWithSharedVMEMCount <= DSWWithPermCount);
   SchedGroup *SG;
