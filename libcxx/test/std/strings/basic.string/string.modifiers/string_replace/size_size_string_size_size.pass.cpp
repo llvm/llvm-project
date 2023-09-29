@@ -5977,7 +5977,7 @@ TEST_CONSTEXPR_CXX20 bool test55() {
 }
 
 template <class S>
-void test() {
+TEST_CONSTEXPR_CXX20 void test() {
   test0<S>();
   test1<S>();
   test2<S>();
@@ -6098,7 +6098,7 @@ void test() {
 int main(int, char**) {
   test<std::string>();
 #if TEST_STD_VER >= 11
-  test<std::basic_string<char, std::char_traits<char>, min_allocator<char>>>();
+  test<std::basic_string<char, std::char_traits<char>, min_allocator<char> > >();
 #endif
 
   return 0;

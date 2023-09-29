@@ -2,7 +2,7 @@
 ; RUN: opt -passes=loop-vectorize -force-vector-interleave=4 -force-vector-width=4 -S < %s | FileCheck %s --check-prefix=CHECK
 ; RUN: opt -passes=loop-vectorize -force-vector-interleave=4 -force-vector-width=1 -S < %s | FileCheck %s --check-prefix=CHECK
 
-define i64 @select_icmp_const_1(ptr nocapture readonly %a, i64 %n) {
+define i64 @select_icmp_const_1(ptr %a, i64 %n) {
 ; CHECK-LABEL: define i64 @select_icmp_const_1
 ; CHECK-NOT:   vector.body:
 ;
@@ -24,7 +24,7 @@ exit:                                             ; preds = %for.body
   ret i64 %cond
 }
 
-define i64 @select_icmp_const_2(ptr nocapture readonly %a, i64 %n) {
+define i64 @select_icmp_const_2(ptr %a, i64 %n) {
 ; CHECK-LABEL: define i64 @select_icmp_const_2
 ; CHECK-NOT:   vector.body:
 ;
@@ -46,7 +46,7 @@ exit:                                             ; preds = %for.body
   ret i64 %cond
 }
 
-define i64 @select_icmp_const_3_variable_rdx_start(ptr nocapture readonly %a, i64 %rdx.start, i64 %n) {
+define i64 @select_icmp_const_3_variable_rdx_start(ptr %a, i64 %rdx.start, i64 %n) {
 ; CHECK-LABEL: define i64 @select_icmp_const_3_variable_rdx_start
 ; CHECK-NOT:   vector.body:
 ;
@@ -68,7 +68,7 @@ exit:                                             ; preds = %for.body
   ret i64 %cond
 }
 
-define i64 @select_fcmp_const_fast(ptr nocapture readonly %a, i64 %n) {
+define i64 @select_fcmp_const_fast(ptr %a, i64 %n) {
 ; CHECK-LABEL: define i64 @select_fcmp_const_fast
 ; CHECK-NOT:   vector.body:
 ;
@@ -90,7 +90,7 @@ exit:                                             ; preds = %for.body
   ret i64 %cond
 }
 
-define i64 @select_fcmp_const(ptr nocapture readonly %a, i64 %n) {
+define i64 @select_fcmp_const(ptr %a, i64 %n) {
 ; CHECK-LABEL: define i64 @select_fcmp_const
 ; CHECK-NOT:   vector.body:
 ;
@@ -112,7 +112,7 @@ exit:                                             ; preds = %for.body
   ret i64 %cond
 }
 
-define i64 @select_icmp(ptr nocapture readonly %a, ptr nocapture readonly %b, i64 %rdx.start, i64 %n) {
+define i64 @select_icmp(ptr %a, ptr %b, i64 %rdx.start, i64 %n) {
 ; CHECK-LABEL: define i64 @select_icmp
 ; CHECK-NOT:   vector.body:
 ;
@@ -136,7 +136,7 @@ exit:                                             ; preds = %for.body
   ret i64 %cond
 }
 
-define i64 @select_fcmp(ptr nocapture readonly %a, ptr nocapture readonly %b, i64 %rdx.start, i64 %n) {
+define i64 @select_fcmp(ptr %a, ptr %b, i64 %rdx.start, i64 %n) {
 ; CHECK-LABEL: define i64 @select_fcmp
 ; CHECK-NOT:   vector.body:
 ;
@@ -160,7 +160,7 @@ exit:                                             ; preds = %for.body
   ret i64 %cond
 }
 
-define i64 @select_icmp_min_valid_iv_start(ptr nocapture readonly %a, ptr nocapture readonly %b, i64 %rdx.start, i64 %n) {
+define i64 @select_icmp_min_valid_iv_start(ptr %a, ptr %b, i64 %rdx.start, i64 %n) {
 ; CHECK-LABEL: define i64 @select_icmp_min_valid_iv_start
 ; CHECK-NOT:   vector.body:
 ;
@@ -196,7 +196,7 @@ exit:                                             ; preds = %for.body
 ; guard is a signed i32:
 ;   %cmp.sgt = icmp sgt i32 %n, 0
 ; and successfully vectorize the case without a runtime-check.
-define i32 @not_vectorized_select_icmp_const_truncated_iv_widened_exit(ptr nocapture readonly %a, i32 %n) {
+define i32 @not_vectorized_select_icmp_const_truncated_iv_widened_exit(ptr %a, i32 %n) {
 ; CHECK-LABEL: define i32 @not_vectorized_select_icmp_const_truncated_iv_widened_exit
 ; CHECK-NOT:   vector.body:
 ;
@@ -233,7 +233,7 @@ exit:                                            ; preds = %for.body, %entry
 ; exit condition, which compares to a constant that fits within i32:
 ;   %exitcond.not = icmp eq i64 %inc, 20000
 ; and successfully vectorize the case without a runtime-check.
-define i32 @not_vectorized_select_icmp_const_truncated_iv_const_exit(ptr nocapture readonly %a) {
+define i32 @not_vectorized_select_icmp_const_truncated_iv_const_exit(ptr %a) {
 ; CHECK-LABEL: define i32 @not_vectorized_select_icmp_const_truncated_iv_const_exit
 ; CHECK-NOT:   vector.body:
 ;
@@ -263,7 +263,7 @@ exit:                                           ; preds = %for.body
 ;   %cmp.sgt = icmp sgt i64 %n, 0
 ; We cannot guarantee that %iv won't overflow an i32 value (and hence hit the
 ; sentinel value), and need a runtime-check to vectorize this case.
-define i32 @not_vectorized_select_icmp_const_truncated_iv_unwidened_exit(ptr nocapture readonly %a, i64 %n) {
+define i32 @not_vectorized_select_icmp_const_truncated_iv_unwidened_exit(ptr %a, i64 %n) {
 ; CHECK-LABEL: define i32 @not_vectorized_select_icmp_const_truncated_iv_unwidened_exit
 ; CHECK-NOT:   vector.body:
 ;
@@ -295,7 +295,7 @@ exit:                                             ; preds = %for.body, %entry
 ;   %cmp.not = icmp eq i32 %n, 0
 ; We cannot guarantee that %iv won't overflow an i32 value (and hence hit the
 ; sentinel value), and need a runtime-check to vectorize this case.
-define i32 @not_vectorized_select_icmp_const_truncated_iv_unsigned_loop_guard(ptr nocapture readonly %a, i32 %n) {
+define i32 @not_vectorized_select_icmp_const_truncated_iv_unsigned_loop_guard(ptr %a, i32 %n) {
 ; CHECK-LABEL: define i32 @not_vectorized_select_icmp_const_truncated_iv_unsigned_loop_guard
 ; CHECK-NOT:   vector.body:
 ;
@@ -331,7 +331,7 @@ exit:                                             ; preds = %for.body, %entry
 ;   %exitcond.not = icmp eq i64 %inc, 4294967294
 ; Hence, the i32 will most certainly wrap and hit the sentinel value, and we
 ; cannot vectorize this case.
-define i32 @not_vectorized_select_icmp_truncated_iv_out_of_bound(ptr nocapture readonly %a) {
+define i32 @not_vectorized_select_icmp_truncated_iv_out_of_bound(ptr %a) {
 ; CHECK-LABEL: define i32 @not_vectorized_select_icmp_truncated_iv_out_of_bound
 ; CHECK-NOT:   vector.body:
 ;
@@ -354,7 +354,7 @@ exit:                                             ; preds = %for.body
   ret i32 %spec.select
 }
 
-define float @not_vectorized_select_float_induction_icmp(ptr nocapture readonly %a, ptr nocapture readonly %b, float %rdx.start, i64 %n) {
+define float @not_vectorized_select_float_induction_icmp(ptr %a, ptr %b, float %rdx.start, i64 %n) {
 ; CHECK-LABEL: @not_vectorized_select_float_induction_icmp
 ; CHECK-NOT:   vector.body:
 ;
@@ -380,7 +380,7 @@ exit:                                             ; preds = %for.body
   ret float %cond
 }
 
-define i64 @not_vectorized_select_decreasing_induction_icmp_const_start(ptr nocapture readonly %a) {
+define i64 @not_vectorized_select_decreasing_induction_icmp_const_start(ptr %a) {
 ; CHECK-LABEL: @not_vectorized_select_decreasing_induction_icmp_const_start
 ; CHECK-NOT:   vector.body:
 ;
@@ -402,7 +402,7 @@ exit:                                             ; preds = %for.body
   ret i64 %spec.select
 }
 
-define i64 @not_vectorized_select_decreasing_induction_icmp_non_const_start(ptr nocapture readonly %a, ptr nocapture readonly %b, i64 %rdx.start, i64 %n) {
+define i64 @not_vectorized_select_decreasing_induction_icmp_non_const_start(ptr %a, ptr %b, i64 %rdx.start, i64 %n) {
 ; CHECK-LABEL: @not_vectorized_select_decreasing_induction_icmp_non_const_start
 ; CHECK-NOT:   vector.body:
 ;
@@ -428,7 +428,7 @@ exit:                                             ; preds = %for.body
 
 ; The sentinel value for increasing-IV vectorization is -LONG_MAX, and since
 ; the IV hits this value, it is impossible to vectorize this case.
-define i64 @not_vectorized_select_icmp_iv_out_of_bound(ptr nocapture readonly %a, ptr nocapture readonly %b, i64 %rdx.start, i64 %n) {
+define i64 @not_vectorized_select_icmp_iv_out_of_bound(ptr %a, ptr %b, i64 %rdx.start, i64 %n) {
 ; CHECK-LABEL: @not_vectorized_select_icmp_iv_out_of_bound
 ; CHECK-NOT:   vector.body:
 ;
@@ -456,7 +456,7 @@ exit:                                             ; preds = %for.body
 
 ; The sentinel value for decreasing-IV vectorization is LONG_MAX, and since
 ; the IV hits this value, it is impossible to vectorize this case.
-define i64 @not_vectorized_select_decreasing_induction_icmp_iv_out_of_bound(ptr nocapture readonly %a) {
+define i64 @not_vectorized_select_decreasing_induction_icmp_iv_out_of_bound(ptr %a) {
 ; CHECK-LABEL: @not_vectorized_select_decreasing_induction_icmp_iv_out_of_bound
 ; CHECK-NOT:   vector.body:
 ;
@@ -478,7 +478,7 @@ exit:                                             ; preds = %for.body
   ret i64 %spec.select
 }
 
-define i64 @not_vectorized_select_icmp_non_const_iv_start_value(ptr nocapture readonly %a, ptr nocapture readonly %b, i64 %ivstart, i64 %rdx.start, i64 %n) {
+define i64 @not_vectorized_select_icmp_non_const_iv_start_value(ptr %a, ptr %b, i64 %ivstart, i64 %rdx.start, i64 %n) {
 ; CHECK-LABEL: define i64 @not_vectorized_select_icmp_non_const_iv_start_value
 ; CHECK-NOT:   vector.body:
 ;

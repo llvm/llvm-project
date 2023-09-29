@@ -357,7 +357,8 @@ TEST(ToolChainTest, VFSGnuLibcxxPathNoSysroot) {
     Driver TheDriver("/bin/clang", "x86_64-unknown-linux-gnu", Diags,
                      "clang LLVM compiler", InMemoryFileSystem);
     std::unique_ptr<Compilation> C(TheDriver.BuildCompilation(
-        {"/bin/clang", "-fsyntax-only", "-stdlib=libc++", "foo.cpp"}));
+        {"/bin/clang", "-fsyntax-only", "-stdlib=libc++",
+         "--sysroot=", "foo.cpp"}));
     ASSERT_TRUE(C);
     EXPECT_THAT(C->getJobs(), testing::ElementsAre(jobHasArgs(
                                   "-internal-isystem /usr/include/c++/v1")));

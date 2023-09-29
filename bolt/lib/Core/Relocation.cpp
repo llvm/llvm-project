@@ -109,6 +109,7 @@ static bool isSupportedRISCV(uint64_t Type) {
   case ELF::R_RISCV_HI20:
   case ELF::R_RISCV_LO12_I:
   case ELF::R_RISCV_LO12_S:
+  case ELF::R_RISCV_64:
     return true;
   }
 }
@@ -209,6 +210,7 @@ static size_t getSizeForTypeRISCV(uint64_t Type) {
   case ELF::R_RISCV_LO12_I:
   case ELF::R_RISCV_LO12_S:
     return 4;
+  case ELF::R_RISCV_64:
   case ELF::R_RISCV_GOT_HI20:
     // See extractValueRISCV for why this is necessary.
     return 8;
@@ -359,6 +361,16 @@ static uint64_t encodeValueAArch64(uint64_t Type, uint64_t Value, uint64_t PC) {
     // Immediate goes in bits 25:0 of BL.
     // OP 1001_01 goes in bits 31:26 of BL.
     Value = ((Value >> 2) & 0x3ffffff) | 0x94000000ULL;
+    break;
+  }
+  return Value;
+}
+
+static uint64_t encodeValueRISCV(uint64_t Type, uint64_t Value, uint64_t PC) {
+  switch (Type) {
+  default:
+    llvm_unreachable("unsupported relocation");
+  case ELF::R_RISCV_64:
     break;
   }
   return Value;
@@ -539,6 +551,7 @@ static uint64_t extractValueRISCV(uint64_t Type, uint64_t Contents,
     return SignExtend64<8>(((Contents >> 2) & 0x1f) | ((Contents >> 5) & 0xe0));
   case ELF::R_RISCV_ADD32:
   case ELF::R_RISCV_SUB32:
+  case ELF::R_RISCV_64:
     return Contents;
   }
 }
@@ -704,6 +717,7 @@ static bool isPCRelativeRISCV(uint64_t Type) {
   case ELF::R_RISCV_HI20:
   case ELF::R_RISCV_LO12_I:
   case ELF::R_RISCV_LO12_S:
+  case ELF::R_RISCV_64:
     return false;
   case ELF::R_RISCV_JAL:
   case ELF::R_RISCV_CALL:
@@ -756,7 +770,7 @@ uint64_t Relocation::encodeValue(uint64_t Type, uint64_t Value, uint64_t PC) {
   if (Arch == Triple::aarch64)
     return encodeValueAArch64(Type, Value, PC);
   if (Arch == Triple::riscv64)
-    llvm_unreachable("not implemented");
+    return encodeValueRISCV(Type, Value, PC);
   return encodeValueX86(Type, Value, PC);
 }
 
@@ -844,6 +858,8 @@ bool Relocation::isPCRelative(uint64_t Type) {
 uint64_t Relocation::getAbs64() {
   if (Arch == Triple::aarch64)
     return ELF::R_AARCH64_ABS64;
+  if (Arch == Triple::riscv64)
+    return ELF::R_RISCV_64;
   return ELF::R_X86_64_64;
 }
 

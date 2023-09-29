@@ -22,9 +22,9 @@ int main(int, char**)
   // expected-error@+1 {{no member named 'is_constant_evaluated' in namespace 'std'}}
   bool b = std::is_constant_evaluated();
 #else
-  // expected-error-re@+1 {{{{(static_assert|static assertion)}} failed}}
+  // expected-error@+1 {{static assertion failed}}
   static_assert(!std::is_constant_evaluated(), "");
-  // expected-warning-re@-1 0-1 {{'std::is_constant_evaluated' will always evaluate to {{('true' in a manifestly constant-evaluated expression|true in this context)}}}}
+  // expected-warning@-1 0-1 {{'std::is_constant_evaluated' will always evaluate to 'true' in a manifestly constant-evaluated expression}}
 #endif
   return 0;
 }

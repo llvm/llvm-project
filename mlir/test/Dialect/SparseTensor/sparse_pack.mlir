@@ -31,7 +31,7 @@
 // CHECK:         }
 func.func @sparse_pack(%values: tensor<6xf64>, %pos:tensor<2xindex>, %coordinates: tensor<6x2xi32>)
                     -> tensor<100x100xf64, #COO> {
-  %0 = sparse_tensor.pack %values, %pos, %coordinates
+  %0 = sparse_tensor.assemble %values, %pos, %coordinates
      : tensor<6xf64>, tensor<2xindex>, tensor<6x2xi32> to tensor<100x100xf64, #COO>
   return %0 : tensor<100x100xf64, #COO>
 }
@@ -70,7 +70,7 @@ func.func @sparse_unpack(%sp : tensor<100x100xf64, #COO>,
                          %op : tensor<2xindex>,
                          %oi : tensor<6x2xi32>)
                        -> (tensor<6xf64>, tensor<2xindex>, tensor<6x2xi32>) {
-  %rd, %rp, %ri, %dl, %pl, %il = sparse_tensor.unpack %sp : tensor<100x100xf64, #COO>
+  %rd, %rp, %ri, %dl, %pl, %il = sparse_tensor.disassemble %sp : tensor<100x100xf64, #COO>
                                  outs(%od, %op, %oi : tensor<6xf64>, tensor<2xindex>, tensor<6x2xi32>)
                                  -> tensor<6xf64>, (tensor<2xindex>, tensor<6x2xi32>), index, (index, index)
   return %rd, %rp, %ri : tensor<6xf64>, tensor<2xindex>, tensor<6x2xi32>

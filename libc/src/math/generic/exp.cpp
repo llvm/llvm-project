@@ -104,7 +104,7 @@ Float128 poly_approx_f128(const Float128 &dx) {
       {false, -132, MType({0xaaaaaaaaaaaaaaab, 0xaaaaaaaaaaaaaaaa})}, // 1/24
       {false, -134, MType({0x8888888888888889, 0x8888888888888888})}, // 1/120
       {false, -137, MType({0x60b60b60b60b60b6, 0xb60b60b60b60b60b})}, // 1/720
-      {false, -140, MType({0x00b00b00b00b00b0, 0xb00b00b00b00b00b})}, // 1/5040
+      {false, -140, MType({0x00d00d00d00d00d0, 0xd00d00d00d00d00d})}, // 1/5040
   };
 
   Float128 p = fputil::polyeval(dx, COEFFS_128[0], COEFFS_128[1], COEFFS_128[2],

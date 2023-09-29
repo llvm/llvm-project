@@ -1401,7 +1401,7 @@ void HeaderSearch::MarkFileModuleHeader(const FileEntry *FE,
 }
 
 bool HeaderSearch::ShouldEnterIncludeFile(Preprocessor &PP,
-                                          const FileEntry *File, bool isImport,
+                                          FileEntryRef File, bool isImport,
                                           bool ModulesEnabled, Module *M,
                                           bool &IsFirstIncludeOfFile) {
   ++NumIncluded; // Count # of attempted #includes.
@@ -1576,7 +1576,7 @@ HeaderSearch::findAllModulesForHeader(FileEntryRef File) const {
 }
 
 ArrayRef<ModuleMap::KnownHeader>
-HeaderSearch::findResolvedModulesForHeader(const FileEntry *File) const {
+HeaderSearch::findResolvedModulesForHeader(FileEntryRef File) const {
   if (ExternalSource) {
     // Make sure the external source has handled header info about this file,
     // which includes whether the file is part of a module.

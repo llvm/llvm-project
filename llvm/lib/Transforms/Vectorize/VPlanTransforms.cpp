@@ -964,10 +964,10 @@ static VPActiveLaneMaskPHIRecipe *addVPLaneMaskPhiAndUpdateExitBranch(
 void VPlanTransforms::addActiveLaneMask(
     VPlan &Plan, bool UseActiveLaneMaskForControlFlow,
     bool DataAndControlFlowWithoutRuntimeCheck) {
-  assert(!DataAndControlFlowWithoutRuntimeCheck ||
-         UseActiveLaneMaskForControlFlow &&
-             "DataAndControlFlowWithoutRuntimeCheck implies "
-             "UseActiveLaneMaskForControlFlow");
+  assert((!DataAndControlFlowWithoutRuntimeCheck ||
+          UseActiveLaneMaskForControlFlow) &&
+         "DataAndControlFlowWithoutRuntimeCheck implies "
+         "UseActiveLaneMaskForControlFlow");
 
   auto FoundWidenCanonicalIVUser =
       find_if(Plan.getCanonicalIV()->users(),

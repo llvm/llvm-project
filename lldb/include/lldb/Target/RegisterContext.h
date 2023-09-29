@@ -144,6 +144,10 @@ public:
 
   uint64_t GetPC(uint64_t fail_value = LLDB_INVALID_ADDRESS);
 
+  // Returns the register value containing thread specific data, like TLS data
+  // and other thread specific stuff.
+  uint64_t GetThreadPointer(uint64_t fail_value = LLDB_INVALID_ADDRESS);
+
   /// Get an address suitable for symbolication.
   /// When symbolicating -- computing line, block, function --
   /// for a function in the middle of the stack, using the return

@@ -15443,7 +15443,7 @@ Decl *Sema::ActOnStartOfFunctionDef(Scope *FnBodyScope, Decl *D,
 
   // Do not push if it is a lambda because one is already pushed when building
   // the lambda in ActOnStartOfLambdaDefinition().
-  if (!isLambdaCallOperator(FD)) {
+  if (!isLambdaCallOperator(FD))
     // [expr.const]/p14.1
     // An expression or conversion is in an immediate function context if it is
     // potentially evaluated and either: its innermost enclosing non-block scope
@@ -15451,9 +15451,6 @@ Decl *Sema::ActOnStartOfFunctionDef(Scope *FnBodyScope, Decl *D,
     PushExpressionEvaluationContext(
         FD->isConsteval() ? ExpressionEvaluationContext::ImmediateFunctionContext
                           : ExprEvalContexts.back().Context);
-    if (!FD->isConsteval() && !FD->isConstexpr())
-      ExprEvalContexts.back().IsRuntimeEvaluated = true;
-  }
 
   // Each ExpressionEvaluationContextRecord also keeps track of whether the
   // context is nested in an immediate function context, so smaller contexts
