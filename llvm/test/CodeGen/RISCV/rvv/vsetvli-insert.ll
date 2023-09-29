@@ -329,7 +329,6 @@ entry:
 define double @test17(i64 %avl, <vscale x 1 x double> %a, <vscale x 1 x double> %b) nounwind {
 ; CHECK-LABEL: test17:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vsetvli a0, a0, e32, mf2, ta, ma
 ; CHECK-NEXT:    vsetvli zero, a0, e64, m1, ta, ma
 ; CHECK-NEXT:    vfmv.f.s fa5, v8
 ; CHECK-NEXT:    vfadd.vv v8, v8, v9

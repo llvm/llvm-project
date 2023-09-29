@@ -1433,7 +1433,7 @@ void RISCVInsertVSETVLI::doLocalPostpass(MachineBasicBlock &MBB) {
   DemandedFields Used;
   Used.demandVL();
   Used.demandVTYPE();
-  SmallVector<MachineInstr*> ToDelete;
+  SmallPtrSet<MachineInstr *, 8> ToDelete;
   for (MachineInstr &MI : make_range(MBB.rbegin(), MBB.rend())) {
 
     if (!isVectorConfigInstr(MI)) {
@@ -1458,8 +1458,10 @@ void RISCVInsertVSETVLI::doLocalPostpass(MachineBasicBlock &MBB) {
     if (VRegDef != RISCV::X0 &&
         !(VRegDef.isVirtual() && MRI->use_nodbg_empty(VRegDef))) {
       for (MachineInstr &UserMI : MRI->use_nodbg_instructions(VRegDef)) {
-        // ignore uses by *NextMI since we will deal with them explicitly
-        if (!NextMI || !UserMI.isIdenticalTo(*NextMI)) {
+        // do not track uses by *NextMI since we will deal with them explicitly,
+        // and also ignore uses by instructions that will be removed
+        if ((!NextMI || !UserMI.isIdenticalTo(*NextMI)) &&
+            ToDelete.find(&UserMI) == ToDelete.end()) {
           Used.demandVL();
           break;
         }
@@ -1478,7 +1480,7 @@ void RISCVInsertVSETVLI::doLocalPostpass(MachineBasicBlock &MBB) {
           // set VLType of MI to that of *NextMI
           VLTypeOp.setImm(NextVLTypeOp.getImm());
           // remove *NextMI and potentially replace its uses with MI
-          ToDelete.push_back(NextMI);
+          ToDelete.insert(NextMI);
           if (NextVRegDef != RISCV::X0 && !MRI->use_nodbg_empty(NextVRegDef)) {
             if (VRegDef != RISCV::X0)
               MRI->replaceRegWith(NextVRegDef, VRegDef);
