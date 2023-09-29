@@ -269,6 +269,8 @@ Bug Fixes in This Version
 - Fixes crash when trying to obtain the common sugared type of
   `decltype(instantiation-dependent-expr)`.
   Fixes (`#67603 <https://github.com/llvm/llvm-project/issues/67603>`_)
+- Fixes a crash caused by a multidimensional array being captured by a lambda
+  (`#67722 <https://github.com/llvm/llvm-project/issues/67722>`_).
 
 Bug Fixes to Compiler Builtins
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -369,6 +371,9 @@ Bug Fixes to C++ Support
 - Fix crash when fold expression was used in the initialization of default
   argument. Fixes:
   (`#67395 <https://github.com/llvm/llvm-project/issues/67395>`_)
+
+- Fixed a bug causing destructors of constant-evaluated structured bindings
+  initialized by array elements to be called in the wrong evaluation context.
 
 Bug Fixes to AST Handling
 ^^^^^^^^^^^^^^^^^^^^^^^^^
