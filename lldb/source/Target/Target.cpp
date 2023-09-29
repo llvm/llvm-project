@@ -3718,8 +3718,8 @@ bool Target::SetSectionUnloaded(const lldb::SectionSP &section_sp,
 
 void Target::ClearAllLoadedSections() { m_section_load_history.Clear(); }
 
-lldb::addr_t Target::FindLoadAddrForNameInSymbolsAndPersistentVariables(
-    ConstString name_const_str, SymbolType symbol_type) {
+lldb::addr_t Target::FindLoadAddrForNameInSymbols(ConstString name_const_str,
+                                                  SymbolType symbol_type) {
   lldb::addr_t symbol_addr = LLDB_INVALID_ADDRESS;
   SymbolContextList sc_list;
 
@@ -3745,21 +3745,39 @@ lldb::addr_t Target::FindLoadAddrForNameInSymbolsAndPersistentVariables(
       }
     }
   }
+  return symbol_addr;
+}
 
-  if (symbol_addr == LLDB_INVALID_ADDRESS) {
-    // If we didn't find it in the symbols, check the ClangPersistentVariables,
-    // 'cause we may have
-    // made it by hand.
-    ConstString mangled_const_str;
-    if (name_const_str.GetMangledCounterpart(mangled_const_str))
-      symbol_addr = GetPersistentSymbol(mangled_const_str);
+lldb::addr_t
+Target::FindLoadAddrForNameInPersistentVariables(ConstString name_const_str,
+                                                 lldb::SymbolType symbol_type) {
+  lldb::addr_t symbol_addr = LLDB_INVALID_ADDRESS;
+  ConstString mangled_const_str;
+
+  if (name_const_str.GetMangledCounterpart(mangled_const_str)) {
+    symbol_addr = GetPersistentSymbol(mangled_const_str);
   }
 
+  // Check in persistent variables using the name that was passed in
   if (symbol_addr == LLDB_INVALID_ADDRESS) {
-    // Let's try looking for the name passed-in itself, as it might be a mangled
-    // name
     symbol_addr = GetPersistentSymbol(name_const_str);
   }
+
+  return symbol_addr;
+}
+
+lldb::addr_t Target::FindLoadAddrForNameInSymbolsAndPersistentVariables(
+    ConstString name_const_str, SymbolType symbol_type) {
+  lldb::addr_t symbol_addr = LLDB_INVALID_ADDRESS;
+
+  // Try to find the name in the symbol list
+  symbol_addr =
+      Target::FindLoadAddrForNameInSymbols(name_const_str, symbol_type);
+
+  // If that doesn't work, look for it in persistent variables
+  if (symbol_addr == LLDB_INVALID_ADDRESS)
+    Target::FindLoadAddrForNameInPersistentVariables(name_const_str,
+                                                     symbol_type);
 
   return symbol_addr;
 }
