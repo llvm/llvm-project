@@ -655,6 +655,10 @@ void CodeGenModule::EmitCXXThreadLocalInitFunc() {
 */
 
 void CodeGenModule::EmitCXXModuleInitFunc(Module *Primary) {
+  assert(Primary->isInterfaceOrPartition() &&
+         "The function should only be called for C++20 named module interface"
+         " or partition.");
+
   while (!CXXGlobalInits.empty() && !CXXGlobalInits.back())
     CXXGlobalInits.pop_back();
 
@@ -669,6 +673,18 @@ void CodeGenModule::EmitCXXModuleInitFunc(Module *Primary) {
   // Ones that we only import.
   for (Module *M : Primary->Imports)
     AllImports.push_back(M);
+  // Ones that we import in the global module fragment or the private module
+  // fragment.
+  llvm::for_each(Primary->submodules(), [&AllImports](Module *SubM) {
+    assert((SubM->isGlobalModule() || SubM->isPrivateModule()) &&
+           "The sub modules of C++20 module unit should only be global module "
+           "fragments or private module framents.");
+    assert(SubM->Exports.empty() &&
+           "The global mdoule fragments and the private module fragments are "
+           "not allowed to export import modules.");
+    for (Module *M : SubM->Imports)
+      AllImports.push_back(M);
+  });
 
   SmallVector<llvm::Function *, 8> ModuleInits;
   for (Module *M : AllImports) {
