@@ -551,10 +551,9 @@ CGOpenMPRuntimeGPU::getExecutionMode() const {
   return CurrentExecutionMode;
 }
 
-static CGOpenMPRuntimeGPU::DataSharingMode
-getDataSharingMode(CodeGenModule &CGM) {
-  return CGM.getLangOpts().OpenMPCUDAMode ? CGOpenMPRuntimeGPU::CUDA
-                                          : CGOpenMPRuntimeGPU::Generic;
+CGOpenMPRuntimeGPU::DataSharingMode
+CGOpenMPRuntimeGPU::getDataSharingMode() const {
+  return CurrentDataSharingMode;
 }
 
 /// Check for inner (nested) SPMD construct, if any
@@ -752,6 +751,9 @@ void CGOpenMPRuntimeGPU::emitNonSPMDKernel(const OMPExecutableDirective &D,
   EntryFunctionState EST;
   WrapperFunctionsMap.clear();
 
+  [[maybe_unused]] bool IsBareKernel = D.getSingleClause<OMPXBareClause>();
+  assert(!IsBareKernel && "bare kernel should not be at generic mode");
+
   // Emit target region as a standalone region.
   class NVPTXPrePostActionTy : public PrePostActionTy {
     CGOpenMPRuntimeGPU::EntryFunctionState &EST;
@@ -760,15 +762,13 @@ void CGOpenMPRuntimeGPU::emitNonSPMDKernel(const OMPExecutableDirective &D,
     NVPTXPrePostActionTy(CGOpenMPRuntimeGPU::EntryFunctionState &EST)
         : EST(EST) {}
     void Enter(CodeGenFunction &CGF) override {
-      auto &RT =
-          static_cast<CGOpenMPRuntimeGPU &>(CGF.CGM.getOpenMPRuntime());
+      auto &RT = static_cast<CGOpenMPRuntimeGPU &>(CGF.CGM.getOpenMPRuntime());
       RT.emitKernelInit(CGF, EST, /* IsSPMD */ false);
       // Skip target region initialization.
       RT.setLocThreadIdInsertPt(CGF, /*AtCurrentPoint=*/true);
     }
     void Exit(CodeGenFunction &CGF) override {
-      auto &RT =
-          static_cast<CGOpenMPRuntimeGPU &>(CGF.CGM.getOpenMPRuntime());
+      auto &RT = static_cast<CGOpenMPRuntimeGPU &>(CGF.CGM.getOpenMPRuntime());
       RT.clearLocThreadIdInsertPt(CGF);
       RT.emitKernelDeinit(CGF, EST, /* IsSPMD */ false);
     }
@@ -807,25 +807,39 @@ void CGOpenMPRuntimeGPU::emitSPMDKernel(const OMPExecutableDirective &D,
   ExecutionRuntimeModesRAII ModeRAII(CurrentExecutionMode, EM_SPMD);
   EntryFunctionState EST;
 
+  bool IsBareKernel = D.getSingleClause<OMPXBareClause>();
+
   // Emit target region as a standalone region.
   class NVPTXPrePostActionTy : public PrePostActionTy {
     CGOpenMPRuntimeGPU &RT;
     CGOpenMPRuntimeGPU::EntryFunctionState &EST;
+    bool IsBareKernel;
+    DataSharingMode Mode;
 
   public:
     NVPTXPrePostActionTy(CGOpenMPRuntimeGPU &RT,
-                         CGOpenMPRuntimeGPU::EntryFunctionState &EST)
-        : RT(RT), EST(EST) {}
+                         CGOpenMPRuntimeGPU::EntryFunctionState &EST,
+                         bool IsBareKernel)
+        : RT(RT), EST(EST), IsBareKernel(IsBareKernel),
+          Mode(RT.CurrentDataSharingMode) {}
     void Enter(CodeGenFunction &CGF) override {
+      if (IsBareKernel) {
+        RT.CurrentDataSharingMode = DataSharingMode::DS_CUDA;
+        return;
+      }
       RT.emitKernelInit(CGF, EST, /* IsSPMD */ true);
       // Skip target region initialization.
       RT.setLocThreadIdInsertPt(CGF, /*AtCurrentPoint=*/true);
     }
     void Exit(CodeGenFunction &CGF) override {
+      if (IsBareKernel) {
+        RT.CurrentDataSharingMode = Mode;
+        return;
+      }
       RT.clearLocThreadIdInsertPt(CGF);
       RT.emitKernelDeinit(CGF, EST, /* IsSPMD */ true);
     }
-  } Action(*this, EST);
+  } Action(*this, EST, IsBareKernel);
   CodeGen.setAction(Action);
   IsInTTDRegion = true;
   emitTargetOutlinedFunctionHelper(D, ParentName, OutlinedFn, OutlinedFnID,
@@ -843,7 +857,8 @@ void CGOpenMPRuntimeGPU::emitTargetOutlinedFunction(
   assert(!ParentName.empty() && "Invalid target region parent name!");
 
   bool Mode = supportsSPMDExecutionMode(CGM.getContext(), D);
-  if (Mode)
+  bool IsBareKernel = D.getSingleClause<OMPXBareClause>();
+  if (Mode || IsBareKernel)
     emitSPMDKernel(D, ParentName, OutlinedFn, OutlinedFnID, IsOffloadEntry,
                    CodeGen);
   else
@@ -866,6 +881,9 @@ CGOpenMPRuntimeGPU::CGOpenMPRuntimeGPU(CodeGenModule &CGM)
   llvm::OpenMPIRBuilder &OMPBuilder = getOMPBuilder();
   if (CGM.getLangOpts().NoGPULib || CGM.getLangOpts().OMPHostIRFile.empty())
     return;
+
+  if (CGM.getLangOpts().OpenMPCUDAMode)
+    CurrentDataSharingMode = CGOpenMPRuntimeGPU::DS_CUDA;
 
   OMPBuilder.createGlobalFlag(CGM.getLangOpts().OpenMPTargetDebug,
                               "__omp_rtl_debug_kind");
@@ -1030,7 +1048,7 @@ llvm::Function *CGOpenMPRuntimeGPU::emitTeamsOutlinedFunction(
 void CGOpenMPRuntimeGPU::emitGenericVarsProlog(CodeGenFunction &CGF,
                                                  SourceLocation Loc,
                                                  bool WithSPMDCheck) {
-  if (getDataSharingMode(CGM) != CGOpenMPRuntimeGPU::Generic &&
+  if (getDataSharingMode() != CGOpenMPRuntimeGPU::DS_Generic &&
       getExecutionMode() != CGOpenMPRuntimeGPU::EM_SPMD)
     return;
 
@@ -1142,7 +1160,7 @@ void CGOpenMPRuntimeGPU::getKmpcFreeShared(
 
 void CGOpenMPRuntimeGPU::emitGenericVarsEpilog(CodeGenFunction &CGF,
                                                  bool WithSPMDCheck) {
-  if (getDataSharingMode(CGM) != CGOpenMPRuntimeGPU::Generic &&
+  if (getDataSharingMode() != CGOpenMPRuntimeGPU::DS_Generic &&
       getExecutionMode() != CGOpenMPRuntimeGPU::EM_SPMD)
     return;
 
@@ -1178,11 +1196,18 @@ void CGOpenMPRuntimeGPU::emitTeamsCall(CodeGenFunction &CGF,
   if (!CGF.HaveInsertPoint())
     return;
 
+  bool IsBareKernel = D.getSingleClause<OMPXBareClause>();
+
   Address ZeroAddr = CGF.CreateDefaultAlignTempAlloca(CGF.Int32Ty,
                                                       /*Name=*/".zero.addr");
   CGF.Builder.CreateStore(CGF.Builder.getInt32(/*C*/ 0), ZeroAddr);
   llvm::SmallVector<llvm::Value *, 16> OutlinedFnArgs;
-  OutlinedFnArgs.push_back(emitThreadIDAddress(CGF, Loc).getPointer());
+  // We don't emit any thread id function call in bare kernel, but because the
+  // outlined function has a pointer argument, we emit a nullptr here.
+  if (IsBareKernel)
+    OutlinedFnArgs.push_back(llvm::ConstantPointerNull::get(CGM.VoidPtrTy));
+  else
+    OutlinedFnArgs.push_back(emitThreadIDAddress(CGF, Loc).getPointer());
   OutlinedFnArgs.push_back(ZeroAddr.getPointer());
   OutlinedFnArgs.append(CapturedVars.begin(), CapturedVars.end());
   emitOutlinedFunctionCall(CGF, Loc, OutlinedFn, OutlinedFnArgs);
@@ -3273,7 +3298,7 @@ llvm::Function *CGOpenMPRuntimeGPU::createParallelDataSharingWrapper(
 
 void CGOpenMPRuntimeGPU::emitFunctionProlog(CodeGenFunction &CGF,
                                               const Decl *D) {
-  if (getDataSharingMode(CGM) != CGOpenMPRuntimeGPU::Generic)
+  if (getDataSharingMode() != CGOpenMPRuntimeGPU::DS_Generic)
     return;
 
   assert(D && "Expected function or captured|block decl.");
@@ -3382,7 +3407,7 @@ Address CGOpenMPRuntimeGPU::getAddressOfLocalVariable(CodeGenFunction &CGF,
         VarTy, Align);
   }
 
-  if (getDataSharingMode(CGM) != CGOpenMPRuntimeGPU::Generic)
+  if (getDataSharingMode() != CGOpenMPRuntimeGPU::DS_Generic)
     return Address::invalid();
 
   VD = VD->getCanonicalDecl();
