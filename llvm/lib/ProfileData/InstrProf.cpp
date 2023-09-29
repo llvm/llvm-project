@@ -487,20 +487,15 @@ Error InstrProfSymtab::addFuncWithName(Function &F, StringRef PGOFuncName) {
 
 uint64_t InstrProfSymtab::getVTableHashFromAddress(uint64_t Address) {
   finalizeSymtab();
-  // printf("look up key 0x%llx\n", Address);
-  // for (auto iter = VTableAddrToMD5Map.begin(); iter !=
-  // VTableAddrToMD5Map.end(); iter++) {
-  //   printf("<key, val> is <0x%llx, %"PRIu64"\n", iter->first, iter->second);
-  // }
   auto It =
       partition_point(VTableAddrToMD5Map, [=](std::pair<uint64_t, uint64_t> A) {
         return A.first < Address;
       });
-  // FIXME: Does the raw function pointers point apply here?
+  // The virtual table address collected from value profiler could be defined
+  // in another module that is not instrumented. Force the value to be 0 in
+  // this case.
   if (It != VTableAddrToMD5Map.end()) {
-    // printf("InstrProfSymtab::getVTableHashFromAddress map addr 0x%llx to hash
-    // value %"PRIu64"\n", Address, (uint64_t)It->second);
-    return (uint64_t)It->second;
+    return It->second;
   }
   return 0;
 }
@@ -585,7 +580,6 @@ Error collectVTableStrings(ArrayRef<GlobalVariable *> VTables,
                            std::string &Result, bool doCompression) {
   std::vector<std::string> VTableNameStrs;
   for (auto *VTable : VTables) {
-    // printf("VTable name %s added\n", VTable->getName().str().c_str());
     VTableNameStrs.push_back(std::string(VTable->getName()));
   }
   return collectPGOFuncNameStrings(
@@ -680,13 +674,11 @@ Error readVTableNames(StringRef NameStrings, InstrProfSymtab &Symtab) {
     }
     NameStrings.split(Names, getInstrProfNameSeparator());
     for (StringRef &Name : Names) {
-      // printf("Read back vtable name %s\n", Name.str().c_str());
       if (Error E = Symtab.addVTableName(Name))
         return E;
     }
 
     P += Dist;
-    // Skip padding?
     while (P < EndP && *P == 0)
       P++;
   }

@@ -125,9 +125,7 @@ int __llvm_profile_merge_from_buffer(const char *ProfileData,
                    Header->NumCounters * __llvm_profile_counter_entry_size();
   SrcNameStart = SrcCountersEnd;
   // This is to assume counter size is a multiple of 8 bytes.
-  // uint64_t NamesSize = Header->NamesSize;
-  // uint64_t PaddingBytesAfterNames =
-  //    __llvm_profile_get_num_padding_bytes(Header->NamesSize);
+
   // First, skip rather than merge them
   uint64_t VTableSectionSize = Header->NumVTables * sizeof(VTableProfData);
   uint64_t PaddingBytesAfterVTableSection =

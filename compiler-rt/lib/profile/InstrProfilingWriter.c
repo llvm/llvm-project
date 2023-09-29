@@ -250,8 +250,8 @@ COMPILER_RT_VISIBILITY int lprofWriteData(ProfDataWriter *Writer,
   const char *NamesEnd = __llvm_profile_end_names();
   const VTableProfData *VTableBegin = __llvm_profile_begin_vtables();
   const VTableProfData *VTableEnd = __llvm_profile_end_vtables();
-  const char *VNamesBegin = __llvm_profile_begin_vnames();
-  const char *VNamesEnd = __llvm_profile_end_vnames();
+  const char *VNamesBegin = __llvm_profile_begin_vtabnames();
+  const char *VNamesEnd = __llvm_profile_end_vtabnames();
   return lprofWriteDataImpl(Writer, DataBegin, DataEnd, CountersBegin,
                             CountersEnd, VPDataReader, NamesBegin, NamesEnd,
                             VTableBegin, VTableEnd, VNamesBegin, VNamesEnd,
@@ -282,9 +282,8 @@ lprofWriteDataImpl(ProfDataWriter *Writer, const __llvm_profile_data *DataBegin,
   const uint64_t NumVTables =
       __llvm_profile_get_num_vtable(VTableBegin, VTableEnd);
   const uint64_t VTableSectionSize =
-      __llvm_profile_get_vtable_size(VTableBegin, VTableEnd);
-  // Note, in reality, vtable profiling is not supported when DebugInfoCorrelate
-  // is true.
+      __llvm_profile_get_vtable_section_size(VTableBegin, VTableEnd);
+  // Note vtable profiling is not supported when DebugInfoCorrelate is true.
   const uint64_t VNamesSize = DebugInfoCorrelate ? 0 : VNamesEnd - VNamesBegin;
 
   /* Create the header. */
@@ -320,12 +319,8 @@ lprofWriteDataImpl(ProfDataWriter *Writer, const __llvm_profile_data *DataBegin,
 
   /* Write the profile header. */
   ProfDataIOVec IOVec[] = {{&Header, sizeof(__llvm_profile_header), 1, 0}};
-  // printf("Size of profile header is %d\n",
-  // (int)(sizeof(__llvm_profile_header)));
   if (Writer->Write(Writer, IOVec, sizeof(IOVec) / sizeof(*IOVec)))
     return -1;
-
-  // printf("Completed profile header\n");
 
   /* Write the binary id lengths and data. */
   int binary_id_size = __llvm_write_binary_ids(Writer);

@@ -92,6 +92,9 @@ INSTR_PROF_DATA(const uint16_t, Int16ArrayTy, NumValueSites[IPVK_Last+1], \
 /* INSTR_PROF_DATA end. */
 
 
+/* For a virtual table object, record the name hash to associate profiled addresses
+ * with global variables, and record {starting address, size in bytes} to map the profiled virtual table (which usually have an offset from the starting address)
+ * back to a virtual table object. */
 #ifndef INSTR_PROF_VTABLE_DATA
 #define INSTR_PROF_VTABLE_DATA(Type, LLVMType, Name, Initializer)
 #else
@@ -192,7 +195,15 @@ VALUE_PROF_FUNC_PARAM(uint32_t, CounterIndex, Type::getInt32Ty(Ctx))
 VALUE_PROF_KIND(IPVK_IndirectCallTarget, 0, "indirect call target")
 /* For memory intrinsic functions size profiling. */
 VALUE_PROF_KIND(IPVK_MemOPSize, 1, "memory intrinsic functions size")
-VALUE_PROF_KIND(IPVK_VTableTarget, 2, "vtable target")
+/* For virtual table address profiling, the addresses of the virtual table (i.e., the address contained in objects pointing to a virtual table) are
+ * profiled. Note this may not be the address of the per C++ class virtual table object (i.e., there is an offset).
+ *
+ * The profiled addresses are stored in raw profile, together with the following two types of information.
+ * 1. The (beginning and ending) addresses of per C++ class virtual table objects.
+ * 2. The (compressed) virtual table object names.
+ * RawInstrProfReader converts profiled virtual table addresses to virtual table objects' MD5 hash.
+ */
+VALUE_PROF_KIND(IPVK_VTableTarget, 2, "The address of the compatible vtable (i.e., there is an offset from this address to per C++ class virtual table global variable.)")
 /* These two kinds must be the last to be
  * declared. This is to make sure the string
  * array created with the template can be
@@ -708,7 +719,7 @@ serializeValueProfDataFrom(ValueProfRecordClosure *Closure,
    than WIN32 */
 #define INSTR_PROF_DATA_COMMON __llvm_prf_data
 #define INSTR_PROF_NAME_COMMON __llvm_prf_names
-#define INSTR_PROF_VNAME_COMMON __llvm_prf_vnames
+#define INSTR_PROF_VNAME_COMMON __llvm_prf_vtabnames
 #define INSTR_PROF_CNTS_COMMON __llvm_prf_cnts
 #define INSTR_PROF_VALS_COMMON __llvm_prf_vals
 #define INSTR_PROF_VNODES_COMMON __llvm_prf_vnds

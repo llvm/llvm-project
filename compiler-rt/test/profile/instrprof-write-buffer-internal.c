@@ -48,19 +48,11 @@ int main(int argc, const char *argv[]) {
       __llvm_profile_begin_names(), __llvm_profile_end_names(), NULL, NULL,
       NULL, NULL);
 
-  // printf("buffer size is %lld\n", bufsize);
-  //uint64_t aligned_bufsize = ((bufsize + 32) >> 6) << 6;
-
   char *buf = malloc(bufsize);
   int ret = __llvm_profile_write_buffer_internal(buf,
       __llvm_profile_begin_data(), __llvm_profile_end_data(),
       __llvm_profile_begin_counters(), __llvm_profile_end_counters(),
       __llvm_profile_begin_names(), __llvm_profile_end_names());
-
-  if (ret != 0) {
-    fprintf(stderr, "failed to write buffer");
-    return ret;
-  }
 
   FILE *f = fopen(argv[1], "w");
   fwrite(buf, bufsize, 1, f);

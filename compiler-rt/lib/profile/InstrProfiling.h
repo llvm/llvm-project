@@ -92,8 +92,8 @@ const __llvm_profile_data *__llvm_profile_begin_data(void);
 const __llvm_profile_data *__llvm_profile_end_data(void);
 const char *__llvm_profile_begin_names(void);
 const char *__llvm_profile_end_names(void);
-const char *__llvm_profile_begin_vnames(void);
-const char *__llvm_profile_end_vnames(void);
+const char *__llvm_profile_begin_vtabnames(void);
+const char *__llvm_profile_end_vtabnames(void);
 char *__llvm_profile_begin_counters(void);
 char *__llvm_profile_end_counters(void);
 ValueProfNode *__llvm_profile_begin_vnodes();
@@ -286,11 +286,13 @@ uint64_t __llvm_profile_get_num_counters(const char *Begin, const char *End);
 /*! \brief Get the size of the profile counters section in bytes. */
 uint64_t __llvm_profile_get_counters_size(const char *Begin, const char *End);
 
+/*! \brief Get the number of virtual table profile data entries */
 uint64_t __llvm_profile_get_num_vtable(const VTableProfData *Begin,
                                        const VTableProfData *End);
 
-uint64_t __llvm_profile_get_vtable_size(const VTableProfData *Begin,
-                                        const VTableProfData *End);
+/*! \brief Get the size of virtual table profile data in bytes. */
+uint64_t __llvm_profile_get_vtable_section_size(const VTableProfData *Begin,
+                                                const VTableProfData *End);
 
 /* ! \brief Given the sizes of the data and counter information, return the
  * number of padding bytes before and after the counters, and after the names,

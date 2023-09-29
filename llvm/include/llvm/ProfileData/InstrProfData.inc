@@ -707,7 +707,7 @@ serializeValueProfDataFrom(ValueProfRecordClosure *Closure,
    than WIN32 */
 #define INSTR_PROF_DATA_COMMON __llvm_prf_data
 #define INSTR_PROF_NAME_COMMON __llvm_prf_names
-#define INSTR_PROF_VNAME_COMMON __llvm_prf_vnames
+#define INSTR_PROF_VNAME_COMMON __llvm_prf_vtabnames
 #define INSTR_PROF_CNTS_COMMON __llvm_prf_cnts
 #define INSTR_PROF_VALS_COMMON __llvm_prf_vals
 #define INSTR_PROF_VNODES_COMMON __llvm_prf_vnds

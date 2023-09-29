@@ -225,15 +225,19 @@ StringRef getPGOFuncNameVarInitializer(GlobalVariable *NameVar);
 StringRef getFuncNameWithoutPrefix(StringRef PGOFuncName,
                                    StringRef FileName = "<unknown>");
 
-/// Given a vector of strings (function PGO names) \c NameStrs, the
+/// Given a vector of strings (names of global variables, currently
+/// function PGO names or C++ virtual table objects) \c NameStrs, the
 /// method generates a combined string \c Result that is ready to be
 /// serialized.  The \c Result string is comprised of three fields:
 /// The first field is the length of the uncompressed strings, and the
 /// the second field is the length of the zlib-compressed string.
 /// Both fields are encoded in ULEB128.  If \c doCompress is false, the
-///  third field is the uncompressed strings; otherwise it is the
+/// third field is the uncompressed strings; otherwise it is the
 /// compressed string. When the string compression is off, the
 /// second field will have value zero.
+/// FIXME: This should be renamed as collectGlobalVariableNameStrings.
+/// This function is used in non-llvm repo, so the refactor of renaming
+/// should go to a separate patch for easier renaming.
 Error collectPGOFuncNameStrings(ArrayRef<std::string> NameStrs,
                                 bool doCompression, std::string &Result);
 
@@ -437,9 +441,13 @@ public:
 private:
   StringRef Data;
   uint64_t Address = 0;
-  // Unique name strings.
+  // Unique name strings. Used to ensure entries in MD5NameMap (a vector that's
+  // going to be sorted) has unique MD5 keys in the first place.
   StringSet<> NameTab;
-  // Unique virtual table names.
+  // Records the unique virtual table names. This is used by InstrProfWriter to
+  // write out an on-disk chained hash table of virtual table names.
+  // InstrProfWriter stores per function profile data (keyed by function names)
+  // so it doesn't use a StringSet for function names.
   StringSet<> VTableNames;
   // A map from MD5 keys to function name strings.
   std::vector<std::pair<uint64_t, StringRef>> MD5NameMap;
@@ -529,17 +537,16 @@ public:
     if (VTableName.empty())
       return make_error<InstrProfError>(instrprof_error::malformed,
                                         "invalid input: VTableName is empty");
-    // Insert into NameTab.
+    // Insert into NameTab so that MD5NameMap (a vector that is going to be
+    // sorted) won't have duplicated entries in the first place.
     auto Ins = NameTab.insert(VTableName);
 
-    // Insert into VTableNames.
+    // Record VTableName. InstrProfWriter uses this map. The comment around
+    // class member explains why.
     VTableNames.insert(VTableName);
 
     // If this is newly added, update MD5NameMap.
     if (Ins.second) {
-      // printf("VTableName %s\n", VTableName.str().c_str());
-      // printf("AddVTableName hash %"PRIu64" to %s\n",
-      // IndexedInstrProf::ComputeHash(VTableName), Ins.first->getKey());
       MD5NameMap.push_back(std::make_pair(
           IndexedInstrProf::ComputeHash(VTableName), Ins.first->getKey()));
       Sorted = false;
