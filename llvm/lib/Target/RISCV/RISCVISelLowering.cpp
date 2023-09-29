@@ -11125,7 +11125,7 @@ void RISCVTargetLowering::ReplaceNodeResults(SDNode *N,
 /// Perform two related transforms whose purpose is to incrementally recognize
 /// an explode_vector followed by scalar reduction as a vector reduction node.
 /// This exists to recover from a deficiency in SLP which can't handle
-/// forrests with multiple roots sharing common nodes.  In some cases, one
+/// forests with multiple roots sharing common nodes.  In some cases, one
 /// of the trees will be vectorized, and the other will remain (unprofitably)
 /// scalarized.
 static SDValue combineBinOpOfExtractToReduceTree(SDNode *N, SelectionDAG &DAG,
@@ -11139,7 +11139,7 @@ static SDValue combineBinOpOfExtractToReduceTree(SDNode *N, SelectionDAG &DAG,
 
   const SDLoc DL(N);
   const EVT VT = N->getValueType(0);
-  const unsigned Opc = N->getOpcode();
+  [[maybe_unused]] const unsigned Opc = N->getOpcode();
   assert(Opc == ISD::ADD && "extend this to other reduction types");
   const SDValue LHS = N->getOperand(0);
   const SDValue RHS = N->getOperand(1);
@@ -11173,8 +11173,8 @@ static SDValue combineBinOpOfExtractToReduceTree(SDNode *N, SelectionDAG &DAG,
     return DAG.getNode(ISD::VECREDUCE_ADD, DL, VT, Vec);
   }
 
-  // Match (binop reduce (extract_subvector V, 0),
-  //                      extract_vector_elt V, sizeof(SubVec))
+  // Match (binop (reduce (extract_subvector V, 0),
+  //                      (extract_vector_elt V, sizeof(SubVec))))
   // into a reduction of one more element from the original vector V.
   if (LHS.getOpcode() != ISD::VECREDUCE_ADD)
     return SDValue();
@@ -11184,7 +11184,7 @@ static SDValue combineBinOpOfExtractToReduceTree(SDNode *N, SelectionDAG &DAG,
       ReduceVec.hasOneUse() && ReduceVec.getOperand(0) == RHS.getOperand(0) &&
       isNullConstant(ReduceVec.getOperand(1)) &&
       isa<ConstantSDNode>(RHS.getOperand(1))) {
-    uint64_t Idx = cast<ConstantSDNode>(RHS.getOperand(1))->getZExtValue();
+    uint64_t Idx = cast<ConstantSDNode>(RHS.getOperand(1))->getLimitedValue();
     if (ReduceVec.getValueType().getVectorNumElements() == Idx) {
       // For illegal types (e.g. 3xi32), most will be combined again into a
       // wider (hopefully legal) type.  If this is a terminal state, we are
