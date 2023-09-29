@@ -162,7 +162,6 @@ public:
   // the unhandled LLVM operand in textual form.
   void serialiseUnimplementedOperand(Value *V) {
     OutStreamer.emitInt8(OperandKind::String);
-    OutStreamer.emitInt8('?');
     serialiseString(toString(V));
   }
 
