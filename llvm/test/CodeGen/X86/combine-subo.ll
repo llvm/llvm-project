@@ -4,9 +4,12 @@
 
 declare {i32, i1} @llvm.ssub.with.overflow.i32(i32, i32) nounwind readnone
 declare {i32, i1} @llvm.usub.with.overflow.i32(i32, i32) nounwind readnone
+declare { i8, i1 } @llvm.usub.with.overflow.i8(i8, i8) nounwind readnone
+declare { i8, i1 } @llvm.ssub.with.overflow.i8(i8, i8) nounwind readnone
 
 declare {<4 x i32>, <4 x i1>} @llvm.ssub.with.overflow.v4i32(<4 x i32>, <4 x i32>) nounwind readnone
 declare {<4 x i32>, <4 x i1>} @llvm.usub.with.overflow.v4i32(<4 x i32>, <4 x i32>) nounwind readnone
+declare { <4 x i8>, <4 x i1> } @llvm.usub.with.overflow.v4i8(<4 x i8>, <4 x i8>) nounwind readnone
 
 ; fold (ssub x, 0) -> x
 define i32 @combine_ssub_zero(i32 %a0, i32 %a1) {
@@ -181,4 +184,107 @@ define <4 x i32> @combine_vec_usub_negone(<4 x i32> %a0, <4 x i32> %a1) {
   %3 = extractvalue {<4 x i32>, <4 x i1>} %1, 1
   %4 = select <4 x i1> %3, <4 x i32> %a1, <4 x i32> %2
   ret <4 x i32> %4
+}
+
+define { i32, i1 } @combine_usub_nuw(i32 %a, i32 %b) {
+; SSE-LABEL: combine_usub_nuw:
+; SSE:       # %bb.0:
+; SSE-NEXT:    movl %edi, %eax
+; SSE-NEXT:    orl $-2147483648, %eax # imm = 0x80000000
+; SSE-NEXT:    andl $2147483647, %esi # imm = 0x7FFFFFFF
+; SSE-NEXT:    subl %esi, %eax
+; SSE-NEXT:    xorl %edx, %edx
+; SSE-NEXT:    retq
+;
+; AVX-LABEL: combine_usub_nuw:
+; AVX:       # %bb.0:
+; AVX-NEXT:    movl %edi, %eax
+; AVX-NEXT:    orl $-2147483648, %eax # imm = 0x80000000
+; AVX-NEXT:    andl $2147483647, %esi # imm = 0x7FFFFFFF
+; AVX-NEXT:    subl %esi, %eax
+; AVX-NEXT:    xorl %edx, %edx
+; AVX-NEXT:    retq
+  %aa = or i32 %a, 2147483648
+  %bb = and i32 %b, 2147483647
+  %x = call { i32, i1 } @llvm.usub.with.overflow.i32(i32 %aa, i32 %bb)
+  ret { i32, i1 } %x
+}
+
+define { i8, i1 } @usub_always_overflow(i8 %x) nounwind {
+; SSE-LABEL: usub_always_overflow:
+; SSE:       # %bb.0:
+; SSE-NEXT:    orb $64, %dil
+; SSE-NEXT:    movb $63, %al
+; SSE-NEXT:    subb %dil, %al
+; SSE-NEXT:    setb %dl
+; SSE-NEXT:    retq
+;
+; AVX-LABEL: usub_always_overflow:
+; AVX:       # %bb.0:
+; AVX-NEXT:    orb $64, %dil
+; AVX-NEXT:    movb $63, %al
+; AVX-NEXT:    subb %dil, %al
+; AVX-NEXT:    setb %dl
+; AVX-NEXT:    retq
+  %y = or i8 %x, 64
+  %a = call { i8, i1 } @llvm.usub.with.overflow.i8(i8 63, i8 %y)
+  ret { i8, i1 } %a
+}
+
+define { i8, i1 } @ssub_always_overflow(i8 %x) nounwind {
+; SSE-LABEL: ssub_always_overflow:
+; SSE:       # %bb.0:
+; SSE-NEXT:    cmpb $30, %dil
+; SSE-NEXT:    movl $29, %ecx
+; SSE-NEXT:    cmovgel %edi, %ecx
+; SSE-NEXT:    movb $-100, %al
+; SSE-NEXT:    subb %cl, %al
+; SSE-NEXT:    seto %dl
+; SSE-NEXT:    retq
+;
+; AVX-LABEL: ssub_always_overflow:
+; AVX:       # %bb.0:
+; AVX-NEXT:    cmpb $30, %dil
+; AVX-NEXT:    movl $29, %ecx
+; AVX-NEXT:    cmovgel %edi, %ecx
+; AVX-NEXT:    movb $-100, %al
+; AVX-NEXT:    subb %cl, %al
+; AVX-NEXT:    seto %dl
+; AVX-NEXT:    retq
+  %c = icmp sgt i8 %x, 29
+  %y = select i1 %c, i8 %x, i8 29
+  %a = call { i8, i1 } @llvm.ssub.with.overflow.i8(i8 -100, i8 %y)
+  ret { i8, i1 } %a
+}
+
+define { <4 x i8>, <4 x i1> } @always_usub_const_vector() nounwind {
+; SSE-LABEL: always_usub_const_vector:
+; SSE:       # %bb.0:
+; SSE-NEXT:    pcmpeqd %xmm0, %xmm0
+; SSE-NEXT:    pcmpeqd %xmm1, %xmm1
+; SSE-NEXT:    retq
+;
+; AVX-LABEL: always_usub_const_vector:
+; AVX:       # %bb.0:
+; AVX-NEXT:    vpcmpeqd %xmm0, %xmm0, %xmm0
+; AVX-NEXT:    vpcmpeqd %xmm1, %xmm1, %xmm1
+; AVX-NEXT:    retq
+  %x = call { <4 x i8>, <4 x i1> } @llvm.usub.with.overflow.v4i8(<4 x i8> <i8 0, i8 0, i8 0, i8 0>, <4 x i8> <i8 1, i8 1, i8 1, i8 1>)
+  ret { <4 x i8>, <4 x i1> } %x
+}
+
+define { <4 x i8>, <4 x i1> } @never_usub_const_vector() nounwind {
+; SSE-LABEL: never_usub_const_vector:
+; SSE:       # %bb.0:
+; SSE-NEXT:    movaps {{.*#+}} xmm0 = <127,255,0,254,u,u,u,u,u,u,u,u,u,u,u,u>
+; SSE-NEXT:    xorps %xmm1, %xmm1
+; SSE-NEXT:    retq
+;
+; AVX-LABEL: never_usub_const_vector:
+; AVX:       # %bb.0:
+; AVX-NEXT:    vbroadcastss {{.*#+}} xmm0 = [127,255,0,254,127,255,0,254,127,255,0,254,127,255,0,254]
+; AVX-NEXT:    vxorps %xmm1, %xmm1, %xmm1
+; AVX-NEXT:    retq
+  %x = call { <4 x i8>, <4 x i1> } @llvm.usub.with.overflow.v4i8(<4 x i8> <i8 255, i8 255, i8 255, i8 255>, <4 x i8> <i8 128, i8 0, i8 255, i8 1>)
+  ret { <4 x i8>, <4 x i1> } %x
 }
