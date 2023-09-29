@@ -1996,11 +1996,11 @@ void Preprocessor::HandleIncludeDirective(SourceLocation HashLoc,
         *this, IncludePos, CurLexer->getSourceLocation());
 
     if (auto *File = std::get_if<PPCachedActions::IncludeFile>(&Include)) {
-      const FileEntry *FE = SourceMgr.getFileEntryForID(File->FID);
+      OptionalFileEntryRef FE = SourceMgr.getFileEntryRefForID(File->FID);
       bool IsImport =
           IncludeTok.getIdentifierInfo()->getPPKeywordID() == tok::pp_import;
       if (FE && IsImport) {
-        HeaderInfo.getFileInfo(FE).isImport = true;
+        HeaderInfo.getFileInfo(*FE).isImport = true;
       }
       EnterSourceFile(File->FID, nullptr, FilenameTok.getLocation(),
                       /*IsFirstIncludeOfFile*/ true);
