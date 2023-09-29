@@ -600,10 +600,9 @@ void mlir::configureArmSMELegalizeForExportTarget(
 
 void mlir::populateArmSMELegalizeForLLVMExportPatterns(
     LLVMTypeConverter &converter, RewritePatternSet &patterns) {
-  patterns.add<EnableZAPattern, DisableZAPattern>(patterns.getContext());
-  patterns
-      .add<ZeroOpConversion, StoreTileSliceToArmSMELowering,
-           LoadTileSliceToArmSMELowering, MoveTileSliceToVectorArmSMELowering,
-           MoveVectorToTileSliceToArmSMELowering,
-           VectorOuterProductToArmSMELowering>(converter);
+  patterns.add<DisableZAPattern, EnableZAPattern>(patterns.getContext());
+  patterns.add<
+      LoadTileSliceToArmSMELowering, MoveTileSliceToVectorArmSMELowering,
+      MoveVectorToTileSliceToArmSMELowering, StoreTileSliceToArmSMELowering,
+      VectorOuterProductToArmSMELowering, ZeroOpConversion>(converter);
 }

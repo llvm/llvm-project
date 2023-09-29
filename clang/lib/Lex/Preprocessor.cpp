@@ -391,10 +391,9 @@ void Preprocessor::recomputeCurLexerKind() {
     CurLexerKind = CLK_CachingLexer;
 }
 
-bool Preprocessor::SetCodeCompletionPoint(const FileEntry *File,
+bool Preprocessor::SetCodeCompletionPoint(FileEntryRef File,
                                           unsigned CompleteLine,
                                           unsigned CompleteColumn) {
-  assert(File);
   assert(CompleteLine && CompleteColumn && "Starts from 1:1");
   assert(!CodeCompletionFile && "Already set");
 
@@ -562,8 +561,8 @@ void Preprocessor::EnterMainSourceFile() {
 
     // Tell the header info that the main file was entered.  If the file is later
     // #imported, it won't be re-entered.
-    if (const FileEntry *FE = SourceMgr.getFileEntryForID(MainFileID))
-      markIncluded(FE);
+    if (OptionalFileEntryRef FE = SourceMgr.getFileEntryRefForID(MainFileID))
+      markIncluded(*FE);
   }
 
   // Preprocess Predefines to populate the initial preprocessor state.

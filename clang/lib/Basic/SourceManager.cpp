@@ -681,14 +681,14 @@ SourceManager::createExpansionLocImpl(const ExpansionInfo &Info,
 }
 
 std::optional<llvm::MemoryBufferRef>
-SourceManager::getMemoryBufferForFileOrNone(const FileEntry *File) {
-  SrcMgr::ContentCache &IR = getOrCreateContentCache(File->getLastRef());
+SourceManager::getMemoryBufferForFileOrNone(FileEntryRef File) {
+  SrcMgr::ContentCache &IR = getOrCreateContentCache(File);
   return IR.getBufferOrNone(Diag, getFileManager(), SourceLocation());
 }
 
 void SourceManager::overrideFileContents(
-    const FileEntry *SourceFile, std::unique_ptr<llvm::MemoryBuffer> Buffer) {
-  SrcMgr::ContentCache &IR = getOrCreateContentCache(SourceFile->getLastRef());
+    FileEntryRef SourceFile, std::unique_ptr<llvm::MemoryBuffer> Buffer) {
+  SrcMgr::ContentCache &IR = getOrCreateContentCache(SourceFile);
 
   IR.setBuffer(std::move(Buffer));
   IR.BufferOverridden = true;
