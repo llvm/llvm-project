@@ -204,7 +204,7 @@ public:
 
     T const &operator*() const {
       assert(ElementIdx < PV->Size);
-      assert(PV->PageToDataPtrs[ElementIdx / PageSize] != nullptr);
+      assert(PV->PageToDataPtrs[ElementIdx / PageSize]);
       T *PagePtr = PV->PageToDataPtrs[ElementIdx / PageSize];
       return PagePtr[ElementIdx % PageSize];
     }
