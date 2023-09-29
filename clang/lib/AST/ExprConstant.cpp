@@ -16174,8 +16174,7 @@ bool Expr::isIntegerConstantExpr(const ASTContext &Ctx,
 }
 
 std::optional<llvm::APSInt>
-Expr::getIntegerConstantExpr(const ASTContext &Ctx, SourceLocation *Loc,
-                             bool isEvaluated) const {
+Expr::getIntegerConstantExpr(const ASTContext &Ctx, SourceLocation *Loc) const {
   if (isValueDependent()) {
     // Expression evaluator can't succeed on a dependent expression.
     return std::nullopt;
