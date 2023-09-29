@@ -2083,9 +2083,8 @@ Instruction *InstCombinerImpl::foldSelectExtConst(SelectInst &Sel) {
   // If the constant is the same after truncation to the smaller type and
   // extension to the original type, we can narrow the select.
   Type *SelType = Sel.getType();
-  Constant *TruncC = ConstantExpr::getTrunc(C, SmallType);
-  Constant *ExtC = ConstantExpr::getCast(ExtOpcode, TruncC, SelType);
-  if (ExtC == C && ExtInst->hasOneUse()) {
+  Constant *TruncC = getLosslessTrunc(C, SmallType, ExtOpcode);
+  if (TruncC && ExtInst->hasOneUse()) {
     Value *TruncCVal = cast<Value>(TruncC);
     if (ExtInst == Sel.getFalseValue())
       std::swap(X, TruncCVal);
@@ -2103,7 +2102,8 @@ Instruction *InstCombinerImpl::foldSelectExtConst(SelectInst &Sel) {
       // select X, (sext X), C --> select X, -1, C
       // select X, (zext X), C --> select X,  1, C
       Constant *One = ConstantInt::getTrue(SmallType);
-      Constant *AllOnesOrOne = ConstantExpr::getCast(ExtOpcode, One, SelType);
+      Value *AllOnesOrOne =
+          Builder.CreateCast((Instruction::CastOps)ExtOpcode, One, SelType);
       return SelectInst::Create(Cond, AllOnesOrOne, C, "", nullptr, &Sel);
     } else {
       // select X, C, (sext X) --> select X, C, 0
