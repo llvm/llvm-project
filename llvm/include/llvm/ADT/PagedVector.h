@@ -146,8 +146,6 @@ public:
         T *Page = PageToDataPtrs[I];
         if (Page)
           Allocator.getPointer()->Deallocate(Page);
-        // We mark the page invalid, to avoid double deletion.
-        PageToDataPtrs[I] = nullptr;
       }
     }
 
