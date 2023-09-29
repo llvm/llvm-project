@@ -127,31 +127,15 @@ return:
 define i32 @f_i8_128(i8 %c) {
 ; CHECK-LABEL: @f_i8_128(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    switch i8 [[C:%.*]], label [[SW_DEFAULT:%.*]] [
-; CHECK-NEXT:    i8 122, label [[RETURN:%.*]]
-; CHECK-NEXT:    i8 123, label [[SW_BB1:%.*]]
-; CHECK-NEXT:    i8 124, label [[SW_BB2:%.*]]
-; CHECK-NEXT:    i8 125, label [[SW_BB3:%.*]]
-; CHECK-NEXT:    i8 126, label [[SW_BB4:%.*]]
-; CHECK-NEXT:    i8 127, label [[SW_BB5:%.*]]
-; CHECK-NEXT:    i8 -128, label [[SW_BB6:%.*]]
-; CHECK-NEXT:    ]
-; CHECK:       sw.bb1:
-; CHECK-NEXT:    br label [[RETURN]]
-; CHECK:       sw.bb2:
-; CHECK-NEXT:    br label [[RETURN]]
-; CHECK:       sw.bb3:
-; CHECK-NEXT:    br label [[RETURN]]
-; CHECK:       sw.bb4:
-; CHECK-NEXT:    br label [[RETURN]]
-; CHECK:       sw.bb5:
-; CHECK-NEXT:    br label [[RETURN]]
-; CHECK:       sw.bb6:
-; CHECK-NEXT:    br label [[RETURN]]
-; CHECK:       sw.default:
+; CHECK-NEXT:    [[SWITCH_TABLEIDX:%.*]] = sub i8 [[C:%.*]], 122
+; CHECK-NEXT:    [[TMP0:%.*]] = icmp ult i8 [[SWITCH_TABLEIDX]], 7
+; CHECK-NEXT:    br i1 [[TMP0]], label [[SWITCH_LOOKUP:%.*]], label [[RETURN:%.*]]
+; CHECK:       switch.lookup:
+; CHECK-NEXT:    [[SWITCH_GEP:%.*]] = getelementptr inbounds [7 x i32], ptr @switch.table.f_i8_128, i32 0, i8 [[SWITCH_TABLEIDX]]
+; CHECK-NEXT:    [[SWITCH_LOAD:%.*]] = load i32, ptr [[SWITCH_GEP]], align 4
 ; CHECK-NEXT:    br label [[RETURN]]
 ; CHECK:       return:
-; CHECK-NEXT:    [[RETVAL_0:%.*]] = phi i32 [ 15, [[SW_DEFAULT]] ], [ 1, [[SW_BB6]] ], [ 62, [[SW_BB5]] ], [ 27, [[SW_BB4]] ], [ -1, [[SW_BB3]] ], [ 0, [[SW_BB2]] ], [ 123, [[SW_BB1]] ], [ 55, [[ENTRY:%.*]] ]
+; CHECK-NEXT:    [[RETVAL_0:%.*]] = phi i32 [ [[SWITCH_LOAD]], [[SWITCH_LOOKUP]] ], [ 15, [[ENTRY:%.*]] ]
 ; CHECK-NEXT:    ret i32 [[RETVAL_0]]
 ;
 entry:

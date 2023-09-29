@@ -6534,18 +6534,20 @@ ShouldBuildLookupTable(SwitchInst *SI, uint64_t TableSize,
 }
 
 static bool ShouldUseSwitchConditionAsTableIndex(
-    ConstantInt &MinCaseVal, const ConstantInt &MaxCaseVal,
+    const ConstantInt &BeginCaseVal, const ConstantInt &EndCaseVal,
     bool HasDefaultResults, const SmallDenseMap<PHINode *, Type *> &ResultTypes,
     const DataLayout &DL, const TargetTransformInfo &TTI) {
-  if (MinCaseVal.isNullValue())
+  if (BeginCaseVal.isNullValue())
     return true;
-  if (MinCaseVal.isNegative() ||
-      MaxCaseVal.getLimitedValue() == std::numeric_limits<uint64_t>::max() ||
+  if (BeginCaseVal.getValue().sge(EndCaseVal.getValue()))
+    return false;
+  if (BeginCaseVal.isNegative() ||
+      EndCaseVal.getLimitedValue() == std::numeric_limits<uint64_t>::max() ||
       !HasDefaultResults)
     return false;
   return all_of(ResultTypes, [&](const auto &KV) {
     return SwitchLookupTable::WouldFitInRegister(
-        DL, MaxCaseVal.getLimitedValue() + 1 /* TableSize */,
+        DL, EndCaseVal.getLimitedValue() + 1 /* TableSize */,
         KV.second /* ResultType */);
   });
 }
@@ -6637,7 +6639,8 @@ static void reuseTableCompare(
 /// lookup tables.
 static bool SwitchToLookupTable(SwitchInst *SI, IRBuilder<> &Builder,
                                 DomTreeUpdater *DTU, const DataLayout &DL,
-                                const TargetTransformInfo &TTI) {
+                                const TargetTransformInfo &TTI,
+                                bool TryMinTableSize) {
   assert(SI->getNumCases() > 1 && "Degenerate switch?");
 
   BasicBlock *BB = SI->getParent();
@@ -6663,9 +6666,6 @@ static bool SwitchToLookupTable(SwitchInst *SI, IRBuilder<> &Builder,
   // Figure out the corresponding result for each case value and phi node in the
   // common destination, as well as the min and max case values.
   assert(!SI->cases().empty());
-  SwitchInst::CaseIt CI = SI->case_begin();
-  ConstantInt *MinCaseVal = CI->getCaseValue();
-  ConstantInt *MaxCaseVal = CI->getCaseValue();
 
   BasicBlock *CommonDest = nullptr;
 
@@ -6676,17 +6676,49 @@ static bool SwitchToLookupTable(SwitchInst *SI, IRBuilder<> &Builder,
   SmallDenseMap<PHINode *, Type *> ResultTypes;
   SmallVector<PHINode *, 4> PHIs;
 
-  for (SwitchInst::CaseIt E = SI->case_end(); CI != E; ++CI) {
-    ConstantInt *CaseVal = CI->getCaseValue();
-    if (CaseVal->getValue().slt(MinCaseVal->getValue()))
-      MinCaseVal = CaseVal;
-    if (CaseVal->getValue().sgt(MaxCaseVal->getValue()))
-      MaxCaseVal = CaseVal;
+  SmallVector<ConstantInt *, 8> CaseVals(llvm::map_range(
+      SI->cases(), [](const auto &C) { return C.getCaseValue(); }));
+
+  llvm::sort(CaseVals, [](const auto *L, const auto *R) {
+    return L->getValue().slt(R->getValue());
+  });
+  auto *CaseValIter = CaseVals.begin();
+  ConstantInt *BeginCaseVal = *CaseValIter;
+  ConstantInt *EndCaseVal = CaseVals.back();
+  bool RangeOverflow = false;
+  uint64_t MinTableSize = EndCaseVal->getValue()
+                              .ssub_ov(BeginCaseVal->getValue(), RangeOverflow)
+                              .getLimitedValue() +
+                          1;
+  // If there is no overflow, then this must be the minimal table.
+  // The signed max-min can no longer build a lookup table, so return.
+  if (RangeOverflow && TryMinTableSize) {
+    // We consider cases where the starting to the endpoint will cross the
+    // signed max and min. For example, for the i8 range `[-128, -127, 126,
+    // 127]`, we choose from 126 to -127. The length of the lookup table is 4.
+    while (CaseValIter != CaseVals.end()) {
+      auto *CurCaseVal = *CaseValIter++;
+      if (CaseValIter == CaseVals.end())
+        break;
+      auto *NextCaseVal = *CaseValIter;
+      const auto &NextVal = NextCaseVal->getValue();
+      const auto &CurVal = CurCaseVal->getValue();
+      uint64_t RequireTableSize = (CurVal - NextVal).getLimitedValue() + 1;
+      if (RequireTableSize < MinTableSize) {
+        BeginCaseVal = NextCaseVal;
+        EndCaseVal = CurCaseVal;
+        MinTableSize = RequireTableSize;
+      }
+    }
+  }
+
+  for (const auto &CI : SI->cases()) {
+    ConstantInt *CaseVal = CI.getCaseValue();
 
     // Resulting value at phi nodes for this case value.
     using ResultsTy = SmallVector<std::pair<PHINode *, Constant *>, 4>;
     ResultsTy Results;
-    if (!getCaseResults(SI, CaseVal, CI->getCaseSuccessor(), &CommonDest,
+    if (!getCaseResults(SI, CaseVal, CI.getCaseSuccessor(), &CommonDest,
                         Results, DL, TTI))
       return false;
 
@@ -6721,13 +6753,12 @@ static bool SwitchToLookupTable(SwitchInst *SI, IRBuilder<> &Builder,
   }
 
   bool UseSwitchConditionAsTableIndex = ShouldUseSwitchConditionAsTableIndex(
-      *MinCaseVal, *MaxCaseVal, HasDefaultResults, ResultTypes, DL, TTI);
+      *BeginCaseVal, *EndCaseVal, HasDefaultResults, ResultTypes, DL, TTI);
   uint64_t TableSize;
   if (UseSwitchConditionAsTableIndex)
-    TableSize = MaxCaseVal->getLimitedValue() + 1;
+    TableSize = EndCaseVal->getLimitedValue() + 1;
   else
-    TableSize =
-        (MaxCaseVal->getValue() - MinCaseVal->getValue()).getLimitedValue() + 1;
+    TableSize = MinTableSize;
 
   // If the default destination is unreachable, or if the lookup table covers
   // all values of the conditional variable, branch directly to the lookup table
@@ -6757,13 +6788,16 @@ static bool SwitchToLookupTable(SwitchInst *SI, IRBuilder<> &Builder,
   }
 
   if (!ShouldBuildLookupTable(SI, TableSize, TTI, DL, ResultTypes))
-    return false;
+    // When a signed max-min cannot construct a lookup table, try to find a
+    // range with a minimal lookup table.
+    return !TryMinTableSize &&
+           SwitchToLookupTable(SI, Builder, DTU, DL, TTI, true);
 
   std::vector<DominatorTree::UpdateType> Updates;
 
   // Compute the maximum table size representable by the integer type we are
   // switching upon.
-  unsigned CaseSize = MinCaseVal->getType()->getPrimitiveSizeInBits();
+  unsigned CaseSize = BeginCaseVal->getType()->getPrimitiveSizeInBits();
   uint64_t MaxTableSize = CaseSize > 63 ? UINT64_MAX : 1ULL << CaseSize;
   assert(MaxTableSize >= TableSize &&
          "It is impossible for a switch to have more entries than the max "
@@ -6779,15 +6813,17 @@ static bool SwitchToLookupTable(SwitchInst *SI, IRBuilder<> &Builder,
   Value *TableIndex;
   ConstantInt *TableIndexOffset;
   if (UseSwitchConditionAsTableIndex) {
-    TableIndexOffset = ConstantInt::get(MaxCaseVal->getIntegerType(), 0);
+    TableIndexOffset = ConstantInt::get(EndCaseVal->getIntegerType(), 0);
     TableIndex = SI->getCondition();
   } else {
-    TableIndexOffset = MinCaseVal;
+    TableIndexOffset = BeginCaseVal;
     // If the default is unreachable, all case values are s>= MinCaseVal. Then
     // we can try to attach nsw.
     bool MayWrap = true;
-    if (!DefaultIsReachable) {
-      APInt Res = MaxCaseVal->getValue().ssub_ov(MinCaseVal->getValue(), MayWrap);
+    if (!DefaultIsReachable &&
+        EndCaseVal->getValue().sge(BeginCaseVal->getValue())) {
+      APInt Res =
+          EndCaseVal->getValue().ssub_ov(BeginCaseVal->getValue(), MayWrap);
       (void)Res;
     }
 
@@ -6830,7 +6866,7 @@ static bool SwitchToLookupTable(SwitchInst *SI, IRBuilder<> &Builder,
     // PHI value for the default case in case we're using a bit mask.
   } else {
     Value *Cmp = Builder.CreateICmpULT(
-        TableIndex, ConstantInt::get(MinCaseVal->getType(), TableSize));
+        TableIndex, ConstantInt::get(BeginCaseVal->getType(), TableSize));
     RangeCheckBranch =
         Builder.CreateCondBr(Cmp, LookupBB, SI->getDefaultDest());
     if (DTU)
@@ -7145,7 +7181,7 @@ bool SimplifyCFGOpt::simplifySwitch(SwitchInst *SI, IRBuilder<> &Builder) {
   // CVP. Therefore, only apply this transformation during late stages of the
   // optimisation pipeline.
   if (Options.ConvertSwitchToLookupTable &&
-      SwitchToLookupTable(SI, Builder, DTU, DL, TTI))
+      SwitchToLookupTable(SI, Builder, DTU, DL, TTI, false))
     return requestResimplify();
 
   if (simplifySwitchOfPowersOfTwo(SI, Builder, DL, TTI))
