@@ -10,12 +10,12 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifdef __USING_WASM_EXCEPTIONS__
-
-#include "config.h"
-#include "unwind.h"
 #include <stdbool.h>
 #include <threads.h>
+#include "config.h"
+#include "unwind.h"
+
+#ifdef __USING_WASM_EXCEPTIONS__
 
 _Unwind_Reason_Code __gxx_personality_wasm0(int version, _Unwind_Action actions,
                                             uint64_t exceptionClass,
@@ -118,4 +118,4 @@ _Unwind_GetRegionStart(struct _Unwind_Context *context) {
   return 0;
 }
 
-#endif
+#endif // defined(__USING_WASM_EXCEPTIONS__)
