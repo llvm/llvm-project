@@ -60,7 +60,7 @@ public:
   /// `true` in the second pair element.
   PagedVector() : Allocator(new BumpPtrAllocator, true) {}
   explicit PagedVector(BumpPtrAllocator *A) : Allocator(A, false) {
-    assert(!A && "Allocator cannot be nullptr");
+    assert(A && "Allocator cannot be nullptr");
   }
 
   ~PagedVector() {

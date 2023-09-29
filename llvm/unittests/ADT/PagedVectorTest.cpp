@@ -53,9 +53,8 @@ TEST(PagedVectorTest, FullPageFillingTest) {
   EXPECT_EQ(V.materialized_begin().getIndex(), 0ULL);
   EXPECT_EQ(V.materialized_end().getIndex(), 10ULL);
   EXPECT_EQ(std::distance(V.materialized_begin(), V.materialized_end()), 10LL);
-  for (int I = 0; I < 10; ++I) {
+  for (int I = 0; I < 10; ++I)
     EXPECT_EQ(V[I], I);
-  }
 }
 
 TEST(PagedVectorTest, HalfPageFillingTest) {
@@ -64,16 +63,13 @@ TEST(PagedVectorTest, HalfPageFillingTest) {
   EXPECT_EQ(V.empty(), false);
   EXPECT_EQ(V.size(), 5ULL);
   EXPECT_EQ(V.capacity(), 10ULL);
-  for (int I = 0; I < 5; ++I) {
+  for (int I = 0; I < 5; ++I)
     V[I] = I;
-  }
   EXPECT_EQ(std::distance(V.materialized_begin(), V.materialized_end()), 5LL);
-  for (int I = 0; I < 5; ++I) {
+  for (int I = 0; I < 5; ++I)
     EXPECT_EQ(V[I], I);
-  }
-  for (int I = 5; I < 10; ++I) {
+  for (int I = 5; I < 10; ++I)
     EXPECT_DEATH(V[I], "Index < Size");
-  }
 }
 
 TEST(PagedVectorTest, FillFullMultiPageTest) {
@@ -82,14 +78,12 @@ TEST(PagedVectorTest, FillFullMultiPageTest) {
   EXPECT_EQ(V.empty(), false);
   EXPECT_EQ(V.size(), 20ULL);
   EXPECT_EQ(V.capacity(), 20ULL);
-  for (int I = 0; I < 20; ++I) {
+  for (int I = 0; I < 20; ++I)
     V[I] = I;
-  }
   EXPECT_EQ(std::distance(V.materialized_begin(), V.materialized_end()), 20LL);
   for (auto MI = V.materialized_begin(), ME = V.materialized_end(); MI != ME;
-       ++MI) {
+       ++MI)
     EXPECT_EQ(*MI, std::distance(V.materialized_begin(), MI));
-  }
 }
 
 TEST(PagedVectorTest, FillHalfMultiPageTest) {
@@ -98,19 +92,15 @@ TEST(PagedVectorTest, FillHalfMultiPageTest) {
   EXPECT_EQ(V.empty(), false);
   EXPECT_EQ(V.size(), 20ULL);
   EXPECT_EQ(V.capacity(), 20ULL);
-  for (int I = 0; I < 5; ++I) {
+  for (int I = 0; I < 5; ++I)
     V[I] = I;
-  }
-  for (int I = 10; I < 15; ++I) {
+  for (int I = 10; I < 15; ++I)
     V[I] = I;
-  }
   EXPECT_EQ(std::distance(V.materialized_begin(), V.materialized_end()), 20LL);
-  for (int I = 0; I < 5; ++I) {
+  for (int I = 0; I < 5; ++I)
     EXPECT_EQ(V[I], I);
-  }
-  for (int I = 10; I < 15; ++I) {
+  for (int I = 10; I < 15; ++I)
     EXPECT_EQ(V[I], I);
-  }
 }
 
 TEST(PagedVectorTest, FillLastMultiPageTest) {
@@ -119,23 +109,20 @@ TEST(PagedVectorTest, FillLastMultiPageTest) {
   EXPECT_EQ(V.empty(), false);
   EXPECT_EQ(V.size(), 20ULL);
   EXPECT_EQ(V.capacity(), 20ULL);
-  for (int I = 10; I < 15; ++I) {
+  for (int I = 10; I < 15; ++I)
     V[I] = I;
-  }
-  for (int I = 10; I < 15; ++I) {
+  for (int I = 10; I < 15; ++I)
     EXPECT_EQ(V[I], I);
-  }
 
   // Since we fill the last page only, the materialized vector
   // should contain only the last page.
   int J = 10;
   for (auto MI = V.materialized_begin(), ME = V.materialized_end(); MI != ME;
        ++MI) {
-    if (J < 15) {
+    if (J < 15)
       EXPECT_EQ(*MI, J);
-    } else {
+    else
       EXPECT_EQ(*MI, 0);
-    }
     ++J;
   }
   EXPECT_EQ(std::distance(V.materialized_begin(), V.materialized_end()), 10LL);
@@ -149,17 +136,14 @@ TEST(PagedVectorTest, FillSparseMultiPageTest) {
   EXPECT_EQ(V.empty(), false);
   EXPECT_EQ(V.size(), 100ULL);
   EXPECT_EQ(V.capacity(), 100ULL);
-  for (int I = 0; I < 10; ++I) {
+  for (int I = 0; I < 10; ++I)
     V[I * 10] = I;
-  }
   EXPECT_EQ(std::distance(V.materialized_begin(), V.materialized_end()), 100LL);
-  for (int I = 0; I < 100; ++I) {
-    if (I % 10 == 0) {
+  for (int I = 0; I < 100; ++I)
+    if (I % 10 == 0)
       EXPECT_EQ(V[I], I / 10);
-    } else {
+    else
       EXPECT_EQ(V[I], 0);
-    }
-  }
 }
 
 struct TestHelper {
@@ -186,9 +170,8 @@ TEST(PagedVectorTest, FillNonTrivialConstructor) {
   EXPECT_EQ(V.size(), 10ULL);
   EXPECT_EQ(V.capacity(), 10ULL);
   EXPECT_EQ(std::distance(V.materialized_begin(), V.materialized_end()), 0LL);
-  for (int I = 0; I < 10; ++I) {
+  for (int I = 0; I < 10; ++I)
     EXPECT_EQ(V[I].A, -1);
-  }
   EXPECT_EQ(std::distance(V.materialized_begin(), V.materialized_end()), 10LL);
 }
 
@@ -246,17 +229,15 @@ TEST(PagedVectorTest, ShrinkTest) {
   EXPECT_EQ(V.empty(), false);
   EXPECT_EQ(V.size(), 20ULL);
   EXPECT_EQ(V.capacity(), 20ULL);
-  for (int I = 0; I < 20; ++I) {
+  for (int I = 0; I < 20; ++I)
     V[I] = I;
-  }
   EXPECT_EQ(std::distance(V.materialized_begin(), V.materialized_end()), 20LL);
   V.resize(9);
   EXPECT_EQ(V.empty(), false);
   EXPECT_EQ(V.size(), 9ULL);
   EXPECT_EQ(V.capacity(), 10ULL);
-  for (int I = 0; I < 9; ++I) {
+  for (int I = 0; I < 9; ++I)
     EXPECT_EQ(V[I], I);
-  }
   EXPECT_EQ(std::distance(V.materialized_begin(), V.materialized_end()), 9LL);
   V.resize(0);
   EXPECT_EQ(V.empty(), true);
@@ -279,56 +260,47 @@ TEST(PagedVectorTest, FunctionalityTest) {
   EXPECT_EQ(std::distance(V.materialized_begin(), V.materialized_end()), 0LL);
 
   EXPECT_EQ(V.size(), 30ULL);
-  for (int I = 0; I < 10; ++I) {
+  for (int I = 0; I < 10; ++I)
     V[I] = I;
-  }
-  for (int I = 0; I < 10; ++I) {
+  for (int I = 0; I < 10; ++I)
     EXPECT_EQ(V[I], I);
-  }
   EXPECT_EQ(std::distance(V.materialized_begin(), V.materialized_end()), 10LL);
-  for (int I = 20; I < 30; ++I) {
+  for (int I = 20; I < 30; ++I)
     V[I] = I;
-  }
-  for (int I = 20; I < 30; ++I) {
+  for (int I = 20; I < 30; ++I)
     EXPECT_EQ(V[I], I);
-  }
   EXPECT_EQ(std::distance(V.materialized_begin(), V.materialized_end()), 20LL);
 
-  for (int I = 10; I < 20; ++I) {
+  for (int I = 10; I < 20; ++I)
     V[I] = I;
-  }
-  for (int I = 10; I < 20; ++I) {
+  for (int I = 10; I < 20; ++I)
     EXPECT_EQ(V[I], I);
-  }
   EXPECT_EQ(std::distance(V.materialized_begin(), V.materialized_end()), 30LL);
   V.resize(35);
   EXPECT_EQ(std::distance(V.materialized_begin(), V.materialized_end()), 30LL);
-  for (int I = 30; I < 35; ++I) {
+  for (int I = 30; I < 35; ++I)
     V[I] = I;
-  }
   EXPECT_EQ(std::distance(V.materialized_begin(), V.materialized_end()), 35LL);
   EXPECT_EQ(V.size(), 35ULL);
   EXPECT_EQ(V.capacity(), 40ULL);
   V.resize(37);
-  for (int I = 30; I < 37; ++I) {
+  for (int I = 30; I < 37; ++I)
     V[I] = I;
-  }
   EXPECT_EQ(V.size(), 37ULL);
   EXPECT_EQ(V.capacity(), 40ULL);
-  for (int I = 0; I < 37; ++I) {
+  for (int I = 0; I < 37; ++I)
     EXPECT_EQ(V[I], I);
-  }
 
   V.resize(41);
   V[40] = 40;
   EXPECT_EQ(V.size(), 41ULL);
   EXPECT_EQ(V.capacity(), 50ULL);
-  for (int I = 0; I < 36; ++I) {
+  for (int I = 0; I < 36; ++I)
     EXPECT_EQ(V[I], I);
-  }
-  for (int I = 37; I < 40; ++I) {
+
+  for (int I = 37; I < 40; ++I)
     EXPECT_EQ(V[I], 0);
-  }
+
   V.resize(50);
   EXPECT_EQ(V.capacity(), 50ULL);
   EXPECT_EQ(V.size(), 50ULL);
