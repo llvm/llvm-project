@@ -476,11 +476,10 @@ fir::ExtendedValue Fortran::lower::genCallOpAndResult(
       } else {
         const Fortran::semantics::DerivedTypeSpec &typeSpec =
             retTy->GetDerivedTypeSpec();
-        // If the result type is finalizable or may require finalization
+        // If the result type may require finalization
         // or have allocatable components, we need to make sure
         // everything is properly finalized/deallocated.
-        if (Fortran::semantics::IsFinalizable(typeSpec) ||
-            Fortran::semantics::MayRequireFinalization(typeSpec) ||
+        if (Fortran::semantics::MayRequireFinalization(typeSpec) ||
             // We can use DerivedTypeDestroy even if finalization is not needed.
             hlfir::mayHaveAllocatableComponent(funcType.getResults()[0])) {
           auto *bldr = &converter.getFirOpBuilder();
