@@ -230,7 +230,7 @@ public:
             LHS.PV->PageToDataPtrs[LHS.ElementIdx / PageSize]));
     assert(RHS.ElementIdx == RHS.PV->Size ||
            (RHS.ElementIdx < RHS.PV->Size &&
-            RHS.PV->PageToDataPtrs[RHS.ElementIdx / PageSize] != nullptr));
+            RHS.PV->PageToDataPtrs[RHS.ElementIdx / PageSize]));
     return LHS.ElementIdx == RHS.ElementIdx;
   }
 
