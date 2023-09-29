@@ -362,6 +362,19 @@ public:
   /// Deactivates an entire strurcutre.
   void deactivate() const;
 
+  /// Compare two pointers.
+  ComparisonCategoryResult compare(const Pointer &Other) const {
+    if (!hasSameBase(*this, Other))
+      return ComparisonCategoryResult::Unordered;
+
+    if (Offset < Other.Offset)
+      return ComparisonCategoryResult::Less;
+    else if (Offset > Other.Offset)
+      return ComparisonCategoryResult::Greater;
+
+    return ComparisonCategoryResult::Equal;
+  }
+
   /// Checks if two pointers are comparable.
   static bool hasSameBase(const Pointer &A, const Pointer &B);
   /// Checks if two pointers can be subtracted.

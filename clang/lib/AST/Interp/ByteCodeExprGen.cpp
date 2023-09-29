@@ -253,6 +253,29 @@ bool ByteCodeExprGen<Emitter>::VisitBinaryOperator(const BinaryOperator *BO) {
     return this->delegate(RHS);
   }
 
+  // Special case for C++'s three-way/spaceship operator <=>, which
+  // returns a std::{strong,weak,partial}_ordering (which is a class, so doesn't
+  // have a PrimType).
+  if (!T) {
+    if (DiscardResult)
+      return true;
+    const ComparisonCategoryInfo *CmpInfo =
+        Ctx.getASTContext().CompCategories.lookupInfoForType(BO->getType());
+    assert(CmpInfo);
+
+    // We need a temporary variable holding our return value.
+    if (!Initializing) {
+      std::optional<unsigned> ResultIndex = this->allocateLocal(BO, false);
+      if (!this->emitGetPtrLocal(*ResultIndex, BO))
+        return false;
+    }
+
+    if (!visit(LHS) || !visit(RHS))
+      return false;
+
+    return this->emitCMP3(*LT, CmpInfo, BO);
+  }
+
   if (!LT || !RT || !T)
     return this->bail(BO);
 
