@@ -192,7 +192,7 @@ Error MachOLinkGraphBuilder::createNormalizedSections() {
 
     // TODO: Are there any other criteria for NoAlloc lifetime?
     if (NSec.Flags & MachO::S_ATTR_DEBUG)
-      NSec.GraphSection->setMemLifetimePolicy(orc::MemLifetimePolicy::NoAlloc);
+      NSec.GraphSection->setMemLifetime(orc::MemLifetime::NoAlloc);
 
     IndexToSection.insert(std::make_pair(SecIndex, std::move(NSec)));
   }

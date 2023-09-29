@@ -295,6 +295,122 @@ struct IfOpInterface
   }
 };
 
+/// Bufferization of scf.index_switch. Replace with a new scf.index_switch that
+/// yields memrefs.
+struct IndexSwitchOpInterface
+    : public BufferizableOpInterface::ExternalModel<IndexSwitchOpInterface,
+                                                    scf::IndexSwitchOp> {
+  AliasingOpOperandList
+  getAliasingOpOperands(Operation *op, Value value,
+                        const AnalysisState &state) const {
+    // IndexSwitchOps do not have tensor OpOperands. The yielded value can be
+    // any SSA. This is similar to IfOps.
+    auto switchOp = cast<scf::IndexSwitchOp>(op);
+    int64_t resultNum = cast<OpResult>(value).getResultNumber();
+    AliasingOpOperandList result;
+    for (int64_t i = 0, numCases = switchOp.getNumCases(); i < numCases; ++i) {
+      auto yieldOp =
+          cast<scf::YieldOp>(switchOp.getCaseBlock(i).getTerminator());
+      result.addAlias(AliasingOpOperand(&yieldOp->getOpOperand(resultNum),
+                                        BufferRelation::Equivalent,
+                                        /*isDefinite=*/false));
+    }
+    auto defaultYieldOp =
+        cast<scf::YieldOp>(switchOp.getDefaultBlock().getTerminator());
+    result.addAlias(AliasingOpOperand(&defaultYieldOp->getOpOperand(resultNum),
+                                      BufferRelation::Equivalent,
+                                      /*isDefinite=*/false));
+    return result;
+  }
+
+  LogicalResult bufferize(Operation *op, RewriterBase &rewriter,
+                          const BufferizationOptions &options) const {
+    OpBuilder::InsertionGuard g(rewriter);
+    auto switchOp = cast<scf::IndexSwitchOp>(op);
+
+    // Compute bufferized result types.
+    SmallVector<Type> newTypes;
+    for (Value result : switchOp.getResults()) {
+      if (!isa<TensorType>(result.getType())) {
+        newTypes.push_back(result.getType());
+        continue;
+      }
+      auto bufferType = bufferization::getBufferType(result, options);
+      if (failed(bufferType))
+        return failure();
+      newTypes.push_back(*bufferType);
+    }
+
+    // Create new op.
+    rewriter.setInsertionPoint(switchOp);
+    auto newSwitchOp = rewriter.create<scf::IndexSwitchOp>(
+        switchOp.getLoc(), newTypes, switchOp.getArg(), switchOp.getCases(),
+        switchOp.getCases().size());
+
+    // Move over blocks.
+    for (auto [src, dest] :
+         llvm::zip(switchOp.getCaseRegions(), newSwitchOp.getCaseRegions()))
+      rewriter.inlineRegionBefore(src, dest, dest.begin());
+    rewriter.inlineRegionBefore(switchOp.getDefaultRegion(),
+                                newSwitchOp.getDefaultRegion(),
+                                newSwitchOp.getDefaultRegion().begin());
+
+    // Replace op results.
+    replaceOpWithBufferizedValues(rewriter, op, newSwitchOp->getResults());
+
+    return success();
+  }
+
+  FailureOr<BaseMemRefType>
+  getBufferType(Operation *op, Value value, const BufferizationOptions &options,
+                SmallVector<Value> &invocationStack) const {
+    auto switchOp = cast<scf::IndexSwitchOp>(op);
+    assert(value.getDefiningOp() == op && "invalid value");
+    int64_t resultNum = cast<OpResult>(value).getResultNumber();
+
+    // Helper function to get buffer type of a case.
+    SmallVector<BaseMemRefType> yieldedTypes;
+    auto getYieldedBufferType = [&](Block &b) -> FailureOr<BaseMemRefType> {
+      auto yieldOp = cast<scf::YieldOp>(b.getTerminator());
+      Value yieldedValue = yieldOp->getOperand(resultNum);
+      if (auto bufferType = dyn_cast<BaseMemRefType>(yieldedValue.getType()))
+        return bufferType;
+      auto maybeBufferType =
+          bufferization::getBufferType(yieldedValue, options, invocationStack);
+      if (failed(maybeBufferType))
+        return failure();
+      return maybeBufferType;
+    };
+
+    // Compute buffer type of the default case.
+    auto maybeBufferType = getYieldedBufferType(switchOp.getDefaultBlock());
+    if (failed(maybeBufferType))
+      return failure();
+    BaseMemRefType bufferType = *maybeBufferType;
+
+    // Compute buffer types of all other cases.
+    for (int64_t i = 0, numCases = switchOp.getNumCases(); i < numCases; ++i) {
+      auto yieldedBufferType = getYieldedBufferType(switchOp.getCaseBlock(i));
+      if (failed(yieldedBufferType))
+        return failure();
+
+      // Best case: Both branches have the exact same buffer type.
+      if (bufferType == *yieldedBufferType)
+        continue;
+
+      // Memory space mismatch.
+      if (bufferType.getMemorySpace() != yieldedBufferType->getMemorySpace())
+        return op->emitError("inconsistent memory space on switch cases");
+
+      // Layout maps are different: Promote to fully dynamic layout map.
+      bufferType = getMemRefTypeWithFullyDynamicLayout(
+          cast<TensorType>(value.getType()), bufferType.getMemorySpace());
+    }
+
+    return bufferType;
+  }
+};
+
 /// Helper function for loop bufferization. Return the indices of all values
 /// that have a tensor type.
 static DenseSet<int64_t> getTensorIndices(ValueRange values) {
@@ -839,7 +955,8 @@ struct WhileOpInterface
           if (!isa<TensorType>(bbArg.getType()))
             return bbArg.getType();
           // TODO: error handling
-          return llvm::cast<Type>(*bufferization::getBufferType(bbArg, options));
+          return llvm::cast<Type>(
+              *bufferization::getBufferType(bbArg, options));
         }));
 
     // Construct a new scf.while op with memref instead of tensor values.
@@ -1005,8 +1122,8 @@ struct YieldOpInterface
   LogicalResult bufferize(Operation *op, RewriterBase &rewriter,
                           const BufferizationOptions &options) const {
     auto yieldOp = cast<scf::YieldOp>(op);
-    if (!isa<scf::ExecuteRegionOp, scf::IfOp, scf::ForOp, scf::WhileOp>(
-            yieldOp->getParentOp()))
+    if (!isa<scf::ExecuteRegionOp, scf::IfOp, scf::IndexSwitchOp, scf::ForOp,
+             scf::WhileOp>(yieldOp->getParentOp()))
       return yieldOp->emitError("unsupported scf::YieldOp parent");
 
     SmallVector<Value> newResults;
@@ -1018,7 +1135,8 @@ struct YieldOpInterface
           return failure();
         Value buffer = *maybeBuffer;
         // We may have to cast the value before yielding it.
-        if (isa<scf::ForOp, scf::IfOp>(yieldOp->getParentOp())) {
+        if (isa<scf::ForOp, scf::IfOp, scf::IndexSwitchOp>(
+                yieldOp->getParentOp())) {
           FailureOr<BaseMemRefType> resultType = bufferization::getBufferType(
               yieldOp->getParentOp()->getResult(it.index()), options);
           if (failed(resultType))
@@ -1217,6 +1335,7 @@ void mlir::scf::registerBufferizableOpInterfaceExternalModels(
     ExecuteRegionOp::attachInterface<ExecuteRegionOpInterface>(*ctx);
     ForOp::attachInterface<ForOpInterface>(*ctx);
     IfOp::attachInterface<IfOpInterface>(*ctx);
+    IndexSwitchOp::attachInterface<IndexSwitchOpInterface>(*ctx);
     ForallOp::attachInterface<ForallOpInterface>(*ctx);
     InParallelOp::attachInterface<InParallelOpInterface>(*ctx);
     WhileOp::attachInterface<WhileOpInterface>(*ctx);

@@ -67,14 +67,6 @@ void NORETURN reportHeaderCorruption(void *Ptr) {
   Report.append("corrupted chunk header at address %p\n", Ptr);
 }
 
-// Two threads have attempted to modify a chunk header at the same time. This is
-// symptomatic of a race-condition in the application code, or general lack of
-// proper locking.
-void NORETURN reportHeaderRace(void *Ptr) {
-  ScopedErrorReport Report;
-  Report.append("race on chunk header at address %p\n", Ptr);
-}
-
 // The allocator was compiled with parameters that conflict with field size
 // requirements.
 void NORETURN reportSanityCheckError(const char *Field) {

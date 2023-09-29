@@ -545,12 +545,14 @@ mgpuCreateBsr(intptr_t brows, intptr_t bcols, intptr_t bnnz, intptr_t rBsz,
               intptr_t cBsz, void *rowPos, void *colIdxs, void *values,
               int32_t ptp, int32_t itp, int32_t dtp, CUstream /*stream*/) {
   cusparseSpMatDescr_t mat = nullptr;
+#if CUSPARSE_VERSION >= 12100
   auto pTp = static_cast<cusparseIndexType_t>(ptp);
   auto iTp = static_cast<cusparseIndexType_t>(itp);
   auto dTp = static_cast<cudaDataType_t>(dtp);
   CUSPARSE_REPORT_IF_ERROR(cusparseCreateBsr(
       &mat, brows, bcols, bnnz, rBsz, cBsz, rowPos, colIdxs, values, pTp, iTp,
       CUSPARSE_INDEX_BASE_ZERO, dTp, CUSPARSE_ORDER_ROW))
+#endif
   return reinterpret_cast<void *>(mat);
 }
 
