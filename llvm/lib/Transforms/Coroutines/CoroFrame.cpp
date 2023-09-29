@@ -2782,7 +2782,7 @@ static void collectFrameAlloca(AllocaInst *AI, coro::Shape &Shape,
 
   // The __coro_gro alloca should outlive the promise, make sure we
   // keep it outside the frame.
-  if (MDNode *MD = AI->getMetadata(LLVMContext::MD_coro_outside_frame))
+  if (AI->hasMetadata(LLVMContext::MD_coro_outside_frame))
     return;
 
   // The code that uses lifetime.start intrinsic does not work for functions
