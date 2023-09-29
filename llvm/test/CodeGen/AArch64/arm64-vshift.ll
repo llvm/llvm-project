@@ -3531,11 +3531,8 @@ entry:
 define <4 x i32> @sext_rshrn(<4 x i32> noundef %a) {
 ; CHECK-LABEL: sext_rshrn:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    movi.4s v1, #16, lsl #8
-; CHECK-NEXT:    add.4s v0, v0, v1
-; CHECK-NEXT:    ushr.4s v0, v0, #13
-; CHECK-NEXT:    shl.4s v0, v0, #16
-; CHECK-NEXT:    sshr.4s v0, v0, #16
+; CHECK-NEXT:    rshrn.4h v0, v0, #13
+; CHECK-NEXT:    sshll.4s v0, v0, #0
 ; CHECK-NEXT:    ret
 entry:
   %vrshrn_n1 = tail call <4 x i16> @llvm.aarch64.neon.rshrn.v4i16(<4 x i32> %a, i32 13)
@@ -3546,10 +3543,8 @@ entry:
 define <4 x i32> @zext_rshrn(<4 x i32> noundef %a) {
 ; CHECK-LABEL: zext_rshrn:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    movi.4s v1, #16, lsl #8
-; CHECK-NEXT:    add.4s v0, v0, v1
-; CHECK-NEXT:    ushr.4s v0, v0, #13
-; CHECK-NEXT:    bic.4s v0, #7, lsl #16
+; CHECK-NEXT:    rshrn.4h v0, v0, #13
+; CHECK-NEXT:    ushll.4s v0, v0, #0
 ; CHECK-NEXT:    ret
 entry:
   %vrshrn_n1 = tail call <4 x i16> @llvm.aarch64.neon.rshrn.v4i16(<4 x i32> %a, i32 13)
@@ -3560,10 +3555,9 @@ entry:
 define <4 x i16> @mul_rshrn(<4 x i32> noundef %a) {
 ; CHECK-LABEL: mul_rshrn:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    mov w8, #4099 // =0x1003
-; CHECK-NEXT:    dup.4s v1, w8
+; CHECK-NEXT:    movi.4s v1, #3
 ; CHECK-NEXT:    add.4s v0, v0, v1
-; CHECK-NEXT:    shrn.4h v0, v0, #13
+; CHECK-NEXT:    rshrn.4h v0, v0, #13
 ; CHECK-NEXT:    ret
 entry:
   %b = add <4 x i32> %a, <i32 3, i32 3, i32 3, i32 3>
