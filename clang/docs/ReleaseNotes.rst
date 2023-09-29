@@ -372,7 +372,7 @@ Bug Fixes to C++ Support
   argument. Fixes:
   (`#67395 <https://github.com/llvm/llvm-project/issues/67395>`_)
 
-- Fixed a bug causing destructors of constant-evaluated structured bindings 
+- Fixed a bug causing destructors of constant-evaluated structured bindings
   initialized by array elements to be called in the wrong evaluation context.
 
 Bug Fixes to AST Handling
