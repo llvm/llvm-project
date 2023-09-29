@@ -23,18 +23,15 @@
 
 /// Configuriation for the MLIR to LLVM pass pipeline.
 struct MLIRToLLVMPassPipelineConfig {
-  MLIRToLLVMPassPipelineConfig(llvm::OptimizationLevel level) {
+  explicit MLIRToLLVMPassPipelineConfig(llvm::OptimizationLevel level) {
     OptLevel = level;
-    StackArrays = false;
-    Underscoring = true;
-    LoopVersioning = false;
-    DebugInfo = llvm::codegenoptions::NoDebugInfo;
   }
   llvm::OptimizationLevel OptLevel; ///< optimisation level
-  bool StackArrays; ///< convert memory allocations to alloca.
-  bool Underscoring; ///< add underscores to function names.
-  bool LoopVersioning; ///< Run the version loop pass.
-  llvm::codegenoptions::DebugInfoKind DebugInfo; ///< Debug info generation.
+  bool StackArrays = false; ///< convert memory allocations to alloca.
+  bool Underscoring = true; ///< add underscores to function names.
+  bool LoopVersioning = false; ///< Run the version loop pass.
+  llvm::codegenoptions::DebugInfoKind DebugInfo =
+      llvm::codegenoptions::NoDebugInfo; ///< Debug info generation.
 };
 
 struct OffloadModuleOpts {
