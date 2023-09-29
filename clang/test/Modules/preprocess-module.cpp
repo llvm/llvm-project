@@ -71,7 +71,7 @@
 
 // == file.h
 // CHECK: # 1 "<module-includes>"
-// REWRITE: #if 0
+// REWRITE: #if defined(__CLANG_REWRITTEN_INCLUDES)
 // REWRITE: #include "file.h"
 // REWRITE: #else /* file.h expanded by -frewrite-includes
 //
@@ -96,7 +96,7 @@
 // NO-REWRITE: #pragma clang module end
 
 // == file2.h
-// REWRITE: #if 0
+// REWRITE: #if defined(__CLANG_REWRITTEN_INCLUDES)
 // REWRITE: #include "file2.h"
 // REWRITE: #else /* file2.h expanded
 //
@@ -105,7 +105,7 @@
 // NO-REWRITE: #pragma clang module begin file
 //
 // ==== recursively re-enter file.h
-// REWRITE: #if 0
+// REWRITE: #if defined(__CLANG_REWRITTEN_INCLUDES)
 // REWRITE: #include "file.h"
 // REWRITE: #else /* file.h expanded
 //

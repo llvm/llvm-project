@@ -346,8 +346,12 @@ void InclusionRewriter::CommentOutDirective(Lexer &DirectiveLex,
     // OutputContentUpTo() would not output anything anyway.
     return;
   }
-  OS << "#if 0 /* " << getIncludedFileName(Inc)
-     << " expanded by -frewrite-includes */" << MainEOL;
+  if (Inc)
+    OS << "#if defined(__CLANG_REWRITTEN_INCLUDES) /* "
+       << getIncludedFileName(Inc);
+  else
+    OS << "#if 0 /*";
+  OS << " expanded by -frewrite-includes */" << MainEOL;
   OutputContentUpTo(FromFile, NextToWrite,
                     SM.getFileOffset(DirectiveToken.getLocation()) +
                         DirectiveToken.getLength(),
