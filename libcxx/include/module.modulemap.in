@@ -1602,6 +1602,7 @@ module std_private_numeric_pstl_transform_reduce    [system] {
   export *
 }
 module std_private_numeric_reduce                   [system] { header "__numeric/reduce.h" }
+module std_private_numeric_ranges_iota              [system] { header "__numeric/ranges_iota.h" }
 module std_private_numeric_transform_exclusive_scan [system] { header "__numeric/transform_exclusive_scan.h" }
 module std_private_numeric_transform_inclusive_scan [system] { header "__numeric/transform_inclusive_scan.h" }
 module std_private_numeric_transform_reduce         [system] { header "__numeric/transform_reduce.h" }
