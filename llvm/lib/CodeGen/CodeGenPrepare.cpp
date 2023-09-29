@@ -6305,7 +6305,7 @@ bool CodeGenPrepare::optimizePhiType(
   // correct type.
   ValueToValueMap ValMap;
   for (ConstantData *C : Constants)
-    ValMap[C] = ConstantExpr::getCast(Instruction::BitCast, C, ConvertTy);
+    ValMap[C] = ConstantExpr::getBitCast(C, ConvertTy);
   for (Instruction *D : Defs) {
     if (isa<BitCastInst>(D)) {
       ValMap[D] = D->getOperand(0);
