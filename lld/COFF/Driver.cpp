@@ -483,7 +483,10 @@ StringRef LinkerDriver::findFile(StringRef filename) {
     return filename;
   };
 
-  if (sys::path::is_absolute(filename))
+  bool hasParentDir = filename.starts_with("../") ||
+                      filename.starts_with("..\\") ||
+                      filename.contains("/../") || filename.contains("\\..\\");
+  if (sys::path::is_absolute(filename) || hasParentDir)
     return getFilename(filename);
   bool hasExt = filename.contains('.');
   for (StringRef dir : searchPaths) {
