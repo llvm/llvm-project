@@ -167,8 +167,7 @@ define i1 @test_ashr_i1_imm1(i32 %arg1) {
 ; X64-NEXT:    movl %edi, %eax
 ; X64-NEXT:    shlb $7, %al
 ; X64-NEXT:    sarb $7, %al
-; X64-NEXT:    movb $1, %cl
-; X64-NEXT:    sarb %cl, %al
+; X64-NEXT:    sarb %al
 ; X64-NEXT:    # kill: def $al killed $al killed $eax
 ; X64-NEXT:    retq
   %a = trunc i32 %arg1 to i1
