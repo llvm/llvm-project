@@ -345,12 +345,8 @@ void VFABI::setVectorVariantNames(CallInst *CI,
   Module *M = CI->getModule();
 #ifndef NDEBUG
   for (const std::string &VariantMapping : VariantMappings) {
-    SmallVector<Type *> OpTys;
-    for (Value *Op : CI->operands())
-      OpTys.push_back(Op->getType());
     LLVM_DEBUG(dbgs() << "VFABI: adding mapping '" << VariantMapping << "'\n");
-    std::optional<VFInfo> VI =
-        VFABI::tryDemangleForVFABI(VariantMapping, OpTys);
+    std::optional<VFInfo> VI = VFABI::tryDemangleForVFABI(VariantMapping, *CI);
     assert(VI && "Cannot add an invalid VFABI name.");
     assert(M->getNamedValue(VI->VectorName) &&
            "Cannot add variant to attribute: "

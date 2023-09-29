@@ -29,7 +29,7 @@ private:
     EXPECT_NE(FTy, nullptr) << "Invalid function type string: " << IRType
                             << "\n"
                             << Err.getMessage() << "\n";
-    FunctionCallee F = M->getOrInsertFunction(Name, FTy);
+    F = M->getOrInsertFunction(Name, FTy);
     EXPECT_NE(F.getCallee(), nullptr)
         << "The function must be present in the module\n";
     // Reset the VFInfo
@@ -41,6 +41,7 @@ private:
   SMDiagnostic Err;
   std::unique_ptr<Module> M;
   FunctionType *FTy;
+  FunctionCallee F;
 
 protected:
   // Referencies to the parser output field.
@@ -74,8 +75,14 @@ protected:
     // Reset the VFInfo and the Module to be able to invoke
     // `invokeParser` multiple times in the same test.
     reset(Name, IRType);
-    SmallVector<Type *> OpTys(FTy->params());
-    const auto OptInfo = VFABI::tryDemangleForVFABI(MangledName, OpTys);
+
+    // Fake the arguments to the CallInst.
+    SmallVector<Value *> Args;
+    for (Type *ParamTy : FTy->params()) {
+      Args.push_back(Constant::getNullValue(ParamTy));
+    }
+    std::unique_ptr<CallInst> CI(CallInst::Create(F, Args));
+    const auto OptInfo = VFABI::tryDemangleForVFABI(MangledName, *(CI.get()));
     if (OptInfo) {
       Info = *OptInfo;
       return true;

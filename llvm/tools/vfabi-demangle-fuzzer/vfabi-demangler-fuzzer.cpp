@@ -28,10 +28,16 @@ extern "C" int LLVMFuzzerTestOneInput(const uint8_t *Data, size_t Size) {
   // `getOrInsertFunction` because such method asserts on strings with
   // zeroes.
   if (!MangledName.empty() && MangledName.find_first_of(0) == StringRef::npos) {
-    SmallVector<Type *> OpTys(
-        FunctionType::get(Type::getVoidTy(M->getContext()), false)->params());
-
-    const auto Info = VFABI::tryDemangleForVFABI(MangledName, OpTys);
+    FunctionType *FTy =
+        FunctionType::get(Type::getVoidTy(M->getContext()), false);
+    FunctionCallee F = M->getOrInsertFunction(MangledName, FTy);
+    // Fake the arguments to the CallInst.
+    SmallVector<Value *> Args;
+    for (Type *ParamTy : FTy->params()) {
+      Args.push_back(Constant::getNullValue(ParamTy));
+    }
+    std::unique_ptr<CallInst> CI(CallInst::Create(F, Args));
+    const auto Info = VFABI::tryDemangleForVFABI(MangledName, *(CI.get()));
 
     // Do not optimize away the return value. Inspired by
     // https://github.com/google/benchmark/blob/main/include/benchmark/benchmark.h#L307-L345
@@ -39,5 +45,4 @@ extern "C" int LLVMFuzzerTestOneInput(const uint8_t *Data, size_t Size) {
 
     return 0;
   }
-  return 1;
 }

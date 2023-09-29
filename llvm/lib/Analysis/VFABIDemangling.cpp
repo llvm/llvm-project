@@ -61,29 +61,77 @@ ParseRet tryParseMask(StringRef &MangledName, bool &IsMasked) {
   return ParseRet::Error;
 }
 
+#ifndef NDEBUG
+// Verify the assumtion that all vectors in the signature of a vector
+// function have the same number of elements.
+bool verifyAllVectorsHaveSameWidth(FunctionType *Signature) {
+  SmallVector<VectorType *, 2> VecTys;
+  if (auto *RetTy = dyn_cast<VectorType>(Signature->getReturnType()))
+    VecTys.push_back(RetTy);
+  for (auto *Ty : Signature->params())
+    if (auto *VTy = dyn_cast<VectorType>(Ty))
+      VecTys.push_back(VTy);
+
+  if (VecTys.size() <= 1)
+    return true;
+
+  assert(VecTys.size() > 1 && "Invalid number of elements.");
+  const ElementCount EC = VecTys[0]->getElementCount();
+  return llvm::all_of(llvm::drop_begin(VecTys), [&EC](VectorType *VTy) {
+    return (EC == VTy->getElementCount());
+  });
+}
+#endif // NDEBUG
+
 /// Extract the `<vlen>` information from the mangled string, and
 /// sets `VF` accordingly. A `<vlen> == "x"` token is interpreted as a scalable
 /// vector length. On success, the `<vlen>` token is removed from
 /// the input string `ParseString`.
 ///
-ParseRet tryParseVLEN(StringRef &ParseString, unsigned &VF, bool &IsScalable) {
+ParseRet tryParseVLEN(StringRef &ParseString, ElementCount &EC,
+                      const CallInst &CI, VFISAKind ISA) {
+  unsigned VF = 0;
   if (ParseString.consume_front("x")) {
-    // Set VF to 0, to be later adjusted to a value grater than zero
-    // by looking at the signature of the vector function with
-    // `getECFromSignature`.
-    VF = 0;
-    IsScalable = true;
+    if (ISA != VFISAKind::SVE)
+      return ParseRet::Error;
+    FunctionType *Signature = CI.getFunctionType();
+    assert(verifyAllVectorsHaveSameWidth(Signature) &&
+           "Invalid vector signature.");
+
+    ArrayRef<Type *> ParamTys = Signature->params();
+    if (ParamTys.empty()) {
+      return ParseRet::Error;
+    }
+    switch (ParamTys[0]->getScalarSizeInBits()) {
+    case 64:
+      VF = 2;
+      break;
+    case 32:
+      VF = 4;
+      break;
+    case 0: {
+      if (ParamTys[0]->isPointerTy())
+        VF = 2;
+      else
+        VF = 0;
+      break;
+    }
+    default:
+      VF = 0;
+      break;
+    }
+    if (VF == 0)
+      return ParseRet::Error;
+    EC = ElementCount::get(VF, true);
     return ParseRet::OK;
   }
-
   if (ParseString.consumeInteger(10, VF))
     return ParseRet::Error;
 
   // The token `0` is invalid for VLEN.
   if (VF == 0)
     return ParseRet::Error;
-
-  IsScalable = false;
+  EC = ElementCount::get(VF, false);
   return ParseRet::OK;
 }
 
@@ -272,50 +320,12 @@ ParseRet tryParseAlign(StringRef &ParseString, Align &Alignment) {
 
   return ParseRet::None;
 }
-
-#ifndef NDEBUG
-// Verify the assumtion that all vectors in the signature of a vector
-// function have the same number of elements.
-bool verifyAllVectorsHaveSameWidth(FunctionType *Signature) {
-  SmallVector<VectorType *, 2> VecTys;
-  if (auto *RetTy = dyn_cast<VectorType>(Signature->getReturnType()))
-    VecTys.push_back(RetTy);
-  for (auto *Ty : Signature->params())
-    if (auto *VTy = dyn_cast<VectorType>(Ty))
-      VecTys.push_back(VTy);
-
-  if (VecTys.size() <= 1)
-    return true;
-
-  assert(VecTys.size() > 1 && "Invalid number of elements.");
-  const ElementCount EC = VecTys[0]->getElementCount();
-  return llvm::all_of(llvm::drop_begin(VecTys), [&EC](VectorType *VTy) {
-    return (EC == VTy->getElementCount());
-  });
-}
-#endif // NDEBUG
-
-// Extract the VectorizationFactor from a given function signature,
-// under the assumtion that all vectors have the same number of
-// elements, i.e. same ElementCount.Min.
-ElementCount getECFromSignature(FunctionType *Signature) {
-  assert(verifyAllVectorsHaveSameWidth(Signature) &&
-         "Invalid vector signature.");
-
-  if (auto *RetTy = dyn_cast<VectorType>(Signature->getReturnType()))
-    return RetTy->getElementCount();
-  for (auto *Ty : Signature->params())
-    if (auto *VTy = dyn_cast<VectorType>(Ty))
-      return VTy->getElementCount();
-
-  return ElementCount::getFixed(/*Min=*/1);
-}
 } // namespace
 
 // Format of the ABI name:
 // _ZGV<isa><mask><vlen><parameters>_<scalarname>[(<redirection>)]
 std::optional<VFInfo> VFABI::tryDemangleForVFABI(StringRef MangledName,
-                                                 SmallVector<Type *> OpTys) {
+                                                 const CallInst &CI) {
   const StringRef OriginalName = MangledName;
   // Assume there is no custom name <redirection>, and therefore the
   // vector name consists of
@@ -338,9 +348,8 @@ std::optional<VFInfo> VFABI::tryDemangleForVFABI(StringRef MangledName,
     return std::nullopt;
 
   // Parse the variable size, starting from <vlen>.
-  unsigned VF;
-  bool IsScalable;
-  if (tryParseVLEN(MangledName, VF, IsScalable) != ParseRet::OK)
+  ElementCount EC;
+  if (tryParseVLEN(MangledName, EC, CI, ISA) != ParseRet::OK)
     return std::nullopt;
 
   // Parse the <parameters>.
@@ -426,43 +435,9 @@ std::optional<VFInfo> VFABI::tryDemangleForVFABI(StringRef MangledName,
     assert(Parameters.back().ParamKind == VFParamKind::GlobalPredicate &&
            "The global predicate must be the last parameter");
 
-  // Adjust the VF for scalable signatures. The EC.Min is not encoded
-  // in the name of the function, but it is encoded in the IR
-  // signature of the function. We need to extract this information
-  // because it is needed by the loop vectorizer, which reasons in
-  // terms of VectorizationFactor or ElementCount. In particular, we
-  // need to make sure that the VF field of the VFShape class is never
-  // set to 0.
-  if (IsScalable) {
-    if (ISA != VFISAKind::SVE)
-      return std::nullopt;
-    if (OpTys.empty())
-      return std::nullopt;
-    switch (OpTys[0]->getScalarSizeInBits()) {
-    case 64:
-      VF = 2;
-      break;
-    case 32:
-      VF = 4;
-      break;
-    case 0: {
-      if (OpTys[0]->isPointerTy())
-        VF = 2;
-      else
-        VF = 0;
-      break;
-    }
-    default:
-      VF = 0;
-      break;
-    }
-  }
-
-  // 1. We don't accept a zero lanes vectorization factor.
-  if (VF == 0)
-    return std::nullopt;
-
-  const VFShape Shape({ElementCount::get(VF, IsScalable), Parameters});
+  assert(EC.getKnownMinValue() != 0 &&
+         "We don't accept a zero lanes vectorization factor.");
+  const VFShape Shape({EC, Parameters});
   return VFInfo({Shape, std::string(ScalarName), std::string(VectorName), ISA});
 }
 

@@ -174,9 +174,9 @@ static constexpr char const *_LLVM_Scalarize_ = "_LLVM_Scalarize_";
 ///
 /// \param MangledName -> input string in the format
 /// _ZGV<isa><mask><vlen><parameters>_<scalarname>[(<redirection>)].
-/// \param OpTys -> the instruction operand types.
+/// \param CI -> the call instruction.
 std::optional<VFInfo> tryDemangleForVFABI(StringRef MangledName,
-                                          SmallVector<Type *> OpTys);
+                                          const CallInst &CI);
 
 /// Retrieve the `VFParamKind` from a string token.
 VFParamKind getVFParamKindFromString(const StringRef Token);
@@ -222,11 +222,8 @@ class VFDatabase {
     if (ListOfStrings.empty())
       return;
     for (const auto &MangledName : ListOfStrings) {
-      SmallVector<Type *> OpTys;
-      for (Value *Op : CI.operands())
-        OpTys.push_back(Op->getType());
       const std::optional<VFInfo> Shape =
-          VFABI::tryDemangleForVFABI(MangledName, OpTys);
+          VFABI::tryDemangleForVFABI(MangledName, CI);
       // A match is found via scalar and vector names, and also by
       // ensuring that the variant described in the attribute has a
       // corresponding definition or declaration of the vector
