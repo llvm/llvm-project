@@ -12552,7 +12552,7 @@ struct AAAddressSpaceImpl : public AAAddressSpace {
         return true;
       if (isa<LoadInst>(Inst))
         MakeChange(Inst, const_cast<Use &>(U));
-      if (auto *SI = dyn_cast<StoreInst>(Inst)) {
+      if (isa<StoreInst>(Inst)) {
         // We only make changes if the use is the pointer operand.
         if (U.getOperandNo() == 1)
           MakeChange(Inst, const_cast<Use &>(U));
