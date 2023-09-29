@@ -7,10 +7,10 @@
 ; RUN: llc -mtriple=arm-eabi -O0  -pass-remarks-analysis=stack-frame-layout < %s 2>&1 >/dev/null | FileCheck %s --check-prefix=NO_COLORING
 
 ; check more complex cases
-; RUN: llc %s  -pass-remarks-analysis=stack-frame-layout -o /dev/null --march=arm -mcpu=cortex-m1 2>&1 | FileCheck %s --check-prefix=BOTH --check-prefix=DEBUG
+; RUN: llc %s  -pass-remarks-analysis=stack-frame-layout -o /dev/null --mtriple=arm -mcpu=cortex-m1 2>&1 | FileCheck %s --check-prefix=BOTH --check-prefix=DEBUG
 
 ; check output without debug info
-; RUN: opt %s -passes=strip -S | llc   -pass-remarks-analysis=stack-frame-layout -o /dev/null --march=arm -mcpu=cortex-m1 2>&1 | FileCheck %s --check-prefix=BOTH --check-prefix=STRIPPED
+; RUN: opt %s -passes=strip -S | llc   -pass-remarks-analysis=stack-frame-layout -o /dev/null --mtriple=arm -mcpu=cortex-m1 2>&1 | FileCheck %s --check-prefix=BOTH --check-prefix=STRIPPED
 
 target triple = "x86_64-unknown-linux-gnu"
 
