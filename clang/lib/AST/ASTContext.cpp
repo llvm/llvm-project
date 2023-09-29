@@ -12718,7 +12718,6 @@ static QualType getCommonNonSugarTypeNode(ASTContext &Ctx, const Type *X,
 
 #define SUGAR_FREE_TYPE(Class) UNEXPECTED_TYPE(Class, "sugar-free")
     SUGAR_FREE_TYPE(Builtin)
-    SUGAR_FREE_TYPE(Decltype)
     SUGAR_FREE_TYPE(DeducedTemplateSpecialization)
     SUGAR_FREE_TYPE(DependentBitInt)
     SUGAR_FREE_TYPE(Enum)
@@ -12947,6 +12946,14 @@ static QualType getCommonNonSugarTypeNode(ASTContext &Ctx, const Type *X,
         ::getCommonTemplateNameChecked(Ctx, TX->getTemplateName(),
                                        TY->getTemplateName()),
         As, X->getCanonicalTypeInternal());
+  }
+  case Type::Decltype: {
+    const auto *DX = cast<DecltypeType>(X), *DY = cast<DecltypeType>(Y);
+    assert(DX->isDependentType());
+    assert(DY->isDependentType());
+    assert(Ctx.hasSameExpr(DX->getUnderlyingExpr(), DY->getUnderlyingExpr()));
+    // As Decltype is not uniqued, building a common type would be wasteful.
+    return QualType(DX, 0);
   }
   case Type::DependentName: {
     const auto *NX = cast<DependentNameType>(X),

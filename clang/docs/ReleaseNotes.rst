@@ -266,6 +266,9 @@ Bug Fixes in This Version
   (`#64836 <https://github.com/llvm/llvm-project/issues/64836>`_)
 - Clang now allows an ``_Atomic`` qualified integer in a switch statement. Fixes
   (`#65557 <https://github.com/llvm/llvm-project/issues/65557>`_)
+- Fixes crash when trying to obtain the common sugared type of
+  `decltype(instantiation-dependent-expr)`.
+  Fixes (`#67603 <https://github.com/llvm/llvm-project/issues/67603>`_)
 
 Bug Fixes to Compiler Builtins
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
