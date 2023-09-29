@@ -2220,7 +2220,7 @@ printTo(raw_ostream &OS, ArrayRef<TA> Args, const PrintingPolicy &Policy,
       if (!FirstArg)
         OS << Comma;
 
-      if (Policy.MSVCFormatting && Policy.UseClassForTemplateArgument &&
+      if (Policy.UseClassForTemplateArgument &&
           Argument.getKind() == TemplateArgument::Type &&
           !Argument.getAsType()->isBuiltinType()) {
         const Type *Ty = Argument.getAsType().getTypePtr();
