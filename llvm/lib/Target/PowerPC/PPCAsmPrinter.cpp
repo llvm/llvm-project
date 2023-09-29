@@ -279,7 +279,7 @@ public:
 
   void emitFunctionBodyEnd() override;
 
-  void emitPGORefs();
+  void emitPGORefs(Module &M);
 
   void emitEndOfAsmFile(Module &) override;
 
@@ -2636,10 +2636,28 @@ void PPCAIXAsmPrinter::emitFunctionEntryLabel() {
         getObjFileLowering().getFunctionEntryPointSymbol(Alias, TM));
 }
 
-void PPCAIXAsmPrinter::emitPGORefs() {
-  if (OutContext.hasXCOFFSection(
+void PPCAIXAsmPrinter::emitPGORefs(Module &M) {
+  if (!OutContext.hasXCOFFSection(
           "__llvm_prf_cnts",
-          XCOFF::CsectProperties(XCOFF::XMC_RW, XCOFF::XTY_SD))) {
+          XCOFF::CsectProperties(XCOFF::XMC_RW, XCOFF::XTY_SD)))
+    return;
+
+  // When inside a csect `foo`, a .ref directive referring to a csect `bar`
+  // translates into a relocation entry from `foo` to` bar`. The referring
+  // csect, `foo`, is identified by its address.  If multiple csects have the
+  // same address (because one or more of them are zero-length), the referring
+  // csect cannot be determined. Hence, we don't generate the .ref directives
+  // if `__llvm_prf_cnts` is an empty section.
+  bool HasNonZeroLengthPrfCntsSection = false;
+  const DataLayout &DL = M.getDataLayout();
+  for (GlobalVariable &GV : M.globals())
+    if (GV.hasSection() && GV.getSection().equals("__llvm_prf_cnts") &&
+        DL.getTypeAllocSize(GV.getValueType()) > 0) {
+      HasNonZeroLengthPrfCntsSection = true;
+      break;
+    }
+
+  if (HasNonZeroLengthPrfCntsSection) {
     MCSection *CntsSection = OutContext.getXCOFFSection(
         "__llvm_prf_cnts", SectionKind::getData(),
         XCOFF::CsectProperties(XCOFF::XMC_RW, XCOFF::XTY_SD),
@@ -2673,7 +2691,7 @@ void PPCAIXAsmPrinter::emitEndOfAsmFile(Module &M) {
   if (M.empty() && TOCDataGlobalVars.empty())
     return;
 
-  emitPGORefs();
+  emitPGORefs(M);
 
   // Switch to section to emit TOC base.
   OutStreamer->switchSection(getObjFileLowering().getTOCBaseSection());
