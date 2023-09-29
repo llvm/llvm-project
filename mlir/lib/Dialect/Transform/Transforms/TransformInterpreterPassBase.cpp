@@ -518,8 +518,8 @@ static LogicalResult mergeSymbolsInto(Operation *target,
 
       // Move op even if we get a collision.
       LLVM_DEBUG(DBGS() << "  moving @" << op.getName());
-      op->moveAfter(&target->getRegion(0).front(),
-                    target->getRegion(0).front().begin());
+      op->moveBefore(&target->getRegion(0).front(),
+                     target->getRegion(0).front().end());
 
       // If there is no collision, we are done.
       if (!collidingOp) {
@@ -553,8 +553,6 @@ static LogicalResult mergeSymbolsInto(Operation *target,
       if (failed(mergeInto(funcOp, collidingFuncOp))) {
         return failure();
       }
-
-      assert(succeeded(mlir::verify(target)));
     }
   }
 
