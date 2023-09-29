@@ -584,9 +584,9 @@ define i1 @and_is_pow2(i16 %x, i16 %y) {
 ; CHECK-SAME: (i16 [[X:%.*]], i16 [[Y:%.*]]) {
 ; CHECK-NEXT:    [[XNZ:%.*]] = or i16 [[X]], 4
 ; CHECK-NEXT:    [[X_NEG:%.*]] = sub nsw i16 0, [[XNZ]]
-; CHECK-NEXT:    [[XX:%.*]] = and i16 [[XNZ]], [[X_NEG]]
-; CHECK-NEXT:    [[AND:%.*]] = and i16 [[XX]], [[Y]]
-; CHECK-NEXT:    [[R:%.*]] = icmp eq i16 [[AND]], [[XX]]
+; CHECK-NEXT:    [[TMP1:%.*]] = and i16 [[X_NEG]], [[Y]]
+; CHECK-NEXT:    [[AND:%.*]] = and i16 [[TMP1]], [[XNZ]]
+; CHECK-NEXT:    [[R:%.*]] = icmp ne i16 [[AND]], 0
 ; CHECK-NEXT:    ret i1 [[R]]
 ;
   %xnz = or i16 %x, 4
