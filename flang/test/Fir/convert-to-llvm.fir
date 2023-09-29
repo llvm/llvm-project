@@ -160,10 +160,10 @@ func.func @zero_test_integer() {
   return
 }
 
-// CHECK: %{{.*}} = llvm.mlir.constant(0 : i8) : i8
-// CHECK: %{{.*}} = llvm.mlir.constant(0 : i16) : i16
-// CHECK: %{{.*}} = llvm.mlir.constant(0 : i32) : i32
-// CHECK: %{{.*}} = llvm.mlir.constant(0 : i64) : i64
+// CHECK: %{{.*}} = llvm.mlir.zero : i8
+// CHECK: %{{.*}} = llvm.mlir.zero : i16
+// CHECK: %{{.*}} = llvm.mlir.zero : i32
+// CHECK: %{{.*}} = llvm.mlir.zero : i64
 // CHECK-NOT: fir.zero_bits
 
 // -----
@@ -180,15 +180,29 @@ func.func @zero_test_float() {
   return
 }
 
-// CHECK: %{{.*}} = llvm.mlir.constant(0.000000e+00 : f16) : f16
-// CHECK: %{{.*}} = llvm.mlir.constant(0.000000e+00 : bf16) : bf16
-// CHECK: %{{.*}} = llvm.mlir.constant(0.000000e+00 : f32) : f32
-// CHECK: %{{.*}} = llvm.mlir.constant(0.000000e+00 : f64) : f64
-// CHECK: %{{.*}} = llvm.mlir.constant(0.000000e+00 : f80) : f80
-// CHECK: %{{.*}} = llvm.mlir.constant(0.000000e+00 : f128) : f128
+// CHECK: %{{.*}} = llvm.mlir.zero : f16
+// CHECK: %{{.*}} = llvm.mlir.zero : bf16
+// CHECK: %{{.*}} = llvm.mlir.zero : f32
+// CHECK: %{{.*}} = llvm.mlir.zero : f64
+// CHECK: %{{.*}} = llvm.mlir.zero : f80
+// CHECK: %{{.*}} = llvm.mlir.zero : f128
 // CHECK-NOT: fir.zero_bits
 
 // -----
+
+// Test fir.zero_bits with aggregate types.
+
+func.func @zero_aggregate() {
+  %a = fir.zero_bits !fir.array<10xf32>
+  %b = fir.zero_bits !fir.type<a{i:i32,j:f32}>
+  return
+}
+// CHECK: %{{.*}} = llvm.mlir.zero : !llvm.array<10 x f32>
+// CHECK: %{{.*}} = llvm.mlir.zero : !llvm.struct<"a", (i32, f32)>
+// CHECK-NOT: fir.zero_bits
+
+// -----
+
 
 // Verify that fir.allocmem is transformed to a call to malloc
 // and that fir.freemem is transformed to a call to free
