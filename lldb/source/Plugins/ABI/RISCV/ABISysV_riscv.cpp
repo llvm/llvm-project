@@ -231,7 +231,7 @@ bool ABISysV_riscv::PrepareTrivialCall(
       args_size <= regs_for_args_count ? 0 : args_size - regs_for_args_count;
   auto offset = on_stack * word_size;
 
-  uint8_t reg_value[reg_size];
+  uint8_t reg_value[8];
   size_t reg_index = LLDB_REGNUM_GENERIC_ARG1;
 
   for (size_t i = 0; i < args_size; ++i) {
