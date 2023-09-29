@@ -13,6 +13,7 @@
 #include "lldb/Utility/RangeMap.h"
 #include "llvm/Support/Error.h"
 
+namespace lldb_private {
 class DWARFDebugAranges {
 protected:
   typedef lldb_private::RangeDataVector<dw_addr_t, uint32_t, dw_offset_t>
@@ -50,5 +51,6 @@ public:
 protected:
   RangeToDIE m_aranges;
 };
+} // namespace lldb_private
 
 #endif // LLDB_SOURCE_PLUGINS_SYMBOLFILE_DWARF_DWARFDEBUGARANGES_H

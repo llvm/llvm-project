@@ -23,6 +23,7 @@
 
 #include "llvm/DebugInfo/DWARF/DWARFAbbreviationDeclaration.h"
 
+namespace lldb_private {
 class DWARFDeclContext;
 
 #define DIE_SIBLING_IDX_BITSIZE 31
@@ -191,5 +192,6 @@ private:
   void GetAttributes(DWARFUnit *cu, DWARFAttributes &attrs, Recurse recurse,
                      uint32_t curr_depth) const;
 };
+} // namespace lldb_private
 
 #endif // LLDB_SOURCE_PLUGINS_SYMBOLFILE_DWARF_DWARFDEBUGINFOENTRY_H

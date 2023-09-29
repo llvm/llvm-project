@@ -19,9 +19,6 @@
 namespace lldb_private {
 
 class DWARFDataExtractor;
-
-} // namespace lldb_private
-
 class SymbolFileDWARF;
 
 class DWARFDebugMacroHeader {
@@ -57,5 +54,6 @@ public:
                    SymbolFileDWARF *sym_file_dwarf,
                    lldb_private::DebugMacrosSP &debug_macros_sp);
 };
+} // namespace lldb_private
 
 #endif // LLDB_SOURCE_PLUGINS_SYMBOLFILE_DWARF_DWARFDEBUGMACRO_H

@@ -11,6 +11,7 @@
 #include "lldb/Core/Declaration.h"
 
 using namespace lldb_private::dwarf;
+using namespace lldb_private;
 
 bool UniqueDWARFASTTypeList::Find(const DWARFDIE &die,
                                   const lldb_private::Declaration &decl,

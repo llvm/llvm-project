@@ -12,6 +12,7 @@
 #include "SymbolFileDWARF.h"
 #include <optional>
 
+namespace lldb_private {
 class SymbolFileDWARFDwo : public SymbolFileDWARF {
   /// LLVM RTTI support.
   static char ID;
@@ -65,9 +66,10 @@ protected:
   lldb::TypeSP
   FindDefinitionTypeForDWARFDeclContext(const DWARFDIE &die) override;
 
-  lldb::TypeSP FindCompleteObjCDefinitionTypeForDIE(
-      const DWARFDIE &die, lldb_private::ConstString type_name,
-      bool must_be_implementation) override;
+  lldb::TypeSP
+  FindCompleteObjCDefinitionTypeForDIE(const DWARFDIE &die,
+                                       lldb_private::ConstString type_name,
+                                       bool must_be_implementation) override;
 
   SymbolFileDWARF &GetBaseSymbolFile() const { return m_base_symbol_file; }
 
@@ -77,5 +79,6 @@ protected:
 
   SymbolFileDWARF &m_base_symbol_file;
 };
+} // namespace lldb_private
 
 #endif // LLDB_SOURCE_PLUGINS_SYMBOLFILE_DWARF_SYMBOLFILEDWARFDWO_H

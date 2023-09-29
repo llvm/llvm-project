@@ -18,9 +18,9 @@
 #include "llvm/DebugInfo/DWARF/DWARFLocationExpression.h"
 #include <functional>
 
-class DWARFUnit;
-
 namespace lldb_private {
+
+class DWARFUnit;
 
 /// \class DWARFExpression DWARFExpression.h
 /// "lldb/Expression/DWARFExpression.h" Encapsulates a DWARF location
@@ -45,7 +45,7 @@ public:
   DWARFExpression(const DataExtractor &data);
 
   /// Destructor
-  virtual ~DWARFExpression();
+  ~DWARFExpression();
 
   /// Return true if the location expression contains data
   bool IsValid() const;

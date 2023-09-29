@@ -20,6 +20,7 @@
 
 #include "UniqueDWARFASTType.h"
 
+namespace lldb_private {
 class SymbolFileDWARF;
 class DWARFCompileUnit;
 class DWARFDebugAranges;
@@ -157,11 +158,17 @@ public:
   void GetCompileOptions(
       std::unordered_map<lldb::CompUnitSP, lldb_private::Args> &args) override;
 
+  lldb::TypeSP FindDefinitionTypeForDWARFDeclContext(const DWARFDIE &die);
+
+  lldb::TypeSP
+  FindCompleteObjCDefinitionTypeForDIE(const DWARFDIE &die,
+                                       lldb_private::ConstString type_name,
+                                       bool must_be_implementation);
+
 protected:
   enum { kHaveInitializedOSOs = (1 << 0), kNumFlags };
 
   friend class DebugMapModule;
-  friend class DWARFASTParserClang;
   friend class DWARFCompileUnit;
   friend class SymbolFileDWARF;
   struct OSOInfo {
@@ -292,13 +299,7 @@ protected:
 
   CompileUnitInfo *GetCompileUnitInfo(SymbolFileDWARF *oso_dwarf);
 
-  lldb::TypeSP FindDefinitionTypeForDWARFDeclContext(const DWARFDIE &die);
-
   bool Supports_DW_AT_APPLE_objc_complete_type(SymbolFileDWARF *skip_dwarf_oso);
-
-  lldb::TypeSP FindCompleteObjCDefinitionTypeForDIE(
-      const DWARFDIE &die, lldb_private::ConstString type_name,
-      bool must_be_implementation);
 
   UniqueDWARFASTTypeMap &GetUniqueDWARFASTTypeMap() {
     return m_unique_ast_type_map;
@@ -403,5 +404,6 @@ protected:
   size_t AddOSOARanges(SymbolFileDWARF *dwarf2Data,
                        DWARFDebugAranges *debug_aranges);
 };
+} // namespace lldb_private
 
 #endif // LLDB_SOURCE_PLUGINS_SYMBOLFILE_DWARF_SYMBOLFILEDWARFDEBUGMAP_H

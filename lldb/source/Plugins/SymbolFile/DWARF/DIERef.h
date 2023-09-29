@@ -14,6 +14,7 @@
 #include <cassert>
 #include <optional>
 
+namespace lldb_private {
 /// Identifies a DWARF debug info entry within a given Module. It contains three
 /// "coordinates":
 /// - file_index: identifies the separate stand alone debug info file
@@ -131,10 +132,12 @@ private:
 static_assert(sizeof(DIERef) == 8);
 
 typedef std::vector<DIERef> DIEArray;
+} // namespace lldb_private
 
 namespace llvm {
-template<> struct format_provider<DIERef> {
-  static void format(const DIERef &ref, raw_ostream &OS, StringRef Style);
+template <> struct format_provider<lldb_private::DIERef> {
+  static void format(const lldb_private::DIERef &ref, raw_ostream &OS,
+                     StringRef Style);
 };
 } // namespace llvm
 

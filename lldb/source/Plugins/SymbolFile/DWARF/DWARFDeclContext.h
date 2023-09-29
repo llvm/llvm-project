@@ -16,6 +16,7 @@
 #include <string>
 #include <vector>
 
+namespace lldb_private {
 // DWARFDeclContext
 //
 // A class that represents a declaration context all the way down to a
@@ -82,5 +83,6 @@ protected:
   collection m_entries;
   mutable std::string m_qualified_name;
 };
+} // namespace lldb_private
 
 #endif // LLDB_SOURCE_PLUGINS_SYMBOLFILE_DWARF_DWARFDECLCONTEXT_H

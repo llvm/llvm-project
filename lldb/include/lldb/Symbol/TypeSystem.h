@@ -28,11 +28,13 @@
 #include "lldb/Symbol/CompilerDeclContext.h"
 #include "lldb/lldb-private.h"
 
-class DWARFDIE;
-class DWARFASTParser;
 class PDBASTParser;
 
 namespace lldb_private {
+
+class DWARFDIE;
+class DWARFASTParser;
+
 namespace npdb {
   class PdbAstBuilder;
 } // namespace npdb
@@ -579,7 +581,7 @@ private:
   llvm::Expected<lldb::TypeSystemSP> GetTypeSystemForLanguage(
       lldb::LanguageType language,
       std::optional<CreateCallback> create_callback = std::nullopt);
-  };
+};
 
 } // namespace lldb_private
 

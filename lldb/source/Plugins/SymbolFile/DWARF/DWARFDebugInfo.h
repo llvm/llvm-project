@@ -21,7 +21,6 @@
 
 namespace lldb_private {
 class DWARFContext;
-}
 
 class DWARFDebugInfo {
 public:
@@ -80,5 +79,6 @@ private:
   DWARFDebugInfo(const DWARFDebugInfo &) = delete;
   const DWARFDebugInfo &operator=(const DWARFDebugInfo &) = delete;
 };
+} // namespace lldb_private
 
 #endif // LLDB_SOURCE_PLUGINS_SYMBOLFILE_DWARF_DWARFDEBUGINFO_H

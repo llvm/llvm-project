@@ -17,11 +17,10 @@
 #include "lldb/lldb-enumerations.h"
 #include <optional>
 
-class DWARFDIE;
 namespace lldb_private {
+class DWARFDIE;
 class CompileUnit;
 class ExecutionContext;
-}
 class SymbolFileDWARF;
 
 class DWARFASTParser {
@@ -65,5 +64,6 @@ public:
 
   static lldb::AccessType GetAccessTypeFromDWARF(uint32_t dwarf_accessibility);
 };
+} // namespace lldb_private
 
 #endif // LLDB_SOURCE_PLUGINS_SYMBOLFILE_DWARF_DWARFASTPARSER_H

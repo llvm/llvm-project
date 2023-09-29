@@ -17,10 +17,10 @@
 #include "lldb/Core/Module.h"
 #include "lldb/Target/Statistics.h"
 
+namespace lldb_private {
 class DWARFDeclContext;
 class DWARFDIE;
 
-namespace lldb_private {
 class DWARFIndex {
 public:
   DWARFIndex(Module &module) : m_module(module) {}

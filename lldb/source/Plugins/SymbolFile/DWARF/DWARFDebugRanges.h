@@ -12,10 +12,9 @@
 #include "lldb/Core/dwarf.h"
 #include <map>
 
-class DWARFUnit;
 namespace lldb_private {
+class DWARFUnit;
 class DWARFContext;
-}
 
 class DWARFDebugRanges {
 public:
@@ -28,5 +27,6 @@ public:
 protected:
   std::map<dw_offset_t, DWARFRangeList> m_range_map;
 };
+} // namespace lldb_private
 
 #endif // LLDB_SOURCE_PLUGINS_SYMBOLFILE_DWARF_DWARFDEBUGRANGES_H

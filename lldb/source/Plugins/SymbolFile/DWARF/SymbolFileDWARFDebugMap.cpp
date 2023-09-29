@@ -166,6 +166,7 @@ SymbolFileDWARFDebugMap::CompileUnitInfo::GetFileRangeMap(
   return file_range_map;
 }
 
+namespace lldb_private {
 class DebugMapModule : public Module {
 public:
   DebugMapModule(const ModuleSP &exe_module_sp, uint32_t cu_idx,
@@ -222,6 +223,7 @@ protected:
   ModuleWP m_exe_module_wp;
   const uint32_t m_cu_idx;
 };
+} // namespace lldb_private
 
 void SymbolFileDWARFDebugMap::Initialize() {
   PluginManager::RegisterPlugin(GetPluginNameStatic(),

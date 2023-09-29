@@ -13,6 +13,7 @@
 #include <cstddef>
 #include <optional>
 
+namespace lldb_private {
 class DWARFUnit;
 class SymbolFileDWARF;
 class DWARFDIE;
@@ -84,7 +85,8 @@ protected:
   // It may be different from compile unit where m_value refers to.
   const DWARFUnit *m_unit = nullptr; // Unit for this form
   dw_form_t m_form = dw_form_t(0);   // Form for this value
-  ValueType m_value;            // Contains all data for the form
+  ValueType m_value;                 // Contains all data for the form
 };
+} // namespace lldb_private
 
 #endif // LLDB_SOURCE_PLUGINS_SYMBOLFILE_DWARF_DWARFFORMVALUE_H

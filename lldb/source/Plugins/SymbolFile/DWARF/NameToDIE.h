@@ -16,6 +16,7 @@
 #include "lldb/Core/dwarf.h"
 #include "lldb/lldb-defines.h"
 
+namespace lldb_private {
 class DWARFUnit;
 
 class NameToDIE {
@@ -45,8 +46,7 @@ public:
 
   void
   ForEach(std::function<bool(lldb_private::ConstString name,
-                             const DIERef &die_ref)> const
-              &callback) const;
+                             const DIERef &die_ref)> const &callback) const;
 
   /// Decode a serialized version of this object from data.
   ///
@@ -89,5 +89,6 @@ public:
 protected:
   lldb_private::UniqueCStringMap<DIERef> m_map;
 };
+} // namespace lldb_private
 
 #endif // LLDB_SOURCE_PLUGINS_SYMBOLFILE_DWARF_NAMETODIE_H

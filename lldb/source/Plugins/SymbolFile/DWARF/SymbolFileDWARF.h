@@ -38,6 +38,7 @@
 #include "DWARFIndex.h"
 #include "UniqueDWARFASTType.h"
 
+namespace lldb_private {
 // Forward Declarations for this DWARF plugin
 class DebugMapModule;
 class DWARFCompileUnit;
@@ -53,7 +54,7 @@ class DWARFTypeUnit;
 class SymbolFileDWARFDebugMap;
 class SymbolFileDWARFDwo;
 class SymbolFileDWARFDwp;
-class UserID;
+struct UserID;
 
 #define DIE_IS_BEING_PARSED ((lldb_private::Type *)1)
 
@@ -339,7 +340,6 @@ public:
     m_file_index = file_index;
   }
 
-protected:
   typedef llvm::DenseMap<const DWARFDebugInfoEntry *, lldb_private::Type *>
       DIEToTypePtr;
   typedef llvm::DenseMap<const DWARFDebugInfoEntry *, lldb::VariableSP>
@@ -575,5 +575,6 @@ protected:
   /// an index that identifies the .DWO or .o file.
   std::optional<uint64_t> m_file_index;
 };
+} // namespace lldb_private
 
 #endif // LLDB_SOURCE_PLUGINS_SYMBOLFILE_DWARF_SYMBOLFILEDWARF_H

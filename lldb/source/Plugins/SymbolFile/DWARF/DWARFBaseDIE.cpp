@@ -120,6 +120,7 @@ DWARFAttributes DWARFBaseDIE::GetAttributes(Recurse recurse) const {
   return DWARFAttributes();
 }
 
+namespace lldb_private {
 bool operator==(const DWARFBaseDIE &lhs, const DWARFBaseDIE &rhs) {
   return lhs.GetDIE() == rhs.GetDIE() && lhs.GetCU() == rhs.GetCU();
 }
@@ -127,6 +128,7 @@ bool operator==(const DWARFBaseDIE &lhs, const DWARFBaseDIE &rhs) {
 bool operator!=(const DWARFBaseDIE &lhs, const DWARFBaseDIE &rhs) {
   return !(lhs == rhs);
 }
+} // namespace lldb_private
 
 const DWARFDataExtractor &DWARFBaseDIE::GetData() const {
   // Clients must check if this DIE is valid before calling this function.

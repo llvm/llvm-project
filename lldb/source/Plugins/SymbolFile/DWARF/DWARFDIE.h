@@ -13,6 +13,7 @@
 #include "llvm/ADT/SmallSet.h"
 #include "llvm/ADT/iterator_range.h"
 
+namespace lldb_private {
 class DWARFDIE : public DWARFBaseDIE {
 public:
   class child_iterator;
@@ -126,5 +127,6 @@ public:
     return *this;
   }
 };
+} // namespace lldb_private
 
 #endif // LLDB_SOURCE_PLUGINS_SYMBOLFILE_DWARF_DWARFDIE_H

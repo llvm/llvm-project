@@ -17,6 +17,7 @@
 
 #include <map>
 
+namespace lldb_private {
 using DWARFAbbreviationDeclaration = llvm::DWARFAbbreviationDeclaration;
 using DWARFAbbreviationDeclarationSet = llvm::DWARFAbbreviationDeclarationSet;
 
@@ -51,5 +52,6 @@ protected:
   mutable DWARFAbbreviationDeclarationCollMapConstIter m_prev_abbr_offset_pos;
   mutable std::optional<llvm::DataExtractor> m_data;
 };
+} // namespace lldb_private
 
 #endif // LLDB_SOURCE_PLUGINS_SYMBOLFILE_DWARF_DWARFDEBUGABBREV_H

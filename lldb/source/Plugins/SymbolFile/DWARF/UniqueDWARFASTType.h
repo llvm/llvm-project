@@ -16,6 +16,7 @@
 #include "DWARFDIE.h"
 #include "lldb/Core/Declaration.h"
 
+namespace lldb_private {
 class UniqueDWARFASTType {
 public:
   // Constructors and Destructors
@@ -74,8 +75,7 @@ public:
 
   ~UniqueDWARFASTTypeMap() = default;
 
-  void Insert(lldb_private::ConstString name,
-              const UniqueDWARFASTType &entry) {
+  void Insert(lldb_private::ConstString name, const UniqueDWARFASTType &entry) {
     m_collection[name.GetCString()].Append(entry);
   }
 
@@ -95,5 +95,6 @@ protected:
   typedef llvm::DenseMap<const char *, UniqueDWARFASTTypeList> collection;
   collection m_collection;
 };
+} // namespace lldb_private
 
 #endif // LLDB_SOURCE_PLUGINS_SYMBOLFILE_DWARF_UNIQUEDWARFASTTYPE_H

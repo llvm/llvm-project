@@ -15,6 +15,7 @@
 #include "llvm/Support/Error.h"
 #include <optional>
 
+namespace lldb_private {
 class DIERef;
 class DWARFASTParser;
 class DWARFAttributes;
@@ -124,5 +125,6 @@ protected:
 
 bool operator==(const DWARFBaseDIE &lhs, const DWARFBaseDIE &rhs);
 bool operator!=(const DWARFBaseDIE &lhs, const DWARFBaseDIE &rhs);
+} // namespace lldb_private
 
 #endif // LLDB_SOURCE_PLUGINS_SYMBOLFILE_DWARF_DWARFBASEDIE_H

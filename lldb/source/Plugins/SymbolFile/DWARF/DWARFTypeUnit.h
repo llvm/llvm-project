@@ -12,6 +12,8 @@
 #include "DWARFUnit.h"
 #include "llvm/Support/Error.h"
 
+namespace lldb_private {
+
 class DWARFTypeUnit : public DWARFUnit {
 public:
   void BuildAddressRangeTable(DWARFDebugAranges *debug_aranges) override {}
@@ -33,5 +35,6 @@ private:
 
   friend class DWARFUnit;
 };
+} // namespace lldb_private
 
 #endif // LLDB_SOURCE_PLUGINS_SYMBOLFILE_DWARF_DWARFTYPEUNIT_H

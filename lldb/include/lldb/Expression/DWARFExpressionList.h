@@ -13,9 +13,9 @@
 #include "lldb/Utility/RangeMap.h"
 #include "lldb/lldb-private.h"
 
-class DWARFUnit;
-
 namespace lldb_private {
+
+class DWARFUnit;
 
 /// \class DWARFExpressionList DWARFExpressionList.h
 /// "lldb/Expression/DWARFExpressionList.h" Encapsulates a range map from file

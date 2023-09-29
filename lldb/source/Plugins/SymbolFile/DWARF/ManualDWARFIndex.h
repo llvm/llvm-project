@@ -13,10 +13,10 @@
 #include "Plugins/SymbolFile/DWARF/NameToDIE.h"
 #include "llvm/ADT/DenseSet.h"
 
+namespace lldb_private {
 class DWARFDebugInfo;
 class SymbolFileDWARFDwo;
 
-namespace lldb_private {
 class ManualDWARFIndex : public DWARFIndex {
 public:
   ManualDWARFIndex(Module &module, SymbolFileDWARF &dwarf,

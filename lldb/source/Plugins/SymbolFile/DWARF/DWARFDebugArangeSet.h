@@ -13,6 +13,7 @@
 #include <cstdint>
 #include <vector>
 
+namespace lldb_private {
 class DWARFDebugArangeSet {
 public:
   struct Header {
@@ -62,5 +63,6 @@ protected:
   Header m_header;
   DescriptorColl m_arange_descriptors;
 };
+} // namespace lldb_private
 
 #endif // LLDB_SOURCE_PLUGINS_SYMBOLFILE_DWARF_DWARFDEBUGARANGESET_H

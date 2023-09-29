@@ -18,6 +18,7 @@
 #include <atomic>
 #include <optional>
 
+namespace lldb_private {
 class DWARFUnit;
 class DWARFCompileUnit;
 class NameToDIE;
@@ -101,6 +102,7 @@ public:
 
   class ScopedExtractDIEs {
     DWARFUnit *m_cu;
+
   public:
     bool m_clear_dies = false;
     ScopedExtractDIEs(DWARFUnit &cu);
@@ -224,7 +226,9 @@ public:
   uint8_t GetUnitType() const { return m_header.GetUnitType(); }
   bool IsTypeUnit() const { return m_header.IsTypeUnit(); }
   /// Note that this check only works for DWARF5+.
-  bool IsSkeletonUnit() const { return GetUnitType() == llvm::dwarf::DW_UT_skeleton; }
+  bool IsSkeletonUnit() const {
+    return GetUnitType() == llvm::dwarf::DW_UT_skeleton;
+  }
 
   std::optional<uint64_t> GetStringOffsetSectionItem(uint32_t index) const;
 
@@ -268,7 +272,6 @@ public:
   /// \returns
   ///   True if any DIEs match any tag in \a tags, false otherwise.
   bool HasAny(llvm::ArrayRef<dw_tag_t> tags);
-
 
   /// Get the fission .dwo file specific error for this compile unit.
   ///
@@ -348,9 +351,9 @@ protected:
   lldb_private::LazyBool m_is_optimized = lldb_private::eLazyBoolCalculate;
   std::optional<lldb_private::FileSpec> m_comp_dir;
   std::optional<lldb_private::FileSpec> m_file_spec;
-  std::optional<dw_addr_t> m_addr_base;  ///< Value of DW_AT_addr_base.
-  dw_addr_t m_loclists_base = 0;         ///< Value of DW_AT_loclists_base.
-  dw_addr_t m_ranges_base = 0;           ///< Value of DW_AT_rnglists_base.
+  std::optional<dw_addr_t> m_addr_base; ///< Value of DW_AT_addr_base.
+  dw_addr_t m_loclists_base = 0;        ///< Value of DW_AT_loclists_base.
+  dw_addr_t m_ranges_base = 0;          ///< Value of DW_AT_rnglists_base.
   std::optional<uint64_t> m_gnu_addr_base;
   std::optional<uint64_t> m_gnu_ranges_base;
 
@@ -387,5 +390,6 @@ private:
   DWARFUnit(const DWARFUnit &) = delete;
   const DWARFUnit &operator=(const DWARFUnit &) = delete;
 };
+} // namespace lldb_private
 
 #endif // LLDB_SOURCE_PLUGINS_SYMBOLFILE_DWARF_DWARFUNIT_H
