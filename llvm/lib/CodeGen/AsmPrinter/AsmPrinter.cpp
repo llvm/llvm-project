@@ -1929,7 +1929,8 @@ void AsmPrinter::emitFunctionBody() {
 
   // Output MBB ids, function names, and frequencies if the flag to dump
   // MBB profile information has been set
-  if (MBBProfileDumpFileOutput && !MF->empty()) {
+  if (MBBProfileDumpFileOutput && !MF->empty() &&
+      MF->getFunction().getEntryCount()) {
     if (!MF->hasBBLabels())
       MF->getContext().reportError(
           SMLoc(),
@@ -1949,13 +1950,9 @@ void AsmPrinter::emitFunctionBody() {
     // "frequencies" may be quite large.
     const double EntryCount =
         static_cast<double>(MF->getFunction().getEntryCount()->getCount());
-    const double EntryFrequency =
-        static_cast<double>(MBFI.getBlockFreq(&*MF->begin()).getFrequency());
-    const double FreqAdjustmentFactor = EntryCount / EntryFrequency;
     for (const auto &MBB : *MF) {
-      const double MBBFreq =
-          static_cast<double>(MBFI.getBlockFreq(&MBB).getFrequency());
-      const double AbsMBBFreq = MBBFreq * FreqAdjustmentFactor;
+      const double MBBRelFreq = MBFI.getBlockFreqRelativeToEntryBlock(&MBB);
+      const double AbsMBBFreq = MBBRelFreq * EntryCount;
       *MBBProfileDumpFileOutput.get()
           << MF->getName() << "," << MBB.getBBID() << "," << AbsMBBFreq << "\n";
     }
