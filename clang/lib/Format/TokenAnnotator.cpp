@@ -376,7 +376,7 @@ private:
     // Infer the role of the l_paren based on the previous token if we haven't
     // detected one yet.
     if (PrevNonComment && OpeningParen.is(TT_Unknown)) {
-      if (PrevNonComment->is(tok::kw___attribute)) {
+      if (PrevNonComment->isAttribute()) {
         OpeningParen.setType(TT_AttributeLParen);
       } else if (PrevNonComment->isOneOf(TT_TypenameMacro, tok::kw_decltype,
                                          tok::kw_typeof,
@@ -1207,11 +1207,13 @@ private:
         return false;
       if (Line.MustBeDeclaration && Contexts.size() == 1 &&
           !Contexts.back().IsExpression && !Line.startsWith(TT_ObjCProperty) &&
-          !Tok->isOneOf(TT_TypeDeclarationParen, TT_RequiresExpressionLParen) &&
-          (!Tok->Previous ||
-           !Tok->Previous->isOneOf(tok::kw___attribute, TT_RequiresClause,
-                                   TT_LeadingJavaAnnotation))) {
-        Line.MightBeFunctionDecl = true;
+          !Tok->isOneOf(TT_TypeDeclarationParen, TT_RequiresExpressionLParen)) {
+        if (const auto *Previous = Tok->Previous;
+            !Previous ||
+            (!Previous->isAttribute() &&
+             !Previous->isOneOf(TT_RequiresClause, TT_LeadingJavaAnnotation))) {
+          Line.MightBeFunctionDecl = true;
+        }
       }
       break;
     case tok::l_square:
@@ -2389,7 +2391,7 @@ private:
           assert(T->MatchingParen->is(tok::l_paren));
           assert(T->MatchingParen->is(TT_AttributeLParen));
           if (const auto *Tok = T->MatchingParen->Previous;
-              Tok && Tok->is(tok::kw___attribute)) {
+              Tok && Tok->isAttribute()) {
             T = Tok->Previous;
             continue;
           }
@@ -5613,10 +5615,11 @@ bool TokenAnnotator::canBreakBefore(const AnnotatedLine &Line,
                           tok::less, tok::coloncolon);
   }
 
-  if (Right.is(tok::kw___attribute) ||
-      (Right.is(tok::l_square) && Right.is(TT_AttributeSquare))) {
+  if (Right.isAttribute())
+    return true;
+
+  if (Right.is(tok::l_square) && Right.is(TT_AttributeSquare))
     return Left.isNot(TT_AttributeSquare);
-  }
 
   if (Left.is(tok::identifier) && Right.is(tok::string_literal))
     return true;
