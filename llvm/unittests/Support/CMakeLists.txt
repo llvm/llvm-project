@@ -90,6 +90,7 @@ add_llvm_unittest(SupportTests
   TypeTraitsTest.cpp
   TrailingObjectsTest.cpp
   UnicodeTest.cpp
+  UTFTimeTest.cpp
   VersionTupleTest.cpp
   VirtualFileSystemTest.cpp
   WithColorTest.cpp
