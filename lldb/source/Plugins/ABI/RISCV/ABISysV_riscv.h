@@ -10,8 +10,6 @@
 #define liblldb_ABISysV_riscv_h_
 
 // Other libraries and framework includes
-#include <optional>
-
 #include "llvm/TargetParser/Triple.h"
 
 // Project includes
