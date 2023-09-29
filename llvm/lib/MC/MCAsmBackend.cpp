@@ -10,6 +10,7 @@
 #include "llvm/MC/MCDXContainerWriter.h"
 #include "llvm/MC/MCELFObjectWriter.h"
 #include "llvm/MC/MCFixupKindInfo.h"
+#include "llvm/MC/MCGOFFObjectWriter.h"
 #include "llvm/MC/MCMachObjectWriter.h"
 #include "llvm/MC/MCObjectWriter.h"
 #include "llvm/MC/MCSPIRVObjectWriter.h"
@@ -45,6 +46,9 @@ MCAsmBackend::createObjectWriter(raw_pwrite_stream &OS) const {
         cast<MCSPIRVObjectTargetWriter>(std::move(TW)), OS);
   case Triple::Wasm:
     return createWasmObjectWriter(cast<MCWasmObjectTargetWriter>(std::move(TW)),
+                                  OS);
+  case Triple::GOFF:
+    return createGOFFObjectWriter(cast<MCGOFFObjectTargetWriter>(std::move(TW)),
                                   OS);
   case Triple::XCOFF:
     return createXCOFFObjectWriter(
