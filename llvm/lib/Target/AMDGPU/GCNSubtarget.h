@@ -194,6 +194,7 @@ protected:
   bool HasPackedTID = false;
   bool ScalarizeGlobal = false;
   bool HasSALUFloatInsts = false;
+  bool HasVGPRSingleUseHintInsts = false;
 
   bool HasVcmpxPermlaneHazard = false;
   bool HasVMEMtoScalarWriteHazard = false;
@@ -1144,6 +1145,8 @@ public:
   bool hasGFX940Insts() const { return GFX940Insts; }
 
   bool hasSALUFloatInsts() const { return HasSALUFloatInsts; }
+
+  bool hasVGPRSingleUseHintInsts() const { return HasVGPRSingleUseHintInsts; }
 
   /// Return the maximum number of waves per SIMD for kernels using \p SGPRs
   /// SGPRs
