@@ -247,7 +247,7 @@ public:
   MaterializedIterator materialized_begin() const {
     // Look for the first valid page.
     for (size_t ElementIdx = 0; ElementIdx < Size; ElementIdx += PageSize)
-      if (PageToDataPtrs[ElementIdx / PageSize] != nullptr)
+      if (PageToDataPtrs[ElementIdx / PageSize])
         return MaterializedIterator(this, ElementIdx);
 
     return MaterializedIterator(this, Size);
