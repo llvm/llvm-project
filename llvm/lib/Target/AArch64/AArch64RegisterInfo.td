@@ -915,6 +915,7 @@ class PNRClass<int firstreg, int lastreg> : RegisterClass<
 }
 
 def PNR        : PNRClass<0, 15>;
+def PNR_3b     : PNRClass<0, 7>;
 def PNR_p8to15 : PNRClass<8, 15>;
 
 // SVE predicate-as-counter operand
