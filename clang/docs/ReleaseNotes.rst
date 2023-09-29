@@ -743,6 +743,9 @@ Bug Fixes in This Version
 - Clang now accepts anonymous members initialized with designated initializers
   inside templates.
   Fixes (`#65143 <https://github.com/llvm/llvm-project/issues/65143>`_)
+- Fixes crash when trying to obtain the common sugared type of
+  `decltype(instantiation-dependent-expr)`.
+  Fixes (`#67603 <https://github.com/llvm/llvm-project/issues/67603>`_)
 
 Bug Fixes to Compiler Builtins
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
