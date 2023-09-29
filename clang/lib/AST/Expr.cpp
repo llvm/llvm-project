@@ -788,6 +788,12 @@ std::string PredefinedExpr::ComputeName(PredefinedIdentKind IK,
 
     FD->printQualifiedName(POut, Policy);
 
+    if (IK == Function) {
+      POut.flush();
+      Out << Proto;
+      return std::string(Name);
+    }
+
     POut << "(";
     if (FT) {
       for (unsigned i = 0, e = Decl->getNumParams(); i != e; ++i) {
