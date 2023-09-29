@@ -1,5 +1,5 @@
-// RUN: %clang_cc1 -fexperimental-new-constant-interpreter -std=c++20 -verify %s
-// RUN: %clang_cc1 -std=c++20 -verify=ref %s
+// RUN: %clang_cc1 -fcxx-exceptions -fexperimental-new-constant-interpreter -std=c++20 -verify %s
+// RUN: %clang_cc1 -fcxx-exceptions -std=c++20 -verify=ref %s
 
 void test_alignas_operand() {
   alignas(8) char dummy;
@@ -699,4 +699,37 @@ namespace ThreeWayCmp {
   static_assert(pa1 <=> pa1 == 0, "");
   static_assert(pa1 <=> pa2 == -1, "");
   static_assert(pa2 <=> pa1 == 1, "");
+}
+
+// FIXME: Interp should also be able to evaluate this snippet properly.
+namespace ConstexprArrayInitLoopExprDestructors
+{
+  struct Highlander {
+      int *p = 0;
+      constexpr Highlander() {}
+      constexpr void set(int *p) { this->p = p; ++*p; if (*p != 1) throw "there can be only one"; } // expected-note {{not valid in a constant expression}}
+      constexpr ~Highlander() { --*p; }
+  };
+
+  struct X {
+      int *p;
+      constexpr X(int *p) : p(p) {}
+      constexpr X(const X &x, Highlander &&h = Highlander()) : p(x.p) {
+          h.set(p); // expected-note {{in call to '&Highlander()->set(&n)'}}
+      }
+  };
+
+  constexpr int f() {
+      int n = 0;
+      X x[3] = {&n, &n, &n};
+      auto [a, b, c] = x; // expected-note {{in call to 'X(x[0], Highlander())'}}
+      return n;
+  }
+
+  static_assert(f() == 0); // expected-error {{not an integral constant expression}} \
+                           // expected-note {{in call to 'f()'}}
+
+  int main() {
+      return f();
+  }
 }
