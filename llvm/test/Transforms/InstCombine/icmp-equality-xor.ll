@@ -136,7 +136,8 @@ define i1 @foo2(i32 %x, i32 %y) {
 define <2 x i1> @foo3(<2 x i8> %x) {
 ; CHECK-LABEL: @foo3(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[CMP:%.*]] = icmp ne <2 x i8> [[X:%.*]], <i8 -9, i8 -80>
+; CHECK-NEXT:    [[XOR:%.*]] = xor <2 x i8> [[X:%.*]], <i8 -2, i8 -1>
+; CHECK-NEXT:    [[CMP:%.*]] = icmp ne <2 x i8> [[XOR]], <i8 9, i8 79>
 ; CHECK-NEXT:    ret <2 x i1> [[CMP]]
 ;
 entry:

@@ -5450,16 +5450,8 @@ Instruction *InstCombinerImpl::foldICmpEquality(ICmpInst &I) {
   Constant *Cst;
   if (match(&I, m_c_ICmp(PredUnused,
                          m_OneUse(m_Xor(m_Value(A), m_ImmConstant(Cst))),
-                         m_Value(B)))) {
-    // Special case:
-    // icmp eq/ne OneUse(A ^ Cst1), Cst2 --> icmp eq/ne A, Cst1 ^ Cst2
-    // We handle this to avoid infinite loops.
-    if (match(B, m_ImmConstant())) {
-      if (Value *V = simplifyXorInst(B, Cst, SQ.getWithInstruction(&I)))
-        return new ICmpInst(Pred, A, V);
-    } else
-      return new ICmpInst(Pred, Builder.CreateXor(A, B), Cst);
-  }
+                         m_CombineAnd(m_Value(B), m_Unless(m_ImmConstant())))))
+    return new ICmpInst(Pred, Builder.CreateXor(A, B), Cst);
 
   return nullptr;
 }
