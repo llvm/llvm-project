@@ -4246,7 +4246,12 @@ foldShiftIntoShiftInAnotherHandOfAndInICmp(ICmpInst &I, const SimplifyQuery SQ,
                       /*isNUW=*/false, SQ.getWithInstruction(&I)));
   if (!NewShAmt)
     return nullptr;
-  NewShAmt = ConstantExpr::getZExtOrBitCast(NewShAmt, WidestTy);
+  if (NewShAmt->getType() != WidestTy) {
+    NewShAmt =
+        ConstantFoldCastOperand(Instruction::ZExt, NewShAmt, WidestTy, SQ.DL);
+    if (!NewShAmt)
+      return nullptr;
+  }
   unsigned WidestBitWidth = WidestTy->getScalarSizeInBits();
 
   // Is the new shift amount smaller than the bit width?
