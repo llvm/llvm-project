@@ -161,7 +161,7 @@ define { i32, i1 } @combine_usub_nuw(i32 %a, i32 %b) {
 ; CHECK-NEXT:    orl $-2147483648, %eax # imm = 0x80000000
 ; CHECK-NEXT:    andl $2147483647, %esi # imm = 0x7FFFFFFF
 ; CHECK-NEXT:    subl %esi, %eax
-; CHECK-NEXT:    setb %dl
+; CHECK-NEXT:    xorl %edx, %edx
 ; CHECK-NEXT:    retq
   %aa = or i32 %a, 2147483648
   %bb = and i32 %b, 2147483647
