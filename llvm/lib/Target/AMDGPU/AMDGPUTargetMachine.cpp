@@ -1199,6 +1199,8 @@ void GCNPassConfig::addMachineSSAOptimization() {
   }
   addPass(&DeadMachineInstructionElimID);
   addPass(createSIShrinkInstructionsPass());
+  if (TM->getOptLevel() > CodeGenOptLevel::Less)
+    addPass(&SIFoldOperandsID);
 }
 
 bool GCNPassConfig::addILPOpts() {
