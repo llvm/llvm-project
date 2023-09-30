@@ -61,9 +61,6 @@ set(FLANG_TEST_DEPENDS
   llvm-objdump
   llvm-readobj
   split-file
-  FortranRuntime
-  Fortran_main
-  FortranDecimal
 )
 if (LLVM_ENABLE_PLUGINS AND NOT WIN32)
   list(APPEND FLANG_TEST_DEPENDS Bye)

@@ -6,10 +6,14 @@
 #
 #===------------------------------------------------------------------------===#
 
+# TODO: Maybe this file should still be added by flang/CMakeLists.txt and
+# when FLANG_STANDALONE_BUILD=On and a new variable FLANG_BUILD_RUNTIME=On
+# we should invoke an ExternalProject_Add(flang-rt ...) from here?
+
 if (CMAKE_SOURCE_DIR STREQUAL CMAKE_CURRENT_SOURCE_DIR)
   cmake_minimum_required(VERSION 3.20.0)
 
-  project(FlangRuntime C CXX)
+  project(FortranRuntime C CXX)
 
   set(CMAKE_CXX_STANDARD 17)
   set(CMAKE_CXX_STANDARD_REQUIRED TRUE)
@@ -81,8 +85,6 @@ append(${NO_LTO_FLAGS} CMAKE_CXX_FLAGS)
 # to avoid an unwanted dependency on libstdc++/libc++.so.
 add_definitions(-U_GLIBCXX_ASSERTIONS)
 add_definitions(-U_LIBCPP_ENABLE_ASSERTIONS)
-
-add_subdirectory(FortranMain)
 
 set(sources
   ISO_Fortran_binding.cpp
@@ -268,10 +270,13 @@ if (NOT FLANG_EXPERIMENTAL_OMP_OFFLOAD_BUILD STREQUAL "off")
   endif()
 endif()
 
-add_flang_library(FortranRuntime
+add_compile_options(-fPIC)
+
+add_flang_library(FortranRuntime STATIC
   ${sources}
   LINK_LIBS
-  FortranDecimal
+  FortranDecimalRT
 
   INSTALL_WITH_TOOLCHAIN
+  PIC
 )

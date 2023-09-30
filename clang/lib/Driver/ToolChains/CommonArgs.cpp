@@ -969,29 +969,41 @@ void tools::addFortranRuntimeLibs(const ToolChain &TC,
                                   llvm::opt::ArgStringList &CmdArgs) {
   if (TC.getTriple().isKnownWindowsMSVCEnvironment()) {
     CmdArgs.push_back("Fortran_main.lib");
-    CmdArgs.push_back("FortranRuntime.lib");
-    CmdArgs.push_back("FortranDecimal.lib");
+    CmdArgs.push_back("flang-rt.lib");
   } else {
     CmdArgs.push_back("-lFortran_main");
-    CmdArgs.push_back("-lFortranRuntime");
-    CmdArgs.push_back("-lFortranDecimal");
+    CmdArgs.push_back("-lflang-rt");
   }
 }
 
 void tools::addFortranRuntimeLibraryPath(const ToolChain &TC,
                                          const llvm::opt::ArgList &Args,
                                          ArgStringList &CmdArgs) {
-  // Default to the <driver-path>/../lib directory. This works fine on the
-  // platforms that we have tested so far. We will probably have to re-fine
-  // this in the future. In particular, on some platforms, we may need to use
-  // lib64 instead of lib.
-  SmallString<256> DefaultLibPath =
+  // Default to the <driver-path>/../lib, <driver-path>/../flang-rt/lib, and
+  // <driver-path>/../runtimes/runtimes-bins/flang-rt/lib directories. This
+  // works fine on the platforms that we have tested so far. We will probably
+  // have to re-fine this in the future. In particular, on some platforms, we
+  // may need to use lib64 instead of lib.
+  SmallString<256> BuildLibPath =
       llvm::sys::path::parent_path(TC.getDriver().Dir);
-  llvm::sys::path::append(DefaultLibPath, "lib");
-  if (TC.getTriple().isKnownWindowsMSVCEnvironment())
-    CmdArgs.push_back(Args.MakeArgString("-libpath:" + DefaultLibPath));
-  else
-    CmdArgs.push_back(Args.MakeArgString("-L" + DefaultLibPath));
+  SmallString<256> FlangRTLibPath =
+      llvm::sys::path::parent_path(TC.getDriver().Dir);
+  SmallString<256> RuntimesLibPath =
+      llvm::sys::path::parent_path(TC.getDriver().Dir);
+  // Search path for Fortran_main and Flang-rt libraries.
+  llvm::sys::path::append(BuildLibPath, "lib");
+  llvm::sys::path::append(FlangRTLibPath, "flang-rt/lib");
+  llvm::sys::path::append(RuntimesLibPath,
+                          "runtimes/runtimes-bins/flang-rt/lib");
+  if (TC.getTriple().isKnownWindowsMSVCEnvironment()) {
+    CmdArgs.push_back(Args.MakeArgString("-libpath:" + BuildLibPath));
+    CmdArgs.push_back(Args.MakeArgString("-libpath:" + FlangRTLibPath));
+    CmdArgs.push_back(Args.MakeArgString("-libpath:" + RuntimesLibPath));
+  } else {
+    CmdArgs.push_back(Args.MakeArgString("-L" + BuildLibPath));
+    CmdArgs.push_back(Args.MakeArgString("-L" + FlangRTLibPath));
+    CmdArgs.push_back(Args.MakeArgString("-L" + RuntimesLibPath));
+  }
 }
 
 static void addSanitizerRuntime(const ToolChain &TC, const ArgList &Args,
