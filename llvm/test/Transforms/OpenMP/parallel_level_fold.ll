@@ -14,7 +14,7 @@ target triple = "nvptx64"
 ; CHECK: @[[G:[a-zA-Z0-9_$"\\.-]+]] = external global i16
 ; CHECK: @[[NONE_SPMD_KERNEL_ENVIRONMENT:[a-zA-Z0-9_$"\\.-]+]] = local_unnamed_addr constant [[STRUCT_KERNELENVIRONMENTTY:%.*]] { [[STRUCT_CONFIGURATIONENVIRONMENTTY:%.*]] { i8 0, i8 0, i8 1 }, ptr null, ptr null }
 ; CHECK: @[[SPMD_KERNEL_ENVIRONMENT:[a-zA-Z0-9_$"\\.-]+]] = local_unnamed_addr constant [[STRUCT_KERNELENVIRONMENTTY:%.*]] { [[STRUCT_CONFIGURATIONENVIRONMENTTY:%.*]] { i8 0, i8 0, i8 2 }, ptr null, ptr null }
-; CHECK: @[[PARALLEL_KERNEL_ENVIRONMENT:[a-zA-Z0-9_$"\\.-]+]] = local_unnamed_addr constant [[STRUCT_KERNELENVIRONMENTTY:%.*]] { [[STRUCT_CONFIGURATIONENVIRONMENTTY:%.*]] { i8 0, i8 0, i8 2 }, ptr null, ptr null }
+; CHECK: @[[PARALLEL_KERNEL_ENVIRONMENT:[a-zA-Z0-9_$"\\.-]+]] = local_unnamed_addr constant [[STRUCT_KERNELENVIRONMENTTY:%.*]] { [[STRUCT_CONFIGURATIONENVIRONMENTTY:%.*]] { i8 0, i8 1, i8 2 }, ptr null, ptr null }
 ;.
 define weak void @none_spmd() "kernel" {
 ; CHECK-LABEL: define {{[^@]+}}@none_spmd
