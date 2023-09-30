@@ -986,11 +986,6 @@ SUnit *ScheduleDAGRRList::TryUnfoldSU(SUnit *SU) {
   if (!TII->unfoldMemoryOperand(*DAG, N, NewNodes))
     return nullptr;
 
-  // unfolding an x86 DEC64m operation results in store, dec, load which
-  // can't be handled here so quit
-  if (NewNodes.size() == 3)
-    return nullptr;
-
   assert(NewNodes.size() == 2 && "Expected a load folding node!");
 
   N = NewNodes[1];
