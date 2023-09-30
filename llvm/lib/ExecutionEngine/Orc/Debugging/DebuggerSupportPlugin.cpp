@@ -156,7 +156,7 @@ public:
       }
     }
 
-    std::optional<std::string> FileName;
+    std::optional<StringRef> FileName;
     if (!DebugLineSectionData.empty()) {
       auto DWARFCtx = DWARFContext::create(DebugSectionMap, G.getPointerSize(),
                                            G.getEndianness());
@@ -169,15 +169,13 @@ public:
       // Try to parse line data. Consume error on failure.
       if (auto Err = LineTable.parse(DebugLineData, &Offset, *DWARFCtx, nullptr,
                                      consumeError)) {
-        handleAllErrors(
-          std::move(Err),
-          [&](ErrorInfoBase &EIB) {
-            LLVM_DEBUG({
-              dbgs() << "Cannot parse line table for \"" << G.getName() << "\": ";
-              EIB.log(dbgs());
-              dbgs() << "\n";
-            });
+        handleAllErrors(std::move(Err), [&](ErrorInfoBase &EIB) {
+          LLVM_DEBUG({
+            dbgs() << "Cannot parse line table for \"" << G.getName() << "\": ";
+            EIB.log(dbgs());
+            dbgs() << "\n";
           });
+        });
       } else {
         if (!LineTable.Prologue.FileNames.empty())
           FileName = *dwarf::toString(LineTable.Prologue.FileNames[0].Name);
@@ -187,7 +185,7 @@ public:
     // If no line table (or unable to use) then use graph name.
     // FIXME: There are probably other debug sections we should look in first.
     if (!FileName)
-      FileName = G.getName();
+      FileName = StringRef(G.getName());
 
     Builder.addSymbol("", MachO::N_SO, 0, 0, 0);
     Builder.addSymbol(*FileName, MachO::N_SO, 0, 0, 0);
