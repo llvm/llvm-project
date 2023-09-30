@@ -11,6 +11,7 @@
 // ===---------------------------------------------------------------------===//
 
 #include "AArch64InstrInfo.h"
+#include "AArch64Subtarget.h"
 #include "llvm/CodeGen/MachineFunction.h"
 #include "llvm/CodeGen/MachineFunctionPass.h"
 #include "llvm/CodeGen/MachineInstr.h"
@@ -122,7 +123,10 @@ bool AArch64StorePairSuppress::runOnMachineFunction(MachineFunction &MF) {
   if (skipFunction(MF.getFunction()) || MF.getFunction().hasOptSize())
     return false;
 
-  const TargetSubtargetInfo &ST = MF.getSubtarget();
+  const AArch64Subtarget &ST = MF.getSubtarget<AArch64Subtarget>();
+  if (!ST.enableStorePairSuppress())
+    return false;
+
   TII = static_cast<const AArch64InstrInfo *>(ST.getInstrInfo());
   TRI = ST.getRegisterInfo();
   MRI = &MF.getRegInfo();
