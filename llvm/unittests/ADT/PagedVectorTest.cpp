@@ -24,8 +24,10 @@ TEST(PagedVectorTest, EmptyTest) {
   EXPECT_EQ(V.materialized_end().getIndex(), 0ULL);
   EXPECT_EQ(std::distance(V.materialized_begin(), V.materialized_end()), 0LL);
 
+#if GTEST_HAS_DEATH_TEST && !defined(NDEBUG)
   EXPECT_DEATH(V[0], "Index < Size");
   EXPECT_DEATH(PagedVector<int>(nullptr), "Allocator cannot be null");
+#endif
 }
 
 TEST(PagedVectorTest, ExpandTest) {
@@ -68,8 +70,11 @@ TEST(PagedVectorTest, HalfPageFillingTest) {
   EXPECT_EQ(std::distance(V.materialized_begin(), V.materialized_end()), 5LL);
   for (int I = 0; I < 5; ++I)
     EXPECT_EQ(V[I], I);
+
+#if GTEST_HAS_DEATH_TEST && !defined(NDEBUG)
   for (int I = 5; I < 10; ++I)
     EXPECT_DEATH(V[I], "Index < Size");
+#endif
 }
 
 TEST(PagedVectorTest, FillFullMultiPageTest) {
@@ -244,7 +249,10 @@ TEST(PagedVectorTest, ShrinkTest) {
   EXPECT_EQ(V.size(), 0ULL);
   EXPECT_EQ(V.capacity(), 0ULL);
   EXPECT_EQ(std::distance(V.materialized_begin(), V.materialized_end()), 0LL);
+
+#if GTEST_HAS_DEATH_TEST && !defined(NDEBUG)
   EXPECT_DEATH(V[0], "Index < Size");
+#endif
 }
 
 TEST(PagedVectorTest, FunctionalityTest) {
