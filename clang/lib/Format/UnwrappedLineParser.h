@@ -40,26 +40,26 @@ struct UnwrappedLineNode;
 /// \c UnwrappedLineFormatter. The key property is that changing the formatting
 /// within an unwrapped line does not affect any other unwrapped lines.
 struct UnwrappedLine {
-  UnwrappedLine();
+  UnwrappedLine() = default;
 
   /// The \c Tokens comprising this \c UnwrappedLine.
   std::list<UnwrappedLineNode> Tokens;
 
   /// The indent level of the \c UnwrappedLine.
-  unsigned Level;
+  unsigned Level = 0;
 
   /// The \c PPBranchLevel (adjusted for header guards) if this line is a
   /// \c InMacroBody line, and 0 otherwise.
-  unsigned PPLevel;
+  unsigned PPLevel = 0;
 
   /// Whether this \c UnwrappedLine is part of a preprocessor directive.
-  bool InPPDirective;
+  bool InPPDirective = false;
   /// Whether this \c UnwrappedLine is part of a pramga directive.
-  bool InPragmaDirective;
+  bool InPragmaDirective = false;
   /// Whether it is part of a macro body.
-  bool InMacroBody;
+  bool InMacroBody = false;
 
-  bool MustBeDeclaration;
+  bool MustBeDeclaration = false;
 
   /// \c True if this line should be indented by ContinuationIndent in
   /// addition to the normal indention level.
@@ -409,11 +409,6 @@ struct UnwrappedLineNode {
   FormatToken *Tok;
   SmallVector<UnwrappedLine, 0> Children;
 };
-
-inline UnwrappedLine::UnwrappedLine()
-    : Level(0), PPLevel(0), InPPDirective(false), InPragmaDirective(false),
-      InMacroBody(false), MustBeDeclaration(false),
-      MatchingOpeningBlockLineIndex(kInvalidIndex) {}
 
 } // end namespace format
 } // end namespace clang
