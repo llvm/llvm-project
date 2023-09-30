@@ -81,7 +81,7 @@ static void checkAndSetWeakAlias(COFFLinkerContext &ctx, InputFile *f,
       // of another symbol emitted near the weak symbol.
       // Just use the definition from the first object file that defined
       // this weak symbol.
-      if (ctx.config.mingw)
+      if (ctx.config.allowDuplicateWeak)
         return;
       ctx.symtab.reportDuplicate(source, f);
     }
