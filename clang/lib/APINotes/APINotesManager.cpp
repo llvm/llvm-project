@@ -154,9 +154,9 @@ bool APINotesManager::loadAPINotes(const DirectoryEntry *HeaderDir,
   return true;
 }
 
-const FileEntry *APINotesManager::findAPINotesFile(DirectoryEntryRef directory,
-                                                   StringRef basename,
-                                                   bool wantPublic) {
+OptionalFileEntryRef
+APINotesManager::findAPINotesFile(DirectoryEntryRef directory,
+                                  StringRef basename, bool wantPublic) {
   FileManager &fileMgr = SourceMgr.getFileManager();
 
   llvm::SmallString<128> path;
@@ -168,8 +168,7 @@ const FileEntry *APINotesManager::findAPINotesFile(DirectoryEntryRef directory,
   // Look for the source API notes file.
   llvm::sys::path::append(path, 
     llvm::Twine(basename) + basenameSuffix + "." + SOURCE_APINOTES_EXTENSION);
-  auto file = fileMgr.getFile(path, /*Open*/true);
-  return file ? *file : nullptr;
+  return fileMgr.getOptionalFileRef(path, /*Open*/true);
 }
 
 OptionalDirectoryEntryRef APINotesManager::loadFrameworkAPINotes(
@@ -247,21 +246,22 @@ static bool hasPrivateSubmodules(const Module *module) {
   });
 }
 
-llvm::SmallVector<const FileEntry *, 2> APINotesManager::getCurrentModuleAPINotes(
-    Module *module, bool lookInModule, ArrayRef<std::string> searchPaths) {
+llvm::SmallVector<FileEntryRef, 2>
+APINotesManager::getCurrentModuleAPINotes(Module *module, bool lookInModule,
+                                          ArrayRef<std::string> searchPaths) {
   FileManager &fileMgr = SourceMgr.getFileManager();
   auto moduleName = module->getTopLevelModuleName();
-  llvm::SmallVector<const FileEntry *, 2> APINotes;
+  llvm::SmallVector<FileEntryRef, 2> APINotes;
 
   // First, look relative to the module itself.
   if (lookInModule) {
     // Local function to try loading an API notes file in the given directory.
     auto tryAPINotes = [&](DirectoryEntryRef dir, bool wantPublic) {
-      if (auto *file = findAPINotesFile(dir, moduleName, wantPublic)) {
+      if (auto file = findAPINotesFile(dir, moduleName, wantPublic)) {
         if (!wantPublic)
-          checkPrivateAPINotesName(SourceMgr.getDiagnostics(), file, module);
+          checkPrivateAPINotesName(SourceMgr.getDiagnostics(), *file, module);
 
-        APINotes.push_back(file);
+        APINotes.push_back(*file);
       }
     };
 
@@ -315,8 +315,8 @@ llvm::SmallVector<const FileEntry *, 2> APINotesManager::getCurrentModuleAPINote
   // notes search paths.
   for (const auto &searchPath : searchPaths) {
     if (auto searchDir = fileMgr.getOptionalDirectoryRef(searchPath)) {
-      if (auto *file = findAPINotesFile(*searchDir, moduleName)) {
-        APINotes.push_back(file);
+      if (auto file = findAPINotesFile(*searchDir, moduleName)) {
+        APINotes.push_back(*file);
         return APINotes;
       }
     }
@@ -334,10 +334,10 @@ bool APINotesManager::loadCurrentModuleAPINotes(
 
   auto APINotes = getCurrentModuleAPINotes(module, lookInModule, searchPaths);
   unsigned numReaders = 0;
-  for (auto *file : APINotes) {
+  for (auto file : APINotes) {
     CurrentModuleReaders[numReaders++] = loadAPINotes(file).release();
     if (!getCurrentModuleReaders().empty())
-      module->APINotesFile = file->getName().str();
+      module->APINotesFile = file.getName().str();
   }
 
   return numReaders > 0;

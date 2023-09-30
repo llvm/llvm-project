@@ -94,8 +94,9 @@ class APINotesManager {
   /// Look for API notes in the given directory.
   ///
   /// This might find either a binary or source API notes.
-  const FileEntry *findAPINotesFile(DirectoryEntryRef directory,
-                                    StringRef filename, bool wantPublic = true);
+  OptionalFileEntryRef findAPINotesFile(DirectoryEntryRef directory,
+                                        StringRef filename,
+                                        bool wantPublic = true);
 
   /// Attempt to load API notes for the given framework.
   ///
@@ -139,7 +140,7 @@ public:
   /// for the current module.
   ///
   /// \returns a vector of FileEntry where APINotes files are.
-  llvm::SmallVector<const FileEntry *, 2>
+  llvm::SmallVector<FileEntryRef, 2>
   getCurrentModuleAPINotes(Module *module, bool lookInModule,
                            ArrayRef<std::string> searchPaths);
 

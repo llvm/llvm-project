@@ -650,7 +650,7 @@ IncludeTreeBuilder::finishIncludeTree(CompilerInstance &ScanInstance,
       auto Notes = ANM.getCurrentModuleAPINotes(
           M, ScanInstance.getLangOpts().APINotesModules,
           ScanInstance.getAPINotesOpts().ModuleSearchPaths);
-      for (auto *File : Notes) {
+      for (auto File : Notes) {
         if (auto Buf =
                 ScanInstance.getSourceManager().getMemoryBufferForFileOrNone(
                     File)) {
