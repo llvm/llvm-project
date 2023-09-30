@@ -562,7 +562,7 @@ func.func @variable_ptr_array_physical_buffer() -> () {
 
 // -----
 
-func.func @variable_ptr_physical_buffer_no_decoration() -> () {
+func.func @variable_ptr_array_physical_buffer_no_decoration() -> () {
   // expected-error @+1 {{must be decorated either 'AliasedPointer' or 'RestrictPointer'}}
   %0 = spirv.Variable :
     !spirv.ptr<!spirv.array<4x!spirv.ptr<f32, PhysicalStorageBuffer>>, Function>
@@ -571,7 +571,7 @@ func.func @variable_ptr_physical_buffer_no_decoration() -> () {
 
 // -----
 
-func.func @variable_ptr_physical_buffer_two_alias_decorations() -> () {
+func.func @variable_ptr_array_physical_buffer_two_alias_decorations() -> () {
   // expected-error @+1 {{must have exactly one aliasing decoration}}
   %0 = spirv.Variable {aliased_pointer, restrict_pointer} :
     !spirv.ptr<!spirv.array<4x!spirv.ptr<f32, PhysicalStorageBuffer>>, Function>
