@@ -377,7 +377,7 @@ Bug Fixes to C++ Support
 
 - Fix crash where ill-formed code was being treated as a deduction guide and
   we now produce a diagnostic. Fixes:
-  (`65522 <https://github.com/llvm/llvm-project/issues/65522>`_)
+  (`#65522 <https://github.com/llvm/llvm-project/issues/65522>`_)
 
 Bug Fixes to AST Handling
 ^^^^^^^^^^^^^^^^^^^^^^^^^
