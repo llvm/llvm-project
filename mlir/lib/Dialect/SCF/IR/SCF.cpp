@@ -1526,24 +1526,27 @@ InParallelOp ForallOp::getTerminator() {
   return cast<InParallelOp>(getBody()->getTerminator());
 }
 
+std::optional<Value> ForallOp::getSingleInductionVar() {
+  if (getRank() != 1)
+    return std::nullopt;
+  return getInductionVar(0);
+}
+
 std::optional<OpFoldResult> ForallOp::getSingleLowerBound() {
   if (getRank() != 1)
     return std::nullopt;
-
   return getMixedLowerBound()[0];
 }
 
 std::optional<OpFoldResult> ForallOp::getSingleUpperBound() {
   if (getRank() != 1)
     return std::nullopt;
-
   return getMixedUpperBound()[0];
 }
 
 std::optional<OpFoldResult> ForallOp::getSingleStep() {
   if (getRank() != 1)
     return std::nullopt;
-
   return getMixedStep()[0];
 }
 
