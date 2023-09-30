@@ -11,6 +11,7 @@
 #include "llvm/ADT/SCCIterator.h"
 #include "llvm/ADT/Statistic.h"
 #include "llvm/DebugInfo/Symbolize/SymbolizableModule.h"
+#include "llvm/Transforms/IPO/SampleProfile.h"
 #include <cstdint>
 #include <queue>
 
@@ -35,13 +36,6 @@ STATISTIC(
 // TODO: the actual threshold to be tuned here because the size here is based
 // on machine code not LLVM IR.
 namespace llvm {
-extern cl::opt<int> SampleHotCallSiteThreshold;
-extern cl::opt<int> SampleColdCallSiteThreshold;
-extern cl::opt<int> ProfileInlineGrowthLimit;
-extern cl::opt<int> ProfileInlineLimitMin;
-extern cl::opt<int> ProfileInlineLimitMax;
-extern cl::opt<bool> SortProfiledSCC;
-
 cl::opt<bool> EnableCSPreInliner(
     "csspgo-preinliner", cl::Hidden, cl::init(true),
     cl::desc("Run a global pre-inliner to merge context profile based on "
