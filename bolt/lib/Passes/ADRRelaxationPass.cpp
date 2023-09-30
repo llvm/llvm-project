@@ -29,7 +29,16 @@ static cl::opt<bool>
 namespace llvm {
 namespace bolt {
 
+// We don't exit directly from runOnFunction since it would call ThreadPool
+// destructor which might result in internal assert if we're not finished
+// creating async jobs on the moment of exit. So we're finishing all parallel
+// jobs and checking the exit flag after it.
+static bool PassFailed = false;
+
 void ADRRelaxationPass::runOnFunction(BinaryFunction &BF) {
+  if (PassFailed)
+    return;
+
   BinaryContext &BC = BF.getBinaryContext();
   for (BinaryBasicBlock &BB : BF) {
     for (auto It = BB.begin(); It != BB.end(); ++It) {
@@ -54,8 +63,12 @@ void ADRRelaxationPass::runOnFunction(BinaryFunction &BF) {
       MCPhysReg Reg;
       BC.MIB->getADRReg(Inst, Reg);
       int64_t Addend = BC.MIB->getTargetAddend(Inst);
-      InstructionListType Addr =
-          BC.MIB->materializeAddress(Symbol, BC.Ctx.get(), Reg, Addend);
+      InstructionListType Addr;
+
+      {
+        auto L = BC.scopeLock();
+        Addr = BC.MIB->materializeAddress(Symbol, BC.Ctx.get(), Reg, Addend);
+      }
 
       if (It != BB.begin() && BC.MIB->isNoop(*std::prev(It))) {
         It = BB.eraseInstruction(std::prev(It));
@@ -68,7 +81,8 @@ void ADRRelaxationPass::runOnFunction(BinaryFunction &BF) {
         errs() << formatv("BOLT-ERROR: Cannot relax adr in non-simple function "
                           "{0}. Can't proceed in current mode.\n",
                           BF.getOneName());
-        exit(1);
+        PassFailed = true;
+        return;
       }
       It = BB.replaceInstruction(It, Addr);
     }
@@ -85,7 +99,10 @@ void ADRRelaxationPass::runOnFunctions(BinaryContext &BC) {
 
   ParallelUtilities::runOnEachFunction(
       BC, ParallelUtilities::SchedulingPolicy::SP_TRIVIAL, WorkFun, nullptr,
-      "ADRRelaxationPass", /* ForceSequential */ true);
+      "ADRRelaxationPass");
+
+  if (PassFailed)
+    exit(1);
 }
 
 } // end namespace bolt
