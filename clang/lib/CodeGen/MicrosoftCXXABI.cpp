@@ -1235,7 +1235,6 @@ void MicrosoftCXXABI::initializeHiddenVirtualInheritanceMembers(
   const VBOffsets &VBaseMap = Layout.getVBaseOffsetsMap();
   CGBuilderTy &Builder = CGF.Builder;
 
-  unsigned AS = getThisAddress(CGF).getAddressSpace();
   llvm::Value *Int8This = nullptr;  // Initialize lazily.
 
   for (const CXXBaseSpecifier &S : RD->vbases()) {
@@ -1256,8 +1255,8 @@ void MicrosoftCXXABI::initializeHiddenVirtualInheritanceMembers(
     VtorDispValue = Builder.CreateTruncOrBitCast(VtorDispValue, CGF.Int32Ty);
 
     if (!Int8This)
-      Int8This = Builder.CreateBitCast(getThisValue(CGF),
-                                       CGF.Int8Ty->getPointerTo(AS));
+      Int8This = getThisValue(CGF);
+
     llvm::Value *VtorDispPtr =
         Builder.CreateInBoundsGEP(CGF.Int8Ty, Int8This, VBaseOffset);
     // vtorDisp is always the 32-bits before the vbase in the class layout.
@@ -3502,8 +3501,6 @@ CGCallee MicrosoftCXXABI::EmitLoadOfMemberFunctionPointer(
   const FunctionProtoType *FPT =
     MPT->getPointeeType()->castAs<FunctionProtoType>();
   const CXXRecordDecl *RD = MPT->getMostRecentCXXRecordDecl();
-  llvm::FunctionType *FTy = CGM.getTypes().GetFunctionType(
-      CGM.getTypes().arrangeCXXMethodType(RD, FPT, /*FD=*/nullptr));
   CGBuilderTy &Builder = CGF.Builder;
 
   MSInheritanceModel Inheritance = RD->getMSInheritanceModel();
@@ -3533,16 +3530,10 @@ CGCallee MicrosoftCXXABI::EmitLoadOfMemberFunctionPointer(
     ThisPtrForCall = This.getPointer();
   }
 
-  if (NonVirtualBaseAdjustment) {
-    // Apply the adjustment and cast back to the original struct type.
-    llvm::Value *Ptr = Builder.CreateBitCast(ThisPtrForCall, CGF.Int8PtrTy);
-    Ptr = Builder.CreateInBoundsGEP(CGF.Int8Ty, Ptr, NonVirtualBaseAdjustment);
-    ThisPtrForCall = Builder.CreateBitCast(Ptr, ThisPtrForCall->getType(),
-                                           "this.adjusted");
-  }
+  if (NonVirtualBaseAdjustment)
+    ThisPtrForCall = Builder.CreateInBoundsGEP(CGF.Int8Ty, ThisPtrForCall,
+                                               NonVirtualBaseAdjustment);
 
-  FunctionPointer =
-    Builder.CreateBitCast(FunctionPointer, FTy->getPointerTo());
   CGCallee Callee(FPT, FunctionPointer);
   return Callee;
 }
