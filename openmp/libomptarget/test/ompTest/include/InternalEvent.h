@@ -40,9 +40,9 @@ enum class EventTy {
 /// String manipulation helper function. Takes up to 8 bytes of data and returns
 /// their hexadecimal representation as string. The data can be truncated to a
 /// certain size in bytes and will by default be prefixed with '0x'.
-std::string makeHexString(uint64_t Data, size_t DataBytes = 0,
-                          bool ShowHexBase = true) {
-  if (Data == 0)
+std::string makeHexString(uint64_t Data, bool IsPointer = true,
+                          size_t DataBytes = 0, bool ShowHexBase = true) {
+  if (Data == 0 && IsPointer)
     return "(nil)";
 
   static std::ostringstream os;
@@ -126,7 +126,23 @@ event_class_w_custom_body(Target,                                              \
     ompt_id_t TargetId;                                                        \
     const void *CodeptrRA;                                                     \
 )
-event_class_stub(TargetEmi)
+event_class_w_custom_body(TargetEmi,                                           \
+  TargetEmi(ompt_target_t Kind, ompt_scope_endpoint_t Endpoint, int DeviceNum, \
+            ompt_data_t *TaskData, ompt_data_t *TargetTaskData,                \
+            ompt_data_t *TargetData, const void *CodeptrRA)                    \
+    : InternalEvent(EventTy::TargetEmi), Kind(Kind), Endpoint(Endpoint),       \
+      DeviceNum(DeviceNum), TaskData(TaskData),                                \
+      TargetTaskData(TargetTaskData), TargetData(TargetData),                  \
+      CodeptrRA(CodeptrRA) {}                                                  \
+                                                                               \
+    ompt_target_t Kind;                                                        \
+    ompt_scope_endpoint_t Endpoint;                                            \
+    int DeviceNum;                                                             \
+    ompt_data_t *TaskData;                                                     \
+    ompt_data_t *TargetTaskData;                                               \
+    ompt_data_t *TargetData;                                                   \
+    const void *CodeptrRA;                                                     \
+)
 event_class_w_custom_body(TargetDataOp,                                        \
   TargetDataOp(ompt_id_t TargetId, ompt_id_t HostOpId,                         \
                ompt_target_data_op_t OpType, void *SrcAddr, int SrcDeviceNum,  \
@@ -147,18 +163,52 @@ event_class_w_custom_body(TargetDataOp,                                        \
   size_t Bytes;                                                                \
   const void *CodeptrRA;                                                       \
 )
-event_class_stub(TargetDataOpEmi)
+event_class_w_custom_body(TargetDataOpEmi,                                     \
+  TargetDataOpEmi(ompt_scope_endpoint_t Endpoint, ompt_data_t *TargetTaskData, \
+                  ompt_data_t *TargetData, ompt_id_t *HostOpId,                \
+                  ompt_target_data_op_t OpType, void *SrcAddr,                 \
+                  int SrcDeviceNum, void *DstAddr, int DstDeviceNum,           \
+                  size_t Bytes, const void *CodeptrRA)                         \
+    : InternalEvent(EventTy::TargetDataOpEmi), Endpoint(Endpoint),             \
+      TargetTaskData(TargetTaskData), TargetData(TargetData),                  \
+      HostOpId(HostOpId), OpType(OpType), SrcAddr(SrcAddr),                    \
+      SrcDeviceNum(SrcDeviceNum), DstAddr(DstAddr),                            \
+      DstDeviceNum(DstDeviceNum), Bytes(Bytes), CodeptrRA(CodeptrRA) {}        \
+                                                                               \
+  ompt_scope_endpoint_t Endpoint;                                              \
+  ompt_data_t *TargetTaskData;                                                 \
+  ompt_data_t *TargetData;                                                     \
+  ompt_id_t *HostOpId;                                                         \
+  ompt_target_data_op_t OpType;                                                \
+  void *SrcAddr;                                                               \
+  int SrcDeviceNum;                                                            \
+  void *DstAddr;                                                               \
+  int DstDeviceNum;                                                            \
+  size_t Bytes;                                                                \
+  const void *CodeptrRA;                                                       \
+)
 event_class_w_custom_body(TargetSubmit,                                        \
   TargetSubmit(ompt_id_t TargetId, ompt_id_t HostOpId,                         \
-               unsigned int ReqNumTeams)                                       \
+               unsigned int RequestedNumTeams)                                 \
     : InternalEvent(EventTy::TargetSubmit), TargetId(TargetId),                \
-      HostOpId(HostOpId), ReqNumTeams(ReqNumTeams) {}                          \
+      HostOpId(HostOpId), RequestedNumTeams(RequestedNumTeams) {}              \
                                                                                \
   ompt_id_t TargetId;                                                          \
   ompt_id_t HostOpId;                                                          \
-  unsigned int ReqNumTeams;                                                    \
+  unsigned int RequestedNumTeams;                                              \
 )
-event_class_stub(TargetSubmitEmi)
+event_class_w_custom_body(TargetSubmitEmi,                                     \
+  TargetSubmitEmi(ompt_scope_endpoint_t Endpoint, ompt_data_t *TargetData,     \
+                  ompt_id_t *HostOpId, unsigned int RequestedNumTeams)         \
+    : InternalEvent(EventTy::TargetSubmitEmi), Endpoint(Endpoint),             \
+      TargetData(TargetData), HostOpId(HostOpId),                              \
+      RequestedNumTeams(RequestedNumTeams) {}                                  \
+                                                                               \
+  ompt_scope_endpoint_t Endpoint;                                              \
+  ompt_data_t *TargetData;                                                     \
+  ompt_id_t *HostOpId;                                                         \
+  unsigned int RequestedNumTeams;                                              \
+)
 event_class_stub(ControlTool)
 event_class_w_custom_body(DeviceInitialize,                                    \
   DeviceInitialize(int DeviceNum, const char *Type, ompt_device_t *Device,     \
@@ -226,6 +276,29 @@ std::string Target::toString() const {
   return S;
 }
 
+std::string TargetEmi::toString() const {
+  std::string S{"Callback Target EMI: kind="};
+  S.append(std::to_string(Kind));
+  S.append(" endpoint=").append(std::to_string(Endpoint));
+  S.append(" device_num=").append(std::to_string(DeviceNum));
+  S.append(" task_data=").append(makeHexString((uint64_t)TaskData));
+  S.append(" (")
+      .append(makeHexString((uint64_t)TaskData->value, /*IsPointer=*/false))
+      .append(1, ')');
+  S.append(" target_task_data=")
+      .append(makeHexString((uint64_t)TargetTaskData));
+  S.append(" (")
+      .append(
+          makeHexString((uint64_t)TargetTaskData->value, /*IsPointer=*/false))
+      .append(1, ')');
+  S.append(" target_data=").append(makeHexString((uint64_t)TargetData));
+  S.append(" (")
+      .append(makeHexString((uint64_t)TargetData->value, /*IsPointer=*/false))
+      .append(1, ')');
+  S.append(" code=").append(makeHexString((uint64_t)CodeptrRA));
+  return S;
+}
+
 std::string TargetDataOp::toString() const {
   std::string S{"  Callback DataOp: target_id="};
   S.append(std::to_string(TargetId));
@@ -240,11 +313,53 @@ std::string TargetDataOp::toString() const {
   return S;
 }
 
+std::string TargetDataOpEmi::toString() const {
+  std::string S{"  Callback DataOp EMI: endpoint="};
+  S.append(std::to_string(Endpoint));
+  S.append(" optype=").append(std::to_string(OpType));
+  S.append(" target_task_data=")
+      .append(makeHexString((uint64_t)TargetTaskData));
+  S.append(" (")
+      .append(
+          makeHexString((uint64_t)TargetTaskData->value, /*IsPointer=*/false))
+      .append(1, ')');
+  S.append(" target_data=").append(makeHexString((uint64_t)TargetData));
+  S.append(" (")
+      .append(makeHexString((uint64_t)TargetData->value, /*IsPointer=*/false))
+      .append(1, ')');
+  S.append(" host_op_id=").append(makeHexString((uint64_t)HostOpId));
+  S.append(" (")
+      .append(makeHexString((uint64_t)(*HostOpId), /*IsPointer=*/false))
+      .append(1, ')');
+  S.append(" src=").append(makeHexString((uint64_t)SrcAddr));
+  S.append(" src_device_num=").append(std::to_string(SrcDeviceNum));
+  S.append(" dest=").append(makeHexString((uint64_t)DstAddr));
+  S.append(" dest_device_num=").append(std::to_string(DstDeviceNum));
+  S.append(" bytes=").append(std::to_string(Bytes));
+  S.append(" code=").append(makeHexString((uint64_t)CodeptrRA));
+  return S;
+}
+
 std::string TargetSubmit::toString() const {
   std::string S{"  Callback Submit: target_id="};
   S.append(std::to_string(TargetId));
   S.append(" host_op_id=").append(std::to_string(HostOpId));
-  S.append(" req_num_teams=").append(std::to_string(ReqNumTeams));
+  S.append(" req_num_teams=").append(std::to_string(RequestedNumTeams));
+  return S;
+}
+
+std::string TargetSubmitEmi::toString() const {
+  std::string S{"  Callback Submit EMI: endpoint="};
+  S.append(std::to_string(Endpoint));
+  S.append("  req_num_teams=").append(std::to_string(RequestedNumTeams));
+  S.append(" target_data=").append(makeHexString((uint64_t)TargetData));
+  S.append(" (")
+      .append(makeHexString((uint64_t)TargetData->value, /*IsPointer=*/false))
+      .append(1, ')');
+  S.append(" host_op_id=").append(makeHexString((uint64_t)HostOpId));
+  S.append(" (")
+      .append(makeHexString((uint64_t)(*HostOpId), /*IsPointer=*/false))
+      .append(1, ')');
   return S;
 }
 

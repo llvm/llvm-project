@@ -1,6 +1,11 @@
 #include "../include/OmptTester.h"
 
+#include <atomic>
+#include <cstdlib>
+#include <cstring>
+
 std::unordered_map<std::string, TestSuite> TestRegistrar::Tests;
+std::atomic<ompt_id_t> NextOpId{0x8000000000000001};
 
 // From openmp/runtime/test/ompt/callback.h
 #define register_ompt_callback_t(name, type)                                   \
@@ -136,6 +141,43 @@ static void on_ompt_callback_target_submit(ompt_id_t target_id,
                                                 requested_num_teams);
 }
 
+static void on_ompt_callback_target_data_op_emi(
+    ompt_scope_endpoint_t endpoint, ompt_data_t *target_task_data,
+    ompt_data_t *target_data, ompt_id_t *host_op_id,
+    ompt_target_data_op_t optype, void *src_addr, int src_device_num,
+    void *dest_addr, int dest_device_num, size_t bytes,
+    const void *codeptr_ra) {
+  assert(codeptr_ra != 0 && "Unexpected null codeptr");
+  // Both src and dest must not be null
+  assert((src_addr != 0 || dest_addr != 0) && "Both src and dest addr null");
+  if (endpoint == ompt_scope_begin)
+    *host_op_id = NextOpId.fetch_add(1, std::memory_order_relaxed);
+  OmptCallbackHandler::get().handleTargetDataOpEmi(
+      endpoint, target_task_data, target_data, host_op_id, optype, src_addr,
+      src_device_num, dest_addr, dest_device_num, bytes, codeptr_ra);
+}
+
+static void on_ompt_callback_target_emi(ompt_target_t kind,
+                                        ompt_scope_endpoint_t endpoint,
+                                        int device_num, ompt_data_t *task_data,
+                                        ompt_data_t *target_task_data,
+                                        ompt_data_t *target_data,
+                                        const void *codeptr_ra) {
+  assert(codeptr_ra != 0 && "Unexpected null codeptr");
+  if (endpoint == ompt_scope_begin)
+    target_data->value = NextOpId.fetch_add(1, std::memory_order_relaxed);
+  OmptCallbackHandler::get().handleTargetEmi(kind, endpoint, device_num,
+                                             task_data, target_task_data,
+                                             target_data, codeptr_ra);
+}
+
+static void on_ompt_callback_target_submit_emi(
+    ompt_scope_endpoint_t endpoint, ompt_data_t *target_data,
+    ompt_id_t *host_op_id, unsigned int requested_num_teams) {
+  OmptCallbackHandler::get().handleTargetSubmitEmi(
+      endpoint, target_data, host_op_id, requested_num_teams);
+}
+
 /// Called by the OMP runtime to initialize the OMPT
 int ompt_initialize(ompt_function_lookup_t lookup, int initial_device_num,
                     ompt_data_t *tool_data) {
@@ -143,6 +185,15 @@ int ompt_initialize(ompt_function_lookup_t lookup, int initial_device_num,
   ompt_set_callback = (ompt_set_callback_t)lookup("ompt_set_callback");
   if (!ompt_set_callback)
     return 0; // failure
+
+  bool RegisterEMICallbacks = false;
+  if (const char *EnvUseEMI = std::getenv("OMPTEST_USE_OMPT_EMI")) {
+    std::string UseEMI{EnvUseEMI};
+    for (auto &C : UseEMI)
+      C = (char)std::tolower(C);
+    if (UseEMI == "1" || UseEMI == "on" || UseEMI == "true" || UseEMI == "yes")
+      RegisterEMICallbacks = true;
+  }
 
   register_ompt_callback(ompt_callback_thread_begin);
   register_ompt_callback(ompt_callback_thread_end);
@@ -152,13 +203,20 @@ int ompt_initialize(ompt_function_lookup_t lookup, int initial_device_num,
   register_ompt_callback(ompt_callback_task_schedule);
   register_ompt_callback(ompt_callback_implicit_task);
   register_ompt_callback(ompt_callback_work);
-  register_ompt_callback(ompt_callback_target);
-  register_ompt_callback(ompt_callback_target_submit);
-  register_ompt_callback(ompt_callback_target_data_op);
   register_ompt_callback(ompt_callback_device_initialize);
   register_ompt_callback(ompt_callback_device_finalize);
   register_ompt_callback(ompt_callback_device_load);
   register_ompt_callback(ompt_callback_device_unload);
+
+  if (RegisterEMICallbacks) {
+    register_ompt_callback(ompt_callback_target_emi);
+    register_ompt_callback(ompt_callback_target_submit_emi);
+    register_ompt_callback(ompt_callback_target_data_op_emi);
+  } else {
+    register_ompt_callback(ompt_callback_target);
+    register_ompt_callback(ompt_callback_target_submit);
+    register_ompt_callback(ompt_callback_target_data_op);
+  }
 
   return 1; // success
 }

@@ -180,6 +180,23 @@ public:
           Kind, Endpoint, DeviceNum, TaskData, TargetId, CodeptrRA, "Target"));
   }
 
+  void handleTargetEmi(ompt_target_t Kind, ompt_scope_endpoint_t Endpoint,
+                       int DeviceNum, ompt_data_t *TaskData,
+                       ompt_data_t *TargetTaskData, ompt_data_t *TargetData,
+                       const void *CodeptrRA) {
+    if (RecordAndReplay) {
+      recordEvent(omptest::OmptAssertEvent::TargetEmi(
+          Kind, Endpoint, DeviceNum, TaskData, TargetTaskData, TargetData,
+          CodeptrRA, "Target EMI"));
+      return;
+    }
+
+    for (const auto &S : Subscribers)
+      S->notify(omptest::OmptAssertEvent::TargetEmi(
+          Kind, Endpoint, DeviceNum, TaskData, TargetTaskData, TargetData,
+          CodeptrRA, "Target EMI"));
+  }
+
   void handleTargetSubmit(ompt_id_t TargetId, ompt_id_t HostOpId,
                           unsigned int RequestedNumTeams) {
     if (RecordAndReplay) {
@@ -191,6 +208,22 @@ public:
     for (const auto &S : Subscribers)
       S->notify(omptest::OmptAssertEvent::TargetSubmit(
           TargetId, HostOpId, RequestedNumTeams, "Target Submit"));
+  }
+
+  void handleTargetSubmitEmi(ompt_scope_endpoint_t Endpoint,
+                             ompt_data_t *TargetData, ompt_id_t *HostOpId,
+                             unsigned int RequestedNumTeams) {
+    if (RecordAndReplay) {
+      recordEvent(omptest::OmptAssertEvent::TargetSubmitEmi(
+          Endpoint, TargetData, HostOpId, RequestedNumTeams,
+          "Target Submit EMI"));
+      return;
+    }
+
+    for (const auto &S : Subscribers)
+      S->notify(omptest::OmptAssertEvent::TargetSubmitEmi(
+          Endpoint, TargetData, HostOpId, RequestedNumTeams,
+          "Target Submit EMI"));
   }
 
   void handleTargetDataOp(ompt_id_t TargetId, ompt_id_t HostOpId,
@@ -208,6 +241,27 @@ public:
       S->notify(omptest::OmptAssertEvent::TargetDataOp(
           TargetId, HostOpId, OpType, SrcAddr, SrcDeviceNum, DstAddr,
           DstDeviceNum, Bytes, CodeptrRA, "Target Data Op"));
+  }
+
+  void handleTargetDataOpEmi(ompt_scope_endpoint_t Endpoint,
+                             ompt_data_t *TargetTaskData,
+                             ompt_data_t *TargetData, ompt_id_t *HostOpId,
+                             ompt_target_data_op_t OpType, void *SrcAddr,
+                             int SrcDeviceNum, void *DstAddr, int DstDeviceNum,
+                             size_t Bytes, const void *CodeptrRA) {
+    if (RecordAndReplay) {
+      recordEvent(omptest::OmptAssertEvent::TargetDataOpEmi(
+          Endpoint, TargetTaskData, TargetData, HostOpId, OpType, SrcAddr,
+          SrcDeviceNum, DstAddr, DstDeviceNum, Bytes, CodeptrRA,
+          "Target Data Op EMI"));
+      return;
+    }
+
+    for (const auto &S : Subscribers)
+      S->notify(omptest::OmptAssertEvent::TargetDataOpEmi(
+          Endpoint, TargetTaskData, TargetData, HostOpId, OpType, SrcAddr,
+          SrcDeviceNum, DstAddr, DstDeviceNum, Bytes, CodeptrRA,
+          "Target Data Op EMI"));
   }
 
   void handleDeviceLoad(int DeviceNum, const char *Filename,
