@@ -115,8 +115,8 @@ foreach Ext = DExts in {
                                     Ext.PrimaryTy, "fcvt.s.d">,
                   Sched<[WriteFCvtF64ToF32, ReadFCvtF64ToF32]>;
 
-  defm FCVT_D_S : FPUnaryOp_r_m<0b0100001, 0b00000, 0b000, Ext, Ext.PrimaryTy,
-                                Ext.F32Ty, "fcvt.d.s">,
+  defm FCVT_D_S : FPUnaryOp_r_frmlegacy_m<0b0100001, 0b00000, Ext, Ext.PrimaryTy,
+                                          Ext.F32Ty, "fcvt.d.s">,
                   Sched<[WriteFCvtF32ToF64, ReadFCvtF32ToF64]>;
 
   let SchedRW = [WriteFCmp64, ReadFCmp64, ReadFCmp64] in {
@@ -240,7 +240,7 @@ let Predicates = [HasStdExtD] in {
 
 // f64 -> f32, f32 -> f64
 def : Pat<(any_fpround FPR64:$rs1), (FCVT_S_D FPR64:$rs1, FRM_DYN)>;
-def : Pat<(any_fpextend FPR32:$rs1), (FCVT_D_S FPR32:$rs1)>;
+def : Pat<(any_fpextend FPR32:$rs1), (FCVT_D_S FPR32:$rs1, FRM_RNE)>;
 } // Predicates = [HasStdExtD]
 
 let Predicates = [HasStdExtZdinx, IsRV64] in {
@@ -248,7 +248,7 @@ let Predicates = [HasStdExtZdinx, IsRV64] in {
 
 // f64 -> f32, f32 -> f64
 def : Pat<(any_fpround FPR64INX:$rs1), (FCVT_S_D_INX FPR64INX:$rs1, FRM_DYN)>;
-def : Pat<(any_fpextend FPR32INX:$rs1), (FCVT_D_S_INX FPR32INX:$rs1)>;
+def : Pat<(any_fpextend FPR32INX:$rs1), (FCVT_D_S_INX FPR32INX:$rs1, FRM_RNE)>;
 } // Predicates = [HasStdExtZdinx, IsRV64]
 
 let Predicates = [HasStdExtZdinx, IsRV32] in {
@@ -256,7 +256,7 @@ let Predicates = [HasStdExtZdinx, IsRV32] in {
 
 // f64 -> f32, f32 -> f64
 def : Pat<(any_fpround FPR64IN32X:$rs1), (FCVT_S_D_IN32X FPR64IN32X:$rs1, FRM_DYN)>;
-def : Pat<(any_fpextend FPR32INX:$rs1), (FCVT_D_S_IN32X FPR32INX:$rs1)>;
+def : Pat<(any_fpextend FPR32INX:$rs1), (FCVT_D_S_IN32X FPR32INX:$rs1, FRM_RNE)>;
 } // Predicates = [HasStdExtZdinx, IsRV32]
 
 // [u]int<->double conversion patterns must be gated on IsRV32 or IsRV64, so
@@ -281,7 +281,8 @@ def : Pat<(riscv_fpclass FPR64:$rs1), (FCLASS_D $rs1)>;
 
 def : PatFprFpr<fcopysign, FSGNJ_D, FPR64, f64>;
 def : Pat<(fcopysign FPR64:$rs1, (fneg FPR64:$rs2)), (FSGNJN_D $rs1, $rs2)>;
-def : Pat<(fcopysign FPR64:$rs1, FPR32:$rs2), (FSGNJ_D $rs1, (FCVT_D_S $rs2))>;
+def : Pat<(fcopysign FPR64:$rs1, FPR32:$rs2), (FSGNJ_D $rs1, (FCVT_D_S $rs2,
+                                                              FRM_RNE))>;
 def : Pat<(fcopysign FPR32:$rs1, FPR64:$rs2), (FSGNJ_S $rs1, (FCVT_S_D $rs2,
                                                               FRM_DYN))>;
 
@@ -318,7 +319,7 @@ def : PatFprFpr<fcopysign, FSGNJ_D_INX, FPR64INX, f64>;
 def : Pat<(fcopysign FPR64INX:$rs1, (fneg FPR64INX:$rs2)),
           (FSGNJN_D_INX $rs1, $rs2)>;
 def : Pat<(fcopysign FPR64INX:$rs1, FPR32INX:$rs2),
-          (FSGNJ_D_INX $rs1, (FCVT_D_S_INX $rs2))>;
+          (FSGNJ_D_INX $rs1, (FCVT_D_S_INX $rs2, FRM_RNE))>;
 def : Pat<(fcopysign FPR32INX:$rs1, FPR64INX:$rs2),
           (FSGNJ_S_INX $rs1, (FCVT_S_D_INX $rs2, FRM_DYN))>;
 
@@ -355,7 +356,7 @@ def : PatFprFpr<fcopysign, FSGNJ_D_IN32X, FPR64IN32X, f64>;
 def : Pat<(fcopysign FPR64IN32X:$rs1, (fneg FPR64IN32X:$rs2)),
           (FSGNJN_D_IN32X $rs1, $rs2)>;
 def : Pat<(fcopysign FPR64IN32X:$rs1, FPR32INX:$rs2),
-          (FSGNJ_D_IN32X $rs1, (FCVT_D_S_INX $rs2))>;
+          (FSGNJ_D_IN32X $rs1, (FCVT_D_S_INX $rs2, FRM_RNE))>;
 def : Pat<(fcopysign FPR32INX:$rs1, FPR64IN32X:$rs2),
           (FSGNJ_S_INX $rs1, (FCVT_S_D_IN32X $rs2, FRM_DYN))>;
 
