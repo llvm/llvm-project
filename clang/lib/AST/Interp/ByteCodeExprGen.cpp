@@ -827,6 +827,7 @@ bool ByteCodeExprGen<Emitter>::VisitArrayInitLoopExpr(
   // where the LHS is on the stack (the target array)
   // and the RHS is our SubExpr.
   for (size_t I = 0; I != Size; ++I) {
+    BlockScope<Emitter> Scope(this);
     ArrayIndexScope<Emitter> IndexScope(this, I);
 
     if (ElemT) {
