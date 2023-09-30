@@ -56,15 +56,15 @@ BasicBlockSectionsProfileReader::parseProfileBBID(StringRef S) const {
 }
 
 bool BasicBlockSectionsProfileReader::isFunctionHot(StringRef FuncName) const {
-  return getRawProfileForFunction(FuncName).first;
+  return getPathAndClusterInfoForFunction(FuncName).first;
 }
 
-std::pair<bool, RawFunctionProfile>
-BasicBlockSectionsProfileReader::getRawProfileForFunction(
+std::pair<bool, FunctionPathAndClusterInfo>
+BasicBlockSectionsProfileReader::getPathAndClusterInfoForFunction(
     StringRef FuncName) const {
-  auto R = RawProgramProfile.find(getAliasName(FuncName));
-  return R != RawProgramProfile.end() ? std::pair(true, R->second)
-                                      : std::pair(false, RawFunctionProfile());
+  auto R = ProgramPathAndClusterInfo.find(getAliasName(FuncName));
+  return R != ProgramPathAndClusterInfo.end() ? std::pair(true, R->second)
+                                      : std::pair(false, FunctionPathAndClusterInfo());
 }
 
 // Reads the version 1 basic block sections profile. Profile for each function
@@ -85,20 +85,42 @@ BasicBlockSectionsProfileReader::getRawProfileForFunction(
 // clone basic blocks along a path. The cloned blocks are then specified in the
 // cluster information.
 // The following profile lists two cloning paths (starting with 'p') for
-// function bar and places the total 11 blocks within two clusters. Each cloned
-// block is identified by its original block id, along with its clone id. A
-// block cloned multiple times (2 in this example) appears with distinct clone
-// ids (2.1 and 2.2).
-// ---------------------------
+// function bar and places the total 9 blocks within two clusters. The blocks in each path are cloned along the path from the first block (the first block is not cloned).
+// For instance, path 1 (1 -> 3 -> 4) specifies that 3 and 4 must be cloned along the edge 1->3. In the clusters, each cloned
+// block is identified by its original block id, along with its clone id. For instance, the cloned blocks from path 1 are represented by 3.1 and 4.1.
+// A block cloned multiple times appears with distinct clone ids. The CFG for bar
+// is shown below before and after cloning with its final clusters labeled.
 //
 // f main
 // f bar
-// p 1 2 3
-// p 4 2 5
-// c 2 3 5 6 7
-// c 1 2.1 3.1 4 2.2 5.1
+// p 1 3 4           # cloning path 1
+// p 4 2             # cloning path 2
+// c 1 3.1 4.1 6     # basic block cluster 1
+// c 0 2 3 4 2.1 5   # basic block cluster 2
+// ****************************************************************************
+// function bar before and after cloning with basic block clusters shown.
+// ****************************************************************************
+//                                ....      ..............
+//      0 -------+                : 0 :---->: 1 ---> 3.1 :
+//      |        |                : | :     :........ |  :
+//      v        v                : v :             : v  :
+// +--> 2 --> 5  1   ~~~~~~>  +---: 2 :             : 4.1: clsuter 1
+// |    |        |            |   : | :             : |  :
+// |    v        |            |   : v .......       : v  :
+// |    3 <------+            |   : 3 <--+  :       : 6  :
+// |    |                     |   : |    |  :       :....:
+// |    v                     |   : v    |  :
+// +--- 4 ---> 6              |   : 4    |  :
+//                            |   : |    |  :
+//                            |   : v    |  :
+//                            |   :2.1---+  : cluster 2
+//                            |   : | ......:
+//                            |   : v :
+//                            +-->: 5 :
+//                                ....
+// ****************************************************************************
 Error BasicBlockSectionsProfileReader::ReadV1Profile() {
-  auto FI = RawProgramProfile.end();
+  auto FI = ProgramPathAndClusterInfo.end();
 
   // Current cluster ID corresponding to this function.
   unsigned CurrentCluster = 0;
@@ -121,7 +143,7 @@ Error BasicBlockSectionsProfileReader::ReadV1Profile() {
     S.split(Values, ' ');
     switch (Specifier) {
     case '@':
-      break;
+      continue;
     case 'm': // Module name speicifer.
       if (Values.size() != 1) {
         return createProfileParseError(Twine("invalid module name value: '") +
@@ -142,7 +164,7 @@ Error BasicBlockSectionsProfileReader::ReadV1Profile() {
       if (!FunctionFound) {
         // Skip the following profile by setting the profile iterator (FI) to
         // the past-the-end element.
-        FI = RawProgramProfile.end();
+        FI = ProgramPathAndClusterInfo.end();
         DIFilename = "";
         continue;
       }
@@ -151,7 +173,7 @@ Error BasicBlockSectionsProfileReader::ReadV1Profile() {
 
       // Prepare for parsing clusters of this function name.
       // Start a new cluster map for this function name.
-      auto R = RawProgramProfile.try_emplace(Values.front());
+      auto R = ProgramPathAndClusterInfo.try_emplace(Values.front());
       // Report error when multiple profiles have been specified for the same
       // function.
       if (!R.second)
@@ -168,8 +190,8 @@ Error BasicBlockSectionsProfileReader::ReadV1Profile() {
     case 'c': // Basic block cluster specifier.
       // Skip the profile when we the profile iterator (FI) refers to the
       // past-the-end element.
-      if (FI == RawProgramProfile.end())
-        break;
+      if (FI == ProgramPathAndClusterInfo.end())
+        continue;
       // Reset current cluster position.
       CurrentPosition = 0;
       for (auto BasicBlockIDStr : Values) {
@@ -185,7 +207,7 @@ Error BasicBlockSectionsProfileReader::ReadV1Profile() {
           return createProfileParseError(
               "entry BB (0) does not begin a cluster.");
 
-        FI->second.RawBBProfiles.emplace_back(BBProfile<ProfileBBID>{
+        FI->second.ClusterInfo.emplace_back(BBClusterInfo<ProfileBBID>{
             *std::move(BasicBlockID), CurrentCluster, CurrentPosition++});
       }
       CurrentCluster++;
@@ -210,12 +232,13 @@ Error BasicBlockSectionsProfileReader::ReadV1Profile() {
       return createProfileParseError(Twine("invalid specifier: '") +
                                      Twine(Specifier) + "'");
     }
+    llvm_unreachable("should not break from this switch statement");
   }
   return Error::success();
 }
 
 Error BasicBlockSectionsProfileReader::ReadV0Profile() {
-  auto FI = RawProgramProfile.end();
+  auto FI = ProgramPathAndClusterInfo.end();
   // Current cluster ID corresponding to this function.
   unsigned CurrentCluster = 0;
   // Current position in the current cluster.
@@ -236,7 +259,7 @@ Error BasicBlockSectionsProfileReader::ReadV0Profile() {
     if (S.consume_front("!")) {
       // Skip the profile when we the profile iterator (FI) refers to the
       // past-the-end element.
-      if (FI == RawProgramProfile.end())
+      if (FI == ProgramPathAndClusterInfo.end())
         continue;
       SmallVector<StringRef, 4> BBIDs;
       S.split(BBIDs, ' ');
@@ -254,8 +277,8 @@ Error BasicBlockSectionsProfileReader::ReadV0Profile() {
           return createProfileParseError(
               "entry BB (0) does not begin a cluster");
 
-        FI->second.RawBBProfiles.emplace_back(
-            BBProfile<ProfileBBID>({{static_cast<unsigned>(BBID), 0},
+        FI->second.ClusterInfo.emplace_back(
+            BBClusterInfo<ProfileBBID>({{static_cast<unsigned>(BBID), 0},
                                     CurrentCluster,
                                     CurrentPosition++}));
       }
@@ -291,7 +314,7 @@ Error BasicBlockSectionsProfileReader::ReadV0Profile() {
       if (!FunctionFound) {
         // Skip the following profile by setting the profile iterator (FI) to
         // the past-the-end element.
-        FI = RawProgramProfile.end();
+        FI = ProgramPathAndClusterInfo.end();
         continue;
       }
       for (size_t i = 1; i < Aliases.size(); ++i)
@@ -299,7 +322,7 @@ Error BasicBlockSectionsProfileReader::ReadV0Profile() {
 
       // Prepare for parsing clusters of this function name.
       // Start a new cluster map for this function name.
-      auto R = RawProgramProfile.try_emplace(Aliases.front());
+      auto R = ProgramPathAndClusterInfo.try_emplace(Aliases.front());
       // Report error when multiple profiles have been specified for the same
       // function.
       if (!R.second)
