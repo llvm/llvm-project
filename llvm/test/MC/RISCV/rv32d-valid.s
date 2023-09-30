@@ -96,6 +96,9 @@ fcvt.s.d fs5, fs6, dyn
 # CHECK-ASM-AND-OBJ: fcvt.d.s fs7, fs8
 # CHECK-ASM: encoding: [0xd3,0x0b,0x0c,0x42]
 fcvt.d.s fs7, fs8
+# CHECK-ASM-AND-OBJ: fcvt.d.s fs7, fs8, rup
+# CHECK-ASM: encoding: [0xd3,0x3b,0x0c,0x42]
+fcvt.d.s fs7, fs8, rup
 # CHECK-ASM-AND-OBJ: feq.d a1, fs8, fs9
 # CHECK-ASM: encoding: [0xd3,0x25,0x9c,0xa3]
 feq.d a1, fs8, fs9
