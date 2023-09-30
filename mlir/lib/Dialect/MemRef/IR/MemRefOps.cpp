@@ -3176,21 +3176,22 @@ void TransposeOp::getAsmResultNames(
   setNameFn(getResult(), "transpose");
 }
 
-/// Build a strided memref type by applying `permutationMap` tp `memRefType`.
+/// Build a strided memref type by applying `permutation` tp `memRefType`.
 static MemRefType inferTransposeResultType(MemRefType memRefType,
-                                           AffineMap permutationMap) {
+                                           ArrayRef<int64_t> permutation) {
   auto rank = memRefType.getRank();
   auto originalSizes = memRefType.getShape();
   auto [originalStrides, offset] = getStridesAndOffset(memRefType);
   assert(originalStrides.size() == static_cast<unsigned>(rank));
+  assert(permutation.size() == rank);
 
   // Compute permuted sizes and strides.
   SmallVector<int64_t> sizes(rank, 0);
   SmallVector<int64_t> strides(rank, 1);
-  for (const auto &en : llvm::enumerate(permutationMap.getResults())) {
-    unsigned position = en.value().cast<AffineDimExpr>().getPosition();
-    sizes[en.index()] = originalSizes[position];
-    strides[en.index()] = originalStrides[position];
+  for (int64_t resultDimPos = 0; resultDimPos < rank; ++resultDimPos) {
+    int64_t originalDimPos = permutation[resultDimPos];
+    sizes[resultDimPos] = originalSizes[originalDimPos];
+    strides[resultDimPos] = originalStrides[originalDimPos];
   }
 
   return MemRefType::Builder(memRefType)
@@ -3200,52 +3201,59 @@ static MemRefType inferTransposeResultType(MemRefType memRefType,
 }
 
 void TransposeOp::build(OpBuilder &b, OperationState &result, Value in,
-                        AffineMapAttr permutation,
+                        DenseI64ArrayAttr permutation,
                         ArrayRef<NamedAttribute> attrs) {
-  auto permutationMap = permutation.getValue();
-  assert(permutationMap);
-
   auto memRefType = llvm::cast<MemRefType>(in.getType());
   // Compute result type.
-  MemRefType resultType = inferTransposeResultType(memRefType, permutationMap);
+  MemRefType resultType =
+      inferTransposeResultType(memRefType, permutation.asArrayRef());
 
   build(b, result, resultType, in, attrs);
   result.addAttribute(TransposeOp::getPermutationAttrStrName(), permutation);
 }
 
-// transpose $in $permutation attr-dict : type($in) `to` type(results)
-void TransposeOp::print(OpAsmPrinter &p) {
-  p << " " << getIn() << " " << getPermutation();
-  p.printOptionalAttrDict((*this)->getAttrs(), {getPermutationAttrStrName()});
-  p << " : " << getIn().getType() << " to " << getType();
+void TransposeOp::build(OpBuilder &b, OperationState &result, Value in,
+                        ArrayRef<int64_t> permutation,
+                        ArrayRef<NamedAttribute> attrs) {
+  auto memRefType = llvm::cast<MemRefType>(in.getType());
+  // Compute result type.
+  MemRefType resultType = inferTransposeResultType(memRefType, permutation);
+
+  build(b, result, resultType, in, attrs);
+  result.addAttribute(TransposeOp::getPermutationAttrStrName(),
+                      b.getDenseI64ArrayAttr(permutation));
 }
 
-ParseResult TransposeOp::parse(OpAsmParser &parser, OperationState &result) {
-  OpAsmParser::UnresolvedOperand in;
-  AffineMap permutation;
-  MemRefType srcType, dstType;
-  if (parser.parseOperand(in) || parser.parseAffineMap(permutation) ||
-      parser.parseOptionalAttrDict(result.attributes) ||
-      parser.parseColonType(srcType) ||
-      parser.resolveOperand(in, srcType, result.operands) ||
-      parser.parseKeywordType("to", dstType) ||
-      parser.addTypeToList(dstType, result.types))
-    return failure();
+/// Check whether the supplied array is an permutation index array, i.e. it
+/// contains the elements 0..size()-1.
+static bool isPermutationArray(ArrayRef<int64_t> arr) {
+  for (int64_t i = 0, e = arr.size(); i < e; ++i) {
+    bool found = false;
+    for (int64_t j = 0; j < e; ++j) {
+      if (arr[j] == i) {
+        found = true;
+        break;
+      }
+    }
 
-  result.addAttribute(TransposeOp::getPermutationAttrStrName(),
-                      AffineMapAttr::get(permutation));
-  return success();
+    if (!found)
+      return false;
+  }
+
+  return true;
 }
 
 LogicalResult TransposeOp::verify() {
-  if (!getPermutation().isPermutation())
+  ArrayRef<int64_t> permutation = getPermutation();
+
+  if (!isPermutationArray(permutation))
     return emitOpError("expected a permutation map");
-  if (getPermutation().getNumDims() != getIn().getType().getRank())
+  if (permutation.size() != getIn().getType().getRank())
     return emitOpError("expected a permutation map of same rank as the input");
 
   auto srcType = llvm::cast<MemRefType>(getIn().getType());
   auto dstType = llvm::cast<MemRefType>(getType());
-  auto transposedType = inferTransposeResultType(srcType, getPermutation());
+  auto transposedType = inferTransposeResultType(srcType, permutation);
   if (dstType != transposedType)
     return emitOpError("output type ")
            << dstType << " does not match transposed input type " << srcType
@@ -3257,6 +3265,15 @@ OpFoldResult TransposeOp::fold(FoldAdaptor) {
   if (succeeded(foldMemRefCast(*this)))
     return getResult();
   return {};
+}
+
+bool TransposeOp::isIdentity() {
+  ArrayRef<int64_t> permutationArray = getPermutation();
+  for (int64_t i = 0, rank = permutationArray.size(); i < rank; ++i)
+    if (permutationArray[i] != i)
+      return false;
+
+  return true;
 }
 
 //===----------------------------------------------------------------------===//

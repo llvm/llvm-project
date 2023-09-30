@@ -2125,7 +2125,7 @@ def TensorStoreOp : MemRef_Op<"tensor_store",
 def MemRef_TransposeOp : MemRef_Op<"transpose", [
     DeclareOpInterfaceMethods<OpAsmOpInterface, ["getAsmResultNames"]>,
     Pure]>,
-    Arguments<(ins AnyStridedMemRef:$in, AffineMapAttr:$permutation)>,
+    Arguments<(ins AnyStridedMemRef:$in, DenseI64ArrayAttr:$permutation)>,
     Results<(outs AnyStridedMemRef)> {
   let summary = "`transpose` produces a new strided memref (metadata-only)";
   let description = [{
@@ -2133,22 +2133,33 @@ def MemRef_TransposeOp : MemRef_Op<"transpose", [
     are a permutation of the original `in` memref. This is purely a metadata
     transformation.
 
+    The permutation is given in the form of an array of indices following the rule:
+    `dim(result, i) = dim(input, permutation[i])`
+
     Example:
 
     ```mlir
-    %1 = memref.transpose %0 (i, j) -> (j, i) : memref<?x?xf32> to memref<?x?xf32, affine_map<(d0, d1)[s0] -> (d1 * s0 + d0)>>
+    %1 = memref.transpose %0 [1, 0] : memref<?x?xf32> to memref<?x?xf32, affine_map<(d0, d1)[s0] -> (d1 * s0 + d0)>>
     ```
   }];
 
   let builders = [
-    OpBuilder<(ins "Value":$in, "AffineMapAttr":$permutation,
+    OpBuilder<(ins "Value":$in, "DenseI64ArrayAttr":$permutation,
+      CArg<"ArrayRef<NamedAttribute>", "{}">:$attrs)>,
+    OpBuilder<(ins "Value":$in, "ArrayRef<int64_t>":$permutation,
       CArg<"ArrayRef<NamedAttribute>", "{}">:$attrs)>];
 
   let extraClassDeclaration = [{
     static StringRef getPermutationAttrStrName() { return "permutation"; }
+
+    /// Returns true if the permutation represents an identity permutation
+    bool isIdentity();
   }];
 
-  let hasCustomAssemblyFormat = 1;
+  let assemblyFormat = [{
+    $in $permutation attr-dict `:` type($in) `to` type(results)
+  }];
+
   let hasFolder = 1;
   let hasVerifier = 1;
 }

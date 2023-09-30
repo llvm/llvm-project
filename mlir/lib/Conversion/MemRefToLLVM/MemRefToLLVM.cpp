@@ -1410,38 +1410,35 @@ public:
     MemRefDescriptor viewMemRef(adaptor.getIn());
 
     // No permutation, early exit.
-    if (transposeOp.getPermutation().isIdentity())
+    if (transposeOp.isIdentity())
       return rewriter.replaceOp(transposeOp, {viewMemRef}), success();
 
-    auto targetMemRef = MemRefDescriptor::undef(
+    auto resultMemRef = MemRefDescriptor::undef(
         rewriter, loc,
         typeConverter->convertType(transposeOp.getIn().getType()));
 
     // Copy the base and aligned pointers from the old descriptor to the new
     // one.
-    targetMemRef.setAllocatedPtr(rewriter, loc,
+    resultMemRef.setAllocatedPtr(rewriter, loc,
                                  viewMemRef.allocatedPtr(rewriter, loc));
-    targetMemRef.setAlignedPtr(rewriter, loc,
+    resultMemRef.setAlignedPtr(rewriter, loc,
                                viewMemRef.alignedPtr(rewriter, loc));
 
     // Copy the offset pointer from the old descriptor to the new one.
-    targetMemRef.setOffset(rewriter, loc, viewMemRef.offset(rewriter, loc));
+    resultMemRef.setOffset(rewriter, loc, viewMemRef.offset(rewriter, loc));
 
     // Iterate over the dimensions and apply size/stride permutation:
-    // When enumerating the results of the permutation map, the enumeration index
-    // is the index into the target dimensions and the DimExpr points to the
-    // dimension of the source memref.
-    for (const auto &en :
-         llvm::enumerate(transposeOp.getPermutation().getResults())) {
-      int targetPos = en.index();
-      int sourcePos = en.value().cast<AffineDimExpr>().getPosition();
-      targetMemRef.setSize(rewriter, loc, targetPos,
-                           viewMemRef.size(rewriter, loc, sourcePos));
-      targetMemRef.setStride(rewriter, loc, targetPos,
-                             viewMemRef.stride(rewriter, loc, sourcePos));
+    ArrayRef<int64_t> permutation = transposeOp.getPermutation();
+    for (int64_t resultDimPos = 0, rank = permutation.size();
+         resultDimPos < rank; ++resultDimPos) {
+      int originalDimPos = permutation[resultDimPos];
+      resultMemRef.setSize(rewriter, loc, resultDimPos,
+                           viewMemRef.size(rewriter, loc, originalDimPos));
+      resultMemRef.setStride(rewriter, loc, resultDimPos,
+                             viewMemRef.stride(rewriter, loc, originalDimPos));
     }
 
-    rewriter.replaceOp(transposeOp, {targetMemRef});
+    rewriter.replaceOp(transposeOp, {resultMemRef});
     return success();
   }
 };
