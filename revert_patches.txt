@@ -20,4 +20,9 @@ Revert: breaks build of libdevice
 Revert: waiting on pip install myst-parser 
  b7ff03206 "[Documentation] Replace recommonmark by myst-parser
 
-Revert: 1afed9f48c2 [Clang][HIP] Remove 'clangPostLink' from SDL handling 
+Reverts : breaks hipify in win build, need combo build
+  3661a48a8473 [clang] NFCI: Use `FileEntryRef` in `SourceManager::getMemoryBufferForFileOr{None,Fake}()`
+  2fc90afdac45 [lldb] Fix build after 2da8f30c
+  2da8f30c5e9a [clang] NFCI: Use `FileEntryRef` in `SourceManager::overrideFileContents()`
+  b0abc9dd4427 [clang] NFCI: Use `FileEntryRef` in `ASTReader::GetHeaderFileInfo()
+  8a2fb1391bbf [clang] NFCI: Use `FileEntryRef` in `SourceManager::FileInfos` (#67742) 

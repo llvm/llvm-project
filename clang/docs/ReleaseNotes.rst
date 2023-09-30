@@ -322,11 +322,16 @@ Bug Fixes in This Version
   (`#66047 <https://github.com/llvm/llvm-project/issues/66047>`_)
 - Fix parser crash when dealing with ill-formed objective C++ header code. Fixes
   (`#64836 <https://github.com/llvm/llvm-project/issues/64836>`_)
+- Fix crash in implicit conversions from initialize list to arrays of unknown
+  bound for C++20. Fixes
+  (`#62945 <https://github.com/llvm/llvm-project/issues/62945>`_)
 - Clang now allows an ``_Atomic`` qualified integer in a switch statement. Fixes
   (`#65557 <https://github.com/llvm/llvm-project/issues/65557>`_)
 - Fixes crash when trying to obtain the common sugared type of
   `decltype(instantiation-dependent-expr)`.
   Fixes (`#67603 <https://github.com/llvm/llvm-project/issues/67603>`_)
+- Fixes a crash caused by a multidimensional array being captured by a lambda
+  (`#67722 <https://github.com/llvm/llvm-project/issues/67722>`_).
 
 Bug Fixes to Compiler Builtins
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -427,6 +432,9 @@ Bug Fixes to C++ Support
 - Fix crash when fold expression was used in the initialization of default
   argument. Fixes:
   (`#67395 <https://github.com/llvm/llvm-project/issues/67395>`_)
+
+- Fixed a bug causing destructors of constant-evaluated structured bindings
+  initialized by array elements to be called in the wrong evaluation context.
 
 Bug Fixes to AST Handling
 ^^^^^^^^^^^^^^^^^^^^^^^^^
