@@ -240,25 +240,48 @@ Expected<Slice> Slice::create(const IRObjectFile &IRO, uint32_t Align) {
   return Slice{IRO, CPUType, CPUSubType, std::move(ArchName), Align};
 }
 
-static Expected<SmallVector<MachO::fat_arch, 2>>
+template <typename FatArchTy> struct FatArchTraits {
+  static const uint64_t OffsetLimit;
+  static const std::string StructName;
+  static const uint8_t BitCount;
+};
+
+template <> struct FatArchTraits<MachO::fat_arch> {
+  static const uint64_t OffsetLimit = UINT32_MAX;
+  static const std::string StructName;
+  static const uint8_t BitCount = 32;
+};
+const std::string FatArchTraits<MachO::fat_arch>::StructName = "fat_arch";
+
+template <> struct FatArchTraits<MachO::fat_arch_64> {
+  static const uint64_t OffsetLimit = UINT64_MAX;
+  static const std::string StructName;
+  static const uint8_t BitCount = 64;
+};
+const std::string FatArchTraits<MachO::fat_arch_64>::StructName = "fat_arch_64";
+
+template <typename FatArchTy>
+static Expected<SmallVector<FatArchTy, 2>>
 buildFatArchList(ArrayRef<Slice> Slices) {
-  SmallVector<MachO::fat_arch, 2> FatArchList;
+  SmallVector<FatArchTy, 2> FatArchList;
   uint64_t Offset =
-      sizeof(MachO::fat_header) + Slices.size() * sizeof(MachO::fat_arch);
+      sizeof(MachO::fat_header) + Slices.size() * sizeof(FatArchTy);
 
   for (const auto &S : Slices) {
     Offset = alignTo(Offset, 1ull << S.getP2Alignment());
-    if (Offset > UINT32_MAX)
+    if (Offset > FatArchTraits<FatArchTy>::OffsetLimit)
       return createStringError(
           std::errc::invalid_argument,
-          ("fat file too large to be created because the offset "
-           "field in struct fat_arch is only 32-bits and the offset " +
+          ("fat file too large to be created because the offset field in the "
+           "struct " +
+           Twine(FatArchTraits<FatArchTy>::StructName) + " is only " +
+           Twine(FatArchTraits<FatArchTy>::BitCount) + "-bits and the offset " +
            Twine(Offset) + " for " + S.getBinary()->getFileName() +
            " for architecture " + S.getArchString() + "exceeds that.")
               .str()
               .c_str());
 
-    MachO::fat_arch FatArch;
+    FatArchTy FatArch;
     FatArch.cputype = S.getCPUType();
     FatArch.cpusubtype = S.getCPUSubType();
     FatArch.offset = Offset;
@@ -270,17 +293,15 @@ buildFatArchList(ArrayRef<Slice> Slices) {
   return FatArchList;
 }
 
-Error object::writeUniversalBinaryToStream(ArrayRef<Slice> Slices,
-                                           raw_ostream &Out) {
-  MachO::fat_header FatHeader;
-  FatHeader.magic = MachO::FAT_MAGIC;
-  FatHeader.nfat_arch = Slices.size();
-
-  Expected<SmallVector<MachO::fat_arch, 2>> FatArchListOrErr =
-      buildFatArchList(Slices);
+template <typename FatArchTy>
+static Error writeUniversalArchsToStream(MachO::fat_header FatHeader,
+                                         ArrayRef<Slice> Slices,
+                                         raw_ostream &Out) {
+  Expected<SmallVector<FatArchTy, 2>> FatArchListOrErr =
+      buildFatArchList<FatArchTy>(Slices);
   if (!FatArchListOrErr)
     return FatArchListOrErr.takeError();
-  SmallVector<MachO::fat_arch, 2> FatArchList = *FatArchListOrErr;
+  SmallVector<FatArchTy, 2> FatArchList = *FatArchListOrErr;
 
   if (sys::IsLittleEndianHost)
     MachO::swapStruct(FatHeader);
@@ -288,17 +309,17 @@ Error object::writeUniversalBinaryToStream(ArrayRef<Slice> Slices,
             sizeof(MachO::fat_header));
 
   if (sys::IsLittleEndianHost)
-    for (MachO::fat_arch &FA : FatArchList)
+    for (FatArchTy &FA : FatArchList)
       MachO::swapStruct(FA);
   Out.write(reinterpret_cast<const char *>(FatArchList.data()),
-            sizeof(MachO::fat_arch) * FatArchList.size());
+            sizeof(FatArchTy) * FatArchList.size());
 
   if (sys::IsLittleEndianHost)
-    for (MachO::fat_arch &FA : FatArchList)
+    for (FatArchTy &FA : FatArchList)
       MachO::swapStruct(FA);
 
   size_t Offset =
-      sizeof(MachO::fat_header) + sizeof(MachO::fat_arch) * FatArchList.size();
+      sizeof(MachO::fat_header) + sizeof(FatArchTy) * FatArchList.size();
   for (size_t Index = 0, Size = Slices.size(); Index < Size; ++Index) {
     MemoryBufferRef BufferRef = Slices[Index].getBinary()->getMemoryBufferRef();
     assert((Offset <= FatArchList[Index].offset) && "Incorrect slice offset");
@@ -311,8 +332,30 @@ Error object::writeUniversalBinaryToStream(ArrayRef<Slice> Slices,
   return Error::success();
 }
 
+Error object::writeUniversalBinaryToStream(ArrayRef<Slice> Slices,
+                                           raw_ostream &Out,
+                                           FatHeaderType HeaderType) {
+  MachO::fat_header FatHeader;
+  FatHeader.nfat_arch = Slices.size();
+
+  switch (HeaderType) {
+  case FatHeaderType::Fat64Header:
+    FatHeader.magic = MachO::FAT_MAGIC_64;
+    return writeUniversalArchsToStream<MachO::fat_arch_64>(FatHeader, Slices,
+                                                           Out);
+    break;
+  case FatHeaderType::FatHeader:
+    FatHeader.magic = MachO::FAT_MAGIC;
+    return writeUniversalArchsToStream<MachO::fat_arch>(FatHeader, Slices, Out);
+    break;
+  default:
+    llvm_unreachable("Invalid fat header type");
+  }
+}
+
 Error object::writeUniversalBinary(ArrayRef<Slice> Slices,
-                                   StringRef OutputFileName) {
+                                   StringRef OutputFileName,
+                                   FatHeaderType HeaderType) {
   const bool IsExecutable = any_of(Slices, [](Slice S) {
     return sys::fs::can_execute(S.getBinary()->getFileName());
   });
@@ -324,7 +367,7 @@ Error object::writeUniversalBinary(ArrayRef<Slice> Slices,
   if (!Temp)
     return Temp.takeError();
   raw_fd_ostream Out(Temp->FD, false);
-  if (Error E = writeUniversalBinaryToStream(Slices, Out)) {
+  if (Error E = writeUniversalBinaryToStream(Slices, Out, HeaderType)) {
     if (Error DiscardError = Temp->discard())
       return joinErrors(std::move(E), std::move(DiscardError));
     return E;
