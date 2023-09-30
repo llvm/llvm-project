@@ -575,6 +575,7 @@ ClangExpressionParser::ClangExpressionParser(
     lang_opts.GNUMode = true;
     lang_opts.GNUKeywords = true;
     lang_opts.CPlusPlus11 = true;
+    lang_opts.BuiltinHeadersInSystemModules = true;
 
     // The Darwin libc expects this macro to be set.
     lang_opts.GNUCVersion = 40201;
