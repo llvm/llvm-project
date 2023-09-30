@@ -881,8 +881,8 @@ bool ByteCodeExprGen<Emitter>::VisitStringLiteral(const StringLiteral *E) {
 
   // If the initializer string is too long, a diagnostic has already been
   // emitted. Read only the array length from the string literal.
-  unsigned N =
-      std::min(unsigned(CAT->getSize().getZExtValue()), E->getLength());
+  unsigned ArraySize = CAT->getSize().getZExtValue();
+  unsigned N = std::min(ArraySize, E->getLength());
   size_t CharWidth = E->getCharByteWidth();
 
   for (unsigned I = 0; I != N; ++I) {
@@ -901,6 +901,23 @@ bool ByteCodeExprGen<Emitter>::VisitStringLiteral(const StringLiteral *E) {
       llvm_unreachable("unsupported character width");
     }
   }
+
+  // Fill up the rest of the char array with NUL bytes.
+  for (unsigned I = N; I != ArraySize; ++I) {
+    if (CharWidth == 1) {
+      this->emitConstSint8(0, E);
+      this->emitInitElemSint8(I, E);
+    } else if (CharWidth == 2) {
+      this->emitConstUint16(0, E);
+      this->emitInitElemUint16(I, E);
+    } else if (CharWidth == 4) {
+      this->emitConstUint32(0, E);
+      this->emitInitElemUint32(I, E);
+    } else {
+      llvm_unreachable("unsupported character width");
+    }
+  }
+
   return true;
 }
 
