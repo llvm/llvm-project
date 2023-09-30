@@ -16,7 +16,7 @@ from lit.llvm.subst import FindTool
 # Configuration file for the 'lit' test runner.
 
 # name: The name of this test suite.
-config.name = "Flang"
+config.name = "flang-rt"
 
 # testFormat: The test format to use to interpret tests.
 #
@@ -56,7 +56,6 @@ config.suffixes = [
 ]
 
 config.substitutions.append(("%PATH%", config.environment["PATH"]))
-config.substitutions.append(("%llvmshlibdir", config.llvm_shlib_dir))
 config.substitutions.append(("%pluginext", config.llvm_plugin_ext))
 
 llvm_config.use_default_substitutions()
@@ -69,19 +68,15 @@ config.targets = frozenset(config.targets_to_build.split())
 for arch in config.targets_to_build.split():
     config.available_features.add(arch.lower() + "-registered-target")
 
-# To modify the default target triple for flang tests.
-if config.flang_test_triple:
-    config.target_triple = config.flang_test_triple
-    config.environment[config.llvm_target_triple_env] = config.flang_test_triple
+# To modify the default target triple for flang-rt tests.
+if config.flang_rt_test_triple:
+    config.target_triple = config.flang_rt_test_triple
+    config.environment[config.llvm_target_triple_env] = config.flang_rt_test_triple
 
 # excludes: A list of directories to exclude from the testsuite. The 'Inputs'
 # subdirectories contain auxiliary inputs for various tests in their parent
 # directories.
 config.excludes = ["Inputs", "CMakeLists.txt", "README.txt", "LICENSE.txt"]
-
-# If the flang examples are built, add examples to the config
-if config.flang_examples:
-    config.available_features.add("examples")
 
 # Plugins (loadable modules)
 if config.has_plugins:
@@ -103,20 +98,12 @@ else:
 config.test_source_root = os.path.dirname(__file__)
 
 # test_exec_root: The root path where tests should be run.
-config.test_exec_root = os.path.join(config.flang_obj_root, "test")
+config.test_exec_root = os.path.join(config.flang_rt_obj_root, "test")
 
-# Tweak the PATH to include the tools dir.
-llvm_config.with_environment("PATH", config.flang_tools_dir, append_path=True)
-llvm_config.with_environment("PATH", config.llvm_tools_dir, append_path=True)
-
-if config.flang_standalone_build:
-    # For builds with FIR, set path for tco and enable related tests
-    if config.flang_llvm_tools_dir != "":
-        config.available_features.add("fir")
-        if config.llvm_tools_dir != config.flang_llvm_tools_dir:
-            llvm_config.with_environment(
-                "PATH", config.flang_llvm_tools_dir, append_path=True
-            )
+llvm_config.with_environment("PATH", config.flang_bin_dir, append_path=True)
+llvm_config.with_environment("PATH", config.flang_rt_obj_root, append_path=True)
+llvm_config.with_environment("PATH", config.flang_libs_dir, append_path=True)
+llvm_config.with_environment("PATH", config.flang_rt_lib_dir, append_path=True)
 
 # For each occurrence of a flang tool name, replace it with the full path to
 # the build directory holding that tool.
@@ -153,26 +140,32 @@ else:
 # the C++ runtime libraries. For this we need a C compiler. If for some reason
 # we don't have one, we can just disable the test.
 if config.cc:
-    libruntime = os.path.join(config.flang_lib_dir, "libflang-rt.a")
+    libruntime_static = os.path.join(config.flang_rt_lib_dir, "libflang-rt.a")
+    libruntime_shared = os.path.join(config.flang_rt_lib_dir, "libflang-rt.so")
     include = os.path.join(config.flang_src_dir, "include")
 
     if (
-        os.path.isfile(libruntime)
+        os.path.isfile(libruntime_static)
         and os.path.isdir(include)
     ):
         config.available_features.add("c-compiler")
         tools.append(ToolSubst("%cc", command=config.cc, unresolved="fatal"))
-        tools.append(ToolSubst("%libruntime", command=libruntime, unresolved="fatal"))
+        tools.append(ToolSubst("%libruntime", command=libruntime_static, unresolved="fatal"))
         tools.append(ToolSubst("%include", command=include, unresolved="fatal"))
+
+    elif (
+        os.path.isfile(libruntime_shared)
+        and os.path.isdir(include)
+    ):
+        config.available_features.add("c-compiler")
+        tools.append(ToolSubst("%cc", command=config.cc, unresolved="fatal"))
+        tools.append(ToolSubst("%libruntime", command=libruntime_shared, unresolved="fatal"))
+        tools.append(ToolSubst("%include", command=include, unresolved="fatal"))
+
 
 # Add all the tools and their substitutions (if applicable). Use the search paths provided for
 # finding the tools.
-if config.flang_standalone_build:
-    llvm_config.add_tool_substitutions(
-        tools, [config.flang_llvm_tools_dir, config.llvm_tools_dir]
-    )
-else:
-    llvm_config.add_tool_substitutions(tools, config.llvm_tools_dir)
+llvm_config.add_tool_substitutions(tools, config.llvm_tools_dir)
 
 # Enable libpgmath testing
 result = lit_config.params.get("LIBPGMATH")
