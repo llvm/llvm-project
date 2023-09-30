@@ -1346,7 +1346,7 @@ findExtractedOutputToOverallOutputMapping(Module &M, OutlinableRegion &Region,
     // the output, so we add a pointer type to the argument types of the overall
     // function to handle this output and create a mapping to it.
     if (!TypeFound) {
-      Group.ArgumentTypes.push_back(Output->getType()->getPointerTo(
+      Group.ArgumentTypes.push_back(PointerType::get(Output->getContext(),
           M.getDataLayout().getAllocaAddrSpace()));
       // Mark the new pointer type as the last value in the aggregate argument
       // list.

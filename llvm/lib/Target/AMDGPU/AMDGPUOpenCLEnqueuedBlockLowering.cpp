@@ -93,7 +93,7 @@ bool AMDGPUOpenCLEnqueuedBlockLowering::runOnModule(Module &M) {
       if (!HandleTy) {
         Type *Int32 = Type::getInt32Ty(C);
         HandleTy = StructType::create(
-            C, {Type::getInt8Ty(C)->getPointerTo(0), Int32, Int32},
+            C, {Type::getInt8PtrTy(C), Int32, Int32},
             "block.runtime.handle.t");
       }
 
