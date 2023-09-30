@@ -3949,8 +3949,7 @@ static Value *simplifyICmpInst(unsigned Predicate, Value *LHS, Value *RHS,
       // Turn icmp (sext X), Cst into a compare of X and Cst if Cst is extended
       // too.  If not, then try to deduce the result of the comparison.
       else if (match(RHS, m_ImmConstant())) {
-        Constant *C = dyn_cast<Constant>(RHS);
-        assert(C != nullptr);
+        Constant *C = cast<Constant>(RHS);
 
         // Compute the constant that would happen if we truncated to SrcTy then
         // reextended to DstTy.

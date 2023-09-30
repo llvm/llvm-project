@@ -1625,6 +1625,40 @@ SmallVector has grown a few other minor advantages over std::vector, causing
    and is no longer "private to the implementation". A name like
    ``SmallVectorHeader`` might be more appropriate.
 
+.. _dss_pagedvector:
+
+llvm/ADT/PagedVector.h
+^^^^^^^^^^^^^^^^^^^^^^
+
+``PagedVector<Type, PageSize>`` is a random access container that allocates
+``PageSize`` elements of type ``Type`` when the first element of a page is
+accessed via the ``operator[]``.  This is useful for cases where the number of
+elements is known in advance; their actual initialization is expensive; and
+they are sparsely used. This utility uses page-granular lazy initialization
+when the element is accessed. When the number of used pages is small
+significant memory savings can be achieved.
+
+The main advantage is that a ``PagedVector`` allows to delay the actual
+allocation of the page until it's needed, at the extra cost of one pointer per
+page and one extra indirection when accessing elements with their positional
+index.
+
+In order to minimise the memory footprint of this container, it's important to
+balance the PageSize so that it's not too small (otherwise the overhead of the
+pointer per page might become too high) and not too big (otherwise the memory
+is wasted if the page is not fully used).
+
+Moreover, while retaining the order of the elements based on their insertion
+index, like a vector, iterating over the elements via ``begin()`` and ``end()``
+is not provided in the API, due to the fact accessing the elements in order
+would allocate all the iterated pages, defeating memory savings and the purpose
+of the ``PagedVector``.
+
+Finally a ``materialized_begin()`` and ``materialized_end`` iterators are
+provided to access the elements associated to the accessed pages, which could
+speed up operations that need to iterate over initialized elements in a
+non-ordered manner.
+
 .. _dss_vector:
 
 <vector>
