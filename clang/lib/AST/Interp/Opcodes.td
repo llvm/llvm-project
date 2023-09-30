@@ -25,8 +25,6 @@ def Sint32 : Type;
 def Uint32 : Type;
 def Sint64 : Type;
 def Uint64 : Type;
-def IntAP : Type;
-def IntAPS : Type;
 def Float : Type;
 def Ptr : Type;
 def FnPtr : Type;
@@ -69,7 +67,7 @@ class TypeClass {
 
 def IntegerTypeClass : TypeClass {
   let Types = [Sint8, Uint8, Sint16, Uint16, Sint32,
-               Uint32, Sint64, Uint64, IntAP, IntAPS];
+               Uint32, Sint64, Uint64];
 }
 
 def NumberTypeClass : TypeClass {
@@ -556,11 +554,11 @@ def Comp: Opcode {
 //===----------------------------------------------------------------------===//
 
 def FromCastTypeClass : TypeClass {
-  let Types = [Uint8, Sint8, Uint16, Sint16, Uint32, Sint32, Uint64, Sint64, Bool, IntAP, IntAPS];
+  let Types = [Uint8, Sint8, Uint16, Sint16, Uint32, Sint32, Uint64, Sint64, Bool];
 }
 
 def ToCastTypeClass : TypeClass {
-  let Types = [Uint8, Sint8, Uint16, Sint16, Uint32, Sint32, Uint64, Sint64, Bool, IntAP, IntAPS];
+  let Types = [Uint8, Sint8, Uint16, Sint16, Uint32, Sint32, Uint64, Sint64, Bool];
 }
 
 def Cast: Opcode {
