@@ -6,11 +6,11 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "../../runtime/namelist.h"
+#include "flang/../../runtime/namelist.h"
 #include "CrashHandlerFixture.h"
-#include "tools.h"
 #include "flang/Runtime/descriptor.h"
 #include "flang/Runtime/io-api.h"
+#include "tools.h"
 #include <algorithm>
 #include <cinttypes>
 #include <complex>
@@ -27,7 +27,7 @@ struct NamelistTests : CrashHandlerFixture {};
 
 static void ClearDescriptorStorage(const Descriptor &descriptor) {
   std::memset(descriptor.raw().base_addr, 0,
-      descriptor.Elements() * descriptor.ElementBytes());
+              descriptor.Elements() * descriptor.ElementBytes());
 }
 
 TEST(NamelistTests, BasicSanity) {
@@ -38,17 +38,20 @@ TEST(NamelistTests, BasicSanity) {
   Descriptor &internalDesc{statDescs[0].descriptor()};
   SubscriptValue extent[]{numLines};
   internalDesc.Establish(TypeCode{CFI_type_char}, /*elementBytes=*/lineLength,
-      &buffer, 1, extent, CFI_attribute_pointer);
+                         &buffer, 1, extent, CFI_attribute_pointer);
   // Set up data arrays
   std::vector<int> ints;
   for (int j{0}; j < 20; ++j) {
     ints.push_back(j % 2 == 0 ? (1 << j) : -(1 << j));
   }
-  std::vector<double> reals{0.0, -0.0, std::numeric_limits<double>::infinity(),
-      -std::numeric_limits<double>::infinity(),
-      std::numeric_limits<double>::quiet_NaN(),
-      std::numeric_limits<double>::max(), std::numeric_limits<double>::lowest(),
-      std::numeric_limits<double>::epsilon()};
+  std::vector<double> reals{0.0,
+                            -0.0,
+                            std::numeric_limits<double>::infinity(),
+                            -std::numeric_limits<double>::infinity(),
+                            std::numeric_limits<double>::quiet_NaN(),
+                            std::numeric_limits<double>::max(),
+                            std::numeric_limits<double>::lowest(),
+                            std::numeric_limits<double>::epsilon()};
   std::vector<std::uint8_t> logicals;
   logicals.push_back(false);
   logicals.push_back(true);
@@ -76,12 +79,14 @@ TEST(NamelistTests, BasicSanity) {
   // Create a NAMELIST group
   static constexpr int items{5};
   const NamelistGroup::Item itemArray[items]{{"ints", *intDesc},
-      {"reals", *realDesc}, {"logicals", *logicalDesc},
-      {"complexes", *complexDesc}, {"characters", *characterDesc}};
+                                             {"reals", *realDesc},
+                                             {"logicals", *logicalDesc},
+                                             {"complexes", *complexDesc},
+                                             {"characters", *characterDesc}};
   const NamelistGroup group{"group1", items, itemArray};
   // Do an internal NAMELIST write and check results
-  auto outCookie1{IONAME(BeginInternalArrayListOutput)(
-      internalDesc, nullptr, 0, __FILE__, __LINE__)};
+  auto outCookie1{IONAME(BeginInternalArrayListOutput)(internalDesc, nullptr, 0,
+                                                       __FILE__, __LINE__)};
   ASSERT_TRUE(IONAME(SetDelim)(outCookie1, "APOSTROPHE", 10));
   ASSERT_TRUE(IONAME(OutputNamelist)(outCookie1, group));
   auto outStatus1{IONAME(EndIoStatement)(outCookie1)};
@@ -109,14 +114,14 @@ TEST(NamelistTests, BasicSanity) {
   ClearDescriptorStorage(*logicalDesc);
   ClearDescriptorStorage(*complexDesc);
   ClearDescriptorStorage(*characterDesc);
-  auto inCookie{IONAME(BeginInternalArrayListInput)(
-      internalDesc, nullptr, 0, __FILE__, __LINE__)};
+  auto inCookie{IONAME(BeginInternalArrayListInput)(internalDesc, nullptr, 0,
+                                                    __FILE__, __LINE__)};
   ASSERT_TRUE(IONAME(InputNamelist)(inCookie, group));
   auto inStatus{IONAME(EndIoStatement)(inCookie)};
   ASSERT_EQ(inStatus, 0) << "Failed namelist input sanity, status "
                          << static_cast<int>(inStatus);
-  auto outCookie2{IONAME(BeginInternalArrayListOutput)(
-      internalDesc, nullptr, 0, __FILE__, __LINE__)};
+  auto outCookie2{IONAME(BeginInternalArrayListOutput)(internalDesc, nullptr, 0,
+                                                       __FILE__, __LINE__)};
   ASSERT_TRUE(IONAME(SetDelim)(outCookie2, "APOSTROPHE", 10));
   ASSERT_TRUE(IONAME(OutputNamelist)(outCookie2, group));
   auto outStatus2{IONAME(EndIoStatement)(outCookie2)};
@@ -139,18 +144,19 @@ TEST(NamelistTests, Subscripts) {
   StaticDescriptor<1, true> statDesc;
   Descriptor &internalDesc{statDesc.descriptor()};
   internalDesc.Establish(TypeCode{CFI_type_char},
-      /*elementBytes=*/std::strlen(t1), t1, 0, nullptr, CFI_attribute_pointer);
-  auto inCookie{IONAME(BeginInternalArrayListInput)(
-      internalDesc, nullptr, 0, __FILE__, __LINE__)};
+                         /*elementBytes=*/std::strlen(t1), t1, 0, nullptr,
+                         CFI_attribute_pointer);
+  auto inCookie{IONAME(BeginInternalArrayListInput)(internalDesc, nullptr, 0,
+                                                    __FILE__, __LINE__)};
   ASSERT_TRUE(IONAME(InputNamelist)(inCookie, group));
   auto inStatus{IONAME(EndIoStatement)(inCookie)};
   ASSERT_EQ(inStatus, 0) << "Failed namelist input subscripts, status "
                          << static_cast<int>(inStatus);
   char out[40];
   internalDesc.Establish(TypeCode{CFI_type_char}, /*elementBytes=*/sizeof out,
-      out, 0, nullptr, CFI_attribute_pointer);
-  auto outCookie{IONAME(BeginInternalArrayListOutput)(
-      internalDesc, nullptr, 0, __FILE__, __LINE__)};
+                         out, 0, nullptr, CFI_attribute_pointer);
+  auto outCookie{IONAME(BeginInternalArrayListOutput)(internalDesc, nullptr, 0,
+                                                      __FILE__, __LINE__)};
   ASSERT_TRUE(IONAME(OutputNamelist)(outCookie, group));
   auto outStatus{IONAME(EndIoStatement)(outCookie)};
   ASSERT_EQ(outStatus, 0)
@@ -177,8 +183,8 @@ TEST(NamelistTests, ShortArrayInput) {
   Descriptor &internalDesc{statDesc.descriptor()};
   SubscriptValue shape{2};
   internalDesc.Establish(1, 12, t1, 1, &shape, CFI_attribute_pointer);
-  auto inCookie{IONAME(BeginInternalArrayListInput)(
-      internalDesc, nullptr, 0, __FILE__, __LINE__)};
+  auto inCookie{IONAME(BeginInternalArrayListInput)(internalDesc, nullptr, 0,
+                                                    __FILE__, __LINE__)};
   ASSERT_TRUE(IONAME(InputNamelist)(inCookie, group));
   auto inStatus{IONAME(EndIoStatement)(inCookie)};
   ASSERT_EQ(inStatus, 0) << "Failed namelist input subscripts, status "
@@ -198,17 +204,18 @@ TEST(NamelistTests, ScalarSubstring) {
   StaticDescriptor<1, true> statDesc;
   Descriptor &internalDesc{statDesc.descriptor()};
   internalDesc.Establish(TypeCode{CFI_type_char},
-      /*elementBytes=*/std::strlen(t1), t1, 0, nullptr, CFI_attribute_pointer);
-  auto inCookie{IONAME(BeginInternalArrayListInput)(
-      internalDesc, nullptr, 0, __FILE__, __LINE__)};
+                         /*elementBytes=*/std::strlen(t1), t1, 0, nullptr,
+                         CFI_attribute_pointer);
+  auto inCookie{IONAME(BeginInternalArrayListInput)(internalDesc, nullptr, 0,
+                                                    __FILE__, __LINE__)};
   ASSERT_TRUE(IONAME(InputNamelist)(inCookie, group));
   ASSERT_EQ(IONAME(EndIoStatement)(inCookie), IostatOk)
       << "namelist scalar substring input";
   char out[32];
   internalDesc.Establish(TypeCode{CFI_type_char}, /*elementBytes=*/sizeof out,
-      out, 0, nullptr, CFI_attribute_pointer);
-  auto outCookie{IONAME(BeginInternalArrayListOutput)(
-      internalDesc, nullptr, 0, __FILE__, __LINE__)};
+                         out, 0, nullptr, CFI_attribute_pointer);
+  auto outCookie{IONAME(BeginInternalArrayListOutput)(internalDesc, nullptr, 0,
+                                                      __FILE__, __LINE__)};
   ASSERT_TRUE(IONAME(SetDelim)(outCookie, "apostrophe", 10));
   ASSERT_TRUE(IONAME(OutputNamelist)(outCookie, group));
   ASSERT_EQ(IONAME(EndIoStatement)(outCookie), IostatOk) << "namelist output";
@@ -218,26 +225,27 @@ TEST(NamelistTests, ScalarSubstring) {
 }
 
 TEST(NamelistTests, ArraySubstring) {
-  OwningPtr<Descriptor> scDesc{
-      MakeArray<TypeCategory::Character, 1>(std::vector<int>{2},
-          std::vector<std::string>{"abcdefgh", "ijklmnop"}, 8)};
+  OwningPtr<Descriptor> scDesc{MakeArray<TypeCategory::Character, 1>(
+      std::vector<int>{2}, std::vector<std::string>{"abcdefgh", "ijklmnop"},
+      8)};
   const NamelistGroup::Item items[]{{"a", *scDesc}};
   const NamelistGroup group{"justa", 1, items};
   static char t1[]{"&justa A(:)(2:+5)='BCDE' 'JKLM'/"};
   StaticDescriptor<1, true> statDesc;
   Descriptor &internalDesc{statDesc.descriptor()};
   internalDesc.Establish(TypeCode{CFI_type_char},
-      /*elementBytes=*/std::strlen(t1), t1, 0, nullptr, CFI_attribute_pointer);
-  auto inCookie{IONAME(BeginInternalArrayListInput)(
-      internalDesc, nullptr, 0, __FILE__, __LINE__)};
+                         /*elementBytes=*/std::strlen(t1), t1, 0, nullptr,
+                         CFI_attribute_pointer);
+  auto inCookie{IONAME(BeginInternalArrayListInput)(internalDesc, nullptr, 0,
+                                                    __FILE__, __LINE__)};
   ASSERT_TRUE(IONAME(InputNamelist)(inCookie, group));
   ASSERT_EQ(IONAME(EndIoStatement)(inCookie), IostatOk)
       << "namelist scalar substring input";
   char out[40];
   internalDesc.Establish(TypeCode{CFI_type_char}, /*elementBytes=*/sizeof out,
-      out, 0, nullptr, CFI_attribute_pointer);
-  auto outCookie{IONAME(BeginInternalArrayListOutput)(
-      internalDesc, nullptr, 0, __FILE__, __LINE__)};
+                         out, 0, nullptr, CFI_attribute_pointer);
+  auto outCookie{IONAME(BeginInternalArrayListOutput)(internalDesc, nullptr, 0,
+                                                      __FILE__, __LINE__)};
   ASSERT_TRUE(IONAME(SetDelim)(outCookie, "apostrophe", 10));
   ASSERT_TRUE(IONAME(OutputNamelist)(outCookie, group));
   ASSERT_EQ(IONAME(EndIoStatement)(outCookie), IostatOk) << "namelist output";
@@ -256,17 +264,18 @@ TEST(NamelistTests, Skip) {
   StaticDescriptor<1, true> statDesc;
   Descriptor &internalDesc{statDesc.descriptor()};
   internalDesc.Establish(TypeCode{CFI_type_char},
-      /*elementBytes=*/std::strlen(t1), t1, 0, nullptr, CFI_attribute_pointer);
-  auto inCookie{IONAME(BeginInternalArrayListInput)(
-      internalDesc, nullptr, 0, __FILE__, __LINE__)};
+                         /*elementBytes=*/std::strlen(t1), t1, 0, nullptr,
+                         CFI_attribute_pointer);
+  auto inCookie{IONAME(BeginInternalArrayListInput)(internalDesc, nullptr, 0,
+                                                    __FILE__, __LINE__)};
   ASSERT_TRUE(IONAME(InputNamelist)(inCookie, group));
   ASSERT_EQ(IONAME(EndIoStatement)(inCookie), IostatOk)
       << "namelist input with skipping";
   char out[20];
   internalDesc.Establish(TypeCode{CFI_type_char}, /*elementBytes=*/sizeof out,
-      out, 0, nullptr, CFI_attribute_pointer);
-  auto outCookie{IONAME(BeginInternalArrayListOutput)(
-      internalDesc, nullptr, 0, __FILE__, __LINE__)};
+                         out, 0, nullptr, CFI_attribute_pointer);
+  auto outCookie{IONAME(BeginInternalArrayListOutput)(internalDesc, nullptr, 0,
+                                                      __FILE__, __LINE__)};
   ASSERT_TRUE(IONAME(OutputNamelist)(outCookie, group));
   ASSERT_EQ(IONAME(EndIoStatement)(outCookie), IostatOk) << "namelist output";
   std::string got{out, sizeof out};
@@ -285,18 +294,19 @@ TEST(NamelistTests, Comma) {
   StaticDescriptor<1, true> statDesc;
   Descriptor &internalDesc{statDesc.descriptor()};
   internalDesc.Establish(TypeCode{CFI_type_char},
-      /*elementBytes=*/std::strlen(t1), t1, 0, nullptr, CFI_attribute_pointer);
-  auto inCookie{IONAME(BeginInternalArrayListInput)(
-      internalDesc, nullptr, 0, __FILE__, __LINE__)};
+                         /*elementBytes=*/std::strlen(t1), t1, 0, nullptr,
+                         CFI_attribute_pointer);
+  auto inCookie{IONAME(BeginInternalArrayListInput)(internalDesc, nullptr, 0,
+                                                    __FILE__, __LINE__)};
   ASSERT_TRUE(IONAME(SetDecimal)(inCookie, "COMMA", 5));
   ASSERT_TRUE(IONAME(InputNamelist)(inCookie, group));
   ASSERT_EQ(IONAME(EndIoStatement)(inCookie), IostatOk)
       << "namelist input with skipping";
   char out[30];
   internalDesc.Establish(TypeCode{CFI_type_char}, /*elementBytes=*/sizeof out,
-      out, 0, nullptr, CFI_attribute_pointer);
-  auto outCookie{IONAME(BeginInternalArrayListOutput)(
-      internalDesc, nullptr, 0, __FILE__, __LINE__)};
+                         out, 0, nullptr, CFI_attribute_pointer);
+  auto outCookie{IONAME(BeginInternalArrayListOutput)(internalDesc, nullptr, 0,
+                                                      __FILE__, __LINE__)};
   ASSERT_TRUE(IONAME(SetDecimal)(outCookie, "COMMA", 5));
   ASSERT_TRUE(IONAME(OutputNamelist)(outCookie, group));
   ASSERT_EQ(IONAME(EndIoStatement)(outCookie), IostatOk) << "namelist output";

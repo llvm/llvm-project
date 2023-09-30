@@ -7,10 +7,10 @@ if (FLANG_EXPERIMENTAL_CUDA_RUNTIME)
   enable_language(CUDA)
 endif()
 
-add_custom_target(FlangUnitTests)
-set_target_properties(FlangUnitTests PROPERTIES FOLDER "Flang Unit Tests")
+add_custom_target(FlangRTUnitTests)
+set_target_properties(FlangRTUnitTests PROPERTIES FOLDER "Flang-rt Unit Tests")
 
-function(add_flang_unittest_offload_properties target)
+function(add_flang_rt_unittest_offload_properties target)
   # Set CUDA_RESOLVE_DEVICE_SYMBOLS.
   if (FLANG_EXPERIMENTAL_CUDA_RUNTIME)
     set_target_properties(${target}
@@ -24,10 +24,7 @@ function(add_flang_unittest_offload_properties target)
   # FIXME: replace 'native' in --offload-arch option with the list
   #        of targets that Fortran Runtime was built for.
   #        Common code must be moved from flang/runtime/CMakeLists.txt.
-  # TODO: Revisit this because of Flang-rt. runtime is no longer an added subdirectory of flang. So we temporarily duplicated the option definition to here. This is not a permanent solution.
-  set(FLANG_EXPERIMENTAL_OMP_OFFLOAD_BUILD "off" CACHE STRING
-    "Compile Fortran runtime as OpenMP target offload sources (experimental). Valid options are 'off', 'host_device', 'nohost'")
-
+  # TODO: Revisit this because of Flang-rt. runtime is no longer an added subdirectory of flang.
   if (NOT FLANG_EXPERIMENTAL_OMP_OFFLOAD_BUILD STREQUAL "off")
     set_target_properties(${target}
         PROPERTIES LINK_OPTIONS
@@ -36,22 +33,27 @@ function(add_flang_unittest_offload_properties target)
   endif()
 endfunction()
 
-function(add_flang_unittest test_dirname)
-  add_unittest(FlangUnitTests ${test_dirname} ${ARGN})
-  add_flang_unittest_offload_properties(${test_dirname})
+if(NOT TARGET llvm_gtest)
+  message(FATAL_ERROR "Target llvm_gtest not found.")
+endif()
+
+function(add_flang_rt_unittest test_dirname)
+  add_unittest(FlangRTUnitTests ${test_dirname} ${ARGN})
+  add_flang_rt_unittest_offload_properties(${test_dirname})
 endfunction()
 
 if (CXX_SUPPORTS_SUGGEST_OVERRIDE_FLAG)
   add_compile_options("-Wno-suggest-override")
 endif()
 
-function(add_flang_nongtest_unittest test_name)
+function(add_flang_rt_nongtest_unittest test_name)
   cmake_parse_arguments(ARG
     "SLOW_TEST"
     ""
     ""
     ${ARGN})
 
+  list(APPEND LLVM_COMPILE_FLAGS "-L${LLVM_BINARY_DIR}/lib")
   if(ARG_SLOW_TEST)
       set(suffix .slow)
   else()
@@ -68,14 +70,12 @@ function(add_flang_nongtest_unittest test_name)
   target_link_libraries(${test_name}${suffix} ${llvm_libs} ${ARG_UNPARSED_ARGUMENTS})
 
   if(NOT ARG_SLOW_TEST)
-    add_dependencies(FlangUnitTests ${test_name}${suffix})
+    add_dependencies(FlangRTUnitTests ${test_name}${suffix})
   endif()
 
-  add_flang_unittest_offload_properties(${test_name}${suffix})
+  add_flang_rt_unittest_offload_properties(${test_name}${suffix})
 endfunction()
 
-add_subdirectory(Optimizer)
-add_subdirectory(Common)
-add_subdirectory(Decimal)
-add_subdirectory(Evaluate)
-add_subdirectory(Frontend)
+add_subdirectory(FortranRuntime)
+# TODO: We may want to find a better location for these tests that use the runtime
+add_subdirectory(FortranEvaluate)
