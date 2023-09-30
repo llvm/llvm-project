@@ -29,8 +29,6 @@ namespace interp {
 using APInt = llvm::APInt;
 using APSInt = llvm::APSInt;
 
-template <bool Signed> class IntegralAP;
-
 // Helper structure to select the representation.
 template <unsigned Bits, bool Signed> struct Repr;
 template <> struct Repr<8, false> { using Type = uint8_t; };
@@ -63,8 +61,6 @@ private:
   template <typename T> explicit Integral(T V) : V(V) {}
 
 public:
-  using AsUnsigned = Integral<Bits, false>;
-
   /// Zero-initializes an integral.
   Integral() : V(0) {}
 
