@@ -525,6 +525,61 @@ spirv.module Logical GLSL450 {
 
 // -----
 
+func.func @variable_ptr_physical_buffer() -> () {
+  %0 = spirv.Variable {aliased_pointer} :
+    !spirv.ptr<!spirv.ptr<f32, PhysicalStorageBuffer>, Function>
+  %1 = spirv.Variable {restrict_pointer} :
+    !spirv.ptr<!spirv.ptr<f32, PhysicalStorageBuffer>, Function>
+  return
+}
+
+// -----
+
+func.func @variable_ptr_physical_buffer_no_decoration() -> () {
+  // expected-error @+1 {{must be decorated either 'AliasedPointer' or 'RestrictPointer'}}
+  %0 = spirv.Variable : !spirv.ptr<!spirv.ptr<f32, PhysicalStorageBuffer>, Function>
+  return
+}
+
+// -----
+
+func.func @variable_ptr_physical_buffer_two_alias_decorations() -> () {
+  // expected-error @+1 {{must have exactly one aliasing decoration}}
+  %0 = spirv.Variable {aliased_pointer, restrict_pointer} :
+    !spirv.ptr<!spirv.ptr<f32, PhysicalStorageBuffer>, Function>
+  return
+}
+
+// -----
+
+func.func @variable_ptr_array_physical_buffer() -> () {
+  %0 = spirv.Variable {aliased_pointer} :
+    !spirv.ptr<!spirv.array<4x!spirv.ptr<f32, PhysicalStorageBuffer>>, Function>
+  %1 = spirv.Variable {restrict_pointer} :
+    !spirv.ptr<!spirv.array<4x!spirv.ptr<f32, PhysicalStorageBuffer>>, Function>
+  return
+}
+
+// -----
+
+func.func @variable_ptr_array_physical_buffer_no_decoration() -> () {
+  // expected-error @+1 {{must be decorated either 'AliasedPointer' or 'RestrictPointer'}}
+  %0 = spirv.Variable :
+    !spirv.ptr<!spirv.array<4x!spirv.ptr<f32, PhysicalStorageBuffer>>, Function>
+  return
+}
+
+// -----
+
+func.func @variable_ptr_array_physical_buffer_two_alias_decorations() -> () {
+  // expected-error @+1 {{must have exactly one aliasing decoration}}
+  %0 = spirv.Variable {aliased_pointer, restrict_pointer} :
+    !spirv.ptr<!spirv.array<4x!spirv.ptr<f32, PhysicalStorageBuffer>>, Function>
+  return
+}
+
+// -----
+
 func.func @variable_bind() -> () {
   // expected-error @+1 {{cannot have 'descriptor_set' attribute (only allowed in spirv.GlobalVariable)}}
   %0 = spirv.Variable bind(1, 2) : !spirv.ptr<f32, Function>
