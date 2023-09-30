@@ -3176,7 +3176,7 @@ void TransposeOp::getAsmResultNames(
   setNameFn(getResult(), "transpose");
 }
 
-/// Build a strided memref type by applying `permutation` tp `memRefType`.
+/// Build a strided memref type by applying `permutation` to `memRefType`.
 static MemRefType inferTransposeResultType(MemRefType memRefType,
                                            ArrayRef<int64_t> permutation) {
   auto rank = memRefType.getRank();
