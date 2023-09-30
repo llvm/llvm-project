@@ -369,3 +369,24 @@ namespace ArrayInitLoop {
   static_assert(g() == 6); // expected-error {{failed}} \
                            // expected-note {{15 == 6}}
 }
+
+namespace StringZeroFill {
+  struct A {
+    char c[6];
+  };
+  constexpr A a = { "abc" };
+  static_assert(a.c[0] == 'a', "");
+  static_assert(a.c[1] == 'b', "");
+  static_assert(a.c[2] == 'c', "");
+  static_assert(a.c[3] == '\0', "");
+  static_assert(a.c[4] == '\0', "");
+  static_assert(a.c[5] == '\0', "");
+
+  constexpr char b[6] = "foo";
+  static_assert(b[0] == 'f', "");
+  static_assert(b[1] == 'o', "");
+  static_assert(b[2] == 'o', "");
+  static_assert(b[3] == '\0', "");
+  static_assert(b[4] == '\0', "");
+  static_assert(b[5] == '\0', "");
+}
