@@ -2278,8 +2278,7 @@ bool UnwrappedLineParser::tryToParseLambdaIntroducer() {
 }
 
 void UnwrappedLineParser::tryToParseJSFunction() {
-  assert(FormatTok->is(Keywords.kw_function) ||
-         FormatTok->startsSequence(Keywords.kw_async, Keywords.kw_function));
+  assert(FormatTok->is(Keywords.kw_function));
   if (FormatTok->is(Keywords.kw_async))
     nextToken();
   // Consume "function".
@@ -2357,8 +2356,7 @@ bool UnwrappedLineParser::parseBracedList(bool ContinueOnSemicolons,
       continue;
     }
     if (Style.isJavaScript()) {
-      if (FormatTok->is(Keywords.kw_function) ||
-          FormatTok->startsSequence(Keywords.kw_async, Keywords.kw_function)) {
+      if (FormatTok->is(Keywords.kw_function)) {
         tryToParseJSFunction();
         continue;
       }
@@ -2511,14 +2509,10 @@ bool UnwrappedLineParser::parseParens(TokenType AmpAmpTokenType) {
         nextToken();
       break;
     case tok::identifier:
-      if (Style.isJavaScript() &&
-          (FormatTok->is(Keywords.kw_function) ||
-           FormatTok->startsSequence(Keywords.kw_async,
-                                     Keywords.kw_function))) {
+      if (Style.isJavaScript() && (FormatTok->is(Keywords.kw_function)))
         tryToParseJSFunction();
-      } else {
+      else
         nextToken();
-      }
       break;
     case tok::kw_requires: {
       auto RequiresToken = FormatTok;
