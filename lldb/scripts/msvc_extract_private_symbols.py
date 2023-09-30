@@ -18,7 +18,7 @@ def extract_symbols(nm_path: str, lib: str):
     library to extract from."""
 
     # Matches mangled symbols containing 'lldb_private'.
-    lldb_sym_re = r"0* [BT] (?P<symbol>[?]+[^?].*lldb_private.*)"
+    lldb_sym_re = r"[0-9a-zA-Z]* [BT] (?P<symbol>[?]+[^?].*lldb_private.*)"
 
     # '-g' means we only get global symbols.
     # '-p' do not waste time sorting the symbols.
