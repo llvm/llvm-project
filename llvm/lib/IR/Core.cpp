@@ -3773,6 +3773,8 @@ void LLVMSetOrdering(LLVMValueRef MemAccessInst, LLVMAtomicOrdering Ordering) {
     return LI->setOrdering(O);
   else if (FenceInst *FI = dyn_cast<FenceInst>(P))
     return FI->setOrdering(O);
+  else if (AtomicRMWInst *ARWI = dyn_cast<AtomicRMWInst>(P))
+    return ARWI->setOrdering(O);
   return cast<StoreInst>(P)->setOrdering(O);
 }
 
