@@ -348,8 +348,6 @@ Error object::writeUniversalBinaryToStream(ArrayRef<Slice> Slices,
     FatHeader.magic = MachO::FAT_MAGIC;
     return writeUniversalArchsToStream<MachO::fat_arch>(FatHeader, Slices, Out);
     break;
-  default:
-    llvm_unreachable("Invalid fat header type");
   }
 }
 
