@@ -171,14 +171,17 @@ bool ByteCodeExprGen<Emitter>::VisitCastExpr(const CastExpr *CE) {
       return this->discard(SubExpr);
     std::optional<PrimType> FromT = classify(SubExpr->getType());
     std::optional<PrimType> ToT = classify(CE->getType());
+
     if (!FromT || !ToT)
       return false;
 
     if (!this->visit(SubExpr))
       return false;
 
-    if (FromT == ToT)
+    if (FromT == ToT) {
+      assert(ToT != PT_IntAP && ToT != PT_IntAPS);
       return true;
+    }
 
     return this->emitCast(*FromT, *ToT, CE);
   }
@@ -1638,6 +1641,9 @@ bool ByteCodeExprGen<Emitter>::visitZeroInitializer(QualType QT,
     return this->emitZeroSint64(E);
   case PT_Uint64:
     return this->emitZeroUint64(E);
+  case PT_IntAP:
+  case PT_IntAPS:
+    assert(false);
   case PT_Ptr:
     return this->emitNullPtr(E);
   case PT_FnPtr:
@@ -1877,6 +1883,9 @@ bool ByteCodeExprGen<Emitter>::emitConst(T Value, PrimType Ty, const Expr *E) {
     return this->emitConstSint64(Value, E);
   case PT_Uint64:
     return this->emitConstUint64(Value, E);
+  case PT_IntAP:
+  case PT_IntAPS:
+    assert(false);
   case PT_Bool:
     return this->emitConstBool(Value, E);
   case PT_Ptr:
