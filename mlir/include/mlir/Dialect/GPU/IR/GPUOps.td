@@ -1228,7 +1228,7 @@ def GPU_AllocOp : GPU_Op<"alloc", [
   let arguments = (ins Variadic<GPU_AsyncToken>:$asyncDependencies,
                    Variadic<Index>:$dynamicSizes, Variadic<Index>:$symbolOperands,
                    UnitAttr:$hostShared);
-  let results = (outs Res<AnyMemRef, "", [MemAlloc]>:$memref,
+  let results = (outs Res<AnyMemRef, "", [MemAllocAt<0, FullEffect>]>:$memref,
                  Optional<GPU_AsyncToken>:$asyncToken);
 
   let extraClassDeclaration = [{
@@ -1268,7 +1268,7 @@ def GPU_DeallocOp : GPU_Op<"dealloc", [GPU_AsyncOpInterface]> {
   }];
 
   let arguments = (ins Variadic<GPU_AsyncToken>:$asyncDependencies,
-                   Arg<AnyMemRef, "", [MemFree]>:$memref);
+                   Arg<AnyMemRef, "", [MemFreeAt<0, FullEffect>]>:$memref);
   let results = (outs Optional<GPU_AsyncToken>:$asyncToken);
 
   let assemblyFormat = [{
@@ -1299,8 +1299,8 @@ def GPU_MemcpyOp : GPU_Op<"memcpy", [GPU_AsyncOpInterface]> {
   }];
 
   let arguments = (ins Variadic<GPU_AsyncToken>:$asyncDependencies,
-                   Arg<AnyMemRef, "", [MemWrite]>:$dst,
-                   Arg<AnyMemRef, "", [MemRead]>:$src);
+                   Arg<AnyMemRef, "", [MemWriteAt<0, FullEffect>]>:$dst,
+                   Arg<AnyMemRef, "", [MemReadAt<0, FullEffect>]>:$src);
   let results = (outs Optional<GPU_AsyncToken>:$asyncToken);
 
   let assemblyFormat = [{
@@ -1335,7 +1335,7 @@ def GPU_MemsetOp : GPU_Op<"memset",
   }];
 
   let arguments = (ins Variadic<GPU_AsyncToken>:$asyncDependencies,
-                   Arg<AnyMemRef, "", [MemWrite]>:$dst,
+                   Arg<AnyMemRef, "", [MemWriteAt<0, FullEffect>]>:$dst,
                    Arg<AnyType, "">:$value);
   let results = (outs Optional<GPU_AsyncToken>:$asyncToken);
 
@@ -1390,7 +1390,8 @@ def GPU_SubgroupMmaLoadMatrixOp : GPU_Op<"subgroup_mma_load_matrix",
     ```
   }];
 
-  let arguments = (ins Arg<GPU_MMAMemRef, "", [MemRead]>:$srcMemref,
+  let arguments = (ins Arg<GPU_MMAMemRef, "",
+                          [MemReadAt<0, FullEffect>]>:$srcMemref,
                   Variadic<Index>:$indices,
                   IndexAttr:$leadDimension,
                   OptionalAttr<UnitAttr>:$transpose);
@@ -1431,7 +1432,7 @@ def GPU_SubgroupMmaStoreMatrixOp : GPU_Op<"subgroup_mma_store_matrix",
   }];
 
   let arguments = (ins Arg<MMAMatrixOf<[SI8, UI8, I32, F16, F32]>>:$src,
-                  Arg<GPU_MMAMemRef, "",[MemWrite]>:$dstMemref,
+                  Arg<GPU_MMAMemRef, "",[MemWriteAt<0, FullEffect>]>:$dstMemref,
                   Variadic<Index>:$indices,
                   IndexAttr:$leadDimension,
                   OptionalAttr<UnitAttr>:$transpose);

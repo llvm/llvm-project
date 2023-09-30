@@ -383,7 +383,8 @@ def Bufferization_ToTensorOp : Bufferization_Op<"to_tensor", [
   }];
 
   let arguments = (ins Arg<AnyRankedOrUnrankedMemRef,
-                       "the reference to load from", [MemRead]>:$memref,
+                           "the reference to load from",
+                           [MemReadAt<0, FullEffect>]>:$memref,
                        UnitAttr:$restrict, UnitAttr:$writable);
   let results = (outs AnyTensor:$result);
 
