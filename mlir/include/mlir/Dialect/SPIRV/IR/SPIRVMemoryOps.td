@@ -289,7 +289,9 @@ def SPIRV_PtrAccessChainOp : SPIRV_Op<"PtrAccessChain", [Pure]> {
     MinVersion<SPIRV_V_1_0>,
     MaxVersion<SPIRV_V_1_6>,
     Extension<[]>,
-    Capability<[SPIRV_C_Addresses, SPIRV_C_PhysicalStorageBufferAddresses, SPIRV_C_VariablePointers, SPIRV_C_VariablePointersStorageBuffer]>
+    Capability<[
+      SPIRV_C_Addresses, SPIRV_C_PhysicalStorageBufferAddresses,
+      SPIRV_C_VariablePointers, SPIRV_C_VariablePointersStorageBuffer]>
   ];
 
   let arguments = (ins
@@ -375,10 +377,15 @@ def SPIRV_VariableOp : SPIRV_Op<"Variable", []> {
     must be the `Function` Storage Class.
 
     Initializer is optional. If Initializer is present, it will be the
-    initial value of the variable’s memory content. Initializer must be an
+    initial value of the variable's memory content. Initializer must be an
     <id> from a constant instruction or a global (module scope) OpVariable
     instruction. Initializer must have the same type as the type pointed to
     by Result Type.
+
+    From `SPV_KHR_physical_storage_buffer`:
+    If an OpVariable's pointee type is a pointer (or array of pointers) in
+    PhysicalStorageBuffer storage class, then the variable must be decorated
+    with exactly one of AliasedPointer or RestrictPointer.
 
     <!-- End of AutoGen section -->
 
@@ -396,6 +403,9 @@ def SPIRV_VariableOp : SPIRV_Op<"Variable", []> {
 
     %1 = spirv.Variable : !spirv.ptr<f32, Function>
     %2 = spirv.Variable init(%0): !spirv.ptr<f32, Function>
+
+    %3 = spirv.Variable {aliased_pointer} :
+      !spirv.ptr<!spirv.ptr<f32, PhysicalStorageBuffer>, Function>
     ```
   }];
 
@@ -407,6 +417,15 @@ def SPIRV_VariableOp : SPIRV_Op<"Variable", []> {
   let results = (outs
     SPIRV_AnyPtr:$pointer
   );
+
+  let extraClassDeclaration = [{
+    ::mlir::spirv::PointerType getPointerType() {
+      return ::llvm::cast<::mlir::spirv::PointerType>(getType());
+    }
+    ::mlir::Type getPointeeType() {
+      return getPointerType().getPointeeType();
+    }
+  }];
 }
 
 #endif // MLIR_DIALECT_SPIRV_IR_MEMORY_OPS
