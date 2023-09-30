@@ -702,19 +702,19 @@ static SmallString<32> getIRFileDisplayName(Any IR) {
   stable_hash NameHash = stable_hash_combine_string(M->getName());
   unsigned int MaxHashWidth = sizeof(stable_hash) * 8 / 4;
   write_hex(ResultStream, NameHash, HexPrintStyle::Lower, MaxHashWidth);
-  if (any_cast<const Module *>(&IR)) {
+  if (llvm::any_cast<const Module *>(&IR)) {
     ResultStream << "-module";
-  } else if (const Function **F = any_cast<const Function *>(&IR)) {
+  } else if (const Function **F = llvm::any_cast<const Function *>(&IR)) {
     ResultStream << "-function-";
     stable_hash FunctionNameHash = stable_hash_combine_string((*F)->getName());
     write_hex(ResultStream, FunctionNameHash, HexPrintStyle::Lower,
               MaxHashWidth);
   } else if (const LazyCallGraph::SCC **C =
-                 any_cast<const LazyCallGraph::SCC *>(&IR)) {
+                 llvm::any_cast<const LazyCallGraph::SCC *>(&IR)) {
     ResultStream << "-scc-";
     stable_hash SCCNameHash = stable_hash_combine_string((*C)->getName());
     write_hex(ResultStream, SCCNameHash, HexPrintStyle::Lower, MaxHashWidth);
-  } else if (const Loop **L = any_cast<const Loop *>(&IR)) {
+  } else if (const Loop **L = llvm::any_cast<const Loop *>(&IR)) {
     ResultStream << "-loop-";
     stable_hash LoopNameHash = stable_hash_combine_string((*L)->getName());
     write_hex(ResultStream, LoopNameHash, HexPrintStyle::Lower, MaxHashWidth);
