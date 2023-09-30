@@ -642,10 +642,9 @@ NVPTXTargetLowering::NVPTXTargetLowering(const NVPTXTargetMachine &TM,
   setI16x2OperationAction(ISD::UREM, MVT::v2i16, Legal, Custom);
 
   // Other arithmetic and logic ops are unsupported.
-  setOperationAction({ISD::AND, ISD::OR, ISD::XOR, ISD::SDIV, ISD::UDIV,
-                      ISD::SRA, ISD::SRL, ISD::MULHS, ISD::MULHU,
-                      ISD::FP_TO_SINT, ISD::FP_TO_UINT, ISD::SINT_TO_FP,
-                      ISD::UINT_TO_FP},
+  setOperationAction({ISD::SDIV, ISD::UDIV, ISD::SRA, ISD::SRL, ISD::MULHS,
+                      ISD::MULHU, ISD::FP_TO_SINT, ISD::FP_TO_UINT,
+                      ISD::SINT_TO_FP, ISD::UINT_TO_FP},
                      MVT::v2i16, Expand);
 
   setOperationAction(ISD::ADDC, MVT::i32, Legal);
@@ -3089,12 +3088,11 @@ NVPTXTargetLowering::LowerReturn(SDValue Chain, CallingConv::ID CallConv,
 }
 
 void NVPTXTargetLowering::LowerAsmOperandForConstraint(
-    SDValue Op, std::string &Constraint, std::vector<SDValue> &Ops,
+    SDValue Op, StringRef Constraint, std::vector<SDValue> &Ops,
     SelectionDAG &DAG) const {
-  if (Constraint.length() > 1)
+  if (Constraint.size() > 1)
     return;
-  else
-    TargetLowering::LowerAsmOperandForConstraint(Op, Constraint, Ops, DAG);
+  TargetLowering::LowerAsmOperandForConstraint(Op, Constraint, Ops, DAG);
 }
 
 static unsigned getOpcForTextureInstr(unsigned Intrinsic) {

@@ -215,8 +215,8 @@ Context::getOverridingFunction(const CXXRecordDecl *DynamicDecl,
 const Function *Context::getOrCreateFunction(const FunctionDecl *FD) {
   assert(FD);
   const Function *Func = P->getFunction(FD);
-  bool IsBeingCompiled = Func && !Func->isFullyCompiled();
-  bool WasNotDefined = Func && !Func->isConstexpr() && !Func->hasBody();
+  bool IsBeingCompiled = Func && Func->isDefined() && !Func->isFullyCompiled();
+  bool WasNotDefined = Func && !Func->isConstexpr() && !Func->isDefined();
 
   if (IsBeingCompiled)
     return Func;

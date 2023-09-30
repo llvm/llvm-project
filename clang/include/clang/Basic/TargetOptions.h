@@ -109,6 +109,10 @@ public:
   // code model.
   std::string CodeModel;
 
+  // The large data threshold used for certain code models on certain
+  // architectures.
+  uint64_t LargeDataThreshold;
+
   /// The version of the SDK which was used during the compilation.
   /// The option is used for two different purposes:
   /// * on darwin the version is propagated to LLVM where it's used

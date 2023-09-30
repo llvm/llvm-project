@@ -70,7 +70,7 @@ define void @load(ptr %p) {
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %63 = load <vscale x 8 x ptr>, ptr %p, align 64
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 16 for instruction: %64 = load <vscale x 16 x ptr>, ptr %p, align 128
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 32 for instruction: %65 = load <vscale x 32 x ptr>, ptr %p, align 256
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret void
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret void
 ;
   load i8, ptr %p
   load <1 x i8>, ptr %p
@@ -213,7 +213,7 @@ define void @store(ptr %p) {
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: store <vscale x 8 x ptr> undef, ptr %p, align 64
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 16 for instruction: store <vscale x 16 x ptr> undef, ptr %p, align 128
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 32 for instruction: store <vscale x 32 x ptr> undef, ptr %p, align 256
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret void
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret void
 ;
   store i8 undef, ptr %p
   store <1 x i8> undef, ptr %p
@@ -308,7 +308,7 @@ define void @store_of_constant(ptr %p) {
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: store <4 x i32> <i32 2, i32 4, i32 6, i32 8>, ptr %p, align 16
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: store <4 x i32> <i32 -1, i32 0, i32 2, i32 1>, ptr %p, align 16
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: store <4 x i32> <i32 256, i32 4096, i32 57, i32 1>, ptr %p, align 16
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret void
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret void
 ;
 
   ; poison and undef

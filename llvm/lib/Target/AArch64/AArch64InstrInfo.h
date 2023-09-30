@@ -140,6 +140,13 @@ public:
   getAddrModeFromMemoryOp(const MachineInstr &MemI,
                           const TargetRegisterInfo *TRI) const override;
 
+  bool canFoldIntoAddrMode(const MachineInstr &MemI, Register Reg,
+                           const MachineInstr &AddrI,
+                           ExtAddrMode &AM) const override;
+
+  MachineInstr *emitLdStWithAddr(MachineInstr &MemI,
+                                 const ExtAddrMode &AM) const override;
+
   bool getMemOperandsWithOffsetWidth(
       const MachineInstr &MI, SmallVectorImpl<const MachineOperand *> &BaseOps,
       int64_t &Offset, bool &OffsetIsScalable, unsigned &Width,
@@ -362,6 +369,13 @@ public:
                                                   int64_t &VGSized);
 
   bool isReallyTriviallyReMaterializable(const MachineInstr &MI) const override;
+
+  // Return true if address of the form BaseReg + Scale * ScaledReg + Offset can
+  // be used for a load/store of NumBytes. BaseReg is always present and
+  // implicit.
+  bool isLegalAddressingMode(unsigned NumBytes, int64_t Offset,
+                             unsigned Scale) const;
+
 #define GET_INSTRINFO_HELPER_DECLS
 #include "AArch64GenInstrInfo.inc"
 

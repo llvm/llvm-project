@@ -9,7 +9,7 @@
 #ifndef LLVM_LIBC_SRC___SUPPORT_FPUTIL_TRIPLE_DOUBLE_H
 #define LLVM_LIBC_SRC___SUPPORT_FPUTIL_TRIPLE_DOUBLE_H
 
-namespace __llvm_libc::fputil {
+namespace LIBC_NAMESPACE::fputil {
 
 struct TripleDouble {
   double lo = 0.0;
@@ -17,6 +17,6 @@ struct TripleDouble {
   double hi = 0.0;
 };
 
-} // namespace __llvm_libc::fputil
+} // namespace LIBC_NAMESPACE::fputil
 
 #endif // LLVM_LIBC_SRC___SUPPORT_FPUTIL_TRIPLE_DOUBLE_H

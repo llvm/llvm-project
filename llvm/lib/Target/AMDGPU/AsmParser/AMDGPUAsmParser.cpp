@@ -273,6 +273,10 @@ public:
     return isRegOrImmWithInputMods(AMDGPU::VS_32RegClassID, MVT::i16);
   }
 
+  bool isRegOrImmWithIntT16InputMods() const {
+    return isRegOrImmWithInputMods(AMDGPU::VS_16RegClassID, MVT::i16);
+  }
+
   bool isRegOrImmWithInt32InputMods() const {
     return isRegOrImmWithInputMods(AMDGPU::VS_32RegClassID, MVT::i32);
   }
@@ -291,6 +295,10 @@ public:
 
   bool isRegOrImmWithFP16InputMods() const {
     return isRegOrImmWithInputMods(AMDGPU::VS_32RegClassID, MVT::f16);
+  }
+
+  bool isRegOrImmWithFPT16InputMods() const {
+    return isRegOrImmWithInputMods(AMDGPU::VS_16RegClassID, MVT::f16);
   }
 
   bool isRegOrImmWithFP32InputMods() const {
@@ -512,7 +520,15 @@ public:
     return isRegOrInlineNoMods(AMDGPU::VS_64RegClassID, MVT::i64);
   }
 
+  bool isVCSrcTB16() const {
+    return isRegOrInlineNoMods(AMDGPU::VS_16RegClassID, MVT::i16);
+  }
+
   bool isVCSrcTB16_Lo128() const {
+    return isRegOrInlineNoMods(AMDGPU::VS_16_Lo128RegClassID, MVT::i16);
+  }
+
+  bool isVCSrcFake16B16_Lo128() const {
     return isRegOrInlineNoMods(AMDGPU::VS_32_Lo128RegClassID, MVT::i16);
   }
 
@@ -532,7 +548,15 @@ public:
     return isRegOrInlineNoMods(AMDGPU::VS_64RegClassID, MVT::f64);
   }
 
+  bool isVCSrcTF16() const {
+    return isRegOrInlineNoMods(AMDGPU::VS_16RegClassID, MVT::f16);
+  }
+
   bool isVCSrcTF16_Lo128() const {
+    return isRegOrInlineNoMods(AMDGPU::VS_16_Lo128RegClassID, MVT::f16);
+  }
+
+  bool isVCSrcFake16F16_Lo128() const {
     return isRegOrInlineNoMods(AMDGPU::VS_32_Lo128RegClassID, MVT::f16);
   }
 
@@ -552,8 +576,14 @@ public:
     return isVCSrcF64() || isLiteralImm(MVT::i64);
   }
 
+  bool isVSrcTB16() const { return isVCSrcTB16() || isLiteralImm(MVT::i16); }
+
   bool isVSrcTB16_Lo128() const {
     return isVCSrcTB16_Lo128() || isLiteralImm(MVT::i16);
+  }
+
+  bool isVSrcFake16B16_Lo128() const {
+    return isVCSrcFake16B16_Lo128() || isLiteralImm(MVT::i16);
   }
 
   bool isVSrcB16() const {
@@ -588,8 +618,14 @@ public:
     return isVCSrcF64() || isLiteralImm(MVT::f64);
   }
 
+  bool isVSrcTF16() const { return isVCSrcTF16() || isLiteralImm(MVT::f16); }
+
   bool isVSrcTF16_Lo128() const {
     return isVCSrcTF16_Lo128() || isLiteralImm(MVT::f16);
+  }
+
+  bool isVSrcFake16F16_Lo128() const {
+    return isVCSrcFake16F16_Lo128() || isLiteralImm(MVT::f16);
   }
 
   bool isVSrcF16() const {
@@ -4195,16 +4231,33 @@ bool AMDGPUAsmParser::validateDPP(const MCInst &Inst,
                                   const OperandVector &Operands) {
   const unsigned Opc = Inst.getOpcode();
   int DppCtrlIdx = AMDGPU::getNamedOperandIdx(Opc, AMDGPU::OpName::dpp_ctrl);
-  if (DppCtrlIdx < 0)
-    return true;
-  unsigned DppCtrl = Inst.getOperand(DppCtrlIdx).getImm();
+  if (DppCtrlIdx >= 0) {
+    unsigned DppCtrl = Inst.getOperand(DppCtrlIdx).getImm();
 
-  if (!AMDGPU::isLegalDPALU_DPPControl(DppCtrl) &&
-      AMDGPU::isDPALU_DPP(MII.get(Opc))) {
-    // DP ALU DPP is supported for row_newbcast only on GFX9*
-    SMLoc S = getImmLoc(AMDGPUOperand::ImmTyDppCtrl, Operands);
-    Error(S, "DP ALU dpp only supports row_newbcast");
-    return false;
+    if (!AMDGPU::isLegalDPALU_DPPControl(DppCtrl) &&
+        AMDGPU::isDPALU_DPP(MII.get(Opc))) {
+      // DP ALU DPP is supported for row_newbcast only on GFX9*
+      SMLoc S = getImmLoc(AMDGPUOperand::ImmTyDppCtrl, Operands);
+      Error(S, "DP ALU dpp only supports row_newbcast");
+      return false;
+    }
+  }
+
+  int Dpp8Idx = AMDGPU::getNamedOperandIdx(Opc, AMDGPU::OpName::dpp8);
+  bool IsDPP = DppCtrlIdx >= 0 || Dpp8Idx >= 0;
+
+  if (IsDPP && !hasDPPSrc1SGPR(getSTI())) {
+    int Src1Idx = AMDGPU::getNamedOperandIdx(Opc, AMDGPU::OpName::src1);
+    if (Src1Idx >= 0) {
+      const MCOperand &Src1 = Inst.getOperand(Src1Idx);
+      const MCRegisterInfo *TRI = getContext().getRegisterInfo();
+      if (Src1.isImm() ||
+          (Src1.isReg() && isSGPR(mc2PseudoReg(Src1.getReg()), TRI))) {
+        AMDGPUOperand &Op = ((AMDGPUOperand &)*Operands[Src1Idx]);
+        Error(Op.getStartLoc(), "invalid operand for instruction");
+        return false;
+      }
+    }
   }
 
   return true;

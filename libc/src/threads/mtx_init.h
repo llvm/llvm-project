@@ -11,10 +11,10 @@
 
 #include <threads.h>
 
-namespace __llvm_libc {
+namespace LIBC_NAMESPACE {
 
 int mtx_init(mtx_t *mutex, int type);
 
-} // namespace __llvm_libc
+} // namespace LIBC_NAMESPACE
 
 #endif // LLVM_LIBC_SRC_THREADS_MTX_INIT_H

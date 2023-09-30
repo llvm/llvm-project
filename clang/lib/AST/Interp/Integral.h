@@ -128,6 +128,13 @@ public:
     return Compare(V, RHS.V);
   }
 
+  std::string toDiagnosticString(const ASTContext &Ctx) const {
+    std::string NameStr;
+    llvm::raw_string_ostream OS(NameStr);
+    OS << V;
+    return NameStr;
+  }
+
   unsigned countLeadingZeros() const {
     if constexpr (!Signed)
       return llvm::countl_zero<ReprT>(V);

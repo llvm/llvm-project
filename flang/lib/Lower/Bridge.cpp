@@ -809,16 +809,16 @@ public:
   genLocation(const Fortran::parser::CharBlock &block) override final {
     if (const Fortran::parser::AllCookedSources *cooked =
             bridge.getCookedSource()) {
-      if (std::optional<std::pair<Fortran::parser::SourcePosition,
-                                  Fortran::parser::SourcePosition>>
-              loc = cooked->GetSourcePositionRange(block)) {
-        // loc is a pair (begin, end); use the beginning position
-        Fortran::parser::SourcePosition &filePos = loc->first;
-        llvm::SmallString<256> filePath(*filePos.path);
-        llvm::sys::fs::make_absolute(filePath);
-        llvm::sys::path::remove_dots(filePath);
-        return mlir::FileLineColLoc::get(&getMLIRContext(), filePath.str(),
-                                         filePos.line, filePos.column);
+      if (std::optional<Fortran::parser::ProvenanceRange> provenance =
+              cooked->GetProvenanceRange(block)) {
+        if (std::optional<Fortran::parser::SourcePosition> filePos =
+                cooked->allSources().GetSourcePosition(provenance->start())) {
+          llvm::SmallString<256> filePath(*filePos->path);
+          llvm::sys::fs::make_absolute(filePath);
+          llvm::sys::path::remove_dots(filePath);
+          return mlir::FileLineColLoc::get(&getMLIRContext(), filePath.str(),
+                                           filePos->line, filePos->column);
+        }
       }
     }
     return genUnknownLocation();

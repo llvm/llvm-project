@@ -354,7 +354,7 @@ bool UnwrappedLineParser::parseLevel(const FormatToken *OpeningBrace,
   bool SwitchLabelEncountered = false;
 
   do {
-    if (FormatTok->getType() == TT_AttributeMacro) {
+    if (FormatTok->isAttribute()) {
       nextToken();
       continue;
     }
@@ -2278,8 +2278,7 @@ bool UnwrappedLineParser::tryToParseLambdaIntroducer() {
 }
 
 void UnwrappedLineParser::tryToParseJSFunction() {
-  assert(FormatTok->is(Keywords.kw_function) ||
-         FormatTok->startsSequence(Keywords.kw_async, Keywords.kw_function));
+  assert(FormatTok->is(Keywords.kw_function));
   if (FormatTok->is(Keywords.kw_async))
     nextToken();
   // Consume "function".
@@ -2357,8 +2356,7 @@ bool UnwrappedLineParser::parseBracedList(bool ContinueOnSemicolons,
       continue;
     }
     if (Style.isJavaScript()) {
-      if (FormatTok->is(Keywords.kw_function) ||
-          FormatTok->startsSequence(Keywords.kw_async, Keywords.kw_function)) {
+      if (FormatTok->is(Keywords.kw_function)) {
         tryToParseJSFunction();
         continue;
       }
@@ -2511,14 +2509,10 @@ bool UnwrappedLineParser::parseParens(TokenType AmpAmpTokenType) {
         nextToken();
       break;
     case tok::identifier:
-      if (Style.isJavaScript() &&
-          (FormatTok->is(Keywords.kw_function) ||
-           FormatTok->startsSequence(Keywords.kw_async,
-                                     Keywords.kw_function))) {
+      if (Style.isJavaScript() && (FormatTok->is(Keywords.kw_function)))
         tryToParseJSFunction();
-      } else {
+      else
         nextToken();
-      }
       break;
     case tok::kw_requires: {
       auto RequiresToken = FormatTok;
@@ -2658,9 +2652,9 @@ static void markOptionalBraces(FormatToken *LeftBrace) {
 
 void UnwrappedLineParser::handleAttributes() {
   // Handle AttributeMacro, e.g. `if (x) UNLIKELY`.
-  if (FormatTok->is(TT_AttributeMacro))
+  if (FormatTok->isAttribute())
     nextToken();
-  if (FormatTok->is(tok::l_square))
+  else if (FormatTok->is(tok::l_square))
     handleCppAttributes();
 }
 
@@ -3362,9 +3356,12 @@ bool clang::format::UnwrappedLineParser::parseRequires() {
     case tok::kw_volatile:
     case tok::kw_const:
     case tok::comma:
-      FormatTok = Tokens->setPosition(StoredPosition);
-      parseRequiresExpression(RequiresToken);
-      return false;
+      if (OpenAngles == 0) {
+        FormatTok = Tokens->setPosition(StoredPosition);
+        parseRequiresExpression(RequiresToken);
+        return false;
+      }
+      break;
     case tok::r_paren:
     case tok::pipepipe:
       FormatTok = Tokens->setPosition(StoredPosition);
@@ -3832,8 +3829,8 @@ void UnwrappedLineParser::parseRecord(bool ParseAsExpr) {
   // it is often token-pasted.
   // An [[attribute]] can be before the identifier.
   while (FormatTok->isOneOf(tok::identifier, tok::coloncolon, tok::hashhash,
-                            tok::kw___attribute, tok::kw___declspec,
                             tok::kw_alignas, tok::l_square) ||
+         FormatTok->isAttribute() ||
          ((Style.Language == FormatStyle::LK_Java || Style.isJavaScript()) &&
           FormatTok->isOneOf(tok::period, tok::comma))) {
     if (Style.isJavaScript() &&

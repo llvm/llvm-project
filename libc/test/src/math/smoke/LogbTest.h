@@ -12,12 +12,12 @@
 
 #include <math.h>
 
-template <typename T> class LogbTest : public __llvm_libc::testing::Test {
+template <typename T> class LogbTest : public LIBC_NAMESPACE::testing::Test {
 
   DECLARE_SPECIAL_CONSTANTS(T)
 
   static constexpr UIntType HIDDEN_BIT =
-      UIntType(1) << __llvm_libc::fputil::MantissaWidth<T>::VALUE;
+      UIntType(1) << LIBC_NAMESPACE::fputil::MantissaWidth<T>::VALUE;
 
 public:
   typedef T (*LogbFunc)(T);
@@ -77,7 +77,7 @@ public:
         continue;
 
       int exponent;
-      __llvm_libc::fputil::frexp(x, exponent);
+      LIBC_NAMESPACE::fputil::frexp(x, exponent);
       ASSERT_FP_EQ(T(exponent), func(x) + T(1.0));
     }
   }

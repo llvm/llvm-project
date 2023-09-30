@@ -1184,14 +1184,14 @@ Instruction *InstCombinerImpl::visitZExt(ZExtInst &Zext) {
   Value *X;
   if (match(Src, m_OneUse(m_And(m_Trunc(m_Value(X)), m_Constant(C)))) &&
       X->getType() == DestTy)
-    return BinaryOperator::CreateAnd(X, ConstantExpr::getZExt(C, DestTy));
+    return BinaryOperator::CreateAnd(X, Builder.CreateZExt(C, DestTy));
 
   // zext((trunc(X) & C) ^ C) -> ((X & zext(C)) ^ zext(C)).
   Value *And;
   if (match(Src, m_OneUse(m_Xor(m_Value(And), m_Constant(C)))) &&
       match(And, m_OneUse(m_And(m_Trunc(m_Value(X)), m_Specific(C)))) &&
       X->getType() == DestTy) {
-    Constant *ZC = ConstantExpr::getZExt(C, DestTy);
+    Value *ZC = Builder.CreateZExt(C, DestTy);
     return BinaryOperator::CreateXor(Builder.CreateAnd(X, ZC), ZC);
   }
 
@@ -1202,7 +1202,7 @@ Instruction *InstCombinerImpl::visitZExt(ZExtInst &Zext) {
   // zext (and (trunc X), C) --> and X, (zext C)
   if (match(Src, m_And(m_Trunc(m_Value(X)), m_Constant(C))) &&
       X->getType() == DestTy) {
-    Constant *ZextC = ConstantExpr::getZExt(C, DestTy);
+    Value *ZextC = Builder.CreateZExt(C, DestTy);
     return BinaryOperator::CreateAnd(X, ZextC);
   }
 

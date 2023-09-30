@@ -246,6 +246,10 @@ Changes in existing checks
   customizable namespace. This further allows for testing the libc when the
   system-libc is also LLVM's libc.
 
+- Improved :doc:`misc-const-correctness
+  <clang-tidy/checks/misc/const-correctness>` check to avoid false positive when
+  using pointer to member function.
+  
 - Improved :doc:`misc-include-cleaner
   <clang-tidy/checks/misc/include-cleaner>` check by adding option
   `DeduplicateFindings` to output one finding per symbol occurrence.

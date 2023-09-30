@@ -28,7 +28,7 @@
 
 #include <stdint.h>
 
-namespace __llvm_libc {
+namespace LIBC_NAMESPACE {
 namespace rpc {
 
 /// A fixed size channel used to communicate between the RPC client and server.
@@ -318,6 +318,8 @@ public:
     return process.packet[index].header.opcode;
   }
 
+  LIBC_INLINE uint16_t get_index() const { return index; }
+
   LIBC_INLINE void close() {
     // The server is passive, if it own the buffer when it closes we need to
     // give ownership back to the client.
@@ -367,7 +369,7 @@ template <uint32_t lane_size> struct Server {
       : process(port_count, buffer) {}
 
   using Port = rpc::Port<true, Packet<lane_size>>;
-  LIBC_INLINE cpp::optional<Port> try_open();
+  LIBC_INLINE cpp::optional<Port> try_open(uint32_t start = 0);
   LIBC_INLINE Port open();
 
   LIBC_INLINE static uint64_t allocation_size(uint32_t port_count) {
@@ -547,9 +549,9 @@ template <uint16_t opcode> LIBC_INLINE Client::Port Client::open() {
 template <uint32_t lane_size>
 [[clang::convergent]] LIBC_INLINE
     cpp::optional<typename Server<lane_size>::Port>
-    Server<lane_size>::try_open() {
+    Server<lane_size>::try_open(uint32_t start) {
   // Perform a naive linear scan for a port that has a pending request.
-  for (uint32_t index = 0; index < process.port_count; ++index) {
+  for (uint32_t index = start; index < process.port_count; ++index) {
     uint64_t lane_mask = gpu::get_lane_mask();
     uint32_t in = process.load_inbox(lane_mask, index);
     uint32_t out = process.load_outbox(lane_mask, index);
@@ -586,6 +588,6 @@ LIBC_INLINE typename Server<lane_size>::Port Server<lane_size>::open() {
 }
 
 } // namespace rpc
-} // namespace __llvm_libc
+} // namespace LIBC_NAMESPACE
 
 #endif

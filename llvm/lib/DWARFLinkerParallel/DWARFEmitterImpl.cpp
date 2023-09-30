@@ -171,18 +171,18 @@ MCSection *DwarfEmitterImpl::switchSection(StringRef SecName) {
       .Case("debug_line_str", MC->getObjectFileInfo()->getDwarfLineStrSection())
       .Case("debug_str_offsets",
             MC->getObjectFileInfo()->getDwarfStrOffSection())
+      .Case("debug_pubnames",
+            MC->getObjectFileInfo()->getDwarfPubNamesSection())
+      .Case("debug_pubtypes",
+            MC->getObjectFileInfo()->getDwarfPubTypesSection())
+      .Case("debug_names", MC->getObjectFileInfo()->getDwarfDebugNamesSection())
+      .Case("apple_names", MC->getObjectFileInfo()->getDwarfAccelNamesSection())
+      .Case("apple_namespac",
+            MC->getObjectFileInfo()->getDwarfAccelNamespaceSection())
+      .Case("apple_objc", MC->getObjectFileInfo()->getDwarfAccelObjCSection())
+      .Case("apple_types", MC->getObjectFileInfo()->getDwarfAccelTypesSection())
+
       .Default(nullptr);
-}
-
-MCSymbol *DwarfEmitterImpl::emitTempSym(StringRef SecName, StringRef SymName) {
-  if (MCSection *Section = switchSection(SecName)) {
-    MS->switchSection(Section);
-    MCSymbol *Res = Asm->createTempSymbol(SymName);
-    Asm->OutStreamer->emitLabel(Res);
-    return Res;
-  }
-
-  return nullptr;
 }
 
 void DwarfEmitterImpl::emitAbbrevs(
@@ -200,8 +200,7 @@ void DwarfEmitterImpl::emitCompileUnitHeader(DwarfUnit &Unit) {
   // Emit size of content not including length itself. The size has already
   // been computed in CompileUnit::computeOffsets(). Subtract 4 to that size to
   // account for the length field.
-  Asm->emitInt32(Unit.getDebugInfoHeaderSize() +
-                 Unit.getOutUnitDIE()->getSize() - 4);
+  Asm->emitInt32(Unit.getUnitSize() - 4);
   Asm->emitInt16(Unit.getVersion());
 
   if (Unit.getVersion() >= 5) {
@@ -222,6 +221,51 @@ void DwarfEmitterImpl::emitDIE(DIE &Die) {
   MS->switchSection(MOFI->getDwarfInfoSection());
   Asm->emitDwarfDIE(Die);
   DebugInfoSectionSize += Die.getSize();
+}
+
+void DwarfEmitterImpl::emitDebugNames(
+    AccelTable<DWARF5AccelTableStaticData> &Table,
+    DebugNamesUnitsOffsets &CUOffsets, CompUnitIDToIdx &CUidToIdx) {
+  if (CUOffsets.empty())
+    return;
+
+  Asm->OutStreamer->switchSection(MOFI->getDwarfDebugNamesSection());
+  emitDWARF5AccelTable(Asm.get(), Table, CUOffsets,
+                       [&CUidToIdx](const DWARF5AccelTableStaticData &Entry) {
+                         return CUidToIdx[Entry.getCUIndex()];
+                       });
+}
+
+void DwarfEmitterImpl::emitAppleNamespaces(
+    AccelTable<AppleAccelTableStaticOffsetData> &Table) {
+  Asm->OutStreamer->switchSection(MOFI->getDwarfAccelNamespaceSection());
+  auto *SectionBegin = Asm->createTempSymbol("namespac_begin");
+  Asm->OutStreamer->emitLabel(SectionBegin);
+  emitAppleAccelTable(Asm.get(), Table, "namespac", SectionBegin);
+}
+
+void DwarfEmitterImpl::emitAppleNames(
+    AccelTable<AppleAccelTableStaticOffsetData> &Table) {
+  Asm->OutStreamer->switchSection(MOFI->getDwarfAccelNamesSection());
+  auto *SectionBegin = Asm->createTempSymbol("names_begin");
+  Asm->OutStreamer->emitLabel(SectionBegin);
+  emitAppleAccelTable(Asm.get(), Table, "names", SectionBegin);
+}
+
+void DwarfEmitterImpl::emitAppleObjc(
+    AccelTable<AppleAccelTableStaticOffsetData> &Table) {
+  Asm->OutStreamer->switchSection(MOFI->getDwarfAccelObjCSection());
+  auto *SectionBegin = Asm->createTempSymbol("objc_begin");
+  Asm->OutStreamer->emitLabel(SectionBegin);
+  emitAppleAccelTable(Asm.get(), Table, "objc", SectionBegin);
+}
+
+void DwarfEmitterImpl::emitAppleTypes(
+    AccelTable<AppleAccelTableStaticTypeData> &Table) {
+  Asm->OutStreamer->switchSection(MOFI->getDwarfAccelTypesSection());
+  auto *SectionBegin = Asm->createTempSymbol("types_begin");
+  Asm->OutStreamer->emitLabel(SectionBegin);
+  emitAppleAccelTable(Asm.get(), Table, "types", SectionBegin);
 }
 
 } // end of namespace dwarflinker_parallel

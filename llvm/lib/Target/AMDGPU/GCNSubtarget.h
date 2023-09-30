@@ -128,6 +128,7 @@ protected:
   bool HasDPP = false;
   bool HasDPP8 = false;
   bool HasDPALU_DPP = false;
+  bool HasDPPSrc1SGPR = false;
   bool HasPackedFP32Ops = false;
   bool HasImageInsts = false;
   bool HasExtendedImageInsts = false;
@@ -193,6 +194,7 @@ protected:
   bool HasPackedTID = false;
   bool ScalarizeGlobal = false;
   bool HasSALUFloatInsts = false;
+  bool HasVGPRSingleUseHintInsts = false;
 
   bool HasVcmpxPermlaneHazard = false;
   bool HasVMEMtoScalarWriteHazard = false;
@@ -206,6 +208,7 @@ protected:
   bool HasFlatSegmentOffsetBug = false;
   bool HasImageStoreD16Bug = false;
   bool HasImageGather4D16Bug = false;
+  bool HasMSAALoadDstSelBug = false;
   bool HasGFX11FullVGPRs = false;
   bool HasMADIntraFwdBug = false;
   bool HasVOPDInsts = false;
@@ -915,6 +918,8 @@ public:
     return HasDPALU_DPP;
   }
 
+  bool hasDPPSrc1SGPR() const { return HasDPPSrc1SGPR; }
+
   bool hasPackedFP32Ops() const {
     return HasPackedFP32Ops;
   }
@@ -953,6 +958,8 @@ public:
   bool hasImageGather4D16Bug() const { return HasImageGather4D16Bug; }
 
   bool hasMADIntraFwdBug() const { return HasMADIntraFwdBug; }
+
+  bool hasMSAALoadDstSelBug() const { return HasMSAALoadDstSelBug; }
 
   bool hasNSAEncoding() const { return HasNSAEncoding; }
 
@@ -1138,6 +1145,8 @@ public:
   bool hasGFX940Insts() const { return GFX940Insts; }
 
   bool hasSALUFloatInsts() const { return HasSALUFloatInsts; }
+
+  bool hasVGPRSingleUseHintInsts() const { return HasVGPRSingleUseHintInsts; }
 
   /// Return the maximum number of waves per SIMD for kernels using \p SGPRs
   /// SGPRs
@@ -1394,8 +1403,6 @@ public:
 
 class GCNUserSGPRUsageInfo {
 public:
-  unsigned getNumUsedUserSGPRs() const;
-
   bool hasImplicitBufferPtr() const { return ImplicitBufferPtr; }
 
   bool hasPrivateSegmentBuffer() const { return PrivateSegmentBuffer; }
@@ -1409,6 +1416,14 @@ public:
   bool hasDispatchID() const { return DispatchID; }
 
   bool hasFlatScratchInit() const { return FlatScratchInit; }
+
+  unsigned getNumKernargPreloadSGPRs() const { return NumKernargPreloadSGPRs; }
+
+  unsigned getNumUsedUserSGPRs() const { return NumUsedUserSGPRs; }
+
+  unsigned getNumFreeUserSGPRs();
+
+  void allocKernargPreloadSGPRs(unsigned NumSGPRs);
 
   enum UserSGPRID : unsigned {
     ImplicitBufferPtrID = 0,
@@ -1447,6 +1462,8 @@ public:
   GCNUserSGPRUsageInfo(const Function &F, const GCNSubtarget &ST);
 
 private:
+  const GCNSubtarget &ST;
+
   // Private memory buffer
   // Compute directly in sgpr[0:1]
   // Other shaders indirect 64-bits at sgpr[0:1]
@@ -1463,6 +1480,10 @@ private:
   bool DispatchID = false;
 
   bool FlatScratchInit = false;
+
+  unsigned NumKernargPreloadSGPRs = 0;
+
+  unsigned NumUsedUserSGPRs = 0;
 };
 
 } // end namespace llvm

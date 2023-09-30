@@ -20,7 +20,7 @@
 
 #include "inv_trigf_utils.h"
 
-namespace __llvm_libc {
+namespace LIBC_NAMESPACE {
 
 static constexpr size_t N_EXCEPTS = 2;
 
@@ -152,4 +152,4 @@ LLVM_LIBC_FUNCTION(float, asinf, (float x)) {
   return static_cast<float>(fputil::multiply_add(c3, r, c2));
 }
 
-} // namespace __llvm_libc
+} // namespace LIBC_NAMESPACE

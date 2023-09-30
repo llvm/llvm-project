@@ -3470,6 +3470,11 @@ LSRInstance::CollectLoopInvariantFixupsAndFormulae() {
   SmallVector<const SCEV *, 8> Worklist(RegUses.begin(), RegUses.end());
   SmallPtrSet<const SCEV *, 32> Visited;
 
+  // Don't collect outside uses if we are favoring postinc - the instructions in
+  // the loop are more important than the ones outside of it.
+  if (AMK == TTI::AMK_PostIndexed)
+    return;
+
   while (!Worklist.empty()) {
     const SCEV *S = Worklist.pop_back_val();
 

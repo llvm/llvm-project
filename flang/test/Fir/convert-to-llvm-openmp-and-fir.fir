@@ -827,4 +827,67 @@ func.func @sub_() {
     omp.terminator
   }
   return
-} 
+}
+
+// -----
+
+// CHECK-LABEL:  llvm.func @flush_standalone_
+// CHECK-SAME:   %[[ARG_A:.*]]: !llvm.ptr<i32> {fir.bindc_name = "a"}, %[[ARG_B:.*]]: !llvm.ptr<i32> {fir.bindc_name = "b"}, %[[ARG_C:.*]]: !llvm.ptr<i32> {fir.bindc_name = "c"})
+  func.func @flush_standalone_(%arg0: !fir.ref<i32> {fir.bindc_name = "a"}, %arg1: !fir.ref<i32> {fir.bindc_name = "b"}, %arg2: !fir.ref<i32> {fir.bindc_name = "c"}) {
+// CHECK:   omp.flush(%[[ARG_A]], %[[ARG_B]], %[[ARG_C]] : !llvm.ptr<i32>, !llvm.ptr<i32>, !llvm.ptr<i32>)
+    omp.flush(%arg0, %arg1, %arg2 : !fir.ref<i32>, !fir.ref<i32>, !fir.ref<i32>)
+// CHECK:   omp.flush
+    omp.flush
+    return
+  }
+
+// CHECK-LABEL:  llvm.func @flush_parallel_
+// CHECK-SAME:   %[[ARG_A:.*]]: !llvm.ptr<i32> {fir.bindc_name = "a"}, %[[ARG_B:.*]]: !llvm.ptr<i32> {fir.bindc_name = "b"}, %[[ARG_C:.*]]: !llvm.ptr<i32> {fir.bindc_name = "c"})
+  func.func @flush_parallel_(%arg0: !fir.ref<i32> {fir.bindc_name = "a"}, %arg1: !fir.ref<i32> {fir.bindc_name = "b"}, %arg2: !fir.ref<i32> {fir.bindc_name = "c"}) {
+// CHECK:    omp.parallel   {
+    omp.parallel   {
+// CHECK:      omp.flush(%[[ARG_A]], %[[ARG_B]], %[[ARG_C]] : !llvm.ptr<i32>, !llvm.ptr<i32>, !llvm.ptr<i32>)
+      omp.flush(%arg0, %arg1, %arg2 : !fir.ref<i32>, !fir.ref<i32>, !fir.ref<i32>)
+// CHECK:      omp.flush
+      omp.flush
+// CHECK:      %[[A_VAL:.*]] = llvm.load %[[ARG_A]] : !llvm.ptr<i32>
+      %0 = fir.load %arg0 : !fir.ref<i32>
+// CHECK:      %[[B_VAL:.*]] = llvm.load %[[ARG_B]] : !llvm.ptr<i32>
+      %1 = fir.load %arg1 : !fir.ref<i32>
+// CHECK:      %[[C_VAL:.*]] = llvm.add %[[A_VAL]], %[[B_VAL]]  : i32
+      %2 = arith.addi %0, %1 : i32
+// CHECK:      llvm.store %[[C_VAL]], %[[ARG_C]] : !llvm.ptr<i32>
+      fir.store %2 to %arg2 : !fir.ref<i32>
+// CHECK:      omp.terminator
+      omp.terminator
+// CHECK:    }
+    }
+    return
+  }
+
+// -----
+
+// CHECK:  omp.critical.declare @help   hint(contended)
+omp.critical.declare @help hint(contended)
+
+// CHECK: llvm.func @omp_critical_() {
+func.func @omp_critical_() {
+// CHECK: %[[X_REF:.*]] = llvm.alloca %{{.*}} x i32 {bindc_name = "x", in_type = i32, operandSegmentSizes = array<i32: 0, 0>, uniq_name = "_QFomp_criticalEx"} : (i64) -> !llvm.ptr<i32>
+  %0 = fir.alloca i32 {bindc_name = "x", uniq_name = "_QFomp_criticalEx"}
+// CHECK: %[[Y_REF:.*]] = llvm.alloca %{{.*}} x i32 {bindc_name = "y", in_type = i32, operandSegmentSizes = array<i32: 0, 0>, uniq_name = "_QFomp_criticalEy"} : (i64) -> !llvm.ptr<i32>
+  %1 = fir.alloca i32 {bindc_name = "y", uniq_name = "_QFomp_criticalEy"}
+// CHECK: omp.critical(@help)
+  omp.critical(@help) {
+// CHECK: %[[X_VAL:.*]] = llvm.load %[[X_REF]] : !llvm.ptr<i32>
+    %2 = fir.load %0 : !fir.ref<i32>
+// CHECK: %[[Y_VAL:.*]] = llvm.load %[[Y_REF]] : !llvm.ptr<i32>
+    %3 = fir.load %1 : !fir.ref<i32>
+// CHECK: %[[RESULT:.*]] = llvm.add %[[X_VAL]], %[[Y_VAL]]  : i32
+    %4 = arith.addi %2, %3 : i32
+// CHECK: llvm.store %[[RESULT]], %[[X_REF]] : !llvm.ptr<i32>
+    fir.store %4 to %0 : !fir.ref<i32>
+// CHECK: omp.terminator
+    omp.terminator
+  }
+  return
+}

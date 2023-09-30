@@ -48,6 +48,7 @@ private:
   bool selectCopy(MachineInstr &MI, MachineRegisterInfo &MRI) const;
   bool selectConstant(MachineInstr &MI, MachineIRBuilder &MIB,
                       MachineRegisterInfo &MRI) const;
+  bool selectSExtInreg(MachineInstr &MI, MachineIRBuilder &MIB) const;
 
   bool earlySelectShift(unsigned Opc, MachineInstr &I, MachineIRBuilder &MIB,
                         const MachineRegisterInfo &MRI);
@@ -225,8 +226,7 @@ bool RISCVInstructionSelector::select(MachineInstr &MI) {
   switch (Opc) {
   case TargetOpcode::G_ANYEXT:
   case TargetOpcode::G_TRUNC:
-    MI.setDesc(TII.get(TargetOpcode::COPY));
-    return true;
+    return selectCopy(MI, MRI);
   case TargetOpcode::G_CONSTANT:
     return selectConstant(MI, MIB, MRI);
   case TargetOpcode::G_BRCOND: {
@@ -237,6 +237,8 @@ bool RISCVInstructionSelector::select(MachineInstr &MI) {
     MI.eraseFromParent();
     return constrainSelectedInstRegOperands(*Bcc, TII, TRI, RBI);
   }
+  case TargetOpcode::G_SEXT_INREG:
+    return selectSExtInreg(MI, MIB);
   default:
     return false;
   }
@@ -265,37 +267,25 @@ const TargetRegisterClass *RISCVInstructionSelector::getRegClassForTypeOnBank(
 bool RISCVInstructionSelector::selectCopy(MachineInstr &MI,
                                           MachineRegisterInfo &MRI) const {
   Register DstReg = MI.getOperand(0).getReg();
-  Register SrcReg = MI.getOperand(1).getReg();
 
-  if (Register::isPhysicalRegister(SrcReg) &&
-      Register::isPhysicalRegister(DstReg))
+  if (DstReg.isPhysical())
     return true;
 
-  if (!Register::isPhysicalRegister(SrcReg)) {
-    const TargetRegisterClass *SrcRC = getRegClassForTypeOnBank(
-        MRI.getType(SrcReg), *RBI.getRegBank(SrcReg, MRI, TRI));
-    assert(SrcRC &&
-           "Register class not available for LLT, register bank combination");
+  const TargetRegisterClass *DstRC = getRegClassForTypeOnBank(
+      MRI.getType(DstReg), *RBI.getRegBank(DstReg, MRI, TRI));
+  assert(DstRC &&
+         "Register class not available for LLT, register bank combination");
 
-    if (!RBI.constrainGenericRegister(SrcReg, *SrcRC, MRI)) {
-      LLVM_DEBUG(dbgs() << "Failed to constrain " << TII.getName(MI.getOpcode())
-                        << " operand\n");
-      return false;
-    }
-  }
-  if (!Register::isPhysicalRegister(DstReg)) {
-    const TargetRegisterClass *DstRC = getRegClassForTypeOnBank(
-        MRI.getType(DstReg), *RBI.getRegBank(DstReg, MRI, TRI));
-    assert(DstRC &&
-           "Register class not available for LLT, register bank combination");
-
-    if (!RBI.constrainGenericRegister(DstReg, *DstRC, MRI)) {
-      LLVM_DEBUG(dbgs() << "Failed to constrain " << TII.getName(MI.getOpcode())
-                        << " operand\n");
-      return false;
-    }
+  // No need to constrain SrcReg. It will get constrained when
+  // we hit another of its uses or its defs.
+  // Copies do not have constraints.
+  if (!RBI.constrainGenericRegister(DstReg, *DstRC, MRI)) {
+    LLVM_DEBUG(dbgs() << "Failed to constrain " << TII.getName(MI.getOpcode())
+                      << " operand\n");
+    return false;
   }
 
+  MI.setDesc(TII.get(RISCV::COPY));
   return true;
 }
 
@@ -358,6 +348,29 @@ bool RISCVInstructionSelector::selectConstant(MachineInstr &MI,
 
     SrcReg = DstReg;
   }
+
+  MI.eraseFromParent();
+  return true;
+}
+
+bool RISCVInstructionSelector::selectSExtInreg(MachineInstr &MI,
+                                               MachineIRBuilder &MIB) const {
+  if (!STI.isRV64())
+    return false;
+
+  const MachineOperand &Size = MI.getOperand(2);
+  // Only Size == 32 (i.e. shift by 32 bits) is acceptable at this point.
+  if (!Size.isImm() || Size.getImm() != 32)
+    return false;
+
+  const MachineOperand &Src = MI.getOperand(1);
+  const MachineOperand &Dst = MI.getOperand(0);
+  // addiw rd, rs, 0 (i.e. sext.w rd, rs)
+  MachineInstr *NewMI =
+      MIB.buildInstr(RISCV::ADDIW, {Dst.getReg()}, {Src.getReg()}).addImm(0U);
+
+  if (!constrainSelectedInstRegOperands(*NewMI, TII, TRI, RBI))
+    return false;
 
   MI.eraseFromParent();
   return true;

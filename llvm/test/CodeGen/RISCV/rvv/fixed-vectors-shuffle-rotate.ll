@@ -511,7 +511,8 @@ define <8 x i16> @shuffle_v8i16_as_i64_16(<8 x i16> %v) {
 ; ZVBB-ZVE32X-NEXT:    lui a0, %hi(.LCPI19_0)
 ; ZVBB-ZVE32X-NEXT:    addi a0, a0, %lo(.LCPI19_0)
 ; ZVBB-ZVE32X-NEXT:    vsetivli zero, 8, e16, m4, ta, ma
-; ZVBB-ZVE32X-NEXT:    vle16.v v16, (a0)
+; ZVBB-ZVE32X-NEXT:    vle8.v v12, (a0)
+; ZVBB-ZVE32X-NEXT:    vsext.vf2 v16, v12
 ; ZVBB-ZVE32X-NEXT:    vrgather.vv v12, v8, v16
 ; ZVBB-ZVE32X-NEXT:    vmv.v.v v8, v12
 ; ZVBB-ZVE32X-NEXT:    ret
@@ -554,7 +555,8 @@ define <8 x i16> @shuffle_v8i16_as_i64_32(<8 x i16> %v) {
 ; ZVBB-ZVE32X-NEXT:    lui a0, %hi(.LCPI20_0)
 ; ZVBB-ZVE32X-NEXT:    addi a0, a0, %lo(.LCPI20_0)
 ; ZVBB-ZVE32X-NEXT:    vsetivli zero, 8, e16, m4, ta, ma
-; ZVBB-ZVE32X-NEXT:    vle16.v v16, (a0)
+; ZVBB-ZVE32X-NEXT:    vle8.v v12, (a0)
+; ZVBB-ZVE32X-NEXT:    vsext.vf2 v16, v12
 ; ZVBB-ZVE32X-NEXT:    vrgather.vv v12, v8, v16
 ; ZVBB-ZVE32X-NEXT:    vmv.v.v v8, v12
 ; ZVBB-ZVE32X-NEXT:    ret
@@ -597,7 +599,8 @@ define <8 x i16> @shuffle_v8i16_as_i64_48(<8 x i16> %v) {
 ; ZVBB-ZVE32X-NEXT:    lui a0, %hi(.LCPI21_0)
 ; ZVBB-ZVE32X-NEXT:    addi a0, a0, %lo(.LCPI21_0)
 ; ZVBB-ZVE32X-NEXT:    vsetivli zero, 8, e16, m4, ta, ma
-; ZVBB-ZVE32X-NEXT:    vle16.v v16, (a0)
+; ZVBB-ZVE32X-NEXT:    vle8.v v12, (a0)
+; ZVBB-ZVE32X-NEXT:    vsext.vf2 v16, v12
 ; ZVBB-ZVE32X-NEXT:    vrgather.vv v12, v8, v16
 ; ZVBB-ZVE32X-NEXT:    vmv.v.v v8, v12
 ; ZVBB-ZVE32X-NEXT:    ret
@@ -639,8 +642,10 @@ define <8 x i32> @shuffle_v8i32_as_i64(<8 x i32> %v) {
 ; ZVBB-ZVE32X:       # %bb.0:
 ; ZVBB-ZVE32X-NEXT:    lui a0, %hi(.LCPI22_0)
 ; ZVBB-ZVE32X-NEXT:    addi a0, a0, %lo(.LCPI22_0)
-; ZVBB-ZVE32X-NEXT:    vsetivli zero, 8, e32, m8, ta, ma
-; ZVBB-ZVE32X-NEXT:    vle16.v v24, (a0)
+; ZVBB-ZVE32X-NEXT:    vsetivli zero, 8, e16, m4, ta, ma
+; ZVBB-ZVE32X-NEXT:    vle8.v v16, (a0)
+; ZVBB-ZVE32X-NEXT:    vsext.vf2 v24, v16
+; ZVBB-ZVE32X-NEXT:    vsetvli zero, zero, e32, m8, ta, ma
 ; ZVBB-ZVE32X-NEXT:    vrgatherei16.vv v16, v8, v24
 ; ZVBB-ZVE32X-NEXT:    vmv.v.v v8, v16
 ; ZVBB-ZVE32X-NEXT:    ret
@@ -707,7 +712,8 @@ define <8 x half> @shuffle_v8f16_as_i64_16(<8 x half> %v) {
 ; ZVBB-ZVE32X-NEXT:    lui a0, %hi(.LCPI24_0)
 ; ZVBB-ZVE32X-NEXT:    addi a0, a0, %lo(.LCPI24_0)
 ; ZVBB-ZVE32X-NEXT:    vsetivli zero, 8, e16, m4, ta, ma
-; ZVBB-ZVE32X-NEXT:    vle16.v v16, (a0)
+; ZVBB-ZVE32X-NEXT:    vle8.v v12, (a0)
+; ZVBB-ZVE32X-NEXT:    vsext.vf2 v16, v12
 ; ZVBB-ZVE32X-NEXT:    vrgather.vv v12, v8, v16
 ; ZVBB-ZVE32X-NEXT:    vmv.v.v v8, v12
 ; ZVBB-ZVE32X-NEXT:    ret
@@ -750,7 +756,8 @@ define <8 x half> @shuffle_v8f16_as_i64_32(<8 x half> %v) {
 ; ZVBB-ZVE32X-NEXT:    lui a0, %hi(.LCPI25_0)
 ; ZVBB-ZVE32X-NEXT:    addi a0, a0, %lo(.LCPI25_0)
 ; ZVBB-ZVE32X-NEXT:    vsetivli zero, 8, e16, m4, ta, ma
-; ZVBB-ZVE32X-NEXT:    vle16.v v16, (a0)
+; ZVBB-ZVE32X-NEXT:    vle8.v v12, (a0)
+; ZVBB-ZVE32X-NEXT:    vsext.vf2 v16, v12
 ; ZVBB-ZVE32X-NEXT:    vrgather.vv v12, v8, v16
 ; ZVBB-ZVE32X-NEXT:    vmv.v.v v8, v12
 ; ZVBB-ZVE32X-NEXT:    ret
@@ -793,7 +800,8 @@ define <8 x half> @shuffle_v8f16_as_i64_48(<8 x half> %v) {
 ; ZVBB-ZVE32X-NEXT:    lui a0, %hi(.LCPI26_0)
 ; ZVBB-ZVE32X-NEXT:    addi a0, a0, %lo(.LCPI26_0)
 ; ZVBB-ZVE32X-NEXT:    vsetivli zero, 8, e16, m4, ta, ma
-; ZVBB-ZVE32X-NEXT:    vle16.v v16, (a0)
+; ZVBB-ZVE32X-NEXT:    vle8.v v12, (a0)
+; ZVBB-ZVE32X-NEXT:    vsext.vf2 v16, v12
 ; ZVBB-ZVE32X-NEXT:    vrgather.vv v12, v8, v16
 ; ZVBB-ZVE32X-NEXT:    vmv.v.v v8, v12
 ; ZVBB-ZVE32X-NEXT:    ret
@@ -835,8 +843,10 @@ define <8 x float> @shuffle_v8f32_as_i64(<8 x float> %v) {
 ; ZVBB-ZVE32X:       # %bb.0:
 ; ZVBB-ZVE32X-NEXT:    lui a0, %hi(.LCPI27_0)
 ; ZVBB-ZVE32X-NEXT:    addi a0, a0, %lo(.LCPI27_0)
-; ZVBB-ZVE32X-NEXT:    vsetivli zero, 8, e32, m8, ta, ma
-; ZVBB-ZVE32X-NEXT:    vle16.v v24, (a0)
+; ZVBB-ZVE32X-NEXT:    vsetivli zero, 8, e16, m4, ta, ma
+; ZVBB-ZVE32X-NEXT:    vle8.v v16, (a0)
+; ZVBB-ZVE32X-NEXT:    vsext.vf2 v24, v16
+; ZVBB-ZVE32X-NEXT:    vsetvli zero, zero, e32, m8, ta, ma
 ; ZVBB-ZVE32X-NEXT:    vrgatherei16.vv v16, v8, v24
 ; ZVBB-ZVE32X-NEXT:    vmv.v.v v8, v16
 ; ZVBB-ZVE32X-NEXT:    ret

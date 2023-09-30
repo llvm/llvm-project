@@ -43,6 +43,8 @@ C/C++ Language Potentially Breaking Changes
 
 - The default extension name for PCH generation (``-c -xc-header`` and ``-c
   -xc++-header``) is now ``.pch`` instead of ``.gch``.
+- ``-include a.h`` probing ``a.h.gch`` is deprecated. Change the extension name
+  to ``.pch`` or use ``-include-pch a.h.gch``.
 
 C++ Specific Potentially Breaking Changes
 -----------------------------------------
@@ -204,6 +206,8 @@ Improvements to Clang's diagnostics
 - Clang no longer emits irrelevant notes about unsatisfied constraint expressions
   on the left-hand side of ``||`` when the right-hand side constraint is satisfied.
   (`#54678: <https://github.com/llvm/llvm-project/issues/54678>`_).
+- Clang now prints its 'note' diagnostic in cyan instead of black, to be more compatible
+  with terminals with dark background colors. This is also more consistent with GCC.
 
 Bug Fixes in This Version
 -------------------------
@@ -260,8 +264,16 @@ Bug Fixes in This Version
   (`#66047 <https://github.com/llvm/llvm-project/issues/66047>`_)
 - Fix parser crash when dealing with ill-formed objective C++ header code. Fixes
   (`#64836 <https://github.com/llvm/llvm-project/issues/64836>`_)
+- Fix crash in implicit conversions from initialize list to arrays of unknown
+  bound for C++20. Fixes
+  (`#62945 <https://github.com/llvm/llvm-project/issues/62945>`_)
 - Clang now allows an ``_Atomic`` qualified integer in a switch statement. Fixes
   (`#65557 <https://github.com/llvm/llvm-project/issues/65557>`_)
+- Fixes crash when trying to obtain the common sugared type of
+  `decltype(instantiation-dependent-expr)`.
+  Fixes (`#67603 <https://github.com/llvm/llvm-project/issues/67603>`_)
+- Fixes a crash caused by a multidimensional array being captured by a lambda
+  (`#67722 <https://github.com/llvm/llvm-project/issues/67722>`_).
 
 Bug Fixes to Compiler Builtins
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -350,6 +362,21 @@ Bug Fixes to C++ Support
 - Clang now disambiguates NTTP types when printing diagnostics where the
   NTTP types are compared with the 'diff' method.
   (`#66744 https://github.com/llvm/llvm-project/issues/66744`)
+
+- Fix crash caused by a spaceship operator returning a comparision category by
+  reference. Fixes:
+  (`#64162 <https://github.com/llvm/llvm-project/issues/64162>`_)
+
+- Clang no longer tries to capture non-odr-used variables that appear
+  in the enclosing expression of a lambda expression with a noexcept specifier.
+  (`#67492 <https://github.com/llvm/llvm-project/issues/67492>`_)
+
+- Fix crash when fold expression was used in the initialization of default
+  argument. Fixes:
+  (`#67395 <https://github.com/llvm/llvm-project/issues/67395>`_)
+
+- Fixed a bug causing destructors of constant-evaluated structured bindings
+  initialized by array elements to be called in the wrong evaluation context.
 
 Bug Fixes to AST Handling
 ^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -496,6 +523,9 @@ Static Analyzer
 - Added a new checker ``core.BitwiseShift`` which reports situations where
   bitwise shift operators produce undefined behavior (because some operand is
   negative or too large).
+
+- Fix false positive in mutation check when using pointer to member function.
+  (`#66204: <https://github.com/llvm/llvm-project/issues/66204>`_).
 
 - The ``alpha.security.taint.TaintPropagation`` checker no longer propagates
   taint on ``strlen`` and ``strnlen`` calls, unless these are marked

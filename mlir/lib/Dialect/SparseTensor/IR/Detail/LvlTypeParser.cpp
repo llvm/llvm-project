@@ -64,13 +64,11 @@ FailureOr<uint8_t> LvlTypeParser::parseLvlType(AsmParser &parser) const {
   if (base.compare("dense") == 0) {
     properties |= static_cast<uint8_t>(LevelFormat::Dense);
   } else if (base.compare("compressed") == 0) {
-    // TODO: Remove this condition once dimLvlType enum is refactored. Current
-    // enum treats High and TwoOutOfFour as formats instead of properties.
-    if (!(properties & static_cast<uint8_t>(LevelNondefaultProperty::High) ||
-          properties &
-              static_cast<uint8_t>(LevelNondefaultProperty::Block2_4))) {
-      properties |= static_cast<uint8_t>(LevelFormat::Compressed);
-    }
+    properties |= static_cast<uint8_t>(LevelFormat::Compressed);
+  } else if (base.compare("block2_4") == 0) {
+    properties |= static_cast<uint8_t>(LevelFormat::TwoOutOfFour);
+  } else if (base.compare("loose_compressed") == 0) {
+    properties |= static_cast<uint8_t>(LevelFormat::CompressedWithHi);
   } else if (base.compare("singleton") == 0) {
     properties |= static_cast<uint8_t>(LevelFormat::Singleton);
   } else {
@@ -93,10 +91,6 @@ ParseResult LvlTypeParser::parseProperty(AsmParser &parser,
     *properties |= static_cast<uint8_t>(LevelNondefaultProperty::Nonunique);
   } else if (strVal.compare("nonordered") == 0) {
     *properties |= static_cast<uint8_t>(LevelNondefaultProperty::Nonordered);
-  } else if (strVal.compare("high") == 0) {
-    *properties |= static_cast<uint8_t>(LevelNondefaultProperty::High);
-  } else if (strVal.compare("block2_4") == 0) {
-    *properties |= static_cast<uint8_t>(LevelNondefaultProperty::Block2_4);
   } else {
     parser.emitError(loc, "unknown level property: ") << strVal;
     return failure();

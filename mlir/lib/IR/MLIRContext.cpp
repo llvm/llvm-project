@@ -834,7 +834,7 @@ void OperationName::UnregisteredOpModel::populateInherentAttrs(
     Operation *op, NamedAttrList &attrs) {}
 LogicalResult OperationName::UnregisteredOpModel::verifyInherentAttrs(
     OperationName opName, NamedAttrList &attributes,
-    function_ref<InFlightDiagnostic()> getDiag) {
+    function_ref<InFlightDiagnostic()> emitError) {
   return success();
 }
 int OperationName::UnregisteredOpModel::getOpPropertyByteSize() {
@@ -852,7 +852,7 @@ void OperationName::UnregisteredOpModel::populateDefaultProperties(
     OperationName opName, OpaqueProperties properties) {}
 LogicalResult OperationName::UnregisteredOpModel::setPropertiesFromAttr(
     OperationName opName, OpaqueProperties properties, Attribute attr,
-    function_ref<InFlightDiagnostic &()> getDiag) {
+    function_ref<InFlightDiagnostic()> emitError) {
   *properties.as<Attribute *>() = attr;
   return success();
 }

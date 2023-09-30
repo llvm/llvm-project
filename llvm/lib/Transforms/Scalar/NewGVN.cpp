@@ -4030,9 +4030,18 @@ bool NewGVN::eliminateInstructions(Function &F) {
             // because stores are put in terms of the stored value, we skip
             // stored values here. If the stored value is really dead, it will
             // still be marked for deletion when we process it in its own class.
-            if (!EliminationStack.empty() && Def != EliminationStack.back() &&
-                isa<Instruction>(Def) && !FromStore)
-              markInstructionForDeletion(cast<Instruction>(Def));
+            auto *DefI = dyn_cast<Instruction>(Def);
+            if (!EliminationStack.empty() && DefI && !FromStore) {
+              Value *DominatingLeader = EliminationStack.back();
+              if (DominatingLeader != Def) {
+                // Even if the instruction is removed, we still need to update
+                // flags/metadata due to downstreams users of the leader.
+                if (!match(DefI, m_Intrinsic<Intrinsic::ssa_copy>()))
+                  patchReplacementInstruction(DefI, DominatingLeader);
+
+                markInstructionForDeletion(DefI);
+              }
+            }
             continue;
           }
           // At this point, we know it is a Use we are trying to possibly

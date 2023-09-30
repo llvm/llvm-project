@@ -7,19 +7,16 @@ define nonnull ptr @useafterloop(ptr nocapture noundef readonly %pSrcA, ptr noca
 ; CHECK-NEXT:    .save {r7, lr}
 ; CHECK-NEXT:    push {r7, lr}
 ; CHECK-NEXT:    mov.w lr, #64
-; CHECK-NEXT:    mov r12, r2
-; CHECK-NEXT:    movs r3, #0
+; CHECK-NEXT:    mov r3, r2
 ; CHECK-NEXT:  .LBB0_1: @ %while.body
 ; CHECK-NEXT:    @ =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    vldrw.u32 q0, [r0], #16
 ; CHECK-NEXT:    vldrw.u32 q1, [r1], #16
-; CHECK-NEXT:    add.w r2, r12, r3
-; CHECK-NEXT:    adds r3, #16
 ; CHECK-NEXT:    vadd.f32 q0, q1, q0
-; CHECK-NEXT:    vstrw.32 q0, [r2]
+; CHECK-NEXT:    vstrb.8 q0, [r3], #16
 ; CHECK-NEXT:    le lr, .LBB0_1
 ; CHECK-NEXT:  @ %bb.2: @ %while.end
-; CHECK-NEXT:    mov r0, r12
+; CHECK-NEXT:    mov r0, r2
 ; CHECK-NEXT:    pop {r7, pc}
 entry:
   br label %while.body
@@ -92,17 +89,15 @@ define nofpclass(nan inf) float @manyusesafterloop(ptr nocapture noundef readonl
 ; CHECK-NEXT:    .save {r4, lr}
 ; CHECK-NEXT:    push {r4, lr}
 ; CHECK-NEXT:    mov.w lr, #64
-; CHECK-NEXT:    movs r3, #0
+; CHECK-NEXT:    mov r12, r0
+; CHECK-NEXT:    mov r3, r1
+; CHECK-NEXT:    mov r4, r2
 ; CHECK-NEXT:  .LBB2_1: @ %while.body
 ; CHECK-NEXT:    @ =>This Inner Loop Header: Depth=1
-; CHECK-NEXT:    add.w r12, r0, r3
-; CHECK-NEXT:    adds r4, r1, r3
-; CHECK-NEXT:    vldrw.u32 q1, [r4]
-; CHECK-NEXT:    vldrw.u32 q0, [r12]
-; CHECK-NEXT:    adds r4, r2, r3
-; CHECK-NEXT:    adds r3, #16
+; CHECK-NEXT:    vldrw.u32 q0, [r12], #16
+; CHECK-NEXT:    vldrw.u32 q1, [r3], #16
 ; CHECK-NEXT:    vadd.f32 q0, q1, q0
-; CHECK-NEXT:    vstrw.32 q0, [r4]
+; CHECK-NEXT:    vstrb.8 q0, [r4], #16
 ; CHECK-NEXT:    le lr, .LBB2_1
 ; CHECK-NEXT:  @ %bb.2: @ %while.end
 ; CHECK-NEXT:    vldr s0, [r2]

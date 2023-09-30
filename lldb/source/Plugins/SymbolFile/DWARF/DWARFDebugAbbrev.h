@@ -29,18 +29,27 @@ typedef DWARFAbbreviationDeclarationCollMap::const_iterator
 
 class DWARFDebugAbbrev {
 public:
-  DWARFDebugAbbrev();
+  DWARFDebugAbbrev(const lldb_private::DWARFDataExtractor &data);
   const DWARFAbbreviationDeclarationSet *
   GetAbbreviationDeclarationSet(dw_offset_t cu_abbr_offset) const;
   /// Extract all abbreviations for a particular compile unit.  Returns
   /// llvm::ErrorSuccess() on success, and an appropriate llvm::Error object
   /// otherwise.
-  llvm::Error parse(const lldb_private::DWARFDataExtractor &data);
-  void GetUnsupportedForms(std::set<dw_form_t> &invalid_forms) const;
+  llvm::Error parse();
+
+  DWARFAbbreviationDeclarationCollMapConstIter begin() const {
+    assert(!m_data && "Must call parse before iterating over DWARFDebugAbbrev");
+    return m_abbrevCollMap.begin();
+  }
+
+  DWARFAbbreviationDeclarationCollMapConstIter end() const {
+    return m_abbrevCollMap.end();
+  }
 
 protected:
   DWARFAbbreviationDeclarationCollMap m_abbrevCollMap;
   mutable DWARFAbbreviationDeclarationCollMapConstIter m_prev_abbr_offset_pos;
+  mutable std::optional<llvm::DataExtractor> m_data;
 };
 
 #endif // LLDB_SOURCE_PLUGINS_SYMBOLFILE_DWARF_DWARFDEBUGABBREV_H

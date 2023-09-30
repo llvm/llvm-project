@@ -476,7 +476,7 @@ public:
   void populateInherentAttrs(Operation *op, NamedAttrList &attrs) final {}
   LogicalResult
   verifyInherentAttrs(OperationName opName, NamedAttrList &attributes,
-                      function_ref<InFlightDiagnostic()> getDiag) final {
+                      function_ref<InFlightDiagnostic()> emitError) final {
     return success();
   }
   int getOpPropertyByteSize() final { return 0; }
@@ -489,8 +489,8 @@ public:
   LogicalResult
   setPropertiesFromAttr(OperationName opName, OpaqueProperties properties,
                         Attribute attr,
-                        function_ref<InFlightDiagnostic &()> getDiag) final {
-    getDiag() << "extensible Dialects don't support properties";
+                        function_ref<InFlightDiagnostic()> emitError) final {
+    emitError() << "extensible Dialects don't support properties";
     return failure();
   }
   Attribute getPropertiesAsAttr(Operation *op) final { return {}; }

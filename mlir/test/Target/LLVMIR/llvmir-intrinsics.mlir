@@ -640,14 +640,14 @@ llvm.func @ushl_sat_test(%arg0: i32, %arg1: i32, %arg2: vector<8xi32>, %arg3: ve
 // CHECK-LABEL: @coro_id
 llvm.func @coro_id(%arg0: i32, %arg1: !llvm.ptr) {
   // CHECK: call token @llvm.coro.id
-  %null = llvm.mlir.null : !llvm.ptr
+  %null = llvm.mlir.zero : !llvm.ptr
   llvm.intr.coro.id %arg0, %arg1, %arg1, %null : (i32, !llvm.ptr, !llvm.ptr, !llvm.ptr) -> !llvm.token
   llvm.return
 }
 
 // CHECK-LABEL: @coro_begin
 llvm.func @coro_begin(%arg0: i32, %arg1: !llvm.ptr) {
-  %null = llvm.mlir.null : !llvm.ptr
+  %null = llvm.mlir.zero : !llvm.ptr
   %token = llvm.intr.coro.id %arg0, %arg1, %arg1, %null : (i32, !llvm.ptr, !llvm.ptr, !llvm.ptr) -> !llvm.token
   // CHECK: call ptr @llvm.coro.begin
   llvm.intr.coro.begin %token, %arg1 : (!llvm.token, !llvm.ptr) -> !llvm.ptr
@@ -681,7 +681,7 @@ llvm.func @coro_save(%arg0: !llvm.ptr) {
 
 // CHECK-LABEL: @coro_suspend
 llvm.func @coro_suspend(%arg0: i32, %arg1 : i1, %arg2 : !llvm.ptr) {
-  %null = llvm.mlir.null : !llvm.ptr
+  %null = llvm.mlir.zero : !llvm.ptr
   %token = llvm.intr.coro.id %arg0, %arg2, %arg2, %null : (i32, !llvm.ptr, !llvm.ptr, !llvm.ptr) -> !llvm.token
   // CHECK: call i8 @llvm.coro.suspend
   %0 = llvm.intr.coro.suspend %token, %arg1 : i8
@@ -698,7 +698,7 @@ llvm.func @coro_end(%arg0: !llvm.ptr, %arg1 : i1) {
 
 // CHECK-LABEL: @coro_free
 llvm.func @coro_free(%arg0: i32, %arg1 : !llvm.ptr) {
-  %null = llvm.mlir.null : !llvm.ptr
+  %null = llvm.mlir.zero : !llvm.ptr
   %token = llvm.intr.coro.id %arg0, %arg1, %arg1, %null : (i32, !llvm.ptr, !llvm.ptr, !llvm.ptr) -> !llvm.token
   // CHECK: call ptr @llvm.coro.free
   %0 = llvm.intr.coro.free %token, %arg1 : (!llvm.token, !llvm.ptr) -> !llvm.ptr
