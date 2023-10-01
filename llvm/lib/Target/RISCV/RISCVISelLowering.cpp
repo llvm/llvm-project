@@ -621,7 +621,10 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
   }
 
   if (Subtarget.hasStdExtA()) {
-    setMaxAtomicSizeInBitsSupported(Subtarget.getXLen());
+    if (Subtarget.hasStdExtZacas())
+      setMaxAtomicSizeInBitsSupported(Subtarget.getXLen() * 2);
+    else
+      setMaxAtomicSizeInBitsSupported(Subtarget.getXLen());
     setMinCmpXchgSizeInBits(32);
   } else if (Subtarget.hasForcedAtomics()) {
     setMaxAtomicSizeInBitsSupported(Subtarget.getXLen());
@@ -1338,6 +1341,12 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
          ISD::ATOMIC_LOAD_MAX, ISD::ATOMIC_LOAD_UMIN, ISD::ATOMIC_LOAD_UMAX},
         XLenVT, LibCall);
   }
+
+  // Set atomic_cmp_swap operations to expand to AMOCAS.D (RV32) and AMOCAS.Q
+  // (RV64).
+  if (Subtarget.hasStdExtZacas())
+    setOperationAction(ISD::ATOMIC_CMP_SWAP,
+                       Subtarget.is64Bit() ? MVT::i128 : MVT::i64, Custom);
 
   if (Subtarget.hasVendorXTHeadMemIdx()) {
     for (unsigned im = (unsigned)ISD::PRE_INC; im != (unsigned)ISD::POST_DEC;
@@ -11075,6 +11084,57 @@ static SDValue customLegalizeToWOpWithSExt(SDNode *N, SelectionDAG &DAG) {
   return DAG.getNode(ISD::TRUNCATE, DL, MVT::i32, NewRes);
 }
 
+// Create an even/odd pair of X registers holding integer value V.
+static SDValue createGPRPairNode(SelectionDAG &DAG, SDValue V, MVT VT,
+                                 MVT SubRegVT) {
+  SDLoc DL(V.getNode());
+  auto [VLo, VHi] = DAG.SplitScalar(V, DL, SubRegVT, SubRegVT);
+  SDValue RegClass =
+      DAG.getTargetConstant(RISCV::GPRPairRegClassID, DL, MVT::i32);
+  SDValue SubReg0 = DAG.getTargetConstant(RISCV::sub_32, DL, MVT::i32);
+  SDValue SubReg1 = DAG.getTargetConstant(RISCV::sub_32_hi, DL, MVT::i32);
+  const SDValue Ops[] = {RegClass, VLo, SubReg0, VHi, SubReg1};
+  return SDValue(
+      DAG.getMachineNode(TargetOpcode::REG_SEQUENCE, DL, MVT::Untyped, Ops), 0);
+}
+
+static void ReplaceCMP_SWAP_2XLenResults(SDNode *N,
+                                         SmallVectorImpl<SDValue> &Results,
+                                         SelectionDAG &DAG,
+                                         const RISCVSubtarget &Subtarget) {
+  MVT VT = N->getSimpleValueType(0);
+  assert(N->getValueType(0) == (Subtarget.is64Bit() ? MVT::i128 : MVT::i64) &&
+         "AtomicCmpSwap on types less than 2*XLen should be legal");
+  assert(Subtarget.hasStdExtZacas());
+  MVT XLenVT = Subtarget.getXLenVT();
+
+  SDLoc DL(N);
+  MachineMemOperand *MemOp = cast<MemSDNode>(N)->getMemOperand();
+  AtomicOrdering Ordering = MemOp->getMergedOrdering();
+  SDValue Ops[] = {
+      N->getOperand(1),                                     // Ptr
+      createGPRPairNode(DAG, N->getOperand(2), VT, XLenVT), // Compare value
+      createGPRPairNode(DAG, N->getOperand(3), VT, XLenVT), // Store value
+      DAG.getTargetConstant(static_cast<unsigned>(Ordering), DL,
+                            MVT::i32), // Ordering
+      N->getOperand(0),                // Chain in
+  };
+
+  unsigned Opcode =
+      (VT == MVT::i64 ? RISCV::PseudoAMOCAS_D_RV32 : RISCV::PseudoAMOCAS_Q);
+  MachineSDNode *CmpSwap = DAG.getMachineNode(
+      Opcode, DL, DAG.getVTList(MVT::Untyped, MVT::Other), Ops);
+  DAG.setNodeMemRefs(CmpSwap, {MemOp});
+
+  unsigned SubReg1 = RISCV::sub_32, SubReg2 = RISCV::sub_32_hi;
+  SDValue Lo =
+      DAG.getTargetExtractSubreg(SubReg1, DL, XLenVT, SDValue(CmpSwap, 0));
+  SDValue Hi =
+      DAG.getTargetExtractSubreg(SubReg2, DL, XLenVT, SDValue(CmpSwap, 0));
+  Results.push_back(DAG.getNode(ISD::BUILD_PAIR, DL, VT, Lo, Hi));
+  Results.push_back(SDValue(CmpSwap, 1));
+}
+
 void RISCVTargetLowering::ReplaceNodeResults(SDNode *N,
                                              SmallVectorImpl<SDValue> &Results,
                                              SelectionDAG &DAG) const {
@@ -11082,6 +11142,9 @@ void RISCVTargetLowering::ReplaceNodeResults(SDNode *N,
   switch (N->getOpcode()) {
   default:
     llvm_unreachable("Don't know how to custom type legalize this operation!");
+  case ISD::ATOMIC_CMP_SWAP:
+    ReplaceCMP_SWAP_2XLenResults(N, Results, DAG, Subtarget);
+    break;
   case ISD::STRICT_FP_TO_SINT:
   case ISD::STRICT_FP_TO_UINT:
   case ISD::FP_TO_SINT:

@@ -59,6 +59,9 @@ private:
   bool expandAtomicCmpXchg(MachineBasicBlock &MBB,
                            MachineBasicBlock::iterator MBBI, bool IsMasked,
                            int Width, MachineBasicBlock::iterator &NextMBBI);
+  bool expandAMOCAS(MachineBasicBlock &MBB, MachineBasicBlock::iterator MBBI,
+                    bool IsPaired, int Width,
+                    MachineBasicBlock::iterator &NextMBBI);
 #ifndef NDEBUG
   unsigned getInstSizeInBytes(const MachineFunction &MF) const {
     unsigned Size = 0;
@@ -145,6 +148,14 @@ bool RISCVExpandAtomicPseudo::expandMI(MachineBasicBlock &MBB,
     return expandAtomicCmpXchg(MBB, MBBI, false, 64, NextMBBI);
   case RISCV::PseudoMaskedCmpXchg32:
     return expandAtomicCmpXchg(MBB, MBBI, true, 32, NextMBBI);
+  case RISCV::PseudoAMOCAS_W:
+    return expandAMOCAS(MBB, MBBI, false, 32, NextMBBI);
+  case RISCV::PseudoAMOCAS_D_RV64:
+    return expandAMOCAS(MBB, MBBI, false, 64, NextMBBI);
+  case RISCV::PseudoAMOCAS_D_RV32:
+    return expandAMOCAS(MBB, MBBI, true, 64, NextMBBI);
+  case RISCV::PseudoAMOCAS_Q:
+    return expandAMOCAS(MBB, MBBI, true, 128, NextMBBI);
   }
 
   return false;
@@ -254,6 +265,74 @@ static unsigned getSCForRMW(AtomicOrdering Ordering, int Width,
   if (Width == 64)
     return getSCForRMW64(Ordering, Subtarget);
   llvm_unreachable("Unexpected SC width\n");
+}
+
+static unsigned getAMOCASForRMW32(AtomicOrdering Ordering,
+                                  const RISCVSubtarget *Subtarget) {
+  if (Subtarget->hasStdExtZtso())
+    return RISCV::AMOCAS_W;
+  switch (Ordering) {
+  default:
+    llvm_unreachable("Unexpected AtomicOrdering");
+  case AtomicOrdering::Monotonic:
+    return RISCV::AMOCAS_W;
+  case AtomicOrdering::Acquire:
+    return RISCV::AMOCAS_W_AQ;
+  case AtomicOrdering::Release:
+    return RISCV::AMOCAS_W_RL;
+  case AtomicOrdering::AcquireRelease:
+  case AtomicOrdering::SequentiallyConsistent:
+    return RISCV::AMOCAS_W_AQ_RL;
+  }
+}
+
+static unsigned getAMOCASForRMW64(AtomicOrdering Ordering,
+                                  const RISCVSubtarget *Subtarget) {
+  if (Subtarget->hasStdExtZtso())
+    return RISCV::AMOCAS_D;
+  switch (Ordering) {
+  default:
+    llvm_unreachable("Unexpected AtomicOrdering");
+  case AtomicOrdering::Monotonic:
+    return RISCV::AMOCAS_D;
+  case AtomicOrdering::Acquire:
+    return RISCV::AMOCAS_D_AQ;
+  case AtomicOrdering::Release:
+    return RISCV::AMOCAS_D_RL;
+  case AtomicOrdering::AcquireRelease:
+  case AtomicOrdering::SequentiallyConsistent:
+    return RISCV::AMOCAS_D_AQ_RL;
+  }
+}
+
+static unsigned getAMOCASForRMW128(AtomicOrdering Ordering,
+                                   const RISCVSubtarget *Subtarget) {
+  if (Subtarget->hasStdExtZtso())
+    return RISCV::AMOCAS_Q;
+  switch (Ordering) {
+  default:
+    llvm_unreachable("Unexpected AtomicOrdering");
+  case AtomicOrdering::Monotonic:
+    return RISCV::AMOCAS_Q;
+  case AtomicOrdering::Acquire:
+    return RISCV::AMOCAS_Q_AQ;
+  case AtomicOrdering::Release:
+    return RISCV::AMOCAS_Q_RL;
+  case AtomicOrdering::AcquireRelease:
+  case AtomicOrdering::SequentiallyConsistent:
+    return RISCV::AMOCAS_Q_AQ_RL;
+  }
+}
+
+static unsigned getAMOCASForRMW(AtomicOrdering Ordering, int Width,
+                                const RISCVSubtarget *Subtarget) {
+  if (Width == 32)
+    return getAMOCASForRMW32(Ordering, Subtarget);
+  if (Width == 64)
+    return getAMOCASForRMW64(Ordering, Subtarget);
+  if (Width == 128)
+    return getAMOCASForRMW128(Ordering, Subtarget);
+  llvm_unreachable("Unexpected AMOCAS width\n");
 }
 
 static void doAtomicBinOpExpansion(const RISCVInstrInfo *TII, MachineInstr &MI,
@@ -725,6 +804,38 @@ bool RISCVExpandAtomicPseudo::expandAtomicCmpXchg(
   computeAndAddLiveIns(LiveRegs, *LoopTailMBB);
   computeAndAddLiveIns(LiveRegs, *DoneMBB);
 
+  return true;
+}
+
+static Register getGPRPairEvenReg(Register PairedReg) {
+  assert(PairedReg >= RISCV::X0_PD && PairedReg <= RISCV::X30_PD &&
+         "Invalid GPR pair");
+  return (PairedReg - RISCV::X0_PD) * 2 + RISCV::X0;
+}
+
+bool RISCVExpandAtomicPseudo::expandAMOCAS(
+    MachineBasicBlock &MBB, MachineBasicBlock::iterator MBBI, bool IsPaired,
+    int Width, MachineBasicBlock::iterator &NextMBBI) {
+  MachineInstr &MI = *MBBI;
+  DebugLoc DL = MI.getDebugLoc();
+
+  Register DestReg = MI.getOperand(0).getReg();
+  if (IsPaired)
+    DestReg = getGPRPairEvenReg(DestReg);
+  Register AddrReg = MI.getOperand(1).getReg();
+  Register NewValReg = MI.getOperand(3).getReg();
+  if (IsPaired)
+    NewValReg = getGPRPairEvenReg(NewValReg);
+  AtomicOrdering Ordering =
+      static_cast<AtomicOrdering>(MI.getOperand(4).getImm());
+
+  MachineInstr *NewMI =
+      BuildMI(MBB, MBBI, DL, TII->get(getAMOCASForRMW(Ordering, Width, STI)))
+          .addReg(DestReg, RegState::Define)
+          .addReg(AddrReg)
+          .addReg(NewValReg);
+
+  MI.eraseFromParent();
   return true;
 }
 

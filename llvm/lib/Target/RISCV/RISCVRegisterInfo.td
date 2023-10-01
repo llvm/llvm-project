@@ -571,6 +571,16 @@ def GPRPF64 : RegisterClass<"RISCV", [f64], 64, (add
     X0_PD, X2_PD, X4_PD
 )>;
 
+let RegInfos = RegInfoByHwMode<[RV32, RV64], [RegInfo<32, 32, 32>, RegInfo<64, 64, 64>]> in
+def GPRPair : RegisterClass<"RISCV", [untyped], 64, (add
+    X10_PD, X12_PD, X14_PD, X16_PD,
+    X6_PD,
+    X28_PD, X30_PD,
+    X8_PD,
+    X18_PD, X20_PD, X22_PD, X24_PD, X26_PD,
+    X0_PD, X2_PD, X4_PD
+)>;
+
 // The register class is added for inline assembly for vector mask types.
 def VM : VReg<VMaskVTs,
            (add (sequence "V%u", 8, 31),
