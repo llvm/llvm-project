@@ -241,6 +241,17 @@ static int libomp_target_memcpy_async_helper(kmp_int32 Gtid, kmp_task_t *Task) {
   return Rc;
 }
 
+EXTERN void * omp_target_memset(void * Ptr, int C, size_t N, int DeviceNum) {
+  return nullptr;
+}
+
+EXTERN void * omp_target_memset_async(void * Ptr, int C, size_t N, int DeviceNum,
+                                      int DepObjCount,
+                                      omp_depend_t * DepObjList) {
+  return nullptr;
+}
+
+
 // Allocate and launch helper task
 static int libomp_helper_task_creation(TargetMemcpyArgsTy *Args,
                                        int DepObjCount,
