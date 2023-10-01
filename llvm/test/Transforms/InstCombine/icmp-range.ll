@@ -1403,6 +1403,29 @@ define <2 x i1> @icmp_ne_sext_eq_otherwise_vec(<2 x i32> %a) {
   ret <2 x i1> %cmp1
 }
 
+define i1 @icmp_ne_sext_ne_zero_i128(i128 %a) {
+; CHECK-LABEL: @icmp_ne_sext_ne_zero_i128(
+; CHECK-NEXT:    [[TMP1:%.*]] = add i128 [[A:%.*]], -1
+; CHECK-NEXT:    [[CMP1:%.*]] = icmp ult i128 [[TMP1]], -2
+; CHECK-NEXT:    ret i1 [[CMP1]]
+;
+  %cmp = icmp ne i128 %a, 0
+  %conv = sext i1 %cmp to i128
+  %cmp1 = icmp ne i128 %conv, %a
+  ret i1 %cmp1
+}
+
+define i1 @icmp_ne_sext_ne_otherwise_i128(i128 %a) {
+; CHECK-LABEL: @icmp_ne_sext_ne_otherwise_i128(
+; CHECK-NEXT:    [[CMP1:%.*]] = icmp ne i128 [[A:%.*]], -1
+; CHECK-NEXT:    ret i1 [[CMP1]]
+;
+  %cmp = icmp ne i128 %a, 2
+  %conv = sext i1 %cmp to i128
+  %cmp1 = icmp ne i128 %conv, %a
+  ret i1 %cmp1
+}
+
 !0 = !{i32 1, i32 6}
 !1 = !{i32 0, i32 6}
 !2 = !{i8 0, i8 1}

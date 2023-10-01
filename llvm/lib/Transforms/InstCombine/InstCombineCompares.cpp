@@ -6387,14 +6387,15 @@ Instruction *InstCombinerImpl::foldICmpUsingBoolRange(ICmpInst &I) {
   if (match(&I, m_c_ICmp(Pred1, m_Value(X),
                          m_CombineAnd(m_Instruction(ExtI),
                                       m_ZExtOrSExt(m_ICmp(Pred2, m_Deferred(X),
-                                                          m_APInt(C))))))) {
+                                                          m_APInt(C)))))) &&
+      ICmpInst::isEquality(Pred1) && ICmpInst::isEquality(Pred2)) {
     bool IsSExt = ExtI->getOpcode() == Instruction::SExt;
     bool HasOneUse = ExtI->hasOneUse() && ExtI->getOperand(0)->hasOneUse();
     auto CreateRangeCheck = [&] {
       Value *CmpV1 =
           Builder.CreateICmp(Pred1, X, Constant::getNullValue(X->getType()));
       Value *CmpV2 = Builder.CreateICmp(
-          Pred1, X, ConstantInt::get(X->getType(), IsSExt ? -1 : 1));
+          Pred1, X, ConstantInt::getSigned(X->getType(), IsSExt ? -1 : 1));
       return BinaryOperator::Create(
           Pred1 == ICmpInst::ICMP_EQ ? Instruction::Or : Instruction::And,
           CmpV1, CmpV2);
@@ -6440,8 +6441,9 @@ Instruction *InstCombinerImpl::foldICmpUsingBoolRange(ICmpInst &I) {
       //   icmp ne X, (sext (icmp ne X, C)) --> icmp ne X, -1
       return ICmpInst::Create(
           Instruction::ICmp, Pred1, X,
-          ConstantInt::get(X->getType(),
-                           Pred2 == ICmpInst::ICMP_NE ? (IsSExt ? -1 : 1) : 0));
+          ConstantInt::getSigned(X->getType(), Pred2 == ICmpInst::ICMP_NE
+                                                   ? (IsSExt ? -1 : 1)
+                                                   : 0));
     }
   }
 
