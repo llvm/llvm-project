@@ -1428,10 +1428,8 @@ public:
     resultMemRef.setOffset(rewriter, loc, viewMemRef.offset(rewriter, loc));
 
     // Iterate over the dimensions and apply size/stride permutation:
-    ArrayRef<int64_t> permutation = transposeOp.getPermutation();
-    for (int64_t resultDimPos = 0, rank = permutation.size();
-         resultDimPos < rank; ++resultDimPos) {
-      int originalDimPos = permutation[resultDimPos];
+    for (auto [resultDimPos, originalDimPos] :
+         llvm::enumerate(transposeOp.getPermutation())) {
       resultMemRef.setSize(rewriter, loc, resultDimPos,
                            viewMemRef.size(rewriter, loc, originalDimPos));
       resultMemRef.setStride(rewriter, loc, resultDimPos,

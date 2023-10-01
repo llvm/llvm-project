@@ -3188,8 +3188,7 @@ static MemRefType inferTransposeResultType(MemRefType memRefType,
   // Compute permuted sizes and strides.
   SmallVector<int64_t> sizes(rank, 0);
   SmallVector<int64_t> strides(rank, 1);
-  for (int64_t resultDimPos = 0; resultDimPos < rank; ++resultDimPos) {
-    int64_t originalDimPos = permutation[resultDimPos];
+  for (auto [resultDimPos, originalDimPos] : llvm::enumerate(permutation)) {
     sizes[resultDimPos] = originalSizes[originalDimPos];
     strides[resultDimPos] = originalStrides[originalDimPos];
   }
@@ -3229,27 +3228,25 @@ void TransposeOp::build(OpBuilder &b, OperationState &result, Value in,
 static bool isPermutationArray(ArrayRef<int64_t> arr) {
   for (int64_t i = 0, e = arr.size(); i < e; ++i) {
     bool found = false;
-    for (int64_t j = 0; j < e; ++j) {
-      if (arr[j] == i) {
+    for (auto dim : arr) {
+      if (dim == i) {
         found = true;
         break;
       }
     }
-
     if (!found)
       return false;
   }
-
   return true;
 }
 
 LogicalResult TransposeOp::verify() {
   ArrayRef<int64_t> permutation = getPermutation();
-
   if (!isPermutationArray(permutation))
-    return emitOpError("expected a permutation map");
+    return emitOpError("expected a permutation array");
   if (permutation.size() != getIn().getType().getRank())
-    return emitOpError("expected a permutation map of same rank as the input");
+    return emitOpError(
+        "expected a permutation array of same size as the input rank");
 
   auto srcType = llvm::cast<MemRefType>(getIn().getType());
   auto dstType = llvm::cast<MemRefType>(getType());
@@ -3268,11 +3265,9 @@ OpFoldResult TransposeOp::fold(FoldAdaptor) {
 }
 
 bool TransposeOp::isIdentity() {
-  ArrayRef<int64_t> permutationArray = getPermutation();
-  for (int64_t i = 0, rank = permutationArray.size(); i < rank; ++i)
-    if (permutationArray[i] != i)
+  for (auto [index, dim] : llvm::enumerate(getPermutation()))
+    if (index != dim)
       return false;
-
   return true;
 }
 

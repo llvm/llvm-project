@@ -2139,7 +2139,7 @@ def MemRef_TransposeOp : MemRef_Op<"transpose", [
     Example:
 
     ```mlir
-    %1 = memref.transpose %0 [1, 0] : memref<?x?xf32> to memref<?x?xf32, affine_map<(d0, d1)[s0] -> (d1 * s0 + d0)>>
+    %1 = memref.transpose %0 [1, 2, 0] : memref<7x8x9xf32> to memref<8x9x7xf32>
     ```
   }];
 
