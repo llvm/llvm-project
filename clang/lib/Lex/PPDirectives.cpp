@@ -1915,7 +1915,7 @@ bool Preprocessor::checkModuleIsAvailable(const LangOptions &LangOpts,
     // FIXME: Track the location at which the requirement was specified, and
     // use it here.
     Diags.Report(M->DefinitionLoc, diag::err_module_unavailable)
-        << M->getFullModuleName() << Requirement.second << Requirement.first;
+        << M->getFullModuleName() << Requirement.RequiredState << Requirement.FeatureName;
   }
   return true;
 }
