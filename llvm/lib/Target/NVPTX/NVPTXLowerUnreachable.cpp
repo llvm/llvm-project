@@ -90,13 +90,13 @@ class NVPTXLowerUnreachable : public FunctionPass {
 
 public:
   static char ID; // Pass identification, replacement for typeid
-  NVPTXLowerUnreachable(bool TrapUnreachable, bool NoTrapAfterNoreturn)
+  NVPTXLowerUnreachable(bool TrapUnreachable, bool TrapAfterNoreturn)
       : FunctionPass(ID), TrapUnreachable(TrapUnreachable),
-        NoTrapAfterNoreturn(NoTrapAfterNoreturn) {}
+        TrapAfterNoreturn(TrapAfterNoreturn) {}
 
 private:
   bool TrapUnreachable;
-  bool NoTrapAfterNoreturn;
+  bool TrapAfterNoreturn;
 };
 } // namespace
 
@@ -117,7 +117,7 @@ StringRef NVPTXLowerUnreachable::getPassName() const {
 bool NVPTXLowerUnreachable::isLoweredToTrap(const UnreachableInst &I) const {
   if (!TrapUnreachable)
     return false;
-  if (!NoTrapAfterNoreturn)
+  if (NoTrapAfterNoreturn)
     return true;
   const CallInst *Call = dyn_cast_or_null<CallInst>(I.getPrevNode());
   return Call && Call->doesNotReturn();
@@ -130,7 +130,7 @@ bool NVPTXLowerUnreachable::runOnFunction(Function &F) {
   if (skipFunction(F))
     return false;
   // Early out iff isLoweredToTrap() always returns true.
-  if (TrapUnreachable && !NoTrapAfterNoreturn)
+  if (TrapUnreachable && TrapAfterNoreturn)
     return false;
 
   LLVMContext &C = F.getContext();
@@ -151,6 +151,6 @@ bool NVPTXLowerUnreachable::runOnFunction(Function &F) {
 }
 
 FunctionPass *llvm::createNVPTXLowerUnreachablePass(bool TrapUnreachable,
-                                                    bool NoTrapAfterNoreturn) {
-  return new NVPTXLowerUnreachable(TrapUnreachable, NoTrapAfterNoreturn);
+                                                    bool TrapAfterNoreturn) {
+  return new NVPTXLowerUnreachable(TrapUnreachable, TrapAfterNoreturn);
 }

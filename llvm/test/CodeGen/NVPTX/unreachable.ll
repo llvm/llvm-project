@@ -6,6 +6,10 @@
 ; RUN:     | FileCheck %s --check-prefix=CHECK --check-prefix=CHECK-TRAP
 ; RUN: llc < %s -march=nvptx64 -mcpu=sm_20 -verify-machineinstrs -trap-unreachable \
 ; RUN:     | FileCheck %s --check-prefix=CHECK --check-prefix=CHECK-TRAP
+; RUN: llc < %s -march=nvptx -mcpu=sm_20 -verify-machineinstrs -trap-unreachable -trap-after-noreturn=false \
+; RUN:     | FileCheck %s --check-prefix=CHECK --check-prefix=CHECK-NOTRAP
+; RUN: llc < %s -march=nvptx64 -mcpu=sm_20 -verify-machineinstrs -trap-unreachable -trap-after-noreturn=false \
+; RUN:     | FileCheck %s --check-prefix=CHECK --check-prefix=CHECK-NOTRAP
 ; RUN: %if ptxas && !ptxas-12.0 %{ llc < %s -march=nvptx -mcpu=sm_20 -verify-machineinstrs | %ptxas-verify %}
 ; RUN: %if ptxas %{ llc < %s -march=nvptx64 -mcpu=sm_20 -verify-machineinstrs | %ptxas-verify %}
 

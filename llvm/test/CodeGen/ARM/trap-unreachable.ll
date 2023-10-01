@@ -1,5 +1,5 @@
 ; RUN: llc -mtriple=thumbv7 -trap-unreachable < %s | FileCheck %s --check-prefixes CHECK,TRAP_UNREACHABLE
-; RUN: llc -mtriple=thumbv7 -trap-unreachable -no-trap-after-noreturn < %s | FileCheck %s --check-prefixes CHECK,NTANR
+; RUN: llc -mtriple=thumbv7 -trap-unreachable -trap-after-noreturn=false < %s | FileCheck %s --check-prefixes CHECK,NTANR
 
 define void @test_trap_unreachable() #0 {
 ; CHECK-LABEL: test_trap_unreachable:

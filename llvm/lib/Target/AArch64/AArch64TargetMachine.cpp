@@ -338,7 +338,7 @@ AArch64TargetMachine::AArch64TargetMachine(const Target &T, const Triple &TT,
 
   if (TT.isOSBinFormatMachO()) {
     this->Options.TrapUnreachable = true;
-    this->Options.NoTrapAfterNoreturn = true;
+    this->Options.TrapAfterNoreturn = false;
   }
 
   if (getMCAsmInfo()->usesWindowsCFI()) {

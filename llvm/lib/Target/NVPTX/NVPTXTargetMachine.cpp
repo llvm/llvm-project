@@ -405,7 +405,7 @@ void NVPTXPassConfig::addIRPasses() {
 
   const auto &Options = getNVPTXTargetMachine().Options;
   addPass(createNVPTXLowerUnreachablePass(Options.TrapUnreachable,
-                                          Options.NoTrapAfterNoreturn));
+                                          Options.TrapAfterNoreturn));
 }
 
 bool NVPTXPassConfig::addInstSelector() {

@@ -134,7 +134,7 @@ namespace llvm {
           FunctionSections(false), DataSections(false),
           IgnoreXCOFFVisibility(false), XCOFFTracebackTable(true),
           UniqueSectionNames(true), UniqueBasicBlockSectionNames(false),
-          TrapUnreachable(false), NoTrapAfterNoreturn(false), TLSSize(0),
+          TrapUnreachable(false), TrapAfterNoreturn(true), TLSSize(0),
           EmulatedTLS(false), EnableIPRA(false), EmitStackSizeSection(false),
           EnableMachineOutliner(false), EnableMachineFunctionSplitter(false),
           SupportsDefaultOutlining(false), EmitAddrsig(false),
@@ -276,7 +276,7 @@ namespace llvm {
 
     /// Do not emit a trap instruction for 'unreachable' IR instructions behind
     /// noreturn calls, even if TrapUnreachable is true.
-    unsigned NoTrapAfterNoreturn : 1;
+    unsigned TrapAfterNoreturn : 1;
 
     /// Bit size of immediate TLS offsets (0 == use the default).
     unsigned TLSSize : 8;

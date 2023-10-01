@@ -252,7 +252,7 @@ ARMBaseTargetMachine::ARMBaseTargetMachine(const Target &T, const Triple &TT,
 
   if (TT.isOSBinFormatMachO()) {
     this->Options.TrapUnreachable = true;
-    this->Options.NoTrapAfterNoreturn = true;
+    this->Options.TrapAfterNoreturn = false;
   }
 
   // ARM supports the debug entry values.
