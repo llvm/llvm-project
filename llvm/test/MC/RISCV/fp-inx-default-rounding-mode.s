@@ -92,15 +92,23 @@ fcvt.w.d a0, a0
 # CHECK-ALIAS: fcvt.wu.d a0, a0{{$}}
 fcvt.wu.d a0, a0
 
-# FIXME: fcvt.d.w should have a default rounding mode.
+# For historical reasons defaults to frm==0b000 (rne) but doesn't print this
+# default rounding mode.
 # CHECK-INST: fcvt.d.w a0, a0{{$}}
 # CHECK-ALIAS: fcvt.d.w a0, a0{{$}}
 fcvt.d.w a0, a0
+# CHECK-INST: fcvt.d.w a0, a0{{$}}
+# CHECK-ALIAS: fcvt.d.w a0, a0{{$}}
+fcvt.d.w a0, a0, rne
 
-# FIXME: fcvt.d.wu should have a default rounding mode.
+# For historical reasons defaults to frm==0b000 (rne) but doesn't print this
+# default rounding mode.
 # CHECK-INST: fcvt.d.wu a0, a0{{$}}
 # CHECK-ALIAS: fcvt.d.wu a0, a0{{$}}
 fcvt.d.wu a0, a0
+# CHECK-INST: fcvt.d.wu a0, a0{{$}}
+# CHECK-ALIAS: fcvt.d.wu a0, a0{{$}}
+fcvt.d.wu a0, a0, rne
 
 # CHECK-INST: fcvt.l.d a0, a0, dyn{{$}}
 # CHECK-ALIAS: fcvt.l.d a0, a0{{$}}
@@ -128,19 +136,27 @@ fmadd.h a0, a1, a2, a3
 # CHECK-ALIAS: fadd.h a0, a1, a2{{$}}
 fadd.h a0, a1, a2
 
-# FIXME: fcvt.s.h should have a default rounding mode.
+# For historical reasons defaults to frm==0b000 (rne) but doesn't print this
+# default rounding mode.
 # CHECK-INST: fcvt.s.h a0, a0{{$}}
 # CHECK-ALIAS: fcvt.s.h a0, a0{{$}}
 fcvt.s.h a0, a0
+# CHECK-INST: fcvt.s.h a0, a0{{$}}
+# CHECK-ALIAS: fcvt.s.h a0, a0{{$}}
+fcvt.s.h a0, a0, rne
 
 # CHECK-INST: fcvt.h.s a0, a0, dyn{{$}}
 # CHECK-ALIAS: fcvt.h.s a0, a0{{$}}
 fcvt.h.s a0, a0
 
-# FIXME: fcvt.d.h should have a default rounding mode.
+# For historical reasons defaults to frm==0b000 (rne) but doesn't print this
+# default rounding mode.
 # CHECK-INST: fcvt.d.h a0, a0{{$}}
 # CHECK-ALIAS: fcvt.d.h a0, a0{{$}}
 fcvt.d.h a0, a0
+# CHECK-INST: fcvt.d.h a0, a0{{$}}
+# CHECK-ALIAS: fcvt.d.h a0, a0{{$}}
+fcvt.d.h a0, a0, rne
 
 # CHECK-INST: fcvt.h.d a0, a0, dyn{{$}}
 # CHECK-ALIAS: fcvt.h.d a0, a0{{$}}
