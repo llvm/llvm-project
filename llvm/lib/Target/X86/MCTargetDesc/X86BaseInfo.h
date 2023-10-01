@@ -1215,16 +1215,17 @@ namespace X86II {
     if (Encoding == X86II::EVEX)
       return true;
 
+    // To be conservative, egpr is not used for all pseudo instructions
+    // because we are not sure what instruction it will become.
+    // FIXME: Could we improve it in X86ExpandPseudo?
+    if (isPseudo(TSFlags))
+      return false;
+
     // MAP OB/TB in legacy encoding space can always use egpr except
     // XSAVE*/XRSTOR*.
     unsigned Opcode = Desc.Opcode;
-    bool IsSpecial = false;
     switch (Opcode) {
     default:
-      // To be conservative, egpr is not used for all pseudo instructions
-      // because we are not sure what instruction it will become.
-      // FIXME: Could we improve it in X86ExpandPseudo?
-      IsSpecial = isPseudo(TSFlags);
       break;
     case X86::XSAVE:
     case X86::XSAVE64:
@@ -1238,12 +1239,10 @@ namespace X86II {
     case X86::XRSTOR64:
     case X86::XRSTORS:
     case X86::XRSTORS64:
-      IsSpecial = true;
-      break;
+      return false;
     }
     uint64_t OpMap = TSFlags & X86II::OpMapMask;
-    return !Encoding && (OpMap == X86II::OB || OpMap == X86II::TB) &&
-           !IsSpecial;
+    return !Encoding && (OpMap == X86II::OB || OpMap == X86II::TB);
   }
 
   /// \returns true if the MemoryOperand is a 32 extended (zmm16 or higher)
