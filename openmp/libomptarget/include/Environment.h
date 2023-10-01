@@ -43,6 +43,27 @@ struct DeviceEnvironmentTy {
   uint64_t HardwareParallelism;
 };
 
+struct DeviceMemoryPoolTy {
+  void *Ptr;
+  uint64_t Size;
+};
+
+struct DeviceMemoryPoolTrackingTy {
+  uint64_t NumAllocations;
+  uint64_t AllocationTotal;
+  uint64_t AllocationMin;
+  uint64_t AllocationMax;
+
+  void combine(DeviceMemoryPoolTrackingTy &Other) {
+    NumAllocations += Other.NumAllocations;
+    AllocationTotal += Other.AllocationTotal;
+    AllocationMin = AllocationMin > Other.AllocationMin ? Other.AllocationMin
+                                                        : AllocationMin;
+    AllocationMax = AllocationMax < Other.AllocationMax ? Other.AllocationMax
+                                                        : AllocationMax;
+  }
+};
+
 // NOTE: Please don't change the order of those members as their indices are
 // used in the middle end. Always add the new data member at the end.
 // Different from KernelEnvironmentTy below, this structure contains members
