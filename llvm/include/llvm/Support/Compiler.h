@@ -139,6 +139,12 @@
 #define LLVM_EXTERNAL_VISIBILITY
 #endif
 
+/// These macros will be used for adding visibility attributes to classes and
+/// functions.  For now, they are just place holders, so we can add the macro
+/// in all the places we need to.
+#define LLVM_CLASS_ABI
+#define LLVM_FUNC_ABI
+
 #if defined(__GNUC__)
 #define LLVM_PREFETCH(addr, rw, locality) __builtin_prefetch(addr, rw, locality)
 #else
