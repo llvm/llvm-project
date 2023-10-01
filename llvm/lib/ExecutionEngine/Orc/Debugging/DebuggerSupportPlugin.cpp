@@ -158,8 +158,12 @@ public:
 
     std::optional<StringRef> FileName;
     if (!DebugLineSectionData.empty()) {
+      assert((G.getEndianness() == support::endianness::big ||
+              G.getEndianness() == support::endianness::little) &&
+             "G.getEndianness() must be either big or little");
       auto DWARFCtx = DWARFContext::create(DebugSectionMap, G.getPointerSize(),
-                                           G.getEndianness());
+                                           G.getEndianness() ==
+                                               support::endianness::little);
       DWARFDataExtractor DebugLineData(
           DebugLineSectionData,
           G.getEndianness() == support::endianness::little, G.getPointerSize());
