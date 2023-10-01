@@ -13,10 +13,10 @@
 #include <stdbool.h>
 
 #include "config.h"
-#include "unwind.h"
 
 #ifdef __USING_WASM_EXCEPTIONS__
 
+#include "unwind.h"
 #include <threads.h>
 
 _Unwind_Reason_Code __gxx_personality_wasm0(int version, _Unwind_Action actions,
