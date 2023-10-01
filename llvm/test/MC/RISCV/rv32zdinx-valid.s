@@ -81,9 +81,15 @@ fcvt.w.d x20, x22, dyn
 # CHECK-ASM-AND-OBJ: fcvt.d.w s10, t3
 # CHECK-ASM: encoding: [0x53,0x0d,0x0e,0xd2]
 fcvt.d.w x26, x28
+# CHECK-ASM-AND-OBJ: fcvt.d.w s10, t3, rup
+# CHECK-ASM: encoding: [0x53,0x3d,0x0e,0xd2]
+fcvt.d.w x26, x28, rup
 # CHECK-ASM-AND-OBJ: fcvt.d.wu s10, t3
 # CHECK-ASM: encoding: [0x53,0x0d,0x1e,0xd2]
 fcvt.d.wu x26, x28
+# CHECK-ASM-AND-OBJ: fcvt.d.wu s10, t3, rup
+# CHECK-ASM: encoding: [0x53,0x3d,0x1e,0xd2]
+fcvt.d.wu x26, x28, rup
 
 # Rounding modes
 
