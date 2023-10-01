@@ -7,8 +7,6 @@
 #define INT_MAX __INT_MAX__
 
 typedef __INTPTR_TYPE__ intptr_t;
-typedef __int128 int128_t;
-typedef unsigned __int128 uint128_t;
 
 
 static_assert(true, "");
@@ -29,7 +27,10 @@ static_assert(number != 10, ""); // expected-error{{failed}} \
                                  // ref-note{{evaluates to}}
 
 
+#ifdef __SIZEOF__INT128__
 namespace i128 {
+  typedef __int128 int128_t;
+  typedef unsigned __int128 uint128_t;
   constexpr int128_t I128_1 = 12;
   static_assert(I128_1 == 12, "");
   static_assert(I128_1 != 10, "");
@@ -87,6 +88,7 @@ constexpr int128_t Error = __LDBL_MAX__; // ref-warning {{implicit conversion of
                                          // expected-error {{must be initialized by a constant expression}} \
                                          // expected-note {{is outside the range of representable values of type}}
 }
+#endif
 
 constexpr bool b = number;
 static_assert(b, "");
