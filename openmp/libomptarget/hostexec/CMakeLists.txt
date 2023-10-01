@@ -16,14 +16,40 @@ if("${CMAKE_SOURCE_DIR}" STREQUAL "${CMAKE_CURRENT_SOURCE_DIR}")
   message(FATAL_ERROR "Direct configuration not supported, please use parent directory!")
 endif()
 
-find_package(hsa-runtime64 1.2.0 QUIET HINTS ${CMAKE_INSTALL_PREFIX} PATHS /opt/rocm/hsa)
-if (hsa-runtime64_FOUND)
+# If we are bootstrapping hsa via external project we need to use find_library
+# as it will not be installed.
+if(DEFINED LIBOMPTARGET_EXTERNAL_PROJECT_HSA_PATH)
+  find_library(HSA_RUNTIME hsa-runtime64 HINTS ${CMAKE_BINARY_DIR}/../../runtimes/rocr-runtime-prefix/src/rocr-runtime-build ${CMAKE_INSTALL_PREFIX} PATHS /opt/rocm)
+else()
+ # As of rocm-3.7, hsa is installed with cmake packages and kmt is found via hsa
+  find_package(hsa-runtime64 QUIET 1.2.0 HINTS ${CMAKE_INSTALL_PREFIX} PATHS /opt/rocm)
+endif()
+
+if(DEFINED HSA_RUNTIME)
+  libomptarget_say("Building hostexec for AMDGCN linked against libhsa")
+  set(HSA_INCLUDE ${LIBOMPTARGET_EXTERNAL_PROJECT_HSA_PATH}/inc)
+  set(HOSTEXEC_EXTRA_SOURCE)
+  set(HOSTEXEC_DEP_LIBRARIES ${HSA_RUNTIME})
+elseif(${hsa-runtime64_FOUND})
+  libomptarget_say("Building hostexec for AMDGCN linked against libhsa")
+  set(HSA_INCLUDE ${hsa-runtime64_DIR}/../../../include/hsa)
+  set(HOSTEXEC_EXTRA_SOURCE)
+  set(HOSTEXEC_DEP_LIBRARIES hsa-runtime64::hsa-runtime64)
+else()
+  libomptarget_say("Building hostexec for AMDGCN using dlopen for libhsa")
+  set(HSA_INCLUDE ../plugins-nextgen/amdgpu/dynamic_hsa)
+  set(HOSTEXEC_EXTRA_SOURCE ../plugins-nextgen/amdgpu/dynamic_hsa/hsa.cpp)
+  set(HOSTEXEC_DEP_LIBRARIES)
+  add_definitions(-DTARGET_NAME=AMDGPU)
+endif()
+
    list(APPEND HOSTRPC_ARCHS "amdgcn")
    add_library(amdgcn_hostexec_services STATIC 
       services/amdgcn_hostexec.cpp 
       services/execute_service.cpp 
       services/devsanitizer.cpp 
-      services/amdgcn_urilocator.cpp 
+      services/amdgcn_urilocator.cpp
+      ${HOSTEXEC_EXTRA_SOURCE}
    )
    target_include_directories(
       amdgcn_hostexec_services
@@ -34,17 +60,16 @@ if (hsa-runtime64_FOUND)
    target_include_directories(
       amdgcn_hostexec_services
       PUBLIC
-      ${hsa-runtime64_DIR}/../../../include)
-   target_link_libraries(amdgcn_hostexec_services hsa-runtime64::hsa-runtime64)
+      ${HSA_INCLUDE}
+      target_link_libraries(amdgcn_hostexec_services ${HOSTEXEC_DEP_LIBRARIES})
+   )
+
    if(SANITIZER_AMDGPU)
       add_definitions(-DSANITIZER_AMDGPU=1)
    endif()
    add_compile_options($<$<OR:$<COMPILE_LANGUAGE:C>,$<COMPILE_LANGUAGE:CXX>>:-UNDEBUG>)
    set_property(TARGET amdgcn_hostexec_services PROPERTY POSITION_INDEPENDENT_CODE ON)
    set(LIBOMPTARGET_SYSTEM_TARGETS "${LIBOMPTARGET_SYSTEM_TARGETS} amdgcn_hostexec_services" PARENT_SCOPE)
-else()
-   libomptarget_say("Not building hostexec for AMDGCN because hsa-runtime64 not found")
-endif()
 
 if (LIBOMPTARGET_DEP_CUDA_FOUND)
    list(APPEND HOSTRPC_ARCHS "nvptx")
@@ -77,7 +102,7 @@ else()
   return()
 endif()
 
-set(amdgpu_mcpus gfx700 gfx701 gfx801 gfx803 gfx900 gfx902 gfx906 gfx908 gfx90a gfx90c gfx940 gfx941 gfx942 gfx1010 gfx1030 gfx1031 gfx1032 gfx1033 gfx1034 gfx1035 gfx1036 gfx1100 gfx1101 gfx1102 gfx1103)
+set(amdgpu_mcpus gfx700 gfx701 gfx801 gfx803 gfx900 gfx902 gfx906 gfx908 gfx90a gfx90c gfx940 gfx941 gfx942 gfx1010 gfx1030 gfx1031 gfx1032 gfx1033 gfx1034 gfx1035 gfx1036 gfx1100 gfx1101 gfx1102 gfx1103 gfx1150 gfx1151)
 if (DEFINED LIBOMPTARGET_AMDGCN_GFXLIST)
   set(amdgpu_mcpus ${LIBOMPTARGET_AMDGCN_GFXLIST})
 endif()

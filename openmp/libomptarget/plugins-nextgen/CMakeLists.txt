@@ -68,9 +68,11 @@ if(CMAKE_SYSTEM_PROCESSOR MATCHES "${tmachine}$")
     # Install plugin under the lib destination folder.
     install(TARGETS "omptarget.rtl.${tmachine_libname}"
       LIBRARY DESTINATION "${RUN_PACKAGE}${OPENMP_INSTALL_LIBDIR}")
-    set_target_properties("omptarget.rtl.${tmachine_libname}" PROPERTIES
-      INSTALL_RPATH "$ORIGIN" BUILD_RPATH "$ORIGIN:${CMAKE_CURRENT_BINARY_DIR}/.."
-      CXX_VISIBILITY_PRESET protected)
+    if(NOT DEFINED CMAKE_INSTALL_RPATH)
+      set_target_properties("omptarget.rtl.${tmachine_libname}" PROPERTIES
+        INSTALL_RPATH "$ORIGIN" BUILD_RPATH "$ORIGIN:${CMAKE_CURRENT_BINARY_DIR}/.."
+        CXX_VISIBILITY_PRESET protected)
+    endif()
 
     target_include_directories( "omptarget.rtl.${tmachine_libname}" PRIVATE
       ${LIBOMPTARGET_INCLUDE_DIR}

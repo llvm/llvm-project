@@ -373,7 +373,20 @@ if(runtimes)
   # together in a single CMake invocation.
   set(extra_deps "")
   if("openmp" IN_LIST LLVM_ENABLE_RUNTIMES)
-    foreach(dep opt llvm-link llvm-extract clang clang-offload-packager)
+    if(DEFINED LIBOMPTARGET_EXTERNAL_PROJECT_HSA_PATH AND DEFINED LIBOMPTARGET_EXTERNAL_PROJECT_THUNK_PATH)
+      ExternalProject_Add(roct
+        SOURCE_DIR ${LIBOMPTARGET_EXTERNAL_PROJECT_THUNK_PATH}
+        DEPENDS clang llvm-link opt llvm-objcopy
+        INSTALL_COMMAND ""
+	CMAKE_ARGS -DCMAKE_PREFIX_PATH=${CMAKE_BINARY_DIR}/lib/cmake)
+      ExternalProject_Add(rocr-runtime
+        SOURCE_DIR ${LIBOMPTARGET_EXTERNAL_PROJECT_HSA_PATH}
+        DEPENDS clang llvm-link opt llvm-objcopy roct
+        INSTALL_COMMAND ""
+	CMAKE_ARGS -DBUILD_SHARED_LIBS=ON -DCMAKE_PREFIX_PATH=${CMAKE_BINARY_DIR}/lib/cmake -DIMAGE_SUPPORT=OFF -DLLVM_RUNTIME_OPENMP=ON -DHSAKMT_SRC_PATH=${LIBOMPTARGET_EXTERNAL_PROJECT_THUNK_PATH})
+        set(HSA_DEP rocr-runtime)
+    endif()
+    foreach(dep opt llvm-link llvm-extract clang clang-offload-packager rocm-device-libs offload-arch amdgcn_hostexec_services ${HSA_DEP})
       if(TARGET ${dep} AND OPENMP_ENABLE_LIBOMPTARGET)
         list(APPEND extra_deps ${dep})
       endif()

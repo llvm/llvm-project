@@ -19,8 +19,14 @@ if (NOT LIBOMPTARGET_BUILD_AMDGPU_PLUGIN)
   return()
 endif()
 
-# as of rocm-3.7, hsa is installed with cmake packages and kmt is found via hsa
-find_package(hsa-runtime64 QUIET 1.2.0 HINTS ${CMAKE_INSTALL_PREFIX} PATHS /opt/rocm)
+# If we are bootstrapping hsa via external project we need to use find_library
+# as it will not be installed.
+if(DEFINED LIBOMPTARGET_EXTERNAL_PROJECT_HSA_PATH)
+  find_library(HSA_RUNTIME hsa-runtime64 HINTS ${CMAKE_BINARY_DIR}/../../runtimes/rocr-runtime-prefix/src/rocr-runtime-build ${CMAKE_INSTALL_PREFIX})
+else()
+  # As of rocm-3.7, hsa is installed with cmake packages and kmt is found via hsa
+  find_package(hsa-runtime64 QUIET 1.2.0 HINTS ${CMAKE_INSTALL_PREFIX} PATHS /opt/rocm)
+endif()
 
 # Check for COMGr package , ASan requires COMGr with minimum version 2.4
 if(SANITIZER_AMDGPU)
@@ -52,7 +58,11 @@ endif()
 set(LIBOMPTARGET_DLOPEN_LIBHSA OFF)
 option(LIBOMPTARGET_FORCE_DLOPEN_LIBHSA "Build with dlopened libhsa" ${LIBOMPTARGET_DLOPEN_LIBHSA})
 
-if (${hsa-runtime64_FOUND} AND NOT LIBOMPTARGET_FORCE_DLOPEN_LIBHSA)
+if(DEFINED HSA_RUNTIME AND NOT LIBOMPTARGET_FORCE_DLOPEN_LIBHSA)
+  libomptarget_say("Building AMDGPU NextGen plugin linked against libhsa")
+  set(LIBOMPTARGET_EXTRA_SOURCE)
+  set(LIBOMPTARGET_DEP_LIBRARIES ${HSA_RUNTIME})
+elseif(${hsa-runtime64_FOUND} AND NOT LIBOMPTARGET_FORCE_DLOPEN_LIBHSA)
   libomptarget_say("Building AMDGPU NextGen plugin linked against libhsa")
   set(LIBOMPTARGET_EXTRA_SOURCE)
   set(LIBOMPTARGET_DEP_LIBRARIES hsa-runtime64::hsa-runtime64)
@@ -117,6 +127,9 @@ target_include_directories(
 
 # Install plugin under the lib destination folder.
 install(TARGETS omptarget.rtl.amdgpu LIBRARY DESTINATION "${RUN_PACKAGE}${OPENMP_INSTALL_LIBDIR}")
-set_target_properties(omptarget.rtl.amdgpu PROPERTIES
-  INSTALL_RPATH "$ORIGIN" BUILD_RPATH "$ORIGIN:${CMAKE_CURRENT_BINARY_DIR}/.."
-  CXX_VISIBILITY_PRESET protected)
+
+if(NOT DEFINED CMAKE_INSTALL_RPATH)
+  set_target_properties(omptarget.rtl.amdgpu PROPERTIES
+    INSTALL_RPATH "$ORIGIN" BUILD_RPATH "$ORIGIN:${CMAKE_CURRENT_BINARY_DIR}/.."
+    CXX_VISIBILITY_PRESET protected)
+endif()

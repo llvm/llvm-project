@@ -66,12 +66,13 @@ set(all_nvptx_architectures "sm_35;sm_37;sm_50;sm_52;sm_53;sm_60;sm_61;sm_62"
 set(all_gpu_architectures
     "${all_amdgpu_architectures};${all_nvptx_architectures}")
 
-set(LIBOMPTARGET_DEVICE_ARCHITECTURES "all" CACHE STRING
-    "List of device architectures to be used to compile the OpenMP DeviceRTL.")
-
 # AMD internal build scripts use LIBOMPTARGET_AMDGCN_GFXLIST
-if (DEFINED LIBOMPTARGET_AMDGCN_GFXLIST)
-  set(LIBOMPTARGET_DEVICE_ARCHITECTURES ${LIBOMPTARGET_AMDGCN_GFXLIST})
+if(DEFINED LIBOMPTARGET_AMDGCN_GFXLIST)
+  set(LIBOMPTARGET_DEVICE_ARCHITECTURES ${LIBOMPTARGET_AMDGCN_GFXLIST} CACHE STRING
+      "List of device architectures to be used to compile the OpenMP DeviceRTL.")
+else()
+  set(LIBOMPTARGET_DEVICE_ARCHITECTURES "all" CACHE STRING
+      "List of device architectures to be used to compile the OpenMP DeviceRTL.")
 endif()
 
 if(LIBOMPTARGET_DEVICE_ARCHITECTURES STREQUAL "all")
@@ -157,6 +158,7 @@ function(addAMDSpecificBcLibs touch_target gfxname abi_num bc_files local_depend
   if(NOT amd_device_libs_found)
     find_package(AMDDeviceLibs REQUIRED CONFIG
       HINTS
+      ${CMAKE_BINARY_DIR}/../../tools/rocm-device-libs
       ${CMAKE_INSTALL_PREFIX}
       PATHS
       /opt/rocm)
@@ -198,8 +200,16 @@ function(addAMDSpecificBcLibs touch_target gfxname abi_num bc_files local_depend
   # TODO: Add back -amdgpu to the names below (maybe?).
   list(APPEND bc_files
     ${CMAKE_BINARY_DIR}/libm-${abi_num}-${gfxname}.bc
-    ${CMAKE_BINARY_DIR}/libomptarget/hostexec/libhostexec-${abi_num}-${gfxname}.bc
   )
+  if(OPENMP_STANDALONE_BUILD)
+    list(APPEND bc_files
+      ${CMAKE_BINARY_DIR}/libomptarget/hostexec/libhostexec-${abi_num}-${gfxname}.bc
+    )
+  else()
+    list(APPEND bc_files
+      ${CMAKE_BINARY_DIR}/openmp/libomptarget/hostexec/libhostexec-${abi_num}-${gfxname}.bc
+    )
+  endif()
   if (EXISTS ${CMAKE_BINARY_DIR}/../../tools/ROCMDEVLIBS)
     add_dependencies(${touch_target}
       ockl ocml oclc_wavefrontsize64_on oclc_wavefrontsize64_off oclc_isa_version_${gfxnum} oclc_abi_version_${abi_num})

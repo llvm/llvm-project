@@ -29,7 +29,7 @@
 
 #ifndef URILOCATOR_H
 #define URILOCATOR_H
-#include "hsa/hsa_ven_amd_loader.h"
+#include "hsa_ven_amd_loader.h"
 #include <string>
 #include <vector>
 
