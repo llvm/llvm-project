@@ -495,7 +495,8 @@ void DebugAddrWriterDwarf5::update(DIEBuilder &DIEBlder, DWARFUnit &CU) {
   const endianness Endian =
       BC->DwCtx->isLittleEndian() ? support::little : support::big;
   const DWARFSection &AddrSec = BC->DwCtx->getDWARFObj().getAddrSection();
-  DWARFDataExtractor AddrData(BC->DwCtx->getDWARFObj(), AddrSec, Endian, 0);
+  DWARFDataExtractor AddrData(BC->DwCtx->getDWARFObj(), AddrSec,
+                              Endian == support::little, 0);
   DWARFDebugAddrTable AddrTable;
   DIDumpOptions DumpOpts;
   constexpr uint32_t HeaderSize = 8;
