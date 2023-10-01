@@ -2881,7 +2881,7 @@ bool IRTranslator::translateUnreachable(const User &U, MachineIRBuilder &MIRBuil
 
   auto &UI = cast<UnreachableInst>(U);
   // We may be able to ignore unreachable behind a noreturn call.
-  if (!MF->getTarget().Options.NoTrapAfterNoreturn) {
+  if (!MF->getTarget().Options.TrapAfterNoreturn) {
     const BasicBlock &BB = *UI.getParent();
     if (&UI != &BB.front()) {
       BasicBlock::const_iterator PredI =

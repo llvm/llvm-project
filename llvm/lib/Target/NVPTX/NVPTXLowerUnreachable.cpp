@@ -117,7 +117,7 @@ StringRef NVPTXLowerUnreachable::getPassName() const {
 bool NVPTXLowerUnreachable::isLoweredToTrap(const UnreachableInst &I) const {
   if (!TrapUnreachable)
     return false;
-  if (NoTrapAfterNoreturn)
+  if (TrapAfterNoreturn)
     return true;
   const CallInst *Call = dyn_cast_or_null<CallInst>(I.getPrevNode());
   return Call && Call->doesNotReturn();
