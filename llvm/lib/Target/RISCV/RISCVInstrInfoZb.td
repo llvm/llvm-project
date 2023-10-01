@@ -718,12 +718,173 @@ def : Pat<(mul_const_oneuse GPR:$r, (XLenVT 41)),
           (SH3ADD (SH2ADD GPR:$r, GPR:$r), GPR:$r)>;
 def : Pat<(mul_const_oneuse GPR:$r, (XLenVT 73)),
           (SH3ADD (SH3ADD GPR:$r, GPR:$r), GPR:$r)>;
+
 def : Pat<(mul_const_oneuse GPR:$r, (XLenVT 27)),
           (SH1ADD (SH3ADD GPR:$r, GPR:$r), (SH3ADD GPR:$r, GPR:$r))>;
 def : Pat<(mul_const_oneuse GPR:$r, (XLenVT 45)),
           (SH2ADD (SH3ADD GPR:$r, GPR:$r), (SH3ADD GPR:$r, GPR:$r))>;
 def : Pat<(mul_const_oneuse GPR:$r, (XLenVT 81)),
           (SH3ADD (SH3ADD GPR:$r, GPR:$r), (SH3ADD GPR:$r, GPR:$r))>;
+
+def : Pat<(mul_const_oneuse GPR:$r, (XLenVT 61)),
+          (SH2ADD (SH2ADD (SH1ADD GPR:$r, GPR:$r), (SH1ADD GPR:$r, GPR:$r)), GPR:$r)>;
+def : Pat<(mul_const_oneuse GPR:$r, (XLenVT 121)),
+          (SH3ADD (SH2ADD (SH1ADD GPR:$r, GPR:$r), (SH1ADD GPR:$r, GPR:$r)), GPR:$r)>;
+def : Pat<(mul_const_oneuse GPR:$r, (XLenVT 55)),
+          (SH1ADD (SH3ADD (SH1ADD GPR:$r, GPR:$r), (SH1ADD GPR:$r, GPR:$r)), GPR:$r)>;
+def : Pat<(mul_const_oneuse GPR:$r, (XLenVT 109)),
+          (SH2ADD (SH3ADD (SH1ADD GPR:$r, GPR:$r), (SH1ADD GPR:$r, GPR:$r)), GPR:$r)>;
+def : Pat<(mul_const_oneuse GPR:$r, (XLenVT 217)),
+          (SH3ADD (SH3ADD (SH1ADD GPR:$r, GPR:$r), (SH1ADD GPR:$r, GPR:$r)), GPR:$r)>;
+def : Pat<(mul_const_oneuse GPR:$r, (XLenVT 51)),
+          (SH1ADD (SH2ADD (SH2ADD GPR:$r, GPR:$r), (SH2ADD GPR:$r, GPR:$r)), GPR:$r)>;
+def : Pat<(mul_const_oneuse GPR:$r, (XLenVT 101)),
+          (SH2ADD (SH2ADD (SH2ADD GPR:$r, GPR:$r), (SH2ADD GPR:$r, GPR:$r)), GPR:$r)>;
+def : Pat<(mul_const_oneuse GPR:$r, (XLenVT 201)),
+          (SH3ADD (SH2ADD (SH2ADD GPR:$r, GPR:$r), (SH2ADD GPR:$r, GPR:$r)), GPR:$r)>;
+def : Pat<(mul_const_oneuse GPR:$r, (XLenVT 91)),
+          (SH1ADD (SH3ADD (SH2ADD GPR:$r, GPR:$r), (SH2ADD GPR:$r, GPR:$r)), GPR:$r)>;
+def : Pat<(mul_const_oneuse GPR:$r, (XLenVT 181)),
+          (SH2ADD (SH3ADD (SH2ADD GPR:$r, GPR:$r), (SH2ADD GPR:$r, GPR:$r)), GPR:$r)>;
+def : Pat<(mul_const_oneuse GPR:$r, (XLenVT 361)),
+          (SH3ADD (SH3ADD (SH2ADD GPR:$r, GPR:$r), (SH2ADD GPR:$r, GPR:$r)), GPR:$r)>;
+def : Pat<(mul_const_oneuse GPR:$r, (XLenVT 163)),
+          (SH1ADD (SH3ADD (SH3ADD GPR:$r, GPR:$r), (SH3ADD GPR:$r, GPR:$r)), GPR:$r)>;
+def : Pat<(mul_const_oneuse GPR:$r, (XLenVT 325)),
+          (SH2ADD (SH3ADD (SH3ADD GPR:$r, GPR:$r), (SH3ADD GPR:$r, GPR:$r)), GPR:$r)>;
+def : Pat<(mul_const_oneuse GPR:$r, (XLenVT 649)),
+          (SH3ADD (SH3ADD (SH3ADD GPR:$r, GPR:$r), (SH3ADD GPR:$r, GPR:$r)), GPR:$r)>;
+
+def : Pat<(mul_const_oneuse GPR:$r, (XLenVT 29)),
+          (SH2ADD (SH1ADD (SH1ADD GPR:$r, GPR:$r), GPR:$r), GPR:$r)>;
+def : Pat<(mul_const_oneuse GPR:$r, (XLenVT 57)),
+          (SH3ADD (SH1ADD (SH1ADD GPR:$r, GPR:$r), GPR:$r), GPR:$r)>;
+def : Pat<(mul_const_oneuse GPR:$r, (XLenVT 53)),
+          (SH2ADD (SH2ADD (SH1ADD GPR:$r, GPR:$r), GPR:$r), GPR:$r)>;
+def : Pat<(mul_const_oneuse GPR:$r, (XLenVT 105)),
+          (SH3ADD (SH2ADD (SH1ADD GPR:$r, GPR:$r), GPR:$r), GPR:$r)>;
+def : Pat<(mul_const_oneuse GPR:$r, (XLenVT 23)),
+          (SH1ADD (SH1ADD (SH2ADD GPR:$r, GPR:$r), GPR:$r), GPR:$r)>;
+def : Pat<(mul_const_oneuse GPR:$r, (XLenVT 89)),
+          (SH3ADD (SH1ADD (SH2ADD GPR:$r, GPR:$r), GPR:$r), GPR:$r)>;
+def : Pat<(mul_const_oneuse GPR:$r, (XLenVT 43)),
+          (SH1ADD (SH2ADD (SH2ADD GPR:$r, GPR:$r), GPR:$r), GPR:$r)>;
+def : Pat<(mul_const_oneuse GPR:$r, (XLenVT 85)),
+          (SH2ADD (SH2ADD (SH2ADD GPR:$r, GPR:$r), GPR:$r), GPR:$r)>;
+def : Pat<(mul_const_oneuse GPR:$r, (XLenVT 169)),
+          (SH3ADD (SH2ADD (SH2ADD GPR:$r, GPR:$r), GPR:$r), GPR:$r)>;
+def : Pat<(mul_const_oneuse GPR:$r, (XLenVT 83)),
+          (SH1ADD (SH3ADD (SH2ADD GPR:$r, GPR:$r), GPR:$r), GPR:$r)>;
+def : Pat<(mul_const_oneuse GPR:$r, (XLenVT 165)),
+          (SH2ADD (SH3ADD (SH2ADD GPR:$r, GPR:$r), GPR:$r), GPR:$r)>;
+def : Pat<(mul_const_oneuse GPR:$r, (XLenVT 329)),
+          (SH3ADD (SH3ADD (SH2ADD GPR:$r, GPR:$r), GPR:$r), GPR:$r)>;
+def : Pat<(mul_const_oneuse GPR:$r, (XLenVT 39)),
+          (SH1ADD (SH1ADD (SH3ADD GPR:$r, GPR:$r), GPR:$r), GPR:$r)>;
+def : Pat<(mul_const_oneuse GPR:$r, (XLenVT 77)),
+          (SH2ADD (SH1ADD (SH3ADD GPR:$r, GPR:$r), GPR:$r), GPR:$r)>;
+def : Pat<(mul_const_oneuse GPR:$r, (XLenVT 153)),
+          (SH3ADD (SH1ADD (SH3ADD GPR:$r, GPR:$r), GPR:$r), GPR:$r)>;
+def : Pat<(mul_const_oneuse GPR:$r, (XLenVT 75)),
+          (SH1ADD (SH2ADD (SH3ADD GPR:$r, GPR:$r), GPR:$r), GPR:$r)>;
+def : Pat<(mul_const_oneuse GPR:$r, (XLenVT 149)),
+          (SH2ADD (SH2ADD (SH3ADD GPR:$r, GPR:$r), GPR:$r), GPR:$r)>;
+def : Pat<(mul_const_oneuse GPR:$r, (XLenVT 297)),
+          (SH3ADD (SH2ADD (SH3ADD GPR:$r, GPR:$r), GPR:$r), GPR:$r)>;
+def : Pat<(mul_const_oneuse GPR:$r, (XLenVT 147)),
+          (SH1ADD (SH3ADD (SH3ADD GPR:$r, GPR:$r), GPR:$r), GPR:$r)>;
+def : Pat<(mul_const_oneuse GPR:$r, (XLenVT 293)),
+          (SH2ADD (SH3ADD (SH3ADD GPR:$r, GPR:$r), GPR:$r), GPR:$r)>;
+
+def : Pat<(mul_const_oneuse GPR:$r, (XLenVT 35)),
+          (SH2ADD (SH1ADD (SH1ADD GPR:$r, GPR:$r), GPR:$r), (SH1ADD (SH1ADD GPR:$r, GPR:$r), GPR:$r))>;
+def : Pat<(mul_const_oneuse GPR:$r, (XLenVT 117)),
+          (SH3ADD (SH2ADD (SH1ADD GPR:$r, GPR:$r), GPR:$r), (SH2ADD (SH1ADD GPR:$r, GPR:$r), GPR:$r))>;
+def : Pat<(mul_const_oneuse GPR:$r, (XLenVT 125)),
+          (SH2ADD (SH3ADD (SH1ADD GPR:$r, GPR:$r), GPR:$r), (SH3ADD (SH1ADD GPR:$r, GPR:$r), GPR:$r))>;
+def : Pat<(mul_const_oneuse GPR:$r, (XLenVT 225)),
+          (SH3ADD (SH3ADD (SH1ADD GPR:$r, GPR:$r), GPR:$r), (SH3ADD (SH1ADD GPR:$r, GPR:$r), GPR:$r))>;
+def : Pat<(mul_const_oneuse GPR:$r, (XLenVT 99)),
+          (SH3ADD (SH1ADD (SH2ADD GPR:$r, GPR:$r), GPR:$r), (SH1ADD (SH2ADD GPR:$r, GPR:$r), GPR:$r))>;
+def : Pat<(mul_const_oneuse GPR:$r, (XLenVT 189)),
+          (SH3ADD (SH2ADD (SH2ADD GPR:$r, GPR:$r), GPR:$r), (SH2ADD (SH2ADD GPR:$r, GPR:$r), GPR:$r))>;
+def : Pat<(mul_const_oneuse GPR:$r, (XLenVT 123)),
+          (SH1ADD (SH3ADD (SH2ADD GPR:$r, GPR:$r), GPR:$r), (SH3ADD (SH2ADD GPR:$r, GPR:$r), GPR:$r))>;
+def : Pat<(mul_const_oneuse GPR:$r, (XLenVT 205)),
+          (SH2ADD (SH3ADD (SH2ADD GPR:$r, GPR:$r), GPR:$r), (SH3ADD (SH2ADD GPR:$r, GPR:$r), GPR:$r))>;
+def : Pat<(mul_const_oneuse GPR:$r, (XLenVT 369)),
+          (SH3ADD (SH3ADD (SH2ADD GPR:$r, GPR:$r), GPR:$r), (SH3ADD (SH2ADD GPR:$r, GPR:$r), GPR:$r))>;
+def : Pat<(mul_const_oneuse GPR:$r, (XLenVT 95)),
+          (SH2ADD (SH1ADD (SH3ADD GPR:$r, GPR:$r), GPR:$r), (SH1ADD (SH3ADD GPR:$r, GPR:$r), GPR:$r))>;
+def : Pat<(mul_const_oneuse GPR:$r, (XLenVT 171)),
+          (SH3ADD (SH1ADD (SH3ADD GPR:$r, GPR:$r), GPR:$r), (SH1ADD (SH3ADD GPR:$r, GPR:$r), GPR:$r))>;
+def : Pat<(mul_const_oneuse GPR:$r, (XLenVT 111)),
+          (SH1ADD (SH2ADD (SH3ADD GPR:$r, GPR:$r), GPR:$r), (SH2ADD (SH3ADD GPR:$r, GPR:$r), GPR:$r))>;
+def : Pat<(mul_const_oneuse GPR:$r, (XLenVT 185)),
+          (SH2ADD (SH2ADD (SH3ADD GPR:$r, GPR:$r), GPR:$r), (SH2ADD (SH3ADD GPR:$r, GPR:$r), GPR:$r))>;
+def : Pat<(mul_const_oneuse GPR:$r, (XLenVT 333)),
+          (SH3ADD (SH2ADD (SH3ADD GPR:$r, GPR:$r), GPR:$r), (SH2ADD (SH3ADD GPR:$r, GPR:$r), GPR:$r))>;
+def : Pat<(mul_const_oneuse GPR:$r, (XLenVT 219)),
+          (SH1ADD (SH3ADD (SH3ADD GPR:$r, GPR:$r), GPR:$r), (SH3ADD (SH3ADD GPR:$r, GPR:$r), GPR:$r))>;
+def : Pat<(mul_const_oneuse GPR:$r, (XLenVT 365)),
+          (SH2ADD (SH3ADD (SH3ADD GPR:$r, GPR:$r), GPR:$r), (SH3ADD (SH3ADD GPR:$r, GPR:$r), GPR:$r))>;
+def : Pat<(mul_const_oneuse GPR:$r, (XLenVT 657)),
+          (SH3ADD (SH3ADD (SH3ADD GPR:$r, GPR:$r), GPR:$r), (SH3ADD (SH3ADD GPR:$r, GPR:$r), GPR:$r))>;
+
+def : Pat<(mul_const_oneuse GPR:$r, (XLenVT 59)),
+          (SH3ADD (SH1ADD (SH1ADD GPR:$r, GPR:$r), GPR:$r), (SH1ADD GPR:$r, GPR:$r))>;
+def : Pat<(mul_const_oneuse GPR:$r, (XLenVT 107)),
+          (SH3ADD (SH1ADD (SH2ADD GPR:$r, GPR:$r), GPR:$r), (SH2ADD GPR:$r, GPR:$r))>;
+def : Pat<(mul_const_oneuse GPR:$r, (XLenVT 103)),
+          (SH2ADD (SH1ADD (SH3ADD GPR:$r, GPR:$r), GPR:$r), (SH3ADD GPR:$r, GPR:$r))>;
+def : Pat<(mul_const_oneuse GPR:$r, (XLenVT 203)),
+          (SH3ADD (SH1ADD (SH3ADD GPR:$r, GPR:$r), GPR:$r), (SH3ADD GPR:$r, GPR:$r))>;
+def : Pat<(mul_const_oneuse GPR:$r, (XLenVT 93)),
+          (SH3ADD (SH2ADD (SH1ADD GPR:$r, GPR:$r), GPR:$r), (SH1ADD GPR:$r, GPR:$r))>;
+def : Pat<(mul_const_oneuse GPR:$r, (XLenVT 47)),
+          (SH1ADD (SH2ADD (SH2ADD GPR:$r, GPR:$r), GPR:$r), (SH2ADD GPR:$r, GPR:$r))>;
+def : Pat<(mul_const_oneuse GPR:$r, (XLenVT 173)),
+          (SH3ADD (SH2ADD (SH2ADD GPR:$r, GPR:$r), GPR:$r), (SH2ADD GPR:$r, GPR:$r))>;
+def : Pat<(mul_const_oneuse GPR:$r, (XLenVT 87)),
+          (SH1ADD (SH2ADD (SH3ADD GPR:$r, GPR:$r), GPR:$r), (SH3ADD GPR:$r, GPR:$r))>;
+def : Pat<(mul_const_oneuse GPR:$r, (XLenVT 161)),
+          (SH3ADD (SH3ADD (SH1ADD GPR:$r, GPR:$r), GPR:$r), (SH1ADD GPR:$r, GPR:$r))>;
+def : Pat<(mul_const_oneuse GPR:$r, (XLenVT 157)),
+          (SH2ADD (SH3ADD (SH2ADD GPR:$r, GPR:$r), GPR:$r), (SH2ADD GPR:$r, GPR:$r))>;
+def : Pat<(mul_const_oneuse GPR:$r, (XLenVT 305)),
+          (SH3ADD (SH3ADD (SH2ADD GPR:$r, GPR:$r), GPR:$r), (SH2ADD GPR:$r, GPR:$r))>;
+def : Pat<(mul_const_oneuse GPR:$r, (XLenVT 155)),
+          (SH1ADD (SH3ADD (SH3ADD GPR:$r, GPR:$r), GPR:$r), (SH3ADD GPR:$r, GPR:$r))>;
+def : Pat<(mul_const_oneuse GPR:$r, (XLenVT 301)),
+          (SH2ADD (SH3ADD (SH3ADD GPR:$r, GPR:$r), GPR:$r), (SH3ADD GPR:$r, GPR:$r))>;
+def : Pat<(mul_const_oneuse GPR:$r, (XLenVT 593)),
+          (SH3ADD (SH3ADD (SH3ADD GPR:$r, GPR:$r), GPR:$r), (SH3ADD GPR:$r, GPR:$r))>;
+
+def : Pat<(mul_const_oneuse GPR:$r, (XLenVT 49)),
+          (SH2ADD (SH3ADD GPR:$r, GPR:$r), (SH2ADD GPR:$r, (SH3ADD GPR:$r, GPR:$r)))>;
+
+def : Pat<(mul_const_oneuse GPR:$r, (XLenVT 97)),
+          (SH3ADD (SH3ADD GPR:$r, (SH1ADD GPR:$r, GPR:$r)), (SH1ADD GPR:$r, GPR:$r))>;
+def : Pat<(mul_const_oneuse GPR:$r, (XLenVT 113)),
+          (SH3ADD (SH3ADD GPR:$r, (SH2ADD GPR:$r, GPR:$r)), (SH2ADD GPR:$r, GPR:$r))>;
+def : Pat<(mul_const_oneuse GPR:$r, (XLenVT 145)),
+          (SH3ADD (SH3ADD GPR:$r, (SH3ADD GPR:$r, GPR:$r)), (SH3ADD GPR:$r, GPR:$r))>;
+
+def : Pat<(mul_const_oneuse GPR:$r, (XLenVT 585)),
+          (SH3ADD (SH3ADD (SH3ADD GPR:$r, GPR:$r), GPR:$r), GPR:$r)>;
+def : Pat<(mul_const_oneuse GPR:$r, (XLenVT 69)),
+          (SH3ADD (SH3ADD GPR:$r, (SH2ADD GPR:$r, GPR:$r)), GPR:$r)>;     
+def : Pat<(mul_const_oneuse GPR:$r, (XLenVT 137)),
+          (SH3ADD (SH3ADD GPR:$r, (SH2ADD GPR:$r, GPR:$r)), GPR:$r)>; 
+
+def : Pat<(mul_const_oneuse GPR:$r, (XLenVT 135)),
+          (SH3ADD (SH2ADD (SH1ADD GPR:$r, GPR:$r), (SH1ADD GPR:$r, GPR:$r)), (SH2ADD (SH1ADD GPR:$r, GPR:$r), (SH1ADD GPR:$r, GPR:$r)))>;
+def : Pat<(mul_const_oneuse GPR:$r, (XLenVT 243)),
+          (SH3ADD (SH3ADD (SH1ADD GPR:$r, GPR:$r), (SH1ADD GPR:$r, GPR:$r)), (SH3ADD (SH1ADD GPR:$r, GPR:$r), (SH1ADD GPR:$r, GPR:$r)))>;
+def : Pat<(mul_const_oneuse GPR:$r, (XLenVT 405)),
+          (SH3ADD (SH3ADD (SH2ADD GPR:$r, GPR:$r), (SH2ADD GPR:$r, GPR:$r)), (SH3ADD (SH2ADD GPR:$r, GPR:$r), (SH2ADD GPR:$r, GPR:$r)))>;
+def : Pat<(mul_const_oneuse GPR:$r, (XLenVT 729)),
+          (SH3ADD (SH3ADD (SH3ADD GPR:$r, GPR:$r), (SH3ADD GPR:$r, GPR:$r)), (SH3ADD (SH3ADD GPR:$r, GPR:$r), (SH3ADD GPR:$r, GPR:$r)))>;
 } // Predicates = [HasStdExtZba]
 
 let Predicates = [HasStdExtZba, IsRV64] in {

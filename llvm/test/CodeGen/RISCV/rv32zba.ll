@@ -476,6 +476,1298 @@ define i32 @mul81(i32 %a) {
   ret i32 %c
 }
 
+define i32 @mul153(i32 %a) {
+; RV32I-LABEL: mul153:
+; RV32I:       # %bb.0:
+; RV32I-NEXT:    li a1, 153
+; RV32I-NEXT:    mul a0, a0, a1
+; RV32I-NEXT:    ret
+;
+; RV32ZBA-LABEL: mul153:
+; RV32ZBA:       # %bb.0:
+; RV32ZBA-NEXT:    sh3add a1, a0, a0
+; RV32ZBA-NEXT:    sh1add a1, a1, a0
+; RV32ZBA-NEXT:    sh3add a0, a1, a0
+; RV32ZBA-NEXT:    ret
+  %c = mul i32 %a, 153
+  ret i32 %c
+}
+
+define i32 @mul305(i32 %a) {
+; RV32I-LABEL: mul305:
+; RV32I:       # %bb.0:
+; RV32I-NEXT:    li a1, 305
+; RV32I-NEXT:    mul a0, a0, a1
+; RV32I-NEXT:    ret
+;
+; RV32ZBA-LABEL: mul305:
+; RV32ZBA:       # %bb.0:
+; RV32ZBA-NEXT:    sh2add a1, a0, a0
+; RV32ZBA-NEXT:    sh3add a0, a1, a0
+; RV32ZBA-NEXT:    sh3add a0, a0, a1
+; RV32ZBA-NEXT:    ret
+  %c = mul i32 %a, 305
+  ret i32 %c
+}
+
+define i32 @mul189(i32 %a) {
+; RV32I-LABEL: mul189:
+; RV32I:       # %bb.0:
+; RV32I-NEXT:    li a1, 189
+; RV32I-NEXT:    mul a0, a0, a1
+; RV32I-NEXT:    ret
+;
+; RV32ZBA-LABEL: mul189:
+; RV32ZBA:       # %bb.0:
+; RV32ZBA-NEXT:    sh2add a1, a0, a0
+; RV32ZBA-NEXT:    sh2add a0, a1, a0
+; RV32ZBA-NEXT:    sh3add a0, a0, a0
+; RV32ZBA-NEXT:    ret
+  %c = mul i32 %a, 189
+  ret i32 %c
+}
+
+define i32 @mul51(i32 %a) {
+; RV32I-LABEL: mul51:
+; RV32I:       # %bb.0:
+; RV32I-NEXT:    li a1, 51
+; RV32I-NEXT:    mul a0, a0, a1
+; RV32I-NEXT:    ret
+;
+; RV32ZBA-LABEL: mul51:
+; RV32ZBA:       # %bb.0:
+; RV32ZBA-NEXT:    sh2add a1, a0, a0
+; RV32ZBA-NEXT:    sh2add a1, a1, a1
+; RV32ZBA-NEXT:    sh1add a0, a1, a0
+; RV32ZBA-NEXT:    ret
+  %c = mul i32 %a, 51
+  ret i32 %c
+}
+
+define i32 @mul91(i32 %a) {
+; RV32I-LABEL: mul91:
+; RV32I:       # %bb.0:
+; RV32I-NEXT:    li a1, 91
+; RV32I-NEXT:    mul a0, a0, a1
+; RV32I-NEXT:    ret
+;
+; RV32ZBA-LABEL: mul91:
+; RV32ZBA:       # %bb.0:
+; RV32ZBA-NEXT:    sh2add a1, a0, a0
+; RV32ZBA-NEXT:    sh3add a1, a1, a1
+; RV32ZBA-NEXT:    sh1add a0, a1, a0
+; RV32ZBA-NEXT:    ret
+  %c = mul i32 %a, 91
+  ret i32 %c
+}
+
+define i32 @mul157(i32 %a) {
+; RV32I-LABEL: mul157:
+; RV32I:       # %bb.0:
+; RV32I-NEXT:    li a1, 157
+; RV32I-NEXT:    mul a0, a0, a1
+; RV32I-NEXT:    ret
+;
+; RV32ZBA-LABEL: mul157:
+; RV32ZBA:       # %bb.0:
+; RV32ZBA-NEXT:    sh2add a1, a0, a0
+; RV32ZBA-NEXT:    sh3add a0, a1, a0
+; RV32ZBA-NEXT:    sh2add a0, a0, a1
+; RV32ZBA-NEXT:    ret
+  %c = mul i32 %a, 157
+  ret i32 %c
+}
+
+define i32 @mul89(i32 %a) {
+; RV32I-LABEL: mul89:
+; RV32I:       # %bb.0:
+; RV32I-NEXT:    li a1, 89
+; RV32I-NEXT:    mul a0, a0, a1
+; RV32I-NEXT:    ret
+;
+; RV32ZBA-LABEL: mul89:
+; RV32ZBA:       # %bb.0:
+; RV32ZBA-NEXT:    sh2add a1, a0, a0
+; RV32ZBA-NEXT:    sh1add a1, a1, a0
+; RV32ZBA-NEXT:    sh3add a0, a1, a0
+; RV32ZBA-NEXT:    ret
+  %c = mul i32 %a, 89
+  ret i32 %c
+}
+
+define i32 @mul117(i32 %a) {
+; RV32I-LABEL: mul117:
+; RV32I:       # %bb.0:
+; RV32I-NEXT:    li a1, 117
+; RV32I-NEXT:    mul a0, a0, a1
+; RV32I-NEXT:    ret
+;
+; RV32ZBA-LABEL: mul117:
+; RV32ZBA:       # %bb.0:
+; RV32ZBA-NEXT:    sh1add a1, a0, a0
+; RV32ZBA-NEXT:    sh2add a0, a1, a0
+; RV32ZBA-NEXT:    sh3add a0, a0, a0
+; RV32ZBA-NEXT:    ret
+  %c = mul i32 %a, 117
+  ret i32 %c
+}
+
+define i32 @mul203(i32 %a) {
+; RV32I-LABEL: mul203:
+; RV32I:       # %bb.0:
+; RV32I-NEXT:    li a1, 203
+; RV32I-NEXT:    mul a0, a0, a1
+; RV32I-NEXT:    ret
+;
+; RV32ZBA-LABEL: mul203:
+; RV32ZBA:       # %bb.0:
+; RV32ZBA-NEXT:    sh3add a1, a0, a0
+; RV32ZBA-NEXT:    sh1add a0, a1, a0
+; RV32ZBA-NEXT:    sh3add a0, a0, a1
+; RV32ZBA-NEXT:    ret
+  %c = mul i32 %a, 203
+  ret i32 %c
+}
+
+define i32 @mul293(i32 %a) {
+; RV32I-LABEL: mul293:
+; RV32I:       # %bb.0:
+; RV32I-NEXT:    li a1, 293
+; RV32I-NEXT:    mul a0, a0, a1
+; RV32I-NEXT:    ret
+;
+; RV32ZBA-LABEL: mul293:
+; RV32ZBA:       # %bb.0:
+; RV32ZBA-NEXT:    sh3add a1, a0, a0
+; RV32ZBA-NEXT:    sh3add a1, a1, a0
+; RV32ZBA-NEXT:    sh2add a0, a1, a0
+; RV32ZBA-NEXT:    ret
+  %c = mul i32 %a, 293
+  ret i32 %c
+}
+
+define i32 @mul147(i32 %a) {
+; RV32I-LABEL: mul147:
+; RV32I:       # %bb.0:
+; RV32I-NEXT:    li a1, 147
+; RV32I-NEXT:    mul a0, a0, a1
+; RV32I-NEXT:    ret
+;
+; RV32ZBA-LABEL: mul147:
+; RV32ZBA:       # %bb.0:
+; RV32ZBA-NEXT:    sh3add a1, a0, a0
+; RV32ZBA-NEXT:    sh3add a1, a1, a0
+; RV32ZBA-NEXT:    sh1add a0, a1, a0
+; RV32ZBA-NEXT:    ret
+  %c = mul i32 %a, 147
+  ret i32 %c
+}
+
+define i32 @mul83(i32 %a) {
+; RV32I-LABEL: mul83:
+; RV32I:       # %bb.0:
+; RV32I-NEXT:    li a1, 83
+; RV32I-NEXT:    mul a0, a0, a1
+; RV32I-NEXT:    ret
+;
+; RV32ZBA-LABEL: mul83:
+; RV32ZBA:       # %bb.0:
+; RV32ZBA-NEXT:    sh2add a1, a0, a0
+; RV32ZBA-NEXT:    sh3add a1, a1, a0
+; RV32ZBA-NEXT:    sh1add a0, a1, a0
+; RV32ZBA-NEXT:    ret
+  %c = mul i32 %a, 83
+  ret i32 %c
+}
+
+define i32 @mul163(i32 %a) {
+; RV32I-LABEL: mul163:
+; RV32I:       # %bb.0:
+; RV32I-NEXT:    li a1, 163
+; RV32I-NEXT:    mul a0, a0, a1
+; RV32I-NEXT:    ret
+;
+; RV32ZBA-LABEL: mul163:
+; RV32ZBA:       # %bb.0:
+; RV32ZBA-NEXT:    sh3add a1, a0, a0
+; RV32ZBA-NEXT:    sh3add a1, a1, a1
+; RV32ZBA-NEXT:    sh1add a0, a1, a0
+; RV32ZBA-NEXT:    ret
+  %c = mul i32 %a, 163
+  ret i32 %c
+}
+
+define i32 @mul111(i32 %a) {
+; RV32I-LABEL: mul111:
+; RV32I:       # %bb.0:
+; RV32I-NEXT:    li a1, 111
+; RV32I-NEXT:    mul a0, a0, a1
+; RV32I-NEXT:    ret
+;
+; RV32ZBA-LABEL: mul111:
+; RV32ZBA:       # %bb.0:
+; RV32ZBA-NEXT:    sh3add a1, a0, a0
+; RV32ZBA-NEXT:    sh2add a0, a1, a0
+; RV32ZBA-NEXT:    sh1add a0, a0, a0
+; RV32ZBA-NEXT:    ret
+  %c = mul i32 %a, 111
+  ret i32 %c
+}
+
+define i32 @mul217(i32 %a) {
+; RV32I-LABEL: mul217:
+; RV32I:       # %bb.0:
+; RV32I-NEXT:    li a1, 217
+; RV32I-NEXT:    mul a0, a0, a1
+; RV32I-NEXT:    ret
+;
+; RV32ZBA-LABEL: mul217:
+; RV32ZBA:       # %bb.0:
+; RV32ZBA-NEXT:    sh1add a1, a0, a0
+; RV32ZBA-NEXT:    sh3add a1, a1, a1
+; RV32ZBA-NEXT:    sh3add a0, a1, a0
+; RV32ZBA-NEXT:    ret
+  %c = mul i32 %a, 217
+  ret i32 %c
+}
+
+define i32 @mul181(i32 %a) {
+; RV32I-LABEL: mul181:
+; RV32I:       # %bb.0:
+; RV32I-NEXT:    li a1, 181
+; RV32I-NEXT:    mul a0, a0, a1
+; RV32I-NEXT:    ret
+;
+; RV32ZBA-LABEL: mul181:
+; RV32ZBA:       # %bb.0:
+; RV32ZBA-NEXT:    sh2add a1, a0, a0
+; RV32ZBA-NEXT:    sh3add a1, a1, a1
+; RV32ZBA-NEXT:    sh2add a0, a1, a0
+; RV32ZBA-NEXT:    ret
+  %c = mul i32 %a, 181
+  ret i32 %c
+}
+
+define i32 @mul53(i32 %a) {
+; RV32I-LABEL: mul53:
+; RV32I:       # %bb.0:
+; RV32I-NEXT:    li a1, 53
+; RV32I-NEXT:    mul a0, a0, a1
+; RV32I-NEXT:    ret
+;
+; RV32ZBA-LABEL: mul53:
+; RV32ZBA:       # %bb.0:
+; RV32ZBA-NEXT:    sh1add a1, a0, a0
+; RV32ZBA-NEXT:    sh2add a1, a1, a0
+; RV32ZBA-NEXT:    sh2add a0, a1, a0
+; RV32ZBA-NEXT:    ret
+  %c = mul i32 %a, 53
+  ret i32 %c
+}
+
+define i32 @mul103(i32 %a) {
+; RV32I-LABEL: mul103:
+; RV32I:       # %bb.0:
+; RV32I-NEXT:    li a1, 103
+; RV32I-NEXT:    mul a0, a0, a1
+; RV32I-NEXT:    ret
+;
+; RV32ZBA-LABEL: mul103:
+; RV32ZBA:       # %bb.0:
+; RV32ZBA-NEXT:    sh3add a1, a0, a0
+; RV32ZBA-NEXT:    sh1add a0, a1, a0
+; RV32ZBA-NEXT:    sh2add a0, a0, a1
+; RV32ZBA-NEXT:    ret
+  %c = mul i32 %a, 103
+  ret i32 %c
+}
+
+define i32 @mul57(i32 %a) {
+; RV32I-LABEL: mul57:
+; RV32I:       # %bb.0:
+; RV32I-NEXT:    li a1, 57
+; RV32I-NEXT:    mul a0, a0, a1
+; RV32I-NEXT:    ret
+;
+; RV32ZBA-LABEL: mul57:
+; RV32ZBA:       # %bb.0:
+; RV32ZBA-NEXT:    sh1add a1, a0, a0
+; RV32ZBA-NEXT:    sh1add a1, a1, a0
+; RV32ZBA-NEXT:    sh3add a0, a1, a0
+; RV32ZBA-NEXT:    ret
+  %c = mul i32 %a, 57
+  ret i32 %c
+}
+
+define i32 @mul35(i32 %a) {
+; RV32I-LABEL: mul35:
+; RV32I:       # %bb.0:
+; RV32I-NEXT:    li a1, 35
+; RV32I-NEXT:    mul a0, a0, a1
+; RV32I-NEXT:    ret
+;
+; RV32ZBA-LABEL: mul35:
+; RV32ZBA:       # %bb.0:
+; RV32ZBA-NEXT:    sh1add a1, a0, a0
+; RV32ZBA-NEXT:    sh1add a0, a1, a0
+; RV32ZBA-NEXT:    sh2add a0, a0, a0
+; RV32ZBA-NEXT:    ret
+  %c = mul i32 %a, 35
+  ret i32 %c
+}
+
+define i32 @mul329(i32 %a) {
+; RV32I-LABEL: mul329:
+; RV32I:       # %bb.0:
+; RV32I-NEXT:    li a1, 329
+; RV32I-NEXT:    mul a0, a0, a1
+; RV32I-NEXT:    ret
+;
+; RV32ZBA-LABEL: mul329:
+; RV32ZBA:       # %bb.0:
+; RV32ZBA-NEXT:    sh2add a1, a0, a0
+; RV32ZBA-NEXT:    sh3add a1, a1, a0
+; RV32ZBA-NEXT:    sh3add a0, a1, a0
+; RV32ZBA-NEXT:    ret
+  %c = mul i32 %a, 329
+  ret i32 %c
+}
+
+define i32 @mul593(i32 %a) {
+; RV32I-LABEL: mul593:
+; RV32I:       # %bb.0:
+; RV32I-NEXT:    li a1, 593
+; RV32I-NEXT:    mul a0, a0, a1
+; RV32I-NEXT:    ret
+;
+; RV32ZBA-LABEL: mul593:
+; RV32ZBA:       # %bb.0:
+; RV32ZBA-NEXT:    sh3add a1, a0, a0
+; RV32ZBA-NEXT:    sh3add a0, a1, a0
+; RV32ZBA-NEXT:    sh3add a0, a0, a1
+; RV32ZBA-NEXT:    ret
+  %c = mul i32 %a, 593
+  ret i32 %c
+}
+
+define i32 @mul301(i32 %a) {
+; RV32I-LABEL: mul301:
+; RV32I:       # %bb.0:
+; RV32I-NEXT:    li a1, 301
+; RV32I-NEXT:    mul a0, a0, a1
+; RV32I-NEXT:    ret
+;
+; RV32ZBA-LABEL: mul301:
+; RV32ZBA:       # %bb.0:
+; RV32ZBA-NEXT:    sh3add a1, a0, a0
+; RV32ZBA-NEXT:    sh3add a0, a1, a0
+; RV32ZBA-NEXT:    sh2add a0, a0, a1
+; RV32ZBA-NEXT:    ret
+  %c = mul i32 %a, 301
+  ret i32 %c
+}
+
+define i32 @mul405(i32 %a) {
+; RV32I-LABEL: mul405:
+; RV32I:       # %bb.0:
+; RV32I-NEXT:    li a1, 405
+; RV32I-NEXT:    mul a0, a0, a1
+; RV32I-NEXT:    ret
+;
+; RV32ZBA-LABEL: mul405:
+; RV32ZBA:       # %bb.0:
+; RV32ZBA-NEXT:    sh2add a0, a0, a0
+; RV32ZBA-NEXT:    sh3add a0, a0, a0
+; RV32ZBA-NEXT:    sh3add a0, a0, a0
+; RV32ZBA-NEXT:    ret
+  %c = mul i32 %a, 405
+  ret i32 %c
+}
+
+define i32 @mul585(i32 %a) {
+; RV32I-LABEL: mul585:
+; RV32I:       # %bb.0:
+; RV32I-NEXT:    li a1, 585
+; RV32I-NEXT:    mul a0, a0, a1
+; RV32I-NEXT:    ret
+;
+; RV32ZBA-LABEL: mul585:
+; RV32ZBA:       # %bb.0:
+; RV32ZBA-NEXT:    sh3add a1, a0, a0
+; RV32ZBA-NEXT:    sh3add a1, a1, a0
+; RV32ZBA-NEXT:    sh3add a0, a1, a0
+; RV32ZBA-NEXT:    ret
+  %c = mul i32 %a, 585
+  ret i32 %c
+}
+
+define i32 @mul23(i32 %a) {
+; RV32I-LABEL: mul23:
+; RV32I:       # %bb.0:
+; RV32I-NEXT:    li a1, 23
+; RV32I-NEXT:    mul a0, a0, a1
+; RV32I-NEXT:    ret
+;
+; RV32ZBA-LABEL: mul23:
+; RV32ZBA:       # %bb.0:
+; RV32ZBA-NEXT:    sh2add a1, a0, a0
+; RV32ZBA-NEXT:    sh1add a1, a1, a0
+; RV32ZBA-NEXT:    sh1add a0, a1, a0
+; RV32ZBA-NEXT:    ret
+  %c = mul i32 %a, 23
+  ret i32 %c
+}
+
+define i32 @mul225(i32 %a) {
+; RV32I-LABEL: mul225:
+; RV32I:       # %bb.0:
+; RV32I-NEXT:    li a1, 225
+; RV32I-NEXT:    mul a0, a0, a1
+; RV32I-NEXT:    ret
+;
+; RV32ZBA-LABEL: mul225:
+; RV32ZBA:       # %bb.0:
+; RV32ZBA-NEXT:    sh1add a1, a0, a0
+; RV32ZBA-NEXT:    sh3add a0, a1, a0
+; RV32ZBA-NEXT:    sh3add a0, a0, a0
+; RV32ZBA-NEXT:    ret
+  %c = mul i32 %a, 225
+  ret i32 %c
+}
+
+define i32 @mul69(i32 %a) {
+; RV32I-LABEL: mul69:
+; RV32I:       # %bb.0:
+; RV32I-NEXT:    li a1, 69
+; RV32I-NEXT:    mul a0, a0, a1
+; RV32I-NEXT:    ret
+;
+; RV32ZBA-LABEL: mul69:
+; RV32ZBA:       # %bb.0:
+; RV32ZBA-NEXT:    sh2add a1, a0, a0
+; RV32ZBA-NEXT:    sh3add a1, a0, a1
+; RV32ZBA-NEXT:    sh3add a0, a1, a0
+; RV32ZBA-NEXT:    ret
+  %c = mul i32 %a, 69
+  ret i32 %c
+}
+
+define i32 @mul77(i32 %a) {
+; RV32I-LABEL: mul77:
+; RV32I:       # %bb.0:
+; RV32I-NEXT:    li a1, 77
+; RV32I-NEXT:    mul a0, a0, a1
+; RV32I-NEXT:    ret
+;
+; RV32ZBA-LABEL: mul77:
+; RV32ZBA:       # %bb.0:
+; RV32ZBA-NEXT:    sh3add a1, a0, a0
+; RV32ZBA-NEXT:    sh1add a1, a1, a0
+; RV32ZBA-NEXT:    sh2add a0, a1, a0
+; RV32ZBA-NEXT:    ret
+  %c = mul i32 %a, 77
+  ret i32 %c
+}
+
+define i32 @mul123(i32 %a) {
+; RV32I-LABEL: mul123:
+; RV32I:       # %bb.0:
+; RV32I-NEXT:    li a1, 123
+; RV32I-NEXT:    mul a0, a0, a1
+; RV32I-NEXT:    ret
+;
+; RV32ZBA-LABEL: mul123:
+; RV32ZBA:       # %bb.0:
+; RV32ZBA-NEXT:    sh2add a1, a0, a0
+; RV32ZBA-NEXT:    sh3add a0, a1, a0
+; RV32ZBA-NEXT:    sh1add a0, a0, a0
+; RV32ZBA-NEXT:    ret
+  %c = mul i32 %a, 123
+  ret i32 %c
+}
+
+define i32 @mul107(i32 %a) {
+; RV32I-LABEL: mul107:
+; RV32I:       # %bb.0:
+; RV32I-NEXT:    li a1, 107
+; RV32I-NEXT:    mul a0, a0, a1
+; RV32I-NEXT:    ret
+;
+; RV32ZBA-LABEL: mul107:
+; RV32ZBA:       # %bb.0:
+; RV32ZBA-NEXT:    sh2add a1, a0, a0
+; RV32ZBA-NEXT:    sh1add a0, a1, a0
+; RV32ZBA-NEXT:    sh3add a0, a0, a1
+; RV32ZBA-NEXT:    ret
+  %c = mul i32 %a, 107
+  ret i32 %c
+}
+
+define i32 @mul361(i32 %a) {
+; RV32I-LABEL: mul361:
+; RV32I:       # %bb.0:
+; RV32I-NEXT:    li a1, 361
+; RV32I-NEXT:    mul a0, a0, a1
+; RV32I-NEXT:    ret
+;
+; RV32ZBA-LABEL: mul361:
+; RV32ZBA:       # %bb.0:
+; RV32ZBA-NEXT:    sh2add a1, a0, a0
+; RV32ZBA-NEXT:    sh3add a1, a1, a1
+; RV32ZBA-NEXT:    sh3add a0, a1, a0
+; RV32ZBA-NEXT:    ret
+  %c = mul i32 %a, 361
+  ret i32 %c
+}
+
+define i32 @mul205(i32 %a) {
+; RV32I-LABEL: mul205:
+; RV32I:       # %bb.0:
+; RV32I-NEXT:    li a1, 205
+; RV32I-NEXT:    mul a0, a0, a1
+; RV32I-NEXT:    ret
+;
+; RV32ZBA-LABEL: mul205:
+; RV32ZBA:       # %bb.0:
+; RV32ZBA-NEXT:    sh2add a1, a0, a0
+; RV32ZBA-NEXT:    sh3add a0, a1, a0
+; RV32ZBA-NEXT:    sh2add a0, a0, a0
+; RV32ZBA-NEXT:    ret
+  %c = mul i32 %a, 205
+  ret i32 %c
+}
+
+define i32 @mul185(i32 %a) {
+; RV32I-LABEL: mul185:
+; RV32I:       # %bb.0:
+; RV32I-NEXT:    li a1, 185
+; RV32I-NEXT:    mul a0, a0, a1
+; RV32I-NEXT:    ret
+;
+; RV32ZBA-LABEL: mul185:
+; RV32ZBA:       # %bb.0:
+; RV32ZBA-NEXT:    sh3add a1, a0, a0
+; RV32ZBA-NEXT:    sh2add a0, a1, a0
+; RV32ZBA-NEXT:    sh2add a0, a0, a0
+; RV32ZBA-NEXT:    ret
+  %c = mul i32 %a, 185
+  ret i32 %c
+}
+
+define i32 @mul55(i32 %a) {
+; RV32I-LABEL: mul55:
+; RV32I:       # %bb.0:
+; RV32I-NEXT:    li a1, 55
+; RV32I-NEXT:    mul a0, a0, a1
+; RV32I-NEXT:    ret
+;
+; RV32ZBA-LABEL: mul55:
+; RV32ZBA:       # %bb.0:
+; RV32ZBA-NEXT:    sh1add a1, a0, a0
+; RV32ZBA-NEXT:    sh3add a1, a1, a1
+; RV32ZBA-NEXT:    sh1add a0, a1, a0
+; RV32ZBA-NEXT:    ret
+  %c = mul i32 %a, 55
+  ret i32 %c
+}
+
+define i32 @mul99(i32 %a) {
+; RV32I-LABEL: mul99:
+; RV32I:       # %bb.0:
+; RV32I-NEXT:    li a1, 99
+; RV32I-NEXT:    mul a0, a0, a1
+; RV32I-NEXT:    ret
+;
+; RV32ZBA-LABEL: mul99:
+; RV32ZBA:       # %bb.0:
+; RV32ZBA-NEXT:    sh2add a1, a0, a0
+; RV32ZBA-NEXT:    sh1add a0, a1, a0
+; RV32ZBA-NEXT:    sh3add a0, a0, a0
+; RV32ZBA-NEXT:    ret
+  %c = mul i32 %a, 99
+  ret i32 %c
+}
+
+define i32 @mul85(i32 %a) {
+; RV32I-LABEL: mul85:
+; RV32I:       # %bb.0:
+; RV32I-NEXT:    li a1, 85
+; RV32I-NEXT:    mul a0, a0, a1
+; RV32I-NEXT:    ret
+;
+; RV32ZBA-LABEL: mul85:
+; RV32ZBA:       # %bb.0:
+; RV32ZBA-NEXT:    sh2add a1, a0, a0
+; RV32ZBA-NEXT:    sh2add a1, a1, a0
+; RV32ZBA-NEXT:    sh2add a0, a1, a0
+; RV32ZBA-NEXT:    ret
+  %c = mul i32 %a, 85
+  ret i32 %c
+}
+
+define i32 @mul155(i32 %a) {
+; RV32I-LABEL: mul155:
+; RV32I:       # %bb.0:
+; RV32I-NEXT:    li a1, 155
+; RV32I-NEXT:    mul a0, a0, a1
+; RV32I-NEXT:    ret
+;
+; RV32ZBA-LABEL: mul155:
+; RV32ZBA:       # %bb.0:
+; RV32ZBA-NEXT:    sh3add a1, a0, a0
+; RV32ZBA-NEXT:    sh3add a0, a1, a0
+; RV32ZBA-NEXT:    sh1add a0, a0, a1
+; RV32ZBA-NEXT:    ret
+  %c = mul i32 %a, 155
+  ret i32 %c
+}
+
+define i32 @mul333(i32 %a) {
+; RV32I-LABEL: mul333:
+; RV32I:       # %bb.0:
+; RV32I-NEXT:    li a1, 333
+; RV32I-NEXT:    mul a0, a0, a1
+; RV32I-NEXT:    ret
+;
+; RV32ZBA-LABEL: mul333:
+; RV32ZBA:       # %bb.0:
+; RV32ZBA-NEXT:    sh3add a1, a0, a0
+; RV32ZBA-NEXT:    sh2add a0, a1, a0
+; RV32ZBA-NEXT:    sh3add a0, a0, a0
+; RV32ZBA-NEXT:    ret
+  %c = mul i32 %a, 333
+  ret i32 %c
+}
+
+define i32 @mul137(i32 %a) {
+; RV32I-LABEL: mul137:
+; RV32I:       # %bb.0:
+; RV32I-NEXT:    li a1, 137
+; RV32I-NEXT:    mul a0, a0, a1
+; RV32I-NEXT:    ret
+;
+; RV32ZBA-LABEL: mul137:
+; RV32ZBA:       # %bb.0:
+; RV32ZBA-NEXT:    sh2add a1, a0, a0
+; RV32ZBA-NEXT:    sh3add a1, a0, a1
+; RV32ZBA-NEXT:    sh3add a0, a1, a0
+; RV32ZBA-NEXT:    ret
+  %c = mul i32 %a, 137
+  ret i32 %c
+}
+
+define i32 @mul135(i32 %a) {
+; RV32I-LABEL: mul135:
+; RV32I:       # %bb.0:
+; RV32I-NEXT:    li a1, 135
+; RV32I-NEXT:    mul a0, a0, a1
+; RV32I-NEXT:    ret
+;
+; RV32ZBA-LABEL: mul135:
+; RV32ZBA:       # %bb.0:
+; RV32ZBA-NEXT:    sh1add a0, a0, a0
+; RV32ZBA-NEXT:    sh2add a0, a0, a0
+; RV32ZBA-NEXT:    sh3add a0, a0, a0
+; RV32ZBA-NEXT:    ret
+  %c = mul i32 %a, 135
+  ret i32 %c
+}
+
+define i32 @mul93(i32 %a) {
+; RV32I-LABEL: mul93:
+; RV32I:       # %bb.0:
+; RV32I-NEXT:    li a1, 93
+; RV32I-NEXT:    mul a0, a0, a1
+; RV32I-NEXT:    ret
+;
+; RV32ZBA-LABEL: mul93:
+; RV32ZBA:       # %bb.0:
+; RV32ZBA-NEXT:    sh1add a1, a0, a0
+; RV32ZBA-NEXT:    sh2add a0, a1, a0
+; RV32ZBA-NEXT:    sh3add a0, a0, a1
+; RV32ZBA-NEXT:    ret
+  %c = mul i32 %a, 93
+  ret i32 %c
+}
+
+define i32 @mul109(i32 %a) {
+; RV32I-LABEL: mul109:
+; RV32I:       # %bb.0:
+; RV32I-NEXT:    li a1, 109
+; RV32I-NEXT:    mul a0, a0, a1
+; RV32I-NEXT:    ret
+;
+; RV32ZBA-LABEL: mul109:
+; RV32ZBA:       # %bb.0:
+; RV32ZBA-NEXT:    sh1add a1, a0, a0
+; RV32ZBA-NEXT:    sh3add a1, a1, a1
+; RV32ZBA-NEXT:    sh2add a0, a1, a0
+; RV32ZBA-NEXT:    ret
+  %c = mul i32 %a, 109
+  ret i32 %c
+}
+
+define i32 @mul75(i32 %a) {
+; RV32I-LABEL: mul75:
+; RV32I:       # %bb.0:
+; RV32I-NEXT:    li a1, 75
+; RV32I-NEXT:    mul a0, a0, a1
+; RV32I-NEXT:    ret
+;
+; RV32ZBA-LABEL: mul75:
+; RV32ZBA:       # %bb.0:
+; RV32ZBA-NEXT:    sh3add a1, a0, a0
+; RV32ZBA-NEXT:    sh2add a1, a1, a0
+; RV32ZBA-NEXT:    sh1add a0, a1, a0
+; RV32ZBA-NEXT:    ret
+  %c = mul i32 %a, 75
+  ret i32 %c
+}
+
+define i32 @mul649(i32 %a) {
+; RV32I-LABEL: mul649:
+; RV32I:       # %bb.0:
+; RV32I-NEXT:    li a1, 649
+; RV32I-NEXT:    mul a0, a0, a1
+; RV32I-NEXT:    ret
+;
+; RV32ZBA-LABEL: mul649:
+; RV32ZBA:       # %bb.0:
+; RV32ZBA-NEXT:    sh3add a1, a0, a0
+; RV32ZBA-NEXT:    sh3add a1, a1, a1
+; RV32ZBA-NEXT:    sh3add a0, a1, a0
+; RV32ZBA-NEXT:    ret
+  %c = mul i32 %a, 649
+  ret i32 %c
+}
+
+define i32 @mul113(i32 %a) {
+; RV32I-LABEL: mul113:
+; RV32I:       # %bb.0:
+; RV32I-NEXT:    li a1, 113
+; RV32I-NEXT:    mul a0, a0, a1
+; RV32I-NEXT:    ret
+;
+; RV32ZBA-LABEL: mul113:
+; RV32ZBA:       # %bb.0:
+; RV32ZBA-NEXT:    sh2add a1, a0, a0
+; RV32ZBA-NEXT:    sh3add a0, a0, a1
+; RV32ZBA-NEXT:    sh3add a0, a0, a1
+; RV32ZBA-NEXT:    ret
+  %c = mul i32 %a, 113
+  ret i32 %c
+}
+
+define i32 @mul149(i32 %a) {
+; RV32I-LABEL: mul149:
+; RV32I:       # %bb.0:
+; RV32I-NEXT:    li a1, 149
+; RV32I-NEXT:    mul a0, a0, a1
+; RV32I-NEXT:    ret
+;
+; RV32ZBA-LABEL: mul149:
+; RV32ZBA:       # %bb.0:
+; RV32ZBA-NEXT:    sh3add a1, a0, a0
+; RV32ZBA-NEXT:    sh2add a1, a1, a0
+; RV32ZBA-NEXT:    sh2add a0, a1, a0
+; RV32ZBA-NEXT:    ret
+  %c = mul i32 %a, 149
+  ret i32 %c
+}
+
+define i32 @mul87(i32 %a) {
+; RV32I-LABEL: mul87:
+; RV32I:       # %bb.0:
+; RV32I-NEXT:    li a1, 87
+; RV32I-NEXT:    mul a0, a0, a1
+; RV32I-NEXT:    ret
+;
+; RV32ZBA-LABEL: mul87:
+; RV32ZBA:       # %bb.0:
+; RV32ZBA-NEXT:    sh3add a1, a0, a0
+; RV32ZBA-NEXT:    sh2add a0, a1, a0
+; RV32ZBA-NEXT:    sh1add a0, a0, a1
+; RV32ZBA-NEXT:    ret
+  %c = mul i32 %a, 87
+  ret i32 %c
+}
+
+define i32 @mul369(i32 %a) {
+; RV32I-LABEL: mul369:
+; RV32I:       # %bb.0:
+; RV32I-NEXT:    li a1, 369
+; RV32I-NEXT:    mul a0, a0, a1
+; RV32I-NEXT:    ret
+;
+; RV32ZBA-LABEL: mul369:
+; RV32ZBA:       # %bb.0:
+; RV32ZBA-NEXT:    sh2add a1, a0, a0
+; RV32ZBA-NEXT:    sh3add a0, a1, a0
+; RV32ZBA-NEXT:    sh3add a0, a0, a0
+; RV32ZBA-NEXT:    ret
+  %c = mul i32 %a, 369
+  ret i32 %c
+}
+
+define i32 @mul173(i32 %a) {
+; RV32I-LABEL: mul173:
+; RV32I:       # %bb.0:
+; RV32I-NEXT:    li a1, 173
+; RV32I-NEXT:    mul a0, a0, a1
+; RV32I-NEXT:    ret
+;
+; RV32ZBA-LABEL: mul173:
+; RV32ZBA:       # %bb.0:
+; RV32ZBA-NEXT:    sh2add a1, a0, a0
+; RV32ZBA-NEXT:    sh2add a0, a1, a0
+; RV32ZBA-NEXT:    sh3add a0, a0, a1
+; RV32ZBA-NEXT:    ret
+  %c = mul i32 %a, 173
+  ret i32 %c
+}
+
+define i32 @mul97(i32 %a) {
+; RV32I-LABEL: mul97:
+; RV32I:       # %bb.0:
+; RV32I-NEXT:    li a1, 97
+; RV32I-NEXT:    mul a0, a0, a1
+; RV32I-NEXT:    ret
+;
+; RV32ZBA-LABEL: mul97:
+; RV32ZBA:       # %bb.0:
+; RV32ZBA-NEXT:    sh1add a1, a0, a0
+; RV32ZBA-NEXT:    sh3add a0, a0, a1
+; RV32ZBA-NEXT:    sh3add a0, a0, a1
+; RV32ZBA-NEXT:    ret
+  %c = mul i32 %a, 97
+  ret i32 %c
+}
+
+define i32 @mul95(i32 %a) {
+; RV32I-LABEL: mul95:
+; RV32I:       # %bb.0:
+; RV32I-NEXT:    li a1, 95
+; RV32I-NEXT:    mul a0, a0, a1
+; RV32I-NEXT:    ret
+;
+; RV32ZBA-LABEL: mul95:
+; RV32ZBA:       # %bb.0:
+; RV32ZBA-NEXT:    sh3add a1, a0, a0
+; RV32ZBA-NEXT:    sh1add a0, a1, a0
+; RV32ZBA-NEXT:    sh2add a0, a0, a0
+; RV32ZBA-NEXT:    ret
+  %c = mul i32 %a, 95
+  ret i32 %c
+}
+
+define i32 @mul161(i32 %a) {
+; RV32I-LABEL: mul161:
+; RV32I:       # %bb.0:
+; RV32I-NEXT:    li a1, 161
+; RV32I-NEXT:    mul a0, a0, a1
+; RV32I-NEXT:    ret
+;
+; RV32ZBA-LABEL: mul161:
+; RV32ZBA:       # %bb.0:
+; RV32ZBA-NEXT:    sh1add a1, a0, a0
+; RV32ZBA-NEXT:    sh3add a0, a1, a0
+; RV32ZBA-NEXT:    sh3add a0, a0, a1
+; RV32ZBA-NEXT:    ret
+  %c = mul i32 %a, 161
+  ret i32 %c
+}
+
+define i32 @mul121(i32 %a) {
+; RV32I-LABEL: mul121:
+; RV32I:       # %bb.0:
+; RV32I-NEXT:    li a1, 121
+; RV32I-NEXT:    mul a0, a0, a1
+; RV32I-NEXT:    ret
+;
+; RV32ZBA-LABEL: mul121:
+; RV32ZBA:       # %bb.0:
+; RV32ZBA-NEXT:    sh1add a1, a0, a0
+; RV32ZBA-NEXT:    sh2add a1, a1, a1
+; RV32ZBA-NEXT:    sh3add a0, a1, a0
+; RV32ZBA-NEXT:    ret
+  %c = mul i32 %a, 121
+  ret i32 %c
+}
+
+define i32 @mul29(i32 %a) {
+; RV32I-LABEL: mul29:
+; RV32I:       # %bb.0:
+; RV32I-NEXT:    li a1, 29
+; RV32I-NEXT:    mul a0, a0, a1
+; RV32I-NEXT:    ret
+;
+; RV32ZBA-LABEL: mul29:
+; RV32ZBA:       # %bb.0:
+; RV32ZBA-NEXT:    sh1add a1, a0, a0
+; RV32ZBA-NEXT:    sh1add a1, a1, a0
+; RV32ZBA-NEXT:    sh2add a0, a1, a0
+; RV32ZBA-NEXT:    ret
+  %c = mul i32 %a, 29
+  ret i32 %c
+}
+
+define i32 @mul125(i32 %a) {
+; RV32I-LABEL: mul125:
+; RV32I:       # %bb.0:
+; RV32I-NEXT:    li a1, 125
+; RV32I-NEXT:    mul a0, a0, a1
+; RV32I-NEXT:    ret
+;
+; RV32ZBA-LABEL: mul125:
+; RV32ZBA:       # %bb.0:
+; RV32ZBA-NEXT:    sh1add a1, a0, a0
+; RV32ZBA-NEXT:    sh3add a0, a1, a0
+; RV32ZBA-NEXT:    sh2add a0, a0, a0
+; RV32ZBA-NEXT:    ret
+  %c = mul i32 %a, 125
+  ret i32 %c
+}
+
+define i32 @mul201(i32 %a) {
+; RV32I-LABEL: mul201:
+; RV32I:       # %bb.0:
+; RV32I-NEXT:    li a1, 201
+; RV32I-NEXT:    mul a0, a0, a1
+; RV32I-NEXT:    ret
+;
+; RV32ZBA-LABEL: mul201:
+; RV32ZBA:       # %bb.0:
+; RV32ZBA-NEXT:    sh2add a1, a0, a0
+; RV32ZBA-NEXT:    sh2add a1, a1, a1
+; RV32ZBA-NEXT:    sh3add a0, a1, a0
+; RV32ZBA-NEXT:    ret
+  %c = mul i32 %a, 201
+  ret i32 %c
+}
+
+define i32 @mul47(i32 %a) {
+; RV32I-LABEL: mul47:
+; RV32I:       # %bb.0:
+; RV32I-NEXT:    li a1, 47
+; RV32I-NEXT:    mul a0, a0, a1
+; RV32I-NEXT:    ret
+;
+; RV32ZBA-LABEL: mul47:
+; RV32ZBA:       # %bb.0:
+; RV32ZBA-NEXT:    sh2add a1, a0, a0
+; RV32ZBA-NEXT:    sh2add a0, a1, a0
+; RV32ZBA-NEXT:    sh1add a0, a0, a1
+; RV32ZBA-NEXT:    ret
+  %c = mul i32 %a, 47
+  ret i32 %c
+}
+
+define i32 @mul657(i32 %a) {
+; RV32I-LABEL: mul657:
+; RV32I:       # %bb.0:
+; RV32I-NEXT:    li a1, 657
+; RV32I-NEXT:    mul a0, a0, a1
+; RV32I-NEXT:    ret
+;
+; RV32ZBA-LABEL: mul657:
+; RV32ZBA:       # %bb.0:
+; RV32ZBA-NEXT:    sh3add a1, a0, a0
+; RV32ZBA-NEXT:    sh3add a0, a1, a0
+; RV32ZBA-NEXT:    sh3add a0, a0, a0
+; RV32ZBA-NEXT:    ret
+  %c = mul i32 %a, 657
+  ret i32 %c
+}
+
+define i32 @mul49(i32 %a) {
+; RV32I-LABEL: mul49:
+; RV32I:       # %bb.0:
+; RV32I-NEXT:    li a1, 49
+; RV32I-NEXT:    mul a0, a0, a1
+; RV32I-NEXT:    ret
+;
+; RV32ZBA-LABEL: mul49:
+; RV32ZBA:       # %bb.0:
+; RV32ZBA-NEXT:    sh1add a1, a0, a0
+; RV32ZBA-NEXT:    sh2add a0, a1, a0
+; RV32ZBA-NEXT:    sh2add a0, a0, a1
+; RV32ZBA-NEXT:    ret
+  %c = mul i32 %a, 49
+  ret i32 %c
+}
+
+define i32 @mul325(i32 %a) {
+; RV32I-LABEL: mul325:
+; RV32I:       # %bb.0:
+; RV32I-NEXT:    li a1, 325
+; RV32I-NEXT:    mul a0, a0, a1
+; RV32I-NEXT:    ret
+;
+; RV32ZBA-LABEL: mul325:
+; RV32ZBA:       # %bb.0:
+; RV32ZBA-NEXT:    sh3add a1, a0, a0
+; RV32ZBA-NEXT:    sh3add a1, a1, a1
+; RV32ZBA-NEXT:    sh2add a0, a1, a0
+; RV32ZBA-NEXT:    ret
+  %c = mul i32 %a, 325
+  ret i32 %c
+}
+
+define i32 @mul43(i32 %a) {
+; RV32I-LABEL: mul43:
+; RV32I:       # %bb.0:
+; RV32I-NEXT:    li a1, 43
+; RV32I-NEXT:    mul a0, a0, a1
+; RV32I-NEXT:    ret
+;
+; RV32ZBA-LABEL: mul43:
+; RV32ZBA:       # %bb.0:
+; RV32ZBA-NEXT:    sh2add a1, a0, a0
+; RV32ZBA-NEXT:    sh2add a1, a1, a0
+; RV32ZBA-NEXT:    sh1add a0, a1, a0
+; RV32ZBA-NEXT:    ret
+  %c = mul i32 %a, 43
+  ret i32 %c
+}
+
+define i32 @mul39(i32 %a) {
+; RV32I-LABEL: mul39:
+; RV32I:       # %bb.0:
+; RV32I-NEXT:    li a1, 39
+; RV32I-NEXT:    mul a0, a0, a1
+; RV32I-NEXT:    ret
+;
+; RV32ZBA-LABEL: mul39:
+; RV32ZBA:       # %bb.0:
+; RV32ZBA-NEXT:    sh3add a1, a0, a0
+; RV32ZBA-NEXT:    sh1add a1, a1, a0
+; RV32ZBA-NEXT:    sh1add a0, a1, a0
+; RV32ZBA-NEXT:    ret
+  %c = mul i32 %a, 39
+  ret i32 %c
+}
+
+define i32 @mul59(i32 %a) {
+; RV32I-LABEL: mul59:
+; RV32I:       # %bb.0:
+; RV32I-NEXT:    li a1, 59
+; RV32I-NEXT:    mul a0, a0, a1
+; RV32I-NEXT:    ret
+;
+; RV32ZBA-LABEL: mul59:
+; RV32ZBA:       # %bb.0:
+; RV32ZBA-NEXT:    sh1add a1, a0, a0
+; RV32ZBA-NEXT:    sh1add a0, a1, a0
+; RV32ZBA-NEXT:    sh3add a0, a0, a1
+; RV32ZBA-NEXT:    ret
+  %c = mul i32 %a, 59
+  ret i32 %c
+}
+
+define i32 @mul165(i32 %a) {
+; RV32I-LABEL: mul165:
+; RV32I:       # %bb.0:
+; RV32I-NEXT:    li a1, 165
+; RV32I-NEXT:    mul a0, a0, a1
+; RV32I-NEXT:    ret
+;
+; RV32ZBA-LABEL: mul165:
+; RV32ZBA:       # %bb.0:
+; RV32ZBA-NEXT:    sh2add a1, a0, a0
+; RV32ZBA-NEXT:    sh3add a1, a1, a0
+; RV32ZBA-NEXT:    sh2add a0, a1, a0
+; RV32ZBA-NEXT:    ret
+  %c = mul i32 %a, 165
+  ret i32 %c
+}
+
+define i32 @mul145(i32 %a) {
+; RV32I-LABEL: mul145:
+; RV32I:       # %bb.0:
+; RV32I-NEXT:    li a1, 145
+; RV32I-NEXT:    mul a0, a0, a1
+; RV32I-NEXT:    ret
+;
+; RV32ZBA-LABEL: mul145:
+; RV32ZBA:       # %bb.0:
+; RV32ZBA-NEXT:    sh3add a1, a0, a0
+; RV32ZBA-NEXT:    sh3add a0, a0, a1
+; RV32ZBA-NEXT:    sh3add a0, a0, a1
+; RV32ZBA-NEXT:    ret
+  %c = mul i32 %a, 145
+  ret i32 %c
+}
+
+define i32 @mul219(i32 %a) {
+; RV32I-LABEL: mul219:
+; RV32I:       # %bb.0:
+; RV32I-NEXT:    li a1, 219
+; RV32I-NEXT:    mul a0, a0, a1
+; RV32I-NEXT:    ret
+;
+; RV32ZBA-LABEL: mul219:
+; RV32ZBA:       # %bb.0:
+; RV32ZBA-NEXT:    sh3add a1, a0, a0
+; RV32ZBA-NEXT:    sh3add a0, a1, a0
+; RV32ZBA-NEXT:    sh1add a0, a0, a0
+; RV32ZBA-NEXT:    ret
+  %c = mul i32 %a, 219
+  ret i32 %c
+}
+
+define i32 @mul729(i32 %a) {
+; RV32I-LABEL: mul729:
+; RV32I:       # %bb.0:
+; RV32I-NEXT:    li a1, 729
+; RV32I-NEXT:    mul a0, a0, a1
+; RV32I-NEXT:    ret
+;
+; RV32ZBA-LABEL: mul729:
+; RV32ZBA:       # %bb.0:
+; RV32ZBA-NEXT:    sh3add a0, a0, a0
+; RV32ZBA-NEXT:    sh3add a0, a0, a0
+; RV32ZBA-NEXT:    sh3add a0, a0, a0
+; RV32ZBA-NEXT:    ret
+  %c = mul i32 %a, 729
+  ret i32 %c
+}
+
+define i32 @mul105(i32 %a) {
+; RV32I-LABEL: mul105:
+; RV32I:       # %bb.0:
+; RV32I-NEXT:    li a1, 105
+; RV32I-NEXT:    mul a0, a0, a1
+; RV32I-NEXT:    ret
+;
+; RV32ZBA-LABEL: mul105:
+; RV32ZBA:       # %bb.0:
+; RV32ZBA-NEXT:    sh1add a1, a0, a0
+; RV32ZBA-NEXT:    sh2add a1, a1, a0
+; RV32ZBA-NEXT:    sh3add a0, a1, a0
+; RV32ZBA-NEXT:    ret
+  %c = mul i32 %a, 105
+  ret i32 %c
+}
+
+define i32 @mul365(i32 %a) {
+; RV32I-LABEL: mul365:
+; RV32I:       # %bb.0:
+; RV32I-NEXT:    li a1, 365
+; RV32I-NEXT:    mul a0, a0, a1
+; RV32I-NEXT:    ret
+;
+; RV32ZBA-LABEL: mul365:
+; RV32ZBA:       # %bb.0:
+; RV32ZBA-NEXT:    sh3add a1, a0, a0
+; RV32ZBA-NEXT:    sh3add a0, a1, a0
+; RV32ZBA-NEXT:    sh2add a0, a0, a0
+; RV32ZBA-NEXT:    ret
+  %c = mul i32 %a, 365
+  ret i32 %c
+}
+
+define i32 @mul243(i32 %a) {
+; RV32I-LABEL: mul243:
+; RV32I:       # %bb.0:
+; RV32I-NEXT:    li a1, 243
+; RV32I-NEXT:    mul a0, a0, a1
+; RV32I-NEXT:    ret
+;
+; RV32ZBA-LABEL: mul243:
+; RV32ZBA:       # %bb.0:
+; RV32ZBA-NEXT:    sh1add a0, a0, a0
+; RV32ZBA-NEXT:    sh3add a0, a0, a0
+; RV32ZBA-NEXT:    sh3add a0, a0, a0
+; RV32ZBA-NEXT:    ret
+  %c = mul i32 %a, 243
+  ret i32 %c
+}
+
+define i32 @mul101(i32 %a) {
+; RV32I-LABEL: mul101:
+; RV32I:       # %bb.0:
+; RV32I-NEXT:    li a1, 101
+; RV32I-NEXT:    mul a0, a0, a1
+; RV32I-NEXT:    ret
+;
+; RV32ZBA-LABEL: mul101:
+; RV32ZBA:       # %bb.0:
+; RV32ZBA-NEXT:    sh2add a1, a0, a0
+; RV32ZBA-NEXT:    sh2add a1, a1, a1
+; RV32ZBA-NEXT:    sh2add a0, a1, a0
+; RV32ZBA-NEXT:    ret
+  %c = mul i32 %a, 101
+  ret i32 %c
+}
+
+define i32 @mul297(i32 %a) {
+; RV32I-LABEL: mul297:
+; RV32I:       # %bb.0:
+; RV32I-NEXT:    li a1, 297
+; RV32I-NEXT:    mul a0, a0, a1
+; RV32I-NEXT:    ret
+;
+; RV32ZBA-LABEL: mul297:
+; RV32ZBA:       # %bb.0:
+; RV32ZBA-NEXT:    sh3add a1, a0, a0
+; RV32ZBA-NEXT:    sh2add a1, a1, a0
+; RV32ZBA-NEXT:    sh3add a0, a1, a0
+; RV32ZBA-NEXT:    ret
+  %c = mul i32 %a, 297
+  ret i32 %c
+}
+
+define i32 @mul171(i32 %a) {
+; RV32I-LABEL: mul171:
+; RV32I:       # %bb.0:
+; RV32I-NEXT:    li a1, 171
+; RV32I-NEXT:    mul a0, a0, a1
+; RV32I-NEXT:    ret
+;
+; RV32ZBA-LABEL: mul171:
+; RV32ZBA:       # %bb.0:
+; RV32ZBA-NEXT:    sh3add a1, a0, a0
+; RV32ZBA-NEXT:    sh1add a0, a1, a0
+; RV32ZBA-NEXT:    sh3add a0, a0, a0
+; RV32ZBA-NEXT:    ret
+  %c = mul i32 %a, 171
+  ret i32 %c
+}
+
+define i32 @mul169(i32 %a) {
+; RV32I-LABEL: mul169:
+; RV32I:       # %bb.0:
+; RV32I-NEXT:    li a1, 169
+; RV32I-NEXT:    mul a0, a0, a1
+; RV32I-NEXT:    ret
+;
+; RV32ZBA-LABEL: mul169:
+; RV32ZBA:       # %bb.0:
+; RV32ZBA-NEXT:    sh2add a1, a0, a0
+; RV32ZBA-NEXT:    sh2add a1, a1, a0
+; RV32ZBA-NEXT:    sh3add a0, a1, a0
+; RV32ZBA-NEXT:    ret
+  %c = mul i32 %a, 169
+  ret i32 %c
+}
+
+define i32 @mul61(i32 %a) {
+; RV32I-LABEL: mul61:
+; RV32I:       # %bb.0:
+; RV32I-NEXT:    li a1, 61
+; RV32I-NEXT:    mul a0, a0, a1
+; RV32I-NEXT:    ret
+;
+; RV32ZBA-LABEL: mul61:
+; RV32ZBA:       # %bb.0:
+; RV32ZBA-NEXT:    sh1add a1, a0, a0
+; RV32ZBA-NEXT:    sh2add a1, a1, a1
+; RV32ZBA-NEXT:    sh2add a0, a1, a0
+; RV32ZBA-NEXT:    ret
+  %c = mul i32 %a, 61
+  ret i32 %c
+}
+
 define i32 @mul4098(i32 %a) {
 ; RV32I-LABEL: mul4098:
 ; RV32I:       # %bb.0:
