@@ -1038,21 +1038,32 @@ MCSection *TargetLoweringObjectFileELF::getSectionForMachineBasicBlock(
   // under the .text.eh prefix. For regular sections, we either use a unique
   // name, or a unique ID for the section.
   SmallString<128> Name;
-  if (MBB.getSectionID() == MBBSectionID::ColdSectionID) {
-    Name += BBSectionsColdTextPrefix;
-    Name += MBB.getParent()->getName();
-  } else if (MBB.getSectionID() == MBBSectionID::ExceptionSectionID) {
-    Name += ".text.eh.";
-    Name += MBB.getParent()->getName();
-  } else {
-    Name += MBB.getParent()->getSection()->getName();
-    if (TM.getUniqueBasicBlockSectionNames()) {
-      if (!Name.endswith("."))
-        Name += ".";
-      Name += MBB.getSymbol()->getName();
+  StringRef FunctionSectionName = MBB.getParent()->getSection()->getName();
+  if (FunctionSectionName.equals(".text") ||
+      FunctionSectionName.startswith(".text.")) {
+    // Function is in a regular .text section.
+    StringRef FunctionName = MBB.getParent()->getName();
+    if (MBB.getSectionID() == MBBSectionID::ColdSectionID) {
+      Name += BBSectionsColdTextPrefix;
+      Name += FunctionName;
+    } else if (MBB.getSectionID() == MBBSectionID::ExceptionSectionID) {
+      Name += ".text.eh.";
+      Name += FunctionName;
     } else {
-      UniqueID = NextUniqueID++;
+      Name += FunctionSectionName;
+      if (TM.getUniqueBasicBlockSectionNames()) {
+        if (!Name.endswith("."))
+          Name += ".";
+        Name += MBB.getSymbol()->getName();
+      } else {
+        UniqueID = NextUniqueID++;
+      }
     }
+  } else {
+    // If the original function has a custom non-dot-text section, then emit
+    // all basic block sections into that section too, each with a unique id.
+    Name = FunctionSectionName;
+    UniqueID = NextUniqueID++;
   }
 
   unsigned Flags = ELF::SHF_ALLOC | ELF::SHF_EXECINSTR;

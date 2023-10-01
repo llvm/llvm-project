@@ -199,10 +199,10 @@ OperationState::~OperationState() {
 }
 
 LogicalResult OperationState::setProperties(
-    Operation *op, function_ref<InFlightDiagnostic &()> getDiag) const {
+    Operation *op, function_ref<InFlightDiagnostic()> emitError) const {
   if (LLVM_UNLIKELY(propertiesAttr)) {
     assert(!properties);
-    return op->setPropertiesFromAttribute(propertiesAttr, getDiag);
+    return op->setPropertiesFromAttribute(propertiesAttr, emitError);
   }
   if (properties)
     propertiesSetter(op->getPropertiesStorage(), properties);
@@ -520,6 +520,14 @@ void MutableOperandRange::updateLength(unsigned newLength) {
 OpOperand &MutableOperandRange::operator[](unsigned index) const {
   assert(index < length && "index is out of bounds");
   return owner->getOpOperand(start + index);
+}
+
+MutableArrayRef<OpOperand>::iterator MutableOperandRange::begin() const {
+  return owner->getOpOperands().slice(start, length).begin();
+}
+
+MutableArrayRef<OpOperand>::iterator MutableOperandRange::end() const {
+  return owner->getOpOperands().slice(start, length).end();
 }
 
 //===----------------------------------------------------------------------===//

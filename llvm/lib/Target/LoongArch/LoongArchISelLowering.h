@@ -290,7 +290,7 @@ private:
   getRegForInlineAsmConstraint(const TargetRegisterInfo *TRI,
                                StringRef Constraint, MVT VT) const override;
 
-  void LowerAsmOperandForConstraint(SDValue Op, std::string &Constraint,
+  void LowerAsmOperandForConstraint(SDValue Op, StringRef Constraint,
                                     std::vector<SDValue> &Ops,
                                     SelectionDAG &DAG) const override;
 

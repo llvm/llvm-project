@@ -2429,18 +2429,16 @@ SDValue AMDGPUTargetLowering::LowerFROUND(SDValue Op, SelectionDAG &DAG) const {
 
   const SDValue Zero = DAG.getConstantFP(0.0, SL, VT);
   const SDValue One = DAG.getConstantFP(1.0, SL, VT);
-  const SDValue Half = DAG.getConstantFP(0.5, SL, VT);
-
-  SDValue SignOne = DAG.getNode(ISD::FCOPYSIGN, SL, VT, One, X);
 
   EVT SetCCVT =
       getSetCCResultType(DAG.getDataLayout(), *DAG.getContext(), VT);
 
+  const SDValue Half = DAG.getConstantFP(0.5, SL, VT);
   SDValue Cmp = DAG.getSetCC(SL, SetCCVT, AbsDiff, Half, ISD::SETOGE);
+  SDValue OneOrZeroFP = DAG.getNode(ISD::SELECT, SL, VT, Cmp, One, Zero);
 
-  SDValue Sel = DAG.getNode(ISD::SELECT, SL, VT, Cmp, SignOne, Zero);
-
-  return DAG.getNode(ISD::FADD, SL, VT, T, Sel);
+  SDValue SignedOffset = DAG.getNode(ISD::FCOPYSIGN, SL, VT, OneOrZeroFP, X);
+  return DAG.getNode(ISD::FADD, SL, VT, T, SignedOffset);
 }
 
 SDValue AMDGPUTargetLowering::LowerFFLOOR(SDValue Op, SelectionDAG &DAG) const {
@@ -5777,12 +5775,6 @@ AMDGPUTargetLowering::shouldExpandAtomicRMWInIR(AtomicRMWInst *RMW) const {
     return AtomicExpansionKind::CmpXChg;
   }
   }
-}
-
-bool AMDGPUTargetLowering::isConstantUnsignedBitfieldExtractLegal(
-    unsigned Opc, LLT Ty1, LLT Ty2) const {
-  return (Ty1 == LLT::scalar(32) || Ty1 == LLT::scalar(64)) &&
-         Ty2 == LLT::scalar(32);
 }
 
 /// Whether it is profitable to sink the operands of an

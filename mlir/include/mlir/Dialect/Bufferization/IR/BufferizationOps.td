@@ -264,9 +264,7 @@ def Bufferization_MaterializeInDestinationOp
       return ::llvm::cast<RankedTensorType>(getResult().getType());
     }
 
-    std::pair<int64_t, int64_t> getDpsInitsPositionRange() {
-      return {1, 2};  // `dest` operand
-    }
+    MutableOperandRange getDpsInitsMutable() { return getDestMutable(); }
   }];
 
   let assemblyFormat = "$source `in` $dest attr-dict `:` type($source)";
@@ -385,7 +383,8 @@ def Bufferization_ToTensorOp : Bufferization_Op<"to_tensor", [
   }];
 
   let arguments = (ins Arg<AnyRankedOrUnrankedMemRef,
-                       "the reference to load from", [MemRead]>:$memref,
+                           "the reference to load from",
+                           [MemReadAt<0, FullEffect>]>:$memref,
                        UnitAttr:$restrict, UnitAttr:$writable);
   let results = (outs AnyTensor:$result);
 

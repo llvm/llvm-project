@@ -2344,8 +2344,9 @@ ExprResult TemplateInstantiator::TransformRequiresTypeParams(
     // here.
     TransReqs.push_back(RebuildTypeRequirement(createSubstDiag(
         SemaRef, Info, [&](llvm::raw_ostream &OS) { OS << *FailedDecl; })));
-    return getDerived().RebuildRequiresExpr(KWLoc, Body, TransParams, TransReqs,
-                                            RBraceLoc);
+    return getDerived().RebuildRequiresExpr(KWLoc, Body, RE->getLParenLoc(),
+                                            TransParams, RE->getRParenLoc(),
+                                            TransReqs, RBraceLoc);
   }
 
   return ExprResult{};

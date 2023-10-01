@@ -695,9 +695,10 @@ void GenericTaintChecker::initTaintRules(CheckerContext &C) const {
       {{{"strpbrk"}}, TR::Prop({{0}}, {{ReturnValueIndex}})},
       {{{"strndup"}}, TR::Prop({{0}}, {{ReturnValueIndex}})},
       {{{"strndupa"}}, TR::Prop({{0}}, {{ReturnValueIndex}})},
-      {{{"strlen"}}, TR::Prop({{0}}, {{ReturnValueIndex}})},
-      {{{"wcslen"}}, TR::Prop({{0}}, {{ReturnValueIndex}})},
-      {{{"strnlen"}}, TR::Prop({{0}}, {{ReturnValueIndex}})},
+
+      // strlen, wcslen, strnlen and alike intentionally don't propagate taint.
+      // See the details here: https://github.com/llvm/llvm-project/pull/66086
+
       {{{"strtol"}}, TR::Prop({{0}}, {{1, ReturnValueIndex}})},
       {{{"strtoll"}}, TR::Prop({{0}}, {{1, ReturnValueIndex}})},
       {{{"strtoul"}}, TR::Prop({{0}}, {{1, ReturnValueIndex}})},
@@ -743,12 +744,14 @@ void GenericTaintChecker::initTaintRules(CheckerContext &C) const {
       // Sinks
       {{{"system"}}, TR::Sink({{0}}, MsgSanitizeSystemArgs)},
       {{{"popen"}}, TR::Sink({{0}}, MsgSanitizeSystemArgs)},
-      {{{"execl"}}, TR::Sink({{0}}, MsgSanitizeSystemArgs)},
-      {{{"execle"}}, TR::Sink({{0}}, MsgSanitizeSystemArgs)},
-      {{{"execlp"}}, TR::Sink({{0}}, MsgSanitizeSystemArgs)},
-      {{{"execvp"}}, TR::Sink({{0}}, MsgSanitizeSystemArgs)},
-      {{{"execvP"}}, TR::Sink({{0}}, MsgSanitizeSystemArgs)},
-      {{{"execve"}}, TR::Sink({{0}}, MsgSanitizeSystemArgs)},
+      {{{"execl"}}, TR::Sink({{}, {0}}, MsgSanitizeSystemArgs)},
+      {{{"execle"}}, TR::Sink({{}, {0}}, MsgSanitizeSystemArgs)},
+      {{{"execlp"}}, TR::Sink({{}, {0}}, MsgSanitizeSystemArgs)},
+      {{{"execv"}}, TR::Sink({{0, 1}}, MsgSanitizeSystemArgs)},
+      {{{"execve"}}, TR::Sink({{0, 1, 2}}, MsgSanitizeSystemArgs)},
+      {{{"fexecve"}}, TR::Sink({{0, 1, 2}}, MsgSanitizeSystemArgs)},
+      {{{"execvp"}}, TR::Sink({{0, 1}}, MsgSanitizeSystemArgs)},
+      {{{"execvpe"}}, TR::Sink({{0, 1, 2}}, MsgSanitizeSystemArgs)},
       {{{"dlopen"}}, TR::Sink({{0}}, MsgSanitizeSystemArgs)},
       {{CDF_MaybeBuiltin, {{"malloc"}}}, TR::Sink({{0}}, MsgTaintedBufferSize)},
       {{CDF_MaybeBuiltin, {{"calloc"}}}, TR::Sink({{0}}, MsgTaintedBufferSize)},

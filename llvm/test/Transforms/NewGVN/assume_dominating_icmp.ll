@@ -4,61 +4,70 @@
 @c = global i32 0, align 4
 
 ; Function Attrs: nounwind optsize uwtable
-define dso_local i32 @main(i1 %cond, i32 %0, i32 %1) {
-; CHECK-LABEL: define dso_local i32 @main(
-; CHECK-SAME: i1 [[COND:%.*]], i32 [[TMP0:%.*]], i32 [[TMP1:%.*]]) {
+define i32 @main(i1 %cond1, i32 %arg0, i32 %arg1) {
+; CHECK-LABEL: define i32 @main(
+; CHECK-SAME: i1 [[COND1:%.*]], i32 [[ARG0:%.*]], i32 [[ARG1:%.*]]) {
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    br i1 [[COND]], label [[IF_THEN:%.*]], label [[IF_END6:%.*]]
-; CHECK:       if.then:
-; CHECK-NEXT:    [[XOR:%.*]] = xor i32 [[TMP0]], 1
-; CHECK-NEXT:    [[TOBOOL1_NOT:%.*]] = icmp eq i32 [[TMP1]], 0
-; CHECK-NEXT:    br i1 [[TOBOOL1_NOT]], label [[IF_END6]], label [[IF_THEN2:%.*]]
-; CHECK:       if.then2:
-; CHECK-NEXT:    [[TOBOOL3_NOT:%.*]] = icmp ne i32 [[XOR]], 0
-; CHECK-NEXT:    tail call void @llvm.assume(i1 [[TOBOOL3_NOT]])
-; CHECK-NEXT:    br label [[IF_END6]]
-; CHECK:       if.end6:
-; CHECK-NEXT:    [[F_0:%.*]] = phi i32 [ undef, [[ENTRY:%.*]] ], [ [[XOR]], [[IF_THEN]] ], [ [[XOR]], [[IF_THEN2]] ]
-; CHECK-NEXT:    [[NOT:%.*]] = xor i32 [[F_0]], -1
-; CHECK-NEXT:    [[TMP2:%.*]] = load i32, ptr @c, align 4
-; CHECK-NEXT:    [[OR:%.*]] = or i32 [[TMP2]], [[NOT]]
-; CHECK-NEXT:    [[TOBOOL7_NOT:%.*]] = icmp eq i32 [[OR]], 0
-; CHECK-NEXT:    [[TOBOOL9_NOT:%.*]] = icmp eq i32 [[F_0]], 0
-; CHECK-NEXT:    [[OR_COND:%.*]] = or i1 [[TOBOOL7_NOT]], [[TOBOOL9_NOT]]
-; CHECK-NEXT:    br i1 [[OR_COND]], label [[IF_END10:%.*]], label [[WHILE_COND_PREHEADER:%.*]]
-; CHECK:       while.cond.preheader:
-; CHECK-NEXT:    ret i32 1
-; CHECK:       if.end10:
+; CHECK-NEXT:    br i1 [[COND1]], label [[BB1:%.*]], label [[BB3:%.*]]
+; CHECK:       bb1:
+; CHECK-NEXT:    [[XOR1:%.*]] = xor i32 [[ARG0]], 1
+; CHECK-NEXT:    [[COND2:%.*]] = icmp eq i32 [[ARG1]], 0
+; CHECK-NEXT:    br i1 [[COND2]], label [[BB3]], label [[BB2:%.*]]
+; CHECK:       bb2:
+; CHECK-NEXT:    [[COND3:%.*]] = icmp ne i32 [[XOR1]], 0
+; CHECK-NEXT:    tail call void @llvm.assume(i1 [[COND3]])
+; CHECK-NEXT:    br label [[BB3]]
+; CHECK:       bb3:
+; CHECK-NEXT:    [[PHI:%.*]] = phi i32 [ undef, [[ENTRY:%.*]] ], [ [[XOR1]], [[BB1]] ], [ [[XOR1]], [[BB2]] ]
+; CHECK-NEXT:    [[XOR2:%.*]] = xor i32 [[PHI]], -1
+; CHECK-NEXT:    [[LD:%.*]] = load i32, ptr @c, align 4
+; CHECK-NEXT:    [[OR:%.*]] = or i32 [[LD]], [[XOR2]]
+; CHECK-NEXT:    [[CMP1:%.*]] = icmp eq i32 [[OR]], 0
+; CHECK-NEXT:    [[CMP2:%.*]] = icmp eq i32 [[PHI]], 0
+; CHECK-NEXT:    [[COND4:%.*]] = or i1 [[CMP1]], [[CMP2]]
+; CHECK-NEXT:    br i1 [[COND4]], label [[EXIT1:%.*]], label [[EXIT2:%.*]]
+; CHECK:       exit1:
 ; CHECK-NEXT:    ret i32 0
+; CHECK:       exit2:
+; CHECK-NEXT:    ret i32 1
 ;
 entry:
-  br i1 %cond, label %if.then, label %if.end6
+;    entry
+;     / |
+;   bb1 |
+;   / | |
+; bb2 | |
+;    \| |
+;     bb3
+;     / \
+; exit1 exit2
+  br i1 %cond1, label %bb1, label %bb3
 
-if.then:                                          ; preds = %entry
-  %xor = xor i32 %0, 1
-  %tobool1.not = icmp eq i32 %1, 0
-  br i1 %tobool1.not, label %if.end6, label %if.then2
+bb1:                                          ; preds = %entry
+  %xor1 = xor i32 %arg0, 1
+  %cond2 = icmp eq i32 %arg1, 0
+  br i1 %cond2, label %bb3, label %bb2
 
-if.then2:                                         ; preds = %if.then
-  %tobool3.not = icmp ne i32 %xor, 0
-  tail call void @llvm.assume(i1 %tobool3.not)
-  br label %if.end6
+bb2:                                          ; preds = %bb1
+  %cond3 = icmp ne i32 %xor1, 0
+  tail call void @llvm.assume(i1 %cond3)
+  br label %bb3
 
-if.end6:                                          ; preds = %if.then2, %if.then, %entry
-  %f.0 = phi i32 [ undef, %entry ], [ %xor, %if.then ], [ %xor, %if.then2 ]
-  %not = xor i32 %f.0, -1
-  %2 = load i32, ptr @c, align 4
-  %or = or i32 %2, %not
-  %tobool7.not = icmp eq i32 %or, 0
-  %tobool9.not = icmp eq i32 %f.0, 0
-  %or.cond = or i1 %tobool7.not, %tobool9.not
-  br i1 %or.cond, label %if.end10, label %while.cond.preheader
+bb3:                                          ; preds = %bb2, %bb1, %entry
+  %phi = phi i32 [ undef, %entry ], [ %xor1, %bb1 ], [ %xor1, %bb2 ]
+  %xor2 = xor i32 %phi, -1
+  %ld = load i32, ptr @c, align 4
+  %or = or i32 %ld, %xor2
+  %cmp1 = icmp eq i32 %or, 0
+  %cmp2 = icmp eq i32 %phi, 0
+  %cond4 = or i1 %cmp1, %cmp2
+  br i1 %cond4, label %exit1, label %exit2
 
-while.cond.preheader:                             ; preds = %if.end6
-  ret i32 1
-
-if.end10:                                         ; preds = %if.end6
+exit1:                                        ; preds = %bb3
   ret i32 0
+
+exit2:                                        ; preds = %bb3
+  ret i32 1
 }
 
 declare void @llvm.assume(i1 noundef)

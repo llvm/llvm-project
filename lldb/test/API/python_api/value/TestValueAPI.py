@@ -210,7 +210,7 @@ class ValueAPITestCase(TestBase):
         # Check that hex value printing works as expected.
         self.assertEqual(
             frame0.FindVariable("fixed_int_ptr").GetValue(),
-            "0x00000000000000aa",
+            "0x000000aa" if target.addr_size == 4 else "0x00000000000000aa",
         )
         self.runCmd("settings set target.show-hex-variable-values-with-leading-zeroes false")
         self.assertEqual(

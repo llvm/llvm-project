@@ -735,9 +735,9 @@ DWARFContext::DWARFContext(std::unique_ptr<const DWARFObject> DObj,
       RecoverableErrorHandler(RecoverableErrorHandler),
       WarningHandler(WarningHandler), DObj(std::move(DObj)) {
         if (ThreadSafe)
-          State.reset(new ThreadUnsafeDWARFContextState(*this, DWPName));
-        else
           State.reset(new ThreadSafeState(*this, DWPName));
+        else
+          State.reset(new ThreadUnsafeDWARFContextState(*this, DWPName));
       }
 
 DWARFContext::~DWARFContext() = default;

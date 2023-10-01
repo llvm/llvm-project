@@ -185,7 +185,7 @@ calculateConstraintSatisfaction(Sema &S, const Expr *ConstraintExpr,
   ConstraintExpr = ConstraintExpr->IgnoreParenImpCasts();
 
   if (LogicalBinOp BO = ConstraintExpr) {
-    auto EffectiveDetailEnd = Satisfaction.Details.end();
+    size_t EffectiveDetailEndIndex = Satisfaction.Details.size();
     ExprResult LHSRes = calculateConstraintSatisfaction(
         S, BO.getLHS(), Satisfaction, Evaluator);
 
@@ -228,9 +228,12 @@ calculateConstraintSatisfaction(Sema &S, const Expr *ConstraintExpr,
     // The following code removes the irrelevant diagnostic information.
     // FIXME: We should probably delay the addition of diagnostic information
     // until we know the entire expression is false.
-    if (BO.isOr() && IsRHSSatisfied)
+    if (BO.isOr() && IsRHSSatisfied) {
+      auto EffectiveDetailEnd = Satisfaction.Details.begin();
+      std::advance(EffectiveDetailEnd, EffectiveDetailEndIndex);
       Satisfaction.Details.erase(EffectiveDetailEnd,
                                  Satisfaction.Details.end());
+    }
 
     return BO.recreateBinOp(S, LHSRes, RHSRes);
   }

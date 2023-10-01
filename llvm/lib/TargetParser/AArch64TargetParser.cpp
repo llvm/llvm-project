@@ -12,6 +12,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/TargetParser/AArch64TargetParser.h"
+#include "llvm/Support/Format.h"
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/TargetParser/ARMTargetParserCommon.h"
 #include "llvm/TargetParser/Triple.h"
@@ -135,11 +136,17 @@ std::optional<AArch64::CpuInfo> AArch64::parseCpu(StringRef Name) {
   return {};
 }
 
-void AArch64::PrintSupportedExtensions() {
-  outs() << "All available -march extensions for AArch64\n\n";
+void AArch64::PrintSupportedExtensions(StringMap<StringRef> DescMap) {
+  outs() << "All available -march extensions for AArch64\n\n"
+         << "    " << left_justify("Name", 20)
+         << (DescMap.empty() ? "\n" : "Description\n");
   for (const auto &Ext : Extensions) {
     // Extensions without a feature cannot be used with -march.
-    if (!Ext.Feature.empty())
-      outs() << '\t' << Ext.Name << "\n";
+    if (!Ext.Feature.empty()) {
+      std::string Description = DescMap[Ext.Name].str();
+      outs() << "    "
+             << format(Description.empty() ? "%s\n" : "%-20s%s\n",
+                       Ext.Name.str().c_str(), Description.c_str());
+    }
   }
 }

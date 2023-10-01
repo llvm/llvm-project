@@ -88,7 +88,6 @@ constexpr size_t kMaxAlign = std::max({
 #if SCUDO_CAN_USE_PRIMARY64
       alignof(scudo::Allocator<scudo::FuchsiaConfig>),
 #endif
-      alignof(scudo::Allocator<scudo::AndroidSvelteConfig>),
       alignof(scudo::Allocator<scudo::AndroidConfig>)
 });
 
@@ -102,14 +101,13 @@ struct TestAllocatorStorage {
 #if SCUDO_CAN_USE_PRIMARY64
         sizeof(scudo::Allocator<scudo::FuchsiaConfig>),
 #endif
-        sizeof(scudo::Allocator<scudo::AndroidSvelteConfig>),
         sizeof(scudo::Allocator<scudo::AndroidConfig>)
   });
 
   // To alleviate some problem, let's skip the thread safety analysis here.
   static void *get(size_t size) NO_THREAD_SAFETY_ANALYSIS {
-    assert(size <= kMaxSize &&
-           "Allocation size doesn't fit in the allocator storage");
+    CHECK(size <= kMaxSize &&
+          "Allocation size doesn't fit in the allocator storage");
     M.lock();
     return AllocatorStorage;
   }
@@ -168,11 +166,9 @@ template <typename T> using ScudoCombinedDeathTest = ScudoCombinedTest<T>;
 
 #if SCUDO_FUCHSIA
 #define SCUDO_TYPED_TEST_ALL_TYPES(FIXTURE, NAME)                              \
-  SCUDO_TYPED_TEST_TYPE(FIXTURE, NAME, AndroidSvelteConfig)                    \
   SCUDO_TYPED_TEST_TYPE(FIXTURE, NAME, FuchsiaConfig)
 #else
 #define SCUDO_TYPED_TEST_ALL_TYPES(FIXTURE, NAME)                              \
-  SCUDO_TYPED_TEST_TYPE(FIXTURE, NAME, AndroidSvelteConfig)                    \
   SCUDO_TYPED_TEST_TYPE(FIXTURE, NAME, DefaultConfig)                          \
   SCUDO_TYPED_TEST_TYPE(FIXTURE, NAME, AndroidConfig)
 #endif

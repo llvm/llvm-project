@@ -605,11 +605,14 @@ bool LTOCodeGenerator::optimize() {
   // pipeline run below.
   updatePublicTypeTestCalls(*MergedModule,
                             /* WholeProgramVisibilityEnabledInLTO */ false);
-  updateVCallVisibilityInModule(*MergedModule,
-                                /* WholeProgramVisibilityEnabledInLTO */ false,
-                                // FIXME: This needs linker information via a
-                                // TBD new interface.
-                                /* DynamicExportSymbols */ {});
+  updateVCallVisibilityInModule(
+      *MergedModule,
+      /* WholeProgramVisibilityEnabledInLTO */ false,
+      // FIXME: These need linker information via a
+      // TBD new interface.
+      /*DynamicExportSymbols=*/{},
+      /*ValidateAllVtablesHaveTypeInfos=*/false,
+      /*IsVisibleToRegularObj=*/[](StringRef) { return true; });
 
   // We always run the verifier once on the merged module, the `DisableVerify`
   // parameter only applies to subsequent verify.

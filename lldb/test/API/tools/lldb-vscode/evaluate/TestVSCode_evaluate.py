@@ -63,8 +63,9 @@ class TestVSCode_variables(lldbvscode_testcase.VSCodeTestCaseBase):
             "struct1", "{foo:15}" if enableAutoVariableSummaries else "my_struct @ 0x"
         )
         self.assertEvaluate(
-            "struct2", "{foo:16}" if enableAutoVariableSummaries else "0x.*"
+            "struct2", "0x.* {foo:16}" if enableAutoVariableSummaries else "0x.*"
         )
+        self.assertEvaluate("struct3", "0x.*0")
         self.assertEvaluate("struct1.foo", "15")
         self.assertEvaluate("struct2->foo", "16")
 

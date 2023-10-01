@@ -19,7 +19,7 @@
 // CHECK-DAG:       %[[VAL_9:.*]] = arith.constant 4 : index
 // CHECK-DAG:       %[[VAL_10:.*]] = arith.constant 0 : i32
 // CHECK-DAG:       %[[VAL_11:.*]] = arith.constant false
-// CHECK-DAG:       %[[VAL_12:.*]] = bufferization.alloc_tensor() : tensor<6x6xi32, #sparse_tensor.encoding<{{.*}}>>
+// CHECK-DAG:       %[[VAL_12:.*]] = tensor.empty() : tensor<6x6xi32, #sparse_tensor.encoding<{{.*}}>>
 // CHECK-DAG:       %[[VAL_13:.*]] = sparse_tensor.positions %[[VAL_0]] {level = 0 : index} : tensor<8x8xi32, #sparse_tensor.encoding<{{.*}}>> to memref<?xindex>
 // CHECK-DAG:       %[[VAL_14:.*]] = sparse_tensor.coordinates %[[VAL_0]] {level = 0 : index} : tensor<8x8xi32, #sparse_tensor.encoding<{{.*}}>> to memref<?xindex>
 // CHECK-DAG:       %[[VAL_15:.*]] = sparse_tensor.positions %[[VAL_0]] {level = 1 : index} : tensor<8x8xi32, #sparse_tensor.encoding<{{.*}}>> to memref<?xindex>
@@ -261,7 +261,7 @@
 // CHECK:         }
 func.func @conv2d_all_sparse_CSR(%arg0: tensor<8x8xi32, #DCSR>,
                                  %arg1: tensor<3x3xi32>) -> tensor<6x6xi32, #DCSR> {
-  %0 = bufferization.alloc_tensor() : tensor<6x6xi32, #DCSR>
+  %0 = tensor.empty() : tensor<6x6xi32, #DCSR>
   %1 = linalg.generic {
          indexing_maps = [#map, #map1, #map2],
          iterator_types = ["parallel", "parallel", "reduction", "reduction"]}

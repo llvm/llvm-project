@@ -71,6 +71,13 @@ static cl::opt<bool> EnableRISCVCopyPropagation(
     cl::desc("Enable the copy propagation with RISC-V copy instr"),
     cl::init(true), cl::Hidden);
 
+static cl::opt<bool> EnableRISCVDeadRegisterElimination(
+    "riscv-enable-dead-defs", cl::Hidden,
+    cl::desc("Enable the pass that removes dead"
+             " definitons and replaces stores to"
+             " them with stores to x0"),
+    cl::init(true));
+
 extern "C" LLVM_EXTERNAL_VISIBILITY void LLVMInitializeRISCVTarget() {
   RegisterTargetMachine<RISCVTargetMachine> X(getTheRISCV32Target());
   RegisterTargetMachine<RISCVTargetMachine> Y(getTheRISCV64Target());
@@ -78,7 +85,9 @@ extern "C" LLVM_EXTERNAL_VISIBILITY void LLVMInitializeRISCVTarget() {
   initializeGlobalISel(*PR);
   initializeRISCVO0PreLegalizerCombinerPass(*PR);
   initializeRISCVPreLegalizerCombinerPass(*PR);
+  initializeRISCVPostLegalizerCombinerPass(*PR);
   initializeKCFIPass(*PR);
+  initializeRISCVDeadRegisterDefinitionsPass(*PR);
   initializeRISCVMakeCompressibleOptPass(*PR);
   initializeRISCVGatherScatterLoweringPass(*PR);
   initializeRISCVCodeGenPreparePass(*PR);
@@ -267,6 +276,7 @@ public:
   bool addIRTranslator() override;
   void addPreLegalizeMachineIR() override;
   bool addLegalizeMachineIR() override;
+  void addPreRegBankSelect() override;
   bool addRegBankSelect() override;
   bool addGlobalInstructionSelect() override;
   void addPreEmitPass() override;
@@ -337,6 +347,11 @@ bool RISCVPassConfig::addLegalizeMachineIR() {
   return false;
 }
 
+void RISCVPassConfig::addPreRegBankSelect() {
+  if (getOptLevel() != CodeGenOptLevel::None)
+    addPass(createRISCVPostLegalizerCombiner());
+}
+
 bool RISCVPassConfig::addRegBankSelect() {
   addPass(new RegBankSelect());
   return false;
@@ -401,6 +416,9 @@ void RISCVPassConfig::addPreRegAlloc() {
   if (TM->getOptLevel() != CodeGenOptLevel::None)
     addPass(createRISCVMergeBaseOffsetOptPass());
   addPass(createRISCVInsertVSETVLIPass());
+  if (TM->getOptLevel() != CodeGenOptLevel::None &&
+      EnableRISCVDeadRegisterElimination)
+    addPass(createRISCVDeadRegisterDefinitionsPass());
   addPass(createRISCVInsertReadWriteCSRPass());
 }
 

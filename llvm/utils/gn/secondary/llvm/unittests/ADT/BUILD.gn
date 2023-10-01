@@ -59,6 +59,7 @@ unittest("ADTTests") {
     "MappedIteratorTest.cpp",
     "MoveOnly.cpp",
     "PackedVectorTest.cpp",
+    "PagedVectorTest.cpp",
     "PointerEmbeddedIntTest.cpp",
     "PointerIntPairTest.cpp",
     "PointerSumTypeTest.cpp",

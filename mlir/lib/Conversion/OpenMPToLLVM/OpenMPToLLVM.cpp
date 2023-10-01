@@ -207,10 +207,10 @@ void mlir::configureOpenMPToLLVMConversionLegality(
            typeConverter.isLegal(op->getOperandTypes()) &&
            typeConverter.isLegal(op->getResultTypes());
   });
-  target.addDynamicallyLegalOp<mlir::omp::AtomicReadOp,
-                               mlir::omp::AtomicWriteOp, mlir::omp::FlushOp,
-                               mlir::omp::ThreadprivateOp, mlir::omp::YieldOp,
-                               mlir::omp::EnterDataOp, mlir::omp::ExitDataOp>(
+  target.addDynamicallyLegalOp<
+      mlir::omp::AtomicReadOp, mlir::omp::AtomicWriteOp, mlir::omp::FlushOp,
+      mlir::omp::ThreadprivateOp, mlir::omp::YieldOp, mlir::omp::EnterDataOp,
+      mlir::omp::ExitDataOp, mlir::omp::DataBoundsOp, mlir::omp::MapInfoOp>(
       [&](Operation *op) {
         return typeConverter.isLegal(op->getOperandTypes()) &&
                typeConverter.isLegal(op->getResultTypes());
@@ -230,6 +230,12 @@ void mlir::configureOpenMPToLLVMConversionLegality(
 
 void mlir::populateOpenMPToLLVMConversionPatterns(LLVMTypeConverter &converter,
                                                   RewritePatternSet &patterns) {
+  // This type is allowed when converting OpenMP to LLVM Dialect, it carries
+  // bounds information for map clauses and the operation and type are
+  // discarded on lowering to LLVM-IR from the OpenMP dialect.
+  converter.addConversion(
+      [&](omp::DataBoundsType type) -> Type { return type; });
+
   patterns.add<
       AtomicReadOpConversion, ReductionOpConversion,
       ReductionDeclareOpConversion, RegionOpConversion<omp::CriticalOp>,
@@ -246,7 +252,9 @@ void mlir::populateOpenMPToLLVMConversionPatterns(LLVMTypeConverter &converter,
       RegionLessOpWithVarOperandsConversion<omp::ThreadprivateOp>,
       RegionLessOpConversion<omp::YieldOp>,
       RegionLessOpConversion<omp::EnterDataOp>,
-      RegionLessOpConversion<omp::ExitDataOp>>(converter);
+      RegionLessOpConversion<omp::ExitDataOp>,
+      RegionLessOpWithVarOperandsConversion<omp::DataBoundsOp>,
+      RegionLessOpWithVarOperandsConversion<omp::MapInfoOp>>(converter);
 }
 
 namespace {

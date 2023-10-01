@@ -354,13 +354,13 @@ define void @vector_reductions(float %0, <8 x float> %1, <8 x i32> %2) {
   %12 = call i32 @llvm.vector.reduce.umax.v8i32(<8 x i32> %2)
   ; CHECK: "llvm.intr.vector.reduce.umin"(%{{.*}}) : (vector<8xi32>) -> i32
   %13 = call i32 @llvm.vector.reduce.umin.v8i32(<8 x i32> %2)
-  ; CHECK: "llvm.intr.vector.reduce.fadd"(%{{.*}}, %{{.*}}) <{reassoc = false}> : (f32, vector<8xf32>) -> f32
+  ; CHECK: "llvm.intr.vector.reduce.fadd"(%{{.*}}, %{{.*}}) <{fastmathFlags = #llvm.fastmath<none>}> : (f32, vector<8xf32>) -> f32
   %14 = call float @llvm.vector.reduce.fadd.v8f32(float %0, <8 x float> %1)
-  ; CHECK: "llvm.intr.vector.reduce.fmul"(%{{.*}}, %{{.*}}) <{reassoc = false}> : (f32, vector<8xf32>) -> f32
+  ; CHECK: "llvm.intr.vector.reduce.fmul"(%{{.*}}, %{{.*}}) <{fastmathFlags = #llvm.fastmath<none>}> : (f32, vector<8xf32>) -> f32
   %15 = call float @llvm.vector.reduce.fmul.v8f32(float %0, <8 x float> %1)
-  ; CHECK: "llvm.intr.vector.reduce.fadd"(%{{.*}}, %{{.*}}) <{reassoc = true}> : (f32, vector<8xf32>) -> f32
+  ; CHECK: "llvm.intr.vector.reduce.fadd"(%{{.*}}, %{{.*}}) <{fastmathFlags = #llvm.fastmath<reassoc>}> : (f32, vector<8xf32>) -> f32
   %16 = call reassoc float @llvm.vector.reduce.fadd.v8f32(float %0, <8 x float> %1)
-  ; CHECK: "llvm.intr.vector.reduce.fmul"(%{{.*}}, %{{.*}}) <{reassoc = true}> : (f32, vector<8xf32>) -> f32
+  ; CHECK: "llvm.intr.vector.reduce.fmul"(%{{.*}}, %{{.*}}) <{fastmathFlags = #llvm.fastmath<reassoc>}> : (f32, vector<8xf32>) -> f32
   %17 = call reassoc float @llvm.vector.reduce.fmul.v8f32(float %0, <8 x float> %1)
   ; CHECK:  "llvm.intr.vector.reduce.xor"(%{{.*}}) : (vector<8xi32>) -> i32
   %18 = call i32 @llvm.vector.reduce.xor.v8i32(<8 x i32> %2)

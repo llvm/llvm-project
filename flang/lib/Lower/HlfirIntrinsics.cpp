@@ -330,6 +330,9 @@ std::optional<hlfir::EntityWithAttributes> Fortran::lower::lowerHlfirIntrinsic(
     const Fortran::lower::PreparedActualArguments &loweredActuals,
     const fir::IntrinsicArgumentLoweringRules *argLowering,
     mlir::Type stmtResultType) {
+  // If the result is of a derived type that may need finalization,
+  // we have to use DestroyOp with 'finalize' attribute for the result
+  // of the intrinsic operation.
   if (name == "sum")
     return HlfirSumLowering{builder, loc}.lower(loweredActuals, argLowering,
                                                 stmtResultType);
@@ -348,6 +351,7 @@ std::optional<hlfir::EntityWithAttributes> Fortran::lower::lowerHlfirIntrinsic(
   if (name == "dot_product")
     return HlfirDotProductLowering{builder, loc}.lower(
         loweredActuals, argLowering, stmtResultType);
+  // FIXME: the result may need finalization.
   if (name == "transpose")
     return HlfirTransposeLowering{builder, loc}.lower(
         loweredActuals, argLowering, stmtResultType);

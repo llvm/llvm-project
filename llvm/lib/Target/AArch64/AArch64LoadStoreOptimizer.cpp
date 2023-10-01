@@ -293,6 +293,8 @@ static unsigned getMatchingNonSExtOpcode(unsigned Opc,
     return AArch64::LDRWui;
   case AArch64::LDURSWi:
     return AArch64::LDURWi;
+  case AArch64::LDRSWpre:
+    return AArch64::LDRWpre;
   }
 }
 
@@ -372,6 +374,8 @@ static unsigned getMatchingPairOpcode(unsigned Opc) {
   case AArch64::LDRSWui:
   case AArch64::LDURSWi:
     return AArch64::LDPSWi;
+  case AArch64::LDRSWpre:
+    return AArch64::LDPSWpre;
   }
 }
 
@@ -585,6 +589,8 @@ static bool isPreLdStPairCandidate(MachineInstr &FirstMI, MachineInstr &MI) {
     return (OpcB == AArch64::LDRWui) || (OpcB == AArch64::LDURWi);
   case AArch64::LDRXpre:
     return (OpcB == AArch64::LDRXui) || (OpcB == AArch64::LDURXi);
+  case AArch64::LDRSWpre:
+    return (OpcB == AArch64::LDRSWui) || (OpcB == AArch64::LDURSWi);
   }
 }
 
@@ -1318,6 +1324,10 @@ static bool areCandidatesToMergeOrPair(MachineInstr &FirstMI, MachineInstr &MI,
   if (OpcA == OpcB)
     return !AArch64InstrInfo::isPreLdSt(FirstMI);
 
+  // Two pre ld/st of different opcodes cannot be merged either
+  if (AArch64InstrInfo::isPreLdSt(FirstMI) && AArch64InstrInfo::isPreLdSt(MI))
+    return false;
+
   // Try to match a sign-extended load/store with a zero-extended load/store.
   bool IsValidLdStrOpc, PairIsValidLdStrOpc;
   unsigned NonSExtOpc = getMatchingNonSExtOpcode(OpcA, &IsValidLdStrOpc);
@@ -1340,7 +1350,7 @@ static bool areCandidatesToMergeOrPair(MachineInstr &FirstMI, MachineInstr &MI,
     return false;
 
   // The STR<S,D,Q,W,X>pre - STR<S,D,Q,W,X>ui and
-  // LDR<S,D,Q,W,X>pre-LDR<S,D,Q,W,X>ui
+  // LDR<S,D,Q,W,X,SW>pre-LDR<S,D,Q,W,X,SW>ui
   // are candidate pairs that can be merged.
   if (isPreLdStPairCandidate(FirstMI, MI))
     return true;

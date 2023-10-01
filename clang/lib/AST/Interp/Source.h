@@ -14,11 +14,15 @@
 #define LLVM_CLANG_AST_INTERP_SOURCE_H
 
 #include "PrimType.h"
-#include "clang/AST/Decl.h"
-#include "clang/AST/Stmt.h"
+#include "llvm/ADT/PointerUnion.h"
 #include "llvm/Support/Endian.h"
 
 namespace clang {
+class Stmt;
+class Decl;
+class Expr;
+class SourceLocation;
+class SourceRange;
 namespace interp {
 class Function;
 

@@ -1031,3 +1031,36 @@ void test() {
     fff(42UL); // expected-error {{no matching function}}
 }
 }
+
+namespace GH66612 {
+  template<typename C>
+    auto end(C c) ->int;
+
+  template <typename T>
+    concept Iterator = true;
+
+  template <typename CT>
+    concept Container = requires(CT b) {
+        { end } -> Iterator; // #66612GH_END
+    };
+
+  static_assert(Container<int>);// expected-error{{static assertion failed}}
+  // expected-note@-1{{because 'int' does not satisfy 'Container'}}
+  // expected-note@#66612GH_END{{because 'end' would be invalid: reference to overloaded function could not be resolved; did you mean to call it?}}
+}
+
+namespace GH66938 {
+template <class>
+concept True = true;
+
+template <class>
+concept False = false;
+
+template <class T>
+void cand(T t)
+  requires False<T> || False<T> || False<T> || False<T> || False<T> ||
+           False<T> || False<T> || False<T> || False<T> || True<T>
+{}
+
+void test() { cand(42); }
+}

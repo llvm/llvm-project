@@ -2853,9 +2853,7 @@ void llvm::UpgradeIntrinsicCall(CallBase *CI, Function *NewFn) {
       auto *VecTy = cast<FixedVectorType>(CI->getType());
       Type *EltTy = VecTy->getElementType();
       unsigned EltNum = VecTy->getNumElements();
-      Value *Cast = Builder.CreateBitCast(CI->getArgOperand(0),
-                                          EltTy->getPointerTo());
-      Value *Load = Builder.CreateLoad(EltTy, Cast);
+      Value *Load = Builder.CreateLoad(EltTy, CI->getArgOperand(0));
       Type *I32Ty = Type::getInt32Ty(C);
       Rep = PoisonValue::get(VecTy);
       for (unsigned I = 0; I < EltNum; ++I)

@@ -344,12 +344,13 @@ bool ISD::isFreezeUndef(const SDNode *N) {
   return N->getOpcode() == ISD::FREEZE && N->getOperand(0).isUndef();
 }
 
-bool ISD::matchUnaryPredicate(SDValue Op,
-                              std::function<bool(ConstantSDNode *)> Match,
-                              bool AllowUndefs) {
+template <typename ConstNodeType>
+bool ISD::matchUnaryPredicateImpl(SDValue Op,
+                                  std::function<bool(ConstNodeType *)> Match,
+                                  bool AllowUndefs) {
   // FIXME: Add support for scalar UNDEF cases?
-  if (auto *Cst = dyn_cast<ConstantSDNode>(Op))
-    return Match(Cst);
+  if (auto *C = dyn_cast<ConstNodeType>(Op))
+    return Match(C);
 
   // FIXME: Add support for vector UNDEF cases?
   if (ISD::BUILD_VECTOR != Op.getOpcode() &&
@@ -364,12 +365,17 @@ bool ISD::matchUnaryPredicate(SDValue Op,
       continue;
     }
 
-    auto *Cst = dyn_cast<ConstantSDNode>(Op.getOperand(i));
+    auto *Cst = dyn_cast<ConstNodeType>(Op.getOperand(i));
     if (!Cst || Cst->getValueType(0) != SVT || !Match(Cst))
       return false;
   }
   return true;
 }
+// Build used template types.
+template bool ISD::matchUnaryPredicateImpl<ConstantSDNode>(
+    SDValue, std::function<bool(ConstantSDNode *)>, bool);
+template bool ISD::matchUnaryPredicateImpl<ConstantFPSDNode>(
+    SDValue, std::function<bool(ConstantFPSDNode *)>, bool);
 
 bool ISD::matchBinaryPredicate(
     SDValue LHS, SDValue RHS,
@@ -5689,12 +5695,13 @@ SDValue SelectionDAG::getNode(unsigned Opcode, const SDLoc &DL, EVT VT,
       return getConstant(0, DL, VT);
 
     // Skip unnecessary zext_inreg pattern:
-    // (zext (trunc (assertzext x))) -> (assertzext x)
-    // TODO: Generalize to MaskedValueIsZero check?
+    // (zext (trunc x)) -> x iff the upper bits are known zero.
+    // TODO: Generalize to just the MaskedValueIsZero check?
     if (OpOpcode == ISD::TRUNCATE) {
       SDValue OpOp = N1.getOperand(0);
       if (OpOp.getValueType() == VT) {
-        if (OpOp.getOpcode() == ISD::AssertZext && N1->hasOneUse()) {
+        if (OpOp.getOpcode() == ISD::AssertZext ||
+            OpOp.getOpcode() == ISD::SRL) {
           APInt HiBits = APInt::getBitsSetFrom(VT.getScalarSizeInBits(),
                                                N1.getScalarValueSizeInBits());
           if (MaskedValueIsZero(OpOp, HiBits)) {

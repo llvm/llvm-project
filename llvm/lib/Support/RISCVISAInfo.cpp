@@ -210,24 +210,36 @@ static void verifyTables() {
 #endif
 }
 
-void llvm::riscvExtensionsHelp() {
+static void PrintExtension(const std::string Name, const std::string Version,
+                           const std::string Description) {
+  outs() << "    "
+         << format(Description.empty() ? "%-20s%s\n" : "%-20s%-10s%s\n",
+                   Name.c_str(), Version.c_str(), Description.c_str());
+}
+
+void llvm::riscvExtensionsHelp(StringMap<StringRef> DescMap) {
+
   outs() << "All available -march extensions for RISC-V\n\n";
-  outs() << '\t' << left_justify("Name", 20) << "Version\n";
+  PrintExtension("Name", "Version", (DescMap.empty() ? "" : "Description"));
 
   RISCVISAInfo::OrderedExtensionMap ExtMap;
   for (const auto &E : SupportedExtensions)
     ExtMap[E.Name] = {E.Version.Major, E.Version.Minor};
-  for (const auto &E : ExtMap)
-    outs() << format("\t%-20s%d.%d\n", E.first.c_str(), E.second.MajorVersion,
-                     E.second.MinorVersion);
+  for (const auto &E : ExtMap) {
+    std::string Version = std::to_string(E.second.MajorVersion) + "." +
+                          std::to_string(E.second.MinorVersion);
+    PrintExtension(E.first, Version, DescMap[E.first].str());
+  }
 
   outs() << "\nExperimental extensions\n";
   ExtMap.clear();
   for (const auto &E : SupportedExperimentalExtensions)
     ExtMap[E.Name] = {E.Version.Major, E.Version.Minor};
-  for (const auto &E : ExtMap)
-    outs() << format("\t%-20s%d.%d\n", E.first.c_str(), E.second.MajorVersion,
-                     E.second.MinorVersion);
+  for (const auto &E : ExtMap) {
+    std::string Version = std::to_string(E.second.MajorVersion) + "." +
+                          std::to_string(E.second.MinorVersion);
+    PrintExtension(E.first, Version, DescMap["experimental-" + E.first].str());
+  }
 
   outs() << "\nUse -march to specify the target's extension.\n"
             "For example, clang -march=rv32i_v1p0\n";

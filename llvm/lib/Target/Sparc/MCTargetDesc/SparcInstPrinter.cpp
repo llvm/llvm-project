@@ -148,15 +148,7 @@ void SparcInstPrinter::printOperand(const MCInst *MI, int opNum,
 
 void SparcInstPrinter::printMemOperand(const MCInst *MI, int opNum,
                                        const MCSubtargetInfo &STI,
-                                       raw_ostream &O, const char *Modifier) {
-  // If this is an ADD operand, emit it like normal operands.
-  if (Modifier && !strcmp(Modifier, "arith")) {
-    printOperand(MI, opNum, STI, O);
-    O << ", ";
-    printOperand(MI, opNum + 1, STI, O);
-    return;
-  }
-
+                                       raw_ostream &O) {
   const MCOperand &Op1 = MI->getOperand(opNum);
   const MCOperand &Op2 = MI->getOperand(opNum + 1);
 

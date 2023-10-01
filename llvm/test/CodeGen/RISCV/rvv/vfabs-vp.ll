@@ -291,19 +291,18 @@ define <vscale x 32 x half> @vfabs_vv_nxv32f16_unmasked(<vscale x 32 x half> %va
 ; ZVFHMIN-NEXT:    vsetvli a4, zero, e8, mf2, ta, ma
 ; ZVFHMIN-NEXT:    vslidedown.vx v0, v16, a2
 ; ZVFHMIN-NEXT:    vsetvli a2, zero, e16, m4, ta, ma
-; ZVFHMIN-NEXT:    vfwcvt.f.f.v v24, v12
+; ZVFHMIN-NEXT:    vfwcvt.f.f.v v16, v12
 ; ZVFHMIN-NEXT:    vsetvli zero, a3, e32, m8, ta, ma
-; ZVFHMIN-NEXT:    vfabs.v v24, v24, v0.t
+; ZVFHMIN-NEXT:    vfabs.v v16, v16, v0.t
 ; ZVFHMIN-NEXT:    vsetvli a2, zero, e16, m4, ta, ma
-; ZVFHMIN-NEXT:    vfncvt.f.f.w v12, v24
+; ZVFHMIN-NEXT:    vfncvt.f.f.w v12, v16
 ; ZVFHMIN-NEXT:    bltu a0, a1, .LBB11_2
 ; ZVFHMIN-NEXT:  # %bb.1:
 ; ZVFHMIN-NEXT:    mv a0, a1
 ; ZVFHMIN-NEXT:  .LBB11_2:
-; ZVFHMIN-NEXT:    vfwcvt.f.f.v v24, v8
+; ZVFHMIN-NEXT:    vfwcvt.f.f.v v16, v8
 ; ZVFHMIN-NEXT:    vsetvli zero, a0, e32, m8, ta, ma
-; ZVFHMIN-NEXT:    vmv1r.v v0, v16
-; ZVFHMIN-NEXT:    vfabs.v v16, v24, v0.t
+; ZVFHMIN-NEXT:    vfabs.v v16, v16
 ; ZVFHMIN-NEXT:    vsetvli a0, zero, e16, m4, ta, ma
 ; ZVFHMIN-NEXT:    vfncvt.f.f.w v8, v16
 ; ZVFHMIN-NEXT:    ret

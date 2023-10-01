@@ -865,6 +865,20 @@ struct ReshapeOpInterface
         bufferization::getBufferType(reshapeOp.getResult(), options);
     if (failed(maybeResultMemRefType))
       return failure();
+
+    // memref.reshape requires the source buffer to have an identity layout.
+    // If the source memref does not have an identity layout, clone the source
+    // into a new buffer with an identity layout.
+    auto srcType = llvm::dyn_cast<MemRefType>(srcBuffer->getType());
+    if (srcType && !srcType.getLayout().isIdentity()) {
+      auto identityType =
+          MemRefType::get(srcType.getShape(), srcType.getElementType());
+      srcBuffer = rewriter
+                      .create<bufferization::CloneOp>(op->getLoc(),
+                                                      identityType, *srcBuffer)
+                      .getResult();
+    }
+
     replaceOpWithNewBufferizedOp<memref::ReshapeOp>(
         rewriter, op, maybeResultMemRefType.value(), *srcBuffer, *shapeBuffer);
     return success();

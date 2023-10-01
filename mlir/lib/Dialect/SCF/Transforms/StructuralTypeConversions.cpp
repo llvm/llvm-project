@@ -126,7 +126,7 @@ public:
     // new op's regions doesn't remove the child ops from the worklist).
 
     // convertRegionTypes already takes care of 1:N conversion.
-    if (failed(rewriter.convertRegionTypes(&op.getLoopBody(), *typeConverter)))
+    if (failed(rewriter.convertRegionTypes(&op.getRegion(), *typeConverter)))
       return std::nullopt;
 
     // Unpacked the iteration arguments.
@@ -146,8 +146,8 @@ public:
     // We do not need the empty block created by rewriter.
     rewriter.eraseBlock(newOp.getBody(0));
     // Inline the type converted region from the original operation.
-    rewriter.inlineRegionBefore(op.getLoopBody(), newOp.getLoopBody(),
-                                newOp.getLoopBody().end());
+    rewriter.inlineRegionBefore(op.getRegion(), newOp.getRegion(),
+                                newOp.getRegion().end());
 
     return newOp;
   }

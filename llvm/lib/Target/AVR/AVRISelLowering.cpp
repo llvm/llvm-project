@@ -2722,7 +2722,7 @@ AVRTargetLowering::getRegForInlineAsmConstraint(const TargetRegisterInfo *TRI,
 }
 
 void AVRTargetLowering::LowerAsmOperandForConstraint(SDValue Op,
-                                                     std::string &Constraint,
+                                                     StringRef Constraint,
                                                      std::vector<SDValue> &Ops,
                                                      SelectionDAG &DAG) const {
   SDValue Result;
@@ -2730,7 +2730,7 @@ void AVRTargetLowering::LowerAsmOperandForConstraint(SDValue Op,
   EVT Ty = Op.getValueType();
 
   // Currently only support length 1 constraints.
-  if (Constraint.length() != 1) {
+  if (Constraint.size() != 1) {
     return;
   }
 

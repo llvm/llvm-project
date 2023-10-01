@@ -6,12 +6,12 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_LIBC_SUPPORT_STR_TO_NUM_RESULT_H
-#define LLVM_LIBC_SUPPORT_STR_TO_NUM_RESULT_H
+#ifndef LLVM_LIBC_SRC___SUPPORT_STR_TO_NUM_RESULT_H
+#define LLVM_LIBC_SRC___SUPPORT_STR_TO_NUM_RESULT_H
 
 #include <stddef.h>
 
-namespace __llvm_libc {
+namespace LIBC_NAMESPACE {
 
 template <typename T> struct StrToNumResult {
   T value;
@@ -28,6 +28,6 @@ template <typename T> struct StrToNumResult {
 
   constexpr operator T() { return value; }
 };
-} // namespace __llvm_libc
+} // namespace LIBC_NAMESPACE
 
-#endif // LLVM_LIBC_SUPPORT_STR_TO_NUM_RESULT_H
+#endif // LLVM_LIBC_SRC___SUPPORT_STR_TO_NUM_RESULT_H

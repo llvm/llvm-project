@@ -16,7 +16,7 @@
 //   CHECK-DAG:  %[[TMP_c3:.*]] = arith.constant 3 : index
 //   CHECK-DAG:  %[[TMP_c0:.*]] = arith.constant 0 : index
 //   CHECK-DAG:  %[[TMP_c1:.*]] = arith.constant 1 : index
-//       CHECK:  %[[TMP_0:.*]] = bufferization.alloc_tensor()
+//       CHECK:  %[[TMP_0:.*]] = tensor.empty()
 //       CHECK:  %[[TMP_1:.*]] = sparse_tensor.positions %[[TMP_arg0]] {level = 0 : index}
 //       CHECK:  %[[TMP_2:.*]] = sparse_tensor.coordinates %[[TMP_arg0]] {level = 0 : index}
 //       CHECK:  %[[TMP_3:.*]] = sparse_tensor.positions %[[TMP_arg0]] {level = 1 : index}
@@ -44,7 +44,7 @@
 //       CHECK:  return %[[TMP_8]]
 module @func_sparse {
   func.func public @main(%arg0: tensor<4x5xi32, #DCSR>) -> tensor<4x3x5xi32, #SparseTensor> {
-    %0 = bufferization.alloc_tensor() : tensor<4x3x5xi32, #SparseTensor>
+    %0 = tensor.empty() : tensor<4x3x5xi32, #SparseTensor>
     %1 = linalg.generic #trait
     ins(%arg0 : tensor<4x5xi32, #DCSR>) outs(%0 : tensor<4x3x5xi32, #SparseTensor>) {
     ^bb0(%in: i32, %out: i32):

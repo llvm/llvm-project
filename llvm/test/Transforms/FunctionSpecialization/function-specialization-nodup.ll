@@ -3,8 +3,8 @@
 ; Function @foo has function attribute 'noduplicate', so check that we don't
 ; specialize it:
 
-; CHECK-NOT: @foo.1(
-; CHECK-NOT: @foo.2(
+; CHECK-NOT: @foo.specialized.1(
+; CHECK-NOT: @foo.specialized.2(
 
 target datalayout = "e-m:e-i8:8:32-i16:16:32-i64:64-i128:128-n32:64-S128"
 

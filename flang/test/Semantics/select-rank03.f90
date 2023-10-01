@@ -46,7 +46,6 @@ program test
     !ERROR: RANK (*) cannot be used when selector is POINTER or ALLOCATABLE
     rank (*)
       !ERROR: Whole assumed-size array 'a' may not appear here without subscripts
-      !ERROR: Entity in ALLOCATE statement must have the ALLOCATABLE or POINTER attribute
       allocate(a)
       !ERROR: Whole assumed-size array 'a' may not appear here without subscripts
       deallocate(a)
@@ -57,6 +56,21 @@ program test
       allocate(a)
       deallocate(a)
       a = 1.
+    end select
+    ! Test nested associations
+    select rank(a)
+    rank default
+      select rank(a)
+      rank default
+        select rank(a)
+        rank (0)
+          allocate(a) ! ok
+          deallocate(a) ! ok
+        rank (1)
+          allocate(a(1)) ! ok
+          deallocate(a) ! ok
+        end select
+      end select
     end select
   end
   subroutine pointers(p)
@@ -103,7 +117,6 @@ program test
     !ERROR: RANK (*) cannot be used when selector is POINTER or ALLOCATABLE
     rank (*)
       !ERROR: Whole assumed-size array 'p' may not appear here without subscripts
-      !ERROR: Entity in ALLOCATE statement must have the ALLOCATABLE or POINTER attribute
       allocate(p)
       !ERROR: Whole assumed-size array 'p' may not appear here without subscripts
       deallocate(p)

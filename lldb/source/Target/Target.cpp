@@ -860,7 +860,8 @@ WatchpointSP Target::CreateWatchpoint(lldb::addr_t addr, size_t size,
     size_t old_size = matched_sp->GetByteSize();
     uint32_t old_type =
         (matched_sp->WatchpointRead() ? LLDB_WATCH_TYPE_READ : 0) |
-        (matched_sp->WatchpointWrite() ? LLDB_WATCH_TYPE_WRITE : 0);
+        (matched_sp->WatchpointWrite() ? LLDB_WATCH_TYPE_WRITE : 0) |
+        (matched_sp->WatchpointModify() ? LLDB_WATCH_TYPE_MODIFY : 0);
     // Return the existing watchpoint if both size and type match.
     if (size == old_size && kind == old_type) {
       wp_sp = matched_sp;

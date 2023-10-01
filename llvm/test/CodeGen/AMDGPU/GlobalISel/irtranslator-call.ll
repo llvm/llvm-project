@@ -4055,7 +4055,7 @@ define amdgpu_kernel void @test_call_external_void_func_byval_struct_i8_i32() #0
   ; CHECK-NEXT:   [[C1:%[0-9]+]]:_(s32) = G_CONSTANT i32 8
   ; CHECK-NEXT:   [[FRAME_INDEX:%[0-9]+]]:_(p5) = G_FRAME_INDEX %stack.0.val
   ; CHECK-NEXT:   [[C2:%[0-9]+]]:_(s32) = G_CONSTANT i32 4
-  ; CHECK-NEXT:   [[PTR_ADD:%[0-9]+]]:_(p5) = G_PTR_ADD [[FRAME_INDEX]], [[C2]](s32)
+  ; CHECK-NEXT:   [[PTR_ADD:%[0-9]+]]:_(p5) = nuw G_PTR_ADD [[FRAME_INDEX]], [[C2]](s32)
   ; CHECK-NEXT:   G_STORE [[C]](s8), [[FRAME_INDEX]](p5) :: (store (s8) into %ir.val, addrspace 5)
   ; CHECK-NEXT:   G_STORE [[C1]](s32), [[PTR_ADD]](p5) :: (store (s32) into %ir.gep1, addrspace 5)
   ; CHECK-NEXT:   ADJCALLSTACKUP 0, 0, implicit-def $scc
@@ -4635,7 +4635,7 @@ define amdgpu_kernel void @stack_passed_arg_alignment_v32i32_f64(<32 x i32> %val
   ; CHECK-NEXT:   [[INT:%[0-9]+]]:_(p4) = G_INTRINSIC intrinsic(@llvm.amdgcn.kernarg.segment.ptr)
   ; CHECK-NEXT:   [[LOAD:%[0-9]+]]:_(<32 x s32>) = G_LOAD [[INT]](p4) :: (dereferenceable invariant load (<32 x s32>) from %ir.val.kernarg.offset1, align 16, addrspace 4)
   ; CHECK-NEXT:   [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 128
-  ; CHECK-NEXT:   [[PTR_ADD:%[0-9]+]]:_(p4) = G_PTR_ADD [[INT]], [[C]](s64)
+  ; CHECK-NEXT:   [[PTR_ADD:%[0-9]+]]:_(p4) = nuw G_PTR_ADD [[INT]], [[C]](s64)
   ; CHECK-NEXT:   [[LOAD1:%[0-9]+]]:_(s64) = G_LOAD [[PTR_ADD]](p4) :: (dereferenceable invariant load (s64) from %ir.tmp.kernarg.offset, align 16, addrspace 4)
   ; CHECK-NEXT:   ADJCALLSTACKUP 0, 0, implicit-def $scc
   ; CHECK-NEXT:   [[GV:%[0-9]+]]:_(p0) = G_GLOBAL_VALUE @stack_passed_f64_arg

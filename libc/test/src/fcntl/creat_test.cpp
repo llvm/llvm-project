@@ -14,17 +14,17 @@
 #include "test/UnitTest/Test.h"
 
 TEST(LlvmLibcCreatTest, CreatAndOpen) {
-  using __llvm_libc::testing::ErrnoSetterMatcher::Succeeds;
+  using LIBC_NAMESPACE::testing::ErrnoSetterMatcher::Succeeds;
   constexpr const char *TEST_FILE = "testdata/creat.test";
-  int fd = __llvm_libc::creat(TEST_FILE, S_IRWXU);
+  int fd = LIBC_NAMESPACE::creat(TEST_FILE, S_IRWXU);
   ASSERT_EQ(libc_errno, 0);
   ASSERT_GT(fd, 0);
-  ASSERT_THAT(__llvm_libc::close(fd), Succeeds(0));
+  ASSERT_THAT(LIBC_NAMESPACE::close(fd), Succeeds(0));
 
-  fd = __llvm_libc::open(TEST_FILE, O_RDONLY);
+  fd = LIBC_NAMESPACE::open(TEST_FILE, O_RDONLY);
   ASSERT_EQ(libc_errno, 0);
   ASSERT_GT(fd, 0);
-  ASSERT_THAT(__llvm_libc::close(fd), Succeeds(0));
+  ASSERT_THAT(LIBC_NAMESPACE::close(fd), Succeeds(0));
 
   // TODO: 'remove' the test file at the end.
 }

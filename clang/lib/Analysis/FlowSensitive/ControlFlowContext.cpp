@@ -97,6 +97,7 @@ ControlFlowContext::build(const Decl &D, Stmt &S, ASTContext &C) {
   Options.AddTemporaryDtors = true;
   Options.AddInitializers = true;
   Options.AddCXXDefaultInitExprInCtors = true;
+  Options.AddLifetime = true;
 
   // Ensure that all sub-expressions in basic blocks are evaluated.
   Options.setAllAlwaysAdd();

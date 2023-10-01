@@ -1388,15 +1388,8 @@ bool llvm::EliminateDuplicatePHINodes(BasicBlock *BB) {
   return Changed;
 }
 
-/// If the specified pointer points to an object that we control, try to modify
-/// the object's alignment to PrefAlign. Returns a minimum known alignment of
-/// the value after the operation, which may be lower than PrefAlign.
-///
-/// Increating value alignment isn't often possible though. If alignment is
-/// important, a more reliable approach is to simply align all global variables
-/// and allocation instructions to their preferred alignment from the beginning.
-static Align tryEnforceAlignment(Value *V, Align PrefAlign,
-                                 const DataLayout &DL) {
+Align llvm::tryEnforceAlignment(Value *V, Align PrefAlign,
+                                const DataLayout &DL) {
   V = V->stripPointerCasts();
 
   if (AllocaInst *AI = dyn_cast<AllocaInst>(V)) {

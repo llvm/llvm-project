@@ -6,7 +6,7 @@
 #include <stdio.h>
 #include "fp_lib.h"
 
-#if defined(CRT_HAS_128BIT) && defined(CRT_LDBL_128BIT)
+#if defined(CRT_HAS_TF_MODE)
 
 int test__compiler_rt_fmaxl(fp_t x, fp_t y) {
   fp_t crt_value = __compiler_rt_fmaxl(x, y);
@@ -43,7 +43,7 @@ fp_t cases[] = {
 #endif
 
 int main() {
-#if defined(CRT_HAS_128BIT) && defined(CRT_LDBL_128BIT)
+#if defined(CRT_HAS_TF_MODE)
   const unsigned N = sizeof(cases) / sizeof(cases[0]);
   unsigned i, j;
   for (i = 0; i < N; ++i) {

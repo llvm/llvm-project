@@ -35,6 +35,7 @@ public:
     ZA_Shared = 1 << 3,     // aarch64_pstate_sm_shared
     ZA_New = 1 << 4,        // aarch64_pstate_sm_new
     ZA_Preserved = 1 << 5,  // aarch64_pstate_sm_preserved
+    ZA_NoLazySave = 1 << 6, // Used for SME ABI routines to avoid lazy saves
     All = ZA_Preserved - 1
   };
 
@@ -42,6 +43,7 @@ public:
   SMEAttrs(const Function &F) : SMEAttrs(F.getAttributes()) {}
   SMEAttrs(const CallBase &CB);
   SMEAttrs(const AttributeList &L);
+  SMEAttrs(StringRef FuncName);
 
   void set(unsigned M, bool Enable = true);
 
@@ -82,7 +84,7 @@ public:
   }
   bool requiresLazySave(const SMEAttrs &Callee) const {
     return hasZAState() && Callee.hasPrivateZAInterface() &&
-           !Callee.preservesZA();
+           !(Callee.Bitmask & ZA_NoLazySave);
   }
 };
 

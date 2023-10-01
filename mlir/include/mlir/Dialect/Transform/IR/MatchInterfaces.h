@@ -95,15 +95,15 @@ public:
                                     TransformResults &results,
                                     TransformState &state) {
     Value operandHandle = cast<OpTy>(this->getOperation()).getOperandHandle();
-    ValueRange payload = state.getPayloadValues(operandHandle);
-    if (payload.size() != 1) {
+    auto payload = state.getPayloadValues(operandHandle);
+    if (!llvm::hasSingleElement(payload)) {
       return emitDefiniteFailure(this->getOperation()->getLoc())
              << "SingleValueMatchOpTrait requires the value handle to point to "
                 "a single payload value";
     }
 
     return cast<OpTy>(this->getOperation())
-        .matchValue(payload[0], results, state);
+        .matchValue(*payload.begin(), results, state);
   }
 
   void getEffects(SmallVectorImpl<MemoryEffects::EffectInstance> &effects) {

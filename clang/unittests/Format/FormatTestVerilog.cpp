@@ -1253,6 +1253,15 @@ TEST_F(FormatTestVerilog, StringLiteral) {
    "xxxx"});)",
                R"(x({"xxxxxxxxxxxxxxxx xxxxxxxxxxxxxxxx ", "xxxx"});)",
                getStyleWithColumns(getDefaultStyle(), 23));
+  // import/export "DPI"/"DPI-C" cannot be split.
+  verifyFormat(R"(import
+    "DPI-C" function void foo
+    ();)",
+               R"(import "DPI-C" function void foo();)",
+               getStyleWithColumns(getDefaultStyle(), 23));
+  verifyFormat(R"(export "DPI-C" function foo;)",
+               R"(export "DPI-C" function foo;)",
+               getStyleWithColumns(getDefaultStyle(), 23));
   // These kinds of strings don't exist in Verilog.
   verifyNoCrash(R"(x(@"xxxxxxxxxxxxxxxx xxxx");)",
                 getStyleWithColumns(getDefaultStyle(), 23));

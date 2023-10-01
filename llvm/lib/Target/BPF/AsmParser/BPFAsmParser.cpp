@@ -135,9 +135,13 @@ public:
     return static_cast<const MCConstantExpr *>(Val)->getValue();
   }
 
-  bool isSImm12() const {
-    return (isConstantImm() && isInt<12>(getConstantImm()));
+  bool isSImm16() const {
+    return (isConstantImm() && isInt<16>(getConstantImm()));
   }
+
+  bool isSymbolRef() const { return isImm() && isa<MCSymbolRefExpr>(getImm()); }
+
+  bool isBrTarget() const { return isSymbolRef() || isSImm16(); }
 
   /// getStartLoc - Gets location of the first token of this operand
   SMLoc getStartLoc() const override { return StartLoc; }
@@ -332,6 +336,12 @@ bool BPFAsmParser::MatchAndEmitInstruction(SMLoc IDLoc, unsigned &Opcode,
     }
 
     return Error(ErrorLoc, "invalid operand for instruction");
+  case Match_InvalidBrTarget:
+    return Error(Operands[ErrorInfo]->getStartLoc(),
+                 "operand is not an identifier or 16-bit signed integer");
+  case Match_InvalidSImm16:
+    return Error(Operands[ErrorInfo]->getStartLoc(),
+                 "operand is not a 16-bit signed integer");
   }
 
   llvm_unreachable("Unknown match type detected!");

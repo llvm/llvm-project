@@ -810,6 +810,24 @@ public:
     return !XC;
   }
 
+  // Return true if its desirable to perform the following transform:
+  // (fmul C, (uitofp Pow2))
+  //     -> (bitcast_to_FP (add (bitcast_to_INT C), Log2(Pow2) << mantissa))
+  // (fdiv C, (uitofp Pow2))
+  //     -> (bitcast_to_FP (sub (bitcast_to_INT C), Log2(Pow2) << mantissa))
+  //
+  // This is only queried after we have verified the transform will be bitwise
+  // equals.
+  //
+  // SDNode *N      : The FDiv/FMul node we want to transform.
+  // SDValue FPConst: The Float constant operand in `N`.
+  // SDValue IntPow2: The Integer power of 2 operand in `N`.
+  virtual bool optimizeFMulOrFDivAsShiftAddBitcast(SDNode *N, SDValue FPConst,
+                                                   SDValue IntPow2) const {
+    // Default to avoiding fdiv which is often very expensive.
+    return N->getOpcode() == ISD::FDIV;
+  }
+
   /// These two forms are equivalent:
   ///   sub %y, (xor %x, -1)
   ///   add (add %x, 1), %y
@@ -1948,12 +1966,6 @@ public:
   /// returns nullptr. Must be previously inserted by insertSSPDeclarations.
   /// Should be used only when getIRStackGuard returns nullptr.
   virtual Function *getSSPStackGuardCheck(const Module &M) const;
-
-  /// \returns true if a constant G_UBFX is legal on the target.
-  virtual bool isConstantUnsignedBitfieldExtractLegal(unsigned Opc, LLT Ty1,
-                                                      LLT Ty2) const {
-    return false;
-  }
 
 protected:
   Value *getDefaultSafeStackPointerLocation(IRBuilderBase &IRB,
@@ -4129,6 +4141,12 @@ public:
     return true;
   }
 
+  /// GlobalISel - return true if it's profitable to perform the combine:
+  /// shl ([sza]ext x), y => zext (shl x, y)
+  virtual bool isDesirableToPullExtFromShl(const MachineInstr &MI) const {
+    return true;
+  }
+
   // Return AndOrSETCCFoldKind::{AddAnd, ABS} if its desirable to try and
   // optimize LogicOp(SETCC0, SETCC1). An example (what is implemented as of
   // writing this) is:
@@ -4825,6 +4843,15 @@ public:
   /// Given a constraint, return the type of constraint it is for this target.
   virtual ConstraintType getConstraintType(StringRef Constraint) const;
 
+  using ConstraintPair = std::pair<StringRef, TargetLowering::ConstraintType>;
+  using ConstraintGroup = SmallVector<ConstraintPair>;
+  /// Given an OpInfo with list of constraints codes as strings, return a
+  /// sorted Vector of pairs of constraint codes and their types in priority of
+  /// what we'd prefer to lower them as. This may contain immediates that
+  /// cannot be lowered, but it is meant to be a machine agnostic order of
+  /// preferences.
+  ConstraintGroup getConstraintPreferences(AsmOperandInfo &OpInfo) const;
+
   /// Given a physical register constraint (e.g.  {edx}), return the register
   /// number and the register class for the register.
   ///
@@ -4858,7 +4885,7 @@ public:
 
   /// Lower the specified operand into the Ops vector.  If it is invalid, don't
   /// add anything to Ops.
-  virtual void LowerAsmOperandForConstraint(SDValue Op, std::string &Constraint,
+  virtual void LowerAsmOperandForConstraint(SDValue Op, StringRef Constraint,
                                             std::vector<SDValue> &Ops,
                                             SelectionDAG &DAG) const;
 

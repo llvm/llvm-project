@@ -470,7 +470,6 @@ endif()
 option(LLVM_ENABLE_WARNINGS "Enable compiler warnings." ON)
 
 if( MSVC )
-  include(ChooseMSVCCRT)
 
   # Add definitions that make MSVC much less annoying.
   add_compile_definitions(
@@ -951,7 +950,7 @@ if(LLVM_USE_SANITIZER)
       endif()
       # Prepare ASAN runtime if needed
       if (LLVM_USE_SANITIZER MATCHES ".*Address.*")
-        if (${LLVM_USE_CRT_${uppercase_CMAKE_BUILD_TYPE}} MATCHES "^(MT|MTd)$")
+        if (${CMAKE_MSVC_RUNTIME_LIBRARY} MATCHES "^(MultiThreaded|MultiThreadedDebug)$")
           append("/wholearchive:clang_rt.asan-${arch}.lib /wholearchive:clang_rt.asan_cxx-${arch}.lib"
             CMAKE_EXE_LINKER_FLAGS)
           append("/wholearchive:clang_rt.asan_dll_thunk-${arch}.lib"

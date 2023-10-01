@@ -782,12 +782,52 @@ bool llvm::hasWholeProgramVisibility(bool WholeProgramVisibilityEnabledInLTO) {
          !DisableWholeProgramVisibility;
 }
 
+static bool
+typeIDVisibleToRegularObj(StringRef TypeID,
+                          function_ref<bool(StringRef)> IsVisibleToRegularObj) {
+  // TypeID for member function pointer type is an internal construct
+  // and won't exist in IsVisibleToRegularObj. The full TypeID
+  // will be present and participate in invalidation.
+  if (TypeID.ends_with(".virtual"))
+    return false;
+
+  // TypeID that doesn't start with Itanium mangling (_ZTS) will be
+  // non-externally visible types which cannot interact with
+  // external native files. See CodeGenModule::CreateMetadataIdentifierImpl.
+  if (!TypeID.consume_front("_ZTS"))
+    return false;
+
+  // TypeID is keyed off the type name symbol (_ZTS). However, the native
+  // object may not contain this symbol if it does not contain a key
+  // function for the base type and thus only contains a reference to the
+  // type info (_ZTI). To catch this case we query using the type info
+  // symbol corresponding to the TypeID.
+  std::string typeInfo = ("_ZTI" + TypeID).str();
+  return IsVisibleToRegularObj(typeInfo);
+}
+
+static bool
+skipUpdateDueToValidation(GlobalVariable &GV,
+                          function_ref<bool(StringRef)> IsVisibleToRegularObj) {
+  SmallVector<MDNode *, 2> Types;
+  GV.getMetadata(LLVMContext::MD_type, Types);
+
+  for (auto Type : Types)
+    if (auto *TypeID = dyn_cast<MDString>(Type->getOperand(1).get()))
+      return typeIDVisibleToRegularObj(TypeID->getString(),
+                                       IsVisibleToRegularObj);
+
+  return false;
+}
+
 /// If whole program visibility asserted, then upgrade all public vcall
 /// visibility metadata on vtable definitions to linkage unit visibility in
 /// Module IR (for regular or hybrid LTO).
 void llvm::updateVCallVisibilityInModule(
     Module &M, bool WholeProgramVisibilityEnabledInLTO,
-    const DenseSet<GlobalValue::GUID> &DynamicExportSymbols) {
+    const DenseSet<GlobalValue::GUID> &DynamicExportSymbols,
+    bool ValidateAllVtablesHaveTypeInfos,
+    function_ref<bool(StringRef)> IsVisibleToRegularObj) {
   if (!hasWholeProgramVisibility(WholeProgramVisibilityEnabledInLTO))
     return;
   for (GlobalVariable &GV : M.globals()) {
@@ -798,7 +838,13 @@ void llvm::updateVCallVisibilityInModule(
         GV.getVCallVisibility() == GlobalObject::VCallVisibilityPublic &&
         // Don't upgrade the visibility for symbols exported to the dynamic
         // linker, as we have no information on their eventual use.
-        !DynamicExportSymbols.count(GV.getGUID()))
+        !DynamicExportSymbols.count(GV.getGUID()) &&
+        // With validation enabled, we want to exclude symbols visible to
+        // regular objects. Local symbols will be in this group due to the
+        // current implementation but those with VCallVisibilityTranslationUnit
+        // will have already been marked in clang so are unaffected.
+        !(ValidateAllVtablesHaveTypeInfos &&
+          skipUpdateDueToValidation(GV, IsVisibleToRegularObj)))
       GV.setVCallVisibilityMetadata(GlobalObject::VCallVisibilityLinkageUnit);
   }
 }
@@ -830,12 +876,26 @@ void llvm::updatePublicTypeTestCalls(Module &M,
   }
 }
 
+/// Based on typeID string, get all associated vtable GUIDS that are
+/// visible to regular objects.
+void llvm::getVisibleToRegularObjVtableGUIDs(
+    ModuleSummaryIndex &Index,
+    DenseSet<GlobalValue::GUID> &VisibleToRegularObjSymbols,
+    function_ref<bool(StringRef)> IsVisibleToRegularObj) {
+  for (const auto &typeID : Index.typeIdCompatibleVtableMap()) {
+    if (typeIDVisibleToRegularObj(typeID.first, IsVisibleToRegularObj))
+      for (const TypeIdOffsetVtableInfo &P : typeID.second)
+        VisibleToRegularObjSymbols.insert(P.VTableVI.getGUID());
+  }
+}
+
 /// If whole program visibility asserted, then upgrade all public vcall
 /// visibility metadata on vtable definition summaries to linkage unit
 /// visibility in Module summary index (for ThinLTO).
 void llvm::updateVCallVisibilityInIndex(
     ModuleSummaryIndex &Index, bool WholeProgramVisibilityEnabledInLTO,
-    const DenseSet<GlobalValue::GUID> &DynamicExportSymbols) {
+    const DenseSet<GlobalValue::GUID> &DynamicExportSymbols,
+    const DenseSet<GlobalValue::GUID> &VisibleToRegularObjSymbols) {
   if (!hasWholeProgramVisibility(WholeProgramVisibilityEnabledInLTO))
     return;
   for (auto &P : Index) {
@@ -847,6 +907,12 @@ void llvm::updateVCallVisibilityInIndex(
       auto *GVar = dyn_cast<GlobalVarSummary>(S.get());
       if (!GVar ||
           GVar->getVCallVisibility() != GlobalObject::VCallVisibilityPublic)
+        continue;
+      // With validation enabled, we want to exclude symbols visible to regular
+      // objects. Local symbols will be in this group due to the current
+      // implementation but those with VCallVisibilityTranslationUnit will have
+      // already been marked in clang so are unaffected.
+      if (VisibleToRegularObjSymbols.count(P.first))
         continue;
       GVar->setVCallVisibility(GlobalObject::VCallVisibilityLinkageUnit);
     }
@@ -1041,8 +1107,8 @@ bool DevirtModule::tryFindVirtualCallTargets(
 }
 
 bool DevirtIndex::tryFindVirtualCallTargets(
-    std::vector<ValueInfo> &TargetsForSlot, const TypeIdCompatibleVtableInfo TIdInfo,
-    uint64_t ByteOffset) {
+    std::vector<ValueInfo> &TargetsForSlot,
+    const TypeIdCompatibleVtableInfo TIdInfo, uint64_t ByteOffset) {
   for (const TypeIdOffsetVtableInfo &P : TIdInfo) {
     // Find a representative copy of the vtable initializer.
     // We can have multiple available_externally, linkonce_odr and weak_odr

@@ -854,6 +854,9 @@ public:
 class EstimateSizeFormatHandler
     : public analyze_format_string::FormatStringHandler {
   size_t Size;
+  /// Whether the format string contains Linux kernel's format specifier
+  /// extension.
+  bool IsKernelCompatible = true;
 
 public:
   EstimateSizeFormatHandler(StringRef Format)
@@ -933,6 +936,10 @@ public:
 
     // Just a pointer in the form '0xddd'.
     case analyze_format_string::ConversionSpecifier::pArg:
+      // Linux kernel has its own extesion for `%p` specifier.
+      // Kernel Document:
+      // https://docs.kernel.org/core-api/printk-formats.html#pointer-types
+      IsKernelCompatible = false;
       Size += std::max(FieldWidth, 2 /* leading 0x */ + Precision);
       break;
 
@@ -990,6 +997,7 @@ public:
   }
 
   size_t getSizeLowerBound() const { return Size; }
+  bool isKernelCompatible() const { return IsKernelCompatible; }
 
 private:
   static size_t computeFieldWidth(const analyze_printf::PrintfSpecifier &FS) {
@@ -1259,7 +1267,9 @@ void Sema::checkFortifiedBuiltinMemoryFunction(FunctionDecl *FD,
       if (!analyze_format_string::ParsePrintfString(
               H, FormatBytes, FormatBytes + StrLen, getLangOpts(),
               Context.getTargetInfo(), false)) {
-        DiagID = diag::warn_fortify_source_format_overflow;
+        DiagID = H.isKernelCompatible()
+                     ? diag::warn_format_overflow
+                     : diag::warn_format_overflow_non_kprintf;
         SourceSize = llvm::APSInt::getUnsigned(H.getSizeLowerBound())
                          .extOrTrunc(SizeTypeWidth);
         if (BuiltinID == Builtin::BI__builtin___sprintf_chk) {
@@ -1350,10 +1360,17 @@ void Sema::checkFortifiedBuiltinMemoryFunction(FunctionDecl *FD,
             llvm::APSInt::getUnsigned(H.getSizeLowerBound())
                 .extOrTrunc(SizeTypeWidth);
         if (FormatSize > *SourceSize && *SourceSize != 0) {
-          DiagID = diag::warn_fortify_source_format_truncation;
-          DestinationSize = SourceSize;
-          SourceSize = FormatSize;
-          break;
+          unsigned TruncationDiagID =
+              H.isKernelCompatible() ? diag::warn_format_truncation
+                                     : diag::warn_format_truncation_non_kprintf;
+          SmallString<16> SpecifiedSizeStr;
+          SmallString<16> FormatSizeStr;
+          SourceSize->toString(SpecifiedSizeStr, /*Radix=*/10);
+          FormatSize.toString(FormatSizeStr, /*Radix=*/10);
+          DiagRuntimeBehavior(TheCall->getBeginLoc(), TheCall,
+                              PDiag(TruncationDiagID)
+                                  << GetFunctionName() << SpecifiedSizeStr
+                                  << FormatSizeStr);
         }
       }
     }
@@ -6259,6 +6276,10 @@ bool Sema::CheckX86BuiltinFunctionCall(const TargetInfo &TI, unsigned BuiltinID,
   case X86::BI__builtin_ia32_cmpss:
   case X86::BI__builtin_ia32_cmppd:
   case X86::BI__builtin_ia32_cmpsd:
+    i = 2;
+    l = 0;
+    u = TI.hasFeature("avx") ? 31 : 7;
+    break;
   case X86::BI__builtin_ia32_cmpps256:
   case X86::BI__builtin_ia32_cmppd256:
   case X86::BI__builtin_ia32_cmpps128_mask:
@@ -11470,7 +11491,11 @@ CheckPrintfHandler::checkFormatExpr(const analyze_printf::PrintfSpecifier &FS,
         Hints.push_back(
             FixItHint::CreateInsertion(E->getBeginLoc(), CastFix.str()));
 
-        SourceLocation After = S.getLocForEndOfToken(E->getEndLoc());
+        // We don't use getLocForEndOfToken because it returns invalid source
+        // locations for macro expansions (by design).
+        SourceLocation EndLoc = S.SourceMgr.getSpellingLoc(E->getEndLoc());
+        SourceLocation After = EndLoc.getLocWithOffset(
+            Lexer::MeasureTokenLength(EndLoc, S.SourceMgr, S.LangOpts));
         Hints.push_back(FixItHint::CreateInsertion(After, ")"));
       }
 

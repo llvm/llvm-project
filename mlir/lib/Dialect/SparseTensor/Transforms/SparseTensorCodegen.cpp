@@ -705,6 +705,7 @@ public:
 };
 
 /// Sparse codegen rule for the alloc operator.
+/// TODO(springerm): remove when bufferization.alloc_tensor is gone
 class SparseTensorAllocConverter
     : public OpConversionPattern<bufferization::AllocTensorOp> {
 public:
@@ -744,6 +745,46 @@ public:
     }
 
     const Value sizeHint = op.getSizeHint();
+    const ValueRange dynSizes = adaptor.getDynamicSizes();
+    const size_t found = dynSizes.size();
+    const int64_t expected = resType.getNumDynamicDims();
+    if (found != static_cast<size_t>(expected))
+      return rewriter.notifyMatchFailure(
+          op, llvm::formatv(
+                  "Got wrong number of dynamic sizes: Found={0}, Expected={1}",
+                  found, expected));
+    SmallVector<Value> fields;
+    createAllocFields(rewriter, loc, resType, dynSizes,
+                      enableBufferInitialization, fields, sizeHint);
+    // Replace operation with resulting memrefs.
+    rewriter.replaceOp(op, genTuple(rewriter, loc, resType, fields));
+    return success();
+  }
+
+private:
+  bool enableBufferInitialization;
+};
+
+/// Sparse codegen rule for the empty tensor operator.
+/// TODO(springerm): remove when bufferization.alloc_tensor is gone
+class SparseTensorEmptyConverter : public OpConversionPattern<tensor::EmptyOp> {
+public:
+  using OpConversionPattern::OpConversionPattern;
+  SparseTensorEmptyConverter(TypeConverter &typeConverter, MLIRContext *context,
+                             bool enableInit)
+      : OpConversionPattern(typeConverter, context),
+        enableBufferInitialization(enableInit) {}
+
+  LogicalResult
+  matchAndRewrite(tensor::EmptyOp op, OpAdaptor adaptor,
+                  ConversionPatternRewriter &rewriter) const override {
+    const auto resType = getSparseTensorType(op);
+    if (!resType.hasEncoding())
+      return failure();
+
+    // Construct allocation for each field.
+    const Location loc = op.getLoc();
+    const Value sizeHint; // none
     const ValueRange dynSizes = adaptor.getDynamicSizes();
     const size_t found = dynSizes.size();
     const int64_t expected = resType.getNumDynamicDims();
@@ -890,8 +931,9 @@ public:
     // If the innermost level is ordered, we need to sort the coordinates
     // in the "added" array prior to applying the compression.
     if (dstType.isOrderedLvl(dstType.getLvlRank() - 1))
-      rewriter.create<SortOp>(loc, count, ValueRange{added}, ValueRange{},
-                              SparseTensorSortKind::HybridQuickSort);
+      rewriter.create<SortCooOp>(
+          loc, count, added, ValueRange{}, rewriter.getMultiDimIdentityMap(1),
+          rewriter.getIndexAttr(0), SparseTensorSortKind::HybridQuickSort);
     // While performing the insertions, we also need to reset the elements
     // of the values/filled-switch by only iterating over the set elements,
     // to ensure that the runtime complexity remains proportional to the
@@ -1202,10 +1244,10 @@ public:
   }
 };
 
-struct SparsePackOpConverter : public OpConversionPattern<PackOp> {
+struct SparseAssembleOpConverter : public OpConversionPattern<AssembleOp> {
   using OpConversionPattern::OpConversionPattern;
   LogicalResult
-  matchAndRewrite(PackOp op, OpAdaptor adaptor,
+  matchAndRewrite(AssembleOp op, OpAdaptor adaptor,
                   ConversionPatternRewriter &rewriter) const override {
     Location loc = op.getLoc();
     const auto stt = getSparseTensorType(op.getResult());
@@ -1305,13 +1347,15 @@ struct SparsePackOpConverter : public OpConversionPattern<PackOp> {
   }
 };
 
-struct SparseUnpackOpConverter : public OpConversionPattern<UnpackOp> {
+struct SparseDisassembleOpConverter
+    : public OpConversionPattern<DisassembleOp> {
   using OpConversionPattern::OpConversionPattern;
-  SparseUnpackOpConverter(TypeConverter &typeConverter, MLIRContext *context)
+  SparseDisassembleOpConverter(TypeConverter &typeConverter,
+                               MLIRContext *context)
       : OpConversionPattern(typeConverter, context) {}
 
   LogicalResult
-  matchAndRewrite(UnpackOp op, OpAdaptor adaptor,
+  matchAndRewrite(DisassembleOp op, OpAdaptor adaptor,
                   ConversionPatternRewriter &rewriter) const override {
     auto desc = getDescriptorFromTensorTuple(adaptor.getTensor());
     Location loc = op.getLoc();
@@ -1486,9 +1530,10 @@ struct SparseNewOpConverter : public OpConversionPattern<NewOp> {
       scf::IfOp ifOp =
           rewriter.create<scf::IfOp>(loc, notSorted, /*else*/ false);
       rewriter.setInsertionPointToStart(&ifOp.getThenRegion().front());
-      rewriter.create<SortCooOp>(
-          loc, nse, xs, ValueRange{ys}, rewriter.getIndexAttr(lvlRank),
-          rewriter.getIndexAttr(0), SparseTensorSortKind::HybridQuickSort);
+      auto xPerm = rewriter.getMultiDimIdentityMap(lvlRank);
+      rewriter.create<SortCooOp>(loc, nse, xs, ValueRange{ys}, xPerm,
+                                 rewriter.getIndexAttr(0),
+                                 SparseTensorSortKind::HybridQuickSort);
       rewriter.setInsertionPointAfter(ifOp);
     }
 
@@ -1528,7 +1573,7 @@ struct SparseNewOpConverter : public OpConversionPattern<NewOp> {
 void mlir::populateSparseTensorCodegenPatterns(
     TypeConverter &typeConverter, RewritePatternSet &patterns,
     bool createSparseDeallocs, bool enableBufferInitialization) {
-  patterns.add<SparsePackOpConverter, SparseUnpackOpConverter,
+  patterns.add<SparseAssembleOpConverter, SparseDisassembleOpConverter,
                SparseReturnConverter, SparseCallConverter, SparseDimOpConverter,
                SparseCastConverter, SparseExtractSliceConverter,
                SparseTensorLoadConverter, SparseExpandConverter,
@@ -1544,6 +1589,6 @@ void mlir::populateSparseTensorCodegenPatterns(
                                                patterns.getContext());
   patterns.add<SparseTensorDeallocConverter>(
       typeConverter, patterns.getContext(), createSparseDeallocs);
-  patterns.add<SparseTensorAllocConverter>(typeConverter, patterns.getContext(),
-                                           enableBufferInitialization);
+  patterns.add<SparseTensorAllocConverter, SparseTensorEmptyConverter>(
+      typeConverter, patterns.getContext(), enableBufferInitialization);
 }

@@ -1237,8 +1237,26 @@ void hlfir::AssociateOp::build(mlir::OpBuilder &builder,
 void hlfir::EndAssociateOp::build(mlir::OpBuilder &builder,
                                   mlir::OperationState &result,
                                   hlfir::AssociateOp associate) {
-  return build(builder, result, associate.getFirBase(),
+  mlir::Value hlfirBase = associate.getBase();
+  mlir::Value firBase = associate.getFirBase();
+  // If EndAssociateOp may need to initiate the deallocation
+  // of allocatable components, it has to have access to the variable
+  // definition, so we cannot use the FIR base as the operand.
+  return build(builder, result,
+               hlfir::mayHaveAllocatableComponent(hlfirBase.getType())
+                   ? hlfirBase
+                   : firBase,
                associate.getMustFreeStrorageFlag());
+}
+
+mlir::LogicalResult hlfir::EndAssociateOp::verify() {
+  mlir::Value var = getVar();
+  if (hlfir::mayHaveAllocatableComponent(var.getType()) &&
+      !hlfir::isFortranEntity(var))
+    return emitOpError("that requires components deallocation must have var "
+                       "operand that is a Fortran entity");
+
+  return mlir::success();
 }
 
 //===----------------------------------------------------------------------===//
@@ -1339,6 +1357,23 @@ void hlfir::NullOp::build(mlir::OpBuilder &builder,
                           mlir::OperationState &odsState) {
   return build(builder, odsState,
                fir::ReferenceType::get(builder.getNoneType()));
+}
+
+//===----------------------------------------------------------------------===//
+// DestroyOp
+//===----------------------------------------------------------------------===//
+
+mlir::LogicalResult hlfir::DestroyOp::verify() {
+  if (mustFinalizeExpr()) {
+    mlir::Value expr = getExpr();
+    hlfir::ExprType exprTy = mlir::cast<hlfir::ExprType>(expr.getType());
+    mlir::Type elemTy = hlfir::getFortranElementType(exprTy);
+    if (!mlir::isa<fir::RecordType>(elemTy))
+      return emitOpError(
+          "the element type must be finalizable, when 'finalize' is set");
+  }
+
+  return mlir::success();
 }
 
 //===----------------------------------------------------------------------===//

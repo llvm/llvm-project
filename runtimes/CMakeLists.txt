@@ -19,7 +19,7 @@ list(INSERT CMAKE_MODULE_PATH 0
 
 # We order libraries to mirror roughly how they are layered, except that compiler-rt can depend
 # on libc++, so we put it after.
-set(LLVM_DEFAULT_RUNTIMES "libc;libunwind;libcxxabi;pstl;libcxx;compiler-rt;openmp")
+set(LLVM_DEFAULT_RUNTIMES "libc;libunwind;libcxxabi;pstl;libcxx;compiler-rt;openmp;flang-rt")
 set(LLVM_SUPPORTED_RUNTIMES "${LLVM_DEFAULT_RUNTIMES};llvm-libgcc")
 set(LLVM_ENABLE_RUNTIMES "" CACHE STRING
   "Semicolon-separated list of runtimes to build, or \"all\" (${LLVM_DEFAULT_RUNTIMES}). Supported runtimes are ${LLVM_SUPPORTED_RUNTIMES}.")
@@ -214,23 +214,6 @@ if(LLVM_INCLUDE_TESTS)
   set(LLVM_LIT_ARGS "${LIT_ARGS_DEFAULT}" CACHE STRING "Default options for lit")
 
   umbrella_lit_testsuite_begin(check-runtimes)
-endif()
-
-# llvm-libgcc incorporates both compiler-rt and libunwind as subprojects with very
-# specific flags, which causes clashes when they're independently built too.
-if("llvm-libgcc" IN_LIST runtimes)
-  if("compiler-rt" IN_LIST runtimes OR "compiler-rt" IN_LIST LLVM_ENABLE_PROJECTS)
-    message(FATAL_ERROR
-      "Attempting to build both compiler-rt and llvm-libgcc will cause irreconcilable "
-      "target clashes. Please choose one or the other, but not both.")
-  endif()
-
-  if("libunwind" IN_LIST runtimes)
-    message(
-      FATAL_ERROR
-      "Attempting to build both libunwind and llvm-libgcc will cause irreconcilable "
-      "target clashes. Please choose one or the other, but not both.")
-  endif()
 endif()
 
 # We do this in two loops so that HAVE_* is set for each runtime before the

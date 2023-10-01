@@ -1218,6 +1218,10 @@ bool RAGreedy::trySplitAroundHintReg(MCPhysReg Hint,
                                      const LiveInterval &VirtReg,
                                      SmallVectorImpl<Register> &NewVRegs,
                                      AllocationOrder &Order) {
+  // Don't allow repeated splitting as a safe guard against looping.
+  if (ExtraInfo->getStage(VirtReg) >= RS_Split2)
+    return false;
+
   BlockFrequency Cost = 0;
   Register Reg = VirtReg.reg();
 
@@ -1325,16 +1329,20 @@ static unsigned getNumAllocatableRegsForConstraints(
 
 static LaneBitmask getInstReadLaneMask(const MachineRegisterInfo &MRI,
                                        const TargetRegisterInfo &TRI,
-                                       const MachineInstr &MI, Register Reg) {
+                                       const MachineInstr &FirstMI,
+                                       Register Reg) {
   LaneBitmask Mask;
-  for (const MachineOperand &MO : MI.operands()) {
-    if (!MO.isReg() || MO.getReg() != Reg)
-      continue;
+  SmallVector<std::pair<MachineInstr *, unsigned>, 8> Ops;
+  (void)AnalyzeVirtRegInBundle(const_cast<MachineInstr &>(FirstMI), Reg, &Ops);
 
+  for (auto [MI, OpIdx] : Ops) {
+    const MachineOperand &MO = MI->getOperand(OpIdx);
+    assert(MO.isReg() && MO.getReg() == Reg);
     unsigned SubReg = MO.getSubReg();
     if (SubReg == 0 && MO.isUse()) {
-      Mask |= MRI.getMaxLaneMaskForVReg(Reg);
-      continue;
+      if (MO.isUndef())
+        continue;
+      return MRI.getMaxLaneMaskForVReg(Reg);
     }
 
     LaneBitmask SubRegMask = TRI.getSubRegIndexLaneMask(SubReg);
@@ -1354,9 +1362,11 @@ static bool readsLaneSubset(const MachineRegisterInfo &MRI,
                             const MachineInstr *MI, const LiveInterval &VirtReg,
                             const TargetRegisterInfo *TRI, SlotIndex Use,
                             const TargetInstrInfo *TII) {
-  // Early check the common case.
+  // Early check the common case. Beware of the semi-formed bundles SplitKit
+  // creates by setting the bundle flag on copies without a matching BUNDLE.
+
   auto DestSrc = TII->isCopyInstr(*MI);
-  if (DestSrc &&
+  if (DestSrc && !MI->isBundled() &&
       DestSrc->Destination->getSubReg() == DestSrc->Source->getSubReg())
     return false;
 
@@ -2692,6 +2702,9 @@ bool RAGreedy::runOnMachineFunction(MachineFunction &mf) {
     return false;
 
   Indexes = &getAnalysis<SlotIndexes>();
+  // Renumber to get accurate and consistent results from
+  // SlotIndexes::getApproxInstrDistance.
+  Indexes->packIndexes();
   MBFI = &getAnalysis<MachineBlockFrequencyInfo>();
   DomTree = &getAnalysis<MachineDominatorTree>();
   ORE = &getAnalysis<MachineOptimizationRemarkEmitterPass>().getORE();

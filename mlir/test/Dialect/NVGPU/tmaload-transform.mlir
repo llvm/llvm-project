@@ -34,7 +34,7 @@ func.func @main() {
     %out_1 = memref.get_global @bufferRhsGlobal : memref<8x128xf32, #gpu.address_space<workgroup>>
     
     //      CHECK: %[[B:.*]] = nvgpu.mbarrier.create -> <memorySpace = #gpu.address_space<workgroup>
-    //      CHECK: nvgpu.mbarrier.init %[[B]], %{{.*}} : <memorySpace = #gpu.address_space<workgroup>
+    //      CHECK: nvgpu.mbarrier.init %[[B]][%{{.*}}], %{{.*}} : <memorySpace = #gpu.address_space<workgroup>
     //      CHECK: gpu.barrier
     //
     //      CHECK: %[[c0:.*]] = arith.constant 0 : index
@@ -44,27 +44,27 @@ func.func @main() {
     //      CHECK: scf.if %[[CMP]] {
     //
     //      CHECK:   %[[c0_7:.*]] = arith.constant 0 : index
-    //      CHECK:   nvgpu.tma.async.load %[[D1]][%[[c0_7]], %[[c0_7]]], %[[B]] to %[[G1]] 
+    //      CHECK:   nvgpu.tma.async.load %[[D1]][%[[c0_7]], %[[c0_7]]], %[[B]][%{{.*}}] to %[[G1]] 
     // CHECK-SAME:     : <tensor = memref<64x8xf32, #gpu.address_space<workgroup>>, 
     // CHECK-SAME:        swizzle = none, l2promo = none, oob = zero, interleave = none>, <memorySpace = #gpu.address_space<workgroup>
     // CHECK-SAME:     -> memref<64x8xf32, #gpu.address_space<workgroup>>
     //
     //      CHECK:   %[[c0_8:.*]] = arith.constant 0 : index
-    //      CHECK:   nvgpu.tma.async.load %[[D2]][%[[c0_8]], %[[c0_8]]], %[[B]] to %[[G2]] 
+    //      CHECK:   nvgpu.tma.async.load %[[D2]][%[[c0_8]], %[[c0_8]]], %[[B]][%{{.*}}] to %[[G2]] 
     // CHECK-SAME:     : <tensor = memref<8x128xf32, #gpu.address_space<workgroup>>,
     // CHECK-SAME:         swizzle = none, l2promo = none, oob = zero, interleave = none>, <memorySpace = #gpu.address_space<workgroup> 
     // CHECK-SAME:    -> memref<8x128xf32, #gpu.address_space<workgroup>>
     //
     //      CHECK:   %[[c6144:.*]] = arith.constant 6144 : index
-    //      CHECK:   nvgpu.mbarrier.arrive.expect_tx %[[B]], %[[c6144]] : <memorySpace = #gpu.address_space<workgroup>
+    //      CHECK:   nvgpu.mbarrier.arrive.expect_tx %[[B]][%{{.*}}], %[[c6144]] : <memorySpace = #gpu.address_space<workgroup>
     //      CHECK: } else {
     //      CHECK:   %[[c0_7:.*]] = arith.constant 0 : index
-    //      CHECK:   nvgpu.mbarrier.arrive.expect_tx %[[B]], %[[c0_7]] : <memorySpace = #gpu.address_space<workgroup>
+    //      CHECK:   nvgpu.mbarrier.arrive.expect_tx %[[B]][%{{.*}}], %[[c0_7]] : <memorySpace = #gpu.address_space<workgroup>
     //      CHECK: }
     //
     //      CHECK: %[[c0_6:.*]] = arith.constant 0 : index
     //      CHECK: %[[c10000000:.*]] = arith.constant 10000000 : index
-    //      CHECK: nvgpu.mbarrier.try_wait.parity %[[B]], %[[c0_6]], %[[c10000000]] : <memorySpace = #gpu.address_space<workgroup>
+    //      CHECK: nvgpu.mbarrier.try_wait.parity %[[B]][%{{.*}}], %[[c0_6]], %[[c10000000]] : <memorySpace = #gpu.address_space<workgroup>
 
     /// Both copies are matched and end up in the same async group.    
     linalg.copy ins(%memref: memref<64x8xf32>) outs(%out: memref<64x8xf32, #gpu.address_space<workgroup>>)

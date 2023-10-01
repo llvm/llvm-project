@@ -13,6 +13,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/Transforms/Vectorize/VectorCombine.h"
+#include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/Statistic.h"
 #include "llvm/Analysis/AssumptionCache.h"
 #include "llvm/Analysis/BasicAliasAnalysis.h"
@@ -102,6 +103,7 @@ private:
   bool foldInsExtFNeg(Instruction &I);
   bool foldBitcastShuf(Instruction &I);
   bool scalarizeBinopOrCmp(Instruction &I);
+  bool scalarizeVPIntrinsic(Instruction &I);
   bool foldExtractedCmps(Instruction &I);
   bool foldSingleElementStore(Instruction &I);
   bool scalarizeLoadExtract(Instruction &I);
@@ -729,6 +731,111 @@ bool VectorCombine::foldBitcastShuf(Instruction &I) {
   return true;
 }
 
+/// VP Intrinsics whose vector operands are both splat values may be simplified
+/// into the scalar version of the operation and the result splatted. This
+/// can lead to scalarization down the line.
+bool VectorCombine::scalarizeVPIntrinsic(Instruction &I) {
+  if (!isa<VPIntrinsic>(I))
+    return false;
+  VPIntrinsic &VPI = cast<VPIntrinsic>(I);
+  Value *Op0 = VPI.getArgOperand(0);
+  Value *Op1 = VPI.getArgOperand(1);
+
+  if (!isSplatValue(Op0) || !isSplatValue(Op1))
+    return false;
+
+  // For the binary VP intrinsics supported here, the result on disabled lanes
+  // is a poison value. For now, only do this simplification if all lanes
+  // are active.
+  // TODO: Relax the condition that all lanes are active by using insertelement
+  // on inactive lanes.
+  auto IsAllTrueMask = [](Value *MaskVal) {
+    if (Value *SplattedVal = getSplatValue(MaskVal))
+      if (auto *ConstValue = dyn_cast<Constant>(SplattedVal))
+        return ConstValue->isAllOnesValue();
+    return false;
+  };
+  if (!IsAllTrueMask(VPI.getArgOperand(2)))
+    return false;
+
+  // Check to make sure we support scalarization of the intrinsic
+  Intrinsic::ID IntrID = VPI.getIntrinsicID();
+  if (!VPBinOpIntrinsic::isVPBinOp(IntrID))
+    return false;
+
+  // Calculate cost of splatting both operands into vectors and the vector
+  // intrinsic
+  VectorType *VecTy = cast<VectorType>(VPI.getType());
+  TTI::TargetCostKind CostKind = TTI::TCK_RecipThroughput;
+  InstructionCost SplatCost =
+      TTI.getVectorInstrCost(Instruction::InsertElement, VecTy, CostKind, 0) +
+      TTI.getShuffleCost(TargetTransformInfo::SK_Broadcast, VecTy);
+
+  // Calculate the cost of the VP Intrinsic
+  SmallVector<Type *, 4> Args;
+  for (Value *V : VPI.args())
+    Args.push_back(V->getType());
+  IntrinsicCostAttributes Attrs(IntrID, VecTy, Args);
+  InstructionCost VectorOpCost = TTI.getIntrinsicInstrCost(Attrs, CostKind);
+  InstructionCost OldCost = 2 * SplatCost + VectorOpCost;
+
+  // Determine scalar opcode
+  std::optional<unsigned> FunctionalOpcode =
+      VPI.getFunctionalOpcode();
+  std::optional<Intrinsic::ID> ScalarIntrID = std::nullopt;
+  if (!FunctionalOpcode) {
+    ScalarIntrID = VPI.getFunctionalIntrinsicID();
+    if (!ScalarIntrID)
+      return false;
+  }
+
+  // Calculate cost of scalarizing
+  InstructionCost ScalarOpCost = 0;
+  if (ScalarIntrID) {
+    IntrinsicCostAttributes Attrs(*ScalarIntrID, VecTy->getScalarType(), Args);
+    ScalarOpCost = TTI.getIntrinsicInstrCost(Attrs, CostKind);
+  } else {
+    ScalarOpCost =
+        TTI.getArithmeticInstrCost(*FunctionalOpcode, VecTy->getScalarType());
+  }
+
+  // The existing splats may be kept around if other instructions use them.
+  InstructionCost CostToKeepSplats =
+      (SplatCost * !Op0->hasOneUse()) + (SplatCost * !Op1->hasOneUse());
+  InstructionCost NewCost = ScalarOpCost + SplatCost + CostToKeepSplats;
+
+  LLVM_DEBUG(dbgs() << "Found a VP Intrinsic to scalarize: " << VPI
+                    << "\n");
+  LLVM_DEBUG(dbgs() << "Cost of Intrinsic: " << OldCost
+                    << ", Cost of scalarizing:" << NewCost << "\n");
+
+  // We want to scalarize unless the vector variant actually has lower cost.
+  if (OldCost < NewCost || !NewCost.isValid())
+    return false;
+
+  // Scalarize the intrinsic
+  ElementCount EC = cast<VectorType>(Op0->getType())->getElementCount();
+  Value *EVL = VPI.getArgOperand(3);
+  const DataLayout &DL = VPI.getModule()->getDataLayout();
+  bool MustHaveNonZeroVL =
+      IntrID == Intrinsic::vp_sdiv || IntrID == Intrinsic::vp_udiv ||
+      IntrID == Intrinsic::vp_srem || IntrID == Intrinsic::vp_urem;
+
+  if (!MustHaveNonZeroVL || isKnownNonZero(EVL, DL, 0, &AC, &VPI, &DT)) {
+    Value *ScalarOp0 = getSplatValue(Op0);
+    Value *ScalarOp1 = getSplatValue(Op1);
+    Value *ScalarVal =
+        ScalarIntrID
+            ? Builder.CreateIntrinsic(VecTy->getScalarType(), *ScalarIntrID,
+                                      {ScalarOp0, ScalarOp1})
+            : Builder.CreateBinOp((Instruction::BinaryOps)(*FunctionalOpcode),
+                                  ScalarOp0, ScalarOp1);
+    replaceValue(VPI, *Builder.CreateVectorSplat(EC, ScalarVal));
+    return true;
+  }
+  return false;
+}
+
 /// Match a vector binop or compare instruction with at least one inserted
 /// scalar operand and convert to scalar binop/cmp followed by insertelement.
 bool VectorCombine::scalarizeBinopOrCmp(Instruction &I) {
@@ -1099,7 +1206,7 @@ bool VectorCombine::foldSingleElementStore(Instruction &I) {
     // Don't optimize for atomic/volatile load or store. Ensure memory is not
     // modified between, vector type matches store size, and index is inbounds.
     if (!Load->isSimple() || Load->getParent() != SI->getParent() ||
-        !DL.typeSizeEqualsStoreSize(Load->getType()) ||
+        !DL.typeSizeEqualsStoreSize(Load->getType()->getScalarType()) ||
         SrcAddr != SI->getPointerOperand()->stripPointerCasts())
       return false;
 
@@ -1137,7 +1244,7 @@ bool VectorCombine::scalarizeLoadExtract(Instruction &I) {
   auto *VecTy = cast<VectorType>(I.getType());
   auto *LI = cast<LoadInst>(&I);
   const DataLayout &DL = I.getModule()->getDataLayout();
-  if (LI->isVolatile() || !DL.typeSizeEqualsStoreSize(VecTy))
+  if (LI->isVolatile() || !DL.typeSizeEqualsStoreSize(VecTy->getScalarType()))
     return false;
 
   InstructionCost OriginalCost =
@@ -1147,15 +1254,13 @@ bool VectorCombine::scalarizeLoadExtract(Instruction &I) {
 
   Instruction *LastCheckedInst = LI;
   unsigned NumInstChecked = 0;
+  DenseMap<ExtractElementInst *, ScalarizationResult> NeedFreeze;
   // Check if all users of the load are extracts with no memory modifications
   // between the load and the extract. Compute the cost of both the original
   // code and the scalarized version.
   for (User *U : LI->users()) {
     auto *UI = dyn_cast<ExtractElementInst>(U);
     if (!UI || UI->getParent() != LI->getParent())
-      return false;
-
-    if (!isGuaranteedNotToBePoison(UI->getOperand(1), &AC, LI, &DT))
       return false;
 
     // Check if any instruction between the load and the extract may modify
@@ -1173,10 +1278,11 @@ bool VectorCombine::scalarizeLoadExtract(Instruction &I) {
     }
 
     auto ScalarIdx = canScalarizeAccess(VecTy, UI->getOperand(1), &I, AC, DT);
-    if (!ScalarIdx.isSafe()) {
-      // TODO: Freeze index if it is safe to do so.
-      ScalarIdx.discard();
+    if (ScalarIdx.isUnsafe())
       return false;
+    if (ScalarIdx.isSafeWithFreeze()) {
+      NeedFreeze.try_emplace(UI, ScalarIdx);
+      ScalarIdx.discard();
     }
 
     auto *Index = dyn_cast<ConstantInt>(UI->getOperand(1));
@@ -1196,9 +1302,14 @@ bool VectorCombine::scalarizeLoadExtract(Instruction &I) {
   // Replace extracts with narrow scalar loads.
   for (User *U : LI->users()) {
     auto *EI = cast<ExtractElementInst>(U);
-    Builder.SetInsertPoint(EI);
-
     Value *Idx = EI->getOperand(1);
+
+    // Insert 'freeze' for poison indexes.
+    auto It = NeedFreeze.find(EI);
+    if (It != NeedFreeze.end())
+      It->second.freeze(Builder, *cast<Instruction>(Idx));
+
+    Builder.SetInsertPoint(EI);
     Value *GEP =
         Builder.CreateInBoundsGEP(VecTy, Ptr, {Builder.getInt32(0), Idx});
     auto *NewLoad = cast<LoadInst>(Builder.CreateLoad(
@@ -1737,6 +1848,7 @@ bool VectorCombine::run() {
     if (isa<VectorType>(I.getType())) {
       MadeChange |= scalarizeBinopOrCmp(I);
       MadeChange |= scalarizeLoadExtract(I);
+      MadeChange |= scalarizeVPIntrinsic(I);
     }
 
     if (Opcode == Instruction::Store)

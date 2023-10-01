@@ -291,6 +291,84 @@ CallInst *IRBuilderBase::CreateElementUnorderedAtomicMemCpy(
   return CI;
 }
 
+/// isConstantOne - Return true only if val is constant int 1
+static bool isConstantOne(const Value *Val) {
+  assert(Val && "isConstantOne does not work with nullptr Val");
+  const ConstantInt *CVal = dyn_cast<ConstantInt>(Val);
+  return CVal && CVal->isOne();
+}
+
+CallInst *IRBuilderBase::CreateMalloc(Type *IntPtrTy, Type *AllocTy,
+                                      Value *AllocSize, Value *ArraySize,
+                                      ArrayRef<OperandBundleDef> OpB,
+                                      Function *MallocF, const Twine &Name) {
+  // malloc(type) becomes:
+  //       i8* malloc(typeSize)
+  // malloc(type, arraySize) becomes:
+  //       i8* malloc(typeSize*arraySize)
+  if (!ArraySize)
+    ArraySize = ConstantInt::get(IntPtrTy, 1);
+  else if (ArraySize->getType() != IntPtrTy)
+    ArraySize = CreateIntCast(ArraySize, IntPtrTy, false);
+
+  if (!isConstantOne(ArraySize)) {
+    if (isConstantOne(AllocSize)) {
+      AllocSize = ArraySize; // Operand * 1 = Operand
+    } else {
+      // Multiply type size by the array size...
+      AllocSize = CreateMul(ArraySize, AllocSize, "mallocsize");
+    }
+  }
+
+  assert(AllocSize->getType() == IntPtrTy && "malloc arg is wrong size");
+  // Create the call to Malloc.
+  Module *M = BB->getParent()->getParent();
+  Type *BPTy = PointerType::getUnqual(Context);
+  FunctionCallee MallocFunc = MallocF;
+  if (!MallocFunc)
+    // prototype malloc as "void *malloc(size_t)"
+    MallocFunc = M->getOrInsertFunction("malloc", BPTy, IntPtrTy);
+  CallInst *MCall = CreateCall(MallocFunc, AllocSize, OpB, Name);
+
+  MCall->setTailCall();
+  if (Function *F = dyn_cast<Function>(MallocFunc.getCallee())) {
+    MCall->setCallingConv(F->getCallingConv());
+    F->setReturnDoesNotAlias();
+  }
+
+  assert(!MCall->getType()->isVoidTy() && "Malloc has void return type");
+
+  return MCall;
+}
+
+CallInst *IRBuilderBase::CreateMalloc(Type *IntPtrTy, Type *AllocTy,
+                                      Value *AllocSize, Value *ArraySize,
+                                      Function *MallocF, const Twine &Name) {
+
+  return CreateMalloc(IntPtrTy, AllocTy, AllocSize, ArraySize, std::nullopt,
+                      MallocF, Name);
+}
+
+/// CreateFree - Generate the IR for a call to the builtin free function.
+CallInst *IRBuilderBase::CreateFree(Value *Source,
+                                    ArrayRef<OperandBundleDef> Bundles) {
+  assert(Source->getType()->isPointerTy() &&
+         "Can not free something of nonpointer type!");
+
+  Module *M = BB->getParent()->getParent();
+
+  Type *VoidTy = Type::getVoidTy(M->getContext());
+  Type *VoidPtrTy = PointerType::getUnqual(M->getContext());
+  // prototype free as "void free(void*)"
+  FunctionCallee FreeFunc = M->getOrInsertFunction("free", VoidTy, VoidPtrTy);
+  CallInst *Result = CreateCall(FreeFunc, Source, Bundles, "");
+  Result->setTailCall();
+  if (Function *F = dyn_cast<Function>(FreeFunc.getCallee()))
+    Result->setCallingConv(F->getCallingConv());
+
+  return Result;
+}
+
 CallInst *IRBuilderBase::CreateElementUnorderedAtomicMemMove(
     Value *Dst, Align DstAlign, Value *Src, Align SrcAlign, Value *Size,
     uint32_t ElementSize, MDNode *TBAATag, MDNode *TBAAStructTag,

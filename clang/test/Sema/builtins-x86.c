@@ -22,19 +22,19 @@ void call_x86_32_builtins(void) {
 }
 
 __m128 test__builtin_ia32_cmpps(__m128 __a, __m128 __b) {
-  return __builtin_ia32_cmpps(__a, __b, 32); // expected-error {{argument value 32 is outside the valid range [0, 31]}}
+  return __builtin_ia32_cmpps(__a, __b, 32); // expected-error {{argument value 32 is outside the valid range [0, 7]}}
 }
 
 __m128d test__builtin_ia32_cmppd(__m128d __a, __m128d __b) {
-  return __builtin_ia32_cmppd(__a, __b, 32); // expected-error {{argument value 32 is outside the valid range [0, 31]}}
+  return __builtin_ia32_cmppd(__a, __b, 32); // expected-error {{argument value 32 is outside the valid range [0, 7]}}
 }
 
 __m128 test__builtin_ia32_cmpss(__m128 __a, __m128 __b) {
-  return __builtin_ia32_cmpss(__a, __b, 32); // expected-error {{argument value 32 is outside the valid range [0, 31]}}
+  return __builtin_ia32_cmpss(__a, __b, 32); // expected-error {{argument value 32 is outside the valid range [0, 7]}}
 }
 
 __m128d test__builtin_ia32_cmpsd(__m128d __a, __m128d __b) {
-  return __builtin_ia32_cmpsd(__a, __b, 32); // expected-error {{argument value 32 is outside the valid range [0, 31]}}
+  return __builtin_ia32_cmpsd(__a, __b, 32); // expected-error {{argument value 32 is outside the valid range [0, 7]}}
 }
 
 __mmask16 test__builtin_ia32_cmpps512_mask(__m512 __a, __m512 __b) {

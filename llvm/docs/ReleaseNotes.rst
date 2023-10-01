@@ -177,6 +177,9 @@ Changes to the LLVM tools
 * llvm-readelf now supports ``--extra-sym-info`` (``-X``) to display extra
   information (section name) when showing symbols.
 
+* ``llvm-nm`` now supports the ``--line-numbers`` (``-l``) option to use
+  debugging information to print symbols' filenames and line numbers.
+
 Changes to LLDB
 ---------------------------------
 

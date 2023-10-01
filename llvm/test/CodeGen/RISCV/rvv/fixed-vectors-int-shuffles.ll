@@ -781,3 +781,16 @@ define <8 x i8> @unmergable(<8 x i8> %v, <8 x i8> %w) {
   %res = shufflevector <8 x i8> %v, <8 x i8> %w, <8 x i32> <i32 2, i32 9, i32 4, i32 11, i32 6, i32 13, i32 8, i32 15>
   ret <8 x i8> %res
 }
+
+; Make sure we use a vmv.v.i to load the mask constant.
+define <8 x i32> @shuffle_v8i32_2(<8 x i32> %x, <8 x i32> %y) {
+; CHECK-LABEL: shuffle_v8i32_2:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vsetivli zero, 1, e8, mf8, ta, ma
+; CHECK-NEXT:    vmv.v.i v0, -13
+; CHECK-NEXT:    vsetivli zero, 8, e32, m2, ta, ma
+; CHECK-NEXT:    vmerge.vvm v8, v10, v8, v0
+; CHECK-NEXT:    ret
+  %s = shufflevector <8 x i32> %x, <8 x i32> %y, <8 x i32> <i32 0, i32 1, i32 10, i32 11, i32 4, i32 5, i32 6, i32 7>
+  ret <8 x i32> %s
+}

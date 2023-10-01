@@ -1,4 +1,0 @@
-Git does not record empty directories. Create a dummy file in each directory
-here. Strictly speaking, putting dummy files in leaf directories should be
-sufficient, but adding them everywhere reduces the risk of repeating the same
-problem in case new directories are added.

@@ -360,13 +360,13 @@ class MapCopyToThreadsOp:
         )
 
 
-class MaskedVectorizeOp:
-    """Specialization for MaskedVectorizeOp class."""
+class VectorizeOp:
+    """Specialization for VectorizeOp class."""
 
     def __init__(
         self,
         target: Union[Operation, OpView, Value],
-        vector_sizes: Union[DynamicIndexList, ArrayAttr],
+        vector_sizes: Optional[Union[DynamicIndexList, ArrayAttr]] = None,
         *,
         vectorize_nd_extract: Optional[bool] = None,
         scalable_sizes: OptionalBoolList = None,
@@ -374,7 +374,13 @@ class MaskedVectorizeOp:
         loc=None,
         ip=None,
     ):
-        if scalable_sizes is None and static_vector_sizes is None:
+        if (
+            scalable_sizes is None
+            and static_vector_sizes is None
+            and vector_sizes is None
+        ):
+            dynamic_vector_sizes = []
+        elif scalable_sizes is None and static_vector_sizes is None:
             (
                 dynamic_vector_sizes,
                 static_vector_sizes,
@@ -561,8 +567,8 @@ class SplitOp:
         )
 
 
-class TileOp:
-    """Specialization for TileOp class."""
+class TileUsingForOp:
+    """Specialization for TileUsingForOp class."""
 
     @overload
     def __init__(
@@ -610,7 +616,9 @@ class TileOp:
         if isinstance(loop_types_or_target, (Operation, Value, OpView)):
             loop_types = [transform.AnyOpType.get()] * num_loops
             target = loop_types_or_target
-            assert target_or_none is None, "Cannot construct TileOp with two targets."
+            assert (
+                target_or_none is None
+            ), "Cannot construct TileUsingForOp with two targets."
         else:
             loop_types = (
                 ([loop_types_or_target] * num_loops)
@@ -632,8 +640,8 @@ class TileOp:
         )
 
 
-class TileToForallOp:
-    """Specialization for TileToForallOp class."""
+class TileUsingForallOp:
+    """Specialization for TileUsingForallOp class."""
 
     @overload
     def __init__(
@@ -724,8 +732,8 @@ class TileToForallOp:
         )
 
 
-class VectorizeOp:
-    """Specialization for VectorizeOp class."""
+class VectorizeChildrenAndApplyPatternsOp:
+    """Specialization for VectorizeChildrenAndApplyPatternsOp class."""
 
     def __init__(
         self,

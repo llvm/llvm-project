@@ -21,7 +21,7 @@
 #include <cstring>
 #include <unistd.h>
 
-namespace __llvm_libc {
+namespace LIBC_NAMESPACE {
 
 extern void *memcpy(void *__restrict, const void *__restrict, size_t);
 extern void *memmove(void *, const void *, size_t);
@@ -30,7 +30,7 @@ extern void bzero(void *, size_t);
 extern int memcmp(const void *, const void *, size_t);
 extern int bcmp(const void *, const void *, size_t);
 
-} // namespace __llvm_libc
+} // namespace LIBC_NAMESPACE
 
 namespace llvm {
 namespace libc_benchmarks {

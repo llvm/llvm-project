@@ -1894,6 +1894,13 @@ void __kmp_runtime_initialize(void) {
 
     /* Query the maximum number of threads */
     __kmp_type_convert(sysconf(_SC_THREAD_THREADS_MAX), &(__kmp_sys_max_nth));
+#ifdef __ve__
+    if (__kmp_sys_max_nth == -1) {
+      // VE's pthread supports only up to 64 threads per a VE process.
+      // So we use that KMP_MAX_NTH (predefined as 64) here.
+      __kmp_sys_max_nth = KMP_MAX_NTH;
+    }
+#else
     if (__kmp_sys_max_nth == -1) {
       /* Unlimited threads for NPTL */
       __kmp_sys_max_nth = INT_MAX;
@@ -1901,6 +1908,7 @@ void __kmp_runtime_initialize(void) {
       /* Can't tell, just use PTHREAD_THREADS_MAX */
       __kmp_sys_max_nth = KMP_MAX_NTH;
     }
+#endif
 
     /* Query the minimum stack size */
     __kmp_sys_min_stksize = sysconf(_SC_THREAD_STACK_MIN);

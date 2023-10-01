@@ -182,6 +182,9 @@ private:
     EffectiveTriple = std::move(ET);
   }
 
+  std::optional<std::string>
+  getFallbackAndroidTargetPath(StringRef BaseDir) const;
+
   mutable std::optional<CXXStdlibType> cxxStdlibType;
   mutable std::optional<RuntimeLibType> runtimeLibType;
   mutable std::optional<UnwindLibType> unwindLibType;

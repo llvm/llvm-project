@@ -27,7 +27,7 @@
 
 extern "C" void SCUDO_PREFIX(malloc_postinit)();
 SCUDO_REQUIRE_CONSTANT_INITIALIZATION
-static scudo::Allocator<scudo::AndroidConfig, SCUDO_PREFIX(malloc_postinit)>
+static scudo::Allocator<scudo::Config, SCUDO_PREFIX(malloc_postinit)>
     SCUDO_ALLOCATOR;
 
 #include "wrappers_c.inc"
