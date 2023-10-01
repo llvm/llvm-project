@@ -13,8 +13,8 @@ using namespace clang::ast_matchers;
 namespace clang::tidy::modernize {
 
 namespace {
-AST_MATCHER_P(InitListExpr, initCountIs, unsigned, N) {
-  return Node.getNumInits() == N;
+AST_MATCHER_P(InitListExpr, initCountLeq, unsigned, N) {
+  return Node.getNumInits() <= N;
 }
 
 // Identical to hasAnyName, except it does not take template specifiers into
@@ -212,7 +212,7 @@ void UseEmplaceCheck::registerMatchers(MatchFinder *Finder) {
 
   // allow for T{} to be replaced, even if no CTOR is declared
   auto HasConstructInitListExpr =
-      has(initListExpr(anyOf(initCountIs(0), initCountIs(1)),
+      has(initListExpr(initCountLeq(1),
                        anyOf(allOf(has(SoughtConstructExpr),
                                    has(cxxConstructExpr(argumentCountIs(0)))),
                              has(cxxBindTemporaryExpr(

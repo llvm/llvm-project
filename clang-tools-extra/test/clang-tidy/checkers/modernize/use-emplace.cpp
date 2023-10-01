@@ -1343,11 +1343,8 @@ void testBracedInitTemporaries() {
   // These should not be noticed or fixed; after the correction, the code won't
   // compile.
   v4.push_back(NonTrivialWithIntAndVector{1, {}});
-  // CHECK-FIXES: v4.push_back(NonTrivialWithIntAndVector{1, {}});
   v4.push_back(NonTrivialWithIntAndVector{});
-  // CHECK-FIXES: v4.push_back(NonTrivialWithIntAndVector{});
   v4.push_back({});
-  // CHECK-FIXES: v4.push_back({});
 }
 
 void testWithPointerTypes() {
