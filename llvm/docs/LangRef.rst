@@ -29969,7 +29969,7 @@ Preserving Debug Information Intrinsics
 These intrinsics are used to carry certain debuginfo together with
 IR-level operations. For example, it may be desirable to
 know the structure/union name and the original user-level field
-indices. Such information got lost in IR GetElementPtr instruction
+indices. Such information gets lost in IR GetElementPtr instruction
 since the IR types are different from debugInfo types and unions
 are converted to structs in IR.
 
