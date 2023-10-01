@@ -1595,8 +1595,8 @@ define <2 x i8> @flip_masked_bit_uniform(<2 x i8> %A) {
 
 define <2 x i8> @flip_masked_bit_undef(<2 x i8> %A) {
 ; CHECK-LABEL: @flip_masked_bit_undef(
-; CHECK-NEXT:    [[B:%.*]] = add <2 x i8> [[A:%.*]], <i8 16, i8 undef>
-; CHECK-NEXT:    [[C:%.*]] = and <2 x i8> [[B]], <i8 16, i8 undef>
+; CHECK-NEXT:    [[TMP1:%.*]] = xor <2 x i8> [[A:%.*]], <i8 -1, i8 -1>
+; CHECK-NEXT:    [[C:%.*]] = and <2 x i8> [[TMP1]], <i8 16, i8 undef>
 ; CHECK-NEXT:    ret <2 x i8> [[C]]
 ;
   %B = add <2 x i8> %A, <i8 16, i8 undef>
@@ -1606,8 +1606,8 @@ define <2 x i8> @flip_masked_bit_undef(<2 x i8> %A) {
 
 define <2 x i8> @flip_masked_bit_nonuniform(<2 x i8> %A) {
 ; CHECK-LABEL: @flip_masked_bit_nonuniform(
-; CHECK-NEXT:    [[B:%.*]] = add <2 x i8> [[A:%.*]], <i8 16, i8 4>
-; CHECK-NEXT:    [[C:%.*]] = and <2 x i8> [[B]], <i8 16, i8 4>
+; CHECK-NEXT:    [[TMP1:%.*]] = xor <2 x i8> [[A:%.*]], <i8 -1, i8 -1>
+; CHECK-NEXT:    [[C:%.*]] = and <2 x i8> [[TMP1]], <i8 16, i8 4>
 ; CHECK-NEXT:    ret <2 x i8> [[C]]
 ;
   %B = add <2 x i8> %A, <i8 16, i8 4>
@@ -2545,4 +2545,40 @@ define i32 @and_zext_eq_zero(i32 %A, i32 %C)  {
   %4 = xor i32 %3, -1
   %5 = and i32 %2, %4
   ret i32 %5
+}
+
+define i32 @canonicalize_and_add_power2_or_zero(i32 %x, i32 %y) {
+; CHECK-LABEL: @canonicalize_and_add_power2_or_zero(
+; CHECK-NEXT:    [[NY:%.*]] = sub i32 0, [[Y:%.*]]
+; CHECK-NEXT:    [[P2:%.*]] = and i32 [[NY]], [[Y]]
+; CHECK-NEXT:    call void @use32(i32 [[P2]])
+; CHECK-NEXT:    [[TMP1:%.*]] = xor i32 [[X:%.*]], -1
+; CHECK-NEXT:    [[AND:%.*]] = and i32 [[P2]], [[TMP1]]
+; CHECK-NEXT:    ret i32 [[AND]]
+;
+  %ny = sub i32 0, %y
+  %p2 = and i32 %y, %ny
+  call void @use32(i32 %p2) ; keep p2
+
+  %val = add i32 %x, %p2
+  %and = and i32 %val, %p2
+  ret i32 %and
+}
+
+define i32 @canonicalize_and_sub_power2_or_zero(i32 %x, i32 %y) {
+; CHECK-LABEL: @canonicalize_and_sub_power2_or_zero(
+; CHECK-NEXT:    [[NY:%.*]] = sub i32 0, [[Y:%.*]]
+; CHECK-NEXT:    [[P2:%.*]] = and i32 [[NY]], [[Y]]
+; CHECK-NEXT:    call void @use32(i32 [[P2]])
+; CHECK-NEXT:    [[TMP1:%.*]] = xor i32 [[X:%.*]], -1
+; CHECK-NEXT:    [[AND:%.*]] = and i32 [[P2]], [[TMP1]]
+; CHECK-NEXT:    ret i32 [[AND]]
+;
+  %ny = sub i32 0, %y
+  %p2 = and i32 %y, %ny
+  call void @use32(i32 %p2) ; keep p2
+
+  %val = sub i32 %x, %p2
+  %and = and i32 %val, %p2
+  ret i32 %and
 }
