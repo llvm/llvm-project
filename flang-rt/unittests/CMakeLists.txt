@@ -33,8 +33,9 @@ function(add_flang_rt_unittest_offload_properties target)
   endif()
 endfunction()
 
-if(NOT TARGET llvm_gtest)
-  message(FATAL_ERROR "Target llvm_gtest not found.")
+set(UNITTEST_DIR ${LLVM_THIRD_PARTY_DIR}/unittest)
+if (NOT TARGET llvm_gtest)
+  add_subdirectory(${UNITTEST_DIR} third-party/unittest)
 endif()
 
 function(add_flang_rt_unittest test_dirname)
