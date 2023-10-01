@@ -261,7 +261,10 @@ llvm::Expected<FunctionInfo> GsymReader::getFunctionInfo(uint64_t Addr) const {
   // Address info offsets size should have been checked in parse().
   assert(*AddressIndex < AddrInfoOffsets.size());
   auto AddrInfoOffset = AddrInfoOffsets[*AddressIndex];
-  DataExtractor Data(MemBuffer->getBuffer().substr(AddrInfoOffset), Endian, 4);
+  assert((Endian == support::big || Endian == support::little) &&
+         "Endian must be either big or little");
+  DataExtractor Data(MemBuffer->getBuffer().substr(AddrInfoOffset),
+                     Endian == support::little, 4);
   if (std::optional<uint64_t> OptAddr = getAddress(*AddressIndex)) {
     auto ExpectedFI = FunctionInfo::decode(Data, *OptAddr);
     if (ExpectedFI) {
@@ -283,7 +286,10 @@ llvm::Expected<LookupResult> GsymReader::lookup(uint64_t Addr) const {
   // Address info offsets size should have been checked in parse().
   assert(*AddressIndex < AddrInfoOffsets.size());
   auto AddrInfoOffset = AddrInfoOffsets[*AddressIndex];
-  DataExtractor Data(MemBuffer->getBuffer().substr(AddrInfoOffset), Endian, 4);
+  assert((Endian == support::big || Endian == support::little) &&
+         "Endian must be either big or little");
+  DataExtractor Data(MemBuffer->getBuffer().substr(AddrInfoOffset),
+                     Endian == support::little, 4);
   if (std::optional<uint64_t> OptAddr = getAddress(*AddressIndex))
     return FunctionInfo::lookup(Data, *this, *OptAddr, Addr);
   return createStringError(std::errc::invalid_argument,
