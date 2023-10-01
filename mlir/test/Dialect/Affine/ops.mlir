@@ -1,5 +1,5 @@
 // RUN: mlir-opt -allow-unregistered-dialect -split-input-file %s | FileCheck %s
-// RUN: mlir-opt -allow-unregistered-dialect %s -mlir-print-op-generic | FileCheck -check-prefix=GENERIC %s
+// RUN: mlir-opt -allow-unregistered-dialect -split-input-file %s -mlir-print-op-generic | FileCheck -check-prefix=GENERIC %s
 
 // Check that the attributes for the affine operations are round-tripped.
 // Check that `affine.yield` is visible in the generic form.
@@ -42,17 +42,23 @@ func.func @empty() {
   return
 }
 
+// -----
+
+// GENERIC: #[[$map:.*]] = affine_map<() -> (0)>
+// GENERIC: #[[$map1:.*]] = affine_map<() -> (10)>
+
 // Check that an explicit affine.yield is not printed in custom format.
 // Check that no extra terminator is introduced.
 // CHECK-LABEL: @affine.yield
+// CHECK-GENERIC-LABEL: @affine.yield
 func.func @affine.yield() {
   // CHECK: affine.for
   // CHECK-NEXT: }
   //
-  // GENERIC:      "affine.for"() ({
+  // GENERIC:      "affine.for"() <{lowerBoundMap = #[[$map]], operandSegmentSizes = array<i32: 0, 0, 0>, step = 1 : index, upperBoundMap = #[[$map1]]}> ({
   // GENERIC-NEXT: ^bb0(%{{.*}}: index):
   // GENERIC-NEXT:   "affine.yield"() : () -> ()
-  // GENERIC-NEXT: }) {lower_bound = #map, step = 1 : index, upper_bound = #map1} : () -> ()
+  // GENERIC-NEXT: }) : () -> ()
   affine.for %i = 0 to 10 {
     "affine.yield"() : () -> ()
   }
