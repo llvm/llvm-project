@@ -11,12 +11,13 @@
 //===----------------------------------------------------------------------===//
 
 #include <stdbool.h>
-#include <threads.h>
 
 #include "config.h"
 #include "unwind.h"
 
 #ifdef __USING_WASM_EXCEPTIONS__
+
+#include <threads.h>
 
 _Unwind_Reason_Code __gxx_personality_wasm0(int version, _Unwind_Action actions,
                                             uint64_t exceptionClass,
