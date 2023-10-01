@@ -3563,7 +3563,9 @@ def Callseq_End :
             [(callseq_end timm:$amt1, timm:$amt2)]>;
 
 // trap instruction
-def trapinst : NVPTXInst<(outs), (ins), "trap;", [(trap)]>;
+// Emit an `exit` as well to convey to ptxas that `trap` exits the CFG.
+// This won't be necessary in a future version of ptxas.
+def trapinst : NVPTXInst<(outs), (ins), "trap; exit;", [(trap)]>;
 
 // Call prototype wrapper
 def SDTCallPrototype : SDTypeProfile<0, 1, [SDTCisInt<0>]>;
