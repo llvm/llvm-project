@@ -253,11 +253,10 @@ func.func @scf_execute_region_yield_non_equivalent(%i: index, %j: index) -> f32 
 //  CHECK-SAME:     %[[t:.*]]: memref<?xf32
 //       CHECK:   %[[alloc:.*]] = memref.alloc(%{{.*}})
 //       CHECK:   memref.copy %[[t]], %[[alloc]]
-//       CHECK:   %[[for:.*]] = scf.for {{.*}} iter_args(%[[iter:.*]] = %[[t]])
+//       CHECK:   %[[for:.*]] = scf.for {{.*}} iter_args(%[[iter:.*]] = %[[alloc]])
 //   CHECK-DAG:     %[[alloc2:.*]] = memref.alloc(%{{.*}})
-//       CHECK:     memref.copy %[[alloc]], %[[alloc2]]
-//       CHECK:     %[[alloc2_casted:.*]] = memref.cast %[[alloc2]]
-//       CHECK:     scf.yield %[[alloc2_casted]]
+//       CHECK:     memref.copy %[[t]], %[[alloc2]]
+//       CHECK:     scf.yield %[[alloc2]]
 //       CHECK:   return %[[for]]
 func.func @scf_for_yield_non_equivalent(
     %t: tensor<?xf32>, %lb : index, %ub : index, %step : index) -> tensor<?xf32> {
@@ -606,9 +605,9 @@ func.func @scf_foreach_private_var(%t: tensor<10xf32>) -> f32 {
 
   // CHECK: scf.forall (%{{.*}}) in (2) {
 
-  // Load from the copy and store into the shared output.
-  // CHECK:   %[[subview:.*]] = memref.subview %[[t]]
-  // CHECK:   memref.load %[[t_copy]]
+  // Load from the original and store into the copy.
+  // CHECK:   %[[subview:.*]] = memref.subview %[[t_copy]]
+  // CHECK:   memref.load %[[t]]
   // CHECK:   memref.store %{{.*}}, %[[subview]]
   %0 = scf.forall (%tid) in (%c2) shared_outs(%o = %t) -> tensor<10xf32> {
     %offset = arith.muli %c5, %tid : index
@@ -752,14 +751,16 @@ func.func @scf_for_yield_alias_of_non_equivalent(%sz: index) -> tensor<?xf32> {
   // CHECK: scf.for
   %r = scf.for %iv = %c0 to %sz step %c1 iter_args(%t = %0) -> tensor<?xf32> {
     %iv_sub = arith.subi %iv, %c1 : index
-    // CHECK: memref.subview %[[generate_copy]]
+    // CHECK: memref.subview %[[generate]]
     %ll = tensor.extract_slice %0[%iv_sub][%sz][1] : tensor<?xf32> to tensor<?xf32>
     %l = tensor.extract %ll[%c0] : tensor<?xf32>
     %double = arith.mulf %cst, %l : f32
-    // CHECK: memref.store %{{.*}}, %[[generate]]
+    // CHECK: memref.store %{{.*}}, %[[generate_copy]]
     %s = tensor.insert %double into %t[%iv] : tensor<?xf32>
     scf.yield %s : tensor<?xf32>
   }
+
+  // CHECK: return %[[generate_copy]]
   return %r : tensor<?xf32>
 }
 
