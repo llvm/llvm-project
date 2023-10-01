@@ -8,6 +8,7 @@
 
 #include "ASTMatchersTest.h"
 #include "clang/AST/Attrs.inc"
+#include "clang/AST/DeclCXX.h"
 #include "clang/AST/PrettyPrinter.h"
 #include "clang/ASTMatchers/ASTMatchFinder.h"
 #include "clang/ASTMatchers/ASTMatchers.h"
@@ -5455,6 +5456,18 @@ TEST(HasParent, NoDuplicateParents) {
     "template <typename T> int Foo() { return 1 + 2; }\n"
       "int x = Foo<int>() + Foo<unsigned>();",
     stmt().bind("node"), std::make_unique<HasDuplicateParents>()));
+}
+
+TEST(HasAnyBase, BindsInnerBoundNodes) {
+  EXPECT_TRUE(matchAndVerifyResultTrue(
+      "struct Inner {}; struct Proxy : Inner {}; struct Main : public "
+      "Proxy {};",
+      cxxRecordDecl(hasName("Main"),
+                    hasAnyBase(cxxBaseSpecifier(hasType(
+                        cxxRecordDecl(hasName("Inner")).bind("base-class")))))
+          .bind("class"),
+      std::make_unique<VerifyIdIsBoundTo<CXXRecordDecl>>("base-class",
+                                                         "Inner")));
 }
 
 TEST(TypeMatching, PointeeTypes) {
