@@ -43,12 +43,13 @@ inline constexpr bool __is_cv_std_pair = __is_std_pair<remove_cv_t<_Tp>>;
 template <class _Type, class _Alloc, class... _Args, __enable_if_t<!__is_cv_std_pair<_Type>, int> = 0>
 _LIBCPP_HIDE_FROM_ABI constexpr auto
 __uses_allocator_construction_args(const _Alloc& __alloc, _Args&&... __args) noexcept {
-  if constexpr (!uses_allocator_v<_Type, _Alloc> && is_constructible_v<_Type, _Args...>) {
+  if constexpr (!uses_allocator_v<remove_cv_t<_Type>, _Alloc> && is_constructible_v<_Type, _Args...>) {
     return std::forward_as_tuple(std::forward<_Args>(__args)...);
-  } else if constexpr (uses_allocator_v<_Type, _Alloc> &&
+  } else if constexpr (uses_allocator_v<remove_cv_t<_Type>, _Alloc> &&
                        is_constructible_v<_Type, allocator_arg_t, const _Alloc&, _Args...>) {
     return tuple<allocator_arg_t, const _Alloc&, _Args&&...>(allocator_arg, __alloc, std::forward<_Args>(__args)...);
-  } else if constexpr (uses_allocator_v<_Type, _Alloc> && is_constructible_v<_Type, _Args..., const _Alloc&>) {
+  } else if constexpr (uses_allocator_v<remove_cv_t<_Type>, _Alloc> &&
+                       is_constructible_v<_Type, _Args..., const _Alloc&>) {
     return std::forward_as_tuple(std::forward<_Args>(__args)..., __alloc);
   } else {
     static_assert(
