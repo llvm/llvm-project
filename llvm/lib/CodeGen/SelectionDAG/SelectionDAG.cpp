@@ -4091,8 +4091,11 @@ SelectionDAG::computeOverflowForSignedSub(SDValue N0, SDValue N1) const {
   if (ComputeNumSignBits(N0) > 1 && ComputeNumSignBits(N1) > 1)
     return OFK_Never;
 
-  // TODO: Add ConstantRange::signedSubMayOverflow handling.
-  return OFK_Sometime;
+  KnownBits N0Known = computeKnownBits(N0);
+  KnownBits N1Known = computeKnownBits(N1);
+  ConstantRange N0Range = ConstantRange::fromKnownBits(N0Known, true);
+  ConstantRange N1Range = ConstantRange::fromKnownBits(N1Known, true);
+  return mapOverflowResult(N0Range.signedSubMayOverflow(N1Range));
 }
 
 SelectionDAG::OverflowKind
@@ -4101,8 +4104,11 @@ SelectionDAG::computeOverflowForUnsignedSub(SDValue N0, SDValue N1) const {
   if (isNullConstant(N1))
     return OFK_Never;
 
-  // TODO: Add ConstantRange::unsignedSubMayOverflow handling.
-  return OFK_Sometime;
+  KnownBits N0Known = computeKnownBits(N0);
+  KnownBits N1Known = computeKnownBits(N1);
+  ConstantRange N0Range = ConstantRange::fromKnownBits(N0Known, false);
+  ConstantRange N1Range = ConstantRange::fromKnownBits(N1Known, false);
+  return mapOverflowResult(N0Range.unsignedSubMayOverflow(N1Range));
 }
 
 SelectionDAG::OverflowKind
