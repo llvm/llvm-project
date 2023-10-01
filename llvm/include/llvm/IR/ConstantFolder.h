@@ -173,14 +173,16 @@ public:
     return nullptr;
   }
 
+  Value *FoldCast(Instruction::CastOps Op, Value *V,
+                  Type *DestTy) const override {
+    if (auto *C = dyn_cast<Constant>(V))
+      return ConstantExpr::getCast(Op, C, DestTy);
+    return nullptr;
+  }
+
   //===--------------------------------------------------------------------===//
   // Cast/Conversion Operators
   //===--------------------------------------------------------------------===//
-
-  Constant *CreateCast(Instruction::CastOps Op, Constant *C,
-                       Type *DestTy) const override {
-    return ConstantExpr::getCast(Op, C, DestTy);
-  }
 
   Constant *CreatePointerCast(Constant *C, Type *DestTy) const override {
     return ConstantExpr::getPointerCast(C, DestTy);
@@ -189,39 +191,6 @@ public:
   Constant *CreatePointerBitCastOrAddrSpaceCast(Constant *C,
                                                 Type *DestTy) const override {
     return ConstantExpr::getPointerBitCastOrAddrSpaceCast(C, DestTy);
-  }
-
-  Constant *CreateIntCast(Constant *C, Type *DestTy,
-                          bool isSigned) const override {
-    return ConstantExpr::getIntegerCast(C, DestTy, isSigned);
-  }
-
-  Constant *CreateFPCast(Constant *C, Type *DestTy) const override {
-    return ConstantExpr::getFPCast(C, DestTy);
-  }
-
-  Constant *CreateBitCast(Constant *C, Type *DestTy) const override {
-    return CreateCast(Instruction::BitCast, C, DestTy);
-  }
-
-  Constant *CreateIntToPtr(Constant *C, Type *DestTy) const override {
-    return CreateCast(Instruction::IntToPtr, C, DestTy);
-  }
-
-  Constant *CreatePtrToInt(Constant *C, Type *DestTy) const override {
-    return CreateCast(Instruction::PtrToInt, C, DestTy);
-  }
-
-  Constant *CreateZExtOrBitCast(Constant *C, Type *DestTy) const override {
-    return ConstantExpr::getZExtOrBitCast(C, DestTy);
-  }
-
-  Constant *CreateSExtOrBitCast(Constant *C, Type *DestTy) const override {
-    return ConstantExpr::getSExtOrBitCast(C, DestTy);
-  }
-
-  Constant *CreateTruncOrBitCast(Constant *C, Type *DestTy) const override {
-    return ConstantExpr::getTruncOrBitCast(C, DestTy);
   }
 
   //===--------------------------------------------------------------------===//

@@ -49,7 +49,19 @@ endif()
 # avoid an unwanted dependency on libstdc++.so.
 add_definitions(-U_GLIBCXX_ASSERTIONS)
 
-add_flang_library(FortranDecimal INSTALL_WITH_TOOLCHAIN
-  binary-to-decimal.cpp
-  decimal-to-binary.cpp
-)
+# Build FortranDecimal when the build target is Flang or LLVM.
+if (CMAKE_SOURCE_DIR STREQUAL FLANG_SOURCE_DIR OR CMAKE_SOURCE_DIR STREQUAL LLVM_MAIN_SRC_DIR)
+  add_flang_library(FortranDecimal
+    binary-to-decimal.cpp
+    decimal-to-binary.cpp
+  )
+# Build FortranDecimalRT for FlangRT when the build target is Runtimes.
+# Standalone builds of FlangRT is not supported.
+elseif (CMAKE_SOURCE_DIR STREQUAL Runtimes_SOURCE_DIR)
+  add_flang_library(FortranDecimalRT STATIC INSTALL_WITH_TOOLCHAIN PIC
+    binary-to-decimal.cpp
+    decimal-to-binary.cpp
+  )
+else()
+  message(FATAL_ERROR "CMAKE_SOURCE_DIR of target points to neither Flang or Flang-rt, no library added for FortranDecimal.")
+endif()

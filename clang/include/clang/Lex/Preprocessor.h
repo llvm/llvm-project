@@ -1483,13 +1483,13 @@ public:
 
   /// Mark the file as included.
   /// Returns true if this is the first time the file was included.
-  bool markIncluded(const FileEntry *File) {
+  bool markIncluded(FileEntryRef File) {
     HeaderInfo.getFileInfo(File);
     return IncludedFiles.insert(File).second;
   }
 
   /// Return true if this header has already been included.
-  bool alreadyIncluded(const FileEntry *File) const {
+  bool alreadyIncluded(FileEntryRef File) const {
     HeaderInfo.getFileInfo(File);
     return IncludedFiles.count(File);
   }
@@ -1935,8 +1935,8 @@ public:
   /// (1-based).
   ///
   /// \returns true if an error occurred, false otherwise.
-  bool SetCodeCompletionPoint(const FileEntry *File,
-                              unsigned Line, unsigned Column);
+  bool SetCodeCompletionPoint(FileEntryRef File, unsigned Line,
+                              unsigned Column);
 
   /// Determine if we are performing code completion.
   bool isCodeCompletionEnabled() const { return CodeCompletionFile != nullptr; }
