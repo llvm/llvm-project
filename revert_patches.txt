@@ -18,7 +18,7 @@ Revert: breaks build of libdevice
    new test:   clang/test/CodeGenOpenCL/sqrt-fpmath.cl
 
 Revert: waiting on pip install myst-parser 
- b7ff03206 "[Documentation] Replace recommonmark by myst-parser
+ b6ff03206 "[Documentation] Replace recommonmark by myst-parser
 
 Reverts : breaks hipify in win build, need combo build
   3661a48a8473 [clang] NFCI: Use `FileEntryRef` in `SourceManager::getMemoryBufferForFileOr{None,Fake}()`
@@ -26,3 +26,6 @@ Reverts : breaks hipify in win build, need combo build
   2da8f30c5e9a [clang] NFCI: Use `FileEntryRef` in `SourceManager::overrideFileContents()`
   b0abc9dd4427 [clang] NFCI: Use `FileEntryRef` in `ASTReader::GetHeaderFileInfo()
   8a2fb1391bbf [clang] NFCI: Use `FileEntryRef` in `SourceManager::FileInfos` (#67742) 
+
+Revert: breaks build of hipTest in win and lnx
+ d8127b2b  InlineSpiller: Consider if all subranges are the same when 
