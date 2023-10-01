@@ -141,7 +141,7 @@ bool Module::isUnimportable(const LangOptions &LangOpts,
     }
     for (unsigned I = 0, N = Current->Requirements.size(); I != N; ++I) {
       if (hasFeature(Current->Requirements[I].FeatureName, LangOpts, Target) !=
-              Current->Requirements[I].RequiredState) {
+          Current->Requirements[I].RequiredState) {
         Req = Current->Requirements[I];
         return true;
       }
