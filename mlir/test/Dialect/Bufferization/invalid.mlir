@@ -87,3 +87,11 @@ func.func @invalid_dealloc_wrong_number_of_results(%arg0: memref<2xf32>, %arg1: 
   %0:2 = bufferization.dealloc (%arg0, %arg1 : memref<2xf32>, memref<4xi32>) if (%arg2, %arg2) retain (%arg1 : memref<4xi32>)
   return %0#0 : i1
 }
+
+// -----
+
+func.func @invalid_dealloc_wrong_number_of_results(%arg0: memref<2xf32>, %arg1: memref<4xi32>, %arg2: i1) -> i1 {
+  // expected-error @below{{must have the same number of updated conditions (results) as retained operands}}
+  %0:3 = "bufferization.dealloc"(%arg0, %arg1, %arg2, %arg2, %arg1) <{operandSegmentSizes = array<i32: 2, 2, 1>}> : (memref<2xf32>, memref<4xi32>, i1, i1, memref<4xi32>) -> (i1, i1, i1)
+  return %0#0 : i1
+}
