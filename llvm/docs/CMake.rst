@@ -733,6 +733,13 @@ enabled sub-projects. Nearly all of these variable names begin with
   directory contains executables with the expected names, no separate
   native versions of those executables will be built.
 
+**LLVM_NO_INSTALL_NAME_DIR_FOR_BUILD_TREE**:BOOL
+  Defaults to ``OFF``. If set to ``ON``, CMake's default logic for library IDs
+  on Darwin in the build tree will be used. Otherwise the install-time library
+  IDs will be used in the build tree as well. Mainly useful when other CMake
+  library ID control variables (e.g., ``CMAKE_INSTALL_NAME_DIR``) are being
+  set to non-standard values.
+
 **LLVM_OPTIMIZED_TABLEGEN**:BOOL
   If enabled and building a debug or asserts build the CMake build system will
   generate a Release build tree to build a fully optimized tablegen for use
