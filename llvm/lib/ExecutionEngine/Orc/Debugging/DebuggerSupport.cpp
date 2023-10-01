@@ -6,9 +6,9 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "llvm/ExecutionEngine/Orc/DebuggerSupport.h"
+#include "llvm/ExecutionEngine/Orc/Debugging/DebuggerSupport.h"
 #include "llvm/ExecutionEngine/Orc/DebugObjectManagerPlugin.h"
-#include "llvm/ExecutionEngine/Orc/DebuggerSupportPlugin.h"
+#include "llvm/ExecutionEngine/Orc/Debugging/DebuggerSupportPlugin.h"
 #include "llvm/ExecutionEngine/Orc/LLJIT.h"
 
 #define DEBUG_TYPE "orc"
