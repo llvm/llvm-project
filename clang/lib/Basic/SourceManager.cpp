@@ -2102,7 +2102,7 @@ std::pair<bool, bool> SourceManager::isInTheSameTranslationUnit(
     unsigned Offset;
     FileID ParentFID; // Used for breaking ties.
   };
-  llvm::SmallDenseMap<FileID, Entry, 16> LChain;
+  llvm::SmallDenseMap<FileID, Entry, 32> LChain;
 
   FileID Parent;
   do {

@@ -700,7 +700,7 @@ class SourceManager : public RefCountedBase<SourceManager> {
   ///
   /// Negative FileIDs are indexes into this table. To get from ID to an index,
   /// use (-ID - 2).
-  llvm::PagedVector<SrcMgr::SLocEntry> LoadedSLocEntryTable;
+  llvm::PagedVector<SrcMgr::SLocEntry, 16> LoadedSLocEntryTable;
 
   /// The starting offset of the next local SLocEntry.
   ///
