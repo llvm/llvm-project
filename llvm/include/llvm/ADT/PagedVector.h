@@ -209,35 +209,30 @@ public:
       return PagePtr[ElementIdx % PageSize];
     }
 
+    /// Equality operator.
     friend bool operator==(MaterializedIterator const &LHS,
-                           MaterializedIterator const &RHS);
+                           MaterializedIterator const &RHS) {
+      assert(LHS.PV == RHS.PV);
+      // Make sure we are comparing either end iterators or iterators pointing
+      // to materialized elements.
+      // It should not be possible to build two iterators pointing to non
+      // materialized elements.
+      assert(LHS.ElementIdx == LHS.PV->Size ||
+             (LHS.ElementIdx < LHS.PV->Size &&
+              LHS.PV->PageToDataPtrs[LHS.ElementIdx / PageSize]));
+      assert(RHS.ElementIdx == RHS.PV->Size ||
+             (RHS.ElementIdx < RHS.PV->Size &&
+              RHS.PV->PageToDataPtrs[RHS.ElementIdx / PageSize]));
+      return LHS.ElementIdx == RHS.ElementIdx;
+    }
+
     friend bool operator!=(MaterializedIterator const &LHS,
-                           MaterializedIterator const &RHS);
+                           MaterializedIterator const &RHS) {
+      return !(LHS == RHS);
+    }
 
     [[nodiscard]] size_t getIndex() const { return ElementIdx; }
   };
-
-  /// Equality operator.
-  friend bool operator==(MaterializedIterator const &LHS,
-                         MaterializedIterator const &RHS) {
-    assert(LHS.PV == RHS.PV);
-    // Make sure we are comparing either end iterators or iterators pointing
-    // to materialized elements.
-    // It should not be possible to build two iterators pointing to non
-    // materialized elements.
-    assert(LHS.ElementIdx == LHS.PV->Size ||
-           (LHS.ElementIdx < LHS.PV->Size &&
-            LHS.PV->PageToDataPtrs[LHS.ElementIdx / PageSize]));
-    assert(RHS.ElementIdx == RHS.PV->Size ||
-           (RHS.ElementIdx < RHS.PV->Size &&
-            RHS.PV->PageToDataPtrs[RHS.ElementIdx / PageSize]));
-    return LHS.ElementIdx == RHS.ElementIdx;
-  }
-
-  friend bool operator!=(MaterializedIterator const &LHS,
-                         MaterializedIterator const &RHS) {
-    return !(LHS == RHS);
-  }
 
   /// Iterators over the materialized elements of the vector.
   ///
