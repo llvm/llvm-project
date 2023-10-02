@@ -156,10 +156,7 @@ endif()
 # As we migrate runtimes to using the bootstrapping build, the set of default runtimes
 # should grow as we remove those runtimes from LLVM_ENABLE_PROJECTS above.
 set(LLVM_DEFAULT_RUNTIMES "libcxx;libcxxabi;libunwind")
-if ("flang" IN_LIST LLVM_ENABLE_PROJECTS)
-  set(LLVM_DEFAULT_RUNTIMES "libcxx;libcxxabi;libunwind;flang-rt")
-endif()
-set(LLVM_SUPPORTED_RUNTIMES "libc;libunwind;libcxxabi;pstl;libcxx;compiler-rt;openmp;llvm-libgcc;flang-rt")
+set(LLVM_SUPPORTED_RUNTIMES "libc;libunwind;libcxxabi;pstl;libcxx;compiler-rt;openmp;llvm-libgcc")
 set(LLVM_ENABLE_RUNTIMES "" CACHE STRING
   "Semicolon-separated list of runtimes to build, or \"all\" (${LLVM_DEFAULT_RUNTIMES}). Supported runtimes are ${LLVM_SUPPORTED_RUNTIMES}.")
 if(LLVM_ENABLE_RUNTIMES STREQUAL "all")
@@ -179,11 +176,6 @@ if ("libc" IN_LIST LLVM_ENABLE_RUNTIMES)
     message(STATUS "Enabling libc project to build libc build tools")
     list(APPEND LLVM_ENABLE_PROJECTS "libc")
   endif()
-endif()
-
-if ("flang" IN_LIST LLVM_ENABLE_PROJECTS AND NOT "flang-rt" IN_LIST LLVM_ENABLE_RUNTIMES)
-  message(STATUS "Enabling Flang-rt to be built with the Flang project.")
-  list(APPEND LLVM_ENABLE_RUNTIMES "flang-rt")
 endif()
 
 # LLVM_ENABLE_PROJECTS_USED is `ON` if the user has ever used the

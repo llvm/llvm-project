@@ -188,7 +188,7 @@ if (FLANG_STANDALONE_BUILD)
   if (FLANG_GTEST_AVAIL)
     add_custom_target(check-all DEPENDS check-flang FlangUnitTests)
   else()
-    add_custom_target(check-all DEPENDS check-flang)
+    add_custom_target(check-all DEPENDS check-flang )
   endif()
   if (LLVM_BUILD_DOCS)
     add_custom_target(doxygen ALL)
@@ -421,11 +421,6 @@ if (FLANG_INCLUDE_TESTS)
   add_compile_definitions(FLANG_INCLUDE_TESTS=1)
 endif()
 
-# Add Flang subdirectories.
-# NOTE: The runtime subdirectory is no longer added here.
-# Sources for the runtime are added in Flang-rt.
-# TODO: Move the runtime sources to the flang-rt top level directory.
-
 add_subdirectory(include)
 add_subdirectory(lib)
 add_subdirectory(cmake/modules)
@@ -435,6 +430,7 @@ option(FLANG_BUILD_TOOLS
 if (FLANG_BUILD_TOOLS)
   add_subdirectory(tools)
 endif()
+add_subdirectory(runtime)
 
 if (LLVM_INCLUDE_EXAMPLES)
   add_subdirectory(examples)
