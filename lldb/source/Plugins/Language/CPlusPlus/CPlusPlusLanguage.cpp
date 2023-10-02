@@ -336,10 +336,8 @@ bool CPlusPlusLanguage::MethodName::ContainsPath(llvm::StringRef path) {
   llvm::StringRef identifier;
   llvm::StringRef context;
   std::string path_str = path.str();
-  bool success
-      = CPlusPlusLanguage::ExtractContextAndIdentifier(path_str.c_str(),
-                                                       context,
-                                                       identifier);
+  bool success = CPlusPlusLanguage::ExtractContextAndIdentifier(
+      path_str.c_str(), context, identifier);
   if (!success)
     return m_full.GetStringRef().contains(path);
 
