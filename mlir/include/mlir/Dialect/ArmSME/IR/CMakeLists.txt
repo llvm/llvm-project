@@ -10,3 +10,10 @@ mlir_tablegen(ArmSMEEnums.cpp.inc -gen-enum-defs)
 mlir_tablegen(ArmSMEAttrDefs.h.inc -gen-attrdef-decls -attrdefs-dialect=arm_sme)
 mlir_tablegen(ArmSMEAttrDefs.cpp.inc -gen-attrdef-defs -attrdefs-dialect=arm_sme)
 add_public_tablegen_target(MLIRArmSMEAttrDefsIncGen)
+
+# Generate declarations and definitions of ArmSME intrinsics
+set(LLVM_TARGET_DEFINITIONS ArmSMEIntrinsicOps.td)
+mlir_tablegen(ArmSMEIntrinsicOps.h.inc -gen-op-decls)
+mlir_tablegen(ArmSMEIntrinsicOps.cpp.inc -gen-op-defs)
+mlir_tablegen(ArmSMEIntrinsicConversions.inc -gen-llvmir-conversions)
+add_public_tablegen_target(ArmSMEIntrinsicOpsIncGen)

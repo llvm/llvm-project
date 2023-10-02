@@ -36,6 +36,7 @@ public:
                    LLVM::ModuleTranslation &moduleTranslation) const final {
     Operation &opInst = *op;
 #include "mlir/Dialect/ArmSME/IR/ArmSMEConversions.inc"
+#include "mlir/Dialect/ArmSME/IR/ArmSMEIntrinsicConversions.inc"
 
     return failure();
   }
