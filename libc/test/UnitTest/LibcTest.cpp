@@ -95,6 +95,7 @@ bool test(RunContext *Ctx, TestCond Cond, ValType LHS, ValType RHS,
   case TestCond::GE:
     return ExplainDifference(LHS >= RHS, "greater than or equal to");
   }
+  __builtin_unreachable();
 }
 
 } // namespace internal

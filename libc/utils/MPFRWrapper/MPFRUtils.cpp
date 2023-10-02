@@ -72,6 +72,7 @@ static inline mpfr_rnd_t get_mpfr_rounding_mode(RoundingMode mode) {
     return MPFR_RNDN;
     break;
   }
+  __builtin_unreachable();
 }
 
 class MPFRNumber {
