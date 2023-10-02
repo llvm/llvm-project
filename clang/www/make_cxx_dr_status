@@ -39,7 +39,11 @@ def collect_tests():
     test_cpp = os.path.join(dr_test_dir, test_cpp)
     found_any = False;
     for match in re.finditer(status_re, open(test_cpp, 'r').read()):
-      status_map[int(match.group(1))] = match.group(2)
+      dr_number = int(match.group(1))
+      if dr_number in status_map:
+        print("error: Comment for dr{} encountered more than once. Duplicate found in {}".format(dr_number, test_cpp))
+        sys.exit(1)
+      status_map[dr_number] = match.group(2)
       found_any = True
     if not found_any:
       print("warning:%s: no '// dr123: foo' comments in this file" % test_cpp, file=sys.stderr)
