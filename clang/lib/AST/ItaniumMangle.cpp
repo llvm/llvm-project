@@ -3048,7 +3048,17 @@ void CXXNameMangler::mangleType(const BuiltinType *T) {
   //                 ::= Di # char32_t
   //                 ::= Ds # char16_t
   //                 ::= Dn # std::nullptr_t (i.e., decltype(nullptr))
+  //                 ::= [DS] DA  # N1169 fixed-point [_Sat] T _Accum
+  //                 ::= [DS] DR  # N1169 fixed-point [_Sat] T _Fract
   //                 ::= u <source-name>    # vendor extended type
+  //
+  //  <fixed-point-size>
+  //                 ::= s # short
+  //                 ::= t # unsigned short
+  //                 ::= i # plain
+  //                 ::= j # unsigned
+  //                 ::= l # long
+  //                 ::= m # unsigned long
   std::string type_name;
   // Normalize integer types as vendor extended types:
   // u<length>i<type size>
@@ -3193,30 +3203,77 @@ void CXXNameMangler::mangleType(const BuiltinType *T) {
     Out << "DF16_";
     break;
   case BuiltinType::ShortAccum:
+    Out << "DAs";
+    break;
   case BuiltinType::Accum:
+    Out << "DAi";
+    break;
   case BuiltinType::LongAccum:
+    Out << "DAl";
+    break;
   case BuiltinType::UShortAccum:
+    Out << "DAt";
+    break;
   case BuiltinType::UAccum:
+    Out << "DAj";
+    break;
   case BuiltinType::ULongAccum:
+    Out << "DAm";
+    break;
   case BuiltinType::ShortFract:
+    Out << "DRs";
+    break;
   case BuiltinType::Fract:
+    Out << "DRi";
+    break;
   case BuiltinType::LongFract:
+    Out << "DRl";
+    break;
   case BuiltinType::UShortFract:
+    Out << "DRt";
+    break;
   case BuiltinType::UFract:
+    Out << "DRj";
+    break;
   case BuiltinType::ULongFract:
+    Out << "DRm";
+    break;
   case BuiltinType::SatShortAccum:
+    Out << "DSDAs";
+    break;
   case BuiltinType::SatAccum:
+    Out << "DSDAi";
+    break;
   case BuiltinType::SatLongAccum:
+    Out << "DSDAl";
+    break;
   case BuiltinType::SatUShortAccum:
+    Out << "DSDAt";
+    break;
   case BuiltinType::SatUAccum:
+    Out << "DSDAj";
+    break;
   case BuiltinType::SatULongAccum:
+    Out << "DSDAm";
+    break;
   case BuiltinType::SatShortFract:
+    Out << "DSDRs";
+    break;
   case BuiltinType::SatFract:
+    Out << "DSDRi";
+    break;
   case BuiltinType::SatLongFract:
+    Out << "DSDRl";
+    break;
   case BuiltinType::SatUShortFract:
+    Out << "DSDRt";
+    break;
   case BuiltinType::SatUFract:
+    Out << "DSDRj";
+    break;
   case BuiltinType::SatULongFract:
-    llvm_unreachable("Fixed point types are disabled for c++");
+    Out << "DSDRm";
+    break;
   case BuiltinType::Half:
     Out << "Dh";
     break;
