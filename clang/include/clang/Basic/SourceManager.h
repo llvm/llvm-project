@@ -490,7 +490,7 @@ public:
 
   bool isExpansion() const { return IsExpansion; }
   bool isFile() const { return !isExpansion(); }
-  [[nodiscard]] bool isLoaded() const { return Loaded; }
+  bool isLoaded() const { return Loaded; }
   void setLoaded(bool Value) { Loaded = Value; }
 
   const FileInfo &getFile() const {
