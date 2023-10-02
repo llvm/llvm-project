@@ -495,31 +495,6 @@ bool InlineSpiller::hoistSpillInsideBB(LiveInterval &SpillLI,
   return true;
 }
 
-/// Check if all subranges in \p LI and \p SLI have the same value number at \p
-/// Idx.
-static bool allSubRangeValNoSame(const LiveInterval &LI,
-                                 const LiveInterval &SLI,
-                                 const MachineInstr &MI,
-                                 const MachineRegisterInfo &MRI,
-                                 const TargetRegisterInfo &TRI, SlotIndex Idx) {
-  for (auto &SR : SLI.subranges()) {
-    VNInfo *SubVNI = SR.getVNInfoAt(Idx);
-
-    for (auto &SubLI : LI.subranges()) {
-      if (SubLI.LaneMask == SR.LaneMask) {
-        if (SubVNI != SubLI.getVNInfoAt(Idx))
-          return false;
-      } else if ((SubLI.LaneMask & SR.LaneMask).any()) {
-        // TODO: Check non-exact, overlapping subranges if they share the same
-        // def instruction
-        return false;
-      }
-    }
-  }
-
-  return true;
-}
-
 /// eliminateRedundantSpills - SLI:VNI is known to be on the stack. Remove any
 /// redundant spills of this value in SLI.reg and sibling copies.
 void InlineSpiller::eliminateRedundantSpills(LiveInterval &SLI, VNInfo *VNI) {
@@ -549,13 +524,7 @@ void InlineSpiller::eliminateRedundantSpills(LiveInterval &SLI, VNInfo *VNI) {
       if (!MI.mayStore() && !TII.isCopyInstr(MI))
         continue;
       SlotIndex Idx = LIS.getInstructionIndex(MI);
-
-      // The main range value numbers will differ if multiple instructions are
-      // used to define its various subregisters. Check the subregister value
-      // numbers as a fallback.
-      if (LI->getVNInfoAt(Idx) != VNI &&
-          (!SLI.hasSubRanges() ||
-           !allSubRangeValNoSame(*LI, SLI, MI, MRI, TRI, Idx)))
+      if (LI->getVNInfoAt(Idx) != VNI)
         continue;
 
       // Follow sibling copies down the dominator tree.
