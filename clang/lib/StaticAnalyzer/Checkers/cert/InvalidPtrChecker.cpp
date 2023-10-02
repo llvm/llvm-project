@@ -25,20 +25,15 @@
 using namespace clang;
 using namespace ento;
 
-
 namespace {
-
 
 class InvalidPtrChecker
     : public Checker<check::Location, check::BeginFunction, check::PostCall> {
 private:
-  static const BugType *InvalidPtrBugType;
   // For accurate emission of NoteTags, the BugType of this checker should have
   // a unique address.
-  void InitInvalidPtrBugType() {
-    InvalidPtrBugType = new BugType(this, "Use of invalidated pointer",
-                                    categories::MemoryError);
-  }
+  BugType InvalidPtrBugType{this, "Use of invalidated pointer",
+                            categories::MemoryError};
 
   void EnvpInvalidatingCall(const CallEvent &Call, CheckerContext &C) const;
 
@@ -98,8 +93,6 @@ public:
                      CheckerContext &C) const;
 };
 
-const BugType *InvalidPtrChecker::InvalidPtrBugType;
-
 } // namespace
 
 // Set of memory regions that were invalidated
@@ -120,19 +113,19 @@ void InvalidPtrChecker::EnvpInvalidatingCall(const CallEvent &Call,
                                              CheckerContext &C) const {
   StringRef FunctionName = Call.getCalleeIdentifier()->getName();
 
-  auto PlaceInvalidationNote = [&C, FunctionName](ProgramStateRef State,
-                                                  const MemRegion *Region,
-                                                  StringRef Message,
-                                                  ExplodedNode *Pred) {
+  auto PlaceInvalidationNote = [this, &C, FunctionName](ProgramStateRef State,
+                                                        const MemRegion *Region,
+                                                        StringRef Message,
+                                                        ExplodedNode *Pred) {
     State = State->add<InvalidMemoryRegions>(Region);
 
     // Make copy of string data for the time when notes are *actually* created.
     const NoteTag *Note =
-        C.getNoteTag([Region, FunctionName = std::string{FunctionName},
+        C.getNoteTag([this, Region, FunctionName = std::string{FunctionName},
                       Message = std::string{Message}](
                          PathSensitiveBugReport &BR, llvm::raw_ostream &Out) {
           if (!BR.isInteresting(Region) ||
-              &BR.getBugType() != InvalidPtrBugType)
+              &BR.getBugType() != &InvalidPtrBugType)
             return;
           Out << '\'' << FunctionName << "' " << Message;
           BR.markNotInteresting(Region);
@@ -166,9 +159,9 @@ void InvalidPtrChecker::postPreviousReturnInvalidatingCall(
   if (const MemRegion *const *Reg = State->get<PreviousCallResultMap>(FD)) {
     const MemRegion *PrevReg = *Reg;
     State = State->add<InvalidMemoryRegions>(PrevReg);
-    Note = C.getNoteTag([PrevReg, FD](PathSensitiveBugReport &BR,
-                                      llvm::raw_ostream &Out) {
-      if (!BR.isInteresting(PrevReg) || &BR.getBugType() != InvalidPtrBugType)
+    Note = C.getNoteTag([this, PrevReg, FD](PathSensitiveBugReport &BR,
+                                            llvm::raw_ostream &Out) {
+      if (!BR.isInteresting(PrevReg) || &BR.getBugType() != &InvalidPtrBugType)
         return;
       Out << '\'';
       FD->getNameForDiagnostic(Out, FD->getASTContext().getLangOpts(), true);
@@ -192,9 +185,9 @@ void InvalidPtrChecker::postPreviousReturnInvalidatingCall(
   State = State->set<PreviousCallResultMap>(FD, MR);
 
   ExplodedNode *Node = C.addTransition(State, Note);
-  const NoteTag *PreviousCallNote =
-      C.getNoteTag([MR](PathSensitiveBugReport &BR, llvm::raw_ostream &Out) {
-        if (!BR.isInteresting(MR) || &BR.getBugType() != InvalidPtrBugType)
+  const NoteTag *PreviousCallNote = C.getNoteTag(
+      [this, MR](PathSensitiveBugReport &BR, llvm::raw_ostream &Out) {
+        if (!BR.isInteresting(MR) || &BR.getBugType() != &InvalidPtrBugType)
           return;
         Out << "previous function call was here";
       });
@@ -274,7 +267,7 @@ void InvalidPtrChecker::checkPostCall(const CallEvent &Call,
         Out << "' in a function call";
 
         auto Report = std::make_unique<PathSensitiveBugReport>(
-            *InvalidPtrBugType, Out.str(), ErrorNode);
+            InvalidPtrBugType, Out.str(), ErrorNode);
         Report->markInteresting(InvalidatedSymbolicBase);
         Report->addRange(Call.getArgSourceRange(I));
         C.emitReport(std::move(Report));
@@ -317,7 +310,7 @@ void InvalidPtrChecker::checkLocation(SVal Loc, bool isLoad, const Stmt *S,
     return;
 
   auto Report = std::make_unique<PathSensitiveBugReport>(
-      *InvalidPtrBugType, "dereferencing an invalid pointer", ErrorNode);
+      InvalidPtrBugType, "dereferencing an invalid pointer", ErrorNode);
   Report->markInteresting(InvalidatedSymbolicBase);
   C.emitReport(std::move(Report));
 }
@@ -327,7 +320,6 @@ void ento::registerInvalidPtrChecker(CheckerManager &Mgr) {
   Checker->InvalidatingGetEnv =
       Mgr.getAnalyzerOptions().getCheckerBooleanOption(Checker,
                                                        "InvalidatingGetEnv");
-  Checker->InitInvalidPtrBugType();
 }
 
 bool ento::shouldRegisterInvalidPtrChecker(const CheckerManager &) {
