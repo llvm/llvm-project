@@ -924,6 +924,23 @@ namespace dr471 { // dr471: yes
   struct H : B, G { int f() { return n; } }; // expected-error {{private}}
 }
 
+namespace dr472 { // dr472: no drafting
+struct B {
+  int i; // #dr472-i-decl
+};
+struct I : protected B {}; // #dr472-inheritance
+struct D : public I {
+  void f(I *ip) {
+    ip->i = 0;
+    // expected-error@-1                {{'i' is a protected member of 'dr472::B'}}
+    // expected-note@#dr472-inheritance {{constrained by protected inheritance here}}
+    // expected-note@#dr472-i-decl      {{member is declared here}}
+    B *bp = ip;
+    bp->i = 5;
+  }
+};
+}
+
 namespace dr474 { // dr474: yes
   namespace N {
     struct S {
