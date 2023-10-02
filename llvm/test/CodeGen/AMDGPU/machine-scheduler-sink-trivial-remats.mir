@@ -84,13 +84,11 @@ body:             |
     %23:vgpr_32 = nofpexcept V_CVT_I32_F64_e32 23, implicit $exec, implicit $mode
 
   bb.1:
-  ; predecessors: %bb.0
     successors: %bb.2
 
     S_NOP 0
 
   bb.2:
-  ; predcessors: %bb.1
 
     S_NOP 0, implicit %0, implicit %1
     S_NOP 0, implicit %2, implicit %3
@@ -191,14 +189,12 @@ body:             |
     %23:vgpr_32 = nofpexcept V_CVT_I32_F64_e32 23, implicit $exec, implicit $mode
 
   bb.1:
-  ; predecessors: %bb.0
     successors: %bb.2
 
     %24:vgpr_32 = nofpexcept V_CVT_I32_F64_e32 24, implicit $exec, implicit $mode, implicit-def $m0
     S_NOP 0, implicit %24
 
   bb.2:
-  ; predcessors: %bb.1
 
     S_NOP 0, implicit %23
     S_NOP 0, implicit %0, implicit %1
@@ -300,7 +296,6 @@ body:             |
     %23:vgpr_32 = nofpexcept V_CVT_I32_F64_e32 23, implicit $exec, implicit $mode
 
   bb.1:
-  ; predecessors: %bb.0
     successors: %bb.2
 
     %24:vgpr_32 = nofpexcept V_CVT_I32_F64_e32 24, implicit $exec, implicit $mode, implicit-def $m0
@@ -308,7 +303,6 @@ body:             |
     S_NOP 0, implicit %23
 
   bb.2:
-  ; predcessors: %bb.1
 
     S_NOP 0, implicit %0, implicit %1
     S_NOP 0, implicit %2, implicit %3
@@ -408,7 +402,6 @@ body:             |
     %23:vgpr_32 = nofpexcept V_CVT_I32_F64_e32 23, implicit $exec, implicit $mode
 
   bb.1:
-  ; predecessors: %bb.0
     successors: %bb.2
 
     %24:vgpr_32 = nofpexcept V_CVT_I32_F64_e32 24, implicit $exec, implicit $mode, implicit-def $m0
@@ -416,7 +409,6 @@ body:             |
     S_NOP 0, implicit %22, implicit %23
 
   bb.2:
-  ; predcessors: %bb.1
 
     S_NOP 0, implicit %0, implicit %1
     S_NOP 0, implicit %2, implicit %3
@@ -529,7 +521,6 @@ body:             |
     %23:vgpr_32 = nofpexcept V_CVT_I32_F64_e32 23, implicit $exec, implicit $mode
 
   bb.1:
-  ; predecessors: %bb.0
     successors: %bb.2
 
     %24:vgpr_32 = nofpexcept V_CVT_I32_F64_e32 24, implicit $exec, implicit $mode, implicit-def $m0
@@ -537,14 +528,12 @@ body:             |
     S_NOP 0, implicit %23
 
   bb.2:
-  ; predcessors: %bb.1
     successors: %bb.3
 
     %25:vgpr_32 = nofpexcept V_CVT_I32_F64_e32 25, implicit $exec, implicit $mode
     S_NOP 0
 
   bb.3:
-  ; predecessors: %bb.2
     successors: %bb.4
 
     %26:vgpr_32 = nofpexcept V_CVT_I32_F64_e32 26, implicit $exec, implicit $mode, implicit-def $m0
@@ -552,7 +541,6 @@ body:             |
     S_NOP 0, implicit %25
 
   bb.4:
-  ; predcessors: %bb.3
 
     S_NOP 0, implicit %0, implicit %1
     S_NOP 0, implicit %2, implicit %3
@@ -666,7 +654,6 @@ body:             |
     %23:vgpr_32 = nofpexcept V_CVT_I32_F64_e32 23, implicit $exec, implicit $mode
 
   bb.1:
-  ; predecessors: %bb.0
     successors: %bb.2
 
     %24:vgpr_32 = nofpexcept V_CVT_I32_F64_e32 24, implicit $exec, implicit $mode, implicit-def $m0
@@ -674,7 +661,6 @@ body:             |
     S_NOP 0, implicit %23, implicit %22
 
   bb.2:
-  ; predcessors: %bb.1
     successors: %bb.3
 
     %25:vgpr_32 = nofpexcept V_CVT_I32_F64_e32 25, implicit $exec, implicit $mode
@@ -682,7 +668,6 @@ body:             |
     S_NOP 0
 
   bb.3:
-  ; predecessors: %bb.2
     successors: %bb.4
 
     %27:vgpr_32 = nofpexcept V_CVT_I32_F64_e32 27, implicit $exec, implicit $mode, implicit-def $m0
@@ -690,7 +675,6 @@ body:             |
     S_NOP 0, implicit %25, implicit %26
 
   bb.4:
-  ; predcessors: %bb.3
 
     S_NOP 0, implicit %0, implicit %1
     S_NOP 0, implicit %2, implicit %3
@@ -949,14 +933,12 @@ body:             |
     undef %23.sub0:vreg_64 = nofpexcept V_CVT_I32_F64_e32 23, implicit $exec, implicit $mode
 
   bb.1:
-  ; predecessors: %bb.0
     successors: %bb.2
 
     %23.sub1:vreg_64 = nofpexcept V_CVT_I32_F64_e32 24, implicit $exec, implicit $mode, implicit-def $m0
     S_NOP 0, implicit %23
 
   bb.2:
-  ; predcessors: %bb.1
 
     S_NOP 0, implicit %0, implicit %1
     S_NOP 0, implicit %2, implicit %3
@@ -1053,7 +1035,6 @@ body:             |
     undef %21.sub0:vreg_128 = nofpexcept V_CVT_I32_F64_e32 21, implicit $exec, implicit $mode
 
   bb.1:
-  ; predecessors: %bb.0
     successors: %bb.2
 
     %21.sub1:vreg_128 = nofpexcept V_CVT_I32_F64_e32 22, implicit $exec, implicit $mode, implicit-def $m0
@@ -1062,7 +1043,6 @@ body:             |
     S_NOP 0, implicit %21
 
   bb.2:
-  ; predcessors: %bb.1
 
     S_NOP 0, implicit %0, implicit %1
     S_NOP 0, implicit %2, implicit %3
@@ -1581,7 +1561,6 @@ body:             |
     %23:vgpr_32 = nofpexcept V_CVT_I32_F64_e32 23, implicit $exec, implicit $mode
 
   bb.1:
-  ; predecessors: %bb.0
     successors: %bb.2
 
     %24:vgpr_32 = nofpexcept V_CVT_I32_F64_e32 24, implicit $exec, implicit $mode, implicit-def $m0
@@ -1589,7 +1568,6 @@ body:             |
     S_NOP 0, implicit %24, implicit %25
 
   bb.2:
-  ; predcessors: %bb.1
 
     S_NOP 0, implicit %23
     S_NOP 0, implicit %0, implicit %1
@@ -2528,14 +2506,12 @@ body:             |
     %23:vgpr_32 = nofpexcept V_CVT_I32_F64_e32 23, implicit $exec, implicit $mode
 
   bb.1:
-  ; predecessors: %bb.0
     successors: %bb.2
 
     %24:vgpr_32 = nofpexcept V_CVT_I32_F64_e32 24, implicit $exec, implicit $mode, implicit-def $m0
     S_NOP 0, implicit %24
 
   bb.2:
-  ; predcessors: %bb.1
     successors: %bb.3
 
     S_NOP 0, implicit %23
@@ -2543,7 +2519,6 @@ body:             |
     S_NOP 0
 
   bb.3:
-  ; predecessors: %bb.2
     successors: %bb.4
 
     %26:vgpr_32 = nofpexcept V_CVT_I32_F64_e32 26, implicit $exec, implicit $mode, implicit-def $m0
@@ -2551,7 +2526,6 @@ body:             |
     S_NOP 0, implicit %26, implicit %27
 
   bb.4:
-  ; predcessors: %bb.3
 
     S_NOP 0, implicit %25
     S_NOP 0, implicit %0, implicit %1
@@ -2650,7 +2624,6 @@ body:             |
     %21.sub1:vreg_128 = nofpexcept V_CVT_I32_F64_e32 22, implicit $exec, implicit $mode, implicit-def $m0
 
   bb.1:
-  ; predecessors: %bb.0
     successors: %bb.2
 
     %21.sub2:vreg_128 = nofpexcept V_CVT_I32_F64_e32 23, implicit $exec, implicit $mode, implicit-def $m0
@@ -2658,7 +2631,6 @@ body:             |
     S_NOP 0, implicit %21
 
   bb.2:
-  ; predcessors: %bb.1
 
     S_NOP 0, implicit %0, implicit %1
     S_NOP 0, implicit %2, implicit %3
@@ -2759,7 +2731,6 @@ body:             |
     %23:vgpr_32 = nofpexcept V_CVT_I32_F64_e32 23, implicit $exec, implicit $mode
 
   bb.1:
-  ; predecessors: %bb.0
     successors: %bb.2
 
     %24:vgpr_32 = nofpexcept V_CVT_I32_F64_e32 24, implicit $exec, implicit $mode, implicit-def $m0
@@ -2767,7 +2738,6 @@ body:             |
     S_NOP 0, implicit %23
 
   bb.2:
-  ; predcessors: %bb.1
 
     S_NOP 0, implicit %23
     S_NOP 0, implicit %0, implicit %1
@@ -5030,7 +5000,6 @@ body:             |
     %21.sub1:vreg_128 = nofpexcept V_CVT_I32_F64_e32 22, implicit $exec, implicit $mode
 
   bb.1:
-  ; predecessors: %bb.0
     successors: %bb.2
 
     %21.sub2:vreg_128 = nofpexcept V_CVT_I32_F64_e32 23, implicit $exec, implicit $mode, implicit-def $m0
@@ -5038,7 +5007,6 @@ body:             |
     S_NOP 0, implicit %21
 
   bb.2:
-  ; predcessors: %bb.1
 
     S_NOP 0, implicit %0, implicit %1
     S_NOP 0, implicit %2, implicit %3
@@ -5137,14 +5105,12 @@ body:             |
     %23:vgpr_32 = nofpexcept V_CVT_I32_F64_e32 23, implicit $exec, implicit $mode
 
   bb.1:
-  ; predecessors: %bb.0
     successors: %bb.2
 
     %24:vgpr_32 = nofpexcept V_CVT_I32_F64_e32 24, implicit $exec, implicit $mode, implicit-def $m0
     S_NOP 0, implicit %23, implicit %24
 
   bb.2:
-  ; predcessors: %bb.1
 
     S_NOP 0, implicit %0, implicit %1
     S_NOP 0, implicit %2, implicit %3
@@ -5242,7 +5208,6 @@ body:             |
     %22:vreg_64 = nofpexcept V_CVT_F64_I32_e32 22, implicit $exec, implicit $mode
 
   bb.1:
-  ; predecessors: %bb.0
     successors: %bb.2
 
     %23:vgpr_32 = nofpexcept V_CVT_I32_F64_e32 23, implicit $exec, implicit $mode, implicit-def $m0
@@ -5250,7 +5215,6 @@ body:             |
     S_NOP 0, implicit %22
 
   bb.2:
-  ; predcessors: %bb.1
 
     S_NOP 0, implicit %0, implicit %1
     S_NOP 0, implicit %2, implicit %3
@@ -5348,7 +5312,6 @@ body:             |
     %22:vreg_64 = nofpexcept V_CVT_F64_I32_e32 22, implicit $exec, implicit $mode
 
   bb.1:
-  ; predecessors: %bb.0
     successors: %bb.2
 
     %23:vgpr_32 = nofpexcept V_CVT_I32_F64_e32 23, implicit $exec, implicit $mode, implicit-def $m0
@@ -5357,7 +5320,6 @@ body:             |
     S_NOP 0, implicit %22
 
   bb.2:
-  ; predcessors: %bb.1
 
     S_NOP 0, implicit %0, implicit %1
     S_NOP 0, implicit %2, implicit %3
@@ -5456,7 +5418,6 @@ body:             |
     %22:vreg_64 = nofpexcept V_CVT_F64_I32_e32 22, implicit $exec, implicit $mode
 
   bb.1:
-  ; predecessors: %bb.0
     successors: %bb.2
 
     %23:vgpr_32 = nofpexcept V_CVT_I32_F64_e32 23, implicit $exec, implicit $mode, implicit-def $m0
@@ -5466,7 +5427,6 @@ body:             |
     S_NOP 0, implicit %22
 
   bb.2:
-  ; predcessors: %bb.1
 
     S_NOP 0, implicit %0, implicit %1
     S_NOP 0, implicit %2, implicit %3
@@ -5562,14 +5522,12 @@ body:             |
     %22:vreg_64 = nofpexcept V_CVT_F64_I32_e32 22, implicit $exec, implicit $mode
 
   bb.1:
-  ; predecessors: %bb.0
     successors: %bb.2
 
     %23:vgpr_32 = nofpexcept V_CVT_I32_F64_e32 23, implicit $exec, implicit $mode, implicit-def $m0
     S_NOP 0, implicit %22, implicit %23
 
   bb.2:
-  ; predcessors: %bb.1
 
     S_NOP 0, implicit %0, implicit %1
     S_NOP 0, implicit %2, implicit %3
@@ -5669,14 +5627,12 @@ body:             |
     undef %23.sub1:vreg_64_align2 = V_MOV_B32_e32 23, implicit $exec
 
   bb.1:
-  ; predecessors: %bb.0
     successors: %bb.2
 
     %24:vgpr_32 = nofpexcept V_CVT_I32_F64_e32 24, implicit $exec, implicit $mode, implicit-def $m0
     S_NOP 0, implicit %24
 
   bb.2:
-  ; predcessors: %bb.1
 
     S_NOP 0, implicit %23.sub1
     S_NOP 0, implicit %0, implicit %1
@@ -5779,14 +5735,12 @@ body:             |
     %23:vgpr_32 = nofpexcept V_CVT_I32_F64_e32 23, implicit $exec, implicit $mode
 
   bb.1:
-  ; predecessors: %bb.0
     successors: %bb.2
 
     %24:vgpr_32 = nofpexcept V_CVT_I32_F64_e32 24, implicit $exec, implicit $mode, implicit-def $m0
     S_NOP 0, implicit %24
 
   bb.2:
-  ; predcessors: %bb.1
 
     DBG_VALUE %23, 0, 0
     S_NOP 0, implicit %23
@@ -5889,14 +5843,12 @@ body:             |
     %23:vgpr_32 = nofpexcept V_CVT_I32_F64_e32 23, implicit $exec, implicit $mode
 
   bb.1:
-  ; predecessors: %bb.0
     successors: %bb.2
 
     %24:vgpr_32 = nofpexcept V_CVT_I32_F64_e32 24, implicit $exec, implicit $mode, implicit-def $m0
     S_NOP 0, implicit %24
 
   bb.2:
-  ; predcessors: %bb.1
 
     S_NOP 0, implicit %23
     S_NOP 0, implicit %0, implicit %1
