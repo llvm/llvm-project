@@ -285,8 +285,8 @@ convertScalarType(const spirv::TargetEnv &targetEnv,
   type.getCapabilities(capabilities, storageClass);
 
   // If all requirements are met, then we can accept this type as-is.
-  if (succeeded(checkCapabilityRequirements(type, targetEnv, capabilities)) &&
-      succeeded(checkExtensionRequirements(type, targetEnv, extensions)))
+  if (succeeded(checkCapabilityAndExtensionRequirements(
+          type, targetEnv, capabilities, extensions)))
     return type;
 
   // Otherwise we need to adjust the type, which really means adjusting the
@@ -397,15 +397,35 @@ convertVectorType(const spirv::TargetEnv &targetEnv,
   cast<spirv::CompositeType>(type).getExtensions(extensions, storageClass);
   cast<spirv::CompositeType>(type).getCapabilities(capabilities, storageClass);
 
-  // If all requirements are met, then we can accept this type as-is.
-  if (succeeded(checkCapabilityRequirements(type, targetEnv, capabilities)) &&
-      succeeded(checkExtensionRequirements(type, targetEnv, extensions)))
-    return type;
-
+  // If the bit-width related capabilities and extensions are not met
+  // for lower bit-width (<32-bit), convert it to 32-bit
   auto elementType =
       convertScalarType(targetEnv, options, scalarType, storageClass);
-  if (elementType)
-    return VectorType::get(type.getShape(), elementType);
+  if (!elementType)
+    return nullptr;
+  type = VectorType::get(type.getShape(), elementType);
+
+  SmallVector<spirv::Capability, 4> elidedCaps;
+  SmallVector<spirv::Extension, 4> elidedExts;
+
+  // Relax the bitwidth requirements for capabilities and extensions
+  if (options.emulateLT32BitScalarTypes) {
+    elidedCaps.push_back(spirv::Capability::Int8);
+    elidedCaps.push_back(spirv::Capability::Int16);
+    elidedCaps.push_back(spirv::Capability::Float16);
+  }
+  // For capabilities whose requirements were relaxed, relax requirements for
+  // the extensions that were infered by those capabilities (e.g., elidedCaps)
+  for (spirv::Capability cap : elidedCaps) {
+    std::optional<ArrayRef<spirv::Extension>> ext = spirv::getExtensions(cap);
+    if (ext)
+      llvm::append_range(elidedExts, *ext);
+  }
+  // If all requirements are met, then we can accept this type as-is.
+  if (succeeded(checkCapabilityAndExtensionRequirements(
+          type, targetEnv, capabilities, extensions, elidedCaps, elidedExts)))
+    return type;
+
   return nullptr;
 }
 
@@ -711,8 +731,9 @@ std::optional<Value> castToSourceType(const spirv::TargetEnv &targetEnv,
   SmallVector<ArrayRef<spirv::Capability>, 2> caps;
   scalarType.getExtensions(exts);
   scalarType.getCapabilities(caps);
-  if (failed(checkCapabilityRequirements(type, targetEnv, caps)) ||
-      failed(checkExtensionRequirements(type, targetEnv, exts))) {
+
+  if (failed(checkCapabilityAndExtensionRequirements(type, targetEnv, caps,
+                                                     exts))) {
     auto castOp = builder.create<UnrealizedConversionCastOp>(loc, type, inputs);
     return castOp.getResult(0);
   }
@@ -1205,16 +1226,18 @@ bool SPIRVConversionTarget::isLegalOp(Operation *op) {
   SmallVector<ArrayRef<spirv::Extension>, 4> typeExtensions;
   SmallVector<ArrayRef<spirv::Capability>, 8> typeCapabilities;
   for (Type valueType : valueTypes) {
-    typeExtensions.clear();
-    cast<spirv::SPIRVType>(valueType).getExtensions(typeExtensions);
-    if (failed(checkExtensionRequirements(op->getName(), this->targetEnv,
-                                          typeExtensions)))
-      return false;
-
     typeCapabilities.clear();
     cast<spirv::SPIRVType>(valueType).getCapabilities(typeCapabilities);
-    if (failed(checkCapabilityRequirements(op->getName(), this->targetEnv,
-                                           typeCapabilities)))
+    typeExtensions.clear();
+    cast<spirv::SPIRVType>(valueType).getExtensions(typeExtensions);
+    // Checking for capability and extension requirements along with capability
+    // infered extensions.
+    // If a capability is present, the extension that
+    // supports it should also be present, this reduces the burden of adding
+    // extension requirement that may or maynot be added in
+    // CompositeType::getExtensions().
+    if (failed(checkCapabilityAndExtensionRequirements(
+            op->getName(), this->targetEnv, typeCapabilities, typeExtensions)))
       return false;
   }
 
