@@ -97,7 +97,7 @@ module tinit
   ! CHECK-DAG: %[[VAL_15:.*]] = arith.constant 66 : i32
   ! CHECK: %[[VAL_16:.*]] = fir.undefined !fir.type<_QMtinitTt1{{.*}}>
   ! CHECK: %[[VAL_17:.*]] = fir.insert_value %[[VAL_16]], %[[VAL_11]], ["i", !fir.type<_QMtinitTt1{{.*}}>] : (!fir.type<_QMtinitTt1{{.*}}>, i32) -> !fir.type<_QMtinitTt1{{.*}}>
-  ! CHECK: %[[VAL_18:.*]] = fir.undefined i32
+  ! CHECK: %[[VAL_18:.*]] = fir.zero_bits i32
   ! CHECK: %[[VAL_19:.*]] = fir.insert_value %[[VAL_17]], %[[VAL_18]], ["j", !fir.type<_QMtinitTt1{{.*}}>] : (!fir.type<_QMtinitTt1{{.*}}>, i32) -> !fir.type<_QMtinitTt1{{.*}}>
   ! CHECK: %[[VAL_20:.*]] = fir.address_of(@_QMtinitEziel) : !fir.ref<!fir.array<100xf32>>
   ! CHECK: %[[VAL_21:.*]] = fir.shape %[[VAL_12]] : (index) -> !fir.shape<1>
@@ -111,12 +111,12 @@ module tinit
   ! CHECK: %[[VAL_28:.*]] = fir.insert_value %[[VAL_27]], %[[VAL_26]], ["z", !fir.type<_QMtinitTt1{{.*}}>] : (!fir.type<_QMtinitTt1{{.*}}>, !fir.box<!fir.ptr<!fir.array<?xf32>>>) -> !fir.type<_QMtinitTt1{{.*}}>
   ! CHECK: %[[VAL_29:.*]] = fir.string_lit "hello     "(10) : !fir.char<1,10>
   ! CHECK: %[[VAL_30:.*]] = fir.insert_value %[[VAL_28]], %[[VAL_29]], ["c1", !fir.type<_QMtinitTt1{{.*}}>] : (!fir.type<_QMtinitTt1{{.*}}>, !fir.char<1,10>) -> !fir.type<_QMtinitTt1{{.*}}>
-  ! CHECK: %[[VAL_31:.*]] = fir.undefined !fir.char<1,10>
+  ! CHECK: %[[VAL_31:.*]] = fir.zero_bits !fir.char<1,10>
   ! CHECK: %[[VAL_32:.*]] = fir.insert_value %[[VAL_30]], %[[VAL_31]], ["c2", !fir.type<_QMtinitTt1{{.*}}>] : (!fir.type<_QMtinitTt1{{.*}}>, !fir.char<1,10>) -> !fir.type<_QMtinitTt1{{.*}}>
   ! CHECK: %[[VAL_33:.*]] = fir.undefined !fir.type<_QMtinitTt0{k:i32}>
   ! CHECK: %[[VAL_34:.*]] = fir.insert_value %[[VAL_33]], %[[VAL_15]], ["k", !fir.type<_QMtinitTt0{k:i32}>] : (!fir.type<_QMtinitTt0{k:i32}>, i32) -> !fir.type<_QMtinitTt0{k:i32}>
   ! CHECK: %[[VAL_35:.*]] = fir.insert_value %[[VAL_32]], %[[VAL_34]], ["somet0", !fir.type<_QMtinitTt1{{.*}}>] : (!fir.type<_QMtinitTt1{{.*}}>, !fir.type<_QMtinitTt0{k:i32}>) -> !fir.type<_QMtinitTt1{{.*}}>
-  ! CHECK: %[[VAL_36:.*]] = fir.undefined !fir.type<_QMtinitTtno_init{k:i32}>
+  ! CHECK: %[[VAL_36:.*]] = fir.zero_bits !fir.type<_QMtinitTtno_init{k:i32}>
   ! CHECK: %[[VAL_37:.*]] = fir.insert_value %[[VAL_35]], %[[VAL_36]], ["sometno_init", !fir.type<_QMtinitTt1{{.*}}>] : (!fir.type<_QMtinitTt1{{.*}}>, !fir.type<_QMtinitTtno_init{k:i32}>) -> !fir.type<_QMtinitTt1{{.*}}>
   ! CHECK: %[[VAL_38:.*]] = fir.insert_value %[[VAL_33]], %[[VAL_14]], ["k", !fir.type<_QMtinitTt0{k:i32}>] : (!fir.type<_QMtinitTt0{k:i32}>, i32) -> !fir.type<_QMtinitTt0{k:i32}>
   ! CHECK: %[[VAL_39:.*]] = fir.insert_value %[[VAL_37]], %[[VAL_38]], ["somet0_2", !fir.type<_QMtinitTt1{{.*}}>] : (!fir.type<_QMtinitTt1{{.*}}>, !fir.type<_QMtinitTt0{k:i32}>) -> !fir.type<_QMtinitTt1{{.*}}>
@@ -129,7 +129,7 @@ module tinit
   ! CHECK: %[[VAL_42:.*]] = arith.constant 66 : i32
   ! CHECK: %[[VAL_43:.*]] = fir.undefined !fir.type<_QMtinitTtextendst0{k:i32,l:i32}>
   ! CHECK: %[[VAL_44:.*]] = fir.insert_value %[[VAL_43]], %[[VAL_42]], ["k", !fir.type<_QMtinitTtextendst0{k:i32,l:i32}>] : (!fir.type<_QMtinitTtextendst0{k:i32,l:i32}>, i32) -> !fir.type<_QMtinitTtextendst0{k:i32,l:i32}>
-  ! CHECK: %[[VAL_45:.*]] = fir.undefined i32
+  ! CHECK: %[[VAL_45:.*]] = fir.zero_bits i32
   ! CHECK: %[[VAL_46:.*]] = fir.insert_value %[[VAL_44]], %[[VAL_45]], ["l", !fir.type<_QMtinitTtextendst0{k:i32,l:i32}>] : (!fir.type<_QMtinitTtextendst0{k:i32,l:i32}>, i32) -> !fir.type<_QMtinitTtextendst0{k:i32,l:i32}>
   ! CHECK: fir.has_value %[[VAL_46]] : !fir.type<_QMtinitTtextendst0{k:i32,l:i32}>
 

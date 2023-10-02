@@ -12,7 +12,7 @@ block data
   common /a/ p
   data p /b/
 ! CHECK-LABEL: fir.global @a_ : tuple<!fir.box<!fir.ptr<f32>>>
-  ! CHECK: %[[undef:.*]] = fir.undefined tuple<!fir.box<!fir.ptr<f32>>>
+  ! CHECK: %[[undef:.*]] = fir.zero_bits tuple<!fir.box<!fir.ptr<f32>>>
   ! CHECK: %[[b:.*]] = fir.address_of(@_QEb) : !fir.ref<f32>
   ! CHECK: %[[box:.*]] = fir.embox %[[b]] : (!fir.ref<f32>) -> !fir.box<f32>
   ! CHECK: %[[rebox:.*]] = fir.rebox %[[box]] : (!fir.box<f32>) -> !fir.box<!fir.ptr<f32>>
@@ -41,7 +41,7 @@ block data bdsnake
   integer, pointer :: p => b
   common /snake/ p, b
 ! CHECK-LABEL: fir.global @snake_ : tuple<!fir.box<!fir.ptr<i32>>, i32>
-  ! CHECK: %[[tuple0:.*]] = fir.undefined tuple<!fir.box<!fir.ptr<i32>>, i32>
+  ! CHECK: %[[tuple0:.*]] = fir.zero_bits tuple<!fir.box<!fir.ptr<i32>>, i32>
   ! CHECK: %[[snakeAddr:.*]] = fir.address_of(@snake_) : !fir.ref<tuple<!fir.box<!fir.ptr<i32>>, i32>>
   ! CHECK: %[[byteView:.*]] = fir.convert %[[snakeAddr:.*]] : (!fir.ref<tuple<!fir.box<!fir.ptr<i32>>, i32>>) -> !fir.ref<!fir.array<?xi8>>
   ! CHECK: %[[coor:.*]] = fir.coordinate_of %[[byteView]], %c24{{.*}} : (!fir.ref<!fir.array<?xi8>>, index) -> !fir.ref<i8>

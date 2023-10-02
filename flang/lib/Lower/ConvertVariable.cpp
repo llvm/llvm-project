@@ -352,8 +352,9 @@ static mlir::Value genDefaultInitializerValue(
         componentValue = genDefaultInitializerValue(converter, loc, component,
                                                     componentTy, stmtCtx);
       } else {
-        // Component has no initial value.
-        componentValue = builder.create<fir::UndefOp>(loc, componentTy);
+        // Component has no initial value. Set its bits to zero by extension
+        // to match what is expected because other compilers are doing it.
+        componentValue = builder.create<fir::ZeroOp>(loc, componentTy);
       }
     } else if (const auto *proc{
                    component
@@ -361,7 +362,7 @@ static mlir::Value genDefaultInitializerValue(
       if (proc->init().has_value())
         TODO(loc, "procedure pointer component default initialization");
       else
-        componentValue = builder.create<fir::UndefOp>(loc, componentTy);
+        componentValue = builder.create<fir::ZeroOp>(loc, componentTy);
     }
     assert(componentValue && "must have been computed");
     componentValue = builder.createConvert(loc, componentTy, componentValue);
@@ -890,7 +891,7 @@ static fir::GlobalOp defineGlobalAggregateStore(
   Fortran::lower::createGlobalInitialization(
       builder, global, [&](fir::FirOpBuilder &builder) {
         Fortran::lower::StatementContext stmtCtx;
-        mlir::Value initVal = builder.create<fir::UndefOp>(loc, aggTy);
+        mlir::Value initVal = builder.create<fir::ZeroOp>(loc, aggTy);
         builder.create<fir::HasValueOp>(loc, initVal);
       });
   return global;
@@ -1171,7 +1172,7 @@ static void finalizeCommonBlockDefinition(
   mlir::TupleType commonTy = global.getType().cast<mlir::TupleType>();
   auto initFunc = [&](fir::FirOpBuilder &builder) {
     mlir::IndexType idxTy = builder.getIndexType();
-    mlir::Value cb = builder.create<fir::UndefOp>(loc, commonTy);
+    mlir::Value cb = builder.create<fir::ZeroOp>(loc, commonTy);
     unsigned tupIdx = 0;
     std::size_t offset = 0;
     LLVM_DEBUG(llvm::dbgs() << "block {\n");
