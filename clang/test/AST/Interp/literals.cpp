@@ -27,7 +27,7 @@ static_assert(number != 10, ""); // expected-error{{failed}} \
                                  // ref-note{{evaluates to}}
 
 
-#ifdef __SIZEOF__INT128__
+#ifdef __SIZEOF_INT128__
 namespace i128 {
   typedef __int128 int128_t;
   typedef unsigned __int128 uint128_t;
