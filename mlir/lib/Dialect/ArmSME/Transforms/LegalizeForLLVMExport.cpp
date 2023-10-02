@@ -550,7 +550,7 @@ struct VectorOuterProductToArmSMELowering
   }
 };
 
-/// Lower `vector.extract` using SME MOVA intrinsics.
+/// Lower `vector.extract` using `arm_sme.move_tile_slice_to_vector`.
 ///
 /// Example:
 /// ```
@@ -578,12 +578,13 @@ struct VectorExtractToArmSMELowering
 
     Value sourceVector = extractOp.getVector();
 
+    // Extract entire vector. Should be handled by folder, but just to be safe.
     if (position.empty()) {
       rewriter.replaceOp(extractOp, sourceVector);
       return success();
     }
 
-    Value sliceIndex = vector::getAsValues(rewriter, loc, position[0])[0];
+    Value sliceIndex = vector::getAsValues(rewriter, loc, position[0]).front();
     auto moveTileSliceToVector =
         rewriter.create<arm_sme::MoveTileSliceToVectorOp>(loc, sourceVector,
                                                           sliceIndex);
@@ -603,7 +604,8 @@ struct VectorExtractToArmSMELowering
   }
 };
 
-/// Lower `vector.insert` using SME MOVA intrinsics.
+/// Lower `vector.insert` using `arm_sme.move_vector_to_tile_slice` and
+/// `arm_sme.move_tile_slice_to_vector`.
 ///
 /// Example:
 /// ```
@@ -634,15 +636,17 @@ struct VectorInsertToArmSMELowering
 
     Value source = adaptor.getSource();
 
+    // Overwrite entire vector with value. Should be handled by folder, but
+    // just to be safe.
     if (position.empty()) {
       rewriter.replaceOp(insertOp, source);
       return success();
     }
 
     Value tileSlice = source;
-    Value sliceIndex = vector::getAsValues(rewriter, loc, position[0])[0];
+    Value sliceIndex = vector::getAsValues(rewriter, loc, position[0]).front();
     if (position.size() == 2) {
-      // Two indices case: Insert signle element into tile.
+      // Two indices case: Insert single element into tile.
       // We need to first extract the existing slice and update the element.
       tileSlice = rewriter.create<arm_sme::MoveTileSliceToVectorOp>(
           loc, adaptor.getDest(), sliceIndex);
