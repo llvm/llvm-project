@@ -1283,9 +1283,12 @@ ULCArraySubscriptGadget::getFixits(const Strategy &S) const {
         // no-op is a good fix-it, otherwise
         return FixItList{};
       }
+      case Strategy::Kind::Array: {
+        // FIXME: negative values
+        return FixItList{};
+      }
       case Strategy::Kind::Wontfix:
       case Strategy::Kind::Iterator:
-      case Strategy::Kind::Array:
       case Strategy::Kind::Vector:
         llvm_unreachable("unsupported strategies for FixableGadgets");
       }
@@ -2211,6 +2214,43 @@ static FixItList fixVariableWithSpan(const VarDecl *VD,
   return fixLocalVarDeclWithSpan(VD, Ctx, getUserFillPlaceHolder(), Handler);
 }
 
+static FixItList fixVarDeclWithArray(const VarDecl *D, const ASTContext &Ctx) {
+  FixItList FixIts{};
+
+  if (auto CAT = dyn_cast<clang::ConstantArrayType>(D->getType())) {
+    const QualType &ArrayEltT = CAT->getElementType();
+    assert(!ArrayEltT.isNull() && "Trying to fix a non-array type variable!");
+    // Producing fix-it for variable declaration---make `D` to be of std::array type:
+    SmallString<32> Replacement;
+    raw_svector_ostream OS(Replacement);
+    OS << "std::array<" << ArrayEltT.getAsString() << ", " << getAPIntText(CAT->getSize()) << "> " << D->getName();
+    FixIts.push_back(FixItHint::CreateReplacement(
+        SourceRange{D->getBeginLoc(), D->getTypeSpecEndLoc() }, OS.str()));
+  }
+
+
+  return FixIts;
+}
+
+static FixItList fixVariableWithArray(const VarDecl *VD,
+                                     const DeclUseTracker &Tracker,
+                                     const ASTContext &Ctx,
+                                     UnsafeBufferUsageHandler &Handler) {
+  const DeclStmt *DS = Tracker.lookupDecl(VD);
+  assert(DS && "Fixing non-local variables not implemented yet!");
+  if (!DS->isSingleDecl()) {
+    // FIXME: to support handling multiple `VarDecl`s in a single `DeclStmt`
+    return {};
+  }
+  // Currently DS is an unused variable but we'll need it when
+  // non-single decls are implemented, where the pointee type name
+  // and the '*' are spread around the place.
+  (void)DS;
+
+  // FIXME: handle cases where DS has multiple declarations
+  return fixVarDeclWithArray(VD, Ctx);
+}
+
 // TODO: we should be consistent to use `std::nullopt` to represent no-fix due
 // to any unexpected problem.
 static FixItList
@@ -2256,8 +2296,12 @@ fixVariable(const VarDecl *VD, Strategy::Kind K,
     DEBUG_NOTE_DECL_FAIL(VD, " : not a pointer");
     return {};
   }
+  case Strategy::Kind::Array: {
+    if (VD->isLocalVarDecl() && isa<clang::ConstantArrayType>(VD->getType()))
+      return fixVariableWithArray(VD, Tracker, Ctx, Handler);
+    return {};
+  }
   case Strategy::Kind::Iterator:
-  case Strategy::Kind::Array:
   case Strategy::Kind::Vector:
     llvm_unreachable("Strategy not implemented yet!");
   case Strategy::Kind::Wontfix:
@@ -2444,7 +2488,10 @@ static Strategy
 getNaiveStrategy(llvm::iterator_range<VarDeclIterTy> UnsafeVars) {
   Strategy S;
   for (const VarDecl *VD : UnsafeVars) {
-    S.set(VD, Strategy::Kind::Span);
+    if (isa<ConstantArrayType>(VD->getType()))
+      S.set(VD, Strategy::Kind::Array);
+    else
+      S.set(VD, Strategy::Kind::Span);
   }
   return S;
 }
@@ -2763,7 +2810,10 @@ void clang::checkUnsafeBufferUsage(const Decl *D,
                                       FixItsIt != FixItsForVariableGroup.end()
                                       ? std::move(FixItsIt->second)
                                       : FixItList{},
-                                      D);
+                                      D,
+                                      NaiveStrategy.lookup(VD) == Strategy::Kind::Span
+                                          ? UnsafeBufferUsageHandler::TargetType::Span
+                                          : UnsafeBufferUsageHandler::TargetType::Array);
     for (const auto &G : WarningGadgets) {
       Handler.handleUnsafeOperation(G->getBaseStmt(), /*IsRelatedToDecl=*/true);
     }

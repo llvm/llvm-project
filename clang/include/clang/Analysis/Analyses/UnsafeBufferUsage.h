@@ -57,6 +57,11 @@ public:
 #endif
 
 public:
+  enum class TargetType {
+    Span,
+    Array
+  };
+
   UnsafeBufferUsageHandler() = default;
   virtual ~UnsafeBufferUsageHandler() = default;
 
@@ -76,7 +81,7 @@ public:
   /// and all of its group mates.
   virtual void handleUnsafeVariableGroup(const VarDecl *Variable,
                                          const VariableGroupsManager &VarGrpMgr,
-                                         FixItList &&Fixes, const Decl *D) = 0;
+                                         FixItList &&Fixes, const Decl *D, TargetType Type) = 0;
 
 #ifndef NDEBUG
 public:
