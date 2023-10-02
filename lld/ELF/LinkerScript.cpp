@@ -327,7 +327,7 @@ void LinkerScript::processInsertCommands() {
           return to != nullptr && to->osec.name == cmd.where;
         });
     if (insertPos == sectionCommands.end()) {
-      error("unable to insert " + cmd.names[0] +
+      warn("unable to insert " + cmd.names[0] +
             (cmd.isAfter ? " after " : " before ") + cmd.where);
     } else {
       if (cmd.isAfter)
