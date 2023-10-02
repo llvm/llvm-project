@@ -177,11 +177,9 @@ static SmallVector<Value> unpackOperandVector(ImplicitLocOpBuilder &b,
   Type i32Ty = b.getI32Type();
   Type f64Ty = b.getF64Type();
   Type f32Ty = b.getF32Type();
-  Type i8Ty = b.getI8Type();
   Type i64Ty = b.getI64Type();
-  Type i4Ty = b.getIntegerType(4);
-  Type i8x4Ty = LLVM::getFixedVectorType(i8Ty, 4);
-  Type i4x8Ty = LLVM::getFixedVectorType(i4Ty, 8);
+  Type i8x4Ty = LLVM::getFixedVectorType(b.getI8Type(), 4);
+  Type i4x8Ty = LLVM::getFixedVectorType(b.getIntegerType(4), 8);
   Type f32x1Ty = LLVM::getFixedVectorType(f32Ty, 1);
   auto arrayTy = cast<LLVM::LLVMArrayType>(operand.getType());
 
