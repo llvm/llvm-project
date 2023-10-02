@@ -348,8 +348,8 @@ bool ModuleMap::resolveAsBuiltinHeader(
   if (!File)
     return false;
 
+  Module::Header H = {Header.FileName, Header.FileName, *File};
   auto Role = headerKindToRole(Header.Kind);
-  Module::Header H = {Header.FileName, std::string(Path.str()), *File};
   addHeader(Mod, H, Role);
   return true;
 }
@@ -415,6 +415,13 @@ static StringRef sanitizeFilenameAsIdentifier(StringRef Name,
 bool ModuleMap::isBuiltinHeader(FileEntryRef File) {
   return File.getDir() == BuiltinIncludeDir && LangOpts.BuiltinHeadersInSystemModules &&
          isBuiltinHeaderName(llvm::sys::path::filename(File.getName()));
+}
+
+bool ModuleMap::shouldImportRelativeToBuiltinIncludeDir(StringRef FileName,
+                                                        Module *Module) const {
+  return LangOpts.BuiltinHeadersInSystemModules && BuiltinIncludeDir &&
+         Module->IsSystem && !Module->isPartOfFramework() &&
+         isBuiltinHeaderName(FileName);
 }
 
 ModuleMap::HeadersMap::iterator ModuleMap::findKnownHeader(FileEntryRef File) {
