@@ -126,7 +126,7 @@ out_file.write('''\
     <th>Available in Clang?</th>
   </tr>''')
 
-latest_release = 16
+latest_release = 17
 
 def availability(issue):
   status = status_map.get(issue, 'unknown')
