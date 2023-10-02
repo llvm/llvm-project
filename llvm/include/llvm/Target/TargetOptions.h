@@ -274,8 +274,8 @@ namespace llvm {
     /// Emit target-specific trap instruction for 'unreachable' IR instructions.
     unsigned TrapUnreachable : 1;
 
-    /// Do not emit a trap instruction for 'unreachable' IR instructions behind
-    /// noreturn calls, even if TrapUnreachable is true.
+    /// Emit a trap instruction for 'unreachable' IR instructions behind
+    /// noreturn calls, if TrapUnreachable is true.
     unsigned TrapAfterNoreturn : 1;
 
     /// Bit size of immediate TLS offsets (0 == use the default).
