@@ -261,7 +261,26 @@ public:
 template <forward_range _View>
   requires view<_View>
 class slide_view<_View>::__sentinel {
-  // TODO ...
+  sentinel_t<_View> __end_ = sentinel_t<_View>();
+  constexpr explicit __sentinel(sentinel_t<_View> __end) : __end_(__end) {}
+
+public:
+  __sentinel() = default;
+
+  friend constexpr bool operator==(const slide_view::__iterator<false>& __x, const __sentinel& __y) {
+    return __x.__last_ == __y.__end_;
+  };
+  friend constexpr range_difference_t<_View> operator-(const slide_view::__iterator<false>& __x, const __sentinel& __y)
+    requires sized_sentinel_for<sentinel_t<_View>, iterator_t<_View>>
+  {
+    return __x.__last_ - __y.__end_;
+  };
+
+  friend constexpr range_difference_t<_View> operator-(const __sentinel& __y, const slide_view::__iterator<false>& __x)
+    requires sized_sentinel_for<sentinel_t<_View>, iterator_t<_View>>
+  {
+    return __y.__end_ - __x.__last_;
+  }
 };
 
 namespace views {
