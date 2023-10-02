@@ -7,7 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "CrashHandlerFixture.h"
-#include "flang/../../runtime/io-error.h"
+#include "../../runtime/io-error.h"
 #include "flang/Runtime/descriptor.h"
 #include "flang/Runtime/io-api.h"
 
@@ -36,15 +36,15 @@ TEST(InputTest, TestListInputAlphabet) {
   // Use _two_ input buffers and _three_ output buffers. Note the `3*` in the
   // _inputBuffers_.
   SetCharacter(inputBuffers[j++], maxInputBufferLength,
-               "3*'abcdefghijklmnopqrstuvwxyzABC");
-  SetCharacter(inputBuffers[j++], maxInputBufferLength,
-               "DEFGHIJKLMNOPQRSTUVWXYZ'");
+      "3*'abcdefghijklmnopqrstuvwxyzABC");
+  SetCharacter(
+      inputBuffers[j++], maxInputBufferLength, "DEFGHIJKLMNOPQRSTUVWXYZ'");
 
   StaticDescriptor<1> staticDescriptor;
   Descriptor &whole{staticDescriptor.descriptor()};
   SubscriptValue extent[]{numInputBuffers};
   whole.Establish(TypeCode{CFI_type_char}, maxInputBufferLength, &inputBuffers,
-                  1, extent, CFI_attribute_pointer);
+      1, extent, CFI_attribute_pointer);
   whole.Check();
   auto *cookie{IONAME(BeginInternalArrayListInput)(whole)};
 
@@ -79,7 +79,7 @@ TEST(InputTest, TestListInputIntegerList) {
   Descriptor &whole{staticDescriptor.descriptor()};
   SubscriptValue extent[]{numBuffers};
   whole.Establish(TypeCode{CFI_type_char}, maxBufferLength, &buffer, 1, extent,
-                  CFI_attribute_pointer);
+      CFI_attribute_pointer);
   whole.Check();
   auto *cookie{IONAME(BeginInternalArrayListInput)(whole)};
 
@@ -88,10 +88,10 @@ TEST(InputTest, TestListInputIntegerList) {
   // Negative numbers will be overwritten by _expectedOutput_, and positive
   // numbers will not be as their indices are "Null values" of the Fortran 2018
   // standard 13.10.3.2 in the format strings _buffer_
-  std::int64_t actualOutput[listInputLength]{-1, -2, -3, -4, 5,
-                                             -6, 7,  -8, 9,  10};
-  const std::int64_t expectedOutput[listInputLength]{1, 2, 3, 3, 5,
-                                                     6, 7, 8, 9, 10};
+  std::int64_t actualOutput[listInputLength]{
+      -1, -2, -3, -4, 5, -6, 7, -8, 9, 10};
+  const std::int64_t expectedOutput[listInputLength]{
+      1, 2, 3, 3, 5, 6, 7, 8, 9, 10};
   for (j = 0; j < listInputLength; ++j) {
     IONAME(InputInteger)(cookie, actualOutput[j]);
   }
@@ -116,7 +116,7 @@ TEST(InputTest, TestListInputInvalidFormatWithSingleSuccess) {
   Descriptor &whole{staticDescriptor.descriptor()};
   SubscriptValue extent[]{numBuffers};
   whole.Establish(TypeCode{CFI_type_char}, formatBuffer.size(),
-                  formatBuffer.data(), 1, extent, CFI_attribute_pointer);
+      formatBuffer.data(), 1, extent, CFI_attribute_pointer);
   whole.Check();
 
   auto *cookie{IONAME(BeginInternalArrayListInput)(whole)};
@@ -127,7 +127,7 @@ TEST(InputTest, TestListInputInvalidFormatWithSingleSuccess) {
 
   // Perform failing InputInteger
   ASSERT_DEATH(IONAME(InputInteger)(cookie, dummy),
-               "Bad character 'g' in INTEGER input field");
+      "Bad character 'g' in INTEGER input field");
 }
 
 // Same test as _TestListInputInvalidFormatWithSingleSuccess_, however no
@@ -140,7 +140,7 @@ TEST(InputTest, TestListInputInvalidFormat) {
   Descriptor &whole{staticDescriptor.descriptor()};
   SubscriptValue extent[]{numBuffers};
   whole.Establish(TypeCode{CFI_type_char}, formatBuffer.size(),
-                  formatBuffer.data(), 1, extent, CFI_attribute_pointer);
+      formatBuffer.data(), 1, extent, CFI_attribute_pointer);
   whole.Check();
 
   auto *cookie{IONAME(BeginInternalArrayListInput)(whole)};
@@ -148,7 +148,7 @@ TEST(InputTest, TestListInputInvalidFormat) {
 
   // Perform failing InputInteger
   ASSERT_DEATH(IONAME(InputInteger)(cookie, dummy),
-               "Bad character 'g' in INTEGER input field");
+      "Bad character 'g' in INTEGER input field");
 }
 
 using ParamTy = std::tuple<std::string, std::vector<int>>;
@@ -163,7 +163,7 @@ TEST_P(SimpleListInputTest, TestListInput) {
   Descriptor &whole{staticDescriptor.descriptor()};
   SubscriptValue extent[]{numBuffers};
   whole.Establish(TypeCode{CFI_type_char}, formatBuffer.size(),
-                  formatBuffer.data(), 1, extent, CFI_attribute_pointer);
+      formatBuffer.data(), 1, extent, CFI_attribute_pointer);
   whole.Check();
   auto *cookie{IONAME(BeginInternalArrayListInput)(whole)};
 
@@ -185,10 +185,9 @@ TEST_P(SimpleListInputTest, TestListInput) {
   }
 }
 
-INSTANTIATE_TEST_SUITE_P(
-    SimpleListInputTestInstantiation, SimpleListInputTest,
+INSTANTIATE_TEST_SUITE_P(SimpleListInputTestInstantiation, SimpleListInputTest,
     testing::Values(std::make_tuple("", std::vector<int>{}),
-                    std::make_tuple("0", std::vector<int>{}),
-                    std::make_tuple("1", std::vector<int>{1}),
-                    std::make_tuple("1, 2", std::vector<int>{1, 2}),
-                    std::make_tuple("3*2", std::vector<int>{2, 2, 2})));
+        std::make_tuple("0", std::vector<int>{}),
+        std::make_tuple("1", std::vector<int>{1}),
+        std::make_tuple("1, 2", std::vector<int>{1, 2}),
+        std::make_tuple("3*2", std::vector<int>{2, 2, 2})));
