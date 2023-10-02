@@ -637,6 +637,11 @@ bool mlirOperationRemoveDiscardableAttributeByName(MlirOperation op,
   return !!unwrap(op)->removeDiscardableAttr(unwrap(name));
 }
 
+void mlirOperationSetSuccessor(MlirOperation op, intptr_t pos,
+                               MlirBlock block) {
+  unwrap(op)->setSuccessor(unwrap(block), static_cast<unsigned>(pos));
+}
+
 intptr_t mlirOperationGetNumAttributes(MlirOperation op) {
   return static_cast<intptr_t>(unwrap(op)->getAttrs().size());
 }

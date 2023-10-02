@@ -576,6 +576,10 @@ MLIR_CAPI_EXPORTED intptr_t mlirOperationGetNumSuccessors(MlirOperation op);
 MLIR_CAPI_EXPORTED MlirBlock mlirOperationGetSuccessor(MlirOperation op,
                                                        intptr_t pos);
 
+/// Set `pos`-th successor of the operation.
+MLIR_CAPI_EXPORTED void
+mlirOperationSetSuccessor(MlirOperation op, intptr_t pos, MlirBlock block);
+
 /// Returns true if this operation defines an inherent attribute with this name.
 /// Note: the attribute can be optional, so
 /// `mlirOperationGetInherentAttributeByName` can still return a null attribute.
