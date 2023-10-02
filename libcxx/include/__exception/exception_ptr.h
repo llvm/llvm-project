@@ -34,9 +34,9 @@ class _LIBCPP_EXPORTED_FROM_ABI exception_ptr {
     static_cast<_Ep*>(__x)->~_Ep();
   }
 
-  _LIBCPP_HIDE_FROM_ABI static void* __init_native_exception(size_t, std::type_info*, void (*)(void*)) _NOEXCEPT;
-  _LIBCPP_HIDE_FROM_ABI static void __free_native_exception(void*) _NOEXCEPT;
-  _LIBCPP_HIDE_FROM_ABI static exception_ptr __from_native_exception_pointer(void* __e) _NOEXCEPT;
+  static void* __init_native_exception(size_t, std::type_info*, void (*)(void*)) _NOEXCEPT;
+  static void __free_native_exception(void*) _NOEXCEPT;
+  static exception_ptr __from_native_exception_pointer(void* __e) _NOEXCEPT;
 
   template <class _Ep>
   friend _LIBCPP_HIDE_FROM_ABI exception_ptr make_exception_ptr(_Ep) _NOEXCEPT;
