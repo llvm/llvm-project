@@ -815,7 +815,7 @@ static bool computeIterationGraph(CodegenEnv &env, SortMask mask,
       const TensorId tid = env.makeTensorId(t.getOperandNumber());
       for (LoopId i = 0; i < numLoops; i++) {
         const auto dltI = env.dlt(tid, i);
-        if (isCompressedDLT(dltI) || isCompressedWithHiDLT(dltI) ||
+        if (isCompressedDLT(dltI) || isLooseCompressedDLT(dltI) ||
             isSingletonDLT(dltI)) {
           for (LoopId j = 0; j < numLoops; j++)
             if (isUndefDLT(env.dlt(tid, j))) {
@@ -1508,7 +1508,7 @@ static scf::IfOp genIf(CodegenEnv &env, OpBuilder &builder, LoopId ldx,
         assert(ldx == env.merger().loop(b));
         Value clause;
         if (isCompressedDLT(dlt) || isSingletonDLT(dlt) ||
-            isCompressedWithHiDLT(dlt)) {
+            isLooseCompressedDLT(dlt)) {
           assert(lvl.has_value());
           const Value crd = env.emitter().getCoords()[tid][*lvl];
           const Value lvar = env.getLoopVar(ldx);
@@ -1593,7 +1593,7 @@ static bool startLoopSeq(CodegenEnv &env, OpBuilder &builder, ExprId exp,
       needsUniv = true;
     }
     if (isCompressedDLT(dlt) || isSingletonDLT(dlt) ||
-        isCompressedWithHiDLT(dlt) || isIdxReduc) {
+        isLooseCompressedDLT(dlt) || isIdxReduc) {
       // Only when this is a index reduction loop, can the dlt be undefined.
       assert(!isUndefDLT(dlt) || isIdxReduc);
       // sparse/singleton levels, or a dense/sparse index reduction loop.

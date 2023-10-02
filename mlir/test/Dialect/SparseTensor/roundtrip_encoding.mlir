@@ -69,7 +69,7 @@ func.func private @sparse_coo(tensor<?x?xf32, #COO>)
 }>
 
 // CHECK-LABEL: func private @sparse_bcoo(
-// CHECK-SAME: tensor<?x?x?xf32, #sparse_tensor.encoding<{ lvlTypes = [ "dense", "compressed_hi_nu", "singleton" ] }>>)
+// CHECK-SAME: tensor<?x?x?xf32, #sparse_tensor.encoding<{ lvlTypes = [ "dense", "loose_compressed_nu", "singleton" ] }>>)
 func.func private @sparse_bcoo(tensor<?x?x?xf32, #BCOO>)
 
 // -----

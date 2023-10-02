@@ -433,7 +433,7 @@ void LoopEmitter::initializeLoopEmit(
              !highs[t][l]);
       const auto lvlTp = lvlTypes[t][l];
       // Handle sparse storage schemes.
-      if (isCompressedDLT(lvlTp) || isCompressedWithHiDLT(lvlTp)) {
+      if (isCompressedDLT(lvlTp) || isLooseCompressedDLT(lvlTp)) {
         // Generate sparse primitives to obtain positions and coordinates.
         positionsBuffers[t][l] = genToPositions(builder, loc, tensor, l);
         coordinatesBuffers[t][l] =
@@ -534,7 +534,7 @@ void LoopEmitter::categorizeLoopCondition(
     auto lvlType = lvlTypes[t][l];
     // Must be a recognizable DLT.
     assert(isDenseDLT(lvlType) || isCompressedDLT(lvlType) ||
-           isCompressedWithHiDLT(lvlType) || isSingletonDLT(lvlType));
+           isLooseCompressedDLT(lvlType) || isSingletonDLT(lvlType));
 
     bool isSparse = !isDenseDLT(lvlType);
     bool isSlice = isSparseSlices[t];
@@ -630,7 +630,7 @@ std::pair<Operation *, Value> LoopEmitter::emitForLoopOverTensorAtLvl(
     OpBuilder &builder, Location loc, TensorId tid, Level lvl, Value lo,
     Value hi, MutableArrayRef<Value> reduc, bool isParallel) {
   bool isSparseCond = isCompressedDLT(lvlTypes[tid][lvl]) ||
-                      isCompressedWithHiDLT(lvlTypes[tid][lvl]) ||
+                      isLooseCompressedDLT(lvlTypes[tid][lvl]) ||
                       isSingletonDLT(lvlTypes[tid][lvl]);
   // TODO: support dynamic slices.
   // Uses the first dimension here to build the loop bound (which is also the
@@ -893,7 +893,7 @@ std::pair<Operation *, Value> LoopEmitter::emitWhileLoopOverTensorsAtLvls(
     // Dense level are handled by the shared univeral index.
     assert(!isDenseCond(cKind));
     // Must be a recognizable sparse level.
-    assert(isCompressedDLT(lvlTp) || isCompressedWithHiDLT(lvlTp) ||
+    assert(isCompressedDLT(lvlTp) || isLooseCompressedDLT(lvlTp) ||
            isSingletonDLT(lvlTp));
     (void)lvlTp;
 
@@ -1012,7 +1012,7 @@ std::pair<Operation *, Value> LoopEmitter::emitWhileLoopOverTensorsAtLvls(
     for (auto [tid, lvl] : unpackTensorLevelFromCondRange(spConds)) {
       const auto lvlTp = lvlTypes[tid][lvl];
       if (isCompressedDLT(lvlTp) || isSingletonDLT(lvlTp) ||
-          isCompressedWithHiDLT(lvlTp)) {
+          isLooseCompressedDLT(lvlTp)) {
         const auto crd = coords[tid][lvl];
         if (min) {
           Value cmp = CMPI(ult, coords[tid][lvl], min);
@@ -1237,11 +1237,11 @@ void LoopEmitter::prepareLoopOverTensorAtLvl(OpBuilder &builder, Location loc,
   // Either the first level, or the previous level has been set.
   /// FIXME: See the [CLARIFY_POSITS_LVL] note in the header.
   assert(lvl == 0 || posits[tid][lvl - 1]);
-  if (isCompressedDLT(lvlTp) || isCompressedWithHiDLT(lvlTp)) {
+  if (isCompressedDLT(lvlTp) || isLooseCompressedDLT(lvlTp)) {
     const Value mem = positionsBuffers[tid][lvl];
 
     Value pLo = lvl == 0 ? c0 : posits[tid][lvl - 1];
-    if (isCompressedWithHiDLT(lvlTp))
+    if (isLooseCompressedDLT(lvlTp))
       pLo = builder.create<arith::MulIOp>(loc, pLo, C_IDX(2));
     posits[tid][lvl] = genIndexLoad(builder, loc, mem, pLo);
 
@@ -1538,7 +1538,7 @@ void LoopEmitter::exitWhileLoop(OpBuilder &builder, Location loc,
   for (auto [tid, lvl] : unpackTensorLevelRange(loopInfo.trivialTidLvls)) {
     const auto lvlTp = lvlTypes[tid][lvl];
     if (isCompressedDLT(lvlTp) || isSingletonDLT(lvlTp) ||
-        isCompressedWithHiDLT(lvlTp)) {
+        isLooseCompressedDLT(lvlTp)) {
       const Value crd = coords[tid][lvl];
       const Value pos = posits[tid][lvl];
       Value cmp = CMPI(eq, crd, iv);
