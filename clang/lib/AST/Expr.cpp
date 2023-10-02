@@ -661,7 +661,7 @@ std::string SYCLUniqueStableNameExpr::ComputeName(ASTContext &Context,
   std::string Buffer;
   Buffer.reserve(128);
   llvm::raw_string_ostream Out(Buffer);
-  Ctx->mangleTypeName(Ty, Out);
+  Ctx->mangleCanonicalTypeName(Ty, Out);
 
   return Out.str();
 }

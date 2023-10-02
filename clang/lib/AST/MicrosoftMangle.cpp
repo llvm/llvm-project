@@ -196,8 +196,8 @@ public:
   mangleCXXRTTICompleteObjectLocator(const CXXRecordDecl *Derived,
                                      ArrayRef<const CXXRecordDecl *> BasePath,
                                      raw_ostream &Out) override;
-  void mangleTypeName(QualType T, raw_ostream &,
-                      bool NormalizeIntegers) override;
+  void mangleCanonicalTypeName(QualType T, raw_ostream &,
+                               bool NormalizeIntegers) override;
   void mangleReferenceTemporary(const VarDecl *, unsigned ManglingNumber,
                                 raw_ostream &) override;
   void mangleStaticGuardVariable(const VarDecl *D, raw_ostream &Out) override;
@@ -3842,13 +3842,13 @@ void MicrosoftMangleContextImpl::mangleSEHFinallyBlock(
   Mangler.mangleName(EnclosingDecl);
 }
 
-void MicrosoftMangleContextImpl::mangleTypeName(
+void MicrosoftMangleContextImpl::mangleCanonicalTypeName(
     QualType T, raw_ostream &Out, bool NormalizeIntegers = false) {
   // This is just a made up unique string for the purposes of tbaa.  undname
   // does *not* know how to demangle it.
   MicrosoftCXXNameMangler Mangler(*this, Out);
   Mangler.getStream() << '?';
-  Mangler.mangleType(T, SourceRange());
+  Mangler.mangleType(T.getCanonicalType(), SourceRange());
 }
 
 void MicrosoftMangleContextImpl::mangleReferenceTemporary(
