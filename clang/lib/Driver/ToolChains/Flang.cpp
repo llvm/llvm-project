@@ -6,7 +6,6 @@
 //
 //===----------------------------------------------------------------------===//
 
-
 #include "Flang.h"
 #include "CommonArgs.h"
 
@@ -170,6 +169,38 @@ void Flang::addPicOptions(const ArgList &Args, ArgStringList &CmdArgs) const {
   }
 }
 
+void Flang::AddAArch64TargetArgs(const ArgList &Args,
+                                 ArgStringList &CmdArgs) const {
+  // Handle -msve_vector_bits=<bits>
+  if (Arg *A = Args.getLastArg(options::OPT_msve_vector_bits_EQ)) {
+    StringRef Val = A->getValue();
+    const Driver &D = getToolChain().getDriver();
+    if (Val.equals("128") || Val.equals("256") || Val.equals("512") ||
+        Val.equals("1024") || Val.equals("2048") || Val.equals("128+") ||
+        Val.equals("256+") || Val.equals("512+") || Val.equals("1024+") ||
+        Val.equals("2048+")) {
+      unsigned Bits = 0;
+      if (Val.endswith("+"))
+        Val = Val.substr(0, Val.size() - 1);
+      else {
+        [[maybe_unused]] bool Invalid = Val.getAsInteger(10, Bits);
+        assert(!Invalid && "Failed to parse value");
+        CmdArgs.push_back(
+            Args.MakeArgString("-mvscale-max=" + llvm::Twine(Bits / 128)));
+      }
+
+      [[maybe_unused]] bool Invalid = Val.getAsInteger(10, Bits);
+      assert(!Invalid && "Failed to parse value");
+      CmdArgs.push_back(
+          Args.MakeArgString("-mvscale-min=" + llvm::Twine(Bits / 128)));
+      // Silently drop requests for vector-length agnostic code as it's implied.
+    } else if (!Val.equals("scalable"))
+      // Handle the unsupported values passed to msve-vector-bits.
+      D.Diag(diag::err_drv_unsupported_option_argument)
+          << A->getSpelling() << Val;
+  }
+}
+
 void Flang::addTargetOptions(const ArgList &Args,
                              ArgStringList &CmdArgs) const {
   const ToolChain &TC = getToolChain();
@@ -186,9 +217,13 @@ void Flang::addTargetOptions(const ArgList &Args,
   switch (TC.getArch()) {
   default:
     break;
+  case llvm::Triple::aarch64:
+    getTargetFeatures(D, Triple, Args, CmdArgs, /*ForAs*/ false);
+    AddAArch64TargetArgs(Args, CmdArgs);
+    break;
+
   case llvm::Triple::r600:
   case llvm::Triple::amdgcn:
-  case llvm::Triple::aarch64:
   case llvm::Triple::riscv64:
   case llvm::Triple::x86_64:
     getTargetFeatures(D, Triple, Args, CmdArgs, /*ForAs*/ false);
