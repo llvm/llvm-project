@@ -668,6 +668,13 @@ void InstrProfSymtab::finalizeSymtab() {
   llvm::sort(AddrToMD5Map, less_first());
   AddrToMD5Map.erase(std::unique(AddrToMD5Map.begin(), AddrToMD5Map.end()),
                      AddrToMD5Map.end());
+  // GlobalVariable address ranges should not overlap; so sort by either
+  // beginning address or end address is fine.
+  llvm::sort(VTableAddrRangeToMD5Map, less_first());
+  // std::unique uses == operator for std::pair.
+  VTableAddrRangeToMD5Map.erase(std::unique(VTableAddrRangeToMD5Map.begin(),
+                                            VTableAddrRangeToMD5Map.end()),
+                                VTableAddrRangeToMD5Map.end());
   Sorted = true;
 }
 

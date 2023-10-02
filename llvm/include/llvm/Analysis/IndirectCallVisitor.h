@@ -55,25 +55,30 @@ struct PGOIndirectCallVisitor : public InstVisitor<PGOIndirectCallVisitor> {
       } break;
       }
     }
-      if (Call.isIndirectCall()) {
-        IndirectCalls.push_back(&Call);
-        if (Type == InstructionType::kVTableVal) {
-          LoadInst *LI = dyn_cast<LoadInst>(Call.getCalledOperand());
-          if (LI != nullptr) {
-            Value *MaybeVTablePtr =
-                LI->getPointerOperand()->stripInBoundsConstantOffsets();
-            Instruction *VTableInstr = dyn_cast<Instruction>(MaybeVTablePtr);
-            // If not used by any type intrinsic, this is not a vtable.
-            // Inst visitor should see the very first type intrinsic using a
-            // vtable before the very first virtual function load from this
-            // vtable. This condition is asserted above.
-            if (VTableInstr &&
-                PtrTestedByTypeIntrinsics.count(MaybeVTablePtr)) {
-              VTableAddrs.insert(VTableInstr);
-            }
+    if (Call.isIndirectCall()) {
+      IndirectCalls.push_back(&Call);
+      if (Type == InstructionType::kVTableVal) {
+        // Note without -fstrict-vtable-pointers, vtable pointers of the same
+        // objects are loaded multiple times, and current implementation
+        // instruments each load once.
+        // FIXME: For more efficient instrumentation, analyze load invariant
+        // vtable values (e.g., from the same pointer in C++) and instrument
+        // them once.
+        LoadInst *LI = dyn_cast<LoadInst>(Call.getCalledOperand());
+        if (LI != nullptr) {
+          Value *MaybeVTablePtr =
+              LI->getPointerOperand()->stripInBoundsConstantOffsets();
+          Instruction *VTableInstr = dyn_cast<Instruction>(MaybeVTablePtr);
+          // If not used by any type intrinsic, this is not a vtable.
+          // Inst visitor should see the very first type intrinsic using a
+          // vtable before the very first virtual function load from this
+          // vtable. This condition is asserted above.
+          if (VTableInstr && PtrTestedByTypeIntrinsics.count(MaybeVTablePtr)) {
+            VTableAddrs.insert(VTableInstr);
           }
         }
       }
+    }
   }
 
 private:
