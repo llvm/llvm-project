@@ -811,18 +811,8 @@ bool ByteCodeExprGen<Emitter>::VisitArrayInitLoopExpr(
   assert(Initializing);
   assert(!DiscardResult);
 
-  const auto *CommonExpr = E->getCommonExpr();
-  std::optional<PrimType> CommonTy = classify(CommonExpr);
-
-  std::optional<unsigned> LocalIndex = this->allocateLocalPrimitive(CommonExpr, *CommonTy, CommonExpr->getType().isConstQualified());
-  if (!LocalIndex)
-    return false;
-  if (!this->visit(CommonExpr))
-    return false;
-  if(!this->emitSetLocal(*CommonTy, *LocalIndex, E))
-    return false;
-    
-  StoredOpaqueValueScope<Emitter> KnownOpaqueScope(this, *LocalIndex);
+  StoredOpaqueValueScope<Emitter> StoredOpaqueScope(this);
+  StoredOpaqueScope.VisitAndStoreOpaqueValue(E->getCommonExpr());
 
   const Expr *SubExpr = E->getSubExpr();
   size_t Size = E->getArraySize().getZExtValue();
@@ -856,8 +846,8 @@ bool ByteCodeExprGen<Emitter>::VisitArrayInitLoopExpr(
 
 template <class Emitter>
 bool ByteCodeExprGen<Emitter>::VisitOpaqueValueExpr(const OpaqueValueExpr *E) {
-  if(IgnoreOpaqueValue)
-    return this->emitGetLocal(*classify(E), *OpaqueValueIndex, E);
+  if(OpaqueExprs.contains(E))
+    return this->emitGetLocal(*classify(E), OpaqueExprs[E], E);
 
   if (Initializing)
     return this->visitInitializer(E->getSourceExpr());

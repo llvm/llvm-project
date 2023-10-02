@@ -306,10 +306,6 @@ protected:
   /// Flag inidicating if we're initializing an already created
   /// variable. This is set in visitInitializer().
   bool Initializing = false;
-
-  /// Flag indicating if we ignore an OpaqueValueExpr.
-  bool IgnoreOpaqueValue = false;
-  std::optional<uint64_t> OpaqueValueIndex;
 };
 
 extern template class ByteCodeExprGen<ByteCodeEmitter>;
@@ -487,21 +483,37 @@ private:
 
 template <class Emitter> class StoredOpaqueValueScope final {
 public:
-  StoredOpaqueValueScope(ByteCodeExprGen<Emitter> *Ctx, uint64_t LocalIndex, bool ignore = true)
-      : Ctx(Ctx), OldIgnoreValue(Ctx->IgnoreOpaqueValue), OldLocalIndex(Ctx->OpaqueValueIndex) {
-    Ctx->IgnoreOpaqueValue = ignore;
-    Ctx->OpaqueValueIndex = LocalIndex;
+  StoredOpaqueValueScope(ByteCodeExprGen<Emitter> *Ctx) : Ctx(Ctx) {}
+
+  bool VisitAndStoreOpaqueValue(const OpaqueValueExpr* Ove) {
+    assert(Ove && "OpaqueValueExpr is a nullptr!");
+    assert(!Ctx->OpaqueExprs.contains(Ove) && "OpaqueValueExpr already stored!");
+
+    std::optional<PrimType> CommonTy = Ctx->classify(Ove);
+    std::optional<unsigned> LocalIndex = Ctx->allocateLocalPrimitive(Ove, *CommonTy, Ove->getType().isConstQualified());
+    if (!LocalIndex)
+      return false;
+
+    if (!Ctx->visit(Ove))
+      return false;
+
+    if(!Ctx->emitSetLocal(*CommonTy, *LocalIndex, Ove))
+      return false;
+
+    Ctx->OpaqueExprs.insert({Ove, *LocalIndex});
+    StoredValues.emplace_back(Ove);
+
+    return true;
   }
 
   ~StoredOpaqueValueScope() {
-      Ctx->IgnoreOpaqueValue = OldIgnoreValue;
-      Ctx->OpaqueValueIndex = OldLocalIndex;
+    for(const auto *SV : StoredValues)
+      Ctx->OpaqueExprs.erase(SV);
   }
 
 private:
   ByteCodeExprGen<Emitter> *Ctx;
-  bool OldIgnoreValue;
-  std::optional<uint64_t> OldLocalIndex;
+  std::vector<const OpaqueValueExpr*> StoredValues;
 };
 
 } // namespace interp
