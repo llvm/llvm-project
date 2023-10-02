@@ -12,6 +12,10 @@
 #include "DWARFUnit.h"
 #include "llvm/Support/Error.h"
 
+namespace llvm {
+class DWARFAbbreviationDeclarationSet;
+}
+
 class DWARFCompileUnit : public DWARFUnit {
 public:
   void BuildAddressRangeTable(DWARFDebugAranges *debug_aranges) override;
@@ -27,7 +31,7 @@ public:
 private:
   DWARFCompileUnit(SymbolFileDWARF &dwarf, lldb::user_id_t uid,
                    const DWARFUnitHeader &header,
-                   const DWARFAbbreviationDeclarationSet &abbrevs,
+                   const llvm::DWARFAbbreviationDeclarationSet &abbrevs,
                    DIERef::Section section, bool is_dwo)
       : DWARFUnit(dwarf, uid, header, abbrevs, section, is_dwo) {}
 
