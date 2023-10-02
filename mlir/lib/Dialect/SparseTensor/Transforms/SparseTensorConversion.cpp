@@ -1538,8 +1538,6 @@ void mlir::populateSparseTensorConversionPatterns(
   patterns
       .add<SparseReturnConverter, SparseTensorToDimSizeConverter,
            SparseCastConverter, SparseTensorNewConverter,
-           SparseReshapeConverter<tensor::ExpandShapeOp>,
-           SparseReshapeConverter<tensor::CollapseShapeOp>,
            SparseTensorConcatConverter, SparseTensorAllocConverter,
            SparseTensorEmptyConverter, SparseTensorDeallocConverter,
            SparseTensorToPositionsConverter, SparseTensorToCoordinatesConverter,
