@@ -274,7 +274,7 @@ TEST(FilterIteratorTest, Enumerate) {
   int A[] = {0, 1, 2, 3, 4, 5, 6};
   auto Enumerate = llvm::enumerate(A);
   SmallVector<int> Actual;
-  for (auto IndexedValue : make_filter_range(Enumerate, IsOdd))
+  for (const auto &IndexedValue : make_filter_range(Enumerate, IsOdd))
     Actual.push_back(IndexedValue.value());
   EXPECT_EQ((SmallVector<int, 3>{1, 3, 5}), Actual);
 }

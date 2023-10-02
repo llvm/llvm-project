@@ -171,12 +171,6 @@ def TLS_ADDXrr : F3_1<2, 0b000000, (outs I64Regs:$rd),
                    "add $rs1, $rs2, $rd, $sym",
                    [(set i64:$rd,
                        (tlsadd i64:$rs1, i64:$rs2, tglobaltlsaddr:$sym))]>;
-
-// "LEA" form of add
-def LEAX_ADDri : F3_2<2, 0b000000,
-                     (outs I64Regs:$rd), (ins (MEMri $rs1, $simm13):$addr),
-                     "add ${addr:arith}, $rd",
-                     [(set iPTR:$rd, ADDRri:$addr)]>;
 }
 
 def : Pat<(SPcmpicc i64:$a, i64:$b), (CMPrr $a, $b)>;

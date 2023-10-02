@@ -127,9 +127,7 @@ bool GEPOperator::accumulateConstantOffset(
   auto end = generic_gep_type_iterator<decltype(Index.end())>::end(Index.end());
   for (auto GTI = begin, GTE = end; GTI != GTE; ++GTI) {
     // Scalable vectors are multiplied by a runtime constant.
-    bool ScalableType = false;
-    if (isa<ScalableVectorType>(GTI.getIndexedType()))
-      ScalableType = true;
+    bool ScalableType = GTI.getIndexedType()->isScalableTy();
 
     Value *V = GTI.getOperand();
     StructType *STy = GTI.getStructTypeOrNull();
@@ -189,7 +187,7 @@ bool GEPOperator::collectOffset(
   for (gep_type_iterator GTI = gep_type_begin(this), GTE = gep_type_end(this);
        GTI != GTE; ++GTI) {
     // Scalable vectors are multiplied by a runtime constant.
-    bool ScalableType = isa<ScalableVectorType>(GTI.getIndexedType());
+    bool ScalableType = GTI.getIndexedType()->isScalableTy();
 
     Value *V = GTI.getOperand();
     StructType *STy = GTI.getStructTypeOrNull();

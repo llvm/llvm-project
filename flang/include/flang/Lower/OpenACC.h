@@ -103,6 +103,9 @@ void attachDeclarePreDeallocAction(AbstractConverter &, fir::FirOpBuilder &,
 void attachDeclarePostDeallocAction(AbstractConverter &, fir::FirOpBuilder &,
                                     const Fortran::semantics::Symbol &);
 
+void genOpenACCTerminator(fir::FirOpBuilder &, mlir::Operation *,
+                          mlir::Location);
+
 } // namespace lower
 } // namespace Fortran
 

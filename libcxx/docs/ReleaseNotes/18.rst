@@ -51,6 +51,8 @@ Implemented Papers
 - P2497R0 - Testing for success or failure of ``<charconv>`` functions
 - P2697R1 - Interfacing ``bitset`` with ``string_view``
 - P2443R1 - ``views::chunk_by``
+- P2538R1 - ADL-proof ``std::projected``
+
 
 Improvements and New Features
 -----------------------------
@@ -126,5 +128,14 @@ ABI Affecting Changes
   and you notice changes to your exported symbols list, then this means that you were not properly preventing libc++
   symbols from being part of your ABI.
 
+- The name mangling for intantiations of ``std::projected`` has changed in order to implement P2538R1. This technically
+  results in an ABI break, however in practice we expect uses of ``std::projected`` in ABI-sensitive places to be
+  extremely rare. Any error resulting from this change should result in a link-time error.
+
 Build System Changes
 --------------------
+
+- The ``LIBCXX_EXECUTOR`` CMake variable has been deprecated. If you are relying on this, the new replacement is
+  passing ``-Dexecutor=...`` to ``llvm-lit``. Alternatively, this flag can be made persistent in the generated test
+  configuration file by passing ``-DLIBCXX_TEST_PARAMS=executor=...``. This also applies to the ``LIBUWIND_EXECTOR``
+  and ``LIBCXXABI_EXECUTOR`` CMake variables. LLVM 19 will completely remove support for the ``*_EXECUTOR`` variables.

@@ -1132,8 +1132,14 @@ AMDGPULegalizerInfo::AMDGPULegalizerInfo(const GCNSubtarget &ST_,
     .scalarize(0)
     .legalIf(all(typeInSet(0, {S1, S32}), isPointer(1)));
 
-  getActionDefinitionsBuilder(G_FCMP)
-    .legalForCartesianProduct({S1}, ST.has16BitInsts() ? FPTypes16 : FPTypesBase)
+  auto &FCmpBuilder =
+      getActionDefinitionsBuilder(G_FCMP).legalForCartesianProduct(
+          {S1}, ST.has16BitInsts() ? FPTypes16 : FPTypesBase);
+
+  if (ST.hasSALUFloatInsts())
+    FCmpBuilder.legalForCartesianProduct({S32}, {S16, S32});
+
+  FCmpBuilder
     .widenScalarToNextPow2(1)
     .clampScalar(1, S32, S64)
     .scalarize(0);
@@ -4657,6 +4663,10 @@ bool AMDGPULegalizerInfo::legalizeFDIV16(MachineInstr &MI,
   return true;
 }
 
+static const unsigned SPDenormModeBitField =
+    AMDGPU::Hwreg::ID_MODE | (4 << AMDGPU::Hwreg::OFFSET_SHIFT_) |
+    (1 << AMDGPU::Hwreg::WIDTH_M1_SHIFT_);
+
 // Enable or disable FP32 denorm mode. When 'Enable' is true, emit instructions
 // to enable denorm mode. When 'Enable' is false, disable denorm mode.
 static void toggleSPDenormMode(bool Enable, MachineIRBuilder &B,
@@ -4675,11 +4685,6 @@ static void toggleSPDenormMode(bool Enable, MachineIRBuilder &B,
       .addImm(NewDenormModeValue);
 
   } else {
-    // Select FP32 bit field in mode register.
-    unsigned SPDenormModeBitField = AMDGPU::Hwreg::ID_MODE |
-                                    (4 << AMDGPU::Hwreg::OFFSET_SHIFT_) |
-                                    (1 << AMDGPU::Hwreg::WIDTH_M1_SHIFT_);
-
     B.buildInstr(AMDGPU::S_SETREG_IMM32_B32)
       .addImm(SPDenormMode)
       .addImm(SPDenormModeBitField);
@@ -4723,10 +4728,21 @@ bool AMDGPULegalizerInfo::legalizeFDIV32(MachineInstr &MI,
                        .setMIFlags(Flags);
   auto NegDivScale0 = B.buildFNeg(S32, DenominatorScaled, Flags);
 
-  // FIXME: Doesn't correctly model the FP mode switch, and the FP operations
-  // aren't modeled as reading it.
-  if (Mode.FP32Denormals != DenormalMode::getIEEE())
+  const bool PreservesDenormals = Mode.FP32Denormals == DenormalMode::getIEEE();
+  const bool HasDynamicDenormals =
+      (Mode.FP32Denormals.Input == DenormalMode::Dynamic) ||
+      (Mode.FP32Denormals.Output == DenormalMode::Dynamic);
+
+  Register SavedSPDenormMode;
+  if (!PreservesDenormals) {
+    if (HasDynamicDenormals) {
+      SavedSPDenormMode = MRI.createVirtualRegister(&AMDGPU::SReg_32RegClass);
+      B.buildInstr(AMDGPU::S_GETREG_B32)
+          .addDef(SavedSPDenormMode)
+          .addImm(SPDenormModeBitField);
+    }
     toggleSPDenormMode(true, B, ST, Mode);
+  }
 
   auto Fma0 = B.buildFMA(S32, NegDivScale0, ApproxRcp, One, Flags);
   auto Fma1 = B.buildFMA(S32, Fma0, ApproxRcp, ApproxRcp, Flags);
@@ -4735,10 +4751,15 @@ bool AMDGPULegalizerInfo::legalizeFDIV32(MachineInstr &MI,
   auto Fma3 = B.buildFMA(S32, Fma2, Fma1, Mul, Flags);
   auto Fma4 = B.buildFMA(S32, NegDivScale0, Fma3, NumeratorScaled, Flags);
 
-  // FIXME: This mishandles dynamic denormal mode. We need to query the
-  // current mode and restore the original.
-  if (Mode.FP32Denormals != DenormalMode::getIEEE())
-    toggleSPDenormMode(false, B, ST, Mode);
+  if (!PreservesDenormals) {
+    if (HasDynamicDenormals) {
+      assert(SavedSPDenormMode);
+      B.buildInstr(AMDGPU::S_SETREG_B32)
+          .addReg(SavedSPDenormMode)
+          .addImm(SPDenormModeBitField);
+    } else
+      toggleSPDenormMode(false, B, ST, Mode);
+  }
 
   auto Fmas = B.buildIntrinsic(Intrinsic::amdgcn_div_fmas, {S32})
                   .addUse(Fma4.getReg(0))

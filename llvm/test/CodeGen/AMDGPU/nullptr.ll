@@ -1,4 +1,4 @@
-;RUN: llc < %s -mtriple=amdgcn -mtriple=amdgcn-- -verify-machineinstrs | FileCheck -check-prefixes=CHECK,GCN %s
+;RUN: llc < %s -mtriple=amdgcn-- -verify-machineinstrs | FileCheck -check-prefixes=CHECK,GCN %s
 ;RUN: llc < %s -march=r600 -mtriple=r600-- -verify-machineinstrs | FileCheck -check-prefixes=CHECK,R600 %s
 
 %struct.S = type { ptr addrspace(5), ptr addrspace(1), ptr addrspace(4), ptr addrspace(3), ptr, ptr addrspace(2)}

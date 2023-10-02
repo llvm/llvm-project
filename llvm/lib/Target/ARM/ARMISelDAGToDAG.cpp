@@ -63,7 +63,7 @@ public:
 
   ARMDAGToDAGISel() = delete;
 
-  explicit ARMDAGToDAGISel(ARMBaseTargetMachine &tm, CodeGenOpt::Level OptLevel)
+  explicit ARMDAGToDAGISel(ARMBaseTargetMachine &tm, CodeGenOptLevel OptLevel)
       : SelectionDAGISel(ID, tm, OptLevel) {}
 
   bool runOnMachineFunction(MachineFunction &MF) override {
@@ -331,7 +331,8 @@ private:
 
   /// SelectInlineAsmMemoryOperand - Implement addressing mode selection for
   /// inline asm expressions.
-  bool SelectInlineAsmMemoryOperand(const SDValue &Op, unsigned ConstraintID,
+  bool SelectInlineAsmMemoryOperand(const SDValue &Op,
+                                    InlineAsm::ConstraintCode ConstraintID,
                                     std::vector<SDValue> &OutOps) override;
 
   // Form pairs of consecutive R, S, D, or Q registers.
@@ -498,7 +499,7 @@ void ARMDAGToDAGISel::PreprocessISelDAG() {
 /// node. VFP / NEON fp VMLA / VMLS instructions have special RAW hazards (at
 /// least on current ARM implementations) which should be avoidded.
 bool ARMDAGToDAGISel::hasNoVMLxHazardUse(SDNode *N) const {
-  if (OptLevel == CodeGenOpt::None)
+  if (OptLevel == CodeGenOptLevel::None)
     return true;
 
   if (!Subtarget->hasVMLxHazards())
@@ -5864,23 +5865,22 @@ bool ARMDAGToDAGISel::tryInlineAsm(SDNode *N){
   return true;
 }
 
-
-bool ARMDAGToDAGISel::
-SelectInlineAsmMemoryOperand(const SDValue &Op, unsigned ConstraintID,
-                             std::vector<SDValue> &OutOps) {
+bool ARMDAGToDAGISel::SelectInlineAsmMemoryOperand(
+    const SDValue &Op, InlineAsm::ConstraintCode ConstraintID,
+    std::vector<SDValue> &OutOps) {
   switch(ConstraintID) {
   default:
     llvm_unreachable("Unexpected asm memory constraint");
-  case InlineAsm::Constraint_m:
-  case InlineAsm::Constraint_o:
-  case InlineAsm::Constraint_Q:
-  case InlineAsm::Constraint_Um:
-  case InlineAsm::Constraint_Un:
-  case InlineAsm::Constraint_Uq:
-  case InlineAsm::Constraint_Us:
-  case InlineAsm::Constraint_Ut:
-  case InlineAsm::Constraint_Uv:
-  case InlineAsm::Constraint_Uy:
+  case InlineAsm::ConstraintCode::m:
+  case InlineAsm::ConstraintCode::o:
+  case InlineAsm::ConstraintCode::Q:
+  case InlineAsm::ConstraintCode::Um:
+  case InlineAsm::ConstraintCode::Un:
+  case InlineAsm::ConstraintCode::Uq:
+  case InlineAsm::ConstraintCode::Us:
+  case InlineAsm::ConstraintCode::Ut:
+  case InlineAsm::ConstraintCode::Uv:
+  case InlineAsm::ConstraintCode::Uy:
     // Require the address to be in a register.  That is safe for all ARM
     // variants and it is hard to do anything much smarter without knowing
     // how the operand is used.
@@ -5894,6 +5894,6 @@ SelectInlineAsmMemoryOperand(const SDValue &Op, unsigned ConstraintID,
 /// ARM-specific DAG, ready for instruction scheduling.
 ///
 FunctionPass *llvm::createARMISelDag(ARMBaseTargetMachine &TM,
-                                     CodeGenOpt::Level OptLevel) {
+                                     CodeGenOptLevel OptLevel) {
   return new ARMDAGToDAGISel(TM, OptLevel);
 }

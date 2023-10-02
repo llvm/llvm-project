@@ -8,6 +8,7 @@
 
 #include "llvm/TargetParser/TargetParser.h"
 #include "llvm/ADT/STLExtras.h"
+#include "llvm/ADT/StringMap.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/Support/ARMBuildAttributes.h"
 #include "llvm/Support/FormatVariadic.h"
@@ -1012,11 +1013,17 @@ TEST(TargetParserTest, getARMCPUForArch) {
 
 TEST(TargetParserTest, ARMPrintSupportedExtensions) {
   std::string expected = "All available -march extensions for ARM\n\n"
-                         "\tcrc\n\tcrypto\n\tsha2";
+                         "    Name                Description\n"
+                         "    crc                 This is a long dummy description\n"
+                         "    crypto\n"
+                         "    sha2\n";
+
+  StringMap<StringRef> DummyMap;
+  DummyMap["crc"] = "This is a long dummy description";
 
   outs().flush();
   testing::internal::CaptureStdout();
-  ARM::PrintSupportedExtensions();
+  ARM::PrintSupportedExtensions(DummyMap);
   outs().flush();
   std::string captured = testing::internal::GetCapturedStdout();
 
@@ -1932,11 +1939,17 @@ TEST(TargetParserTest, AArch64ArchExtFeature) {
 
 TEST(TargetParserTest, AArch64PrintSupportedExtensions) {
   std::string expected = "All available -march extensions for AArch64\n\n"
-                         "\taes\n\tb16b16\n\tbf16";
+                         "    Name                Description\n"
+                         "    aes                 This is a long dummy description\n"
+                         "    b16b16\n"
+                         "    bf16\n";
+
+  StringMap<StringRef> DummyMap;
+  DummyMap["aes"] = "This is a long dummy description";
 
   outs().flush();
   testing::internal::CaptureStdout();
-  AArch64::PrintSupportedExtensions();
+  AArch64::PrintSupportedExtensions(DummyMap);
   outs().flush();
   std::string captured = testing::internal::GetCapturedStdout();
 

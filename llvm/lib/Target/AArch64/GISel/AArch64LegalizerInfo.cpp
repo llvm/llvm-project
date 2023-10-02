@@ -119,13 +119,7 @@ AArch64LegalizerInfo::AArch64LegalizerInfo(const AArch64Subtarget &ST)
       .clampScalar(0, s32, s64);
 
   getActionDefinitionsBuilder({G_ADD, G_SUB, G_MUL, G_AND, G_OR, G_XOR})
-      .legalFor({s32, s64, v2s32, v4s32, v4s16, v8s16, v16s8, v8s8})
-      .scalarizeIf(
-          [=](const LegalityQuery &Query) {
-            return Query.Opcode == G_MUL && Query.Types[0] == v2s64;
-          },
-          0)
-      .legalFor({v2s64})
+      .legalFor({s32, s64, v2s32, v2s64, v4s32, v4s16, v8s16, v16s8, v8s8})
       .widenScalarToNextPow2(0)
       .clampScalar(0, s32, s64)
       .clampMaxNumElements(0, s8, 16)
@@ -867,8 +861,13 @@ AArch64LegalizerInfo::AArch64LegalizerInfo(const AArch64Subtarget &ST)
       .lower();
 
   getActionDefinitionsBuilder(G_VECREDUCE_ADD)
-      .legalFor(
-          {{s8, v16s8}, {s16, v8s16}, {s32, v4s32}, {s32, v2s32}, {s64, v2s64}})
+      .legalFor({{s8, v16s8},
+                 {s8, v8s8},
+                 {s16, v8s16},
+                 {s16, v4s16},
+                 {s32, v4s32},
+                 {s32, v2s32},
+                 {s64, v2s64}})
       .clampMaxNumElements(1, s64, 2)
       .clampMaxNumElements(1, s32, 4)
       .lower();
@@ -1790,7 +1789,7 @@ bool AArch64LegalizerInfo::legalizeFCopySign(MachineInstr &MI,
   if (DstSize == 64)
     Mask = MIRBuilder.buildFNeg(VecTy, Mask);
 
-  auto Sel = MIRBuilder.buildInstr(AArch64::G_BIT, {VecTy}, {Ins1, Ins2, Mask});
+  auto Sel = MIRBuilder.buildInstr(AArch64::G_BSP, {VecTy}, {Mask, Ins2, Ins1});
 
   // Build an unmerge whose 0th elt is the original G_FCOPYSIGN destination. We
   // want this to eventually become an EXTRACT_SUBREG.

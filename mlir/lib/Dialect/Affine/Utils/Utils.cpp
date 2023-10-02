@@ -367,7 +367,7 @@ mlir::affine::affineParallelize(AffineForOp forOp,
       loc, ValueRange(reducedValues).getTypes(), reductionKinds,
       llvm::ArrayRef(lowerBoundMap), lowerBoundOperands,
       llvm::ArrayRef(upperBoundMap), upperBoundOperands,
-      llvm::ArrayRef(forOp.getStep()));
+      llvm::ArrayRef(forOp.getStepAsInt()));
   // Steal the body of the old affine for op.
   newPloop.getRegion().takeBody(forOp.getRegion());
   Operation *yieldOp = &newPloop.getBody()->back();
@@ -377,7 +377,7 @@ mlir::affine::affineParallelize(AffineForOp forOp,
   SmallVector<Value> newResults;
   newResults.reserve(numReductions);
   for (unsigned i = 0; i < numReductions; ++i) {
-    Value init = forOp.getIterOperands()[i];
+    Value init = forOp.getInits()[i];
     // This works because we are only handling single-op reductions at the
     // moment. A switch on reduction kind or a mechanism to collect operations
     // participating in the reduction will be necessary for multi-op reductions.
@@ -570,7 +570,7 @@ LogicalResult mlir::affine::normalizeAffineFor(AffineForOp op,
 
   Location loc = op.getLoc();
   OpBuilder opBuilder(op);
-  int64_t origLoopStep = op.getStep();
+  int64_t origLoopStep = op.getStepAsInt();
 
   // Construct the new upper bound value map.
   AffineMap oldLbMap = op.getLowerBoundMap();

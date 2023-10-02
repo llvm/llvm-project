@@ -70,6 +70,7 @@
 #include "llvm/Transforms/Instrumentation/KCFI.h"
 #include "llvm/Transforms/Instrumentation/MemProfiler.h"
 #include "llvm/Transforms/Instrumentation/MemorySanitizer.h"
+#include "llvm/Transforms/Instrumentation/PGOInstrumentation.h"
 #include "llvm/Transforms/Instrumentation/SanitizerBinaryMetadata.h"
 #include "llvm/Transforms/Instrumentation/SanitizerCoverage.h"
 #include "llvm/Transforms/Instrumentation/ThreadSanitizer.h"
@@ -90,7 +91,6 @@ using namespace llvm;
 #include "llvm/Support/Extension.def"
 
 namespace llvm {
-extern cl::opt<bool> DebugInfoCorrelate;
 extern cl::opt<bool> PrintPipelinePasses;
 
 // Experiment to move sanitizers earlier.
@@ -314,12 +314,12 @@ getCodeModel(const CodeGenOptions &CodeGenOpts) {
 
 static CodeGenFileType getCodeGenFileType(BackendAction Action) {
   if (Action == Backend_EmitObj)
-    return CGFT_ObjectFile;
+    return CodeGenFileType::ObjectFile;
   else if (Action == Backend_EmitMCNull)
-    return CGFT_Null;
+    return CodeGenFileType::Null;
   else {
     assert(Action == Backend_EmitAssembly && "Invalid action!");
-    return CGFT_AssemblyFile;
+    return CodeGenFileType::AssemblyFile;
   }
 }
 
@@ -561,10 +561,10 @@ void EmitAssemblyHelper::CreateTargetMachine(bool MustCreateTM) {
   std::string FeaturesStr =
       llvm::join(TargetOpts.Features.begin(), TargetOpts.Features.end(), ",");
   llvm::Reloc::Model RM = CodeGenOpts.RelocationModel;
-  std::optional<CodeGenOpt::Level> OptLevelOrNone =
+  std::optional<CodeGenOptLevel> OptLevelOrNone =
       CodeGenOpt::getLevel(CodeGenOpts.OptimizationLevel);
   assert(OptLevelOrNone && "Invalid optimization level!");
-  CodeGenOpt::Level OptLevel = *OptLevelOrNone;
+  CodeGenOptLevel OptLevel = *OptLevelOrNone;
 
   llvm::TargetOptions Options;
   if (!initTargetOptions(Diags, Options, CodeGenOpts, TargetOpts, LangOpts,
@@ -572,6 +572,7 @@ void EmitAssemblyHelper::CreateTargetMachine(bool MustCreateTM) {
     return;
   TM.reset(TheTarget->createTargetMachine(Triple, TargetOpts.CPU, FeaturesStr,
                                           Options, RM, CM, OptLevel));
+  TM->setLargeDataThreshold(CodeGenOpts.LargeDataThreshold);
 }
 
 bool EmitAssemblyHelper::AddEmitPasses(legacy::PassManager &CodeGenPasses,
@@ -1216,7 +1217,7 @@ static void runThinLTOBackend(
   Conf.CodeModel = getCodeModel(CGOpts);
   Conf.MAttrs = TOpts.Features;
   Conf.RelocModel = CGOpts.RelocationModel;
-  std::optional<CodeGenOpt::Level> OptLevelOrNone =
+  std::optional<CodeGenOptLevel> OptLevelOrNone =
       CodeGenOpt::getLevel(CGOpts.OptimizationLevel);
   assert(OptLevelOrNone && "Invalid optimization level!");
   Conf.CGOptLevel = *OptLevelOrNone;

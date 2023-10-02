@@ -39,19 +39,19 @@ body:             |
   ; CHECK-NEXT: bb.1:
   ; CHECK-NEXT:   successors: %bb.1(0x80000000)
   ; CHECK-NEXT: {{  $}}
-  ; CHECK-NEXT:   INLINEASM &"", 1 /* sideeffect attdialect */, 851978 /* regdef:VGPR_HI16 */, def dead %11
+  ; CHECK-NEXT:   INLINEASM &"", 1 /* sideeffect attdialect */, 851978 /* regdef:VGPR_16 */, def dead %11
   ; CHECK-NEXT:   GLOBAL_STORE_DWORD undef %12:vreg_64, [[BUFFER_LOAD_DWORD_OFFEN]], 0, 0, implicit $exec :: (store (s32), addrspace 1)
   ; CHECK-NEXT:   [[V_MOV_B32_e32_2:%[0-9]+]]:vgpr_32 = V_MOV_B32_e32 0, implicit $exec
   ; CHECK-NEXT:   %5.sub1:vreg_64 = COPY [[V_MOV_B32_e32_]]
   ; CHECK-NEXT:   [[DS_READ_B64_gfx9_:%[0-9]+]]:vreg_64 = DS_READ_B64_gfx9 undef %14:vgpr_32, 0, 0, implicit $exec :: (load (s64), addrspace 3)
-  ; CHECK-NEXT:   INLINEASM &"def $0 $1", 1 /* sideeffect attdialect */, 851978 /* regdef:VGPR_HI16 */, def %15, 851978 /* regdef:VGPR_HI16 */, def %16
+  ; CHECK-NEXT:   INLINEASM &"def $0 $1", 1 /* sideeffect attdialect */, 851978 /* regdef:VGPR_16 */, def %15, 851978 /* regdef:VGPR_16 */, def %16
   ; CHECK-NEXT:   [[DS_READ_B32_gfx9_:%[0-9]+]]:vgpr_32 = DS_READ_B32_gfx9 [[V_MOV_B32_e32_]], 0, 0, implicit $exec
   ; CHECK-NEXT:   [[DS_READ_B32_gfx9_1:%[0-9]+]]:vgpr_32 = DS_READ_B32_gfx9 [[V_MOV_B32_e32_1]], 0, 0, implicit $exec
   ; CHECK-NEXT:   [[DS_READ_B32_gfx9_2:%[0-9]+]]:vgpr_32 = DS_READ_B32_gfx9 undef %20:vgpr_32, 0, 0, implicit $exec
-  ; CHECK-NEXT:   INLINEASM &"def $0 $1", 1 /* sideeffect attdialect */, 851978 /* regdef:VGPR_HI16 */, def %21, 851978 /* regdef:VGPR_HI16 */, def %22
+  ; CHECK-NEXT:   INLINEASM &"def $0 $1", 1 /* sideeffect attdialect */, 851978 /* regdef:VGPR_16 */, def %21, 851978 /* regdef:VGPR_16 */, def %22
   ; CHECK-NEXT:   [[DS_READ_B32_gfx9_3:%[0-9]+]]:vgpr_32 = DS_READ_B32_gfx9 [[V_MOV_B32_e32_1]], 0, 0, implicit $exec
   ; CHECK-NEXT:   [[V_MOV_B32_e32_3:%[0-9]+]]:vgpr_32 = V_MOV_B32_e32 0, implicit $exec
-  ; CHECK-NEXT:   INLINEASM &"", 1 /* sideeffect attdialect */, 851978 /* regdef:VGPR_HI16 */, def dead [[V_MOV_B32_e32_2]], 851978 /* regdef:VGPR_HI16 */, def dead [[V_MOV_B32_e32_3]], 851977 /* reguse:VGPR_HI16 */, [[DS_READ_B64_gfx9_]].sub0, 2147483657 /* reguse tiedto:$0 */, [[V_MOV_B32_e32_2]](tied-def 3), 2147549193 /* reguse tiedto:$1 */, [[V_MOV_B32_e32_3]](tied-def 5), 851977 /* reguse:VGPR_HI16 */, %15, 851977 /* reguse:VGPR_HI16 */, %16, 851977 /* reguse:VGPR_HI16 */, [[DS_READ_B32_gfx9_1]], 851977 /* reguse:VGPR_HI16 */, [[DS_READ_B32_gfx9_]], 851977 /* reguse:VGPR_HI16 */, [[DS_READ_B32_gfx9_3]], 851977 /* reguse:VGPR_HI16 */, [[DS_READ_B32_gfx9_2]]
+  ; CHECK-NEXT:   INLINEASM &"", 1 /* sideeffect attdialect */, 851978 /* regdef:VGPR_16 */, def dead [[V_MOV_B32_e32_2]], 851978 /* regdef:VGPR_16 */, def dead [[V_MOV_B32_e32_3]], 851977 /* reguse:VGPR_16 */, [[DS_READ_B64_gfx9_]].sub0, 2147483657 /* reguse tiedto:$0 */, [[V_MOV_B32_e32_2]](tied-def 3), 2147549193 /* reguse tiedto:$1 */, [[V_MOV_B32_e32_3]](tied-def 5), 851977 /* reguse:VGPR_16 */, %15, 851977 /* reguse:VGPR_16 */, %16, 851977 /* reguse:VGPR_16 */, [[DS_READ_B32_gfx9_1]], 851977 /* reguse:VGPR_16 */, [[DS_READ_B32_gfx9_]], 851977 /* reguse:VGPR_16 */, [[DS_READ_B32_gfx9_3]], 851977 /* reguse:VGPR_16 */, [[DS_READ_B32_gfx9_2]]
   ; CHECK-NEXT:   DS_WRITE_B32_gfx9 undef %28:vgpr_32, %21, 0, 0, implicit $exec :: (store (s32), addrspace 3)
   ; CHECK-NEXT:   DS_WRITE_B32_gfx9 undef %29:vgpr_32, %22, 0, 0, implicit $exec :: (store (s32), addrspace 3)
   ; CHECK-NEXT:   DS_WRITE_B64_gfx9 undef %30:vgpr_32, %5, 0, 0, implicit $exec :: (store (s64), addrspace 3)

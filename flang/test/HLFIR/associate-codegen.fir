@@ -428,7 +428,7 @@ func.func @_QPtest_multitple_associates_for_same_expr() {
 // CHECK:           %[[VAL_29:.*]] = fir.convert %[[VAL_24]]#1 : (!fir.heap<!fir.array<10x!fir.char<1>>>) -> !fir.ref<!fir.array<10x!fir.char<1>>>
 // CHECK:           %[[VAL_30:.*]] = fir.convert %[[VAL_29]] : (!fir.ref<!fir.array<10x!fir.char<1>>>) -> !fir.heap<!fir.array<10x!fir.char<1>>>
 // CHECK:           fir.freemem %[[VAL_30]] : !fir.heap<!fir.array<10x!fir.char<1>>>
-// CHECK:           fir.freemem %[[VAL_4]]#1 : !fir.heap<!fir.array<10x!fir.char<1>>>
+// CHECK:           fir.freemem %[[VAL_4]]#0 : !fir.heap<!fir.array<10x!fir.char<1>>>
 // CHECK:           return
 // CHECK:         }
 

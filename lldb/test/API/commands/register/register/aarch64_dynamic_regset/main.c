@@ -1,5 +1,9 @@
 #include <sys/auxv.h>
 
+// If this program receives 0 arguments, it will use non-streaming SVE
+// registers. If the number of arguments is >= 1, it will use streaming SVE
+// registers.
+
 #ifndef HWCAP2_SME
 #define HWCAP2_SME (1 << 23)
 #endif

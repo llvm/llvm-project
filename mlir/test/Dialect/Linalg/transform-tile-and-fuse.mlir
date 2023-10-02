@@ -47,7 +47,7 @@ module {
     %producers = transform.structured.match attributes{"__producer__"} in %arg1 : (!transform.any_op) -> !transform.any_op
 
     // Tile the root.
-    %forall_op, %tiled_op = transform.structured.tile_to_forall_op %root num_threads [10, 20]
+    %tiled_op, %forall_op = transform.structured.tile_using_forall %root num_threads [10, 20]
          : (!transform.any_op) -> (!transform.any_op, !transform.any_op)
 
     // Fuse all producers.
@@ -58,7 +58,7 @@ module {
 
 // -----
 
-// Inverse the order of the payload ops passed to the tile_to_forall_op
+// Inverse the order of the payload ops passed to the tile_using_forall
 // op. Fusion should still work.
 
 module {
@@ -107,7 +107,7 @@ module {
     %reversed_producers = transform.test_reverse_payload_ops %producers : (!transform.any_op) -> !transform.any_op
 
     // Tile the root.
-    %forall_op, %tiled_op = transform.structured.tile_to_forall_op %root num_threads [10, 20]
+    %tiled_op, %forall_op = transform.structured.tile_using_forall %root num_threads [10, 20]
          : (!transform.any_op) -> (!transform.any_op, !transform.any_op)
 
     // Fuse all producers.

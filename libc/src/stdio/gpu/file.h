@@ -11,8 +11,41 @@
 
 #include <stdio.h>
 
-namespace __llvm_libc {
+namespace LIBC_NAMESPACE {
 namespace file {
+
+enum Stream {
+  File = 0,
+  Stdin = 1,
+  Stdout = 2,
+  Stderr = 3,
+};
+
+// When copying between the client and server we need to indicate if this is one
+// of the special streams. We do this by enocding the low order bits of the
+// pointer to indicate if we need to use the host's standard stream.
+LIBC_INLINE uintptr_t from_stream(::FILE *f) {
+  if (f == stdin)
+    return reinterpret_cast<uintptr_t>(f) | Stdin;
+  if (f == stdout)
+    return reinterpret_cast<uintptr_t>(f) | Stdout;
+  if (f == stderr)
+    return reinterpret_cast<uintptr_t>(f) | Stderr;
+  return reinterpret_cast<uintptr_t>(f);
+}
+
+// Get the associated stream out of an encoded number.
+LIBC_INLINE ::FILE *to_stream(uintptr_t f) {
+  ::FILE *stream = reinterpret_cast<FILE *>(f & ~0x3ull);
+  Stream type = static_cast<Stream>(f & 0x3ull);
+  if (type == Stdin)
+    return stdin;
+  if (type == Stdout)
+    return stdout;
+  if (type == Stderr)
+    return stderr;
+  return stream;
+}
 
 template <uint16_t opcode>
 LIBC_INLINE uint64_t write_impl(::FILE *file, const void *data, size_t size) {
@@ -42,15 +75,13 @@ LIBC_INLINE uint64_t write(::FILE *f, const void *data, size_t size) {
     return write_impl<RPC_WRITE_TO_STREAM>(f, data, size);
 }
 
-template <uint16_t opcode>
 LIBC_INLINE uint64_t read_from_stream(::FILE *file, void *buf, size_t size) {
   uint64_t ret = 0;
   uint64_t recv_size;
-  rpc::Client::Port port = rpc::client.open<opcode>();
+  rpc::Client::Port port = rpc::client.open<RPC_READ_FROM_STREAM>();
   port.send([=](rpc::Buffer *buffer) {
     buffer->data[0] = size;
-    if constexpr (opcode == RPC_READ_FROM_STREAM)
-      buffer->data[1] = reinterpret_cast<uintptr_t>(file);
+    buffer->data[1] = from_stream(file);
   });
   port.recv_n(&buf, &recv_size, [&](uint64_t) { return buf; });
   port.recv([&](rpc::Buffer *buffer) { ret = buffer->data[0]; });
@@ -59,11 +90,8 @@ LIBC_INLINE uint64_t read_from_stream(::FILE *file, void *buf, size_t size) {
 }
 
 LIBC_INLINE uint64_t read(::FILE *f, void *data, size_t size) {
-  if (f == stdin)
-    return read_from_stream<RPC_READ_FROM_STDIN>(f, data, size);
-  else
-    return read_from_stream<RPC_READ_FROM_STREAM>(f, data, size);
+  return read_from_stream(f, data, size);
 }
 
 } // namespace file
-} // namespace __llvm_libc
+} // namespace LIBC_NAMESPACE

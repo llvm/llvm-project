@@ -20,7 +20,7 @@
 #include <inttypes.h>
 #include <stddef.h>
 
-namespace __llvm_libc {
+namespace LIBC_NAMESPACE {
 namespace printf_core {
 
 // These functions only work on characters that are already known to be in the
@@ -189,6 +189,6 @@ LIBC_INLINE int convert_int(Writer *writer, const FormatSection &to_conv) {
 }
 
 } // namespace printf_core
-} // namespace __llvm_libc
+} // namespace LIBC_NAMESPACE
 
 #endif // LLVM_LIBC_SRC_STDIO_PRINTF_CORE_INT_CONVERTER_H

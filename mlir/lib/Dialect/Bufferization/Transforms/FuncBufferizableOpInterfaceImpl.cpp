@@ -352,13 +352,7 @@ struct FuncOpInterface
     // TODO: func.func with multiple returns are not supported.
     if (!getAssumedUniqueReturnOp(funcOp) && !funcOp.isExternal())
       return op->emitOpError("op without unique func.return is not supported");
-    const auto &options =
-        static_cast<const OneShotBufferizationOptions &>(state.getOptions());
-    // allow-return-allocs is required for ops with multiple blocks.
-    if (options.allowReturnAllocs || funcOp.getRegion().getBlocks().size() <= 1)
-      return success();
-    return op->emitOpError(
-        "op cannot be bufferized without allow-return-allocs");
+    return success();
   }
 
   /// Rewrite function bbArgs and return values into buffer form. This function

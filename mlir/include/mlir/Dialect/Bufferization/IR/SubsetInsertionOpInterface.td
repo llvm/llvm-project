@@ -99,6 +99,42 @@ def SubsetInsertionOpInterface : OpInterface<"SubsetInsertionOpInterface"> {
             "::mlir::Value":$candidate,
             "::llvm::function_ref<bool(Value, Value)>":$equivalenceFn)
       >,
+      InterfaceMethod<
+        /*desc=*/[{
+          Return the subset of the destination tensor that this operation
+          inserts into.
+
+          Example:
+          ```
+          // SubsetOpInterface op:
+          %0 = tensor.insert_slice %t0 into %t1[%pos][5][1]
+              : tensor<5xf32> into tensor<?xf32>
+          // Subset (built by this function):
+          %1 = tensor.extract_slice %t1[%pos][5][1]
+              : tensor<?xf32> to tensor<5xf32>
+          ```
+
+          Note: Implementations do not necessarily have to build new IR. They
+          may return existing SSA values.
+        }],
+        /*retType=*/"::mlir::Value",
+        /*methodName=*/"buildSubsetExtraction",
+        /*args=*/(ins "::mlir::OpBuilder &":$builder, "Location":$loc)
+      >,
+      InterfaceMethod<
+        /*desc=*/[{
+          Return all SSA values that are needed (i.e., must be in scope) at the
+          insertion of the builder when calling `buildSubsetExtraction`. Users
+          of `buildSubsetExtraction` can use this helper method to find a
+          suitable insertion point.
+
+          Example: The SSA values needed to build the subset in the example of
+          `buildSubsetExtraction` are %t1 and %pos.
+        }],
+        /*retType=*/"::llvm::SmallVector<::mlir::Value>",
+        /*methodName=*/"getValuesNeededToBuildSubsetExtraction",
+        /*args=*/(ins)
+      >,
   ];
 
   let extraClassDeclaration = [{

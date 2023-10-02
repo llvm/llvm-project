@@ -110,6 +110,7 @@ set(files
   __algorithm/ranges_copy_n.h
   __algorithm/ranges_count.h
   __algorithm/ranges_count_if.h
+  __algorithm/ranges_ends_with.h
   __algorithm/ranges_equal.h
   __algorithm/ranges_equal_range.h
   __algorithm/ranges_fill.h
@@ -677,6 +678,7 @@ set(files
   __system_error/system_error.h
   __thread/formatter.h
   __thread/id.h
+  __thread/jthread.h
   __thread/poll_with_backoff.h
   __thread/this_thread.h
   __thread/thread.h

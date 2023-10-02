@@ -50,6 +50,7 @@
 #include "flang/Parser/parse-tree.h"
 #include "flang/Runtime/iostat.h"
 #include "flang/Semantics/runtime-type-info.h"
+#include "flang/Semantics/symbol.h"
 #include "flang/Semantics/tools.h"
 #include "mlir/Dialect/ControlFlow/IR/ControlFlowOps.h"
 #include "mlir/IR/PatternMatch.h"
@@ -111,7 +112,6 @@ struct IncrementLoopInfo {
   llvm::SmallVector<const Fortran::semantics::Symbol *> localInitSymList;
   llvm::SmallVector<const Fortran::semantics::Symbol *> sharedSymList;
   mlir::Value loopVariable = nullptr;
-  mlir::Value stepValue = nullptr; // possible uses in multiple blocks
 
   // Data members for structured loops.
   fir::DoLoopOp doLoop = nullptr;
@@ -119,6 +119,7 @@ struct IncrementLoopInfo {
   // Data members for unstructured loops.
   bool hasRealControl = false;
   mlir::Value tripVariable = nullptr;
+  mlir::Value stepVariable = nullptr;
   mlir::Block *headerBlock = nullptr; // loop entry and test block
   mlir::Block *maskBlock = nullptr;   // concurrent loop mask block
   mlir::Block *bodyBlock = nullptr;   // first loop body block
@@ -294,12 +295,15 @@ public:
     //    that they are available before lowering any function that may use
     //    them.
     bool hasMainProgram = false;
+    const Fortran::semantics::Symbol *globalOmpRequiresSymbol = nullptr;
     for (Fortran::lower::pft::Program::Units &u : pft.getUnits()) {
       std::visit(Fortran::common::visitors{
                      [&](Fortran::lower::pft::FunctionLikeUnit &f) {
                        if (f.isMainProgram())
                          hasMainProgram = true;
                        declareFunction(f);
+                       if (!globalOmpRequiresSymbol)
+                         globalOmpRequiresSymbol = f.getScope().symbol();
                      },
                      [&](Fortran::lower::pft::ModuleLikeUnit &m) {
                        lowerModuleDeclScope(m);
@@ -307,7 +311,10 @@ public:
                             m.nestedFunctions)
                          declareFunction(f);
                      },
-                     [&](Fortran::lower::pft::BlockDataUnit &b) {},
+                     [&](Fortran::lower::pft::BlockDataUnit &b) {
+                       if (!globalOmpRequiresSymbol)
+                         globalOmpRequiresSymbol = b.symTab.symbol();
+                     },
                      [&](Fortran::lower::pft::CompilerDirectiveUnit &d) {},
                  },
                  u);
@@ -352,6 +359,7 @@ public:
       });
 
     finalizeOpenACCLowering();
+    finalizeOpenMPLowering(globalOmpRequiresSymbol);
   }
 
   /// Declare a function.
@@ -698,14 +706,7 @@ public:
             return;
           }
           // deallocate allocated in createHostAssociateVarClone value
-          mlir::Value needs_dealloc =
-              fir::factory::genIsAllocatedOrAssociatedTest(*builder, loc,
-                                                           new_box);
-          builder->genIfThen(loc, needs_dealloc)
-              .genThen([&]() {
-                Fortran::lower::genDeallocateBox(*this, new_box, loc);
-              })
-              .end();
+          Fortran::lower::genDeallocateIfAllocated(*this, new_box, loc);
         },
         [&](const auto &) -> void {
           // Do nothing
@@ -808,16 +809,16 @@ public:
   genLocation(const Fortran::parser::CharBlock &block) override final {
     if (const Fortran::parser::AllCookedSources *cooked =
             bridge.getCookedSource()) {
-      if (std::optional<std::pair<Fortran::parser::SourcePosition,
-                                  Fortran::parser::SourcePosition>>
-              loc = cooked->GetSourcePositionRange(block)) {
-        // loc is a pair (begin, end); use the beginning position
-        Fortran::parser::SourcePosition &filePos = loc->first;
-        llvm::SmallString<256> filePath(*filePos.path);
-        llvm::sys::fs::make_absolute(filePath);
-        llvm::sys::path::remove_dots(filePath);
-        return mlir::FileLineColLoc::get(&getMLIRContext(), filePath.str(),
-                                         filePos.line, filePos.column);
+      if (std::optional<Fortran::parser::ProvenanceRange> provenance =
+              cooked->GetProvenanceRange(block)) {
+        if (std::optional<Fortran::parser::SourcePosition> filePos =
+                cooked->allSources().GetSourcePosition(provenance->start())) {
+          llvm::SmallString<256> filePath(*filePos->path);
+          llvm::sys::fs::make_absolute(filePath);
+          llvm::sys::path::remove_dots(filePath);
+          return mlir::FileLineColLoc::get(&getMLIRContext(), filePath.str(),
+                                           filePos->line, filePos->column);
+        }
       }
     }
     return genUnknownLocation();
@@ -847,6 +848,11 @@ public:
   std::string mangleName(std::string &name) override final {
     return Fortran::lower::mangle::mangleName(name, getCurrentScope(),
                                               scopeBlockIdMap);
+  }
+  std::string getRecordTypeFieldName(
+      const Fortran::semantics::Symbol &component) override final {
+    return Fortran::lower::mangle::getRecordTypeFieldName(component,
+                                                          scopeBlockIdMap);
   }
   const fir::KindMapping &getKindMap() override final {
     return bridge.getKindMap();
@@ -1005,7 +1011,9 @@ private:
     if (!forced && lookupSymbol(sym))
       return false;
     if (lowerToHighLevelFIR()) {
-      Fortran::lower::genDeclareSymbol(*this, localSymbols, sym, val, forced);
+      Fortran::lower::genDeclareSymbol(*this, localSymbols, sym, val,
+                                       fir::FortranVariableFlagsEnum::None,
+                                       forced);
     } else {
       localSymbols.addSymbol(sym, val, forced);
     }
@@ -1723,29 +1731,45 @@ private:
     genFIR(endDoEval, unstructuredContext);
   }
 
+  /// Generate FIR to evaluate loop control values (lower, upper and step).
+  mlir::Value genControlValue(const Fortran::lower::SomeExpr *expr,
+                              const IncrementLoopInfo &info,
+                              bool *isConst = nullptr) {
+    mlir::Location loc = toLocation();
+    mlir::Type controlType = info.isStructured() ? builder->getIndexType()
+                                                 : info.getLoopVariableType();
+    Fortran::lower::StatementContext stmtCtx;
+    if (expr) {
+      if (isConst)
+        *isConst = Fortran::evaluate::IsConstantExpr(*expr);
+      return builder->createConvert(loc, controlType,
+                                    createFIRExpr(loc, expr, stmtCtx));
+    }
+
+    if (isConst)
+      *isConst = true;
+    if (info.hasRealControl)
+      return builder->createRealConstant(loc, controlType, 1u);
+    return builder->createIntegerConstant(loc, controlType, 1); // step
+  }
+
   /// Generate FIR to begin a structured or unstructured increment loop nest.
   void genFIRIncrementLoopBegin(IncrementLoopNestInfo &incrementLoopNestInfo) {
     assert(!incrementLoopNestInfo.empty() && "empty loop nest");
     mlir::Location loc = toLocation();
-    auto genControlValue = [&](const Fortran::lower::SomeExpr *expr,
-                               const IncrementLoopInfo &info) {
-      mlir::Type controlType = info.isStructured() ? builder->getIndexType()
-                                                   : info.getLoopVariableType();
-      Fortran::lower::StatementContext stmtCtx;
-      if (expr)
-        return builder->createConvert(loc, controlType,
-                                      createFIRExpr(loc, expr, stmtCtx));
-
-      if (info.hasRealControl)
-        return builder->createRealConstant(loc, controlType, 1u);
-      return builder->createIntegerConstant(loc, controlType, 1); // step
-    };
     for (IncrementLoopInfo &info : incrementLoopNestInfo) {
       info.loopVariable =
           genLoopVariableAddress(loc, info.loopVariableSym, info.isUnordered);
       mlir::Value lowerValue = genControlValue(info.lowerExpr, info);
       mlir::Value upperValue = genControlValue(info.upperExpr, info);
-      info.stepValue = genControlValue(info.stepExpr, info);
+      bool isConst = true;
+      mlir::Value stepValue = genControlValue(
+          info.stepExpr, info, info.isStructured() ? nullptr : &isConst);
+      // Use a temp variable for unstructured loops with non-const step.
+      if (!isConst) {
+        info.stepVariable = builder->createTemporary(loc, stepValue.getType());
+        builder->create<fir::StoreOp>(loc, stepValue, info.stepVariable);
+      }
 
       // Structured loop - generate fir.do_loop.
       if (info.isStructured()) {
@@ -1754,14 +1778,14 @@ private:
         if (info.isUnordered) {
           // The loop variable value is explicitly updated.
           info.doLoop = builder->create<fir::DoLoopOp>(
-              loc, lowerValue, upperValue, info.stepValue, /*unordered=*/true);
+              loc, lowerValue, upperValue, stepValue, /*unordered=*/true);
           builder->setInsertionPointToStart(info.doLoop.getBody());
           loopValue = builder->createConvert(loc, loopVarType,
                                              info.doLoop.getInductionVar());
         } else {
           // The loop variable is a doLoop op argument.
           info.doLoop = builder->create<fir::DoLoopOp>(
-              loc, lowerValue, upperValue, info.stepValue, /*unordered=*/false,
+              loc, lowerValue, upperValue, stepValue, /*unordered=*/false,
               /*finalCountValue=*/true,
               builder->createConvert(loc, loopVarType, lowerValue));
           builder->setInsertionPointToStart(info.doLoop.getBody());
@@ -1790,18 +1814,17 @@ private:
         auto diff1 =
             builder->create<mlir::arith::SubFOp>(loc, upperValue, lowerValue);
         auto diff2 =
-            builder->create<mlir::arith::AddFOp>(loc, diff1, info.stepValue);
-        tripCount =
-            builder->create<mlir::arith::DivFOp>(loc, diff2, info.stepValue);
+            builder->create<mlir::arith::AddFOp>(loc, diff1, stepValue);
+        tripCount = builder->create<mlir::arith::DivFOp>(loc, diff2, stepValue);
         tripCount =
             builder->createConvert(loc, builder->getIndexType(), tripCount);
       } else {
         auto diff1 =
             builder->create<mlir::arith::SubIOp>(loc, upperValue, lowerValue);
         auto diff2 =
-            builder->create<mlir::arith::AddIOp>(loc, diff1, info.stepValue);
+            builder->create<mlir::arith::AddIOp>(loc, diff1, stepValue);
         tripCount =
-            builder->create<mlir::arith::DivSIOp>(loc, diff2, info.stepValue);
+            builder->create<mlir::arith::DivSIOp>(loc, diff2, stepValue);
       }
       if (forceLoopToExecuteOnce) { // minimum tripCount is 1
         mlir::Value one =
@@ -1889,12 +1912,15 @@ private:
       tripCount = builder->create<mlir::arith::SubIOp>(loc, tripCount, one);
       builder->create<fir::StoreOp>(loc, tripCount, info.tripVariable);
       mlir::Value value = builder->create<fir::LoadOp>(loc, info.loopVariable);
-      if (info.hasRealControl)
-        value =
-            builder->create<mlir::arith::AddFOp>(loc, value, info.stepValue);
+      mlir::Value step;
+      if (info.stepVariable)
+        step = builder->create<fir::LoadOp>(loc, info.stepVariable);
       else
-        value =
-            builder->create<mlir::arith::AddIOp>(loc, value, info.stepValue);
+        step = genControlValue(info.stepExpr, info);
+      if (info.hasRealControl)
+        value = builder->create<mlir::arith::AddFOp>(loc, value, step);
+      else
+        value = builder->create<mlir::arith::AddIOp>(loc, value, step);
       builder->create<fir::StoreOp>(loc, value, info.loopVariable);
 
       genBranch(info.headerBlock);
@@ -2305,7 +2331,7 @@ private:
   void genFIR(const Fortran::parser::OpenMPConstruct &omp) {
     mlir::OpBuilder::InsertPoint insertPt = builder->saveInsertionPoint();
     localSymbols.pushScope();
-    genOpenMPConstruct(*this, getEval(), omp);
+    genOpenMPConstruct(*this, bridge.getSemanticsContext(), getEval(), omp);
 
     const Fortran::parser::OpenMPLoopConstruct *ompLoop =
         std::get_if<Fortran::parser::OpenMPLoopConstruct>(&omp.u);
@@ -2347,10 +2373,19 @@ private:
 
     localSymbols.popScope();
     builder->restoreInsertionPoint(insertPt);
+
+    // Register if a target region was found
+    ompDeviceCodeFound =
+        ompDeviceCodeFound || Fortran::lower::isOpenMPTargetConstruct(omp);
   }
 
   void genFIR(const Fortran::parser::OpenMPDeclarativeConstruct &ompDecl) {
     mlir::OpBuilder::InsertPoint insertPt = builder->saveInsertionPoint();
+    // Register if a declare target construct intended for a target device was
+    // found
+    ompDeviceCodeFound =
+        ompDeviceCodeFound ||
+        Fortran::lower::isOpenMPDeviceDeclareTarget(*this, getEval(), ompDecl);
     genOpenMPDeclarativeConstruct(*this, getEval(), ompDecl);
     for (Fortran::lower::pft::Evaluation &e : getEval().getNestedEvaluations())
       genFIR(e);
@@ -4758,6 +4793,16 @@ private:
                                                      accRoutineInfos);
   }
 
+  /// Performing OpenMP lowering actions that were deferred to the end of
+  /// lowering.
+  void finalizeOpenMPLowering(
+      const Fortran::semantics::Symbol *globalOmpRequiresSymbol) {
+    // Set the module attribute related to OpenMP requires directives
+    if (ompDeviceCodeFound)
+      Fortran::lower::genOpenMPRequires(getModuleOp().getOperation(),
+                                        globalOmpRequiresSymbol);
+  }
+
   //===--------------------------------------------------------------------===//
 
   Fortran::lower::LoweringBridge &bridge;
@@ -4804,6 +4849,10 @@ private:
 
   /// Deferred OpenACC routine attachment.
   Fortran::lower::AccRoutineInfoMappingList accRoutineInfos;
+
+  /// Whether an OpenMP target region or declare target function/subroutine
+  /// intended for device offloading has been detected
+  bool ompDeviceCodeFound = false;
 };
 
 } // namespace

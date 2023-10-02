@@ -40,15 +40,6 @@ lld:
 llvm-lit:
   - llvm/utils/lit/**/*
 
-mlir:afine:
-  - mlir/**/Affine/**/*
-
-mlir:python:
-  - mlir/python/**/*
-
-mlir:vectorops:
-  - mlir/**/Vector/**/*
-
 PGO:
   - llvm/lib/Transforms/Instrumentation/CGProfile.cpp
   - llvm/lib/Transforms/Instrumentation/ControlHeightReduction.cpp
@@ -90,6 +81,10 @@ compiler-rt:sanitizer:
   - compiler-rt/lib/scudo/**
   - compiler-rt/test/scudo/**
 
+compiler-rt:scudo:
+  - compiler-rt/lib/scudo/**
+  - compiler-rt/test/scudo/**
+
 xray:
   - llvm/tools/llvm-xray/**
   - compiler-rt/*/xray/**
@@ -110,16 +105,26 @@ mlir:
   - mlir/**
 
 mlir:core:
-  - mlir/**/Support/**
-  - mlir/**/Parser/**
-  - mlir/**/IR/**
-  - mlir/**/Bytecode/**
-  - mlir/**/AsmParser/**
-  - mlir/**/Pass/**
-  - mlir/**/tools/**
-  - mlir/**/Reducer/**
-  - mlir/**/Transforms/**
-  - mlir/**/Debug/**
+  - mlir/include/mlir/Support/**
+  - mlir/lib/Support/**
+  - mlir/include/mlir/Parser/**
+  - mlir/lib/Parser/**
+  - mlir/include/mlir/IR/**
+  - mlir/lib/IR/**
+  - mlir/include/mlir/Bytecode/**
+  - mlir/lib/Bytecode/**
+  - mlir/include/mlir/AsmParser/**
+  - mlir/lib/AsmParser/**
+  - mlir/include/mlir/Pass/**
+  - mlir/lib/Pass/**
+  - mlir/include/mlir/Tools/**
+  - mlir/lib/Tools/**
+  - mlir/include/mlir/Reducer/**
+  - mlir/lib/Reducer/**
+  - mlir/include/mlir/Transforms/**
+  - mlir/lib/Transforms/**
+  - mlir/include/mlir/Debug/**
+  - mlir/lib/Debug/**
   - mlir/tools/**
 
 mlir:ods:
@@ -172,6 +177,7 @@ mlir:dlti:
 
 mlir:emitc:
   - mlir/**/EmitC/**
+  - mlir/lib/Target/Cpp/**
 
 mlir:func:
   - mlir/**/Func/**
@@ -183,7 +189,8 @@ mlir:index:
   - mlir/**/Index/**
 
 mlir:llvm:
-  - mlir/**/LLVM/**
+  - mlir/**/LLVM*
+  - mlir/**/LLVM*/**
 
 mlir:linalg:
   - mlir/**/*linalg/**
@@ -220,6 +227,11 @@ mlir:scf:
 
 mlir:spirv:
   - mlir/**/SPIRV/**
+  - mlir/**/SPIRVTo*/**
+  - mlir/**/*ToSPIRV/**
+  - mlir/tools/mlir-spirv-cpu-runner/**
+  - mlir/tools/mlir-vulkan-runner/**
+  - mlir/tools/mlir-tblgen/SPIRVUtilsGen.cpp
 
 mlir:shape:
   - mlir/**/Shape/**
@@ -241,6 +253,15 @@ mlir:vector:
 
 mlir:execution-engine:
   - mlir/**/ExecutionEngine/**
+
+mlir:presburger:
+  - mlir/**/*Presburger*/**
+
+mlir:python:
+  - mlir/python/**/*
+
+mlir:vectorops:
+  - mlir/**/Vector/**/*
 
 coroutines:
   - clang/docs/DebuggingCoroutines.rst
@@ -288,12 +309,11 @@ tools:llvm-mca:
   - llvm/include/llvm/MCA/**
   - llvm/lib/MCA/**
 
-vectorizers:
-  - llvm/lib/Transforms/Vectorize/**
-  - llvm/include/llvm/Transforms/Vectorize/**
-
 clang:
-  - clang/**
+  - any:
+    - clang/**
+    - '!clang/**/Format/**'
+    - '!clang/tools/clang-format/**'
 
 testing-tools:
   - llvm/include/llvm/FileCheck/**
@@ -360,6 +380,11 @@ debuginfo:
 github:workflow:
   - .github/workflows/**
 
+cmake:
+  - cmake/**
+  - llvm/cmake/**
+  - runtimes/**
+
 flang:driver:
   - flang/tools/flang-driver/**
   - flang/unittests/Frontend/**
@@ -379,15 +404,12 @@ backend:m68k:
 
 libc++:
   - libcxx/**
-  - runtimes/**
 
 libc++abi:
   - libcxxabi/**
-  - runtimes/**
 
 libunwind:
   - libunwind/**
-  - runtimes/**
 
 objectyaml:
   - llvm/include/llvm/ObjectYAML/**
@@ -493,14 +515,25 @@ llvm:ir:
   - llvm/lib/IR/**
   - llvm/include/llvm/IR/**
   - llvm/docs/LangRef.rst
+  - llvm/unittests/IR/**
 
 llvm:analysis:
   - llvm/lib/Analysis/**
   - llvm/include/llvm/Analysis/**
+  - llvm/test/Analysis/**
+  - llvm/unittests/Analysis/**
+
+llvm:adt:
+  - llvm/**/ADT/*
+
+llvm:support:
+  - llvm/**/Support/**
 
 llvm:transforms:
   - llvm/lib/Transforms/**
   - llvm/include/llvm/Transforms/**
+  - llvm/test/Transforms/**
+  - llvm/unittests/Transforms/**
 
 clangd:
   - clang-tools-extra/clangd/**
@@ -533,12 +566,19 @@ llvm:SelectionDAG:
   - llvm/include/llvm/CodeGen/ISDOpcodes.h
 
 backend:DirectX:
-  - llvm/lib/Target/DirectX/**
-  - llvm/test/CodeGen/DirectX/**
-  - llvm/tools/dxil-dis
-  - llvm/test/tools/dxil-dis
-  - clang/lib/Basic/Targets/DirectX*
-  - llvm/include/llvm/IR/IntrinsicsDirectX.td
+  - '**/*DirectX*'
+  - '**/*DXIL*'
+  - '**/*dxil*'
+  - '**/*DirectX*/**'
+  - '**/*DXIL*/**'
+  - '**/*dxil*/**'
+
+backend:SPIR-V:
+  - clang/lib/Driver/ToolChains/SPIRV.*
+  - llvm/lib/Target/SPIRV/**
+  - llvm/test/CodeGen/SPIRV/**
+  - llvm/test/Frontend/HLSL/**
+  - llvm/docs/SPIRVUsage.rst
 
 mlgo:
   - llvm/lib/Analysis/ML*
@@ -592,9 +632,6 @@ llvm:regalloc:
   - llvm/include/PBQPRAConstraint.h
   - llvm/include/llvm/CodeGen/Spiller.h
   - llvm/**/*RegAlloc
-
-mlir:presburger:
-  - mlir/**/*Presburger
 
 lldb:
   - lldb/**
@@ -727,3 +764,33 @@ backend:X86:
 
 third-party:unittests:
   - third-party/unittests/**
+
+llvm:binary-utilities:
+  - llvm/docs/CommandGuide/llvm-*
+  - llvm/include/llvm/BinaryFormat/**
+  - llvm/include/llvm/DebugInfo/Symbolize/**
+  - llvm/include/llvm/ObjCopy/**
+  - llvm/include/llvm/Object/**
+  - llvm/lib/BinaryFormat/**
+  - llvm/lib/DebugInfo/Symbolize/**
+  - llvm/lib/ObjCopy/**
+  - llvm/lib/Object/**
+  - llvm/test/Object/**
+  - llvm/test/tools/llvm-ar/**
+  - llvm/test/tools/llvm-cxxfilt/**
+  - llvm/test/tools/llvm-nm/**
+  - llvm/test/tools/llvm-objcopy/**
+  - llvm/test/tools/llvm-objdump/**
+  - llvm/test/tools/llvm-readobj/**
+  - llvm/test/tools/llvm-size/**
+  - llvm/test/tools/llvm-strings/**
+  - llvm/test/tools/llvm-symbolizer/**
+  - llvm/tools/llvm-ar/**
+  - llvm/tools/llvm-cxxfilt/**
+  - llvm/tools/llvm-nm/**
+  - llvm/tools/llvm-objcopy/**
+  - llvm/tools/llvm-objdump/**
+  - llvm/tools/llvm-readobj/**
+  - llvm/tools/llvm-size/**
+  - llvm/tools/llvm-strings/**
+  - llvm/tools/llvm-symbolizer/**

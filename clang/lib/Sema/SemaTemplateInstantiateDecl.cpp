@@ -302,7 +302,15 @@ static void instantiateDependentCUDALaunchBoundsAttr(
     MinBlocks = Result.getAs<Expr>();
   }
 
-  S.AddLaunchBoundsAttr(New, Attr, MaxThreads, MinBlocks);
+  Expr *MaxBlocks = nullptr;
+  if (Attr.getMaxBlocks()) {
+    Result = S.SubstExpr(Attr.getMaxBlocks(), TemplateArgs);
+    if (Result.isInvalid())
+      return;
+    MaxBlocks = Result.getAs<Expr>();
+  }
+
+  S.AddLaunchBoundsAttr(New, Attr, MaxThreads, MinBlocks, MaxBlocks);
 }
 
 static void
@@ -4426,7 +4434,7 @@ TemplateDeclInstantiator::SubstFunctionType(FunctionDecl *D,
   Qualifiers ThisTypeQuals;
   if (CXXMethodDecl *Method = dyn_cast<CXXMethodDecl>(D)) {
     ThisContext = cast<CXXRecordDecl>(Owner);
-    ThisTypeQuals = Method->getMethodQualifiers();
+    ThisTypeQuals = Method->getFunctionObjectParameterType().getQualifiers();
   }
 
   TypeSourceInfo *NewTInfo = SemaRef.SubstFunctionDeclType(
@@ -4990,8 +4998,10 @@ void Sema::InstantiateFunctionDefinition(SourceLocation PointOfInstantiation,
   // unimported module.
   Function->setVisibleDespiteOwningModule();
 
-  // Copy the inner loc start from the pattern.
+  // Copy the source locations from the pattern.
+  Function->setLocation(PatternDecl->getLocation());
   Function->setInnerLocStart(PatternDecl->getInnerLocStart());
+  Function->setRangeEnd(PatternDecl->getEndLoc());
 
   EnterExpressionEvaluationContext EvalContext(
       *this, Sema::ExpressionEvaluationContext::PotentiallyEvaluated);

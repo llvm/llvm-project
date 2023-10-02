@@ -431,6 +431,9 @@ def warn_drv_overriding_option : Warning<
 def warn_drv_treating_input_as_cxx : Warning<
   "treating '%0' input as '%1' when in C++ mode, this behavior is deprecated">,
   InGroup<Deprecated>;
+def warn_drv_include_probe_gch : Warning<
+  "'%0' probing .gch is deprecated. Use '-include-pch %1' or switch to .pch instead">,
+  InGroup<DeprecatedIncludeGch>;
 def warn_drv_pch_not_first_include : Warning<
   "precompiled header '%0' was ignored because '%1' is not first '-include'">;
 def warn_missing_sysroot : Warning<"no such sysroot directory: '%0'">,
@@ -453,6 +456,9 @@ def warn_unsupported_branch_protection: Warning <
   "invalid branch protection option '%0' in '%1'">, InGroup<BranchProtection>;
 def err_sls_hardening_arm_not_supported : Error<
   "-mharden-sls is only supported on armv7-a or later">;
+def warn_drv_large_data_threshold_invalid_code_model: Warning<
+  "'%0' only applies to medium code model">,
+  InGroup<UnusedCommandLineArgument>;
 
 def note_drv_command_failed_diag_msg : Note<
   "diagnostic msg: %0">;
@@ -674,6 +680,9 @@ def err_cc1_round_trip_mismatch : Error<
 def err_cc1_unbounded_vscale_min : Error<
   "minimum vscale must be an unsigned integer greater than 0">;
 
+def err_drv_using_omit_rtti_component_without_no_rtti : Error<
+  "-fexperimental-omit-vtable-rtti call only be used with -fno-rtti">;
+
 def err_drv_ssp_missing_offset_argument : Error<
   "'%0' is used without '-mstack-protector-guard-offset', and there is no default">;
 
@@ -746,4 +755,10 @@ def warn_drv_missing_multilib : Warning<
   InGroup<DiagGroup<"missing-multilib">>;
 def note_drv_available_multilibs : Note<
   "available multilibs are:%0">;
+
+def warn_android_unversioned_fallback : Warning<
+  "Using unversioned Android target directory %0 for target %1. Unversioned"
+  " directories will not be used in Clang 19. Provide a versioned directory"
+  " for the target version or lower instead.">,
+  InGroup<DiagGroup<"android-unversioned-fallback">>;
 }

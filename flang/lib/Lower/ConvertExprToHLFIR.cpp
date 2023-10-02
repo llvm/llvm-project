@@ -742,7 +742,7 @@ private:
     assert(
         !componentSym.test(Fortran::semantics::Symbol::Flag::ParentComp) &&
         "parent components are skipped and must not reach visitComponentImpl");
-    partInfo.componentName = componentSym.name().ToString();
+    partInfo.componentName = converter.getRecordTypeFieldName(componentSym);
     auto recordType =
         hlfir::getFortranElementType(baseType).cast<fir::RecordType>();
     if (recordType.isDependentType())
@@ -1721,7 +1721,7 @@ private:
     for (const auto &value : ctor.values()) {
       const Fortran::semantics::Symbol &sym = *value.first;
       const Fortran::lower::SomeExpr &expr = value.second.value();
-      llvm::StringRef name = toStringRef(sym.name());
+      std::string name = converter.getRecordTypeFieldName(sym);
       if (sym.test(Fortran::semantics::Symbol::Flag::ParentComp)) {
         const Fortran::semantics::DeclTypeSpec *declTypeSpec = sym.GetType();
         assert(declTypeSpec && declTypeSpec->AsDerived() &&

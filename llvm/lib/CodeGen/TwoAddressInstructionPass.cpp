@@ -95,7 +95,7 @@ class TwoAddressInstructionPass : public MachineFunctionPass {
   LiveVariables *LV = nullptr;
   LiveIntervals *LIS = nullptr;
   AliasAnalysis *AA = nullptr;
-  CodeGenOpt::Level OptLevel = CodeGenOpt::None;
+  CodeGenOptLevel OptLevel = CodeGenOptLevel::None;
 
   // The current basic block being processed.
   MachineBasicBlock *MBB = nullptr;
@@ -551,7 +551,7 @@ bool TwoAddressInstructionPass::isProfitableToCommute(Register RegA,
                                                       Register RegC,
                                                       MachineInstr *MI,
                                                       unsigned Dist) {
-  if (OptLevel == CodeGenOpt::None)
+  if (OptLevel == CodeGenOptLevel::None)
     return false;
 
   // Determine if it's profitable to commute this two address instruction. In
@@ -1231,7 +1231,7 @@ tryInstructionTransform(MachineBasicBlock::iterator &mi,
                         MachineBasicBlock::iterator &nmi,
                         unsigned SrcIdx, unsigned DstIdx,
                         unsigned &Dist, bool shouldOnlyCommute) {
-  if (OptLevel == CodeGenOpt::None)
+  if (OptLevel == CodeGenOptLevel::None)
     return false;
 
   MachineInstr &MI = *mi;
@@ -1566,7 +1566,7 @@ TwoAddressInstructionPass::processTiedPairs(MachineInstr *MI,
     MachineOperand &MO = MI->getOperand(SrcIdx);
     assert(MO.isReg() && MO.getReg() == RegB && MO.isUse() &&
            "inconsistent operand info for 2-reg pass");
-    if (MO.isKill()) {
+    if (isPlainlyKilled(MO)) {
       MO.setIsKill(false);
       RemovedKillFlag = true;
     }
@@ -1587,7 +1587,7 @@ TwoAddressInstructionPass::processTiedPairs(MachineInstr *MI,
     for (MachineOperand &MO : MI->all_uses()) {
       if (MO.getReg() == RegB) {
         if (MO.getSubReg() == SubRegB && !IsEarlyClobber) {
-          if (MO.isKill()) {
+          if (isPlainlyKilled(MO)) {
             MO.setIsKill(false);
             RemovedKillFlag = true;
           }
@@ -1757,7 +1757,7 @@ bool TwoAddressInstructionPass::runOnMachineFunction(MachineFunction &Func) {
   // Disable optimizations if requested. We cannot skip the whole pass as some
   // fixups are necessary for correctness.
   if (skipFunction(Func.getFunction()))
-    OptLevel = CodeGenOpt::None;
+    OptLevel = CodeGenOptLevel::None;
 
   bool MadeChange = false;
 
@@ -1868,12 +1868,16 @@ bool TwoAddressInstructionPass::runOnMachineFunction(MachineFunction &Func) {
             // %reg.subidx.
             LaneBitmask LaneMask =
                 TRI->getSubRegIndexLaneMask(mi->getOperand(0).getSubReg());
-            SlotIndex Idx = LIS->getInstructionIndex(*mi);
+            SlotIndex Idx = LIS->getInstructionIndex(*mi).getRegSlot();
             for (auto &S : LI.subranges()) {
               if ((S.LaneMask & LaneMask).none()) {
-                LiveRange::iterator UseSeg = S.FindSegmentContaining(Idx);
-                LiveRange::iterator DefSeg = std::next(UseSeg);
-                S.MergeValueNumberInto(DefSeg->valno, UseSeg->valno);
+                LiveRange::iterator DefSeg = S.FindSegmentContaining(Idx);
+                if (mi->getOperand(0).isUndef()) {
+                  S.removeValNo(DefSeg->valno);
+                } else {
+                  LiveRange::iterator UseSeg = std::prev(DefSeg);
+                  S.MergeValueNumberInto(DefSeg->valno, UseSeg->valno);
+                }
               }
             }
 

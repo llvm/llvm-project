@@ -196,26 +196,17 @@ minSMLoc(AsmParser &parser, llvm::SMLoc sm1, llvm::SMLoc sm2) {
   return pair1 <= pair2 ? sm1 : sm2;
 }
 
-LLVM_ATTRIBUTE_UNUSED static void
-assertInternalConsistency(VarEnv const &env, VarInfo::ID id, StringRef name) {
-#ifndef NDEBUG
+bool isInternalConsistent(VarEnv const &env, VarInfo::ID id, StringRef name) {
   const auto &var = env.access(id);
-  assert(var.getName() == name && "found inconsistent name");
-  assert(var.getID() == id && "found inconsistent VarInfo::ID");
-#endif // NDEBUG
+  return (var.getName() == name && var.getID() == id);
 }
 
 // NOTE(wrengr): if we can actually obtain an `AsmParser` for `minSMLoc`
 // (or find some other way to convert SMLoc to FileLineColLoc), then this
 // would no longer be `const VarEnv` (and couldn't be a free-function either).
-LLVM_ATTRIBUTE_UNUSED static void assertUsageConsistency(VarEnv const &env,
-                                                         VarInfo::ID id,
-                                                         llvm::SMLoc loc,
-                                                         VarKind vk) {
-#ifndef NDEBUG
+bool isUsageConsistent(VarEnv const &env, VarInfo::ID id, llvm::SMLoc loc,
+                       VarKind vk) {
   const auto &var = env.access(id);
-  assert(var.getKind() == vk &&
-         "a variable of that name already exists with a different VarKind");
   // Since the same variable can occur at several locations,
   // it would not be appropriate to do `assert(var.getLoc() == loc)`.
   /* TODO(wrengr):
@@ -223,7 +214,7 @@ LLVM_ATTRIBUTE_UNUSED static void assertUsageConsistency(VarEnv const &env,
   assert(minLoc && "Location mismatch/incompatibility");
   var.loc = minLoc;
   // */
-#endif // NDEBUG
+  return var.getKind() == vk;
 }
 
 std::optional<VarInfo::ID> VarEnv::lookup(StringRef name) const {
@@ -236,24 +227,23 @@ std::optional<VarInfo::ID> VarEnv::lookup(StringRef name) const {
   if (iter == ids.end())
     return std::nullopt;
   const auto id = iter->second;
-#ifndef NDEBUG
-  assertInternalConsistency(*this, id, name);
-#endif // NDEBUG
+  if (!isInternalConsistent(*this, id, name))
+    return std::nullopt;
   return id;
 }
 
-std::pair<VarInfo::ID, bool> VarEnv::create(StringRef name, llvm::SMLoc loc,
-                                            VarKind vk, bool verifyUsage) {
+std::optional<std::pair<VarInfo::ID, bool>>
+VarEnv::create(StringRef name, llvm::SMLoc loc, VarKind vk, bool verifyUsage) {
   const auto &[iter, didInsert] = ids.try_emplace(name, nextID());
   const auto id = iter->second;
   if (didInsert) {
     vars.emplace_back(id, name, loc, vk);
   } else {
-#ifndef NDEBUG
-    assertInternalConsistency(*this, id, name);
-    if (verifyUsage)
-      assertUsageConsistency(*this, id, loc, vk);
-#endif // NDEBUG
+  if (!isInternalConsistent(*this, id, name))
+    return std::nullopt;
+  if (verifyUsage)
+    if (!isUsageConsistent(*this, id, loc, vk))
+      return std::nullopt;
   }
   return std::make_pair(id, didInsert);
 }
@@ -265,20 +255,18 @@ VarEnv::lookupOrCreate(Policy creationPolicy, StringRef name, llvm::SMLoc loc,
   case Policy::MustNot: {
     const auto oid = lookup(name);
     if (!oid)
-      return std::nullopt; // Doesn't exist, but must not create.
-#ifndef NDEBUG
-    assertUsageConsistency(*this, *oid, loc, vk);
-#endif // NDEBUG
+      return std::nullopt;  // Doesn't exist, but must not create.
+    if (!isUsageConsistent(*this, *oid, loc, vk))
+      return std::nullopt;
     return std::make_pair(*oid, false);
   }
   case Policy::May:
     return create(name, loc, vk, /*verifyUsage=*/true);
   case Policy::Must: {
     const auto res = create(name, loc, vk, /*verifyUsage=*/false);
-    // const auto id = res.first;
-    const auto didCreate = res.second;
+    const auto didCreate = res->second;
     if (!didCreate)
-      return std::nullopt; // Already exists, but must create.
+      return std::nullopt;  // Already exists, but must create.
     return res;
   }
   }

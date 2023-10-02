@@ -12,7 +12,7 @@
 #include "src/__support/FPUtil/triple_double.h"
 #include "src/__support/number_pair.h"
 
-namespace __llvm_libc {
+namespace LIBC_NAMESPACE {
 
 // Lookup table for (1/f) where f = 1 + n*2^(-7), n = 0..127.
 extern const double ONE_OVER_F[128];
@@ -72,6 +72,6 @@ extern const fputil::TripleDouble EXP2_MID1[64];
 // Lookup table for 2^(k * 2^-12) with k = 0..63.
 extern const fputil::TripleDouble EXP2_MID2[64];
 
-} // namespace __llvm_libc
+} // namespace LIBC_NAMESPACE
 
 #endif // LLVM_LIBC_SRC_MATH_GENERIC_COMMON_CONSTANTS_H

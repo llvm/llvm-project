@@ -187,20 +187,9 @@ LogicalResult AllocTensorOp::bufferize(RewriterBase &rewriter,
       return failure();
   }
 
-  // Should the buffer be deallocated?
-  bool dealloc =
-      shouldDeallocateOpResult(llvm::cast<OpResult>(getResult()), options);
-
   // Replace op.
   replaceOpWithBufferizedValues(rewriter, getOperation(), *alloc);
 
-  // Create buffer deallocation (if requested).
-  if (!dealloc)
-    return success();
-
-  rewriter.setInsertionPoint(rewriter.getInsertionBlock()->getTerminator());
-  if (failed(options.createDealloc(rewriter, loc, *alloc)))
-    return failure();
   return success();
 }
 
@@ -537,8 +526,7 @@ LogicalResult DeallocTensorOp::bufferize(RewriterBase &rewriter,
   FailureOr<Value> buffer = getBuffer(rewriter, getTensor(), options);
   if (failed(buffer))
     return failure();
-  if (failed(options.createDealloc(rewriter, getLoc(), *buffer)))
-    return failure();
+  rewriter.create<memref::DeallocOp>(getLoc(), *buffer);
   rewriter.eraseOp(getOperation());
   return success();
 }
@@ -549,22 +537,18 @@ LogicalResult DeallocTensorOp::bufferize(RewriterBase &rewriter,
 
 bool MaterializeInDestinationOp::bufferizesToMemoryRead(
     OpOperand &opOperand, const AnalysisState &state) {
-  if (&opOperand == &getOperation()->getOpOperand(0) /*source*/)
-    return true;
-  return false;
+  return &opOperand == &getSourceMutable()[0];
 }
 
 bool MaterializeInDestinationOp::bufferizesToMemoryWrite(
     OpOperand &opOperand, const AnalysisState &state) {
-  if (&opOperand == &getOperation()->getOpOperand(1) /*dest*/)
-    return true;
-  return false;
+  return &opOperand == &getDestMutable()[0];
 }
 
 AliasingValueList
 MaterializeInDestinationOp::getAliasingValues(OpOperand &opOperand,
                                               const AnalysisState &state) {
-  if (&opOperand == &getOperation()->getOpOperand(1) /*dest*/)
+  if (&opOperand == &getDestMutable()[0])
     return {{getOperation()->getResult(0), BufferRelation::Equivalent}};
   return {};
 }
@@ -580,11 +564,38 @@ MaterializeInDestinationOp::bufferize(RewriterBase &rewriter,
   return success();
 }
 
+bool MaterializeInDestinationOp::bufferizesToElementwiseAccess(
+    const AnalysisState &state, ArrayRef<OpOperand *> opOperands) {
+  // As elements are copied from the "source" buffer to the "dest" buffer,
+  // already copied elements are not read a second time.
+  return true;
+}
+
 LogicalResult MaterializeInDestinationOp::reifyResultShapes(
     OpBuilder &builder, ReifiedRankedShapedTypeDims &reifiedReturnShapes) {
   reifiedReturnShapes.resize(1, SmallVector<OpFoldResult>(getType().getRank()));
   reifiedReturnShapes[0] = tensor::getMixedSizes(builder, getLoc(), getDest());
   return success();
+}
+
+Value MaterializeInDestinationOp::buildSubsetExtraction(OpBuilder &builder,
+                                                        Location loc) {
+  // The subset is the entire destination tensor.
+  return getDest();
+}
+
+bool MaterializeInDestinationOp::isEquivalentSubset(
+    Value candidate, function_ref<bool(Value, Value)> equivalenceFn) {
+  return equivalenceFn(getDest(), candidate);
+}
+
+SmallVector<Value>
+MaterializeInDestinationOp::getValuesNeededToBuildSubsetExtraction() {
+  return {getDest()};
+}
+
+OpOperand &MaterializeInDestinationOp::getSourceOperand() {
+  return getOperation()->getOpOperand(0) /*source*/;
 }
 
 //===----------------------------------------------------------------------===//
@@ -753,6 +764,9 @@ LogicalResult DeallocOp::verify() {
   if (getMemrefs().size() != getConditions().size())
     return emitOpError(
         "must have the same number of conditions as memrefs to deallocate");
+  if (getRetained().size() != getUpdatedConditions().size())
+    return emitOpError("must have the same number of updated conditions "
+                       "(results) as retained operands");
   return success();
 }
 

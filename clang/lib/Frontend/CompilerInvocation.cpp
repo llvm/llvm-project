@@ -574,6 +574,7 @@ static bool FixupInvocation(CompilerInvocation &Invocation,
   llvm::Triple::ArchType Arch = T.getArch();
 
   CodeGenOpts.CodeModel = TargetOpts.CodeModel;
+  CodeGenOpts.LargeDataThreshold = TargetOpts.LargeDataThreshold;
 
   if (LangOpts.getExceptionHandling() !=
           LangOptions::ExceptionHandlingKind::None &&
@@ -661,27 +662,27 @@ static bool FixupInvocation(CompilerInvocation &Invocation,
 
 static unsigned getOptimizationLevel(ArgList &Args, InputKind IK,
                                      DiagnosticsEngine &Diags) {
-  unsigned DefaultOpt = llvm::CodeGenOpt::None;
+  unsigned DefaultOpt = 0;
   if ((IK.getLanguage() == Language::OpenCL ||
        IK.getLanguage() == Language::OpenCLCXX) &&
       !Args.hasArg(OPT_cl_opt_disable))
-    DefaultOpt = llvm::CodeGenOpt::Default;
+    DefaultOpt = 2;
 
   if (Arg *A = Args.getLastArg(options::OPT_O_Group)) {
     if (A->getOption().matches(options::OPT_O0))
-      return llvm::CodeGenOpt::None;
+      return 0;
 
     if (A->getOption().matches(options::OPT_Ofast))
-      return llvm::CodeGenOpt::Aggressive;
+      return 3;
 
     assert(A->getOption().matches(options::OPT_O));
 
     StringRef S(A->getValue());
     if (S == "s" || S == "z")
-      return llvm::CodeGenOpt::Default;
+      return 2;
 
     if (S == "g")
-      return llvm::CodeGenOpt::Less;
+      return 1;
 
     return getLastArgIntValue(Args, OPT_O, DefaultOpt, Diags);
   }
@@ -3549,24 +3550,40 @@ void CompilerInvocationBase::GenerateLangArgs(const LangOptions &Opts,
   for (const std::string &F : Opts.NoSanitizeFiles)
     GenerateArg(Consumer, OPT_fsanitize_ignorelist_EQ, F);
 
-  if (Opts.getClangABICompat() == LangOptions::ClangABI::Ver3_8)
+  switch (Opts.getClangABICompat()) {
+  case LangOptions::ClangABI::Ver3_8:
     GenerateArg(Consumer, OPT_fclang_abi_compat_EQ, "3.8");
-  else if (Opts.getClangABICompat() == LangOptions::ClangABI::Ver4)
+    break;
+  case LangOptions::ClangABI::Ver4:
     GenerateArg(Consumer, OPT_fclang_abi_compat_EQ, "4.0");
-  else if (Opts.getClangABICompat() == LangOptions::ClangABI::Ver6)
+    break;
+  case LangOptions::ClangABI::Ver6:
     GenerateArg(Consumer, OPT_fclang_abi_compat_EQ, "6.0");
-  else if (Opts.getClangABICompat() == LangOptions::ClangABI::Ver7)
+    break;
+  case LangOptions::ClangABI::Ver7:
     GenerateArg(Consumer, OPT_fclang_abi_compat_EQ, "7.0");
-  else if (Opts.getClangABICompat() == LangOptions::ClangABI::Ver9)
+    break;
+  case LangOptions::ClangABI::Ver9:
     GenerateArg(Consumer, OPT_fclang_abi_compat_EQ, "9.0");
-  else if (Opts.getClangABICompat() == LangOptions::ClangABI::Ver11)
+    break;
+  case LangOptions::ClangABI::Ver11:
     GenerateArg(Consumer, OPT_fclang_abi_compat_EQ, "11.0");
-  else if (Opts.getClangABICompat() == LangOptions::ClangABI::Ver12)
+    break;
+  case LangOptions::ClangABI::Ver12:
     GenerateArg(Consumer, OPT_fclang_abi_compat_EQ, "12.0");
-  else if (Opts.getClangABICompat() == LangOptions::ClangABI::Ver14)
+    break;
+  case LangOptions::ClangABI::Ver14:
     GenerateArg(Consumer, OPT_fclang_abi_compat_EQ, "14.0");
-  else if (Opts.getClangABICompat() == LangOptions::ClangABI::Ver15)
+    break;
+  case LangOptions::ClangABI::Ver15:
     GenerateArg(Consumer, OPT_fclang_abi_compat_EQ, "15.0");
+    break;
+  case LangOptions::ClangABI::Ver17:
+    GenerateArg(Consumer, OPT_fclang_abi_compat_EQ, "17.0");
+    break;
+  case LangOptions::ClangABI::Latest:
+    break;
+  }
 
   if (Opts.getSignReturnAddressScope() ==
       LangOptions::SignReturnAddressScopeKind::All)
@@ -4052,6 +4069,8 @@ bool CompilerInvocation::ParseLangArgs(LangOptions &Opts, ArgList &Args,
         Opts.setClangABICompat(LangOptions::ClangABI::Ver14);
       else if (Major <= 15)
         Opts.setClangABICompat(LangOptions::ClangABI::Ver15);
+      else if (Major <= 17)
+        Opts.setClangABICompat(LangOptions::ClangABI::Ver17);
     } else if (Ver != "latest") {
       Diags.Report(diag::err_drv_invalid_value)
           << A->getAsString(Args) << A->getValue();
@@ -4108,6 +4127,14 @@ bool CompilerInvocation::ParseLangArgs(LangOptions &Opts, ArgList &Args,
       Args.hasFlag(options::OPT_fexperimental_relative_cxx_abi_vtables,
                    options::OPT_fno_experimental_relative_cxx_abi_vtables,
                    TargetCXXABI::usesRelativeVTables(T));
+
+  // RTTI is on by default.
+  bool HasRTTI = Args.hasFlag(options::OPT_frtti, options::OPT_fno_rtti, true);
+  Opts.OmitVTableRTTI =
+      Args.hasFlag(options::OPT_fexperimental_omit_vtable_rtti,
+                   options::OPT_fno_experimental_omit_vtable_rtti, false);
+  if (Opts.OmitVTableRTTI && HasRTTI)
+    Diags.Report(diag::err_drv_using_omit_rtti_component_without_no_rtti);
 
   for (const auto &A : Args.getAllArgValues(OPT_fmacro_prefix_map_EQ)) {
     auto Split = StringRef(A).split('=');

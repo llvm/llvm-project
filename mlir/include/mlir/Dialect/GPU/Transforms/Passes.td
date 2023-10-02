@@ -68,7 +68,6 @@ def GpuModuleToBinaryPass
     2. `assembly`, `isa`: produces assembly code.
     3. `binary`, `bin`: produces binaries.
     4. `fatbinary`, `fatbin`: produces fatbinaries.
-    5. `binOrFatbin`: produces bins or fatbins, the target decides which.
   }];
   let options = [
     Option<"offloadingHandler", "handler", "Attribute", "nullptr",
@@ -79,7 +78,7 @@ def GpuModuleToBinaryPass
            "Extra files to link to.">,
     Option<"cmdOptions", "opts", "std::string", [{""}],
            "Command line options to pass to the tools.">,
-    Option<"compilationTarget", "format", "std::string", [{"binOrFatbin"}],
+    Option<"compilationTarget", "format", "std::string", [{"fatbin"}],
            "The target representation of the compilation process.">
   ];
 }

@@ -25,6 +25,8 @@ def Sint32 : Type;
 def Uint32 : Type;
 def Sint64 : Type;
 def Uint64 : Type;
+def IntAP : Type;
+def IntAPS : Type;
 def Float : Type;
 def Ptr : Type;
 def FnPtr : Type;
@@ -54,6 +56,8 @@ def ArgLETD: ArgType { let Name = "const LifetimeExtendedTemporaryDecl *"; }
 def ArgCastKind : ArgType { let Name = "CastKind"; }
 def ArgCallExpr : ArgType { let Name = "const CallExpr *"; }
 def ArgOffsetOfExpr : ArgType { let Name = "const OffsetOfExpr *"; }
+def ArgDeclRef : ArgType { let Name = "const DeclRefExpr *"; }
+def ArgCCI : ArgType { let Name = "const ComparisonCategoryInfo *"; }
 
 //===----------------------------------------------------------------------===//
 // Classes of types instructions operate on.
@@ -65,7 +69,7 @@ class TypeClass {
 
 def IntegerTypeClass : TypeClass {
   let Types = [Sint8, Uint8, Sint16, Uint16, Sint32,
-               Uint32, Sint64, Uint64];
+               Uint32, Sint64, Uint64, IntAP, IntAPS];
 }
 
 def NumberTypeClass : TypeClass {
@@ -552,11 +556,11 @@ def Comp: Opcode {
 //===----------------------------------------------------------------------===//
 
 def FromCastTypeClass : TypeClass {
-  let Types = [Uint8, Sint8, Uint16, Sint16, Uint32, Sint32, Uint64, Sint64, Bool];
+  let Types = [Uint8, Sint8, Uint16, Sint16, Uint32, Sint32, Uint64, Sint64, Bool, IntAP, IntAPS];
 }
 
 def ToCastTypeClass : TypeClass {
-  let Types = [Uint8, Sint8, Uint16, Sint16, Uint32, Sint32, Uint64, Sint64, Bool];
+  let Types = [Uint8, Sint8, Uint16, Sint16, Uint32, Sint32, Uint64, Sint64, Bool, IntAP, IntAPS];
 }
 
 def Cast: Opcode {
@@ -606,6 +610,10 @@ class ComparisonOpcode : Opcode {
   let HasGroup = 1;
 }
 
+def CMP3 : ComparisonOpcode {
+  let Args = [ArgCCI];
+}
+
 def LT : ComparisonOpcode;
 def LE : ComparisonOpcode;
 def GT : ComparisonOpcode;
@@ -631,4 +639,8 @@ def Dup : Opcode {
 def Invalid : Opcode {}
 def InvalidCast : Opcode {
   let Args = [ArgCastKind];
+}
+
+def InvalidDeclRef : Opcode {
+  let Args = [ArgDeclRef];
 }

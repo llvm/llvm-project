@@ -137,6 +137,13 @@ getMutableSuccessorOperands(Block *block, unsigned successorIndex) {
   return succOps.getMutableForwardedOperands();
 }
 
+/// Return the operand range used to transfer operands from `block` to its
+/// successor with the given index.
+static OperandRange getSuccessorOperands(Block *block,
+                                         unsigned successorIndex) {
+  return getMutableSuccessorOperands(block, successorIndex);
+}
+
 /// Appends all the block arguments from `other` to the block arguments of
 /// `block`, copying their types and locations.
 static void addBlockArgumentsFromOther(Block *block, Block *other) {
@@ -175,8 +182,14 @@ public:
 
   /// Returns the arguments of this edge that are passed to the block arguments
   /// of the successor.
-  MutableOperandRange getSuccessorOperands() const {
-    return getMutableSuccessorOperands(fromBlock, successorIndex);
+  MutableOperandRange getMutableSuccessorOperands() const {
+    return ::getMutableSuccessorOperands(fromBlock, successorIndex);
+  }
+
+  /// Returns the arguments of this edge that are passed to the block arguments
+  /// of the successor.
+  OperandRange getSuccessorOperands() const {
+    return ::getSuccessorOperands(fromBlock, successorIndex);
   }
 };
 
@@ -262,7 +275,7 @@ public:
     assert(result != blockArgMapping.end() &&
            "Edge was not originally passed to `create` method.");
 
-    MutableOperandRange successorOperands = edge.getSuccessorOperands();
+    MutableOperandRange successorOperands = edge.getMutableSuccessorOperands();
 
     // Extra arguments are always appended at the end of the block arguments.
     unsigned extraArgsBeginIndex =
@@ -277,7 +290,8 @@ public:
       if (index >= result->second &&
           index < result->second + edge.getSuccessor()->getNumArguments()) {
         // Original block arguments to the entry block.
-        newSuccOperands[index] = successorOperands[index - result->second];
+        newSuccOperands[index] =
+            successorOperands[index - result->second].get();
         continue;
       }
 
@@ -665,7 +679,7 @@ transformToReduceLoop(Block *loopHeader, Block *exitBlock,
   // invalidated when mutating the operands through a different
   // `MutableOperandRange` of the same operation.
   SmallVector<Value> loopHeaderSuccessorOperands =
-      llvm::to_vector(getMutableSuccessorOperands(latch, loopHeaderIndex));
+      llvm::to_vector(getSuccessorOperands(latch, loopHeaderIndex));
 
   // Add all values used in the next iteration to the exit block. Replace
   // any uses that are outside the loop with the newly created exit block.
@@ -706,7 +720,13 @@ transformToReduceLoop(Block *loopHeader, Block *exitBlock,
     auto checkValue = [&](Value value) {
       Value blockArgument;
       for (OpOperand &use : llvm::make_early_inc_range(value.getUses())) {
-        if (loopBlocks.contains(use.getOwner()->getBlock()))
+        // Go through all the parent blocks and find the one part of the region
+        // of the loop. If the block is part of the loop, then the value does
+        // not escape the loop through this use.
+        Block *currBlock = use.getOwner()->getBlock();
+        while (currBlock && currBlock->getParent() != loopHeader->getParent())
+          currBlock = currBlock->getParentOp()->getBlock();
+        if (loopBlocks.contains(currBlock))
           continue;
 
         // Block argument is only created the first time it is required.
@@ -741,7 +761,7 @@ transformToReduceLoop(Block *loopHeader, Block *exitBlock,
 
           loopHeaderSuccessorOperands.push_back(argument);
           for (Edge edge : successorEdges(latch))
-            edge.getSuccessorOperands().append(argument);
+            edge.getMutableSuccessorOperands().append(argument);
         }
 
         use.set(blockArgument);
@@ -938,9 +958,8 @@ static FailureOr<SmallVector<Block *>> transformToStructuredCFBranches(
   if (regionEntry->getNumSuccessors() == 1) {
     // Single successor we can just splice together.
     Block *successor = regionEntry->getSuccessor(0);
-    for (auto &&[oldValue, newValue] :
-         llvm::zip(successor->getArguments(),
-                   getMutableSuccessorOperands(regionEntry, 0)))
+    for (auto &&[oldValue, newValue] : llvm::zip(
+             successor->getArguments(), getSuccessorOperands(regionEntry, 0)))
       oldValue.replaceAllUsesWith(newValue);
     regionEntry->getTerminator()->erase();
 

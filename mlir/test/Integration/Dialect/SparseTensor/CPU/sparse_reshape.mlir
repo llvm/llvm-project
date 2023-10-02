@@ -35,11 +35,11 @@
 }>
 
 #SparseMatrix = #sparse_tensor.encoding<{
-  lvlTypes = ["compressed", "compressed"]
+  map = (d0, d1) -> (d0 : compressed, d1 : compressed)
 }>
 
 #Sparse3dTensor = #sparse_tensor.encoding<{
-  lvlTypes = ["compressed", "compressed", "compressed"]
+  map = (d0, d1, d2) -> (d0 : compressed, d1 : compressed, d2 : compressed)
 }>
 
 module {

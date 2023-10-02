@@ -13,6 +13,7 @@
 #include "Symbols.h"
 #include "lld/Common/Args.h"
 #include "lld/Common/CommonLinkerContext.h"
+#include "lld/Common/Filesystem.h"
 #include "lld/Common/Strings.h"
 #include "lld/Common/TargetOptionsCommandFlags.h"
 #include "llvm/ADT/STLExtras.h"
@@ -41,18 +42,6 @@ using namespace llvm;
 using namespace llvm::object;
 using namespace lld;
 using namespace lld::coff;
-
-// Creates an empty file to and returns a raw_fd_ostream to write to it.
-static std::unique_ptr<raw_fd_ostream> openFile(StringRef file) {
-  std::error_code ec;
-  auto ret =
-      std::make_unique<raw_fd_ostream>(file, ec, sys::fs::OpenFlags::OF_None);
-  if (ec) {
-    error("cannot open " + file + ": " + ec.message());
-    return nullptr;
-  }
-  return ret;
-}
 
 std::string BitcodeCompiler::getThinLTOOutputFile(StringRef path) {
   return lto::getThinLTOOutputFile(path, ctx.config.thinLTOPrefixReplaceOld,
@@ -88,7 +77,7 @@ lto::Config BitcodeCompiler::createConfig() {
   c.OptLevel = ctx.config.ltoo;
   c.CPU = getCPUStr();
   c.MAttrs = getMAttrs();
-  std::optional<CodeGenOpt::Level> optLevelOrNone = CodeGenOpt::getLevel(
+  std::optional<CodeGenOptLevel> optLevelOrNone = CodeGenOpt::getLevel(
       ctx.config.ltoCgo.value_or(args::getCGOptLevel(ctx.config.ltoo)));
   assert(optLevelOrNone && "Invalid optimization level!");
   c.CGOptLevel = *optLevelOrNone;

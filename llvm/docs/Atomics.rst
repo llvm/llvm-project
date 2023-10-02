@@ -409,7 +409,7 @@ Atomics and Codegen
 Atomic operations are represented in the SelectionDAG with ``ATOMIC_*`` opcodes.
 On architectures which use barrier instructions for all atomic ordering (like
 ARM), appropriate fences can be emitted by the AtomicExpand Codegen pass if
-``setInsertFencesForAtomic()`` was used.
+``shouldInsertFencesForAtomic()`` returns true.
 
 The MachineMemOperand for all atomic operations is currently marked as volatile;
 this is not correct in the IR sense of volatile, but CodeGen handles anything

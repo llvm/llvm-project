@@ -2688,6 +2688,10 @@ size_t IBTPltSection::getSize() const {
 
 bool IBTPltSection::isNeeded() const { return in.plt->getNumEntries() > 0; }
 
+RelroPaddingSection::RelroPaddingSection()
+    : SyntheticSection(SHF_ALLOC | SHF_WRITE, SHT_NOBITS, 1, ".relro_padding") {
+}
+
 // The string hash function for .gdb_index.
 static uint32_t computeGdbHash(StringRef s) {
   uint32_t h = 0;
@@ -3839,6 +3843,7 @@ void InStruct::reset() {
   got.reset();
   gotPlt.reset();
   igotPlt.reset();
+  relroPadding.reset();
   armCmseSGSection.reset();
   ppc64LongBranchTarget.reset();
   mipsAbiFlags.reset();

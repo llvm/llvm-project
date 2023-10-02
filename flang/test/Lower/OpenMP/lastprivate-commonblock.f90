@@ -1,35 +1,30 @@
-! RUN: %flang_fc1 -emit-fir -fopenmp -o - %s 2>&1 | FileCheck %s 
+! RUN: %flang_fc1 -emit-hlfir -fopenmp -o - %s 2>&1 | FileCheck %s
 
-!CHECK: func.func @_QPlastprivate_common() {
-!CHECK: %[[val_0:.*]] = fir.alloca i32 {adapt.valuebyref, pinned}
-!CHECK: %[[val_1:.*]] = fir.alloca i32 {bindc_name = "i", uniq_name = "_QFlastprivate_commonEi"}
-!CHECK: %[[val_2:.*]] = fir.address_of(@c_) : !fir.ref<!fir.array<8xi8>>
-!CHECK: %[[val_3:.*]] = fir.convert %[[val_2]] : (!fir.ref<!fir.array<8xi8>>) -> !fir.ref<!fir.array<?xi8>>
-!CHECK: %[[val_c0:.*]] = arith.constant 0 : index
-!CHECK: %[[val_4:.*]] = fir.coordinate_of %[[val_3]], %[[val_c0]] : (!fir.ref<!fir.array<?xi8>>, index) -> !fir.ref<i8>
-!CHECK: %[[val_5:.*]] = fir.convert %[[val_4]] : (!fir.ref<i8>) -> !fir.ref<f32>
-!CHECK: %[[val_6:.*]] = fir.convert %[[val_2]] : (!fir.ref<!fir.array<8xi8>>) -> !fir.ref<!fir.array<?xi8>>
-!CHECK: %[[val_c4:.*]] = arith.constant 4 : index
-!CHECK: %[[val_7:.*]] = fir.coordinate_of %[[val_6]], %[[val_c4]] : (!fir.ref<!fir.array<?xi8>>, index) -> !fir.ref<i8>
-!CHECK: %[[val_8:.*]] = fir.convert %[[val_7]] : (!fir.ref<i8>) -> !fir.ref<f32>
-!CHECK: %[[val_9:.*]] = fir.alloca f32 {bindc_name = "x", pinned, uniq_name = "_QFlastprivate_commonEx"}
-!CHECK: %[[val_10:.*]] = fir.alloca f32 {bindc_name = "y", pinned, uniq_name = "_QFlastprivate_commonEy"}
-!CHECK: %[[val_c1_i32:.*]] = arith.constant 1 : i32
-!CHECK: %[[val_c100_i32:.*]] = arith.constant 100 : i32
-!CHECK: %[[val_c1_i32_0:.*]] = arith.constant 1 : i32
-!CHECK: omp.wsloop   for (%[[arg:.*]]) : i32 = (%[[val_c1_i32]]) to (%[[val_c100_i32]]) inclusive step (%[[val_c1_i32_0]]) {
-!CHECK: fir.store %[[arg]] to %[[val_0]] : !fir.ref<i32>
-!CHECK: %[[val_11:.*]] = arith.cmpi eq, %[[arg]], %[[val_c100_i32]] : i32
-!CHECK: fir.if %[[val_11]] {
-!CHECK: %[[val_12:.*]] = fir.load %[[val_9]] : !fir.ref<f32>
-!CHECK: fir.store %[[val_12]] to %[[val_5]] : !fir.ref<f32>
-!CHECK: %[[val_13:.*]] = fir.load %[[val_10]] : !fir.ref<f32>
-!CHECK: fir.store %[[val_13]] to %[[val_8]] : !fir.ref<f32>
-!CHECK: }
-!CHECK: omp.yield
-!CHECK: }
-!CHECK: return
-!CHECK: }
+!CHECK: fir.global common @[[CB_C:.*]](dense<0> : vector<8xi8>) : !fir.array<8xi8>
+!CHECK-LABEL: func.func @_QPlastprivate_common
+!CHECK:    %[[CB_C_REF:.*]] = fir.address_of(@[[CB_C]]) : !fir.ref<!fir.array<8xi8>>
+!CHECK:    %[[CB_C_REF_CVT:.*]] = fir.convert %[[CB_C_REF]] : (!fir.ref<!fir.array<8xi8>>) -> !fir.ref<!fir.array<?xi8>>
+!CHECK:    %[[CB_C_X_COOR:.*]] = fir.coordinate_of %[[CB_C_REF_CVT]], %{{.*}} : (!fir.ref<!fir.array<?xi8>>, index) -> !fir.ref<i8>
+!CHECK:    %[[CB_C_X_ADDR:.*]] = fir.convert %[[CB_C_X_COOR]] : (!fir.ref<i8>) -> !fir.ref<f32>
+!CHECK:    %[[X_DECL:.*]]:2 = hlfir.declare %[[CB_C_X_ADDR]] {uniq_name = "_QFlastprivate_commonEx"} : (!fir.ref<f32>) -> (!fir.ref<f32>, !fir.ref<f32>)
+!CHECK:    %[[CB_C_REF_CVT:.*]] = fir.convert %[[CB_C_REF]] : (!fir.ref<!fir.array<8xi8>>) -> !fir.ref<!fir.array<?xi8>>
+!CHECK:    %[[CB_C_Y_COOR:.*]] = fir.coordinate_of %[[CB_C_REF_CVT]], %{{.*}} : (!fir.ref<!fir.array<?xi8>>, index) -> !fir.ref<i8>
+!CHECK:    %[[CB_C_Y_ADDR:.*]] = fir.convert %[[CB_C_Y_COOR]] : (!fir.ref<i8>) -> !fir.ref<f32>
+!CHECK:    %[[Y_DECL:.*]]:2 = hlfir.declare %[[CB_C_Y_ADDR]] {uniq_name = "_QFlastprivate_commonEy"} : (!fir.ref<f32>) -> (!fir.ref<f32>, !fir.ref<f32>)
+!CHECK:    %[[PRIVATE_X_REF:.*]] = fir.alloca f32 {bindc_name = "x", pinned, uniq_name = "_QFlastprivate_commonEx"}
+!CHECK:    %[[PRIVATE_X_DECL:.*]]:2 = hlfir.declare %[[PRIVATE_X_REF]] {uniq_name = "_QFlastprivate_commonEx"} : (!fir.ref<f32>) -> (!fir.ref<f32>, !fir.ref<f32>)
+!CHECK:    %[[PRIVATE_Y_REF:.*]] = fir.alloca f32 {bindc_name = "y", pinned, uniq_name = "_QFlastprivate_commonEy"}
+!CHECK:    %[[PRIVATE_Y_DECL:.*]]:2 = hlfir.declare %[[PRIVATE_Y_REF]] {uniq_name = "_QFlastprivate_commonEy"} : (!fir.ref<f32>) -> (!fir.ref<f32>, !fir.ref<f32>)
+!CHECK:    omp.wsloop   for  (%[[I:.*]]) : i32 = (%{{.*}}) to (%{{.*}}) inclusive step (%{{.*}}) {
+!CHECK:      %[[LAST_ITER:.*]] = arith.cmpi eq, %[[I]], %{{.*}} : i32
+!CHECK:      fir.if %[[LAST_ITER]] {
+!CHECK:        %[[PRIVATE_X_VAL:.*]] = fir.load %[[PRIVATE_X_DECL]]#1 : !fir.ref<f32>
+!CHECK:        fir.store %[[PRIVATE_X_VAL]] to %[[X_DECL]]#1 : !fir.ref<f32>
+!CHECK:        %[[PRIVATE_Y_VAL:.*]] = fir.load %[[PRIVATE_Y_DECL]]#1 : !fir.ref<f32>
+!CHECK:        fir.store %[[PRIVATE_Y_VAL]] to %[[Y_DECL]]#1 : !fir.ref<f32>
+!CHECK:      }
+!CHECK:      omp.yield
+!CHECK:    }
 subroutine lastprivate_common
   common /c/ x, y
   real x, y

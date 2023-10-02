@@ -182,6 +182,7 @@ condition_variable cstdlib
 condition_variable cstring
 condition_variable ctime
 condition_variable initializer_list
+condition_variable iosfwd
 condition_variable limits
 condition_variable new
 condition_variable ratio
@@ -818,9 +819,9 @@ stop_token cstddef
 stop_token cstdint
 stop_token cstring
 stop_token ctime
+stop_token iosfwd
 stop_token limits
 stop_token ratio
-stop_token thread
 stop_token type_traits
 stop_token version
 streambuf cstdint
@@ -880,6 +881,7 @@ system_error string
 system_error type_traits
 system_error version
 thread array
+thread atomic
 thread cerrno
 thread compare
 thread cstddef

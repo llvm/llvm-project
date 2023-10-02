@@ -84,7 +84,9 @@ void mlir::sparse_tensor::buildSparseCompiler(
     nvvmTargetOptions.features = options.gpuFeatures;
     pm.addPass(createGpuNVVMAttachTarget(nvvmTargetOptions));
     pm.addPass(createGpuToLLVMConversionPass());
-    pm.addPass(createGpuModuleToBinaryPass());
+    GpuModuleToBinaryPassOptions gpuModuleToBinaryPassOptions;
+    gpuModuleToBinaryPassOptions.compilationTarget = options.gpuFormat;
+    pm.addPass(createGpuModuleToBinaryPass(gpuModuleToBinaryPassOptions));
   }
 
   pm.addPass(createReconcileUnrealizedCastsPass());

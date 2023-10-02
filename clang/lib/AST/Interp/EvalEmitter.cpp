@@ -7,17 +7,15 @@
 //===----------------------------------------------------------------------===//
 
 #include "EvalEmitter.h"
+#include "ByteCodeGenError.h"
 #include "Context.h"
+#include "IntegralAP.h"
 #include "Interp.h"
 #include "Opcode.h"
-#include "Program.h"
 #include "clang/AST/DeclCXX.h"
 
 using namespace clang;
 using namespace clang::interp;
-
-using APSInt = llvm::APSInt;
-template <typename T> using Expected = llvm::Expected<T>;
 
 EvalEmitter::EvalEmitter(Context &Ctx, Program &P, State &Parent,
                          InterpStack &Stk, APValue &Result)

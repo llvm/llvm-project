@@ -259,16 +259,16 @@ define <8 x float> @masked_load_v8f32(ptr %src, <8 x i1> %mask) {
 ; CHECK-NEXT:    .cfi_def_cfa_offset 16
 ; CHECK-NEXT:    fmov w8, s1
 ; CHECK-NEXT:    mov z1.b, z0.b[6]
-; CHECK-NEXT:    strh w8, [sp, #6]
-; CHECK-NEXT:    fmov w8, s2
+; CHECK-NEXT:    fmov w9, s2
 ; CHECK-NEXT:    mov z2.b, z0.b[5]
 ; CHECK-NEXT:    mov z0.b, z0.b[4]
-; CHECK-NEXT:    strh w8, [sp, #4]
+; CHECK-NEXT:    strh w8, [sp, #6]
 ; CHECK-NEXT:    fmov w8, s3
+; CHECK-NEXT:    strh w9, [sp, #4]
+; CHECK-NEXT:    fmov w9, s4
 ; CHECK-NEXT:    strh w8, [sp, #2]
-; CHECK-NEXT:    fmov w8, s4
-; CHECK-NEXT:    strh w8, [sp, #14]
 ; CHECK-NEXT:    fmov w8, s1
+; CHECK-NEXT:    strh w9, [sp, #14]
 ; CHECK-NEXT:    strh w8, [sp, #12]
 ; CHECK-NEXT:    fmov w8, s2
 ; CHECK-NEXT:    strh w8, [sp, #10]

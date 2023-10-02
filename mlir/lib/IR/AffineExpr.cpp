@@ -533,6 +533,14 @@ AffineExpr mlir::getAffineConstantExpr(int64_t constant, MLIRContext *context) {
   return uniquer.get<AffineConstantExprStorage>(assignCtx, constant);
 }
 
+SmallVector<AffineExpr>
+mlir::getAffineConstantExprs(ArrayRef<int64_t> constants,
+                             MLIRContext *context) {
+  return llvm::to_vector(llvm::map_range(constants, [&](int64_t constant) {
+    return getAffineConstantExpr(constant, context);
+  }));
+}
+
 /// Simplify add expression. Return nullptr if it can't be simplified.
 static AffineExpr simplifyAdd(AffineExpr lhs, AffineExpr rhs) {
   auto lhsConst = lhs.dyn_cast<AffineConstantExpr>();

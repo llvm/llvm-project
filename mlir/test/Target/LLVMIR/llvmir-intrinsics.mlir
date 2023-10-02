@@ -375,9 +375,9 @@ llvm.func @vector_reductions(%arg0: f32, %arg1: vector<8xf32>, %arg2: vector<8xi
   // CHECK: call float @llvm.vector.reduce.fmul.v8f32
   "llvm.intr.vector.reduce.fmul"(%arg0, %arg1) : (f32, vector<8xf32>) -> f32
   // CHECK: call reassoc float @llvm.vector.reduce.fadd.v8f32
-  "llvm.intr.vector.reduce.fadd"(%arg0, %arg1) {reassoc = true} : (f32, vector<8xf32>) -> f32
+  "llvm.intr.vector.reduce.fadd"(%arg0, %arg1) <{fastmathFlags = #llvm.fastmath<reassoc>}> : (f32, vector<8xf32>) -> f32
   // CHECK: call reassoc float @llvm.vector.reduce.fmul.v8f32
-  "llvm.intr.vector.reduce.fmul"(%arg0, %arg1) {reassoc = true} : (f32, vector<8xf32>) -> f32
+  "llvm.intr.vector.reduce.fmul"(%arg0, %arg1) <{fastmathFlags = #llvm.fastmath<reassoc>}> : (f32, vector<8xf32>) -> f32
   // CHECK: call i32 @llvm.vector.reduce.xor.v8i32
   "llvm.intr.vector.reduce.xor"(%arg2) : (vector<8xi32>) -> i32
   llvm.return
@@ -640,14 +640,14 @@ llvm.func @ushl_sat_test(%arg0: i32, %arg1: i32, %arg2: vector<8xi32>, %arg3: ve
 // CHECK-LABEL: @coro_id
 llvm.func @coro_id(%arg0: i32, %arg1: !llvm.ptr) {
   // CHECK: call token @llvm.coro.id
-  %null = llvm.mlir.null : !llvm.ptr
+  %null = llvm.mlir.zero : !llvm.ptr
   llvm.intr.coro.id %arg0, %arg1, %arg1, %null : (i32, !llvm.ptr, !llvm.ptr, !llvm.ptr) -> !llvm.token
   llvm.return
 }
 
 // CHECK-LABEL: @coro_begin
 llvm.func @coro_begin(%arg0: i32, %arg1: !llvm.ptr) {
-  %null = llvm.mlir.null : !llvm.ptr
+  %null = llvm.mlir.zero : !llvm.ptr
   %token = llvm.intr.coro.id %arg0, %arg1, %arg1, %null : (i32, !llvm.ptr, !llvm.ptr, !llvm.ptr) -> !llvm.token
   // CHECK: call ptr @llvm.coro.begin
   llvm.intr.coro.begin %token, %arg1 : (!llvm.token, !llvm.ptr) -> !llvm.ptr
@@ -681,7 +681,7 @@ llvm.func @coro_save(%arg0: !llvm.ptr) {
 
 // CHECK-LABEL: @coro_suspend
 llvm.func @coro_suspend(%arg0: i32, %arg1 : i1, %arg2 : !llvm.ptr) {
-  %null = llvm.mlir.null : !llvm.ptr
+  %null = llvm.mlir.zero : !llvm.ptr
   %token = llvm.intr.coro.id %arg0, %arg2, %arg2, %null : (i32, !llvm.ptr, !llvm.ptr, !llvm.ptr) -> !llvm.token
   // CHECK: call i8 @llvm.coro.suspend
   %0 = llvm.intr.coro.suspend %token, %arg1 : i8
@@ -690,14 +690,15 @@ llvm.func @coro_suspend(%arg0: i32, %arg1 : i1, %arg2 : !llvm.ptr) {
 
 // CHECK-LABEL: @coro_end
 llvm.func @coro_end(%arg0: !llvm.ptr, %arg1 : i1) {
+  %none = llvm.mlir.none : !llvm.token
   // CHECK: call i1 @llvm.coro.end
-  %0 = llvm.intr.coro.end %arg0, %arg1 : (!llvm.ptr, i1) -> i1
+  %0 = llvm.intr.coro.end %arg0, %arg1, %none : (!llvm.ptr, i1, !llvm.token) -> i1
   llvm.return
 }
 
 // CHECK-LABEL: @coro_free
 llvm.func @coro_free(%arg0: i32, %arg1 : !llvm.ptr) {
-  %null = llvm.mlir.null : !llvm.ptr
+  %null = llvm.mlir.zero : !llvm.ptr
   %token = llvm.intr.coro.id %arg0, %arg1, %arg1, %null : (i32, !llvm.ptr, !llvm.ptr, !llvm.ptr) -> !llvm.token
   // CHECK: call ptr @llvm.coro.free
   %0 = llvm.intr.coro.free %token, %arg1 : (!llvm.token, !llvm.ptr) -> !llvm.ptr
@@ -1043,7 +1044,7 @@ llvm.func @ssa_copy(%arg: f32) -> f32 {
 // CHECK-DAG: declare i32 @llvm.coro.size.i32()
 // CHECK-DAG: declare token @llvm.coro.save(ptr)
 // CHECK-DAG: declare i8 @llvm.coro.suspend(token, i1)
-// CHECK-DAG: declare i1 @llvm.coro.end(ptr, i1)
+// CHECK-DAG: declare i1 @llvm.coro.end(ptr, i1, token)
 // CHECK-DAG: declare ptr @llvm.coro.free(token, ptr nocapture readonly)
 // CHECK-DAG: declare void @llvm.coro.resume(ptr)
 // CHECK-DAG: declare <8 x i32> @llvm.vp.add.v8i32(<8 x i32>, <8 x i32>, <8 x i1>, i32)

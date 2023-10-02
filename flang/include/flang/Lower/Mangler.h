@@ -96,6 +96,13 @@ inline std::string mangleArrayLiteral(
 /// Return the compiler-generated name of a static namelist variable descriptor.
 std::string globalNamelistDescriptorName(const Fortran::semantics::Symbol &sym);
 
+/// Return the field name for a derived type component inside a fir.record type.
+/// It is the component name if the component is not private. Otherwise it is
+/// mangled with the component parent type to avoid any name clashes in type
+/// extensions.
+std::string getRecordTypeFieldName(const Fortran::semantics::Symbol &component,
+                                   ScopeBlockIdMap &);
+
 } // namespace lower::mangle
 } // namespace Fortran
 

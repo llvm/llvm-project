@@ -542,6 +542,38 @@ bool CheckFloatResult(InterpState &S, CodePtr OpPC, const Floating &Result,
   return true;
 }
 
+/// We aleady know the given DeclRefExpr is invalid for some reason,
+/// now figure out why and print appropriate diagnostics.
+bool CheckDeclRef(InterpState &S, CodePtr OpPC, const DeclRefExpr *DR) {
+  const ValueDecl *D = DR->getDecl();
+  const SourceInfo &E = S.Current->getSource(OpPC);
+
+  if (isa<ParmVarDecl>(D)) {
+    S.FFDiag(E, diag::note_constexpr_function_param_value_unknown) << D;
+    S.Note(D->getLocation(), diag::note_declared_at) << D->getSourceRange();
+  } else if (const auto *VD = dyn_cast<VarDecl>(D)) {
+    if (!VD->getType().isConstQualified()) {
+      S.FFDiag(E,
+               VD->getType()->isIntegralOrEnumerationType()
+                   ? diag::note_constexpr_ltor_non_const_int
+                   : diag::note_constexpr_ltor_non_constexpr,
+               1)
+          << VD;
+      S.Note(VD->getLocation(), diag::note_declared_at) << VD->getSourceRange();
+      return false;
+    }
+
+    // const, but no initializer.
+    if (!VD->getAnyInitializer()) {
+      S.FFDiag(E, diag::note_constexpr_var_init_unknown, 1) << VD;
+      S.Note(VD->getLocation(), diag::note_declared_at) << VD->getSourceRange();
+      return false;
+    }
+  }
+
+  return false;
+}
+
 bool Interpret(InterpState &S, APValue &Result) {
   // The current stack frame when we started Interpret().
   // This is being used by the ops to determine wheter

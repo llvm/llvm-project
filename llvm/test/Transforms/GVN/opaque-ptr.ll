@@ -52,6 +52,12 @@ define void @gep_cse_offset_canonicalization(ptr %p, i64 %idx, i64 %idx2) {
 ; CHECK-NEXT:    call void @use(ptr [[GEP5]])
 ; CHECK-NEXT:    call void @use(ptr [[GEP5_SAME]])
 ; CHECK-NEXT:    call void @use(ptr [[GEP5_DIFFERENT]])
+; CHECK-NEXT:    [[GEP6:%.*]] = getelementptr [4 x <vscale x 4 x i32>], ptr [[P]], i64 [[IDX]], i64 1
+; CHECK-NEXT:    [[GEP6_SAME:%.*]] = getelementptr [4 x <vscale x 4 x float>], ptr [[P]], i64 [[IDX]], i64 1
+; CHECK-NEXT:    [[GEP6_DIFFERENT:%.*]] = getelementptr [4 x <vscale x 4 x float>], ptr [[P]], i64 [[IDX2]], i64 1
+; CHECK-NEXT:    call void @use(ptr [[GEP6]])
+; CHECK-NEXT:    call void @use(ptr [[GEP6_SAME]])
+; CHECK-NEXT:    call void @use(ptr [[GEP6_DIFFERENT]])
 ; CHECK-NEXT:    ret void
 ;
   %gep1 = getelementptr i64, ptr %p, i64 1
@@ -89,6 +95,12 @@ define void @gep_cse_offset_canonicalization(ptr %p, i64 %idx, i64 %idx2) {
   call void @use(ptr %gep5)
   call void @use(ptr %gep5.same)
   call void @use(ptr %gep5.different)
+  %gep6 = getelementptr [4 x <vscale x 4 x i32>], ptr %p, i64 %idx, i64 1
+  %gep6.same = getelementptr [4 x <vscale x 4 x float>], ptr %p, i64 %idx, i64 1
+  %gep6.different = getelementptr [4 x <vscale x 4 x float>], ptr %p, i64 %idx2, i64 1
+  call void @use(ptr %gep6)
+  call void @use(ptr %gep6.same)
+  call void @use(ptr %gep6.different)
   ret void
 }
 

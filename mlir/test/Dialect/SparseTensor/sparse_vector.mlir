@@ -309,7 +309,7 @@ func.func @reduction_d(%arga: tensor<1024xf32, #DenseVector>,
 // -----
 
 #SparseMatrix = #sparse_tensor.encoding<{
-  lvlTypes = [ "dense", "compressed" ],
+  map = (d0, d1) -> (d0 : dense, d1 : compressed),
   posWidth = 32,
   crdWidth = 32
 }>
@@ -448,7 +448,7 @@ func.func @mul_ds(%arga: tensor<512x1024xf32, #SparseMatrix>,
 
 // -----
 
-#SparseMatrix = #sparse_tensor.encoding<{lvlTypes = ["dense","compressed"]}>
+#SparseMatrix = #sparse_tensor.encoding<{map = (d0, d1) -> (d0 : dense, d1 : compressed)}>
 
 #trait_affine = {
   indexing_maps = [

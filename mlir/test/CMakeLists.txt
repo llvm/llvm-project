@@ -26,6 +26,8 @@ if (MLIR_INCLUDE_INTEGRATION_TESTS)
       "If arch-specific Arm integration tests run emulated, use this Arm native lli.")
   set(ARM_EMULATOR_UTILS_LIB_DIR "" CACHE STRING
       "If arch-specific Arm integration tests run emulated, find Arm native utility libraries in this directory.")
+  set(MLIR_GPU_COMPILATION_TEST_FORMAT "fatbin" CACHE STRING
+      "The GPU compilation format used by the tests.")
   option(MLIR_RUN_AMX_TESTS "Run AMX tests.")
   option(MLIR_RUN_X86VECTOR_TESTS "Run X86Vector tests.")
   option(MLIR_RUN_CUDA_TENSOR_CORE_TESTS "Run CUDA Tensor core WMMA tests.")

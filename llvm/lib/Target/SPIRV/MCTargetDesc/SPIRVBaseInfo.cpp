@@ -217,8 +217,7 @@ getExtInstSetFromString(std::string SetName) {
 std::string getExtInstName(SPIRV::InstructionSet::InstructionSet Set,
                            uint32_t InstructionNumber) {
   const SPIRV::ExtendedBuiltin *Lookup =
-      SPIRV::lookupExtendedBuiltinBySetAndNumber(
-          SPIRV::InstructionSet::OpenCL_std, InstructionNumber);
+      SPIRV::lookupExtendedBuiltinBySetAndNumber(Set, InstructionNumber);
 
   if (!Lookup)
     return "UNKNOWN_EXT_INST";

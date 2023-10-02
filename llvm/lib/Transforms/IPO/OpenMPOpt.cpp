@@ -158,6 +158,8 @@ STATISTIC(NumOpenMPRuntimeFunctionUsesIdentified,
           "Number of OpenMP runtime function uses identified");
 STATISTIC(NumOpenMPTargetRegionKernels,
           "Number of OpenMP target region entry points (=kernels) identified");
+STATISTIC(NumNonOpenMPTargetRegionKernels,
+          "Number of non-OpenMP target region kernels identified");
 STATISTIC(NumOpenMPTargetRegionKernelsSPMD,
           "Number of OpenMP target region entry points (=kernels) executed in "
           "SPMD-mode instead of generic-mode");
@@ -989,7 +991,7 @@ struct OpenMPOpt {
   /// Print OpenMP GPU kernels for testing.
   void printKernels() const {
     for (Function *F : SCC) {
-      if (!omp::isKernel(*F))
+      if (!omp::isOpenMPKernel(*F))
         continue;
 
       auto Remark = [&](OptimizationRemarkAnalysis ORA) {
@@ -2030,7 +2032,7 @@ Kernel OpenMPOpt::getUniqueKernelFor(Function &F) {
     // TODO: We should use an AA to create an (optimistic and callback
     //       call-aware) call graph. For now we stick to simple patterns that
     //       are less powerful, basically the worst fixpoint.
-    if (isKernel(F)) {
+    if (isOpenMPKernel(F)) {
       CachedKernel = Kernel(&F);
       return *CachedKernel;
     }
@@ -2621,6 +2623,17 @@ struct AAICVTrackerCallSiteReturned : AAICVTracker {
   }
 };
 
+/// Determines if \p BB exits the function unconditionally itself or reaches a
+/// block that does through only unique successors.
+static bool hasFunctionEndAsUniqueSuccessor(const BasicBlock *BB) {
+  if (succ_empty(BB))
+    return true;
+  const BasicBlock *const Successor = BB->getUniqueSuccessor();
+  if (!Successor)
+    return false;
+  return hasFunctionEndAsUniqueSuccessor(Successor);
+}
+
 struct AAExecutionDomainFunction : public AAExecutionDomain {
   AAExecutionDomainFunction(const IRPosition &IRP, Attributor &A)
       : AAExecutionDomain(IRP, A) {}
@@ -2676,17 +2689,19 @@ struct AAExecutionDomainFunction : public AAExecutionDomain {
       if (!ED.EncounteredAssumes.empty() && !A.isModulePass())
         return;
 
-      // We can remove this barrier, if it is one, or all aligned barriers
-      // reaching the kernel end. In the latter case we can transitively work
-      // our way back until we find a barrier that guards a side-effect if we
-      // are dealing with the kernel end here.
+      // We can remove this barrier, if it is one, or aligned barriers reaching
+      // the kernel end (if CB is nullptr). Aligned barriers reaching the kernel
+      // end should only be removed if the kernel end is their unique successor;
+      // otherwise, they may have side-effects that aren't accounted for in the
+      // kernel end in their other successors. If those barriers have other
+      // barriers reaching them, those can be transitively removed as well as
+      // long as the kernel end is also their unique successor.
       if (CB) {
         DeletedBarriers.insert(CB);
         A.deleteAfterManifest(*CB);
         ++NumBarriersEliminated;
         Changed = ChangeStatus::CHANGED;
       } else if (!ED.AlignedBarriers.empty()) {
-        NumBarriersEliminated += ED.AlignedBarriers.size();
         Changed = ChangeStatus::CHANGED;
         SmallVector<CallBase *> Worklist(ED.AlignedBarriers.begin(),
                                          ED.AlignedBarriers.end());
@@ -2697,7 +2712,10 @@ struct AAExecutionDomainFunction : public AAExecutionDomain {
             continue;
           if (LastCB->getFunction() != getAnchorScope())
             continue;
+          if (!hasFunctionEndAsUniqueSuccessor(LastCB->getParent()))
+            continue;
           if (!DeletedBarriers.count(LastCB)) {
+            ++NumBarriersEliminated;
             A.deleteAfterManifest(*LastCB);
             continue;
           }
@@ -2721,7 +2739,7 @@ struct AAExecutionDomainFunction : public AAExecutionDomain {
       HandleAlignedBarrier(CB);
 
     // Handle the "kernel end barrier" for kernels too.
-    if (omp::isKernel(*getAnchorScope()))
+    if (omp::isOpenMPKernel(*getAnchorScope()))
       HandleAlignedBarrier(nullptr);
 
     return Changed;
@@ -2974,11 +2992,11 @@ bool AAExecutionDomainFunction::handleCallees(Attributor &A,
   } else {
     // We could not find all predecessors, so this is either a kernel or a
     // function with external linkage (or with some other weird uses).
-    if (omp::isKernel(*getAnchorScope())) {
+    if (omp::isOpenMPKernel(*getAnchorScope())) {
       EntryBBED.IsExecutedByInitialThreadOnly = false;
       EntryBBED.IsReachedFromAlignedBarrierOnly = true;
       EntryBBED.EncounteredNonLocalSideEffect = false;
-      ExitED.IsReachingAlignedBarrierOnly = true;
+      ExitED.IsReachingAlignedBarrierOnly = false;
     } else {
       EntryBBED.IsExecutedByInitialThreadOnly = false;
       EntryBBED.IsReachedFromAlignedBarrierOnly = false;
@@ -3028,7 +3046,7 @@ ChangeStatus AAExecutionDomainFunction::updateImpl(Attributor &A) {
 
   Function *F = getAnchorScope();
   BasicBlock &EntryBB = F->getEntryBlock();
-  bool IsKernel = omp::isKernel(*F);
+  bool IsKernel = omp::isOpenMPKernel(*F);
 
   SmallVector<Instruction *> SyncInstWorklist;
   for (auto &RIt : *RPOT) {
@@ -4167,7 +4185,7 @@ struct AAKernelInfoFunction : AAKernelInfo {
       auto *CB = cast<CallBase>(Kernel->user_back());
       Kernel = CB->getCaller();
     }
-    assert(omp::isKernel(*Kernel) && "Expected kernel function!");
+    assert(omp::isOpenMPKernel(*Kernel) && "Expected kernel function!");
 
     // Check if the kernel is already in SPMD mode, if so, return success.
     ConstantStruct *ExistingKernelEnvC =
@@ -5028,7 +5046,8 @@ struct AAKernelInfoCallSite : AAKernelInfo {
     const auto *AACE =
         A.getAAFor<AACallEdges>(*this, getIRPosition(), DepClassTy::OPTIONAL);
     if (!AACE || !AACE->getState().isValidState() || AACE->hasUnknownCallee()) {
-      CheckCallee(getAssociatedFunction(), /*NumCallees=*/1);
+      if (Function *F = getAssociatedFunction())
+        CheckCallee(F, /*NumCallees=*/1);
     } else {
       const auto &OptimisticEdges = AACE->getOptimisticEdges();
       for (auto *Callee : OptimisticEdges) {
@@ -5803,7 +5822,9 @@ PreservedAnalyses OpenMPOptCGSCCPass::run(LazyCallGraph::SCC &C,
   return PreservedAnalyses::all();
 }
 
-bool llvm::omp::isKernel(Function &Fn) { return Fn.hasFnAttribute("kernel"); }
+bool llvm::omp::isOpenMPKernel(Function &Fn) {
+  return Fn.hasFnAttribute("kernel");
+}
 
 KernelSet llvm::omp::getDeviceKernels(Module &M) {
   // TODO: Create a more cross-platform way of determining device kernels.
@@ -5825,10 +5846,13 @@ KernelSet llvm::omp::getDeviceKernels(Module &M) {
     if (!KernelFn)
       continue;
 
-    assert(isKernel(*KernelFn) && "Inconsistent kernel function annotation");
-    ++NumOpenMPTargetRegionKernels;
-
-    Kernels.insert(KernelFn);
+    // We are only interested in OpenMP target regions. Others, such as kernels
+    // generated by CUDA but linked together, are not interesting to this pass.
+    if (isOpenMPKernel(*KernelFn)) {
+      ++NumOpenMPTargetRegionKernels;
+      Kernels.insert(KernelFn);
+    } else
+      ++NumNonOpenMPTargetRegionKernels;
   }
 
   return Kernels;

@@ -1576,31 +1576,18 @@ define <1 x i64> @vror_vv_v1i64(<1 x i64> %a, <1 x i64> %b) {
 }
 
 define <1 x i64> @vror_vx_v1i64(<1 x i64> %a, i64 %b) {
-; CHECK-RV32-LABEL: vror_vx_v1i64:
-; CHECK-RV32:       # %bb.0:
-; CHECK-RV32-NEXT:    vsetivli zero, 1, e64, m1, ta, ma
-; CHECK-RV32-NEXT:    vmv.v.x v9, a0
-; CHECK-RV32-NEXT:    li a0, 63
-; CHECK-RV32-NEXT:    vand.vx v10, v9, a0
-; CHECK-RV32-NEXT:    vsrl.vv v10, v8, v10
-; CHECK-RV32-NEXT:    vrsub.vi v9, v9, 0
-; CHECK-RV32-NEXT:    vand.vx v9, v9, a0
-; CHECK-RV32-NEXT:    vsll.vv v8, v8, v9
-; CHECK-RV32-NEXT:    vor.vv v8, v10, v8
-; CHECK-RV32-NEXT:    ret
-;
-; CHECK-RV64-LABEL: vror_vx_v1i64:
-; CHECK-RV64:       # %bb.0:
-; CHECK-RV64-NEXT:    vsetivli zero, 1, e64, m1, ta, ma
-; CHECK-RV64-NEXT:    vmv.s.x v9, a0
-; CHECK-RV64-NEXT:    li a0, 63
-; CHECK-RV64-NEXT:    vand.vx v10, v9, a0
-; CHECK-RV64-NEXT:    vsrl.vv v10, v8, v10
-; CHECK-RV64-NEXT:    vrsub.vi v9, v9, 0
-; CHECK-RV64-NEXT:    vand.vx v9, v9, a0
-; CHECK-RV64-NEXT:    vsll.vv v8, v8, v9
-; CHECK-RV64-NEXT:    vor.vv v8, v10, v8
-; CHECK-RV64-NEXT:    ret
+; CHECK-LABEL: vror_vx_v1i64:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vsetivli zero, 1, e64, m1, ta, ma
+; CHECK-NEXT:    vmv.s.x v9, a0
+; CHECK-NEXT:    li a0, 63
+; CHECK-NEXT:    vand.vx v10, v9, a0
+; CHECK-NEXT:    vsrl.vv v10, v8, v10
+; CHECK-NEXT:    vrsub.vi v9, v9, 0
+; CHECK-NEXT:    vand.vx v9, v9, a0
+; CHECK-NEXT:    vsll.vv v8, v8, v9
+; CHECK-NEXT:    vor.vv v8, v10, v8
+; CHECK-NEXT:    ret
 ;
 ; CHECK-ZVBB-LABEL: vror_vx_v1i64:
 ; CHECK-ZVBB:       # %bb.0:
@@ -1622,7 +1609,7 @@ define <1 x i64> @vror_vi_v1i64(<1 x i64> %a) {
 ; CHECK-RV32-NEXT:    li a0, 63
 ; CHECK-RV32-NEXT:    vand.vx v9, v9, a0
 ; CHECK-RV32-NEXT:    vsll.vv v9, v8, v9
-; CHECK-RV32-NEXT:    vmv.v.x v10, a0
+; CHECK-RV32-NEXT:    vmv.s.x v10, a0
 ; CHECK-RV32-NEXT:    vand.vi v10, v10, 1
 ; CHECK-RV32-NEXT:    vsrl.vv v8, v8, v10
 ; CHECK-RV32-NEXT:    vor.vv v8, v8, v9
@@ -1655,7 +1642,7 @@ define <1 x i64> @vror_vi_rotl_v1i64(<1 x i64> %a) {
 ; CHECK-RV32-NEXT:    li a0, 63
 ; CHECK-RV32-NEXT:    vand.vx v9, v9, a0
 ; CHECK-RV32-NEXT:    vsrl.vv v9, v8, v9
-; CHECK-RV32-NEXT:    vmv.v.x v10, a0
+; CHECK-RV32-NEXT:    vmv.s.x v10, a0
 ; CHECK-RV32-NEXT:    vand.vi v10, v10, 1
 ; CHECK-RV32-NEXT:    vsll.vv v8, v8, v10
 ; CHECK-RV32-NEXT:    vor.vv v8, v8, v9

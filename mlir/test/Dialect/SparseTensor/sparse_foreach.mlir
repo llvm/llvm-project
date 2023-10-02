@@ -29,13 +29,11 @@ func.func @sparse_foreach_constant() -> () {
 }
 
 #CSR_SLICE = #sparse_tensor.encoding<{
-  lvlTypes = [ "compressed", "compressed" ],
-  dimSlices = [ (0, 4, 1), (2, 4, 1) ]
+  map = (d0 : #sparse_tensor<slice(0, 4, 1)>, d1 : #sparse_tensor<slice(2, 4, 1)>) -> (d0 : compressed, d1 : compressed)
 }>
 
 #CSR_SLICE_DYN = #sparse_tensor.encoding<{
-  lvlTypes = [ "compressed", "compressed" ],
-  dimSlices = [ (?, ?, ?), (?, ?, ?) ]
+  map = (d0 : #sparse_tensor<slice(?, ?, ?)>, d1 : #sparse_tensor<slice(?, ?, ?)>) -> (d0 : compressed, d1 : compressed)
 }>
 
 
@@ -141,7 +139,7 @@ func.func @foreach_print_slice(%A: tensor<4x4xf64, #CSR_SLICE>) {
 }
 
 #BCOO = #sparse_tensor.encoding<{
-  lvlTypes = [ "dense", "compressed_hi_nu", "singleton" ],
+  map = (d0, d1, d2) -> (d0 : dense, d1 : loose_compressed(nonunique), d2 : singleton)
 }>
 
 // CHECK-LABEL:   func.func @foreach_bcoo(

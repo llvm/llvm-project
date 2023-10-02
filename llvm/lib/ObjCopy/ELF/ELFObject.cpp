@@ -2089,7 +2089,7 @@ template <class ELFT> void ELFWriter<ELFT>::writeSegmentData() {
                 Size);
   }
 
-  for (auto it : Obj.getUpdatedSections()) {
+  for (const auto &it : Obj.getUpdatedSections()) {
     SectionBase *Sec = it.first;
     ArrayRef<uint8_t> Data = it.second;
 

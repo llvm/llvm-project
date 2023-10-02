@@ -830,15 +830,15 @@ static Instruction *foldNoWrapAdd(BinaryOperator &Add,
   // (sext (X +nsw NarrowC)) + C --> (sext X) + (sext(NarrowC) + C)
   Constant *NarrowC;
   if (match(Op0, m_OneUse(m_SExt(m_NSWAdd(m_Value(X), m_Constant(NarrowC)))))) {
-    Constant *WideC = ConstantExpr::getSExt(NarrowC, Ty);
-    Constant *NewC = ConstantExpr::getAdd(WideC, Op1C);
+    Value *WideC = Builder.CreateSExt(NarrowC, Ty);
+    Value *NewC = Builder.CreateAdd(WideC, Op1C);
     Value *WideX = Builder.CreateSExt(X, Ty);
     return BinaryOperator::CreateAdd(WideX, NewC);
   }
   // (zext (X +nuw NarrowC)) + C --> (zext X) + (zext(NarrowC) + C)
   if (match(Op0, m_OneUse(m_ZExt(m_NUWAdd(m_Value(X), m_Constant(NarrowC)))))) {
-    Constant *WideC = ConstantExpr::getZExt(NarrowC, Ty);
-    Constant *NewC = ConstantExpr::getAdd(WideC, Op1C);
+    Value *WideC = Builder.CreateZExt(NarrowC, Ty);
+    Value *NewC = Builder.CreateAdd(WideC, Op1C);
     Value *WideX = Builder.CreateZExt(X, Ty);
     return BinaryOperator::CreateAdd(WideX, NewC);
   }
@@ -2145,7 +2145,9 @@ Instruction *InstCombinerImpl::visitSub(BinaryOperator &I) {
                      m_Select(m_Value(), m_Specific(Op1), m_Specific(&I))) ||
                match(UI, m_Select(m_Value(), m_Specific(&I), m_Specific(Op1)));
       })) {
-    if (Value *NegOp1 = Negator::Negate(IsNegation, Op1, *this))
+    if (Value *NegOp1 = Negator::Negate(IsNegation, /* IsNSW */ IsNegation &&
+                                                        I.hasNoSignedWrap(),
+                                        Op1, *this))
       return BinaryOperator::CreateAdd(NegOp1, Op0);
   }
   if (IsNegation)

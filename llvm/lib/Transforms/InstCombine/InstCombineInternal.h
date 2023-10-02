@@ -219,6 +219,23 @@ public:
   bool fmulByZeroIsZero(Value *MulVal, FastMathFlags FMF,
                         const Instruction *CtxI) const;
 
+  Constant *getLosslessTrunc(Constant *C, Type *TruncTy, unsigned ExtOp) {
+    Constant *TruncC = ConstantExpr::getTrunc(C, TruncTy);
+    Constant *ExtTruncC =
+        ConstantFoldCastOperand(ExtOp, TruncC, C->getType(), DL);
+    if (ExtTruncC && ExtTruncC == C)
+      return TruncC;
+    return nullptr;
+  }
+
+  Constant *getLosslessUnsignedTrunc(Constant *C, Type *TruncTy) {
+    return getLosslessTrunc(C, TruncTy, Instruction::ZExt);
+  }
+
+  Constant *getLosslessSignedTrunc(Constant *C, Type *TruncTy) {
+    return getLosslessTrunc(C, TruncTy, Instruction::SExt);
+  }
+
 private:
   bool annotateAnyAllocSite(CallBase &Call, const TargetLibraryInfo *TLI);
   bool isDesirableIntType(unsigned BitWidth) const;
@@ -738,13 +755,13 @@ class Negator final {
 
   std::array<Value *, 2> getSortedOperandsOfBinOp(Instruction *I);
 
-  [[nodiscard]] Value *visitImpl(Value *V, unsigned Depth);
+  [[nodiscard]] Value *visitImpl(Value *V, bool IsNSW, unsigned Depth);
 
-  [[nodiscard]] Value *negate(Value *V, unsigned Depth);
+  [[nodiscard]] Value *negate(Value *V, bool IsNSW, unsigned Depth);
 
   /// Recurse depth-first and attempt to sink the negation.
   /// FIXME: use worklist?
-  [[nodiscard]] std::optional<Result> run(Value *Root);
+  [[nodiscard]] std::optional<Result> run(Value *Root, bool IsNSW);
 
   Negator(const Negator &) = delete;
   Negator(Negator &&) = delete;
@@ -754,7 +771,7 @@ class Negator final {
 public:
   /// Attempt to negate \p Root. Retuns nullptr if negation can't be performed,
   /// otherwise returns negated value.
-  [[nodiscard]] static Value *Negate(bool LHSIsZero, Value *Root,
+  [[nodiscard]] static Value *Negate(bool LHSIsZero, bool IsNSW, Value *Root,
                                      InstCombinerImpl &IC);
 };
 

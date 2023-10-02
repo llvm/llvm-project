@@ -458,7 +458,7 @@ if(MSVC)
   # value (1 MB) which is not enough for us in tasks such as parsing recursive
   # C++ templates in Clang.
   set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} /STACK:10000000")
-elseif(MINGW) # FIXME: Also cygwin?
+elseif(MINGW OR CYGWIN)
   set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -Wl,--stack,16777216")
 
   # Pass -mbig-obj to mingw gas to avoid COFF 2**16 section limit.
@@ -470,7 +470,6 @@ endif()
 option(LLVM_ENABLE_WARNINGS "Enable compiler warnings." ON)
 
 if( MSVC )
-  include(ChooseMSVCCRT)
 
   # Add definitions that make MSVC much less annoying.
   add_compile_definitions(
@@ -951,7 +950,7 @@ if(LLVM_USE_SANITIZER)
       endif()
       # Prepare ASAN runtime if needed
       if (LLVM_USE_SANITIZER MATCHES ".*Address.*")
-        if (${LLVM_USE_CRT_${uppercase_CMAKE_BUILD_TYPE}} MATCHES "^(MT|MTd)$")
+        if (${CMAKE_MSVC_RUNTIME_LIBRARY} MATCHES "^(MultiThreaded|MultiThreadedDebug)$")
           append("/wholearchive:clang_rt.asan-${arch}.lib /wholearchive:clang_rt.asan_cxx-${arch}.lib"
             CMAKE_EXE_LINKER_FLAGS)
           append("/wholearchive:clang_rt.asan_dll_thunk-${arch}.lib"

@@ -33,16 +33,17 @@ define void @buildvec_no_vid_v4f32(<4 x float>* %x) {
 define <4 x float> @hang_when_merging_stores_after_legalization(<8 x float> %x, <8 x float> %y) optsize {
 ; CHECK-LABEL: hang_when_merging_stores_after_legalization:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetivli zero, 8, e32, m2, ta, ma
+; CHECK-NEXT:    vsetivli zero, 8, e16, m1, ta, ma
 ; CHECK-NEXT:    vid.v v12
 ; CHECK-NEXT:    li a0, 7
 ; CHECK-NEXT:    vmul.vx v14, v12, a0
-; CHECK-NEXT:    vrgather.vv v12, v8, v14
+; CHECK-NEXT:    vsetvli zero, zero, e32, m2, ta, ma
+; CHECK-NEXT:    vrgatherei16.vv v12, v8, v14
+; CHECK-NEXT:    vsetvli zero, zero, e16, m1, ta, ma
 ; CHECK-NEXT:    vadd.vi v8, v14, -14
-; CHECK-NEXT:    vsetivli zero, 1, e8, mf8, ta, ma
 ; CHECK-NEXT:    vmv.v.i v0, 12
-; CHECK-NEXT:    vsetivli zero, 8, e32, m2, ta, mu
-; CHECK-NEXT:    vrgather.vv v12, v10, v8, v0.t
+; CHECK-NEXT:    vsetvli zero, zero, e32, m2, ta, mu
+; CHECK-NEXT:    vrgatherei16.vv v12, v10, v8, v0.t
 ; CHECK-NEXT:    vmv1r.v v8, v12
 ; CHECK-NEXT:    ret
   %z = shufflevector <8 x float> %x, <8 x float> %y, <4 x i32> <i32 0, i32 7, i32 8, i32 15>
@@ -1074,4 +1075,11 @@ define <32 x double> @buildvec_v32f64(double %e0, double %e1, double %e2, double
   %v30 = insertelement <32 x double> %v29, double %e30, i64 30
   %v31 = insertelement <32 x double> %v30, double %e31, i64 31
   ret <32 x double> %v31
+}
+
+; FIXME: These constants have enough sign bits that we could use vmv.v.x/i and
+; vsext, but we don't support this for FP yet.
+define <2 x float> @signbits() {
+entry:
+  ret <2 x float> <float 0x36A0000000000000, float 0.000000e+00>
 }

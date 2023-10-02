@@ -2354,6 +2354,15 @@ void Parser::ParseCXXSimpleTypeSpecifier(DeclSpec &DS) {
   case tok::kw_bool:
     DS.SetTypeSpecType(DeclSpec::TST_bool, Loc, PrevSpec, DiagID, Policy);
     break;
+  case tok::kw__Accum:
+    DS.SetTypeSpecType(DeclSpec::TST_accum, Loc, PrevSpec, DiagID, Policy);
+    break;
+  case tok::kw__Fract:
+    DS.SetTypeSpecType(DeclSpec::TST_fract, Loc, PrevSpec, DiagID, Policy);
+    break;
+  case tok::kw__Sat:
+    DS.SetTypeSpecSat(Loc, PrevSpec, DiagID);
+    break;
 #define GENERIC_IMAGE_TYPE(ImgType, Id)                                        \
   case tok::kw_##ImgType##_t:                                                  \
     DS.SetTypeSpecType(DeclSpec::TST_##ImgType##_t, Loc, PrevSpec, DiagID,     \
@@ -3493,11 +3502,11 @@ ExprResult Parser::ParseRequiresExpression() {
   SourceLocation RequiresKWLoc = ConsumeToken(); // Consume 'requires'
 
   llvm::SmallVector<ParmVarDecl *, 2> LocalParameterDecls;
+  BalancedDelimiterTracker Parens(*this, tok::l_paren);
   if (Tok.is(tok::l_paren)) {
     // requirement parameter list is present.
     ParseScope LocalParametersScope(this, Scope::FunctionPrototypeScope |
                                     Scope::DeclScope);
-    BalancedDelimiterTracker Parens(*this, tok::l_paren);
     Parens.consumeOpen();
     if (!Tok.is(tok::r_paren)) {
       ParsedAttributes FirstArgAttrs(getAttrFactory());
@@ -3769,8 +3778,9 @@ ExprResult Parser::ParseRequiresExpression() {
   Braces.consumeClose();
   Actions.ActOnFinishRequiresExpr();
   ParsingBodyDecl.complete(Body);
-  return Actions.ActOnRequiresExpr(RequiresKWLoc, Body, LocalParameterDecls,
-                                   Requirements, Braces.getCloseLocation());
+  return Actions.ActOnRequiresExpr(
+      RequiresKWLoc, Body, Parens.getOpenLocation(), LocalParameterDecls,
+      Parens.getCloseLocation(), Requirements, Braces.getCloseLocation());
 }
 
 static TypeTrait TypeTraitFromTokKind(tok::TokenKind kind) {

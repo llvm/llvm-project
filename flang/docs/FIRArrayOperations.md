@@ -8,9 +8,10 @@
 
 # Design: FIR Array operations
 
-```eval_rst
-.. contents::
-   :local:
+```{contents}
+---
+local:
+---
 ```
 
 ## General

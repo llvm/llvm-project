@@ -144,28 +144,28 @@ define void @test1(ptr %A, ptr %B) {
 ; X32:       # %bb.0: # %entry
 ; X32-NEXT:    movl {{[0-9]+}}(%esp), %ecx
 ; X32-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X32-NEXT:    movq {{.*#+}} xmm0 = mem[0],zero
 ; X32-NEXT:    movq {{.*#+}} xmm1 = mem[0],zero
-; X32-NEXT:    paddd %xmm0, %xmm1
-; X32-NEXT:    movq %xmm1, (%eax)
 ; X32-NEXT:    movq {{.*#+}} xmm0 = mem[0],zero
-; X32-NEXT:    pshufd {{.*#+}} xmm2 = xmm1[1,1,3,3]
-; X32-NEXT:    pmuludq %xmm0, %xmm1
-; X32-NEXT:    shufps {{.*#+}} xmm0 = xmm0[1,1,1,1]
-; X32-NEXT:    pmuludq %xmm0, %xmm2
-; X32-NEXT:    pshufd {{.*#+}} xmm0 = xmm2[0,2,2,3]
-; X32-NEXT:    pshufd {{.*#+}} xmm1 = xmm1[0,2,2,3]
-; X32-NEXT:    punpckldq {{.*#+}} xmm1 = xmm1[0],xmm0[0],xmm1[1],xmm0[1]
-; X32-NEXT:    movq %xmm1, (%eax)
-; X32-NEXT:    movq {{.*#+}} xmm0 = mem[0],zero
-; X32-NEXT:    pand %xmm1, %xmm0
+; X32-NEXT:    paddd %xmm1, %xmm0
 ; X32-NEXT:    movq %xmm0, (%eax)
 ; X32-NEXT:    movq {{.*#+}} xmm1 = mem[0],zero
-; X32-NEXT:    por %xmm0, %xmm1
+; X32-NEXT:    pshufd {{.*#+}} xmm2 = xmm0[1,1,3,3]
+; X32-NEXT:    pmuludq %xmm1, %xmm0
+; X32-NEXT:    shufps {{.*#+}} xmm1 = xmm1[1,1,1,1]
+; X32-NEXT:    pmuludq %xmm1, %xmm2
+; X32-NEXT:    pshufd {{.*#+}} xmm1 = xmm2[0,2,2,3]
+; X32-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[0,2,2,3]
+; X32-NEXT:    punpckldq {{.*#+}} xmm0 = xmm0[0],xmm1[0],xmm0[1],xmm1[1]
+; X32-NEXT:    movq %xmm0, (%eax)
+; X32-NEXT:    movq {{.*#+}} xmm1 = mem[0],zero
+; X32-NEXT:    pand %xmm0, %xmm1
 ; X32-NEXT:    movq %xmm1, (%eax)
 ; X32-NEXT:    movq {{.*#+}} xmm0 = mem[0],zero
-; X32-NEXT:    pxor %xmm1, %xmm0
+; X32-NEXT:    por %xmm1, %xmm0
 ; X32-NEXT:    movq %xmm0, (%eax)
+; X32-NEXT:    movq {{.*#+}} xmm1 = mem[0],zero
+; X32-NEXT:    pxor %xmm0, %xmm1
+; X32-NEXT:    movq %xmm1, (%eax)
 ; X32-NEXT:    emms
 ; X32-NEXT:    retl
 ;
