@@ -106,7 +106,7 @@ public:
   [[nodiscard]] bool isMaterialized(size_t Index) const {
     assert(Index < Size);
     assert(Index / PageSize < PageToDataPtrs.size());
-    return PageToDataPtrs[Index / PageSize] != nullptr;
+    return PageToDataPtrs[Index / PageSize];
   }
 
   /// Resize the vector. Notice that the constructor of the elements will not
