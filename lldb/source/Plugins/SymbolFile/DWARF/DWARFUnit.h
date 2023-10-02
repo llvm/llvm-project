@@ -76,6 +76,8 @@ public:
   }
   uint32_t GetNextUnitOffset() const { return m_offset + m_length + 4; }
 
+  llvm::Error ApplyIndexEntry(const llvm::DWARFUnitIndex::Entry *index_entry);
+
   static llvm::Expected<DWARFUnitHeader>
   extract(const lldb_private::DWARFDataExtractor &data, DIERef::Section section,
           lldb_private::DWARFContext &dwarf_context,
