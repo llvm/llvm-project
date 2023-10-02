@@ -993,14 +993,14 @@ struct DSEState {
 
     // If the start pointers are the same, we just have to compare sizes to see if
     // the killing store was larger than the dead store.
-    if (AAR == AliasResult::MustAlias && !AnyScalable) {
+    if (AAR == AliasResult::MustAlias) {
       // Make sure that the KillingSize size is >= the DeadSize size.
       if (KillingSize >= DeadSize)
         return OW_Complete;
     }
 
     // If we hit a partial alias we may have a full overwrite
-    if (AAR == AliasResult::PartialAlias && AAR.hasOffset() & !AnyScalable) {
+    if (AAR == AliasResult::PartialAlias && AAR.hasOffset()) {
       int32_t Off = AAR.getOffset();
       if (Off >= 0 && (uint64_t)Off + DeadSize <= KillingSize)
         return OW_Complete;
@@ -1047,9 +1047,6 @@ struct DSEState {
     //    |<->|---killing---|<----->|
     //
     // We have to be careful here as *Off is signed while *.Size is unsigned.
-
-    if (AnyScalable)
-      return OW_Unknown;
 
     // Check if the dead access starts "not before" the killing one.
     if (DeadOff >= KillingOff) {
