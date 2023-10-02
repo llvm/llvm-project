@@ -97,11 +97,11 @@ define float @loadfpimm11() {
 
 ; Ensure fli isn't incorrectly used for negated versions of numbers in the fli
 ; table.
-; FIXME: Codegen is incorrect.
 define float @loadfpimm12() {
 ; CHECK-LABEL: loadfpimm12:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    fli.s fa0, -1.0
+; CHECK-NEXT:    lui a0, 786432
+; CHECK-NEXT:    fmv.w.x fa0, a0
 ; CHECK-NEXT:    ret
   ret float -2.0
 }
