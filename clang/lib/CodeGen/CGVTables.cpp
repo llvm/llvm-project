@@ -1316,6 +1316,7 @@ void CodeGenModule::EmitVTableTypeMetadata(const CXXRecordDecl *RD,
                                 AP.second.AddressPointIndex));
 
   // Sort the address points for determinism.
+  // FIXME: It's more efficient to mangle the types before sorting.
   llvm::sort(AddressPoints, [this](const AddressPoint &AP1,
                                    const AddressPoint &AP2) {
     if (&AP1 == &AP2)
@@ -1323,13 +1324,13 @@ void CodeGenModule::EmitVTableTypeMetadata(const CXXRecordDecl *RD,
 
     std::string S1;
     llvm::raw_string_ostream O1(S1);
-    getCXXABI().getMangleContext().mangleTypeName(
+    getCXXABI().getMangleContext().mangleCanonicalTypeName(
         QualType(AP1.first->getTypeForDecl(), 0), O1);
     O1.flush();
 
     std::string S2;
     llvm::raw_string_ostream O2(S2);
-    getCXXABI().getMangleContext().mangleTypeName(
+    getCXXABI().getMangleContext().mangleCanonicalTypeName(
         QualType(AP2.first->getTypeForDecl(), 0), O2);
     O2.flush();
 

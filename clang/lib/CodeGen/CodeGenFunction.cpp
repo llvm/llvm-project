@@ -576,7 +576,7 @@ CodeGenFunction::getUBSanFunctionTypeHash(QualType Ty) const {
     Ty = getContext().getFunctionTypeWithExceptionSpec(Ty, EST_None);
   std::string Mangled;
   llvm::raw_string_ostream Out(Mangled);
-  CGM.getCXXABI().getMangleContext().mangleTypeName(Ty, Out, false);
+  CGM.getCXXABI().getMangleContext().mangleCanonicalTypeName(Ty, Out, false);
   return llvm::ConstantInt::get(
       CGM.Int32Ty, static_cast<uint32_t>(llvm::xxh3_64bits(Mangled)));
 }
