@@ -11,6 +11,7 @@ from lldbsuite.test.lldbtest import *
 class TestProgressReporting(TestBase):
     def setUp(self):
         TestBase.setUp(self)
+
         self.broadcaster = self.dbg.GetBroadcaster()
         self.listener = lldbutil.start_listening_from(
             self.broadcaster, lldb.SBDebugger.eBroadcastBitProgress
