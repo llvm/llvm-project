@@ -43,8 +43,6 @@ public:
   DIGlobal symbolizeData(object::SectionedAddress ModuleOffset) const override;
   std::vector<DILocal>
   symbolizeFrame(object::SectionedAddress ModuleOffset) const override;
-  std::vector<object::SectionedAddress>
-  findSymbol(StringRef Symbol) const override;
 
   // Return true if this is a 32-bit x86 PE COFF module.
   bool isWin32Module() const override;

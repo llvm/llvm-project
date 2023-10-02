@@ -9,8 +9,8 @@
 
 ;; Handle invalid argument.
 ; RUN: llvm-symbolizer "FRAME tmp.o Z" --output-style=JSON | \
-; RUN:   FileCheck %s -DMSG=%errc_ENOENT --check-prefix=INVARG --strict-whitespace --match-full-lines --implicit-check-not={{.}}
-; INVARG:[{"Error":{"Message":"[[MSG]]"},"ModuleName":"tmp.o","SymName":"Z"}]
+; RUN:   FileCheck %s --check-prefix=INVARG --strict-whitespace --match-full-lines --implicit-check-not={{.}}
+; INVARG:[{"ModuleName":"tmp.o","Symbol":[{"Column":0,"Discriminator":0,"FileName":"","FunctionName":"","Line":0,"StartAddress":"","StartFileName":"","StartLine":0}]}]
 
 ; RUN: llc -filetype=obj -o %t.o %s 
 
