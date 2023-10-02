@@ -210,7 +210,6 @@ public:
   }
 
   static bool comp(IntegralAP A, IntegralAP *R) {
-    assert(false);
     *R = IntegralAP(~A.V);
     return false;
   }

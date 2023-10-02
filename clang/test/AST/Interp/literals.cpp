@@ -52,6 +52,9 @@ namespace i128 {
   constexpr int128_t Two = (int128_t)1 << 1ul;
   static_assert(Two == 2, "");
 
+  constexpr uint128_t AllOnes = ~static_cast<uint128_t>(0);
+  static_assert(AllOnes == static_cast<uint128_t>(-1), "");
+
 #if __cplusplus >= 201402L
   template <typename T>
   constexpr T CastFrom(__int128_t A) {
