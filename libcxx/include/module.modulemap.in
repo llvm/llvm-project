@@ -1719,6 +1719,7 @@ module std_private_ranges_size                       [system] {
   header "__ranges/size.h"
   export std_private_type_traits_make_unsigned
 }
+module std_private_ranges_slide_view                 [system] { header "__ranges/slide_view.h" }
 module std_private_ranges_split_view                 [system] { header "__ranges/split_view.h" }
 module std_private_ranges_subrange                   [system] {
   header "__ranges/subrange.h"
