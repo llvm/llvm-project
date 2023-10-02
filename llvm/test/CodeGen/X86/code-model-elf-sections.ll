@@ -16,21 +16,29 @@
 ; SMALL: .bss {{.*}} WA {{.*}}
 ; SMALL: .rodata {{.*}} A {{.*}}
 ; SMALL: .data.rel.ro {{.*}} WA {{.*}}
+; SMALL: .tbss {{.*}} WAT {{.*}}
+; SMALL: .tdata {{.*}} WAT {{.*}}
 
 ; SMALL-DS: .data.data {{.*}} WA {{.*}}
 ; SMALL-DS: .bss.bss {{.*}} WA {{.*}}
 ; SMALL-DS: .rodata.rodata {{.*}} A {{.*}}
 ; SMALL-DS: .data.rel.ro.relro {{.*}} WA {{.*}}
+; SMALL-DS: .tbss.tbss {{.*}} WAT {{.*}}
+; SMALL-DS: .tdata.tdata {{.*}} WAT {{.*}}
 
 ; LARGE: .ldata {{.*}} WAl {{.*}}
 ; LARGE: .lbss {{.*}} WAl {{.*}}
 ; LARGE: .lrodata {{.*}} Al {{.*}}
 ; LARGE: .ldata.rel.ro {{.*}} WAl {{.*}}
+; LARGE: .tbss {{.*}} WAT {{.*}}
+; LARGE: .tdata {{.*}} WAT {{.*}}
 
 ; LARGE-DS: .ldata.data {{.*}} WAl {{.*}}
 ; LARGE-DS: .lbss.bss {{.*}} WAl {{.*}}
 ; LARGE-DS: .lrodata.rodata {{.*}} Al {{.*}}
 ; LARGE-DS: .ldata.rel.ro.relro {{.*}} WAl {{.*}}
+; LARGE-DS: .tbss.tbss {{.*}} WAT {{.*}}
+; LARGE-DS: .tdata.tdata {{.*}} WAT {{.*}}
 
 target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
 target triple = "x86_64--linux"
@@ -39,5 +47,7 @@ target triple = "x86_64--linux"
 @bss = internal global [10 x i64] zeroinitializer
 @rodata = internal constant [10 x i64] zeroinitializer
 @relro = internal constant [10 x ptr] [ptr @func, ptr @func, ptr @func, ptr @func, ptr @func, ptr @func, ptr @func, ptr @func, ptr @func, ptr @func]
+@tbss = internal thread_local global [10 x i64] zeroinitializer
+@tdata = internal thread_local global [10 x i64] [i64 1, i64 2, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0]
 
 declare void @func()
