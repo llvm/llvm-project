@@ -260,3 +260,25 @@ namespace SourceLocation {
     static_assert(c.a.n == __LINE__ - 1, "");
   }
 }
+
+namespace popcount {
+  static_assert(__builtin_popcount(~0u) == __CHAR_BIT__ * sizeof(unsigned int), "");
+  static_assert(__builtin_popcount(0) == 0, "");
+  static_assert(__builtin_popcountl(~0ul) == __CHAR_BIT__ * sizeof(unsigned long), "");
+  static_assert(__builtin_popcountl(0) == 0, "");
+  static_assert(__builtin_popcountll(~0ull) == __CHAR_BIT__ * sizeof(unsigned long long), "");
+  static_assert(__builtin_popcountll(0) == 0, "");
+
+  /// From test/Sema/constant-builtins-2.c
+#define BITSIZE(x) (sizeof(x) * 8)
+  char popcount1[__builtin_popcount(0) == 0 ? 1 : -1];
+  char popcount2[__builtin_popcount(0xF0F0) == 8 ? 1 : -1];
+  char popcount3[__builtin_popcount(~0) == BITSIZE(int) ? 1 : -1];
+  char popcount4[__builtin_popcount(~0L) == BITSIZE(int) ? 1 : -1];
+  char popcount5[__builtin_popcountl(0L) == 0 ? 1 : -1];
+  char popcount6[__builtin_popcountl(0xF0F0L) == 8 ? 1 : -1];
+  char popcount7[__builtin_popcountl(~0L) == BITSIZE(long) ? 1 : -1];
+  char popcount8[__builtin_popcountll(0LL) == 0 ? 1 : -1];
+  char popcount9[__builtin_popcountll(0xF0F0LL) == 8 ? 1 : -1];
+  char popcount10[__builtin_popcountll(~0LL) == BITSIZE(long long) ? 1 : -1];
+}
