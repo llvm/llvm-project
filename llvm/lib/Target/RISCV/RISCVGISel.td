@@ -31,9 +31,6 @@ def ShiftMaskGI :
     GIComplexOperandMatcher<s32, "selectShiftMask">,
     GIComplexPatternEquiv<shiftMaskXLen>;
 
-def gi_non_imm12 : GIComplexOperandMatcher<s32, "selectNonImm12">,
-                   GIComplexPatternEquiv<non_imm12>;
-
 def gi_sh1add_op : GIComplexOperandMatcher<s32, "selectSHXADDOp<1>">,
                    GIComplexPatternEquiv<sh1add_op>;
 def gi_sh2add_op : GIComplexOperandMatcher<s32, "selectSHXADDOp<2>">,
