@@ -226,7 +226,7 @@ define i64 @finally_useful_bswap() {
 ; CHECK64:       # %bb.0:
 ; CHECK64-NEXT:    movzwl var16(%rip), %ecx
 ; CHECK64-NEXT:    movzbl %cl, %eax
-; CHECK64-NEXT:    # kill: def $ecx killed $ecx def $rcx killed $rcx
+; CHECK64-NEXT:    # kill: def $ecx killed $ecx killed $rcx def $rcx
 ; CHECK64-NEXT:    shrl $8, %ecx
 ; CHECK64-NEXT:    shlq $8, %rax
 ; CHECK64-NEXT:    orq %rcx, %rax
