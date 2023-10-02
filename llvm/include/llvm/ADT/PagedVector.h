@@ -103,8 +103,8 @@ public:
   /// Return the size of the vector.
   [[nodiscard]] size_t size() const { return Size; }
 
-  /// @return true in case the element at index @a Index belongs to a page which
-  /// was already materialised.
+  /// Return true if the element at `Index` belongs to a page which was already
+  /// materialized, i.e., had at least one element accessed.
   [[nodiscard]] bool isMaterialized(size_t Index) const {
     assert(Index < Size);
     assert(Index / PageSize < PageToDataPtrs.size());
