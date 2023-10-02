@@ -963,8 +963,8 @@ bool SIShrinkInstructions::runOnMachineFunction(MachineFunction &MF) {
       if (SDst) {
         // All of the instructions with carry outs also have an SGPR input in
         // src2.
-        const MachineOperand *Src2 =
-            TII->getNamedOperand(MI, AMDGPU::OpName::src2);
+        const MachineOperand *Src2 = TII->getNamedOperand(MI,
+                                                          AMDGPU::OpName::src2);
 
         // We can shrink the instruction right now if sdst is dead anyway and
         // carry-in is not a register. If it is a register then VOP2 form shall
