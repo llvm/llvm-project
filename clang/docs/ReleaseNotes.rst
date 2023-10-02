@@ -91,6 +91,11 @@ C++20 Feature Support
 
 C++23 Feature Support
 ^^^^^^^^^^^^^^^^^^^^^
+- Implemented `P0847R7: Deducing this <https://wg21.link/P0847R7>`_. Some related core issues were also
+  implemented (`CWG2553 <https://wg21.link/CWG2553>`_, `CWG2554 <https://wg21.link/CWG2554>`_,
+  `CWG2653 <https://wg21.link/CWG2653>`_, `CWG2687 <https://wg21.link/CWG2687>`_). Because the
+  support for this feature is still experimental, the feature test macro ``__cpp_explicit_this_parameter``
+  was not set in this version.
 
 C++2c Feature Support
 ^^^^^^^^^^^^^^^^^^^^^
@@ -264,6 +269,9 @@ Bug Fixes in This Version
   (`#66047 <https://github.com/llvm/llvm-project/issues/66047>`_)
 - Fix parser crash when dealing with ill-formed objective C++ header code. Fixes
   (`#64836 <https://github.com/llvm/llvm-project/issues/64836>`_)
+- Fix crash in implicit conversions from initialize list to arrays of unknown
+  bound for C++20. Fixes
+  (`#62945 <https://github.com/llvm/llvm-project/issues/62945>`_)
 - Clang now allows an ``_Atomic`` qualified integer in a switch statement. Fixes
   (`#65557 <https://github.com/llvm/llvm-project/issues/65557>`_)
 - Fixes crash when trying to obtain the common sugared type of

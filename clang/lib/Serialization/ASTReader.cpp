@@ -7946,9 +7946,10 @@ void ASTReader::PrintStats() {
   std::fprintf(stderr, "*** AST File Statistics:\n");
 
   unsigned NumTypesLoaded =
-      TypesLoaded.size() - llvm::count(TypesLoaded, QualType());
+      TypesLoaded.size() - llvm::count(TypesLoaded.materialized(), QualType());
   unsigned NumDeclsLoaded =
-      DeclsLoaded.size() - llvm::count(DeclsLoaded, (Decl *)nullptr);
+      DeclsLoaded.size() -
+      llvm::count(DeclsLoaded.materialized(), (Decl *)nullptr);
   unsigned NumIdentifiersLoaded =
       IdentifiersLoaded.size() -
       llvm::count(IdentifiersLoaded, (IdentifierInfo *)nullptr);
@@ -10446,9 +10447,6 @@ OMPClause *OMPClauseReader::readClause() {
   case llvm::omp::OMPC_ompx_attribute:
     C = new (Context) OMPXAttributeClause();
     break;
-  case llvm::omp::OMPC_ompx_bare:
-    C = new (Context) OMPXBareClause();
-    break;
 #define OMP_CLAUSE_NO_CLASS(Enum, Str)                                         \
   case llvm::omp::Enum:                                                        \
     break;
@@ -11549,8 +11547,6 @@ void OMPClauseReader::VisitOMPXAttributeClause(OMPXAttributeClause *C) {
   C->setLParenLoc(Record.readSourceLocation());
   C->setLocEnd(Record.readSourceLocation());
 }
-
-void OMPClauseReader::VisitOMPXBareClause(OMPXBareClause *C) {}
 
 OMPTraitInfo *ASTRecordReader::readOMPTraitInfo() {
   OMPTraitInfo &TI = getContext().getNewOMPTraitInfo();

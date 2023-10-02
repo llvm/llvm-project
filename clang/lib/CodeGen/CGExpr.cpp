@@ -51,6 +51,12 @@
 using namespace clang;
 using namespace CodeGen;
 
+// Experiment to make sanitizers easier to debug
+static llvm::cl::opt<bool> ClSanitizeDebugDeoptimization(
+    "ubsan-unique-traps", llvm::cl::Optional,
+    llvm::cl::desc("Deoptimize traps for UBSAN so there is 1 trap per check"),
+    llvm::cl::init(false));
+
 //===--------------------------------------------------------------------===//
 //                        Miscellaneous Helper Methods
 //===--------------------------------------------------------------------===//
@@ -2641,9 +2647,8 @@ static LValue EmitFunctionDeclLValue(CodeGenFunction &CGF, const Expr *E,
 
 static LValue EmitCapturedFieldLValue(CodeGenFunction &CGF, const FieldDecl *FD,
                                       llvm::Value *ThisValue) {
-  QualType TagType = CGF.getContext().getTagDeclType(FD->getParent());
-  LValue LV = CGF.MakeNaturalAlignAddrLValue(ThisValue, TagType);
-  return CGF.EmitLValueForField(LV, FD);
+
+  return CGF.EmitLValueForLambdaField(FD, ThisValue);
 }
 
 /// Named Registers are named metadata pointing to the register name
@@ -3553,17 +3558,28 @@ void CodeGenFunction::EmitTrapCheck(llvm::Value *Checked,
   // check-type per function to save on code size.
   if (TrapBBs.size() <= CheckHandlerID)
     TrapBBs.resize(CheckHandlerID + 1);
+
   llvm::BasicBlock *&TrapBB = TrapBBs[CheckHandlerID];
 
-  if (!CGM.getCodeGenOpts().OptimizationLevel || !TrapBB ||
-      (CurCodeDecl && CurCodeDecl->hasAttr<OptimizeNoneAttr>())) {
+  if (!ClSanitizeDebugDeoptimization &&
+      CGM.getCodeGenOpts().OptimizationLevel && TrapBB &&
+      (!CurCodeDecl || !CurCodeDecl->hasAttr<OptimizeNoneAttr>())) {
+    auto Call = TrapBB->begin();
+    assert(isa<llvm::CallInst>(Call) && "Expected call in trap BB");
+
+    Call->applyMergedLocation(Call->getDebugLoc(),
+                              Builder.getCurrentDebugLocation());
+    Builder.CreateCondBr(Checked, Cont, TrapBB);
+  } else {
     TrapBB = createBasicBlock("trap");
     Builder.CreateCondBr(Checked, Cont, TrapBB);
     EmitBlock(TrapBB);
 
-    llvm::CallInst *TrapCall =
-        Builder.CreateCall(CGM.getIntrinsic(llvm::Intrinsic::ubsantrap),
-                           llvm::ConstantInt::get(CGM.Int8Ty, CheckHandlerID));
+    llvm::CallInst *TrapCall = Builder.CreateCall(
+        CGM.getIntrinsic(llvm::Intrinsic::ubsantrap),
+        llvm::ConstantInt::get(CGM.Int8Ty, ClSanitizeDebugDeoptimization
+                                               ? TrapBB->getParent()->size()
+                                               : CheckHandlerID));
 
     if (!CGM.getCodeGenOpts().TrapFuncName.empty()) {
       auto A = llvm::Attribute::get(getLLVMContext(), "trap-func-name",
@@ -3573,13 +3589,6 @@ void CodeGenFunction::EmitTrapCheck(llvm::Value *Checked,
     TrapCall->setDoesNotReturn();
     TrapCall->setDoesNotThrow();
     Builder.CreateUnreachable();
-  } else {
-    auto Call = TrapBB->begin();
-    assert(isa<llvm::CallInst>(Call) && "Expected call in trap BB");
-
-    Call->applyMergedLocation(Call->getDebugLoc(),
-                              Builder.getCurrentDebugLocation());
-    Builder.CreateCondBr(Checked, Cont, TrapBB);
   }
 
   EmitBlock(Cont);
@@ -4252,15 +4261,36 @@ LValue CodeGenFunction::EmitMemberExpr(const MemberExpr *E) {
 
 /// Given that we are currently emitting a lambda, emit an l-value for
 /// one of its members.
-LValue CodeGenFunction::EmitLValueForLambdaField(const FieldDecl *Field) {
-  if (CurCodeDecl) {
-    assert(cast<CXXMethodDecl>(CurCodeDecl)->getParent()->isLambda());
-    assert(cast<CXXMethodDecl>(CurCodeDecl)->getParent() == Field->getParent());
+///
+LValue CodeGenFunction::EmitLValueForLambdaField(const FieldDecl *Field,
+                                                 llvm::Value *ThisValue) {
+  bool HasExplicitObjectParameter = false;
+  if (const auto *MD = dyn_cast_if_present<CXXMethodDecl>(CurCodeDecl)) {
+    HasExplicitObjectParameter = MD->isExplicitObjectMemberFunction();
+    assert(MD->getParent()->isLambda());
+    assert(MD->getParent() == Field->getParent());
   }
-  QualType LambdaTagType =
-    getContext().getTagDeclType(Field->getParent());
-  LValue LambdaLV = MakeNaturalAlignAddrLValue(CXXABIThisValue, LambdaTagType);
+  LValue LambdaLV;
+  if (HasExplicitObjectParameter) {
+    const VarDecl *D = cast<CXXMethodDecl>(CurCodeDecl)->getParamDecl(0);
+    auto It = LocalDeclMap.find(D);
+    assert(It != LocalDeclMap.end() && "explicit parameter not loaded?");
+    Address AddrOfExplicitObject = It->getSecond();
+    if (D->getType()->isReferenceType())
+      LambdaLV = EmitLoadOfReferenceLValue(AddrOfExplicitObject, D->getType(),
+                                           AlignmentSource::Decl);
+    else
+      LambdaLV = MakeNaturalAlignAddrLValue(AddrOfExplicitObject.getPointer(),
+                                            D->getType().getNonReferenceType());
+  } else {
+    QualType LambdaTagType = getContext().getTagDeclType(Field->getParent());
+    LambdaLV = MakeNaturalAlignAddrLValue(ThisValue, LambdaTagType);
+  }
   return EmitLValueForField(LambdaLV, Field);
+}
+
+LValue CodeGenFunction::EmitLValueForLambdaField(const FieldDecl *Field) {
+  return EmitLValueForLambdaField(Field, CXXABIThisValue);
 }
 
 /// Get the field index in the debug info. The debug info structure/union
@@ -4977,9 +5007,12 @@ RValue CodeGenFunction::EmitCallExpr(const CallExpr *E,
   if (const auto *CE = dyn_cast<CUDAKernelCallExpr>(E))
     return EmitCUDAKernelCallExpr(CE, ReturnValue);
 
+  // A CXXOperatorCallExpr is created even for explicit object methods, but
+  // these should be treated like static function call.
   if (const auto *CE = dyn_cast<CXXOperatorCallExpr>(E))
-    if (const CXXMethodDecl *MD =
-          dyn_cast_or_null<CXXMethodDecl>(CE->getCalleeDecl()))
+    if (const auto *MD =
+            dyn_cast_if_present<CXXMethodDecl>(CE->getCalleeDecl());
+        MD && MD->isImplicitObjectMemberFunction())
       return EmitCXXOperatorMemberCallExpr(CE, MD, ReturnValue);
 
   CGCallee callee = EmitCallee(E->getCallee());
