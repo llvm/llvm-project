@@ -475,10 +475,8 @@ Improvements to Clang's diagnostics
 - ``-Wformat`` cast fix-its will now suggest ``static_cast`` instead of C-style casts
   for C++ code.
 - ``-Wformat`` will no longer suggest a no-op fix-it for fixing scoped enum format
-  warnings. Instead, it will suggest casting the enum object to the type specified
-  in the format string.
-- Clang contexpr evaluator now displays notes as well as an error when a constructor
-  of a base class is not called in the constructor of its derived class.
+  warnings. Instead, it will suggest casting the enum object based on its
+  underlying type.
 
 Bug Fixes in This Version
 -------------------------
