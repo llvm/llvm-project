@@ -41,7 +41,7 @@ constexpr bool test() {
   {
     using SomeView = SizedView;
 
-    // Test `view | views::take`
+    // Test `view | views::slide`
     {
       SomeView view(buf, buf + n);
       std::same_as<std::ranges::slide_view<SomeView>> decltype(auto) result = view | std::views::slide(2);
