@@ -66,7 +66,7 @@ public:
 
   template <typename T> static IntegralAP from(T Value, unsigned NumBits = 0) {
     assert(NumBits > 0);
-    APSInt Copy = APSInt(APInt(NumBits, Value, Signed), !Signed);
+    APSInt Copy = APSInt(APInt(NumBits, static_cast<int64_t>(Value), Signed), !Signed);
 
     return IntegralAP<Signed>(Copy);
   }
@@ -210,7 +210,6 @@ public:
   }
 
   static bool comp(IntegralAP A, IntegralAP *R) {
-    assert(false);
     *R = IntegralAP(~A.V);
     return false;
   }

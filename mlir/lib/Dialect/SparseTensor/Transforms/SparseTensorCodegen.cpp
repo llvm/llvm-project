@@ -498,7 +498,7 @@ static void genEndInsert(OpBuilder &builder, Location loc,
   const Level lvlRank = stt.getLvlRank();
   for (Level l = 0; l < lvlRank; l++) {
     const auto dlt = stt.getLvlType(l);
-    if (isCompressedWithHiDLT(dlt))
+    if (isLooseCompressedDLT(dlt))
       llvm_unreachable("TODO: Not yet implemented");
     if (isCompressedDLT(dlt)) {
       // Compressed dimensions need a position cleanup for all entries
@@ -1237,7 +1237,7 @@ public:
                   ConversionPatternRewriter &rewriter) const override {
     // Query memSizes for the actually stored values.
     // FIXME: the nse value computed in this way might be wrong when there is
-    // any "compressed_hi" level.
+    // any "loose_compressed" level.
     rewriter.replaceOp(
         op, genValMemSize(rewriter, op.getLoc(), adaptor.getTensor()));
     return success();
@@ -1316,8 +1316,8 @@ struct SparseAssembleOpConverter : public OpConversionPattern<AssembleOp> {
       }
 
       if (isDLTWithPos(dlt)) {
-        assert(isCompressedDLT(dlt) || isCompressedWithHiDLT(dlt));
-        if (isCompressedWithHiDLT(dlt)) {
+        assert(isCompressedDLT(dlt) || isLooseCompressedDLT(dlt));
+        if (isLooseCompressedDLT(dlt)) {
           memSize = rewriter.create<arith::MulIOp>(loc, memSize, c2);
           posBack = rewriter.create<arith::SubIOp>(loc, memSize, c1);
         } else {
