@@ -87,6 +87,15 @@ lto::Config BitcodeCompiler::createConfig() {
   c.RunCSIRInstr = ctx.config.ltoCSProfileGenerate;
   c.PGOWarnMismatch = ctx.config.ltoPGOWarnMismatch;
 
+  if (ctx.config.emit == EmitKind::LLVM) {
+    c.PostInternalizeModuleHook = [this](size_t task, const Module &m) {
+      if (std::unique_ptr<raw_fd_ostream> os =
+              openLTOOutputFile(ctx.config.outputFile))
+        WriteBitcodeToFile(m, *os, false);
+      return false;
+    };
+  }
+
   if (ctx.config.saveTemps)
     checkError(c.addSaveTemps(std::string(ctx.config.outputFile) + ".",
                               /*UseInputModulePath*/ true));
