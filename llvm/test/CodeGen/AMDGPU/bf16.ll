@@ -2800,6 +2800,7 @@ define { <32 x i32>, bfloat } @test_overflow_stack(bfloat %a, <32 x i32> %b) {
 ; GCN-NEXT:    v_add_i32_e32 v31, vcc, 0x6c, v0
 ; GCN-NEXT:    buffer_store_dword v30, v2, s[0:3], 0 offen
 ; GCN-NEXT:    v_add_i32_e32 v2, vcc, 0x68, v0
+; GCN-NEXT:    v_lshrrev_b32_e32 v1, 16, v1
 ; GCN-NEXT:    s_waitcnt expcnt(0)
 ; GCN-NEXT:    v_add_i32_e32 v30, vcc, 0x64, v0
 ; GCN-NEXT:    buffer_store_dword v29, v31, s[0:3], 0 offen
@@ -2814,7 +2815,6 @@ define { <32 x i32>, bfloat } @test_overflow_stack(bfloat %a, <32 x i32> %b) {
 ; GCN-NEXT:    s_waitcnt expcnt(0)
 ; GCN-NEXT:    v_add_i32_e32 v27, vcc, 0x50, v0
 ; GCN-NEXT:    v_add_i32_e32 v30, vcc, 0x4c, v0
-; GCN-NEXT:    v_lshrrev_b32_e32 v1, 16, v1
 ; GCN-NEXT:    buffer_store_dword v26, v29, s[0:3], 0 offen
 ; GCN-NEXT:    s_waitcnt expcnt(0)
 ; GCN-NEXT:    v_add_i32_e32 v26, vcc, 0x48, v0
@@ -2897,21 +2897,21 @@ define { <32 x i32>, bfloat } @test_overflow_stack(bfloat %a, <32 x i32> %b) {
 ; GFX7-NEXT:    v_add_i32_e32 v2, vcc, 0x64, v0
 ; GFX7-NEXT:    buffer_store_dword v27, v2, s[0:3], 0 offen
 ; GFX7-NEXT:    v_add_i32_e32 v2, vcc, 0x60, v0
+; GFX7-NEXT:    v_add_i32_e32 v27, vcc, 0x5c, v0
 ; GFX7-NEXT:    buffer_store_dword v26, v2, s[0:3], 0 offen
-; GFX7-NEXT:    v_add_i32_e32 v2, vcc, 0x5c, v0
-; GFX7-NEXT:    buffer_store_dword v25, v2, s[0:3], 0 offen
 ; GFX7-NEXT:    v_add_i32_e32 v2, vcc, 0x58, v0
+; GFX7-NEXT:    v_add_i32_e32 v26, vcc, 0x54, v0
+; GFX7-NEXT:    buffer_store_dword v25, v27, s[0:3], 0 offen
 ; GFX7-NEXT:    buffer_store_dword v24, v2, s[0:3], 0 offen
-; GFX7-NEXT:    v_add_i32_e32 v2, vcc, 0x54, v0
-; GFX7-NEXT:    buffer_store_dword v23, v2, s[0:3], 0 offen
-; GFX7-NEXT:    v_add_i32_e32 v2, vcc, 0x50, v0
-; GFX7-NEXT:    buffer_store_dword v22, v2, s[0:3], 0 offen
-; GFX7-NEXT:    v_add_i32_e32 v2, vcc, 0x4c, v0
-; GFX7-NEXT:    buffer_store_dword v21, v2, s[0:3], 0 offen
 ; GFX7-NEXT:    v_add_i32_e32 v2, vcc, 0x48, v0
+; GFX7-NEXT:    v_add_i32_e32 v25, vcc, 0x50, v0
+; GFX7-NEXT:    v_add_i32_e32 v27, vcc, 0x4c, v0
+; GFX7-NEXT:    v_add_i32_e32 v24, vcc, 0x44, v0
+; GFX7-NEXT:    buffer_store_dword v23, v26, s[0:3], 0 offen
+; GFX7-NEXT:    buffer_store_dword v22, v25, s[0:3], 0 offen
+; GFX7-NEXT:    buffer_store_dword v21, v27, s[0:3], 0 offen
 ; GFX7-NEXT:    buffer_store_dword v20, v2, s[0:3], 0 offen
-; GFX7-NEXT:    v_add_i32_e32 v2, vcc, 0x44, v0
-; GFX7-NEXT:    buffer_store_dword v19, v2, s[0:3], 0 offen
+; GFX7-NEXT:    buffer_store_dword v19, v24, s[0:3], 0 offen
 ; GFX7-NEXT:    v_add_i32_e32 v2, vcc, 64, v0
 ; GFX7-NEXT:    buffer_store_dword v18, v2, s[0:3], 0 offen
 ; GFX7-NEXT:    v_add_i32_e32 v2, vcc, 60, v0
@@ -2975,21 +2975,21 @@ define { <32 x i32>, bfloat } @test_overflow_stack(bfloat %a, <32 x i32> %b) {
 ; GFX8-NEXT:    v_add_u32_e32 v2, vcc, 0x64, v0
 ; GFX8-NEXT:    buffer_store_dword v27, v2, s[0:3], 0 offen
 ; GFX8-NEXT:    v_add_u32_e32 v2, vcc, 0x60, v0
+; GFX8-NEXT:    v_add_u32_e32 v27, vcc, 0x5c, v0
 ; GFX8-NEXT:    buffer_store_dword v26, v2, s[0:3], 0 offen
-; GFX8-NEXT:    v_add_u32_e32 v2, vcc, 0x5c, v0
-; GFX8-NEXT:    buffer_store_dword v25, v2, s[0:3], 0 offen
 ; GFX8-NEXT:    v_add_u32_e32 v2, vcc, 0x58, v0
+; GFX8-NEXT:    v_add_u32_e32 v26, vcc, 0x54, v0
+; GFX8-NEXT:    buffer_store_dword v25, v27, s[0:3], 0 offen
 ; GFX8-NEXT:    buffer_store_dword v24, v2, s[0:3], 0 offen
-; GFX8-NEXT:    v_add_u32_e32 v2, vcc, 0x54, v0
-; GFX8-NEXT:    buffer_store_dword v23, v2, s[0:3], 0 offen
-; GFX8-NEXT:    v_add_u32_e32 v2, vcc, 0x50, v0
-; GFX8-NEXT:    buffer_store_dword v22, v2, s[0:3], 0 offen
-; GFX8-NEXT:    v_add_u32_e32 v2, vcc, 0x4c, v0
-; GFX8-NEXT:    buffer_store_dword v21, v2, s[0:3], 0 offen
 ; GFX8-NEXT:    v_add_u32_e32 v2, vcc, 0x48, v0
+; GFX8-NEXT:    v_add_u32_e32 v25, vcc, 0x50, v0
+; GFX8-NEXT:    v_add_u32_e32 v27, vcc, 0x4c, v0
+; GFX8-NEXT:    v_add_u32_e32 v24, vcc, 0x44, v0
+; GFX8-NEXT:    buffer_store_dword v23, v26, s[0:3], 0 offen
+; GFX8-NEXT:    buffer_store_dword v22, v25, s[0:3], 0 offen
+; GFX8-NEXT:    buffer_store_dword v21, v27, s[0:3], 0 offen
 ; GFX8-NEXT:    buffer_store_dword v20, v2, s[0:3], 0 offen
-; GFX8-NEXT:    v_add_u32_e32 v2, vcc, 0x44, v0
-; GFX8-NEXT:    buffer_store_dword v19, v2, s[0:3], 0 offen
+; GFX8-NEXT:    buffer_store_dword v19, v24, s[0:3], 0 offen
 ; GFX8-NEXT:    v_add_u32_e32 v2, vcc, 64, v0
 ; GFX8-NEXT:    buffer_store_dword v18, v2, s[0:3], 0 offen
 ; GFX8-NEXT:    v_add_u32_e32 v2, vcc, 60, v0
@@ -3035,20 +3035,20 @@ define { <32 x i32>, bfloat } @test_overflow_stack(bfloat %a, <32 x i32> %b) {
 ; GFX9-NEXT:    buffer_store_dword v28, v0, s[0:3], 0 offen offset:104
 ; GFX9-NEXT:    buffer_store_dword v27, v0, s[0:3], 0 offen offset:100
 ; GFX9-NEXT:    buffer_store_dword v26, v0, s[0:3], 0 offen offset:96
+; GFX9-NEXT:    buffer_load_dword v26, off, s[0:3], s32 offset:4
+; GFX9-NEXT:    s_nop 0
+; GFX9-NEXT:    buffer_load_dword v27, off, s[0:3], s32 offset:8
+; GFX9-NEXT:    s_nop 0
 ; GFX9-NEXT:    buffer_store_dword v25, v0, s[0:3], 0 offen offset:92
+; GFX9-NEXT:    buffer_load_dword v25, off, s[0:3], s32
+; GFX9-NEXT:    s_nop 0
 ; GFX9-NEXT:    buffer_store_dword v24, v0, s[0:3], 0 offen offset:88
 ; GFX9-NEXT:    buffer_store_dword v23, v0, s[0:3], 0 offen offset:84
 ; GFX9-NEXT:    buffer_store_dword v22, v0, s[0:3], 0 offen offset:80
 ; GFX9-NEXT:    buffer_store_dword v21, v0, s[0:3], 0 offen offset:76
 ; GFX9-NEXT:    buffer_store_dword v20, v0, s[0:3], 0 offen offset:72
-; GFX9-NEXT:    buffer_load_dword v20, off, s[0:3], s32 offset:4
-; GFX9-NEXT:    s_nop 0
 ; GFX9-NEXT:    buffer_store_dword v19, v0, s[0:3], 0 offen offset:68
-; GFX9-NEXT:    buffer_load_dword v19, off, s[0:3], s32 offset:8
-; GFX9-NEXT:    s_nop 0
 ; GFX9-NEXT:    buffer_store_dword v18, v0, s[0:3], 0 offen offset:64
-; GFX9-NEXT:    buffer_load_dword v18, off, s[0:3], s32
-; GFX9-NEXT:    s_nop 0
 ; GFX9-NEXT:    buffer_store_dword v17, v0, s[0:3], 0 offen offset:60
 ; GFX9-NEXT:    buffer_store_dword v16, v0, s[0:3], 0 offen offset:56
 ; GFX9-NEXT:    buffer_store_dword v15, v0, s[0:3], 0 offen offset:52
@@ -3065,11 +3065,11 @@ define { <32 x i32>, bfloat } @test_overflow_stack(bfloat %a, <32 x i32> %b) {
 ; GFX9-NEXT:    buffer_store_dword v4, v0, s[0:3], 0 offen offset:8
 ; GFX9-NEXT:    buffer_store_dword v3, v0, s[0:3], 0 offen offset:4
 ; GFX9-NEXT:    buffer_store_dword v2, v0, s[0:3], 0 offen
-; GFX9-NEXT:    s_waitcnt vmcnt(18)
-; GFX9-NEXT:    buffer_store_dword v19, v0, s[0:3], 0 offen offset:124
-; GFX9-NEXT:    buffer_store_dword v20, v0, s[0:3], 0 offen offset:120
-; GFX9-NEXT:    s_waitcnt vmcnt(18)
-; GFX9-NEXT:    buffer_store_dword v18, v0, s[0:3], 0 offen offset:116
+; GFX9-NEXT:    s_waitcnt vmcnt(25)
+; GFX9-NEXT:    buffer_store_dword v27, v0, s[0:3], 0 offen offset:124
+; GFX9-NEXT:    buffer_store_dword v26, v0, s[0:3], 0 offen offset:120
+; GFX9-NEXT:    s_waitcnt vmcnt(25)
+; GFX9-NEXT:    buffer_store_dword v25, v0, s[0:3], 0 offen offset:116
 ; GFX9-NEXT:    buffer_store_short_d16_hi v1, v0, s[0:3], 0 offen offset:128
 ; GFX9-NEXT:    s_waitcnt vmcnt(0)
 ; GFX9-NEXT:    s_setpc_b64 s[30:31]

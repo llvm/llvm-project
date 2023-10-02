@@ -709,7 +709,7 @@ bool UnclusteredHighRPStage::initGCNSchedStage() {
   if (!GCNSchedStage::initGCNSchedStage())
     return false;
 
-  if (DAG.RegionsWithHighRP.none() && DAG.RegionsWithExcessRP.none())
+  if (DAG.RegionsWithExcessRP.none())
     return false;
 
   SavedMutations.swap(DAG.Mutations);
@@ -904,9 +904,21 @@ void GCNSchedStage::setupNewBlock() {
 
 void GCNSchedStage::finalizeGCNRegion() {
   DAG.Regions[RegionIdx] = std::pair(DAG.RegionBegin, DAG.RegionEnd);
-  DAG.RescheduleRegions[RegionIdx] = false;
+  PressureAfter = DAG.getRealRegPressure(RegionIdx);
+
   if (S.HasHighPressure)
     DAG.RegionsWithHighRP[RegionIdx] = true;
+
+  unsigned NewVGPRRP = PressureAfter.getVGPRNum(false);
+  unsigned NewAGPRRP = PressureAfter.getAGPRNum();
+  unsigned NewSGPRRP = PressureAfter.getSGPRNum();
+
+  if ((NewVGPRRP >= S.VGPRExcessLimit - S.VGPRExcessMargin) ||
+      (NewAGPRRP >= S.VGPRExcessLimit - S.SGPRExcessMargin) ||
+      (NewSGPRRP >= S.SGPRExcessLimit - S.VGPRExcessMargin)) {
+    DAG.RegionsWithExcessRP[RegionIdx] = true;
+    DAG.RescheduleRegions[RegionIdx] = true;
+  }
 
   // Revert scheduling if we have dropped occupancy or there is some other
   // reason that the original schedule is better.
@@ -922,7 +934,6 @@ void GCNSchedStage::finalizeGCNRegion() {
 
 void GCNSchedStage::checkScheduling() {
   // Check the results of scheduling.
-  PressureAfter = DAG.getRealRegPressure(RegionIdx);
   LLVM_DEBUG(dbgs() << "Pressure after scheduling: " << print(PressureAfter));
   LLVM_DEBUG(dbgs() << "Region: " << RegionIdx << ".\n");
 
@@ -967,16 +978,6 @@ void GCNSchedStage::checkScheduling() {
     DAG.RegionsWithMinOcc.reset();
     LLVM_DEBUG(dbgs() << "Occupancy lowered for the function to "
                       << DAG.MinOccupancy << ".\n");
-  }
-
-  unsigned MaxVGPRs = ST.getMaxNumVGPRs(MF);
-  unsigned MaxSGPRs = ST.getMaxNumSGPRs(MF);
-  if (PressureAfter.getVGPRNum(false) > MaxVGPRs ||
-      PressureAfter.getAGPRNum() > MaxVGPRs ||
-      PressureAfter.getSGPRNum() > MaxSGPRs) {
-    DAG.RescheduleRegions[RegionIdx] = true;
-    DAG.RegionsWithHighRP[RegionIdx] = true;
-    DAG.RegionsWithExcessRP[RegionIdx] = true;
   }
 
   // Revert if this region's schedule would cause a drop in occupancy or
@@ -1127,16 +1128,23 @@ bool OccInitialScheduleStage::shouldRevertScheduling(unsigned WavesAfter) {
 bool UnclusteredHighRPStage::shouldRevertScheduling(unsigned WavesAfter) {
   // If RP is not reduced in the unclustered reschedule stage, revert to the
   // old schedule.
-  if ((WavesAfter <= PressureBefore.getOccupancy(ST) &&
-       mayCauseSpilling(WavesAfter)) ||
-      GCNSchedStage::shouldRevertScheduling(WavesAfter)) {
-    LLVM_DEBUG(dbgs() << "Unclustered reschedule did not help.\n");
-    return true;
-  }
+  if (DAG.RegionsWithExcessRP[RegionIdx]) {
+    unsigned NewVGPRRP = PressureAfter.getVGPRNum(false);
+    unsigned NewAGPRRP = PressureAfter.getAGPRNum();
+    unsigned NewSGPRRP = PressureAfter.getSGPRNum();
 
-  // Do not attempt to relax schedule even more if we are already spilling.
-  if (isRegionWithExcessRP())
+    unsigned OldVGPRRP = PressureBefore.getVGPRNum(false);
+    unsigned OldAGPRRP = PressureBefore.getAGPRNum();
+    unsigned OldSGPRRP = PressureBefore.getSGPRNum();
+
+    if (NewVGPRRP > S.VGPRExcessLimit && NewVGPRRP >= OldVGPRRP)
+      return true;
+    if (NewAGPRRP > S.VGPRExcessLimit && NewAGPRRP >= OldAGPRRP)
+      return true;
+    if (NewSGPRRP > S.SGPRExcessLimit && NewSGPRRP >= OldSGPRRP)
+      return true;
     return false;
+  }
 
   LLVM_DEBUG(
       dbgs()
