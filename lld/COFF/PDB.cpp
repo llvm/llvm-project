@@ -187,9 +187,6 @@ class DebugSHandler {
   /// The object file whose .debug$S sections we're processing.
   ObjFile &file;
 
-  /// The result of merging type indices.
-  TpiSource *source;
-
   /// The DEBUG_S_STRINGTABLE subsection.  These strings are referred to by
   /// index from other records in the .debug$S section.  All of these strings
   /// need to be added to the global PDB string table, and all references to
@@ -230,11 +227,9 @@ class DebugSHandler {
   void addFrameDataSubsection(SectionChunk *debugChunk,
                               const DebugSubsectionRecord &ss);
 
-  void recordStringTableReferences(CVSymbol sym, uint32_t symOffset);
-
 public:
-  DebugSHandler(PDBLinker &linker, ObjFile &file, TpiSource *source)
-      : linker(linker), file(file), source(source) {}
+  DebugSHandler(PDBLinker &linker, ObjFile &file)
+      : linker(linker), file(file) {}
 
   void handleDebugS(SectionChunk *debugChunk);
 
@@ -1035,7 +1030,7 @@ void PDBLinker::addDebugSymbols(TpiSource *source) {
   ScopedTimer t(ctx.symbolMergingTimer);
   ExitOnError exitOnErr;
   pdb::DbiStreamBuilder &dbiBuilder = builder.getDbiBuilder();
-  DebugSHandler dsh(*this, *source->file, source);
+  DebugSHandler dsh(*this, *source->file);
   // Now do all live .debug$S and .debug$F sections.
   for (SectionChunk *debugChunk : source->file->getDebugChunks()) {
     if (!debugChunk->live || debugChunk->getSize() == 0)
