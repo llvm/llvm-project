@@ -19,8 +19,6 @@
 
 STATISTIC(NumInstructionsShrunk,
           "Number of 64-bit instruction reduced to 32-bit.");
-STATISTIC(NumLiteralConstantsFolded,
-          "Number of literal constants folded into 32-bit instructions.");
 
 using namespace llvm;
 
@@ -40,7 +38,6 @@ public:
   SIShrinkInstructions() : MachineFunctionPass(ID) {
   }
 
-  bool foldImmediates(MachineInstr &MI, bool TryToCommute = true) const;
   bool shouldShrinkTrue16(MachineInstr &MI) const;
   bool isKImmOperand(const MachineOperand &Src) const;
   bool isKUImmOperand(const MachineOperand &Src) const;
@@ -82,64 +79,6 @@ char SIShrinkInstructions::ID = 0;
 
 FunctionPass *llvm::createSIShrinkInstructionsPass() {
   return new SIShrinkInstructions();
-}
-
-/// This function checks \p MI for operands defined by a move immediate
-/// instruction and then folds the literal constant into the instruction if it
-/// can. This function assumes that \p MI is a VOP1, VOP2, or VOPC instructions.
-bool SIShrinkInstructions::foldImmediates(MachineInstr &MI,
-                                          bool TryToCommute) const {
-  assert(TII->isVOP1(MI) || TII->isVOP2(MI) || TII->isVOPC(MI));
-
-  int Src0Idx = AMDGPU::getNamedOperandIdx(MI.getOpcode(), AMDGPU::OpName::src0);
-
-  // Try to fold Src0
-  MachineOperand &Src0 = MI.getOperand(Src0Idx);
-  if (Src0.isReg()) {
-    Register Reg = Src0.getReg();
-    if (Reg.isVirtual()) {
-      MachineInstr *Def = MRI->getUniqueVRegDef(Reg);
-      if (Def && Def->isMoveImmediate()) {
-        MachineOperand &MovSrc = Def->getOperand(1);
-        bool ConstantFolded = false;
-
-        if (TII->isOperandLegal(MI, Src0Idx, &MovSrc)) {
-          if (MovSrc.isImm() &&
-              (isInt<32>(MovSrc.getImm()) || isUInt<32>(MovSrc.getImm()))) {
-            Src0.ChangeToImmediate(MovSrc.getImm());
-            ConstantFolded = true;
-          } else if (MovSrc.isFI()) {
-            Src0.ChangeToFrameIndex(MovSrc.getIndex());
-            ConstantFolded = true;
-          } else if (MovSrc.isGlobal()) {
-            Src0.ChangeToGA(MovSrc.getGlobal(), MovSrc.getOffset(),
-                            MovSrc.getTargetFlags());
-            ConstantFolded = true;
-          }
-        }
-
-        if (ConstantFolded) {
-          if (MRI->use_nodbg_empty(Reg))
-            Def->eraseFromParent();
-          ++NumLiteralConstantsFolded;
-          return true;
-        }
-      }
-    }
-  }
-
-  // We have failed to fold src0, so commute the instruction and try again.
-  if (TryToCommute && MI.isCommutable()) {
-    if (TII->commuteInstruction(MI)) {
-      if (foldImmediates(MI, false))
-        return true;
-
-      // Commute back.
-      TII->commuteInstruction(MI);
-    }
-  }
-
-  return false;
 }
 
 /// Do not shrink the instruction if its registers are not expressible in the
@@ -1010,7 +949,6 @@ bool SIShrinkInstructions::runOnMachineFunction(MachineFunction &MF) {
         Inst32->findRegisterDefOperand(VCCReg)->setIsDead();
 
       MI.eraseFromParent();
-      foldImmediates(*Inst32);
 
       LLVM_DEBUG(dbgs() << "e32 MI = " << *Inst32 << '\n');
     }

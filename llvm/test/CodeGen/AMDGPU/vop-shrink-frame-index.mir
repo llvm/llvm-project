@@ -1,4 +1,4 @@
-# RUN: llc -march=amdgcn -verify-machineinstrs -run-pass si-shrink-instructions -o - %s | FileCheck -check-prefix=GCN %s
+# RUN: llc -march=amdgcn -verify-machineinstrs -run-pass si-shrink-instructions,si-fold-operands -o - %s | FileCheck -check-prefix=GCN %s
 --- |
 
   define amdgpu_kernel void @fold_fi_vgpr() {
@@ -141,8 +141,8 @@ body:             |
 
 ...
 # GCN-LABEL: name: fold_imm_fi{{$}}
-# GCN: %0:vgpr_32 = V_MOV_B32_e32 %stack.0.alloca, implicit $exec
-# GCN: %2:vgpr_32 = V_ADD_CO_U32_e32 999, %0, implicit-def $vcc, implicit $exec
+# GCN: %1:vgpr_32 = V_MOV_B32_e32 999, implicit $exec
+# GCN: %2:vgpr_32 = V_ADD_CO_U32_e32 %stack.0.alloca, %1, implicit-def $vcc, implicit $exec
 name: fold_imm_fi
 tracksRegLiveness: true
 registers:
