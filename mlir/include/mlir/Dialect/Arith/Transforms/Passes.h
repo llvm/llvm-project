@@ -63,13 +63,6 @@ void populateExpandBFloat16Patterns(RewritePatternSet &patterns);
 /// Add patterns to expand Arith ops.
 void populateArithExpandOpsPatterns(RewritePatternSet &patterns);
 
-/// Create a pass to legalize Arith ops.
-std::unique_ptr<Pass> createArithExpandOpsPass();
-
-/// Create a pass to legalize Arith ops with specified configuration.
-std::unique_ptr<Pass>
-createArithExpandOpsPass(const ArithExpandOpsOptions &options);
-
 /// Create a pass to replace signed ops with unsigned ones where they are proven
 /// equivalent.
 std::unique_ptr<Pass> createArithUnsignedWhenEquivalentPass();
