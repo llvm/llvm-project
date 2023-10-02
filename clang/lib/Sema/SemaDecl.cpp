@@ -18446,6 +18446,9 @@ Decl *Sema::ActOnIvar(Scope *S,
                                              DeclStart, Loc, II, T,
                                              TInfo, ac, (Expr *)BitfieldWidth);
 
+  if (T->containsErrors())
+    NewID->setInvalidDecl();
+
   if (II) {
     NamedDecl *PrevDecl = LookupSingleName(S, II, Loc, LookupMemberName,
                                            ForVisibleRedeclaration);
