@@ -383,6 +383,10 @@ Bug Fixes to C++ Support
 - Fixed a bug causing destructors of constant-evaluated structured bindings
   initialized by array elements to be called in the wrong evaluation context.
 
+- Fix crash where ill-formed code was being treated as a deduction guide and
+  we now produce a diagnostic. Fixes:
+  (`#65522 <https://github.com/llvm/llvm-project/issues/65522>`_)
+
 Bug Fixes to AST Handling
 ^^^^^^^^^^^^^^^^^^^^^^^^^
 - Fixed an import failure of recursive friend class template.
