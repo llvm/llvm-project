@@ -281,7 +281,7 @@ buildFatArchList(ArrayRef<Slice> Slices) {
               .str()
               .c_str());
 
-    FatArchTy FatArch;
+    FatArchTy FatArch = {};
     FatArch.cputype = S.getCPUType();
     FatArch.cpusubtype = S.getCPUSubType();
     FatArch.offset = Offset;
