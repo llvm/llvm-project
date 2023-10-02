@@ -8335,23 +8335,40 @@ static unsigned getRVVReductionOp(unsigned ISDOpcode) {
   switch (ISDOpcode) {
   default:
     llvm_unreachable("Unhandled reduction");
+  case ISD::VP_REDUCE_ADD:
   case ISD::VECREDUCE_ADD:
     return RISCVISD::VECREDUCE_ADD_VL;
+  case ISD::VP_REDUCE_UMAX:
   case ISD::VECREDUCE_UMAX:
     return RISCVISD::VECREDUCE_UMAX_VL;
+  case ISD::VP_REDUCE_SMAX:
   case ISD::VECREDUCE_SMAX:
     return RISCVISD::VECREDUCE_SMAX_VL;
+  case ISD::VP_REDUCE_UMIN:
   case ISD::VECREDUCE_UMIN:
     return RISCVISD::VECREDUCE_UMIN_VL;
+  case ISD::VP_REDUCE_SMIN:
   case ISD::VECREDUCE_SMIN:
     return RISCVISD::VECREDUCE_SMIN_VL;
+  case ISD::VP_REDUCE_AND:
   case ISD::VECREDUCE_AND:
     return RISCVISD::VECREDUCE_AND_VL;
+  case ISD::VP_REDUCE_OR:
   case ISD::VECREDUCE_OR:
     return RISCVISD::VECREDUCE_OR_VL;
+  case ISD::VP_REDUCE_XOR:
   case ISD::VECREDUCE_XOR:
     return RISCVISD::VECREDUCE_XOR_VL;
+  case ISD::VP_REDUCE_FADD:
+    return RISCVISD::VECREDUCE_FADD_VL;
+  case ISD::VP_REDUCE_SEQ_FADD:
+    return RISCVISD::VECREDUCE_SEQ_FADD_VL;
+  case ISD::VP_REDUCE_FMAX:
+    return RISCVISD::VECREDUCE_FMAX_VL;
+  case ISD::VP_REDUCE_FMIN:
+    return RISCVISD::VECREDUCE_FMIN_VL;
   }
+
 }
 
 SDValue RISCVTargetLowering::lowerVectorMaskVecReduction(SDValue Op,
@@ -8583,37 +8600,6 @@ SDValue RISCVTargetLowering::lowerFPVECREDUCE(SDValue Op,
                            VectorVal, Mask, VL, DL, DAG, Subtarget);
 }
 
-static unsigned getRVVVPReductionOp(unsigned ISDOpcode) {
-  switch (ISDOpcode) {
-  default:
-    llvm_unreachable("Unhandled reduction");
-  case ISD::VP_REDUCE_ADD:
-    return RISCVISD::VECREDUCE_ADD_VL;
-  case ISD::VP_REDUCE_UMAX:
-    return RISCVISD::VECREDUCE_UMAX_VL;
-  case ISD::VP_REDUCE_SMAX:
-    return RISCVISD::VECREDUCE_SMAX_VL;
-  case ISD::VP_REDUCE_UMIN:
-    return RISCVISD::VECREDUCE_UMIN_VL;
-  case ISD::VP_REDUCE_SMIN:
-    return RISCVISD::VECREDUCE_SMIN_VL;
-  case ISD::VP_REDUCE_AND:
-    return RISCVISD::VECREDUCE_AND_VL;
-  case ISD::VP_REDUCE_OR:
-    return RISCVISD::VECREDUCE_OR_VL;
-  case ISD::VP_REDUCE_XOR:
-    return RISCVISD::VECREDUCE_XOR_VL;
-  case ISD::VP_REDUCE_FADD:
-    return RISCVISD::VECREDUCE_FADD_VL;
-  case ISD::VP_REDUCE_SEQ_FADD:
-    return RISCVISD::VECREDUCE_SEQ_FADD_VL;
-  case ISD::VP_REDUCE_FMAX:
-    return RISCVISD::VECREDUCE_FMAX_VL;
-  case ISD::VP_REDUCE_FMIN:
-    return RISCVISD::VECREDUCE_FMIN_VL;
-  }
-}
-
 SDValue RISCVTargetLowering::lowerVPREDUCE(SDValue Op,
                                            SelectionDAG &DAG) const {
   SDLoc DL(Op);
@@ -8626,7 +8612,7 @@ SDValue RISCVTargetLowering::lowerVPREDUCE(SDValue Op,
     return SDValue();
 
   MVT VecVT = VecEVT.getSimpleVT();
-  unsigned RVVOpcode = getRVVVPReductionOp(Op.getOpcode());
+  unsigned RVVOpcode = getRVVReductionOp(Op.getOpcode());
 
   if (VecVT.isFixedLengthVector()) {
     auto ContainerVT = getContainerForFixedLengthVector(VecVT);
