@@ -20,14 +20,9 @@ namespace arith {
 
 #define GEN_PASS_DECL
 #include "mlir/Dialect/Arith/Transforms/Passes.h.inc"
-#define GEN_PASS_DECL_ARITHINTRANGEOPTS
-#include "mlir/Dialect/Arith/Transforms/Passes.h.inc"
 
 class WideIntEmulationConverter;
 class NarrowTypeEmulationConverter;
-
-/// Create a pass to bufferize Arith ops.
-std::unique_ptr<Pass> createArithBufferizePass();
 
 /// Create a pass to bufferize arith.constant ops.
 std::unique_ptr<Pass> createConstantBufferizePass(uint64_t alignment = 0);
