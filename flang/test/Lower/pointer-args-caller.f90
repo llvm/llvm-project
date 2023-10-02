@@ -102,8 +102,8 @@ subroutine test_non_ptr_to_char_array_ptr(p)
   character(10), target :: p(10)
 ! CHECK:  %[[VAL_1:.*]] = fir.alloca !fir.box<!fir.ptr<!fir.array<?x!fir.char<1,?>>>>
 ! CHECK:  %[[VAL_2:.*]]:2 = fir.unboxchar %[[VAL_0]] : (!fir.boxchar<1>) -> (!fir.ref<!fir.char<1,?>>, index)
-! CHECK:  %[[VAL_3:.*]] = arith.constant 10 : index
 ! CHECK:  %[[VAL_4:.*]] = fir.convert %[[VAL_2]]#0 : (!fir.ref<!fir.char<1,?>>) -> !fir.ref<!fir.array<10x!fir.char<1,10>>>
+! CHECK:  %[[VAL_3:.*]] = arith.constant 10 : index
 ! CHECK:  %[[VAL_5:.*]] = arith.constant 10 : index
 ! CHECK:  %[[VAL_6:.*]] = fir.shape %[[VAL_5]] : (index) -> !fir.shape<1>
 ! CHECK:  %[[VAL_7:.*]] = fir.convert %[[VAL_4]] : (!fir.ref<!fir.array<10x!fir.char<1,10>>>) -> !fir.ref<!fir.array<?x!fir.char<1,?>>>

@@ -212,8 +212,7 @@ subroutine ref_scalar_cst_char_p(p0_0, p1_0, p0_1, p1_1)
   ! CHECK: %[[coor:.*]] = fir.coordinate_of %[[p0_0]], %[[fld]]
   ! CHECK: %[[box:.*]] = fir.load %[[coor]]
   ! CHECK: %[[addr:.*]] = fir.box_addr %[[box]]
-  ! CHECK: %[[cast:.*]] = fir.convert %[[addr]]
-  ! CHECK: %[[boxchar:.*]] = fir.emboxchar %[[cast]], %c10{{.*}}
+  ! CHECK: %[[boxchar:.*]] = fir.emboxchar %[[addr]], %c10{{.*}}
   ! CHECK: fir.call @_QPtakes_char_scalar(%[[boxchar]])
   call takes_char_scalar(p0_0%p)
 
@@ -222,8 +221,7 @@ subroutine ref_scalar_cst_char_p(p0_0, p1_0, p0_1, p1_1)
   ! CHECK: %[[coor:.*]] = fir.coordinate_of %[[coor0]], %[[fld]]
   ! CHECK: %[[box:.*]] = fir.load %[[coor]]
   ! CHECK: %[[addr:.*]] = fir.box_addr %[[box]]
-  ! CHECK: %[[cast:.*]] = fir.convert %[[addr]]
-  ! CHECK: %[[boxchar:.*]] = fir.emboxchar %[[cast]], %c10{{.*}}
+  ! CHECK: %[[boxchar:.*]] = fir.emboxchar %[[addr]], %c10{{.*}}
   ! CHECK: fir.call @_QPtakes_char_scalar(%[[boxchar]])
   call takes_char_scalar(p0_1(5)%p)
 
@@ -235,8 +233,7 @@ subroutine ref_scalar_cst_char_p(p0_0, p1_0, p0_1, p1_1)
   ! CHECK: %[[lb:.*]] = fir.convert %[[dims]]#0 : (index) -> i64
   ! CHECK: %[[index:.*]] = arith.subi %c7{{.*}}, %[[lb]]
   ! CHECK: %[[addr:.*]] = fir.coordinate_of %[[box]], %[[index]]
-  ! CHECK: %[[cast:.*]] = fir.convert %[[addr]]
-  ! CHECK: %[[boxchar:.*]] = fir.emboxchar %[[cast]], %c10{{.*}}
+  ! CHECK: %[[boxchar:.*]] = fir.emboxchar %[[addr]], %c10{{.*}}
   ! CHECK: fir.call @_QPtakes_char_scalar(%[[boxchar]])
   call takes_char_scalar(p1_0%p(7))
 
@@ -249,8 +246,7 @@ subroutine ref_scalar_cst_char_p(p0_0, p1_0, p0_1, p1_1)
   ! CHECK: %[[lb:.*]] = fir.convert %[[dims]]#0 : (index) -> i64
   ! CHECK: %[[index:.*]] = arith.subi %c7{{.*}}, %[[lb]]
   ! CHECK: %[[addr:.*]] = fir.coordinate_of %[[box]], %[[index]]
-  ! CHECK: %[[cast:.*]] = fir.convert %[[addr]]
-  ! CHECK: %[[boxchar:.*]] = fir.emboxchar %[[cast]], %c10{{.*}}
+  ! CHECK: %[[boxchar:.*]] = fir.emboxchar %[[addr]], %c10{{.*}}
   ! CHECK: fir.call @_QPtakes_char_scalar(%[[boxchar]])
   call takes_char_scalar(p1_1(5)%p(7))
 
@@ -267,8 +263,7 @@ subroutine ref_scalar_def_char_p(p0_0, p1_0, p0_1, p1_1)
   ! CHECK: %[[box:.*]] = fir.load %[[coor]]
   ! CHECK-DAG: %[[len:.*]] = fir.box_elesize %[[box]]
   ! CHECK-DAG: %[[addr:.*]] = fir.box_addr %[[box]]
-  ! CHECK-DAG: %[[cast:.*]] = fir.convert %[[addr]]
-  ! CHECK: %[[boxchar:.*]] = fir.emboxchar %[[cast]], %[[len]]
+  ! CHECK: %[[boxchar:.*]] = fir.emboxchar %[[addr]], %[[len]]
   ! CHECK: fir.call @_QPtakes_char_scalar(%[[boxchar]])
   call takes_char_scalar(p0_0%p)
 
@@ -278,8 +273,7 @@ subroutine ref_scalar_def_char_p(p0_0, p1_0, p0_1, p1_1)
   ! CHECK: %[[box:.*]] = fir.load %[[coor]]
   ! CHECK-DAG: %[[len:.*]] = fir.box_elesize %[[box]]
   ! CHECK-DAG: %[[addr:.*]] = fir.box_addr %[[box]]
-  ! CHECK-DAG: %[[cast:.*]] = fir.convert %[[addr]]
-  ! CHECK: %[[boxchar:.*]] = fir.emboxchar %[[cast]], %[[len]]
+  ! CHECK: %[[boxchar:.*]] = fir.emboxchar %[[addr]], %[[len]]
   ! CHECK: fir.call @_QPtakes_char_scalar(%[[boxchar]])
   call takes_char_scalar(p0_1(5)%p)
 

@@ -85,8 +85,7 @@ end
 ! CHECK:           }
 ! CHECK:           fir.array_merge_store %[[VAL_16]], %[[VAL_35:.*]] to %[[VAL_14]] : !fir.array<10x!fir.char<1,5>>, !fir.array<10x!fir.char<1,5>>, !fir.ref<!fir.array<10x!fir.char<1,5>>>
 ! CHECK:           omp.barrier
-! CHECK:           %[[VAL_36:.*]] = fir.convert %[[VAL_7]] : (!fir.ref<!fir.char<1,5>>) -> !fir.ref<!fir.char<1,?>>
-! CHECK:           %[[VAL_37:.*]] = fir.emboxchar %[[VAL_36]], %[[VAL_1]] : (!fir.ref<!fir.char<1,?>>, index) -> !fir.boxchar<1>
+! CHECK:           %[[VAL_37:.*]] = fir.emboxchar %[[VAL_7]], %[[VAL_1]] : (!fir.ref<!fir.char<1,5>>, index) -> !fir.boxchar<1>
 ! CHECK:           %[[VAL_38:.*]] = fir.convert %[[VAL_14]] : (!fir.ref<!fir.array<10x!fir.char<1,5>>>) -> !fir.ref<!fir.char<1,?>>
 ! CHECK:           %[[VAL_39:.*]] = fir.emboxchar %[[VAL_38]], %[[VAL_4]] : (!fir.ref<!fir.char<1,?>>, index) -> !fir.boxchar<1>
 ! CHECK:           fir.call @_QPsub2(%[[VAL_37]], %[[VAL_39]]) {{.*}}: (!fir.boxchar<1>, !fir.boxchar<1>) -> ()
