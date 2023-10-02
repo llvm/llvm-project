@@ -86,6 +86,9 @@ public:
   // Bias for VGPR limits under a high register pressure.
   const unsigned HighRPVGPRBias = 7;
 
+  // Bias for AGPR limits under a high register pressure.
+  const unsigned HighRPAGPRBias = 7;
+
   unsigned SGPRCriticalLimit;
 
   unsigned VGPRCriticalLimit;
@@ -94,11 +97,16 @@ public:
 
   unsigned VGPRExcessLimit;
 
+  unsigned AGPRExcessLimit;
+
   unsigned SGPRLimitBias = 0;
 
   unsigned VGPRLimitBias = 0;
 
+  unsigned AGPRLimitBias = 0;
+
   unsigned VGPRExcessMargin = 1;
+  unsigned AGPRExcessMargin = 1;
   unsigned SGPRExcessMargin = 0;
 
   GCNSchedStrategy(const MachineSchedContext *C);

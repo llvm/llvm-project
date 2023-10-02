@@ -75,6 +75,8 @@ void GCNSchedStrategy::initialize(ScheduleDAGMI *DAG) {
       Context->RegClassInfo->getNumAllocatableRegs(&AMDGPU::SGPR_32RegClass);
   VGPRExcessLimit =
       Context->RegClassInfo->getNumAllocatableRegs(&AMDGPU::VGPR_32RegClass);
+  AGPRExcessLimit =
+      Context->RegClassInfo->getNumAllocatableRegs(&AMDGPU::AGPR_32RegClass);
 
   SIMachineFunctionInfo &MFI = *MF->getInfo<SIMachineFunctionInfo>();
   // Set the initial TargetOccupnacy to the maximum occupancy that we can
@@ -109,11 +111,13 @@ void GCNSchedStrategy::initialize(ScheduleDAGMI *DAG) {
   VGPRCriticalLimit -= std::min(VGPRLimitBias + ErrorMargin, VGPRCriticalLimit);
   SGPRExcessLimit -= std::min(SGPRLimitBias + ErrorMargin, SGPRExcessLimit);
   VGPRExcessLimit -= std::min(VGPRLimitBias + ErrorMargin, VGPRExcessLimit);
+  AGPRExcessLimit -= std::min(AGPRLimitBias + ErrorMargin, AGPRExcessLimit);
 
   LLVM_DEBUG(dbgs() << "VGPRCriticalLimit = " << VGPRCriticalLimit
                     << ", VGPRExcessLimit = " << VGPRExcessLimit
                     << ", SGPRCriticalLimit = " << SGPRCriticalLimit
-                    << ", SGPRExcessLimit = " << SGPRExcessLimit << "\n\n");
+                    << ", SGPRExcessLimit = " << SGPRExcessLimit
+                    << ", AGPRExcessLimit = " << AGPRExcessLimit << "\n\n");
 }
 
 void GCNSchedStrategy::initCandidate(SchedCandidate &Cand, SUnit *SU,
@@ -720,6 +724,7 @@ bool UnclusteredHighRPStage::initGCNSchedStage() {
   // stage. Temporarily increase occupancy target in the region.
   S.SGPRLimitBias = S.HighRPSGPRBias;
   S.VGPRLimitBias = S.HighRPVGPRBias;
+  S.AGPRLimitBias = S.HighRPAGPRBias;
   if (MFI.getMaxWavesPerEU() > DAG.MinOccupancy)
     MFI.increaseOccupancy(MF, ++DAG.MinOccupancy);
 
@@ -914,7 +919,7 @@ void GCNSchedStage::finalizeGCNRegion() {
   unsigned NewSGPRRP = PressureAfter.getSGPRNum();
 
   if ((NewVGPRRP >= S.VGPRExcessLimit - S.VGPRExcessMargin) ||
-      (NewAGPRRP >= S.VGPRExcessLimit - S.VGPRExcessMargin) ||
+      (NewAGPRRP >= S.AGPRExcessLimit - S.AGPRExcessMargin) ||
       (NewSGPRRP >= S.SGPRExcessLimit - S.SGPRExcessMargin)) {
     DAG.RegionsWithExcessRP[RegionIdx] = true;
     DAG.RescheduleRegions[RegionIdx] = true;
@@ -1139,7 +1144,7 @@ bool UnclusteredHighRPStage::shouldRevertScheduling(unsigned WavesAfter) {
 
     if (NewVGPRRP > S.VGPRExcessLimit && NewVGPRRP >= OldVGPRRP)
       return true;
-    if (NewAGPRRP > S.VGPRExcessLimit && NewAGPRRP >= OldAGPRRP)
+    if (NewAGPRRP > S.AGPRExcessLimit && NewAGPRRP >= OldAGPRRP)
       return true;
     if (NewSGPRRP > S.SGPRExcessLimit && NewSGPRRP >= OldSGPRRP)
       return true;

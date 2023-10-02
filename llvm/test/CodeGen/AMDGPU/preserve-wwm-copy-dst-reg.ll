@@ -194,9 +194,6 @@ define void @preserve_wwm_copy_dstreg(ptr %parg0, ptr %parg1, ptr %parg2) #0 {
 ; GFX906-NEXT:    ;;#ASMSTART
 ; GFX906-NEXT:    ; def s21
 ; GFX906-NEXT:    ;;#ASMEND
-; GFX906-NEXT:    v_writelane_b32 v40, s21, 24
-; GFX906-NEXT:    s_or_saveexec_b64 s[34:35], -1
-; GFX906-NEXT:    s_mov_b64 exec, s[34:35]
 ; GFX906-NEXT:    ;;#ASMSTART
 ; GFX906-NEXT:    ; def s22
 ; GFX906-NEXT:    ;;#ASMEND
@@ -222,6 +219,7 @@ define void @preserve_wwm_copy_dstreg(ptr %parg0, ptr %parg1, ptr %parg2) #0 {
 ; GFX906-NEXT:    ; def s29
 ; GFX906-NEXT:    ;;#ASMEND
 ; GFX906-NEXT:    buffer_load_dword v31, off, s[0:3], s33 offset:4 ; 4-byte Folded Reload
+; GFX906-NEXT:    v_writelane_b32 v40, s21, 24
 ; GFX906-NEXT:    v_writelane_b32 v40, s22, 25
 ; GFX906-NEXT:    v_writelane_b32 v40, s23, 26
 ; GFX906-NEXT:    v_writelane_b32 v40, s24, 27
@@ -244,6 +242,8 @@ define void @preserve_wwm_copy_dstreg(ptr %parg0, ptr %parg1, ptr %parg2) #0 {
 ; GFX906-NEXT:    v_readlane_b32 s9, v40, 7
 ; GFX906-NEXT:    v_readlane_b32 s11, v40, 5
 ; GFX906-NEXT:    v_readlane_b32 s17, v40, 23
+; GFX906-NEXT:    s_or_saveexec_b64 s[34:35], -1
+; GFX906-NEXT:    s_mov_b64 exec, s[34:35]
 ; GFX906-NEXT:    s_swappc_b64 s[30:31], s[16:17]
 ; GFX906-NEXT:    s_or_saveexec_b64 s[34:35], -1
 ; GFX906-NEXT:    s_mov_b64 exec, s[34:35]
@@ -569,9 +569,6 @@ define void @preserve_wwm_copy_dstreg(ptr %parg0, ptr %parg1, ptr %parg2) #0 {
 ; GFX908-NEXT:    ;;#ASMSTART
 ; GFX908-NEXT:    ; def s21
 ; GFX908-NEXT:    ;;#ASMEND
-; GFX908-NEXT:    v_writelane_b32 v40, s21, 24
-; GFX908-NEXT:    s_or_saveexec_b64 s[34:35], -1
-; GFX908-NEXT:    s_mov_b64 exec, s[34:35]
 ; GFX908-NEXT:    ;;#ASMSTART
 ; GFX908-NEXT:    ; def s22
 ; GFX908-NEXT:    ;;#ASMEND
@@ -597,6 +594,7 @@ define void @preserve_wwm_copy_dstreg(ptr %parg0, ptr %parg1, ptr %parg2) #0 {
 ; GFX908-NEXT:    ; def s29
 ; GFX908-NEXT:    ;;#ASMEND
 ; GFX908-NEXT:    buffer_load_dword v31, off, s[0:3], s33 offset:8 ; 4-byte Folded Reload
+; GFX908-NEXT:    v_writelane_b32 v40, s21, 24
 ; GFX908-NEXT:    v_writelane_b32 v40, s22, 25
 ; GFX908-NEXT:    v_writelane_b32 v40, s23, 26
 ; GFX908-NEXT:    v_writelane_b32 v40, s24, 27
@@ -619,6 +617,8 @@ define void @preserve_wwm_copy_dstreg(ptr %parg0, ptr %parg1, ptr %parg2) #0 {
 ; GFX908-NEXT:    v_readlane_b32 s9, v40, 7
 ; GFX908-NEXT:    v_readlane_b32 s11, v40, 5
 ; GFX908-NEXT:    v_readlane_b32 s17, v40, 23
+; GFX908-NEXT:    s_or_saveexec_b64 s[34:35], -1
+; GFX908-NEXT:    s_mov_b64 exec, s[34:35]
 ; GFX908-NEXT:    s_swappc_b64 s[30:31], s[16:17]
 ; GFX908-NEXT:    s_or_saveexec_b64 s[34:35], -1
 ; GFX908-NEXT:    s_mov_b64 exec, s[34:35]
