@@ -87,6 +87,25 @@ define float @loadfpimm10() {
   ret float 0.00006103515625
 }
 
+define float @loadfpimm11() {
+; CHECK-LABEL: loadfpimm11:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    fli.s fa0, -1.0
+; CHECK-NEXT:    ret
+  ret float -1.0
+}
+
+; Ensure fli isn't incorrectly used for negated versions of numbers in the fli
+; table.
+; FIXME: Codegen is incorrect.
+define float @loadfpimm12() {
+; CHECK-LABEL: loadfpimm12:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    fli.s fa0, -1.0
+; CHECK-NEXT:    ret
+  ret float -2.0
+}
+
 declare float @llvm.minimum.f32(float, float)
 
 define float @fminm_s(float %a, float %b) nounwind {
