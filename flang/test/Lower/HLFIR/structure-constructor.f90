@@ -41,8 +41,8 @@ end subroutine test1
 ! CHECK:           %[[VAL_2:.*]] = fir.alloca !fir.type<_QMtypesTt1{c:!fir.char<1,4>}> {bindc_name = "res", uniq_name = "_QFtest1Eres"}
 ! CHECK:           %[[VAL_3:.*]]:2 = hlfir.declare %[[VAL_2]] {uniq_name = "_QFtest1Eres"} : (!fir.ref<!fir.type<_QMtypesTt1{c:!fir.char<1,4>}>>) -> (!fir.ref<!fir.type<_QMtypesTt1{c:!fir.char<1,4>}>>, !fir.ref<!fir.type<_QMtypesTt1{c:!fir.char<1,4>}>>)
 ! CHECK:           %[[VAL_4:.*]]:2 = fir.unboxchar %[[VAL_0]] : (!fir.boxchar<1>) -> (!fir.ref<!fir.char<1,?>>, index)
-! CHECK:           %[[VAL_5:.*]] = arith.constant 4 : index
 ! CHECK:           %[[VAL_6:.*]] = fir.convert %[[VAL_4]]#0 : (!fir.ref<!fir.char<1,?>>) -> !fir.ref<!fir.char<1,4>>
+! CHECK:           %[[VAL_5:.*]] = arith.constant 4 : index
 ! CHECK:           %[[VAL_7:.*]]:2 = hlfir.declare %[[VAL_6]] typeparams %[[VAL_5]] {uniq_name = "_QFtest1Ex"} : (!fir.ref<!fir.char<1,4>>, index) -> (!fir.ref<!fir.char<1,4>>, !fir.ref<!fir.char<1,4>>)
 ! CHECK:           %[[VAL_8:.*]]:2 = hlfir.declare %[[VAL_1]] {uniq_name = "ctor.temp"} : (!fir.ref<!fir.type<_QMtypesTt1{c:!fir.char<1,4>}>>) -> (!fir.ref<!fir.type<_QMtypesTt1{c:!fir.char<1,4>}>>, !fir.ref<!fir.type<_QMtypesTt1{c:!fir.char<1,4>}>>)
 ! CHECK:           %[[VAL_9:.*]] = fir.embox %[[VAL_8]]#0 : (!fir.ref<!fir.type<_QMtypesTt1{c:!fir.char<1,4>}>>) -> !fir.box<!fir.type<_QMtypesTt1{c:!fir.char<1,4>}>>
@@ -220,8 +220,8 @@ end subroutine test6
 ! CHECK:           %[[VAL_5:.*]] = fir.alloca !fir.type<_QMtypesTt5{t5m:!fir.box<!fir.heap<!fir.array<?x!fir.type<_QMtypesTt4{c:!fir.box<!fir.heap<!fir.array<?x!fir.char<1,2>>>>}>>>>}>
 ! CHECK:           %[[VAL_6:.*]] = fir.alloca !fir.type<_QMtypesTt6{t5m:!fir.box<!fir.heap<!fir.array<?x!fir.type<_QMtypesTt4{c:!fir.box<!fir.heap<!fir.array<?x!fir.char<1,2>>>>}>>>>,t6m:!fir.array<1x!fir.type<_QMtypesTt1{c:!fir.char<1,4>}>>}>
 ! CHECK:           %[[VAL_7:.*]]:2 = fir.unboxchar %[[VAL_1]] : (!fir.boxchar<1>) -> (!fir.ref<!fir.char<1,?>>, index)
-! CHECK:           %[[VAL_8:.*]] = arith.constant 4 : index
 ! CHECK:           %[[VAL_9:.*]] = fir.convert %[[VAL_7]]#0 : (!fir.ref<!fir.char<1,?>>) -> !fir.ref<!fir.char<1,4>>
+! CHECK:           %[[VAL_8:.*]] = arith.constant 4 : index
 ! CHECK:           %[[VAL_10:.*]]:2 = hlfir.declare %[[VAL_9]] typeparams %[[VAL_8]] {uniq_name = "_QFtest6Ec"} : (!fir.ref<!fir.char<1,4>>, index) -> (!fir.ref<!fir.char<1,4>>, !fir.ref<!fir.char<1,4>>)
 ! CHECK:           %[[VAL_11:.*]] = fir.alloca !fir.type<_QMtypesTt6{t5m:!fir.box<!fir.heap<!fir.array<?x!fir.type<_QMtypesTt4{c:!fir.box<!fir.heap<!fir.array<?x!fir.char<1,2>>>>}>>>>,t6m:!fir.array<1x!fir.type<_QMtypesTt1{c:!fir.char<1,4>}>>}> {bindc_name = "res", uniq_name = "_QFtest6Eres"}
 ! CHECK:           %[[VAL_12:.*]]:2 = hlfir.declare %[[VAL_11]] {uniq_name = "_QFtest6Eres"} : (!fir.ref<!fir.type<_QMtypesTt6{t5m:!fir.box<!fir.heap<!fir.array<?x!fir.type<_QMtypesTt4{c:!fir.box<!fir.heap<!fir.array<?x!fir.char<1,2>>>>}>>>>,t6m:!fir.array<1x!fir.type<_QMtypesTt1{c:!fir.char<1,4>}>>}>>) -> (!fir.ref<!fir.type<_QMtypesTt6{t5m:!fir.box<!fir.heap<!fir.array<?x!fir.type<_QMtypesTt4{c:!fir.box<!fir.heap<!fir.array<?x!fir.char<1,2>>>>}>>>>,t6m:!fir.array<1x!fir.type<_QMtypesTt1{c:!fir.char<1,4>}>>}>>, !fir.ref<!fir.type<_QMtypesTt6{t5m:!fir.box<!fir.heap<!fir.array<?x!fir.type<_QMtypesTt4{c:!fir.box<!fir.heap<!fir.array<?x!fir.char<1,2>>>>}>>>>,t6m:!fir.array<1x!fir.type<_QMtypesTt1{c:!fir.char<1,4>}>>}>>)
