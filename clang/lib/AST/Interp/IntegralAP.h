@@ -39,7 +39,9 @@ public:
   using AsUnsigned = IntegralAP<false>;
 
   template <typename T>
-  IntegralAP(T Value) : V(APInt(sizeof(T) * 8, Value, std::is_signed_v<T>)) {}
+  IntegralAP(T Value)
+      : V(APInt(sizeof(T) * 8, static_cast<uint64_t>(Value),
+                std::is_signed_v<T>)) {}
 
   IntegralAP(APInt V) : V(V) {}
   IntegralAP(APSInt V) : V(V) {}
