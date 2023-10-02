@@ -137,9 +137,10 @@ std::string getComgrInstallPathFromExecutable() {
         return "";
       }
 
+      std::string rv = StripGNUInstallLibDir(Path).str();
       fclose(ProcMaps);
       free(Line);
-      return StripGNUInstallLibDir(Path).str();
+      return rv;
     }
   }
 
