@@ -358,7 +358,7 @@ EXTERN int __tgt_activate_record_replay(int64_t DeviceId, uint64_t MemorySize,
   assert(Rc == OFFLOAD_SUCCESS &&
          "__tgt_activate_record_replay unexpected failure!");
   return OMP_TGT_SUCCESS;
-};
+}
 
 /// Implements a target kernel entry that replays a pre-recorded kernel.
 /// \param Loc Source location associated with this target region (unused).
