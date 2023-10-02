@@ -21,7 +21,6 @@ def ArithBufferize : Pass<"arith-bufferize", "ModuleOp"> {
     multi-threading. Most other bufferization passes can run in parallel at
     function granularity.
   }];
-  let constructor = "mlir::arith::createArithBufferizePass()";
   let options = [
     Option<"alignment", "alignment", "unsigned", /*default=*/"0",
            "Create global memrefs with a specified alignment">,
