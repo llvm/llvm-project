@@ -2100,48 +2100,49 @@ std::pair<bool, bool> SourceManager::isInTheSameTranslationUnit(
 
   // A location within a FileID on the path up from LOffs to the main file.
   struct Entry {
-    unsigned Offset;
-    FileID ParentFID; // Used for breaking ties.
+    std::pair<FileID, unsigned> DecomposedLoc; // FileID redundant, but clearer.
+    FileID ChildFID; // Used for breaking ties. Invalid for the initial loc.
   };
   llvm::SmallDenseMap<FileID, Entry, 16> LChain;
 
-  FileID Parent;
+  FileID LChild;
   do {
-    LChain.try_emplace(LOffs.first, Entry{LOffs.second, Parent});
+    LChain.try_emplace(LOffs.first, Entry{LOffs, LChild});
     // We catch the case where LOffs is in a file included by ROffs and
     // quit early. The other way round unfortunately remains suboptimal.
     if (LOffs.first == ROffs.first)
       break;
-    Parent = LOffs.first;
+    LChild = LOffs.first;
   } while (!MoveUpIncludeHierarchy(LOffs, *this));
 
-  Parent = FileID();
+  FileID RChild;
   do {
-    auto I = LChain.find(ROffs.first);
-    if (I != LChain.end()) {
+    auto LIt = LChain.find(ROffs.first);
+    if (LIt != LChain.end()) {
       // Compare the locations within the common file and cache them.
-      LOffs.first = I->first;
-      LOffs.second = I->second.Offset;
-      // The relative order of LParent and RParent is a tiebreaker when
+      LOffs = LIt->second.DecomposedLoc;
+      LChild = LIt->second.ChildFID;
+      // The relative order of LChild and RChild is a tiebreaker when
       // - locs expand to the same location (occurs in macro arg expansion)
       // - one loc is a parent of the other (we consider the parent as "first")
-      // For the parent to be first, the invalid file ID must compare smaller.
+      // For the parent entry to be first, its invalid child file ID must
+      // compare smaller to the valid child file ID of the other entry.
       // However loaded FileIDs are <0, so we perform *unsigned* comparison!
       // This changes the relative order of local vs loaded FileIDs, but it
       // doesn't matter as these are never mixed in macro expansion.
-      unsigned LParent = I->second.ParentFID.ID;
-      unsigned RParent = Parent.ID;
+      unsigned LChildID = LChild.ID;
+      unsigned RChildID = RChild.ID;
       assert(((LOffs.second != ROffs.second) ||
-              (LParent == 0 || RParent == 0) ||
-              isInSameSLocAddrSpace(getComposedLoc(I->second.ParentFID, 0),
-                                    getComposedLoc(Parent, 0), nullptr)) &&
+              (LChildID == 0 || RChildID == 0) ||
+              isInSameSLocAddrSpace(getComposedLoc(LChild, 0),
+                                    getComposedLoc(RChild, 0), nullptr)) &&
              "Mixed local/loaded FileIDs with same include location?");
       IsBeforeInTUCache.setCommonLoc(LOffs.first, LOffs.second, ROffs.second,
-                                     LParent < RParent);
+                                     LChildID < RChildID);
       return std::make_pair(
           true, IsBeforeInTUCache.getCachedResult(LOffs.second, ROffs.second));
     }
-    Parent = ROffs.first;
+    RChild = ROffs.first;
   } while (!MoveUpIncludeHierarchy(ROffs, *this));
 
   // If we found no match, we're not in the same TU.
