@@ -180,3 +180,34 @@ define half @loadfpimm12() {
 ; ZFHMIN-NEXT:    ret
   ret half 0xH7c01
 }
+
+define half @loadfpimm13() {
+; CHECK-LABEL: loadfpimm13:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    fli.h fa0, -1.0
+; CHECK-NEXT:    ret
+;
+; ZFHMIN-LABEL: loadfpimm13:
+; ZFHMIN:       # %bb.0:
+; ZFHMIN-NEXT:    lui a0, %hi(.LCPI12_0)
+; ZFHMIN-NEXT:    flh fa0, %lo(.LCPI12_0)(a0)
+; ZFHMIN-NEXT:    ret
+  ret half -1.0
+}
+
+; Ensure fli isn't incorrectly used for negated versions of numbers in the fli
+; table.
+; FIXME: Codegen is incorrect when Zfa is enabled.
+define half @loadfpimm14() {
+; CHECK-LABEL: loadfpimm14:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    fli.h fa0, -1.0
+; CHECK-NEXT:    ret
+;
+; ZFHMIN-LABEL: loadfpimm14:
+; ZFHMIN:       # %bb.0:
+; ZFHMIN-NEXT:    lui a0, 1048572
+; ZFHMIN-NEXT:    fmv.h.x fa0, a0
+; ZFHMIN-NEXT:    ret
+  ret half -2.0
+}
