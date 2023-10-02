@@ -10,6 +10,7 @@
 #define MLIR_DIALECT_TRANSFORM_IR_TRANSFORMDIALECT_H
 
 #include "mlir/IR/Dialect.h"
+#include "mlir/IR/DialectRegistry.h"
 #include "mlir/IR/PatternMatch.h"
 #include "mlir/Support/LLVM.h"
 #include "mlir/Support/TypeID.h"
@@ -315,7 +316,30 @@ public:
   BuildOnly() : DerivedTy(/*buildOnly=*/true) {}
 };
 
+class TransformLibraries : public TransformDialectData<TransformLibraries> {
+public:
+  explicit TransformLibraries(MLIRContext *ctx) : TransformDialectData(ctx) {}
+
+  void parseAndAddLibrary(StringRef filename);
+  void addLibrary(OwningOpRef<ModuleOp> &&library);
+
+  auto getLibraries() const {
+    return llvm::make_range(libraries.begin(), libraries.end());
+  }
+
+  bool isOk() const { return !hadFailures; }
+
+private:
+  SmallVector<OwningOpRef<ModuleOp>> libraries;
+  bool hadFailures = false;
+};
+
+void registerTransformLibraryPreloader(DialectRegistry &registry,
+                                       StringRef filename);
+
 } // namespace transform
 } // namespace mlir
+
+MLIR_DECLARE_EXPLICIT_TYPE_ID(mlir::transform::TransformLibraries)
 
 #endif // MLIR_DIALECT_TRANSFORM_IR_TRANSFORMDIALECT_H

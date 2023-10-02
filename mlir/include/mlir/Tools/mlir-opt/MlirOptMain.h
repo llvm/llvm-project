@@ -90,6 +90,13 @@ public:
   }
   StringRef getIrdlFile() const { return irdlFileFlag; }
 
+  /// Set the transform dialect library to preload.
+  MlirOptMainConfig &setTransformLibrary(StringRef file) {
+    transformLibraryFlag = file;
+    return *this;
+  }
+  StringRef getTransformLibrary() const { return transformLibraryFlag; }
+
   /// Set the bytecode version to emit.
   MlirOptMainConfig &setEmitBytecodeVersion(int64_t version) {
     emitBytecodeVersion = version;
@@ -222,6 +229,9 @@ protected:
 
   /// Verify that the input IR round-trips perfectly.
   bool verifyRoundtripFlag = false;
+
+  /// Transform dialect library to preload.
+  std::string transformLibraryFlag = "";
 };
 
 /// This defines the function type used to setup the pass manager. This can be
