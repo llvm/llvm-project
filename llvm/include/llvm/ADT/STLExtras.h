@@ -2263,8 +2263,7 @@ private:
 
 struct index_iterator
     : llvm::iterator_facade_base<index_iterator,
-                                 std::random_access_iterator_tag, std::size_t,
-                                 std::ptrdiff_t> {
+                                 std::random_access_iterator_tag, std::size_t> {
   index_iterator(std::size_t Index) : Index(Index) {}
 
   index_iterator &operator+=(std::ptrdiff_t N) {

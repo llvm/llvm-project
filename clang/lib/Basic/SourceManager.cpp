@@ -864,6 +864,11 @@ FileID SourceManager::getFileIDLocal(SourceLocation::UIntTy SLocOffset) const {
 /// This function knows that the SourceLocation is in a loaded buffer, not a
 /// local one.
 FileID SourceManager::getFileIDLoaded(SourceLocation::UIntTy SLocOffset) const {
+  if (SLocOffset < CurrentLoadedOffset) {
+    assert(0 && "Invalid SLocOffset or bad function choice");
+    return FileID();
+  }
+
   return FileID::get(ExternalSLocEntries->getSLocEntryID(SLocOffset));
 }
 

@@ -2157,8 +2157,8 @@ public:
   int getSLocEntryID(SourceLocation::UIntTy SLocOffset) override;
   /// Try to read the offset of the SLocEntry at the given index in the given
   /// module file.
-  std::optional<SourceLocation::UIntTy> readSLocOffset(ModuleFile *F,
-                                                       unsigned Index);
+  llvm::Expected<SourceLocation::UIntTy> readSLocOffset(ModuleFile *F,
+                                                        unsigned Index);
 
   /// Retrieve the module import location and module name for the
   /// given source manager entry ID.

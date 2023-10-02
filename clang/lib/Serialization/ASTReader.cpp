@@ -1444,39 +1444,35 @@ llvm::Error ASTReader::ReadSourceManagerBlock(ModuleFile &F) {
   }
 }
 
-std::optional<SourceLocation::UIntTy>
+llvm::Expected<SourceLocation::UIntTy>
 ASTReader::readSLocOffset(ModuleFile *F, unsigned Index) {
   BitstreamCursor &Cursor = F->SLocEntryCursor;
   SavedStreamPosition SavedPosition(Cursor);
   if (llvm::Error Err = Cursor.JumpToBit(F->SLocEntryOffsetsBase +
-                                         F->SLocEntryOffsets[Index])) {
-    Error(std::move(Err));
-    return std::nullopt;
-  }
+                                         F->SLocEntryOffsets[Index]))
+    return Err;
 
   Expected<llvm::BitstreamEntry> MaybeEntry = Cursor.advance();
-  if (!MaybeEntry) {
-    Error(MaybeEntry.takeError());
-    return std::nullopt;
-  }
-  llvm::BitstreamEntry Entry = MaybeEntry.get();
+  if (!MaybeEntry)
+    return MaybeEntry.takeError();
 
-  if (Entry.Kind != llvm::BitstreamEntry::Record) {
-    Error("incorrectly-formatted source location entry in AST file");
-    return std::nullopt;
-  }
+  llvm::BitstreamEntry Entry = MaybeEntry.get();
+  if (Entry.Kind != llvm::BitstreamEntry::Record)
+    return llvm::createStringError(
+        std::errc::illegal_byte_sequence,
+        "incorrectly-formatted source location entry in AST file");
 
   RecordData Record;
   StringRef Blob;
   Expected<unsigned> MaybeSLOC = Cursor.readRecord(Entry.ID, Record, &Blob);
-  if (!MaybeSLOC) {
-    Error(MaybeSLOC.takeError());
-    return std::nullopt;
-  }
+  if (!MaybeSLOC)
+    return MaybeSLOC.takeError();
+
   switch (MaybeSLOC.get()) {
   default:
-    Error("incorrectly-formatted source location entry in AST file");
-    return std::nullopt;
+    return llvm::createStringError(
+        std::errc::illegal_byte_sequence,
+        "incorrectly-formatted source location entry in AST file");
   case SM_SLOC_FILE_ENTRY:
   case SM_SLOC_BUFFER_ENTRY:
   case SM_SLOC_EXPANSION_ENTRY:
@@ -1499,6 +1495,7 @@ int ASTReader::getSLocEntryID(SourceLocation::UIntTy SLocOffset) {
         if (F->SLocEntryOffsetLoaded[Index] == -1U) {
           auto MaybeEntryOffset = readSLocOffset(F, Index);
           if (!MaybeEntryOffset) {
+            Error(MaybeEntryOffset.takeError());
             Invalid = true;
             return true;
           }
