@@ -168,14 +168,17 @@ jobs:
         uses: actions/download-artifact@v3
         with:
           name: build-baseline
+          path: build-baseline
       - name: Download latest
         uses: actions/download-artifact@v3
         with:
           name: build-latest
+          path: build-latest
       - name: Download symbol list
         uses: actions/download-artifact@v3
         with:
           name: symbol-list
+          path: symbol-list
 
       - name: Install abi-compliance-checker
         run: sudo apt-get install abi-compliance-checker
