@@ -17,7 +17,7 @@
 
 namespace mlir {
 namespace arith {
-#define GEN_PASS_DEF_ARITHBUFFERIZE
+#define GEN_PASS_DEF_ARITHBUFFERIZEPASS
 #include "mlir/Dialect/Arith/Transforms/Passes.h.inc"
 } // namespace arith
 } // namespace mlir
@@ -28,8 +28,8 @@ using namespace bufferization;
 namespace {
 /// Pass to bufferize Arith ops.
 struct ArithBufferizePass
-    : public arith::impl::ArithBufferizeBase<ArithBufferizePass> {
-  using arith::impl::ArithBufferizeBase<ArithBufferizePass>::ArithBufferizeBase;
+    : public arith::impl::ArithBufferizePassBase<ArithBufferizePass> {
+  using ArithBufferizePassBase::ArithBufferizePassBase;
 
   ArithBufferizePass(uint64_t alignment = 0, bool constantOpOnly = false)
       : constantOpOnly(constantOpOnly) {
