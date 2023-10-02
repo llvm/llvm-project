@@ -8,8 +8,8 @@
 target triple = "wasm32-unknown-unknown"
 
 
-; Test that the LLVM trap and debug trap intrinsics are lowered to
-; wasm unreachable.
+; Test that the LLVM trap and debug trap intrinsics are lowered to wasm
+; unreachable.
 
 declare void @llvm.trap() cold noreturn nounwind
 declare void @llvm.debugtrap() nounwind
@@ -25,9 +25,9 @@ define void @trap_ret_void() {
   ret void
 }
 
-define void @dtrap_ret_void() {
-; CHECK-LABEL: dtrap_ret_void:
-; CHECK:         .functype dtrap_ret_void () -> ()
+define void @debugtrap_ret_void() {
+; CHECK-LABEL: debugtrap_ret_void:
+; CHECK:         .functype debugtrap_ret_void () -> ()
 ; CHECK-NEXT:  # %bb.0:
 ; CHECK-NEXT:    unreachable
 ; CHECK-NEXT:    # fallthrough-return
@@ -36,11 +36,11 @@ define void @dtrap_ret_void() {
   ret void
 }
 
-; LLVM trap followed by LLVM unreachable could become exactly one
-; wasm unreachable, but two are emitted currently.
-define void @trap_unreach() {
-; CHECK-LABEL: trap_unreach:
-; CHECK:         .functype trap_unreach () -> ()
+; LLVM trap followed by LLVM unreachable could become exactly one wasm
+; unreachable, but two are emitted currently.
+define void @trap_unreacheable() {
+; CHECK-LABEL: trap_unreacheable:
+; CHECK:         .functype trap_unreacheable () -> ()
 ; CHECK-NEXT:  # %bb.0:
 ; CHECK-NEXT:    unreachable
 ; CHECK-NEXT:    unreachable
