@@ -61,6 +61,9 @@ struct UnwrappedLine {
 
   bool MustBeDeclaration;
 
+  /// Whether the parser has seen \c decltype(auto) in this line.
+  bool SeenDecltypeAuto = false;
+
   /// \c True if this line should be indented by ContinuationIndent in
   /// addition to the normal indention level.
   bool IsContinuation = false;
@@ -340,6 +343,14 @@ private:
   // Keeps a stack of the states of nested control statements (true if the
   // statement contains more than some predefined number of nested statements).
   SmallVector<bool, 8> NestedTooDeep;
+
+  // Keeps a stack of the states of nested lambdas (true if the return type of
+  // the lambda is `decltype(auto)`).
+  SmallVector<bool, 4> NestedLambdas;
+
+  // Whether the parser is parsing the body of a function whose return type is
+  // `decltype(auto)`.
+  bool IsDecltypeAutoFunction = false;
 
   // Represents preprocessor branch type, so we can find matching
   // #if/#else/#endif directives.
