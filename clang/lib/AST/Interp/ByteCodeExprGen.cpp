@@ -812,7 +812,8 @@ bool ByteCodeExprGen<Emitter>::VisitArrayInitLoopExpr(
   assert(!DiscardResult);
 
   StoredOpaqueValueScope<Emitter> StoredOpaqueScope(this);
-  StoredOpaqueScope.VisitAndStoreOpaqueValue(E->getCommonExpr());
+  if (!StoredOpaqueScope.VisitAndStoreOpaqueValue(E->getCommonExpr()))
+    return false;
 
   const Expr *SubExpr = E->getSubExpr();
   size_t Size = E->getArraySize().getZExtValue();
