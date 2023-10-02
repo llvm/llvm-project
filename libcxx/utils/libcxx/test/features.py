@@ -280,9 +280,10 @@ DEFAULT_FEATURES = [
     Feature(name=lambda cfg: "msvc-{}".format(*_msvcVersion(cfg)), when=_isMSVC),
     Feature(name=lambda cfg: "msvc-{}.{}".format(*_msvcVersion(cfg)), when=_isMSVC),
     Feature(
-        name="msvc-no-unique-address", when=lambda cfg: sourceBuilds(
-          cfg,
-          """
+        name="msvc-no-unique-address",
+        when=lambda cfg: sourceBuilds(
+            cfg,
+            """
           struct A { [[msvc::no_unique_address]] A a; };
           """,
         ),
