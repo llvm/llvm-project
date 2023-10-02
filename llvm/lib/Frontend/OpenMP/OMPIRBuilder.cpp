@@ -341,6 +341,44 @@ BasicBlock *llvm::splitBBWithSuffix(IRBuilderBase &Builder, bool CreateBranch,
   return splitBB(Builder, CreateBranch, Old->getName() + Suffix);
 }
 
+// This function creates a fake integer value and a fake use for the integer
+// value. It returns the fake value created. This is useful in modeling the
+// extra arguments to the outlined functions.
+Value *createFakeIntVal(IRBuilder<> &Builder,
+                        OpenMPIRBuilder::InsertPointTy OuterAllocaIP,
+                        std::stack<Instruction *> &ToBeDeleted,
+                        OpenMPIRBuilder::InsertPointTy InnerAllocaIP,
+                        const Twine &Name = "", bool AsPtr = true) {
+  Builder.restoreIP(OuterAllocaIP);
+  Instruction *FakeVal;
+  AllocaInst *FakeValAddr =
+      Builder.CreateAlloca(Builder.getInt32Ty(), nullptr, Name + ".addr");
+  ToBeDeleted.push(FakeValAddr);
+
+  if (AsPtr)
+    FakeVal = FakeValAddr;
+  else {
+    FakeVal =
+        Builder.CreateLoad(Builder.getInt32Ty(), FakeValAddr, Name + ".val");
+    ToBeDeleted.push(FakeVal);
+  }
+
+  // We only need TIDAddr and ZeroAddr for modeling purposes to get the
+  // associated arguments in the outlined function, so we delete them later.
+
+  // Fake use of TID
+  Builder.restoreIP(InnerAllocaIP);
+  Instruction *UseFakeVal;
+  if (AsPtr)
+    UseFakeVal =
+        Builder.CreateLoad(Builder.getInt32Ty(), FakeVal, Name + ".use");
+  else
+    UseFakeVal =
+        cast<BinaryOperator>(Builder.CreateAdd(FakeVal, Builder.getInt32(10)));
+  ToBeDeleted.push(UseFakeVal);
+  return FakeVal;
+}
+
 //===----------------------------------------------------------------------===//
 // OpenMPIRBuilderConfig
 //===----------------------------------------------------------------------===//
@@ -1497,13 +1535,6 @@ OpenMPIRBuilder::createTask(const LocationDescription &Loc,
                             InsertPointTy AllocaIP, BodyGenCallbackTy BodyGenCB,
                             bool Tied, Value *Final, Value *IfCondition,
                             SmallVector<DependData> Dependencies) {
-  // We create a temporary i32 value that will represent the global tid after
-  // outlining.
-  SmallVector<Instruction *, 4> ToBeDeleted;
-  Builder.restoreIP(AllocaIP);
-  AllocaInst *TIDAddr = Builder.CreateAlloca(Int32, nullptr, "tid.addr");
-  LoadInst *TID = Builder.CreateLoad(Int32, TIDAddr, "tid.addr.use");
-  ToBeDeleted.append({TID, TIDAddr});
 
   if (!updateToLocation(Loc))
     return InsertPointTy();
@@ -1532,19 +1563,24 @@ OpenMPIRBuilder::createTask(const LocationDescription &Loc,
   BasicBlock *TaskAllocaBB =
       splitBB(Builder, /*CreateBranch=*/true, "task.alloca");
 
-  // Fake use of TID
-  Builder.SetInsertPoint(TaskAllocaBB, TaskAllocaBB->begin());
-  BinaryOperator *AddInst =
-      dyn_cast<BinaryOperator>(Builder.CreateAdd(TID, Builder.getInt32(10)));
-  ToBeDeleted.push_back(AddInst);
+  InsertPointTy TaskAllocaIP =
+      InsertPointTy(TaskAllocaBB, TaskAllocaBB->begin());
+  InsertPointTy TaskBodyIP = InsertPointTy(TaskBodyBB, TaskBodyBB->begin());
+  BodyGenCB(TaskAllocaIP, TaskBodyIP);
+  Builder.SetInsertPoint(TaskExitBB, TaskExitBB->begin());
 
   OutlineInfo OI;
   OI.EntryBB = TaskAllocaBB;
   OI.OuterAllocaBB = AllocaIP.getBlock();
   OI.ExitBB = TaskExitBB;
-  OI.ExcludeArgsFromAggregate = {TID};
+
+  // Add the thread ID argument.
+  std::stack<Instruction *> ToBeDeleted;
+  OI.ExcludeArgsFromAggregate.push_back(createFakeIntVal(
+      Builder, AllocaIP, ToBeDeleted, TaskAllocaIP, "global.tid", false));
+
   OI.PostOutlineCB = [this, Ident, Tied, Final, IfCondition, Dependencies,
-                      TaskAllocaBB, ToBeDeleted](Function &OutlinedFn) {
+                      TaskAllocaBB, ToBeDeleted](Function &OutlinedFn) mutable {
     // Replace the Stale CI by appropriate RTL function call.
     assert(OutlinedFn.getNumUses() == 1 &&
            "there must be a single user for the outlined function");
@@ -1670,7 +1706,7 @@ OpenMPIRBuilder::createTask(const LocationDescription &Loc,
     //    br label %exit
     //  else:
     //    call @__kmpc_omp_task_begin_if0(...)
-    //    call @wrapper_fn(...)
+    //    call @outlined_fn(...)
     //    call @__kmpc_omp_task_complete_if0(...)
     //    br label %exit
     //  exit:
@@ -1725,30 +1761,13 @@ OpenMPIRBuilder::createTask(const LocationDescription &Loc,
           Shareds, [Shareds](Use &U) { return U.getUser() != Shareds; });
     }
 
-    // Replace kmpc_global_thread_num() calls with the global thread id
-    // argument.
-    OutlinedFn.getArg(0)->setName("global.tid");
-    FunctionCallee TIDRTLFn =
-        getOrCreateRuntimeFunctionPtr(OMPRTL___kmpc_global_thread_num);
-    for (Instruction &Inst : instructions(OutlinedFn)) {
-      CallInst *CI = dyn_cast<CallInst>(&Inst);
-      if (!CI)
-        continue;
-      if (CI->getCalledFunction() == TIDRTLFn.getCallee())
-        CI->replaceAllUsesWith(OutlinedFn.getArg(0));
+    while (!ToBeDeleted.empty()) {
+      ToBeDeleted.top()->eraseFromParent();
+      ToBeDeleted.pop();
     }
-
-    for (Instruction *I : ToBeDeleted)
-      I->eraseFromParent();
   };
 
   addOutlineInfo(std::move(OI));
-
-  InsertPointTy TaskAllocaIP =
-      InsertPointTy(TaskAllocaBB, TaskAllocaBB->begin());
-  InsertPointTy TaskBodyIP = InsertPointTy(TaskBodyBB, TaskBodyBB->begin());
-  BodyGenCB(TaskAllocaIP, TaskBodyIP);
-  Builder.SetInsertPoint(TaskExitBB, TaskExitBB->begin());
 
   return Builder.saveIP();
 }
@@ -5740,6 +5759,7 @@ OpenMPIRBuilder::createTeams(const LocationDescription &Loc,
     BasicBlock *BodyBB = splitBB(Builder, /*CreateBranch=*/true, "teams.entry");
     Builder.SetInsertPoint(BodyBB, BodyBB->begin());
   }
+  InsertPointTy OuterAllocaIP(&OuterAllocaBB, OuterAllocaBB.begin());
 
   // The current basic block is split into four basic blocks. After outlining,
   // they will be mapped as follows:
@@ -5763,83 +5783,61 @@ OpenMPIRBuilder::createTeams(const LocationDescription &Loc,
   BasicBlock *AllocaBB =
       splitBB(Builder, /*CreateBranch=*/true, "teams.alloca");
 
+  // Generate the body of teams.
+  InsertPointTy AllocaIP(AllocaBB, AllocaBB->begin());
+  InsertPointTy CodeGenIP(BodyBB, BodyBB->begin());
+  BodyGenCB(AllocaIP, CodeGenIP);
+
   OutlineInfo OI;
   OI.EntryBB = AllocaBB;
   OI.ExitBB = ExitBB;
   OI.OuterAllocaBB = &OuterAllocaBB;
-  OI.PostOutlineCB = [this, Ident](Function &OutlinedFn) {
-    // The input IR here looks like the following-
-    // ```
-    // func @current_fn() {
-    //   outlined_fn(%args)
-    // }
-    // func @outlined_fn(%args) { ... }
-    // ```
-    //
-    // This is changed to the following-
-    //
-    // ```
-    // func @current_fn() {
-    //   runtime_call(..., wrapper_fn, ...)
-    // }
-    // func @wrapper_fn(..., %args) {
-    //   outlined_fn(%args)
-    // }
-    // func @outlined_fn(%args) { ... }
-    // ```
 
+  // Insert fake values for global tid and bound tid.
+  std::stack<Instruction *> ToBeDeleted;
+  OI.ExcludeArgsFromAggregate.push_back(createFakeIntVal(
+      Builder, OuterAllocaIP, ToBeDeleted, AllocaIP, "gid", true));
+  OI.ExcludeArgsFromAggregate.push_back(createFakeIntVal(
+      Builder, OuterAllocaIP, ToBeDeleted, AllocaIP, "tid", true));
+
+  OI.PostOutlineCB = [this, Ident, ToBeDeleted](Function &OutlinedFn) mutable {
     // The stale call instruction will be replaced with a new call instruction
-    // for runtime call with a wrapper function.
+    // for runtime call with the outlined function.
 
     assert(OutlinedFn.getNumUses() == 1 &&
            "there must be a single user for the outlined function");
     CallInst *StaleCI = cast<CallInst>(OutlinedFn.user_back());
+    ToBeDeleted.push(StaleCI);
 
-    // Create the wrapper function.
-    SmallVector<Type *> WrapperArgTys{Builder.getPtrTy(), Builder.getPtrTy()};
-    for (auto &Arg : OutlinedFn.args())
-      WrapperArgTys.push_back(Arg.getType());
-    FunctionCallee WrapperFuncVal = M.getOrInsertFunction(
-        (Twine(OutlinedFn.getName()) + ".teams").str(),
-        FunctionType::get(Builder.getVoidTy(), WrapperArgTys, false));
-    Function *WrapperFunc = dyn_cast<Function>(WrapperFuncVal.getCallee());
-    WrapperFunc->getArg(0)->setName("global_tid");
-    WrapperFunc->getArg(1)->setName("bound_tid");
-    if (WrapperFunc->arg_size() > 2)
-      WrapperFunc->getArg(2)->setName("data");
+    assert((OutlinedFn.arg_size() == 2 || OutlinedFn.arg_size() == 3) &&
+           "Outlined function must have two or three arguments only");
 
-    // Emit the body of the wrapper function - just a call to outlined function
-    // and return statement.
-    BasicBlock *WrapperEntryBB =
-        BasicBlock::Create(M.getContext(), "entrybb", WrapperFunc);
-    Builder.SetInsertPoint(WrapperEntryBB);
-    SmallVector<Value *> Args;
-    for (size_t ArgIndex = 2; ArgIndex < WrapperFunc->arg_size(); ArgIndex++)
-      Args.push_back(WrapperFunc->getArg(ArgIndex));
-    Builder.CreateCall(&OutlinedFn, Args);
-    Builder.CreateRetVoid();
+    bool HasShared = OutlinedFn.arg_size() == 3;
 
-    OutlinedFn.addFnAttr(Attribute::AttrKind::AlwaysInline);
+    OutlinedFn.getArg(0)->setName("global.tid.ptr");
+    OutlinedFn.getArg(1)->setName("bound.tid.ptr");
+    if (HasShared)
+      OutlinedFn.getArg(2)->setName("data");
 
     // Call to the runtime function for teams in the current function.
     assert(StaleCI && "Error while outlining - no CallInst user found for the "
                       "outlined function.");
     Builder.SetInsertPoint(StaleCI);
-    Args = {Ident, Builder.getInt32(StaleCI->arg_size()), WrapperFunc};
-    for (Use &Arg : StaleCI->args())
-      Args.push_back(Arg);
+    SmallVector<Value *> Args = {Ident, Builder.getInt32(StaleCI->arg_size()),
+                                 &OutlinedFn};
+    if (HasShared)
+      Args.push_back(StaleCI->getArgOperand(2));
     Builder.CreateCall(getOrCreateRuntimeFunctionPtr(
                            omp::RuntimeFunction::OMPRTL___kmpc_fork_teams),
                        Args);
-    StaleCI->eraseFromParent();
+
+    while (!ToBeDeleted.empty()) {
+      ToBeDeleted.top()->eraseFromParent();
+      ToBeDeleted.pop();
+    }
   };
 
   addOutlineInfo(std::move(OI));
-
-  // Generate the body of teams.
-  InsertPointTy AllocaIP(AllocaBB, AllocaBB->begin());
-  InsertPointTy CodeGenIP(BodyBB, BodyBB->begin());
-  BodyGenCB(AllocaIP, CodeGenIP);
 
   Builder.SetInsertPoint(ExitBB, ExitBB->begin());
 

@@ -4057,25 +4057,17 @@ TEST_F(OpenMPIRBuilderTest, CreateTeams) {
   ASSERT_NE(SrcSrc, nullptr);
 
   // Verify the outlined function signature.
-  Function *WrapperFn =
+  Function *OutlinedFn =
       dyn_cast<Function>(TeamsForkCall->getArgOperand(2)->stripPointerCasts());
-  ASSERT_NE(WrapperFn, nullptr);
-  EXPECT_FALSE(WrapperFn->isDeclaration());
-  EXPECT_TRUE(WrapperFn->arg_size() >= 3);
-  EXPECT_EQ(WrapperFn->getArg(0)->getType(), Builder.getPtrTy()); // global_tid
-  EXPECT_EQ(WrapperFn->getArg(1)->getType(), Builder.getPtrTy()); // bound_tid
-  EXPECT_EQ(WrapperFn->getArg(2)->getType(),
+  ASSERT_NE(OutlinedFn, nullptr);
+  EXPECT_FALSE(OutlinedFn->isDeclaration());
+  EXPECT_TRUE(OutlinedFn->arg_size() >= 3);
+  EXPECT_EQ(OutlinedFn->getArg(0)->getType(), Builder.getPtrTy()); // global_tid
+  EXPECT_EQ(OutlinedFn->getArg(1)->getType(), Builder.getPtrTy()); // bound_tid
+  EXPECT_EQ(OutlinedFn->getArg(2)->getType(),
             Builder.getPtrTy()); // captured args
 
   // Check for TruncInst and ICmpInst in the outlined function.
-  inst_range Instructions = instructions(WrapperFn);
-  auto OutlinedFnInst = find_if(
-      Instructions, [](Instruction &Inst) { return isa<CallInst>(&Inst); });
-  ASSERT_NE(OutlinedFnInst, Instructions.end());
-  CallInst *OutlinedFnCI = dyn_cast<CallInst>(&*OutlinedFnInst);
-  ASSERT_NE(OutlinedFnCI, nullptr);
-  Function *OutlinedFn = OutlinedFnCI->getCalledFunction();
-
   EXPECT_TRUE(any_of(instructions(OutlinedFn),
                      [](Instruction &inst) { return isa<TruncInst>(&inst); }));
   EXPECT_TRUE(any_of(instructions(OutlinedFn),
