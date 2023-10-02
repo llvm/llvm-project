@@ -42,7 +42,7 @@ public:
 
   /// Update internal state with \p Inst at \p Addr.
   ///
-  /// For some types a analyses, inspecting a single instruction is not
+  /// For some types of analyses, inspecting a single instruction is not
   /// sufficient. Some examples are auipc/jalr pairs on RISC-V or adrp/ldr pairs
   /// on AArch64. To support inspecting multiple instructions, targets may keep
   /// track of an internal state while analysing instructions. Clients should
