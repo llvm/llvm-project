@@ -652,8 +652,8 @@ serializeValueProfDataFrom(ValueProfRecordClosure *Closure,
 #define INSTR_PROF_COVMAP_VERSION 5
 
 /* Profile version is always of type uint64_t. Reserve the upper 32 bits in the
- * version for other variants of profile. We set the lowest bit of the upper 8
- * bits (i.e. bit 56) to 1 to indicate if this is an IR-level instrumentation
+ * version for other variants of profile. we set the 8th most significant bit 
+ * (i.e. bit 56) to 1 to indicate if this is an IR-level instrumentation
  * generated profile, and 0 if this is a Clang FE generated profile.
  * 1 in bit 57 indicates there are context-sensitive records in the profile.
  * The 59th bit indicates whether to use debug info to correlate profiles.
