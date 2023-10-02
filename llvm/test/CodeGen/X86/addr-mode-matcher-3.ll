@@ -15,8 +15,7 @@ define i32 @mask_offset_scale_i32_i64(ptr %base, i32 %i) {
 ; X64:       # %bb.0:
 ; X64-NEXT:    # kill: def $esi killed $esi def $rsi
 ; X64-NEXT:    andl $65280, %esi # imm = 0xFF00
-; X64-NEXT:    addl %esi, %esi
-; X64-NEXT:    movl 48(%rdi,%rsi,4), %eax
+; X64-NEXT:    movl 48(%rdi,%rsi,8), %eax
 ; X64-NEXT:    retq
   %mask = and i32 %i, 65280
   %offset = or i32 %mask, 6
