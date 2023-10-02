@@ -10,7 +10,6 @@
 
 // std::views::slide
 
-
 #include "test_iterators.h"
 #include <cassert>
 #include <concepts>
