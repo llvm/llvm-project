@@ -31,7 +31,8 @@ static inline void initialize_tm_data(struct tm *tm_data, int year, int month,
                     // years since 1900
                     .tm_year = year - TimeConstants::TIME_YEAR_BASE,
                     .tm_wday = wday,
-                    .tm_yday = yday};
+                    .tm_yday = yday,
+                    .tm_isdst = 0};
   *tm_data = temp;
 }
 
