@@ -180,8 +180,6 @@ Changes to the LLVM tools
 * ``llvm-nm`` now supports the ``--line-numbers`` (``-l``) option to use
   debugging information to print symbols' filenames and line numbers.
 
-* llvm-symbolizer and llvm-addr2line now support addresses specified as symbol names.
-
 Changes to LLDB
 ---------------------------------
 
