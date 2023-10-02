@@ -226,7 +226,7 @@ struct llvm::TimeTraceProfiler {
         J.attribute("tid", int64_t(TotalTid));
         J.attribute("ph", "X");
         J.attribute("ts", 0);
-        J.attribute("dur", DurNs / 1000 );
+        J.attribute("dur", DurNs / 1000);
         J.attribute("name", "Total: " + Total.first);
         J.attributeObject("args", [&] {
           J.attribute("count", int64_t(Count));
@@ -261,10 +261,10 @@ struct llvm::TimeTraceProfiler {
     // Emit the absolute time when this TimeProfiler started.
     // This can be used to combine the profiling data from
     // multiple processes and preserve actual time intervals.
-    J.attribute("beginningOfTime",
-                time_point_cast<nanoseconds>(BeginningOfTime)
-                    .time_since_epoch()
-                    .count()/1000);
+    J.attribute("beginningOfTime", time_point_cast<nanoseconds>(BeginningOfTime)
+                                           .time_since_epoch()
+                                           .count() /
+                                       1000);
 
     J.objectEnd();
   }

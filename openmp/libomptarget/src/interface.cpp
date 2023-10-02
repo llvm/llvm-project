@@ -66,8 +66,7 @@ targetData(ident_t *Loc, int64_t DeviceId, int32_t ArgNum, void **ArgsBase,
                 "TargetAsyncInfoTy must be convertible to AsyncInfoTy.");
 
   TIMESCOPE_WITH_DETAILS_AND_IDENT("Runtime: Data Copy",
-                                  "NumArgs="+
-                                  std::to_string(ArgNum), Loc);
+                                   "NumArgs=" + std::to_string(ArgNum), Loc);
 
   DP("Entering data %s region for device %" PRId64 " with %d mappings\n",
      RegionName, DeviceId, ArgNum);
@@ -263,10 +262,11 @@ static inline int targetKernel(ident_t *Loc, int64_t DeviceId, int32_t NumTeams,
   assert(KernelArgs->ThreadLimit[0] == static_cast<uint32_t>(ThreadLimit) &&
          !KernelArgs->ThreadLimit[1] && !KernelArgs->ThreadLimit[2] &&
          "OpenMP interface should not use multiple dimensions");
-  TIMESCOPE_WITH_DETAILS_AND_IDENT("Runtime target exe",
-                                   "NumTeams="+std::to_string(NumTeams)+
-                                   ";NumArgs="+
-                                   std::to_string(KernelArgs->NumArgs), Loc);
+  TIMESCOPE_WITH_DETAILS_AND_IDENT(
+      "Runtime target exe",
+      "NumTeams=" + std::to_string(NumTeams) +
+          ";NumArgs=" + std::to_string(KernelArgs->NumArgs),
+      Loc);
 
   if (getInfoLevel() & OMP_INFOTYPE_KERNEL_ARGS)
     printKernelArguments(Loc, DeviceId, KernelArgs->NumArgs,
