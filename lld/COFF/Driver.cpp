@@ -2084,8 +2084,11 @@ void LinkerDriver::linkerMain(ArrayRef<const char *> argsArr) {
     raw_svector_ostream stream(buffer);
     stream << "Library search paths:\n";
 
-    for (StringRef path : searchPaths)
+    for (StringRef path : searchPaths) {
+      if (path == "")
+        path = "(cwd)";
       stream << "  " << path << "\n";
+    }
 
     message(buffer);
   }
