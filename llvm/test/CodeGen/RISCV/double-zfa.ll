@@ -133,6 +133,25 @@ define double @loadfpimm15() {
   ret double 0x0008000000000000
 }
 
+define double @loadfpimm16() {
+; CHECK-LABEL: loadfpimm16:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    fli.d fa0, -1.0
+; CHECK-NEXT:    ret
+  ret double -1.0
+}
+
+; Ensure fli isn't incorrectly used for negated versions of numbers in the fli
+; table.
+; FIXME: Codegen is incorrect.
+define double @loadfpimm17() {
+; CHECK-LABEL: loadfpimm17:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    fli.d fa0, -1.0
+; CHECK-NEXT:    ret
+  ret double -2.0
+}
+
 declare double @llvm.minimum.f64(double, double)
 
 define double @fminm_d(double %a, double %b) nounwind {
