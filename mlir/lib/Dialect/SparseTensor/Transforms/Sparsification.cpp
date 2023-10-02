@@ -250,7 +250,7 @@ static bool findAffine(Merger &merger, TensorId tid, Level lvl, AffineExpr a,
     }
 
     if (auto binOp = a.dyn_cast<AffineBinaryOpExpr>()) {
-      // We do not set dim level format for affine expresssion like d0 + d1 on
+      // We do not set dim level format for affine expression like d0 + d1 on
       // either loop index at d0 or d1.
       // We continue the recursion merely to check whether current affine is
       // admissible or not.
@@ -309,7 +309,7 @@ static bool findDepIdxSet(Merger &merger, TensorId tensor, Level lvl,
       if (merger.hasDependentLvl(ldx, tensor)) {
         // TODO: This can be supported by coiterate slices if the loop idx is
         // appeared on affine index for different tensor, or take slice on
-        // mulitple dimensions when it is on the same tensor.
+        // multiple dimensions when it is on the same tensor.
         // E.g.,
         // `d0 + d1` for indexing t0[lvl0] and `d0 + d2` for indexing t1[lvl0]
         // d0_1 = getNextSliceOffset t0 along lvl0
@@ -357,7 +357,7 @@ static bool findDepIdxSet(Merger &merger, TensorId tensor, Level lvl,
 /// indexing-expression is `d0 + d1`)
 static unsigned getNumNonTrivialIdxExpOnSparseLvls(AffineMap map,
                                                    Value tensor) {
-  // The `tensor` is not guaranted to have `RankedTensorType`, therefore
+  // The `tensor` is not guaranteed to have `RankedTensorType`, therefore
   // we can't use `getRankedTensorType`/`getSparseTensorType` here.
   // However, we don't need to handle `StorageSpecifierType`, so we
   // can use `SparseTensorType` once we guard against non-tensors.
@@ -636,7 +636,7 @@ static void addFilterLoopBasedConstraints(CodegenEnv &env, OpOperand &t,
 
   // Each tensor expression and optional dimension ordering (row-major
   // by default) puts an ordering constraint on the loop indices. For
-  // example, the tensor expresion A_ijk forces the ordering i < j < k
+  // example, the tensor expression A_ijk forces the ordering i < j < k
   // on the loop indices if no explicit dimension ordering is given.
   const Level lvlRank = map.getNumResults();
   assert(!enc || lvlRank == enc.getLvlRank());
@@ -668,7 +668,7 @@ static void addFilterLoopBasedConstraints(CodegenEnv &env, OpOperand &t,
 
       // Applying order constraints on every pair of dimExpr between two
       // compound affine expressions can sometime too strict:
-      // E.g, for [dense, dense] -> (d0 + d1, d2 + d3).
+      // E.g., for [dense, dense] -> (d0 + d1, d2 + d3).
       // It is totally fine to have loop sequence d0->d2->d1->d3 instead of
       // requiring d0 < d2, d1 < d2, d0 < d3, d1 < d3.
       // We also relax the affine constraint when use slice-based algorithm
@@ -1316,7 +1316,7 @@ static void genExpand(CodegenEnv &env, OpBuilder &builder, LoopOrd at,
     return; // not needed at this level
   assert(!env.isReduc());
   // Generate start or end of an expanded access pattern. Note that because
-  // an expension does not rely on the ongoing contents of the sparse storage
+  // an expansion does not rely on the ongoing contents of the sparse storage
   // scheme, we can use the original tensor as incoming SSA value (which
   // simplifies codegen a bit). If expansion on the actual contents is ever
   // needed, we will need to use the SSA value in the insertion chain instead.
@@ -2007,9 +2007,9 @@ public:
     bool isAdmissible = false;
     bool hasCycle = true;
 
-    // An const list of all masks that we used for interation graph
+    // A const list of all masks that we used for iteration graph
     // computation. Must be ordered from more strict to less strict.
-    // Ideally (though might not be guaranteed), the eariler a constraint mask
+    // Ideally (though might not be guaranteed), the earlier a constraint mask
     // can be satisfied, the faster the generated kernel will be.
     const auto allMasks = {
         SortMask::kIncludeAll,        SortMask::kIncludeDense,
@@ -2038,7 +2038,7 @@ public:
     env.startEmit();
     genBuffers(env, rewriter);
     // TODO: Constant affine expression should be handled differently when using
-    // slice-based codegen, it does not matter now becasue we already reject the
+    // slice-based codegen, it does not matter now because we already reject the
     // constant expression at a earlier stage.
     genInitConstantDenseAddress(env, rewriter);
     genStmt(env, rewriter, env.getExprId(), 0);

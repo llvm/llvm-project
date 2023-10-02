@@ -242,7 +242,7 @@ Value LoopEmitter::genSegmentHigh(OpBuilder &builder, Location loc,
         {
           OpBuilder::InsertionGuard guard(builder);
           // Load the next coordinates only when inbound (to avoid OOB
-          // acccesses).
+          // accesses).
           builder.setInsertionPointToStart(ifInBound.thenBlock());
           Value crd = genIndexLoad(builder, loc, coordinates, pos);
           Value isSameCrd = builder.create<arith::CmpIOp>(
@@ -651,7 +651,7 @@ std::pair<Operation *, Value> LoopEmitter::emitForLoopOverTensorAtLvl(
     // expression on init vals will be moved into scf.reduce and replaced with
     // the block arguments when exiting the loop (see exitForLoop). This is
     // needed as we can not build the actual reduction block and get the actual
-    // reduction varaible before users fill parallel loop body.
+    // reduction variable before users fill parallel loop body.
     for (int i = 0, e = reduc.size(); i < e; i++)
       reduc[i] = parOp.getInitVals()[i];
     loop = parOp;
@@ -882,7 +882,7 @@ std::pair<Operation *, Value> LoopEmitter::emitWhileLoopOverTensorsAtLvls(
 
   // The set of induction variables for the while loop.
   SmallVector<Value> ivs;
-  // Segement sizes for induction variables used for different kinds of loop
+  // Segment sizes for induction variables used for different kinds of loop
   // conditions.
   SmallVector<unsigned> opSegSize;
 
@@ -1077,7 +1077,7 @@ Operation *LoopEmitter::enterCoIterationOverTensorsAtLvls(
   needsUniv = !spConds.empty() && needsUniv;
   // The TensorLevel used for loop conditions.
   // If there is any sparse level, we need to use the sparse condition.
-  // If all levels are dense, we can pick arbitary one (dense slice-driven loop
+  // If all levels are dense, we can pick arbitrary one (dense slice-driven loop
   // can be generated using a simple ForOp as well).
   Operation *l = nullptr;
   Value iv = nullptr;
@@ -1700,7 +1700,7 @@ std::pair<Operation *, ValueRange> LoopEmitter::genSliceLvlTraverseLoop(
           // Delegates to users' callback.
           bodyBuilder(builder, loc, iv, ifRet);
         }
-        // Marks this speical ifOp to avoid sparisification finalizing it.
+        // Marks this special ifOp to avoid sparisification finalizing it.
         ifOp->setAttr(getLoopEmitterLoopAttrName(),
                       StringAttr::get(builder.getContext(), "slice"));
         // Insertion point restored to after ifOp.
@@ -1741,7 +1741,7 @@ ValueRange LoopEmitter::genUnResolvedSliceTreeTraverse(
   Value pos = c0;
   OpBuilder::InsertPoint ip;
   SmallVector<Value> innerArgs(userReduc.begin(), userReduc.end());
-  scf::ForOp outerMost = nullptr; // the outtermost loop.
+  scf::ForOp outerMost = nullptr; // the outermost loop.
 
   // Wraps body builder and inserts a extra counting instruction at the end.
   auto wrapped = [bodyBuilder](OpBuilder &builder, Location loc, Value iv,
@@ -1842,7 +1842,7 @@ ValueRange LoopEmitter::genUnResolvedSliceTreeTraverse(
                                OpBuilder &builder, Location loc, ValueRange ivs,
                                ValueRange iterArgs) -> scf::ValueVector {
                              for (auto em : llvm::enumerate(ivs)) {
-                               // Linearizes postion: pos = (pos * lvlsize) +
+                               // Linearizes position: pos = (pos * lvlsize) +
                                // iv;
                                pos = MULI(pos, lvlSzs[em.index()]);
                                pos = ADDI(pos, em.value());
@@ -2072,7 +2072,7 @@ bool LoopEmitter::genSliceBegin(OpBuilder &builder, Location loc, TensorId tid,
   assert(isOrderedDLT(lvlType));
   if (isSingletonDLT(lvlType)) {
     llvm_unreachable("TODO: dense level should be easy to support, while "
-                     "singleton level requres more efforts");
+                     "singleton level requires more efforts");
   }
 
   assert(!dependentLvlMap[tid][lvl].empty());
