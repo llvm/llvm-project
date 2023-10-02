@@ -1725,7 +1725,6 @@ SDValue WebAssemblyTargetLowering::LowerGlobalAddress(SDValue Op,
 
   unsigned OperandFlags = 0;
   const GlobalValue *GV = GA->getGlobal();
-  // is PIC but not a WebAssembly table.
   // Since WebAssembly tables cannot yet be shared accross modules, we don't
   // need special treatment for tables in PIC mode.
   if (isPositionIndependent() &&
