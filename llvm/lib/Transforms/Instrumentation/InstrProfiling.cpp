@@ -64,6 +64,10 @@ cl::opt<bool>
     DebugInfoCorrelate("debug-info-correlate",
                        cl::desc("Use debug info to correlate profiles."),
                        cl::init(false));
+
+// Command line option to enable vtable value profiling. Defined in
+// ProfileData/InstrProf.cpp: -enable-vtable-value-profiling=
+extern cl::opt<bool> EnableVTableValueProfiling;
 } // namespace llvm
 
 namespace {
@@ -561,10 +565,12 @@ bool InstrProfiling::run(
       static_cast<void>(getOrCreateRegionCounters(FirstProfInst));
   }
 
-  for (GlobalVariable &GV : M.globals()) {
-    // Global variables with type metadata are virtual table variables.
-    if (GV.hasMetadata(LLVMContext::MD_type)) {
-      getOrCreateVTableProfData(&GV);
+  if (EnableVTableValueProfiling) {
+    for (GlobalVariable &GV : M.globals()) {
+      // Global variables with type metadata are virtual table variables.
+      if (GV.hasMetadata(LLVMContext::MD_type)) {
+        getOrCreateVTableProfData(&GV);
+      }
     }
   }
 
@@ -1376,7 +1382,7 @@ void InstrProfiling::emitNameData() {
 }
 
 void InstrProfiling::emitVTableNames() {
-  if (ReferencedVTableNames.empty())
+  if (!EnableVTableValueProfiling || ReferencedVTableNames.empty())
     return;
 
   // Collect VTable

@@ -1,12 +1,11 @@
 #!/bin/bash
 
 if [ $# -lt 2 ]; then
-  echo "Path to clang++ and llvm-profdata required!"
-  echo "Usage: update_vtable_value_prof_inputs.sh /path/to/updated/clang++ /path/to/updated/llvm-profdata"
+  echo "Path to clang++ required!"
+  echo "Usage: update_vtable_value_prof_inputs.sh /path/to/updated/clang++"
   exit 1
 else
   CLANG=$1
-  LLVMPROFDATA=$2
 fi
 
 OUTDIR=$(dirname $(realpath -s $0))
