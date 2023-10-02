@@ -135,8 +135,8 @@ TEST(Decl, MangleDependentSizedArray) {
   std::unique_ptr<ItaniumMangleContext> MC(
       ItaniumMangleContext::create(Ctx, Diags));
 
-  MC->mangleTypeName(DeclA->getType(), OS_A);
-  MC->mangleTypeName(DeclB->getType(), OS_B);
+  MC->mangleCanonicalTypeName(DeclA->getType(), OS_A);
+  MC->mangleCanonicalTypeName(DeclB->getType(), OS_B);
 
   ASSERT_TRUE(0 == MangleA.compare("_ZTSA_i"));
   ASSERT_TRUE(0 == MangleB.compare("_ZTSAT0__T_"));

@@ -1710,7 +1710,7 @@ static std::string getBlockCaptureStr(const CGBlockInfo::Capture &Cap,
     Str += "c";
     SmallString<256> TyStr;
     llvm::raw_svector_ostream Out(TyStr);
-    CGM.getCXXABI().getMangleContext().mangleTypeName(CaptureTy, Out);
+    CGM.getCXXABI().getMangleContext().mangleCanonicalTypeName(CaptureTy, Out);
     Str += llvm::to_string(TyStr.size()) + TyStr.c_str();
     break;
   }
