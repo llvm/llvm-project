@@ -1105,10 +1105,10 @@ static void LoadLibStdcppFormatters(lldb::TypeCategoryImplSP cpp_category_sp) {
           stl_synth_flags,
           "lldb.formatters.cpp.gnu_libstdcpp.StdForwardListSynthProvider")));
   cpp_category_sp->AddTypeSynthetic(
-    "^std::variant<.+>$", eFormatterMatchRegex,
-    SyntheticChildrenSP(new ScriptedSyntheticChildren(
-        stl_synth_flags,
-        "lldb.formatters.cpp.gnu_libstdcpp.VariantSynthProvider")));
+      "^std::variant<.+>$", eFormatterMatchRegex,
+      SyntheticChildrenSP(new ScriptedSyntheticChildren(
+          stl_synth_flags,
+          "lldb.formatters.cpp.gnu_libstdcpp.VariantSynthProvider")));
 
   stl_summary_flags.SetDontShowChildren(false);
   stl_summary_flags.SetSkipPointers(false);

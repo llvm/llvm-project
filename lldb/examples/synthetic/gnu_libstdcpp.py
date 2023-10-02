@@ -898,12 +898,7 @@ def VariantSummaryProvider(valobj, dict):
     raw_obj = valobj.GetNonSyntheticValue()
     index_obj = raw_obj.GetChildMemberWithName("_M_index")
     data_obj = raw_obj.GetChildMemberWithName("_M_u")
-    if not (
-        index_obj
-        and index_obj.IsValid()
-        and data_obj
-        and data_obj.IsValid()
-    ):
+    if not (index_obj and index_obj.IsValid() and data_obj and data_obj.IsValid()):
         return "<Can't find _M_index or _M_u>"
 
     def get_variant_npos_value(index_byte_size):
