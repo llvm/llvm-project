@@ -143,11 +143,11 @@ define double @loadfpimm16() {
 
 ; Ensure fli isn't incorrectly used for negated versions of numbers in the fli
 ; table.
-; FIXME: Codegen is incorrect.
 define double @loadfpimm17() {
 ; CHECK-LABEL: loadfpimm17:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    fli.d fa0, -1.0
+; CHECK-NEXT:    lui a0, %hi(.LCPI15_0)
+; CHECK-NEXT:    fld fa0, %lo(.LCPI15_0)(a0)
 ; CHECK-NEXT:    ret
   ret double -2.0
 }

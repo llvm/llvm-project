@@ -197,11 +197,11 @@ define half @loadfpimm13() {
 
 ; Ensure fli isn't incorrectly used for negated versions of numbers in the fli
 ; table.
-; FIXME: Codegen is incorrect when Zfa is enabled.
 define half @loadfpimm14() {
 ; CHECK-LABEL: loadfpimm14:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    fli.h fa0, -1.0
+; CHECK-NEXT:    lui a0, 1048572
+; CHECK-NEXT:    fmv.h.x fa0, a0
 ; CHECK-NEXT:    ret
 ;
 ; ZFHMIN-LABEL: loadfpimm14:
