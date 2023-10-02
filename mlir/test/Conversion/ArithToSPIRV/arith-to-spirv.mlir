@@ -1407,3 +1407,43 @@ func.func @float_scalar(%arg0: f16) {
 }
 
 } // end module
+
+// -----
+
+//===----------------------------------------------------------------------===//
+// VectorAnyINTEL support
+//===----------------------------------------------------------------------===//
+
+// Check that with VectorAnyINTEL, VectorComputeINTEL capability,
+// and SPV_INTEL_vector_compute extension, any sized (2-2^32 -1) vector is allowed.
+module attributes {
+  spirv.target_env = #spirv.target_env<
+    #spirv.vce<v1.0, [Int8, Int16, Int64, Float16, Float64, Kernel, VectorAnyINTEL], [SPV_INTEL_vector_compute]>, #spirv.resource_limits<>>
+} {
+
+// CHECK-LABEL: @any_vector
+func.func @any_vector(%arg0: vector<16xi32>, %arg1: vector<16xi32>) {
+  // CHECK: spirv.ISub %{{.+}}, %{{.+}}: vector<16xi32>
+  %0 = arith.subi %arg0, %arg1: vector<16xi32>
+  return
+}
+
+// CHECK-LABEL: @max_vector
+func.func @max_vector(%arg0: vector<4294967295xi32>, %arg1: vector<4294967295xi32>) {
+  // CHECK: spirv.ISub %{{.+}}, %{{.+}}: vector<4294967295xi32>
+  %0 = arith.subi %arg0, %arg1: vector<4294967295xi32>
+  return
+}
+
+
+// Check float vector types of any size.
+// CHECK-LABEL: @float_vector58
+func.func @float_vector58(%arg0: vector<5xf16>, %arg1: vector<8xf64>) {
+  // CHECK: spirv.FAdd %{{.*}}, %{{.*}}: vector<5xf16>
+  %0 = arith.addf %arg0, %arg0: vector<5xf16>
+  // CHECK: spirv.FMul %{{.*}}, %{{.*}}: vector<8xf64>
+  %1 = arith.mulf %arg1, %arg1: vector<8xf64>
+  return
+}
+
+} // end module

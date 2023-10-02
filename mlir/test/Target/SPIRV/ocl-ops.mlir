@@ -39,6 +39,12 @@ spirv.module Physical64 OpenCL requires #spirv.vce<v1.0, [Kernel, Addresses], []
     spirv.Return
   }
 
+  spirv.func @vector_anysize(%arg0 : vector<5000xf32>) "None" {
+    // CHECK: {{%.*}} = spirv.CL.fabs {{%.*}} : vector<5000xf32>
+    %0 = spirv.CL.fabs %arg0 : vector<5000xf32>
+    spirv.Return
+  }
+
   spirv.func @fma(%arg0 : f32, %arg1 : f32, %arg2 : f32) "None" {
     // CHECK: spirv.CL.fma {{%[^,]*}}, {{%[^,]*}}, {{%[^,]*}} : f32
     %13 = spirv.CL.fma %arg0, %arg1, %arg2 : f32
