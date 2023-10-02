@@ -36,6 +36,7 @@ template <class Emitter> class DeclScope;
 template <class Emitter> class OptionScope;
 template <class Emitter> class ArrayIndexScope;
 template <class Emitter> class SourceLocScope;
+template <class Emitter> class StoredOpaqueValueScope;
 
 /// Compilation context for expressions.
 template <class Emitter>
@@ -220,6 +221,7 @@ private:
   friend class OptionScope<Emitter>;
   friend class ArrayIndexScope<Emitter>;
   friend class SourceLocScope<Emitter>;
+  friend class StoredOpaqueValueScope<Emitter>;
 
   /// Emits a zero initializer.
   bool visitZeroInitializer(PrimType T, QualType QT, const Expr *E);
@@ -304,6 +306,10 @@ protected:
   /// Flag inidicating if we're initializing an already created
   /// variable. This is set in visitInitializer().
   bool Initializing = false;
+
+  /// Flag indicating if we ignore an OpaqueValueExpr.
+  bool IgnoreOpaqueValue = false;
+  std::optional<uint64_t> OpaqueValueIndex;
 };
 
 extern template class ByteCodeExprGen<ByteCodeEmitter>;
@@ -477,6 +483,25 @@ public:
 private:
   ByteCodeExprGen<Emitter> *Ctx;
   bool Enabled = false;
+};
+
+template <class Emitter> class StoredOpaqueValueScope final {
+public:
+  StoredOpaqueValueScope(ByteCodeExprGen<Emitter> *Ctx, uint64_t LocalIndex, bool ignore = true)
+      : Ctx(Ctx), OldIgnoreValue(Ctx->IgnoreOpaqueValue), OldLocalIndex(Ctx->OpaqueValueIndex) {
+    Ctx->IgnoreOpaqueValue = ignore;
+    Ctx->OpaqueValueIndex = LocalIndex;
+  }
+
+  ~StoredOpaqueValueScope() {
+      Ctx->IgnoreOpaqueValue = OldIgnoreValue;
+      Ctx->OpaqueValueIndex = OldLocalIndex;
+  }
+
+private:
+  ByteCodeExprGen<Emitter> *Ctx;
+  bool OldIgnoreValue;
+  std::optional<uint64_t> OldLocalIndex;
 };
 
 } // namespace interp

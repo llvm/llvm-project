@@ -810,9 +810,20 @@ bool ByteCodeExprGen<Emitter>::VisitArrayInitLoopExpr(
     const ArrayInitLoopExpr *E) {
   assert(Initializing);
   assert(!DiscardResult);
-  // TODO: This compiles to quite a lot of bytecode if the array is larger.
-  //   Investigate compiling this to a loop, or at least try to use
-  //   the AILE's Common expr.
+
+  const auto *CommonExpr = E->getCommonExpr();
+  std::optional<PrimType> CommonTy = classify(CommonExpr);
+
+  std::optional<unsigned> LocalIndex = this->allocateLocalPrimitive(CommonExpr, *CommonTy, CommonExpr->getType().isConstQualified());
+  if (!LocalIndex)
+    return false;
+  if (!this->visit(CommonExpr))
+    return false;
+  if(!this->emitSetLocal(*CommonTy, *LocalIndex, E))
+    return false;
+    
+  StoredOpaqueValueScope<Emitter> KnownOpaqueScope(this, *LocalIndex);
+
   const Expr *SubExpr = E->getSubExpr();
   size_t Size = E->getArraySize().getZExtValue();
   std::optional<PrimType> ElemT = classify(SubExpr->getType());
@@ -845,8 +856,12 @@ bool ByteCodeExprGen<Emitter>::VisitArrayInitLoopExpr(
 
 template <class Emitter>
 bool ByteCodeExprGen<Emitter>::VisitOpaqueValueExpr(const OpaqueValueExpr *E) {
+  if(IgnoreOpaqueValue)
+    return this->emitGetLocal(*classify(E), *OpaqueValueIndex, E);
+
   if (Initializing)
     return this->visitInitializer(E->getSourceExpr());
+  
   return this->visit(E->getSourceExpr());
 }
 

@@ -352,9 +352,6 @@ namespace ZeroInit {
 }
 
 namespace ArrayInitLoop {
-  /// FIXME: The ArrayInitLoop for the decomposition initializer in g() has
-  /// f(n) as its CommonExpr. We need to evaluate that exactly once and not
-  /// N times as we do right now.
   struct X {
       int arr[3];
   };
@@ -366,8 +363,7 @@ namespace ArrayInitLoop {
       auto [a, b, c] = f(n).arr;
       return a + b + c;
   }
-  static_assert(g() == 6); // expected-error {{failed}} \
-                           // expected-note {{15 == 6}}
+  static_assert(g() == 6);
 }
 
 namespace StringZeroFill {
