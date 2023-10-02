@@ -40,9 +40,9 @@ inline IntMatrix makeIntMatrix(unsigned numRow, unsigned numColumns,
   return results;
 }
 
-inline FracMatrix makeFracMatrix(unsigned numRow, unsigned numColumns,
-                                 ArrayRef<SmallVector<Fraction, 8>> matrix) {
-  FracMatrix results(numRow, numColumns);
+inline Matrix<Fraction> makeFracMatrix(unsigned numRow, unsigned numColumns,
+                         ArrayRef<SmallVector<Fraction, 8>> matrix) {
+  Matrix<Fraction> results(numRow, numColumns);
   assert(matrix.size() == numRow);
   for (unsigned i = 0; i < numRow; ++i) {
     assert(matrix[i].size() == numColumns &&
