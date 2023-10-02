@@ -7,7 +7,7 @@ target triple = "x86_64-unknown-linux-gnu"
 
 ; Check that everything still works when debuginfo is present, and that it is reasonably propagated.
 
-; CHECK: remark: <stdin>:6:1: Formed a call to llvm.memcpy.p0.p0.i64() intrinsic from load and store instruction in test6_dest_align function{{$}}
+; CHECK: remark: {{.*}}<stdin>:6:1: Formed a call to llvm.memcpy.p0.p0.i64() intrinsic from load and store instruction in test6_dest_align function{{$}}
 
 ; YAML:      --- !Passed
 ; YAML-NEXT: Pass:            loop-idiom

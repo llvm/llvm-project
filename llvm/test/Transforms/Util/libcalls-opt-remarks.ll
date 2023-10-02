@@ -5,7 +5,7 @@
 ; RUN:     -pass-remarks-output=%t -S -pass-remarks=instcombine 2>&1 | FileCheck %s
 ; RUN: cat %t | FileCheck -check-prefix=YAML %s
 
-; CHECK:      remark: libcalls-opt-remarks.c:10:10: folded strlen(select) to select of constants{{$}}
+; CHECK:      remark: {{.*}}libcalls-opt-remarks.c:10:10: folded strlen(select) to select of constants{{$}}
 ; CHECK-NOT:  remark:
 
 ; YAML:      --- !Passed

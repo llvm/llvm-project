@@ -21,7 +21,7 @@ declare void @doit(ptr) local_unnamed_addr #3
 ; Function Attrs: argmemonly nounwind
 declare void @llvm.lifetime.end.p0(i64, ptr nocapture) #1
 
-; CHECK: error: warn_stack.c
+; CHECK: error: {{.*}}warn_stack.c
 ; CHECK: BPF stack limit
 define void @warn() local_unnamed_addr #0 !dbg !20 {
   %1 = alloca [512 x i8], align 1

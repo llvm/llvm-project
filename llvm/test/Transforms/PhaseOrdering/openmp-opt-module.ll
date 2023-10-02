@@ -8,7 +8,7 @@ target datalayout = "e-i64:64-i128:128-v16:16-v32:32-n16:32:64"
 @S = external local_unnamed_addr global ptr
 @foo_kernel_environment = local_unnamed_addr constant %struct.KernelEnvironmentTy { %struct.ConfigurationEnvironmentTy { i8 1, i8 0, i8 1 }, ptr null, ptr null }
 
-; MODULE: remark: openmp_opt_module.c:5:7: Found thread data sharing on the GPU. Expect degraded performance due to data globalization.
+; MODULE: remark: {{.*}}openmp_opt_module.c:5:7: Found thread data sharing on the GPU. Expect degraded performance due to data globalization.
 
 define void @foo() "kernel" {
 entry:

@@ -159,7 +159,10 @@ std::string DiagnosticInfoWithLocationBase::getLocationStr() const {
   unsigned Column = 0;
   if (isLocationAvailable())
     getLocation(Filename, Line, Column);
-  return (Filename + ":" + Twine(Line) + ":" + Twine(Column)).str();
+  return (getAbsolutePath()
+              ? getAbsolutePath()
+              : Filename + ":" + Twine(Line) + ":" + Twine(Column))
+      .str();
 }
 
 DiagnosticInfoOptimizationBase::Argument::Argument(StringRef Key,

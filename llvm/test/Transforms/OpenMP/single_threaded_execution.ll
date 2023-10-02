@@ -43,8 +43,8 @@ entry:
   ret void
 }
 
-; REMARKS: remark: single_threaded_execution.c:1:0: Could not internalize function. Some optimizations may not be possible.
-; REMARKS-NOT: remark: single_threaded_execution.c:1:0: Could not internalize function. Some optimizations may not be possible.
+; REMARKS: remark: {{.*}}single_threaded_execution.c:1:0: Could not internalize function. Some optimizations may not be possible.
+; REMARKS-NOT: remark: {{.*}}single_threaded_execution.c:1:0: Could not internalize function. Some optimizations may not be possible.
 
 ; CHECK-NOT: [openmp-opt] Basic block @nvptx entry is executed by a single thread.
 ; CHECK-DAG: [openmp-opt] Basic block @nvptx if.then is executed by a single thread.

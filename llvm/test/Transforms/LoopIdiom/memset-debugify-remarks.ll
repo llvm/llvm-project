@@ -12,7 +12,7 @@ target triple = "x86_64-unknown-linux-gnu"
 ;     *begin = value;
 ; }
 
-; CHECK: remark: <stdin>:4:1: Transformed loop-strided store in _Z15my_basic_memsetPcS_c function into a call to llvm.memset.p0.i64() intrinsic{{$}}
+; CHECK: remark: {{.*}}<stdin>:4:1: Transformed loop-strided store in _Z15my_basic_memsetPcS_c function into a call to llvm.memset.p0.i64() intrinsic{{$}}
 
 ; YAML:      --- !Passed
 ; YAML-NEXT: Pass:            loop-idiom

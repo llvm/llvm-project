@@ -5,8 +5,8 @@
 target datalayout = "e-m:e-p270:32:32-p271:32:32-p272:64:64-i64:64-f80:128-n8:16:32:64-S128"
 target triple = "x86_64-unknown-linux-gnu"
 
-; TTI: remark: <stdin>:7:1: advising against unrolling the loop because it contains a call
-; UNROLL: remark: <stdin>:14:1: unrolled loop by a factor of 8 with run-time trip count
+; TTI: remark: {{.*}}<stdin>:7:1: advising against unrolling the loop because it contains a call
+; UNROLL: remark: {{.*}}<stdin>:14:1: unrolled loop by a factor of 8 with run-time trip count
 
 define void @contains_external_call(i32 %count) {
 ; ALL-LABEL: @contains_external_call(

@@ -5,7 +5,7 @@ target datalayout = "e-m:o-i64:64-f80:128-n8:16:32:64-S128"
 
 @B = common global [1024 x i32] zeroinitializer, align 16, !dbg !0
 
-; CHECK: remark: diagnostics_missed.c:18:3: [non_adjacent]: entry and for.end: Loops are not adjacent
+; CHECK: remark: {{.*}}diagnostics_missed.c:18:3: [non_adjacent]: entry and for.end: Loops are not adjacent
 define void @non_adjacent(ptr noalias %A) !dbg !14 {
 entry:
   br label %for.body
@@ -55,7 +55,7 @@ for.end15:                                        ; preds = %for.cond.cleanup5
   ret void
 }
 
-; CHECK: remark: diagnostics_missed.c:28:3: [different_bounds]: entry and for.end: Loop trip counts are not the same
+; CHECK: remark: {{.*}}diagnostics_missed.c:28:3: [different_bounds]: entry and for.end: Loop trip counts are not the same
 define void @different_bounds(ptr noalias %A) !dbg !36 {
 entry:
   br label %for.body
@@ -105,7 +105,7 @@ for.end15:                                        ; preds = %for.cond.cleanup5
   ret void
 }
 
-; CHECK: remark: diagnostics_missed.c:38:3: [negative_dependence]: entry and for.end: Dependencies prevent fusion
+; CHECK: remark: {{.*}}diagnostics_missed.c:38:3: [negative_dependence]: entry and for.end: Dependencies prevent fusion
 define void @negative_dependence(ptr noalias %A) !dbg !51 {
 entry:
   br label %for.body
@@ -144,7 +144,7 @@ for.end12:                                        ; preds = %for.inc10
   ret void, !dbg !62
 }
 
-; CHECK: remark: diagnostics_missed.c:51:3: [sumTest]: entry and for.cond2.preheader: Dependencies prevent fusion
+; CHECK: remark: {{.*}}diagnostics_missed.c:51:3: [sumTest]: entry and for.cond2.preheader: Dependencies prevent fusion
 define i32 @sumTest(ptr noalias %A) !dbg !63 {
 entry:
   br label %for.body
@@ -186,7 +186,7 @@ for.end12:                                        ; preds = %for.inc10
 ; Function Attrs: nounwind readnone speculatable willreturn
 declare void @llvm.dbg.value(metadata, metadata, metadata) #0
 
-; CHECK: remark: diagnostics_missed.c:62:3: [unsafe_preheader]: for.first.preheader and for.second.preheader: Loop has a non-empty preheader with instructions that cannot be moved
+; CHECK: remark: {{.*}}diagnostics_missed.c:62:3: [unsafe_preheader]: for.first.preheader and for.second.preheader: Loop has a non-empty preheader with instructions that cannot be moved
 define void @unsafe_preheader(ptr noalias %A, ptr noalias %B) {
 for.first.preheader:
   br label %for.first, !dbg !80
@@ -215,7 +215,7 @@ for.end:
   ret void
 }
 
-; CHECK: remark: diagnostics_missed.c:67:3: [unsafe_exitblock]: for.first.preheader and for.second.preheader: Candidate has a non-empty exit block with instructions that cannot be moved
+; CHECK: remark: {{.*}}diagnostics_missed.c:67:3: [unsafe_exitblock]: for.first.preheader and for.second.preheader: Candidate has a non-empty exit block with instructions that cannot be moved
 define void @unsafe_exitblock(ptr noalias %A, ptr noalias %B, i64 %N) {
 for.first.guard:
   %cmp3 = icmp slt i64 0, %N
@@ -258,7 +258,7 @@ for.end:
   ret void
 }
 
-; CHECK: remark: diagnostics_missed.c:72:3: [unsafe_guardblock]: for.first.preheader and for.second.preheader: Candidate has a non-empty guard block with instructions that cannot be moved
+; CHECK: remark: {{.*}}diagnostics_missed.c:72:3: [unsafe_guardblock]: for.first.preheader and for.second.preheader: Candidate has a non-empty guard block with instructions that cannot be moved
 define void @unsafe_guardblock(ptr noalias %A, ptr noalias %B, i64 %N) {
 for.first.guard:
   %cmp3 = icmp slt i64 0, %N
