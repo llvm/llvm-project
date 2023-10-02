@@ -2054,7 +2054,7 @@ defm fixed_point : BoolFOption<"fixed-point",
   LangOpts<"FixedPoint">, DefaultFalse,
   PosFlag<SetTrue, [], [ClangOption, CC1Option], "Enable">,
   NegFlag<SetFalse, [], [ClangOption], "Disable">,
-  BothFlags<[], [ClangOption], " fixed point types">>, ShouldParseIf<!strconcat("!", cplusplus.KeyPath)>;
+  BothFlags<[], [ClangOption], " fixed point types">>;
 defm cxx_static_destructors : BoolFOption<"c++-static-destructors",
   LangOpts<"RegisterStaticDestructors">, DefaultTrue,
   NegFlag<SetFalse, [], [ClangOption, CC1Option],
@@ -2952,6 +2952,13 @@ defm modules : BoolFOption<"modules",
           "Enable the 'modules' language feature">,
   NegFlag<SetFalse>, BothFlags<
           [NoXarchOption], [ClangOption, CLOption]>>;
+def fbuiltin_headers_in_system_modules : Flag <["-"], "fbuiltin-headers-in-system-modules">,
+  Group<f_Group>,
+  Flags<[NoXarchOption]>,
+  Visibility<[CC1Option]>,
+  ShouldParseIf<fmodules.KeyPath>,
+  HelpText<"builtin headers belong to system modules, and _Builtin_ modules are ignored for cstdlib headers">,
+  MarshallingInfoFlag<LangOpts<"BuiltinHeadersInSystemModules">>;
 def fmodule_maps : Flag <["-"], "fmodule-maps">,
   Visibility<[ClangOption, CLOption]>, Alias<fimplicit_module_maps>;
 def fmodule_name_EQ : Joined<["-"], "fmodule-name=">, Group<f_Group>,
@@ -4550,18 +4557,19 @@ foreach i = {8-15,18} in
     HelpText<"Make the x"#i#" register call-saved (AArch64 only)">;
 
 def msve_vector_bits_EQ : Joined<["-"], "msve-vector-bits=">, Group<m_aarch64_Features_Group>,
+  Visibility<[ClangOption, FlangOption]>,
   HelpText<"Specify the size in bits of an SVE vector register. Defaults to the"
            " vector length agnostic value of \"scalable\". (AArch64 only)">;
 } // let Flags = [TargetSpecific]
 
 def mvscale_min_EQ : Joined<["-"], "mvscale-min=">,
   Group<m_aarch64_Features_Group>, Flags<[NoXarchOption]>,
-  Visibility<[ClangOption, CC1Option]>,
+  Visibility<[ClangOption, CC1Option, FC1Option]>,
   HelpText<"Specify the vscale minimum. Defaults to \"1\". (AArch64/RISC-V only)">,
   MarshallingInfoInt<LangOpts<"VScaleMin">>;
 def mvscale_max_EQ : Joined<["-"], "mvscale-max=">,
   Group<m_aarch64_Features_Group>, Flags<[NoXarchOption]>,
-  Visibility<[ClangOption, CC1Option]>,
+  Visibility<[ClangOption, CC1Option, FC1Option]>,
   HelpText<"Specify the vscale maximum. Defaults to the"
            " vector length agnostic value of \"0\". (AArch64/RISC-V only)">,
   MarshallingInfoInt<LangOpts<"VScaleMax">>;
@@ -5055,6 +5063,9 @@ def nogpulib : Flag<["-"], "nogpulib">, MarshallingInfoFlag<LangOpts<"NoGPULib">
   Visibility<[ClangOption, CC1Option]>,
   HelpText<"Do not link device library for CUDA/HIP device compilation">;
 def : Flag<["-"], "nocudalib">, Alias<nogpulib>;
+def gpulibc : Flag<["-"], "gpulibc">, Visibility<[ClangOption, CC1Option]>,
+  HelpText<"Link the LLVM C Library for GPUs">;
+def nogpulibc : Flag<["-"], "nogpulibc">, Visibility<[ClangOption, CC1Option]>;
 def nodefaultlibs : Flag<["-"], "nodefaultlibs">;
 def nodriverkitlib : Flag<["-"], "nodriverkitlib">;
 def nofixprebinding : Flag<["-"], "nofixprebinding">;

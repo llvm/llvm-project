@@ -208,7 +208,9 @@ fir::factory::CharacterExprHelper::createEmbox(const fir::CharBoxValue &box) {
     builder.create<fir::StoreOp>(loc, buff, temp);
     buff = temp;
   }
-  buff = builder.createConvert(loc, refType, buff);
+  // fir.emboxchar only accepts scalar, cast array buffer to a scalar buffer.
+  if (mlir::isa<fir::SequenceType>(fir::dyn_cast_ptrEleTy(buff.getType())))
+    buff = builder.createConvert(loc, refType, buff);
   // Convert in case the provided length is not of the integer type that must
   // be used in boxchar.
   auto len = builder.createConvert(loc, builder.getCharacterLengthType(),

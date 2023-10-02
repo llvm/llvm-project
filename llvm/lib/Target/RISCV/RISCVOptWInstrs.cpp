@@ -207,7 +207,7 @@ static bool vectorPseudoHasAllNBitUsers(const MachineOperand &UserOp,
   case RISCV::VSMUL_VX:
   // 16.1. Integer Scalar Move Instructions
   case RISCV::VMV_S_X:
-    if (Bits < (1 << Log2SEW))
+    if (Bits < (1U << Log2SEW))
       return false;
   }
   return true;

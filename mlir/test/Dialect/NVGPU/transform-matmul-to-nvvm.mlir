@@ -50,10 +50,10 @@ func.func @matmul_16x8x4xf32_global(
 //
 // CHECK:           %[[VAL_35:.*]] = nvgpu.mma.sync(%[[LHS]], %[[RHS]], %[[RES]]) {mmaShape = [16, 8, 4], tf32Enabled} : (vector<2x1xf32>, vector<1x1xf32>, vector<2x2xf32>) -> vector<2x2xf32>
 //
-// CHECK:           %[[VAL_36:.*]] = vector.extract %[[VAL_35]][0, 0] : vector<2x2xf32>
-// CHECK:           %[[VAL_37:.*]] = vector.extract %[[VAL_35]][0, 1] : vector<2x2xf32>
-// CHECK:           %[[VAL_38:.*]] = vector.extract %[[VAL_35]][1, 0] : vector<2x2xf32>
-// CHECK:           %[[VAL_39:.*]] = vector.extract %[[VAL_35]][1, 1] : vector<2x2xf32>
+// CHECK:           %[[VAL_36:.*]] = vector.extract %[[VAL_35]][0, 0] : f32 from vector<2x2xf32>
+// CHECK:           %[[VAL_37:.*]] = vector.extract %[[VAL_35]][0, 1] : f32 from vector<2x2xf32>
+// CHECK:           %[[VAL_38:.*]] = vector.extract %[[VAL_35]][1, 0] : f32 from vector<2x2xf32>
+// CHECK:           %[[VAL_39:.*]] = vector.extract %[[VAL_35]][1, 1] : f32 from vector<2x2xf32>
 // CHECK:           %[[VAL_40:.*]] = affine.apply #[[$div4]]()[%[[TIDX]]]
 // CHECK:           %[[VAL_41:.*]] = affine.apply #[[$map3]]()[%[[TIDX]]]
 // CHECK:           memref.store %[[VAL_36]], %[[VAL_2]][%[[VAL_40]], %[[VAL_41]]] : memref<16x8xf32>
@@ -97,7 +97,7 @@ func.func @matmul_16x8x16xf16_global(
   //         CHECK: nvgpu.mma.sync(%{{.*}}) {mmaShape = [16, 8, 16]} 
   //    CHECK-SAME:   : (vector<4x2xf16>, vector<2x2xf16>, vector<2x2xf16>) -> vector<2x2xf16>
   //
-  // CHECK-COUNT-4: vector.extract %{{.*}} : vector<2x2xf16>
+  // CHECK-COUNT-4: vector.extract %{{.*}} : f16 from vector<2x2xf16>
   // CHECK-COUNT-4: memref.store %{{.*}} : memref<16x8xf16>
   linalg.matmul ins(%A, %B: memref<16x16xf16>, memref<16x8xf16>)
             outs(%C: memref<16x8xf16>)

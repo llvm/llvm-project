@@ -1335,6 +1335,8 @@ void StmtProfiler::VisitIntegerLiteral(const IntegerLiteral *S) {
   S->getValue().Profile(ID);
 
   QualType T = S->getType();
+  if (Canonical)
+    T = T.getCanonicalType();
   ID.AddInteger(T->getTypeClass());
   if (auto BitIntT = T->getAs<BitIntType>())
     BitIntT->Profile(ID);
