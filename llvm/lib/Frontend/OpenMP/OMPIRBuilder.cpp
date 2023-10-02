@@ -1566,7 +1566,6 @@ OpenMPIRBuilder::createTask(const LocationDescription &Loc,
       InsertPointTy(TaskAllocaBB, TaskAllocaBB->begin());
   InsertPointTy TaskBodyIP = InsertPointTy(TaskBodyBB, TaskBodyBB->begin());
   BodyGenCB(TaskAllocaIP, TaskBodyIP);
-  Builder.SetInsertPoint(TaskExitBB, TaskExitBB->begin());
 
   OutlineInfo OI;
   OI.EntryBB = TaskAllocaBB;
@@ -1767,6 +1766,7 @@ OpenMPIRBuilder::createTask(const LocationDescription &Loc,
   };
 
   addOutlineInfo(std::move(OI));
+  Builder.SetInsertPoint(TaskExitBB, TaskExitBB->begin());
 
   return Builder.saveIP();
 }
