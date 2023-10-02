@@ -2461,6 +2461,25 @@ InstructionCost AArch64TTIImpl::getCastInstrCost(unsigned Opcode, Type *Dst,
             FP16Tbl, ISD, DstTy.getSimpleVT(), SrcTy.getSimpleVT()))
       return AdjustCost(Entry->Cost);
 
+  if ((ISD == ISD::ZERO_EXTEND || ISD == ISD::SIGN_EXTEND) &&
+      CCH == TTI::CastContextHint::Masked && ST->hasSVEorSME() &&
+      TLI->getTypeAction(Src->getContext(), SrcTy) ==
+          TargetLowering::TypePromoteInteger &&
+      TLI->getTypeAction(Dst->getContext(), DstTy) ==
+          TargetLowering::TypeSplitVector) {
+    // The standard behaviour in the backend for these cases is to split the
+    // extend up into two parts:
+    //  1. Perform an extending load or masked load up to the legal type.
+    //  2. Extend the loaded data to the final type.
+    std::pair<InstructionCost, MVT> SrcLT = getTypeLegalizationCost(Src);
+    Type *LegalTy = EVT(SrcLT.second).getTypeForEVT(Src->getContext());
+    InstructionCost Part1 = AArch64TTIImpl::getCastInstrCost(
+        Opcode, LegalTy, Src, CCH, CostKind, I);
+    InstructionCost Part2 = AArch64TTIImpl::getCastInstrCost(
+        Opcode, Dst, LegalTy, TTI::CastContextHint::None, CostKind, I);
+    return Part1 + Part2;
+  }
+
   // The BasicTTIImpl version only deals with CCH==TTI::CastContextHint::Normal,
   // but we also want to include the TTI::CastContextHint::Masked case too.
   if ((ISD == ISD::ZERO_EXTEND || ISD == ISD::SIGN_EXTEND) &&
