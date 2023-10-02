@@ -986,12 +986,15 @@ class DerefSimplePtrArithFixableGadget : public FixableGadget {
   static constexpr const char *const BaseDeclRefExprTag = "BaseDRE";
   static constexpr const char *const DerefOpTag = "DerefOp";
   static constexpr const char *const AddOpTag = "AddOp";
-  static constexpr const char *const OffsetTag = "Offset";
+  // TODO RHS -> Offset
+  static constexpr const char *const OffsetLiteralTag = "RHSLiteral";
+  static constexpr const char *const OffsetUnsignedTag = "RHSUnsigned";
 
   const DeclRefExpr *BaseDeclRefExpr = nullptr;
   const UnaryOperator *DerefOp = nullptr;
   const BinaryOperator *AddOp = nullptr;
-  const IntegerLiteral *Offset = nullptr;
+  const IntegerLiteral *OffsetLiteral = nullptr;
+  const Expr *OffsetUnsigned = nullptr;
 
 public:
   DerefSimplePtrArithFixableGadget(const MatchFinder::MatchResult &Result)
@@ -1000,7 +1003,11 @@ public:
             Result.Nodes.getNodeAs<DeclRefExpr>(BaseDeclRefExprTag)),
         DerefOp(Result.Nodes.getNodeAs<UnaryOperator>(DerefOpTag)),
         AddOp(Result.Nodes.getNodeAs<BinaryOperator>(AddOpTag)),
-        Offset(Result.Nodes.getNodeAs<IntegerLiteral>(OffsetTag)) {}
+        OffsetLiteral(Result.Nodes.getNodeAs<IntegerLiteral>(OffsetLiteralTag)),
+        OffsetUnsigned(Result.Nodes.getNodeAs<Expr>(OffsetUnsignedTag)) {
+        assert(OffsetLiteral || OffsetUnsigned && "Expecting some RHS");
+      }
+
 
   static Matcher matcher() {
     // clang-format off
@@ -1009,10 +1016,16 @@ public:
                                         bind(BaseDeclRefExprTag)));
     auto PlusOverPtrAndInteger = expr(anyOf(
           binaryOperator(hasOperatorName("+"), hasLHS(ThePtr),
-                         hasRHS(integerLiteral().bind(OffsetTag)))
+                hasRHS(
+                  anyOf(
+                    integerLiteral().bind(OffsetLiteralTag),
+                    expr(hasType(isUnsignedInteger())).bind(OffsetUnsignedTag))))
                          .bind(AddOpTag),
           binaryOperator(hasOperatorName("+"), hasRHS(ThePtr),
-                         hasLHS(integerLiteral().bind(OffsetTag)))
+                hasLHS(
+                  anyOf(
+                    integerLiteral().bind(OffsetLiteralTag),
+                    expr(hasType(isUnsignedInteger())).bind(OffsetUnsignedTag))))
                          .bind(AddOpTag)));
     return isInUnspecifiedLvalueContext(unaryOperator(
         hasOperatorName("*"),
@@ -1566,9 +1579,10 @@ DerefSimplePtrArithFixableGadget::getFixits(const Strategy &s) const {
   if (VD && s.lookup(VD) == Strategy::Kind::Span) {
     ASTContext &Ctx = VD->getASTContext();
     // std::span can't represent elements before its begin()
-    if (auto ConstVal = Offset->getIntegerConstantExpr(Ctx))
-      if (ConstVal->isNegative())
-        return std::nullopt;
+    if (OffsetLiteral)
+      if (auto ConstVal = OffsetLiteral->getIntegerConstantExpr(Ctx))
+        if (ConstVal->isNegative())
+          return std::nullopt;
 
     // note that the expr may (oddly) has multiple layers of parens
     // example:
