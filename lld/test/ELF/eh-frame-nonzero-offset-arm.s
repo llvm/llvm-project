@@ -1,46 +1,45 @@
 // REQUIRES: arm
-// RUN: rm -rf %t && split-file %s %t
+// RUN: rm -rf %t && split-file %s %t && cd %t
 
-// RUN: llvm-mc -filetype=obj -triple=arm %t/a.s -o %t/a.o
-// RUN: ld.lld %t/a.o -T %t/eh-frame-non-zero-offset.t -o %t/non-zero
-// RUN: llvm-readelf --program-headers --unwind --symbols -x .eh_frame %t/non-zero | FileCheck --check-prefix=NONZERO %s
-// RUN: ld.lld %t/a.o -T %t/eh-frame-zero-offset.t -o %t/zero
-// RUN: llvm-readelf --program-headers --unwind --symbols -x .eh_frame %t/zero | FileCheck --check-prefix=ZERO %s
+// RUN: llvm-mc -filetype=obj -triple=arm a.s -o a.o
+// RUN: ld.lld a.o -T eh-frame-non-zero-offset.t -o non-zero
+// RUN: llvm-readelf --program-headers --unwind --symbols -x .eh_frame non-zero | FileCheck --check-prefix=NONZERO %s
+// RUN: ld.lld a.o -T eh-frame-zero-offset.t -o zero
+// RUN: llvm-readelf --program-headers --unwind --symbols -x .eh_frame zero | FileCheck --check-prefix=ZERO %s
 
-// NONZERO:      {{[0-9]+}}: 00000080 {{.*}} __eh_frame_start
-// NONZERO-NEXT: {{[0-9]+}}: 000000ac {{.*}} __eh_frame_end
+// NONZERO:      {{[0-9]+}}: 00000084 {{.*}} __eh_frame_start
+// NONZERO-NEXT: {{[0-9]+}}: 000000b0 {{.*}} __eh_frame_end
 
-// NONZERO:      0x00000074 00000000 00000000 00000000 10000000
-// NONZERO-NEXT: 0x00000084 00000000 017a5200 017c0e01 1b0c0d00
-// NONZERO-NEXT: 0x00000094 10000000 18000000 64ffffff 04000000
-// NONZERO-NEXT: 0x000000a4 00000000 00000000
+// NONZERO:      0x00000084 10000000 00000000 017a5200 017c0e01
+// NONZERO-NEXT: 0x00000094 1b0c0d00 10000000 18000000 60ffffff
+// NONZERO-NEXT: 0x000000a4 04000000 00000000 00000000
 
-// ZERO:      {{[0-9]+}}: 00000080 {{.*}} __eh_frame_start
-// ZERO-NEXT: {{[0-9]+}}: 000000ac {{.*}} __eh_frame_end
+// ZERO:      {{[0-9]+}}: 00000004 {{.*}} __eh_frame_start
+// ZERO-NEXT: {{[0-9]+}}: 00000030 {{.*}} __eh_frame_end
 
-// ZERO:      0x00000080 10000000 00000000 017a5200 017c0e01
-// ZERO-NEXT: 0x00000090 1b0c0d00 10000000 18000000 64ffffff
-// ZERO-NEXT: 0x000000a0 04000000 00000000 00000000
+// ZERO:      0x00000004 10000000 00000000 017a5200 017c0e01
+// ZERO-NEXT: 0x00000014 1b0c0d00 10000000 18000000 e0ffffff
+// ZERO-NEXT: 0x00000024 04000000 00000000 00000000
 
 //--- eh-frame-non-zero-offset.t
 SECTIONS {
   .text : { *(.text .text.*) }
   .eh_frame : {
-  /* Alignment padding within .eh_frame */
-  . = ALIGN(128);
-  __eh_frame_start = .;
-  *(.eh_frame .eh_frame.*) ;
-  __eh_frame_end = .;
+    /* Padding within .eh_frame */
+    . += 128;
+    __eh_frame_start = .;
+    *(.eh_frame) ;
+    __eh_frame_end = .;
   }
 }
 
 //--- eh-frame-zero-offset.t
 SECTIONS {
   .text : { *(.text .text.*) }
-  .eh_frame : ALIGN(128) {
-  __eh_frame_start = .;
-  *(.eh_frame .eh_frame.*) ;
-  __eh_frame_end = .;
+  .eh_frame : {
+    __eh_frame_start = .;
+    *(.eh_frame) ;
+    __eh_frame_end = .;
   }
 }
 
