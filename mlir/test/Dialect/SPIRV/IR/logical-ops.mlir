@@ -166,7 +166,7 @@ func.func @logicalUnary(%arg0 : i1)
 
 func.func @logicalUnary(%arg0 : i32)
 {
-  // expected-error @+1 {{'operand' must be bool or vector of bool values of length 2/3/4/8/16, but got 'i32'}}
+  // expected-error @+1 {{'operand' must be bool or vector of bool values of length 2-4294967295, but got 'i32'}}
   %0 = spirv.LogicalNot %arg0 : i32
   return
 }

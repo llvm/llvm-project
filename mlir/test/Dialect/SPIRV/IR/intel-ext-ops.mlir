@@ -21,7 +21,7 @@ spirv.func @f32_to_bf16_vec(%arg0 : vector<2xf32>) "None" {
 // -----
 
 spirv.func @f32_to_bf16_unsupported(%arg0 : f64) "None" {
-  // expected-error @+1 {{operand #0 must be Float32 or vector of Float32 values of length 2/3/4/8/16, but got}}
+  // expected-error @+1 {{operand #0 must be Float32 or vector of Float32 values of length 2-4294967295, but got}}
   %0 = spirv.INTEL.ConvertFToBF16 %arg0 : f64 to i16
   spirv.Return
 }
@@ -57,7 +57,7 @@ spirv.func @bf16_to_f32_vec(%arg0 : vector<2xi16>) "None" {
 // -----
 
 spirv.func @bf16_to_f32_unsupported(%arg0 : i16) "None" {
-  // expected-error @+1 {{result #0 must be Float32 or vector of Float32 values of length 2/3/4/8/16, but got}}
+  // expected-error @+1 {{result #0 must be Float32 or vector of Float32 values of length 2-4294967295, but got}}
   %0 = spirv.INTEL.ConvertBF16ToF %arg0 : i16 to f16
   spirv.Return
 }

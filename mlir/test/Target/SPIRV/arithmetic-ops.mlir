@@ -6,9 +6,9 @@ spirv.module Logical GLSL450 requires #spirv.vce<v1.0, [Shader], []> {
     %0 = spirv.FMul %arg0, %arg1 : f32
     spirv.Return
   }
-  spirv.func @fadd(%arg0 : vector<4xf32>, %arg1 : vector<4xf32>) "None" {
-    // CHECK: {{%.*}} = spirv.FAdd {{%.*}}, {{%.*}} : vector<4xf32>
-    %0 = spirv.FAdd %arg0, %arg1 : vector<4xf32>
+  spirv.func @fadd(%arg0 : vector<5xf32>, %arg1 : vector<5xf32>) "None" {
+    // CHECK: {{%.*}} = spirv.FAdd {{%.*}}, {{%.*}} : vector<5xf32>
+    %0 = spirv.FAdd %arg0, %arg1 : vector<5xf32>
     spirv.Return
   }
   spirv.func @fdiv(%arg0 : vector<4xf32>, %arg1 : vector<4xf32>) "None" {

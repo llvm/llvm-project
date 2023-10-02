@@ -101,9 +101,11 @@ bool CompositeType::classof(Type type) {
 }
 
 bool CompositeType::isValid(VectorType type) {
-  return type.getRank() == 1 &&
-         llvm::is_contained({2, 3, 4, 8, 16}, type.getNumElements()) &&
-         llvm::isa<ScalarType>(type.getElementType());
+  // Number of elements should be between [2 - 2^32 -1],
+  // since getNumElements() returns an unsigned, the upper limit check is
+  // unnecessary.
+  return type.getRank() == 1 && llvm::isa<ScalarType>(type.getElementType()) &&
+         type.getNumElements() >= 2;
 }
 
 Type CompositeType::getElementType(unsigned index) const {
@@ -171,9 +173,17 @@ void CompositeType::getCapabilities(
       .Case<VectorType>([&](VectorType type) {
         auto vecSize = getNumElements();
         if (vecSize == 8 || vecSize == 16) {
-          static const Capability caps[] = {Capability::Vector16};
-          ArrayRef<Capability> ref(caps, std::size(caps));
-          capabilities.push_back(ref);
+          static constexpr Capability caps[] = {Capability::Vector16,
+                                                Capability::VectorAnyINTEL};
+          capabilities.push_back(caps);
+        }
+        // VectorAnyINTEL capability removes the vector size restriction and
+        // allows the vector size to be up to (2^32-1).
+        // Vector16 capability allows the vector size to be 8 and 16
+        SmallVector<unsigned, 5> allowedVecRange = {2, 3, 4, 8, 16};
+        if (vecSize >= 2 && !llvm::is_contained(allowedVecRange, vecSize)) {
+          static constexpr Capability caps[] = {Capability::VectorAnyINTEL};
+          capabilities.push_back(caps);
         }
         return llvm::cast<ScalarType>(type.getElementType())
             .getCapabilities(capabilities, storage);

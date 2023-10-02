@@ -184,9 +184,12 @@ static Type parseAndVerifyType(SPIRVDialect const &dialect,
       parser.emitError(typeLoc, "only 1-D vector allowed but found ") << t;
       return Type();
     }
-    if (t.getNumElements() > 4) {
+    // Number of elements should be between [2 - 2^32 -1],
+    // since getNumElements() returns an unsigned, the upper limit check is
+    // unnecessary.
+    if (t.getNumElements() < 2) {
       parser.emitError(
-          typeLoc, "vector length has to be less than or equal to 4 but found ")
+          typeLoc, "vector length has to be between [2 - 2^32 -1] but found ")
           << t.getNumElements();
       return Type();
     }
