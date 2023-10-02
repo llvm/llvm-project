@@ -1727,11 +1727,11 @@ template<class _Yp, __enable_if_t<__compatible_with<_Yp, _Tp>::value, int> >
 inline
 weak_ptr<_Tp>::weak_ptr(weak_ptr<_Yp> const& __r)
          _NOEXCEPT
-    : __ptr_(__r.__ptr_),
-      __cntrl_(__r.__cntrl_)
+    : __ptr_(nullptr),
+      __cntrl_(nullptr)
 {
-    if (__cntrl_)
-        __cntrl_->__add_weak();
+    shared_ptr<_Yp> __s = __r.lock();
+    *this = weak_ptr<_Tp>(__s);
 }
 
 template<class _Tp>
@@ -1749,11 +1749,12 @@ template<class _Yp, __enable_if_t<__compatible_with<_Yp, _Tp>::value, int> >
 inline
 weak_ptr<_Tp>::weak_ptr(weak_ptr<_Yp>&& __r)
          _NOEXCEPT
-    : __ptr_(__r.__ptr_),
-      __cntrl_(__r.__cntrl_)
+    : __ptr_(nullptr),
+      __cntrl_(nullptr)
 {
-    __r.__ptr_ = nullptr;
-    __r.__cntrl_ = nullptr;
+    shared_ptr<_Yp> __s = __r.lock();
+    *this = weak_ptr<_Tp>(__s);
+    __r.reset();
 }
 
 template<class _Tp>
