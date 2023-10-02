@@ -211,7 +211,6 @@ static SDValue selectImm(SelectionDAG *CurDAG, const SDLoc &DL, const MVT VT,
           CurDAG->getMachineNode(RISCV::SLLI, DL, VT, Lo,
                                  CurDAG->getTargetConstant(ShiftAmt, DL, VT)),
           0);
-      // Prefer ADD when possible.
       return SDValue(CurDAG->getMachineNode(AddOpc, DL, VT, Lo, SLLI), 0);
     }
   }
