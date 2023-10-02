@@ -176,7 +176,7 @@ public:
       Str->append("StartBlockAddress: 0x%zx, EndBlockAddress: 0x%zx, "
                   "BlockSize: %zu %s\n",
                   Entry.CommitBase, Entry.CommitBase + Entry.CommitSize,
-                  Entry.CommitSize, Entry.Time == 0 ? "[R]" : " ");
+                  Entry.CommitSize, Entry.Time == 0 ? "[R]" : "");
     }
   }
 
