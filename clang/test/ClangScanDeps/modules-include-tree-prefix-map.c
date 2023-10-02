@@ -105,7 +105,7 @@
 
 // CHECK-LABEL: System module-includes
 // CHECK-NEXT: #import "sys.h"
-// CHECK-NEXT: #import "/^tc/{{.*}}/stdbool.h"
+// CHECK-NEXT: #import "stdbool.h"
 
 // CHECK-NEXT:      {
 // CHECK-NEXT   "modules": [

@@ -422,12 +422,15 @@ public:
   }
 
   /// Get the directory that contains Clang-supplied include files.
-  const DirectoryEntry *getBuiltinDir() const {
+  OptionalDirectoryEntryRefDegradesToDirectoryEntryPtr getBuiltinDir() const {
     return BuiltinIncludeDir;
   }
 
   /// Is this a compiler builtin header?
   bool isBuiltinHeader(const FileEntry *File);
+
+  bool shouldImportRelativeToBuiltinIncludeDir(StringRef FileName,
+                                               Module *Module) const;
 
   /// Add a module map callback.
   void addModuleMapCallbacks(std::unique_ptr<ModuleMapCallbacks> Callback) {
