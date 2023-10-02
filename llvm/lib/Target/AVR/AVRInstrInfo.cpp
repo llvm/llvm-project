@@ -43,7 +43,6 @@ void AVRInstrInfo::copyPhysReg(MachineBasicBlock &MBB,
                                MachineBasicBlock::iterator MI,
                                const DebugLoc &DL, MCRegister DestReg,
                                MCRegister SrcReg, bool KillSrc) const {
-  const AVRSubtarget &STI = MBB.getParent()->getSubtarget<AVRSubtarget>();
   const AVRRegisterInfo &TRI = *STI.getRegisterInfo();
   unsigned Opc;
 
@@ -496,9 +495,7 @@ unsigned AVRInstrInfo::getInstSizeInBytes(const MachineInstr &MI) const {
     const MachineFunction &MF = *MI.getParent()->getParent();
     const AVRTargetMachine &TM =
         static_cast<const AVRTargetMachine &>(MF.getTarget());
-    const AVRSubtarget &STI = MF.getSubtarget<AVRSubtarget>();
     const TargetInstrInfo &TII = *STI.getInstrInfo();
-
     return TII.getInlineAsmLength(MI.getOperand(0).getSymbolName(),
                                   *TM.getMCAsmInfo());
   }
@@ -542,7 +539,7 @@ bool AVRInstrInfo::isBranchOffsetInRange(unsigned BranchOp,
     llvm_unreachable("unexpected opcode!");
   case AVR::JMPk:
   case AVR::CALLk:
-    return true;
+    return STI.hasJMPCALL();
   case AVR::RCALLk:
   case AVR::RJMPk:
     return isIntN(13, BrOffset);
@@ -573,7 +570,10 @@ void AVRInstrInfo::insertIndirectBranch(MachineBasicBlock &MBB,
   if (STI.hasJMPCALL())
     BuildMI(&MBB, DL, get(AVR::JMPk)).addMBB(&NewDestBB);
   else
-    report_fatal_error("cannot create long jump without FeatureJMPCALL");
+    // The RJMP may jump to a far place beyond its legal range. We let the
+    // linker to report 'out of range' rather than crash, or silently emit
+    // incorrect assembly code.
+    BuildMI(&MBB, DL, get(AVR::RJMPk)).addMBB(&NewDestBB);
 }
 
 } // end of namespace llvm

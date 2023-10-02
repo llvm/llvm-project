@@ -305,7 +305,11 @@ namespace {
     /// number if it is not zero. If DstReg is a physical register and the
     /// existing subregister number of the def / use being updated is not zero,
     /// make sure to set it to the correct physical subregister.
-    void updateRegDefsUses(Register SrcReg, Register DstReg, unsigned SubIdx);
+    ///
+    /// If \p IsSubregToReg, we are coalescing a DstReg = SUBREG_TO_REG
+    /// SrcReg. This introduces an implicit-def of DstReg on coalesced users.
+    void updateRegDefsUses(Register SrcReg, Register DstReg, unsigned SubIdx,
+                           bool IsSubregToReg);
 
     /// If the given machine operand reads only undefined lanes add an undef
     /// flag.
@@ -1317,13 +1321,13 @@ bool RegisterCoalescer::reMaterializeTrivialDef(const CoalescerPair &CP,
   if (SrcIdx && DstIdx)
     return false;
 
+  [[maybe_unused]] const unsigned DefSubIdx = DefMI->getOperand(0).getSubReg();
   const TargetRegisterClass *DefRC = TII->getRegClass(MCID, 0, TRI, *MF);
   if (!DefMI->isImplicitDef()) {
     if (DstReg.isPhysical()) {
       Register NewDstReg = DstReg;
 
-      unsigned NewDstIdx = TRI->composeSubRegIndices(CP.getSrcIdx(),
-                                              DefMI->getOperand(0).getSubReg());
+      unsigned NewDstIdx = TRI->composeSubRegIndices(CP.getSrcIdx(), DefSubIdx);
       if (NewDstIdx)
         NewDstReg = TRI->getSubReg(DstReg, NewDstIdx);
 
@@ -1396,7 +1400,9 @@ bool RegisterCoalescer::reMaterializeTrivialDef(const CoalescerPair &CP,
     MachineOperand &MO = CopyMI->getOperand(I);
     if (MO.isReg()) {
       assert(MO.isImplicit() && "No explicit operands after implicit operands.");
-      assert(MO.getReg().isPhysical() && "unexpected implicit virtual register def");
+      assert((MO.getReg().isPhysical() ||
+              (MO.getSubReg() == 0 && MO.getReg() == DstOperand.getReg())) &&
+             "unexpected implicit virtual register def");
       ImplicitOps.push_back(MO);
     }
   }
@@ -1407,14 +1413,43 @@ bool RegisterCoalescer::reMaterializeTrivialDef(const CoalescerPair &CP,
   // NewMI may have dead implicit defs (E.g. EFLAGS for MOV<bits>r0 on X86).
   // We need to remember these so we can add intervals once we insert
   // NewMI into SlotIndexes.
+  //
+  // We also expect to have tied implicit-defs of super registers originating
+  // from SUBREG_TO_REG, such as:
+  // $edi = MOV32r0 implicit-def dead $eflags, implicit-def $rdi
+  // undef %0.sub_32bit = MOV32r0 implicit-def dead $eflags, implicit-def %0
+
+  bool NewMIDefinesFullReg = false;
+
   SmallVector<MCRegister, 4> NewMIImplDefs;
   for (unsigned i = NewMI.getDesc().getNumOperands(),
                 e = NewMI.getNumOperands();
        i != e; ++i) {
     MachineOperand &MO = NewMI.getOperand(i);
     if (MO.isReg() && MO.isDef()) {
-      assert(MO.isImplicit() && MO.isDead() && MO.getReg().isPhysical());
-      NewMIImplDefs.push_back(MO.getReg().asMCReg());
+      assert(MO.isImplicit());
+      if (MO.getReg().isPhysical()) {
+        if (MO.getReg() == DstReg)
+          NewMIDefinesFullReg = true;
+
+        assert(MO.isImplicit() && MO.getReg().isPhysical() &&
+               (MO.isDead() ||
+                (DefSubIdx &&
+                 (TRI->getSubReg(MO.getReg(), DefSubIdx) ==
+                  MCRegister((unsigned)NewMI.getOperand(0).getReg())))));
+        NewMIImplDefs.push_back(MO.getReg().asMCReg());
+      } else {
+        assert(MO.getReg() == NewMI.getOperand(0).getReg() &&
+               MO.getSubReg() == 0);
+        // We're only expecting another def of the main output, so the range
+        // should get updated with the regular output range.
+        //
+        // FIXME: The range updating below probably needs updating to look at
+        // the super register if subranges are tracked.
+        assert(!MRI->shouldTrackSubRegLiveness(DstReg) &&
+               "subrange update for implicit-def of super register may not be "
+               "properly handled");
+      }
     }
   }
 
@@ -1436,7 +1471,7 @@ bool RegisterCoalescer::reMaterializeTrivialDef(const CoalescerPair &CP,
     MRI->setRegClass(DstReg, NewRC);
 
     // Update machine operands and add flags.
-    updateRegDefsUses(DstReg, DstReg, DstIdx);
+    updateRegDefsUses(DstReg, DstReg, DstIdx, false);
     NewMI.getOperand(0).setSubReg(NewIdx);
     // updateRegDefUses can add an "undef" flag to the definition, since
     // it will replace DstReg with DstReg.DstIdx. If NewIdx is 0, make
@@ -1526,8 +1561,12 @@ bool RegisterCoalescer::reMaterializeTrivialDef(const CoalescerPair &CP,
     assert(DstReg.isPhysical() &&
            "Only expect virtual or physical registers in remat");
     NewMI.getOperand(0).setIsDead(true);
-    NewMI.addOperand(MachineOperand::CreateReg(
-        CopyDstReg, true /*IsDef*/, true /*IsImp*/, false /*IsKill*/));
+
+    if (!NewMIDefinesFullReg) {
+      NewMI.addOperand(MachineOperand::CreateReg(
+          CopyDstReg, true /*IsDef*/, true /*IsImp*/, false /*IsKill*/));
+    }
+
     // Record small dead def live-ranges for all the subregisters
     // of the destination register.
     // Otherwise, variables that live through may miss some
@@ -1747,7 +1786,7 @@ void RegisterCoalescer::addUndefFlag(const LiveInterval &Int, SlotIndex UseIdx,
 }
 
 void RegisterCoalescer::updateRegDefsUses(Register SrcReg, Register DstReg,
-                                          unsigned SubIdx) {
+                                          unsigned SubIdx, bool IsSubregToReg) {
   bool DstIsPhys = DstReg.isPhysical();
   LiveInterval *DstInt = DstIsPhys ? nullptr : &LIS->getInterval(DstReg);
 
@@ -1787,6 +1826,8 @@ void RegisterCoalescer::updateRegDefsUses(Register SrcReg, Register DstReg,
     if (DstInt && !Reads && SubIdx && !UseMI->isDebugInstr())
       Reads = DstInt->liveAt(LIS->getInstructionIndex(*UseMI));
 
+    bool FullDef = true;
+
     // Replace SrcReg with DstReg in all UseMI operands.
     for (unsigned i = 0, e = Ops.size(); i != e; ++i) {
       MachineOperand &MO = UseMI->getOperand(Ops[i]);
@@ -1794,8 +1835,12 @@ void RegisterCoalescer::updateRegDefsUses(Register SrcReg, Register DstReg,
       // Adjust <undef> flags in case of sub-register joins. We don't want to
       // turn a full def into a read-modify-write sub-register def and vice
       // versa.
-      if (SubIdx && MO.isDef())
+      if (SubIdx && MO.isDef()) {
         MO.setIsUndef(!Reads);
+
+        if (!Reads)
+          FullDef = false;
+      }
 
       // A subreg use of a partially undef (super) register may be a complete
       // undef use now and then has to be marked that way.
@@ -1826,6 +1871,25 @@ void RegisterCoalescer::updateRegDefsUses(Register SrcReg, Register DstReg,
         MO.substPhysReg(DstReg, *TRI);
       else
         MO.substVirtReg(DstReg, SubIdx, *TRI);
+    }
+
+    if (IsSubregToReg && !FullDef) {
+      // If the coalesed instruction doesn't fully define the register, we need
+      // to preserve the original super register liveness for SUBREG_TO_REG.
+      //
+      // We pretended SUBREG_TO_REG was a regular copy for coalescing purposes,
+      // but it introduces liveness for other subregisters. Downstream users may
+      // have been relying on those bits, so we need to ensure their liveness is
+      // captured with a def of other lanes.
+
+      // FIXME: Need to add new subrange if tracking subranges. We could also
+      // skip adding this if we knew the other lanes are dead, and only for
+      // other lanes.
+
+      assert(!MRI->shouldTrackSubRegLiveness(DstReg) &&
+             "this should update subranges");
+      MachineInstrBuilder MIB(*MF, UseMI);
+      MIB.addReg(DstReg, RegState::ImplicitDefine);
     }
 
     LLVM_DEBUG({
@@ -2027,6 +2091,8 @@ bool RegisterCoalescer::joinCopy(MachineInstr *CopyMI, bool &Again) {
     });
   }
 
+  const bool IsSubregToReg = CopyMI->isSubregToReg();
+
   ShrinkMask = LaneBitmask::getNone();
   ShrinkMainRange = false;
 
@@ -2094,9 +2160,12 @@ bool RegisterCoalescer::joinCopy(MachineInstr *CopyMI, bool &Again) {
 
   // Rewrite all SrcReg operands to DstReg.
   // Also update DstReg operands to include DstIdx if it is set.
-  if (CP.getDstIdx())
-    updateRegDefsUses(CP.getDstReg(), CP.getDstReg(), CP.getDstIdx());
-  updateRegDefsUses(CP.getSrcReg(), CP.getDstReg(), CP.getSrcIdx());
+  if (CP.getDstIdx()) {
+    assert(!IsSubregToReg && "can this happen?");
+    updateRegDefsUses(CP.getDstReg(), CP.getDstReg(), CP.getDstIdx(), false);
+  }
+  updateRegDefsUses(CP.getSrcReg(), CP.getDstReg(), CP.getSrcIdx(),
+                    IsSubregToReg);
 
   // Shrink subregister ranges if necessary.
   if (ShrinkMask.any()) {
@@ -4130,6 +4199,14 @@ bool RegisterCoalescer::runOnMachineFunction(MachineFunction &fn) {
     JoinGlobalCopies = STI.enableJoinGlobalCopies();
   else
     JoinGlobalCopies = (EnableGlobalCopies == cl::BOU_TRUE);
+
+  // FIXME: MachineFunctionProperties cannot express the required pre-property
+  // no-SSA. When running a MIR testcase without any virtual register defs, the
+  // MIR parser assumes SSA. MachineFunctionPass::getClearedProperties is called
+  // after the pass is run, so the properties at this point say it's an SSA
+  // function.  Forcibly clear it here so -verify-coalescing doesn't complain
+  // after multiple virtual register defs are introduced.
+  MRI->leaveSSA();
 
   // If there are PHIs tracked by debug-info, they will need updating during
   // coalescing. Build an index of those PHIs to ease updating.

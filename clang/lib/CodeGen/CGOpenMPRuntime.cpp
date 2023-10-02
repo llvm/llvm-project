@@ -8281,7 +8281,7 @@ public:
       // of tofrom.
       // Emit this[:1]
       CombinedInfo.Pointers.push_back(PartialStruct.Base.getPointer());
-      QualType Ty = MD->getThisObjectType();
+      QualType Ty = MD->getFunctionObjectParameterType();
       llvm::Value *Size =
           CGF.Builder.CreateIntCast(CGF.getTypeSize(Ty), CGF.Int64Ty,
                                     /*isSigned=*/true);
