@@ -24,15 +24,11 @@ function(add_flang_unittest_offload_properties target)
   # FIXME: replace 'native' in --offload-arch option with the list
   #        of targets that Fortran Runtime was built for.
   #        Common code must be moved from flang/runtime/CMakeLists.txt.
-  # TODO: Revisit this because of Flang-rt. runtime is no longer an added subdirectory of flang. So we temporarily duplicated the option definition to here. This is not a permanent solution.
-  set(FLANG_EXPERIMENTAL_OMP_OFFLOAD_BUILD "off" CACHE STRING
-    "Compile Fortran runtime as OpenMP target offload sources (experimental). Valid options are 'off', 'host_device', 'nohost'")
-
   if (NOT FLANG_EXPERIMENTAL_OMP_OFFLOAD_BUILD STREQUAL "off")
     set_target_properties(${target}
-        PROPERTIES LINK_OPTIONS
-        "-fopenmp;--offload-arch=native"
-    )
+      PROPERTIES LINK_OPTIONS
+      "-fopenmp;--offload-arch=native"
+      )
   endif()
 endfunction()
 
@@ -78,4 +74,5 @@ add_subdirectory(Optimizer)
 add_subdirectory(Common)
 add_subdirectory(Decimal)
 add_subdirectory(Evaluate)
+add_subdirectory(Runtime)
 add_subdirectory(Frontend)

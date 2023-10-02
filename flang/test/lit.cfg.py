@@ -153,16 +153,19 @@ else:
 # the C++ runtime libraries. For this we need a C compiler. If for some reason
 # we don't have one, we can just disable the test.
 if config.cc:
-    libruntime = os.path.join(config.flang_lib_dir, "libflang-rt.a")
+    libruntime = os.path.join(config.flang_lib_dir, "libFortranRuntime.a")
+    libdecimal = os.path.join(config.flang_lib_dir, "libFortranDecimal.a")
     include = os.path.join(config.flang_src_dir, "include")
 
     if (
         os.path.isfile(libruntime)
+        and os.path.isfile(libdecimal)
         and os.path.isdir(include)
     ):
         config.available_features.add("c-compiler")
         tools.append(ToolSubst("%cc", command=config.cc, unresolved="fatal"))
         tools.append(ToolSubst("%libruntime", command=libruntime, unresolved="fatal"))
+        tools.append(ToolSubst("%libdecimal", command=libdecimal, unresolved="fatal"))
         tools.append(ToolSubst("%include", command=include, unresolved="fatal"))
 
 # Add all the tools and their substitutions (if applicable). Use the search paths provided for

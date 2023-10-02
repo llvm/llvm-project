@@ -1,4 +1,4 @@
-add_flang_rt_unittest(FortranRuntimeTests
+add_flang_unittest(FlangRuntimeTests
   Allocatable.cpp
   ArrayConstructor.cpp
   BufferTest.cpp
@@ -29,7 +29,7 @@ add_flang_rt_unittest(FortranRuntimeTests
   Transformational.cpp
 )
 
-target_link_libraries(FortranRuntimeTests
+target_link_libraries(FlangRuntimeTests
   PRIVATE
-  flang-rt
+  FortranRuntime
 )
