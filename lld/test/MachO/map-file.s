@@ -89,7 +89,7 @@
 # CHECK-NEXT: 0x[[#%X,BSS]]            0x00000001  [  2] _number
 # CHECK-EMPTY:
 
-# MAPFILE: "name":"Total Write map file"
+# MAPFILE: "name":"Total: Write map file"
 
 # RUN: %lld -demangle -dead_strip -map %t/stripped-map %t/test.o -force_load \
 # RUN:   %t/libfoo.a %t/c-string-literal.o %t/libbaz.dylib -o %t/stripped
