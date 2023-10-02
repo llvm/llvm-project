@@ -961,26 +961,34 @@ bool SIShrinkInstructions::runOnMachineFunction(MachineFunction &MF) {
                                                         AMDGPU::OpName::sdst);
 
       if (SDst) {
-        bool Next = false;
-
-        if (SDst->getReg() != VCCReg) {
-          if (SDst->getReg().isVirtual())
-            MRI->setRegAllocationHint(SDst->getReg(), 0, VCCReg);
-          Next = true;
-        }
-
         // All of the instructions with carry outs also have an SGPR input in
         // src2.
-        const MachineOperand *Src2 = TII->getNamedOperand(MI,
-                                                          AMDGPU::OpName::src2);
-        if (Src2 && Src2->getReg() != VCCReg) {
-          if (Src2->getReg().isVirtual())
-            MRI->setRegAllocationHint(Src2->getReg(), 0, VCCReg);
-          Next = true;
-        }
+        const MachineOperand *Src2 =
+            TII->getNamedOperand(MI, AMDGPU::OpName::src2);
 
-        if (Next)
-          continue;
+        // We can shrink the instruction right now if sdst is dead anyway and
+        // carry-in is not a register. If it is a register then VOP2 form shall
+        // have it set to the same vcc register and we may end up reading an
+        // undefined vcc.
+        if (!SDst->isDead() || SDst->getReg().isPhysical() ||
+            (Src2 && Src2->isReg())) {
+          bool Next = false;
+
+          if (SDst->getReg() != VCCReg) {
+            if (SDst->getReg().isVirtual())
+              MRI->setRegAllocationHint(SDst->getReg(), 0, VCCReg);
+            Next = true;
+          }
+
+          if (Src2 && Src2->getReg() != VCCReg) {
+            if (Src2->getReg().isVirtual())
+              MRI->setRegAllocationHint(Src2->getReg(), 0, VCCReg);
+            Next = true;
+          }
+
+          if (Next)
+            continue;
+        }
       }
 
       // Pre-GFX10, shrinking VOP3 instructions pre-RA gave us the chance to

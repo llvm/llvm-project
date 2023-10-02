@@ -688,12 +688,12 @@ define amdgpu_kernel void @simplify_demanded_bfe_sdiv(ptr addrspace(1) %out, ptr
 ; GFX6-NEXT:    v_add_i32_e32 v0, vcc, v0, v1
 ; GFX6-NEXT:    v_mul_hi_u32 v0, s0, v0
 ; GFX6-NEXT:    v_lshlrev_b32_e32 v1, 1, v0
-; GFX6-NEXT:    v_add_i32_e32 v2, vcc, 1, v0
 ; GFX6-NEXT:    v_sub_i32_e32 v1, vcc, s0, v1
-; GFX6-NEXT:    v_cmp_le_u32_e32 vcc, 2, v1
-; GFX6-NEXT:    v_cndmask_b32_e32 v0, v0, v2, vcc
-; GFX6-NEXT:    v_subrev_i32_e64 v2, s[0:1], 2, v1
-; GFX6-NEXT:    v_cndmask_b32_e32 v1, v1, v2, vcc
+; GFX6-NEXT:    v_add_i32_e32 v2, vcc, 1, v0
+; GFX6-NEXT:    v_cmp_le_u32_e64 s[0:1], 2, v1
+; GFX6-NEXT:    v_cndmask_b32_e64 v0, v0, v2, s[0:1]
+; GFX6-NEXT:    v_subrev_i32_e32 v2, vcc, 2, v1
+; GFX6-NEXT:    v_cndmask_b32_e64 v1, v1, v2, s[0:1]
 ; GFX6-NEXT:    v_add_i32_e32 v2, vcc, 1, v0
 ; GFX6-NEXT:    v_cmp_le_u32_e32 vcc, 2, v1
 ; GFX6-NEXT:    v_cndmask_b32_e32 v0, v0, v2, vcc

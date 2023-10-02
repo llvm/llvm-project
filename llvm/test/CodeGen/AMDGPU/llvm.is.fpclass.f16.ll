@@ -578,12 +578,12 @@ define i1 @negsubnormal_f16(half %x) nounwind {
 ; GFX7GLISEL-NEXT:    v_and_b32_e32 v1, 0x7fff, v0
 ; GFX7GLISEL-NEXT:    v_and_b32_e32 v0, 0xffff, v0
 ; GFX7GLISEL-NEXT:    v_and_b32_e32 v2, 0xffff, v1
-; GFX7GLISEL-NEXT:    v_cmp_ne_u32_e32 vcc, v0, v2
-; GFX7GLISEL-NEXT:    v_subrev_i32_e64 v0, s[4:5], 1, v1
+; GFX7GLISEL-NEXT:    v_cmp_ne_u32_e64 s[4:5], v0, v2
+; GFX7GLISEL-NEXT:    v_subrev_i32_e32 v0, vcc, 1, v1
 ; GFX7GLISEL-NEXT:    v_and_b32_e32 v0, 0xffff, v0
 ; GFX7GLISEL-NEXT:    v_mov_b32_e32 v1, 0x3ff
-; GFX7GLISEL-NEXT:    v_cmp_lt_u32_e64 s[4:5], v0, v1
-; GFX7GLISEL-NEXT:    s_and_b64 s[4:5], s[4:5], vcc
+; GFX7GLISEL-NEXT:    v_cmp_lt_u32_e32 vcc, v0, v1
+; GFX7GLISEL-NEXT:    s_and_b64 s[4:5], vcc, s[4:5]
 ; GFX7GLISEL-NEXT:    v_cndmask_b32_e64 v0, 0, 1, s[4:5]
 ; GFX7GLISEL-NEXT:    s_setpc_b64 s[30:31]
 ;

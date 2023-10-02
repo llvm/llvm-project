@@ -95,7 +95,7 @@ bb:
 ; GCN:     v_mov_b32_e32 [[BASE:v[0-9]+]], [[ARG]]
 
 ; VI-DAG: v_add_u32_e32 [[B1:v[0-9]+]], vcc, {{s[0-9]+}}, [[BASE]]
-; VI-DAG: v_add_u32_e32 [[B2:v[0-9]+]], vcc, {{s[0-9]+}}, [[BASE]]
+; VI-DAG: v_add_u32_e32 [[B2:v[0-9]+]], vcc, 0x400, [[BASE]]
 ; VI-DAG: v_add_u32_e32 [[B3:v[0-9]+]], vcc, {{s[0-9]+}}, [[BASE]]
 
 ; GFX9-DAG: v_add_u32_e32 [[B1:v[0-9]+]], 0x800, [[BASE]]
