@@ -914,8 +914,8 @@ void GCNSchedStage::finalizeGCNRegion() {
   unsigned NewSGPRRP = PressureAfter.getSGPRNum();
 
   if ((NewVGPRRP >= S.VGPRExcessLimit - S.VGPRExcessMargin) ||
-      (NewAGPRRP >= S.VGPRExcessLimit - S.SGPRExcessMargin) ||
-      (NewSGPRRP >= S.SGPRExcessLimit - S.VGPRExcessMargin)) {
+      (NewAGPRRP >= S.VGPRExcessLimit - S.VGPRExcessMargin) ||
+      (NewSGPRRP >= S.SGPRExcessLimit - S.SGPRExcessMargin)) {
     DAG.RegionsWithExcessRP[RegionIdx] = true;
     DAG.RescheduleRegions[RegionIdx] = true;
   }
