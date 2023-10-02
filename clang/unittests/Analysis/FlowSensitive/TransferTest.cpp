@@ -2957,10 +2957,7 @@ TEST(TransferTest, VarDeclInDoWhile) {
         const auto *BarVal = cast<IntegerValue>(EnvInLoop.getValue(*BarDecl));
         EXPECT_EQ(BarVal, FooPointeeVal);
 
-        // FIXME: This assertion documents current behavior, but we would prefer
-        // declarations to be removed from the environment when their lifetime
-        // ends. Once this is the case, change this assertion accordingly.
-        ASSERT_THAT(EnvAfterLoop.getValue(*BarDecl), BarVal);
+        ASSERT_THAT(EnvAfterLoop.getValue(*BarDecl), IsNull());
       });
 }
 

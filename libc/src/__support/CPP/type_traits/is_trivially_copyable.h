@@ -11,13 +11,13 @@
 #include "src/__support/CPP/type_traits/integral_constant.h"
 #include "src/__support/macros/config.h"
 
-namespace __llvm_libc::cpp {
+namespace LIBC_NAMESPACE::cpp {
 
 // is_trivially_copyable
 template <class T>
 struct is_trivially_copyable
     : public integral_constant<bool, __is_trivially_copyable(T)> {};
 
-} // namespace __llvm_libc::cpp
+} // namespace LIBC_NAMESPACE::cpp
 
 #endif // LLVM_LIBC_SRC___SUPPORT_CPP_TYPE_TRAITS_IS_TRIVIALLY_COPYABLE_H

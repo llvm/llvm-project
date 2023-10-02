@@ -13,7 +13,7 @@
 
 #include "src/__support/StringUtil/message_mapper.h"
 
-namespace __llvm_libc {
+namespace LIBC_NAMESPACE {
 
 LIBC_INLINE_VAR constexpr const MsgTable<6> STDC_SIGNALS = {
     MsgMapping(SIGINT, "Interrupt"),
@@ -24,6 +24,6 @@ LIBC_INLINE_VAR constexpr const MsgTable<6> STDC_SIGNALS = {
     MsgMapping(SIGTERM, "Terminated"),
 };
 
-} // namespace __llvm_libc
+} // namespace LIBC_NAMESPACE
 
 #endif // LLVM_LIBC_SRC___SUPPORT_STRING_UTIL_TABLES_LINUX_SIGNALS_H

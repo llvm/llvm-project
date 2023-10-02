@@ -13,7 +13,7 @@ if @LIBUNWIND_ENABLE_THREADS@:
 if @LIBUNWIND_ENABLE_CET@:
     compile_flags.append('-fcf-protection=full')
 
-# On ELF platforms, add -Wl,--export-dynamic if supported by the linker.
+# On ELF platforms, link tests with -Wl,--export-dynamic if supported by the linker.
 if len('@CMAKE_EXE_EXPORTS_CXX_FLAG@'):
     link_flags.append('@CMAKE_EXE_EXPORTS_CXX_FLAG@')
 

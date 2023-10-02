@@ -11,7 +11,7 @@
 
 // TODO: Split this file if it becomes too big.
 
-namespace __llvm_libc::cpp {
+namespace LIBC_NAMESPACE::cpp {
 
 class Class {};
 union Union {};
@@ -432,4 +432,4 @@ TEST(LlvmLibcTypeTraitsTest, true_type) { EXPECT_TRUE((true_type::value)); }
 
 // TODO void_t
 
-} // namespace __llvm_libc::cpp
+} // namespace LIBC_NAMESPACE::cpp

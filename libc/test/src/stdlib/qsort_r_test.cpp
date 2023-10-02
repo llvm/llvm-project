@@ -33,8 +33,8 @@ TEST(LlvmLibcQsortRTest, SortedArray) {
 
   size_t count = 0;
 
-  __llvm_libc::qsort_r(array, ARRAY_SIZE, sizeof(int), int_compare_count,
-                       &count);
+  LIBC_NAMESPACE::qsort_r(array, ARRAY_SIZE, sizeof(int), int_compare_count,
+                          &count);
 
   ASSERT_LE(array[0], 10);
   ASSERT_LE(array[1], 23);
@@ -74,8 +74,8 @@ TEST(LlvmLibcQsortRTest, ReverseSortedArray) {
 
   size_t count = 0;
 
-  __llvm_libc::qsort_r(array, ARRAY_SIZE, sizeof(int), int_compare_count,
-                       &count);
+  LIBC_NAMESPACE::qsort_r(array, ARRAY_SIZE, sizeof(int), int_compare_count,
+                          &count);
 
   for (int i = 0; i < int(ARRAY_SIZE - 1); ++i)
     ASSERT_LE(array[i], i + 1);
@@ -127,9 +127,9 @@ TEST(LlvmLibcQsortRTest, SafeTypeErasure) {
   };
   constexpr size_t ARRAY_SIZE = sizeof(array) / sizeof(PriorityVal);
 
-  __llvm_libc::qsort_r(array, ARRAY_SIZE, sizeof(PriorityVal),
-                       type_erased_comp<PriorityVal>,
-                       reinterpret_cast<void *>(compare_priority_val));
+  LIBC_NAMESPACE::qsort_r(array, ARRAY_SIZE, sizeof(PriorityVal),
+                          type_erased_comp<PriorityVal>,
+                          reinterpret_cast<void *>(compare_priority_val));
 
   EXPECT_EQ(array[0].priority, -1);
   EXPECT_EQ(array[0].size, 100);

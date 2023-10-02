@@ -11,10 +11,10 @@
 
 #include <sched.h>
 
-namespace __llvm_libc {
+namespace LIBC_NAMESPACE {
 
 int sched_getparam(pid_t tid, struct sched_param *param);
 
-} // namespace __llvm_libc
+} // namespace LIBC_NAMESPACE
 
 #endif // LLVM_LIBC_SRC_SCHED_SCHED_GETPARAM_H

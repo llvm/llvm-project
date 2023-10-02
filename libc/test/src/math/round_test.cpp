@@ -10,4 +10,4 @@
 
 #include "src/math/round.h"
 
-LIST_ROUND_TESTS(double, __llvm_libc::round)
+LIST_ROUND_TESTS(double, LIBC_NAMESPACE::round)

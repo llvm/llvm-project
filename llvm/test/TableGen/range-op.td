@@ -11,9 +11,25 @@ def range_op_ranges {
   // CHECK: list<int> idxs4 = [4, 5, 6, 7];
   list<int> idxs4 = !range(4, 8);
 
+  // !range(m, n, s) generates half-open interval "[m,n)" with step s
+  // CHECK: list<int> step = [0, 2, 4, 6];
+  list<int> step = !range(0, 8, 2);
+
+  // Step can be negative.
+  // CHECK: list<int> negative_step = [8, 6, 4, 2];
+  list<int> negative_step = !range(8, 0, -2);
+
   // !range(m, n) generates empty set if m >= n
   // CHECK: list<int> idxs84 = [];
   list<int> idxs84 = !range(8, 4);
+
+  // !range(m, n, s) generates empty set if m < n and s < 0
+  // CHECK: list<int> emptycase0 = [];
+  list<int> emptycase0 = !range(4, 8, -1);
+
+  // !range(m, n, s) generates empty set if m > n and s > 0
+  // CHECK: list<int> emptycase1 = [];
+  list<int> emptycase1 = !range(8, 4, 1);
 
   // !range(list) generates index values for the list. (Not a copy of the list)
   // CHECK: list<int> idxsl = [0, 1, 2, 3];

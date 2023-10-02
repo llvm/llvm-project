@@ -22,6 +22,7 @@
 #include "flang/Optimizer/Builder/BoxValue.h"
 #include "flang/Optimizer/Builder/Complex.h"
 #include "flang/Optimizer/Builder/FIRBuilder.h"
+#include "flang/Optimizer/Builder/HLFIRTools.h"
 #include "flang/Optimizer/Builder/IntrinsicCall.h"
 #include "flang/Optimizer/Builder/Todo.h"
 #include "flang/Parser/parse-tree.h"
@@ -34,6 +35,8 @@ static constexpr std::int64_t starCst = -1;
 
 static unsigned routineCounter = 0;
 static constexpr llvm::StringRef accRoutinePrefix = "acc_routine_";
+static constexpr llvm::StringRef accPrivateInitName = "acc.private.init";
+static constexpr llvm::StringRef accReductionInitName = "acc.reduction.init";
 
 static mlir::Location
 genOperandLocation(Fortran::lower::AbstractConverter &converter,
@@ -343,20 +346,47 @@ static void genDataExitOperations(fir::FirOpBuilder &builder,
   }
 }
 
+fir::ShapeOp genShapeOp(mlir::OpBuilder &builder, fir::SequenceType seqTy,
+                        mlir::Location loc) {
+  llvm::SmallVector<mlir::Value> extents;
+  mlir::Type idxTy = builder.getIndexType();
+  for (auto extent : seqTy.getShape())
+    extents.push_back(builder.create<mlir::arith::ConstantOp>(
+        loc, idxTy, builder.getIntegerAttr(idxTy, extent)));
+  return builder.create<fir::ShapeOp>(loc, extents);
+}
+
 template <typename RecipeOp>
 static void genPrivateLikeInitRegion(mlir::OpBuilder &builder, RecipeOp recipe,
                                      mlir::Type ty, mlir::Location loc) {
   mlir::Value retVal = recipe.getInitRegion().front().getArgument(0);
   if (auto refTy = mlir::dyn_cast_or_null<fir::ReferenceType>(ty)) {
-    if (fir::isa_trivial(refTy.getEleTy()))
-      retVal = builder.create<fir::AllocaOp>(loc, refTy.getEleTy());
-    else if (auto seqTy =
-                 mlir::dyn_cast_or_null<fir::SequenceType>(refTy.getEleTy())) {
+    if (fir::isa_trivial(refTy.getEleTy())) {
+      auto alloca = builder.create<fir::AllocaOp>(loc, refTy.getEleTy());
+      auto declareOp = builder.create<hlfir::DeclareOp>(
+          loc, alloca, accPrivateInitName, /*shape=*/nullptr,
+          llvm::ArrayRef<mlir::Value>{}, fir::FortranVariableFlagsAttr{});
+      retVal = declareOp.getBase();
+    } else if (auto seqTy = mlir::dyn_cast_or_null<fir::SequenceType>(
+                   refTy.getEleTy())) {
       if (seqTy.hasDynamicExtents())
         TODO(loc, "private recipe of array with dynamic extents");
-      if (fir::isa_trivial(seqTy.getEleTy()))
-        retVal = builder.create<fir::AllocaOp>(loc, seqTy);
+      if (fir::isa_trivial(seqTy.getEleTy())) {
+        auto alloca = builder.create<fir::AllocaOp>(loc, seqTy);
+        auto shapeOp = genShapeOp(builder, seqTy, loc);
+        auto declareOp = builder.create<hlfir::DeclareOp>(
+            loc, alloca, accPrivateInitName, shapeOp,
+            llvm::ArrayRef<mlir::Value>{}, fir::FortranVariableFlagsAttr{});
+        retVal = declareOp.getBase();
+      }
     }
+  } else if (auto boxTy = mlir::dyn_cast_or_null<fir::BaseBoxType>(ty)) {
+    if (!mlir::isa<fir::SequenceType>(boxTy.getEleTy()))
+      TODO(loc, "Unsupported boxed type in OpenACC privatization");
+    fir::FirOpBuilder firBuilder{builder, recipe.getOperation()};
+    hlfir::Entity source = hlfir::Entity{retVal};
+    auto [temp, cleanup] = hlfir::createTempFromMold(loc, firBuilder, source);
+    retVal = temp;
   }
   builder.create<mlir::acc::YieldOp>(loc, retVal);
 }
@@ -682,6 +712,9 @@ static mlir::Value getReductionInitValue(fir::FirOpBuilder &builder,
   if (auto seqTy = mlir::dyn_cast<fir::SequenceType>(ty))
     return getReductionInitValue(builder, loc, seqTy.getEleTy(), op);
 
+  if (auto boxTy = mlir::dyn_cast<fir::BaseBoxType>(ty))
+    return getReductionInitValue(builder, loc, boxTy.getEleTy(), op);
+
   llvm::report_fatal_error("Unsupported OpenACC reduction type");
 }
 
@@ -692,14 +725,21 @@ static mlir::Value genReductionInitRegion(fir::FirOpBuilder &builder,
   mlir::Value initValue = getReductionInitValue(builder, loc, ty, op);
   if (fir::isa_trivial(ty)) {
     mlir::Value alloca = builder.create<fir::AllocaOp>(loc, ty);
+    auto declareOp = builder.create<hlfir::DeclareOp>(
+        loc, alloca, accReductionInitName, /*shape=*/nullptr,
+        llvm::ArrayRef<mlir::Value>{}, fir::FortranVariableFlagsAttr{});
     builder.create<fir::StoreOp>(loc, builder.createConvert(loc, ty, initValue),
-                                 alloca);
-    return alloca;
+                                 declareOp.getBase());
+    return declareOp.getBase();
   } else if (auto seqTy = mlir::dyn_cast_or_null<fir::SequenceType>(ty)) {
     if (seqTy.hasDynamicExtents())
       TODO(loc, "private recipe of array with dynamic extents");
     if (fir::isa_trivial(seqTy.getEleTy())) {
       mlir::Value alloca = builder.create<fir::AllocaOp>(loc, seqTy);
+      auto shapeOp = genShapeOp(builder, seqTy, loc);
+      auto declareOp = builder.create<hlfir::DeclareOp>(
+          loc, alloca, accReductionInitName, shapeOp,
+          llvm::ArrayRef<mlir::Value>{}, fir::FortranVariableFlagsAttr{});
       mlir::Type idxTy = builder.getIndexType();
       mlir::Type refTy = fir::ReferenceType::get(seqTy.getEleTy());
       llvm::SmallVector<fir::DoLoopOp> loops;
@@ -714,11 +754,20 @@ static mlir::Value genReductionInitRegion(fir::FirOpBuilder &builder,
         loops.push_back(loop);
         ivs.push_back(loop.getInductionVar());
       }
-      auto coord = builder.create<fir::CoordinateOp>(loc, refTy, alloca, ivs);
+      auto coord = builder.create<fir::CoordinateOp>(loc, refTy,
+                                                     declareOp.getBase(), ivs);
       builder.create<fir::StoreOp>(loc, initValue, coord);
       builder.setInsertionPointAfter(loops[0]);
-      return alloca;
+      return declareOp.getBase();
     }
+  } else if (auto boxTy = mlir::dyn_cast_or_null<fir::BaseBoxType>(ty)) {
+    if (!mlir::isa<fir::SequenceType>(boxTy.getEleTy()))
+      TODO(loc, "Unsupported boxed type for reduction");
+    // Create the private copy from the initial fir.box.
+    hlfir::Entity source = hlfir::Entity{builder.getBlock()->getArgument(0)};
+    auto [temp, cleanup] = hlfir::createTempFromMold(loc, builder, source);
+    builder.create<hlfir::AssignOp>(loc, initValue, temp);
+    return temp;
   }
   llvm::report_fatal_error("Unsupported OpenACC reduction type");
 }
@@ -816,21 +865,25 @@ static mlir::Value genScalarCombiner(fir::FirOpBuilder &builder,
 
 static void genCombiner(fir::FirOpBuilder &builder, mlir::Location loc,
                         mlir::acc::ReductionOperator op, mlir::Type ty,
-                        mlir::Value value1, mlir::Value value2) {
+                        mlir::Value value1, mlir::Value value2,
+                        mlir::acc::ReductionRecipeOp &recipe) {
   ty = fir::unwrapRefType(ty);
 
   if (auto seqTy = mlir::dyn_cast<fir::SequenceType>(ty)) {
-    if (seqTy.hasDynamicExtents())
-      TODO(loc, "OpenACC reduction on array with dynamic extents");
-    mlir::Type idxTy = builder.getIndexType();
+    assert(!seqTy.hasDynamicExtents() &&
+           "Assumed shaped array should be boxed for reduction");
     mlir::Type refTy = fir::ReferenceType::get(seqTy.getEleTy());
-
+    unsigned nbRangeArgs = recipe.getCombinerRegion().getArguments().size() - 2;
+    assert((nbRangeArgs / 3 == seqTy.getDimension()) &&
+           "Expect 3 block arguments per dimension");
+    (void)nbRangeArgs;
     llvm::SmallVector<fir::DoLoopOp> loops;
     llvm::SmallVector<mlir::Value> ivs;
-    for (auto ext : llvm::reverse(seqTy.getShape())) {
-      auto lb = builder.createIntegerConstant(loc, idxTy, 0);
-      auto ub = builder.createIntegerConstant(loc, idxTy, ext - 1);
-      auto step = builder.createIntegerConstant(loc, idxTy, 1);
+    for (unsigned i = 2; i < recipe.getCombinerRegion().getArguments().size();
+         i += 3) {
+      mlir::Value lb = recipe.getCombinerRegion().getArgument(i);
+      mlir::Value ub = recipe.getCombinerRegion().getArgument(i + 1);
+      mlir::Value step = recipe.getCombinerRegion().getArgument(i + 2);
       auto loop = builder.create<fir::DoLoopOp>(loc, lb, ub, step,
                                                 /*unordered=*/false);
       builder.setInsertionPointToStart(loop.getBody());
@@ -845,6 +898,29 @@ static void genCombiner(fir::FirOpBuilder &builder, mlir::Location loc,
         genScalarCombiner(builder, loc, op, seqTy.getEleTy(), load1, load2);
     builder.create<fir::StoreOp>(loc, res, addr1);
     builder.setInsertionPointAfter(loops[0]);
+  } else if (auto boxTy = mlir::dyn_cast<fir::BaseBoxType>(ty)) {
+    fir::SequenceType seqTy =
+        mlir::dyn_cast_or_null<fir::SequenceType>(boxTy.getEleTy());
+    if (!seqTy)
+      TODO(loc, "Unsupported boxed type in OpenACC reduction");
+    hlfir::Entity left = hlfir::Entity{value1};
+    hlfir::Entity right = hlfir::Entity{value2};
+    auto shape = hlfir::genShape(loc, builder, left);
+    llvm::SmallVector<mlir::Value, 1> typeParams;
+    auto genKernel = [&builder, &loc, op, seqTy, &left, &right](
+                         mlir::Location l, fir::FirOpBuilder &b,
+                         mlir::ValueRange oneBasedIndices) -> hlfir::Entity {
+      auto leftElement = hlfir::getElementAt(l, b, left, oneBasedIndices);
+      auto rightElement = hlfir::getElementAt(l, b, right, oneBasedIndices);
+      auto leftVal = hlfir::loadTrivialScalar(l, b, leftElement);
+      auto rightVal = hlfir::loadTrivialScalar(l, b, rightElement);
+      return hlfir::Entity{genScalarCombiner(builder, loc, op, seqTy.getEleTy(),
+                                             leftVal, rightVal)};
+    };
+    mlir::Value elemental = hlfir::genElementalOp(
+        loc, builder, seqTy.getEleTy(), shape, typeParams, genKernel,
+        /*isUnordered=*/true);
+    builder.create<hlfir::AssignOp>(loc, elemental, value1);
   } else {
     mlir::Value res = genScalarCombiner(builder, loc, op, ty, value1, value2);
     builder.create<fir::StoreOp>(loc, res, value1);
@@ -870,12 +946,27 @@ mlir::acc::ReductionRecipeOp Fortran::lower::createOrGetReductionRecipe(
   mlir::Value initValue = genReductionInitRegion(builder, loc, ty, op);
   builder.create<mlir::acc::YieldOp>(loc, initValue);
 
+  // The two first block arguments are the two values to be combined.
+  // The next arguments are the iteration ranges (lb, ub, step) to be used
+  // for the combiner if needed.
+  llvm::SmallVector<mlir::Type> argsTy{ty, ty};
+  llvm::SmallVector<mlir::Location> argsLoc{loc, loc};
+  for (mlir::Value bound : llvm::reverse(bounds)) {
+    auto dataBound =
+        mlir::dyn_cast<mlir::acc::DataBoundsOp>(bound.getDefiningOp());
+    argsTy.push_back(dataBound.getLowerbound().getType());
+    argsLoc.push_back(dataBound.getLowerbound().getLoc());
+    argsTy.push_back(dataBound.getUpperbound().getType());
+    argsLoc.push_back(dataBound.getUpperbound().getLoc());
+    argsTy.push_back(dataBound.getStartIdx().getType());
+    argsLoc.push_back(dataBound.getStartIdx().getLoc());
+  }
   builder.createBlock(&recipe.getCombinerRegion(),
-                      recipe.getCombinerRegion().end(), {ty, ty}, {loc, loc});
+                      recipe.getCombinerRegion().end(), argsTy, argsLoc);
   builder.setInsertionPointToEnd(&recipe.getCombinerRegion().back());
   mlir::Value v1 = recipe.getCombinerRegion().front().getArgument(0);
   mlir::Value v2 = recipe.getCombinerRegion().front().getArgument(1);
-  genCombiner(builder, loc, op, ty, v1, v2);
+  genCombiner(builder, loc, op, ty, v1, v2, recipe);
   builder.create<mlir::acc::YieldOp>(loc, v1);
   builder.restoreInsertionPoint(crtPos);
   return recipe;
@@ -902,9 +993,6 @@ genReductions(const Fortran::parser::AccObjectListWithReduction &objectList,
         mlir::acc::DataBoundsOp>(converter, builder, semanticsContext, stmtCtx,
                                  accObject, operandLocation, asFortran, bounds);
 
-    if (hasDynamicShape(bounds))
-      TODO(operandLocation, "OpenACC reductions with dynamic shaped array");
-
     mlir::Type reductionTy = fir::unwrapRefType(baseAddr.getType());
     if (auto seqTy = mlir::dyn_cast<fir::SequenceType>(reductionTy))
       reductionTy = seqTy.getEleTy();
@@ -923,6 +1011,8 @@ genReductions(const Fortran::parser::AccObjectListWithReduction &objectList,
     std::string recipeName = fir::getTypeAsString(
         ty, converter.getKindMap(),
         ("reduction_" + stringifyReductionOperator(mlirOp)).str());
+    if (hasDynamicShape(bounds))
+      ty = baseAddr.getType();
     mlir::acc::ReductionRecipeOp recipe =
         Fortran::lower::createOrGetReductionRecipe(
             builder, recipeName, operandLocation, ty, mlirOp, bounds);

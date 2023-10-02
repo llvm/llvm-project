@@ -2913,8 +2913,8 @@ void CGOpenMPRuntime::createOffloadEntriesAndInfoMetadata() {
       for (auto I = CGM.getContext().getSourceManager().fileinfo_begin(),
                 E = CGM.getContext().getSourceManager().fileinfo_end();
            I != E; ++I) {
-        if (I->getFirst()->getUniqueID().getDevice() == EntryInfo.DeviceID &&
-            I->getFirst()->getUniqueID().getFile() == EntryInfo.FileID) {
+        if (I->getFirst().getUniqueID().getDevice() == EntryInfo.DeviceID &&
+            I->getFirst().getUniqueID().getFile() == EntryInfo.FileID) {
           Loc = CGM.getContext().getSourceManager().translateFileLineCol(
               I->getFirst(), EntryInfo.Line, 1);
           break;
@@ -8260,7 +8260,7 @@ public:
       // of tofrom.
       // Emit this[:1]
       CombinedInfo.Pointers.push_back(PartialStruct.Base.getPointer());
-      QualType Ty = MD->getThisObjectType();
+      QualType Ty = MD->getFunctionObjectParameterType();
       llvm::Value *Size =
           CGF.Builder.CreateIntCast(CGF.getTypeSize(Ty), CGF.Int64Ty,
                                     /*isSigned=*/true);
@@ -9069,7 +9069,7 @@ void CGOpenMPRuntime::emitUserDefinedMapper(const OMPDeclareMapperDecl *D,
   llvm::FunctionType *FnTy = CGM.getTypes().GetFunctionType(FnInfo);
   SmallString<64> TyStr;
   llvm::raw_svector_ostream Out(TyStr);
-  CGM.getCXXABI().getMangleContext().mangleTypeName(Ty, Out);
+  CGM.getCXXABI().getMangleContext().mangleCanonicalTypeName(Ty, Out);
   std::string Name = getName({"omp_mapper", TyStr, D->getName()});
   auto *Fn = llvm::Function::Create(FnTy, llvm::GlobalValue::InternalLinkage,
                                     Name, &CGM.getModule());

@@ -17,7 +17,7 @@
 #include "src/__support/CPP/type_traits/is_same.h"
 #include "src/__support/CPP/utility/forward.h"
 
-namespace __llvm_libc::cpp {
+namespace LIBC_NAMESPACE::cpp {
 
 namespace detail {
 
@@ -57,6 +57,6 @@ decltype(auto) invoke(Function &&fun, Args &&...args) {
       cpp::forward<Function>(fun), cpp::forward<Args>(args)...);
 }
 
-} // namespace __llvm_libc::cpp
+} // namespace LIBC_NAMESPACE::cpp
 
 #endif // LLVM_LIBC_SRC___SUPPORT_CPP_TYPE_TRAITS_INVOKE_H

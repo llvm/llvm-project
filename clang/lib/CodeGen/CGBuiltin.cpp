@@ -1769,12 +1769,9 @@ Value *CodeGenFunction::EmitCheckedArgForBuiltin(const Expr *E,
 }
 
 static Value *EmitAbs(CodeGenFunction &CGF, Value *ArgValue, bool HasNSW) {
-  // X < 0 ? -X : X
-  // TODO: Use phi-node (for better SimplifyCFGPass)
-  Value *NegOp = CGF.Builder.CreateNeg(ArgValue, "neg", false, HasNSW);
-  Constant *Zero = llvm::Constant::getNullValue(ArgValue->getType());
-  Value *CmpResult = CGF.Builder.CreateICmpSLT(ArgValue, Zero, "abscond");
-  return CGF.Builder.CreateSelect(CmpResult, NegOp, ArgValue, "abs");
+  return CGF.Builder.CreateBinaryIntrinsic(
+      Intrinsic::abs, ArgValue,
+      ConstantInt::get(CGF.Builder.getInt1Ty(), HasNSW));
 }
 
 static Value *EmitOverflowCheckedAbs(CodeGenFunction &CGF, const CallExpr *E,
@@ -13527,7 +13524,7 @@ CodeGenFunction::EmitX86CpuSupports(std::array<uint32_t, 4> FeatureMask) {
 Value *CodeGenFunction::EmitAArch64CpuInit() {
   llvm::FunctionType *FTy = llvm::FunctionType::get(VoidTy, false);
   llvm::FunctionCallee Func =
-      CGM.CreateRuntimeFunction(FTy, "init_cpu_features_resolver");
+      CGM.CreateRuntimeFunction(FTy, "__init_cpu_features_resolver");
   cast<llvm::GlobalValue>(Func.getCallee())->setDSOLocal(true);
   cast<llvm::GlobalValue>(Func.getCallee())
       ->setDLLStorageClass(llvm::GlobalValue::DefaultStorageClass);
@@ -15593,6 +15590,15 @@ Value *CodeGenFunction::EmitX86BuiltinExpr(unsigned BuiltinID,
         break;
       case X86::BI__builtin_ia32_cmppd256:
         IID = Intrinsic::x86_avx_cmp_pd_256;
+        break;
+      case X86::BI__builtin_ia32_cmpph128_mask:
+        IID = Intrinsic::x86_avx512fp16_mask_cmp_ph_128;
+        break;
+      case X86::BI__builtin_ia32_cmpph256_mask:
+        IID = Intrinsic::x86_avx512fp16_mask_cmp_ph_256;
+        break;
+      case X86::BI__builtin_ia32_cmpph512_mask:
+        IID = Intrinsic::x86_avx512fp16_mask_cmp_ph_512;
         break;
       case X86::BI__builtin_ia32_cmpps512_mask:
         IID = Intrinsic::x86_avx512_mask_cmp_ps_512;

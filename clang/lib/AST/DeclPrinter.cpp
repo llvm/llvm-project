@@ -962,6 +962,10 @@ void DeclPrinter::VisitLabelDecl(LabelDecl *D) {
 void DeclPrinter::VisitVarDecl(VarDecl *D) {
   prettyPrintPragmas(D);
 
+  if (const auto *Param = dyn_cast<ParmVarDecl>(D);
+      Param && Param->isExplicitObjectParameter())
+    Out << "this ";
+
   std::string LeftSide;
   llvm::raw_string_ostream LeftSideStream(LeftSide);
 

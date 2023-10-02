@@ -7834,6 +7834,7 @@ static Value *lookThroughCast(CmpInst *CmpI, Value *V1, Value *V2,
   if (!C)
     return nullptr;
 
+  const DataLayout &DL = CmpI->getModule()->getDataLayout();
   Constant *CastedTo = nullptr;
   switch (*CastOp) {
   case Instruction::ZExt:
@@ -7871,7 +7872,8 @@ static Value *lookThroughCast(CmpInst *CmpI, Value *V1, Value *V2,
       // CmpConst == C is checked below.
       CastedTo = CmpConst;
     } else {
-      CastedTo = ConstantExpr::getIntegerCast(C, SrcTy, CmpI->isSigned());
+      unsigned ExtOp = CmpI->isSigned() ? Instruction::SExt : Instruction::ZExt;
+      CastedTo = ConstantFoldCastOperand(ExtOp, C, SrcTy, DL);
     }
     break;
   case Instruction::FPTrunc:
@@ -7901,8 +7903,8 @@ static Value *lookThroughCast(CmpInst *CmpI, Value *V1, Value *V2,
 
   // Make sure the cast doesn't lose any information.
   Constant *CastedBack =
-      ConstantExpr::getCast(*CastOp, CastedTo, C->getType(), true);
-  if (CastedBack != C)
+      ConstantFoldCastOperand(*CastOp, CastedTo, C->getType(), DL);
+  if (CastedBack && CastedBack != C)
     return nullptr;
 
   return CastedTo;
@@ -8291,6 +8293,29 @@ static std::optional<bool> isImpliedCondICmps(const ICmpInst *LHS,
   const APInt *LC, *RC;
   if (L0 == R0 && match(L1, m_APInt(LC)) && match(R1, m_APInt(RC)))
     return isImpliedCondCommonOperandWithConstants(LPred, *LC, RPred, *RC);
+
+  // L0 = R0 = L1 + R1, L0 >=u L1 implies R0 >=u R1, L0 <u L1 implies R0 <u R1
+  if (ICmpInst::isUnsigned(LPred) && ICmpInst::isUnsigned(RPred)) {
+    if (L0 == R1) {
+      std::swap(R0, R1);
+      RPred = ICmpInst::getSwappedPredicate(RPred);
+    }
+    if (L1 == R0) {
+      std::swap(L0, L1);
+      LPred = ICmpInst::getSwappedPredicate(LPred);
+    }
+    if (L1 == R1) {
+      std::swap(L0, L1);
+      LPred = ICmpInst::getSwappedPredicate(LPred);
+      std::swap(R0, R1);
+      RPred = ICmpInst::getSwappedPredicate(RPred);
+    }
+    if (L0 == R0 &&
+        (LPred == ICmpInst::ICMP_ULT || LPred == ICmpInst::ICMP_UGE) &&
+        (RPred == ICmpInst::ICMP_ULT || RPred == ICmpInst::ICMP_UGE) &&
+        match(L0, m_c_Add(m_Specific(L1), m_Specific(R1))))
+      return LPred == RPred;
+  }
 
   if (LPred == RPred)
     return isImpliedCondOperands(LPred, L0, L1, R0, R1, DL, Depth);

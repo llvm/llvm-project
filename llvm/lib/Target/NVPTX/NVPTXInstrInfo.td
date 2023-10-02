@@ -1486,6 +1486,24 @@ defm OR  : BITWISE<"or", or>;
 defm AND : BITWISE<"and", and>;
 defm XOR : BITWISE<"xor", xor>;
 
+// Lower logical v2i16 ops as bitwise ops on b32.
+def: Pat<(or (v2i16 Int32Regs:$a), (v2i16 Int32Regs:$b)),
+         (ORb32rr Int32Regs:$a, Int32Regs:$b)>;
+def: Pat<(xor (v2i16 Int32Regs:$a), (v2i16 Int32Regs:$b)),
+         (XORb32rr Int32Regs:$a, Int32Regs:$b)>;
+def: Pat<(and (v2i16 Int32Regs:$a), (v2i16 Int32Regs:$b)),
+         (ANDb32rr Int32Regs:$a, Int32Regs:$b)>;
+
+// The constants get legalized into a bitcast from i32, so that's what we need
+// to match here.
+def: Pat<(or Int32Regs:$a, (v2i16 (bitconvert (i32 imm:$b)))),
+         (ORb32ri Int32Regs:$a, imm:$b)>;
+def: Pat<(xor Int32Regs:$a, (v2i16 (bitconvert (i32 imm:$b)))),
+         (XORb32ri Int32Regs:$a, imm:$b)>;
+def: Pat<(and Int32Regs:$a, (v2i16 (bitconvert (i32 imm:$b)))),
+         (ANDb32ri Int32Regs:$a, imm:$b)>;
+
+
 def NOT1  : NVPTXInst<(outs Int1Regs:$dst), (ins Int1Regs:$src),
                       "not.pred \t$dst, $src;",
                       [(set Int1Regs:$dst, (not Int1Regs:$src))]>;
@@ -3545,7 +3563,9 @@ def Callseq_End :
             [(callseq_end timm:$amt1, timm:$amt2)]>;
 
 // trap instruction
-def trapinst : NVPTXInst<(outs), (ins), "trap;", [(trap)]>;
+// Emit an `exit` as well to convey to ptxas that `trap` exits the CFG.
+// This won't be necessary in a future version of ptxas.
+def trapinst : NVPTXInst<(outs), (ins), "trap; exit;", [(trap)]>;
 
 // Call prototype wrapper
 def SDTCallPrototype : SDTypeProfile<0, 1, [SDTCisInt<0>]>;

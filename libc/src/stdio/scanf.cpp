@@ -16,12 +16,12 @@
 #include <stdio.h>
 
 #ifndef LIBC_COPT_STDIO_USE_SYSTEM_FILE
-#define SCANF_STDIN __llvm_libc::stdin
+#define SCANF_STDIN LIBC_NAMESPACE::stdin
 #else // LIBC_COPT_STDIO_USE_SYSTEM_FILE
 #define SCANF_STDIN ::stdin
 #endif // LIBC_COPT_STDIO_USE_SYSTEM_FILE
 
-namespace __llvm_libc {
+namespace LIBC_NAMESPACE {
 
 LLVM_LIBC_FUNCTION(int, scanf, (const char *__restrict format, ...)) {
   va_list vlist;
@@ -37,4 +37,4 @@ LLVM_LIBC_FUNCTION(int, scanf, (const char *__restrict format, ...)) {
   return (ret_val == -1) ? EOF : ret_val;
 }
 
-} // namespace __llvm_libc
+} // namespace LIBC_NAMESPACE

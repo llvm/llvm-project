@@ -433,7 +433,7 @@ def warn_drv_treating_input_as_cxx : Warning<
   InGroup<Deprecated>;
 def warn_drv_include_probe_gch : Warning<
   "'%0' probing .gch is deprecated. Use '-include-pch %1' or switch to .pch instead">,
-  InGroup<Deprecated>;
+  InGroup<DeprecatedIncludeGch>;
 def warn_drv_pch_not_first_include : Warning<
   "precompiled header '%0' was ignored because '%1' is not first '-include'">;
 def warn_missing_sysroot : Warning<"no such sysroot directory: '%0'">,
@@ -456,6 +456,9 @@ def warn_unsupported_branch_protection: Warning <
   "invalid branch protection option '%0' in '%1'">, InGroup<BranchProtection>;
 def err_sls_hardening_arm_not_supported : Error<
   "-mharden-sls is only supported on armv7-a or later">;
+def warn_drv_large_data_threshold_invalid_code_model: Warning<
+  "'%0' only applies to medium code model">,
+  InGroup<UnusedCommandLineArgument>;
 
 def note_drv_command_failed_diag_msg : Note<
   "diagnostic msg: %0">;

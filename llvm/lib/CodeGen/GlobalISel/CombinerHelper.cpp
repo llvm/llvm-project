@@ -1078,6 +1078,7 @@ void CombinerHelper::applyCombineIndexedLoadStore(
   MIB.addUse(MatchInfo.Base);
   MIB.addUse(MatchInfo.Offset);
   MIB.addImm(MatchInfo.IsPre);
+  MIB->cloneMemRefs(*MI.getMF(), MI);
   MI.eraseFromParent();
   AddrDef.eraseFromParent();
 
@@ -4155,8 +4156,7 @@ bool CombinerHelper::matchBitfieldExtractFromAnd(
   Register Dst = MI.getOperand(0).getReg();
   LLT Ty = MRI.getType(Dst);
   LLT ExtractTy = getTargetLowering().getPreferredShiftAmountTy(Ty);
-  if (!getTargetLowering().isConstantUnsignedBitfieldExtractLegal(
-          TargetOpcode::G_UBFX, Ty, ExtractTy))
+  if (LI && !LI->isLegalOrCustom({TargetOpcode::G_UBFX, {Ty, ExtractTy}}))
     return false;
 
   int64_t AndImm, LSBImm;
@@ -4242,8 +4242,7 @@ bool CombinerHelper::matchBitfieldExtractFromShrAnd(
   const Register Dst = MI.getOperand(0).getReg();
   LLT Ty = MRI.getType(Dst);
   LLT ExtractTy = getTargetLowering().getPreferredShiftAmountTy(Ty);
-  if (!getTargetLowering().isConstantUnsignedBitfieldExtractLegal(
-          TargetOpcode::G_UBFX, Ty, ExtractTy))
+  if (LI && !LI->isLegalOrCustom({TargetOpcode::G_UBFX, {Ty, ExtractTy}}))
     return false;
 
   // Try to match shr (and x, c1), c2

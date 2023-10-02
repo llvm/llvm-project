@@ -12,7 +12,7 @@
 #include "src/__support/macros/attributes.h"
 #include "src/__support/threads/mutex_common.h"
 
-namespace __llvm_libc {
+namespace LIBC_NAMESPACE {
 
 /// Implementation of a simple passthrough mutex which guards nothing. A
 /// complete Mutex locks in general cannot be implemented on the GPU. We simply
@@ -26,6 +26,6 @@ struct Mutex {
   LIBC_INLINE MutexError reset() { return MutexError::NONE; }
 };
 
-} // namespace __llvm_libc
+} // namespace LIBC_NAMESPACE
 
 #endif

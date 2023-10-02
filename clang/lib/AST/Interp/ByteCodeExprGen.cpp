@@ -171,14 +171,17 @@ bool ByteCodeExprGen<Emitter>::VisitCastExpr(const CastExpr *CE) {
       return this->discard(SubExpr);
     std::optional<PrimType> FromT = classify(SubExpr->getType());
     std::optional<PrimType> ToT = classify(CE->getType());
+
     if (!FromT || !ToT)
       return false;
 
     if (!this->visit(SubExpr))
       return false;
 
-    if (FromT == ToT)
+    if (FromT == ToT) {
+      assert(ToT != PT_IntAP && ToT != PT_IntAPS);
       return true;
+    }
 
     return this->emitCast(*FromT, *ToT, CE);
   }
@@ -251,6 +254,29 @@ bool ByteCodeExprGen<Emitter>::VisitBinaryOperator(const BinaryOperator *BO) {
       return this->discard(RHS);
 
     return this->delegate(RHS);
+  }
+
+  // Special case for C++'s three-way/spaceship operator <=>, which
+  // returns a std::{strong,weak,partial}_ordering (which is a class, so doesn't
+  // have a PrimType).
+  if (!T) {
+    if (DiscardResult)
+      return true;
+    const ComparisonCategoryInfo *CmpInfo =
+        Ctx.getASTContext().CompCategories.lookupInfoForType(BO->getType());
+    assert(CmpInfo);
+
+    // We need a temporary variable holding our return value.
+    if (!Initializing) {
+      std::optional<unsigned> ResultIndex = this->allocateLocal(BO, false);
+      if (!this->emitGetPtrLocal(*ResultIndex, BO))
+        return false;
+    }
+
+    if (!visit(LHS) || !visit(RHS))
+      return false;
+
+    return this->emitCMP3(*LT, CmpInfo, BO);
   }
 
   if (!LT || !RT || !T)
@@ -858,8 +884,8 @@ bool ByteCodeExprGen<Emitter>::VisitStringLiteral(const StringLiteral *E) {
 
   // If the initializer string is too long, a diagnostic has already been
   // emitted. Read only the array length from the string literal.
-  unsigned N =
-      std::min(unsigned(CAT->getSize().getZExtValue()), E->getLength());
+  unsigned ArraySize = CAT->getSize().getZExtValue();
+  unsigned N = std::min(ArraySize, E->getLength());
   size_t CharWidth = E->getCharByteWidth();
 
   for (unsigned I = 0; I != N; ++I) {
@@ -878,6 +904,23 @@ bool ByteCodeExprGen<Emitter>::VisitStringLiteral(const StringLiteral *E) {
       llvm_unreachable("unsupported character width");
     }
   }
+
+  // Fill up the rest of the char array with NUL bytes.
+  for (unsigned I = N; I != ArraySize; ++I) {
+    if (CharWidth == 1) {
+      this->emitConstSint8(0, E);
+      this->emitInitElemSint8(I, E);
+    } else if (CharWidth == 2) {
+      this->emitConstUint16(0, E);
+      this->emitInitElemUint16(I, E);
+    } else if (CharWidth == 4) {
+      this->emitConstUint32(0, E);
+      this->emitInitElemUint32(I, E);
+    } else {
+      llvm_unreachable("unsupported character width");
+    }
+  }
+
   return true;
 }
 
@@ -1598,6 +1641,10 @@ bool ByteCodeExprGen<Emitter>::visitZeroInitializer(QualType QT,
     return this->emitZeroSint64(E);
   case PT_Uint64:
     return this->emitZeroUint64(E);
+  case PT_IntAP:
+  case PT_IntAPS:
+    assert(false);
+    return false;
   case PT_Ptr:
     return this->emitNullPtr(E);
   case PT_FnPtr:
@@ -1837,6 +1884,10 @@ bool ByteCodeExprGen<Emitter>::emitConst(T Value, PrimType Ty, const Expr *E) {
     return this->emitConstSint64(Value, E);
   case PT_Uint64:
     return this->emitConstUint64(Value, E);
+  case PT_IntAP:
+  case PT_IntAPS:
+    assert(false);
+    return false;
   case PT_Bool:
     return this->emitConstBool(Value, E);
   case PT_Ptr:

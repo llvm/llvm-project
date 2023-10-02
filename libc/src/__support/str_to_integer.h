@@ -17,7 +17,7 @@
 #include "src/errno/libc_errno.h" // For ERANGE
 #include <limits.h>
 
-namespace __llvm_libc {
+namespace LIBC_NAMESPACE {
 namespace internal {
 
 // Returns a pointer to the first character in src that is not a whitespace
@@ -150,6 +150,6 @@ LIBC_INLINE StrToNumResult<T> strtointeger(const char *__restrict src,
 }
 
 } // namespace internal
-} // namespace __llvm_libc
+} // namespace LIBC_NAMESPACE
 
 #endif // LLVM_LIBC_SRC___SUPPORT_STR_TO_INTEGER_H

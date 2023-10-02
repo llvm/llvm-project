@@ -8,7 +8,6 @@
 
 // UNSUPPORTED: no-threads
 // UNSUPPORTED: c++03, c++11, c++14, c++17, c++20
-// XFAIL: clang-15
 
 // checks that CTAD for std::packaged_task works properly with static operator() overloads
 
