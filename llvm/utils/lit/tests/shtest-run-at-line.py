@@ -52,9 +52,9 @@
 
 #      CHECK: Command Output (stderr)
 # CHECK-NEXT: --
-# CHECK-NEXT: {{^}}RUN: at line 1: true &&
-# CHECK-NEXT: echo abc |
-# CHECK-NEXT: FileCheck {{.*}}
+# CHECK-NEXT: {{^}}RUN: at line 1: echo abc |
+# CHECK-NEXT: FileCheck {{.*}} &&
+# CHECK-NEXT: false
 #  CHECK-NOT: RUN
 
 
@@ -102,10 +102,10 @@
 #      CHECK: Command Output (stdout)
 # CHECK-NEXT: --
 # CHECK-NEXT: # RUN: at line 1
-# CHECK-NEXT: true &&
 # CHECK-NEXT: echo abc |
-# CHECK-NEXT: FileCheck {{.*}}
-# CHECK-NEXT: # executed command: true
+# CHECK-NEXT: FileCheck {{.*}} &&
+# CHECK-NEXT: false
 # CHECK-NEXT: # executed command: echo abc
 # CHECK-NEXT: # executed command: FileCheck {{.*}}
+# CHECK-NEXT: # executed command: false
 #  CHECK-NOT: RUN

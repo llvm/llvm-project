@@ -1,2 +1,2 @@
 # RUN: %{cmds-with-newlines}
-# CHECK: bac
+# CHECK: abc
