@@ -177,6 +177,10 @@ def warn_unknown_attribute_ignored : Warning<
   "unknown attribute %0 ignored">, InGroup<UnknownAttributes>;
 def warn_attribute_ignored : Warning<"%0 attribute ignored">,
   InGroup<IgnoredAttributes>;
+def warn_multiarg_malloc_attribute_ignored: Warning<
+  "'malloc' attribute ignored because"
+  " Clang does not support the one/two argument form">,
+  InGroup<IgnoredAttributes>;
 def err_keyword_not_supported_on_target : Error<
   "%0 is not supported on this target">;
 def err_use_of_tag_name_without_tag : Error<

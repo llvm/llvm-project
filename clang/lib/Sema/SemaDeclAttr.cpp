@@ -2064,13 +2064,27 @@ static void handleTLSModelAttr(Sema &S, Decl *D, const ParsedAttr &AL) {
 
 static void handleRestrictAttr(Sema &S, Decl *D, const ParsedAttr &AL) {
   QualType ResultType = getFunctionOrMethodResultType(D);
-  if (ResultType->isAnyPointerType() || ResultType->isBlockPointerType()) {
+  if (!ResultType->isAnyPointerType() && !ResultType->isBlockPointerType()) {
+    S.Diag(AL.getLoc(), diag::warn_attribute_return_pointers_only)
+        << AL << getFunctionOrMethodResultSourceRange(D);
+    return;
+  }
+
+  if (getNumAttributeArgs(AL) == 0) {
     D->addAttr(::new (S.Context) RestrictAttr(S.Context, AL));
     return;
   }
 
-  S.Diag(AL.getLoc(), diag::warn_attribute_return_pointers_only)
-      << AL << getFunctionOrMethodResultSourceRange(D);
+  if (AL.getAttributeSpellingListIndex() == RestrictAttr::Declspec_restrict) {
+    // __declspec(restrict) accepts no arguments
+    S.Diag(AL.getLoc(), diag::err_attribute_wrong_number_arguments) << AL << 0;
+    return;
+  }
+
+  // FIXME: GCC uses [[malloc(my_func)]] to specify a deallocator for the
+  // returned pointer, but this isn't currently supported in LLVM
+  // see https://github.com/llvm/llvm-project/issues/51607
+  S.Diag(AL.getLoc(), diag::warn_multiarg_malloc_attribute_ignored);
 }
 
 static void handleCPUSpecificAttr(Sema &S, Decl *D, const ParsedAttr &AL) {

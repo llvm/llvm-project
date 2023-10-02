@@ -289,6 +289,11 @@ Bug Fixes to Compiler Builtins
 Bug Fixes to Attribute Support
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+- Clang now emits a warning instead of an error when using the one or two
+  argument form of GCC 11's ``__attribute__((malloc(deallocator)))``
+  or ``__attribute__((malloc(deallocator, ptr-index)))``
+  (`#51607 <https://github.com/llvm/llvm-project/issues/51607>`).
+
 Bug Fixes to C++ Support
 ^^^^^^^^^^^^^^^^^^^^^^^^
 
