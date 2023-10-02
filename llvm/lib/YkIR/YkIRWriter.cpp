@@ -55,7 +55,8 @@ enum OperandKind {
 };
 
 enum TypeKind {
-  Integer = 0,
+  Void = 0,
+  Integer,
   UnimplementedType = 255, // YKFIXME: Will eventually be deleted.
 };
 
@@ -235,7 +236,9 @@ public:
   }
 
   void serialiseType(Type *Ty) {
-    if (IntegerType *ITy = dyn_cast<IntegerType>(Ty)) {
+    if (Ty->isVoidTy()) {
+      OutStreamer.emitInt8(TypeKind::Void);
+    } else if (IntegerType *ITy = dyn_cast<IntegerType>(Ty)) {
       OutStreamer.emitInt8(TypeKind::Integer);
       OutStreamer.emitInt32(ITy->getBitWidth());
     } else {
