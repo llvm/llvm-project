@@ -804,7 +804,7 @@ std::string PredefinedExpr::ComputeName(IdentKind IK, const Decl *CurrentDecl) {
     PrettyCallbacks PrettyCB(Context.getLangOpts());
     Policy.Callbacks = &PrettyCB;
     if (IK == Function && LO.MicrosoftExt) {
-      Policy.UseClassForTemplateArgument = LO.MicrosoftExt;
+      Policy.ForcePrintingAsElaboratedType = LO.MicrosoftExt;
     }
     std::string Proto;
     llvm::raw_string_ostream POut(Proto);

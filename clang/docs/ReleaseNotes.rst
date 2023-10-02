@@ -266,7 +266,8 @@ Bug Fixes in This Version
   (`#64836 <https://github.com/llvm/llvm-project/issues/64836>`_)
 - Clang now allows an ``_Atomic`` qualified integer in a switch statement. Fixes
   (`#65557 <https://github.com/llvm/llvm-project/issues/65557>`_)
-- Fix value of predefined macro ``__FUNCTION__`` to match MSVC's value. Fixes (`#66114 <https://github.com/llvm/llvm-project/issues/66114>`_)
+- Fix value of predefined macro ``__FUNCTION__`` to match MSVC's value. Fixes
+  (`#66114 <https://github.com/llvm/llvm-project/issues/66114>`_)
 
 Bug Fixes to Compiler Builtins
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^

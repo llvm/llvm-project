@@ -2220,27 +2220,16 @@ printTo(raw_ostream &OS, ArrayRef<TA> Args, const PrintingPolicy &Policy,
       if (!FirstArg)
         OS << Comma;
 
-      if (Policy.UseClassForTemplateArgument &&
+      if (Policy.ForcePrintingAsElaboratedType &&
           Argument.getKind() == TemplateArgument::Type &&
-          !Argument.getAsType()->isBuiltinType()) {
-        const Type *Ty = Argument.getAsType().getTypePtr();
-        const char *kw;
-        if (Ty->isStructureType())
-          kw = "struct ";
-        else if (Ty->isClassType())
-          kw = "class ";
-        else if (Ty->isUnionType())
-          kw = "union ";
-        else if (Ty->isEnumeralType())
-          kw = "enum ";
-        else
-          llvm_unreachable("argument type not expected");
-        OS << kw;
+          !Argument.getAsType()->isBuiltinType())
+        OS << Argument.getAsType().getAsString().data();
+      else {
       }
-      // Tries to print the argument with location info if exists.
-      printArgument(Arg, Policy, ArgOS,
-                    TemplateParameterList::shouldIncludeTypeForArgument(
-                        Policy, TPL, ParmIndex));
+        // Tries to print the argument with location info if exists.
+        printArgument(Arg, Policy, ArgOS,
+                      TemplateParameterList::shouldIncludeTypeForArgument(
+                          Policy, TPL, ParmIndex));
     }
     StringRef ArgString = ArgOS.str();
 
