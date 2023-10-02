@@ -478,7 +478,7 @@ public:
       static_assert(is_equal(__FUNCTION__, "test_func::TestBI<int>::TestBI"));
       static_assert(is_equal(__func__, "TestBI"));
 #else
-      static_assert(is_equal(__func__, "TestBI"));
+      static_assert(is_equal(__FUNCTION__, "TestBI"));
       static_assert(is_equal(__func__, "TestBI"));
 #endif
    }
@@ -492,7 +492,7 @@ public:
       static_assert(is_equal(__FUNCTION__, "test_func::TestClass<class test_func::C>::TestClass"));
       static_assert(is_equal(__func__, "TestClass"));
 #else
-      static_assert(is_equal(__func__, "TestClass"));
+      static_assert(is_equal(__FUNCTION__, "TestClass"));
       static_assert(is_equal(__func__, "TestClass"));
 #endif
    }
@@ -520,7 +520,7 @@ public:
       static_assert(is_equal(__FUNCTION__, "test_func::TestEnum<enum test_func::E>::TestEnum"));
       static_assert(is_equal(__func__, "TestEnum"));
 #else
-      static_assert(is_equal(__func__, "TestEnum"));
+      static_assert(is_equal(__FUNCTION__, "TestEnum"));
       static_assert(is_equal(__func__, "TestEnum"));
 #endif
    }
