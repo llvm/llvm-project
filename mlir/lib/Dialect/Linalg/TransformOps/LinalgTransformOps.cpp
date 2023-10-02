@@ -1180,6 +1180,15 @@ transform::MatchOp::apply(transform::TransformRewriter &rewriter,
         return;
     }
 
+    if (getFilterOperandType().has_value()) {
+      Type t = getFilterOperandType().value();
+      for (auto type : op->getOperandTypes()) {
+        if (type != t) {
+          return;
+        }
+      }
+    }
+
     // All constraints are satisfied.
     res.push_back(op);
     return;
