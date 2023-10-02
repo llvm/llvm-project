@@ -222,6 +222,7 @@ def calltarget : Operand<i32> {
 }
 
 def simm13Op : Operand<iPTR> {
+  let OperandType = "OPERAND_IMMEDIATE";
   let DecoderMethod = "DecodeSIMM13";
   let EncoderMethod = "getSImm13OpValue";
 }
@@ -835,7 +836,7 @@ let Defs = [ICC], hasPostISelHook = true in
 let Uses = [ICC] in
   defm SUBC   : F3_12np <"subx", 0b001100>;
 
-def : Pat<(SPcmpicc i32:$lhs, i32:$rhs), (SUBCCri $lhs, $rhs)>;
+def : Pat<(SPcmpicc i32:$lhs, i32:$rhs), (SUBCCrr $lhs, $rhs)>;
 def : Pat<(SPcmpicc i32:$lhs, (i32 simm13:$rhs)), (SUBCCri $lhs, imm:$rhs)>;
 
 // Section B.18 - Multiply Instructions, p. 113
