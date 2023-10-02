@@ -202,27 +202,62 @@ Improvements to Clang's time-trace
 
 Bug Fixes in This Version
 -------------------------
-- Fixed missing warnings when comparing mismatched enumeration constants
-  in C (`#29217 <https://github.com/llvm/llvm-project/issues/29217>`).
-
-- Clang now accepts elaborated-type-specifiers that explicitly specialize
-  a member class template for an implicit instantiation of a class template.
-
-- Fixed missing warnings when doing bool-like conversions in C23 (#GH79435).
-- Clang's ``-Wshadow`` no longer warns when an init-capture is named the same as
-  a class field unless the lambda can capture this.
-  Fixes (#GH71976)
-
-- Clang now accepts qualified partial/explicit specializations of variable templates that
-  are not nominable in the lookup context of the specialization.
-
-- Clang now doesn't produce false-positive warning `-Wconstant-logical-operand`
-  for logical operators in C23.
-  Fixes (#GH64356).
-
-- Clang no longer produces a false-positive `-Wunused-variable` warning
-  for variables created through copy initialization having side-effects in C++17 and later.
-  Fixes (#GH64356) (#GH79518).
+- Fixed an issue where a class template specialization whose declaration is
+  instantiated in one module and whose definition is instantiated in another
+  module may end up with members associated with the wrong declaration of the
+  class, which can result in miscompiles in some cases.
+- Fix crash on use of a variadic overloaded operator.
+  (`#42535 <https://github.com/llvm/llvm-project/issues/42535>`_)
+- Fix a hang on valid C code passing a function type as an argument to
+  ``typeof`` to form a function declaration.
+  (`#64713 <https://github.com/llvm/llvm-project/issues/64713>`_)
+- Clang now reports missing-field-initializers warning for missing designated
+  initializers in C++.
+  (`#56628 <https://github.com/llvm/llvm-project/issues/56628>`_)
+- Clang now respects ``-fwrapv`` and ``-ftrapv`` for ``__builtin_abs`` and
+  ``abs`` builtins.
+  (`#45129 <https://github.com/llvm/llvm-project/issues/45129>`_,
+  `#45794 <https://github.com/llvm/llvm-project/issues/45794>`_)
+- Fixed an issue where accesses to the local variables of a coroutine during
+  ``await_suspend`` could be misoptimized, including accesses to the awaiter
+  object itself.
+  (`#56301 <https://github.com/llvm/llvm-project/issues/56301>`_)
+  The current solution may bring performance regressions if the awaiters have
+  non-static data members. See
+  `#64945 <https://github.com/llvm/llvm-project/issues/64945>`_ for details.
+- Clang now prints unnamed members in diagnostic messages instead of giving an
+  empty ''. Fixes
+  (`#63759 <https://github.com/llvm/llvm-project/issues/63759>`_)
+- Fix crash in __builtin_strncmp and related builtins when the size value
+  exceeded the maximum value representable by int64_t. Fixes
+  (`#64876 <https://github.com/llvm/llvm-project/issues/64876>`_)
+- Fixed an assertion if a function has cleanups and fatal erors.
+  (`#48974 <https://github.com/llvm/llvm-project/issues/48974>`_)
+- Clang now emits an error if it is not possible to deduce array size for a
+  variable with incomplete array type.
+  (`#37257 <https://github.com/llvm/llvm-project/issues/37257>`_)
+- Clang's ``-Wunused-private-field`` no longer warns on fields whose type is
+  declared with ``[[maybe_unused]]``.
+  (`#61334 <https://github.com/llvm/llvm-project/issues/61334>`_)
+- For function multi-versioning using the ``target``, ``target_clones``, or
+  ``target_version`` attributes, remove comdat for internal linkage functions.
+  (`#65114 <https://github.com/llvm/llvm-project/issues/65114>`_)
+- Clang now reports ``-Wformat`` for bool value and char specifier confusion
+  in scanf. Fixes
+  (`#64987 <https://github.com/llvm/llvm-project/issues/64987>`_)
+- Support MSVC predefined macro expressions in constant expressions and in
+  local structs.
+- Correctly parse non-ascii identifiers that appear immediately after a line splicing
+  (`#65156 <https://github.com/llvm/llvm-project/issues/65156>`_)
+- Clang no longer considers the loss of ``__unaligned`` qualifier from objects as
+  an invalid conversion during method function overload resolution.
+- Fix lack of comparison of declRefExpr in ASTStructuralEquivalence
+  (`#66047 <https://github.com/llvm/llvm-project/issues/66047>`_)
+- Fix parser crash when dealing with ill-formed objective C++ header code. Fixes
+  (`#64836 <https://github.com/llvm/llvm-project/issues/64836>`_)
+- Clang now allows an ``_Atomic`` qualified integer in a switch statement. Fixes
+  (`#65557 <https://github.com/llvm/llvm-project/issues/65557>`_)
+- Fix value of predefined macro ``__FUNCTION__`` to match MSVC's value. Fixes (`#66114 <https://github.com/llvm/llvm-project/issues/66114>`_)
 
 Bug Fixes to Compiler Builtins
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
