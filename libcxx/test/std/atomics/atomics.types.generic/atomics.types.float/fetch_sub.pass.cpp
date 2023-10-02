@@ -7,10 +7,6 @@
 //===----------------------------------------------------------------------===//
 // UNSUPPORTED: c++03, c++11, c++14, c++17
 
-// floating-point-type fetch_add(floating-point-type,
-//                               memory_order = memory_order::seq_cst) volatile noexcept;
-// floating-point-type fetch_add(floating-point-type,
-//                               memory_order = memory_order::seq_cst) noexcept;
 // floating-point-type fetch_sub(floating-point-type,
 //                               memory_order = memory_order::seq_cst) volatile noexcept;
 // floating-point-type fetch_sub(floating-point-type,
@@ -19,25 +15,66 @@
 #include <atomic>
 #include <cassert>
 #include <concepts>
+#include <thread>
+#include <vector>
 
 #include "test_macros.h"
+#include "make_test_thread.h"
+
+template <class T>
+concept HasVolatileFetchSub = requires(volatile std::atomic<T> a, T t) { a.fetch_sub(t); };
 
 template <class T>
 void test() {
-  // fetch_add
-  {
-    std::atomic<T> a(3.1);
-    std::same_as<T> decltype(auto) r = a.fetch_add(1.2);
-    assert(r == T(3.1));
-    assert(a.load() == T(3.1) + T(1.2));
-  }
+  static_assert(noexcept(std::declval<std::atomic<T>&>().fetch_sub(T(0))));
+  static_assert(HasVolatileFetchSub<T> == std::atomic<T>::is_always_lock_free);
 
   // fetch_sub
   {
     std::atomic<T> a(3.1);
-    std::same_as<T> decltype(auto) r = a.fetch_sub(1.2);
+    std::same_as<T> decltype(auto) r = a.fetch_sub(T(1.2));
     assert(r == T(3.1));
     assert(a.load() == T(3.1) - T(1.2));
+  }
+
+  // fetch_sub volatile
+  if constexpr (std::atomic<T>::is_always_lock_free) {
+    volatile std::atomic<T> a(3.1);
+    std::same_as<T> decltype(auto) r = a.fetch_sub(T(1.2));
+    assert(r == T(3.1));
+    assert(a.load() == T(3.1) - T(1.2));
+  }
+
+  // fetch_sub concurrent
+  {
+    constexpr auto number_of_threads = 4;
+    constexpr auto loop              = 1000;
+
+    std::atomic<T> at;
+
+    std::vector<std::thread> threads;
+    threads.reserve(number_of_threads);
+    for (auto i = 0; i < number_of_threads; ++i) {
+      threads.emplace_back([&at]() {
+        for (auto j = 0; j < loop; ++j) {
+          at.fetch_sub(T(1.234));
+        }
+      });
+    }
+
+    for (auto& thread : threads) {
+      thread.join();
+    }
+
+    const auto accu_neg = [](T t, int n) {
+      T res(0);
+      for (auto i = 0; i < n; ++i) {
+        res -= t;
+      }
+      return res;
+    };
+
+    assert(at.load() == accu_neg(1.234, number_of_threads * loop));
   }
 }
 

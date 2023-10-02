@@ -146,49 +146,43 @@ struct atomic<_Tp>
     : public __atomic_base<_Tp>
 {
   private:
-    // see lib/Sema/SemaChecking.cpp approx. line 6748, function IsAllowedValueType
-    // // LLVM Parser does not allow atomicrmw with x86_fp80 type.
-    //if (ValType->isSpecificBuiltinType(BuiltinType::LongDouble) &&
+    // The builtin __cxx_atomic_fetch_add does not work for
+    // long double on some platforms with fp80 type
+    // There is no way on the libc++ side to test whether it is
+    // ok to use the builtin for a certain type.
+    // Therefore, we do not use the builtin here
+    // For more details, see 
+    // lib/Sema/SemaChecking.cpp function IsAllowedValueType
+    // LLVM Parser does not allow atomicrmw with x86_fp80 type.
+    // if (ValType->isSpecificBuiltinType(BuiltinType::LongDouble) &&
     //    &Context.getTargetInfo().getLongDoubleFormat() ==
     //        &llvm::APFloat::x87DoubleExtended())
+    // For more info
+    // https://reviews.llvm.org/D53965
 
-    // this is platform dependent. How can we get the correct answer?
-    _LIBCPP_HIDE_FROM_ABI static constexpr bool __has_rmw_builtin = !std::is_same_v<_Tp, long double>;
-
-    template <class _This, class _BuiltinOp, class _Operation>
-    _LIBCPP_HIDE_FROM_ABI static _Tp __rmw_op(_This&& __self, _Tp __operand, memory_order __m, _BuiltinOp __builtin_op, _Operation __operation) {
-        if constexpr (__has_rmw_builtin) {
-            return __builtin_op(std::addressof(std::forward<_This>(__self).__a_), __operand, __m);
-        } else {
-            _Tp __old = __self.load(memory_order_relaxed);
-            _Tp __new = __operation(__old, __operand);
-            while(!__self.compare_exchange_weak(__old, __new, __m, memory_order_relaxed)) {
-                if constexpr (std::is_same_v<_Tp, long double>){
-                    // https://reviews.llvm.org/D53965
-                    // https://bugs.llvm.org/show_bug.cgi?id=48634
-                    // clang bug: __old is not updated on failure for atomic<long double>
-                    __old = __self.load(memory_order_relaxed);
-                }
-                __new = __operation(__old, __operand);
+    template <class _This, class _Operation>
+    _LIBCPP_HIDE_FROM_ABI static _Tp __rmw_op(_This&& __self, _Tp __operand, memory_order __m, _Operation __operation) {
+        _Tp __old = __self.load(memory_order_relaxed);
+        _Tp __new = __operation(__old, __operand);
+        while(!__self.compare_exchange_weak(__old, __new, __m, memory_order_relaxed)) {
+            if constexpr (std::is_same_v<_Tp, long double>){
+                // https://bugs.llvm.org/show_bug.cgi?id=48634
+                // clang bug: __old is not updated on failure for atomic<long double>
+                __old = __self.load(memory_order_relaxed);
             }
-            return __old;
+            __new = __operation(__old, __operand);
         }
+        return __old;
     }
 
     template <class _This>
     _LIBCPP_HIDE_FROM_ABI static _Tp __fetch_add(_This&& __self, _Tp __operand, memory_order __m) {
-        auto __builtin_op = [](auto __a, auto __operand, auto __order){
-            return std::__cxx_atomic_fetch_add(__a, __operand, __order);
-        };
-        return __rmw_op(std::forward<_This>(__self), __operand, __m, __builtin_op, std::plus<>{});
+        return __rmw_op(std::forward<_This>(__self), __operand, __m, std::plus<>{});
     }
 
     template <class _This>
     _LIBCPP_HIDE_FROM_ABI static _Tp __fetch_sub(_This&& __self, _Tp __operand, memory_order __m) {
-        auto __builtin_op = [](auto __a, auto __operand, auto __order){
-            return std::__cxx_atomic_fetch_sub(__a, __operand, __order);
-        };
-        return __rmw_op(std::forward<_This>(__self), __operand, __m, __builtin_op, std::minus<>{});
+        return __rmw_op(std::forward<_This>(__self), __operand, __m, std::minus<>{});
     }
 
   public:
