@@ -533,7 +533,10 @@ int targetDataBegin(ident_t *Loc, DeviceTy &Device, int32_t ArgNum,
     if ((ArgTypes[I] & OMP_TGT_MAPTYPE_LITERAL) ||
         (ArgTypes[I] & OMP_TGT_MAPTYPE_PRIVATE))
       continue;
-    TIMESCOPE_WITH_DETAILS_AND_IDENT("HostToDev","Size="+std::to_string(ArgSizes[I])+"B", Loc);
+    TIMESCOPE_WITH_DETAILS_AND_IDENT("HostToDev",
+                                     "Size="+
+                                     std::to_string(ArgSizes[I])+
+                                     "B", Loc);
     if (ArgMappers && ArgMappers[I]) {
       // Instead of executing the regular path of targetDataBegin, call the
       // targetDataMapper variant which will call targetDataBegin again
@@ -908,7 +911,8 @@ int targetDataEnd(ident_t *Loc, DeviceTy &Device, int32_t ArgNum,
         !TPR.Flags.IsHostPointer && DataSize != 0) {
       DP("Moving %" PRId64 " bytes (tgt:" DPxMOD ") -> (hst:" DPxMOD ")\n",
          DataSize, DPxPTR(TgtPtrBegin), DPxPTR(HstPtrBegin));
-        TIMESCOPE_WITH_DETAILS_AND_IDENT("DevToHost","Size="+std::to_string(DataSize)+"B", Loc);
+        TIMESCOPE_WITH_DETAILS_AND_IDENT("DevToHost","Size="+
+                                         std::to_string(DataSize)+"B", Loc);
       // Wait for any previous transfer if an event is present.
       if (void *Event = TPR.getEntry()->getEvent()) {
         if (Device.waitEvent(Event, AsyncInfo) != OFFLOAD_SUCCESS) {
@@ -1449,7 +1453,7 @@ static int processDataBefore(ident_t *Loc, int64_t DeviceId, void *HostPtr,
              "variable (" DPxMOD ")\n",
              DPxPTR(HstPtrVal));
           continue;
-        }     
+        }
         DP("Update lambda reference (" DPxMOD ") -> [" DPxMOD "]\n",
            DPxPTR(PointerTgtPtrBegin), DPxPTR(TgtPtrBegin));
         Ret =
@@ -1558,7 +1562,6 @@ static int processDataAfter(ident_t *Loc, int64_t DeviceId, void *HostPtr,
         return Ret;
       });
 
-  
   return OFFLOAD_SUCCESS;
 }
 } // namespace
@@ -1635,11 +1638,14 @@ int target(ident_t *Loc, DeviceTy &Device, void *HostPtr,
   {
     assert(KernelArgs.NumArgs == TgtArgs.size() && "Argument count mismatch!");
     TIMESCOPE_WITH_DETAILS_AND_IDENT("Kernel Target",
-                                    "NumArguments="+std::to_string(KernelArgs.NumArgs)
-                                    +";NumTeams="+std::to_string(KernelArgs.NumTeams[0])
-                                    +";TripCount="+std::to_string(KernelArgs.Tripcount)
-                                    , Loc);
-    
+                                     "NumArguments="+
+                                     std::to_string(KernelArgs.NumArgs)+
+                                     ";NumTeams="+
+                                     std::to_string(KernelArgs.NumTeams[0])+
+                                     ";TripCount="+
+                                     std::to_string(KernelArgs.Tripcount)
+                                     , Loc);
+
 #ifdef OMPT_SUPPORT
     assert(KernelArgs.NumTeams[1] == 0 && KernelArgs.NumTeams[2] == 0 &&
            "Multi dimensional launch not supported yet.");
