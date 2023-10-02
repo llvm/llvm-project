@@ -1402,6 +1402,9 @@ static void ARM64EmitUnwindInfo(MCStreamer &streamer, WinEH::FrameInfo *info,
     // here, but we'd have to emit the pdata, the xdata header, and the
     // epilogue scopes later, since they depend on whether the we need to
     // split the unwind data.
+    //
+    // If this is fixed, remove code in AArch64ISelLowering.cpp that
+    // disables loop alignment on Windows.
     RawFuncLength = GetAbsDifference(streamer, info->FuncletOrFuncEnd,
                                      info->Begin);
   }
