@@ -230,8 +230,6 @@ class DebugSHandler {
   void addFrameDataSubsection(SectionChunk *debugChunk,
                               const DebugSubsectionRecord &ss);
 
-  void recordStringTableReferences(CVSymbol sym, uint32_t symOffset);
-
 public:
   DebugSHandler(PDBLinker &linker, ObjFile &file, TpiSource *source)
       : linker(linker), file(file), source(source) {}
