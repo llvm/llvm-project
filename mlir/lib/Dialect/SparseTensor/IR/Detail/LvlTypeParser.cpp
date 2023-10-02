@@ -68,7 +68,7 @@ FailureOr<uint8_t> LvlTypeParser::parseLvlType(AsmParser &parser) const {
   } else if (base.compare("block2_4") == 0) {
     properties |= static_cast<uint8_t>(LevelFormat::TwoOutOfFour);
   } else if (base.compare("loose_compressed") == 0) {
-    properties |= static_cast<uint8_t>(LevelFormat::CompressedWithHi);
+    properties |= static_cast<uint8_t>(LevelFormat::LooseCompressed);
   } else if (base.compare("singleton") == 0) {
     properties |= static_cast<uint8_t>(LevelFormat::Singleton);
   } else {

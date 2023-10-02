@@ -114,10 +114,10 @@ SparseTensorEncodingAttr getSparseTensorEncoding(Type type);
 /// Convenience method to query whether a given DLT needs both position and
 /// coordinates array or only coordinates array.
 constexpr inline bool isDLTWithPos(DimLevelType dlt) {
-  return isCompressedWithHiDLT(dlt) || isCompressedDLT(dlt);
+  return isLooseCompressedDLT(dlt) || isCompressedDLT(dlt);
 }
 constexpr inline bool isDLTWithCrd(DimLevelType dlt) {
-  return isSingletonDLT(dlt) || isCompressedWithHiDLT(dlt) ||
+  return isSingletonDLT(dlt) || isLooseCompressedDLT(dlt) ||
          isCompressedDLT(dlt);
 }
 
