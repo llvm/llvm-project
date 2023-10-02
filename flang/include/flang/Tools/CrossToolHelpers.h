@@ -13,6 +13,7 @@
 #ifndef FORTRAN_TOOLS_CROSS_TOOL_HELPERS_H
 #define FORTRAN_TOOLS_CROSS_TOOL_HELPERS_H
 
+#include "flang/Frontend/CodeGenOptions.h"
 #include "flang/Frontend/LangOptions.h"
 #include <cstdint>
 
@@ -26,6 +27,15 @@ struct MLIRToLLVMPassPipelineConfig {
   explicit MLIRToLLVMPassPipelineConfig(llvm::OptimizationLevel level) {
     OptLevel = level;
   }
+  explicit MLIRToLLVMPassPipelineConfig(llvm::OptimizationLevel level,
+      const Fortran::frontend::CodeGenOptions &opts) {
+    OptLevel = level;
+    StackArrays = opts.StackArrays;
+    Underscoring = opts.Underscoring;
+    LoopVersioning = opts.LoopVersioning;
+    DebugInfo = opts.getDebugInfo();
+  }
+
   llvm::OptimizationLevel OptLevel; ///< optimisation level
   bool StackArrays = false; ///< convert memory allocations to alloca.
   bool Underscoring = true; ///< add underscores to function names.
