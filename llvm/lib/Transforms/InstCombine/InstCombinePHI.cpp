@@ -1452,9 +1452,11 @@ Instruction *InstCombinerImpl::visitPHINode(PHINode &PN) {
   // %p = phi [%v, BB] ...
   //      icmp eq, %p, 0
   // FIXME: To be simple, handle only integer type for now.
-  // Extend to 2 use of phi -> icmp and or(icmp)
-  bool AllUsesOfPhiEndsInCmp = false;
+  // Extend to 2 use of phi -> icmp and or(icmp). Putting a limit on number of
+  // uses as it turns a O(1) algorithm into a O(n) algorithm. And if we are
+  // doing it for each instruction it turns into O(n^2).
   if (PN.hasOneUse() || PN.hasNUses(2)) {
+    bool AllUsesOfPhiEndsInCmp = true;
     for (const auto *U : PN.users()) {
       auto *CmpInst = dyn_cast<ICmpInst>(U);
       if (!CmpInst) {
@@ -1463,34 +1465,31 @@ Instruction *InstCombinerImpl::visitPHINode(PHINode &PN) {
         if (U->hasOneUse() && match(U, m_Or(m_Specific(&PN), m_Value())))
           CmpInst = dyn_cast<ICmpInst>(U->user_back());
       }
-      if (CmpInst && isa<IntegerType>(PN.getType()) && CmpInst->isEquality() &&
-          match(CmpInst->getOperand(1), m_Zero()))
-        AllUsesOfPhiEndsInCmp = true;
-      else {
+      if (!CmpInst || !isa<IntegerType>(PN.getType()) ||
+          !CmpInst->isEquality() || !match(CmpInst->getOperand(1), m_Zero())) {
         AllUsesOfPhiEndsInCmp = false;
         break;
       }
     }
-  }
-
-  // All uses of PHI results in a compare with zero.
-  if (AllUsesOfPhiEndsInCmp) {
-    ConstantInt *NonZeroConst = nullptr;
-    bool MadeChange = false;
-    for (unsigned I = 0, E = PN.getNumIncomingValues(); I != E; ++I) {
-      Instruction *CtxI = PN.getIncomingBlock(I)->getTerminator();
-      Value *VA = PN.getIncomingValue(I);
-      if (isKnownNonZero(VA, DL, 0, &AC, CtxI, &DT)) {
-        if (!NonZeroConst)
-          NonZeroConst = getAnyNonZeroConstInt(PN);
-        if (NonZeroConst != VA) {
-          replaceOperand(PN, I, NonZeroConst);
-          MadeChange = true;
+    // All uses of PHI results in a compare with zero.
+    if (AllUsesOfPhiEndsInCmp) {
+      ConstantInt *NonZeroConst = nullptr;
+      bool MadeChange = false;
+      for (unsigned I = 0, E = PN.getNumIncomingValues(); I != E; ++I) {
+        Instruction *CtxI = PN.getIncomingBlock(I)->getTerminator();
+        Value *VA = PN.getIncomingValue(I);
+        if (isKnownNonZero(VA, DL, 0, &AC, CtxI, &DT)) {
+          if (!NonZeroConst)
+            NonZeroConst = getAnyNonZeroConstInt(PN);
+          if (NonZeroConst != VA) {
+            replaceOperand(PN, I, NonZeroConst);
+            MadeChange = true;
+          }
         }
       }
+      if (MadeChange)
+        return &PN;
     }
-    if (MadeChange)
-      return &PN;
   }
 
   // We sometimes end up with phi cycles that non-obviously end up being the

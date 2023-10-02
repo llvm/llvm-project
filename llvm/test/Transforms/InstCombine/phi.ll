@@ -1316,6 +1316,36 @@ if.end:                                           ; preds = %entry, %if.then
   ret i1  %cmp1
 }
 
+define i1 @phi_knownnonzero_ne_oricmp(i32 %n, i32 %s, ptr nocapture readonly %P, i32 %val) {
+; CHECK-LABEL: @phi_knownnonzero_ne_oricmp(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[TOBOOL:%.*]] = icmp slt i32 [[N:%.*]], [[S:%.*]]
+; CHECK-NEXT:    br i1 [[TOBOOL]], label [[IF_END:%.*]], label [[IF_THEN:%.*]]
+; CHECK:       if.then:
+; CHECK-NEXT:    br label [[IF_END]]
+; CHECK:       if.end:
+; CHECK-NEXT:    [[A_0:%.*]] = phi i32 [ 1, [[IF_THEN]] ], [ [[N]], [[ENTRY:%.*]] ]
+; CHECK-NEXT:    [[TMP0:%.*]] = or i32 [[A_0]], [[VAL:%.*]]
+; CHECK-NEXT:    [[CMP1:%.*]] = icmp ne i32 [[TMP0]], 0
+; CHECK-NEXT:    ret i1 [[CMP1]]
+;
+entry:
+  %tobool = icmp slt  i32 %n, %s
+  br i1 %tobool, label %if.end, label %if.then
+
+if.then:                                          ; preds = %entry
+  %0 = load i32, ptr %P
+  %cmp = icmp eq i32 %n, %0
+  %1 = select i1 %cmp, i32 1, i32 2
+  br label %if.end
+
+if.end:                                           ; preds = %entry, %if.then
+  %a.0 = phi i32 [ %1,  %if.then ], [ %n, %entry ]
+  %2 = or i32 %a.0, %val
+  %cmp1 = icmp ne i32 %2, 0
+  ret i1  %cmp1
+}
+
 define i1 @phi_knownnonzero_eq_multiuse_oricmp(i32 %n, i32 %s, ptr nocapture readonly %P, i32 %val) {
 ; CHECK-LABEL: @phi_knownnonzero_eq_multiuse_oricmp(
 ; CHECK-NEXT:  entry:
@@ -1353,6 +1383,50 @@ if.end:                                           ; preds = %entry, %if.then
 
 next:
   %bool2 = icmp eq i32 %a.0, 0
+  br label %cleanup
+
+cleanup:
+  %final =  phi i1 [ %cmp1,  %if.end ], [ %bool2, %next ]
+  ret i1  %final
+}
+
+define i1 @phi_knownnonzero_ne_multiuse_oricmp(i32 %n, i32 %s, ptr nocapture readonly %P, i32 %val) {
+; CHECK-LABEL: @phi_knownnonzero_ne_multiuse_oricmp(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[TOBOOL:%.*]] = icmp slt i32 [[N:%.*]], [[S:%.*]]
+; CHECK-NEXT:    br i1 [[TOBOOL]], label [[IF_END:%.*]], label [[IF_THEN:%.*]]
+; CHECK:       if.then:
+; CHECK-NEXT:    br label [[IF_END]]
+; CHECK:       if.end:
+; CHECK-NEXT:    [[A_0:%.*]] = phi i32 [ 1, [[IF_THEN]] ], [ [[N]], [[ENTRY:%.*]] ]
+; CHECK-NEXT:    [[TMP0:%.*]] = or i32 [[A_0]], [[VAL:%.*]]
+; CHECK-NEXT:    [[CMP1:%.*]] = icmp ne i32 [[TMP0]], 0
+; CHECK-NEXT:    br i1 [[CMP1]], label [[NEXT:%.*]], label [[CLEANUP:%.*]]
+; CHECK:       next:
+; CHECK-NEXT:    [[BOOL2:%.*]] = icmp ne i32 [[A_0]], 0
+; CHECK-NEXT:    br label [[CLEANUP]]
+; CHECK:       cleanup:
+; CHECK-NEXT:    [[FINAL:%.*]] = phi i1 [ [[CMP1]], [[IF_END]] ], [ [[BOOL2]], [[NEXT]] ]
+; CHECK-NEXT:    ret i1 [[FINAL]]
+;
+entry:
+  %tobool = icmp slt  i32 %n, %s
+  br i1 %tobool, label %if.end, label %if.then
+
+if.then:                                          ; preds = %entry
+  %0 = load i32, ptr %P
+  %cmp = icmp eq i32 %n, %0
+  %1 = select i1 %cmp, i32 1, i32 2
+  br label %if.end
+
+if.end:                                           ; preds = %entry, %if.then
+  %a.0 = phi i32 [ %1,  %if.then ], [ %n, %entry ]
+  %2 = or i32 %a.0, %val
+  %cmp1 = icmp ne i32 %2, 0
+  br i1 %cmp1, label %next, label %cleanup
+
+next:
+  %bool2 = icmp ne i32 %a.0, 0
   br label %cleanup
 
 cleanup:
@@ -1400,6 +1474,53 @@ if.end:                                           ; preds = %entry, %if.then
 
 next:
   %bool2 = icmp eq i32 %a.0, 0
+  br label %cleanup
+
+cleanup:
+  %final =  phi i1 [ %cmp1,  %if.end ], [ %bool2, %next ]
+  ret i1  %final
+}
+
+define i1 @phi_knownnonzero_ne_multiuse_andicmp(i32 %n, i32 %s, ptr nocapture readonly %P, i32 %val) {
+; CHECK-LABEL: @phi_knownnonzero_ne_multiuse_andicmp(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[TOBOOL:%.*]] = icmp slt i32 [[N:%.*]], [[S:%.*]]
+; CHECK-NEXT:    br i1 [[TOBOOL]], label [[IF_END:%.*]], label [[IF_THEN:%.*]]
+; CHECK:       if.then:
+; CHECK-NEXT:    [[TMP0:%.*]] = load i32, ptr [[P:%.*]], align 4
+; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i32 [[TMP0]], [[N]]
+; CHECK-NEXT:    [[TMP1:%.*]] = select i1 [[CMP]], i32 1, i32 2
+; CHECK-NEXT:    br label [[IF_END]]
+; CHECK:       if.end:
+; CHECK-NEXT:    [[A_0:%.*]] = phi i32 [ [[TMP1]], [[IF_THEN]] ], [ [[N]], [[ENTRY:%.*]] ]
+; CHECK-NEXT:    [[TMP2:%.*]] = and i32 [[A_0]], [[VAL:%.*]]
+; CHECK-NEXT:    [[CMP1:%.*]] = icmp ne i32 [[TMP2]], 0
+; CHECK-NEXT:    br i1 [[CMP1]], label [[NEXT:%.*]], label [[CLEANUP:%.*]]
+; CHECK:       next:
+; CHECK-NEXT:    [[BOOL2:%.*]] = icmp ne i32 [[A_0]], 0
+; CHECK-NEXT:    br label [[CLEANUP]]
+; CHECK:       cleanup:
+; CHECK-NEXT:    [[FINAL:%.*]] = phi i1 [ [[CMP1]], [[IF_END]] ], [ [[BOOL2]], [[NEXT]] ]
+; CHECK-NEXT:    ret i1 [[FINAL]]
+;
+entry:
+  %tobool = icmp slt  i32 %n, %s
+  br i1 %tobool, label %if.end, label %if.then
+
+if.then:                                          ; preds = %entry
+  %0 = load i32, ptr %P
+  %cmp = icmp eq i32 %n, %0
+  %1 = select i1 %cmp, i32 1, i32 2
+  br label %if.end
+
+if.end:                                           ; preds = %entry, %if.then
+  %a.0 = phi i32 [ %1,  %if.then ], [ %n, %entry ]
+  %2 = and i32 %a.0, %val
+  %cmp1 = icmp ne i32 %2, 0
+  br i1 %cmp1, label %next, label %cleanup
+
+next:
+  %bool2 = icmp ne i32 %a.0, 0
   br label %cleanup
 
 cleanup:
