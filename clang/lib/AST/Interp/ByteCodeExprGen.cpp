@@ -846,12 +846,11 @@ bool ByteCodeExprGen<Emitter>::VisitArrayInitLoopExpr(
 
 template <class Emitter>
 bool ByteCodeExprGen<Emitter>::VisitOpaqueValueExpr(const OpaqueValueExpr *E) {
-  if(OpaqueExprs.contains(E))
+  if (OpaqueExprs.contains(E))
     return this->emitGetLocal(*classify(E), OpaqueExprs[E], E);
 
   if (Initializing)
     return this->visitInitializer(E->getSourceExpr());
-  
   return this->visit(E->getSourceExpr());
 }
 

@@ -485,19 +485,21 @@ template <class Emitter> class StoredOpaqueValueScope final {
 public:
   StoredOpaqueValueScope(ByteCodeExprGen<Emitter> *Ctx) : Ctx(Ctx) {}
 
-  bool VisitAndStoreOpaqueValue(const OpaqueValueExpr* Ove) {
+  bool VisitAndStoreOpaqueValue(const OpaqueValueExpr *Ove) {
     assert(Ove && "OpaqueValueExpr is a nullptr!");
-    assert(!Ctx->OpaqueExprs.contains(Ove) && "OpaqueValueExpr already stored!");
+    assert(!Ctx->OpaqueExprs.contains(Ove) &&
+           "OpaqueValueExpr already stored!");
 
     std::optional<PrimType> CommonTy = Ctx->classify(Ove);
-    std::optional<unsigned> LocalIndex = Ctx->allocateLocalPrimitive(Ove, *CommonTy, Ove->getType().isConstQualified());
+    std::optional<unsigned> LocalIndex = Ctx->allocateLocalPrimitive(
+        Ove, *CommonTy, Ove->getType().isConstQualified());
     if (!LocalIndex)
       return false;
 
     if (!Ctx->visit(Ove))
       return false;
 
-    if(!Ctx->emitSetLocal(*CommonTy, *LocalIndex, Ove))
+    if (!Ctx->emitSetLocal(*CommonTy, *LocalIndex, Ove))
       return false;
 
     Ctx->OpaqueExprs.insert({Ove, *LocalIndex});
@@ -507,13 +509,13 @@ public:
   }
 
   ~StoredOpaqueValueScope() {
-    for(const auto *SV : StoredValues)
+    for (const auto *SV : StoredValues)
       Ctx->OpaqueExprs.erase(SV);
   }
 
 private:
   ByteCodeExprGen<Emitter> *Ctx;
-  std::vector<const OpaqueValueExpr*> StoredValues;
+  std::vector<const OpaqueValueExpr *> StoredValues;
 };
 
 } // namespace interp
