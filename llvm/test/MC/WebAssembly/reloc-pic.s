@@ -213,7 +213,7 @@ REF-.tabletype mytable, externref
 # REF:              - Index:           10
 # REF-NEXT:           Kind:            TABLE
 # REF-NEXT:           Name:            mytable
-# REF-NEXT:           Flags:           [ UNDEFINED ]
+# REF-NEXT:           Flags:           [ BINDING_LOCAL ]
 # REF-NEXT:           Table:           1
 # REF-NEXT:         - Index:           11
 # REF-NEXT:           Kind:            TABLE
