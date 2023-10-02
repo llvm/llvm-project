@@ -10,19 +10,24 @@
 // This pass inserts the necessary  instructions to adjust for the inconsistency
 // of the call-frame information caused by final machine basic block layout.
 // The pass relies in constraints LLVM imposes on the placement of
-// save/restore points (cf. ShrinkWrap):
-// * there is a single basic block, containing the function prologue
+// save/restore points (cf. ShrinkWrap) and has certain preconditions about
+// placement of CFI instructions:
+// * for any two CFI instructions of the function prologue one dominates
+//   and is post-dominated by the other
 // * possibly multiple epilogue blocks, where each epilogue block is
 //   complete and self-contained, i.e. CSR restore instructions (and the
 //   corresponding CFI instructions are not split across two or more blocks.
-// * prologue and epilogue blocks are outside of any loops
-// Thus, during execution, at the beginning and at the end of each basic block
-// the function can be in one of two states:
+// * CFI instructions are not contained in any loops
+// Thus, during execution, at the beginning and at the end of each basic block,
+// following the prologue, the function can be in one of two states:
 //  - "has a call frame", if the function has executed the prologue, and
 //    has not executed any epilogue
 //  - "does not have a call frame", if the function has not executed the
 //    prologue, or has executed an epilogue
 // which can be computed by a single RPO traversal.
+
+// The location of the prologue is determined by finding the first block in the
+// post-order traversal which contains CFI instructions.
 
 // In order to accommodate backends which do not generate unwind info in
 // epilogues we compute an additional property "strong no call frame on entry",
@@ -85,15 +90,30 @@ static bool isPrologueCFIInstruction(const MachineInstr &MI) {
          MI.getFlag(MachineInstr::FrameSetup);
 }
 
-static bool containsPrologue(const MachineBasicBlock &MBB) {
-  return llvm::any_of(MBB.instrs(), isPrologueCFIInstruction);
-}
-
 static bool containsEpilogue(const MachineBasicBlock &MBB) {
   return llvm::any_of(llvm::reverse(MBB), [](const auto &MI) {
     return MI.getOpcode() == TargetOpcode::CFI_INSTRUCTION &&
            MI.getFlag(MachineInstr::FrameDestroy);
   });
+}
+
+static MachineBasicBlock *
+findPrologueEnd(MachineFunction &MF, MachineBasicBlock::iterator &PrologueEnd) {
+  MachineBasicBlock *PrologueBlock = nullptr;
+  for (auto It = po_begin(&MF.front()), End = po_end(&MF.front()); It != End;
+       ++It) {
+    MachineBasicBlock *MBB = *It;
+    llvm::for_each(MBB->instrs(), [&](MachineInstr &MI) {
+      if (isPrologueCFIInstruction(MI)) {
+        PrologueBlock = MBB;
+        PrologueEnd = std::next(MI.getIterator());
+      }
+    });
+    if (PrologueBlock)
+      return PrologueBlock;
+  }
+
+  return nullptr;
 }
 
 bool CFIFixup::runOnMachineFunction(MachineFunction &MF) {
@@ -103,6 +123,14 @@ bool CFIFixup::runOnMachineFunction(MachineFunction &MF) {
 
   const unsigned NumBlocks = MF.getNumBlockIDs();
   if (NumBlocks < 2)
+    return false;
+
+  // Find the prologue and the point where we can issue the first
+  // `.cfi_remember_state`.
+
+  MachineBasicBlock::iterator PrologueEnd;
+  MachineBasicBlock *PrologueBlock = findPrologueEnd(MF, PrologueEnd);
+  if (PrologueBlock == nullptr)
     return false;
 
   struct BlockFlags {
@@ -116,20 +144,14 @@ bool CFIFixup::runOnMachineFunction(MachineFunction &MF) {
   BlockInfo[0].StrongNoFrameOnEntry = true;
 
   // Compute the presence/absence of frame at each basic block.
-  MachineBasicBlock *PrologueBlock = nullptr;
   ReversePostOrderTraversal<MachineBasicBlock *> RPOT(&*MF.begin());
   for (MachineBasicBlock *MBB : RPOT) {
     BlockFlags &Info = BlockInfo[MBB->getNumber()];
 
     // Set to true if the current block contains the prologue or the epilogue,
     // respectively.
-    bool HasPrologue = false;
+    bool HasPrologue = MBB == PrologueBlock;
     bool HasEpilogue = false;
-
-    if (!PrologueBlock && !Info.HasFrameOnEntry && containsPrologue(*MBB)) {
-      PrologueBlock = MBB;
-      HasPrologue = true;
-    }
 
     if (Info.HasFrameOnEntry || HasPrologue)
       HasEpilogue = containsEpilogue(*MBB);
@@ -149,9 +171,6 @@ bool CFIFixup::runOnMachineFunction(MachineFunction &MF) {
     }
   }
 
-  if (!PrologueBlock)
-    return false;
-
   // Walk the blocks of the function in "physical" order.
   // Every block inherits the frame state (as recorded in the unwind tables)
   // of the previous block. If the intended frame state is different, insert
@@ -162,10 +181,7 @@ bool CFIFixup::runOnMachineFunction(MachineFunction &MF) {
   // insert a `.cfi_remember_state`, in the case that the current block needs a
   // `.cfi_restore_state`.
   MachineBasicBlock *InsertMBB = PrologueBlock;
-  MachineBasicBlock::iterator InsertPt = PrologueBlock->begin();
-  for (MachineInstr &MI : *PrologueBlock)
-    if (isPrologueCFIInstruction(MI))
-      InsertPt = std::next(MI.getIterator());
+  MachineBasicBlock::iterator InsertPt = PrologueEnd;
 
   assert(InsertPt != PrologueBlock->begin() &&
          "Inconsistent notion of \"prologue block\"");
