@@ -1364,7 +1364,7 @@ void VarLocBasedLDV::removeEntryValue(const MachineInstr &MI,
     // TODO: Try to keep tracking of an entry value if we encounter a propagated
     // DBG_VALUE describing the copy of the entry value. (Propagated entry value
     // does not indicate the parameter modification.)
-    auto DestSrc = TII->isCopyInstr(*TransferInst, false);
+    auto DestSrc = TII->isCopyInstr(*TransferInst);
     if (DestSrc) {
       const MachineOperand *SrcRegOp, *DestRegOp;
       SrcRegOp = DestSrc->Source;
@@ -1840,7 +1840,7 @@ void VarLocBasedLDV::transferRegisterCopy(MachineInstr &MI,
                                            OpenRangesSet &OpenRanges,
                                            VarLocMap &VarLocIDs,
                                            TransferMap &Transfers) {
-  auto DestSrc = TII->isCopyInstr(MI, false);
+  auto DestSrc = TII->isCopyInstr(MI);
   if (!DestSrc)
     return;
 

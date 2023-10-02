@@ -9176,7 +9176,7 @@ static std::optional<ParamLoadedValue>
 describeORRLoadedValue(const MachineInstr &MI, Register DescribedReg,
                        const TargetInstrInfo *TII,
                        const TargetRegisterInfo *TRI) {
-  auto DestSrc = TII->isCopyInstr(MI, false);
+  auto DestSrc = TII->isCopyInstr(MI);
   if (!DestSrc)
     return std::nullopt;
 
