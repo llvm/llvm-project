@@ -1852,6 +1852,17 @@ void LinkerDriver::linkerMain(ArrayRef<const char *> argsArr) {
   if (args.hasArg(OPT_lldsavetemps))
     config->saveTemps = true;
 
+  // Handle /lldemit
+  if (auto *arg = args.getLastArg(OPT_lldemit)) {
+    StringRef s = arg->getValue();
+    if (s == "obj")
+      config->emit = EmitKind::Obj;
+    else if (s == "llvm")
+      config->emit = EmitKind::LLVM;
+    else
+      error("/lldemit: unknown option: " + s);
+  }
+
   // Handle /kill-at
   if (args.hasArg(OPT_kill_at))
     config->killAt = true;
@@ -2395,7 +2406,8 @@ void LinkerDriver::linkerMain(ArrayRef<const char *> argsArr) {
   // If -thinlto-index-only is given, we should create only "index
   // files" and not object files. Index file creation is already done
   // in addCombinedLTOObject, so we are done if that's the case.
-  if (config->thinLTOIndexOnly)
+  // Likewise, don't emit object files for other /lldemit options.
+  if (config->emit != EmitKind::Obj || config->thinLTOIndexOnly)
     return;
 
   // If we generated native object files from bitcode files, this resolves
