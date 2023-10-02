@@ -1639,21 +1639,6 @@ void AArch64FrameLowering::emitPrologue(MachineFunction &MF,
       assert(Prolog->getOpcode() == AArch64::HOM_Prolog);
       Prolog->addOperand(MachineOperand::CreateImm(FPOffset));
     } else {
-      // Before we update the live FP we have to ensure there's a valid (or
-      // null) asynchronous context in its slot just before FP in the frame
-      // record, so store it now.
-      if (AFI->hasSwiftAsyncContext()) {
-        const auto &Attrs = MF.getFunction().getAttributes();
-        bool HaveInitialContext = Attrs.hasAttrSomewhere(Attribute::SwiftAsync);
-        if (HaveInitialContext)
-          MBB.addLiveIn(AArch64::X22);
-        BuildMI(MBB, MBBI, DL, TII->get(AArch64::StoreSwiftAsyncContext))
-            .addUse(HaveInitialContext ? AArch64::X22 : AArch64::XZR)
-            .addUse(AArch64::SP)
-            .addImm(FPOffset - 8)
-            .setMIFlags(MachineInstr::FrameSetup);
-      }
-
       // Issue    sub fp, sp, FPOffset or
       //          mov fp,sp          when FPOffset is zero.
       // Note: All stores of callee-saved registers are marked as "FrameSetup".
