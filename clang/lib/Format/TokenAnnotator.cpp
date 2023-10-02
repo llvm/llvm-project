@@ -4709,7 +4709,9 @@ bool TokenAnnotator::spaceRequiredBefore(const AnnotatedLine &Line,
   if (Line.Type == LT_ObjCMethodDecl) {
     if (Left.is(TT_ObjCMethodSpecifier))
       return true;
-    if (Left.is(tok::r_paren) && canBeObjCSelectorComponent(Right)) {
+    // Apply this logic for parens that are not function attribute macros.
+    if (Left.is(tok::r_paren) && Left.isNot(TT_AttributeRParen) &&
+        canBeObjCSelectorComponent(Right)) {
       // Don't space between ')' and <id> or ')' and 'new'. 'new' is not a
       // keyword in Objective-C, and '+ (instancetype)new;' is a standard class
       // method declaration.
@@ -5222,8 +5224,10 @@ bool TokenAnnotator::mustBreakBefore(const AnnotatedLine &Line,
   }
 
   // Ensure wrapping after __attribute__((XX)) and @interface etc.
-  if (Left.is(TT_AttributeRParen) && Right.is(TT_ObjCDecl))
+  if (Left.isOneOf(TT_AttributeRParen, TT_AttributeMacro) &&
+      Right.is(TT_ObjCDecl)) {
     return true;
+  }
 
   if (Left.is(TT_LambdaLBrace)) {
     if (IsFunctionArgument(Left) &&
