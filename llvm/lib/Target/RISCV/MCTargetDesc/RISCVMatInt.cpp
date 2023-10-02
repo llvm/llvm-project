@@ -438,6 +438,39 @@ InstSeq generateInstSeq(int64_t Val, const FeatureBitset &ActiveFeatures) {
   return Res;
 }
 
+InstSeq generateTwoRegInstSeq(int64_t Val, const FeatureBitset &ActiveFeatures,
+                              unsigned &ShiftAmt, unsigned &AddOpc) {
+  int64_t LoVal = SignExtend64<32>(Val);
+  if (LoVal == 0)
+    return RISCVMatInt::InstSeq();
+
+  // Subtract the LoVal to emulate the effect of the final ADD.
+  uint64_t Tmp = (uint64_t)Val - (uint64_t)LoVal;
+  assert(Tmp != 0);
+
+  // Use trailing zero counts to figure how far we need to shift LoVal to line
+  // up with the remaining constant.
+  // TODO: This algorithm assumes all non-zero bits in the low 32 bits of the
+  // final constant come from LoVal.
+  unsigned TzLo = llvm::countr_zero((uint64_t)LoVal);
+  unsigned TzHi = llvm::countr_zero(Tmp);
+  assert(TzLo < 32 && TzHi >= 32);
+  ShiftAmt = TzHi - TzLo;
+  AddOpc = RISCV::ADD;
+
+  if (Tmp == ((uint64_t)LoVal << ShiftAmt))
+    return RISCVMatInt::generateInstSeq(LoVal, ActiveFeatures);
+
+  // If we have Zba, we can use (ADD_UW X, (SLLI X, 32)).
+  if (ActiveFeatures[RISCV::FeatureStdExtZba] && Lo_32(Val) == Hi_32(Val)) {
+    ShiftAmt = 32;
+    AddOpc = RISCV::ADD_UW;
+    return RISCVMatInt::generateInstSeq(LoVal, ActiveFeatures);
+  }
+
+  return RISCVMatInt::InstSeq();
+}
+
 int getIntMatCost(const APInt &Val, unsigned Size,
                   const FeatureBitset &ActiveFeatures, bool CompressionCost) {
   bool IsRV64 = ActiveFeatures[RISCV::Feature64Bit];
