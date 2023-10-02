@@ -273,7 +273,7 @@ int RISCVLoadFPImm::getLoadFPImm(APFloat FPImm) {
   if (Sign) {
     if (Entry == 16)
       return 0;
-    return false;
+    return -1;
   }
 
   return Entry;
