@@ -328,6 +328,10 @@ extern cl::opt<PGOViewCountsType> PGOViewCounts;
 extern cl::opt<std::string> ViewBlockFreqFuncName;
 
 extern cl::opt<bool> DebugInfoCorrelate;
+
+// Command line option to enable vtable value profiling. Defined in
+// ProfileData/InstrProf.cpp: -enable-vtable-value-profiling=
+extern cl::opt<bool> EnableVTableValueProfiling;
 } // namespace llvm
 
 static cl::opt<bool>
@@ -585,7 +589,9 @@ public:
       NumOfPGOMemIntrinsics += ValueSites[IPVK_MemOPSize].size();
       NumOfPGOBB += MST.BBInfos.size();
       ValueSites[IPVK_IndirectCallTarget] = VPC.get(IPVK_IndirectCallTarget);
-      ValueSites[IPVK_VTableTarget] = VPC.get(IPVK_VTableTarget);
+      if (EnableVTableValueProfiling) {
+        ValueSites[IPVK_VTableTarget] = VPC.get(IPVK_VTableTarget);
+      }
     } else {
       NumOfCSPGOSelectInsts += SIVisitor.getNumOfSelectInsts();
       NumOfCSPGOMemIntrinsics += ValueSites[IPVK_MemOPSize].size();

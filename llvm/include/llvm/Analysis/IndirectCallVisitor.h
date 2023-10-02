@@ -17,15 +17,20 @@
 #include <vector>
 
 namespace llvm {
-// Visitor class that finds all indirect call.
+// Visitor class that finds indirect calls or instructions that gives vtable
+// value, depending on Type.
 struct PGOIndirectCallVisitor : public InstVisitor<PGOIndirectCallVisitor> {
+  enum class InstructionType {
+    kIndirectCall = 0,
+    kVTableVal = 1,
+  };
   std::vector<CallBase *> IndirectCalls;
   SetVector<Instruction *, std::vector<Instruction *>> VTableAddrs;
-  PGOIndirectCallVisitor() = default;
+  PGOIndirectCallVisitor(InstructionType Type) : Type(Type) {}
 
   void visitCallBase(CallBase &Call) {
     const CallInst *CI = dyn_cast<CallInst>(&Call);
-    if (CI && CI->getCalledFunction()) {
+    if (Type == InstructionType::kVTableVal && CI && CI->getCalledFunction()) {
       switch (CI->getCalledFunction()->getIntrinsicID()) {
       case Intrinsic::type_test:
       case Intrinsic::public_type_test:
@@ -52,17 +57,20 @@ struct PGOIndirectCallVisitor : public InstVisitor<PGOIndirectCallVisitor> {
     }
       if (Call.isIndirectCall()) {
         IndirectCalls.push_back(&Call);
-        LoadInst *LI = dyn_cast<LoadInst>(Call.getCalledOperand());
-        if (LI != nullptr) {
-          Value *MaybeVTablePtr =
-              LI->getPointerOperand()->stripInBoundsConstantOffsets();
-          Instruction *VTableInstr = dyn_cast<Instruction>(MaybeVTablePtr);
-          // If not used by any type intrinsic, this is not a vtable.
-          // Inst visitor should see the very first type intrinsic using a
-          // vtable before the very first virtual function load from this
-          // vtable. This condition is asserted above.
-          if (VTableInstr && PtrTestedByTypeIntrinsics.count(MaybeVTablePtr)) {
-            VTableAddrs.insert(VTableInstr);
+        if (Type == InstructionType::kVTableVal) {
+          LoadInst *LI = dyn_cast<LoadInst>(Call.getCalledOperand());
+          if (LI != nullptr) {
+            Value *MaybeVTablePtr =
+                LI->getPointerOperand()->stripInBoundsConstantOffsets();
+            Instruction *VTableInstr = dyn_cast<Instruction>(MaybeVTablePtr);
+            // If not used by any type intrinsic, this is not a vtable.
+            // Inst visitor should see the very first type intrinsic using a
+            // vtable before the very first virtual function load from this
+            // vtable. This condition is asserted above.
+            if (VTableInstr &&
+                PtrTestedByTypeIntrinsics.count(MaybeVTablePtr)) {
+              VTableAddrs.insert(VTableInstr);
+            }
           }
         }
       }
@@ -72,16 +80,19 @@ private:
   // Keeps track of the pointers that are tested by llvm type intrinsics for
   // look up.
   SmallPtrSet<Value *, 4> PtrTestedByTypeIntrinsics;
+  InstructionType Type;
 };
 
 inline std::vector<CallBase *> findIndirectCalls(Function &F) {
-  PGOIndirectCallVisitor ICV;
+  PGOIndirectCallVisitor ICV(
+      PGOIndirectCallVisitor::InstructionType::kIndirectCall);
   ICV.visit(F);
   return ICV.IndirectCalls;
 }
 
 inline std::vector<Instruction *> findVTableAddrs(Function &F) {
-  PGOIndirectCallVisitor ICV;
+  PGOIndirectCallVisitor ICV(
+      PGOIndirectCallVisitor::InstructionType::kVTableVal);
   ICV.visit(F);
   return ICV.VTableAddrs.takeVector();
 }

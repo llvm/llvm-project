@@ -215,6 +215,13 @@ cl::opt<bool> DoInstrProfNameCompression(
     "enable-name-compression",
     cl::desc("Enable name/filename string compression"), cl::init(true));
 
+cl::opt<bool> EnableVTableValueProfiling(
+    "enable-vtable-value-profiling", cl::init(true),
+    cl::desc("If true, the virtual table address will be instrumented to know "
+             "the types of a C++ pointer. The information could be used in "
+             "indirect-call-promotion to do selective vtable-based comparison "
+             "and interprocedural type propagation."));
+
 std::string getInstrProfSectionName(InstrProfSectKind IPSK,
                                     Triple::ObjectFormatType OF,
                                     bool AddSegmentInfo) {
@@ -487,16 +494,18 @@ Error InstrProfSymtab::addFuncWithName(Function &F, StringRef PGOFuncName) {
 
 uint64_t InstrProfSymtab::getVTableHashFromAddress(uint64_t Address) {
   finalizeSymtab();
-  auto It =
-      partition_point(VTableAddrToMD5Map, [=](std::pair<uint64_t, uint64_t> A) {
-        return A.first < Address;
-      });
+  auto It = lower_bound(
+      VTableAddrRangeToMD5Map, Address,
+      [](std::pair<std::pair<uint64_t, uint64_t>, uint64_t> VTableRangeAddr,
+         uint64_t Addr) { return VTableRangeAddr.first.second < Addr; });
+
+  // Returns the MD5 hash if Address is within the address range of an entry.
+  if (It != VTableAddrRangeToMD5Map.end() && It->first.first <= Address) {
+    return It->second;
+  }
   // The virtual table address collected from value profiler could be defined
   // in another module that is not instrumented. Force the value to be 0 in
   // this case.
-  if (It != VTableAddrToMD5Map.end()) {
-    return It->second;
-  }
   return 0;
 }
 

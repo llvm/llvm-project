@@ -437,6 +437,8 @@ uint64_t ComputeHash(StringRef K);
 class InstrProfSymtab {
 public:
   using AddrHashMap = std::vector<std::pair<uint64_t, uint64_t>>;
+  using RangeHashMap =
+      std::vector<std::pair<std::pair<uint64_t, uint64_t>, uint64_t>>;
 
 private:
   StringRef Data;
@@ -464,7 +466,7 @@ private:
   // This map is only populated and used by raw instr profile reader.
   // This is a different map from 'AddrToMD5Map' for readability and
   // debuggability.
-  AddrHashMap VTableAddrToMD5Map;
+  RangeHashMap VTableAddrRangeToMD5Map;
   bool Sorted = false;
 
   static StringRef getExternalSymbol() {
@@ -562,11 +564,11 @@ public:
     AddrToMD5Map.push_back(std::make_pair(Addr, MD5Val));
   }
 
-  // Map the start and end address of a variable to its names' MD5 hash.
-  // This interface is only used by the raw profile header.
+  // Map the address range (i.e., [start_address, end_address]) of a variable to
+  // its names' MD5 hash. This interface is only used by the raw profile header.
   void mapVTableAddress(uint64_t StartAddr, uint64_t EndAddr, uint64_t MD5Val) {
-    VTableAddrToMD5Map.push_back(std::make_pair(StartAddr, MD5Val));
-    VTableAddrToMD5Map.push_back(std::make_pair(EndAddr, MD5Val));
+    VTableAddrRangeToMD5Map.push_back(
+        std::make_pair(std::make_pair(StartAddr, EndAddr), MD5Val));
   }
 
   /// Return a function's hash, or 0, if the function isn't in this SymTab.
