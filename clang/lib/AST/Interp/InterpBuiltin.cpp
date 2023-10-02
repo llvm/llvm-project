@@ -398,6 +398,16 @@ static bool interp__builtin_fabs(InterpState &S, CodePtr OpPC,
   return true;
 }
 
+static bool interp__builtin_popcount(InterpState &S, CodePtr OpPC,
+                                     const InterpFrame *Frame,
+                                     const Function *Func,
+                                     const CallExpr *Call) {
+  PrimType ArgT = *S.getContext().classify(Call->getArg(0)->getType());
+  APSInt Val = peekToAPSInt(S.Stk, ArgT);
+  pushInt(S, Val.popcount());
+  return true;
+}
+
 bool InterpretBuiltin(InterpState &S, CodePtr OpPC, const Function *F,
                       const CallExpr *Call) {
   InterpFrame *Frame = S.Current;
@@ -511,6 +521,16 @@ bool InterpretBuiltin(InterpState &S, CodePtr OpPC, const Function *F,
   case Builtin::BI__builtin_fabsf128:
     if (interp__builtin_fabs(S, OpPC, Frame, F))
       return Ret<PT_Float>(S, OpPC, Dummy);
+    break;
+
+  case Builtin::BI__builtin_popcount:
+  case Builtin::BI__builtin_popcountl:
+  case Builtin::BI__builtin_popcountll:
+  case Builtin::BI__popcnt16: // Microsoft variants of popcount
+  case Builtin::BI__popcnt:
+  case Builtin::BI__popcnt64:
+    if (interp__builtin_popcount(S, OpPC, Frame, F, Call))
+      return retInt(S, OpPC, Dummy);
     break;
 
   default:
