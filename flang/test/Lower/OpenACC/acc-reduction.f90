@@ -274,7 +274,7 @@
 ! CHECK:   acc.yield %[[ARG0]] : !fir.ref<f32>
 ! CHECK: }
 
-! CHECK-LABEL: acc.reduction.recipe @reduction_max_section_ext100ext10x_ref_100x10xi32 : !fir.ref<!fir.array<100x10xi32>> reduction_operator <max> init {
+! CHECK-LABEL: acc.reduction.recipe @reduction_max_section_ext100xext10_ref_100x10xi32 : !fir.ref<!fir.array<100x10xi32>> reduction_operator <max> init {
 ! CHECK: ^bb0(%arg0: !fir.ref<!fir.array<100x10xi32>>):
 ! CHECK:   %[[INIT:.*]] = arith.constant -2147483648 : i32
 ! CHECK:   %[[ALLOCA:.*]] = fir.alloca !fir.array<100x10xi32>
@@ -320,7 +320,7 @@
 ! CHECK:   acc.yield %[[ARG0]] : !fir.ref<i32>
 ! CHECK: }
 
-! CHECK-LABEL: acc.reduction.recipe @reduction_min_section_ext100ext10x_ref_100x10xf32 : !fir.ref<!fir.array<100x10xf32>> reduction_operator <min> init {
+! CHECK-LABEL: acc.reduction.recipe @reduction_min_section_ext100xext10_ref_100x10xf32 : !fir.ref<!fir.array<100x10xf32>> reduction_operator <min> init {
 ! CHECK: ^bb0(%{{.*}}: !fir.ref<!fir.array<100x10xf32>>):
 ! CHECK:   %[[INIT:.*]] = arith.constant 3.40282347E+38 : f32
 ! CHECK:   %[[ALLOCA:.*]] = fir.alloca !fir.array<100x10xf32>
@@ -501,7 +501,7 @@
 ! CHECK:   acc.yield %[[ARG0]] : !fir.ref<f32>
 ! CHECK: }
 
-! CHECK-LABEL: acc.reduction.recipe @reduction_add_section_ext100ext10xext2x_ref_100x10x2xi32 : !fir.ref<!fir.array<100x10x2xi32>> reduction_operator <add> init {
+! CHECK-LABEL: acc.reduction.recipe @reduction_add_section_ext100xext10xext2_ref_100x10x2xi32 : !fir.ref<!fir.array<100x10x2xi32>> reduction_operator <add> init {
 ! CHECK: ^bb0(%{{.*}}: !fir.ref<!fir.array<100x10x2xi32>>):
 ! CHECK:   %[[INIT:.*]] = arith.constant 0 : i32
 ! CHECK:   %[[ALLOCA:.*]] = fir.alloca !fir.array<100x10x2xi32>
@@ -534,7 +534,7 @@
 ! CHECK:   acc.yield %[[ARG0]] : !fir.ref<!fir.array<100x10x2xi32>>
 ! CHECK: }
 
-! CHECK-LABEL: acc.reduction.recipe @reduction_add_section_ext100ext10x_ref_100x10xi32 : !fir.ref<!fir.array<100x10xi32>> reduction_operator <add> init {
+! CHECK-LABEL: acc.reduction.recipe @reduction_add_section_ext100xext10_ref_100x10xi32 : !fir.ref<!fir.array<100x10xi32>> reduction_operator <add> init {
 ! CHECK: ^bb0(%{{.*}}: !fir.ref<!fir.array<100x10xi32>>):
 ! CHECK:   %[[INIT:.*]] = arith.constant 0 : i32
 ! CHECK:   %[[ALLOCA:.*]] = fir.alloca !fir.array<100x10xi32>
@@ -652,7 +652,7 @@ end subroutine
 ! HLFIR:       %[[DECLARG1:.*]]:2 = hlfir.declare %[[ARG1]]
 ! FIR:         %[[RED_ARG1:.*]] = acc.reduction varPtr(%[[ARG1]] : !fir.ref<!fir.array<100x10xi32>>) bounds(%{{.*}}, %{{.*}}) -> !fir.ref<!fir.array<100x10xi32>> {name = "b"}
 ! HLFIR:       %[[RED_ARG1:.*]] = acc.reduction varPtr(%[[DECLARG1]]#1 : !fir.ref<!fir.array<100x10xi32>>) bounds(%{{.*}}, %{{.*}}) -> !fir.ref<!fir.array<100x10xi32>> {name = "b"}
-! CHECK:       acc.loop reduction(@reduction_add_section_ext100ext10x_ref_100x10xi32 -> %[[RED_ARG1]] : !fir.ref<!fir.array<100x10xi32>>) {
+! CHECK:       acc.loop reduction(@reduction_add_section_ext100xext10_ref_100x10xi32 -> %[[RED_ARG1]] : !fir.ref<!fir.array<100x10xi32>>) {
 ! CHECK: } attributes {collapse = 2 : i64}
 
 subroutine acc_reduction_add_int_array_3d(a, b)
@@ -674,7 +674,7 @@ end subroutine
 ! HLFIR: %[[DECLARG1:.*]]:2 = hlfir.declare %[[ARG1]]
 ! FIR:   %[[RED_ARG1:.*]] = acc.reduction varPtr(%[[ARG1]] : !fir.ref<!fir.array<100x10x2xi32>>) bounds(%{{.*}}, %{{.*}}, %{{.*}}) -> !fir.ref<!fir.array<100x10x2xi32>> {name = "b"}
 ! HLFIR: %[[RED_ARG1:.*]] = acc.reduction varPtr(%[[DECLARG1]]#1 : !fir.ref<!fir.array<100x10x2xi32>>) bounds(%{{.*}}, %{{.*}}, %{{.*}}) -> !fir.ref<!fir.array<100x10x2xi32>> {name = "b"}
-! CHECK: acc.loop reduction(@reduction_add_section_ext100ext10xext2x_ref_100x10x2xi32 -> %[[RED_ARG1]] : !fir.ref<!fir.array<100x10x2xi32>>)
+! CHECK: acc.loop reduction(@reduction_add_section_ext100xext10xext2_ref_100x10x2xi32 -> %[[RED_ARG1]] : !fir.ref<!fir.array<100x10x2xi32>>)
 ! CHECK: } attributes {collapse = 3 : i64}
 
 subroutine acc_reduction_add_float(a, b)
@@ -847,7 +847,7 @@ end subroutine
 ! HLFIR: %[[DECLARG1:.*]]:2 = hlfir.declare %[[ARG1]]
 ! FIR:   %[[RED_ARG1:.*]] = acc.reduction varPtr(%[[ARG1]] : !fir.ref<!fir.array<100x10xf32>>) bounds(%3, %5) -> !fir.ref<!fir.array<100x10xf32>> {name = "b"}
 ! HLFIR: %[[RED_ARG1:.*]] = acc.reduction varPtr(%[[DECLARG1]]#1 : !fir.ref<!fir.array<100x10xf32>>) bounds(%{{.*}}, %{{.*}}) -> !fir.ref<!fir.array<100x10xf32>> {name = "b"}
-! CHECK: acc.loop reduction(@reduction_min_section_ext100ext10x_ref_100x10xf32 -> %[[RED_ARG1]] : !fir.ref<!fir.array<100x10xf32>>)
+! CHECK: acc.loop reduction(@reduction_min_section_ext100xext10_ref_100x10xf32 -> %[[RED_ARG1]] : !fir.ref<!fir.array<100x10xf32>>)
 ! CHECK: attributes {collapse = 2 : i64}
 
 subroutine acc_reduction_max_int(a, b)
@@ -884,7 +884,7 @@ end subroutine
 ! HLFIR: %[[DECLARG1:.*]]:2 = hlfir.declare %[[ARG1]]
 ! FIR:   %[[RED_ARG1:.*]] = acc.reduction varPtr(%[[ARG1]] : !fir.ref<!fir.array<100x10xi32>>) bounds(%{{.*}}, %{{.*}}) -> !fir.ref<!fir.array<100x10xi32>> {name = "b"}
 ! HLFIR: %[[RED_ARG1:.*]] = acc.reduction varPtr(%[[DECLARG1]]#1 : !fir.ref<!fir.array<100x10xi32>>) bounds(%{{.*}}, %{{.*}}) -> !fir.ref<!fir.array<100x10xi32>> {name = "b"}
-! CHECK: acc.loop reduction(@reduction_max_section_ext100ext10x_ref_100x10xi32 -> %[[RED_ARG1]] : !fir.ref<!fir.array<100x10xi32>>)
+! CHECK: acc.loop reduction(@reduction_max_section_ext100xext10_ref_100x10xi32 -> %[[RED_ARG1]] : !fir.ref<!fir.array<100x10xi32>>)
 
 subroutine acc_reduction_max_float(a, b)
   real :: a(100), b

@@ -481,28 +481,27 @@ mlir::acc::FirstprivateRecipeOp Fortran::lower::createOrGetFirstprivateRecipe(
 /// Get a string representation of the bounds.
 std::string getBoundsString(llvm::SmallVector<mlir::Value> &bounds) {
   std::stringstream boundStr;
-  bool addSeparator = false;
   if (!bounds.empty())
     boundStr << "_section_";
-  for (auto bound : bounds) {
-    auto boundsOp =
-        mlir::dyn_cast<mlir::acc::DataBoundsOp>(bound.getDefiningOp());
-    if (boundsOp.getLowerbound() &&
-        fir::getIntIfConstant(boundsOp.getLowerbound()) &&
-        boundsOp.getUpperbound() &&
-        fir::getIntIfConstant(boundsOp.getUpperbound())) {
-      boundStr << "lb" << *fir::getIntIfConstant(boundsOp.getUpperbound())
-               << ".ub" << *fir::getIntIfConstant(boundsOp.getLowerbound());
-    } else if (boundsOp.getExtent() &&
-               fir::getIntIfConstant(boundsOp.getExtent())) {
-      boundStr << "ext" << *fir::getIntIfConstant(boundsOp.getExtent());
-    } else {
-      boundStr << "?";
-    }
-    if (addSeparator)
-      boundStr << "x";
-    addSeparator = true;
-  }
+  llvm::interleave(
+      bounds,
+      [&](mlir::Value bound) {
+        auto boundsOp =
+            mlir::cast<mlir::acc::DataBoundsOp>(bound.getDefiningOp());
+        if (boundsOp.getLowerbound() &&
+            fir::getIntIfConstant(boundsOp.getLowerbound()) &&
+            boundsOp.getUpperbound() &&
+            fir::getIntIfConstant(boundsOp.getUpperbound())) {
+          boundStr << "lb" << *fir::getIntIfConstant(boundsOp.getUpperbound())
+                   << ".ub" << *fir::getIntIfConstant(boundsOp.getLowerbound());
+        } else if (boundsOp.getExtent() &&
+                   fir::getIntIfConstant(boundsOp.getExtent())) {
+          boundStr << "ext" << *fir::getIntIfConstant(boundsOp.getExtent());
+        } else {
+          boundStr << "?";
+        }
+      },
+      [&] { boundStr << "x"; });
   return boundStr.str();
 }
 
