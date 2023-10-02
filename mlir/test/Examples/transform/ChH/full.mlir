@@ -1,6 +1,7 @@
 // RUN: mlir-opt %s --test-transform-dialect-interpreter \
 // RUN:             --test-transform-dialect-erase-schedule \
 // RUN:             --math-uplift-to-fma \
+// RUN:             --convert-bufferization-to-memref \
 // RUN:             --test-lower-to-llvm |\
 // RUN: FileCheck %s
 
@@ -307,9 +308,21 @@ module attributes { transform.with_named_sequence } {
     // transformation process, so invalidation is not an issue. However, if
     // other transformations, such as loop unrolling, are required after
     // bufferization, new handles should be produced using the match operations.
+    //
+    // One-shot bufferization itself does not produce buffer deallocations,
+    // which may lead to leaks. So we have to run the buffer deallocation pass
+    // pipeline to avoid them. Note that the transform dialect seamlessly runs
+    // named passes and pass pipelines: if desired, one could replace complex
+    // --pass-pipeline expressions with operations. Note that we apply the
+    // pipeline to functions rather than entire module to avoid running it
+    // on the transform IR that is contained in the module.
     %arg1 = transform.bufferization.one_shot_bufferize %arg0 {
       bufferize_function_boundaries = true,
       function_boundary_type_conversion = 1 : i32 }
+      : (!transform.any_op) -> !transform.any_op
+    %f = transform.structured.match ops{["func.func"]} in %arg1
+      : (!transform.any_op) -> !transform.any_op
+    transform.apply_registered_pass "buffer-deallocation-pipeline" to %f
       : (!transform.any_op) -> !transform.any_op
 
     // Apply general canonicalization and CSE to each function after
