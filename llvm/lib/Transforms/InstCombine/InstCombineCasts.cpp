@@ -1445,9 +1445,11 @@ Instruction *InstCombinerImpl::visitSExt(SExtInst &Sext) {
   // TODO: Eventually this could be subsumed by EvaluateInDifferentType.
   Constant *BA = nullptr, *CA = nullptr;
   if (match(Src, m_AShr(m_Shl(m_Trunc(m_Value(A)), m_Constant(BA)),
-                        m_Constant(CA))) &&
+                        m_ImmConstant(CA))) &&
       BA->isElementWiseEqual(CA) && A->getType() == DestTy) {
-    Constant *WideCurrShAmt = ConstantExpr::getSExt(CA, DestTy);
+    Constant *WideCurrShAmt =
+        ConstantFoldCastOperand(Instruction::SExt, CA, DestTy, DL);
+    assert(WideCurrShAmt && "Constant folding of ImmConstant cannot fail");
     Constant *NumLowbitsLeft = ConstantExpr::getSub(
         ConstantInt::get(DestTy, SrcTy->getScalarSizeInBits()), WideCurrShAmt);
     Constant *NewShAmt = ConstantExpr::getSub(

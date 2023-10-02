@@ -1495,8 +1495,13 @@ static Value *canonicalizeClampLike(SelectInst &Sel0, ICmpInst &Cmp0,
     if (!match(ReplacementLow, m_ImmConstant(LowC)) ||
         !match(ReplacementHigh, m_ImmConstant(HighC)))
       return nullptr;
-    ReplacementLow = ConstantExpr::getSExt(LowC, X->getType());
-    ReplacementHigh = ConstantExpr::getSExt(HighC, X->getType());
+    const DataLayout &DL = Sel0.getModule()->getDataLayout();
+    ReplacementLow =
+        ConstantFoldCastOperand(Instruction::SExt, LowC, X->getType(), DL);
+    ReplacementHigh =
+        ConstantFoldCastOperand(Instruction::SExt, HighC, X->getType(), DL);
+    assert(ReplacementLow && ReplacementHigh &&
+           "Constant folding of ImmConstant cannot fail");
   }
 
   // All good, finally emit the new pattern.
