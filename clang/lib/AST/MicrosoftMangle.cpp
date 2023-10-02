@@ -2636,7 +2636,7 @@ void MicrosoftCXXNameMangler::mangleFunctionType(const FunctionType *T,
   if (const CXXMethodDecl *MD = dyn_cast_or_null<CXXMethodDecl>(D)) {
     if (MD->getParent()->isLambda())
       IsInLambda = true;
-    if (MD->isInstance())
+    if (MD->isImplicitObjectMemberFunction())
       HasThisQuals = true;
     if (isa<CXXDestructorDecl>(MD)) {
       IsStructor = true;
@@ -2745,6 +2745,10 @@ void MicrosoftCXXNameMangler::mangleFunctionType(const FunctionType *T,
   } else {
     // Happens for function pointer type arguments for example.
     for (unsigned I = 0, E = Proto->getNumParams(); I != E; ++I) {
+      // Explicit object parameters are prefixed by "_V".
+      if (I == 0 && D && D->getParamDecl(I)->isExplicitObjectParameter())
+        Out << "_V";
+
       mangleFunctionArgumentType(Proto->getParamType(I), Range);
       // Mangle each pass_object_size parameter as if it's a parameter of enum
       // type passed directly after the parameter with the pass_object_size
@@ -2810,7 +2814,7 @@ void MicrosoftCXXNameMangler::mangleFunctionClass(const FunctionDecl *FD) {
       case AS_none:
         llvm_unreachable("Unsupported access specifier");
       case AS_private:
-        if (MD->isStatic())
+        if (!MD->isImplicitObjectMemberFunction())
           Out << 'C';
         else if (IsVirtual)
           Out << 'E';
@@ -2818,7 +2822,7 @@ void MicrosoftCXXNameMangler::mangleFunctionClass(const FunctionDecl *FD) {
           Out << 'A';
         break;
       case AS_protected:
-        if (MD->isStatic())
+        if (!MD->isImplicitObjectMemberFunction())
           Out << 'K';
         else if (IsVirtual)
           Out << 'M';
@@ -2826,7 +2830,7 @@ void MicrosoftCXXNameMangler::mangleFunctionClass(const FunctionDecl *FD) {
           Out << 'I';
         break;
       case AS_public:
-        if (MD->isStatic())
+        if (!MD->isImplicitObjectMemberFunction())
           Out << 'S';
         else if (IsVirtual)
           Out << 'U';

@@ -4434,7 +4434,7 @@ TemplateDeclInstantiator::SubstFunctionType(FunctionDecl *D,
   Qualifiers ThisTypeQuals;
   if (CXXMethodDecl *Method = dyn_cast<CXXMethodDecl>(D)) {
     ThisContext = cast<CXXRecordDecl>(Owner);
-    ThisTypeQuals = Method->getMethodQualifiers();
+    ThisTypeQuals = Method->getFunctionObjectParameterType().getQualifiers();
   }
 
   TypeSourceInfo *NewTInfo = SemaRef.SubstFunctionDeclType(

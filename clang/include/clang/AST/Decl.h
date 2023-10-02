@@ -1809,6 +1809,18 @@ public:
     ParmVarDeclBits.IsKNRPromoted = promoted;
   }
 
+  bool isExplicitObjectParameter() const {
+    return ExplicitObjectParameterIntroducerLoc.isValid();
+  }
+
+  void setExplicitObjectParameterLoc(SourceLocation Loc) {
+    ExplicitObjectParameterIntroducerLoc = Loc;
+  }
+
+  SourceLocation getExplicitObjectParamThisLoc() const {
+    return ExplicitObjectParameterIntroducerLoc;
+  }
+
   Expr *getDefaultArg();
   const Expr *getDefaultArg() const {
     return const_cast<ParmVarDecl *>(this)->getDefaultArg();
@@ -1875,7 +1887,10 @@ public:
   static bool classofKind(Kind K) { return K == ParmVar; }
 
 private:
+  friend class ASTDeclReader;
+
   enum { ParameterIndexSentinel = (1 << NumParameterIndexBits) - 1 };
+  SourceLocation ExplicitObjectParameterIntroducerLoc;
 
   void setParameterIndex(unsigned parameterIndex) {
     if (parameterIndex >= ParameterIndexSentinel) {
@@ -2639,6 +2654,23 @@ public:
   /// may be fewer than the number of function parameters, if some of the
   /// parameters have default arguments (in C++).
   unsigned getMinRequiredArguments() const;
+
+  /// Returns the minimum number of non-object arguments needed to call this
+  /// function. This produces the same value as getMinRequiredArguments except
+  /// it does not count the explicit object argument, if any.
+  unsigned getMinRequiredExplicitArguments() const;
+
+  bool hasCXXExplicitFunctionObjectParameter() const;
+
+  unsigned getNumNonObjectParams() const;
+
+  const ParmVarDecl *getNonObjectParameter(unsigned I) const {
+    return getParamDecl(hasCXXExplicitFunctionObjectParameter() ? I + 1 : I);
+  }
+
+  ParmVarDecl *getNonObjectParameter(unsigned I) {
+    return getParamDecl(hasCXXExplicitFunctionObjectParameter() ? I + 1 : I);
+  }
 
   /// Determine whether this function has a single parameter, or multiple
   /// parameters where all but the first have default arguments.
