@@ -92,7 +92,7 @@ append_rtti_flag(OFF ASAN_CFLAGS)
 
 # Silence warnings in system headers with MSVC.
 if(NOT CLANG_CL)
-  append_list_if(COMPILER_RT_HAS_EXTERNAL_FLAG "/experimental:external /external:W0 /external:anglebrackets" ASAN_CFLAGS)
+  append_list_if(COMPILER_RT_HAS_EXTERNAL_FLAG "/experimental:external;/external:W0;/external:anglebrackets" ASAN_CFLAGS)
 endif()
 
 # Too many existing bugs, needs cleanup.
