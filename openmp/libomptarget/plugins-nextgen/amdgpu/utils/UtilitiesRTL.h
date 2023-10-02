@@ -183,36 +183,8 @@ extractXnackModeFromBinary(const __tgt_device_image *TgtImage) {
   return XnackBuildMode::XNACK_UNSUPPORTED;
 }
 
-bool IsXnackEnabledViaKernelParam() {
-
-  ErrorOr<std::unique_ptr<MemoryBuffer>> FileOrError =
-      MemoryBuffer::getFileAsStream("/proc/cmdline");
-
-  if (std::error_code ErrorCode = FileOrError.getError()) {
-    FAILURE_MESSAGE("Cannot open /proc/cmdline : %s\n",
-                    ErrorCode.message().c_str());
-    return false;
-  }
-
-  StringRef FileContent = (FileOrError.get())->getBuffer();
-
-  StringRef RefString("amdgpu.noretry=");
-  int SizeOfRefString = RefString.size();
-
-  size_t Pos = FileContent.find_insensitive(RefString);
-  // Is noretry defined?
-  if (Pos != StringRef::npos) {
-    bool NoRetryValue = FileContent[Pos + SizeOfRefString] - '0';
-    // is noretry set to 0
-    if (!NoRetryValue)
-      return true;
-  }
-
-  return false;
-}
-
-void checkImageCompatibilityWithSystemXnackMode(
-    const __tgt_device_image *TgtImage, bool IsXnackEnabled) {
+void checkImageCompatibilityWithSystemXnackMode(__tgt_device_image *TgtImage,
+                                                bool IsXnackEnabled) {
   XnackBuildMode ImageXnackMode = utils::extractXnackModeFromBinary(TgtImage);
 
   if (ImageXnackMode == XnackBuildMode::XNACK_UNSUPPORTED)

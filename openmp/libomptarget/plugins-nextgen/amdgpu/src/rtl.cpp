@@ -4207,7 +4207,13 @@ private:
   }
 
   bool IsXnackEnabled() const {
-    return ((HsaXnack.get()) || (utils::IsXnackEnabledViaKernelParam()));
+    bool hasSystemXnackEnabled = false;
+    hsa_status_t HsaStatus = hsa_system_get_info(
+        HSA_AMD_SYSTEM_INFO_XNACK_ENABLED, &hasSystemXnackEnabled);
+    if (HsaStatus != HSA_STATUS_SUCCESS)
+      return false;
+
+    return hasSystemXnackEnabled;
   }
 
   void scanForUSMCapableDevices() {

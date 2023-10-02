@@ -430,7 +430,12 @@ typedef enum {
    * implementation. An extension with an ID of @p i is supported if the bit at
    * position @p i is set. The type of this attribute is uint8_t[128].
    */
-  HSA_SYSTEM_INFO_EXTENSIONS = 7
+  HSA_SYSTEM_INFO_EXTENSIONS = 7,
+  /**
+   * Returns true if XNACK is enabled on this system.  The type of
+   * this attribute is bool.
+   */
+  HSA_AMD_SYSTEM_INFO_XNACK_ENABLED = 0x206
 } hsa_system_info_t;
 
 /**
