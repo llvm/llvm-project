@@ -780,18 +780,18 @@ func.func @warpgroup_mma_store(
     %matrixD: memref<128x128xf32,3>) {
 // CHECK: %[[S0:.+]] = builtin.unrealized_conversion_cast %[[arg0]] : !nvgpu.warpgroup.accumulator<fragmented = vector<64x128xf32>> to !llvm.struct<(f32, f32, f32, f32, f32, f32, f32, f32, f32, f32, f32, f32, f32, f32, f32, f32, f32, f32, f32, f32, f32, f32, f32, f32, f32, f32, f32, f32, f32, f32, f32, f32, f32, f32, f32, f32, f32, f32, f32, f32, f32, f32, f32, f32, f32, f32, f32, f32, f32, f32, f32, f32, f32, f32, f32, f32, f32, f32, f32, f32, f32, f32, f32, f32)>
 // CHECK: %[[S1:.+]] = builtin.unrealized_conversion_cast %[[arg1]] : !nvgpu.warpgroup.accumulator<fragmented = vector<64x128xf32>> to !llvm.struct<(f32, f32, f32, f32, f32, f32, f32, f32, f32, f32, f32, f32, f32, f32, f32, f32, f32, f32, f32, f32, f32, f32, f32, f32, f32, f32, f32, f32, f32, f32, f32, f32, f32, f32, f32, f32, f32, f32, f32, f32, f32, f32, f32, f32, f32, f32, f32, f32, f32, f32, f32, f32, f32, f32, f32, f32, f32, f32, f32, f32, f32, f32, f32, f32)>
-// CHECK: %[[S2:.+]] = llvm.mlir.constant(4 : i32) : i32
-// CHECK: %[[S3:.+]] = llvm.mlir.constant(32 : i32) : i32
-// CHECK: %[[S4:.+]] = llvm.mlir.constant(8 : i32) : i32
-// CHECK: %[[S5:.+]] = llvm.mlir.constant(2 : i32) : i32
 // CHECK: %[[S6:.+]] = llvm.mlir.constant(1 : i32) : i32
+// CHECK: %[[S5:.+]] = llvm.mlir.constant(2 : i32) : i32
+// CHECK: %[[S2:.+]] = llvm.mlir.constant(4 : i32) : i32
+// CHECK: %[[S4:.+]] = llvm.mlir.constant(8 : i32) : i32
 // CHECK: %[[S7:.+]] = llvm.mlir.constant(16 : i32) : i32
+// CHECK: %[[WarpSize:.+]] = llvm.mlir.constant(32 : i32) : i32
 
 // ### Store {d0, d1} of each thread ###
 
 // CHECK: %[[S8:.+]] = nvvm.read.ptx.sreg.tid.x : i32
-// CHECK: %[[S9:.+]] = llvm.urem %[[S8]], %[[S3]]  : i32
-// CHECK: %[[S10:.+]] = llvm.udiv %[[S8]], %[[S3]]  : i32
+// CHECK: %[[S9:.+]] = llvm.urem %[[S8]], %[[WarpSize]]  : i32
+// CHECK: %[[S10:.+]] = llvm.udiv %[[S8]], %[[WarpSize]]  : i32
 // CHECK: %[[S11:.+]] = llvm.udiv %[[S9]], %[[S2]]  : i32
 // CHECK: %[[S12:.+]] = llvm.urem %[[S9]], %[[S2]]  : i32
 // CHECK: %[[S13:.+]] = llvm.mul %[[S12]], %[[S5]]  : i32
@@ -856,20 +856,22 @@ func.func @warpgroup_mma_store(
 
 // Pattern continues similarly 28x times until {... d62, d63}
 
+// CHECK: %[[c1:.+]] = llvm.mlir.constant(1 : i32) : i32
+// CHECK: %[[c2:.+]] = llvm.mlir.constant(2 : i32) : i32
+
 // ### Store {d64, d65} of each thread ### 
 
-// CHECK: %[[S311:.+]] = llvm.mlir.constant(4 : i32) : i32
-// CHECK: %[[S312:.+]] = llvm.mlir.constant(32 : i32) : i32
-// CHECK: %[[S313:.+]] = llvm.mlir.constant(8 : i32) : i32
-// CHECK: %[[S314:.+]] = llvm.mlir.constant(2 : i32) : i32
 // CHECK: %[[S315:.+]] = llvm.mlir.constant(1 : i32) : i32
+// CHECK: %[[S312:.+]] = llvm.mlir.constant(2 : i32) : i32
+// CHECK: %[[S311:.+]] = llvm.mlir.constant(4 : i32) : i32
+// CHECK: %[[S313:.+]] = llvm.mlir.constant(8 : i32) : i32
 // CHECK: %[[S316:.+]] = llvm.mlir.constant(16 : i32) : i32
 // CHECK: %[[S317:.+]] = nvvm.read.ptx.sreg.tid.x : i32
-// CHECK: %[[S318:.+]] = llvm.urem %[[S317]], %[[S312]]  : i32
-// CHECK: %[[S319:.+]] = llvm.udiv %[[S317]], %[[S312]]  : i32
-// CHECK: %[[S320:.+]] = llvm.udiv %[[S318]]
-// CHECK: %[[S321:.+]] = llvm.urem %[[S318]]
-// CHECK: %[[S322:.+]] = llvm.mul %[[S321]], %[[S314]]  : i32
+// CHECK: %[[S318:.+]] = llvm.urem %[[S317]], %[[WarpSize]]  : i32
+// CHECK: %[[S319:.+]] = llvm.udiv %[[S317]], %[[WarpSize]]  : i32
+// CHECK: %[[S320:.+]] = llvm.udiv %[[S318]], %[[S311]]  : i32
+// CHECK: %[[S321:.+]] = llvm.urem %[[S318]], %[[S311]]  : i32
+// CHECK: %[[S322:.+]] = llvm.mul %[[S321]], %[[S312]]  : i32
 // CHECK: %[[S323:.+]] = llvm.mul %[[S319]], %[[S316]]  : i32
 // CHECK: %[[S324:.+]] = llvm.add %[[S320]], %[[S323]]  : i32
 // CHECK: %[[S325:.+]] = llvm.mlir.constant(64 : i32) : i32
