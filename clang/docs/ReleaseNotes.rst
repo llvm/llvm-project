@@ -91,6 +91,11 @@ C++20 Feature Support
 
 C++23 Feature Support
 ^^^^^^^^^^^^^^^^^^^^^
+- Implemented `P0847R7: Deducing this <https://wg21.link/P0847R7>`_. Some related core issues were also
+  implemented (`CWG2553 <https://wg21.link/CWG2553>`_, `CWG2554 <https://wg21.link/CWG2554>`_,
+  `CWG2653 <https://wg21.link/CWG2653>`_, `CWG2687 <https://wg21.link/CWG2687>`_). Because the
+  support for this feature is still experimental, the feature test macro ``__cpp_explicit_this_parameter``
+  was not set in this version.
 
 C++2c Feature Support
 ^^^^^^^^^^^^^^^^^^^^^
@@ -208,6 +213,9 @@ Improvements to Clang's diagnostics
   (`#54678: <https://github.com/llvm/llvm-project/issues/54678>`_).
 - Clang now prints its 'note' diagnostic in cyan instead of black, to be more compatible
   with terminals with dark background colors. This is also more consistent with GCC.
+- The fix-it emitted by ``-Wformat`` for scoped enumerations now take the
+  enumeration's underlying type into account instead of suggesting a type just
+  based on the format string specifier being used.
 
 Bug Fixes in This Version
 -------------------------
@@ -378,6 +386,10 @@ Bug Fixes to C++ Support
 - Fixed a bug causing destructors of constant-evaluated structured bindings
   initialized by array elements to be called in the wrong evaluation context.
 
+- Fix crash where ill-formed code was being treated as a deduction guide and
+  we now produce a diagnostic. Fixes:
+  (`#65522 <https://github.com/llvm/llvm-project/issues/65522>`_)
+
 Bug Fixes to AST Handling
 ^^^^^^^^^^^^^^^^^^^^^^^^^
 - Fixed an import failure of recursive friend class template.
@@ -532,6 +544,14 @@ Static Analyzer
   This removal empirically reduces the number of false positive reports.
   Read the PR for the details.
   (`#66086 <https://github.com/llvm/llvm-project/pull/66086>`_)
+
+- A few crashes have been found and fixed using randomized testing related
+  to the use of ``_BitInt()`` in tidy checks and in clang analysis. See
+ `#67212 <https://github.com/llvm/llvm-project/pull/67212>`_,
+ `#66782 <https://github.com/llvm/llvm-project/pull/66782>`_,
+ `#65889 <https://github.com/llvm/llvm-project/pull/65889>`_,
+ `#65888 <https://github.com/llvm/llvm-project/pull/65888>`_, and
+ `#65887 <https://github.com/llvm/llvm-project/pull/65887>`_
 
 .. _release-notes-sanitizers:
 
