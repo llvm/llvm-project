@@ -6,13 +6,13 @@
 //
 //===----------------------------------------------------------------------===//
 #include "CrashHandlerFixture.h"
-#include "flang/../../runtime/terminator.h"
+#include "../../runtime/terminator.h"
 #include <cstdarg>
 #include <cstdlib>
 
 // Replaces Fortran runtime's crash handler so we can verify the crash message
-[[noreturn]] static void CatchCrash(const char *sourceFile, int sourceLine,
-                                    const char *message, va_list &ap) {
+[[noreturn]] static void CatchCrash(
+    const char *sourceFile, int sourceLine, const char *message, va_list &ap) {
   char buffer[1000];
   std::vsnprintf(buffer, sizeof buffer, message, ap);
   va_end(ap);

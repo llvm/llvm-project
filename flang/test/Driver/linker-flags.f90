@@ -24,18 +24,21 @@
 ! GNU-LABEL:  "{{.*}}ld{{(\.exe)?}}"
 ! GNU-SAME: "[[object_file]]"
 ! GNU-SAME: -lFortran_main
-! GNU-SAME: -lflang-rt
+! GNU-SAME: -lFortranRuntime
+! GNU-SAME: -lFortranDecimal
 ! GNU-SAME: -lm
 
 ! DARWIN-LABEL:  "{{.*}}ld{{(\.exe)?}}"
 ! DARWIN-SAME: "[[object_file]]"
 ! DARWIN-SAME: -lFortran_main
-! DARWIN-SAME: -lflang-rt
+! DARWIN-SAME: -lFortranRuntime
+! DARWIN-SAME: -lFortranDecimal
 
 ! MINGW-LABEL:  "{{.*}}ld{{(\.exe)?}}"
 ! MINGW-SAME: "[[object_file]]"
 ! MINGW-SAME: -lFortran_main
-! MINGW-SAME: -lflang-rt
+! MINGW-SAME: -lFortranRuntime
+! MINGW-SAME: -lFortranDecimal
 
 ! NOTE: This also matches lld-link (when CLANG_DEFAULT_LINKER=lld) and
 !       any .exe suffix that is added when resolving to the full path of
@@ -43,6 +46,7 @@
 !       when the executable is not found or on non-Windows platforms.
 ! MSVC-LABEL: link
 ! MSVC-SAME: Fortran_main.lib
-! MSVC-SAME: flang-rt.lib
+! MSVC-SAME: FortranRuntime.lib
+! MSVC-SAME: FortranDecimal.lib
 ! MSVC-SAME: /subsystem:console
 ! MSVC-SAME: "[[object_file]]"

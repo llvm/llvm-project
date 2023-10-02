@@ -138,15 +138,10 @@ CppTypeFor<TypeCategory::Real, 10> RTNAME(SumReal10)(const Descriptor &x,
 }
 #endif
 #if LDBL_MANT_DIG == 113 || HAS_FLOAT128
-#if HAS_FLOAT128
-using AccumType = __float128;
-#else // if LDBL_MANT_DIG == 113
-using AccumType = long double;
-#endif
 CppTypeFor<TypeCategory::Real, 16> RTNAME(SumReal16)(const Descriptor &x,
     const char *source, int line, int dim, const Descriptor *mask) {
   return GetTotalReduction<TypeCategory::Real, 16>(
-      x, source, line, dim, mask, RealSumAccumulator<AccumType>{x}, "SUM");
+      x, source, line, dim, mask, RealSumAccumulator<long double>{x}, "SUM");
 }
 #endif
 
