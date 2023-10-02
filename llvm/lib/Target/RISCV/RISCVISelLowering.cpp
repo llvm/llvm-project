@@ -11128,8 +11128,9 @@ void RISCVTargetLowering::ReplaceNodeResults(SDNode *N,
 /// forests with multiple roots sharing common nodes.  In some cases, one
 /// of the trees will be vectorized, and the other will remain (unprofitably)
 /// scalarized.
-static SDValue combineBinOpOfExtractToReduceTree(SDNode *N, SelectionDAG &DAG,
-                                                 const RISCVSubtarget &Subtarget) {
+static SDValue
+combineBinOpOfExtractToReduceTree(SDNode *N, SelectionDAG &DAG,
+                                  const RISCVSubtarget &Subtarget) {
 
   // This transforms need to run before all integer types have been legalized
   // to i64 (so that the vector element type matches the add type), and while
@@ -11189,7 +11190,7 @@ static SDValue combineBinOpOfExtractToReduceTree(SDNode *N, SelectionDAG &DAG,
       // wider (hopefully legal) type.  If this is a terminal state, we are
       // relying on type legalization here to produce something reasonable
       // and this lowering quality could probably be improved. (TODO)
-      EVT ReduceVT = EVT::getVectorVT(*DAG.getContext(), VT, Idx+1);
+      EVT ReduceVT = EVT::getVectorVT(*DAG.getContext(), VT, Idx + 1);
       SDValue Vec = DAG.getNode(ISD::EXTRACT_SUBVECTOR, DL, ReduceVT, SrcVec,
                                 DAG.getVectorIdxConstant(0, DL));
       return DAG.getNode(ISD::VECREDUCE_ADD, DL, VT, Vec);
