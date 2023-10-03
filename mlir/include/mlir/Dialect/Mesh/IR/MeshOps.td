@@ -47,15 +47,15 @@ def Mesh_ClusterOp : Mesh_Op<"cluster", [Symbol]> {
 
     Example:
     ```
-    // A device mesh cluster with 3 axes, the totol device number is 4 * 8 * 12
+    // A device mesh cluster with 3 axes, the total device number is 4 * 8 * 12
     // The dimension sizes are 4, 8, 12 
     mesh.cluster @mesh0(rank = 3, dim_sizes = [4, 8, 12])
 
-    // A device mesh cluster with 2 axes, the totol device number is unknown
+    // A device mesh cluster with 2 axes, the total device number is unknown
     // The first dimension size is 4 and the second is unknown
     mesh.cluster @mesh1(rank = 2, dim_sizes = [4])
 
-    // A device mesh cluster with 2 axes, the totol device number is unknown
+    // A device mesh cluster with 2 axes, the total device number is unknown
     // The first dimension size is unknown and the second is 4
     mesh.cluster @mesh2(rank = 2, dim_sizes = [0, 4])
 

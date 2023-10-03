@@ -71,21 +71,30 @@ LogicalResult ClusterOp::verify() {
 
 LogicalResult
 MeshShardingAttr::verify(function_ref<InFlightDiagnostic()> emitError,
-                         SymbolRefAttr, ArrayRef<DenseI8ArrayAttr> axes,
-                         Partial) {
+                         SymbolRefAttr, ArrayRef<DenseI8ArrayAttr> splitAxes,
+                         ArrayRef<int8_t> partialAxes, Partial) {
   // TODO: At present cluster symbol ref is not verified. This is due to the
   // difficulty in fetching the corresponding symbol op based on an attribute.
 
   llvm::SmallSet<int8_t, 4> visitedAxes;
-  for (DenseI8ArrayAttr subAxes : axes) {
-    ArrayRef<int8_t> subAxesArray = subAxes.asArrayRef();
-    for (int8_t axis : subAxesArray) {
+
+  auto checkMeshAxis = [&](ArrayRef<int8_t> axesArray) -> LogicalResult {
+    for (int8_t axis : axesArray) {
       if (axis < 0)
         return emitError() << "mesh axis is expected to be non-negative";
       if (!visitedAxes.insert(axis).second)
         return emitError() << "mesh axis duplicated";
     }
+    return success();
+  };
+
+  for (DenseI8ArrayAttr subAxes : splitAxes) {
+    ArrayRef<int8_t> subAxesArray = subAxes.asArrayRef();
+    if (failed(checkMeshAxis(subAxesArray)))
+      return failure();
   }
+  if (failed(checkMeshAxis(partialAxes)))
+    return failure();
 
   return success();
 }

@@ -73,8 +73,8 @@ func.func @mesh_shard_op_1st_and_3rd_dim(
 func.func @mesh_shard_op_partial_max(
     // CHECK-SAME: %[[ARG:.*]]: tensor<4x8xf32>
     %arg0 : tensor<4x8xf32>) -> tensor<4x8xf32> {
-  // CHECK-NEXT: mesh.shard %[[ARG]] to <@mesh3, {{\[\[}}0], [], [1]], partial_max> : tensor<4x8xf32>
-  %0 = mesh.shard %arg0 to <@mesh3, [[0], [], [1]], partial_max> : tensor<4x8xf32>
+  // CHECK-NEXT: mesh.shard %[[ARG]] to <@mesh3, {{\[\[}}0]], partial = max[1]> : tensor<4x8xf32>
+  %0 = mesh.shard %arg0 to <@mesh3, [[0]], partial = max[1]> : tensor<4x8xf32>
   return %0 : tensor<4x8xf32>
 }
 
@@ -82,8 +82,8 @@ func.func @mesh_shard_op_partial_max(
 func.func @mesh_shard_op_partial_min(
     // CHECK-SAME: %[[ARG:.*]]: tensor<4x8xf32>
     %arg0 : tensor<4x8xf32>) -> tensor<4x8xf32> {
-  // CHECK-NEXT: mesh.shard %[[ARG]] to <@mesh3, {{\[\[}}0], [], [1]], partial_min> : tensor<4x8xf32>
-  %0 = mesh.shard %arg0 to <@mesh3, [[0], [], [1]], partial_min> : tensor<4x8xf32>
+  // CHECK-NEXT: mesh.shard %[[ARG]] to <@mesh3, {{\[\[}}0]], partial = min[1]> : tensor<4x8xf32>
+  %0 = mesh.shard %arg0 to <@mesh3, [[0]], partial = min[1]> : tensor<4x8xf32>
   return %0 : tensor<4x8xf32>
 }
 
@@ -91,17 +91,26 @@ func.func @mesh_shard_op_partial_min(
 func.func @mesh_shard_op_partial_generic(
     // CHECK-SAME: %[[ARG:.*]]: tensor<4x8xf32>
     %arg0 : tensor<4x8xf32>) -> tensor<4x8xf32> {
-  // CHECK-NEXT: mesh.shard %[[ARG]] to <@mesh3, {{\[\[}}0], [], [1]], partial_generic> : tensor<4x8xf32>
-  %0 = mesh.shard %arg0 to <@mesh3, [[0], [], [1]], partial_generic> : tensor<4x8xf32>
+  // CHECK-NEXT: mesh.shard %[[ARG]] to <@mesh3, {{\[\[}}0]], partial = generic[1]> : tensor<4x8xf32>
+  %0 = mesh.shard %arg0 to <@mesh3, [[0]], partial = generic[1]> : tensor<4x8xf32>
   return %0 : tensor<4x8xf32>
 }
 
-// CHECK-LABEL: func @mesh_shard_op_partial_sum_explict
-func.func @mesh_shard_op_partial_sum_explict(
+// CHECK-LABEL: func @mesh_shard_op_partial_sum
+func.func @mesh_shard_op_partial_sum(
     // CHECK-SAME: %[[ARG:.*]]: tensor<4x8xf32>
     %arg0 : tensor<4x8xf32>) -> tensor<4x8xf32> {
-  // CHECK-NEXT: mesh.shard %[[ARG]] to <@mesh3, {{\[\[}}0], [], [1]]> : tensor<4x8xf32>
-  %0 = mesh.shard %arg0 to <@mesh3, [[0], [], [1]], partial_sum> : tensor<4x8xf32>
+  // CHECK-NEXT: mesh.shard %[[ARG]] to <@mesh3, {{\[\[}}0]], partial = sum[1]> : tensor<4x8xf32>
+  %0 = mesh.shard %arg0 to <@mesh3, [[0]], partial = sum[1]> : tensor<4x8xf32>
+  return %0 : tensor<4x8xf32>
+}
+
+// CHECK-LABEL: func @mesh_shard_op_partial_sum_multi_axes
+func.func @mesh_shard_op_partial_sum_multi_axes(
+    // CHECK-SAME: %[[ARG:.*]]: tensor<4x8xf32>
+    %arg0 : tensor<4x8xf32>) -> tensor<4x8xf32> {
+  // CHECK-NEXT: mesh.shard %[[ARG]] to <@mesh3, {{\[\[}}0]], partial = sum[1, 2]> : tensor<4x8xf32>
+  %0 = mesh.shard %arg0 to <@mesh3, [[0]], partial = sum[1, 2]> : tensor<4x8xf32>
   return %0 : tensor<4x8xf32>
 }
 

@@ -40,10 +40,10 @@ def Mesh_Dialect : Dialect {
 //===----------------------------------------------------------------------===//
 
 def Mesh_Partial : I32EnumAttr<"Partial", "partial type of a distributed tensor", [
-  I32EnumAttrCase<"Sum", 0, "partial_sum">,
-  I32EnumAttrCase<"Max", 1, "partial_max">,
-  I32EnumAttrCase<"Min", 2, "partial_min">,
-  I32EnumAttrCase<"Generic", 100, "partial_generic">
+  I32EnumAttrCase<"Sum", 1, "sum">,
+  I32EnumAttrCase<"Max", 2, "max">,
+  I32EnumAttrCase<"Min", 3, "min">,
+  I32EnumAttrCase<"Generic", 100, "generic">
 ]> {
   let genSpecializedAttr = 0;
   let cppNamespace = "::mlir::mesh";
@@ -58,9 +58,9 @@ def MeshSharding : AttrDef<Mesh_Dialect, "MeshSharding"> {
 
   let parameters = (ins
     AttrParameter<"::mlir::SymbolRefAttr", "cluster placed">:$cluster,
-    ArrayRefParameter<"::mlir::DenseI8ArrayAttr">:$axes,
-    DefaultValuedParameter<"::mlir::mesh::Partial", 
-                           "::mlir::mesh::Partial::Sum">:$partial_type
+    ArrayRefParameter<"::mlir::DenseI8ArrayAttr">:$split_axes,
+    OptionalArrayRefParameter<"int8_t">:$partial_axes,
+    OptionalParameter<"::mlir::mesh::Partial">:$partial_type
   );
 
   let summary = "Attribute that extends tensor type to distributed tensor type.";
@@ -68,20 +68,21 @@ def MeshSharding : AttrDef<Mesh_Dialect, "MeshSharding"> {
   let description = [{
     The MeshSharding attribute could be used in the encoding of a
     `RankedTensorType` or the mesh.shard op. it contains three sub-attributes:
+
     1. `cluster`: this attribute is a SymbolRefAttr that refers to the mesh
     cluster where the distributed tensor is placed. The symbol must resolve to a
     `mesh.cluster` operation.
 
-    2. `axes`: is an array composed of int64_t sub-arrays. The outer array's
-    maximum size is the `rank` of the related tensor plus one. For the i-th
-    sub-array, if its value is [x, y]:
-    - When i < `rank`, it indicates that the tensor's i-th dimension is sharded
+    2. `split_axes`: is an array composed of int64_t sub-arrays. The outer array's
+    maximum size is the `rank` of the related tensor. For the i-th sub-array, if
+    its value is [x, y], it indicates that the tensor's i-th dimension is splitted
     along the x and y axes of the device mesh.
-    - When i == `rank`, it signifies that the tensor is partial one along the x
-    and y axes. An all-reduce should be applied to get the whole tensor, and the
-    reduction type is specified by `partial_type`.
 
-    3. `partial_type`: indicates the reduction type of the possible all-reduce
+    3. `partial_axes`: if not empty, this sifnifies that the tensor is partial
+    one along the specified mesh axes. An all-reduce should be applied to obtain
+    the complete tensor, with reduction type being specified by `partial_type`.
+
+    4. `partial_type`: indicates the reduction type of the possible all-reduce
     op. It has 4 possible values:
     - `partial_sum`: denotes it's an all-reduce-sum
     - `partial_max`: denotes it's an all-reduce-max
@@ -110,13 +111,17 @@ def MeshSharding : AttrDef<Mesh_Dialect, "MeshSharding"> {
 
     // The tensor is sharded on the first dimension along axis 0 of @mesh0 and
     // it is also a partial_max along mesh axis 1.
-    tensor<4x8xf32, #mesh.shard<@mesh0, [[0], [], [1]], partial_max>
+    tensor<4x8xf32, #mesh.shard<@mesh0, [[0]], partial = max[1]>
 
     // Could be used in the attribute of mesh.shard op
     %0 = mesh.shard %arg0 to <@mesh0, [[0]]> : tensor<4x8xf32>
     ```
   }];
-  let assemblyFormat = "`<` $cluster `,` `[` $axes `]` (`,` $partial_type^)?`>`";
+  let assemblyFormat = [{
+    `<` $cluster `,` `[` $split_axes `]` (`,` `partial` `=` $partial_type `[`
+       $partial_axes^ `]`)? `>`
+  }];
+
   let genVerifyDecl = 1;
 }
 
