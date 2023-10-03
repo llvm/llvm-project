@@ -2224,8 +2224,7 @@ printTo(raw_ostream &OS, ArrayRef<TA> Args, const PrintingPolicy &Policy,
           Argument.getKind() == TemplateArgument::Type &&
           !Argument.getAsType()->isBuiltinType())
         OS << Argument.getAsType().getAsString().data();
-      else {
-      }
+      else
         // Tries to print the argument with location info if exists.
         printArgument(Arg, Policy, ArgOS,
                       TemplateParameterList::shouldIncludeTypeForArgument(

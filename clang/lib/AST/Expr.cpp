@@ -724,7 +724,8 @@ StringRef PredefinedExpr::getIdentKindName(PredefinedExpr::IdentKind IK) {
 
 // FIXME: Maybe this should use DeclPrinter with a special "print predefined
 // expr" policy instead.
-std::string PredefinedExpr::ComputeName(IdentKind IK, const Decl *CurrentDecl) {
+std::string PredefinedExpr::ComputeName(IdentKind IK, const Decl *CurrentDecl,
+                                        bool ForceElaboratedPrinting) {
   ASTContext &Context = CurrentDecl->getASTContext();
 
   if (IK == PredefinedExpr::FuncDName) {
@@ -773,10 +774,16 @@ std::string PredefinedExpr::ComputeName(IdentKind IK, const Decl *CurrentDecl) {
   }
   if (const FunctionDecl *FD = dyn_cast<FunctionDecl>(CurrentDecl)) {
     const auto &LO = Context.getLangOpts();
-    if (IK == Func || IK == Function && !LO.MicrosoftExt)
-      return FD->getNameAsString();
-    if (IK == LFunction && LO.MicrosoftExt)
-      return FD->getNameAsString();
+    if (ForceElaboratedPrinting) {
+      if ((IK == Func || IK == Function) && !LO.MicrosoftExt)
+        return FD->getNameAsString();
+      if (IK == LFunction && LO.MicrosoftExt)
+        return FD->getNameAsString();
+    } else {
+      if (IK != PrettyFunction && IK != PrettyFunctionNoVirtual &&
+          IK != FuncSig && IK != LFuncSig)
+        return FD->getNameAsString();
+    }
 
     SmallString<256> Name;
     llvm::raw_svector_ostream Out(Name);
@@ -803,9 +810,8 @@ std::string PredefinedExpr::ComputeName(IdentKind IK, const Decl *CurrentDecl) {
     PrintingPolicy Policy(Context.getLangOpts());
     PrettyCallbacks PrettyCB(Context.getLangOpts());
     Policy.Callbacks = &PrettyCB;
-    if (IK == Function && LO.MicrosoftExt) {
+    if (IK == Function && ForceElaboratedPrinting)
       Policy.ForcePrintingAsElaboratedType = LO.MicrosoftExt;
-    }
     std::string Proto;
     llvm::raw_string_ostream POut(Proto);
 
