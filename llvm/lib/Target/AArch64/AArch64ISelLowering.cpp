@@ -25853,6 +25853,7 @@ static SDValue GenerateFixedLengthSVETBL(SDValue Op, SDValue Op1, SDValue Op2,
   uint64_t MaxOffset = APInt(BitsPerElt, -1, false).getZExtValue();
   assert(ElementsPerVectorReg <= IndexLen && MaskSize <= IndexLen &&
          "Incorrectly legalised shuffle operation");
+  (void)MaskSize;
 
   SmallVector<SDValue, 8> TBLMask;
   for (int Index : ShuffleMask) {
