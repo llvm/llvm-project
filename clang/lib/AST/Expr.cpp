@@ -727,6 +727,7 @@ StringRef PredefinedExpr::getIdentKindName(PredefinedExpr::IdentKind IK) {
 std::string PredefinedExpr::ComputeName(IdentKind IK, const Decl *CurrentDecl) {
   ASTContext &Context = CurrentDecl->getASTContext();
   // This is a just a test.
+  // This is just yet another test.
   if (IK == PredefinedExpr::FuncDName) {
     if (const NamedDecl *ND = dyn_cast<NamedDecl>(CurrentDecl)) {
       std::unique_ptr<MangleContext> MC;
