@@ -467,6 +467,12 @@ static bool CheckFieldsInitialized(InterpState &S, CodePtr OpPC,
   // Check Fields in all bases
   for (const Record::Base &B : R->bases()) {
     Pointer P = BasePtr.atField(B.Offset);
+    if (!P.isInitialized()) {
+      S.FFDiag(BasePtr.getDeclDesc()->asDecl()->getLocation(),
+               diag::note_constexpr_uninitialized_base)
+          << B.Desc->getType();
+      return false;
+    }
     Result &= CheckFieldsInitialized(S, OpPC, P, B.R);
   }
 
