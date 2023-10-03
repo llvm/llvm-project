@@ -36,6 +36,8 @@ void ActionProfiler::print(const ActionActiveStack *action,
   // Create the event.
   std::string str;
   llvm::raw_string_ostream event(str);
+  if (printComma)
+    event << ",\n";
   event << "{";
   event << R"("name": ")" << action->getAction().getTag() << "\", ";
   event << R"("cat": "PERF", )";
@@ -52,12 +54,11 @@ void ActionProfiler::print(const ActionActiveStack *action,
     event << "\"}";
   }
   event << "}";
+  event.flush();
 
-  // Print the event.
+  // Print the event, guard with a mutex to ensure the stream is correctly
+  // formed.
   std::lock_guard<std::mutex> guard(mutex);
-  if (printComma)
-    os << ",\n";
   printComma = true;
   os << event.str();
-  os.flush();
 }
