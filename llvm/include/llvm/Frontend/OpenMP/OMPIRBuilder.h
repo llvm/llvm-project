@@ -877,6 +877,30 @@ public:
       std::function<GlobalValue::LinkageTypes()> VariableLinkage,
       Type *LlvmPtrTy, Constant *Addr);
 
+  /// Get the offset of the OMP_MAP_MEMBER_OF field.
+  unsigned getFlagMemberOffset();
+
+  /// Get OMP_MAP_MEMBER_OF flag with extra bits reserved based on
+  /// the position given.
+  /// \param Position - A value indicating the position of the parent
+  /// of the member in the kernel argument structure, often retrieved
+  /// by the parents position in the combined information vectors used
+  /// to generate the structure itself. Multiple children (member's of)
+  /// with the same parent will use the same returned member flag.
+  omp::OpenMPOffloadMappingFlags getMemberOfFlag(unsigned Position);
+
+  /// Given an initial flag set, this function modifies it to contain
+  /// the passed in MemberOfFlag generated from the getMemberOfFlag
+  /// function. The results are dependent on the existing flag bits
+  /// set in the original flag set.
+  /// \param Flags - The original set of flags to be modified with the
+  /// passed in MemberOfFlag.
+  /// \param MemberOfFlag - A modified OMP_MAP_MEMBER_OF flag, adjusted
+  /// slightly based on the getMemberOfFlag which adjusts the flag bits
+  /// based on the members position in its parent.
+  void setCorrectMemberOfFlag(omp::OpenMPOffloadMappingFlags &Flags,
+                              omp::OpenMPOffloadMappingFlags MemberOfFlag);
+
 private:
   /// Modifies the canonical loop to be a statically-scheduled workshare loop.
   ///
