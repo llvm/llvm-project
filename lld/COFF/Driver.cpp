@@ -1859,6 +1859,8 @@ void LinkerDriver::linkerMain(ArrayRef<const char *> argsArr) {
       config->emit = EmitKind::Obj;
     else if (s == "llvm")
       config->emit = EmitKind::LLVM;
+    else if (s == "asm")
+      config->emit = EmitKind::ASM;
     else
       error("/lldemit: unknown option: " + s);
   }
