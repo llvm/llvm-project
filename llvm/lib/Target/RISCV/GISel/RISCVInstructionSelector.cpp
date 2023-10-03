@@ -239,6 +239,18 @@ bool RISCVInstructionSelector::select(MachineInstr &MI) {
   }
   case TargetOpcode::G_SEXT_INREG:
     return selectSExtInreg(MI, MIB);
+  case TargetOpcode::G_FRAME_INDEX: {
+    // FIXME: We want to replace this with tablegen code that matches for
+    // FrameAddrRegImm
+    Register DstReg = MI.getOperand(0).getReg();
+
+    if (!MRI.getType(DstReg).isPointer())
+      return false;
+
+    MI.setDesc(TII.get(RISCV::ADDI));
+    MI.addOperand(MachineOperand::CreateImm(0));
+    return constrainSelectedInstRegOperands(MI, TII, TRI, RBI);
+  }
   default:
     return false;
   }
