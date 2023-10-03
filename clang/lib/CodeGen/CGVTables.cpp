@@ -24,7 +24,6 @@
 #include "llvm/Transforms/Utils/Cloning.h"
 #include <algorithm>
 #include <cstdio>
-#include <utility>
 
 using namespace clang;
 using namespace CodeGen;
@@ -1309,33 +1308,44 @@ void CodeGenModule::EmitVTableTypeMetadata(const CXXRecordDecl *RD,
 
   CharUnits ComponentWidth = GetTargetTypeStoreSize(getVTableComponentType());
 
-  struct AddressPoint {
-    const CXXRecordDecl *Base;
-    size_t Offset;
-    std::string TypeName;
-    bool operator<(const AddressPoint &RHS) const {
-      int D = TypeName.compare(RHS.TypeName);
-      return D < 0 || (D == 0 && Offset < RHS.Offset);
-    }
-  };
+  typedef std::pair<const CXXRecordDecl *, unsigned> AddressPoint;
   std::vector<AddressPoint> AddressPoints;
-  for (auto &&AP : VTLayout.getAddressPoints()) {
-    AddressPoint N{AP.first.getBase(),
-                   VTLayout.getVTableOffset(AP.second.VTableIndex) +
-                       AP.second.AddressPointIndex};
-    llvm::raw_string_ostream Stream(N.TypeName);
-    getCXXABI().getMangleContext().mangleCanonicalTypeName(
-        QualType(N.Base->getTypeForDecl(), 0), Stream);
-    AddressPoints.push_back(std::move(N));
-  }
+  for (auto &&AP : VTLayout.getAddressPoints())
+    AddressPoints.push_back(std::make_pair(
+        AP.first.getBase(), VTLayout.getVTableOffset(AP.second.VTableIndex) +
+                                AP.second.AddressPointIndex));
 
   // Sort the address points for determinism.
-  llvm::sort(AddressPoints);
+  // FIXME: It's more efficient to mangle the types before sorting.
+  llvm::sort(AddressPoints, [this](const AddressPoint &AP1,
+                                   const AddressPoint &AP2) {
+    if (&AP1 == &AP2)
+      return false;
+
+    std::string S1;
+    llvm::raw_string_ostream O1(S1);
+    getCXXABI().getMangleContext().mangleCanonicalTypeName(
+        QualType(AP1.first->getTypeForDecl(), 0), O1);
+    O1.flush();
+
+    std::string S2;
+    llvm::raw_string_ostream O2(S2);
+    getCXXABI().getMangleContext().mangleCanonicalTypeName(
+        QualType(AP2.first->getTypeForDecl(), 0), O2);
+    O2.flush();
+
+    if (S1 < S2)
+      return true;
+    if (S1 != S2)
+      return false;
+
+    return AP1.second < AP2.second;
+  });
 
   ArrayRef<VTableComponent> Comps = VTLayout.vtable_components();
   for (auto AP : AddressPoints) {
     // Create type metadata for the address point.
-    AddVTableTypeMetadata(VTable, ComponentWidth * AP.Offset, AP.Base);
+    AddVTableTypeMetadata(VTable, ComponentWidth * AP.second, AP.first);
 
     // The class associated with each address point could also potentially be
     // used for indirect calls via a member function pointer, so we need to
@@ -1347,7 +1357,7 @@ void CodeGenModule::EmitVTableTypeMetadata(const CXXRecordDecl *RD,
       llvm::Metadata *MD = CreateMetadataIdentifierForVirtualMemPtrType(
           Context.getMemberPointerType(
               Comps[I].getFunctionDecl()->getType(),
-              Context.getRecordType(AP.Base).getTypePtr()));
+              Context.getRecordType(AP.first).getTypePtr()));
       VTable->addTypeMetadata((ComponentWidth * I).getQuantity(), MD);
     }
   }
