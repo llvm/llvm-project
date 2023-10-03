@@ -1551,8 +1551,6 @@ namespace clang {
     /// (or the end of the file).
     void skipUntil(MMToken::TokenKind K);
 
-    using ModuleId = SmallVector<std::pair<std::string, SourceLocation>, 2>;
-
     bool parseModuleId(ModuleId &Id);
     void parseModuleDecl();
     void parseExternModuleDecl();
