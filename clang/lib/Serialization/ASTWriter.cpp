@@ -4628,6 +4628,12 @@ ASTFileSignature ASTWriter::WriteAST(Sema &SemaRef, StringRef OutputFile,
   WritingAST = true;
 
   ASTHasCompilerErrors = hasErrors;
+  bool trueHasErrors = SemaRef.PP.getDiagnostics().hasUncompilableErrorOccurred();
+  assert(ASTHasCompilerErrors == trueHasErrors);
+  if (trueHasErrors != ASTHasCompilerErrors) {
+      // forcing the compiler errors flag to be set correctly
+      ASTHasCompilerErrors = trueHasErrors;
+  }
 
   // Emit the file header.
   Stream.Emit((unsigned)'C', 8);
