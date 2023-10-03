@@ -201,8 +201,8 @@ declare_mlir_dialect_extension_python_bindings(
   EXTENSION_NAME memref_transform)
 
 declare_mlir_dialect_extension_python_bindings(
-ADD_TO_PARENT MLIRPythonSources.Dialects
-ROOT_DIR "${CMAKE_CURRENT_SOURCE_DIR}/mlir"
+  ADD_TO_PARENT MLIRPythonSources.Dialects
+  ROOT_DIR "${CMAKE_CURRENT_SOURCE_DIR}/mlir"
   TD_FILE dialects/NVGPUTransformOps.td
   SOURCES
     dialects/transform/nvgpu.py
