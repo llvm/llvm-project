@@ -8366,9 +8366,9 @@ bool LValueExprEvaluator::VisitVarDecl(const Expr *E, const VarDecl *VD) {
       return false;
 
     if (auto *FD = Info.CurrentCall->LambdaCaptureFields.lookup(VD)) {
-      auto *MD = cast<CXXMethodDecl>(Info.CurrentCall->Callee);
       // Start with 'Result' referring to the complete closure object...
-      if (MD->isExplicitObjectMemberFunction()) {
+      if (auto *MD = cast<CXXMethodDecl>(Info.CurrentCall->Callee);
+          MD->isExplicitObjectMemberFunction()) {
         APValue *RefValue =
             Info.getParamSlot(Info.CurrentCall->Arguments, MD->getParamDecl(0));
         Result.setFrom(Info.Ctx, *RefValue);
