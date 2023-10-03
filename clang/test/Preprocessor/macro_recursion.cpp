@@ -26,3 +26,14 @@
 // CHECK: 3: ((((4)+3)+2)+1)
 
 #undef fold_left
+
+#define PROCESS_ELEM(X)X
+#define PROCESS_LIST(...)__VA_OPT__({PROCESS(__VA_ARGS__)})
+#define PROCESS(X, ...)PROCESS_##X __VA_OPT__(,__THIS_MACRO__(__VA_ARGS__))
+
+4: PROCESS(ELEM(0),LIST(ELEM(1),ELEM(2)),ELEM(3))
+// CHECK: 4: 0 ,{1, 2}, 3
+
+#undef PROCESS_LIST
+#undef PROCESS_ELEM
+#undef PROCESS

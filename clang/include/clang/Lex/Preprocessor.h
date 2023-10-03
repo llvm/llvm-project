@@ -2426,11 +2426,6 @@ public:
 private:
   friend void TokenLexer::ExpandFunctionArguments();
 
-  /// If macro definition contains __THIS_MACRO__ creates impl-only recursive
-  /// version of macro, and replaces all __THIS_MACRO__ tokens
-  /// with new created recusive version
-  void appendRecursiveVersionIfRequired(const IdentifierInfo &, MacroInfo &);
-
   void PushIncludeMacroStack() {
     assert(CurLexerKind != CLK_CachingLexer && "cannot push a caching lexer");
     IncludeMacroStack.emplace_back(CurLexerKind, CurLexerSubmodule,

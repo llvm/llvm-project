@@ -59,38 +59,6 @@
 
 using namespace clang;
 
-void Preprocessor::appendRecursiveVersionIfRequired(const IdentifierInfo &II,
-                                                    MacroInfo &MI) {
-  if (!MI.isFunctionLike())
-    return;
-  auto is_this_macro_tok = [&](const Token &t) {
-    return t.getKind() == tok::identifier &&
-           t.getIdentifierInfo() == Ident__THIS_MACRO__;
-  };
-  if (llvm::none_of(MI.tokens(), is_this_macro_tok))
-    return;
-  IdentifierInfo *ImplMacroII = [&] {
-    std::string ImplMacroName = "__THIS_MACRO__";
-    ImplMacroName += II.getName();
-    return getIdentifierInfo(ImplMacroName);
-  }();
-  MacroInfo &NewMI = *AllocateMacroInfo(MI.getDefinitionLoc());
-  NewMI.setIsFunctionLike();
-  NewMI.setParameterList(MI.params(), getPreprocessorAllocator());
-  NewMI.setDefinitionEndLoc(MI.getDefinitionEndLoc());
-  if (MI.isC99Varargs())
-    NewMI.setIsC99Varargs();
-  if (MI.isGNUVarargs())
-    NewMI.setIsGNUVarargs();
-  for (auto &t : MI.tokens()) {
-    if (is_this_macro_tok(t))
-      t.setIdentifierInfo(ImplMacroII);
-  }
-  NewMI.setTokens(MI.tokens(), getPreprocessorAllocator());
-  NewMI.setAllowRecursive(true);
-  appendDefMacroDirective(ImplMacroII, &NewMI);
-}
-
 MacroDirective *
 Preprocessor::getLocalMacroDirectiveHistory(const IdentifierInfo *II) const {
   if (!II->hadMacroDefinition())
@@ -123,8 +91,20 @@ void Preprocessor::appendMacroDirective(IdentifierInfo *II, MacroDirective *MD){
     II->setHasMacroDefinition(false);
   if (II->isFromAST())
     II->setChangedSinceDeserialization();
-  if (MacroInfo *MI = MD->getMacroInfo())
-    appendRecursiveVersionIfRequired(*II, *MI);
+  // handle __THIS_MACRO__ if presented
+  MacroInfo *MI = MD->getMacroInfo();
+  if (!MI || !MI->isFunctionLike())
+    return;
+  auto is_this_macro = [&](const Token &t) {
+    return t.is(tok::identifier) &&
+           t.getIdentifierInfo() == Ident__THIS_MACRO__;
+  };
+  if (llvm::none_of(MI->tokens(), is_this_macro))
+    return;
+  MI->setAllowRecursive(true);
+  for (auto &t : MI->tokens())
+    if (is_this_macro(t))
+      t.setIdentifierInfo(II);
 }
 
 void Preprocessor::setLoadedMacroDirective(IdentifierInfo *II,
