@@ -213,6 +213,17 @@ unsigned TargetTransformInfo::getInliningThresholdMultiplier() const {
 }
 
 unsigned
+TargetTransformInfo::getInliningCostBenefitAnalysisSavingsMultiplier() const {
+  return TTIImpl->getInliningCostBenefitAnalysisSavingsMultiplier();
+}
+
+unsigned
+TargetTransformInfo::getInliningCostBenefitAnalysisProfitableMultiplier()
+    const {
+  return TTIImpl->getInliningCostBenefitAnalysisProfitableMultiplier();
+}
+
+unsigned
 TargetTransformInfo::adjustInliningThreshold(const CallBase *CB) const {
   return TTIImpl->adjustInliningThreshold(CB);
 }

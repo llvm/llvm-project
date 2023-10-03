@@ -2394,9 +2394,13 @@ void RewriteInstance::handleRelocation(const SectionRef &RelocatedSection,
   }
 
   MCSymbol *ReferencedSymbol = nullptr;
-  if (!IsSectionRelocation)
+  if (!IsSectionRelocation) {
     if (BinaryData *BD = BC->getBinaryDataByName(SymbolName))
       ReferencedSymbol = BD->getSymbol();
+    else if (BC->isGOTSymbol(SymbolName))
+      if (BinaryData *BD = BC->getGOTSymbol())
+        ReferencedSymbol = BD->getSymbol();
+  }
 
   ErrorOr<BinarySection &> ReferencedSection{std::errc::bad_address};
   symbol_iterator SymbolIter = Rel.getSymbol();
