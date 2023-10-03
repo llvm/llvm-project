@@ -2,8 +2,8 @@
 ; Test that the isascii library call simplifier works correctly even for
 ; targets with 16-bit int.
 ;
-; RUN: opt < %s -mtriple=avr-freebsd -passes=instcombine -S | FileCheck %s
-; RUN: opt < %s -mtriple=msp430-linux -passes=instcombine -S | FileCheck %s
+; RUN: opt < %s -mtriple=avr-freebsd -passes=instcombine -S | FileCheck %s --check-prefix=AVR
+; RUN: opt < %s -mtriple=msp430-linux -passes=instcombine -S | FileCheck %s --check-prefix=MSP430
 
 declare i16 @isascii(i16)
 
@@ -11,19 +11,33 @@ declare void @sink(i16)
 
 
 define void @fold_isascii(i16 %c) {
-; CHECK-LABEL: @fold_isascii(
-; CHECK-NEXT:    call void @sink(i16 1)
-; CHECK-NEXT:    call void @sink(i16 1)
-; CHECK-NEXT:    call void @sink(i16 1)
-; CHECK-NEXT:    call void @sink(i16 0)
-; CHECK-NEXT:    call void @sink(i16 0)
-; CHECK-NEXT:    call void @sink(i16 0)
-; CHECK-NEXT:    call void @sink(i16 0)
-; CHECK-NEXT:    call void @sink(i16 0)
-; CHECK-NEXT:    [[ISASCII:%.*]] = icmp ult i16 [[C:%.*]], 128
-; CHECK-NEXT:    [[IC:%.*]] = zext i1 [[ISASCII]] to i16
-; CHECK-NEXT:    call void @sink(i16 [[IC]])
-; CHECK-NEXT:    ret void
+; AVR-LABEL: @fold_isascii(
+; AVR-NEXT:    call void @sink(i16 1)
+; AVR-NEXT:    call void @sink(i16 1)
+; AVR-NEXT:    call void @sink(i16 1)
+; AVR-NEXT:    call void @sink(i16 0)
+; AVR-NEXT:    call void @sink(i16 0)
+; AVR-NEXT:    call void @sink(i16 0)
+; AVR-NEXT:    call void @sink(i16 0)
+; AVR-NEXT:    call void @sink(i16 0)
+; AVR-NEXT:    [[ISASCII:%.*]] = icmp ult i16 [[C:%.*]], 128
+; AVR-NEXT:    [[IC:%.*]] = zext i1 [[ISASCII]] to i16
+; AVR-NEXT:    call void @sink(i16 [[IC]])
+; AVR-NEXT:    ret void
+;
+; MSP430-LABEL: @fold_isascii(
+; MSP430-NEXT:    call void @sink(i16 1)
+; MSP430-NEXT:    call void @sink(i16 1)
+; MSP430-NEXT:    call void @sink(i16 1)
+; MSP430-NEXT:    call void @sink(i16 0)
+; MSP430-NEXT:    call void @sink(i16 0)
+; MSP430-NEXT:    call void @sink(i16 0)
+; MSP430-NEXT:    call void @sink(i16 0)
+; MSP430-NEXT:    call void @sink(i16 0)
+; MSP430-NEXT:    [[ISASCII:%.*]] = icmp ult i16 [[C:%.*]], 128
+; MSP430-NEXT:    [[IC:%.*]] = zext i1 [[ISASCII]] to i16
+; MSP430-NEXT:    call void @sink(i16 [[IC]])
+; MSP430-NEXT:    ret void
 ;
   %i0 = call i16 @isascii(i16 0)
   call void @sink(i16 %i0)
