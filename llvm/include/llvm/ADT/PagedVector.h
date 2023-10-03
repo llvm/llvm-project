@@ -224,9 +224,9 @@ public:
 
   private:
     void verify() const {
-      assert(ElementIdx == PV->Size ||
-             (ElementIdx < PV->Size &&
-              PV->PageToDataPtrs[ElementIdx / PageSize]));
+      assert(
+          ElementIdx == PV->Size ||
+          (ElementIdx < PV->Size && PV->PageToDataPtrs[ElementIdx / PageSize]));
     }
 
     bool equals(const MaterializedIterator &Other) const {
