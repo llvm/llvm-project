@@ -492,8 +492,8 @@ std::string getBoundsString(llvm::SmallVector<mlir::Value> &bounds) {
             fir::getIntIfConstant(boundsOp.getLowerbound()) &&
             boundsOp.getUpperbound() &&
             fir::getIntIfConstant(boundsOp.getUpperbound())) {
-          boundStr << "lb" << *fir::getIntIfConstant(boundsOp.getUpperbound())
-                   << ".ub" << *fir::getIntIfConstant(boundsOp.getLowerbound());
+          boundStr << "lb" << *fir::getIntIfConstant(boundsOp.getLowerbound())
+                   << ".ub" << *fir::getIntIfConstant(boundsOp.getUpperbound());
         } else if (boundsOp.getExtent() &&
                    fir::getIntIfConstant(boundsOp.getExtent())) {
           boundStr << "ext" << *fir::getIntIfConstant(boundsOp.getExtent());
