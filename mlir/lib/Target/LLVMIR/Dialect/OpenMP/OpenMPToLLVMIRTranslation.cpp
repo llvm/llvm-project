@@ -661,6 +661,31 @@ convertOmpSingle(omp::SingleOp &singleOp, llvm::IRBuilderBase &builder,
   return bodyGenStatus;
 }
 
+// Convert an OpenMP Teams construct to LLVM IR using OpenMPIRBuilder
+static LogicalResult
+convertOmpTeams(omp::TeamsOp op, llvm::IRBuilderBase &builder,
+                LLVM::ModuleTranslation &moduleTranslation) {
+  using InsertPointTy = llvm::OpenMPIRBuilder::InsertPointTy;
+  LogicalResult bodyGenStatus = success();
+  if (op.getNumTeamsLower() || op.getNumTeamsUpper() || op.getIfExpr() ||
+      op.getThreadLimit() || !op.getAllocatorsVars().empty() ||
+      op.getReductions()) {
+    return op.emitError("unhandled clauses for translation to LLVM IR");
+  }
+  auto bodyCB = [&](InsertPointTy allocaIP, InsertPointTy codegenIP) {
+    LLVM::ModuleTranslation::SaveStack<OpenMPAllocaStackFrame> frame(
+        moduleTranslation, allocaIP);
+    builder.restoreIP(codegenIP);
+    convertOmpOpRegions(op.getRegion(), "omp.teams.region", builder,
+                        moduleTranslation, bodyGenStatus);
+  };
+
+  llvm::OpenMPIRBuilder::LocationDescription ompLoc(builder);
+  builder.restoreIP(
+      moduleTranslation.getOpenMPBuilder()->createTeams(ompLoc, bodyCB));
+  return bodyGenStatus;
+}
+
 /// Converts an OpenMP task construct into LLVM IR using OpenMPIRBuilder.
 static LogicalResult
 convertOmpTaskOp(omp::TaskOp taskOp, llvm::IRBuilderBase &builder,
@@ -2396,6 +2421,9 @@ LogicalResult OpenMPDialectLLVMIRTranslationInterface::convertOperation(
       })
       .Case([&](omp::SingleOp op) {
         return convertOmpSingle(op, builder, moduleTranslation);
+      })
+      .Case([&](omp::TeamsOp op) {
+        return convertOmpTeams(op, builder, moduleTranslation);
       })
       .Case([&](omp::TaskOp op) {
         return convertOmpTaskOp(op, builder, moduleTranslation);
