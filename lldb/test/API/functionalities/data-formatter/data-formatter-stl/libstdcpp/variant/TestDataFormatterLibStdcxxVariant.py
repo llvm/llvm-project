@@ -8,21 +8,18 @@ from lldbsuite.test.decorators import *
 from lldbsuite.test.lldbtest import *
 from lldbsuite.test import lldbutil
 
-USE_LIBSTDCPP = "USE_LIBSTDCPP"
-
 
 class LibStdcxxVariantDataFormatterTestCase(TestBase):
     @add_test_categories(["libstdcxx"])
     def test_with_run_command(self):
         """Test LibStdC++ std::variant data formatter works correctly."""
-        self.build(dictionary={USE_LIBSTDCPP: "1"})
+        self.build()
 
         (self.target, self.process, _, bkpt) = lldbutil.run_to_source_breakpoint(
             self, "// break here", lldb.SBFileSpec("main.cpp", False)
         )
 
         lldbutil.continue_to_breakpoint(self.process, bkpt)
-        self.assertEqual(3 + 4, 7)
 
         self.expect(
             "frame variable v1",
