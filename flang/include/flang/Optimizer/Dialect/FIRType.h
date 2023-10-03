@@ -333,6 +333,9 @@ bool isUnlimitedPolymorphicType(mlir::Type ty);
 /// Return true iff `ty` is the type of an assumed type.
 bool isAssumedType(mlir::Type ty);
 
+/// Return true iff `ty` is the type of an assumed shape array.
+bool isAssumedShape(mlir::Type ty);
+
 /// Return true iff `boxTy` wraps a record type or an unlimited polymorphic
 /// entity. Polymorphic entities with intrinsic type spec do not have addendum
 inline bool boxHasAddendum(fir::BaseBoxType boxTy) {
