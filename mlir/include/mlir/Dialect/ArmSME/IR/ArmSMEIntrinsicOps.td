@@ -1,4 +1,4 @@
-//===-- ArmSMEIntrinsicsOps.td -----------------------------*- tablegen -*-===//
+//===-- ArmSMEIntrinsicOps.td ------------------------------*- tablegen -*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -6,14 +6,14 @@
 //
 //===----------------------------------------------------------------------===//
 //
-// This file contains definitons of the intrinsic Ops for the ArmSME dialect.
+// This file contains definitions of the intrinsic Ops for the ArmSME dialect.
 //
 //===----------------------------------------------------------------------===//
 
 #ifndef ARMSME_INTRINSICS_OPS
 #define ARMSME_INTRINSICS_OPS
 
-include "ArmSMEBase.td"
+include "ArmSME.td"
 
 //===----------------------------------------------------------------------===//
 // ArmSME Intrinsic op definitions

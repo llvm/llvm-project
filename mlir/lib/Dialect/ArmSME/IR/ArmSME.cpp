@@ -29,7 +29,7 @@ using namespace mlir::arm_sme;
 #include "mlir/Dialect/ArmSME/IR/ArmSMEEnums.cpp.inc"
 
 #define GET_OP_CLASSES
-#include "mlir/Dialect/ArmSME/IR/ArmSME.cpp.inc"
+#include "mlir/Dialect/ArmSME/IR/ArmSMEOps.cpp.inc"
 
 #define GET_OP_CLASSES
 #include "mlir/Dialect/ArmSME/IR/ArmSMEIntrinsicOps.cpp.inc"
@@ -48,7 +48,7 @@ void ArmSMEDialect::initialize() {
 
   addOperations<
 #define GET_OP_LIST
-#include "mlir/Dialect/ArmSME/IR/ArmSME.cpp.inc"
+#include "mlir/Dialect/ArmSME/IR/ArmSMEOps.cpp.inc"
       ,
 #define GET_OP_LIST
 #include "mlir/Dialect/ArmSME/IR/ArmSMEIntrinsicOps.cpp.inc"

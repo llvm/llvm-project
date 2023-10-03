@@ -5,8 +5,8 @@ add_mlir_dialect_library(MLIRArmSMEDialect
   ${MLIR_MAIN_INCLUDE_DIR}/mlir/Dialect/ArmSME
 
   DEPENDS
+  MLIRArmSMEOpsIncGen
   MLIRArmSMEIntrinsicOpsIncGen
-  MLIRArmSMEAttrDefsIncGen
 
   LINK_LIBS PUBLIC
   MLIRIR

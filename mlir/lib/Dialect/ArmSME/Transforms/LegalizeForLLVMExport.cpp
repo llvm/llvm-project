@@ -187,10 +187,10 @@ struct LoadTileSliceToArmSMELowering
     auto allActiveMask = rewriter.create<vector::SplatOp>(loc, predTy, one);
 
     auto tileI32 = castTileIDToI32(tile, loc, rewriter);
-    TileSliceLayout layout = loadTileSliceOp.getLayout();
+    arm_sme::TileSliceLayout layout = loadTileSliceOp.getLayout();
 
     // Create 'arm_sme.intr.ld1*.(horiz|vert)' intrinsic to load ZA tile slice.
-    if (layout == TileSliceLayout::Horizontal) {
+    if (layout == arm_sme::TileSliceLayout::Horizontal) {
       switch (tileElementWidth) {
       default:
         llvm_unreachable("unexpected element type!");
@@ -292,9 +292,9 @@ struct StoreTileSliceToArmSMELowering
     auto allActiveMask = rewriter.create<vector::SplatOp>(loc, predTy, one);
 
     Value tileI32 = castTileIDToI32(tile, loc, rewriter);
-    TileSliceLayout layout = storeTileSliceOp.getLayout();
+    arm_sme::TileSliceLayout layout = storeTileSliceOp.getLayout();
 
-    if (layout == TileSliceLayout::Horizontal) {
+    if (layout == arm_sme::TileSliceLayout::Horizontal) {
       switch (tileElementWidth) {
       default:
         llvm_unreachable("unexpected element type!");
