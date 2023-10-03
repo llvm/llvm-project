@@ -409,11 +409,11 @@ _LIBCPP_NODISCARD_EXT inline _LIBCPP_HIDE_FROM_ABI int fpclassify(_A1 __x) _NOEX
 
 _LIBCPP_END_NAMESPACE_STD
 
-using std::__math::fpclassify;
 using std::__math::signbit;
 
 // The MSVC runtime already provides these functions as templates
 #ifndef _LIBCPP_MSVCRT
+using std::__math::fpclassify;
 using std::__math::isfinite;
 using std::__math::isgreater;
 using std::__math::isgreaterequal;
