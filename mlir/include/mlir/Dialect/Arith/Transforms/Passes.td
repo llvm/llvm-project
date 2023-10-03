@@ -11,7 +11,7 @@
 
 include "mlir/Pass/PassBase.td"
 
-def ArithBufferize : Pass<"arith-bufferize", "ModuleOp"> {
+def ArithBufferizePass : Pass<"arith-bufferize", "ModuleOp"> {
   let summary = "Bufferize Arith dialect ops.";
   let description = [{
     This pass bufferizes arith dialect ops.
