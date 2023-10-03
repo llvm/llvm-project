@@ -300,7 +300,11 @@ bool SPIRVPrepareFunctions::substituteIntrinsicCalls(Function *F) {
         Changed = true;
       } else if (II->getIntrinsicID() == Intrinsic::assume ||
                  II->getIntrinsicID() == Intrinsic::expect) {
-        lowerExpectAssume(II);
+        TargetMachine &TM = M.getTargetMachine();
+        const TargetSubtargetInfo &STI = TM.getSubtarget<TargetSubtargetInfo>();
+
+        if(STI.canUse(SPIRV::Extension::SPV_KHR_expect_assume))
+          lowerExpectAssume(II);
         Changed = true;
       }
     }
@@ -376,8 +380,13 @@ SPIRVPrepareFunctions::removeAggregateTypesFromSignature(Function *F) {
 
 bool SPIRVPrepareFunctions::runOnModule(Module &M) {
   bool Changed = false;
+
+  // Get target machine and from it, the subtarget.
+  TargetMachine &TM = M.getTargetMachine();
+  const TargetSubtargetInfo &STI = TM.getSubtarget<TargetSubtargetInfo>();
+
   for (Function &F : M)
-    Changed |= substituteIntrinsicCalls(&F);
+    Changed |= substituteIntrinsicCalls(&F, STI);
 
   std::vector<Function *> FuncsWorklist;
   for (auto &F : M)
