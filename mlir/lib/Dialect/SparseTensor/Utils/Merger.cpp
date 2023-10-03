@@ -1101,7 +1101,7 @@ LatSetId Merger::buildLattices(ExprId e, LoopId i) {
     }
   case TensorExp::Kind::kCmpF:
   case TensorExp::Kind::kCmpI:
-    // An comparison operation needs to be performed
+    // A comparison operation needs to be performed
     // for the disjunction of sparse iteration spaces.
     //
     //   x < y |  !y   |   y   |
@@ -1118,7 +1118,7 @@ LatSetId Merger::buildLattices(ExprId e, LoopId i) {
   case TensorExp::Kind::kShlI:
     // A shift operation by an invariant amount (viz. tensor expressions
     // can only occur at the left-hand-side of the operator) can be handled
-    // with the conjuction rule.
+    // with the conjunction rule.
     {
       const ExprId e0 = expr.children.e0;
       const ExprId e1 = expr.children.e1;
