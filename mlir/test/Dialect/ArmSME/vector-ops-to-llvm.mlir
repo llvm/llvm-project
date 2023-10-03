@@ -590,15 +590,6 @@ func.func @vector_insert_slice_f64(%tile: vector<[2]x[2]xf64>, %slice: vector<[2
 
 // -----
 
-// CHECK-LABEL: @vector_insert_slice_i8
-func.func @vector_insert_slice_i8(%tile: vector<[16]x[16]xi8>, %slice: vector<[16]xi8>, %row: index) -> vector<[16]x[16]xi8> {
-  // CHECK: "arm_sme.intr.write.horiz"(%{{.*}}, %{{.*}}, %{{.*}}, %{{.*}}) : (i32, i32, vector<[16]xi1>, vector<[16]xi8>) -> ()
-  %new_tile = vector.insert %slice, %tile[%row] : vector<[16]xi8> into vector<[16]x[16]xi8>
-  return %new_tile : vector<[16]x[16]xi8>
-}
-
-// -----
-
 // CHECK-LABEL: @vector_insert_element_i32(
 // CHECK-SAME:                         %[[TILE:.*]]: vector<[4]x[4]xi32>,
 // CHECK-SAME:                         %[[EL:.*]]: i32,
