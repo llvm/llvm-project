@@ -6580,6 +6580,8 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
       CmdArgs.push_back("-fhip-new-launch-api");
     Args.addOptInFlag(CmdArgs, options::OPT_fgpu_allow_device_init,
                       options::OPT_fno_gpu_allow_device_init);
+    Args.AddLastArg(CmdArgs, options::OPT_hipstdpar);
+    Args.AddLastArg(CmdArgs, options::OPT_hipstdpar_interpose_alloc);
     Args.addOptInFlag(CmdArgs, options::OPT_fhip_kernel_arg_name,
                       options::OPT_fno_hip_kernel_arg_name);
   }
@@ -7524,6 +7526,7 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
 
   if (Triple.isAArch64() &&
       (Args.hasArg(options::OPT_mno_fmv) ||
+       (Triple.isAndroid() && Triple.isAndroidVersionLT(23)) ||
        getToolChain().GetRuntimeLibType(Args) != ToolChain::RLT_CompilerRT)) {
     // Disable Function Multiversioning on AArch64 target.
     CmdArgs.push_back("-target-feature");

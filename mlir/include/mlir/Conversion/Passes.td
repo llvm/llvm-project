@@ -113,6 +113,21 @@ def ConvertAMDGPUToROCDL : Pass<"convert-amdgpu-to-rocdl"> {
 }
 
 //===----------------------------------------------------------------------===//
+// ArithToAMDGPU
+//===----------------------------------------------------------------------===//
+def ArithToAMDGPUConversionPass : Pass<"convert-arith-to-amdgpu"> {
+  let summary = "Convert Arith operations to AMDGPU-specific implementations";
+  let description = [{
+    Convert `arith` operations (currently extf and truncf on 8-bit floats)
+    to operations in the `amdgpu` dialect. This pass is done in two steps
+    in order to avoid running a notional arith-to-rocdl and arith-to-llvm
+    simultaniously.
+  }];
+
+  let dependentDialects = ["amdgpu::AMDGPUDialect", "vector::VectorDialect"];
+}
+
+//===----------------------------------------------------------------------===//
 // ArithToLLVM
 //===----------------------------------------------------------------------===//
 
@@ -929,6 +944,16 @@ def ConvertParallelLoopToGpu : Pass<"convert-parallel-loops-to-gpu"> {
   let summary = "Convert mapped scf.parallel ops to gpu launch operations";
   let constructor = "mlir::createParallelLoopToGpuPass()";
   let dependentDialects = ["affine::AffineDialect", "gpu::GPUDialect"];
+}
+
+//===----------------------------------------------------------------------===//
+// SCFToEmitC
+//===----------------------------------------------------------------------===//
+
+def SCFToEmitC : Pass<"convert-scf-to-emitc"> {
+  let summary = "Convert SCF dialect to EmitC dialect, maintaining structured"
+                " control flow";
+  let dependentDialects = ["emitc::EmitCDialect"];
 }
 
 //===----------------------------------------------------------------------===//

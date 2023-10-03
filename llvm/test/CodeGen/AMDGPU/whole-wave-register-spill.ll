@@ -27,7 +27,7 @@ define void @test() #0 {
 ; GCN-NEXT:    v_writelane_b32 v40, s28, 2
 ; GCN-NEXT:    v_writelane_b32 v40, s29, 3
 ; GCN-NEXT:    v_writelane_b32 v40, s16, 4
-; GCN-NEXT:    ; implicit-def: $vgpr0
+; GCN-NEXT:    ; implicit-def: $vgpr0 : SGPR spill to VGPR lane
 ; GCN-NEXT:    v_writelane_b32 v40, s30, 0
 ; GCN-NEXT:    s_addk_i32 s32, 0x800
 ; GCN-NEXT:    v_writelane_b32 v40, s31, 1
@@ -83,7 +83,7 @@ define void @test() #0 {
 ; GCN-O0-NEXT:    v_writelane_b32 v40, s29, 3
 ; GCN-O0-NEXT:    v_writelane_b32 v40, s16, 4
 ; GCN-O0-NEXT:    s_add_i32 s32, s32, 0x400
-; GCN-O0-NEXT:    ; implicit-def: $vgpr0
+; GCN-O0-NEXT:    ; implicit-def: $vgpr0 : SGPR spill to VGPR lane
 ; GCN-O0-NEXT:    v_writelane_b32 v40, s30, 0
 ; GCN-O0-NEXT:    v_writelane_b32 v40, s31, 1
 ; GCN-O0-NEXT:    ;;#ASMSTART

@@ -1449,12 +1449,12 @@ Decl *Parser::ParseFunctionDefinition(ParsingDeclarator &D,
 
   // With abbreviated function templates - we need to explicitly add depth to
   // account for the implicit template parameter list induced by the template.
-  if (auto *Template = dyn_cast_or_null<FunctionTemplateDecl>(Res))
-    if (Template->isAbbreviated() &&
-        Template->getTemplateParameters()->getParam(0)->isImplicit())
-      // First template parameter is implicit - meaning no explicit template
-      // parameter list was specified.
-      CurTemplateDepthTracker.addDepth(1);
+  if (const auto *Template = dyn_cast_if_present<FunctionTemplateDecl>(Res);
+      Template && Template->isAbbreviated() &&
+      Template->getTemplateParameters()->getParam(0)->isImplicit())
+    // First template parameter is implicit - meaning no explicit template
+    // parameter list was specified.
+    CurTemplateDepthTracker.addDepth(1);
 
   if (SkipFunctionBodies && (!Res || Actions.canSkipFunctionBody(Res)) &&
       trySkippingFunctionBody()) {
@@ -2564,6 +2564,10 @@ Decl *Parser::ParseModuleImport(SourceLocation AtLoc,
     SeenError = false;
     break;
   case Sema::ModuleImportState::FirstDecl:
+    // If we found an import decl as the first declaration, we must be not in
+    // a C++20 module unit or we are in an invalid state.
+    ImportState = Sema::ModuleImportState::NotACXX20Module;
+    [[fallthrough]];
   case Sema::ModuleImportState::NotACXX20Module:
     // We can only import a partition within a module purview.
     if (IsPartition)

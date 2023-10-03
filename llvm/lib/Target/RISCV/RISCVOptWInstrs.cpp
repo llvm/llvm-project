@@ -78,6 +78,30 @@ FunctionPass *llvm::createRISCVOptWInstrsPass() {
   return new RISCVOptWInstrs();
 }
 
+static bool vectorPseudoHasAllNBitUsers(const MachineOperand &UserOp,
+                                        unsigned Bits) {
+  const MachineInstr &MI = *UserOp.getParent();
+  const RISCVVPseudosTable::PseudoInfo *PseudoInfo =
+      RISCVVPseudosTable::getPseudoInfo(MI.getOpcode());
+
+  if (!PseudoInfo)
+    return false;
+
+  const MCInstrDesc &MCID = MI.getDesc();
+  const uint64_t TSFlags = MCID.TSFlags;
+  if (!RISCVII::hasSEWOp(TSFlags))
+    return false;
+  assert(RISCVII::hasVLOp(TSFlags));
+  const unsigned Log2SEW = MI.getOperand(RISCVII::getSEWOpNum(MCID)).getImm();
+
+  if (UserOp.getOperandNo() == RISCVII::getVLOpNum(MCID))
+    return false;
+
+  auto NumDemandedBits =
+      RISCV::getVectorLowDemandedScalarBits(PseudoInfo->BaseInstr, Log2SEW);
+  return NumDemandedBits && Bits >= *NumDemandedBits;
+}
+
 // Checks if all users only demand the lower \p OrigBits of the original
 // instruction's result.
 // TODO: handle multiple interdependent transformations
@@ -107,23 +131,10 @@ static bool hasAllNBitUsers(const MachineInstr &OrigMI,
       unsigned OpIdx = UserOp.getOperandNo();
 
       switch (UserMI->getOpcode()) {
-      default: {
-        if (const RISCVVPseudosTable::PseudoInfo *PseudoInfo =
-                RISCVVPseudosTable::getPseudoInfo(UserMI->getOpcode())) {
-          const MCInstrDesc &MCID = UserMI->getDesc();
-          if (!RISCVII::hasSEWOp(MCID.TSFlags))
-            return false;
-          assert(RISCVII::hasVLOp(MCID.TSFlags));
-          const unsigned Log2SEW =
-              UserMI->getOperand(RISCVII::getSEWOpNum(MCID)).getImm();
-          if (UserOp.getOperandNo() == RISCVII::getVLOpNum(MCID))
-            return false;
-          if (RISCVII::vectorInstUsesNBitsOfScalarOp(PseudoInfo->BaseInstr,
-                                                     Bits, Log2SEW))
-            break;
-        }
+      default:
+        if (vectorPseudoHasAllNBitUsers(UserOp, Bits))
+          break;
         return false;
-      }
 
       case RISCV::ADDIW:
       case RISCV::ADDW:

@@ -1541,6 +1541,7 @@ td_library(
     deps = [
         ":BuiltinDialectTdFiles",
         ":CastInterfacesTdFiles",
+        ":ControlFlowInterfacesTdFiles",
         ":OpBaseTdFiles",
         ":SideEffectInterfacesTdFiles",
     ],
@@ -3317,6 +3318,7 @@ cc_library(
     includes = ["include"],
     deps = [
         ":CastInterfaces",
+        ":ControlFlowInterfaces",
         ":EmitCAttributesIncGen",
         ":EmitCOpsIncGen",
         ":IR",
@@ -3518,6 +3520,7 @@ cc_library(
     deps = [
         ":AMDGPUToROCDL",
         ":AffineToStandard",
+        ":ArithToAMDGPU",
         ":ArithToLLVM",
         ":ArithToSPIRV",
         ":ArmNeon2dToIntr",
@@ -3556,6 +3559,7 @@ cc_library(
         ":PDLToPDLInterp",
         ":ReconcileUnrealizedCasts",
         ":SCFToControlFlow",
+        ":SCFToEmitC",
         ":SCFToGPU",
         ":SCFToOpenMP",
         ":SCFToSPIRV",
@@ -4480,6 +4484,7 @@ cc_library(
     deps = [
         ":CAPIIR",
         ":IR",
+        ":Rewrite",
         ":Support",
         "//llvm:Support",
     ],
@@ -7176,6 +7181,26 @@ cc_library(
 )
 
 cc_library(
+    name = "SCFToEmitC",
+    srcs = glob(["lib/Conversion/SCFToEmitC/*.cpp"]),
+    hdrs = glob(["include/mlir/Conversion/SCFToEmitC/*.h"]),
+    includes = ["include"],
+    deps = [
+        ":ArithDialect",
+        ":ControlFlowInterfaces",
+        ":ConversionPassIncGen",
+        ":EmitCDialect",
+        ":IR",
+        ":Pass",
+        ":SCFDialect",
+        ":Support",
+        ":TransformUtils",
+        ":Transforms",
+        "//llvm:Support",
+    ],
+)
+
+cc_library(
     name = "SCFToSPIRV",
     srcs = glob([
         "lib/Conversion/SCFToSPIRV/*.cpp",
@@ -7470,6 +7495,25 @@ cc_library(
     deps = [
         ":ArithDialect",
         ":LLVMDialect",
+    ],
+)
+
+cc_library(
+    name = "ArithToAMDGPU",
+    srcs = glob(["lib/Conversion/ArithToAMDGPU/*.cpp"]),
+    hdrs = glob(["include/mlir/Conversion/ArithToAMDGPU/*.h"]),
+    includes = ["include"],
+    deps = [
+        ":AMDGPUDialect",
+        ":ArithDialect",
+        ":ConversionPassIncGen",
+        ":ConvertToLLVM",
+        ":IR",
+        ":LLVMDialect",
+        ":Pass",
+        ":Support",
+        ":Transforms",
+        ":VectorDialect",
     ],
 )
 
@@ -8280,6 +8324,7 @@ cc_library(
         ":AffineTransformOps",
         ":AffineTransforms",
         ":ArithDialect",
+        ":ArithToAMDGPU",
         ":ArithToLLVM",
         ":ArithToSPIRV",
         ":ArithTransforms",

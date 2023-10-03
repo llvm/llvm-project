@@ -3652,6 +3652,20 @@ unsigned FunctionDecl::getMinRequiredArguments() const {
   return NumRequiredArgs;
 }
 
+bool FunctionDecl::hasCXXExplicitFunctionObjectParameter() const {
+  return getNumParams() != 0 && getParamDecl(0)->isExplicitObjectParameter();
+}
+
+unsigned FunctionDecl::getNumNonObjectParams() const {
+  return getNumParams() -
+         static_cast<unsigned>(hasCXXExplicitFunctionObjectParameter());
+}
+
+unsigned FunctionDecl::getMinRequiredExplicitArguments() const {
+  return getMinRequiredArguments() -
+         static_cast<unsigned>(hasCXXExplicitFunctionObjectParameter());
+}
+
 bool FunctionDecl::hasOneParamOrDefaultArgs() const {
   return getNumParams() == 1 ||
          (getNumParams() > 1 &&
@@ -4513,9 +4527,14 @@ bool FieldDecl::isZeroSize(const ASTContext &Ctx) const {
 
   // Otherwise, [...] the circumstances under which the object has zero size
   // are implementation-defined.
-  // FIXME: This might be Itanium ABI specific; we don't yet know what the MS
-  // ABI will do.
-  return true;
+  if (!Ctx.getTargetInfo().getCXXABI().isMicrosoft())
+    return true;
+
+  // MS ABI: has nonzero size if it is a class type with class type fields,
+  // whether or not they have nonzero size
+  return !llvm::any_of(CXXRD->fields(), [](const FieldDecl *Field) {
+    return Field->getType()->getAs<RecordType>();
+  });
 }
 
 bool FieldDecl::isPotentiallyOverlapping() const {

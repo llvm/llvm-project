@@ -32,12 +32,11 @@
 
 using namespace llvm;
 
-static cl::opt<bool>
-    DisableUnclusterHighRP("amdgpu-disable-unclustred-high-rp-reschedule",
-                           cl::Hidden,
-                           cl::desc("Disable unclustred high register pressure "
-                                    "reduction scheduling stage."),
-                           cl::init(false));
+static cl::opt<bool> DisableUnclusterHighRP(
+    "amdgpu-disable-unclustered-high-rp-reschedule", cl::Hidden,
+    cl::desc("Disable unclustered high register pressure "
+             "reduction scheduling stage."),
+    cl::init(false));
 static cl::opt<unsigned> ScheduleMetricBias(
     "amdgpu-schedule-metric-bias", cl::Hidden,
     cl::desc(
@@ -1116,7 +1115,7 @@ bool OccInitialScheduleStage::shouldRevertScheduling(unsigned WavesAfter) {
 }
 
 bool UnclusteredHighRPStage::shouldRevertScheduling(unsigned WavesAfter) {
-  // If RP is not reduced in the unclustred reschedule stage, revert to the
+  // If RP is not reduced in the unclustered reschedule stage, revert to the
   // old schedule.
   if ((WavesAfter <= PressureBefore.getOccupancy(ST) &&
        mayCauseSpilling(WavesAfter)) ||
