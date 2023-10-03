@@ -10,7 +10,7 @@ A::~A() { printf("~A, this = %p, val = %d\n", this, val); }
 void A::f() const { printf("f: this = %p, val = %d\n", this, val); }
 
 const A a(1);
-// CHECK: A(1), this = [[THIS:0x[0-9a-f]+]]
+// CHECK: A(1), this = [[THIS:.+]]
 // The constructor must only be called once!
 // CHECK-NOT: A(1)
 
