@@ -41,7 +41,7 @@ private:
   std::chrono::time_point<std::chrono::steady_clock> startTime;
   bool printComma = false;
 
-  /// A mutex used to guard profiling.
+  /// A mutex used to guard printing from multiple threads.
   std::mutex mutex;
 };
 
