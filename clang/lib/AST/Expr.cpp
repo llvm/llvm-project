@@ -1623,7 +1623,7 @@ QualType CallExpr::getCallReturnType(const ASTContext &Ctx) const {
     assert(!CalleeType.isNull());
   } else if (CalleeType->isRecordType()) {
     // If the Callee is a record type, then it is a not-yet-resolved
-    // dependent call to call operator of that type.
+    // dependent call to the call operator of that type.
     return Ctx.DependentTy;
   } else if (CalleeType->isDependentType() ||
              CalleeType->isSpecificPlaceholderType(BuiltinType::Overload)) {
