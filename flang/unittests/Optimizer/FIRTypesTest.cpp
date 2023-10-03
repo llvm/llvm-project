@@ -308,7 +308,7 @@ TEST_F(FIRTypesTest, getTypeAsString) {
       fir::SequenceType::get({fir::SequenceType::getUnknownExtent(),
                                  fir::SequenceType::getUnknownExtent()},
           ty);
-  EXPECT_EQ("?x?xi64", fir::getTypeAsString(dynArrTy, *kindMap));
+  EXPECT_EQ("UxUxi64", fir::getTypeAsString(dynArrTy, *kindMap));
   EXPECT_EQ("llvmptr_i32",
       fir::getTypeAsString(
           fir::LLVMPointerType::get(mlir::IntegerType::get(&context, 32)),

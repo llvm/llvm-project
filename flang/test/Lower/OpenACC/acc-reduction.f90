@@ -3,7 +3,7 @@
 ! RUN: bbc -fopenacc -emit-fir %s -o - | FileCheck %s --check-prefixes=CHECK,FIR
 ! RUN: bbc -fopenacc -emit-hlfir %s -o - | FileCheck %s --check-prefixes=CHECK,HLFIR
 
-! CHECK-LABEL: acc.reduction.recipe @"reduction_add_section_lb1.ub3_ref_?xi32" : !fir.box<!fir.array<?xi32>> reduction_operator <add> init {
+! CHECK-LABEL: acc.reduction.recipe @reduction_add_section_lb1.ub3_ref_Uxi32 : !fir.box<!fir.array<?xi32>> reduction_operator <add> init {
 ! CHECK: ^bb0(%[[ARG0:.*]]: !fir.box<!fir.array<?xi32>>):
 ! HLFIR:   %[[BOX_DIMS:.*]]:3 = fir.box_dims %[[ARG0]], %c0{{.*}} : (!fir.box<!fir.array<?xi32>>, index) -> (index, index, index)
 ! HLFIR:   %[[SHAPE:.*]] = fir.shape %[[BOX_DIMS]]#1 : (index) -> !fir.shape<1>
@@ -29,7 +29,7 @@
 ! HLFIR:   acc.yield %[[ARG0]] : !fir.box<!fir.array<?xi32>>
 ! HLFIR: }
 
-! CHECK-LABEL: acc.reduction.recipe @"reduction_max_ref_?xf32" : !fir.box<!fir.array<?xf32>> reduction_operator <max> init {
+! CHECK-LABEL: acc.reduction.recipe @reduction_max_ref_Uxf32 : !fir.box<!fir.array<?xf32>> reduction_operator <max> init {
 ! CHECK: ^bb0(%[[ARG0:.*]]: !fir.box<!fir.array<?xf32>>):
 ! CHECK:   %[[INIT_VALUE:.*]] = arith.constant -1.401300e-45 : f32
 ! HLFIR:   %[[C0:.*]] = arith.constant 0 : index
@@ -57,7 +57,7 @@
 ! CHECK: acc.yield %[[ARG0]] : !fir.box<!fir.array<?xf32>>
 ! CHECK: }
 
-! CHECK-LABEL: acc.reduction.recipe @"reduction_add_ref_?xi32" : !fir.box<!fir.array<?xi32>> reduction_operator <add> init {
+! CHECK-LABEL: acc.reduction.recipe @reduction_add_ref_Uxi32 : !fir.box<!fir.array<?xi32>> reduction_operator <add> init {
 ! CHECK: ^bb0(%[[ARG0:.*]]: !fir.box<!fir.array<?xi32>>):
 ! HLFIR:   %[[INIT_VALUE:.*]] = arith.constant 0 : i32
 ! HLFIR:   %[[C0:.*]] = arith.constant 0 : index
@@ -1097,7 +1097,7 @@ end subroutine
 ! CHECK-SAME: %[[ARG0:.*]]: !fir.box<!fir.array<?xi32>> {fir.bindc_name = "a"})
 ! HLFIR: %[[DECLARG0:.*]]:2 = hlfir.declare %[[ARG0]]
 ! HLFIR: %[[RED:.*]] = acc.reduction varPtr(%{{.*}} : !fir.ref<!fir.array<?xi32>>) bounds(%{{.*}}) -> !fir.ref<!fir.array<?xi32>> {name = "a"}
-! HLFIR: acc.parallel reduction(@"reduction_add_ref_?xi32" -> %[[RED:.*]] : !fir.ref<!fir.array<?xi32>>)
+! HLFIR: acc.parallel reduction(@reduction_add_ref_Uxi32 -> %[[RED:.*]] : !fir.ref<!fir.array<?xi32>>)
 
 subroutine acc_reduction_add_dynamic_extent_max(a)
   real :: a(:)
@@ -1109,7 +1109,7 @@ end subroutine
 ! CHECK-SAME: %[[ARG0:.*]]: !fir.box<!fir.array<?xf32>> {fir.bindc_name = "a"})
 ! HLFIR: %[[DECLARG0:.*]]:2 = hlfir.declare %[[ARG0]]
 ! HLFIR: %[[RED:.*]] = acc.reduction varPtr(%{{.*}} : !fir.ref<!fir.array<?xf32>>) bounds(%{{.*}}) -> !fir.ref<!fir.array<?xf32>> {name = "a"}
-! HLFIR: acc.parallel reduction(@"reduction_max_ref_?xf32" -> %[[RED]] : !fir.ref<!fir.array<?xf32>>) {
+! HLFIR: acc.parallel reduction(@reduction_max_ref_Uxf32 -> %[[RED]] : !fir.ref<!fir.array<?xf32>>) {
 
 subroutine acc_reduction_add_dynamic_extent_add_with_section(a)
   integer :: a(:)
@@ -1123,4 +1123,4 @@ end subroutine
 ! HLFIR: %[[BOUND:.*]] = acc.bounds lowerbound(%c1{{.*}} : index) upperbound(%c3{{.*}} : index) stride(%{{.*}}#2 : index) startIdx(%{{.*}} : index) {strideInBytes = true}
 ! HLFIR: %[[BOX_ADDR:.*]] = fir.box_addr %[[DECL]]#1 : (!fir.box<!fir.array<?xi32>>) -> !fir.ref<!fir.array<?xi32>>
 ! HLFIR: %[[RED:.*]] = acc.reduction varPtr(%[[BOX_ADDR]] : !fir.ref<!fir.array<?xi32>>) bounds(%[[BOUND]]) -> !fir.ref<!fir.array<?xi32>> {name = "a(2:4)"}
-! HLFIR: acc.parallel reduction(@"reduction_add_section_lb1.ub3_ref_?xi32" -> %[[RED]] : !fir.ref<!fir.array<?xi32>>)
+! HLFIR: acc.parallel reduction(@reduction_add_section_lb1.ub3_ref_Uxi32 -> %[[RED]] : !fir.ref<!fir.array<?xi32>>)
