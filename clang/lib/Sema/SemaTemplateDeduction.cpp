@@ -3877,8 +3877,9 @@ ResolveOverloadForDeduction(Sema &S, TemplateParameterList *TemplateParams,
 /// overloaded function set that could not be resolved.
 static bool AdjustFunctionParmAndArgTypesForDeduction(
     Sema &S, TemplateParameterList *TemplateParams, unsigned FirstInnerIndex,
-    QualType &ParamType, QualType &ArgType, bool IsLValue, Expr *Arg,
-    unsigned &TDF, TemplateSpecCandidateSet *FailedTSC = nullptr) {
+    QualType &ParamType, QualType &ArgType,
+    Expr::Classification ArgClassification, Expr *Arg, unsigned &TDF,
+    TemplateSpecCandidateSet *FailedTSC = nullptr) {
   // C++0x [temp.deduct.call]p3:
   //   If P is a cv-qualified type, the top level cv-qualifiers of P's type
   //   are ignored for type deduction.
@@ -3913,7 +3914,7 @@ static bool AdjustFunctionParmAndArgTypesForDeduction(
     //   If P is a forwarding reference and the argument is an lvalue, the type
     //   "lvalue reference to A" is used in place of A for type deduction.
     if (isForwardingReference(QualType(ParamRefType, 0), FirstInnerIndex) &&
-        IsLValue) {
+        ArgClassification.isLValue()) {
       if (S.getLangOpts().OpenCL && !ArgType.hasAddressSpace())
         ArgType = S.Context.getAddrSpaceQualType(
             ArgType, S.Context.getDefaultOpenCLPointeeAddrSpace());
@@ -3974,15 +3975,6 @@ hasDeducibleTemplateParameters(Sema &S, FunctionTemplateDecl *FunctionTemplate,
 
 static Sema::TemplateDeductionResult DeduceTemplateArgumentsFromCallArgument(
     Sema &S, TemplateParameterList *TemplateParams, unsigned FirstInnerIndex,
-    QualType ParamType, QualType ArgType, bool IsLValue, Expr *Arg,
-    TemplateDeductionInfo &Info,
-    SmallVectorImpl<DeducedTemplateArgument> &Deduced,
-    SmallVectorImpl<Sema::OriginalCallArg> &OriginalCallArgs,
-    bool DecomposedParam, unsigned ArgIdx, unsigned TDF,
-    TemplateSpecCandidateSet *FailedTSC = nullptr);
-
-static Sema::TemplateDeductionResult DeduceTemplateArgumentsFromCallArgument(
-    Sema &S, TemplateParameterList *TemplateParams, unsigned FirstInnerIndex,
     QualType ParamType, QualType ArgType,
     Expr::Classification ArgClassification, Expr *Arg,
     TemplateDeductionInfo &Info,
@@ -4030,8 +4022,9 @@ static Sema::TemplateDeductionResult DeduceFromInitializerList(
   if (ElTy->isDependentType()) {
     for (Expr *E : ILE->inits()) {
       if (auto Result = DeduceTemplateArgumentsFromCallArgument(
-              S, TemplateParams, 0, ElTy, E->getType(), E->isLValue(), E, Info,
-              Deduced, OriginalCallArgs, true, ArgIdx, TDF))
+              S, TemplateParams, 0, ElTy, E->getType(),
+              E->Classify(S.getASTContext()), E, Info, Deduced,
+              OriginalCallArgs, true, ArgIdx, TDF))
         return Result;
     }
   }
@@ -4062,7 +4055,8 @@ static Sema::TemplateDeductionResult DeduceFromInitializerList(
 ///        single parameter / argument pair.
 static Sema::TemplateDeductionResult DeduceTemplateArgumentsFromCallArgument(
     Sema &S, TemplateParameterList *TemplateParams, unsigned FirstInnerIndex,
-    QualType ParamType, QualType ArgType, bool IsLValue, Expr *Arg,
+    QualType ParamType, QualType ArgType,
+    Expr::Classification ArgClassification, Expr *Arg,
     TemplateDeductionInfo &Info,
     SmallVectorImpl<DeducedTemplateArgument> &Deduced,
     SmallVectorImpl<Sema::OriginalCallArg> &OriginalCallArgs,
@@ -4074,8 +4068,8 @@ static Sema::TemplateDeductionResult DeduceTemplateArgumentsFromCallArgument(
   //   If P is a reference type [...]
   //   If P is a cv-qualified type [...]
   if (AdjustFunctionParmAndArgTypesForDeduction(
-          S, TemplateParams, FirstInnerIndex, ParamType, ArgType, IsLValue, Arg,
-          TDF, FailedTSC))
+          S, TemplateParams, FirstInnerIndex, ParamType, ArgType,
+          ArgClassification, Arg, TDF, FailedTSC))
     return Sema::TDK_Success;
 
   //   If [...] the argument is a non-empty initializer list [...]
@@ -4093,22 +4087,6 @@ static Sema::TemplateDeductionResult DeduceTemplateArgumentsFromCallArgument(
         Sema::OriginalCallArg(OrigParamType, DecomposedParam, ArgIdx, ArgType));
   return DeduceTemplateArgumentsByTypeMatch(S, TemplateParams, ParamType,
                                             ArgType, Info, Deduced, TDF);
-}
-
-static Sema::TemplateDeductionResult DeduceTemplateArgumentsFromCallArgument(
-    Sema &S, TemplateParameterList *TemplateParams, unsigned FirstInnerIndex,
-    QualType ParamType, QualType ArgType,
-    Expr::Classification ArgClassification, Expr *Arg,
-    TemplateDeductionInfo &Info,
-    SmallVectorImpl<DeducedTemplateArgument> &Deduced,
-    SmallVectorImpl<Sema::OriginalCallArg> &OriginalCallArgs,
-    bool DecomposedParam, unsigned ArgIdx, unsigned TDF,
-    TemplateSpecCandidateSet *FailedTSC) {
-
-  return DeduceTemplateArgumentsFromCallArgument(
-      S, TemplateParams, FirstInnerIndex, ParamType, ArgType,
-      ArgClassification.isLValue(), Arg, Info, Deduced, OriginalCallArgs,
-      DecomposedParam, ArgIdx, TDF, FailedTSC);
 }
 
 /// Perform template argument deduction from a function call
@@ -4222,8 +4200,9 @@ Sema::TemplateDeductionResult Sema::DeduceTemplateArguments(
     //   ... with the type of the corresponding argument
     return DeduceTemplateArgumentsFromCallArgument(
         *this, TemplateParams, FirstInnerIndex, ParamType,
-        Args[ArgIdx]->getType(), Args[ArgIdx]->isLValue(), Args[ArgIdx], Info,
-        Deduced, OriginalCallArgs, /*Decomposed*/ false, ArgIdx, /*TDF*/ 0);
+        Args[ArgIdx]->getType(), Args[ArgIdx]->Classify(getASTContext()),
+        Args[ArgIdx], Info, Deduced, OriginalCallArgs, /*Decomposed*/ false,
+        ArgIdx, /*TDF*/ 0);
   };
 
   // Deduce template arguments from the function parameters.
@@ -4925,8 +4904,8 @@ Sema::DeduceAutoType(TypeLoc Type, Expr *Init, QualType &Result,
           return TDK_Invalid;
         if (auto TDK = DeduceTemplateArgumentsFromCallArgument(
                 *this, TemplateParamsSt.get(), 0, TemplArg, Init->getType(),
-                Init->isLValue(), Init, Info, Deduced, OriginalCallArgs,
-                /*Decomposed=*/true,
+                Init->Classify(getASTContext()), Init, Info, Deduced,
+                OriginalCallArgs, /*Decomposed=*/true,
                 /*ArgIdx=*/0, /*TDF=*/0)) {
           if (TDK == TDK_Inconsistent) {
             Diag(Info.getLocation(), diag::err_auto_inconsistent_deduction)
@@ -4952,8 +4931,9 @@ Sema::DeduceAutoType(TypeLoc Type, Expr *Init, QualType &Result,
              "substituting template parameter for 'auto' failed");
       if (auto TDK = DeduceTemplateArgumentsFromCallArgument(
               *this, TemplateParamsSt.get(), 0, FuncParam, Init->getType(),
-              Init->isLValue(), Init, Info, Deduced, OriginalCallArgs,
-              /*Decomposed=*/false, /*ArgIdx=*/0, /*TDF=*/0, FailedTSC))
+              Init->Classify(getASTContext()), Init, Info, Deduced,
+              OriginalCallArgs, /*Decomposed=*/false, /*ArgIdx=*/0, /*TDF=*/0,
+              FailedTSC))
         return DeductionFailed(TDK);
     }
 
