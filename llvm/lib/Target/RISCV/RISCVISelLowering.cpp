@@ -11106,6 +11106,31 @@ void RISCVTargetLowering::ReplaceNodeResults(SDNode *N,
   }
 }
 
+/// Given an integer binary operator, return the generic ISD::VECREDUCE_OP
+/// which corresponds to it.
+static unsigned getVecReduceOpcode(unsigned Opc) {
+  switch (Opc) {
+  default:
+    llvm_unreachable("Unhandled binary to transfrom reduction");
+  case ISD::ADD:
+    return ISD::VECREDUCE_ADD;
+  case ISD::UMAX:
+    return ISD::VECREDUCE_UMAX;
+  case ISD::SMAX:
+    return ISD::VECREDUCE_SMAX;
+  case ISD::UMIN:
+    return ISD::VECREDUCE_UMIN;
+  case ISD::SMIN:
+    return ISD::VECREDUCE_SMIN;
+  case ISD::AND:
+    return ISD::VECREDUCE_AND;
+  case ISD::OR:
+    return ISD::VECREDUCE_OR;
+  case ISD::XOR:
+    return ISD::VECREDUCE_XOR;
+  }
+};
+
 /// Perform two related transforms whose purpose is to incrementally recognize
 /// an explode_vector followed by scalar reduction as a vector reduction node.
 /// This exists to recover from a deficiency in SLP which can't handle
@@ -11124,8 +11149,15 @@ combineBinOpOfExtractToReduceTree(SDNode *N, SelectionDAG &DAG,
 
   const SDLoc DL(N);
   const EVT VT = N->getValueType(0);
-  [[maybe_unused]] const unsigned Opc = N->getOpcode();
-  assert(Opc == ISD::ADD && "extend this to other reduction types");
+
+  // TODO: Handle floating point here.
+  if (!VT.isInteger())
+    return SDValue();
+
+  const unsigned Opc = N->getOpcode();
+  const unsigned ReduceOpc = getVecReduceOpcode(Opc);
+  assert(Opc == ISD::getVecReduceBaseOpcode(ReduceOpc) &&
+         "Inconsistent mappings");
   const SDValue LHS = N->getOperand(0);
   const SDValue RHS = N->getOperand(1);
 
@@ -11155,13 +11187,13 @@ combineBinOpOfExtractToReduceTree(SDNode *N, SelectionDAG &DAG,
     EVT ReduceVT = EVT::getVectorVT(*DAG.getContext(), VT, 2);
     SDValue Vec = DAG.getNode(ISD::EXTRACT_SUBVECTOR, DL, ReduceVT, SrcVec,
                               DAG.getVectorIdxConstant(0, DL));
-    return DAG.getNode(ISD::VECREDUCE_ADD, DL, VT, Vec);
+    return DAG.getNode(ReduceOpc, DL, VT, Vec);
   }
 
   // Match (binop (reduce (extract_subvector V, 0),
   //                      (extract_vector_elt V, sizeof(SubVec))))
   // into a reduction of one more element from the original vector V.
-  if (LHS.getOpcode() != ISD::VECREDUCE_ADD)
+  if (LHS.getOpcode() != ReduceOpc)
     return SDValue();
 
   SDValue ReduceVec = LHS.getOperand(0);
@@ -11177,7 +11209,7 @@ combineBinOpOfExtractToReduceTree(SDNode *N, SelectionDAG &DAG,
       EVT ReduceVT = EVT::getVectorVT(*DAG.getContext(), VT, Idx + 1);
       SDValue Vec = DAG.getNode(ISD::EXTRACT_SUBVECTOR, DL, ReduceVT, SrcVec,
                                 DAG.getVectorIdxConstant(0, DL));
-      return DAG.getNode(ISD::VECREDUCE_ADD, DL, VT, Vec);
+      return DAG.getNode(ReduceOpc, DL, VT, Vec);
     }
   }
 
@@ -11685,6 +11717,8 @@ static SDValue performANDCombine(SDNode *N,
 
   if (SDValue V = combineBinOpToReduce(N, DAG, Subtarget))
     return V;
+  if (SDValue V = combineBinOpOfExtractToReduceTree(N, DAG, Subtarget))
+    return V;
 
   if (DCI.isAfterLegalizeDAG())
     if (SDValue V = combineDeMorganOfBoolean(N, DAG))
@@ -11737,6 +11771,8 @@ static SDValue performORCombine(SDNode *N, TargetLowering::DAGCombinerInfo &DCI,
 
   if (SDValue V = combineBinOpToReduce(N, DAG, Subtarget))
     return V;
+  if (SDValue V = combineBinOpOfExtractToReduceTree(N, DAG, Subtarget))
+    return V;
 
   if (DCI.isAfterLegalizeDAG())
     if (SDValue V = combineDeMorganOfBoolean(N, DAG))
@@ -11788,6 +11824,9 @@ static SDValue performXORCombine(SDNode *N, SelectionDAG &DAG,
 
   if (SDValue V = combineBinOpToReduce(N, DAG, Subtarget))
     return V;
+  if (SDValue V = combineBinOpOfExtractToReduceTree(N, DAG, Subtarget))
+    return V;
+
   // fold (xor (select cond, 0, y), x) ->
   //      (select cond, x, (xor x, y))
   return combineSelectAndUseCommutative(N, DAG, /*AllOnes*/ false, Subtarget);
@@ -13993,8 +14032,13 @@ SDValue RISCVTargetLowering::PerformDAGCombine(SDNode *N,
   case ISD::SMAX:
   case ISD::SMIN:
   case ISD::FMAXNUM:
-  case ISD::FMINNUM:
-    return combineBinOpToReduce(N, DAG, Subtarget);
+  case ISD::FMINNUM: {
+    if (SDValue V = combineBinOpToReduce(N, DAG, Subtarget))
+      return V;
+    if (SDValue V = combineBinOpOfExtractToReduceTree(N, DAG, Subtarget))
+      return V;
+    return SDValue();
+  }
   case ISD::SETCC:
     return performSETCCCombine(N, DAG, Subtarget);
   case ISD::SIGN_EXTEND_INREG:
