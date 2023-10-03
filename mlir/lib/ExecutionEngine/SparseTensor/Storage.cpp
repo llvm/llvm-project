@@ -9,14 +9,7 @@
 // This file contains method definitions for `SparseTensorStorageBase`.
 // In particular we want to ensure that the default implementations of
 // the "partial method specialization" trick aren't inline (since there's
-// no benefit).  Though this also helps ensure that we avoid weak-vtables:
-// <https://llvm.org/docs/CodingStandards.html#provide-a-virtual-method-anchor-for-classes-in-headers>
-//
-// This file is part of the lightweight runtime support library for sparse
-// tensor manipulations.  The functionality of the support library is meant
-// to simplify benchmarking, testing, and debugging MLIR code operating on
-// sparse tensors.  However, the provided functionality is **not** part of
-// core MLIR itself.
+// no benefit).
 //
 //===----------------------------------------------------------------------===//
 
@@ -32,10 +25,6 @@ SparseTensorStorageBase::SparseTensorStorageBase( // NOLINT
       lvlSizes(lvlSizes, lvlSizes + lvlRank),
       lvlTypes(lvlTypes, lvlTypes + lvlRank),
       lvl2dim(lvl2dim, lvl2dim + lvlRank) {
-  // TODO: If we do get any nullptrs, I'm pretty sure these assertions
-  // will run too late (i.e., after copying things into vectors above).
-  // But since those fields are const I'm not sure there's any clean way
-  // to assert things before copying...
   assert(dimSizes && "Got nullptr for dimension sizes");
   assert(lvlSizes && "Got nullptr for level sizes");
   assert(lvlTypes && "Got nullptr for level types");
@@ -44,18 +33,15 @@ SparseTensorStorageBase::SparseTensorStorageBase( // NOLINT
   assert(dimRank > 0 && "Trivial shape is unsupported");
   for (uint64_t d = 0; d < dimRank; ++d)
     assert(dimSizes[d] > 0 && "Dimension size zero has trivial storage");
-  // Validate level-indexed parameters.
+  // Validate lvl-indexed parameters.
   assert(lvlRank > 0 && "Trivial shape is unsupported");
   for (uint64_t l = 0; l < lvlRank; ++l) {
     assert(lvlSizes[l] > 0 && "Level size zero has trivial storage");
-    const auto dlt = lvlTypes[l]; // Avoid redundant bounds checking.
-    // We use `MLIR_SPARSETENSOR_FATAL` here instead of `assert` so that
-    // when this ctor is successful then all the methods can rely on the
-    // fact that each level-type satisfies one of these options (even
-    // when `NDEBUG` is true), thereby reducing the need to re-assert things.
-    if (!(isDenseDLT(dlt) || isCompressedDLT(dlt) || isSingletonDLT(dlt)))
+    const auto dlt = lvlTypes[l];
+    if (!(isDenseDLT(dlt) || isCompressedDLT(dlt) || isSingletonDLT(dlt))) {
       MLIR_SPARSETENSOR_FATAL("unsupported level type: %d\n",
                               static_cast<uint8_t>(dlt));
+    }
   }
 }
 
