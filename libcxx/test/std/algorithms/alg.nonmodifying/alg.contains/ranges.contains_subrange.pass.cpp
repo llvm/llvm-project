@@ -32,39 +32,35 @@
 struct NotEqualityComparable {};
 
 template <class Iter1, class Sent1 = Iter1, class Iter2 = int*, class Sent2 = Iter2>
-concept HasContainsSubrangeSubrangeIt = requires(Iter1 first1, Sent1 last1, Iter2 first2, Sent2 last2) {
+concept HasContainsSubrangeIt = requires(Iter1 first1, Sent1 last1, Iter2 first2, Sent2 last2) {
   std::ranges::contains_subrange(first1, last1, first2, last2);
 };
 
-static_assert(HasContainsSubrangeSubrangeIt<int*>);
-static_assert(!HasContainsSubrangeSubrangeIt<NotEqualityComparable*>);
-static_assert(!HasContainsSubrangeSubrangeIt<InputIteratorNotDerivedFrom>);
-static_assert(!HasContainsSubrangeSubrangeIt<InputIteratorNotIndirectlyReadable>);
-static_assert(!HasContainsSubrangeSubrangeIt<InputIteratorNotInputOrOutputIterator>);
-static_assert(!HasContainsSubrangeSubrangeIt<cpp20_input_iterator<int*>, SentinelForNotSemiregular>);
-static_assert(!HasContainsSubrangeSubrangeIt<cpp20_input_iterator<int*>, InputRangeNotSentinelEqualityComparableWith>);
-static_assert(!HasContainsSubrangeSubrangeIt<cpp20_input_iterator<int*>, sentinel_wrapper<cpp20_input_iterator<int*>>>);
-
-static_assert(!HasContainsSubrangeSubrangeIt<int*, int>);
-static_assert(!HasContainsSubrangeSubrangeIt<int, int*>);
-static_assert(HasContainsSubrangeSubrangeIt<int*, int*>);
+static_assert(HasContainsSubrangeIt<int*>);
+static_assert(!HasContainsSubrangeIt<ForwardIteratorNotDerivedFrom>);
+static_assert(!HasContainsSubrangeIt<ForwardIteratorNotIncrementable>);
+static_assert(!HasContainsSubrangeIt<int*, SentinelForNotSemiregular>);
+static_assert(!HasContainsSubrangeIt<int*, int*, int**>); // not indirectly comparable
+static_assert(!HasContainsSubrangeIt<int*, SentinelForNotWeaklyEqualityComparableWith>);
+static_assert(!HasContainsSubrangeIt<int*, int*, ForwardIteratorNotDerivedFrom>);
+static_assert(!HasContainsSubrangeIt<int*, int*, ForwardIteratorNotIncrementable>);
+static_assert(!HasContainsSubrangeIt<int*, int*, int*, SentinelForNotSemiregular>);
+static_assert(!HasContainsSubrangeIt<int*, int*, int*, SentinelForNotWeaklyEqualityComparableWith>);
 
 template <class Range1, class Range2 = UncheckedRange<int*>>
 concept HasContainsSubrangeR = requires(Range1&& range1, Range2&& range2) {
   std::ranges::contains_subrange(std::forward<Range1>(range1), std::forward<Range2>(range2)); };
 
 static_assert(HasContainsSubrangeR<UncheckedRange<int*>>);
-static_assert(HasContainsSubrangeR<ForwardRangeNotDerivedFrom>);
+static_assert(!HasContainsSubrangeR<ForwardRangeNotDerivedFrom>);
 static_assert(!HasContainsSubrangeR<ForwardIteratorNotIncrementable>);
 static_assert(!HasContainsSubrangeR<ForwardRangeNotSentinelSemiregular>);
 static_assert(!HasContainsSubrangeR<ForwardRangeNotSentinelEqualityComparableWith>);
 static_assert(!HasContainsSubrangeR<UncheckedRange<int*>, UncheckedRange<int**>>); // not indirectly comparable
-static_assert(HasContainsSubrangeR<UncheckedRange<int*>, ForwardRangeNotDerivedFrom>);
-static_assert(HasContainsSubrangeR<UncheckedRange<int*>, ForwardRangeNotIncrementable>);
+static_assert(!HasContainsSubrangeR<UncheckedRange<int*>, ForwardRangeNotDerivedFrom>);
+static_assert(!HasContainsSubrangeR<UncheckedRange<int*>, ForwardRangeNotIncrementable>);
 static_assert(!HasContainsSubrangeR<UncheckedRange<int*>, ForwardRangeNotSentinelSemiregular>);
 static_assert(!HasContainsSubrangeR<UncheckedRange<int*>, ForwardRangeNotSentinelEqualityComparableWith>);
-
-static std::vector<int> comparable_data;
 
 template <class Iter1, class Sent1 = Iter1, class Iter2, class Sent2 = Iter2>
 constexpr void test_iterators() {
@@ -272,18 +268,29 @@ constexpr void test_iterators() {
   }
 }
 
+template <class Iter1, class Sent1 = Iter1>
+constexpr void test_iterators2() {
+  test_iterators<Iter1, Sent1, forward_iterator<int*>>();
+  test_iterators<Iter1, Sent1, forward_iterator<int*>, sized_sentinel<forward_iterator<int*>>>();
+  test_iterators<Iter1, Sent1, bidirectional_iterator<int*>>();
+  test_iterators<Iter1, Sent1, bidirectional_iterator<int*>, sized_sentinel<bidirectional_iterator<int*>>>();
+  test_iterators<Iter1, Sent1, random_access_iterator<int*>>();
+  test_iterators<Iter1, Sent1, random_access_iterator<int*>, sized_sentinel<random_access_iterator<int*>>>();
+  test_iterators<Iter1, Sent1, contiguous_iterator<int*>>();
+  test_iterators<Iter1, Sent1, contiguous_iterator<int*>, sized_sentinel<contiguous_iterator<int*>>>();
+  test_iterators<Iter1, Sent1, int*>();
+}
+
 constexpr bool test() {
-  types::for_each(types::cpp20_input_iterator_list<int*>{}, []<class Iter2>() {
-    types::for_each(types::cpp20_input_iterator_list<int*>{}, []<class Iter1>() {
-      if constexpr (std::forward_iterator<Iter1> && std::forward_iterator<Iter2>)
-        test_iterators<Iter1, Iter1, Iter2, Iter2>();
-      if constexpr (std::forward_iterator<Iter2>)
-        test_iterators<Iter1, sized_sentinel<Iter1>, Iter2, Iter2>();
-      if constexpr (std::forward_iterator<Iter1>)
-        test_iterators<Iter1, Iter1, Iter2, sized_sentinel<Iter2>>();
-      test_iterators<Iter1, sized_sentinel<Iter1>, Iter2, sized_sentinel<Iter2>>();
-    });
-  });
+  test_iterators2<forward_iterator<int*>>();
+  test_iterators2<forward_iterator<int*>, sized_sentinel<forward_iterator<int*>>>();
+  test_iterators2<bidirectional_iterator<int*>>();
+  test_iterators2<bidirectional_iterator<int*>, sized_sentinel<bidirectional_iterator<int*>>>();
+  test_iterators2<random_access_iterator<int*>>();
+  test_iterators2<random_access_iterator<int*>, sized_sentinel<random_access_iterator<int*>>>();
+  test_iterators2<contiguous_iterator<int*>>();
+  test_iterators2<contiguous_iterator<int*>, sized_sentinel<contiguous_iterator<int*>>>();
+  test_iterators2<int*>();
 
   return true;
 }

@@ -9,7 +9,7 @@
 #ifndef _LIBCPP___ALGORITHM_RANGES_CONTAINS_SUBRANGE_H
 #define _LIBCPP___ALGORITHM_RANGES_CONTAINS_SUBRANGE_H
 
-#include <__algorithm/ranges_starts_with.h>
+#include <__algorithm/ranges_search.h>
 #include <__config>
 #include <__functional/identity.h>
 #include <__functional/ranges_operations.h>
@@ -33,9 +33,9 @@ _LIBCPP_BEGIN_NAMESPACE_STD
 namespace ranges {
 namespace __contains_subrange {
 struct __fn {
-  template <input_iterator _Iter1,
+  template <forward_iterator _Iter1,
             sentinel_for<_Iter1> _Sent1,
-            input_iterator _Iter2,
+            forward_iterator _Iter2,
             sentinel_for<_Iter2> _Sent2,
             class _Pred,
             class _Proj1,
@@ -53,25 +53,21 @@ struct __fn {
     if (__offset < 0)
       return false;
     else {
-      for (; __offset >= 0; __offset--, __first1++) {
-        auto result = ranges::starts_with(
-            std::move(__first1),
-            std::move(__last1),
-            std::move(__first2),
-            std::move(__last2),
-            std::ref(__pred),
-            std::ref(__proj1),
-            std::ref(__proj2));
-        if (result)
-          return true;
-      }
-      return false;
+      auto result = ranges::search(
+          std::move(__first1),
+          std::move(__last1),
+          std::move(__first2),
+          std::move(__last2),
+          std::ref(__pred),
+          std::ref(__proj1),
+          std::ref(__proj2));
+      return result.empty() == false;
     }
   }
 
-  template <input_iterator _Iter1,
+  template <forward_iterator _Iter1,
             sentinel_for<_Iter1> _Sent1,
-            input_iterator _Iter2,
+            forward_iterator _Iter2,
             sentinel_for<_Iter2> _Sent2,
             class _Pred  = ranges::equal_to,
             class _Proj1 = identity,
@@ -87,6 +83,8 @@ struct __fn {
       _Proj2 __proj2 = {}) const {
     int __n1     = ranges::distance(__first1, __last1);
     int __n2     = ranges::distance(__first2, __last2);
+    if (__n2 == 0)
+      return true;
     int __offset = __n1 - __n2;
 
     return __contains_subrange_fn_impl(
@@ -100,8 +98,8 @@ struct __fn {
         std::move(__offset));
   }
 
-  template <input_range _Range1,
-            input_range _Range2,
+  template <forward_range _Range1,
+            forward_range _Range2,
             class _Pred  = ranges::equal_to,
             class _Proj1 = identity,
             class _Proj2 = identity>
@@ -119,6 +117,8 @@ struct __fn {
       __n2 = ranges::distance(__range2);
     }
 
+    if (__n2 == 0)
+      return true;
     int __offset = __n1 - __n2;
     return __contains_subrange_fn_impl(
         ranges::begin(__range1),
