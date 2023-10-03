@@ -4382,7 +4382,7 @@ static SDValue lowerBitreverseShuffle(ShuffleVectorSDNode *SVN,
 
 // Given a shuffle mask like <3, 0, 1, 2, 7, 4, 5, 6> for v8i8, we can
 // reinterpret it as a v2i32 and rotate it right by 8 instead. We can lower this
-// as a vror.vi if we have zvkb, or otherwise as a vsll, vsrl and vor.
+// as a vror.vi if we have Zvkb, or otherwise as a vsll, vsrl and vor.
 static SDValue lowerVECTOR_SHUFFLEAsRotate(ShuffleVectorSDNode *SVN,
                                            SelectionDAG &DAG,
                                            const RISCVSubtarget &Subtarget) {
@@ -4533,7 +4533,7 @@ static SDValue lowerVECTOR_SHUFFLE(SDValue Op, SelectionDAG &DAG,
           lowerVECTOR_SHUFFLEAsVSlidedown(DL, VT, V1, V2, Mask, Subtarget, DAG))
     return V;
 
-  // A bitrotate will be one instruction on zvkb, so try to lower to it first if
+  // A bitrotate will be one instruction on Zvkb, so try to lower to it first if
   // available.
   if (Subtarget.hasStdExtZvkb())
     if (SDValue V = lowerVECTOR_SHUFFLEAsRotate(SVN, DAG, Subtarget))
@@ -4666,7 +4666,7 @@ static SDValue lowerVECTOR_SHUFFLE(SDValue Op, SelectionDAG &DAG,
     return DAG.getNode(ISD::VSELECT, DL, VT, SelectMask, V1, V2);
 
   // We might be able to express the shuffle as a bitrotate. But even if we
-  // don't have zvkb and have to expand, the expanded sequence of approx. 2
+  // don't have Zvkb and have to expand, the expanded sequence of approx. 2
   // shifts and a vor will have a higher throughput than a vrgather.
   if (SDValue V = lowerVECTOR_SHUFFLEAsRotate(SVN, DAG, Subtarget))
     return V;
