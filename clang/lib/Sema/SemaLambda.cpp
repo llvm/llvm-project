@@ -2319,7 +2319,7 @@ static FunctionDecl *getPatternFunctionDecl(FunctionDecl *FD) {
 Sema::LambdaScopeForCallOperatorInstantiationRAII::
     LambdaScopeForCallOperatorInstantiationRAII(
         Sema &SemaRef, FunctionDecl *FD, MultiLevelTemplateArgumentList MLTAL,
-        LocalInstantiationScope &Scope, bool shouldAddDeclsFromParentScope)
+        LocalInstantiationScope &Scope, bool ShouldAddDeclsFromParentScope)
     : FunctionScopeRAII(SemaRef) {
   if (!isLambdaCallOperator(FD)) {
     FunctionScopeRAII::disable();
@@ -2333,7 +2333,7 @@ Sema::LambdaScopeForCallOperatorInstantiationRAII::
     SemaRef.addInstantiatedCapturesToScope(FD, Pattern, Scope, MLTAL);
 
     FunctionDecl *ParentFD = FD;
-    while (shouldAddDeclsFromParentScope) {
+    while (ShouldAddDeclsFromParentScope) {
 
       ParentFD =
           dyn_cast<FunctionDecl>(getLambdaAwareParentOfDeclContext(ParentFD));

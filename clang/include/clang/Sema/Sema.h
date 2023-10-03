@@ -7384,7 +7384,7 @@ public:
     LambdaScopeForCallOperatorInstantiationRAII(
         Sema &SemasRef, FunctionDecl *FD, MultiLevelTemplateArgumentList MLTAL,
         LocalInstantiationScope &Scope,
-        bool shouldAddDeclsFromParentScope = true);
+        bool ShouldAddDeclsFromParentScope = true);
   };
 
   /// Check whether the given expression is a valid constraint expression.
