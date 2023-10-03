@@ -1,6 +1,7 @@
 // XFAIL: target={{.*}}-apple{{.*}}
 // XFAIL: target={{.*}}hexagon{{.*}}
 // XFAIL: target={{.*}}-scei{{.*}}
+// XFAIL: target={{.*}}-sie{{.*}}
 // XFAIL: target={{.*}}-windows{{.*}}
 
 // RUN: not %clang -### --hipstdpar -nogpulib -nogpuinc --compile %s 2>&1 | \
