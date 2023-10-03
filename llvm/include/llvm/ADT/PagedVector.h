@@ -215,8 +215,15 @@ public:
       return LHS.equals(RHS);
     }
 
+    [[nodiscard]] size_t getIndex() const { return ElementIdx; }
+
+    friend bool operator!=(const MaterializedIterator &LHS,
+                           const MaterializedIterator &RHS) {
+      return !(LHS == RHS);
+    }
+
   private:
-    void verify() {
+    void verify() const {
       assert(ElementIdx == PV->Size ||
              (ElementIdx < PV->Size &&
               PV->PageToDataPtrs[ElementIdx / PageSize]));
@@ -228,13 +235,6 @@ public:
       Other.verify();
       return ElementIdx == Other.ElementIdx;
     }
-
-    friend bool operator!=(const MaterializedIterator &LHS,
-                           const MaterializedIterator &RHS) {
-      return !(LHS == RHS);
-    }
-
-    [[nodiscard]] size_t getIndex() const { return ElementIdx; }
   };
 
   /// Iterators over the materialized elements of the vector.
