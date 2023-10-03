@@ -87,7 +87,8 @@ public:
       : SparseTensorCOO(dimSizes.size(), dimSizes.data(), capacity) {}
 
   /// Constructs a new coordinate-scheme sparse tensor with the given
-  /// sizes and an optional initial storage capacity.
+  /// sizes and an optional initial storage capacity. The size of the
+  /// dimSizes array is determined by dimRank.
   explicit SparseTensorCOO(uint64_t dimRank, const uint64_t *dimSizes,
                            uint64_t capacity = 0)
       : dimSizes(dimSizes, dimSizes + dimRank), isSorted(true) {
