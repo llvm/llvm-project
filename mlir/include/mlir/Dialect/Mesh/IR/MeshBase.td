@@ -12,6 +12,7 @@
 include "mlir/IR/OpBase.td"
 include "mlir/IR/AttrTypeBase.td"
 include "mlir/IR/BuiltinTypeInterfaces.td"
+include "mlir/IR/EnumAttr.td"
 
 //===----------------------------------------------------------------------===//
 // Mesh Dialect
@@ -28,11 +29,24 @@ def Mesh_Dialect : Dialect {
   }];
 
   let dependentDialects = [
-    "arith::ArithDialect"
+    "arith::ArithDialect" // For materializeConstant()
   ];
 
   let useDefaultAttributePrinterParser = 1;
   let hasConstantMaterializer = 1;
+}
+//===----------------------------------------------------------------------===//
+// Mesh Enums.
+//===----------------------------------------------------------------------===//
+
+def Mesh_Partial : I32EnumAttr<"Partial", "partial type of a distributed tensor", [
+  I32EnumAttrCase<"Sum", 0, "partial_sum">,
+  I32EnumAttrCase<"Max", 1, "partial_max">,
+  I32EnumAttrCase<"Min", 2, "partial_min">,
+  I32EnumAttrCase<"Generic", 100, "partial_generic">
+]> {
+  let genSpecializedAttr = 0;
+  let cppNamespace = "::mlir::mesh";
 }
 
 //===----------------------------------------------------------------------===//
@@ -43,25 +57,39 @@ def MeshSharding : AttrDef<Mesh_Dialect, "MeshSharding"> {
   let mnemonic = "shard";
 
   let parameters = (ins
-    OptionalParameter<"::mlir::SymbolRefAttr">:$cluster,
-    ArrayRefParameter<"::mlir::DenseI64ArrayAttr">:$axes
+    AttrParameter<"::mlir::SymbolRefAttr", "cluster placed">:$cluster,
+    ArrayRefParameter<"::mlir::DenseI8ArrayAttr">:$axes,
+    DefaultValuedParameter<"::mlir::mesh::Partial", 
+                           "::mlir::mesh::Partial::Sum">:$partial_type
   );
 
   let summary = "Attribute that extends tensor type to distributed tensor type.";
 
   let description = [{
-    The mesh.shard attribute contains two attribute in it:
+    The MeshSharding attribute could be used in the encoding of a
+    `RankedTensorType` or the mesh.shard op. it contains three sub-attributes:
     1. `cluster`: this attribute is a SymbolRefAttr that refers to the mesh
-    cluster where the distributed tensor is placed.
+    cluster where the distributed tensor is placed. The symbol must resolve to a
+    `mesh.cluster` operation.
 
     2. `axes`: is an array composed of int64_t sub-arrays. The outer array's
     maximum size is the `rank` of the related tensor plus one. For the i-th
     sub-array, if its value is [x, y]:
     - When i < `rank`, it indicates that the tensor's i-th dimension is sharded
     along the x and y axes of the device mesh.
-    - When i == `rank`, it signifies that the tensor represents a partial sum
-    along the x and y axes. More partial types could be introduced if needed, 
-    e.g. partial-max, partial-min and even partial-generic.
+    - When i == `rank`, it signifies that the tensor is partial one along the x
+    and y axes. An all-reduce should be applied to get the whole tensor, and the
+    reduction type is specified by `partial_type`.
+
+    3. `partial_type`: indicates the reduction type of the possible all-reduce
+    op. It has 4 possible values:
+    - `partial_sum`: denotes it's an all-reduce-sum
+    - `partial_max`: denotes it's an all-reduce-max
+    - `partial_min`: denotes it's an all-reduce-min
+    - `partial_generic`: denotes that the all-reduce type is complex and cannot
+    be represented merely by a simple sum, max, or min. The exact reduction
+    computation may be derived from the semantics of the corresponding operation
+    or from the reduction computation IR
 
     Example:
 
@@ -77,14 +105,18 @@ def MeshSharding : AttrDef<Mesh_Dialect, "MeshSharding"> {
     tensor<4x8xf32, #mesh.shard<@mesh0, [[0]]>
 
     // The tensor is sharded on the first dimension along axis 0 of @mesh0 and
-    // it is also a partial-sum along axis 1.
+    // it is also a partial_sum along mesh axis 1.
     tensor<4x8xf32, #mesh.shard<@mesh0, [[0], [], [1]]>
 
-    // Could also be used in the attribute of mesh.shard op
+    // The tensor is sharded on the first dimension along axis 0 of @mesh0 and
+    // it is also a partial_max along mesh axis 1.
+    tensor<4x8xf32, #mesh.shard<@mesh0, [[0], [], [1]], partial_max>
+
+    // Could be used in the attribute of mesh.shard op
     %0 = mesh.shard %arg0 to <@mesh0, [[0]]> : tensor<4x8xf32>
     ```
   }];
-  let assemblyFormat = "`<` ($cluster^ `,`)? `[` $axes `]` `>`";
+  let assemblyFormat = "`<` $cluster `,` `[` $axes `]` (`,` $partial_type^)?`>`";
   let genVerifyDecl = 1;
 }
 

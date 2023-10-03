@@ -10,6 +10,7 @@
 #include "mlir/Dialect/Arith/IR/Arith.h"
 #include "mlir/IR/DialectImplementation.h"
 #include "mlir/Support/LLVM.h"
+#include "llvm/ADT/SmallSet.h"
 #include "llvm/ADT/TypeSwitch.h"
 
 #define DEBUG_TYPE "mesh-ops"
@@ -46,7 +47,7 @@ Operation *MeshDialect::materializeConstant(OpBuilder &builder, Attribute value,
 
 LogicalResult ClusterOp::verify() {
   ArrayRef<int64_t> dimSizes = getDimSizes();
-  size_t rank = getRank();
+  uint8_t rank = getRank();
 
   if (rank == 0)
     return emitOpError("rank of cluster is expected to be a positive integer");
@@ -55,35 +56,10 @@ LogicalResult ClusterOp::verify() {
     return emitOpError(
         "rank of dim_sizes is not expected to be larger than rank of cluster");
 
-  return success();
-}
-
-//===----------------------------------------------------------------------===//
-// mesh.shard op
-//===----------------------------------------------------------------------===//
-
-LogicalResult ShardOp::verify() {
-  bool asResult = getAsResult();
-  if (asResult) {
-    Value src = getSrc();
-    Operation *defOp = src.getDefiningOp();
-    if (llvm::isa_and_nonnull<ShardOp>(defOp))
-      return emitOpError("two mesh.shard ops with as_result = true are not "
-                         "expected to be stacked together");
-
-    unsigned numShard = llvm::count_if(src.getUsers(), [](Operation *user) {
-      return llvm::isa<ShardOp>(user);
-    });
-    if (numShard > 1)
+  for (int64_t dimSize : dimSizes) {
+    if (dimSize < 0)
       return emitOpError(
-          "when than one mesh.shard ops operate on the same tensor, all of "
-          "their as_result attributes are expected to be false");
-
-  } else {
-    ShardOp defShardOp = getSrc().getDefiningOp<ShardOp>();
-    if (defShardOp && !defShardOp.getAsResult())
-      return emitOpError("two mesh.shard ops with as_result = false are not "
-                         "expected to be stacked together");
+          "dimension size of a mesh cluster is expected to be non-negative");
   }
 
   return success();
@@ -95,14 +71,17 @@ LogicalResult ShardOp::verify() {
 
 LogicalResult
 MeshShardingAttr::verify(function_ref<InFlightDiagnostic()> emitError,
-                         SymbolRefAttr, ArrayRef<DenseI64ArrayAttr> axes) {
+                         SymbolRefAttr, ArrayRef<DenseI8ArrayAttr> axes,
+                         Partial) {
   // TODO: At present cluster symbol ref is not verified. This is due to the
   // difficulty in fetching the corresponding symbol op based on an attribute.
 
-  DenseSet<int64_t> visitedAxes;
-  for (DenseI64ArrayAttr subAxes : axes) {
-    ArrayRef<int64_t> subAxesArray = subAxes.asArrayRef();
-    for (int64_t axis : subAxesArray) {
+  llvm::SmallSet<int8_t, 4> visitedAxes;
+  for (DenseI8ArrayAttr subAxes : axes) {
+    ArrayRef<int8_t> subAxesArray = subAxes.asArrayRef();
+    for (int8_t axis : subAxesArray) {
+      if (axis < 0)
+        return emitError() << "mesh axis is expected to be non-negative";
       if (!visitedAxes.insert(axis).second)
         return emitError() << "mesh axis duplicated";
     }
@@ -120,3 +99,5 @@ MeshShardingAttr::verify(function_ref<InFlightDiagnostic()> emitError,
 
 #define GET_ATTRDEF_CLASSES
 #include "mlir/Dialect/Mesh/IR/MeshOpsAttributes.cpp.inc"
+
+#include "mlir/Dialect/Mesh/IR/MeshOpsEnums.cpp.inc"

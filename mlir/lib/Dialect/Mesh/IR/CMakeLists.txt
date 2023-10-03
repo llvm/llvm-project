@@ -6,6 +6,7 @@ add_mlir_dialect_library(MLIRMeshDialect
 
   DEPENDS
   MLIRMeshOpsAttrIncGen
+  MLIRMeshOpsEnumsIncGen
   MLIRMeshOpsIncGen
 
   LINK_LIBS PUBLIC

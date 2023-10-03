@@ -14,17 +14,9 @@
 #include "mlir/Interfaces/InferTypeOpInterface.h"
 #include "mlir/Interfaces/SideEffectInterfaces.h"
 
-namespace mlir {
-
-namespace mesh {
-
-constexpr StringRef getMeshClusterAttrName() { return "mesh_cluster"; }
-
-} // namespace mesh
-
-} // namespace mlir
-
 #include "mlir/Dialect/Mesh/IR/MeshOpsDialect.h.inc"
+
+#include "mlir/Dialect/Mesh/IR/MeshOpsEnums.h.inc"
 
 #define GET_ATTRDEF_CLASSES
 #include "mlir/Dialect/Mesh/IR/MeshOpsAttributes.h.inc"
