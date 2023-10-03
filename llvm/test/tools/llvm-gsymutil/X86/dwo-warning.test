@@ -1,0 +1,32 @@
+$ cat > main.cpp
+#include <iostream>
+#include <unistd.h>
+
+void foo() {
+    std::cout << "This is foo" << std::endl;
+}
+
+int main() {
+    std::cout << "hello world" << std::endl;
+    foo();
+    std::cout << "after foo" << std::endl;
+    return 0;
+}
+
+$ clang++ -g -gdwarf-4 -gsplit-dwarf main.cpp -o main_split
+$ mv main_split-main.dwo main_split-main__.dwo
+
+// RUN: llvm-gsymutil --convert=%p/Inputs/main_split | FileCheck %s --check-prefix=WARNING
+// RUN: llvm-gsymutil --convert=%p/Inputs/main_split --quiet 2>&1 | FileCheck %s --check-prefix=WARNING-QUIET
+
+// WARNING: Input file:  {{.*\/main_split}}
+// WARNING: Output file (x86_64): {{.*\.gsym}}
+// WARNING: warning: Unable to retrieve DWO .debug_info section for main_split-main.dwo
+// WARNING: Loaded 0 functions from DWARF.
+// WARNING: Loaded 12 functions from symbol table.
+// WARNING: Pruned 0 functions, ended with 12 total
+
+// WARNING-QUIET: Input file: {{.*\/main_split}}
+// WARNING-QUIET: Output file (x86_64): {{.*\.gsym}}
+// WARNING-QUIET: warning: Unable to retrieve DWO .debug_info section for some object files. (Remove the --quiet flag for full output)
+// WARNING-QUIET: Pruned 0 functions, ended with 12 total
