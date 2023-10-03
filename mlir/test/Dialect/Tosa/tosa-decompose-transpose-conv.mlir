@@ -29,7 +29,7 @@ func.func @transpose_conv2d_quantized_padded(%arg0: tensor<2x16x14x3xi8>, %arg1:
   // CHECK-DAG: %[[REV0:.+]] = tosa.reverse %0 {axis = 2 : i32}
   // CHECK-DAG: %[[REV1:.+]] = tosa.reverse %arg1 {axis = 1 : i32}
   // CHECK: tosa.conv2d %arg0, %1, %arg2
-  // CHECK-SAME: dilation = array<i64: 1, 1>, pad = array<i64: 3, 4, 8, 9>,
+  // CHECK-SAME: dilation = array<i64: 1, 1>, pad = array<i64: 1, 0, 2, 1>,
   // CHECK-SAME: quantization_info = #tosa.conv_quant<input_zp = -22, weight_zp = 42>, stride = array<i64: 1, 1>}
   %0 = tosa.transpose_conv2d %arg0, %arg1, %arg2 {
     out_pad = array<i64: 1, 2, 3, 4>,

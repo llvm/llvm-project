@@ -106,10 +106,10 @@ public:
     int64_t kernelWidth = weightTy.getDimSize(2);
 
     llvm::SmallVector<int64_t> convPad(4, 0);
-    convPad[0] = kernelHeight - 1 + pad[0];
-    convPad[1] = kernelHeight - 1 + pad[1];
-    convPad[2] = kernelWidth - 1 + pad[2];
-    convPad[3] = kernelWidth - 1 + pad[3];
+    convPad[0] = kernelHeight - 1 - pad[0];
+    convPad[1] = kernelHeight - 1 - pad[1];
+    convPad[2] = kernelWidth - 1 - pad[2];
+    convPad[3] = kernelWidth - 1 - pad[3];
 
     auto reverse1 = rewriter.create<tosa::ReverseOp>(
         loc, weightTy, weight, /* axis = */ rewriter.getI32IntegerAttr(1));
