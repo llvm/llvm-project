@@ -392,7 +392,7 @@ Bug Fixes to C++ Support
 
 - Fixed a bug where clang incorrectly considered implicitly generated deduction
   guides from a non-templated constructor and a templated constructor as ambiguous,
-  rather than prefer the non-templated constructor as specified in 
+  rather than prefer the non-templated constructor as specified in
   [standard.group]p3.
 
 Bug Fixes to AST Handling
