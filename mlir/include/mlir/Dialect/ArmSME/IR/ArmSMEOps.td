@@ -1,4 +1,4 @@
-//===-- ArmSME.td - ArmSME dialect operation definitions ---*- tablegen -*-===//
+//===-- ArmSMEOps.td - ArmSME dialect operation definitions *- tablegen -*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 //
-// This file defines the ArmSME dialect and contains intrinsic ops to lower to
-// LLVM IR.
+// This file defines the ArmSME dialect ops. It also defines custom attributes
+// and types that are used to define the Ops.
 //
 //===----------------------------------------------------------------------===//
 
