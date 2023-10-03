@@ -207,7 +207,7 @@ struct SparseTensorCodegenPass
     ConversionTarget target(*ctx);
     // Most ops in the sparse dialect must go!
     target.addIllegalDialect<SparseTensorDialect>();
-    target.addLegalOp<SortCooOp>();
+    target.addLegalOp<SortOp>();
     target.addLegalOp<PushBackOp>();
     // Storage specifier outlives sparse tensor pipeline.
     target.addLegalOp<GetStorageSpecifierOp>();
