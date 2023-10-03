@@ -137,7 +137,11 @@ bool FixStackmapsSpillReloads::runOnMachineFunction(MachineFunction &MF) {
             Register Reg = MOI->getReg();
             // Check if the register operand in the stackmap is a restored
             // spill.
-            if (Spills.count(Reg) > 0) {
+            // Since implicit operands are ignored by stackmaps (they are not
+            // added into the record) we must not replace them with spills so
+            // we don't add extra locations that aren't needed. Doing so leads
+            // to bugs during deoptimisation.
+            if (Spills.count(Reg) > 0 && !MOI->isImplicit()) {
               // Get spill reload instruction
               MachineInstr *SMI = Spills[Reg];
               int FI;
