@@ -30,7 +30,7 @@ namespace {
 
 using std::chrono::duration;
 using std::chrono::duration_cast;
-using std::chrono::microseconds;
+using std::chrono::nanoseconds;
 using std::chrono::steady_clock;
 using std::chrono::system_clock;
 using std::chrono::time_point;
@@ -76,18 +76,18 @@ struct TimeTraceProfilerEntry {
       : Start(std::move(S)), End(std::move(E)), Name(std::move(N)),
         Detail(std::move(Dt)) {}
 
-  // Calculate timings for FlameGraph. Cast time points to microsecond precision
+  // Calculate timings for FlameGraph. Cast time points to nanosecond precision
   // rather than casting duration. This avoids truncation issues causing inner
   // scopes overruning outer scopes.
-  ClockType::rep getFlameGraphStartUs(TimePointType StartTime) const {
-    return (time_point_cast<microseconds>(Start) -
-            time_point_cast<microseconds>(StartTime))
+  ClockType::rep getFlameGraphStartNs(TimePointType StartTime) const {
+    return (time_point_cast<nanoseconds>(Start) -
+            time_point_cast<nanoseconds>(StartTime))
         .count();
   }
 
-  ClockType::rep getFlameGraphDurUs() const {
-    return (time_point_cast<microseconds>(End) -
-            time_point_cast<microseconds>(Start))
+  ClockType::rep getFlameGraphDurNs() const {
+    return (time_point_cast<nanoseconds>(End) -
+            time_point_cast<nanoseconds>(Start))
         .count();
   }
 };
@@ -114,16 +114,16 @@ struct llvm::TimeTraceProfiler {
 
     // Check that end times monotonically increase.
     assert((Entries.empty() ||
-            (E.getFlameGraphStartUs(StartTime) + E.getFlameGraphDurUs() >=
-             Entries.back().getFlameGraphStartUs(StartTime) +
-                 Entries.back().getFlameGraphDurUs())) &&
+            (E.getFlameGraphStartNs(StartTime) + E.getFlameGraphDurNs() >=
+             Entries.back().getFlameGraphStartNs(StartTime) +
+                 Entries.back().getFlameGraphDurNs())) &&
            "TimeProfiler scope ended earlier than previous scope");
 
     // Calculate duration at full precision for overall counts.
     DurationType Duration = E.End - E.Start;
 
     // Only include sections longer or equal to TimeTraceGranularity msec.
-    if (duration_cast<microseconds>(Duration).count() >= TimeTraceGranularity)
+    if (duration_cast<nanoseconds>(Duration).count() >= TimeTraceGranularity)
       Entries.emplace_back(E);
 
     // Track total time taken by each "name", but only the topmost levels of
@@ -162,15 +162,15 @@ struct llvm::TimeTraceProfiler {
 
     // Emit all events for the main flame graph.
     auto writeEvent = [&](const auto &E, uint64_t Tid) {
-      auto StartUs = E.getFlameGraphStartUs(StartTime);
-      auto DurUs = E.getFlameGraphDurUs();
+      auto StartNs = E.getFlameGraphStartNs(StartTime);
+      auto DurNs = E.getFlameGraphDurNs();
 
       J.object([&] {
         J.attribute("pid", Pid);
         J.attribute("tid", int64_t(Tid));
         J.attribute("ph", "X");
-        J.attribute("ts", StartUs);
-        J.attribute("dur", DurUs);
+        J.attribute("ts", StartNs / 1000);
+        J.attribute("dur", DurNs / 1000);
         J.attribute("name", E.Name);
         if (!E.Detail.empty()) {
           J.attributeObject("args", [&] { J.attribute("detail", E.Detail); });
@@ -218,7 +218,7 @@ struct llvm::TimeTraceProfiler {
     // Report totals on separate threads of tracing file.
     uint64_t TotalTid = MaxTid + 1;
     for (const NameAndCountAndDurationType &Total : SortedTotals) {
-      auto DurUs = duration_cast<microseconds>(Total.second.second).count();
+      auto DurNs = duration_cast<nanoseconds>(Total.second.second).count();
       auto Count = AllCountAndTotalPerName[Total.first].first;
 
       J.object([&] {
@@ -226,11 +226,11 @@ struct llvm::TimeTraceProfiler {
         J.attribute("tid", int64_t(TotalTid));
         J.attribute("ph", "X");
         J.attribute("ts", 0);
-        J.attribute("dur", DurUs);
-        J.attribute("name", "Total " + Total.first);
+        J.attribute("dur", DurNs / 1000);
+        J.attribute("name", "Total: " + Total.first);
         J.attributeObject("args", [&] {
           J.attribute("count", int64_t(Count));
-          J.attribute("avg ms", int64_t(DurUs / Count / 1000));
+          J.attribute("avg us", int64_t(DurNs / Count / 1000));
         });
       });
 
@@ -261,10 +261,10 @@ struct llvm::TimeTraceProfiler {
     // Emit the absolute time when this TimeProfiler started.
     // This can be used to combine the profiling data from
     // multiple processes and preserve actual time intervals.
-    J.attribute("beginningOfTime",
-                time_point_cast<microseconds>(BeginningOfTime)
-                    .time_since_epoch()
-                    .count());
+    J.attribute("beginningOfTime", time_point_cast<nanoseconds>(BeginningOfTime)
+                                           .time_since_epoch()
+                                           .count() /
+                                       1000);
 
     J.objectEnd();
   }
@@ -281,7 +281,7 @@ struct llvm::TimeTraceProfiler {
   SmallString<0> ThreadName;
   const uint64_t Tid;
 
-  // Minimum time granularity (in microseconds)
+  // Minimum time granularity (in nanoseconds)
   const unsigned TimeTraceGranularity;
 };
 
