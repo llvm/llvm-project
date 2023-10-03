@@ -253,7 +253,7 @@ struct DimOpInterface
   }
 };
 
-/// Bufferization of tensor.empty. Replace with "bufferization.alloc_tensor".
+/// Bufferization of "tensor.empty". Replace with "bufferization.alloc_tensor".
 struct EmptyOpInterface
     : public BufferizableOpInterface::ExternalModel<EmptyOpInterface,
                                                     tensor::EmptyOp> {
