@@ -4484,6 +4484,7 @@ cc_library(
     deps = [
         ":CAPIIR",
         ":IR",
+        ":Rewrite",
         ":Support",
         "//llvm:Support",
     ],

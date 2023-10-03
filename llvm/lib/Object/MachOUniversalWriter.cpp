@@ -100,7 +100,7 @@ Slice::Slice(const IRObjectFile &IRO, uint32_t CPUType, uint32_t CPUSubType,
 
 Slice::Slice(const MachOObjectFile &O) : Slice(O, calculateAlignment(O)) {}
 
-using MachoCPUTy = std::pair<unsigned, unsigned>;
+using MachoCPUTy = std::pair<uint32_t, uint32_t>;
 
 static Expected<MachoCPUTy> getMachoCPUFromTriple(Triple TT) {
   auto CPU = std::make_pair(MachO::getCPUType(TT), MachO::getCPUSubType(TT));
@@ -117,10 +117,15 @@ static Expected<MachoCPUTy> getMachoCPUFromTriple(StringRef TT) {
   return getMachoCPUFromTriple(Triple{TT});
 }
 
+static MachoCPUTy getMachoCPUFromObjectFile(const MachOObjectFile &O) {
+  return std::make_pair(O.getHeader().cputype, O.getHeader().cpusubtype);
+}
+
 Expected<Slice> Slice::create(const Archive &A, LLVMContext *LLVMCtx) {
   Error Err = Error::success();
   std::unique_ptr<MachOObjectFile> MFO = nullptr;
   std::unique_ptr<IRObjectFile> IRFO = nullptr;
+  std::optional<MachoCPUTy> CPU = std::nullopt;
   for (const Archive::Child &Child : A.children(Err)) {
     Expected<std::unique_ptr<Binary>> ChildOrErr = Child.getAsBinary(LLVMCtx);
     if (!ChildOrErr)
@@ -134,65 +139,56 @@ Expected<Slice> Slice::create(const Archive &A, LLVMContext *LLVMCtx) {
                                    .c_str());
     if (Bin->isMachO()) {
       MachOObjectFile *O = cast<MachOObjectFile>(Bin);
-      if (IRFO) {
-        return createStringError(
-            std::errc::invalid_argument,
-            "archive member %s is a MachO, while previous archive member "
-            "%s was an IR LLVM object",
-            O->getFileName().str().c_str(), IRFO->getFileName().str().c_str());
-      }
-      if (MFO &&
-          std::tie(MFO->getHeader().cputype, MFO->getHeader().cpusubtype) !=
-              std::tie(O->getHeader().cputype, O->getHeader().cpusubtype)) {
+      MachoCPUTy ObjectCPU = getMachoCPUFromObjectFile(*O);
+
+      if (CPU && CPU != ObjectCPU) {
+        // If CPU != nullptr, one of MFO, IRFO will be != nullptr.
+        StringRef PreviousName = MFO ? MFO->getFileName() : IRFO->getFileName();
         return createStringError(
             std::errc::invalid_argument,
             ("archive member " + O->getFileName() + " cputype (" +
-             Twine(O->getHeader().cputype) + ") and cpusubtype(" +
-             Twine(O->getHeader().cpusubtype) +
+             Twine(ObjectCPU.first) + ") and cpusubtype(" +
+             Twine(ObjectCPU.second) +
              ") does not match previous archive members cputype (" +
-             Twine(MFO->getHeader().cputype) + ") and cpusubtype(" +
-             Twine(MFO->getHeader().cpusubtype) +
-             ") (all members must match) " + MFO->getFileName())
+             Twine(CPU->first) + ") and cpusubtype(" + Twine(CPU->second) +
+             ") (all members must match) " + PreviousName)
                 .str()
                 .c_str());
       }
       if (!MFO) {
         ChildOrErr.get().release();
         MFO.reset(O);
+        if (!CPU)
+          CPU.emplace(ObjectCPU);
       }
     } else if (Bin->isIR()) {
       IRObjectFile *O = cast<IRObjectFile>(Bin);
-      if (MFO) {
-        return createStringError(std::errc::invalid_argument,
-                                 "archive member '%s' is an LLVM IR object, "
-                                 "while previous archive member "
-                                 "'%s' was a MachO",
-                                 O->getFileName().str().c_str(),
-                                 MFO->getFileName().str().c_str());
+      Expected<MachoCPUTy> ObjectCPU =
+          getMachoCPUFromTriple(O->getTargetTriple());
+      if (!ObjectCPU)
+        return ObjectCPU.takeError();
+
+      if (CPU && CPU != *ObjectCPU) {
+        // If CPU != nullptr, one of MFO, IRFO will be != nullptr.
+        StringRef PreviousName =
+            IRFO ? IRFO->getFileName() : MFO->getFileName();
+        return createStringError(
+            std::errc::invalid_argument,
+            ("archive member " + O->getFileName() + " cputype (" +
+             Twine(ObjectCPU->first) + ") and cpusubtype(" +
+             Twine(ObjectCPU->second) +
+             ") does not match previous archive members cputype (" +
+             Twine(CPU->first) + ") and cpusubtype(" + Twine(CPU->second) +
+             ") (all members must match) " + PreviousName)
+                .str()
+                .c_str());
       }
-      if (IRFO) {
-        Expected<MachoCPUTy> CPUO = getMachoCPUFromTriple(O->getTargetTriple());
-        Expected<MachoCPUTy> CPUFO =
-            getMachoCPUFromTriple(IRFO->getTargetTriple());
-        if (!CPUO)
-          return CPUO.takeError();
-        if (!CPUFO)
-          return CPUFO.takeError();
-        if (*CPUO != *CPUFO) {
-          return createStringError(
-              std::errc::invalid_argument,
-              ("archive member " + O->getFileName() + " cputype (" +
-               Twine(CPUO->first) + ") and cpusubtype(" + Twine(CPUO->second) +
-               ") does not match previous archive members cputype (" +
-               Twine(CPUFO->first) + ") and cpusubtype(" +
-               Twine(CPUFO->second) + ") (all members must match) " +
-               IRFO->getFileName())
-                  .str()
-                  .c_str());
-        }
-      } else {
+
+      if (!IRFO) {
         ChildOrErr.get().release();
         IRFO.reset(O);
+        if (!CPU)
+          CPU.emplace(*ObjectCPU);
       }
     } else
       return createStringError(std::errc::invalid_argument,
