@@ -1721,7 +1721,7 @@ void CXXNameMangler::mangleUnqualifiedName(
 
       // If we have a member function, we need to include the 'this' pointer.
       if (const auto *MD = dyn_cast<CXXMethodDecl>(ND))
-        if (!MD->isStatic())
+        if (MD->isImplicitObjectMemberFunction())
           Arity++;
     }
     [[fallthrough]];
@@ -1781,6 +1781,8 @@ void CXXNameMangler::mangleNestedName(GlobalDecl GD,
     Qualifiers MethodQuals = Method->getMethodQualifiers();
     // We do not consider restrict a distinguishing attribute for overloading
     // purposes so we must not mangle it.
+    if (Method->isExplicitObjectMemberFunction())
+      Out << 'H';
     MethodQuals.removeRestrict();
     mangleQualifiers(MethodQuals);
     mangleRefQualifier(Method->getRefQualifier());
