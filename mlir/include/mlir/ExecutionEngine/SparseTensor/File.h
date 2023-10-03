@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 //
-// This file implements parsing and printing of files in one of the
-// following external formats:
+// This file implements reading and writing files in one of the following
+// external formats:
 //
 // (1) Matrix Market Exchange (MME): *.mtx
 //     https://math.nist.gov/MatrixMarket/formats.html
@@ -197,31 +197,14 @@ public:
 
   /// Allocates a new COO object for `lvlSizes`, initializes it by reading
   /// all the elements from the file and applying `dim2lvl` to their
-  /// dim-coordinates, and then closes the file.
-  ///
-  /// Preconditions:
-  /// * `lvlSizes` must be valid for `lvlRank`.
-  /// * `dim2lvl` must be valid for `getRank()`.
-  /// * `dim2lvl` maps `getDimSizes()`-coordinates to `lvlSizes`-coordinates.
-  /// * the file's actual value type can be read as `V`.
-  ///
-  /// Asserts:
-  /// * `isValid()`
-  /// * `dim2lvl` is a permutation, and therefore also `lvlRank == getRank()`.
-  ///   (This requirement will be lifted once we functionalize `dim2lvl`.)
-  //
-  // NOTE: This method is factored out of `readSparseTensor` primarily to
-  // reduce code bloat (since the bulk of the code doesn't care about the
-  // `<P,I>` type template parameters).  But we leave it public since it's
-  // perfectly reasonable for clients to use.
+  /// dim-coordinates, and then closes the file. Templated on V only.
   template <typename V>
   SparseTensorCOO<V> *readCOO(uint64_t lvlRank, const uint64_t *lvlSizes,
                               const uint64_t *dim2lvl);
 
   /// Allocates a new sparse-tensor storage object with the given encoding,
   /// initializes it by reading all the elements from the file, and then
-  /// closes the file.  Preconditions/assertions are as per `readCOO`
-  /// and `SparseTensorStorage::newFromCOO`.
+  /// closes the file. Templated on P, I, and V.
   template <typename P, typename I, typename V>
   SparseTensorStorage<P, I, V> *
   readSparseTensor(uint64_t lvlRank, const uint64_t *lvlSizes,
@@ -312,10 +295,6 @@ SparseTensorCOO<V> *SparseTensorReader::readCOO(uint64_t lvlRank,
                                                 const uint64_t *lvlSizes,
                                                 const uint64_t *dim2lvl) {
   assert(isValid() && "Attempt to readCOO() before readHeader()");
-  // Construct a `PermutationRef` for the `pushforward` below.
-  // TODO: This specific implementation does not generalize to arbitrary
-  // mappings, but once we functionalize the `dim2lvl` argument we can
-  // simply use that function instead.
   const uint64_t dimRank = getRank();
   assert(lvlRank == dimRank && "Rank mismatch");
   detail::PermutationRef d2l(dimRank, dim2lvl);
