@@ -527,17 +527,6 @@ FileID SourceManager::getNextFileID(FileID FID) const {
 
 /// Create a new FileID that represents the specified file
 /// being \#included from the specified IncludePosition.
-///
-/// This translates NULL into standard input.
-FileID SourceManager::createFileID(const FileEntry *SourceFile,
-                                   SourceLocation IncludePos,
-                                   SrcMgr::CharacteristicKind FileCharacter,
-                                   int LoadedID,
-                                   SourceLocation::UIntTy LoadedOffset) {
-  return createFileID(SourceFile->getLastRef(), IncludePos, FileCharacter,
-                      LoadedID, LoadedOffset);
-}
-
 FileID SourceManager::createFileID(FileEntryRef SourceFile,
                                    SourceLocation IncludePos,
                                    SrcMgr::CharacteristicKind FileCharacter,
@@ -585,7 +574,7 @@ FileID SourceManager::createFileID(const llvm::MemoryBufferRef &Buffer,
 /// Get the FileID for \p SourceFile if it exists. Otherwise, create a
 /// new FileID for the \p SourceFile.
 FileID
-SourceManager::getOrCreateFileID(const FileEntry *SourceFile,
+SourceManager::getOrCreateFileID(FileEntryRef SourceFile,
                                  SrcMgr::CharacteristicKind FileCharacter) {
   FileID ID = translateFile(SourceFile);
   return ID.isValid() ? ID : createFileID(SourceFile, SourceLocation(),
@@ -2375,8 +2364,9 @@ SourceManagerForFile::SourceManagerForFile(StringRef FileName,
       IntrusiveRefCntPtr<DiagnosticIDs>(new DiagnosticIDs),
       new DiagnosticOptions);
   SourceMgr = std::make_unique<SourceManager>(*Diagnostics, *FileMgr);
-  FileID ID = SourceMgr->createFileID(*FileMgr->getFile(FileName),
-                                      SourceLocation(), clang::SrcMgr::C_User);
+  FileEntryRef FE = llvm::cantFail(FileMgr->getFileRef(FileName));
+  FileID ID =
+      SourceMgr->createFileID(FE, SourceLocation(), clang::SrcMgr::C_User);
   assert(ID.isValid());
   SourceMgr->setMainFileID(ID);
 }
