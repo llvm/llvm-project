@@ -1088,7 +1088,7 @@ public:
 
   /// Replace the compound memory operand of Inst with an immediate operand.
   /// The value of the immediate operand is computed by reading the \p
-  /// ConstantData array starting from \p offset and assuming little-endianess.
+  /// ConstantData array starting from \p offset and assuming little-endianness.
   /// Return true on success. The given instruction is modified in place.
   virtual bool replaceMemOperandWithImm(MCInst &Inst, StringRef ConstantData,
                                         uint64_t Offset) const {

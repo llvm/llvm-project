@@ -188,7 +188,7 @@ uint64_t DebugRangeListsSectionWriter::addRanges(
 }
 
 struct LocListsRangelistsHeader {
-  UnitLengthType UnitLength; // Size of loclist entris section, not including
+  UnitLengthType UnitLength; // Size of loclist entries section, not including
                              // size of header.
   VersionType Version;
   AddressSizeType AddressSize;
@@ -446,8 +446,8 @@ static void updateAddressBase(DIEBuilder &DIEBlder, DebugAddrWriter &AddrWriter,
 }
 
 void DebugAddrWriter::update(DIEBuilder &DIEBlder, DWARFUnit &CU) {
-  // Handling the case wehre debug information is a mix of Debug fission and
-  // monolitic.
+  // Handling the case where debug information is a mix of Debug fission and
+  // monolithic.
   if (!CU.getDWOId())
     return;
   const uint64_t CUID = getCUID(CU);

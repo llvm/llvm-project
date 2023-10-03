@@ -2166,7 +2166,7 @@ public:
   /// is corrupted. If it is unable to fix it, it returns false.
   bool finalizeCFIState();
 
-  /// Return true if this function needs an address-transaltion table after
+  /// Return true if this function needs an address-translation table after
   /// its code emission.
   bool requiresAddressTranslation() const;
 
