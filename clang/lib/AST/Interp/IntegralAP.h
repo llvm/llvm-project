@@ -33,13 +33,13 @@ class Boolean;
 
 template <bool Signed> class IntegralAP final {
 private:
+  friend IntegralAP<!Signed>;
+  APSInt V;
+
   template <typename T> static T truncateCast(const APSInt &V) {
     return std::is_signed_v<T> ? V.trunc(sizeof(T) * 8).getSExtValue()
                                : V.trunc(sizeof(T) * 8).getZExtValue();
   }
-
-public:
-  APSInt V;
 
 public:
   using AsUnsigned = IntegralAP<false>;
