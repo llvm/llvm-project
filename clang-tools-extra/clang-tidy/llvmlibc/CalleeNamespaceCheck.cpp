@@ -45,9 +45,10 @@ void CalleeNamespaceCheck::check(const MatchFinder::MatchResult &Result) {
   if (FuncDecl->getBuiltinID() != 0)
     return;
 
-  // If the outermost namespace of the function is __llvm_libc, we're good.
+  // If the outermost namespace of the function starts with __llvm_libc, we're
+  // good.
   const auto *NS = dyn_cast<NamespaceDecl>(getOutermostNamespace(FuncDecl));
-  if (NS && NS->getName() == "__llvm_libc")
+  if (NS && NS->getName().starts_with("__llvm_libc"))
     return;
 
   const DeclarationName &Name = FuncDecl->getDeclName();
@@ -55,8 +56,9 @@ void CalleeNamespaceCheck::check(const MatchFinder::MatchResult &Result) {
       IgnoredFunctions.contains(Name.getAsIdentifierInfo()->getName()))
     return;
 
-  diag(UsageSiteExpr->getBeginLoc(), "%0 must resolve to a function declared "
-                                     "within the '__llvm_libc' namespace")
+  diag(UsageSiteExpr->getBeginLoc(),
+       "%0 must resolve to a function declared "
+       "within the '__llvm_libc' namespace (use macro `LIBC_NAMESPACE`)")
       << FuncDecl;
 
   diag(FuncDecl->getLocation(), "resolves to this declaration",
