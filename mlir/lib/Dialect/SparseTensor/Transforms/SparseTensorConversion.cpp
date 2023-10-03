@@ -1434,17 +1434,16 @@ mlir::SparseTensorTypeToPtrConverter::SparseTensorTypeToPtrConverter() {
 void mlir::populateSparseTensorConversionPatterns(
     TypeConverter &typeConverter, RewritePatternSet &patterns,
     const SparseTensorConversionOptions &options) {
-  patterns
-      .add<SparseReturnConverter, SparseTensorToDimSizeConverter,
-           SparseCastConverter, SparseTensorNewConverter,
-           SparseTensorConcatConverter, SparseTensorAllocConverter,
-           SparseTensorEmptyConverter, SparseTensorDeallocConverter,
-           SparseTensorToPositionsConverter, SparseTensorToCoordinatesConverter,
-           SparseTensorToValuesConverter, SparseNumberOfEntriesConverter,
-           SparseTensorLoadConverter, SparseTensorInsertConverter,
-           SparseTensorExpandConverter, SparseTensorCompressConverter,
-           SparseTensorOutConverter, SparseTensorAssembleConverter>(
-          typeConverter, patterns.getContext());
+  patterns.add<SparseReturnConverter, SparseTensorToDimSizeConverter,
+               SparseCastConverter, SparseTensorNewConverter,
+               SparseTensorAllocConverter, SparseTensorEmptyConverter,
+               SparseTensorDeallocConverter, SparseTensorToPositionsConverter,
+               SparseTensorToCoordinatesConverter,
+               SparseTensorToValuesConverter, SparseNumberOfEntriesConverter,
+               SparseTensorLoadConverter, SparseTensorInsertConverter,
+               SparseTensorExpandConverter, SparseTensorCompressConverter,
+               SparseTensorOutConverter, SparseTensorAssembleConverter>(
+      typeConverter, patterns.getContext());
   patterns.add<SparseTensorConvertConverter>(typeConverter,
                                              patterns.getContext(), options);
 }
