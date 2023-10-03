@@ -56,8 +56,6 @@ private:
 
   ComplexRendererFns selectShiftMask(MachineOperand &Root) const;
 
-  ComplexRendererFns selectNonImm12(MachineOperand &Root) const;
-
   ComplexRendererFns selectSHXADDOp(MachineOperand &Root, unsigned ShAmt) const;
   template <unsigned ShAmt>
   ComplexRendererFns selectSHXADDOp(MachineOperand &Root) const {
@@ -111,23 +109,6 @@ InstructionSelector::ComplexRendererFns
 RISCVInstructionSelector::selectShiftMask(MachineOperand &Root) const {
   // TODO: Also check if we are seeing the result of an AND operation which
   // could be bypassed since we only check the lower log2(xlen) bits.
-  return {{[=](MachineInstrBuilder &MIB) { MIB.add(Root); }}};
-}
-
-// This complex pattern actually serves as a perdicate that is effectively
-// `!isInt<12>(Imm)`.
-InstructionSelector::ComplexRendererFns
-RISCVInstructionSelector::selectNonImm12(MachineOperand &Root) const {
-  MachineFunction &MF = *Root.getParent()->getParent()->getParent();
-  MachineRegisterInfo &MRI = MF.getRegInfo();
-
-  if (Root.isReg() && Root.getReg())
-    if (auto Val = getIConstantVRegValWithLookThrough(Root.getReg(), MRI)) {
-      // We do NOT want immediates that fit in 12 bits.
-      if (isInt<12>(Val->Value.getSExtValue()))
-        return std::nullopt;
-    }
-
   return {{[=](MachineInstrBuilder &MIB) { MIB.add(Root); }}};
 }
 
