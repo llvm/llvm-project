@@ -7,12 +7,16 @@
   target triple = "aarch64--linux-gnu"
 
   define aarch64_sve_vector_pcs void @spills_fills_stack_id_ppr() #0 { entry: unreachable }
+  define aarch64_sve_vector_pcs void @spills_fills_stack_id_pnr() #1 { entry: unreachable }
   define aarch64_sve_vector_pcs void @spills_fills_stack_id_zpr() #0 { entry: unreachable }
   define aarch64_sve_vector_pcs void @spills_fills_stack_id_zpr2() #0 { entry: unreachable }
+  define aarch64_sve_vector_pcs void @spills_fills_stack_id_zpr2strided() #0 { entry: unreachable }
   define aarch64_sve_vector_pcs void @spills_fills_stack_id_zpr3() #0 { entry: unreachable }
   define aarch64_sve_vector_pcs void @spills_fills_stack_id_zpr4() #0 { entry: unreachable }
+  define aarch64_sve_vector_pcs void @spills_fills_stack_id_zpr4strided() #0 { entry: unreachable }
 
   attributes #0 = { nounwind "target-features"="+sve" }
+  attributes #1 = { nounwind "target-features"="+sve2p1" }
 
 ...
 ---
@@ -56,6 +60,49 @@ body:             |
     $p15 = IMPLICIT_DEF
 
     $p0 = COPY %0
+    RET_ReallyLR
+...
+---
+name: spills_fills_stack_id_pnr
+tracksRegLiveness: true
+registers:
+  - { id: 0, class: pnr }
+stack:
+liveins:
+  - { reg: '$pn0', virtual-reg: '%0' }
+body:             |
+  bb.0.entry:
+    liveins: $pn0
+
+    ; CHECK-LABEL: name: spills_fills_stack_id_pnr
+    ; CHECK: stack:
+    ; CHECK:      - { id: 0, name: '', type: spill-slot, offset: 0, size: 2, alignment: 2
+    ; CHECK-NEXT:     stack-id: scalable-vector, callee-saved-register: ''
+
+    ; EXPAND-LABEL: name: spills_fills_stack_id_pnr
+    ; EXPAND: STR_PXI $p0, $sp, 7
+    ; EXPAND: $p0 = LDR_PXI $sp, 7, implicit-def $pn0
+
+    %0:pnr = COPY $pn0
+
+    $pn0 = IMPLICIT_DEF
+    $pn1 = IMPLICIT_DEF
+    $pn2 = IMPLICIT_DEF
+    $pn3 = IMPLICIT_DEF
+    $pn4 = IMPLICIT_DEF
+    $pn5 = IMPLICIT_DEF
+    $pn6 = IMPLICIT_DEF
+    $pn7 = IMPLICIT_DEF
+    $pn8 = IMPLICIT_DEF
+    $pn9 = IMPLICIT_DEF
+    $pn10 = IMPLICIT_DEF
+    $pn11 = IMPLICIT_DEF
+    $pn12 = IMPLICIT_DEF
+    $pn13 = IMPLICIT_DEF
+    $pn14 = IMPLICIT_DEF
+    $pn15 = IMPLICIT_DEF
+
+    $pn0 = COPY %0
     RET_ReallyLR
 ...
 ---
@@ -128,6 +175,51 @@ body:             |
     $z28_z29_z30_z31 = IMPLICIT_DEF
 
     $z0_z1 = COPY %0
+    RET_ReallyLR
+...
+---
+name: spills_fills_stack_id_zpr2strided
+tracksRegLiveness: true
+registers:
+  - { id: 0, class: zpr2strided }
+stack:
+liveins:
+  - { reg: '$z0_z8', virtual-reg: '%0' }
+body:             |
+  bb.0.entry:
+    liveins: $z0_z1
+    successors: %bb.1
+
+    $z0_z8 = COPY $z0_z1
+
+    B %bb.1
+
+  bb.1:
+    liveins: $z0_z8
+
+    ; CHECK-LABEL: name: spills_fills_stack_id_zpr2strided
+    ; CHECK: stack:
+    ; CHECK:      - { id: 0, name: '', type: spill-slot, offset: 0, size: 32, alignment: 16
+    ; CHECK-NEXT:     stack-id: scalable-vector
+
+    ; EXPAND-LABEL: name: spills_fills_stack_id_zpr2strided
+    ; EXPAND: STR_ZXI $z0, $sp, 0
+    ; EXPAND: STR_ZXI $z8, $sp, 1
+    ; EXPAND: $z0 = LDR_ZXI $sp, 0
+    ; EXPAND: $z8 = LDR_ZXI $sp, 1
+
+    %0:zpr2strided = COPY $z0_z8
+
+    $z0_z1_z2_z3     = IMPLICIT_DEF
+    $z4_z5_z6_z7     = IMPLICIT_DEF
+    $z8_z9_z10_z11   = IMPLICIT_DEF
+    $z12_z13_z14_z15 = IMPLICIT_DEF
+    $z16_z17_z18_z19 = IMPLICIT_DEF
+    $z20_z21_z22_z23 = IMPLICIT_DEF
+    $z24_z25_z26_z27 = IMPLICIT_DEF
+    $z28_z29_z30_z31 = IMPLICIT_DEF
+
+    $z0_z8 = COPY %0
     RET_ReallyLR
 ...
 ---
@@ -208,5 +300,53 @@ body:             |
     $z28_z29_z30_z31 = IMPLICIT_DEF
 
     $z0_z1_z2_z3 = COPY %0
+    RET_ReallyLR
+...
+---
+name: spills_fills_stack_id_zpr4strided
+tracksRegLiveness: true
+registers:
+  - { id: 0, class: zpr4strided }
+stack:
+liveins:
+  - { reg: '$z0_z4_z8_z12', virtual-reg: '%0' }
+body:             |
+  bb.0.entry:
+    liveins: $z0_z1_z2_z3
+
+    $z0_z4_z8_z12 = COPY $z0_z1_z2_z3
+
+    B %bb.1
+
+  bb.1:
+    liveins: $z0_z4_z8_z12
+
+    ; CHECK-LABEL: name: spills_fills_stack_id_zpr4strided
+    ; CHECK: stack:
+    ; CHECK:      - { id: 0, name: '', type: spill-slot, offset: 0, size: 64, alignment: 16
+    ; CHECK-NEXT:     stack-id: scalable-vector
+
+    ; EXPAND-LABEL: name: spills_fills_stack_id_zpr4strided
+    ; EXPAND: STR_ZXI $z0, $sp, 0
+    ; EXPAND: STR_ZXI $z4, $sp, 1
+    ; EXPAND: STR_ZXI $z8, $sp, 2
+    ; EXPAND: STR_ZXI $z12, $sp, 3
+    ; EXPAND: $z0 = LDR_ZXI $sp, 0
+    ; EXPAND: $z4 = LDR_ZXI $sp, 1
+    ; EXPAND: $z8 = LDR_ZXI $sp, 2
+    ; EXPAND: $z12 = LDR_ZXI $sp, 3
+
+    %0:zpr4strided = COPY $z0_z4_z8_z12
+
+    $z0_z1_z2_z3     = IMPLICIT_DEF
+    $z4_z5_z6_z7     = IMPLICIT_DEF
+    $z8_z9_z10_z11   = IMPLICIT_DEF
+    $z12_z13_z14_z15 = IMPLICIT_DEF
+    $z16_z17_z18_z19 = IMPLICIT_DEF
+    $z20_z21_z22_z23 = IMPLICIT_DEF
+    $z24_z25_z26_z27 = IMPLICIT_DEF
+    $z28_z29_z30_z31 = IMPLICIT_DEF
+
+    $z0_z4_z8_z12 = COPY %0
     RET_ReallyLR
 ...

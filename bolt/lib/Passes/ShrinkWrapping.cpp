@@ -1960,7 +1960,7 @@ bool ShrinkWrapping::perform(bool HotOnly) {
     for (const auto &Instr : *BB) {
       if (BC.MIB->isPseudo(Instr))
         continue;
-      if (BC.MIB->isStore(Instr))
+      if (BC.MIB->mayStore(Instr))
         TotalStoreInstrs += BBExecCount;
       TotalInstrs += BBExecCount;
     }

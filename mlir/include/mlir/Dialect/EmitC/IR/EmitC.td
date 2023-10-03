@@ -17,6 +17,7 @@ include "mlir/Dialect/EmitC/IR/EmitCAttributes.td"
 include "mlir/Dialect/EmitC/IR/EmitCTypes.td"
 
 include "mlir/Interfaces/CastInterfaces.td"
+include "mlir/Interfaces/ControlFlowInterfaces.td"
 include "mlir/Interfaces/SideEffectInterfaces.td"
 
 //===----------------------------------------------------------------------===//
@@ -27,8 +28,8 @@ include "mlir/Interfaces/SideEffectInterfaces.td"
 class EmitC_Op<string mnemonic, list<Trait> traits = []>
     : Op<EmitC_Dialect, mnemonic, traits>;
 
-// Base class for binary arithmetic operations.
-class EmitC_BinaryArithOp<string mnemonic, list<Trait> traits = []> :
+// Base class for binary operations.
+class EmitC_BinaryOp<string mnemonic, list<Trait> traits = []> :
     EmitC_Op<mnemonic, traits> {
   let arguments = (ins AnyType:$lhs, AnyType:$rhs);
   let results = (outs AnyType);
@@ -39,7 +40,7 @@ class EmitC_BinaryArithOp<string mnemonic, list<Trait> traits = []> :
 def IntegerIndexOrOpaqueType : AnyTypeOf<[AnyInteger, Index, EmitC_OpaqueType]>;
 def FloatIntegerIndexOrOpaqueType : AnyTypeOf<[AnyFloat, IntegerIndexOrOpaqueType]>;
 
-def EmitC_AddOp : EmitC_BinaryArithOp<"add", []> {
+def EmitC_AddOp : EmitC_BinaryOp<"add", []> {
   let summary = "Addition operation";
   let description = [{
     With the `add` operation the arithmetic operator + (addition) can
@@ -150,6 +151,47 @@ def EmitC_CastOp : EmitC_Op<"cast", [
   let assemblyFormat = "$source attr-dict `:` type($source) `to` type($dest)";
 }
 
+def EmitC_CmpOp : EmitC_BinaryOp<"cmp", []> {
+  let summary = "Comparison operation";
+  let description = [{
+    With the `cmp` operation the comparison operators ==, !=, <, <=, >, >=, <=> 
+    can be applied.
+
+    Its first argument is an attribute that defines the comparison operator:
+
+    - equal to (mnemonic: `"eq"`; integer value: `0`)
+    - not equal to (mnemonic: `"ne"`; integer value: `1`)
+    - less than (mnemonic: `"lt"`; integer value: `2`)
+    - less than or equal to (mnemonic: `"le"`; integer value: `3`)
+    - greater than (mnemonic: `"gt"`; integer value: `4`)
+    - greater than or equal to (mnemonic: `"ge"`; integer value: `5`)
+    - three-way-comparison (mnemonic: `"three_way"`; integer value: `6`)
+
+    Example:
+    ```mlir
+    // Custom form of the cmp operation.
+    %0 = emitc.cmp eq, %arg0, %arg1 : (i32, i32) -> i1
+    %1 = emitc.cmp lt, %arg2, %arg3 : 
+        (
+          !emitc.opaque<"std::valarray<float>">,
+          !emitc.opaque<"std::valarray<float>">
+        ) -> !emitc.opaque<"std::valarray<bool>">
+    ```
+    ```c++
+    // Code emitted for the operations above.
+    bool v5 = v1 == v2;
+    std::valarray<bool> v6 = v3 < v4;
+    ```
+  }];
+
+  let arguments = (ins EmitC_CmpPredicateAttr:$predicate,
+                       AnyType:$lhs,
+                       AnyType:$rhs);
+  let results = (outs AnyType);
+
+  let assemblyFormat = "$predicate `,` operands attr-dict `:` functional-type(operands, results)";
+}
+
 def EmitC_ConstantOp : EmitC_Op<"constant", [ConstantLike]> {
   let summary = "Constant operation";
   let description = [{
@@ -180,7 +222,7 @@ def EmitC_ConstantOp : EmitC_Op<"constant", [ConstantLike]> {
   let hasVerifier = 1;
 }
 
-def EmitC_DivOp : EmitC_BinaryArithOp<"div", []> {
+def EmitC_DivOp : EmitC_BinaryOp<"div", []> {
   let summary = "Division operation";
   let description = [{
     With the `div` operation the arithmetic operator / (division) can
@@ -234,7 +276,21 @@ def EmitC_IncludeOp
   let hasCustomAssemblyFormat = 1;
 }
 
-def EmitC_MulOp : EmitC_BinaryArithOp<"mul", []> {
+def EmitC_LiteralOp : EmitC_Op<"literal", [Pure]> {
+  let summary = "Literal operation";
+  let description = [{
+    The `literal` operation produces an SSA value equal to some constant
+    specified by an attribute.
+  }];
+
+  let arguments = (ins StrAttr:$value);
+  let results = (outs AnyType:$result);
+
+  let hasVerifier = 1;
+  let assemblyFormat = "$value attr-dict `:` type($result)";
+}
+
+def EmitC_MulOp : EmitC_BinaryOp<"mul", []> {
   let summary = "Multiplication operation";
   let description = [{
     With the `mul` operation the arithmetic operator * (multiplication) can
@@ -258,7 +314,7 @@ def EmitC_MulOp : EmitC_BinaryArithOp<"mul", []> {
   let results = (outs FloatIntegerIndexOrOpaqueType);
 }
 
-def EmitC_RemOp : EmitC_BinaryArithOp<"rem", []> {
+def EmitC_RemOp : EmitC_BinaryOp<"rem", []> {
   let summary = "Remainder operation";
   let description = [{
     With the `rem` operation the arithmetic operator % (remainder) can
@@ -280,7 +336,7 @@ def EmitC_RemOp : EmitC_BinaryArithOp<"rem", []> {
   let results = (outs IntegerIndexOrOpaqueType);
 }
 
-def EmitC_SubOp : EmitC_BinaryArithOp<"sub", []> {
+def EmitC_SubOp : EmitC_BinaryOp<"sub", []> {
   let summary = "Subtraction operation";
   let description = [{
     With the `sub` operation the arithmetic operator - (subtraction) can
@@ -345,6 +401,104 @@ def EmitC_VariableOp : EmitC_Op<"variable", []> {
   let results = (outs AnyType);
 
   let hasVerifier = 1;
+}
+
+def EmitC_AssignOp : EmitC_Op<"assign", []> {
+  let summary = "Assign operation";
+  let description = [{
+    The `assign` operation stores an SSA value to the location designated by an
+    EmitC variable. This operation doesn't return any value. The assigned value
+    must be of the same type as the variable being assigned. The operation is
+    emitted as a C/C++ '=' operator.
+
+    Example:
+
+    ```mlir
+    // Integer variable
+    %0 = "emitc.variable"(){value = 42 : i32} : () -> i32
+    %1 = emitc.call "foo"() : () -> (i32)
+
+    // Assign emitted as `... = ...;`
+    "emitc.assign"(%0, %1) : (i32, i32) -> ()
+    ```
+  }];
+
+  let arguments = (ins AnyType:$var, AnyType:$value);
+  let results = (outs);
+
+  let hasVerifier = 1;
+  let assemblyFormat = "$value `:` type($value) `to` $var `:` type($var) attr-dict";
+}
+
+def EmitC_YieldOp : EmitC_Op<"yield", [Pure, Terminator, ParentOneOf<["IfOp"]>]> {
+  let summary = "block termination operation";
+  let description = [{
+    "yield" terminates blocks within EmitC control-flow operations. Since
+    control-flow constructs in C do not return values, this operation doesn't
+    take any arguments.
+  }];
+
+  let arguments = (ins);
+  let builders = [OpBuilder<(ins), [{ /* nothing to do */ }]>];
+
+  let assemblyFormat = [{ attr-dict }];
+}
+
+def EmitC_IfOp : EmitC_Op<"if",
+    [DeclareOpInterfaceMethods<RegionBranchOpInterface, [
+    "getNumRegionInvocations", "getRegionInvocationBounds",
+    "getEntrySuccessorRegions"]>, SingleBlock,
+    SingleBlockImplicitTerminator<"emitc::YieldOp">,
+    RecursiveMemoryEffects, NoRegionArguments]> {
+  let summary = "if-then-else operation";
+  let description = [{
+    The `if` operation represents an if-then-else construct for
+    conditionally executing two regions of code. The operand to an if operation
+    is a boolean value. For example:
+
+    ```mlir
+    emitc.if %b  {
+      ...
+    } else {
+      ...
+    }
+    ```
+
+    The "then" region has exactly 1 block. The "else" region may have 0 or 1
+    blocks. The blocks are always terminated with `emitc.yield`, which can be
+    left out to be inserted implicitly. This operation doesn't produce any
+    results.
+  }];
+  let arguments = (ins I1:$condition);
+  let results = (outs);
+  let regions = (region SizedRegion<1>:$thenRegion,
+                        MaxSizedRegion<1>:$elseRegion);
+
+  let skipDefaultBuilders = 1;
+  let builders = [
+    OpBuilder<(ins "Value":$cond)>,
+    OpBuilder<(ins "Value":$cond, "bool":$addThenBlock, "bool":$addElseBlock)>,
+    OpBuilder<(ins "Value":$cond, "bool":$withElseRegion)>,
+    OpBuilder<(ins "Value":$cond,
+      CArg<"function_ref<void(OpBuilder &, Location)>",
+           "buildTerminatedBody">:$thenBuilder,
+      CArg<"function_ref<void(OpBuilder &, Location)>",
+           "nullptr">:$elseBuilder)>,
+  ];
+
+  let extraClassDeclaration = [{
+    OpBuilder getThenBodyBuilder(OpBuilder::Listener *listener = nullptr) {
+      Block* body = getBody(0);
+      return OpBuilder::atBlockEnd(body, listener);
+    }
+    OpBuilder getElseBodyBuilder(OpBuilder::Listener *listener = nullptr) {
+      Block* body = getBody(1);
+      return OpBuilder::atBlockEnd(body, listener);
+    }
+    Block* thenBlock();
+    Block* elseBlock();
+  }];
+  let hasCustomAssemblyFormat = 1;
 }
 
 #endif // MLIR_DIALECT_EMITC_IR_EMITC

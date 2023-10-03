@@ -62,12 +62,12 @@
 //
 // Test the generated arguments default to a value with no architecture. 
 //
-// RUN: %clang -target nvptx64-nvidia-cuda -### %s 2>&1 \
+// RUN: %clang --target=nvptx64-nvidia-cuda -### --cuda-path=%S/Inputs/CUDA/usr/local/cuda %s 2>&1 \
 // RUN:   | FileCheck -check-prefix=DEFAULT %s
 
-//      DEFAULT: -cc1" "-triple" "nvptx64-nvidia-cuda" "-S" {{.*}} "-target-cpu" "sm_35" "-target-feature" "+ptx{{[0-9]+}}" {{.*}} "-o" "[[PTX:.+]].s"
-// DEFAULT-NEXT: ptxas{{.*}}"-m64" "-O0" "--gpu-name" "sm_35" "--output-file" "[[CUBIN:.+]].cubin" "[[PTX]].s" "-c"
-// DEFAULT-NEXT: nvlink{{.*}}"-o" "a.out" "-arch" "sm_35" {{.*}} "[[CUBIN]].cubin"
+//      DEFAULT: -cc1" "-triple" "nvptx64-nvidia-cuda" "-S" {{.*}} "-target-cpu" "sm_52" "-target-feature" "+ptx{{[0-9]+}}" {{.*}} "-o" "[[PTX:.+]].s"
+// DEFAULT-NEXT: ptxas{{.*}}"-m64" "-O0" "--gpu-name" "sm_52" "--output-file" "[[CUBIN:.+]].cubin" "[[PTX]].s" "-c"
+// DEFAULT-NEXT: nvlink{{.*}}"-o" "a.out" "-arch" "sm_52" {{.*}} "[[CUBIN]].cubin"
 
 //
 // Test to ensure that we enable handling global constructors in a freestanding

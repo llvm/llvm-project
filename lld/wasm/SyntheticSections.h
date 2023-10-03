@@ -375,7 +375,11 @@ public:
         segments(segments) {}
   bool isNeeded() const override { return !config->stripAll && numNames() > 0; }
   void writeBody() override;
-  unsigned numNames() const { return numNamedGlobals() + numNamedFunctions(); }
+  unsigned numNames() const {
+    // We always write at least one name which is the name of the
+    // module itself.
+    return 1 + numNamedGlobals() + numNamedFunctions();
+  }
   unsigned numNamedGlobals() const;
   unsigned numNamedFunctions() const;
   unsigned numNamedDataSegments() const;

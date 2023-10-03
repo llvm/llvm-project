@@ -374,6 +374,7 @@ define amdgpu_kernel void @clmem_read_simplified(ptr addrspace(1)  %buffer) {
 ; GFX11-NEXT:    v_add_co_u32 v0, vcc_lo, v0, v2
 ; GFX11-NEXT:    v_add_co_ci_u32_e32 v1, vcc_lo, v1, v3, vcc_lo
 ; GFX11-NEXT:    global_store_b64 v16, v[0:1], s[34:35]
+; GFX11-NEXT:    s_nop 0
 ; GFX11-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX11-NEXT:    s_endpgm
 entry:
@@ -820,12 +821,12 @@ define hidden amdgpu_kernel void @clmem_read(ptr addrspace(1)  %buffer) {
 ; GFX90A-NEXT:  .LBB1_2: ; %for.body
 ; GFX90A-NEXT:    ; Parent Loop BB1_1 Depth=1
 ; GFX90A-NEXT:    ; => This Inner Loop Header: Depth=2
-; GFX90A-NEXT:    v_add_co_u32_e32 v8, vcc, 0xffffb000, v6
-; GFX90A-NEXT:    v_addc_co_u32_e32 v9, vcc, -1, v7, vcc
-; GFX90A-NEXT:    global_load_dwordx2 v[10:11], v[6:7], off offset:-4096
-; GFX90A-NEXT:    global_load_dwordx2 v[12:13], v[6:7], off offset:-2048
+; GFX90A-NEXT:    v_add_co_u32_e32 v12, vcc, 0xffffb000, v6
+; GFX90A-NEXT:    v_addc_co_u32_e32 v13, vcc, -1, v7, vcc
+; GFX90A-NEXT:    global_load_dwordx2 v[8:9], v[6:7], off offset:-4096
+; GFX90A-NEXT:    global_load_dwordx2 v[10:11], v[6:7], off offset:-2048
 ; GFX90A-NEXT:    v_add_co_u32_e32 v14, vcc, 0xffffc000, v6
-; GFX90A-NEXT:    global_load_dwordx2 v[8:9], v[8:9], off
+; GFX90A-NEXT:    global_load_dwordx2 v[12:13], v[12:13], off
 ; GFX90A-NEXT:    v_addc_co_u32_e32 v15, vcc, -1, v7, vcc
 ; GFX90A-NEXT:    global_load_dwordx2 v[18:19], v[14:15], off offset:-2048
 ; GFX90A-NEXT:    v_add_co_u32_e32 v16, vcc, s0, v6
@@ -846,8 +847,8 @@ define hidden amdgpu_kernel void @clmem_read(ptr addrspace(1)  %buffer) {
 ; GFX90A-NEXT:    s_addk_i32 s4, 0x2000
 ; GFX90A-NEXT:    s_cmp_gt_u32 s4, 0x3fffff
 ; GFX90A-NEXT:    s_waitcnt vmcnt(8)
-; GFX90A-NEXT:    v_add_co_u32_e32 v1, vcc, v8, v4
-; GFX90A-NEXT:    v_addc_co_u32_e32 v4, vcc, v9, v5, vcc
+; GFX90A-NEXT:    v_add_co_u32_e32 v1, vcc, v12, v4
+; GFX90A-NEXT:    v_addc_co_u32_e32 v4, vcc, v13, v5, vcc
 ; GFX90A-NEXT:    s_waitcnt vmcnt(7)
 ; GFX90A-NEXT:    v_add_co_u32_e32 v1, vcc, v18, v1
 ; GFX90A-NEXT:    v_addc_co_u32_e32 v4, vcc, v19, v4, vcc
@@ -868,10 +869,10 @@ define hidden amdgpu_kernel void @clmem_read(ptr addrspace(1)  %buffer) {
 ; GFX90A-NEXT:    s_waitcnt vmcnt(1)
 ; GFX90A-NEXT:    v_add_co_u32_e32 v1, vcc, v20, v1
 ; GFX90A-NEXT:    v_addc_co_u32_e32 v4, vcc, v21, v4, vcc
+; GFX90A-NEXT:    v_add_co_u32_e32 v1, vcc, v8, v1
+; GFX90A-NEXT:    v_addc_co_u32_e32 v4, vcc, v9, v4, vcc
 ; GFX90A-NEXT:    v_add_co_u32_e32 v1, vcc, v10, v1
-; GFX90A-NEXT:    v_addc_co_u32_e32 v4, vcc, v11, v4, vcc
-; GFX90A-NEXT:    v_add_co_u32_e32 v1, vcc, v12, v1
-; GFX90A-NEXT:    v_addc_co_u32_e32 v5, vcc, v13, v4, vcc
+; GFX90A-NEXT:    v_addc_co_u32_e32 v5, vcc, v11, v4, vcc
 ; GFX90A-NEXT:    s_waitcnt vmcnt(0)
 ; GFX90A-NEXT:    v_add_co_u32_e32 v4, vcc, v30, v1
 ; GFX90A-NEXT:    v_addc_co_u32_e32 v5, vcc, v31, v5, vcc
@@ -1013,6 +1014,7 @@ define hidden amdgpu_kernel void @clmem_read(ptr addrspace(1)  %buffer) {
 ; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX11-NEXT:    v_add_co_ci_u32_e64 v1, null, s35, 0, s0
 ; GFX11-NEXT:    global_store_b64 v[0:1], v[3:4], off
+; GFX11-NEXT:    s_nop 0
 ; GFX11-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX11-NEXT:    s_endpgm
 entry:
@@ -1437,6 +1439,7 @@ define amdgpu_kernel void @Address32(ptr addrspace(1) %buffer) {
 ; GFX11-NEXT:    s_waitcnt vmcnt(0)
 ; GFX11-NEXT:    v_add3_u32 v0, v3, v1, v0
 ; GFX11-NEXT:    global_store_b32 v6, v0, s[34:35]
+; GFX11-NEXT:    s_nop 0
 ; GFX11-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX11-NEXT:    s_endpgm
 entry:
@@ -1738,6 +1741,7 @@ define amdgpu_kernel void @Offset64(ptr addrspace(1)  %buffer) {
 ; GFX11-NEXT:    v_add_co_u32 v0, vcc_lo, v4, v0
 ; GFX11-NEXT:    v_add_co_ci_u32_e32 v1, vcc_lo, v5, v1, vcc_lo
 ; GFX11-NEXT:    global_store_b64 v8, v[0:1], s[34:35]
+; GFX11-NEXT:    s_nop 0
 ; GFX11-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX11-NEXT:    s_endpgm
 entry:
@@ -1994,6 +1998,7 @@ define amdgpu_kernel void @p32Offset64(ptr addrspace(1)  %buffer) {
 ; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX11-NEXT:    v_add3_u32 v0, v2, v0, v3
 ; GFX11-NEXT:    global_store_b32 v6, v0, s[34:35]
+; GFX11-NEXT:    s_nop 0
 ; GFX11-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX11-NEXT:    s_endpgm
 entry:
@@ -2257,6 +2262,7 @@ define amdgpu_kernel void @DiffBase(ptr addrspace(1) %buffer1,
 ; GFX11-NEXT:    v_add_co_u32 v0, vcc_lo, v0, v2
 ; GFX11-NEXT:    v_add_co_ci_u32_e32 v1, vcc_lo, v1, v3, vcc_lo
 ; GFX11-NEXT:    global_store_b64 v12, v[0:1], s[36:37]
+; GFX11-NEXT:    s_nop 0
 ; GFX11-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX11-NEXT:    s_endpgm
                                     ptr addrspace(1) %buffer2) {
@@ -2661,6 +2667,7 @@ define amdgpu_kernel void @ReverseOrder(ptr addrspace(1) %buffer) {
 ; GFX11-NEXT:    v_add_co_u32 v0, vcc_lo, v0, v2
 ; GFX11-NEXT:    v_add_co_ci_u32_e32 v1, vcc_lo, v1, v3, vcc_lo
 ; GFX11-NEXT:    global_store_b64 v16, v[0:1], s[34:35]
+; GFX11-NEXT:    s_nop 0
 ; GFX11-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX11-NEXT:    s_endpgm
 entry:
@@ -2911,6 +2918,7 @@ define hidden amdgpu_kernel void @negativeoffset(ptr addrspace(1) nocapture %buf
 ; GFX11-NEXT:    v_add_co_u32 v0, vcc_lo, v2, v0
 ; GFX11-NEXT:    v_add_co_ci_u32_e32 v1, vcc_lo, v3, v1, vcc_lo
 ; GFX11-NEXT:    global_store_b64 v4, v[0:1], s[34:35]
+; GFX11-NEXT:    s_nop 0
 ; GFX11-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX11-NEXT:    s_endpgm
 entry:

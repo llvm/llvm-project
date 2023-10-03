@@ -173,12 +173,34 @@ Pattern {
 
 // -----
 
+Constraint Foo(op: Op) {}
+
+Pattern {
+  // CHECK: unable to negate non native constraints
+  let root = op<>;
+  not Foo(root);
+}
+
+// -----
+
 Rewrite Foo();
 
 Pattern {
   // CHECK: unable to build a tuple with `Rewrite` element
   let tuple = (Foo);
   erase op<>;
+}
+
+// -----
+
+Rewrite Foo(op: Op);
+
+Pattern {
+  // CHECK: unable to negate a Rewrite
+  let root = op<>;
+  rewrite root with {
+     not Foo(root);
+  }
 }
 
 // -----

@@ -12,7 +12,9 @@
 #include "mlir/Bytecode/BytecodeOpInterface.h"
 #include "mlir/Dialect/Bufferization/IR/AllocationOpInterface.h"
 #include "mlir/Dialect/Bufferization/IR/BufferizableOpInterface.h"
+#include "mlir/Dialect/Bufferization/IR/SubsetInsertionOpInterface.h"
 #include "mlir/Interfaces/CopyOpInterface.h"
+#include "mlir/Interfaces/DestinationStyleOpInterface.h"
 #include "mlir/Interfaces/InferTypeOpInterface.h"
 
 //===----------------------------------------------------------------------===//
@@ -57,6 +59,12 @@ FailureOr<Value> castOrReallocMemRefValue(OpBuilder &b, Value value,
 /// to_memref op are different, a memref.cast is needed.
 LogicalResult foldToMemrefToTensorPair(RewriterBase &rewriter,
                                        ToMemrefOp toMemref);
+
+/// Add the canonicalization patterns for bufferization.dealloc to the given
+/// pattern set to make them available to other passes (such as
+/// BufferDeallocationSimplification).
+void populateDeallocOpCanonicalizationPatterns(RewritePatternSet &patterns,
+                                               MLIRContext *context);
 
 } // namespace bufferization
 } // namespace mlir

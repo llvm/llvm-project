@@ -1,6 +1,7 @@
 // RUN: %check_clang_tidy %s bugprone-unchecked-optional-access %t -- -- -I %S/Inputs/unchecked-optional-access
 
 #include "absl/types/optional.h"
+#include "folly/types/Optional.h"
 
 void unchecked_value_access(const absl::optional<int> &opt) {
   opt.value();
@@ -21,8 +22,30 @@ void unchecked_arrow_operator_access(const absl::optional<Foo> &opt) {
   // CHECK-MESSAGES: :[[@LINE-1]]:3: warning: unchecked access to optional value
 }
 
+void folly_check_value_then_reset(folly::Optional<int> opt) {
+  if (opt) {
+    opt.reset();
+    opt.value();
+    // CHECK-MESSAGES: :[[@LINE-1]]:5: warning: unchecked access to optional value
+  }
+}
+
+void folly_value_after_swap(folly::Optional<int> opt1, folly::Optional<int> opt2) {
+  if (opt1) {
+    opt1.swap(opt2);
+    opt1.value();
+    // CHECK-MESSAGES: :[[@LINE-1]]:5: warning: unchecked access to optional value
+  }
+}
+
 void checked_access(const absl::optional<int> &opt) {
   if (opt.has_value()) {
+    opt.value();
+  }
+}
+
+void folly_checked_access(const folly::Optional<int> &opt) {
+  if (opt.hasValue()) {
     opt.value();
   }
 }

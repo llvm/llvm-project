@@ -69,5 +69,7 @@ Options
       T other = std::forward<T>(t);
     }
 
-This check implements
-`CppCoreGuideline F.18 <http://isocpp.github.io/CppCoreGuidelines/CppCoreGuidelines#f18-for-will-move-from-parameters-pass-by-x-and-stdmove-the-parameter>`_.
+This check implements `F.18
+<http://isocpp.github.io/CppCoreGuidelines/CppCoreGuidelines#f18-for-will-move-from-parameters-pass-by-x-and-stdmove-the-parameter>`_
+from the C++ Core Guidelines.
+

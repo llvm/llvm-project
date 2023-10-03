@@ -70,10 +70,7 @@ func.func @dead_branch(%arg0: memref<f32>, %arg1: f32) -> f32 {
 func.func @loop(%arg0: memref<?xf32>, %arg1: f32, %arg2: index, %arg3: index, %arg4: index) -> f32 {
   %c0 = arith.constant 0.0 : f32
   // CHECK:      name = "pre"
-  // CHECK-SAME: next_access = {{\[}}["loop"], "unknown"]
-  // The above is not entirely correct when the loop has 0 iterations, but 
-  // the region control flow specificaiton is currently incapable of
-  // specifying that.
+  // CHECK-SAME: next_access = {{\[}}["outside", "loop"], "unknown"]
   memref.load %arg0[%arg4] {name = "pre"} : memref<?xf32>
   %l = scf.for %i = %arg2 to %arg3 step %arg4 iter_args(%ia = %c0) -> (f32) {
     // CHECK:      name = "loop"
@@ -90,10 +87,7 @@ func.func @loop(%arg0: memref<?xf32>, %arg1: f32, %arg2: index, %arg3: index, %a
 // CHECK-LABEL: @conditional
 func.func @conditional(%cond: i1, %arg0: memref<f32>) {
   // CHECK:      name = "pre"
-  // CHECK-SAME: next_access = {{\[}}["then"]]
-  // The above is not entirely correct when the condition is false, but 
-  // the region control flow specificaiton is currently incapable of
-  // specifying that.
+  // CHECK-SAME: next_access = {{\[}}["post", "then"]]
   memref.load %arg0[] {name = "pre"}: memref<f32>
   scf.if %cond {
     // CHECK:      name = "then"
@@ -126,10 +120,7 @@ func.func @two_sided_conditional(%cond: i1, %arg0: memref<f32>) {
 func.func @dead_conditional(%arg0: memref<f32>) {
   %false = arith.constant 0 : i1
   // CHECK:      name = "pre"
-  // CHECK-SAME: next_access = ["unknown"]
-  // The above is not entirely correct when the condition is false, but 
-  // the region control flow specificaiton is currently incapable of
-  // specifying that.
+  // CHECK-SAME: next_access = {{\[}}["post"]]
   memref.load %arg0[] {name = "pre"}: memref<f32>
   scf.if %false {
     // CHECK:      name = "then"
@@ -301,10 +292,7 @@ func.func @infinite_recursive_call(%arg0: memref<f32>) {
 // CHECK-LABEL: @recursive_call
 func.func @recursive_call(%arg0: memref<f32>, %cond: i1) {
   // CHECK:      name = "pre"
-  // CHECK-SAME: next_access = {{\[}}["pre"]]
-  // The above is not entirely correct when the condition is false, but 
-  // the region control flow specificaiton is currently incapable of
-  // specifying that.
+  // CHECK-SAME: next_access = {{\[}}["post", "pre"]]
   memref.load %arg0[] {name = "pre"} : memref<f32>
   scf.if %cond {
     func.call @recursive_call(%arg0, %cond) : (memref<f32>, i1) -> ()
@@ -354,6 +342,160 @@ func.func @conditonal_call(%arg0: memref<f32>, %cond: i1) {
   } else {
     func.call @callee2(%arg0) : (memref<f32>) -> ()
   }
+  memref.load %arg0[] {name = "post"} : memref<f32>
+  return
+}
+
+// -----
+
+
+// In this test, the "call" operation also accesses %arg0 itself before
+// transferring control flow to the callee. Therefore, the order of accesses is
+// "caller" -> "call" -> "callee" -> "post"
+
+func.func private @callee(%arg0: memref<f32>) {
+  // CHECK:              name = "callee"
+  // CHECK-SAME-LITERAL: next_access = [["post"]]
+  memref.load %arg0[] {name = "callee"} : memref<f32>
+  return
+}
+
+// CHECK-LABEL: @call_and_store_before
+func.func @call_and_store_before(%arg0: memref<f32>) {
+  // CHECK:              name = "caller"
+  // CHECK-SAME-LITERAL: next_access = [["call"]]
+  memref.load %arg0[] {name = "caller"} : memref<f32>
+  // Note that the access after the entire call is "post".
+  // CHECK:              name = "call"
+  // CHECK-SAME-LITERAL: next_access = [["post"], ["post"]]
+  test.call_and_store @callee(%arg0), %arg0 {name = "call", store_before_call = true} : (memref<f32>, memref<f32>) -> ()
+  // CHECK:              name = "post"
+  // CHECK-SAME-LITERAL: next_access = ["unknown"]
+  memref.load %arg0[] {name = "post"} : memref<f32>
+  return
+}
+
+// -----
+
+// In this test, the "call" operation also accesses %arg0 itself after getting
+// control flow back from the callee. Therefore, the order of accesses is
+// "caller" -> "callee" -> "call" -> "post"
+
+func.func private @callee(%arg0: memref<f32>) {
+  // CHECK:              name = "callee"
+  // CHECK-SAME-LITERAL: next_access = [["call"]]
+  memref.load %arg0[] {name = "callee"} : memref<f32>
+  return
+}
+
+// CHECK-LABEL: @call_and_store_after
+func.func @call_and_store_after(%arg0: memref<f32>) {
+  // CHECK:              name = "caller"
+  // CHECK-SAME-LITERAL: next_access = [["callee"]]
+  memref.load %arg0[] {name = "caller"} : memref<f32>
+  // CHECK:              name = "call"
+  // CHECK-SAME-LITERAL: next_access = [["post"], ["post"]]
+  test.call_and_store @callee(%arg0), %arg0 {name = "call", store_before_call = true} : (memref<f32>, memref<f32>) -> ()
+  // CHECK:              name = "post"
+  // CHECK-SAME-LITERAL: next_access = ["unknown"]
+  memref.load %arg0[] {name = "post"} : memref<f32>
+  return
+}
+
+// -----
+
+// In this test, the "region" operation also accesses %arg0 itself before
+// entering the region. Therefore:
+//   - the next access of "pre" is the "region" operation itself;
+//   - at the entry of the block, the next access is "post".
+// CHECK-LABEL: @store_with_a_region
+func.func @store_with_a_region_before(%arg0: memref<f32>) {
+  // CHECK:              name = "pre"
+  // CHECK-SAME-LITERAL: next_access = [["region"]]
+  memref.load %arg0[] {name = "pre"} : memref<f32>
+  // CHECK:              name = "region"
+  // CHECK-SAME-LITERAL: next_access = [["post"]]
+  // CHECK-SAME-LITERAL: next_at_entry_point = [[["post"]]]
+  test.store_with_a_region %arg0 attributes { name = "region", store_before_region = true } {
+    test.store_with_a_region_terminator
+  } : memref<f32>
+  memref.load %arg0[] {name = "post"} : memref<f32>
+  return
+}
+
+// In this test, the "region" operation also accesses %arg0 itself after
+// exiting from the region. Therefore:
+//   - the next access of "pre" is the "region" operation itself;
+//   - at the entry of the block, the next access is "region".
+// CHECK-LABEL: @store_with_a_region
+func.func @store_with_a_region_after(%arg0: memref<f32>) {
+  // CHECK:              name = "pre"
+  // CHECK-SAME-LITERAL: next_access = [["region"]]
+  memref.load %arg0[] {name = "pre"} : memref<f32>
+  // CHECK:              name = "region"
+  // CHECK-SAME-LITERAL: next_access = [["post"]]
+  // CHECK-SAME-LITERAL: next_at_entry_point = [[["region"]]]
+  test.store_with_a_region %arg0 attributes { name = "region", store_before_region = false } {
+    test.store_with_a_region_terminator
+  } : memref<f32>
+  memref.load %arg0[] {name = "post"} : memref<f32>
+  return
+}
+
+// In this test, the operation with a region stores to %arg0 before going to the
+// region. Therefore: 
+//   - the next access of "pre" is the "region" operation itself;
+//   - the next access of the "region" operation (computed as the next access
+//     *after* said operation) is the "post" operation;
+//   - the next access of the "inner" operation is also "post";
+//   - the next access at the entry point of the region of the "region" operation
+//     is the "inner" operation.
+// That is, the order of access is: "pre" -> "region" -> "inner" -> "post".
+// CHECK-LABEL: @store_with_a_region_before_containing_a_load
+func.func @store_with_a_region_before_containing_a_load(%arg0: memref<f32>) {
+  // CHECK:              name = "pre"
+  // CHECK-SAME-LITERAL: next_access = [["region"]]
+  memref.load %arg0[] {name = "pre"} : memref<f32>
+  // CHECK:              name = "region"
+  // CHECK-SAME-LITERAL: next_access = [["post"]]
+  // CHECK-SAME-LITERAL: next_at_entry_point = [[["inner"]]]
+  test.store_with_a_region %arg0 attributes { name = "region", store_before_region = true } {
+    // CHECK:              name = "inner"
+    // CHECK-SAME-LITERAL: next_access = [["post"]]
+    memref.load %arg0[] {name = "inner"} : memref<f32>
+    test.store_with_a_region_terminator
+  } : memref<f32>
+  // CHECK:              name = "post"
+  // CHECK-SAME-LITERAL: next_access = ["unknown"]
+  memref.load %arg0[] {name = "post"} : memref<f32>
+  return
+}
+
+// In this test, the operation with a region stores to %arg0 after exiting from
+// the region. Therefore:
+//   - the next access of "pre" is "inner";
+//   - the next access of the "region" operation (computed as the next access
+//     *after* said operation) is the "post" operation);
+//   - the next access at the entry point of the region of the "region" operation
+//     is the "inner" operation;
+//   - the next access of the "inner" operation is the "region" operation itself.
+// That is, the order of access is "pre" -> "inner" -> "region" -> "post".
+// CHECK-LABEL: @store_with_a_region_after_containing_a_load
+func.func @store_with_a_region_after_containing_a_load(%arg0: memref<f32>) {
+  // CHECK:              name = "pre"
+  // CHECK-SAME-LITERAL: next_access = [["inner"]]
+  memref.load %arg0[] {name = "pre"} : memref<f32>
+  // CHECK:              name = "region"
+  // CHECK-SAME-LITERAL: next_access = [["post"]]
+  // CHECK-SAME-LITERAL: next_at_entry_point = [[["inner"]]]
+  test.store_with_a_region %arg0 attributes { name = "region", store_before_region = false } {
+    // CHECK:              name = "inner"
+    // CHECK-SAME-LITERAL: next_access = [["region"]]
+    memref.load %arg0[] {name = "inner"} : memref<f32>
+    test.store_with_a_region_terminator
+  } : memref<f32>
+  // CHECK:              name = "post"
+  // CHECK-SAME-LITERAL: next_access = ["unknown"]
   memref.load %arg0[] {name = "post"} : memref<f32>
   return
 }

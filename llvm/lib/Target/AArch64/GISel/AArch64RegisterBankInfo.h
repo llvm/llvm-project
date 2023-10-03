@@ -103,7 +103,8 @@ protected:
 /// This class provides the information for the target register banks.
 class AArch64RegisterBankInfo final : public AArch64GenRegisterBankInfo {
   /// See RegisterBankInfo::applyMapping.
-  void applyMappingImpl(const OperandsMapper &OpdMapper) const override;
+  void applyMappingImpl(MachineIRBuilder &Builder,
+                        const OperandsMapper &OpdMapper) const override;
 
   /// Get an instruction mapping where all the operands map to
   /// the same register bank and have similar size.

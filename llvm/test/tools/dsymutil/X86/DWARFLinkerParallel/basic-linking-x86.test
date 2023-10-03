@@ -1,4 +1,0 @@
-RUN: cat %p/../../Inputs/basic.macho.x86_64 > %t1
-RUN: dsymutil --linker llvm --no-output -accelerator=Pub -f -oso-prepend-path=%p/../.. %t1 2>&1 | FileCheck %s --allow-empty
-
-#CHECK: LLVM parallel dwarflinker is not implemented yet.

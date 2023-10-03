@@ -23,6 +23,7 @@ class ImmediateTLSAsmOperand<string name>
 
 class ImmediateOp<ValueType vt, string asmop> : Operand<vt> {
   let PrintMethod = "print"#asmop#"Operand";
+  let EncoderMethod = "getImmOpValue<SystemZ::FK_390_"#asmop#">";
   let DecoderMethod = "decode"#asmop#"Operand";
   let ParserMatchClass = !cast<AsmOperandClass>(asmop);
   let OperandType = "OPERAND_IMMEDIATE";
@@ -509,11 +510,11 @@ class Imm64 : ImmLeaf<i64, [{}]>, Operand<i64> {
 }
 def imm64 : Imm64;
 def len4imm64 : Imm64 {
-  let EncoderMethod = "getLenEncoding<4>";
+  let EncoderMethod = "getLenEncoding<SystemZ::FK_390_U4Imm>";
   let DecoderMethod = "decodeLenOperand<4>";
 }
 def len8imm64 : Imm64 {
-  let EncoderMethod = "getLenEncoding<8>";
+  let EncoderMethod = "getLenEncoding<SystemZ::FK_390_U8Imm>";
   let DecoderMethod = "decodeLenOperand<8>";
 }
 
@@ -590,14 +591,14 @@ def pcrel32 : PCRelAddress<i64, "pcrel32", PCRel32> {
 //===----------------------------------------------------------------------===//
 
 // 12-bit displacement operands.
-let EncoderMethod = "getDisp12Encoding",
+let EncoderMethod = "getImmOpValue<SystemZ::FK_390_U12Imm>",
     DecoderMethod = "decodeU12ImmOperand" in {
   def disp12imm32 : Operand<i32>;
   def disp12imm64 : Operand<i64>;
 }
 
 // 20-bit displacement operands.
-let EncoderMethod = "getDisp20Encoding",
+let EncoderMethod = "getImmOpValue<SystemZ::FK_390_S20Imm>",
     DecoderMethod = "decodeS20ImmOperand" in {
   def disp20imm32 : Operand<i32>;
   def disp20imm64 : Operand<i64>;

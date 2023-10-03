@@ -97,6 +97,16 @@ transform::OperationType::checkPayload(Location loc,
 }
 
 //===----------------------------------------------------------------------===//
+// transform::AnyParamType
+//===----------------------------------------------------------------------===//
+
+DiagnosedSilenceableFailure
+transform::AnyParamType::checkPayload(Location loc,
+                                      ArrayRef<Attribute> payload) const {
+  return DiagnosedSilenceableFailure::success();
+}
+
+//===----------------------------------------------------------------------===//
 // transform::ParamType
 //===----------------------------------------------------------------------===//
 

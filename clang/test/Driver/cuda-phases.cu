@@ -322,7 +322,7 @@
 //
 // Test that the new driver does not create actions for invalid architectures.
 //
-// RUN: %clang -### -target powerpc64le-ibm-linux-gnu --offload-new-driver \
+// RUN: not %clang -### --target=powerpc64le-ibm-linux-gnu --offload-new-driver \
 // RUN:        -ccc-print-phases --offload-arch=sm_999 -fgpu-rdc -c %s 2>&1 \
 // RUN: | FileCheck -check-prefix=INVALID-ARCH %s
 //      INVALID-ARCH: error: unsupported CUDA gpu architecture: sm_999

@@ -7,8 +7,8 @@
 define void @test_fvdot_lane_za32_vg1x2_nxv8f16(i32 %slice, <vscale x 8 x half> %zn1, <vscale x 8 x half> %zn2, <vscale x 8 x half> %zm) {
 ; CHECK-LABEL: test_fvdot_lane_za32_vg1x2_nxv8f16:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    mov w8, w0
 ; CHECK-NEXT:    // kill: def $z1 killed $z1 killed $z0_z1 def $z0_z1
+; CHECK-NEXT:    mov w8, w0
 ; CHECK-NEXT:    // kill: def $z0 killed $z0 killed $z0_z1 def $z0_z1
 ; CHECK-NEXT:    fvdot za.s[w8, 0, vgx2], { z0.h, z1.h }, z2.h[3]
 ; CHECK-NEXT:    fvdot za.s[w8, 7, vgx2], { z0.h, z1.h }, z2.h[3]
@@ -25,8 +25,8 @@ define void @test_fvdot_lane_za32_vg1x2_nxv8f16(i32 %slice, <vscale x 8 x half> 
 define void @test_fvdot_lane_za32_vg1x2_nxv8bf16(i32 %slice, <vscale x 8 x bfloat> %zn1, <vscale x 8 x bfloat> %zn2, <vscale x 8 x bfloat> %zm) {
 ; CHECK-LABEL: test_fvdot_lane_za32_vg1x2_nxv8bf16:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    mov w8, w0
 ; CHECK-NEXT:    // kill: def $z1 killed $z1 killed $z0_z1 def $z0_z1
+; CHECK-NEXT:    mov w8, w0
 ; CHECK-NEXT:    // kill: def $z0 killed $z0 killed $z0_z1 def $z0_z1
 ; CHECK-NEXT:    bfvdot za.s[w8, 0, vgx2], { z0.h, z1.h }, z2.h[3]
 ; CHECK-NEXT:    bfvdot za.s[w8, 7, vgx2], { z0.h, z1.h }, z2.h[3]
@@ -43,8 +43,8 @@ define void @test_fvdot_lane_za32_vg1x2_nxv8bf16(i32 %slice, <vscale x 8 x bfloa
 define void @test_svdot_lane_za32_vg1x2_nxv8i16(i32 %slice, <vscale x 8 x i16> %zn1, <vscale x 8 x i16> %zn2, <vscale x 8 x i16> %zm) {
 ; CHECK-LABEL: test_svdot_lane_za32_vg1x2_nxv8i16:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    mov w8, w0
 ; CHECK-NEXT:    // kill: def $z1 killed $z1 killed $z0_z1 def $z0_z1
+; CHECK-NEXT:    mov w8, w0
 ; CHECK-NEXT:    // kill: def $z0 killed $z0 killed $z0_z1 def $z0_z1
 ; CHECK-NEXT:    svdot za.s[w8, 0, vgx2], { z0.h, z1.h }, z2.h[3]
 ; CHECK-NEXT:    svdot za.s[w8, 7, vgx2], { z0.h, z1.h }, z2.h[3]
@@ -95,8 +95,8 @@ define void @test_svdot_lane_za64_vg1x4_nxv8i16(i32 %slice, <vscale x 8 x i16> %
 define void @test_uvdot_lane_za32_vg1x2_nxv8i16(i32 %slice, <vscale x 8 x i16> %zn1, <vscale x 8 x i16> %zn2, <vscale x 8 x i16> %zm) {
 ; CHECK-LABEL: test_uvdot_lane_za32_vg1x2_nxv8i16:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    mov w8, w0
 ; CHECK-NEXT:    // kill: def $z1 killed $z1 killed $z0_z1 def $z0_z1
+; CHECK-NEXT:    mov w8, w0
 ; CHECK-NEXT:    // kill: def $z0 killed $z0 killed $z0_z1 def $z0_z1
 ; CHECK-NEXT:    uvdot za.s[w8, 0, vgx2], { z0.h, z1.h }, z2.h[3]
 ; CHECK-NEXT:    uvdot za.s[w8, 7, vgx2], { z0.h, z1.h }, z2.h[3]

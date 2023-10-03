@@ -66,6 +66,10 @@ struct Foo { int a; };
         {
           "kind": "identifier",
           "spelling": "num"
+        },
+        {
+          "kind": "text",
+          "spelling": ";"
         }
       ],
       "identifier": {

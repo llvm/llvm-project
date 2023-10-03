@@ -657,6 +657,7 @@ sizeof...($TemplateParameter[[Elements]]);
       void $Function_def[[Bar]]($Concept[[Fooable]] $TemplateParameter[[auto]] $Parameter_def[[x]]) {}
 
       template$Bracket[[<]]$Concept[[Fooable]] auto $TemplateParameter_def_readonly[[x]]$Bracket[[>]] void $Function_def[[Boo]]() {}
+      bool $Variable_def[[b]] = $Concept[[Fooable]]$Bracket[[<]]int$Bracket[[>]];
     )cpp",
       // Dependent template name
       R"cpp(
@@ -886,10 +887,10 @@ sizeof...($TemplateParameter[[Elements]]);
       // Issue 1222: readonly modifier for generic parameter
       R"cpp(
         template $Bracket[[<]]typename $TemplateParameter_def[[T]]$Bracket[[>]]
-        auto $Function_def[[foo]](const $TemplateParameter[[T]] $Parameter_def_readonly[[template_type]], 
-                                  const $TemplateParameter[[auto]] $Parameter_def_readonly[[auto_type]], 
+        auto $Function_def[[foo]](const $TemplateParameter[[T]] $Parameter_def_readonly[[template_type]],
+                                  const $TemplateParameter[[auto]] $Parameter_def_readonly[[auto_type]],
                                   const int $Parameter_def_readonly[[explicit_type]]) {
-            return $Parameter_readonly[[template_type]] 
+            return $Parameter_readonly[[template_type]]
                  $Operator_userDefined[[+]] $Parameter_readonly[[auto_type]]
                  $Operator_userDefined[[+]] $Parameter_readonly[[explicit_type]];
         }
@@ -1002,7 +1003,7 @@ $Bracket[[>]]$Bracket[[>]] $LocalVariable_def[[s6]];
         template $Bracket[[<]]class $TemplateParameter_def[[T]]$Bracket[[>]]
         class $Class_def[[B]] {
           template $Bracket[[<]]class $TemplateParameter_def[[U]]$Bracket[[>]] void $Method_def[[foo]]($TemplateParameter[[U]]) { }
-          template$Bracket[[<]]$Bracket[[>]] void $Method_def[[foo]]$Bracket[[<]]int$Bracket[[>]](int) { } 
+          template$Bracket[[<]]$Bracket[[>]] void $Method_def[[foo]]$Bracket[[<]]int$Bracket[[>]](int) { }
           friend void $Function_decl[[foo]]$Bracket[[<]]$Bracket[[>]]($TemplateParameter[[T]]);
         };
       )cpp",

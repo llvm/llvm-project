@@ -554,6 +554,24 @@ def ApplyTestPatternsOp
   let cppNamespace = "::mlir::test";
 }
 
+def ApplyTestConversionPatternsOp
+  : Op<Transform_Dialect, "apply_conversion_patterns.transform.test_conversion_patterns",
+      [DeclareOpInterfaceMethods<ConversionPatternDescriptorOpInterface>]> {
+  let arguments = (ins);
+  let results = (outs);
+  let assemblyFormat = "attr-dict";
+  let cppNamespace = "::mlir::test";
+}
+
+def TestTypeConverterOp
+  : Op<Transform_Dialect, "apply_conversion_patterns.transform.test_type_converter",
+      [DeclareOpInterfaceMethods<TypeConverterBuilderOpInterface>]> {
+  let arguments = (ins);
+  let results = (outs);
+  let assemblyFormat = "attr-dict";
+  let cppNamespace = "::mlir::test";
+}
+
 def TestReEnterRegionOp
   : Op<Transform_Dialect, "test_re_enter_region",
        [DeclareOpInterfaceMethods<MemoryEffectsOpInterface>,

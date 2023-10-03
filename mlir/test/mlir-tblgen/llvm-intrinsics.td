@@ -74,7 +74,7 @@
 // It has alias scopes, noalias, and tbaa.
 // ALIAS: OptionalAttr<LLVM_AliasScopeArrayAttr>:$alias_scopes
 // ALIAS: OptionalAttr<LLVM_AliasScopeArrayAttr>:$noalias_scopes
-// ALIAS: OptionalAttr<SymbolRefArrayAttr>:$tbaa
+// ALIAS: OptionalAttr<LLVM_TBAATagArrayAttr>:$tbaa
 
 //---------------------------------------------------------------------------//
 

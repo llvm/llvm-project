@@ -15,7 +15,6 @@ package(default_visibility = ["//visibility:public"])
             "//llvm:include/llvm/IR/Intrinsics.td",
             "//mlir:BuiltinDialectBytecodeTdFiles",
             "//mlir:SideEffectInterfacesTdFiles",
-            "//mlir:include/mlir/Bindings/Python/Attributes.td",
             "//mlir:include/mlir/Dialect/LLVMIR/LLVMAttrDefs.td",
             "//mlir:include/mlir/Dialect/LLVMIR/LLVMDialect.td",
             "//mlir:include/mlir/Dialect/LLVMIR/LLVMInterfaces.td",

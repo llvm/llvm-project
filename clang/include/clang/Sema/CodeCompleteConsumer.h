@@ -336,7 +336,12 @@ public:
     CCC_Recovery,
 
     /// Code completion in a @class forward declaration.
-    CCC_ObjCClassForwardDecl
+    CCC_ObjCClassForwardDecl,
+
+    /// Code completion at a top level, i.e. in a namespace or global scope,
+    /// but also in expression statements. This is because REPL inputs can be
+    /// declarations or expression statements.
+    CCC_TopLevelOrExpression,
   };
 
   using VisitedContextSet = llvm::SmallPtrSet<DeclContext *, 8>;

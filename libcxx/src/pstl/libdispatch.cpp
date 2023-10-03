@@ -10,58 +10,22 @@
 #include <__algorithm/pstl_backends/cpu_backends/libdispatch.h>
 #include <__config>
 #include <dispatch/dispatch.h>
-#include <memory_resource>
-#include <thread>
 
 _LIBCPP_BEGIN_NAMESPACE_STD
 
 namespace __par_backend::inline __libdispatch {
 
-pmr::memory_resource* __get_memory_resource() {
-  static std::pmr::synchronized_pool_resource pool{pmr::new_delete_resource()};
-  return &pool;
-}
-
 void __dispatch_apply(size_t chunk_count, void* context, void (*func)(void* context, size_t chunk)) noexcept {
   ::dispatch_apply_f(chunk_count, DISPATCH_APPLY_AUTO, context, func);
 }
 
-__chunk_partitions __partition_chunks(ptrdiff_t element_count) {
+__chunk_partitions __partition_chunks(ptrdiff_t element_count) noexcept {
   __chunk_partitions partitions;
-  partitions.__chunk_count_ = [&] {
-    ptrdiff_t cores = std::max(1u, thread::hardware_concurrency());
-
-    auto medium = [&](ptrdiff_t n) { return cores + ((n - cores) / cores); };
-
-    // This is an approximation of `log(1.01, sqrt(n))` which seemes to be reasonable for `n` larger than 500 and tops
-    // at 800 tasks for n ~ 8 million
-    auto large = [](ptrdiff_t n) { return static_cast<ptrdiff_t>(100.499 * std::log(std::sqrt(n))); };
-
-    if (element_count < cores)
-      return element_count;
-    else if (element_count < 500)
-      return medium(element_count);
-    else
-      return std::min(medium(element_count), large(element_count)); // provide a "smooth" transition
-  }();
+  partitions.__chunk_count_      = std::max<ptrdiff_t>(1, element_count / 256);
   partitions.__chunk_size_       = element_count / partitions.__chunk_count_;
-  partitions.__first_chunk_size_ = partitions.__chunk_size_;
-
-  const ptrdiff_t leftover_item_count = element_count - (partitions.__chunk_count_ * partitions.__chunk_size_);
-
-  if (leftover_item_count == 0)
-    return partitions;
-
-  if (leftover_item_count == partitions.__chunk_size_) {
-    partitions.__chunk_count_ += 1;
-    return partitions;
-  }
-
-  const ptrdiff_t n_extra_items_per_chunk = leftover_item_count / partitions.__chunk_count_;
-  const ptrdiff_t n_final_leftover_items  = leftover_item_count - (n_extra_items_per_chunk * partitions.__chunk_count_);
-
-  partitions.__chunk_size_ += n_extra_items_per_chunk;
-  partitions.__first_chunk_size_ = partitions.__chunk_size_ + n_final_leftover_items;
+  partitions.__first_chunk_size_ = element_count - (partitions.__chunk_count_ - 1) * partitions.__chunk_size_;
+  if (partitions.__chunk_count_ == 0 && element_count > 0)
+    partitions.__chunk_count_ = 1;
   return partitions;
 }
 

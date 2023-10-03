@@ -1,7 +1,7 @@
 // RUN: %check_clang_tidy %s cppcoreguidelines-owning-memory %t \
 // RUN: -config='{CheckOptions: \
-// RUN:  [{key: cppcoreguidelines-owning-memory.LegacyResourceProducers, value: "::malloc;::aligned_alloc;::realloc;::calloc;::fopen;::freopen;::tmpfile"}, \
-// RUN:   {key: cppcoreguidelines-owning-memory.LegacyResourceConsumers, value: "::free;::realloc;::freopen;::fclose"}]}' \
+// RUN:  {cppcoreguidelines-owning-memory.LegacyResourceProducers: "::malloc;::aligned_alloc;::realloc;::calloc;::fopen;::freopen;::tmpfile", \
+// RUN:   cppcoreguidelines-owning-memory.LegacyResourceConsumers: "::free;::realloc;::freopen;::fclose"}}' \
 // RUN: -- -nostdlib -nostdinc++
 
 namespace gsl {

@@ -14,7 +14,6 @@ import os
 
 class TestVSCode_launch(lldbvscode_testcase.VSCodeTestCaseBase):
     @skipIfWindows
-    @skipIfDarwin  # Flaky
     @skipIfRemote
     def test_default(self):
         """
@@ -46,12 +45,8 @@ class TestVSCode_launch(lldbvscode_testcase.VSCodeTestCaseBase):
         self.vscode.request_disconnect()
 
         # Wait until the underlying lldb-vscode process dies.
-        # We need to do this because the popen.wait function in python2.7
-        # doesn't have a timeout argument.
-        for _ in range(10):
-            time.sleep(1)
-            if self.vscode.process.poll() is not None:
-                break
+        self.vscode.process.wait(timeout=10)
+
         # Check the return code
         self.assertEqual(self.vscode.process.poll(), 0)
 
@@ -427,10 +422,7 @@ class TestVSCode_launch(lldbvscode_testcase.VSCodeTestCaseBase):
 
     @skipIfWindows
     @skipIfNetBSD  # Hangs on NetBSD as well
-    @skipIfDarwin
-    @skipIf(
-        archs=["arm", "aarch64"]
-    )  # Example of a flaky run http://lab.llvm.org:8011/builders/lldb-aarch64-ubuntu/builds/5540/steps/test/logs/stdio
+    @skipIf(archs=["arm", "aarch64"], oslist=["linux"])
     def test_terminate_commands(self):
         """
         Tests that the "terminateCommands", that can be passed during

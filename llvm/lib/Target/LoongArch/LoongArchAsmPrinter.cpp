@@ -75,6 +75,20 @@ bool LoongArchAsmPrinter::PrintAsmOperand(const MachineInstr *MI, unsigned OpNo,
         return false;
       }
       break;
+    case 'w': // Print LSX registers.
+      if (MO.getReg().id() >= LoongArch::VR0 &&
+          MO.getReg().id() <= LoongArch::VR31)
+        break;
+      // The modifier is 'w' but the operand is not an LSX register; Report an
+      // unknown operand error.
+      return true;
+    case 'u': // Print LASX registers.
+      if (MO.getReg().id() >= LoongArch::XR0 &&
+          MO.getReg().id() <= LoongArch::XR31)
+        break;
+      // The modifier is 'u' but the operand is not an LASX register; Report an
+      // unknown operand error.
+      return true;
       // TODO: handle other extra codes if any.
     }
   }

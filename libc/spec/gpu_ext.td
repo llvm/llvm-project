@@ -6,9 +6,9 @@ def GPUExtensions : StandardSpec<"GPUExtensions"> {
     [], // Enumerations
     [
         FunctionSpec<
-            "rpc_reset",
+            "rpc_host_call",
             RetValSpec<VoidType>,
-            [ArgSpec<UnsignedIntType>, ArgSpec<VoidPtr>]
+            [ArgSpec<VoidPtr>, ArgSpec<VoidPtr>, ArgSpec<SizeTType>]
         >,
     ]
   >;

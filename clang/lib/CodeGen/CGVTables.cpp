@@ -24,6 +24,7 @@
 #include "llvm/Transforms/Utils/Cloning.h"
 #include <algorithm>
 #include <cstdio>
+#include <utility>
 
 using namespace clang;
 using namespace CodeGen;
@@ -201,7 +202,7 @@ CodeGenFunction::GenerateVarArgsThunk(llvm::Function *Fn,
   // Find the first store of "this", which will be to the alloca associated
   // with "this".
   Address ThisPtr =
-      Address(&*AI, ConvertTypeForMem(MD->getThisType()->getPointeeType()),
+      Address(&*AI, ConvertTypeForMem(MD->getFunctionObjectParameterType()),
               CGM.getClassPointerAlignment(MD->getParent()));
   llvm::BasicBlock *EntryBB = &Fn->front();
   llvm::BasicBlock::iterator ThisStore =
@@ -690,7 +691,7 @@ bool CodeGenVTables::useRelativeLayout() const {
 llvm::Type *CodeGenModule::getVTableComponentType() const {
   if (UseRelativeLayout(*this))
     return Int32Ty;
-  return Int8PtrTy;
+  return GlobalsInt8PtrTy;
 }
 
 llvm::Type *CodeGenVTables::getVTableComponentType() const {
@@ -702,7 +703,7 @@ static void AddPointerLayoutOffset(const CodeGenModule &CGM,
                                    CharUnits offset) {
   builder.add(llvm::ConstantExpr::getIntToPtr(
       llvm::ConstantInt::get(CGM.PtrDiffTy, offset.getQuantity()),
-      CGM.Int8PtrTy));
+      CGM.GlobalsInt8PtrTy));
 }
 
 static void AddRelativeLayoutOffset(const CodeGenModule &CGM,
@@ -739,7 +740,7 @@ void CodeGenVTables::addVTableComponent(ConstantArrayBuilder &builder,
                                   vtableHasLocalLinkage,
                                   /*isCompleteDtor=*/false);
     else
-      return builder.add(llvm::ConstantExpr::getBitCast(rtti, CGM.Int8PtrTy));
+      return builder.add(rtti);
 
   case VTableComponent::CK_FunctionPointer:
   case VTableComponent::CK_CompleteDtorPointer:
@@ -758,7 +759,8 @@ void CodeGenVTables::addVTableComponent(ConstantArrayBuilder &builder,
               ? MD->hasAttr<CUDADeviceAttr>()
               : (MD->hasAttr<CUDAHostAttr>() || !MD->hasAttr<CUDADeviceAttr>());
       if (!CanEmitMethod)
-        return builder.add(llvm::ConstantExpr::getNullValue(CGM.Int8PtrTy));
+        return builder.add(
+            llvm::ConstantExpr::getNullValue(CGM.GlobalsInt8PtrTy));
       // Method is acceptable, continue processing as usual.
     }
 
@@ -771,20 +773,20 @@ void CodeGenVTables::addVTableComponent(ConstantArrayBuilder &builder,
       // with the local symbol. As a temporary solution, fill these components
       // with zero. We shouldn't be calling these in the first place anyway.
       if (useRelativeLayout())
-        return llvm::ConstantPointerNull::get(CGM.Int8PtrTy);
+        return llvm::ConstantPointerNull::get(CGM.GlobalsInt8PtrTy);
 
       // For NVPTX devices in OpenMP emit special functon as null pointers,
       // otherwise linking ends up with unresolved references.
       if (CGM.getLangOpts().OpenMP && CGM.getLangOpts().OpenMPIsTargetDevice &&
           CGM.getTriple().isNVPTX())
-        return llvm::ConstantPointerNull::get(CGM.Int8PtrTy);
+        return llvm::ConstantPointerNull::get(CGM.GlobalsInt8PtrTy);
       llvm::FunctionType *fnTy =
           llvm::FunctionType::get(CGM.VoidTy, /*isVarArg=*/false);
       llvm::Constant *fn = cast<llvm::Constant>(
           CGM.CreateRuntimeFunction(fnTy, name).getCallee());
       if (auto f = dyn_cast<llvm::Function>(fn))
         f->setUnnamedAddr(llvm::GlobalValue::UnnamedAddr::Global);
-      return llvm::ConstantExpr::getBitCast(fn, CGM.Int8PtrTy);
+      return fn;
     };
 
     llvm::Constant *fnPtr;
@@ -822,15 +824,26 @@ void CodeGenVTables::addVTableComponent(ConstantArrayBuilder &builder,
       return addRelativeComponent(
           builder, fnPtr, vtableAddressPoint, vtableHasLocalLinkage,
           component.getKind() == VTableComponent::CK_CompleteDtorPointer);
-    } else
-      return builder.add(llvm::ConstantExpr::getBitCast(fnPtr, CGM.Int8PtrTy));
+    } else {
+      // TODO: this icky and only exists due to functions being in the generic
+      //       address space, rather than the global one, even though they are
+      //       globals;  fixing said issue might be intrusive, and will be done
+      //       later.
+      unsigned FnAS = fnPtr->getType()->getPointerAddressSpace();
+      unsigned GVAS = CGM.GlobalsInt8PtrTy->getPointerAddressSpace();
+
+      if (FnAS != GVAS)
+        fnPtr =
+            llvm::ConstantExpr::getAddrSpaceCast(fnPtr, CGM.GlobalsInt8PtrTy);
+      return builder.add(fnPtr);
+    }
   }
 
   case VTableComponent::CK_UnusedFunctionPointer:
     if (useRelativeLayout())
       return builder.add(llvm::ConstantExpr::getNullValue(CGM.Int32Ty));
     else
-      return builder.addNullPointer(CGM.Int8PtrTy);
+      return builder.addNullPointer(CGM.GlobalsInt8PtrTy);
   }
 
   llvm_unreachable("Unexpected vtable component kind");
@@ -1296,43 +1309,34 @@ void CodeGenModule::EmitVTableTypeMetadata(const CXXRecordDecl *RD,
 
   CharUnits ComponentWidth = GetTargetTypeStoreSize(getVTableComponentType());
 
-  typedef std::pair<const CXXRecordDecl *, unsigned> AddressPoint;
+  struct AddressPoint {
+    const CXXRecordDecl *Base;
+    size_t Offset;
+    std::string TypeName;
+    bool operator<(const AddressPoint &RHS) const {
+      int D = TypeName.compare(RHS.TypeName);
+      return D < 0 || (D == 0 && Offset < RHS.Offset);
+    }
+  };
   std::vector<AddressPoint> AddressPoints;
-  for (auto &&AP : VTLayout.getAddressPoints())
-    AddressPoints.push_back(std::make_pair(
-        AP.first.getBase(), VTLayout.getVTableOffset(AP.second.VTableIndex) +
-                                AP.second.AddressPointIndex));
+  for (auto &&AP : VTLayout.getAddressPoints()) {
+    AddressPoint N{AP.first.getBase(),
+                   VTLayout.getVTableOffset(AP.second.VTableIndex) +
+                       AP.second.AddressPointIndex,
+                   {}};
+    llvm::raw_string_ostream Stream(N.TypeName);
+    getCXXABI().getMangleContext().mangleCanonicalTypeName(
+        QualType(N.Base->getTypeForDecl(), 0), Stream);
+    AddressPoints.push_back(std::move(N));
+  }
 
   // Sort the address points for determinism.
-  llvm::sort(AddressPoints, [this](const AddressPoint &AP1,
-                                   const AddressPoint &AP2) {
-    if (&AP1 == &AP2)
-      return false;
-
-    std::string S1;
-    llvm::raw_string_ostream O1(S1);
-    getCXXABI().getMangleContext().mangleTypeName(
-        QualType(AP1.first->getTypeForDecl(), 0), O1);
-    O1.flush();
-
-    std::string S2;
-    llvm::raw_string_ostream O2(S2);
-    getCXXABI().getMangleContext().mangleTypeName(
-        QualType(AP2.first->getTypeForDecl(), 0), O2);
-    O2.flush();
-
-    if (S1 < S2)
-      return true;
-    if (S1 != S2)
-      return false;
-
-    return AP1.second < AP2.second;
-  });
+  llvm::sort(AddressPoints);
 
   ArrayRef<VTableComponent> Comps = VTLayout.vtable_components();
   for (auto AP : AddressPoints) {
     // Create type metadata for the address point.
-    AddVTableTypeMetadata(VTable, ComponentWidth * AP.second, AP.first);
+    AddVTableTypeMetadata(VTable, ComponentWidth * AP.Offset, AP.Base);
 
     // The class associated with each address point could also potentially be
     // used for indirect calls via a member function pointer, so we need to
@@ -1344,7 +1348,7 @@ void CodeGenModule::EmitVTableTypeMetadata(const CXXRecordDecl *RD,
       llvm::Metadata *MD = CreateMetadataIdentifierForVirtualMemPtrType(
           Context.getMemberPointerType(
               Comps[I].getFunctionDecl()->getType(),
-              Context.getRecordType(AP.first).getTypePtr()));
+              Context.getRecordType(AP.Base).getTypePtr()));
       VTable->addTypeMetadata((ComponentWidth * I).getQuantity(), MD);
     }
   }

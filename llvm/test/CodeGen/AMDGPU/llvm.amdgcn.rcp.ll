@@ -3,6 +3,8 @@
 declare float @llvm.amdgcn.rcp.f32(float) #0
 declare double @llvm.amdgcn.rcp.f64(double) #0
 
+declare double @llvm.amdgcn.sqrt.f64(double) #0
+declare float @llvm.amdgcn.sqrt.f32(float) #0
 declare double @llvm.sqrt.f64(double) #0
 declare float @llvm.sqrt.f32(float) #0
 
@@ -63,16 +65,45 @@ define amdgpu_kernel void @unsafe_f32_denormals_rcp_pat_f32(ptr addrspace(1) %ou
 }
 
 ; FUNC-LABEL: {{^}}safe_rsq_rcp_pat_f32:
-; SI: v_rsq_f32_e32
+; SI: v_mul_f32
+; SI: v_rsq_f32
+; SI: v_mul_f32
+; SI: v_fma_f32
+; SI: v_fma_f32
+; SI: v_fma_f32
+; SI: v_fma_f32
+; SI: v_fma_f32
+; SI: v_rcp_f32
 define amdgpu_kernel void @safe_rsq_rcp_pat_f32(ptr addrspace(1) %out, float %src) #1 {
-  %sqrt = call float @llvm.sqrt.f32(float %src)
-  %rcp = call float @llvm.amdgcn.rcp.f32(float %sqrt)
+  %sqrt = call contract float @llvm.sqrt.f32(float %src)
+  %rcp = call contract float @llvm.amdgcn.rcp.f32(float %sqrt)
+  store float %rcp, ptr addrspace(1) %out, align 4
+  ret void
+}
+
+; FUNC-LABEL: {{^}}safe_rsq_rcp_pat_amdgcn_sqrt_f32:
+; SI: v_sqrt_f32_e32
+; SI: v_rcp_f32_e32
+define amdgpu_kernel void @safe_rsq_rcp_pat_amdgcn_sqrt_f32(ptr addrspace(1) %out, float %src) #1 {
+  %sqrt = call contract float @llvm.amdgcn.sqrt.f32(float %src)
+  %rcp = call contract float @llvm.amdgcn.rcp.f32(float %sqrt)
+  store float %rcp, ptr addrspace(1) %out, align 4
+  ret void
+}
+
+; FUNC-LABEL: {{^}}safe_rsq_rcp_pat_amdgcn_sqrt_f32_nocontract:
+; SI: v_sqrt_f32_e32
+; SI: v_rcp_f32_e32
+define amdgpu_kernel void @safe_rsq_rcp_pat_amdgcn_sqrt_f32_nocontract(ptr addrspace(1) %out, float %src) #1 {
+  %sqrt = call float @llvm.amdgcn.sqrt.f32(float %src)
+  %rcp = call contract float @llvm.amdgcn.rcp.f32(float %sqrt)
   store float %rcp, ptr addrspace(1) %out, align 4
   ret void
 }
 
 ; FUNC-LABEL: {{^}}unsafe_rsq_rcp_pat_f32:
-; SI: v_rsq_f32_e32
+; SI: v_sqrt_f32_e32
+; SI: v_rcp_f32_e32
 define amdgpu_kernel void @unsafe_rsq_rcp_pat_f32(ptr addrspace(1) %out, float %src) #2 {
   %sqrt = call float @llvm.sqrt.f32(float %src)
   %rcp = call float @llvm.amdgcn.rcp.f32(float %sqrt)
@@ -124,7 +155,15 @@ define amdgpu_kernel void @unsafe_rcp_pat_f64(ptr addrspace(1) %out, double %src
 
 ; FUNC-LABEL: {{^}}safe_rsq_rcp_pat_f64:
 ; SI-NOT: v_rsq_f64_e32
-; SI: v_sqrt_f64
+; SI: v_rsq_f64
+; SI: v_mul_f64
+; SI: v_mul_f64
+; SI: v_fma_f64
+; SI: v_fma_f64
+; SI: v_fma_f64
+; SI: v_fma_f64
+; SI: v_fma_f64
+; SI: v_fma_f64
 ; SI: v_rcp_f64
 define amdgpu_kernel void @safe_rsq_rcp_pat_f64(ptr addrspace(1) %out, double %src) #1 {
   %sqrt = call double @llvm.sqrt.f64(double %src)
@@ -133,12 +172,42 @@ define amdgpu_kernel void @safe_rsq_rcp_pat_f64(ptr addrspace(1) %out, double %s
   ret void
 }
 
+; FUNC-LABEL: {{^}}safe_amdgcn_sqrt_rsq_rcp_pat_f64:
+; SI-NOT: v_rsq_f64_e32
+; SI: v_sqrt_f64
+; SI: v_rcp_f64
+define amdgpu_kernel void @safe_amdgcn_sqrt_rsq_rcp_pat_f64(double addrspace(1)* %out, double %src) #1 {
+  %sqrt = call double @llvm.amdgcn.sqrt.f64(double %src)
+  %rcp = call double @llvm.amdgcn.rcp.f64(double %sqrt)
+  store double %rcp, double addrspace(1)* %out, align 8
+  ret void
+}
+
 ; FUNC-LABEL: {{^}}unsafe_rsq_rcp_pat_f64:
+; SI: v_rsq_f64
+; SI: v_mul_f64
+; SI: v_mul_f64
+; SI: v_fma_f64
+; SI: v_fma_f64
+; SI: v_fma_f64
+; SI: v_fma_f64
+; SI: v_fma_f64
+; SI: v_fma_f64
+; SI: v_rcp_f64
+; SI: buffer_store_dwordx2
+define amdgpu_kernel void @unsafe_rsq_rcp_pat_f64(double addrspace(1)* %out, double %src) #2 {
+  %sqrt = call double @llvm.sqrt.f64(double %src)
+  %rcp = call double @llvm.amdgcn.rcp.f64(double %sqrt)
+  store double %rcp, double addrspace(1)* %out, align 8
+  ret void
+}
+
+; FUNC-LABEL: {{^}}unsafe_amdgcn_sqrt_rsq_rcp_pat_f64:
 ; SI: v_sqrt_f64_e32 [[SQRT:v\[[0-9]+:[0-9]+\]]], s{{\[[0-9]+:[0-9]+\]}}
 ; SI: v_rcp_f64_e32 [[RESULT:v\[[0-9]+:[0-9]+\]]], [[SQRT]]
 ; SI: buffer_store_dwordx2 [[RESULT]]
-define amdgpu_kernel void @unsafe_rsq_rcp_pat_f64(ptr addrspace(1) %out, double %src) #2 {
-  %sqrt = call double @llvm.sqrt.f64(double %src)
+define amdgpu_kernel void @unsafe_amdgcn_sqrt_rsq_rcp_pat_f64(ptr addrspace(1) %out, double %src) #2 {
+  %sqrt = call double @llvm.amdgcn.sqrt.f64(double %src)
   %rcp = call double @llvm.amdgcn.rcp.f64(double %sqrt)
   store double %rcp, ptr addrspace(1) %out, align 8
   ret void

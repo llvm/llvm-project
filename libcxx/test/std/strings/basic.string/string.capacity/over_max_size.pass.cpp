@@ -26,15 +26,16 @@
 #include "min_allocator.h"
 
 template <class S>
-void
-test(const S& s)
-{
-    assert(s.max_size() >= s.size());
-    S s2(s);
-    const std::size_t sz = s2.max_size() + 1;
-    try { s2.resize(sz, 'x'); }
-    catch ( const std::length_error & ) { return ; }
-    assert ( false );
+void test(const S& s) {
+  assert(s.max_size() >= s.size());
+  S s2(s);
+  const std::size_t sz = s2.max_size() + 1;
+  try {
+    s2.resize(sz, 'x');
+  } catch (const std::length_error&) {
+    return;
+  }
+  assert(false);
 }
 
 template <class S>
@@ -53,8 +54,7 @@ bool test() {
   return true;
 }
 
-int main(int, char**)
-{
+int main(int, char**) {
   test();
 
   return 0;

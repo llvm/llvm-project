@@ -3145,7 +3145,12 @@ void format_tests(TestFunction check, ExceptionTest check_exception) {
 
   // *** Test invalid format strings ***
   check_exception("The format string terminates at a '{'", SV("{"));
+  check_exception("The argument index value is too large for the number of arguments supplied", SV("{:"));
   check_exception("The replacement field misses a terminating '}'", SV("{:"), 42);
+
+  check_exception("The argument index should end with a ':' or a '}'", SV("{0"));
+  check_exception("The argument index value is too large for the number of arguments supplied", SV("{0:"));
+  check_exception("The replacement field misses a terminating '}'", SV("{0:"), 42);
 
   check_exception("The format string contains an invalid escape sequence", SV("}"));
   check_exception("The format string contains an invalid escape sequence", SV("{:}-}"), 42);

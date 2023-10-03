@@ -177,6 +177,16 @@ float4 strict_elementwise_sin(float4 a) {
   return __builtin_elementwise_sin(a);
 }
 
+// CHECK-LABEL: define dso_local noundef <4 x float> @_Z23strict_elementwise_sqrtDv4_f
+// CHECK-SAME: (<4 x float> noundef [[A:%.*]]) local_unnamed_addr #[[ATTR0]] {
+// CHECK-NEXT:  entry:
+// CHECK-NEXT:    [[TMP0:%.*]] = tail call <4 x float> @llvm.experimental.constrained.sqrt.v4f32(<4 x float> [[A]], metadata !"round.dynamic", metadata !"fpexcept.strict") #[[ATTR4]]
+// CHECK-NEXT:    ret <4 x float> [[TMP0]]
+//
+float4 strict_elementwise_sqrt(float4 a) {
+  return __builtin_elementwise_sqrt(a);
+}
+
 // CHECK-LABEL: define dso_local noundef <4 x float> @_Z24strict_elementwise_truncDv4_f
 // CHECK-SAME: (<4 x float> noundef [[A:%.*]]) local_unnamed_addr #[[ATTR2]] {
 // CHECK-NEXT:  entry:
@@ -217,3 +227,12 @@ float4 strict_elementwise_fma(float4 a, float4 b, float4 c) {
   return __builtin_elementwise_fma(a, b, c);
 }
 
+// CHECK-LABEL: define dso_local noundef <4 x float> @_Z22strict_elementwise_powDv4_fS_
+// CHECK-SAME: (<4 x float> noundef [[A:%.*]], <4 x float> noundef [[B:%.*]]) local_unnamed_addr #[[ATTR2]] {
+// CHECK-NEXT:  entry:
+// CHECK-NEXT:    [[TMP0:%.*]] = tail call <4 x float> @llvm.pow.v4f32(<4 x float> [[A]], <4 x float> [[B]]) #[[ATTR4]]
+// CHECK-NEXT:    ret <4 x float> [[TMP0]]
+//
+float4 strict_elementwise_pow(float4 a, float4 b) {
+  return __builtin_elementwise_pow(a, b);
+}

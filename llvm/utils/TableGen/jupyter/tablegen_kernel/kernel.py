@@ -11,19 +11,33 @@ from ipykernel.kernelbase import Kernel
 __version__ = "0.0.1"
 
 
+class TableGenKernelException(Exception):
+    pass
+
+
 class TableGenKernel(Kernel):
     """Kernel using llvm-tblgen inside jupyter.
 
     All input is treated as TableGen unless the first non whitespace character
     is "%" in which case it is a "magic" line.
 
-    The supported magic is:
-    * %args - to set the arguments passed to llvm-tblgen.
-    * %reset - to reset the cached code and magic state.
+    The supported cell magic is:
+    * %args    - to set the arguments passed to llvm-tblgen.
+    * %reset   - to reset the cached code and magic state.
+    * %noreset - to not reset the cached code and magic state
+                 (useful when you have changed the default to always
+                  reset the cache).
 
     These are "cell magic" meaning it applies to the whole cell. Therefore
     it must be the first line, or part of a run of magic lines starting
     from the first line.
+
+    The following are global magic (that applies to all cells going
+    forward):
+    * %config  - to change the behaviour of the kernel overall, including
+                 changing defaults for things like resets.
+
+    Global magic must be written in the same way as cell magic.
 
     ```tablgen
     %args
@@ -59,6 +73,9 @@ class TableGenKernel(Kernel):
         self._previous_code = ""
         # The most recent set of magic since the last reset.
         self._previous_magic = {}
+        # The default cache reset behaviour. True means do not cache anything
+        # between cells.
+        self._cell_reset = False
 
     @property
     def banner(self):
@@ -81,6 +98,61 @@ class TableGenKernel(Kernel):
                 self._executable = path
 
         return self._executable
+
+    def parse_config_magic(self, config):
+        """Config should be a list of parameters given to the %config command.
+        We allow only one setting per %config line and that setting can only
+        have one value.
+
+        Assuming the parameters are valid, update the kernel's setting with
+        the new value.
+
+        If there is an error, raise a TableGenKernelException.
+
+        >>> k.parse_config_magic([])
+        Traceback (most recent call last):
+         ...
+        TableGenKernelException: Incorrect number of parameters to %config. Expected %config <setting> <value>.
+        >>> k._cell_reset
+        False
+        >>> k.parse_config_magic(["a", "b", "c"])
+        Traceback (most recent call last):
+         ...
+        TableGenKernelException: Incorrect number of parameters to %config. Expected %config <setting> <value>.
+        >>> k.parse_config_magic(["notasetting", "..."])
+        Traceback (most recent call last):
+         ...
+        TableGenKernelException: Unknown kernel setting "notasetting". Possible settings are: "cellreset".
+        >>> k.parse_config_magic(["cellreset", "food"])
+        Traceback (most recent call last):
+         ...
+        TableGenKernelException: Invalid value for setting "cellreset", expected "on" or "off".
+        >>> k.parse_config_magic(["cellreset", "on"])
+        >>> k._cell_reset
+        True
+        >>> k.parse_config_magic(["cellreset", "off"])
+        >>> k._cell_reset
+        False
+        """
+        if len(config) != 2:
+            raise TableGenKernelException(
+                "Incorrect number of parameters to %config. Expected %config <setting> <value>."
+            )
+
+        name, value = config
+        if name != "cellreset":
+            raise TableGenKernelException(
+                'Unknown kernel setting "{}". '
+                'Possible settings are: "cellreset".'.format(name)
+            )
+
+        try:
+            self._cell_reset = {"on": True, "off": False}[value.lower()]
+        except KeyError:
+            raise TableGenKernelException(
+                'Invalid value for setting "{}", '
+                'expected "on" or "off".'.format(name)
+            )
 
     def get_magic(self, code):
         """Given a block of code remove the magic lines from it.
@@ -128,6 +200,51 @@ class TableGenKernel(Kernel):
 
         return "\n".join(code_lines), magic
 
+    def should_reset(self, magic):
+        """Return true if we should reset the cache, based on the default
+        setting and the current cell's magic %reset and/or %noreset.
+
+        >>> k._cell_reset = False
+        >>> k.should_reset({})
+        False
+        >>> k.should_reset({'reset': [], 'noreset': []})
+        Traceback (most recent call last):
+        ...
+        TableGenKernelException: %reset and %noreset in the same cell is not allowed. Use only one, or neither.
+        >>> k.should_reset({'reset': []})
+        True
+        >>> k.should_reset({'noreset': []})
+        False
+        >>> k._cell_reset = True
+        >>> k.should_reset({})
+        True
+        >>> k.should_reset({'reset': [], 'noreset': []})
+        Traceback (most recent call last):
+        ...
+        TableGenKernelException: %reset and %noreset in the same cell is not allowed. Use only one, or neither.
+        >>> k.should_reset({'reset': []})
+        True
+        >>> k.should_reset({'noreset': []})
+        False
+        """
+        # Cell reset is the default unless told otherwise.
+        should_reset = self._cell_reset
+        # Magic reset commands always win if present.
+        reset = magic.get("reset") is not None
+        noreset = magic.get("noreset") is not None
+
+        if reset and not noreset:
+            should_reset = True
+        elif noreset and not reset:
+            should_reset = False
+        elif noreset and reset:
+            raise TableGenKernelException(
+                "%reset and %noreset in the same cell is not allowed. Use only one, or neither."
+            )
+        # else neither are set so use the default.
+
+        return should_reset
+
     def get_code_and_args(self, new_code):
         """Get the code that do_execute should use, taking into account
         the code from any cached cells.
@@ -149,8 +266,12 @@ class TableGenKernel(Kernel):
         """
         new_code, new_magic = self.get_magic(new_code)
 
-        # Only a reset in the newest cell actually does a reset.
-        if new_magic.get("reset") is not None:
+        # Update kernel configuration first, if needed.
+        config_magic = new_magic.get("config")
+        if config_magic is not None:
+            self.parse_config_magic(config_magic)
+
+        if self.should_reset(new_magic):
             self._previous_code = new_code
             self._previous_magic = new_magic
         else:
@@ -182,7 +303,10 @@ class TableGenKernel(Kernel):
         self, code, silent, store_history=True, user_expressions=None, allow_stdin=False
     ):
         """Execute user code using llvm-tblgen binary."""
-        all_code, args = self.get_code_and_args(code)
+        try:
+            all_code, args = self.get_code_and_args(code)
+        except TableGenKernelException as e:
+            return self.send_stderr(str(e))
 
         # If we cannot find llvm-tblgen, propogate the error to the notebook.
         # (in case the user is not able to see the output from the Jupyter server)

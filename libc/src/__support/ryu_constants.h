@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_LIBC_SRC_SUPPORT_RYU_CONSTANTS_H
-#define LLVM_LIBC_SRC_SUPPORT_RYU_CONSTANTS_H
+#ifndef LLVM_LIBC_SRC___SUPPORT_RYU_CONSTANTS_H
+#define LLVM_LIBC_SRC___SUPPORT_RYU_CONSTANTS_H
 
 #include <stddef.h>
 #include <stdint.h>
@@ -4401,4 +4401,4 @@ constexpr uint64_t POW10_SPLIT_2[3133][3] = {
     {0u, 0u, 33000000000u},
 };
 
-#endif // LLVM_LIBC_SRC_SUPPORT_RYU_CONSTANTS_H
+#endif // LLVM_LIBC_SRC___SUPPORT_RYU_CONSTANTS_H

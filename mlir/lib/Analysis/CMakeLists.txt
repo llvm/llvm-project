@@ -13,6 +13,7 @@ set(LLVM_OPTIONAL_SOURCES
   DataFlow/DeadCodeAnalysis.cpp
   DataFlow/DenseAnalysis.cpp
   DataFlow/IntegerRangeAnalysis.cpp
+  DataFlow/LivenessAnalysis.cpp
   DataFlow/SparseAnalysis.cpp
   )
 
@@ -34,6 +35,7 @@ add_mlir_library(MLIRAnalysis
   DataFlow/DeadCodeAnalysis.cpp
   DataFlow/DenseAnalysis.cpp
   DataFlow/IntegerRangeAnalysis.cpp
+  DataFlow/LivenessAnalysis.cpp
   DataFlow/SparseAnalysis.cpp
 
   ADDITIONAL_HEADER_DIRS
@@ -46,6 +48,7 @@ add_mlir_library(MLIRAnalysis
   MLIRCallInterfaces
   MLIRControlFlowInterfaces
   MLIRDataLayoutInterfaces
+  MLIRFunctionInterfaces
   MLIRInferIntRangeInterface
   MLIRInferTypeOpInterface
   MLIRLoopLikeInterface

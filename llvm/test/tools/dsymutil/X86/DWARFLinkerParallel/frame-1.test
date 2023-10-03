@@ -1,0 +1,36 @@
+# RUN: rm -rf %t
+# RUN: mkdir -p %t
+# RUN: llc -filetype=obj %p/../../Inputs/frame-dw2.ll -o %t/frame-dw2.o
+# RUN: dsymutil --linker llvm -f -oso-prepend-path=%t -y %s -o - | \
+# RUN:   llvm-dwarfdump -debug-frame - | FileCheck %s
+
+# This test is meant to verify that identical CIEs will get reused
+# in the same file but not inbetween files. For this to happen, we
+# link twice the same file using this made-up debug map:
+
+---
+triple:          'i386-apple-darwin'
+objects:
+  - filename: frame-dw2.o
+    symbols:
+      - { sym: _bar, objAddr: 0x0, binAddr: 0x1000, size: 0x12 }
+      - { sym: _baz, objAddr: 0x0, binAddr: 0x2000, size: 0x12 }
+  - filename: frame-dw2.o
+    symbols:
+      - { sym: _bar, objAddr: 0x0, binAddr: 0x3000, size: 0x12 }
+      - { sym: _baz, objAddr: 0x0, binAddr: 0x4000, size: 0x12 }
+...
+
+# CHECK: .debug_frame contents:
+# CHECK: 00000000 {{[0-9a-f]*}} ffffffff CIE
+# CHECK-NOT: FDE
+# CHECK:  FDE cie=00000000 pc=00001000...00001
+# CHECK-NOT: FDE
+# CHECK:  FDE cie=00000000 pc=00002000...00002
+# CHECK:  [[CIECU2:[0-9a-f]*]] {{[0-9a-f]*}} ffffffff CIE
+# CHECK-NOT: FDE
+# CHECK:  FDE cie=[[CIECU2]] pc=00003000...00003
+# CHECK-NOT: FDE
+# CHECK:  FDE cie=[[CIECU2]] pc=00004000...00004
+# CHECK-NOT: FDE
+# CHECK: .eh_frame contents:

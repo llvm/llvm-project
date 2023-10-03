@@ -629,6 +629,7 @@ void LiveRange::join(LiveRange &Other,
                      const int *RHSValNoAssignments,
                      SmallVectorImpl<VNInfo *> &NewVNInfo) {
   verify();
+  Other.verify();
 
   // Determine if any of our values are mapped.  This is uncommon, so we want
   // to avoid the range scan if not.

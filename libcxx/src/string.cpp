@@ -346,7 +346,7 @@ S i_to_string(V v) {
     constexpr size_t bufsize = numeric_limits<V>::digits10 + 2;  // +1 for minus, +1 for digits10
     char buf[bufsize];
     const auto res = to_chars(buf, buf + bufsize, v);
-    _LIBCPP_ASSERT_UNCATEGORIZED(res.ec == errc(), "bufsize must be large enough to accomodate the value");
+    _LIBCPP_ASSERT_INTERNAL(res.ec == errc(), "bufsize must be large enough to accomodate the value");
     return S(buf, res.ptr);
 }
 

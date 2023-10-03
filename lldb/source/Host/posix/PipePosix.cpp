@@ -65,16 +65,21 @@ PipePosix::PipePosix(PipePosix &&pipe_posix)
             pipe_posix.ReleaseWriteFileDescriptor()} {}
 
 PipePosix &PipePosix::operator=(PipePosix &&pipe_posix) {
+  std::scoped_lock<std::mutex, std::mutex, std::mutex, std::mutex> guard(
+      m_read_mutex, m_write_mutex, pipe_posix.m_read_mutex,
+      pipe_posix.m_write_mutex);
+
   PipeBase::operator=(std::move(pipe_posix));
-  m_fds[READ] = pipe_posix.ReleaseReadFileDescriptor();
-  m_fds[WRITE] = pipe_posix.ReleaseWriteFileDescriptor();
+  m_fds[READ] = pipe_posix.ReleaseReadFileDescriptorUnlocked();
+  m_fds[WRITE] = pipe_posix.ReleaseWriteFileDescriptorUnlocked();
   return *this;
 }
 
 PipePosix::~PipePosix() { Close(); }
 
 Status PipePosix::CreateNew(bool child_processes_inherit) {
-  if (CanRead() || CanWrite())
+  std::scoped_lock<std::mutex, std::mutex> guard(m_read_mutex, m_write_mutex);
+  if (CanReadUnlocked() || CanWriteUnlocked())
     return Status(EINVAL, eErrorTypePOSIX);
 
   Status error;
@@ -87,7 +92,7 @@ Status PipePosix::CreateNew(bool child_processes_inherit) {
     if (!child_processes_inherit) {
       if (!SetCloexecFlag(m_fds[0]) || !SetCloexecFlag(m_fds[1])) {
         error.SetErrorToErrno();
-        Close();
+        CloseUnlocked();
         return error;
       }
     }
@@ -103,7 +108,8 @@ Status PipePosix::CreateNew(bool child_processes_inherit) {
 }
 
 Status PipePosix::CreateNew(llvm::StringRef name, bool child_process_inherit) {
-  if (CanRead() || CanWrite())
+  std::scoped_lock<std::mutex, std::mutex> (m_read_mutex, m_write_mutex);
+  if (CanReadUnlocked() || CanWriteUnlocked())
     return Status("Pipe is already opened");
 
   Status error;
@@ -140,7 +146,9 @@ Status PipePosix::CreateWithUniqueName(llvm::StringRef prefix,
 
 Status PipePosix::OpenAsReader(llvm::StringRef name,
                                bool child_process_inherit) {
-  if (CanRead() || CanWrite())
+  std::scoped_lock<std::mutex, std::mutex> (m_read_mutex, m_write_mutex);
+
+  if (CanReadUnlocked() || CanWriteUnlocked())
     return Status("Pipe is already opened");
 
   int flags = O_RDONLY | O_NONBLOCK;
@@ -161,7 +169,8 @@ Status
 PipePosix::OpenAsWriterWithTimeout(llvm::StringRef name,
                                    bool child_process_inherit,
                                    const std::chrono::microseconds &timeout) {
-  if (CanRead() || CanWrite())
+  std::lock_guard<std::mutex> guard(m_write_mutex);
+  if (CanReadUnlocked() || CanWriteUnlocked())
     return Status("Pipe is already opened");
 
   int flags = O_WRONLY | O_NONBLOCK;
@@ -171,7 +180,7 @@ PipePosix::OpenAsWriterWithTimeout(llvm::StringRef name,
   using namespace std::chrono;
   const auto finish_time = Now() + timeout;
 
-  while (!CanWrite()) {
+  while (!CanWriteUnlocked()) {
     if (timeout != microseconds::zero()) {
       const auto dur = duration_cast<microseconds>(finish_time - Now()).count();
       if (dur <= 0)
@@ -196,25 +205,54 @@ PipePosix::OpenAsWriterWithTimeout(llvm::StringRef name,
   return Status();
 }
 
-int PipePosix::GetReadFileDescriptor() const { return m_fds[READ]; }
+int PipePosix::GetReadFileDescriptor() const {
+  std::lock_guard<std::mutex> guard(m_read_mutex);
+  return GetReadFileDescriptorUnlocked();
+}
 
-int PipePosix::GetWriteFileDescriptor() const { return m_fds[WRITE]; }
+int PipePosix::GetReadFileDescriptorUnlocked() const {
+  return m_fds[READ];
+}
+
+int PipePosix::GetWriteFileDescriptor() const {
+  std::lock_guard<std::mutex> guard(m_write_mutex);
+  return GetWriteFileDescriptorUnlocked();
+}
+
+int PipePosix::GetWriteFileDescriptorUnlocked() const {
+  return m_fds[WRITE];
+}
 
 int PipePosix::ReleaseReadFileDescriptor() {
+  std::lock_guard<std::mutex> guard(m_read_mutex);
+  return ReleaseReadFileDescriptorUnlocked();
+}
+
+int PipePosix::ReleaseReadFileDescriptorUnlocked() {
   const int fd = m_fds[READ];
   m_fds[READ] = PipePosix::kInvalidDescriptor;
   return fd;
 }
 
 int PipePosix::ReleaseWriteFileDescriptor() {
+  std::lock_guard<std::mutex> guard(m_write_mutex);
+  return ReleaseWriteFileDescriptorUnlocked();
+}
+
+int PipePosix::ReleaseWriteFileDescriptorUnlocked() {
   const int fd = m_fds[WRITE];
   m_fds[WRITE] = PipePosix::kInvalidDescriptor;
   return fd;
 }
 
 void PipePosix::Close() {
-  CloseReadFileDescriptor();
-  CloseWriteFileDescriptor();
+  std::scoped_lock<std::mutex, std::mutex> guard(m_read_mutex, m_write_mutex);
+  CloseUnlocked();
+}
+
+void PipePosix::CloseUnlocked() {
+  CloseReadFileDescriptorUnlocked();
+  CloseWriteFileDescriptorUnlocked();
 }
 
 Status PipePosix::Delete(llvm::StringRef name) {
@@ -222,22 +260,41 @@ Status PipePosix::Delete(llvm::StringRef name) {
 }
 
 bool PipePosix::CanRead() const {
+  std::lock_guard<std::mutex> guard(m_read_mutex);
+  return CanReadUnlocked();
+}
+
+bool PipePosix::CanReadUnlocked() const {
   return m_fds[READ] != PipePosix::kInvalidDescriptor;
 }
 
 bool PipePosix::CanWrite() const {
+  std::lock_guard<std::mutex> guard(m_write_mutex);
+  return CanWriteUnlocked();
+}
+
+bool PipePosix::CanWriteUnlocked() const {
   return m_fds[WRITE] != PipePosix::kInvalidDescriptor;
 }
 
 void PipePosix::CloseReadFileDescriptor() {
-  if (CanRead()) {
+  std::lock_guard<std::mutex> guard(m_read_mutex);
+  CloseReadFileDescriptorUnlocked();
+}
+void PipePosix::CloseReadFileDescriptorUnlocked() {
+  if (CanReadUnlocked()) {
     close(m_fds[READ]);
     m_fds[READ] = PipePosix::kInvalidDescriptor;
   }
 }
 
 void PipePosix::CloseWriteFileDescriptor() {
-  if (CanWrite()) {
+  std::lock_guard<std::mutex> guard(m_write_mutex);
+  CloseWriteFileDescriptorUnlocked();
+}
+
+void PipePosix::CloseWriteFileDescriptorUnlocked() {
+  if (CanWriteUnlocked()) {
     close(m_fds[WRITE]);
     m_fds[WRITE] = PipePosix::kInvalidDescriptor;
   }
@@ -246,11 +303,12 @@ void PipePosix::CloseWriteFileDescriptor() {
 Status PipePosix::ReadWithTimeout(void *buf, size_t size,
                                   const std::chrono::microseconds &timeout,
                                   size_t &bytes_read) {
+  std::lock_guard<std::mutex> guard(m_read_mutex);
   bytes_read = 0;
-  if (!CanRead())
+  if (!CanReadUnlocked())
     return Status(EINVAL, eErrorTypePOSIX);
 
-  const int fd = GetReadFileDescriptor();
+  const int fd = GetReadFileDescriptorUnlocked();
 
   SelectHelper select_helper;
   select_helper.SetTimeout(timeout);
@@ -278,11 +336,12 @@ Status PipePosix::ReadWithTimeout(void *buf, size_t size,
 }
 
 Status PipePosix::Write(const void *buf, size_t size, size_t &bytes_written) {
+  std::lock_guard<std::mutex> guard(m_write_mutex);
   bytes_written = 0;
-  if (!CanWrite())
+  if (!CanWriteUnlocked())
     return Status(EINVAL, eErrorTypePOSIX);
 
-  const int fd = GetWriteFileDescriptor();
+  const int fd = GetWriteFileDescriptorUnlocked();
   SelectHelper select_helper;
   select_helper.SetTimeout(std::chrono::seconds(0));
   select_helper.FDSetWrite(fd);

@@ -6,12 +6,18 @@
 #define INT_MIN (~__INT_MAX__)
 #define INT_MAX __INT_MAX__
 
+typedef __INTPTR_TYPE__ intptr_t;
+
 
 static_assert(true, "");
 static_assert(false, ""); // expected-error{{failed}} ref-error{{failed}}
 static_assert(nullptr == nullptr, "");
+static_assert(__null == __null, "");
 static_assert(1 == 1, "");
 static_assert(1 == 3, ""); // expected-error{{failed}} ref-error{{failed}}
+
+constexpr void* v = nullptr;
+static_assert(__null == v, "");
 
 constexpr int number = 10;
 static_assert(number == 10, "");
@@ -19,6 +25,81 @@ static_assert(number != 10, ""); // expected-error{{failed}} \
                                  // ref-error{{failed}} \
                                  // expected-note{{evaluates to}} \
                                  // ref-note{{evaluates to}}
+
+
+#ifdef __SIZEOF_INT128__
+namespace i128 {
+  typedef __int128 int128_t;
+  typedef unsigned __int128 uint128_t;
+  constexpr int128_t I128_1 = 12;
+  static_assert(I128_1 == 12, "");
+  static_assert(I128_1 != 10, "");
+  static_assert(I128_1 != 12, ""); // expected-error{{failed}} \
+                                   // ref-error{{failed}} \
+                                   // expected-note{{evaluates to}} \
+                                   // ref-note{{evaluates to}}
+
+  static const __uint128_t UINT128_MAX =__uint128_t(__int128_t(-1L));
+  static_assert(UINT128_MAX == -1, "");
+
+  static const __int128_t INT128_MAX = UINT128_MAX >> (__int128_t)1;
+  static_assert(INT128_MAX != 0, "");
+  static const __int128_t INT128_MIN = -INT128_MAX - 1;
+  constexpr __int128 A = INT128_MAX + 1; // expected-error {{must be initialized by a constant expression}} \
+                                         // expected-note {{outside the range}} \
+                                         // ref-error {{must be initialized by a constant expression}} \
+                                         // ref-note {{outside the range}}
+  constexpr int128_t Two = (int128_t)1 << 1ul;
+  static_assert(Two == 2, "");
+
+  constexpr uint128_t AllOnes = ~static_cast<uint128_t>(0);
+  static_assert(AllOnes == UINT128_MAX, "");
+
+#if __cplusplus >= 201402L
+  template <typename T>
+  constexpr T CastFrom(__int128_t A) {
+    T B = (T)A;
+    return B;
+  }
+  static_assert(CastFrom<char>(12) == 12, "");
+  static_assert(CastFrom<unsigned char>(12) == 12, "");
+  static_assert(CastFrom<long>(12) == 12, "");
+  static_assert(CastFrom<unsigned short>(12) == 12, "");
+  static_assert(CastFrom<int128_t>(12) == 12, "");
+  static_assert(CastFrom<float>(12) == 12, "");
+  static_assert(CastFrom<double>(12) == 12, "");
+  static_assert(CastFrom<long double>(12) == 12, "");
+
+  static_assert(CastFrom<char>(AllOnes) == -1, "");
+  static_assert(CastFrom<unsigned char>(AllOnes) == 0xFF, "");
+  static_assert(CastFrom<long>(AllOnes) == -1, "");
+  static_assert(CastFrom<unsigned short>(AllOnes) == 0xFFFF, "");
+  static_assert(CastFrom<int>(AllOnes) == -1, "");
+  static_assert(CastFrom<int128_t>(AllOnes) == -1, "");
+  static_assert(CastFrom<uint128_t>(AllOnes) == AllOnes, "");
+
+  template <typename T>
+  constexpr __int128 CastTo(T A) {
+    int128_t B = (int128_t)A;
+    return B;
+  }
+  static_assert(CastTo<char>(12) == 12, "");
+  static_assert(CastTo<unsigned char>(12) == 12, "");
+  static_assert(CastTo<long>(12) == 12, "");
+  static_assert(CastTo<unsigned long long>(12) == 12, "");
+  static_assert(CastTo<float>(12) == 12, "");
+  static_assert(CastTo<double>(12) == 12, "");
+  static_assert(CastTo<long double>(12) == 12, "");
+#endif
+
+constexpr int128_t Error = __LDBL_MAX__; // ref-warning {{implicit conversion of out of range value}} \
+                                         // ref-error {{must be initialized by a constant expression}} \
+                                         // ref-note {{is outside the range of representable values of type}} \
+                                         // expected-warning {{implicit conversion of out of range value}} \
+                                         // expected-error {{must be initialized by a constant expression}} \
+                                         // expected-note {{is outside the range of representable values of type}}
+}
+#endif
 
 constexpr bool b = number;
 static_assert(b, "");
@@ -85,6 +166,15 @@ static_assert(-(1 << 31), ""); // expected-error {{not an integral constant expr
                                // ref-error {{not an integral constant expression}} \
                                // ref-note {{outside the range of representable values}} \
 
+namespace PrimitiveEmptyInitList {
+  constexpr int a = {};
+  static_assert(a == 0, "");
+  constexpr bool b = {};
+  static_assert(!b, "");
+  constexpr double d = {};
+  static_assert(d == 0.0, "");
+}
+
 
 enum E {};
 constexpr E e = static_cast<E>(0);
@@ -120,6 +210,35 @@ namespace PointerToBool {
   static_assert(!!FP, "");
 }
 
+namespace PointerComparison {
+
+  struct S { int a, b; } s;
+  constexpr void *null = 0;
+  constexpr void *pv = (void*)&s.a;
+  constexpr void *qv = (void*)&s.b;
+  constexpr bool v1 = null < (int*)0;
+  constexpr bool v2 = null < pv; // expected-error {{must be initialized by a constant expression}} \
+                                 // expected-note {{comparison between 'nullptr' and '&s.a' has unspecified value}} \
+                                 // ref-error {{must be initialized by a constant expression}} \
+                                 // ref-note {{comparison between 'nullptr' and '&s.a' has unspecified value}} \
+
+  constexpr bool v3 = null == pv; // ok
+  constexpr bool v4 = qv == pv; // ok
+
+  /// FIXME: These two are rejected by the current interpreter, but
+  ///   accepted by GCC.
+  constexpr bool v5 = qv >= pv; // ref-error {{constant expression}} \
+                                // ref-note {{unequal pointers to void}}
+  constexpr bool v8 = qv > (void*)&s.a; // ref-error {{constant expression}} \
+                                        // ref-note {{unequal pointers to void}}
+  constexpr bool v6 = qv > null; // expected-error {{must be initialized by a constant expression}} \
+                                 // expected-note {{comparison between '&s.b' and 'nullptr' has unspecified value}} \
+                                 // ref-error {{must be initialized by a constant expression}} \
+                                 // ref-note {{comparison between '&s.b' and 'nullptr' has unspecified value}}
+
+  constexpr bool v7 = qv <= (void*)&s.b; // ok
+}
+
 namespace SizeOf {
   constexpr int soint = sizeof(int);
   constexpr int souint = sizeof(unsigned int);
@@ -149,13 +268,10 @@ namespace SizeOf {
                                     // ref-error{{to a function type}}
 
 
-
-  /// FIXME: The following code should be accepted.
   struct S {
     void func();
   };
-  constexpr void (S::*Func)() = &S::func; // expected-error {{must be initialized by a constant expression}} \
-                                          // expected-error {{interpreter failed to evaluate an expression}}
+  constexpr void (S::*Func)() = &S::func;
   static_assert(sizeof(Func) == sizeof(&S::func), "");
 
 
@@ -164,6 +280,21 @@ namespace SizeOf {
     constexpr int oofda = sizeof(int[n++]); // expected-error {{must be initialized by a constant expression}} \
                                             // ref-error {{must be initialized by a constant expression}}
   }
+
+#if __cplusplus >= 201402L
+  constexpr int IgnoredRejected() { // ref-error {{never produces a constant expression}}
+    int n = 0;
+    sizeof(int[n++]); // expected-warning {{expression result unused}} \
+                      // ref-warning {{expression result unused}} \
+                      // ref-note 2{{subexpression not valid in a constant expression}}
+    return n;
+  }
+  /// FIXME: This is rejected because the parameter so sizeof() is not constant.
+  ///   produce a proper diagnostic.
+  static_assert(IgnoredRejected() == 0, ""); // expected-error {{not an integral constant expression}} \
+                                             // ref-error {{not an integral constant expression}} \
+                                             // ref-note {{in call to 'IgnoredRejected()'}}
+#endif
 
 
 #if __cplusplus >= 202002L
@@ -462,36 +593,72 @@ namespace IncDec {
   }
   static_assert(incBool(), "");
 
-  template<typename T, bool Inc>
+  /// FIXME: The diagnostics for pre-inc/dec of pointers doesn't match the
+  /// current interpreter. But they are stil OK.
+  template<typename T, bool Inc, bool Pre>
   constexpr int uninit() {
     T a;
-    if constexpr (Inc)
-      ++a; // ref-note 2{{increment of uninitialized}} \
-           // expected-note 2{{increment of uninitialized}}
-    else
-      --a; // ref-note 2{{decrement of uninitialized}} \
-           // expected-note 2{{decrement of uninitialized}}
+    if constexpr (Inc) {
+      if (Pre)
+        ++a; // ref-note 3{{increment of uninitialized}} \
+             // expected-note 2{{increment of uninitialized}} \
+             // expected-note {{read of uninitialized}}
+      else
+        a++; // ref-note 2{{increment of uninitialized}} \
+             // expected-note 2{{increment of uninitialized}}
+    } else {
+      if (Pre)
+        --a; // ref-note 3{{decrement of uninitialized}} \
+             // expected-note 2{{decrement of uninitialized}} \
+             // expected-note {{read of uninitialized}}
+      else
+        a--; // ref-note 2{{decrement of uninitialized}} \
+             // expected-note 2{{decrement of uninitialized}}
+    }
     return 1;
   }
-  static_assert(uninit<int, true>(), ""); // ref-error {{not an integral constant expression}} \
-                                          // ref-note {{in call to 'uninit()'}} \
-                                          // expected-error {{not an integral constant expression}} \
-                                          // expected-note {{in call to 'uninit()'}}
+  static_assert(uninit<int, true, true>(), ""); // ref-error {{not an integral constant expression}} \
+                                                // ref-note {{in call to 'uninit<int, true, true>()'}} \
+                                                // expected-error {{not an integral constant expression}} \
+                                                // expected-note {{in call to 'uninit()'}}
+  static_assert(uninit<int, false, true>(), ""); // ref-error {{not an integral constant expression}} \
+                                                 // ref-note {{in call to 'uninit<int, false, true>()'}} \
+                                                 // expected-error {{not an integral constant expression}} \
+                                                 // expected-note {{in call to 'uninit()'}}
 
-  static_assert(uninit<int, false>(), ""); // ref-error {{not an integral constant expression}} \
-                                           // ref-note {{in call to 'uninit()'}} \
-                                           // expected-error {{not an integral constant expression}} \
-                                           // expected-note {{in call to 'uninit()'}}
+  static_assert(uninit<float, true, true>(), ""); // ref-error {{not an integral constant expression}} \
+                                                  // ref-note {{in call to 'uninit<float, true, true>()'}} \
+                                                  // expected-error {{not an integral constant expression}} \
+                                                  // expected-note {{in call to 'uninit()'}}
+  static_assert(uninit<float, false, true>(), ""); // ref-error {{not an integral constant expression}} \
+                                                   // ref-note {{in call to 'uninit<float, false, true>()'}} \
+                                                   // expected-error {{not an integral constant expression}} \
+                                                   // expected-note {{in call to 'uninit()'}}
+  static_assert(uninit<float, true, false>(), ""); // ref-error {{not an integral constant expression}} \
+                                                   // ref-note {{in call to 'uninit<float, true, false>()'}} \
+                                                   // expected-error {{not an integral constant expression}} \
+                                                   // expected-note {{in call to 'uninit()'}}
+  static_assert(uninit<float, false, false>(), ""); // ref-error {{not an integral constant expression}} \
+                                                    // ref-note {{in call to 'uninit<float, false, false>()'}} \
+                                                    // expected-error {{not an integral constant expression}} \
+                                                    // expected-note {{in call to 'uninit()'}}
 
-  static_assert(uninit<float, true>(), ""); // ref-error {{not an integral constant expression}} \
-                                            // ref-note {{in call to 'uninit()'}} \
-                                            // expected-error {{not an integral constant expression}} \
-                                            // expected-note {{in call to 'uninit()'}}
-
-  static_assert(uninit<float, false>(), ""); // ref-error {{not an integral constant expression}} \
-                                             // ref-note {{in call to 'uninit()'}} \
-                                             // expected-error {{not an integral constant expression}} \
-                                             // expected-note {{in call to 'uninit()'}}
+  static_assert(uninit<int*, true, true>(), ""); // ref-error {{not an integral constant expression}} \
+                                                 // ref-note {{in call to 'uninit<int *, true, true>()'}} \
+                                                 // expected-error {{not an integral constant expression}} \
+                                                 // expected-note {{in call to 'uninit()'}}
+  static_assert(uninit<int*, false, true>(), ""); // ref-error {{not an integral constant expression}} \
+                                                  // ref-note {{in call to 'uninit<int *, false, true>()'}} \
+                                                  // expected-error {{not an integral constant expression}} \
+                                                  // expected-note {{in call to 'uninit()'}}
+  static_assert(uninit<int*, true, false>(), ""); // ref-error {{not an integral constant expression}} \
+                                                  // ref-note {{in call to 'uninit<int *, true, false>()'}} \
+                                                  // expected-error {{not an integral constant expression}} \
+                                                  // expected-note {{in call to 'uninit()'}}
+  static_assert(uninit<int*, false, false>(), ""); // ref-error {{not an integral constant expression}} \
+                                                   // ref-note {{in call to 'uninit<int *, false, false>()'}} \
+                                                   // expected-error {{not an integral constant expression}} \
+                                                   // expected-note {{in call to 'uninit()'}}
 
   constexpr int OverFlow() { // ref-error {{never produces a constant expression}} \
                              // expected-error {{never produces a constant expression}}
@@ -764,6 +931,17 @@ namespace IncDec {
   }
   static_assert(bug1Dec() == 3);
 
+  constexpr int f() {
+    int a[] = {1,2};
+    int i = 0;
+
+    // RHS should be evaluated before LHS, so this should
+    // write to a[1];
+    a[i++] += ++i;
+
+    return a[1];
+  }
+  static_assert(f() == 3, "");
 };
 #endif
 
@@ -837,19 +1015,94 @@ constexpr int ignoredDecls() {
 }
 static_assert(ignoredDecls() == 12, "");
 
-struct A{};
-constexpr int ignoredExprs() {
-  (void)(1 / 2);
-  A a;
-  a; // expected-warning {{unused}} \
-     // ref-warning {{unused}}
-  (void)a;
-  (a); // expected-warning {{unused}} \
-       // ref-warning {{unused}}
+namespace DiscardExprs {
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wunused-value"
 
-  return 0;
+  struct A{ int a; };
+  constexpr int ignoredExprs() {
+    (void)(1 / 2);
+    A a{12};
+    a;
+    (void)a;
+    (a);
+
+    /// Ignored MaterializeTemporaryExpr.
+    struct B{ const int &a; };
+    (void)B{12};
+
+    (void)5, (void)6;
+
+    1 ? 0 : 1;
+    __is_trivial(int);
+
+    (int){1};
+    (int[]){1,2,3};
+    int arr[] = {1,2,3};
+    arr[0];
+    "a";
+    'b';
+    sizeof(int);
+    alignof(int);
+
+    (short)5;
+    (bool)1;
+    __null;
+    __builtin_offsetof(A, a);
+    1,2;
+
+    return 0;
+  }
+  static_assert(ignoredExprs() == 0, "");
+
+  constexpr int oh_my(int x) {
+    (int){ x++ };
+    return x;
+  }
+  static_assert(oh_my(0) == 1, "");
+
+  constexpr int oh_my2(int x) {
+    int y{x++};
+    return x;
+  }
+
+  static_assert(oh_my2(0) == 1, "");
+
+
+  /// Ignored comma expressions still have their
+  /// expressions evaluated.
+  constexpr int Comma(int start) {
+      int i = start;
+
+      (void)i++;
+      (void)i++,(void)i++;
+      return i;
+  }
+  constexpr int Value = Comma(5);
+  static_assert(Value == 8, "");
+
+  /// Ignored MemberExprs need to still evaluate the Base
+  /// expr.
+  constexpr A callme(int &i) {
+    ++i;
+    return A{};
+  }
+  constexpr int ignoredMemberExpr() {
+    int i = 0;
+    callme(i).a;
+    return i;
+  }
+  static_assert(ignoredMemberExpr() == 1, "");
+
+  template <int I>
+  constexpr int foo() {
+    I;
+    return I;
+  }
+  static_assert(foo<3>() == 3, "");
+
+#pragma clang diagnostic pop
 }
-
 #endif
 
 namespace PredefinedExprs {
@@ -872,5 +1125,78 @@ namespace PredefinedExprs {
     static_assert(strings_match(__func__, "foo"), "");
     static_assert(strings_match(__PRETTY_FUNCTION__, "void PredefinedExprs::foo()"), "");
   }
+
+  constexpr char heh(unsigned index) {
+    __FUNCTION__;               // ref-warning {{result unused}} \
+                                // expected-warning {{result unused}}
+    __extension__ __FUNCTION__; // ref-warning {{result unused}} \
+                                // expected-warning {{result unused}}
+    return __FUNCTION__[index];
+  }
+  static_assert(heh(0) == 'h', "");
+  static_assert(heh(1) == 'e', "");
+  static_assert(heh(2) == 'h', "");
 #endif
+}
+
+namespace NE {
+  constexpr int foo() noexcept {
+    return 1;
+  }
+  static_assert(noexcept(foo()), "");
+  constexpr int foo2() {
+    return 1;
+  }
+  static_assert(!noexcept(foo2()), "");
+
+#if __cplusplus > 201402L
+  constexpr int a() {
+    int b = 0;
+    (void)noexcept(++b); // expected-warning {{expression with side effects has no effect in an unevaluated context}} \
+                         // ref-warning {{expression with side effects has no effect in an unevaluated context}}
+
+    return b;
+  }
+  static_assert(a() == 0, "");
+#endif
+}
+
+namespace PointerCasts {
+  constexpr int M = 10;
+  constexpr const int *P = &M;
+  constexpr intptr_t A = (intptr_t)P; // ref-error {{must be initialized by a constant expression}} \
+                                      // ref-note {{cast that performs the conversions of a reinterpret_cast}} \
+                                      // expected-error {{must be initialized by a constant expression}} \
+                                      // expected-note {{cast that performs the conversions of a reinterpret_cast}}
+
+  int array[(intptr_t)(char*)0]; // ref-warning {{variable length array folded to constant array}} \
+                                 // expected-warning {{variable length array folded to constant array}}
+}
+
+namespace InvalidDeclRefs {
+  bool b00; // ref-note {{declared here}} \
+            // expected-note {{declared here}}
+  static_assert(b00, ""); // ref-error {{not an integral constant expression}} \
+                          // ref-note {{read of non-const variable}} \
+                          // expected-error {{not an integral constant expression}} \
+                          // expected-note {{read of non-const variable}}
+
+  float b01; // ref-note {{declared here}} \
+             // expected-note {{declared here}}
+  static_assert(b01, ""); // ref-error {{not an integral constant expression}} \
+                          // ref-note {{read of non-constexpr variable}} \
+                          // expected-error {{not an integral constant expression}} \
+                          // expected-note {{read of non-constexpr variable}}
+
+  extern const int b02; // ref-note {{declared here}} \
+                        // expected-note {{declared here}}
+  static_assert(b02, ""); // ref-error {{not an integral constant expression}} \
+                          // ref-note {{initializer of 'b02' is unknown}} \
+                          // expected-error {{not an integral constant expression}} \
+                          // expected-note {{initializer of 'b02' is unknown}}
+
+  /// FIXME: This should also be diagnosed in the new interpreter.
+  int b03 = 3; // ref-note {{declared here}}
+  static_assert(b03, ""); // ref-error {{not an integral constant expression}} \
+                          // ref-note {{read of non-const variable}}
 }

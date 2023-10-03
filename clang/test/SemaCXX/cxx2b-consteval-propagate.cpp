@@ -1,5 +1,5 @@
-// RUN: %clang_cc1 -std=c++2a -emit-llvm-only -Wno-unused-value %s -verify
-// RUN: %clang_cc1 -std=c++2b -emit-llvm-only -Wno-unused-value %s -verify
+// RUN: %clang_cc1 -std=c++2a -Wno-unused-value %s -verify
+// RUN: %clang_cc1 -std=c++2b -Wno-unused-value %s -verify
 
 consteval int id(int i) { return i; }
 constexpr char id(char c) { return c; }
@@ -34,7 +34,7 @@ int x = 0; // expected-note {{declared here}}
 
 template <typename T>
 constexpr T h(T t = id(x)) { // expected-note {{read of non-const variable 'x' is not allowed in a constant expression}} \
-                             // expected-note 2{{'hh<int>' is an immediate function because its body contains a call to a consteval function 'id' and that call is not a constant expression}}
+                             // expected-note {{'hh<int>' is an immediate function because its body contains a call to a consteval function 'id' and that call is not a constant expression}}
     return t;
 }
 
@@ -45,7 +45,7 @@ constexpr T hh() {           // hh<int> is an immediate function
 }
 
 int i = hh<int>(); // expected-error {{call to immediate function 'examples::hh<int>' is not a constant expression}} \
-                   // expected-note {{in call to 'hh()'}}
+                   // expected-note {{in call to 'hh<int>()'}}
 
 struct A {
   int x;
@@ -102,14 +102,14 @@ constexpr int f(T t) {
 
 namespace forward_declare_consteval{
 template <typename T>
-constexpr int f(T t);  // expected-note {{'f<int>' defined here}}
+constexpr int f(T t);
 
 auto a = &f<char>;
 auto b = &f<int>; // expected-error {{immediate function 'f<int>' used before it is defined}} \
                   // expected-note {{in instantiation of function template specialization}}
 
 template <typename T>
-constexpr int f(T t) {
+constexpr int f(T t) { // expected-note {{'f<int>' defined here}}
     return id(t); // expected-note {{'f<int>' is an immediate function because its body contains a call to a consteval function 'id' and that call is not a constant expression}}
 }
 }
@@ -163,4 +163,208 @@ constexpr int g(auto t) {
 }
 int i = g(x); // expected-error {{call to immediate function 'ConstevalConstructor::g<int>' is not a constant expression}} \
               // expected-note {{read of non-const variable 'x' is not allowed in a constant expression}}
+}
+
+
+
+namespace Aggregate {
+consteval int f(int); // expected-note {{declared here}}
+struct S {
+  int x = f(42); // expected-note {{undefined function 'f' cannot be used in a constant expression}} \
+                 // expected-note {{'immediate<int>' is an immediate function because its body contains a call to a consteval function 'f' and that call is not a constant expression}}
+};
+
+constexpr S immediate(auto) {
+    return S{};
+}
+
+void test_runtime() {
+    (void)immediate(0); // expected-error {{call to immediate function 'Aggregate::immediate<int>' is not a constant expression}} \
+                        // expected-note {{in call to 'immediate<int>(0)'}}
+}
+consteval int f(int i) {
+    return i;
+}
+consteval void test() {
+    constexpr S s = immediate(0);
+    static_assert(s.x == 42);
+}
+}
+
+
+
+namespace GH63742 {
+void side_effect(); // expected-note  {{declared here}}
+consteval int f(int x) {
+    if (!x) side_effect(); // expected-note {{non-constexpr function 'side_effect' cannot be used in a constant expression}}
+    return x;
+}
+struct SS {
+  int y = f(1); // Ok
+  int x = f(0); // expected-error {{call to consteval function 'GH63742::f' is not a constant expression}} \
+                // expected-note  {{declared here}} \
+                // expected-note  {{in call to 'f(0)'}}
+  SS();
+};
+SS::SS(){} // expected-note {{in the default initializer of 'x'}}
+
+consteval int f2(int x) {
+    if (!__builtin_is_constant_evaluated()) side_effect();
+    return x;
+}
+struct S2 {
+    int x = f2(0);
+    constexpr S2();
+};
+
+constexpr S2::S2(){}
+S2 s = {};
+constinit S2 s2 = {};
+
+struct S3 {
+    int x = f2(0);
+    S3();
+};
+S3::S3(){}
+
+}
+
+namespace Defaulted {
+consteval int f(int x);
+struct SS {
+  int x = f(0);
+  SS() = default;
+};
+}
+
+namespace DefaultedUse{
+consteval int f(int x);  // expected-note {{declared here}}
+struct SS {
+  int a = sizeof(f(0)); // Ok
+  int x = f(0); // expected-note {{undefined function 'f' cannot be used in a constant expression}}
+
+  SS() = default; // expected-note {{'SS' is an immediate constructor because the default initializer of 'x' contains a call to a consteval function 'f' and that call is not a constant expression}}
+};
+
+void test() {
+    [[maybe_unused]] SS s; // expected-error {{call to immediate function 'DefaultedUse::SS::SS' is not a constant expression}} \
+                           //  expected-note {{in call to 'SS()'}}
+}
+}
+
+namespace UserDefinedConstructors {
+consteval int f(int x) {
+    return x;
+}
+extern int NonConst; // expected-note 2{{declared here}}
+
+struct ConstevalCtr {
+    int y;
+    int x = f(y);
+    consteval ConstevalCtr(int yy)
+    : y(f(yy)) {}
+};
+
+ConstevalCtr c1(1);
+ConstevalCtr c2(NonConst);
+// expected-error@-1 {{call to consteval function 'UserDefinedConstructors::ConstevalCtr::ConstevalCtr' is not a constant expression}} \
+// expected-note@-1 {{read of non-const variable 'NonConst' is not allowed in a constant expression}}
+
+struct ImmediateEscalating {
+    int y;
+    int x = f(y);
+    template<typename T>
+    constexpr ImmediateEscalating(T yy) // expected-note {{ImmediateEscalating<int>' is an immediate constructor because the initializer of 'y' contains a call to a consteval function 'f' and that call is not a constant expression}}
+    : y(f(yy)) {}
+};
+
+ImmediateEscalating c3(1);
+ImmediateEscalating c4(NonConst);
+// expected-error@-1 {{call to immediate function 'UserDefinedConstructors::ImmediateEscalating::ImmediateEscalating<int>' is not a constant expression}} \
+// expected-note@-1 {{read of non-const variable 'NonConst' is not allowed in a constant expression}}
+
+
+struct NonEscalating {
+    int y;
+    int x = f(this->y); // expected-error {{call to consteval function 'UserDefinedConstructors::f' is not a constant expression}} \
+                        // expected-note  {{declared here}} \
+                        // expected-note  {{use of 'this' pointer is only allowed within the evaluation of a call to a 'constexpr' member function}}
+    constexpr NonEscalating(int yy) : y(yy) {} // expected-note {{in the default initializer of 'x'}}
+};
+NonEscalating s = {1};
+
+}
+
+namespace AggregateInit {
+
+consteval int f(int x) {
+    return x;
+}
+
+struct S {
+    int i;
+    int j = f(i);
+};
+
+constexpr S  test(auto) {
+    return {};
+}
+
+S s = test(0);
+
+}
+
+namespace GlobalAggregateInit {
+
+consteval int f(int x) {
+    return x;
+}
+
+struct S {
+    int i;
+    int j = f(i); // expected-error {{call to consteval function 'GlobalAggregateInit::f' is not a constant expression}} \
+                  // expected-note {{implicit use of 'this' pointer is only allowed within the evaluation of a call to a 'constexpr' member function}} \
+                  // expected-note {{declared here}}
+};
+
+S s(0); // expected-note {{in the default initializer of 'j'}}
+
+}
+
+namespace GH65985 {
+consteval int invalid(); // expected-note 2{{declared here}}
+constexpr int escalating(auto) {
+    return invalid();
+    // expected-note@-1 {{'escalating<int>' is an immediate function because its body contains a call to a consteval function 'invalid' and that call is not a constant expression}}
+    // expected-note@-2 2{{undefined function 'invalid' cannot be used in a constant expression}}
+}
+struct S {
+    static constexpr int a = escalating(0); // expected-note 2{{in call to}}
+    // expected-error@-1 {{call to immediate function 'GH65985::escalating<int>' is not a constant expression}}
+    // expected-error@-2 {{constexpr variable 'a' must be initialized by a constant expression}}
+};
+
+}
+
+namespace GH66324 {
+
+consteval int allocate();  // expected-note  2{{declared here}}
+
+struct _Vector_base {
+  int b =  allocate(); // expected-note 2{{undefined function 'allocate' cannot be used in a constant expression}} \
+  // expected-error {{call to consteval function 'GH66324::allocate' is not a constant expression}} \
+  // expected-note  {{declared here}}
+};
+
+template <typename>
+struct vector : _Vector_base {
+  constexpr vector()
+  // expected-note@-1 {{'vector' is an immediate constructor because its body contains a call to a consteval function 'allocate' and that call is not a constant expression}}
+  : _Vector_base{} {} // expected-note {{in the default initializer of 'b'}}
+};
+
+vector<void> v{};
+// expected-error@-1 {{call to immediate function 'GH66324::vector<void>::vector' is not a constant expression}}
+// expected-note@-2 {{in call to 'vector()'}}
+
 }

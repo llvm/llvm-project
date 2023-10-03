@@ -176,8 +176,9 @@ class LLVM_LIBRARY_VISIBILITY AggressiveAntiDepState {
                             std::set<unsigned> &PassthruRegs);
     void ScanInstruction(MachineInstr &MI, unsigned Count);
     BitVector GetRenameRegisters(unsigned Reg);
-    bool FindSuitableFreeRegisters(unsigned AntiDepGroupIndex,
-                                   RenameOrderType& RenameOrder,
+    bool FindSuitableFreeRegisters(unsigned SuperReg,
+                                   unsigned AntiDepGroupIndex,
+                                   RenameOrderType &RenameOrder,
                                    std::map<unsigned, unsigned> &RenameMap);
   };
 

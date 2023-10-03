@@ -55,11 +55,11 @@ LLVMErrorRef dumpObjectsTransform(void *Ctx, LLVMMemoryBufferRef *ObjInOut) {
   return LLVMOrcDumpObjects_CallOperator(DumpObjects, ObjInOut);
 }
 
-int main(int argc, char *argv[]) {
+int main(int argc, const char *argv[]) {
 
   int MainResult = 0;
 
-  LLVMParseCommandLineOptions(argc, (const char **)argv, "");
+  LLVMParseCommandLineOptions(argc, argv, "");
 
   LLVMInitializeNativeTarget();
   LLVMInitializeNativeAsmPrinter();

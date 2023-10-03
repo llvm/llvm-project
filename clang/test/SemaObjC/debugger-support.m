@@ -1,6 +1,5 @@
 // RUN: %clang_cc1 -triple x86_64-apple-darwin10 -fdebugger-support %s -emit-llvm -o - | FileCheck %s
 
-// rdar://problem/9416370
 void test0(id x) {
   struct A { int w, x, y, z; };
   struct A result = (struct A) [x makeStruct];

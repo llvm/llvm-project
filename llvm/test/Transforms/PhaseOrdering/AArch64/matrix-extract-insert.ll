@@ -115,8 +115,8 @@ define void @matrix_extract_insert_loop(i32 %i, ptr nonnull align 8 dereferencea
 ; CHECK-NEXT:    br label [[FOR_BODY4_US_1:%.*]]
 ; CHECK:       for.body4.us.1:
 ; CHECK-NEXT:    [[K_011_US_1:%.*]] = phi i32 [ 0, [[FOR_COND1_FOR_COND_CLEANUP3_CRIT_EDGE_US]] ], [ [[INC_US_1:%.*]], [[FOR_BODY4_US_1]] ]
-; CHECK-NEXT:    [[NARROW:%.*]] = add nuw nsw i32 [[K_011_US_1]], 15
-; CHECK-NEXT:    [[TMP8:%.*]] = zext i32 [[NARROW]] to i64
+; CHECK-NEXT:    [[CONV_US_1:%.*]] = zext i32 [[K_011_US_1]] to i64
+; CHECK-NEXT:    [[TMP8:%.*]] = add nuw nsw i64 [[CONV_US_1]], 15
 ; CHECK-NEXT:    [[TMP9:%.*]] = icmp ult i32 [[K_011_US_1]], 210
 ; CHECK-NEXT:    tail call void @llvm.assume(i1 [[TMP9]])
 ; CHECK-NEXT:    [[TMP10:%.*]] = getelementptr inbounds <225 x double>, ptr [[A]], i64 0, i64 [[TMP8]]
@@ -138,8 +138,8 @@ define void @matrix_extract_insert_loop(i32 %i, ptr nonnull align 8 dereferencea
 ; CHECK-NEXT:    br label [[FOR_BODY4_US_2:%.*]]
 ; CHECK:       for.body4.us.2:
 ; CHECK-NEXT:    [[K_011_US_2:%.*]] = phi i32 [ 0, [[FOR_COND1_FOR_COND_CLEANUP3_CRIT_EDGE_US_1]] ], [ [[INC_US_2:%.*]], [[FOR_BODY4_US_2]] ]
-; CHECK-NEXT:    [[NARROW14:%.*]] = add nuw nsw i32 [[K_011_US_2]], 30
-; CHECK-NEXT:    [[TMP15:%.*]] = zext i32 [[NARROW14]] to i64
+; CHECK-NEXT:    [[CONV_US_2:%.*]] = zext i32 [[K_011_US_2]] to i64
+; CHECK-NEXT:    [[TMP15:%.*]] = add nuw nsw i64 [[CONV_US_2]], 30
 ; CHECK-NEXT:    [[TMP16:%.*]] = icmp ult i32 [[K_011_US_2]], 195
 ; CHECK-NEXT:    tail call void @llvm.assume(i1 [[TMP16]])
 ; CHECK-NEXT:    [[TMP17:%.*]] = getelementptr inbounds <225 x double>, ptr [[A]], i64 0, i64 [[TMP15]]
@@ -161,8 +161,8 @@ define void @matrix_extract_insert_loop(i32 %i, ptr nonnull align 8 dereferencea
 ; CHECK-NEXT:    br label [[FOR_BODY4_US_3:%.*]]
 ; CHECK:       for.body4.us.3:
 ; CHECK-NEXT:    [[K_011_US_3:%.*]] = phi i32 [ 0, [[FOR_COND1_FOR_COND_CLEANUP3_CRIT_EDGE_US_2]] ], [ [[INC_US_3:%.*]], [[FOR_BODY4_US_3]] ]
-; CHECK-NEXT:    [[NARROW15:%.*]] = add nuw nsw i32 [[K_011_US_3]], 45
-; CHECK-NEXT:    [[TMP22:%.*]] = zext i32 [[NARROW15]] to i64
+; CHECK-NEXT:    [[CONV_US_3:%.*]] = zext i32 [[K_011_US_3]] to i64
+; CHECK-NEXT:    [[TMP22:%.*]] = add nuw nsw i64 [[CONV_US_3]], 45
 ; CHECK-NEXT:    [[TMP23:%.*]] = icmp ult i32 [[K_011_US_3]], 180
 ; CHECK-NEXT:    tail call void @llvm.assume(i1 [[TMP23]])
 ; CHECK-NEXT:    [[TMP24:%.*]] = getelementptr inbounds <225 x double>, ptr [[A]], i64 0, i64 [[TMP22]]

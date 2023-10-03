@@ -50,7 +50,6 @@ void Gorf(void) // expected-error {{redefinition of 'Gorf' as different kind of 
 // expected-warning@-4 {{duplicate definition of category 'Cat' on interface 'A'}}
 #endif
 
-// rdar 7626768
 @class NSString;
 NSString * TestBaz;  // expected-note {{previous definition is here}}
 NSString * const TestBaz;  // expected-error {{redefinition of 'TestBaz' with a different type}}

@@ -25,8 +25,8 @@ entry:
 define <4 x double> @complex_add_v4f64(<4 x double> %a, <4 x double> %b) {
 ; CHECK-LABEL: complex_add_v4f64:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    fcadd v0.2d, v2.2d, v0.2d, #90
 ; CHECK-NEXT:    fcadd v1.2d, v3.2d, v1.2d, #90
+; CHECK-NEXT:    fcadd v0.2d, v2.2d, v0.2d, #90
 ; CHECK-NEXT:    ret
 entry:
   %a.real = shufflevector <4 x double> %a, <4 x double> zeroinitializer, <2 x i32> <i32 0, i32 2>

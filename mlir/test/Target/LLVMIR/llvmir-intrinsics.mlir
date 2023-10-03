@@ -1,7 +1,7 @@
 // RUN: mlir-translate -mlir-to-llvmir %s | FileCheck %s
 
 // CHECK-LABEL: @intrinsics
-llvm.func @intrinsics(%arg0: f32, %arg1: f32, %arg2: vector<8xf32>, %arg3: !llvm.ptr<i8>) {
+llvm.func @intrinsics(%arg0: f32, %arg1: f32, %arg2: vector<8xf32>, %arg3: !llvm.ptr) {
   // CHECK: call float @llvm.fmuladd.f32
   "llvm.intr.fmuladd"(%arg0, %arg1, %arg0) : (f32, f32, f32) -> f32
   // CHECK: call <8 x float> @llvm.fmuladd.v8f32
@@ -11,7 +11,7 @@ llvm.func @intrinsics(%arg0: f32, %arg1: f32, %arg2: vector<8xf32>, %arg3: !llvm
   // CHECK: call <8 x float> @llvm.fma.v8f32
   "llvm.intr.fma"(%arg2, %arg2, %arg2) : (vector<8xf32>, vector<8xf32>, vector<8xf32>) -> vector<8xf32>
   // CHECK: call void @llvm.prefetch.p0(ptr %3, i32 0, i32 3, i32 1)
-  "llvm.intr.prefetch"(%arg3) <{cache = 1 : i32, hint = 3 : i32, rw = 0 : i32}> : (!llvm.ptr<i8>) -> ()
+  "llvm.intr.prefetch"(%arg3) <{cache = 1 : i32, hint = 3 : i32, rw = 0 : i32}> : (!llvm.ptr) -> ()
   llvm.return
 }
 
@@ -354,6 +354,10 @@ llvm.func @vector_reductions(%arg0: f32, %arg1: vector<8xf32>, %arg2: vector<8xi
   llvm.intr.vector.reduce.fmax(%arg1) : (vector<8xf32>) -> f32
   // CHECK: call float @llvm.vector.reduce.fmin.v8f32
   llvm.intr.vector.reduce.fmin(%arg1) : (vector<8xf32>) -> f32
+  // CHECK: call float @llvm.vector.reduce.fmaximum.v8f32
+  llvm.intr.vector.reduce.fmaximum(%arg1) : (vector<8xf32>) -> f32
+  // CHECK: call float @llvm.vector.reduce.fminimum.v8f32
+  llvm.intr.vector.reduce.fminimum(%arg1) : (vector<8xf32>) -> f32
   // CHECK: call i32 @llvm.vector.reduce.mul.v8i32
   "llvm.intr.vector.reduce.mul"(%arg2) : (vector<8xi32>) -> i32
   // CHECK: call i32 @llvm.vector.reduce.or.v8i32
@@ -371,9 +375,9 @@ llvm.func @vector_reductions(%arg0: f32, %arg1: vector<8xf32>, %arg2: vector<8xi
   // CHECK: call float @llvm.vector.reduce.fmul.v8f32
   "llvm.intr.vector.reduce.fmul"(%arg0, %arg1) : (f32, vector<8xf32>) -> f32
   // CHECK: call reassoc float @llvm.vector.reduce.fadd.v8f32
-  "llvm.intr.vector.reduce.fadd"(%arg0, %arg1) {reassoc = true} : (f32, vector<8xf32>) -> f32
+  "llvm.intr.vector.reduce.fadd"(%arg0, %arg1) <{fastmathFlags = #llvm.fastmath<reassoc>}> : (f32, vector<8xf32>) -> f32
   // CHECK: call reassoc float @llvm.vector.reduce.fmul.v8f32
-  "llvm.intr.vector.reduce.fmul"(%arg0, %arg1) {reassoc = true} : (f32, vector<8xf32>) -> f32
+  "llvm.intr.vector.reduce.fmul"(%arg0, %arg1) <{fastmathFlags = #llvm.fastmath<reassoc>}> : (f32, vector<8xf32>) -> f32
   // CHECK: call i32 @llvm.vector.reduce.xor.v8i32
   "llvm.intr.vector.reduce.xor"(%arg2) : (vector<8xi32>) -> i32
   llvm.return
@@ -382,7 +386,7 @@ llvm.func @vector_reductions(%arg0: f32, %arg1: vector<8xf32>, %arg2: vector<8xi
 // CHECK-LABEL: @matrix_intrinsics
 //                                       4x16                       16x3
 llvm.func @matrix_intrinsics(%A: vector<64 x f32>, %B: vector<48 x f32>,
-                             %ptr: !llvm.ptr<f32>, %stride: i64) {
+                             %ptr: !llvm.ptr, %stride: i64) {
   // CHECK: call <12 x float> @llvm.matrix.multiply.v12f32.v64f32.v48f32(<64 x float> %0, <48 x float> %1, i32 4, i32 16, i32 3)
   %C = llvm.intr.matrix.multiply %A, %B
     { lhs_rows = 4: i32, lhs_columns = 16: i32 , rhs_columns = 3: i32} :
@@ -393,11 +397,11 @@ llvm.func @matrix_intrinsics(%A: vector<64 x f32>, %B: vector<48 x f32>,
   // CHECK: call <48 x float> @llvm.matrix.column.major.load.v48f32.i64(ptr align 4 %2, i64 %3, i1 false, i32 3, i32 16)
   %E = llvm.intr.matrix.column.major.load %ptr, <stride=%stride>
     { isVolatile = 0: i1, rows = 3: i32, columns = 16: i32} :
-    vector<48 x f32> from !llvm.ptr<f32> stride i64
+    vector<48 x f32> from !llvm.ptr stride i64
   // CHECK: call void @llvm.matrix.column.major.store.v48f32.i64(<48 x float> %7, ptr align 4 %2, i64 %3, i1 false, i32 3, i32 16)
   llvm.intr.matrix.column.major.store %E, %ptr, <stride=%stride>
     { isVolatile = 0: i1, rows = 3: i32, columns = 16: i32} :
-    vector<48 x f32> to !llvm.ptr<f32> stride i64
+    vector<48 x f32> to !llvm.ptr stride i64
   llvm.return
 }
 
@@ -409,16 +413,16 @@ llvm.func @get_active_lane_mask(%base: i64, %n: i64) -> (vector<7xi1>) {
 }
 
 // CHECK-LABEL: @masked_load_store_intrinsics
-llvm.func @masked_load_store_intrinsics(%A: !llvm.ptr<vector<7xf32>>, %mask: vector<7xi1>) {
+llvm.func @masked_load_store_intrinsics(%A: !llvm.ptr, %mask: vector<7xi1>) {
   // CHECK: call <7 x float> @llvm.masked.load.v7f32.p0(ptr %{{.*}}, i32 1, <7 x i1> %{{.*}}, <7 x float> poison)
   %a = llvm.intr.masked.load %A, %mask { alignment = 1: i32} :
-    (!llvm.ptr<vector<7xf32>>, vector<7xi1>) -> vector<7xf32>
+    (!llvm.ptr, vector<7xi1>) -> vector<7xf32>
   // CHECK: call <7 x float> @llvm.masked.load.v7f32.p0(ptr %{{.*}}, i32 1, <7 x i1> %{{.*}}, <7 x float> %{{.*}})
   %b = llvm.intr.masked.load %A, %mask, %a { alignment = 1: i32} :
-    (!llvm.ptr<vector<7xf32>>, vector<7xi1>, vector<7xf32>) -> vector<7xf32>
+    (!llvm.ptr, vector<7xi1>, vector<7xf32>) -> vector<7xf32>
   // CHECK: call void @llvm.masked.store.v7f32.p0(<7 x float> %{{.*}}, ptr %0, i32 {{.*}}, <7 x i1> %{{.*}})
   llvm.intr.masked.store %b, %A, %mask { alignment = 1: i32} :
-    vector<7xf32>, vector<7xi1> into !llvm.ptr<vector<7xf32>>
+    vector<7xf32>, vector<7xi1> into !llvm.ptr
   llvm.return
 }
 
@@ -437,13 +441,13 @@ llvm.func @masked_gather_scatter_intrinsics(%M: !llvm.vec<7 x ptr<f32>>, %mask: 
 }
 
 // CHECK-LABEL: @masked_expand_compress_intrinsics
-llvm.func @masked_expand_compress_intrinsics(%ptr: !llvm.ptr<f32>, %mask: vector<7xi1>, %passthru: vector<7xf32>) {
+llvm.func @masked_expand_compress_intrinsics(%ptr: !llvm.ptr, %mask: vector<7xi1>, %passthru: vector<7xf32>) {
   // CHECK: call <7 x float> @llvm.masked.expandload.v7f32(ptr %{{.*}}, <7 x i1> %{{.*}}, <7 x float> %{{.*}})
   %0 = "llvm.intr.masked.expandload"(%ptr, %mask, %passthru)
-    : (!llvm.ptr<f32>, vector<7xi1>, vector<7xf32>) -> (vector<7xf32>)
+    : (!llvm.ptr, vector<7xi1>, vector<7xf32>) -> (vector<7xf32>)
   // CHECK: call void @llvm.masked.compressstore.v7f32(<7 x float> %{{.*}}, ptr %{{.*}}, <7 x i1> %{{.*}})
   "llvm.intr.masked.compressstore"(%0, %ptr, %mask)
-    : (vector<7xf32>, !llvm.ptr<f32>, vector<7xi1>) -> ()
+    : (vector<7xf32>, !llvm.ptr, vector<7xi1>) -> ()
   llvm.return
 }
 
@@ -470,28 +474,28 @@ llvm.func @trap_intrinsics() {
 }
 
 // CHECK-LABEL: @memcpy_test
-llvm.func @memcpy_test(%arg0: i32, %arg2: !llvm.ptr<i8>, %arg3: !llvm.ptr<i8>) {
+llvm.func @memcpy_test(%arg0: i32, %arg2: !llvm.ptr, %arg3: !llvm.ptr) {
   // CHECK: call void @llvm.memcpy.p0.p0.i32(ptr %{{.*}}, ptr %{{.*}}, i32 %{{.*}}, i1 false
-  "llvm.intr.memcpy"(%arg2, %arg3, %arg0) <{isVolatile = false}> : (!llvm.ptr<i8>, !llvm.ptr<i8>, i32) -> ()
+  "llvm.intr.memcpy"(%arg2, %arg3, %arg0) <{isVolatile = false}> : (!llvm.ptr, !llvm.ptr, i32) -> ()
   // CHECK: call void @llvm.memcpy.inline.p0.p0.i32(ptr %{{.*}}, ptr %{{.*}}, i32 10, i1 true
-  "llvm.intr.memcpy.inline"(%arg2, %arg3) <{isVolatile = true, len = 10 : i32}> : (!llvm.ptr<i8>, !llvm.ptr<i8>) -> ()
+  "llvm.intr.memcpy.inline"(%arg2, %arg3) <{isVolatile = true, len = 10 : i32}> : (!llvm.ptr, !llvm.ptr) -> ()
   // CHECK: call void @llvm.memcpy.inline.p0.p0.i64(ptr %{{.*}}, ptr %{{.*}}, i64 10, i1 true
-  "llvm.intr.memcpy.inline"(%arg2, %arg3) <{isVolatile = true, len = 10 : i64}> : (!llvm.ptr<i8>, !llvm.ptr<i8>) -> ()
+  "llvm.intr.memcpy.inline"(%arg2, %arg3) <{isVolatile = true, len = 10 : i64}> : (!llvm.ptr, !llvm.ptr) -> ()
   llvm.return
 }
 
 // CHECK-LABEL: @memmove_test
-llvm.func @memmove_test(%arg0: i32, %arg2: !llvm.ptr<i8>, %arg3: !llvm.ptr<i8>) {
+llvm.func @memmove_test(%arg0: i32, %arg2: !llvm.ptr, %arg3: !llvm.ptr) {
   // CHECK: call void @llvm.memmove.p0.p0.i32(ptr %{{.*}}, ptr %{{.*}}, i32 %{{.*}}, i1 false
-  "llvm.intr.memmove"(%arg2, %arg3, %arg0) <{isVolatile = false}> : (!llvm.ptr<i8>, !llvm.ptr<i8>, i32) -> ()
+  "llvm.intr.memmove"(%arg2, %arg3, %arg0) <{isVolatile = false}> : (!llvm.ptr, !llvm.ptr, i32) -> ()
   llvm.return
 }
 
 // CHECK-LABEL: @memset_test
-llvm.func @memset_test(%arg0: i32, %arg2: !llvm.ptr<i8>, %arg3: i8) {
+llvm.func @memset_test(%arg0: i32, %arg2: !llvm.ptr, %arg3: i8) {
   %i1 = llvm.mlir.constant(false) : i1
   // CHECK: call void @llvm.memset.p0.i32(ptr %{{.*}}, i8 %{{.*}}, i32 %{{.*}}, i1 false
-  "llvm.intr.memset"(%arg2, %arg3, %arg0) <{isVolatile = false}> : (!llvm.ptr<i8>, i8, i32) -> ()
+  "llvm.intr.memset"(%arg2, %arg3, %arg0) <{isVolatile = false}> : (!llvm.ptr, i8, i32) -> ()
   llvm.return
 }
 
@@ -634,19 +638,19 @@ llvm.func @ushl_sat_test(%arg0: i32, %arg1: i32, %arg2: vector<8xi32>, %arg3: ve
 }
 
 // CHECK-LABEL: @coro_id
-llvm.func @coro_id(%arg0: i32, %arg1: !llvm.ptr<i8>) {
+llvm.func @coro_id(%arg0: i32, %arg1: !llvm.ptr) {
   // CHECK: call token @llvm.coro.id
-  %null = llvm.mlir.null : !llvm.ptr<i8>
-  llvm.intr.coro.id %arg0, %arg1, %arg1, %null : (i32, !llvm.ptr<i8>, !llvm.ptr<i8>, !llvm.ptr<i8>) -> !llvm.token
+  %null = llvm.mlir.zero : !llvm.ptr
+  llvm.intr.coro.id %arg0, %arg1, %arg1, %null : (i32, !llvm.ptr, !llvm.ptr, !llvm.ptr) -> !llvm.token
   llvm.return
 }
 
 // CHECK-LABEL: @coro_begin
-llvm.func @coro_begin(%arg0: i32, %arg1: !llvm.ptr<i8>) {
-  %null = llvm.mlir.null : !llvm.ptr<i8>
-  %token = llvm.intr.coro.id %arg0, %arg1, %arg1, %null : (i32, !llvm.ptr<i8>, !llvm.ptr<i8>, !llvm.ptr<i8>) -> !llvm.token
+llvm.func @coro_begin(%arg0: i32, %arg1: !llvm.ptr) {
+  %null = llvm.mlir.zero : !llvm.ptr
+  %token = llvm.intr.coro.id %arg0, %arg1, %arg1, %null : (i32, !llvm.ptr, !llvm.ptr, !llvm.ptr) -> !llvm.token
   // CHECK: call ptr @llvm.coro.begin
-  llvm.intr.coro.begin %token, %arg1 : (!llvm.token, !llvm.ptr<i8>) -> !llvm.ptr<i8>
+  llvm.intr.coro.begin %token, %arg1 : (!llvm.token, !llvm.ptr) -> !llvm.ptr
   llvm.return
 }
 
@@ -669,62 +673,67 @@ llvm.func @coro_align() {
 }
 
 // CHECK-LABEL: @coro_save
-llvm.func @coro_save(%arg0: !llvm.ptr<i8>) {
+llvm.func @coro_save(%arg0: !llvm.ptr) {
   // CHECK: call token @llvm.coro.save
-  %0 = llvm.intr.coro.save %arg0 : (!llvm.ptr<i8>) -> !llvm.token
+  %0 = llvm.intr.coro.save %arg0 : (!llvm.ptr) -> !llvm.token
   llvm.return
 }
 
 // CHECK-LABEL: @coro_suspend
-llvm.func @coro_suspend(%arg0: i32, %arg1 : i1, %arg2 : !llvm.ptr<i8>) {
-  %null = llvm.mlir.null : !llvm.ptr<i8>
-  %token = llvm.intr.coro.id %arg0, %arg2, %arg2, %null : (i32, !llvm.ptr<i8>, !llvm.ptr<i8>, !llvm.ptr<i8>) -> !llvm.token
+llvm.func @coro_suspend(%arg0: i32, %arg1 : i1, %arg2 : !llvm.ptr) {
+  %null = llvm.mlir.zero : !llvm.ptr
+  %token = llvm.intr.coro.id %arg0, %arg2, %arg2, %null : (i32, !llvm.ptr, !llvm.ptr, !llvm.ptr) -> !llvm.token
   // CHECK: call i8 @llvm.coro.suspend
   %0 = llvm.intr.coro.suspend %token, %arg1 : i8
   llvm.return
 }
 
 // CHECK-LABEL: @coro_end
-llvm.func @coro_end(%arg0: !llvm.ptr<i8>, %arg1 : i1) {
+llvm.func @coro_end(%arg0: !llvm.ptr, %arg1 : i1) {
+  %none = llvm.mlir.none : !llvm.token
   // CHECK: call i1 @llvm.coro.end
-  %0 = llvm.intr.coro.end %arg0, %arg1 : (!llvm.ptr<i8>, i1) -> i1
+  %0 = llvm.intr.coro.end %arg0, %arg1, %none : (!llvm.ptr, i1, !llvm.token) -> i1
   llvm.return
 }
 
 // CHECK-LABEL: @coro_free
-llvm.func @coro_free(%arg0: i32, %arg1 : !llvm.ptr<i8>) {
-  %null = llvm.mlir.null : !llvm.ptr<i8>
-  %token = llvm.intr.coro.id %arg0, %arg1, %arg1, %null : (i32, !llvm.ptr<i8>, !llvm.ptr<i8>, !llvm.ptr<i8>) -> !llvm.token
+llvm.func @coro_free(%arg0: i32, %arg1 : !llvm.ptr) {
+  %null = llvm.mlir.zero : !llvm.ptr
+  %token = llvm.intr.coro.id %arg0, %arg1, %arg1, %null : (i32, !llvm.ptr, !llvm.ptr, !llvm.ptr) -> !llvm.token
   // CHECK: call ptr @llvm.coro.free
-  %0 = llvm.intr.coro.free %token, %arg1 : (!llvm.token, !llvm.ptr<i8>) -> !llvm.ptr<i8>
+  %0 = llvm.intr.coro.free %token, %arg1 : (!llvm.token, !llvm.ptr) -> !llvm.ptr
   llvm.return
 }
 
 // CHECK-LABEL: @coro_resume
-llvm.func @coro_resume(%arg0: !llvm.ptr<i8>) {
+llvm.func @coro_resume(%arg0: !llvm.ptr) {
   // CHECK: call void @llvm.coro.resume
-  llvm.intr.coro.resume %arg0 : !llvm.ptr<i8>
+  llvm.intr.coro.resume %arg0 : !llvm.ptr
   llvm.return
 }
 
 // CHECK-LABEL: @eh_typeid_for
-llvm.func @eh_typeid_for(%arg0 : !llvm.ptr<i8>) {
+llvm.func @eh_typeid_for(%arg0 : !llvm.ptr) {
     // CHECK: call i32 @llvm.eh.typeid.for
-    %0 = llvm.intr.eh.typeid.for %arg0 : (!llvm.ptr<i8>) -> i32
+    %0 = llvm.intr.eh.typeid.for %arg0 : (!llvm.ptr) -> i32
     llvm.return
 }
 
 // CHECK-LABEL: @stack_save
 llvm.func @stack_save() {
-  // CHECK: call ptr @llvm.stacksave
-  %0 = llvm.intr.stacksave : !llvm.ptr<i8>
+  // CHECK: call ptr @llvm.stacksave.p0
+  %0 = llvm.intr.stacksave : !llvm.ptr
+  // CHECK: call ptr addrspace(1) @llvm.stacksave.p1
+  %1 = llvm.intr.stacksave : !llvm.ptr<1>
   llvm.return
 }
 
 // CHECK-LABEL: @stack_restore
-llvm.func @stack_restore(%arg0: !llvm.ptr<i8>) {
-  // CHECK: call void @llvm.stackrestore
-  llvm.intr.stackrestore %arg0 : !llvm.ptr<i8>
+llvm.func @stack_restore(%arg0: !llvm.ptr, %arg1: !llvm.ptr<1>) {
+  // CHECK: call void @llvm.stackrestore.p0(ptr %{{.}})
+  llvm.intr.stackrestore %arg0 : !llvm.ptr
+  // CHECK: call void @llvm.stackrestore.p1(ptr addrspace(1) %{{.}})
+  llvm.intr.stackrestore %arg1 : !llvm.ptr<1>
   llvm.return
 }
 
@@ -732,10 +741,10 @@ llvm.func @stack_restore(%arg0: !llvm.ptr<i8>) {
 llvm.func @vector_predication_intrinsics(%A: vector<8xi32>, %B: vector<8xi32>,
                                          %C: vector<8xf32>, %D: vector<8xf32>,
                                          %E: vector<8xi64>, %F: vector<8xf64>,
-                                         %G: !llvm.vec<8 x !llvm.ptr<i32>>,
+                                         %G: !llvm.vec<8 x !llvm.ptr>,
                                          %i: i32, %f: f32,
-                                         %iptr : !llvm.ptr<i32>,
-                                         %fptr : !llvm.ptr<f32>,
+                                         %iptr : !llvm.ptr,
+                                         %fptr : !llvm.ptr,
                                          %mask: vector<8xi1>, %evl: i32) {
   // CHECK: call <8 x i32> @llvm.vp.add.v8i32
   "llvm.intr.vp.add" (%A, %B, %mask, %evl) :
@@ -852,16 +861,16 @@ llvm.func @vector_predication_intrinsics(%A: vector<8xi32>, %B: vector<8xi32>,
 
   // CHECK: call void @llvm.vp.store.v8i32.p0
   "llvm.intr.vp.store" (%A, %iptr, %mask, %evl) :
-         (vector<8xi32>, !llvm.ptr<i32>, vector<8xi1>, i32) -> ()
+         (vector<8xi32>, !llvm.ptr, vector<8xi1>, i32) -> ()
   // CHECK: call <8 x i32> @llvm.vp.load.v8i32.p0
   "llvm.intr.vp.load" (%iptr, %mask, %evl) :
-         (!llvm.ptr<i32>, vector<8xi1>, i32) -> vector<8xi32>
+         (!llvm.ptr, vector<8xi1>, i32) -> vector<8xi32>
   // CHECK: call void @llvm.experimental.vp.strided.store.v8i32.p0.i32
   "llvm.intr.experimental.vp.strided.store" (%A, %iptr, %i, %mask, %evl) :
-         (vector<8xi32>, !llvm.ptr<i32>, i32, vector<8xi1>, i32) -> ()
+         (vector<8xi32>, !llvm.ptr, i32, vector<8xi1>, i32) -> ()
   // CHECK: call <8 x i32> @llvm.experimental.vp.strided.load.v8i32.p0.i32
   "llvm.intr.experimental.vp.strided.load" (%iptr, %i, %mask, %evl) :
-         (!llvm.ptr<i32>, i32, vector<8xi1>, i32) -> vector<8xi32>
+         (!llvm.ptr, i32, vector<8xi1>, i32) -> vector<8xi32>
 
   // CHECK: call <8 x i32> @llvm.vp.trunc.v8i32.v8i64
   "llvm.intr.vp.trunc" (%E, %mask, %evl) :
@@ -889,10 +898,10 @@ llvm.func @vector_predication_intrinsics(%A: vector<8xi32>, %B: vector<8xi32>,
 
   // CHECK: call <8 x i64> @llvm.vp.ptrtoint.v8i64.v8p0
   "llvm.intr.vp.ptrtoint" (%G, %mask, %evl) :
-         (!llvm.vec<8 x !llvm.ptr<i32>>, vector<8xi1>, i32) -> vector<8xi64>
+         (!llvm.vec<8 x !llvm.ptr>, vector<8xi1>, i32) -> vector<8xi64>
   // CHECK: call <8 x ptr> @llvm.vp.inttoptr.v8p0.v8i64
   "llvm.intr.vp.inttoptr" (%E, %mask, %evl) :
-         (vector<8xi64>, vector<8xi1>, i32) -> !llvm.vec<8 x !llvm.ptr<i32>>
+         (vector<8xi64>, vector<8xi1>, i32) -> !llvm.vec<8 x !llvm.ptr>
   llvm.return
 }
 
@@ -930,6 +939,13 @@ llvm.func @lifetime(%p: !llvm.ptr) {
   // CHECK: call void @llvm.lifetime.end
   llvm.intr.lifetime.end 16, %p : !llvm.ptr
   llvm.return
+}
+
+// CHECK-LABEL: @ssa_copy
+llvm.func @ssa_copy(%arg: f32) -> f32 {
+  // CHECK: call float @llvm.ssa.copy
+  %0 = llvm.intr.ssa.copy %arg : f32
+  llvm.return %0 : f32
 }
 
 // Check that intrinsics are declared with appropriate types.
@@ -1028,7 +1044,7 @@ llvm.func @lifetime(%p: !llvm.ptr) {
 // CHECK-DAG: declare i32 @llvm.coro.size.i32()
 // CHECK-DAG: declare token @llvm.coro.save(ptr)
 // CHECK-DAG: declare i8 @llvm.coro.suspend(token, i1)
-// CHECK-DAG: declare i1 @llvm.coro.end(ptr, i1)
+// CHECK-DAG: declare i1 @llvm.coro.end(ptr, i1, token)
 // CHECK-DAG: declare ptr @llvm.coro.free(token, ptr nocapture readonly)
 // CHECK-DAG: declare void @llvm.coro.resume(ptr)
 // CHECK-DAG: declare <8 x i32> @llvm.vp.add.v8i32(<8 x i32>, <8 x i32>, <8 x i1>, i32)
@@ -1085,3 +1101,8 @@ llvm.func @lifetime(%p: !llvm.ptr) {
 // CHECK-DAG: declare <2 x i32> @llvm.vector.extract.v2i32.v8i32(<8 x i32>, i64 immarg)
 // CHECK-DAG: declare void @llvm.lifetime.start.p0(i64 immarg, ptr nocapture)
 // CHECK-DAG: declare void @llvm.lifetime.end.p0(i64 immarg, ptr nocapture)
+// CHECK-DAG: declare float @llvm.ssa.copy.f32(float returned)
+// CHECK-DAG: declare ptr @llvm.stacksave.p0()
+// CHECK-DAG: declare ptr addrspace(1) @llvm.stacksave.p1()
+// CHECK-DAG: declare void @llvm.stackrestore.p0(ptr)
+// CHECK-DAG: declare void @llvm.stackrestore.p1(ptr addrspace(1))

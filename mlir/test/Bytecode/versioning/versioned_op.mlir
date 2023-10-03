@@ -10,7 +10,7 @@
 // COM:   version: 2.0
 // COM:   "test.versionedA"() <{dims = 123 : i64, modifier = false}> : () -> ()
 // COM: }
-// RUN: mlir-opt %S/versioned-op-2.0.mlirbc 2>&1 | FileCheck %s --check-prefix=CHECK1
+// RUN: mlir-opt %S/versioned-op-with-prop-2.0.mlirbc 2>&1 | FileCheck %s --check-prefix=CHECK1
 // CHECK1: "test.versionedA"() <{dims = 123 : i64, modifier = false}> : () -> ()
 
 //===--------------------------------------------------------------------===//
@@ -22,8 +22,8 @@
 // COM:   version: 1.12
 // COM:   "test.versionedA"() <{dimensions = 123 : i64}> : () -> ()
 // COM: }
-// RUN: mlir-opt %S/versioned-op-1.12.mlirbc 2>&1 | FileCheck %s --check-prefix=CHECK2
-// CHECK2: "test.versionedA"() <{dims = 123 : i64, modifier = false}> : () -> ()
+// RUN: mlir-opt %S/versioned-op-with-prop-1.12.mlirbc 2>&1 | FileCheck %s --check-prefix=CHECK3
+// CHECK3: "test.versionedA"() <{dims = 123 : i64, modifier = false}> : () -> ()
 
 //===--------------------------------------------------------------------===//
 // Test forbidden downgrade

@@ -88,3 +88,11 @@ subroutine s11
   integer :: nl3
   nl2 = 1
 end
+
+subroutine s12(x)
+  real, intent(in) :: x
+  namelist /nl/x
+  !ERROR: NAMELIST input group must not contain undefinable item 'x'
+  !BECAUSE: 'x' is an INTENT(IN) dummy argument
+  read(*,nml=nl)
+end

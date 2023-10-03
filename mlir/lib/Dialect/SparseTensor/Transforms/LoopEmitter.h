@@ -84,18 +84,22 @@ public:
   using SynTensorBoundSetter =
       function_ref<Value(OpBuilder &builder, Location loc, Level lvl)>;
 
-  // Map from [tid, dim] to a list of dependent [tid, dim] for affine expression
-  // index on sparse tensors.
-  // E.g., for affine index (d0 + d1), it depends on two [tid, dim] that defines
-  // d0 and d1 (for affine expression reduction).
+  // Map from [tid, lvl] to a list of dependent [tidlvl, coeffecient] for
+  // subscript expressions on sparse tensors.
+  //
+  // E.g., for affine index (2 * d0 + d1), it depends on two tidlvls that
+  // defines d0 and d1 (for affine expression reduction) and uses 2 and 1 for
+  // cofficients on d0, d1 respectively.
   // If the list is empty, it means that there is no affine expression on the
-  // input [tid, dim].
+  // input [tid, lvl].
+  //
   // NOTE: The caller is responsible to ensure that the order of the returned
   // list to be consistent with the topological order of the iteration graph,
   // otherwise the loop emitter might reduce a wrong dependent index variable
   // when generating slice-driven loops.
   using DependentLvlGetter =
-      function_ref<std::vector<std::pair<TensorId, Level>>(TensorId, Level)>;
+      function_ref<std::vector<std::pair<TensorLevel, unsigned>>(TensorId,
+                                                                 Level)>;
 
   LoopEmitter() = default;
 
@@ -184,24 +188,32 @@ public:
   void exitCurrentLoop(RewriterBase &rewriter, Location loc,
                        MutableArrayRef<Value> reduc = {});
 
+  /// Get the range of values for all induction variables.
+  auto getLoopIVsRange() const {
+    return llvm::map_range(loopStack, [](const LoopInfo &li) { return li.iv; });
+  }
+
   /// Fills the out-parameter with the loop induction variables for all
   /// loops in the current loop-stack.  The variables are given in the
   /// same order as the loop-stack, hence `ivs` should be indexed into
   /// by `LoopOrd` (not `LoopId`).
-  void getLoopIVs(SmallVectorImpl<Value> &ivs) const {
-    ivs.clear();
-    ivs.reserve(getCurrentDepth());
-    for (auto &l : loopStack)
-      ivs.push_back(l.iv);
+  SmallVector<Value> getLoopIVs() const {
+    return llvm::to_vector(getLoopIVsRange());
   }
 
   /// Gets the current depth of the loop-stack.  The result is given
   /// the type `LoopOrd` for the same reason as one-past-the-end iterators.
-  LoopOrd getCurrentDepth() const { return loopStack.size(); }
+  LoopOrd getCurrentDepth() const {
+    return llvm::range_size(getLoopIVsRange());
+  }
 
   /// Gets loop induction variable for the given `LoopOrd`.
   Value getLoopIV(LoopOrd n) const {
-    return n < getCurrentDepth() ? loopStack[n].iv : Value();
+    if (n >= getCurrentDepth())
+      return Value();
+    auto it = getLoopIVsRange().begin();
+    std::advance(it, n);
+    return *it;
   }
 
   /// Gets the total number of manifest tensors (excluding the synthetic
@@ -327,9 +339,9 @@ private:
     // Whether this is the tensor that has not yet been sliced.
     bool isInitialTensor() const { return !slicedOnLvl.has_value(); }
 
-    Value minCrd;                     // the minimum coordinate of the slice.
-    Value offset;                     // the offset of the current slice.
-    Value isNonEmpty;                 // whether the slice is empty.
+    Value minCrd;     // the minimum coordinate of the slice.
+    Value offset;     // the *absolute* offset of the current slice.
+    Value isNonEmpty; // whether the slice is empty.
     std::optional<Level> slicedOnLvl; // the level on which the slice is done
     unsigned depth; // the depth (relative to dependentDimMap[tid][lvl]).
   };
@@ -381,7 +393,7 @@ private:
   }
   static bool isTrivalIdxCond(LoopCondKind k) { return !isAffineIdxCond(k); }
 
-  /// Whether the affine index expression is not fully reduced.
+  /// Whether the affine index expression is fully reduced.
   static bool isAffineIdxUnRedCond(LoopCondKind k) {
     return isAffineIdxCond(k) && static_cast<uint8_t>(k) & kAffineIdxCondUnRed;
   }
@@ -393,7 +405,7 @@ private:
   // E.g., to iterate over sparse tensor slice, we need to check whether the
   // current cooridnate is on the slice (e.g., due to stride) or not.
   static bool isCondWithExtraCheck(LoopCondKind k) {
-    return isSparseCond(k) && isSliceCond(k);
+    return isSparseCond(k) && (isSliceCond(k) || isAffineIdxUnRedCond(k));
   }
 
   static LoopCondKind makeLoopCondKind(bool isSparse, bool isSlice,
@@ -558,40 +570,6 @@ private:
                      MutableArrayRef<Value> reduc);
 
   //
-  // View-based-reshape methods.
-  //
-
-  /// Get the collapse reassociation for `tensors[tid][dstLvl]`.
-  /// For unreshaped operands, the reassociation is simply an identity
-  /// transformation.
-  ///
-  /// NOTE: the result uses `Level` rather than the `int64_t` of
-  /// `ReassociationIndices`, since the former gives clarity to what
-  /// the values actually mean.
-  ///
-  /// TODO: why not do this computation when we first store the reassoc,
-  /// instead of doing it every time we look it up?
-  SmallVector<Level, 2> getCollapseReassociation(TensorId tid, Level dstLvl) {
-    assert(tid < getNumTensors() && "Invalid TensorId");
-    assert(collapseReassoc.size() == getNumTensors());
-    if (const auto reassoc = collapseReassoc[tid]) {
-      assert(!isSynTensor(tid) && !isOutputTensor(tid) &&
-             "Output/Synthetic tensor should not have reassociation");
-      // TODO: store the dstLvlRank in the LoopEmitter so that we can
-      // check `dstLvl < dstLvlRank` at the top; and only here need to
-      // assert that `reassoc.size() == dstLvlRank`.
-      assert(dstLvl < reassoc.size() && "Level is out-of-bounds");
-      const auto srcLvls = cast<ArrayAttr>(reassoc[dstLvl]);
-      return llvm::to_vector<2>(
-          llvm::map_range(srcLvls, [&](Attribute srcLvl) -> Level {
-            // TODO: replace this with the converter for `LevelAttr`.
-            return cast<IntegerAttr>(srcLvl).getValue().getZExtValue();
-          }));
-    }
-    return {dstLvl};
-  }
-
-  //
   // Slice-driven loop related methods.
   //
 
@@ -671,10 +649,12 @@ private:
   bool genSliceBegin(OpBuilder &builder, Location loc, TensorId tid, Level lvl);
 
   /// Generates code to get the next non-empty slices of tid on lvl.
-  void genSliceNextInduction(OpBuilder &builder, Location loc,
-                             const Operation *whileOp, TensorId tid, Level lvl,
-                             SmallVectorImpl<Value> &operands,
-                             unsigned &retIdx);
+  /// Returns a tuple of values for <NonEmpty, MinCrd, AbsOffset> (see
+  /// SliceInfo) respectively.
+  std::tuple<Value, Value, Value> genSliceNextInduction(OpBuilder &builder,
+                                                        Location loc,
+                                                        TensorId tid,
+                                                        Level lvl);
 
   /// A optional string attribute that should be attached to the loop
   /// generated by loop emitter, it might help following passes to identify
@@ -733,9 +713,9 @@ private:
   std::vector<std::vector<Value>> sliceOffsets;
   std::vector<std::vector<Value>> sliceStrides;
 
-  // Map from [tid, level] to a list of dependent [tid, level].
-  // See comments for `DependentDimGetter`.
-  std::vector<std::vector<std::vector<std::pair<TensorId, Level>>>>
+  // Map from [tid, level] to a list of dependent [tidlevel, coefficient].
+  // See comments for `DependentLvlGetter`.
+  std::vector<std::vector<std::vector<std::pair<TensorLevel, unsigned>>>>
       dependentLvlMap;
 
   // The cached position buffer for the slices, they serve the same purpose as
@@ -744,22 +724,15 @@ private:
   // to avoid iteration from the beginning.
   std::vector<std::vector<std::vector<Value>>> slicePosBuffer;
 
-  // The cached size for each slices.
-  std::vector<std::vector<std::vector<Value>>> sliceSizes;
+  // The (size, stride) for each conceptual slice used for index reduction
+  // loops.
+  std::vector<std::vector<std::vector<std::pair<Value, unsigned>>>> sliceMeta;
 
   // The number of reduced dependencies on a tensor level so far.
   std::vector<std::vector<unsigned>> levelReducedDep;
 
   // sliceStack[tid] holds the generated slice stack on tid.
   std::vector<std::vector<SliceInfo>> sliceStack;
-
-  //
-  // View based reshape related-fields and methods
-  //
-
-  /// Collapse Reassociations related to a specific tensor
-  // TODO: support expand.
-  std::vector<ArrayAttr> collapseReassoc;
 
   /// TODO: not yet used, it should track the current level for each tensor
   /// to help eliminate `lvls` paramters from above APIs.

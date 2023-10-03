@@ -3212,13 +3212,13 @@ let Predicates = [UseSSE2] in {
 // Prefetch intrinsic.
 let Predicates = [HasSSEPrefetch], SchedRW = [WriteLoad] in {
 def PREFETCHT0   : I<0x18, MRM1m, (outs), (ins i8mem:$src),
-    "prefetcht0\t$src", [(prefetch addr:$src, imm, (i32 3), (i32 1))]>, TB;
+    "prefetcht0\t$src", [(prefetch addr:$src, timm, (i32 3), (i32 1))]>, TB;
 def PREFETCHT1   : I<0x18, MRM2m, (outs), (ins i8mem:$src),
-    "prefetcht1\t$src", [(prefetch addr:$src, imm, (i32 2), (i32 1))]>, TB;
+    "prefetcht1\t$src", [(prefetch addr:$src, timm, (i32 2), (i32 1))]>, TB;
 def PREFETCHT2   : I<0x18, MRM3m, (outs), (ins i8mem:$src),
-    "prefetcht2\t$src", [(prefetch addr:$src, imm, (i32 1), (i32 1))]>, TB;
+    "prefetcht2\t$src", [(prefetch addr:$src, timm, (i32 1), (i32 1))]>, TB;
 def PREFETCHNTA  : I<0x18, MRM0m, (outs), (ins i8mem:$src),
-    "prefetchnta\t$src", [(prefetch addr:$src, imm, (i32 0), (i32 1))]>, TB;
+    "prefetchnta\t$src", [(prefetch addr:$src, timm, (i32 0), (i32 1))]>, TB;
 }
 
 // FIXME: How should flush instruction be modeled?
@@ -8289,9 +8289,145 @@ let Predicates = [HasAVXNECONVERT] in {
        f256mem>, T8PS;
   let checkVEXPredicate = 1 in
   defm VCVTNEPS2BF16 : VCVTNEPS2BF16_BASE, VEX, T8XS, ExplicitVEXPrefix;
+
+  def : Pat<(v8bf16 (X86vfpround (v8f32 VR256:$src))),
+            (VCVTNEPS2BF16Yrr VR256:$src)>;
+  def : Pat<(v8bf16 (X86vfpround (loadv8f32 addr:$src))),
+            (VCVTNEPS2BF16Yrm addr:$src)>;
 }
 
 def : InstAlias<"vcvtneps2bf16x\t{$src, $dst|$dst, $src}",
                 (VCVTNEPS2BF16rr VR128:$dst, VR128:$src), 0, "att">;
 def : InstAlias<"vcvtneps2bf16y\t{$src, $dst|$dst, $src}",
                 (VCVTNEPS2BF16Yrr VR128:$dst, VR256:$src), 0, "att">;
+
+// FIXME: Is there a better scheduler class for SHA512 than WriteVecIMul?
+let Predicates = [HasSHA512], Constraints = "$src1 = $dst" in {
+def VSHA512MSG1rr : I<0xcc, MRMSrcReg, (outs VR256:$dst),
+                     (ins VR256:$src1, VR128:$src2),
+                     "vsha512msg1\t{$src2, $dst|$dst, $src2}",
+                     [(set VR256:$dst,
+                       (int_x86_vsha512msg1 VR256:$src1, VR128:$src2))]>, VEX_L,
+                     VEX, T8XD, Sched<[WriteVecIMul]>;
+def VSHA512MSG2rr : I<0xcd, MRMSrcReg, (outs VR256:$dst),
+                     (ins VR256:$src1, VR256:$src2),
+                     "vsha512msg2\t{$src2, $dst|$dst, $src2}",
+                     [(set VR256:$dst,
+                       (int_x86_vsha512msg2 VR256:$src1, VR256:$src2))]>, VEX_L,
+                     VEX, T8XD, Sched<[WriteVecIMul]>;
+def VSHA512RNDS2rr : I<0xcb, MRMSrcReg, (outs VR256:$dst),
+                      (ins VR256:$src1, VR256:$src2, VR128:$src3),
+                      "vsha512rnds2\t{$src3, $src2, $dst|$dst, $src2, $src3}",
+                      [(set VR256:$dst,
+                        (int_x86_vsha512rnds2 VR256:$src1, VR256:$src2, VR128:$src3))]>,
+                      VEX_L, VEX_4V, T8XD, Sched<[WriteVecIMul]>;
+}
+
+// FIXME: Is there a better scheduler class for SM3 than WriteVecIMul?
+let Predicates = [HasSM3], Constraints = "$src1 = $dst" in {
+  multiclass SM3_Base<string OpStr> {
+    def rr : I<0xda, MRMSrcReg, (outs VR128:$dst),
+              (ins VR128:$src1, VR128:$src2, VR128:$src3),
+              !strconcat(OpStr, "\t{$src3, $src2, $dst|$dst, $src2, $src3}"),
+              [(set VR128:$dst,
+               (!cast<Intrinsic>("int_x86_"#OpStr) VR128:$src1,
+                VR128:$src2, VR128:$src3))]>,
+              Sched<[WriteVecIMul]>, VEX_4V;
+    def rm : I<0xda, MRMSrcMem, (outs VR128:$dst),
+              (ins VR128:$src1, VR128:$src2, i128mem:$src3),
+              !strconcat(OpStr, "\t{$src3, $src2, $dst|$dst, $src2, $src3}"),
+              [(set VR128:$dst,
+               (!cast<Intrinsic>("int_x86_"#OpStr) VR128:$src1,
+                VR128:$src2, (loadv4i32 addr:$src3)))]>,
+              Sched<[WriteVecIMul]>, VEX_4V;
+  }
+
+  multiclass VSM3RNDS2_Base {
+    def rr : Ii8<0xde, MRMSrcReg, (outs VR128:$dst),
+              (ins VR128:$src1, VR128:$src2, VR128:$src3, i32u8imm:$src4),
+              "vsm3rnds2\t{$src4, $src3, $src2, $dst|$dst, $src2, $src3, $src4}",
+              [(set VR128:$dst,
+               (int_x86_vsm3rnds2 VR128:$src1,
+                VR128:$src2, VR128:$src3, timm:$src4))]>,
+              Sched<[WriteVecIMul]>;
+    def rm : Ii8<0xde, MRMSrcMem, (outs VR128:$dst),
+              (ins VR128:$src1, VR128:$src2, i128mem:$src3, i32u8imm:$src4),
+              "vsm3rnds2\t{$src4, $src3, $src2, $dst|$dst, $src2, $src3, $src4}",
+              [(set VR128:$dst,
+               (int_x86_vsm3rnds2 VR128:$src1,
+                VR128:$src2, (loadv4i32 addr:$src3), timm:$src4))]>,
+              Sched<[WriteVecIMul]>;
+  }
+}
+
+defm VSM3MSG1 : SM3_Base<"vsm3msg1">, T8PS;
+defm VSM3MSG2 : SM3_Base<"vsm3msg2">, T8PD;
+defm VSM3RNDS2 : VSM3RNDS2_Base, VEX_4V, TAPD;
+
+// FIXME: Is there a better scheduler class for SM4 than WriteVecIMul?
+let Predicates = [HasSM4] in {
+  multiclass SM4_Base<string OpStr, RegisterClass RC, string VL,
+                      PatFrag LD, X86MemOperand MemOp> {
+    def rr : I<0xda, MRMSrcReg, (outs RC:$dst),
+               (ins RC:$src1, RC:$src2),
+               !strconcat(OpStr, "\t{$src2, $src1, $dst|$dst, $src1, $src2}"),
+               [(set RC:$dst, (!cast<Intrinsic>("int_x86_"#OpStr#VL) RC:$src1,
+                  RC:$src2))]>,
+               Sched<[WriteVecIMul]>;
+    def rm : I<0xda, MRMSrcMem, (outs RC:$dst),
+               (ins RC:$src1, MemOp:$src2),
+               !strconcat(OpStr, "\t{$src2, $src1, $dst|$dst, $src1, $src2}"),
+               [(set RC:$dst, (!cast<Intrinsic>("int_x86_"#OpStr#VL) RC:$src1,
+                 (LD addr:$src2)))]>,
+               Sched<[WriteVecIMul]>;
+  }
+}
+
+defm VSM4KEY4  : SM4_Base<"vsm4key4", VR128, "128", loadv4i32, i128mem>, T8XS, VEX_4V;
+defm VSM4KEY4Y : SM4_Base<"vsm4key4", VR256, "256", loadv8i32, i256mem>, T8XS, VEX_L, VEX_4V;
+defm VSM4RNDS4  : SM4_Base<"vsm4rnds4", VR128, "128", loadv4i32, i128mem>, T8XD, VEX_4V;
+defm VSM4RNDS4Y : SM4_Base<"vsm4rnds4", VR256, "256", loadv8i32, i256mem>, T8XD, VEX_L, VEX_4V;
+
+let Predicates = [HasAVXVNNIINT16], Constraints = "$src1 = $dst" in
+multiclass avx_vnni_int16<bits<8> opc, string OpcodeStr, bit IsCommutable> {
+  let isCommutable = IsCommutable in
+  def rr  : I<opc, MRMSrcReg, (outs VR128:$dst),
+              (ins VR128:$src1, VR128:$src2, VR128:$src3),
+              !strconcat(OpcodeStr, "\t{$src3, $src2, $dst|$dst, $src2, $src3}"),
+              [(set VR128:$dst,
+                (v4i32 (!cast<Intrinsic>("int_x86_avx2_"#OpcodeStr#"_128")
+                        VR128:$src1, VR128:$src2, VR128:$src3)))]>,
+              VEX_4V, Sched<[SchedWriteVecIMul.XMM]>;
+
+  def rm  : I<opc, MRMSrcMem, (outs VR128:$dst),
+              (ins VR128:$src1, VR128:$src2, i128mem:$src3),
+              !strconcat(OpcodeStr, "\t{$src3, $src2, $dst|$dst, $src2, $src3}"),
+              [(set VR128:$dst,
+                (v4i32 (!cast<Intrinsic>("int_x86_avx2_"#OpcodeStr#"_128")
+                        VR128:$src1, VR128:$src2, (loadv4i32 addr:$src3))))]>,
+              VEX_4V, Sched<[SchedWriteVecIMul.XMM]>;
+
+  let isCommutable = IsCommutable in
+  def Yrr  : I<opc, MRMSrcReg, (outs VR256:$dst),
+               (ins VR256:$src1, VR256:$src2, VR256:$src3),
+               !strconcat(OpcodeStr, "\t{$src3, $src2, $dst|$dst, $src2, $src3}"),
+               [(set VR256:$dst,
+                 (v8i32 (!cast<Intrinsic>("int_x86_avx2_"#OpcodeStr#"_256")
+                         VR256:$src1, VR256:$src2, VR256:$src3)))]>,
+               VEX_4V, VEX_L, Sched<[SchedWriteVecIMul.YMM]>;
+
+  def Yrm  : I<opc, MRMSrcMem, (outs VR256:$dst),
+               (ins VR256:$src1, VR256:$src2, i256mem:$src3),
+               !strconcat(OpcodeStr, "\t{$src3, $src2, $dst|$dst, $src2, $src3}"),
+               [(set VR256:$dst,
+                 (v8i32 (!cast<Intrinsic>("int_x86_avx2_"#OpcodeStr#"_256")
+                         VR256:$src1, VR256:$src2, (loadv8i32 addr:$src3))))]>,
+               VEX_4V, VEX_L, Sched<[SchedWriteVecIMul.YMM]>;
+}
+
+defm VPDPWSUD   : avx_vnni_int16<0xd2, "vpdpwsud", 0>, T8XS;
+defm VPDPWSUDS  : avx_vnni_int16<0xd3, "vpdpwsuds", 0>, T8XS;
+defm VPDPWUSD   : avx_vnni_int16<0xd2, "vpdpwusd", 0>, T8PD;
+defm VPDPWUSDS  : avx_vnni_int16<0xd3, "vpdpwusds", 0>, T8PD;
+defm VPDPWUUD   : avx_vnni_int16<0xd2, "vpdpwuud", 1>, T8PS;
+defm VPDPWUUDS  : avx_vnni_int16<0xd3, "vpdpwuuds", 1>, T8PS;

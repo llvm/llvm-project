@@ -105,10 +105,10 @@ public:
   }
 };
 
-void PlainPrinterBase::printHeader(uint64_t Address) {
-  if (Config.PrintAddress) {
+void PlainPrinterBase::printHeader(std::optional<uint64_t> Address) {
+  if (Address.has_value() && Config.PrintAddress) {
     OS << "0x";
-    OS.write_hex(Address);
+    OS.write_hex(*Address);
     StringRef Delimiter = Config.Pretty ? ": " : "\n";
     OS << Delimiter;
   }
@@ -182,7 +182,7 @@ void PlainPrinterBase::print(const DILineInfo &Info, bool Inlined) {
 }
 
 void PlainPrinterBase::print(const Request &Request, const DILineInfo &Info) {
-  printHeader(*Request.Address);
+  printHeader(Request.Address);
   print(Info, false);
   printFooter();
 }
@@ -258,11 +258,6 @@ void PlainPrinterBase::print(const Request &Request,
       OS << '\n';
     }
   printFooter();
-}
-
-void PlainPrinterBase::printInvalidCommand(const Request &Request,
-                                           StringRef Command) {
-  OS << Command << '\n';
 }
 
 bool PlainPrinterBase::printError(const Request &Request,
@@ -365,13 +360,6 @@ void JSONPrinter::print(const Request &Request,
     ObjectList->push_back(std::move(Json));
   else
     printJSON(std::move(Json));
-}
-
-void JSONPrinter::printInvalidCommand(const Request &Request,
-                                      StringRef Command) {
-  printError(Request,
-             StringError("unable to parse arguments: " + Command,
-                         std::make_error_code(std::errc::invalid_argument)));
 }
 
 bool JSONPrinter::printError(const Request &Request,

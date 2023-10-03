@@ -44,11 +44,10 @@ static ThreadRegistry *asan_thread_registry;
 static ThreadArgRetval *thread_data;
 
 static Mutex mu_for_thread_context;
-static LowLevelAllocator allocator_for_thread_context;
 
 static ThreadContextBase *GetAsanThreadContext(u32 tid) {
   Lock lock(&mu_for_thread_context);
-  return new (allocator_for_thread_context) AsanThreadContext(tid);
+  return new (GetGlobalLowLevelAllocator()) AsanThreadContext(tid);
 }
 
 static void InitThreads() {
@@ -91,18 +90,25 @@ AsanThreadContext *GetThreadContextByTidLocked(u32 tid) {
 
 // AsanThread implementation.
 
-AsanThread *AsanThread::Create(thread_callback_t start_routine, void *arg,
+AsanThread *AsanThread::Create(const void *start_data, uptr data_size,
                                u32 parent_tid, StackTrace *stack,
                                bool detached) {
   uptr PageSize = GetPageSizeCached();
   uptr size = RoundUpTo(sizeof(AsanThread), PageSize);
   AsanThread *thread = (AsanThread *)MmapOrDie(size, __func__);
-  thread->start_routine_ = start_routine;
-  thread->arg_ = arg;
+  if (data_size) {
+    uptr availible_size = (uptr)thread + size - (uptr)(thread->start_data_);
+    CHECK_LE(data_size, availible_size);
+    internal_memcpy(thread->start_data_, start_data, data_size);
+  }
   AsanThreadContext::CreateThreadContextArgs args = {thread, stack};
   asanThreadRegistry().CreateThread(0, detached, parent_tid, &args);
 
   return thread;
+}
+
+void AsanThread::GetStartData(void *out, uptr out_size) const {
+  internal_memcpy(out, start_data_, out_size);
 }
 
 void AsanThread::TSDDtor(void *tsd) {
@@ -273,37 +279,17 @@ void AsanThread::Init(const InitOptions *options) {
 // asan_fuchsia.c definies CreateMainThread and SetThreadStackAndTls.
 #if !SANITIZER_FUCHSIA
 
-thread_return_t AsanThread::ThreadStart(tid_t os_id) {
+void AsanThread::ThreadStart(tid_t os_id) {
   Init();
   asanThreadRegistry().StartThread(tid(), os_id, ThreadType::Regular, nullptr);
 
   if (common_flags()->use_sigaltstack)
     SetAlternateSignalStack();
-
-  if (!start_routine_) {
-    // start_routine_ == 0 if we're on the main thread or on one of the
-    // OS X libdispatch worker threads. But nobody is supposed to call
-    // ThreadStart() for the worker threads.
-    CHECK_EQ(tid(), 0);
-    return 0;
-  }
-
-  thread_return_t res = start_routine_(arg_);
-
-  // On POSIX systems we defer this to the TSD destructor. LSan will consider
-  // the thread's memory as non-live from the moment we call Destroy(), even
-  // though that memory might contain pointers to heap objects which will be
-  // cleaned up by a user-defined TSD destructor. Thus, calling Destroy() before
-  // the TSD destructors have run might cause false positives in LSan.
-  if (!SANITIZER_POSIX)
-    this->Destroy();
-
-  return res;
 }
 
 AsanThread *CreateMainThread() {
   AsanThread *main_thread = AsanThread::Create(
-      /* start_routine */ nullptr, /* arg */ nullptr, /* parent_tid */ kMainTid,
+      /* parent_tid */ kMainTid,
       /* stack */ nullptr, /* detached */ true);
   SetCurrentThread(main_thread);
   main_thread->ThreadStart(internal_getpid());

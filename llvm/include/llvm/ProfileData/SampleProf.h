@@ -318,6 +318,14 @@ struct LineLocationHash {
 
 raw_ostream &operator<<(raw_ostream &OS, const LineLocation &Loc);
 
+static inline uint64_t hashFuncName(StringRef F) {
+  // If function name is already MD5 string, do not hash again.
+  uint64_t Hash;
+  if (F.getAsInteger(10, Hash))
+    Hash = MD5Hash(F);
+  return Hash;
+}
+
 /// Representation of a single sample record.
 ///
 /// A sample record is represented by a positive integer value, which
@@ -525,7 +533,9 @@ public:
   SampleContext() : State(UnknownContext), Attributes(ContextNone) {}
 
   SampleContext(StringRef Name)
-      : Name(Name), State(UnknownContext), Attributes(ContextNone) {}
+      : Name(Name), State(UnknownContext), Attributes(ContextNone) {
+        assert(!Name.empty() && "Name is empty");
+      }
 
   SampleContext(SampleContextFrames Context,
                 ContextStateMask CState = RawContext)
@@ -631,8 +641,12 @@ public:
   }
 
   uint64_t getHashCode() const {
-    return hasContext() ? hash_value(getContextFrames())
-                        : hash_value(getName());
+    if (hasContext())
+      return hash_value(getContextFrames());
+
+    // For non-context function name, use its MD5 as hash value, so that it is
+    // consistent with the profile map's key.
+    return hashFuncName(getName());
   }
 
   /// Set the name of the function and clear the current context.
@@ -710,9 +724,12 @@ private:
   uint32_t Attributes;
 };
 
-static inline hash_code hash_value(const SampleContext &arg) {
-  return arg.hasContext() ? hash_value(arg.getContextFrames())
-                          : hash_value(arg.getName());
+static inline hash_code hash_value(const SampleContext &Context) {
+  return Context.getHashCode();
+}
+
+inline raw_ostream &operator<<(raw_ostream &OS, const SampleContext &Context) {
+  return OS << Context.toString();
 }
 
 class FunctionSamples;
@@ -1206,6 +1223,9 @@ public:
     return !(*this == Other);
   }
 
+  template <typename T>
+  const T &getKey() const;
+
 private:
   /// CFG hash value for the function.
   uint64_t FunctionHash = 0;
@@ -1269,12 +1289,131 @@ private:
   const LocToLocMap *IRToProfileLocationMap = nullptr;
 };
 
+template <>
+inline const SampleContext &FunctionSamples::getKey<SampleContext>() const {
+  return getContext();
+}
+
 raw_ostream &operator<<(raw_ostream &OS, const FunctionSamples &FS);
 
-using SampleProfileMap =
-    std::unordered_map<SampleContext, FunctionSamples, SampleContext::Hash>;
+/// This class is a wrapper to associative container MapT<KeyT, ValueT> using
+/// the hash value of the original key as the new key. This greatly improves the
+/// performance of insert and query operations especially when hash values of
+/// keys are available a priori, and reduces memory usage if KeyT has a large
+/// size.
+/// All keys with the same hash value are considered equivalent (i.e. hash
+/// collision is silently ignored). Given such feature this class should only be
+/// used where it does not affect compilation correctness, for example, when
+/// loading a sample profile.
+/// Assuming the hashing algorithm is uniform, we use the formula
+/// 1 - Permute(n, k) / n ^ k where n is the universe size and k is number of
+/// elements chosen at random to calculate the probability of collision. With
+/// 1,000,000 entries the probability is negligible:
+/// 1 - (2^64)!/((2^64-1000000)!*(2^64)^1000000) ~= 3*10^-8.
+/// Source: https://en.wikipedia.org/wiki/Birthday_problem
+template <template <typename, typename, typename...> typename MapT,
+          typename KeyT, typename ValueT, typename... MapTArgs>
+class HashKeyMap : public MapT<hash_code, ValueT, MapTArgs...> {
+public:
+  using base_type = MapT<hash_code, ValueT, MapTArgs...>;
+  using key_type = hash_code;
+  using original_key_type = KeyT;
+  using mapped_type = ValueT;
+  using value_type = typename base_type::value_type;
 
-using NameFunctionSamples = std::pair<SampleContext, const FunctionSamples *>;
+  using iterator = typename base_type::iterator;
+  using const_iterator = typename base_type::const_iterator;
+
+  template <typename... Ts>
+  std::pair<iterator, bool> try_emplace(const key_type &Hash,
+                                        const original_key_type &Key,
+                                        Ts &&...Args) {
+    assert(Hash == hash_value(Key));
+    return base_type::try_emplace(Hash, std::forward<Ts>(Args)...);
+  }
+
+  template <typename... Ts>
+  std::pair<iterator, bool> try_emplace(const original_key_type &Key,
+                                        Ts &&...Args) {
+    key_type Hash = hash_value(Key);
+    return try_emplace(Hash, Key, std::forward<Ts>(Args)...);
+  }
+
+  template <typename... Ts> std::pair<iterator, bool> emplace(Ts &&...Args) {
+    return try_emplace(std::forward<Ts>(Args)...);
+  }
+
+  mapped_type &operator[](const original_key_type &Key) {
+    return try_emplace(Key, mapped_type()).first->second;
+  }
+
+  iterator find(const original_key_type &Key) {
+    key_type Hash = hash_value(Key);
+    auto It = base_type::find(Hash);
+    if (It != base_type::end())
+      return It;
+    return base_type::end();
+  }
+
+  const_iterator find(const original_key_type &Key) const {
+    key_type Hash = hash_value(Key);
+    auto It = base_type::find(Hash);
+    if (It != base_type::end())
+      return It;
+    return base_type::end();
+  }
+
+  size_t erase(const original_key_type &Ctx) {
+    auto It = find(Ctx);
+    if (It != base_type::end()) {
+      base_type::erase(It);
+      return 1;
+    }
+    return 0;
+  }
+};
+
+/// This class provides operator overloads to the map container using MD5 as the
+/// key type, so that existing code can still work in most cases using
+/// SampleContext as key.
+/// Note: when populating container, make sure to assign the SampleContext to
+/// the mapped value immediately because the key no longer holds it.
+class SampleProfileMap
+    : public HashKeyMap<std::unordered_map, SampleContext, FunctionSamples> {
+public:
+  // Convenience method because this is being used in many places. Set the
+  // FunctionSamples' context if its newly inserted.
+  mapped_type &Create(const SampleContext &Ctx) {
+    auto Ret = try_emplace(Ctx, FunctionSamples());
+    if (Ret.second)
+      Ret.first->second.setContext(Ctx);
+    return Ret.first->second;
+  }
+
+  iterator find(const SampleContext &Ctx) {
+    return HashKeyMap<std::unordered_map, SampleContext, FunctionSamples>::find(
+        Ctx);
+  }
+
+  const_iterator find(const SampleContext &Ctx) const {
+    return HashKeyMap<std::unordered_map, SampleContext, FunctionSamples>::find(
+        Ctx);
+  }
+
+  // Overloaded find() to lookup a function by name.
+  iterator find(StringRef Fname) {
+    return base_type::find(hashFuncName(Fname));
+  }
+
+  size_t erase(const SampleContext &Ctx) {
+    return HashKeyMap<std::unordered_map, SampleContext, FunctionSamples>::
+        erase(Ctx);
+  }
+
+  size_t erase(const key_type &Key) { return base_type::erase(Key); }
+};
+
+using NameFunctionSamples = std::pair<hash_code, const FunctionSamples *>;
 
 void sortFuncProfiles(const SampleProfileMap &ProfileMap,
                       std::vector<NameFunctionSamples> &SortedProfiles);
@@ -1320,8 +1459,6 @@ public:
                                        bool MergeColdContext,
                                        uint32_t ColdContextFrameLength,
                                        bool TrimBaseProfileOnly);
-  // Canonicalize context profile name and attributes.
-  void canonicalizeContextProfiles();
 
 private:
   SampleProfileMap &ProfileMap;
@@ -1367,12 +1504,12 @@ public:
                              SampleProfileMap &OutputProfiles,
                              bool ProfileIsCS = false) {
     if (ProfileIsCS) {
-      for (const auto &I : InputProfiles)
-        OutputProfiles[I.second.getName()].merge(I.second);
-      // Retain the profile name and clear the full context for each function
-      // profile.
-      for (auto &I : OutputProfiles)
-        I.second.setContext(SampleContext(I.first));
+      for (const auto &I : InputProfiles) {
+        // Retain the profile name and clear the full context for each function
+        // profile.
+        FunctionSamples &FS = OutputProfiles.Create(I.second.getName());
+        FS.merge(I.second);
+      }
     } else {
       for (const auto &I : InputProfiles)
         flattenNestedProfile(OutputProfiles, I.second);

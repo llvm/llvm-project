@@ -70,7 +70,7 @@ func.func @generic_no_region(%arg0: memref<f32>) {
 // -----
 
 func.func @generic_mismatched_num_returns(%arg0: memref<f32>) {
-  // expected-error @+6 {{op expected number of yield values (1) to match the number of operands of the enclosing LinalgOp (0)}}
+  // expected-error @+6 {{op expected number of yield values (0) to match the number of inits / outs operands of the enclosing LinalgOp (1)}}
   linalg.generic {
       indexing_maps =  [ affine_map<() -> ()> ],
       iterator_types = []}
@@ -202,7 +202,7 @@ func.func @generic_empty_region(%arg0: memref<f32>) {
 // -----
 
 func.func @generic_mismatched_num_arguments(%arg0: memref<f32>) {
-  // expected-error @+6 {{'linalg.yield' op expected number of yield values (2) to match the number of operands of the enclosing LinalgOp (1)}}
+  // expected-error @+6 {{'linalg.yield' op expected number of yield values (1) to match the number of inits / outs operands of the enclosing LinalgOp (2)}}
   linalg.generic {
       indexing_maps =  [ affine_map<() -> ()>, affine_map<() -> ()> ],
       iterator_types = []}
@@ -399,7 +399,7 @@ func.func @map_binary_wrong_yield_operands(
           outs(%init:tensor<64xf32>)
           (%lhs_elem: f32, %rhs_elem: f32) {
             %0 = arith.addf %lhs_elem, %rhs_elem: f32
-            // expected-error @+1{{'linalg.yield' op expected number of yield values (1) to match the number of operands of the enclosing LinalgOp (2)}}
+            // expected-error @+1{{'linalg.yield' op expected number of yield values (2) to match the number of inits / outs operands of the enclosing LinalgOp (1)}}
             linalg.yield %0, %0: f32, f32
           }
   func.return %add : tensor<64xf32>

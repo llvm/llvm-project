@@ -45,9 +45,9 @@ bool DINodeAttr::classof(Attribute attr) {
   return llvm::isa<DIBasicTypeAttr, DICompileUnitAttr, DICompositeTypeAttr,
                    DIDerivedTypeAttr, DIFileAttr, DILabelAttr,
                    DILexicalBlockAttr, DILexicalBlockFileAttr,
-                   DILocalVariableAttr, DINamespaceAttr, DINullTypeAttr,
-                   DISubprogramAttr, DISubrangeAttr, DISubroutineTypeAttr>(
-      attr);
+                   DILocalVariableAttr, DIModuleAttr, DINamespaceAttr,
+                   DINullTypeAttr, DISubprogramAttr, DISubrangeAttr,
+                   DISubroutineTypeAttr>(attr);
 }
 
 //===----------------------------------------------------------------------===//
@@ -56,7 +56,7 @@ bool DINodeAttr::classof(Attribute attr) {
 
 bool DIScopeAttr::classof(Attribute attr) {
   return llvm::isa<DICompileUnitAttr, DICompositeTypeAttr, DIFileAttr,
-                   DILocalScopeAttr, DINamespaceAttr>(attr);
+                   DILocalScopeAttr, DIModuleAttr, DINamespaceAttr>(attr);
 }
 
 //===----------------------------------------------------------------------===//
@@ -75,6 +75,14 @@ bool DILocalScopeAttr::classof(Attribute attr) {
 bool DITypeAttr::classof(Attribute attr) {
   return llvm::isa<DINullTypeAttr, DIBasicTypeAttr, DICompositeTypeAttr,
                    DIDerivedTypeAttr, DISubroutineTypeAttr>(attr);
+}
+
+//===----------------------------------------------------------------------===//
+// TBAANodeAttr
+//===----------------------------------------------------------------------===//
+
+bool TBAANodeAttr::classof(Attribute attr) {
+  return llvm::isa<TBAATypeDescriptorAttr, TBAARootAttr>(attr);
 }
 
 //===----------------------------------------------------------------------===//

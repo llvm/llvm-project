@@ -17,11 +17,10 @@
 //
 //===----------------------------------------------------------------------===//
 
-
 #include "PPCELFStreamer.h"
 #include "PPCFixupKinds.h"
-#include "PPCInstrInfo.h"
 #include "PPCMCCodeEmitter.h"
+#include "PPCMCTargetDesc.h"
 #include "llvm/BinaryFormat/ELF.h"
 #include "llvm/MC/MCAsmBackend.h"
 #include "llvm/MC/MCAssembler.h"

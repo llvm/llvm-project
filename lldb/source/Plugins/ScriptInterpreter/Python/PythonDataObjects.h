@@ -343,6 +343,15 @@ public:
     return python::Take<PythonObject>(obj);
   }
 
+  llvm::Expected<PythonObject> GetType() const {
+    if (!m_py_obj)
+      return nullDeref();
+    PyObject *obj = PyObject_Type(m_py_obj);
+    if (!obj)
+      return exception();
+    return python::Take<PythonObject>(obj);
+  }
+
   llvm::Expected<bool> IsTrue() {
     if (!m_py_obj)
       return nullDeref();

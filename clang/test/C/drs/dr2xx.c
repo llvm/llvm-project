@@ -231,7 +231,7 @@ void dr251(void) {
   struct dr251_fred *ptr; /* expected-error {{use of 'dr251_fred' with tag type that does not match previous declaration}} */
 }
 
-#if __STDC_VERSION__ < 202000L
+#if __STDC_VERSION__ < 202311L
 /* WG14 DR252: yes
  * Incomplete argument types when calling non-prototyped functions
  */
@@ -247,10 +247,10 @@ void dr252(void) {
    * prototype, but Clang treats it as an error.
    */
   dr252_no_proto(dr252_proto()); /* expected-error {{argument type 'void' is incomplete}}
-                                    expected-warning {{passing arguments to 'dr252_no_proto' without a prototype is deprecated in all versions of C and is not supported in C2x}}
+                                    expected-warning {{passing arguments to 'dr252_no_proto' without a prototype is deprecated in all versions of C and is not supported in C23}}
                                   */
 }
-#endif /* __STDC_VERSION__ < 202000L */
+#endif /* __STDC_VERSION__ < 202311L */
 
 /* WG14 DR258: yes
  * Ordering of "defined" and macro replacement

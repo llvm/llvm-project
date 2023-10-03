@@ -16,69 +16,14 @@
 using namespace mlir;
 using namespace mlir::LLVM;
 
-/// Verifies the given array attribute contains symbol references and checks the
-/// referenced symbol types using the provided verification function.
-static LogicalResult
-verifySymbolRefs(Operation *op, StringRef name, ArrayAttr symbolRefs,
-                 llvm::function_ref<LogicalResult(Operation *, SymbolRefAttr)>
-                     verifySymbolType) {
-  assert(symbolRefs && "expected a non-null attribute");
-
-  // Verify that the attribute is a symbol ref array attribute,
-  // because this constraint is not verified for all attribute
-  // names processed here (e.g. 'tbaa'). This verification
-  // is redundant in some cases.
-  if (!llvm::all_of(symbolRefs, [](Attribute attr) {
-        return attr && llvm::isa<SymbolRefAttr>(attr);
-      }))
-    return op->emitOpError() << name
-                             << " attribute failed to satisfy constraint: "
-                                "symbol ref array attribute";
-
-  for (SymbolRefAttr symbolRef : symbolRefs.getAsRange<SymbolRefAttr>()) {
-    StringAttr metadataName = symbolRef.getRootReference();
-    StringAttr symbolName = symbolRef.getLeafReference();
-    // We want @metadata::@symbol, not just @symbol
-    if (metadataName == symbolName) {
-      return op->emitOpError() << "expected '" << symbolRef
-                               << "' to specify a fully qualified reference";
-    }
-    auto metadataOp = SymbolTable::lookupNearestSymbolFrom<LLVM::MetadataOp>(
-        op->getParentOp(), metadataName);
-    if (!metadataOp)
-      return op->emitOpError()
-             << "expected '" << symbolRef << "' to reference a metadata op";
-    Operation *symbolOp =
-        SymbolTable::lookupNearestSymbolFrom(metadataOp, symbolName);
-    if (!symbolOp)
-      return op->emitOpError()
-             << "expected '" << symbolRef << "' to be a valid reference";
-    if (failed(verifySymbolType(symbolOp, symbolRef))) {
-      return failure();
-    }
-  }
-
+/// Verifies that all elements of `array` are instances of `Attr`.
+template <class AttrT>
+static LogicalResult isArrayOf(Operation *op, ArrayAttr array) {
+  for (Attribute iter : array)
+    if (!isa<AttrT>(iter))
+      return op->emitOpError("expected op to return array of ")
+             << AttrT::getMnemonic() << " attributes";
   return success();
-}
-
-/// Verifies the given array attribute contains symbol references that point to
-/// metadata operations of the given type.
-template <typename OpTy>
-LogicalResult verifySymbolRefsPointTo(Operation *op, StringRef name,
-                                      ArrayAttr symbolRefs) {
-  if (!symbolRefs)
-    return success();
-
-  auto verifySymbolType = [op](Operation *symbolOp,
-                               SymbolRefAttr symbolRef) -> LogicalResult {
-    if (!isa<OpTy>(symbolOp)) {
-      return op->emitOpError()
-             << "expected '" << symbolRef << "' to resolve to a "
-             << OpTy::getOperationName();
-    }
-    return success();
-  };
-  return verifySymbolRefs(op, name, symbolRefs, verifySymbolType);
 }
 
 //===----------------------------------------------------------------------===//
@@ -90,11 +35,8 @@ LogicalResult mlir::LLVM::detail::verifyAccessGroupOpInterface(Operation *op) {
   ArrayAttr accessGroups = iface.getAccessGroupsOrNull();
   if (!accessGroups)
     return success();
-  for (Attribute iter : accessGroups)
-    if (!isa<AccessGroupAttr>(iter))
-      return op->emitOpError("expected op to return array of ")
-             << AccessGroupAttr::getMnemonic() << " attributes";
-  return success();
+
+  return isArrayOf<AccessGroupAttr>(op, accessGroups);
 }
 
 //===----------------------------------------------------------------------===//
@@ -104,10 +46,59 @@ LogicalResult mlir::LLVM::detail::verifyAccessGroupOpInterface(Operation *op) {
 LogicalResult
 mlir::LLVM::detail::verifyAliasAnalysisOpInterface(Operation *op) {
   auto iface = cast<AliasAnalysisOpInterface>(op);
-  if (failed(verifySymbolRefsPointTo<LLVM::TBAATagOp>(
-          iface, "tbaa tags", iface.getTBAATagsOrNull())))
-    return failure();
-  return success();
+
+  if (auto aliasScopes = iface.getAliasScopesOrNull())
+    if (failed(isArrayOf<AliasScopeAttr>(op, aliasScopes)))
+      return failure();
+
+  if (auto noAliasScopes = iface.getNoAliasScopesOrNull())
+    if (failed(isArrayOf<AliasScopeAttr>(op, noAliasScopes)))
+      return failure();
+
+  ArrayAttr tags = iface.getTBAATagsOrNull();
+  if (!tags)
+    return success();
+
+  return isArrayOf<TBAATagAttr>(op, tags);
+}
+
+SmallVector<Value> mlir::LLVM::AtomicCmpXchgOp::getAccessedOperands() {
+  return {getPtr()};
+}
+
+SmallVector<Value> mlir::LLVM::AtomicRMWOp::getAccessedOperands() {
+  return {getPtr()};
+}
+
+SmallVector<Value> mlir::LLVM::LoadOp::getAccessedOperands() {
+  return {getAddr()};
+}
+
+SmallVector<Value> mlir::LLVM::StoreOp::getAccessedOperands() {
+  return {getAddr()};
+}
+
+SmallVector<Value> mlir::LLVM::MemcpyOp::getAccessedOperands() {
+  return {getDst(), getSrc()};
+}
+
+SmallVector<Value> mlir::LLVM::MemcpyInlineOp::getAccessedOperands() {
+  return {getDst(), getSrc()};
+}
+
+SmallVector<Value> mlir::LLVM::MemmoveOp::getAccessedOperands() {
+  return {getDst(), getSrc()};
+}
+
+SmallVector<Value> mlir::LLVM::MemsetOp::getAccessedOperands() {
+  return {getDst()};
+}
+
+SmallVector<Value> mlir::LLVM::CallOp::getAccessedOperands() {
+  return llvm::to_vector(
+      llvm::make_filter_range(getArgOperands(), [](Value arg) {
+        return isa<LLVMPointerType>(arg.getType());
+      }));
 }
 
 #include "mlir/Dialect/LLVMIR/LLVMInterfaces.cpp.inc"

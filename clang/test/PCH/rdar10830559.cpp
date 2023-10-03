@@ -9,8 +9,6 @@
 // RUN: %clang_cc1 -emit-pch -fpch-instantiate-templates -o %t %s
 // RUN: %clang_cc1 -include-pch %t -emit-llvm-only %t.empty.cpp
 
-// rdar://10830559
-
 //#pragma ms_struct on
 
 template< typename T >

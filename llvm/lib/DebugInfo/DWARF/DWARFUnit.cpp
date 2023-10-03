@@ -828,7 +828,7 @@ void DWARFUnit::updateVariableDieMap(DWARFDie Die) {
   // no type), then we use a size of one to still allow symbolization of the
   // exact address.
   uint64_t GVSize = 1;
-  if (DWARFDie BaseType = Die.getAttributeValueAsReferencedDie(DW_AT_type))
+  if (Die.getAttributeValueAsReferencedDie(DW_AT_type))
     if (std::optional<uint64_t> Size = Die.getTypeSize(getAddressByteSize()))
       GVSize = *Size;
 

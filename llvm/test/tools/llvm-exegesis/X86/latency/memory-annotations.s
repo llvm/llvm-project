@@ -1,4 +1,4 @@
-# REQUIRES: exegesis-can-execute-in-subprocess, x86_64-linux
+# REQUIRES: exegesis-can-measure-latency, x86_64-linux
 
 # Test the basic functionality of memory annotations, namely that we can
 # specify a memory definition, map it into the process, and then use the
@@ -9,6 +9,9 @@
 
 # CHECK: measurements:
 # CHECK-NEXT: value: {{.*}}, per_snippet_value: {{.*}}
+
+# TODO: Sometimes transiently fails on PTRACE_ATTACH
+# ALLOW_RETRIES: 2
 
 # LLVM-EXEGESIS-MEM-DEF test1 4096 2147483647
 # LLVM-EXEGESIS-MEM-MAP test1 1048576

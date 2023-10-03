@@ -1,12 +1,12 @@
 // RUN: %check_clang_tidy %s readability-function-size %t -- \
-// RUN:     -config='{CheckOptions: [ \
-// RUN:         {key: readability-function-size.LineThreshold, value: 0}, \
-// RUN:         {key: readability-function-size.StatementThreshold, value: 0}, \
-// RUN:         {key: readability-function-size.BranchThreshold, value: 0}, \
-// RUN:         {key: readability-function-size.ParameterThreshold, value: 5}, \
-// RUN:         {key: readability-function-size.NestingThreshold, value: 2}, \
-// RUN:         {key: readability-function-size.VariableThreshold, value: 1} \
-// RUN:     ]}'
+// RUN:     -config='{CheckOptions: { \
+// RUN:         readability-function-size.LineThreshold: 0, \
+// RUN:         readability-function-size.StatementThreshold: 0, \
+// RUN:         readability-function-size.BranchThreshold: 0, \
+// RUN:         readability-function-size.ParameterThreshold: 5, \
+// RUN:         readability-function-size.NestingThreshold: 2, \
+// RUN:         readability-function-size.VariableThreshold: 1 \
+// RUN:     }}'
 
 // Bad formatting is intentional, don't run clang-format over the whole file!
 

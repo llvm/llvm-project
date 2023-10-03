@@ -409,7 +409,7 @@ private:
   Error readHeader(const RawInstrProf::Header &Header);
 
   template <class IntT> IntT swap(IntT Int) const {
-    return ShouldSwapBytes ? sys::getSwappedBytes(Int) : Int;
+    return ShouldSwapBytes ? llvm::byteswap(Int) : Int;
   }
 
   support::endianness getDataEndianness() const {
@@ -716,9 +716,12 @@ public:
   /// When return a hash_mismatch error and MismatchedFuncSum is not nullptr,
   /// the sum of all counters in the mismatched function will be set to
   /// MismatchedFuncSum. If there are multiple instances of mismatched
-  /// functions, MismatchedFuncSum returns the maximum.
+  /// functions, MismatchedFuncSum returns the maximum. If \c FuncName is not
+  /// found, try to lookup \c DeprecatedFuncName to handle profiles built by
+  /// older compilers.
   Expected<InstrProfRecord>
   getInstrProfRecord(StringRef FuncName, uint64_t FuncHash,
+                     StringRef DeprecatedFuncName = "",
                      uint64_t *MismatchedFuncSum = nullptr);
 
   /// Return the memprof record for the function identified by

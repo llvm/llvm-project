@@ -5,8 +5,6 @@
 //
 //===----------------------------------------------------------------------===//
 
-// XFAIL: LIBCXX-FREEBSD-FIXME
-
 // UNSUPPORTED: c++03, c++11, c++14, c++17
 // UNSUPPORTED: no-localization
 // UNSUPPORTED: GCC-ALWAYS_INLINE-FIXME
@@ -189,17 +187,17 @@ static void test_valid_values() {
 #endif                   // defined(_WIN32)
             "%y='70'\t"
             "%Y='1970'\t"
-#if defined(__APPLE__) || defined(_AIX) || defined(_WIN32)
+#if defined(__APPLE__) || defined(_AIX) || defined(_WIN32) || defined(__FreeBSD__)
             "%EC='19'\t"
             "%Ey='70'\t"
             "%EY='1970'\t"
             "%Oy='70'\t"
-#else  // defined(__APPLE__) || defined(_AIX) || defined(_WIN32)
+#else  // defined(__APPLE__) || defined(_AIX) || defined(_WIN32) || defined(__FreeBSD__)
             "%EC='昭和'\t"
             "%Ey='45'\t"
             "%EY='昭和45年'\t"
             "%Oy='七十'\t"
-#endif // defined(__APPLE__) || defined(_AIX) || defined(_WIN32)
+#endif // defined(__APPLE__) || defined(_AIX) || defined(_WIN32) || defined(__FreeBSD__)
             "\n"),
         lfmt,
         std::chrono::year_month{std::chrono::year{1970}, std::chrono::January});
@@ -229,17 +227,17 @@ static void test_valid_values() {
 #endif                   // defined(_WIN32)
             "%y='04'\t"
             "%Y='2004'\t"
-#if defined(__APPLE__) || defined(_AIX) || defined(_WIN32)
+#if defined(__APPLE__) || defined(_AIX) || defined(_WIN32) || defined(__FreeBSD__)
             "%EC='20'\t"
             "%Ey='04'\t"
             "%EY='2004'\t"
             "%Oy='04'\t"
-#else  // defined(__APPLE__) || defined(_AIX) || defined(_WIN32)
+#else  // defined(__APPLE__) || defined(_AIX) || defined(_WIN32) || defined(__FreeBSD__)
             "%EC='平成'\t"
             "%Ey='16'\t"
             "%EY='平成16年'\t"
             "%Oy='四'\t"
-#endif // defined(__APPLE__) || defined(_AIX) || defined(_WIN32)
+#endif // defined(__APPLE__) || defined(_AIX) || defined(_WIN32) || defined(__FreeBSD__)
             "\n"),
         lfmt,
         std::chrono::year_month{std::chrono::year{2004}, std::chrono::May});

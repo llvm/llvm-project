@@ -10,13 +10,13 @@
 
 // REQUIRES: has-unix-headers
 // UNSUPPORTED: c++03, c++11, c++14, c++17
-// UNSUPPORTED: !libcpp-has-hardened-mode && !libcpp-has-debug-mode
+// UNSUPPORTED: !libcpp-hardening-mode=debug
 // XFAIL: availability-verbose_abort-missing
 // ADDITIONAL_COMPILE_FLAGS: -D_LIBCPP_DEBUG_STRICT_WEAK_ORDERING_CHECK
 // When the debug mode is enabled, this test fails because we actually catch on the fly that the comparator is not
 // a strict-weak ordering before we catch that we'd dereference out-of-bounds inside std::sort, which leads to different
 // errors than the ones tested below.
-// XFAIL: libcpp-has-debug-mode
+// XFAIL: libcpp-hardening-mode=debug
 
 // This test uses a specific combination of an invalid comparator and sequence of values to
 // ensure that our sorting functions do not go out-of-bounds and satisfy strict weak ordering in that case.

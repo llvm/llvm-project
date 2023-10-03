@@ -191,6 +191,16 @@ MachineOperand *GCNDPPCombine::getOldOpndValue(MachineOperand &OldOpnd) const {
   return &OldOpnd;
 }
 
+[[maybe_unused]] static unsigned getOperandSize(MachineInstr &MI, unsigned Idx,
+                               MachineRegisterInfo &MRI) {
+  int16_t RegClass = MI.getDesc().operands()[Idx].RegClass;
+  if (RegClass == -1)
+    return 0;
+
+  const TargetRegisterInfo *TRI = MRI.getTargetRegisterInfo();
+  return TRI->getRegSizeInBits(*TRI->getRegClass(RegClass));
+}
+
 MachineInstr *GCNDPPCombine::createDPPInst(MachineInstr &OrigMI,
                                            MachineInstr &MovMI,
                                            RegSubRegPair CombOldVGPR,
@@ -278,6 +288,7 @@ MachineInstr *GCNDPPCombine::createDPPInst(MachineInstr &OrigMI,
     }
     auto *Src0 = TII->getNamedOperand(MovMI, AMDGPU::OpName::src0);
     assert(Src0);
+    int Src0Idx = NumOperands;
     if (!TII->isOperandLegal(*DPPInst.getInstr(), NumOperands, Src0)) {
       LLVM_DEBUG(dbgs() << "  failed: src0 is illegal\n");
       Fail = true;
@@ -301,7 +312,17 @@ MachineInstr *GCNDPPCombine::createDPPInst(MachineInstr &OrigMI,
     }
     auto *Src1 = TII->getNamedOperand(OrigMI, AMDGPU::OpName::src1);
     if (Src1) {
-      if (!TII->isOperandLegal(*DPPInst.getInstr(), NumOperands, Src1)) {
+      int OpNum = NumOperands;
+      // If subtarget does not support SGPRs for src1 operand then the
+      // requirements are the same as for src0. We check src0 instead because
+      // pseudos are shared between subtargets and allow SGPR for src1 on all.
+      if (!ST->hasDPPSrc1SGPR()) {
+        assert(getOperandSize(*DPPInst, Src0Idx, *MRI) ==
+                   getOperandSize(*DPPInst, NumOperands, *MRI) &&
+               "Src0 and Src1 operands should have the same size");
+        OpNum = Src0Idx;
+      }
+      if (!TII->isOperandLegal(*DPPInst.getInstr(), OpNum, Src1)) {
         LLVM_DEBUG(dbgs() << "  failed: src1 is illegal\n");
         Fail = true;
         break;
@@ -505,7 +526,7 @@ bool GCNDPPCombine::combineDPPMov(MachineInstr &MovMI) const {
       MovMI.getOpcode() == AMDGPU::V_MOV_B64_dpp) {
     auto *DppCtrl = TII->getNamedOperand(MovMI, AMDGPU::OpName::dpp_ctrl);
     assert(DppCtrl && DppCtrl->isImm());
-    if (!AMDGPU::isLegal64BitDPPControl(DppCtrl->getImm())) {
+    if (!AMDGPU::isLegalDPALU_DPPControl(DppCtrl->getImm())) {
       LLVM_DEBUG(dbgs() << "  failed: 64 bit dpp move uses unsupported"
                            " control value\n");
       // Let it split, then control may become legal.
@@ -728,7 +749,7 @@ bool GCNDPPCombine::runOnMachineFunction(MachineFunction &MF) {
         ++NumDPPMovsCombined;
       } else if (MI.getOpcode() == AMDGPU::V_MOV_B64_DPP_PSEUDO ||
                  MI.getOpcode() == AMDGPU::V_MOV_B64_dpp) {
-        if (ST->has64BitDPP() && combineDPPMov(MI)) {
+        if (ST->hasDPALU_DPP() && combineDPPMov(MI)) {
           Changed = true;
           ++NumDPPMovsCombined;
         } else {

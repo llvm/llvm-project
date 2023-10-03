@@ -1260,10 +1260,6 @@ public:
   /// the language based on the target options where applicable.
   virtual void adjust(DiagnosticsEngine &Diags, LangOptions &Opts);
 
-  /// Adjust target options based on codegen options.
-  virtual void adjustTargetOptions(const CodeGenOptions &CGOpts,
-                                   TargetOptions &TargetOpts) const {}
-
   /// Initialize the map with the default set of target features for the
   /// CPU this should include all legal feature strings on the target.
   ///
@@ -1414,7 +1410,9 @@ public:
 
   /// Identify whether this target supports IFuncs.
   bool supportsIFunc() const {
-    return getTriple().isOSBinFormatELF() && !getTriple().isOSFuchsia();
+    return getTriple().isOSBinFormatELF() &&
+           ((getTriple().isOSLinux() && !getTriple().isMusl()) ||
+            getTriple().isOSFreeBSD());
   }
 
   // Validate the contents of the __builtin_cpu_supports(const char*)

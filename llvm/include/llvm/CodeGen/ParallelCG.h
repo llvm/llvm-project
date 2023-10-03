@@ -36,7 +36,8 @@ void splitCodeGen(
     Module &M, ArrayRef<raw_pwrite_stream *> OSs,
     ArrayRef<llvm::raw_pwrite_stream *> BCOSs,
     const std::function<std::unique_ptr<TargetMachine>()> &TMFactory,
-    CodeGenFileType FileType = CGFT_ObjectFile, bool PreserveLocals = false);
+    CodeGenFileType FileType = CodeGenFileType::ObjectFile,
+    bool PreserveLocals = false);
 
 } // namespace llvm
 

@@ -112,7 +112,7 @@ static Distro::DistroType DetectDistro(llvm::vfs::FileSystem &VFS) {
   if (Version != Distro::UnknownDistro)
     return Version;
 
-  // Otherwise try some distro-specific quirks for RedHat...
+  // Otherwise try some distro-specific quirks for Red Hat...
   llvm::ErrorOr<std::unique_ptr<llvm::MemoryBuffer>> File =
       VFS.getBufferForFile("/etc/redhat-release");
 
@@ -170,6 +170,7 @@ static Distro::DistroType DetectDistro(llvm::vfs::FileSystem &VFS) {
         .Case("buster/sid", Distro::DebianBuster)
         .Case("bullseye/sid", Distro::DebianBullseye)
         .Case("bookworm/sid", Distro::DebianBookworm)
+        .Case("trixie/sid", Distro::DebianTrixie)
         .Default(Distro::UnknownDistro);
   }
 

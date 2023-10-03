@@ -843,3 +843,36 @@ void positiveSingleTemplateType() {
 }
 
 void instantiatePositiveSingleTemplateType() { positiveSingleTemplateType<ExpensiveToCopyType>(); }
+
+struct Struct {
+  ExpensiveToCopyType Member;
+};
+
+void positiveConstMemberExpr() {
+  Struct Orig;
+  auto UC = Orig;
+  // CHECK-MESSAGES: [[@LINE-1]]:8: warning: local copy 'UC'
+  // CHECK-FIXES: const auto& UC = Orig;
+  const auto &ConstRef = UC.Member;
+  auto MemberCopy = UC.Member;
+  bool b = UC.Member.constMethod();
+  useByValue(UC.Member);
+  useAsConstReference(UC.Member);
+  useByValue(UC.Member);
+}
+
+void negativeNonConstMemberExpr() {
+  Struct Orig;
+  {
+    auto Copy = Orig;
+    Copy.Member.nonConstMethod();
+  }
+  {
+    auto Copy = Orig;
+    mutate(Copy.Member);
+  }
+  {
+    auto Copy = Orig;
+    mutate(&Copy.Member);
+  }
+}

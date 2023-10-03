@@ -11,6 +11,7 @@
 #include "llvm/ADT/SCCIterator.h"
 #include "llvm/ADT/Statistic.h"
 #include "llvm/DebugInfo/Symbolize/SymbolizableModule.h"
+#include "llvm/Transforms/IPO/SampleProfile.h"
 #include <cstdint>
 #include <queue>
 
@@ -35,13 +36,6 @@ STATISTIC(
 // TODO: the actual threshold to be tuned here because the size here is based
 // on machine code not LLVM IR.
 namespace llvm {
-extern cl::opt<int> SampleHotCallSiteThreshold;
-extern cl::opt<int> SampleColdCallSiteThreshold;
-extern cl::opt<int> ProfileInlineGrowthLimit;
-extern cl::opt<int> ProfileInlineLimitMin;
-extern cl::opt<int> ProfileInlineLimitMax;
-extern cl::opt<bool> SortProfiledSCC;
-
 cl::opt<bool> EnableCSPreInliner(
     "csspgo-preinliner", cl::Hidden, cl::init(true),
     cl::desc("Run a global pre-inliner to merge context profile based on "
@@ -186,7 +180,7 @@ bool CSPreInliner::shouldInline(ProfiledInlineCandidate &Candidate) {
         (NormalizationUpperBound - NormalizationLowerBound);
     if (NormalizedHotness > 1.0)
       NormalizedHotness = 1.0;
-    // Add 1 to to ensure hot callsites get a non-zero threshold, which could
+    // Add 1 to ensure hot callsites get a non-zero threshold, which could
     // happen when SampleColdCallSiteThreshold is 0. This is when we do not
     // want any inlining for cold callsites.
     SampleThreshold = SampleHotCallSiteThreshold * NormalizedHotness * 100 +

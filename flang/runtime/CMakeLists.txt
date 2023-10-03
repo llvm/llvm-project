@@ -150,7 +150,10 @@ option(FLANG_EXPERIMENTAL_CUDA_RUNTIME
 
 # List of files that are buildable for all devices.
 set(supported_files
+  descriptor.cpp
+  terminator.cpp
   transformational.cpp
+  type-code.cpp
   )
 
 if (FLANG_EXPERIMENTAL_CUDA_RUNTIME)
@@ -173,6 +176,11 @@ if (FLANG_EXPERIMENTAL_CUDA_RUNTIME)
     # Allow varargs.
     set(CUDA_COMPILE_OPTIONS
       -Xclang -fcuda-allow-variadic-functions
+      )
+  endif()
+  if ("${CMAKE_CUDA_COMPILER_ID}" MATCHES "NVIDIA")
+    set(CUDA_COMPILE_OPTIONS
+      --expt-relaxed-constexpr
       )
   endif()
   set_source_files_properties(${supported_files} PROPERTIES COMPILE_OPTIONS

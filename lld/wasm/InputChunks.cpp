@@ -451,7 +451,7 @@ void MergeInputChunk::splitStrings(ArrayRef<uint8_t> data) {
       fatal(toString(this) + ": string is not null terminated");
     size_t size = end + 1;
 
-    pieces.emplace_back(off, xxHash64(s.substr(0, size)), true);
+    pieces.emplace_back(off, xxh3_64bits(s.substr(0, size)), true);
     s = s.substr(size);
     off += size;
   }

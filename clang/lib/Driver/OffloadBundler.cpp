@@ -1265,8 +1265,9 @@ Error OffloadBundler::UnbundleArchive() {
         OutputArchivesMap.find(Target);
     if (CurArchiveMembers != OutputArchivesMap.end()) {
       if (Error WriteErr = writeArchive(FileName, CurArchiveMembers->getValue(),
-                                        true, getDefaultArchiveKindForHost(),
-                                        true, false, nullptr))
+                                        SymtabWritingMode::NormalSymtab,
+                                        getDefaultArchiveKindForHost(), true,
+                                        false, nullptr))
         return WriteErr;
     } else if (!BundlerConfig.AllowMissingBundles) {
       std::string ErrMsg =
@@ -1280,9 +1281,9 @@ Error OffloadBundler::UnbundleArchive() {
              // the missing input file.
       std::vector<llvm::NewArchiveMember> EmptyArchive;
       EmptyArchive.clear();
-      if (Error WriteErr = writeArchive(FileName, EmptyArchive, true,
-                                        getDefaultArchiveKindForHost(), true,
-                                        false, nullptr))
+      if (Error WriteErr = writeArchive(
+              FileName, EmptyArchive, SymtabWritingMode::NormalSymtab,
+              getDefaultArchiveKindForHost(), true, false, nullptr))
         return WriteErr;
     }
   }

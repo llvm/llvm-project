@@ -43,7 +43,7 @@ class GBRSimplex;
 /// these constraints that are redundant, i.e. a subset of constraints that
 /// doesn't constrain the affine set further after adding the non-redundant
 /// constraints. The LexSimplex class provides support for computing the
-/// lexicographic minimum of an IntegerRelation. The SymbolicLexMin class
+/// lexicographic minimum of an IntegerRelation. The SymbolicLexOpt class
 /// provides support for computing symbolic lexicographic minimums. All of these
 /// classes can be constructed from an IntegerRelation, and all inherit common
 /// functionality from SimplexBase.
@@ -338,7 +338,7 @@ protected:
   unsigned nSymbol;
 
   /// The matrix representing the tableau.
-  Matrix tableau;
+  IntMatrix tableau;
 
   /// This is true if the tableau has been detected to be empty, false
   /// otherwise.
@@ -529,18 +529,18 @@ private:
   std::optional<unsigned> maybeGetNonIntegralVarRow() const;
 };
 
-/// Represents the result of a symbolic lexicographic minimization computation.
-struct SymbolicLexMin {
-  SymbolicLexMin(const PresburgerSpace &space)
-      : lexmin(space),
+/// Represents the result of a symbolic lexicographic optimization computation.
+struct SymbolicLexOpt {
+  SymbolicLexOpt(const PresburgerSpace &space)
+      : lexopt(space),
         unboundedDomain(PresburgerSet::getEmpty(space.getDomainSpace())) {}
 
-  /// This maps assignments of symbols to the corresponding lexmin.
+  /// This maps assignments of symbols to the corresponding lexopt.
   /// Takes no value when no integer sample exists for the assignment or if the
-  /// lexmin is unbounded.
-  PWMAFunction lexmin;
-  /// Contains all assignments to the symbols that made the lexmin unbounded.
-  /// Note that the symbols of the input set to the symbolic lexmin are dims
+  /// lexopt is unbounded.
+  PWMAFunction lexopt;
+  /// Contains all assignments to the symbols that made the lexopt unbounded.
+  /// Note that the symbols of the input set to the symbolic lexopt are dims
   /// of this PrebsurgerSet.
   PresburgerSet unboundedDomain;
 };
@@ -575,13 +575,13 @@ struct SymbolicLexMin {
 /// where it is.
 class SymbolicLexSimplex : public LexSimplexBase {
 public:
-  /// `constraints` is the set for which the symbolic lexmin will be computed.
-  /// `symbolDomain` is the set of values of the symbols for which the lexmin
+  /// `constraints` is the set for which the symbolic lexopt will be computed.
+  /// `symbolDomain` is the set of values of the symbols for which the lexopt
   /// will be computed. `symbolDomain` should have a dim var for every symbol in
   /// `constraints`, and no other vars. `isSymbol` specifies which vars of
   /// `constraints` should be considered as symbols.
   ///
-  /// The resulting SymbolicLexMin's space will be compatible with that of
+  /// The resulting SymbolicLexOpt's space will be compatible with that of
   /// symbolDomain.
   SymbolicLexSimplex(const IntegerRelation &constraints,
                      const IntegerPolyhedron &symbolDomain,
@@ -594,7 +594,7 @@ public:
            "there must be some non-symbols to optimize!");
   }
 
-  /// An overload to select some subrange of ids as symbols for lexmin.
+  /// An overload to select some subrange of ids as symbols for lexopt.
   /// The symbol ids are the range of ids with absolute index
   /// [symbolOffset, symbolOffset + symbolDomain.getNumVars())
   SymbolicLexSimplex(const IntegerRelation &constraints, unsigned symbolOffset,
@@ -604,7 +604,7 @@ public:
                                                 symbolOffset,
                                                 symbolDomain.getNumVars())) {}
 
-  /// An overload to select the symbols of `constraints` as symbols for lexmin.
+  /// An overload to select the symbols of `constraints` as symbols for lexopt.
   SymbolicLexSimplex(const IntegerRelation &constraints,
                      const IntegerPolyhedron &symbolDomain)
       : SymbolicLexSimplex(constraints,
@@ -614,7 +614,7 @@ public:
            "symbolDomain must have as many vars as constraints has symbols!");
   }
 
-  /// The lexmin will be stored as a function `lexmin` from symbols to
+  /// The lexmin will be stored as a function `lexopt` from symbols to
   /// non-symbols in the result.
   ///
   /// For some values of the symbols, the lexmin may be unbounded.
@@ -622,7 +622,7 @@ public:
   ///
   /// The spaces of the sets in the result are compatible with the symbolDomain
   /// passed in the SymbolicLexSimplex constructor.
-  SymbolicLexMin computeSymbolicIntegerLexMin();
+  SymbolicLexOpt computeSymbolicIntegerLexMin();
 
 private:
   /// Perform all pivots that do not require branching.
@@ -670,7 +670,7 @@ private:
 
   /// Record a lexmin. The tableau must be consistent with all variables
   /// having symbolic samples with integer coefficients.
-  void recordOutput(SymbolicLexMin &result) const;
+  void recordOutput(SymbolicLexOpt &result) const;
 
   /// The symbol domain.
   IntegerPolyhedron domainPoly;
@@ -861,7 +861,7 @@ private:
 
   /// Reduce the given basis, starting at the specified level, using general
   /// basis reduction.
-  void reduceBasis(Matrix &basis, unsigned level);
+  void reduceBasis(IntMatrix &basis, unsigned level);
 };
 
 /// Takes a snapshot of the simplex state on construction and rolls back to the

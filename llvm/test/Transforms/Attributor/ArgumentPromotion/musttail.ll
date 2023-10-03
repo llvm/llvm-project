@@ -181,7 +181,7 @@ define i32 @caller2b(ptr %g) {
 ; CGSCC: attributes #[[ATTR3]] = { mustprogress nofree norecurse nosync nounwind willreturn memory(argmem: write) }
 ; CGSCC: attributes #[[ATTR4]] = { mustprogress nofree nosync nounwind willreturn memory(argmem: readwrite) }
 ; CGSCC: attributes #[[ATTR5]] = { nofree willreturn memory(read) }
-; CGSCC: attributes #[[ATTR6]] = { nofree willreturn }
+; CGSCC: attributes #[[ATTR6]] = { nofree nosync willreturn }
 ; CGSCC: attributes #[[ATTR7]] = { nofree nounwind willreturn memory(write) }
 ; CGSCC: attributes #[[ATTR8]] = { nofree nounwind willreturn }
 ;.

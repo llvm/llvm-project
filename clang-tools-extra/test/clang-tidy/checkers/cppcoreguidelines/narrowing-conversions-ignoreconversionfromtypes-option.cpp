@@ -1,13 +1,11 @@
 // RUN: %check_clang_tidy -check-suffix=DEFAULT %s \
-// RUN: cppcoreguidelines-narrowing-conversions %t -- \
-// RUN: -config='{CheckOptions: [ \
-// RUN: ]}'
+// RUN: cppcoreguidelines-narrowing-conversions %t --
 
 // RUN: %check_clang_tidy -check-suffix=IGNORED %s \
 // RUN: cppcoreguidelines-narrowing-conversions %t -- \
-// RUN: -config='{CheckOptions: [ \
-// RUN:   {key: cppcoreguidelines-narrowing-conversions.IgnoreConversionFromTypes, value: "global_size_t;nested_size_type"} \
-// RUN: ]}'
+// RUN: -config='{CheckOptions: { \
+// RUN:   cppcoreguidelines-narrowing-conversions.IgnoreConversionFromTypes: "global_size_t;nested_size_type" \
+// RUN: }}'
 
 // We use global_size_t instead of 'size_t' because windows predefines size_t.
 typedef long long global_size_t;

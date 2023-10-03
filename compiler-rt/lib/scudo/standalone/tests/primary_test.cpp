@@ -8,6 +8,7 @@
 
 #include "tests/scudo_unit_test.h"
 
+#include "allocator_config.h"
 #include "primary32.h"
 #include "primary64.h"
 #include "size_class_map.h"
@@ -253,7 +254,8 @@ SCUDO_TYPED_TEST(ScudoPrimaryTest, PrimaryIterate) {
   Cache.init(nullptr, Allocator.get());
   std::vector<std::pair<scudo::uptr, void *>> V;
   for (scudo::uptr I = 0; I < 64U; I++) {
-    const scudo::uptr Size = std::rand() % Primary::SizeClassMap::MaxSize;
+    const scudo::uptr Size =
+        static_cast<scudo::uptr>(std::rand()) % Primary::SizeClassMap::MaxSize;
     const scudo::uptr ClassId = Primary::SizeClassMap::getClassIdBySize(Size);
     void *P = Cache.allocate(ClassId);
     V.push_back(std::make_pair(ClassId, P));
@@ -282,7 +284,7 @@ SCUDO_TYPED_TEST(ScudoPrimaryTest, PrimaryIterate) {
 }
 
 SCUDO_TYPED_TEST(ScudoPrimaryTest, PrimaryThreaded) {
-  using Primary = TestAllocator<TypeParam, scudo::SvelteSizeClassMap>;
+  using Primary = TestAllocator<TypeParam, scudo::Config::Primary::SizeClassMap>;
   std::unique_ptr<Primary> Allocator(new Primary);
   Allocator->init(/*ReleaseToOsInterval=*/-1);
   std::mutex Mutex;
@@ -300,8 +302,8 @@ SCUDO_TYPED_TEST(ScudoPrimaryTest, PrimaryThreaded) {
           Cv.wait(Lock);
       }
       for (scudo::uptr I = 0; I < 256U; I++) {
-        const scudo::uptr Size =
-            std::rand() % Primary::SizeClassMap::MaxSize / 4;
+        const scudo::uptr Size = static_cast<scudo::uptr>(std::rand()) %
+                                 Primary::SizeClassMap::MaxSize / 4;
         const scudo::uptr ClassId =
             Primary::SizeClassMap::getClassIdBySize(Size);
         void *P = Cache.allocate(ClassId);
@@ -334,6 +336,7 @@ SCUDO_TYPED_TEST(ScudoPrimaryTest, PrimaryThreaded) {
   Allocator->releaseToOS(scudo::ReleaseToOS::Force);
   scudo::ScopedString Str;
   Allocator->getStats(&Str);
+  Allocator->getFragmentationInfo(&Str);
   Str.output();
 }
 

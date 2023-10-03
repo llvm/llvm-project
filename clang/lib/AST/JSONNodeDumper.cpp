@@ -530,6 +530,39 @@ JSONNodeDumper::createCXXBaseSpecifier(const CXXBaseSpecifier &BS) {
   return Ret;
 }
 
+void JSONNodeDumper::VisitAliasAttr(const AliasAttr *AA) {
+  JOS.attribute("aliasee", AA->getAliasee());
+}
+
+void JSONNodeDumper::VisitCleanupAttr(const CleanupAttr *CA) {
+  JOS.attribute("cleanup_function", createBareDeclRef(CA->getFunctionDecl()));
+}
+
+void JSONNodeDumper::VisitDeprecatedAttr(const DeprecatedAttr *DA) {
+  if (!DA->getMessage().empty())
+    JOS.attribute("message", DA->getMessage());
+  if (!DA->getReplacement().empty())
+    JOS.attribute("replacement", DA->getReplacement());
+}
+
+void JSONNodeDumper::VisitUnavailableAttr(const UnavailableAttr *UA) {
+  if (!UA->getMessage().empty())
+    JOS.attribute("message", UA->getMessage());
+}
+
+void JSONNodeDumper::VisitSectionAttr(const SectionAttr *SA) {
+  JOS.attribute("section_name", SA->getName());
+}
+
+void JSONNodeDumper::VisitVisibilityAttr(const VisibilityAttr *VA) {
+  JOS.attribute("visibility", VisibilityAttr::ConvertVisibilityTypeToStr(
+                                  VA->getVisibility()));
+}
+
+void JSONNodeDumper::VisitTLSModelAttr(const TLSModelAttr *TA) {
+  JOS.attribute("tls_model", TA->getModel());
+}
+
 void JSONNodeDumper::VisitTypedefType(const TypedefType *TT) {
   JOS.attribute("decl", createBareDeclRef(TT->getDecl()));
   if (!TT->typeMatchesDecl())
@@ -843,6 +876,9 @@ void JSONNodeDumper::VisitUsingShadowDecl(const UsingShadowDecl *USD) {
 void JSONNodeDumper::VisitVarDecl(const VarDecl *VD) {
   VisitNamedDecl(VD);
   JOS.attribute("type", createQualType(VD->getType()));
+  if (const auto *P = dyn_cast<ParmVarDecl>(VD))
+    attributeOnlyIfTrue("explicitObjectParameter",
+                        P->isExplicitObjectParameter());
 
   StorageClass SC = VD->getStorageClass();
   if (SC != SC_None)
@@ -1144,6 +1180,10 @@ void JSONNodeDumper::VisitObjCPropertyImplDecl(const ObjCPropertyImplDecl *D) {
 void JSONNodeDumper::VisitBlockDecl(const BlockDecl *D) {
   attributeOnlyIfTrue("variadic", D->isVariadic());
   attributeOnlyIfTrue("capturesThis", D->capturesCXXThis());
+}
+
+void JSONNodeDumper::VisitAtomicExpr(const AtomicExpr *AE) {
+  JOS.attribute("name", AE->getOpAsString());
 }
 
 void JSONNodeDumper::VisitObjCEncodeExpr(const ObjCEncodeExpr *OEE) {

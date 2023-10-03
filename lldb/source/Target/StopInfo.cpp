@@ -894,7 +894,7 @@ protected:
 
         if (m_silently_skip_wp) {
           m_should_stop = false;
-          wp_sp->IncrementFalseAlarmsAndReviseHitCount();
+          wp_sp->UndoHitCount();
         }
 
         if (wp_sp->GetHitCount() <= wp_sp->GetIgnoreCount()) {
@@ -982,6 +982,12 @@ protected:
             m_should_stop = false;
           }
         }
+
+        // Don't stop if the watched region value is unmodified, and
+        // this is a Modify-type watchpoint.
+        if (m_should_stop && !wp_sp->WatchedValueReportable(exe_ctx))
+          m_should_stop = false;
+
         // Finally, if we are going to stop, print out the new & old values:
         if (m_should_stop) {
           wp_sp->CaptureWatchedValue(exe_ctx);
@@ -1067,9 +1073,9 @@ public:
           thread_sp->GetProcess()->GetUnixSignals()->GetShouldNotify(m_value);
       if (should_notify) {
         StreamString strm;
-        strm.Printf(
-            "thread %d received signal: %s", thread_sp->GetIndexID(),
-            thread_sp->GetProcess()->GetUnixSignals()->GetSignalAsCString(
+        strm.Format(
+            "thread {0:d} received signal: {1}", thread_sp->GetIndexID(),
+            thread_sp->GetProcess()->GetUnixSignals()->GetSignalAsStringRef(
                 m_value));
         Process::ProcessEventData::AddRestartedReason(event_ptr,
                                                       strm.GetData());

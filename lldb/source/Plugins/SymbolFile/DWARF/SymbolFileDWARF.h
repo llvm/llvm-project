@@ -41,7 +41,6 @@
 // Forward Declarations for this DWARF plugin
 class DebugMapModule;
 class DWARFCompileUnit;
-class DWARFDebugAbbrev;
 class DWARFDebugAranges;
 class DWARFDebugInfo;
 class DWARFDebugInfoEntry;
@@ -54,6 +53,10 @@ class SymbolFileDWARFDebugMap;
 class SymbolFileDWARFDwo;
 class SymbolFileDWARFDwp;
 class UserID;
+
+namespace llvm {
+class DWARFDebugAbbrev;
+}
 
 #define DIE_IS_BEING_PARSED ((lldb_private::Type *)1)
 
@@ -224,7 +227,7 @@ public:
   // PluginInterface protocol
   llvm::StringRef GetPluginName() override { return GetPluginNameStatic(); }
 
-  DWARFDebugAbbrev *DebugAbbrev();
+  llvm::DWARFDebugAbbrev *DebugAbbrev();
 
   DWARFDebugInfo &DebugInfo();
 
@@ -536,7 +539,7 @@ protected:
   llvm::once_flag m_info_once_flag;
   std::unique_ptr<DWARFDebugInfo> m_info;
 
-  std::unique_ptr<DWARFDebugAbbrev> m_abbr;
+  std::unique_ptr<llvm::DWARFDebugAbbrev> m_abbr;
   std::unique_ptr<GlobalVariableMap> m_global_aranges_up;
 
   typedef std::unordered_map<lldb::offset_t, lldb_private::DebugMacrosSP>

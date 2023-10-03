@@ -323,12 +323,11 @@ AArch64ABIInfo::classifyArgumentType(QualType Ty, bool IsVariadic,
       return ABIArgInfo::getDirect(
           llvm::ArrayType::get(CGT.ConvertType(QualType(Base, 0)), Members));
 
-    // For alignment adjusted HFAs, cap the argument alignment to 16, leave it
-    // default otherwise.
+    // For HFAs/HVAs, cap the argument alignment to 16, otherwise
+    // set it to 8 according to the AAPCS64 document.
     unsigned Align =
         getContext().getTypeUnadjustedAlignInChars(Ty).getQuantity();
-    unsigned BaseAlign = getContext().getTypeAlignInChars(Base).getQuantity();
-    Align = (Align > BaseAlign && Align >= 16) ? 16 : 0;
+    Align = (Align >= 16) ? 16 : 8;
     return ABIArgInfo::getDirect(
         llvm::ArrayType::get(CGT.ConvertType(QualType(Base, 0)), Members), 0,
         nullptr, true, Align);

@@ -25,7 +25,7 @@ namespace attribute_aligned {
   {
     __attribute__((aligned(Align))) char storage[Size];
   };
-  
+
   template<typename T>
   class C {
   public:
@@ -95,11 +95,11 @@ void UseAnnotations() { HasAnnotations<int>(); }
 template <int... Is> [[clang::annotate("ANNOTATE_BAZ", Is...)]] void HasPackAnnotations();
 void UsePackAnnotations() { HasPackAnnotations<1, 2, 3>(); }
 
-template <int... Is> [[clang::annotate(Is...)]] void HasOnlyPackAnnotation() {} // expected-error {{'annotate' attribute takes at least 1 argument}} expected-error {{'annotate' attribute requires a string}}
+template <int... Is> [[clang::annotate(Is...)]] void HasOnlyPackAnnotation() {} // expected-error {{expected string literal as argument of 'annotate' attribute}}
 
 void UseOnlyPackAnnotations() {
-  HasOnlyPackAnnotation<>();  // expected-note {{in instantiation of function template specialization 'attribute_annotate::HasOnlyPackAnnotation<>' requested here}}
-  HasOnlyPackAnnotation<1>(); // expected-note {{in instantiation of function template specialization 'attribute_annotate::HasOnlyPackAnnotation<1>' requested here}}
+  HasOnlyPackAnnotation<>();
+  HasOnlyPackAnnotation<1>();
 }
 
 // CHECK:      ClassTemplateDecl {{.*}} AnnotatedPackTemplateStruct
@@ -276,40 +276,21 @@ void UseOnlyPackAnnotations() {
 // CHECK-NEXT:       value: Int 6
 // CHECK-NEXT:       IntegerLiteral {{.*}} 'int' 6
 // CHECK-NEXT:   CXXRecordDecl {{.*}} implicit struct AnnotatedPackTemplateStruct
-// CHECK-NEXT: ClassTemplatePartialSpecializationDecl {{.*}} struct AnnotatedPackTemplateStruct definition
-// CHECK-NEXT:   DefinitionData
-// CHECK-NEXT:     DefaultConstructor
-// CHECK-NEXT:     CopyConstructor
-// CHECK-NEXT:     MoveConstructor
-// CHECK-NEXT:     CopyAssignment
-// CHECK-NEXT:     MoveAssignment
-// CHECK-NEXT:     Destructor
-// CHECK-NEXT:   TemplateArgument{{.*}} type 'char'
-// CHECK-NEXT:     BuiltinType {{.*}} 'char'
-// CHECK-NEXT:   TemplateArgument{{.*}} pack
-// CHECK-NEXT:     TemplateArgument{{.*}} expr
-// CHECK-NEXT:       PackExpansionExpr {{.*}} 'int'
-// CHECK-NEXT:         DeclRefExpr {{.*}} 'int' NonTypeTemplateParm {{.*}} 'Is' 'int'
-// CHECK-NEXT:   NonTypeTemplateParmDecl {{.*}} referenced 'int' depth 0 index 0 ... Is
-// CHECK-NEXT:   AnnotateAttr {{.*}} ""
-// CHECK-NEXT:     PackExpansionExpr {{.*}} '<dependent type>'
-// CHECK-NEXT:       DeclRefExpr {{.*}} 'int' NonTypeTemplateParm {{.*}} 'Is' 'int'
-// CHECK-NEXT:   CXXRecordDecl {{.*}} implicit struct AnnotatedPackTemplateStruct
 template <typename T, int... Is> struct [[clang::annotate("ANNOTATE_FOZ", Is...)]] AnnotatedPackTemplateStruct{};
 template <int... Is> struct [[clang::annotate("ANNOTATE_BOO", Is...)]] AnnotatedPackTemplateStruct<int, Is...>{};
 template <int... Is> struct [[clang::annotate("ANNOTATE_FOZ", 4, 5, 6)]] AnnotatedPackTemplateStruct<float, Is...>{};
-template <int... Is> struct [[clang::annotate(Is...)]] AnnotatedPackTemplateStruct<char, Is...>{}; // expected-error {{'annotate' attribute requires a string}} expected-error {{'annotate' attribute takes at least 1 argument}}
+template <int... Is> struct [[clang::annotate(Is...)]] AnnotatedPackTemplateStruct<char, Is...>{}; // expected-error {{expected string literal as argument of 'annotate' attribute}}
 void UseAnnotatedPackTemplateStructSpecializations() {
   AnnotatedPackTemplateStruct<int, 1, 2, 3> Instance1{};
   AnnotatedPackTemplateStruct<float, 3, 2, 1> Instance2{};
   AnnotatedPackTemplateStruct<bool, 7, 8, 9> Instance3{};
-  AnnotatedPackTemplateStruct<char, 1, 2, 3> Instance4{}; // expected-note {{in instantiation of template class 'attribute_annotate::AnnotatedPackTemplateStruct<char, 1, 2, 3>' requested here}}
-  AnnotatedPackTemplateStruct<char> Instance5{};          // expected-note {{in instantiation of template class 'attribute_annotate::AnnotatedPackTemplateStruct<char>' requested here}}
+  AnnotatedPackTemplateStruct<char, 1, 2, 3> Instance4{};
+  AnnotatedPackTemplateStruct<char> Instance5{};
 }
 
 // CHECK:      ClassTemplateDecl {{.*}} InvalidAnnotatedPackTemplateStruct
 // CHECK-NEXT:   TemplateTypeParmDecl {{.*}} typename depth 0 index 0 T
-// CHECK-NEXT:   NonTypeTemplateParmDecl {{.*}} referenced 'int' depth 0 index 1 ... Is
+// CHECK-NEXT:   NonTypeTemplateParmDecl {{.*}} 'int' depth 0 index 1 ... Is
 // CHECK-NEXT:   CXXRecordDecl {{.*}} struct InvalidAnnotatedPackTemplateStruct definition
 // CHECK-NEXT:     DefinitionData
 // CHECK-NEXT:       DefaultConstructor
@@ -318,9 +299,6 @@ void UseAnnotatedPackTemplateStructSpecializations() {
 // CHECK-NEXT:       CopyAssignment
 // CHECK-NEXT:       MoveAssignment
 // CHECK-NEXT:       Destructor
-// CHECK-NEXT:     AnnotateAttr {{.*}} ""
-// CHECK-NEXT:       PackExpansionExpr {{.*}} '<dependent type>'
-// CHECK-NEXT:         DeclRefExpr {{.*}} 'int' NonTypeTemplateParm {{.*}} 'Is' 'int'
 // CHECK-NEXT:     CXXRecordDecl {{.*}} implicit struct InvalidAnnotatedPackTemplateStruct
 // CHECK-NEXT:   ClassTemplateSpecialization {{.*}} 'InvalidAnnotatedPackTemplateStruct'
 // CHECK-NEXT:   ClassTemplateSpecializationDecl {{.*}} struct InvalidAnnotatedPackTemplateStruct definition
@@ -446,7 +424,7 @@ void UseAnnotatedPackTemplateStructSpecializations() {
 // CHECK-NEXT:     TemplateArgument{{.*}} integral 6
 // CHECK-NEXT:     TemplateArgument{{.*}} integral 7
 // CHECK-NEXT:   CXXRecordDecl {{.*}} implicit struct InvalidAnnotatedPackTemplateStruct
-template <typename T, int... Is> struct [[clang::annotate(Is...)]] InvalidAnnotatedPackTemplateStruct{}; // expected-error {{'annotate' attribute requires a string}} expected-error {{'annotate' attribute takes at least 1 argument}}
+template <typename T, int... Is> struct InvalidAnnotatedPackTemplateStruct{};
 template <int... Is> struct [[clang::annotate("ANNOTATE_BIR", Is...)]] InvalidAnnotatedPackTemplateStruct<int, Is...>{};
 template <int... Is> struct InvalidAnnotatedPackTemplateStruct<float, Is...> {};
 template <> struct InvalidAnnotatedPackTemplateStruct<char, 5, 6, 7> {};
@@ -454,8 +432,8 @@ void UseInvalidAnnotatedPackTemplateStruct() {
   InvalidAnnotatedPackTemplateStruct<int, 1, 2, 3> Instance1{};
   InvalidAnnotatedPackTemplateStruct<float, 3, 2, 1> Instance2{};
   InvalidAnnotatedPackTemplateStruct<char, 5, 6, 7> Instance3{};
-  InvalidAnnotatedPackTemplateStruct<bool, 7, 8, 9> Instance4{}; // expected-note {{in instantiation of template class 'attribute_annotate::InvalidAnnotatedPackTemplateStruct<bool, 7, 8, 9>' requested here}}
-  InvalidAnnotatedPackTemplateStruct<bool> Instance5{};          // expected-note {{in instantiation of template class 'attribute_annotate::InvalidAnnotatedPackTemplateStruct<bool>' requested here}}
+  InvalidAnnotatedPackTemplateStruct<bool, 7, 8, 9> Instance4{};
+  InvalidAnnotatedPackTemplateStruct<bool> Instance5{};
 }
 
 // CHECK:      FunctionTemplateDecl {{.*}} RedeclaredAnnotatedFunc

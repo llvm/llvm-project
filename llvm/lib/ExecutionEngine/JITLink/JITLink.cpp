@@ -13,6 +13,10 @@
 #include "llvm/ExecutionEngine/JITLink/COFF.h"
 #include "llvm/ExecutionEngine/JITLink/ELF.h"
 #include "llvm/ExecutionEngine/JITLink/MachO.h"
+#include "llvm/ExecutionEngine/JITLink/aarch64.h"
+#include "llvm/ExecutionEngine/JITLink/i386.h"
+#include "llvm/ExecutionEngine/JITLink/loongarch.h"
+#include "llvm/ExecutionEngine/JITLink/x86_64.h"
 #include "llvm/Support/Format.h"
 #include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/raw_ostream.h"
@@ -415,6 +419,38 @@ Error makeAlignmentError(llvm::orc::ExecutorAddr Loc, uint64_t Value, int N,
                                   formatv("{0:d}", E.getKind()) + ": 0x" +
                                   llvm::utohexstr(Value) +
                                   " is not aligned to " + Twine(N) + " bytes");
+}
+
+AnonymousPointerCreator getAnonymousPointerCreator(const Triple &TT) {
+  switch (TT.getArch()) {
+  case Triple::aarch64:
+    return aarch64::createAnonymousPointer;
+  case Triple::x86_64:
+    return x86_64::createAnonymousPointer;
+  case Triple::x86:
+    return i386::createAnonymousPointer;
+  case Triple::loongarch32:
+  case Triple::loongarch64:
+    return loongarch::createAnonymousPointer;
+  default:
+    return nullptr;
+  }
+}
+
+PointerJumpStubCreator getPointerJumpStubCreator(const Triple &TT) {
+  switch (TT.getArch()) {
+  case Triple::aarch64:
+    return aarch64::createAnonymousPointerJumpStub;
+  case Triple::x86_64:
+    return x86_64::createAnonymousPointerJumpStub;
+  case Triple::x86:
+    return i386::createAnonymousPointerJumpStub;
+  case Triple::loongarch32:
+  case Triple::loongarch64:
+    return loongarch::createAnonymousPointerJumpStub;
+  default:
+    return nullptr;
+  }
 }
 
 Expected<std::unique_ptr<LinkGraph>>

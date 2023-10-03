@@ -231,6 +231,7 @@ public:
     EXPECT_TRUE(m_process_sp);
 
     m_module_spec = GetTestModuleSpec();
+    m_module_spec_without_uuid = ModuleSpec(GetRemotePath(), ArchSpec(k_arch));
   }
 
   void TearDown() override {
@@ -244,15 +245,33 @@ public:
   }
 
   void CheckCallbackArgs(const ModuleSpec &module_spec,
-                         FileSpec &module_file_spec,
-                         FileSpec &symbol_file_spec) {
-    EXPECT_TRUE(m_module_spec.Matches(module_spec,
-                                      /*exact_arch_match=*/true));
+                         FileSpec &module_file_spec, FileSpec &symbol_file_spec,
+                         const ModuleSpec &expected_module_spec,
+                         int expected_callback_call_count) {
+    EXPECT_TRUE(expected_module_spec.Matches(module_spec,
+                                             /*exact_arch_match=*/true));
     EXPECT_FALSE(module_file_spec);
     EXPECT_FALSE(symbol_file_spec);
 
-    EXPECT_EQ(m_callback_call_count, 0);
-    m_callback_call_count++;
+    EXPECT_EQ(++m_callback_call_count, expected_callback_call_count);
+  }
+
+  void CheckCallbackArgsWithUUID(const ModuleSpec &module_spec,
+                                 FileSpec &module_file_spec,
+                                 FileSpec &symbol_file_spec,
+                                 int expected_callback_call_count) {
+    CheckCallbackArgs(module_spec, module_file_spec, symbol_file_spec,
+                      m_module_spec, expected_callback_call_count);
+    EXPECT_TRUE(module_spec.GetUUID().IsValid());
+  }
+
+  void CheckCallbackArgsWithoutUUID(const ModuleSpec &module_spec,
+                                    FileSpec &module_file_spec,
+                                    FileSpec &symbol_file_spec,
+                                    int expected_callback_call_count) {
+    CheckCallbackArgs(module_spec, module_file_spec, symbol_file_spec,
+                      m_module_spec_without_uuid, expected_callback_call_count);
+    EXPECT_FALSE(module_spec.GetUUID().IsValid());
   }
 
 protected:
@@ -262,6 +281,7 @@ protected:
   TargetSP m_target_sp;
   ProcessSP m_process_sp;
   ModuleSpec m_module_spec;
+  ModuleSpec m_module_spec_without_uuid;
   ModuleSP m_module_sp;
   int m_callback_call_count = 0;
 };
@@ -331,14 +351,18 @@ TEST_F(LocateModuleCallbackTest, GetOrCreateModuleCallbackFailureNoCache) {
   // download the module and fails.
   BuildEmptyCacheDir(m_test_dir);
 
-  m_platform_sp->SetLocateModuleCallback([this](const ModuleSpec &module_spec,
-                                                FileSpec &module_file_spec,
-                                                FileSpec &symbol_file_spec) {
-    CheckCallbackArgs(module_spec, module_file_spec, symbol_file_spec);
-    return Status("The locate module callback failed");
-  });
+  int callback_call_count = 0;
+  m_platform_sp->SetLocateModuleCallback(
+      [this, &callback_call_count](const ModuleSpec &module_spec,
+                                   FileSpec &module_file_spec,
+                                   FileSpec &symbol_file_spec) {
+        CheckCallbackArgsWithUUID(module_spec, module_file_spec,
+                                  symbol_file_spec, ++callback_call_count);
+        return Status("The locate module callback failed");
+      });
 
   m_module_sp = m_target_sp->GetOrCreateModule(m_module_spec, /*notify=*/false);
+  ASSERT_EQ(callback_call_count, 2);
   ASSERT_FALSE(m_module_sp);
 }
 
@@ -348,14 +372,18 @@ TEST_F(LocateModuleCallbackTest, GetOrCreateModuleCallbackFailureCached) {
   // some reason.
   FileSpec uuid_view = BuildCacheDir(m_test_dir);
 
-  m_platform_sp->SetLocateModuleCallback([this](const ModuleSpec &module_spec,
-                                                FileSpec &module_file_spec,
-                                                FileSpec &symbol_file_spec) {
-    CheckCallbackArgs(module_spec, module_file_spec, symbol_file_spec);
-    return Status("The locate module callback failed");
-  });
+  int callback_call_count = 0;
+  m_platform_sp->SetLocateModuleCallback(
+      [this, &callback_call_count](const ModuleSpec &module_spec,
+                                   FileSpec &module_file_spec,
+                                   FileSpec &symbol_file_spec) {
+        CheckCallbackArgsWithUUID(module_spec, module_file_spec,
+                                  symbol_file_spec, ++callback_call_count);
+        return Status("The locate module callback failed");
+      });
 
   m_module_sp = m_target_sp->GetOrCreateModule(m_module_spec, /*notify=*/false);
+  ASSERT_EQ(callback_call_count, 2);
   CheckModule(m_module_sp);
   ASSERT_EQ(m_module_sp->GetFileSpec(), uuid_view);
   ASSERT_FALSE(m_module_sp->GetSymbolFileFileSpec());
@@ -368,16 +396,20 @@ TEST_F(LocateModuleCallbackTest, GetOrCreateModuleCallbackNoFiles) {
   // no files.
   FileSpec uuid_view = BuildCacheDir(m_test_dir);
 
-  m_platform_sp->SetLocateModuleCallback([this](const ModuleSpec &module_spec,
-                                                FileSpec &module_file_spec,
-                                                FileSpec &symbol_file_spec) {
-    CheckCallbackArgs(module_spec, module_file_spec, symbol_file_spec);
-    // The locate module callback succeeds but it does not set
-    // module_file_spec nor symbol_file_spec.
-    return Status();
-  });
+  int callback_call_count = 0;
+  m_platform_sp->SetLocateModuleCallback(
+      [this, &callback_call_count](const ModuleSpec &module_spec,
+                                   FileSpec &module_file_spec,
+                                   FileSpec &symbol_file_spec) {
+        CheckCallbackArgsWithUUID(module_spec, module_file_spec,
+                                  symbol_file_spec, ++callback_call_count);
+        // The locate module callback succeeds but it does not set
+        // module_file_spec nor symbol_file_spec.
+        return Status();
+      });
 
   m_module_sp = m_target_sp->GetOrCreateModule(m_module_spec, /*notify=*/false);
+  ASSERT_EQ(callback_call_count, 2);
   CheckModule(m_module_sp);
   ASSERT_EQ(m_module_sp->GetFileSpec(), uuid_view);
   ASSERT_FALSE(m_module_sp->GetSymbolFileFileSpec());
@@ -391,15 +423,19 @@ TEST_F(LocateModuleCallbackTest, GetOrCreateModuleCallbackNonExistentModule) {
   // non-existent module file.
   FileSpec uuid_view = BuildCacheDir(m_test_dir);
 
-  m_platform_sp->SetLocateModuleCallback([this](const ModuleSpec &module_spec,
-                                                FileSpec &module_file_spec,
-                                                FileSpec &symbol_file_spec) {
-    CheckCallbackArgs(module_spec, module_file_spec, symbol_file_spec);
-    module_file_spec.SetPath("/this path does not exist");
-    return Status();
-  });
+  int callback_call_count = 0;
+  m_platform_sp->SetLocateModuleCallback(
+      [this, &callback_call_count](const ModuleSpec &module_spec,
+                                   FileSpec &module_file_spec,
+                                   FileSpec &symbol_file_spec) {
+        CheckCallbackArgsWithUUID(module_spec, module_file_spec,
+                                  symbol_file_spec, ++callback_call_count);
+        module_file_spec.SetPath("/this path does not exist");
+        return Status();
+      });
 
   m_module_sp = m_target_sp->GetOrCreateModule(m_module_spec, /*notify=*/false);
+  ASSERT_EQ(callback_call_count, 2);
   CheckModule(m_module_sp);
   ASSERT_EQ(m_module_sp->GetFileSpec(), uuid_view);
   ASSERT_FALSE(m_module_sp->GetSymbolFileFileSpec());
@@ -413,18 +449,22 @@ TEST_F(LocateModuleCallbackTest, GetOrCreateModuleCallbackNonExistentSymbol) {
   // non-existent symbol file.
   FileSpec uuid_view = BuildCacheDir(m_test_dir);
 
-  m_platform_sp->SetLocateModuleCallback([this](const ModuleSpec &module_spec,
-                                                FileSpec &module_file_spec,
-                                                FileSpec &symbol_file_spec) {
-    CheckCallbackArgs(module_spec, module_file_spec, symbol_file_spec);
-    // The locate module callback returns a right module file.
-    module_file_spec.SetPath(GetInputFilePath(k_module_file));
-    // But it returns non-existent symbols file.
-    symbol_file_spec.SetPath("/this path does not exist");
-    return Status();
-  });
+  int callback_call_count = 0;
+  m_platform_sp->SetLocateModuleCallback(
+      [this, &callback_call_count](const ModuleSpec &module_spec,
+                                   FileSpec &module_file_spec,
+                                   FileSpec &symbol_file_spec) {
+        CheckCallbackArgsWithUUID(module_spec, module_file_spec,
+                                  symbol_file_spec, ++callback_call_count);
+        // The locate module callback returns a right module file.
+        module_file_spec.SetPath(GetInputFilePath(k_module_file));
+        // But it returns non-existent symbols file.
+        symbol_file_spec.SetPath("/this path does not exist");
+        return Status();
+      });
 
   m_module_sp = m_target_sp->GetOrCreateModule(m_module_spec, /*notify=*/false);
+  ASSERT_EQ(callback_call_count, 2);
   CheckModule(m_module_sp);
   ASSERT_EQ(m_module_sp->GetFileSpec(), uuid_view);
   ASSERT_TRUE(m_module_sp->GetSymbolFileFileSpec().GetPath().empty());
@@ -440,7 +480,8 @@ TEST_F(LocateModuleCallbackTest, GetOrCreateModuleCallbackSuccessWithModule) {
   m_platform_sp->SetLocateModuleCallback([this](const ModuleSpec &module_spec,
                                                 FileSpec &module_file_spec,
                                                 FileSpec &symbol_file_spec) {
-    CheckCallbackArgs(module_spec, module_file_spec, symbol_file_spec);
+    CheckCallbackArgsWithUUID(module_spec, module_file_spec, symbol_file_spec,
+                              1);
     module_file_spec.SetPath(GetInputFilePath(k_module_file));
     return Status();
   });
@@ -465,7 +506,8 @@ TEST_F(LocateModuleCallbackTest,
   m_platform_sp->SetLocateModuleCallback([this](const ModuleSpec &module_spec,
                                                 FileSpec &module_file_spec,
                                                 FileSpec &symbol_file_spec) {
-    CheckCallbackArgs(module_spec, module_file_spec, symbol_file_spec);
+    CheckCallbackArgsWithUUID(module_spec, module_file_spec, symbol_file_spec,
+                              1);
     module_file_spec.SetPath(GetInputFilePath(k_symbol_file));
     return Status();
   });
@@ -490,7 +532,8 @@ TEST_F(LocateModuleCallbackTest,
   m_platform_sp->SetLocateModuleCallback([this](const ModuleSpec &module_spec,
                                                 FileSpec &module_file_spec,
                                                 FileSpec &symbol_file_spec) {
-    CheckCallbackArgs(module_spec, module_file_spec, symbol_file_spec);
+    CheckCallbackArgsWithUUID(module_spec, module_file_spec, symbol_file_spec,
+                              1);
     module_file_spec.SetPath(GetInputFilePath(k_symbol_file));
     symbol_file_spec.SetPath(GetInputFilePath(k_symbol_file));
     return Status();
@@ -516,7 +559,8 @@ TEST_F(LocateModuleCallbackTest,
   m_platform_sp->SetLocateModuleCallback([this](const ModuleSpec &module_spec,
                                                 FileSpec &module_file_spec,
                                                 FileSpec &symbol_file_spec) {
-    CheckCallbackArgs(module_spec, module_file_spec, symbol_file_spec);
+    CheckCallbackArgsWithUUID(module_spec, module_file_spec, symbol_file_spec,
+                              1);
     module_file_spec.SetPath(GetInputFilePath(k_module_file));
     symbol_file_spec.SetPath(GetInputFilePath(k_symbol_file));
     return Status();
@@ -542,7 +586,8 @@ TEST_F(LocateModuleCallbackTest,
   m_platform_sp->SetLocateModuleCallback([this](const ModuleSpec &module_spec,
                                                 FileSpec &module_file_spec,
                                                 FileSpec &symbol_file_spec) {
-    CheckCallbackArgs(module_spec, module_file_spec, symbol_file_spec);
+    CheckCallbackArgsWithUUID(module_spec, module_file_spec, symbol_file_spec,
+                              1);
     module_file_spec.SetPath(GetInputFilePath(k_module_file));
     symbol_file_spec.SetPath(GetInputFilePath(k_breakpad_symbol_file));
     return Status();
@@ -565,15 +610,19 @@ TEST_F(LocateModuleCallbackTest,
   // along with the symbol file from the Inputs directory.
   FileSpec uuid_view = BuildCacheDir(m_test_dir);
 
-  m_platform_sp->SetLocateModuleCallback([this](const ModuleSpec &module_spec,
-                                                FileSpec &module_file_spec,
-                                                FileSpec &symbol_file_spec) {
-    CheckCallbackArgs(module_spec, module_file_spec, symbol_file_spec);
-    symbol_file_spec.SetPath(GetInputFilePath(k_symbol_file));
-    return Status();
-  });
+  int callback_call_count = 0;
+  m_platform_sp->SetLocateModuleCallback(
+      [this, &callback_call_count](const ModuleSpec &module_spec,
+                                   FileSpec &module_file_spec,
+                                   FileSpec &symbol_file_spec) {
+        CheckCallbackArgsWithUUID(module_spec, module_file_spec,
+                                  symbol_file_spec, ++callback_call_count);
+        symbol_file_spec.SetPath(GetInputFilePath(k_symbol_file));
+        return Status();
+      });
 
   m_module_sp = m_target_sp->GetOrCreateModule(m_module_spec, /*notify=*/false);
+  ASSERT_EQ(callback_call_count, 2);
   CheckModule(m_module_sp);
   ASSERT_EQ(m_module_sp->GetFileSpec(), uuid_view);
   ASSERT_EQ(m_module_sp->GetSymbolFileFileSpec(),
@@ -589,15 +638,51 @@ TEST_F(LocateModuleCallbackTest,
   // cache along with the symbol file from the Inputs directory.
   FileSpec uuid_view = BuildCacheDir(m_test_dir);
 
-  m_platform_sp->SetLocateModuleCallback([this](const ModuleSpec &module_spec,
-                                                FileSpec &module_file_spec,
-                                                FileSpec &symbol_file_spec) {
-    CheckCallbackArgs(module_spec, module_file_spec, symbol_file_spec);
-    symbol_file_spec.SetPath(GetInputFilePath(k_breakpad_symbol_file));
-    return Status();
-  });
+  int callback_call_count = 0;
+  m_platform_sp->SetLocateModuleCallback(
+      [this, &callback_call_count](const ModuleSpec &module_spec,
+                                   FileSpec &module_file_spec,
+                                   FileSpec &symbol_file_spec) {
+        CheckCallbackArgsWithUUID(module_spec, module_file_spec,
+                                  symbol_file_spec, ++callback_call_count);
+        symbol_file_spec.SetPath(GetInputFilePath(k_breakpad_symbol_file));
+        return Status();
+      });
 
   m_module_sp = m_target_sp->GetOrCreateModule(m_module_spec, /*notify=*/false);
+  ASSERT_EQ(callback_call_count, 2);
+  CheckModule(m_module_sp);
+  ASSERT_EQ(m_module_sp->GetFileSpec(), uuid_view);
+  ASSERT_EQ(m_module_sp->GetSymbolFileFileSpec(),
+            FileSpec(GetInputFilePath(k_breakpad_symbol_file)));
+  CheckUnstrippedSymbol(m_module_sp);
+  ModuleList::RemoveSharedModule(m_module_sp);
+}
+
+TEST_F(LocateModuleCallbackTest,
+       GetOrCreateModuleCallbackSuccessWithMultipleSymbols) {
+  // The get callback returns only a symbol file. The first call returns
+  // a breakpad symbol file and the second call returns a symbol file.
+  // Also the module is cached, so GetOrCreateModule should succeed to return
+  // the module from the cache along with the breakpad symbol file from the
+  // Inputs directory because GetOrCreateModule will use the first symbol file
+  // from the callback.
+  FileSpec uuid_view = BuildCacheDir(m_test_dir);
+
+  int callback_call_count = 0;
+  m_platform_sp->SetLocateModuleCallback(
+      [this, &callback_call_count](const ModuleSpec &module_spec,
+                                   FileSpec &module_file_spec,
+                                   FileSpec &symbol_file_spec) {
+        CheckCallbackArgsWithUUID(module_spec, module_file_spec,
+                                  symbol_file_spec, ++callback_call_count);
+        symbol_file_spec.SetPath(GetInputFilePath(
+            callback_call_count == 1 ? k_breakpad_symbol_file : k_symbol_file));
+        return Status();
+      });
+
+  m_module_sp = m_target_sp->GetOrCreateModule(m_module_spec, /*notify=*/false);
+  ASSERT_EQ(callback_call_count, 2);
   CheckModule(m_module_sp);
   ASSERT_EQ(m_module_sp->GetFileSpec(), uuid_view);
   ASSERT_EQ(m_module_sp->GetSymbolFileFileSpec(),
@@ -612,15 +697,19 @@ TEST_F(LocateModuleCallbackTest,
   // cached, GetOrCreateModule should fail because of the missing module.
   BuildEmptyCacheDir(m_test_dir);
 
-  m_platform_sp->SetLocateModuleCallback([this](const ModuleSpec &module_spec,
-                                                FileSpec &module_file_spec,
-                                                FileSpec &symbol_file_spec) {
-    CheckCallbackArgs(module_spec, module_file_spec, symbol_file_spec);
-    symbol_file_spec.SetPath(GetInputFilePath(k_symbol_file));
-    return Status();
-  });
+  int callback_call_count = 0;
+  m_platform_sp->SetLocateModuleCallback(
+      [this, &callback_call_count](const ModuleSpec &module_spec,
+                                   FileSpec &module_file_spec,
+                                   FileSpec &symbol_file_spec) {
+        CheckCallbackArgsWithUUID(module_spec, module_file_spec,
+                                  symbol_file_spec, ++callback_call_count);
+        symbol_file_spec.SetPath(GetInputFilePath(k_symbol_file));
+        return Status();
+      });
 
   m_module_sp = m_target_sp->GetOrCreateModule(m_module_spec, /*notify=*/false);
+  ASSERT_EQ(callback_call_count, 2);
   ASSERT_FALSE(m_module_sp);
 }
 
@@ -630,14 +719,180 @@ TEST_F(LocateModuleCallbackTest,
   // cached, GetOrCreateModule should fail because of the missing module.
   BuildEmptyCacheDir(m_test_dir);
 
-  m_platform_sp->SetLocateModuleCallback([this](const ModuleSpec &module_spec,
-                                                FileSpec &module_file_spec,
-                                                FileSpec &symbol_file_spec) {
-    CheckCallbackArgs(module_spec, module_file_spec, symbol_file_spec);
-    symbol_file_spec.SetPath(GetInputFilePath(k_breakpad_symbol_file));
-    return Status();
-  });
+  int callback_call_count = 0;
+  m_platform_sp->SetLocateModuleCallback(
+      [this, &callback_call_count](const ModuleSpec &module_spec,
+                                   FileSpec &module_file_spec,
+                                   FileSpec &symbol_file_spec) {
+        CheckCallbackArgsWithUUID(module_spec, module_file_spec,
+                                  symbol_file_spec, ++callback_call_count);
+        symbol_file_spec.SetPath(GetInputFilePath(k_breakpad_symbol_file));
+        return Status();
+      });
 
   m_module_sp = m_target_sp->GetOrCreateModule(m_module_spec, /*notify=*/false);
+  ASSERT_EQ(callback_call_count, 2);
   ASSERT_FALSE(m_module_sp);
+}
+
+TEST_F(LocateModuleCallbackTest,
+       GetOrCreateModuleCallbackSuccessWithModuleByPlatformUUID) {
+  // This is a simulation for Android remote platform debugging.
+  // The locate module callback first call fails because module_spec does not
+  // have UUID. Then, the callback second call returns a module file because the
+  // platform resolved the module_spec UUID from the target process.
+  // GetOrCreateModule should succeed to return the module from the Inputs
+  // directory.
+  BuildEmptyCacheDir(m_test_dir);
+
+  int callback_call_count = 0;
+  m_platform_sp->SetLocateModuleCallback(
+      [this, &callback_call_count](const ModuleSpec &module_spec,
+                                   FileSpec &module_file_spec,
+                                   FileSpec &symbol_file_spec) {
+        callback_call_count++;
+        if (callback_call_count == 1) {
+          // The module_spec does not have UUID on the first call.
+          CheckCallbackArgsWithoutUUID(module_spec, module_file_spec,
+                                       symbol_file_spec, callback_call_count);
+          return Status("Ignored empty UUID");
+        } else {
+          // The module_spec has UUID on the second call.
+          CheckCallbackArgsWithUUID(module_spec, module_file_spec,
+                                    symbol_file_spec, callback_call_count);
+          module_file_spec.SetPath(GetInputFilePath(k_module_file));
+          return Status();
+        }
+      });
+
+  m_module_sp = m_target_sp->GetOrCreateModule(m_module_spec_without_uuid,
+                                               /*notify=*/false);
+  ASSERT_EQ(callback_call_count, 2);
+  CheckModule(m_module_sp);
+  ASSERT_EQ(m_module_sp->GetFileSpec(),
+            FileSpec(GetInputFilePath(k_module_file)));
+  ASSERT_FALSE(m_module_sp->GetSymbolFileFileSpec());
+  CheckStrippedSymbol(m_module_sp);
+  ModuleList::RemoveSharedModule(m_module_sp);
+}
+
+TEST_F(LocateModuleCallbackTest,
+       GetOrCreateModuleCallbackSuccessWithSymbolByPlatformUUID) {
+  // Same as GetOrCreateModuleCallbackSuccessWithModuleByPlatformUUID,
+  // but with a symbol file. GetOrCreateModule should succeed to return the
+  // module file and the symbol file from the Inputs directory.
+  BuildEmptyCacheDir(m_test_dir);
+
+  int callback_call_count = 0;
+  m_platform_sp->SetLocateModuleCallback(
+      [this, &callback_call_count](const ModuleSpec &module_spec,
+                                   FileSpec &module_file_spec,
+                                   FileSpec &symbol_file_spec) {
+        callback_call_count++;
+        if (callback_call_count == 1) {
+          // The module_spec does not have UUID on the first call.
+          CheckCallbackArgsWithoutUUID(module_spec, module_file_spec,
+                                       symbol_file_spec, callback_call_count);
+          return Status("Ignored empty UUID");
+        } else {
+          // The module_spec has UUID on the second call.
+          CheckCallbackArgsWithUUID(module_spec, module_file_spec,
+                                    symbol_file_spec, callback_call_count);
+          module_file_spec.SetPath(GetInputFilePath(k_module_file));
+          symbol_file_spec.SetPath(GetInputFilePath(k_symbol_file));
+          return Status();
+        }
+      });
+
+  m_module_sp = m_target_sp->GetOrCreateModule(m_module_spec_without_uuid,
+                                               /*notify=*/false);
+  ASSERT_EQ(callback_call_count, 2);
+  CheckModule(m_module_sp);
+  ASSERT_EQ(m_module_sp->GetFileSpec(),
+            FileSpec(GetInputFilePath(k_module_file)));
+  ASSERT_EQ(m_module_sp->GetSymbolFileFileSpec(),
+            FileSpec(GetInputFilePath(k_symbol_file)));
+  CheckUnstrippedSymbol(m_module_sp);
+  ModuleList::RemoveSharedModule(m_module_sp);
+}
+
+TEST_F(LocateModuleCallbackTest,
+       GetOrCreateModuleCallbackSuccessWithBreakpadSymbolByPlatformUUID) {
+  // Same as GetOrCreateModuleCallbackSuccessWithModuleByPlatformUUID,
+  // but with a breakpad symbol file. GetOrCreateModule should succeed to return
+  // the module file and the symbol file from the Inputs directory.
+  BuildEmptyCacheDir(m_test_dir);
+
+  int callback_call_count = 0;
+  m_platform_sp->SetLocateModuleCallback(
+      [this, &callback_call_count](const ModuleSpec &module_spec,
+                                   FileSpec &module_file_spec,
+                                   FileSpec &symbol_file_spec) {
+        callback_call_count++;
+        if (callback_call_count == 1) {
+          // The module_spec does not have UUID on the first call.
+          CheckCallbackArgsWithoutUUID(module_spec, module_file_spec,
+                                       symbol_file_spec, callback_call_count);
+          return Status("Ignored empty UUID");
+        } else {
+          // The module_spec has UUID on the second call.
+          CheckCallbackArgsWithUUID(module_spec, module_file_spec,
+                                    symbol_file_spec, callback_call_count);
+          module_file_spec.SetPath(GetInputFilePath(k_module_file));
+          symbol_file_spec.SetPath(GetInputFilePath(k_breakpad_symbol_file));
+          return Status();
+        }
+      });
+
+  m_module_sp = m_target_sp->GetOrCreateModule(m_module_spec_without_uuid,
+                                               /*notify=*/false);
+  ASSERT_EQ(callback_call_count, 2);
+  CheckModule(m_module_sp);
+  ASSERT_EQ(m_module_sp->GetFileSpec(),
+            FileSpec(GetInputFilePath(k_module_file)));
+  ASSERT_EQ(m_module_sp->GetSymbolFileFileSpec(),
+            FileSpec(GetInputFilePath(k_breakpad_symbol_file)));
+  CheckUnstrippedSymbol(m_module_sp);
+  ModuleList::RemoveSharedModule(m_module_sp);
+}
+
+TEST_F(LocateModuleCallbackTest,
+       GetOrCreateModuleCallbackSuccessWithOnlyBreakpadSymbolByPlatformUUID) {
+  // This is a simulation for Android remote platform debugging.
+  // The locate module callback first call fails because module_spec does not
+  // have UUID. Then, the callback second call returns a breakpad symbol file
+  // for the UUID from the target process. GetOrCreateModule should succeed to
+  // return the module from the cache along with the symbol file from the Inputs
+  // directory.
+  FileSpec uuid_view = BuildCacheDir(m_test_dir);
+
+  int callback_call_count = 0;
+  m_platform_sp->SetLocateModuleCallback(
+      [this, &callback_call_count](const ModuleSpec &module_spec,
+                                   FileSpec &module_file_spec,
+                                   FileSpec &symbol_file_spec) {
+        callback_call_count++;
+        if (callback_call_count == 1) {
+          // The module_spec does not have UUID on the first call.
+          CheckCallbackArgsWithoutUUID(module_spec, module_file_spec,
+                                       symbol_file_spec, callback_call_count);
+          return Status("Ignored empty UUID");
+        } else {
+          // The module_spec has UUID on the second call.
+          CheckCallbackArgsWithUUID(module_spec, module_file_spec,
+                                    symbol_file_spec, callback_call_count);
+          symbol_file_spec.SetPath(GetInputFilePath(k_breakpad_symbol_file));
+          return Status();
+        }
+      });
+
+  m_module_sp = m_target_sp->GetOrCreateModule(m_module_spec_without_uuid,
+                                               /*notify=*/false);
+  ASSERT_EQ(callback_call_count, 2);
+  CheckModule(m_module_sp);
+  ASSERT_EQ(m_module_sp->GetFileSpec(), uuid_view);
+  ASSERT_EQ(m_module_sp->GetSymbolFileFileSpec(),
+            FileSpec(GetInputFilePath(k_breakpad_symbol_file)));
+  CheckUnstrippedSymbol(m_module_sp);
+  ModuleList::RemoveSharedModule(m_module_sp);
 }

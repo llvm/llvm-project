@@ -28,6 +28,7 @@
 #include "flang/Optimizer/Builder/MutableBox.h"
 #include "flang/Optimizer/Builder/Runtime/Character.h"
 #include "flang/Optimizer/Builder/Runtime/Derived.h"
+#include "flang/Optimizer/Builder/Runtime/Pointer.h"
 #include "flang/Optimizer/Builder/Todo.h"
 #include "flang/Optimizer/HLFIR/HLFIROps.h"
 #include "llvm/ADT/TypeSwitch.h"
@@ -129,7 +130,7 @@ public:
     // shape is deferred and should not be loaded now to preserve
     // pointer/allocatable aspects.
     if (componentSym.Rank() == 0 ||
-        Fortran::semantics::IsAllocatableOrPointer(componentSym))
+        Fortran::semantics::IsAllocatableOrObjectPointer(&componentSym))
       return mlir::Value{};
 
     fir::FirOpBuilder &builder = getBuilder();
@@ -268,8 +269,36 @@ private:
   fir::FortranVariableOpInterface
   gen(const Fortran::evaluate::SymbolRef &symbolRef) {
     if (std::optional<fir::FortranVariableOpInterface> varDef =
-            getSymMap().lookupVariableDefinition(symbolRef))
+            getSymMap().lookupVariableDefinition(symbolRef)) {
+      if (symbolRef->test(Fortran::semantics::Symbol::Flag::CrayPointee)) {
+        // The pointee is represented with a descriptor inheriting
+        // the shape and type parameters of the pointee.
+        // We have to update the base_addr to point to the current
+        // value of the Cray pointer variable.
+        fir::FirOpBuilder &builder = getBuilder();
+        fir::FortranVariableOpInterface ptrVar =
+            gen(Fortran::lower::getCrayPointer(symbolRef));
+        mlir::Value ptrAddr = ptrVar.getBase();
+
+        // Reinterpret the reference to a Cray pointer so that
+        // we have a pointer-compatible value after loading
+        // the Cray pointer value.
+        mlir::Type refPtrType = builder.getRefType(
+            fir::PointerType::get(fir::dyn_cast_ptrEleTy(ptrAddr.getType())));
+        mlir::Value cast = builder.createConvert(loc, refPtrType, ptrAddr);
+        mlir::Value ptrVal = builder.create<fir::LoadOp>(loc, cast);
+
+        // Update the base_addr to the value of the Cray pointer.
+        // This is a hacky way to do the update, and it may harm
+        // performance around Cray pointer references.
+        // TODO: we should introduce an operation that updates
+        // just the base_addr of the given box. The CodeGen
+        // will just convert it into a single store.
+        fir::runtime::genPointerAssociateScalar(builder, loc, varDef->getBase(),
+                                                ptrVal);
+      }
       return *varDef;
+    }
     TODO(getLoc(), "lowering symbol to HLFIR");
   }
 
@@ -488,8 +517,8 @@ private:
       // array ref designates the target (this is done in "visit"). Other
       // components need special care to deal with the array%array_comp(indices)
       // case.
-      if (Fortran::semantics::IsAllocatableOrPointer(
-              component->GetLastSymbol()))
+      if (Fortran::semantics::IsAllocatableOrObjectPointer(
+              &component->GetLastSymbol()))
         baseType = visit(*component, partInfo);
       else
         baseType = hlfir::getFortranElementOrSequenceType(
@@ -713,7 +742,7 @@ private:
     assert(
         !componentSym.test(Fortran::semantics::Symbol::Flag::ParentComp) &&
         "parent components are skipped and must not reach visitComponentImpl");
-    partInfo.componentName = componentSym.name().ToString();
+    partInfo.componentName = converter.getRecordTypeFieldName(componentSym);
     auto recordType =
         hlfir::getFortranElementType(baseType).cast<fir::RecordType>();
     if (recordType.isDependentType())
@@ -734,7 +763,7 @@ private:
       if (charTy.hasConstantLen())
         partInfo.typeParams.push_back(
             builder.createIntegerConstant(loc, idxTy, charTy.getLen()));
-      else if (!Fortran::semantics::IsAllocatableOrPointer(componentSym))
+      else if (!Fortran::semantics::IsAllocatableOrObjectPointer(&componentSym))
         TODO(loc, "compute character length of automatic character component "
                   "in a PDT");
       // Otherwise, the length of the component is deferred and will only
@@ -1385,7 +1414,34 @@ struct UnaryOp<
                                          hlfir::Entity lhs) {
     if constexpr (TC1 == Fortran::common::TypeCategory::Character &&
                   TC2 == TC1) {
-      TODO(loc, "character conversion in HLFIR");
+      // TODO(loc, "character conversion in HLFIR");
+      auto kindMap = builder.getKindMap();
+      mlir::Type fromTy = lhs.getFortranElementType();
+      mlir::Value origBufferSize = genCharLength(loc, builder, lhs);
+      mlir::Value bufferSize{origBufferSize};
+      auto fromBits = kindMap.getCharacterBitsize(
+          fir::unwrapRefType(fromTy).cast<fir::CharacterType>().getFKind());
+      mlir::Type toTy = Fortran::lower::getFIRType(
+          builder.getContext(), TC1, KIND, /*params=*/std::nullopt);
+      auto toBits = kindMap.getCharacterBitsize(
+          toTy.cast<fir::CharacterType>().getFKind());
+      if (toBits < fromBits) {
+        // Scale by relative ratio to give a buffer of the same length.
+        auto ratio = builder.createIntegerConstant(loc, bufferSize.getType(),
+                                                   fromBits / toBits);
+        bufferSize =
+            builder.create<mlir::arith::MulIOp>(loc, bufferSize, ratio);
+      }
+      // allocate space on the stack for toBuffer
+      auto dest = builder.create<fir::AllocaOp>(loc, toTy,
+                                                mlir::ValueRange{bufferSize});
+      builder.create<fir::CharConvertOp>(loc, lhs.getFirBase(), origBufferSize,
+                                         dest);
+
+      return hlfir::EntityWithAttributes{builder.create<hlfir::DeclareOp>(
+          loc, dest, "ctor.temp", /*shape=*/nullptr,
+          /*typeparams=*/mlir::ValueRange{origBufferSize},
+          fir::FortranVariableFlagsAttr{})};
     }
     mlir::Type type = Fortran::lower::getFIRType(builder.getContext(), TC1,
                                                  KIND, /*params=*/std::nullopt);
@@ -1498,13 +1554,11 @@ private:
     // Elemental expression.
     mlir::Type elementType;
     if constexpr (R::category == Fortran::common::TypeCategory::Derived) {
-      // TODO: need to pass a mold to hlfir.elemental for polymorphic arrays
-      // if using hlfir.elemental here so that it can get the dynamic type
-      // info.
-      if (left.isPolymorphic())
-        TODO(loc, "parenthesized polymorphic arrays in HLFIR");
-      elementType = Fortran::lower::translateDerivedTypeToFIRType(
-          getConverter(), op.derived().GetType().GetDerivedTypeSpec());
+      if (op.derived().GetType().IsUnlimitedPolymorphic())
+        elementType = mlir::NoneType::get(builder.getContext());
+      else
+        elementType = Fortran::lower::translateDerivedTypeToFIRType(
+            getConverter(), op.derived().GetType().GetDerivedTypeSpec());
     } else {
       elementType =
           Fortran::lower::getFIRType(builder.getContext(), R::category, R::kind,
@@ -1518,9 +1572,9 @@ private:
       auto leftVal = hlfir::loadTrivialScalar(l, b, leftElement);
       return unaryOp.gen(l, b, op.derived(), leftVal);
     };
-    mlir::Value elemental = hlfir::genElementalOp(loc, builder, elementType,
-                                                  shape, typeParams, genKernel,
-                                                  /*isUnordered=*/true);
+    mlir::Value elemental = hlfir::genElementalOp(
+        loc, builder, elementType, shape, typeParams, genKernel,
+        /*isUnordered=*/true, left.isPolymorphic() ? left : mlir::Value{});
     fir::FirOpBuilder *bldr = &builder;
     getStmtCtx().attachCleanup(
         [=]() { bldr->create<hlfir::DestroyOp>(loc, elemental); });
@@ -1667,7 +1721,7 @@ private:
     for (const auto &value : ctor.values()) {
       const Fortran::semantics::Symbol &sym = *value.first;
       const Fortran::lower::SomeExpr &expr = value.second.value();
-      llvm::StringRef name = toStringRef(sym.name());
+      std::string name = converter.getRecordTypeFieldName(sym);
       if (sym.test(Fortran::semantics::Symbol::Flag::ParentComp)) {
         const Fortran::semantics::DeclTypeSpec *declTypeSpec = sym.GetType();
         assert(declTypeSpec && declTypeSpec->AsDerived() &&

@@ -19,7 +19,7 @@
 #include "SIMachineFunctionInfo.h"
 #include "SIRegisterInfo.h"
 #include "llvm/CodeGen/LiveIntervals.h"
-#include "llvm/CodeGen/LivePhysRegs.h"
+#include "llvm/CodeGen/LiveRegUnits.h"
 #include "llvm/CodeGen/MachineDominators.h"
 #include "llvm/CodeGen/MachineFrameInfo.h"
 #include "llvm/CodeGen/RegisterScavenging.h"
@@ -1065,6 +1065,8 @@ static unsigned getNumSubRegsForSpillOp(unsigned Op) {
   case AMDGPU::SI_SPILL_AV32_RESTORE:
   case AMDGPU::SI_SPILL_WWM_V32_SAVE:
   case AMDGPU::SI_SPILL_WWM_V32_RESTORE:
+  case AMDGPU::SI_SPILL_WWM_AV32_SAVE:
+  case AMDGPU::SI_SPILL_WWM_AV32_RESTORE:
     return 1;
   default: llvm_unreachable("Invalid spill opcode");
   }
@@ -1307,8 +1309,8 @@ void SIRegisterInfo::buildSpillLoadStore(
     MachineBasicBlock &MBB, MachineBasicBlock::iterator MI, const DebugLoc &DL,
     unsigned LoadStoreOp, int Index, Register ValueReg, bool IsKill,
     MCRegister ScratchOffsetReg, int64_t InstOffset, MachineMemOperand *MMO,
-    RegScavenger *RS, LivePhysRegs *LiveRegs) const {
-  assert((!RS || !LiveRegs) && "Only RS or LiveRegs can be set but not both");
+    RegScavenger *RS, LiveRegUnits *LiveUnits) const {
+  assert((!RS || !LiveUnits) && "Only RS or LiveUnits can be set but not both");
 
   MachineFunction *MF = MBB.getParent();
   const SIInstrInfo *TII = ST.getInstrInfo();
@@ -1396,7 +1398,7 @@ void SIRegisterInfo::buildSpillLoadStore(
     SOffset = MCRegister();
 
     // We don't have access to the register scavenger if this function is called
-    // during  PEI::scavengeFrameVirtualRegs() so use LiveRegs in this case.
+    // during  PEI::scavengeFrameVirtualRegs() so use LiveUnits in this case.
     // TODO: Clobbering SCC is not necessary for scratch instructions in the
     // entry.
     if (RS) {
@@ -1404,10 +1406,10 @@ void SIRegisterInfo::buildSpillLoadStore(
 
       // Piggy back on the liveness scan we just did see if SCC is dead.
       CanClobberSCC = !RS->isRegUsed(AMDGPU::SCC);
-    } else if (LiveRegs) {
-      CanClobberSCC = !LiveRegs->contains(AMDGPU::SCC);
+    } else if (LiveUnits) {
+      CanClobberSCC = LiveUnits->available(AMDGPU::SCC);
       for (MCRegister Reg : AMDGPU::SGPR_32RegClass) {
-        if (LiveRegs->available(MF->getRegInfo(), Reg)) {
+        if (LiveUnits->available(Reg) && !MF->getRegInfo().isReserved(Reg)) {
           SOffset = Reg;
           break;
         }
@@ -1423,9 +1425,9 @@ void SIRegisterInfo::buildSpillLoadStore(
       if (RS) {
         TmpOffsetVGPR = RS->scavengeRegisterBackwards(AMDGPU::VGPR_32RegClass, MI, false, 0);
       } else {
-        assert(LiveRegs);
+        assert(LiveUnits);
         for (MCRegister Reg : AMDGPU::VGPR_32RegClass) {
-          if (LiveRegs->available(MF->getRegInfo(), Reg)) {
+          if (LiveUnits->available(Reg) && !MF->getRegInfo().isReserved(Reg)) {
             TmpOffsetVGPR = Reg;
             break;
           }
@@ -2144,7 +2146,8 @@ bool SIRegisterInfo::eliminateFrameIndex(MachineBasicBlock::iterator MI,
     case AMDGPU::SI_SPILL_AV96_SAVE:
     case AMDGPU::SI_SPILL_AV64_SAVE:
     case AMDGPU::SI_SPILL_AV32_SAVE:
-    case AMDGPU::SI_SPILL_WWM_V32_SAVE: {
+    case AMDGPU::SI_SPILL_WWM_V32_SAVE:
+    case AMDGPU::SI_SPILL_WWM_AV32_SAVE: {
       const MachineOperand *VData = TII->getNamedOperand(*MI,
                                                          AMDGPU::OpName::vdata);
       assert(TII->getNamedOperand(*MI, AMDGPU::OpName::soffset)->getReg() ==
@@ -2211,7 +2214,8 @@ bool SIRegisterInfo::eliminateFrameIndex(MachineBasicBlock::iterator MI,
     case AMDGPU::SI_SPILL_AV384_RESTORE:
     case AMDGPU::SI_SPILL_AV512_RESTORE:
     case AMDGPU::SI_SPILL_AV1024_RESTORE:
-    case AMDGPU::SI_SPILL_WWM_V32_RESTORE: {
+    case AMDGPU::SI_SPILL_WWM_V32_RESTORE:
+    case AMDGPU::SI_SPILL_WWM_AV32_RESTORE: {
       const MachineOperand *VData = TII->getNamedOperand(*MI,
                                                          AMDGPU::OpName::vdata);
       assert(TII->getNamedOperand(*MI, AMDGPU::OpName::soffset)->getReg() ==
@@ -2569,6 +2573,10 @@ bool SIRegisterInfo::eliminateFrameIndex(MachineBasicBlock::iterator MI,
 
 StringRef SIRegisterInfo::getRegAsmName(MCRegister Reg) const {
   return AMDGPUInstPrinter::getRegisterName(Reg);
+}
+
+unsigned AMDGPU::getRegBitWidth(const TargetRegisterClass &RC) {
+  return getRegBitWidth(RC.getID());
 }
 
 static const TargetRegisterClass *

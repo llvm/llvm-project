@@ -7,6 +7,8 @@
 //===----------------------------------------------------------------------===//
 
 #include "GPUOpsLowering.h"
+
+#include "mlir/Conversion/GPUCommon/GPUCommonPass.h"
 #include "mlir/Dialect/LLVMIR/LLVMDialect.h"
 #include "mlir/IR/Attributes.h"
 #include "mlir/IR/Builders.h"
@@ -51,13 +53,21 @@ GPUFuncOpLowering::matchAndRewrite(gpu::GPUFuncOp gpuFuncOp, OpAdaptor adaptor,
   // Remap proper input types.
   TypeConverter::SignatureConversion signatureConversion(
       gpuFuncOp.front().getNumArguments());
+
   Type funcType = getTypeConverter()->convertFunctionSignature(
       gpuFuncOp.getFunctionType(), /*isVariadic=*/false,
       getTypeConverter()->getOptions().useBarePtrCallConv, signatureConversion);
+  if (!funcType) {
+    return rewriter.notifyMatchFailure(gpuFuncOp, [&](Diagnostic &diag) {
+      diag << "failed to convert function signature type for: "
+           << gpuFuncOp.getFunctionType();
+    });
+  }
 
   // Create the new function operation. Only copy those attributes that are
   // not specific to function modeling.
   SmallVector<NamedAttribute, 4> attributes;
+  ArrayAttr argAttrs;
   for (const auto &attr : gpuFuncOp->getAttrs()) {
     if (attr.getName() == SymbolTable::getSymbolAttrName() ||
         attr.getName() == gpuFuncOp.getFunctionTypeAttrName() ||
@@ -66,6 +76,10 @@ GPUFuncOpLowering::matchAndRewrite(gpu::GPUFuncOp gpuFuncOp, OpAdaptor adaptor,
         attr.getName() == gpuFuncOp.getWorkgroupAttribAttrsAttrName() ||
         attr.getName() == gpuFuncOp.getPrivateAttribAttrsAttrName())
       continue;
+    if (attr.getName() == gpuFuncOp.getArgAttrsAttrName()) {
+      argAttrs = gpuFuncOp.getArgAttrsAttr();
+      continue;
+    }
     attributes.push_back(attr);
   }
   // Add a dialect specific kernel attribute in addition to GPU kernel
@@ -181,6 +195,49 @@ GPUFuncOpLowering::matchAndRewrite(gpu::GPUFuncOp gpuFuncOp, OpAdaptor adaptor,
     }
   }
 
+  // Get memref type from function arguments and set the noalias to
+  // pointer arguments.
+  for (const auto &en : llvm::enumerate(gpuFuncOp.getArgumentTypes())) {
+    auto memrefTy = en.value().dyn_cast<MemRefType>();
+    NamedAttrList argAttr = argAttrs
+                                ? argAttrs[en.index()].cast<DictionaryAttr>()
+                                : NamedAttrList();
+
+    auto copyPointerAttribute = [&](StringRef attrName) {
+      Attribute attr = argAttr.erase(attrName);
+
+      // This is a proxy for the bare pointer calling convention.
+      if (!attr)
+        return;
+      auto remapping = signatureConversion.getInputMapping(en.index());
+      if (remapping->size > 1 &&
+          attrName == LLVM::LLVMDialect::getNoAliasAttrName()) {
+        emitWarning(llvmFuncOp.getLoc(),
+                    "Cannot copy noalias with non-bare pointers.\n");
+        return;
+      }
+      for (size_t i = 0, e = remapping->size; i < e; ++i) {
+        if (llvmFuncOp.getArgument(remapping->inputNo + i)
+                .getType()
+                .isa<LLVM::LLVMPointerType>()) {
+          llvmFuncOp.setArgAttr(remapping->inputNo + i, attrName, attr);
+        }
+      }
+    };
+
+    if (argAttr.empty())
+      continue;
+
+    if (memrefTy) {
+      copyPointerAttribute(LLVM::LLVMDialect::getNoAliasAttrName());
+      copyPointerAttribute(LLVM::LLVMDialect::getReadonlyAttrName());
+      copyPointerAttribute(LLVM::LLVMDialect::getWriteOnlyAttrName());
+      copyPointerAttribute(LLVM::LLVMDialect::getNonNullAttrName());
+      copyPointerAttribute(LLVM::LLVMDialect::getDereferenceableAttrName());
+      copyPointerAttribute(
+          LLVM::LLVMDialect::getDereferenceableOrNullAttrName());
+    }
+  }
   rewriter.eraseOp(gpuFuncOp);
   return success();
 }
@@ -455,7 +512,7 @@ LogicalResult GPUPrintfOpToVPrintfLowering::matchAndRewrite(
 /// Unrolls op if it's operating on vectors.
 LogicalResult impl::scalarizeVectorOp(Operation *op, ValueRange operands,
                                       ConversionPatternRewriter &rewriter,
-                                      LLVMTypeConverter &converter) {
+                                      const LLVMTypeConverter &converter) {
   TypeRange operandTypes(operands);
   if (llvm::none_of(operandTypes,
                     [](Type type) { return isa<VectorType>(type); })) {

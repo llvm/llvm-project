@@ -12,16 +12,18 @@
 // extended bits aren't consumed or because the input was already sign extended
 // by an earlier instruction.
 //
-// Then it removes the -w suffix from each addiw and slliw instructions
+// Then it removes the -w suffix from addw, slliw and mulw instructions
 // whenever all users are dependent only on the lower word of the result of the
-// instruction. We do this only for addiw, slliw, and mulw because the -w forms
-// are less compressible.
+// instruction. We do this only for addw, slliw, and mulw because the -w forms
+// are less compressible: c.add and c.slli have a larger register encoding than
+// their w counterparts, and there's no compressible version of mulw.
 //
 //===---------------------------------------------------------------------===//
 
 #include "RISCV.h"
 #include "RISCVMachineFunctionInfo.h"
 #include "RISCVSubtarget.h"
+#include "llvm/ADT/SmallSet.h"
 #include "llvm/ADT/Statistic.h"
 #include "llvm/CodeGen/MachineFunctionPass.h"
 #include "llvm/CodeGen/TargetInstrInfo.h"
@@ -76,6 +78,30 @@ FunctionPass *llvm::createRISCVOptWInstrsPass() {
   return new RISCVOptWInstrs();
 }
 
+static bool vectorPseudoHasAllNBitUsers(const MachineOperand &UserOp,
+                                        unsigned Bits) {
+  const MachineInstr &MI = *UserOp.getParent();
+  const RISCVVPseudosTable::PseudoInfo *PseudoInfo =
+      RISCVVPseudosTable::getPseudoInfo(MI.getOpcode());
+
+  if (!PseudoInfo)
+    return false;
+
+  const MCInstrDesc &MCID = MI.getDesc();
+  const uint64_t TSFlags = MCID.TSFlags;
+  if (!RISCVII::hasSEWOp(TSFlags))
+    return false;
+  assert(RISCVII::hasVLOp(TSFlags));
+  const unsigned Log2SEW = MI.getOperand(RISCVII::getSEWOpNum(MCID)).getImm();
+
+  if (UserOp.getOperandNo() == RISCVII::getVLOpNum(MCID))
+    return false;
+
+  auto NumDemandedBits =
+      RISCV::getVectorLowDemandedScalarBits(PseudoInfo->BaseInstr, Log2SEW);
+  return NumDemandedBits && Bits >= *NumDemandedBits;
+}
+
 // Checks if all users only demand the lower \p OrigBits of the original
 // instruction's result.
 // TODO: handle multiple interdependent transformations
@@ -106,6 +132,8 @@ static bool hasAllNBitUsers(const MachineInstr &OrigMI,
 
       switch (UserMI->getOpcode()) {
       default:
+        if (vectorPseudoHasAllNBitUsers(UserOp, Bits))
+          break;
         return false;
 
       case RISCV::ADDIW:
@@ -283,6 +311,8 @@ static bool hasAllNBitUsers(const MachineInstr &OrigMI,
         Worklist.push_back(std::make_pair(UserMI, Bits));
         break;
 
+      case RISCV::CZERO_EQZ:
+      case RISCV::CZERO_NEZ:
       case RISCV::VT_MASKC:
       case RISCV::VT_MASKCN:
         if (OpIdx != 1)
@@ -504,6 +534,8 @@ static bool isSignExtendedW(Register SrcReg, const RISCVSubtarget &ST,
       break;
     }
 
+    case RISCV::CZERO_EQZ:
+    case RISCV::CZERO_NEZ:
     case RISCV::VT_MASKC:
     case RISCV::VT_MASKCN:
       // Instructions return zero or operand 1. Result is sign extended if

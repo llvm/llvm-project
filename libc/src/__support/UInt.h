@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_LIBC_SRC_SUPPORT_UINT_H
-#define LLVM_LIBC_SRC_SUPPORT_UINT_H
+#ifndef LLVM_LIBC_SRC___SUPPORT_UINT_H
+#define LLVM_LIBC_SRC___SUPPORT_UINT_H
 
 #include "src/__support/CPP/array.h"
 #include "src/__support/CPP/limits.h"
@@ -21,7 +21,7 @@
 #include <stddef.h> // For size_t
 #include <stdint.h>
 
-namespace __llvm_libc::cpp {
+namespace LIBC_NAMESPACE::cpp {
 
 template <size_t Bits, bool Signed> struct BigInt {
 
@@ -116,7 +116,7 @@ template <size_t Bits, bool Signed> struct BigInt {
         return lo;
       }
     } else {
-      return (static_cast<T>(val[1]) << 64) + lo;
+      return static_cast<T>((static_cast<T>(val[1]) << 64) + lo);
     }
   }
 
@@ -381,7 +381,7 @@ template <size_t Bits, bool Signed> struct BigInt {
 
     BigInt<Bits, Signed> quotient(0);
     BigInt<Bits, Signed> subtractor = other;
-    int cur_bit = subtractor.clz() - this->clz();
+    int cur_bit = static_cast<int>(subtractor.clz() - this->clz());
     subtractor.shift_left(cur_bit);
 
     for (; cur_bit >= 0 && *this > 0; --cur_bit, subtractor.shift_right(1)) {
@@ -909,6 +909,24 @@ struct make_unsigned<Int<Bits>> : type_identity<UInt<Bits>> {
                 "Number of bits in Int should be a multiple of 64.");
 };
 
-} // namespace __llvm_libc::cpp
+template <size_t Bits>
+struct make_unsigned<UInt<Bits>> : type_identity<UInt<Bits>> {
+  static_assert(Bits > 0 && Bits % 64 == 0,
+                "Number of bits in Int should be a multiple of 64.");
+};
 
-#endif // LLVM_LIBC_SRC_SUPPORT_UINT_H
+template <size_t Bits>
+struct make_signed<Int<Bits>> : type_identity<Int<Bits>> {
+  static_assert(Bits > 0 && Bits % 64 == 0,
+                "Number of bits in Int should be a multiple of 64.");
+};
+
+template <size_t Bits>
+struct make_signed<UInt<Bits>> : type_identity<Int<Bits>> {
+  static_assert(Bits > 0 && Bits % 64 == 0,
+                "Number of bits in Int should be a multiple of 64.");
+};
+
+} // namespace LIBC_NAMESPACE::cpp
+
+#endif // LLVM_LIBC_SRC___SUPPORT_UINT_H

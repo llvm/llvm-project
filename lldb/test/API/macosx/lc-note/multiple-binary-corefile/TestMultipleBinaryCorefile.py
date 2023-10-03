@@ -1,4 +1,4 @@
-"""Test corefiles with "main bin spec"/"load binary" with only addrs work."""
+"""Test corefiles with "main bin spec"/"load binary" with only vmaddrs works."""
 
 
 import os
@@ -35,41 +35,28 @@ class TestMultipleBinaryCorefile(TestBase):
             self.libtwo_exe,
             self.libtwo_slide,
         )
+        if self.TraceOn():
+            print("Creating corefile with command %s")
         call(cmd, shell=True)
 
     def load_corefile_and_test(self):
         target = self.dbg.CreateTarget("")
         err = lldb.SBError()
         if self.TraceOn():
-            self.runCmd("script print('loading corefile %s')" % self.corefile)
+            print("loading corefile %s" % self.corefile)
         process = target.LoadCore(self.corefile)
         self.assertEqual(process.IsValid(), True)
         if self.TraceOn():
-            self.runCmd("script print('image list after loading corefile:')")
+            print("image list after loading corefile:")
             self.runCmd("image list")
 
-        self.assertEqual(target.GetNumModules(), 3)
+        ## We don't have libone.dylib in the global module cache or from
+        ## dsymForUUID, and lldb will not read the binary out of memory.
+        self.assertEqual(target.GetNumModules(), 2)
         fspec = target.GetModuleAtIndex(0).GetFileSpec()
         self.assertEqual(fspec.GetFilename(), self.aout_exe_basename)
 
-        # libone.dylib was never loaded into lldb, see that we added a memory module.
         fspec = target.GetModuleAtIndex(1).GetFileSpec()
-        self.assertIn("memory-image", fspec.GetFilename())
-
-        dwarfdump_uuid_regex = re.compile("UUID: ([-0-9a-fA-F]+) \(([^\(]+)\) .*")
-        dwarfdump_cmd_output = subprocess.check_output(
-            ('/usr/bin/dwarfdump --uuid "%s"' % self.libone_exe), shell=True
-        ).decode("utf-8")
-        libone_uuid = None
-        for line in dwarfdump_cmd_output.splitlines():
-            match = dwarfdump_uuid_regex.search(line)
-            if match:
-                libone_uuid = match.group(1)
-
-        memory_image_uuid = target.GetModuleAtIndex(1).GetUUIDString()
-        self.assertEqual(libone_uuid, memory_image_uuid)
-
-        fspec = target.GetModuleAtIndex(2).GetFileSpec()
         self.assertEqual(fspec.GetFilename(), self.libtwo_exe_basename)
 
         # Executables "always" have this base address
@@ -81,16 +68,8 @@ class TestMultipleBinaryCorefile(TestBase):
         self.assertEqual(aout_load, 0x100000000 + self.aout_slide)
 
         # Value from Makefile
-        libone_load = (
-            target.GetModuleAtIndex(1)
-            .GetObjectFileHeaderAddress()
-            .GetLoadAddress(target)
-        )
-        self.assertEqual(libone_load, self.libone_slide)
-
-        # Value from Makefile
         libtwo_load = (
-            target.GetModuleAtIndex(2)
+            target.GetModuleAtIndex(1)
             .GetObjectFileHeaderAddress()
             .GetLoadAddress(target)
         )
@@ -140,6 +119,15 @@ class TestMultipleBinaryCorefile(TestBase):
         self.assertNotEqual(
             libtwo_uuid, None, "Could not get uuid of built libtwo.dylib"
         )
+        dwarfdump_cmd_output = subprocess.check_output(
+            ('/usr/bin/dwarfdump --uuid "%s"' % self.aout_exe), shell=True
+        ).decode("utf-8")
+        aout_uuid = None
+        for line in dwarfdump_cmd_output.splitlines():
+            match = dwarfdump_uuid_regex.search(line)
+            if match:
+                aout_uuid = match.group(1)
+        self.assertNotEqual(aout_uuid, None, "Could not get uuid of built a.out")
 
         ###  Create our dsym-for-uuid shell script which returns aout_exe
         shell_cmds = [
@@ -149,27 +137,47 @@ class TestMultipleBinaryCorefile(TestBase):
             "do",
             "  shift",
             "done",
-            "ret=0",
             'echo "<?xml version=\\"1.0\\" encoding=\\"UTF-8\\"?>"',
             'echo "<!DOCTYPE plist PUBLIC \\"-//Apple//DTD PLIST 1.0//EN\\" \\"http://www.apple.com/DTDs/PropertyList-1.0.dtd\\">"',
             'echo "<plist version=\\"1.0\\">"',
+            'echo "  <dict>"',
+            'echo "    <key>$1</key>"',
+            'echo "    <dict>"',
             "",
-            'if [ "$1" != "%s" ]' % (libtwo_uuid),
+            'if [ "$1" != "%s" -a "$1" != "%s" ]' % (libtwo_uuid, aout_uuid),
             "then",
-            '  echo "<key>DBGError</key><string>not found</string>"',
+            '  echo "      <key>DBGError</key>"',
+            '  echo "      <string>not found by $0</string>"',
+            '  echo "    </dict>"',
+            '  echo "  </dict>"',
             '  echo "</plist>"',
-            "  exit 1",
+            "  exit 0",
             "fi",
+            #  UUID matches libtwo.dylib
+            'if [ "$1" = "%s" ]' % (libtwo_uuid),
+            "then",
             "  uuid=%s" % libtwo_uuid,
             "  bin=%s" % self.libtwo_exe,
             "  dsym=%s.dSYM/Contents/Resources/DWARF/%s"
             % (self.libtwo_exe, os.path.basename(self.libtwo_exe)),
-            'echo "<dict><key>$uuid</key><dict>"',
+            "fi",
+            #  UUID matches a.out
+            'if [ "$1" = "%s" ]' % (aout_uuid),
+            "then",
+            "  uuid=%s" % aout_uuid,
+            "  bin=%s" % self.aout_exe,
+            "  dsym=%s.dSYM/Contents/Resources/DWARF/%s"
+            % (self.aout_exe, os.path.basename(self.aout_exe)),
+            "fi",
             "",
-            'echo "<key>DBGDSYMPath</key><string>$dsym</string>"',
-            'echo "<key>DBGSymbolRichExecutable</key><string>$bin</string>"',
-            'echo "</dict></dict></plist>"',
-            "exit $ret",
+            'echo "      <key>DBGDSYMPath</key>"',
+            'echo "      <string>$dsym</string>"',
+            'echo "      <key>DBGSymbolRichExecutable</key>"',
+            'echo "      <string>$bin</string>"',
+            'echo "    </dict>"',
+            'echo "  </dict>"',
+            'echo "</plist>"',
+            "exit 0",
         ]
 
         with open(dsym_for_uuid, "w") as writer:
@@ -183,7 +191,7 @@ class TestMultipleBinaryCorefile(TestBase):
         self.dbg.DeleteTarget(target)
 
         if self.TraceOn():
-            self.runCmd("script print('Global image list, before loading corefile:')")
+            print("Global image list, before loading corefile:")
             self.runCmd("image list -g")
 
         self.load_corefile_and_test()
@@ -206,7 +214,7 @@ class TestMultipleBinaryCorefile(TestBase):
         self.dbg.DeleteTarget(target)
 
         if self.TraceOn():
-            self.runCmd("script print('Global image list, before loading corefile:')")
+            print("Global image list, before loading corefile:")
             self.runCmd("image list -g")
 
         self.load_corefile_and_test()

@@ -55,14 +55,13 @@ func.func @return_tensor(%A : tensor<?xf32>, %v : vector<4xf32>) -> (tensor<?xf3
   %c0 = arith.constant 0 : index
 
   // CHECK: %[[A_memref:.*]] = bufferization.to_memref %[[A]]
-  // CHECK: %[[dim:.*]] = tensor.dim %[[A]]
+  // CHECK: %[[dim:.*]] = memref.dim %[[A_memref]]
   // CHECK: %[[alloc:.*]] = memref.alloc(%[[dim]])
   // CHECK: memref.copy %[[A_memref]], %[[alloc]]
   // CHECK: vector.transfer_write %{{.*}}, %[[alloc]]
   // CHECK: %[[res_tensor:.*]] = bufferization.to_tensor %[[alloc]]
   %0 = vector.transfer_write %v, %A[%c0] : vector<4xf32>, tensor<?xf32>
 
-  // CHECK: memref.dealloc %[[alloc]]
   // CHECK: return %[[res_tensor]]
   return %0 : tensor<?xf32>
 }
@@ -115,7 +114,6 @@ func.func @read_after_write_conflict(%cst : f32, %idx : index, %idx2 : index)
   // CHECK: %[[read2:.*]] = memref.load %[[alloc]]
   %read2 = tensor.extract %write[%idx] : tensor<10xf32>
 
-  // CHECK: memref.dealloc %[[alloc]]
   // CHECK: return %[[read]], %[[read2]]
   return %read, %read2 : f32, f32
 }
@@ -127,7 +125,6 @@ func.func @copy_deallocated() -> tensor<10xf32> {
   // CHECK: %[[alloc:.*]] = memref.alloc()
   %0 = bufferization.alloc_tensor() : tensor<10xf32>
   // CHECK: %[[alloc_tensor:.*]] = bufferization.to_tensor %[[alloc]]
-  // CHECK: memref.dealloc %[[alloc]]
   // CHECK: return %[[alloc_tensor]]
   return %0 : tensor<10xf32>
 }
@@ -162,7 +159,6 @@ func.func @alloc_tensor_with_copy(%t: tensor<5xf32>) -> tensor<5xf32> {
   // CHECK: memref.copy %[[m]], %[[alloc]]
   %0 = bufferization.alloc_tensor() copy(%t) : tensor<5xf32>
   // CHECK: %[[r:.*]] = bufferization.to_tensor %[[alloc]]
-  // CHECK: memref.dealloc %[[alloc]]
   // CHECK: return %[[r]]
   return %0 : tensor<5xf32>
 }
@@ -174,7 +170,6 @@ func.func @alloc_tensor_with_memory_space() -> tensor<5xf32> {
   // CHECK: %[[alloc:.*]] = memref.alloc() {{.*}} : memref<5xf32, 1>
   %0 = bufferization.alloc_tensor() {memory_space = 1 : i64} : tensor<5xf32>
   // CHECK: %[[r:.*]] = bufferization.to_tensor %[[alloc]]
-  // CHECK: memref.dealloc %[[alloc]]
   // CHECK: return %[[r]]
   return %0 : tensor<5xf32>
 }
@@ -202,9 +197,12 @@ func.func @read_of_alias(%t: tensor<100xf32>, %pos1: index, %pos2: index,
 
 // -----
 
-// CHECK-LABEL: func @from_unranked_to_unranked
+// CHECK-LABEL: func @from_unranked_to_unranked(
+//  CHECK-SAME:     %[[arg0:.*]]: tensor<*xi32>
 func.func @from_unranked_to_unranked(%arg0: tensor<*xi32>) -> tensor<*xi32> {
-  // CHECK: return %arg{{.*}} : tensor<*xi32>
+  // CHECK: %[[m:.*]] = bufferization.to_memref %[[arg0]] : memref<*xi32>
+  // CHECK: %[[t:.*]] = bufferization.to_tensor %[[m]]
+  // CHECK: return %[[t]] : tensor<*xi32>
   %0 = tensor.cast %arg0 : tensor<*xi32> to tensor<*xi32>
   return %0 : tensor<*xi32>
 }
@@ -218,9 +216,8 @@ func.func @tensor_copy(%arg0: tensor<5xf32>) -> tensor<5xf32> {
   // CHECK: %[[alloc:.*]] = memref.alloc() {{.*}} : memref<5xf32>
   // CHECK: memref.copy %[[m]], %[[alloc]]
   // CHECK: %[[r:.*]] = bufferization.to_tensor %[[alloc]]
-  // CHECK: memref.dealloc %[[alloc]]
   // CHECK: return %[[r]]
   %dest = bufferization.alloc_tensor() : tensor<5xf32>
-  %0 = bufferization.copy_tensor %arg0, %dest : tensor<5xf32>
+  %0 = bufferization.materialize_in_destination %arg0 in %dest : tensor<5xf32>
   return %0 : tensor<5xf32>
 }

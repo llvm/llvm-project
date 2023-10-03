@@ -13,7 +13,7 @@
 // expected-error {{should be ignored}}
 
 //      CHECK: error: no expected directives found: consider use of 'expected-no-diagnostics'
-// CHECK-NEXT: error: 'error' diagnostics seen but not expected:
+// CHECK-NEXT: error: 'expected-error' diagnostics seen but not expected:
 // CHECK-NEXT:   Line 5: header
 // CHECK-NEXT:   Line 10: source
 // CHECK-NEXT: 3 errors generated.
@@ -31,9 +31,9 @@
 // expected-error@verify2.h:* {{header}}
 // expected-error@verify2.h:* {{unknown}}
 
-//      CHECK2: error: 'error' diagnostics expected but not seen:
+//      CHECK2: error: 'expected-error' diagnostics expected but not seen:
 // CHECK2-NEXT:   File {{.*}}verify2.h Line * (directive at {{.*}}verify2.c:32): unknown
-// CHECK2-NEXT: error: 'error' diagnostics seen but not expected:
+// CHECK2-NEXT: error: 'expected-error' diagnostics seen but not expected:
 // CHECK2-NEXT:   File {{.*}}verify2.c Line 10: source
 // CHECK2-NEXT: 2 errors generated.
 #endif

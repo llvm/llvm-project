@@ -206,3 +206,11 @@ def XR#I : LoongArchReg256<!cast<LoongArchReg128>("VR"#I), "xr"#I>,
 def LASX256 : RegisterClass<"LoongArch",
                             [v8f32, v4f64, v32i8, v16i16, v8i32, v4i64],
                             256, (sequence "XR%u", 0, 31)>;
+
+// Scratchpad registers
+
+foreach I = 0-3 in
+def SCR#I : LoongArchReg<I, "scr"#I>;
+
+let isAllocatable = false, RegInfos = GRLenRI in
+def SCR : RegisterClass<"LoongArch", [GRLenVT], 32, (sequence "SCR%u", 0, 3)>;

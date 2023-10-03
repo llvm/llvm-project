@@ -33,7 +33,21 @@ void RTNAME(Destroy)(const Descriptor &descriptor) {
   if (const DescriptorAddendum * addendum{descriptor.Addendum()}) {
     if (const auto *derived{addendum->derivedType()}) {
       if (!derived->noDestructionNeeded()) {
-        Destroy(descriptor, true, *derived);
+        // TODO: Pass source file & line information to the API
+        // so that a good Terminator can be passed
+        Destroy(descriptor, true, *derived, nullptr);
+      }
+    }
+  }
+}
+
+void RTNAME(Finalize)(
+    const Descriptor &descriptor, const char *sourceFile, int sourceLine) {
+  if (const DescriptorAddendum * addendum{descriptor.Addendum()}) {
+    if (const auto *derived{addendum->derivedType()}) {
+      if (!derived->noFinalizationNeeded()) {
+        Terminator terminator{sourceFile, sourceLine};
+        Finalize(descriptor, *derived, &terminator);
       }
     }
   }
@@ -160,7 +174,7 @@ void RTNAME(DestroyWithoutFinalization)(const Descriptor &descriptor) {
   if (const DescriptorAddendum * addendum{descriptor.Addendum()}) {
     if (const auto *derived{addendum->derivedType()}) {
       if (!derived->noDestructionNeeded()) {
-        Destroy(descriptor, /*finalize=*/false, *derived);
+        Destroy(descriptor, /*finalize=*/false, *derived, nullptr);
       }
     }
   }

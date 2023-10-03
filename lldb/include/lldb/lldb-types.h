@@ -74,6 +74,8 @@ typedef bool (*CommandOverrideCallback)(void *baton, const char **argv);
 typedef bool (*ExpressionCancelCallback)(ExpressionEvaluationPhase phase,
                                          void *baton);
 
+typedef void *ScriptObjectPtr;
+
 typedef uint64_t addr_t;
 typedef uint64_t user_id_t;
 typedef uint64_t pid_t;

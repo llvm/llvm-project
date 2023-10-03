@@ -533,9 +533,8 @@ BitVector AggressiveAntiDepBreaker::GetRenameRegisters(unsigned Reg) {
 }
 
 bool AggressiveAntiDepBreaker::FindSuitableFreeRegisters(
-                                unsigned AntiDepGroupIndex,
-                                RenameOrderType& RenameOrder,
-                                std::map<unsigned, unsigned> &RenameMap) {
+    unsigned SuperReg, unsigned AntiDepGroupIndex, RenameOrderType &RenameOrder,
+    std::map<unsigned, unsigned> &RenameMap) {
   std::vector<unsigned> &KillIndices = State->GetKillIndices();
   std::vector<unsigned> &DefIndices = State->GetDefIndices();
   std::multimap<unsigned, AggressiveAntiDepState::RegisterReference>&
@@ -550,17 +549,12 @@ bool AggressiveAntiDepBreaker::FindSuitableFreeRegisters(
   if (Regs.empty())
     return false;
 
-  // Find the "superest" register in the group. At the same time,
-  // collect the BitVector of registers that can be used to rename
+  // Collect the BitVector of registers that can be used to rename
   // each register.
   LLVM_DEBUG(dbgs() << "\tRename Candidates for Group g" << AntiDepGroupIndex
                     << ":\n");
   std::map<unsigned, BitVector> RenameRegisterMap;
-  unsigned SuperReg = 0;
   for (unsigned Reg : Regs) {
-    if ((SuperReg == 0) || TRI->isSuperRegister(SuperReg, Reg))
-      SuperReg = Reg;
-
     // If Reg has any references, then collect possible rename regs
     if (RegRefs.count(Reg) > 0) {
       LLVM_DEBUG(dbgs() << "\t\t" << printReg(Reg, TRI) << ":");
@@ -892,30 +886,8 @@ unsigned AggressiveAntiDepBreaker::BreakAntiDependencies(
             }
           }
 
-          if (AntiDepReg == 0) continue;
-
-          // If the definition of the anti-dependency register does not start
-          // a new live range, bail out. This can happen if the anti-dep
-          // register is a sub-register of another register whose live range
-          // spans over PathSU. In such case, PathSU defines only a part of
-          // the larger register.
-          RegAliases.reset();
-          for (MCRegAliasIterator AI(AntiDepReg, TRI, true); AI.isValid(); ++AI)
-            RegAliases.set(*AI);
-          for (SDep S : PathSU->Succs) {
-            SDep::Kind K = S.getKind();
-            if (K != SDep::Data && K != SDep::Output && K != SDep::Anti)
-              continue;
-            unsigned R = S.getReg();
-            if (!RegAliases[R])
-              continue;
-            if (R == AntiDepReg || TRI->isSubRegister(AntiDepReg, R))
-              continue;
-            AntiDepReg = 0;
-            break;
-          }
-
-          if (AntiDepReg == 0) continue;
+          if (AntiDepReg == 0)
+            continue;
         }
 
         assert(AntiDepReg != 0);
@@ -931,7 +903,8 @@ unsigned AggressiveAntiDepBreaker::BreakAntiDependencies(
 
         // Look for a suitable register to use to break the anti-dependence.
         std::map<unsigned, unsigned> RenameMap;
-        if (FindSuitableFreeRegisters(GroupIndex, RenameOrder, RenameMap)) {
+        if (FindSuitableFreeRegisters(AntiDepReg, GroupIndex, RenameOrder,
+                                      RenameMap)) {
           LLVM_DEBUG(dbgs() << "\tBreaking anti-dependence edge on "
                             << printReg(AntiDepReg, TRI) << ":");
 

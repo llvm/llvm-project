@@ -406,13 +406,12 @@ struct ConcatSliceOptimization : public OpRewritePattern<tosa::SliceOp> {
 
       if (sliceStart[axis] >= 0 &&
           (sliceStart[axis] + sliceSize[axis]) <= inputType.getDimSize(axis)) {
-        replaceWithSlice =
-            rewriter
-                .create<tosa::SliceOp>(
-                    sliceOp.getLoc(), sliceOp.getType(), input,
-                    rewriter.getDenseI64ArrayAttr(sliceOp.getStart()),
-                    rewriter.getDenseI64ArrayAttr(sliceSize))
-                .getResult();
+        replaceWithSlice = rewriter
+                               .create<tosa::SliceOp>(
+                                   sliceOp.getLoc(), sliceOp.getType(), input,
+                                   rewriter.getDenseI64ArrayAttr(sliceStart),
+                                   rewriter.getDenseI64ArrayAttr(sliceSize))
+                               .getResult();
         break;
       }
       sliceStart[axis] -= inputType.getDimSize(axis);

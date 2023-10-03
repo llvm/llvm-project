@@ -31,6 +31,21 @@
 
 using namespace __hwasan;
 
+struct HWAsanInterceptorContext {
+  const char *interceptor_name;
+};
+
+#  define ACCESS_MEMORY_RANGE(ctx, offset, size, access)                    \
+    do {                                                                    \
+      __hwasan::CheckAddressSized<ErrorAction::Abort, access>((uptr)offset, \
+                                                              size);        \
+    } while (0)
+
+#  define HWASAN_READ_RANGE(ctx, offset, size) \
+    ACCESS_MEMORY_RANGE(ctx, offset, size, AccessType::Load)
+#  define HWASAN_WRITE_RANGE(ctx, offset, size) \
+    ACCESS_MEMORY_RANGE(ctx, offset, size, AccessType::Store)
+
 #  if !SANITIZER_APPLE
 #    define HWASAN_INTERCEPT_FUNC(name)                                        \
       do {                                                                     \
@@ -79,13 +94,11 @@ using namespace __hwasan;
       } while (false)
 
 #    define COMMON_INTERCEPTOR_READ_RANGE(ctx, ptr, size) \
-      do {                                                \
-        (void)(ctx);                                      \
-        (void)(ptr);                                      \
-        (void)(size);                                     \
-      } while (false)
+      HWASAN_READ_RANGE(ctx, ptr, size)
 
 #    define COMMON_INTERCEPTOR_ENTER(ctx, func, ...) \
+      HWAsanInterceptorContext _ctx = {#func};       \
+      ctx = (void *)&_ctx;                           \
       do {                                           \
         (void)(ctx);                                 \
         (void)(func);                                \
@@ -520,12 +533,12 @@ void InitializeInterceptors() {
   static int inited = 0;
   CHECK_EQ(inited, 0);
 
+#  if HWASAN_WITH_INTERCEPTORS
   InitializeCommonInterceptors();
 
   (void)(read_iovec);
   (void)(write_iovec);
 
-#  if HWASAN_WITH_INTERCEPTORS
 #    if defined(__linux__)
   INTERCEPT_FUNCTION(__libc_longjmp);
   INTERCEPT_FUNCTION(longjmp);

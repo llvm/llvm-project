@@ -20,8 +20,8 @@ define float @foo_float(float %0, float %1, float %2, float %3) {
 ;
 ; CHECK-P8-LABEL: foo_float:
 ; CHECK-P8:       # %bb.0:
-; CHECK-P8-NEXT:    xsmulsp f1, f2, f1
 ; CHECK-P8-NEXT:    addis r3, r2, .LCPI0_0@toc@ha
+; CHECK-P8-NEXT:    xsmulsp f1, f2, f1
 ; CHECK-P8-NEXT:    xssubsp f0, f3, f4
 ; CHECK-P8-NEXT:    lfs f2, .LCPI0_0@toc@l(r3)
 ; CHECK-P8-NEXT:    xsmaddasp f1, f0, f2
@@ -56,8 +56,8 @@ define double @foo_double(double %0, double %1, double %2, double %3) {
 ;
 ; CHECK-P8-LABEL: foo_double:
 ; CHECK-P8:       # %bb.0:
-; CHECK-P8-NEXT:    xsmuldp f1, f2, f1
 ; CHECK-P8-NEXT:    addis r3, r2, .LCPI1_0@toc@ha
+; CHECK-P8-NEXT:    xsmuldp f1, f2, f1
 ; CHECK-P8-NEXT:    xssubdp f0, f3, f4
 ; CHECK-P8-NEXT:    lfd f2, .LCPI1_0@toc@l(r3)
 ; CHECK-P8-NEXT:    xsmaddadp f1, f0, f2
@@ -98,16 +98,16 @@ define float @foo_float_reuse_const(float %0, float %1, float %2, float %3) {
 ;
 ; CHECK-P8-LABEL: foo_float_reuse_const:
 ; CHECK-P8:       # %bb.0:
-; CHECK-P8-NEXT:    xsmulsp f1, f2, f1
 ; CHECK-P8-NEXT:    addis r3, r2, .LCPI2_0@toc@ha
+; CHECK-P8-NEXT:    xsmulsp f1, f2, f1
 ; CHECK-P8-NEXT:    xssubsp f0, f3, f4
 ; CHECK-P8-NEXT:    lfs f3, .LCPI2_0@toc@l(r3)
 ; CHECK-P8-NEXT:    addis r3, r2, .LCPI2_1@toc@ha
-; CHECK-P8-NEXT:    lfs f4, .LCPI2_1@toc@l(r3)
+; CHECK-P8-NEXT:    xsmaddasp f1, f0, f3
+; CHECK-P8-NEXT:    lfs f0, .LCPI2_1@toc@l(r3)
 ; CHECK-P8-NEXT:    addis r3, r2, .LC0@toc@ha
 ; CHECK-P8-NEXT:    ld r3, .LC0@toc@l(r3)
-; CHECK-P8-NEXT:    xsmaddasp f1, f0, f3
-; CHECK-P8-NEXT:    xsmulsp f0, f2, f4
+; CHECK-P8-NEXT:    xsmulsp f0, f2, f0
 ; CHECK-P8-NEXT:    stfs f0, 0(r3)
 ; CHECK-P8-NEXT:    blr
 ;

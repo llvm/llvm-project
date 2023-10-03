@@ -14,8 +14,8 @@
 #include <__algorithm/pstl_backend.h>
 #include <__algorithm/pstl_frontend_dispatch.h>
 #include <__config>
+#include <__iterator/concepts.h>
 #include <__iterator/cpp17_iterator_concepts.h>
-#include <__iterator/iterator_traits.h>
 #include <__type_traits/enable_if.h>
 #include <__type_traits/is_execution_policy.h>
 #include <__type_traits/remove_cvref.h>
@@ -58,7 +58,7 @@ for_each_n(_ExecutionPolicy&& __policy, _ForwardIterator __first, _Size __size, 
   return std::__pstl_frontend_dispatch(
       _LIBCPP_PSTL_CUSTOMIZATION_POINT(__pstl_for_each_n),
       [&](_ForwardIterator __g_first, _Size __g_size, _Function __g_func) {
-        if constexpr (__has_random_access_iterator_category<_ForwardIterator>::value) {
+        if constexpr (__has_random_access_iterator_category_or_concept<_ForwardIterator>::value) {
           std::for_each(__policy, std::move(__g_first), __g_first + __g_size, std::move(__g_func));
         } else {
           std::for_each_n(std::move(__g_first), __g_size, std::move(__g_func));

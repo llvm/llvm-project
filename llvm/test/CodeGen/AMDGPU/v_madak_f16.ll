@@ -75,6 +75,7 @@ define amdgpu_kernel void @madak_f16(
 ; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX11-NEXT:    v_add_f16_e32 v0, 0x4900, v0
 ; GFX11-NEXT:    buffer_store_b16 v0, off, s[8:11], 0
+; GFX11-NEXT:    s_nop 0
 ; GFX11-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX11-NEXT:    s_endpgm
     ptr addrspace(1) %r,
@@ -200,6 +201,7 @@ define amdgpu_kernel void @madak_f16_use_2(
 ; GFX11-NEXT:    v_add_f16_e32 v0, 0x4900, v0
 ; GFX11-NEXT:    buffer_store_b16 v1, off, s[12:15], 0
 ; GFX11-NEXT:    buffer_store_b16 v0, off, s[0:3], 0
+; GFX11-NEXT:    s_nop 0
 ; GFX11-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX11-NEXT:    s_endpgm
     ptr addrspace(1) %r0,

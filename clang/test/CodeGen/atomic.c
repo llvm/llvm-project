@@ -112,7 +112,7 @@ void release_return(int *lock) {
 }
 
 
-// rdar://8461279 - Atomics with address spaces.
+// Atomics with address spaces.
 // CHECK: @addrspace
 void addrspace(int  __attribute__((address_space(256))) * P) {
   __sync_bool_compare_and_swap(P, 0, 1);

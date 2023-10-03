@@ -106,8 +106,8 @@ end subroutine test_taskloop
 ! Rule a); OpenMP 4.5 Examples teams.2.f90
 ! TODO: reduction; data-mapping attributes
 !DEF: /dotprod (Subroutine) Subprogram
-!DEF: /dotprod/b ObjectEntity REAL(4)
-!DEF: /dotprod/c ObjectEntity REAL(4)
+!DEF: /dotprod/b (OmpMapTo) ObjectEntity REAL(4)
+!DEF: /dotprod/c (OmpMapTo) ObjectEntity REAL(4)
 !DEF: /dotprod/n ObjectEntity INTEGER(4)
 !DEF: /dotprod/block_size ObjectEntity INTEGER(4)
 !DEF: /dotprod/num_teams ObjectEntity INTEGER(4)
@@ -119,7 +119,7 @@ subroutine dotprod (b, c, n, block_size, num_teams, block_threads)
  !REF: /dotprod/b
  !REF: /dotprod/n
  !REF: /dotprod/c
- !DEF: /dotprod/sum ObjectEntity REAL(4)
+ !DEF: /dotprod/sum (OmpMapToFrom) ObjectEntity REAL(4)
  real b(n), c(n), sum
  !REF: /dotprod/block_size
  !REF: /dotprod/num_teams

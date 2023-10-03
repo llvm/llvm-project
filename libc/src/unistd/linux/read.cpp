@@ -14,15 +14,15 @@
 #include "src/errno/libc_errno.h"
 #include <sys/syscall.h> // For syscall numbers.
 
-namespace __llvm_libc {
+namespace LIBC_NAMESPACE {
 
 LLVM_LIBC_FUNCTION(ssize_t, read, (int fd, void *buf, size_t count)) {
-  long ret = __llvm_libc::syscall_impl(SYS_read, fd, buf, count);
+  ssize_t ret = LIBC_NAMESPACE::syscall_impl<ssize_t>(SYS_read, fd, buf, count);
   if (ret < 0) {
-    libc_errno = -ret;
+    libc_errno = static_cast<int>(-ret);
     return -1;
   }
   return ret;
 }
 
-} // namespace __llvm_libc
+} // namespace LIBC_NAMESPACE

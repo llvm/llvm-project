@@ -5,10 +5,13 @@
 # SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 #
 # ===----------------------------------------------------------------------===##
+import sys
+import re
+from pathlib import Path
 
 from libcxx.test.dsl import *
 from libcxx.test.features import _isMSVC
-import re
+
 
 _warningFlags = [
     "-Werror",
@@ -25,6 +28,8 @@ _warningFlags = [
     "-Wno-aligned-allocation-unavailable",
     "-Wno-atomic-alignment",
     "-Wno-reserved-module-identifier",
+    '-Wdeprecated-copy',
+    '-Wdeprecated-copy-dtor',
     # GCC warns about places where we might want to add sized allocation/deallocation
     # functions, but we know better what we're doing/testing in the test suite.
     "-Wno-sized-deallocation",
@@ -51,6 +56,20 @@ _warningFlags = [
     # Disable warnings for extensions used in C++03
     "-Wno-local-type-template-args",
     "-Wno-c++11-extensions",
+
+    # TODO(philnik) This fails with the PSTL.
+    "-Wno-unknown-pragmas",
+    # Don't fail compilation in case the compiler fails to perform the requested
+    # loop vectorization.
+    "-Wno-pass-failed",
+
+    # TODO: Find out why GCC warns in lots of places (is this a problem with always_inline?)
+    "-Wno-dangling-reference",
+    "-Wno-mismatched-new-delete",
+    "-Wno-redundant-move",
+
+    # This doesn't make sense in real code, but we have to test it because the standard requires us to not break
+    "-Wno-self-move",
 ]
 
 _allStandards = ["c++03", "c++11", "c++14", "c++17", "c++20", "c++23", "c++26"]
@@ -68,15 +87,6 @@ def getStdFlag(cfg, std):
     }
     if std in fallbacks and hasCompileFlag(cfg, "-std=" + fallbacks[std]):
         return "-std=" + fallbacks[std]
-    return None
-
-
-_allModules = ["none", "clang", "std"]
-
-
-def getModuleFlag(cfg, enable_modules):
-    if enable_modules in _allModules:
-        return enable_modules
     return None
 
 
@@ -112,41 +122,25 @@ DEFAULT_PARAMETERS = [
     ),
     Parameter(
         name="enable_modules",
-        choices=_allModules,
+        choices=["none", "clang", "clang-lsv"],
         type=str,
-        help="Whether to build the test suite with modules enabled. Select "
-        "`clang` for Clang modules and `std` for C++23 std module",
-        default=lambda cfg: next(s for s in _allModules if getModuleFlag(cfg, s)),
-        actions=lambda enable_modules: [
-            AddFeature("modules-build"),
-            AddCompileFlag("-fmodules"),
-            AddCompileFlag("-fcxx-modules"), # AppleClang disregards -fmodules entirely when compiling C++. This enables modules for C++.
-        ]
-        if enable_modules == "clang"
-        else [
-            AddFeature("use_module_std"),
-            AddCompileFlag("-DTEST_USE_MODULE"),
-            AddCompileFlag("-DTEST_USE_MODULE_STD"),
-            AddCompileFlag(
-                lambda cfg: "-fprebuilt-module-path="
-                + os.path.join(
-                    cfg.test_exec_root, "__config_module__/CMakeFiles/std.dir"
-                )
-            ),
-            BuildStdModule(),
-        ]
-        if enable_modules == "std"
-        else [],
-    ),
-    Parameter(
-        name="enable_modules_lsv",
-        choices=[True, False],
-        type=bool,
-        default=False,
-        help="Whether to enable Local Submodule Visibility in the Modules build.",
-        actions=lambda lsv: [] if not lsv else [
-            AddCompileFlag("-Xclang -fmodules-local-submodule-visibility"),
-        ],
+        help="Whether to build the test suite with modules enabled. "
+             "Select `clang` for Clang modules, and 'clang-lsv' for Clang modules with Local Submodule Visibility.",
+        default="none",
+        actions=lambda modules: filter(None, [
+            AddFeature("clang-modules-build")           if modules in ("clang", "clang-lsv") else None,
+
+            # Note: AppleClang disregards -fmodules entirely when compiling C++, so we also pass -fcxx-modules
+            #       to enable modules for C++.
+            AddCompileFlag("-fmodules -fcxx-modules")   if modules in ("clang", "clang-lsv") else None,
+
+            # Note: We use a custom modules cache path to make sure that we don't reuse
+            #       the default one, which can be shared across CI builds with different
+            #       configurations.
+            AddCompileFlag(lambda cfg: f"-fmodules-cache-path={cfg.test_exec_root}/ModuleCache") if modules in ("clang", "clang-lsv") else None,
+
+            AddCompileFlag("-Xclang -fmodules-local-submodule-visibility") if modules == "clang-lsv" else None,
+        ])
     ),
     Parameter(
         name="enable_exceptions",
@@ -273,6 +267,7 @@ DEFAULT_PARAMETERS = [
         else [
             AddFeature("libcpp-has-no-incomplete-pstl"),
             AddFeature("libcpp-has-no-experimental-stop_token"),
+            AddFeature("libcpp-has-no-incomplete-tzdb"),
         ],
     ),
     Parameter(
@@ -285,18 +280,18 @@ DEFAULT_PARAMETERS = [
     ),
     Parameter(
         name="hardening_mode",
-        choices=["unchecked", "hardened", "debug"],
+        choices=["unchecked", "hardened", "safe", "debug"],
         type=str,
         default="unchecked",
-        help="Whether to enable the hardened mode or the debug mode when compiling the test suite. This is only "
+        help="Whether to enable one of the hardening modes when compiling the test suite. This is only "
         "meaningful when running the tests against libc++.",
         actions=lambda hardening_mode: filter(
             None,
             [
                 AddCompileFlag("-D_LIBCPP_ENABLE_HARDENED_MODE=1") if hardening_mode == "hardened" else None,
+                AddCompileFlag("-D_LIBCPP_ENABLE_SAFE_MODE=1")     if hardening_mode == "safe" else None,
                 AddCompileFlag("-D_LIBCPP_ENABLE_DEBUG_MODE=1")    if hardening_mode == "debug" else None,
-                AddFeature("libcpp-has-hardened-mode")             if hardening_mode == "hardened" else None,
-                AddFeature("libcpp-has-debug-mode")                if hardening_mode == "debug" else None,
+                AddFeature("libcpp-hardening-mode={}".format(hardening_mode)),
             ],
         ),
     ),
@@ -322,5 +317,12 @@ DEFAULT_PARAMETERS = [
             AddCompileFlag("-D_LIBCPP_REMOVE_TRANSITIVE_INCLUDES"),
         ],
     ),
+    Parameter(
+        name="executor",
+        type=str,
+        default=f"{sys.executable} {Path(__file__).resolve().parent.parent.parent / 'run.py'}",
+        help="Custom executor to use instead of the configured default.",
+        actions=lambda executor: [AddSubstitution("%{executor}", executor)],
+    )
 ]
 # fmt: on

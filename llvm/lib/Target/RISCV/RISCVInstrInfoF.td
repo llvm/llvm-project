@@ -51,6 +51,9 @@ def riscv_fcvt_x
 def riscv_fcvt_xu
     : SDNode<"RISCVISD::FCVT_XU", SDT_RISCVFCVT_X>;
 
+def riscv_fmin : SDNode<"RISCVISD::FMIN", SDTFPBinOp>;
+def riscv_fmax : SDNode<"RISCVISD::FMAX", SDTFPBinOp>;
+
 def riscv_strict_fcvt_w_rv64
     : SDNode<"RISCVISD::STRICT_FCVT_W_RV64", SDT_RISCVFCVT_W_RV64,
              [SDNPHasChain]>;
@@ -126,6 +129,26 @@ def FRMArg : AsmOperandClass {
 def frmarg : Operand<XLenVT> {
   let ParserMatchClass = FRMArg;
   let PrintMethod = "printFRMArg";
+  let DecoderMethod = "decodeFRMArg";
+}
+
+// Variants of the rounding mode operand that default to 'rne'. This is used
+// for historical/legacy reasons. fcvt functions where the rounding mode
+// doesn't affect the output originally always set it to 0b000 ('rne'). As old
+// versions of LLVM and GCC will fail to decode versions of these instructions
+// with the rounding mode set to something other than 'rne', we retain this
+// default.
+def FRMArgLegacy : AsmOperandClass {
+  let Name = "FRMArgLegacy";
+  let RenderMethod = "addFRMArgOperands";
+  let ParserMethod = "parseFRMArg";
+  let IsOptional = 1;
+  let DefaultMethod = "defaultFRMArgLegacyOp";
+}
+
+def frmarglegacy : Operand<XLenVT> {
+  let ParserMatchClass = FRMArgLegacy;
+  let PrintMethod = "printFRMArgLegacy";
   let DecoderMethod = "decodeFRMArg";
 }
 
@@ -224,6 +247,24 @@ multiclass FPUnaryOp_r_frm_m<bits<7> funct7, bits<5> rs2val,
 }
 
 let hasSideEffects = 0, mayLoad = 0, mayStore = 0, mayRaiseFPException = 1,
+    UseNamedOperandTable = 1, hasPostISelHook = 1 in
+class FPUnaryOp_r_frmlegacy<bits<7> funct7, bits<5> rs2val, DAGOperand rdty,
+                            DAGOperand rs1ty, string opcodestr>
+    : RVInstRFrm<funct7, OPC_OP_FP, (outs rdty:$rd),
+                 (ins rs1ty:$rs1, frmarglegacy:$frm), opcodestr,
+                  "$rd, $rs1$frm"> {
+  let rs2 = rs2val;
+}
+multiclass FPUnaryOp_r_frmlegacy_m<bits<7> funct7, bits<5> rs2val,
+                                   ExtInfo Ext, DAGOperand rdty, DAGOperand rs1ty,
+                                   string opcodestr, list<Predicate> ExtraPreds = []> {
+  let Predicates = !listconcat(Ext.Predicates, ExtraPreds),
+      DecoderNamespace = Ext.Space in
+  def Ext.Suffix : FPUnaryOp_r_frmlegacy<funct7, rs2val, rdty, rs1ty,
+                                         opcodestr>;
+}
+
+let hasSideEffects = 0, mayLoad = 0, mayStore = 0, mayRaiseFPException = 1,
     IsSignExtendingOpW = 1 in
 class FPCmp_rr<bits<7> funct7, bits<3> funct3, string opcodestr,
                DAGOperand rty, bit Commutable = 0>
@@ -269,12 +310,12 @@ foreach Ext = FExts in {
   }
 
   let SchedRW = [WriteFAdd32, ReadFAdd32, ReadFAdd32] in {
-    defm FADD_S : FPALU_rr_frm_m<0b0000000, "fadd.s", Ext, /*Commutable*/1>;
+    defm FADD_S : FPALU_rr_frm_m<0b0000000, "fadd.s", Ext, Commutable=1>;
     defm FSUB_S : FPALU_rr_frm_m<0b0000100, "fsub.s", Ext>;
   }
 
   let SchedRW = [WriteFMul32, ReadFMul32, ReadFMul32] in
-  defm FMUL_S : FPALU_rr_frm_m<0b0001000, "fmul.s", Ext, /*Commutable*/1>;
+  defm FMUL_S : FPALU_rr_frm_m<0b0001000, "fmul.s", Ext, Commutable=1>;
 
   let SchedRW = [WriteFDiv32, ReadFDiv32, ReadFDiv32] in
   defm FDIV_S : FPALU_rr_frm_m<0b0001100, "fdiv.s", Ext>;
@@ -291,8 +332,8 @@ foreach Ext = FExts in {
   }
 
   let SchedRW = [WriteFMinMax32, ReadFMinMax32, ReadFMinMax32] in {
-    defm FMIN_S   : FPALU_rr_m<0b0010100, 0b000, "fmin.s", Ext, /*Commutable*/1>;
-    defm FMAX_S   : FPALU_rr_m<0b0010100, 0b001, "fmax.s", Ext, /*Commutable*/1>;
+    defm FMIN_S   : FPALU_rr_m<0b0010100, 0b000, "fmin.s", Ext, Commutable=1>;
+    defm FMAX_S   : FPALU_rr_m<0b0010100, 0b001, "fmax.s", Ext, Commutable=1>;
   }
 
   let IsSignExtendingOpW = 1 in
@@ -306,7 +347,7 @@ foreach Ext = FExts in {
                    Sched<[WriteFCvtF32ToI32, ReadFCvtF32ToI32]>;
 
   let SchedRW = [WriteFCmp32, ReadFCmp32, ReadFCmp32] in {
-  defm FEQ_S : FPCmp_rr_m<0b1010000, 0b010, "feq.s", Ext, /*Commutable*/1>;
+  defm FEQ_S : FPCmp_rr_m<0b1010000, 0b010, "feq.s", Ext, Commutable=1>;
   defm FLT_S : FPCmp_rr_m<0b1010000, 0b001, "flt.s", Ext>;
   defm FLE_S : FPCmp_rr_m<0b1010000, 0b000, "fle.s", Ext>;
   }
@@ -555,6 +596,8 @@ def : Pat<(fneg (any_fma_nsz FPR32INX:$rs1, FPR32INX:$rs2, FPR32INX:$rs3)),
 foreach Ext = FExts in {
   defm : PatFprFpr_m<fminnum, FMIN_S, Ext>;
   defm : PatFprFpr_m<fmaxnum, FMAX_S, Ext>;
+  defm : PatFprFpr_m<riscv_fmin, FMIN_S, Ext>;
+  defm : PatFprFpr_m<riscv_fmax, FMAX_S, Ext>;
 }
 
 /// Setcc

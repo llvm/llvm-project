@@ -24,6 +24,7 @@ class StringRef;
 namespace mlir {
 class Location;
 class Type;
+class ModuleOp;
 class OpBuilder;
 class Value;
 } // namespace mlir
@@ -40,22 +41,39 @@ struct OpenACCDeclarativeConstruct;
 
 namespace semantics {
 class SemanticsContext;
+class Symbol;
 }
 
 namespace lower {
 
 class AbstractConverter;
+class StatementContext;
 
 namespace pft {
 struct Evaluation;
 } // namespace pft
 
+using AccRoutineInfoMappingList =
+    llvm::SmallVector<std::pair<std::string, mlir::SymbolRefAttr>>;
+
+static constexpr llvm::StringRef declarePostAllocSuffix =
+    "_acc_declare_update_desc_post_alloc";
+static constexpr llvm::StringRef declarePreDeallocSuffix =
+    "_acc_declare_update_desc_pre_dealloc";
+static constexpr llvm::StringRef declarePostDeallocSuffix =
+    "_acc_declare_update_desc_post_dealloc";
+
 void genOpenACCConstruct(AbstractConverter &,
                          Fortran::semantics::SemanticsContext &,
                          pft::Evaluation &, const parser::OpenACCConstruct &);
-void genOpenACCDeclarativeConstruct(
-    AbstractConverter &, pft::Evaluation &,
-    const parser::OpenACCDeclarativeConstruct &);
+void genOpenACCDeclarativeConstruct(AbstractConverter &,
+                                    Fortran::semantics::SemanticsContext &,
+                                    StatementContext &,
+                                    const parser::OpenACCDeclarativeConstruct &,
+                                    AccRoutineInfoMappingList &);
+
+void finalizeOpenACCRoutineAttachment(mlir::ModuleOp &,
+                                      AccRoutineInfoMappingList &);
 
 /// Get a acc.private.recipe op for the given type or create it if it does not
 /// exist yet.
@@ -76,6 +94,17 @@ mlir::acc::FirstprivateRecipeOp createOrGetFirstprivateRecipe(mlir::OpBuilder &,
                                                               llvm::StringRef,
                                                               mlir::Location,
                                                               mlir::Type);
+
+void attachDeclarePostAllocAction(AbstractConverter &, fir::FirOpBuilder &,
+                                  const Fortran::semantics::Symbol &);
+void attachDeclarePreDeallocAction(AbstractConverter &, fir::FirOpBuilder &,
+                                   mlir::Value beginOpValue,
+                                   const Fortran::semantics::Symbol &);
+void attachDeclarePostDeallocAction(AbstractConverter &, fir::FirOpBuilder &,
+                                    const Fortran::semantics::Symbol &);
+
+void genOpenACCTerminator(fir::FirOpBuilder &, mlir::Operation *,
+                          mlir::Location);
 
 } // namespace lower
 } // namespace Fortran

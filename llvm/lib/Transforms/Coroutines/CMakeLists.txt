@@ -21,4 +21,5 @@ add_llvm_component_library(LLVMCoroutines
   Scalar
   Support
   TransformUtils
+  TargetParser
   )

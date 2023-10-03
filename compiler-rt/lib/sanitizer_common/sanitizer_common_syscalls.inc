@@ -2135,7 +2135,7 @@ PRE_SYSCALL(epoll_pwait2)
  const sanitizer_kernel_timespec *timeout, const kernel_sigset_t *sigmask,
  long sigsetsize) {
   if (timeout)
-    PRE_READ(timeout, sizeof(timeout));
+    PRE_READ(timeout, sizeof(*timeout));
   if (sigmask)
     PRE_READ(sigmask, sigsetsize);
 }

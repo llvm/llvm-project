@@ -10,5 +10,5 @@ add_object_library(
     libc.src.__support.common
     libc.src.__support.CPP.string_view
     libc.src.__support.RPC.rpc_client
-    libc.src.string.memory_utils.memcpy_implementation
+    libc.src.string.memory_utils.inline_memcpy
 )

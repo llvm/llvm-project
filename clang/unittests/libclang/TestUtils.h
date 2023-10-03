@@ -87,14 +87,18 @@ public:
         it.first->second->size()    // length
     });
   }
-  template<typename F>
-  void Traverse(const F &TraversalFunctor) {
-    CXCursor TuCursor = clang_getTranslationUnitCursor(ClangTU);
+  template <typename F>
+  void Traverse(const CXCursor &cursor, const F &TraversalFunctor) {
     std::reference_wrapper<const F> FunctorRef = std::cref(TraversalFunctor);
-    clang_visitChildren(TuCursor,
-        &TraverseStateless<std::reference_wrapper<const F>>,
-        &FunctorRef);
+    clang_visitChildren(cursor,
+                        &TraverseStateless<std::reference_wrapper<const F>>,
+                        &FunctorRef);
   }
+
+  template <typename F> void Traverse(const F &TraversalFunctor) {
+    Traverse(clang_getTranslationUnitCursor(ClangTU), TraversalFunctor);
+  }
+
   static std::string fromCXString(CXString cx_string) {
     std::string string{clang_getCString(cx_string)};
     clang_disposeString(cx_string);

@@ -58,6 +58,16 @@ class ValueTypeByHwMode<list<HwMode> Ms, list<ValueType> Ts>
   list<ValueType> Objects = Ts;
 }
 
+// A class that implements a counterpart of PtrValueType, which is
+// dependent on a HW mode. This class inherits from PtrValueType itself,
+// which makes it possible to use objects of this class where PtrValueType
+// or ValueType could be used. This is specifically applicable to selection
+// patterns.
+class PtrValueTypeByHwMode<ValueTypeByHwMode scalar, int addrspace>
+    : HwModeSelect<scalar.Modes>, PtrValueType<ValueType<0, 0>, addrspace> {
+  list<ValueType> Objects = scalar.Objects;
+}
+
 // A class representing the register size, spill size and spill alignment
 // in bits of a register.
 class RegInfo<int RS, int SS, int SA> {
@@ -315,7 +325,7 @@ class RegisterClass<string namespace, list<ValueType> regTypes, int alignment,
   string DiagnosticType = "";
 
   // A diagnostic message to emit when an invalid value is provided for this
-  // register class when it is being used an an assembly operand. If this is
+  // register class when it is being used as an assembly operand. If this is
   // non-empty, an anonymous diagnostic type enum value will be generated, and
   // the assembly matcher will provide a function to map from diagnostic types
   // to message strings.
@@ -1407,6 +1417,14 @@ def MEMBARRIER : StandardPseudoInstruction {
   let InOperandList = (ins);
   let AsmString = "";
   let hasSideEffects = true;
+  let Size = 0;
+  let isMeta = true;
+}
+def JUMP_TABLE_DEBUG_INFO : StandardPseudoInstruction {
+  let OutOperandList = (outs);
+  let InOperandList = (ins i64imm:$jti);
+  let AsmString = "";
+  let hasSideEffects = false;
   let Size = 0;
   let isMeta = true;
 }

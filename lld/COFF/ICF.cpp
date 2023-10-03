@@ -268,7 +268,7 @@ void ICF::run() {
 
   // Initially, we use hash values to partition sections.
   parallelForEach(chunks, [&](SectionChunk *sc) {
-    sc->eqClass[0] = xxHash64(sc->getContents());
+    sc->eqClass[0] = xxh3_64bits(sc->getContents());
   });
 
   // Combine the hashes of the sections referenced by each section into its

@@ -194,16 +194,16 @@ struct __hash_key_value_types<__hash_value_type<_Key, _Tp> > {
     return __v.first;
   }
 
-  template <class _Up>
+  template <class _Up, __enable_if_t<__is_same_uncvref<_Up, __node_value_type>::value, int> = 0>
   _LIBCPP_INLINE_VISIBILITY
-  static __enable_if_t<__is_same_uncvref<_Up, __node_value_type>::value, __container_value_type const&>
+  static __container_value_type const&
   __get_value(_Up& __t) {
     return __t.__get_value();
   }
 
-  template <class _Up>
+  template <class _Up, __enable_if_t<__is_same_uncvref<_Up, __container_value_type>::value, int> = 0>
   _LIBCPP_INLINE_VISIBILITY
-  static __enable_if_t<__is_same_uncvref<_Up, __container_value_type>::value, __container_value_type const&>
+  static __container_value_type const&
   __get_value(_Up& __t) {
     return __t;
   }
@@ -904,9 +904,10 @@ public:
                                           __can_extract_key<_Pp, key_type>());
     }
 
-    template <class _First, class _Second>
+    template <class _First, class _Second,
+              __enable_if_t<__can_extract_map_key<_First, key_type, __container_value_type>::value, int> = 0>
     _LIBCPP_INLINE_VISIBILITY
-    __enable_if_t<__can_extract_map_key<_First, key_type, __container_value_type>::value, pair<iterator, bool> >
+    pair<iterator, bool>
     __emplace_unique(_First&& __f, _Second&& __s) {
         return __emplace_unique_key_args(__f, _VSTD::forward<_First>(__f),
                                               _VSTD::forward<_Second>(__s));
@@ -1109,7 +1110,7 @@ public:
     local_iterator
     begin(size_type __n)
     {
-        _LIBCPP_ASSERT_UNCATEGORIZED(__n < bucket_count(),
+        _LIBCPP_ASSERT_VALID_ELEMENT_ACCESS(__n < bucket_count(),
             "unordered container::begin(n) called with n >= bucket_count()");
         return local_iterator(__bucket_list_[__n], __n, bucket_count());
     }
@@ -1118,7 +1119,7 @@ public:
     local_iterator
     end(size_type __n)
     {
-        _LIBCPP_ASSERT_UNCATEGORIZED(__n < bucket_count(),
+        _LIBCPP_ASSERT_VALID_ELEMENT_ACCESS(__n < bucket_count(),
             "unordered container::end(n) called with n >= bucket_count()");
         return local_iterator(nullptr, __n, bucket_count());
     }
@@ -1127,7 +1128,7 @@ public:
     const_local_iterator
     cbegin(size_type __n) const
     {
-        _LIBCPP_ASSERT_UNCATEGORIZED(__n < bucket_count(),
+        _LIBCPP_ASSERT_VALID_ELEMENT_ACCESS(__n < bucket_count(),
             "unordered container::cbegin(n) called with n >= bucket_count()");
         return const_local_iterator(__bucket_list_[__n], __n, bucket_count());
     }
@@ -1136,7 +1137,7 @@ public:
     const_local_iterator
     cend(size_type __n) const
     {
-        _LIBCPP_ASSERT_UNCATEGORIZED(__n < bucket_count(),
+        _LIBCPP_ASSERT_VALID_ELEMENT_ACCESS(__n < bucket_count(),
             "unordered container::cend(n) called with n >= bucket_count()");
         return const_local_iterator(nullptr, __n, bucket_count());
     }
@@ -2223,8 +2224,8 @@ typename __hash_table<_Tp, _Hash, _Equal, _Alloc>::iterator
 __hash_table<_Tp, _Hash, _Equal, _Alloc>::erase(const_iterator __p)
 {
     __next_pointer __np = __p.__node_;
-    _LIBCPP_ASSERT_UNCATEGORIZED(__p != end(),
-                                 "unordered container erase(iterator) called with a non-dereferenceable iterator");
+    _LIBCPP_ASSERT_VALID_ELEMENT_ACCESS(__p != end(),
+        "unordered container::erase(iterator) called with a non-dereferenceable iterator");
     iterator __r(__np);
     ++__r;
     remove(__p);
@@ -2423,10 +2424,10 @@ __hash_table<_Tp, _Hash, _Equal, _Alloc>::swap(__hash_table& __u)
   _NOEXCEPT_(__is_nothrow_swappable<hasher>::value && __is_nothrow_swappable<key_equal>::value)
 #endif
 {
-    _LIBCPP_ASSERT_UNCATEGORIZED(__node_traits::propagate_on_container_swap::value ||
-                                 this->__node_alloc() == __u.__node_alloc(),
-                                 "list::swap: Either propagate_on_container_swap must be true"
-                                 " or the allocators must compare equal");
+    _LIBCPP_ASSERT_COMPATIBLE_ALLOCATOR(__node_traits::propagate_on_container_swap::value ||
+                                        this->__node_alloc() == __u.__node_alloc(),
+                                        "unordered container::swap: Either propagate_on_container_swap "
+                                        "must be true or the allocators must compare equal");
     {
     __node_pointer_pointer __npp = __bucket_list_.release();
     __bucket_list_.reset(__u.__bucket_list_.release());
@@ -2451,7 +2452,7 @@ template <class _Tp, class _Hash, class _Equal, class _Alloc>
 typename __hash_table<_Tp, _Hash, _Equal, _Alloc>::size_type
 __hash_table<_Tp, _Hash, _Equal, _Alloc>::bucket_size(size_type __n) const
 {
-    _LIBCPP_ASSERT_UNCATEGORIZED(__n < bucket_count(),
+    _LIBCPP_ASSERT_VALID_ELEMENT_ACCESS(__n < bucket_count(),
         "unordered container::bucket_size(n) called with n >= bucket_count()");
     __next_pointer __np = __bucket_list_[__n];
     size_type __bc = bucket_count();

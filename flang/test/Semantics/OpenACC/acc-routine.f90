@@ -9,3 +9,7 @@ subroutine sub2(a)
   real, dimension(10) :: a
   call sub1(a)
 end subroutine
+
+subroutine sub3()
+  !$acc routine bind(sub1)
+end subroutine

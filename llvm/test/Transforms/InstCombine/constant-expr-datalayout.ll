@@ -11,7 +11,8 @@ define void @test1(ptr %ptr) {
 ; CHECK-NEXT:    store i64 0, ptr [[PTR:%.*]], align 8
 ; CHECK-NEXT:    ret void
 ;
-  store i64 and (i64 ptrtoint (ptr getelementptr (%test1.struct, ptr @test1.aligned_glbl, i32 0, i32 1) to i64), i64 3), ptr %ptr
+  %and = and i64 ptrtoint (ptr getelementptr (%test1.struct, ptr @test1.aligned_glbl, i32 0, i32 1) to i64), 3
+  store i64 %and, ptr %ptr
   ret void
 }
 

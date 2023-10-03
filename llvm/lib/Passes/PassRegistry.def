@@ -42,6 +42,7 @@ MODULE_ALIAS_ANALYSIS("globals-aa", GlobalsAA())
 #endif
 MODULE_PASS("always-inline", AlwaysInlinerPass())
 MODULE_PASS("attributor", AttributorPass())
+MODULE_PASS("attributor-light", AttributorLightPass())
 MODULE_PASS("annotation2metadata", Annotation2MetadataPass())
 MODULE_PASS("openmp-opt", OpenMPOptPass())
 MODULE_PASS("openmp-opt-postlink", OpenMPOptPass(ThinOrFullLTOPhase::FullLTOPostLink))
@@ -56,6 +57,7 @@ MODULE_PASS("cross-dso-cfi", CrossDSOCFIPass())
 MODULE_PASS("deadargelim", DeadArgumentEliminationPass())
 MODULE_PASS("debugify", NewPMDebugifyPass())
 MODULE_PASS("dot-callgraph", CallGraphDOTPrinterPass())
+MODULE_PASS("dxil-upgrade", DXILUpgradePass())
 MODULE_PASS("elim-avail-extern", EliminateAvailableExternallyPass())
 MODULE_PASS("extract-blocks", BlockExtractorPass({}, false))
 MODULE_PASS("forceattrs", ForceFunctionAttrsPass())
@@ -190,6 +192,15 @@ MODULE_PASS_WITH_PARAMS("memprof-use",
                         },
                         parseMemProfUsePassOptions,
                         "profile-filename=S")
+MODULE_PASS_WITH_PARAMS("print<structural-hash>",
+                        "StructuralHashPrinterPass",
+                        [](bool EnableDetailedStructuralHash) {
+                          return StructuralHashPrinterPass(
+                              dbgs(),
+                              EnableDetailedStructuralHash);
+                        },
+                        parseStructuralHashPrinterPassOptions,
+                        "detailed")
 #undef MODULE_PASS_WITH_PARAMS
 
 #ifndef CGSCC_ANALYSIS
@@ -206,6 +217,7 @@ CGSCC_ANALYSIS("pass-instrumentation", PassInstrumentationAnalysis(PIC))
 CGSCC_PASS("argpromotion", ArgumentPromotionPass())
 CGSCC_PASS("invalidate<all>", InvalidateAllAnalysesPass())
 CGSCC_PASS("attributor-cgscc", AttributorCGSCCPass())
+CGSCC_PASS("attributor-light-cgscc", AttributorLightCGSCCPass())
 CGSCC_PASS("openmp-opt-cgscc", OpenMPOptCGSCCPass())
 CGSCC_PASS("no-op-cgscc", NoOpCGSCCPass())
 #undef CGSCC_PASS
@@ -233,7 +245,7 @@ CGSCC_PASS_WITH_PARAMS("function-attrs",
                          return PostOrderFunctionAttrsPass(SkipNonRecursive);
                        },
                        parsePostOrderFunctionAttrsPassOptions,
-                       "skip-non-recursive")
+                       "skip-non-recursive-function-attrs")
 #undef CGSCC_PASS_WITH_PARAMS
 
 #ifndef FUNCTION_ANALYSIS
@@ -325,7 +337,7 @@ FUNCTION_PASS("gvn-hoist", GVNHoistPass())
 FUNCTION_PASS("gvn-sink", GVNSinkPass())
 FUNCTION_PASS("helloworld", HelloWorldPass())
 FUNCTION_PASS("infer-address-spaces", InferAddressSpacesPass())
-FUNCTION_PASS("instcombine", InstCombinePass())
+FUNCTION_PASS("infer-alignment", InferAlignmentPass())
 FUNCTION_PASS("instcount", InstCountPass())
 FUNCTION_PASS("instsimplify", InstSimplifyPass())
 FUNCTION_PASS("invalidate<all>", InvalidateAllAnalysesPass())
@@ -509,6 +521,7 @@ FUNCTION_PASS_WITH_PARAMS("instcombine",
                            },
                           parseInstCombineOptions,
                           "no-use-loop-info;use-loop-info;"
+                          "no-verify-fixpoint;verify-fixpoint;"
                           "max-iterations=N"
                           )
 FUNCTION_PASS_WITH_PARAMS("mldst-motion",

@@ -39,9 +39,9 @@
 #include <sys/wait.h>
 #include <unistd.h>
 
-#if defined(__GLIBC__) && __has_include(<sys/rseq.h>) && __has_builtin(__builtin_thread_pointer)
+#if defined(__GLIBC__) && __has_include(<sys/rseq.h>) && defined(HAVE_BUILTIN_THREAD_POINTER)
 #include <sys/rseq.h>
-#ifdef RSEQ_SIG
+#if defined(RSEQ_SIG) && defined(SYS_rseq)
 #define GLIBC_INITS_RSEQ
 #endif
 #endif
@@ -209,7 +209,8 @@ private:
     ssize_t BytesWritten = sendmsg(SocketFD, &Message, 0);
 
     if (BytesWritten < 0)
-      return make_error<Failure>("Failed to write FD to socket");
+      return make_error<Failure>("Failed to write FD to socket: " +
+                                 Twine(strerror(errno)));
 
     return Error::success();
   }
@@ -221,10 +222,11 @@ private:
     Message.msg_control = ControlBuffer;
     Message.msg_controllen = sizeof(ControlBuffer);
 
-    size_t BytesRead = recvmsg(SocketFD, &Message, 0);
+    ssize_t BytesRead = recvmsg(SocketFD, &Message, 0);
 
     if (BytesRead < 0)
-      return make_error<Failure>("Failed to read FD from socket");
+      return make_error<Failure>("Failed to read FD from socket: " +
+                                 Twine(strerror(errno)));
 
     struct cmsghdr *ControlMessage = CMSG_FIRSTHDR(&Message);
 
@@ -246,7 +248,8 @@ private:
     if (PipeSuccessOrErr != 0) {
       return make_error<Failure>(
           "Failed to create a pipe for interprocess communication between "
-          "llvm-exegesis and the benchmarking subprocess");
+          "llvm-exegesis and the benchmarking subprocess: " +
+          Twine(strerror(errno)));
     }
 
     SubprocessMemory SPMemory;
@@ -260,6 +263,12 @@ private:
       return AddMemDefError;
 
     pid_t ParentOrChildPID = fork();
+
+    if (ParentOrChildPID == -1) {
+      return make_error<Failure>("Failed to create child process: " +
+                                 Twine(strerror(errno)));
+    }
+
     if (ParentOrChildPID == 0) {
       // We are in the child process, close the write end of the pipe
       close(PipeFiles[1]);

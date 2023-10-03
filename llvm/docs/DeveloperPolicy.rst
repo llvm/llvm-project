@@ -46,21 +46,33 @@ quality.
 Stay Informed
 -------------
 
-Developers should stay informed by reading the `LLVM Discourse forums`_. 
-If you are doing anything more than just casual work on LLVM, it is suggested that you also
-subscribe to the "commits" mailing list for the subproject you're interested in,
+Developers should stay informed by reading the `LLVM Discourse forums`_ and subscribing
+to the categories of interest for notifications.
+
+Paying attention to changes being made by others is a good way to see what other people
+are interested in and watching the flow of the project as a whole.
+
+Contibutions to the project are made through :ref:`GitHub Pull Requests <github-reviews>`.
+You can subscribe to notification for areas of the codebase by joining
+one of the `pr-subscribers-* <https://github.com/orgs/llvm/teams?query=pr-subscribers>`_
+GitHub teams. This `mapping <https://github.com/llvm/llvm-project/blob/main/.github/new-prs-labeler.yml>`_
+indicates which team is associated with a particular paths in the repository.
+
+You can also subscribe to the "commits" mailing list for a subproject you're interested in,
 such as `llvm-commits
 <http://lists.llvm.org/mailman/listinfo/llvm-commits>`_, `cfe-commits
 <http://lists.llvm.org/mailman/listinfo/cfe-commits>`_, or `lldb-commits
-<http://lists.llvm.org/mailman/listinfo/lldb-commits>`_.  Reading the
-"commits" list and paying attention to changes being made by others is a good
-way to see what other people are interested in and watching the flow of the
-project as a whole.
+<http://lists.llvm.org/mailman/listinfo/lldb-commits>`_.
 
-We recommend that active developers monitor incoming issues to our `GitHub issue tracker <https://github.com/llvm/llvm-project/issues>`_ and preferably subscribe to the `llvm-bugs
+Missing features and bugs are tracked through our `GitHub issue tracker <https://github.com/llvm/llvm-project/issues>`_
+and assigned labels. We recommend that active developers monitor incoming issues.
+You can subscribe for notification for specific components by joining
+one of the `issue-subscribers-* <https://github.com/orgs/llvm/teams?query=issue-subscribers>`_
+teams.
+You may also subscribe to the `llvm-bugs
 <http://lists.llvm.org/mailman/listinfo/llvm-bugs>`_ email list to keep track
-of bugs and enhancements occurring in LLVM.  We really appreciate people who are
-proactive at catching incoming bugs in their components and dealing with them
+of bugs and enhancements occurring in the entire project.  We really appreciate people
+who are proactive at catching incoming bugs in their components and dealing with them
 promptly.
 
 Please be aware that all public LLVM mailing lists and discourse forums are public and archived, and
@@ -84,11 +96,8 @@ to read it as possible.  As such, we recommend that you:
    patches may not apply correctly if the underlying code changes between the
    time the patch was created and the time it is applied.
 
-#. Patches should be unified diffs with "infinite context" (i.e. using something
-   like `git diff -U999999 main`).
-
 #. Once you have created your patch, create a
-   `Phabricator review <Phabricator.html#phabricator-request-review-web>`_ for
+   :ref:`GitHub Pull Request <github-reviews>` for
    it (or commit it directly if applicable).
 
 When submitting patches, please do not add confidentiality or non-disclosure
@@ -115,6 +124,12 @@ to be removed in the future, removing an already-deprecated feature, upgrading a
 diagnostic from a warning to an error, switching important default behavior, or
 any other potentially disruptive situation thought to be worth raising
 awareness of. For such changes, the following should be done:
+
+.. warning::
+
+  Phabricator is deprecated and will be switched to read-only mode in October
+  2023, for new code contributions use :ref:`GitHub Pull Requests <github-reviews>`.
+  This section contains old information that needs to be updated.
 
 * When performing the code review for the change, please add any applicable
   "vendors" group to the review for their awareness. The purpose of these
@@ -201,6 +216,11 @@ features added.  Some tips for getting your testcase approved:
   entire failing program into ``llvm/test`` as this creates a *time-to-test*
   burden on all developers. Please keep them short.
 
+* Avoid adding links to resources that are not available to the entire
+  community, such as links to private bug trackers, internal corporate
+  documentation, etc. Instead, add sufficient comments to the test to provide
+  the context behind such links.
+
 Note that llvm/test and clang/test are designed for regression and small feature
 tests only. More extensive test cases (e.g., entire applications, benchmarks,
 etc) should be added to the ``llvm-test`` test suite.  The llvm-test suite is
@@ -255,6 +275,11 @@ committed to the main development branch are:
    where "reasonable" depends on the contributor's judgement and the scope of
    the change (more invasive changes require more testing). A reasonable subset
    might be something like "``llvm-test/MultiSource/Benchmarks``".
+
+#. Ensure that links in source code and test files point to publicly available
+   resources and are used primarily to add additional information rather than
+   to supply critical context. The surrounding comments should be sufficient
+   to provide the context behind such links.
 
 Additionally, the committer is responsible for addressing any problems found in
 the future that the change is responsible for.  For example:
@@ -336,8 +361,6 @@ Below are some guidelines about the format of the message itself:
   code snippets and gory details should be left to bug comments, web
   review or the mailing list.
 
-* If the patch fixes a bug in GitHub Issues, please include the PR# in the message.
-
 * Text formatting and spelling should follow the same rules as documentation
   and in-code comments, ex. capitalization, full stop, etc.
 
@@ -347,7 +370,17 @@ Below are some guidelines about the format of the message itself:
   caused PR#".
 
 * If the patch has been reviewed, add a link to its review page, as shown
-  `here <https://www.llvm.org/docs/Phabricator.html#committing-a-change>`_.
+  `here <https://www.llvm.org/docs/Phabricator.html#committing-a-change>`__.
+  If the patch fixes a bug in GitHub Issues, we encourage adding a reference to
+  the issue being closed, as described
+  `here <https://llvm.org/docs/BugLifeCycle.html#resolving-closing-bugs>`__.
+
+* It is also acceptable to add other metadata to the commit message to automate
+  processes, including for downstream consumers. This metadata can include
+  links to resources that are not available to the entire community. However,
+  such links and/or metadata should not be used in place of making the commit
+  message self-explanatory. Note that such non-public links should not be
+  included in the submitted code.
 
 For minor violations of these recommendations, the community normally favors
 reminding the contributor of this policy over reverting. Minor corrections and

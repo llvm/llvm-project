@@ -117,6 +117,7 @@ void *MmapAlignedOrDieOnFatalError(uptr size, uptr alignment,
 // unaccessible memory.
 bool MprotectNoAccess(uptr addr, uptr size);
 bool MprotectReadOnly(uptr addr, uptr size);
+bool MprotectReadWrite(uptr addr, uptr size);
 
 void MprotectMallocZones(void *addr, int prot);
 
@@ -207,6 +208,11 @@ void ParseUnixMemoryProfile(fill_profile_f cb, uptr *stats, char *smaps,
 // Simple low-level (mmap-based) allocator for internal use. Doesn't have
 // constructor, so all instances of LowLevelAllocator should be
 // linker initialized.
+//
+// NOTE: Users should instead use the singleton provided via
+// `GetGlobalLowLevelAllocator()` rather than create a new one. This way, the
+// number of mmap fragments can be reduced and use the same contiguous mmap
+// provided by this singleton.
 class LowLevelAllocator {
  public:
   // Requires an external lock.
@@ -222,6 +228,8 @@ typedef void (*LowLevelAllocateCallback)(uptr ptr, uptr size);
 // Allows to register tool-specific callbacks for LowLevelAllocator.
 // Passing NULL removes the callback.
 void SetLowLevelAllocateCallback(LowLevelAllocateCallback callback);
+
+LowLevelAllocator &GetGlobalLowLevelAllocator();
 
 // IO
 void CatastrophicErrorWrite(const char *buffer, uptr length);
@@ -635,7 +643,8 @@ class InternalScopedString {
     buffer_.resize(1);
     buffer_[0] = '\0';
   }
-  void append(const char *format, ...) FORMAT(2, 3);
+  void Append(const char *str);
+  void AppendF(const char *format, ...) FORMAT(2, 3);
   const char *data() const { return buffer_.data(); }
   char *data() { return buffer_.data(); }
 

@@ -56,6 +56,9 @@ void fuchsia::Linker::ConstructJob(Compilation &C, const JobAction &JA,
   CmdArgs.push_back("-z");
   CmdArgs.push_back("now");
 
+  CmdArgs.push_back("-z");
+  CmdArgs.push_back("start-stop-visibility=hidden");
+
   const char *Exec = Args.MakeArgString(ToolChain.GetLinkerPath());
   if (llvm::sys::path::filename(Exec).equals_insensitive("ld.lld") ||
       llvm::sys::path::stem(Exec).equals_insensitive("ld.lld")) {
@@ -254,8 +257,8 @@ Fuchsia::Fuchsia(const Driver &D, const llvm::Triple &Triple,
 
   auto FilePaths = [&](const Multilib &M) -> std::vector<std::string> {
     std::vector<std::string> FP;
-    for (const std::string &Path : getStdlibPaths()) {
-      SmallString<128> P(Path);
+    if (std::optional<std::string> Path = getStdlibPath()) {
+      SmallString<128> P(*Path);
       llvm::sys::path::append(P, M.gccSuffix());
       FP.push_back(std::string(P.str()));
     }

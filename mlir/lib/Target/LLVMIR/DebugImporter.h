@@ -62,9 +62,10 @@ private:
   DILexicalBlockAttr translateImpl(llvm::DILexicalBlock *node);
   DILexicalBlockFileAttr translateImpl(llvm::DILexicalBlockFile *node);
   DILocalVariableAttr translateImpl(llvm::DILocalVariable *node);
+  DIModuleAttr translateImpl(llvm::DIModule *node);
+  DINamespaceAttr translateImpl(llvm::DINamespace *node);
   DIScopeAttr translateImpl(llvm::DIScope *node);
   DISubprogramAttr translateImpl(llvm::DISubprogram *node);
-  DINamespaceAttr translateImpl(llvm::DINamespace *node);
   DISubrangeAttr translateImpl(llvm::DISubrange *node);
   DISubroutineTypeAttr translateImpl(llvm::DISubroutineType *node);
   DITypeAttr translateImpl(llvm::DIType *node);

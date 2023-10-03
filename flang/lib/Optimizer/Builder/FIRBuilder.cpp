@@ -205,6 +205,21 @@ mlir::Block *fir::FirOpBuilder::getAllocaBlock() {
   return iface ? iface.getAllocaBlock() : getEntryBlock();
 }
 
+mlir::Value fir::FirOpBuilder::createTemporaryAlloc(
+    mlir::Location loc, mlir::Type type, llvm::StringRef name,
+    mlir::ValueRange lenParams, mlir::ValueRange shape,
+    llvm::ArrayRef<mlir::NamedAttribute> attrs) {
+  assert(!type.isa<fir::ReferenceType>() && "cannot be a reference");
+  // If the alloca is inside an OpenMP Op which will be outlined then pin
+  // the alloca here.
+  const bool pinned =
+      getRegion().getParentOfType<mlir::omp::OutlineableOpenMPOpInterface>();
+  mlir::Value temp =
+      create<fir::AllocaOp>(loc, type, /*unique_name=*/llvm::StringRef{}, name,
+                            pinned, lenParams, shape, attrs);
+  return temp;
+}
+
 /// Create a temporary variable on the stack. Anonymous temporaries have no
 /// `name` value. Temporaries do not require a uniqued name.
 mlir::Value
@@ -223,14 +238,9 @@ fir::FirOpBuilder::createTemporary(mlir::Location loc, mlir::Type type,
     setInsertionPointToStart(getAllocaBlock());
   }
 
-  // If the alloca is inside an OpenMP Op which will be outlined then pin the
-  // alloca here.
-  const bool pinned =
-      getRegion().getParentOfType<mlir::omp::OutlineableOpenMPOpInterface>();
-  assert(!type.isa<fir::ReferenceType>() && "cannot be a reference");
-  auto ae =
-      create<fir::AllocaOp>(loc, type, /*unique_name=*/llvm::StringRef{}, name,
-                            pinned, dynamicLength, dynamicShape, attrs);
+  mlir::Value ae =
+      createTemporaryAlloc(loc, type, name, dynamicLength, dynamicShape, attrs);
+
   if (hoistAlloc)
     restoreInsertionPoint(insPt);
   return ae;
@@ -1137,6 +1147,7 @@ void fir::factory::genScalarAssignment(fir::FirOpBuilder &builder,
                                        mlir::Location loc,
                                        const fir::ExtendedValue &lhs,
                                        const fir::ExtendedValue &rhs,
+                                       bool needFinalization,
                                        bool isTemporaryLHS) {
   assert(lhs.rank() == 0 && rhs.rank() == 0 && "must be scalars");
   auto type = fir::unwrapSequenceType(
@@ -1149,8 +1160,8 @@ void fir::factory::genScalarAssignment(fir::FirOpBuilder &builder,
     helper.createAssign(fir::ExtendedValue{*toChar},
                         fir::ExtendedValue{*fromChar});
   } else if (type.isa<fir::RecordType>()) {
-    fir::factory::genRecordAssignment(
-        builder, loc, lhs, rhs, /*needFinalization=*/false, isTemporaryLHS);
+    fir::factory::genRecordAssignment(builder, loc, lhs, rhs, needFinalization,
+                                      isTemporaryLHS);
   } else {
     assert(!fir::hasDynamicSize(type));
     auto rhsVal = fir::getBase(rhs);
@@ -1230,7 +1241,12 @@ static void genComponentByComponentAssignment(fir::FirOpBuilder &builder,
       auto from =
           fir::factory::componentToExtendedValue(builder, loc, fromCoor);
       auto to = fir::factory::componentToExtendedValue(builder, loc, toCoor);
-      fir::factory::genScalarAssignment(builder, loc, to, from, isTemporaryLHS);
+      // If LHS finalization is needed it is expected to be done
+      // for the parent record, so that component-by-component
+      // assignments may avoid finalization calls.
+      fir::factory::genScalarAssignment(builder, loc, to, from,
+                                        /*needFinalization=*/false,
+                                        isTemporaryLHS);
     }
     if (outerLoop)
       builder.setInsertionPointAfter(*outerLoop);

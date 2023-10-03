@@ -267,7 +267,7 @@ acc.private.recipe @privatization_i32 : !llvm.ptr<i32> init {
 
 // -----
 
-// expected-error@+1 {{expects init region with one argument of the privatization type}}
+// expected-error@+1 {{expects init region first argument of the privatization type}}
 acc.private.recipe @privatization_i32 : !llvm.ptr<i32> init {
 ^bb0(%arg0 : !llvm.ptr<f32>):
   %c1 = arith.constant 1 : i32
@@ -291,7 +291,7 @@ acc.private.recipe @privatization_i32 : !llvm.ptr<f32> init {
 
 // -----
 
-// expected-error@+1 {{expects destroy region with one argument of the privatization type}}
+// expected-error@+1 {{expects destroy region first argument of the privatization type}}
 acc.private.recipe @privatization_i32 : !llvm.ptr<i32> init {
 ^bb0(%arg0 : !llvm.ptr<i32>):
   %c1 = arith.constant 1 : i32
@@ -312,7 +312,7 @@ acc.firstprivate.recipe @privatization_i32 : !llvm.ptr<i32> init {
 
 // -----
 
-// expected-error@+1 {{expects init region with one argument of the privatization type}}
+// expected-error@+1 {{expects init region first argument of the privatization type}}
 acc.firstprivate.recipe @privatization_i32 : !llvm.ptr<i32> init {
 ^bb0(%arg0 : !llvm.ptr<f32>):
   %c1 = arith.constant 1 : i32
@@ -379,7 +379,7 @@ acc.firstprivate.recipe @privatization_i32 : !llvm.ptr<i32> init {
 
 // -----
 
-// expected-error@+1 {{destroy region with one argument of the privatization type}}
+// expected-error@+1 {{expects destroy region first argument of the privatization type}}
 acc.firstprivate.recipe @privatization_i32 : i32 init {
 ^bb0(%arg0 : i32):
   %0 = arith.constant 1 : i32
@@ -409,7 +409,7 @@ acc.reduction.recipe @reduction_i64 : i64 reduction_operator<add> init {
 
 // -----
 
-// expected-error@+1 {{expects init region with one argument of the reduction type}}
+// expected-error@+1 {{expects init region first argument of the reduction type}}
 acc.reduction.recipe @reduction_i64 : i64 reduction_operator<add> init {
 ^bb0(%0: i32):
   %1 = arith.constant 0 : i64
@@ -427,7 +427,7 @@ acc.reduction.recipe @reduction_i64 : i64 reduction_operator<add> init {
 
 // -----
 
-// expected-error@+1 {{expects combiner region with two arguments of the reduction type}}
+// expected-error@+1 {{expects combiner region with the first two arguments of the reduction type}}
 acc.reduction.recipe @reduction_i64 : i64 reduction_operator<add> init {
 ^bb0(%0: i64):
   %1 = arith.constant 0 : i64
@@ -439,7 +439,7 @@ acc.reduction.recipe @reduction_i64 : i64 reduction_operator<add> init {
 
 // -----
 
-// expected-error@+1 {{expects combiner region with two arguments of the reduction type}}
+// expected-error@+1 {{expects combiner region with the first two arguments of the reduction type}}
 acc.reduction.recipe @reduction_i64 : i64 reduction_operator<add> init {
 ^bb0(%0: i64):
   %1 = arith.constant 0 : i64
@@ -492,4 +492,238 @@ acc.loop gang() {
 %i64value = arith.constant 1 : i64
 // expected-error@+1 {{num_gangs expects a maximum of 3 values}}
 acc.parallel num_gangs(%i64value, %i64value, %i64value, %i64value : i64, i64, i64, i64) {
+}
+
+// -----
+
+%i64value = arith.constant 1 : i64
+acc.parallel {
+// expected-error@+1 {{'acc.set' op cannot be nested in a compute operation}}
+  acc.set device_type(%i64value : i64)
+  acc.yield
+}
+
+// -----
+
+// expected-error@+1 {{'acc.set' op at least one default_async, device_num, or device_type operand must appear}}
+acc.set
+
+// -----
+
+func.func @acc_atomic_write(%addr : memref<memref<i32>>, %val : i32) {
+  // expected-error @below {{address must dereference to value type}}
+  acc.atomic.write %addr = %val : memref<memref<i32>>, i32
+  return
+}
+
+// -----
+
+func.func @acc_atomic_update(%x: memref<i32>, %expr: f32) {
+  // expected-error @below {{the type of the operand must be a pointer type whose element type is the same as that of the region argument}}
+  acc.atomic.update %x : memref<i32> {
+  ^bb0(%xval: f32):
+    %newval = llvm.fadd %xval, %expr : f32
+    acc.yield %newval : f32
+  }
+  return
+}
+
+// -----
+
+func.func @acc_atomic_update(%x: memref<i32>, %expr: i32) {
+  // expected-error @+2 {{op expects regions to end with 'acc.yield', found 'acc.terminator'}}
+  // expected-note @below {{in custom textual format, the absence of terminator implies 'acc.yield'}}
+  acc.atomic.update %x : memref<i32> {
+  ^bb0(%xval: i32):
+    %newval = llvm.add %xval, %expr : i32
+    acc.terminator
+  }
+  return
+}
+// -----
+
+func.func @acc_atomic_update(%x: memref<i32>, %expr: i32) {
+  // expected-error @below {{invalid kind of type specified}}
+  acc.atomic.update %x : i32 {
+  ^bb0(%xval: i32):
+    %newval = llvm.add %xval, %expr : i32
+    acc.yield %newval : i32
+  }
+  return
+}
+
+// -----
+
+func.func @acc_atomic_update(%x: memref<i32>, %expr: i32) {
+  // expected-error @below {{only updated value must be returned}}
+  acc.atomic.update %x : memref<i32> {
+  ^bb0(%xval: i32):
+    %newval = llvm.add %xval, %expr : i32
+    acc.yield %newval, %expr : i32, i32
+  }
+  return
+}
+
+// -----
+
+func.func @acc_atomic_update(%x: memref<i32>, %expr: i32, %y: f32) {
+  // expected-error @below {{input and yielded value must have the same type}}
+  acc.atomic.update %x : memref<i32> {
+  ^bb0(%xval: i32):
+    %newval = llvm.add %xval, %expr : i32
+    acc.yield %y: f32
+  }
+  return
+}
+
+// -----
+
+func.func @acc_atomic_update(%x: memref<i32>, %expr: i32) {
+  // expected-error @below {{the region must accept exactly one argument}}
+  acc.atomic.update %x : memref<i32> {
+  ^bb0(%xval: i32, %tmp: i32):
+    %newval = llvm.add %xval, %expr : i32
+    acc.yield %newval : i32
+  }
+  return
+}
+
+// -----
+
+func.func @acc_atomic_capture(%x: memref<i32>, %v: memref<i32>, %expr: i32) {
+  // expected-error @below {{expected three operations in atomic.capture region}}
+  acc.atomic.capture {
+    acc.atomic.read %v = %x : memref<i32>, i32
+    acc.terminator
+  }
+  return
+}
+
+// -----
+
+func.func @acc_atomic_capture(%x: memref<i32>, %v: memref<i32>, %expr: i32) {
+  acc.atomic.capture {
+    // expected-error @below {{invalid sequence of operations in the capture region}}
+    acc.atomic.read %v = %x : memref<i32>, i32
+    acc.atomic.read %v = %x : memref<i32>, i32
+    acc.terminator
+  }
+  return
+}
+
+// -----
+
+func.func @acc_atomic_capture(%x: memref<i32>, %v: memref<i32>, %expr: i32) {
+  acc.atomic.capture {
+    // expected-error @below {{invalid sequence of operations in the capture region}}
+    acc.atomic.update %x : memref<i32> {
+    ^bb0(%xval: i32):
+      %newval = llvm.add %xval, %expr : i32
+      acc.yield %newval : i32
+    }
+    acc.atomic.update %x : memref<i32> {
+    ^bb0(%xval: i32):
+      %newval = llvm.add %xval, %expr : i32
+      acc.yield %newval : i32
+    }
+    acc.terminator
+  }
+  return
+}
+
+// -----
+
+func.func @acc_atomic_capture(%x: memref<i32>, %v: memref<i32>, %expr: i32) {
+  acc.atomic.capture {
+    // expected-error @below {{invalid sequence of operations in the capture region}}
+    acc.atomic.write %x = %expr : memref<i32>, i32
+    acc.atomic.write %x = %expr : memref<i32>, i32
+    acc.terminator
+  }
+  return
+}
+
+// -----
+
+func.func @acc_atomic_capture(%x: memref<i32>, %v: memref<i32>, %expr: i32) {
+  acc.atomic.capture {
+    // expected-error @below {{invalid sequence of operations in the capture region}}
+    acc.atomic.write %x = %expr : memref<i32>, i32
+    acc.atomic.update %x : memref<i32> {
+    ^bb0(%xval: i32):
+      %newval = llvm.add %xval, %expr : i32
+      acc.yield %newval : i32
+    }
+    acc.terminator
+  }
+  return
+}
+
+// -----
+
+func.func @acc_atomic_capture(%x: memref<i32>, %v: memref<i32>, %expr: i32) {
+  acc.atomic.capture {
+    // expected-error @below {{invalid sequence of operations in the capture region}}
+    acc.atomic.update %x : memref<i32> {
+    ^bb0(%xval: i32):
+      %newval = llvm.add %xval, %expr : i32
+      acc.yield %newval : i32
+    }
+    acc.atomic.write %x = %expr : memref<i32>, i32
+    acc.terminator
+  }
+  return
+}
+
+// -----
+
+func.func @acc_atomic_capture(%x: memref<i32>, %v: memref<i32>, %expr: i32) {
+  acc.atomic.capture {
+    // expected-error @below {{invalid sequence of operations in the capture region}}
+    acc.atomic.write %x = %expr : memref<i32>, i32
+    acc.atomic.read %v = %x : memref<i32>, i32
+    acc.terminator
+  }
+  return
+}
+
+// -----
+
+func.func @acc_atomic_capture(%x: memref<i32>, %y: memref<i32>, %v: memref<i32>, %expr: i32) {
+  acc.atomic.capture {
+    // expected-error @below {{updated variable in atomic.update must be captured in second operation}}
+    acc.atomic.update %x : memref<i32> {
+    ^bb0(%xval: i32):
+      %newval = llvm.add %xval, %expr : i32
+      acc.yield %newval : i32
+    }
+    acc.atomic.read %v = %y : memref<i32>, i32
+    acc.terminator
+  }
+}
+
+// -----
+
+func.func @acc_atomic_capture(%x: memref<i32>, %y: memref<i32>, %v: memref<i32>, %expr: i32) {
+  acc.atomic.capture {
+    // expected-error @below {{captured variable in atomic.read must be updated in second operation}}
+    acc.atomic.read %v = %y : memref<i32>, i32
+    acc.atomic.update %x : memref<i32> {
+    ^bb0(%xval: i32):
+      %newval = llvm.add %xval, %expr : i32
+      acc.yield %newval : i32
+    }
+    acc.terminator
+  }
+}
+
+// -----
+
+func.func @acc_atomic_capture(%x: memref<i32>, %y: memref<i32>, %v: memref<i32>, %expr: i32) {
+  acc.atomic.capture {
+    // expected-error @below {{captured variable in atomic.read must be updated in second operation}}
+    acc.atomic.read %v = %x : memref<i32>, i32
+    acc.atomic.write %y = %expr : memref<i32>, i32
+    acc.terminator
+  }
 }

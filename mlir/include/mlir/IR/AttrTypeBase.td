@@ -14,7 +14,11 @@
 #ifndef ATTRTYPEBASE_TD
 #define ATTRTYPEBASE_TD
 
-include "mlir/IR/OpBase.td"
+include "mlir/IR/CommonAttrConstraints.td"
+include "mlir/IR/CommonTypeConstraints.td"
+include "mlir/IR/Constraints.td"
+include "mlir/IR/DialectBase.td"
+include "mlir/IR/Traits.td"
 
 //-------------------------------------------------------------------------===//
 // AttrTrait definitions
@@ -311,7 +315,7 @@ class AttrOrTypeParameter<string type, string desc, string accessorType = ""> {
   string cppType = type;
   // The C++ type of the accessor for this parameter.
   string cppAccessorType = !if(!empty(accessorType), type, accessorType);
-  // The C++ storage type of of this parameter if it is a reference, e.g.
+  // The C++ storage type of this parameter if it is a reference, e.g.
   // `std::string` for `StringRef` or `SmallVector` for `ArrayRef`.
   string cppStorageType = cppType;
   // The C++ code to convert from the storage type to the parameter type.
@@ -359,7 +363,7 @@ class DefaultValuedParameter<string type, string value, string desc = ""> :
 class StringRefParameter<string desc = "", string value = ""> :
     AttrOrTypeParameter<"::llvm::StringRef", desc> {
   let allocator = [{$_dst = $_allocator.copyInto($_self);}];
-  let printer = [{$_printer << '"' << $_self << '"';}];
+  let printer = [{$_printer.printString($_self);}];
   let cppStorageType = "std::string";
   let defaultValue = value;
 }

@@ -1,5 +1,5 @@
 // REQUIRES: riscv-registered-target
-// RUN: %clang_cc1  -triple riscv32 -target-feature +v -target-feature +experimental-zihintntl -emit-llvm %s -o - \
+// RUN: %clang_cc1  -triple riscv32 -target-feature +v -target-feature +zihintntl -emit-llvm %s -o - \
 // RUN:     | FileCheck %s
 
 #include <riscv_ntlh.h>
@@ -100,6 +100,24 @@ void ntl_all_sizes() {                                       // CHECK-LABEL: ntl
   *scvs1 = __riscv_ntl_load(scvs2, __RISCV_NTLH_ALL);   // CHECK: load <vscale x 4 x i16>{{.*}}align 8, !nontemporal !4, !riscv-nontemporal-domain !8
   *scvc1 = __riscv_ntl_load(scvc2, __RISCV_NTLH_ALL);   // CHECK: load <vscale x 8 x i8>{{.*}}align 8, !nontemporal !4, !riscv-nontemporal-domain !8
 
+  uc = __riscv_ntl_load(&sc);   // CHECK: load i8{{.*}}align 1, !nontemporal !4, !riscv-nontemporal-domain !8
+  sc = __riscv_ntl_load(&uc);   // CHECK: load i8{{.*}}align 1, !nontemporal !4, !riscv-nontemporal-domain !8
+  us = __riscv_ntl_load(&ss);   // CHECK: load i16{{.*}}align 2, !nontemporal !4, !riscv-nontemporal-domain !8
+  ss = __riscv_ntl_load(&us);   // CHECK: load i16{{.*}}align 2, !nontemporal !4, !riscv-nontemporal-domain !8
+  ui = __riscv_ntl_load(&si);   // CHECK: load i32{{.*}}align 4, !nontemporal !4, !riscv-nontemporal-domain !8
+  si = __riscv_ntl_load(&ui);   // CHECK: load i32{{.*}}align 4, !nontemporal !4, !riscv-nontemporal-domain !8
+  ull = __riscv_ntl_load(&sll); // CHECK: load i64{{.*}}align 8, !nontemporal !4, !riscv-nontemporal-domain !8
+  sll = __riscv_ntl_load(&ull); // CHECK: load i64{{.*}}align 8, !nontemporal !4, !riscv-nontemporal-domain !8
+  h1 = __riscv_ntl_load(&h2);   // CHECK: load half{{.*}}align 2, !nontemporal !4, !riscv-nontemporal-domain !8
+  f1 = __riscv_ntl_load(&f2);   // CHECK: load float{{.*}}align 4, !nontemporal !4, !riscv-nontemporal-domain !8
+  d1 = __riscv_ntl_load(&d2);   // CHECK: load double{{.*}}align 8, !nontemporal !4, !riscv-nontemporal-domain !8
+  v4si1 = __riscv_ntl_load(&v4si2);   // CHECK: load <4 x i32>{{.*}}align 16, !nontemporal !4, !riscv-nontemporal-domain !8
+  v8ss1 = __riscv_ntl_load(&v8ss2);   // CHECK: load <8 x i16>{{.*}}align 16, !nontemporal !4, !riscv-nontemporal-domain !8
+  v16sc1 = __riscv_ntl_load(&v16sc2);   // CHECK: load <16 x i8>{{.*}}align 16, !nontemporal !4, !riscv-nontemporal-domain !8
+  *scvi1 = __riscv_ntl_load(scvi2);   // CHECK: load <vscale x 2 x i32>{{.*}}align 8, !nontemporal !4, !riscv-nontemporal-domain !8
+  *scvs1 = __riscv_ntl_load(scvs2);   // CHECK: load <vscale x 4 x i16>{{.*}}align 8, !nontemporal !4, !riscv-nontemporal-domain !8
+  *scvc1 = __riscv_ntl_load(scvc2);   // CHECK: load <vscale x 8 x i8>{{.*}}align 8, !nontemporal !4, !riscv-nontemporal-domain !8
+
   __riscv_ntl_store(&uc, 1, __RISCV_NTLH_INNERMOST_PRIVATE);    // CHECK: store i8{{.*}}align 1, !nontemporal !4, !riscv-nontemporal-domain !5
   __riscv_ntl_store(&sc, 1, __RISCV_NTLH_INNERMOST_PRIVATE);    // CHECK: store i8{{.*}}align 1, !nontemporal !4, !riscv-nontemporal-domain !5
   __riscv_ntl_store(&us, 1, __RISCV_NTLH_INNERMOST_PRIVATE);    // CHECK: store i16{{.*}}align 2, !nontemporal !4, !riscv-nontemporal-domain !5
@@ -172,6 +190,23 @@ void ntl_all_sizes() {                                       // CHECK-LABEL: ntl
   __riscv_ntl_store(scvs2, *scvs1, __RISCV_NTLH_ALL);  // CHECK: store <vscale x 4 x i16>{{.*}}align 8, !nontemporal !4, !riscv-nontemporal-domain !8
   __riscv_ntl_store(scvc2, *scvc1, __RISCV_NTLH_ALL);  // CHECK: store <vscale x 8 x i8>{{.*}}align 8, !nontemporal !4, !riscv-nontemporal-domain !8
 
+  __riscv_ntl_store(&uc, 1);    // CHECK: store i8{{.*}}align 1, !nontemporal !4, !riscv-nontemporal-domain !8
+  __riscv_ntl_store(&sc, 1);    // CHECK: store i8{{.*}}align 1, !nontemporal !4, !riscv-nontemporal-domain !8
+  __riscv_ntl_store(&us, 1);    // CHECK: store i16{{.*}}align 2, !nontemporal !4, !riscv-nontemporal-domain !8
+  __riscv_ntl_store(&ss, 1);    // CHECK: store i16{{.*}}align 2, !nontemporal !4, !riscv-nontemporal-domain !8
+  __riscv_ntl_store(&ui, 1);    // CHECK: store i32{{.*}}align 4, !nontemporal !4, !riscv-nontemporal-domain !8
+  __riscv_ntl_store(&si, 1);    // CHECK: store i32{{.*}}align 4, !nontemporal !4, !riscv-nontemporal-domain !8
+  __riscv_ntl_store(&ull, 1);   // CHECK: store i64{{.*}}align 8, !nontemporal !4, !riscv-nontemporal-domain !8
+  __riscv_ntl_store(&sll, 1);   // CHECK: store i64{{.*}}align 8, !nontemporal !4, !riscv-nontemporal-domain !8
+  __riscv_ntl_store(&h1, 1.0);  // CHECK: store half{{.*}}align 2, !nontemporal !4, !riscv-nontemporal-domain !8
+  __riscv_ntl_store(&f1, 1.0);  // CHECK: store float{{.*}}align 4, !nontemporal !4, !riscv-nontemporal-domain !8
+  __riscv_ntl_store(&d1, 1.0);  // CHECK: store double{{.*}}align 8, !nontemporal !4, !riscv-nontemporal-domain !8
+  __riscv_ntl_store(&v4si1, v4si2);  // CHECK: store <4 x i32>{{.*}}align 16, !nontemporal !4, !riscv-nontemporal-domain !8
+  __riscv_ntl_store(&v8ss1, v8ss2);  // CHECK: store <8 x i16>{{.*}}align 16, !nontemporal !4, !riscv-nontemporal-domain !8
+  __riscv_ntl_store(&v16sc1, v16sc2);  // CHECK: store <16 x i8>{{.*}}align 16, !nontemporal !4, !riscv-nontemporal-domain !8
+  __riscv_ntl_store(scvi2, *scvi1);  // CHECK: store <vscale x 2 x i32>{{.*}}align 8, !nontemporal !4, !riscv-nontemporal-domain !8
+  __riscv_ntl_store(scvs2, *scvs1);  // CHECK: store <vscale x 4 x i16>{{.*}}align 8, !nontemporal !4, !riscv-nontemporal-domain !8
+  __riscv_ntl_store(scvc2, *scvc1);  // CHECK: store <vscale x 8 x i8>{{.*}}align 8, !nontemporal !4, !riscv-nontemporal-domain !8
 }
 // clang-format on
 

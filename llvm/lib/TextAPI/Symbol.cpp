@@ -65,10 +65,9 @@ bool Symbol::operator==(const Symbol &O) const {
   };
   SymbolFlags LHSFlags = Flags;
   SymbolFlags RHSFlags = O.Flags;
-  if ((!O.isData() && !O.isText()) || (!isData() && !isText())) {
-    RemoveFlag(*this, LHSFlags);
-    RemoveFlag(O, RHSFlags);
-  }
+  // Ignore Text and Data for now.
+  RemoveFlag(*this, LHSFlags);
+  RemoveFlag(O, RHSFlags);
   return std::tie(Name, Kind, Targets, LHSFlags) ==
          std::tie(O.Name, O.Kind, O.Targets, RHSFlags);
 }

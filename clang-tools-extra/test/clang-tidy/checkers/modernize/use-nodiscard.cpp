@@ -1,5 +1,5 @@
 // RUN: %check_clang_tidy -std=c++17-or-later %s modernize-use-nodiscard %t -- \
-// RUN:   -config="{CheckOptions: [{key: modernize-use-nodiscard.ReplacementString, value: 'NO_DISCARD'}]}"
+// RUN:   -config="{CheckOptions: {modernize-use-nodiscard.ReplacementString: 'NO_DISCARD'}}"
 
 namespace std {
 template <class>

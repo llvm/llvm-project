@@ -61,12 +61,24 @@ static mlir::Attribute convertToAttribute(
   } else if constexpr (TC == Fortran::common::TypeCategory::Logical) {
     return builder.getIntegerAttr(type, value.IsTrue());
   } else {
-    static_assert(TC == Fortran::common::TypeCategory::Real,
-                  "type values cannot be converted to attributes");
-    std::string str = value.DumpHexadecimal();
-    auto floatVal =
-        consAPFloat(builder.getKindMap().getFloatSemantics(KIND), str);
-    return builder.getFloatAttr(type, floatVal);
+    auto getFloatAttr = [&](const auto &value, mlir::Type type) {
+      std::string str = value.DumpHexadecimal();
+      auto floatVal =
+          consAPFloat(builder.getKindMap().getFloatSemantics(KIND), str);
+      return builder.getFloatAttr(type, floatVal);
+    };
+
+    if constexpr (TC == Fortran::common::TypeCategory::Real) {
+      return getFloatAttr(value, type);
+    } else {
+      static_assert(TC == Fortran::common::TypeCategory::Complex,
+                    "type values cannot be converted to attributes");
+      mlir::Type eleTy = mlir::cast<mlir::ComplexType>(type).getElementType();
+      llvm::SmallVector<mlir::Attribute, 2> attrs = {
+          getFloatAttr(value.REAL(), eleTy),
+          getFloatAttr(value.AIMAG(), eleTy)};
+      return builder.getArrayAttr(attrs);
+    }
   }
   return {};
 }
@@ -75,12 +87,11 @@ namespace {
 /// Helper class to lower an array constant to a global with an MLIR dense
 /// attribute.
 ///
-/// If we have an array of integer, real, or logical, then we can
+/// If we have an array of integer, real, complex, or logical, then we can
 /// create a global array with the dense attribute.
 ///
-/// The mlir tensor type can only handle integer, real, or logical. It
-/// does not currently support nested structures which is required for
-/// complex.
+/// The mlir tensor type can only handle integer, real, complex, or logical.
+/// It does not currently support nested structures.
 class DenseGlobalBuilder {
 public:
   static fir::GlobalOp tryCreating(fir::FirOpBuilder &builder,
@@ -98,6 +109,8 @@ public:
             [&](const Fortran::evaluate::Expr<Fortran::evaluate::SomeReal> &x) {
               globalBuilder.tryConvertingToAttributes(builder, x);
             },
+            [&](const Fortran::evaluate::Expr<Fortran::evaluate::SomeComplex> &
+                    x) { globalBuilder.tryConvertingToAttributes(builder, x); },
             [](const auto &) {},
         },
         initExpr.u);
@@ -133,6 +146,9 @@ private:
                       : TC;
     attributeElementType = Fortran::lower::getFIRType(
         builder.getContext(), attrTc, KIND, std::nullopt);
+    if (auto firCTy = mlir::dyn_cast<fir::ComplexType>(attributeElementType))
+      attributeElementType =
+          mlir::ComplexType::get(firCTy.getEleType(builder.getKindMap()));
     for (auto element : constant.values())
       attributes.push_back(
           convertToAttribute<TC, KIND>(builder, element, attributeElementType));
@@ -307,7 +323,8 @@ genScalarLit(fir::FirOpBuilder &builder, mlir::Location loc,
 
   auto size = builder.getKindMap().getCharacterBitsize(KIND) / 8 * value.size();
   llvm::StringRef strVal(reinterpret_cast<const char *>(value.c_str()), size);
-  std::string globalName = fir::factory::uniqueCGIdent("cl", strVal);
+  std::string globalName = fir::factory::uniqueCGIdent(
+      KIND == 1 ? "cl"s : "cl"s + std::to_string(KIND), strVal);
   fir::GlobalOp global = builder.getNamedGlobal(globalName);
   fir::CharacterType type =
       fir::CharacterType::get(builder.getContext(), KIND, len);
@@ -346,8 +363,9 @@ static mlir::Value genInlinedStructureCtorLitImpl(
     if (sym->test(Fortran::semantics::Symbol::Flag::ParentComp))
       TODO(loc, "parent component in structure constructor");
 
-    llvm::StringRef name = toStringRef(sym->name());
+    std::string name = converter.getRecordTypeFieldName(sym);
     mlir::Type componentTy = recTy.getType(name);
+    assert(componentTy && "failed to retrieve component");
     // FIXME: type parameters must come from the derived-type-spec
     auto field = builder.create<fir::FieldIndexOp>(
         loc, fieldTy, name, type,
@@ -544,7 +562,8 @@ genOutlineArrayLit(Fortran::lower::AbstractConverter &converter,
     // always possible.
     if constexpr (T::category == Fortran::common::TypeCategory::Logical ||
                   T::category == Fortran::common::TypeCategory::Integer ||
-                  T::category == Fortran::common::TypeCategory::Real) {
+                  T::category == Fortran::common::TypeCategory::Real ||
+                  T::category == Fortran::common::TypeCategory::Complex) {
       global = DenseGlobalBuilder::tryCreating(
           builder, loc, arrayTy, globalName, builder.createInternalLinkage(),
           true, constant);

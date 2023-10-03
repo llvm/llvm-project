@@ -1,5 +1,4 @@
 // RUN: %clang_cc1 -fsyntax-only -verify %s
-// rdar://7634850
 
 @interface Foo
 - (void)foo:(Class)class; // expected-note{{passing argument to parameter 'class' here}}

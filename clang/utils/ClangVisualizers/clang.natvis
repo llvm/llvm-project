@@ -223,11 +223,11 @@ For later versions of Visual Studio, no setup is required-->
     <DisplayString IncludeView="TorC" Condition="Typename">typename</DisplayString>
     <DisplayString IncludeView="TorC" Condition="!Typename">class</DisplayString>
     <DisplayString IncludeView="MaybeEllipses" Condition="TypeForDecl == nullptr">(not yet known if parameter pack) </DisplayString>
-    <DisplayString IncludeView="MaybeEllipses" Condition="((TemplateTypeParmType *)(((clang::ExtQualsTypeCommonBase *)(((uintptr_t)TypeForDecl->CanonicalType.Value.Value) &amp; ~(uintptr_t)((1 &lt;&lt; 4) - 1)))-&gt;BaseType))->CanTTPTInfo.ParameterPack">...</DisplayString>
-    <DisplayString IncludeView="MaybeEllipses" Condition="!((TemplateTypeParmType *)(((clang::ExtQualsTypeCommonBase *)(((uintptr_t)TypeForDecl->CanonicalType.Value.Value) &amp; ~(uintptr_t)((1 &lt;&lt; 4) - 1)))-&gt;BaseType))->CanTTPTInfo.ParameterPack"></DisplayString>
-    <DisplayString IncludeView="DefaultArg" Condition="(DefaultArgument.ValueOrInherited.Val.Value&amp;3LL) == 0">{(TypeSourceInfo *)(DefaultArgument.ValueOrInherited.Val.Value&amp;~3LL),view(cpp)}</DisplayString>
+    <DisplayString IncludeView="MaybeEllipses" Condition="((clang::TemplateTypeParmType *)((clang::ExtQualsTypeCommonBase *)((*(uintptr_t *)TypeForDecl-&gt;CanonicalType.Value.Value.Data) &amp; ~(uintptr_t)((1U &lt;&lt; clang::TypeAlignmentInBits) - 1U)))-&gt;BaseType)->CanTTPTInfo.ParameterPack">...</DisplayString>
+    <DisplayString IncludeView="MaybeEllipses" Condition="!((clang::TemplateTypeParmType *)((clang::ExtQualsTypeCommonBase *)((*(uintptr_t *)TypeForDecl-&gt;CanonicalType.Value.Value.Data) &amp; ~(uintptr_t)((1U &lt;&lt; clang::TypeAlignmentInBits) - 1U)))-&gt;BaseType)->CanTTPTInfo.ParameterPack"></DisplayString>
+    <DisplayString IncludeView="DefaultArg" Condition="(*(uintptr_t *)DefaultArgument.ValueOrInherited.Val.Value.Data &amp; 3LL) == 0">{(TypeSourceInfo *)(*(uintptr_t *)DefaultArgument.ValueOrInherited.Val.Value.Data&amp;~3LL),view(cpp)}</DisplayString>
     <DisplayString IncludeView="DefaultArg">{{InheritedInitializer}}</DisplayString>
-    <DisplayString IncludeView="Initializer" Condition="DefaultArgument.ValueOrInherited.Val.Value&amp;~3LL">= {this,view(DefaultArg)na}</DisplayString>
+    <DisplayString IncludeView="Initializer" Condition="*(uintptr_t *)DefaultArgument.ValueOrInherited.Val.Value.Data &amp; 3LL">= {this,view(DefaultArg)na}</DisplayString>
     <DisplayString IncludeView="Initializer"></DisplayString>
     <DisplayString>{*this,view(TorC)} {*this,view(MaybeEllipses)}{Name,view(cpp)} {this,view(Initializer)na}</DisplayString>
   </Type>
@@ -439,8 +439,8 @@ For later versions of Visual Studio, no setup is required-->
     </Expand>
   </Type>
   <Type Name="clang::TemplateTypeParmType">
-    <DisplayString IncludeView="cpp" Condition="CanonicalType.Value.Value != this">{TTPDecl->Name,view(cpp)}</DisplayString>
-    <DisplayString Condition="CanonicalType.Value.Value != this">Non-canonical: {*TTPDecl}</DisplayString>
+    <DisplayString IncludeView="cpp" Condition="((clang::TemplateTypeParmType *)((clang::ExtQualsTypeCommonBase *)((*(uintptr_t *)CanonicalType.Value.Value.Data) &amp; ~(uintptr_t)((1U &lt;&lt; clang::TypeAlignmentInBits) - 1U)))-&gt;BaseType) != this">{TTPDecl->Name,view(cpp)}</DisplayString>
+    <DisplayString Condition="((clang::TemplateTypeParmType *)((clang::ExtQualsTypeCommonBase *)((*(uintptr_t *)CanonicalType.Value.Value.Data) &amp; ~(uintptr_t)((1U &lt;&lt; clang::TypeAlignmentInBits) - 1U)))-&gt;BaseType) != this">Non-canonical: {*TTPDecl}</DisplayString>
     <DisplayString>Canonical: {CanTTPTInfo}</DisplayString>
     <Expand>
       <ExpandedItem>*(clang::Type *)this, view(cmn)</ExpandedItem>
@@ -1071,12 +1071,12 @@ For later versions of Visual Studio, no setup is required-->
     <DisplayString>{Val}</DisplayString>
   </Type>
   <Type Name="clang::ActionResult&lt;*, 1&gt;">
-    <DisplayString Condition="PtrWithInvalid&amp;1">Invalid</DisplayString>
-    <DisplayString Condition="!PtrWithInvalid">Unset</DisplayString>
-    <DisplayString>{($T1)(PtrWithInvalid&amp;~1)}</DisplayString>
+    <DisplayString Condition="Value&amp;1">Invalid</DisplayString>
+    <DisplayString Condition="Value==0">Unset</DisplayString>
+    <DisplayString>{($T1)(Value&amp;~1)}</DisplayString>
     <Expand>
-      <Item Name="Invalid">(bool)(PtrWithInvalid&amp;1)</Item>
-      <Item Name="Val">($T1)(PtrWithInvalid&amp;~1)</Item>
+      <Item Name="Invalid">(bool)(Value&amp;1)</Item>
+      <Item Name="Val">($T1)(Value&amp;~1)</Item>
     </Expand>
   </Type>
 </AutoVisualizer>

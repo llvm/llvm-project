@@ -28,7 +28,7 @@ namespace {
 template <typename ELFT> class ELFDumper : public Dumper {
 public:
   ELFDumper(const ELFObjectFile<ELFT> &O) : Dumper(O), Obj(O) {}
-  void printPrivateHeaders(bool MachOOnlyFirst) override;
+  void printPrivateHeaders() override;
   void printDynamicRelocations() override;
 
 private:
@@ -38,6 +38,7 @@ private:
   void printDynamicSection();
   void printProgramHeaders();
   void printSymbolVersion();
+  void printSymbolVersionDependency(const typename ELFT::Shdr &Sec);
 };
 } // namespace
 
@@ -282,6 +283,9 @@ template <class ELFT> void ELFDumper<ELFT>::printProgramHeaders() {
     case ELF::PT_OPENBSD_MUTABLE:
       outs() << "OPENBSD_MUTABLE ";
       break;
+    case ELF::PT_OPENBSD_NOBTCFI:
+      outs() << "OPENBSD_NOBTCFI ";
+      break;
     case ELF::PT_OPENBSD_RANDOMIZE:
       outs() << "OPENBSD_RANDOMIZE ";
       break;
@@ -346,19 +350,13 @@ template <typename ELFT> void ELFDumper<ELFT>::printDynamicRelocations() {
 }
 
 template <class ELFT>
-static void printSymbolVersionDependency(StringRef FileName,
-                                         const ELFFile<ELFT> &Obj,
-                                         const typename ELFT::Shdr &Sec) {
+void ELFDumper<ELFT>::printSymbolVersionDependency(
+    const typename ELFT::Shdr &Sec) {
   outs() << "\nVersion References:\n";
-
-  auto WarningHandler = [&](const Twine &Msg) {
-    reportWarning(Msg, FileName);
-    return Error::success();
-  };
   Expected<std::vector<VerNeed>> V =
-      Obj.getVersionDependencies(Sec, WarningHandler);
+      getELFFile().getVersionDependencies(Sec, this->WarningHandler);
   if (!V) {
-    reportWarning(toString(V.takeError()), FileName);
+    reportWarning(toString(V.takeError()), Obj.getFileName());
     return;
   }
 
@@ -420,13 +418,13 @@ template <class ELFT> void ELFDumper<ELFT>::printSymbolVersion() {
     StringRef StrTab = unwrapOrError(Elf.getStringTable(*StrTabSec), FileName);
 
     if (Shdr.sh_type == ELF::SHT_GNU_verneed)
-      printSymbolVersionDependency<ELFT>(FileName, Elf, Shdr);
+      printSymbolVersionDependency(Shdr);
     else
       printSymbolVersionDefinition<ELFT>(Shdr, Contents, StrTab);
   }
 }
 
-template <class ELFT> void ELFDumper<ELFT>::printPrivateHeaders(bool) {
+template <class ELFT> void ELFDumper<ELFT>::printPrivateHeaders() {
   printProgramHeaders();
   printDynamicSection();
   printSymbolVersion();

@@ -29,7 +29,6 @@
 #include "llvm/CodeGen/GlobalISel/Combiner.h"
 #include "llvm/CodeGen/GlobalISel/CombinerHelper.h"
 #include "llvm/CodeGen/GlobalISel/CombinerInfo.h"
-#include "llvm/CodeGen/GlobalISel/GIMatchTableExecutor.h"
 #include "llvm/CodeGen/GlobalISel/GIMatchTableExecutorImpl.h"
 #include "llvm/CodeGen/GlobalISel/GISelChangeObserver.h"
 #include "llvm/CodeGen/GlobalISel/GenericMachineInstrs.h"
@@ -457,11 +456,15 @@ void applyShuffleVectorPseudo(MachineInstr &MI,
 /// for the imported tablegen patterns to work.
 void applyEXT(MachineInstr &MI, ShuffleVectorPseudo &MatchInfo) {
   MachineIRBuilder MIRBuilder(MI);
-  // Tablegen patterns expect an i32 G_CONSTANT as the final op.
-  auto Cst =
-      MIRBuilder.buildConstant(LLT::scalar(32), MatchInfo.SrcOps[2].getImm());
-  MIRBuilder.buildInstr(MatchInfo.Opc, {MatchInfo.Dst},
-                        {MatchInfo.SrcOps[0], MatchInfo.SrcOps[1], Cst});
+  if (MatchInfo.SrcOps[2].getImm() == 0)
+    MIRBuilder.buildCopy(MatchInfo.Dst, MatchInfo.SrcOps[0]);
+  else {
+    // Tablegen patterns expect an i32 G_CONSTANT as the final op.
+    auto Cst =
+        MIRBuilder.buildConstant(LLT::scalar(32), MatchInfo.SrcOps[2].getImm());
+    MIRBuilder.buildInstr(MatchInfo.Opc, {MatchInfo.Dst},
+                          {MatchInfo.SrcOps[0], MatchInfo.SrcOps[1], Cst});
+  }
   MI.eraseFromParent();
 }
 
@@ -720,9 +723,13 @@ bool matchDupLane(MachineInstr &MI, MachineRegisterInfo &MRI,
   case 4:
     if (ScalarSize == 32)
       Opc = AArch64::G_DUPLANE32;
+    else if (ScalarSize == 16)
+      Opc = AArch64::G_DUPLANE16;
     break;
   case 8:
-    if (ScalarSize == 16)
+    if (ScalarSize == 8)
+      Opc = AArch64::G_DUPLANE8;
+    else if (ScalarSize == 16)
       Opc = AArch64::G_DUPLANE16;
     break;
   case 16:
@@ -752,13 +759,10 @@ void applyDupLane(MachineInstr &MI, MachineRegisterInfo &MRI,
   Register DupSrc = MI.getOperand(1).getReg();
   // For types like <2 x s32>, we can use G_DUPLANE32, with a <4 x s32> source.
   // To do this, we can use a G_CONCAT_VECTORS to do the widening.
-  if (SrcTy == LLT::fixed_vector(2, LLT::scalar(32))) {
-    assert(MRI.getType(MI.getOperand(0).getReg()).getNumElements() == 2 &&
-           "Unexpected dest elements");
+  if (SrcTy.getSizeInBits() == 64) {
     auto Undef = B.buildUndef(SrcTy);
-    DupSrc = B.buildConcatVectors(
-                  SrcTy.changeElementCount(ElementCount::getFixed(4)),
-                  {Src1Reg, Undef.getReg(0)})
+    DupSrc = B.buildConcatVectors(SrcTy.multiplyElements(2),
+                                  {Src1Reg, Undef.getReg(0)})
                  .getReg(0);
   }
   B.buildInstr(MatchInfo.first, {MI.getOperand(0).getReg()}, {DupSrc, Lane});
@@ -1062,27 +1066,136 @@ void applyVectorSextInReg(MachineInstr &MI, MachineRegisterInfo &MRI,
   Helper.lower(MI, 0, /* Unused hint type */ LLT());
 }
 
-class AArch64PostLegalizerLoweringImpl : public GIMatchTableExecutor {
+/// Combine <N x t>, unused = unmerge(G_EXT <2*N x t> v, undef, N)
+///           => unused, <N x t> = unmerge v
+bool matchUnmergeExtToUnmerge(MachineInstr &MI, MachineRegisterInfo &MRI,
+                              Register &MatchInfo) {
+  auto &Unmerge = cast<GUnmerge>(MI);
+  if (Unmerge.getNumDefs() != 2)
+    return false;
+  if (!MRI.use_nodbg_empty(Unmerge.getReg(1)))
+    return false;
+
+  LLT DstTy = MRI.getType(Unmerge.getReg(0));
+  if (!DstTy.isVector())
+    return false;
+
+  MachineInstr *Ext = getOpcodeDef(AArch64::G_EXT, Unmerge.getSourceReg(), MRI);
+  if (!Ext)
+    return false;
+
+  Register ExtSrc1 = Ext->getOperand(1).getReg();
+  Register ExtSrc2 = Ext->getOperand(2).getReg();
+  auto LowestVal =
+      getIConstantVRegValWithLookThrough(Ext->getOperand(3).getReg(), MRI);
+  if (!LowestVal || LowestVal->Value.getZExtValue() != DstTy.getSizeInBytes())
+    return false;
+
+  if (!getOpcodeDef<GImplicitDef>(ExtSrc2, MRI))
+    return false;
+
+  MatchInfo = ExtSrc1;
+  return true;
+}
+
+void applyUnmergeExtToUnmerge(MachineInstr &MI, MachineRegisterInfo &MRI,
+                              MachineIRBuilder &B,
+                              GISelChangeObserver &Observer, Register &SrcReg) {
+  Observer.changingInstr(MI);
+  // Swap dst registers.
+  Register Dst1 = MI.getOperand(0).getReg();
+  MI.getOperand(0).setReg(MI.getOperand(1).getReg());
+  MI.getOperand(1).setReg(Dst1);
+  MI.getOperand(2).setReg(SrcReg);
+  Observer.changedInstr(MI);
+}
+
+// Match mul({z/s}ext , {z/s}ext) => {u/s}mull OR
+// Match v2s64 mul instructions, which will then be scalarised later on
+// Doing these two matches in one function to ensure that the order of matching
+// will always be the same.
+// Try lowering MUL to MULL before trying to scalarize if needed.
+bool matchExtMulToMULL(MachineInstr &MI, MachineRegisterInfo &MRI) {
+  // Get the instructions that defined the source operand
+  LLT DstTy = MRI.getType(MI.getOperand(0).getReg());
+  MachineInstr *I1 = getDefIgnoringCopies(MI.getOperand(1).getReg(), MRI);
+  MachineInstr *I2 = getDefIgnoringCopies(MI.getOperand(2).getReg(), MRI);
+
+  if (DstTy.isVector()) {
+    // If the source operands were EXTENDED before, then {U/S}MULL can be used
+    unsigned I1Opc = I1->getOpcode();
+    unsigned I2Opc = I2->getOpcode();
+    if (((I1Opc == TargetOpcode::G_ZEXT && I2Opc == TargetOpcode::G_ZEXT) ||
+         (I1Opc == TargetOpcode::G_SEXT && I2Opc == TargetOpcode::G_SEXT)) &&
+        (MRI.getType(I1->getOperand(0).getReg()).getScalarSizeInBits() ==
+         MRI.getType(I1->getOperand(1).getReg()).getScalarSizeInBits() * 2) &&
+        (MRI.getType(I2->getOperand(0).getReg()).getScalarSizeInBits() ==
+         MRI.getType(I2->getOperand(1).getReg()).getScalarSizeInBits() * 2)) {
+      return true;
+    }
+    // If result type is v2s64, scalarise the instruction
+    else if (DstTy == LLT::fixed_vector(2, 64)) {
+      return true;
+    }
+  }
+  return false;
+}
+
+void applyExtMulToMULL(MachineInstr &MI, MachineRegisterInfo &MRI,
+                       MachineIRBuilder &B, GISelChangeObserver &Observer) {
+  assert(MI.getOpcode() == TargetOpcode::G_MUL &&
+         "Expected a G_MUL instruction");
+
+  // Get the instructions that defined the source operand
+  LLT DstTy = MRI.getType(MI.getOperand(0).getReg());
+  MachineInstr *I1 = getDefIgnoringCopies(MI.getOperand(1).getReg(), MRI);
+  MachineInstr *I2 = getDefIgnoringCopies(MI.getOperand(2).getReg(), MRI);
+
+  // If the source operands were EXTENDED before, then {U/S}MULL can be used
+  unsigned I1Opc = I1->getOpcode();
+  unsigned I2Opc = I2->getOpcode();
+  if (((I1Opc == TargetOpcode::G_ZEXT && I2Opc == TargetOpcode::G_ZEXT) ||
+       (I1Opc == TargetOpcode::G_SEXT && I2Opc == TargetOpcode::G_SEXT)) &&
+      (MRI.getType(I1->getOperand(0).getReg()).getScalarSizeInBits() ==
+       MRI.getType(I1->getOperand(1).getReg()).getScalarSizeInBits() * 2) &&
+      (MRI.getType(I2->getOperand(0).getReg()).getScalarSizeInBits() ==
+       MRI.getType(I2->getOperand(1).getReg()).getScalarSizeInBits() * 2)) {
+
+    B.setInstrAndDebugLoc(MI);
+    B.buildInstr(I1->getOpcode() == TargetOpcode::G_ZEXT ? AArch64::G_UMULL
+                                                         : AArch64::G_SMULL,
+                 {MI.getOperand(0).getReg()},
+                 {I1->getOperand(1).getReg(), I2->getOperand(1).getReg()});
+    MI.eraseFromParent();
+  }
+  // If result type is v2s64, scalarise the instruction
+  else if (DstTy == LLT::fixed_vector(2, 64)) {
+    LegalizerHelper Helper(*MI.getMF(), Observer, B);
+    B.setInstrAndDebugLoc(MI);
+    Helper.fewerElementsVector(
+        MI, 0,
+        DstTy.changeElementCount(
+            DstTy.getElementCount().divideCoefficientBy(2)));
+  }
+}
+
+class AArch64PostLegalizerLoweringImpl : public Combiner {
 protected:
-  CombinerHelper &Helper;
+  // TODO: Make CombinerHelper methods const.
+  mutable CombinerHelper Helper;
   const AArch64PostLegalizerLoweringImplRuleConfig &RuleConfig;
-
   const AArch64Subtarget &STI;
-  GISelChangeObserver &Observer;
-  MachineIRBuilder &B;
-  MachineFunction &MF;
-
-  MachineRegisterInfo &MRI;
 
 public:
   AArch64PostLegalizerLoweringImpl(
+      MachineFunction &MF, CombinerInfo &CInfo, const TargetPassConfig *TPC,
+      GISelCSEInfo *CSEInfo,
       const AArch64PostLegalizerLoweringImplRuleConfig &RuleConfig,
-      const AArch64Subtarget &STI, GISelChangeObserver &Observer,
-      MachineIRBuilder &B, CombinerHelper &Helper);
+      const AArch64Subtarget &STI);
 
   static const char *getName() { return "AArch6400PreLegalizerCombiner"; }
 
-  bool tryCombineAll(MachineInstr &I) const;
+  bool tryCombineAll(MachineInstr &I) const override;
 
 private:
 #define GET_GICOMBINER_CLASS_MEMBERS
@@ -1095,42 +1208,19 @@ private:
 #undef GET_GICOMBINER_IMPL
 
 AArch64PostLegalizerLoweringImpl::AArch64PostLegalizerLoweringImpl(
+    MachineFunction &MF, CombinerInfo &CInfo, const TargetPassConfig *TPC,
+    GISelCSEInfo *CSEInfo,
     const AArch64PostLegalizerLoweringImplRuleConfig &RuleConfig,
-    const AArch64Subtarget &STI, GISelChangeObserver &Observer,
-    MachineIRBuilder &B, CombinerHelper &Helper)
-    : Helper(Helper), RuleConfig(RuleConfig), STI(STI), Observer(Observer),
-      B(B), MF(B.getMF()), MRI(*B.getMRI()),
+    const AArch64Subtarget &STI)
+    : Combiner(MF, CInfo, TPC, /*KB*/ nullptr, CSEInfo),
+      Helper(Observer, B, /*IsPreLegalize*/ true), RuleConfig(RuleConfig),
+      STI(STI),
 #define GET_GICOMBINER_CONSTRUCTOR_INITS
 #include "AArch64GenPostLegalizeGILowering.inc"
 #undef GET_GICOMBINER_CONSTRUCTOR_INITS
 {
 }
 
-class AArch64PostLegalizerLoweringInfo : public CombinerInfo {
-public:
-  AArch64PostLegalizerLoweringImplRuleConfig RuleConfig;
-
-  AArch64PostLegalizerLoweringInfo(bool OptSize, bool MinSize)
-      : CombinerInfo(/*AllowIllegalOps*/ true, /*ShouldLegalizeIllegal*/ false,
-                     /*LegalizerInfo*/ nullptr, /*OptEnabled = */ true, OptSize,
-                     MinSize) {
-    if (!RuleConfig.parseCommandLineOption())
-      report_fatal_error("Invalid rule identifier");
-  }
-
-  bool combine(GISelChangeObserver &Observer, MachineInstr &MI,
-               MachineIRBuilder &B) const override;
-};
-
-bool AArch64PostLegalizerLoweringInfo::combine(GISelChangeObserver &Observer,
-                                               MachineInstr &MI,
-                                               MachineIRBuilder &B) const {
-  const auto &STI = MI.getMF()->getSubtarget<AArch64Subtarget>();
-  CombinerHelper Helper(Observer, B, /* IsPreLegalize*/ false);
-  AArch64PostLegalizerLoweringImpl Impl(RuleConfig, STI, Observer, B, Helper);
-  Impl.setupMF(*MI.getMF(), Helper.getKnownBits());
-  return Impl.tryCombineAll(MI);
-}
 class AArch64PostLegalizerLowering : public MachineFunctionPass {
 public:
   static char ID;
@@ -1143,6 +1233,9 @@ public:
 
   bool runOnMachineFunction(MachineFunction &MF) override;
   void getAnalysisUsage(AnalysisUsage &AU) const override;
+
+private:
+  AArch64PostLegalizerLoweringImplRuleConfig RuleConfig;
 };
 } // end anonymous namespace
 
@@ -1156,6 +1249,9 @@ void AArch64PostLegalizerLowering::getAnalysisUsage(AnalysisUsage &AU) const {
 AArch64PostLegalizerLowering::AArch64PostLegalizerLowering()
     : MachineFunctionPass(ID) {
   initializeAArch64PostLegalizerLoweringPass(*PassRegistry::getPassRegistry());
+
+  if (!RuleConfig.parseCommandLineOption())
+    report_fatal_error("Invalid rule identifier");
 }
 
 bool AArch64PostLegalizerLowering::runOnMachineFunction(MachineFunction &MF) {
@@ -1167,9 +1263,14 @@ bool AArch64PostLegalizerLowering::runOnMachineFunction(MachineFunction &MF) {
          "Expected a legalized function?");
   auto *TPC = &getAnalysis<TargetPassConfig>();
   const Function &F = MF.getFunction();
-  AArch64PostLegalizerLoweringInfo PCInfo(F.hasOptSize(), F.hasMinSize());
-  Combiner C(PCInfo, TPC);
-  return C.combineMachineInstrs(MF, /*CSEInfo*/ nullptr);
+
+  const AArch64Subtarget &ST = MF.getSubtarget<AArch64Subtarget>();
+  CombinerInfo CInfo(/*AllowIllegalOps*/ true, /*ShouldLegalizeIllegal*/ false,
+                     /*LegalizerInfo*/ nullptr, /*OptEnabled=*/true,
+                     F.hasOptSize(), F.hasMinSize());
+  AArch64PostLegalizerLoweringImpl Impl(MF, CInfo, TPC, /*CSEInfo*/ nullptr,
+                                        RuleConfig, ST);
+  return Impl.combineMachineInstrs();
 }
 
 char AArch64PostLegalizerLowering::ID = 0;

@@ -6,8 +6,6 @@
 //
 //===----------------------------------------------------------------------===//
 
-// ADDITIONAL_COMPILE_FLAGS: -Wno-private-header
-
 #include <__type_traits/datasizeof.h>
 #include <cstdint>
 

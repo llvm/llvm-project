@@ -123,7 +123,7 @@ bool BufferPlacementTransformationBase::isLoop(Operation *op) {
       return true;
     // Recurses into all region successors.
     SmallVector<RegionSuccessor, 2> successors;
-    regionInterface.getSuccessorRegions(current->getRegionNumber(), successors);
+    regionInterface.getSuccessorRegions(current, successors);
     for (RegionSuccessor &regionEntry : successors)
       if (recurse(regionEntry.getSuccessor()))
         return true;
@@ -132,7 +132,8 @@ bool BufferPlacementTransformationBase::isLoop(Operation *op) {
 
   // Start with all entry regions and test whether they induce a loop.
   SmallVector<RegionSuccessor, 2> successorRegions;
-  regionInterface.getSuccessorRegions(/*index=*/std::nullopt, successorRegions);
+  regionInterface.getSuccessorRegions(/*point=*/RegionBranchPoint::parent(),
+                                      successorRegions);
   for (RegionSuccessor &regionEntry : successorRegions) {
     if (recurse(regionEntry.getSuccessor()))
       return true;

@@ -267,4 +267,10 @@ void x86::getX86TargetFeatures(const Driver &D, const llvm::Triple &Triple,
           << A->getSpelling() << Scope;
     }
   }
+
+  // -mno-gather, -mno-scatter support
+  if (Args.hasArg(options::OPT_mno_gather))
+    Features.push_back("+prefer-no-gather");
+  if (Args.hasArg(options::OPT_mno_scatter))
+    Features.push_back("+prefer-no-scatter");
 }

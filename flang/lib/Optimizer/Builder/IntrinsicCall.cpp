@@ -511,6 +511,7 @@ static constexpr IntrinsicHandler handlers[]{
      &I::genSystemClock,
      {{{"count", asAddr}, {"count_rate", asAddr}, {"count_max", asAddr}}},
      /*isElemental=*/false},
+    {"tand", &I::genTand},
     {"trailz", &I::genTrailz},
     {"transfer",
      &I::genTransfer,
@@ -571,10 +572,10 @@ llvm::cl::opt<MathRuntimeVersion> mathRuntimeVersion(
     llvm::cl::init(fastVersion));
 
 static llvm::cl::opt<bool>
-    disableMlirComplex("disable-mlir-complex",
-                       llvm::cl::desc("Use libm instead of the MLIR complex "
-                                      "dialect to lower complex operations"),
-                       llvm::cl::init(false));
+    forceMlirComplex("force-mlir-complex",
+                     llvm::cl::desc("Force using MLIR complex operations "
+                                    "instead of libm complex operations"),
+                     llvm::cl::init(false));
 
 mlir::Value genLibCall(fir::FirOpBuilder &builder, mlir::Location loc,
                        llvm::StringRef libFuncName,
@@ -733,11 +734,19 @@ mlir::Value genComplexMathOp(fir::FirOpBuilder &builder, mlir::Location loc,
                              mlir::FunctionType mathLibFuncType,
                              llvm::ArrayRef<mlir::Value> args) {
   mlir::Value result;
-  if (disableMlirComplex ||
-      (mathRuntimeVersion == preciseVersion && !mathLibFuncName.empty())) {
-    result = genLibCall(builder, loc, mathLibFuncName, mathLibFuncType, args);
-    LLVM_DEBUG(result.dump(); llvm::dbgs() << "\n");
-    return result;
+  bool canUseApprox = mlir::arith::bitEnumContainsAny(
+      builder.getFastMathFlags(), mlir::arith::FastMathFlags::afn);
+
+  // If we have libm functions, we can attempt to generate the more precise
+  // version of the complex math operation.
+  if (!mathLibFuncName.empty()) {
+    // If we enabled MLIR complex or can use approximate operations, we should
+    // NOT use libm.
+    if (!forceMlirComplex && !canUseApprox) {
+      result = genLibCall(builder, loc, mathLibFuncName, mathLibFuncType, args);
+      LLVM_DEBUG(result.dump(); llvm::dbgs() << "\n");
+      return result;
+    }
   }
 
   LLVM_DEBUG(llvm::dbgs() << "Generating '" << mathLibFuncName
@@ -1204,8 +1213,9 @@ searchMathOperation(fir::FirOpBuilder &builder, llvm::StringRef name,
   for (auto iter = range.first; iter != range.second && iter; ++iter) {
     const auto &impl = *iter;
     auto implType = impl.typeGenerator(builder.getContext(), builder);
-    if (funcType == implType)
+    if (funcType == implType) {
       return &impl; // exact match
+    }
 
     FunctionDistance distance(funcType, implType);
     if (distance.isSmallerThan(bestMatchDistance)) {
@@ -3555,7 +3565,7 @@ IntrinsicLibrary::genIeeeCopySign(mlir::Type resultType,
 
   // Args have the same type.
   if (xRealType == yRealType)
-    return builder.create<mlir::LLVM::CopySignOp>(loc, xRealVal, yRealVal);
+    return builder.create<mlir::math::CopySignOp>(loc, xRealVal, yRealVal);
 
   // Args have different types.
   mlir::Type xIntType = builder.getIntegerType(xRealType.getWidth());
@@ -4995,6 +5005,21 @@ IntrinsicLibrary::genSize(mlir::Type resultType,
       .getResults()[0];
 }
 
+// TAND
+mlir::Value IntrinsicLibrary::genTand(mlir::Type resultType,
+                                      llvm::ArrayRef<mlir::Value> args) {
+  assert(args.size() == 1);
+  mlir::MLIRContext *context = builder.getContext();
+  mlir::FunctionType ftype =
+      mlir::FunctionType::get(context, {resultType}, {args[0].getType()});
+  llvm::APFloat pi = llvm::APFloat(llvm::numbers::pi);
+  mlir::Value dfactor = builder.createRealConstant(
+      loc, mlir::FloatType::getF64(context), pi / llvm::APFloat(180.0));
+  mlir::Value factor = builder.createConvert(loc, args[0].getType(), dfactor);
+  mlir::Value arg = builder.create<mlir::arith::MulFOp>(loc, args[0], factor);
+  return getRuntimeCallGenerator("tan", ftype)(builder, loc, {arg});
+}
+
 // TRAILZ
 mlir::Value IntrinsicLibrary::genTrailz(mlir::Type resultType,
                                         llvm::ArrayRef<mlir::Value> args) {
@@ -5259,11 +5284,8 @@ IntrinsicLibrary::genStorageSize(mlir::Type resultType,
         builder.getKindMap().getIntegerBitsize(fir::toInt(constOp)));
   }
 
-  if (args[0].getBoxOf<fir::PolymorphicValue>()) {
-    box = builder.createBox(loc, args[0], /*isPolymorphic=*/true);
-  } else if (box.getType().isa<fir::ReferenceType>()) {
-    box = builder.create<fir::LoadOp>(loc, box);
-  }
+  box = builder.createBox(loc, args[0],
+                          /*isPolymorphic=*/args[0].isPolymorphic());
   mlir::Value eleSize = builder.create<fir::BoxEleSizeOp>(loc, kindTy, box);
   mlir::Value c8 = builder.createIntegerConstant(loc, kindTy, 8);
   return builder.create<mlir::arith::MulIOp>(loc, eleSize, c8);
@@ -5721,6 +5743,9 @@ getIntrinsicArgumentLowering(llvm::StringRef specificName) {
   if (const IntrinsicHandler *handler = findIntrinsicHandler(name))
     if (!handler->argLoweringRules.hasDefaultRules())
       return &handler->argLoweringRules;
+  if (const IntrinsicHandler *ppcHandler = findPPCIntrinsicHandler(name))
+    if (!ppcHandler->argLoweringRules.hasDefaultRules())
+      return &ppcHandler->argLoweringRules;
   return nullptr;
 }
 
@@ -5742,9 +5767,10 @@ lowerIntrinsicArgumentAs(const IntrinsicArgumentLoweringRules &rules,
 std::pair<fir::ExtendedValue, bool>
 genIntrinsicCall(fir::FirOpBuilder &builder, mlir::Location loc,
                  llvm::StringRef name, std::optional<mlir::Type> resultType,
-                 llvm::ArrayRef<fir::ExtendedValue> args) {
-  return IntrinsicLibrary{builder, loc}.genIntrinsicCall(name, resultType,
-                                                         args);
+                 llvm::ArrayRef<fir::ExtendedValue> args,
+                 Fortran::lower::AbstractConverter *converter) {
+  return IntrinsicLibrary{builder, loc, converter}.genIntrinsicCall(
+      name, resultType, args);
 }
 
 mlir::Value genMax(fir::FirOpBuilder &builder, mlir::Location loc,

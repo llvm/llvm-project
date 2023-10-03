@@ -61,13 +61,15 @@ enum ModuleKind {
 
 /// The input file info that has been loaded from an AST file.
 struct InputFileInfo {
+  std::string FilenameAsRequested;
   std::string Filename;
   uint64_t ContentHash;
   off_t StoredSize;
   time_t StoredTime;
   bool Overridden;
   bool Transient;
-  bool TopLevelModuleMap;
+  bool TopLevel;
+  bool ModuleMap;
 };
 
 /// The input file that has been loaded from this AST file, along with
@@ -243,7 +245,10 @@ public:
   /// The cursor to the start of the input-files block.
   llvm::BitstreamCursor InputFilesCursor;
 
-  /// Offsets for all of the input file entries in the AST file.
+  /// Absolute offset of the start of the input-files block.
+  uint64_t InputFilesOffsetBase = 0;
+
+  /// Relative offsets for all of the input file entries in the AST file.
   const llvm::support::unaligned_uint64_t *InputFileOffsets = nullptr;
 
   /// The input files that have been loaded from this AST file.

@@ -471,7 +471,7 @@ bool RawInstrProfReader<IntPtrT>::hasFormat(const MemoryBuffer &DataBuffer) {
   uint64_t Magic =
     *reinterpret_cast<const uint64_t *>(DataBuffer.getBufferStart());
   return RawInstrProf::getMagic<IntPtrT>() == Magic ||
-         sys::getSwappedBytes(RawInstrProf::getMagic<IntPtrT>()) == Magic;
+         llvm::byteswap(RawInstrProf::getMagic<IntPtrT>()) == Magic;
 }
 
 template <class IntPtrT>
@@ -550,9 +550,9 @@ Error RawInstrProfReader<IntPtrT>::readHeader(
 
   CountersDelta = swap(Header.CountersDelta);
   NamesDelta = swap(Header.NamesDelta);
-  auto NumData = swap(Header.DataSize);
+  auto NumData = swap(Header.NumData);
   auto PaddingBytesBeforeCounters = swap(Header.PaddingBytesBeforeCounters);
-  auto CountersSize = swap(Header.CountersSize) * getCounterTypeSize();
+  auto CountersSize = swap(Header.NumCounters) * getCounterTypeSize();
   auto PaddingBytesAfterCounters = swap(Header.PaddingBytesAfterCounters);
   auto NamesSize = swap(Header.NamesSize);
   ValueKindLast = swap(Header.ValueKindLast);
@@ -1214,12 +1214,25 @@ InstrProfSymtab &IndexedInstrProfReader::getSymtab() {
 }
 
 Expected<InstrProfRecord> IndexedInstrProfReader::getInstrProfRecord(
-    StringRef FuncName, uint64_t FuncHash, uint64_t *MismatchedFuncSum) {
+    StringRef FuncName, uint64_t FuncHash, StringRef DeprecatedFuncName,
+    uint64_t *MismatchedFuncSum) {
   ArrayRef<NamedInstrProfRecord> Data;
   uint64_t FuncSum = 0;
-  Error Err = Remapper->getRecords(FuncName, Data);
-  if (Err)
-    return std::move(Err);
+  auto Err = Remapper->getRecords(FuncName, Data);
+  if (Err) {
+    // If we don't find FuncName, try DeprecatedFuncName to handle profiles
+    // built by older compilers.
+    auto Err2 =
+        handleErrors(std::move(Err), [&](const InstrProfError &IE) -> Error {
+          if (IE.get() != instrprof_error::unknown_function)
+            return make_error<InstrProfError>(IE);
+          if (auto Err = Remapper->getRecords(DeprecatedFuncName, Data))
+            return Err;
+          return Error::success();
+        });
+    if (Err2)
+      return std::move(Err2);
+  }
   // Found it. Look for counters with the right hash.
 
   // A flag to indicate if the records are from the same type

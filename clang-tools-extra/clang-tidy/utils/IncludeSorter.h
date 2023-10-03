@@ -51,7 +51,7 @@ public:
                                                   bool IsAngled);
 
 private:
-  typedef SmallVector<SourceRange, 1> SourceRangeVector;
+  using SourceRangeVector = SmallVector<SourceRange, 1>;
 
   const SourceManager *SourceMgr;
   const IncludeStyle Style;

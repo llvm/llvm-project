@@ -9,7 +9,7 @@
 #include "test/UnitTest/Test.h"
 
 template <typename IntType, typename ReturnType>
-class DivTest : public __llvm_libc::testing::Test {
+class DivTest : public LIBC_NAMESPACE::testing::Test {
 public:
   using DivFunc = ReturnType(IntType, IntType);
 

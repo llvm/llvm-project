@@ -75,9 +75,6 @@ unittest("ScudoHooksUnitTest") {
     "//compiler-rt/lib/scudo/standalone:c_wrapper_sources",
     "//compiler-rt/lib/scudo/standalone:sources",
   ]
-  sources = [
-    "scudo_hooks_test.cpp",
-    "scudo_unit_test_main.cpp",
-  ]
+  sources = [ "scudo_unit_test_main.cpp" ]
   has_custom_main = true
 }

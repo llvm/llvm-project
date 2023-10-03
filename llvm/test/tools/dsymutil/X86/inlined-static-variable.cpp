@@ -1,5 +1,10 @@
 // RUN: dsymutil -f -y %p/dummy-debug-map.map -oso-prepend-path %p/../Inputs/inlined-static-variable -o - | llvm-dwarfdump - | FileCheck %s --implicit-check-not "{{DW_AT_low_pc|DW_AT_high_pc|DW_AT_location|DW_TAG|NULL}}"
 
+// RUN: dsymutil --linker llvm -f -y %p/dummy-debug-map.map -oso-prepend-path \
+// RUN: %p/../Inputs/inlined-static-variable -o - | llvm-dwarfdump - | \
+// RUN: FileCheck %s --implicit-check-not \
+// RUN: "{{DW_AT_low_pc|DW_AT_high_pc|DW_AT_location|DW_TAG|NULL}}"
+
 // clang -g -c inlined-static-variable.cpp -o 4.o
 
 // The functions removed and not_removed are not in the debug map and are

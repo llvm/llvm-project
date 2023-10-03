@@ -11,9 +11,13 @@
 //===----------------------------------------------------------------------===//
 
 #include "device.h"
+#include "OmptCallback.h"
+#include "OmptInterface.h"
 #include "omptarget.h"
 #include "private.h"
 #include "rtl.h"
+
+#include "Utilities.h"
 
 #include <cassert>
 #include <climits>
@@ -22,6 +26,10 @@
 #include <mutex>
 #include <string>
 #include <thread>
+
+#ifdef OMPT_SUPPORT
+using namespace llvm::omp::target::ompt;
+#endif
 
 int HostDataToTargetTy::addEventIfNecessary(DeviceTy &Device,
                                             AsyncInfoTy &AsyncInfo) const {
@@ -524,6 +532,23 @@ void DeviceTy::init() {
   if (Ret != OFFLOAD_SUCCESS)
     return;
 
+  // Enables recording kernels if set.
+  llvm::omp::target::BoolEnvar OMPX_RecordKernel("LIBOMPTARGET_RECORD", false);
+  if (OMPX_RecordKernel) {
+    // Enables saving the device memory kernel output post execution if set.
+    llvm::omp::target::BoolEnvar OMPX_ReplaySaveOutput(
+        "LIBOMPTARGET_RR_SAVE_OUTPUT", false);
+    // Sets the maximum to pre-allocate device memory.
+    llvm::omp::target::UInt64Envar OMPX_DeviceMemorySize(
+        "LIBOMPTARGET_RR_DEVMEM_SIZE", 16);
+    DP("Activating Record-Replay for Device %d with %lu GB memory\n",
+       RTLDeviceID, OMPX_DeviceMemorySize.get());
+
+    RTL->activate_record_replay(RTLDeviceID,
+                                OMPX_DeviceMemorySize * 1024 * 1024 * 1024,
+                                true, OMPX_ReplaySaveOutput);
+  }
+
   IsInit = true;
 }
 
@@ -554,10 +579,24 @@ __tgt_target_table *DeviceTy::loadBinary(void *Img) {
 }
 
 void *DeviceTy::allocData(int64_t Size, void *HstPtr, int32_t Kind) {
-  return RTL->data_alloc(RTLDeviceID, Size, HstPtr, Kind);
+  /// RAII to establish tool anchors before and after data allocation
+  void *TargetPtr = nullptr;
+  OMPT_IF_BUILT(InterfaceRAII TargetDataAllocRAII(
+                    RegionInterface.getCallbacks<ompt_target_data_alloc>(),
+                    DeviceID, HstPtr, &TargetPtr, Size,
+                    /* CodePtr */ OMPT_GET_RETURN_ADDRESS(0));)
+
+  TargetPtr = RTL->data_alloc(RTLDeviceID, Size, HstPtr, Kind);
+  return TargetPtr;
 }
 
 int32_t DeviceTy::deleteData(void *TgtAllocBegin, int32_t Kind) {
+  /// RAII to establish tool anchors before and after data deletion
+  OMPT_IF_BUILT(InterfaceRAII TargetDataDeleteRAII(
+                    RegionInterface.getCallbacks<ompt_target_data_delete>(),
+                    DeviceID, TgtAllocBegin,
+                    /* CodePtr */ OMPT_GET_RETURN_ADDRESS(0));)
+
   return RTL->data_delete(RTLDeviceID, TgtAllocBegin, Kind);
 }
 
@@ -589,6 +628,13 @@ int32_t DeviceTy::submitData(void *TgtPtrBegin, void *HstPtrBegin, int64_t Size,
                   Entry);
   }
 
+  /// RAII to establish tool anchors before and after data submit
+  OMPT_IF_BUILT(
+      InterfaceRAII TargetDataSubmitRAII(
+          RegionInterface.getCallbacks<ompt_target_data_transfer_to_device>(),
+          DeviceID, TgtPtrBegin, HstPtrBegin, Size,
+          /* CodePtr */ OMPT_GET_RETURN_ADDRESS(0));)
+
   if (!AsyncInfo || !RTL->data_submit_async || !RTL->synchronize)
     return RTL->data_submit(RTLDeviceID, TgtPtrBegin, HstPtrBegin, Size);
   return RTL->data_submit_async(RTLDeviceID, TgtPtrBegin, HstPtrBegin, Size,
@@ -609,6 +655,13 @@ int32_t DeviceTy::retrieveData(void *HstPtrBegin, void *TgtPtrBegin,
     printCopyInfo(DeviceID, /* H2D */ false, TgtPtrBegin, HstPtrBegin, Size,
                   Entry);
   }
+
+  /// RAII to establish tool anchors before and after data retrieval
+  OMPT_IF_BUILT(
+      InterfaceRAII TargetDataRetrieveRAII(
+          RegionInterface.getCallbacks<ompt_target_data_transfer_from_device>(),
+          DeviceID, HstPtrBegin, TgtPtrBegin, Size,
+          /* CodePtr */ OMPT_GET_RETURN_ADDRESS(0));)
 
   if (!RTL->data_retrieve_async || !RTL->synchronize)
     return RTL->data_retrieve(RTLDeviceID, HstPtrBegin, TgtPtrBegin, Size);

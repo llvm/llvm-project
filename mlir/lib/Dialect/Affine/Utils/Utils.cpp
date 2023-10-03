@@ -367,7 +367,7 @@ mlir::affine::affineParallelize(AffineForOp forOp,
       loc, ValueRange(reducedValues).getTypes(), reductionKinds,
       llvm::ArrayRef(lowerBoundMap), lowerBoundOperands,
       llvm::ArrayRef(upperBoundMap), upperBoundOperands,
-      llvm::ArrayRef(forOp.getStep()));
+      llvm::ArrayRef(forOp.getStepAsInt()));
   // Steal the body of the old affine for op.
   newPloop.getRegion().takeBody(forOp.getRegion());
   Operation *yieldOp = &newPloop.getBody()->back();
@@ -377,7 +377,7 @@ mlir::affine::affineParallelize(AffineForOp forOp,
   SmallVector<Value> newResults;
   newResults.reserve(numReductions);
   for (unsigned i = 0; i < numReductions; ++i) {
-    Value init = forOp.getIterOperands()[i];
+    Value init = forOp.getInits()[i];
     // This works because we are only handling single-op reductions at the
     // moment. A switch on reduction kind or a mechanism to collect operations
     // participating in the reduction will be necessary for multi-op reductions.
@@ -550,6 +550,7 @@ void mlir::affine::normalizeAffineParallel(AffineParallelOp op) {
                                     ubExprs, op.getContext());
   op.setUpperBounds(ranges.getOperands(), newUpperMap);
 }
+
 LogicalResult mlir::affine::normalizeAffineFor(AffineForOp op,
                                                bool promoteSingleIter) {
   if (promoteSingleIter && succeeded(promoteIfSingleIteration(op)))
@@ -569,88 +570,56 @@ LogicalResult mlir::affine::normalizeAffineFor(AffineForOp op,
 
   Location loc = op.getLoc();
   OpBuilder opBuilder(op);
-  int64_t origLoopStep = op.getStep();
+  int64_t origLoopStep = op.getStepAsInt();
 
-  AffineBound lb = op.getLowerBound();
-  AffineMap originalLbMap = lb.getMap();
-  SmallVector<Value, 4> origLbOperands;
-  llvm::append_range(origLbOperands, lb.getOperands());
+  // Construct the new upper bound value map.
+  AffineMap oldLbMap = op.getLowerBoundMap();
+  // The upper bound can have multiple results. To use
+  // AffineValueMap::difference, we need to have the same number of results in
+  // both lower and upper bound maps. So, we just create a value map for the
+  // lower bound with the only available lower bound result repeated to pad up
+  // to the number of upper bound results.
+  SmallVector<AffineExpr> lbExprs(op.getUpperBoundMap().getNumResults(),
+                                  op.getLowerBoundMap().getResult(0));
+  AffineValueMap lbMap(oldLbMap, op.getLowerBoundOperands());
+  AffineMap paddedLbMap =
+      AffineMap::get(oldLbMap.getNumDims(), oldLbMap.getNumSymbols(), lbExprs,
+                     op.getContext());
+  AffineValueMap paddedLbValueMap(paddedLbMap, op.getLowerBoundOperands());
+  AffineValueMap ubValueMap(op.getUpperBoundMap(), op.getUpperBoundOperands());
+  AffineValueMap newUbValueMap;
+  // Compute the `upper bound - lower bound`.
+  AffineValueMap::difference(ubValueMap, paddedLbValueMap, &newUbValueMap);
+  (void)newUbValueMap.canonicalize();
 
-  AffineBound ub = op.getUpperBound();
-  AffineMap originalUbMap = ub.getMap();
-  SmallVector<Value, 4> origUbOperands;
-  llvm::append_range(origUbOperands, ub.getOperands());
+  // Scale down the upper bound value map by the loop step.
+  unsigned numResult = newUbValueMap.getNumResults();
+  SmallVector<AffineExpr> scaleDownExprs(numResult);
+  for (unsigned i = 0; i < numResult; ++i)
+    scaleDownExprs[i] = opBuilder.getAffineDimExpr(i).ceilDiv(origLoopStep);
+  // `scaleDownMap` is (d0, d1, ..., d_n) -> (d0 / step, d1 / step, ..., d_n /
+  // step). Where `n` is the number of results in the upper bound map.
+  AffineMap scaleDownMap =
+      AffineMap::get(numResult, 0, scaleDownExprs, op.getContext());
+  AffineMap newUbMap = scaleDownMap.compose(newUbValueMap.getAffineMap());
 
-  // Calculate upperBound for normalized loop.
-  SmallVector<Value, 4> ubOperands;
-  ubOperands.reserve(ub.getNumOperands() + lb.getNumOperands());
-
-  // Add dimension operands from upper/lower bound.
-  for (unsigned j = 0, e = originalUbMap.getNumDims(); j < e; ++j)
-    ubOperands.push_back(ub.getOperand(j));
-  for (unsigned j = 0, e = originalLbMap.getNumDims(); j < e; ++j)
-    ubOperands.push_back(lb.getOperand(j));
-
-  // Add symbol operands from upper/lower bound.
-  for (unsigned j = 0, e = originalUbMap.getNumSymbols(); j < e; ++j)
-    ubOperands.push_back(ub.getOperand(originalUbMap.getNumDims() + j));
-  for (unsigned j = 0, e = originalLbMap.getNumSymbols(); j < e; ++j)
-    ubOperands.push_back(lb.getOperand(originalLbMap.getNumDims() + j));
-
-  // Add original result expressions from lower/upper bound map.
-  SmallVector<AffineExpr, 1> origLbExprs(originalLbMap.getResults().begin(),
-                                         originalLbMap.getResults().end());
-  SmallVector<AffineExpr, 2> origUbExprs(originalUbMap.getResults().begin(),
-                                         originalUbMap.getResults().end());
-  SmallVector<AffineExpr, 4> newUbExprs;
-
-  // The original upperBound can have more than one result. For the new
-  // upperBound of this loop, take difference of all possible combinations of
-  // the ub results and lb result and ceildiv with the loop step. For e.g.,
-  //
-  //  affine.for %i1 = 0 to min affine_map<(d0)[] -> (d0 + 32, 1024)>(%i0)
-  //  will have an upperBound map as,
-  //  affine_map<(d0)[] -> (((d0 + 32) - 0) ceildiv 1, (1024 - 0) ceildiv
-  //  1)>(%i0)
-  //
-  // Insert all combinations of upper/lower bound results.
-  for (unsigned i = 0, e = origUbExprs.size(); i < e; ++i) {
-    newUbExprs.push_back(
-        (origUbExprs[i] - origLbExprs[0]).ceilDiv(origLoopStep));
-  }
-
-  // Construct newUbMap.
-  AffineMap newUbMap = AffineMap::get(
-      originalLbMap.getNumDims() + originalUbMap.getNumDims(),
-      originalLbMap.getNumSymbols() + originalUbMap.getNumSymbols(), newUbExprs,
-      opBuilder.getContext());
-  canonicalizeMapAndOperands(&newUbMap, &ubOperands);
-
-  SmallVector<Value, 4> lbOperands(lb.getOperands().begin(),
-                                   lb.getOperands().begin() +
-                                       originalLbMap.getNumDims());
-
-  // Normalize the loop.
-  op.setUpperBound(ubOperands, newUbMap);
+  // Set the newly create upper bound map and operands.
+  op.setUpperBound(newUbValueMap.getOperands(), newUbMap);
   op.setLowerBound({}, opBuilder.getConstantAffineMap(0));
   op.setStep(1);
 
   // Calculate the Value of new loopIV. Create affine.apply for the value of
   // the loopIV in normalized loop.
   opBuilder.setInsertionPointToStart(op.getBody());
-  // Add an extra dim operand for loopIV.
-  lbOperands.push_back(op.getInductionVar());
-  // Add symbol operands from lower bound.
-  for (unsigned j = 0, e = originalLbMap.getNumSymbols(); j < e; ++j)
-    lbOperands.push_back(origLbOperands[originalLbMap.getNumDims() + j]);
-
-  AffineExpr origIVExpr =
-      opBuilder.getAffineDimExpr(originalLbMap.getNumDims());
-  AffineExpr newIVExpr = origIVExpr * origLoopStep + originalLbMap.getResult(0);
-  AffineMap ivMap = AffineMap::get(originalLbMap.getNumDims() + 1,
-                                   originalLbMap.getNumSymbols(), newIVExpr);
-  canonicalizeMapAndOperands(&ivMap, &lbOperands);
-  Operation *newIV = opBuilder.create<AffineApplyOp>(loc, ivMap, lbOperands);
+  // Construct an affine.apply op mapping the new IV to the old IV.
+  AffineMap scaleIvMap =
+      AffineMap::get(1, 0, -opBuilder.getAffineDimExpr(0) * origLoopStep);
+  AffineValueMap scaleIvValueMap(scaleIvMap, ValueRange{op.getInductionVar()});
+  AffineValueMap newIvToOldIvMap;
+  AffineValueMap::difference(lbMap, scaleIvValueMap, &newIvToOldIvMap);
+  (void)newIvToOldIvMap.canonicalize();
+  auto newIV = opBuilder.create<AffineApplyOp>(
+      loc, newIvToOldIvMap.getAffineMap(), newIvToOldIvMap.getOperands());
   op.getInductionVar().replaceAllUsesExcept(newIV->getResult(0), newIV);
   return success();
 }

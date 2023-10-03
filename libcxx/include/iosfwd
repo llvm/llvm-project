@@ -121,7 +121,9 @@ template <class _CharT, class _Traits = char_traits<_CharT> >
 
 template <class _State>             class _LIBCPP_TEMPLATE_VIS fpos;
 typedef fpos<mbstate_t>    streampos;
+#ifndef _LIBCPP_HAS_NO_WIDE_CHARACTERS
 typedef fpos<mbstate_t>    wstreampos;
+#endif
 #ifndef _LIBCPP_HAS_NO_CHAR8_T
 typedef fpos<mbstate_t>    u8streampos;
 #endif

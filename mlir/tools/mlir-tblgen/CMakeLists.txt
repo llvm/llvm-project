@@ -14,6 +14,7 @@ add_tablegen(mlir-tblgen MLIR
   DialectGen.cpp
   DirectiveCommonGen.cpp
   EnumsGen.cpp
+  EnumPythonBindingGen.cpp
   FormatGen.cpp
   LLVMIRConversionGen.cpp
   LLVMIRIntrinsicGen.cpp

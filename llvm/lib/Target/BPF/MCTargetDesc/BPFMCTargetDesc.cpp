@@ -79,12 +79,15 @@ public:
   bool evaluateBranch(const MCInst &Inst, uint64_t Addr, uint64_t Size,
                       uint64_t &Target) const override {
     // The target is the 3rd operand of cond inst and the 1st of uncond inst.
-    int16_t Imm;
+    int32_t Imm;
     if (isConditionalBranch(Inst)) {
-      Imm = Inst.getOperand(2).getImm();
-    } else if (isUnconditionalBranch(Inst))
-      Imm = Inst.getOperand(0).getImm();
-    else
+      Imm = (short)Inst.getOperand(2).getImm();
+    } else if (isUnconditionalBranch(Inst)) {
+      if (Inst.getOpcode() == BPF::JMP)
+        Imm = (short)Inst.getOperand(0).getImm();
+      else
+        Imm = (int)Inst.getOperand(0).getImm();
+    } else
       return false;
 
     Target = Addr + Size + Imm * Size;

@@ -94,5 +94,5 @@ ModRefInfo NVPTXAAResult::getModRefInfoMask(const MemoryLocation &Loc,
   if (isConstOrParam(Base->getType()->getPointerAddressSpace()))
     return ModRefInfo::NoModRef;
 
-  return AAResultBase::getModRefInfoMask(Loc, AAQI, IgnoreLocals);
+  return ModRefInfo::ModRef;
 }

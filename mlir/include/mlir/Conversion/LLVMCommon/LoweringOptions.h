@@ -36,7 +36,7 @@ public:
   bool useOpaquePointers = true;
 
   enum class AllocLowering {
-    /// Use malloc for for heap allocations.
+    /// Use malloc for heap allocations.
     Malloc,
 
     /// Use aligned_alloc for heap allocations.

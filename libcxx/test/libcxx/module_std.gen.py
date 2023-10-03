@@ -21,21 +21,12 @@
 import sys
 
 sys.path.append(sys.argv[1])
-from libcxx.test.header_information import toplevel_headers
+from libcxx.header_information import module_headers
+from libcxx.header_information import header_restrictions
 
 BLOCKLIT = (
     ""  # block Lit from interpreting a RUN/XFAIL/etc inside the generation script
 )
-
-### Remove the headers that have no module associated with them
-
-# Note all C-headers using .h are filtered in the loop.
-
-# These headers are not available in C++23, but in older language Standards.
-toplevel_headers.remove("ccomplex")
-toplevel_headers.remove("ciso646")
-toplevel_headers.remove("cstdbool")
-toplevel_headers.remove("ctgmath")
 
 # Ignore several declarations found in the includes.
 #
@@ -119,14 +110,18 @@ ExtraHeader["ranges"] = "v1/__fwd/subrange.h$"
 # same definition.
 ExtraHeader["functional"] = "v1/__compare/compare_three_way.h$"
 
+# newline needs to be escaped for the module partition output.
+nl = '\\\\n'
+
 # Create empty file with all parts.
 print(
     f"""\
 //--- module_std.sh.cpp
-// UNSUPPORTED{BLOCKLIT}: c++03, c++11, c++14, c++17, c++20
+// UNSUPPORTED{BLOCKLIT}: c++03, c++11, c++14, c++17
+// UNSUPPORTED{BLOCKLIT}: libcpp-has-no-std-modules
+// UNSUPPORTED{BLOCKLIT}: clang-modules-build
 
 // REQUIRES{BLOCKLIT}: has-clang-tidy
-// REQUIRES{BLOCKLIT}: use_module_std
 
 // The GCC compiler flags are not always compatible with clang-tidy.
 // UNSUPPORTED{BLOCKLIT}: gcc
@@ -136,18 +131,50 @@ print(
 )
 
 # Validate all module parts.
-for header in toplevel_headers:
-    if header.endswith(".h"):  # Skip C compatibility headers
-        continue
+for header in module_headers:
+    # Some headers cannot be included when a libc++ feature is disabled.
+    # In that case include the header conditionally. The header __config
+    # ensures the libc++ feature macros are available.
+    if header in header_restrictions:
+        include = (
+            f"#include <__config>{nl}"
+            + f"#if {header_restrictions[header]}{nl}"
+            + f"#  include <{header}>{nl}"
+            + f"#endif{nl}"
+        )
+    elif header == "chrono":
+        # When localization is disabled the header string is not included.
+        # When string is included chrono's operator""s is a named declaration
+        #   using std::chrono_literals::operator""s;
+        # else it is a named declaration
+        #   using std::operator""s;
+        # TODO MODULES investigate why
+        include = f"#include <string>{nl}#include <chrono>{nl}"
+    else:
+        include = f"#include <{header}>{nl}"
+
+    # Generate a module partition for the header module includes. This
+    # makes it possible to verify that all headers export all their
+    # named declarations.
+    print(
+        f"// RUN{BLOCKLIT}: echo -e \""
+        f"module;{nl}"
+        f"{include}"
+        f"{nl}"
+        f"// Use __libcpp_module_<HEADER> to ensure that modules {nl}"
+        f"// are not named as keywords or reserved names.{nl}"
+        f"export module std:__libcpp_module_{header};{nl}"
+        f'#include \\"%{{module}}/std/{header}.inc\\"{nl}'
+        f"\" > %t.{header}.cppm")
 
     # Dump the information as found in the module's cppm file.
     print(
-        f"// RUN{BLOCKLIT}: %{{clang-tidy}} %{{module}}/std/{header}.cppm "
+        f"// RUN{BLOCKLIT}: %{{clang-tidy}} %t.{header}.cppm "
         "  --checks='-*,libcpp-header-exportable-declarations' "
         "  -config='{CheckOptions: [ "
         "    {"
         "      key: libcpp-header-exportable-declarations.Filename, "
-        f"     value: {header}.cppm"
+        f"     value: {header}.inc"
         "    }, {"
         "      key: libcpp-header-exportable-declarations.FileType, "
         "      value: ModulePartition"
@@ -188,7 +215,7 @@ for header in toplevel_headers:
         )
 
     # Clang-tidy needs a file input
-    print(f'// RUN{BLOCKLIT}: echo "#include <{header}>" > %t.{header}.cpp')
+    print(f'// RUN{BLOCKLIT}: echo -e "' f"{include}" f'" > %t.{header}.cpp')
     print(
         f"// RUN{BLOCKLIT}: %{{clang-tidy}} %t.{header}.cpp "
         "  --checks='-*,libcpp-header-exportable-declarations' "
@@ -225,3 +252,10 @@ print(
 
 # Compare the sum of the parts with the main module.
 print(f"// RUN{BLOCKLIT}: diff -u %t.all_partitions %t.module")
+
+# Basic smoke test. Import a module and try to compile when using all
+# exported names. This validates the clang-tidy script does not accidentally
+# add named declarations to the list that are not available.
+print(f"// RUN{BLOCKLIT}: echo 'import std;' > %t.compile.pass.cpp")
+print(f"// RUN{BLOCKLIT}: cat %t.all_partitions >> %t.compile.pass.cpp")
+print(f"// RUN{BLOCKLIT}: %{{cxx}} %{{flags}} %{{compile_flags}} -fsyntax-only %t.compile.pass.cpp")

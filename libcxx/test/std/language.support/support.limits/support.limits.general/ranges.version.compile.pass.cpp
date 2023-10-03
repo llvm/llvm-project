@@ -15,14 +15,16 @@
 
 // Test the feature test macros defined by <ranges>
 
-/*  Constant                      Value
-    __cpp_lib_ranges              202207L [C++20]
-    __cpp_lib_ranges_as_rvalue    202207L [C++23]
-    __cpp_lib_ranges_chunk        202202L [C++23]
-    __cpp_lib_ranges_chunk_by     202202L [C++23]
-    __cpp_lib_ranges_join_with    202202L [C++23]
-    __cpp_lib_ranges_slide        202202L [C++23]
-    __cpp_lib_ranges_zip          202110L [C++23]
+/*  Constant                         Value
+    __cpp_lib_ranges                 202207L [C++20]
+    __cpp_lib_ranges_as_rvalue       202207L [C++23]
+    __cpp_lib_ranges_chunk           202202L [C++23]
+    __cpp_lib_ranges_chunk_by        202202L [C++23]
+    __cpp_lib_ranges_join_with       202202L [C++23]
+    __cpp_lib_ranges_repeat          202207L [C++23]
+    __cpp_lib_ranges_slide           202202L [C++23]
+    __cpp_lib_ranges_to_container    202202L [C++23]
+    __cpp_lib_ranges_zip             202110L [C++23]
 */
 
 #include <ranges>
@@ -50,8 +52,16 @@
 #   error "__cpp_lib_ranges_join_with should not be defined before c++23"
 # endif
 
+# ifdef __cpp_lib_ranges_repeat
+#   error "__cpp_lib_ranges_repeat should not be defined before c++23"
+# endif
+
 # ifdef __cpp_lib_ranges_slide
 #   error "__cpp_lib_ranges_slide should not be defined before c++23"
+# endif
+
+# ifdef __cpp_lib_ranges_to_container
+#   error "__cpp_lib_ranges_to_container should not be defined before c++23"
 # endif
 
 # ifdef __cpp_lib_ranges_zip
@@ -80,8 +90,16 @@
 #   error "__cpp_lib_ranges_join_with should not be defined before c++23"
 # endif
 
+# ifdef __cpp_lib_ranges_repeat
+#   error "__cpp_lib_ranges_repeat should not be defined before c++23"
+# endif
+
 # ifdef __cpp_lib_ranges_slide
 #   error "__cpp_lib_ranges_slide should not be defined before c++23"
+# endif
+
+# ifdef __cpp_lib_ranges_to_container
+#   error "__cpp_lib_ranges_to_container should not be defined before c++23"
 # endif
 
 # ifdef __cpp_lib_ranges_zip
@@ -110,8 +128,16 @@
 #   error "__cpp_lib_ranges_join_with should not be defined before c++23"
 # endif
 
+# ifdef __cpp_lib_ranges_repeat
+#   error "__cpp_lib_ranges_repeat should not be defined before c++23"
+# endif
+
 # ifdef __cpp_lib_ranges_slide
 #   error "__cpp_lib_ranges_slide should not be defined before c++23"
+# endif
+
+# ifdef __cpp_lib_ranges_to_container
+#   error "__cpp_lib_ranges_to_container should not be defined before c++23"
 # endif
 
 # ifdef __cpp_lib_ranges_zip
@@ -143,8 +169,16 @@
 #   error "__cpp_lib_ranges_join_with should not be defined before c++23"
 # endif
 
+# ifdef __cpp_lib_ranges_repeat
+#   error "__cpp_lib_ranges_repeat should not be defined before c++23"
+# endif
+
 # ifdef __cpp_lib_ranges_slide
 #   error "__cpp_lib_ranges_slide should not be defined before c++23"
+# endif
+
+# ifdef __cpp_lib_ranges_to_container
+#   error "__cpp_lib_ranges_to_container should not be defined before c++23"
 # endif
 
 # ifdef __cpp_lib_ranges_zip
@@ -180,17 +214,11 @@
 #   endif
 # endif
 
-# if !defined(_LIBCPP_VERSION)
-#   ifndef __cpp_lib_ranges_chunk_by
-#     error "__cpp_lib_ranges_chunk_by should be defined in c++23"
-#   endif
-#   if __cpp_lib_ranges_chunk_by != 202202L
-#     error "__cpp_lib_ranges_chunk_by should have the value 202202L in c++23"
-#   endif
-# else // _LIBCPP_VERSION
-#   ifdef __cpp_lib_ranges_chunk_by
-#     error "__cpp_lib_ranges_chunk_by should not be defined because it is unimplemented in libc++!"
-#   endif
+# ifndef __cpp_lib_ranges_chunk_by
+#   error "__cpp_lib_ranges_chunk_by should be defined in c++23"
+# endif
+# if __cpp_lib_ranges_chunk_by != 202202L
+#   error "__cpp_lib_ranges_chunk_by should have the value 202202L in c++23"
 # endif
 
 # if !defined(_LIBCPP_VERSION)
@@ -206,6 +234,13 @@
 #   endif
 # endif
 
+# ifndef __cpp_lib_ranges_repeat
+#   error "__cpp_lib_ranges_repeat should be defined in c++23"
+# endif
+# if __cpp_lib_ranges_repeat != 202207L
+#   error "__cpp_lib_ranges_repeat should have the value 202207L in c++23"
+# endif
+
 # if !defined(_LIBCPP_VERSION)
 #   ifndef __cpp_lib_ranges_slide
 #     error "__cpp_lib_ranges_slide should be defined in c++23"
@@ -217,6 +252,13 @@
 #   ifdef __cpp_lib_ranges_slide
 #     error "__cpp_lib_ranges_slide should not be defined because it is unimplemented in libc++!"
 #   endif
+# endif
+
+# ifndef __cpp_lib_ranges_to_container
+#   error "__cpp_lib_ranges_to_container should be defined in c++23"
+# endif
+# if __cpp_lib_ranges_to_container != 202202L
+#   error "__cpp_lib_ranges_to_container should have the value 202202L in c++23"
 # endif
 
 # if !defined(_LIBCPP_VERSION)
@@ -261,17 +303,11 @@
 #   endif
 # endif
 
-# if !defined(_LIBCPP_VERSION)
-#   ifndef __cpp_lib_ranges_chunk_by
-#     error "__cpp_lib_ranges_chunk_by should be defined in c++26"
-#   endif
-#   if __cpp_lib_ranges_chunk_by != 202202L
-#     error "__cpp_lib_ranges_chunk_by should have the value 202202L in c++26"
-#   endif
-# else // _LIBCPP_VERSION
-#   ifdef __cpp_lib_ranges_chunk_by
-#     error "__cpp_lib_ranges_chunk_by should not be defined because it is unimplemented in libc++!"
-#   endif
+# ifndef __cpp_lib_ranges_chunk_by
+#   error "__cpp_lib_ranges_chunk_by should be defined in c++26"
+# endif
+# if __cpp_lib_ranges_chunk_by != 202202L
+#   error "__cpp_lib_ranges_chunk_by should have the value 202202L in c++26"
 # endif
 
 # if !defined(_LIBCPP_VERSION)
@@ -287,6 +323,13 @@
 #   endif
 # endif
 
+# ifndef __cpp_lib_ranges_repeat
+#   error "__cpp_lib_ranges_repeat should be defined in c++26"
+# endif
+# if __cpp_lib_ranges_repeat != 202207L
+#   error "__cpp_lib_ranges_repeat should have the value 202207L in c++26"
+# endif
+
 # if !defined(_LIBCPP_VERSION)
 #   ifndef __cpp_lib_ranges_slide
 #     error "__cpp_lib_ranges_slide should be defined in c++26"
@@ -298,6 +341,13 @@
 #   ifdef __cpp_lib_ranges_slide
 #     error "__cpp_lib_ranges_slide should not be defined because it is unimplemented in libc++!"
 #   endif
+# endif
+
+# ifndef __cpp_lib_ranges_to_container
+#   error "__cpp_lib_ranges_to_container should be defined in c++26"
+# endif
+# if __cpp_lib_ranges_to_container != 202202L
+#   error "__cpp_lib_ranges_to_container should have the value 202202L in c++26"
 # endif
 
 # if !defined(_LIBCPP_VERSION)

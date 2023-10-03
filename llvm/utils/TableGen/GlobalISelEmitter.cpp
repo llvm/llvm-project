@@ -312,6 +312,8 @@ public:
   void emitTestSimplePredicate(raw_ostream &OS) override;
   void emitRunCustomAction(raw_ostream &OS) override;
 
+  void postProcessRule(RuleMatcher &M);
+
   const CodeGenTarget &getTarget() const override { return Target; }
   StringRef getClassName() const override { return ClassName; }
 
@@ -413,6 +415,8 @@ private:
 
   void declareSubtargetFeature(Record *Predicate);
 
+  unsigned declareHwModeCheck(StringRef HwModeFeatures);
+
   MatchTable buildMatchTable(MutableArrayRef<RuleMatcher> Rules, bool Optimize,
                              bool WithCoverage);
 
@@ -497,6 +501,10 @@ GlobalISelEmitter::getEquivNode(Record &Equiv, const TreePatternNode *N) const {
         MVT(N->getChild(0)->getSimpleType(0)).isFloatingPoint())
       return &Target.getInstruction(Equiv.getValueAsDef("IfFloatingPoint"));
   }
+
+  if (!Equiv.isValueUnset("IfConvergent") &&
+      N->getIntrinsicInfo(CGP)->isConvergent)
+    return &Target.getInstruction(Equiv.getValueAsDef("IfConvergent"));
 
   for (const TreePredicateCall &Call : N->getPredicateCalls()) {
     const TreePredicateFn &Predicate = Call.Fn;
@@ -779,13 +787,11 @@ Expected<InstructionMatcher &> GlobalISelEmitter::createAndImportSelDAGMatcher(
     }
   }
 
-  bool IsAtomic = false;
   if (SrcGIEquivOrNull &&
       SrcGIEquivOrNull->getValueAsBit("CheckMMOIsNonAtomic"))
     InsnMatcher.addPredicate<AtomicOrderingMMOPredicateMatcher>("NotAtomic");
   else if (SrcGIEquivOrNull &&
            SrcGIEquivOrNull->getValueAsBit("CheckMMOIsAtomic")) {
-    IsAtomic = true;
     InsnMatcher.addPredicate<AtomicOrderingMMOPredicateMatcher>(
         "Unordered", AtomicOrderingMMOPredicateMatcher::AO_OrStronger);
   }
@@ -839,31 +845,13 @@ Expected<InstructionMatcher &> GlobalISelEmitter::createAndImportSelDAGMatcher(
       }
     }
 
-    // Hack around an unfortunate mistake in how atomic store (and really
-    // atomicrmw in general) operands were ordered. A ISD::STORE used the order
-    // <stored value>, <pointer> order. ISD::ATOMIC_STORE used the opposite,
-    // <pointer>, <stored value>. In GlobalISel there's just the one store
-    // opcode, so we need to swap the operands here to get the right type check.
-    if (IsAtomic && SrcGIOrNull->TheDef->getName() == "G_STORE") {
-      assert(NumChildren == 2 && "wrong operands for atomic store");
-
-      const TreePatternNode *PtrChild = Src->getChild(0);
-      const TreePatternNode *ValueChild = Src->getChild(1);
-
-      if (auto Error = importChildMatcher(Rule, InsnMatcher, PtrChild, true,
-                                          false, 1, TempOpIdx))
-        return std::move(Error);
-
-      if (auto Error = importChildMatcher(Rule, InsnMatcher, ValueChild, false,
-                                          false, 0, TempOpIdx))
-        return std::move(Error);
-      return InsnMatcher;
-    }
-
     // Match the used operands (i.e. the children of the operator).
     bool IsIntrinsic =
         SrcGIOrNull->TheDef->getName() == "G_INTRINSIC" ||
-        SrcGIOrNull->TheDef->getName() == "G_INTRINSIC_W_SIDE_EFFECTS";
+        SrcGIOrNull->TheDef->getName() == "G_INTRINSIC_W_SIDE_EFFECTS" ||
+        SrcGIOrNull->TheDef->getName() == "G_INTRINSIC_CONVERGENT" ||
+        SrcGIOrNull->TheDef->getName() ==
+            "G_INTRINSIC_CONVERGENT_W_SIDE_EFFECTS";
     const CodeGenIntrinsic *II = Src->getIntrinsicInfo(CGP);
     if (IsIntrinsic && !II)
       return failedImport("Expected IntInit containing intrinsic ID)");
@@ -1908,6 +1896,9 @@ Expected<RuleMatcher> GlobalISelEmitter::runOnPattern(const PatternToMatch &P) {
   if (auto Error = importRulePredicates(M, Predicates))
     return std::move(Error);
 
+  if (!P.getHwModeFeatures().empty())
+    M.addHwModeIdx(declareHwModeCheck(P.getHwModeFeatures()));
+
   // Next, analyze the pattern operators.
   TreePatternNode *Src = P.getSrcPattern();
   TreePatternNode *Dst = P.getDstPattern();
@@ -2357,10 +2348,36 @@ void GlobalISelEmitter::emitTestSimplePredicate(raw_ostream &OS) {
 
 void GlobalISelEmitter::emitRunCustomAction(raw_ostream &OS) {
   OS << "void " << getClassName()
-     << "::runCustomAction(unsigned, const MatcherState&) const {\n"
+     << "::runCustomAction(unsigned, const MatcherState&, NewMIVector &) const "
+        "{\n"
      << "    llvm_unreachable(\"" + getClassName() +
             " does not support custom C++ actions!\");\n"
      << "}\n";
+}
+
+void GlobalISelEmitter::postProcessRule(RuleMatcher &M) {
+  SmallPtrSet<Record *, 16> UsedRegs;
+
+  // TODO: deal with subregs?
+  for (auto &A : M.actions()) {
+    auto *MI = dyn_cast<BuildMIAction>(A.get());
+    if (!MI)
+      continue;
+
+    for (auto *Use : MI->getCGI()->ImplicitUses)
+      UsedRegs.insert(Use);
+  }
+
+  for (auto &A : M.actions()) {
+    auto *MI = dyn_cast<BuildMIAction>(A.get());
+    if (!MI)
+      continue;
+
+    for (auto *Def : MI->getCGI()->ImplicitDefs) {
+      if (!UsedRegs.contains(Def))
+        MI->setDeadImplicitDef(Def);
+    }
+  }
 }
 
 void GlobalISelEmitter::run(raw_ostream &OS) {
@@ -2420,6 +2437,7 @@ void GlobalISelEmitter::run(raw_ostream &OS) {
                      "Pattern is not covered by a test");
     }
     Rules.push_back(std::move(MatcherOrErr.get()));
+    postProcessRule(Rules.back());
   }
 
   // Comparison function to order records by name.
@@ -2484,9 +2502,11 @@ void GlobalISelEmitter::run(raw_ostream &OS) {
 }
 
 void GlobalISelEmitter::declareSubtargetFeature(Record *Predicate) {
-  if (SubtargetFeatures.count(Predicate) == 0)
-    SubtargetFeatures.emplace(
-        Predicate, SubtargetFeatureInfo(Predicate, SubtargetFeatures.size()));
+  SubtargetFeatures.try_emplace(Predicate, Predicate, SubtargetFeatures.size());
+}
+
+unsigned GlobalISelEmitter::declareHwModeCheck(StringRef HwModeFeatures) {
+  return HwModes.emplace(HwModeFeatures.str(), HwModes.size()).first->second;
 }
 
 } // end anonymous namespace

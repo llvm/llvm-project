@@ -2,7 +2,6 @@
 
 // Awkward interactions of sanitizers with blocks.
 
-// rdar://22071955
 const char *TheString = "Hello, world!";
 const char *(^getString)(void) = ^{
   return TheString;

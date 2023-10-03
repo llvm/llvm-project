@@ -32,9 +32,7 @@ define i32 @test2(i32 %N) nounwind {
 ; CHECK-NEXT:    br label [[HEADER:%.*]]
 ; CHECK:       header:
 ; CHECK-NEXT:    [[IV:%.*]] = phi i32 [ 0, [[ENTRY:%.*]] ], [ [[IV_INC:%.*]], [[HEADER]] ]
-; CHECK-NEXT:    [[IV2:%.*]] = phi i32 [ 0, [[ENTRY]] ], [ [[IV2_INC:%.*]], [[HEADER]] ]
 ; CHECK-NEXT:    [[IV_INC]] = add i32 [[IV]], 1
-; CHECK-NEXT:    [[IV2_INC]] = add i32 [[IV2]], 1
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i32 [[IV]], [[N:%.*]]
 ; CHECK-NEXT:    br i1 [[CMP]], label [[EXIT:%.*]], label [[HEADER]]
 ; CHECK:       exit:
@@ -63,9 +61,7 @@ define i32 @test3(i32 %N) nounwind {
 ; CHECK-NEXT:    br label [[HEADER:%.*]]
 ; CHECK:       header:
 ; CHECK-NEXT:    [[IV:%.*]] = phi i32 [ 0, [[ENTRY:%.*]] ], [ [[IV_INC:%.*]], [[HEADER]] ]
-; CHECK-NEXT:    [[IV2:%.*]] = phi i32 [ 0, [[ENTRY]] ], [ [[IV2_INC:%.*]], [[HEADER]] ]
 ; CHECK-NEXT:    [[IV_INC]] = add i32 [[IV]], 1
-; CHECK-NEXT:    [[IV2_INC]] = add i32 [[IV2]], 1
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i32 [[IV]], [[N:%.*]]
 ; CHECK-NEXT:    br i1 [[CMP]], label [[EXIT:%.*]], label [[HEADER]]
 ; CHECK:       exit:
@@ -95,9 +91,7 @@ define i32 @test4(i32 %N) nounwind {
 ; CHECK-NEXT:    br label [[HEADER:%.*]]
 ; CHECK:       header:
 ; CHECK-NEXT:    [[IV:%.*]] = phi i32 [ 0, [[ENTRY:%.*]] ], [ [[IV_INC:%.*]], [[HEADER]] ]
-; CHECK-NEXT:    [[IV2:%.*]] = phi i32 [ 0, [[ENTRY]] ], [ [[IV2_INC:%.*]], [[HEADER]] ]
 ; CHECK-NEXT:    [[IV_INC]] = add i32 [[IV]], 1
-; CHECK-NEXT:    [[IV2_INC]] = add i32 [[IV2]], 1
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i32 [[IV]], [[N:%.*]]
 ; CHECK-NEXT:    br i1 [[CMP]], label [[EXIT:%.*]], label [[HEADER]]
 ; CHECK:       exit:

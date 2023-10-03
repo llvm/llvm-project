@@ -24,14 +24,14 @@ define void @bar0() {
 ; CHECK-LABEL: bar0:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    addis r3, r2, .LC0@toc@ha
-; CHECK-NEXT:    addis r4, r2, .LC1@toc@ha
 ; CHECK-NEXT:    ld r3, .LC0@toc@l(r3)
 ; CHECK-NEXT:    lxvd2x vs0, 0, r3
-; CHECK-NEXT:    ld r3, .LC1@toc@l(r4)
-; CHECK-NEXT:    xxswapd vs0, vs0
+; CHECK-NEXT:    addis r3, r2, .LC1@toc@ha
+; CHECK-NEXT:    ld r3, .LC1@toc@l(r3)
 ; CHECK-NEXT:    lfd f1, 0(r3)
 ; CHECK-NEXT:    addis r3, r2, .LC2@toc@ha
 ; CHECK-NEXT:    ld r3, .LC2@toc@l(r3)
+; CHECK-NEXT:    xxswapd vs0, vs0
 ; CHECK-NEXT:    xxmrghd vs0, vs0, vs1
 ; CHECK-NEXT:    xxswapd vs0, vs0
 ; CHECK-NEXT:    stxvd2x vs0, 0, r3
@@ -78,14 +78,14 @@ define void @bar1() {
 ; CHECK-LABEL: bar1:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    addis r3, r2, .LC0@toc@ha
-; CHECK-NEXT:    addis r4, r2, .LC1@toc@ha
 ; CHECK-NEXT:    ld r3, .LC0@toc@l(r3)
 ; CHECK-NEXT:    lxvd2x vs0, 0, r3
-; CHECK-NEXT:    ld r3, .LC1@toc@l(r4)
-; CHECK-NEXT:    xxswapd vs0, vs0
+; CHECK-NEXT:    addis r3, r2, .LC1@toc@ha
+; CHECK-NEXT:    ld r3, .LC1@toc@l(r3)
 ; CHECK-NEXT:    lfd f1, 0(r3)
 ; CHECK-NEXT:    addis r3, r2, .LC2@toc@ha
 ; CHECK-NEXT:    ld r3, .LC2@toc@l(r3)
+; CHECK-NEXT:    xxswapd vs0, vs0
 ; CHECK-NEXT:    xxpermdi vs0, vs1, vs0, 1
 ; CHECK-NEXT:    xxswapd vs0, vs0
 ; CHECK-NEXT:    stxvd2x vs0, 0, r3

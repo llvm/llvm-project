@@ -197,7 +197,7 @@ class MachODumper : public Dumper {
 
 public:
   MachODumper(const object::MachOObjectFile &O) : Dumper(O), Obj(O) {}
-  void printPrivateHeaders(bool OnlyFirst) override;
+  void printPrivateHeaders() override;
 };
 } // namespace
 
@@ -10554,9 +10554,9 @@ void objdump::printMachOFileHeader(const object::ObjectFile *Obj) {
   PrintMachHeader(file, Verbose);
 }
 
-void MachODumper::printPrivateHeaders(bool OnlyFirst) {
+void MachODumper::printPrivateHeaders() {
   printMachOFileHeader(&Obj);
-  if (!OnlyFirst)
+  if (!FirstPrivateHeader)
     printMachOLoadCommands(&Obj);
 }
 

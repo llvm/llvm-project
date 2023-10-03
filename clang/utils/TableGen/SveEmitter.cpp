@@ -1284,7 +1284,7 @@ void SVEEmitter::createHeader(raw_ostream &OS) {
         if (ShortForm) {
           OS << "__aio __attribute__((target(\"sve\"))) " << From.Type
              << " svreinterpret_" << From.Suffix;
-          OS << "(" << To.Type << " op) {\n";
+          OS << "(" << To.Type << " op) __arm_streaming_compatible {\n";
           OS << "  return __builtin_sve_reinterpret_" << From.Suffix << "_"
              << To.Suffix << "(op);\n";
           OS << "}\n\n";
@@ -1489,6 +1489,8 @@ void SVEEmitter::createSMEHeader(raw_ostream &OS) {
   OS << "/* Function attributes */\n";
   OS << "#define __ai static __inline__ __attribute__((__always_inline__, "
         "__nodebug__))\n\n";
+  OS << "#define __aio static __inline__ __attribute__((__always_inline__, "
+        "__nodebug__, __overloadable__))\n\n";
 
   OS << "#ifdef  __cplusplus\n";
   OS << "extern \"C\" {\n";

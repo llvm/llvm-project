@@ -459,3 +459,64 @@ func.func @cse_multiple_regions(%c: i1, %t: tensor<5xf32>) -> (tensor<5xf32>, te
 //       CHECK:   }
 //   CHECK-NOT:   scf.if
 //       CHECK:   return %[[if]], %[[if]]
+
+// CHECK-LABEL: @cse_recursive_effects_success
+func.func @cse_recursive_effects_success() -> (i32, i32, i32) {
+  // CHECK-NEXT: %[[READ_VALUE:.*]] = "test.op_with_memread"() : () -> i32
+  %0 = "test.op_with_memread"() : () -> (i32)
+
+  // do something with recursive effects, containing no side effects
+  %true = arith.constant true
+  // CHECK-NEXT: %[[TRUE:.+]] = arith.constant true
+  // CHECK-NEXT: %[[IF:.+]] = scf.if %[[TRUE]] -> (i32) {
+  %1 = scf.if %true -> (i32) {
+    %c42 = arith.constant 42 : i32
+    scf.yield %c42 : i32
+    // CHECK-NEXT: %[[C42:.+]] = arith.constant 42 : i32
+    // CHECK-NEXT: scf.yield %[[C42]]
+    // CHECK-NEXT: } else {
+  } else {
+    %c24 = arith.constant 24 : i32
+    scf.yield %c24 : i32
+    // CHECK-NEXT: %[[C24:.+]] = arith.constant 24 : i32
+    // CHECK-NEXT: scf.yield %[[C24]]
+    // CHECK-NEXT: }
+  }
+
+  // %2 can be removed
+  // CHECK-NEXT: return %[[READ_VALUE]], %[[READ_VALUE]], %[[IF]] : i32, i32, i32
+  %2 = "test.op_with_memread"() : () -> (i32)
+  return %0, %2, %1 : i32, i32, i32
+}
+
+// CHECK-LABEL: @cse_recursive_effects_failure
+func.func @cse_recursive_effects_failure() -> (i32, i32, i32) {
+  // CHECK-NEXT: %[[READ_VALUE:.*]] = "test.op_with_memread"() : () -> i32
+  %0 = "test.op_with_memread"() : () -> (i32)
+
+  // do something with recursive effects, containing a write effect
+  %true = arith.constant true
+  // CHECK-NEXT: %[[TRUE:.+]] = arith.constant true
+  // CHECK-NEXT: %[[IF:.+]] = scf.if %[[TRUE]] -> (i32) {
+  %1 = scf.if %true -> (i32) {
+    "test.op_with_memwrite"() : () -> ()
+    // CHECK-NEXT: "test.op_with_memwrite"() : () -> ()
+    %c42 = arith.constant 42 : i32
+    scf.yield %c42 : i32
+    // CHECK-NEXT: %[[C42:.+]] = arith.constant 42 : i32
+    // CHECK-NEXT: scf.yield %[[C42]]
+    // CHECK-NEXT: } else {
+  } else {
+    %c24 = arith.constant 24 : i32
+    scf.yield %c24 : i32
+    // CHECK-NEXT: %[[C24:.+]] = arith.constant 24 : i32
+    // CHECK-NEXT: scf.yield %[[C24]]
+    // CHECK-NEXT: }
+  }
+
+  // %2 can not be be removed because of the write
+  // CHECK-NEXT: %[[READ_VALUE2:.*]] = "test.op_with_memread"() : () -> i32
+  // CHECK-NEXT: return %[[READ_VALUE]], %[[READ_VALUE2]], %[[IF]] : i32, i32, i32
+  %2 = "test.op_with_memread"() : () -> (i32)
+  return %0, %2, %1 : i32, i32, i32
+}

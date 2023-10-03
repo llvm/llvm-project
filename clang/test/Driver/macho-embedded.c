@@ -11,7 +11,7 @@
 // RUN: %clang -arch armv7m --target=thumbv7-apple-watchos -mwatchos-version-min=5 -fdriver-only -c %s 2>&1 | FileCheck %s --check-prefix=CHECK-MACHO-EMBEDDED-DIAG
 // RUN: %clang -arch armv7m --target=thumbv7-apple-tvos -mtvos-version-min=5 -fdriver-only -c %s 2>&1 | FileCheck %s --check-prefix=CHECK-MACHO-EMBEDDED-DIAG
 
-// RUN: %clang -arch armv7m --target=thumbv7-apple-tvos -mios-version-min=5 -### -c %s 2>&1 | FileCheck %s --check-prefix=CHECK-MACHO-EMBEDDED-MIXED
+// RUN: not %clang -arch armv7m --target=thumbv7-apple-tvos -mios-version-min=5 -### -c %s 2>&1 | FileCheck %s --check-prefix=CHECK-MACHO-EMBEDDED-MIXED
 
 // CHECK-IOS: "-triple" "thumbv7" "thumbv7-apple-ios
 

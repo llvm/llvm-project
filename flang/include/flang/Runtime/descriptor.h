@@ -18,7 +18,7 @@
 // User C code is welcome to depend on that ISO_Fortran_binding.h file,
 // but should never reference this internal header.
 
-#include "flang/ISO_Fortran_binding.h"
+#include "flang/ISO_Fortran_binding_wrapper.h"
 #include "flang/Runtime/memory.h"
 #include "flang/Runtime/type-code.h"
 #include <algorithm>
@@ -36,6 +36,7 @@ class DerivedType;
 namespace Fortran::runtime {
 
 using SubscriptValue = ISO::CFI_index_t;
+class Terminator;
 
 RT_VAR_GROUP_BEGIN
 static constexpr RT_CONST_VAR_ATTRS int maxRank{CFI_MAX_RANK};
@@ -179,21 +180,26 @@ public:
       const SubscriptValue *extent = nullptr,
       ISO::CFI_attribute_t attribute = CFI_attribute_other);
 
-  // CUDA_TODO: Clang does not support unique_ptr on device.
-  static OwningPtr<Descriptor> Create(TypeCode t, std::size_t elementBytes,
-      void *p = nullptr, int rank = maxRank,
+  // To create a descriptor for a derived type the caller
+  // must provide non-null dt argument.
+  // The addendum argument is only used for testing purposes,
+  // and it may force a descriptor with an addendum while
+  // dt may be null.
+  static RT_API_ATTRS OwningPtr<Descriptor> Create(TypeCode t,
+      std::size_t elementBytes, void *p = nullptr, int rank = maxRank,
       const SubscriptValue *extent = nullptr,
       ISO::CFI_attribute_t attribute = CFI_attribute_other,
-      int derivedTypeLenParameters = 0);
-  static OwningPtr<Descriptor> Create(TypeCategory, int kind, void *p = nullptr,
-      int rank = maxRank, const SubscriptValue *extent = nullptr,
+      bool addendum = false, const typeInfo::DerivedType *dt = nullptr);
+  static RT_API_ATTRS OwningPtr<Descriptor> Create(TypeCategory, int kind,
+      void *p = nullptr, int rank = maxRank,
+      const SubscriptValue *extent = nullptr,
       ISO::CFI_attribute_t attribute = CFI_attribute_other);
-  static OwningPtr<Descriptor> Create(int characterKind,
+  static RT_API_ATTRS OwningPtr<Descriptor> Create(int characterKind,
       SubscriptValue characters, void *p = nullptr, int rank = maxRank,
       const SubscriptValue *extent = nullptr,
       ISO::CFI_attribute_t attribute = CFI_attribute_other);
-  static OwningPtr<Descriptor> Create(const typeInfo::DerivedType &dt,
-      void *p = nullptr, int rank = maxRank,
+  static RT_API_ATTRS OwningPtr<Descriptor> Create(
+      const typeInfo::DerivedType &dt, void *p = nullptr, int rank = maxRank,
       const SubscriptValue *extent = nullptr,
       ISO::CFI_attribute_t attribute = CFI_attribute_other);
 
@@ -247,6 +253,13 @@ public:
   template <typename A>
   RT_API_ATTRS A *Element(const SubscriptValue subscript[]) const {
     return OffsetElement<A>(SubscriptsToByteOffset(subscript));
+  }
+
+  template <typename A>
+  RT_API_ATTRS A *ElementComponent(
+      const SubscriptValue subscript[], std::size_t componentOffset) const {
+    return OffsetElement<A>(
+        SubscriptsToByteOffset(subscript) + componentOffset);
   }
 
   template <typename A>
@@ -369,7 +382,8 @@ public:
 
   // Deallocates storage, including allocatable and automatic
   // components.  Optionally invokes FINAL subroutines.
-  RT_API_ATTRS int Destroy(bool finalize = false, bool destroyPointers = false);
+  RT_API_ATTRS int Destroy(bool finalize = false, bool destroyPointers = false,
+      Terminator * = nullptr);
 
   RT_API_ATTRS bool IsContiguous(int leadingDimensions = maxRank) const {
     auto bytes{static_cast<SubscriptValue>(ElementBytes())};

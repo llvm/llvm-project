@@ -57,9 +57,7 @@ define ptr @checkAndAdvance(ptr align 16 %0) {
 ; GRAPH-EMPTY:
 ; GRAPH-NEXT: [AAPotentialValues] for CtxI '  %2 = load i32, ptr %0, align 4' at position {flt: [@-1]} with state set-state(< {  %2 = load i32, ptr %0, align 4[3], } >)
 ; GRAPH-EMPTY:
-; GRAPH-NEXT: [AAUnderlyingObjects] for CtxI '  %2 = load i32, ptr %0, align 4' at position {arg: [@0]} with state UnderlyingObjects inter #1 objs, intra #1 objs
-; GRAPH-EMPTY:
-; GRAPH-NEXT: [AAPotentialValues] for CtxI '  %2 = load i32, ptr %0, align 4' at position {arg: [@0]} with state set-state(< {ptr %0[3], } >)
+; GRAPH-NEXT: [AAUnderlyingObjects] for CtxI '  %2 = load i32, ptr %0, align 4' at position {arg: [@0]} with state UnderlyingObjects <invalid>
 ; GRAPH-EMPTY:
 ; GRAPH-NEXT: [AAPotentialValues] for CtxI <<null inst>> at position {flt: [@-1]} with state set-state(< {i32 0[3], } >)
 ; GRAPH-EMPTY:
@@ -70,6 +68,8 @@ define ptr @checkAndAdvance(ptr align 16 %0) {
 ; GRAPH-NEXT: [AAIsDead] for CtxI '  ret ptr %.0' at position {flt: [@-1]} with state assumed-live
 ; GRAPH-EMPTY:
 ; GRAPH-NEXT: [AAUndefinedBehavior] for CtxI '  %2 = load i32, ptr %0, align 4' at position {fn:checkAndAdvance [checkAndAdvance@-1]} with state undefined-behavior
+; GRAPH-EMPTY:
+; GRAPH-NEXT: [AAPotentialValues] for CtxI '  %2 = load i32, ptr %0, align 4' at position {arg: [@0]} with state set-state(< {ptr %0[3], } >)
 ; GRAPH-EMPTY:
 ; GRAPH-NEXT: [AAIsDead] for CtxI '  %6 = call ptr @checkAndAdvance(ptr %5)' at position {flt: [@-1]} with state assumed-live
 ; GRAPH-EMPTY:
@@ -106,22 +106,22 @@ define ptr @checkAndAdvance(ptr align 16 %0) {
 ; GRAPH-NEXT:   updates [AAAlign] for CtxI '  %2 = load i32, ptr %0, align 4' at position {fn_ret:checkAndAdvance [checkAndAdvance@-1]} with state align<1-16>
 ; GRAPH-NEXT:   updates [AANonNull] for CtxI '  %2 = load i32, ptr %0, align 4' at position {fn_ret:checkAndAdvance [checkAndAdvance@-1]} with state nonnull
 ; GRAPH-NEXT:   updates [AADereferenceable] for CtxI '  %2 = load i32, ptr %0, align 4' at position {fn_ret:checkAndAdvance [checkAndAdvance@-1]} with state unknown-dereferenceable
-; GRAPH-EMPTY: 
+; GRAPH-EMPTY:
 ; GRAPH-NEXT: [AAPotentialValues] for CtxI '  %.0 = phi ptr [ %6, %4 ], [ %0, %7 ]' at position {flt:.0 [.0@-1]} with state set-state(< {ptr %0[3],   %5 = getelementptr inbounds i32, ptr %0, i64 4[3],   %5 = getelementptr inbounds i32, ptr %0, i64 4[3], } >)
 ; GRAPH-NEXT:   updates [AAPotentialValues] for CtxI '  %2 = load i32, ptr %0, align 4' at position {fn_ret:checkAndAdvance [checkAndAdvance@-1]} with state set-state(< {  %.0 = phi ptr [ %6, %4 ], [ %0, %7 ][3], } >)
 ; GRAPH-NEXT:   updates [AAPotentialValues] for CtxI '  %6 = call ptr @checkAndAdvance(ptr %5)' at position {cs_ret: [@-1]} with state set-state(< {  %5 = getelementptr inbounds i32, ptr %0, i64 4[3],   %5 = getelementptr inbounds i32, ptr %0, i64 4[3], } >)
 ; GRAPH-NEXT:   updates [AANoCapture] for CtxI '  %2 = load i32, ptr %0, align 4' at position {arg: [@0]} with state assumed not-captured-maybe-returned
 ; GRAPH-NEXT:   updates [AAAlign] for CtxI '  %2 = load i32, ptr %0, align 4' at position {fn_ret:checkAndAdvance [checkAndAdvance@-1]} with state align<1-16>
-; GRAPH-NEXT:   updates [AANonNull] for CtxI '  %2 = load i32, ptr %0, align 4' at position {fn_ret:checkAndAdvance [checkAndAdvance@-1]} with state nonnull
-; GRAPH-EMPTY: 
+; GRAPH-NEXT:   updates [AANonNull] for CtxI ' %.0 = phi ptr [ %6, %4 ], [ %0, %7 ]' at position {flt:.0 [.0@-1]} with state nonnull
+; GRAPH-EMPTY:
 ; GRAPH-NEXT: [AAPotentialValues] for CtxI '  %5 = getelementptr inbounds i32, ptr %0, i64 4' at position {flt: [@-1]} with state set-state(< {  %5 = getelementptr inbounds i32, ptr %0, i64 4[3], } >)
-; GRAPH-EMPTY: 
+; GRAPH-EMPTY:
 ; GRAPH-NEXT: [AAPotentialValues] for CtxI <<null inst>> at position {flt: [@-1]} with state set-state(< {i64 4[3], } >)
-; GRAPH-EMPTY: 
+; GRAPH-EMPTY:
 ; GRAPH-NEXT: [AAPotentialValues] for CtxI '  %2 = load i32, ptr %0, align 4' at position {flt:checkAndAdvance [checkAndAdvance@-1]} with state set-state(< {@checkAndAdvance[3], } >)
-; GRAPH-EMPTY: 
+; GRAPH-EMPTY:
 ; GRAPH-NEXT: [AAPotentialValues] for CtxI '  %6 = call ptr @checkAndAdvance(ptr %5)' at position {cs_arg: [@0]} with state set-state(< {  %5 = getelementptr inbounds i32, ptr %0, i64 4[3], } >)
-; GRAPH-EMPTY: 
+; GRAPH-EMPTY:
 ; GRAPH-NEXT: [AAInstanceInfo] for CtxI '  %5 = getelementptr inbounds i32, ptr %0, i64 4' at position {flt: [@-1]} with state <unique [fAa]>
 ; GRAPH-EMPTY:
 ; GRAPH-NEXT: [AANoRecurse] for CtxI '  %2 = load i32, ptr %0, align 4' at position {fn:checkAndAdvance [checkAndAdvance@-1]} with state may-recurse
@@ -207,6 +207,9 @@ define ptr @checkAndAdvance(ptr align 16 %0) {
 ; GRAPH-EMPTY:
 ; GRAPH-NEXT: [AANonNull] for CtxI '  %2 = load i32, ptr %0, align 4' at position {fn_ret:checkAndAdvance [checkAndAdvance@-1]} with state nonnull
 ; GRAPH-EMPTY:
+; GRAPH-NEXT: [AANonNull] for CtxI ' %.0 = phi ptr [ %6, %4 ], [ %0, %7 ]' at position {flt:.0 [.0@-1]} with state nonnull
+; GRAPH-NEXT:   updates [AANonNull] for CtxI ' %2 = load i32, ptr %0, align 4' at position {fn_ret:checkAndAdvance [checkAndAdvance@-1]} with state nonnull
+; GRAPH-EMPTY:
 ; GRAPH-NEXT: [AANonNull] for CtxI '  %2 = load i32, ptr %0, align 4' at position {arg: [@0]} with state nonnull
 ; GRAPH-EMPTY:
 ; GRAPH-NEXT: [AANoAlias] for CtxI '  %2 = load i32, ptr %0, align 4' at position {fn_ret:checkAndAdvance [checkAndAdvance@-1]} with state may-alias
@@ -217,8 +220,6 @@ define ptr @checkAndAdvance(ptr align 16 %0) {
 ; GRAPH-NEXT:   updates [AADereferenceable] for CtxI '  %6 = call ptr @checkAndAdvance(ptr %5)' at position {cs_arg: [@0]} with state unknown-dereferenceable
 ; GRAPH-EMPTY:
 ; GRAPH-NEXT: [AADereferenceable] for CtxI '  %6 = call ptr @checkAndAdvance(ptr %5)' at position {cs_arg: [@0]} with state unknown-dereferenceable
-; GRAPH-EMPTY:
-; GRAPH-NEXT: [AANoAlias] for CtxI '  %2 = load i32, ptr %0, align 4' at position {arg: [@0]} with state may-alias
 ; GRAPH-EMPTY:
 ; GRAPH-NEXT: [AANoFree] for CtxI '  %2 = load i32, ptr %0, align 4' at position {arg: [@0]} with state nofree
 ; GRAPH-NEXT:   updates [AANoFree] for CtxI '  %6 = call ptr @checkAndAdvance(ptr %5)' at position {cs_arg: [@0]} with state nofree
@@ -233,7 +234,7 @@ define ptr @checkAndAdvance(ptr align 16 %0) {
 ; GRAPH-EMPTY:
 ; GRAPH-NEXT: [AANoFree] for CtxI '  %6 = call ptr @checkAndAdvance(ptr %5)' at position {cs_arg: [@0]} with state nofree
 ; GRAPH-EMPTY:
-; GRAPH-NEXT: [AAAddressSpace] for CtxI '  %2 = load i32, ptr %0, align 4' at position {arg: [@0]} with state addrspace(0)
+; GRAPH-NEXT: [AAAddressSpace] for CtxI '  %2 = load i32, ptr %0, align 4' at position {arg: [@0]} with state addrspace(<invalid>)
 ; GRAPH-EMPTY:
 ; GRAPH-NEXT: [AADereferenceable] for CtxI '  %5 = getelementptr inbounds i32, ptr %0, i64 4' at position {flt: [@-1]} with state unknown-dereferenceable
 
@@ -310,7 +311,6 @@ define ptr @checkAndAdvance(ptr align 16 %0) {
 ; DOT-DAG: Node[[Node69:0x[a-z0-9]+]] [shape=record,label="{[AAPrivatizablePtr]
 ; DOT-DAG: Node[[Node70:0x[a-z0-9]+]] [shape=record,label="{[AAAssumptionInfo]
 ; DOT-DAG: Node[[Node71:0x[a-z0-9]+]] [shape=record,label="{[AANoAlias]
-; DOT-DAG: Node[[Node72:0x[a-z0-9]+]] [shape=record,label="{[AANoAlias]
 ; DOT-DAG: Node[[Node73:0x[a-z0-9]+]] [shape=record,label="{[AANoFree]
 ; DOT-DAG: Node[[Node75:0x[a-z0-9]+]] [shape=record,label="{[AAAddressSpace]
 ; DOT-DAG: Node[[Node74:0x[a-z0-9]+]] [shape=record,label="{[AADereferenceable]

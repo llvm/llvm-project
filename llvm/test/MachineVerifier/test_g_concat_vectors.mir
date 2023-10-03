@@ -1,4 +1,4 @@
-#RUN: not --crash llc -o - -global-isel -run-pass=none -verify-machineinstrs %s 2>&1 | FileCheck %s
+#RUN: not --crash llc -o - -global-isel -mtriple=aarch64 -run-pass=none -verify-machineinstrs %s 2>&1 | FileCheck %s
 # REQUIRES: aarch64-registered-target
 ---
 name:            g_concat_vectors

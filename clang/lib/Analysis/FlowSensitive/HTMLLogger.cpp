@@ -95,22 +95,14 @@ public:
 
     switch (V.getKind()) {
     case Value::Kind::Integer:
+    case Value::Kind::Record:
     case Value::Kind::TopBool:
     case Value::Kind::AtomicBool:
     case Value::Kind::FormulaBool:
       break;
-    case Value::Kind::Reference:
-      JOS.attributeObject(
-          "referent", [&] { dump(cast<ReferenceValue>(V).getReferentLoc()); });
-      break;
     case Value::Kind::Pointer:
       JOS.attributeObject(
           "pointee", [&] { dump(cast<PointerValue>(V).getPointeeLoc()); });
-      break;
-    case Value::Kind::Struct:
-      for (const auto &Child : cast<StructValue>(V).children())
-        JOS.attributeObject("f:" + Child.first->getNameAsString(),
-                            [&] { dump(*Child.second); });
       break;
     }
 
@@ -137,6 +129,15 @@ public:
     JOS.attribute("type", L.getType().getAsString());
     if (auto *V = Env.getValue(L))
       dump(*V);
+
+    if (auto *RLoc = dyn_cast<RecordStorageLocation>(&L)) {
+      for (const auto &Child : RLoc->children())
+        JOS.attributeObject("f:" + Child.first->getNameAsString(), [&] {
+          if (Child.second)
+            if (Value *Val = Env.getValue(*Child.second))
+              dump(*Val);
+        });
+    }
   }
 
   llvm::DenseSet<const void*> Visited;
@@ -145,15 +146,21 @@ public:
 };
 
 class HTMLLogger : public Logger {
+  struct Iteration {
+    const CFGBlock *Block;
+    unsigned Iter;
+    bool PostVisit;
+  };
+
   StreamFactory Streams;
   std::unique_ptr<llvm::raw_ostream> OS;
   std::optional<llvm::json::OStream> JOS;
 
   const ControlFlowContext *CFG;
   // Timeline of iterations of CFG block visitation.
-  std::vector<std::pair<const CFGBlock *, unsigned>> Iters;
+  std::vector<Iteration> Iters;
   // Number of times each CFG block has been seen.
-  llvm::DenseMap<const CFGBlock *, unsigned> BlockIters;
+  llvm::DenseMap<const CFGBlock *, llvm::SmallVector<Iteration>> BlockIters;
   // The messages logged in the current context but not yet written.
   std::string ContextLogs;
   // The number of elements we have visited within the current CFG block.
@@ -167,15 +174,14 @@ public:
     this->CFG = &CFG;
     *OS << llvm::StringRef(HTMLLogger_html).split("<?INJECT?>").first;
 
-    if (const auto *D = CFG.getDecl()) {
-      const auto &SM = A.getASTContext().getSourceManager();
-      *OS << "<title>";
-      if (const auto *ND = dyn_cast<NamedDecl>(D))
-        *OS << ND->getNameAsString() << " at ";
-      *OS << SM.getFilename(D->getLocation()) << ":"
-          << SM.getSpellingLineNumber(D->getLocation());
-      *OS << "</title>\n";
-    };
+    const auto &D = CFG.getDecl();
+    const auto &SM = A.getASTContext().getSourceManager();
+    *OS << "<title>";
+    if (const auto *ND = dyn_cast<NamedDecl>(&D))
+      *OS << ND->getNameAsString() << " at ";
+    *OS << SM.getFilename(D.getLocation()) << ":"
+        << SM.getSpellingLineNumber(D.getLocation());
+    *OS << "</title>\n";
 
     *OS << "<style>" << HTMLLogger_css << "</style>\n";
     *OS << "<script>" << HTMLLogger_js << "</script>\n";
@@ -198,8 +204,9 @@ public:
     JOS->attributeArray("timeline", [&] {
       for (const auto &E : Iters) {
         JOS->object([&] {
-          JOS->attribute("block", blockID(E.first->getBlockID()));
-          JOS->attribute("iter", E.second);
+          JOS->attribute("block", blockID(E.Block->getBlockID()));
+          JOS->attribute("iter", E.Iter);
+          JOS->attribute("post_visit", E.PostVisit);
         });
       }
     });
@@ -214,8 +221,11 @@ public:
     *OS << llvm::StringRef(HTMLLogger_html).split("<?INJECT?>").second;
   }
 
-  void enterBlock(const CFGBlock &B) override {
-    Iters.emplace_back(&B, ++BlockIters[&B]);
+  void enterBlock(const CFGBlock &B, bool PostVisit) override {
+    llvm::SmallVector<Iteration> &BIter = BlockIters[&B];
+    unsigned IterNum = BIter.size() + 1;
+    BIter.push_back({&B, IterNum, PostVisit});
+    Iters.push_back({&B, IterNum, PostVisit});
     ElementIndex = 0;
   }
   void enterElement(const CFGElement &E) override {
@@ -243,21 +253,30 @@ public:
   //  - meaningful names for values
   //  - which boolean values are implied true/false by the flow condition
   void recordState(TypeErasedDataflowAnalysisState &State) override {
-    unsigned Block = Iters.back().first->getBlockID();
-    unsigned Iter = Iters.back().second;
+    unsigned Block = Iters.back().Block->getBlockID();
+    unsigned Iter = Iters.back().Iter;
+    bool PostVisit = Iters.back().PostVisit;
     JOS->attributeObject(elementIterID(Block, Iter, ElementIndex), [&] {
       JOS->attribute("block", blockID(Block));
       JOS->attribute("iter", Iter);
+      JOS->attribute("post_visit", PostVisit);
       JOS->attribute("element", ElementIndex);
 
       // If this state immediately follows an Expr, show its built-in model.
       if (ElementIndex > 0) {
         auto S =
-            Iters.back().first->Elements[ElementIndex - 1].getAs<CFGStmt>();
-        if (const Expr *E = S ? llvm::dyn_cast<Expr>(S->getStmt()) : nullptr)
-          if (auto *Loc = State.Env.getStorageLocation(*E, SkipPast::None))
-            JOS->attributeObject(
-                "value", [&] { ModelDumper(*JOS, State.Env).dump(*Loc); });
+            Iters.back().Block->Elements[ElementIndex - 1].getAs<CFGStmt>();
+        if (const Expr *E = S ? llvm::dyn_cast<Expr>(S->getStmt()) : nullptr) {
+          if (E->isPRValue()) {
+            if (auto *V = State.Env.getValue(*E))
+              JOS->attributeObject(
+                  "value", [&] { ModelDumper(*JOS, State.Env).dump(*V); });
+          } else {
+            if (auto *Loc = State.Env.getStorageLocation(*E))
+              JOS->attributeObject(
+                  "value", [&] { ModelDumper(*JOS, State.Env).dump(*Loc); });
+          }
+        }
       }
       if (!ContextLogs.empty()) {
         JOS->attribute("logs", ContextLogs);
@@ -282,9 +301,16 @@ private:
   // Write the CFG block details.
   // Currently this is just the list of elements in execution order.
   // FIXME: an AST dump would be a useful view, too.
-  void writeBlock(const CFGBlock &B, unsigned Iters) {
+  void writeBlock(const CFGBlock &B, llvm::ArrayRef<Iteration> ItersForB) {
     JOS->attributeObject(blockID(B.getBlockID()), [&] {
-      JOS->attribute("iters", Iters);
+      JOS->attributeArray("iters", [&] {
+        for (const auto &Iter : ItersForB) {
+          JOS->object([&] {
+            JOS->attribute("iter", Iter.Iter);
+            JOS->attribute("post_visit", Iter.PostVisit);
+          });
+        }
+      });
       JOS->attributeArray("elements", [&] {
         for (const auto &Elt : B.Elements) {
           std::string Dump;
@@ -301,9 +327,7 @@ private:
   // tokens are associated with, and even which BB element (so that clicking
   // can select the right element).
   void writeCode() {
-    if (!CFG->getDecl())
-      return;
-    const auto &AST = CFG->getDecl()->getASTContext();
+    const auto &AST = CFG->getDecl().getASTContext();
     bool Invalid = false;
 
     // Extract the source code from the original file.
@@ -311,7 +335,7 @@ private:
     // indentation to worry about), but we need the boundaries of particular
     // AST nodes and the printer doesn't provide this.
     auto Range = clang::Lexer::makeFileCharRange(
-        CharSourceRange::getTokenRange(CFG->getDecl()->getSourceRange()),
+        CharSourceRange::getTokenRange(CFG->getDecl().getSourceRange()),
         AST.getSourceManager(), AST.getLangOpts());
     if (Range.isInvalid())
       return;
@@ -458,8 +482,9 @@ private:
       GraphS << "  " << blockID(I) << " [id=" << blockID(I) << "]\n";
     for (const auto *Block : CFG) {
       for (const auto &Succ : Block->succs()) {
-        GraphS << "  " << blockID(Block->getBlockID()) << " -> "
-               << blockID(Succ.getReachableBlock()->getBlockID()) << "\n";
+        if (Succ.getReachableBlock())
+          GraphS << "  " << blockID(Block->getBlockID()) << " -> "
+                 << blockID(Succ.getReachableBlock()->getBlockID()) << "\n";
       }
     }
     GraphS << "}\n";

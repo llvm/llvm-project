@@ -12,13 +12,24 @@
 #include "src/__support/common.h"
 
 #include "src/errno/libc_errno.h"
+#include <stdint.h>      // For uint64_t.
 #include <sys/syscall.h> // For syscall numbers.
 #include <unistd.h>
 
-namespace __llvm_libc {
+namespace LIBC_NAMESPACE {
 
 LLVM_LIBC_FUNCTION(int, ftruncate, (int fd, off_t len)) {
-  int ret = __llvm_libc::syscall_impl(SYS_ftruncate, fd, len);
+#ifdef SYS_ftruncate
+  int ret = LIBC_NAMESPACE::syscall_impl<int>(SYS_ftruncate, fd, len);
+#elif defined(SYS_ftruncate64)
+  // Same as ftruncate but can handle large offsets
+  static_assert(sizeof(off_t) == 8);
+  int ret = LIBC_NAMESPACE::syscall_impl<int>(SYS_ftruncate64, fd, (long)len,
+                                              (long)(((uint64_t)(len)) >> 32));
+#else
+#error "ftruncate and ftruncate64 syscalls not available."
+#endif
+
   if (ret < 0) {
     libc_errno = -ret;
     return -1;
@@ -26,4 +37,4 @@ LLVM_LIBC_FUNCTION(int, ftruncate, (int fd, off_t len)) {
   return 0;
 }
 
-} // namespace __llvm_libc
+} // namespace LIBC_NAMESPACE

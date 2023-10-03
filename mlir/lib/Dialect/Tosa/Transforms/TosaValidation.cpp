@@ -86,7 +86,7 @@ struct tosa_level_t {
   }
 };
 
-static constexpr tosa_level_t TOSA_LEVEL_EIGHTK = {6, 8192, 8192, 64};
+static constexpr tosa_level_t TOSA_LEVEL_EIGHTK = {6, 8192, 8192, 256};
 static constexpr tosa_level_t TOSA_LEVEL_NONE = {0, 0, 0, 0};
 
 //===----------------------------------------------------------------------===//
@@ -96,6 +96,11 @@ static constexpr tosa_level_t TOSA_LEVEL_NONE = {0, 0, 0, 0};
 struct TosaValidation : public tosa::impl::TosaValidationBase<TosaValidation> {
 public:
   explicit TosaValidation() { populateConstantOperandChecks(); }
+  explicit TosaValidation(const ValidationOptions &options) : TosaValidation() {
+    this->profile = options.profile;
+    this->StrictOperationSpecAlignment = options.strictOperationSpecAlignment;
+    this->level = options.level;
+  }
   void runOnOperation() override;
 
   LogicalResult applyConstantOperandCheck(Operation *op) {
@@ -387,18 +392,13 @@ private:
   // configure profile and level values from pass options profileName and
   // levelName
   void configLevelAndProfile() {
-    profileType = symbolizeEnum<TosaProfileEnum>(profileName);
-
-    auto levelType = symbolizeEnum<TosaLevelEnum>(levelName);
-
     tosa_level = TOSA_LEVEL_NONE;
-    if (levelType == TosaLevelEnum::EightK) {
+    if (level == TosaLevelEnum::EightK) {
       tosa_level = TOSA_LEVEL_EIGHTK;
     }
   }
 
   SmallVector<std::function<LogicalResult(Operation *)>> const_checkers;
-  std::optional<TosaProfileEnum> profileType;
   tosa_level_t tosa_level;
 };
 
@@ -431,7 +431,7 @@ void TosaValidation::runOnOperation() {
   configLevelAndProfile();
   getOperation().walk([&](Operation *op) {
     for (Value operand : op->getOperands()) {
-      if ((profileType == TosaProfileEnum::BaseInference) &&
+      if ((profile == TosaProfileEnum::BaseInference) &&
           isa<FloatType>(getElementTypeOrSelf(operand))) {
         return signalPassFailure();
       }
@@ -451,6 +451,7 @@ void TosaValidation::runOnOperation() {
 }
 } // namespace
 
-std::unique_ptr<Pass> mlir::tosa::createTosaValidationPass() {
-  return std::make_unique<TosaValidation>();
+std::unique_ptr<Pass>
+mlir::tosa::createTosaValidationPass(ValidationOptions const &options) {
+  return std::make_unique<TosaValidation>(options);
 }

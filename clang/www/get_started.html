@@ -2,7 +2,7 @@
           "http://www.w3.org/TR/html4/strict.dtd">
 <html>
 <head>
-  <META http-equiv="Content-Type" content="text/html; charset=ISO-8859-1">
+  <META http-equiv="Content-Type" content="text/html; charset=utf-8">
   <title>Clang - Getting Started</title>
   <link type="text/css" rel="stylesheet" href="menu.css">
   <link type="text/css" rel="stylesheet" href="content.css">
@@ -125,7 +125,7 @@ Visual Studio:</p>
         project files.  Get it from:
         <a href="https://cmake.org/download/">
         https://cmake.org/download/</a></li>
-    <li><b>Visual Studio 2017 or later</b></li>
+    <li><b>Visual Studio 2019 16.7 or later</b></li>
     <li><b>Python</b>.  It is used to run the clang test suite. Get it from:
         <a href="https://www.python.org/download/">
         https://www.python.org/download/</a></li>
@@ -156,8 +156,8 @@ Visual Studio:</p>
     <li><tt>mkdir build</tt> (for building without polluting the source dir)</li>
     <li><tt>cd build</tt></li>
     <li>
-      If you are using Visual Studio 2017:
-      <tt>cmake -DLLVM_ENABLE_PROJECTS=clang -G "Visual Studio 15 2017" -A x64 -Thost=x64 ..\llvm</tt><br/>
+      If you are using Visual Studio 2019:
+      <tt>cmake -DLLVM_ENABLE_PROJECTS=clang -G "Visual Studio 16 2019" -A x64 -Thost=x64 ..\llvm</tt><br/>
       <tt>-Thost=x64</tt> is required, since the 32-bit linker will run out of memory.
     </li>
     <li>To generate x86 binaries instead of x64, pass <tt>-A Win32</tt>.</li>

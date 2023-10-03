@@ -27,7 +27,11 @@ namespace interp {
 class Block;
 class DeadBlock;
 class Pointer;
+class Context;
 enum PrimType : unsigned;
+
+class Pointer;
+inline llvm::raw_ostream &operator<<(llvm::raw_ostream &OS, const Pointer &P);
 
 /// A pointer to a memory block, live or dead.
 ///
@@ -77,8 +81,18 @@ public:
   /// Converts the pointer to an APValue.
   APValue toAPValue() const;
 
+  /// Converts the pointer to a string usable in diagnostics.
+  std::string toDiagnosticString(const ASTContext &Ctx) const;
+
+  unsigned getIntegerRepresentation() const {
+    return reinterpret_cast<uintptr_t>(Pointee) + Offset;
+  }
+
+  /// Converts the pointer to an APValue that is an rvalue.
+  APValue toRValue(const Context &Ctx) const;
+
   /// Offsets a pointer inside an array.
-  Pointer atIndex(unsigned Idx) const {
+  [[nodiscard]] Pointer atIndex(unsigned Idx) const {
     if (Base == RootPtrMark)
       return Pointer(Pointee, RootPtrMark, getDeclDesc()->getSize());
     unsigned Off = Idx * elemSize();
@@ -90,13 +104,21 @@ public:
   }
 
   /// Creates a pointer to a field.
-  Pointer atField(unsigned Off) const {
+  [[nodiscard]] Pointer atField(unsigned Off) const {
     unsigned Field = Offset + Off;
     return Pointer(Pointee, Field, Field);
   }
 
+  /// Subtract the given offset from the current Base and Offset
+  /// of the pointer.
+  [[nodiscard]]  Pointer atFieldSub(unsigned Off) const {
+    assert(Offset >= Off);
+    unsigned O = Offset - Off;
+    return Pointer(Pointee, O, O);
+  }
+
   /// Restricts the scope of an array element pointer.
-  Pointer narrow() const {
+  [[nodiscard]] Pointer narrow() const {
     // Null pointers cannot be narrowed.
     if (isZero() || isUnknownSizeArray())
       return *this;
@@ -132,7 +154,7 @@ public:
   }
 
   /// Expands a pointer to the containing array, undoing narrowing.
-  Pointer expand() const {
+  [[nodiscard]] Pointer expand() const {
     if (isElementPastEnd()) {
       // Revert to an outer one-past-end pointer.
       unsigned Adjust;
@@ -171,7 +193,7 @@ public:
   SourceLocation getDeclLoc() const { return getDeclDesc()->getLocation(); }
 
   /// Returns a pointer to the object of which this pointer is a field.
-  Pointer getBase() const {
+  [[nodiscard]] Pointer getBase() const {
     if (Base == RootPtrMark) {
       assert(Offset == PastEndMark && "cannot get base of a block");
       return Pointer(Pointee, Base, 0);
@@ -181,7 +203,7 @@ public:
     return Pointer(Pointee, NewBase, NewBase);
   }
   /// Returns the parent array.
-  Pointer getArray() const {
+  [[nodiscard]] Pointer getArray() const {
     if (Base == RootPtrMark) {
       assert(Offset != 0 && Offset != PastEndMark && "not an array element");
       return Pointer(Pointee, Base, 0);
@@ -198,9 +220,13 @@ public:
   }
 
   /// Returns the type of the innermost field.
-  QualType getType() const { return getFieldDesc()->getType(); }
+  QualType getType() const {
+    if (inPrimitiveArray() && Offset != Base)
+      return getFieldDesc()->getType()->getAsArrayTypeUnsafe()->getElementType();
+    return getFieldDesc()->getType();
+  }
 
-  Pointer getDeclPtr() const { return Pointer(Pointee); }
+  [[nodiscard]] Pointer getDeclPtr() const { return Pointer(Pointee); }
 
   /// Returns the element size of the innermost field.
   size_t elemSize() const {
@@ -325,7 +351,8 @@ public:
 
   /// Dereferences a primitive element.
   template <typename T> T &elem(unsigned I) const {
-    return reinterpret_cast<T *>(Pointee->rawData())[I];
+    assert(I < getNumElems());
+    return reinterpret_cast<T *>(Pointee->data() + sizeof(InitMap *))[I];
   }
 
   /// Initializes a field.
@@ -335,6 +362,19 @@ public:
   /// Deactivates an entire strurcutre.
   void deactivate() const;
 
+  /// Compare two pointers.
+  ComparisonCategoryResult compare(const Pointer &Other) const {
+    if (!hasSameBase(*this, Other))
+      return ComparisonCategoryResult::Unordered;
+
+    if (Offset < Other.Offset)
+      return ComparisonCategoryResult::Less;
+    else if (Offset > Other.Offset)
+      return ComparisonCategoryResult::Greater;
+
+    return ComparisonCategoryResult::Equal;
+  }
+
   /// Checks if two pointers are comparable.
   static bool hasSameBase(const Pointer &A, const Pointer &B);
   /// Checks if two pointers can be subtracted.
@@ -342,7 +382,17 @@ public:
 
   /// Prints the pointer.
   void print(llvm::raw_ostream &OS) const {
-    OS << Pointee << " {" << Base << ", " << Offset << ", ";
+    OS << Pointee << " {";
+    if (Base == RootPtrMark)
+      OS << "rootptr, ";
+    else
+      OS << Base << ", ";
+
+    if (Offset == PastEndMark)
+      OS << "pastend, ";
+    else
+      OS << Offset << ", ";
+
     if (Pointee)
       OS << Pointee->getSize();
     else

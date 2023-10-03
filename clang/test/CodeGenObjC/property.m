@@ -109,7 +109,6 @@ void test4(Test4 *t) {
 @synthesize x = _x;
 @end
 
-// rdar://problem/10410531
 @interface Test6
 @property void (*prop)(void);
 @end
@@ -119,7 +118,6 @@ void test6(Test6 *a) {
   a.prop = test6_func;
 }
 
-// rdar://problem/10507455
 @interface Test7
 @property unsigned char x;
 @end

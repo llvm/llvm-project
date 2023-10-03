@@ -50,8 +50,10 @@
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/ScopeExit.h"
+#include "llvm/ADT/StringExtras.h"
 #include "llvm/Option/Arg.h"
 #include "llvm/Option/ArgList.h"
+#include "llvm/Option/OptTable.h"
 #include "llvm/Option/Option.h"
 #include "llvm/Support/Errno.h"
 #include "llvm/Support/FileSystem.h"
@@ -74,11 +76,11 @@ typedef int socklen_t;
 using namespace lldb_vscode;
 
 namespace {
+using namespace llvm::opt;
+
 enum ID {
   OPT_INVALID = 0, // This is not an option ID.
-#define OPTION(PREFIX, NAME, ID, KIND, GROUP, ALIAS, ALIASARGS, FLAGS, PARAM,  \
-               HELPTEXT, METAVAR, VALUES)                                      \
-  OPT_##ID,
+#define OPTION(...) LLVM_MAKE_OPT_ID(__VA_ARGS__),
 #include "Options.inc"
 #undef OPTION
 };
@@ -91,12 +93,7 @@ enum ID {
 #undef PREFIX
 
 static constexpr llvm::opt::OptTable::Info InfoTable[] = {
-#define OPTION(PREFIX, NAME, ID, KIND, GROUP, ALIAS, ALIASARGS, FLAGS, PARAM,  \
-               HELPTEXT, METAVAR, VALUES)                                      \
-  {PREFIX,      NAME,      HELPTEXT,                                           \
-   METAVAR,     OPT_##ID,  llvm::opt::Option::KIND##Class,                     \
-   PARAM,       FLAGS,     OPT_##GROUP,                                        \
-   OPT_##ALIAS, ALIASARGS, VALUES},
+#define OPTION(...) LLVM_CONSTRUCT_OPT_INFO(__VA_ARGS__),
 #include "Options.inc"
 #undef OPTION
 };
@@ -191,6 +188,28 @@ void SendThreadExitedEvent(lldb::tid_t tid) {
   g_vsc.SendJSON(llvm::json::Value(std::move(event)));
 }
 
+// Send a "continued" event to indicate the process is in the running state.
+void SendContinuedEvent() {
+  lldb::SBProcess process = g_vsc.target.GetProcess();
+  if (!process.IsValid()) {
+    return;
+  }
+
+  // If the focus thread is not set then we haven't reported any thread status
+  // to the client, so nothing to report.
+  if (!g_vsc.configuration_done_sent ||
+      g_vsc.focus_tid == LLDB_INVALID_THREAD_ID) {
+    return;
+  }
+
+  llvm::json::Object event(CreateEventObject("continued"));
+  llvm::json::Object body;
+  body.try_emplace("threadId", (int64_t)g_vsc.focus_tid);
+  body.try_emplace("allThreadsContinued", true);
+  event.try_emplace("body", std::move(body));
+  g_vsc.SendJSON(llvm::json::Value(std::move(event)));
+}
+
 // Send a "terminated" event to indicate the process is done being
 // debugged.
 void SendTerminatedEvent() {
@@ -252,7 +271,7 @@ void SendThreadStoppedEvent() {
         }
       }
 
-      // We will have cleared g_vsc.focus_tid if he focus thread doesn't have
+      // We will have cleared g_vsc.focus_tid if the focus thread doesn't have
       // a stop reason, so if it was cleared, or wasn't set, or doesn't exist,
       // then set the focus thread to the first thread with a stop reason.
       if (!focus_thread_exists || g_vsc.focus_tid == LLDB_INVALID_THREAD_ID)
@@ -262,6 +281,7 @@ void SendThreadStoppedEvent() {
       // we at least let the UI know we stopped.
       if (num_threads_with_reason == 0) {
         lldb::SBThread thread = process.GetThreadAtIndex(0);
+        g_vsc.focus_tid = thread.GetThreadID();
         g_vsc.SendJSON(CreateThreadStopped(thread, stop_id));
       } else {
         for (uint32_t thread_idx = 0; thread_idx < num_threads; ++thread_idx) {
@@ -468,6 +488,7 @@ void EventThreadFunction() {
             break;
           case lldb::eStateRunning:
             g_vsc.WillContinue();
+            SendContinuedEvent();
             break;
           case lldb::eStateExited:
             // When restarting, we can get an "exited" event for the process we
@@ -626,6 +647,10 @@ void request_attach(const llvm::json::Object &request) {
   std::vector<std::string> postRunCommands =
       GetStrings(arguments, "postRunCommands");
   const llvm::StringRef debuggerRoot = GetString(arguments, "debuggerRoot");
+  g_vsc.enable_auto_variable_summaries =
+      GetBoolean(arguments, "enableAutoVariableSummaries", false);
+  g_vsc.enable_synthetic_child_debugging =
+      GetBoolean(arguments, "enableSyntheticChildDebugging", false);
 
   // This is a hack for loading DWARF in .o files on Mac where the .o files
   // in the debug map of the main executable have relative paths which require
@@ -766,10 +791,6 @@ void request_continue(const llvm::json::Object &request) {
   llvm::json::Object response;
   FillResponse(request, response);
   lldb::SBProcess process = g_vsc.target.GetProcess();
-  auto arguments = request.getObject("arguments");
-  // Remember the thread ID that caused the resume so we can set the
-  // "threadCausedFocus" boolean value in the "stopped" events.
-  g_vsc.focus_tid = GetUnsigned(arguments, "threadId", LLDB_INVALID_THREAD_ID);
   lldb::SBError error = process.Continue();
   llvm::json::Object body;
   body.try_emplace("allThreadsContinued", true);
@@ -1065,50 +1086,62 @@ void request_completions(const llvm::json::Object &request) {
   FillResponse(request, response);
   llvm::json::Object body;
   auto arguments = request.getObject("arguments");
-  std::string text = std::string(GetString(arguments, "text"));
-  auto original_column = GetSigned(arguments, "column", text.size());
-  auto actual_column = original_column - 1;
-  llvm::json::Array targets;
-  // NOTE: the 'line' argument is not needed, as multiline expressions
-  // work well already
-  // TODO: support frameID. Currently
-  // g_vsc.debugger.GetCommandInterpreter().HandleCompletionWithDescriptions
-  // is frame-unaware.
 
-  if (!text.empty() && text[0] == '`') {
-    text = text.substr(1);
-    actual_column--;
-  } else {
+  // If we have a frame, try to set the context for variable completions.
+  lldb::SBFrame frame = g_vsc.GetLLDBFrame(*arguments);
+  if (frame.IsValid()) {
+    frame.GetThread().GetProcess().SetSelectedThread(frame.GetThread());
+    frame.GetThread().SetSelectedFrame(frame.GetFrameID());
+  }
+
+  std::string text = GetString(arguments, "text").str();
+  auto original_column = GetSigned(arguments, "column", text.size());
+  auto original_line = GetSigned(arguments, "line", 1);
+  auto offset = original_column - 1;
+  if (original_line > 1) {
+    llvm::SmallVector<::llvm::StringRef, 2> lines;
+    llvm::StringRef(text).split(lines, '\n');
+    for (int i = 0; i < original_line - 1; i++) {
+      offset += lines[i].size();
+    }
+  }
+  llvm::json::Array targets;
+
+  if (g_vsc.DetectExpressionContext(frame, text) ==
+      ExpressionContext::Variable) {
     char command[] = "expression -- ";
     text = command + text;
-    actual_column += strlen(command);
+    offset += strlen(command);
   }
   lldb::SBStringList matches;
   lldb::SBStringList descriptions;
-  g_vsc.debugger.GetCommandInterpreter().HandleCompletionWithDescriptions(
-      text.c_str(), actual_column, 0, -1, matches, descriptions);
-  size_t count = std::min((uint32_t)100, matches.GetSize());
-  targets.reserve(count);
-  for (size_t i = 0; i < count; i++) {
-    std::string match = matches.GetStringAtIndex(i);
-    std::string description = descriptions.GetStringAtIndex(i);
 
-    llvm::json::Object item;
+  if (g_vsc.debugger.GetCommandInterpreter().HandleCompletionWithDescriptions(
+          text.c_str(), offset, 0, 100, matches, descriptions)) {
+    // The first element is the common substring after the cursor position for
+    // all the matches. The rest of the elements are the matches so ignore the
+    // first result.
+    targets.reserve(matches.GetSize() - 1);
+    for (size_t i = 1; i < matches.GetSize(); i++) {
+      std::string match = matches.GetStringAtIndex(i);
+      std::string description = descriptions.GetStringAtIndex(i);
 
-    llvm::StringRef match_ref = match;
-    for (llvm::StringRef commit_point : {".", "->"}) {
-      if (match_ref.contains(commit_point)) {
-        match_ref = match_ref.rsplit(commit_point).second;
+      llvm::json::Object item;
+      llvm::StringRef match_ref = match;
+      for (llvm::StringRef commit_point : {".", "->"}) {
+        if (match_ref.contains(commit_point)) {
+          match_ref = match_ref.rsplit(commit_point).second;
+        }
       }
+      EmplaceSafeString(item, "text", match_ref);
+
+      if (description.empty())
+        EmplaceSafeString(item, "label", match);
+      else
+        EmplaceSafeString(item, "label", match + " -- " + description);
+
+      targets.emplace_back(std::move(item));
     }
-    EmplaceSafeString(item, "text", match_ref);
-
-    if (description.empty())
-      EmplaceSafeString(item, "label", match);
-    else
-      EmplaceSafeString(item, "label", match + " -- " + description);
-
-    targets.emplace_back(std::move(item));
   }
 
   body.try_emplace("targets", std::move(targets));
@@ -1223,12 +1256,17 @@ void request_evaluate(const llvm::json::Object &request) {
   llvm::json::Object body;
   auto arguments = request.getObject("arguments");
   lldb::SBFrame frame = g_vsc.GetLLDBFrame(*arguments);
-  const auto expression = GetString(arguments, "expression");
+  std::string expression = GetString(arguments, "expression").str();
   llvm::StringRef context = GetString(arguments, "context");
 
-  if (!expression.empty() && expression[0] == '`') {
-    auto result =
-        RunLLDBCommands(llvm::StringRef(), {std::string(expression.substr(1))});
+  if (context == "repl" && g_vsc.DetectExpressionContext(frame, expression) ==
+                               ExpressionContext::Command) {
+    // If we're evaluating a command relative to the current frame, set the
+    // focus_tid to the current frame for any thread related events.
+    if (frame.IsValid()) {
+      g_vsc.focus_tid = frame.GetThread().GetThreadID();
+    }
+    auto result = RunLLDBCommands(llvm::StringRef(), {std::string(expression)});
     EmplaceSafeString(body, "result", result);
     body.try_emplace("variablesReference", (int64_t)0);
   } else {
@@ -1472,11 +1510,16 @@ void request_initialize(const llvm::json::Object &request) {
   g_vsc.debugger =
       lldb::SBDebugger::Create(source_init_file, log_cb, nullptr);
   auto cmd = g_vsc.debugger.GetCommandInterpreter().AddMultiwordCommand(
-      "lldb-vscode", nullptr);
+      "lldb-vscode", "Commands for managing lldb-vscode.");
+  if (GetBoolean(arguments, "supportsStartDebuggingRequest", false)) {
+    cmd.AddCommand(
+        "startDebugging", &g_vsc.start_debugging_request_handler,
+        "Sends a startDebugging request from the debug adapter to the client "
+        "to start a child debug session of the same type as the caller.");
+  }
   cmd.AddCommand(
-      "startDebugging", &g_vsc.start_debugging_request_handler,
-      "Sends a startDebugging request from the debug adapter to the client to "
-      "start a child debug session of the same type as the caller.");
+      "repl-mode", &g_vsc.repl_mode_request_handler,
+      "Get or set the repl behavior of vscode-lldb evaluation requests.");
 
   g_vsc.progress_event_thread = std::thread(ProgressEventThreadFunction);
 
@@ -1519,22 +1562,18 @@ void request_initialize(const llvm::json::Object &request) {
   body.try_emplace("supportsGotoTargetsRequest", false);
   // The debug adapter supports the stepInTargetsRequest.
   body.try_emplace("supportsStepInTargetsRequest", false);
-  // We need to improve the current implementation of completions in order to
-  // enable it again. For some context, this is how VSCode works:
-  // - VSCode sends a completion request whenever chars are added, the user
-  //   triggers completion manually via CTRL-space or similar mechanisms, but
-  //   not when there's a deletion. Besides, VSCode doesn't let us know which
-  //   of these events we are handling. What is more, the use can paste or cut
-  //   sections of the text arbitrarily.
-  //   https://github.com/microsoft/vscode/issues/89531 tracks part of the
-  //   issue just mentioned.
-  // This behavior causes many problems with the current way completion is
-  // implemented in lldb-vscode, as these requests could be really expensive,
-  // blocking the debugger, and there could be many concurrent requests unless
-  // the user types very slowly... We need to address this specific issue, or
-  // at least trigger completion only when the user explicitly wants it, which
-  // is the behavior of LLDB CLI, that expects a TAB.
-  body.try_emplace("supportsCompletionsRequest", false);
+  // The debug adapter supports the completions request.
+  body.try_emplace("supportsCompletionsRequest", true);
+  // The debug adapter supports the disassembly request.
+  body.try_emplace("supportsDisassembleRequest", true);
+
+  llvm::json::Array completion_characters;
+  completion_characters.emplace_back(".");
+  completion_characters.emplace_back(" ");
+  completion_characters.emplace_back("\t");
+  body.try_emplace("completionTriggerCharacters",
+                   std::move(completion_characters));
+
   // The debug adapter supports the modules request.
   body.try_emplace("supportsModulesRequest", true);
   // The set of additional module information exposed by the debug adapter.
@@ -1703,7 +1742,7 @@ lldb::SBError LaunchProcess(const llvm::json::Object &request) {
     // selected target after these commands are run.
     g_vsc.target = g_vsc.debugger.GetSelectedTarget();
     // Make sure the process is launched and stopped at the entry point before
-    // proceeding as the the launch commands are not run using the synchronous
+    // proceeding as the launch commands are not run using the synchronous
     // mode.
     error = g_vsc.WaitForProcessToStop(timeout_seconds);
   }
@@ -1759,6 +1798,10 @@ void request_launch(const llvm::json::Object &request) {
       GetStrings(arguments, "postRunCommands");
   g_vsc.stop_at_entry = GetBoolean(arguments, "stopOnEntry", false);
   const llvm::StringRef debuggerRoot = GetString(arguments, "debuggerRoot");
+  g_vsc.enable_auto_variable_summaries =
+      GetBoolean(arguments, "enableAutoVariableSummaries", false);
+  g_vsc.enable_synthetic_child_debugging =
+      GetBoolean(arguments, "enableSyntheticChildDebugging", false);
 
   // This is a hack for loading DWARF in .o files on Mac where the .o files
   // in the debug map of the main executable have relative paths which require
@@ -2093,6 +2136,7 @@ void request_scopes(const llvm::json::Object &request) {
     frame.GetThread().GetProcess().SetSelectedThread(frame.GetThread());
     frame.GetThread().SetSelectedFrame(frame.GetFrameID());
   }
+
   g_vsc.variables.locals = frame.GetVariables(/*arguments=*/true,
                                               /*locals=*/true,
                                               /*statics=*/false,
@@ -2551,18 +2595,7 @@ void request_setFunctionBreakpoints(const llvm::json::Object &request) {
 void request_source(const llvm::json::Object &request) {
   llvm::json::Object response;
   FillResponse(request, response);
-  llvm::json::Object body;
-
-  auto arguments = request.getObject("arguments");
-  auto source = arguments->getObject("source");
-  auto sourceReference = GetSigned(source, "sourceReference", -1);
-  auto pos = g_vsc.source_map.find((lldb::addr_t)sourceReference);
-  if (pos != g_vsc.source_map.end()) {
-    EmplaceSafeString(body, "content", pos->second.content);
-  } else {
-    response["success"] = llvm::json::Value(false);
-  }
-  EmplaceSafeString(body, "mimeType", "text/x-lldb.disassembly");
+  llvm::json::Object body{{"content", ""}};
   response.try_emplace("body", std::move(body));
   g_vsc.SendJSON(llvm::json::Value(std::move(response)));
 }
@@ -2650,13 +2683,72 @@ void request_stackTrace(const llvm::json::Object &request) {
     const auto startFrame = GetUnsigned(arguments, "startFrame", 0);
     const auto levels = GetUnsigned(arguments, "levels", 0);
     const auto endFrame = (levels == 0) ? INT64_MAX : (startFrame + levels);
+    auto totalFrames = thread.GetNumFrames();
+
+    // This will always return an invalid thread when
+    // libBacktraceRecording.dylib is not loaded or if there is no extended
+    // backtrace.
+    lldb::SBThread queue_backtrace_thread =
+        thread.GetExtendedBacktraceThread("libdispatch");
+    if (queue_backtrace_thread.IsValid()) {
+      // One extra frame as a label to mark the enqueued thread.
+      totalFrames += queue_backtrace_thread.GetNumFrames() + 1;
+    }
+
+    // This will always return an invalid thread when there is no exception in
+    // the current thread.
+    lldb::SBThread exception_backtrace_thread =
+        thread.GetCurrentExceptionBacktrace();
+    if (exception_backtrace_thread.IsValid()) {
+      // One extra frame as a label to mark the exception thread.
+      totalFrames += exception_backtrace_thread.GetNumFrames() + 1;
+    }
+
     for (uint32_t i = startFrame; i < endFrame; ++i) {
-      auto frame = thread.GetFrameAtIndex(i);
+      lldb::SBFrame frame;
+      std::string prefix;
+      if (i < thread.GetNumFrames()) {
+        frame = thread.GetFrameAtIndex(i);
+      } else if (queue_backtrace_thread.IsValid() &&
+                 i < (thread.GetNumFrames() +
+                      queue_backtrace_thread.GetNumFrames() + 1)) {
+        if (i == thread.GetNumFrames()) {
+          const uint32_t thread_idx =
+              queue_backtrace_thread.GetExtendedBacktraceOriginatingIndexID();
+          const char *queue_name = queue_backtrace_thread.GetQueueName();
+          auto name = llvm::formatv("Enqueued from {0} (Thread {1})",
+                                    queue_name, thread_idx);
+          stackFrames.emplace_back(
+              llvm::json::Object{{"id", thread.GetThreadID() + 1},
+                                 {"name", name},
+                                 {"presentationHint", "label"}});
+          continue;
+        }
+        frame = queue_backtrace_thread.GetFrameAtIndex(
+            i - thread.GetNumFrames() - 1);
+      } else if (exception_backtrace_thread.IsValid()) {
+        if (i == thread.GetNumFrames() +
+                     (queue_backtrace_thread.IsValid()
+                          ? queue_backtrace_thread.GetNumFrames() + 1
+                          : 0)) {
+          stackFrames.emplace_back(
+              llvm::json::Object{{"id", thread.GetThreadID() + 2},
+                                 {"name", "Original Exception Backtrace"},
+                                 {"presentationHint", "label"}});
+          continue;
+        }
+
+        frame = exception_backtrace_thread.GetFrameAtIndex(
+            i - thread.GetNumFrames() -
+            (queue_backtrace_thread.IsValid()
+                 ? queue_backtrace_thread.GetNumFrames() + 1
+                 : 0));
+      }
       if (!frame.IsValid())
         break;
       stackFrames.emplace_back(CreateStackFrame(frame));
     }
-    const auto totalFrames = thread.GetNumFrames();
+
     body.try_emplace("totalFrames", totalFrames);
   }
   body.try_emplace("stackFrames", std::move(stackFrames));
@@ -3167,7 +3259,7 @@ void request_variables(const llvm::json::Object &request) {
         break;
 
       int64_t var_ref = 0;
-      if (variable.MightHaveChildren()) {
+      if (variable.MightHaveChildren() || variable.IsSynthetic()) {
         var_ref = g_vsc.variables.InsertExpandableVariable(
             variable, /*is_permanent=*/false);
       }
@@ -3180,23 +3272,37 @@ void request_variables(const llvm::json::Object &request) {
     // children.
     lldb::SBValue variable = g_vsc.variables.GetVariable(variablesReference);
     if (variable.IsValid()) {
-      const auto num_children = variable.GetNumChildren();
-      const int64_t end_idx = start + ((count == 0) ? num_children : count);
-      for (auto i = start; i < end_idx; ++i) {
-        lldb::SBValue child = variable.GetChildAtIndex(i);
+      auto addChild = [&](lldb::SBValue child,
+                          std::optional<std::string> custom_name = {}) {
         if (!child.IsValid())
-          break;
+          return;
         if (child.MightHaveChildren()) {
           auto is_permanent =
               g_vsc.variables.IsPermanentVariableReference(variablesReference);
           auto childVariablesReferences =
               g_vsc.variables.InsertExpandableVariable(child, is_permanent);
-          variables.emplace_back(CreateVariable(child, childVariablesReferences,
-                                                childVariablesReferences, hex));
+          variables.emplace_back(CreateVariable(
+              child, childVariablesReferences, childVariablesReferences, hex,
+              /*is_name_duplicated=*/false, custom_name));
         } else {
-          variables.emplace_back(CreateVariable(child, 0, INT64_MAX, hex));
+          variables.emplace_back(CreateVariable(child, 0, INT64_MAX, hex,
+                                                /*is_name_duplicated=*/false,
+                                                custom_name));
         }
-      }
+      };
+      const int64_t num_children = variable.GetNumChildren();
+      int64_t end_idx = start + ((count == 0) ? num_children : count);
+      int64_t i = start;
+      for (; i < end_idx && i < num_children; ++i)
+        addChild(variable.GetChildAtIndex(i));
+
+      // If we haven't filled the count quota from the request, we insert a new
+      // "[raw]" child that can be used to inspect the raw version of a
+      // synthetic member. That eliminates the need for the user to go to the
+      // debug console and type `frame var <variable> to get these values.
+      if (g_vsc.enable_synthetic_child_debugging && variable.IsSynthetic() &&
+          i == num_children)
+        addChild(variable.GetNonSyntheticValue(), "[raw]");
     }
   }
   llvm::json::Object body;
@@ -3205,6 +3311,211 @@ void request_variables(const llvm::json::Object &request) {
   g_vsc.SendJSON(llvm::json::Value(std::move(response)));
 }
 
+// "DisassembleRequest": {
+//   "allOf": [ { "$ref": "#/definitions/Request" }, {
+//     "type": "object",
+//     "description": "Disassembles code stored at the provided
+//     location.\nClients should only call this request if the corresponding
+//     capability `supportsDisassembleRequest` is true.", "properties": {
+//       "command": {
+//         "type": "string",
+//         "enum": [ "disassemble" ]
+//       },
+//       "arguments": {
+//         "$ref": "#/definitions/DisassembleArguments"
+//       }
+//     },
+//     "required": [ "command", "arguments" ]
+//   }]
+// },
+// "DisassembleArguments": {
+//   "type": "object",
+//   "description": "Arguments for `disassemble` request.",
+//   "properties": {
+//     "memoryReference": {
+//       "type": "string",
+//       "description": "Memory reference to the base location containing the
+//       instructions to disassemble."
+//     },
+//     "offset": {
+//       "type": "integer",
+//       "description": "Offset (in bytes) to be applied to the reference
+//       location before disassembling. Can be negative."
+//     },
+//     "instructionOffset": {
+//       "type": "integer",
+//       "description": "Offset (in instructions) to be applied after the byte
+//       offset (if any) before disassembling. Can be negative."
+//     },
+//     "instructionCount": {
+//       "type": "integer",
+//       "description": "Number of instructions to disassemble starting at the
+//       specified location and offset.\nAn adapter must return exactly this
+//       number of instructions - any unavailable instructions should be
+//       replaced with an implementation-defined 'invalid instruction' value."
+//     },
+//     "resolveSymbols": {
+//       "type": "boolean",
+//       "description": "If true, the adapter should attempt to resolve memory
+//       addresses and other values to symbolic names."
+//     }
+//   },
+//   "required": [ "memoryReference", "instructionCount" ]
+// },
+// "DisassembleResponse": {
+//   "allOf": [ { "$ref": "#/definitions/Response" }, {
+//     "type": "object",
+//     "description": "Response to `disassemble` request.",
+//     "properties": {
+//       "body": {
+//         "type": "object",
+//         "properties": {
+//           "instructions": {
+//             "type": "array",
+//             "items": {
+//               "$ref": "#/definitions/DisassembledInstruction"
+//             },
+//             "description": "The list of disassembled instructions."
+//           }
+//         },
+//         "required": [ "instructions" ]
+//       }
+//     }
+//   }]
+// }
+void request_disassemble(const llvm::json::Object &request) {
+  llvm::json::Object response;
+  FillResponse(request, response);
+  auto arguments = request.getObject("arguments");
+
+  auto memoryReference = GetString(arguments, "memoryReference");
+  lldb::addr_t addr_ptr;
+  if (memoryReference.consumeInteger(0, addr_ptr)) {
+    response["success"] = false;
+    response["message"] =
+        "Malformed memory reference: " + memoryReference.str();
+    g_vsc.SendJSON(llvm::json::Value(std::move(response)));
+    return;
+  }
+
+  addr_ptr += GetSigned(arguments, "instructionOffset", 0);
+  lldb::SBAddress addr(addr_ptr, g_vsc.target);
+  if (!addr.IsValid()) {
+    response["success"] = false;
+    response["message"] = "Memory reference not found in the current binary.";
+    g_vsc.SendJSON(llvm::json::Value(std::move(response)));
+    return;
+  }
+
+  const auto inst_count = GetUnsigned(arguments, "instructionCount", 0);
+  lldb::SBInstructionList insts =
+      g_vsc.target.ReadInstructions(addr, inst_count);
+
+  if (!insts.IsValid()) {
+    response["success"] = false;
+    response["message"] = "Failed to find instructions for memory address.";
+    g_vsc.SendJSON(llvm::json::Value(std::move(response)));
+    return;
+  }
+
+  const bool resolveSymbols = GetBoolean(arguments, "resolveSymbols", false);
+  llvm::json::Array instructions;
+  const auto num_insts = insts.GetSize();
+  for (size_t i = 0; i < num_insts; ++i) {
+    lldb::SBInstruction inst = insts.GetInstructionAtIndex(i);
+    auto addr = inst.GetAddress();
+    const auto inst_addr = addr.GetLoadAddress(g_vsc.target);
+    const char *m = inst.GetMnemonic(g_vsc.target);
+    const char *o = inst.GetOperands(g_vsc.target);
+    const char *c = inst.GetComment(g_vsc.target);
+    auto d = inst.GetData(g_vsc.target);
+
+    std::string bytes;
+    llvm::raw_string_ostream sb(bytes);
+    for (unsigned i = 0; i < inst.GetByteSize(); i++) {
+      lldb::SBError error;
+      uint8_t b = d.GetUnsignedInt8(error, i);
+      if (error.Success()) {
+        sb << llvm::format("%2.2x ", b);
+      }
+    }
+    sb.flush();
+
+    llvm::json::Object disassembled_inst{
+        {"address", "0x" + llvm::utohexstr(inst_addr)},
+        {"instructionBytes",
+         bytes.size() > 0 ? bytes.substr(0, bytes.size() - 1) : ""},
+    };
+
+    std::string instruction;
+    llvm::raw_string_ostream si(instruction);
+
+    lldb::SBSymbol symbol = addr.GetSymbol();
+    // Only add the symbol on the first line of the function.
+    if (symbol.IsValid() && symbol.GetStartAddress() == addr) {
+      // If we have a valid symbol, append it as a label prefix for the first
+      // instruction. This is so you can see the start of a function/callsite
+      // in the assembly, at the moment VS Code (1.80) does not visualize the
+      // symbol associated with the assembly instruction.
+      si << (symbol.GetMangledName() != nullptr ? symbol.GetMangledName()
+                                                : symbol.GetName())
+         << ": ";
+
+      if (resolveSymbols) {
+        disassembled_inst.try_emplace("symbol", symbol.GetDisplayName());
+      }
+    }
+
+    si << llvm::formatv("{0,7} {1,12}", m, o);
+    if (c && c[0]) {
+      si << " ; " << c;
+    }
+    si.flush();
+
+    disassembled_inst.try_emplace("instruction", instruction);
+
+    auto line_entry = addr.GetLineEntry();
+    // If the line number is 0 then the entry represents a compiler generated
+    // location.
+    if (line_entry.GetStartAddress() == addr && line_entry.IsValid() &&
+        line_entry.GetFileSpec().IsValid() && line_entry.GetLine() != 0) {
+      auto source = CreateSource(line_entry);
+      disassembled_inst.try_emplace("location", source);
+
+      const auto line = line_entry.GetLine();
+      if (line && line != LLDB_INVALID_LINE_NUMBER) {
+        disassembled_inst.try_emplace("line", line);
+      }
+      const auto column = line_entry.GetColumn();
+      if (column && column != LLDB_INVALID_COLUMN_NUMBER) {
+        disassembled_inst.try_emplace("column", column);
+      }
+
+      auto end_line_entry = line_entry.GetEndAddress().GetLineEntry();
+      if (end_line_entry.IsValid() &&
+          end_line_entry.GetFileSpec() == line_entry.GetFileSpec()) {
+        const auto end_line = end_line_entry.GetLine();
+        if (end_line && end_line != LLDB_INVALID_LINE_NUMBER &&
+            end_line != line) {
+          disassembled_inst.try_emplace("endLine", end_line);
+
+          const auto end_column = end_line_entry.GetColumn();
+          if (end_column && end_column != LLDB_INVALID_COLUMN_NUMBER &&
+              end_column != column) {
+            disassembled_inst.try_emplace("endColumn", end_column - 1);
+          }
+        }
+      }
+    }
+
+    instructions.emplace_back(std::move(disassembled_inst));
+  }
+
+  llvm::json::Object body;
+  body.try_emplace("instructions", std::move(instructions));
+  response.try_emplace("body", std::move(body));
+  g_vsc.SendJSON(llvm::json::Value(std::move(response)));
+}
 // A request used in testing to get the details on all breakpoints that are
 // currently set in the target. This helps us to test "setBreakpoints" and
 // "setFunctionBreakpoints" requests to verify we have the correct set of
@@ -3249,6 +3560,7 @@ void RegisterRequestCallbacks() {
   g_vsc.RegisterRequestCallback("stepOut", request_stepOut);
   g_vsc.RegisterRequestCallback("threads", request_threads);
   g_vsc.RegisterRequestCallback("variables", request_variables);
+  g_vsc.RegisterRequestCallback("disassemble", request_disassemble);
   // Custom requests
   g_vsc.RegisterRequestCallback("compileUnits", request_compileUnits);
   g_vsc.RegisterRequestCallback("modules", request_modules);
@@ -3404,6 +3716,23 @@ int main(int argc, char *argv[]) {
   if (input_args.hasArg(OPT_help)) {
     printHelp(T, llvm::sys::path::filename(argv[0]));
     return EXIT_SUCCESS;
+  }
+
+  if (input_args.hasArg(OPT_repl_mode)) {
+    llvm::opt::Arg *repl_mode = input_args.getLastArg(OPT_repl_mode);
+    llvm::StringRef repl_mode_value = repl_mode->getValue();
+    if (repl_mode_value == "auto") {
+      g_vsc.repl_mode = ReplMode::Auto;
+    } else if (repl_mode_value == "variable") {
+      g_vsc.repl_mode = ReplMode::Variable;
+    } else if (repl_mode_value == "command") {
+      g_vsc.repl_mode = ReplMode::Command;
+    } else {
+      llvm::errs()
+          << "'" << repl_mode_value
+          << "' is not a valid option, use 'variable', 'command' or 'auto'.\n";
+      return EXIT_FAILURE;
+    }
   }
 
   if (llvm::opt::Arg *target_arg = input_args.getLastArg(OPT_launch_target)) {

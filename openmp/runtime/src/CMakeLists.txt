@@ -12,6 +12,7 @@ include(ExtendPath)
 
 # Configure omp.h, kmp_config.h and omp-tools.h if necessary
 configure_file(${LIBOMP_INC_DIR}/omp.h.var omp.h @ONLY)
+configure_file(${LIBOMP_INC_DIR}/ompx.h.var ompx.h @ONLY)
 configure_file(kmp_config.h.cmake kmp_config.h @ONLY)
 if(${LIBOMP_OMPT_SUPPORT})
   configure_file(${LIBOMP_INC_DIR}/omp-tools.h.var omp-tools.h @ONLY)
@@ -393,6 +394,7 @@ endif()
 install(
   FILES
   ${CMAKE_CURRENT_BINARY_DIR}/omp.h
+  ${CMAKE_CURRENT_BINARY_DIR}/ompx.h
   DESTINATION ${LIBOMP_HEADERS_INSTALL_PATH}
 )
 if(${LIBOMP_OMPT_SUPPORT})

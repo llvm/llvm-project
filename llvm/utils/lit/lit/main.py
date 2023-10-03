@@ -40,7 +40,7 @@ def main(builtin_params={}):
         order=opts.order,
         params=params,
         config_prefix=opts.configPrefix,
-        echo_all_commands=opts.echoAllCommands,
+        per_test_coverage=opts.per_test_coverage,
     )
 
     discovered_tests = lit.discovery.find_tests_for_inputs(
@@ -73,7 +73,7 @@ def main(builtin_params={}):
                     "The test suite configuration requested an individual"
                     " test timeout of {0} seconds but a timeout of {1} seconds was"
                     " requested on the command line. Forcing timeout to be {1}"
-                    " seconds"
+                    " seconds."
                 ).format(lit_config.maxIndividualTestTime, opts.maxIndividualTestTime)
             )
             lit_config.maxIndividualTestTime = opts.maxIndividualTestTime

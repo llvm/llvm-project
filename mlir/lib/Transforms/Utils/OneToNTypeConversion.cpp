@@ -289,9 +289,9 @@ OneToNConversionPattern::matchAndRewrite(Operation *op,
   //                    drive the pattern application ourselves, which is a lot
   //                    of additional boilerplate code. This seems to work fine,
   //                    so I leave it like this for the time being.
-  OneToNPatternRewriter oneToNPatternRewriter(rewriter.getContext());
+  OneToNPatternRewriter oneToNPatternRewriter(rewriter.getContext(),
+                                              rewriter.getListener());
   oneToNPatternRewriter.restoreInsertionPoint(rewriter.saveInsertionPoint());
-  oneToNPatternRewriter.setListener(rewriter.getListener());
 
   // Apply actual pattern.
   if (failed(matchAndRewrite(op, oneToNPatternRewriter, operandMapping,

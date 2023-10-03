@@ -1206,12 +1206,12 @@ public:
     bool empty() const _NOEXCEPT {return size() == 0;}
 
   _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 const_reference operator[](size_type __pos) const _NOEXCEPT {
-    _LIBCPP_ASSERT_UNCATEGORIZED(__pos <= size(), "string index out of bounds");
+    _LIBCPP_ASSERT_VALID_ELEMENT_ACCESS(__pos <= size(), "string index out of bounds");
     return *(data() + __pos);
   }
 
   _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 reference operator[](size_type __pos) _NOEXCEPT {
-    _LIBCPP_ASSERT_UNCATEGORIZED(__pos <= size(), "string index out of bounds");
+    _LIBCPP_ASSERT_VALID_ELEMENT_ACCESS(__pos <= size(), "string index out of bounds");
     return *(__get_pointer() + __pos);
   }
 
@@ -1307,22 +1307,22 @@ public:
     _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 void pop_back();
 
   _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 reference front() _NOEXCEPT {
-    _LIBCPP_ASSERT_UNCATEGORIZED(!empty(), "string::front(): string is empty");
+    _LIBCPP_ASSERT_VALID_ELEMENT_ACCESS(!empty(), "string::front(): string is empty");
     return *__get_pointer();
   }
 
   _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 const_reference front() const _NOEXCEPT {
-    _LIBCPP_ASSERT_UNCATEGORIZED(!empty(), "string::front(): string is empty");
+    _LIBCPP_ASSERT_VALID_ELEMENT_ACCESS(!empty(), "string::front(): string is empty");
     return *data();
   }
 
   _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 reference back() _NOEXCEPT {
-    _LIBCPP_ASSERT_UNCATEGORIZED(!empty(), "string::back(): string is empty");
+    _LIBCPP_ASSERT_VALID_ELEMENT_ACCESS(!empty(), "string::back(): string is empty");
     return *(__get_pointer() + size() - 1);
   }
 
   _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 const_reference back() const _NOEXCEPT {
-    _LIBCPP_ASSERT_UNCATEGORIZED(!empty(), "string::back(): string is empty");
+    _LIBCPP_ASSERT_VALID_ELEMENT_ACCESS(!empty(), "string::back(): string is empty");
     return *(data() + size() - 1);
   }
 
@@ -1812,16 +1812,16 @@ private:
 
     _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20
     void __set_short_size(size_type __s) _NOEXCEPT {
-        _LIBCPP_ASSERT_UNCATEGORIZED(__s < __min_cap,
-                                     "__s should never be greater than or equal to the short string capacity");
+        _LIBCPP_ASSERT_INTERNAL(
+            __s < __min_cap, "__s should never be greater than or equal to the short string capacity");
         __r_.first().__s.__size_ = __s;
         __r_.first().__s.__is_long_ = false;
     }
 
     _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20
     size_type __get_short_size() const _NOEXCEPT {
-        _LIBCPP_ASSERT_UNCATEGORIZED(!__r_.first().__s.__is_long_,
-                                     "String has to be short when trying to get the short size");
+        _LIBCPP_ASSERT_INTERNAL(
+            !__r_.first().__s.__is_long_, "String has to be short when trying to get the short size");
         return __r_.first().__s.__size_;
     }
 
@@ -1969,7 +1969,8 @@ private:
                     allocator_type __a = __str.__alloc();
                     auto __allocation = std::__allocate_at_least(__a, __str.__get_long_cap());
                     __begin_lifetime(__allocation.ptr, __allocation.count);
-                    __alloc_traits::deallocate(__alloc(), __get_long_pointer(), __get_long_cap());
+                    if (__is_long())
+                        __alloc_traits::deallocate(__alloc(), __get_long_pointer(), __get_long_cap());
                     __alloc() = std::move(__a);
                     __set_long_pointer(__allocation.ptr);
                     __set_long_cap(__allocation.count);
@@ -2585,7 +2586,7 @@ template <class _Iterator, class _Sentinel>
 _LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_HIDE_FROM_ABI
 void
 basic_string<_CharT, _Traits, _Allocator>::__assign_trivial(_Iterator __first, _Sentinel __last, size_type __n) {
-  _LIBCPP_ASSERT_UNCATEGORIZED(
+  _LIBCPP_ASSERT_INTERNAL(
       __string_is_trivial_iterator<_Iterator>::value, "The iterator type given to `__assign_trivial` must be trivial");
 
   size_type __cap = capacity();
@@ -3161,7 +3162,8 @@ inline _LIBCPP_CONSTEXPR_SINCE_CXX20
 typename basic_string<_CharT, _Traits, _Allocator>::iterator
 basic_string<_CharT, _Traits, _Allocator>::erase(const_iterator __pos)
 {
-  _LIBCPP_ASSERT_UNCATEGORIZED(__pos != end(), "string::erase(iterator) called with a non-dereferenceable iterator");
+  _LIBCPP_ASSERT_VALID_ELEMENT_ACCESS(
+      __pos != end(), "string::erase(iterator) called with a non-dereferenceable iterator");
   iterator __b = begin();
   size_type __r = static_cast<size_type>(__pos - __b);
   erase(__r, 1);
@@ -3173,7 +3175,7 @@ inline _LIBCPP_CONSTEXPR_SINCE_CXX20
 typename basic_string<_CharT, _Traits, _Allocator>::iterator
 basic_string<_CharT, _Traits, _Allocator>::erase(const_iterator __first, const_iterator __last)
 {
-  _LIBCPP_ASSERT_UNCATEGORIZED(__first <= __last, "string::erase(first, last) called with invalid range");
+  _LIBCPP_ASSERT_VALID_INPUT_RANGE(__first <= __last, "string::erase(first, last) called with invalid range");
   iterator __b = begin();
   size_type __r = static_cast<size_type>(__first - __b);
   erase(__r, static_cast<size_type>(__last - __first));
@@ -3185,7 +3187,7 @@ inline _LIBCPP_CONSTEXPR_SINCE_CXX20
 void
 basic_string<_CharT, _Traits, _Allocator>::pop_back()
 {
-    _LIBCPP_ASSERT_UNCATEGORIZED(!empty(), "string::pop_back(): string is already empty");
+    _LIBCPP_ASSERT_VALID_ELEMENT_ACCESS(!empty(), "string::pop_back(): string is already empty");
     __erase_to_end(size() - 1);
 }
 
@@ -3368,7 +3370,7 @@ basic_string<_CharT, _Traits, _Allocator>::swap(basic_string& __str)
                     __is_nothrow_swappable<allocator_type>::value)
 #endif
 {
-    _LIBCPP_ASSERT_UNCATEGORIZED(
+    _LIBCPP_ASSERT_COMPATIBLE_ALLOCATOR(
         __alloc_traits::propagate_on_container_swap::value ||
         __alloc_traits::is_always_equal::value ||
         __alloc() == __str.__alloc(), "swapping non-equal allocators");

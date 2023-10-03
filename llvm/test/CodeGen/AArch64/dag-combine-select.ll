@@ -35,14 +35,14 @@ define void @test1(i32 %bitset, i32 %val0, i32 %val1) {
 ; SDISEL-LABEL: test1:
 ; SDISEL:       // %bb.0:
 ; SDISEL-NEXT:    cmp w0, #7
-; SDISEL-NEXT:    adrp x8, out
-; SDISEL-NEXT:    csel w9, w1, w2, eq
-; SDISEL-NEXT:    cmp w9, #13
-; SDISEL-NEXT:    csel w9, w1, w2, lo
+; SDISEL-NEXT:    adrp x9, out
+; SDISEL-NEXT:    csel w8, w1, w2, eq
+; SDISEL-NEXT:    cmp w8, #13
+; SDISEL-NEXT:    csel w8, w1, w2, lo
 ; SDISEL-NEXT:    cmp w0, #42
-; SDISEL-NEXT:    csel w10, w1, w9, eq
-; SDISEL-NEXT:    str w9, [x8, :lo12:out]
-; SDISEL-NEXT:    str w10, [x8, :lo12:out]
+; SDISEL-NEXT:    csel w10, w1, w8, eq
+; SDISEL-NEXT:    str w8, [x9, :lo12:out]
+; SDISEL-NEXT:    str w10, [x9, :lo12:out]
 ; SDISEL-NEXT:    ret
 ;
 ; GISEL-LABEL: test1:

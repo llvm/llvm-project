@@ -213,35 +213,6 @@ static Constant *ExtractConstantBytes(Constant *C, unsigned ByteStart,
 
   switch (CE->getOpcode()) {
   default: return nullptr;
-  case Instruction::Or: {
-    Constant *RHS = ExtractConstantBytes(CE->getOperand(1), ByteStart,ByteSize);
-    if (!RHS)
-      return nullptr;
-
-    // X | -1 -> -1.
-    if (ConstantInt *RHSC = dyn_cast<ConstantInt>(RHS))
-      if (RHSC->isMinusOne())
-        return RHSC;
-
-    Constant *LHS = ExtractConstantBytes(CE->getOperand(0), ByteStart,ByteSize);
-    if (!LHS)
-      return nullptr;
-    return ConstantExpr::getOr(LHS, RHS);
-  }
-  case Instruction::And: {
-    Constant *RHS = ExtractConstantBytes(CE->getOperand(1), ByteStart,ByteSize);
-    if (!RHS)
-      return nullptr;
-
-    // X & 0 -> 0.
-    if (RHS->isNullValue())
-      return RHS;
-
-    Constant *LHS = ExtractConstantBytes(CE->getOperand(0), ByteStart,ByteSize);
-    if (!LHS)
-      return nullptr;
-    return ConstantExpr::getAnd(LHS, RHS);
-  }
   case Instruction::LShr: {
     ConstantInt *Amt = dyn_cast<ConstantInt>(CE->getOperand(1));
     if (!Amt)
@@ -1084,7 +1055,9 @@ Constant *llvm::ConstantFoldBinaryInstruction(unsigned Opcode, Constant *C1,
   } else if (isa<ConstantInt>(C1)) {
     // If C1 is a ConstantInt and C2 is not, swap the operands.
     if (Instruction::isCommutative(Opcode))
-      return ConstantExpr::get(Opcode, C2, C1);
+      return ConstantExpr::isDesirableBinOp(Opcode)
+                 ? ConstantExpr::get(Opcode, C2, C1)
+                 : ConstantFoldBinaryInstruction(Opcode, C2, C1);
   }
 
   if (ConstantInt *CI1 = dyn_cast<ConstantInt>(C1)) {
@@ -1241,8 +1214,6 @@ Constant *llvm::ConstantFoldBinaryInstruction(unsigned Opcode, Constant *C1,
     case Instruction::Add:
     case Instruction::Sub:
       return ConstantExpr::getXor(C1, C2);
-    case Instruction::Mul:
-      return ConstantExpr::getAnd(C1, C2);
     case Instruction::Shl:
     case Instruction::LShr:
     case Instruction::AShr:

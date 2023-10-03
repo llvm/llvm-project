@@ -656,15 +656,15 @@ public:
   ///
   /// Consider an instruction that uses resources X0, X1 and X2 as follows:
   ///
-  /// X0 X1 X1 X2    +--------+------------+------+
-  ///                |Resource|StartAtCycle|Cycles|
-  ///                +--------+------------+------+
-  ///                |   X0   |     0      |  1   |
-  ///                +--------+------------+------+
-  ///                |   X1   |     1      |  3   |
-  ///                +--------+------------+------+
-  ///                |   X2   |     3      |  4   |
-  ///                +--------+------------+------+
+  /// X0 X1 X1 X2    +--------+-------------+--------------+
+  ///                |Resource|AcquireAtCycle|ReleaseAtCycle|
+  ///                +--------+-------------+--------------+
+  ///                |   X0   |     0       |       1      |
+  ///                +--------+-------------+--------------+
+  ///                |   X1   |     1       |       3      |
+  ///                +--------+-------------+--------------+
+  ///                |   X2   |     3       |       4      |
+  ///                +--------+-------------+--------------+
   ///
   /// If we can schedule the instruction at cycle C, we need to
   /// compute the interval of the resource as follows:
@@ -685,7 +685,7 @@ public:
   /// of an instruction that can be scheduled at cycle C in top-down
   /// scheduling is:
   ///
-  ///       [C+StartAtCycle, C+Cycles)
+  ///       [C+AcquireAtCycle, C+ReleaseAtCycle)
   ///
   ///
   /// # BOTTOM UP SCHEDULING
@@ -709,20 +709,20 @@ public:
   /// of an instruction that can be scheduled at cycle C in bottom-up
   /// scheduling is:
   ///
-  ///       [C-Cycle+1, C-StartAtCycle+1)
+  ///       [C-ReleaseAtCycle+1, C-AcquireAtCycle+1)
   ///
   ///
   /// NOTE: In both cases, the number of cycles booked by a
-  /// resources is the value (Cycle - StartAtCycles).
-  static IntervalTy getResourceIntervalBottom(unsigned C, unsigned StartAtCycle,
-                                              unsigned Cycle) {
-    return std::make_pair<long, long>((long)C - (long)Cycle + 1L,
-                                      (long)C - (long)StartAtCycle + 1L);
+  /// resources is the value (ReleaseAtCycle - AcquireAtCycle).
+  static IntervalTy getResourceIntervalBottom(unsigned C, unsigned AcquireAtCycle,
+                                              unsigned ReleaseAtCycle) {
+    return std::make_pair<long, long>((long)C - (long)ReleaseAtCycle + 1L,
+                                      (long)C - (long)AcquireAtCycle + 1L);
   }
-  static IntervalTy getResourceIntervalTop(unsigned C, unsigned StartAtCycle,
-                                           unsigned Cycle) {
-    return std::make_pair<long, long>((long)C + (long)StartAtCycle,
-                                      (long)C + (long)Cycle);
+  static IntervalTy getResourceIntervalTop(unsigned C, unsigned AcquireAtCycle,
+                                           unsigned ReleaseAtCycle) {
+    return std::make_pair<long, long>((long)C + (long)AcquireAtCycle,
+                                      (long)C + (long)ReleaseAtCycle);
   }
 
 private:
@@ -730,7 +730,7 @@ private:
   ///
   /// The function uses the \param IntervalBuider [*] to build a
   /// resource interval [a, b[ out of the input parameters \param
-  /// CurrCycle, \param StartAtCycle and \param Cycle.
+  /// CurrCycle, \param AcquireAtCycle and \param ReleaseAtCycle.
   ///
   /// The function then loops through the intervals in the ResourceSegments
   /// and shifts the interval [a, b[ and the ReturnCycle to the
@@ -744,7 +744,7 @@ private:
   ///               c   1   2   3   4   5   6   7   8   9   10 ... ---> (time
   ///               flow)
   ///  ResourceSegments...  [---)   [-------)           [-----------)
-  ///               c   [1     3[  -> StartAtCycle=1, Cycles=3
+  ///               c   [1     3[  -> AcquireAtCycle=1, ReleaseAtCycle=3
   ///                 ++c   [1     3)
   ///                     ++c   [1     3)
   ///                         ++c   [1     3)
@@ -772,24 +772,25 @@ private:
   /// [*] See \ref `getResourceIntervalTop` and
   /// \ref `getResourceIntervalBottom` to see how such resource intervals
   /// are built.
-  unsigned
-  getFirstAvailableAt(unsigned CurrCycle, unsigned StartAtCycle, unsigned Cycle,
-                      std::function<IntervalTy(unsigned, unsigned, unsigned)>
-                          IntervalBuilder) const;
+  unsigned getFirstAvailableAt(
+      unsigned CurrCycle, unsigned AcquireAtCycle, unsigned ReleaseAtCycle,
+      std::function<IntervalTy(unsigned, unsigned, unsigned)> IntervalBuilder)
+      const;
 
 public:
   /// getFirstAvailableAtFromBottom and getFirstAvailableAtFromTop
   /// should be merged in a single function in which a function that
   /// creates the `NewInterval` is passed as a parameter.
   unsigned getFirstAvailableAtFromBottom(unsigned CurrCycle,
-                                         unsigned StartAtCycle,
-                                         unsigned Cycle) const {
-    return getFirstAvailableAt(CurrCycle, StartAtCycle, Cycle,
+                                         unsigned AcquireAtCycle,
+                                         unsigned ReleaseAtCycle) const {
+    return getFirstAvailableAt(CurrCycle, AcquireAtCycle, ReleaseAtCycle,
                                getResourceIntervalBottom);
   }
-  unsigned getFirstAvailableAtFromTop(unsigned CurrCycle, unsigned StartAtCycle,
-                                      unsigned Cycle) const {
-    return getFirstAvailableAt(CurrCycle, StartAtCycle, Cycle,
+  unsigned getFirstAvailableAtFromTop(unsigned CurrCycle,
+                                      unsigned AcquireAtCycle,
+                                      unsigned ReleaseAtCycle) const {
+    return getFirstAvailableAt(CurrCycle, AcquireAtCycle, ReleaseAtCycle,
                                getResourceIntervalTop);
   }
 
@@ -1006,13 +1007,13 @@ public:
   unsigned getLatencyStallCycles(SUnit *SU);
 
   unsigned getNextResourceCycleByInstance(unsigned InstanceIndex,
-                                          unsigned Cycles,
-                                          unsigned StartAtCycle);
+                                          unsigned ReleaseAtCycle,
+                                          unsigned AcquireAtCycle);
 
   std::pair<unsigned, unsigned> getNextResourceCycle(const MCSchedClassDesc *SC,
                                                      unsigned PIdx,
-                                                     unsigned Cycles,
-                                                     unsigned StartAtCycle);
+                                                     unsigned ReleaseAtCycle,
+                                                     unsigned AcquireAtCycle);
 
   bool isUnbufferedGroup(unsigned PIdx) const {
     return SchedModel->getProcResource(PIdx)->SubUnitsIdxBegin &&

@@ -17,21 +17,21 @@
 #include <time.h>
 #elif defined(LIBC_TARGET_ARCH_IS_GPU)
 #include "src/__support/GPU/utils.h"
-static long clock() { return __llvm_libc::gpu::fixed_frequency_clock(); }
+static long clock() { return LIBC_NAMESPACE::gpu::fixed_frequency_clock(); }
 #if defined(LIBC_TARGET_ARCH_IS_NVPTX)
 #define CLOCKS_PER_SEC 1000000000UL
 #else
 // The AMDGPU loader needs to initialize this at runtime by querying the driver.
 extern "C" [[gnu::visibility("protected")]] uint64_t
-    [[clang::address_space(4)]] __llvm_libc_clock_freq;
-#define CLOCKS_PER_SEC __llvm_libc_clock_freq
+    [[clang::address_space(4)]] LIBC_NAMESPACE_clock_freq;
+#define CLOCKS_PER_SEC LIBC_NAMESPACE_clock_freq
 #endif
 #else
 static long clock() { return 0; }
 #define CLOCKS_PER_SEC 1
 #endif
 
-namespace __llvm_libc {
+namespace LIBC_NAMESPACE {
 namespace testing {
 
 namespace internal {
@@ -47,9 +47,8 @@ cpp::enable_if_t<cpp::is_integral_v<T> && (sizeof(T) > sizeof(uint64_t)),
                  cpp::string>
 describeValue(T Value) {
   static_assert(sizeof(T) % 8 == 0, "Unsupported size of UInt");
-  char buf[IntegerToString::hex_bufsize<T>()];
-  IntegerToString::hex(Value, buf, false);
-  return "0x" + cpp::string(buf, sizeof(buf));
+  const IntegerToString<T, radix::Hex::WithPrefix> buffer(Value);
+  return buffer.view();
 }
 
 // When the value is of a standard integral type, just display it as normal.
@@ -96,6 +95,7 @@ bool test(RunContext *Ctx, TestCond Cond, ValType LHS, ValType RHS,
   case TestCond::GE:
     return ExplainDifference(LHS >= RHS, "greater than or equal to");
   }
+  __builtin_unreachable();
 }
 
 } // namespace internal
@@ -245,51 +245,42 @@ template bool test<__uint128_t>(RunContext *Ctx, TestCond Cond, __uint128_t LHS,
                                 const char *RHSStr, Location Loc);
 #endif
 
-template bool test<__llvm_libc::cpp::Int<128>>(RunContext *Ctx, TestCond Cond,
-                                               __llvm_libc::cpp::Int<128> LHS,
-                                               __llvm_libc::cpp::Int<128> RHS,
-                                               const char *LHSStr,
-                                               const char *RHSStr,
-                                               Location Loc);
-
-template bool test<__llvm_libc::cpp::UInt<128>>(RunContext *Ctx, TestCond Cond,
-                                                __llvm_libc::cpp::UInt<128> LHS,
-                                                __llvm_libc::cpp::UInt<128> RHS,
-                                                const char *LHSStr,
-                                                const char *RHSStr,
-                                                Location Loc);
-
-template bool test<__llvm_libc::cpp::UInt<192>>(RunContext *Ctx, TestCond Cond,
-                                                __llvm_libc::cpp::UInt<192> LHS,
-                                                __llvm_libc::cpp::UInt<192> RHS,
-                                                const char *LHSStr,
-                                                const char *RHSStr,
-                                                Location Loc);
-
-template bool test<__llvm_libc::cpp::UInt<256>>(RunContext *Ctx, TestCond Cond,
-                                                __llvm_libc::cpp::UInt<256> LHS,
-                                                __llvm_libc::cpp::UInt<256> RHS,
-                                                const char *LHSStr,
-                                                const char *RHSStr,
-                                                Location Loc);
-
-template bool test<__llvm_libc::cpp::UInt<320>>(RunContext *Ctx, TestCond Cond,
-                                                __llvm_libc::cpp::UInt<320> LHS,
-                                                __llvm_libc::cpp::UInt<320> RHS,
-                                                const char *LHSStr,
-                                                const char *RHSStr,
-                                                Location Loc);
-
-template bool test<__llvm_libc::cpp::string_view>(
-    RunContext *Ctx, TestCond Cond, __llvm_libc::cpp::string_view LHS,
-    __llvm_libc::cpp::string_view RHS, const char *LHSStr, const char *RHSStr,
+template bool test<LIBC_NAMESPACE::cpp::Int<128>>(
+    RunContext *Ctx, TestCond Cond, LIBC_NAMESPACE::cpp::Int<128> LHS,
+    LIBC_NAMESPACE::cpp::Int<128> RHS, const char *LHSStr, const char *RHSStr,
     Location Loc);
 
-template bool test<__llvm_libc::cpp::string>(RunContext *Ctx, TestCond Cond,
-                                             __llvm_libc::cpp::string LHS,
-                                             __llvm_libc::cpp::string RHS,
-                                             const char *LHSStr,
-                                             const char *RHSStr, Location Loc);
+template bool test<LIBC_NAMESPACE::cpp::UInt<128>>(
+    RunContext *Ctx, TestCond Cond, LIBC_NAMESPACE::cpp::UInt<128> LHS,
+    LIBC_NAMESPACE::cpp::UInt<128> RHS, const char *LHSStr, const char *RHSStr,
+    Location Loc);
+
+template bool test<LIBC_NAMESPACE::cpp::UInt<192>>(
+    RunContext *Ctx, TestCond Cond, LIBC_NAMESPACE::cpp::UInt<192> LHS,
+    LIBC_NAMESPACE::cpp::UInt<192> RHS, const char *LHSStr, const char *RHSStr,
+    Location Loc);
+
+template bool test<LIBC_NAMESPACE::cpp::UInt<256>>(
+    RunContext *Ctx, TestCond Cond, LIBC_NAMESPACE::cpp::UInt<256> LHS,
+    LIBC_NAMESPACE::cpp::UInt<256> RHS, const char *LHSStr, const char *RHSStr,
+    Location Loc);
+
+template bool test<LIBC_NAMESPACE::cpp::UInt<320>>(
+    RunContext *Ctx, TestCond Cond, LIBC_NAMESPACE::cpp::UInt<320> LHS,
+    LIBC_NAMESPACE::cpp::UInt<320> RHS, const char *LHSStr, const char *RHSStr,
+    Location Loc);
+
+template bool test<LIBC_NAMESPACE::cpp::string_view>(
+    RunContext *Ctx, TestCond Cond, LIBC_NAMESPACE::cpp::string_view LHS,
+    LIBC_NAMESPACE::cpp::string_view RHS, const char *LHSStr,
+    const char *RHSStr, Location Loc);
+
+template bool test<LIBC_NAMESPACE::cpp::string>(RunContext *Ctx, TestCond Cond,
+                                                LIBC_NAMESPACE::cpp::string LHS,
+                                                LIBC_NAMESPACE::cpp::string RHS,
+                                                const char *LHSStr,
+                                                const char *RHSStr,
+                                                Location Loc);
 
 } // namespace internal
 
@@ -322,4 +313,4 @@ bool Test::testMatch(bool MatchResult, MatcherBase &Matcher, const char *LHSStr,
 }
 
 } // namespace testing
-} // namespace __llvm_libc
+} // namespace LIBC_NAMESPACE

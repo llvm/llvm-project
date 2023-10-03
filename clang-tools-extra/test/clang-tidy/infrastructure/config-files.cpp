@@ -54,3 +54,6 @@
 // RUN: %S/Inputs/config-files/4/44/- -- | FileCheck %s -check-prefix=CHECK-CHILD6
 // CHECK-CHILD6: Checks: {{.*-llvm-qualified-auto'? *$}}
 // CHECK-CHILD6-NOT: modernize-use-using.IgnoreMacros
+
+// Validate that check options are printed in alphabetical order:
+// RUN: clang-tidy --checks="-*,readability-identifier-naming" --dump-config %S/Inputs/config-files/- -- | grep "readability-identifier-naming\." | sort --check

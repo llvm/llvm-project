@@ -1242,13 +1242,12 @@ bool LoopVectorizationLegality::blockNeedsPredication(BasicBlock *BB) const {
 
 bool LoopVectorizationLegality::blockCanBePredicated(
     BasicBlock *BB, SmallPtrSetImpl<Value *> &SafePtrs,
-    SmallPtrSetImpl<const Instruction *> &MaskedOp,
-    SmallPtrSetImpl<Instruction *> &ConditionalAssumes) const {
+    SmallPtrSetImpl<const Instruction *> &MaskedOp) const {
   for (Instruction &I : *BB) {
     // We can predicate blocks with calls to assume, as long as we drop them in
     // case we flatten the CFG via predication.
     if (match(&I, m_Intrinsic<Intrinsic::assume>())) {
-      ConditionalAssumes.insert(&I);
+      MaskedOp.insert(&I);
       continue;
     }
 
@@ -1345,16 +1344,13 @@ bool LoopVectorizationLegality::canVectorizeWithIfConvert() {
     }
 
     // We must be able to predicate all blocks that need to be predicated.
-    if (blockNeedsPredication(BB)) {
-      if (!blockCanBePredicated(BB, SafePointers, MaskedOp,
-                                ConditionalAssumes)) {
-        reportVectorizationFailure(
-            "Control flow cannot be substituted for a select",
-            "control flow cannot be substituted for a select",
-            "NoCFGForSelect", ORE, TheLoop,
-            BB->getTerminator());
-        return false;
-      }
+    if (blockNeedsPredication(BB) &&
+        !blockCanBePredicated(BB, SafePointers, MaskedOp)) {
+      reportVectorizationFailure(
+          "Control flow cannot be substituted for a select",
+          "control flow cannot be substituted for a select", "NoCFGForSelect",
+          ORE, TheLoop, BB->getTerminator());
+      return false;
     }
   }
 
@@ -1554,14 +1550,14 @@ bool LoopVectorizationLegality::prepareToFoldTailByMasking() {
   // The list of pointers that we can safely read and write to remains empty.
   SmallPtrSet<Value *, 8> SafePointers;
 
+  // Collect masked ops in temporary set first to avoid partially populating
+  // MaskedOp if a block cannot be predicated.
   SmallPtrSet<const Instruction *, 8> TmpMaskedOp;
-  SmallPtrSet<Instruction *, 8> TmpConditionalAssumes;
 
   // Check and mark all blocks for predication, including those that ordinarily
   // do not need predication such as the header block.
   for (BasicBlock *BB : TheLoop->blocks()) {
-    if (!blockCanBePredicated(BB, SafePointers, TmpMaskedOp,
-                              TmpConditionalAssumes)) {
+    if (!blockCanBePredicated(BB, SafePointers, TmpMaskedOp)) {
       LLVM_DEBUG(dbgs() << "LV: Cannot fold tail by masking as requested.\n");
       return false;
     }
@@ -1570,9 +1566,6 @@ bool LoopVectorizationLegality::prepareToFoldTailByMasking() {
   LLVM_DEBUG(dbgs() << "LV: can fold tail by masking.\n");
 
   MaskedOp.insert(TmpMaskedOp.begin(), TmpMaskedOp.end());
-  ConditionalAssumes.insert(TmpConditionalAssumes.begin(),
-                            TmpConditionalAssumes.end());
-
   return true;
 }
 

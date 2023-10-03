@@ -444,6 +444,8 @@ struct Taskgroup final : DataPoolEntry<Taskgroup> {
   Taskgroup(DataPool<Taskgroup> *dp) : DataPoolEntry<Taskgroup>(dp) {}
 };
 
+enum ArcherTaskFlag { ArcherTaskFulfilled = 0x00010000 };
+
 struct TaskData;
 typedef DataPool<TaskData> TaskDataPool;
 template <> __thread TaskDataPool *TaskDataPool::ThreadDataPool = nullptr;
@@ -460,6 +462,9 @@ struct TaskData final : DataPoolEntry<TaskData> {
   /// Child tasks use its address to model omp_all_memory dependencies
   ompt_tsan_clockid AllMemory[2]{0};
 
+  /// Index of which barrier to use next.
+  char BarrierIndex{0};
+
   /// Whether this task is currently executing a barrier.
   bool InBarrier{false};
 
@@ -469,17 +474,11 @@ struct TaskData final : DataPoolEntry<TaskData> {
   /// count execution phase
   int execution{0};
 
-  /// Index of which barrier to use next.
-  char BarrierIndex{0};
-
   /// Count how often this structure has been put into child tasks + 1.
   std::atomic_int RefCount{1};
 
   /// Reference to the parent that created this task.
   TaskData *Parent{nullptr};
-
-  /// Reference to the implicit task in the stack above this task.
-  TaskData *ImplicitTask{nullptr};
 
   /// Reference to the team of this task.
   ParallelData *Team{nullptr};
@@ -515,6 +514,9 @@ struct TaskData final : DataPoolEntry<TaskData> {
   bool isInitial() { return TaskType & ompt_task_initial; }
   bool isTarget() { return TaskType & ompt_task_target; }
 
+  bool isFulfilled() { return TaskType & ArcherTaskFulfilled; }
+  void setFulfilled() { TaskType |= ArcherTaskFulfilled; }
+
   void setAllMemoryDep() { AllMemory[0] = 1; }
   bool hasAllMemoryDep() { return AllMemory[0]; }
 
@@ -529,6 +531,7 @@ struct TaskData final : DataPoolEntry<TaskData> {
     TaskType = taskType;
     Parent = parent;
     Team = Parent->Team;
+    BarrierIndex = Parent->BarrierIndex;
     if (Parent != nullptr) {
       Parent->RefCount++;
       // Copy over pointer to taskgroup. This task may set up its own stack
@@ -541,7 +544,6 @@ struct TaskData final : DataPoolEntry<TaskData> {
   TaskData *Init(ParallelData *team, int taskType) {
     TaskType = taskType;
     execution = 1;
-    ImplicitTask = this;
     Team = team;
     return this;
   }
@@ -553,7 +555,6 @@ struct TaskData final : DataPoolEntry<TaskData> {
     BarrierIndex = 0;
     RefCount = 1;
     Parent = nullptr;
-    ImplicitTask = nullptr;
     Team = nullptr;
     TaskGroup = nullptr;
     if (DependencyMap) {
@@ -584,7 +585,9 @@ struct TaskData final : DataPoolEntry<TaskData> {
 } // namespace
 
 static inline TaskData *ToTaskData(ompt_data_t *task_data) {
-  return reinterpret_cast<TaskData *>(task_data->ptr);
+  if (task_data)
+    return reinterpret_cast<TaskData *>(task_data->ptr);
+  return nullptr;
 }
 
 /// Store a mutex for each wait_id to resolve race condition with callbacks.
@@ -899,6 +902,79 @@ static void acquireDependencies(TaskData *task) {
   }
 }
 
+static void completeTask(TaskData *FromTask) {
+  if (!FromTask)
+    return;
+  // Task-end happens after a possible omp_fulfill_event call
+  if (FromTask->isFulfilled())
+    TsanHappensAfter(FromTask->GetTaskPtr());
+  // Included tasks are executed sequentially, no need to track
+  // synchronization
+  if (!FromTask->isIncluded()) {
+    // Task will finish before a barrier in the surrounding parallel region
+    // ...
+    ParallelData *PData = FromTask->Team;
+    TsanHappensBefore(PData->GetBarrierPtr(FromTask->BarrierIndex));
+
+    // ... and before an eventual taskwait by the parent thread.
+    TsanHappensBefore(FromTask->Parent->GetTaskwaitPtr());
+
+    if (FromTask->TaskGroup != nullptr) {
+      // This task is part of a taskgroup, so it will finish before the
+      // corresponding taskgroup_end.
+      TsanHappensBefore(FromTask->TaskGroup->GetPtr());
+    }
+  }
+  // release dependencies
+  releaseDependencies(FromTask);
+}
+
+static void suspendTask(TaskData *FromTask) {
+  if (!FromTask)
+    return;
+  // Task may be resumed at a later point in time.
+  TsanHappensBefore(FromTask->GetTaskPtr());
+}
+
+static void switchTasks(TaskData *FromTask, TaskData *ToTask) {
+  // Legacy handling for missing reduction callback
+  if (hasReductionCallback < ompt_set_always) {
+    if (FromTask && FromTask->InBarrier) {
+      // We want to ignore writes in the runtime code during barriers,
+      // but not when executing tasks with user code!
+      TsanIgnoreWritesEnd();
+    }
+    if (ToTask && ToTask->InBarrier) {
+      // We want to ignore writes in the runtime code during barriers,
+      // but not when executing tasks with user code!
+      TsanIgnoreWritesBegin();
+    }
+  }
+  //// Not yet used
+  //  if (FromTask)
+  //    FromTask->deactivate();
+  //  if (ToTask)
+  //    ToTask->activate();
+}
+
+static void endTask(TaskData *FromTask) {
+  if (!FromTask)
+    return;
+}
+
+static void startTask(TaskData *ToTask) {
+  if (!ToTask)
+    return;
+  // Handle dependencies on first execution of the task
+  if (ToTask->execution == 0) {
+    ToTask->execution++;
+    acquireDependencies(ToTask);
+  }
+  // 1. Task will begin execution after it has been created.
+  // 2. Task will resume after it has been switched away.
+  TsanHappensAfter(ToTask->GetTaskPtr());
+}
+
 static void ompt_tsan_task_schedule(ompt_data_t *first_task_data,
                                     ompt_task_status_t prior_task_status,
                                     ompt_data_t *second_task_data) {
@@ -916,88 +992,62 @@ static void ompt_tsan_task_schedule(ompt_data_t *first_task_data,
   //    ompt_task_cancel        = 3,
   //     -> first completed, first freed, second starts
   //
+  //    ompt_taskwait_complete = 8,
+  //     -> first starts, first completes, first freed, second ignored
+  //
   //    ompt_task_detach        = 4,
   //    ompt_task_yield         = 2,
   //    ompt_task_switch        = 7
   //     -> first suspended, second starts
   //
 
-  if (prior_task_status == ompt_task_early_fulfill)
-    return;
-
   TaskData *FromTask = ToTaskData(first_task_data);
+  TaskData *ToTask = ToTaskData(second_task_data);
 
-  // Legacy handling for missing reduction callback
-  if (hasReductionCallback < ompt_set_always && FromTask->InBarrier) {
-    // We want to ignore writes in the runtime code during barriers,
-    // but not when executing tasks with user code!
-    TsanIgnoreWritesEnd();
-  }
-
-  // The late fulfill happens after the detached task finished execution
-  if (prior_task_status == ompt_task_late_fulfill)
+  switch (prior_task_status) {
+  case ompt_task_early_fulfill:
+    TsanHappensBefore(FromTask->GetTaskPtr());
+    FromTask->setFulfilled();
+    return;
+  case ompt_task_late_fulfill:
     TsanHappensAfter(FromTask->GetTaskPtr());
-
-  // task completed execution
-  if (prior_task_status == ompt_task_complete ||
-      prior_task_status == ompt_task_cancel ||
-      prior_task_status == ompt_task_late_fulfill) {
-    // Included tasks are executed sequentially, no need to track
-    // synchronization
-    if (!FromTask->isIncluded()) {
-      // Task will finish before a barrier in the surrounding parallel region
-      // ...
-      ParallelData *PData = FromTask->Team;
-      TsanHappensBefore(
-          PData->GetBarrierPtr(FromTask->ImplicitTask->BarrierIndex));
-
-      // ... and before an eventual taskwait by the parent thread.
-      TsanHappensBefore(FromTask->Parent->GetTaskwaitPtr());
-
-      if (FromTask->TaskGroup != nullptr) {
-        // This task is part of a taskgroup, so it will finish before the
-        // corresponding taskgroup_end.
-        TsanHappensBefore(FromTask->TaskGroup->GetPtr());
-      }
-    }
-
-    // release dependencies
-    releaseDependencies(FromTask);
-    // free the previously running task
+    completeTask(FromTask);
     freeTask(FromTask);
-  }
-
-  // For late fulfill of detached task, there is no task to schedule to
-  if (prior_task_status == ompt_task_late_fulfill) {
+    return;
+  case ompt_taskwait_complete:
+    acquireDependencies(FromTask);
+    freeTask(FromTask);
+    return;
+  case ompt_task_complete:
+    completeTask(FromTask);
+    endTask(FromTask);
+    switchTasks(FromTask, ToTask);
+    freeTask(FromTask);
+    return;
+  case ompt_task_cancel:
+    completeTask(FromTask);
+    endTask(FromTask);
+    switchTasks(FromTask, ToTask);
+    freeTask(FromTask);
+    startTask(ToTask);
+    return;
+  case ompt_task_detach:
+    endTask(FromTask);
+    suspendTask(FromTask);
+    switchTasks(FromTask, ToTask);
+    startTask(ToTask);
+    return;
+  case ompt_task_yield:
+    suspendTask(FromTask);
+    switchTasks(FromTask, ToTask);
+    startTask(ToTask);
+    return;
+  case ompt_task_switch:
+    suspendTask(FromTask);
+    switchTasks(FromTask, ToTask);
+    startTask(ToTask);
     return;
   }
-
-  TaskData *ToTask = ToTaskData(second_task_data);
-  // Legacy handling for missing reduction callback
-  if (hasReductionCallback < ompt_set_always && ToTask->InBarrier) {
-    // We re-enter runtime code which currently performs a barrier.
-    TsanIgnoreWritesBegin();
-  }
-
-  // task suspended
-  if (prior_task_status == ompt_task_switch ||
-      prior_task_status == ompt_task_yield ||
-      prior_task_status == ompt_task_detach) {
-    // Task may be resumed at a later point in time.
-    TsanHappensBefore(FromTask->GetTaskPtr());
-    ToTask->ImplicitTask = FromTask->ImplicitTask;
-    assert(ToTask->ImplicitTask != NULL &&
-           "A task belongs to a team and has an implicit task on the stack");
-  }
-
-  // Handle dependencies on first execution of the task
-  if (ToTask->execution == 0) {
-    ToTask->execution++;
-    acquireDependencies(ToTask);
-  }
-  // 1. Task will begin execution after it has been created.
-  // 2. Task will resume after it has been switched away.
-  TsanHappensAfter(ToTask->GetTaskPtr());
 }
 
 static void ompt_tsan_dependences(ompt_data_t *task_data,

@@ -21,7 +21,7 @@
 # POSTCHECK: Compile Unit
 # POSTCHECK-SAME: version = 0x0005
 # POSTCHECK: DW_TAG_variable [9]
-# POSTCHECK: DW_AT_type [DW_FORM_ref_addr] (0x00000000000001f8 "Foo2a")
+# POSTCHECK: DW_AT_type [DW_FORM_ref_addr] (0x{{[0-9a-f]+}} "Foo2a")
 # POSTCHECK: Compile Unit
 # POSTCHECK-SAME: version = 0x0005
 # POSTCHECK: DW_TAG_structure_type [11]

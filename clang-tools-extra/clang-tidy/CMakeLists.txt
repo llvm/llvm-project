@@ -22,6 +22,7 @@ add_clang_library(clangTidy
   DEPENDS
   ClangSACheckers
   omp_gen
+  ClangDriverOptions
   )
 
 clang_target_link_libraries(clangTidy

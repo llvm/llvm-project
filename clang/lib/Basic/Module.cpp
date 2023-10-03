@@ -44,7 +44,7 @@ Module::Module(StringRef Name, SourceLocation DefinitionLoc, Module *Parent,
       InferSubmodules(false), InferExplicitSubmodules(false),
       InferExportWildcard(false), ConfigMacrosExhaustive(false),
       NoUndeclaredIncludes(false), ModuleMapIsPrivate(false),
-      NameVisibility(Hidden) {
+      NamedModuleHasInit(true), NameVisibility(Hidden) {
   if (Parent) {
     IsAvailable = Parent->isAvailable();
     IsUnimportable = Parent->isUnimportable();
@@ -113,6 +113,7 @@ static bool hasFeature(StringRef Feature, const LangOptions &LangOpts,
                         .Case("c99", LangOpts.C99)
                         .Case("c11", LangOpts.C11)
                         .Case("c17", LangOpts.C17)
+                        .Case("c23", LangOpts.C23)
                         .Case("freestanding", LangOpts.Freestanding)
                         .Case("gnuinlineasm", LangOpts.GNUAsm)
                         .Case("objc", LangOpts.ObjC)
@@ -367,6 +368,28 @@ Module *Module::findOrInferSubmodule(StringRef Name) {
   if (Result->InferExportWildcard)
     Result->Exports.push_back(Module::ExportDecl(nullptr, true));
   return Result;
+}
+
+Module *Module::getGlobalModuleFragment() const {
+  assert(isNamedModuleUnit() && "We should only query the global module "
+                                "fragment from the C++ 20 Named modules");
+
+  for (auto *SubModule : SubModules)
+    if (SubModule->isExplicitGlobalModule())
+      return SubModule;
+
+  return nullptr;
+}
+
+Module *Module::getPrivateModuleFragment() const {
+  assert(isNamedModuleUnit() && "We should only query the private module "
+                                "fragment from the C++ 20 Named modules");
+
+  for (auto *SubModule : SubModules)
+    if (SubModule->isPrivateModule())
+      return SubModule;
+
+  return nullptr;
 }
 
 void Module::getExportedModules(SmallVectorImpl<Module *> &Exported) const {

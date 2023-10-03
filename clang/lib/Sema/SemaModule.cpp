@@ -103,7 +103,8 @@ void Sema::HandleStartOfHeaderUnit() {
 
   StringRef HUName = getLangOpts().CurrentModule;
   if (HUName.empty()) {
-    HUName = SourceMgr.getFileEntryForID(SourceMgr.getMainFileID())->getName();
+    HUName =
+        SourceMgr.getFileEntryRefForID(SourceMgr.getMainFileID())->getName();
     const_cast<LangOptions &>(getLangOpts()).CurrentModule = HUName.str();
   }
 
@@ -530,6 +531,12 @@ DeclResult Sema::ActOnModuleImport(SourceLocation StartLoc,
       ImportLoc, Path, Module::AllVisible, /*IsInclusionDirective=*/false);
   if (!Mod)
     return true;
+
+  if (!Mod->isInterfaceOrPartition() && !ModuleName.empty()) {
+    Diag(ImportLoc, diag::err_module_import_non_interface_nor_parition)
+        << ModuleName;
+    return true;
+  }
 
   return ActOnModuleImport(StartLoc, ExportLoc, ImportLoc, Mod, Path);
 }

@@ -13,6 +13,7 @@
 
 #include "mlir/Conversion/NVVMToLLVM/NVVMToLLVM.h"
 
+#include "mlir/Conversion/ConvertToLLVM/ToLLVMInterface.h"
 #include "mlir/Conversion/LLVMCommon/ConversionTarget.h"
 #include "mlir/Conversion/LLVMCommon/Pattern.h"
 #include "mlir/Dialect/Func/IR/FuncOps.h"
@@ -52,7 +53,7 @@ using namespace NVVM;
 namespace {
 
 class PtxBuilder {
-  Operation *op;
+  NVVM::BasicPtxBuilderInterface op;
   PatternRewriter &rewriter;
   std::string asmStr;
   SmallVector<Value> asmVals;
@@ -61,28 +62,33 @@ class PtxBuilder {
   bool hasResult = false;
 
   // https://docs.nvidia.com/cuda/inline-ptx-assembly/index.html#constraints
-  char getRegisterType(Value v) {
-    if (v.getDefiningOp<LLVM::ConstantOp>())
-      return 'n';
-    if (v.getType().isInteger(16))
+  char getRegisterType(Type type) {
+    if (type.isInteger(16))
       return 'h';
-    if (v.getType().isInteger(32))
+    if (type.isInteger(32))
       return 'r';
-    if (v.getType().isInteger(64))
+    if (type.isInteger(64))
       return 'l';
-    if (v.getType().isF32())
+    if (type.isF32())
       return 'f';
-    if (v.getType().isF64())
+    if (type.isF64())
       return 'd';
-    if (auto ptr = v.getType().dyn_cast<LLVM::LLVMPointerType>()) {
+    if (auto ptr = type.dyn_cast<LLVM::LLVMPointerType>()) {
       // Shared address spaces is addressed with 32-bit pointers.
       if (ptr.getAddressSpace() == NVVM::kSharedMemorySpace) {
         return 'r';
       }
       return 'l';
     }
-    assert(false && "Register type is not handled yet");
+    op->emitError() << "Register type could not deduced from MLIR type: "
+                    << type;
     return ' ';
+  }
+
+  char getRegisterType(Value v) {
+    if (v.getDefiningOp<LLVM::ConstantOp>())
+      return 'n';
+    return getRegisterType(v.getType());
   }
 
 public:
@@ -92,26 +98,60 @@ public:
         sideEffects(sideEffects) {}
 
   void insertValue(Value v, PTXRegisterMod itype = PTXRegisterMod::Read) {
+    LLVM_DEBUG(DBGS() << v << "\t Modifier : " << itype << "\n");
+    auto getModifier = [&]() -> const char * {
+      if (itype == PTXRegisterMod::ReadWrite) {
+        assert(false && "Read-Write modifier is not supported. Try setting the "
+                        "same value as Write and Read seperately.");
+        return "+";
+      }
+      if (itype == PTXRegisterMod::Write) {
+        return "=";
+      }
+      return "";
+    };
+    auto addValue = [&](Value v) {
+      if (itype == PTXRegisterMod::Read) {
+        asmVals.push_back(v);
+        return;
+      }
+      if (itype == PTXRegisterMod::ReadWrite)
+        asmVals.push_back(v);
+      hasResult = true;
+    };
+
     llvm::raw_string_ostream ss(asmConstraints);
-    if (itype == PTXRegisterMod::Read) {
-      asmVals.push_back(v);
-    } else if (itype == PTXRegisterMod::ReadWrite) {
-      asmVals.push_back(v);
-      ss << "+";
-      hasResult = true;
-    } else if (itype == PTXRegisterMod::Write) {
-      ss << "=";
-      hasResult = true;
+    // Handle Structs
+    if (auto stype = dyn_cast<LLVM::LLVMStructType>(v.getType())) {
+      if (itype == PTXRegisterMod::Write) {
+        addValue(v);
+      }
+      for (auto [idx, t] : llvm::enumerate(stype.getBody())) {
+        if (itype != PTXRegisterMod::Write) {
+          Value extractValue =
+              rewriter.create<LLVM::ExtractValueOp>(op->getLoc(), v, idx);
+          addValue(extractValue);
+        }
+        if (itype == PTXRegisterMod::ReadWrite) {
+          ss << idx << ",";
+        } else {
+          ss << getModifier() << getRegisterType(t) << ",";
+        }
+        ss.flush();
+      }
+      return;
     }
-    ss << getRegisterType(v) << ",";
+    // Handle Scalars
+    addValue(v);
+    ss << getModifier() << getRegisterType(v) << ",";
     ss.flush();
   }
 
   LLVM::InlineAsmOp build() {
     auto asmDialectAttr =
         LLVM::AsmDialectAttr::get(op->getContext(), LLVM::AsmDialect::AD_ATT);
-    Type resultType = hasResult ? op->getResult(0).getType()
-                                : LLVM::LLVMVoidType::get(op->getContext());
+
+    auto resultTypes = op->getResultTypes();
 
     // Remove the last comma from the constraints string.
     if (!asmConstraints.empty() &&
@@ -122,7 +162,8 @@ public:
     std::replace(asmStr.begin(), asmStr.end(), '%', '$');
 
     return rewriter.create<LLVM::InlineAsmOp>(
-        op->getLoc(), resultType,
+        op->getLoc(),
+        /*result types=*/resultTypes,
         /*operands=*/asmVals,
         /*asm_string=*/llvm::StringRef(asmStr),
         /*constraints=*/asmConstraints.data(),
@@ -158,6 +199,7 @@ struct PtxLowering
     }
 
     SmallVector<std::pair<Value, PTXRegisterMod>> asmValues;
+    LLVM_DEBUG(DBGS() << op.getPtx() << "\n");
     PtxBuilder generator(op, rewriter, op.getPtx(), op.hasSideEffect());
 
     op.getAsmValues(rewriter, asmValues);
@@ -190,8 +232,30 @@ struct ConvertNVVMToLLVMPass
   }
 };
 
+/// Implement the interface to convert NNVM to LLVM.
+struct NVVMToLLVMDialectInterface : public ConvertToLLVMPatternInterface {
+  using ConvertToLLVMPatternInterface::ConvertToLLVMPatternInterface;
+  void loadDependentDialects(MLIRContext *context) const final {
+    context->loadDialect<NVVMDialect>();
+  }
+
+  /// Hook for derived dialect interface to provide conversion patterns
+  /// and mark dialect legal for the conversion target.
+  void populateConvertToLLVMConversionPatterns(
+      ConversionTarget &target, LLVMTypeConverter &typeConverter,
+      RewritePatternSet &patterns) const final {
+    populateNVVMToLLVMConversionPatterns(patterns);
+  }
+};
+
 } // namespace
 
 void mlir::populateNVVMToLLVMConversionPatterns(RewritePatternSet &patterns) {
   patterns.add<PtxLowering>(patterns.getContext());
+}
+
+void mlir::registerConvertNVVMToLLVMInterface(DialectRegistry &registry) {
+  registry.addExtension(+[](MLIRContext *ctx, NVVMDialect *dialect) {
+    dialect->addInterfaces<NVVMToLLVMDialectInterface>();
+  });
 }

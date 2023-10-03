@@ -47,7 +47,7 @@
 #include "SourceCode.h"
 #include "TidyProvider.h"
 #include "XRefs.h"
-#include "index/CanonicalIncludes.h"
+#include "clang-include-cleaner/Record.h"
 #include "index/FileIndex.h"
 #include "refactor/Tweak.h"
 #include "support/Context.h"
@@ -231,12 +231,12 @@ public:
     Preamble = buildPreamble(
         File, *Invocation, Inputs, /*StoreInMemory=*/true,
         [&](CapturedASTCtx Ctx,
-            const std::shared_ptr<const CanonicalIncludes> Includes) {
+            std::shared_ptr<const include_cleaner::PragmaIncludes> PI) {
           if (!Opts.BuildDynamicSymbolIndex)
             return;
           log("Indexing headers...");
           Index.updatePreamble(File, /*Version=*/"null", Ctx.getASTContext(),
-                               Ctx.getPreprocessor(), *Includes);
+                               Ctx.getPreprocessor(), *PI);
         });
     if (!Preamble) {
       elog("Failed to build preamble");

@@ -14,6 +14,18 @@
 # See https://buildkite.com/docs/agent/v3/cli-pipeline#pipeline-format.
 #
 
+set -eu
+set -o pipefail
+
+# Filter rules for generic windows tests
+: ${WINDOWS_AGENTS:='{"queue": "windows"}'}
+# Filter rules for generic linux tests
+: ${LINUX_AGENTS:='{"queue": "linux"}'}
+# Set by buildkite
+: ${BUILDKITE_MESSAGE:=}
+: ${BUILDKITE_COMMIT:=}
+: ${BUILDKITE_BRANCH:=}
+
 cat <<EOF
 steps:
   - trigger: "libcxx-ci"
@@ -27,4 +39,43 @@ steps:
       message: "${BUILDKITE_MESSAGE}"
       commit: "${BUILDKITE_COMMIT}"
       branch: "${BUILDKITE_BRANCH}"
-EOF
+
+  - label: ':linux: Linux x64'
+    artifact_paths:
+    - 'artifacts/**/*'
+    - '*_result.json'
+    - 'build/test-results.xml'
+    agents: ${LINUX_AGENTS}
+    retry:
+      automatic:
+        - exit_status: -1  # Agent was lost
+          limit: 2
+        - exit_status: 255 # Forced agent shutdown
+          limit: 2
+    timeout_in_minutes: 120
+    env:
+      CC: 'clang'
+      CXX: 'clang++'
+    commands:
+    - ./.ci/monolithic-linux.sh "bolt;clang;clang-tools-extra;compiler-rt;flang;libc;libclc;lld;llvm;mlir;polly;pstl" "check-all"
+
+  - label: ':windows: Windows x64'
+    artifact_paths:
+    - 'artifacts/**/*'
+    - '*_result.json'
+    - 'build/test-results.xml'
+    agents: ${WINDOWS_AGENTS}
+    retry:
+      automatic:
+        - exit_status: -1  # Agent was lost
+          limit: 2
+        - exit_status: 255 # Forced agent shutdown
+          limit: 2
+    timeout_in_minutes: 150
+    env:
+      CC: 'cl'
+      CXX: 'cl'
+      LD: 'link'
+    commands:
+    - C:\\BuildTools\\Common7\\Tools\\VsDevCmd.bat -arch=amd64 -host_arch=amd64
+    - bash .ci/monolithic-windows.sh "clang;clang-tools-extra;flang;libclc;lld;llvm;mlir;polly;pstl" "check-all"

@@ -145,7 +145,7 @@ define <vscale x 2 x i64> @mul_nuw_nsw_shuffle_constant_expr(<vscale x 2 x i8> %
 
 define i32 @neg_sub0_sub_nsw_nsw(i32 %a, i32 %b) {
 ; CHECK-LABEL: @neg_sub0_sub_nsw_nsw(
-; CHECK-NEXT:    [[C_NEG:%.*]] = sub i32 [[B:%.*]], [[A:%.*]]
+; CHECK-NEXT:    [[C_NEG:%.*]] = sub nsw i32 [[B:%.*]], [[A:%.*]]
 ; CHECK-NEXT:    ret i32 [[C_NEG]]
 ;
   %c = sub nsw i32 %a, %b
@@ -181,7 +181,7 @@ define i32 @neg_sub_sub_nsw1(i32 %a, i32 %b) {
 
 define i32 @neg_mul_sub_nsw_nsw(i32 %a, i32 %b) {
 ; CHECK-LABEL: @neg_mul_sub_nsw_nsw(
-; CHECK-NEXT:    [[C_NEG:%.*]] = sub i32 [[B:%.*]], [[A:%.*]]
+; CHECK-NEXT:    [[C_NEG:%.*]] = sub nsw i32 [[B:%.*]], [[A:%.*]]
 ; CHECK-NEXT:    ret i32 [[C_NEG]]
 ;
   %c = sub nsw i32 %a, %b
@@ -251,4 +251,167 @@ define i32 @sub_sub1_nsw_nsw(i32 %a, i32 %b, i32 %c) {
   %s1 = sub nsw i32 %a, %b
   %s2 = sub nsw i32 %c, %s1
   ret i32 %s2
+}
+
+define i8 @neg_nsw_freeze(i8 %a1, i8 %a2) {
+; CHECK-LABEL: @neg_nsw_freeze(
+; CHECK-NEXT:    [[A_NEG:%.*]] = sub nsw i8 [[A2:%.*]], [[A1:%.*]]
+; CHECK-NEXT:    [[FR_NEG:%.*]] = freeze i8 [[A_NEG]]
+; CHECK-NEXT:    ret i8 [[FR_NEG]]
+;
+  %a = sub nsw i8 %a1, %a2
+  %fr = freeze i8 %a
+  %neg = sub nsw i8 0, %fr
+  ret i8 %neg
+}
+
+define i8 @neg_nsw_phi(i1 %c, i8 %a1, i8 %a2, i8 %b1, i8 %b2) {
+; CHECK-LABEL: @neg_nsw_phi(
+; CHECK-NEXT:    br i1 [[C:%.*]], label [[IF:%.*]], label [[ELSE:%.*]]
+; CHECK:       if:
+; CHECK-NEXT:    [[A_NEG:%.*]] = sub nsw i8 [[A2:%.*]], [[A1:%.*]]
+; CHECK-NEXT:    br label [[JOIN:%.*]]
+; CHECK:       else:
+; CHECK-NEXT:    [[B_NEG:%.*]] = sub nsw i8 [[B2:%.*]], [[B1:%.*]]
+; CHECK-NEXT:    br label [[JOIN]]
+; CHECK:       join:
+; CHECK-NEXT:    [[PHI_NEG:%.*]] = phi i8 [ [[A_NEG]], [[IF]] ], [ [[B_NEG]], [[ELSE]] ]
+; CHECK-NEXT:    ret i8 [[PHI_NEG]]
+;
+  br i1 %c, label %if, label %else
+
+if:
+  %a = sub nsw i8 %a1, %a2
+  br label %join
+
+else:
+  %b = sub nsw i8 %b1, %b2
+  br label %join
+
+join:
+  %phi = phi i8 [ %a, %if ], [ %b, %else ]
+  %neg = sub nsw i8 0, %phi
+  ret i8 %neg
+}
+
+define i8 @neg_nsw_select(i1 %c, i8 %a1, i8 %a2, i8 %b1, i8 %b2) {
+; CHECK-LABEL: @neg_nsw_select(
+; CHECK-NEXT:    [[A_NEG:%.*]] = sub nsw i8 [[A2:%.*]], [[A1:%.*]]
+; CHECK-NEXT:    [[B_NEG:%.*]] = sub nsw i8 [[B2:%.*]], [[B1:%.*]]
+; CHECK-NEXT:    [[SEL_NEG:%.*]] = select i1 [[C:%.*]], i8 [[A_NEG]], i8 [[B_NEG]]
+; CHECK-NEXT:    ret i8 [[SEL_NEG]]
+;
+  %a = sub nsw i8 %a1, %a2
+  %b = sub nsw i8 %b1, %b2
+  %sel = select i1 %c, i8 %a, i8 %b
+  %neg = sub nsw i8 0, %sel
+  ret i8 %neg
+}
+
+define <4 x i8> @neg_nsw_shufflevector(<2 x i8> %a1, <2 x i8> %a2, <2 x i8> %b1, <2 x i8> %b2) {
+; CHECK-LABEL: @neg_nsw_shufflevector(
+; CHECK-NEXT:    [[A_NEG:%.*]] = sub nsw <2 x i8> [[A2:%.*]], [[A1:%.*]]
+; CHECK-NEXT:    [[B_NEG:%.*]] = sub nsw <2 x i8> [[B2:%.*]], [[B1:%.*]]
+; CHECK-NEXT:    [[SHUF_NEG:%.*]] = shufflevector <2 x i8> [[A_NEG]], <2 x i8> [[B_NEG]], <4 x i32> <i32 0, i32 1, i32 2, i32 3>
+; CHECK-NEXT:    ret <4 x i8> [[SHUF_NEG]]
+;
+  %a = sub nsw <2 x i8> %a1, %a2
+  %b = sub nsw <2 x i8> %b1, %b2
+  %shuf = shufflevector <2 x i8> %a, <2 x i8> %b, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
+  %neg = sub nsw <4 x i8> zeroinitializer, %shuf
+  ret <4 x i8> %neg
+}
+
+define i8 @neg_nsw_extractelement(<2 x i8> %a1, <2 x i8> %a2) {
+; CHECK-LABEL: @neg_nsw_extractelement(
+; CHECK-NEXT:    [[A_NEG:%.*]] = sub nsw <2 x i8> [[A2:%.*]], [[A1:%.*]]
+; CHECK-NEXT:    [[EXTR_NEG:%.*]] = extractelement <2 x i8> [[A_NEG]], i64 0
+; CHECK-NEXT:    ret i8 [[EXTR_NEG]]
+;
+  %a = sub nsw <2 x i8> %a1, %a2
+  %extr = extractelement <2 x i8> %a, i32 0
+  %neg = sub nsw i8 0, %extr
+  ret i8 %neg
+}
+
+define <2 x i8> @neg_nsw_insertelement(<2 x i8> %a1, <2 x i8> %a2, i8 %b1, i8 %b2) {
+; CHECK-LABEL: @neg_nsw_insertelement(
+; CHECK-NEXT:    [[A_NEG:%.*]] = sub nsw <2 x i8> [[A2:%.*]], [[A1:%.*]]
+; CHECK-NEXT:    [[B_NEG:%.*]] = sub nsw i8 [[B2:%.*]], [[B1:%.*]]
+; CHECK-NEXT:    [[INSERT_NEG:%.*]] = insertelement <2 x i8> [[A_NEG]], i8 [[B_NEG]], i64 0
+; CHECK-NEXT:    ret <2 x i8> [[INSERT_NEG]]
+;
+  %a = sub nsw <2 x i8> %a1, %a2
+  %b = sub nsw i8 %b1, %b2
+  %insert  = insertelement <2 x i8> %a, i8 %b, i32 0
+  %neg = sub nsw <2 x i8> zeroinitializer, %insert
+  ret <2 x i8> %neg
+}
+
+define i8 @neg_nsw_shl(i8 %a1, i8 %a2, i8 %b) {
+; CHECK-LABEL: @neg_nsw_shl(
+; CHECK-NEXT:    [[A_NEG:%.*]] = sub nsw i8 [[A2:%.*]], [[A1:%.*]]
+; CHECK-NEXT:    [[SHL_NEG:%.*]] = shl nsw i8 [[A_NEG]], [[B:%.*]]
+; CHECK-NEXT:    ret i8 [[SHL_NEG]]
+;
+  %a = sub nsw i8 %a1, %a2
+  %shl = shl nsw i8 %a, %b
+  %neg = sub nsw i8 0, %shl
+  ret i8 %neg
+}
+
+define i8 @neg_nsw_shl_missing_nsw_on_shl(i8 %a1, i8 %a2, i8 %b) {
+; CHECK-LABEL: @neg_nsw_shl_missing_nsw_on_shl(
+; CHECK-NEXT:    [[A_NEG:%.*]] = sub i8 [[A2:%.*]], [[A1:%.*]]
+; CHECK-NEXT:    [[SHL_NEG:%.*]] = shl i8 [[A_NEG]], [[B:%.*]]
+; CHECK-NEXT:    ret i8 [[SHL_NEG]]
+;
+  %a = sub nsw i8 %a1, %a2
+  %shl = shl i8 %a, %b
+  %neg = sub nsw i8 0, %shl
+  ret i8 %neg
+}
+
+define i8 @neg_nsw_shl_to_mul(i8 %a, i8 %b) {
+; CHECK-LABEL: @neg_nsw_shl_to_mul(
+; CHECK-NEXT:    [[SHL_NEG:%.*]] = mul nsw i8 [[A:%.*]], -2
+; CHECK-NEXT:    ret i8 [[SHL_NEG]]
+;
+  %shl = shl nsw i8 %a, 1
+  %neg = sub nsw i8 0, %shl
+  ret i8 %neg
+}
+
+define i8 @neg_nsw_shl_to_mul_missing_nsw_on_shl(i8 %a, i8 %b) {
+; CHECK-LABEL: @neg_nsw_shl_to_mul_missing_nsw_on_shl(
+; CHECK-NEXT:    [[SHL_NEG:%.*]] = mul i8 [[A:%.*]], -2
+; CHECK-NEXT:    ret i8 [[SHL_NEG]]
+;
+  %shl = shl i8 %a, 1
+  %neg = sub nsw i8 0, %shl
+  ret i8 %neg
+}
+
+define i8 @neg_nsw_mul(i8 %a1, i8 %a2, i8 %b) {
+; CHECK-LABEL: @neg_nsw_mul(
+; CHECK-NEXT:    [[A_NEG:%.*]] = sub i8 [[A2:%.*]], [[A1:%.*]]
+; CHECK-NEXT:    [[SHL_NEG:%.*]] = mul nsw i8 [[A_NEG]], [[B:%.*]]
+; CHECK-NEXT:    ret i8 [[SHL_NEG]]
+;
+  %a = sub nsw i8 %a1, %a2
+  %shl = mul nsw i8 %a, %b
+  %neg = sub nsw i8 0, %shl
+  ret i8 %neg
+}
+
+define i8 @neg_nsw_mul_missing_nsw_on_mul(i8 %a1, i8 %a2, i8 %b) {
+; CHECK-LABEL: @neg_nsw_mul_missing_nsw_on_mul(
+; CHECK-NEXT:    [[A_NEG:%.*]] = sub i8 [[A2:%.*]], [[A1:%.*]]
+; CHECK-NEXT:    [[SHL_NEG:%.*]] = mul i8 [[A_NEG]], [[B:%.*]]
+; CHECK-NEXT:    ret i8 [[SHL_NEG]]
+;
+  %a = sub nsw i8 %a1, %a2
+  %shl = mul i8 %a, %b
+  %neg = sub nsw i8 0, %shl
+  ret i8 %neg
 }

@@ -11,6 +11,7 @@
 
 #include "clang/Driver/ToolChain.h"
 #include "llvm/ADT/StringRef.h"
+#include "llvm/Option/ArgList.h"
 #include "llvm/Option/Option.h"
 #include "llvm/TargetParser/ARMTargetParser.h"
 #include "llvm/TargetParser/Triple.h"
@@ -73,6 +74,7 @@ llvm::ARM::FPUKind getARMTargetFeatures(const Driver &D,
 int getARMSubArchVersionNumber(const llvm::Triple &Triple);
 bool isARMMProfile(const llvm::Triple &Triple);
 bool isARMAProfile(const llvm::Triple &Triple);
+bool isARMBigEndian(const llvm::Triple &Triple, const llvm::opt::ArgList &Args);
 
 } // end namespace arm
 } // end namespace tools

@@ -27,15 +27,32 @@
 #include "mlir/Transforms/DialectConversion.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/STLExtras.h"
+#include "llvm/ADT/SmallVectorExtras.h"
 #include "llvm/Support/FormatVariadic.h"
+#include <cassert>
+#include <cstdint>
 #include <numeric>
 
 using namespace mlir;
 
-/// Gets the first integer value from `attr`, assuming it is an integer array
-/// attribute.
+/// Returns the integer value from the first valid input element, assuming Value
+/// inputs are defined by a constant index ops and Attribute inputs are integer
+/// attributes.
+static uint64_t getFirstIntValue(ValueRange values) {
+  return values[0].getDefiningOp<arith::ConstantIndexOp>().value();
+}
+static uint64_t getFirstIntValue(ArrayRef<Attribute> attr) {
+  return cast<IntegerAttr>(attr[0]).getInt();
+}
 static uint64_t getFirstIntValue(ArrayAttr attr) {
   return (*attr.getAsValueRange<IntegerAttr>().begin()).getZExtValue();
+}
+static uint64_t getFirstIntValue(ArrayRef<OpFoldResult> foldResults) {
+  auto attr = foldResults[0].dyn_cast<Attribute>();
+  if (attr)
+    return getFirstIntValue(attr);
+
+  return getFirstIntValue(ValueRange{foldResults[0].get<Value>()});
 }
 
 /// Returns the number of bits for the given scalar/vector type.
@@ -138,9 +155,7 @@ struct VectorExtractOpConvert final
   LogicalResult
   matchAndRewrite(vector::ExtractOp extractOp, OpAdaptor adaptor,
                   ConversionPatternRewriter &rewriter) const override {
-    // Only support extracting a scalar value now.
-    VectorType resultVectorType = dyn_cast<VectorType>(extractOp.getType());
-    if (resultVectorType && resultVectorType.getNumElements() > 1)
+    if (extractOp.hasDynamicPosition())
       return failure();
 
     Type dstType = getTypeConverter()->convertType(extractOp.getType());
@@ -152,7 +167,7 @@ struct VectorExtractOpConvert final
       return success();
     }
 
-    int32_t id = getFirstIntValue(extractOp.getPosition());
+    int32_t id = getFirstIntValue(extractOp.getMixedPosition());
     rewriter.replaceOpWithNewOp<spirv::CompositeExtractOp>(
         extractOp, adaptor.getVector(), id);
     return success();
@@ -232,7 +247,7 @@ struct VectorInsertOpConvert final
       return success();
     }
 
-    int32_t id = getFirstIntValue(insertOp.getPosition());
+    int32_t id = getFirstIntValue(insertOp.getMixedPosition());
     rewriter.replaceOpWithNewOp<spirv::CompositeInsertOp>(
         insertOp, adaptor.getSource(), adaptor.getDest(), id);
     return success();
@@ -388,7 +403,8 @@ struct VectorReductionPattern final
 
         INT_AND_FLOAT_CASE(ADD, IAddOp, FAddOp);
         INT_AND_FLOAT_CASE(MUL, IMulOp, FMulOp);
-
+        INT_OR_FLOAT_CASE(MAXIMUMF, SPIRVFMaxOp);
+        INT_OR_FLOAT_CASE(MINIMUMF, SPIRVFMinOp);
         INT_OR_FLOAT_CASE(MAXF, SPIRVFMaxOp);
         INT_OR_FLOAT_CASE(MINF, SPIRVFMinOp);
         INT_OR_FLOAT_CASE(MINUI, SPIRVUMinOp);
@@ -444,24 +460,48 @@ struct VectorShuffleOpConvert final
       return rewriter.notifyMatchFailure(shuffleOp,
                                          "unsupported result vector type");
 
-    auto oldSourceType = shuffleOp.getV1VectorType();
-    if (oldSourceType.getNumElements() > 1) {
-      SmallVector<int32_t, 4> components = llvm::to_vector<4>(
-          llvm::map_range(shuffleOp.getMask(), [](Attribute attr) -> int32_t {
-            return cast<IntegerAttr>(attr).getValue().getZExtValue();
-          }));
+    SmallVector<int32_t, 4> mask = llvm::map_to_vector<4>(
+        shuffleOp.getMask(), [](Attribute attr) -> int32_t {
+          return cast<IntegerAttr>(attr).getValue().getZExtValue();
+        });
+
+    auto oldV1Type = shuffleOp.getV1VectorType();
+    auto oldV2Type = shuffleOp.getV2VectorType();
+
+    // When both operands are SPIR-V vectors, emit a SPIR-V shuffle.
+    if (oldV1Type.getNumElements() > 1 && oldV2Type.getNumElements() > 1) {
       rewriter.replaceOpWithNewOp<spirv::VectorShuffleOp>(
           shuffleOp, newResultType, adaptor.getV1(), adaptor.getV2(),
-          rewriter.getI32ArrayAttr(components));
+          rewriter.getI32ArrayAttr(mask));
       return success();
     }
 
-    SmallVector<Value, 2> oldOperands = {adaptor.getV1(), adaptor.getV2()};
-    SmallVector<Value, 4> newOperands;
-    newOperands.reserve(oldResultType.getNumElements());
-    for (const APInt &i : shuffleOp.getMask().getAsValueRange<IntegerAttr>()) {
-      newOperands.push_back(oldOperands[i.getZExtValue()]);
+    // When at least one of the operands becomes a scalar after type conversion
+    // for SPIR-V, extract all the required elements and construct the result
+    // vector.
+    auto getElementAtIdx = [&rewriter, loc = shuffleOp.getLoc()](
+                               Value scalarOrVec, int32_t idx) -> Value {
+      if (auto vecTy = dyn_cast<VectorType>(scalarOrVec.getType()))
+        return rewriter.create<spirv::CompositeExtractOp>(loc, scalarOrVec,
+                                                          idx);
+
+      assert(idx == 0 && "Invalid scalar element index");
+      return scalarOrVec;
+    };
+
+    int32_t numV1Elems = oldV1Type.getNumElements();
+    SmallVector<Value> newOperands(mask.size());
+    for (auto [shuffleIdx, newOperand] : llvm::zip_equal(mask, newOperands)) {
+      Value vec = adaptor.getV1();
+      int32_t elementIdx = shuffleIdx;
+      if (elementIdx >= numV1Elems) {
+        vec = adaptor.getV2();
+        elementIdx -= numV1Elems;
+      }
+
+      newOperand = getElementAtIdx(vec, elementIdx);
     }
+
     rewriter.replaceOpWithNewOp<spirv::CompositeConstructOp>(
         shuffleOp, newResultType, newOperands);
 

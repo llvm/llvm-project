@@ -11,11 +11,15 @@
 //===----------------------------------------------------------------------===//
 
 #include "TestDenseDataFlowAnalysis.h"
+#include "TestDialect.h"
 #include "mlir/Analysis/DataFlow/ConstantPropagationAnalysis.h"
 #include "mlir/Analysis/DataFlow/DeadCodeAnalysis.h"
 #include "mlir/Analysis/DataFlow/DenseAnalysis.h"
 #include "mlir/Analysis/DataFlowFramework.h"
+#include "mlir/IR/Builders.h"
 #include "mlir/IR/SymbolTable.h"
+#include "mlir/Interfaces/CallInterfaces.h"
+#include "mlir/Interfaces/ControlFlowInterfaces.h"
 #include "mlir/Interfaces/SideEffectInterfaces.h"
 #include "mlir/Pass/Pass.h"
 #include "mlir/Support/TypeID.h"
@@ -27,14 +31,14 @@ using namespace mlir::dataflow::test;
 
 namespace {
 
-class NextAccess : public AbstractDenseLattice, public test::AccessLatticeBase {
+class NextAccess : public AbstractDenseLattice, public AccessLatticeBase {
 public:
   MLIR_DEFINE_EXPLICIT_INTERNAL_INLINE_TYPE_ID(NextAccess)
 
   using dataflow::AbstractDenseLattice::AbstractDenseLattice;
 
   ChangeResult meet(const AbstractDenseLattice &lattice) override {
-    return AccessLatticeBase::merge(static_cast<test::AccessLatticeBase>(
+    return AccessLatticeBase::merge(static_cast<AccessLatticeBase>(
         static_cast<const NextAccess &>(lattice)));
   }
 
@@ -49,6 +53,17 @@ public:
 
   void visitOperation(Operation *op, const NextAccess &after,
                       NextAccess *before) override;
+
+  void visitCallControlFlowTransfer(CallOpInterface call,
+                                    CallControlFlowAction action,
+                                    const NextAccess &after,
+                                    NextAccess *before) override;
+
+  void visitRegionBranchControlFlowTransfer(RegionBranchOpInterface branch,
+                                            RegionBranchPoint regionFrom,
+                                            RegionBranchPoint regionTo,
+                                            const NextAccess &after,
+                                            NextAccess *before) override;
 
   // TODO: this isn't ideal for the analysis. When there is no next access, it
   // means "we don't know what the next access is" rather than "there is no next
@@ -78,16 +93,51 @@ void NextAccessAnalysis::visitOperation(Operation *op, const NextAccess &after,
     if (!value)
       return setToExitState(before);
 
+    // If cannot find the most underlying value, we cannot assume anything about
+    // the next accesses.
     value = UnderlyingValueAnalysis::getMostUnderlyingValue(
         value, [&](Value value) {
           return getOrCreateFor<UnderlyingValueLattice>(op, value);
         });
     if (!value)
-      return;
+      return setToExitState(before);
 
     result |= before->set(value, op);
   }
   propagateIfChanged(before, result);
+}
+
+void NextAccessAnalysis::visitCallControlFlowTransfer(
+    CallOpInterface call, CallControlFlowAction action, const NextAccess &after,
+    NextAccess *before) {
+  auto testCallAndStore =
+      dyn_cast<::test::TestCallAndStoreOp>(call.getOperation());
+  if (testCallAndStore && ((action == CallControlFlowAction::EnterCallee &&
+                            testCallAndStore.getStoreBeforeCall()) ||
+                           (action == CallControlFlowAction::ExitCallee &&
+                            !testCallAndStore.getStoreBeforeCall()))) {
+    visitOperation(call, after, before);
+  } else {
+    AbstractDenseBackwardDataFlowAnalysis::visitCallControlFlowTransfer(
+        call, action, after, before);
+  }
+}
+
+void NextAccessAnalysis::visitRegionBranchControlFlowTransfer(
+    RegionBranchOpInterface branch, RegionBranchPoint regionFrom,
+    RegionBranchPoint regionTo, const NextAccess &after, NextAccess *before) {
+  auto testStoreWithARegion =
+      dyn_cast<::test::TestStoreWithARegion>(branch.getOperation());
+
+  if (testStoreWithARegion &&
+      ((regionTo.isParent() && !testStoreWithARegion.getStoreBeforeRegion()) ||
+       (regionFrom.isParent() &&
+        testStoreWithARegion.getStoreBeforeRegion()))) {
+    visitOperation(branch, static_cast<const NextAccess &>(after),
+                   static_cast<NextAccess *>(before));
+  } else {
+    propagateIfChanged(before, before->meet(after));
+  }
 }
 
 namespace {
@@ -99,6 +149,45 @@ struct TestNextAccessPass
 
   static constexpr llvm::StringLiteral kTagAttrName = "name";
   static constexpr llvm::StringLiteral kNextAccessAttrName = "next_access";
+  static constexpr llvm::StringLiteral kAtEntryPointAttrName =
+      "next_at_entry_point";
+
+  static Attribute makeNextAccessAttribute(Operation *op,
+                                           const DataFlowSolver &solver,
+                                           const NextAccess *nextAccess) {
+    if (!nextAccess)
+      return StringAttr::get(op->getContext(), "not computed");
+
+    SmallVector<Attribute> attrs;
+    for (Value operand : op->getOperands()) {
+      Value value = UnderlyingValueAnalysis::getMostUnderlyingValue(
+          operand, [&](Value value) {
+            return solver.lookupState<UnderlyingValueLattice>(value);
+          });
+      std::optional<ArrayRef<Operation *>> nextAcc =
+          nextAccess->getAdjacentAccess(value);
+      if (!nextAcc) {
+        attrs.push_back(StringAttr::get(op->getContext(), "unknown"));
+        continue;
+      }
+
+      SmallVector<Attribute> innerAttrs;
+      innerAttrs.reserve(nextAcc->size());
+      for (Operation *nextAccOp : *nextAcc) {
+        if (auto nextAccTag =
+                nextAccOp->getAttrOfType<StringAttr>(kTagAttrName)) {
+          innerAttrs.push_back(nextAccTag);
+          continue;
+        }
+        std::string repr;
+        llvm::raw_string_ostream os(repr);
+        nextAccOp->print(os);
+        innerAttrs.push_back(StringAttr::get(op->getContext(), os.str()));
+      }
+      attrs.push_back(ArrayAttr::get(op->getContext(), innerAttrs));
+    }
+    return ArrayAttr::get(op->getContext(), attrs);
+  }
 
   void runOnOperation() override {
     Operation *op = getOperation();
@@ -113,7 +202,6 @@ struct TestNextAccessPass
       emitError(op->getLoc(), "dataflow solver failed");
       return signalPassFailure();
     }
-
     op->walk([&](Operation *op) {
       auto tag = op->getAttrOfType<StringAttr>(kTagAttrName);
       if (!tag)
@@ -122,42 +210,28 @@ struct TestNextAccessPass
       const NextAccess *nextAccess = solver.lookupState<NextAccess>(
           op->getNextNode() == nullptr ? ProgramPoint(op->getBlock())
                                        : op->getNextNode());
-      if (!nextAccess) {
-        op->setAttr(kNextAccessAttrName,
-                    StringAttr::get(op->getContext(), "not computed"));
+      op->setAttr(kNextAccessAttrName,
+                  makeNextAccessAttribute(op, solver, nextAccess));
+
+      auto iface = dyn_cast<RegionBranchOpInterface>(op);
+      if (!iface)
         return;
-      }
 
-      SmallVector<Attribute> attrs;
-      for (Value operand : op->getOperands()) {
-        Value value = UnderlyingValueAnalysis::getMostUnderlyingValue(
-            operand, [&](Value value) {
-              return solver.lookupState<UnderlyingValueLattice>(value);
-            });
-        std::optional<ArrayRef<Operation *>> nextAcc =
-            nextAccess->getAdjacentAccess(value);
-        if (!nextAcc) {
-          attrs.push_back(StringAttr::get(op->getContext(), "unknown"));
+      SmallVector<Attribute> entryPointNextAccess;
+      SmallVector<RegionSuccessor> regionSuccessors;
+      iface.getSuccessorRegions(RegionBranchPoint::parent(), regionSuccessors);
+      for (const RegionSuccessor &successor : regionSuccessors) {
+        if (!successor.getSuccessor() || successor.getSuccessor()->empty())
           continue;
-        }
-
-        SmallVector<Attribute> innerAttrs;
-        innerAttrs.reserve(nextAcc->size());
-        for (Operation *nextAccOp : *nextAcc) {
-          if (auto nextAccTag =
-                  nextAccOp->getAttrOfType<StringAttr>(kTagAttrName)) {
-            innerAttrs.push_back(nextAccTag);
-            continue;
-          }
-          std::string repr;
-          llvm::raw_string_ostream os(repr);
-          nextAccOp->print(os);
-          innerAttrs.push_back(StringAttr::get(op->getContext(), os.str()));
-        }
-        attrs.push_back(ArrayAttr::get(op->getContext(), innerAttrs));
+        Block &successorBlock = successor.getSuccessor()->front();
+        ProgramPoint successorPoint = successorBlock.empty()
+                                          ? ProgramPoint(&successorBlock)
+                                          : &successorBlock.front();
+        entryPointNextAccess.push_back(makeNextAccessAttribute(
+            op, solver, solver.lookupState<NextAccess>(successorPoint)));
       }
-
-      op->setAttr(kNextAccessAttrName, ArrayAttr::get(op->getContext(), attrs));
+      op->setAttr(kAtEntryPointAttrName,
+                  ArrayAttr::get(op->getContext(), entryPointNextAccess));
     });
   }
 };

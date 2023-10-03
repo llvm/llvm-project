@@ -14,7 +14,7 @@
 #include "src/__support/fixedvector.h"
 #include "src/__support/macros/attributes.h"
 
-namespace __llvm_libc {
+namespace LIBC_NAMESPACE {
 
 LIBC_THREAD_LOCAL Thread self;
 
@@ -57,7 +57,7 @@ public:
 
   cpp::optional<unsigned int> new_key(TSSDtor *dtor) {
     MutexLock lock(&mtx);
-    for (size_t i = 0; i < TSS_KEY_COUNT; ++i) {
+    for (unsigned int i = 0; i < TSS_KEY_COUNT; ++i) {
       TSSKeyUnit &u = units[i];
       if (!u.active) {
         u = {dtor};
@@ -183,4 +183,4 @@ void *get_tss_value(unsigned int key) {
   return u.payload;
 }
 
-} // namespace __llvm_libc
+} // namespace LIBC_NAMESPACE

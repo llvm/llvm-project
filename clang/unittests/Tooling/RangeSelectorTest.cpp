@@ -486,6 +486,22 @@ TEST(RangeSelectorTest, NameOpTypeLoc) {
   EXPECT_THAT_EXPECTED(select(name(CtorTy), MatchC), HasValue("Foo"));
 }
 
+TEST(RangeSelectorTest, NameOpTemplateSpecializationTypeLoc) {
+  StringRef Code = R"cc(
+    namespace ns {
+    template <typename T>
+    struct Foo {};
+    }  // namespace ns
+
+    ns::Foo<int> a;
+  )cc";
+  const char *Loc = "tyloc";
+  // Matches declaration of `a`.
+  TestMatch MatchA =
+      matchCode(Code, varDecl(hasName("a"), hasTypeLoc(typeLoc().bind(Loc))));
+  EXPECT_THAT_EXPECTED(select(name(Loc), MatchA), HasValue("Foo"));
+}
+
 TEST(RangeSelectorTest, NameOpErrors) {
   EXPECT_THAT_EXPECTED(selectFromTrivial(name("unbound_id")),
                        Failed<StringError>(withUnboundNodeMessage()));

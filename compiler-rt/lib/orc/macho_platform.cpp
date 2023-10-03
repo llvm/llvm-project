@@ -577,7 +577,7 @@ Error MachOPlatformRuntimeState::deregisterObjectPlatformSections(
   // TODO: Add a JITDylib prepare-for-teardown operation that clears all
   //       registered sections, causing this function to take the fast-path.
   ORC_RT_DEBUG({
-    printdbg("MachOPlatform: Registering object sections for %p.\n",
+    printdbg("MachOPlatform: Deregistering object sections for %p.\n",
              HeaderAddr.toPtr<void *>());
   });
 

@@ -138,6 +138,16 @@ namespace std::ranges {
     inline constexpr auto values = elements<1>;
   }
 
+  // [range.utility.conv], range conversions
+  template<class C, input_range R, class... Args> requires (!view<C>)
+    constexpr C to(R&& r, Args&&... args);     // Since C++23
+  template<template<class...> class C, input_range R, class... Args>
+    constexpr auto to(R&& r, Args&&... args);  // Since C++23
+  template<class C, class... Args> requires (!view<C>)
+    constexpr auto to(Args&&... args);         // Since C++23
+  template<template<class...> class C, class... Args>
+    constexpr auto to(Args&&... args);         // Since C++23
+
   // [range.empty], empty view
   template<class T>
     requires is_object_v<T>
@@ -252,6 +262,19 @@ namespace std::ranges {
   template<class W, class Bound>
     inline constexpr bool enable_borrowed_range<iota_view<W, Bound>> = true;
 
+  // [range.repeat], repeat view
+  template<class T>
+    concept integer-like-with-usable-difference-type =  // exposition only
+      is-signed-integer-like<T> || (is-integer-like<T> && weakly_incrementable<T>);
+
+  template<move_constructible T, semiregular Bound = unreachable_sentinel_t>
+    requires (is_object_v<T> && same_as<T, remove_cv_t<T>> &&
+              (integer-like-with-usable-difference-type<Bound> ||
+               same_as<Bound, unreachable_sentinel_t>))
+  class repeat_view;
+
+  namespace views { inline constexpr unspecified repeat = unspecified; }
+
   // [range.join], join view
   template<input_range V>
     requires view<V> && input_range<range_reference_t<V>>
@@ -297,17 +320,24 @@ namespace std::ranges {
   class zip_view;        // C++23
 
   template<class... Views>
-    inline constexpr bool enable_borrowed_range<zip_view<Views...>> =    // C++23
+    inline constexpr bool enable_borrowed_range<zip_view<Views...>> =       // C++23
       (enable_borrowed_range<Views> && ...);
 
-  namespace views { inline constexpr unspecified zip = unspecified; }    // C++23
+  namespace views { inline constexpr unspecified zip = unspecified; }       // C++23
 
   // [range.as.rvalue]
   template <view V>
     requires input_range<V>
-  class as_rvalue_view; // since C++23
+  class as_rvalue_view;                                                     // C++23
 
-  namespace views { inline constexpr unspecified as_rvalue ) unspecified; } // since C++23
+  namespace views { inline constexpr unspecified as_rvalue ) unspecified; } // C++23
+
+  [range.chunk.by]
+  template<forward_range V, indirect_binary_predicate<iterator_t<V>, iterator_t<V>> Pred>
+    requires view<V> && is_object_v<Pred>
+  class chunk_by_view;                                                      // C++23
+
+  namespace views { inline constexpr unspecified chunk_by = unspecified; }  // C++23
 }
 
 namespace std {
@@ -350,6 +380,7 @@ namespace std {
 #include <__ranges/access.h>
 #include <__ranges/all.h>
 #include <__ranges/as_rvalue_view.h>
+#include <__ranges/chunk_by_view.h>
 #include <__ranges/common_view.h>
 #include <__ranges/concepts.h>
 #include <__ranges/counted.h>
@@ -370,6 +401,7 @@ namespace std {
 #include <__ranges/rbegin.h>
 #include <__ranges/ref_view.h>
 #include <__ranges/rend.h>
+#include <__ranges/repeat_view.h>
 #include <__ranges/reverse_view.h>
 #include <__ranges/single_view.h>
 #include <__ranges/size.h>
@@ -377,6 +409,7 @@ namespace std {
 #include <__ranges/subrange.h>
 #include <__ranges/take_view.h>
 #include <__ranges/take_while_view.h>
+#include <__ranges/to.h>
 #include <__ranges/transform_view.h>
 #include <__ranges/view_interface.h>
 #include <__ranges/views.h>

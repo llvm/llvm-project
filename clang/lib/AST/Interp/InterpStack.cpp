@@ -6,9 +6,12 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "InterpStack.h"
+#include "Boolean.h"
+#include "Floating.h"
+#include "Integral.h"
 #include <cassert>
 #include <cstdlib>
-#include "InterpStack.h"
 
 using namespace clang;
 using namespace clang::interp;
@@ -24,6 +27,9 @@ void InterpStack::clear() {
     std::free(Chunk);
   Chunk = nullptr;
   StackSize = 0;
+#ifndef NDEBUG
+  ItemTypes.clear();
+#endif
 }
 
 void *InterpStack::grow(size_t Size) {
@@ -75,4 +81,25 @@ void InterpStack::shrink(size_t Size) {
 
   Chunk->End -= Size;
   StackSize -= Size;
+}
+
+void InterpStack::dump() const {
+#ifndef NDEBUG
+  llvm::errs() << "Items: " << ItemTypes.size() << ". Size: " << size() << "\n";
+  if (ItemTypes.empty())
+    return;
+
+  size_t Index = 0;
+  size_t Offset = align(primSize(ItemTypes[0]));
+  for (PrimType Ty : ItemTypes) {
+    llvm::errs() << Index << "/" << Offset << ": ";
+    TYPE_SWITCH(Ty, {
+      const T &V = peek<T>(Offset);
+      llvm::errs() << V;
+    });
+    llvm::errs() << "\n";
+    Offset += align(primSize(Ty));
+    ++Index;
+  }
+#endif
 }

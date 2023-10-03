@@ -62,7 +62,7 @@ jobs:
       # actions/checkout deletes any existing files in the new git directory,
       # so this needs to either run before ccache-action or it has to use
       # clean: false.
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
         with:
           fetch-depth: 250
       - name: Setup ccache
@@ -93,6 +93,6 @@ jobs:
         run: |
           # Make sure all of LLVM libraries that llvm-config needs are built.
           ninja -C build
-          cmake -G Ninja -S libclc -B libclc-build -DLLVM_DIR=$(pwd)/build/lib/cmake/llvm -DLIBCLC_TARGETS_TO_BUILD="amdgcn--;amdgcn--amdhsa;r600--;nvptx--;nvptx64--;nvptx--nvidiacl;nvptx64--nvidiacl"
+          cmake -G Ninja -S libclc -B libclc-build -DLLVM_DIR="$(pwd)"/build/lib/cmake/llvm -DLIBCLC_TARGETS_TO_BUILD="amdgcn--;amdgcn--amdhsa;r600--;nvptx--;nvptx64--;nvptx--nvidiacl;nvptx64--nvidiacl"
           ninja -C libclc-build
           ninja -C libclc-build test

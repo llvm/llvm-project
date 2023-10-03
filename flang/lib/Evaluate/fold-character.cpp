@@ -80,8 +80,6 @@ Expr<Type<TypeCategory::Character, KIND>> FoldIntrinsicFunction(
       return FoldMaxvalMinval<T>(
           context, std::move(funcRef), RelationalOperator::GT, *identity);
     }
-  } else if (name == "merge") {
-    return FoldMerge<T>(context, std::move(funcRef));
   } else if (name == "min") {
     return FoldMINorMAX(context, std::move(funcRef), Ordering::Less);
   } else if (name == "minval") {

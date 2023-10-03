@@ -9,7 +9,7 @@ set(all_amdgpu_architectures "gfx700;gfx701;gfx801;gfx803;gfx900;gfx902;gfx906"
                              "gfx1031;gfx1032;gfx1033;gfx1034;gfx1035;gfx1036"
                              "gfx1100;gfx1101;gfx1102;gfx1103;gfx1150;gfx1151")
 set(all_nvptx_architectures "sm_35;sm_37;sm_50;sm_52;sm_53;sm_60;sm_61;sm_62"
-                            "sm_70;sm_72;sm_75;sm_80;sm_86")
+                            "sm_70;sm_72;sm_75;sm_80;sm_86;sm_89;sm_90")
 set(all_gpu_architectures
     "${all_amdgpu_architectures};${all_nvptx_architectures}")
 set(LIBC_GPU_ARCHITECTURES "all" CACHE STRING
@@ -30,12 +30,12 @@ endif()
 
 # Identify any locally installed AMD GPUs on the system using 'amdgpu-arch'.
 find_program(LIBC_AMDGPU_ARCH
-             NAMES amdgpu-arch
+             NAMES amdgpu-arch NO_DEFAULT_PATH
              PATHS ${LLVM_BINARY_DIR}/bin /opt/rocm/llvm/bin/)
 
 # Identify any locally installed NVIDIA GPUs on the system using 'nvptx-arch'.
 find_program(LIBC_NVPTX_ARCH
-             NAMES nvptx-arch
+             NAMES nvptx-arch NO_DEFAULT_PATH
              PATHS ${LLVM_BINARY_DIR}/bin)
 
 # Get the list of all natively supported GPU architectures.
@@ -64,7 +64,7 @@ message(STATUS "Building libc for the following GPU architecture(s): "
 
 # Identify the program used to package multiple images into a single binary.
 find_program(LIBC_CLANG_OFFLOAD_PACKAGER
-             NAMES clang-offload-packager
+             NAMES clang-offload-packager NO_DEFAULT_PATH
              PATHS ${LLVM_BINARY_DIR}/bin)
 if(NOT LIBC_CLANG_OFFLOAD_PACKAGER)
   message(FATAL_ERROR "Cannot find the 'clang-offload-packager' for the GPU "
@@ -114,4 +114,14 @@ if(LIBC_GPU_TARGET_ARCHITECTURE_IS_NVPTX)
   if(CUDAToolkit_FOUND)
     get_filename_component(LIBC_CUDA_ROOT "${CUDAToolkit_BIN_DIR}" DIRECTORY ABSOLUTE)
   endif()
+endif()
+
+if(LIBC_GPU_TARGET_ARCHITECTURE_IS_AMDGPU)
+  # The AMDGPU environment uses different code objects to encode the ABI for
+  # kernel calls and intrinsic functions. We want to specify this manually to
+  # conform to whatever the test suite was built to handle.
+  # FIXME: The test suite currently hangs when compiled targeting version five.
+  # This occurrs during traversal of the callback array in the startup code. We
+  # deliberately use version four until this can be addressed.
+  set(LIBC_GPU_CODE_OBJECT_VERSION 4)
 endif()

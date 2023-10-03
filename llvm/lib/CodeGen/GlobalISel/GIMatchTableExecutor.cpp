@@ -26,12 +26,19 @@ GIMatchTableExecutor::MatcherState::MatcherState(unsigned MaxRenderers)
 
 GIMatchTableExecutor::GIMatchTableExecutor() = default;
 
-bool GIMatchTableExecutor::isOperandImmEqual(
-    const MachineOperand &MO, int64_t Value,
-    const MachineRegisterInfo &MRI) const {
-  if (MO.isReg() && MO.getReg())
+bool GIMatchTableExecutor::isOperandImmEqual(const MachineOperand &MO,
+                                             int64_t Value,
+                                             const MachineRegisterInfo &MRI,
+                                             bool Splat) const {
+  if (MO.isReg() && MO.getReg()) {
     if (auto VRegVal = getIConstantVRegValWithLookThrough(MO.getReg(), MRI))
       return VRegVal->Value.getSExtValue() == Value;
+
+    if (Splat) {
+      if (auto VRegVal = getIConstantSplatVal(MO.getReg(), MRI))
+        return VRegVal->getSExtValue() == Value;
+    }
+  }
   return false;
 }
 

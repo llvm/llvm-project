@@ -6,19 +6,19 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_LIBC_SRC_SUPPORT_CPP_STRING_H
-#define LLVM_LIBC_SRC_SUPPORT_CPP_STRING_H
+#ifndef LLVM_LIBC_SRC___SUPPORT_CPP_STRING_H
+#define LLVM_LIBC_SRC___SUPPORT_CPP_STRING_H
 
 #include "src/__support/CPP/string_view.h"
 #include "src/__support/integer_to_string.h" // IntegerToString
-#include "src/string/memory_utils/memcpy_implementations.h"
-#include "src/string/memory_utils/memset_implementations.h"
+#include "src/string/memory_utils/inline_memcpy.h"
+#include "src/string/memory_utils/inline_memset.h"
 #include "src/string/string_utils.h" // string_length
 
 #include <stddef.h> // size_t
 #include <stdlib.h> // malloc, free
 
-namespace __llvm_libc {
+namespace LIBC_NAMESPACE {
 namespace cpp {
 
 // This class mimics std::string but does not intend to be a full fledged
@@ -58,8 +58,10 @@ public:
     resize(count);
     inline_memcpy(buffer_, cstr, count);
   }
+  LIBC_INLINE string(const string_view &view)
+      : string(view.data(), view.size()) {}
   LIBC_INLINE string(const char *cstr)
-      : string(cstr, ::__llvm_libc::internal::string_length(cstr)) {}
+      : string(cstr, ::LIBC_NAMESPACE::internal::string_length(cstr)) {}
   LIBC_INLINE string(size_t size_, char value) {
     resize(size_);
     inline_memset((void *)buffer_, value, size_);
@@ -76,6 +78,10 @@ public:
     capacity_ = other.capacity_;
     other.reset_no_deallocate();
     return *this;
+  }
+
+  LIBC_INLINE string &operator=(const string_view &view) {
+    return *this = string(view);
   }
 
   LIBC_INLINE ~string() {
@@ -189,10 +195,8 @@ LIBC_INLINE string operator+(const char *lhs, const string &rhs) {
 
 namespace internal {
 template <typename T> string to_dec_string(T value) {
-  char dec_buf[IntegerToString::dec_bufsize<T>()];
-  auto maybe_string_view = IntegerToString::dec(value, dec_buf);
-  const auto &string_view = *maybe_string_view;
-  return string(string_view.data(), string_view.size());
+  const IntegerToString<T> buffer(value);
+  return buffer.view();
 }
 } // namespace internal
 
@@ -221,6 +225,6 @@ LIBC_INLINE string to_string(unsigned long long value) {
 // LIBC_INLINE string to_string(long double value);
 
 } // namespace cpp
-} // namespace __llvm_libc
+} // namespace LIBC_NAMESPACE
 
-#endif // LLVM_LIBC_SRC_SUPPORT_CPP_STRING_H
+#endif // LLVM_LIBC_SRC___SUPPORT_CPP_STRING_H

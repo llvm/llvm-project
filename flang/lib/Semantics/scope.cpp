@@ -304,23 +304,6 @@ bool Scope::CanImport(const SourceName &name) const {
   }
 }
 
-const Scope *Scope::FindScope(parser::CharBlock source) const {
-  return const_cast<Scope *>(this)->FindScope(source);
-}
-
-Scope *Scope::FindScope(parser::CharBlock source) {
-  bool isContained{sourceRange_.Contains(source)};
-  if (!isContained && !IsTopLevel() && kind_ != Kind::Module) {
-    return nullptr;
-  }
-  for (auto &child : children_) {
-    if (auto *scope{child.FindScope(source)}) {
-      return scope;
-    }
-  }
-  return isContained && !IsTopLevel() ? this : nullptr;
-}
-
 void Scope::AddSourceRange(parser::CharBlock source) {
   if (source.empty()) {
     return;
@@ -334,10 +317,14 @@ void Scope::AddSourceRange(parser::CharBlock source) {
   for (auto *scope{this}; !scope->IsTopLevel(); scope = &scope->parent()) {
     CHECK(scope->sourceRange_.empty() == (scope->cookedSource_ == nullptr));
     if (!scope->cookedSource_) {
+      context_.UpdateScopeIndex(*scope, source);
       scope->cookedSource_ = cooked;
       scope->sourceRange_ = source;
     } else if (scope->cookedSource_ == cooked) {
-      scope->sourceRange_.ExtendToCover(source);
+      auto combined{scope->sourceRange()};
+      combined.ExtendToCover(source);
+      context_.UpdateScopeIndex(*scope, combined);
+      scope->sourceRange_ = combined;
     } else {
       // There's a bug that will be hard to fix; crash informatively
       const parser::AllSources &allSources{allCookedSources.allSources()};
@@ -361,6 +348,12 @@ void Scope::AddSourceRange(parser::CharBlock source) {
                   "source files \"%s\" and \"%s\"",
           scopeDesc.c_str(), newDesc.c_str());
     }
+    // Note: If the "break;" here were unconditional (or, equivalently, if
+    // there were no loop at all) then the source ranges of parent scopes
+    // would not enclose the source ranges of their children.  Timing
+    // shows that it's cheap to maintain this property, with the exceptions
+    // of top-level scopes and for (sub)modules and their descendant
+    // submodules.
     if (scope->IsSubmodule()) {
       break; // Submodules are child scopes but not contained ranges
     }

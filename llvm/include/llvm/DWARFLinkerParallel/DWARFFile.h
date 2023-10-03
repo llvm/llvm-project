@@ -29,15 +29,7 @@ public:
 
   DWARFFile(StringRef Name, std::unique_ptr<DWARFContext> Dwarf,
             std::unique_ptr<AddressesMap> Addresses,
-            const std::vector<std::string> &Warnings,
-            UnloadCallbackTy UnloadFunc = nullptr)
-      : FileName(Name), Dwarf(std::move(Dwarf)),
-        Addresses(std::move(Addresses)), Warnings(Warnings),
-        UnloadFunc(UnloadFunc) {
-    if (this->Dwarf)
-      Endianess = this->Dwarf->isLittleEndian() ? support::endianness::little
-                                                : support::endianness::big;
-  }
+            UnloadCallbackTy UnloadFunc = nullptr);
 
   /// Object file name.
   StringRef FileName;
@@ -47,12 +39,6 @@ public:
 
   /// Helpful address information(list of valid address ranges, relocations).
   std::unique_ptr<AddressesMap> Addresses;
-
-  /// Warnings for object file.
-  const std::vector<std::string> &Warnings;
-
-  /// Endiannes of source DWARF information.
-  support::endianness Endianess = support::endianness::little;
 
   /// Callback to the module keeping object file to unload.
   UnloadCallbackTy UnloadFunc;

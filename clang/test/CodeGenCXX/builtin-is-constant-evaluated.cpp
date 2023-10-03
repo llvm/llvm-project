@@ -78,7 +78,7 @@ void test_arr_expr() {
   // CHECK-ARR: %x2 = alloca [42 x i8],
   char x2[std::is_constant_evaluated() && __builtin_is_constant_evaluated() ? 42 : RANDU()];
 
-  // CHECK-ARR: call ptr @llvm.stacksave()
+  // CHECK-ARR: call ptr @llvm.stacksave.p0()
   // CHECK-ARR: %vla = alloca i8, i64 13,
   char x3[std::is_constant_evaluated() || __builtin_is_constant_evaluated() ? RANDU() : 13];
 }

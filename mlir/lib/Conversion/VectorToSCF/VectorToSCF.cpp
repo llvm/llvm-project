@@ -10,6 +10,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include <numeric>
 #include <optional>
 #include <type_traits>
 
@@ -313,15 +314,18 @@ static BufferAllocs allocBuffers(OpBuilder &b, OpTy xferOp) {
 /// the VectorType into the MemRefType.
 ///
 /// E.g.: memref<9xvector<5x6xf32>> --> memref<9x5xvector<6xf32>>
-static MemRefType unpackOneDim(MemRefType type) {
+static FailureOr<MemRefType> unpackOneDim(MemRefType type) {
   auto vectorType = dyn_cast<VectorType>(type.getElementType());
+  // Vectors with leading scalable dims are not supported.
+  // It may be possible to support these in future by using dynamic memref dims.
+  if (vectorType.getScalableDims().front())
+    return failure();
   auto memrefShape = type.getShape();
   SmallVector<int64_t, 8> newMemrefShape;
   newMemrefShape.append(memrefShape.begin(), memrefShape.end());
   newMemrefShape.push_back(vectorType.getDimSize(0));
   return MemRefType::get(newMemrefShape,
-                         VectorType::get(vectorType.getShape().drop_front(),
-                                         vectorType.getElementType()));
+                         VectorType::Builder(vectorType).dropDim(0));
 }
 
 /// Given a transfer op, find the memref from which the mask is loaded. This
@@ -541,6 +545,10 @@ LogicalResult checkPrepareXferOp(OpTy xferOp,
     return failure();
   if (xferOp.getVectorType().getRank() <= options.targetRank)
     return failure();
+  // Currently the unpacking of the leading dimension into the memref is not
+  // supported for scalable dimensions.
+  if (xferOp.getVectorType().getScalableDims().front())
+    return failure();
   if (isTensorOp(xferOp) && !options.lowerTensors)
     return failure();
   // Transfer ops that modify the element type are not supported atm.
@@ -651,6 +659,171 @@ struct PrepareTransferWriteConversion
   }
 };
 
+/// Decompose a n-D PrintOp into a loop of elementary/scalar prints. This allows
+/// printing both 1D scalable vectors and n-D fixed size vectors.
+///
+/// E.g.:
+/// ```
+/// vector.print %v : vector<[4]xi32>
+/// ```
+/// is rewritten to:
+/// ```
+/// %c0 = arith.constant 0 : index
+/// %c4 = arith.constant 4 : index
+/// %c1 = arith.constant 1 : index
+/// %vscale = vector.vscale
+/// %length = arith.muli %vscale, %c4 : index
+/// %lastIndex = arith.subi %length, %c1 : index
+/// vector.print punctuation <open>
+/// scf.for %i = %c0 to %length step %c1 {
+///   %el = vector.extractelement %v[%i : index] : vector<[4]xi32>
+///   vector.print %el : i32 punctuation <no_punctuation>
+///   %notLastIndex = arith.cmpi ult, %i, %lastIndex : index
+///   scf.if %notLastIndex {
+///     vector.print punctuation <comma>
+///   }
+/// }
+/// vector.print punctuation <close>
+/// vector.print
+/// ```
+struct DecomposePrintOpConversion : public VectorToSCFPattern<vector::PrintOp> {
+  using VectorToSCFPattern<vector::PrintOp>::VectorToSCFPattern;
+  LogicalResult matchAndRewrite(vector::PrintOp printOp,
+                                PatternRewriter &rewriter) const override {
+    if (!printOp.getSource())
+      return failure();
+
+    VectorType vectorType = dyn_cast<VectorType>(printOp.getPrintType());
+    if (!vectorType)
+      return failure();
+
+    // Currently >= 2D scalable vectors are not supported.
+    // These can't be lowered to LLVM (as LLVM does not support scalable vectors
+    // of scalable vectors), and due to limitations of current ops can't be
+    // indexed with SSA values or flattened. This may change after
+    // https://reviews.llvm.org/D155034, though there still needs to be a path
+    // for lowering to LLVM.
+    if (vectorType.getRank() > 1 && vectorType.isScalable())
+      return failure();
+
+    auto loc = printOp.getLoc();
+    auto value = printOp.getSource();
+
+    if (auto intTy = dyn_cast<IntegerType>(vectorType.getElementType())) {
+      // Oddly sized integers are (somewhat) buggy on a lot of backends, so to
+      // avoid issues extend them to a more standard size.
+      // https://github.com/llvm/llvm-project/issues/30613
+      auto width = intTy.getWidth();
+      auto legalWidth = llvm::NextPowerOf2(std::max(8u, width) - 1);
+      auto legalIntTy = IntegerType::get(rewriter.getContext(), legalWidth,
+                                         intTy.getSignedness());
+      // arith can only take signless integers, so we must cast back and forth.
+      auto signlessSourceVectorType =
+          vectorType.cloneWith({}, getIntTypeWithSignlessSemantics(intTy));
+      auto signlessTargetVectorType =
+          vectorType.cloneWith({}, getIntTypeWithSignlessSemantics(legalIntTy));
+      auto targetVectorType = vectorType.cloneWith({}, legalIntTy);
+      value = rewriter.create<vector::BitCastOp>(loc, signlessSourceVectorType,
+                                                 value);
+      if (width == 1 || intTy.isUnsigned())
+        value = rewriter.create<arith::ExtUIOp>(loc, signlessTargetVectorType,
+                                                value);
+      else
+        value = rewriter.create<arith::ExtSIOp>(loc, signlessTargetVectorType,
+                                                value);
+      value = rewriter.create<vector::BitCastOp>(loc, targetVectorType, value);
+      vectorType = targetVectorType;
+    }
+
+    auto scalableDimensions = vectorType.getScalableDims();
+    auto shape = vectorType.getShape();
+    constexpr int64_t singletonShape[] = {1};
+    if (vectorType.getRank() == 0)
+      shape = singletonShape;
+
+    if (vectorType.getRank() != 1) {
+      // Flatten n-D vectors to 1D. This is done to allow indexing with a
+      // non-constant value (which can currently only be done via
+      // vector.extractelement for 1D vectors).
+      auto flatLength = std::accumulate(shape.begin(), shape.end(), 1,
+                                        std::multiplies<int64_t>());
+      auto flatVectorType =
+          VectorType::get({flatLength}, vectorType.getElementType());
+      value = rewriter.create<vector::ShapeCastOp>(loc, flatVectorType, value);
+    }
+
+    vector::PrintOp firstClose;
+    SmallVector<Value, 8> loopIndices;
+    for (unsigned d = 0; d < shape.size(); d++) {
+      // Setup loop bounds and step.
+      Value lowerBound = rewriter.create<arith::ConstantIndexOp>(loc, 0);
+      Value upperBound = rewriter.create<arith::ConstantIndexOp>(loc, shape[d]);
+      Value step = rewriter.create<arith::ConstantIndexOp>(loc, 1);
+      if (!scalableDimensions.empty() && scalableDimensions[d]) {
+        auto vscale = rewriter.create<vector::VectorScaleOp>(
+            loc, rewriter.getIndexType());
+        upperBound = rewriter.create<arith::MulIOp>(loc, upperBound, vscale);
+      }
+      auto lastIndex = rewriter.create<arith::SubIOp>(loc, upperBound, step);
+
+      // Create a loop to print the elements surrounded by parentheses.
+      rewriter.create<vector::PrintOp>(loc, vector::PrintPunctuation::Open);
+      auto loop =
+          rewriter.create<scf::ForOp>(loc, lowerBound, upperBound, step);
+      auto printClose = rewriter.create<vector::PrintOp>(
+          loc, vector::PrintPunctuation::Close);
+      if (!firstClose)
+        firstClose = printClose;
+
+      auto loopIdx = loop.getInductionVar();
+      loopIndices.push_back(loopIdx);
+
+      // Print a comma after all but the last element.
+      rewriter.setInsertionPointToStart(loop.getBody());
+      auto notLastIndex = rewriter.create<arith::CmpIOp>(
+          loc, arith::CmpIPredicate::ult, loopIdx, lastIndex);
+      rewriter.create<scf::IfOp>(loc, notLastIndex,
+                                 [&](OpBuilder &builder, Location loc) {
+                                   builder.create<vector::PrintOp>(
+                                       loc, vector::PrintPunctuation::Comma);
+                                   builder.create<scf::YieldOp>(loc);
+                                 });
+
+      rewriter.setInsertionPointToStart(loop.getBody());
+    }
+
+    // Compute the flattened index.
+    // Note: For the > rank 1 vectors this assumes non-scalable.
+    Value flatIndex;
+    auto currentStride = 1;
+    for (int d = shape.size() - 1; d >= 0; d--) {
+      auto stride = rewriter.create<arith::ConstantIndexOp>(loc, currentStride);
+      auto index = rewriter.create<arith::MulIOp>(loc, stride, loopIndices[d]);
+      if (flatIndex)
+        flatIndex = rewriter.create<arith::AddIOp>(loc, flatIndex, index);
+      else
+        flatIndex = index;
+      currentStride *= shape[d];
+    }
+
+    // Print the scalar elements in the inner most loop.
+    auto element =
+        rewriter.create<vector::ExtractElementOp>(loc, value, flatIndex);
+    rewriter.create<vector::PrintOp>(loc, element,
+                                     vector::PrintPunctuation::NoPunctuation);
+
+    rewriter.setInsertionPointAfter(firstClose);
+    rewriter.create<vector::PrintOp>(loc, printOp.getPunctuation());
+    rewriter.eraseOp(printOp);
+    return success();
+  }
+
+  static IntegerType getIntTypeWithSignlessSemantics(IntegerType intTy) {
+    return IntegerType::get(intTy.getContext(), intTy.getWidth(),
+                            IntegerType::Signless);
+  };
+};
+
 /// Progressive lowering of vector transfer ops: Unpack one dimension.
 ///
 /// 1. Unpack one dimension from the current buffer type and cast the buffer
@@ -700,8 +873,11 @@ struct TransferOpConversion : public VectorToSCFPattern<OpTy> {
     auto dataBuffer = Strategy<OpTy>::getBuffer(xferOp);
     auto dataBufferType = dyn_cast<MemRefType>(dataBuffer.getType());
     auto castedDataType = unpackOneDim(dataBufferType);
+    if (failed(castedDataType))
+      return failure();
+
     auto castedDataBuffer =
-        locB.create<vector::TypeCastOp>(castedDataType, dataBuffer);
+        locB.create<vector::TypeCastOp>(*castedDataType, dataBuffer);
 
     // If the xferOp has a mask: Find and cast mask buffer.
     Value castedMaskBuffer;
@@ -716,7 +892,9 @@ struct TransferOpConversion : public VectorToSCFPattern<OpTy> {
         //   be broadcasted.)
         castedMaskBuffer = maskBuffer;
       } else {
-        auto castedMaskType = unpackOneDim(maskBufferType);
+        // It's safe to assume the mask buffer can be unpacked if the data
+        // buffer was unpacked.
+        auto castedMaskType = *unpackOneDim(maskBufferType);
         castedMaskBuffer =
             locB.create<vector::TypeCastOp>(castedMaskType, maskBuffer);
       }
@@ -725,7 +903,7 @@ struct TransferOpConversion : public VectorToSCFPattern<OpTy> {
     // Loop bounds and step.
     auto lb = locB.create<arith::ConstantIndexOp>(0);
     auto ub = locB.create<arith::ConstantIndexOp>(
-        castedDataType.getDimSize(castedDataType.getRank() - 1));
+        castedDataType->getDimSize(castedDataType->getRank() - 1));
     auto step = locB.create<arith::ConstantIndexOp>(1);
     // TransferWriteOps that operate on tensors return the modified tensor and
     // require a loop state.
@@ -885,10 +1063,10 @@ struct UnrollTransferReadConversion
   /// If the result of the TransferReadOp has exactly one user, which is a
   /// vector::InsertOp, return that operation's indices.
   void getInsertionIndices(TransferReadOp xferOp,
-                           SmallVector<int64_t, 8> &indices) const {
+                           SmallVectorImpl<OpFoldResult> &indices) const {
     if (auto insertOp = getInsertOp(xferOp)) {
-      for (Attribute attr : insertOp.getPosition())
-        indices.push_back(dyn_cast<IntegerAttr>(attr).getInt());
+      auto pos = insertOp.getMixedPosition();
+      indices.append(pos.begin(), pos.end());
     }
   }
 
@@ -909,8 +1087,14 @@ struct UnrollTransferReadConversion
     auto vec = getResultVector(xferOp, rewriter);
     auto vecType = dyn_cast<VectorType>(vec.getType());
     auto xferVecType = xferOp.getVectorType();
-    auto newXferVecType = VectorType::get(xferVecType.getShape().drop_front(),
-                                          xferVecType.getElementType());
+
+    if (xferVecType.getScalableDims()[0]) {
+      // Cannot unroll a scalable dimension at compile time.
+      return failure();
+    }
+
+    VectorType newXferVecType = VectorType::Builder(xferVecType).dropDim(0);
+
     int64_t dimSize = xferVecType.getShape()[0];
 
     // Generate fully unrolled loop of transfer ops.
@@ -927,9 +1111,9 @@ struct UnrollTransferReadConversion
             getXferIndices(b, xferOp, iv, xferIndices);
 
             // Indices for the new vector.insert op.
-            SmallVector<int64_t, 8> insertionIndices;
+            SmallVector<OpFoldResult, 8> insertionIndices;
             getInsertionIndices(xferOp, insertionIndices);
-            insertionIndices.push_back(i);
+            insertionIndices.push_back(rewriter.getIndexAttr(i));
 
             auto inBoundsAttr = dropFirstElem(b, xferOp.getInBoundsAttr());
             auto newXferOp = b.create<vector::TransferReadOp>(
@@ -971,12 +1155,12 @@ struct UnrollTransferReadConversion
 /// ```
 /// is rewritten to IR such as (simplified):
 /// ```
-/// %v0 = vector.extract %vec[0] : vector<5x4xf32>
+/// %v0 = vector.extract %vec[0] : vector<4xf32> from vector<5x4xf32>
 /// vector.transfer_write %v0, %A[%a, %b, %c] : vector<4xf32>, memref<...>
-/// %v1 = vector.extract %vec[1] : vector<5x4xf32>
+/// %v1 = vector.extract %vec[1] : vector<4xf32> from vector<5x4xf32>
 /// vector.transfer_write %v1, %A[%a, %b + 1, %c] : vector<4xf32>, memref<...>
 /// ...
-/// %v4 = vector.extract %vec[4] : vector<5x4xf32>
+/// %v4 = vector.extract %vec[4] : vector<4xf32> from vector<5x4xf32>
 /// vector.transfer_write %v4, %A[%a, %b + 4, %c] : vector<4xf32>, memref<...>
 /// ```
 ///
@@ -1012,10 +1196,10 @@ struct UnrollTransferWriteConversion
   /// If the input of the given TransferWriteOp is an ExtractOp, return its
   /// indices.
   void getExtractionIndices(TransferWriteOp xferOp,
-                            SmallVector<int64_t, 8> &indices) const {
+                            SmallVectorImpl<OpFoldResult> &indices) const {
     if (auto extractOp = getExtractOp(xferOp)) {
-      for (Attribute attr : extractOp.getPosition())
-        indices.push_back(dyn_cast<IntegerAttr>(attr).getInt());
+      auto pos = extractOp.getMixedPosition();
+      indices.append(pos.begin(), pos.end());
     }
   }
 
@@ -1053,9 +1237,9 @@ struct UnrollTransferWriteConversion
             getXferIndices(b, xferOp, iv, xferIndices);
 
             // Indices for the new vector.extract op.
-            SmallVector<int64_t, 8> extractionIndices;
+            SmallVector<OpFoldResult, 8> extractionIndices;
             getExtractionIndices(xferOp, extractionIndices);
-            extractionIndices.push_back(i);
+            extractionIndices.push_back(b.getI64IntegerAttr(i));
 
             auto extracted =
                 b.create<vector::ExtractOp>(loc, vec, extractionIndices);
@@ -1282,6 +1466,8 @@ void mlir::populateVectorToSCFConversionPatterns(
                  lowering_1_d::TransferOp1dConversion<TransferWriteOp>>(
         patterns.getContext(), options);
   }
+  patterns.add<lowering_n_d::DecomposePrintOpConversion>(patterns.getContext(),
+                                                         options);
 }
 
 namespace {

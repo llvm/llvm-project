@@ -86,6 +86,7 @@ define amdgpu_kernel void @sgpr_isnan_f16(ptr addrspace(1) %out, half %x) {
 ; GFX11CHECK-NEXT:    v_cmp_class_f16_e64 s2, s2, 3
 ; GFX11CHECK-NEXT:    v_cndmask_b32_e64 v1, 0, -1, s2
 ; GFX11CHECK-NEXT:    global_store_b32 v0, v1, s[0:1]
+; GFX11CHECK-NEXT:    s_nop 0
 ; GFX11CHECK-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX11CHECK-NEXT:    s_endpgm
   %result = call i1 @llvm.is.fpclass.f16(half %x, i32 3)
@@ -130,65 +131,35 @@ define i1 @zeromask_f16(half %x) nounwind {
 
 ; FIXME: DAG and GlobalISel return different values for i1 true
 define i1 @allflags_f16(half %x) nounwind {
-; GFX7SELDAG-LABEL: allflags_f16:
-; GFX7SELDAG:       ; %bb.0:
-; GFX7SELDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX7SELDAG-NEXT:    v_mov_b32_e32 v0, 1
-; GFX7SELDAG-NEXT:    s_setpc_b64 s[30:31]
+; GFX7CHECK-LABEL: allflags_f16:
+; GFX7CHECK:       ; %bb.0:
+; GFX7CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX7CHECK-NEXT:    v_mov_b32_e32 v0, 1
+; GFX7CHECK-NEXT:    s_setpc_b64 s[30:31]
 ;
-; GFX7GLISEL-LABEL: allflags_f16:
-; GFX7GLISEL:       ; %bb.0:
-; GFX7GLISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX7GLISEL-NEXT:    v_mov_b32_e32 v0, -1
-; GFX7GLISEL-NEXT:    s_setpc_b64 s[30:31]
+; GFX8CHECK-LABEL: allflags_f16:
+; GFX8CHECK:       ; %bb.0:
+; GFX8CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX8CHECK-NEXT:    v_mov_b32_e32 v0, 1
+; GFX8CHECK-NEXT:    s_setpc_b64 s[30:31]
 ;
-; GFX8SELDAG-LABEL: allflags_f16:
-; GFX8SELDAG:       ; %bb.0:
-; GFX8SELDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX8SELDAG-NEXT:    v_mov_b32_e32 v0, 1
-; GFX8SELDAG-NEXT:    s_setpc_b64 s[30:31]
+; GFX9CHECK-LABEL: allflags_f16:
+; GFX9CHECK:       ; %bb.0:
+; GFX9CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX9CHECK-NEXT:    v_mov_b32_e32 v0, 1
+; GFX9CHECK-NEXT:    s_setpc_b64 s[30:31]
 ;
-; GFX8GLISEL-LABEL: allflags_f16:
-; GFX8GLISEL:       ; %bb.0:
-; GFX8GLISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX8GLISEL-NEXT:    v_mov_b32_e32 v0, -1
-; GFX8GLISEL-NEXT:    s_setpc_b64 s[30:31]
+; GFX10CHECK-LABEL: allflags_f16:
+; GFX10CHECK:       ; %bb.0:
+; GFX10CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX10CHECK-NEXT:    v_mov_b32_e32 v0, 1
+; GFX10CHECK-NEXT:    s_setpc_b64 s[30:31]
 ;
-; GFX9SELDAG-LABEL: allflags_f16:
-; GFX9SELDAG:       ; %bb.0:
-; GFX9SELDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX9SELDAG-NEXT:    v_mov_b32_e32 v0, 1
-; GFX9SELDAG-NEXT:    s_setpc_b64 s[30:31]
-;
-; GFX9GLISEL-LABEL: allflags_f16:
-; GFX9GLISEL:       ; %bb.0:
-; GFX9GLISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX9GLISEL-NEXT:    v_mov_b32_e32 v0, -1
-; GFX9GLISEL-NEXT:    s_setpc_b64 s[30:31]
-;
-; GFX10SELDAG-LABEL: allflags_f16:
-; GFX10SELDAG:       ; %bb.0:
-; GFX10SELDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX10SELDAG-NEXT:    v_mov_b32_e32 v0, 1
-; GFX10SELDAG-NEXT:    s_setpc_b64 s[30:31]
-;
-; GFX10GLISEL-LABEL: allflags_f16:
-; GFX10GLISEL:       ; %bb.0:
-; GFX10GLISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX10GLISEL-NEXT:    v_mov_b32_e32 v0, -1
-; GFX10GLISEL-NEXT:    s_setpc_b64 s[30:31]
-;
-; GFX11SELDAG-LABEL: allflags_f16:
-; GFX11SELDAG:       ; %bb.0:
-; GFX11SELDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11SELDAG-NEXT:    v_mov_b32_e32 v0, 1
-; GFX11SELDAG-NEXT:    s_setpc_b64 s[30:31]
-;
-; GFX11GLISEL-LABEL: allflags_f16:
-; GFX11GLISEL:       ; %bb.0:
-; GFX11GLISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11GLISEL-NEXT:    v_mov_b32_e32 v0, -1
-; GFX11GLISEL-NEXT:    s_setpc_b64 s[30:31]
+; GFX11CHECK-LABEL: allflags_f16:
+; GFX11CHECK:       ; %bb.0:
+; GFX11CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11CHECK-NEXT:    v_mov_b32_e32 v0, 1
+; GFX11CHECK-NEXT:    s_setpc_b64 s[30:31]
   %1 = call i1 @llvm.is.fpclass.f16(half %x, i32 1023) ; 0x3ff
   ret i1 %1
 }
@@ -1387,7 +1358,7 @@ define i1 @isnan_f16_strictfp(half %x) strictfp nounwind {
 ; GFX11CHECK-NEXT:    v_cmp_class_f16_e64 s0, v0, 3
 ; GFX11CHECK-NEXT:    v_cndmask_b32_e64 v0, 0, 1, s0
 ; GFX11CHECK-NEXT:    s_setpc_b64 s[30:31]
-  %1 = call i1 @llvm.is.fpclass.f16(half %x, i32 3)  ; nan
+  %1 = call i1 @llvm.is.fpclass.f16(half %x, i32 3) strictfp ; nan
   ret i1 %1
 }
 

@@ -177,7 +177,7 @@ static bool isDestBasedOnGivenLength(const MatchFinder::MatchResult &Result) {
   StringRef LengthExprStr =
       exprToStr(Result.Nodes.getNodeAs<Expr>(LengthExprName), Result).trim();
 
-  return DestCapacityExprStr != "" && LengthExprStr != "" &&
+  return !DestCapacityExprStr.empty() && !LengthExprStr.empty() &&
          DestCapacityExprStr.contains(LengthExprStr);
 }
 
@@ -483,7 +483,7 @@ static void insertNullTerminatorExpr(StringRef Name,
       (Twine('\n') + SpaceBeforeStmtStr +
        exprToStr(Result.Nodes.getNodeAs<Expr>(DestExprName), Result) + "[" +
        exprToStr(Result.Nodes.getNodeAs<Expr>(LengthExprName), Result) +
-       "] = " + ((Name[0] != 'w') ? "\'\\0\';" : "L\'\\0\';"))
+       "] = " + ((Name[0] != 'w') ? R"('\0';)" : R"(L'\0';)"))
           .str();
 
   const auto AddNullTerminatorExprFix = FixItHint::CreateInsertion(
@@ -939,7 +939,7 @@ void NotNullTerminatedResultCheck::memchrFix(
 
 void NotNullTerminatedResultCheck::memmoveFix(
     StringRef Name, const MatchFinder::MatchResult &Result,
-    DiagnosticBuilder &Diag) {
+    DiagnosticBuilder &Diag) const {
   bool IsOverflows = isDestCapacityFix(Result, Diag);
 
   if (UseSafeFunctions && isKnownDest(Result)) {

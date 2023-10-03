@@ -18,21 +18,22 @@ program OmpAtomic
 !$omp atomic
    x = 1 + x
 !$omp atomic
-   !ERROR: Atomic update variable 'x' not found in the RHS of the assignment statement in an ATOMIC (UPDATE) construct
+   !ERROR: Atomic update statement should be of form `x = x operator expr` OR `x = expr operator x`
    x = y + 1
 !$omp atomic
-   !ERROR: Atomic update variable 'x' not found in the RHS of the assignment statement in an ATOMIC (UPDATE) construct
-   x = 1 + y
+   !ERROR: Atomic update statement should be of form `x = x operator expr` OR `x = expr operator x`
+   x = 1 + (y + x)
 
 !$omp atomic
-   x = x - 1
+   !ERROR: Atomic update statement should be of form `x = x operator expr` OR `x = expr operator x`
+   x = 1 - (10 * (y + x))
 !$omp atomic
    x = 1 - x
 !$omp atomic
-   !ERROR: Atomic update variable 'x' not found in the RHS of the assignment statement in an ATOMIC (UPDATE) construct
+   !ERROR: Atomic update statement should be of form `x = x operator expr` OR `x = expr operator x`
    x = y - 1
 !$omp atomic
-   !ERROR: Atomic update variable 'x' not found in the RHS of the assignment statement in an ATOMIC (UPDATE) construct
+   !ERROR: Atomic update statement should be of form `x = x operator expr` OR `x = expr operator x`
    x = 1 - y
 
 !$omp atomic
@@ -40,21 +41,21 @@ program OmpAtomic
 !$omp atomic
    x = 1*x
 !$omp atomic
-   !ERROR: Atomic update variable 'x' not found in the RHS of the assignment statement in an ATOMIC (UPDATE) construct
-   x = y*1
+   !ERROR: Atomic update statement should be of form `x = x operator expr` OR `x = expr operator x`
+   x = y*(10 + x)
 !$omp atomic
-   !ERROR: Atomic update variable 'x' not found in the RHS of the assignment statement in an ATOMIC (UPDATE) construct
-   x = 1*y
+   !ERROR: Atomic update statement should be of form `x = x operator expr` OR `x = expr operator x`
+   x = (44 * x) * y
 
 !$omp atomic
    x = x/1
 !$omp atomic
    x = 1/x
 !$omp atomic
-   !ERROR: Atomic update variable 'x' not found in the RHS of the assignment statement in an ATOMIC (UPDATE) construct
+   !ERROR: Atomic update statement should be of form `x = x operator expr` OR `x = expr operator x`
    x = y/1
 !$omp atomic
-   !ERROR: Atomic update variable 'x' not found in the RHS of the assignment statement in an ATOMIC (UPDATE) construct
+   !ERROR: Atomic update statement should be of form `x = x operator expr` OR `x = expr operator x`
    x = 1/y
 
 !$omp atomic
@@ -62,7 +63,7 @@ program OmpAtomic
 !$omp atomic
    m = n .AND. m
 !$omp atomic
-   !ERROR: Atomic update variable 'm' not found in the RHS of the assignment statement in an ATOMIC (UPDATE) construct
+   !ERROR: Atomic update statement should be of form `m = m operator expr` OR `m = expr operator m`
    m = n .AND. l
 
 !$omp atomic
@@ -70,7 +71,7 @@ program OmpAtomic
 !$omp atomic
    m = n .OR. m
 !$omp atomic
-   !ERROR: Atomic update variable 'm' not found in the RHS of the assignment statement in an ATOMIC (UPDATE) construct
+   !ERROR: Atomic update statement should be of form `m = m operator expr` OR `m = expr operator m`
    m = n .OR. l
 
 !$omp atomic
@@ -78,7 +79,7 @@ program OmpAtomic
 !$omp atomic
    m = n .EQV. m
 !$omp atomic
-   !ERROR: Atomic update variable 'm' not found in the RHS of the assignment statement in an ATOMIC (UPDATE) construct
+   !ERROR: Atomic update statement should be of form `m = m operator expr` OR `m = expr operator m`
    m = n .EQV. l
 
 !$omp atomic
@@ -86,7 +87,7 @@ program OmpAtomic
 !$omp atomic
    m = n .NEQV. m
 !$omp atomic
-   !ERROR: Atomic update variable 'm' not found in the RHS of the assignment statement in an ATOMIC (UPDATE) construct
+   !ERROR: Atomic update statement should be of form `m = m operator expr` OR `m = expr operator m`
    m = n .NEQV. l
 
 !$omp atomic update
@@ -94,10 +95,10 @@ program OmpAtomic
 !$omp atomic update
    x = 1 + x
 !$omp atomic update
-   !ERROR: Atomic update variable 'x' not found in the RHS of the assignment statement in an ATOMIC (UPDATE) construct
+   !ERROR: Atomic update statement should be of form `x = x operator expr` OR `x = expr operator x`
    x = y + 1
 !$omp atomic update
-   !ERROR: Atomic update variable 'x' not found in the RHS of the assignment statement in an ATOMIC (UPDATE) construct
+   !ERROR: Atomic update statement should be of form `x = x operator expr` OR `x = expr operator x`
    x = 1 + y
 
 !$omp atomic update
@@ -105,10 +106,10 @@ program OmpAtomic
 !$omp atomic update
    x = 1 - x
 !$omp atomic update
-   !ERROR: Atomic update variable 'x' not found in the RHS of the assignment statement in an ATOMIC (UPDATE) construct
+   !ERROR: Atomic update statement should be of form `x = x operator expr` OR `x = expr operator x`
    x = y - 1
 !$omp atomic update
-   !ERROR: Atomic update variable 'x' not found in the RHS of the assignment statement in an ATOMIC (UPDATE) construct
+   !ERROR: Atomic update statement should be of form `x = x operator expr` OR `x = expr operator x`
    x = 1 - y
 
 !$omp atomic update
@@ -116,10 +117,10 @@ program OmpAtomic
 !$omp atomic update
    x = 1*x
 !$omp atomic update
-   !ERROR: Atomic update variable 'x' not found in the RHS of the assignment statement in an ATOMIC (UPDATE) construct
+   !ERROR: Atomic update statement should be of form `x = x operator expr` OR `x = expr operator x`
    x = y*1
 !$omp atomic update
-   !ERROR: Atomic update variable 'x' not found in the RHS of the assignment statement in an ATOMIC (UPDATE) construct
+   !ERROR: Atomic update statement should be of form `x = x operator expr` OR `x = expr operator x`
    x = 1*y
 
 !$omp atomic update
@@ -127,18 +128,18 @@ program OmpAtomic
 !$omp atomic update
    x = 1/x
 !$omp atomic update
-   !ERROR: Atomic update variable 'x' not found in the RHS of the assignment statement in an ATOMIC (UPDATE) construct
-   x = y/1
+   !ERROR: Atomic update statement should be of form `x = x operator expr` OR `x = expr operator x`
+   x = max(x, y) + 10
 !$omp atomic update
-   !ERROR: Atomic update variable 'x' not found in the RHS of the assignment statement in an ATOMIC (UPDATE) construct
-   x = 1/y
+   !ERROR: Atomic update statement should be of form `x = x operator expr` OR `x = expr operator x`
+   x = y * min(x, y)
 
 !$omp atomic update
    m = m .AND. n
 !$omp atomic update
    m = n .AND. m
 !$omp atomic update
-   !ERROR: Atomic update variable 'm' not found in the RHS of the assignment statement in an ATOMIC (UPDATE) construct
+   !ERROR: Atomic update statement should be of form `m = m operator expr` OR `m = expr operator m`
    m = n .AND. l
 
 !$omp atomic update
@@ -146,7 +147,7 @@ program OmpAtomic
 !$omp atomic update
    m = n .OR. m
 !$omp atomic update
-   !ERROR: Atomic update variable 'm' not found in the RHS of the assignment statement in an ATOMIC (UPDATE) construct
+   !ERROR: Atomic update statement should be of form `m = m operator expr` OR `m = expr operator m`
    m = n .OR. l
 
 !$omp atomic update
@@ -154,7 +155,7 @@ program OmpAtomic
 !$omp atomic update
    m = n .EQV. m
 !$omp atomic update
-   !ERROR: Atomic update variable 'm' not found in the RHS of the assignment statement in an ATOMIC (UPDATE) construct
+   !ERROR: Atomic update statement should be of form `m = m operator expr` OR `m = expr operator m`
    m = n .EQV. l
 
 !$omp atomic update
@@ -162,7 +163,7 @@ program OmpAtomic
 !$omp atomic update
    m = n .NEQV. m
 !$omp atomic update
-   !ERROR: Atomic update variable 'm' not found in the RHS of the assignment statement in an ATOMIC (UPDATE) construct
+   !ERROR: Atomic update statement should be of form `m = m operator expr` OR `m = expr operator m`
    m = n .NEQV. l
 
 end program OmpAtomic

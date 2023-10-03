@@ -12,7 +12,7 @@
 #include "stat.h"
 #include "terminator.h"
 #include "type-info.h"
-#include "flang/ISO_Fortran_binding.h"
+#include "flang/ISO_Fortran_binding_wrapper.h"
 #include "flang/Runtime/assign.h"
 #include "flang/Runtime/descriptor.h"
 
@@ -78,7 +78,8 @@ std::int32_t RTNAME(MoveAlloc)(Descriptor &to, Descriptor &from,
   }
 
   if (to.IsAllocated()) {
-    int stat{to.Destroy(/*finalize=*/true)};
+    int stat{
+        to.Destroy(/*finalize=*/true, /*destroyPointers=*/false, &terminator)};
     if (stat != StatOk) {
       return ReturnError(terminator, stat, errMsg, hasStat);
     }
@@ -167,9 +168,6 @@ int RTNAME(AllocatableAllocate)(Descriptor &descriptor, bool hasStat,
 int RTNAME(AllocatableAllocateSource)(Descriptor &alloc,
     const Descriptor &source, bool hasStat, const Descriptor *errMsg,
     const char *sourceFile, int sourceLine) {
-  if (alloc.Elements() == 0) {
-    return StatOk;
-  }
   int stat{RTNAME(AllocatableAllocate)(
       alloc, hasStat, errMsg, sourceFile, sourceLine)};
   if (stat == StatOk) {
@@ -188,7 +186,10 @@ int RTNAME(AllocatableDeallocate)(Descriptor &descriptor, bool hasStat,
   if (!descriptor.IsAllocated()) {
     return ReturnError(terminator, StatBaseNull, errMsg, hasStat);
   }
-  return ReturnError(terminator, descriptor.Destroy(true), errMsg, hasStat);
+  return ReturnError(terminator,
+      descriptor.Destroy(
+          /*finalize=*/true, /*destroyPointers=*/false, &terminator),
+      errMsg, hasStat);
 }
 
 int RTNAME(AllocatableDeallocatePolymorphic)(Descriptor &descriptor,
@@ -218,7 +219,9 @@ void RTNAME(AllocatableDeallocateNoFinal)(
   } else if (!descriptor.IsAllocated()) {
     ReturnError(terminator, StatBaseNull);
   } else {
-    ReturnError(terminator, descriptor.Destroy(false));
+    ReturnError(terminator,
+        descriptor.Destroy(
+            /*finalize=*/false, /*destroyPointers=*/false, &terminator));
   }
 }
 

@@ -86,7 +86,6 @@ class T { // expected-error{{declaration of 'T' shadows template parameter}}
 template<int Size> // expected-note{{template parameter is declared here}}
 void shadow3(int Size); // expected-error{{declaration of 'Size' shadows template parameter}}
 
-// <rdar://problem/6952203>
 template<typename T> // expected-note{{here}}
 struct shadow4 {
   int T; // expected-error{{shadows}}

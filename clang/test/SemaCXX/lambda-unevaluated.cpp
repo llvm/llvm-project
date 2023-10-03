@@ -155,17 +155,24 @@ struct WithFoo { static void foo(); };
 
 template <class T>
 concept lambda_works = requires {
-    []() { T::foo(); };
+    []() { T::foo(); }; // expected-error{{type 'int' cannot be used prior to '::'}}
+                        // expected-note@-1{{while substituting into a lambda expression here}}
+                        // expected-note@-2{{in instantiation of requirement here}}
+                        // expected-note@-4{{while substituting template arguments into constraint expression here}}
 };
 
-static_assert(!lambda_works<int>);
+static_assert(!lambda_works<int>); // expected-note {{while checking the satisfaction of concept 'lambda_works<int>' requested here}}
 static_assert(lambda_works<WithFoo>);
 
 template <class T>
-int* func(T) requires requires { []() { T::foo(); }; };
+int* func(T) requires requires { []() { T::foo(); }; }; // expected-error{{type 'int' cannot be used prior to '::'}}
+                                                        // expected-note@-1{{while substituting into a lambda expression here}}
+                                                        // expected-note@-2{{in instantiation of requirement here}}
+                                                        // expected-note@-3{{while substituting template arguments into constraint expression here}}
 double* func(...);
 
-static_assert(__is_same(decltype(func(0)), double*));
+static_assert(__is_same(decltype(func(0)), double*)); // expected-note {{while checking constraint satisfaction for template 'func<int>' required here}}
+                                                      // expected-note@-1 {{in instantiation of function template specialization 'lambda_in_constraints::func<int>'}}
 static_assert(__is_same(decltype(func(WithFoo())), int*));
 
 template <class T>

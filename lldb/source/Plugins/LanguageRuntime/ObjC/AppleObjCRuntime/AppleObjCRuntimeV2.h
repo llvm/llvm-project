@@ -38,6 +38,8 @@ public:
 
   static llvm::StringRef GetPluginNameStatic() { return "apple-objc-v2"; }
 
+  LanguageRuntime *GetPreferredLanguageRuntime(ValueObject &in_value) override;
+
   static char ID;
 
   bool isA(const void *ClassID) const override {
@@ -63,12 +65,12 @@ public:
     return ObjCRuntimeVersions::eAppleObjC_V2;
   }
 
-  size_t GetByteOffsetForIvar(CompilerType &parent_qual_type,
+  size_t GetByteOffsetForIvar(CompilerType &parent_ast_type,
                               const char *ivar_name) override;
 
   void UpdateISAToDescriptorMapIfNeeded() override;
 
-  ClassDescriptorSP GetClassDescriptor(ValueObject &in_value) override;
+  ClassDescriptorSP GetClassDescriptor(ValueObject &valobj) override;
 
   ClassDescriptorSP GetClassDescriptorFromISA(ObjCISA isa) override;
 

@@ -299,6 +299,7 @@ public:
   /// \p Default if neither option is given. If both the option and its
   /// negation are present, the last one wins.
   bool hasFlag(OptSpecifier Pos, OptSpecifier Neg, bool Default) const;
+  bool hasFlagNoClaim(OptSpecifier Pos, OptSpecifier Neg, bool Default) const;
 
   /// hasFlag - Given an option \p Pos, an alias \p PosAlias and its negative
   /// form \p Neg, return true if the option or its alias is present, false if
@@ -419,6 +420,8 @@ public:
         NumInputArgStrings(RHS.NumInputArgStrings) {}
 
   InputArgList &operator=(InputArgList &&RHS) {
+    if (this == &RHS)
+      return *this;
     releaseMemory();
     ArgList::operator=(std::move(RHS));
     ArgStrings = std::move(RHS.ArgStrings);

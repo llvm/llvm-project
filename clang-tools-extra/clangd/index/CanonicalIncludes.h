@@ -20,13 +20,9 @@
 #define LLVM_CLANG_TOOLS_EXTRA_CLANGD_INDEX_CANONICALINCLUDES_H
 
 #include "clang/Basic/FileEntry.h"
-#include "clang/Lex/Preprocessor.h"
+#include "clang/Basic/LangOptions.h"
 #include "llvm/ADT/StringMap.h"
 #include "llvm/ADT/StringRef.h"
-#include "llvm/Support/FileSystem/UniqueID.h"
-#include <mutex>
-#include <string>
-#include <vector>
 
 namespace clang {
 namespace clangd {
@@ -36,18 +32,10 @@ namespace clangd {
 /// Only const methods (i.e. mapHeader) in this class are thread safe.
 class CanonicalIncludes {
 public:
-  /// Adds a file-to-string mapping from \p ID to \p CanonicalPath.
-  void addMapping(FileEntryRef Header, llvm::StringRef CanonicalPath);
-
-  /// Returns the overridden include for a qualified symbol with, or "".
-  /// \p Scope and \p Name concatenation forms the fully qualified name.
-  /// \p Scope is the qualifier with the trailing "::" (e.g. "std::") or empty
-  /// (for global namespace).
-  llvm::StringRef mapSymbol(llvm::StringRef Scope, llvm::StringRef Name,
-                            const LangOptions &L) const;
-
-  /// Returns the overridden include for files in \p Header, or "".
-  llvm::StringRef mapHeader(FileEntryRef Header) const;
+  /// Returns the overridden verbatim spelling for files in \p Header that can
+  /// be directly included (i.e., contains quotes "" or angled brackets <>), or
+  /// "" if the spelling could not be found.
+  llvm::StringRef mapHeader(llvm::StringRef HeaderPath) const;
 
   /// Adds mapping for system headers and some special symbols (e.g. STL symbols
   /// in <iosfwd> need to be mapped individually). Approximately, the following
@@ -60,37 +48,10 @@ public:
   void addSystemHeadersMapping(const LangOptions &Language);
 
 private:
-  /// A map from the private header to a canonical include path.
-  llvm::DenseMap<llvm::sys::fs::UniqueID, std::string> FullPathMapping;
   /// A map from a suffix (one or components of a path) to a canonical path.
   /// Used only for mapping standard headers.
   const llvm::StringMap<llvm::StringRef> *StdSuffixHeaderMapping = nullptr;
 };
-
-/// Returns a CommentHandler that parses pragma comment on include files to
-/// determine when we should include a different header from the header that
-/// directly defines a symbol. Mappinps are registered with \p Includes.
-///
-/// Currently it only supports IWYU private pragma:
-/// https://github.com/include-what-you-use/include-what-you-use/blob/master/docs/IWYUPragmas.md#iwyu-pragma-private
-///
-/// We ignore other pragmas:
-/// - keep: this is common but irrelevant: we do not currently remove includes
-/// - export: this is common and potentially interesting, there are three cases:
-///    * Points to a public header (common): we can suppress include2 if you
-///      already have include1. Only marginally useful.
-///    * Points to a private header annotated with `private` (somewhat common):
-///      Not incrementally useful as we support private.
-///    * Points to a private header without pragmas (rare). This is a reversed
-///      private pragma, and is valuable but too rare to be worthwhile.
-/// - no_include: this is about as common as private, but only affects the
-///   current file, so the value is smaller. We could add support.
-/// - friend: this is less common than private, has implementation difficulties,
-///   and affects behavior in a limited scope.
-/// - associated: extremely rare
-std::unique_ptr<CommentHandler>
-collectIWYUHeaderMaps(CanonicalIncludes *Includes);
-
 } // namespace clangd
 } // namespace clang
 

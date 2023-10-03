@@ -1,5 +1,7 @@
 #include "clang/AST/ASTContext.h"
 #include "clang/AST/ASTStructuralEquivalence.h"
+#include "clang/AST/Decl.h"
+#include "clang/AST/DeclTemplate.h"
 #include "clang/ASTMatchers/ASTMatchers.h"
 #include "clang/Frontend/ASTUnit.h"
 #include "clang/Testing/CommandLineArgs.h"
@@ -130,15 +132,20 @@ struct StructuralEquivalenceTest : ::testing::Test {
     return makeStmts(Wrap(SrcCode0), Wrap(SrcCode1), Lang, AMatcher);
   }
 
-  bool testStructuralMatch(Decl *D0, Decl *D1) {
+  bool testStructuralMatch(Decl *D0, Decl *D1,
+                           bool IgnoreTemplateParmDepth = false) {
     llvm::DenseSet<std::pair<Decl *, Decl *>> NonEquivalentDecls01;
     llvm::DenseSet<std::pair<Decl *, Decl *>> NonEquivalentDecls10;
     StructuralEquivalenceContext Ctx01(
-        D0->getASTContext(), D1->getASTContext(),
-        NonEquivalentDecls01, StructuralEquivalenceKind::Default, false, false);
+        D0->getASTContext(), D1->getASTContext(), NonEquivalentDecls01,
+        StructuralEquivalenceKind::Default, /*StrictTypeSpelling=*/false,
+        /*Complain=*/false, /*ErrorOnTagTypeMismatch=*/false,
+        IgnoreTemplateParmDepth);
     StructuralEquivalenceContext Ctx10(
-        D1->getASTContext(), D0->getASTContext(),
-        NonEquivalentDecls10, StructuralEquivalenceKind::Default, false, false);
+        D1->getASTContext(), D0->getASTContext(), NonEquivalentDecls10,
+        StructuralEquivalenceKind::Default, /*StrictTypeSpelling=*/false,
+        /*Complain=*/false, /*ErrorOnTagTypeMismatch=*/false,
+        IgnoreTemplateParmDepth);
     bool Eq01 = Ctx01.IsEquivalent(D0, D1);
     bool Eq10 = Ctx10.IsEquivalent(D1, D0);
     EXPECT_EQ(Eq01, Eq10);
@@ -165,8 +172,9 @@ struct StructuralEquivalenceTest : ::testing::Test {
     return testStructuralMatch(get<0>(t), get<1>(t));
   }
 
-  bool testStructuralMatch(std::tuple<Decl *, Decl *> t) {
-    return testStructuralMatch(get<0>(t), get<1>(t));
+  bool testStructuralMatch(std::tuple<Decl *, Decl *> t,
+                           bool IgnoreTemplateParmDepth = false) {
+    return testStructuralMatch(get<0>(t), get<1>(t), IgnoreTemplateParmDepth);
   }
 };
 
@@ -992,8 +1000,8 @@ TEST_F(StructuralEquivalenceRecordContextTest, NamespaceInlineVsInline) {
 
 TEST_F(StructuralEquivalenceRecordContextTest, NamespaceInlineTopLevel) {
   auto Decls =
-      makeNamedDecls("inline namespace A { class X; } }",
-                     "inline namespace B { class X; } }", Lang_CXX17, "X");
+      makeNamedDecls("inline namespace A { class X; }",
+                     "inline namespace B { class X; }", Lang_CXX17, "X");
   EXPECT_TRUE(testStructuralMatch(Decls));
 }
 
@@ -1689,6 +1697,40 @@ TEST_F(
   EXPECT_FALSE(testStructuralMatch(t));
 }
 
+TEST_F(StructuralEquivalenceTemplateTest,
+       IgnoreTemplateParmDepthAtTemplateTypeParmDecl) {
+  auto Decls = makeDecls<ClassTemplateDecl>(
+      R"(
+        template<class> struct A;
+      )",
+      R"(
+        template<class> struct S {
+          template<class> friend struct A;
+        };
+      )",
+      Lang_CXX03, classTemplateDecl(hasName("A")),
+      classTemplateDecl(hasName("A")));
+  EXPECT_TRUE(testStructuralMatch(Decls));
+  EXPECT_TRUE(testStructuralMatch(Decls, true));
+}
+
+TEST_F(StructuralEquivalenceTemplateTest,
+       IgnoreTemplateParmDepthAtNonTypeTemplateParmDecl) {
+  auto Decls = makeDecls<ClassTemplateDecl>(
+      R"(
+        template<class T, T U> struct A;
+      )",
+      R"(
+        template<class T> struct S {
+          template<class P, P Q> friend struct A;
+        };
+      )",
+      Lang_CXX03, classTemplateDecl(hasName("A")),
+      classTemplateDecl(hasName("A")));
+  EXPECT_FALSE(testStructuralMatch(Decls));
+  EXPECT_TRUE(testStructuralMatch(Decls, /*IgnoreTemplateParmDepth=*/true));
+}
+
 TEST_F(
     StructuralEquivalenceTemplateTest,
     ClassTemplSpecWithInequivalentShadowedTemplArg) {
@@ -1755,6 +1797,79 @@ TEST_F(StructuralEquivalenceCacheTest, SimpleNonEq) {
       TU, cxxRecordDecl(hasName("A"), unless(isImplicit())))));
   EXPECT_FALSE(isInNonEqCache(findDeclPair<CXXRecordDecl>(
       TU, cxxRecordDecl(hasName("B"), unless(isImplicit())))));
+}
+
+TEST_F(StructuralEquivalenceCacheTest, ReturnStmtNonEq) {
+  auto TU = makeTuDecls(
+      R"(
+      bool x() { return true; }
+      )",
+      R"(
+      bool x() { return false; }
+      )",
+      Lang_CXX03);
+
+  StructuralEquivalenceContext Ctx(
+      get<0>(TU)->getASTContext(), get<1>(TU)->getASTContext(),
+      NonEquivalentDecls, StructuralEquivalenceKind::Default, false, false);
+
+  auto X = findDeclPair<FunctionDecl>(TU, functionDecl(hasName("x")));
+  EXPECT_FALSE(Ctx.IsEquivalent(X.first->getBody(), X.second->getBody()));
+
+}
+
+TEST_F(StructuralEquivalenceCacheTest, VarDeclNoEq) {
+  auto TU = makeTuDecls(
+      R"(
+      int p;
+      )",
+      R"(
+      int q;
+      )",
+      Lang_CXX03);
+
+  StructuralEquivalenceContext Ctx(
+      get<0>(TU)->getASTContext(), get<1>(TU)->getASTContext(),
+      NonEquivalentDecls, StructuralEquivalenceKind::Default, false, false);
+
+  auto Var = findDeclPair<VarDecl>(TU, varDecl());
+  EXPECT_FALSE(Ctx.IsEquivalent(Var.first, Var.second));
+}
+
+TEST_F(StructuralEquivalenceCacheTest, VarDeclWithDifferentStorageClassNoEq) {
+  auto TU = makeTuDecls(
+      R"(
+      int p;
+      )",
+      R"(
+      static int p;
+      )",
+      Lang_CXX03);
+
+  StructuralEquivalenceContext Ctx(
+      get<0>(TU)->getASTContext(), get<1>(TU)->getASTContext(),
+      NonEquivalentDecls, StructuralEquivalenceKind::Default, false, false);
+
+  auto Var = findDeclPair<VarDecl>(TU, varDecl());
+  EXPECT_FALSE(Ctx.IsEquivalent(Var.first, Var.second));
+}
+
+TEST_F(StructuralEquivalenceCacheTest, VarDeclWithInitNoEq) {
+  auto TU = makeTuDecls(
+      R"(
+      int p = 1;
+      )",
+      R"(
+      int p = 2;
+      )",
+      Lang_CXX03);
+
+  StructuralEquivalenceContext Ctx(
+      get<0>(TU)->getASTContext(), get<1>(TU)->getASTContext(),
+      NonEquivalentDecls, StructuralEquivalenceKind::Default, false, false);
+
+  auto Var = findDeclPair<VarDecl>(TU, varDecl());
+  EXPECT_FALSE(Ctx.IsEquivalent(Var.first, Var.second));
 }
 
 TEST_F(StructuralEquivalenceCacheTest, SpecialNonEq) {
@@ -2258,6 +2373,33 @@ TEST_F(StructuralEquivalenceStmtTest, UnresolvedLookup) {
       )",
       Lang_CXX03, unresolvedLookupExpr());
   EXPECT_TRUE(testStructuralMatch(t));
+}
+
+TEST_F(StructuralEquivalenceCacheTest, GotoStmtNoEq) {
+  auto S = makeStmts(
+      R"(
+      void foo() {
+        goto L1;
+        L1: foo();
+      }
+      )",
+      R"(
+      void foo() {
+        goto L2;
+        L2: foo();
+      }
+      )",
+      Lang_CXX03, gotoStmt());
+  EXPECT_FALSE(testStructuralMatch(S));
+}
+
+TEST_F(StructuralEquivalenceStmtTest, DeclRefExpr) {
+  std::string Prefix = "enum Test { AAA, BBB };";
+  auto t = makeStmts(
+      Prefix + "void foo(int i) {if (i > 0) {i = AAA;} else {i = BBB;}}",
+      Prefix + "void foo(int i) {if (i > 0) {i = BBB;} else {i = AAA;}}",
+      Lang_CXX03, ifStmt());
+  EXPECT_FALSE(testStructuralMatch(t));
 }
 
 } // end namespace ast_matchers

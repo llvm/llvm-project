@@ -6,8 +6,6 @@
 
 // UNSUPPORTED: android
 
-// REQUIRES: stable-runtime
-
 // Checks that pvalloc overflows are caught. If the allocator is allowed to
 // return null, the errno should be set to ENOMEM.
 

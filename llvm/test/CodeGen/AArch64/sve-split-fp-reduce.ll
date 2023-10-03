@@ -6,8 +6,8 @@
 define double @fadda_nxv8f64(double %init, <vscale x 8 x double> %a) {
 ; CHECK-LABEL: fadda_nxv8f64:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    // kill: def $d0 killed $d0 def $z0
 ; CHECK-NEXT:    ptrue p0.d
+; CHECK-NEXT:    // kill: def $d0 killed $d0 def $z0
 ; CHECK-NEXT:    fadda d0, p0, d0, z1.d
 ; CHECK-NEXT:    fadda d0, p0, d0, z2.d
 ; CHECK-NEXT:    fadda d0, p0, d0, z3.d

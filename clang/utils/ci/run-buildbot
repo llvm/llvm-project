@@ -60,13 +60,21 @@ MONOREPO_ROOT="${MONOREPO_ROOT:="$(git rev-parse --show-toplevel)"}"
 BUILD_DIR="${BUILD_DIR:=${MONOREPO_ROOT}/build/${BUILDER}}"
 INSTALL_DIR="${BUILD_DIR}/install"
 
+function clean() {
+    rm -rf "${BUILD_DIR}"
+}
+
 # Print the version of a few tools to aid diagnostics in some cases
 cmake --version
 ninja --version
 
 case "${BUILDER}" in
 check-format)
-    ! grep -rnI '[[:blank:]]$' clang/lib clang/include clang/docs
+    echo "*** Checking for trailing whitespace left in Clang source files ***"
+    if grep -rnI '[[:blank:]]$' clang/lib clang/include clang/docs; then
+        echo "*** Trailing whitespace has been found in Clang source files as described above ***"
+        exit 1
+    fi
 ;;
 build-clang)
     mkdir install
@@ -77,17 +85,34 @@ build-clang)
     # network I/O.
     cmake                                                                      \
         -S llvm                                                                \
-        -B build                                                               \
+        -B ${BUILD_DIR}                                                        \
         -G Ninja                                                               \
         -DCMAKE_CXX_COMPILER_LAUNCHER="ccache"                                 \
         -DCMAKE_BUILD_TYPE=Release                                             \
         -DCMAKE_INSTALL_PREFIX=install                                         \
         -DLLVM_ENABLE_PROJECTS="clang;compiler-rt"                             \
 
-    ninja -C build install-clang install-clang-resource-headers
+    ninja -C ${BUILD_DIR} install-clang install-clang-resource-headers
     ccache -s
     tar -cJvf install.tar.xz install/
     buildkite-agent artifact upload --debug install.tar.xz
+
+    ninja -C ${BUILD_DIR} check-clang
+;;
+build-clang-windows)
+    cmake -S llvm -B ${BUILD_DIR} -G Ninja                                      \
+        -D CMAKE_C_COMPILER_LAUNCHER=sccache                                    \
+        -D CMAKE_CXX_COMPILER_LAUNCHER=sccache                                  \
+        -D CMAKE_BUILD_TYPE=Release                                             \
+        -D CMAKE_INSTALL_PREFIX=install-windows                                 \
+        -D LLVM_ENABLE_PROJECTS="clang;compiler-rt"                             \
+        -D LLVM_ENABLE_ASSERTIONS=ON                                            \
+        -D LLVM_BUILD_EXAMPLES=ON                                               \
+        -D COMPILER_RT_BUILD_LIBFUZZER=OFF                                      \
+        -D COMPILER_RT_BUILD_ORC=OFF
+
+    ninja -C ${BUILD_DIR} install-clang install-clang-resource-headers
+    ninja -C ${BUILD_DIR} check-clang
 ;;
 generic-cxx03)
     buildkite-agent artifact download install.tar.xz .
@@ -95,7 +120,17 @@ generic-cxx03)
     export CC=$(pwd)/install/bin/clang
     export CXX=$(pwd)/install/bin/clang++
     chmod +x install/bin/clang install/bin/clang++
-    libcxx/utils/ci/run-buildbot generic-cxx03
+
+    clean
+    cmake -S "${MONOREPO_ROOT}/runtimes" -B "${BUILD_DIR}" -GNinja \
+          -DLLVM_ENABLE_RUNTIMES="libcxx;libcxxabi;libunwind" \
+          -DLIBCXX_CXX_ABI=libcxxabi \
+          -DCMAKE_BUILD_TYPE=RelWithDebInfo \
+          -DCMAKE_INSTALL_PREFIX="${INSTALL_DIR}" \
+          -DLIBCXX_TEST_PARAMS="std=c++03" \
+          -DLIBCXXABI_TEST_PARAMS="std=c++03"
+
+    ninja -vC "${BUILD_DIR}" check-runtimes
 ;;
 generic-cxx26)
     buildkite-agent artifact download install.tar.xz .
@@ -103,7 +138,17 @@ generic-cxx26)
     export CC=$(pwd)/install/bin/clang
     export CXX=$(pwd)/install/bin/clang++
     chmod +x install/bin/clang install/bin/clang++
-    libcxx/utils/ci/run-buildbot generic-cxx26
+
+    clean
+    cmake -S "${MONOREPO_ROOT}/runtimes" -B "${BUILD_DIR}" -GNinja \
+          -DLLVM_ENABLE_RUNTIMES="libcxx;libcxxabi;libunwind" \
+          -DLIBCXX_CXX_ABI=libcxxabi \
+          -DCMAKE_BUILD_TYPE=RelWithDebInfo \
+          -DCMAKE_INSTALL_PREFIX="${INSTALL_DIR}" \
+          -DLIBCXX_TEST_PARAMS="std=c++26" \
+          -DLIBCXXABI_TEST_PARAMS="std=c++26"
+
+    ninja -vC "${BUILD_DIR}" check-runtimes
 ;;
 generic-modules)
     buildkite-agent artifact download install.tar.xz .
@@ -111,7 +156,17 @@ generic-modules)
     export CC=$(pwd)/install/bin/clang
     export CXX=$(pwd)/install/bin/clang++
     chmod +x install/bin/clang install/bin/clang++
-    libcxx/utils/ci/run-buildbot generic-modules
+
+    clean
+    cmake -S "${MONOREPO_ROOT}/runtimes" -B "${BUILD_DIR}" -GNinja \
+          -DLLVM_ENABLE_RUNTIMES="libcxx;libcxxabi;libunwind" \
+          -DLIBCXX_CXX_ABI=libcxxabi \
+          -DCMAKE_BUILD_TYPE=RelWithDebInfo \
+          -DCMAKE_INSTALL_PREFIX="${INSTALL_DIR}" \
+          -DLIBCXX_TEST_PARAMS="enable_modules=clang" \
+          -DLIBCXXABI_TEST_PARAMS="enable_modules=clang"
+
+    ninja -vC "${BUILD_DIR}" check-runtimes
 ;;
 #################################################################
 # Insert vendor-specific internal configurations below.

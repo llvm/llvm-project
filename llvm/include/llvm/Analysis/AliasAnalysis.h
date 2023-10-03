@@ -873,6 +873,13 @@ bool isEscapeSource(const Value *V);
 bool isNotVisibleOnUnwind(const Value *Object,
                           bool &RequiresNoCaptureBeforeUnwind);
 
+/// Return true if the Object is writable, in the sense that any location based
+/// on this pointer that can be loaded can also be stored to without trapping.
+///
+/// By itself, this does not imply that introducing spurious stores is safe,
+/// for example due to thread-safety reasons.
+bool isWritableObject(const Value *Object);
+
 /// A manager for alias analyses.
 ///
 /// This class can have analyses registered with it and when run, it will run

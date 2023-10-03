@@ -11,7 +11,7 @@
 define internal i1 @iszero1(i32 %c) {
 ; CGSCC: Function Attrs: mustprogress nofree norecurse nosync nounwind willreturn memory(none)
 ; CGSCC-LABEL: define {{[^@]+}}@iszero1
-; CGSCC-SAME: (i32 noundef [[C:%.*]]) #[[ATTR0:[0-9]+]] {
+; CGSCC-SAME: () #[[ATTR0:[0-9]+]] {
 ; CGSCC-NEXT:    ret i1 false
 ;
   %cmp = icmp eq i32 %c, 0
@@ -27,8 +27,7 @@ define i1 @potential_test1(i1 %c) {
 ; CGSCC: Function Attrs: mustprogress nofree nosync nounwind willreturn memory(none)
 ; CGSCC-LABEL: define {{[^@]+}}@potential_test1
 ; CGSCC-SAME: (i1 [[C:%.*]]) #[[ATTR1:[0-9]+]] {
-; CGSCC-NEXT:    [[ARG:%.*]] = select i1 [[C]], i32 -1, i32 1
-; CGSCC-NEXT:    [[RET:%.*]] = call noundef i1 @iszero1(i32 noundef [[ARG]]) #[[ATTR2:[0-9]+]]
+; CGSCC-NEXT:    [[RET:%.*]] = call noundef i1 @iszero1() #[[ATTR2:[0-9]+]]
 ; CGSCC-NEXT:    ret i1 [[RET]]
 ;
   %arg = select i1 %c, i32 -1, i32 1
@@ -46,12 +45,12 @@ define i1 @potential_test1(i1 %c) {
 ; int potential_test2(int x) { return call_with_two_values(1) + call_with_two_values(-1); }
 
 define internal i32 @iszero2(i32 %c) {
-; CHECK: Function Attrs: mustprogress nofree norecurse nosync nounwind willreturn memory(none)
-; CHECK-LABEL: define {{[^@]+}}@iszero2
-; CHECK-SAME: (i32 [[C:%.*]]) #[[ATTR0:[0-9]+]] {
-; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i32 [[C]], 0
-; CHECK-NEXT:    [[RET:%.*]] = zext i1 [[CMP]] to i32
-; CHECK-NEXT:    ret i32 [[RET]]
+; CGSCC: Function Attrs: mustprogress nofree norecurse nosync nounwind willreturn memory(none)
+; CGSCC-LABEL: define {{[^@]+}}@iszero2
+; CGSCC-SAME: (i32 [[C:%.*]]) #[[ATTR0]] {
+; CGSCC-NEXT:    [[CMP:%.*]] = icmp eq i32 [[C]], 0
+; CGSCC-NEXT:    [[RET:%.*]] = zext i1 [[CMP]] to i32
+; CGSCC-NEXT:    ret i32 [[RET]]
 ;
   %cmp = icmp eq i32 %c, 0
   %ret = zext i1 %cmp to i32
@@ -59,15 +58,6 @@ define internal i32 @iszero2(i32 %c) {
 }
 
 define internal i32 @call_with_two_values(i32 %c) {
-; TUNIT: Function Attrs: mustprogress nofree norecurse nosync nounwind willreturn memory(none)
-; TUNIT-LABEL: define {{[^@]+}}@call_with_two_values
-; TUNIT-SAME: (i32 noundef [[C:%.*]]) #[[ATTR0]] {
-; TUNIT-NEXT:    [[CSRET1:%.*]] = call i32 @iszero2(i32 noundef [[C]]) #[[ATTR1:[0-9]+]], !range [[RNG0:![0-9]+]]
-; TUNIT-NEXT:    [[MINUSC:%.*]] = sub i32 0, [[C]]
-; TUNIT-NEXT:    [[CSRET2:%.*]] = call i32 @iszero2(i32 [[MINUSC]]) #[[ATTR1]], !range [[RNG0]]
-; TUNIT-NEXT:    [[RET:%.*]] = add i32 [[CSRET1]], [[CSRET2]]
-; TUNIT-NEXT:    ret i32 [[RET]]
-;
 ; CGSCC: Function Attrs: mustprogress nofree nosync nounwind willreturn memory(none)
 ; CGSCC-LABEL: define {{[^@]+}}@call_with_two_values
 ; CGSCC-SAME: (i32 noundef [[C:%.*]]) #[[ATTR1]] {
@@ -88,10 +78,7 @@ define i32 @potential_test2(i1 %c) {
 ; TUNIT: Function Attrs: mustprogress nofree norecurse nosync nounwind willreturn memory(none)
 ; TUNIT-LABEL: define {{[^@]+}}@potential_test2
 ; TUNIT-SAME: (i1 [[C:%.*]]) #[[ATTR0]] {
-; TUNIT-NEXT:    [[CSRET1:%.*]] = call i32 @call_with_two_values(i32 noundef 1) #[[ATTR1]], !range [[RNG1:![0-9]+]]
-; TUNIT-NEXT:    [[CSRET2:%.*]] = call i32 @call_with_two_values(i32 noundef -1) #[[ATTR1]], !range [[RNG1]]
-; TUNIT-NEXT:    [[RET:%.*]] = add i32 [[CSRET1]], [[CSRET2]]
-; TUNIT-NEXT:    ret i32 [[RET]]
+; TUNIT-NEXT:    ret i32 0
 ;
 ; CGSCC: Function Attrs: mustprogress nofree nosync nounwind willreturn memory(none)
 ; CGSCC-LABEL: define {{[^@]+}}@potential_test2
@@ -134,7 +121,7 @@ define internal i32 @iszero3(i32 %c) {
 define internal i32 @less_than_two(i32 %c) {
 ; CGSCC: Function Attrs: mustprogress nofree norecurse nosync nounwind willreturn memory(none)
 ; CGSCC-LABEL: define {{[^@]+}}@less_than_two
-; CGSCC-SAME: (i32 [[C:%.*]]) #[[ATTR0]] {
+; CGSCC-SAME: (i32 noundef [[C:%.*]]) #[[ATTR0]] {
 ; CGSCC-NEXT:    [[CMP:%.*]] = icmp slt i32 [[C]], 2
 ; CGSCC-NEXT:    [[RET:%.*]] = zext i1 [[CMP]] to i32
 ; CGSCC-NEXT:    ret i32 [[RET]]
@@ -154,9 +141,9 @@ define i32 @potential_test3() {
 ; CGSCC-LABEL: define {{[^@]+}}@potential_test3
 ; CGSCC-SAME: () #[[ATTR1]] {
 ; CGSCC-NEXT:    [[CMP1:%.*]] = call i32 @iszero3(i32 noundef 0) #[[ATTR2]]
-; CGSCC-NEXT:    [[TRUE1:%.*]] = call i32 @less_than_two(i32 [[CMP1]]) #[[ATTR2]]
+; CGSCC-NEXT:    [[TRUE1:%.*]] = call i32 @less_than_two(i32 noundef [[CMP1]]) #[[ATTR2]]
 ; CGSCC-NEXT:    [[CMP2:%.*]] = call i32 @iszero3(i32 noundef 1) #[[ATTR2]]
-; CGSCC-NEXT:    [[TRUE2:%.*]] = call i32 @less_than_two(i32 [[CMP2]]) #[[ATTR2]]
+; CGSCC-NEXT:    [[TRUE2:%.*]] = call i32 @less_than_two(i32 noundef [[CMP2]]) #[[ATTR2]]
 ; CGSCC-NEXT:    [[RET:%.*]] = add i32 [[TRUE1]], [[TRUE2]]
 ; CGSCC-NEXT:    ret i32 [[RET]]
 ;
@@ -183,10 +170,7 @@ define i32 @potential_test4(i32 %c) {
 ; TUNIT: Function Attrs: mustprogress nofree norecurse nosync nounwind willreturn memory(none)
 ; TUNIT-LABEL: define {{[^@]+}}@potential_test4
 ; TUNIT-SAME: (i32 [[C:%.*]]) #[[ATTR0]] {
-; TUNIT-NEXT:    [[CSRET:%.*]] = call i32 @return1or3(i32 [[C]]) #[[ATTR1]]
-; TUNIT-NEXT:    [[FALSE:%.*]] = icmp eq i32 [[CSRET]], 2
-; TUNIT-NEXT:    [[RET:%.*]] = zext i1 [[FALSE]] to i32
-; TUNIT-NEXT:    ret i32 [[RET]]
+; TUNIT-NEXT:    ret i32 0
 ;
 ; CGSCC: Function Attrs: mustprogress nofree nosync nounwind willreturn memory(none)
 ; CGSCC-LABEL: define {{[^@]+}}@potential_test4
@@ -206,11 +190,7 @@ define i32 @potential_test5(i32 %c) {
 ; TUNIT: Function Attrs: mustprogress nofree norecurse nosync nounwind willreturn memory(none)
 ; TUNIT-LABEL: define {{[^@]+}}@potential_test5
 ; TUNIT-SAME: (i32 [[C:%.*]]) #[[ATTR0]] {
-; TUNIT-NEXT:    [[CSRET1:%.*]] = call i32 @return1or3(i32 [[C]]) #[[ATTR1]]
-; TUNIT-NEXT:    [[CSRET2:%.*]] = call i32 @return2or4(i32 [[C]]) #[[ATTR1]]
-; TUNIT-NEXT:    [[FALSE:%.*]] = icmp eq i32 [[CSRET1]], [[CSRET2]]
-; TUNIT-NEXT:    [[RET:%.*]] = zext i1 [[FALSE]] to i32
-; TUNIT-NEXT:    ret i32 [[RET]]
+; TUNIT-NEXT:    ret i32 0
 ;
 ; CGSCC: Function Attrs: mustprogress nofree nosync nounwind willreturn memory(none)
 ; CGSCC-LABEL: define {{[^@]+}}@potential_test5
@@ -232,7 +212,7 @@ define i1 @potential_test6(i32 %c) {
 ; TUNIT: Function Attrs: mustprogress nofree norecurse nosync nounwind willreturn memory(none)
 ; TUNIT-LABEL: define {{[^@]+}}@potential_test6
 ; TUNIT-SAME: (i32 [[C:%.*]]) #[[ATTR0]] {
-; TUNIT-NEXT:    [[CSRET1:%.*]] = call i32 @return1or3(i32 [[C]]) #[[ATTR1]]
+; TUNIT-NEXT:    [[CSRET1:%.*]] = call i32 @return1or3(i32 [[C]]) #[[ATTR1:[0-9]+]]
 ; TUNIT-NEXT:    [[RET:%.*]] = icmp eq i32 [[CSRET1]], 3
 ; TUNIT-NEXT:    ret i1 [[RET]]
 ;
@@ -274,7 +254,7 @@ define i1 @potential_test7(i32 %c) {
 define internal i32 @return1or3(i32 %c) {
 ; CHECK: Function Attrs: mustprogress nofree norecurse nosync nounwind willreturn memory(none)
 ; CHECK-LABEL: define {{[^@]+}}@return1or3
-; CHECK-SAME: (i32 [[C:%.*]]) #[[ATTR0]] {
+; CHECK-SAME: (i32 [[C:%.*]]) #[[ATTR0:[0-9]+]] {
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i32 [[C]], 0
 ; CHECK-NEXT:    [[RET:%.*]] = select i1 [[CMP]], i32 1, i32 3
 ; CHECK-NEXT:    ret i32 [[RET]]
@@ -285,12 +265,12 @@ define internal i32 @return1or3(i32 %c) {
 }
 
 define internal i32 @return2or4(i32 %c) {
-; CHECK: Function Attrs: mustprogress nofree norecurse nosync nounwind willreturn memory(none)
-; CHECK-LABEL: define {{[^@]+}}@return2or4
-; CHECK-SAME: (i32 [[C:%.*]]) #[[ATTR0]] {
-; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i32 [[C]], 0
-; CHECK-NEXT:    [[RET:%.*]] = select i1 [[CMP]], i32 2, i32 4
-; CHECK-NEXT:    ret i32 [[RET]]
+; CGSCC: Function Attrs: mustprogress nofree norecurse nosync nounwind willreturn memory(none)
+; CGSCC-LABEL: define {{[^@]+}}@return2or4
+; CGSCC-SAME: (i32 [[C:%.*]]) #[[ATTR0]] {
+; CGSCC-NEXT:    [[CMP:%.*]] = icmp eq i32 [[C]], 0
+; CGSCC-NEXT:    [[RET:%.*]] = select i1 [[CMP]], i32 2, i32 4
+; CGSCC-NEXT:    ret i32 [[RET]]
 ;
   %cmp = icmp eq i32 %c, 0
   %ret = select i1 %cmp, i32 2, i32 4
@@ -491,9 +471,7 @@ define i32 @optimize_undef_3(i1 %c) {
 ; CHECK:       t:
 ; CHECK-NEXT:    ret i32 0
 ; CHECK:       f:
-; CHECK-NEXT:    [[UNDEF:%.*]] = icmp eq i32 undef, 0
-; CHECK-NEXT:    [[UNDEF2:%.*]] = zext i1 [[UNDEF]] to i32
-; CHECK-NEXT:    ret i32 [[UNDEF2]]
+; CHECK-NEXT:    ret i32 0
 ;
   br i1 %c, label %t, label %f
 t:
@@ -512,9 +490,8 @@ define i32 @potential_test11(i1 %c) {
 ; TUNIT-SAME: (i1 [[C:%.*]]) #[[ATTR0]] {
 ; TUNIT-NEXT:    [[ZERO1:%.*]] = call i32 @optimize_undef_1(i1 noundef [[C]]) #[[ATTR1]]
 ; TUNIT-NEXT:    [[ZERO2:%.*]] = call i32 @optimize_undef_2(i1 noundef [[C]]) #[[ATTR1]]
-; TUNIT-NEXT:    [[ZERO3:%.*]] = call i32 @optimize_undef_3(i1 noundef [[C]]) #[[ATTR1]]
 ; TUNIT-NEXT:    [[ACC1:%.*]] = add i32 [[ZERO1]], [[ZERO2]]
-; TUNIT-NEXT:    [[ACC2:%.*]] = add i32 [[ACC1]], [[ZERO3]]
+; TUNIT-NEXT:    [[ACC2:%.*]] = add i32 [[ACC1]], 0
 ; TUNIT-NEXT:    ret i32 [[ACC2]]
 ;
 ; CGSCC: Function Attrs: mustprogress nofree nosync nounwind willreturn memory(none)
@@ -686,8 +663,5 @@ define i1 @potential_test16(i1 %c0, i1 %c1) {
 ;.
 ; CGSCC: attributes #[[ATTR0]] = { mustprogress nofree norecurse nosync nounwind willreturn memory(none) }
 ; CGSCC: attributes #[[ATTR1]] = { mustprogress nofree nosync nounwind willreturn memory(none) }
-; CGSCC: attributes #[[ATTR2]] = { nofree willreturn }
-;.
-; TUNIT: [[RNG0]] = !{i32 0, i32 2}
-; TUNIT: [[RNG1]] = !{i32 0, i32 3}
+; CGSCC: attributes #[[ATTR2]] = { nofree nosync willreturn }
 ;.

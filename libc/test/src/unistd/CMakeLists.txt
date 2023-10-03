@@ -414,7 +414,7 @@ add_libc_unittest(
     libc.include.unistd
     libc.include.fcntl
     libc.include.sys_syscall
-    libc.src.unistd.__llvm_libc_syscall
+    libc.src.unistd.LIBC_NAMESPACE_syscall
     libc.test.errno_setter_matcher
 )
 
@@ -430,8 +430,9 @@ add_libc_unittest(
     libc.src.unistd.sysconf
 )
 
-add_libc_unittest(
+add_libc_test(
   getopt_test
+  HERMETIC_TEST_ONLY # Uses libc's own stderr
   SUITE
     libc_unistd_unittests
   SRCS

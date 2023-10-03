@@ -1130,7 +1130,7 @@ SDValue VETargetLowering::lowerATOMIC_FENCE(SDValue Op,
     case AtomicOrdering::AcquireRelease:
     case AtomicOrdering::SequentiallyConsistent:
       // Generate "fencem 3" as acq_rel and seq_cst fence.
-      // FIXME: "fencem 3" doesn't wait for for PCIe deveices accesses,
+      // FIXME: "fencem 3" doesn't wait for PCIe deveices accesses,
       //        so  seq_cst may require more instruction for them.
       return SDValue(DAG.getMachineNode(VE::FENCEM, DL, MVT::Other,
                                         DAG.getTargetConstant(3, DL, MVT::i32),
@@ -1428,11 +1428,10 @@ static SDValue lowerLoadI1(SDValue Op, SelectionDAG &DAG) {
 
 SDValue VETargetLowering::lowerLOAD(SDValue Op, SelectionDAG &DAG) const {
   LoadSDNode *LdNode = cast<LoadSDNode>(Op.getNode());
-
   EVT MemVT = LdNode->getMemoryVT();
 
-  // Dispatch to vector isel.
-  if (MemVT.isVector() && !isMaskType(MemVT))
+  // If VPU is enabled, always expand non-mask vector loads to VVP
+  if (Subtarget->enableVPU() && MemVT.isVector() && !isMaskType(MemVT))
     return lowerToVVP(Op, DAG);
 
   SDValue BasePtr = LdNode->getBasePtr();
@@ -1542,10 +1541,10 @@ static SDValue lowerStoreI1(SDValue Op, SelectionDAG &DAG) {
 SDValue VETargetLowering::lowerSTORE(SDValue Op, SelectionDAG &DAG) const {
   StoreSDNode *StNode = cast<StoreSDNode>(Op.getNode());
   assert(StNode && StNode->getOffset().isUndef() && "Unexpected node type");
-
-  // always expand non-mask vector loads to VVP
   EVT MemVT = StNode->getMemoryVT();
-  if (MemVT.isVector() && !isMaskType(MemVT))
+
+  // If VPU is enabled, always expand non-mask vector stores to VVP
+  if (Subtarget->enableVPU() && MemVT.isVector() && !isMaskType(MemVT))
     return lowerToVVP(Op, DAG);
 
   SDValue BasePtr = StNode->getBasePtr();
@@ -1871,7 +1870,7 @@ VETargetLowering::getCustomOperationAction(SDNode &Op) const {
 }
 
 SDValue VETargetLowering::LowerOperation(SDValue Op, SelectionDAG &DAG) const {
-  LLVM_DEBUG(dbgs() << "::LowerOperation"; Op->print(dbgs()););
+  LLVM_DEBUG(dbgs() << "::LowerOperation "; Op.dump(&DAG));
   unsigned Opcode = Op.getOpcode();
 
   /// Scalar isel.
@@ -1922,7 +1921,6 @@ SDValue VETargetLowering::LowerOperation(SDValue Op, SelectionDAG &DAG) const {
   }
 
   /// Vector isel.
-  LLVM_DEBUG(dbgs() << "::LowerOperation_VVP"; Op->print(dbgs()););
   if (ISD::isVPOpcode(Opcode))
     return lowerToVVP(Op, DAG);
 

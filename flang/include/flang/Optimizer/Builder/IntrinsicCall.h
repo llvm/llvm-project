@@ -9,6 +9,7 @@
 #ifndef FORTRAN_LOWER_INTRINSICCALL_H
 #define FORTRAN_LOWER_INTRINSICCALL_H
 
+#include "flang/Lower/AbstractConverter.h"
 #include "flang/Optimizer/Builder/BoxValue.h"
 #include "flang/Optimizer/Builder/FIRBuilder.h"
 #include "flang/Optimizer/Builder/Runtime/Character.h"
@@ -34,7 +35,8 @@ class StatementContext;
 std::pair<fir::ExtendedValue, bool>
 genIntrinsicCall(fir::FirOpBuilder &, mlir::Location, llvm::StringRef name,
                  std::optional<mlir::Type> resultType,
-                 llvm::ArrayRef<fir::ExtendedValue> args);
+                 llvm::ArrayRef<fir::ExtendedValue> args,
+                 Fortran::lower::AbstractConverter *converter = nullptr);
 
 /// Enums used to templatize and share lowering of MIN and MAX.
 enum class Extremum { Min, Max };
@@ -124,8 +126,10 @@ struct IntrinsicArgumentLoweringRules;
 struct IntrinsicLibrary {
 
   // Constructors.
-  explicit IntrinsicLibrary(fir::FirOpBuilder &builder, mlir::Location loc)
-      : builder{builder}, loc{loc} {}
+  explicit IntrinsicLibrary(
+      fir::FirOpBuilder &builder, mlir::Location loc,
+      Fortran::lower::AbstractConverter *converter = nullptr)
+      : builder{builder}, loc{loc}, converter{converter} {}
   IntrinsicLibrary() = delete;
   IntrinsicLibrary(const IntrinsicLibrary &) = delete;
 
@@ -316,6 +320,7 @@ struct IntrinsicLibrary {
                                     llvm::ArrayRef<fir::ExtendedValue>);
   fir::ExtendedValue genSum(mlir::Type, llvm::ArrayRef<fir::ExtendedValue>);
   void genSystemClock(llvm::ArrayRef<fir::ExtendedValue>);
+  mlir::Value genTand(mlir::Type, llvm::ArrayRef<mlir::Value>);
   mlir::Value genTrailz(mlir::Type, llvm::ArrayRef<mlir::Value>);
   fir::ExtendedValue genTransfer(mlir::Type,
                                  llvm::ArrayRef<fir::ExtendedValue>);
@@ -415,6 +420,7 @@ struct IntrinsicLibrary {
   fir::FirOpBuilder &builder;
   mlir::Location loc;
   bool resultMustBeFreed = false;
+  Fortran::lower::AbstractConverter *converter = nullptr;
 };
 
 struct IntrinsicDummyArgument {

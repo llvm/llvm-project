@@ -337,6 +337,9 @@ class CGDebugInfo {
                                           llvm::DIScope *RecordTy,
                                           const RecordDecl *RD);
 
+  /// Create type for binding declarations.
+  llvm::DIType *CreateBindingDeclType(const BindingDecl *BD);
+
   /// Create an anonnymous zero-size separator for bit-field-decl if needed on
   /// the target.
   llvm::DIDerivedType *createBitFieldSeparatorIfNeeded(
@@ -832,8 +835,10 @@ public:
 
   // Define copy assignment operator.
   ApplyDebugLocation &operator=(ApplyDebugLocation &&Other) {
-    CGF = Other.CGF;
-    Other.CGF = nullptr;
+    if (this != &Other) {
+      CGF = Other.CGF;
+      Other.CGF = nullptr;
+    }
     return *this;
   }
 

@@ -30,6 +30,7 @@ def : Proc<"generic", []>;
 def : Proc<"v1", []>;
 def : Proc<"v2", []>;
 def : Proc<"v3", [ALU32]>;
+def : Proc<"v4", [ALU32]>;
 def : Proc<"probe", []>;
 
 def BPFInstPrinter : AsmWriter {
@@ -45,7 +46,7 @@ def BPFAsmParserVariant : AsmParserVariant {
   int Variant = 0;
   string Name = "BPF";
   string BreakCharacters = ".";
-  string TokenizingCharacters = "#()[]=:.<>!+*";
+  string TokenizingCharacters = "#()[]=:.<>!+*%/";
 }
 
 def BPF : Target {

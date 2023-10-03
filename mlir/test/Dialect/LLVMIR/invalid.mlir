@@ -545,9 +545,9 @@ func.func @invalid_vector_type_5(%a : vector<4xf32>, %idx : i32) -> vector<4xf32
 
 // -----
 
-func.func @null_non_llvm_type() {
-  // expected-error@+1 {{'llvm.mlir.null' op result #0 must be LLVM pointer type, but got 'i32'}}
-  llvm.mlir.null : i32
+func.func @zero_non_llvm_type() {
+  // expected-error@+1 {{'llvm.mlir.zero' op result #0 must be LLVM dialect-compatible type, but got 'tensor<4xi32>'}}
+  llvm.mlir.zero : tensor<4xi32>
 }
 
 // -----
@@ -874,7 +874,7 @@ func.func @switch_wrong_number_of_weights(%arg0 : i32) {
   // expected-error@+1 {{expects number of branch weights to match number of successors: 3 vs 2}}
   llvm.switch %arg0 : i32, ^bb1 [
     42: ^bb2(%arg0, %arg0 : i32, i32)
-  ] {branch_weights = dense<[13, 17, 19]> : vector<3xi32>}
+  ] {branch_weights = array<i32: 13, 17, 19>}
 
 ^bb1: // pred: ^bb0
   llvm.return
@@ -887,7 +887,7 @@ func.func @switch_wrong_number_of_weights(%arg0 : i32) {
 
 func.func @switch_case_type_mismatch(%arg0 : i64) {
   // expected-error@below {{expects case value type to match condition value type}}
-  "llvm.switch"(%arg0)[^bb1, ^bb2] <{case_operand_segments = array<i32: 0>, case_values = dense<42> : vector<1xi32>, operand_segment_sizes = array<i32: 1, 0, 0>}> : (i64) -> ()
+  "llvm.switch"(%arg0)[^bb1, ^bb2] <{case_operand_segments = array<i32: 0>, case_values = dense<42> : vector<1xi32>, operandSegmentSizes = array<i32: 1, 0, 0>}> : (i64) -> ()
 ^bb1: // pred: ^bb0
   llvm.return
 ^bb2: // pred: ^bb0
@@ -1336,16 +1336,18 @@ func.func @invalid_target_ext_atomic(%arg0 : !llvm.ptr) {
 
 // -----
 
-func.func @invalid_target_ext_constant() {
+func.func @invalid_target_ext_constant_unsupported() {
   // expected-error@+1 {{target extension type does not support zero-initializer}}
-  %0 = llvm.mlir.constant(0 : index) : !llvm.target<"invalid_constant">
+  %0 = llvm.mlir.zero : !llvm.target<"invalid_constant">
+  llvm.return
 }
 
 // -----
 
 func.func @invalid_target_ext_constant() {
-  // expected-error@+1 {{only zero-initializer allowed for target extension types}}
-  %0 = llvm.mlir.constant(42 : index) : !llvm.target<"spirv.Event">
+  // expected-error@+1 {{does not support target extension type.}}
+  %0 = llvm.mlir.constant(0 : index) : !llvm.target<"spirv.Event">
+  llvm.return
 }
 
 // -----
@@ -1408,4 +1410,24 @@ func.func @invalid_zext_target_type(%arg: i32)  {
 func.func @invalid_zext_target_type_two(%arg: vector<1xi32>)  {
   // expected-error@+1 {{input type is a vector but output type is an integer}}
   %0 = llvm.zext %arg : vector<1xi32> to i64
+}
+
+// -----
+
+llvm.func @variadic(...)
+
+llvm.func @invalid_variadic_call(%arg: i32)  {
+  // expected-error@+1 {{missing callee type attribute for vararg call}}
+  "llvm.call"(%arg) <{callee = @variadic}> : (i32) -> ()
+  llvm.return
+}
+
+// -----
+
+llvm.func @variadic(...)
+
+llvm.func @invalid_variadic_call(%arg: i32)  {
+  // expected-error@+1 {{missing callee type attribute for vararg call}}
+  "llvm.call"(%arg) <{callee = @variadic}> : (i32) -> ()
+  llvm.return
 }

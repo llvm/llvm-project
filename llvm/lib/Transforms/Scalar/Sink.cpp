@@ -67,9 +67,8 @@ static bool IsAcceptableTarget(Instruction *Inst, BasicBlock *SuccToSinkTo,
   assert(Inst && "Instruction to be sunk is null");
   assert(SuccToSinkTo && "Candidate sink target is null");
 
-  // It's never legal to sink an instruction into a block which terminates in an
-  // EH-pad.
-  if (SuccToSinkTo->getTerminator()->isExceptionalTerminator())
+  // It's never legal to sink an instruction into an EH-pad block.
+  if (SuccToSinkTo->isEHPad())
     return false;
 
   // If the block has multiple predecessors, this would introduce computation

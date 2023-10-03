@@ -18,23 +18,23 @@ declare float @llvm.sqrt.f32(float) nounwind readnone
 declare <2 x float> @llvm.sqrt.v2f32(<2 x float>) nounwind readnone
 
 define amdgpu_kernel void @rsq_f32(ptr addrspace(1) noalias %out, ptr addrspace(1) noalias %in) {
-; GCN-DAZ-LABEL: rsq_f32:
-; GCN-DAZ:       ; %bb.0:
-; GCN-DAZ-NEXT:    s_load_dwordx4 s[0:3], s[0:1], 0x9
-; GCN-DAZ-NEXT:    s_mov_b32 s7, 0xf000
-; GCN-DAZ-NEXT:    s_mov_b32 s6, -1
-; GCN-DAZ-NEXT:    s_mov_b32 s10, s6
-; GCN-DAZ-NEXT:    s_mov_b32 s11, s7
-; GCN-DAZ-NEXT:    s_waitcnt lgkmcnt(0)
-; GCN-DAZ-NEXT:    s_mov_b32 s8, s2
-; GCN-DAZ-NEXT:    s_mov_b32 s9, s3
-; GCN-DAZ-NEXT:    buffer_load_dword v0, off, s[8:11], 0
-; GCN-DAZ-NEXT:    s_mov_b32 s4, s0
-; GCN-DAZ-NEXT:    s_mov_b32 s5, s1
-; GCN-DAZ-NEXT:    s_waitcnt vmcnt(0)
-; GCN-DAZ-NEXT:    v_rsq_f32_e32 v0, v0
-; GCN-DAZ-NEXT:    buffer_store_dword v0, off, s[4:7], 0
-; GCN-DAZ-NEXT:    s_endpgm
+; GCN-DAZ-UNSAFE-LABEL: rsq_f32:
+; GCN-DAZ-UNSAFE:       ; %bb.0:
+; GCN-DAZ-UNSAFE-NEXT:    s_load_dwordx4 s[0:3], s[0:1], 0x9
+; GCN-DAZ-UNSAFE-NEXT:    s_mov_b32 s7, 0xf000
+; GCN-DAZ-UNSAFE-NEXT:    s_mov_b32 s6, -1
+; GCN-DAZ-UNSAFE-NEXT:    s_mov_b32 s10, s6
+; GCN-DAZ-UNSAFE-NEXT:    s_mov_b32 s11, s7
+; GCN-DAZ-UNSAFE-NEXT:    s_waitcnt lgkmcnt(0)
+; GCN-DAZ-UNSAFE-NEXT:    s_mov_b32 s8, s2
+; GCN-DAZ-UNSAFE-NEXT:    s_mov_b32 s9, s3
+; GCN-DAZ-UNSAFE-NEXT:    buffer_load_dword v0, off, s[8:11], 0
+; GCN-DAZ-UNSAFE-NEXT:    s_mov_b32 s4, s0
+; GCN-DAZ-UNSAFE-NEXT:    s_mov_b32 s5, s1
+; GCN-DAZ-UNSAFE-NEXT:    s_waitcnt vmcnt(0)
+; GCN-DAZ-UNSAFE-NEXT:    v_rsq_f32_e32 v0, v0
+; GCN-DAZ-UNSAFE-NEXT:    buffer_store_dword v0, off, s[4:7], 0
+; GCN-DAZ-UNSAFE-NEXT:    s_endpgm
 ;
 ; GCN-IEEE-UNSAFE-LABEL: rsq_f32:
 ; GCN-IEEE-UNSAFE:       ; %bb.0:
@@ -54,30 +54,123 @@ define amdgpu_kernel void @rsq_f32(ptr addrspace(1) noalias %out, ptr addrspace(
 ; GCN-IEEE-UNSAFE-NEXT:    buffer_store_dword v0, off, s[4:7], 0
 ; GCN-IEEE-UNSAFE-NEXT:    s_endpgm
 ;
-; GCN-IEEE-SAFE-LABEL: rsq_f32:
-; GCN-IEEE-SAFE:       ; %bb.0:
-; GCN-IEEE-SAFE-NEXT:    s_load_dwordx4 s[0:3], s[0:1], 0x9
-; GCN-IEEE-SAFE-NEXT:    s_mov_b32 s7, 0xf000
-; GCN-IEEE-SAFE-NEXT:    s_mov_b32 s6, -1
-; GCN-IEEE-SAFE-NEXT:    s_mov_b32 s10, s6
-; GCN-IEEE-SAFE-NEXT:    s_mov_b32 s11, s7
-; GCN-IEEE-SAFE-NEXT:    s_waitcnt lgkmcnt(0)
-; GCN-IEEE-SAFE-NEXT:    s_mov_b32 s8, s2
-; GCN-IEEE-SAFE-NEXT:    s_mov_b32 s9, s3
-; GCN-IEEE-SAFE-NEXT:    buffer_load_dword v0, off, s[8:11], 0
-; GCN-IEEE-SAFE-NEXT:    s_mov_b32 s2, 0x6f800000
-; GCN-IEEE-SAFE-NEXT:    v_mov_b32_e32 v1, 0x2f800000
-; GCN-IEEE-SAFE-NEXT:    s_mov_b32 s4, s0
-; GCN-IEEE-SAFE-NEXT:    s_mov_b32 s5, s1
-; GCN-IEEE-SAFE-NEXT:    s_waitcnt vmcnt(0)
-; GCN-IEEE-SAFE-NEXT:    v_sqrt_f32_e32 v0, v0
-; GCN-IEEE-SAFE-NEXT:    v_cmp_gt_f32_e64 vcc, |v0|, s2
-; GCN-IEEE-SAFE-NEXT:    v_cndmask_b32_e32 v1, 1.0, v1, vcc
-; GCN-IEEE-SAFE-NEXT:    v_mul_f32_e32 v0, v0, v1
-; GCN-IEEE-SAFE-NEXT:    v_rcp_f32_e32 v0, v0
-; GCN-IEEE-SAFE-NEXT:    v_mul_f32_e32 v0, v1, v0
-; GCN-IEEE-SAFE-NEXT:    buffer_store_dword v0, off, s[4:7], 0
-; GCN-IEEE-SAFE-NEXT:    s_endpgm
+; GCN-DAZ-SAFE-LABEL: rsq_f32:
+; GCN-DAZ-SAFE:       ; %bb.0:
+; GCN-DAZ-SAFE-NEXT:    s_load_dwordx4 s[0:3], s[0:1], 0x9
+; GCN-DAZ-SAFE-NEXT:    s_mov_b32 s7, 0xf000
+; GCN-DAZ-SAFE-NEXT:    s_mov_b32 s6, -1
+; GCN-DAZ-SAFE-NEXT:    s_mov_b32 s10, s6
+; GCN-DAZ-SAFE-NEXT:    s_mov_b32 s11, s7
+; GCN-DAZ-SAFE-NEXT:    s_waitcnt lgkmcnt(0)
+; GCN-DAZ-SAFE-NEXT:    s_mov_b32 s8, s2
+; GCN-DAZ-SAFE-NEXT:    s_mov_b32 s9, s3
+; GCN-DAZ-SAFE-NEXT:    buffer_load_dword v0, off, s[8:11], 0
+; GCN-DAZ-SAFE-NEXT:    s_mov_b32 s2, 0xf800000
+; GCN-DAZ-SAFE-NEXT:    v_mov_b32_e32 v2, 0x260
+; GCN-DAZ-SAFE-NEXT:    s_mov_b32 s4, s0
+; GCN-DAZ-SAFE-NEXT:    s_mov_b32 s5, s1
+; GCN-DAZ-SAFE-NEXT:    s_waitcnt vmcnt(0)
+; GCN-DAZ-SAFE-NEXT:    v_mul_f32_e32 v1, 0x4f800000, v0
+; GCN-DAZ-SAFE-NEXT:    v_cmp_gt_f32_e32 vcc, s2, v0
+; GCN-DAZ-SAFE-NEXT:    v_cndmask_b32_e32 v0, v0, v1, vcc
+; GCN-DAZ-SAFE-NEXT:    v_rsq_f32_e32 v1, v0
+; GCN-DAZ-SAFE-NEXT:    v_mul_f32_e32 v3, v0, v1
+; GCN-DAZ-SAFE-NEXT:    v_mul_f32_e32 v1, 0.5, v1
+; GCN-DAZ-SAFE-NEXT:    v_fma_f32 v4, -v1, v3, 0.5
+; GCN-DAZ-SAFE-NEXT:    v_fma_f32 v3, v3, v4, v3
+; GCN-DAZ-SAFE-NEXT:    v_fma_f32 v1, v1, v4, v1
+; GCN-DAZ-SAFE-NEXT:    v_fma_f32 v4, -v3, v3, v0
+; GCN-DAZ-SAFE-NEXT:    v_fma_f32 v1, v4, v1, v3
+; GCN-DAZ-SAFE-NEXT:    v_mul_f32_e32 v3, 0x37800000, v1
+; GCN-DAZ-SAFE-NEXT:    v_cndmask_b32_e32 v1, v1, v3, vcc
+; GCN-DAZ-SAFE-NEXT:    v_cmp_class_f32_e32 vcc, v0, v2
+; GCN-DAZ-SAFE-NEXT:    v_cndmask_b32_e32 v0, v1, v0, vcc
+; GCN-DAZ-SAFE-NEXT:    v_rcp_f32_e32 v0, v0
+; GCN-DAZ-SAFE-NEXT:    buffer_store_dword v0, off, s[4:7], 0
+; GCN-DAZ-SAFE-NEXT:    s_endpgm
+;
+; SI-IEEE-SAFE-LABEL: rsq_f32:
+; SI-IEEE-SAFE:       ; %bb.0:
+; SI-IEEE-SAFE-NEXT:    s_load_dwordx4 s[8:11], s[0:1], 0x9
+; SI-IEEE-SAFE-NEXT:    s_mov_b32 s7, 0xf000
+; SI-IEEE-SAFE-NEXT:    s_mov_b32 s6, -1
+; SI-IEEE-SAFE-NEXT:    s_mov_b32 s2, s6
+; SI-IEEE-SAFE-NEXT:    s_mov_b32 s3, s7
+; SI-IEEE-SAFE-NEXT:    s_waitcnt lgkmcnt(0)
+; SI-IEEE-SAFE-NEXT:    s_mov_b32 s0, s10
+; SI-IEEE-SAFE-NEXT:    s_mov_b32 s1, s11
+; SI-IEEE-SAFE-NEXT:    buffer_load_dword v0, off, s[0:3], 0
+; SI-IEEE-SAFE-NEXT:    s_mov_b32 s0, 0xf800000
+; SI-IEEE-SAFE-NEXT:    v_mov_b32_e32 v1, 0x260
+; SI-IEEE-SAFE-NEXT:    s_mov_b32 s2, 0x7f800000
+; SI-IEEE-SAFE-NEXT:    s_mov_b32 s4, s8
+; SI-IEEE-SAFE-NEXT:    s_mov_b32 s5, s9
+; SI-IEEE-SAFE-NEXT:    s_waitcnt vmcnt(0)
+; SI-IEEE-SAFE-NEXT:    v_mul_f32_e32 v2, 0x4f800000, v0
+; SI-IEEE-SAFE-NEXT:    v_cmp_gt_f32_e64 s[0:1], s0, v0
+; SI-IEEE-SAFE-NEXT:    v_cndmask_b32_e64 v0, v0, v2, s[0:1]
+; SI-IEEE-SAFE-NEXT:    v_sqrt_f32_e32 v2, v0
+; SI-IEEE-SAFE-NEXT:    v_add_i32_e32 v3, vcc, -1, v2
+; SI-IEEE-SAFE-NEXT:    v_add_i32_e32 v4, vcc, 1, v2
+; SI-IEEE-SAFE-NEXT:    v_fma_f32 v5, -v3, v2, v0
+; SI-IEEE-SAFE-NEXT:    v_fma_f32 v6, -v4, v2, v0
+; SI-IEEE-SAFE-NEXT:    v_cmp_ge_f32_e32 vcc, 0, v5
+; SI-IEEE-SAFE-NEXT:    v_cndmask_b32_e32 v2, v2, v3, vcc
+; SI-IEEE-SAFE-NEXT:    v_cmp_lt_f32_e32 vcc, 0, v6
+; SI-IEEE-SAFE-NEXT:    v_cndmask_b32_e32 v2, v2, v4, vcc
+; SI-IEEE-SAFE-NEXT:    v_mul_f32_e32 v3, 0x37800000, v2
+; SI-IEEE-SAFE-NEXT:    v_cndmask_b32_e64 v2, v2, v3, s[0:1]
+; SI-IEEE-SAFE-NEXT:    v_cmp_class_f32_e32 vcc, v0, v1
+; SI-IEEE-SAFE-NEXT:    v_cndmask_b32_e32 v0, v2, v0, vcc
+; SI-IEEE-SAFE-NEXT:    v_frexp_mant_f32_e32 v1, v0
+; SI-IEEE-SAFE-NEXT:    v_cmp_lt_f32_e64 vcc, |v0|, s2
+; SI-IEEE-SAFE-NEXT:    v_cndmask_b32_e32 v1, v0, v1, vcc
+; SI-IEEE-SAFE-NEXT:    v_rcp_f32_e32 v1, v1
+; SI-IEEE-SAFE-NEXT:    v_frexp_exp_i32_f32_e32 v0, v0
+; SI-IEEE-SAFE-NEXT:    v_sub_i32_e32 v0, vcc, 0, v0
+; SI-IEEE-SAFE-NEXT:    v_ldexp_f32_e32 v0, v1, v0
+; SI-IEEE-SAFE-NEXT:    buffer_store_dword v0, off, s[4:7], 0
+; SI-IEEE-SAFE-NEXT:    s_endpgm
+;
+; CI-IEEE-SAFE-LABEL: rsq_f32:
+; CI-IEEE-SAFE:       ; %bb.0:
+; CI-IEEE-SAFE-NEXT:    s_load_dwordx4 s[8:11], s[0:1], 0x9
+; CI-IEEE-SAFE-NEXT:    s_mov_b32 s7, 0xf000
+; CI-IEEE-SAFE-NEXT:    s_mov_b32 s6, -1
+; CI-IEEE-SAFE-NEXT:    s_mov_b32 s2, s6
+; CI-IEEE-SAFE-NEXT:    s_mov_b32 s3, s7
+; CI-IEEE-SAFE-NEXT:    s_waitcnt lgkmcnt(0)
+; CI-IEEE-SAFE-NEXT:    s_mov_b32 s0, s10
+; CI-IEEE-SAFE-NEXT:    s_mov_b32 s1, s11
+; CI-IEEE-SAFE-NEXT:    buffer_load_dword v0, off, s[0:3], 0
+; CI-IEEE-SAFE-NEXT:    s_mov_b32 s0, 0xf800000
+; CI-IEEE-SAFE-NEXT:    v_mov_b32_e32 v1, 0x260
+; CI-IEEE-SAFE-NEXT:    s_mov_b32 s4, s8
+; CI-IEEE-SAFE-NEXT:    s_mov_b32 s5, s9
+; CI-IEEE-SAFE-NEXT:    s_waitcnt vmcnt(0)
+; CI-IEEE-SAFE-NEXT:    v_mul_f32_e32 v2, 0x4f800000, v0
+; CI-IEEE-SAFE-NEXT:    v_cmp_gt_f32_e64 s[0:1], s0, v0
+; CI-IEEE-SAFE-NEXT:    v_cndmask_b32_e64 v0, v0, v2, s[0:1]
+; CI-IEEE-SAFE-NEXT:    v_sqrt_f32_e32 v2, v0
+; CI-IEEE-SAFE-NEXT:    v_add_i32_e32 v3, vcc, -1, v2
+; CI-IEEE-SAFE-NEXT:    v_add_i32_e32 v4, vcc, 1, v2
+; CI-IEEE-SAFE-NEXT:    v_fma_f32 v5, -v3, v2, v0
+; CI-IEEE-SAFE-NEXT:    v_fma_f32 v6, -v4, v2, v0
+; CI-IEEE-SAFE-NEXT:    v_cmp_ge_f32_e32 vcc, 0, v5
+; CI-IEEE-SAFE-NEXT:    v_cndmask_b32_e32 v2, v2, v3, vcc
+; CI-IEEE-SAFE-NEXT:    v_cmp_lt_f32_e32 vcc, 0, v6
+; CI-IEEE-SAFE-NEXT:    v_cndmask_b32_e32 v2, v2, v4, vcc
+; CI-IEEE-SAFE-NEXT:    v_mul_f32_e32 v3, 0x37800000, v2
+; CI-IEEE-SAFE-NEXT:    v_cndmask_b32_e64 v2, v2, v3, s[0:1]
+; CI-IEEE-SAFE-NEXT:    v_cmp_class_f32_e32 vcc, v0, v1
+; CI-IEEE-SAFE-NEXT:    v_cndmask_b32_e32 v0, v2, v0, vcc
+; CI-IEEE-SAFE-NEXT:    v_frexp_mant_f32_e32 v1, v0
+; CI-IEEE-SAFE-NEXT:    v_rcp_f32_e32 v1, v1
+; CI-IEEE-SAFE-NEXT:    v_frexp_exp_i32_f32_e32 v0, v0
+; CI-IEEE-SAFE-NEXT:    v_sub_i32_e32 v0, vcc, 0, v0
+; CI-IEEE-SAFE-NEXT:    v_ldexp_f32_e32 v0, v1, v0
+; CI-IEEE-SAFE-NEXT:    buffer_store_dword v0, off, s[4:7], 0
+; CI-IEEE-SAFE-NEXT:    s_endpgm
 ; GCN-UNSAFE-LABEL: rsq_f32:
 ; GCN-UNSAFE:       ; %bb.0:
 ; GCN-UNSAFE-NEXT:    s_load_dwordx4 s[0:3], s[0:1], 0x9
@@ -96,23 +189,23 @@ define amdgpu_kernel void @rsq_f32(ptr addrspace(1) noalias %out, ptr addrspace(
 ; GCN-UNSAFE-NEXT:    buffer_store_dword v0, off, s[4:7], 0
 ; GCN-UNSAFE-NEXT:    s_endpgm
   %val = load float, ptr addrspace(1) %in, align 4
-  %sqrt = call float @llvm.sqrt.f32(float %val) nounwind readnone
-  %div = fdiv float 1.0, %sqrt, !fpmath !0
+  %sqrt = call contract float @llvm.sqrt.f32(float %val) nounwind readnone
+  %div = fdiv contract float 1.0, %sqrt, !fpmath !0
   store float %div, ptr addrspace(1) %out, align 4
   ret void
 }
 
 define amdgpu_kernel void @rsq_f32_sgpr(ptr addrspace(1) noalias %out, float %val) {
-; GCN-DAZ-LABEL: rsq_f32_sgpr:
-; GCN-DAZ:       ; %bb.0:
-; GCN-DAZ-NEXT:    s_load_dword s2, s[0:1], 0xb
-; GCN-DAZ-NEXT:    s_load_dwordx2 s[0:1], s[0:1], 0x9
-; GCN-DAZ-NEXT:    s_mov_b32 s3, 0xf000
-; GCN-DAZ-NEXT:    s_waitcnt lgkmcnt(0)
-; GCN-DAZ-NEXT:    v_rsq_f32_e32 v0, s2
-; GCN-DAZ-NEXT:    s_mov_b32 s2, -1
-; GCN-DAZ-NEXT:    buffer_store_dword v0, off, s[0:3], 0
-; GCN-DAZ-NEXT:    s_endpgm
+; GCN-DAZ-UNSAFE-LABEL: rsq_f32_sgpr:
+; GCN-DAZ-UNSAFE:       ; %bb.0:
+; GCN-DAZ-UNSAFE-NEXT:    s_load_dword s2, s[0:1], 0xb
+; GCN-DAZ-UNSAFE-NEXT:    s_load_dwordx2 s[0:1], s[0:1], 0x9
+; GCN-DAZ-UNSAFE-NEXT:    s_mov_b32 s3, 0xf000
+; GCN-DAZ-UNSAFE-NEXT:    s_waitcnt lgkmcnt(0)
+; GCN-DAZ-UNSAFE-NEXT:    v_rsq_f32_e32 v0, s2
+; GCN-DAZ-UNSAFE-NEXT:    s_mov_b32 s2, -1
+; GCN-DAZ-UNSAFE-NEXT:    buffer_store_dword v0, off, s[0:3], 0
+; GCN-DAZ-UNSAFE-NEXT:    s_endpgm
 ;
 ; GCN-IEEE-UNSAFE-LABEL: rsq_f32_sgpr:
 ; GCN-IEEE-UNSAFE:       ; %bb.0:
@@ -125,23 +218,108 @@ define amdgpu_kernel void @rsq_f32_sgpr(ptr addrspace(1) noalias %out, float %va
 ; GCN-IEEE-UNSAFE-NEXT:    buffer_store_dword v0, off, s[0:3], 0
 ; GCN-IEEE-UNSAFE-NEXT:    s_endpgm
 ;
-; GCN-IEEE-SAFE-LABEL: rsq_f32_sgpr:
-; GCN-IEEE-SAFE:       ; %bb.0:
-; GCN-IEEE-SAFE-NEXT:    s_load_dword s2, s[0:1], 0xb
-; GCN-IEEE-SAFE-NEXT:    v_mov_b32_e32 v1, 0x2f800000
-; GCN-IEEE-SAFE-NEXT:    s_load_dwordx2 s[0:1], s[0:1], 0x9
-; GCN-IEEE-SAFE-NEXT:    s_mov_b32 s3, 0xf000
-; GCN-IEEE-SAFE-NEXT:    s_waitcnt lgkmcnt(0)
-; GCN-IEEE-SAFE-NEXT:    v_sqrt_f32_e32 v0, s2
-; GCN-IEEE-SAFE-NEXT:    s_mov_b32 s2, 0x6f800000
-; GCN-IEEE-SAFE-NEXT:    v_cmp_gt_f32_e64 vcc, |v0|, s2
-; GCN-IEEE-SAFE-NEXT:    v_cndmask_b32_e32 v1, 1.0, v1, vcc
-; GCN-IEEE-SAFE-NEXT:    v_mul_f32_e32 v0, v0, v1
-; GCN-IEEE-SAFE-NEXT:    v_rcp_f32_e32 v0, v0
-; GCN-IEEE-SAFE-NEXT:    s_mov_b32 s2, -1
-; GCN-IEEE-SAFE-NEXT:    v_mul_f32_e32 v0, v1, v0
-; GCN-IEEE-SAFE-NEXT:    buffer_store_dword v0, off, s[0:3], 0
-; GCN-IEEE-SAFE-NEXT:    s_endpgm
+; GCN-DAZ-SAFE-LABEL: rsq_f32_sgpr:
+; GCN-DAZ-SAFE:       ; %bb.0:
+; GCN-DAZ-SAFE-NEXT:    s_load_dword s2, s[0:1], 0xb
+; GCN-DAZ-SAFE-NEXT:    v_mov_b32_e32 v0, 0xf800000
+; GCN-DAZ-SAFE-NEXT:    v_mov_b32_e32 v1, 0x4f800000
+; GCN-DAZ-SAFE-NEXT:    s_load_dwordx2 s[0:1], s[0:1], 0x9
+; GCN-DAZ-SAFE-NEXT:    s_mov_b32 s3, 0xf000
+; GCN-DAZ-SAFE-NEXT:    s_waitcnt lgkmcnt(0)
+; GCN-DAZ-SAFE-NEXT:    v_mul_f32_e32 v1, s2, v1
+; GCN-DAZ-SAFE-NEXT:    v_mov_b32_e32 v2, s2
+; GCN-DAZ-SAFE-NEXT:    v_cmp_lt_f32_e32 vcc, s2, v0
+; GCN-DAZ-SAFE-NEXT:    v_cndmask_b32_e32 v0, v2, v1, vcc
+; GCN-DAZ-SAFE-NEXT:    v_rsq_f32_e32 v1, v0
+; GCN-DAZ-SAFE-NEXT:    s_mov_b32 s2, -1
+; GCN-DAZ-SAFE-NEXT:    v_mul_f32_e32 v2, v0, v1
+; GCN-DAZ-SAFE-NEXT:    v_mul_f32_e32 v1, 0.5, v1
+; GCN-DAZ-SAFE-NEXT:    v_fma_f32 v3, -v1, v2, 0.5
+; GCN-DAZ-SAFE-NEXT:    v_fma_f32 v2, v2, v3, v2
+; GCN-DAZ-SAFE-NEXT:    v_fma_f32 v1, v1, v3, v1
+; GCN-DAZ-SAFE-NEXT:    v_fma_f32 v3, -v2, v2, v0
+; GCN-DAZ-SAFE-NEXT:    v_fma_f32 v1, v3, v1, v2
+; GCN-DAZ-SAFE-NEXT:    v_mul_f32_e32 v2, 0x37800000, v1
+; GCN-DAZ-SAFE-NEXT:    v_cndmask_b32_e32 v1, v1, v2, vcc
+; GCN-DAZ-SAFE-NEXT:    v_mov_b32_e32 v2, 0x260
+; GCN-DAZ-SAFE-NEXT:    v_cmp_class_f32_e32 vcc, v0, v2
+; GCN-DAZ-SAFE-NEXT:    v_cndmask_b32_e32 v0, v1, v0, vcc
+; GCN-DAZ-SAFE-NEXT:    v_rcp_f32_e32 v0, v0
+; GCN-DAZ-SAFE-NEXT:    buffer_store_dword v0, off, s[0:3], 0
+; GCN-DAZ-SAFE-NEXT:    s_endpgm
+;
+; SI-IEEE-SAFE-LABEL: rsq_f32_sgpr:
+; SI-IEEE-SAFE:       ; %bb.0:
+; SI-IEEE-SAFE-NEXT:    s_load_dword s2, s[0:1], 0xb
+; SI-IEEE-SAFE-NEXT:    s_load_dwordx2 s[4:5], s[0:1], 0x9
+; SI-IEEE-SAFE-NEXT:    v_mov_b32_e32 v0, 0xf800000
+; SI-IEEE-SAFE-NEXT:    v_mov_b32_e32 v1, 0x4f800000
+; SI-IEEE-SAFE-NEXT:    s_mov_b32 s7, 0xf000
+; SI-IEEE-SAFE-NEXT:    s_waitcnt lgkmcnt(0)
+; SI-IEEE-SAFE-NEXT:    v_mul_f32_e32 v1, s2, v1
+; SI-IEEE-SAFE-NEXT:    v_mov_b32_e32 v2, s2
+; SI-IEEE-SAFE-NEXT:    v_cmp_lt_f32_e64 s[0:1], s2, v0
+; SI-IEEE-SAFE-NEXT:    v_cndmask_b32_e64 v0, v2, v1, s[0:1]
+; SI-IEEE-SAFE-NEXT:    v_sqrt_f32_e32 v1, v0
+; SI-IEEE-SAFE-NEXT:    s_mov_b32 s6, -1
+; SI-IEEE-SAFE-NEXT:    v_add_i32_e32 v2, vcc, -1, v1
+; SI-IEEE-SAFE-NEXT:    v_fma_f32 v3, -v2, v1, v0
+; SI-IEEE-SAFE-NEXT:    v_cmp_ge_f32_e32 vcc, 0, v3
+; SI-IEEE-SAFE-NEXT:    v_cndmask_b32_e32 v2, v1, v2, vcc
+; SI-IEEE-SAFE-NEXT:    v_add_i32_e32 v3, vcc, 1, v1
+; SI-IEEE-SAFE-NEXT:    v_fma_f32 v1, -v3, v1, v0
+; SI-IEEE-SAFE-NEXT:    v_cmp_lt_f32_e32 vcc, 0, v1
+; SI-IEEE-SAFE-NEXT:    v_cndmask_b32_e32 v1, v2, v3, vcc
+; SI-IEEE-SAFE-NEXT:    v_mul_f32_e32 v2, 0x37800000, v1
+; SI-IEEE-SAFE-NEXT:    v_cndmask_b32_e64 v1, v1, v2, s[0:1]
+; SI-IEEE-SAFE-NEXT:    v_mov_b32_e32 v2, 0x260
+; SI-IEEE-SAFE-NEXT:    v_cmp_class_f32_e32 vcc, v0, v2
+; SI-IEEE-SAFE-NEXT:    v_cndmask_b32_e32 v0, v1, v0, vcc
+; SI-IEEE-SAFE-NEXT:    s_mov_b32 s0, 0x7f800000
+; SI-IEEE-SAFE-NEXT:    v_frexp_mant_f32_e32 v1, v0
+; SI-IEEE-SAFE-NEXT:    v_cmp_lt_f32_e64 vcc, |v0|, s0
+; SI-IEEE-SAFE-NEXT:    v_cndmask_b32_e32 v1, v0, v1, vcc
+; SI-IEEE-SAFE-NEXT:    v_rcp_f32_e32 v1, v1
+; SI-IEEE-SAFE-NEXT:    v_frexp_exp_i32_f32_e32 v0, v0
+; SI-IEEE-SAFE-NEXT:    v_sub_i32_e32 v0, vcc, 0, v0
+; SI-IEEE-SAFE-NEXT:    v_ldexp_f32_e32 v0, v1, v0
+; SI-IEEE-SAFE-NEXT:    buffer_store_dword v0, off, s[4:7], 0
+; SI-IEEE-SAFE-NEXT:    s_endpgm
+;
+; CI-IEEE-SAFE-LABEL: rsq_f32_sgpr:
+; CI-IEEE-SAFE:       ; %bb.0:
+; CI-IEEE-SAFE-NEXT:    s_load_dword s2, s[0:1], 0xb
+; CI-IEEE-SAFE-NEXT:    s_load_dwordx2 s[4:5], s[0:1], 0x9
+; CI-IEEE-SAFE-NEXT:    v_mov_b32_e32 v0, 0xf800000
+; CI-IEEE-SAFE-NEXT:    v_mov_b32_e32 v1, 0x4f800000
+; CI-IEEE-SAFE-NEXT:    s_mov_b32 s7, 0xf000
+; CI-IEEE-SAFE-NEXT:    s_waitcnt lgkmcnt(0)
+; CI-IEEE-SAFE-NEXT:    v_mul_f32_e32 v1, s2, v1
+; CI-IEEE-SAFE-NEXT:    v_mov_b32_e32 v2, s2
+; CI-IEEE-SAFE-NEXT:    v_cmp_lt_f32_e64 s[0:1], s2, v0
+; CI-IEEE-SAFE-NEXT:    v_cndmask_b32_e64 v0, v2, v1, s[0:1]
+; CI-IEEE-SAFE-NEXT:    v_sqrt_f32_e32 v1, v0
+; CI-IEEE-SAFE-NEXT:    s_mov_b32 s6, -1
+; CI-IEEE-SAFE-NEXT:    v_add_i32_e32 v2, vcc, -1, v1
+; CI-IEEE-SAFE-NEXT:    v_fma_f32 v3, -v2, v1, v0
+; CI-IEEE-SAFE-NEXT:    v_cmp_ge_f32_e32 vcc, 0, v3
+; CI-IEEE-SAFE-NEXT:    v_cndmask_b32_e32 v2, v1, v2, vcc
+; CI-IEEE-SAFE-NEXT:    v_add_i32_e32 v3, vcc, 1, v1
+; CI-IEEE-SAFE-NEXT:    v_fma_f32 v1, -v3, v1, v0
+; CI-IEEE-SAFE-NEXT:    v_cmp_lt_f32_e32 vcc, 0, v1
+; CI-IEEE-SAFE-NEXT:    v_cndmask_b32_e32 v1, v2, v3, vcc
+; CI-IEEE-SAFE-NEXT:    v_mul_f32_e32 v2, 0x37800000, v1
+; CI-IEEE-SAFE-NEXT:    v_cndmask_b32_e64 v1, v1, v2, s[0:1]
+; CI-IEEE-SAFE-NEXT:    v_mov_b32_e32 v2, 0x260
+; CI-IEEE-SAFE-NEXT:    v_cmp_class_f32_e32 vcc, v0, v2
+; CI-IEEE-SAFE-NEXT:    v_cndmask_b32_e32 v0, v1, v0, vcc
+; CI-IEEE-SAFE-NEXT:    v_frexp_mant_f32_e32 v1, v0
+; CI-IEEE-SAFE-NEXT:    v_rcp_f32_e32 v1, v1
+; CI-IEEE-SAFE-NEXT:    v_frexp_exp_i32_f32_e32 v0, v0
+; CI-IEEE-SAFE-NEXT:    v_sub_i32_e32 v0, vcc, 0, v0
+; CI-IEEE-SAFE-NEXT:    v_ldexp_f32_e32 v0, v1, v0
+; CI-IEEE-SAFE-NEXT:    buffer_store_dword v0, off, s[4:7], 0
+; CI-IEEE-SAFE-NEXT:    s_endpgm
 ; GCN-UNSAFE-LABEL: rsq_f32_sgpr:
 ; GCN-UNSAFE:       ; %bb.0:
 ; GCN-UNSAFE-NEXT:    s_load_dword s2, s[0:1], 0xb
@@ -152,8 +330,8 @@ define amdgpu_kernel void @rsq_f32_sgpr(ptr addrspace(1) noalias %out, float %va
 ; GCN-UNSAFE-NEXT:    s_mov_b32 s2, -1
 ; GCN-UNSAFE-NEXT:    buffer_store_dword v0, off, s[0:3], 0
 ; GCN-UNSAFE-NEXT:    s_endpgm
-  %sqrt = call float @llvm.sqrt.f32(float %val) nounwind readnone
-  %div = fdiv float 1.0, %sqrt, !fpmath !0
+  %sqrt = call contract float @llvm.sqrt.f32(float %val) nounwind readnone
+  %div = fdiv contract float 1.0, %sqrt, !fpmath !0
   store float %div, ptr addrspace(1) %out, align 4
   ret void
 }
@@ -203,9 +381,9 @@ define amdgpu_kernel void @rsqrt_fmul(ptr addrspace(1) %out, ptr addrspace(1) %i
 ; GCN-DAZ-UNSAFE-NEXT:    buffer_load_dword v4, v[0:1], s[8:11], 0 addr64 offset:8 glc
 ; GCN-DAZ-UNSAFE-NEXT:    s_waitcnt vmcnt(0)
 ; GCN-DAZ-UNSAFE-NEXT:    s_mov_b64 s[4:5], s[0:1]
-; GCN-DAZ-UNSAFE-NEXT:    v_sqrt_f32_e32 v2, v2
+; GCN-DAZ-UNSAFE-NEXT:    v_rsq_f32_e32 v2, v2
+; GCN-DAZ-UNSAFE-NEXT:    v_rcp_f32_e32 v3, v3
 ; GCN-DAZ-UNSAFE-NEXT:    v_mul_f32_e32 v2, v2, v3
-; GCN-DAZ-UNSAFE-NEXT:    v_rcp_f32_e32 v2, v2
 ; GCN-DAZ-UNSAFE-NEXT:    v_mul_f32_e32 v2, v4, v2
 ; GCN-DAZ-UNSAFE-NEXT:    buffer_store_dword v2, v[0:1], s[4:7], 0 addr64
 ; GCN-DAZ-UNSAFE-NEXT:    s_endpgm
@@ -227,33 +405,49 @@ define amdgpu_kernel void @rsqrt_fmul(ptr addrspace(1) %out, ptr addrspace(1) %i
 ; GCN-IEEE-UNSAFE-NEXT:    buffer_load_dword v4, v[0:1], s[8:11], 0 addr64 offset:8 glc
 ; GCN-IEEE-UNSAFE-NEXT:    s_waitcnt vmcnt(0)
 ; GCN-IEEE-UNSAFE-NEXT:    s_mov_b64 s[4:5], s[0:1]
-; GCN-IEEE-UNSAFE-NEXT:    v_sqrt_f32_e32 v2, v2
+; GCN-IEEE-UNSAFE-NEXT:    v_rsq_f32_e32 v2, v2
+; GCN-IEEE-UNSAFE-NEXT:    v_rcp_f32_e32 v3, v3
 ; GCN-IEEE-UNSAFE-NEXT:    v_mul_f32_e32 v2, v2, v3
-; GCN-IEEE-UNSAFE-NEXT:    v_rcp_f32_e32 v2, v2
 ; GCN-IEEE-UNSAFE-NEXT:    v_mul_f32_e32 v2, v4, v2
 ; GCN-IEEE-UNSAFE-NEXT:    buffer_store_dword v2, v[0:1], s[4:7], 0 addr64
 ; GCN-IEEE-UNSAFE-NEXT:    s_endpgm
 ;
 ; GCN-DAZ-SAFE-LABEL: rsqrt_fmul:
 ; GCN-DAZ-SAFE:       ; %bb.0:
-; GCN-DAZ-SAFE-NEXT:    s_load_dwordx4 s[0:3], s[0:1], 0x9
-; GCN-DAZ-SAFE-NEXT:    s_mov_b32 s7, 0xf000
-; GCN-DAZ-SAFE-NEXT:    s_mov_b32 s6, 0
+; GCN-DAZ-SAFE-NEXT:    s_load_dwordx4 s[4:7], s[0:1], 0x9
+; GCN-DAZ-SAFE-NEXT:    s_mov_b32 s3, 0xf000
+; GCN-DAZ-SAFE-NEXT:    s_mov_b32 s2, 0
 ; GCN-DAZ-SAFE-NEXT:    v_lshlrev_b32_e32 v0, 2, v0
 ; GCN-DAZ-SAFE-NEXT:    v_mov_b32_e32 v1, 0
 ; GCN-DAZ-SAFE-NEXT:    s_waitcnt lgkmcnt(0)
-; GCN-DAZ-SAFE-NEXT:    s_mov_b64 s[8:9], s[2:3]
-; GCN-DAZ-SAFE-NEXT:    s_mov_b64 s[10:11], s[6:7]
+; GCN-DAZ-SAFE-NEXT:    s_mov_b64 s[8:9], s[6:7]
+; GCN-DAZ-SAFE-NEXT:    s_mov_b64 s[10:11], s[2:3]
 ; GCN-DAZ-SAFE-NEXT:    buffer_load_dword v2, v[0:1], s[8:11], 0 addr64 glc
 ; GCN-DAZ-SAFE-NEXT:    s_waitcnt vmcnt(0)
 ; GCN-DAZ-SAFE-NEXT:    buffer_load_dword v3, v[0:1], s[8:11], 0 addr64 offset:4 glc
 ; GCN-DAZ-SAFE-NEXT:    s_waitcnt vmcnt(0)
 ; GCN-DAZ-SAFE-NEXT:    buffer_load_dword v4, v[0:1], s[8:11], 0 addr64 offset:8 glc
 ; GCN-DAZ-SAFE-NEXT:    s_waitcnt vmcnt(0)
-; GCN-DAZ-SAFE-NEXT:    s_mov_b64 s[4:5], s[0:1]
-; GCN-DAZ-SAFE-NEXT:    v_sqrt_f32_e32 v2, v2
+; GCN-DAZ-SAFE-NEXT:    s_mov_b32 s0, 0xf800000
+; GCN-DAZ-SAFE-NEXT:    v_mov_b32_e32 v6, 0x260
+; GCN-DAZ-SAFE-NEXT:    v_mul_f32_e32 v5, 0x4f800000, v2
+; GCN-DAZ-SAFE-NEXT:    v_cmp_gt_f32_e32 vcc, s0, v2
+; GCN-DAZ-SAFE-NEXT:    v_cndmask_b32_e32 v2, v2, v5, vcc
+; GCN-DAZ-SAFE-NEXT:    v_rsq_f32_e32 v5, v2
+; GCN-DAZ-SAFE-NEXT:    s_mov_b64 s[0:1], s[4:5]
+; GCN-DAZ-SAFE-NEXT:    v_mul_f32_e32 v7, v2, v5
+; GCN-DAZ-SAFE-NEXT:    v_mul_f32_e32 v5, 0.5, v5
+; GCN-DAZ-SAFE-NEXT:    v_fma_f32 v8, -v5, v7, 0.5
+; GCN-DAZ-SAFE-NEXT:    v_fma_f32 v7, v7, v8, v7
+; GCN-DAZ-SAFE-NEXT:    v_fma_f32 v5, v5, v8, v5
+; GCN-DAZ-SAFE-NEXT:    v_fma_f32 v8, -v7, v7, v2
+; GCN-DAZ-SAFE-NEXT:    v_fma_f32 v5, v8, v5, v7
+; GCN-DAZ-SAFE-NEXT:    v_mul_f32_e32 v7, 0x37800000, v5
+; GCN-DAZ-SAFE-NEXT:    v_cndmask_b32_e32 v5, v5, v7, vcc
+; GCN-DAZ-SAFE-NEXT:    v_cmp_class_f32_e32 vcc, v2, v6
+; GCN-DAZ-SAFE-NEXT:    v_cndmask_b32_e32 v2, v5, v2, vcc
 ; GCN-DAZ-SAFE-NEXT:    v_mul_f32_e32 v2, v2, v3
-; GCN-DAZ-SAFE-NEXT:    v_div_scale_f32 v3, s[0:1], v2, v2, v4
+; GCN-DAZ-SAFE-NEXT:    v_div_scale_f32 v3, s[4:5], v2, v2, v4
 ; GCN-DAZ-SAFE-NEXT:    v_rcp_f32_e32 v5, v3
 ; GCN-DAZ-SAFE-NEXT:    v_div_scale_f32 v6, vcc, v4, v2, v4
 ; GCN-DAZ-SAFE-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_MODE, 4, 2), 3
@@ -266,31 +460,48 @@ define amdgpu_kernel void @rsqrt_fmul(ptr addrspace(1) %out, ptr addrspace(1) %i
 ; GCN-DAZ-SAFE-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_MODE, 4, 2), 0
 ; GCN-DAZ-SAFE-NEXT:    v_div_fmas_f32 v3, v3, v5, v7
 ; GCN-DAZ-SAFE-NEXT:    v_div_fixup_f32 v2, v3, v2, v4
-; GCN-DAZ-SAFE-NEXT:    buffer_store_dword v2, v[0:1], s[4:7], 0 addr64
+; GCN-DAZ-SAFE-NEXT:    buffer_store_dword v2, v[0:1], s[0:3], 0 addr64
 ; GCN-DAZ-SAFE-NEXT:    s_endpgm
 ;
 ; GCN-IEEE-SAFE-LABEL: rsqrt_fmul:
 ; GCN-IEEE-SAFE:       ; %bb.0:
-; GCN-IEEE-SAFE-NEXT:    s_load_dwordx4 s[0:3], s[0:1], 0x9
-; GCN-IEEE-SAFE-NEXT:    s_mov_b32 s7, 0xf000
-; GCN-IEEE-SAFE-NEXT:    s_mov_b32 s6, 0
+; GCN-IEEE-SAFE-NEXT:    s_load_dwordx4 s[4:7], s[0:1], 0x9
+; GCN-IEEE-SAFE-NEXT:    s_mov_b32 s3, 0xf000
+; GCN-IEEE-SAFE-NEXT:    s_mov_b32 s2, 0
 ; GCN-IEEE-SAFE-NEXT:    v_lshlrev_b32_e32 v0, 2, v0
 ; GCN-IEEE-SAFE-NEXT:    v_mov_b32_e32 v1, 0
 ; GCN-IEEE-SAFE-NEXT:    s_waitcnt lgkmcnt(0)
-; GCN-IEEE-SAFE-NEXT:    s_mov_b64 s[8:9], s[2:3]
-; GCN-IEEE-SAFE-NEXT:    s_mov_b64 s[10:11], s[6:7]
+; GCN-IEEE-SAFE-NEXT:    s_mov_b64 s[8:9], s[6:7]
+; GCN-IEEE-SAFE-NEXT:    s_mov_b64 s[10:11], s[2:3]
 ; GCN-IEEE-SAFE-NEXT:    buffer_load_dword v2, v[0:1], s[8:11], 0 addr64 glc
 ; GCN-IEEE-SAFE-NEXT:    s_waitcnt vmcnt(0)
 ; GCN-IEEE-SAFE-NEXT:    buffer_load_dword v3, v[0:1], s[8:11], 0 addr64 offset:4 glc
 ; GCN-IEEE-SAFE-NEXT:    s_waitcnt vmcnt(0)
 ; GCN-IEEE-SAFE-NEXT:    buffer_load_dword v4, v[0:1], s[8:11], 0 addr64 offset:8 glc
 ; GCN-IEEE-SAFE-NEXT:    s_waitcnt vmcnt(0)
-; GCN-IEEE-SAFE-NEXT:    s_mov_b64 s[4:5], s[0:1]
-; GCN-IEEE-SAFE-NEXT:    v_sqrt_f32_e32 v2, v2
+; GCN-IEEE-SAFE-NEXT:    s_mov_b32 s0, 0xf800000
+; GCN-IEEE-SAFE-NEXT:    v_mov_b32_e32 v6, 0x260
+; GCN-IEEE-SAFE-NEXT:    v_mul_f32_e32 v5, 0x4f800000, v2
+; GCN-IEEE-SAFE-NEXT:    v_cmp_gt_f32_e32 vcc, s0, v2
+; GCN-IEEE-SAFE-NEXT:    v_cndmask_b32_e32 v2, v2, v5, vcc
+; GCN-IEEE-SAFE-NEXT:    v_sqrt_f32_e32 v5, v2
+; GCN-IEEE-SAFE-NEXT:    v_add_i32_e64 v7, s[0:1], -1, v5
+; GCN-IEEE-SAFE-NEXT:    v_add_i32_e64 v8, s[0:1], 1, v5
+; GCN-IEEE-SAFE-NEXT:    v_fma_f32 v9, -v7, v5, v2
+; GCN-IEEE-SAFE-NEXT:    v_fma_f32 v10, -v8, v5, v2
+; GCN-IEEE-SAFE-NEXT:    v_cmp_ge_f32_e64 s[0:1], 0, v9
+; GCN-IEEE-SAFE-NEXT:    v_cndmask_b32_e64 v5, v5, v7, s[0:1]
+; GCN-IEEE-SAFE-NEXT:    v_cmp_lt_f32_e64 s[0:1], 0, v10
+; GCN-IEEE-SAFE-NEXT:    v_cndmask_b32_e64 v5, v5, v8, s[0:1]
+; GCN-IEEE-SAFE-NEXT:    v_mul_f32_e32 v7, 0x37800000, v5
+; GCN-IEEE-SAFE-NEXT:    v_cndmask_b32_e32 v5, v5, v7, vcc
+; GCN-IEEE-SAFE-NEXT:    v_cmp_class_f32_e32 vcc, v2, v6
+; GCN-IEEE-SAFE-NEXT:    v_cndmask_b32_e32 v2, v5, v2, vcc
 ; GCN-IEEE-SAFE-NEXT:    v_mul_f32_e32 v2, v2, v3
-; GCN-IEEE-SAFE-NEXT:    v_div_scale_f32 v3, s[2:3], v2, v2, v4
+; GCN-IEEE-SAFE-NEXT:    v_div_scale_f32 v3, s[0:1], v2, v2, v4
 ; GCN-IEEE-SAFE-NEXT:    v_rcp_f32_e32 v5, v3
 ; GCN-IEEE-SAFE-NEXT:    v_div_scale_f32 v6, vcc, v4, v2, v4
+; GCN-IEEE-SAFE-NEXT:    s_mov_b64 s[0:1], s[4:5]
 ; GCN-IEEE-SAFE-NEXT:    v_fma_f32 v7, -v3, v5, 1.0
 ; GCN-IEEE-SAFE-NEXT:    v_fma_f32 v5, v7, v5, v5
 ; GCN-IEEE-SAFE-NEXT:    v_mul_f32_e32 v7, v6, v5
@@ -299,7 +510,7 @@ define amdgpu_kernel void @rsqrt_fmul(ptr addrspace(1) %out, ptr addrspace(1) %i
 ; GCN-IEEE-SAFE-NEXT:    v_fma_f32 v3, -v3, v7, v6
 ; GCN-IEEE-SAFE-NEXT:    v_div_fmas_f32 v3, v3, v5, v7
 ; GCN-IEEE-SAFE-NEXT:    v_div_fixup_f32 v2, v3, v2, v4
-; GCN-IEEE-SAFE-NEXT:    buffer_store_dword v2, v[0:1], s[4:7], 0 addr64
+; GCN-IEEE-SAFE-NEXT:    buffer_store_dword v2, v[0:1], s[0:3], 0 addr64
 ; GCN-IEEE-SAFE-NEXT:    s_endpgm
   %tid = call i32 @llvm.amdgcn.workitem.id.x() nounwind readnone
   %out.gep = getelementptr float, ptr addrspace(1) %out, i32 %tid
@@ -311,32 +522,32 @@ define amdgpu_kernel void @rsqrt_fmul(ptr addrspace(1) %out, ptr addrspace(1) %i
   %b = load volatile float, ptr addrspace(1) %gep.1
   %c = load volatile float, ptr addrspace(1) %gep.2
 
-  %x = call float @llvm.sqrt.f32(float %a)
-  %y = fmul float %x, %b
-  %z = fdiv float %c, %y
+  %x = call contract float @llvm.sqrt.f32(float %a)
+  %y = fmul contract float %x, %b
+  %z = fdiv contract float %c, %y
   store float %z, ptr addrspace(1) %out.gep
   ret void
 }
 
 define amdgpu_kernel void @neg_rsq_f32(ptr addrspace(1) noalias %out, ptr addrspace(1) noalias %in) {
-; GCN-DAZ-LABEL: neg_rsq_f32:
-; GCN-DAZ:       ; %bb.0:
-; GCN-DAZ-NEXT:    s_load_dwordx4 s[0:3], s[0:1], 0x9
-; GCN-DAZ-NEXT:    s_mov_b32 s7, 0xf000
-; GCN-DAZ-NEXT:    s_mov_b32 s6, -1
-; GCN-DAZ-NEXT:    s_mov_b32 s10, s6
-; GCN-DAZ-NEXT:    s_mov_b32 s11, s7
-; GCN-DAZ-NEXT:    s_waitcnt lgkmcnt(0)
-; GCN-DAZ-NEXT:    s_mov_b32 s8, s2
-; GCN-DAZ-NEXT:    s_mov_b32 s9, s3
-; GCN-DAZ-NEXT:    buffer_load_dword v0, off, s[8:11], 0
-; GCN-DAZ-NEXT:    s_mov_b32 s4, s0
-; GCN-DAZ-NEXT:    s_mov_b32 s5, s1
-; GCN-DAZ-NEXT:    s_waitcnt vmcnt(0)
-; GCN-DAZ-NEXT:    v_sqrt_f32_e32 v0, v0
-; GCN-DAZ-NEXT:    v_rcp_f32_e64 v0, -v0
-; GCN-DAZ-NEXT:    buffer_store_dword v0, off, s[4:7], 0
-; GCN-DAZ-NEXT:    s_endpgm
+; GCN-DAZ-UNSAFE-LABEL: neg_rsq_f32:
+; GCN-DAZ-UNSAFE:       ; %bb.0:
+; GCN-DAZ-UNSAFE-NEXT:    s_load_dwordx4 s[0:3], s[0:1], 0x9
+; GCN-DAZ-UNSAFE-NEXT:    s_mov_b32 s7, 0xf000
+; GCN-DAZ-UNSAFE-NEXT:    s_mov_b32 s6, -1
+; GCN-DAZ-UNSAFE-NEXT:    s_mov_b32 s10, s6
+; GCN-DAZ-UNSAFE-NEXT:    s_mov_b32 s11, s7
+; GCN-DAZ-UNSAFE-NEXT:    s_waitcnt lgkmcnt(0)
+; GCN-DAZ-UNSAFE-NEXT:    s_mov_b32 s8, s2
+; GCN-DAZ-UNSAFE-NEXT:    s_mov_b32 s9, s3
+; GCN-DAZ-UNSAFE-NEXT:    buffer_load_dword v0, off, s[8:11], 0
+; GCN-DAZ-UNSAFE-NEXT:    s_mov_b32 s4, s0
+; GCN-DAZ-UNSAFE-NEXT:    s_mov_b32 s5, s1
+; GCN-DAZ-UNSAFE-NEXT:    s_waitcnt vmcnt(0)
+; GCN-DAZ-UNSAFE-NEXT:    v_rsq_f32_e32 v0, v0
+; GCN-DAZ-UNSAFE-NEXT:    v_xor_b32_e32 v0, 0x80000000, v0
+; GCN-DAZ-UNSAFE-NEXT:    buffer_store_dword v0, off, s[4:7], 0
+; GCN-DAZ-UNSAFE-NEXT:    s_endpgm
 ;
 ; GCN-IEEE-UNSAFE-LABEL: neg_rsq_f32:
 ; GCN-IEEE-UNSAFE:       ; %bb.0:
@@ -352,35 +563,128 @@ define amdgpu_kernel void @neg_rsq_f32(ptr addrspace(1) noalias %out, ptr addrsp
 ; GCN-IEEE-UNSAFE-NEXT:    s_mov_b32 s4, s0
 ; GCN-IEEE-UNSAFE-NEXT:    s_mov_b32 s5, s1
 ; GCN-IEEE-UNSAFE-NEXT:    s_waitcnt vmcnt(0)
-; GCN-IEEE-UNSAFE-NEXT:    v_sqrt_f32_e32 v0, v0
-; GCN-IEEE-UNSAFE-NEXT:    v_rcp_f32_e64 v0, -v0
+; GCN-IEEE-UNSAFE-NEXT:    v_rsq_f32_e32 v0, v0
+; GCN-IEEE-UNSAFE-NEXT:    v_xor_b32_e32 v0, 0x80000000, v0
 ; GCN-IEEE-UNSAFE-NEXT:    buffer_store_dword v0, off, s[4:7], 0
 ; GCN-IEEE-UNSAFE-NEXT:    s_endpgm
 ;
-; GCN-IEEE-SAFE-LABEL: neg_rsq_f32:
-; GCN-IEEE-SAFE:       ; %bb.0:
-; GCN-IEEE-SAFE-NEXT:    s_load_dwordx4 s[0:3], s[0:1], 0x9
-; GCN-IEEE-SAFE-NEXT:    s_mov_b32 s7, 0xf000
-; GCN-IEEE-SAFE-NEXT:    s_mov_b32 s6, -1
-; GCN-IEEE-SAFE-NEXT:    s_mov_b32 s10, s6
-; GCN-IEEE-SAFE-NEXT:    s_mov_b32 s11, s7
-; GCN-IEEE-SAFE-NEXT:    s_waitcnt lgkmcnt(0)
-; GCN-IEEE-SAFE-NEXT:    s_mov_b32 s8, s2
-; GCN-IEEE-SAFE-NEXT:    s_mov_b32 s9, s3
-; GCN-IEEE-SAFE-NEXT:    buffer_load_dword v0, off, s[8:11], 0
-; GCN-IEEE-SAFE-NEXT:    s_mov_b32 s2, 0x6f800000
-; GCN-IEEE-SAFE-NEXT:    v_mov_b32_e32 v1, 0x2f800000
-; GCN-IEEE-SAFE-NEXT:    s_mov_b32 s4, s0
-; GCN-IEEE-SAFE-NEXT:    s_mov_b32 s5, s1
-; GCN-IEEE-SAFE-NEXT:    s_waitcnt vmcnt(0)
-; GCN-IEEE-SAFE-NEXT:    v_sqrt_f32_e32 v0, v0
-; GCN-IEEE-SAFE-NEXT:    v_cmp_gt_f32_e64 vcc, |v0|, s2
-; GCN-IEEE-SAFE-NEXT:    v_cndmask_b32_e32 v1, 1.0, v1, vcc
-; GCN-IEEE-SAFE-NEXT:    v_mul_f32_e64 v0, v0, -v1
-; GCN-IEEE-SAFE-NEXT:    v_rcp_f32_e32 v0, v0
-; GCN-IEEE-SAFE-NEXT:    v_mul_f32_e32 v0, v1, v0
-; GCN-IEEE-SAFE-NEXT:    buffer_store_dword v0, off, s[4:7], 0
-; GCN-IEEE-SAFE-NEXT:    s_endpgm
+; GCN-DAZ-SAFE-LABEL: neg_rsq_f32:
+; GCN-DAZ-SAFE:       ; %bb.0:
+; GCN-DAZ-SAFE-NEXT:    s_load_dwordx4 s[0:3], s[0:1], 0x9
+; GCN-DAZ-SAFE-NEXT:    s_mov_b32 s7, 0xf000
+; GCN-DAZ-SAFE-NEXT:    s_mov_b32 s6, -1
+; GCN-DAZ-SAFE-NEXT:    s_mov_b32 s10, s6
+; GCN-DAZ-SAFE-NEXT:    s_mov_b32 s11, s7
+; GCN-DAZ-SAFE-NEXT:    s_waitcnt lgkmcnt(0)
+; GCN-DAZ-SAFE-NEXT:    s_mov_b32 s8, s2
+; GCN-DAZ-SAFE-NEXT:    s_mov_b32 s9, s3
+; GCN-DAZ-SAFE-NEXT:    buffer_load_dword v0, off, s[8:11], 0
+; GCN-DAZ-SAFE-NEXT:    s_mov_b32 s2, 0xf800000
+; GCN-DAZ-SAFE-NEXT:    v_mov_b32_e32 v2, 0x260
+; GCN-DAZ-SAFE-NEXT:    s_mov_b32 s4, s0
+; GCN-DAZ-SAFE-NEXT:    s_mov_b32 s5, s1
+; GCN-DAZ-SAFE-NEXT:    s_waitcnt vmcnt(0)
+; GCN-DAZ-SAFE-NEXT:    v_mul_f32_e32 v1, 0x4f800000, v0
+; GCN-DAZ-SAFE-NEXT:    v_cmp_gt_f32_e32 vcc, s2, v0
+; GCN-DAZ-SAFE-NEXT:    v_cndmask_b32_e32 v0, v0, v1, vcc
+; GCN-DAZ-SAFE-NEXT:    v_rsq_f32_e32 v1, v0
+; GCN-DAZ-SAFE-NEXT:    v_mul_f32_e32 v3, v0, v1
+; GCN-DAZ-SAFE-NEXT:    v_mul_f32_e32 v1, 0.5, v1
+; GCN-DAZ-SAFE-NEXT:    v_fma_f32 v4, -v1, v3, 0.5
+; GCN-DAZ-SAFE-NEXT:    v_fma_f32 v3, v3, v4, v3
+; GCN-DAZ-SAFE-NEXT:    v_fma_f32 v1, v1, v4, v1
+; GCN-DAZ-SAFE-NEXT:    v_fma_f32 v4, -v3, v3, v0
+; GCN-DAZ-SAFE-NEXT:    v_fma_f32 v1, v4, v1, v3
+; GCN-DAZ-SAFE-NEXT:    v_mul_f32_e32 v3, 0x37800000, v1
+; GCN-DAZ-SAFE-NEXT:    v_cndmask_b32_e32 v1, v1, v3, vcc
+; GCN-DAZ-SAFE-NEXT:    v_cmp_class_f32_e32 vcc, v0, v2
+; GCN-DAZ-SAFE-NEXT:    v_cndmask_b32_e32 v0, v1, v0, vcc
+; GCN-DAZ-SAFE-NEXT:    v_rcp_f32_e64 v0, -v0
+; GCN-DAZ-SAFE-NEXT:    buffer_store_dword v0, off, s[4:7], 0
+; GCN-DAZ-SAFE-NEXT:    s_endpgm
+;
+; SI-IEEE-SAFE-LABEL: neg_rsq_f32:
+; SI-IEEE-SAFE:       ; %bb.0:
+; SI-IEEE-SAFE-NEXT:    s_load_dwordx4 s[8:11], s[0:1], 0x9
+; SI-IEEE-SAFE-NEXT:    s_mov_b32 s7, 0xf000
+; SI-IEEE-SAFE-NEXT:    s_mov_b32 s6, -1
+; SI-IEEE-SAFE-NEXT:    s_mov_b32 s2, s6
+; SI-IEEE-SAFE-NEXT:    s_mov_b32 s3, s7
+; SI-IEEE-SAFE-NEXT:    s_waitcnt lgkmcnt(0)
+; SI-IEEE-SAFE-NEXT:    s_mov_b32 s0, s10
+; SI-IEEE-SAFE-NEXT:    s_mov_b32 s1, s11
+; SI-IEEE-SAFE-NEXT:    buffer_load_dword v0, off, s[0:3], 0
+; SI-IEEE-SAFE-NEXT:    s_mov_b32 s0, 0xf800000
+; SI-IEEE-SAFE-NEXT:    v_mov_b32_e32 v1, 0x260
+; SI-IEEE-SAFE-NEXT:    s_mov_b32 s2, 0x7f800000
+; SI-IEEE-SAFE-NEXT:    s_mov_b32 s4, s8
+; SI-IEEE-SAFE-NEXT:    s_mov_b32 s5, s9
+; SI-IEEE-SAFE-NEXT:    s_waitcnt vmcnt(0)
+; SI-IEEE-SAFE-NEXT:    v_mul_f32_e32 v2, 0x4f800000, v0
+; SI-IEEE-SAFE-NEXT:    v_cmp_gt_f32_e64 s[0:1], s0, v0
+; SI-IEEE-SAFE-NEXT:    v_cndmask_b32_e64 v0, v0, v2, s[0:1]
+; SI-IEEE-SAFE-NEXT:    v_sqrt_f32_e32 v2, v0
+; SI-IEEE-SAFE-NEXT:    v_add_i32_e32 v3, vcc, -1, v2
+; SI-IEEE-SAFE-NEXT:    v_add_i32_e32 v4, vcc, 1, v2
+; SI-IEEE-SAFE-NEXT:    v_fma_f32 v5, -v3, v2, v0
+; SI-IEEE-SAFE-NEXT:    v_fma_f32 v6, -v4, v2, v0
+; SI-IEEE-SAFE-NEXT:    v_cmp_ge_f32_e32 vcc, 0, v5
+; SI-IEEE-SAFE-NEXT:    v_cndmask_b32_e32 v2, v2, v3, vcc
+; SI-IEEE-SAFE-NEXT:    v_cmp_lt_f32_e32 vcc, 0, v6
+; SI-IEEE-SAFE-NEXT:    v_cndmask_b32_e32 v2, v2, v4, vcc
+; SI-IEEE-SAFE-NEXT:    v_mul_f32_e32 v3, 0x37800000, v2
+; SI-IEEE-SAFE-NEXT:    v_cndmask_b32_e64 v2, v2, v3, s[0:1]
+; SI-IEEE-SAFE-NEXT:    v_cmp_class_f32_e32 vcc, v0, v1
+; SI-IEEE-SAFE-NEXT:    v_cndmask_b32_e32 v0, v2, v0, vcc
+; SI-IEEE-SAFE-NEXT:    v_frexp_mant_f32_e64 v1, -v0
+; SI-IEEE-SAFE-NEXT:    v_cmp_lt_f32_e64 s[0:1], |v0|, s2
+; SI-IEEE-SAFE-NEXT:    v_cndmask_b32_e64 v1, -v0, v1, s[0:1]
+; SI-IEEE-SAFE-NEXT:    v_rcp_f32_e32 v1, v1
+; SI-IEEE-SAFE-NEXT:    v_frexp_exp_i32_f32_e32 v0, v0
+; SI-IEEE-SAFE-NEXT:    v_sub_i32_e32 v0, vcc, 0, v0
+; SI-IEEE-SAFE-NEXT:    v_ldexp_f32_e32 v0, v1, v0
+; SI-IEEE-SAFE-NEXT:    buffer_store_dword v0, off, s[4:7], 0
+; SI-IEEE-SAFE-NEXT:    s_endpgm
+;
+; CI-IEEE-SAFE-LABEL: neg_rsq_f32:
+; CI-IEEE-SAFE:       ; %bb.0:
+; CI-IEEE-SAFE-NEXT:    s_load_dwordx4 s[8:11], s[0:1], 0x9
+; CI-IEEE-SAFE-NEXT:    s_mov_b32 s7, 0xf000
+; CI-IEEE-SAFE-NEXT:    s_mov_b32 s6, -1
+; CI-IEEE-SAFE-NEXT:    s_mov_b32 s2, s6
+; CI-IEEE-SAFE-NEXT:    s_mov_b32 s3, s7
+; CI-IEEE-SAFE-NEXT:    s_waitcnt lgkmcnt(0)
+; CI-IEEE-SAFE-NEXT:    s_mov_b32 s0, s10
+; CI-IEEE-SAFE-NEXT:    s_mov_b32 s1, s11
+; CI-IEEE-SAFE-NEXT:    buffer_load_dword v0, off, s[0:3], 0
+; CI-IEEE-SAFE-NEXT:    s_mov_b32 s0, 0xf800000
+; CI-IEEE-SAFE-NEXT:    v_mov_b32_e32 v1, 0x260
+; CI-IEEE-SAFE-NEXT:    s_mov_b32 s4, s8
+; CI-IEEE-SAFE-NEXT:    s_mov_b32 s5, s9
+; CI-IEEE-SAFE-NEXT:    s_waitcnt vmcnt(0)
+; CI-IEEE-SAFE-NEXT:    v_mul_f32_e32 v2, 0x4f800000, v0
+; CI-IEEE-SAFE-NEXT:    v_cmp_gt_f32_e64 s[0:1], s0, v0
+; CI-IEEE-SAFE-NEXT:    v_cndmask_b32_e64 v0, v0, v2, s[0:1]
+; CI-IEEE-SAFE-NEXT:    v_sqrt_f32_e32 v2, v0
+; CI-IEEE-SAFE-NEXT:    v_add_i32_e32 v3, vcc, -1, v2
+; CI-IEEE-SAFE-NEXT:    v_add_i32_e32 v4, vcc, 1, v2
+; CI-IEEE-SAFE-NEXT:    v_fma_f32 v5, -v3, v2, v0
+; CI-IEEE-SAFE-NEXT:    v_fma_f32 v6, -v4, v2, v0
+; CI-IEEE-SAFE-NEXT:    v_cmp_ge_f32_e32 vcc, 0, v5
+; CI-IEEE-SAFE-NEXT:    v_cndmask_b32_e32 v2, v2, v3, vcc
+; CI-IEEE-SAFE-NEXT:    v_cmp_lt_f32_e32 vcc, 0, v6
+; CI-IEEE-SAFE-NEXT:    v_cndmask_b32_e32 v2, v2, v4, vcc
+; CI-IEEE-SAFE-NEXT:    v_mul_f32_e32 v3, 0x37800000, v2
+; CI-IEEE-SAFE-NEXT:    v_cndmask_b32_e64 v2, v2, v3, s[0:1]
+; CI-IEEE-SAFE-NEXT:    v_cmp_class_f32_e32 vcc, v0, v1
+; CI-IEEE-SAFE-NEXT:    v_cndmask_b32_e32 v0, v2, v0, vcc
+; CI-IEEE-SAFE-NEXT:    v_frexp_mant_f32_e64 v1, -v0
+; CI-IEEE-SAFE-NEXT:    v_rcp_f32_e32 v1, v1
+; CI-IEEE-SAFE-NEXT:    v_frexp_exp_i32_f32_e32 v0, v0
+; CI-IEEE-SAFE-NEXT:    v_sub_i32_e32 v0, vcc, 0, v0
+; CI-IEEE-SAFE-NEXT:    v_ldexp_f32_e32 v0, v1, v0
+; CI-IEEE-SAFE-NEXT:    buffer_store_dword v0, off, s[4:7], 0
+; CI-IEEE-SAFE-NEXT:    s_endpgm
 ; GCN-UNSAFE-LABEL: neg_rsq_f32:
 ; GCN-UNSAFE:       ; %bb.0:
 ; GCN-UNSAFE-NEXT:    s_load_dwordx4 s[0:3], s[0:1], 0x9
@@ -400,31 +704,31 @@ define amdgpu_kernel void @neg_rsq_f32(ptr addrspace(1) noalias %out, ptr addrsp
 ; GCN-UNSAFE-NEXT:    buffer_store_dword v0, off, s[4:7], 0
 ; GCN-UNSAFE-NEXT:    s_endpgm
   %val = load float, ptr addrspace(1) %in, align 4
-  %sqrt = call float @llvm.sqrt.f32(float %val)
-  %div = fdiv float -1.0, %sqrt, !fpmath !0
+  %sqrt = call contract float @llvm.sqrt.f32(float %val)
+  %div = fdiv contract float -1.0, %sqrt, !fpmath !0
   store float %div, ptr addrspace(1) %out, align 4
   ret void
 }
 
 define amdgpu_kernel void @neg_rsq_neg_f32(ptr addrspace(1) noalias %out, ptr addrspace(1) noalias %in) {
-; GCN-DAZ-LABEL: neg_rsq_neg_f32:
-; GCN-DAZ:       ; %bb.0:
-; GCN-DAZ-NEXT:    s_load_dwordx4 s[0:3], s[0:1], 0x9
-; GCN-DAZ-NEXT:    s_mov_b32 s7, 0xf000
-; GCN-DAZ-NEXT:    s_mov_b32 s6, -1
-; GCN-DAZ-NEXT:    s_mov_b32 s10, s6
-; GCN-DAZ-NEXT:    s_mov_b32 s11, s7
-; GCN-DAZ-NEXT:    s_waitcnt lgkmcnt(0)
-; GCN-DAZ-NEXT:    s_mov_b32 s8, s2
-; GCN-DAZ-NEXT:    s_mov_b32 s9, s3
-; GCN-DAZ-NEXT:    buffer_load_dword v0, off, s[8:11], 0
-; GCN-DAZ-NEXT:    s_mov_b32 s4, s0
-; GCN-DAZ-NEXT:    s_mov_b32 s5, s1
-; GCN-DAZ-NEXT:    s_waitcnt vmcnt(0)
-; GCN-DAZ-NEXT:    v_sqrt_f32_e64 v0, -v0
-; GCN-DAZ-NEXT:    v_rcp_f32_e64 v0, -v0
-; GCN-DAZ-NEXT:    buffer_store_dword v0, off, s[4:7], 0
-; GCN-DAZ-NEXT:    s_endpgm
+; GCN-DAZ-UNSAFE-LABEL: neg_rsq_neg_f32:
+; GCN-DAZ-UNSAFE:       ; %bb.0:
+; GCN-DAZ-UNSAFE-NEXT:    s_load_dwordx4 s[0:3], s[0:1], 0x9
+; GCN-DAZ-UNSAFE-NEXT:    s_mov_b32 s7, 0xf000
+; GCN-DAZ-UNSAFE-NEXT:    s_mov_b32 s6, -1
+; GCN-DAZ-UNSAFE-NEXT:    s_mov_b32 s10, s6
+; GCN-DAZ-UNSAFE-NEXT:    s_mov_b32 s11, s7
+; GCN-DAZ-UNSAFE-NEXT:    s_waitcnt lgkmcnt(0)
+; GCN-DAZ-UNSAFE-NEXT:    s_mov_b32 s8, s2
+; GCN-DAZ-UNSAFE-NEXT:    s_mov_b32 s9, s3
+; GCN-DAZ-UNSAFE-NEXT:    buffer_load_dword v0, off, s[8:11], 0
+; GCN-DAZ-UNSAFE-NEXT:    s_mov_b32 s4, s0
+; GCN-DAZ-UNSAFE-NEXT:    s_mov_b32 s5, s1
+; GCN-DAZ-UNSAFE-NEXT:    s_waitcnt vmcnt(0)
+; GCN-DAZ-UNSAFE-NEXT:    v_rsq_f32_e64 v0, -v0
+; GCN-DAZ-UNSAFE-NEXT:    v_xor_b32_e32 v0, 0x80000000, v0
+; GCN-DAZ-UNSAFE-NEXT:    buffer_store_dword v0, off, s[4:7], 0
+; GCN-DAZ-UNSAFE-NEXT:    s_endpgm
 ;
 ; GCN-IEEE-UNSAFE-LABEL: neg_rsq_neg_f32:
 ; GCN-IEEE-UNSAFE:       ; %bb.0:
@@ -440,35 +744,128 @@ define amdgpu_kernel void @neg_rsq_neg_f32(ptr addrspace(1) noalias %out, ptr ad
 ; GCN-IEEE-UNSAFE-NEXT:    s_mov_b32 s4, s0
 ; GCN-IEEE-UNSAFE-NEXT:    s_mov_b32 s5, s1
 ; GCN-IEEE-UNSAFE-NEXT:    s_waitcnt vmcnt(0)
-; GCN-IEEE-UNSAFE-NEXT:    v_sqrt_f32_e64 v0, -v0
-; GCN-IEEE-UNSAFE-NEXT:    v_rcp_f32_e64 v0, -v0
+; GCN-IEEE-UNSAFE-NEXT:    v_rsq_f32_e64 v0, -v0
+; GCN-IEEE-UNSAFE-NEXT:    v_xor_b32_e32 v0, 0x80000000, v0
 ; GCN-IEEE-UNSAFE-NEXT:    buffer_store_dword v0, off, s[4:7], 0
 ; GCN-IEEE-UNSAFE-NEXT:    s_endpgm
 ;
-; GCN-IEEE-SAFE-LABEL: neg_rsq_neg_f32:
-; GCN-IEEE-SAFE:       ; %bb.0:
-; GCN-IEEE-SAFE-NEXT:    s_load_dwordx4 s[0:3], s[0:1], 0x9
-; GCN-IEEE-SAFE-NEXT:    s_mov_b32 s7, 0xf000
-; GCN-IEEE-SAFE-NEXT:    s_mov_b32 s6, -1
-; GCN-IEEE-SAFE-NEXT:    s_mov_b32 s10, s6
-; GCN-IEEE-SAFE-NEXT:    s_mov_b32 s11, s7
-; GCN-IEEE-SAFE-NEXT:    s_waitcnt lgkmcnt(0)
-; GCN-IEEE-SAFE-NEXT:    s_mov_b32 s8, s2
-; GCN-IEEE-SAFE-NEXT:    s_mov_b32 s9, s3
-; GCN-IEEE-SAFE-NEXT:    buffer_load_dword v0, off, s[8:11], 0
-; GCN-IEEE-SAFE-NEXT:    s_mov_b32 s2, 0x6f800000
-; GCN-IEEE-SAFE-NEXT:    v_mov_b32_e32 v1, 0x2f800000
-; GCN-IEEE-SAFE-NEXT:    s_mov_b32 s4, s0
-; GCN-IEEE-SAFE-NEXT:    s_mov_b32 s5, s1
-; GCN-IEEE-SAFE-NEXT:    s_waitcnt vmcnt(0)
-; GCN-IEEE-SAFE-NEXT:    v_sqrt_f32_e64 v0, -v0
-; GCN-IEEE-SAFE-NEXT:    v_cmp_gt_f32_e64 vcc, |v0|, s2
-; GCN-IEEE-SAFE-NEXT:    v_cndmask_b32_e32 v1, 1.0, v1, vcc
-; GCN-IEEE-SAFE-NEXT:    v_mul_f32_e64 v0, v0, -v1
-; GCN-IEEE-SAFE-NEXT:    v_rcp_f32_e32 v0, v0
-; GCN-IEEE-SAFE-NEXT:    v_mul_f32_e32 v0, v1, v0
-; GCN-IEEE-SAFE-NEXT:    buffer_store_dword v0, off, s[4:7], 0
-; GCN-IEEE-SAFE-NEXT:    s_endpgm
+; GCN-DAZ-SAFE-LABEL: neg_rsq_neg_f32:
+; GCN-DAZ-SAFE:       ; %bb.0:
+; GCN-DAZ-SAFE-NEXT:    s_load_dwordx4 s[0:3], s[0:1], 0x9
+; GCN-DAZ-SAFE-NEXT:    s_mov_b32 s7, 0xf000
+; GCN-DAZ-SAFE-NEXT:    s_mov_b32 s6, -1
+; GCN-DAZ-SAFE-NEXT:    s_mov_b32 s10, s6
+; GCN-DAZ-SAFE-NEXT:    s_mov_b32 s11, s7
+; GCN-DAZ-SAFE-NEXT:    s_waitcnt lgkmcnt(0)
+; GCN-DAZ-SAFE-NEXT:    s_mov_b32 s8, s2
+; GCN-DAZ-SAFE-NEXT:    s_mov_b32 s9, s3
+; GCN-DAZ-SAFE-NEXT:    buffer_load_dword v0, off, s[8:11], 0
+; GCN-DAZ-SAFE-NEXT:    s_mov_b32 s2, 0x8f800000
+; GCN-DAZ-SAFE-NEXT:    v_mov_b32_e32 v2, 0x260
+; GCN-DAZ-SAFE-NEXT:    s_mov_b32 s4, s0
+; GCN-DAZ-SAFE-NEXT:    s_mov_b32 s5, s1
+; GCN-DAZ-SAFE-NEXT:    s_waitcnt vmcnt(0)
+; GCN-DAZ-SAFE-NEXT:    v_mul_f32_e32 v1, 0xcf800000, v0
+; GCN-DAZ-SAFE-NEXT:    v_cmp_lt_f32_e32 vcc, s2, v0
+; GCN-DAZ-SAFE-NEXT:    v_cndmask_b32_e64 v0, -v0, v1, vcc
+; GCN-DAZ-SAFE-NEXT:    v_rsq_f32_e32 v1, v0
+; GCN-DAZ-SAFE-NEXT:    v_mul_f32_e32 v3, v0, v1
+; GCN-DAZ-SAFE-NEXT:    v_mul_f32_e32 v1, 0.5, v1
+; GCN-DAZ-SAFE-NEXT:    v_fma_f32 v4, -v1, v3, 0.5
+; GCN-DAZ-SAFE-NEXT:    v_fma_f32 v3, v3, v4, v3
+; GCN-DAZ-SAFE-NEXT:    v_fma_f32 v1, v1, v4, v1
+; GCN-DAZ-SAFE-NEXT:    v_fma_f32 v4, -v3, v3, v0
+; GCN-DAZ-SAFE-NEXT:    v_fma_f32 v1, v4, v1, v3
+; GCN-DAZ-SAFE-NEXT:    v_mul_f32_e32 v3, 0x37800000, v1
+; GCN-DAZ-SAFE-NEXT:    v_cndmask_b32_e32 v1, v1, v3, vcc
+; GCN-DAZ-SAFE-NEXT:    v_cmp_class_f32_e32 vcc, v0, v2
+; GCN-DAZ-SAFE-NEXT:    v_cndmask_b32_e32 v0, v1, v0, vcc
+; GCN-DAZ-SAFE-NEXT:    v_rcp_f32_e64 v0, -v0
+; GCN-DAZ-SAFE-NEXT:    buffer_store_dword v0, off, s[4:7], 0
+; GCN-DAZ-SAFE-NEXT:    s_endpgm
+;
+; SI-IEEE-SAFE-LABEL: neg_rsq_neg_f32:
+; SI-IEEE-SAFE:       ; %bb.0:
+; SI-IEEE-SAFE-NEXT:    s_load_dwordx4 s[8:11], s[0:1], 0x9
+; SI-IEEE-SAFE-NEXT:    s_mov_b32 s7, 0xf000
+; SI-IEEE-SAFE-NEXT:    s_mov_b32 s6, -1
+; SI-IEEE-SAFE-NEXT:    s_mov_b32 s2, s6
+; SI-IEEE-SAFE-NEXT:    s_mov_b32 s3, s7
+; SI-IEEE-SAFE-NEXT:    s_waitcnt lgkmcnt(0)
+; SI-IEEE-SAFE-NEXT:    s_mov_b32 s0, s10
+; SI-IEEE-SAFE-NEXT:    s_mov_b32 s1, s11
+; SI-IEEE-SAFE-NEXT:    buffer_load_dword v0, off, s[0:3], 0
+; SI-IEEE-SAFE-NEXT:    s_mov_b32 s0, 0x8f800000
+; SI-IEEE-SAFE-NEXT:    v_mov_b32_e32 v1, 0x260
+; SI-IEEE-SAFE-NEXT:    s_mov_b32 s2, 0x7f800000
+; SI-IEEE-SAFE-NEXT:    s_mov_b32 s4, s8
+; SI-IEEE-SAFE-NEXT:    s_mov_b32 s5, s9
+; SI-IEEE-SAFE-NEXT:    s_waitcnt vmcnt(0)
+; SI-IEEE-SAFE-NEXT:    v_mul_f32_e32 v2, 0xcf800000, v0
+; SI-IEEE-SAFE-NEXT:    v_cmp_lt_f32_e64 s[0:1], s0, v0
+; SI-IEEE-SAFE-NEXT:    v_cndmask_b32_e64 v0, -v0, v2, s[0:1]
+; SI-IEEE-SAFE-NEXT:    v_sqrt_f32_e32 v2, v0
+; SI-IEEE-SAFE-NEXT:    v_add_i32_e32 v3, vcc, -1, v2
+; SI-IEEE-SAFE-NEXT:    v_add_i32_e32 v4, vcc, 1, v2
+; SI-IEEE-SAFE-NEXT:    v_fma_f32 v5, -v3, v2, v0
+; SI-IEEE-SAFE-NEXT:    v_fma_f32 v6, -v4, v2, v0
+; SI-IEEE-SAFE-NEXT:    v_cmp_ge_f32_e32 vcc, 0, v5
+; SI-IEEE-SAFE-NEXT:    v_cndmask_b32_e32 v2, v2, v3, vcc
+; SI-IEEE-SAFE-NEXT:    v_cmp_lt_f32_e32 vcc, 0, v6
+; SI-IEEE-SAFE-NEXT:    v_cndmask_b32_e32 v2, v2, v4, vcc
+; SI-IEEE-SAFE-NEXT:    v_mul_f32_e32 v3, 0x37800000, v2
+; SI-IEEE-SAFE-NEXT:    v_cndmask_b32_e64 v2, v2, v3, s[0:1]
+; SI-IEEE-SAFE-NEXT:    v_cmp_class_f32_e32 vcc, v0, v1
+; SI-IEEE-SAFE-NEXT:    v_cndmask_b32_e32 v0, v2, v0, vcc
+; SI-IEEE-SAFE-NEXT:    v_frexp_mant_f32_e64 v1, -v0
+; SI-IEEE-SAFE-NEXT:    v_cmp_lt_f32_e64 s[0:1], |v0|, s2
+; SI-IEEE-SAFE-NEXT:    v_cndmask_b32_e64 v1, -v0, v1, s[0:1]
+; SI-IEEE-SAFE-NEXT:    v_rcp_f32_e32 v1, v1
+; SI-IEEE-SAFE-NEXT:    v_frexp_exp_i32_f32_e32 v0, v0
+; SI-IEEE-SAFE-NEXT:    v_sub_i32_e32 v0, vcc, 0, v0
+; SI-IEEE-SAFE-NEXT:    v_ldexp_f32_e32 v0, v1, v0
+; SI-IEEE-SAFE-NEXT:    buffer_store_dword v0, off, s[4:7], 0
+; SI-IEEE-SAFE-NEXT:    s_endpgm
+;
+; CI-IEEE-SAFE-LABEL: neg_rsq_neg_f32:
+; CI-IEEE-SAFE:       ; %bb.0:
+; CI-IEEE-SAFE-NEXT:    s_load_dwordx4 s[8:11], s[0:1], 0x9
+; CI-IEEE-SAFE-NEXT:    s_mov_b32 s7, 0xf000
+; CI-IEEE-SAFE-NEXT:    s_mov_b32 s6, -1
+; CI-IEEE-SAFE-NEXT:    s_mov_b32 s2, s6
+; CI-IEEE-SAFE-NEXT:    s_mov_b32 s3, s7
+; CI-IEEE-SAFE-NEXT:    s_waitcnt lgkmcnt(0)
+; CI-IEEE-SAFE-NEXT:    s_mov_b32 s0, s10
+; CI-IEEE-SAFE-NEXT:    s_mov_b32 s1, s11
+; CI-IEEE-SAFE-NEXT:    buffer_load_dword v0, off, s[0:3], 0
+; CI-IEEE-SAFE-NEXT:    s_mov_b32 s0, 0x8f800000
+; CI-IEEE-SAFE-NEXT:    v_mov_b32_e32 v1, 0x260
+; CI-IEEE-SAFE-NEXT:    s_mov_b32 s4, s8
+; CI-IEEE-SAFE-NEXT:    s_mov_b32 s5, s9
+; CI-IEEE-SAFE-NEXT:    s_waitcnt vmcnt(0)
+; CI-IEEE-SAFE-NEXT:    v_mul_f32_e32 v2, 0xcf800000, v0
+; CI-IEEE-SAFE-NEXT:    v_cmp_lt_f32_e64 s[0:1], s0, v0
+; CI-IEEE-SAFE-NEXT:    v_cndmask_b32_e64 v0, -v0, v2, s[0:1]
+; CI-IEEE-SAFE-NEXT:    v_sqrt_f32_e32 v2, v0
+; CI-IEEE-SAFE-NEXT:    v_add_i32_e32 v3, vcc, -1, v2
+; CI-IEEE-SAFE-NEXT:    v_add_i32_e32 v4, vcc, 1, v2
+; CI-IEEE-SAFE-NEXT:    v_fma_f32 v5, -v3, v2, v0
+; CI-IEEE-SAFE-NEXT:    v_fma_f32 v6, -v4, v2, v0
+; CI-IEEE-SAFE-NEXT:    v_cmp_ge_f32_e32 vcc, 0, v5
+; CI-IEEE-SAFE-NEXT:    v_cndmask_b32_e32 v2, v2, v3, vcc
+; CI-IEEE-SAFE-NEXT:    v_cmp_lt_f32_e32 vcc, 0, v6
+; CI-IEEE-SAFE-NEXT:    v_cndmask_b32_e32 v2, v2, v4, vcc
+; CI-IEEE-SAFE-NEXT:    v_mul_f32_e32 v3, 0x37800000, v2
+; CI-IEEE-SAFE-NEXT:    v_cndmask_b32_e64 v2, v2, v3, s[0:1]
+; CI-IEEE-SAFE-NEXT:    v_cmp_class_f32_e32 vcc, v0, v1
+; CI-IEEE-SAFE-NEXT:    v_cndmask_b32_e32 v0, v2, v0, vcc
+; CI-IEEE-SAFE-NEXT:    v_frexp_mant_f32_e64 v1, -v0
+; CI-IEEE-SAFE-NEXT:    v_rcp_f32_e32 v1, v1
+; CI-IEEE-SAFE-NEXT:    v_frexp_exp_i32_f32_e32 v0, v0
+; CI-IEEE-SAFE-NEXT:    v_sub_i32_e32 v0, vcc, 0, v0
+; CI-IEEE-SAFE-NEXT:    v_ldexp_f32_e32 v0, v1, v0
+; CI-IEEE-SAFE-NEXT:    buffer_store_dword v0, off, s[4:7], 0
+; CI-IEEE-SAFE-NEXT:    s_endpgm
 ; GCN-UNSAFE-LABEL: neg_rsq_neg_f32:
 ; GCN-UNSAFE:       ; %bb.0:
 ; GCN-UNSAFE-NEXT:    s_load_dwordx4 s[0:3], s[0:1], 0x9
@@ -489,331 +886,1105 @@ define amdgpu_kernel void @neg_rsq_neg_f32(ptr addrspace(1) noalias %out, ptr ad
 ; GCN-UNSAFE-NEXT:    s_endpgm
   %val = load float, ptr addrspace(1) %in, align 4
   %val.fneg = fneg float %val
-  %sqrt = call float @llvm.sqrt.f32(float %val.fneg)
-  %div = fdiv float -1.0, %sqrt, !fpmath !0
+  %sqrt = call contract float @llvm.sqrt.f32(float %val.fneg)
+  %div = fdiv contract float -1.0, %sqrt, !fpmath !0
   store float %div, ptr addrspace(1) %out, align 4
   ret void
 }
 
 define float @v_neg_rsq_neg_f32(float %val) {
-; GCN-DAZ-LABEL: v_neg_rsq_neg_f32:
-; GCN-DAZ:       ; %bb.0:
-; GCN-DAZ-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GCN-DAZ-NEXT:    v_sqrt_f32_e64 v0, -v0
-; GCN-DAZ-NEXT:    v_rcp_f32_e64 v0, -v0
-; GCN-DAZ-NEXT:    s_setpc_b64 s[30:31]
+; GCN-DAZ-UNSAFE-LABEL: v_neg_rsq_neg_f32:
+; GCN-DAZ-UNSAFE:       ; %bb.0:
+; GCN-DAZ-UNSAFE-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GCN-DAZ-UNSAFE-NEXT:    v_rsq_f32_e64 v0, -v0
+; GCN-DAZ-UNSAFE-NEXT:    v_xor_b32_e32 v0, 0x80000000, v0
+; GCN-DAZ-UNSAFE-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GCN-IEEE-UNSAFE-LABEL: v_neg_rsq_neg_f32:
 ; GCN-IEEE-UNSAFE:       ; %bb.0:
 ; GCN-IEEE-UNSAFE-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GCN-IEEE-UNSAFE-NEXT:    v_sqrt_f32_e64 v0, -v0
-; GCN-IEEE-UNSAFE-NEXT:    v_rcp_f32_e64 v0, -v0
+; GCN-IEEE-UNSAFE-NEXT:    v_rsq_f32_e64 v0, -v0
+; GCN-IEEE-UNSAFE-NEXT:    v_xor_b32_e32 v0, 0x80000000, v0
 ; GCN-IEEE-UNSAFE-NEXT:    s_setpc_b64 s[30:31]
 ;
-; GCN-IEEE-SAFE-LABEL: v_neg_rsq_neg_f32:
-; GCN-IEEE-SAFE:       ; %bb.0:
-; GCN-IEEE-SAFE-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GCN-IEEE-SAFE-NEXT:    v_sqrt_f32_e64 v0, -v0
-; GCN-IEEE-SAFE-NEXT:    s_mov_b32 s4, 0x6f800000
-; GCN-IEEE-SAFE-NEXT:    v_mov_b32_e32 v1, 0x2f800000
-; GCN-IEEE-SAFE-NEXT:    v_cmp_gt_f32_e64 vcc, |v0|, s4
-; GCN-IEEE-SAFE-NEXT:    v_cndmask_b32_e32 v1, 1.0, v1, vcc
-; GCN-IEEE-SAFE-NEXT:    v_mul_f32_e64 v0, v0, -v1
-; GCN-IEEE-SAFE-NEXT:    v_rcp_f32_e32 v0, v0
-; GCN-IEEE-SAFE-NEXT:    v_mul_f32_e32 v0, v1, v0
-; GCN-IEEE-SAFE-NEXT:    s_setpc_b64 s[30:31]
+; GCN-DAZ-SAFE-LABEL: v_neg_rsq_neg_f32:
+; GCN-DAZ-SAFE:       ; %bb.0:
+; GCN-DAZ-SAFE-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GCN-DAZ-SAFE-NEXT:    s_mov_b32 s4, 0x8f800000
+; GCN-DAZ-SAFE-NEXT:    v_mul_f32_e32 v1, 0xcf800000, v0
+; GCN-DAZ-SAFE-NEXT:    v_cmp_lt_f32_e32 vcc, s4, v0
+; GCN-DAZ-SAFE-NEXT:    v_cndmask_b32_e64 v0, -v0, v1, vcc
+; GCN-DAZ-SAFE-NEXT:    v_rsq_f32_e32 v1, v0
+; GCN-DAZ-SAFE-NEXT:    v_mul_f32_e32 v2, v0, v1
+; GCN-DAZ-SAFE-NEXT:    v_mul_f32_e32 v1, 0.5, v1
+; GCN-DAZ-SAFE-NEXT:    v_fma_f32 v3, -v1, v2, 0.5
+; GCN-DAZ-SAFE-NEXT:    v_fma_f32 v2, v2, v3, v2
+; GCN-DAZ-SAFE-NEXT:    v_fma_f32 v4, -v2, v2, v0
+; GCN-DAZ-SAFE-NEXT:    v_fma_f32 v1, v1, v3, v1
+; GCN-DAZ-SAFE-NEXT:    v_fma_f32 v1, v4, v1, v2
+; GCN-DAZ-SAFE-NEXT:    v_mul_f32_e32 v2, 0x37800000, v1
+; GCN-DAZ-SAFE-NEXT:    v_cndmask_b32_e32 v1, v1, v2, vcc
+; GCN-DAZ-SAFE-NEXT:    v_mov_b32_e32 v2, 0x260
+; GCN-DAZ-SAFE-NEXT:    v_cmp_class_f32_e32 vcc, v0, v2
+; GCN-DAZ-SAFE-NEXT:    v_cndmask_b32_e32 v0, v1, v0, vcc
+; GCN-DAZ-SAFE-NEXT:    v_rcp_f32_e64 v0, -v0
+; GCN-DAZ-SAFE-NEXT:    s_setpc_b64 s[30:31]
+;
+; SI-IEEE-SAFE-LABEL: v_neg_rsq_neg_f32:
+; SI-IEEE-SAFE:       ; %bb.0:
+; SI-IEEE-SAFE-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; SI-IEEE-SAFE-NEXT:    s_mov_b32 s4, 0x8f800000
+; SI-IEEE-SAFE-NEXT:    v_mul_f32_e32 v1, 0xcf800000, v0
+; SI-IEEE-SAFE-NEXT:    v_cmp_lt_f32_e32 vcc, s4, v0
+; SI-IEEE-SAFE-NEXT:    v_cndmask_b32_e64 v0, -v0, v1, vcc
+; SI-IEEE-SAFE-NEXT:    v_sqrt_f32_e32 v1, v0
+; SI-IEEE-SAFE-NEXT:    v_add_i32_e64 v2, s[4:5], -1, v1
+; SI-IEEE-SAFE-NEXT:    v_fma_f32 v3, -v2, v1, v0
+; SI-IEEE-SAFE-NEXT:    v_cmp_ge_f32_e64 s[4:5], 0, v3
+; SI-IEEE-SAFE-NEXT:    v_cndmask_b32_e64 v2, v1, v2, s[4:5]
+; SI-IEEE-SAFE-NEXT:    v_add_i32_e64 v3, s[4:5], 1, v1
+; SI-IEEE-SAFE-NEXT:    v_fma_f32 v1, -v3, v1, v0
+; SI-IEEE-SAFE-NEXT:    v_cmp_lt_f32_e64 s[4:5], 0, v1
+; SI-IEEE-SAFE-NEXT:    v_cndmask_b32_e64 v1, v2, v3, s[4:5]
+; SI-IEEE-SAFE-NEXT:    v_mul_f32_e32 v2, 0x37800000, v1
+; SI-IEEE-SAFE-NEXT:    v_cndmask_b32_e32 v1, v1, v2, vcc
+; SI-IEEE-SAFE-NEXT:    v_mov_b32_e32 v2, 0x260
+; SI-IEEE-SAFE-NEXT:    v_cmp_class_f32_e32 vcc, v0, v2
+; SI-IEEE-SAFE-NEXT:    v_cndmask_b32_e32 v0, v1, v0, vcc
+; SI-IEEE-SAFE-NEXT:    s_mov_b32 s4, 0x7f800000
+; SI-IEEE-SAFE-NEXT:    v_frexp_mant_f32_e64 v1, -v0
+; SI-IEEE-SAFE-NEXT:    v_cmp_lt_f32_e64 s[4:5], |v0|, s4
+; SI-IEEE-SAFE-NEXT:    v_cndmask_b32_e64 v1, -v0, v1, s[4:5]
+; SI-IEEE-SAFE-NEXT:    v_rcp_f32_e32 v1, v1
+; SI-IEEE-SAFE-NEXT:    v_frexp_exp_i32_f32_e32 v0, v0
+; SI-IEEE-SAFE-NEXT:    v_sub_i32_e32 v0, vcc, 0, v0
+; SI-IEEE-SAFE-NEXT:    v_ldexp_f32_e32 v0, v1, v0
+; SI-IEEE-SAFE-NEXT:    s_setpc_b64 s[30:31]
+;
+; CI-IEEE-SAFE-LABEL: v_neg_rsq_neg_f32:
+; CI-IEEE-SAFE:       ; %bb.0:
+; CI-IEEE-SAFE-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; CI-IEEE-SAFE-NEXT:    s_mov_b32 s4, 0x8f800000
+; CI-IEEE-SAFE-NEXT:    v_mul_f32_e32 v1, 0xcf800000, v0
+; CI-IEEE-SAFE-NEXT:    v_cmp_lt_f32_e32 vcc, s4, v0
+; CI-IEEE-SAFE-NEXT:    v_cndmask_b32_e64 v0, -v0, v1, vcc
+; CI-IEEE-SAFE-NEXT:    v_sqrt_f32_e32 v1, v0
+; CI-IEEE-SAFE-NEXT:    v_add_i32_e64 v2, s[4:5], -1, v1
+; CI-IEEE-SAFE-NEXT:    v_fma_f32 v3, -v2, v1, v0
+; CI-IEEE-SAFE-NEXT:    v_cmp_ge_f32_e64 s[4:5], 0, v3
+; CI-IEEE-SAFE-NEXT:    v_cndmask_b32_e64 v2, v1, v2, s[4:5]
+; CI-IEEE-SAFE-NEXT:    v_add_i32_e64 v3, s[4:5], 1, v1
+; CI-IEEE-SAFE-NEXT:    v_fma_f32 v1, -v3, v1, v0
+; CI-IEEE-SAFE-NEXT:    v_cmp_lt_f32_e64 s[4:5], 0, v1
+; CI-IEEE-SAFE-NEXT:    v_cndmask_b32_e64 v1, v2, v3, s[4:5]
+; CI-IEEE-SAFE-NEXT:    v_mul_f32_e32 v2, 0x37800000, v1
+; CI-IEEE-SAFE-NEXT:    v_cndmask_b32_e32 v1, v1, v2, vcc
+; CI-IEEE-SAFE-NEXT:    v_mov_b32_e32 v2, 0x260
+; CI-IEEE-SAFE-NEXT:    v_cmp_class_f32_e32 vcc, v0, v2
+; CI-IEEE-SAFE-NEXT:    v_cndmask_b32_e32 v0, v1, v0, vcc
+; CI-IEEE-SAFE-NEXT:    v_frexp_mant_f32_e64 v1, -v0
+; CI-IEEE-SAFE-NEXT:    v_rcp_f32_e32 v1, v1
+; CI-IEEE-SAFE-NEXT:    v_frexp_exp_i32_f32_e32 v0, v0
+; CI-IEEE-SAFE-NEXT:    v_sub_i32_e32 v0, vcc, 0, v0
+; CI-IEEE-SAFE-NEXT:    v_ldexp_f32_e32 v0, v1, v0
+; CI-IEEE-SAFE-NEXT:    s_setpc_b64 s[30:31]
   %val.fneg = fneg float %val
-  %sqrt = call float @llvm.sqrt.f32(float %val.fneg)
-  %div = fdiv float -1.0, %sqrt, !fpmath !0
+  %sqrt = call contract float @llvm.sqrt.f32(float %val.fneg)
+  %div = fdiv contract float -1.0, %sqrt, !fpmath !0
   ret float %div
 }
 
 define <2 x float> @v_neg_rsq_neg_v2f32(<2 x float> %val) {
-; GCN-DAZ-LABEL: v_neg_rsq_neg_v2f32:
-; GCN-DAZ:       ; %bb.0:
-; GCN-DAZ-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GCN-DAZ-NEXT:    v_sqrt_f32_e64 v0, -v0
-; GCN-DAZ-NEXT:    v_sqrt_f32_e64 v1, -v1
-; GCN-DAZ-NEXT:    v_rcp_f32_e64 v0, -v0
-; GCN-DAZ-NEXT:    v_rcp_f32_e64 v1, -v1
-; GCN-DAZ-NEXT:    s_setpc_b64 s[30:31]
+; GCN-DAZ-UNSAFE-LABEL: v_neg_rsq_neg_v2f32:
+; GCN-DAZ-UNSAFE:       ; %bb.0:
+; GCN-DAZ-UNSAFE-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GCN-DAZ-UNSAFE-NEXT:    v_rsq_f32_e64 v0, -v0
+; GCN-DAZ-UNSAFE-NEXT:    v_rsq_f32_e64 v1, -v1
+; GCN-DAZ-UNSAFE-NEXT:    v_xor_b32_e32 v0, 0x80000000, v0
+; GCN-DAZ-UNSAFE-NEXT:    v_xor_b32_e32 v1, 0x80000000, v1
+; GCN-DAZ-UNSAFE-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GCN-IEEE-UNSAFE-LABEL: v_neg_rsq_neg_v2f32:
 ; GCN-IEEE-UNSAFE:       ; %bb.0:
 ; GCN-IEEE-UNSAFE-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GCN-IEEE-UNSAFE-NEXT:    v_sqrt_f32_e64 v0, -v0
-; GCN-IEEE-UNSAFE-NEXT:    v_sqrt_f32_e64 v1, -v1
-; GCN-IEEE-UNSAFE-NEXT:    v_rcp_f32_e64 v0, -v0
-; GCN-IEEE-UNSAFE-NEXT:    v_rcp_f32_e64 v1, -v1
+; GCN-IEEE-UNSAFE-NEXT:    v_rsq_f32_e64 v0, -v0
+; GCN-IEEE-UNSAFE-NEXT:    v_rsq_f32_e64 v1, -v1
+; GCN-IEEE-UNSAFE-NEXT:    v_xor_b32_e32 v0, 0x80000000, v0
+; GCN-IEEE-UNSAFE-NEXT:    v_xor_b32_e32 v1, 0x80000000, v1
 ; GCN-IEEE-UNSAFE-NEXT:    s_setpc_b64 s[30:31]
 ;
-; GCN-IEEE-SAFE-LABEL: v_neg_rsq_neg_v2f32:
-; GCN-IEEE-SAFE:       ; %bb.0:
-; GCN-IEEE-SAFE-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GCN-IEEE-SAFE-NEXT:    v_sqrt_f32_e64 v0, -v0
-; GCN-IEEE-SAFE-NEXT:    v_sqrt_f32_e64 v1, -v1
-; GCN-IEEE-SAFE-NEXT:    s_mov_b32 s4, 0x6f800000
-; GCN-IEEE-SAFE-NEXT:    v_mov_b32_e32 v2, 0x2f800000
-; GCN-IEEE-SAFE-NEXT:    v_cmp_gt_f32_e64 vcc, |v0|, s4
-; GCN-IEEE-SAFE-NEXT:    v_cndmask_b32_e32 v3, 1.0, v2, vcc
-; GCN-IEEE-SAFE-NEXT:    v_cmp_gt_f32_e64 vcc, |v1|, s4
-; GCN-IEEE-SAFE-NEXT:    v_cndmask_b32_e32 v2, 1.0, v2, vcc
-; GCN-IEEE-SAFE-NEXT:    v_mul_f32_e64 v0, v0, -v3
-; GCN-IEEE-SAFE-NEXT:    v_mul_f32_e64 v1, v1, -v2
-; GCN-IEEE-SAFE-NEXT:    v_rcp_f32_e32 v0, v0
-; GCN-IEEE-SAFE-NEXT:    v_rcp_f32_e32 v1, v1
-; GCN-IEEE-SAFE-NEXT:    v_mul_f32_e32 v0, v3, v0
-; GCN-IEEE-SAFE-NEXT:    v_mul_f32_e32 v1, v2, v1
-; GCN-IEEE-SAFE-NEXT:    s_setpc_b64 s[30:31]
+; GCN-DAZ-SAFE-LABEL: v_neg_rsq_neg_v2f32:
+; GCN-DAZ-SAFE:       ; %bb.0:
+; GCN-DAZ-SAFE-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GCN-DAZ-SAFE-NEXT:    s_mov_b32 s4, 0x8f800000
+; GCN-DAZ-SAFE-NEXT:    s_mov_b32 s5, 0x4f800000
+; GCN-DAZ-SAFE-NEXT:    v_mul_f32_e64 v2, -v1, s5
+; GCN-DAZ-SAFE-NEXT:    v_cmp_lt_f32_e32 vcc, s4, v1
+; GCN-DAZ-SAFE-NEXT:    v_cndmask_b32_e64 v1, -v1, v2, vcc
+; GCN-DAZ-SAFE-NEXT:    v_rsq_f32_e32 v2, v1
+; GCN-DAZ-SAFE-NEXT:    v_mul_f32_e32 v3, v1, v2
+; GCN-DAZ-SAFE-NEXT:    v_mul_f32_e32 v2, 0.5, v2
+; GCN-DAZ-SAFE-NEXT:    v_fma_f32 v4, -v2, v3, 0.5
+; GCN-DAZ-SAFE-NEXT:    v_fma_f32 v3, v3, v4, v3
+; GCN-DAZ-SAFE-NEXT:    v_fma_f32 v5, -v3, v3, v1
+; GCN-DAZ-SAFE-NEXT:    v_fma_f32 v2, v2, v4, v2
+; GCN-DAZ-SAFE-NEXT:    v_fma_f32 v2, v5, v2, v3
+; GCN-DAZ-SAFE-NEXT:    v_mul_f32_e32 v3, 0x37800000, v2
+; GCN-DAZ-SAFE-NEXT:    v_cndmask_b32_e32 v2, v2, v3, vcc
+; GCN-DAZ-SAFE-NEXT:    v_mul_f32_e64 v3, -v0, s5
+; GCN-DAZ-SAFE-NEXT:    v_cmp_lt_f32_e32 vcc, s4, v0
+; GCN-DAZ-SAFE-NEXT:    v_cndmask_b32_e64 v0, -v0, v3, vcc
+; GCN-DAZ-SAFE-NEXT:    v_rsq_f32_e32 v3, v0
+; GCN-DAZ-SAFE-NEXT:    v_mov_b32_e32 v4, 0x260
+; GCN-DAZ-SAFE-NEXT:    v_cmp_class_f32_e64 s[4:5], v1, v4
+; GCN-DAZ-SAFE-NEXT:    v_cndmask_b32_e64 v1, v2, v1, s[4:5]
+; GCN-DAZ-SAFE-NEXT:    v_mul_f32_e32 v2, v0, v3
+; GCN-DAZ-SAFE-NEXT:    v_mul_f32_e32 v3, 0.5, v3
+; GCN-DAZ-SAFE-NEXT:    v_fma_f32 v5, -v3, v2, 0.5
+; GCN-DAZ-SAFE-NEXT:    v_fma_f32 v2, v2, v5, v2
+; GCN-DAZ-SAFE-NEXT:    v_fma_f32 v6, -v2, v2, v0
+; GCN-DAZ-SAFE-NEXT:    v_fma_f32 v3, v3, v5, v3
+; GCN-DAZ-SAFE-NEXT:    v_fma_f32 v2, v6, v3, v2
+; GCN-DAZ-SAFE-NEXT:    v_mul_f32_e32 v3, 0x37800000, v2
+; GCN-DAZ-SAFE-NEXT:    v_cndmask_b32_e32 v2, v2, v3, vcc
+; GCN-DAZ-SAFE-NEXT:    v_cmp_class_f32_e32 vcc, v0, v4
+; GCN-DAZ-SAFE-NEXT:    v_cndmask_b32_e32 v0, v2, v0, vcc
+; GCN-DAZ-SAFE-NEXT:    v_rcp_f32_e64 v0, -v0
+; GCN-DAZ-SAFE-NEXT:    v_rcp_f32_e64 v1, -v1
+; GCN-DAZ-SAFE-NEXT:    s_setpc_b64 s[30:31]
+;
+; SI-IEEE-SAFE-LABEL: v_neg_rsq_neg_v2f32:
+; SI-IEEE-SAFE:       ; %bb.0:
+; SI-IEEE-SAFE-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; SI-IEEE-SAFE-NEXT:    s_mov_b32 s6, 0x8f800000
+; SI-IEEE-SAFE-NEXT:    s_mov_b32 s7, 0x4f800000
+; SI-IEEE-SAFE-NEXT:    v_mul_f32_e64 v2, -v1, s7
+; SI-IEEE-SAFE-NEXT:    v_cmp_lt_f32_e32 vcc, s6, v1
+; SI-IEEE-SAFE-NEXT:    v_cndmask_b32_e64 v1, -v1, v2, vcc
+; SI-IEEE-SAFE-NEXT:    v_sqrt_f32_e32 v2, v1
+; SI-IEEE-SAFE-NEXT:    v_add_i32_e64 v3, s[4:5], -1, v2
+; SI-IEEE-SAFE-NEXT:    v_fma_f32 v4, -v3, v2, v1
+; SI-IEEE-SAFE-NEXT:    v_cmp_ge_f32_e64 s[4:5], 0, v4
+; SI-IEEE-SAFE-NEXT:    v_cndmask_b32_e64 v3, v2, v3, s[4:5]
+; SI-IEEE-SAFE-NEXT:    v_add_i32_e64 v4, s[4:5], 1, v2
+; SI-IEEE-SAFE-NEXT:    v_fma_f32 v2, -v4, v2, v1
+; SI-IEEE-SAFE-NEXT:    v_cmp_lt_f32_e64 s[4:5], 0, v2
+; SI-IEEE-SAFE-NEXT:    v_cndmask_b32_e64 v2, v3, v4, s[4:5]
+; SI-IEEE-SAFE-NEXT:    v_mul_f32_e32 v3, 0x37800000, v2
+; SI-IEEE-SAFE-NEXT:    v_cndmask_b32_e32 v2, v2, v3, vcc
+; SI-IEEE-SAFE-NEXT:    v_mul_f32_e64 v4, -v0, s7
+; SI-IEEE-SAFE-NEXT:    v_cmp_lt_f32_e32 vcc, s6, v0
+; SI-IEEE-SAFE-NEXT:    v_cndmask_b32_e64 v0, -v0, v4, vcc
+; SI-IEEE-SAFE-NEXT:    v_sqrt_f32_e32 v4, v0
+; SI-IEEE-SAFE-NEXT:    v_mov_b32_e32 v3, 0x260
+; SI-IEEE-SAFE-NEXT:    v_cmp_class_f32_e64 s[4:5], v1, v3
+; SI-IEEE-SAFE-NEXT:    v_cndmask_b32_e64 v1, v2, v1, s[4:5]
+; SI-IEEE-SAFE-NEXT:    v_add_i32_e64 v2, s[4:5], -1, v4
+; SI-IEEE-SAFE-NEXT:    v_fma_f32 v5, -v2, v4, v0
+; SI-IEEE-SAFE-NEXT:    v_cmp_ge_f32_e64 s[4:5], 0, v5
+; SI-IEEE-SAFE-NEXT:    v_cndmask_b32_e64 v2, v4, v2, s[4:5]
+; SI-IEEE-SAFE-NEXT:    v_add_i32_e64 v5, s[4:5], 1, v4
+; SI-IEEE-SAFE-NEXT:    v_fma_f32 v4, -v5, v4, v0
+; SI-IEEE-SAFE-NEXT:    v_cmp_lt_f32_e64 s[4:5], 0, v4
+; SI-IEEE-SAFE-NEXT:    v_cndmask_b32_e64 v2, v2, v5, s[4:5]
+; SI-IEEE-SAFE-NEXT:    v_mul_f32_e32 v4, 0x37800000, v2
+; SI-IEEE-SAFE-NEXT:    v_cndmask_b32_e32 v2, v2, v4, vcc
+; SI-IEEE-SAFE-NEXT:    v_cmp_class_f32_e32 vcc, v0, v3
+; SI-IEEE-SAFE-NEXT:    v_cndmask_b32_e32 v0, v2, v0, vcc
+; SI-IEEE-SAFE-NEXT:    s_mov_b32 s6, 0x7f800000
+; SI-IEEE-SAFE-NEXT:    v_frexp_mant_f32_e64 v2, -v0
+; SI-IEEE-SAFE-NEXT:    v_cmp_lt_f32_e64 s[4:5], |v0|, s6
+; SI-IEEE-SAFE-NEXT:    v_cndmask_b32_e64 v2, -v0, v2, s[4:5]
+; SI-IEEE-SAFE-NEXT:    v_rcp_f32_e32 v2, v2
+; SI-IEEE-SAFE-NEXT:    v_frexp_exp_i32_f32_e32 v0, v0
+; SI-IEEE-SAFE-NEXT:    v_sub_i32_e32 v0, vcc, 0, v0
+; SI-IEEE-SAFE-NEXT:    v_ldexp_f32_e32 v0, v2, v0
+; SI-IEEE-SAFE-NEXT:    v_frexp_mant_f32_e64 v2, -v1
+; SI-IEEE-SAFE-NEXT:    v_cmp_lt_f32_e64 s[4:5], |v1|, s6
+; SI-IEEE-SAFE-NEXT:    v_cndmask_b32_e64 v2, -v1, v2, s[4:5]
+; SI-IEEE-SAFE-NEXT:    v_rcp_f32_e32 v2, v2
+; SI-IEEE-SAFE-NEXT:    v_frexp_exp_i32_f32_e32 v1, v1
+; SI-IEEE-SAFE-NEXT:    v_sub_i32_e32 v1, vcc, 0, v1
+; SI-IEEE-SAFE-NEXT:    v_ldexp_f32_e32 v1, v2, v1
+; SI-IEEE-SAFE-NEXT:    s_setpc_b64 s[30:31]
+;
+; CI-IEEE-SAFE-LABEL: v_neg_rsq_neg_v2f32:
+; CI-IEEE-SAFE:       ; %bb.0:
+; CI-IEEE-SAFE-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; CI-IEEE-SAFE-NEXT:    s_mov_b32 s6, 0x8f800000
+; CI-IEEE-SAFE-NEXT:    s_mov_b32 s7, 0x4f800000
+; CI-IEEE-SAFE-NEXT:    v_mul_f32_e64 v2, -v1, s7
+; CI-IEEE-SAFE-NEXT:    v_cmp_lt_f32_e32 vcc, s6, v1
+; CI-IEEE-SAFE-NEXT:    v_cndmask_b32_e64 v1, -v1, v2, vcc
+; CI-IEEE-SAFE-NEXT:    v_sqrt_f32_e32 v2, v1
+; CI-IEEE-SAFE-NEXT:    v_add_i32_e64 v3, s[4:5], -1, v2
+; CI-IEEE-SAFE-NEXT:    v_fma_f32 v4, -v3, v2, v1
+; CI-IEEE-SAFE-NEXT:    v_cmp_ge_f32_e64 s[4:5], 0, v4
+; CI-IEEE-SAFE-NEXT:    v_cndmask_b32_e64 v3, v2, v3, s[4:5]
+; CI-IEEE-SAFE-NEXT:    v_add_i32_e64 v4, s[4:5], 1, v2
+; CI-IEEE-SAFE-NEXT:    v_fma_f32 v2, -v4, v2, v1
+; CI-IEEE-SAFE-NEXT:    v_cmp_lt_f32_e64 s[4:5], 0, v2
+; CI-IEEE-SAFE-NEXT:    v_cndmask_b32_e64 v2, v3, v4, s[4:5]
+; CI-IEEE-SAFE-NEXT:    v_mul_f32_e32 v3, 0x37800000, v2
+; CI-IEEE-SAFE-NEXT:    v_cndmask_b32_e32 v2, v2, v3, vcc
+; CI-IEEE-SAFE-NEXT:    v_mul_f32_e64 v4, -v0, s7
+; CI-IEEE-SAFE-NEXT:    v_cmp_lt_f32_e32 vcc, s6, v0
+; CI-IEEE-SAFE-NEXT:    v_cndmask_b32_e64 v0, -v0, v4, vcc
+; CI-IEEE-SAFE-NEXT:    v_sqrt_f32_e32 v4, v0
+; CI-IEEE-SAFE-NEXT:    v_mov_b32_e32 v3, 0x260
+; CI-IEEE-SAFE-NEXT:    v_cmp_class_f32_e64 s[4:5], v1, v3
+; CI-IEEE-SAFE-NEXT:    v_cndmask_b32_e64 v1, v2, v1, s[4:5]
+; CI-IEEE-SAFE-NEXT:    v_add_i32_e64 v2, s[4:5], -1, v4
+; CI-IEEE-SAFE-NEXT:    v_fma_f32 v5, -v2, v4, v0
+; CI-IEEE-SAFE-NEXT:    v_cmp_ge_f32_e64 s[4:5], 0, v5
+; CI-IEEE-SAFE-NEXT:    v_cndmask_b32_e64 v2, v4, v2, s[4:5]
+; CI-IEEE-SAFE-NEXT:    v_add_i32_e64 v5, s[4:5], 1, v4
+; CI-IEEE-SAFE-NEXT:    v_fma_f32 v4, -v5, v4, v0
+; CI-IEEE-SAFE-NEXT:    v_cmp_lt_f32_e64 s[4:5], 0, v4
+; CI-IEEE-SAFE-NEXT:    v_cndmask_b32_e64 v2, v2, v5, s[4:5]
+; CI-IEEE-SAFE-NEXT:    v_mul_f32_e32 v4, 0x37800000, v2
+; CI-IEEE-SAFE-NEXT:    v_cndmask_b32_e32 v2, v2, v4, vcc
+; CI-IEEE-SAFE-NEXT:    v_cmp_class_f32_e32 vcc, v0, v3
+; CI-IEEE-SAFE-NEXT:    v_cndmask_b32_e32 v0, v2, v0, vcc
+; CI-IEEE-SAFE-NEXT:    v_frexp_mant_f32_e64 v2, -v0
+; CI-IEEE-SAFE-NEXT:    v_rcp_f32_e32 v2, v2
+; CI-IEEE-SAFE-NEXT:    v_frexp_exp_i32_f32_e32 v0, v0
+; CI-IEEE-SAFE-NEXT:    v_sub_i32_e32 v0, vcc, 0, v0
+; CI-IEEE-SAFE-NEXT:    v_ldexp_f32_e32 v0, v2, v0
+; CI-IEEE-SAFE-NEXT:    v_frexp_mant_f32_e64 v2, -v1
+; CI-IEEE-SAFE-NEXT:    v_rcp_f32_e32 v2, v2
+; CI-IEEE-SAFE-NEXT:    v_frexp_exp_i32_f32_e32 v1, v1
+; CI-IEEE-SAFE-NEXT:    v_sub_i32_e32 v1, vcc, 0, v1
+; CI-IEEE-SAFE-NEXT:    v_ldexp_f32_e32 v1, v2, v1
+; CI-IEEE-SAFE-NEXT:    s_setpc_b64 s[30:31]
   %val.fneg = fneg <2 x float> %val
-  %sqrt = call <2 x float> @llvm.sqrt.v2f32(<2 x float> %val.fneg)
-  %div = fdiv <2 x float> <float -1.0, float -1.0>, %sqrt, !fpmath !0
+  %sqrt = call contract <2 x float> @llvm.sqrt.v2f32(<2 x float> %val.fneg)
+  %div = fdiv contract <2 x float> <float -1.0, float -1.0>, %sqrt, !fpmath !0
   ret <2 x float> %div
 }
 
 define float @v_neg_rsq_neg_f32_foldable_user(float %val0, float %val1) {
-; GCN-DAZ-LABEL: v_neg_rsq_neg_f32_foldable_user:
-; GCN-DAZ:       ; %bb.0:
-; GCN-DAZ-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GCN-DAZ-NEXT:    v_sqrt_f32_e64 v0, -v0
-; GCN-DAZ-NEXT:    v_rcp_f32_e64 v0, -v0
-; GCN-DAZ-NEXT:    v_mul_f32_e32 v0, v0, v1
-; GCN-DAZ-NEXT:    s_setpc_b64 s[30:31]
+; GCN-DAZ-UNSAFE-LABEL: v_neg_rsq_neg_f32_foldable_user:
+; GCN-DAZ-UNSAFE:       ; %bb.0:
+; GCN-DAZ-UNSAFE-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GCN-DAZ-UNSAFE-NEXT:    v_rsq_f32_e64 v0, -v0
+; GCN-DAZ-UNSAFE-NEXT:    v_mul_f32_e64 v0, -v0, v1
+; GCN-DAZ-UNSAFE-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GCN-IEEE-UNSAFE-LABEL: v_neg_rsq_neg_f32_foldable_user:
 ; GCN-IEEE-UNSAFE:       ; %bb.0:
 ; GCN-IEEE-UNSAFE-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GCN-IEEE-UNSAFE-NEXT:    v_sqrt_f32_e64 v0, -v0
-; GCN-IEEE-UNSAFE-NEXT:    v_rcp_f32_e64 v0, -v0
-; GCN-IEEE-UNSAFE-NEXT:    v_mul_f32_e32 v0, v0, v1
+; GCN-IEEE-UNSAFE-NEXT:    v_rsq_f32_e64 v0, -v0
+; GCN-IEEE-UNSAFE-NEXT:    v_mul_f32_e64 v0, -v0, v1
 ; GCN-IEEE-UNSAFE-NEXT:    s_setpc_b64 s[30:31]
 ;
-; GCN-IEEE-SAFE-LABEL: v_neg_rsq_neg_f32_foldable_user:
-; GCN-IEEE-SAFE:       ; %bb.0:
-; GCN-IEEE-SAFE-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GCN-IEEE-SAFE-NEXT:    v_sqrt_f32_e64 v0, -v0
-; GCN-IEEE-SAFE-NEXT:    s_mov_b32 s4, 0x6f800000
-; GCN-IEEE-SAFE-NEXT:    v_mov_b32_e32 v2, 0x2f800000
-; GCN-IEEE-SAFE-NEXT:    v_cmp_gt_f32_e64 vcc, |v0|, s4
-; GCN-IEEE-SAFE-NEXT:    v_cndmask_b32_e32 v2, 1.0, v2, vcc
-; GCN-IEEE-SAFE-NEXT:    v_mul_f32_e64 v0, v0, -v2
-; GCN-IEEE-SAFE-NEXT:    v_rcp_f32_e32 v0, v0
-; GCN-IEEE-SAFE-NEXT:    v_mul_f32_e32 v0, v2, v0
-; GCN-IEEE-SAFE-NEXT:    v_mul_f32_e32 v0, v0, v1
-; GCN-IEEE-SAFE-NEXT:    s_setpc_b64 s[30:31]
+; GCN-DAZ-SAFE-LABEL: v_neg_rsq_neg_f32_foldable_user:
+; GCN-DAZ-SAFE:       ; %bb.0:
+; GCN-DAZ-SAFE-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GCN-DAZ-SAFE-NEXT:    s_mov_b32 s4, 0x8f800000
+; GCN-DAZ-SAFE-NEXT:    v_mul_f32_e32 v2, 0xcf800000, v0
+; GCN-DAZ-SAFE-NEXT:    v_cmp_lt_f32_e32 vcc, s4, v0
+; GCN-DAZ-SAFE-NEXT:    v_cndmask_b32_e64 v0, -v0, v2, vcc
+; GCN-DAZ-SAFE-NEXT:    v_rsq_f32_e32 v2, v0
+; GCN-DAZ-SAFE-NEXT:    v_mul_f32_e32 v3, v0, v2
+; GCN-DAZ-SAFE-NEXT:    v_mul_f32_e32 v2, 0.5, v2
+; GCN-DAZ-SAFE-NEXT:    v_fma_f32 v4, -v2, v3, 0.5
+; GCN-DAZ-SAFE-NEXT:    v_fma_f32 v3, v3, v4, v3
+; GCN-DAZ-SAFE-NEXT:    v_fma_f32 v5, -v3, v3, v0
+; GCN-DAZ-SAFE-NEXT:    v_fma_f32 v2, v2, v4, v2
+; GCN-DAZ-SAFE-NEXT:    v_fma_f32 v2, v5, v2, v3
+; GCN-DAZ-SAFE-NEXT:    v_mul_f32_e32 v3, 0x37800000, v2
+; GCN-DAZ-SAFE-NEXT:    v_cndmask_b32_e32 v2, v2, v3, vcc
+; GCN-DAZ-SAFE-NEXT:    v_mov_b32_e32 v3, 0x260
+; GCN-DAZ-SAFE-NEXT:    v_cmp_class_f32_e32 vcc, v0, v3
+; GCN-DAZ-SAFE-NEXT:    v_cndmask_b32_e32 v0, v2, v0, vcc
+; GCN-DAZ-SAFE-NEXT:    v_rcp_f32_e64 v0, -v0
+; GCN-DAZ-SAFE-NEXT:    v_mul_f32_e32 v0, v0, v1
+; GCN-DAZ-SAFE-NEXT:    s_setpc_b64 s[30:31]
+;
+; SI-IEEE-SAFE-LABEL: v_neg_rsq_neg_f32_foldable_user:
+; SI-IEEE-SAFE:       ; %bb.0:
+; SI-IEEE-SAFE-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; SI-IEEE-SAFE-NEXT:    s_mov_b32 s4, 0x8f800000
+; SI-IEEE-SAFE-NEXT:    v_mul_f32_e32 v2, 0xcf800000, v0
+; SI-IEEE-SAFE-NEXT:    v_cmp_lt_f32_e32 vcc, s4, v0
+; SI-IEEE-SAFE-NEXT:    v_cndmask_b32_e64 v0, -v0, v2, vcc
+; SI-IEEE-SAFE-NEXT:    v_sqrt_f32_e32 v2, v0
+; SI-IEEE-SAFE-NEXT:    v_add_i32_e64 v3, s[4:5], -1, v2
+; SI-IEEE-SAFE-NEXT:    v_fma_f32 v4, -v3, v2, v0
+; SI-IEEE-SAFE-NEXT:    v_cmp_ge_f32_e64 s[4:5], 0, v4
+; SI-IEEE-SAFE-NEXT:    v_cndmask_b32_e64 v3, v2, v3, s[4:5]
+; SI-IEEE-SAFE-NEXT:    v_add_i32_e64 v4, s[4:5], 1, v2
+; SI-IEEE-SAFE-NEXT:    v_fma_f32 v2, -v4, v2, v0
+; SI-IEEE-SAFE-NEXT:    v_cmp_lt_f32_e64 s[4:5], 0, v2
+; SI-IEEE-SAFE-NEXT:    v_cndmask_b32_e64 v2, v3, v4, s[4:5]
+; SI-IEEE-SAFE-NEXT:    v_mul_f32_e32 v3, 0x37800000, v2
+; SI-IEEE-SAFE-NEXT:    v_cndmask_b32_e32 v2, v2, v3, vcc
+; SI-IEEE-SAFE-NEXT:    v_mov_b32_e32 v3, 0x260
+; SI-IEEE-SAFE-NEXT:    v_cmp_class_f32_e32 vcc, v0, v3
+; SI-IEEE-SAFE-NEXT:    v_cndmask_b32_e32 v0, v2, v0, vcc
+; SI-IEEE-SAFE-NEXT:    s_mov_b32 s4, 0x7f800000
+; SI-IEEE-SAFE-NEXT:    v_frexp_mant_f32_e64 v2, -v0
+; SI-IEEE-SAFE-NEXT:    v_cmp_lt_f32_e64 s[4:5], |v0|, s4
+; SI-IEEE-SAFE-NEXT:    v_cndmask_b32_e64 v2, -v0, v2, s[4:5]
+; SI-IEEE-SAFE-NEXT:    v_rcp_f32_e32 v2, v2
+; SI-IEEE-SAFE-NEXT:    v_frexp_exp_i32_f32_e32 v0, v0
+; SI-IEEE-SAFE-NEXT:    v_sub_i32_e32 v0, vcc, 0, v0
+; SI-IEEE-SAFE-NEXT:    v_ldexp_f32_e32 v0, v2, v0
+; SI-IEEE-SAFE-NEXT:    v_mul_f32_e32 v0, v0, v1
+; SI-IEEE-SAFE-NEXT:    s_setpc_b64 s[30:31]
+;
+; CI-IEEE-SAFE-LABEL: v_neg_rsq_neg_f32_foldable_user:
+; CI-IEEE-SAFE:       ; %bb.0:
+; CI-IEEE-SAFE-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; CI-IEEE-SAFE-NEXT:    s_mov_b32 s4, 0x8f800000
+; CI-IEEE-SAFE-NEXT:    v_mul_f32_e32 v2, 0xcf800000, v0
+; CI-IEEE-SAFE-NEXT:    v_cmp_lt_f32_e32 vcc, s4, v0
+; CI-IEEE-SAFE-NEXT:    v_cndmask_b32_e64 v0, -v0, v2, vcc
+; CI-IEEE-SAFE-NEXT:    v_sqrt_f32_e32 v2, v0
+; CI-IEEE-SAFE-NEXT:    v_add_i32_e64 v3, s[4:5], -1, v2
+; CI-IEEE-SAFE-NEXT:    v_fma_f32 v4, -v3, v2, v0
+; CI-IEEE-SAFE-NEXT:    v_cmp_ge_f32_e64 s[4:5], 0, v4
+; CI-IEEE-SAFE-NEXT:    v_cndmask_b32_e64 v3, v2, v3, s[4:5]
+; CI-IEEE-SAFE-NEXT:    v_add_i32_e64 v4, s[4:5], 1, v2
+; CI-IEEE-SAFE-NEXT:    v_fma_f32 v2, -v4, v2, v0
+; CI-IEEE-SAFE-NEXT:    v_cmp_lt_f32_e64 s[4:5], 0, v2
+; CI-IEEE-SAFE-NEXT:    v_cndmask_b32_e64 v2, v3, v4, s[4:5]
+; CI-IEEE-SAFE-NEXT:    v_mul_f32_e32 v3, 0x37800000, v2
+; CI-IEEE-SAFE-NEXT:    v_cndmask_b32_e32 v2, v2, v3, vcc
+; CI-IEEE-SAFE-NEXT:    v_mov_b32_e32 v3, 0x260
+; CI-IEEE-SAFE-NEXT:    v_cmp_class_f32_e32 vcc, v0, v3
+; CI-IEEE-SAFE-NEXT:    v_cndmask_b32_e32 v0, v2, v0, vcc
+; CI-IEEE-SAFE-NEXT:    v_frexp_mant_f32_e64 v2, -v0
+; CI-IEEE-SAFE-NEXT:    v_rcp_f32_e32 v2, v2
+; CI-IEEE-SAFE-NEXT:    v_frexp_exp_i32_f32_e32 v0, v0
+; CI-IEEE-SAFE-NEXT:    v_sub_i32_e32 v0, vcc, 0, v0
+; CI-IEEE-SAFE-NEXT:    v_ldexp_f32_e32 v0, v2, v0
+; CI-IEEE-SAFE-NEXT:    v_mul_f32_e32 v0, v0, v1
+; CI-IEEE-SAFE-NEXT:    s_setpc_b64 s[30:31]
   %val0.neg = fneg float %val0
-  %sqrt = call float @llvm.sqrt.f32(float %val0.neg)
-  %div = fdiv float -1.0, %sqrt, !fpmath !0
-  %user = fmul float %div, %val1
+  %sqrt = call contract float @llvm.sqrt.f32(float %val0.neg)
+  %div = fdiv contract float -1.0, %sqrt, !fpmath !0
+  %user = fmul contract float %div, %val1
   ret float %user
 }
 
 define <2 x float> @v_neg_rsq_neg_v2f32_foldable_user(<2 x float> %val0, <2 x float> %val1) {
-; GCN-DAZ-LABEL: v_neg_rsq_neg_v2f32_foldable_user:
-; GCN-DAZ:       ; %bb.0:
-; GCN-DAZ-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GCN-DAZ-NEXT:    v_sqrt_f32_e64 v0, -v0
-; GCN-DAZ-NEXT:    v_sqrt_f32_e64 v1, -v1
-; GCN-DAZ-NEXT:    v_rcp_f32_e64 v0, -v0
-; GCN-DAZ-NEXT:    v_rcp_f32_e64 v1, -v1
-; GCN-DAZ-NEXT:    v_mul_f32_e32 v0, v0, v2
-; GCN-DAZ-NEXT:    v_mul_f32_e32 v1, v1, v3
-; GCN-DAZ-NEXT:    s_setpc_b64 s[30:31]
+; GCN-DAZ-UNSAFE-LABEL: v_neg_rsq_neg_v2f32_foldable_user:
+; GCN-DAZ-UNSAFE:       ; %bb.0:
+; GCN-DAZ-UNSAFE-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GCN-DAZ-UNSAFE-NEXT:    v_rsq_f32_e64 v0, -v0
+; GCN-DAZ-UNSAFE-NEXT:    v_rsq_f32_e64 v1, -v1
+; GCN-DAZ-UNSAFE-NEXT:    v_mul_f32_e64 v0, -v0, v2
+; GCN-DAZ-UNSAFE-NEXT:    v_mul_f32_e64 v1, -v1, v3
+; GCN-DAZ-UNSAFE-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GCN-IEEE-UNSAFE-LABEL: v_neg_rsq_neg_v2f32_foldable_user:
 ; GCN-IEEE-UNSAFE:       ; %bb.0:
 ; GCN-IEEE-UNSAFE-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GCN-IEEE-UNSAFE-NEXT:    v_sqrt_f32_e64 v0, -v0
-; GCN-IEEE-UNSAFE-NEXT:    v_sqrt_f32_e64 v1, -v1
-; GCN-IEEE-UNSAFE-NEXT:    v_rcp_f32_e64 v0, -v0
-; GCN-IEEE-UNSAFE-NEXT:    v_rcp_f32_e64 v1, -v1
-; GCN-IEEE-UNSAFE-NEXT:    v_mul_f32_e32 v0, v0, v2
-; GCN-IEEE-UNSAFE-NEXT:    v_mul_f32_e32 v1, v1, v3
+; GCN-IEEE-UNSAFE-NEXT:    v_rsq_f32_e64 v0, -v0
+; GCN-IEEE-UNSAFE-NEXT:    v_rsq_f32_e64 v1, -v1
+; GCN-IEEE-UNSAFE-NEXT:    v_mul_f32_e64 v0, -v0, v2
+; GCN-IEEE-UNSAFE-NEXT:    v_mul_f32_e64 v1, -v1, v3
 ; GCN-IEEE-UNSAFE-NEXT:    s_setpc_b64 s[30:31]
 ;
-; GCN-IEEE-SAFE-LABEL: v_neg_rsq_neg_v2f32_foldable_user:
-; GCN-IEEE-SAFE:       ; %bb.0:
-; GCN-IEEE-SAFE-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GCN-IEEE-SAFE-NEXT:    v_sqrt_f32_e64 v0, -v0
-; GCN-IEEE-SAFE-NEXT:    v_sqrt_f32_e64 v1, -v1
-; GCN-IEEE-SAFE-NEXT:    s_mov_b32 s4, 0x6f800000
-; GCN-IEEE-SAFE-NEXT:    v_mov_b32_e32 v4, 0x2f800000
-; GCN-IEEE-SAFE-NEXT:    v_cmp_gt_f32_e64 vcc, |v0|, s4
-; GCN-IEEE-SAFE-NEXT:    v_cndmask_b32_e32 v5, 1.0, v4, vcc
-; GCN-IEEE-SAFE-NEXT:    v_cmp_gt_f32_e64 vcc, |v1|, s4
-; GCN-IEEE-SAFE-NEXT:    v_cndmask_b32_e32 v4, 1.0, v4, vcc
-; GCN-IEEE-SAFE-NEXT:    v_mul_f32_e64 v0, v0, -v5
-; GCN-IEEE-SAFE-NEXT:    v_mul_f32_e64 v1, v1, -v4
-; GCN-IEEE-SAFE-NEXT:    v_rcp_f32_e32 v0, v0
-; GCN-IEEE-SAFE-NEXT:    v_rcp_f32_e32 v1, v1
-; GCN-IEEE-SAFE-NEXT:    v_mul_f32_e32 v0, v5, v0
-; GCN-IEEE-SAFE-NEXT:    v_mul_f32_e32 v1, v4, v1
-; GCN-IEEE-SAFE-NEXT:    v_mul_f32_e32 v0, v0, v2
-; GCN-IEEE-SAFE-NEXT:    v_mul_f32_e32 v1, v1, v3
-; GCN-IEEE-SAFE-NEXT:    s_setpc_b64 s[30:31]
+; GCN-DAZ-SAFE-LABEL: v_neg_rsq_neg_v2f32_foldable_user:
+; GCN-DAZ-SAFE:       ; %bb.0:
+; GCN-DAZ-SAFE-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GCN-DAZ-SAFE-NEXT:    s_mov_b32 s4, 0x8f800000
+; GCN-DAZ-SAFE-NEXT:    s_mov_b32 s5, 0x4f800000
+; GCN-DAZ-SAFE-NEXT:    v_mul_f32_e64 v4, -v1, s5
+; GCN-DAZ-SAFE-NEXT:    v_cmp_lt_f32_e32 vcc, s4, v1
+; GCN-DAZ-SAFE-NEXT:    v_cndmask_b32_e64 v1, -v1, v4, vcc
+; GCN-DAZ-SAFE-NEXT:    v_rsq_f32_e32 v4, v1
+; GCN-DAZ-SAFE-NEXT:    v_mul_f32_e32 v5, v1, v4
+; GCN-DAZ-SAFE-NEXT:    v_mul_f32_e32 v4, 0.5, v4
+; GCN-DAZ-SAFE-NEXT:    v_fma_f32 v6, -v4, v5, 0.5
+; GCN-DAZ-SAFE-NEXT:    v_fma_f32 v5, v5, v6, v5
+; GCN-DAZ-SAFE-NEXT:    v_fma_f32 v7, -v5, v5, v1
+; GCN-DAZ-SAFE-NEXT:    v_fma_f32 v4, v4, v6, v4
+; GCN-DAZ-SAFE-NEXT:    v_fma_f32 v4, v7, v4, v5
+; GCN-DAZ-SAFE-NEXT:    v_mul_f32_e32 v5, 0x37800000, v4
+; GCN-DAZ-SAFE-NEXT:    v_cndmask_b32_e32 v4, v4, v5, vcc
+; GCN-DAZ-SAFE-NEXT:    v_mul_f32_e64 v5, -v0, s5
+; GCN-DAZ-SAFE-NEXT:    v_cmp_lt_f32_e32 vcc, s4, v0
+; GCN-DAZ-SAFE-NEXT:    v_cndmask_b32_e64 v0, -v0, v5, vcc
+; GCN-DAZ-SAFE-NEXT:    v_rsq_f32_e32 v5, v0
+; GCN-DAZ-SAFE-NEXT:    v_mov_b32_e32 v6, 0x260
+; GCN-DAZ-SAFE-NEXT:    v_cmp_class_f32_e64 s[4:5], v1, v6
+; GCN-DAZ-SAFE-NEXT:    v_cndmask_b32_e64 v1, v4, v1, s[4:5]
+; GCN-DAZ-SAFE-NEXT:    v_mul_f32_e32 v4, v0, v5
+; GCN-DAZ-SAFE-NEXT:    v_mul_f32_e32 v5, 0.5, v5
+; GCN-DAZ-SAFE-NEXT:    v_fma_f32 v7, -v5, v4, 0.5
+; GCN-DAZ-SAFE-NEXT:    v_fma_f32 v4, v4, v7, v4
+; GCN-DAZ-SAFE-NEXT:    v_fma_f32 v8, -v4, v4, v0
+; GCN-DAZ-SAFE-NEXT:    v_fma_f32 v5, v5, v7, v5
+; GCN-DAZ-SAFE-NEXT:    v_fma_f32 v4, v8, v5, v4
+; GCN-DAZ-SAFE-NEXT:    v_mul_f32_e32 v5, 0x37800000, v4
+; GCN-DAZ-SAFE-NEXT:    v_cndmask_b32_e32 v4, v4, v5, vcc
+; GCN-DAZ-SAFE-NEXT:    v_cmp_class_f32_e32 vcc, v0, v6
+; GCN-DAZ-SAFE-NEXT:    v_cndmask_b32_e32 v0, v4, v0, vcc
+; GCN-DAZ-SAFE-NEXT:    v_rcp_f32_e64 v0, -v0
+; GCN-DAZ-SAFE-NEXT:    v_rcp_f32_e64 v1, -v1
+; GCN-DAZ-SAFE-NEXT:    v_mul_f32_e32 v0, v0, v2
+; GCN-DAZ-SAFE-NEXT:    v_mul_f32_e32 v1, v1, v3
+; GCN-DAZ-SAFE-NEXT:    s_setpc_b64 s[30:31]
+;
+; SI-IEEE-SAFE-LABEL: v_neg_rsq_neg_v2f32_foldable_user:
+; SI-IEEE-SAFE:       ; %bb.0:
+; SI-IEEE-SAFE-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; SI-IEEE-SAFE-NEXT:    s_mov_b32 s6, 0x8f800000
+; SI-IEEE-SAFE-NEXT:    s_mov_b32 s7, 0x4f800000
+; SI-IEEE-SAFE-NEXT:    v_mul_f32_e64 v4, -v1, s7
+; SI-IEEE-SAFE-NEXT:    v_cmp_lt_f32_e32 vcc, s6, v1
+; SI-IEEE-SAFE-NEXT:    v_cndmask_b32_e64 v1, -v1, v4, vcc
+; SI-IEEE-SAFE-NEXT:    v_sqrt_f32_e32 v4, v1
+; SI-IEEE-SAFE-NEXT:    v_add_i32_e64 v5, s[4:5], -1, v4
+; SI-IEEE-SAFE-NEXT:    v_fma_f32 v6, -v5, v4, v1
+; SI-IEEE-SAFE-NEXT:    v_cmp_ge_f32_e64 s[4:5], 0, v6
+; SI-IEEE-SAFE-NEXT:    v_cndmask_b32_e64 v5, v4, v5, s[4:5]
+; SI-IEEE-SAFE-NEXT:    v_add_i32_e64 v6, s[4:5], 1, v4
+; SI-IEEE-SAFE-NEXT:    v_fma_f32 v4, -v6, v4, v1
+; SI-IEEE-SAFE-NEXT:    v_cmp_lt_f32_e64 s[4:5], 0, v4
+; SI-IEEE-SAFE-NEXT:    v_cndmask_b32_e64 v4, v5, v6, s[4:5]
+; SI-IEEE-SAFE-NEXT:    v_mul_f32_e32 v5, 0x37800000, v4
+; SI-IEEE-SAFE-NEXT:    v_cndmask_b32_e32 v4, v4, v5, vcc
+; SI-IEEE-SAFE-NEXT:    v_mul_f32_e64 v6, -v0, s7
+; SI-IEEE-SAFE-NEXT:    v_cmp_lt_f32_e32 vcc, s6, v0
+; SI-IEEE-SAFE-NEXT:    v_cndmask_b32_e64 v0, -v0, v6, vcc
+; SI-IEEE-SAFE-NEXT:    v_sqrt_f32_e32 v6, v0
+; SI-IEEE-SAFE-NEXT:    v_mov_b32_e32 v5, 0x260
+; SI-IEEE-SAFE-NEXT:    v_cmp_class_f32_e64 s[4:5], v1, v5
+; SI-IEEE-SAFE-NEXT:    v_cndmask_b32_e64 v1, v4, v1, s[4:5]
+; SI-IEEE-SAFE-NEXT:    v_add_i32_e64 v4, s[4:5], -1, v6
+; SI-IEEE-SAFE-NEXT:    v_fma_f32 v7, -v4, v6, v0
+; SI-IEEE-SAFE-NEXT:    v_cmp_ge_f32_e64 s[4:5], 0, v7
+; SI-IEEE-SAFE-NEXT:    v_cndmask_b32_e64 v4, v6, v4, s[4:5]
+; SI-IEEE-SAFE-NEXT:    v_add_i32_e64 v7, s[4:5], 1, v6
+; SI-IEEE-SAFE-NEXT:    v_fma_f32 v6, -v7, v6, v0
+; SI-IEEE-SAFE-NEXT:    v_cmp_lt_f32_e64 s[4:5], 0, v6
+; SI-IEEE-SAFE-NEXT:    v_cndmask_b32_e64 v4, v4, v7, s[4:5]
+; SI-IEEE-SAFE-NEXT:    v_mul_f32_e32 v6, 0x37800000, v4
+; SI-IEEE-SAFE-NEXT:    v_cndmask_b32_e32 v4, v4, v6, vcc
+; SI-IEEE-SAFE-NEXT:    v_cmp_class_f32_e32 vcc, v0, v5
+; SI-IEEE-SAFE-NEXT:    v_cndmask_b32_e32 v0, v4, v0, vcc
+; SI-IEEE-SAFE-NEXT:    s_mov_b32 s6, 0x7f800000
+; SI-IEEE-SAFE-NEXT:    v_frexp_mant_f32_e64 v4, -v0
+; SI-IEEE-SAFE-NEXT:    v_cmp_lt_f32_e64 s[4:5], |v0|, s6
+; SI-IEEE-SAFE-NEXT:    v_cndmask_b32_e64 v4, -v0, v4, s[4:5]
+; SI-IEEE-SAFE-NEXT:    v_rcp_f32_e32 v4, v4
+; SI-IEEE-SAFE-NEXT:    v_frexp_exp_i32_f32_e32 v0, v0
+; SI-IEEE-SAFE-NEXT:    v_sub_i32_e32 v0, vcc, 0, v0
+; SI-IEEE-SAFE-NEXT:    v_ldexp_f32_e32 v0, v4, v0
+; SI-IEEE-SAFE-NEXT:    v_frexp_mant_f32_e64 v4, -v1
+; SI-IEEE-SAFE-NEXT:    v_cmp_lt_f32_e64 s[4:5], |v1|, s6
+; SI-IEEE-SAFE-NEXT:    v_cndmask_b32_e64 v4, -v1, v4, s[4:5]
+; SI-IEEE-SAFE-NEXT:    v_rcp_f32_e32 v4, v4
+; SI-IEEE-SAFE-NEXT:    v_frexp_exp_i32_f32_e32 v1, v1
+; SI-IEEE-SAFE-NEXT:    v_sub_i32_e32 v1, vcc, 0, v1
+; SI-IEEE-SAFE-NEXT:    v_ldexp_f32_e32 v1, v4, v1
+; SI-IEEE-SAFE-NEXT:    v_mul_f32_e32 v0, v0, v2
+; SI-IEEE-SAFE-NEXT:    v_mul_f32_e32 v1, v1, v3
+; SI-IEEE-SAFE-NEXT:    s_setpc_b64 s[30:31]
+;
+; CI-IEEE-SAFE-LABEL: v_neg_rsq_neg_v2f32_foldable_user:
+; CI-IEEE-SAFE:       ; %bb.0:
+; CI-IEEE-SAFE-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; CI-IEEE-SAFE-NEXT:    s_mov_b32 s6, 0x8f800000
+; CI-IEEE-SAFE-NEXT:    s_mov_b32 s7, 0x4f800000
+; CI-IEEE-SAFE-NEXT:    v_mul_f32_e64 v4, -v1, s7
+; CI-IEEE-SAFE-NEXT:    v_cmp_lt_f32_e32 vcc, s6, v1
+; CI-IEEE-SAFE-NEXT:    v_cndmask_b32_e64 v1, -v1, v4, vcc
+; CI-IEEE-SAFE-NEXT:    v_sqrt_f32_e32 v4, v1
+; CI-IEEE-SAFE-NEXT:    v_add_i32_e64 v5, s[4:5], -1, v4
+; CI-IEEE-SAFE-NEXT:    v_fma_f32 v6, -v5, v4, v1
+; CI-IEEE-SAFE-NEXT:    v_cmp_ge_f32_e64 s[4:5], 0, v6
+; CI-IEEE-SAFE-NEXT:    v_cndmask_b32_e64 v5, v4, v5, s[4:5]
+; CI-IEEE-SAFE-NEXT:    v_add_i32_e64 v6, s[4:5], 1, v4
+; CI-IEEE-SAFE-NEXT:    v_fma_f32 v4, -v6, v4, v1
+; CI-IEEE-SAFE-NEXT:    v_cmp_lt_f32_e64 s[4:5], 0, v4
+; CI-IEEE-SAFE-NEXT:    v_cndmask_b32_e64 v4, v5, v6, s[4:5]
+; CI-IEEE-SAFE-NEXT:    v_mul_f32_e32 v5, 0x37800000, v4
+; CI-IEEE-SAFE-NEXT:    v_cndmask_b32_e32 v4, v4, v5, vcc
+; CI-IEEE-SAFE-NEXT:    v_mul_f32_e64 v6, -v0, s7
+; CI-IEEE-SAFE-NEXT:    v_cmp_lt_f32_e32 vcc, s6, v0
+; CI-IEEE-SAFE-NEXT:    v_cndmask_b32_e64 v0, -v0, v6, vcc
+; CI-IEEE-SAFE-NEXT:    v_sqrt_f32_e32 v6, v0
+; CI-IEEE-SAFE-NEXT:    v_mov_b32_e32 v5, 0x260
+; CI-IEEE-SAFE-NEXT:    v_cmp_class_f32_e64 s[4:5], v1, v5
+; CI-IEEE-SAFE-NEXT:    v_cndmask_b32_e64 v1, v4, v1, s[4:5]
+; CI-IEEE-SAFE-NEXT:    v_add_i32_e64 v4, s[4:5], -1, v6
+; CI-IEEE-SAFE-NEXT:    v_fma_f32 v7, -v4, v6, v0
+; CI-IEEE-SAFE-NEXT:    v_cmp_ge_f32_e64 s[4:5], 0, v7
+; CI-IEEE-SAFE-NEXT:    v_cndmask_b32_e64 v4, v6, v4, s[4:5]
+; CI-IEEE-SAFE-NEXT:    v_add_i32_e64 v7, s[4:5], 1, v6
+; CI-IEEE-SAFE-NEXT:    v_fma_f32 v6, -v7, v6, v0
+; CI-IEEE-SAFE-NEXT:    v_cmp_lt_f32_e64 s[4:5], 0, v6
+; CI-IEEE-SAFE-NEXT:    v_cndmask_b32_e64 v4, v4, v7, s[4:5]
+; CI-IEEE-SAFE-NEXT:    v_mul_f32_e32 v6, 0x37800000, v4
+; CI-IEEE-SAFE-NEXT:    v_cndmask_b32_e32 v4, v4, v6, vcc
+; CI-IEEE-SAFE-NEXT:    v_cmp_class_f32_e32 vcc, v0, v5
+; CI-IEEE-SAFE-NEXT:    v_cndmask_b32_e32 v0, v4, v0, vcc
+; CI-IEEE-SAFE-NEXT:    v_frexp_mant_f32_e64 v4, -v0
+; CI-IEEE-SAFE-NEXT:    v_rcp_f32_e32 v4, v4
+; CI-IEEE-SAFE-NEXT:    v_frexp_exp_i32_f32_e32 v0, v0
+; CI-IEEE-SAFE-NEXT:    v_sub_i32_e32 v0, vcc, 0, v0
+; CI-IEEE-SAFE-NEXT:    v_ldexp_f32_e32 v0, v4, v0
+; CI-IEEE-SAFE-NEXT:    v_frexp_mant_f32_e64 v4, -v1
+; CI-IEEE-SAFE-NEXT:    v_rcp_f32_e32 v4, v4
+; CI-IEEE-SAFE-NEXT:    v_frexp_exp_i32_f32_e32 v1, v1
+; CI-IEEE-SAFE-NEXT:    v_sub_i32_e32 v1, vcc, 0, v1
+; CI-IEEE-SAFE-NEXT:    v_ldexp_f32_e32 v1, v4, v1
+; CI-IEEE-SAFE-NEXT:    v_mul_f32_e32 v0, v0, v2
+; CI-IEEE-SAFE-NEXT:    v_mul_f32_e32 v1, v1, v3
+; CI-IEEE-SAFE-NEXT:    s_setpc_b64 s[30:31]
   %val0.fneg = fneg <2 x float> %val0
-  %sqrt = call <2 x float> @llvm.sqrt.v2f32(<2 x float> %val0.fneg)
-  %div = fdiv <2 x float> <float -1.0, float -1.0>, %sqrt, !fpmath !0
-  %user = fmul <2 x float> %div, %val1
+  %sqrt = call contract <2 x float> @llvm.sqrt.v2f32(<2 x float> %val0.fneg)
+  %div = fdiv contract <2 x float> <float -1.0, float -1.0>, %sqrt, !fpmath !0
+  %user = fmul contract <2 x float> %div, %val1
   ret <2 x float> %user
 }
 
 define float @v_neg_rsq_f32(float %val) {
-; GCN-DAZ-LABEL: v_neg_rsq_f32:
-; GCN-DAZ:       ; %bb.0:
-; GCN-DAZ-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GCN-DAZ-NEXT:    v_sqrt_f32_e32 v0, v0
-; GCN-DAZ-NEXT:    v_rcp_f32_e64 v0, -v0
-; GCN-DAZ-NEXT:    s_setpc_b64 s[30:31]
+; GCN-DAZ-UNSAFE-LABEL: v_neg_rsq_f32:
+; GCN-DAZ-UNSAFE:       ; %bb.0:
+; GCN-DAZ-UNSAFE-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GCN-DAZ-UNSAFE-NEXT:    v_rsq_f32_e32 v0, v0
+; GCN-DAZ-UNSAFE-NEXT:    v_xor_b32_e32 v0, 0x80000000, v0
+; GCN-DAZ-UNSAFE-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GCN-IEEE-UNSAFE-LABEL: v_neg_rsq_f32:
 ; GCN-IEEE-UNSAFE:       ; %bb.0:
 ; GCN-IEEE-UNSAFE-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GCN-IEEE-UNSAFE-NEXT:    v_sqrt_f32_e32 v0, v0
-; GCN-IEEE-UNSAFE-NEXT:    v_rcp_f32_e64 v0, -v0
+; GCN-IEEE-UNSAFE-NEXT:    v_rsq_f32_e32 v0, v0
+; GCN-IEEE-UNSAFE-NEXT:    v_xor_b32_e32 v0, 0x80000000, v0
 ; GCN-IEEE-UNSAFE-NEXT:    s_setpc_b64 s[30:31]
 ;
-; GCN-IEEE-SAFE-LABEL: v_neg_rsq_f32:
-; GCN-IEEE-SAFE:       ; %bb.0:
-; GCN-IEEE-SAFE-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GCN-IEEE-SAFE-NEXT:    v_sqrt_f32_e32 v0, v0
-; GCN-IEEE-SAFE-NEXT:    s_mov_b32 s4, 0x6f800000
-; GCN-IEEE-SAFE-NEXT:    v_mov_b32_e32 v1, 0x2f800000
-; GCN-IEEE-SAFE-NEXT:    v_cmp_gt_f32_e64 vcc, |v0|, s4
-; GCN-IEEE-SAFE-NEXT:    v_cndmask_b32_e32 v1, 1.0, v1, vcc
-; GCN-IEEE-SAFE-NEXT:    v_mul_f32_e64 v0, v0, -v1
-; GCN-IEEE-SAFE-NEXT:    v_rcp_f32_e32 v0, v0
-; GCN-IEEE-SAFE-NEXT:    v_mul_f32_e32 v0, v1, v0
-; GCN-IEEE-SAFE-NEXT:    s_setpc_b64 s[30:31]
-  %sqrt = call float @llvm.sqrt.f32(float %val)
-  %div = fdiv float -1.0, %sqrt, !fpmath !0
+; GCN-DAZ-SAFE-LABEL: v_neg_rsq_f32:
+; GCN-DAZ-SAFE:       ; %bb.0:
+; GCN-DAZ-SAFE-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GCN-DAZ-SAFE-NEXT:    s_mov_b32 s4, 0xf800000
+; GCN-DAZ-SAFE-NEXT:    v_mul_f32_e32 v1, 0x4f800000, v0
+; GCN-DAZ-SAFE-NEXT:    v_cmp_gt_f32_e32 vcc, s4, v0
+; GCN-DAZ-SAFE-NEXT:    v_cndmask_b32_e32 v0, v0, v1, vcc
+; GCN-DAZ-SAFE-NEXT:    v_rsq_f32_e32 v1, v0
+; GCN-DAZ-SAFE-NEXT:    v_mul_f32_e32 v2, v0, v1
+; GCN-DAZ-SAFE-NEXT:    v_mul_f32_e32 v1, 0.5, v1
+; GCN-DAZ-SAFE-NEXT:    v_fma_f32 v3, -v1, v2, 0.5
+; GCN-DAZ-SAFE-NEXT:    v_fma_f32 v2, v2, v3, v2
+; GCN-DAZ-SAFE-NEXT:    v_fma_f32 v4, -v2, v2, v0
+; GCN-DAZ-SAFE-NEXT:    v_fma_f32 v1, v1, v3, v1
+; GCN-DAZ-SAFE-NEXT:    v_fma_f32 v1, v4, v1, v2
+; GCN-DAZ-SAFE-NEXT:    v_mul_f32_e32 v2, 0x37800000, v1
+; GCN-DAZ-SAFE-NEXT:    v_cndmask_b32_e32 v1, v1, v2, vcc
+; GCN-DAZ-SAFE-NEXT:    v_mov_b32_e32 v2, 0x260
+; GCN-DAZ-SAFE-NEXT:    v_cmp_class_f32_e32 vcc, v0, v2
+; GCN-DAZ-SAFE-NEXT:    v_cndmask_b32_e32 v0, v1, v0, vcc
+; GCN-DAZ-SAFE-NEXT:    v_rcp_f32_e64 v0, -v0
+; GCN-DAZ-SAFE-NEXT:    s_setpc_b64 s[30:31]
+;
+; SI-IEEE-SAFE-LABEL: v_neg_rsq_f32:
+; SI-IEEE-SAFE:       ; %bb.0:
+; SI-IEEE-SAFE-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; SI-IEEE-SAFE-NEXT:    s_mov_b32 s4, 0xf800000
+; SI-IEEE-SAFE-NEXT:    v_mul_f32_e32 v1, 0x4f800000, v0
+; SI-IEEE-SAFE-NEXT:    v_cmp_gt_f32_e32 vcc, s4, v0
+; SI-IEEE-SAFE-NEXT:    v_cndmask_b32_e32 v0, v0, v1, vcc
+; SI-IEEE-SAFE-NEXT:    v_sqrt_f32_e32 v1, v0
+; SI-IEEE-SAFE-NEXT:    v_add_i32_e64 v2, s[4:5], -1, v1
+; SI-IEEE-SAFE-NEXT:    v_fma_f32 v3, -v2, v1, v0
+; SI-IEEE-SAFE-NEXT:    v_cmp_ge_f32_e64 s[4:5], 0, v3
+; SI-IEEE-SAFE-NEXT:    v_cndmask_b32_e64 v2, v1, v2, s[4:5]
+; SI-IEEE-SAFE-NEXT:    v_add_i32_e64 v3, s[4:5], 1, v1
+; SI-IEEE-SAFE-NEXT:    v_fma_f32 v1, -v3, v1, v0
+; SI-IEEE-SAFE-NEXT:    v_cmp_lt_f32_e64 s[4:5], 0, v1
+; SI-IEEE-SAFE-NEXT:    v_cndmask_b32_e64 v1, v2, v3, s[4:5]
+; SI-IEEE-SAFE-NEXT:    v_mul_f32_e32 v2, 0x37800000, v1
+; SI-IEEE-SAFE-NEXT:    v_cndmask_b32_e32 v1, v1, v2, vcc
+; SI-IEEE-SAFE-NEXT:    v_mov_b32_e32 v2, 0x260
+; SI-IEEE-SAFE-NEXT:    v_cmp_class_f32_e32 vcc, v0, v2
+; SI-IEEE-SAFE-NEXT:    v_cndmask_b32_e32 v0, v1, v0, vcc
+; SI-IEEE-SAFE-NEXT:    s_mov_b32 s4, 0x7f800000
+; SI-IEEE-SAFE-NEXT:    v_frexp_mant_f32_e64 v1, -v0
+; SI-IEEE-SAFE-NEXT:    v_cmp_lt_f32_e64 s[4:5], |v0|, s4
+; SI-IEEE-SAFE-NEXT:    v_cndmask_b32_e64 v1, -v0, v1, s[4:5]
+; SI-IEEE-SAFE-NEXT:    v_rcp_f32_e32 v1, v1
+; SI-IEEE-SAFE-NEXT:    v_frexp_exp_i32_f32_e32 v0, v0
+; SI-IEEE-SAFE-NEXT:    v_sub_i32_e32 v0, vcc, 0, v0
+; SI-IEEE-SAFE-NEXT:    v_ldexp_f32_e32 v0, v1, v0
+; SI-IEEE-SAFE-NEXT:    s_setpc_b64 s[30:31]
+;
+; CI-IEEE-SAFE-LABEL: v_neg_rsq_f32:
+; CI-IEEE-SAFE:       ; %bb.0:
+; CI-IEEE-SAFE-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; CI-IEEE-SAFE-NEXT:    s_mov_b32 s4, 0xf800000
+; CI-IEEE-SAFE-NEXT:    v_mul_f32_e32 v1, 0x4f800000, v0
+; CI-IEEE-SAFE-NEXT:    v_cmp_gt_f32_e32 vcc, s4, v0
+; CI-IEEE-SAFE-NEXT:    v_cndmask_b32_e32 v0, v0, v1, vcc
+; CI-IEEE-SAFE-NEXT:    v_sqrt_f32_e32 v1, v0
+; CI-IEEE-SAFE-NEXT:    v_add_i32_e64 v2, s[4:5], -1, v1
+; CI-IEEE-SAFE-NEXT:    v_fma_f32 v3, -v2, v1, v0
+; CI-IEEE-SAFE-NEXT:    v_cmp_ge_f32_e64 s[4:5], 0, v3
+; CI-IEEE-SAFE-NEXT:    v_cndmask_b32_e64 v2, v1, v2, s[4:5]
+; CI-IEEE-SAFE-NEXT:    v_add_i32_e64 v3, s[4:5], 1, v1
+; CI-IEEE-SAFE-NEXT:    v_fma_f32 v1, -v3, v1, v0
+; CI-IEEE-SAFE-NEXT:    v_cmp_lt_f32_e64 s[4:5], 0, v1
+; CI-IEEE-SAFE-NEXT:    v_cndmask_b32_e64 v1, v2, v3, s[4:5]
+; CI-IEEE-SAFE-NEXT:    v_mul_f32_e32 v2, 0x37800000, v1
+; CI-IEEE-SAFE-NEXT:    v_cndmask_b32_e32 v1, v1, v2, vcc
+; CI-IEEE-SAFE-NEXT:    v_mov_b32_e32 v2, 0x260
+; CI-IEEE-SAFE-NEXT:    v_cmp_class_f32_e32 vcc, v0, v2
+; CI-IEEE-SAFE-NEXT:    v_cndmask_b32_e32 v0, v1, v0, vcc
+; CI-IEEE-SAFE-NEXT:    v_frexp_mant_f32_e64 v1, -v0
+; CI-IEEE-SAFE-NEXT:    v_rcp_f32_e32 v1, v1
+; CI-IEEE-SAFE-NEXT:    v_frexp_exp_i32_f32_e32 v0, v0
+; CI-IEEE-SAFE-NEXT:    v_sub_i32_e32 v0, vcc, 0, v0
+; CI-IEEE-SAFE-NEXT:    v_ldexp_f32_e32 v0, v1, v0
+; CI-IEEE-SAFE-NEXT:    s_setpc_b64 s[30:31]
+  %sqrt = call contract float @llvm.sqrt.f32(float %val)
+  %div = fdiv contract float -1.0, %sqrt, !fpmath !0
   ret float %div
 }
 
 define <2 x float> @v_neg_rsq_v2f32(<2 x float> %val) {
-; GCN-DAZ-LABEL: v_neg_rsq_v2f32:
-; GCN-DAZ:       ; %bb.0:
-; GCN-DAZ-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GCN-DAZ-NEXT:    v_sqrt_f32_e32 v0, v0
-; GCN-DAZ-NEXT:    v_sqrt_f32_e32 v1, v1
-; GCN-DAZ-NEXT:    v_rcp_f32_e64 v0, -v0
-; GCN-DAZ-NEXT:    v_rcp_f32_e64 v1, -v1
-; GCN-DAZ-NEXT:    s_setpc_b64 s[30:31]
+; GCN-DAZ-UNSAFE-LABEL: v_neg_rsq_v2f32:
+; GCN-DAZ-UNSAFE:       ; %bb.0:
+; GCN-DAZ-UNSAFE-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GCN-DAZ-UNSAFE-NEXT:    v_rsq_f32_e32 v0, v0
+; GCN-DAZ-UNSAFE-NEXT:    v_rsq_f32_e32 v1, v1
+; GCN-DAZ-UNSAFE-NEXT:    v_xor_b32_e32 v0, 0x80000000, v0
+; GCN-DAZ-UNSAFE-NEXT:    v_xor_b32_e32 v1, 0x80000000, v1
+; GCN-DAZ-UNSAFE-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GCN-IEEE-UNSAFE-LABEL: v_neg_rsq_v2f32:
 ; GCN-IEEE-UNSAFE:       ; %bb.0:
 ; GCN-IEEE-UNSAFE-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GCN-IEEE-UNSAFE-NEXT:    v_sqrt_f32_e32 v0, v0
-; GCN-IEEE-UNSAFE-NEXT:    v_sqrt_f32_e32 v1, v1
-; GCN-IEEE-UNSAFE-NEXT:    v_rcp_f32_e64 v0, -v0
-; GCN-IEEE-UNSAFE-NEXT:    v_rcp_f32_e64 v1, -v1
+; GCN-IEEE-UNSAFE-NEXT:    v_rsq_f32_e32 v0, v0
+; GCN-IEEE-UNSAFE-NEXT:    v_rsq_f32_e32 v1, v1
+; GCN-IEEE-UNSAFE-NEXT:    v_xor_b32_e32 v0, 0x80000000, v0
+; GCN-IEEE-UNSAFE-NEXT:    v_xor_b32_e32 v1, 0x80000000, v1
 ; GCN-IEEE-UNSAFE-NEXT:    s_setpc_b64 s[30:31]
 ;
-; GCN-IEEE-SAFE-LABEL: v_neg_rsq_v2f32:
-; GCN-IEEE-SAFE:       ; %bb.0:
-; GCN-IEEE-SAFE-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GCN-IEEE-SAFE-NEXT:    v_sqrt_f32_e32 v0, v0
-; GCN-IEEE-SAFE-NEXT:    v_sqrt_f32_e32 v1, v1
-; GCN-IEEE-SAFE-NEXT:    s_mov_b32 s4, 0x6f800000
-; GCN-IEEE-SAFE-NEXT:    v_mov_b32_e32 v2, 0x2f800000
-; GCN-IEEE-SAFE-NEXT:    v_cmp_gt_f32_e64 vcc, |v0|, s4
-; GCN-IEEE-SAFE-NEXT:    v_cndmask_b32_e32 v3, 1.0, v2, vcc
-; GCN-IEEE-SAFE-NEXT:    v_cmp_gt_f32_e64 vcc, |v1|, s4
-; GCN-IEEE-SAFE-NEXT:    v_cndmask_b32_e32 v2, 1.0, v2, vcc
-; GCN-IEEE-SAFE-NEXT:    v_mul_f32_e64 v0, v0, -v3
-; GCN-IEEE-SAFE-NEXT:    v_mul_f32_e64 v1, v1, -v2
-; GCN-IEEE-SAFE-NEXT:    v_rcp_f32_e32 v0, v0
-; GCN-IEEE-SAFE-NEXT:    v_rcp_f32_e32 v1, v1
-; GCN-IEEE-SAFE-NEXT:    v_mul_f32_e32 v0, v3, v0
-; GCN-IEEE-SAFE-NEXT:    v_mul_f32_e32 v1, v2, v1
-; GCN-IEEE-SAFE-NEXT:    s_setpc_b64 s[30:31]
-  %sqrt = call <2 x float> @llvm.sqrt.v2f32(<2 x float> %val)
-  %div = fdiv <2 x float> <float -1.0, float -1.0>, %sqrt, !fpmath !0
+; GCN-DAZ-SAFE-LABEL: v_neg_rsq_v2f32:
+; GCN-DAZ-SAFE:       ; %bb.0:
+; GCN-DAZ-SAFE-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GCN-DAZ-SAFE-NEXT:    s_mov_b32 s4, 0xf800000
+; GCN-DAZ-SAFE-NEXT:    v_mul_f32_e32 v2, 0x4f800000, v1
+; GCN-DAZ-SAFE-NEXT:    v_cmp_gt_f32_e32 vcc, s4, v1
+; GCN-DAZ-SAFE-NEXT:    v_cndmask_b32_e32 v1, v1, v2, vcc
+; GCN-DAZ-SAFE-NEXT:    v_rsq_f32_e32 v2, v1
+; GCN-DAZ-SAFE-NEXT:    v_mul_f32_e32 v3, v1, v2
+; GCN-DAZ-SAFE-NEXT:    v_mul_f32_e32 v2, 0.5, v2
+; GCN-DAZ-SAFE-NEXT:    v_fma_f32 v4, -v2, v3, 0.5
+; GCN-DAZ-SAFE-NEXT:    v_fma_f32 v3, v3, v4, v3
+; GCN-DAZ-SAFE-NEXT:    v_fma_f32 v5, -v3, v3, v1
+; GCN-DAZ-SAFE-NEXT:    v_fma_f32 v2, v2, v4, v2
+; GCN-DAZ-SAFE-NEXT:    v_fma_f32 v2, v5, v2, v3
+; GCN-DAZ-SAFE-NEXT:    v_mul_f32_e32 v3, 0x37800000, v2
+; GCN-DAZ-SAFE-NEXT:    v_cndmask_b32_e32 v2, v2, v3, vcc
+; GCN-DAZ-SAFE-NEXT:    v_mul_f32_e32 v3, 0x4f800000, v0
+; GCN-DAZ-SAFE-NEXT:    v_cmp_gt_f32_e32 vcc, s4, v0
+; GCN-DAZ-SAFE-NEXT:    v_cndmask_b32_e32 v0, v0, v3, vcc
+; GCN-DAZ-SAFE-NEXT:    v_rsq_f32_e32 v3, v0
+; GCN-DAZ-SAFE-NEXT:    v_mov_b32_e32 v4, 0x260
+; GCN-DAZ-SAFE-NEXT:    v_cmp_class_f32_e64 s[4:5], v1, v4
+; GCN-DAZ-SAFE-NEXT:    v_cndmask_b32_e64 v1, v2, v1, s[4:5]
+; GCN-DAZ-SAFE-NEXT:    v_mul_f32_e32 v2, v0, v3
+; GCN-DAZ-SAFE-NEXT:    v_mul_f32_e32 v3, 0.5, v3
+; GCN-DAZ-SAFE-NEXT:    v_fma_f32 v5, -v3, v2, 0.5
+; GCN-DAZ-SAFE-NEXT:    v_fma_f32 v2, v2, v5, v2
+; GCN-DAZ-SAFE-NEXT:    v_fma_f32 v6, -v2, v2, v0
+; GCN-DAZ-SAFE-NEXT:    v_fma_f32 v3, v3, v5, v3
+; GCN-DAZ-SAFE-NEXT:    v_fma_f32 v2, v6, v3, v2
+; GCN-DAZ-SAFE-NEXT:    v_mul_f32_e32 v3, 0x37800000, v2
+; GCN-DAZ-SAFE-NEXT:    v_cndmask_b32_e32 v2, v2, v3, vcc
+; GCN-DAZ-SAFE-NEXT:    v_cmp_class_f32_e32 vcc, v0, v4
+; GCN-DAZ-SAFE-NEXT:    v_cndmask_b32_e32 v0, v2, v0, vcc
+; GCN-DAZ-SAFE-NEXT:    v_rcp_f32_e64 v0, -v0
+; GCN-DAZ-SAFE-NEXT:    v_rcp_f32_e64 v1, -v1
+; GCN-DAZ-SAFE-NEXT:    s_setpc_b64 s[30:31]
+;
+; SI-IEEE-SAFE-LABEL: v_neg_rsq_v2f32:
+; SI-IEEE-SAFE:       ; %bb.0:
+; SI-IEEE-SAFE-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; SI-IEEE-SAFE-NEXT:    s_mov_b32 s6, 0xf800000
+; SI-IEEE-SAFE-NEXT:    v_mul_f32_e32 v2, 0x4f800000, v1
+; SI-IEEE-SAFE-NEXT:    v_cmp_gt_f32_e32 vcc, s6, v1
+; SI-IEEE-SAFE-NEXT:    v_cndmask_b32_e32 v1, v1, v2, vcc
+; SI-IEEE-SAFE-NEXT:    v_sqrt_f32_e32 v2, v1
+; SI-IEEE-SAFE-NEXT:    v_add_i32_e64 v3, s[4:5], -1, v2
+; SI-IEEE-SAFE-NEXT:    v_fma_f32 v4, -v3, v2, v1
+; SI-IEEE-SAFE-NEXT:    v_cmp_ge_f32_e64 s[4:5], 0, v4
+; SI-IEEE-SAFE-NEXT:    v_cndmask_b32_e64 v3, v2, v3, s[4:5]
+; SI-IEEE-SAFE-NEXT:    v_add_i32_e64 v4, s[4:5], 1, v2
+; SI-IEEE-SAFE-NEXT:    v_fma_f32 v2, -v4, v2, v1
+; SI-IEEE-SAFE-NEXT:    v_cmp_lt_f32_e64 s[4:5], 0, v2
+; SI-IEEE-SAFE-NEXT:    v_cndmask_b32_e64 v2, v3, v4, s[4:5]
+; SI-IEEE-SAFE-NEXT:    v_mul_f32_e32 v3, 0x37800000, v2
+; SI-IEEE-SAFE-NEXT:    v_cndmask_b32_e32 v2, v2, v3, vcc
+; SI-IEEE-SAFE-NEXT:    v_mul_f32_e32 v4, 0x4f800000, v0
+; SI-IEEE-SAFE-NEXT:    v_cmp_gt_f32_e32 vcc, s6, v0
+; SI-IEEE-SAFE-NEXT:    v_cndmask_b32_e32 v0, v0, v4, vcc
+; SI-IEEE-SAFE-NEXT:    v_sqrt_f32_e32 v4, v0
+; SI-IEEE-SAFE-NEXT:    v_mov_b32_e32 v3, 0x260
+; SI-IEEE-SAFE-NEXT:    v_cmp_class_f32_e64 s[4:5], v1, v3
+; SI-IEEE-SAFE-NEXT:    v_cndmask_b32_e64 v1, v2, v1, s[4:5]
+; SI-IEEE-SAFE-NEXT:    v_add_i32_e64 v2, s[4:5], -1, v4
+; SI-IEEE-SAFE-NEXT:    v_fma_f32 v5, -v2, v4, v0
+; SI-IEEE-SAFE-NEXT:    v_cmp_ge_f32_e64 s[4:5], 0, v5
+; SI-IEEE-SAFE-NEXT:    v_cndmask_b32_e64 v2, v4, v2, s[4:5]
+; SI-IEEE-SAFE-NEXT:    v_add_i32_e64 v5, s[4:5], 1, v4
+; SI-IEEE-SAFE-NEXT:    v_fma_f32 v4, -v5, v4, v0
+; SI-IEEE-SAFE-NEXT:    v_cmp_lt_f32_e64 s[4:5], 0, v4
+; SI-IEEE-SAFE-NEXT:    v_cndmask_b32_e64 v2, v2, v5, s[4:5]
+; SI-IEEE-SAFE-NEXT:    v_mul_f32_e32 v4, 0x37800000, v2
+; SI-IEEE-SAFE-NEXT:    v_cndmask_b32_e32 v2, v2, v4, vcc
+; SI-IEEE-SAFE-NEXT:    v_cmp_class_f32_e32 vcc, v0, v3
+; SI-IEEE-SAFE-NEXT:    v_cndmask_b32_e32 v0, v2, v0, vcc
+; SI-IEEE-SAFE-NEXT:    s_mov_b32 s6, 0x7f800000
+; SI-IEEE-SAFE-NEXT:    v_frexp_mant_f32_e64 v2, -v0
+; SI-IEEE-SAFE-NEXT:    v_cmp_lt_f32_e64 s[4:5], |v0|, s6
+; SI-IEEE-SAFE-NEXT:    v_cndmask_b32_e64 v2, -v0, v2, s[4:5]
+; SI-IEEE-SAFE-NEXT:    v_rcp_f32_e32 v2, v2
+; SI-IEEE-SAFE-NEXT:    v_frexp_exp_i32_f32_e32 v0, v0
+; SI-IEEE-SAFE-NEXT:    v_sub_i32_e32 v0, vcc, 0, v0
+; SI-IEEE-SAFE-NEXT:    v_ldexp_f32_e32 v0, v2, v0
+; SI-IEEE-SAFE-NEXT:    v_frexp_mant_f32_e64 v2, -v1
+; SI-IEEE-SAFE-NEXT:    v_cmp_lt_f32_e64 s[4:5], |v1|, s6
+; SI-IEEE-SAFE-NEXT:    v_cndmask_b32_e64 v2, -v1, v2, s[4:5]
+; SI-IEEE-SAFE-NEXT:    v_rcp_f32_e32 v2, v2
+; SI-IEEE-SAFE-NEXT:    v_frexp_exp_i32_f32_e32 v1, v1
+; SI-IEEE-SAFE-NEXT:    v_sub_i32_e32 v1, vcc, 0, v1
+; SI-IEEE-SAFE-NEXT:    v_ldexp_f32_e32 v1, v2, v1
+; SI-IEEE-SAFE-NEXT:    s_setpc_b64 s[30:31]
+;
+; CI-IEEE-SAFE-LABEL: v_neg_rsq_v2f32:
+; CI-IEEE-SAFE:       ; %bb.0:
+; CI-IEEE-SAFE-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; CI-IEEE-SAFE-NEXT:    s_mov_b32 s6, 0xf800000
+; CI-IEEE-SAFE-NEXT:    v_mul_f32_e32 v2, 0x4f800000, v1
+; CI-IEEE-SAFE-NEXT:    v_cmp_gt_f32_e32 vcc, s6, v1
+; CI-IEEE-SAFE-NEXT:    v_cndmask_b32_e32 v1, v1, v2, vcc
+; CI-IEEE-SAFE-NEXT:    v_sqrt_f32_e32 v2, v1
+; CI-IEEE-SAFE-NEXT:    v_add_i32_e64 v3, s[4:5], -1, v2
+; CI-IEEE-SAFE-NEXT:    v_fma_f32 v4, -v3, v2, v1
+; CI-IEEE-SAFE-NEXT:    v_cmp_ge_f32_e64 s[4:5], 0, v4
+; CI-IEEE-SAFE-NEXT:    v_cndmask_b32_e64 v3, v2, v3, s[4:5]
+; CI-IEEE-SAFE-NEXT:    v_add_i32_e64 v4, s[4:5], 1, v2
+; CI-IEEE-SAFE-NEXT:    v_fma_f32 v2, -v4, v2, v1
+; CI-IEEE-SAFE-NEXT:    v_cmp_lt_f32_e64 s[4:5], 0, v2
+; CI-IEEE-SAFE-NEXT:    v_cndmask_b32_e64 v2, v3, v4, s[4:5]
+; CI-IEEE-SAFE-NEXT:    v_mul_f32_e32 v3, 0x37800000, v2
+; CI-IEEE-SAFE-NEXT:    v_cndmask_b32_e32 v2, v2, v3, vcc
+; CI-IEEE-SAFE-NEXT:    v_mul_f32_e32 v4, 0x4f800000, v0
+; CI-IEEE-SAFE-NEXT:    v_cmp_gt_f32_e32 vcc, s6, v0
+; CI-IEEE-SAFE-NEXT:    v_cndmask_b32_e32 v0, v0, v4, vcc
+; CI-IEEE-SAFE-NEXT:    v_sqrt_f32_e32 v4, v0
+; CI-IEEE-SAFE-NEXT:    v_mov_b32_e32 v3, 0x260
+; CI-IEEE-SAFE-NEXT:    v_cmp_class_f32_e64 s[4:5], v1, v3
+; CI-IEEE-SAFE-NEXT:    v_cndmask_b32_e64 v1, v2, v1, s[4:5]
+; CI-IEEE-SAFE-NEXT:    v_add_i32_e64 v2, s[4:5], -1, v4
+; CI-IEEE-SAFE-NEXT:    v_fma_f32 v5, -v2, v4, v0
+; CI-IEEE-SAFE-NEXT:    v_cmp_ge_f32_e64 s[4:5], 0, v5
+; CI-IEEE-SAFE-NEXT:    v_cndmask_b32_e64 v2, v4, v2, s[4:5]
+; CI-IEEE-SAFE-NEXT:    v_add_i32_e64 v5, s[4:5], 1, v4
+; CI-IEEE-SAFE-NEXT:    v_fma_f32 v4, -v5, v4, v0
+; CI-IEEE-SAFE-NEXT:    v_cmp_lt_f32_e64 s[4:5], 0, v4
+; CI-IEEE-SAFE-NEXT:    v_cndmask_b32_e64 v2, v2, v5, s[4:5]
+; CI-IEEE-SAFE-NEXT:    v_mul_f32_e32 v4, 0x37800000, v2
+; CI-IEEE-SAFE-NEXT:    v_cndmask_b32_e32 v2, v2, v4, vcc
+; CI-IEEE-SAFE-NEXT:    v_cmp_class_f32_e32 vcc, v0, v3
+; CI-IEEE-SAFE-NEXT:    v_cndmask_b32_e32 v0, v2, v0, vcc
+; CI-IEEE-SAFE-NEXT:    v_frexp_mant_f32_e64 v2, -v0
+; CI-IEEE-SAFE-NEXT:    v_rcp_f32_e32 v2, v2
+; CI-IEEE-SAFE-NEXT:    v_frexp_exp_i32_f32_e32 v0, v0
+; CI-IEEE-SAFE-NEXT:    v_sub_i32_e32 v0, vcc, 0, v0
+; CI-IEEE-SAFE-NEXT:    v_ldexp_f32_e32 v0, v2, v0
+; CI-IEEE-SAFE-NEXT:    v_frexp_mant_f32_e64 v2, -v1
+; CI-IEEE-SAFE-NEXT:    v_rcp_f32_e32 v2, v2
+; CI-IEEE-SAFE-NEXT:    v_frexp_exp_i32_f32_e32 v1, v1
+; CI-IEEE-SAFE-NEXT:    v_sub_i32_e32 v1, vcc, 0, v1
+; CI-IEEE-SAFE-NEXT:    v_ldexp_f32_e32 v1, v2, v1
+; CI-IEEE-SAFE-NEXT:    s_setpc_b64 s[30:31]
+  %sqrt = call contract <2 x float> @llvm.sqrt.v2f32(<2 x float> %val)
+  %div = fdiv contract <2 x float> <float -1.0, float -1.0>, %sqrt, !fpmath !0
   ret <2 x float> %div
 }
 
 define float @v_neg_rsq_f32_foldable_user(float %val0, float %val1) {
-; GCN-DAZ-LABEL: v_neg_rsq_f32_foldable_user:
-; GCN-DAZ:       ; %bb.0:
-; GCN-DAZ-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GCN-DAZ-NEXT:    v_sqrt_f32_e32 v0, v0
-; GCN-DAZ-NEXT:    v_rcp_f32_e64 v0, -v0
-; GCN-DAZ-NEXT:    v_mul_f32_e32 v0, v0, v1
-; GCN-DAZ-NEXT:    s_setpc_b64 s[30:31]
+; GCN-DAZ-UNSAFE-LABEL: v_neg_rsq_f32_foldable_user:
+; GCN-DAZ-UNSAFE:       ; %bb.0:
+; GCN-DAZ-UNSAFE-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GCN-DAZ-UNSAFE-NEXT:    v_rsq_f32_e32 v0, v0
+; GCN-DAZ-UNSAFE-NEXT:    v_mul_f32_e64 v0, -v0, v1
+; GCN-DAZ-UNSAFE-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GCN-IEEE-UNSAFE-LABEL: v_neg_rsq_f32_foldable_user:
 ; GCN-IEEE-UNSAFE:       ; %bb.0:
 ; GCN-IEEE-UNSAFE-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GCN-IEEE-UNSAFE-NEXT:    v_sqrt_f32_e32 v0, v0
-; GCN-IEEE-UNSAFE-NEXT:    v_rcp_f32_e64 v0, -v0
-; GCN-IEEE-UNSAFE-NEXT:    v_mul_f32_e32 v0, v0, v1
+; GCN-IEEE-UNSAFE-NEXT:    v_rsq_f32_e32 v0, v0
+; GCN-IEEE-UNSAFE-NEXT:    v_mul_f32_e64 v0, -v0, v1
 ; GCN-IEEE-UNSAFE-NEXT:    s_setpc_b64 s[30:31]
 ;
-; GCN-IEEE-SAFE-LABEL: v_neg_rsq_f32_foldable_user:
-; GCN-IEEE-SAFE:       ; %bb.0:
-; GCN-IEEE-SAFE-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GCN-IEEE-SAFE-NEXT:    v_sqrt_f32_e32 v0, v0
-; GCN-IEEE-SAFE-NEXT:    s_mov_b32 s4, 0x6f800000
-; GCN-IEEE-SAFE-NEXT:    v_mov_b32_e32 v2, 0x2f800000
-; GCN-IEEE-SAFE-NEXT:    v_cmp_gt_f32_e64 vcc, |v0|, s4
-; GCN-IEEE-SAFE-NEXT:    v_cndmask_b32_e32 v2, 1.0, v2, vcc
-; GCN-IEEE-SAFE-NEXT:    v_mul_f32_e64 v0, v0, -v2
-; GCN-IEEE-SAFE-NEXT:    v_rcp_f32_e32 v0, v0
-; GCN-IEEE-SAFE-NEXT:    v_mul_f32_e32 v0, v2, v0
-; GCN-IEEE-SAFE-NEXT:    v_mul_f32_e32 v0, v0, v1
-; GCN-IEEE-SAFE-NEXT:    s_setpc_b64 s[30:31]
-  %sqrt = call float @llvm.sqrt.f32(float %val0)
-  %div = fdiv float -1.0, %sqrt, !fpmath !0
-  %user = fmul float %div, %val1
+; GCN-DAZ-SAFE-LABEL: v_neg_rsq_f32_foldable_user:
+; GCN-DAZ-SAFE:       ; %bb.0:
+; GCN-DAZ-SAFE-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GCN-DAZ-SAFE-NEXT:    s_mov_b32 s4, 0xf800000
+; GCN-DAZ-SAFE-NEXT:    v_mul_f32_e32 v2, 0x4f800000, v0
+; GCN-DAZ-SAFE-NEXT:    v_cmp_gt_f32_e32 vcc, s4, v0
+; GCN-DAZ-SAFE-NEXT:    v_cndmask_b32_e32 v0, v0, v2, vcc
+; GCN-DAZ-SAFE-NEXT:    v_rsq_f32_e32 v2, v0
+; GCN-DAZ-SAFE-NEXT:    v_mul_f32_e32 v3, v0, v2
+; GCN-DAZ-SAFE-NEXT:    v_mul_f32_e32 v2, 0.5, v2
+; GCN-DAZ-SAFE-NEXT:    v_fma_f32 v4, -v2, v3, 0.5
+; GCN-DAZ-SAFE-NEXT:    v_fma_f32 v3, v3, v4, v3
+; GCN-DAZ-SAFE-NEXT:    v_fma_f32 v5, -v3, v3, v0
+; GCN-DAZ-SAFE-NEXT:    v_fma_f32 v2, v2, v4, v2
+; GCN-DAZ-SAFE-NEXT:    v_fma_f32 v2, v5, v2, v3
+; GCN-DAZ-SAFE-NEXT:    v_mul_f32_e32 v3, 0x37800000, v2
+; GCN-DAZ-SAFE-NEXT:    v_cndmask_b32_e32 v2, v2, v3, vcc
+; GCN-DAZ-SAFE-NEXT:    v_mov_b32_e32 v3, 0x260
+; GCN-DAZ-SAFE-NEXT:    v_cmp_class_f32_e32 vcc, v0, v3
+; GCN-DAZ-SAFE-NEXT:    v_cndmask_b32_e32 v0, v2, v0, vcc
+; GCN-DAZ-SAFE-NEXT:    v_rcp_f32_e64 v0, -v0
+; GCN-DAZ-SAFE-NEXT:    v_mul_f32_e32 v0, v0, v1
+; GCN-DAZ-SAFE-NEXT:    s_setpc_b64 s[30:31]
+;
+; SI-IEEE-SAFE-LABEL: v_neg_rsq_f32_foldable_user:
+; SI-IEEE-SAFE:       ; %bb.0:
+; SI-IEEE-SAFE-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; SI-IEEE-SAFE-NEXT:    s_mov_b32 s4, 0xf800000
+; SI-IEEE-SAFE-NEXT:    v_mul_f32_e32 v2, 0x4f800000, v0
+; SI-IEEE-SAFE-NEXT:    v_cmp_gt_f32_e32 vcc, s4, v0
+; SI-IEEE-SAFE-NEXT:    v_cndmask_b32_e32 v0, v0, v2, vcc
+; SI-IEEE-SAFE-NEXT:    v_sqrt_f32_e32 v2, v0
+; SI-IEEE-SAFE-NEXT:    v_add_i32_e64 v3, s[4:5], -1, v2
+; SI-IEEE-SAFE-NEXT:    v_fma_f32 v4, -v3, v2, v0
+; SI-IEEE-SAFE-NEXT:    v_cmp_ge_f32_e64 s[4:5], 0, v4
+; SI-IEEE-SAFE-NEXT:    v_cndmask_b32_e64 v3, v2, v3, s[4:5]
+; SI-IEEE-SAFE-NEXT:    v_add_i32_e64 v4, s[4:5], 1, v2
+; SI-IEEE-SAFE-NEXT:    v_fma_f32 v2, -v4, v2, v0
+; SI-IEEE-SAFE-NEXT:    v_cmp_lt_f32_e64 s[4:5], 0, v2
+; SI-IEEE-SAFE-NEXT:    v_cndmask_b32_e64 v2, v3, v4, s[4:5]
+; SI-IEEE-SAFE-NEXT:    v_mul_f32_e32 v3, 0x37800000, v2
+; SI-IEEE-SAFE-NEXT:    v_cndmask_b32_e32 v2, v2, v3, vcc
+; SI-IEEE-SAFE-NEXT:    v_mov_b32_e32 v3, 0x260
+; SI-IEEE-SAFE-NEXT:    v_cmp_class_f32_e32 vcc, v0, v3
+; SI-IEEE-SAFE-NEXT:    v_cndmask_b32_e32 v0, v2, v0, vcc
+; SI-IEEE-SAFE-NEXT:    s_mov_b32 s4, 0x7f800000
+; SI-IEEE-SAFE-NEXT:    v_frexp_mant_f32_e64 v2, -v0
+; SI-IEEE-SAFE-NEXT:    v_cmp_lt_f32_e64 s[4:5], |v0|, s4
+; SI-IEEE-SAFE-NEXT:    v_cndmask_b32_e64 v2, -v0, v2, s[4:5]
+; SI-IEEE-SAFE-NEXT:    v_rcp_f32_e32 v2, v2
+; SI-IEEE-SAFE-NEXT:    v_frexp_exp_i32_f32_e32 v0, v0
+; SI-IEEE-SAFE-NEXT:    v_sub_i32_e32 v0, vcc, 0, v0
+; SI-IEEE-SAFE-NEXT:    v_ldexp_f32_e32 v0, v2, v0
+; SI-IEEE-SAFE-NEXT:    v_mul_f32_e32 v0, v0, v1
+; SI-IEEE-SAFE-NEXT:    s_setpc_b64 s[30:31]
+;
+; CI-IEEE-SAFE-LABEL: v_neg_rsq_f32_foldable_user:
+; CI-IEEE-SAFE:       ; %bb.0:
+; CI-IEEE-SAFE-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; CI-IEEE-SAFE-NEXT:    s_mov_b32 s4, 0xf800000
+; CI-IEEE-SAFE-NEXT:    v_mul_f32_e32 v2, 0x4f800000, v0
+; CI-IEEE-SAFE-NEXT:    v_cmp_gt_f32_e32 vcc, s4, v0
+; CI-IEEE-SAFE-NEXT:    v_cndmask_b32_e32 v0, v0, v2, vcc
+; CI-IEEE-SAFE-NEXT:    v_sqrt_f32_e32 v2, v0
+; CI-IEEE-SAFE-NEXT:    v_add_i32_e64 v3, s[4:5], -1, v2
+; CI-IEEE-SAFE-NEXT:    v_fma_f32 v4, -v3, v2, v0
+; CI-IEEE-SAFE-NEXT:    v_cmp_ge_f32_e64 s[4:5], 0, v4
+; CI-IEEE-SAFE-NEXT:    v_cndmask_b32_e64 v3, v2, v3, s[4:5]
+; CI-IEEE-SAFE-NEXT:    v_add_i32_e64 v4, s[4:5], 1, v2
+; CI-IEEE-SAFE-NEXT:    v_fma_f32 v2, -v4, v2, v0
+; CI-IEEE-SAFE-NEXT:    v_cmp_lt_f32_e64 s[4:5], 0, v2
+; CI-IEEE-SAFE-NEXT:    v_cndmask_b32_e64 v2, v3, v4, s[4:5]
+; CI-IEEE-SAFE-NEXT:    v_mul_f32_e32 v3, 0x37800000, v2
+; CI-IEEE-SAFE-NEXT:    v_cndmask_b32_e32 v2, v2, v3, vcc
+; CI-IEEE-SAFE-NEXT:    v_mov_b32_e32 v3, 0x260
+; CI-IEEE-SAFE-NEXT:    v_cmp_class_f32_e32 vcc, v0, v3
+; CI-IEEE-SAFE-NEXT:    v_cndmask_b32_e32 v0, v2, v0, vcc
+; CI-IEEE-SAFE-NEXT:    v_frexp_mant_f32_e64 v2, -v0
+; CI-IEEE-SAFE-NEXT:    v_rcp_f32_e32 v2, v2
+; CI-IEEE-SAFE-NEXT:    v_frexp_exp_i32_f32_e32 v0, v0
+; CI-IEEE-SAFE-NEXT:    v_sub_i32_e32 v0, vcc, 0, v0
+; CI-IEEE-SAFE-NEXT:    v_ldexp_f32_e32 v0, v2, v0
+; CI-IEEE-SAFE-NEXT:    v_mul_f32_e32 v0, v0, v1
+; CI-IEEE-SAFE-NEXT:    s_setpc_b64 s[30:31]
+  %sqrt = call contract float @llvm.sqrt.f32(float %val0)
+  %div = fdiv contract float -1.0, %sqrt, !fpmath !0
+  %user = fmul contract float %div, %val1
   ret float %user
 }
 
 define <2 x float> @v_neg_rsq_v2f32_foldable_user(<2 x float> %val0, <2 x float> %val1) {
-; GCN-DAZ-LABEL: v_neg_rsq_v2f32_foldable_user:
-; GCN-DAZ:       ; %bb.0:
-; GCN-DAZ-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GCN-DAZ-NEXT:    v_sqrt_f32_e32 v0, v0
-; GCN-DAZ-NEXT:    v_sqrt_f32_e32 v1, v1
-; GCN-DAZ-NEXT:    v_rcp_f32_e64 v0, -v0
-; GCN-DAZ-NEXT:    v_rcp_f32_e64 v1, -v1
-; GCN-DAZ-NEXT:    v_mul_f32_e32 v0, v0, v2
-; GCN-DAZ-NEXT:    v_mul_f32_e32 v1, v1, v3
-; GCN-DAZ-NEXT:    s_setpc_b64 s[30:31]
+; GCN-DAZ-UNSAFE-LABEL: v_neg_rsq_v2f32_foldable_user:
+; GCN-DAZ-UNSAFE:       ; %bb.0:
+; GCN-DAZ-UNSAFE-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GCN-DAZ-UNSAFE-NEXT:    v_rsq_f32_e32 v0, v0
+; GCN-DAZ-UNSAFE-NEXT:    v_rsq_f32_e32 v1, v1
+; GCN-DAZ-UNSAFE-NEXT:    v_mul_f32_e64 v0, -v0, v2
+; GCN-DAZ-UNSAFE-NEXT:    v_mul_f32_e64 v1, -v1, v3
+; GCN-DAZ-UNSAFE-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GCN-IEEE-UNSAFE-LABEL: v_neg_rsq_v2f32_foldable_user:
 ; GCN-IEEE-UNSAFE:       ; %bb.0:
 ; GCN-IEEE-UNSAFE-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GCN-IEEE-UNSAFE-NEXT:    v_sqrt_f32_e32 v0, v0
-; GCN-IEEE-UNSAFE-NEXT:    v_sqrt_f32_e32 v1, v1
-; GCN-IEEE-UNSAFE-NEXT:    v_rcp_f32_e64 v0, -v0
-; GCN-IEEE-UNSAFE-NEXT:    v_rcp_f32_e64 v1, -v1
-; GCN-IEEE-UNSAFE-NEXT:    v_mul_f32_e32 v0, v0, v2
-; GCN-IEEE-UNSAFE-NEXT:    v_mul_f32_e32 v1, v1, v3
+; GCN-IEEE-UNSAFE-NEXT:    v_rsq_f32_e32 v0, v0
+; GCN-IEEE-UNSAFE-NEXT:    v_rsq_f32_e32 v1, v1
+; GCN-IEEE-UNSAFE-NEXT:    v_mul_f32_e64 v0, -v0, v2
+; GCN-IEEE-UNSAFE-NEXT:    v_mul_f32_e64 v1, -v1, v3
 ; GCN-IEEE-UNSAFE-NEXT:    s_setpc_b64 s[30:31]
 ;
-; GCN-IEEE-SAFE-LABEL: v_neg_rsq_v2f32_foldable_user:
-; GCN-IEEE-SAFE:       ; %bb.0:
-; GCN-IEEE-SAFE-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GCN-IEEE-SAFE-NEXT:    v_sqrt_f32_e32 v0, v0
-; GCN-IEEE-SAFE-NEXT:    v_sqrt_f32_e32 v1, v1
-; GCN-IEEE-SAFE-NEXT:    s_mov_b32 s4, 0x6f800000
-; GCN-IEEE-SAFE-NEXT:    v_mov_b32_e32 v4, 0x2f800000
-; GCN-IEEE-SAFE-NEXT:    v_cmp_gt_f32_e64 vcc, |v0|, s4
-; GCN-IEEE-SAFE-NEXT:    v_cndmask_b32_e32 v5, 1.0, v4, vcc
-; GCN-IEEE-SAFE-NEXT:    v_cmp_gt_f32_e64 vcc, |v1|, s4
-; GCN-IEEE-SAFE-NEXT:    v_cndmask_b32_e32 v4, 1.0, v4, vcc
-; GCN-IEEE-SAFE-NEXT:    v_mul_f32_e64 v0, v0, -v5
-; GCN-IEEE-SAFE-NEXT:    v_mul_f32_e64 v1, v1, -v4
-; GCN-IEEE-SAFE-NEXT:    v_rcp_f32_e32 v0, v0
-; GCN-IEEE-SAFE-NEXT:    v_rcp_f32_e32 v1, v1
-; GCN-IEEE-SAFE-NEXT:    v_mul_f32_e32 v0, v5, v0
-; GCN-IEEE-SAFE-NEXT:    v_mul_f32_e32 v1, v4, v1
-; GCN-IEEE-SAFE-NEXT:    v_mul_f32_e32 v0, v0, v2
-; GCN-IEEE-SAFE-NEXT:    v_mul_f32_e32 v1, v1, v3
-; GCN-IEEE-SAFE-NEXT:    s_setpc_b64 s[30:31]
-  %sqrt = call <2 x float> @llvm.sqrt.v2f32(<2 x float> %val0)
-  %div = fdiv <2 x float> <float -1.0, float -1.0>, %sqrt, !fpmath !0
-  %user = fmul <2 x float> %div, %val1
+; GCN-DAZ-SAFE-LABEL: v_neg_rsq_v2f32_foldable_user:
+; GCN-DAZ-SAFE:       ; %bb.0:
+; GCN-DAZ-SAFE-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GCN-DAZ-SAFE-NEXT:    s_mov_b32 s4, 0xf800000
+; GCN-DAZ-SAFE-NEXT:    v_mul_f32_e32 v4, 0x4f800000, v1
+; GCN-DAZ-SAFE-NEXT:    v_cmp_gt_f32_e32 vcc, s4, v1
+; GCN-DAZ-SAFE-NEXT:    v_cndmask_b32_e32 v1, v1, v4, vcc
+; GCN-DAZ-SAFE-NEXT:    v_rsq_f32_e32 v4, v1
+; GCN-DAZ-SAFE-NEXT:    v_mul_f32_e32 v5, v1, v4
+; GCN-DAZ-SAFE-NEXT:    v_mul_f32_e32 v4, 0.5, v4
+; GCN-DAZ-SAFE-NEXT:    v_fma_f32 v6, -v4, v5, 0.5
+; GCN-DAZ-SAFE-NEXT:    v_fma_f32 v5, v5, v6, v5
+; GCN-DAZ-SAFE-NEXT:    v_fma_f32 v7, -v5, v5, v1
+; GCN-DAZ-SAFE-NEXT:    v_fma_f32 v4, v4, v6, v4
+; GCN-DAZ-SAFE-NEXT:    v_fma_f32 v4, v7, v4, v5
+; GCN-DAZ-SAFE-NEXT:    v_mul_f32_e32 v5, 0x37800000, v4
+; GCN-DAZ-SAFE-NEXT:    v_cndmask_b32_e32 v4, v4, v5, vcc
+; GCN-DAZ-SAFE-NEXT:    v_mul_f32_e32 v5, 0x4f800000, v0
+; GCN-DAZ-SAFE-NEXT:    v_cmp_gt_f32_e32 vcc, s4, v0
+; GCN-DAZ-SAFE-NEXT:    v_cndmask_b32_e32 v0, v0, v5, vcc
+; GCN-DAZ-SAFE-NEXT:    v_rsq_f32_e32 v5, v0
+; GCN-DAZ-SAFE-NEXT:    v_mov_b32_e32 v6, 0x260
+; GCN-DAZ-SAFE-NEXT:    v_cmp_class_f32_e64 s[4:5], v1, v6
+; GCN-DAZ-SAFE-NEXT:    v_cndmask_b32_e64 v1, v4, v1, s[4:5]
+; GCN-DAZ-SAFE-NEXT:    v_mul_f32_e32 v4, v0, v5
+; GCN-DAZ-SAFE-NEXT:    v_mul_f32_e32 v5, 0.5, v5
+; GCN-DAZ-SAFE-NEXT:    v_fma_f32 v7, -v5, v4, 0.5
+; GCN-DAZ-SAFE-NEXT:    v_fma_f32 v4, v4, v7, v4
+; GCN-DAZ-SAFE-NEXT:    v_fma_f32 v8, -v4, v4, v0
+; GCN-DAZ-SAFE-NEXT:    v_fma_f32 v5, v5, v7, v5
+; GCN-DAZ-SAFE-NEXT:    v_fma_f32 v4, v8, v5, v4
+; GCN-DAZ-SAFE-NEXT:    v_mul_f32_e32 v5, 0x37800000, v4
+; GCN-DAZ-SAFE-NEXT:    v_cndmask_b32_e32 v4, v4, v5, vcc
+; GCN-DAZ-SAFE-NEXT:    v_cmp_class_f32_e32 vcc, v0, v6
+; GCN-DAZ-SAFE-NEXT:    v_cndmask_b32_e32 v0, v4, v0, vcc
+; GCN-DAZ-SAFE-NEXT:    v_rcp_f32_e64 v0, -v0
+; GCN-DAZ-SAFE-NEXT:    v_rcp_f32_e64 v1, -v1
+; GCN-DAZ-SAFE-NEXT:    v_mul_f32_e32 v0, v0, v2
+; GCN-DAZ-SAFE-NEXT:    v_mul_f32_e32 v1, v1, v3
+; GCN-DAZ-SAFE-NEXT:    s_setpc_b64 s[30:31]
+;
+; SI-IEEE-SAFE-LABEL: v_neg_rsq_v2f32_foldable_user:
+; SI-IEEE-SAFE:       ; %bb.0:
+; SI-IEEE-SAFE-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; SI-IEEE-SAFE-NEXT:    s_mov_b32 s6, 0xf800000
+; SI-IEEE-SAFE-NEXT:    v_mul_f32_e32 v4, 0x4f800000, v1
+; SI-IEEE-SAFE-NEXT:    v_cmp_gt_f32_e32 vcc, s6, v1
+; SI-IEEE-SAFE-NEXT:    v_cndmask_b32_e32 v1, v1, v4, vcc
+; SI-IEEE-SAFE-NEXT:    v_sqrt_f32_e32 v4, v1
+; SI-IEEE-SAFE-NEXT:    v_add_i32_e64 v5, s[4:5], -1, v4
+; SI-IEEE-SAFE-NEXT:    v_fma_f32 v6, -v5, v4, v1
+; SI-IEEE-SAFE-NEXT:    v_cmp_ge_f32_e64 s[4:5], 0, v6
+; SI-IEEE-SAFE-NEXT:    v_cndmask_b32_e64 v5, v4, v5, s[4:5]
+; SI-IEEE-SAFE-NEXT:    v_add_i32_e64 v6, s[4:5], 1, v4
+; SI-IEEE-SAFE-NEXT:    v_fma_f32 v4, -v6, v4, v1
+; SI-IEEE-SAFE-NEXT:    v_cmp_lt_f32_e64 s[4:5], 0, v4
+; SI-IEEE-SAFE-NEXT:    v_cndmask_b32_e64 v4, v5, v6, s[4:5]
+; SI-IEEE-SAFE-NEXT:    v_mul_f32_e32 v5, 0x37800000, v4
+; SI-IEEE-SAFE-NEXT:    v_cndmask_b32_e32 v4, v4, v5, vcc
+; SI-IEEE-SAFE-NEXT:    v_mul_f32_e32 v6, 0x4f800000, v0
+; SI-IEEE-SAFE-NEXT:    v_cmp_gt_f32_e32 vcc, s6, v0
+; SI-IEEE-SAFE-NEXT:    v_cndmask_b32_e32 v0, v0, v6, vcc
+; SI-IEEE-SAFE-NEXT:    v_sqrt_f32_e32 v6, v0
+; SI-IEEE-SAFE-NEXT:    v_mov_b32_e32 v5, 0x260
+; SI-IEEE-SAFE-NEXT:    v_cmp_class_f32_e64 s[4:5], v1, v5
+; SI-IEEE-SAFE-NEXT:    v_cndmask_b32_e64 v1, v4, v1, s[4:5]
+; SI-IEEE-SAFE-NEXT:    v_add_i32_e64 v4, s[4:5], -1, v6
+; SI-IEEE-SAFE-NEXT:    v_fma_f32 v7, -v4, v6, v0
+; SI-IEEE-SAFE-NEXT:    v_cmp_ge_f32_e64 s[4:5], 0, v7
+; SI-IEEE-SAFE-NEXT:    v_cndmask_b32_e64 v4, v6, v4, s[4:5]
+; SI-IEEE-SAFE-NEXT:    v_add_i32_e64 v7, s[4:5], 1, v6
+; SI-IEEE-SAFE-NEXT:    v_fma_f32 v6, -v7, v6, v0
+; SI-IEEE-SAFE-NEXT:    v_cmp_lt_f32_e64 s[4:5], 0, v6
+; SI-IEEE-SAFE-NEXT:    v_cndmask_b32_e64 v4, v4, v7, s[4:5]
+; SI-IEEE-SAFE-NEXT:    v_mul_f32_e32 v6, 0x37800000, v4
+; SI-IEEE-SAFE-NEXT:    v_cndmask_b32_e32 v4, v4, v6, vcc
+; SI-IEEE-SAFE-NEXT:    v_cmp_class_f32_e32 vcc, v0, v5
+; SI-IEEE-SAFE-NEXT:    v_cndmask_b32_e32 v0, v4, v0, vcc
+; SI-IEEE-SAFE-NEXT:    s_mov_b32 s6, 0x7f800000
+; SI-IEEE-SAFE-NEXT:    v_frexp_mant_f32_e64 v4, -v0
+; SI-IEEE-SAFE-NEXT:    v_cmp_lt_f32_e64 s[4:5], |v0|, s6
+; SI-IEEE-SAFE-NEXT:    v_cndmask_b32_e64 v4, -v0, v4, s[4:5]
+; SI-IEEE-SAFE-NEXT:    v_rcp_f32_e32 v4, v4
+; SI-IEEE-SAFE-NEXT:    v_frexp_exp_i32_f32_e32 v0, v0
+; SI-IEEE-SAFE-NEXT:    v_sub_i32_e32 v0, vcc, 0, v0
+; SI-IEEE-SAFE-NEXT:    v_ldexp_f32_e32 v0, v4, v0
+; SI-IEEE-SAFE-NEXT:    v_frexp_mant_f32_e64 v4, -v1
+; SI-IEEE-SAFE-NEXT:    v_cmp_lt_f32_e64 s[4:5], |v1|, s6
+; SI-IEEE-SAFE-NEXT:    v_cndmask_b32_e64 v4, -v1, v4, s[4:5]
+; SI-IEEE-SAFE-NEXT:    v_rcp_f32_e32 v4, v4
+; SI-IEEE-SAFE-NEXT:    v_frexp_exp_i32_f32_e32 v1, v1
+; SI-IEEE-SAFE-NEXT:    v_sub_i32_e32 v1, vcc, 0, v1
+; SI-IEEE-SAFE-NEXT:    v_ldexp_f32_e32 v1, v4, v1
+; SI-IEEE-SAFE-NEXT:    v_mul_f32_e32 v0, v0, v2
+; SI-IEEE-SAFE-NEXT:    v_mul_f32_e32 v1, v1, v3
+; SI-IEEE-SAFE-NEXT:    s_setpc_b64 s[30:31]
+;
+; CI-IEEE-SAFE-LABEL: v_neg_rsq_v2f32_foldable_user:
+; CI-IEEE-SAFE:       ; %bb.0:
+; CI-IEEE-SAFE-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; CI-IEEE-SAFE-NEXT:    s_mov_b32 s6, 0xf800000
+; CI-IEEE-SAFE-NEXT:    v_mul_f32_e32 v4, 0x4f800000, v1
+; CI-IEEE-SAFE-NEXT:    v_cmp_gt_f32_e32 vcc, s6, v1
+; CI-IEEE-SAFE-NEXT:    v_cndmask_b32_e32 v1, v1, v4, vcc
+; CI-IEEE-SAFE-NEXT:    v_sqrt_f32_e32 v4, v1
+; CI-IEEE-SAFE-NEXT:    v_add_i32_e64 v5, s[4:5], -1, v4
+; CI-IEEE-SAFE-NEXT:    v_fma_f32 v6, -v5, v4, v1
+; CI-IEEE-SAFE-NEXT:    v_cmp_ge_f32_e64 s[4:5], 0, v6
+; CI-IEEE-SAFE-NEXT:    v_cndmask_b32_e64 v5, v4, v5, s[4:5]
+; CI-IEEE-SAFE-NEXT:    v_add_i32_e64 v6, s[4:5], 1, v4
+; CI-IEEE-SAFE-NEXT:    v_fma_f32 v4, -v6, v4, v1
+; CI-IEEE-SAFE-NEXT:    v_cmp_lt_f32_e64 s[4:5], 0, v4
+; CI-IEEE-SAFE-NEXT:    v_cndmask_b32_e64 v4, v5, v6, s[4:5]
+; CI-IEEE-SAFE-NEXT:    v_mul_f32_e32 v5, 0x37800000, v4
+; CI-IEEE-SAFE-NEXT:    v_cndmask_b32_e32 v4, v4, v5, vcc
+; CI-IEEE-SAFE-NEXT:    v_mul_f32_e32 v6, 0x4f800000, v0
+; CI-IEEE-SAFE-NEXT:    v_cmp_gt_f32_e32 vcc, s6, v0
+; CI-IEEE-SAFE-NEXT:    v_cndmask_b32_e32 v0, v0, v6, vcc
+; CI-IEEE-SAFE-NEXT:    v_sqrt_f32_e32 v6, v0
+; CI-IEEE-SAFE-NEXT:    v_mov_b32_e32 v5, 0x260
+; CI-IEEE-SAFE-NEXT:    v_cmp_class_f32_e64 s[4:5], v1, v5
+; CI-IEEE-SAFE-NEXT:    v_cndmask_b32_e64 v1, v4, v1, s[4:5]
+; CI-IEEE-SAFE-NEXT:    v_add_i32_e64 v4, s[4:5], -1, v6
+; CI-IEEE-SAFE-NEXT:    v_fma_f32 v7, -v4, v6, v0
+; CI-IEEE-SAFE-NEXT:    v_cmp_ge_f32_e64 s[4:5], 0, v7
+; CI-IEEE-SAFE-NEXT:    v_cndmask_b32_e64 v4, v6, v4, s[4:5]
+; CI-IEEE-SAFE-NEXT:    v_add_i32_e64 v7, s[4:5], 1, v6
+; CI-IEEE-SAFE-NEXT:    v_fma_f32 v6, -v7, v6, v0
+; CI-IEEE-SAFE-NEXT:    v_cmp_lt_f32_e64 s[4:5], 0, v6
+; CI-IEEE-SAFE-NEXT:    v_cndmask_b32_e64 v4, v4, v7, s[4:5]
+; CI-IEEE-SAFE-NEXT:    v_mul_f32_e32 v6, 0x37800000, v4
+; CI-IEEE-SAFE-NEXT:    v_cndmask_b32_e32 v4, v4, v6, vcc
+; CI-IEEE-SAFE-NEXT:    v_cmp_class_f32_e32 vcc, v0, v5
+; CI-IEEE-SAFE-NEXT:    v_cndmask_b32_e32 v0, v4, v0, vcc
+; CI-IEEE-SAFE-NEXT:    v_frexp_mant_f32_e64 v4, -v0
+; CI-IEEE-SAFE-NEXT:    v_rcp_f32_e32 v4, v4
+; CI-IEEE-SAFE-NEXT:    v_frexp_exp_i32_f32_e32 v0, v0
+; CI-IEEE-SAFE-NEXT:    v_sub_i32_e32 v0, vcc, 0, v0
+; CI-IEEE-SAFE-NEXT:    v_ldexp_f32_e32 v0, v4, v0
+; CI-IEEE-SAFE-NEXT:    v_frexp_mant_f32_e64 v4, -v1
+; CI-IEEE-SAFE-NEXT:    v_rcp_f32_e32 v4, v4
+; CI-IEEE-SAFE-NEXT:    v_frexp_exp_i32_f32_e32 v1, v1
+; CI-IEEE-SAFE-NEXT:    v_sub_i32_e32 v1, vcc, 0, v1
+; CI-IEEE-SAFE-NEXT:    v_ldexp_f32_e32 v1, v4, v1
+; CI-IEEE-SAFE-NEXT:    v_mul_f32_e32 v0, v0, v2
+; CI-IEEE-SAFE-NEXT:    v_mul_f32_e32 v1, v1, v3
+; CI-IEEE-SAFE-NEXT:    s_setpc_b64 s[30:31]
+  %sqrt = call contract <2 x float> @llvm.sqrt.v2f32(<2 x float> %val0)
+  %div = fdiv contract <2 x float> <float -1.0, float -1.0>, %sqrt, !fpmath !0
+  %user = fmul contract <2 x float> %div, %val1
   ret <2 x float> %user
 }
 
@@ -833,20 +2004,272 @@ define float @v_rsq_f32(float %val) {
 ; GCN-IEEE-SAFE-LABEL: v_rsq_f32:
 ; GCN-IEEE-SAFE:       ; %bb.0:
 ; GCN-IEEE-SAFE-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GCN-IEEE-SAFE-NEXT:    v_sqrt_f32_e32 v0, v0
-; GCN-IEEE-SAFE-NEXT:    v_div_scale_f32 v1, s[4:5], v0, v0, 1.0
-; GCN-IEEE-SAFE-NEXT:    v_rcp_f32_e32 v2, v1
-; GCN-IEEE-SAFE-NEXT:    v_div_scale_f32 v3, vcc, 1.0, v0, 1.0
-; GCN-IEEE-SAFE-NEXT:    v_fma_f32 v4, -v1, v2, 1.0
-; GCN-IEEE-SAFE-NEXT:    v_fma_f32 v2, v4, v2, v2
-; GCN-IEEE-SAFE-NEXT:    v_mul_f32_e32 v4, v3, v2
-; GCN-IEEE-SAFE-NEXT:    v_fma_f32 v5, -v1, v4, v3
-; GCN-IEEE-SAFE-NEXT:    v_fma_f32 v4, v5, v2, v4
-; GCN-IEEE-SAFE-NEXT:    v_fma_f32 v1, -v1, v4, v3
-; GCN-IEEE-SAFE-NEXT:    v_div_fmas_f32 v1, v1, v2, v4
-; GCN-IEEE-SAFE-NEXT:    v_div_fixup_f32 v0, v1, v0, 1.0
+; GCN-IEEE-SAFE-NEXT:    s_mov_b32 s4, 0x800000
+; GCN-IEEE-SAFE-NEXT:    v_mov_b32_e32 v1, 0x4b800000
+; GCN-IEEE-SAFE-NEXT:    v_cmp_gt_f32_e32 vcc, s4, v0
+; GCN-IEEE-SAFE-NEXT:    v_cndmask_b32_e32 v1, 1.0, v1, vcc
+; GCN-IEEE-SAFE-NEXT:    v_mul_f32_e32 v0, v0, v1
+; GCN-IEEE-SAFE-NEXT:    v_rsq_f32_e32 v0, v0
+; GCN-IEEE-SAFE-NEXT:    v_mov_b32_e32 v1, 0x45800000
+; GCN-IEEE-SAFE-NEXT:    v_cndmask_b32_e32 v1, 1.0, v1, vcc
+; GCN-IEEE-SAFE-NEXT:    v_mul_f32_e32 v0, v0, v1
 ; GCN-IEEE-SAFE-NEXT:    s_setpc_b64 s[30:31]
+  %sqrt = call contract float @llvm.sqrt.f32(float %val), !fpmath !1
+  %div = fdiv contract float 1.0, %sqrt, !fpmath !1
+  ret float %div
+}
+
+define { float, float } @v_rsq_f32_multi_use(float %val) {
+; GCN-DAZ-UNSAFE-LABEL: v_rsq_f32_multi_use:
+; GCN-DAZ-UNSAFE:       ; %bb.0:
+; GCN-DAZ-UNSAFE-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GCN-DAZ-UNSAFE-NEXT:    v_sqrt_f32_e32 v2, v0
+; GCN-DAZ-UNSAFE-NEXT:    v_rsq_f32_e32 v1, v0
+; GCN-DAZ-UNSAFE-NEXT:    v_mov_b32_e32 v0, v2
+; GCN-DAZ-UNSAFE-NEXT:    s_setpc_b64 s[30:31]
+;
+; GCN-IEEE-UNSAFE-LABEL: v_rsq_f32_multi_use:
+; GCN-IEEE-UNSAFE:       ; %bb.0:
+; GCN-IEEE-UNSAFE-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GCN-IEEE-UNSAFE-NEXT:    v_sqrt_f32_e32 v2, v0
+; GCN-IEEE-UNSAFE-NEXT:    v_rsq_f32_e32 v1, v0
+; GCN-IEEE-UNSAFE-NEXT:    v_mov_b32_e32 v0, v2
+; GCN-IEEE-UNSAFE-NEXT:    s_setpc_b64 s[30:31]
+;
+; GCN-DAZ-SAFE-LABEL: v_rsq_f32_multi_use:
+; GCN-DAZ-SAFE:       ; %bb.0:
+; GCN-DAZ-SAFE-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GCN-DAZ-SAFE-NEXT:    v_sqrt_f32_e32 v0, v0
+; GCN-DAZ-SAFE-NEXT:    v_rcp_f32_e32 v1, v0
+; GCN-DAZ-SAFE-NEXT:    s_setpc_b64 s[30:31]
+;
+; SI-IEEE-SAFE-LABEL: v_rsq_f32_multi_use:
+; SI-IEEE-SAFE:       ; %bb.0:
+; SI-IEEE-SAFE-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; SI-IEEE-SAFE-NEXT:    s_mov_b32 s4, 0xf800000
+; SI-IEEE-SAFE-NEXT:    v_mul_f32_e32 v1, 0x4f800000, v0
+; SI-IEEE-SAFE-NEXT:    v_cmp_gt_f32_e32 vcc, s4, v0
+; SI-IEEE-SAFE-NEXT:    v_cndmask_b32_e32 v0, v0, v1, vcc
+; SI-IEEE-SAFE-NEXT:    v_sqrt_f32_e32 v1, v0
+; SI-IEEE-SAFE-NEXT:    v_add_i32_e64 v2, s[4:5], -1, v1
+; SI-IEEE-SAFE-NEXT:    v_fma_f32 v3, -v2, v1, v0
+; SI-IEEE-SAFE-NEXT:    v_cmp_ge_f32_e64 s[4:5], 0, v3
+; SI-IEEE-SAFE-NEXT:    v_cndmask_b32_e64 v2, v1, v2, s[4:5]
+; SI-IEEE-SAFE-NEXT:    v_add_i32_e64 v3, s[4:5], 1, v1
+; SI-IEEE-SAFE-NEXT:    v_fma_f32 v1, -v3, v1, v0
+; SI-IEEE-SAFE-NEXT:    v_cmp_lt_f32_e64 s[4:5], 0, v1
+; SI-IEEE-SAFE-NEXT:    v_cndmask_b32_e64 v1, v2, v3, s[4:5]
+; SI-IEEE-SAFE-NEXT:    v_mul_f32_e32 v2, 0x37800000, v1
+; SI-IEEE-SAFE-NEXT:    v_cndmask_b32_e32 v1, v1, v2, vcc
+; SI-IEEE-SAFE-NEXT:    v_mov_b32_e32 v2, 0x260
+; SI-IEEE-SAFE-NEXT:    v_cmp_class_f32_e32 vcc, v0, v2
+; SI-IEEE-SAFE-NEXT:    v_cndmask_b32_e32 v0, v1, v0, vcc
+; SI-IEEE-SAFE-NEXT:    s_mov_b32 s4, 0x7f800000
+; SI-IEEE-SAFE-NEXT:    v_frexp_mant_f32_e32 v1, v0
+; SI-IEEE-SAFE-NEXT:    v_cmp_lt_f32_e64 vcc, |v0|, s4
+; SI-IEEE-SAFE-NEXT:    v_cndmask_b32_e32 v1, v0, v1, vcc
+; SI-IEEE-SAFE-NEXT:    v_rcp_f32_e32 v1, v1
+; SI-IEEE-SAFE-NEXT:    v_frexp_exp_i32_f32_e32 v2, v0
+; SI-IEEE-SAFE-NEXT:    v_sub_i32_e32 v2, vcc, 0, v2
+; SI-IEEE-SAFE-NEXT:    v_ldexp_f32_e32 v1, v1, v2
+; SI-IEEE-SAFE-NEXT:    s_setpc_b64 s[30:31]
+;
+; CI-IEEE-SAFE-LABEL: v_rsq_f32_multi_use:
+; CI-IEEE-SAFE:       ; %bb.0:
+; CI-IEEE-SAFE-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; CI-IEEE-SAFE-NEXT:    s_mov_b32 s4, 0xf800000
+; CI-IEEE-SAFE-NEXT:    v_mul_f32_e32 v1, 0x4f800000, v0
+; CI-IEEE-SAFE-NEXT:    v_cmp_gt_f32_e32 vcc, s4, v0
+; CI-IEEE-SAFE-NEXT:    v_cndmask_b32_e32 v0, v0, v1, vcc
+; CI-IEEE-SAFE-NEXT:    v_sqrt_f32_e32 v1, v0
+; CI-IEEE-SAFE-NEXT:    v_add_i32_e64 v2, s[4:5], -1, v1
+; CI-IEEE-SAFE-NEXT:    v_fma_f32 v3, -v2, v1, v0
+; CI-IEEE-SAFE-NEXT:    v_cmp_ge_f32_e64 s[4:5], 0, v3
+; CI-IEEE-SAFE-NEXT:    v_cndmask_b32_e64 v2, v1, v2, s[4:5]
+; CI-IEEE-SAFE-NEXT:    v_add_i32_e64 v3, s[4:5], 1, v1
+; CI-IEEE-SAFE-NEXT:    v_fma_f32 v1, -v3, v1, v0
+; CI-IEEE-SAFE-NEXT:    v_cmp_lt_f32_e64 s[4:5], 0, v1
+; CI-IEEE-SAFE-NEXT:    v_cndmask_b32_e64 v1, v2, v3, s[4:5]
+; CI-IEEE-SAFE-NEXT:    v_mul_f32_e32 v2, 0x37800000, v1
+; CI-IEEE-SAFE-NEXT:    v_cndmask_b32_e32 v1, v1, v2, vcc
+; CI-IEEE-SAFE-NEXT:    v_mov_b32_e32 v2, 0x260
+; CI-IEEE-SAFE-NEXT:    v_cmp_class_f32_e32 vcc, v0, v2
+; CI-IEEE-SAFE-NEXT:    v_cndmask_b32_e32 v0, v1, v0, vcc
+; CI-IEEE-SAFE-NEXT:    v_frexp_mant_f32_e32 v1, v0
+; CI-IEEE-SAFE-NEXT:    v_rcp_f32_e32 v1, v1
+; CI-IEEE-SAFE-NEXT:    v_frexp_exp_i32_f32_e32 v2, v0
+; CI-IEEE-SAFE-NEXT:    v_sub_i32_e32 v2, vcc, 0, v2
+; CI-IEEE-SAFE-NEXT:    v_ldexp_f32_e32 v1, v1, v2
+; CI-IEEE-SAFE-NEXT:    s_setpc_b64 s[30:31]
+  %sqrt = call contract float @llvm.sqrt.f32(float %val), !fpmath !1
+  %insert.0 = insertvalue { float, float } poison, float %sqrt, 0
+  %div = fdiv contract float 1.0, %sqrt, !fpmath !1
+  %insert.1 = insertvalue { float, float } %insert.0, float %div, 1
+  ret { float, float } %insert.1
+}
+
+define float @v_rsq_f32_missing_contract0(float %val) {
+; GCN-DAZ-UNSAFE-LABEL: v_rsq_f32_missing_contract0:
+; GCN-DAZ-UNSAFE:       ; %bb.0:
+; GCN-DAZ-UNSAFE-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GCN-DAZ-UNSAFE-NEXT:    v_rsq_f32_e32 v0, v0
+; GCN-DAZ-UNSAFE-NEXT:    s_setpc_b64 s[30:31]
+;
+; GCN-IEEE-UNSAFE-LABEL: v_rsq_f32_missing_contract0:
+; GCN-IEEE-UNSAFE:       ; %bb.0:
+; GCN-IEEE-UNSAFE-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GCN-IEEE-UNSAFE-NEXT:    v_rsq_f32_e32 v0, v0
+; GCN-IEEE-UNSAFE-NEXT:    s_setpc_b64 s[30:31]
+;
+; GCN-DAZ-SAFE-LABEL: v_rsq_f32_missing_contract0:
+; GCN-DAZ-SAFE:       ; %bb.0:
+; GCN-DAZ-SAFE-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GCN-DAZ-SAFE-NEXT:    v_sqrt_f32_e32 v0, v0
+; GCN-DAZ-SAFE-NEXT:    v_rcp_f32_e32 v0, v0
+; GCN-DAZ-SAFE-NEXT:    s_setpc_b64 s[30:31]
+;
+; SI-IEEE-SAFE-LABEL: v_rsq_f32_missing_contract0:
+; SI-IEEE-SAFE:       ; %bb.0:
+; SI-IEEE-SAFE-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; SI-IEEE-SAFE-NEXT:    s_mov_b32 s4, 0xf800000
+; SI-IEEE-SAFE-NEXT:    v_mul_f32_e32 v1, 0x4f800000, v0
+; SI-IEEE-SAFE-NEXT:    v_cmp_gt_f32_e32 vcc, s4, v0
+; SI-IEEE-SAFE-NEXT:    v_cndmask_b32_e32 v0, v0, v1, vcc
+; SI-IEEE-SAFE-NEXT:    v_sqrt_f32_e32 v1, v0
+; SI-IEEE-SAFE-NEXT:    v_add_i32_e64 v2, s[4:5], -1, v1
+; SI-IEEE-SAFE-NEXT:    v_fma_f32 v3, -v2, v1, v0
+; SI-IEEE-SAFE-NEXT:    v_cmp_ge_f32_e64 s[4:5], 0, v3
+; SI-IEEE-SAFE-NEXT:    v_cndmask_b32_e64 v2, v1, v2, s[4:5]
+; SI-IEEE-SAFE-NEXT:    v_add_i32_e64 v3, s[4:5], 1, v1
+; SI-IEEE-SAFE-NEXT:    v_fma_f32 v1, -v3, v1, v0
+; SI-IEEE-SAFE-NEXT:    v_cmp_lt_f32_e64 s[4:5], 0, v1
+; SI-IEEE-SAFE-NEXT:    v_cndmask_b32_e64 v1, v2, v3, s[4:5]
+; SI-IEEE-SAFE-NEXT:    v_mul_f32_e32 v2, 0x37800000, v1
+; SI-IEEE-SAFE-NEXT:    v_cndmask_b32_e32 v1, v1, v2, vcc
+; SI-IEEE-SAFE-NEXT:    v_mov_b32_e32 v2, 0x260
+; SI-IEEE-SAFE-NEXT:    v_cmp_class_f32_e32 vcc, v0, v2
+; SI-IEEE-SAFE-NEXT:    v_cndmask_b32_e32 v0, v1, v0, vcc
+; SI-IEEE-SAFE-NEXT:    s_mov_b32 s4, 0x7f800000
+; SI-IEEE-SAFE-NEXT:    v_frexp_mant_f32_e32 v1, v0
+; SI-IEEE-SAFE-NEXT:    v_cmp_lt_f32_e64 vcc, |v0|, s4
+; SI-IEEE-SAFE-NEXT:    v_cndmask_b32_e32 v1, v0, v1, vcc
+; SI-IEEE-SAFE-NEXT:    v_rcp_f32_e32 v1, v1
+; SI-IEEE-SAFE-NEXT:    v_frexp_exp_i32_f32_e32 v0, v0
+; SI-IEEE-SAFE-NEXT:    v_sub_i32_e32 v0, vcc, 0, v0
+; SI-IEEE-SAFE-NEXT:    v_ldexp_f32_e32 v0, v1, v0
+; SI-IEEE-SAFE-NEXT:    s_setpc_b64 s[30:31]
+;
+; CI-IEEE-SAFE-LABEL: v_rsq_f32_missing_contract0:
+; CI-IEEE-SAFE:       ; %bb.0:
+; CI-IEEE-SAFE-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; CI-IEEE-SAFE-NEXT:    s_mov_b32 s4, 0xf800000
+; CI-IEEE-SAFE-NEXT:    v_mul_f32_e32 v1, 0x4f800000, v0
+; CI-IEEE-SAFE-NEXT:    v_cmp_gt_f32_e32 vcc, s4, v0
+; CI-IEEE-SAFE-NEXT:    v_cndmask_b32_e32 v0, v0, v1, vcc
+; CI-IEEE-SAFE-NEXT:    v_sqrt_f32_e32 v1, v0
+; CI-IEEE-SAFE-NEXT:    v_add_i32_e64 v2, s[4:5], -1, v1
+; CI-IEEE-SAFE-NEXT:    v_fma_f32 v3, -v2, v1, v0
+; CI-IEEE-SAFE-NEXT:    v_cmp_ge_f32_e64 s[4:5], 0, v3
+; CI-IEEE-SAFE-NEXT:    v_cndmask_b32_e64 v2, v1, v2, s[4:5]
+; CI-IEEE-SAFE-NEXT:    v_add_i32_e64 v3, s[4:5], 1, v1
+; CI-IEEE-SAFE-NEXT:    v_fma_f32 v1, -v3, v1, v0
+; CI-IEEE-SAFE-NEXT:    v_cmp_lt_f32_e64 s[4:5], 0, v1
+; CI-IEEE-SAFE-NEXT:    v_cndmask_b32_e64 v1, v2, v3, s[4:5]
+; CI-IEEE-SAFE-NEXT:    v_mul_f32_e32 v2, 0x37800000, v1
+; CI-IEEE-SAFE-NEXT:    v_cndmask_b32_e32 v1, v1, v2, vcc
+; CI-IEEE-SAFE-NEXT:    v_mov_b32_e32 v2, 0x260
+; CI-IEEE-SAFE-NEXT:    v_cmp_class_f32_e32 vcc, v0, v2
+; CI-IEEE-SAFE-NEXT:    v_cndmask_b32_e32 v0, v1, v0, vcc
+; CI-IEEE-SAFE-NEXT:    v_frexp_mant_f32_e32 v1, v0
+; CI-IEEE-SAFE-NEXT:    v_rcp_f32_e32 v1, v1
+; CI-IEEE-SAFE-NEXT:    v_frexp_exp_i32_f32_e32 v0, v0
+; CI-IEEE-SAFE-NEXT:    v_sub_i32_e32 v0, vcc, 0, v0
+; CI-IEEE-SAFE-NEXT:    v_ldexp_f32_e32 v0, v1, v0
+; CI-IEEE-SAFE-NEXT:    s_setpc_b64 s[30:31]
   %sqrt = call float @llvm.sqrt.f32(float %val), !fpmath !1
+  %div = fdiv contract float 1.0, %sqrt, !fpmath !1
+  ret float %div
+}
+
+define float @v_rsq_f32_missing_contract1(float %val) {
+; GCN-DAZ-UNSAFE-LABEL: v_rsq_f32_missing_contract1:
+; GCN-DAZ-UNSAFE:       ; %bb.0:
+; GCN-DAZ-UNSAFE-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GCN-DAZ-UNSAFE-NEXT:    v_rsq_f32_e32 v0, v0
+; GCN-DAZ-UNSAFE-NEXT:    s_setpc_b64 s[30:31]
+;
+; GCN-IEEE-UNSAFE-LABEL: v_rsq_f32_missing_contract1:
+; GCN-IEEE-UNSAFE:       ; %bb.0:
+; GCN-IEEE-UNSAFE-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GCN-IEEE-UNSAFE-NEXT:    v_rsq_f32_e32 v0, v0
+; GCN-IEEE-UNSAFE-NEXT:    s_setpc_b64 s[30:31]
+;
+; GCN-DAZ-SAFE-LABEL: v_rsq_f32_missing_contract1:
+; GCN-DAZ-SAFE:       ; %bb.0:
+; GCN-DAZ-SAFE-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GCN-DAZ-SAFE-NEXT:    v_sqrt_f32_e32 v0, v0
+; GCN-DAZ-SAFE-NEXT:    v_rcp_f32_e32 v0, v0
+; GCN-DAZ-SAFE-NEXT:    s_setpc_b64 s[30:31]
+;
+; SI-IEEE-SAFE-LABEL: v_rsq_f32_missing_contract1:
+; SI-IEEE-SAFE:       ; %bb.0:
+; SI-IEEE-SAFE-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; SI-IEEE-SAFE-NEXT:    s_mov_b32 s4, 0xf800000
+; SI-IEEE-SAFE-NEXT:    v_mul_f32_e32 v1, 0x4f800000, v0
+; SI-IEEE-SAFE-NEXT:    v_cmp_gt_f32_e32 vcc, s4, v0
+; SI-IEEE-SAFE-NEXT:    v_cndmask_b32_e32 v0, v0, v1, vcc
+; SI-IEEE-SAFE-NEXT:    v_sqrt_f32_e32 v1, v0
+; SI-IEEE-SAFE-NEXT:    v_add_i32_e64 v2, s[4:5], -1, v1
+; SI-IEEE-SAFE-NEXT:    v_fma_f32 v3, -v2, v1, v0
+; SI-IEEE-SAFE-NEXT:    v_cmp_ge_f32_e64 s[4:5], 0, v3
+; SI-IEEE-SAFE-NEXT:    v_cndmask_b32_e64 v2, v1, v2, s[4:5]
+; SI-IEEE-SAFE-NEXT:    v_add_i32_e64 v3, s[4:5], 1, v1
+; SI-IEEE-SAFE-NEXT:    v_fma_f32 v1, -v3, v1, v0
+; SI-IEEE-SAFE-NEXT:    v_cmp_lt_f32_e64 s[4:5], 0, v1
+; SI-IEEE-SAFE-NEXT:    v_cndmask_b32_e64 v1, v2, v3, s[4:5]
+; SI-IEEE-SAFE-NEXT:    v_mul_f32_e32 v2, 0x37800000, v1
+; SI-IEEE-SAFE-NEXT:    v_cndmask_b32_e32 v1, v1, v2, vcc
+; SI-IEEE-SAFE-NEXT:    v_mov_b32_e32 v2, 0x260
+; SI-IEEE-SAFE-NEXT:    v_cmp_class_f32_e32 vcc, v0, v2
+; SI-IEEE-SAFE-NEXT:    v_cndmask_b32_e32 v0, v1, v0, vcc
+; SI-IEEE-SAFE-NEXT:    s_mov_b32 s4, 0x7f800000
+; SI-IEEE-SAFE-NEXT:    v_frexp_mant_f32_e32 v1, v0
+; SI-IEEE-SAFE-NEXT:    v_cmp_lt_f32_e64 vcc, |v0|, s4
+; SI-IEEE-SAFE-NEXT:    v_cndmask_b32_e32 v1, v0, v1, vcc
+; SI-IEEE-SAFE-NEXT:    v_rcp_f32_e32 v1, v1
+; SI-IEEE-SAFE-NEXT:    v_frexp_exp_i32_f32_e32 v0, v0
+; SI-IEEE-SAFE-NEXT:    v_sub_i32_e32 v0, vcc, 0, v0
+; SI-IEEE-SAFE-NEXT:    v_ldexp_f32_e32 v0, v1, v0
+; SI-IEEE-SAFE-NEXT:    s_setpc_b64 s[30:31]
+;
+; CI-IEEE-SAFE-LABEL: v_rsq_f32_missing_contract1:
+; CI-IEEE-SAFE:       ; %bb.0:
+; CI-IEEE-SAFE-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; CI-IEEE-SAFE-NEXT:    s_mov_b32 s4, 0xf800000
+; CI-IEEE-SAFE-NEXT:    v_mul_f32_e32 v1, 0x4f800000, v0
+; CI-IEEE-SAFE-NEXT:    v_cmp_gt_f32_e32 vcc, s4, v0
+; CI-IEEE-SAFE-NEXT:    v_cndmask_b32_e32 v0, v0, v1, vcc
+; CI-IEEE-SAFE-NEXT:    v_sqrt_f32_e32 v1, v0
+; CI-IEEE-SAFE-NEXT:    v_add_i32_e64 v2, s[4:5], -1, v1
+; CI-IEEE-SAFE-NEXT:    v_fma_f32 v3, -v2, v1, v0
+; CI-IEEE-SAFE-NEXT:    v_cmp_ge_f32_e64 s[4:5], 0, v3
+; CI-IEEE-SAFE-NEXT:    v_cndmask_b32_e64 v2, v1, v2, s[4:5]
+; CI-IEEE-SAFE-NEXT:    v_add_i32_e64 v3, s[4:5], 1, v1
+; CI-IEEE-SAFE-NEXT:    v_fma_f32 v1, -v3, v1, v0
+; CI-IEEE-SAFE-NEXT:    v_cmp_lt_f32_e64 s[4:5], 0, v1
+; CI-IEEE-SAFE-NEXT:    v_cndmask_b32_e64 v1, v2, v3, s[4:5]
+; CI-IEEE-SAFE-NEXT:    v_mul_f32_e32 v2, 0x37800000, v1
+; CI-IEEE-SAFE-NEXT:    v_cndmask_b32_e32 v1, v1, v2, vcc
+; CI-IEEE-SAFE-NEXT:    v_mov_b32_e32 v2, 0x260
+; CI-IEEE-SAFE-NEXT:    v_cmp_class_f32_e32 vcc, v0, v2
+; CI-IEEE-SAFE-NEXT:    v_cndmask_b32_e32 v0, v1, v0, vcc
+; CI-IEEE-SAFE-NEXT:    v_frexp_mant_f32_e32 v1, v0
+; CI-IEEE-SAFE-NEXT:    v_rcp_f32_e32 v1, v1
+; CI-IEEE-SAFE-NEXT:    v_frexp_exp_i32_f32_e32 v0, v0
+; CI-IEEE-SAFE-NEXT:    v_sub_i32_e32 v0, vcc, 0, v0
+; CI-IEEE-SAFE-NEXT:    v_ldexp_f32_e32 v0, v1, v0
+; CI-IEEE-SAFE-NEXT:    s_setpc_b64 s[30:31]
+  %sqrt = call contract float @llvm.sqrt.f32(float %val), !fpmath !1
   %div = fdiv float 1.0, %sqrt, !fpmath !1
   ret float %div
 }
@@ -871,21 +2294,17 @@ define float @v_rsq_f32_contractable_user(float %val0, float %val1) {
 ; GCN-IEEE-SAFE-LABEL: v_rsq_f32_contractable_user:
 ; GCN-IEEE-SAFE:       ; %bb.0:
 ; GCN-IEEE-SAFE-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GCN-IEEE-SAFE-NEXT:    v_sqrt_f32_e32 v0, v0
-; GCN-IEEE-SAFE-NEXT:    v_div_scale_f32 v2, s[4:5], v0, v0, 1.0
-; GCN-IEEE-SAFE-NEXT:    v_rcp_f32_e32 v3, v2
-; GCN-IEEE-SAFE-NEXT:    v_div_scale_f32 v4, vcc, 1.0, v0, 1.0
-; GCN-IEEE-SAFE-NEXT:    v_fma_f32 v5, -v2, v3, 1.0
-; GCN-IEEE-SAFE-NEXT:    v_fma_f32 v3, v5, v3, v3
-; GCN-IEEE-SAFE-NEXT:    v_mul_f32_e32 v5, v4, v3
-; GCN-IEEE-SAFE-NEXT:    v_fma_f32 v6, -v2, v5, v4
-; GCN-IEEE-SAFE-NEXT:    v_fma_f32 v5, v6, v3, v5
-; GCN-IEEE-SAFE-NEXT:    v_fma_f32 v2, -v2, v5, v4
-; GCN-IEEE-SAFE-NEXT:    v_div_fmas_f32 v2, v2, v3, v5
-; GCN-IEEE-SAFE-NEXT:    v_div_fixup_f32 v0, v2, v0, 1.0
-; GCN-IEEE-SAFE-NEXT:    v_add_f32_e32 v0, v0, v1
+; GCN-IEEE-SAFE-NEXT:    s_mov_b32 s4, 0x800000
+; GCN-IEEE-SAFE-NEXT:    v_mov_b32_e32 v2, 0x4b800000
+; GCN-IEEE-SAFE-NEXT:    v_cmp_gt_f32_e32 vcc, s4, v0
+; GCN-IEEE-SAFE-NEXT:    v_cndmask_b32_e32 v2, 1.0, v2, vcc
+; GCN-IEEE-SAFE-NEXT:    v_mul_f32_e32 v0, v0, v2
+; GCN-IEEE-SAFE-NEXT:    v_rsq_f32_e32 v0, v0
+; GCN-IEEE-SAFE-NEXT:    v_mov_b32_e32 v2, 0x45800000
+; GCN-IEEE-SAFE-NEXT:    v_cndmask_b32_e32 v2, 1.0, v2, vcc
+; GCN-IEEE-SAFE-NEXT:    v_fma_f32 v0, v0, v2, v1
 ; GCN-IEEE-SAFE-NEXT:    s_setpc_b64 s[30:31]
-  %sqrt = call float @llvm.sqrt.f32(float %val0), !fpmath !1
+  %sqrt = call contract float @llvm.sqrt.f32(float %val0), !fpmath !1
   %div = fdiv contract float 1.0, %sqrt, !fpmath !1
   %add = fadd contract float %div, %val1
   ret float %add
@@ -910,22 +2329,18 @@ define float @v_rsq_f32_contractable_user_missing_contract0(float %val0, float %
 ; GCN-IEEE-SAFE-LABEL: v_rsq_f32_contractable_user_missing_contract0:
 ; GCN-IEEE-SAFE:       ; %bb.0:
 ; GCN-IEEE-SAFE-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GCN-IEEE-SAFE-NEXT:    v_sqrt_f32_e32 v0, v0
-; GCN-IEEE-SAFE-NEXT:    v_div_scale_f32 v2, s[4:5], v0, v0, 1.0
-; GCN-IEEE-SAFE-NEXT:    v_rcp_f32_e32 v3, v2
-; GCN-IEEE-SAFE-NEXT:    v_div_scale_f32 v4, vcc, 1.0, v0, 1.0
-; GCN-IEEE-SAFE-NEXT:    v_fma_f32 v5, -v2, v3, 1.0
-; GCN-IEEE-SAFE-NEXT:    v_fma_f32 v3, v5, v3, v3
-; GCN-IEEE-SAFE-NEXT:    v_mul_f32_e32 v5, v4, v3
-; GCN-IEEE-SAFE-NEXT:    v_fma_f32 v6, -v2, v5, v4
-; GCN-IEEE-SAFE-NEXT:    v_fma_f32 v5, v6, v3, v5
-; GCN-IEEE-SAFE-NEXT:    v_fma_f32 v2, -v2, v5, v4
-; GCN-IEEE-SAFE-NEXT:    v_div_fmas_f32 v2, v2, v3, v5
-; GCN-IEEE-SAFE-NEXT:    v_div_fixup_f32 v0, v2, v0, 1.0
-; GCN-IEEE-SAFE-NEXT:    v_add_f32_e32 v0, v0, v1
+; GCN-IEEE-SAFE-NEXT:    s_mov_b32 s4, 0x800000
+; GCN-IEEE-SAFE-NEXT:    v_mov_b32_e32 v2, 0x4b800000
+; GCN-IEEE-SAFE-NEXT:    v_cmp_gt_f32_e32 vcc, s4, v0
+; GCN-IEEE-SAFE-NEXT:    v_cndmask_b32_e32 v2, 1.0, v2, vcc
+; GCN-IEEE-SAFE-NEXT:    v_mul_f32_e32 v0, v0, v2
+; GCN-IEEE-SAFE-NEXT:    v_rsq_f32_e32 v0, v0
+; GCN-IEEE-SAFE-NEXT:    v_mov_b32_e32 v2, 0x45800000
+; GCN-IEEE-SAFE-NEXT:    v_cndmask_b32_e32 v2, 1.0, v2, vcc
+; GCN-IEEE-SAFE-NEXT:    v_fma_f32 v0, v0, v2, v1
 ; GCN-IEEE-SAFE-NEXT:    s_setpc_b64 s[30:31]
-  %sqrt = call float @llvm.sqrt.f32(float %val0), !fpmath !1
-  %div = fdiv float 1.0, %sqrt, !fpmath !1
+  %sqrt = call contract float @llvm.sqrt.f32(float %val0), !fpmath !1
+  %div = fdiv contract float 1.0, %sqrt, !fpmath !1
   %add = fadd contract float %div, %val1
   ret float %add
 }
@@ -949,24 +2364,69 @@ define float @v_rsq_f32_contractable_user_missing_contract1(float %val0, float %
 ; GCN-IEEE-SAFE-LABEL: v_rsq_f32_contractable_user_missing_contract1:
 ; GCN-IEEE-SAFE:       ; %bb.0:
 ; GCN-IEEE-SAFE-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GCN-IEEE-SAFE-NEXT:    v_sqrt_f32_e32 v0, v0
-; GCN-IEEE-SAFE-NEXT:    v_div_scale_f32 v2, s[4:5], v0, v0, 1.0
-; GCN-IEEE-SAFE-NEXT:    v_rcp_f32_e32 v3, v2
-; GCN-IEEE-SAFE-NEXT:    v_div_scale_f32 v4, vcc, 1.0, v0, 1.0
-; GCN-IEEE-SAFE-NEXT:    v_fma_f32 v5, -v2, v3, 1.0
-; GCN-IEEE-SAFE-NEXT:    v_fma_f32 v3, v5, v3, v3
-; GCN-IEEE-SAFE-NEXT:    v_mul_f32_e32 v5, v4, v3
-; GCN-IEEE-SAFE-NEXT:    v_fma_f32 v6, -v2, v5, v4
-; GCN-IEEE-SAFE-NEXT:    v_fma_f32 v5, v6, v3, v5
-; GCN-IEEE-SAFE-NEXT:    v_fma_f32 v2, -v2, v5, v4
-; GCN-IEEE-SAFE-NEXT:    v_div_fmas_f32 v2, v2, v3, v5
-; GCN-IEEE-SAFE-NEXT:    v_div_fixup_f32 v0, v2, v0, 1.0
+; GCN-IEEE-SAFE-NEXT:    s_mov_b32 s4, 0x800000
+; GCN-IEEE-SAFE-NEXT:    v_mov_b32_e32 v2, 0x4b800000
+; GCN-IEEE-SAFE-NEXT:    v_cmp_gt_f32_e32 vcc, s4, v0
+; GCN-IEEE-SAFE-NEXT:    v_cndmask_b32_e32 v2, 1.0, v2, vcc
+; GCN-IEEE-SAFE-NEXT:    v_mul_f32_e32 v0, v0, v2
+; GCN-IEEE-SAFE-NEXT:    v_rsq_f32_e32 v0, v0
+; GCN-IEEE-SAFE-NEXT:    v_mov_b32_e32 v2, 0x45800000
+; GCN-IEEE-SAFE-NEXT:    v_cndmask_b32_e32 v2, 1.0, v2, vcc
+; GCN-IEEE-SAFE-NEXT:    v_mul_f32_e32 v0, v0, v2
 ; GCN-IEEE-SAFE-NEXT:    v_add_f32_e32 v0, v0, v1
 ; GCN-IEEE-SAFE-NEXT:    s_setpc_b64 s[30:31]
-  %sqrt = call float @llvm.sqrt.f32(float %val0), !fpmath !1
+  %sqrt = call contract float @llvm.sqrt.f32(float %val0), !fpmath !1
   %div = fdiv contract float 1.0, %sqrt, !fpmath !1
   %add = fadd float %div, %val1
   ret float %add
+}
+
+define float @v_rsq_f32_known_never_denormal(float nofpclass(sub) %val) {
+; GCN-DAZ-LABEL: v_rsq_f32_known_never_denormal:
+; GCN-DAZ:       ; %bb.0:
+; GCN-DAZ-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GCN-DAZ-NEXT:    v_rsq_f32_e32 v0, v0
+; GCN-DAZ-NEXT:    s_setpc_b64 s[30:31]
+;
+; GCN-IEEE-LABEL: v_rsq_f32_known_never_denormal:
+; GCN-IEEE:       ; %bb.0:
+; GCN-IEEE-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GCN-IEEE-NEXT:    v_rsq_f32_e32 v0, v0
+; GCN-IEEE-NEXT:    s_setpc_b64 s[30:31]
+  %sqrt = call contract float @llvm.sqrt.f32(float %val), !fpmath !1
+  %div = fdiv contract float 1.0, %sqrt, !fpmath !1
+  ret float %div
+}
+
+define float @v_rsq_f32_known_never_posdenormal(float nofpclass(psub) %val) {
+; GCN-DAZ-LABEL: v_rsq_f32_known_never_posdenormal:
+; GCN-DAZ:       ; %bb.0:
+; GCN-DAZ-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GCN-DAZ-NEXT:    v_rsq_f32_e32 v0, v0
+; GCN-DAZ-NEXT:    s_setpc_b64 s[30:31]
+;
+; GCN-IEEE-UNSAFE-LABEL: v_rsq_f32_known_never_posdenormal:
+; GCN-IEEE-UNSAFE:       ; %bb.0:
+; GCN-IEEE-UNSAFE-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GCN-IEEE-UNSAFE-NEXT:    v_rsq_f32_e32 v0, v0
+; GCN-IEEE-UNSAFE-NEXT:    s_setpc_b64 s[30:31]
+;
+; GCN-IEEE-SAFE-LABEL: v_rsq_f32_known_never_posdenormal:
+; GCN-IEEE-SAFE:       ; %bb.0:
+; GCN-IEEE-SAFE-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GCN-IEEE-SAFE-NEXT:    s_mov_b32 s4, 0x800000
+; GCN-IEEE-SAFE-NEXT:    v_mov_b32_e32 v1, 0x4b800000
+; GCN-IEEE-SAFE-NEXT:    v_cmp_gt_f32_e32 vcc, s4, v0
+; GCN-IEEE-SAFE-NEXT:    v_cndmask_b32_e32 v1, 1.0, v1, vcc
+; GCN-IEEE-SAFE-NEXT:    v_mul_f32_e32 v0, v0, v1
+; GCN-IEEE-SAFE-NEXT:    v_rsq_f32_e32 v0, v0
+; GCN-IEEE-SAFE-NEXT:    v_mov_b32_e32 v1, 0x45800000
+; GCN-IEEE-SAFE-NEXT:    v_cndmask_b32_e32 v1, 1.0, v1, vcc
+; GCN-IEEE-SAFE-NEXT:    v_mul_f32_e32 v0, v0, v1
+; GCN-IEEE-SAFE-NEXT:    s_setpc_b64 s[30:31]
+  %sqrt = call contract float @llvm.sqrt.f32(float %val), !fpmath !1
+  %div = fdiv contract float 1.0, %sqrt, !fpmath !1
+  ret float %div
 }
 
 !0 = !{float 2.500000e+00}
@@ -976,10 +2436,7 @@ attributes #0 = { nounwind "denormal-fp-math-f32"="preserve-sign,preserve-sign" 
 ;; NOTE: These prefixes are unused and the list is autogenerated. Do not add tests below this line:
 ; CI-DAZ-SAFE: {{.*}}
 ; CI-DAZ-UNSAFE: {{.*}}
-; CI-IEEE-SAFE: {{.*}}
 ; CI-IEEE-UNSAFE: {{.*}}
-; GCN-IEEE: {{.*}}
 ; SI-DAZ-SAFE: {{.*}}
 ; SI-DAZ-UNSAFE: {{.*}}
-; SI-IEEE-SAFE: {{.*}}
 ; SI-IEEE-UNSAFE: {{.*}}

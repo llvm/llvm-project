@@ -1311,15 +1311,15 @@ EmitSpecialNode(SDNode *Node, bool IsClone, bool IsCloned,
     for (unsigned i = InlineAsm::Op_FirstOperand; i != NumOps;) {
       unsigned Flags =
         cast<ConstantSDNode>(Node->getOperand(i))->getZExtValue();
-      const unsigned NumVals = InlineAsm::getNumOperandRegisters(Flags);
+      const InlineAsm::Flag F(Flags);
+      const unsigned NumVals = F.getNumOperandRegisters();
 
       GroupIdx.push_back(MIB->getNumOperands());
       MIB.addImm(Flags);
       ++i;  // Skip the ID value.
 
-      switch (InlineAsm::getKind(Flags)) {
-      default: llvm_unreachable("Bad flags!");
-        case InlineAsm::Kind_RegDef:
+      switch (F.getKind()) {
+      case InlineAsm::Kind::RegDef:
         for (unsigned j = 0; j != NumVals; ++j, ++i) {
           Register Reg = cast<RegisterSDNode>(Node->getOperand(i))->getReg();
           // FIXME: Add dead flags for physical and virtual registers defined.
@@ -1328,8 +1328,8 @@ EmitSpecialNode(SDNode *Node, bool IsClone, bool IsCloned,
           MIB.addReg(Reg, RegState::Define | getImplRegState(Reg.isPhysical()));
         }
         break;
-      case InlineAsm::Kind_RegDefEarlyClobber:
-      case InlineAsm::Kind_Clobber:
+      case InlineAsm::Kind::RegDefEarlyClobber:
+      case InlineAsm::Kind::Clobber:
         for (unsigned j = 0; j != NumVals; ++j, ++i) {
           Register Reg = cast<RegisterSDNode>(Node->getOperand(i))->getReg();
           MIB.addReg(Reg, RegState::Define | RegState::EarlyClobber |
@@ -1337,9 +1337,9 @@ EmitSpecialNode(SDNode *Node, bool IsClone, bool IsCloned,
           ECRegs.push_back(Reg);
         }
         break;
-      case InlineAsm::Kind_RegUse:  // Use of register.
-      case InlineAsm::Kind_Imm:  // Immediate.
-      case InlineAsm::Kind_Mem:  // Non-function addressing mode.
+      case InlineAsm::Kind::RegUse: // Use of register.
+      case InlineAsm::Kind::Imm:    // Immediate.
+      case InlineAsm::Kind::Mem:    // Non-function addressing mode.
         // The addressing mode has been selected, just add all of the
         // operands to the machine instruction.
         for (unsigned j = 0; j != NumVals; ++j, ++i)
@@ -1347,9 +1347,9 @@ EmitSpecialNode(SDNode *Node, bool IsClone, bool IsCloned,
                      /*IsDebug=*/false, IsClone, IsCloned);
 
         // Manually set isTied bits.
-        if (InlineAsm::getKind(Flags) == InlineAsm::Kind_RegUse) {
-          unsigned DefGroup = 0;
-          if (InlineAsm::isUseOperandTiedToDef(Flags, DefGroup)) {
+        if (F.isRegUseKind()) {
+          unsigned DefGroup;
+          if (F.isUseOperandTiedToDef(DefGroup)) {
             unsigned DefIdx = GroupIdx[DefGroup] + 1;
             unsigned UseIdx = GroupIdx.back() + 1;
             for (unsigned j = 0; j != NumVals; ++j)
@@ -1357,7 +1357,7 @@ EmitSpecialNode(SDNode *Node, bool IsClone, bool IsCloned,
           }
         }
         break;
-      case InlineAsm::Kind_Func: // Function addressing mode.
+      case InlineAsm::Kind::Func: // Function addressing mode.
         for (unsigned j = 0; j != NumVals; ++j, ++i) {
           SDValue Op = Node->getOperand(i);
           AddOperand(MIB, Op, 0, nullptr, VRBaseMap,

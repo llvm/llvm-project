@@ -240,9 +240,13 @@ def FindPayloadReplacementOpInterface
 
 def PatternDescriptorOpInterface : OpInterface<"PatternDescriptorOpInterface"> {
   let description = [{
-    This interface should be implemented by ops that select patterns of a
-    `transform.apply_patterns` op. It provides a method to populate a rewrite
+    This interface should be implemented by ops that select rewrite patterns of
+    a `transform.apply_patterns` op. It provides a method to populate a rewrite
     pattern set with patterns.
+
+    Note: Conversion patterns are rewrite patterns in MLIR, but they should not
+    be populated with `PatternDescriptorOpInterface` because they cannot be
+    used in a greedy pattern rewrite.
   }];
 
   let cppNamespace = "::mlir::transform";
@@ -250,11 +254,124 @@ def PatternDescriptorOpInterface : OpInterface<"PatternDescriptorOpInterface"> {
   let methods = [
     InterfaceMethod<
       /*desc=*/[{
-        Populate patterns into the given pattern set.
+        Populate rewrite patterns into the given pattern set.
       }],
       /*returnType=*/"void",
       /*name=*/"populatePatterns",
-      /*arguments=*/(ins "RewritePatternSet &":$patterns)
+      /*arguments=*/(ins "::mlir::RewritePatternSet &":$patterns)
+    >,
+    InterfaceMethod<
+      /*desc=*/[{
+        Populate rewrite patterns into the given pattern set taking into account
+        the transform state.
+      }],
+      /*returnType=*/"void",
+      /*name=*/"populatePatternsWithState",
+      /*arguments=*/(ins "::mlir::RewritePatternSet &":$patterns,
+                         "::mlir::transform::TransformState &":$state),
+      /*methodBody=*/"",
+      /*defaultImplementation=*/[{ $_op.populatePatterns(patterns); }]
+    >
+  ];
+}
+
+def TypeConverterBuilderOpInterface
+    : OpInterface<"TypeConverterBuilderOpInterface"> {
+  let description = [{
+    This interface should be implemented by ops that specify a type converter
+    for a dialect conversion. Such ops can be used with
+    "apply_conversion_patterns".
+  }];
+
+  let cppNamespace = "::mlir::transform";
+
+  let methods = [
+    InterfaceMethod<
+      /*desc=*/[{
+        Return the type converter to be used with a dialect conversion.
+      }],
+      /*returnType=*/"std::unique_ptr<::mlir::TypeConverter>",
+      /*name=*/"getTypeConverter",
+      /*arguments=*/(ins)
+    >,
+    StaticInterfaceMethod<
+      /*desc=*/[{
+        Return the type of type converter that this `getTypeConverter` returns.
+        This function is used for op verification.
+      }],
+      /*returnType=*/"StringRef",
+      /*name=*/"getTypeConverterType",
+      /*arguments=*/(ins),
+      /*methodBody=*/"",
+      /*defaultImplementation=*/[{ return "TypeConverter"; }]
+    >,
+  ];
+}
+
+def ConversionPatternDescriptorOpInterface
+    : OpInterface<"ConversionPatternDescriptorOpInterface"> {
+  let description = [{
+    This interface should be implemented by ops that select conversion patterns
+    of a `transform.apply_patterns` op. It provides a method to populate a
+    rewrite pattern set with conversion patterns.
+
+    Note: Non-conversion rewrite patterns should not be populated with
+    `ConversionPatternDescriptorOpInterface` because it is not generally safe
+    to use non-conversion rewrite patterns as part of a dialect conversion.
+  }];
+
+  let cppNamespace = "::mlir::transform";
+
+  let methods = [
+    InterfaceMethod<
+      /*desc=*/[{
+        Populate conversion patterns into the given pattern set with the
+        given type converter.
+      }],
+      /*returnType=*/"void",
+      /*name=*/"populatePatterns",
+      /*arguments=*/(ins "::mlir::TypeConverter &":$typeConverter,
+                         "::mlir::RewritePatternSet &":$patterns)
+    >,
+    InterfaceMethod<
+      /*desc=*/[{
+        Populate the ConversionTarget using the final TypeConverter. The default
+        implementation is to do nothing. Overriding this method can be useful
+        in order to setup the ConversionTarget for structural type conversions.
+        In such a situation, an op's legality depends on using the TypeConverter
+        to determine whether the op's operand and result types are legal
+        (defined as converting to themselves).
+
+      }],
+      /*returnType=*/"void",
+      /*name=*/"populateConversionTargetRules",
+      /*arguments=*/(ins "const ::mlir::TypeConverter &":$typeConverter,
+                         "::mlir::ConversionTarget &":$conversionTarget),
+      /*methodBody=*/"",
+      /*defaultImplementation=*/"return;"
+    >,
+    InterfaceMethod<
+      /*desc=*/[{
+        Return the type converter to be used with this pattern set. If no
+        type converter is specified, the default type converter of the enclosing
+        "apply_conversion_patterns" op is used.
+      }],
+      /*returnType=*/"std::unique_ptr<::mlir::TypeConverter>",
+      /*name=*/"getTypeConverter",
+      /*arguments=*/(ins),
+      /*methodBody=*/"",
+      /*defaultImplementation=*/"return nullptr;"
+    >,
+    InterfaceMethod<
+      /*desc=*/[{
+        Verify the default type converter that is provided by the enclosing
+        "apply_conversion_patterns" op.
+      }],
+      /*returnType=*/"::mlir::LogicalResult",
+      /*name=*/"verifyTypeConverter",
+      /*arguments=*/(ins "TypeConverterBuilderOpInterface":$builder),
+      /*methodBody=*/"",
+      /*defaultImplementation=*/"return success();"
     >,
   ];
 }

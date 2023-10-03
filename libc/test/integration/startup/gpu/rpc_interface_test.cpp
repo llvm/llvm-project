@@ -6,11 +6,12 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "include/llvm-libc-types/test_rpc_opcodes_t.h"
 #include "src/__support/GPU/utils.h"
 #include "src/__support/RPC/rpc_client.h"
 #include "test/IntegrationTest/test.h"
 
-using namespace __llvm_libc;
+using namespace LIBC_NAMESPACE;
 
 // Test to ensure that we can use aribtrary combinations of sends and recieves
 // as long as they are mirrored.

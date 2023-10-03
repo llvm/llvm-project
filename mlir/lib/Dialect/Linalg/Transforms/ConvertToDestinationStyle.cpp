@@ -202,9 +202,11 @@ createAllocationForTensor(RewriterBase &rewriter, Location loc, Value value,
   if (options.allocOp ==
       linalg::BufferizeToAllocationOptions::AllocOp::MemrefAlloc) {
     alloc = rewriter.create<memref::AllocOp>(loc, memrefType, dynamicSizes);
-    // Place deallocation at the end of the block.
-    rewriter.setInsertionPoint(rewriter.getInsertionBlock()->getTerminator());
-    rewriter.create<memref::DeallocOp>(loc, alloc);
+    if (options.emitDealloc) {
+      // Place deallocation at the end of the block.
+      rewriter.setInsertionPoint(rewriter.getInsertionBlock()->getTerminator());
+      rewriter.create<memref::DeallocOp>(loc, alloc);
+    }
   } else if (options.allocOp ==
              linalg::BufferizeToAllocationOptions::AllocOp::MemrefAlloca) {
     alloc = rewriter.create<memref::AllocaOp>(loc, memrefType, dynamicSizes);
@@ -217,6 +219,9 @@ createAllocationForTensor(RewriterBase &rewriter, Location loc, Value value,
 Value linalg::bufferizeToAllocation(
     RewriterBase &rewriter, const linalg::BufferizeToAllocationOptions &options,
     PadOp padOp, Attribute memorySpace, Operation *insertionPoint) {
+  // tensor.pad does not have a destination operand.
+  assert(!options.bufferizeDestinationOnly && "invalid options");
+
   OpBuilder::InsertionGuard g(rewriter);
   rewriter.setInsertionPoint(insertionPoint ? insertionPoint : padOp);
   Location loc = padOp.getLoc();
@@ -265,6 +270,9 @@ Value linalg::bufferizeToAllocation(
   Value alloc = bufferizeToAllocation(
       rewriter, options, maskOp.getMaskableOp(), memorySpace,
       /*insertionPoint=*/insertionPoint ? insertionPoint : maskOp);
+
+  if (options.bufferizeDestinationOnly)
+    return alloc;
 
   // Bufferize terminator.
   rewriter.setInsertionPoint(yieldOp);
@@ -454,6 +462,23 @@ Value linalg::bufferizeToAllocation(
   BufferizationOptions bufferizationOptions;
   AnalysisState state(bufferizationOptions);
 
+#ifndef NDEBUG
+  if (!options.bufferizeDestinationOnly) {
+    // Ops with nested tensor ops are not supported yet. At the moment, this
+    // function just bufferizes the given op itself, but not its body.
+    op->walk([&](Operation *nestedOp) {
+      if (op == nestedOp)
+        return;
+      if (llvm::any_of(nestedOp->getOperands(),
+                       [](Value v) { return v.getType().isa<TensorType>(); }))
+        llvm_unreachable("ops with nested tensor ops are not supported yet");
+      if (llvm::any_of(nestedOp->getResults(),
+                       [](Value v) { return v.getType().isa<TensorType>(); }))
+        llvm_unreachable("ops with nested tensor ops are not supported yet");
+    });
+  }
+#endif // NDEBUG
+
   // Gather tensor results.
   SmallVector<OpResult> tensorResults;
   for (OpResult result : op->getResults()) {
@@ -488,7 +513,7 @@ Value linalg::bufferizeToAllocation(
     if (!state.bufferizesToMemoryWrite(operand))
       continue;
     if (!isa<RankedTensorType>(operand.get().getType()))
-      return nullptr;
+      continue;
     addOutOfPlaceOperand(&operand);
   }
   // TODO: Support multiple buffers.
@@ -509,9 +534,19 @@ Value linalg::bufferizeToAllocation(
       createMemcpy(rewriter, op->getLoc(), operand->get(), alloc, options);
     }
     rewriter.updateRootInPlace(op, [&]() {
-      operand->set(rewriter.create<ToTensorOp>(op->getLoc(), alloc));
+      auto toTensorOp = rewriter.create<ToTensorOp>(op->getLoc(), alloc);
+      operand->set(toTensorOp);
+      if (options.bufferizeDestinationOnly) {
+        rewriter.updateRootInPlace(toTensorOp, [&]() {
+          toTensorOp.setRestrict(true);
+          toTensorOp.setWritable(true);
+        });
+      }
     });
   }
+
+  if (options.bufferizeDestinationOnly)
+    return allocs.front();
 
   // Bufferize the op.
   rewriter.setInsertionPoint(op);

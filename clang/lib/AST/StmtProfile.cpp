@@ -928,6 +928,8 @@ void OMPClauseProfiler::VisitOMPXDynCGroupMemClause(
 void OMPClauseProfiler::VisitOMPDoacrossClause(const OMPDoacrossClause *C) {
   VisitOMPClauseList(C);
 }
+void OMPClauseProfiler::VisitOMPXAttributeClause(const OMPXAttributeClause *C) {
+}
 } // namespace
 
 void
@@ -991,6 +993,10 @@ void StmtProfiler::VisitOMPSectionsDirective(const OMPSectionsDirective *S) {
 }
 
 void StmtProfiler::VisitOMPSectionDirective(const OMPSectionDirective *S) {
+  VisitOMPExecutableDirective(S);
+}
+
+void StmtProfiler::VisitOMPScopeDirective(const OMPScopeDirective *S) {
   VisitOMPExecutableDirective(S);
 }
 
@@ -1327,7 +1333,15 @@ void StmtProfiler::VisitPredefinedExpr(const PredefinedExpr *S) {
 void StmtProfiler::VisitIntegerLiteral(const IntegerLiteral *S) {
   VisitExpr(S);
   S->getValue().Profile(ID);
-  ID.AddInteger(S->getType()->castAs<BuiltinType>()->getKind());
+
+  QualType T = S->getType();
+  if (Canonical)
+    T = T.getCanonicalType();
+  ID.AddInteger(T->getTypeClass());
+  if (auto BitIntT = T->getAs<BitIntType>())
+    BitIntT->Profile(ID);
+  else
+    ID.AddInteger(T->castAs<BuiltinType>()->getKind());
 }
 
 void StmtProfiler::VisitFixedPointLiteral(const FixedPointLiteral *S) {

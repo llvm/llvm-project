@@ -50,6 +50,12 @@ enum class ReservedIdentifierStatus {
   ContainsDoubleUnderscore,
 };
 
+enum class ReservedLiteralSuffixIdStatus {
+  NotReserved = 0,
+  NotStartsWithUnderscore,
+  ContainsDoubleUnderscore,
+};
+
 /// Determine whether an identifier is reserved for use as a name at global
 /// scope. Such identifiers might be implementation-specific global functions
 /// or variables.
@@ -491,9 +497,16 @@ public:
   /// 7.1.3, C++ [lib.global.names]).
   ReservedIdentifierStatus isReserved(const LangOptions &LangOpts) const;
 
+  /// Determine whether \p this is a name reserved for future standardization or
+  /// the implementation (C++ [usrlit.suffix]).
+  ReservedLiteralSuffixIdStatus isReservedLiteralSuffixId() const;
+
   /// If the identifier is an "uglified" reserved name, return a cleaned form.
   /// e.g. _Foo => Foo. Otherwise, just returns the name.
   StringRef deuglifiedName() const;
+  bool isPlaceholder() const {
+    return getLength() == 1 && getNameStart()[0] == '_';
+  }
 
   /// Provide less than operator for lexicographical sorting.
   bool operator<(const IdentifierInfo &RHS) const {

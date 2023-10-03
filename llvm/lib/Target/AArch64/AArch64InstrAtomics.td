@@ -162,14 +162,14 @@ def : Pat<(f64 (bitconvert (i64 (relaxed_load<atomic_load_64>
 
 // A store operation that actually needs release semantics.
 class releasing_store<PatFrag base>
-  : PatFrag<(ops node:$ptr, node:$val), (base node:$ptr, node:$val)> {
+  : PatFrag<(ops node:$ptr, node:$val), (base node:$val, node:$ptr)> {
   let IsAtomic = 1;
   let IsAtomicOrderingReleaseOrStronger = 1;
 }
 
 // An atomic store operation that doesn't actually need to be atomic on AArch64.
 class relaxed_store<PatFrag base>
-  : PatFrag<(ops node:$ptr, node:$val), (base node:$ptr, node:$val)> {
+  : PatFrag<(ops node:$ptr, node:$val), (base node:$val, node:$ptr)> {
   let IsAtomic = 1;
   let IsAtomicOrderingReleaseOrStronger = 0;
 }

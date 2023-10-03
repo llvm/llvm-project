@@ -22,6 +22,7 @@
 #include "mlir/Interfaces/DestinationStyleOpInterface.h"
 #include "mlir/Interfaces/InferTypeOpInterface.h"
 #include "mlir/Interfaces/ViewLikeInterface.h"
+#include "mlir/Support/RawOstreamExtras.h"
 
 namespace mlir {
 namespace linalg {
@@ -29,7 +30,7 @@ class IteratorTypeAttr;
 class LinalgOp;
 
 namespace detail {
-/// Implementation of the method that that check if given operands
+/// Implementation of the method that check if given operands
 /// can be dropped, i.e. the remaining operands can compute the loop
 /// bounds of the op.
 bool canOpOperandsBeDroppedImpl(linalg::LinalgOp linalgOp,
@@ -66,6 +67,45 @@ FailureOr<ContractionDimensions> inferContractionDims(LinalgOp linalgOp);
 // TODO: embed within `isa<ContractionOpInterface>` if possible / natural.
 bool isaContractionOpInterface(LinalgOp linalgOp);
 
+/// Positions of a Linalg op loops that correspond to different kinds of a
+/// convolution dimension.
+struct ConvolutionDimensions {
+  SmallVector<unsigned, 2> batch;
+  SmallVector<unsigned, 2> outputImage;
+  SmallVector<unsigned, 2> outputChannel;
+  SmallVector<unsigned, 2> filterLoop;
+  SmallVector<unsigned, 2> inputChannel;
+  SmallVector<unsigned, 2> depth;
+  SmallVector<int64_t, 2> strides;
+  SmallVector<int64_t, 2> dilations;
+};
+
+/// Find at least 1 parallel (output_image) and reduction (filter_loop)
+/// dimension candidates that form a convolution subcomputation within
+/// `linalgOp`. The LHS is assumed to be the convolution input while the
+/// RHS is assumed as the filter.
+/// These dimensions are such that:
+///   1. Optional batch dimensions that appear in the input and filter.
+///   2. The output_image dimension is involved in a cross-correlation along LHS
+///      (i.e. it is a permutation on RES and LHS and has an associated
+///      filter_loop in RHS).
+///   3. Optional output_channel dimension is involved in an outer-product along
+///      RHS (i.e. it is a permutation on RES and RHS and does not appear in
+///      LHS).
+///   4. Optional input_channel dimension appears as a permutation on LHS and
+///      RHS.
+///   5. The filter_loop dimension appears as a permutation on the RHS and
+///      represents the shape of the kernel cross-correlated along a
+///      corresponding output_image dim.
+///   6. The input_channel dimension appears as a permutation on LHS and RHS.
+///   7. All dimensions appear only once in any given indexing map.
+/// This allows e.g. detecting that some convolution is embedded within
+/// `linalgOp` with some orthogonal heuristic.
+/// When multiple dimension occurrences exist that match any classification
+/// indices are returned in sorted order.
+/// Returns a failure if `output_image` (and implicitly `filter_loop`) is empty.
+FailureOr<ConvolutionDimensions> inferConvolutionDims(LinalgOp linalgOp);
+
 /// Checks whether `linalgOp` conforms to ConvolutionOpInterface.
 // TODO: embed within `isa<ConvolutionOpInterface>` if possible / natural.
 bool isaConvolutionOpInterface(LinalgOp linalgOp);
@@ -90,7 +130,7 @@ namespace detail {
 /// the failed precondition is send to the `errs` stream, if provided.
 bool isContractionBody(Block &block,
                        function_ref<bool(Operation *, Operation *)> isaPair,
-                       llvm::raw_ostream &errs = llvm::nulls());
+                       llvm::raw_ostream &errs = mlir::thread_safe_nulls());
 
 /// Result of matching a Linalg generic against the predicates of it being a
 /// contraction.
@@ -99,9 +139,6 @@ enum class MatchContractionResult;
 /// Checks whether `op` conforms to ContractionOpInterface and populates
 /// `dimensions` with indexes of the different kinds of dimensions when
 /// present.
-// TODO: Extract a standalone `inferConvolutionDims` that can also detect
-// whether a conv pattern exists within a bigger linalg op (see
-// inferContractionDims).
 MatchContractionResult
 isContractionInterfaceImpl(Operation *op,
                            ContractionDimensions *dimensions = nullptr);
@@ -113,17 +150,6 @@ StringRef getMatchContractionMessage(MatchContractionResult res);
 /// Result of matching a Linalg generic against the predicates of it being a
 /// convolution.
 enum class MatchConvolutionResult;
-
-/// Positions of a Linalg op loops that correspond to different kinds of a
-/// convolution dimension.
-struct ConvolutionDimensions {
-  SmallVector<unsigned, 2> batch;
-  SmallVector<unsigned, 2> outputImage;
-  SmallVector<unsigned, 2> outputChannel;
-  SmallVector<unsigned, 2> filterLoop;
-  SmallVector<unsigned, 2> inputChannel;
-  SmallVector<unsigned, 2> depth;
-};
 
 /// Checks whether `op` conforms to ConvolutionOpInterface and populates
 /// `dimensions` with indexes of the different kinds of dimensions when

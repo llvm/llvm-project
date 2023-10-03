@@ -319,30 +319,31 @@ void MacroCallReconstructor::endReconstruction(FormatToken *Token) {
   assert(Token->MacroCtx &&
          (ActiveExpansions.size() >= Token->MacroCtx->EndOfExpansion));
   for (size_t I = 0; I < Token->MacroCtx->EndOfExpansion; ++I) {
-#ifndef NDEBUG
-    // Check all remaining tokens but the final closing parenthesis and optional
-    // trailing comment were already reconstructed at an inner expansion level.
-    for (auto T = ActiveExpansions.back().SpelledI;
-         T != ActiveExpansions.back().SpelledE; ++T) {
-      FormatToken *Token = T->Tok;
-      bool ClosingParen = (std::next(T) == ActiveExpansions.back().SpelledE ||
-                           std::next(T)->Tok->isTrailingComment()) &&
-                          !Token->MacroCtx && Token->is(tok::r_paren);
-      bool TrailingComment = Token->isTrailingComment();
-      bool PreviousLevel =
-          Token->MacroCtx &&
-          (ActiveExpansions.size() < Token->MacroCtx->ExpandedFrom.size());
-      if (!ClosingParen && !TrailingComment && !PreviousLevel)
-        llvm::dbgs() << "At token: " << Token->TokenText << "\n";
-      // In addition to the following cases, we can also run into this
-      // when a macro call had more arguments than expected; in that case,
-      // the comma and the remaining tokens in the macro call will potentially
-      // end up in the line when we finish the expansion.
-      // FIXME: Add the information which arguments are unused, and assert
-      // one of the cases below plus reconstructed macro argument tokens.
-      // assert(ClosingParen || TrailingComment || PreviousLevel);
-    }
-#endif
+    LLVM_DEBUG([&] {
+      // Check all remaining tokens but the final closing parenthesis and
+      // optional trailing comment were already reconstructed at an inner
+      // expansion level.
+      for (auto T = ActiveExpansions.back().SpelledI;
+           T != ActiveExpansions.back().SpelledE; ++T) {
+        FormatToken *Token = T->Tok;
+        bool ClosingParen = (std::next(T) == ActiveExpansions.back().SpelledE ||
+                             std::next(T)->Tok->isTrailingComment()) &&
+                            !Token->MacroCtx && Token->is(tok::r_paren);
+        bool TrailingComment = Token->isTrailingComment();
+        bool PreviousLevel =
+            Token->MacroCtx &&
+            (ActiveExpansions.size() < Token->MacroCtx->ExpandedFrom.size());
+        if (!ClosingParen && !TrailingComment && !PreviousLevel)
+          llvm::dbgs() << "At token: " << Token->TokenText << "\n";
+        // In addition to the following cases, we can also run into this
+        // when a macro call had more arguments than expected; in that case,
+        // the comma and the remaining tokens in the macro call will
+        // potentially end up in the line when we finish the expansion.
+        // FIXME: Add the information which arguments are unused, and assert
+        // one of the cases below plus reconstructed macro argument tokens.
+        // assert(ClosingParen || TrailingComment || PreviousLevel);
+      }
+    }());
     // Handle the remaining open tokens:
     // - expand the closing parenthesis, if it exists, including an optional
     //   trailing comment

@@ -13,8 +13,8 @@
 
 #include "llvm/TargetParser/LoongArchTargetParser.h"
 
-namespace llvm {
-namespace LoongArch {
+using namespace llvm;
+using namespace llvm::LoongArch;
 
 const FeatureInfo AllFeatures[] = {
 #define LOONGARCH_FEATURE(NAME, KIND) {NAME, KIND},
@@ -27,14 +27,15 @@ const ArchInfo AllArchs[] = {
 #include "llvm/TargetParser/LoongArchTargetParser.def"
 };
 
-bool isValidArchName(StringRef Arch) {
+bool LoongArch::isValidArchName(StringRef Arch) {
   for (const auto A : AllArchs)
     if (A.Name == Arch)
       return true;
   return false;
 }
 
-bool getArchFeatures(StringRef Arch, std::vector<StringRef> &Features) {
+bool LoongArch::getArchFeatures(StringRef Arch,
+                                std::vector<StringRef> &Features) {
   for (const auto A : AllArchs) {
     if (A.Name == Arch) {
       for (const auto F : AllFeatures)
@@ -45,5 +46,15 @@ bool getArchFeatures(StringRef Arch, std::vector<StringRef> &Features) {
   }
   return false;
 }
-} // namespace LoongArch
-} // namespace llvm
+
+bool LoongArch::isValidCPUName(StringRef Name) { return isValidArchName(Name); }
+
+void LoongArch::fillValidCPUList(SmallVectorImpl<StringRef> &Values) {
+  for (const auto A : AllArchs)
+    Values.emplace_back(A.Name);
+}
+
+StringRef LoongArch::getDefaultArch(bool Is64Bit) {
+  // TODO: use a real 32-bit arch name.
+  return Is64Bit ? "loongarch64" : "";
+}

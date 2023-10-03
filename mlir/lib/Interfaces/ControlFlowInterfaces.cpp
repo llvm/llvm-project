@@ -84,52 +84,47 @@ detail::verifyBranchSuccessorOperands(Operation *op, unsigned succNo,
 // RegionBranchOpInterface
 //===----------------------------------------------------------------------===//
 
+static InFlightDiagnostic &printRegionEdgeName(InFlightDiagnostic &diag,
+                                               RegionBranchPoint sourceNo,
+                                               RegionBranchPoint succRegionNo) {
+  diag << "from ";
+  if (Region *region = sourceNo.getRegionOrNull())
+    diag << "Region #" << region->getRegionNumber();
+  else
+    diag << "parent operands";
+
+  diag << " to ";
+  if (Region *region = succRegionNo.getRegionOrNull())
+    diag << "Region #" << region->getRegionNumber();
+  else
+    diag << "parent results";
+  return diag;
+}
+
 /// Verify that types match along all region control flow edges originating from
-/// `sourceNo` (region # if source is a region, std::nullopt if source is parent
-/// op). `getInputsTypesForRegion` is a function that returns the types of the
-/// inputs that flow from `sourceIndex' to the given region, or std::nullopt if
-/// the exact type match verification is not necessary (e.g., if the Op verifies
-/// the match itself).
-static LogicalResult verifyTypesAlongAllEdges(
-    Operation *op, std::optional<unsigned> sourceNo,
-    function_ref<std::optional<TypeRange>(std::optional<unsigned>)>
-        getInputsTypesForRegion) {
+/// `sourcePoint`. `getInputsTypesForRegion` is a function that returns the
+/// types of the inputs that flow to a successor region.
+static LogicalResult
+verifyTypesAlongAllEdges(Operation *op, RegionBranchPoint sourcePoint,
+                         function_ref<FailureOr<TypeRange>(RegionBranchPoint)>
+                             getInputsTypesForRegion) {
   auto regionInterface = cast<RegionBranchOpInterface>(op);
 
   SmallVector<RegionSuccessor, 2> successors;
-  regionInterface.getSuccessorRegions(sourceNo, successors);
+  regionInterface.getSuccessorRegions(sourcePoint, successors);
 
   for (RegionSuccessor &succ : successors) {
-    std::optional<unsigned> succRegionNo;
-    if (!succ.isParent())
-      succRegionNo = succ.getSuccessor()->getRegionNumber();
-
-    auto printEdgeName = [&](InFlightDiagnostic &diag) -> InFlightDiagnostic & {
-      diag << "from ";
-      if (sourceNo)
-        diag << "Region #" << sourceNo.value();
-      else
-        diag << "parent operands";
-
-      diag << " to ";
-      if (succRegionNo)
-        diag << "Region #" << succRegionNo.value();
-      else
-        diag << "parent results";
-      return diag;
-    };
-
-    std::optional<TypeRange> sourceTypes =
-        getInputsTypesForRegion(succRegionNo);
-    if (!sourceTypes.has_value())
-      continue;
+    FailureOr<TypeRange> sourceTypes = getInputsTypesForRegion(succ);
+    if (failed(sourceTypes))
+      return failure();
 
     TypeRange succInputsTypes = succ.getSuccessorInputs().getTypes();
     if (sourceTypes->size() != succInputsTypes.size()) {
       InFlightDiagnostic diag = op->emitOpError(" region control flow edge ");
-      return printEdgeName(diag) << ": source has " << sourceTypes->size()
-                                 << " operands, but target successor needs "
-                                 << succInputsTypes.size();
+      return printRegionEdgeName(diag, sourcePoint, succ)
+             << ": source has " << sourceTypes->size()
+             << " operands, but target successor needs "
+             << succInputsTypes.size();
     }
 
     for (const auto &typesIdx :
@@ -138,7 +133,7 @@ static LogicalResult verifyTypesAlongAllEdges(
       Type inputType = std::get<1>(typesIdx.value());
       if (!regionInterface.areTypesCompatible(sourceType, inputType)) {
         InFlightDiagnostic diag = op->emitOpError(" along control flow edge ");
-        return printEdgeName(diag)
+        return printRegionEdgeName(diag, sourcePoint, succ)
                << ": source type #" << typesIdx.index() << " " << sourceType
                << " should match input type #" << typesIdx.index() << " "
                << inputType;
@@ -152,13 +147,13 @@ static LogicalResult verifyTypesAlongAllEdges(
 LogicalResult detail::verifyTypesAlongControlFlowEdges(Operation *op) {
   auto regionInterface = cast<RegionBranchOpInterface>(op);
 
-  auto inputTypesFromParent =
-      [&](std::optional<unsigned> regionNo) -> TypeRange {
-    return regionInterface.getSuccessorEntryOperands(regionNo).getTypes();
+  auto inputTypesFromParent = [&](RegionBranchPoint point) -> TypeRange {
+    return regionInterface.getEntrySuccessorOperands(point).getTypes();
   };
 
   // Verify types along control flow edges originating from the parent.
-  if (failed(verifyTypesAlongAllEdges(op, std::nullopt, inputTypesFromParent)))
+  if (failed(verifyTypesAlongAllEdges(op, RegionBranchPoint::parent(),
+                                      inputTypesFromParent)))
     return failure();
 
   auto areTypesCompatible = [&](TypeRange lhs, TypeRange rhs) {
@@ -174,47 +169,49 @@ LogicalResult detail::verifyTypesAlongControlFlowEdges(Operation *op) {
   };
 
   // Verify types along control flow edges originating from each region.
-  for (unsigned regionNo : llvm::seq(0U, op->getNumRegions())) {
-    Region &region = op->getRegion(regionNo);
+  for (Region &region : op->getRegions()) {
 
-    // Since there can be multiple `ReturnLike` terminators or others
-    // implementing the `RegionBranchTerminatorOpInterface`, all should have the
-    // same operand types when passing them to the same region.
+    // Since there can be multiple terminators implementing the
+    // `RegionBranchTerminatorOpInterface`, all should have the same operand
+    // types when passing them to the same region.
 
-    std::optional<OperandRange> regionReturnOperands;
-    for (Block &block : region) {
-      Operation *terminator = block.getTerminator();
-      auto terminatorOperands =
-          getRegionBranchSuccessorOperands(terminator, regionNo);
-      if (!terminatorOperands)
-        continue;
+    SmallVector<RegionBranchTerminatorOpInterface> regionReturnOps;
+    for (Block &block : region)
+      if (auto terminator = dyn_cast<RegionBranchTerminatorOpInterface>(
+              block.getTerminator()))
+        regionReturnOps.push_back(terminator);
 
-      if (!regionReturnOperands) {
-        regionReturnOperands = terminatorOperands;
-        continue;
+    // If there is no return-like terminator, the op itself should verify
+    // type consistency.
+    if (regionReturnOps.empty())
+      continue;
+
+    auto inputTypesForRegion =
+        [&](RegionBranchPoint point) -> FailureOr<TypeRange> {
+      std::optional<OperandRange> regionReturnOperands;
+      for (RegionBranchTerminatorOpInterface regionReturnOp : regionReturnOps) {
+        auto terminatorOperands = regionReturnOp.getSuccessorOperands(point);
+
+        if (!regionReturnOperands) {
+          regionReturnOperands = terminatorOperands;
+          continue;
+        }
+
+        // Found more than one ReturnLike terminator. Make sure the operand
+        // types match with the first one.
+        if (!areTypesCompatible(regionReturnOperands->getTypes(),
+                                terminatorOperands.getTypes())) {
+          InFlightDiagnostic diag = op->emitOpError(" along control flow edge");
+          return printRegionEdgeName(diag, region, point)
+                 << " operands mismatch between return-like terminators";
+        }
       }
-
-      // Found more than one ReturnLike terminator. Make sure the operand types
-      // match with the first one.
-      if (!areTypesCompatible(regionReturnOperands->getTypes(),
-                              terminatorOperands->getTypes()))
-        return op->emitOpError("Region #")
-               << regionNo
-               << " operands mismatch between return-like terminators";
-    }
-
-    auto inputTypesFromRegion =
-        [&](std::optional<unsigned> regionNo) -> std::optional<TypeRange> {
-      // If there is no return-like terminator, the op itself should verify
-      // type consistency.
-      if (!regionReturnOperands)
-        return std::nullopt;
 
       // All successors get the same set of operand types.
       return TypeRange(regionReturnOperands->getTypes());
     };
 
-    if (failed(verifyTypesAlongAllEdges(op, regionNo, inputTypesFromRegion)))
+    if (failed(verifyTypesAlongAllEdges(op, region, inputTypesForRegion)))
       return failure();
   }
 
@@ -231,24 +228,24 @@ static bool isRegionReachable(Region *begin, Region *r) {
   visited[begin->getRegionNumber()] = true;
 
   // Retrieve all successors of the region and enqueue them in the worklist.
-  SmallVector<unsigned> worklist;
-  auto enqueueAllSuccessors = [&](unsigned index) {
+  SmallVector<Region *> worklist;
+  auto enqueueAllSuccessors = [&](Region *region) {
     SmallVector<RegionSuccessor> successors;
-    op.getSuccessorRegions(index, successors);
+    op.getSuccessorRegions(region, successors);
     for (RegionSuccessor successor : successors)
       if (!successor.isParent())
-        worklist.push_back(successor.getSuccessor()->getRegionNumber());
+        worklist.push_back(successor.getSuccessor());
   };
-  enqueueAllSuccessors(begin->getRegionNumber());
+  enqueueAllSuccessors(begin);
 
   // Process all regions in the worklist via DFS.
   while (!worklist.empty()) {
-    unsigned nextRegion = worklist.pop_back_val();
-    if (nextRegion == r->getRegionNumber())
+    Region *nextRegion = worklist.pop_back_val();
+    if (nextRegion == r)
       return true;
-    if (visited[nextRegion])
+    if (visited[nextRegion->getRegionNumber()])
       continue;
-    visited[nextRegion] = true;
+    visited[nextRegion->getRegionNumber()] = true;
     enqueueAllSuccessors(nextRegion);
   }
 
@@ -308,27 +305,6 @@ bool RegionBranchOpInterface::isRepetitiveRegion(unsigned index) {
   return isRegionReachable(region, region);
 }
 
-void RegionBranchOpInterface::getSuccessorRegions(
-    std::optional<unsigned> index, SmallVectorImpl<RegionSuccessor> &regions) {
-  unsigned numInputs = 0;
-  if (index) {
-    // If the predecessor is a region, get the number of operands from an
-    // exiting terminator in the region.
-    for (Block &block : getOperation()->getRegion(*index)) {
-      Operation *terminator = block.getTerminator();
-      if (getRegionBranchSuccessorOperands(terminator, *index)) {
-        numInputs = terminator->getNumOperands();
-        break;
-      }
-    }
-  } else {
-    // Otherwise, use the number of parent operation operands.
-    numInputs = getOperation()->getNumOperands();
-  }
-  SmallVector<Attribute, 2> operands(numInputs, nullptr);
-  getSuccessorRegions(index, operands, regions);
-}
-
 Region *mlir::getEnclosingRepetitiveRegion(Operation *op) {
   while (Region *region = op->getParentRegion()) {
     op = region->getParentOp();
@@ -349,52 +325,4 @@ Region *mlir::getEnclosingRepetitiveRegion(Value value) {
     region = op->getParentRegion();
   }
   return nullptr;
-}
-
-//===----------------------------------------------------------------------===//
-// RegionBranchTerminatorOpInterface
-//===----------------------------------------------------------------------===//
-
-/// Returns true if the given operation is either annotated with the
-/// `ReturnLike` trait or implements the `RegionBranchTerminatorOpInterface`.
-bool mlir::isRegionReturnLike(Operation *operation) {
-  return dyn_cast<RegionBranchTerminatorOpInterface>(operation) ||
-         operation->hasTrait<OpTrait::ReturnLike>();
-}
-
-/// Returns the mutable operands that are passed to the region with the given
-/// `regionIndex`. If the operation does not implement the
-/// `RegionBranchTerminatorOpInterface` and is not marked as `ReturnLike`, the
-/// result will be `std::nullopt`. In all other cases, the resulting
-/// `OperandRange` represents all operands that are passed to the specified
-/// successor region. If `regionIndex` is `std::nullopt`, all operands that are
-/// passed to the parent operation will be returned.
-std::optional<MutableOperandRange>
-mlir::getMutableRegionBranchSuccessorOperands(
-    Operation *operation, std::optional<unsigned> regionIndex) {
-  // Try to query a RegionBranchTerminatorOpInterface to determine
-  // all successor operands that will be passed to the successor
-  // input arguments.
-  if (auto regionTerminatorInterface =
-          dyn_cast<RegionBranchTerminatorOpInterface>(operation))
-    return regionTerminatorInterface.getMutableSuccessorOperands(regionIndex);
-
-  // TODO: The ReturnLike trait should imply a default implementation of the
-  // RegionBranchTerminatorOpInterface. This would make this code significantly
-  // easier. Furthermore, this may even make this function obsolete.
-  if (operation->hasTrait<OpTrait::ReturnLike>())
-    return MutableOperandRange(operation);
-  return std::nullopt;
-}
-
-/// Returns the read only operands that are passed to the region with the given
-/// `regionIndex`. See `getMutableRegionBranchSuccessorOperands` for more
-/// information.
-std::optional<OperandRange>
-mlir::getRegionBranchSuccessorOperands(Operation *operation,
-                                       std::optional<unsigned> regionIndex) {
-  auto range = getMutableRegionBranchSuccessorOperands(operation, regionIndex);
-  if (range)
-    return range->operator OperandRange();
-  return std::nullopt;
 }

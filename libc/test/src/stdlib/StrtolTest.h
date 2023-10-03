@@ -8,13 +8,14 @@
 
 #include "src/__support/CPP/limits.h"
 #include "src/__support/CPP/type_traits.h"
+#include "src/__support/macros/properties/architectures.h"
 #include "src/errno/libc_errno.h"
 #include "test/UnitTest/Test.h"
 
 #include <limits.h>
 #include <stddef.h>
 
-using __llvm_libc::cpp::is_signed_v;
+using LIBC_NAMESPACE::cpp::is_signed_v;
 
 static inline char int_to_b36_char(int input) {
   if (input < 0 || input > 36)
@@ -25,13 +26,13 @@ static inline char int_to_b36_char(int input) {
 }
 
 template <typename ReturnT>
-struct StrtoTest : public __llvm_libc::testing::Test {
+struct StrtoTest : public LIBC_NAMESPACE::testing::Test {
   using FunctionT = ReturnT (*)(const char *, char **, int);
 
   static constexpr ReturnT T_MAX =
-      __llvm_libc::cpp::numeric_limits<ReturnT>::max();
+      LIBC_NAMESPACE::cpp::numeric_limits<ReturnT>::max();
   static constexpr ReturnT T_MIN =
-      __llvm_libc::cpp::numeric_limits<ReturnT>::min();
+      LIBC_NAMESPACE::cpp::numeric_limits<ReturnT>::min();
 
   void InvalidBase(FunctionT func) {
     const char *ten = "10";
@@ -198,6 +199,12 @@ struct StrtoTest : public __llvm_libc::testing::Test {
   }
 
   void DecodeInOtherBases(FunctionT func) {
+    // This test is excessively slow on the GPU, so we limit the innermost loop.
+#if defined(LIBC_TARGET_ARCH_IS_GPU)
+    constexpr int limit = 0;
+#else
+    constexpr int limit = 36;
+#endif
     char small_string[4] = {'\0', '\0', '\0', '\0'};
     for (int base = 2; base <= 36; ++base) {
       for (int first_digit = 0; first_digit <= 36; ++first_digit) {
@@ -245,7 +252,7 @@ struct StrtoTest : public __llvm_libc::testing::Test {
         small_string[0] = int_to_b36_char(first_digit);
         for (int second_digit = 0; second_digit <= 36; ++second_digit) {
           small_string[1] = int_to_b36_char(second_digit);
-          for (int third_digit = 0; third_digit <= 36; ++third_digit) {
+          for (int third_digit = 0; third_digit <= limit; ++third_digit) {
             small_string[2] = int_to_b36_char(third_digit);
 
             if (first_digit < base && second_digit < base &&

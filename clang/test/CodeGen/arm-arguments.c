@@ -187,7 +187,6 @@ void g34(struct s34 *s) { f34(*s); }
 // AAPCS: %[[a:.*]] = alloca [1 x i32]
 // AAPCS: load [1 x i32], ptr %[[a]]
 
-// rdar://12596507
 struct s35
 {
    float v[18]; //make sure byval is on.

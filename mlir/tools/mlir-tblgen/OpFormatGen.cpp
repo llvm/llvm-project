@@ -313,11 +313,10 @@ struct OperationFormat {
     resultTypes.resize(op.getNumResults(), TypeResolution());
 
     hasImplicitTermTrait = llvm::any_of(op.getTraits(), [](const Trait &trait) {
-      return trait.getDef().isSubClassOf("SingleBlockImplicitTerminator");
+      return trait.getDef().isSubClassOf("SingleBlockImplicitTerminatorImpl");
     });
 
-    hasSingleBlockTrait =
-        hasImplicitTermTrait || op.getTrait("::mlir::OpTrait::SingleBlock");
+    hasSingleBlockTrait = op.getTrait("::mlir::OpTrait::SingleBlock");
   }
 
   /// Generate the operation parser from this format.
@@ -954,7 +953,8 @@ static void genCustomParameterParser(FormatElement *param, MethodBody &body) {
 /// Generate the parser for a custom directive.
 static void genCustomDirectiveParser(CustomDirective *dir, MethodBody &body,
                                      bool useProperties,
-                                     StringRef opCppClassName) {
+                                     StringRef opCppClassName,
+                                     bool isOptional = false) {
   body << "  {\n";
 
   // Preprocess the directive variables.
@@ -1012,14 +1012,19 @@ static void genCustomDirectiveParser(CustomDirective *dir, MethodBody &body,
     }
   }
 
-  body << "    if (parse" << dir->getName() << "(parser";
+  body << "    auto odsResult = parse" << dir->getName() << "(parser";
   for (FormatElement *param : dir->getArguments()) {
     body << ", ";
     genCustomParameterParser(param, body);
   }
+  body << ");\n";
 
-  body << "))\n"
-       << "      return ::mlir::failure();\n";
+  if (isOptional) {
+    body << "    if (!odsResult) return {};\n"
+         << "    if (::mlir::failed(*odsResult)) return ::mlir::failure();\n";
+  } else {
+    body << "    if (odsResult) return ::mlir::failure();\n";
+  }
 
   // After parsing, add handling for any of the optional constructs.
   for (FormatElement *param : dir->getArguments()) {
@@ -1274,6 +1279,14 @@ void OperationFormat::genElementParser(FormatElement *element, MethodBody &body,
           body << llvm::formatv(regionEnsureSingleBlockParserCode,
                                 region->name);
       }
+    } else if (auto *custom = dyn_cast<CustomDirective>(firstElement)) {
+      body << "  if (auto result = [&]() -> ::mlir::OptionalParseResult {\n";
+      genCustomDirectiveParser(custom, body, useProperties, opCppClassName,
+                               /*isOptional=*/true);
+      body << "    return ::mlir::success();\n"
+           << "  }(); result.has_value() && ::mlir::failed(*result)) {\n"
+           << "    return ::mlir::failure();\n"
+           << "  } else if (result.has_value()) {\n";
     }
 
     genElementParsers(firstElement, thenElements.drop_front(),
@@ -1396,7 +1409,7 @@ void OperationFormat::genElementParser(FormatElement *element, MethodBody &body,
     }
     body.unindent() << "}\n";
     body.unindent();
-  } else if (auto *attrDict = dyn_cast<PropDictDirective>(element)) {
+  } else if (dyn_cast<PropDictDirective>(element)) {
     body << "  if (parseProperties(parser, result))\n"
          << "    return ::mlir::failure();\n";
   } else if (auto *customDir = dyn_cast<CustomDirective>(element)) {
@@ -1654,16 +1667,6 @@ void OperationFormat::genParserVariadicSegmentResolution(Operator &op,
                                                          MethodBody &body) {
   if (!allOperands) {
     if (op.getTrait("::mlir::OpTrait::AttrSizedOperandSegments")) {
-      if (op.getDialect().usePropertiesForAttributes()) {
-        body << formatv("  "
-                        "result.getOrAddProperties<{0}::Properties>().operand_"
-                        "segment_sizes = "
-                        "(parser.getBuilder().getDenseI32ArrayAttr({{",
-                        op.getCppClassName());
-      } else {
-        body << "  result.addAttribute(\"operand_segment_sizes\", "
-             << "parser.getBuilder().getDenseI32ArrayAttr({";
-      }
       auto interleaveFn = [&](const NamedTypeConstraint &operand) {
         // If the operand is variadic emit the parsed size.
         if (operand.isVariableLength())
@@ -1671,8 +1674,19 @@ void OperationFormat::genParserVariadicSegmentResolution(Operator &op,
         else
           body << "1";
       };
-      llvm::interleaveComma(op.getOperands(), body, interleaveFn);
-      body << "}));\n";
+      if (op.getDialect().usePropertiesForAttributes()) {
+        body << "::llvm::copy(::llvm::ArrayRef<int32_t>({";
+        llvm::interleaveComma(op.getOperands(), body, interleaveFn);
+        body << formatv("}), "
+                        "result.getOrAddProperties<{0}::Properties>()."
+                        "operandSegmentSizes.begin());\n",
+                        op.getCppClassName());
+      } else {
+        body << "  result.addAttribute(\"operandSegmentSizes\", "
+             << "parser.getBuilder().getDenseI32ArrayAttr({";
+        llvm::interleaveComma(op.getOperands(), body, interleaveFn);
+        body << "}));\n";
+      }
     }
     for (const NamedTypeConstraint &operand : op.getOperands()) {
       if (!operand.isVariadicOfVariadic())
@@ -1697,16 +1711,6 @@ void OperationFormat::genParserVariadicSegmentResolution(Operator &op,
 
   if (!allResultTypes &&
       op.getTrait("::mlir::OpTrait::AttrSizedResultSegments")) {
-    if (op.getDialect().usePropertiesForAttributes()) {
-      body << formatv(
-          "  "
-          "result.getOrAddProperties<{0}::Properties>().result_segment_sizes = "
-          "(parser.getBuilder().getDenseI32ArrayAttr({{",
-          op.getCppClassName());
-    } else {
-      body << "  result.addAttribute(\"result_segment_sizes\", "
-           << "parser.getBuilder().getDenseI32ArrayAttr({";
-    }
     auto interleaveFn = [&](const NamedTypeConstraint &result) {
       // If the result is variadic emit the parsed size.
       if (result.isVariableLength())
@@ -1714,8 +1718,19 @@ void OperationFormat::genParserVariadicSegmentResolution(Operator &op,
       else
         body << "1";
     };
-    llvm::interleaveComma(op.getResults(), body, interleaveFn);
-    body << "}));\n";
+    if (op.getDialect().usePropertiesForAttributes()) {
+      body << "::llvm::copy(::llvm::ArrayRef<int32_t>({";
+      llvm::interleaveComma(op.getResults(), body, interleaveFn);
+      body << formatv("}), "
+                      "result.getOrAddProperties<{0}::Properties>()."
+                      "resultSegmentSizes.begin());\n",
+                      op.getCppClassName());
+    } else {
+      body << "  result.addAttribute(\"resultSegmentSizes\", "
+           << "parser.getBuilder().getDenseI32ArrayAttr({";
+      llvm::interleaveComma(op.getResults(), body, interleaveFn);
+      body << "}));\n";
+    }
   }
 }
 
@@ -1765,10 +1780,10 @@ static void genAttrDictPrinter(OperationFormat &fmt, Operator &op,
   // Elide the variadic segment size attributes if necessary.
   if (!fmt.allOperands &&
       op.getTrait("::mlir::OpTrait::AttrSizedOperandSegments"))
-    body << "  elidedAttrs.push_back(\"operand_segment_sizes\");\n";
+    body << "  elidedAttrs.push_back(\"operandSegmentSizes\");\n";
   if (!fmt.allResultTypes &&
       op.getTrait("::mlir::OpTrait::AttrSizedResultSegments"))
-    body << "  elidedAttrs.push_back(\"result_segment_sizes\");\n";
+    body << "  elidedAttrs.push_back(\"resultSegmentSizes\");\n";
   for (const StringRef key : fmt.inferredAttributes.keys())
     body << "  elidedAttrs.push_back(\"" << key << "\");\n";
   for (const NamedAttribute *attr : fmt.usedAttributes)
@@ -2007,19 +2022,19 @@ static void genOptionalGroupPrinterAnchor(FormatElement *anchor,
         else if (var->isVariadic())
           body << "!" << name << "().empty()";
       })
-      .Case<RegionVariable>([&](RegionVariable *element) {
+      .Case([&](RegionVariable *element) {
         const NamedRegion *var = element->getVar();
         std::string name = op.getGetterName(var->name);
         // TODO: Add a check for optional regions here when ODS supports it.
         body << "!" << name << "().empty()";
       })
-      .Case<TypeDirective>([&](TypeDirective *element) {
+      .Case([&](TypeDirective *element) {
         genOptionalGroupPrinterAnchor(element->getArg(), op, body);
       })
-      .Case<FunctionalTypeDirective>([&](FunctionalTypeDirective *element) {
+      .Case([&](FunctionalTypeDirective *element) {
         genOptionalGroupPrinterAnchor(element->getInputs(), op, body);
       })
-      .Case<AttributeVariable>([&](AttributeVariable *element) {
+      .Case([&](AttributeVariable *element) {
         Attribute attr = element->getVar()->attr;
         body << op.getGetterName(element->getVar()->name) << "Attr()";
         if (attr.isOptional())
@@ -2036,6 +2051,18 @@ static void genOptionalGroupPrinterAnchor(FormatElement *anchor,
           return;
         }
         llvm_unreachable("attribute must be optional or default-valued");
+      })
+      .Case([&](CustomDirective *ele) {
+        body << '(';
+        llvm::interleave(
+            ele->getArguments(), body,
+            [&](FormatElement *child) {
+              body << '(';
+              genOptionalGroupPrinterAnchor(child, op, body);
+              body << ')';
+            },
+            " || ");
+        body << ')';
       });
 }
 
@@ -2188,7 +2215,7 @@ void OperationFormat::genElementPrinter(FormatElement *element,
   }
 
   // Emit the attribute dictionary.
-  if (auto *propDict = dyn_cast<PropDictDirective>(element)) {
+  if (dyn_cast<PropDictDirective>(element)) {
     genPropDictPrinter(*this, op, body);
     lastWasPunctuation = false;
     return;
@@ -3433,15 +3460,28 @@ LogicalResult OpFormatParser::verifyOptionalGroupElement(SMLoc loc,
         return verifyOptionalGroupElement(loc, ele->getResults(),
                                           /*isAnchor=*/false);
       })
-      // Literals, whitespace, and custom directives may be used, but they can't
-      // anchor the group.
-      .Case<LiteralElement, WhitespaceElement, CustomDirective,
-            FunctionalTypeDirective, OptionalElement>([&](FormatElement *) {
-        if (isAnchor)
-          return emitError(loc, "only variables and types can be used "
-                                "to anchor an optional group");
+      .Case([&](CustomDirective *ele) {
+        if (!isAnchor)
+          return success();
+        // Verify each child as being valid in an optional group. They are all
+        // potential anchors if the custom directive was marked as one.
+        for (FormatElement *child : ele->getArguments()) {
+          if (isa<RefDirective>(child))
+            continue;
+          if (failed(verifyOptionalGroupElement(loc, child, /*isAnchor=*/true)))
+            return failure();
+        }
         return success();
       })
+      // Literals, whitespace, and custom directives may be used, but they can't
+      // anchor the group.
+      .Case<LiteralElement, WhitespaceElement, OptionalElement>(
+          [&](FormatElement *) {
+            if (isAnchor)
+              return emitError(loc, "only variables and types can be used "
+                                    "to anchor an optional group");
+            return success();
+          })
       .Default([&](FormatElement *) {
         return emitError(loc, "only literals, types, and variables can be "
                               "used within an optional group");

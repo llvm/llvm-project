@@ -2427,3 +2427,122 @@ define i8 @negate_lowbitmask_use2(i8 %x, i8 %y) {
   %r = and i8 %n, %y
   ret i8 %r
 }
+
+@g = external global i64
+
+define i64 @test_and_or_constexpr_infloop() {
+; CHECK-LABEL: @test_and_or_constexpr_infloop(
+; CHECK-NEXT:    [[AND:%.*]] = and i64 ptrtoint (ptr @g to i64), -8
+; CHECK-NEXT:    [[OR:%.*]] = or i64 [[AND]], 1
+; CHECK-NEXT:    ret i64 [[OR]]
+;
+  %and = and i64 ptrtoint (ptr @g to i64), -8
+  %or = or i64 %and, 1
+  ret i64 %or
+}
+
+define i32 @and_zext(i32 %a, i1 %b) {
+; CHECK-LABEL: @and_zext(
+; CHECK-NEXT:    [[TMP1:%.*]] = and i32 [[A:%.*]], 1
+; CHECK-NEXT:    [[R:%.*]] = select i1 [[B:%.*]], i32 [[TMP1]], i32 0
+; CHECK-NEXT:    ret i32 [[R]]
+;
+  %mask = zext i1 %b to i32
+  %r = and i32 %a, %mask
+  ret i32 %r
+}
+
+define i32 @and_zext_commuted(i32 %a, i1 %b) {
+; CHECK-LABEL: @and_zext_commuted(
+; CHECK-NEXT:    [[TMP1:%.*]] = and i32 [[A:%.*]], 1
+; CHECK-NEXT:    [[R:%.*]] = select i1 [[B:%.*]], i32 [[TMP1]], i32 0
+; CHECK-NEXT:    ret i32 [[R]]
+;
+  %mask = zext i1 %b to i32
+  %r = and i32 %mask, %a
+  ret i32 %r
+}
+
+define i32 @and_zext_multiuse(i32 %a, i1 %b) {
+; CHECK-LABEL: @and_zext_multiuse(
+; CHECK-NEXT:    [[MASK:%.*]] = zext i1 [[B:%.*]] to i32
+; CHECK-NEXT:    call void @use32(i32 [[MASK]])
+; CHECK-NEXT:    [[R:%.*]] = and i32 [[MASK]], [[A:%.*]]
+; CHECK-NEXT:    ret i32 [[R]]
+;
+  %mask = zext i1 %b to i32
+  call void @use32(i32 %mask)
+  %r = and i32 %a, %mask
+  ret i32 %r
+}
+
+define <2 x i32> @and_zext_vec(<2 x i32> %a, <2 x i1> %b) {
+; CHECK-LABEL: @and_zext_vec(
+; CHECK-NEXT:    [[TMP1:%.*]] = and <2 x i32> [[A:%.*]], <i32 1, i32 1>
+; CHECK-NEXT:    [[R:%.*]] = select <2 x i1> [[B:%.*]], <2 x i32> [[TMP1]], <2 x i32> zeroinitializer
+; CHECK-NEXT:    ret <2 x i32> [[R]]
+;
+  %mask = zext <2 x i1> %b to <2 x i32>
+  %r = and <2 x i32> %a, %mask
+  ret <2 x i32> %r
+}
+
+; tests from PR66606
+define i32 @and_zext_eq_even(i32 %a) {
+; CHECK-LABEL: @and_zext_eq_even(
+; CHECK-NEXT:    ret i32 0
+;
+  %cond = icmp eq i32 %a, 2
+  %not = zext i1 %cond to i32
+  %r = and i32 %a, %not
+  ret i32 %r
+}
+
+define i32 @and_zext_eq_even_commuted(i32 %a) {
+; CHECK-LABEL: @and_zext_eq_even_commuted(
+; CHECK-NEXT:    ret i32 0
+;
+  %cond = icmp eq i32 %a, 2
+  %not = zext i1 %cond to i32
+  %r = and i32 %not, %a
+  ret i32 %r
+}
+
+define i32 @and_zext_eq_odd(i32 %a) {
+; CHECK-LABEL: @and_zext_eq_odd(
+; CHECK-NEXT:    [[COND:%.*]] = icmp eq i32 [[A:%.*]], 3
+; CHECK-NEXT:    [[R:%.*]] = zext i1 [[COND]] to i32
+; CHECK-NEXT:    ret i32 [[R]]
+;
+  %cond = icmp eq i32 %a, 3
+  %not = zext i1 %cond to i32
+  %r = and i32 %a, %not
+  ret i32 %r
+}
+
+define i32 @and_zext_eq_odd_commuted(i32 %a) {
+; CHECK-LABEL: @and_zext_eq_odd_commuted(
+; CHECK-NEXT:    [[COND:%.*]] = icmp eq i32 [[A:%.*]], 3
+; CHECK-NEXT:    [[R:%.*]] = zext i1 [[COND]] to i32
+; CHECK-NEXT:    ret i32 [[R]]
+;
+  %cond = icmp eq i32 %a, 3
+  %not = zext i1 %cond to i32
+  %r = and i32 %not, %a
+  ret i32 %r
+}
+
+; Tests from PR66733
+define i32 @and_zext_eq_zero(i32 %A, i32 %C)  {
+; CHECK-LABEL: @and_zext_eq_zero(
+; CHECK-NEXT:    [[TMP1:%.*]] = icmp eq i32 [[A:%.*]], 0
+; CHECK-NEXT:    [[TMP2:%.*]] = zext i1 [[TMP1]] to i32
+; CHECK-NEXT:    ret i32 [[TMP2]]
+;
+  %1 = icmp eq i32 %A, 0
+  %2 = zext i1 %1 to i32
+  %3 = lshr i32 %A, %C
+  %4 = xor i32 %3, -1
+  %5 = and i32 %2, %4
+  ret i32 %5
+}

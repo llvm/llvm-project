@@ -324,31 +324,6 @@ llvm::json::Value CreateSource(lldb::SBLineEntry &line_entry);
 ///     definition outlined by Microsoft.
 llvm::json::Value CreateSource(llvm::StringRef source_path);
 
-/// Create a "Source" object for a given frame.
-///
-/// When there is no source file information for a stack frame, we will
-/// create disassembly for a function and store a permanent
-/// "sourceReference" that contains the textual disassembly for a
-/// function along with address to line information. The "Source" object
-/// that is created will contain a "sourceReference" that the VSCode
-/// protocol can later fetch as text in order to display disassembly.
-/// The PC will be extracted from the frame and the disassembly line
-/// within the source referred to by "sourceReference" will be filled
-/// in.
-///
-/// \param[in] frame
-///     The LLDB stack frame to use when populating out the "Source"
-///     object.
-///
-/// \param[out] disasm_line
-///     The line within the "sourceReference" file that the PC from
-///     \a frame matches.
-///
-/// \return
-///     A "Source" JSON object with that follows the formal JSON
-///     definition outlined by Microsoft.
-llvm::json::Value CreateSource(lldb::SBFrame &frame, int64_t &disasm_line);
-
 /// Create a "StackFrame" object for a LLDB frame object.
 ///
 /// This function will fill in the following keys in the returned
@@ -465,12 +440,17 @@ std::string CreateUniqueVariableNameForDisplay(lldb::SBValue v,
 ///     As VSCode doesn't render two of more variables with the same name, we
 ///     apply a suffix to distinguish duplicated variables.
 ///
+/// \param[in] custom_name
+///     A provided custom name that is used instead of the SBValue's when
+///     creating the JSON representation.
+///
 /// \return
 ///     A "Variable" JSON object with that follows the formal JSON
 ///     definition outlined by Microsoft.
 llvm::json::Value CreateVariable(lldb::SBValue v, int64_t variablesReference,
                                  int64_t varID, bool format_hex,
-                                 bool is_name_duplicated = false);
+                                 bool is_name_duplicated = false,
+                                 std::optional<std::string> custom_name = {});
 
 llvm::json::Value CreateCompileUnit(lldb::SBCompileUnit unit);
 

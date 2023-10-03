@@ -313,18 +313,8 @@ So all of the following name is not valid by default:
     __test
     // and so on ...
 
-If you still want to use the reserved module names for any reason, currently you can add a special line marker
-in the front of the module declaration like:
-
-.. code-block:: c++
-
-  # __LINE_NUMBER__ __FILE__ 1 3
-  export module std;
-
-Here the `__LINE_NUMBER__` is the actual line number of the corresponding line. The `__FILE__` means the filename
-of the translation unit. The `1` means the following is a new file. And `3` means this is a system header/file so
-the certain warnings should be suppressed. You could find more details at:
-https://gcc.gnu.org/onlinedocs/gcc-3.0.2/cpp_9.html.
+If you still want to use the reserved module names for any reason, use
+``-Wno-reserved-module-identifier`` to suppress the warning.
 
 How to specify the dependent BMIs
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -501,6 +491,96 @@ is attached to the global module fragments. For example:
 
 Now the linkage name of ``NS::foo()`` will be ``_ZN2NS3fooEv``.
 
+Performance Tips
+----------------
+
+Reduce duplications
+~~~~~~~~~~~~~~~~~~~
+
+While it is legal to have duplicated declarations in the global module fragments
+of different module units, it is not free for clang to deal with the duplicated
+declarations. In other word, for a translation unit, it will compile slower if the
+translation unit itself and its importing module units contains a lot duplicated
+declarations.
+
+For example,
+
+.. code-block:: c++
+
+  // M-partA.cppm
+  module;
+  #include "big.header.h"
+  export module M:partA;
+  ...
+
+  // M-partB.cppm
+  module;
+  #include "big.header.h"
+  export module M:partB;
+  ...
+
+  // other partitions
+  ...
+
+  // M-partZ.cppm
+  module;
+  #include "big.header.h"
+  export module M:partZ;
+  ...
+
+  // M.cppm
+  export module M;
+  export import :partA;
+  export import :partB;
+  ...
+  export import :partZ;
+
+  // use.cpp
+  import M;
+  ... // use declarations from module M.
+
+When ``big.header.h`` is big enough and there are a lot of partitions,
+the compilation of ``use.cpp`` may be slower than
+the following style significantly:
+
+.. code-block:: c++
+
+  module;
+  #include "big.header.h"
+  export module m:big.header.wrapper;
+  export ... // export the needed declarations
+
+  // M-partA.cppm
+  export module M:partA;
+  import :big.header.wrapper;
+  ...
+
+  // M-partB.cppm
+  export module M:partB;
+  import :big.header.wrapper;
+  ...
+
+  // other partitions
+  ...
+
+  // M-partZ.cppm
+  export module M:partZ;
+  import :big.header.wrapper;
+  ...
+
+  // M.cppm
+  export module M;
+  export import :partA;
+  export import :partB;
+  ...
+  export import :partZ;
+
+  // use.cpp
+  import M;
+  ... // use declarations from module M.
+
+The key part of the tip is to reduce the duplications from the text includes.
+
 Known Problems
 --------------
 
@@ -597,6 +677,14 @@ Currently, clang requires the file name of an ``importable module unit`` should 
 (or ``.ccm``, ``.cxxm``, ``.c++m``). However, the behavior is inconsistent with other compilers.
 
 This is tracked in: https://github.com/llvm/llvm-project/issues/57416
+
+clang-cl is not compatible with the standard C++ modules
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+Now we can't use the `/clang:-fmodule-file` or `/clang:-fprebuilt-module-path` to specify
+the BMI within ``clang-cl.exe``.
+
+This is tracked in: https://github.com/llvm/llvm-project/issues/64118
 
 Header Units
 ============
@@ -974,12 +1062,6 @@ the user can choose to get the dependency information per file. For example:
 
   $ clang-scan-deps -format=p1689 -- <path-to-compiler-executable>/clang++ -std=c++20 impl_part.cppm -c -o impl_part.o
 
-.. warning::
-
-   The ``<path-to-compiler-executable>/clang++`` should point to the real
-   binary and not to a symlink. If it points to a symlink the include paths
-   will not be correctly resolved.
-
 And we'll get:
 
 .. code-block:: text
@@ -1035,6 +1117,32 @@ We will get:
 
 When clang-scan-deps detects ``-MF`` option, clang-scan-deps will try to write the
 dependency information for headers to the file specified by ``-MF``.
+
+Possible Issues: Failed to find system headers
+----------------------------------------------
+
+In case the users encounter errors like ``fatal error: 'stddef.h' file not found``,
+probably the specified ``<path-to-compiler-executable>/clang++`` refers to a symlink
+instead a real binary. There are 4 potential solutions to the problem:
+
+* (1) End users can resolve the issue by pointing the specified compiler executable to
+  the real binary instead of the symlink.
+* (2) End users can invoke ``<path-to-compiler-executable>/clang++ -print-resource-dir``
+  to get the corresponding resource directory for your compiler and add that directory
+  to the include search paths manually in the build scripts.
+* (3) Build systems that use a compilation database as the input for clang-scan-deps
+  scanner, the build system can add the flag ``--resource-dir-recipe invoke-compiler`` to
+  the clang-scan-deps scanner to calculate the resources directory dynamically.
+  The calculation happens only once for a unique ``<path-to-compiler-executable>/clang++``.
+* (4) For build systems that invokes the clang-scan-deps scanner per file, repeatedly
+  calculating the resource directory may be inefficient. In such cases, the build
+  system can cache the resource directory by itself and pass ``-resource-dir <resource-dir>``
+  explicitly in the command line options:
+
+.. code-block:: console
+
+  $ clang-scan-deps -format=p1689 -- <path-to-compiler-executable>/clang++ -std=c++20 -resource-dir <resource-dir> mod.cppm -c -o mod.o
+
 
 Possible Questions
 ==================

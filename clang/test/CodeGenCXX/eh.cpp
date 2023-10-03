@@ -64,8 +64,6 @@ void test4() {
 // CHECK:        call void @__cxa_rethrow() [[NR]]
 // CHECK-NEXT:   unreachable
 
-
-// rdar://problem/7696549
 namespace test5 {
   struct A {
     A();
@@ -172,7 +170,6 @@ namespace test8 {
 }
 
 // Constructor function-try-block must rethrow on fallthrough.
-// rdar://problem/7696603
 namespace test9 {
   void opaque();
 
@@ -232,7 +229,6 @@ namespace test10 {
 }
 
 // __cxa_begin_catch returns pointers by value, even when catching by reference
-// <rdar://problem/8212123>
 namespace test11 {
   void opaque();
 
@@ -336,7 +332,6 @@ namespace test13 {
   }
 }
 
-// rdar://problem/8231514
 namespace test14 {
   struct A { ~A(); };
   struct B { ~B(); };
@@ -354,7 +349,6 @@ namespace test14 {
   }
 }
 
-// rdar://problem/8231514
 // JumpDests shouldn't get confused by scopes that aren't normal cleanups.
 namespace test15 {
   struct A { ~A(); };

@@ -412,13 +412,13 @@ define i64 @load32_and16_sexty(ptr %p, i32 %y) {
 define zeroext i1 @bigger(ptr nocapture readonly %c, ptr nocapture readonly %e, i64 %d, i64 %p1) {
 ; CHECK-LABEL: bigger:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    ldrb w8, [x0, x2]
+; CHECK-NEXT:    ldrb w8, [x1, x2]
+; CHECK-NEXT:    ldrb w9, [x0, x2]
 ; CHECK-NEXT:    and w10, w3, #0x7
-; CHECK-NEXT:    ldrb w9, [x1, x2]
-; CHECK-NEXT:    mov w11, #8
+; CHECK-NEXT:    mov w11, #8 // =0x8
 ; CHECK-NEXT:    sub w10, w11, w10
-; CHECK-NEXT:    eor w8, w9, w8
-; CHECK-NEXT:    mov w9, #5
+; CHECK-NEXT:    eor w8, w8, w9
+; CHECK-NEXT:    mov w9, #5 // =0x5
 ; CHECK-NEXT:    lsr w8, w8, w10
 ; CHECK-NEXT:    tst w8, w9
 ; CHECK-NEXT:    cset w0, eq
@@ -426,13 +426,13 @@ define zeroext i1 @bigger(ptr nocapture readonly %c, ptr nocapture readonly %e, 
 ;
 ; CHECKBE-LABEL: bigger:
 ; CHECKBE:       // %bb.0: // %entry
-; CHECKBE-NEXT:    ldrb w8, [x0, x2]
+; CHECKBE-NEXT:    ldrb w8, [x1, x2]
+; CHECKBE-NEXT:    ldrb w9, [x0, x2]
 ; CHECKBE-NEXT:    and w10, w3, #0x7
-; CHECKBE-NEXT:    ldrb w9, [x1, x2]
-; CHECKBE-NEXT:    mov w11, #8
+; CHECKBE-NEXT:    mov w11, #8 // =0x8
 ; CHECKBE-NEXT:    sub w10, w11, w10
-; CHECKBE-NEXT:    eor w8, w9, w8
-; CHECKBE-NEXT:    mov w9, #5
+; CHECKBE-NEXT:    eor w8, w8, w9
+; CHECKBE-NEXT:    mov w9, #5 // =0x5
 ; CHECKBE-NEXT:    lsr w8, w8, w10
 ; CHECKBE-NEXT:    tst w8, w9
 ; CHECKBE-NEXT:    cset w0, eq

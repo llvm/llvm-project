@@ -777,26 +777,28 @@ rnb_err_t RNBRemote::GetPacketPayload(std::string &return_packet) {
   // DNBLogThreadedIf (LOG_RNB_MAX, "%8u RNBRemote::%s called",
   // (uint32_t)m_comm.Timer().ElapsedMicroSeconds(true), __FUNCTION__);
 
-  PThreadMutex::Locker locker(m_mutex);
-  if (m_rx_packets.empty()) {
-    // Only reset the remote command available event if we have no more packets
-    m_ctx.Events().ResetEvents(RNBContext::event_read_packet_available);
-    // DNBLogThreadedIf (LOG_RNB_MAX, "%8u RNBRemote::%s error: no packets
-    // available...", (uint32_t)m_comm.Timer().ElapsedMicroSeconds(true),
-    // __FUNCTION__);
-    return rnb_err;
-  }
+  {
+    PThreadMutex::Locker locker(m_mutex);
+    if (m_rx_packets.empty()) {
+      // Only reset the remote command available event if we have no more
+      // packets
+      m_ctx.Events().ResetEvents(RNBContext::event_read_packet_available);
+      // DNBLogThreadedIf (LOG_RNB_MAX, "%8u RNBRemote::%s error: no packets
+      // available...", (uint32_t)m_comm.Timer().ElapsedMicroSeconds(true),
+      // __FUNCTION__);
+      return rnb_err;
+    }
 
-  // DNBLogThreadedIf (LOG_RNB_MAX, "%8u RNBRemote::%s has %u queued packets",
-  // (uint32_t)m_comm.Timer().ElapsedMicroSeconds(true), __FUNCTION__,
-  // m_rx_packets.size());
-  return_packet.swap(m_rx_packets.front());
-  m_rx_packets.pop_front();
-  locker.Reset(); // Release our lock on the mutex
+    // DNBLogThreadedIf (LOG_RNB_MAX, "%8u RNBRemote::%s has %u queued packets",
+    // (uint32_t)m_comm.Timer().ElapsedMicroSeconds(true), __FUNCTION__,
+    // m_rx_packets.size());
+    return_packet.swap(m_rx_packets.front());
+    m_rx_packets.pop_front();
 
-  if (m_rx_packets.empty()) {
-    // Reset the remote command available event if we have no more packets
-    m_ctx.Events().ResetEvents(RNBContext::event_read_packet_available);
+    if (m_rx_packets.empty()) {
+      // Reset the remote command available event if we have no more packets
+      m_ctx.Events().ResetEvents(RNBContext::event_read_packet_available);
+    }
   }
 
   // DNBLogThreadedIf (LOG_RNB_MEDIUM, "%8u RNBRemote::%s: '%s'",
@@ -2585,7 +2587,7 @@ void register_value_in_hex_fixed_width(std::ostream &ostrm, nub_process_t pid,
       // fail value. If it does, return this instead in case some of
       // the registers are not available on the current system.
       if (reg->nub_info.size > 0) {
-        std::basic_string<uint8_t> zeros(reg->nub_info.size, '\0');
+        std::vector<uint8_t> zeros(reg->nub_info.size, '\0');
         append_hex_value(ostrm, zeros.data(), zeros.size(), false);
       }
     }
@@ -4219,7 +4221,7 @@ rnb_err_t RNBRemote::HandlePacket_p(const char *p) {
     ostrm << "00000000";
   } else if (reg_entry->nub_info.reg == (uint32_t)-1) {
     if (reg_entry->nub_info.size > 0) {
-      std::basic_string<uint8_t> zeros(reg_entry->nub_info.size, '\0');
+      std::vector<uint8_t> zeros(reg_entry->nub_info.size, '\0');
       append_hex_value(ostrm, zeros.data(), zeros.size(), false);
     }
   } else {

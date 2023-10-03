@@ -18,8 +18,11 @@ def GetZeroAttr : NativeCodeCall<"$_builder.getZeroAttr($0.getType())">;
 // Add two integer attributes and create a new one with the result.
 def AddIntAttrs : NativeCodeCall<"addIntegerAttrs($_builder, $0, $1, $2)">;
 
-// Subtract two integer attributes and createa a new one with the result.
+// Subtract two integer attributes and create a new one with the result.
 def SubIntAttrs : NativeCodeCall<"subIntegerAttrs($_builder, $0, $1, $2)">;
+
+// Multiply two integer attributes and create a new one with the result.
+def MulIntAttrs : NativeCodeCall<"mulIntegerAttrs($_builder, $0, $1, $2)">;
 
 class cast<string type> : NativeCodeCall<"::mlir::cast<" # type # ">($0)">;
 
@@ -71,6 +74,13 @@ def AddIMulNegativeOneLhs :
            $y),
         (Arith_SubIOp $y, $x),
         [(IsScalarOrSplatNegativeOne $c0)]>;
+
+// muli(muli(x, c0), c1) -> muli(x, c0 * c1)
+def MulIMulIConstant :
+    Pat<(Arith_MulIOp:$res
+          (Arith_MulIOp $x, (ConstantLikeMatcher APIntAttr:$c0)),
+          (ConstantLikeMatcher APIntAttr:$c1)),
+        (Arith_MulIOp $x, (Arith_ConstantOp (MulIntAttrs $res, $c0, $c1)))>;
 
 //===----------------------------------------------------------------------===//
 // AddUIExtendedOp

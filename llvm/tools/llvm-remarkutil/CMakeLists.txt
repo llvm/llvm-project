@@ -5,5 +5,10 @@ set(LLVM_LINK_COMPONENTS
   )
 
 add_llvm_tool(llvm-remarkutil
+  RemarkConvert.cpp
+  RemarkCount.cpp
+  RemarkSizeDiff.cpp
   RemarkUtil.cpp
+  RemarkUtilHelpers.cpp
+  RemarkUtilRegistry.cpp
   )

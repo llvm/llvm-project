@@ -71,7 +71,6 @@ void test9_4(volatile int* ptr, int val) {
   __sync_fetch_and_nand(ptr, val);
 }
 
-// rdar://7236819
 void test10(void) __attribute__((noreturn));
 
 void test10(void) {
@@ -104,13 +103,11 @@ int test13(void) {
   __builtin_eh_return(0, 0); // no warning, eh_return never returns.
 }
 
-// <rdar://problem/8228293>
 void test14(void) {
   int old;
   old = __sync_fetch_and_min((volatile int *)&old, 1);
 }
 
-// <rdar://problem/8336581>
 void test15(const char *s) {
   __builtin_printf("string is %s\n", s);
 }
@@ -131,7 +128,7 @@ struct foo x = (struct foo) { __builtin_constant_p(42) ? 37 : 927 };
 
 const int test17_n = 0;
 const char test17_c[] = {1, 2, 3, 0};
-const char test17_d[] = {1, 2, 3, 4};
+const char test17_d[] = {1, 2, 3, 4}; // Like test17_c but not NUL-terminated.
 typedef int __attribute__((vector_size(16))) IntVector;
 struct Aggregate { int n; char c; };
 enum Enum { EnumValue1, EnumValue2 };
@@ -178,9 +175,10 @@ void test17(void) {
   ASSERT(!OPT("abcd"));
   // In these cases, the strlen is non-constant, but the __builtin_constant_p
   // is 0: the array size is not an ICE but is foldable.
-  ASSERT(!OPT(test17_c));        // expected-warning {{folding}}
-  ASSERT(!OPT(&test17_c[0]));    // expected-warning {{folding}}
-  ASSERT(!OPT((char*)test17_c)); // expected-warning {{folding}}
+  ASSERT(!OPT(test17_c));
+  ASSERT(!OPT(&test17_c[0]));
+  ASSERT(!OPT((char*)test17_c));
+  // NOTE: test17_d is not NUL-termintated, so calling strlen on it is UB.
   ASSERT(!OPT(test17_d));        // expected-warning {{folding}}
   ASSERT(!OPT(&test17_d[0]));    // expected-warning {{folding}}
   ASSERT(!OPT((char*)test17_d)); // expected-warning {{folding}}
@@ -216,7 +214,6 @@ void unavailable(void) {
   __builtin_operator_delete(0); // expected-error {{'__builtin_operator_delete' is only available in C++}}
 }
 
-// rdar://18259539
 size_t strlcpy(char * restrict dst, const char * restrict src, size_t size);
 size_t strlcat(char * restrict dst, const char * restrict src, size_t size);
 
@@ -239,7 +236,6 @@ void Test19(void)
 				                                                   // expected-warning {{'strlcat' will always overflow; destination buffer has size 20, but size argument is 40}}
 }
 
-// rdar://11076881
 char * Test20(char *p, const char *in, unsigned n)
 {
     static char buf[10];
@@ -343,7 +339,6 @@ void test22(void) {
   (void)__builtin_signbitl(1.0L);
 }
 
-// rdar://43909200
 #define memcpy(x,y,z) __builtin___memcpy_chk(x,y,z, __builtin_object_size(x,0))
 #define my_memcpy(x,y,z) __builtin___memcpy_chk(x,y,z, __builtin_object_size(x,0))
 

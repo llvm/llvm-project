@@ -33,6 +33,7 @@
 #include "lldb/Target/ABI.h"
 #include "lldb/Target/DynamicLoader.h"
 #include "lldb/Target/ExecutionContext.h"
+#include "lldb/Target/LanguageRuntime.h"
 #include "lldb/Target/Platform.h"
 #include "lldb/Target/Process.h"
 #include "lldb/Target/RegisterContext.h"
@@ -753,6 +754,19 @@ AppleObjCRuntimeV2::AppleObjCRuntimeV2(Process *process,
   RegisterObjCExceptionRecognizer(process);
 }
 
+LanguageRuntime *
+AppleObjCRuntimeV2::GetPreferredLanguageRuntime(ValueObject &in_value) {
+  if (auto process_sp = in_value.GetProcessSP()) {
+    assert(process_sp.get() == m_process);
+    if (auto descriptor_sp = GetNonKVOClassDescriptor(in_value)) {
+      LanguageType impl_lang = descriptor_sp->GetImplementationLanguage();
+      if (impl_lang != eLanguageTypeUnknown)
+        return process_sp->GetLanguageRuntime(impl_lang);
+    }
+  }
+  return nullptr;
+}
+
 bool AppleObjCRuntimeV2::GetDynamicTypeAndAddress(
     ValueObject &in_value, lldb::DynamicValueType use_dynamic,
     TypeAndOrName &class_type_or_name, Address &address,
@@ -1385,7 +1399,7 @@ public:
       return *this;
     }
 
-    const element operator*() const {
+    element operator*() const {
       if (m_index == -1) {
         // TODO find a way to make this an error, but not an assert
         return element();
@@ -2725,7 +2739,7 @@ lldb::addr_t AppleObjCRuntimeV2::LookupRuntimeSymbol(ConstString name) {
       std::pair<llvm::StringRef, llvm::StringRef> class_and_ivar =
           ivar_skipped_prefix.split('.');
 
-      if (class_and_ivar.first.size() && class_and_ivar.second.size()) {
+      if (!class_and_ivar.first.empty() && !class_and_ivar.second.empty()) {
         const ConstString class_name_cs(class_and_ivar.first);
         ClassDescriptorSP descriptor =
             ObjCLanguageRuntime::GetClassDescriptorFromClassName(class_name_cs);

@@ -449,6 +449,13 @@ TEST_F(CommandLineExtractorTest, AcceptSaveTemps) {
   EXPECT_NE(extractCC1Arguments(Args), nullptr);
 }
 
+TEST_F(CommandLineExtractorTest, AcceptPreprocessedInputFile) {
+  addFile("test.i", "int main() {}\n");
+  const char *Args[] = {"clang", "-target", "arm64-apple-macosx11.0.0", "-c",
+                        "test.i"};
+  EXPECT_NE(extractCC1Arguments(Args), nullptr);
+}
+
 TEST_F(CommandLineExtractorTest, RejectMultipleArchitectures) {
   addFile("test.c", "int main() {}\n");
   const char *Args[] = {"clang", "-target", "arm64-apple-macosx11.0.0",

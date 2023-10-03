@@ -491,6 +491,7 @@ DeclRefExpr::DeclRefExpr(const ASTContext &Ctx, ValueDecl *D,
   DeclRefExprBits.HadMultipleCandidates = false;
   DeclRefExprBits.RefersToEnclosingVariableOrCapture =
       RefersToEnclosingVariableOrCapture;
+  DeclRefExprBits.CapturedByCopyInLambdaWithExplicitObjectParameter = false;
   DeclRefExprBits.NonOdrUseReason = NOUR;
   DeclRefExprBits.IsImmediateEscalating = false;
   DeclRefExprBits.Loc = L;
@@ -518,6 +519,7 @@ DeclRefExpr::DeclRefExpr(const ASTContext &Ctx,
     = (TemplateArgs || TemplateKWLoc.isValid()) ? 1 : 0;
   DeclRefExprBits.RefersToEnclosingVariableOrCapture =
       RefersToEnclosingVariableOrCapture;
+  DeclRefExprBits.CapturedByCopyInLambdaWithExplicitObjectParameter = false;
   DeclRefExprBits.NonOdrUseReason = NOUR;
   if (TemplateArgs) {
     auto Deps = TemplateArgumentDependence::None;
@@ -659,7 +661,7 @@ std::string SYCLUniqueStableNameExpr::ComputeName(ASTContext &Context,
   std::string Buffer;
   Buffer.reserve(128);
   llvm::raw_string_ostream Out(Buffer);
-  Ctx->mangleTypeName(Ty, Out);
+  Ctx->mangleCanonicalTypeName(Ty, Out);
 
   return Out.str();
 }
@@ -2288,14 +2290,17 @@ APValue SourceLocExpr::EvaluateInContext(const ASTContext &Ctx,
   SourceLocation Loc;
   const DeclContext *Context;
 
-  std::tie(Loc,
-           Context) = [&]() -> std::pair<SourceLocation, const DeclContext *> {
-    if (auto *DIE = dyn_cast_or_null<CXXDefaultInitExpr>(DefaultExpr))
-      return {DIE->getUsedLocation(), DIE->getUsedContext()};
-    if (auto *DAE = dyn_cast_or_null<CXXDefaultArgExpr>(DefaultExpr))
-      return {DAE->getUsedLocation(), DAE->getUsedContext()};
-    return {this->getLocation(), this->getParentContext()};
-  }();
+  if (const auto *DIE = dyn_cast_if_present<CXXDefaultInitExpr>(DefaultExpr)) {
+    Loc = DIE->getUsedLocation();
+    Context = DIE->getUsedContext();
+  } else if (const auto *DAE =
+                 dyn_cast_if_present<CXXDefaultArgExpr>(DefaultExpr)) {
+    Loc = DAE->getUsedLocation();
+    Context = DAE->getUsedContext();
+  } else {
+    Loc = getLocation();
+    Context = getParentContext();
+  }
 
   PresumedLoc PLoc = Ctx.getSourceManager().getPresumedLoc(
       Ctx.getSourceManager().getExpansionRange(Loc).getEnd());
@@ -2333,13 +2338,9 @@ APValue SourceLocExpr::EvaluateInContext(const ASTContext &Ctx,
         CurDecl ? PredefinedExpr::ComputeName(Kind, CurDecl) : std::string(""));
   }
   case SourceLocExpr::Line:
-  case SourceLocExpr::Column: {
-    llvm::APSInt IntVal(Ctx.getIntWidth(Ctx.UnsignedIntTy),
-                        /*isUnsigned=*/true);
-    IntVal = getIdentKind() == SourceLocExpr::Line ? PLoc.getLine()
-                                                   : PLoc.getColumn();
-    return APValue(IntVal);
-  }
+    return APValue(Ctx.MakeIntValue(PLoc.getLine(), Ctx.UnsignedIntTy));
+  case SourceLocExpr::Column:
+    return APValue(Ctx.MakeIntValue(PLoc.getColumn(), Ctx.UnsignedIntTy));
   case SourceLocExpr::SourceLocStruct: {
     // Fill in a std::source_location::__impl structure, by creating an
     // artificial file-scoped CompoundLiteralExpr, and returning a pointer to
@@ -2352,7 +2353,7 @@ APValue SourceLocExpr::EvaluateInContext(const ASTContext &Ctx,
     // the ImplDecl type is as expected.
 
     APValue Value(APValue::UninitStruct(), 0, 4);
-    for (FieldDecl *F : ImplDecl->fields()) {
+    for (const FieldDecl *F : ImplDecl->fields()) {
       StringRef Name = F->getName();
       if (Name == "_M_file_name") {
         SmallString<256> Path(PLoc.getFilename());
@@ -2369,16 +2370,10 @@ APValue SourceLocExpr::EvaluateInContext(const ASTContext &Ctx,
                       PredefinedExpr::PrettyFunction, CurDecl))
                 : "");
       } else if (Name == "_M_line") {
-        QualType Ty = F->getType();
-        llvm::APSInt IntVal(Ctx.getIntWidth(Ty),
-                            Ty->hasUnsignedIntegerRepresentation());
-        IntVal = PLoc.getLine();
+        llvm::APSInt IntVal = Ctx.MakeIntValue(PLoc.getLine(), F->getType());
         Value.getStructField(F->getFieldIndex()) = APValue(IntVal);
       } else if (Name == "_M_column") {
-        QualType Ty = F->getType();
-        llvm::APSInt IntVal(Ctx.getIntWidth(Ty),
-                            Ty->hasUnsignedIntegerRepresentation());
-        IntVal = PLoc.getColumn();
+        llvm::APSInt IntVal = Ctx.MakeIntValue(PLoc.getColumn(), F->getType());
         Value.getStructField(F->getFieldIndex()) = APValue(IntVal);
       }
     }
@@ -3319,6 +3314,10 @@ bool Expr::isConstantInitializer(ASTContext &Ctx, bool IsForRef,
   // kill the second parameter.
 
   if (IsForRef) {
+    if (auto *EWC = dyn_cast<ExprWithCleanups>(this))
+      return EWC->getSubExpr()->isConstantInitializer(Ctx, true, Culprit);
+    if (auto *MTE = dyn_cast<MaterializeTemporaryExpr>(this))
+      return MTE->getSubExpr()->isConstantInitializer(Ctx, false, Culprit);
     EvalResult Result;
     if (EvaluateAsLValue(Result, Ctx) && !Result.HasSideEffects)
       return true;
@@ -3985,7 +3984,7 @@ Expr::isNullPointerConstant(ASTContext &Ctx,
   if (getType().isNull())
     return NPCK_NotNull;
 
-  // C++11/C2x nullptr_t is always a null pointer constant.
+  // C++11/C23 nullptr_t is always a null pointer constant.
   if (getType()->isNullPtrType())
     return NPCK_CXX11_nullptr;
 

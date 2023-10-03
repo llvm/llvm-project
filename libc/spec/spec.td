@@ -37,6 +37,7 @@ class RestrictedPtrType<Type type> : Type {
 
 // Builtin types.
 def VarArgType : NamedType<"...">;
+def VaListType : NamedType<"va_list">;
 def VoidType : NamedType<"void">;
 def IntType : NamedType<"int">;
 def UnsignedIntType : NamedType<"unsigned int">;

@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LIBC_SRC_SUPPORT_STR_TO_INTEGER_H
-#define LIBC_SRC_SUPPORT_STR_TO_INTEGER_H
+#ifndef LLVM_LIBC_SRC___SUPPORT_STR_TO_INTEGER_H
+#define LLVM_LIBC_SRC___SUPPORT_STR_TO_INTEGER_H
 
 #include "src/__support/CPP/limits.h"
 #include "src/__support/CPP/type_traits.h"
@@ -17,7 +17,7 @@
 #include "src/errno/libc_errno.h" // For ERANGE
 #include <limits.h>
 
-namespace __llvm_libc {
+namespace LIBC_NAMESPACE {
 namespace internal {
 
 // Returns a pointer to the first character in src that is not a whitespace
@@ -49,7 +49,7 @@ LIBC_INLINE bool is_hex_start(const char *__restrict src) {
 // base.
 LIBC_INLINE int infer_base(const char *__restrict *__restrict src) {
   // A hexadecimal number is defined as "the prefix 0x or 0X followed by a
-  // sequence of the deimal digits and the letters a (or A) through f (or F)
+  // sequence of the decimal digits and the letters a (or A) through f (or F)
   // with values 10 through 15 respectively." (C standard 6.4.4.1)
   if (is_hex_start(*src)) {
     (*src) += 2;
@@ -150,6 +150,6 @@ LIBC_INLINE StrToNumResult<T> strtointeger(const char *__restrict src,
 }
 
 } // namespace internal
-} // namespace __llvm_libc
+} // namespace LIBC_NAMESPACE
 
-#endif // LIBC_SRC_SUPPORT_STR_TO_INTEGER_H
+#endif // LLVM_LIBC_SRC___SUPPORT_STR_TO_INTEGER_H

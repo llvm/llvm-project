@@ -7,12 +7,11 @@
 //===----------------------------------------------------------------------===//
 // UNSUPPORTED: no-threads
 // UNSUPPORTED: c++03, c++11, c++14, c++17
+// REQUIRES: libcpp-hardening-mode={{safe|debug}}
 
-// REQUIRES: availability-synchronization_library-missing
-// XFAIL: target={{.+}}-apple-macosx10.{{13|15}}
+// XFAIL: availability-verbose_abort-missing
 
 // REQUIRES: has-unix-headers
-// ADDITIONAL_COMPILE_FLAGS: -D_LIBCPP_ENABLE_ASSERTIONS=1
 
 // <barrier>
 

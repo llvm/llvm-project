@@ -4,6 +4,7 @@ set(LLVM_LINK_COMPONENTS
    MC
    Option
    OrcJit
+   OrcDebugging
    OrcShared
    OrcTargetProcess
    Support
@@ -13,6 +14,7 @@ set(LLVM_LINK_COMPONENTS
 
 add_clang_library(clangInterpreter
   DeviceOffload.cpp
+  CodeCompletion.cpp
   IncrementalExecutor.cpp
   IncrementalParser.cpp
   Interpreter.cpp

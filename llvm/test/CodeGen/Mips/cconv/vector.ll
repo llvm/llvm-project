@@ -6637,24 +6637,12 @@ define <2 x i24> @i24x2(<2 x i24> %a, <2 x i24> %b) {
 ;
 ; MIPS64-LABEL: i24x2:
 ; MIPS64:       # %bb.0: # %Entry
-; MIPS64-NEXT:    lui $1, 256
-; MIPS64-NEXT:    daddiu $1, $1, -1
-; MIPS64-NEXT:    dsll $1, $1, 24
-; MIPS64-NEXT:    and $2, $5, $1
-; MIPS64-NEXT:    dsrl $2, $2, 24
-; MIPS64-NEXT:    sll $2, $2, 0
-; MIPS64-NEXT:    and $1, $4, $1
-; MIPS64-NEXT:    dsrl $1, $1, 24
-; MIPS64-NEXT:    sll $1, $1, 0
-; MIPS64-NEXT:    addu $1, $1, $2
-; MIPS64-NEXT:    sll $2, $5, 0
-; MIPS64-NEXT:    sll $3, $4, 0
-; MIPS64-NEXT:    dsll $1, $1, 24
-; MIPS64-NEXT:    addu $2, $3, $2
-; MIPS64-NEXT:    lui $3, 255
-; MIPS64-NEXT:    ori $3, $3, 65535
-; MIPS64-NEXT:    and $2, $2, $3
-; MIPS64-NEXT:    or $2, $2, $1
+; MIPS64-NEXT:    sll $1, $6, 0
+; MIPS64-NEXT:    sll $2, $4, 0
+; MIPS64-NEXT:    addu $2, $2, $1
+; MIPS64-NEXT:    sll $1, $7, 0
+; MIPS64-NEXT:    sll $3, $5, 0
+; MIPS64-NEXT:    addu $3, $3, $1
 ; MIPS64-NEXT:    jr $ra
 ; MIPS64-NEXT:    nop
 ;
@@ -6689,56 +6677,14 @@ define <2 x i24> @i24x2(<2 x i24> %a, <2 x i24> %b) {
 ;
 ; MIPS64R5EB-LABEL: i24x2:
 ; MIPS64R5EB:       # %bb.0: # %Entry
-; MIPS64R5EB-NEXT:    daddiu $sp, $sp, -32
-; MIPS64R5EB-NEXT:    .cfi_def_cfa_offset 32
-; MIPS64R5EB-NEXT:    sh $5, 20($sp)
-; MIPS64R5EB-NEXT:    dsrl $1, $5, 16
-; MIPS64R5EB-NEXT:    sw $1, 16($sp)
-; MIPS64R5EB-NEXT:    sh $4, 28($sp)
-; MIPS64R5EB-NEXT:    dsrl $1, $4, 16
-; MIPS64R5EB-NEXT:    sw $1, 24($sp)
-; MIPS64R5EB-NEXT:    lbu $1, 20($sp)
-; MIPS64R5EB-NEXT:    dsll $1, $1, 8
-; MIPS64R5EB-NEXT:    lb $2, 19($sp)
-; MIPS64R5EB-NEXT:    dsll $2, $2, 16
-; MIPS64R5EB-NEXT:    or $1, $2, $1
-; MIPS64R5EB-NEXT:    lbu $2, 28($sp)
-; MIPS64R5EB-NEXT:    dsll $2, $2, 8
-; MIPS64R5EB-NEXT:    lb $3, 27($sp)
-; MIPS64R5EB-NEXT:    dsll $3, $3, 16
-; MIPS64R5EB-NEXT:    lbu $4, 21($sp)
-; MIPS64R5EB-NEXT:    or $2, $3, $2
-; MIPS64R5EB-NEXT:    or $1, $4, $1
-; MIPS64R5EB-NEXT:    lh $3, 16($sp)
-; MIPS64R5EB-NEXT:    dsll $3, $3, 8
-; MIPS64R5EB-NEXT:    lbu $4, 18($sp)
-; MIPS64R5EB-NEXT:    or $3, $4, $3
-; MIPS64R5EB-NEXT:    lbu $4, 29($sp)
-; MIPS64R5EB-NEXT:    insert.d $w0[0], $3
-; MIPS64R5EB-NEXT:    insert.d $w0[1], $1
-; MIPS64R5EB-NEXT:    or $1, $4, $2
-; MIPS64R5EB-NEXT:    lh $2, 24($sp)
-; MIPS64R5EB-NEXT:    dsll $2, $2, 8
-; MIPS64R5EB-NEXT:    lbu $3, 26($sp)
-; MIPS64R5EB-NEXT:    or $2, $3, $2
-; MIPS64R5EB-NEXT:    insert.d $w1[0], $2
-; MIPS64R5EB-NEXT:    insert.d $w1[1], $1
+; MIPS64R5EB-NEXT:    insert.d $w0[0], $6
+; MIPS64R5EB-NEXT:    insert.d $w0[1], $7
+; MIPS64R5EB-NEXT:    insert.d $w1[0], $4
+; MIPS64R5EB-NEXT:    insert.d $w1[1], $5
 ; MIPS64R5EB-NEXT:    addv.d $w0, $w1, $w0
-; MIPS64R5EB-NEXT:    copy_s.d $1, $w0[1]
-; MIPS64R5EB-NEXT:    copy_s.d $2, $w0[0]
-; MIPS64R5EB-NEXT:    sb $2, 10($sp)
-; MIPS64R5EB-NEXT:    dsrl $3, $1, 16
-; MIPS64R5EB-NEXT:    sb $3, 11($sp)
-; MIPS64R5EB-NEXT:    dsrl $2, $2, 8
-; MIPS64R5EB-NEXT:    sh $2, 8($sp)
-; MIPS64R5EB-NEXT:    sb $1, 13($sp)
-; MIPS64R5EB-NEXT:    dsrl $1, $1, 8
-; MIPS64R5EB-NEXT:    sb $1, 12($sp)
-; MIPS64R5EB-NEXT:    lw $1, 8($sp)
-; MIPS64R5EB-NEXT:    dsll $1, $1, 16
-; MIPS64R5EB-NEXT:    lhu $2, 12($sp)
-; MIPS64R5EB-NEXT:    or $2, $2, $1
-; MIPS64R5EB-NEXT:    daddiu $sp, $sp, 32
+; MIPS64R5EB-NEXT:    shf.w $w0, $w0, 177
+; MIPS64R5EB-NEXT:    copy_s.w $2, $w0[1]
+; MIPS64R5EB-NEXT:    copy_s.w $3, $w0[3]
 ; MIPS64R5EB-NEXT:    jr $ra
 ; MIPS64R5EB-NEXT:    nop
 ;
@@ -6772,56 +6718,13 @@ define <2 x i24> @i24x2(<2 x i24> %a, <2 x i24> %b) {
 ;
 ; MIPS64R5EL-LABEL: i24x2:
 ; MIPS64R5EL:       # %bb.0: # %Entry
-; MIPS64R5EL-NEXT:    daddiu $sp, $sp, -32
-; MIPS64R5EL-NEXT:    .cfi_def_cfa_offset 32
-; MIPS64R5EL-NEXT:    dsrl $1, $5, 32
-; MIPS64R5EL-NEXT:    sh $1, 20($sp)
-; MIPS64R5EL-NEXT:    sw $5, 16($sp)
-; MIPS64R5EL-NEXT:    dsrl $1, $4, 32
-; MIPS64R5EL-NEXT:    sh $1, 28($sp)
-; MIPS64R5EL-NEXT:    lbu $1, 20($sp)
-; MIPS64R5EL-NEXT:    sw $4, 24($sp)
-; MIPS64R5EL-NEXT:    dsll $1, $1, 8
-; MIPS64R5EL-NEXT:    lbu $2, 19($sp)
-; MIPS64R5EL-NEXT:    or $1, $1, $2
-; MIPS64R5EL-NEXT:    lb $2, 21($sp)
-; MIPS64R5EL-NEXT:    dsll $2, $2, 16
-; MIPS64R5EL-NEXT:    lbu $3, 28($sp)
-; MIPS64R5EL-NEXT:    dsll $3, $3, 8
-; MIPS64R5EL-NEXT:    lb $4, 18($sp)
-; MIPS64R5EL-NEXT:    lbu $5, 27($sp)
-; MIPS64R5EL-NEXT:    or $3, $3, $5
-; MIPS64R5EL-NEXT:    or $1, $1, $2
-; MIPS64R5EL-NEXT:    dsll $2, $4, 16
-; MIPS64R5EL-NEXT:    lhu $4, 16($sp)
-; MIPS64R5EL-NEXT:    or $2, $4, $2
-; MIPS64R5EL-NEXT:    lb $4, 29($sp)
-; MIPS64R5EL-NEXT:    dsll $4, $4, 16
-; MIPS64R5EL-NEXT:    insert.d $w0[0], $2
-; MIPS64R5EL-NEXT:    insert.d $w0[1], $1
-; MIPS64R5EL-NEXT:    or $1, $3, $4
-; MIPS64R5EL-NEXT:    lb $2, 26($sp)
-; MIPS64R5EL-NEXT:    dsll $2, $2, 16
-; MIPS64R5EL-NEXT:    lhu $3, 24($sp)
-; MIPS64R5EL-NEXT:    or $2, $3, $2
-; MIPS64R5EL-NEXT:    insert.d $w1[0], $2
-; MIPS64R5EL-NEXT:    insert.d $w1[1], $1
+; MIPS64R5EL-NEXT:    insert.d $w0[0], $6
+; MIPS64R5EL-NEXT:    insert.d $w0[1], $7
+; MIPS64R5EL-NEXT:    insert.d $w1[0], $4
+; MIPS64R5EL-NEXT:    insert.d $w1[1], $5
 ; MIPS64R5EL-NEXT:    addv.d $w0, $w1, $w0
-; MIPS64R5EL-NEXT:    copy_s.d $1, $w0[0]
-; MIPS64R5EL-NEXT:    copy_s.d $2, $w0[1]
-; MIPS64R5EL-NEXT:    dsrl $3, $2, 8
-; MIPS64R5EL-NEXT:    sb $3, 12($sp)
-; MIPS64R5EL-NEXT:    dsrl $3, $2, 16
-; MIPS64R5EL-NEXT:    sb $3, 13($sp)
-; MIPS64R5EL-NEXT:    sb $2, 11($sp)
-; MIPS64R5EL-NEXT:    sh $1, 8($sp)
-; MIPS64R5EL-NEXT:    dsrl $1, $1, 16
-; MIPS64R5EL-NEXT:    sb $1, 10($sp)
-; MIPS64R5EL-NEXT:    lh $1, 12($sp)
-; MIPS64R5EL-NEXT:    dsll $1, $1, 32
-; MIPS64R5EL-NEXT:    lwu $2, 8($sp)
-; MIPS64R5EL-NEXT:    or $2, $2, $1
-; MIPS64R5EL-NEXT:    daddiu $sp, $sp, 32
+; MIPS64R5EL-NEXT:    copy_s.w $2, $w0[0]
+; MIPS64R5EL-NEXT:    copy_s.w $3, $w0[2]
 ; MIPS64R5EL-NEXT:    jr $ra
 ; MIPS64R5EL-NEXT:    nop
 Entry:
@@ -6868,17 +6771,22 @@ define void @call_i24x2() {
 ; MIPS64EB-NEXT:    lui $1, %hi(%neg(%gp_rel(call_i24x2)))
 ; MIPS64EB-NEXT:    daddu $1, $1, $25
 ; MIPS64EB-NEXT:    daddiu $gp, $1, %lo(%neg(%gp_rel(call_i24x2)))
-; MIPS64EB-NEXT:    lui $1, 1536
-; MIPS64EB-NEXT:    ori $4, $1, 7
-; MIPS64EB-NEXT:    lui $1, 3072
-; MIPS64EB-NEXT:    ori $5, $1, 8
 ; MIPS64EB-NEXT:    ld $25, %call16(i24x2)($gp)
+; MIPS64EB-NEXT:    daddiu $4, $zero, 6
+; MIPS64EB-NEXT:    daddiu $5, $zero, 7
+; MIPS64EB-NEXT:    daddiu $6, $zero, 12
+; MIPS64EB-NEXT:    daddiu $7, $zero, 8
 ; MIPS64EB-NEXT:    jalr $25
 ; MIPS64EB-NEXT:    nop
 ; MIPS64EB-NEXT:    ld $1, %got_disp(gv2i24)($gp)
-; MIPS64EB-NEXT:    sh $2, 4($1)
-; MIPS64EB-NEXT:    dsrl $2, $2, 16
-; MIPS64EB-NEXT:    sw $2, 0($1)
+; MIPS64EB-NEXT:    sb $3, 5($1)
+; MIPS64EB-NEXT:    sb $2, 2($1)
+; MIPS64EB-NEXT:    srl $4, $3, 8
+; MIPS64EB-NEXT:    sb $4, 4($1)
+; MIPS64EB-NEXT:    srl $3, $3, 16
+; MIPS64EB-NEXT:    sb $3, 3($1)
+; MIPS64EB-NEXT:    srl $2, $2, 8
+; MIPS64EB-NEXT:    sh $2, 0($1)
 ; MIPS64EB-NEXT:    ld $gp, 0($sp) # 8-byte Folded Reload
 ; MIPS64EB-NEXT:    ld $ra, 8($sp) # 8-byte Folded Reload
 ; MIPS64EB-NEXT:    daddiu $sp, $sp, 16
@@ -6923,31 +6831,27 @@ define void @call_i24x2() {
 ; MIPS64R5EB-NEXT:    lui $1, %hi(%neg(%gp_rel(call_i24x2)))
 ; MIPS64R5EB-NEXT:    daddu $1, $1, $25
 ; MIPS64R5EB-NEXT:    daddiu $gp, $1, %lo(%neg(%gp_rel(call_i24x2)))
-; MIPS64R5EB-NEXT:    lui $1, 1536
-; MIPS64R5EB-NEXT:    ori $1, $1, 7
-; MIPS64R5EB-NEXT:    swl $1, 2($sp)
-; MIPS64R5EB-NEXT:    lui $2, 3072
-; MIPS64R5EB-NEXT:    ori $2, $2, 8
-; MIPS64R5EB-NEXT:    swl $2, 10($sp)
-; MIPS64R5EB-NEXT:    sh $zero, 0($sp)
-; MIPS64R5EB-NEXT:    swr $1, 5($sp)
-; MIPS64R5EB-NEXT:    sh $zero, 8($sp)
-; MIPS64R5EB-NEXT:    swr $2, 13($sp)
-; MIPS64R5EB-NEXT:    lw $1, 0($sp)
-; MIPS64R5EB-NEXT:    dsll $1, $1, 16
-; MIPS64R5EB-NEXT:    lhu $2, 4($sp)
-; MIPS64R5EB-NEXT:    or $4, $2, $1
-; MIPS64R5EB-NEXT:    lw $1, 8($sp)
-; MIPS64R5EB-NEXT:    dsll $1, $1, 16
-; MIPS64R5EB-NEXT:    lhu $2, 12($sp)
-; MIPS64R5EB-NEXT:    or $5, $2, $1
 ; MIPS64R5EB-NEXT:    ld $25, %call16(i24x2)($gp)
+; MIPS64R5EB-NEXT:    daddiu $4, $zero, 6
+; MIPS64R5EB-NEXT:    daddiu $5, $zero, 7
+; MIPS64R5EB-NEXT:    daddiu $6, $zero, 12
+; MIPS64R5EB-NEXT:    daddiu $7, $zero, 8
 ; MIPS64R5EB-NEXT:    jalr $25
 ; MIPS64R5EB-NEXT:    nop
-; MIPS64R5EB-NEXT:    ld $1, %got_disp(gv2i24)($gp)
-; MIPS64R5EB-NEXT:    sh $2, 4($1)
+; MIPS64R5EB-NEXT:    sw $3, 12($sp)
+; MIPS64R5EB-NEXT:    sw $2, 4($sp)
+; MIPS64R5EB-NEXT:    ld.d $w0, 0($sp)
+; MIPS64R5EB-NEXT:    copy_s.d $1, $w0[0]
+; MIPS64R5EB-NEXT:    copy_s.d $2, $w0[1]
+; MIPS64R5EB-NEXT:    ld $3, %got_disp(gv2i24)($gp)
+; MIPS64R5EB-NEXT:    sb $2, 5($3)
+; MIPS64R5EB-NEXT:    sb $1, 2($3)
+; MIPS64R5EB-NEXT:    dsrl $4, $2, 8
+; MIPS64R5EB-NEXT:    sb $4, 4($3)
 ; MIPS64R5EB-NEXT:    dsrl $2, $2, 16
-; MIPS64R5EB-NEXT:    sw $2, 0($1)
+; MIPS64R5EB-NEXT:    sb $2, 3($3)
+; MIPS64R5EB-NEXT:    dsrl $1, $1, 8
+; MIPS64R5EB-NEXT:    sh $1, 0($3)
 ; MIPS64R5EB-NEXT:    ld $gp, 16($sp) # 8-byte Folded Reload
 ; MIPS64R5EB-NEXT:    ld $ra, 24($sp) # 8-byte Folded Reload
 ; MIPS64R5EB-NEXT:    daddiu $sp, $sp, 32
@@ -6992,17 +6896,22 @@ define void @call_i24x2() {
 ; MIPS64EL-NEXT:    lui $1, %hi(%neg(%gp_rel(call_i24x2)))
 ; MIPS64EL-NEXT:    daddu $1, $1, $25
 ; MIPS64EL-NEXT:    daddiu $gp, $1, %lo(%neg(%gp_rel(call_i24x2)))
-; MIPS64EL-NEXT:    lui $1, 1792
-; MIPS64EL-NEXT:    ori $4, $1, 6
-; MIPS64EL-NEXT:    lui $1, 2048
-; MIPS64EL-NEXT:    ori $5, $1, 12
 ; MIPS64EL-NEXT:    ld $25, %call16(i24x2)($gp)
+; MIPS64EL-NEXT:    daddiu $4, $zero, 6
+; MIPS64EL-NEXT:    daddiu $5, $zero, 7
+; MIPS64EL-NEXT:    daddiu $6, $zero, 12
+; MIPS64EL-NEXT:    daddiu $7, $zero, 8
 ; MIPS64EL-NEXT:    jalr $25
 ; MIPS64EL-NEXT:    nop
 ; MIPS64EL-NEXT:    ld $1, %got_disp(gv2i24)($gp)
-; MIPS64EL-NEXT:    sw $2, 0($1)
-; MIPS64EL-NEXT:    dsrl $2, $2, 32
-; MIPS64EL-NEXT:    sh $2, 4($1)
+; MIPS64EL-NEXT:    sb $3, 3($1)
+; MIPS64EL-NEXT:    sh $2, 0($1)
+; MIPS64EL-NEXT:    srl $4, $3, 8
+; MIPS64EL-NEXT:    sb $4, 4($1)
+; MIPS64EL-NEXT:    srl $3, $3, 16
+; MIPS64EL-NEXT:    sb $3, 5($1)
+; MIPS64EL-NEXT:    srl $2, $2, 16
+; MIPS64EL-NEXT:    sb $2, 2($1)
 ; MIPS64EL-NEXT:    ld $gp, 0($sp) # 8-byte Folded Reload
 ; MIPS64EL-NEXT:    ld $ra, 8($sp) # 8-byte Folded Reload
 ; MIPS64EL-NEXT:    daddiu $sp, $sp, 16
@@ -7047,31 +6956,27 @@ define void @call_i24x2() {
 ; MIPS64R5EL-NEXT:    lui $1, %hi(%neg(%gp_rel(call_i24x2)))
 ; MIPS64R5EL-NEXT:    daddu $1, $1, $25
 ; MIPS64R5EL-NEXT:    daddiu $gp, $1, %lo(%neg(%gp_rel(call_i24x2)))
-; MIPS64R5EL-NEXT:    addiu $1, $zero, 1792
-; MIPS64R5EL-NEXT:    swl $1, 5($sp)
-; MIPS64R5EL-NEXT:    addiu $2, $zero, 2048
-; MIPS64R5EL-NEXT:    swl $2, 13($sp)
-; MIPS64R5EL-NEXT:    swr $1, 2($sp)
-; MIPS64R5EL-NEXT:    daddiu $1, $zero, 6
-; MIPS64R5EL-NEXT:    sh $1, 0($sp)
-; MIPS64R5EL-NEXT:    swr $2, 10($sp)
-; MIPS64R5EL-NEXT:    daddiu $1, $zero, 12
-; MIPS64R5EL-NEXT:    sh $1, 8($sp)
-; MIPS64R5EL-NEXT:    lh $1, 4($sp)
-; MIPS64R5EL-NEXT:    dsll $1, $1, 32
-; MIPS64R5EL-NEXT:    lwu $2, 0($sp)
-; MIPS64R5EL-NEXT:    or $4, $2, $1
-; MIPS64R5EL-NEXT:    lh $1, 12($sp)
-; MIPS64R5EL-NEXT:    dsll $1, $1, 32
-; MIPS64R5EL-NEXT:    lwu $2, 8($sp)
-; MIPS64R5EL-NEXT:    or $5, $2, $1
 ; MIPS64R5EL-NEXT:    ld $25, %call16(i24x2)($gp)
+; MIPS64R5EL-NEXT:    daddiu $4, $zero, 6
+; MIPS64R5EL-NEXT:    daddiu $5, $zero, 7
+; MIPS64R5EL-NEXT:    daddiu $6, $zero, 12
+; MIPS64R5EL-NEXT:    daddiu $7, $zero, 8
 ; MIPS64R5EL-NEXT:    jalr $25
 ; MIPS64R5EL-NEXT:    nop
-; MIPS64R5EL-NEXT:    ld $1, %got_disp(gv2i24)($gp)
-; MIPS64R5EL-NEXT:    sw $2, 0($1)
-; MIPS64R5EL-NEXT:    dsrl $2, $2, 32
-; MIPS64R5EL-NEXT:    sh $2, 4($1)
+; MIPS64R5EL-NEXT:    sw $3, 8($sp)
+; MIPS64R5EL-NEXT:    sw $2, 0($sp)
+; MIPS64R5EL-NEXT:    ld.d $w0, 0($sp)
+; MIPS64R5EL-NEXT:    copy_s.d $1, $w0[0]
+; MIPS64R5EL-NEXT:    copy_s.d $2, $w0[1]
+; MIPS64R5EL-NEXT:    ld $3, %got_disp(gv2i24)($gp)
+; MIPS64R5EL-NEXT:    sb $2, 3($3)
+; MIPS64R5EL-NEXT:    sh $1, 0($3)
+; MIPS64R5EL-NEXT:    dsrl $4, $2, 8
+; MIPS64R5EL-NEXT:    sb $4, 4($3)
+; MIPS64R5EL-NEXT:    dsrl $2, $2, 16
+; MIPS64R5EL-NEXT:    sb $2, 5($3)
+; MIPS64R5EL-NEXT:    dsrl $1, $1, 16
+; MIPS64R5EL-NEXT:    sb $1, 2($3)
 ; MIPS64R5EL-NEXT:    ld $gp, 16($sp) # 8-byte Folded Reload
 ; MIPS64R5EL-NEXT:    ld $ra, 24($sp) # 8-byte Folded Reload
 ; MIPS64R5EL-NEXT:    daddiu $sp, $sp, 32

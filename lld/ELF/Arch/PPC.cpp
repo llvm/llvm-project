@@ -278,9 +278,16 @@ RelType PPC::getDynRel(RelType type) const {
 int64_t PPC::getImplicitAddend(const uint8_t *buf, RelType type) const {
   switch (type) {
   case R_PPC_NONE:
+  case R_PPC_GLOB_DAT:
+  case R_PPC_JMP_SLOT:
     return 0;
   case R_PPC_ADDR32:
   case R_PPC_REL32:
+  case R_PPC_RELATIVE:
+  case R_PPC_IRELATIVE:
+  case R_PPC_DTPMOD32:
+  case R_PPC_DTPREL32:
+  case R_PPC_TPREL32:
     return SignExtend64<32>(read32(buf));
   default:
     internalLinkerError(getErrorLocation(buf),
@@ -471,10 +478,14 @@ void PPC::relaxTlsIeToLe(uint8_t *loc, const Relocation &rel,
     if (insn >> 26 != 31)
       error("unrecognized instruction for IE to LE R_PPC_TLS");
     // addi rT, rT, x@tls --> addi rT, rT, x@tprel@l
-    uint32_t dFormOp = getPPCDFormOp((read32(loc) & 0x000007fe) >> 1);
-    if (dFormOp == 0)
-      error("unrecognized instruction for IE to LE R_PPC_TLS");
-    write32(loc, (dFormOp << 26) | (insn & 0x03ff0000) | lo(val));
+    unsigned secondaryOp = (read32(loc) & 0x000007fe) >> 1;
+    uint32_t dFormOp = getPPCDFormOp(secondaryOp);
+    if (dFormOp == 0) { // Expecting a DS-Form instruction.
+      dFormOp = getPPCDSFormOp(secondaryOp);
+      if (dFormOp == 0)
+        error("unrecognized instruction for IE to LE R_PPC_TLS");
+    }
+    write32(loc, (dFormOp | (insn & 0x03ff0000) | lo(val)));
     break;
   }
   default:

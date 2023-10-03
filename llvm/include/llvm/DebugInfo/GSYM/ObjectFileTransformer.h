@@ -32,15 +32,15 @@ public:
   ///
   /// \param Obj The object file that contains the DWARF debug info.
   ///
-  /// \param Log The stream to log warnings and non fatal issues to.
+  /// \param Log The stream to log warnings and non fatal issues to. If NULL,
+  ///            don't log.
   ///
   /// \param Gsym The GSYM creator to populate with the function information
   /// from the debug info.
   ///
   /// \returns An error indicating any fatal issues that happen when parsing
   /// the DWARF, or Error::success() if all goes well.
-  static llvm::Error convert(const object::ObjectFile &Obj,
-                             raw_ostream &Log,
+  static llvm::Error convert(const object::ObjectFile &Obj, raw_ostream *Log,
                              GsymCreator &Gsym);
 };
 

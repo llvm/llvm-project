@@ -22,12 +22,7 @@ namespace Fortran::evaluate {
 
 class InitialImage {
 public:
-  enum Result {
-    Ok,
-    NotAConstant,
-    OutOfRange,
-    SizeMismatch,
-  };
+  enum Result { Ok, NotAConstant, OutOfRange, SizeMismatch };
 
   explicit InitialImage(std::size_t bytes) : data_(bytes) {}
   InitialImage(InitialImage &&that) = default;

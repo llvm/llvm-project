@@ -847,7 +847,9 @@ void WinCOFFWriter::executePostLayoutBinding(MCAssembler &Asm,
 
   if (Mode != DwoOnly)
     for (const MCSymbol &Symbol : Asm.symbols())
-      if (!Symbol.isTemporary())
+      // Define non-temporary or temporary static (private-linkage) symbols
+      if (!Symbol.isTemporary() ||
+          cast<MCSymbolCOFF>(Symbol).getClass() == COFF::IMAGE_SYM_CLASS_STATIC)
         DefineSymbol(Symbol, Asm, Layout);
 }
 
@@ -909,7 +911,7 @@ void WinCOFFWriter::recordRelocation(MCAssembler &Asm,
   Reloc.Data.VirtualAddress = Layout.getFragmentOffset(Fragment);
 
   // Turn relocations for temporary symbols into section relocations.
-  if (A.isTemporary()) {
+  if (A.isTemporary() && !SymbolMap[&A]) {
     MCSection *TargetSection = &A.getSection();
     assert(
         SectionMap.contains(TargetSection) &&

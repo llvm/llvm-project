@@ -1036,12 +1036,9 @@ void IoChecker::CheckForDefinableVariable(
 
 void IoChecker::CheckForPureSubprogram() const { // C1597
   CHECK(context_.location());
-  if (const Scope *
-      scope{context_.globalScope().FindScope(*context_.location())}) {
-    if (FindPureProcedureContaining(*scope)) {
-      context_.Say(
-          "External I/O is not allowed in a pure subprogram"_err_en_US);
-    }
+  const Scope &scope{context_.FindScope(*context_.location())};
+  if (FindPureProcedureContaining(scope)) {
+    context_.Say("External I/O is not allowed in a pure subprogram"_err_en_US);
   }
 }
 
@@ -1171,11 +1168,23 @@ parser::Message *IoChecker::CheckForBadIoType(const Symbol &symbol,
 
 void IoChecker::CheckNamelist(const Symbol &namelist, common::DefinedIo which,
     parser::CharBlock namelistLocation) const {
-  const auto &details{namelist.GetUltimate().get<NamelistDetails>()};
-  for (const Symbol &object : details.objects()) {
-    context_.CheckIndexVarRedefine(namelistLocation, object);
-    if (auto *msg{CheckForBadIoType(object, which, namelistLocation)}) {
-      evaluate::AttachDeclaration(*msg, namelist);
+  if (!context_.HasError(namelist)) {
+    const auto &details{namelist.GetUltimate().get<NamelistDetails>()};
+    for (const Symbol &object : details.objects()) {
+      context_.CheckIndexVarRedefine(namelistLocation, object);
+      if (auto *msg{CheckForBadIoType(object, which, namelistLocation)}) {
+        evaluate::AttachDeclaration(*msg, namelist);
+      } else if (which == common::DefinedIo::ReadFormatted) {
+        if (auto why{WhyNotDefinable(namelistLocation, namelist.owner(),
+                DefinabilityFlags{}, object)}) {
+          context_
+              .Say(namelistLocation,
+                  "NAMELIST input group must not contain undefinable item '%s'"_err_en_US,
+                  object.name())
+              .Attach(std::move(*why));
+          context_.SetError(namelist);
+        }
+      }
     }
   }
 }

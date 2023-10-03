@@ -2003,10 +2003,10 @@ SmallVector<uint32_t, 8> HvxSelector::getPerfectCompletions(ShuffleMask SM,
     if ((unsigned)llvm::popcount(P) < Count) {
       // Reset all occurences of P, if there are more occurrences of P
       // than there are bits in P.
-      for_each(Worklist, [P](unsigned &Q) {
+      for (unsigned &Q : Worklist) {
         if (Q == P)
           Q = 0;
-      });
+      }
     }
   }
 
@@ -2341,7 +2341,7 @@ OpRef HvxSelector::perfect(ShuffleMask SM, OpRef Va, ResultStack &Results) {
   }
 
   auto Comps = getPerfectCompletions(SM, LogLen);
-  if (llvm::any_of(Comps, [](uint32_t P) { return P == 0; }))
+  if (llvm::is_contained(Comps, 0))
     return OpRef::fail();
 
   auto Pick = completeToPerfect(Comps, LogLen);

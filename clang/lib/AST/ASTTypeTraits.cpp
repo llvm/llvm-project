@@ -13,6 +13,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "clang/AST/ASTTypeTraits.h"
+#include "clang/AST/ASTConcept.h"
 #include "clang/AST/ASTContext.h"
 #include "clang/AST/Attr.h"
 #include "clang/AST/DeclCXX.h"
@@ -54,6 +55,7 @@ const ASTNodeKind::KindInfo ASTNodeKind::AllKindInfo[] = {
 #define ATTR(A) {NKI_Attr, #A "Attr"},
 #include "clang/Basic/AttrList.inc"
     {NKI_None, "ObjCProtocolLoc"},
+    {NKI_None, "ConceptReference"},
 };
 
 bool ASTNodeKind::isBaseOf(ASTNodeKind Other) const {
@@ -210,6 +212,8 @@ void DynTypedNode::print(llvm::raw_ostream &OS,
     A->printPretty(OS, PP);
   else if (const ObjCProtocolLoc *P = get<ObjCProtocolLoc>())
     P->getProtocol()->print(OS, PP);
+  else if (const ConceptReference *C = get<ConceptReference>())
+    C->print(OS, PP);
   else
     OS << "Unable to print values of type " << NodeKind.asStringRef() << "\n";
 }
@@ -222,6 +226,8 @@ void DynTypedNode::dump(llvm::raw_ostream &OS,
     S->dump(OS, Context);
   else if (const Type *T = get<Type>())
     T->dump(OS, Context);
+  else if (const ConceptReference *C = get<ConceptReference>())
+    C->dump(OS);
   else
     OS << "Unable to dump values of type " << NodeKind.asStringRef() << "\n";
 }
@@ -247,5 +253,7 @@ SourceRange DynTypedNode::getSourceRange() const {
     return A->getRange();
   if (const ObjCProtocolLoc *P = get<ObjCProtocolLoc>())
     return P->getSourceRange();
+  if (const ConceptReference *C = get<ConceptReference>())
+    return C->getSourceRange();
   return SourceRange();
 }

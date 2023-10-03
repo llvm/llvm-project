@@ -18,6 +18,7 @@
 #define FORTRAN_LOWER_CONVERT_VARIABLE_H
 
 #include "flang/Lower/Support/Utils.h"
+#include "flang/Optimizer/Dialect/FIRAttr.h"
 #include "mlir/IR/Value.h"
 #include "llvm/ADT/DenseMap.h"
 
@@ -115,7 +116,9 @@ void createRuntimeTypeInfoGlobal(Fortran::lower::AbstractConverter &converter,
 /// representation.
 fir::FortranVariableFlagsAttr
 translateSymbolAttributes(mlir::MLIRContext *mlirContext,
-                          const Fortran::semantics::Symbol &sym);
+                          const Fortran::semantics::Symbol &sym,
+                          fir::FortranVariableFlagsEnum extraFlags =
+                              fir::FortranVariableFlagsEnum::None);
 
 /// Map a symbol to a given fir::ExtendedValue. This will generate an
 /// hlfir.declare when lowering to HLFIR and map the hlfir.declare result to the
@@ -123,7 +126,14 @@ translateSymbolAttributes(mlir::MLIRContext *mlirContext,
 void genDeclareSymbol(Fortran::lower::AbstractConverter &converter,
                       Fortran::lower::SymMap &symMap,
                       const Fortran::semantics::Symbol &sym,
-                      const fir::ExtendedValue &exv, bool force = false);
+                      const fir::ExtendedValue &exv,
+                      fir::FortranVariableFlagsEnum extraFlags =
+                          fir::FortranVariableFlagsEnum::None,
+                      bool force = false);
+
+/// For the given Cray pointee symbol return the corresponding
+/// Cray pointer symbol. Assert if the pointer symbol cannot be found.
+Fortran::semantics::SymbolRef getCrayPointer(Fortran::semantics::SymbolRef sym);
 
 } // namespace Fortran::lower
 #endif // FORTRAN_LOWER_CONVERT_VARIABLE_H

@@ -31,13 +31,13 @@ struct DenseMapInfo<clang::tidy::RenamerClangTidyCheck::NamingCheckId> {
   using NamingCheckId = clang::tidy::RenamerClangTidyCheck::NamingCheckId;
 
   static inline NamingCheckId getEmptyKey() {
-    return NamingCheckId(DenseMapInfo<clang::SourceLocation>::getEmptyKey(),
-                         "EMPTY");
+    return {DenseMapInfo<clang::SourceLocation>::getEmptyKey(),
+                         "EMPTY"};
   }
 
   static inline NamingCheckId getTombstoneKey() {
-    return NamingCheckId(DenseMapInfo<clang::SourceLocation>::getTombstoneKey(),
-                         "TOMBSTONE");
+    return {DenseMapInfo<clang::SourceLocation>::getTombstoneKey(),
+                         "TOMBSTONE"};
   }
 
   static unsigned getHashValue(NamingCheckId Val) {
@@ -256,26 +256,6 @@ public:
       return true;
     }
 
-    // Fix type aliases in value declarations.
-    if (const auto *Value = dyn_cast<ValueDecl>(Decl)) {
-      if (const Type *TypePtr = Value->getType().getTypePtrOrNull()) {
-        if (const auto *Typedef = TypePtr->getAs<TypedefType>())
-          Check->addUsage(Typedef->getDecl(), Value->getSourceRange(), SM);
-      }
-    }
-
-    // Fix type aliases in function declarations.
-    if (const auto *Value = dyn_cast<FunctionDecl>(Decl)) {
-      if (const auto *Typedef =
-              Value->getReturnType().getTypePtr()->getAs<TypedefType>())
-        Check->addUsage(Typedef->getDecl(), Value->getSourceRange(), SM);
-      for (const ParmVarDecl *Param : Value->parameters()) {
-        if (const TypedefType *Typedef =
-                Param->getType().getTypePtr()->getAs<TypedefType>())
-          Check->addUsage(Typedef->getDecl(), Value->getSourceRange(), SM);
-      }
-    }
-
     // Fix overridden methods
     if (const auto *Method = dyn_cast<CXXMethodDecl>(Decl)) {
       if (const CXXMethodDecl *Overridden = getOverrideMethod(Method)) {
@@ -337,6 +317,11 @@ public:
                         DepMemberRef->getMemberNameInfo().getSourceRange(), SM);
     }
 
+    return true;
+  }
+
+  bool VisitTypedefTypeLoc(const TypedefTypeLoc &Loc) {
+    Check->addUsage(Loc.getTypedefNameDecl(), Loc.getSourceRange(), SM);
     return true;
   }
 

@@ -19,7 +19,7 @@
 # POSTCHECK: version = 0x0005
 # POSTCHECK: DW_TAG_compile_unit
 # POSTCHECK: DW_TAG_subprogram
-# POSTCHECK: DW_AT_type [DW_FORM_ref4] (cu + 0x0031 => {0x000000d8} "int")
+# POSTCHECK: DW_AT_type [DW_FORM_ref4] (cu + 0x0034 => {0x000000db} "int")
 # POSTCHECK: DW_TAG_base_type
 
 # POSTCHECKTU: version = 0x0004

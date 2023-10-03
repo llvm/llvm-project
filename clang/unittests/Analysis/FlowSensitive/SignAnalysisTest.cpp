@@ -114,10 +114,10 @@ getValueAndSignProperties(const UnaryOperator *UO,
     return {nullptr, {}, {}};
 
   // Value of the unary op.
-  auto *UnaryOpValue = State.Env.getValueStrict(*UO);
+  auto *UnaryOpValue = State.Env.getValue(*UO);
   if (!UnaryOpValue) {
     UnaryOpValue = &State.Env.makeAtomicBoolValue();
-    State.Env.setValueStrict(*UO, *UnaryOpValue);
+    State.Env.setValue(*UO, *UnaryOpValue);
   }
 
   // Properties for the operand (sub expression).
@@ -133,18 +133,18 @@ void transferBinary(const BinaryOperator *BO, const MatchFinder::MatchResult &M,
                     LatticeTransferState &State) {
   auto &A = State.Env.arena();
   const Formula *Comp;
-  if (BoolValue *V = cast_or_null<BoolValue>(State.Env.getValueStrict(*BO))) {
+  if (BoolValue *V = cast_or_null<BoolValue>(State.Env.getValue(*BO))) {
     Comp = &V->formula();
   } else {
     Comp = &A.makeAtomRef(A.makeAtom());
-    State.Env.setValueStrict(*BO, A.makeBoolValue(*Comp));
+    State.Env.setValue(*BO, A.makeBoolValue(*Comp));
   }
 
   // FIXME Use this as well:
   // auto *NegatedComp = &State.Env.makeNot(*Comp);
 
-  auto *LHS = State.Env.getValueStrict(*BO->getLHS());
-  auto *RHS = State.Env.getValueStrict(*BO->getRHS());
+  auto *LHS = State.Env.getValue(*BO->getLHS());
+  auto *RHS = State.Env.getValue(*BO->getRHS());
 
   if (!LHS || !RHS)
     return;
@@ -260,10 +260,10 @@ void transferUnaryNot(const UnaryOperator *UO,
 Value *getOrCreateValue(const Expr *E, Environment &Env) {
   Value *Val = nullptr;
   if (E->isGLValue()) {
-    StorageLocation *Loc = Env.getStorageLocationStrict(*E);
+    StorageLocation *Loc = Env.getStorageLocation(*E);
     if (!Loc) {
       Loc = &Env.createStorageLocation(*E);
-      Env.setStorageLocationStrict(*E, *Loc);
+      Env.setStorageLocation(*E, *Loc);
     }
     Val = Env.getValue(*Loc);
     if (!Val) {
@@ -271,10 +271,10 @@ Value *getOrCreateValue(const Expr *E, Environment &Env) {
       Env.setValue(*Loc, *Val);
     }
   } else {
-    Val = Env.getValueStrict(*E);
+    Val = Env.getValue(*E);
     if (!Val) {
       Val = Env.createValue(E->getType());
-      Env.setValueStrict(*E, *Val);
+      Env.setValue(*E, *Val);
     }
   }
   assert(Val != nullptr);

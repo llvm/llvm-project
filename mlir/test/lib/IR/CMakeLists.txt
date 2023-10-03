@@ -1,5 +1,6 @@
 # Exclude tests from libMLIR.so
 add_mlir_library(MLIRTestIR
+  TestBytecodeCallbacks.cpp
   TestBuiltinAttributeInterfaces.cpp
   TestBuiltinDistinctAttributes.cpp
   TestClone.cpp
@@ -29,6 +30,7 @@ add_mlir_library(MLIRTestIR
   MLIRPass
   MLIRBytecodeReader
   MLIRBytecodeWriter
+  MLIRFunctionInterfaces
   MLIRTestDialect
   )
 

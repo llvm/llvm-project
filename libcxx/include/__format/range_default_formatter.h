@@ -24,6 +24,7 @@
 #include <__iterator/back_insert_iterator.h>
 #include <__ranges/concepts.h>
 #include <__ranges/data.h>
+#include <__ranges/from_range.h>
 #include <__ranges/size.h>
 #include <__type_traits/conditional.h>
 #include <__type_traits/remove_cvref.h>
@@ -111,8 +112,9 @@ public:
     return __underlying_.parse(__ctx);
   }
 
-  template <class FormatContext>
-  _LIBCPP_HIDE_FROM_ABI typename FormatContext::iterator format(__maybe_const_r& __range, FormatContext& __ctx) const {
+  template <class _FormatContext>
+  _LIBCPP_HIDE_FROM_ABI typename _FormatContext::iterator
+  format(__maybe_const_r& __range, _FormatContext& __ctx) const {
     return __underlying_.format(__range, __ctx);
   }
 };
@@ -196,15 +198,8 @@ public:
     // specialization is the "basic" string formatter in libc++.
     if constexpr (ranges::contiguous_range<_Rp> && std::ranges::sized_range<_Rp>)
       return __underlying_.format(basic_string_view<_CharT>{ranges::data(__range), ranges::size(__range)}, __ctx);
-    else {
-      // P2106's from_range has not been implemented yet. Instead use a simple
-      // copy operation.
-      // TODO FMT use basic_string's "from_range" constructor.
-      // return __underlying_.format(basic_string<_CharT>{from_range, __range}, __ctx);
-      basic_string<_CharT> __str;
-      std::ranges::copy(__range, back_insert_iterator{__str});
-      return __underlying_.format(static_cast<basic_string_view<_CharT>>(__str), __ctx);
-    }
+    else
+      return __underlying_.format(basic_string<_CharT>{from_range, __range}, __ctx);
   }
 };
 

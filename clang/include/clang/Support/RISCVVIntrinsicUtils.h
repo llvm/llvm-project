@@ -58,6 +58,13 @@ enum class VectorTypeModifier : uint8_t {
   SFixedLog2LMUL1,
   SFixedLog2LMUL2,
   SFixedLog2LMUL3,
+  SEFixedLog2LMULN3,
+  SEFixedLog2LMULN2,
+  SEFixedLog2LMULN1,
+  SEFixedLog2LMUL0,
+  SEFixedLog2LMUL1,
+  SEFixedLog2LMUL2,
+  SEFixedLog2LMUL3,
   Tuple2,
   Tuple3,
   Tuple4,
@@ -218,6 +225,7 @@ enum ScalarTypeKind : uint8_t {
   UnsignedInteger,
   Float,
   Invalid,
+  Undefined,
 };
 
 // Exponential LMUL
@@ -240,7 +248,7 @@ class RVVType {
   friend class RVVTypeCache;
 
   BasicType BT;
-  ScalarTypeKind ScalarType = Invalid;
+  ScalarTypeKind ScalarType = Undefined;
   LMULType LMUL;
   bool IsPointer = false;
   // IsConstant indices are "int", but have the constant expression.
@@ -258,7 +266,7 @@ class RVVType {
   std::string Str;
   std::string ShortStr;
 
-  enum class FixedLMULType { LargerThan, SmallerThan };
+  enum class FixedLMULType { LargerThan, SmallerThan, SmallerOrEqual };
 
   RVVType(BasicType BT, int Log2LMUL, const PrototypeDescriptor &Profile);
 
@@ -472,13 +480,21 @@ public:
 
 // RVVRequire should be sync'ed with target features, but only
 // required features used in riscv_vector.td.
-enum RVVRequire : uint8_t {
+enum RVVRequire : uint16_t {
   RVV_REQ_None = 0,
   RVV_REQ_RV64 = 1 << 0,
-  RVV_REQ_FullMultiply = 1 << 1,
+  RVV_REQ_ZvfhminOrZvfh = 1 << 1,
   RVV_REQ_Xsfvcp = 1 << 2,
+  RVV_REQ_Zvbb = 1 << 3,
+  RVV_REQ_Zvbc = 1 << 4,
+  RVV_REQ_Zvkb = 1 << 5,
+  RVV_REQ_Zvkg = 1 << 6,
+  RVV_REQ_Zvkned = 1 << 7,
+  RVV_REQ_Zvknha = 1 << 8,
+  RVV_REQ_Zvksed = 1 << 9,
+  RVV_REQ_Zvksh = 1 << 10,
 
-  LLVM_MARK_AS_BITMASK_ENUM(RVV_REQ_Xsfvcp)
+  LLVM_MARK_AS_BITMASK_ENUM(RVV_REQ_Zvksh)
 };
 
 // Raw RVV intrinsic info, used to expand later.
@@ -510,7 +526,7 @@ struct RVVIntrinsicRecord {
   uint8_t OverloadedSuffixSize;
 
   // Required target features for this intrinsic.
-  uint8_t RequiredExtensions;
+  uint16_t RequiredExtensions;
 
   // Supported type, mask of BasicType.
   uint8_t TypeRangeMask;

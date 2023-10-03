@@ -59,9 +59,19 @@ class DisassembleRawDataTestCase(TestBase):
         elif arch in ("aarch64", "arm64"):
             self.assertEqual(inst.GetMnemonic(target), "mov")
             self.assertEqual(inst.GetOperands(target), "w0, #0x63")
+            self.assertEqual(inst.GetComment(target), "=99 ")
             self.assertEqual(
                 inst.GetControlFlowKind(target), lldb.eInstructionControlFlowKindUnknown
             )
+            # Make sure that using colors doesn't affect the output here.
+            res = lldb.SBCommandReturnObject()
+            ci = self.dbg.GetCommandInterpreter()
+            ci.HandleCommand("settings set use-color true", res)
+            self.assertEqual(inst.GetOperands(target), "w0, #0x63")
+            self.assertEqual(inst.GetMnemonic(target), "mov")
+            self.assertEqual(inst.GetComment(target), "=99 ")
+            ci.HandleCommand("settings set use-color false", res)
+
         elif arch == "arm":
             self.assertEqual(inst.GetMnemonic(target), "mov")
             self.assertEqual(inst.GetOperands(target), "r3, #99")

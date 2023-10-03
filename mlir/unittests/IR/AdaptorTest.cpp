@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "../../test/lib/Dialect/Test/TestDialect.h"
+#include "../../test/lib/Dialect/Test/TestOpsSyntax.h"
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
 
@@ -39,12 +40,18 @@ TEST(Adaptor, GenericAdaptorsOperandAccess) {
     // value from the value 0.
     SmallVector<std::optional<int>> v = {0, 4};
     OIListSimple::Properties prop;
-    prop.operand_segment_sizes = builder.getDenseI32ArrayAttr({1, 0, 1});
+    prop.operandSegmentSizes = {1, 0, 1};
     OIListSimple::GenericAdaptor<ArrayRef<std::optional<int>>> d(v, {}, prop,
                                                                  {});
     EXPECT_EQ(d.getArg0(), 0);
     EXPECT_EQ(d.getArg1(), std::nullopt);
     EXPECT_EQ(d.getArg2(), 4);
+
+    // Check the property comparison operator.
+    OIListSimple::Properties equivalentProp = {1, 0, 1};
+    OIListSimple::Properties differentProp = {0, 0, 1};
+    EXPECT_EQ(d.getProperties(), equivalentProp);
+    EXPECT_NE(d.getProperties(), differentProp);
   }
 
   // Has VariadicOfVariadic arguments.

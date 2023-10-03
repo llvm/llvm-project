@@ -8,9 +8,10 @@
 
 # Fortran Extensions supported by Flang
 
-```eval_rst
-.. contents::
-   :local:
+```{contents}
+---
+local:
+---
 ```
 
 As a general principle, this compiler will accept by default and
@@ -99,7 +100,9 @@ end
 * `<>` as synonym for `.NE.` and `/=`
 * `$` and `@` as legal characters in names
 * Initialization in type declaration statements using `/values/`
-* Saved integer, logical and real scalars are zero initialized.
+* Saved variables without explicit or default initializers are zero initialized.
+* In a saved entity of a type with a default initializer, components without default
+  values are zero initialized.
 * Kind specification with `*`, e.g. `REAL*4`
 * `DOUBLE COMPLEX` as a synonym for `COMPLEX(KIND(0.D0))` --
   but not when spelled `TYPE(DOUBLECOMPLEX)`.
@@ -289,6 +292,17 @@ end
   fixed form source by a '0' in column 6, can contain spaces
   between the letters of the word INCLUDE, and can have a
   numeric character literal kind prefix on the file name.
+* Intrinsic procedures TAND and ATAND. Constant folding is currently
+  not supported for these procedures but this is planned.
+* When a pair of quotation marks in a character literal are split
+  by a line continuation in free form, the second quotation mark
+  may appear at the beginning of the continuation line without an
+  ampersand, althought one is required by the standard.
+* Unrestricted `INTRINSIC` functions are accepted for use in
+  `PROCEDURE` statements in generic interfaces, as in some other
+  compilers.
+* A `NULL()` pointer is treated as an unallocated allocatable
+  when associated with an `INTENT(IN)` allocatable dummy argument.
 
 ### Extensions supported when enabled by options
 
@@ -419,6 +433,9 @@ end
 * Since Fortran 90, INCLUDE lines have been allowed to have
   a numeric kind parameter prefix on the file name.  No other
   Fortran compiler supports them that I can find.
+* A `SEQUENCE` derived type is required (F'2023 C745) to have
+  at least one component.  No compiler enforces this constraint;
+  this compiler emits a warning.
 
 ## Behavior in cases where the standard is ambiguous or indefinite
 
@@ -605,3 +622,4 @@ end module
 * `ENCODING=` is not in the list of changeable modes on an I/O unit,
   but every Fortran compiler allows the encoding to be changed on an
   open unit.
+

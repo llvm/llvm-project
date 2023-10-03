@@ -27,7 +27,7 @@ All library level keys, accept target values and are defaulted if not specified.
   "target_info": [                                # Required: target information 
     {
       "target": "x86_64-macos",
-      "min_deployment": "10.14"                   # Required: minimum OS deployment version
+      "min_deployment": "10.14"                   # Optional: minOS defaults to 0
     },
     {
       "target": "arm64-macos",
@@ -283,17 +283,16 @@ Expected<TargetList> getTargetsSection(const Object *Section) {
         getRequiredValue<StringRef>(TBDKey::Target, Obj, &Object::getString);
     if (!TargetStr)
       return make_error<JSONStubError>(getParseErrorMsg(TBDKey::Target));
-    auto VersionStr = getRequiredValue<StringRef>(TBDKey::Deployment, Obj,
-                                                  &Object::getString);
-    if (!VersionStr)
-      return make_error<JSONStubError>(getParseErrorMsg(TBDKey::Deployment));
-    VersionTuple Version;
-    if (Version.tryParse(*VersionStr))
-      return make_error<JSONStubError>(getParseErrorMsg(TBDKey::Deployment));
     auto TargetOrErr = Target::create(*TargetStr);
     if (!TargetOrErr)
       return make_error<JSONStubError>(getParseErrorMsg(TBDKey::Target));
+
+    auto VersionStr = Obj->getString(Keys[TBDKey::Deployment]);
+    VersionTuple Version;
+    if (VersionStr && Version.tryParse(*VersionStr))
+      return make_error<JSONStubError>(getParseErrorMsg(TBDKey::Deployment));
     TargetOrErr->MinDeployment = Version;
+
     // Convert to LLVM::Triple to accurately compute minOS + platform + arch
     // pairing.
     IFTargets.push_back(
@@ -548,11 +547,11 @@ Expected<PackedVersion> getPackedVersion(const Object *File, TBDKey Key) {
 Expected<TBDFlags> getFlags(const Object *File) {
   TBDFlags Flags = TBDFlags::None;
   const Array *Section = File->getArray(Keys[TBDKey::Flags]);
-  if (!Section)
+  if (!Section || Section->empty())
     return Flags;
 
   for (auto &Val : *Section) {
-    // TODO: Just take first for now.
+    // FIXME: Flags currently apply to all target triples.
     const auto *Obj = Val.getAsObject();
     if (!Obj)
       return make_error<JSONStubError>(getParseErrorMsg(TBDKey::Flags));
@@ -564,6 +563,7 @@ Expected<TBDFlags> getFlags(const Object *File) {
                   .Case("flat_namespace", TBDFlags::FlatNamespace)
                   .Case("not_app_extension_safe",
                         TBDFlags::NotApplicationExtensionSafe)
+                  .Case("sim_support", TBDFlags::SimulatorSupport)
                   .Default(TBDFlags::None);
           Flags |= TBDFlag;
         });
@@ -654,6 +654,7 @@ Expected<IFPtr> parseToInterfaceFile(const Object *File) {
   F->setTwoLevelNamespace(!(Flags & TBDFlags::FlatNamespace));
   F->setApplicationExtensionSafe(
       !(Flags & TBDFlags::NotApplicationExtensionSafe));
+  F->setSimulatorSupport((Flags & TBDFlags::SimulatorSupport));
   for (auto &T : Targets)
     F->addTarget(T);
   for (auto &[Lib, Targets] : Clients)
@@ -753,9 +754,9 @@ std::vector<std::string> serializeTargets(const AggregateT Targets,
   if (Targets.size() == ActiveTargets.size())
     return TargetsStr;
 
-  llvm::for_each(Targets, [&TargetsStr](const MachO::Target &Target) {
+  for (const MachO::Target &Target : Targets)
     TargetsStr.emplace_back(getFormattedStr(Target));
-  });
+
   return TargetsStr;
 }
 
@@ -920,6 +921,8 @@ Array serializeFlags(const InterfaceFile *File) {
     Flags.emplace_back("flat_namespace");
   if (!File->isApplicationExtensionSafe())
     Flags.emplace_back("not_app_extension_safe");
+  if (File->hasSimulatorSupport())
+    Flags.emplace_back("sim_support");
   return serializeScalar(TBDKey::Attributes, std::move(Flags));
 }
 
@@ -983,9 +986,8 @@ Expected<Object> serializeIF(const InterfaceFile *File) {
   return std::move(Library);
 }
 
-Expected<Object> getJSON(const InterfaceFile *File) {
-  assert(File->getFileType() == FileType::TBD_V5 &&
-         "unexpected json file format version");
+Expected<Object> getJSON(const InterfaceFile *File, const FileType FileKind) {
+  assert(FileKind == FileType::TBD_V5 && "unexpected json file format version");
   Object Root;
 
   auto MainLibOrErr = serializeIF(File);
@@ -1009,8 +1011,9 @@ Expected<Object> getJSON(const InterfaceFile *File) {
 
 Error MachO::serializeInterfaceFileToJSON(raw_ostream &OS,
                                           const InterfaceFile &File,
+                                          const FileType FileKind,
                                           bool Compact) {
-  auto TextFile = getJSON(&File);
+  auto TextFile = getJSON(&File, FileKind);
   if (!TextFile)
     return TextFile.takeError();
   if (Compact)

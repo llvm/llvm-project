@@ -1,6 +1,5 @@
 // RUN: %clang_cc1 -triple x86_64-apple-darwin10 -debug-info-kind=limited -fblocks -emit-llvm -o - %s | FileCheck %s
 // Assignment and block entry should point to the same line.
-// rdar://problem/14039866
 
 // CHECK: define{{.*}}@main()
 // CHECK: store {{.*}}, !dbg ![[ASSIGNMENT:[0-9]+]]

@@ -136,9 +136,6 @@ private:
   // True if a script being read is in the --sysroot directory.
   bool isUnderSysroot = false;
 
-  bool seenDataAlign = false;
-  bool seenRelroEnd = false;
-
   // A set to detect an INCLUDE() cycle.
   StringSet<> seen;
 };
@@ -291,7 +288,7 @@ void ScriptParser::readDefsym(StringRef name) {
   Expr e = readExpr();
   if (!atEOF())
     setError("EOF expected, but got " + next());
-  SymbolAssignment *cmd = make<SymbolAssignment>(name, e, getCurrentLocation());
+  auto *cmd = make<SymbolAssignment>(name, e, 0, getCurrentLocation());
   script->sectionCommands.push_back(cmd);
 }
 
@@ -445,6 +442,8 @@ static std::pair<ELFKind, uint16_t> parseBfdName(StringRef s) {
       .Case("elf64-littleriscv", {ELF64LEKind, EM_RISCV})
       .Case("elf64-sparc", {ELF64BEKind, EM_SPARCV9})
       .Case("elf32-msp430", {ELF32LEKind, EM_MSP430})
+      .Case("elf32-loongarch", {ELF32LEKind, EM_LOONGARCH})
+      .Case("elf64-loongarch", {ELF64LEKind, EM_LOONGARCH})
       .Default({ELFNoneKind, EM_NONE});
 }
 
@@ -566,7 +565,7 @@ SmallVector<SectionCommand *, 0> ScriptParser::readOverlay() {
       max = std::max(max, cast<OutputDesc>(cmd)->osec.size);
     return addrExpr().getValue() + max;
   };
-  v.push_back(make<SymbolAssignment>(".", moveDot, getCurrentLocation()));
+  v.push_back(make<SymbolAssignment>(".", moveDot, 0, getCurrentLocation()));
   return v;
 }
 
@@ -598,7 +597,7 @@ void ScriptParser::readSections() {
 
   // If DATA_SEGMENT_RELRO_END is absent, for sections after DATA_SEGMENT_ALIGN,
   // the relro fields should be cleared.
-  if (!seenRelroEnd)
+  if (!script->seenRelroEnd)
     for (SectionCommand *cmd : v)
       if (auto *osd = dyn_cast<OutputDesc>(cmd))
         osd->osec.relro = false;
@@ -914,7 +913,7 @@ OutputDesc *ScriptParser::readOutputSectionDescription(StringRef outSec) {
       script->createOutputSection(unquote(outSec), getCurrentLocation());
   OutputSection *osec = &cmd->osec;
   // Maybe relro. Will reset to false if DATA_SEGMENT_RELRO_END is absent.
-  osec->relro = seenDataAlign && !seenRelroEnd;
+  osec->relro = script->seenDataAlign && !script->seenRelroEnd;
 
   size_t symbolsReferenced = script->referencedSymbols.size();
 
@@ -1045,10 +1044,11 @@ SymbolAssignment *ScriptParser::readProvideHidden(bool provide, bool hidden) {
 SymbolAssignment *ScriptParser::readAssignment(StringRef tok) {
   // Assert expression returns Dot, so this is equal to ".=."
   if (tok == "ASSERT")
-    return make<SymbolAssignment>(".", readAssert(), getCurrentLocation());
+    return make<SymbolAssignment>(".", readAssert(), 0, getCurrentLocation());
 
   size_t oldPos = pos;
   SymbolAssignment *cmd = nullptr;
+  bool savedSeenRelroEnd = script->seenRelroEnd;
   const StringRef op = peek();
   if (op.starts_with("=")) {
     // Support = followed by an expression without whitespace.
@@ -1069,6 +1069,7 @@ SymbolAssignment *ScriptParser::readAssignment(StringRef tok) {
   }
 
   if (cmd) {
+    cmd->dataSegmentRelroEnd = !savedSeenRelroEnd && script->seenRelroEnd;
     cmd->commandString =
         tok.str() + " " +
         llvm::join(tokens.begin() + oldPos, tokens.begin() + pos, " ");
@@ -1082,7 +1083,7 @@ SymbolAssignment *ScriptParser::readSymbolAssignment(StringRef name) {
   StringRef op = next();
   assert(op == "=" || op == "*=" || op == "/=" || op == "+=" || op == "-=" ||
          op == "&=" || op == "^=" || op == "|=" || op == "<<=" || op == ">>=");
-  // Note: GNU ld does not support %= or ^=.
+  // Note: GNU ld does not support %=.
   Expr e = readExpr();
   if (op != "=") {
     std::string loc = getCurrentLocation();
@@ -1115,7 +1116,8 @@ SymbolAssignment *ScriptParser::readSymbolAssignment(StringRef name) {
       }
     };
   }
-  return make<SymbolAssignment>(name, e, getCurrentLocation());
+  return make<SymbolAssignment>(name, e, ctx.scriptSymOrderCounter++,
+                                getCurrentLocation());
 }
 
 // This is an operator-precedence parser to parse a linker
@@ -1436,7 +1438,7 @@ Expr ScriptParser::readPrimary() {
     expect(",");
     readExpr();
     expect(")");
-    seenDataAlign = true;
+    script->seenDataAlign = true;
     return [=] {
       uint64_t align = std::max(uint64_t(1), e().getValue());
       return (script->getDot() + align - 1) & -align;
@@ -1457,15 +1459,18 @@ Expr ScriptParser::readPrimary() {
     expect(",");
     readExpr();
     expect(")");
-    seenRelroEnd = true;
-    Expr e = getPageSize();
-    return [=] { return alignToPowerOf2(script->getDot(), e().getValue()); };
+    script->seenRelroEnd = true;
+    return [=] { return alignToPowerOf2(script->getDot(), config->maxPageSize); };
   }
   if (tok == "DEFINED") {
     StringRef name = unquote(readParenLiteral());
+    // Return 1 if s is defined. If the definition is only found in a linker
+    // script, it must happen before this DEFINED.
+    auto order = ctx.scriptSymOrderCounter++;
     return [=] {
-      Symbol *b = symtab.find(name);
-      return (b && b->isDefined()) ? 1 : 0;
+      Symbol *s = symtab.find(name);
+      return s && s->isDefined() && ctx.scriptSymOrder.lookup(s) < order ? 1
+                                                                         : 0;
     };
   }
   if (tok == "LENGTH") {

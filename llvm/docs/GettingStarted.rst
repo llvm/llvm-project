@@ -281,17 +281,13 @@ uses the package and provides other details.
 Package                                                     Version      Notes
 =========================================================== ============ ==========================================
 `CMake <http://cmake.org/>`__                               >=3.20.0     Makefile/workspace generator
-`GCC <http://gcc.gnu.org/>`_                                >=7.1.0      C/C++ compiler\ :sup:`1`
-`python <http://www.python.org/>`_                          >=3.6        Automated test suite\ :sup:`2`
-`zlib <http://zlib.net>`_                                   >=1.2.3.4    Compression library\ :sup:`3`
-`GNU Make <http://savannah.gnu.org/projects/make>`_         3.79, 3.79.1 Makefile/build processor\ :sup:`4`
+`python <http://www.python.org/>`_                          >=3.6        Automated test suite\ :sup:`1`
+`zlib <http://zlib.net>`_                                   >=1.2.3.4    Compression library\ :sup:`2`
+`GNU Make <http://savannah.gnu.org/projects/make>`_         3.79, 3.79.1 Makefile/build processor\ :sup:`3`
 =========================================================== ============ ==========================================
 
 .. note::
 
-   #. Only the C and C++ languages are needed so there's no need to build the
-      other languages for LLVM's purposes. See `below` for specific version
-      info.
    #. Only needed if you want to run the automated test suite in the
       ``llvm/test`` directory.
    #. Optional, adds compression / uncompression capabilities to selected LLVM
@@ -343,7 +339,7 @@ popular host toolchains for specific minimum versions in our build systems:
 
 * Clang 5.0
 * Apple Clang 10.0
-* GCC 7.1
+* GCC 7.4
 * Visual Studio 2019 16.7
 
 Anything older than these toolchains *may* work, but will require forcing the
@@ -409,11 +405,11 @@ GCC from source. It is also quite easy to do these days.
 .. _github gist:
   https://gist.github.com/application2000/73fd6f4bf1be6600a2cf9f56315a2d91
 
-Easy steps for installing GCC 7.1.0:
+Easy steps for installing a specific version of GCC:
 
 .. code-block:: console
 
-  % gcc_version=7.1.0
+  % gcc_version=7.4.0
   % wget https://ftp.gnu.org/gnu/gcc/gcc-${gcc_version}/gcc-${gcc_version}.tar.bz2
   % wget https://ftp.gnu.org/gnu/gcc/gcc-${gcc_version}/gcc-${gcc_version}.tar.bz2.sig
   % wget https://ftp.gnu.org/gnu/gnu-keyring.gpg

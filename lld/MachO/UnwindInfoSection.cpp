@@ -146,7 +146,7 @@ private:
   Symbol *canonicalizePersonality(Symbol *);
 
   uint64_t unwindInfoSize = 0;
-  std::vector<decltype(symbols)::value_type> symbolsVec;
+  SmallVector<decltype(symbols)::value_type, 0> symbolsVec;
   CompactUnwindLayout cuLayout;
   std::vector<std::pair<compact_unwind_encoding_t, size_t>> commonEncodings;
   EncodingMap commonEncodingIndexes;

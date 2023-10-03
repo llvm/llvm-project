@@ -14,6 +14,7 @@
 #ifndef MLIR_IR_ASMSTATE_H_
 #define MLIR_IR_ASMSTATE_H_
 
+#include "mlir/Bytecode/BytecodeReaderConfig.h"
 #include "mlir/IR/OperationSupport.h"
 #include "mlir/Support/LLVM.h"
 #include "llvm/ADT/MapVector.h"
@@ -475,6 +476,11 @@ public:
   /// Returns if the parser should verify the IR after parsing.
   bool shouldVerifyAfterParse() const { return verifyAfterParse; }
 
+  /// Returns the parsing configurations associated to the bytecode read.
+  BytecodeReaderConfig &getBytecodeReaderConfig() const {
+    return const_cast<BytecodeReaderConfig &>(bytecodeReaderConfig);
+  }
+
   /// Return the resource parser registered to the given name, or nullptr if no
   /// parser with `name` is registered.
   AsmResourceParser *getResourceParser(StringRef name) const {
@@ -509,6 +515,7 @@ private:
   bool verifyAfterParse;
   DenseMap<StringRef, std::unique_ptr<AsmResourceParser>> resourceParsers;
   FallbackAsmResourceMap *fallbackResourceMap;
+  BytecodeReaderConfig bytecodeReaderConfig;
 };
 
 //===----------------------------------------------------------------------===//

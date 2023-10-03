@@ -19,7 +19,6 @@
 #include "lldb/Core/Module.h"
 #include "lldb/Core/ModuleSpec.h"
 #include "lldb/Core/PluginManager.h"
-#include "lldb/Core/StreamFile.h"
 #include "lldb/Host/FileCache.h"
 #include "lldb/Host/FileSystem.h"
 #include "lldb/Host/Host.h"
@@ -73,8 +72,8 @@ enum {
 
 } // namespace
 
-ConstString PlatformProperties::GetSettingName() {
-  static ConstString g_setting_name("platform");
+llvm::StringRef PlatformProperties::GetSettingName() {
+  static constexpr llvm::StringLiteral g_setting_name("platform");
   return g_setting_name;
 }
 
@@ -1564,14 +1563,167 @@ Status Platform::GetRemoteSharedModule(const ModuleSpec &module_spec,
     resolved_module_spec.GetUUID() = module_spec.GetUUID();
   }
 
-  // Trying to find a module by UUID on local file system.
-  const auto error = module_resolver(resolved_module_spec);
-  if (error.Fail()) {
-    if (GetCachedSharedModule(resolved_module_spec, module_sp, did_create_ptr))
-      return Status();
+  // Call locate module callback if set. This allows users to implement their
+  // own module cache system. For example, to leverage build system artifacts,
+  // to bypass pulling files from remote platform, or to search symbol files
+  // from symbol servers.
+  FileSpec symbol_file_spec;
+  CallLocateModuleCallbackIfSet(resolved_module_spec, module_sp,
+                                symbol_file_spec, did_create_ptr);
+  if (module_sp) {
+    // The module is loaded.
+    if (symbol_file_spec) {
+      // 1. module_sp:loaded, symbol_file_spec:set
+      //      The callback found a module file and a symbol file for this
+      //      resolved_module_spec. Set the symbol file to the module.
+      module_sp->SetSymbolFileFileSpec(symbol_file_spec);
+    } else {
+      // 2. module_sp:loaded, symbol_file_spec:empty
+      //      The callback only found a module file for this
+      //      resolved_module_spec.
+    }
+    return Status();
   }
 
-  return error;
+  // The module is not loaded by CallLocateModuleCallbackIfSet.
+  // 3. module_sp:empty, symbol_file_spec:set
+  //      The callback only found a symbol file for the module. We continue to
+  //      find a module file for this resolved_module_spec. and we will call
+  //      module_sp->SetSymbolFileFileSpec with the symbol_file_spec later.
+  // 4. module_sp:empty, symbol_file_spec:empty
+  //      The callback is not set. Or the callback did not find any module
+  //      files nor any symbol files. Or the callback failed, or something
+  //      went wrong. We continue to find a module file for this
+  //      resolved_module_spec.
+
+  // Trying to find a module by UUID on local file system.
+  const Status error = module_resolver(resolved_module_spec);
+  if (error.Success()) {
+    if (module_sp && symbol_file_spec) {
+      // Set the symbol file to the module if the locate modudle callback was
+      // called and returned only a symbol file.
+      module_sp->SetSymbolFileFileSpec(symbol_file_spec);
+    }
+    return error;
+  }
+
+  // Fallback to call GetCachedSharedModule on failure.
+  if (GetCachedSharedModule(resolved_module_spec, module_sp, did_create_ptr)) {
+    if (module_sp && symbol_file_spec) {
+      // Set the symbol file to the module if the locate modudle callback was
+      // called and returned only a symbol file.
+      module_sp->SetSymbolFileFileSpec(symbol_file_spec);
+    }
+    return Status();
+  }
+
+  return Status("Failed to call GetCachedSharedModule");
+}
+
+void Platform::CallLocateModuleCallbackIfSet(const ModuleSpec &module_spec,
+                                             lldb::ModuleSP &module_sp,
+                                             FileSpec &symbol_file_spec,
+                                             bool *did_create_ptr) {
+  if (!m_locate_module_callback) {
+    // Locate module callback is not set.
+    return;
+  }
+
+  FileSpec module_file_spec;
+  Status error =
+      m_locate_module_callback(module_spec, module_file_spec, symbol_file_spec);
+
+  // Locate module callback is set and called. Check the error.
+  Log *log = GetLog(LLDBLog::Platform);
+  if (error.Fail()) {
+    LLDB_LOGF(log, "%s: locate module callback failed: %s",
+              LLVM_PRETTY_FUNCTION, error.AsCString());
+    return;
+  }
+
+  // The locate module callback was succeeded.
+  // Check the module_file_spec and symbol_file_spec values.
+  // 1. module:empty  symbol:empty  -> Failure
+  //    - The callback did not return any files.
+  // 2. module:exists symbol:exists -> Success
+  //    - The callback returned a module file and a symbol file.
+  // 3. module:exists symbol:empty  -> Success
+  //    - The callback returned only a module file.
+  // 4. module:empty  symbol:exists -> Success
+  //    - The callback returned only a symbol file.
+  //      For example, a breakpad symbol text file.
+  if (!module_file_spec && !symbol_file_spec) {
+    // This is '1. module:empty  symbol:empty  -> Failure'
+    // The callback did not return any files.
+    LLDB_LOGF(log,
+              "%s: locate module callback did not set both "
+              "module_file_spec and symbol_file_spec",
+              LLVM_PRETTY_FUNCTION);
+    return;
+  }
+
+  // If the callback returned a module file, it should exist.
+  if (module_file_spec && !FileSystem::Instance().Exists(module_file_spec)) {
+    LLDB_LOGF(log,
+              "%s: locate module callback set a non-existent file to "
+              "module_file_spec: %s",
+              LLVM_PRETTY_FUNCTION, module_file_spec.GetPath().c_str());
+    // Clear symbol_file_spec for the error.
+    symbol_file_spec.Clear();
+    return;
+  }
+
+  // If the callback returned a symbol file, it should exist.
+  if (symbol_file_spec && !FileSystem::Instance().Exists(symbol_file_spec)) {
+    LLDB_LOGF(log,
+              "%s: locate module callback set a non-existent file to "
+              "symbol_file_spec: %s",
+              LLVM_PRETTY_FUNCTION, symbol_file_spec.GetPath().c_str());
+    // Clear symbol_file_spec for the error.
+    symbol_file_spec.Clear();
+    return;
+  }
+
+  if (!module_file_spec && symbol_file_spec) {
+    // This is '4. module:empty  symbol:exists -> Success'
+    // The locate module callback returned only a symbol file. For example,
+    // a breakpad symbol text file. GetRemoteSharedModule will use this returned
+    // symbol_file_spec.
+    LLDB_LOGF(log, "%s: locate module callback succeeded: symbol=%s",
+              LLVM_PRETTY_FUNCTION, symbol_file_spec.GetPath().c_str());
+    return;
+  }
+
+  // This is one of the following.
+  // - 2. module:exists symbol:exists -> Success
+  //    - The callback returned a module file and a symbol file.
+  // - 3. module:exists symbol:empty  -> Success
+  //    - The callback returned Only a module file.
+  // Load the module file.
+  auto cached_module_spec(module_spec);
+  cached_module_spec.GetUUID().Clear(); // Clear UUID since it may contain md5
+                                        // content hash instead of real UUID.
+  cached_module_spec.GetFileSpec() = module_file_spec;
+  cached_module_spec.GetPlatformFileSpec() = module_spec.GetFileSpec();
+  cached_module_spec.SetObjectOffset(0);
+
+  error = ModuleList::GetSharedModule(cached_module_spec, module_sp, nullptr,
+                                      nullptr, did_create_ptr, false);
+  if (error.Success() && module_sp) {
+    // Succeeded to load the module file.
+    LLDB_LOGF(log, "%s: locate module callback succeeded: module=%s symbol=%s",
+              LLVM_PRETTY_FUNCTION, module_file_spec.GetPath().c_str(),
+              symbol_file_spec.GetPath().c_str());
+  } else {
+    LLDB_LOGF(log,
+              "%s: locate module callback succeeded but failed to load: "
+              "module=%s symbol=%s",
+              LLVM_PRETTY_FUNCTION, module_file_spec.GetPath().c_str(),
+              symbol_file_spec.GetPath().c_str());
+    // Clear module_sp and symbol_file_spec for the error.
+    module_sp.reset();
+    symbol_file_spec.Clear();
+  }
 }
 
 bool Platform::GetCachedSharedModule(const ModuleSpec &module_spec,

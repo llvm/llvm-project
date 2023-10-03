@@ -52,5 +52,5 @@ Options
    By default the following function return types are checked:
    `::std::error_code`, `::std::error_condition`, `::std::errc`, `::std::expected`, `::boost::system::error_code`
 
-`cert-err33-c <../cert/err33-c.html>`_ is an alias of this check that checks a
+:doc:`cert-err33-c <../cert/err33-c>` is an alias of this check that checks a
 fixed and large set of standard library functions.

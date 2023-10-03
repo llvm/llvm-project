@@ -12,6 +12,7 @@
 #include "Lexer.h"
 #include "mlir/IR/Attributes.h"
 #include "mlir/IR/OpImplementation.h"
+#include "llvm/ADT/SetVector.h"
 #include "llvm/ADT/StringMap.h"
 
 namespace mlir {
@@ -69,6 +70,10 @@ struct ParserState {
 
   /// The current state for symbol parsing.
   SymbolState &symbols;
+
+  /// Stack of potentially cyclic mutable attributes or type currently being
+  /// parsed.
+  SetVector<const void *> cyclicParsingStack;
 
   /// An optional pointer to a struct containing high level parser state to be
   /// populated during parsing.

@@ -5,18 +5,18 @@
  * Revise spelling of keywords v7
  */
 
-thread_local struct alignas(int) S { // c2x-warning {{'alignas' is incompatible with C standards before C2x}} \
-                                        c2x-warning {{'thread_local' is incompatible with C standards before C2x}} \
+thread_local struct alignas(int) S { // c2x-warning {{'alignas' is incompatible with C standards before C23}} \
+                                        c2x-warning {{'thread_local' is incompatible with C standards before C23}} \
                                         c2x-error 0+ {{thread-local storage is not supported for the current target}} \
                                         c17-error {{unknown type name 'thread_local'}} \
                                         c17-error {{expected identifier or '('}} \
                                         c17-error {{expected ')'}} \
                                         c17-note {{to match this '('}}
-  bool b; // c2x-warning {{'bool' is incompatible with C standards before C2x}}
+  bool b; // c2x-warning {{'bool' is incompatible with C standards before C23}}
 } s; // c17-error {{type specifier missing, defaults to 'int'; ISO C99 and later do not support implicit int}}
 
-static_assert(alignof(struct S) == alignof(int), ""); // c2x-warning {{'static_assert' is incompatible with C standards before C2x}} \
-                                                         c2x-warning 2 {{'alignof' is incompatible with C standards before C2x}} \
+static_assert(alignof(struct S) == alignof(int), ""); // c2x-warning {{'static_assert' is incompatible with C standards before C23}} \
+                                                         c2x-warning 2 {{'alignof' is incompatible with C standards before C23}} \
                                                          c17-error 2 {{type specifier missing, defaults to 'int'; ISO C99 and later do not support implicit int}} \
                                                          c17-error {{expected ')'}} \
                                                          c17-warning {{declaration of 'struct S' will not be visible outside of this function}} \

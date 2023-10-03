@@ -72,8 +72,7 @@
   ; GFX908-NEXT:    ; implicit-def: $vgpr59
   ; GFX908-NEXT:    ; implicit-def: $vgpr60
   ; GFX908-NEXT:    ; implicit-def: $vgpr61
-  ; GFX908-NEXT:    s_nop 0
-  ; GFX908-NEXT:    s_nop 0
+  ; GFX908-NEXT:    s_nop 1
   ; GFX908-NEXT:    v_accvgpr_write_b32 a64, v63
   ; GFX908-NEXT:    v_accvgpr_read_b32 v63, a97
   ; GFX908-NEXT:    s_nop 1
@@ -214,6 +213,7 @@
   ; GFX908-NEXT:    v_accvgpr_read_b32 v63, a111 ; Reload Reuse
   ; GFX908-NEXT:    s_nop 1
   ; GFX908-NEXT:    buffer_store_dword v63, off, s[0:3], s32 offset:124 ; 4-byte Folded Spill
+  ; GFX908-NEXT:    s_nop 0
   ;
   ; GFX90A-LABEL: test_spill:
   ; GFX90A:       ; %bb.0:

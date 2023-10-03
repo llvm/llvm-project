@@ -429,7 +429,8 @@ let Uses = [EAX, ECX, EDX] in
 def WRMSRNS : I<0x01, MRM_C6, (outs), (ins), "wrmsrns", []>, PS;
 let Defs = [EAX, EDX], Uses = [ECX] in
 def RDMSR : I<0x32, RawFrm, (outs), (ins), "rdmsr", []>, TB;
-
+let Defs = [RAX, EFLAGS], Uses = [RBX, RCX], Predicates = [In64BitMode] in
+def PBNDKB : I<0x01, MRM_C7, (outs), (ins), "pbndkb", []>, PS;
 let Uses = [RSI, RDI, RCX], Predicates = [In64BitMode] in {
 def WRMSRLIST : I<0x01, MRM_C6, (outs), (ins), "wrmsrlist", []>, XS;
 def RDMSRLIST : I<0x01, MRM_C6, (outs), (ins), "rdmsrlist", []>, XD;

@@ -136,7 +136,7 @@ namespace pr16061 {
 
   template<typename T> struct Test2 {
     union {
-      struct {  // expected-note {{default constructor of 'Test2<pr16061::X>' is implicitly deleted because variant field '' has a non-trivial default constructor}}
+      struct {  // expected-note-re {{default constructor of 'Test2<pr16061::X>' is implicitly deleted because variant field 'struct (anonymous struct at{{.+}})' has a non-trivial default constructor}}
         T x;
       };
     };

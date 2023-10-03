@@ -1688,6 +1688,48 @@ Error LVSymbolVisitor::visitKnownRecord(CVSymbol &Record,
   return Error::success();
 }
 
+// S_ARMSWITCHTABLE
+Error LVSymbolVisitor::visitKnownRecord(CVSymbol &CVR,
+                                        JumpTableSym &JumpTable) {
+  LLVM_DEBUG({
+    W.printHex("BaseOffset", JumpTable.BaseOffset);
+    W.printNumber("BaseSegment", JumpTable.BaseSegment);
+    W.printFlags("SwitchType", static_cast<uint16_t>(JumpTable.SwitchType),
+                 getJumpTableEntrySizeNames());
+    W.printHex("BranchOffset", JumpTable.BranchOffset);
+    W.printHex("TableOffset", JumpTable.TableOffset);
+    W.printNumber("BranchSegment", JumpTable.BranchSegment);
+    W.printNumber("TableSegment", JumpTable.TableSegment);
+    W.printNumber("EntriesCount", JumpTable.EntriesCount);
+  });
+  return Error::success();
+}
+
+// S_CALLERS, S_CALLEES, S_INLINEES
+Error LVSymbolVisitor::visitKnownRecord(CVSymbol &Record, CallerSym &Caller) {
+  LLVM_DEBUG({
+    llvm::StringRef FieldName;
+    switch (Caller.getKind()) {
+    case SymbolRecordKind::CallerSym:
+      FieldName = "Callee";
+      break;
+    case SymbolRecordKind::CalleeSym:
+      FieldName = "Caller";
+      break;
+    case SymbolRecordKind::InlineesSym:
+      FieldName = "Inlinee";
+      break;
+    default:
+      return llvm::make_error<CodeViewError>(
+          "Unknown CV Record type for a CallerSym object!");
+    }
+    for (auto FuncID : Caller.Indices) {
+      printTypeIndex(FieldName, FuncID);
+    }
+  });
+  return Error::success();
+}
+
 #undef DEBUG_TYPE
 #define DEBUG_TYPE "CodeViewLogicalVisitor"
 

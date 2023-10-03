@@ -1,4 +1,5 @@
 omp_*
+ompx_*
 *llvm_*
 __kmpc_*
 

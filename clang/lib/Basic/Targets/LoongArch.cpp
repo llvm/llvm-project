@@ -15,7 +15,7 @@
 #include "clang/Basic/MacroBuilder.h"
 #include "clang/Basic/TargetBuiltins.h"
 #include "llvm/Support/raw_ostream.h"
-#include "llvm/TargetParser/TargetParser.h"
+#include "llvm/TargetParser/LoongArchTargetParser.h"
 
 using namespace clang;
 using namespace clang::targets;
@@ -33,7 +33,17 @@ ArrayRef<const char *> LoongArchTargetInfo::getGCCRegNames() const {
       "$f19", "$f20", "$f21", "$f22", "$f23", "$f24", "$f25", "$f26", "$f27",
       "$f28", "$f29", "$f30", "$f31",
       // Condition flag registers.
-      "$fcc0", "$fcc1", "$fcc2", "$fcc3", "$fcc4", "$fcc5", "$fcc6", "$fcc7"};
+      "$fcc0", "$fcc1", "$fcc2", "$fcc3", "$fcc4", "$fcc5", "$fcc6", "$fcc7",
+      // 128-bit vector registers.
+      "$vr0", "$vr1", "$vr2", "$vr3", "$vr4", "$vr5", "$vr6", "$vr7", "$vr8",
+      "$vr9", "$vr10", "$vr11", "$vr12", "$vr13", "$vr14", "$vr15", "$vr16",
+      "$vr17", "$vr18", "$vr19", "$vr20", "$vr21", "$vr22", "$vr23", "$vr24",
+      "$vr25", "$vr26", "$vr27", "$vr28", "$vr29", "$vr30", "$vr31",
+      // 256-bit vector registers.
+      "$xr0", "$xr1", "$xr2", "$xr3", "$xr4", "$xr5", "$xr6", "$xr7", "$xr8",
+      "$xr9", "$xr10", "$xr11", "$xr12", "$xr13", "$xr14", "$xr15", "$xr16",
+      "$xr17", "$xr18", "$xr19", "$xr20", "$xr21", "$xr22", "$xr23", "$xr24",
+      "$xr25", "$xr26", "$xr27", "$xr28", "$xr29", "$xr30", "$xr31"};
   return llvm::ArrayRef(GCCRegNames);
 }
 
@@ -188,7 +198,15 @@ void LoongArchTargetInfo::getTargetDefines(const LangOptions &Opts,
   else
     Builder.defineMacro("__loongarch_frlen", "0");
 
-  // TODO: define __loongarch_arch and __loongarch_tune.
+  // Define __loongarch_arch.
+  StringRef ArchName = getCPU();
+  Builder.defineMacro("__loongarch_arch", Twine('"') + ArchName + Twine('"'));
+
+  // Define __loongarch_tune.
+  StringRef TuneCPU = getTargetOpts().TuneCPU;
+  if (TuneCPU.empty())
+    TuneCPU = ArchName;
+  Builder.defineMacro("__loongarch_tune", Twine('"') + TuneCPU + Twine('"'));
 
   StringRef ABI = getABI();
   if (ABI == "lp64d" || ABI == "lp64f" || ABI == "lp64s")
@@ -259,4 +277,13 @@ bool LoongArchTargetInfo::handleTargetFeatures(
     }
   }
   return true;
+}
+
+bool LoongArchTargetInfo::isValidCPUName(StringRef Name) const {
+  return llvm::LoongArch::isValidCPUName(Name);
+}
+
+void LoongArchTargetInfo::fillValidCPUList(
+    SmallVectorImpl<StringRef> &Values) const {
+  llvm::LoongArch::fillValidCPUList(Values);
 }

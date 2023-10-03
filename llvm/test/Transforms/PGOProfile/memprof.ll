@@ -14,8 +14,8 @@
 
 ;; Generate indexed profiles of all combinations:
 ; RUN: llvm-profdata merge %S/Inputs/memprof.memprofraw --profiled-binary %S/Inputs/memprof.exe -o %t.memprofdata
-; RUN: llvm-profdata merge %S/Inputs/memprof_pgo.profraw %S/Inputs/memprof.memprofraw --profiled-binary %S/Inputs/memprof.exe -o %t.pgomemprofdata
-; RUN: llvm-profdata merge %S/Inputs/memprof_pgo.profraw -o %t.pgoprofdata
+; RUN: llvm-profdata merge %S/Inputs/memprof_pgo.proftext %S/Inputs/memprof.memprofraw --profiled-binary %S/Inputs/memprof.exe -o %t.pgomemprofdata
+; RUN: llvm-profdata merge %S/Inputs/memprof_pgo.proftext -o %t.pgoprofdata
 
 ;; In all below cases we should not get any messages about missing profile data
 ;; for any functions. Either we are not performing any matching for a particular

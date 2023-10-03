@@ -22,17 +22,35 @@
 #include <optional>
 
 namespace mlir {
+namespace ub {
+class PoisonAttr;
+}
 /// Performs constant folding `calculate` with element-wise behavior on the two
 /// attributes in `operands` and returns the result if possible.
 /// Uses `resultType` for the type of the returned attribute.
+/// Optional PoisonAttr template argument allows to specify 'poison' attribute
+/// which will be directly propagated to result.
 template <class AttrElementT,
           class ElementValueT = typename AttrElementT::ValueType,
+          class PoisonAttr = ub::PoisonAttr,
           class CalculationT = function_ref<
               std::optional<ElementValueT>(ElementValueT, ElementValueT)>>
 Attribute constFoldBinaryOpConditional(ArrayRef<Attribute> operands,
                                        Type resultType,
-                                       const CalculationT &calculate) {
+                                       CalculationT &&calculate) {
   assert(operands.size() == 2 && "binary op takes two operands");
+  static_assert(
+      std::is_void_v<PoisonAttr> || !llvm::is_incomplete_v<PoisonAttr>,
+      "PoisonAttr is undefined, either add a dependency on UB dialect or pass "
+      "void as template argument to opt-out from poison semantics.");
+  if constexpr (!std::is_void_v<PoisonAttr>) {
+    if (isa_and_nonnull<PoisonAttr>(operands[0]))
+      return operands[0];
+
+    if (isa_and_nonnull<PoisonAttr>(operands[1]))
+      return operands[1];
+  }
+
   if (!resultType || !operands[0] || !operands[1])
     return {};
 
@@ -95,13 +113,28 @@ Attribute constFoldBinaryOpConditional(ArrayRef<Attribute> operands,
 /// attributes in `operands` and returns the result if possible.
 /// Uses the operand element type for the element type of the returned
 /// attribute.
+/// Optional PoisonAttr template argument allows to specify 'poison' attribute
+/// which will be directly propagated to result.
 template <class AttrElementT,
           class ElementValueT = typename AttrElementT::ValueType,
+          class PoisonAttr = ub::PoisonAttr,
           class CalculationT = function_ref<
               std::optional<ElementValueT>(ElementValueT, ElementValueT)>>
 Attribute constFoldBinaryOpConditional(ArrayRef<Attribute> operands,
-                                       const CalculationT &calculate) {
+                                       CalculationT &&calculate) {
   assert(operands.size() == 2 && "binary op takes two operands");
+  static_assert(
+      std::is_void_v<PoisonAttr> || !llvm::is_incomplete_v<PoisonAttr>,
+      "PoisonAttr is undefined, either add a dependency on UB dialect or pass "
+      "void as template argument to opt-out from poison semantics.");
+  if constexpr (!std::is_void_v<PoisonAttr>) {
+    if (isa_and_nonnull<PoisonAttr>(operands[0]))
+      return operands[0];
+
+    if (isa_and_nonnull<PoisonAttr>(operands[1]))
+      return operands[1];
+  }
+
   auto getResultType = [](Attribute attr) -> Type {
     if (auto typed = dyn_cast_or_null<TypedAttr>(attr))
       return typed.getType();
@@ -115,18 +148,19 @@ Attribute constFoldBinaryOpConditional(ArrayRef<Attribute> operands,
   if (lhsType != rhsType)
     return {};
 
-  return constFoldBinaryOpConditional<AttrElementT, ElementValueT,
-                                      CalculationT>(operands, lhsType,
-                                                    calculate);
+  return constFoldBinaryOpConditional<AttrElementT, ElementValueT, PoisonAttr,
+                                      CalculationT>(
+      operands, lhsType, std::forward<CalculationT>(calculate));
 }
 
 template <class AttrElementT,
           class ElementValueT = typename AttrElementT::ValueType,
+          class PoisonAttr = void,
           class CalculationT =
               function_ref<ElementValueT(ElementValueT, ElementValueT)>>
 Attribute constFoldBinaryOp(ArrayRef<Attribute> operands, Type resultType,
-                            const CalculationT &calculate) {
-  return constFoldBinaryOpConditional<AttrElementT>(
+                            CalculationT &&calculate) {
+  return constFoldBinaryOpConditional<AttrElementT, ElementValueT, PoisonAttr>(
       operands, resultType,
       [&](ElementValueT a, ElementValueT b) -> std::optional<ElementValueT> {
         return calculate(a, b);
@@ -135,11 +169,12 @@ Attribute constFoldBinaryOp(ArrayRef<Attribute> operands, Type resultType,
 
 template <class AttrElementT,
           class ElementValueT = typename AttrElementT::ValueType,
+          class PoisonAttr = ub::PoisonAttr,
           class CalculationT =
               function_ref<ElementValueT(ElementValueT, ElementValueT)>>
 Attribute constFoldBinaryOp(ArrayRef<Attribute> operands,
-                            const CalculationT &calculate) {
-  return constFoldBinaryOpConditional<AttrElementT>(
+                            CalculationT &&calculate) {
+  return constFoldBinaryOpConditional<AttrElementT, ElementValueT, PoisonAttr>(
       operands,
       [&](ElementValueT a, ElementValueT b) -> std::optional<ElementValueT> {
         return calculate(a, b);
@@ -148,15 +183,27 @@ Attribute constFoldBinaryOp(ArrayRef<Attribute> operands,
 
 /// Performs constant folding `calculate` with element-wise behavior on the one
 /// attributes in `operands` and returns the result if possible.
+/// Optional PoisonAttr template argument allows to specify 'poison' attribute
+/// which will be directly propagated to result.
 template <class AttrElementT,
           class ElementValueT = typename AttrElementT::ValueType,
+          class PoisonAttr = ub::PoisonAttr,
           class CalculationT =
               function_ref<std::optional<ElementValueT>(ElementValueT)>>
 Attribute constFoldUnaryOpConditional(ArrayRef<Attribute> operands,
-                                      const CalculationT &&calculate) {
+                                      CalculationT &&calculate) {
   assert(operands.size() == 1 && "unary op takes one operands");
   if (!operands[0])
     return {};
+
+  static_assert(
+      std::is_void_v<PoisonAttr> || !llvm::is_incomplete_v<PoisonAttr>,
+      "PoisonAttr is undefined, either add a dependency on UB dialect or pass "
+      "void as template argument to opt-out from poison semantics.");
+  if constexpr (!std::is_void_v<PoisonAttr>) {
+    if (isa<PoisonAttr>(operands[0]))
+      return operands[0];
+  }
 
   if (isa<AttrElementT>(operands[0])) {
     auto op = cast<AttrElementT>(operands[0]);
@@ -196,10 +243,11 @@ Attribute constFoldUnaryOpConditional(ArrayRef<Attribute> operands,
 
 template <class AttrElementT,
           class ElementValueT = typename AttrElementT::ValueType,
+          class PoisonAttr = ub::PoisonAttr,
           class CalculationT = function_ref<ElementValueT(ElementValueT)>>
 Attribute constFoldUnaryOp(ArrayRef<Attribute> operands,
-                           const CalculationT &&calculate) {
-  return constFoldUnaryOpConditional<AttrElementT>(
+                           CalculationT &&calculate) {
+  return constFoldUnaryOpConditional<AttrElementT, ElementValueT, PoisonAttr>(
       operands, [&](ElementValueT a) -> std::optional<ElementValueT> {
         return calculate(a);
       });
@@ -209,12 +257,22 @@ template <
     class AttrElementT, class TargetAttrElementT,
     class ElementValueT = typename AttrElementT::ValueType,
     class TargetElementValueT = typename TargetAttrElementT::ValueType,
+    class PoisonAttr = ub::PoisonAttr,
     class CalculationT = function_ref<TargetElementValueT(ElementValueT, bool)>>
 Attribute constFoldCastOp(ArrayRef<Attribute> operands, Type resType,
-                          const CalculationT &calculate) {
+                          CalculationT &&calculate) {
   assert(operands.size() == 1 && "Cast op takes one operand");
   if (!operands[0])
     return {};
+
+  static_assert(
+      std::is_void_v<PoisonAttr> || !llvm::is_incomplete_v<PoisonAttr>,
+      "PoisonAttr is undefined, either add a dependency on UB dialect or pass "
+      "void as template argument to opt-out from poison semantics.");
+  if constexpr (!std::is_void_v<PoisonAttr>) {
+    if (isa<PoisonAttr>(operands[0]))
+      return operands[0];
+  }
 
   if (isa<AttrElementT>(operands[0])) {
     auto op = cast<AttrElementT>(operands[0]);
@@ -254,7 +312,6 @@ Attribute constFoldCastOp(ArrayRef<Attribute> operands, Type resType,
   }
   return {};
 }
-
 } // namespace mlir
 
 #endif // MLIR_DIALECT_COMMONFOLDERS_H

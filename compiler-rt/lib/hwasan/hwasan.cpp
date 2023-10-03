@@ -86,9 +86,11 @@ static void InitializeFlags() {
     cf.clear_shadow_mmap_threshold = 4096 * (SANITIZER_ANDROID ? 2 : 8);
     // Sigtrap is used in error reporting.
     cf.handle_sigtrap = kHandleSignalExclusive;
-    // For now only tested on Linux. Other plantforms can be turned on as they
-    // become ready.
-    cf.detect_leaks = cf.detect_leaks && SANITIZER_LINUX && !SANITIZER_ANDROID;
+    // For now only tested on Linux and Fuchsia. Other plantforms can be turned
+    // on as they become ready.
+    constexpr bool can_detect_leaks =
+        (SANITIZER_LINUX && !SANITIZER_ANDROID) || SANITIZER_FUCHSIA;
+    cf.detect_leaks = cf.detect_leaks && can_detect_leaks;
 
 #if SANITIZER_ANDROID
     // Let platform handle other signals. It is better at reporting them then we
@@ -170,7 +172,7 @@ static void HwasanFormatMemoryUsage(InternalScopedString &s) {
   auto sds = StackDepotGetStats();
   AllocatorStatCounters asc;
   GetAllocatorStats(asc);
-  s.append(
+  s.AppendF(
       "HWASAN pid: %d rss: %zd threads: %zd stacks: %zd"
       " thr_aux: %zd stack_depot: %zd uniq_stacks: %zd"
       " heap: %zd",

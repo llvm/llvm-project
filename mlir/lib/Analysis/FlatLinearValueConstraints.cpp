@@ -148,10 +148,6 @@ LogicalResult mlir::getFlattenedAffineExprs(
 // FlatLinearConstraints
 //===----------------------------------------------------------------------===//
 
-std::unique_ptr<FlatLinearConstraints> FlatLinearConstraints::clone() const {
-  return std::make_unique<FlatLinearConstraints>(*this);
-}
-
 // Similar to `composeMap` except that no Values need be associated with the
 // constraint system nor are they looked at -- the dimensions and symbols of
 // `other` are expected to correspond 1:1 to `this` system.
@@ -849,48 +845,6 @@ FlatLinearValueConstraints::FlatLinearValueConstraints(IntegerSet set,
   append(localVarCst);
 }
 
-// Construct a hyperrectangular constraint set from ValueRanges that represent
-// induction variables, lower and upper bounds. `ivs`, `lbs` and `ubs` are
-// expected to match one to one. The order of variables and constraints is:
-//
-// ivs | lbs | ubs | eq/ineq
-// ----+-----+-----+---------
-//   1   -1     0      >= 0
-// ----+-----+-----+---------
-//  -1    0     1      >= 0
-//
-// All dimensions as set as VarKind::SetDim.
-FlatLinearValueConstraints
-FlatLinearValueConstraints::getHyperrectangular(ValueRange ivs, ValueRange lbs,
-                                                ValueRange ubs) {
-  FlatLinearValueConstraints res;
-  unsigned nIvs = ivs.size();
-  assert(nIvs == lbs.size() && "expected as many lower bounds as ivs");
-  assert(nIvs == ubs.size() && "expected as many upper bounds as ivs");
-
-  if (nIvs == 0)
-    return res;
-
-  res.appendDimVar(ivs);
-  unsigned lbsStart = res.appendDimVar(lbs);
-  unsigned ubsStart = res.appendDimVar(ubs);
-
-  MLIRContext *ctx = ivs.front().getContext();
-  for (int ivIdx = 0, e = nIvs; ivIdx < e; ++ivIdx) {
-    // iv - lb >= 0
-    AffineMap lb = AffineMap::get(/*dimCount=*/3 * nIvs, /*symbolCount=*/0,
-                                  getAffineDimExpr(lbsStart + ivIdx, ctx));
-    if (failed(res.addBound(BoundType::LB, ivIdx, lb)))
-      llvm_unreachable("Unexpected FlatLinearValueConstraints creation error");
-    // -iv + ub >= 0
-    AffineMap ub = AffineMap::get(/*dimCount=*/3 * nIvs, /*symbolCount=*/0,
-                                  getAffineDimExpr(ubsStart + ivIdx, ctx));
-    if (failed(res.addBound(BoundType::UB, ivIdx, ub)))
-      llvm_unreachable("Unexpected FlatLinearValueConstraints creation error");
-  }
-  return res;
-}
-
 unsigned FlatLinearValueConstraints::appendDimVar(ValueRange vals) {
   unsigned pos = getNumDimVars();
   return insertVar(VarKind::SetDim, pos, vals);
@@ -938,11 +892,6 @@ unsigned FlatLinearValueConstraints::insertVar(VarKind kind, unsigned pos,
 
   assert(values.size() == getNumDimAndSymbolVars());
   return absolutePos;
-}
-
-bool FlatLinearValueConstraints::hasValues() const {
-  return llvm::any_of(
-      values, [](const std::optional<Value> &var) { return var.has_value(); });
 }
 
 /// Checks if two constraint systems are in the same space, i.e., if they are
@@ -1301,8 +1250,8 @@ AffineMap mlir::alignAffineMapWithValues(AffineMap map, ValueRange operands,
   for (const auto &operand : llvm::enumerate(operands)) {
     // Compute replacement dim/sym of operand.
     AffineExpr replacement;
-    auto dimIt = std::find(dims.begin(), dims.end(), operand.value());
-    auto symIt = std::find(syms.begin(), syms.end(), operand.value());
+    auto dimIt = llvm::find(dims, operand.value());
+    auto symIt = llvm::find(syms, operand.value());
     if (dimIt != dims.end()) {
       replacement =
           builder.getAffineDimExpr(std::distance(dims.begin(), dimIt));
@@ -1343,7 +1292,7 @@ mlir::getMultiAffineFunctionFromMap(AffineMap map,
          "AffineMap cannot produce divs without local representation");
 
   // TODO: We shouldn't have to do this conversion.
-  Matrix mat(map.getNumResults(), map.getNumInputs() + divs.getNumDivs() + 1);
+  Matrix<MPInt> mat(map.getNumResults(), map.getNumInputs() + divs.getNumDivs() + 1);
   for (unsigned i = 0, e = flattenedExprs.size(); i < e; ++i)
     for (unsigned j = 0, f = flattenedExprs[i].size(); j < f; ++j)
       mat(i, j) = flattenedExprs[i][j];

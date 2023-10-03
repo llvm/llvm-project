@@ -8,9 +8,10 @@
 
 # Fortran Preprocessing
 
-```eval_rst
-.. contents::
-   :local:
+```{contents}
+---
+local:
+---
 ```
 
 ## Behavior common to (nearly) all compilers:
@@ -74,8 +75,14 @@
   operators; e.g., `#if 2 .LT. 3` should work.
 * If a function-like macro does not close its parentheses, line
   continuation should be assumed.
+  This includes the case of a keyword-like macro that expands to
+  the name of a function-like macro.
 * ... However, the leading parenthesis has to be on the same line as
   the name of the function-like macro, or on a continuation line thereof.
+* And no macro definition prior to that point can be allowed to have
+  unbalanced parentheses in its replacement text.
+  When that happens, it's possible to have false positive cases
+  causing implicit line continuations that break real code.
 * If macros expand to text containing `&`, it doesn't work as a free form
   line continuation marker.
 * `#define c 1` does not allow a `c` in column 1 to be used as a label
@@ -218,7 +225,7 @@ N N N N N .   pp116.F90  FLM call split between name and (, no leading &
 . . E E . E   pp124.F90  KWM NOT expanded in Hollerith in FORMAT
 E . . E E .   pp125.F90  #DEFINE works in free form
 . . . . . .   pp126.F90  \ newline works in #define
-N . E . E E   pp127.F90  FLM call with closing ')' on next line (not a continuation)
+. . E . E E   pp127.F90  FLM call with closing ')' on next line (not a continuation)
 E . E . E E   pp128.F90  FLM call with '(' on next line (not a continuation)
 . . N . . N   pp129.F90  #define KWM !, then KWM works as comment line initiator
 E . E . . E   pp130.F90  #define KWM &, use for continuation w/o pasting (ifort and nag seem to continue #define)

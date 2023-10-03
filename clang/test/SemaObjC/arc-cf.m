@@ -46,7 +46,6 @@ void test2(void) {
   x = (id) CFCreateString3(); // expected-error {{requires a bridged cast}} expected-note {{CFBridgingRelease call to transfer}}
 }
 
-// rdar://14569171
 @interface NSString @end
 typedef signed int SInt32;
 #pragma clang arc_cf_code_audited begin

@@ -81,7 +81,9 @@ module m
 contains
   subroutine bar
   end subroutine
+  !ERROR: An entity may not have the ASYNCHRONOUS attribute unless it is a variable
   subroutine test
+    asynchronous test
     !ERROR: Abstract procedure interface 'foo2' may not be referenced
     call foo2()
     !ERROR: Abstract procedure interface 'f' may not be referenced

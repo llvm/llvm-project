@@ -26,6 +26,15 @@ namespace support {
 namespace endian {
 
 template <typename value_type>
+inline void write_array(raw_ostream &os, ArrayRef<value_type> values,
+                        endianness endian) {
+  for (const auto orig : values) {
+    value_type value = byte_swap<value_type>(orig, endian);
+    os.write((const char *)&value, sizeof(value_type));
+  }
+}
+
+template <typename value_type>
 inline void write(raw_ostream &os, value_type value, endianness endian) {
   value = byte_swap<value_type>(value, endian);
   os.write((const char *)&value, sizeof(value_type));

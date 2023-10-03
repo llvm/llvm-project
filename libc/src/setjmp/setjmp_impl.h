@@ -6,17 +6,17 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_LIBC_SRC_SETJMP_SETJMP_H
-#define LLVM_LIBC_SRC_SETJMP_SETJMP_H
+#ifndef LLVM_LIBC_SRC_SETJMP_SETJMP_IMPL_H
+#define LLVM_LIBC_SRC_SETJMP_SETJMP_IMPL_H
 
 // This header has the _impl prefix in its name to avoid conflict with the
 // public header setjmp.h which is also included. here.
 #include <setjmp.h>
 
-namespace __llvm_libc {
+namespace LIBC_NAMESPACE {
 
 int setjmp(__jmp_buf *buf);
 
-} // namespace __llvm_libc
+} // namespace LIBC_NAMESPACE
 
-#endif // LLVM_LIBC_SRC_SETJMP_SETJMP_H
+#endif // LLVM_LIBC_SRC_SETJMP_SETJMP_IMPL_H

@@ -133,6 +133,8 @@ class _LIBCPP_EXPORTED_FROM_ABI bad_alloc
 {
 public:
     bad_alloc() _NOEXCEPT;
+    _LIBCPP_HIDE_FROM_ABI bad_alloc(const bad_alloc&) _NOEXCEPT = default;
+    _LIBCPP_HIDE_FROM_ABI bad_alloc& operator=(const bad_alloc&) _NOEXCEPT = default;
     ~bad_alloc() _NOEXCEPT override;
     const char* what() const _NOEXCEPT override;
 };
@@ -142,6 +144,8 @@ class _LIBCPP_EXPORTED_FROM_ABI bad_array_new_length
 {
 public:
     bad_array_new_length() _NOEXCEPT;
+    _LIBCPP_HIDE_FROM_ABI bad_array_new_length(const bad_array_new_length&) _NOEXCEPT = default;
+    _LIBCPP_HIDE_FROM_ABI bad_array_new_length& operator=(const bad_array_new_length&) _NOEXCEPT = default;
     ~bad_array_new_length() _NOEXCEPT override;
     const char* what() const _NOEXCEPT override;
 };
@@ -185,7 +189,7 @@ void __throw_bad_array_new_length()
 #if !defined(_LIBCPP_HAS_NO_LIBRARY_ALIGNED_ALLOCATION) && \
     !defined(_LIBCPP_ABI_VCRUNTIME)
 #ifndef _LIBCPP_CXX03_LANG
-enum class _LIBCPP_ENUM_VIS align_val_t : size_t { };
+enum class align_val_t : size_t { };
 #else
 enum align_val_t { __zero = 0, __max = (size_t)-1 };
 #endif

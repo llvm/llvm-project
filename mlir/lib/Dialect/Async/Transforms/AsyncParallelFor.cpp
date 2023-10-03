@@ -429,7 +429,7 @@ static ParallelComputeFunction createParallelComputeFunction(
       mapping.map(op.getInductionVars(), computeBlockInductionVars);
       mapping.map(computeFuncType.captures, captures);
 
-      for (auto &bodyOp : op.getLoopBody().getOps())
+      for (auto &bodyOp : op.getRegion().getOps())
         b.clone(bodyOp, mapping);
     };
   };
@@ -548,7 +548,7 @@ createAsyncDispatchFunction(ParallelComputeFunction &computeFunc,
       operands[2] = end;
 
       executeBuilder.create<func::CallOp>(executeLoc, func.getSymName(),
-                                          func.getCallableResults(), operands);
+                                          func.getResultTypes(), operands);
       executeBuilder.create<async::YieldOp>(executeLoc, ValueRange());
     };
 
@@ -569,7 +569,7 @@ createAsyncDispatchFunction(ParallelComputeFunction &computeFunc,
   computeFuncOperands.append(forwardedInputs.begin(), forwardedInputs.end());
 
   b.create<func::CallOp>(computeFunc.func.getSymName(),
-                         computeFunc.func.getCallableResults(),
+                         computeFunc.func.getResultTypes(),
                          computeFuncOperands);
   b.create<func::ReturnOp>(ValueRange());
 
@@ -616,7 +616,7 @@ static void doAsyncDispatch(ImplicitLocOpBuilder &b, PatternRewriter &rewriter,
     appendBlockComputeOperands(operands);
 
     b.create<func::CallOp>(parallelComputeFunction.func.getSymName(),
-                           parallelComputeFunction.func.getCallableResults(),
+                           parallelComputeFunction.func.getResultTypes(),
                            operands);
     b.create<scf::YieldOp>();
   };
@@ -635,8 +635,7 @@ static void doAsyncDispatch(ImplicitLocOpBuilder &b, PatternRewriter &rewriter,
     appendBlockComputeOperands(operands);
 
     b.create<func::CallOp>(asyncDispatchFunction.getSymName(),
-                           asyncDispatchFunction.getCallableResults(),
-                           operands);
+                           asyncDispatchFunction.getResultTypes(), operands);
 
     // Wait for the completion of all parallel compute operations.
     b.create<AwaitAllOp>(group);
@@ -694,7 +693,7 @@ doSequentialDispatch(ImplicitLocOpBuilder &b, PatternRewriter &rewriter,
     auto executeBodyBuilder = [&](OpBuilder &executeBuilder,
                                   Location executeLoc, ValueRange executeArgs) {
       executeBuilder.create<func::CallOp>(executeLoc, compute.getSymName(),
-                                          compute.getCallableResults(),
+                                          compute.getResultTypes(),
                                           computeFuncOperands(iv));
       executeBuilder.create<async::YieldOp>(executeLoc, ValueRange());
     };
@@ -710,7 +709,7 @@ doSequentialDispatch(ImplicitLocOpBuilder &b, PatternRewriter &rewriter,
   b.create<scf::ForOp>(c1, blockCount, c1, ValueRange(), loopBuilder);
 
   // Call parallel compute function for the first block in the caller thread.
-  b.create<func::CallOp>(compute.getSymName(), compute.getCallableResults(),
+  b.create<func::CallOp>(compute.getSymName(), compute.getResultTypes(),
                          computeFuncOperands(c0));
 
   // Wait for the completion of all async compute operations.
@@ -733,7 +732,7 @@ AsyncParallelForRewrite::matchAndRewrite(scf::ParallelOp op,
 
   // Make sure that all constants will be inside the parallel operation body to
   // reduce the number of parallel compute function arguments.
-  cloneConstantsIntoTheRegion(op.getLoopBody(), rewriter);
+  cloneConstantsIntoTheRegion(op.getRegion(), rewriter);
 
   // Compute trip count for each loop induction variable:
   //   tripCount = ceil_div(upperBound - lowerBound, step);

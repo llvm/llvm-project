@@ -9,9 +9,9 @@
 // Implements the required interoperability API from ISO_Fortran_binding.h
 // as specified in section 18.5.5 of Fortran 2018.
 
-#include "flang/ISO_Fortran_binding.h"
 #include "ISO_Fortran_util.h"
 #include "terminator.h"
+#include "flang/ISO_Fortran_binding_wrapper.h"
 #include "flang/Runtime/descriptor.h"
 #include "flang/Runtime/type-code.h"
 #include <cstdlib>
@@ -148,9 +148,11 @@ int CFI_section(CFI_cdesc_t *result, const CFI_cdesc_t *source,
   if (IsAssumedSize(source) && !upper_bounds) {
     return CFI_INVALID_DESCRIPTOR;
   }
-  if ((result->type != source->type) ||
-      (result->elem_len != source->elem_len)) {
-    return CFI_INVALID_DESCRIPTOR;
+  if (runtime::TypeCode{result->type} != runtime::TypeCode{source->type}) {
+    return CFI_INVALID_TYPE;
+  }
+  if (source->elem_len != result->elem_len) {
+    return CFI_INVALID_ELEM_LEN;
   }
   if (result->attribute == CFI_attribute_allocatable) {
     return CFI_INVALID_ATTRIBUTE;
@@ -256,7 +258,7 @@ int CFI_setpointer(CFI_cdesc_t *result, const CFI_cdesc_t *source,
   if (source->rank != result->rank) {
     return CFI_INVALID_RANK;
   }
-  if (source->type != result->type) {
+  if (runtime::TypeCode{source->type} != runtime::TypeCode{result->type}) {
     return CFI_INVALID_TYPE;
   }
   if (source->elem_len != result->elem_len) {

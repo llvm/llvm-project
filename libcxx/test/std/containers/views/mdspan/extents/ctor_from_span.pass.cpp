@@ -84,5 +84,17 @@ int main(int, char**) {
   static_assert(std::is_convertible_v<IntType, int>, "Test helper IntType unexpectedly not convertible to int");
   static_assert(!std::is_constructible_v< std::extents<unsigned long, D>, std::span<IntType, 1>>,
                 "extents constructible from illegal arguments");
+
+  // index_type is not nothrow constructible
+  static_assert(std::is_convertible_v<IntType, unsigned char>);
+  static_assert(std::is_convertible_v<const IntType&, unsigned char>);
+  static_assert(!std::is_nothrow_constructible_v<unsigned char, const IntType&>);
+  static_assert(!std::is_constructible_v<std::dextents<unsigned char, 2>, std::span<IntType, 2>>);
+
+  // convertible from non-const to index_type but not  from const
+  static_assert(std::is_convertible_v<IntTypeNC, int>);
+  static_assert(!std::is_convertible_v<const IntTypeNC&, int>);
+  static_assert(std::is_nothrow_constructible_v<int, IntTypeNC>);
+  static_assert(!std::is_constructible_v<std::dextents<int, 2>, std::span<IntTypeNC, 2>>);
   return 0;
 }

@@ -24,6 +24,8 @@
 
 using namespace llvm::omp::target::ompt;
 
+bool llvm::omp::target::ompt::Initialized = false;
+
 ompt_get_callback_t llvm::omp::target::ompt::lookupCallbackByCode = nullptr;
 ompt_function_lookup_t llvm::omp::target::ompt::lookupCallbackByName = nullptr;
 
@@ -42,6 +44,8 @@ int llvm::omp::target::ompt::initializeLibrary(ompt_function_lookup_t lookup,
 
   // Store pointer of 'ompt_libomp_target_fn_lookup' for use by the plugin
   lookupCallbackByName = lookup;
+
+  Initialized = true;
 
   return 0;
 }

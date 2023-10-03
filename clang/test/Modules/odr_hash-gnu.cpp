@@ -65,9 +65,10 @@ Invalid1 i1;
 // expected-error@first.h:* {{'Types::TypeOfExpr::Invalid1' has different definitions in different modules; first difference is definition in module 'FirstModule' found field 'x' with type 'typeof (1 + 2)' (aka 'int')}}
 // expected-note@second.h:* {{but in 'SecondModule' found field 'x' with type 'typeof (3)' (aka 'int')}}
 Invalid2 i2;
-// expected-error@second.h:* {{'Types::TypeOfExpr::Invalid2::x' from module 'SecondModule' is not present in definition of 'Types::TypeOfExpr::Invalid2' in module 'FirstModule'}}
-// expected-note@first.h:* {{declaration of 'x' does not match}}
+
 Valid v;
+
+// FIXME: We should diagnose the different definitions of `global`.
 #endif
 }  // namespace TypeOfExpr
 
@@ -113,8 +114,9 @@ Invalid2 i2;
 // expected-error@first.h:* {{'Types::TypeOf::Invalid2' has different definitions in different modules; first difference is definition in module 'FirstModule' found field 'x' with type 'typeof(int)' (aka 'int')}}
 // expected-note@second.h:* {{but in 'SecondModule' found field 'x' with type 'typeof(I)' (aka 'int')}}
 Invalid3 i3;
-// expected-error@second.h:* {{'Types::TypeOf::Invalid3::x' from module 'SecondModule' is not present in definition of 'Types::TypeOf::Invalid3' in module 'FirstModule'}}
-// expected-note@first.h:* {{declaration of 'x' does not match}}
+
+// FIXME: We should reject the `Invalid3` due to the inconsistent definition of `T`.
+
 Valid v;
 #endif
 }  // namespace TypeOf

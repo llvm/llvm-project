@@ -111,7 +111,7 @@ CXXRewrittenBinaryOperator::getDecomposedForm() const {
     return Result;
 
   // Otherwise, we expect a <=> to now be on the LHS.
-  E = Result.LHS->IgnoreImplicitAsWritten();
+  E = Result.LHS->IgnoreUnlessSpelledInSource();
   if (auto *BO = dyn_cast<BinaryOperator>(E)) {
     assert(BO->getOpcode() == BO_Cmp);
     Result.LHS = BO->getLHS();
@@ -767,29 +767,35 @@ CXXDynamicCastExpr *CXXDynamicCastExpr::CreateEmpty(const ASTContext &C,
 /// struct C { };
 ///
 /// C *f(B* b) { return dynamic_cast<C*>(b); }
-bool CXXDynamicCastExpr::isAlwaysNull() const
-{
+bool CXXDynamicCastExpr::isAlwaysNull() const {
+  if (isValueDependent() || getCastKind() != CK_Dynamic)
+    return false;
+
   QualType SrcType = getSubExpr()->getType();
   QualType DestType = getType();
 
-  if (const auto *SrcPTy = SrcType->getAs<PointerType>()) {
-    SrcType = SrcPTy->getPointeeType();
-    DestType = DestType->castAs<PointerType>()->getPointeeType();
+  if (DestType->isVoidPointerType())
+    return false;
+
+  if (DestType->isPointerType()) {
+    SrcType = SrcType->getPointeeType();
+    DestType = DestType->getPointeeType();
   }
 
-  if (DestType->isVoidType())
-    return false;
+  const auto *SrcRD = SrcType->getAsCXXRecordDecl();
+  const auto *DestRD = DestType->getAsCXXRecordDecl();
+  assert(SrcRD && DestRD);
 
-  const auto *SrcRD =
-      cast<CXXRecordDecl>(SrcType->castAs<RecordType>()->getDecl());
+  if (SrcRD->isEffectivelyFinal()) {
+    assert(!SrcRD->isDerivedFrom(DestRD) &&
+           "upcasts should not use CK_Dynamic");
+    return true;
+  }
 
-  if (!SrcRD->hasAttr<FinalAttr>())
-    return false;
+  if (DestRD->isEffectivelyFinal() && !DestRD->isDerivedFrom(SrcRD))
+    return true;
 
-  const auto *DestRD =
-      cast<CXXRecordDecl>(DestType->castAs<RecordType>()->getDecl());
-
-  return !DestRD->isDerivedFrom(SrcRD);
+  return false;
 }
 
 CXXReinterpretCastExpr *
@@ -1507,6 +1513,16 @@ CXXDependentScopeMemberExpr *CXXDependentScopeMemberExpr::CreateEmpty(
   void *Mem = Ctx.Allocate(Size, alignof(CXXDependentScopeMemberExpr));
   return new (Mem) CXXDependentScopeMemberExpr(
       EmptyShell(), HasTemplateKWAndArgsInfo, HasFirstQualifierFoundInScope);
+}
+
+CXXThisExpr *CXXThisExpr::Create(const ASTContext &Ctx, SourceLocation L,
+                                 QualType Ty, bool IsImplicit) {
+  return new (Ctx) CXXThisExpr(L, Ty, IsImplicit,
+                               Ctx.getLangOpts().HLSL ? VK_LValue : VK_PRValue);
+}
+
+CXXThisExpr *CXXThisExpr::CreateEmpty(const ASTContext &Ctx) {
+  return new (Ctx) CXXThisExpr(EmptyShell());
 }
 
 static bool hasOnlyNonStaticMemberFunctions(UnresolvedSetIterator begin,

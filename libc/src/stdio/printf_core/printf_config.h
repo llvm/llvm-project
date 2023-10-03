@@ -39,4 +39,6 @@
 
 // TODO(michaelrj): Move the other printf configuration options into this file.
 
+// LIBC_COPT_PRINTF_NO_NULLPTR_CHECKS
+
 #endif // LLVM_LIBC_SRC_STDIO_PRINTF_CORE_PRINTF_CONFIG_H

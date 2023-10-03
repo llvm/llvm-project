@@ -47,12 +47,7 @@ __write_to_windows_console([[maybe_unused]] FILE* __stream, [[maybe_unused]] wst
                     __view.size(),
                     nullptr,
                     nullptr) == 0) {
-#    ifndef _LIBCPP_HAS_NO_EXCEPTIONS
-    // There is no __throw_system_error overload that takes an error code.
-    throw system_error{filesystem::detail::make_windows_error(GetLastError()), "failed to write formatted output"};
-#    else  // _LIBCPP_HAS_NO_EXCEPTIONS
-    std::abort();
-#    endif // _LIBCPP_HAS_NO_EXCEPTIONS
+    __throw_system_error(filesystem::detail::make_windows_error(GetLastError()), "failed to write formatted output");
   }
 }
 #  endif // _LIBCPP_HAS_NO_WIDE_CHARACTERS

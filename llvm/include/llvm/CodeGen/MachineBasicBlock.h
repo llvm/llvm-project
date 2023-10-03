@@ -111,6 +111,15 @@ private:
 
   const BasicBlock *BB;
   int Number;
+
+  /// The call frame size on entry to this basic block due to call frame setup
+  /// instructions in a predecessor. This is usually zero, unless basic blocks
+  /// are split in the middle of a call sequence.
+  ///
+  /// This information is only maintained until PrologEpilogInserter eliminates
+  /// call frame pseudos.
+  unsigned CallFrameSize = 0;
+
   MachineFunction *xParent;
   Instructions Insts;
 
@@ -224,7 +233,7 @@ public:
   /// Return a formatted string to identify this block and its parent function.
   std::string getFullName() const;
 
-  /// Test whether this block is used as as something other than the target
+  /// Test whether this block is used as something other than the target
   /// of a terminator, exception-handling target, or jump table. This is
   /// either the result of an IR-level "blockaddress", or some form
   /// of target-specific branch lowering.
@@ -625,12 +634,6 @@ public:
   void setIsEndSection(bool V = true) { IsEndSection = V; }
 
   std::optional<unsigned> getBBID() const { return BBID; }
-
-  /// Returns the BBID of the block when BBAddrMapVersion >= 2, otherwise
-  /// returns `MachineBasicBlock::Number`.
-  /// TODO: Remove this function when version 1 is deprecated and replace its
-  /// uses with `getBBID()`.
-  unsigned getBBIDOrNumber() const;
 
   /// Returns the section ID of this basic block.
   MBBSectionID getSectionID() const { return SectionID; }
@@ -1147,6 +1150,11 @@ public:
   /// they're not in a MachineFunction yet, in which case this will return -1.
   int getNumber() const { return Number; }
   void setNumber(int N) { Number = N; }
+
+  /// Return the call frame size on entry to this basic block.
+  unsigned getCallFrameSize() const { return CallFrameSize; }
+  /// Set the call frame size on entry to this basic block.
+  void setCallFrameSize(unsigned N) { CallFrameSize = N; }
 
   /// Return the MCSymbol for this basic block.
   MCSymbol *getSymbol() const;

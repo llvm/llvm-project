@@ -79,8 +79,8 @@ uint32_t GetLLDBFrameID(uint64_t dap_frame_id) {
 }
 
 int64_t MakeVSCodeFrameID(lldb::SBFrame &frame) {
-  return (int64_t)(frame.GetThread().GetIndexID() << THREAD_INDEX_SHIFT |
-                   frame.GetFrameID());
+  return ((int64_t)frame.GetThread().GetIndexID() << THREAD_INDEX_SHIFT) |
+         frame.GetFrameID();
 }
 
 } // namespace lldb_vscode

@@ -132,6 +132,82 @@ std::vector<std::string> GetStrings(const llvm::json::Object *obj,
   return strs;
 }
 
+/// Create a short summary for a container that contains the summary of its
+/// first children, so that the user can get a glimpse of its contents at a
+/// glance.
+static std::optional<std::string>
+TryCreateAutoSummaryForContainer(lldb::SBValue &v) {
+  // We gate this feature because it performs GetNumChildren(), which can
+  // cause performance issues because LLDB needs to complete possibly huge
+  // types.
+  if (!g_vsc.enable_auto_variable_summaries)
+    return std::nullopt;
+
+  if (!v.MightHaveChildren())
+    return std::nullopt;
+  /// As this operation can be potentially slow, we limit the total time spent
+  /// fetching children to a few ms.
+  const auto max_evaluation_time = std::chrono::milliseconds(10);
+  /// We don't want to generate a extremely long summary string, so we limit its
+  /// length.
+  const size_t max_length = 32;
+
+  auto start = std::chrono::steady_clock::now();
+  std::string summary;
+  llvm::raw_string_ostream os(summary);
+  os << "{";
+
+  llvm::StringRef separator = "";
+
+  for (size_t i = 0, e = v.GetNumChildren(); i < e; ++i) {
+    // If we reached the time limit or exceeded the number of characters, we
+    // dump `...` to signal that there are more elements in the collection.
+    if (summary.size() > max_length ||
+        (std::chrono::steady_clock::now() - start) > max_evaluation_time) {
+      os << separator << "...";
+      break;
+    }
+    lldb::SBValue child = v.GetChildAtIndex(i);
+
+    if (llvm::StringRef name = child.GetName(); !name.empty()) {
+      llvm::StringRef value;
+      if (llvm::StringRef summary = child.GetSummary(); !summary.empty())
+        value = summary;
+      else
+        value = child.GetValue();
+
+      if (!value.empty()) {
+        // If the child is an indexed entry, we don't show its index to save
+        // characters.
+        if (name.starts_with("["))
+          os << separator << value;
+        else
+          os << separator << name << ":" << value;
+        separator = ", ";
+      }
+    }
+  }
+  os << "}";
+
+  if (summary == "{...}" || summary == "{}")
+    return std::nullopt;
+  return summary;
+}
+
+/// Try to create a summary string for the given value that doesn't have a
+/// summary of its own.
+static std::optional<std::string> TryCreateAutoSummary(lldb::SBValue value) {
+  if (!g_vsc.enable_auto_variable_summaries)
+    return std::nullopt;
+
+  // We use the dereferenced value for generating the summary.
+  if (value.GetType().IsPointerType() || value.GetType().IsReferenceType())
+    value = value.Dereference();
+
+  // We only support auto summaries for containers.
+  return TryCreateAutoSummaryForContainer(value);
+}
+
 void SetValueForKey(lldb::SBValue &v, llvm::json::Object &object,
                     llvm::StringRef key) {
   std::string result;
@@ -142,22 +218,28 @@ void SetValueForKey(lldb::SBValue &v, llvm::json::Object &object,
     strm << "<error: " << error.GetCString() << ">";
   } else {
     llvm::StringRef value = v.GetValue();
-    llvm::StringRef summary = v.GetSummary();
-    llvm::StringRef type_name = v.GetType().GetDisplayTypeName();
+    llvm::StringRef nonAutoSummary = v.GetSummary();
+    std::optional<std::string> summary = !nonAutoSummary.empty()
+                                             ? nonAutoSummary.str()
+                                             : TryCreateAutoSummary(v);
     if (!value.empty()) {
       strm << value;
-      if (!summary.empty())
-        strm << ' ' << summary;
-    } else if (!summary.empty()) {
-      strm << ' ' << summary;
-    } else if (!type_name.empty()) {
-      strm << type_name;
-      lldb::addr_t address = v.GetLoadAddress();
-      if (address != LLDB_INVALID_ADDRESS)
-        strm << " @ " << llvm::format_hex(address, 0);
+      if (summary)
+        strm << ' ' << *summary;
+    } else if (summary) {
+      strm << *summary;
+
+      // As last resort, we print its type and address if available.
+    } else {
+      if (llvm::StringRef type_name = v.GetType().GetDisplayTypeName();
+          !type_name.empty()) {
+        strm << type_name;
+        lldb::addr_t address = v.GetLoadAddress();
+        if (address != LLDB_INVALID_ADDRESS)
+          strm << " @ " << llvm::format_hex(address, 0);
+      }
     }
   }
-  strm.flush();
   EmplaceSafeString(object, key, result);
 }
 
@@ -342,6 +424,9 @@ llvm::json::Value CreateBreakpoint(lldb::SBBreakpoint &bp,
     object.try_emplace("source", CreateSource(*request_path));
 
   if (bp_addr.IsValid()) {
+    std::string formatted_addr =
+        "0x" + llvm::utohexstr(bp_addr.GetLoadAddress(g_vsc.target));
+    object.try_emplace("instructionReference", formatted_addr);
     auto line_entry = bp_addr.GetLineEntry();
     const auto line = line_entry.GetLine();
     if (line != UINT32_MAX)
@@ -600,8 +685,8 @@ llvm::json::Value CreateSource(lldb::SBLineEntry &line_entry) {
     if (name)
       EmplaceSafeString(object, "name", name);
     char path[PATH_MAX] = "";
-    file.GetPath(path, sizeof(path));
-    if (path[0]) {
+    if (file.GetPath(path, sizeof(path)) &&
+        lldb::SBFileSpec::ResolvePath(path, path, PATH_MAX)) {
       EmplaceSafeString(object, "path", std::string(path));
     }
   }
@@ -616,97 +701,14 @@ llvm::json::Value CreateSource(llvm::StringRef source_path) {
   return llvm::json::Value(std::move(source));
 }
 
-llvm::json::Value CreateSource(lldb::SBFrame &frame, int64_t &disasm_line) {
-  disasm_line = 0;
+std::optional<llvm::json::Value> CreateSource(lldb::SBFrame &frame) {
   auto line_entry = frame.GetLineEntry();
   // A line entry of 0 indicates the line is compiler generated i.e. no source
-  // file so don't return early with the line entry.
+  // file is associated with the frame.
   if (line_entry.GetFileSpec().IsValid() && line_entry.GetLine() != 0)
     return CreateSource(line_entry);
 
-  llvm::json::Object object;
-  const auto pc = frame.GetPC();
-
-  lldb::SBInstructionList insts;
-  lldb::SBFunction function = frame.GetFunction();
-  lldb::addr_t low_pc = LLDB_INVALID_ADDRESS;
-  if (function.IsValid()) {
-    low_pc = function.GetStartAddress().GetLoadAddress(g_vsc.target);
-    auto addr_srcref = g_vsc.addr_to_source_ref.find(low_pc);
-    if (addr_srcref != g_vsc.addr_to_source_ref.end()) {
-      // We have this disassembly cached already, return the existing
-      // sourceReference
-      object.try_emplace("sourceReference", addr_srcref->second);
-      disasm_line = g_vsc.GetLineForPC(addr_srcref->second, pc);
-    } else {
-      insts = function.GetInstructions(g_vsc.target);
-    }
-  } else {
-    lldb::SBSymbol symbol = frame.GetSymbol();
-    if (symbol.IsValid()) {
-      low_pc = symbol.GetStartAddress().GetLoadAddress(g_vsc.target);
-      auto addr_srcref = g_vsc.addr_to_source_ref.find(low_pc);
-      if (addr_srcref != g_vsc.addr_to_source_ref.end()) {
-        // We have this disassembly cached already, return the existing
-        // sourceReference
-        object.try_emplace("sourceReference", addr_srcref->second);
-        disasm_line = g_vsc.GetLineForPC(addr_srcref->second, pc);
-      } else {
-        insts = symbol.GetInstructions(g_vsc.target);
-      }
-    }
-  }
-  const auto num_insts = insts.GetSize();
-  if (low_pc != LLDB_INVALID_ADDRESS && num_insts > 0) {
-    if (line_entry.GetLine() == 0) {
-      EmplaceSafeString(object, "name", "<compiler-generated>");
-    } else {
-      EmplaceSafeString(object, "name", frame.GetDisplayFunctionName());
-    }
-    SourceReference source;
-    llvm::raw_string_ostream src_strm(source.content);
-    std::string line;
-    for (size_t i = 0; i < num_insts; ++i) {
-      lldb::SBInstruction inst = insts.GetInstructionAtIndex(i);
-      const auto inst_addr = inst.GetAddress().GetLoadAddress(g_vsc.target);
-      const char *m = inst.GetMnemonic(g_vsc.target);
-      const char *o = inst.GetOperands(g_vsc.target);
-      const char *c = inst.GetComment(g_vsc.target);
-      if (pc == inst_addr)
-        disasm_line = i + 1;
-      const auto inst_offset = inst_addr - low_pc;
-      int spaces = 0;
-      if (inst_offset < 10)
-        spaces = 3;
-      else if (inst_offset < 100)
-        spaces = 2;
-      else if (inst_offset < 1000)
-        spaces = 1;
-      line.clear();
-      llvm::raw_string_ostream line_strm(line);
-      line_strm << llvm::formatv("{0:X+}: <{1}> {2} {3,12} {4}", inst_addr,
-                                 inst_offset, llvm::fmt_repeat(' ', spaces), m,
-                                 o);
-
-      // If there is a comment append it starting at column 60 or after one
-      // space past the last char
-      const uint32_t comment_row = std::max(line_strm.str().size(), (size_t)60);
-      if (c && c[0]) {
-        if (line.size() < comment_row)
-          line_strm.indent(comment_row - line_strm.str().size());
-        line_strm << " # " << c;
-      }
-      src_strm << line_strm.str() << "\n";
-      source.addr_to_line[inst_addr] = i + 1;
-    }
-    // Flush the source stream
-    src_strm.str();
-    auto sourceReference = VSCode::GetNextSourceReference();
-    g_vsc.source_map[sourceReference] = std::move(source);
-    g_vsc.addr_to_source_ref[low_pc] = sourceReference;
-    object.try_emplace("sourceReference", sourceReference);
-  }
-  return llvm::json::Value(std::move(object));
+  return {};
 }
 
 // "StackFrame": {
@@ -748,6 +750,12 @@ llvm::json::Value CreateSource(lldb::SBFrame &frame, int64_t &disasm_line) {
 //       "description": "An optional end column of the range covered by the
 //                       stack frame."
 //     },
+//     "instructionPointerReference": {
+// 	     "type": "string",
+// 	     "description": "A memory reference for the current instruction
+// pointer
+//                       in this frame."
+//     },
 //     "moduleId": {
 //       "type": ["integer", "string"],
 //       "description": "The module associated with this frame, if any."
@@ -770,30 +778,45 @@ llvm::json::Value CreateStackFrame(lldb::SBFrame &frame) {
   int64_t frame_id = MakeVSCodeFrameID(frame);
   object.try_emplace("id", frame_id);
 
-  std::string frame_name;
-  const char *func_name = frame.GetFunctionName();
-  if (func_name)
-    frame_name = func_name;
-  else
-    frame_name = "<unknown>";
+  // `function_name` can be a nullptr, which throws an error when assigned to an
+  // `std::string`.
+  const char *function_name = frame.GetDisplayFunctionName();
+  std::string frame_name =
+      function_name == nullptr ? std::string() : function_name;
+  if (frame_name.empty()) {
+    // If the function name is unavailable, display the pc address as a 16-digit
+    // hex string, e.g. "0x0000000000012345"
+    llvm::raw_string_ostream os(frame_name);
+    os << llvm::format_hex(frame.GetPC(), 18);
+  }
   bool is_optimized = frame.GetFunction().GetIsOptimized();
   if (is_optimized)
     frame_name += " [opt]";
   EmplaceSafeString(object, "name", frame_name);
 
-  int64_t disasm_line = 0;
-  object.try_emplace("source", CreateSource(frame, disasm_line));
+  auto source = CreateSource(frame);
 
-  auto line_entry = frame.GetLineEntry();
-  if (disasm_line > 0) {
-    object.try_emplace("line", disasm_line);
-  } else {
+  if (source) {
+    object.try_emplace("source", *source);
+    auto line_entry = frame.GetLineEntry();
     auto line = line_entry.GetLine();
-    if (line == UINT32_MAX)
-      line = 0;
-    object.try_emplace("line", line);
+    if (line && line != LLDB_INVALID_LINE_NUMBER)
+      object.try_emplace("line", line);
+    auto column = line_entry.GetColumn();
+    if (column && column != LLDB_INVALID_COLUMN_NUMBER)
+      object.try_emplace("column", column);
+  } else {
+    object.try_emplace("line", 0);
+    object.try_emplace("column", 0);
+    object.try_emplace("presentationHint", "subtle");
   }
-  object.try_emplace("column", line_entry.GetColumn());
+
+  const auto pc = frame.GetPC();
+  if (pc != LLDB_INVALID_ADDRESS) {
+    std::string formatted_addr = "0x" + llvm::utohexstr(pc);
+    object.try_emplace("instructionPointerReference", formatted_addr);
+  }
+
   return llvm::json::Value(std::move(object));
 }
 
@@ -815,17 +838,30 @@ llvm::json::Value CreateStackFrame(lldb::SBFrame &frame) {
 llvm::json::Value CreateThread(lldb::SBThread &thread) {
   llvm::json::Object object;
   object.try_emplace("id", (int64_t)thread.GetThreadID());
-  char thread_str[64];
-  snprintf(thread_str, sizeof(thread_str), "Thread #%u", thread.GetIndexID());
-  const char *name = thread.GetName();
-  if (name) {
-    std::string thread_with_name(thread_str);
-    thread_with_name += ' ';
-    thread_with_name += name;
-    EmplaceSafeString(object, "name", thread_with_name);
+  const char *thread_name = thread.GetName();
+  const char *queue_name = thread.GetQueueName();
+
+  std::string thread_str;
+  if (thread_name) {
+    thread_str = std::string(thread_name);
+  } else if (queue_name) {
+    auto kind = thread.GetQueue().GetKind();
+    std::string queue_kind_label = "";
+    if (kind == lldb::eQueueKindSerial) {
+      queue_kind_label = " (serial)";
+    } else if (kind == lldb::eQueueKindConcurrent) {
+      queue_kind_label = " (concurrent)";
+    }
+
+    thread_str = llvm::formatv("Thread {0} Queue: {1}{2}", thread.GetIndexID(),
+                               queue_name, queue_kind_label)
+                     .str();
   } else {
-    EmplaceSafeString(object, "name", std::string(thread_str));
+    thread_str = llvm::formatv("Thread {0}", thread.GetIndexID()).str();
   }
+
+  EmplaceSafeString(object, "name", thread_str);
+
   return llvm::json::Value(std::move(object));
 }
 
@@ -907,6 +943,8 @@ llvm::json::Value CreateThreadStopped(lldb::SBThread &thread,
       uint64_t bp_loc_id = thread.GetStopReasonDataAtIndex(1);
       snprintf(desc_str, sizeof(desc_str), "breakpoint %" PRIu64 ".%" PRIu64,
                bp_id, bp_loc_id);
+      body.try_emplace("hitBreakpointIds",
+                       llvm::json::Array{llvm::json::Value(bp_id)});
       EmplaceSafeString(body, "description", desc_str);
     }
   } break;
@@ -951,6 +989,7 @@ llvm::json::Value CreateThreadStopped(lldb::SBThread &thread,
       EmplaceSafeString(body, "description", std::string(description));
     }
   }
+  // "threadCausedFocus" is used in tests to validate breaking behavior.
   if (tid == g_vsc.focus_tid) {
     body.try_emplace("threadCausedFocus", true);
   }
@@ -1046,17 +1085,20 @@ std::string CreateUniqueVariableNameForDisplay(lldb::SBValue v,
 // }
 llvm::json::Value CreateVariable(lldb::SBValue v, int64_t variablesReference,
                                  int64_t varID, bool format_hex,
-                                 bool is_name_duplicated) {
+                                 bool is_name_duplicated,
+                                 std::optional<std::string> custom_name) {
   llvm::json::Object object;
-  EmplaceSafeString(object, "name",
-                    CreateUniqueVariableNameForDisplay(v, is_name_duplicated));
+  EmplaceSafeString(
+      object, "name",
+      custom_name ? *custom_name
+                  : CreateUniqueVariableNameForDisplay(v, is_name_duplicated));
 
   if (format_hex)
     v.SetFormat(lldb::eFormatHex);
   SetValueForKey(v, object, "value");
   auto type_obj = v.GetType();
   auto type_cstr = type_obj.GetDisplayTypeName();
-  // If we have a type with many many children, we would like to be able to
+  // If we have a type with many children, we would like to be able to
   // give a hint to the IDE that the type has indexed children so that the
   // request can be broken up in grabbing only a few children at a time. We want
   // to be careful and only call "v.GetNumChildren()" if we have an array type
@@ -1074,15 +1116,20 @@ llvm::json::Value CreateVariable(lldb::SBValue v, int64_t variablesReference,
   const bool is_synthetic = v.IsSynthetic();
   if (is_array || is_synthetic) {
     const auto num_children = v.GetNumChildren();
+    // We create a "[raw]" fake child for each synthetic type, so we have to
+    // account for it when returning indexed variables. We don't need to do this
+    // for non-indexed ones.
+    bool has_raw_child = is_synthetic && g_vsc.enable_synthetic_child_debugging;
+    int actual_num_children = num_children + (has_raw_child ? 1 : 0);
     if (is_array) {
-      object.try_emplace("indexedVariables", num_children);
-    } else {
+      object.try_emplace("indexedVariables", actual_num_children);
+    } else if (num_children > 0) {
       // If a type has a synthetic child provider, then the SBType of "v" won't
       // tell us anything about what might be displayed. So we can check if the
       // first child's name is "[0]" and then we can say it is indexed.
       const char *first_child_name = v.GetChildAtIndex(0).GetName();
       if (first_child_name && strcmp(first_child_name, "[0]") == 0)
-        object.try_emplace("indexedVariables", num_children);
+        object.try_emplace("indexedVariables", actual_num_children);
     }
   }
   EmplaceSafeString(object, "type", type_cstr ? type_cstr : NO_TYPENAME);

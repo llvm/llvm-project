@@ -1451,7 +1451,7 @@ void ClangdLSPServer::onGoToType(const TextDocumentPositionParams &Params,
           return Reply(Types.takeError());
         std::vector<Location> Response;
         for (const LocatedSymbol &Sym : *Types)
-          Response.push_back(Sym.PreferredDeclaration);
+          Response.push_back(Sym.Definition.value_or(Sym.PreferredDeclaration));
         return Reply(std::move(Response));
       });
 }
@@ -1467,7 +1467,7 @@ void ClangdLSPServer::onGoToImplementation(
           return Reply(Overrides.takeError());
         std::vector<Location> Impls;
         for (const LocatedSymbol &Sym : *Overrides)
-          Impls.push_back(Sym.PreferredDeclaration);
+          Impls.push_back(Sym.Definition.value_or(Sym.PreferredDeclaration));
         return Reply(std::move(Impls));
       });
 }

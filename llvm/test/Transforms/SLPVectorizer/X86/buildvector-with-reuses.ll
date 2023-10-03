@@ -4,12 +4,12 @@
 define <4 x double> @test(ptr %ia, ptr %ib, ptr %ic, ptr %id, ptr %ie, ptr %x) {
 ; CHECK-LABEL: define <4 x double> @test
 ; CHECK-SAME: (ptr [[IA:%.*]], ptr [[IB:%.*]], ptr [[IC:%.*]], ptr [[ID:%.*]], ptr [[IE:%.*]], ptr [[X:%.*]]) #[[ATTR0:[0-9]+]] {
-; CHECK-NEXT:    [[I4275:%.*]] = load double, ptr [[ID]], align 8
-; CHECK-NEXT:    [[I4326:%.*]] = load <4 x double>, ptr [[X]], align 8
 ; CHECK-NEXT:    [[I4238:%.*]] = load double, ptr [[IA]], align 8
 ; CHECK-NEXT:    [[I4252:%.*]] = load double, ptr [[IB]], align 8
 ; CHECK-NEXT:    [[I4264:%.*]] = load double, ptr [[IC]], align 8
+; CHECK-NEXT:    [[I4275:%.*]] = load double, ptr [[ID]], align 8
 ; CHECK-NEXT:    [[I4277:%.*]] = load double, ptr [[IE]], align 8
+; CHECK-NEXT:    [[I4326:%.*]] = load <4 x double>, ptr [[X]], align 8
 ; CHECK-NEXT:    [[TMP1:%.*]] = shufflevector <4 x double> [[I4326]], <4 x double> poison, <2 x i32> <i32 0, i32 poison>
 ; CHECK-NEXT:    [[TMP2:%.*]] = insertelement <2 x double> [[TMP1]], double [[I4275]], i32 1
 ; CHECK-NEXT:    [[TMP3:%.*]] = shufflevector <2 x double> [[TMP2]], <2 x double> poison, <4 x i32> <i32 0, i32 0, i32 0, i32 1>

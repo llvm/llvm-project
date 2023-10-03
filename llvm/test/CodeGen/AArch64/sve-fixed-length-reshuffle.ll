@@ -10,8 +10,8 @@ define <4 x i1> @reshuffle_v4i1_nxv4i1(<vscale x 4 x i1> %a) #0 {
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    mov z1.s, p0/z, #1 // =0x1
 ; CHECK-NEXT:    mov w8, v1.s[1]
-; CHECK-NEXT:    mov w9, v1.s[2]
 ; CHECK-NEXT:    mov v0.16b, v1.16b
+; CHECK-NEXT:    mov w9, v1.s[2]
 ; CHECK-NEXT:    mov v0.h[1], w8
 ; CHECK-NEXT:    mov w8, v1.s[3]
 ; CHECK-NEXT:    mov v0.h[2], w9

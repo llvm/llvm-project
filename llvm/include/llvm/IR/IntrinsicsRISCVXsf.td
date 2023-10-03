@@ -93,38 +93,38 @@ let TargetPrefix = "riscv" in {
       defvar range = ["c", "s", "i", "l"];
       foreach r = range in {
         foreach s = VCIXSuffix<r>.suffix in {
-          def "int_riscv_sf_vc_" # t # "_se_" # s : RISCVSFCustomVC_X</*HasDst*/0, /*HasSE*/1, ImmScalar>;
+          def "int_riscv_sf_vc_" # t # "_se_" # s : RISCVSFCustomVC_X<HasDst=0, HasSE=1, ImmScalar=ImmScalar>;
         }
       }
-      def "int_riscv_sf_vc_v_" # t # "_se" : RISCVSFCustomVC_X</*HasDst*/1, /*HasSE*/1, ImmScalar>;
-      def "int_riscv_sf_vc_v_" # t         : RISCVSFCustomVC_X</*HasDst*/1, /*HasSE*/0, ImmScalar>;
+      def "int_riscv_sf_vc_v_" # t # "_se" : RISCVSFCustomVC_X<HasDst=1, HasSE=1, ImmScalar=ImmScalar>;
+      def "int_riscv_sf_vc_v_" # t         : RISCVSFCustomVC_X<HasDst=1, HasSE=0, ImmScalar=ImmScalar>;
     }
   }
 
   multiclass RISCVSFCustomVC_XV<list<string> type> {
     foreach t = type in {
       defvar ImmScalar = !eq(t, "i");
-      def "int_riscv_sf_vc_" # t # "v_se"   : RISCVSFCustomVC_XV</*HasDst*/0, /*HasSE*/1, ImmScalar>;
-      def "int_riscv_sf_vc_v_" # t # "v_se" : RISCVSFCustomVC_XV</*HasDst*/1, /*HasSE*/1, ImmScalar>;
-      def "int_riscv_sf_vc_v_" # t # "v"    : RISCVSFCustomVC_XV</*HasDst*/1, /*HasSE*/0, ImmScalar>;
+      def "int_riscv_sf_vc_" # t # "v_se"   : RISCVSFCustomVC_XV<HasDst=0, HasSE=1, ImmScalar=ImmScalar>;
+      def "int_riscv_sf_vc_v_" # t # "v_se" : RISCVSFCustomVC_XV<HasDst=1, HasSE=1, ImmScalar=ImmScalar>;
+      def "int_riscv_sf_vc_v_" # t # "v"    : RISCVSFCustomVC_XV<HasDst=1, HasSE=0, ImmScalar=ImmScalar>;
     }
   }
 
   multiclass RISCVSFCustomVC_XVV<list<string> type> {
     foreach t = type in {
       defvar ImmScalar = !eq(t, "i");
-      def "int_riscv_sf_vc_" # t # "vv_se"   : RISCVSFCustomVC_XVV</*HasDst*/0, /*HasSE*/1, ImmScalar>;
-      def "int_riscv_sf_vc_v_" # t # "vv_se" : RISCVSFCustomVC_XVV</*HasDst*/1, /*HasSE*/1, ImmScalar>;
-      def "int_riscv_sf_vc_v_" # t # "vv"    : RISCVSFCustomVC_XVV</*HasDst*/1, /*HasSE*/0, ImmScalar>;
+      def "int_riscv_sf_vc_" # t # "vv_se"   : RISCVSFCustomVC_XVV<HasDst=0, HasSE=1, ImmScalar=ImmScalar>;
+      def "int_riscv_sf_vc_v_" # t # "vv_se" : RISCVSFCustomVC_XVV<HasDst=1, HasSE=1, ImmScalar=ImmScalar>;
+      def "int_riscv_sf_vc_v_" # t # "vv"    : RISCVSFCustomVC_XVV<HasDst=1, HasSE=0, ImmScalar=ImmScalar>;
     }
   }
 
   multiclass RISCVSFCustomVC_XVW<list<string> type> {
     foreach t = type in {
       defvar ImmScalar = !eq(t, "i");
-      def "int_riscv_sf_vc_" # t # "vw_se"   : RISCVSFCustomVC_XVW</*HasDst*/0, /*HasSE*/1, ImmScalar>;
-      def "int_riscv_sf_vc_v_" # t # "vw_se" : RISCVSFCustomVC_XVW</*HasDst*/1, /*HasSE*/1, ImmScalar>;
-      def "int_riscv_sf_vc_v_" # t # "vw"    : RISCVSFCustomVC_XVW</*HasDst*/1, /*HasSE*/0, ImmScalar>;
+      def "int_riscv_sf_vc_" # t # "vw_se"   : RISCVSFCustomVC_XVW<HasDst=0, HasSE=1, ImmScalar=ImmScalar>;
+      def "int_riscv_sf_vc_v_" # t # "vw_se" : RISCVSFCustomVC_XVW<HasDst=1, HasSE=1, ImmScalar=ImmScalar>;
+      def "int_riscv_sf_vc_v_" # t # "vw"    : RISCVSFCustomVC_XVW<HasDst=1, HasSE=0, ImmScalar=ImmScalar>;
     }
   }
 

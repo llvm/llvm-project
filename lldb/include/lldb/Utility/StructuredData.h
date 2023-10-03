@@ -9,10 +9,10 @@
 #ifndef LLDB_UTILITY_STRUCTUREDDATA_H
 #define LLDB_UTILITY_STRUCTUREDDATA_H
 
+#include "llvm/ADT/StringMap.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/JSON.h"
 
-#include "lldb/Utility/ConstString.h"
 #include "lldb/Utility/FileSpec.h"
 #include "lldb/Utility/Stream.h"
 #include "lldb/lldb-enumerations.h"
@@ -266,25 +266,6 @@ public:
       return success;
     }
 
-    bool GetItemAtIndexAsString(size_t idx, ConstString &result) const {
-      ObjectSP value_sp = GetItemAtIndex(idx);
-      if (value_sp.get()) {
-        if (auto string_value = value_sp->GetAsString()) {
-          result = ConstString(string_value->GetValue());
-          return true;
-        }
-      }
-      return false;
-    }
-
-    bool GetItemAtIndexAsString(size_t idx, ConstString &result,
-                                const char *default_val) const {
-      bool success = GetItemAtIndexAsString(idx, result);
-      if (!success)
-        result.SetCString(default_val);
-      return success;
-    }
-
     bool GetItemAtIndexAsDictionary(size_t idx, Dictionary *&result) const {
       result = nullptr;
       ObjectSP value_sp = GetItemAtIndex(idx);
@@ -442,34 +423,25 @@ public:
 
     size_t GetSize() const { return m_dict.size(); }
 
-    void ForEach(std::function<bool(ConstString key, Object *object)> const
+    void ForEach(std::function<bool(llvm::StringRef key, Object *object)> const
                      &callback) const {
       for (const auto &pair : m_dict) {
-        if (!callback(pair.first, pair.second.get()))
+        if (!callback(pair.first(), pair.second.get()))
           break;
       }
     }
 
     ArraySP GetKeys() const {
       auto array_sp = std::make_shared<Array>();
-      collection::const_iterator iter;
-      for (iter = m_dict.begin(); iter != m_dict.end(); ++iter) {
-        auto key_object_sp = std::make_shared<String>();
-        key_object_sp->SetValue(iter->first.AsCString());
+      for (auto iter = m_dict.begin(); iter != m_dict.end(); ++iter) {
+        auto key_object_sp = std::make_shared<String>(iter->first());
         array_sp->Push(key_object_sp);
       }
       return array_sp;
     }
 
     ObjectSP GetValueForKey(llvm::StringRef key) const {
-      ObjectSP value_sp;
-      if (!key.empty()) {
-        ConstString key_cs(key);
-        collection::const_iterator iter = m_dict.find(key_cs);
-        if (iter != m_dict.end())
-          value_sp = iter->second;
-      }
-      return value_sp;
+      return m_dict.lookup(key);
     }
 
     bool GetValueForKeyAsBoolean(llvm::StringRef key, bool &result) const {
@@ -558,15 +530,10 @@ public:
       return false;
     }
 
-    bool HasKey(llvm::StringRef key) const {
-      ConstString key_cs(key);
-      collection::const_iterator search = m_dict.find(key_cs);
-      return search != m_dict.end();
-    }
+    bool HasKey(llvm::StringRef key) const { return m_dict.contains(key); }
 
     void AddItem(llvm::StringRef key, ObjectSP value_sp) {
-      ConstString key_cs(key);
-      m_dict[key_cs] = std::move(value_sp);
+      m_dict.insert_or_assign(key, std::move(value_sp));
     }
 
     template <typename T> void AddIntegerItem(llvm::StringRef key, T value) {
@@ -596,8 +563,7 @@ public:
     void GetDescription(lldb_private::Stream &s) const override;
 
   protected:
-    typedef std::map<ConstString, ObjectSP> collection;
-    collection m_dict;
+    llvm::StringMap<ObjectSP> m_dict;
   };
 
   class Null : public Object {

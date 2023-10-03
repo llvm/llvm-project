@@ -17,25 +17,37 @@ class B {
 };
 }
 
-//--- module1.cppm
-// inside NS, using C = B<A>
-module;
-export module module1;
-#include "header.h"
+//--- module1.h
 namespace NS {
 using C = B<A>;
 }
-export struct D : NS::C {};
+struct D : NS::C {
+    using Type = NS::C;
+};
+
+//--- module1.cppm
+// inside NS, using C = B<A>
+module;
+#include "header.h"
+#include "module1.h"
+export module module1;
+export using ::D;
+
+//--- module2.h
+namespace NS {
+using C = B<NS::A>;
+}
+struct D : NS::C {
+    using Type = NS::C;
+};
 
 //--- module2.cppm
 // inside NS, using C = B<NS::A>
 module;
-export module module2;
 #include "header.h"
-namespace NS {
-using C = B<NS::A>;
-}
-export struct D : NS::C {};
+#include "module2.h"
+export module module2;
+export using ::D;
 
 //--- merge.cpp
 // expected-no-diagnostics

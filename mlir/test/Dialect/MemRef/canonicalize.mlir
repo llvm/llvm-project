@@ -719,6 +719,16 @@ func.func @scopeInline(%arg : memref<index>) {
 
 // -----
 
+// CHECK-LABEL: func @reinterpret_noop
+//  CHECK-SAME: (%[[ARG:.*]]: memref<2x3x4xf32>)
+//  CHECK-NEXT: return %[[ARG]]
+func.func @reinterpret_noop(%arg : memref<2x3x4xf32>) -> memref<2x3x4xf32> {
+  %0 = memref.reinterpret_cast %arg to offset: [0], sizes: [2, 3, 4], strides: [12, 4, 1] : memref<2x3x4xf32> to memref<2x3x4xf32>
+  return %0 : memref<2x3x4xf32>
+}
+
+// -----
+
 // CHECK-LABEL: func @reinterpret_of_reinterpret
 //  CHECK-SAME: (%[[ARG:.*]]: memref<?xi8>, %[[SIZE1:.*]]: index, %[[SIZE2:.*]]: index)
 //       CHECK: %[[RES:.*]] = memref.reinterpret_cast %[[ARG]] to offset: [0], sizes: [%[[SIZE2]]], strides: [1]
@@ -931,7 +941,7 @@ func.func @fold_multiple_memory_space_cast(%arg : memref<?xf32>) -> memref<?xf32
 
 // -----
 
-// CHECK-lABEL: func @ub_negative_alloc_size
+// CHECK-LABEL: func private @ub_negative_alloc_size
 func.func private @ub_negative_alloc_size() -> memref<?x?x?xi1> {
   %idx1 = index.constant 1
   %c-2 = arith.constant -2 : index
@@ -939,4 +949,19 @@ func.func private @ub_negative_alloc_size() -> memref<?x?x?xi1> {
 // CHECK:   %[[ALLOC:.*]] = memref.alloc(%c-2) : memref<15x?x1xi1>
   %alloc = memref.alloc(%c15, %c-2, %idx1) : memref<?x?x?xi1>
   return %alloc : memref<?x?x?xi1>
+}
+
+// -----
+
+// CHECK-LABEL: func @subview_rank_reduction(
+//  CHECK-SAME:     %[[arg0:.*]]: memref<1x384x384xf32>, %[[arg1:.*]]: index
+func.func @subview_rank_reduction(%arg0: memref<1x384x384xf32>, %idx: index)
+    -> memref<?x?xf32, strided<[384, 1], offset: ?>> {
+  %c1 = arith.constant 1 : index
+  // CHECK: %[[subview:.*]] = memref.subview %[[arg0]][0, %[[arg1]], %[[arg1]]] [1, 1, %[[arg1]]] [1, 1, 1] : memref<1x384x384xf32> to memref<1x?xf32, strided<[384, 1], offset: ?>>
+  // CHECK: %[[cast:.*]] = memref.cast %[[subview]] : memref<1x?xf32, strided<[384, 1], offset: ?>> to memref<?x?xf32, strided<[384, 1], offset: ?>>
+  %0 = memref.subview %arg0[0, %idx, %idx] [1, %c1, %idx] [1, 1, 1]
+      : memref<1x384x384xf32> to memref<?x?xf32, strided<[384, 1], offset: ?>>
+  // CHECK: return %[[cast]]
+  return %0 : memref<?x?xf32, strided<[384, 1], offset: ?>>
 }

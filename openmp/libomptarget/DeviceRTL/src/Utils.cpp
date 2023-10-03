@@ -144,12 +144,10 @@ bool utils::isSharedMemPtr(void *Ptr) { return impl::isSharedMemPtr(Ptr); }
 
 extern "C" {
 int32_t __kmpc_shuffle_int32(int32_t Val, int16_t Delta, int16_t SrcLane) {
-  FunctionTracingRAII();
   return impl::shuffleDown(lanes::All, Val, Delta, SrcLane);
 }
 
 int64_t __kmpc_shuffle_int64(int64_t Val, int16_t Delta, int16_t Width) {
-  FunctionTracingRAII();
   uint32_t lo, hi;
   utils::unpack(Val, lo, hi);
   hi = impl::shuffleDown(lanes::All, hi, Delta, Width);

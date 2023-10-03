@@ -52,9 +52,9 @@ define <vscale x 8 x double> @complex_add_v8f64(<vscale x 8 x double> %a, <vscal
 ; CHECK-LABEL: complex_add_v8f64:
 ; CHECK:       // %bb.0: // %entry
 ; CHECK-NEXT:    ptrue p0.d
-; CHECK-NEXT:    fcadd z6.d, p0/m, z6.d, z2.d, #90
 ; CHECK-NEXT:    fcadd z4.d, p0/m, z4.d, z0.d, #90
 ; CHECK-NEXT:    fcadd z5.d, p0/m, z5.d, z1.d, #90
+; CHECK-NEXT:    fcadd z6.d, p0/m, z6.d, z2.d, #90
 ; CHECK-NEXT:    fcadd z7.d, p0/m, z7.d, z3.d, #90
 ; CHECK-NEXT:    mov z0.d, z4.d
 ; CHECK-NEXT:    mov z1.d, z5.d

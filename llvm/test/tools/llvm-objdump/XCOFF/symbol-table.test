@@ -71,7 +71,7 @@ entry:
 ; SYM-NEXT: 00000000 l       .text      00000091 
 ; SYM-NEXT: 00000000 g     F .text (csect: )       00000000 .bar
 ; SYM-NEXT: 00000050 g     F .text (csect: )       00000000 .foo
-; SYM-NEXT: 00000094 l       .text      00000013 .rodata.str1.1L...str
+; SYM-NEXT: 00000094 l       .text      00000013 L...str
 ; SYM-NEXT: 000000a8 g     O .data      00000004 con
 ; SYM-NEXT: 000000ac  w    O .data      00000004 wi
 ; SYM-NEXT: 000000b0 g     O .data      00000004 i
@@ -93,7 +93,7 @@ entry:
 ; SYM-DES-NEXT: 00000000 l       .text      00000091 (idx: 3) [PR]
 ; SYM-DES-NEXT: 00000000 g     F .text (csect: (idx: 3) [PR])  00000000 (idx: 5) .bar
 ; SYM-DES-NEXT: 00000050 g     F .text (csect: (idx: 3) [PR])  00000000 (idx: 7) .foo
-; SYM-DES-NEXT: 00000094 l       .text      00000013 (idx: 9) .rodata.str1.1L...str[RO]
+; SYM-DES-NEXT: 00000094 l       .text      00000013 (idx: 9) L...str[RO]
 ; SYM-DES-NEXT: 000000a8 g     O .data      00000004 (idx: 11) con[RW]
 ; SYM-DES-NEXT: 000000ac  w    O .data      00000004 (idx: 13) wi[RW]
 ; SYM-DES-NEXT: 000000b0 g     O .data      00000004 (idx: 15) i[RW]

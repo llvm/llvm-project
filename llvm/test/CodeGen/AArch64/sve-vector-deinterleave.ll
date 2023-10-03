@@ -185,17 +185,17 @@ ret {<vscale x 4 x i64>, <vscale x 4 x i64>} %retval
 define {<vscale x 8 x i64>, <vscale x 8 x i64>}  @vector_deinterleave_nxv8i64_nxv16i64(<vscale x 16 x i64> %vec) {
 ; CHECK-LABEL: vector_deinterleave_nxv8i64_nxv16i64:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    uzp1 z24.d, z4.d, z5.d
-; CHECK-NEXT:    uzp1 z25.d, z2.d, z3.d
-; CHECK-NEXT:    uzp1 z26.d, z0.d, z1.d
+; CHECK-NEXT:    uzp1 z24.d, z2.d, z3.d
+; CHECK-NEXT:    uzp1 z25.d, z0.d, z1.d
+; CHECK-NEXT:    uzp1 z26.d, z4.d, z5.d
 ; CHECK-NEXT:    uzp1 z27.d, z6.d, z7.d
 ; CHECK-NEXT:    uzp2 z28.d, z0.d, z1.d
 ; CHECK-NEXT:    uzp2 z29.d, z2.d, z3.d
 ; CHECK-NEXT:    uzp2 z30.d, z4.d, z5.d
 ; CHECK-NEXT:    uzp2 z7.d, z6.d, z7.d
-; CHECK-NEXT:    mov z0.d, z26.d
-; CHECK-NEXT:    mov z1.d, z25.d
-; CHECK-NEXT:    mov z2.d, z24.d
+; CHECK-NEXT:    mov z0.d, z25.d
+; CHECK-NEXT:    mov z1.d, z24.d
+; CHECK-NEXT:    mov z2.d, z26.d
 ; CHECK-NEXT:    mov z3.d, z27.d
 ; CHECK-NEXT:    mov z4.d, z28.d
 ; CHECK-NEXT:    mov z5.d, z29.d

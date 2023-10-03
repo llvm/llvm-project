@@ -15,6 +15,7 @@ static_library("Core") {
     "//llvm/utils/gn/build/libs/pthread",
   ]
   sources = [
+    "AddressMap.cpp",
     "BinaryBasicBlock.cpp",
     "BinaryContext.cpp",
     "BinaryData.cpp",

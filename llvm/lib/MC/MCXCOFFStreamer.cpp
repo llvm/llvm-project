@@ -105,6 +105,10 @@ void MCXCOFFStreamer::emitXCOFFExceptDirective(const MCSymbol *Symbol,
                                                FunctionSize, hasDebug);
 }
 
+void MCXCOFFStreamer::emitXCOFFCInfoSym(StringRef Name, StringRef Metadata) {
+  getAssembler().getWriter().addCInfoSymEntry(Name, Metadata);
+}
+
 void MCXCOFFStreamer::emitCommonSymbol(MCSymbol *Symbol, uint64_t Size,
                                        Align ByteAlignment) {
   getAssembler().registerSymbol(*Symbol);

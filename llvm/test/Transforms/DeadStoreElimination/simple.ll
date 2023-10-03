@@ -354,8 +354,8 @@ define noalias ptr @test23() nounwind uwtable ssp {
 define void @test24(ptr %a, i32 %b, i32 %c) nounwind {
 ; CHECK-LABEL: @test24(
 ; CHECK-NEXT:    store i32 [[B:%.*]], ptr [[A:%.*]], align 4
-; CHECK-NEXT:    [[TMP2:%.*]] = getelementptr inbounds [2 x i32], ptr [[A]], i64 0, i64 1
-; CHECK-NEXT:    store i32 [[C:%.*]], ptr [[TMP2]], align 4
+; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr inbounds [2 x i32], ptr [[A]], i64 0, i64 1
+; CHECK-NEXT:    store i32 [[C:%.*]], ptr [[TMP1]], align 4
 ; CHECK-NEXT:    ret void
 ;
   store i32 0, ptr %a, align 4

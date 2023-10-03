@@ -75,8 +75,8 @@ static constexpr bool IsZeroCostAbstraction =
     // use memcpy.  The commentary there mentions that it's intended to be
     // an approximation of `is_trivially_copyable`, so this may be redundant
     // with the above, but we include it just to make sure.
-    llvm::is_trivially_copy_constructible<T>::value &&
-    llvm::is_trivially_move_constructible<T>::value;
+    std::is_trivially_copy_constructible<T>::value &&
+    std::is_trivially_move_constructible<T>::value;
 
 //===----------------------------------------------------------------------===//
 

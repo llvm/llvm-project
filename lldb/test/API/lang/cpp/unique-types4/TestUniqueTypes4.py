@@ -30,12 +30,12 @@ class UniqueTypesTestCase4(TestBase):
         )
         self.expect(
             "expression ns::FooDouble::value",
-            substrs=["Couldn't lookup symbols"],
+            substrs=["Couldn't look up symbols"],
             error=True,
         )
         self.expect(
             "expression ns::FooInt::value",
-            substrs=["Couldn't lookup symbols"],
+            substrs=["Couldn't look up symbols"],
             error=True,
         )
 

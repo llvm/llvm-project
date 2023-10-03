@@ -6,7 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 //
-// Generic COFF LinkGraph buliding code.
+// Generic COFF LinkGraph building code.
 //
 //===----------------------------------------------------------------------===//
 #include "COFFLinkGraphBuilder.h"
@@ -161,7 +161,7 @@ Error COFFLinkGraphBuilder::graphifySections() {
     if (!GraphSec) {
       GraphSec = &G->createSection(SectionName, Prot);
       if ((*Sec)->Characteristics & COFF::IMAGE_SCN_LNK_REMOVE)
-        GraphSec->setMemLifetimePolicy(orc::MemLifetimePolicy::NoAlloc);
+        GraphSec->setMemLifetime(orc::MemLifetime::NoAlloc);
     }
     if (GraphSec->getMemProt() != Prot)
       return make_error<JITLinkError>("MemProt should match");
@@ -606,7 +606,7 @@ COFFLinkGraphBuilder::exportCOMDATSymbol(COFFSymbolIndex SymIndex,
                                          object::COFFSymbolRef Symbol) {
   Block *B = getGraphBlock(Symbol.getSectionNumber());
   auto &PendingComdatExport = PendingComdatExports[Symbol.getSectionNumber()];
-  // NOTE: ComdatDef->Legnth is the size of "section" not size of symbol.
+  // NOTE: ComdatDef->Length is the size of "section" not size of symbol.
   // We use zero symbol size to not reach out of bound of block when symbol
   // offset is non-zero.
   auto GSym = &G->addDefinedSymbol(

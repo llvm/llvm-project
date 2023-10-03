@@ -77,7 +77,7 @@ class ConcurrentHashTableInfoByPtr {
 public:
   /// \returns Hash value for the specified \p Key.
   static inline uint64_t getHashValue(const KeyTy &Key) {
-    return xxHash64(Key);
+    return xxh3_64bits(Key);
   }
 
   /// \returns true if both \p LHS and \p RHS are equal.
@@ -154,7 +154,7 @@ public:
     MaxBucketSize = 1Ull << (std::min((size_t)31, LeadingZerosNumber));
 
     // Calculate mask for extended hash bits.
-    ExtHashMask = (NumberOfBuckets * MaxBucketSize) - 1;
+    ExtHashMask = (uint64_t)NumberOfBuckets * MaxBucketSize - 1;
   }
 
   virtual ~ConcurrentHashTableByPtr() {

@@ -8,12 +8,16 @@
 
 # OpenACC in Flang
 
-```eval_rst
-.. contents::
-   :local:
+```{contents}
+---
+local:
+---
 ```
 
 ## Intentional deviation from the specification
 * The end directive for combined construct can omit the `loop` keyword.
 * An `!$acc routine` with no parallelism clause is treated as if the `seq`
   clause was present.
+* `!$acc end loop` does not trigger a parsing error and is just ignored.
+* The restriction on `!$acc data` required clauses is emitted as a portability
+  warning instead of an error as other compiler accepts it.

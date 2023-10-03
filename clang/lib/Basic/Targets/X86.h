@@ -95,6 +95,7 @@ class LLVM_LIBRARY_VISIBILITY X86TargetInfo : public TargetInfo {
   bool HasLWP = false;
   bool HasFMA = false;
   bool HasF16C = false;
+  bool HasEVEX512 = false;
   bool HasAVX512CD = false;
   bool HasAVX512VPOPCNTDQ = false;
   bool HasAVX512VNNI = false;
@@ -112,8 +113,11 @@ class LLVM_LIBRARY_VISIBILITY X86TargetInfo : public TargetInfo {
   bool HasAVX512IFMA = false;
   bool HasAVX512VP2INTERSECT = false;
   bool HasSHA = false;
+  bool HasSHA512 = false;
   bool HasSHSTK = false;
+  bool HasSM3 = false;
   bool HasSGX = false;
+  bool HasSM4 = false;
   bool HasCX8 = false;
   bool HasCX16 = false;
   bool HasFXSR = false;
@@ -142,6 +146,7 @@ class LLVM_LIBRARY_VISIBILITY X86TargetInfo : public TargetInfo {
   bool HasPTWRITE = false;
   bool HasINVPCID = false;
   bool HasENQCMD = false;
+  bool HasAVXVNNIINT16 = false;
   bool HasAMXFP16 = false;
   bool HasCMPCCXADD = false;
   bool HasRAOINT = false;

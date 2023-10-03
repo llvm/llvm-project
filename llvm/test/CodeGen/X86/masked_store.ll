@@ -107,38 +107,71 @@ define void @store_v2f64_v2i64(<2 x i64> %trigger, ptr %addr, <2 x double> %val)
 }
 
 define void @store_v4f64_v4i64(<4 x i64> %trigger, ptr %addr, <4 x double> %val) {
-; SSE-LABEL: store_v4f64_v4i64:
-; SSE:       ## %bb.0:
-; SSE-NEXT:    packssdw %xmm1, %xmm0
-; SSE-NEXT:    movmskps %xmm0, %eax
-; SSE-NEXT:    testb $1, %al
-; SSE-NEXT:    jne LBB2_1
-; SSE-NEXT:  ## %bb.2: ## %else
-; SSE-NEXT:    testb $2, %al
-; SSE-NEXT:    jne LBB2_3
-; SSE-NEXT:  LBB2_4: ## %else2
-; SSE-NEXT:    testb $4, %al
-; SSE-NEXT:    jne LBB2_5
-; SSE-NEXT:  LBB2_6: ## %else4
-; SSE-NEXT:    testb $8, %al
-; SSE-NEXT:    jne LBB2_7
-; SSE-NEXT:  LBB2_8: ## %else6
-; SSE-NEXT:    retq
-; SSE-NEXT:  LBB2_1: ## %cond.store
-; SSE-NEXT:    movlps %xmm2, (%rdi)
-; SSE-NEXT:    testb $2, %al
-; SSE-NEXT:    je LBB2_4
-; SSE-NEXT:  LBB2_3: ## %cond.store1
-; SSE-NEXT:    movhps %xmm2, 8(%rdi)
-; SSE-NEXT:    testb $4, %al
-; SSE-NEXT:    je LBB2_6
-; SSE-NEXT:  LBB2_5: ## %cond.store3
-; SSE-NEXT:    movlps %xmm3, 16(%rdi)
-; SSE-NEXT:    testb $8, %al
-; SSE-NEXT:    je LBB2_8
-; SSE-NEXT:  LBB2_7: ## %cond.store5
-; SSE-NEXT:    movhps %xmm3, 24(%rdi)
-; SSE-NEXT:    retq
+; SSE2-LABEL: store_v4f64_v4i64:
+; SSE2:       ## %bb.0:
+; SSE2-NEXT:    shufps {{.*#+}} xmm0 = xmm0[1,3],xmm1[1,3]
+; SSE2-NEXT:    movmskps %xmm0, %eax
+; SSE2-NEXT:    testb $1, %al
+; SSE2-NEXT:    jne LBB2_1
+; SSE2-NEXT:  ## %bb.2: ## %else
+; SSE2-NEXT:    testb $2, %al
+; SSE2-NEXT:    jne LBB2_3
+; SSE2-NEXT:  LBB2_4: ## %else2
+; SSE2-NEXT:    testb $4, %al
+; SSE2-NEXT:    jne LBB2_5
+; SSE2-NEXT:  LBB2_6: ## %else4
+; SSE2-NEXT:    testb $8, %al
+; SSE2-NEXT:    jne LBB2_7
+; SSE2-NEXT:  LBB2_8: ## %else6
+; SSE2-NEXT:    retq
+; SSE2-NEXT:  LBB2_1: ## %cond.store
+; SSE2-NEXT:    movlps %xmm2, (%rdi)
+; SSE2-NEXT:    testb $2, %al
+; SSE2-NEXT:    je LBB2_4
+; SSE2-NEXT:  LBB2_3: ## %cond.store1
+; SSE2-NEXT:    movhps %xmm2, 8(%rdi)
+; SSE2-NEXT:    testb $4, %al
+; SSE2-NEXT:    je LBB2_6
+; SSE2-NEXT:  LBB2_5: ## %cond.store3
+; SSE2-NEXT:    movlps %xmm3, 16(%rdi)
+; SSE2-NEXT:    testb $8, %al
+; SSE2-NEXT:    je LBB2_8
+; SSE2-NEXT:  LBB2_7: ## %cond.store5
+; SSE2-NEXT:    movhps %xmm3, 24(%rdi)
+; SSE2-NEXT:    retq
+;
+; SSE4-LABEL: store_v4f64_v4i64:
+; SSE4:       ## %bb.0:
+; SSE4-NEXT:    packssdw %xmm1, %xmm0
+; SSE4-NEXT:    movmskps %xmm0, %eax
+; SSE4-NEXT:    testb $1, %al
+; SSE4-NEXT:    jne LBB2_1
+; SSE4-NEXT:  ## %bb.2: ## %else
+; SSE4-NEXT:    testb $2, %al
+; SSE4-NEXT:    jne LBB2_3
+; SSE4-NEXT:  LBB2_4: ## %else2
+; SSE4-NEXT:    testb $4, %al
+; SSE4-NEXT:    jne LBB2_5
+; SSE4-NEXT:  LBB2_6: ## %else4
+; SSE4-NEXT:    testb $8, %al
+; SSE4-NEXT:    jne LBB2_7
+; SSE4-NEXT:  LBB2_8: ## %else6
+; SSE4-NEXT:    retq
+; SSE4-NEXT:  LBB2_1: ## %cond.store
+; SSE4-NEXT:    movlps %xmm2, (%rdi)
+; SSE4-NEXT:    testb $2, %al
+; SSE4-NEXT:    je LBB2_4
+; SSE4-NEXT:  LBB2_3: ## %cond.store1
+; SSE4-NEXT:    movhps %xmm2, 8(%rdi)
+; SSE4-NEXT:    testb $4, %al
+; SSE4-NEXT:    je LBB2_6
+; SSE4-NEXT:  LBB2_5: ## %cond.store3
+; SSE4-NEXT:    movlps %xmm3, 16(%rdi)
+; SSE4-NEXT:    testb $8, %al
+; SSE4-NEXT:    je LBB2_8
+; SSE4-NEXT:  LBB2_7: ## %cond.store5
+; SSE4-NEXT:    movhps %xmm3, 24(%rdi)
+; SSE4-NEXT:    retq
 ;
 ; AVX1OR2-LABEL: store_v4f64_v4i64:
 ; AVX1OR2:       ## %bb.0:
@@ -968,7 +1001,7 @@ define void @store_v2i64_v2i64(<2 x i64> %trigger, ptr %addr, <2 x i64> %val) {
 define void @store_v4i64_v4i64(<4 x i64> %trigger, ptr %addr, <4 x i64> %val) {
 ; SSE2-LABEL: store_v4i64_v4i64:
 ; SSE2:       ## %bb.0:
-; SSE2-NEXT:    packssdw %xmm1, %xmm0
+; SSE2-NEXT:    shufps {{.*#+}} xmm0 = xmm0[1,3],xmm1[1,3]
 ; SSE2-NEXT:    movmskps %xmm0, %eax
 ; SSE2-NEXT:    testb $1, %al
 ; SSE2-NEXT:    jne LBB8_1
@@ -6235,26 +6268,15 @@ define void @store_v24i32_v24i32_stride6_vf4_only_even_numbered_elts(ptr %trigge
 ; From https://reviews.llvm.org/rGf8d9097168b7#1165311
 define void @undefshuffle(<8 x i1> %i0, ptr %src, ptr %dst) #0 {
 ; SSE2-LABEL: undefshuffle:
-; SSE2:       ## %bb.0:
+; SSE2:       ## %bb.0: ## %else
 ; SSE2-NEXT:    movaps %xmm0, -{{[0-9]+}}(%rsp)
-; SSE2-NEXT:    movb $1, %al
-; SSE2-NEXT:    testb %al, %al
-; SSE2-NEXT:    testb %al, %al
-; SSE2-NEXT:    testb %al, %al
-; SSE2-NEXT:    movzbl -{{[0-9]+}}(%rsp), %ecx
-; SSE2-NEXT:    testb %al, %al
-; SSE2-NEXT:    movd %ecx, %xmm0
-; SSE2-NEXT:    movzbl -{{[0-9]+}}(%rsp), %ecx
-; SSE2-NEXT:    testb %al, %al
-; SSE2-NEXT:    pinsrw $1, %ecx, %xmm0
-; SSE2-NEXT:    movl -{{[0-9]+}}(%rsp), %ecx
-; SSE2-NEXT:    testb %al, %al
-; SSE2-NEXT:    pinsrw $2, %ecx, %xmm0
 ; SSE2-NEXT:    movzbl -{{[0-9]+}}(%rsp), %eax
-; SSE2-NEXT:    movb $1, %cl
-; SSE2-NEXT:    testb %cl, %cl
+; SSE2-NEXT:    movd %eax, %xmm0
+; SSE2-NEXT:    movzbl -{{[0-9]+}}(%rsp), %eax
+; SSE2-NEXT:    pinsrw $1, %eax, %xmm0
+; SSE2-NEXT:    pinsrw $2, -{{[0-9]+}}(%rsp), %xmm0
+; SSE2-NEXT:    movzbl -{{[0-9]+}}(%rsp), %eax
 ; SSE2-NEXT:    pinsrw $3, %eax, %xmm0
-; SSE2-NEXT:    testb %cl, %cl
 ; SSE2-NEXT:    psllw $15, %xmm0
 ; SSE2-NEXT:    packsswb %xmm0, %xmm0
 ; SSE2-NEXT:    pmovmskb %xmm0, %eax
@@ -6316,18 +6338,9 @@ define void @undefshuffle(<8 x i1> %i0, ptr %src, ptr %dst) #0 {
 ; SSE2-NEXT:    retq
 ;
 ; SSE4-LABEL: undefshuffle:
-; SSE4:       ## %bb.0:
-; SSE4-NEXT:    movb $1, %al
-; SSE4-NEXT:    testb %al, %al
-; SSE4-NEXT:    testb %al, %al
-; SSE4-NEXT:    testb %al, %al
-; SSE4-NEXT:    testb %al, %al
-; SSE4-NEXT:    testb %al, %al
-; SSE4-NEXT:    testb %al, %al
-; SSE4-NEXT:    testb %al, %al
-; SSE4-NEXT:    pand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
-; SSE4-NEXT:    testb %al, %al
+; SSE4:       ## %bb.0: ## %else
 ; SSE4-NEXT:    psllw $15, %xmm0
+; SSE4-NEXT:    pand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
 ; SSE4-NEXT:    packsswb %xmm0, %xmm0
 ; SSE4-NEXT:    pmovmskb %xmm0, %eax
 ; SSE4-NEXT:    testb $1, %al

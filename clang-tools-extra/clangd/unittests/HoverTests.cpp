@@ -487,6 +487,16 @@ class Foo final {})cpp";
          HI.Kind = index::SymbolKind::TypeAlias;
          HI.Definition = "int";
        }},
+      {R"cpp(
+        template <class T> concept F = true;
+        [[^F]] auto x = 1;
+        )cpp",
+       [](HoverInfo &HI) {
+         HI.NamespaceScope = "";
+         HI.Name = "F";
+         HI.Kind = index::SymbolKind::Concept;
+         HI.Definition = "template <class T>\nconcept F = true";
+       }},
       // auto on lambda
       {R"cpp(
         void foo() {
@@ -535,7 +545,7 @@ class Foo final {})cpp";
          HI.Kind = index::SymbolKind::Concept;
          HI.Definition = "template <class T>\nconcept Fooable = true";
        }},
-       {R"cpp(
+      {R"cpp(
         template<class T> concept Fooable = true;
         template<Fooable [[T^T]]>
         void bar(TT t) {}
@@ -548,6 +558,28 @@ class Foo final {})cpp";
          HI.LocalScope = "bar::";
          HI.Kind = index::SymbolKind::TemplateTypeParm;
          HI.Definition = "Fooable TT";
+       }},
+      {R"cpp(
+        template<class T> concept Fooable = true;
+        void bar([[Foo^able]] auto t) {}
+        )cpp",
+       [](HoverInfo &HI) {
+         HI.NamespaceScope = "";
+         HI.Name = "Fooable";
+         HI.Kind = index::SymbolKind::Concept;
+         HI.Definition = "template <class T>\nconcept Fooable = true";
+       }},
+      // concept reference
+      {R"cpp(
+        template<class T> concept Fooable = true;
+        auto X = [[Fooa^ble]]<int>;
+        )cpp",
+       [](HoverInfo &HI) {
+         HI.NamespaceScope = "";
+         HI.Name = "Fooable";
+         HI.Kind = index::SymbolKind::Concept;
+         HI.Definition = "template <class T>\nconcept Fooable = true";
+         HI.Value = "true";
        }},
 
       // empty macro
@@ -2544,6 +2576,19 @@ TEST(Hover, All) {
             HI.Definition = "Test &&test = {}";
           }},
       {
+          R"cpp(// Shouldn't crash when evaluating the initializer.
+            struct Bar {}; // error-ok
+            struct Foo { void foo(Bar x = y); }
+            void Foo::foo(Bar [[^x]]) {})cpp",
+          [](HoverInfo &HI) {
+            HI.Name = "x";
+            HI.Kind = index::SymbolKind::Parameter;
+            HI.NamespaceScope = "";
+            HI.LocalScope = "Foo::foo::";
+            HI.Type = "Bar";
+            HI.Definition = "Bar x = <recovery - expr>()";
+          }},
+      {
           R"cpp(// auto on alias
           typedef int int_type;
           ^[[auto]] x = int_type();
@@ -2953,6 +2998,32 @@ TEST(Hover, All) {
          HI.LocalScope = "-[Foo variadicArgMethod:, ...]::";
          HI.NamespaceScope = "";
          HI.Value = "0";
+       }},
+      // Should not crash.
+      {R"objc(
+        typedef struct MyRect {} MyRect;
+
+        @interface IFace
+        @property(nonatomic) MyRect frame;
+        @end
+
+        MyRect foobar() {
+          MyRect mr;
+          return mr;
+        }
+        void test() {
+          IFace *v;
+          v.frame = [[foo^bar]]();
+        }
+        )objc",
+       [](HoverInfo &HI) {
+         HI.Name = "foobar";
+         HI.Kind = index::SymbolKind::Function;
+         HI.NamespaceScope = "";
+         HI.Definition = "MyRect foobar()";
+         HI.Type = {"MyRect ()", "MyRect ()"};
+         HI.ReturnType = {"MyRect", "MyRect"};
+         HI.Parameters.emplace();
        }},
       {R"cpp(
          void foo(int * __attribute__(([[non^null]], noescape)) );

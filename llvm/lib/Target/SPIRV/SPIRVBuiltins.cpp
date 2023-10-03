@@ -976,7 +976,7 @@ static bool genWorkgroupQuery(const SPIRV::IncomingCall *Call,
     // Use Intrinsic::spv_extractelt so dynamic vs static extraction is
     // handled later: extr = spv_extractelt LoadedVector, IndexRegister.
     MachineInstrBuilder ExtractInst = MIRBuilder.buildIntrinsic(
-        Intrinsic::spv_extractelt, ArrayRef<Register>{Extracted}, true);
+        Intrinsic::spv_extractelt, ArrayRef<Register>{Extracted}, true, false);
     ExtractInst.addUse(LoadedVector).addUse(IndexRegister);
 
     // If the index is dynamic, need check if it's < 3, and then use a select.
@@ -1644,8 +1644,8 @@ static bool buildEnqueueKernel(const SPIRV::IncomingCall *Call,
       Register Reg = MRI->createVirtualRegister(&SPIRV::IDRegClass);
       MRI->setType(Reg, LLType);
       GR->assignSPIRVTypeToVReg(PointerSizeTy, Reg, MIRBuilder.getMF());
-      auto GEPInst = MIRBuilder.buildIntrinsic(Intrinsic::spv_gep,
-                                               ArrayRef<Register>{Reg}, true);
+      auto GEPInst = MIRBuilder.buildIntrinsic(
+          Intrinsic::spv_gep, ArrayRef<Register>{Reg}, true, false);
       GEPInst
           .addImm(GepMI->getOperand(2).getImm())          // In bound.
           .addUse(ArrayMI->getOperand(0).getReg())        // Alloca.

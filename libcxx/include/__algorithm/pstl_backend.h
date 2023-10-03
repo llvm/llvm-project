@@ -150,6 +150,9 @@ implemented, all the algorithms will eventually forward to the basis algorithms 
                               _Pred __pred,
                               const _Tp& __new_value);
 
+  template <class _ExecutionPolicy, class _Iterator, class _Comp>
+  void __pstl_sort(_Backend, _Iterator __first, _Iterator __last, _Comp __comp);
+
 // TODO: Complete this list
 
 */

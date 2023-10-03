@@ -33,7 +33,6 @@ _start:
  .space 0x1000
 // CHECK1:      <_start>:
 // CHECK1-NEXT:   21000: bx      lr
-// CHECK1:      <$d.1>:
 // CHECK1-NEXT:   21002:       00 00 00 00 .word 0x00000000
 
 

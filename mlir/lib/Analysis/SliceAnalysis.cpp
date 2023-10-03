@@ -62,7 +62,7 @@ void mlir::getForwardSlice(Operation *op, SetVector<Operation *> *forwardSlice,
   // Reverse to get back the actual topological order.
   // std::reverse does not work out of the box on SetVector and I want an
   // in-place swap based thing (the real std::reverse, not the LLVM adapter).
-  std::vector<Operation *> v(forwardSlice->takeVector());
+  SmallVector<Operation *, 0> v(forwardSlice->takeVector());
   forwardSlice->insert(v.rbegin(), v.rend());
 }
 
@@ -74,7 +74,7 @@ void mlir::getForwardSlice(Value root, SetVector<Operation *> *forwardSlice,
   // Reverse to get back the actual topological order.
   // std::reverse does not work out of the box on SetVector and I want an
   // in-place swap based thing (the real std::reverse, not the LLVM adapter).
-  std::vector<Operation *> v(forwardSlice->takeVector());
+  SmallVector<Operation *, 0> v(forwardSlice->takeVector());
   forwardSlice->insert(v.rbegin(), v.rend());
 }
 

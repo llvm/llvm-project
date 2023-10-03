@@ -177,6 +177,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "AMDGPU.h"
+#include "AMDGPUTargetMachine.h"
 #include "Utils/AMDGPUBaseInfo.h"
 #include "Utils/AMDGPUMemoryUtils.h"
 #include "llvm/ADT/BitVector.h"
@@ -186,6 +187,7 @@
 #include "llvm/ADT/SetOperations.h"
 #include "llvm/ADT/SetVector.h"
 #include "llvm/Analysis/CallGraph.h"
+#include "llvm/CodeGen/TargetPassConfig.h"
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/DerivedTypes.h"
 #include "llvm/IR/IRBuilder.h"
@@ -252,7 +254,8 @@ template <typename T> std::vector<T> sortByName(std::vector<T> &&V) {
   return {std::move(V)};
 }
 
-class AMDGPULowerModuleLDS : public ModulePass {
+class AMDGPULowerModuleLDS {
+  const AMDGPUTargetMachine &TM;
 
   static void
   removeLocalVarsFromUsedLists(Module &M,
@@ -270,8 +273,7 @@ class AMDGPULowerModuleLDS : public ModulePass {
       LocalVar->removeDeadConstantUsers();
   }
 
-  static void markUsedByKernel(IRBuilder<> &Builder, Function *Func,
-                               GlobalVariable *SGV) {
+  static void markUsedByKernel(Function *Func, GlobalVariable *SGV) {
     // The llvm.amdgcn.module.lds instance is implicitly used by all kernels
     // that might call a function which accesses a field within it. This is
     // presently approximated to 'all kernels' if there are any such functions
@@ -292,22 +294,17 @@ class AMDGPULowerModuleLDS : public ModulePass {
     // equivalent target specific intrinsic which lasts until immediately after
     // codegen would suffice for that, but one would still need to ensure that
     // the variables are allocated in the anticpated order.
-
-    LLVMContext &Ctx = Func->getContext();
-
-    Builder.SetInsertPoint(Func->getEntryBlock().getFirstNonPHI());
-
-    FunctionType *FTy = FunctionType::get(Type::getVoidTy(Ctx), {});
+    BasicBlock *Entry = &Func->getEntryBlock();
+    IRBuilder<> Builder(Entry, Entry->getFirstNonPHIIt());
 
     Function *Decl =
         Intrinsic::getDeclaration(Func->getParent(), Intrinsic::donothing, {});
 
-    Value *UseInstance[1] = {Builder.CreateInBoundsGEP(
-        SGV->getValueType(), SGV, ConstantInt::get(Type::getInt32Ty(Ctx), 0))};
+    Value *UseInstance[1] = {
+        Builder.CreateConstInBoundsGEP1_32(SGV->getValueType(), SGV, 0)};
 
-    Builder.CreateCall(FTy, Decl, {},
-                       {OperandBundleDefT<Value *>("ExplicitUse", UseInstance)},
-                       "");
+    Builder.CreateCall(
+        Decl, {}, {OperandBundleDefT<Value *>("ExplicitUse", UseInstance)});
   }
 
   static bool eliminateConstantExprUsesOfLDSFromAllInstructions(Module &M) {
@@ -333,11 +330,7 @@ class AMDGPULowerModuleLDS : public ModulePass {
   }
 
 public:
-  static char ID;
-
-  AMDGPULowerModuleLDS() : ModulePass(ID) {
-    initializeAMDGPULowerModuleLDSPass(*PassRegistry::getPassRegistry());
-  }
+  AMDGPULowerModuleLDS(const AMDGPUTargetMachine &TM_) : TM(TM_) {}
 
   using FunctionVariableMap = DenseMap<Function *, DenseSet<GlobalVariable *>>;
 
@@ -701,22 +694,18 @@ public:
     // Accesses from a function use the amdgcn_lds_kernel_id intrinsic which
     // lowers to a read from a live in register. Emit it once in the entry
     // block to spare deduplicating it later.
-    if (tableKernelIndexCache.count(F) == 0) {
-      LLVMContext &Ctx = M.getContext();
-      IRBuilder<> Builder(Ctx);
-      FunctionType *FTy = FunctionType::get(Type::getInt32Ty(Ctx), {});
+    auto [It, Inserted] = tableKernelIndexCache.try_emplace(F);
+    if (Inserted) {
       Function *Decl =
           Intrinsic::getDeclaration(&M, Intrinsic::amdgcn_lds_kernel_id, {});
 
-      BasicBlock::iterator it =
-          F->getEntryBlock().getFirstNonPHIOrDbgOrAlloca();
-      Instruction &i = *it;
-      Builder.SetInsertPoint(&i);
+      auto InsertAt = F->getEntryBlock().getFirstNonPHIOrDbgOrAlloca();
+      IRBuilder<> Builder(&*InsertAt);
 
-      tableKernelIndexCache[F] = Builder.CreateCall(FTy, Decl, {});
+      It->second = Builder.CreateCall(Decl, {});
     }
 
-    return tableKernelIndexCache[F];
+    return It->second;
   }
 
   static std::vector<Function *> assignLDSKernelIDToEachKernel(
@@ -888,8 +877,6 @@ public:
     // allocate the module scope variable, otherwise leave them unchanged
     // Record on each kernel whether the module scope global is used by it
 
-    IRBuilder<> Builder(Ctx);
-
     for (Function &Func : M.functions()) {
       if (Func.isDeclaration() || !isKernelLDS(&Func))
         continue;
@@ -905,7 +892,7 @@ public:
               return F == &Func;
             });
 
-        markUsedByKernel(Builder, &Func, ModuleScopeReplacement.SGV);
+        markUsedByKernel(&Func, ModuleScopeReplacement.SGV);
       }
     }
 
@@ -921,7 +908,6 @@ public:
 
     // Create a struct for each kernel for the non-module-scope variables.
 
-    IRBuilder<> Builder(M.getContext());
     DenseMap<Function *, LDSVariableReplacement> KernelToReplacement;
     for (Function &Func : M.functions()) {
       if (Func.isDeclaration() || !isKernelLDS(&Func))
@@ -980,7 +966,7 @@ public:
       auto Accesses = LDSUsesInfo.indirect_access.find(&Func);
       if ((Accesses != LDSUsesInfo.indirect_access.end()) &&
           !Accesses->second.empty())
-        markUsedByKernel(Builder, &Func, Replacement.SGV);
+        markUsedByKernel(&Func, Replacement.SGV);
 
       // remove preserves existing codegen
       removeLocalVarsFromUsedLists(M, KernelUsedVariables);
@@ -1069,7 +1055,7 @@ public:
 
           KernelToCreatedDynamicLDS[func] = N;
 
-          markUsedByKernel(Builder, func, N);
+          markUsedByKernel(func, N);
 
           auto emptyCharArray = ArrayType::get(Type::getInt8Ty(Ctx), 0);
           auto GEP = ConstantExpr::getGetElementPtr(
@@ -1103,7 +1089,7 @@ public:
     return KernelToCreatedDynamicLDS;
   }
 
-  bool runOnModule(Module &M) override {
+  bool runOnModule(Module &M) {
     CallGraph CG = CallGraph(M);
     bool Changed = superAlignLDSGlobals(M);
 
@@ -1255,6 +1241,7 @@ public:
         }
 
         if (Offset != 0) {
+          (void)TM; // TODO: Account for target maximum LDS
           std::string Buffer;
           raw_string_ostream SS{Buffer};
           SS << format("%u", Offset);
@@ -1381,9 +1368,9 @@ private:
 
           Type *ATy = ArrayType::get(Type::getInt8Ty(Ctx), Padding);
           LocalVars.push_back(new GlobalVariable(
-              M, ATy, false, GlobalValue::InternalLinkage, UndefValue::get(ATy),
-              "", nullptr, GlobalValue::NotThreadLocal, AMDGPUAS::LOCAL_ADDRESS,
-              false));
+              M, ATy, false, GlobalValue::InternalLinkage,
+              PoisonValue::get(ATy), "", nullptr, GlobalValue::NotThreadLocal,
+              AMDGPUAS::LOCAL_ADDRESS, false));
           IsPaddingField.push_back(true);
           CurrentOffset += Padding;
         }
@@ -1405,7 +1392,7 @@ private:
     Align StructAlign = AMDGPU::getAlign(DL, LocalVars[0]);
 
     GlobalVariable *SGV = new GlobalVariable(
-        M, LDSTy, false, GlobalValue::InternalLinkage, UndefValue::get(LDSTy),
+        M, LDSTy, false, GlobalValue::InternalLinkage, PoisonValue::get(LDSTy),
         VarName, nullptr, GlobalValue::NotThreadLocal, AMDGPUAS::LOCAL_ADDRESS,
         false);
     SGV->setAlignment(StructAlign);
@@ -1544,21 +1531,51 @@ private:
   }
 };
 
+class AMDGPULowerModuleLDSLegacy : public ModulePass {
+public:
+  const AMDGPUTargetMachine *TM;
+  static char ID;
+
+  AMDGPULowerModuleLDSLegacy(const AMDGPUTargetMachine *TM_ = nullptr)
+      : ModulePass(ID), TM(TM_) {
+    initializeAMDGPULowerModuleLDSLegacyPass(*PassRegistry::getPassRegistry());
+  }
+
+  void getAnalysisUsage(AnalysisUsage &AU) const override {
+    if (!TM)
+      AU.addRequired<TargetPassConfig>();
+  }
+
+  bool runOnModule(Module &M) override {
+    if (!TM) {
+      auto &TPC = getAnalysis<TargetPassConfig>();
+      TM = &TPC.getTM<AMDGPUTargetMachine>();
+    }
+
+    return AMDGPULowerModuleLDS(*TM).runOnModule(M);
+  }
+};
+
 } // namespace
-char AMDGPULowerModuleLDS::ID = 0;
+char AMDGPULowerModuleLDSLegacy::ID = 0;
 
-char &llvm::AMDGPULowerModuleLDSID = AMDGPULowerModuleLDS::ID;
+char &llvm::AMDGPULowerModuleLDSLegacyPassID = AMDGPULowerModuleLDSLegacy::ID;
 
-INITIALIZE_PASS(AMDGPULowerModuleLDS, DEBUG_TYPE,
-                "Lower uses of LDS variables from non-kernel functions", false,
-                false)
+INITIALIZE_PASS_BEGIN(AMDGPULowerModuleLDSLegacy, DEBUG_TYPE,
+                      "Lower uses of LDS variables from non-kernel functions",
+                      false, false)
+INITIALIZE_PASS_DEPENDENCY(TargetPassConfig)
+INITIALIZE_PASS_END(AMDGPULowerModuleLDSLegacy, DEBUG_TYPE,
+                    "Lower uses of LDS variables from non-kernel functions",
+                    false, false)
 
-ModulePass *llvm::createAMDGPULowerModuleLDSPass() {
-  return new AMDGPULowerModuleLDS();
+ModulePass *
+llvm::createAMDGPULowerModuleLDSLegacyPass(const AMDGPUTargetMachine *TM) {
+  return new AMDGPULowerModuleLDSLegacy(TM);
 }
 
 PreservedAnalyses AMDGPULowerModuleLDSPass::run(Module &M,
                                                 ModuleAnalysisManager &) {
-  return AMDGPULowerModuleLDS().runOnModule(M) ? PreservedAnalyses::none()
-                                               : PreservedAnalyses::all();
+  return AMDGPULowerModuleLDS(TM).runOnModule(M) ? PreservedAnalyses::none()
+                                                 : PreservedAnalyses::all();
 }

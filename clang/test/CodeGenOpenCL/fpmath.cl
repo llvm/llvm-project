@@ -28,6 +28,21 @@ float spscalarsqrt(float a) {
   return __builtin_sqrtf(a);
 }
 
+float elementwise_sqrt_f32(float a) {
+  // CHECK-LABEL: @elementwise_sqrt_f32
+  // NODIVOPT: call float @llvm.sqrt.f32(float %{{.+}}), !fpmath ![[MD_SQRT:[0-9]+]]
+  // DIVOPT: call float @llvm.sqrt.f32(float %{{.+}}){{$}}
+  return __builtin_elementwise_sqrt(a);
+}
+
+float4 elementwise_sqrt_v4f32(float4 a) {
+  // CHECK-LABEL: @elementwise_sqrt_v4f32
+  // NODIVOPT: call <4 x float> @llvm.sqrt.v4f32(<4 x float> %{{.+}}), !fpmath ![[MD_SQRT:[0-9]+]]
+  // DIVOPT: call <4 x float> @llvm.sqrt.v4f32(<4 x float> %{{.+}}){{$}}
+  return __builtin_elementwise_sqrt(a);
+}
+
+
 #if __OPENCL_C_VERSION__ >=120
 void printf(constant char* fmt, ...);
 
@@ -59,6 +74,18 @@ double dpscalarsqrt(double a) {
   // CHECK-LABEL: @dpscalarsqrt
   // CHECK: call double @llvm.sqrt.f64(double %{{.+}}){{$}}
   return __builtin_sqrt(a);
+}
+
+double elementwise_sqrt_f64(double a) {
+  // CHECK-LABEL: @elementwise_sqrt_f64
+  // CHECK: call double @llvm.sqrt.f64(double %{{.+}}){{$}}
+  return __builtin_elementwise_sqrt(a);
+}
+
+double4 elementwise_sqrt_v4f64(double4 a) {
+  // CHECK-LABEL: @elementwise_sqrt_v4f64
+  // CHECK: call <4 x double> @llvm.sqrt.v4f64(<4 x double> %{{.+}}){{$}}
+  return __builtin_elementwise_sqrt(a);
 }
 
 #endif

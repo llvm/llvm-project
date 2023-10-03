@@ -35,7 +35,7 @@ declare void @callee_indirect2()
 define void @caller_indirect_tail(i32 %a) nounwind {
 ; CHECK-LABEL: caller_indirect_tail:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    bstrpick.d $a0, $a0, 31, 0
+; CHECK-NEXT:    addi.w $a0, $a0, 0
 ; CHECK-NEXT:    sltui $a0, $a0, 1
 ; CHECK-NEXT:    pcalau12i $a1, %got_pc_hi20(callee_indirect2)
 ; CHECK-NEXT:    ld.d $a1, $a1, %got_pc_lo12(callee_indirect2)

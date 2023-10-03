@@ -366,6 +366,7 @@ add_entrypoint_object(
     libc.src.__support.fixedvector
     libc.src.__support.blockstore
     libc.src.__support.threads.mutex
+    libc.src.__support.CPP.new
 )
 
 add_entrypoint_object(

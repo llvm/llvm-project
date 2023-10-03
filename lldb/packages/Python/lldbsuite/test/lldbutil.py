@@ -4,9 +4,6 @@ Some of the test suite takes advantage of the utility functions defined here.
 They can also be useful for general purpose lldb scripting.
 """
 
-from __future__ import print_function
-from __future__ import absolute_import
-
 # System modules
 import errno
 import io

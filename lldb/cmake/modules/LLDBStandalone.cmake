@@ -128,3 +128,16 @@ endif()
 set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bin)
 set(CMAKE_LIBRARY_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/lib${LLVM_LIBDIR_SUFFIX})
 set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/lib${LLVM_LIBDIR_SUFFIX})
+
+# If LLDB is building against a prebuilt Clang, then the Clang resource
+# directory that LLDB is using for its embedded Clang instance needs to point to
+# the resource directory of the used Clang installation.
+if (NOT TARGET clang-resource-headers)
+  include(GetClangResourceDir)
+  get_clang_resource_dir(LLDB_EXTERNAL_CLANG_RESOURCE_DIR
+    PREFIX "${Clang_DIR}/../../../")
+
+  if (NOT EXISTS ${LLDB_EXTERNAL_CLANG_RESOURCE_DIR})
+    message(FATAL_ERROR "Expected directory for clang-resource-headers not found: ${LLDB_EXTERNAL_CLANG_RESOURCE_DIR}")
+  endif()
+endif()

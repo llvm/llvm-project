@@ -47,6 +47,7 @@
 #include "llvm/Support/Error.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/TargetParser/Triple.h"
+#include "llvm/Transforms/Instrumentation/PGOInstrumentation.h"
 #include "llvm/Transforms/Utils/ModuleUtils.h"
 #include "llvm/Transforms/Utils/SSAUpdater.h"
 #include <algorithm>
@@ -190,7 +191,8 @@ public:
         auto *OrigBiasInst = dyn_cast<BinaryOperator>(AddrInst->getOperand(0));
         assert(OrigBiasInst->getOpcode() == Instruction::BinaryOps::Add);
         Value *BiasInst = Builder.Insert(OrigBiasInst->clone());
-        Addr = Builder.CreateIntToPtr(BiasInst, Ty->getPointerTo());
+        Addr = Builder.CreateIntToPtr(BiasInst,
+                                      PointerType::getUnqual(Ty->getContext()));
       }
       if (AtomicCounterUpdatePromoted)
         // automic update currently can only be promoted across the current
@@ -1056,12 +1058,6 @@ InstrProfiling::getOrCreateRegionCounters(InstrProfInstBase *Inc) {
           Annotations);
       CounterPtr->addDebugInfo(DICounter);
       DB.finalize();
-    } else {
-      std::string Msg = ("Missing debug info for function " + Fn->getName() +
-                         "; required for profile correlation.")
-                            .str();
-      Ctx.diagnose(
-          DiagnosticInfoPGOProfile(M->getName().data(), Msg, DS_Warning));
     }
   }
 

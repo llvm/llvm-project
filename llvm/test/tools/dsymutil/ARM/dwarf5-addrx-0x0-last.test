@@ -28,12 +28,20 @@ RUN: llvm-dwarfdump --verify %t.dSYM 2>&1 | FileCheck %s
 RUN: llvm-dwarfdump --verbose -debug-info %t.dSYM | FileCheck %s --check-prefix DEBUGINFO
 RUN: llvm-dwarfdump --verbose -debug-line %t.dSYM | FileCheck %s --check-prefix DEBUGLINE
 
+RUN: dsymutil --linker llvm -oso-prepend-path %p/../Inputs \
+RUN:   %p/../Inputs/private/tmp/dwarf5/dwarf5-addrx-0x0-last.out \
+RUN:   -o %t.dSYM 2>&1 | FileCheck %s --allow-empty
+RUN: llvm-dwarfdump --verify %t.dSYM 2>&1 | FileCheck %s
+RUN: llvm-dwarfdump --verbose -debug-info %t.dSYM | FileCheck %s --check-prefix DEBUGINFO
+RUN: llvm-dwarfdump --verbose -debug-line %t.dSYM | FileCheck %s --check-prefix DEBUGLINE
+
+
 CHECK-NOT: error:
 
 DEBUGINFO:   DW_TAG_subprogram
-DEBUGINFO:     DW_AT_low_pc [DW_FORM_addr]     (0x0000000100003f4c)
+DEBUGINFO:     DW_AT_low_pc [DW_FORM_addrx]      (indexed (00000000) address = 0x0000000100003f4c)
 DEBUGINFO:     DW_AT_high_pc [DW_FORM_data4]   (0x00000054)
-DEBUGINFO:     DW_AT_name [DW_FORM_strp]       ( .debug_str[0x0000011c] = "main")
+DEBUGINFO:     DW_AT_name [DW_FORM_strx]       (indexed (00000007) string = "main")
 
 DEBUGLINE:  0x0000000100003f4c   4   0  {{.*}}  is_stmt
 DEBUGLINE:  0x0000000100003f6c   5  17  {{.*}}  is_stmt prologue_end

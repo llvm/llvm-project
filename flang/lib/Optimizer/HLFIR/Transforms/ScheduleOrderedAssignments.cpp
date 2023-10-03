@@ -81,7 +81,8 @@ public:
   /// current assignment: the saved value will be used.
   void saveEvaluationIfConflict(mlir::Region &yieldRegion,
                                 bool leafRegionsMayOnlyRead,
-                                bool yieldIsImplicitRead = true);
+                                bool yieldIsImplicitRead = true,
+                                bool evaluationsMayConflict = false);
 
   /// Finish evaluating a group of independent regions. The current independent
   /// regions effects are added to the "parent" effect list since evaluating the
@@ -117,6 +118,10 @@ private:
 
   /// Memory effects of the assignments being lowered.
   llvm::SmallVector<mlir::MemoryEffects::EffectInstance> assignEffects;
+  /// Memory effects of the evaluations implied by the assignments
+  /// being lowered. They do not include the implicit writes
+  /// to the LHS of the assignments.
+  llvm::SmallVector<mlir::MemoryEffects::EffectInstance> assignEvaluateEffects;
   /// Memory effects of the unsaved evaluation region that are controlling or
   /// masking the current assignments.
   llvm::SmallVector<mlir::MemoryEffects::EffectInstance>
@@ -260,6 +265,20 @@ static void gatherAssignEffects(
   }
 }
 
+/// Gather the effects of evaluations implied by the given assignment.
+/// These are the effects of operations from LHS and RHS.
+static void gatherAssignEvaluationEffects(
+    hlfir::RegionAssignOp regionAssign,
+    bool userDefAssignmentMayOnlyWriteToAssignedVariable,
+    llvm::SmallVectorImpl<mlir::MemoryEffects::EffectInstance> &assignEffects) {
+  gatherMemoryEffects(regionAssign.getLhsRegion(),
+                      userDefAssignmentMayOnlyWriteToAssignedVariable,
+                      assignEffects);
+  gatherMemoryEffects(regionAssign.getRhsRegion(),
+                      userDefAssignmentMayOnlyWriteToAssignedVariable,
+                      assignEffects);
+}
+
 //===----------------------------------------------------------------------===//
 // Scheduling Implementation : finding conflicting memory effects.
 //===----------------------------------------------------------------------===//
@@ -344,11 +363,19 @@ anyWrite(llvm::ArrayRef<mlir::MemoryEffects::EffectInstance> effects) {
 void Scheduler::startSchedulingAssignment(hlfir::RegionAssignOp assign,
                                           bool leafRegionsMayOnlyRead) {
   gatherAssignEffects(assign, leafRegionsMayOnlyRead, assignEffects);
+  // Unconditionally collect effects of the evaluations of LHS and RHS
+  // in case they need to be analyzed for any parent that might be
+  // affected by conflicts of these evaluations.
+  // This collection migth be skipped, if there are no such parents,
+  // but for the time being we run it always.
+  gatherAssignEvaluationEffects(assign, leafRegionsMayOnlyRead,
+                                assignEvaluateEffects);
 }
 
 void Scheduler::saveEvaluationIfConflict(mlir::Region &yieldRegion,
                                          bool leafRegionsMayOnlyRead,
-                                         bool yieldIsImplicitRead) {
+                                         bool yieldIsImplicitRead,
+                                         bool evaluationsMayConflict) {
   // If the region evaluation was previously executed and saved, the saved
   // value will be used when evaluating the current assignment and this has
   // no effects in the current assignment evaluation.
@@ -377,6 +404,14 @@ void Scheduler::saveEvaluationIfConflict(mlir::Region &yieldRegion,
     // implies that it never conflicted with a prior assignment, so its value
     // should be the same.)
     saveEvaluation(yieldRegion, effects, /*anyWrite=*/false);
+  } else if (evaluationsMayConflict &&
+             conflict(effects, assignEvaluateEffects)) {
+    // If evaluations of the assignment may conflict with the yield
+    // evaluations, we have to save yield evaluation.
+    // For example, a WHERE mask might be written by the masked assignment
+    // evaluations, and it has to be saved in this case:
+    //   where (mask) r = f() ! function f modifies mask
+    saveEvaluation(yieldRegion, effects, anyWrite(effects));
   } else {
     // Can be executed while doing the assignment.
     independentEvaluationEffects.append(effects.begin(), effects.end());
@@ -444,6 +479,7 @@ void Scheduler::finishSchedulingAssignment(hlfir::RegionAssignOp assign) {
   schedule.back().memoryEffects.append(assignEffects.begin(),
                                        assignEffects.end());
   assignEffects.clear();
+  assignEvaluateEffects.clear();
   parentEvaluationEffects.clear();
   independentEvaluationEffects.clear();
   savedAnyRegionForCurrentAssignment = false;
@@ -533,9 +569,13 @@ hlfir::buildEvaluationSchedule(hlfir::OrderedAssignmentTreeOpInterface root,
       scheduler.startIndependentEvaluationGroup();
       llvm::SmallVector<mlir::Region *, 4> yieldRegions;
       parent.getLeafRegions(yieldRegions);
+      // TODO: is this really limited to WHERE/ELSEWHERE?
+      bool evaluationsMayConflict = mlir::isa<hlfir::WhereOp>(parent) ||
+                                    mlir::isa<hlfir::ElseWhereOp>(parent);
       for (mlir::Region *yieldRegion : yieldRegions)
-        scheduler.saveEvaluationIfConflict(*yieldRegion,
-                                           leafRegionsMayOnlyRead);
+        scheduler.saveEvaluationIfConflict(*yieldRegion, leafRegionsMayOnlyRead,
+                                           /*yieldIsImplicitRead=*/true,
+                                           evaluationsMayConflict);
       scheduler.finishIndependentEvaluationGroup();
     }
     // Look for conflicts between the RHS/LHS evaluation and the assignments.

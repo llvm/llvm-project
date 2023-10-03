@@ -15,7 +15,8 @@ CLASS_INDEX_PAGE_URL = "https://clang.llvm.org/doxygen/classes.html"
 try:
     CLASS_INDEX_PAGE = urlopen(CLASS_INDEX_PAGE_URL).read().decode("utf-8")
 except Exception as e:
-    raise Exception("Unable to get %s: %s" % (CLASS_INDEX_PAGE_URL, e))
+    CLASS_INDEX_PAGE = None
+    print("Unable to get %s: %s" % (CLASS_INDEX_PAGE_URL, e))
 
 MATCHERS_FILE = "../../include/clang/ASTMatchers/ASTMatchers.h"
 
@@ -58,7 +59,10 @@ def esc(text):
         url = "https://clang.llvm.org/doxygen/classclang_1_1%s.html" % name
         if url not in doxygen_probes:
             search_str = 'href="classclang_1_1%s.html"' % name
-            doxygen_probes[url] = search_str in CLASS_INDEX_PAGE
+            if CLASS_INDEX_PAGE is not None:
+                doxygen_probes[url] = search_str in CLASS_INDEX_PAGE
+            else:
+                doxygen_probes[url] = True
             if not doxygen_probes[url]:
                 print("Did not find %s in class index page" % name)
         if doxygen_probes[url]:
@@ -186,7 +190,7 @@ def act_on_decl(declaration, comment, allowed_types):
     """
     if declaration.strip():
 
-        if re.match(r"^\s?(#|namespace|using)", declaration):
+        if re.match(r"^\s?(#|namespace|using|template <typename NodeType> using|})", declaration):
             return
 
         # Node matchers are defined by writing:

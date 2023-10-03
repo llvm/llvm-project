@@ -1,5 +1,7 @@
 #include <stdio.h>
 
+struct ForwardDecl;
+
 typedef int MyInt;
 
 void populate(MyInt i);
@@ -29,7 +31,19 @@ typedef struct MyStruct {
   void (*f)(int);
 } MyStructT;
 
+struct LargeStruct {
+  char buffer[9000];
+  int b;
+};
+
+struct RecursiveStruct {
+  struct RecursiveStruct *n;
+};
+
 MyStructT foo;
+struct ForwardDecl *forward;
+struct LargeStruct bar;
+struct RecursiveStruct ke;
 
 void populate(MyInt i) {
   foo.n.i = i;
@@ -41,6 +55,9 @@ void populate(MyInt i) {
   foo.n.a[3] = 'd';
   foo.n.e = eOne;
   foo.f = NULL;
+  forward = NULL;
+  bar.b = i;
+  ke.n = NULL;
 }
 
 int main(int argc, char** argv) {

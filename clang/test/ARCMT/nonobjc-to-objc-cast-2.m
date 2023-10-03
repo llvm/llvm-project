@@ -56,7 +56,6 @@ CFStringRef f3(void) {
 
 extern void NSLog(NSString *format, ...);
 
-// rdar://13192395
 void f4(NSString *s) {
   NSLog(@"%@", (CFStringRef)s); // expected-error {{cast of Objective-C pointer type 'NSString *' to C pointer type 'CFStringRef' (aka 'const struct __CFString *') requires a bridged cast}} \
     // expected-note{{use __bridge to convert directly (no change in ownership)}} \

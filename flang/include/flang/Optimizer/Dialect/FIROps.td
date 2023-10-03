@@ -2147,7 +2147,7 @@ def fir_DoLoopOp : region_Op<"do_loop",
 }
 
 def fir_IfOp : region_Op<"if", [DeclareOpInterfaceMethods<RegionBranchOpInterface, [
-    "getRegionInvocationBounds"]>, RecursiveMemoryEffects,
+    "getRegionInvocationBounds", "getEntrySuccessorRegions"]>, RecursiveMemoryEffects,
     NoRegionArguments]> {
   let summary = "if-then-else conditional operation";
   let description = [{
@@ -2345,6 +2345,12 @@ def fir_CallOp : fir_Op<"call",
       if ((*this)->getAttrOfType<mlir::SymbolRefAttr>(getCalleeAttrName()))
         return {arg_operand_begin(), arg_operand_end()};
       return {arg_operand_begin() + 1, arg_operand_end()};
+    }
+
+    mlir::MutableOperandRange getArgOperandsMutable() {
+      if ((*this)->getAttrOfType<mlir::SymbolRefAttr>(getCalleeAttrName()))
+        return getArgsMutable();
+      return mlir::MutableOperandRange(*this, 1, getArgs().size() - 1);
     }
 
     operand_iterator arg_operand_begin() { return operand_begin(); }
@@ -2913,7 +2919,13 @@ def fir_IsPresentOp : fir_SimpleOp<"is_present", [NoMemoryEffect]> {
   let results = (outs BoolLike);
 }
 
+// fir.declare leads to no codegen so the side effects implementation should be
+// Pure. However, this would allow dead code elimination to remove these
+// operations if the values are unused. fir.declare may be used to generate
+// debug information so we would like to keep this around even if the value
+// is not used.
 def fir_DeclareOp : fir_Op<"declare", [AttrSizedOperandSegments,
+    MemoryEffects<[MemWrite<DebuggingResource>]>,
     DeclareOpInterfaceMethods<fir_FortranVariableOpInterface>]> {
   let summary = "declare a variable";
 

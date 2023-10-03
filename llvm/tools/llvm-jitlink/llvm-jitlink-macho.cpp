@@ -117,8 +117,9 @@ Error registerMachOGraphInfo(Session &S, LinkGraph &G) {
                                          inconvertibleErrorCode());
 
         if (auto TS = getMachOGOTTarget(G, Sym->getBlock()))
-          FileInfo.GOTEntryInfos[TS->getName()] = {
-              Sym->getSymbolContent(), Sym->getAddress().getValue()};
+          FileInfo.GOTEntryInfos[TS->getName()] = {Sym->getSymbolContent(),
+                                                   Sym->getAddress().getValue(),
+                                                   Sym->getTargetFlags()};
         else
           return TS.takeError();
         SectionContainsContent = true;
@@ -129,7 +130,8 @@ Error registerMachOGraphInfo(Session &S, LinkGraph &G) {
 
         if (auto TS = getMachOStubTarget(G, Sym->getBlock()))
           FileInfo.StubInfos[TS->getName()] = {Sym->getSymbolContent(),
-                                               Sym->getAddress().getValue()};
+                                               Sym->getAddress().getValue(),
+                                               Sym->getTargetFlags()};
         else
           return TS.takeError();
         SectionContainsContent = true;
@@ -140,7 +142,8 @@ Error registerMachOGraphInfo(Session &S, LinkGraph &G) {
           SectionContainsZeroFill = true;
         } else {
           S.SymbolInfos[Sym->getName()] = {Sym->getSymbolContent(),
-                                           Sym->getAddress().getValue()};
+                                           Sym->getAddress().getValue(),
+                                           Sym->getTargetFlags()};
           SectionContainsContent = true;
         }
       }
@@ -160,7 +163,7 @@ Error registerMachOGraphInfo(Session &S, LinkGraph &G) {
     else
       FileInfo.SectionInfos[Sec.getName()] = {
           ArrayRef<char>(FirstSym->getBlock().getContent().data(), SecSize),
-          SecAddr.getValue()};
+          SecAddr.getValue(), FirstSym->getTargetFlags()};
   }
 
   return Error::success();

@@ -23,44 +23,41 @@ namespace {
 class DefaultIncludeSpeller : public IncludeSpeller {
 public:
   std::string operator()(const Input &Input) const override {
-    bool IsSystem = false;
-    std::string FinalSpelling = Input.HS.suggestPathToFileForDiagnostics(
-        Input.H.physical(), Input.Main->tryGetRealPathName(), &IsSystem);
-    return IsSystem ? "<" + FinalSpelling + ">" : "\"" + FinalSpelling + "\"";
+    switch (Input.H.kind()) {
+    case Header::Standard:
+      return Input.H.standard().name().str();
+    case Header::Verbatim:
+      return Input.H.verbatim().str();
+    case Header::Physical:
+      bool IsAngled = false;
+      std::string FinalSpelling = Input.HS.suggestPathToFileForDiagnostics(
+          Input.H.physical(), Input.Main->tryGetRealPathName(), &IsAngled);
+      return IsAngled ? "<" + FinalSpelling + ">" : "\"" + FinalSpelling + "\"";
+    }
+    llvm_unreachable("Unknown clang::include_cleaner::Header::Kind enum");
   }
 };
 
-std::string spellPhysicalHeader(const IncludeSpeller::Input &Input) {
-  static auto Spellers = [] {
-    llvm::SmallVector<std::unique_ptr<include_cleaner::IncludeSpeller>> Result;
+} // namespace
+
+std::string spellHeader(const IncludeSpeller::Input &Input) {
+  static auto *Spellers = [] {
+    auto *Result =
+        new llvm::SmallVector<std::unique_ptr<include_cleaner::IncludeSpeller>>;
     for (const auto &Strategy :
          include_cleaner::IncludeSpellingStrategy::entries())
-      Result.push_back(Strategy.instantiate());
-    Result.push_back(std::make_unique<DefaultIncludeSpeller>());
+      Result->push_back(Strategy.instantiate());
+    Result->push_back(std::make_unique<DefaultIncludeSpeller>());
     return Result;
   }();
 
   std::string Spelling;
-  for (const auto &Speller : Spellers) {
+  for (const auto &Speller : *Spellers) {
     Spelling = (*Speller)(Input);
     if (!Spelling.empty())
       break;
   }
   return Spelling;
 }
-} // namespace
 
-std::string spellHeader(const IncludeSpeller::Input &Input) {
-  const Header &H = Input.H;
-  switch (H.kind()) {
-  case Header::Standard:
-    return H.standard().name().str();
-  case Header::Verbatim:
-    return H.verbatim().str();
-  case Header::Physical:
-    // Spelling physical headers allows for various plug-in strategies.
-    return spellPhysicalHeader(Input);
-  }
-  llvm_unreachable("Unknown Header kind");
-}
 } // namespace clang::include_cleaner

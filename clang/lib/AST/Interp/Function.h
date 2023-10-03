@@ -17,6 +17,7 @@
 
 #include "Pointer.h"
 #include "Source.h"
+#include "clang/AST/ASTLambda.h"
 #include "clang/AST/Decl.h"
 #include "llvm/Support/raw_ostream.h"
 
@@ -65,7 +66,7 @@ private:
 /// the argument values need to be preceeded by a Pointer for the This object.
 ///
 /// If the function uses Return Value Optimization, the arguments (and
-/// potentially the This pointer) need to be proceeded by a Pointer pointing
+/// potentially the This pointer) need to be preceeded by a Pointer pointing
 /// to the location to construct the returned value.
 ///
 /// After the function has been called, it will remove all arguments,
@@ -127,7 +128,7 @@ public:
   SourceInfo getSource(CodePtr PC) const;
 
   /// Checks if the function is valid to call in constexpr.
-  bool isConstexpr() const { return IsValid; }
+  bool isConstexpr() const { return IsValid || isLambdaStaticInvoker(); }
 
   /// Checks if the function is virtual.
   bool isVirtual() const;
@@ -144,6 +145,22 @@ public:
     return nullptr;
   }
 
+  /// Returns whether this function is a lambda static invoker,
+  /// which we generate custom byte code for.
+  bool isLambdaStaticInvoker() const {
+    if (const auto *MD = dyn_cast<CXXMethodDecl>(F))
+      return MD->isLambdaStaticInvoker();
+    return false;
+  }
+
+  /// Returns whether this function is the call operator
+  /// of a lambda record decl.
+  bool isLambdaCallOperator() const {
+    if (const auto *MD = dyn_cast<CXXMethodDecl>(F))
+      return clang::isLambdaCallOperator(MD);
+    return false;
+  }
+
   /// Checks if the function is fully done compiling.
   bool isFullyCompiled() const { return IsFullyCompiled; }
 
@@ -152,16 +169,30 @@ public:
   /// Checks if the function already has a body attached.
   bool hasBody() const { return HasBody; }
 
+  /// Checks if the function is defined.
+  bool isDefined() const { return Defined; }
+
   unsigned getBuiltinID() const { return F->getBuiltinID(); }
 
+  bool isBuiltin() const { return F->getBuiltinID() != 0; }
+
+  /// Does this function need its arguments to be classified at runtime
+  /// rather than at bytecode-compile-time?
+  bool needsRuntimeArgPop(const ASTContext &Ctx) const;
+
   unsigned getNumParams() const { return ParamTypes.size(); }
+
+  unsigned getParamOffset(unsigned ParamIndex) const {
+    return ParamOffsets[ParamIndex];
+  }
 
 private:
   /// Construct a function representing an actual function.
   Function(Program &P, const FunctionDecl *F, unsigned ArgSize,
-           llvm::SmallVector<PrimType, 8> &&ParamTypes,
+           llvm::SmallVectorImpl<PrimType> &&ParamTypes,
            llvm::DenseMap<unsigned, ParamDescriptor> &&Params,
-           bool HasThisPointer, bool HasRVO);
+           llvm::SmallVectorImpl<unsigned> &&ParamOffsets, bool HasThisPointer,
+           bool HasRVO);
 
   /// Sets the code of a function.
   void setCode(unsigned NewFrameSize, std::vector<std::byte> &&NewCode,
@@ -176,6 +207,7 @@ private:
   }
 
   void setIsFullyCompiled(bool FC) { IsFullyCompiled = FC; }
+  void setDefined(bool D) { Defined = D; }
 
 private:
   friend class Program;
@@ -201,6 +233,8 @@ private:
   llvm::SmallVector<PrimType, 8> ParamTypes;
   /// Map from byte offset to parameter descriptor.
   llvm::DenseMap<unsigned, ParamDescriptor> Params;
+  /// List of parameter offsets.
+  llvm::SmallVector<unsigned, 8> ParamOffsets;
   /// Flag to indicate if the function is valid.
   bool IsValid = false;
   /// Flag to indicate if the function is done being
@@ -215,6 +249,7 @@ private:
   bool HasRVO = false;
   /// If we've already compiled the function's body.
   bool HasBody = false;
+  bool Defined = false;
 
 public:
   /// Dumps the disassembled bytecode to \c llvm::errs().

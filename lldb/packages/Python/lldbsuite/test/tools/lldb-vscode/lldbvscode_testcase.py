@@ -1,7 +1,8 @@
-from lldbsuite.test.lldbtest import *
 import os
-import vscode
 import time
+
+import vscode
+from lldbsuite.test.lldbtest import *
 
 
 class VSCodeTestCaseBase(TestBase):
@@ -257,6 +258,19 @@ class VSCodeTestCaseBase(TestBase):
             "exitCode == %i" % (exitCode),
         )
 
+    def disassemble(self, threadId=None, frameIndex=None):
+        stackFrames = self.get_stackFrames(
+            threadId=threadId, startFrame=frameIndex, levels=1
+        )
+        self.assertIsNotNone(stackFrames)
+        memoryReference = stackFrames[0]["instructionPointerReference"]
+        self.assertIsNotNone(memoryReference)
+
+        if memoryReference not in self.vscode.disassembled_instructions:
+            self.vscode.request_disassemble(memoryReference=memoryReference)
+
+        return self.vscode.disassembled_instructions[memoryReference]
+
     def attach(
         self,
         program=None,
@@ -335,6 +349,8 @@ class VSCodeTestCaseBase(TestBase):
         runInTerminal=False,
         expectFailure=False,
         postRunCommands=None,
+        enableAutoVariableSummaries=False,
+        enableSyntheticChildDebugging=False,
     ):
         """Sending launch request to vscode"""
 
@@ -371,6 +387,8 @@ class VSCodeTestCaseBase(TestBase):
             sourceMap=sourceMap,
             runInTerminal=runInTerminal,
             postRunCommands=postRunCommands,
+            enableAutoVariableSummaries=enableAutoVariableSummaries,
+            enableSyntheticChildDebugging=enableSyntheticChildDebugging,
         )
 
         if expectFailure:
@@ -405,6 +423,8 @@ class VSCodeTestCaseBase(TestBase):
         disconnectAutomatically=True,
         postRunCommands=None,
         lldbVSCodeEnv=None,
+        enableAutoVariableSummaries=False,
+        enableSyntheticChildDebugging=False,
     ):
         """Build the default Makefile target, create the VSCode debug adaptor,
         and launch the process.
@@ -433,4 +453,6 @@ class VSCodeTestCaseBase(TestBase):
             runInTerminal=runInTerminal,
             disconnectAutomatically=disconnectAutomatically,
             postRunCommands=postRunCommands,
+            enableAutoVariableSummaries=enableAutoVariableSummaries,
+            enableSyntheticChildDebugging=enableSyntheticChildDebugging,
         )

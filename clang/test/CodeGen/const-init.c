@@ -190,3 +190,28 @@ void g31(void) {
 struct { const float *floats; } compoundliteral = {
   (float[1]) { 0.1, },
 };
+
+struct PR4517_foo {
+  int x;
+};
+struct PR4517_bar {
+  struct PR4517_foo foo;
+};
+const struct PR4517_foo my_foo = {.x = 42};
+struct PR4517_bar my_bar = {.foo = my_foo};
+struct PR4517_bar my_bar2 = (struct PR4517_bar){.foo = my_foo};
+struct PR4517_bar my_bar3 = {my_foo};
+struct PR4517_bar my_bar4 = (struct PR4517_bar){my_foo};
+// CHECK: @my_foo = constant %struct.PR4517_foo { i32 42 }, align 4
+// CHECK: @my_bar = global %struct.PR4517_bar { %struct.PR4517_foo { i32 42 } }, align 4
+// CHECK: @my_bar2 = global %struct.PR4517_bar { %struct.PR4517_foo { i32 42 } }, align 4
+// CHECK: @my_bar3 = global %struct.PR4517_bar { %struct.PR4517_foo { i32 42 } }, align 4
+// CHECK: @my_bar4 = global %struct.PR4517_bar { %struct.PR4517_foo { i32 42 } }, align 4
+const int PR4517_arrc[2] = {41, 42};
+int PR4517_x = PR4517_arrc[1];
+const int PR4517_idx = 1;
+int PR4517_x2 = PR4517_arrc[PR4517_idx];
+// CHECK: @PR4517_arrc = constant [2 x i32] [i32 41, i32 42], align 4
+// CHECK: @PR4517_x = global i32 42, align 4
+// CHECK: @PR4517_idx = constant i32 1, align 4
+// CHECK: @PR4517_x2 = global i32 42, align 4

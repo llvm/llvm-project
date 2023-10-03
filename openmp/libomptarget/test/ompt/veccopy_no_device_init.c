@@ -1,8 +1,5 @@
 // RUN: %libomptarget-compile-run-and-check-generic
 // REQUIRES: ompt
-// UNSUPPORTED: x86_64-pc-linux-gnu
-// UNSUPPORTED: x86_64-pc-linux-gnu-oldDriver
-// UNSUPPORTED: x86_64-pc-linux-gnu-LTO
 
 /*
  * Example OpenMP program that shows that if no device init callback
@@ -54,10 +51,29 @@ int main() {
   return rc;
 }
 
-/// CHECK: Could not register callback 'ompt_callback_target_data_op'
-/// CHECK: Could not register callback 'ompt_callback_target'
-/// CHECK: Could not register callback 'ompt_callback_target_submit'
-
 /// CHECK-NOT: Callback Init:
 /// CHECK-NOT: Callback Load:
+/// CHECK-NOT: Callback Target: target_id=[[TARGET_ID:[0-9]+]] kind=1 endpoint=1
+/// CHECK-NOT: Callback DataOp: target_id=[[TARGET_ID:[0-9]+]] host_op_id=[[HOST_OP_ID:[0-9]+]] optype=1
+/// CHECK-NOT: Callback DataOp: target_id=[[TARGET_ID:[0-9]+]] host_op_id=[[HOST_OP_ID:[0-9]+]] optype=2
+/// CHECK-NOT: Callback DataOp: target_id=[[TARGET_ID:[0-9]+]] host_op_id=[[HOST_OP_ID:[0-9]+]] optype=1
+/// CHECK-NOT: Callback DataOp: target_id=[[TARGET_ID:[0-9]+]] host_op_id=[[HOST_OP_ID:[0-9]+]] optype=2
+/// CHECK-NOT: Callback Submit: target_id=[[TARGET_ID:[0-9]+]] host_op_id=[[HOST_OP_ID:[0-9]+]] req_num_teams=1
+/// CHECK-NOT: Callback DataOp: target_id=[[TARGET_ID:[0-9]+]] host_op_id=[[HOST_OP_ID:[0-9]+]] optype=3
+/// CHECK-NOT: Callback DataOp: target_id=[[TARGET_ID:[0-9]+]] host_op_id=[[HOST_OP_ID:[0-9]+]] optype=3
+/// CHECK-NOT: Callback DataOp: target_id=[[TARGET_ID:[0-9]+]] host_op_id=[[HOST_OP_ID:[0-9]+]] optype=4
+/// CHECK-NOT: Callback DataOp: target_id=[[TARGET_ID:[0-9]+]] host_op_id=[[HOST_OP_ID:[0-9]+]] optype=4
+/// CHECK-NOT: Callback Target: target_id=[[TARGET_ID:[0-9]+]] kind=1 endpoint=2
+
+/// CHECK-NOT: Callback Target: target_id=[[TARGET_ID:[0-9]+]] kind=1 endpoint=1
+/// CHECK-NOT: Callback DataOp: target_id=[[TARGET_ID:[0-9]+]] host_op_id=[[HOST_OP_ID:[0-9]+]] optype=1
+/// CHECK-NOT: Callback DataOp: target_id=[[TARGET_ID:[0-9]+]] host_op_id=[[HOST_OP_ID:[0-9]+]] optype=2
+/// CHECK-NOT: Callback DataOp: target_id=[[TARGET_ID:[0-9]+]] host_op_id=[[HOST_OP_ID:[0-9]+]] optype=1
+/// CHECK-NOT: Callback DataOp: target_id=[[TARGET_ID:[0-9]+]] host_op_id=[[HOST_OP_ID:[0-9]+]] optype=2
+/// CHECK-NOT: Callback Submit: target_id=[[TARGET_ID:[0-9]+]] host_op_id=[[HOST_OP_ID:[0-9]+]] req_num_teams=0
+/// CHECK-NOT: Callback DataOp: target_id=[[TARGET_ID:[0-9]+]] host_op_id=[[HOST_OP_ID:[0-9]+]] optype=3
+/// CHECK-NOT: Callback DataOp: target_id=[[TARGET_ID:[0-9]+]] host_op_id=[[HOST_OP_ID:[0-9]+]] optype=3
+/// CHECK-NOT: Callback DataOp: target_id=[[TARGET_ID:[0-9]+]] host_op_id=[[HOST_OP_ID:[0-9]+]] optype=4
+/// CHECK-NOT: Callback DataOp: target_id=[[TARGET_ID:[0-9]+]] host_op_id=[[HOST_OP_ID:[0-9]+]] optype=4
+/// CHECK-NOT: Callback Target: target_id=[[TARGET_ID:[0-9]+]] kind=1 endpoint=2
 /// CHECK-NOT: Callback Fini:

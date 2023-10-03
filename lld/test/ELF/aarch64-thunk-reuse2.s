@@ -11,7 +11,6 @@
 # CHECK-NEXT:     10700:       ret
 # CHECK:       <__AArch64ADRPThunk_>:
 # CHECK-NEXT:     10704:       b       0x10700 <dest>
-# CHECK-EMPTY:
 # CHECK:       <__AArch64ADRPThunk_>:
 # CHECK-NEXT:   8010708:       adrp    x16, 0x10000
 # CHECK-NEXT:                  add     x16, x16, #1792

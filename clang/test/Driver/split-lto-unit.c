@@ -2,7 +2,7 @@
 // RUN: %clang --target=x86_64-unknown-linux -### %s -flto=thin -fsplit-lto-unit 2>&1 | FileCheck --check-prefix=UNIT %s
 // RUN: %clang --target=x86_64-unknown-linux -### %s -flto=thin -fno-split-lto-unit 2>&1 | FileCheck --check-prefix=NOUNIT %s
 // RUN: %clang --target=x86_64-unknown-linux -### %s -flto=thin -fno-split-lto-unit -fwhole-program-vtables 2>&1 | FileCheck --check-prefix=ERROR1 %s
-// RUN: %clang --target=x86_64-unknown-linux -### %s -flto=thin -fno-split-lto-unit -fsanitize=cfi 2>&1 | FileCheck --check-prefix=ERROR2 %s
+// RUN: not %clang --target=x86_64-unknown-linux -### %s -flto=thin -fno-split-lto-unit -fsanitize=cfi 2>&1 | FileCheck --check-prefix=ERROR2 %s
 // RUN: %clang --target=x86_64-apple-darwin13.3.0 -### %s -fwhole-program-vtables -flto=full 2>&1 | FileCheck --check-prefix=UNIT %s
 // RUN: %clang --target=x86_64-apple-darwin13.3.0 -### %s -fwhole-program-vtables -flto=thin 2>&1 | FileCheck --check-prefix=NOUNIT %s
 // RUN: %clang --target=x86_64-scei-ps4 -### %s -fwhole-program-vtables -flto=full 2>&1 | FileCheck --check-prefix=UNIT %s

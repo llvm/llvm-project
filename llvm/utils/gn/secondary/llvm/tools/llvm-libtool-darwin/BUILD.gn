@@ -1,4 +1,5 @@
 import("//llvm/tools/cctools_symlinks.gni")
+import("//llvm/utils/gn/build/driver_executable.gni")
 import("//llvm/utils/gn/build/symlink_or_copy.gni")
 import("//llvm/utils/TableGen/tablegen.gni")
 
@@ -24,7 +25,7 @@ group("symlinks") {
   }
 }
 
-executable("llvm-libtool-darwin") {
+driver_executable("llvm-libtool-darwin") {
   deps = [
     ":Opts",
     "//llvm/lib/Object",

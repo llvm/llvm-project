@@ -43,6 +43,34 @@ func.func @llvm_nvvm_barrier0() {
   llvm.return
 }
 
+// CHECK-LABEL: @llvm_nvvm_cluster_arrive
+func.func @llvm_nvvm_cluster_arrive() {
+  // CHECK: nvvm.cluster.arrive
+  nvvm.cluster.arrive
+  llvm.return
+}
+
+// CHECK-LABEL: @llvm_nvvm_cluster_arrive_relaxed
+func.func @llvm_nvvm_cluster_arrive_relaxed() {
+  // CHECK: nvvm.cluster.arrive.relaxed
+  nvvm.cluster.arrive.relaxed
+  llvm.return
+}
+
+// CHECK-LABEL: @llvm_nvvm_cluster_wait
+func.func @llvm_nvvm_cluster_wait() {
+  // CHECK: nvvm.cluster.wait
+  nvvm.cluster.wait
+  llvm.return
+}
+
+// CHECK-LABEL: @llvm_nvvm_fence_sc_cluster
+func.func @llvm_nvvm_fence_sc_cluster() {
+  // CHECK: nvvm.fence.sc.cluster
+  nvvm.fence.sc.cluster
+  llvm.return
+}
+
 // CHECK-LABEL: @nvvm_shfl
 func.func @nvvm_shfl(
     %arg0 : i32, %arg1 : i32, %arg2 : i32,
@@ -406,4 +434,35 @@ llvm.func private @mbarrier_test_wait_shared(%barrier: !llvm.ptr<3>, %token : i6
   // CHECK:   nvvm.mbarrier.test.wait.shared %{{.*}}
   %isComplete = nvvm.mbarrier.test.wait.shared %barrier, %token : !llvm.ptr<3>, i64 -> i1
   llvm.return
+}
+
+// CHECK-LABEL : @wgmma_fence_aligned
+func.func @wgmma_fence_aligned() {
+  // CHECK : nvvm.wgmma.fence.aligned
+  nvvm.wgmma.fence.aligned
+  return
+}
+
+// CHECK-LABEL : @wgmma_commit_group_sync_aligned
+func.func @wgmma_commit_group_sync_aligned() {
+  // CHECK : nvvm.wgmma.commit.group.sync.aligned
+  nvvm.wgmma.commit.group.sync.aligned
+  return
+}
+
+
+// CHECK-LABEL : @wgmma_commit_group_sync_aligned
+func.func @wgmma_wait_group_sync_aligned() {
+  // CHECK : nvvm.wgmma.wait.group.sync.aligned
+  nvvm.wgmma.wait.group.sync.aligned 0
+  return
+}
+
+// -----
+
+// Just check these don't emit errors.
+gpu.module @module_1 [#nvvm.target<chip = "sm_90", features = "+ptx70", link = ["my_device_lib.bc"], flags = {fast, ftz}>] {
+}
+
+gpu.module @module_2 [#nvvm.target<chip = "sm_90">, #nvvm.target<chip = "sm_80">, #nvvm.target<chip = "sm_70">] {
 }

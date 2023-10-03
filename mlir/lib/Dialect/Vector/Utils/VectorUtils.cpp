@@ -165,7 +165,7 @@ static SetVector<Operation *> getParentsOfType(Block *block) {
   SetVector<Operation *> res;
   auto *current = block->getParentOp();
   while (current) {
-    if (auto typedParent = dyn_cast<T>(current)) {
+    if ([[maybe_unused]] auto typedParent = dyn_cast<T>(current)) {
       assert(res.count(current) == 0 && "Already inserted");
       res.insert(current);
     }

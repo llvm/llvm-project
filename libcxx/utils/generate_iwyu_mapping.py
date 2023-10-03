@@ -77,6 +77,8 @@ def generate_map(include):
             continue
         elif i == "__split_buffer":
             public = ["deque", "vector"]
+        elif i == "__std_clang_module":
+            continue
         elif i == "__std_mbstate_t.h":
             continue
         elif i == "__threading_support":

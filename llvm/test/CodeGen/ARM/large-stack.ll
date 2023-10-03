@@ -36,19 +36,16 @@ define i32 @test3() {
 ; CHECK-NEXT: lsls    [[REG]], [[REG]], #0x8
 ; CHECK-NEXT: adds    [[REG]], #0xff
 ; CHECK-NEXT: lsls    [[REG]], [[REG]], #0x8
-; CHECK-NEXT: adds    [[REG]], #0xf0
+; CHECK-NEXT: adds    [[REG]], #0xf4
 	%retval = alloca i32, align 4
 	%tmp = alloca i32, align 4
 	%a = alloca [u0x30000001 x i8], align 16
 	store i32 0, ptr %tmp
 ;; are we choosing correct store/tSTRspi pattern for execute-only
 ; CHECK:      movs    [[REG:r[0-9]+]], #0x30
-; CHECK-NEXT: lsls    [[REG]], [[REG]], #0x8
-; CHECK-NEXT: adds    [[REG]], #0x0
-; CHECK-NEXT: lsls    [[REG]], [[REG]], #0x8
-; CHECK-NEXT: adds    [[REG]], #0x0
-; CHECK-NEXT: lsls    [[REG]], [[REG]], #0x8
-; CHECK-NEXT: adds    [[REG]], #0x8
+; CHECK-NEXT: lsls    [[REG]], [[REG]], #0x18
+; CHECK-NEXT: add     [[REG]], sp
+; CHECK-NEXT: str     {{r[0-9]+}}, [[[REG]], #0x4]
 	%tmp1 = load i32, ptr %tmp
         ret i32 %tmp1
 }

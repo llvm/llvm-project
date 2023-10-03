@@ -72,17 +72,18 @@ void setIncludeCleanerAnalyzesStdlib(bool B);
 
 /// Converts the clangd include representation to include-cleaner
 /// include representation.
-include_cleaner::Includes
-convertIncludes(const SourceManager &SM,
-                const llvm::ArrayRef<Inclusion> Includes);
+include_cleaner::Includes convertIncludes(const ParsedAST &);
 
 std::vector<include_cleaner::SymbolReference>
 collectMacroReferences(ParsedAST &AST);
 
-/// Find the first provider in the list that is matched by the includes.
-std::optional<include_cleaner::Header>
-firstMatchedProvider(const include_cleaner::Includes &Includes,
-                     llvm::ArrayRef<include_cleaner::Header> Providers);
+/// Whether this #include is considered to provide a particular symbol.
+///
+/// This means it satisfies the reference, and no other #include does better.
+/// `Providers` is the symbol's candidate headers according to walkUsed().
+bool isPreferredProvider(const Inclusion &, const include_cleaner::Includes &,
+                         llvm::ArrayRef<include_cleaner::Header> Providers);
+
 } // namespace clangd
 } // namespace clang
 

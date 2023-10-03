@@ -56,17 +56,16 @@ class AVRAsmParser : public MCTargetAsmParser {
                                uint64_t &ErrorInfo,
                                bool MatchingInlineAsm) override;
 
-  bool parseRegister(MCRegister &RegNo, SMLoc &StartLoc,
-                     SMLoc &EndLoc) override;
-  OperandMatchResultTy tryParseRegister(MCRegister &RegNo, SMLoc &StartLoc,
-                                        SMLoc &EndLoc) override;
+  bool parseRegister(MCRegister &Reg, SMLoc &StartLoc, SMLoc &EndLoc) override;
+  ParseStatus tryParseRegister(MCRegister &Reg, SMLoc &StartLoc,
+                               SMLoc &EndLoc) override;
 
   bool ParseInstruction(ParseInstructionInfo &Info, StringRef Name,
                         SMLoc NameLoc, OperandVector &Operands) override;
 
   ParseStatus parseDirective(AsmToken DirectiveID) override;
 
-  OperandMatchResultTy parseMemriOperand(OperandVector &Operands);
+  ParseStatus parseMemriOperand(OperandVector &Operands);
 
   bool parseOperand(OperandVector &Operands, bool maybeReg);
   int parseRegisterName(unsigned (*matchFn)(StringRef));
@@ -559,7 +558,7 @@ bool AVRAsmParser::parseOperand(OperandVector &Operands, bool maybeReg) {
   return true;
 }
 
-OperandMatchResultTy AVRAsmParser::parseMemriOperand(OperandVector &Operands) {
+ParseStatus AVRAsmParser::parseMemriOperand(OperandVector &Operands) {
   LLVM_DEBUG(dbgs() << "parseMemriOperand()\n");
 
   SMLoc E, S;
@@ -571,7 +570,7 @@ OperandMatchResultTy AVRAsmParser::parseMemriOperand(OperandVector &Operands) {
     RegNo = parseRegister();
 
     if (RegNo == AVR::NoRegister)
-      return MatchOperand_ParseFail;
+      return ParseStatus::Failure;
 
     S = SMLoc::getFromPointer(Parser.getTok().getLoc().getPointer() - 1);
     Parser.Lex(); // Eat register token.
@@ -580,35 +579,34 @@ OperandMatchResultTy AVRAsmParser::parseMemriOperand(OperandVector &Operands) {
   // Parse immediate;
   {
     if (getParser().parseExpression(Expression))
-      return MatchOperand_ParseFail;
+      return ParseStatus::Failure;
 
     E = SMLoc::getFromPointer(Parser.getTok().getLoc().getPointer() - 1);
   }
 
   Operands.push_back(AVROperand::CreateMemri(RegNo, Expression, S, E));
 
-  return MatchOperand_Success;
+  return ParseStatus::Success;
 }
 
-bool AVRAsmParser::parseRegister(MCRegister &RegNo, SMLoc &StartLoc,
+bool AVRAsmParser::parseRegister(MCRegister &Reg, SMLoc &StartLoc,
                                  SMLoc &EndLoc) {
   StartLoc = Parser.getTok().getLoc();
-  RegNo = parseRegister(/*RestoreOnFailure=*/false);
+  Reg = parseRegister(/*RestoreOnFailure=*/false);
   EndLoc = Parser.getTok().getLoc();
 
-  return (RegNo == AVR::NoRegister);
+  return Reg == AVR::NoRegister;
 }
 
-OperandMatchResultTy AVRAsmParser::tryParseRegister(MCRegister &RegNo,
-                                                    SMLoc &StartLoc,
-                                                    SMLoc &EndLoc) {
+ParseStatus AVRAsmParser::tryParseRegister(MCRegister &Reg, SMLoc &StartLoc,
+                                           SMLoc &EndLoc) {
   StartLoc = Parser.getTok().getLoc();
-  RegNo = parseRegister(/*RestoreOnFailure=*/true);
+  Reg = parseRegister(/*RestoreOnFailure=*/true);
   EndLoc = Parser.getTok().getLoc();
 
-  if (RegNo == AVR::NoRegister)
-    return MatchOperand_NoMatch;
-  return MatchOperand_Success;
+  if (Reg == AVR::NoRegister)
+    return ParseStatus::NoMatch;
+  return ParseStatus::Success;
 }
 
 void AVRAsmParser::eatComma() {
@@ -630,13 +628,12 @@ bool AVRAsmParser::ParseInstruction(ParseInstructionInfo &Info,
     if (OperandNum > 0)
       eatComma();
 
-    auto MatchResult = MatchOperandParserImpl(Operands, Mnemonic);
+    ParseStatus ParseRes = MatchOperandParserImpl(Operands, Mnemonic);
 
-    if (MatchResult == MatchOperand_Success) {
+    if (ParseRes.isSuccess())
       continue;
-    }
 
-    if (MatchResult == MatchOperand_ParseFail) {
+    if (ParseRes.isFailure()) {
       SMLoc Loc = getLexer().getLoc();
       Parser.eatToEndOfStatement();
 

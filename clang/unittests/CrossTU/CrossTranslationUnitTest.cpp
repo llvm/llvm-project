@@ -125,8 +125,8 @@ public:
 protected:
   std::unique_ptr<clang::ASTConsumer>
   CreateASTConsumer(clang::CompilerInstance &CI, StringRef) override {
-    CI.getAnalyzerOpts()->CTUImportThreshold = OverrideLimit;
-    CI.getAnalyzerOpts()->CTUImportCppThreshold = OverrideLimit;
+    CI.getAnalyzerOpts().CTUImportThreshold = OverrideLimit;
+    CI.getAnalyzerOpts().CTUImportCppThreshold = OverrideLimit;
     return std::make_unique<CTUASTConsumer>(CI, Success);
   }
 

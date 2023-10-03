@@ -1158,14 +1158,11 @@ void InterleavedAccessInfo::analyzeInterleaving(
         LLVM_DEBUG(dbgs() << "LV: Creating an interleave group with:" << *B
                           << '\n');
         GroupB = createInterleaveGroup(B, DesB.Stride, DesB.Alignment);
-      } else if (CompletedLoadGroups.contains(GroupB)) {
-        // Skip B if no new instructions can be added to its load group.
-        continue;
+        if (B->mayWriteToMemory())
+          StoreGroups.insert(GroupB);
+        else
+          LoadGroups.insert(GroupB);
       }
-      if (B->mayWriteToMemory())
-        StoreGroups.insert(GroupB);
-      else
-        LoadGroups.insert(GroupB);
     }
 
     for (auto AI = std::next(BI); AI != E; ++AI) {
@@ -1191,38 +1188,62 @@ void InterleavedAccessInfo::analyzeInterleaving(
       // Because accesses (2) and (3) are dependent, we can group (2) with (1)
       // but not with (4). If we did, the dependent access (3) would be within
       // the boundaries of the (2, 4) group.
-      if (!canReorderMemAccessesForInterleavedGroups(&*AI, &*BI)) {
-        // If a dependence exists and A is already in a group, we know that A
-        // must be a store since A precedes B and WAR dependences are allowed.
-        // Thus, A would be sunk below B. We release A's group to prevent this
-        // illegal code motion. A will then be free to form another group with
-        // instructions that precede it.
-        if (isInterleaved(A)) {
-          InterleaveGroup<Instruction> *StoreGroup = getInterleaveGroup(A);
-
-          LLVM_DEBUG(dbgs() << "LV: Invalidated store group due to "
-                               "dependence between " << *A << " and "<< *B << '\n');
-
-          StoreGroups.remove(StoreGroup);
-          releaseGroup(StoreGroup);
+      auto DependentMember = [&](InterleaveGroup<Instruction> *Group,
+                                 StrideEntry *A) -> Instruction * {
+        for (uint32_t Index = 0; Index < Group->getFactor(); ++Index) {
+          Instruction *MemberOfGroupB = Group->getMember(Index);
+          if (MemberOfGroupB && !canReorderMemAccessesForInterleavedGroups(
+                                    A, &*AccessStrideInfo.find(MemberOfGroupB)))
+            return MemberOfGroupB;
         }
-        // If B is a load and part of an interleave group, no earlier loads can
-        // be added to B's interleave group, because this would mean the load B
-        // would need to be moved across store A. Mark the interleave group as
-        // complete.
-        if (GroupB && isa<LoadInst>(B)) {
-          LLVM_DEBUG(dbgs() << "LV: Marking interleave group for " << *B
-                            << " as complete.\n");
+        return nullptr;
+      };
 
-          CompletedLoadGroups.insert(GroupB);
+      auto GroupA = getInterleaveGroup(A);
+      // If A is a load, dependencies are tolerable, there's nothing to do here.
+      // If both A and B belong to the same (store) group, they are independent,
+      // even if dependencies have not been recorded.
+      // If both GroupA and GroupB are null, there's nothing to do here.
+      if (A->mayWriteToMemory() && GroupA != GroupB) {
+        Instruction *DependentInst = nullptr;
+        // If GroupB is a load group, we have to compare AI against all
+        // members of GroupB because if any load within GroupB has a dependency
+        // on AI, we need to mark GroupB as complete and also release the
+        // store GroupA (if A belongs to one). The former prevents incorrect
+        // hoisting of load B above store A while the latter prevents incorrect
+        // sinking of store A below load B.
+        if (GroupB && LoadGroups.contains(GroupB))
+          DependentInst = DependentMember(GroupB, &*AI);
+        else if (!canReorderMemAccessesForInterleavedGroups(&*AI, &*BI))
+          DependentInst = B;
+
+        if (DependentInst) {
+          // A has a store dependence on B (or on some load within GroupB) and
+          // is part of a store group. Release A's group to prevent illegal
+          // sinking of A below B. A will then be free to form another group
+          // with instructions that precede it.
+          if (GroupA && StoreGroups.contains(GroupA)) {
+            LLVM_DEBUG(dbgs() << "LV: Invalidated store group due to "
+                                 "dependence between "
+                              << *A << " and " << *DependentInst << '\n');
+            StoreGroups.remove(GroupA);
+            releaseGroup(GroupA);
+          }
+          // If B is a load and part of an interleave group, no earlier loads
+          // can be added to B's interleave group, because this would mean the
+          // DependentInst would move across store A. Mark the interleave group
+          // as complete.
+          if (GroupB && LoadGroups.contains(GroupB)) {
+            LLVM_DEBUG(dbgs() << "LV: Marking interleave group for " << *B
+                              << " as complete.\n");
+            CompletedLoadGroups.insert(GroupB);
+          }
         }
-
-        // If a dependence exists and A is not already in a group (or it was
-        // and we just released it), B might be hoisted above A (if B is a
-        // load) or another store might be sunk below A (if B is a store). In
-        // either case, we can't add additional instructions to B's group. B
-        // will only form a group with instructions that it precedes.
-        break;
+      }
+      if (CompletedLoadGroups.contains(GroupB)) {
+        // Skip trying to add A to B, continue to look for other conflicting A's
+        // in groups to be released.
+        continue;
       }
 
       // At this point, we've checked for illegal code motion. If either A or B
@@ -1430,22 +1451,6 @@ void InterleaveGroup<Instruction>::addMetadata(Instruction *NewInst) const {
                  [](std::pair<int, Instruction *> p) { return p.second; });
   propagateMetadata(NewInst, VL);
 }
-}
-
-std::string VFABI::mangleTLIVectorName(StringRef VectorName,
-                                       StringRef ScalarName, unsigned numArgs,
-                                       ElementCount VF, bool Masked) {
-  SmallString<256> Buffer;
-  llvm::raw_svector_ostream Out(Buffer);
-  Out << "_ZGV" << VFABI::_LLVM_ << (Masked ? "M" : "N");
-  if (VF.isScalable())
-    Out << 'x';
-  else
-    Out << VF.getFixedValue();
-  for (unsigned I = 0; I < numArgs; ++I)
-    Out << "v";
-  Out << "_" << ScalarName << "(" << VectorName << ")";
-  return std::string(Out.str());
 }
 
 void VFABI::getVectorVariantNames(

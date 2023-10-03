@@ -12,7 +12,7 @@
 #include <__algorithm/merge.h>
 #include <__algorithm/pstl_backends/cpu_backends/backend.h>
 #include <__config>
-#include <__iterator/iterator_traits.h>
+#include <__iterator/concepts.h>
 #include <__type_traits/is_execution_policy.h>
 #include <__utility/move.h>
 #include <__utility/terminate_on_exception.h>
@@ -39,9 +39,9 @@ _LIBCPP_HIDE_FROM_ABI _ForwardOutIterator __pstl_merge(
     _ForwardOutIterator __result,
     _Comp __comp) {
   if constexpr (__is_parallel_execution_policy_v<_ExecutionPolicy> &&
-                __has_random_access_iterator_category<_ForwardIterator1>::value &&
-                __has_random_access_iterator_category<_ForwardIterator2>::value &&
-                __has_random_access_iterator_category<_ForwardOutIterator>::value) {
+                __has_random_access_iterator_category_or_concept<_ForwardIterator1>::value &&
+                __has_random_access_iterator_category_or_concept<_ForwardIterator2>::value &&
+                __has_random_access_iterator_category_or_concept<_ForwardOutIterator>::value) {
     return std::__terminate_on_exception([&] {
       __par_backend::__parallel_merge(
           __first1,

@@ -343,7 +343,6 @@ Perform a fork only if the condition is true.
 void __kmpc_fork_call_if(ident_t *loc, kmp_int32 argc, kmpc_micro microtask,
                          kmp_int32 cond, void *args) {
   int gtid = __kmp_entry_gtid();
-  int zero = 0;
   if (cond) {
     if (args)
       __kmpc_fork_call(loc, argc, microtask, args);
@@ -352,10 +351,29 @@ void __kmpc_fork_call_if(ident_t *loc, kmp_int32 argc, kmpc_micro microtask,
   } else {
     __kmpc_serialized_parallel(loc, gtid);
 
+#if OMPT_SUPPORT
+    void *exit_frame_ptr;
+#endif
+
     if (args)
-      microtask(&gtid, &zero, args);
+      __kmp_invoke_microtask(VOLATILE_CAST(microtask_t) microtask, gtid,
+                             /*npr=*/0,
+                             /*argc=*/1, &args
+#if OMPT_SUPPORT
+                             ,
+                             &exit_frame_ptr
+#endif
+      );
     else
-      microtask(&gtid, &zero);
+      __kmp_invoke_microtask(VOLATILE_CAST(microtask_t) microtask, gtid,
+                             /*npr=*/0,
+                             /*argc=*/0,
+                             /*args=*/nullptr
+#if OMPT_SUPPORT
+                             ,
+                             &exit_frame_ptr
+#endif
+      );
 
     __kmpc_end_serialized_parallel(loc, gtid);
   }
@@ -379,6 +397,24 @@ void __kmpc_push_num_teams(ident_t *loc, kmp_int32 global_tid,
             global_tid, num_teams, num_threads));
   __kmp_assert_valid_gtid(global_tid);
   __kmp_push_num_teams(loc, global_tid, num_teams, num_threads);
+}
+
+/*!
+@ingroup PARALLEL
+@param loc source location information
+@param global_tid global thread number
+@param thread_limit limit on number of threads which can be created within the
+current task
+
+Set the thread_limit for the current task
+This call is there to support `thread_limit` clause on the `target` construct
+*/
+void __kmpc_set_thread_limit(ident_t *loc, kmp_int32 global_tid,
+                             kmp_int32 thread_limit) {
+  __kmp_assert_valid_gtid(global_tid);
+  kmp_info_t *thread = __kmp_threads[global_tid];
+  if (thread_limit > 0)
+    thread->th.th_current_task->td_icvs.task_thread_limit = thread_limit;
 }
 
 /*!
@@ -2065,14 +2101,15 @@ void kmpc_set_stacksize_s(size_t arg) {
 }
 
 void kmpc_set_blocktime(int arg) {
-  int gtid, tid;
+  int gtid, tid, bt = arg;
   kmp_info_t *thread;
 
   gtid = __kmp_entry_gtid();
   tid = __kmp_tid_from_gtid(gtid);
   thread = __kmp_thread_from_gtid(gtid);
 
-  __kmp_aux_set_blocktime(arg, thread, tid);
+  __kmp_aux_convert_blocktime(&bt);
+  __kmp_aux_set_blocktime(bt, thread, tid);
 }
 
 void kmpc_set_library(int arg) {

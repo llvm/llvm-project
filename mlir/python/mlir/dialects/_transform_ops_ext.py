@@ -15,42 +15,66 @@ from typing import Optional, Sequence, Union
 
 
 class CastOp:
+    def __init__(
+        self,
+        result_type: Type,
+        target: Union[Operation, Value],
+        *,
+        loc=None,
+        ip=None,
+    ):
+        super().__init__(result_type, _get_op_result_or_value(target), loc=loc, ip=ip)
 
-  def __init__(
-      self,
-      result_type: Type,
-      target: Union[Operation, Value],
-      *,
-      loc=None,
-      ip=None,
-  ):
-    super().__init__(
-        result_type, _get_op_result_or_value(target), loc=loc, ip=ip
-    )
+
+class ApplyPatternsOp:
+    def __init__(
+        self,
+        target: Union[Operation, Value, OpView],
+        *,
+        loc=None,
+        ip=None,
+    ):
+        operands = []
+        operands.append(_get_op_result_or_value(target))
+        super().__init__(
+            self.build_generic(
+                attributes={},
+                results=[],
+                operands=operands,
+                successors=None,
+                regions=None,
+                loc=loc,
+                ip=ip,
+            )
+        )
+        self.regions[0].blocks.append()
+
+    @property
+    def patterns(self) -> Block:
+        return self.regions[0].blocks[0]
 
 
 class testGetParentOp:
-
-  def __init__(
-      self,
-      result_type: Type,
-      target: Union[Operation, Value],
-      *,
-      isolated_from_above: bool = False,
-      op_name: Optional[str] = None,
-      deduplicate: bool = False,
-      loc=None,
-      ip=None,
-  ):
-    super().__init__(
-        result_type,
-        _get_op_result_or_value(target),
-        isolated_from_above=isolated_from_above,
-        op_name=op_name,
-        deduplicate=deduplicate,
-        loc=loc,
-        ip=ip,
-    )
+    def __init__(
+        self,
+        result_type: Type,
+        target: Union[Operation, Value],
+        *,
+        isolated_from_above: bool = False,
+        op_name: Optional[str] = None,
+        deduplicate: bool = False,
+        loc=None,
+        ip=None,
+    ):
+        super().__init__(
+            result_type,
+            _get_op_result_or_value(target),
+            isolated_from_above=isolated_from_above,
+            op_name=op_name,
+            deduplicate=deduplicate,
+            loc=loc,
+            ip=ip,
+        )
 
 
 class MergeHandlesOp:
@@ -104,12 +128,6 @@ class SequenceOp:
             else None
         )
         root_type = root.type if not isinstance(target, Type) else target
-        if not isinstance(failure_propagation_mode, Attribute):
-            failure_propagation_mode_attr = IntegerAttr.get(
-                IntegerType.get_signless(32), failure_propagation_mode._as_int()
-            )
-        else:
-            failure_propagation_mode_attr = failure_propagation_mode
 
         if extra_bindings is None:
             extra_bindings = []
@@ -126,7 +144,7 @@ class SequenceOp:
 
         super().__init__(
             results_=results,
-            failure_propagation_mode=failure_propagation_mode_attr,
+            failure_propagation_mode=failure_propagation_mode,
             root=root,
             extra_bindings=extra_bindings,
         )

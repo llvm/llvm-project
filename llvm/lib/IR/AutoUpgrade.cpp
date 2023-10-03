@@ -593,68 +593,83 @@ static bool UpgradeX86IntrinsicFunction(Function *F, StringRef Name,
 }
 
 static Intrinsic::ID ShouldUpgradeNVPTXBF16Intrinsic(StringRef Name) {
-  return StringSwitch<Intrinsic::ID>(Name)
-      .Case("abs.bf16", Intrinsic::nvvm_abs_bf16)
-      .Case("abs.bf16x2", Intrinsic::nvvm_abs_bf16x2)
-      .Case("fma.rn.bf16", Intrinsic::nvvm_fma_rn_bf16)
-      .Case("fma.rn.bf16x2", Intrinsic::nvvm_fma_rn_bf16x2)
-      .Case("fma.rn.ftz_bf16", Intrinsic::nvvm_fma_rn_ftz_bf16)
-      .Case("fma.rn.ftz.bf16x2", Intrinsic::nvvm_fma_rn_ftz_bf16x2)
-      .Case("fma.rn.ftz.relu.bf16", Intrinsic::nvvm_fma_rn_ftz_relu_bf16)
-      .Case("fma.rn.ftz.relu.bf16x2", Intrinsic::nvvm_fma_rn_ftz_relu_bf16x2)
-      .Case("fma.rn.ftz_sat.bf16", Intrinsic::nvvm_fma_rn_ftz_sat_bf16)
-      .Case("fma.rn.ftz_sat.bf16x2", Intrinsic::nvvm_fma_rn_ftz_sat_bf16x2)
-      .Case("fma.rn.relu.bf16", Intrinsic::nvvm_fma_rn_relu_bf16)
-      .Case("fma.rn.relu.bf16x2", Intrinsic::nvvm_fma_rn_relu_bf16x2)
-      .Case("fma.rn.sat.bf16", Intrinsic::nvvm_fma_rn_sat_bf16)
-      .Case("fma.rn.sat.bf16x2", Intrinsic::nvvm_fma_rn_sat_bf16x2)
-      .Case("fmax.bf16", Intrinsic::nvvm_fmax_bf16)
-      .Case("fmax.bf16x2", Intrinsic::nvvm_fmax_bf16x2)
-      .Case("fmax.ftz.bf16", Intrinsic::nvvm_fmax_ftz_bf16)
-      .Case("fmax.ftz.bf16x2", Intrinsic::nvvm_fmax_ftz_bf16x2)
-      .Case("fmax.ftz.nan.bf16", Intrinsic::nvvm_fmax_ftz_nan_bf16)
-      .Case("fmax.ftz.nan.bf16x2", Intrinsic::nvvm_fmax_ftz_nan_bf16x2)
-      .Case("fmax.ftz.nan.xorsign.abs.bf16",
-            Intrinsic::nvvm_fmax_ftz_nan_xorsign_abs_bf16)
-      .Case("fmax.ftz.nan.xorsign.abs.bf16x2",
-            Intrinsic::nvvm_fmax_ftz_nan_xorsign_abs_bf16x2)
-      .Case("fmax.ftz.xorsign.abs.bf16",
-            Intrinsic::nvvm_fmax_ftz_xorsign_abs_bf16)
-      .Case("fmax.ftz.xorsign.abs.bf16x2",
-            Intrinsic::nvvm_fmax_ftz_xorsign_abs_bf16x2)
-      .Case("fmax.nan.bf16", Intrinsic::nvvm_fmax_nan_bf16)
-      .Case("fmax.nan.bf16x2", Intrinsic::nvvm_fmax_nan_bf16x2)
-      .Case("fmax.nan.xorsign.abs.bf16",
-            Intrinsic::nvvm_fmax_nan_xorsign_abs_bf16)
-      .Case("fmax.nan.xorsign.abs.bf16x2",
-            Intrinsic::nvvm_fmax_nan_xorsign_abs_bf16x2)
-      .Case("fmax.xorsign.abs.bf16", Intrinsic::nvvm_fmax_xorsign_abs_bf16)
-      .Case("fmax.xorsign.abs.bf16x2", Intrinsic::nvvm_fmax_xorsign_abs_bf16x2)
-      .Case("fmin.bf16", Intrinsic::nvvm_fmin_bf16)
-      .Case("fmin.bf16x2", Intrinsic::nvvm_fmin_bf16x2)
-      .Case("fmin.ftz.bf16", Intrinsic::nvvm_fmin_ftz_bf16)
-      .Case("fmin.ftz.bf16x2", Intrinsic::nvvm_fmin_ftz_bf16x2)
-      .Case("fmin.ftz.nan_bf16", Intrinsic::nvvm_fmin_ftz_nan_bf16)
-      .Case("fmin.ftz.nan_bf16x2", Intrinsic::nvvm_fmin_ftz_nan_bf16x2)
-      .Case("fmin.ftz.nan.xorsign.abs.bf16",
-            Intrinsic::nvvm_fmin_ftz_nan_xorsign_abs_bf16)
-      .Case("fmin.ftz.nan.xorsign.abs.bf16x2",
-            Intrinsic::nvvm_fmin_ftz_nan_xorsign_abs_bf16x2)
-      .Case("fmin.ftz.xorsign.abs.bf16",
-            Intrinsic::nvvm_fmin_ftz_xorsign_abs_bf16)
-      .Case("fmin.ftz.xorsign.abs.bf16x2",
-            Intrinsic::nvvm_fmin_ftz_xorsign_abs_bf16x2)
-      .Case("fmin.nan.bf16", Intrinsic::nvvm_fmin_nan_bf16)
-      .Case("fmin.nan.bf16x2", Intrinsic::nvvm_fmin_nan_bf16x2)
-      .Case("fmin.nan.xorsign.abs.bf16",
-            Intrinsic::nvvm_fmin_nan_xorsign_abs_bf16)
-      .Case("fmin.nan.xorsign.abs.bf16x2",
-            Intrinsic::nvvm_fmin_nan_xorsign_abs_bf16x2)
-      .Case("fmin.xorsign.abs.bf16", Intrinsic::nvvm_fmin_xorsign_abs_bf16)
-      .Case("fmin.xorsign.abs.bf16x2", Intrinsic::nvvm_fmin_xorsign_abs_bf16x2)
-      .Case("neg.bf16", Intrinsic::nvvm_neg_bf16)
-      .Case("neg.bf16x2", Intrinsic::nvvm_neg_bf16x2)
-      .Default(Intrinsic::not_intrinsic);
+  if (Name.consume_front("abs."))
+    return StringSwitch<Intrinsic::ID>(Name)
+        .Case("bf16", Intrinsic::nvvm_abs_bf16)
+        .Case("bf16x2", Intrinsic::nvvm_abs_bf16x2)
+        .Default(Intrinsic::not_intrinsic);
+
+  if (Name.consume_front("fma.rn."))
+    return StringSwitch<Intrinsic::ID>(Name)
+        .Case("bf16", Intrinsic::nvvm_fma_rn_bf16)
+        .Case("bf16x2", Intrinsic::nvvm_fma_rn_bf16x2)
+        .Case("ftz_bf16", Intrinsic::nvvm_fma_rn_ftz_bf16)
+        .Case("ftz.bf16x2", Intrinsic::nvvm_fma_rn_ftz_bf16x2)
+        .Case("ftz.relu.bf16", Intrinsic::nvvm_fma_rn_ftz_relu_bf16)
+        .Case("ftz.relu.bf16x2", Intrinsic::nvvm_fma_rn_ftz_relu_bf16x2)
+        .Case("ftz_sat.bf16", Intrinsic::nvvm_fma_rn_ftz_sat_bf16)
+        .Case("ftz_sat.bf16x2", Intrinsic::nvvm_fma_rn_ftz_sat_bf16x2)
+        .Case("relu.bf16", Intrinsic::nvvm_fma_rn_relu_bf16)
+        .Case("relu.bf16x2", Intrinsic::nvvm_fma_rn_relu_bf16x2)
+        .Case("sat.bf16", Intrinsic::nvvm_fma_rn_sat_bf16)
+        .Case("sat.bf16x2", Intrinsic::nvvm_fma_rn_sat_bf16x2)
+        .Default(Intrinsic::not_intrinsic);
+
+  if (Name.consume_front("fmax."))
+    return StringSwitch<Intrinsic::ID>(Name)
+        .Case("bf16", Intrinsic::nvvm_fmax_bf16)
+        .Case("bf16x2", Intrinsic::nvvm_fmax_bf16x2)
+        .Case("ftz.bf16", Intrinsic::nvvm_fmax_ftz_bf16)
+        .Case("ftz.bf16x2", Intrinsic::nvvm_fmax_ftz_bf16x2)
+        .Case("ftz.nan.bf16", Intrinsic::nvvm_fmax_ftz_nan_bf16)
+        .Case("ftz.nan.bf16x2", Intrinsic::nvvm_fmax_ftz_nan_bf16x2)
+        .Case("ftz.nan.xorsign.abs.bf16",
+              Intrinsic::nvvm_fmax_ftz_nan_xorsign_abs_bf16)
+        .Case("ftz.nan.xorsign.abs.bf16x2",
+              Intrinsic::nvvm_fmax_ftz_nan_xorsign_abs_bf16x2)
+        .Case("ftz.xorsign.abs.bf16", Intrinsic::nvvm_fmax_ftz_xorsign_abs_bf16)
+        .Case("ftz.xorsign.abs.bf16x2",
+              Intrinsic::nvvm_fmax_ftz_xorsign_abs_bf16x2)
+        .Case("nan.bf16", Intrinsic::nvvm_fmax_nan_bf16)
+        .Case("nan.bf16x2", Intrinsic::nvvm_fmax_nan_bf16x2)
+        .Case("nan.xorsign.abs.bf16", Intrinsic::nvvm_fmax_nan_xorsign_abs_bf16)
+        .Case("nan.xorsign.abs.bf16x2",
+              Intrinsic::nvvm_fmax_nan_xorsign_abs_bf16x2)
+        .Case("xorsign.abs.bf16", Intrinsic::nvvm_fmax_xorsign_abs_bf16)
+        .Case("xorsign.abs.bf16x2", Intrinsic::nvvm_fmax_xorsign_abs_bf16x2)
+        .Default(Intrinsic::not_intrinsic);
+
+  if (Name.consume_front("fmin."))
+    return StringSwitch<Intrinsic::ID>(Name)
+        .Case("bf16", Intrinsic::nvvm_fmin_bf16)
+        .Case("bf16x2", Intrinsic::nvvm_fmin_bf16x2)
+        .Case("ftz.bf16", Intrinsic::nvvm_fmin_ftz_bf16)
+        .Case("ftz.bf16x2", Intrinsic::nvvm_fmin_ftz_bf16x2)
+        .Case("ftz.nan_bf16", Intrinsic::nvvm_fmin_ftz_nan_bf16)
+        .Case("ftz.nan_bf16x2", Intrinsic::nvvm_fmin_ftz_nan_bf16x2)
+        .Case("ftz.nan.xorsign.abs.bf16",
+              Intrinsic::nvvm_fmin_ftz_nan_xorsign_abs_bf16)
+        .Case("ftz.nan.xorsign.abs.bf16x2",
+              Intrinsic::nvvm_fmin_ftz_nan_xorsign_abs_bf16x2)
+        .Case("ftz.xorsign.abs.bf16", Intrinsic::nvvm_fmin_ftz_xorsign_abs_bf16)
+        .Case("ftz.xorsign.abs.bf16x2",
+              Intrinsic::nvvm_fmin_ftz_xorsign_abs_bf16x2)
+        .Case("nan.bf16", Intrinsic::nvvm_fmin_nan_bf16)
+        .Case("nan.bf16x2", Intrinsic::nvvm_fmin_nan_bf16x2)
+        .Case("nan.xorsign.abs.bf16", Intrinsic::nvvm_fmin_nan_xorsign_abs_bf16)
+        .Case("nan.xorsign.abs.bf16x2",
+              Intrinsic::nvvm_fmin_nan_xorsign_abs_bf16x2)
+        .Case("xorsign.abs.bf16", Intrinsic::nvvm_fmin_xorsign_abs_bf16)
+        .Case("xorsign.abs.bf16x2", Intrinsic::nvvm_fmin_xorsign_abs_bf16x2)
+        .Default(Intrinsic::not_intrinsic);
+
+  if (Name.consume_front("neg."))
+    return StringSwitch<Intrinsic::ID>(Name)
+        .Case("bf16", Intrinsic::nvvm_neg_bf16)
+        .Case("bf16x2", Intrinsic::nvvm_neg_bf16x2)
+        .Default(Intrinsic::not_intrinsic);
+
+  return Intrinsic::not_intrinsic;
 }
 
 static bool UpgradeIntrinsicFunction1(Function *F, Function *&NewFn) {
@@ -897,21 +912,28 @@ static bool UpgradeIntrinsicFunction1(Function *F, Function *&NewFn) {
         Name == "arm.cde.vcx3qa.predicated.v2i64.v4i1")
       return true;
 
-    if (Name.startswith("amdgcn."))
-      Name = Name.substr(7); // Strip off "amdgcn."
+    if (Name.consume_front("amdgcn.")) {
+      if (Name == "alignbit") {
+        // Target specific intrinsic became redundant
+        NewFn = Intrinsic::getDeclaration(F->getParent(), Intrinsic::fshr,
+                                          {F->getReturnType()});
+        return true;
+      }
 
-    if (Name == "alignbit") {
-      // Target specific intrinsic became redundant
-      NewFn = Intrinsic::getDeclaration(F->getParent(), Intrinsic::fshr,
-                                        {F->getReturnType()});
-      return true;
-    }
+      if (Name.startswith("atomic.inc") || Name.startswith("atomic.dec")) {
+        // This was replaced with atomicrmw uinc_wrap and udec_wrap, so there's no
+        // new declaration.
+        NewFn = nullptr;
+        return true;
+      }
 
-    if (Name.startswith("atomic.inc") || Name.startswith("atomic.dec")) {
-      // This was replaced with atomicrmw uinc_wrap and udec_wrap, so there's no
-      // new declaration.
-      NewFn = nullptr;
-      return true;
+      if (Name.startswith("ldexp.")) {
+        // Target specific intrinsic became redundant
+        NewFn = Intrinsic::getDeclaration(
+          F->getParent(), Intrinsic::ldexp,
+          {F->getReturnType(), F->getArg(1)->getType()});
+        return true;
+      }
     }
 
     break;
@@ -929,82 +951,86 @@ static bool UpgradeIntrinsicFunction1(Function *F, Function *&NewFn) {
                                         F->arg_begin()->getType());
       return true;
     }
-    break;
-  }
-  case 'd': {
-    if (Name == "dbg.addr") {
+    if (Name.equals("coro.end") && F->arg_size() == 2) {
       rename(F);
-      NewFn = Intrinsic::getDeclaration(F->getParent(), Intrinsic::dbg_value);
-      return true;
-    }
-    if (Name == "dbg.value" && F->arg_size() == 4) {
-      rename(F);
-      NewFn = Intrinsic::getDeclaration(F->getParent(), Intrinsic::dbg_value);
-      return true;
-    }
-    break;
-  }
-  case 'e': {
-    if (Name.startswith("experimental.vector.extract.")) {
-      rename(F);
-      Type *Tys[] = {F->getReturnType(), F->arg_begin()->getType()};
-      NewFn = Intrinsic::getDeclaration(F->getParent(),
-                                        Intrinsic::vector_extract, Tys);
+      NewFn = Intrinsic::getDeclaration(F->getParent(), Intrinsic::coro_end);
       return true;
     }
 
-    if (Name.startswith("experimental.vector.insert.")) {
-      rename(F);
-      auto Args = F->getFunctionType()->params();
-      Type *Tys[] = {Args[0], Args[1]};
-      NewFn = Intrinsic::getDeclaration(F->getParent(),
-                                        Intrinsic::vector_insert, Tys);
-      return true;
-    }
-
-    SmallVector<StringRef, 2> Groups;
-    static const Regex R("^experimental.vector.reduce.([a-z]+)\\.[a-z][0-9]+");
-    if (R.match(Name, &Groups)) {
-      Intrinsic::ID ID;
-      ID = StringSwitch<Intrinsic::ID>(Groups[1])
-               .Case("add", Intrinsic::vector_reduce_add)
-               .Case("mul", Intrinsic::vector_reduce_mul)
-               .Case("and", Intrinsic::vector_reduce_and)
-               .Case("or", Intrinsic::vector_reduce_or)
-               .Case("xor", Intrinsic::vector_reduce_xor)
-               .Case("smax", Intrinsic::vector_reduce_smax)
-               .Case("smin", Intrinsic::vector_reduce_smin)
-               .Case("umax", Intrinsic::vector_reduce_umax)
-               .Case("umin", Intrinsic::vector_reduce_umin)
-               .Case("fmax", Intrinsic::vector_reduce_fmax)
-               .Case("fmin", Intrinsic::vector_reduce_fmin)
-               .Default(Intrinsic::not_intrinsic);
-      if (ID != Intrinsic::not_intrinsic) {
+    break;
+  }
+  case 'd':
+    if (Name.consume_front("dbg.")) {
+      if (Name == "addr" || (Name == "value" && F->arg_size() == 4)) {
         rename(F);
-        auto Args = F->getFunctionType()->params();
-        NewFn = Intrinsic::getDeclaration(F->getParent(), ID, {Args[0]});
+        NewFn = Intrinsic::getDeclaration(F->getParent(), Intrinsic::dbg_value);
         return true;
       }
+      break; // No other 'dbg.*'.
     }
-    static const Regex R2(
-        "^experimental.vector.reduce.v2.([a-z]+)\\.[fi][0-9]+");
-    Groups.clear();
-    if (R2.match(Name, &Groups)) {
-      Intrinsic::ID ID = Intrinsic::not_intrinsic;
-      if (Groups[1] == "fadd")
-        ID = Intrinsic::vector_reduce_fadd;
-      if (Groups[1] == "fmul")
-        ID = Intrinsic::vector_reduce_fmul;
+    break;
+  case 'e':
+    if (Name.consume_front("experimental.vector.")) {
+      Intrinsic::ID ID = StringSwitch<Intrinsic::ID>(Name)
+                             .StartsWith("extract.", Intrinsic::vector_extract)
+                             .StartsWith("insert.", Intrinsic::vector_insert)
+                             .Default(Intrinsic::not_intrinsic);
       if (ID != Intrinsic::not_intrinsic) {
+        const auto *FT = F->getFunctionType();
+        SmallVector<Type *, 2> Tys;
+        if (ID == Intrinsic::vector_extract)
+          // Extracting overloads the return type.
+          Tys.push_back(FT->getReturnType());
+        Tys.push_back(FT->getParamType(0));
+        if (ID == Intrinsic::vector_insert)
+          // Inserting overloads the inserted type.
+          Tys.push_back(FT->getParamType(1));
         rename(F);
-        auto Args = F->getFunctionType()->params();
-        Type *Tys[] = {Args[1]};
         NewFn = Intrinsic::getDeclaration(F->getParent(), ID, Tys);
         return true;
       }
+
+      if (Name.consume_front("reduce.")) {
+        SmallVector<StringRef, 2> Groups;
+        static const Regex R("^([a-z]+)\\.[a-z][0-9]+");
+        if (R.match(Name, &Groups))
+          ID = StringSwitch<Intrinsic::ID>(Groups[1])
+                   .Case("add", Intrinsic::vector_reduce_add)
+                   .Case("mul", Intrinsic::vector_reduce_mul)
+                   .Case("and", Intrinsic::vector_reduce_and)
+                   .Case("or", Intrinsic::vector_reduce_or)
+                   .Case("xor", Intrinsic::vector_reduce_xor)
+                   .Case("smax", Intrinsic::vector_reduce_smax)
+                   .Case("smin", Intrinsic::vector_reduce_smin)
+                   .Case("umax", Intrinsic::vector_reduce_umax)
+                   .Case("umin", Intrinsic::vector_reduce_umin)
+                   .Case("fmax", Intrinsic::vector_reduce_fmax)
+                   .Case("fmin", Intrinsic::vector_reduce_fmin)
+                   .Default(Intrinsic::not_intrinsic);
+
+        bool V2 = false;
+        if (ID == Intrinsic::not_intrinsic) {
+          static const Regex R2("^v2\\.([a-z]+)\\.[fi][0-9]+");
+          Groups.clear();
+          V2 = true;
+          if (R2.match(Name, &Groups))
+            ID = StringSwitch<Intrinsic::ID>(Groups[1])
+                     .Case("fadd", Intrinsic::vector_reduce_fadd)
+                     .Case("fmul", Intrinsic::vector_reduce_fmul)
+                     .Default(Intrinsic::not_intrinsic);
+        }
+        if (ID != Intrinsic::not_intrinsic) {
+          rename(F);
+          auto Args = F->getFunctionType()->params();
+          NewFn =
+              Intrinsic::getDeclaration(F->getParent(), ID, {Args[V2 ? 1 : 0]});
+          return true;
+        }
+        break; // No other 'expermental.vector.reduce.*'.
+      }
+      break; // No other 'experimental.vector.*'.
     }
-    break;
-  }
+    break; // No other 'e*'.
   case 'f':
     if (Name.startswith("flt.rounds")) {
       rename(F);
@@ -1013,33 +1039,6 @@ static bool UpgradeIntrinsicFunction1(Function *F, Function *&NewFn) {
     }
     break;
   case 'i':
-  case 'l': {
-    bool IsLifetimeStart = Name.startswith("lifetime.start");
-    if (IsLifetimeStart || Name.startswith("invariant.start")) {
-      Intrinsic::ID ID = IsLifetimeStart ?
-        Intrinsic::lifetime_start : Intrinsic::invariant_start;
-      auto Args = F->getFunctionType()->params();
-      Type* ObjectPtr[1] = {Args[1]};
-      if (F->getName() != Intrinsic::getName(ID, ObjectPtr, F->getParent())) {
-        rename(F);
-        NewFn = Intrinsic::getDeclaration(F->getParent(), ID, ObjectPtr);
-        return true;
-      }
-    }
-
-    bool IsLifetimeEnd = Name.startswith("lifetime.end");
-    if (IsLifetimeEnd || Name.startswith("invariant.end")) {
-      Intrinsic::ID ID = IsLifetimeEnd ?
-        Intrinsic::lifetime_end : Intrinsic::invariant_end;
-
-      auto Args = F->getFunctionType()->params();
-      Type* ObjectPtr[1] = {Args[IsLifetimeEnd ? 1 : 2]};
-      if (F->getName() != Intrinsic::getName(ID, ObjectPtr, F->getParent())) {
-        rename(F);
-        NewFn = Intrinsic::getDeclaration(F->getParent(), ID, ObjectPtr);
-        return true;
-      }
-    }
     if (Name.startswith("invariant.group.barrier")) {
       // Rename invariant.group.barrier to launder.invariant.group
       auto Args = F->getFunctionType()->params();
@@ -1048,76 +1047,24 @@ static bool UpgradeIntrinsicFunction1(Function *F, Function *&NewFn) {
       NewFn = Intrinsic::getDeclaration(F->getParent(),
           Intrinsic::launder_invariant_group, ObjectPtr);
       return true;
-
     }
-
     break;
-  }
   case 'm': {
-    if (Name.startswith("masked.load.")) {
-      Type *Tys[] = { F->getReturnType(), F->arg_begin()->getType() };
-      if (F->getName() !=
-          Intrinsic::getName(Intrinsic::masked_load, Tys, F->getParent())) {
-        rename(F);
-        NewFn = Intrinsic::getDeclaration(F->getParent(),
-                                          Intrinsic::masked_load,
-                                          Tys);
-        return true;
-      }
-    }
-    if (Name.startswith("masked.store.")) {
-      auto Args = F->getFunctionType()->params();
-      Type *Tys[] = { Args[0], Args[1] };
-      if (F->getName() !=
-          Intrinsic::getName(Intrinsic::masked_store, Tys, F->getParent())) {
-        rename(F);
-        NewFn = Intrinsic::getDeclaration(F->getParent(),
-                                          Intrinsic::masked_store,
-                                          Tys);
-        return true;
-      }
-    }
-    // Renaming gather/scatter intrinsics with no address space overloading
-    // to the new overload which includes an address space
-    if (Name.startswith("masked.gather.")) {
-      Type *Tys[] = {F->getReturnType(), F->arg_begin()->getType()};
-      if (F->getName() !=
-          Intrinsic::getName(Intrinsic::masked_gather, Tys, F->getParent())) {
-        rename(F);
-        NewFn = Intrinsic::getDeclaration(F->getParent(),
-                                          Intrinsic::masked_gather, Tys);
-        return true;
-      }
-    }
-    if (Name.startswith("masked.scatter.")) {
-      auto Args = F->getFunctionType()->params();
-      Type *Tys[] = {Args[0], Args[1]};
-      if (F->getName() !=
-          Intrinsic::getName(Intrinsic::masked_scatter, Tys, F->getParent())) {
-        rename(F);
-        NewFn = Intrinsic::getDeclaration(F->getParent(),
-                                          Intrinsic::masked_scatter, Tys);
-        return true;
-      }
-    }
     // Updating the memory intrinsics (memcpy/memmove/memset) that have an
     // alignment parameter to embedding the alignment as an attribute of
     // the pointer args.
-    if (Name.startswith("memcpy.") && F->arg_size() == 5) {
-      rename(F);
-      // Get the types of dest, src, and len
-      ArrayRef<Type *> ParamTypes = F->getFunctionType()->params().slice(0, 3);
-      NewFn = Intrinsic::getDeclaration(F->getParent(), Intrinsic::memcpy,
-                                        ParamTypes);
-      return true;
-    }
-    if (Name.startswith("memmove.") && F->arg_size() == 5) {
-      rename(F);
-      // Get the types of dest, src, and len
-      ArrayRef<Type *> ParamTypes = F->getFunctionType()->params().slice(0, 3);
-      NewFn = Intrinsic::getDeclaration(F->getParent(), Intrinsic::memmove,
-                                        ParamTypes);
-      return true;
+    if (unsigned ID = StringSwitch<unsigned>(Name)
+                          .StartsWith("memcpy.", Intrinsic::memcpy)
+                          .StartsWith("memmove.", Intrinsic::memmove)
+                          .Default(0)) {
+      if (F->arg_size() == 5) {
+        rename(F);
+        // Get the types of dest, src, and len
+        ArrayRef<Type *> ParamTypes =
+            F->getFunctionType()->params().slice(0, 3);
+        NewFn = Intrinsic::getDeclaration(F->getParent(), ID, ParamTypes);
+        return true;
+      }
     }
     if (Name.startswith("memset.") && F->arg_size() == 5) {
       rename(F);
@@ -1134,42 +1081,55 @@ static bool UpgradeIntrinsicFunction1(Function *F, Function *&NewFn) {
     break;
   }
   case 'n': {
-    if (Name.startswith("nvvm.")) {
-      Name = Name.substr(5);
+    if (Name.consume_front("nvvm.")) {
+      // Check for nvvm intrinsics corresponding exactly to an LLVM intrinsic.
+      if (F->arg_size() == 1) {
+        Intrinsic::ID IID =
+            StringSwitch<Intrinsic::ID>(Name)
+                .Cases("brev32", "brev64", Intrinsic::bitreverse)
+                .Case("clz.i", Intrinsic::ctlz)
+                .Case("popc.i", Intrinsic::ctpop)
+                .Default(Intrinsic::not_intrinsic);
+        if (IID != Intrinsic::not_intrinsic) {
+          NewFn = Intrinsic::getDeclaration(F->getParent(), IID,
+                                            {F->getReturnType()});
+          return true;
+        }
+      }
 
-      // The following nvvm intrinsics correspond exactly to an LLVM intrinsic.
-      Intrinsic::ID IID = StringSwitch<Intrinsic::ID>(Name)
-                              .Cases("brev32", "brev64", Intrinsic::bitreverse)
-                              .Case("clz.i", Intrinsic::ctlz)
-                              .Case("popc.i", Intrinsic::ctpop)
-                              .Default(Intrinsic::not_intrinsic);
-      if (IID != Intrinsic::not_intrinsic && F->arg_size() == 1) {
-        NewFn = Intrinsic::getDeclaration(F->getParent(), IID,
-                                          {F->getReturnType()});
-        return true;
+      // Check for nvvm intrinsics that need a return type adjustment.
+      if (!F->getReturnType()->getScalarType()->isBFloatTy()) {
+        Intrinsic::ID IID = ShouldUpgradeNVPTXBF16Intrinsic(Name);
+        if (IID != Intrinsic::not_intrinsic) {
+          NewFn = nullptr;
+          return true;
+        }
       }
-      IID = ShouldUpgradeNVPTXBF16Intrinsic(Name);
-      if (IID != Intrinsic::not_intrinsic &&
-          !F->getReturnType()->getScalarType()->isBFloatTy()) {
-        NewFn = nullptr;
-        return true;
-      }
+
       // The following nvvm intrinsics correspond exactly to an LLVM idiom, but
       // not to an intrinsic alone.  We expand them in UpgradeIntrinsicCall.
       //
       // TODO: We could add lohi.i2d.
-      bool Expand = StringSwitch<bool>(Name)
-                        .Cases("abs.i", "abs.ll", true)
-                        .Cases("clz.ll", "popc.ll", "h2f", true)
-                        .Cases("max.i", "max.ll", "max.ui", "max.ull", true)
-                        .Cases("min.i", "min.ll", "min.ui", "min.ull", true)
-                        .StartsWith("atomic.load.add.f32.p", true)
-                        .StartsWith("atomic.load.add.f64.p", true)
-                        .Default(false);
+      bool Expand = false;
+      if (Name.consume_front("abs."))
+        // nvvm.abs.{i,ii}
+        Expand = Name == "i" || Name == "ll";
+      else if (Name == "clz.ll" || Name == "popc.ll" || Name == "h2f")
+        Expand = true;
+      else if (Name.consume_front("max.") || Name.consume_front("min."))
+        // nvvm.{min,max}.{i,ii,ui,ull}
+        Expand = Name == "i" || Name == "ll" || Name == "ui" || Name == "ull";
+      else if (Name.consume_front("atomic.load.add."))
+        // nvvm.atomic.load.add.{f32.p,f64.p}
+        Expand = Name.startswith("f32.p") || Name.startswith("f64.p");
+      else
+        Expand = false;
+
       if (Expand) {
         NewFn = nullptr;
         return true;
       }
+      break; // No other 'nvvm.*'.
     }
     break;
   }
@@ -1190,17 +1150,7 @@ static bool UpgradeIntrinsicFunction1(Function *F, Function *&NewFn) {
     break;
 
   case 'p':
-    if (Name == "prefetch") {
-      // Handle address space overloading.
-      Type *Tys[] = {F->arg_begin()->getType()};
-      if (F->getName() !=
-          Intrinsic::getName(Intrinsic::prefetch, Tys, F->getParent())) {
-        rename(F);
-        NewFn =
-            Intrinsic::getDeclaration(F->getParent(), Intrinsic::prefetch, Tys);
-        return true;
-      }
-    } else if (Name.startswith("ptr.annotation.") && F->arg_size() == 4) {
+    if (Name.startswith("ptr.annotation.") && F->arg_size() == 4) {
       rename(F);
       NewFn = Intrinsic::getDeclaration(
           F->getParent(), Intrinsic::ptr_annotation,
@@ -1209,86 +1159,57 @@ static bool UpgradeIntrinsicFunction1(Function *F, Function *&NewFn) {
     }
     break;
 
-  case 'r':
-    if (Name == "riscv.aes32dsi" &&
-        !F->getFunctionType()->getParamType(2)->isIntegerTy(32)) {
-      rename(F);
-      NewFn = Intrinsic::getDeclaration(F->getParent(), Intrinsic::riscv_aes32dsi);
-      return true;
+  case 'r': {
+    if (Name.consume_front("riscv.")) {
+      Intrinsic::ID ID;
+      ID = StringSwitch<Intrinsic::ID>(Name)
+               .Case("aes32dsi", Intrinsic::riscv_aes32dsi)
+               .Case("aes32dsmi", Intrinsic::riscv_aes32dsmi)
+               .Case("aes32esi", Intrinsic::riscv_aes32esi)
+               .Case("aes32esmi", Intrinsic::riscv_aes32esmi)
+               .Default(Intrinsic::not_intrinsic);
+      if (ID != Intrinsic::not_intrinsic) {
+        if (!F->getFunctionType()->getParamType(2)->isIntegerTy(32)) {
+          rename(F);
+          NewFn = Intrinsic::getDeclaration(F->getParent(), ID);
+          return true;
+        }
+        break; // No other applicable upgrades.
+      }
+
+      ID = StringSwitch<Intrinsic::ID>(Name)
+               .StartsWith("sm4ks", Intrinsic::riscv_sm4ks)
+               .StartsWith("sm4ed", Intrinsic::riscv_sm4ed)
+               .Default(Intrinsic::not_intrinsic);
+      if (ID != Intrinsic::not_intrinsic) {
+        if (!F->getFunctionType()->getParamType(2)->isIntegerTy(32) ||
+            F->getFunctionType()->getReturnType()->isIntegerTy(64)) {
+          rename(F);
+          NewFn = Intrinsic::getDeclaration(F->getParent(), ID);
+          return true;
+        }
+        break; // No other applicable upgrades.
+      }
+
+      ID = StringSwitch<Intrinsic::ID>(Name)
+               .StartsWith("sha256sig0", Intrinsic::riscv_sha256sig0)
+               .StartsWith("sha256sig1", Intrinsic::riscv_sha256sig1)
+               .StartsWith("sha256sum0", Intrinsic::riscv_sha256sum0)
+               .StartsWith("sha256sum1", Intrinsic::riscv_sha256sum1)
+               .StartsWith("sm3p0", Intrinsic::riscv_sm3p0)
+               .StartsWith("sm3p1", Intrinsic::riscv_sm3p1)
+               .Default(Intrinsic::not_intrinsic);
+      if (ID != Intrinsic::not_intrinsic) {
+        if (F->getFunctionType()->getReturnType()->isIntegerTy(64)) {
+          rename(F);
+          NewFn = Intrinsic::getDeclaration(F->getParent(), ID);
+          return true;
+        }
+        break; // No other applicable upgrades.
+      }
+      break; // No other 'riscv.*' intrinsics
     }
-    if (Name == "riscv.aes32dsmi" &&
-        !F->getFunctionType()->getParamType(2)->isIntegerTy(32)) {
-      rename(F);
-      NewFn = Intrinsic::getDeclaration(F->getParent(), Intrinsic::riscv_aes32dsmi);
-      return true;
-    }
-    if (Name == "riscv.aes32esi" &&
-        !F->getFunctionType()->getParamType(2)->isIntegerTy(32)) {
-      rename(F);
-      NewFn = Intrinsic::getDeclaration(F->getParent(), Intrinsic::riscv_aes32esi);
-      return true;
-    }
-    if (Name == "riscv.aes32esmi" &&
-        !F->getFunctionType()->getParamType(2)->isIntegerTy(32)) {
-      rename(F);
-      NewFn = Intrinsic::getDeclaration(F->getParent(), Intrinsic::riscv_aes32esmi);
-      return true;
-    }
-    if (Name.startswith("riscv.sm4ks") &&
-        (!F->getFunctionType()->getParamType(2)->isIntegerTy(32) ||
-         F->getFunctionType()->getReturnType()->isIntegerTy(64))) {
-      rename(F);
-      NewFn = Intrinsic::getDeclaration(F->getParent(), Intrinsic::riscv_sm4ks);
-      return true;
-    }
-    if (Name.startswith("riscv.sm4ed") &&
-        (!F->getFunctionType()->getParamType(2)->isIntegerTy(32) ||
-         F->getFunctionType()->getReturnType()->isIntegerTy(64))) {
-      rename(F);
-      NewFn = Intrinsic::getDeclaration(F->getParent(), Intrinsic::riscv_sm4ed);
-      return true;
-    }
-    if (Name.startswith("riscv.sha256sig0") &&
-        F->getFunctionType()->getReturnType()->isIntegerTy(64)) {
-      rename(F);
-      NewFn = Intrinsic::getDeclaration(F->getParent(),
-                                        Intrinsic::riscv_sha256sig0);
-      return true;
-    }
-    if (Name.startswith("riscv.sha256sig1") &&
-        F->getFunctionType()->getReturnType()->isIntegerTy(64)) {
-      rename(F);
-      NewFn = Intrinsic::getDeclaration(F->getParent(),
-                                        Intrinsic::riscv_sha256sig1);
-      return true;
-    }
-    if (Name.startswith("riscv.sha256sum0") &&
-        F->getFunctionType()->getReturnType()->isIntegerTy(64)) {
-      rename(F);
-      NewFn = Intrinsic::getDeclaration(F->getParent(),
-                                        Intrinsic::riscv_sha256sum0);
-      return true;
-    }
-    if (Name.startswith("riscv.sha256sum1") &&
-        F->getFunctionType()->getReturnType()->isIntegerTy(64)) {
-      rename(F);
-      NewFn = Intrinsic::getDeclaration(F->getParent(),
-                                        Intrinsic::riscv_sha256sum1);
-      return true;
-    }
-    if (Name.startswith("riscv.sm3p0") &&
-        F->getFunctionType()->getReturnType()->isIntegerTy(64)) {
-      rename(F);
-      NewFn = Intrinsic::getDeclaration(F->getParent(), Intrinsic::riscv_sm3p0);
-      return true;
-    }
-    if (Name.startswith("riscv.sm3p1") &&
-        F->getFunctionType()->getReturnType()->isIntegerTy(64)) {
-      rename(F);
-      NewFn = Intrinsic::getDeclaration(F->getParent(), Intrinsic::riscv_sm3p1);
-      return true;
-    }
-    break;
+  } break;
 
   case 's':
     if (Name == "stackprotectorcheck") {
@@ -1309,36 +1230,34 @@ static bool UpgradeIntrinsicFunction1(Function *F, Function *&NewFn) {
   }
 
   case 'w':
-    if (Name.startswith("wasm.fma.")) {
-      rename(F);
-      NewFn = Intrinsic::getDeclaration(
-          F->getParent(), Intrinsic::wasm_relaxed_madd, F->getReturnType());
-      return true;
-    }
-    if (Name.startswith("wasm.fms.")) {
-      rename(F);
-      NewFn = Intrinsic::getDeclaration(
-          F->getParent(), Intrinsic::wasm_relaxed_nmadd, F->getReturnType());
-      return true;
-    }
-    if (Name.startswith("wasm.laneselect.")) {
-      rename(F);
-      NewFn = Intrinsic::getDeclaration(
-          F->getParent(), Intrinsic::wasm_relaxed_laneselect,
-          F->getReturnType());
-      return true;
-    }
-    if (Name == "wasm.dot.i8x16.i7x16.signed") {
-      rename(F);
-      NewFn = Intrinsic::getDeclaration(
-          F->getParent(), Intrinsic::wasm_relaxed_dot_i8x16_i7x16_signed);
-      return true;
-    }
-    if (Name == "wasm.dot.i8x16.i7x16.add.signed") {
-      rename(F);
-      NewFn = Intrinsic::getDeclaration(
-          F->getParent(), Intrinsic::wasm_relaxed_dot_i8x16_i7x16_add_signed);
-      return true;
+    if (Name.consume_front("wasm.")) {
+      Intrinsic::ID ID =
+          StringSwitch<Intrinsic::ID>(Name)
+              .StartsWith("fma.", Intrinsic::wasm_relaxed_madd)
+              .StartsWith("fms.", Intrinsic::wasm_relaxed_nmadd)
+              .StartsWith("laneselect.", Intrinsic::wasm_relaxed_laneselect)
+              .Default(Intrinsic::not_intrinsic);
+      if (ID != Intrinsic::not_intrinsic) {
+        rename(F);
+        NewFn =
+            Intrinsic::getDeclaration(F->getParent(), ID, F->getReturnType());
+        return true;
+      }
+
+      if (Name.consume_front("dot.i8x16.i7x16.")) {
+        ID = StringSwitch<Intrinsic::ID>(Name)
+                 .Case("signed", Intrinsic::wasm_relaxed_dot_i8x16_i7x16_signed)
+                 .Case("add.signed",
+                       Intrinsic::wasm_relaxed_dot_i8x16_i7x16_add_signed)
+                 .Default(Intrinsic::not_intrinsic);
+        if (ID != Intrinsic::not_intrinsic) {
+          rename(F);
+          NewFn = Intrinsic::getDeclaration(F->getParent(), ID);
+          return true;
+        }
+        break; // No other 'wasm.dot.i8x16.i7x16.*'.
+      }
+      break; // No other 'wasm.*'.
     }
     break;
 
@@ -1413,15 +1332,15 @@ GlobalVariable *llvm::UpgradeGlobalVariable(GlobalVariable *GV) {
   LLVMContext &C = GV->getContext();
   IRBuilder<> IRB(C);
   auto EltTy = StructType::get(STy->getElementType(0), STy->getElementType(1),
-                               IRB.getInt8PtrTy());
+                               IRB.getPtrTy());
   Constant *Init = GV->getInitializer();
   unsigned N = Init->getNumOperands();
   std::vector<Constant *> NewCtors(N);
   for (unsigned i = 0; i != N; ++i) {
     auto Ctor = cast<Constant>(Init->getOperand(i));
-    NewCtors[i] = ConstantStruct::get(
-        EltTy, Ctor->getAggregateElement(0u), Ctor->getAggregateElement(1),
-        Constant::getNullValue(IRB.getInt8PtrTy()));
+    NewCtors[i] = ConstantStruct::get(EltTy, Ctor->getAggregateElement(0u),
+                                      Ctor->getAggregateElement(1),
+                                      Constant::getNullValue(IRB.getPtrTy()));
   }
   Constant *NewInit = ConstantArray::get(ArrayType::get(EltTy, N), NewCtors);
 
@@ -2305,7 +2224,11 @@ static Value *UpgradeAMDGCNIntrinsicCall(StringRef Name, CallBase *CI,
         Order == AtomicOrdering::Unordered)
       Order = AtomicOrdering::SequentiallyConsistent;
 
-    AtomicRMWInst *RMW = Builder.CreateAtomicRMW(RMWOp, Ptr, Val, std::nullopt, Order);
+    // The scope argument never really worked correctly. Use agent as the most
+    // conservative option which should still always produce the instruction.
+    SyncScope::ID SSID = F->getContext().getOrInsertSyncScopeID("agent");
+    AtomicRMWInst *RMW =
+        Builder.CreateAtomicRMW(RMWOp, Ptr, Val, std::nullopt, Order, SSID);
 
     if (!VolatileArg || !VolatileArg->isZero())
       RMW->setVolatile(true);
@@ -2930,9 +2853,7 @@ void llvm::UpgradeIntrinsicCall(CallBase *CI, Function *NewFn) {
       auto *VecTy = cast<FixedVectorType>(CI->getType());
       Type *EltTy = VecTy->getElementType();
       unsigned EltNum = VecTy->getNumElements();
-      Value *Cast = Builder.CreateBitCast(CI->getArgOperand(0),
-                                          EltTy->getPointerTo());
-      Value *Load = Builder.CreateLoad(EltTy, Cast);
+      Value *Load = Builder.CreateLoad(EltTy, CI->getArgOperand(0));
       Type *I32Ty = Type::getInt32Ty(C);
       Rep = PoisonValue::get(VecTy);
       for (unsigned I = 0; I < EltNum; ++I)
@@ -4290,6 +4211,13 @@ void llvm::UpgradeIntrinsicCall(CallBase *CI, Function *NewFn) {
     break;
   }
 
+  case Intrinsic::coro_end: {
+    SmallVector<Value *, 3> Args(CI->args());
+    Args.push_back(ConstantTokenNone::get(CI->getContext()));
+    NewCall = Builder.CreateCall(NewFn, Args);
+    break;
+  }
+
   case Intrinsic::vector_extract: {
     StringRef Name = F->getName();
     Name = Name.substr(5); // Strip llvm
@@ -4434,10 +4362,10 @@ void llvm::UpgradeIntrinsicCall(CallBase *CI, Function *NewFn) {
     }
 
     // Create a new call with an added null annotation attribute argument.
-    NewCall = Builder.CreateCall(
-        NewFn,
-        {CI->getArgOperand(0), CI->getArgOperand(1), CI->getArgOperand(2),
-         CI->getArgOperand(3), Constant::getNullValue(Builder.getInt8PtrTy())});
+    NewCall =
+        Builder.CreateCall(NewFn, {CI->getArgOperand(0), CI->getArgOperand(1),
+                                   CI->getArgOperand(2), CI->getArgOperand(3),
+                                   Constant::getNullValue(Builder.getPtrTy())});
     NewCall->takeName(CI);
     CI->replaceAllUsesWith(NewCall);
     CI->eraseFromParent();
@@ -4450,10 +4378,10 @@ void llvm::UpgradeIntrinsicCall(CallBase *CI, Function *NewFn) {
       return;
     }
     // Create a new call with an added null annotation attribute argument.
-    NewCall = Builder.CreateCall(
-        NewFn,
-        {CI->getArgOperand(0), CI->getArgOperand(1), CI->getArgOperand(2),
-         CI->getArgOperand(3), Constant::getNullValue(Builder.getInt8PtrTy())});
+    NewCall =
+        Builder.CreateCall(NewFn, {CI->getArgOperand(0), CI->getArgOperand(1),
+                                   CI->getArgOperand(2), CI->getArgOperand(3),
+                                   Constant::getNullValue(Builder.getPtrTy())});
     NewCall->takeName(CI);
     CI->replaceAllUsesWith(NewCall);
     CI->eraseFromParent();
@@ -4650,22 +4578,6 @@ void llvm::UpgradeIntrinsicCall(CallBase *CI, Function *NewFn) {
 
   case Intrinsic::thread_pointer: {
     NewCall = Builder.CreateCall(NewFn, {});
-    break;
-  }
-
-  case Intrinsic::invariant_start:
-  case Intrinsic::invariant_end: {
-    SmallVector<Value *, 4> Args(CI->args());
-    NewCall = Builder.CreateCall(NewFn, Args);
-    break;
-  }
-  case Intrinsic::masked_load:
-  case Intrinsic::masked_store:
-  case Intrinsic::masked_gather:
-  case Intrinsic::masked_scatter: {
-    SmallVector<Value *, 4> Args(CI->args());
-    NewCall = Builder.CreateCall(NewFn, Args);
-    NewCall->copyMetadata(*CI);
     break;
   }
 

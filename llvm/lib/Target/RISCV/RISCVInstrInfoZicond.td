@@ -40,4 +40,13 @@ def : Pat<(XLenVT (riscv_czero_eqz GPR:$rs1, GPR:$rc)),
           (CZERO_EQZ GPR:$rs1, GPR:$rc)>;
 def : Pat<(XLenVT (riscv_czero_nez GPR:$rs1, GPR:$rc)),
           (CZERO_NEZ GPR:$rs1, GPR:$rc)>;
+
+def : Pat<(XLenVT (riscv_czero_eqz GPR:$rs1, (riscv_setne (XLenVT GPR:$rc)))),
+          (CZERO_EQZ GPR:$rs1, GPR:$rc)>;
+def : Pat<(XLenVT (riscv_czero_eqz GPR:$rs1, (riscv_seteq (XLenVT GPR:$rc)))),
+          (CZERO_NEZ GPR:$rs1, GPR:$rc)>;
+def : Pat<(XLenVT (riscv_czero_nez GPR:$rs1, (riscv_setne (XLenVT GPR:$rc)))),
+          (CZERO_NEZ GPR:$rs1, GPR:$rc)>;
+def : Pat<(XLenVT (riscv_czero_nez GPR:$rs1, (riscv_seteq (XLenVT GPR:$rc)))),
+          (CZERO_EQZ GPR:$rs1, GPR:$rc)>;
 } // Predicates = [HasStdExtZicond]

@@ -10,7 +10,7 @@
 // UNSUPPORTED: libcpp-has-no-incomplete-pstl
 
 // Having a customization point outside the module doesn't work, so this test is inherintly module-hostile.
-// UNSUPPORTED: modules-build
+// UNSUPPORTED: clang-modules-build
 
 // Make sure that the customization points get called properly when overloaded
 
@@ -40,6 +40,24 @@ bool __pstl_all_of(TestBackend, ForwardIterator, ForwardIterator, Pred) {
   assert(!pstl_all_of_called);
   pstl_all_of_called = true;
   return true;
+}
+
+bool pstl_copy_called = false;
+
+template <class, class ForwardIterator, class ForwardOutIterator>
+ForwardIterator __pstl_copy(TestBackend, ForwardIterator, ForwardIterator, ForwardOutIterator) {
+  assert(!pstl_copy_called);
+  pstl_copy_called = true;
+  return 0;
+}
+
+bool pstl_copy_n_called = false;
+
+template <class, class ForwardIterator, class Size, class ForwardOutIterator>
+ForwardIterator __pstl_copy_n(TestBackend, ForwardIterator, Size, ForwardOutIterator) {
+  assert(!pstl_copy_n_called);
+  pstl_copy_n_called = true;
+  return 0;
 }
 
 bool pstl_count_called = false;
@@ -225,6 +243,22 @@ __pstl_reduce(TestBackend, ForwardIterator, ForwardIterator) {
   return {};
 }
 
+bool pstl_sort_called = false;
+
+template <class, class RandomAccessIterator, class Comp>
+void __pstl_sort(TestBackend, RandomAccessIterator, RandomAccessIterator, Comp) {
+  assert(!pstl_sort_called);
+  pstl_sort_called = true;
+}
+
+bool pstl_stable_sort_called = false;
+
+template <class, class RandomAccessIterator, class Comp>
+void __pstl_stable_sort(TestBackend, RandomAccessIterator, RandomAccessIterator, Comp) {
+  assert(!pstl_stable_sort_called);
+  pstl_stable_sort_called = true;
+}
+
 bool pstl_unary_transform_reduce_called = false;
 
 template <class, class ForwardIterator, class T, class UnaryOperation, class BinaryOperation>
@@ -274,6 +308,10 @@ int main(int, char**) {
   assert(std::pstl_all_of_called);
   (void)std::none_of(TestPolicy{}, std::begin(a), std::end(a), pred);
   assert(std::pstl_none_of_called);
+  std::copy(TestPolicy{}, std::begin(a), std::end(a), std::begin(a));
+  assert(std::pstl_copy_called);
+  std::copy_n(TestPolicy{}, std::begin(a), 1, std::begin(a));
+  assert(std::pstl_copy_n_called);
   (void)std::count(TestPolicy{}, std::begin(a), std::end(a), 0);
   assert(std::pstl_count_called);
   (void)std::count_if(TestPolicy{}, std::begin(a), std::end(a), pred);
@@ -314,6 +352,10 @@ int main(int, char**) {
   assert(std::pstl_reduce_with_init_called);
   (void)std::reduce(TestPolicy{}, std::begin(a), std::end(a));
   assert(std::pstl_reduce_without_init_called);
+  (void)std::sort(TestPolicy{}, std::begin(a), std::end(a));
+  assert(std::pstl_sort_called);
+  (void)std::stable_sort(TestPolicy{}, std::begin(a), std::end(a));
+  assert(std::pstl_stable_sort_called);
   (void)std::transform_reduce(TestPolicy{}, std::begin(a), std::end(a), 0, pred, pred);
   assert(std::pstl_unary_transform_reduce_called);
   (void)std::transform_reduce(TestPolicy{}, std::begin(a), std::end(a), std::begin(a), 0, pred, pred);

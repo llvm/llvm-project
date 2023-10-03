@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LIBC_SRC_SUPPORT_STR_TO_FLOAT_H
-#define LIBC_SRC_SUPPORT_STR_TO_FLOAT_H
+#ifndef LLVM_LIBC_SRC___SUPPORT_STR_TO_FLOAT_H
+#define LLVM_LIBC_SRC___SUPPORT_STR_TO_FLOAT_H
 
 #include "src/__support/CPP/limits.h"
 #include "src/__support/CPP/optional.h"
@@ -25,7 +25,7 @@
 #include "src/__support/str_to_num_result.h"
 #include "src/errno/libc_errno.h" // For ERANGE
 
-namespace __llvm_libc {
+namespace LIBC_NAMESPACE {
 namespace internal {
 
 template <class T> struct ExpandedFloat {
@@ -1180,7 +1180,9 @@ LIBC_INLINE StrToNumResult<T> strtofloatingpoint(const char *__restrict src) {
       if (src[index] == '(') {
         size_t left_paren = index;
         ++index;
-        while (isalnum(src[index]))
+        // Apparently it's common for underscores to also be accepted. No idea
+        // why, but it's causing fuzz failures.
+        while (isalnum(src[index]) || src[index] == '_')
           ++index;
         if (src[index] == ')') {
           ++index;
@@ -1196,7 +1198,7 @@ LIBC_INLINE StrToNumResult<T> strtofloatingpoint(const char *__restrict src) {
             if (strtoint_result.has_error()) {
               error = strtoint_result.error;
             }
-            nan_mantissa = strtoint_result.value;
+            nan_mantissa = static_cast<BitsType>(strtoint_result.value);
             if (src[left_paren + 1 + strtoint_result.parsed_len] != ')')
               nan_mantissa = 0;
           }
@@ -1245,6 +1247,6 @@ LIBC_INLINE StrToNumResult<T> strtofloatingpoint(const char *__restrict src) {
 }
 
 } // namespace internal
-} // namespace __llvm_libc
+} // namespace LIBC_NAMESPACE
 
-#endif // LIBC_SRC_SUPPORT_STR_TO_FLOAT_H
+#endif // LLVM_LIBC_SRC___SUPPORT_STR_TO_FLOAT_H

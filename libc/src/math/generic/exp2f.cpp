@@ -22,7 +22,7 @@
 
 #include "explogxf.h"
 
-namespace __llvm_libc {
+namespace LIBC_NAMESPACE {
 
 constexpr uint32_t EXVAL1 = 0x3b42'9d37U;
 constexpr uint32_t EXVAL2 = 0xbcf3'a937U;
@@ -65,7 +65,7 @@ LLVM_LIBC_FUNCTION(float, exp2f, (float x)) {
       double c2 = fputil::multiply_add(xd, COEFFS[5], COEFFS[4]);
       double p = fputil::polyeval(xsq, c0, c1, c2);
       double r = fputil::multiply_add(p, xd, 1.0);
-      return r;
+      return static_cast<float>(r);
     }
 
     // x >= 128
@@ -158,4 +158,4 @@ LLVM_LIBC_FUNCTION(float, exp2f, (float x)) {
   return static_cast<float>(fputil::multiply_add(p, dx_sq * mh, c1 * mh));
 }
 
-} // namespace __llvm_libc
+} // namespace LIBC_NAMESPACE

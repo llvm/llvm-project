@@ -158,6 +158,17 @@ public:
     return false;
   }
 
+  void logicAlwaysTrue(const BinaryOperator *B, bool isAlwaysTrue) override {
+    if (HasMacroID(B))
+      return;
+
+    unsigned DiagID = isAlwaysTrue
+                          ? diag::warn_tautological_negation_or_compare
+                          : diag::warn_tautological_negation_and_compare;
+    SourceRange DiagRange = B->getSourceRange();
+    S.Diag(B->getExprLoc(), DiagID) << DiagRange;
+  }
+
   void compareAlwaysTrue(const BinaryOperator *B, bool isAlwaysTrue) override {
     if (HasMacroID(B))
       return;
@@ -188,7 +199,8 @@ public:
   static bool hasActiveDiagnostics(DiagnosticsEngine &Diags,
                                    SourceLocation Loc) {
     return !Diags.isIgnored(diag::warn_tautological_overlap_comparison, Loc) ||
-           !Diags.isIgnored(diag::warn_comparison_bitwise_or, Loc);
+           !Diags.isIgnored(diag::warn_comparison_bitwise_or, Loc) ||
+           !Diags.isIgnored(diag::warn_tautological_negation_and_compare, Loc);
   }
 };
 } // anonymous namespace
@@ -1247,7 +1259,7 @@ static StringRef getFallthroughAttrSpelling(Preprocessor &PP,
     tok::r_square, tok::r_square
   };
 
-  bool PreferClangAttr = !PP.getLangOpts().CPlusPlus17 && !PP.getLangOpts().C2x;
+  bool PreferClangAttr = !PP.getLangOpts().CPlusPlus17 && !PP.getLangOpts().C23;
 
   StringRef MacroName;
   if (PreferClangAttr)
@@ -2163,6 +2175,41 @@ class UnsafeBufferUsageReporter : public UnsafeBufferUsageHandler {
   Sema &S;
   bool SuggestSuggestions;  // Recommend -fsafe-buffer-usage-suggestions?
 
+  // Lists as a string the names of variables in `VarGroupForVD` except for `VD`
+  // itself:
+  std::string listVariableGroupAsString(
+      const VarDecl *VD, const ArrayRef<const VarDecl *> &VarGroupForVD) const {
+    if (VarGroupForVD.size() <= 1)
+      return "";
+
+    std::vector<StringRef> VarNames;
+    auto PutInQuotes = [](StringRef S) -> std::string {
+      return "'" + S.str() + "'";
+    };
+
+    for (auto *V : VarGroupForVD) {
+      if (V == VD)
+        continue;
+      VarNames.push_back(V->getName());
+    }
+    if (VarNames.size() == 1) {
+      return PutInQuotes(VarNames[0]);
+    }
+    if (VarNames.size() == 2) {
+      return PutInQuotes(VarNames[0]) + " and " + PutInQuotes(VarNames[1]);
+    }
+    assert(VarGroupForVD.size() > 3);
+    const unsigned N = VarNames.size() -
+                       2; // need to print the last two names as "..., X, and Y"
+    std::string AllVars = "";
+
+    for (unsigned I = 0; I < N; ++I)
+      AllVars.append(PutInQuotes(VarNames[I]) + ", ");
+    AllVars.append(PutInQuotes(VarNames[N]) + ", and " +
+                   PutInQuotes(VarNames[N + 1]));
+    return AllVars;
+  }
+
 public:
   UnsafeBufferUsageReporter(Sema &S, bool SuggestSuggestions)
     : S(S), SuggestSuggestions(SuggestSuggestions) {}
@@ -2219,63 +2266,41 @@ public:
   }
 
   void handleUnsafeVariableGroup(const VarDecl *Variable,
-                                 const DefMapTy &VarGrpMap,
-                             FixItList &&Fixes) override {
+                                 const VariableGroupsManager &VarGrpMgr,
+                                 FixItList &&Fixes, const Decl *D) override {
     assert(!SuggestSuggestions &&
            "Unsafe buffer usage fixits displayed without suggestions!");
     S.Diag(Variable->getLocation(), diag::warn_unsafe_buffer_variable)
         << Variable << (Variable->getType()->isPointerType() ? 0 : 1)
         << Variable->getSourceRange();
     if (!Fixes.empty()) {
-      const auto VarGroupForVD = VarGrpMap.find(Variable)->second;
+      assert(isa<NamedDecl>(D) &&
+             "Fix-its are generated only for `NamedDecl`s");
+      const NamedDecl *ND = cast<NamedDecl>(D);
+      bool BriefMsg = false;
+      // If the variable group involves parameters, the diagnostic message will
+      // NOT explain how the variables are grouped as the reason is non-trivial
+      // and irrelavant to users' experience:
+      const auto VarGroupForVD = VarGrpMgr.getGroupOfVar(Variable, &BriefMsg);
       unsigned FixItStrategy = 0; // For now we only have 'std::span' strategy
-      const auto &FD = S.Diag(Variable->getLocation(),
-                              diag::note_unsafe_buffer_variable_fixit_group);
+      const auto &FD =
+          S.Diag(Variable->getLocation(),
+                 BriefMsg ? diag::note_unsafe_buffer_variable_fixit_together
+                          : diag::note_unsafe_buffer_variable_fixit_group);
 
       FD << Variable << FixItStrategy;
-      std::string AllVars = "";
-      if (VarGroupForVD.size() > 1) {
-        if (VarGroupForVD.size() == 2) {
-          if (VarGroupForVD[0] == Variable) {
-            AllVars.append("'" + VarGroupForVD[1]->getName().str() + "'");
-          } else {
-            AllVars.append("'" + VarGroupForVD[0]->getName().str() + "'");
-          }
-        } else {
-          bool first = false;
-          if (VarGroupForVD.size() == 3) {
-            for (const VarDecl * V : VarGroupForVD) {
-              if (V == Variable) {
-                continue;
-              }
-              if (!first) {
-                first = true;
-                AllVars.append("'" + V->getName().str() + "'" + " and ");
-              } else {
-                AllVars.append("'" + V->getName().str() + "'");
-              }
-            }
-          } else {
-            for (const VarDecl * V : VarGroupForVD) {
-              if (V == Variable) {
-                continue;
-              }
-              if (VarGroupForVD.back() != V) {
-                AllVars.append("'" + V->getName().str() + "'" + ", ");
-              } else {
-                AllVars.append("and '" + V->getName().str() + "'");
-              }
-            }
-          }
-        }
-        FD << AllVars << 1;
-      } else {
-        FD << "" << 0;
-      }
-
-      for (const auto &F : Fixes)
+      FD << listVariableGroupAsString(Variable, VarGroupForVD)
+         << (VarGroupForVD.size() > 1) << ND;
+      for (const auto &F : Fixes) {
         FD << F;
+      }
     }
+
+#ifndef NDEBUG
+    if (areDebugNotesRequested())
+      for (const DebugNote &Note: DebugNotesByVar[Variable])
+        S.Diag(Note.first, diag::note_safe_buffer_debug_mode) << Note.second;
+#endif
   }
 
   bool isSafeBufferOptOut(const SourceLocation &Loc) const override {

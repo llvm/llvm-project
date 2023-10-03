@@ -73,7 +73,7 @@
 #include "llvm/IR/Constant.h"
 #include "llvm/IR/ConstantRange.h"
 #include "llvm/IR/Constants.h"
-#include "llvm/IR/CycleInfo.h"
+#include "llvm/IR/ConvergenceVerifier.h"
 #include "llvm/IR/DataLayout.h"
 #include "llvm/IR/DebugInfo.h"
 #include "llvm/IR/DebugInfoMetadata.h"
@@ -329,13 +329,6 @@ class Verifier : public InstVisitor<Verifier>, VerifierSupport {
   /// The current source language.
   dwarf::SourceLanguage CurrentSourceLang = dwarf::DW_LANG_lo_user;
 
-  /// Whether the current function has convergencectrl operand bundles.
-  enum {
-    ControlledConvergence,
-    UncontrolledConvergence,
-    NoConvergence
-  } ConvergenceKind = NoConvergence;
-
   /// Whether source was present on the first DIFile encountered in each CU.
   DenseMap<const DICompileUnit *, bool> HasSourceDebugInfo;
 
@@ -370,6 +363,7 @@ class Verifier : public InstVisitor<Verifier>, VerifierSupport {
   SmallVector<const DILocalVariable *, 16> DebugFnArgs;
 
   TBAAVerifier TBAAVerifyHelper;
+  ConvergenceVerifier ConvergenceVerifyHelper;
 
   SmallVector<IntrinsicInst *, 4> NoAliasScopeDecls;
 
@@ -411,12 +405,19 @@ public:
       return false;
     }
 
+    auto FailureCB = [this](const Twine &Message) {
+      this->CheckFailed(Message);
+    };
+    ConvergenceVerifyHelper.initialize(OS, FailureCB, F);
+
     Broken = false;
     // FIXME: We strip const here because the inst visitor strips const.
     visit(const_cast<Function &>(F));
     verifySiblingFuncletUnwinds();
-    if (ConvergenceKind == ControlledConvergence)
-      verifyConvergenceControl(const_cast<Function &>(F));
+
+    if (ConvergenceVerifyHelper.sawTokens())
+      ConvergenceVerifyHelper.verify(DT);
+
     InstsInThisBlock.clear();
     DebugFnArgs.clear();
     LandingPadResultTy = nullptr;
@@ -424,7 +425,6 @@ public:
     SiblingFuncletInfo.clear();
     verifyNoAliasScopeDecl();
     NoAliasScopeDecls.clear();
-    ConvergenceKind = NoConvergence;
 
     return !Broken;
   }
@@ -600,7 +600,6 @@ private:
   void verifyStatepoint(const CallBase &Call);
   void verifyFrameRecoverIndices();
   void verifySiblingFuncletUnwinds();
-  void verifyConvergenceControl(Function &F);
 
   void verifyFragmentExpression(const DbgVariableIntrinsic &I);
   template <typename ValueOrMetadata>
@@ -797,8 +796,7 @@ void Verifier::visitGlobalVariable(const GlobalVariable &GV) {
     if (ArrayType *ATy = dyn_cast<ArrayType>(GV.getValueType())) {
       StructType *STy = dyn_cast<StructType>(ATy->getElementType());
       PointerType *FuncPtrTy =
-          FunctionType::get(Type::getVoidTy(Context), false)->
-          getPointerTo(DL.getProgramAddressSpace());
+          PointerType::get(Context, DL.getProgramAddressSpace());
       Check(STy && (STy->getNumElements() == 2 || STy->getNumElements() == 3) &&
                 STy->getTypeAtIndex(0u)->isIntegerTy(32) &&
                 STy->getTypeAtIndex(1) == FuncPtrTy,
@@ -852,17 +850,9 @@ void Verifier::visitGlobalVariable(const GlobalVariable &GV) {
   }
 
   // Scalable vectors cannot be global variables, since we don't know
-  // the runtime size. If the global is an array containing scalable vectors,
-  // that will be caught by the isValidElementType methods in StructType or
-  // ArrayType instead.
-  Check(!isa<ScalableVectorType>(GV.getValueType()),
-        "Globals cannot contain scalable vectors", &GV);
-
-  if (auto *STy = dyn_cast<StructType>(GV.getValueType())) {
-    SmallPtrSet<Type *, 4> Visited;
-    Check(!STy->containsScalableVectorType(&Visited),
-          "Globals cannot contain scalable vectors", &GV);
-  }
+  // the runtime size.
+  Check(!GV.getValueType()->isScalableTy(),
+        "Globals cannot contain scalable types", &GV);
 
   // Check if it's a target extension type that disallows being used as a
   // global.
@@ -1429,6 +1419,15 @@ void Verifier::visitDISubprogram(const DISubprogram &N) {
     CheckDI(N.isDistinct(), "subprogram definitions must be distinct", &N);
     CheckDI(Unit, "subprogram definitions must have a compile unit", &N);
     CheckDI(isa<DICompileUnit>(Unit), "invalid unit type", &N, Unit);
+    // There's no good way to cross the CU boundary to insert a nested
+    // DISubprogram definition in one CU into a type defined in another CU.
+    auto *CT = dyn_cast_or_null<DICompositeType>(N.getRawScope());
+    if (CT && CT->getRawIdentifier() &&
+        M.getContext().isODRUniquingDebugTypes())
+      CheckDI(N.getDeclaration(),
+              "definition subprograms cannot be nested within DICompositeType "
+              "when enabling ODR",
+              &N);
     if (N.getFile())
       verifySourceDebugInfo(*N.getUnit(), *N.getFile());
   } else {
@@ -2023,6 +2022,17 @@ void Verifier::verifyFunctionAttrs(FunctionType *FT, AttributeList Attrs,
               "' does not apply to function return values",
           V);
 
+  unsigned MaxParameterWidth = 0;
+  auto GetMaxParameterWidth = [&MaxParameterWidth](Type *Ty) {
+    if (Ty->isVectorTy()) {
+      if (auto *VT = dyn_cast<FixedVectorType>(Ty)) {
+        unsigned Size = VT->getPrimitiveSizeInBits().getFixedValue();
+        if (Size > MaxParameterWidth)
+          MaxParameterWidth = Size;
+      }
+    }
+  };
+  GetMaxParameterWidth(FT->getReturnType());
   verifyParameterAttrs(RetAttrs, FT->getReturnType(), V);
 
   // Verify parameter attributes.
@@ -2041,6 +2051,7 @@ void Verifier::verifyFunctionAttrs(FunctionType *FT, AttributeList Attrs,
     }
 
     verifyParameterAttrs(ArgAttrs, Ty, V);
+    GetMaxParameterWidth(Ty);
 
     if (ArgAttrs.hasAttribute(Attribute::Nest)) {
       Check(!SawNest, "More than one parameter has attribute nest!", V);
@@ -2194,6 +2205,16 @@ void Verifier::verifyFunctionAttrs(FunctionType *FT, AttributeList Attrs,
     StringRef FP = Attrs.getFnAttr("frame-pointer").getValueAsString();
     if (FP != "all" && FP != "non-leaf" && FP != "none")
       CheckFailed("invalid value for 'frame-pointer' attribute: " + FP, V);
+  }
+
+  // Check EVEX512 feature.
+  if (MaxParameterWidth >= 512 && Attrs.hasFnAttr("target-features")) {
+    Triple T(M.getTargetTriple());
+    if (T.isX86()) {
+      StringRef TF = Attrs.getFnAttr("target-features").getValueAsString();
+      Check(!TF.contains("+avx512f") || !TF.contains("-evex512"),
+            "512-bit vector arguments require 'evex512' for AVX512", V);
+    }
   }
 
   checkUnsignedBaseTenFuncAttr(Attrs, "patchable-function-prefix", V);
@@ -2526,118 +2547,6 @@ void Verifier::verifySiblingFuncletUnwinds() {
   }
 }
 
-void Verifier::verifyConvergenceControl(Function &F) {
-  DenseMap<BasicBlock *, SmallVector<CallBase *, 8>> LiveTokenMap;
-  DenseMap<const Cycle *, const CallBase *> CycleHearts;
-
-  // Just like the DominatorTree, compute the CycleInfo locally so that we
-  // can run the verifier outside of a pass manager and we don't rely on
-  // potentially out-dated analysis results.
-  CycleInfo CI;
-  CI.compute(F);
-
-  auto checkBundle = [&](OperandBundleUse &Bundle, CallBase *CB,
-                         SmallVectorImpl<CallBase *> &LiveTokens) {
-    Check(Bundle.Inputs.size() == 1 && Bundle.Inputs[0]->getType()->isTokenTy(),
-          "The 'convergencectrl' bundle requires exactly one token use.", CB);
-
-    Value *Token = Bundle.Inputs[0].get();
-    auto *Def = dyn_cast<CallBase>(Token);
-    Check(Def != nullptr,
-          "Convergence control tokens can only be produced by call "
-          "instructions.",
-          Token);
-
-    Check(llvm::is_contained(LiveTokens, Token),
-          "Convergence region is not well-nested.", Token, CB);
-
-    while (LiveTokens.back() != Token)
-      LiveTokens.pop_back();
-
-    // Check static rules about cycles.
-    auto *BB = CB->getParent();
-    auto *BBCycle = CI.getCycle(BB);
-    if (!BBCycle)
-      return;
-
-    BasicBlock *DefBB = Def->getParent();
-    if (DefBB == BB || BBCycle->contains(DefBB)) {
-      // degenerate occurrence of a loop intrinsic
-      return;
-    }
-
-    auto *II = dyn_cast<IntrinsicInst>(CB);
-    Check(II &&
-              II->getIntrinsicID() == Intrinsic::experimental_convergence_loop,
-          "Convergence token used by an instruction other than "
-          "llvm.experimental.convergence.loop in a cycle that does "
-          "not contain the token's definition.",
-          CB, CI.print(BBCycle));
-
-    while (true) {
-      auto *Parent = BBCycle->getParentCycle();
-      if (!Parent || Parent->contains(DefBB))
-        break;
-      BBCycle = Parent;
-    };
-
-    Check(BBCycle->isReducible() && BB == BBCycle->getHeader(),
-          "Cycle heart must dominate all blocks in the cycle.", CB, BB,
-          CI.print(BBCycle));
-    Check(!CycleHearts.count(BBCycle),
-          "Two static convergence token uses in a cycle that does "
-          "not contain either token's definition.",
-          CB, CycleHearts[BBCycle], CI.print(BBCycle));
-    CycleHearts[BBCycle] = CB;
-  };
-
-  ReversePostOrderTraversal<Function *> RPOT(&F);
-  SmallVector<CallBase *, 8> LiveTokens;
-  for (BasicBlock *BB : RPOT) {
-    LiveTokens.clear();
-    auto LTIt = LiveTokenMap.find(BB);
-    if (LTIt != LiveTokenMap.end()) {
-      LiveTokens = std::move(LTIt->second);
-      LiveTokenMap.erase(LTIt);
-    }
-
-    for (Instruction &I : *BB) {
-      CallBase *CB = dyn_cast<CallBase>(&I);
-      if (!CB)
-        continue;
-
-      auto Bundle = CB->getOperandBundle(LLVMContext::OB_convergencectrl);
-      if (Bundle)
-        checkBundle(*Bundle, CB, LiveTokens);
-
-      if (CB->getType()->isTokenTy())
-        LiveTokens.push_back(CB);
-    }
-
-    // Propagate token liveness
-    for (BasicBlock *Succ : successors(BB)) {
-      DomTreeNode *SuccNode = DT.getNode(Succ);
-      LTIt = LiveTokenMap.find(Succ);
-      if (LTIt == LiveTokenMap.end()) {
-        // We're the first predecessor: all tokens which dominate the
-        // successor are live for now.
-        LTIt = LiveTokenMap.try_emplace(Succ).first;
-        for (CallBase *LiveToken : LiveTokens) {
-          if (!DT.dominates(DT.getNode(LiveToken->getParent()), SuccNode))
-            break;
-          LTIt->second.push_back(LiveToken);
-        }
-      } else {
-        // Compute the intersection of live tokens.
-        auto It = llvm::partition(LTIt->second, [&LiveTokens](CallBase *Token) {
-          return llvm::is_contained(LiveTokens, Token);
-        });
-        LTIt->second.erase(It, LTIt->second.end());
-      }
-    }
-  }
-}
-
 // visitFunction - Verify that a function is ok.
 //
 void Verifier::visitFunction(const Function &F) {
@@ -2958,6 +2867,7 @@ void Verifier::visitFunction(const Function &F) {
 //
 void Verifier::visitBasicBlock(BasicBlock &BB) {
   InstsInThisBlock.clear();
+  ConvergenceVerifyHelper.visit(BB);
 
   // Ensure that basic blocks have terminators!
   Check(BB.getTerminator(), "Basic Block does not have terminator!", &BB);
@@ -3366,20 +3276,6 @@ void Verifier::visitPHINode(PHINode &PN) {
   visitInstruction(PN);
 }
 
-static bool isControlledConvergent(const CallBase &Call) {
-  if (Call.getOperandBundle(LLVMContext::OB_convergencectrl))
-    return true;
-  if (const auto *F = dyn_cast<Function>(Call.getCalledOperand())) {
-    switch (F->getIntrinsicID()) {
-    case Intrinsic::experimental_convergence_anchor:
-    case Intrinsic::experimental_convergence_entry:
-    case Intrinsic::experimental_convergence_loop:
-      return true;
-    }
-  }
-  return false;
-}
-
 void Verifier::visitCallBase(CallBase &Call) {
   Check(Call.getCalledOperand()->getType()->isPointerTy(),
         "Called function must be a pointer!", Call);
@@ -3673,22 +3569,7 @@ void Verifier::visitCallBase(CallBase &Call) {
   if (Call.isInlineAsm())
     verifyInlineAsmCall(Call);
 
-  if (isControlledConvergent(Call)) {
-    Check(Call.isConvergent(),
-          "Expected convergent attribute on a controlled convergent call.",
-          Call);
-    Check(ConvergenceKind != UncontrolledConvergence,
-          "Cannot mix controlled and uncontrolled convergence in the same "
-          "function.",
-          Call);
-    ConvergenceKind = ControlledConvergence;
-  } else if (Call.isConvergent()) {
-    Check(ConvergenceKind != ControlledConvergence,
-          "Cannot mix controlled and uncontrolled convergence in the same "
-          "function.",
-          Call);
-    ConvergenceKind = UncontrolledConvergence;
-  }
+  ConvergenceVerifyHelper.visit(Call);
 
   visitInstruction(Call);
 }
@@ -5964,7 +5845,7 @@ void Verifier::visitIntrinsicCall(Intrinsic::ID ID, CallBase &Call) {
           "vector_extract index must be a constant multiple of "
           "the result type's known minimum vector length.");
 
-    // If this extraction is not the 'mixed' case where a fixed vector is is
+    // If this extraction is not the 'mixed' case where a fixed vector is
     // extracted from a scalable vector, ensure that the extraction does not
     // overrun the parent vector.
     if (VecEC.isScalable() == ResultEC.isScalable()) {
@@ -6053,27 +5934,38 @@ void Verifier::visitIntrinsicCall(Intrinsic::ID ID, CallBase &Call) {
                   &Call);
       break;
     }
+
+    Check(Call.paramHasAttr(2, Attribute::InReg),
+          "SGPR arguments must have the `inreg` attribute", &Call);
+    Check(!Call.paramHasAttr(3, Attribute::InReg),
+          "VGPR arguments must not have the `inreg` attribute", &Call);
     break;
   }
   case Intrinsic::experimental_convergence_entry:
-    Check(Call.getFunction()->isConvergent(),
-          "Entry intrinsic can occur only in a convergent function.", &Call);
-    Check(Call.getParent()->isEntryBlock(),
-          "Entry intrinsic must occur in the entry block.", &Call);
-    Check(Call.getParent()->getFirstNonPHI() == &Call,
-          "Entry intrinsic must occur at the start of the basic block.", &Call);
     LLVM_FALLTHROUGH;
   case Intrinsic::experimental_convergence_anchor:
-    Check(!Call.getOperandBundle(LLVMContext::OB_convergencectrl),
-          "Entry or anchor intrinsic must not have a convergencectrl bundle.",
-          &Call);
     break;
   case Intrinsic::experimental_convergence_loop:
-    Check(Call.getOperandBundle(LLVMContext::OB_convergencectrl),
-          "Loop intrinsic must have a convergencectrl bundle.", &Call);
-    Check(Call.getParent()->getFirstNonPHI() == &Call,
-          "Loop intrinsic must occur at the start of the basic block.", &Call);
     break;
+  case Intrinsic::ptrmask: {
+    Type *Ty0 = Call.getArgOperand(0)->getType();
+    Type *Ty1 = Call.getArgOperand(1)->getType();
+    Check(Ty0->isPtrOrPtrVectorTy(),
+          "llvm.ptrmask intrinsic first argument must be pointer or vector "
+          "of pointers",
+          &Call);
+    Check(
+        Ty0->isVectorTy() == Ty1->isVectorTy(),
+        "llvm.ptrmask intrinsic arguments must be both scalars or both vectors",
+        &Call);
+    if (Ty0->isVectorTy())
+      Check(cast<VectorType>(Ty0)->getElementCount() ==
+                cast<VectorType>(Ty1)->getElementCount(),
+            "llvm.ptrmask intrinsic arguments must have the same number of "
+            "elements",
+            &Call);
+    break;
+  }
   };
 
   // Verify that there aren't any unmediated control transfers between funclets.
@@ -6219,6 +6111,11 @@ void Verifier::visitVPIntrinsic(VPIntrinsic &VPI) {
     auto Pred = cast<VPCmpIntrinsic>(&VPI)->getPredicate();
     Check(CmpInst::isIntPredicate(Pred),
           "invalid predicate for VP integer comparison intrinsic", &VPI);
+  }
+  if (VPI.getIntrinsicID() == Intrinsic::vp_is_fpclass) {
+    auto TestMask = cast<ConstantInt>(VPI.getOperand(1));
+    Check((TestMask->getZExtValue() & ~static_cast<unsigned>(fcAllFlags)) == 0,
+          "unsupported bits for llvm.vp.is.fpclass test mask");
   }
 }
 
@@ -6532,12 +6429,16 @@ void Verifier::verifyNotEntryValue(const DbgVariableIntrinsic &I) {
   if (!E || !E->isValid())
     return;
 
-  // We allow EntryValues for swift async arguments, as they have an
-  // ABI-guarantee to be turned into a specific register.
-  if (isa<ValueAsMetadata>(I.getRawLocation()))
-    if (auto *ArgLoc = dyn_cast_or_null<Argument>(I.getVariableLocationOp(0));
+  if (isa<ValueAsMetadata>(I.getRawLocation())) {
+    Value *VarValue = I.getVariableLocationOp(0);
+    if (isa<UndefValue>(VarValue) || isa<PoisonValue>(VarValue))
+      return;
+    // We allow EntryValues for swift async arguments, as they have an
+    // ABI-guarantee to be turned into a specific register.
+    if (auto *ArgLoc = dyn_cast_or_null<Argument>(VarValue);
         ArgLoc && ArgLoc->hasAttribute(Attribute::SwiftAsync))
       return;
+  }
 
   CheckDI(!E->isEntryValue(),
           "Entry values are only allowed in MIR unless they target a "

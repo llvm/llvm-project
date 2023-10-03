@@ -60,6 +60,20 @@ public:
   static bool classof(Attribute attr);
 };
 
+/// Base class for LLVM attributes participating in the TBAA graph.
+class TBAANodeAttr : public Attribute {
+public:
+  using Attribute::Attribute;
+
+  /// Support LLVM type casting.
+  static bool classof(Attribute attr);
+
+  /// Required by DenseMapInfo to create empty and tombstone key.
+  static TBAANodeAttr getFromOpaquePointer(const void *pointer) {
+    return TBAANodeAttr(reinterpret_cast<const ImplType *>(pointer));
+  }
+};
+
 // Inline the LLVM generated Linkage enum and utility.
 // This is only necessary to isolate the "enum generated code" from the
 // attribute definition itself.

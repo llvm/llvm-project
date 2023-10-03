@@ -82,9 +82,9 @@ public:
 /// using operations that define `InferIntRangeInterface` and also sets the
 /// range of iteration indices of loops with known bounds.
 class IntegerRangeAnalysis
-    : public SparseDataFlowAnalysis<IntegerValueRangeLattice> {
+    : public SparseForwardDataFlowAnalysis<IntegerValueRangeLattice> {
 public:
-  using SparseDataFlowAnalysis::SparseDataFlowAnalysis;
+  using SparseForwardDataFlowAnalysis::SparseForwardDataFlowAnalysis;
 
   /// At an entry point, we cannot reason about interger value ranges.
   void setToEntryState(IntegerValueRangeLattice *lattice) override {

@@ -11,7 +11,7 @@ define {ptr, ptr, i32} @f(ptr %buffer, i32 %n) {
 ; CHECK-NEXT:    store i32 [[N:%.*]], ptr [[N_VAL_SPILL_ADDR]], align 4
 ; CHECK-NEXT:    [[TMP0:%.*]] = tail call ptr @allocate(i32 [[N]])
 ; CHECK-NEXT:    store ptr [[TMP0]], ptr [[BUFFER]], align 8
-; CHECK-NEXT:    [[TMP1:%.*]] = insertvalue { ptr, ptr, i32 } { ptr @f.resume.0, ptr undef, i32 undef }, ptr [[TMP0]], 1
+; CHECK-NEXT:    [[TMP1:%.*]] = insertvalue { ptr, ptr, i32 } { ptr @f.resume.0, ptr poison, i32 poison }, ptr [[TMP0]], 1
 ; CHECK-NEXT:    [[TMP2:%.*]] = insertvalue { ptr, ptr, i32 } [[TMP1]], i32 [[N]], 2
 ; CHECK-NEXT:    ret { ptr, ptr, i32 } [[TMP2]]
 ;
@@ -33,7 +33,7 @@ resume:
   br label %loop
 
 cleanup:
-  call i1 @llvm.coro.end(ptr %hdl, i1 0)
+  call i1 @llvm.coro.end(ptr %hdl, i1 0, token none)
   unreachable
 }
 
@@ -47,7 +47,7 @@ define {ptr, i32} @g(ptr %buffer, i32 %n) {
 ; CHECK-NEXT:    [[TMP0:%.*]] = zext i32 [[N]] to i64
 ; CHECK-NEXT:    [[TMP1:%.*]] = alloca i8, i64 [[TMP0]], align 8
 ; CHECK-NEXT:    tail call void @use(ptr nonnull [[TMP1]])
-; CHECK-NEXT:    [[TMP2:%.*]] = insertvalue { ptr, i32 } { ptr @g.resume.0, i32 undef }, i32 [[N]], 1
+; CHECK-NEXT:    [[TMP2:%.*]] = insertvalue { ptr, i32 } { ptr @g.resume.0, i32 poison }, i32 [[N]], 1
 ; CHECK-NEXT:    ret { ptr, i32 } [[TMP2]]
 ;
 entry:
@@ -69,7 +69,7 @@ resume:
   br label %loop
 
 cleanup:
-  call i1 @llvm.coro.end(ptr %hdl, i1 0)
+  call i1 @llvm.coro.end(ptr %hdl, i1 0, token none)
   unreachable
 }
 
@@ -80,7 +80,7 @@ define {ptr, i32} @h(ptr %buffer, i32 %n) {
 ; CHECK-LABEL: @h(
 ; CHECK-NEXT:  coro.return:
 ; CHECK-NEXT:    store i32 [[N:%.*]], ptr [[BUFFER:%.*]], align 4
-; CHECK-NEXT:    [[TMP0:%.*]] = insertvalue { ptr, i32 } { ptr @h.resume.0, i32 undef }, i32 [[N]], 1
+; CHECK-NEXT:    [[TMP0:%.*]] = insertvalue { ptr, i32 } { ptr @h.resume.0, i32 poison }, i32 [[N]], 1
 ; CHECK-NEXT:    ret { ptr, i32 } [[TMP0]]
 ;
 entry:
@@ -102,7 +102,7 @@ resume:
   br label %loop
 
 cleanup:
-  call i1 @llvm.coro.end(ptr %hdl, i1 0)
+  call i1 @llvm.coro.end(ptr %hdl, i1 0, token none)
   unreachable
 }
 
@@ -113,7 +113,7 @@ define {ptr, i32} @i(ptr %buffer, i32 %n) {
 ; CHECK-LABEL: @i(
 ; CHECK-NEXT:  coro.return:
 ; CHECK-NEXT:    store i32 [[N:%.*]], ptr [[BUFFER:%.*]], align 4
-; CHECK-NEXT:    [[TMP0:%.*]] = insertvalue { ptr, i32 } { ptr @i.resume.0, i32 undef }, i32 [[N]], 1
+; CHECK-NEXT:    [[TMP0:%.*]] = insertvalue { ptr, i32 } { ptr @i.resume.0, i32 poison }, i32 [[N]], 1
 ; CHECK-NEXT:    ret { ptr, i32 } [[TMP0]]
 ;
 entry:
@@ -145,7 +145,7 @@ define {ptr, i32} @j(ptr %buffer, i32 %n) {
 ; CHECK-LABEL: @j(
 ; CHECK-NEXT:  coro.return:
 ; CHECK-NEXT:    store i32 [[N:%.*]], ptr [[BUFFER:%.*]], align 4
-; CHECK-NEXT:    [[TMP0:%.*]] = insertvalue { ptr, i32 } { ptr @j.resume.0, i32 undef }, i32 [[N]], 1
+; CHECK-NEXT:    [[TMP0:%.*]] = insertvalue { ptr, i32 } { ptr @j.resume.0, i32 poison }, i32 [[N]], 1
 ; CHECK-NEXT:    ret { ptr, i32 } [[TMP0]]
 ;
 entry:
@@ -170,7 +170,7 @@ forward:
   br label %back
 
 end:
-  call i1 @llvm.coro.end(ptr %hdl, i1 0)
+  call i1 @llvm.coro.end(ptr %hdl, i1 0, token none)
   unreachable
 }
 
@@ -181,7 +181,7 @@ define {ptr, i32} @k(ptr %buffer, i32 %n, i1 %cond) {
 ; CHECK-NEXT:    [[SIZE:%.*]] = tail call i32 @getSize()
 ; CHECK-NEXT:    br i1 [[COND:%.*]], label [[ALLOCA_BLOCK:%.*]], label [[CORO_RETURN:%.*]]
 ; CHECK:       coro.return:
-; CHECK-NEXT:    [[TMP0:%.*]] = insertvalue { ptr, i32 } { ptr @k.resume.0, i32 undef }, i32 [[N:%.*]], 1
+; CHECK-NEXT:    [[TMP0:%.*]] = insertvalue { ptr, i32 } { ptr @k.resume.0, i32 poison }, i32 [[N:%.*]], 1
 ; CHECK-NEXT:    ret { ptr, i32 } [[TMP0]]
 ; CHECK:       alloca_block:
 ; CHECK-NEXT:    [[TMP1:%.*]] = zext i32 [[SIZE]] to i64
@@ -217,7 +217,7 @@ non_alloca_block:
   br label %suspend
 
 cleanup:
-  call i1 @llvm.coro.end(ptr %hdl, i1 0)
+  call i1 @llvm.coro.end(ptr %hdl, i1 0, token none)
   unreachable
 }
 
@@ -225,7 +225,7 @@ declare token @llvm.coro.id.retcon(i32, i32, ptr, ptr, ptr, ptr)
 declare ptr @llvm.coro.begin(token, ptr)
 declare i1 @llvm.coro.suspend.retcon.i1(...)
 declare void @llvm.coro.suspend.retcon.isVoid(...)
-declare i1 @llvm.coro.end(ptr, i1)
+declare i1 @llvm.coro.end(ptr, i1, token)
 declare ptr @llvm.coro.prepare.retcon(ptr)
 declare token @llvm.coro.alloca.alloc.i32(i32, i32)
 declare ptr @llvm.coro.alloca.get(token)

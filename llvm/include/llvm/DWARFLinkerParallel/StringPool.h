@@ -21,13 +21,13 @@ namespace dwarflinker_parallel {
 
 /// StringEntry keeps data of the string: the length, external offset
 /// and a string body which is placed right after StringEntry.
-using StringEntry = StringMapEntry<DwarfStringPoolEntry *>;
+using StringEntry = StringMapEntry<std::nullopt_t>;
 
 class StringPoolEntryInfo {
 public:
   /// \returns Hash value for the specified \p Key.
   static inline uint64_t getHashValue(const StringRef &Key) {
-    return xxHash64(Key);
+    return xxh3_64bits(Key);
   }
 
   /// \returns true if both \p LHS and \p RHS are equal.
@@ -63,6 +63,8 @@ public:
                                  StringPoolEntryInfo>(Allocator, InitialSize) {}
 
   parallel::PerThreadBumpPtrAllocator &getAllocatorRef() { return Allocator; }
+
+  void clear() { Allocator.Reset(); }
 
 private:
   parallel::PerThreadBumpPtrAllocator Allocator;

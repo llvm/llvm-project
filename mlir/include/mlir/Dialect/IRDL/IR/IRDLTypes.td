@@ -51,4 +51,28 @@ def IRDL_AttributeType : IRDL_Type<"Attribute", "attribute"> {
   }];
 }
 
+def IRDL_RegionType : IRDL_Type<"Region", "region"> {
+  let summary = "IRDL handle to a region definition";
+  let description = [{
+    This type represents a region constraint. It is produced by
+    the `irdl.region` operation and consumed by the `irdl.regions` operation.
+    The region can be constrained on the number of arguments
+    and the number of blocks.
+
+    Example:
+    ```mlir
+    irdl.dialect @example {
+      irdl.operation @op_with_regions {
+        %r1 = irdl.region with size 3
+        %0 = irdl.any
+        %r2 = irdl.region(%0)
+        irdl.regions(%r1, %r2)
+      }
+    }
+    ```
+
+    Here we have `%r1` and `%r2`, both of which have the type `!irdl.region`.
+  }];
+}
+
 #endif // MLIR_DIALECT_IRDL_IR_IRDLTYPES

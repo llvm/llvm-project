@@ -6,7 +6,6 @@
 // Ensure that XML we generate is not invalid.
 // RUN: FileCheck %s -check-prefix=WRONG < %t/out
 // WRONG-NOT: CommentXMLInvalid
-// rdar://12378714
 
 /**
  * \brief Aaa.

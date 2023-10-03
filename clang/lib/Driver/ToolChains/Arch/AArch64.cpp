@@ -82,6 +82,25 @@ static bool DecodeAArch64Features(const Driver &D, StringRef text,
     else
       return false;
 
+    // +sme implies +bf16.
+    // +sme-f64f64 and +sme-i16i64 both imply +sme.
+    if (Feature == "sme") {
+      Features.push_back("+bf16");
+    } else if (Feature == "nosme") {
+      Features.push_back("-sme-f64f64");
+      Features.push_back("-sme-i16i64");
+    } else if (Feature == "sme-f64f64") {
+      Features.push_back("+sme");
+      Features.push_back("+bf16");
+    } else if (Feature == "sme-i16i64") {
+      Features.push_back("+sme");
+      Features.push_back("+bf16");
+    } else if (Feature == "nobf16") {
+      Features.push_back("-sme");
+      Features.push_back("-sme-f64f64");
+      Features.push_back("-sme-i16i64");
+    }
+
     if (Feature == "sve2")
       Features.push_back("+sve");
     else if (Feature == "sve2-bitperm" || Feature == "sve2-sha3" ||
@@ -139,7 +158,7 @@ static bool DecodeAArch64Mcpu(const Driver &D, StringRef Mcpu, StringRef &CPU,
 
     Features.push_back(ArchInfo->ArchFeature);
 
-    uint64_t Extension = CpuInfo->getImpliedExtensions();
+    auto Extension = CpuInfo->getImpliedExtensions();
     if (!llvm::AArch64::getExtensionFeatures(Extension, Features))
       return false;
   }

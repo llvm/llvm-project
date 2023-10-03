@@ -2207,26 +2207,26 @@ define float @v_fneg_round_f32(float %a) #0 {
 ; GCN-SAFE-LABEL: v_fneg_round_f32:
 ; GCN-SAFE:       ; %bb.0:
 ; GCN-SAFE-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GCN-SAFE-NEXT:    v_trunc_f32_e32 v1, v0
+; GCN-SAFE-NEXT:    v_sub_f32_e32 v2, v0, v1
+; GCN-SAFE-NEXT:    v_cmp_ge_f32_e64 s[4:5], |v2|, 0.5
+; GCN-SAFE-NEXT:    v_cndmask_b32_e64 v2, 0, 1.0, s[4:5]
 ; GCN-SAFE-NEXT:    s_brev_b32 s4, -2
-; GCN-SAFE-NEXT:    v_trunc_f32_e32 v2, v0
-; GCN-SAFE-NEXT:    v_bfi_b32 v1, s4, 1.0, v0
-; GCN-SAFE-NEXT:    v_sub_f32_e32 v0, v0, v2
-; GCN-SAFE-NEXT:    v_cmp_ge_f32_e64 vcc, |v0|, 0.5
-; GCN-SAFE-NEXT:    v_cndmask_b32_e32 v0, 0, v1, vcc
-; GCN-SAFE-NEXT:    v_add_f32_e32 v0, v2, v0
+; GCN-SAFE-NEXT:    v_bfi_b32 v0, s4, v2, v0
+; GCN-SAFE-NEXT:    v_add_f32_e32 v0, v1, v0
 ; GCN-SAFE-NEXT:    v_xor_b32_e32 v0, 0x80000000, v0
 ; GCN-SAFE-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GCN-NSZ-LABEL: v_fneg_round_f32:
 ; GCN-NSZ:       ; %bb.0:
 ; GCN-NSZ-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GCN-NSZ-NEXT:    v_trunc_f32_e32 v1, v0
+; GCN-NSZ-NEXT:    v_sub_f32_e32 v2, v0, v1
+; GCN-NSZ-NEXT:    v_cmp_ge_f32_e64 s[4:5], |v2|, 0.5
+; GCN-NSZ-NEXT:    v_cndmask_b32_e64 v2, 0, 1.0, s[4:5]
 ; GCN-NSZ-NEXT:    s_brev_b32 s4, -2
-; GCN-NSZ-NEXT:    v_trunc_f32_e32 v2, v0
-; GCN-NSZ-NEXT:    v_bfi_b32 v1, s4, 1.0, v0
-; GCN-NSZ-NEXT:    v_sub_f32_e32 v0, v0, v2
-; GCN-NSZ-NEXT:    v_cmp_ge_f32_e64 vcc, |v0|, 0.5
-; GCN-NSZ-NEXT:    v_cndmask_b32_e32 v0, 0, v1, vcc
-; GCN-NSZ-NEXT:    v_sub_f32_e64 v0, -v2, v0
+; GCN-NSZ-NEXT:    v_bfi_b32 v0, s4, v2, v0
+; GCN-NSZ-NEXT:    v_sub_f32_e64 v0, -v1, v0
 ; GCN-NSZ-NEXT:    s_setpc_b64 s[30:31]
   %round = call float @llvm.round.f32(float %a)
   %fneg = fneg float %round
@@ -2641,8 +2641,7 @@ define float @nnan_fmul_neg1_to_fneg(float %x, float %y) #0 {
 ; GCN-LABEL: nnan_fmul_neg1_to_fneg:
 ; GCN:       ; %bb.0:
 ; GCN-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GCN-NEXT:    v_sub_f32_e32 v0, 0x80000000, v0
-; GCN-NEXT:    v_mul_f32_e32 v0, v0, v1
+; GCN-NEXT:    v_mul_f32_e64 v0, -v0, v1
 ; GCN-NEXT:    s_setpc_b64 s[30:31]
   %mul = fmul float %x, -1.0
   %add = fmul nnan float %mul, %y
@@ -2681,8 +2680,7 @@ define float @flush_snan_fmul_neg1_to_fneg(float %x, float %y) #0 {
 ; GCN:       ; %bb.0:
 ; GCN-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GCN-NEXT:    v_mul_f32_e32 v0, 1.0, v0
-; GCN-NEXT:    v_sub_f32_e32 v0, 0x80000000, v0
-; GCN-NEXT:    v_mul_f32_e32 v0, v0, v1
+; GCN-NEXT:    v_mul_f32_e64 v0, -v0, v1
 ; GCN-NEXT:    s_setpc_b64 s[30:31]
   %quiet = call float @llvm.canonicalize.f32(float %x)
   %mul = fmul float %quiet, -1.0

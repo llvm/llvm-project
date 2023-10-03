@@ -225,6 +225,8 @@ public:
   Error visitKnownRecord(CVSymbol &Record, Thunk32Sym &Thunk) override;
   Error visitKnownRecord(CVSymbol &Record, UDTSym &UDT) override;
   Error visitKnownRecord(CVSymbol &Record, UsingNamespaceSym &UN) override;
+  Error visitKnownRecord(CVSymbol &Record, JumpTableSym &JumpTable) override;
+  Error visitKnownRecord(CVSymbol &Record, CallerSym &Caller) override;
 };
 
 // Visitor for CodeView types and symbols to populate elements.

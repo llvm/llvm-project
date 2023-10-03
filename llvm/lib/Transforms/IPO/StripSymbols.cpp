@@ -30,11 +30,17 @@
 #include "llvm/IR/PassManager.h"
 #include "llvm/IR/TypeFinder.h"
 #include "llvm/IR/ValueSymbolTable.h"
+#include "llvm/Support/CommandLine.h"
 #include "llvm/Transforms/IPO.h"
 #include "llvm/Transforms/IPO/StripSymbols.h"
 #include "llvm/Transforms/Utils/Local.h"
 
 using namespace llvm;
+
+static cl::opt<bool>
+    StripGlobalConstants("strip-global-constants", cl::init(false), cl::Hidden,
+                         cl::desc("Removes debug compile units which reference "
+                                  "to non-existing global constants"));
 
 /// OnlyUsedBy - Return true if V is only used by Usr.
 static bool OnlyUsedBy(Value *V, Value *Usr) {
@@ -216,7 +222,8 @@ static bool stripDeadDebugInfoImpl(Module &M) {
     // Create our live global variable list.
     bool GlobalVariableChange = false;
     for (auto *DIG : DIC->getGlobalVariables()) {
-      if (DIG->getExpression() && DIG->getExpression()->isConstant())
+      if (DIG->getExpression() && DIG->getExpression()->isConstant() &&
+          !StripGlobalConstants)
         LiveGVs.insert(DIG);
 
       // Make sure we only visit each global variable only once.

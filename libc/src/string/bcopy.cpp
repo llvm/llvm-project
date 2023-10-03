@@ -8,12 +8,12 @@
 
 #include "src/string/bcopy.h"
 #include "src/__support/common.h"
-#include "src/string/memory_utils/memmove_implementations.h"
+#include "src/string/memory_utils/inline_memmove.h"
 
-namespace __llvm_libc {
+namespace LIBC_NAMESPACE {
 
 LLVM_LIBC_FUNCTION(void, bcopy, (const void *src, void *dst, size_t count)) {
   return inline_memmove(dst, src, count);
 }
 
-} // namespace __llvm_libc
+} // namespace LIBC_NAMESPACE

@@ -12,6 +12,7 @@
 #include "Gnu.h"
 #include "clang/Driver/InputInfo.h"
 
+#include "Arch/ARM.h"
 #include "Arch/RISCV.h"
 #include "clang/Driver/Compilation.h"
 #include "clang/Driver/Driver.h"
@@ -115,10 +116,12 @@ BareMetal::BareMetal(const Driver &D, const llvm::Triple &Triple,
   }
 }
 
-/// Is the triple {arm,thumb}-none-none-{eabi,eabihf} ?
+/// Is the triple {arm,armeb,thumb,thumbeb}-none-none-{eabi,eabihf} ?
 static bool isARMBareMetal(const llvm::Triple &Triple) {
   if (Triple.getArch() != llvm::Triple::arm &&
-      Triple.getArch() != llvm::Triple::thumb)
+      Triple.getArch() != llvm::Triple::thumb &&
+      Triple.getArch() != llvm::Triple::armeb &&
+      Triple.getArch() != llvm::Triple::thumbeb)
     return false;
 
   if (Triple.getVendor() != llvm::Triple::UnknownVendor)
@@ -134,9 +137,10 @@ static bool isARMBareMetal(const llvm::Triple &Triple) {
   return true;
 }
 
-/// Is the triple aarch64-none-elf?
+/// Is the triple {aarch64.aarch64_be}-none-elf?
 static bool isAArch64BareMetal(const llvm::Triple &Triple) {
-  if (Triple.getArch() != llvm::Triple::aarch64)
+  if (Triple.getArch() != llvm::Triple::aarch64 &&
+      Triple.getArch() != llvm::Triple::aarch64_be)
     return false;
 
   if (Triple.getVendor() != llvm::Triple::UnknownVendor)
@@ -432,10 +436,21 @@ void baremetal::Linker::ConstructJob(Compilation &C, const JobAction &JA,
   ArgStringList CmdArgs;
 
   auto &TC = static_cast<const toolchains::BareMetal &>(getToolChain());
+  const llvm::Triple::ArchType Arch = TC.getArch();
+  const llvm::Triple &Triple = getToolChain().getEffectiveTriple();
 
   AddLinkerInputs(TC, Inputs, Args, CmdArgs, JA);
 
   CmdArgs.push_back("-Bstatic");
+
+  if (Triple.isARM() || Triple.isThumb()) {
+    bool IsBigEndian = arm::isARMBigEndian(Triple, Args);
+    if (IsBigEndian)
+      arm::appendBE8LinkFlag(Args, CmdArgs, Triple);
+    CmdArgs.push_back(IsBigEndian ? "-EB" : "-EL");
+  } else if (Triple.isAArch64()) {
+    CmdArgs.push_back(Arch == llvm::Triple::aarch64_be ? "-EB" : "-EL");
+  }
 
   Args.AddAllArgs(CmdArgs,
                   {options::OPT_L, options::OPT_T_Group, options::OPT_s,

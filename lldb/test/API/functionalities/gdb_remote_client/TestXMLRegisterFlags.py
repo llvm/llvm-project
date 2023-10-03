@@ -348,7 +348,7 @@ class TestXMLRegisterFlags(GDBRemoteTestBase):
 
     @skipIfXmlSupportMissing
     @skipIfRemote
-    def test_flags_requried_attributes(self):
+    def test_flags_required_attributes(self):
         # flags must have an id and size so the flags with "C" is the only valid one
         # here.
         self.setup_register_test(
@@ -620,7 +620,8 @@ class TestXMLRegisterFlags(GDBRemoteTestBase):
         # The table should split according to terminal width.
         self.runCmd("settings set term-width 17")
 
-        self.expect("register info cpsr",
+        self.expect(
+            "register info cpsr",
             substrs=[
                 "       Name: cpsr\n"
                 "       Size: 4 bytes (32 bits)\n"
@@ -632,4 +633,6 @@ class TestXMLRegisterFlags(GDBRemoteTestBase):
                 "\n"
                 "| 15-8 | 7-0 |\n"
                 "|------|-----|\n"
-                "|  C   |  D  |"])
+                "|  C   |  D  |"
+            ],
+        )

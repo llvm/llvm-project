@@ -11,7 +11,7 @@
 ! RUN: | FileCheck %s -check-prefix=CHECK-ARMV9
 
 ! Negative test. ARM cpu with x86 target.
-! RUN: %flang --target=x86_64-linux-gnu -mcpu=cortex-a57 -c %s -### 2>&1 \
+! RUN: not %flang --target=x86_64-linux-gnu -mcpu=cortex-a57 -c %s -### 2>&1 \
 ! RUN: | FileCheck %s -check-prefix=CHECK-NO-A57
 
 ! RUN: %flang --target=x86_64-linux-gnu -march=skylake -c %s -### 2>&1 \

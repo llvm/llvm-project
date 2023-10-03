@@ -243,10 +243,33 @@ inline void createHLFIRToFIRPassPipeline(
     pm.addPass(hlfir::createSimplifyHLFIRIntrinsicsPass());
   }
   pm.addPass(hlfir::createInlineElementalsPass());
+  if (optLevel.isOptimizingForSpeed()) {
+    addCanonicalizerPassWithoutRegionSimplification(pm);
+    pm.addPass(mlir::createCSEPass());
+    pm.addPass(hlfir::createOptimizedBufferizationPass());
+  }
   pm.addPass(hlfir::createLowerHLFIROrderedAssignmentsPass());
   pm.addPass(hlfir::createLowerHLFIRIntrinsicsPass());
   pm.addPass(hlfir::createBufferizeHLFIRPass());
   pm.addPass(hlfir::createConvertHLFIRtoFIRPass());
+}
+
+/// Create a pass pipeline for handling certain OpenMP transformations needed
+/// prior to FIR lowering.
+///
+/// WARNING: These passes must be run immediately after the lowering to ensure
+/// that the FIR is correct with respect to OpenMP operations/attributes.
+///
+/// \param pm - MLIR pass manager that will hold the pipeline definition.
+/// \param isTargetDevice - Whether code is being generated for a target device
+/// rather than the host device.
+inline void createOpenMPFIRPassPipeline(
+    mlir::PassManager &pm, bool isTargetDevice) {
+  pm.addPass(fir::createOMPMarkDeclareTargetPass());
+  if (isTargetDevice) {
+    pm.addPass(fir::createOMPEarlyOutliningPass());
+    pm.addPass(fir::createOMPFunctionFilteringPass());
+  }
 }
 
 #if !defined(FLANG_EXCLUDE_CODEGEN)

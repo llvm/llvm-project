@@ -38,15 +38,18 @@ header_exportable_declarations::header_exportable_declarations(
       filename_(Options.get("Filename", "")),
       file_type_(Options.get("FileType", header_exportable_declarations::FileType::Unknown)),
       extra_header_(Options.get("ExtraHeader", "")) {
-  if (filename_.empty())
-    llvm::errs() << "No filename is provided.\n";
-
   switch (file_type_) {
   case header_exportable_declarations::FileType::Header:
-    /* DO NOTHING */
+    if (filename_.empty())
+      llvm::errs() << "No filename is provided.\n";
+    if (extra_header_.empty())
+      extra_header_ = "$^"; // Use a never matching regex to silence an error message.
     break;
-  case header_exportable_declarations::FileType::Module:
   case header_exportable_declarations::FileType::ModulePartition:
+    if (filename_.empty())
+      llvm::errs() << "No filename is provided.\n";
+    [[fallthrough]];
+  case header_exportable_declarations::FileType::Module:
     if (!extra_header_.empty())
       llvm::errs() << "Extra headers are not allowed for modules.\n";
     if (Options.get("SkipDeclarations"))
@@ -222,10 +225,9 @@ void header_exportable_declarations::check(const clang::ast_matchers::MatchFinde
     if (is_reserved_name(name))
       return;
 
-    // For modules (std, std.compat) only take the declarations exported from the partitions.
-    // Making sure no declatations of headers are compared.
-    if (file_type_ == FileType::Module)
-      if (clang::Module* M = decl->getOwningModule(); M && M->Kind != clang::Module::ModulePartitionInterface)
+    // For modules only take the declarations exported.
+    if (file_type_ == FileType::ModulePartition || file_type_ == FileType::Module)
+      if (decl->getModuleOwnershipKind() != clang::Decl::ModuleOwnershipKind::VisibleWhenImported)
         return;
 
     if (decls_.contains(name)) {

@@ -25,7 +25,7 @@ void f(int m) {
 // CHECK1-NEXT:    call void @llvm.dbg.declare(metadata ptr [[I]], metadata [[META14:![0-9]+]], metadata !DIExpression()), !dbg [[DBG15:![0-9]+]]
 // CHECK1-NEXT:    [[TMP0:%.*]] = load i32, ptr [[M_ADDR]], align 4, !dbg [[DBG16:![0-9]+]]
 // CHECK1-NEXT:    [[TMP1:%.*]] = zext i32 [[TMP0]] to i64, !dbg [[DBG17:![0-9]+]]
-// CHECK1-NEXT:    [[TMP2:%.*]] = call ptr @llvm.stacksave(), !dbg [[DBG17]]
+// CHECK1-NEXT:    [[TMP2:%.*]] = call ptr @llvm.stacksave.p0(), !dbg [[DBG17]]
 // CHECK1-NEXT:    store ptr [[TMP2]], ptr [[SAVED_STACK]], align 8, !dbg [[DBG17]]
 // CHECK1-NEXT:    [[VLA:%.*]] = alloca i32, i64 [[TMP1]], align 16, !dbg [[DBG17]]
 // CHECK1-NEXT:    store i64 [[TMP1]], ptr [[__VLA_EXPR0]], align 8, !dbg [[DBG17]]
@@ -33,7 +33,7 @@ void f(int m) {
 // CHECK1-NEXT:    call void @llvm.dbg.declare(metadata ptr [[VLA]], metadata [[META21:![0-9]+]], metadata !DIExpression()), !dbg [[DBG25:![0-9]+]]
 // CHECK1-NEXT:    call void (ptr, i32, ptr, ...) @__kmpc_fork_call(ptr @[[GLOB4:[0-9]+]], i32 3, ptr @_Z1fi.omp_outlined, ptr [[M_ADDR]], i64 [[TMP1]], ptr [[VLA]]), !dbg [[DBG26:![0-9]+]]
 // CHECK1-NEXT:    [[TMP3:%.*]] = load ptr, ptr [[SAVED_STACK]], align 8, !dbg [[DBG27:![0-9]+]]
-// CHECK1-NEXT:    call void @llvm.stackrestore(ptr [[TMP3]]), !dbg [[DBG27]]
+// CHECK1-NEXT:    call void @llvm.stackrestore.p0(ptr [[TMP3]]), !dbg [[DBG27]]
 // CHECK1-NEXT:    ret void, !dbg [[DBG27]]
 //
 //

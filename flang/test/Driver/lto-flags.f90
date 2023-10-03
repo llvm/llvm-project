@@ -12,7 +12,7 @@
 ! Also check linker plugin opt for Thin LTO
 ! RUN: %flang -### -flto=thin %s 2>&1 | FileCheck %s --check-prefix=THIN-LTO
 
-! RUN: %flang -### -S -flto=somelto %s 2>&1 | FileCheck %s --check-prefix=ERROR
+! RUN: not %flang -### -S -flto=somelto %s 2>&1 | FileCheck %s --check-prefix=ERROR
 
 ! FC1 tests. Check that it does not crash.
 ! RUN: %flang_fc1 -S %s -flto -o /dev/null

@@ -73,6 +73,7 @@ public:
   void Define(std::string macro, std::string value);
   void Undefine(std::string macro);
   bool IsNameDefined(const CharBlock &);
+  bool IsFunctionLikeDefinition(const CharBlock &);
 
   std::optional<TokenSequence> MacroReplacement(
       const TokenSequence &, Prescanner &);

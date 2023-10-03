@@ -35,37 +35,6 @@ class ElementalOpInterface;
 class ElementalAddrOp;
 class YieldElementOp;
 
-/// Is this an SSA value type for the value of a Fortran procedure
-/// designator ?
-inline bool isFortranProcedureValue(mlir::Type type) {
-  return type.isa<fir::BoxProcType>() ||
-         (type.isa<mlir::TupleType>() &&
-          fir::isCharacterProcedureTuple(type, /*acceptRawFunc=*/false));
-}
-
-/// Is this an SSA value type for the value of a Fortran expression?
-inline bool isFortranValueType(mlir::Type type) {
-  return type.isa<hlfir::ExprType>() || fir::isa_trivial(type) ||
-         isFortranProcedureValue(type);
-}
-
-/// Is this the value of a Fortran expression in an SSA value form?
-inline bool isFortranValue(mlir::Value value) {
-  return isFortranValueType(value.getType());
-}
-
-/// Is this a Fortran variable?
-/// Note that by "variable", it must be understood that the mlir::Value is
-/// a memory value of a storage that can be reason about as a Fortran object
-/// (its bounds, shape, and type parameters, if any, are retrievable).
-/// This does not imply that the mlir::Value points to a variable from the
-/// original source or can be legally defined: temporaries created to store
-/// expression values are considered to be variables, and so are PARAMETERs
-/// global constant address.
-inline bool isFortranEntity(mlir::Value value) {
-  return isFortranValue(value) || isFortranVariableType(value.getType());
-}
-
 /// Is this a Fortran variable for which the defining op carrying the Fortran
 /// attributes is visible?
 inline bool isFortranVariableWithAttributes(mlir::Value value) {
@@ -374,14 +343,15 @@ using ElementalKernelGenerator = std::function<hlfir::Entity(
     mlir::Location, fir::FirOpBuilder &, mlir::ValueRange)>;
 /// Generate an hlfir.elementalOp given call back to generate the element
 /// value at for each iteration.
-/// If exprType is specified, this will be the return type of the elemental op
-hlfir::ElementalOp genElementalOp(mlir::Location loc,
-                                  fir::FirOpBuilder &builder,
-                                  mlir::Type elementType, mlir::Value shape,
-                                  mlir::ValueRange typeParams,
-                                  const ElementalKernelGenerator &genKernel,
-                                  bool isUnordered = false,
-                                  mlir::Type exprType = mlir::Type{});
+/// If exprType is specified, this will be the return type of the elemental op.
+/// If exprType is not specified, the resulting expression type is computed
+/// from the given \p elementType and \p shape, and the type is polymorphic
+/// if \p polymorphicMold is present.
+hlfir::ElementalOp genElementalOp(
+    mlir::Location loc, fir::FirOpBuilder &builder, mlir::Type elementType,
+    mlir::Value shape, mlir::ValueRange typeParams,
+    const ElementalKernelGenerator &genKernel, bool isUnordered = false,
+    mlir::Value polymorphicMold = {}, mlir::Type exprType = mlir::Type{});
 
 /// Structure to describe a loop nest.
 struct LoopNest {
@@ -440,6 +410,17 @@ convertToBox(mlir::Location loc, fir::FirOpBuilder &builder,
 hlfir::ElementalOp cloneToElementalOp(mlir::Location loc,
                                       fir::FirOpBuilder &builder,
                                       hlfir::ElementalAddrOp elementalAddrOp);
+
+/// Return true, if \p elemental must produce a temporary array,
+/// for example, for the purpose of finalization. Note that such
+/// ElementalOp's must be optimized with caution. For example,
+/// completely inlining such ElementalOp into another one
+/// would be incorrect.
+bool elementalOpMustProduceTemp(hlfir::ElementalOp elemental);
+
+std::pair<hlfir::Entity, mlir::Value>
+createTempFromMold(mlir::Location loc, fir::FirOpBuilder &builder,
+                   hlfir::Entity mold);
 
 } // namespace hlfir
 

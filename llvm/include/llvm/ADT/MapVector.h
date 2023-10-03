@@ -10,7 +10,7 @@
 /// This file implements a map that provides insertion order iteration. The
 /// interface is purposefully minimal. The key is assumed to be cheap to copy
 /// and 2 copies are kept, one for indexing in a DenseMap, one for iteration in
-/// a std::vector.
+/// a SmallVector.
 ///
 //===----------------------------------------------------------------------===//
 
@@ -24,16 +24,15 @@
 #include <iterator>
 #include <type_traits>
 #include <utility>
-#include <vector>
 
 namespace llvm {
 
 /// This class implements a map that also provides access to all stored values
-/// in a deterministic order. The values are kept in a std::vector and the
+/// in a deterministic order. The values are kept in a SmallVector<*, 0> and the
 /// mapping is done with DenseMap from Keys to indexes in that vector.
-template<typename KeyT, typename ValueT,
-         typename MapType = DenseMap<KeyT, unsigned>,
-         typename VectorType = std::vector<std::pair<KeyT, ValueT>>>
+template <typename KeyT, typename ValueT,
+          typename MapType = DenseMap<KeyT, unsigned>,
+          typename VectorType = SmallVector<std::pair<KeyT, ValueT>, 0>>
 class MapVector {
   MapType Map;
   VectorType Vector;

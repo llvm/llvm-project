@@ -76,6 +76,7 @@ define amdgpu_kernel void @fptrunc_f64_to_f32(ptr addrspace(1) %out, double %in)
 ; GFX11-SDAG-NEXT:    s_mov_b32 s3, 0x31016000
 ; GFX11-SDAG-NEXT:    s_mov_b32 s2, -1
 ; GFX11-SDAG-NEXT:    buffer_store_b32 v0, off, s[0:3], 0
+; GFX11-SDAG-NEXT:    s_nop 0
 ; GFX11-SDAG-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX11-SDAG-NEXT:    s_endpgm
 ;
@@ -87,6 +88,7 @@ define amdgpu_kernel void @fptrunc_f64_to_f32(ptr addrspace(1) %out, double %in)
 ; GFX11-GISEL-NEXT:    s_mov_b32 s2, -1
 ; GFX11-GISEL-NEXT:    s_mov_b32 s3, 0x31016000
 ; GFX11-GISEL-NEXT:    buffer_store_b32 v0, off, s[0:3], 0
+; GFX11-GISEL-NEXT:    s_nop 0
 ; GFX11-GISEL-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX11-GISEL-NEXT:    s_endpgm
   %result = fptrunc double %in to float
@@ -479,6 +481,7 @@ define amdgpu_kernel void @fptrunc_f64_to_f16(ptr addrspace(1) %out, double %in)
 ; GFX11-SAFE-SDAG-NEXT:    v_or_b32_e32 v0, s2, v0
 ; GFX11-SAFE-SDAG-NEXT:    s_mov_b32 s2, -1
 ; GFX11-SAFE-SDAG-NEXT:    buffer_store_b16 v0, off, s[0:3], 0
+; GFX11-SAFE-SDAG-NEXT:    s_nop 0
 ; GFX11-SAFE-SDAG-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX11-SAFE-SDAG-NEXT:    s_endpgm
 ;
@@ -537,6 +540,7 @@ define amdgpu_kernel void @fptrunc_f64_to_f16(ptr addrspace(1) %out, double %in)
 ; GFX11-SAFE-GISEL-NEXT:    v_mov_b32_e32 v0, s2
 ; GFX11-SAFE-GISEL-NEXT:    s_mov_b32 s2, -1
 ; GFX11-SAFE-GISEL-NEXT:    buffer_store_b16 v0, off, s[0:3], 0
+; GFX11-SAFE-GISEL-NEXT:    s_nop 0
 ; GFX11-SAFE-GISEL-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX11-SAFE-GISEL-NEXT:    s_endpgm
 ;
@@ -550,6 +554,7 @@ define amdgpu_kernel void @fptrunc_f64_to_f16(ptr addrspace(1) %out, double %in)
 ; GFX11-UNSAFE-SDAG-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX11-UNSAFE-SDAG-NEXT:    v_cvt_f16_f32_e32 v0, v0
 ; GFX11-UNSAFE-SDAG-NEXT:    buffer_store_b16 v0, off, s[0:3], 0
+; GFX11-UNSAFE-SDAG-NEXT:    s_nop 0
 ; GFX11-UNSAFE-SDAG-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX11-UNSAFE-SDAG-NEXT:    s_endpgm
 ;
@@ -563,6 +568,7 @@ define amdgpu_kernel void @fptrunc_f64_to_f16(ptr addrspace(1) %out, double %in)
 ; GFX11-UNSAFE-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX11-UNSAFE-GISEL-NEXT:    v_cvt_f16_f32_e32 v0, v0
 ; GFX11-UNSAFE-GISEL-NEXT:    buffer_store_b16 v0, off, s[0:3], 0
+; GFX11-UNSAFE-GISEL-NEXT:    s_nop 0
 ; GFX11-UNSAFE-GISEL-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX11-UNSAFE-GISEL-NEXT:    s_endpgm
   %result = fptrunc double %in to half
@@ -645,6 +651,7 @@ define amdgpu_kernel void @fptrunc_v2f64_to_v2f32(ptr addrspace(1) %out, <2 x do
 ; GFX11-SDAG-NEXT:    v_cvt_f32_f64_e32 v1, s[6:7]
 ; GFX11-SDAG-NEXT:    v_cvt_f32_f64_e32 v0, s[4:5]
 ; GFX11-SDAG-NEXT:    buffer_store_b64 v[0:1], off, s[0:3], 0
+; GFX11-SDAG-NEXT:    s_nop 0
 ; GFX11-SDAG-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX11-SDAG-NEXT:    s_endpgm
 ;
@@ -659,6 +666,7 @@ define amdgpu_kernel void @fptrunc_v2f64_to_v2f32(ptr addrspace(1) %out, <2 x do
 ; GFX11-GISEL-NEXT:    v_cvt_f32_f64_e32 v0, s[4:5]
 ; GFX11-GISEL-NEXT:    v_cvt_f32_f64_e32 v1, s[6:7]
 ; GFX11-GISEL-NEXT:    buffer_store_b64 v[0:1], off, s[0:3], 0
+; GFX11-GISEL-NEXT:    s_nop 0
 ; GFX11-GISEL-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX11-GISEL-NEXT:    s_endpgm
   %result = fptrunc <2 x double> %in to <2 x float>
@@ -751,6 +759,7 @@ define amdgpu_kernel void @fptrunc_v3f64_to_v3f32(ptr addrspace(1) %out, <3 x do
 ; GFX11-SDAG-NEXT:    s_mov_b32 s3, 0x31016000
 ; GFX11-SDAG-NEXT:    s_mov_b32 s2, -1
 ; GFX11-SDAG-NEXT:    buffer_store_b96 v[0:2], off, s[0:3], 0
+; GFX11-SDAG-NEXT:    s_nop 0
 ; GFX11-SDAG-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX11-SDAG-NEXT:    s_endpgm
 ;
@@ -766,6 +775,7 @@ define amdgpu_kernel void @fptrunc_v3f64_to_v3f32(ptr addrspace(1) %out, <3 x do
 ; GFX11-GISEL-NEXT:    v_cvt_f32_f64_e32 v1, s[6:7]
 ; GFX11-GISEL-NEXT:    v_cvt_f32_f64_e32 v2, s[8:9]
 ; GFX11-GISEL-NEXT:    buffer_store_b96 v[0:2], off, s[0:3], 0
+; GFX11-GISEL-NEXT:    s_nop 0
 ; GFX11-GISEL-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX11-GISEL-NEXT:    s_endpgm
   %result = fptrunc <3 x double> %in to <3 x float>
@@ -859,6 +869,7 @@ define amdgpu_kernel void @fptrunc_v4f64_to_v4f32(ptr addrspace(1) %out, <4 x do
 ; GFX11-SDAG-NEXT:    v_cvt_f32_f64_e32 v1, s[6:7]
 ; GFX11-SDAG-NEXT:    v_cvt_f32_f64_e32 v0, s[4:5]
 ; GFX11-SDAG-NEXT:    buffer_store_b128 v[0:3], off, s[0:3], 0
+; GFX11-SDAG-NEXT:    s_nop 0
 ; GFX11-SDAG-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX11-SDAG-NEXT:    s_endpgm
 ;
@@ -875,6 +886,7 @@ define amdgpu_kernel void @fptrunc_v4f64_to_v4f32(ptr addrspace(1) %out, <4 x do
 ; GFX11-GISEL-NEXT:    v_cvt_f32_f64_e32 v2, s[8:9]
 ; GFX11-GISEL-NEXT:    v_cvt_f32_f64_e32 v3, s[10:11]
 ; GFX11-GISEL-NEXT:    buffer_store_b128 v[0:3], off, s[0:3], 0
+; GFX11-GISEL-NEXT:    s_nop 0
 ; GFX11-GISEL-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX11-GISEL-NEXT:    s_endpgm
   %result = fptrunc <4 x double> %in to <4 x float>
@@ -999,6 +1011,7 @@ define amdgpu_kernel void @fptrunc_v8f64_to_v8f32(ptr addrspace(1) %out, <8 x do
 ; GFX11-SDAG-NEXT:    s_clause 0x1
 ; GFX11-SDAG-NEXT:    buffer_store_b128 v[4:7], off, s[0:3], 0 offset:16
 ; GFX11-SDAG-NEXT:    buffer_store_b128 v[0:3], off, s[0:3], 0
+; GFX11-SDAG-NEXT:    s_nop 0
 ; GFX11-SDAG-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX11-SDAG-NEXT:    s_endpgm
 ;
@@ -1021,6 +1034,7 @@ define amdgpu_kernel void @fptrunc_v8f64_to_v8f32(ptr addrspace(1) %out, <8 x do
 ; GFX11-GISEL-NEXT:    s_clause 0x1
 ; GFX11-GISEL-NEXT:    buffer_store_b128 v[0:3], off, s[0:3], 0
 ; GFX11-GISEL-NEXT:    buffer_store_b128 v[4:7], off, s[0:3], 0 offset:16
+; GFX11-GISEL-NEXT:    s_nop 0
 ; GFX11-GISEL-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX11-GISEL-NEXT:    s_endpgm
   %result = fptrunc <8 x double> %in to <8 x float>

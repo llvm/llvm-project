@@ -193,8 +193,11 @@ struct DenseIntOrFPElementsAttrStorage : public DenseElementsAttributeStorage {
   ArrayRef<char> data;
 
   /// The values used to denote a boolean splat value.
-  static constexpr char kSplatTrue = ~0;
-  static constexpr char kSplatFalse = 0;
+  // This is not using constexpr declaration due to compilation failure
+  // encountered with MSVC where it would inline these values, which makes it
+  // unsafe to refer by reference in KeyTy.
+  static const char kSplatTrue;
+  static const char kSplatFalse;
 };
 
 /// An attribute representing a reference to a dense vector or tensor object

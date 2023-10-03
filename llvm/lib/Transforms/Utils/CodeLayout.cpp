@@ -45,8 +45,11 @@
 #include "llvm/Support/Debug.h"
 
 #include <cmath>
+#include <set>
 
 using namespace llvm;
+using namespace llvm::codelayout;
+
 #define DEBUG_TYPE "code-layout"
 
 namespace llvm {
@@ -61,8 +64,8 @@ cl::opt<bool> ApplyExtTspWithoutProfile(
     cl::init(true), cl::Hidden);
 } // namespace llvm
 
-// Algorithm-specific params. The values are tuned for the best performance
-// of large-scale front-end bound binaries.
+// Algorithm-specific params for Ext-TSP. The values are tuned for the best
+// performance of large-scale front-end bound binaries.
 static cl::opt<double> ForwardWeightCond(
     "ext-tsp-forward-weight-cond", cl::ReallyHidden, cl::init(0.1),
     cl::desc("The weight of conditional forward jumps for ExtTSP value"));
@@ -112,6 +115,21 @@ static cl::opt<unsigned> ChainSplitThreshold(
 static cl::opt<bool> EnableChainSplitAlongJumps(
     "ext-tsp-enable-chain-split-along-jumps", cl::ReallyHidden, cl::init(true),
     cl::desc("The maximum size of a chain to apply splitting"));
+
+// Algorithm-specific options for CDS.
+static cl::opt<unsigned> CacheEntries("cds-cache-entries", cl::ReallyHidden,
+                                      cl::desc("The size of the cache"));
+
+static cl::opt<unsigned> CacheSize("cds-cache-size", cl::ReallyHidden,
+                                   cl::desc("The size of a line in the cache"));
+
+static cl::opt<double> DistancePower(
+    "cds-distance-power", cl::ReallyHidden,
+    cl::desc("The power exponent for the distance-based locality"));
+
+static cl::opt<double> FrequencyScale(
+    "cds-frequency-scale", cl::ReallyHidden,
+    cl::desc("The scale factor for the frequency-based locality"));
 
 namespace {
 
@@ -280,9 +298,9 @@ struct ChainT {
   }
 
   ChainEdge *getEdge(ChainT *Other) const {
-    for (auto It : Edges) {
-      if (It.first == Other)
-        return It.second;
+    for (const auto &[Chain, ChainEdge] : Edges) {
+      if (Chain == Other)
+        return ChainEdge;
     }
     return nullptr;
   }
@@ -302,13 +320,13 @@ struct ChainT {
     Edges.push_back(std::make_pair(Other, Edge));
   }
 
-  void merge(ChainT *Other, const std::vector<NodeT *> &MergedBlocks) {
-    Nodes = MergedBlocks;
-    // Update the chain's data
+  void merge(ChainT *Other, std::vector<NodeT *> MergedBlocks) {
+    Nodes = std::move(MergedBlocks);
+    // Update the chain's data.
     ExecutionCount += Other->ExecutionCount;
     Size += Other->Size;
     Id = Nodes[0]->Index;
-    // Update the node's data
+    // Update the node's data.
     for (size_t Idx = 0; Idx < Nodes.size(); Idx++) {
       Nodes[Idx]->CurChain = this;
       Nodes[Idx]->CurIndex = Idx;
@@ -340,7 +358,7 @@ struct ChainT {
 
 /// An edge in the graph representing jumps between two chains.
 /// When nodes are merged into chains, the edges are combined too so that
-/// there is always at most one edge between a pair of chains
+/// there is always at most one edge between a pair of chains.
 struct ChainEdge {
   ChainEdge(const ChainEdge &) = delete;
   ChainEdge(ChainEdge &&) = default;
@@ -426,40 +444,34 @@ private:
 
 uint64_t NodeT::outCount() const {
   uint64_t Count = 0;
-  for (JumpT *Jump : OutJumps) {
+  for (JumpT *Jump : OutJumps)
     Count += Jump->ExecutionCount;
-  }
   return Count;
 }
 
 uint64_t NodeT::inCount() const {
   uint64_t Count = 0;
-  for (JumpT *Jump : InJumps) {
+  for (JumpT *Jump : InJumps)
     Count += Jump->ExecutionCount;
-  }
   return Count;
 }
 
 void ChainT::mergeEdges(ChainT *Other) {
-  // Update edges adjacent to chain Other
-  for (auto EdgeIt : Other->Edges) {
-    ChainT *DstChain = EdgeIt.first;
-    ChainEdge *DstEdge = EdgeIt.second;
+  // Update edges adjacent to chain Other.
+  for (const auto &[DstChain, DstEdge] : Other->Edges) {
     ChainT *TargetChain = DstChain == Other ? this : DstChain;
     ChainEdge *CurEdge = getEdge(TargetChain);
     if (CurEdge == nullptr) {
       DstEdge->changeEndpoint(Other, this);
       this->addEdge(TargetChain, DstEdge);
-      if (DstChain != this && DstChain != Other) {
+      if (DstChain != this && DstChain != Other)
         DstChain->addEdge(this, DstEdge);
-      }
     } else {
       CurEdge->moveJumps(DstEdge);
     }
-    // Cleanup leftover edge
-    if (DstChain != Other) {
+    // Cleanup leftover edge.
+    if (DstChain != Other)
       DstChain->removeEdge(Other);
-    }
   }
 }
 
@@ -512,7 +524,7 @@ private:
 MergedChain mergeNodes(const std::vector<NodeT *> &X,
                        const std::vector<NodeT *> &Y, size_t MergeOffset,
                        MergeTypeT MergeType) {
-  // Split the first chain, X, into X1 and X2
+  // Split the first chain, X, into X1 and X2.
   NodeIter BeginX1 = X.begin();
   NodeIter EndX1 = X.begin() + MergeOffset;
   NodeIter BeginX2 = X.begin() + MergeOffset;
@@ -520,7 +532,7 @@ MergedChain mergeNodes(const std::vector<NodeT *> &X,
   NodeIter BeginY = Y.begin();
   NodeIter EndY = Y.end();
 
-  // Construct a new chain from the three existing ones
+  // Construct a new chain from the three existing ones.
   switch (MergeType) {
   case MergeTypeT::X_Y:
     return MergedChain(BeginX1, EndX2, BeginY, EndY);
@@ -539,15 +551,14 @@ MergedChain mergeNodes(const std::vector<NodeT *> &X,
 /// The implementation of the ExtTSP algorithm.
 class ExtTSPImpl {
 public:
-  ExtTSPImpl(const std::vector<uint64_t> &NodeSizes,
-             const std::vector<uint64_t> &NodeCounts,
-             const std::vector<EdgeCountT> &EdgeCounts)
+  ExtTSPImpl(ArrayRef<uint64_t> NodeSizes, ArrayRef<uint64_t> NodeCounts,
+             ArrayRef<EdgeCount> EdgeCounts)
       : NumNodes(NodeSizes.size()) {
     initialize(NodeSizes, NodeCounts, EdgeCounts);
   }
 
   /// Run the algorithm and return an optimized ordering of nodes.
-  void run(std::vector<uint64_t> &Result) {
+  std::vector<uint64_t> run() {
     // Pass 1: Merge nodes with their mutually forced successors
     mergeForcedPairs();
 
@@ -558,20 +569,20 @@ public:
     mergeColdChains();
 
     // Collect nodes from all chains
-    concatChains(Result);
+    return concatChains();
   }
 
 private:
   /// Initialize the algorithm's data structures.
-  void initialize(const std::vector<uint64_t> &NodeSizes,
-                  const std::vector<uint64_t> &NodeCounts,
-                  const std::vector<EdgeCountT> &EdgeCounts) {
+  void initialize(const ArrayRef<uint64_t> &NodeSizes,
+                  const ArrayRef<uint64_t> &NodeCounts,
+                  const ArrayRef<EdgeCount> &EdgeCounts) {
     // Initialize nodes
     AllNodes.reserve(NumNodes);
     for (uint64_t Idx = 0; Idx < NumNodes; Idx++) {
       uint64_t Size = std::max<uint64_t>(NodeSizes[Idx], 1ULL);
       uint64_t ExecutionCount = NodeCounts[Idx];
-      // The execution count of the entry node is set to at least one
+      // The execution count of the entry node is set to at least one.
       if (Idx == 0 && ExecutionCount == 0)
         ExecutionCount = 1;
       AllNodes.emplace_back(Idx, Size, ExecutionCount);
@@ -582,21 +593,18 @@ private:
     PredNodes.resize(NumNodes);
     std::vector<uint64_t> OutDegree(NumNodes, 0);
     AllJumps.reserve(EdgeCounts.size());
-    for (auto It : EdgeCounts) {
-      uint64_t Pred = It.first.first;
-      uint64_t Succ = It.first.second;
-      OutDegree[Pred]++;
-      // Ignore self-edges
-      if (Pred == Succ)
+    for (auto Edge : EdgeCounts) {
+      ++OutDegree[Edge.src];
+      // Ignore self-edges.
+      if (Edge.src == Edge.dst)
         continue;
 
-      SuccNodes[Pred].push_back(Succ);
-      PredNodes[Succ].push_back(Pred);
-      uint64_t ExecutionCount = It.second;
-      if (ExecutionCount > 0) {
-        NodeT &PredNode = AllNodes[Pred];
-        NodeT &SuccNode = AllNodes[Succ];
-        AllJumps.emplace_back(&PredNode, &SuccNode, ExecutionCount);
+      SuccNodes[Edge.src].push_back(Edge.dst);
+      PredNodes[Edge.dst].push_back(Edge.src);
+      if (Edge.count > 0) {
+        NodeT &PredNode = AllNodes[Edge.src];
+        NodeT &SuccNode = AllNodes[Edge.dst];
+        AllJumps.emplace_back(&PredNode, &SuccNode, Edge.count);
         SuccNode.InJumps.push_back(&AllJumps.back());
         PredNode.OutJumps.push_back(&AllJumps.back());
       }
@@ -606,30 +614,29 @@ private:
       Jump.IsConditional = OutDegree[Jump.Source->Index] > 1;
     }
 
-    // Initialize chains
+    // Initialize chains.
     AllChains.reserve(NumNodes);
     HotChains.reserve(NumNodes);
     for (NodeT &Node : AllNodes) {
       AllChains.emplace_back(Node.Index, &Node);
       Node.CurChain = &AllChains.back();
-      if (Node.ExecutionCount > 0) {
+      if (Node.ExecutionCount > 0)
         HotChains.push_back(&AllChains.back());
-      }
     }
 
-    // Initialize chain edges
+    // Initialize chain edges.
     AllEdges.reserve(AllJumps.size());
     for (NodeT &PredNode : AllNodes) {
       for (JumpT *Jump : PredNode.OutJumps) {
         NodeT *SuccNode = Jump->Target;
         ChainEdge *CurEdge = PredNode.CurChain->getEdge(SuccNode->CurChain);
-        // this edge is already present in the graph
+        // this edge is already present in the graph.
         if (CurEdge != nullptr) {
           assert(SuccNode->CurChain->getEdge(PredNode.CurChain) != nullptr);
           CurEdge->appendJump(Jump);
           continue;
         }
-        // this is a new edge
+        // this is a new edge.
         AllEdges.emplace_back(Jump);
         PredNode.CurChain->addEdge(SuccNode->CurChain, &AllEdges.back());
         SuccNode->CurChain->addEdge(PredNode.CurChain, &AllEdges.back());
@@ -642,7 +649,7 @@ private:
   /// to B are from A. Such nodes should be adjacent in the optimal ordering;
   /// the method finds and merges such pairs of nodes.
   void mergeForcedPairs() {
-    // Find fallthroughs based on edge weights
+    // Find fallthroughs based on edge weights.
     for (NodeT &Node : AllNodes) {
       if (SuccNodes[Node.Index].size() == 1 &&
           PredNodes[SuccNodes[Node.Index][0]].size() == 1 &&
@@ -669,12 +676,12 @@ private:
       }
       if (SuccNode == nullptr)
         continue;
-      // Break the cycle
+      // Break the cycle.
       AllNodes[Node.ForcedPred->Index].ForcedSucc = nullptr;
       Node.ForcedPred = nullptr;
     }
 
-    // Merge nodes with their fallthrough successors
+    // Merge nodes with their fallthrough successors.
     for (NodeT &Node : AllNodes) {
       if (Node.ForcedPred == nullptr && Node.ForcedSucc != nullptr) {
         const NodeT *CurBlock = &Node;
@@ -689,7 +696,7 @@ private:
 
   /// Merge pairs of chains while improving the ExtTSP objective.
   void mergeChainPairs() {
-    /// Deterministically compare pairs of chains
+    /// Deterministically compare pairs of chains.
     auto compareChainPairs = [](const ChainT *A1, const ChainT *B1,
                                 const ChainT *A2, const ChainT *B2) {
       if (A1 != A2)
@@ -701,21 +708,19 @@ private:
       ChainT *BestChainPred = nullptr;
       ChainT *BestChainSucc = nullptr;
       MergeGainT BestGain;
-      // Iterate over all pairs of chains
+      // Iterate over all pairs of chains.
       for (ChainT *ChainPred : HotChains) {
-        // Get candidates for merging with the current chain
-        for (auto EdgeIt : ChainPred->Edges) {
-          ChainT *ChainSucc = EdgeIt.first;
-          ChainEdge *Edge = EdgeIt.second;
-          // Ignore loop edges
+        // Get candidates for merging with the current chain.
+        for (const auto &[ChainSucc, Edge] : ChainPred->Edges) {
+          // Ignore loop edges.
           if (ChainPred == ChainSucc)
             continue;
 
-          // Stop early if the combined chain violates the maximum allowed size
+          // Stop early if the combined chain violates the maximum allowed size.
           if (ChainPred->numBlocks() + ChainSucc->numBlocks() >= MaxChainSize)
             continue;
 
-          // Compute the gain of merging the two chains
+          // Compute the gain of merging the two chains.
           MergeGainT CurGain = getBestMergeGain(ChainPred, ChainSucc, Edge);
           if (CurGain.score() <= EPS)
             continue;
@@ -731,11 +736,11 @@ private:
         }
       }
 
-      // Stop merging when there is no improvement
+      // Stop merging when there is no improvement.
       if (BestGain.score() <= EPS)
         break;
 
-      // Merge the best pair of chains
+      // Merge the best pair of chains.
       mergeChains(BestChainPred, BestChainSucc, BestGain.mergeOffset(),
                   BestGain.mergeType());
     }
@@ -743,7 +748,7 @@ private:
 
   /// Merge remaining nodes into chains w/o taking jump counts into
   /// consideration. This allows to maintain the original node order in the
-  /// absence of profile data
+  /// absence of profile data.
   void mergeColdChains() {
     for (size_t SrcBB = 0; SrcBB < NumNodes; SrcBB++) {
       // Iterating in reverse order to make sure original fallthrough jumps are
@@ -797,7 +802,7 @@ private:
       return Edge->getCachedMergeGain(ChainPred, ChainSucc);
     }
 
-    // Precompute jumps between ChainPred and ChainSucc
+    // Precompute jumps between ChainPred and ChainSucc.
     auto Jumps = Edge->jumps();
     ChainEdge *EdgePP = ChainPred->getEdge(ChainPred);
     if (EdgePP != nullptr) {
@@ -805,34 +810,34 @@ private:
     }
     assert(!Jumps.empty() && "trying to merge chains w/o jumps");
 
-    // The object holds the best currently chosen gain of merging the two chains
+    // This object holds the best chosen gain of merging two chains.
     MergeGainT Gain = MergeGainT();
 
     /// Given a merge offset and a list of merge types, try to merge two chains
-    /// and update Gain with a better alternative
+    /// and update Gain with a better alternative.
     auto tryChainMerging = [&](size_t Offset,
                                const std::vector<MergeTypeT> &MergeTypes) {
-      // Skip merging corresponding to concatenation w/o splitting
+      // Skip merging corresponding to concatenation w/o splitting.
       if (Offset == 0 || Offset == ChainPred->Nodes.size())
         return;
-      // Skip merging if it breaks Forced successors
+      // Skip merging if it breaks Forced successors.
       NodeT *Node = ChainPred->Nodes[Offset - 1];
       if (Node->ForcedSucc != nullptr)
         return;
       // Apply the merge, compute the corresponding gain, and update the best
-      // value, if the merge is beneficial
+      // value, if the merge is beneficial.
       for (const MergeTypeT &MergeType : MergeTypes) {
         Gain.updateIfLessThan(
             computeMergeGain(ChainPred, ChainSucc, Jumps, Offset, MergeType));
       }
     };
 
-    // Try to concatenate two chains w/o splitting
+    // Try to concatenate two chains w/o splitting.
     Gain.updateIfLessThan(
         computeMergeGain(ChainPred, ChainSucc, Jumps, 0, MergeTypeT::X_Y));
 
     if (EnableChainSplitAlongJumps) {
-      // Attach (a part of) ChainPred before the first node of ChainSucc
+      // Attach (a part of) ChainPred before the first node of ChainSucc.
       for (JumpT *Jump : ChainSucc->Nodes.front()->InJumps) {
         const NodeT *SrcBlock = Jump->Source;
         if (SrcBlock->CurChain != ChainPred)
@@ -841,9 +846,9 @@ private:
         tryChainMerging(Offset, {MergeTypeT::X1_Y_X2, MergeTypeT::X2_X1_Y});
       }
 
-      // Attach (a part of) ChainPred after the last node of ChainSucc
+      // Attach (a part of) ChainPred after the last node of ChainSucc.
       for (JumpT *Jump : ChainSucc->Nodes.back()->OutJumps) {
-        const NodeT *DstBlock = Jump->Source;
+        const NodeT *DstBlock = Jump->Target;
         if (DstBlock->CurChain != ChainPred)
           continue;
         size_t Offset = DstBlock->CurIndex;
@@ -851,12 +856,12 @@ private:
       }
     }
 
-    // Try to break ChainPred in various ways and concatenate with ChainSucc
+    // Try to break ChainPred in various ways and concatenate with ChainSucc.
     if (ChainPred->Nodes.size() <= ChainSplitThreshold) {
       for (size_t Offset = 1; Offset < ChainPred->Nodes.size(); Offset++) {
         // Try to split the chain in different ways. In practice, applying
         // X2_Y_X1 merging is almost never provides benefits; thus, we exclude
-        // it from consideration to reduce the search space
+        // it from consideration to reduce the search space.
         tryChainMerging(Offset, {MergeTypeT::X1_Y_X2, MergeTypeT::Y_X2_X1,
                                  MergeTypeT::X2_X1_Y});
       }
@@ -875,12 +880,12 @@ private:
     auto MergedBlocks =
         mergeNodes(ChainPred->Nodes, ChainSucc->Nodes, MergeOffset, MergeType);
 
-    // Do not allow a merge that does not preserve the original entry point
+    // Do not allow a merge that does not preserve the original entry point.
     if ((ChainPred->isEntry() || ChainSucc->isEntry()) &&
         !MergedBlocks.getFirstNode()->isEntry())
       return MergeGainT();
 
-    // The gain for the new chain
+    // The gain for the new chain.
     auto NewGainScore = extTSPScore(MergedBlocks, Jumps) - ChainPred->Score;
     return MergeGainT(NewGainScore, MergeOffset, MergeType);
   }
@@ -891,39 +896,39 @@ private:
                    MergeTypeT MergeType) {
     assert(Into != From && "a chain cannot be merged with itself");
 
-    // Merge the nodes
+    // Merge the nodes.
     MergedChain MergedNodes =
         mergeNodes(Into->Nodes, From->Nodes, MergeOffset, MergeType);
     Into->merge(From, MergedNodes.getNodes());
 
-    // Merge the edges
+    // Merge the edges.
     Into->mergeEdges(From);
     From->clear();
 
-    // Update cached ext-tsp score for the new chain
+    // Update cached ext-tsp score for the new chain.
     ChainEdge *SelfEdge = Into->getEdge(Into);
     if (SelfEdge != nullptr) {
       MergedNodes = MergedChain(Into->Nodes.begin(), Into->Nodes.end());
       Into->Score = extTSPScore(MergedNodes, SelfEdge->jumps());
     }
 
-    // Remove the chain from the list of active chains
+    // Remove the chain from the list of active chains.
     llvm::erase_value(HotChains, From);
 
-    // Invalidate caches
+    // Invalidate caches.
     for (auto EdgeIt : Into->Edges)
       EdgeIt.second->invalidateCache();
   }
 
   /// Concatenate all chains into the final order.
-  void concatChains(std::vector<uint64_t> &Order) {
-    // Collect chains and calculate density stats for their sorting
+  std::vector<uint64_t> concatChains() {
+    // Collect chains and calculate density stats for their sorting.
     std::vector<const ChainT *> SortedChains;
     DenseMap<const ChainT *, double> ChainDensity;
     for (ChainT &Chain : AllChains) {
       if (!Chain.Nodes.empty()) {
         SortedChains.push_back(&Chain);
-        // Using doubles to avoid overflow of ExecutionCounts
+        // Using doubles to avoid overflow of ExecutionCounts.
         double Size = 0;
         double ExecutionCount = 0;
         for (NodeT *Node : Chain.Nodes) {
@@ -935,27 +940,27 @@ private:
       }
     }
 
-    // Sorting chains by density in the decreasing order
-    std::stable_sort(SortedChains.begin(), SortedChains.end(),
-                     [&](const ChainT *L, const ChainT *R) {
-                       // Make sure the original entry point is at the
-                       // beginning of the order
-                       if (L->isEntry() != R->isEntry())
-                         return L->isEntry();
+    // Sorting chains by density in the decreasing order.
+    std::sort(SortedChains.begin(), SortedChains.end(),
+              [&](const ChainT *L, const ChainT *R) {
+                // Place the entry point is at the beginning of the order.
+                if (L->isEntry() != R->isEntry())
+                  return L->isEntry();
 
-                       const double DL = ChainDensity[L];
-                       const double DR = ChainDensity[R];
-                       // Compare by density and break ties by chain identifiers
-                       return (DL != DR) ? (DL > DR) : (L->Id < R->Id);
-                     });
+                const double DL = ChainDensity[L];
+                const double DR = ChainDensity[R];
+                // Compare by density and break ties by chain identifiers.
+                return std::make_tuple(-DL, L->Id) <
+                       std::make_tuple(-DR, R->Id);
+              });
 
-    // Collect the nodes in the order specified by their chains
+    // Collect the nodes in the order specified by their chains.
+    std::vector<uint64_t> Order;
     Order.reserve(NumNodes);
-    for (const ChainT *Chain : SortedChains) {
-      for (NodeT *Node : Chain->Nodes) {
+    for (const ChainT *Chain : SortedChains)
+      for (NodeT *Node : Chain->Nodes)
         Order.push_back(Node->Index);
-      }
-    }
+    return Order;
   }
 
 private:
@@ -984,61 +989,466 @@ private:
   std::vector<ChainT *> HotChains;
 };
 
+/// The implementation of the Cache-Directed Sort (CDS) algorithm for ordering
+/// functions represented by a call graph.
+class CDSortImpl {
+public:
+  CDSortImpl(const CDSortConfig &Config, ArrayRef<uint64_t> NodeSizes,
+             ArrayRef<uint64_t> NodeCounts, ArrayRef<EdgeCount> EdgeCounts,
+             ArrayRef<uint64_t> EdgeOffsets)
+      : Config(Config), NumNodes(NodeSizes.size()) {
+    initialize(NodeSizes, NodeCounts, EdgeCounts, EdgeOffsets);
+  }
+
+  /// Run the algorithm and return an ordered set of function clusters.
+  std::vector<uint64_t> run() {
+    // Merge pairs of chains while improving the objective.
+    mergeChainPairs();
+
+    LLVM_DEBUG(dbgs() << "Cache-directed function sorting reduced the number"
+                      << " of chains from " << NumNodes << " to "
+                      << HotChains.size() << "\n");
+
+    // Collect nodes from all the chains.
+    return concatChains();
+  }
+
+private:
+  /// Initialize the algorithm's data structures.
+  void initialize(const ArrayRef<uint64_t> &NodeSizes,
+                  const ArrayRef<uint64_t> &NodeCounts,
+                  const ArrayRef<EdgeCount> &EdgeCounts,
+                  const ArrayRef<uint64_t> &EdgeOffsets) {
+    // Initialize nodes.
+    AllNodes.reserve(NumNodes);
+    for (uint64_t Node = 0; Node < NumNodes; Node++) {
+      uint64_t Size = std::max<uint64_t>(NodeSizes[Node], 1ULL);
+      uint64_t ExecutionCount = NodeCounts[Node];
+      AllNodes.emplace_back(Node, Size, ExecutionCount);
+      TotalSamples += ExecutionCount;
+      if (ExecutionCount > 0)
+        TotalSize += Size;
+    }
+
+    // Initialize jumps between the nodes.
+    SuccNodes.resize(NumNodes);
+    PredNodes.resize(NumNodes);
+    AllJumps.reserve(EdgeCounts.size());
+    for (size_t I = 0; I < EdgeCounts.size(); I++) {
+      auto [Pred, Succ, Count] = EdgeCounts[I];
+      // Ignore recursive calls.
+      if (Pred == Succ)
+        continue;
+
+      SuccNodes[Pred].push_back(Succ);
+      PredNodes[Succ].push_back(Pred);
+      if (Count > 0) {
+        NodeT &PredNode = AllNodes[Pred];
+        NodeT &SuccNode = AllNodes[Succ];
+        AllJumps.emplace_back(&PredNode, &SuccNode, Count);
+        AllJumps.back().Offset = EdgeOffsets[I];
+        SuccNode.InJumps.push_back(&AllJumps.back());
+        PredNode.OutJumps.push_back(&AllJumps.back());
+      }
+    }
+
+    // Initialize chains.
+    AllChains.reserve(NumNodes);
+    HotChains.reserve(NumNodes);
+    for (NodeT &Node : AllNodes) {
+      // Adjust execution counts.
+      Node.ExecutionCount = std::max(Node.ExecutionCount, Node.inCount());
+      Node.ExecutionCount = std::max(Node.ExecutionCount, Node.outCount());
+      // Create chain.
+      AllChains.emplace_back(Node.Index, &Node);
+      Node.CurChain = &AllChains.back();
+      if (Node.ExecutionCount > 0)
+        HotChains.push_back(&AllChains.back());
+    }
+
+    // Initialize chain edges.
+    AllEdges.reserve(AllJumps.size());
+    for (NodeT &PredNode : AllNodes) {
+      for (JumpT *Jump : PredNode.OutJumps) {
+        NodeT *SuccNode = Jump->Target;
+        ChainEdge *CurEdge = PredNode.CurChain->getEdge(SuccNode->CurChain);
+        // this edge is already present in the graph.
+        if (CurEdge != nullptr) {
+          assert(SuccNode->CurChain->getEdge(PredNode.CurChain) != nullptr);
+          CurEdge->appendJump(Jump);
+          continue;
+        }
+        // this is a new edge.
+        AllEdges.emplace_back(Jump);
+        PredNode.CurChain->addEdge(SuccNode->CurChain, &AllEdges.back());
+        SuccNode->CurChain->addEdge(PredNode.CurChain, &AllEdges.back());
+      }
+    }
+  }
+
+  /// Merge pairs of chains while there is an improvement in the objective.
+  void mergeChainPairs() {
+    // Create a priority queue containing all edges ordered by the merge gain.
+    auto GainComparator = [](ChainEdge *L, ChainEdge *R) {
+      return std::make_tuple(-L->gain(), L->srcChain()->Id, L->dstChain()->Id) <
+             std::make_tuple(-R->gain(), R->srcChain()->Id, R->dstChain()->Id);
+    };
+    std::set<ChainEdge *, decltype(GainComparator)> Queue(GainComparator);
+
+    // Insert the edges into the queue.
+    for (ChainT *ChainPred : HotChains) {
+      for (const auto &[_, Edge] : ChainPred->Edges) {
+        // Ignore self-edges.
+        if (Edge->isSelfEdge())
+          continue;
+        // Ignore already processed edges.
+        if (Edge->gain() != -1.0)
+          continue;
+
+        // Compute the gain of merging the two chains.
+        MergeGainT Gain = getBestMergeGain(Edge);
+        Edge->setMergeGain(Gain);
+
+        if (Edge->gain() > EPS)
+          Queue.insert(Edge);
+      }
+    }
+
+    // Merge the chains while the gain of merging is positive.
+    while (!Queue.empty()) {
+      // Extract the best (top) edge for merging.
+      ChainEdge *BestEdge = *Queue.begin();
+      Queue.erase(Queue.begin());
+      // Ignore self-edges.
+      if (BestEdge->isSelfEdge())
+        continue;
+      // Ignore edges with non-positive gains.
+      if (BestEdge->gain() <= EPS)
+        continue;
+
+      ChainT *BestSrcChain = BestEdge->srcChain();
+      ChainT *BestDstChain = BestEdge->dstChain();
+
+      // Remove outdated edges from the queue.
+      for (const auto &[_, ChainEdge] : BestSrcChain->Edges)
+        Queue.erase(ChainEdge);
+      for (const auto &[_, ChainEdge] : BestDstChain->Edges)
+        Queue.erase(ChainEdge);
+
+      // Merge the best pair of chains.
+      MergeGainT BestGain = BestEdge->getMergeGain();
+      mergeChains(BestSrcChain, BestDstChain, BestGain.mergeOffset(),
+                  BestGain.mergeType());
+
+      // Insert newly created edges into the queue.
+      for (const auto &[_, Edge] : BestSrcChain->Edges) {
+        // Ignore loop edges.
+        if (Edge->isSelfEdge())
+          continue;
+
+        // Compute the gain of merging the two chains.
+        MergeGainT Gain = getBestMergeGain(Edge);
+        Edge->setMergeGain(Gain);
+
+        if (Edge->gain() > EPS)
+          Queue.insert(Edge);
+      }
+    }
+  }
+
+  /// Compute the gain of merging two chains.
+  ///
+  /// The function considers all possible ways of merging two chains and
+  /// computes the one having the largest increase in ExtTSP objective. The
+  /// result is a pair with the first element being the gain and the second
+  /// element being the corresponding merging type.
+  MergeGainT getBestMergeGain(ChainEdge *Edge) const {
+    // Precompute jumps between ChainPred and ChainSucc.
+    auto Jumps = Edge->jumps();
+    assert(!Jumps.empty() && "trying to merge chains w/o jumps");
+    ChainT *SrcChain = Edge->srcChain();
+    ChainT *DstChain = Edge->dstChain();
+
+    // This object holds the best currently chosen gain of merging two chains.
+    MergeGainT Gain = MergeGainT();
+
+    /// Given a list of merge types, try to merge two chains and update Gain
+    /// with a better alternative.
+    auto tryChainMerging = [&](const std::vector<MergeTypeT> &MergeTypes) {
+      // Apply the merge, compute the corresponding gain, and update the best
+      // value, if the merge is beneficial.
+      for (const MergeTypeT &MergeType : MergeTypes) {
+        MergeGainT NewGain =
+            computeMergeGain(SrcChain, DstChain, Jumps, MergeType);
+
+        // When forward and backward gains are the same, prioritize merging that
+        // preserves the original order of the functions in the binary.
+        if (std::abs(Gain.score() - NewGain.score()) < EPS) {
+          if ((MergeType == MergeTypeT::X_Y && SrcChain->Id < DstChain->Id) ||
+              (MergeType == MergeTypeT::Y_X && SrcChain->Id > DstChain->Id)) {
+            Gain = NewGain;
+          }
+        } else if (NewGain.score() > Gain.score() + EPS) {
+          Gain = NewGain;
+        }
+      }
+    };
+
+    // Try to concatenate two chains w/o splitting.
+    tryChainMerging({MergeTypeT::X_Y, MergeTypeT::Y_X});
+
+    return Gain;
+  }
+
+  /// Compute the score gain of merging two chains, respecting a given type.
+  ///
+  /// The two chains are not modified in the method.
+  MergeGainT computeMergeGain(ChainT *ChainPred, ChainT *ChainSucc,
+                              const std::vector<JumpT *> &Jumps,
+                              MergeTypeT MergeType) const {
+    // This doesn't depend on the ordering of the nodes
+    double FreqGain = freqBasedLocalityGain(ChainPred, ChainSucc);
+
+    // Merge offset is always 0, as the chains are not split.
+    size_t MergeOffset = 0;
+    auto MergedBlocks =
+        mergeNodes(ChainPred->Nodes, ChainSucc->Nodes, MergeOffset, MergeType);
+    double DistGain = distBasedLocalityGain(MergedBlocks, Jumps);
+
+    double GainScore = DistGain + Config.FrequencyScale * FreqGain;
+    // Scale the result to increase the importance of merging short chains.
+    if (GainScore >= 0.0)
+      GainScore /= std::min(ChainPred->Size, ChainSucc->Size);
+
+    return MergeGainT(GainScore, MergeOffset, MergeType);
+  }
+
+  /// Compute the change of the frequency locality after merging the chains.
+  double freqBasedLocalityGain(ChainT *ChainPred, ChainT *ChainSucc) const {
+    auto missProbability = [&](double ChainDensity) {
+      double PageSamples = ChainDensity * Config.CacheSize;
+      if (PageSamples >= TotalSamples)
+        return 0.0;
+      double P = PageSamples / TotalSamples;
+      return pow(1.0 - P, static_cast<double>(Config.CacheEntries));
+    };
+
+    // Cache misses on the chains before merging.
+    double CurScore =
+        ChainPred->ExecutionCount * missProbability(ChainPred->density()) +
+        ChainSucc->ExecutionCount * missProbability(ChainSucc->density());
+
+    // Cache misses on the merged chain
+    double MergedCounts = ChainPred->ExecutionCount + ChainSucc->ExecutionCount;
+    double MergedSize = ChainPred->Size + ChainSucc->Size;
+    double MergedDensity = static_cast<double>(MergedCounts) / MergedSize;
+    double NewScore = MergedCounts * missProbability(MergedDensity);
+
+    return CurScore - NewScore;
+  }
+
+  /// Compute the distance locality for a jump / call.
+  double distScore(uint64_t SrcAddr, uint64_t DstAddr, uint64_t Count) const {
+    uint64_t Dist = SrcAddr <= DstAddr ? DstAddr - SrcAddr : SrcAddr - DstAddr;
+    double D = Dist == 0 ? 0.1 : static_cast<double>(Dist);
+    return static_cast<double>(Count) * std::pow(D, -Config.DistancePower);
+  }
+
+  /// Compute the change of the distance locality after merging the chains.
+  double distBasedLocalityGain(const MergedChain &MergedBlocks,
+                               const std::vector<JumpT *> &Jumps) const {
+    if (Jumps.empty())
+      return 0.0;
+    uint64_t CurAddr = 0;
+    MergedBlocks.forEach([&](const NodeT *Node) {
+      Node->EstimatedAddr = CurAddr;
+      CurAddr += Node->Size;
+    });
+
+    double CurScore = 0;
+    double NewScore = 0;
+    for (const JumpT *Arc : Jumps) {
+      uint64_t SrcAddr = Arc->Source->EstimatedAddr + Arc->Offset;
+      uint64_t DstAddr = Arc->Target->EstimatedAddr;
+      NewScore += distScore(SrcAddr, DstAddr, Arc->ExecutionCount);
+      CurScore += distScore(0, TotalSize, Arc->ExecutionCount);
+    }
+    return NewScore - CurScore;
+  }
+
+  /// Merge chain From into chain Into, update the list of active chains,
+  /// adjacency information, and the corresponding cached values.
+  void mergeChains(ChainT *Into, ChainT *From, size_t MergeOffset,
+                   MergeTypeT MergeType) {
+    assert(Into != From && "a chain cannot be merged with itself");
+
+    // Merge the nodes.
+    MergedChain MergedNodes =
+        mergeNodes(Into->Nodes, From->Nodes, MergeOffset, MergeType);
+    Into->merge(From, MergedNodes.getNodes());
+
+    // Merge the edges.
+    Into->mergeEdges(From);
+    From->clear();
+
+    // Remove the chain from the list of active chains.
+    llvm::erase_value(HotChains, From);
+  }
+
+  /// Concatenate all chains into the final order.
+  std::vector<uint64_t> concatChains() {
+    // Collect chains and calculate density stats for their sorting.
+    std::vector<const ChainT *> SortedChains;
+    DenseMap<const ChainT *, double> ChainDensity;
+    for (ChainT &Chain : AllChains) {
+      if (!Chain.Nodes.empty()) {
+        SortedChains.push_back(&Chain);
+        // Using doubles to avoid overflow of ExecutionCounts.
+        double Size = 0;
+        double ExecutionCount = 0;
+        for (NodeT *Node : Chain.Nodes) {
+          Size += static_cast<double>(Node->Size);
+          ExecutionCount += static_cast<double>(Node->ExecutionCount);
+        }
+        assert(Size > 0 && "a chain of zero size");
+        ChainDensity[&Chain] = ExecutionCount / Size;
+      }
+    }
+
+    // Sort chains by density in the decreasing order.
+    std::sort(SortedChains.begin(), SortedChains.end(),
+              [&](const ChainT *L, const ChainT *R) {
+                const double DL = ChainDensity[L];
+                const double DR = ChainDensity[R];
+                // Compare by density and break ties by chain identifiers.
+                return std::make_tuple(-DL, L->Id) <
+                       std::make_tuple(-DR, R->Id);
+              });
+
+    // Collect the nodes in the order specified by their chains.
+    std::vector<uint64_t> Order;
+    Order.reserve(NumNodes);
+    for (const ChainT *Chain : SortedChains)
+      for (NodeT *Node : Chain->Nodes)
+        Order.push_back(Node->Index);
+    return Order;
+  }
+
+private:
+  /// Config for the algorithm.
+  const CDSortConfig Config;
+
+  /// The number of nodes in the graph.
+  const size_t NumNodes;
+
+  /// Successors of each node.
+  std::vector<std::vector<uint64_t>> SuccNodes;
+
+  /// Predecessors of each node.
+  std::vector<std::vector<uint64_t>> PredNodes;
+
+  /// All nodes (functions) in the graph.
+  std::vector<NodeT> AllNodes;
+
+  /// All jumps (function calls) between the nodes.
+  std::vector<JumpT> AllJumps;
+
+  /// All chains of nodes.
+  std::vector<ChainT> AllChains;
+
+  /// All edges between the chains.
+  std::vector<ChainEdge> AllEdges;
+
+  /// Active chains. The vector gets updated at runtime when chains are merged.
+  std::vector<ChainT *> HotChains;
+
+  /// The total number of samples in the graph.
+  uint64_t TotalSamples{0};
+
+  /// The total size of the nodes in the graph.
+  uint64_t TotalSize{0};
+};
+
 } // end of anonymous namespace
 
 std::vector<uint64_t>
-llvm::applyExtTspLayout(const std::vector<uint64_t> &NodeSizes,
-                        const std::vector<uint64_t> &NodeCounts,
-                        const std::vector<EdgeCountT> &EdgeCounts) {
-  // Verify correctness of the input data
+codelayout::computeExtTspLayout(ArrayRef<uint64_t> NodeSizes,
+                                ArrayRef<uint64_t> NodeCounts,
+                                ArrayRef<EdgeCount> EdgeCounts) {
+  // Verify correctness of the input data.
   assert(NodeCounts.size() == NodeSizes.size() && "Incorrect input");
   assert(NodeSizes.size() > 2 && "Incorrect input");
 
-  // Apply the reordering algorithm
+  // Apply the reordering algorithm.
   ExtTSPImpl Alg(NodeSizes, NodeCounts, EdgeCounts);
-  std::vector<uint64_t> Result;
-  Alg.run(Result);
+  std::vector<uint64_t> Result = Alg.run();
 
-  // Verify correctness of the output
+  // Verify correctness of the output.
   assert(Result.front() == 0 && "Original entry point is not preserved");
   assert(Result.size() == NodeSizes.size() && "Incorrect size of layout");
   return Result;
 }
 
-double llvm::calcExtTspScore(const std::vector<uint64_t> &Order,
-                             const std::vector<uint64_t> &NodeSizes,
-                             const std::vector<uint64_t> &NodeCounts,
-                             const std::vector<EdgeCountT> &EdgeCounts) {
-  // Estimate addresses of the blocks in memory
+double codelayout::calcExtTspScore(ArrayRef<uint64_t> Order,
+                                   ArrayRef<uint64_t> NodeSizes,
+                                   ArrayRef<uint64_t> NodeCounts,
+                                   ArrayRef<EdgeCount> EdgeCounts) {
+  // Estimate addresses of the blocks in memory.
   std::vector<uint64_t> Addr(NodeSizes.size(), 0);
   for (size_t Idx = 1; Idx < Order.size(); Idx++) {
     Addr[Order[Idx]] = Addr[Order[Idx - 1]] + NodeSizes[Order[Idx - 1]];
   }
   std::vector<uint64_t> OutDegree(NodeSizes.size(), 0);
-  for (auto It : EdgeCounts) {
-    uint64_t Pred = It.first.first;
-    OutDegree[Pred]++;
-  }
+  for (auto Edge : EdgeCounts)
+    ++OutDegree[Edge.src];
 
-  // Increase the score for each jump
+  // Increase the score for each jump.
   double Score = 0;
-  for (auto It : EdgeCounts) {
-    uint64_t Pred = It.first.first;
-    uint64_t Succ = It.first.second;
-    uint64_t Count = It.second;
-    bool IsConditional = OutDegree[Pred] > 1;
-    Score += ::extTSPScore(Addr[Pred], NodeSizes[Pred], Addr[Succ], Count,
-                           IsConditional);
+  for (auto Edge : EdgeCounts) {
+    bool IsConditional = OutDegree[Edge.src] > 1;
+    Score += ::extTSPScore(Addr[Edge.src], NodeSizes[Edge.src], Addr[Edge.dst],
+                           Edge.count, IsConditional);
   }
   return Score;
 }
 
-double llvm::calcExtTspScore(const std::vector<uint64_t> &NodeSizes,
-                             const std::vector<uint64_t> &NodeCounts,
-                             const std::vector<EdgeCountT> &EdgeCounts) {
+double codelayout::calcExtTspScore(ArrayRef<uint64_t> NodeSizes,
+                                   ArrayRef<uint64_t> NodeCounts,
+                                   ArrayRef<EdgeCount> EdgeCounts) {
   std::vector<uint64_t> Order(NodeSizes.size());
   for (size_t Idx = 0; Idx < NodeSizes.size(); Idx++) {
     Order[Idx] = Idx;
   }
   return calcExtTspScore(Order, NodeSizes, NodeCounts, EdgeCounts);
+}
+
+std::vector<uint64_t> codelayout::computeCacheDirectedLayout(
+    const CDSortConfig &Config, ArrayRef<uint64_t> FuncSizes,
+    ArrayRef<uint64_t> FuncCounts, ArrayRef<EdgeCount> CallCounts,
+    ArrayRef<uint64_t> CallOffsets) {
+  // Verify correctness of the input data.
+  assert(FuncCounts.size() == FuncSizes.size() && "Incorrect input");
+
+  // Apply the reordering algorithm.
+  CDSortImpl Alg(Config, FuncSizes, FuncCounts, CallCounts, CallOffsets);
+  std::vector<uint64_t> Result = Alg.run();
+  assert(Result.size() == FuncSizes.size() && "Incorrect size of layout");
+  return Result;
+}
+
+std::vector<uint64_t> codelayout::computeCacheDirectedLayout(
+    ArrayRef<uint64_t> FuncSizes, ArrayRef<uint64_t> FuncCounts,
+    ArrayRef<EdgeCount> CallCounts, ArrayRef<uint64_t> CallOffsets) {
+  CDSortConfig Config;
+  // Populate the config from the command-line options.
+  if (CacheEntries.getNumOccurrences() > 0)
+    Config.CacheEntries = CacheEntries;
+  if (CacheSize.getNumOccurrences() > 0)
+    Config.CacheSize = CacheSize;
+  if (DistancePower.getNumOccurrences() > 0)
+    Config.DistancePower = DistancePower;
+  if (FrequencyScale.getNumOccurrences() > 0)
+    Config.FrequencyScale = FrequencyScale;
+  return computeCacheDirectedLayout(Config, FuncSizes, FuncCounts, CallCounts,
+                                    CallOffsets);
 }

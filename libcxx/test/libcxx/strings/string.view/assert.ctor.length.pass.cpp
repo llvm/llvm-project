@@ -7,9 +7,8 @@
 //===----------------------------------------------------------------------===//
 
 // REQUIRES: has-unix-headers
-
 // UNSUPPORTED: c++03, c++11
-// UNSUPPORTED: !libcpp-has-hardened-mode && !libcpp-has-debug-mode
+// REQUIRES: libcpp-hardening-mode={{safe|debug}}
 // XFAIL: availability-verbose_abort-missing
 
 // Construct a string_view from an invalid length

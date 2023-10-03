@@ -395,8 +395,6 @@ void Module::setDataLayout(StringRef Desc) {
 
 void Module::setDataLayout(const DataLayout &Other) { DL = Other; }
 
-const DataLayout &Module::getDataLayout() const { return DL; }
-
 DICompileUnit *Module::debug_compile_units_iterator::operator*() const {
   return cast<DICompileUnit>(CUs->getOperand(Idx));
 }
@@ -631,6 +629,23 @@ void Module::setCodeModel(CodeModel::Model CL) {
   // longer jumps) if a larger code model is used with a smaller one.
   // Therefore we will treat attempts to mix code models as an error.
   addModuleFlag(ModFlagBehavior::Error, "Code Model", CL);
+}
+
+std::optional<uint64_t> Module::getLargeDataThreshold() const {
+  auto *Val =
+      cast_or_null<ConstantAsMetadata>(getModuleFlag("Large Data Threshold"));
+
+  if (!Val)
+    return std::nullopt;
+
+  return cast<ConstantInt>(Val->getValue())->getZExtValue();
+}
+
+void Module::setLargeDataThreshold(uint64_t Threshold) {
+  // Since the large data threshold goes along with the code model, the merge
+  // behavior is the same.
+  addModuleFlag(ModFlagBehavior::Error, "Large Data Threshold",
+                ConstantInt::get(Type::getInt64Ty(Context), Threshold));
 }
 
 void Module::setProfileSummary(Metadata *M, ProfileSummary::Kind Kind) {

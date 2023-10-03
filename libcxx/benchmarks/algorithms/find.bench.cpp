@@ -46,4 +46,32 @@ BENCHMARK(bm_ranges_find<char>)->DenseRange(1, 8)->Range(16, 1 << 20);
 BENCHMARK(bm_ranges_find<short>)->DenseRange(1, 8)->Range(16, 1 << 20);
 BENCHMARK(bm_ranges_find<int>)->DenseRange(1, 8)->Range(16, 1 << 20);
 
+static void bm_vector_bool_find(benchmark::State& state) {
+  std::vector<bool> vec1(state.range(), false);
+  std::mt19937_64 rng(std::random_device{}());
+
+  for (auto _ : state) {
+    auto idx  = rng() % vec1.size();
+    vec1[idx] = true;
+    benchmark::DoNotOptimize(vec1);
+    benchmark::DoNotOptimize(std::find(vec1.begin(), vec1.end(), true));
+    vec1[idx] = false;
+  }
+}
+BENCHMARK(bm_vector_bool_find)->DenseRange(1, 8)->Range(16, 1 << 20);
+
+static void bm_vector_bool_ranges_find(benchmark::State& state) {
+  std::vector<bool> vec1(state.range(), false);
+  std::mt19937_64 rng(std::random_device{}());
+
+  for (auto _ : state) {
+    auto idx  = rng() % vec1.size();
+    vec1[idx] = true;
+    benchmark::DoNotOptimize(vec1);
+    benchmark::DoNotOptimize(std::ranges::find(vec1, true));
+    vec1[idx] = false;
+  }
+}
+BENCHMARK(bm_vector_bool_ranges_find)->DenseRange(1, 8)->Range(16, 1 << 20);
+
 BENCHMARK_MAIN();

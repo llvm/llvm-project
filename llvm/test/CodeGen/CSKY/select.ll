@@ -8159,3 +8159,211 @@ entry:
   %ret = select i1 %c, i1 %m, i1 %n
   ret i1 %ret
 }
+
+define i32 @select_bit_test_eq_0(i32 %0) {
+; CHECK-LABEL: select_bit_test_eq_0:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    btsti16 a0, 17
+; CHECK-NEXT:    movi16 a0, 23
+; CHECK-NEXT:    movi16 a1, 1
+; CHECK-NEXT:    movf32 a0, a1
+; CHECK-NEXT:    rts16
+;
+; GENERIC-LABEL: select_bit_test_eq_0:
+; GENERIC:       # %bb.0:
+; GENERIC-NEXT:    .cfi_def_cfa_offset 0
+; GENERIC-NEXT:    subi16 sp, sp, 4
+; GENERIC-NEXT:    .cfi_def_cfa_offset 4
+; GENERIC-NEXT:    movi16 a1, 0
+; GENERIC-NEXT:    lsli16 a2, a1, 24
+; GENERIC-NEXT:    movi16 a3, 2
+; GENERIC-NEXT:    lsli16 a3, a3, 16
+; GENERIC-NEXT:    or16 a3, a2
+; GENERIC-NEXT:    lsli16 a2, a1, 8
+; GENERIC-NEXT:    or16 a2, a3
+; GENERIC-NEXT:    or16 a2, a1
+; GENERIC-NEXT:    and16 a2, a0
+; GENERIC-NEXT:    cmpnei16 a2, 0
+; GENERIC-NEXT:    mvcv16 a1
+; GENERIC-NEXT:    movi16 a0, 1
+; GENERIC-NEXT:    btsti16 a1, 0
+; GENERIC-NEXT:    bt16 .LBB202_2
+; GENERIC-NEXT:  # %bb.1:
+; GENERIC-NEXT:    movi16 a0, 23
+; GENERIC-NEXT:  .LBB202_2:
+; GENERIC-NEXT:    addi16 sp, sp, 4
+; GENERIC-NEXT:    rts16
+  %2 = and i32 %0, 131072
+  %3 = icmp eq i32 %2, 0
+  %4 = select i1 %3, i32 1, i32 23
+  ret i32 %4
+}
+
+define i32 @select_bit_test_ne_0(i32 %0) {
+; CHECK-LABEL: select_bit_test_ne_0:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    btsti16 a0, 17
+; CHECK-NEXT:    movi16 a0, 34
+; CHECK-NEXT:    movi16 a1, 5
+; CHECK-NEXT:    movt32 a0, a1
+; CHECK-NEXT:    rts16
+;
+; GENERIC-LABEL: select_bit_test_ne_0:
+; GENERIC:       # %bb.0:
+; GENERIC-NEXT:    .cfi_def_cfa_offset 0
+; GENERIC-NEXT:    subi16 sp, sp, 4
+; GENERIC-NEXT:    .cfi_def_cfa_offset 4
+; GENERIC-NEXT:    movi16 a1, 0
+; GENERIC-NEXT:    lsli16 a2, a1, 24
+; GENERIC-NEXT:    movi16 a3, 2
+; GENERIC-NEXT:    lsli16 a3, a3, 16
+; GENERIC-NEXT:    or16 a3, a2
+; GENERIC-NEXT:    lsli16 a2, a1, 8
+; GENERIC-NEXT:    or16 a2, a3
+; GENERIC-NEXT:    or16 a2, a1
+; GENERIC-NEXT:    and16 a2, a0
+; GENERIC-NEXT:    cmpnei16 a2, 0
+; GENERIC-NEXT:    mvcv16 a0
+; GENERIC-NEXT:    movi16 a1, 1
+; GENERIC-NEXT:    subu16 a1, a0
+; GENERIC-NEXT:    movi16 a0, 5
+; GENERIC-NEXT:    btsti16 a1, 0
+; GENERIC-NEXT:    bt16 .LBB203_2
+; GENERIC-NEXT:  # %bb.1:
+; GENERIC-NEXT:    movi16 a0, 34
+; GENERIC-NEXT:  .LBB203_2:
+; GENERIC-NEXT:    addi16 sp, sp, 4
+; GENERIC-NEXT:    rts16
+  %2 = and i32 %0, 131072
+  %3 = icmp ne i32 %2, 0
+  %4 = select i1 %3, i32 5, i32 34
+  ret i32 %4
+}
+
+define i32 @select_bit_test_eq_mask(i32 %0) {
+; CHECK-LABEL: select_bit_test_eq_mask:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    btsti16 a0, 17
+; CHECK-NEXT:    movi16 a0, 5
+; CHECK-NEXT:    movi16 a1, 34
+; CHECK-NEXT:    movt32 a0, a1
+; CHECK-NEXT:    rts16
+;
+; GENERIC-LABEL: select_bit_test_eq_mask:
+; GENERIC:       # %bb.0:
+; GENERIC-NEXT:    .cfi_def_cfa_offset 0
+; GENERIC-NEXT:    subi16 sp, sp, 4
+; GENERIC-NEXT:    .cfi_def_cfa_offset 4
+; GENERIC-NEXT:    movi16 a1, 0
+; GENERIC-NEXT:    lsli16 a2, a1, 24
+; GENERIC-NEXT:    movi16 a3, 2
+; GENERIC-NEXT:    lsli16 a3, a3, 16
+; GENERIC-NEXT:    or16 a3, a2
+; GENERIC-NEXT:    lsli16 a2, a1, 8
+; GENERIC-NEXT:    or16 a2, a3
+; GENERIC-NEXT:    or16 a2, a1
+; GENERIC-NEXT:    and16 a2, a0
+; GENERIC-NEXT:    cmpnei16 a2, 0
+; GENERIC-NEXT:    mvcv16 a0
+; GENERIC-NEXT:    movi16 a1, 1
+; GENERIC-NEXT:    subu16 a1, a0
+; GENERIC-NEXT:    movi16 a0, 34
+; GENERIC-NEXT:    btsti16 a1, 0
+; GENERIC-NEXT:    bt16 .LBB204_2
+; GENERIC-NEXT:  # %bb.1:
+; GENERIC-NEXT:    movi16 a0, 5
+; GENERIC-NEXT:  .LBB204_2:
+; GENERIC-NEXT:    addi16 sp, sp, 4
+; GENERIC-NEXT:    rts16
+  %2 = and i32 %0, 131072
+  %3 = icmp eq i32 %2, 131072
+  %4 = select i1 %3, i32 34, i32 5
+  ret i32 %4
+}
+
+define i32 @select_bit_test_ne_mask(i32 %0) {
+; CHECK-LABEL: select_bit_test_ne_mask:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    btsti16 a0, 17
+; CHECK-NEXT:    movi16 a0, 34
+; CHECK-NEXT:    movi16 a1, 5
+; CHECK-NEXT:    movt32 a0, a1
+; CHECK-NEXT:    rts16
+;
+; GENERIC-LABEL: select_bit_test_ne_mask:
+; GENERIC:       # %bb.0:
+; GENERIC-NEXT:    .cfi_def_cfa_offset 0
+; GENERIC-NEXT:    subi16 sp, sp, 4
+; GENERIC-NEXT:    .cfi_def_cfa_offset 4
+; GENERIC-NEXT:    movi16 a1, 0
+; GENERIC-NEXT:    lsli16 a2, a1, 24
+; GENERIC-NEXT:    movi16 a3, 2
+; GENERIC-NEXT:    lsli16 a3, a3, 16
+; GENERIC-NEXT:    or16 a3, a2
+; GENERIC-NEXT:    lsli16 a2, a1, 8
+; GENERIC-NEXT:    or16 a2, a3
+; GENERIC-NEXT:    or16 a2, a1
+; GENERIC-NEXT:    and16 a2, a0
+; GENERIC-NEXT:    cmpnei16 a2, 0
+; GENERIC-NEXT:    mvcv16 a0
+; GENERIC-NEXT:    movi16 a1, 1
+; GENERIC-NEXT:    subu16 a1, a0
+; GENERIC-NEXT:    movi16 a0, 5
+; GENERIC-NEXT:    btsti16 a1, 0
+; GENERIC-NEXT:    bt16 .LBB205_2
+; GENERIC-NEXT:  # %bb.1:
+; GENERIC-NEXT:    movi16 a0, 34
+; GENERIC-NEXT:  .LBB205_2:
+; GENERIC-NEXT:    addi16 sp, sp, 4
+; GENERIC-NEXT:    rts16
+  %2 = and i32 %0, 131072
+  %3 = icmp eq i32 %2, 131072
+  %4 = select i1 %3, i32 5, i32 34
+  ret i32 %4
+}
+
+define i32 @select_lowbit_test_ne_0(i32 %0) {
+; CHECK-LABEL: select_lowbit_test_ne_0:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    andi32 a0, a0, 256
+; CHECK-NEXT:    cmpnei16 a0, 0
+; CHECK-NEXT:    movi16 a0, 34
+; CHECK-NEXT:    movi16 a1, 5
+; CHECK-NEXT:    movt32 a0, a1
+; CHECK-NEXT:    rts16
+;
+; GENERIC-LABEL: select_lowbit_test_ne_0:
+; GENERIC:       # %bb.0:
+; GENERIC-NEXT:    subi16 sp, sp, 4
+; GENERIC-NEXT:    .cfi_def_cfa_offset 4
+; GENERIC-NEXT:    st16.w l0, (sp, 0) # 4-byte Folded Spill
+; GENERIC-NEXT:    .cfi_offset l0, -4
+; GENERIC-NEXT:    subi16 sp, sp, 4
+; GENERIC-NEXT:    .cfi_def_cfa_offset 8
+; GENERIC-NEXT:    movi16 a1, 0
+; GENERIC-NEXT:    lsli16 a2, a1, 24
+; GENERIC-NEXT:    lsli16 a3, a1, 16
+; GENERIC-NEXT:    or16 a3, a2
+; GENERIC-NEXT:    movi16 a2, 1
+; GENERIC-NEXT:    lsli16 l0, a2, 8
+; GENERIC-NEXT:    or16 l0, a3
+; GENERIC-NEXT:    or16 l0, a1
+; GENERIC-NEXT:    and16 l0, a0
+; GENERIC-NEXT:    cmpnei16 l0, 0
+; GENERIC-NEXT:    mvcv16 a0
+; GENERIC-NEXT:    subu16 a2, a0
+; GENERIC-NEXT:    movi16 a0, 5
+; GENERIC-NEXT:    btsti16 a2, 0
+; GENERIC-NEXT:    bt16 .LBB206_2
+; GENERIC-NEXT:  # %bb.1:
+; GENERIC-NEXT:    movi16 a0, 34
+; GENERIC-NEXT:  .LBB206_2:
+; GENERIC-NEXT:    addi16 sp, sp, 4
+; GENERIC-NEXT:    ld16.w l0, (sp, 0) # 4-byte Folded Reload
+; GENERIC-NEXT:    addi16 sp, sp, 4
+; GENERIC-NEXT:    rts16
+  %2 = and i32 %0, 256
+  %3 = icmp ne i32 %2, 0
+  %4 = select i1 %3, i32 5, i32 34
+  ret i32 %4
+}

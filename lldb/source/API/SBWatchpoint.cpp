@@ -16,7 +16,6 @@
 
 #include "lldb/Breakpoint/Watchpoint.h"
 #include "lldb/Breakpoint/WatchpointList.h"
-#include "lldb/Core/StreamFile.h"
 #include "lldb/Symbol/CompilerType.h"
 #include "lldb/Target/Process.h"
 #include "lldb/Target/Target.h"
@@ -355,7 +354,8 @@ bool SBWatchpoint::IsWatchingWrites() {
     std::lock_guard<std::recursive_mutex> guard(
         watchpoint_sp->GetTarget().GetAPIMutex());
 
-    return watchpoint_sp->WatchpointWrite();
+    return watchpoint_sp->WatchpointWrite() ||
+           watchpoint_sp->WatchpointModify();
   }
 
   return false;

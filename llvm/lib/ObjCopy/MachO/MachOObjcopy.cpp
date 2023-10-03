@@ -490,10 +490,12 @@ Error objcopy::macho::executeObjcopyOnMachOUniversalBinary(
       if (Kind == object::Archive::K_BSD)
         Kind = object::Archive::K_DARWIN;
       Expected<std::unique_ptr<MemoryBuffer>> OutputBufferOrErr =
-          writeArchiveToBuffer(*NewArchiveMembersOrErr,
-                               (*ArOrErr)->hasSymbolTable(), Kind,
-                               Config.getCommonConfig().DeterministicArchives,
-                               (*ArOrErr)->isThin());
+          writeArchiveToBuffer(
+              *NewArchiveMembersOrErr,
+              (*ArOrErr)->hasSymbolTable() ? SymtabWritingMode::NormalSymtab
+                                           : SymtabWritingMode::NoSymtab,
+              Kind, Config.getCommonConfig().DeterministicArchives,
+              (*ArOrErr)->isThin());
       if (!OutputBufferOrErr)
         return OutputBufferOrErr.takeError();
       Expected<std::unique_ptr<Binary>> BinaryOrErr =

@@ -256,7 +256,7 @@ public:
   void clear();
   void compute(FunctionT &F);
 
-  FunctionT *getFunction() const { return Context.getFunction(); }
+  const FunctionT *getFunction() const { return Context.getFunction(); }
   const ContextT &getSSAContext() const { return Context; }
 
   CycleT *getCycle(const BlockT *Block) const;

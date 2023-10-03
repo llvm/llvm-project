@@ -138,5 +138,5 @@ entry:
 ; CGSCC: attributes #[[ATTR0]] = { nofree nosync nounwind memory(argmem: readwrite) }
 ; CGSCC: attributes #[[ATTR1]] = { mustprogress nofree norecurse nosync nounwind willreturn memory(none) }
 ; CGSCC: attributes #[[ATTR2]] = { nofree nosync nounwind null_pointer_is_valid }
-; CGSCC: attributes #[[ATTR3]] = { nofree }
+; CGSCC: attributes #[[ATTR3]] = { nofree nosync }
 ;.

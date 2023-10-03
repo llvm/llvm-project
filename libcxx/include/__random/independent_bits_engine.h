@@ -104,23 +104,18 @@ public:
 #endif // _LIBCPP_CXX03_LANG
     _LIBCPP_INLINE_VISIBILITY
     explicit independent_bits_engine(result_type __sd) : __e_(__sd) {}
-    template<class _Sseq>
+    template<class _Sseq, __enable_if_t<__is_seed_sequence<_Sseq, independent_bits_engine>::value &&
+                                        !is_convertible<_Sseq, _Engine>::value, int> = 0>
         _LIBCPP_INLINE_VISIBILITY
-        explicit independent_bits_engine(_Sseq& __q,
-        typename enable_if<__is_seed_sequence<_Sseq, independent_bits_engine>::value &&
-                           !is_convertible<_Sseq, _Engine>::value>::type* = 0)
+        explicit independent_bits_engine(_Sseq& __q)
          : __e_(__q) {}
     _LIBCPP_INLINE_VISIBILITY
     void seed() {__e_.seed();}
     _LIBCPP_INLINE_VISIBILITY
     void seed(result_type __sd) {__e_.seed(__sd);}
-    template<class _Sseq>
+    template<class _Sseq, __enable_if_t<__is_seed_sequence<_Sseq, independent_bits_engine>::value, int> = 0>
         _LIBCPP_INLINE_VISIBILITY
-        typename enable_if
-        <
-            __is_seed_sequence<_Sseq, independent_bits_engine>::value,
-            void
-        >::type
+        void
         seed(_Sseq& __q) {__e_.seed(__q);}
 
     // generating functions
@@ -166,24 +161,16 @@ private:
     result_type __eval(false_type);
     _LIBCPP_HIDE_FROM_ABI result_type __eval(true_type);
 
-    template <size_t __count>
+    template <size_t __count, __enable_if_t<__count < _Dt, int> = 0>
         _LIBCPP_INLINE_VISIBILITY
         static
-        typename enable_if
-        <
-            __count < _Dt,
-            result_type
-        >::type
+        result_type
         __lshift(result_type __x) {return __x << __count;}
 
-    template <size_t __count>
+    template <size_t __count, __enable_if_t<(__count >= _Dt), int> = 0>
         _LIBCPP_INLINE_VISIBILITY
         static
-        typename enable_if
-        <
-            (__count >= _Dt),
-            result_type
-        >::type
+        result_type
         __lshift(result_type) {return result_type(0);}
 };
 

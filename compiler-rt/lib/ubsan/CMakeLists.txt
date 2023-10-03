@@ -57,7 +57,7 @@ append_list_if(SANITIZER_CAN_USE_CXXABI -DUBSAN_CAN_USE_CXXABI UBSAN_CXXFLAGS)
 
 # Silence warnings in system headers with MSVC.
 if(NOT CLANG_CL)
-  append_list_if(COMPILER_RT_HAS_EXTERNAL_FLAG "/experimental:external /external:W0 /external:anglebrackets" UBSAN_CXXFLAGS)
+  append_list_if(COMPILER_RT_HAS_EXTERNAL_FLAG "/experimental:external;/external:W0;/external:anglebrackets" UBSAN_CXXFLAGS)
 endif()
 
 set(UBSAN_LINK_FLAGS ${SANITIZER_COMMON_LINK_FLAGS})
@@ -71,6 +71,9 @@ append_list_if(COMPILER_RT_HAS_LIBDL dl UBSAN_DYNAMIC_LIBS)
 append_list_if(COMPILER_RT_HAS_LIBLOG log UBSAN_DYNAMIC_LIBS)
 append_list_if(COMPILER_RT_HAS_LIBRT rt UBSAN_DYNAMIC_LIBS)
 append_list_if(COMPILER_RT_HAS_LIBPTHREAD pthread UBSAN_DYNAMIC_LIBS)
+if (COMPILER_RT_ENABLE_INTERNAL_SYMBOLIZER)
+  append_list_if(COMPILER_RT_HAS_LIBM m UBSAN_DYNAMIC_LIBS)
+endif()
 
 add_compiler_rt_component(ubsan)
 
@@ -204,6 +207,7 @@ else()
               RTSanitizerCommonLibc
               RTSanitizerCommonCoverage
               RTSanitizerCommonSymbolizer
+              RTSanitizerCommonSymbolizerInternal
               RTUbsan
               RTUbsan_standalone
               RTInterception
@@ -248,6 +252,7 @@ else()
                 RTSanitizerCommonLibc
                 RTSanitizerCommonCoverage
                 RTSanitizerCommonSymbolizer
+                RTSanitizerCommonSymbolizerInternal
                 RTUbsan
                 RTUbsan_cxx
                 RTUbsan_standalone

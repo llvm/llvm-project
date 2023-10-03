@@ -383,6 +383,7 @@ const TargetLoweringObjectFile &AsmPrinter::getObjFileLowering() const {
 }
 
 const DataLayout &AsmPrinter::getDataLayout() const {
+  assert(MMI && "MMI could not be nullptr!");
   return MMI->getModule()->getDataLayout();
 }
 
@@ -516,6 +517,7 @@ bool AsmPrinter::doInitialization(Module &M) {
                             CodeViewLineTablesGroupDescription);
     }
     if (!EmitCodeView || M.getDwarfVersion()) {
+      assert(MMI && "MMI could not be nullptr here!");
       if (MMI->hasDebugInfo()) {
         DD = new DwarfDebug(this);
         Handlers.emplace_back(std::unique_ptr<DwarfDebug>(DD), DbgTimerName,
@@ -1724,6 +1726,10 @@ void AsmPrinter::emitFunctionBody() {
       case TargetOpcode::MEMBARRIER:
         OutStreamer->emitRawComment("MEMBARRIER");
         break;
+      case TargetOpcode::JUMP_TABLE_DEBUG_INFO:
+        // This instruction is only used to note jump table debug info, it's
+        // purely meta information.
+        break;
       default:
         emitInstruction(&MI);
         if (CanDoExtraAnalysis) {
@@ -1923,7 +1929,8 @@ void AsmPrinter::emitFunctionBody() {
 
   // Output MBB ids, function names, and frequencies if the flag to dump
   // MBB profile information has been set
-  if (MBBProfileDumpFileOutput) {
+  if (MBBProfileDumpFileOutput && !MF->empty() &&
+      MF->getFunction().getEntryCount()) {
     if (!MF->hasBBLabels())
       MF->getContext().reportError(
           SMLoc(),
@@ -1931,10 +1938,23 @@ void AsmPrinter::emitFunctionBody() {
           "must be called with -basic-block-sections=labels");
     MachineBlockFrequencyInfo &MBFI =
         getAnalysis<LazyMachineBlockFrequencyInfoPass>().getBFI();
+    // The entry count and the entry basic block frequency aren't the same. We
+    // want to capture "absolute" frequencies, i.e. the frequency with which a
+    // MBB is executed when the program is executed. From there, we can derive
+    // Function-relative frequencies (divide by the value for the first MBB).
+    // We also have the information about frequency with which functions
+    // were called. This helps, for example, in a type of integration tests
+    // where we want to cross-validate the compiler's profile with a real
+    // profile.
+    // Using double precision because uint64 values used to encode mbb
+    // "frequencies" may be quite large.
+    const double EntryCount =
+        static_cast<double>(MF->getFunction().getEntryCount()->getCount());
     for (const auto &MBB : *MF) {
+      const double MBBRelFreq = MBFI.getBlockFreqRelativeToEntryBlock(&MBB);
+      const double AbsMBBFreq = MBBRelFreq * EntryCount;
       *MBBProfileDumpFileOutput.get()
-          << MF->getName() << "," << MBB.getBBID() << ","
-          << MBFI.getBlockFreqRelativeToEntryBlock(&MBB) << "\n";
+          << MF->getName() << "," << MBB.getBBID() << "," << AbsMBBFreq << "\n";
     }
   }
 }
@@ -2565,7 +2585,8 @@ void AsmPrinter::emitJumpTableInfo() {
   const Function &F = MF->getFunction();
   const TargetLoweringObjectFile &TLOF = getObjFileLowering();
   bool JTInDiffSection = !TLOF.shouldPutJumpTableInFunctionSection(
-      MJTI->getEntryKind() == MachineJumpTableInfo::EK_LabelDifference32,
+      MJTI->getEntryKind() == MachineJumpTableInfo::EK_LabelDifference32 ||
+          MJTI->getEntryKind() == MachineJumpTableInfo::EK_LabelDifference64,
       F);
   if (JTInDiffSection) {
     // Drop it in the readonly section.
@@ -2663,7 +2684,8 @@ void AsmPrinter::emitJumpTableEntry(const MachineJumpTableInfo *MJTI,
     return;
   }
 
-  case MachineJumpTableInfo::EK_LabelDifference32: {
+  case MachineJumpTableInfo::EK_LabelDifference32:
+  case MachineJumpTableInfo::EK_LabelDifference64: {
     // Each entry is the address of the block minus the address of the jump
     // table. This is used for PIC jump tables where gprel32 is not supported.
     // e.g.:
@@ -2671,7 +2693,8 @@ void AsmPrinter::emitJumpTableEntry(const MachineJumpTableInfo *MJTI,
     // If the .set directive avoids relocations, this is emitted as:
     //      .set L4_5_set_123, LBB123 - LJTI1_2
     //      .word L4_5_set_123
-    if (MAI->doesSetDirectiveSuppressReloc()) {
+    if (MJTI->getEntryKind() == MachineJumpTableInfo::EK_LabelDifference32 &&
+        MAI->doesSetDirectiveSuppressReloc()) {
       Value = MCSymbolRefExpr::create(GetJTSetSymbol(UID, MBB->getNumber()),
                                       OutContext);
       break;
@@ -4163,4 +4186,19 @@ dwarf::FormParams AsmPrinter::getDwarfFormParams() const {
 unsigned int AsmPrinter::getUnitLengthFieldByteSize() const {
   return dwarf::getUnitLengthFieldByteSize(
       OutStreamer->getContext().getDwarfFormat());
+}
+
+std::tuple<const MCSymbol *, uint64_t, const MCSymbol *,
+           codeview::JumpTableEntrySize>
+AsmPrinter::getCodeViewJumpTableInfo(int JTI, const MachineInstr *BranchInstr,
+                                     const MCSymbol *BranchLabel) const {
+  const auto TLI = MF->getSubtarget().getTargetLowering();
+  const auto BaseExpr =
+      TLI->getPICJumpTableRelocBaseExpr(MF, JTI, MMI->getContext());
+  const auto Base = &cast<MCSymbolRefExpr>(BaseExpr)->getSymbol();
+
+  // By default, for the architectures that support CodeView,
+  // EK_LabelDifference32 is implemented as an Int32 from the base address.
+  return std::make_tuple(Base, 0, BranchLabel,
+                         codeview::JumpTableEntrySize::Int32);
 }

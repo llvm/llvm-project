@@ -21,7 +21,6 @@
 #include "clang-include-cleaner/IncludeSpeller.h"
 #include "clang-include-cleaner/Types.h"
 #include "index/SymbolCollector.h"
-#include "support/Logger.h"
 #include "support/Markup.h"
 #include "support/Trace.h"
 #include "clang/AST/ASTContext.h"
@@ -1190,13 +1189,12 @@ void maybeAddSymbolProviders(ParsedAST &AST, HoverInfo &HI,
 
   const SourceManager &SM = AST.getSourceManager();
   llvm::SmallVector<include_cleaner::Header> RankedProviders =
-      include_cleaner::headersForSymbol(Sym, SM, AST.getPragmaIncludes());
+      include_cleaner::headersForSymbol(Sym, SM, AST.getPragmaIncludes().get());
   if (RankedProviders.empty())
     return;
 
   std::string Result;
-  include_cleaner::Includes ConvertedIncludes =
-      convertIncludes(SM, AST.getIncludeStructure().MainFileIncludes);
+  include_cleaner::Includes ConvertedIncludes = convertIncludes(AST);
   for (const auto &P : RankedProviders) {
     if (P.kind() == include_cleaner::Header::Physical &&
         P.physical() == SM.getFileEntryForID(SM.getMainFileID()))
@@ -1247,26 +1245,19 @@ std::string getSymbolName(include_cleaner::Symbol Sym) {
 }
 
 void maybeAddUsedSymbols(ParsedAST &AST, HoverInfo &HI, const Inclusion &Inc) {
-  const SourceManager &SM = AST.getSourceManager();
-  const auto &ConvertedMainFileIncludes =
-      convertIncludes(SM, AST.getIncludeStructure().MainFileIncludes);
-  const auto &HoveredInclude = convertIncludes(SM, llvm::ArrayRef{Inc});
+  auto Converted = convertIncludes(AST);
   llvm::DenseSet<include_cleaner::Symbol> UsedSymbols;
   include_cleaner::walkUsed(
       AST.getLocalTopLevelDecls(), collectMacroReferences(AST),
-      AST.getPragmaIncludes(), SM,
+      AST.getPragmaIncludes().get(), AST.getPreprocessor(),
       [&](const include_cleaner::SymbolReference &Ref,
           llvm::ArrayRef<include_cleaner::Header> Providers) {
         if (Ref.RT != include_cleaner::RefType::Explicit ||
             UsedSymbols.contains(Ref.Target))
           return;
 
-        auto Provider =
-            firstMatchedProvider(ConvertedMainFileIncludes, Providers);
-        if (!Provider || HoveredInclude.match(*Provider).empty())
-          return;
-
-        UsedSymbols.insert(Ref.Target);
+        if (isPreferredProvider(Inc, Converted, Providers))
+          UsedSymbols.insert(Ref.Target);
       });
 
   for (const auto &UsedSymbolDecl : UsedSymbols)

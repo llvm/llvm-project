@@ -114,6 +114,21 @@ constexpr C c2 = C().get();
 static_assert(c2.a == 100, "");
 static_assert(c2.b == 200, "");
 
+
+/// A global, composite temporary variable.
+constexpr const C &c3 = C().get();
+
+/// Same, but with a bitfield.
+class D {
+public:
+  unsigned a : 4;
+  constexpr D() : a(15) {}
+  constexpr D get() const {
+    return *this;
+  }
+};
+constexpr const D &d4 = D().get();
+
 constexpr int getB() {
   C c;
   int &j = c.b;
@@ -311,16 +326,38 @@ namespace InitializerTemporaries {
     int Pos = 0;
 
     {
-      auto T = Test(Arr, Pos);
+      Test(Arr, Pos);
       // End of scope, should destroy Test.
     }
 
     return Arr[Index];
   }
-
   static_assert(T(0) == 1);
   static_assert(T(1) == 2);
   static_assert(T(2) == 3);
+
+  // Invalid destructor.
+  struct S {
+    constexpr S() {}
+    constexpr ~S() noexcept(false) { throw 12; } // expected-error {{cannot use 'throw'}} \
+                                                 // expected-error {{never produces a constant expression}} \
+                                                 // expected-note 2{{subexpression not valid}} \
+                                                 // ref-error {{cannot use 'throw'}} \
+                                                 // ref-error {{never produces a constant expression}} \
+                                                 // ref-note 2{{subexpression not valid}}
+  };
+
+  constexpr int f() {
+    S{}; // ref-note {{in call to 'S{}.~S()'}}
+    /// FIXME: Wrong source location below.
+    return 12; // expected-note {{in call to '&S{}->~S()'}}
+  }
+  static_assert(f() == 12); // expected-error {{not an integral constant expression}} \
+                            // expected-note {{in call to 'f()'}} \
+                            // ref-error {{not an integral constant expression}} \
+                            // ref-note {{in call to 'f()'}}
+
+
 #endif
 }
 
@@ -494,6 +531,29 @@ namespace DeclRefs {
   //static_assert(b.a.f == 100, "");
 }
 
+namespace PointerArith {
+  struct A {};
+  struct B : A { int n; };
+
+  B b = {};
+  constexpr A *a1 = &b;
+  constexpr B *b1 = &b + 1;
+  constexpr B *b2 = &b + 0;
+
+#if 0
+  constexpr A *a2 = &b + 1; // expected-error {{must be initialized by a constant expression}} \
+                            // expected-note {{cannot access base class of pointer past the end of object}} \
+                            // ref-error {{must be initialized by a constant expression}} \
+                            // ref-note {{cannot access base class of pointer past the end of object}}
+
+#endif
+  constexpr const int *pn = &(&b + 1)->n; // expected-error {{must be initialized by a constant expression}} \
+                                          // expected-note {{cannot access field of pointer past the end of object}} \
+                                          // ref-error {{must be initialized by a constant expression}} \
+                                          // ref-note {{cannot access field of pointer past the end of object}}
+
+}
+
 #if __cplusplus >= 202002L
 namespace VirtualCalls {
 namespace Obvious {
@@ -566,6 +626,78 @@ namespace Destructors {
     return i;
   }
   static_assert(test() == 1);
+
+  struct S {
+    constexpr S() {}
+    constexpr ~S() { // expected-error {{never produces a constant expression}} \
+                     // ref-error {{never produces a constant expression}}
+      int i = 1 / 0; // expected-warning {{division by zero}} \
+                     // expected-note 2{{division by zero}} \
+                     // ref-warning {{division by zero}} \
+                     // ref-note 2{{division by zero}}
+    }
+  };
+  constexpr int testS() {
+    S{}; // ref-note {{in call to 'S{}.~S()'}}
+    return 1; // expected-note {{in call to '&S{}->~S()'}}
+              // FIXME: ^ Wrong line
+  }
+  static_assert(testS() == 1); // expected-error {{not an integral constant expression}} \
+                               // expected-note {{in call to 'testS()'}} \
+                               // ref-error {{not an integral constant expression}} \
+                               // ref-note {{in call to 'testS()'}}
+}
+
+namespace BaseToDerived {
+namespace A {
+  struct A {};
+  struct B : A { int n; };
+  struct C : B {};
+  C c = {};
+  constexpr C *pb = (C*)((A*)&c + 1); // expected-error {{must be initialized by a constant expression}} \
+                                      // expected-note {{cannot access derived class of pointer past the end of object}} \
+                                      // ref-error {{must be initialized by a constant expression}} \
+                                      // ref-note {{cannot access derived class of pointer past the end of object}}
+}
+namespace B {
+  struct A {};
+  struct Z {};
+  struct B : Z, A {
+    int n;
+   constexpr B() : n(10) {}
+  };
+  struct C : B {
+   constexpr C() : B() {}
+  };
+
+  constexpr C c = {};
+  constexpr const A *pa = &c;
+  constexpr const C *cp = (C*)pa;
+  constexpr const B *cb = (B*)cp;
+
+  static_assert(cb->n == 10);
+  static_assert(cp->n == 10);
+}
+
+namespace C {
+  struct Base { int *a; };
+  struct Base2 : Base { int f[12]; };
+
+  struct Middle1 { int b[3]; };
+  struct Middle2 : Base2 { char c; };
+  struct Middle3 : Middle2 { char g[3]; };
+  struct Middle4 { int f[3]; };
+  struct Middle5 : Middle4, Middle3 { char g2[3]; };
+
+  struct NotQuiteDerived : Middle1, Middle5 { bool d; };
+  struct Derived : NotQuiteDerived { int e; };
+
+  constexpr NotQuiteDerived NQD1 = {};
+
+  constexpr Middle5 *M4 = (Middle5*)((Base2*)&NQD1);
+  static_assert(M4->a == nullptr);
+  static_assert(M4->g2[0] == 0);
+}
 }
 
 
@@ -689,5 +821,248 @@ namespace CtorDtor {
                                 // ref-note {{initializer of 'D2' is not a constant expression}}
 
 }
+
+namespace VirtualFunctionPointers {
+  struct S {
+    virtual constexpr int func() const { return 1; }
+  };
+
+  struct Middle : S {
+    constexpr Middle(int i) : i(i) {}
+    int i;
+  };
+
+  struct Other {
+    constexpr Other(int k) : k(k) {}
+    int k;
+  };
+
+  struct S2 : Middle, Other {
+    int j;
+    constexpr S2(int i, int j, int k) : Middle(i), Other(k), j(j) {}
+    virtual constexpr int func() const { return i + j + k  + S::func(); }
+  };
+
+  constexpr S s;
+  constexpr decltype(&S::func) foo = &S::func;
+  constexpr int value = (s.*foo)();
+  static_assert(value == 1);
+
+
+  constexpr S2 s2(1, 2, 3);
+  static_assert(s2.i == 1);
+  static_assert(s2.j == 2);
+  static_assert(s2.k == 3);
+
+  constexpr int value2 = s2.func();
+  constexpr int value3 = (s2.*foo)();
+  static_assert(value3 == 7);
+
+  constexpr int dynamicDispatch(const S &s) {
+    constexpr decltype(&S::func) SFunc = &S::func;
+
+    return (s.*SFunc)();
+  }
+
+  static_assert(dynamicDispatch(s) == 1);
+  static_assert(dynamicDispatch(s2) == 7);
 };
+
+};
+#endif
+
+#if __cplusplus < 202002L
+namespace VirtualFromBase {
+  struct S1 {
+    virtual int f() const;
+  };
+  struct S2 {
+    virtual int f();
+  };
+  template <typename T> struct X : T {
+    constexpr X() {}
+    double d = 0.0;
+    constexpr int f() { return sizeof(T); }
+  };
+
+  // Non-virtual f(), OK.
+  constexpr X<X<S1>> xxs1;
+  constexpr X<S1> *p = const_cast<X<X<S1>>*>(&xxs1);
+  static_assert(p->f() == sizeof(S1), "");
+
+  // Virtual f(), not OK.
+  constexpr X<X<S2>> xxs2;
+  constexpr X<S2> *q = const_cast<X<X<S2>>*>(&xxs2);
+  static_assert(q->f() == sizeof(X<S2>), ""); // ref-error {{not an integral constant expression}} \
+                                              // ref-note {{cannot evaluate call to virtual function}} \
+                                              // expected-error {{not an integral constant expression}} \
+                                              // expected-note {{cannot evaluate call to virtual function}}
+}
+#endif
+
+namespace CompositeDefaultArgs {
+  struct Foo {
+    int a;
+    int b;
+    constexpr Foo() : a(12), b(13) {}
+  };
+
+  class Bar {
+  public:
+    bool B = false;
+
+    constexpr int someFunc(Foo F = Foo()) {
+      this->B = true;
+      return 5;
+    }
+  };
+
+  constexpr bool testMe() {
+    Bar B;
+    B.someFunc();
+    return B.B;
+  }
+  static_assert(testMe(), "");
+}
+
+constexpr bool BPand(BoolPair bp) {
+  return bp.first && bp.second;
+}
+static_assert(BPand(BoolPair{true, false}) == false, "");
+
+namespace TemporaryObjectExpr {
+  struct F {
+    int a;
+    constexpr F() : a(12) {}
+  };
+  constexpr int foo(F f) {
+    return 0;
+  }
+  static_assert(foo(F()) == 0, "");
+}
+
+  namespace ZeroInit {
+  struct F {
+    int a;
+  };
+
+  namespace Simple {
+    struct A {
+      char a;
+      bool b;
+      int c[4];
+      float d;
+    };
+    constexpr int foo(A x) {
+      return x.a + static_cast<int>(x.b) + x.c[0] + x.c[3] + static_cast<int>(x.d);
+    }
+    static_assert(foo(A()) == 0, "");
+  }
+
+  namespace Inheritance {
+    struct F2 : F {
+      float f;
+    };
+
+    constexpr int foo(F2 f) {
+      return (int)f.f + f.a;
+    }
+    static_assert(foo(F2()) == 0, "");
+  }
+
+  namespace BitFields {
+    struct F {
+      unsigned a : 6;
+    };
+    constexpr int foo(F f) {
+      return f.a;
+    }
+    static_assert(foo(F()) == 0, "");
+  }
+
+  namespace Nested {
+    struct F2 {
+      float f;
+      char c;
+    };
+
+    struct F {
+      F2 f2;
+      int i;
+    };
+
+    constexpr int foo(F f) {
+      return f.i + f.f2.f + f.f2.c;
+    }
+    static_assert(foo(F()) == 0, "");
+  }
+
+  namespace CompositeArrays {
+    struct F2 {
+      float f;
+      char c;
+    };
+
+    struct F {
+      F2 f2[2];
+      int i;
+    };
+
+    constexpr int foo(F f) {
+      return f.i + f.f2[0].f + f.f2[0].c + f.f2[1].f + f.f2[1].c;
+    }
+    static_assert(foo(F()) == 0, "");
+  }
+
+  /// FIXME: This needs support for unions on the new interpreter.
+  /// We diagnose an uninitialized object in c++14.
+#if __cplusplus > 201402L
+  namespace Unions {
+    struct F {
+      union {
+        int a;
+        char c[4];
+        float f;
+      } U;
+      int i;
+    };
+
+    constexpr int foo(F f) {
+      return f.i + f.U.f; // ref-note {{read of member 'f' of union with active member 'a'}}
+    }
+    static_assert(foo(F()) == 0, ""); // ref-error {{not an integral constant expression}} \
+                                      // ref-note {{in call to}}
+  }
+#endif
+
+#if __cplusplus >= 202002L
+  namespace Failure {
+    struct S {
+      int a;
+      F f{12};
+    };
+    constexpr int foo(S x) {
+      return x.a; // expected-note {{read of uninitialized object}} \
+                  // ref-note {{read of uninitialized object}}
+    }
+    static_assert(foo(S()) == 0, ""); // expected-error {{not an integral constant expression}} \
+                                      // expected-note {{in call to}} \
+                                      // ref-error {{not an integral constant expression}} \
+                                      // ref-note {{in call to}}
+  };
+#endif
+}
+
+#if __cplusplus >= 202002L
+namespace ParenInit {
+  struct A {
+    int a;
+  };
+
+  struct B : A {
+    int b;
+  };
+
+  constexpr B b(A(1),2);
+}
 #endif

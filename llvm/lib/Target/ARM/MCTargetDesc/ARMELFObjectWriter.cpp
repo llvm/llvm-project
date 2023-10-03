@@ -38,7 +38,7 @@ namespace {
     unsigned getRelocType(MCContext &Ctx, const MCValue &Target,
                           const MCFixup &Fixup, bool IsPCRel) const override;
 
-    bool needsRelocateWithSymbol(const MCSymbol &Sym,
+    bool needsRelocateWithSymbol(const MCValue &Val, const MCSymbol &Sym,
                                  unsigned Type) const override;
 
     void addTargetSectionFlags(MCContext &Ctx, MCSectionELF &Sec) override;
@@ -51,7 +51,8 @@ ARMELFObjectWriter::ARMELFObjectWriter(uint8_t OSABI)
                             ELF::EM_ARM,
                             /*HasRelocationAddend*/ false) {}
 
-bool ARMELFObjectWriter::needsRelocateWithSymbol(const MCSymbol &Sym,
+bool ARMELFObjectWriter::needsRelocateWithSymbol(const MCValue &,
+                                                 const MCSymbol &,
                                                  unsigned Type) const {
   // FIXME: This is extremely conservative. This really needs to use an
   // explicit list with a clear explanation for why each realocation needs to

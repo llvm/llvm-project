@@ -11,9 +11,6 @@ and multiple OS types, verifying changes across all.
 Provides helper support for adding lldb test paths to the python path.
 """
 
-from __future__ import print_function
-from __future__ import absolute_import
-
 # System modules
 import os
 import platform

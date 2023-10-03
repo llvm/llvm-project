@@ -187,20 +187,9 @@ LogicalResult AllocTensorOp::bufferize(RewriterBase &rewriter,
       return failure();
   }
 
-  // Should the buffer be deallocated?
-  bool dealloc =
-      shouldDeallocateOpResult(llvm::cast<OpResult>(getResult()), options);
-
   // Replace op.
   replaceOpWithBufferizedValues(rewriter, getOperation(), *alloc);
 
-  // Create buffer deallocation (if requested).
-  if (!dealloc)
-    return success();
-
-  rewriter.setInsertionPoint(rewriter.getInsertionBlock()->getTerminator());
-  if (failed(options.createDealloc(rewriter, loc, *alloc)))
-    return failure();
   return success();
 }
 
@@ -224,16 +213,15 @@ bool AllocTensorOp::bufferizesToMemoryWrite(OpOperand &opOperand,
   return false;
 }
 
-AliasingOpResultList
-AllocTensorOp::getAliasingOpResults(OpOperand &opOperand,
-                                    const AnalysisState &state) {
+AliasingValueList AllocTensorOp::getAliasingValues(OpOperand &opOperand,
+                                                   const AnalysisState &state) {
   // This is a new allocation. It does not alias with any other buffer.
   return {};
 }
 
-FailureOr<BaseMemRefType> AllocTensorOp::getBufferType(
-    Value value, const BufferizationOptions &options,
-    const DenseMap<Value, BaseMemRefType> &fixedTypes) {
+FailureOr<BaseMemRefType>
+AllocTensorOp::getBufferType(Value value, const BufferizationOptions &options,
+                             SmallVector<Value> &invocationStack) {
   assert(value == getResult() && "invalid value");
 
   // Compute memory space of this allocation.
@@ -242,7 +230,7 @@ FailureOr<BaseMemRefType> AllocTensorOp::getBufferType(
     memorySpace = *getMemorySpace();
   } else if (getCopy()) {
     auto copyBufferType =
-        bufferization::getBufferType(getCopy(), options, fixedTypes);
+        bufferization::getBufferType(getCopy(), options, invocationStack);
     if (failed(copyBufferType))
       return failure();
     memorySpace = copyBufferType->getMemorySpace();
@@ -443,62 +431,8 @@ Value AllocTensorOp::getDynamicSize(OpBuilder &b, unsigned idx) {
 }
 
 //===----------------------------------------------------------------------===//
-// CopyTensorOp
-//===----------------------------------------------------------------------===//
-
-bool CopyTensorOp::bufferizesToMemoryRead(OpOperand &opOperand,
-                                          const AnalysisState &state) {
-  if (&opOperand == &getOperation()->getOpOperand(0) /*source*/)
-    return true;
-  return false;
-}
-
-bool CopyTensorOp::bufferizesToMemoryWrite(OpOperand &opOperand,
-                                           const AnalysisState &state) {
-  if (&opOperand == &getOperation()->getOpOperand(1) /*dest*/)
-    return true;
-  return false;
-}
-
-AliasingOpResultList
-CopyTensorOp::getAliasingOpResults(OpOperand &opOperand,
-                                   const AnalysisState &state) {
-  if (&opOperand == &getOperation()->getOpOperand(1) /*dest*/)
-    return {{getOperation()->getResult(0), BufferRelation::Equivalent}};
-  return {};
-}
-
-LogicalResult CopyTensorOp::bufferize(RewriterBase &rewriter,
-                                      const BufferizationOptions &options) {
-  FailureOr<Value> buffer = getBuffer(rewriter, getDest(), options);
-  if (failed(buffer))
-    return failure();
-  rewriter.create<memref::TensorStoreOp>(getLoc(), getSource(), *buffer);
-  replaceOpWithBufferizedValues(rewriter, getOperation(), *buffer);
-  return success();
-}
-
-LogicalResult CopyTensorOp::reifyResultShapes(
-    OpBuilder &builder, ReifiedRankedShapedTypeDims &reifiedReturnShapes) {
-  reifiedReturnShapes.resize(1, SmallVector<OpFoldResult>(getType().getRank()));
-  reifiedReturnShapes[0] = tensor::getMixedSizes(builder, getLoc(), getDest());
-  return success();
-}
-
-//===----------------------------------------------------------------------===//
 // CloneOp
 //===----------------------------------------------------------------------===//
-
-void CloneOp::getEffects(
-    SmallVectorImpl<SideEffects::EffectInstance<MemoryEffects::Effect>>
-        &effects) {
-  effects.emplace_back(MemoryEffects::Read::get(), getInput(),
-                       SideEffects::DefaultResource::get());
-  effects.emplace_back(MemoryEffects::Write::get(), getOutput(),
-                       SideEffects::DefaultResource::get());
-  effects.emplace_back(MemoryEffects::Allocate::get(), getOutput(),
-                       SideEffects::DefaultResource::get());
-}
 
 OpFoldResult CloneOp::fold(FoldAdaptor adaptor) {
   return succeeded(memref::foldMemRefCast(*this)) ? getResult() : Value();
@@ -592,10 +526,76 @@ LogicalResult DeallocTensorOp::bufferize(RewriterBase &rewriter,
   FailureOr<Value> buffer = getBuffer(rewriter, getTensor(), options);
   if (failed(buffer))
     return failure();
-  if (failed(options.createDealloc(rewriter, getLoc(), *buffer)))
-    return failure();
+  rewriter.create<memref::DeallocOp>(getLoc(), *buffer);
   rewriter.eraseOp(getOperation());
   return success();
+}
+
+//===----------------------------------------------------------------------===//
+// MaterializeInDestinationOp
+//===----------------------------------------------------------------------===//
+
+bool MaterializeInDestinationOp::bufferizesToMemoryRead(
+    OpOperand &opOperand, const AnalysisState &state) {
+  return &opOperand == &getSourceMutable()[0];
+}
+
+bool MaterializeInDestinationOp::bufferizesToMemoryWrite(
+    OpOperand &opOperand, const AnalysisState &state) {
+  return &opOperand == &getDestMutable()[0];
+}
+
+AliasingValueList
+MaterializeInDestinationOp::getAliasingValues(OpOperand &opOperand,
+                                              const AnalysisState &state) {
+  if (&opOperand == &getDestMutable()[0])
+    return {{getOperation()->getResult(0), BufferRelation::Equivalent}};
+  return {};
+}
+
+LogicalResult
+MaterializeInDestinationOp::bufferize(RewriterBase &rewriter,
+                                      const BufferizationOptions &options) {
+  FailureOr<Value> buffer = getBuffer(rewriter, getDest(), options);
+  if (failed(buffer))
+    return failure();
+  rewriter.create<memref::TensorStoreOp>(getLoc(), getSource(), *buffer);
+  replaceOpWithBufferizedValues(rewriter, getOperation(), *buffer);
+  return success();
+}
+
+bool MaterializeInDestinationOp::bufferizesToElementwiseAccess(
+    const AnalysisState &state, ArrayRef<OpOperand *> opOperands) {
+  // As elements are copied from the "source" buffer to the "dest" buffer,
+  // already copied elements are not read a second time.
+  return true;
+}
+
+LogicalResult MaterializeInDestinationOp::reifyResultShapes(
+    OpBuilder &builder, ReifiedRankedShapedTypeDims &reifiedReturnShapes) {
+  reifiedReturnShapes.resize(1, SmallVector<OpFoldResult>(getType().getRank()));
+  reifiedReturnShapes[0] = tensor::getMixedSizes(builder, getLoc(), getDest());
+  return success();
+}
+
+Value MaterializeInDestinationOp::buildSubsetExtraction(OpBuilder &builder,
+                                                        Location loc) {
+  // The subset is the entire destination tensor.
+  return getDest();
+}
+
+bool MaterializeInDestinationOp::isEquivalentSubset(
+    Value candidate, function_ref<bool(Value, Value)> equivalenceFn) {
+  return equivalenceFn(getDest(), candidate);
+}
+
+SmallVector<Value>
+MaterializeInDestinationOp::getValuesNeededToBuildSubsetExtraction() {
+  return {getDest()};
+}
+
+OpOperand &MaterializeInDestinationOp::getSourceOperand() {
+  return getOperation()->getOpOperand(0) /*source*/;
 }
 
 //===----------------------------------------------------------------------===//
@@ -755,7 +755,8 @@ LogicalResult DeallocOp::inferReturnTypes(
     ValueRange operands, DictionaryAttr attributes, OpaqueProperties properties,
     RegionRange regions, SmallVectorImpl<Type> &inferredReturnTypes) {
   DeallocOpAdaptor adaptor(operands, attributes, properties, regions);
-  inferredReturnTypes = SmallVector<Type>(adaptor.getConditions().getTypes());
+  inferredReturnTypes = SmallVector<Type>(adaptor.getRetained().size(),
+                                          IntegerType::get(context, 1));
   return success();
 }
 
@@ -763,7 +764,285 @@ LogicalResult DeallocOp::verify() {
   if (getMemrefs().size() != getConditions().size())
     return emitOpError(
         "must have the same number of conditions as memrefs to deallocate");
+  if (getRetained().size() != getUpdatedConditions().size())
+    return emitOpError("must have the same number of updated conditions "
+                       "(results) as retained operands");
   return success();
+}
+
+static LogicalResult updateDeallocIfChanged(DeallocOp deallocOp,
+                                            ValueRange memrefs,
+                                            ValueRange conditions,
+                                            PatternRewriter &rewriter) {
+  if (deallocOp.getMemrefs() == memrefs &&
+      deallocOp.getConditions() == conditions)
+    return failure();
+
+  rewriter.updateRootInPlace(deallocOp, [&]() {
+    deallocOp.getMemrefsMutable().assign(memrefs);
+    deallocOp.getConditionsMutable().assign(conditions);
+  });
+  return success();
+}
+
+namespace {
+
+/// Remove duplicate values in the list of memrefs to be deallocated. We need to
+/// make sure the corresponding condition value is updated accordingly since
+/// their two conditions might not cover the same set of cases. In that case, we
+/// have to combine them (by computing the disjunction of them).
+/// Example:
+/// ```mlir
+/// bufferization.dealloc (%arg0, %arg0 : ...) if (%arg1, %arg2)
+/// ```
+/// is canonicalized to
+/// ```mlir
+/// %0 = arith.ori %arg1, %arg2 : i1
+/// bufferization.dealloc (%arg0 : memref<2xi32>) if (%0)
+/// ```
+struct DeallocRemoveDuplicateDeallocMemrefs
+    : public OpRewritePattern<DeallocOp> {
+  using OpRewritePattern<DeallocOp>::OpRewritePattern;
+
+  LogicalResult matchAndRewrite(DeallocOp deallocOp,
+                                PatternRewriter &rewriter) const override {
+    // Unique memrefs to be deallocated.
+    DenseMap<Value, unsigned> memrefToCondition;
+    SmallVector<Value> newMemrefs, newConditions;
+    for (auto [i, memref, cond] :
+         llvm::enumerate(deallocOp.getMemrefs(), deallocOp.getConditions())) {
+      if (memrefToCondition.count(memref)) {
+        // If the dealloc conditions don't match, we need to make sure that the
+        // dealloc happens on the union of cases.
+        Value &newCond = newConditions[memrefToCondition[memref]];
+        if (newCond != cond)
+          newCond =
+              rewriter.create<arith::OrIOp>(deallocOp.getLoc(), newCond, cond);
+      } else {
+        memrefToCondition.insert({memref, newConditions.size()});
+        newMemrefs.push_back(memref);
+        newConditions.push_back(cond);
+      }
+    }
+
+    // Return failure if we don't change anything such that we don't run into an
+    // infinite loop of pattern applications.
+    return updateDeallocIfChanged(deallocOp, newMemrefs, newConditions,
+                                  rewriter);
+  }
+};
+
+/// Remove duplicate values in the list of retained memrefs. We need to make
+/// sure the corresponding result condition value is replaced properly.
+/// Example:
+/// ```mlir
+/// %0:2 = bufferization.dealloc retain (%arg3, %arg3 : ...)
+/// ```
+/// is canonicalized to
+/// ```mlir
+/// %0 = bufferization.dealloc retain (%arg3 : memref<2xi32>)
+/// ```
+struct DeallocRemoveDuplicateRetainedMemrefs
+    : public OpRewritePattern<DeallocOp> {
+  using OpRewritePattern<DeallocOp>::OpRewritePattern;
+
+  LogicalResult matchAndRewrite(DeallocOp deallocOp,
+                                PatternRewriter &rewriter) const override {
+    // Unique retained values
+    DenseMap<Value, unsigned> seen;
+    SmallVector<Value> newRetained;
+    SmallVector<unsigned> resultReplacementIdx;
+    unsigned i = 0;
+    for (auto retained : deallocOp.getRetained()) {
+      if (seen.count(retained)) {
+        resultReplacementIdx.push_back(seen[retained]);
+        continue;
+      }
+
+      seen[retained] = i;
+      newRetained.push_back(retained);
+      resultReplacementIdx.push_back(i++);
+    }
+
+    // Return failure if we don't change anything such that we don't run into an
+    // infinite loop of pattern applications.
+    if (newRetained.size() == deallocOp.getRetained().size())
+      return failure();
+
+    // We need to create a new op because the number of results is always the
+    // same as the number of condition operands.
+    auto newDeallocOp =
+        rewriter.create<DeallocOp>(deallocOp.getLoc(), deallocOp.getMemrefs(),
+                                   deallocOp.getConditions(), newRetained);
+    SmallVector<Value> replacements(
+        llvm::map_range(resultReplacementIdx, [&](unsigned idx) {
+          return newDeallocOp.getUpdatedConditions()[idx];
+        }));
+    rewriter.replaceOp(deallocOp, replacements);
+    return success();
+  }
+};
+
+/// Erase deallocation operations where the variadic list of memrefs to
+/// deallocate is empty. Example:
+/// ```mlir
+/// %0 = bufferization.dealloc retain (%arg0: memref<2xi32>)
+/// ```
+struct EraseEmptyDealloc : public OpRewritePattern<DeallocOp> {
+  using OpRewritePattern<DeallocOp>::OpRewritePattern;
+
+  LogicalResult matchAndRewrite(DeallocOp deallocOp,
+                                PatternRewriter &rewriter) const override {
+    if (deallocOp.getMemrefs().empty()) {
+      Value constFalse = rewriter.create<arith::ConstantOp>(
+          deallocOp.getLoc(), rewriter.getBoolAttr(false));
+      rewriter.replaceOp(
+          deallocOp, SmallVector<Value>(deallocOp.getUpdatedConditions().size(),
+                                        constFalse));
+      return success();
+    }
+    return failure();
+  }
+};
+
+/// Removes memrefs from the deallocation list if their associated condition is
+/// always 'false'.
+///
+/// Example:
+/// ```
+/// bufferization.dealloc (%arg0, %arg1 : memref<2xi32>, memref<2xi32>)
+///                           if (%arg2, %false)
+/// ```
+/// becomes
+/// ```
+/// bufferization.dealloc (%arg0 : memref<2xi32>) if (%arg2)
+/// ```
+struct EraseAlwaysFalseDealloc : public OpRewritePattern<DeallocOp> {
+  using OpRewritePattern<DeallocOp>::OpRewritePattern;
+
+  LogicalResult matchAndRewrite(DeallocOp deallocOp,
+                                PatternRewriter &rewriter) const override {
+    SmallVector<Value> newMemrefs, newConditions;
+    for (auto [memref, cond] :
+         llvm::zip(deallocOp.getMemrefs(), deallocOp.getConditions())) {
+      if (!matchPattern(cond, m_Zero())) {
+        newMemrefs.push_back(memref);
+        newConditions.push_back(cond);
+      }
+    }
+
+    return updateDeallocIfChanged(deallocOp, newMemrefs, newConditions,
+                                  rewriter);
+  }
+};
+
+/// The `memref.extract_strided_metadata` is often inserted to get the base
+/// memref if the operand is not already guaranteed to be the result of a memref
+/// allocation operation. This canonicalization pattern removes this extraction
+/// operation if the operand is now produced by an allocation operation (e.g.,
+/// due to other canonicalizations simplifying the IR).
+///
+/// Example:
+/// ```mlir
+/// %alloc = memref.alloc() : memref<2xi32>
+/// %base_memref, %offset, %size, %stride = memref.extract_strided_metadata
+///   %alloc : memref<2xi32> -> memref<i32>, index, index, index
+/// bufferization.dealloc (%base_memref : memref<i32>) if (%cond)
+/// ```
+/// is canonicalized to
+/// ```mlir
+/// %alloc = memref.alloc() : memref<2xi32>
+/// bufferization.dealloc (%alloc : memref<2xi32>) if (%cond)
+/// ```
+struct SkipExtractMetadataOfAlloc : public OpRewritePattern<DeallocOp> {
+  using OpRewritePattern<DeallocOp>::OpRewritePattern;
+
+  LogicalResult matchAndRewrite(DeallocOp deallocOp,
+                                PatternRewriter &rewriter) const override {
+    SmallVector<Value> newMemrefs(
+        llvm::map_range(deallocOp.getMemrefs(), [&](Value memref) {
+          auto extractStridedOp =
+              memref.getDefiningOp<memref::ExtractStridedMetadataOp>();
+          if (!extractStridedOp)
+            return memref;
+          Value allocMemref = extractStridedOp.getOperand();
+          auto allocOp = allocMemref.getDefiningOp<MemoryEffectOpInterface>();
+          if (!allocOp)
+            return memref;
+          if (allocOp.getEffectOnValue<MemoryEffects::Allocate>(allocMemref))
+            return allocMemref;
+          return memref;
+        }));
+
+    return updateDeallocIfChanged(deallocOp, newMemrefs,
+                                  deallocOp.getConditions(), rewriter);
+  }
+};
+
+/// Removes pairs of `bufferization.dealloc` and alloc operations if there is no
+/// other user of the allocated value and the allocating operation can be safely
+/// removed. If the same value is present multiple times, this pattern relies on
+/// other canonicalization patterns to remove the duplicate first.
+///
+/// Example:
+/// ```mlir
+/// %alloc = memref.alloc() : memref<2xi32>
+/// bufferization.dealloc (%alloc, %arg0, : ...) if (%true, %true)
+/// ```
+/// is canonicalized to
+/// ```mlir
+/// bufferization.dealloc (%arg0 : ...) if (%true)
+/// ```
+struct RemoveAllocDeallocPairWhenNoOtherUsers
+    : public OpRewritePattern<DeallocOp> {
+  using OpRewritePattern<DeallocOp>::OpRewritePattern;
+
+  LogicalResult matchAndRewrite(DeallocOp deallocOp,
+                                PatternRewriter &rewriter) const override {
+    SmallVector<Value> newMemrefs, newConditions;
+    SmallVector<Operation *> toDelete;
+    for (auto [memref, cond] :
+         llvm::zip(deallocOp.getMemrefs(), deallocOp.getConditions())) {
+      if (auto allocOp = memref.getDefiningOp<MemoryEffectOpInterface>()) {
+        // Check that it is indeed an allocate effect, that the op has no other
+        // side effects (which would not allow us to remove the op), and that
+        // there are no other users.
+        if (allocOp.getEffectOnValue<MemoryEffects::Allocate>(memref) &&
+            hasSingleEffect<MemoryEffects::Allocate>(allocOp, memref) &&
+            memref.hasOneUse()) {
+          toDelete.push_back(allocOp);
+          continue;
+        }
+      }
+
+      newMemrefs.push_back(memref);
+      newConditions.push_back(cond);
+    }
+
+    if (failed(updateDeallocIfChanged(deallocOp, newMemrefs, newConditions,
+                                      rewriter)))
+      return failure();
+
+    for (Operation *op : toDelete)
+      rewriter.eraseOp(op);
+
+    return success();
+  }
+};
+
+} // anonymous namespace
+
+void DeallocOp::getCanonicalizationPatterns(RewritePatternSet &results,
+                                            MLIRContext *context) {
+  populateDeallocOpCanonicalizationPatterns(results, context);
+}
+
+void bufferization::populateDeallocOpCanonicalizationPatterns(
+    RewritePatternSet &patterns, MLIRContext *context) {
+  patterns.add<DeallocRemoveDuplicateDeallocMemrefs,
+               DeallocRemoveDuplicateRetainedMemrefs, EraseEmptyDealloc,
+               EraseAlwaysFalseDealloc, SkipExtractMetadataOfAlloc,
+               RemoveAllocDeallocPairWhenNoOtherUsers>(context);
 }
 
 //===----------------------------------------------------------------------===//

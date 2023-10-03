@@ -149,7 +149,7 @@ public:
     _LIBCPP_INLINE_VISIBILITY
     __basic_node_handle& operator=(__basic_node_handle&& __other)
     {
-        _LIBCPP_ASSERT_UNCATEGORIZED(
+        _LIBCPP_ASSERT_COMPATIBLE_ALLOCATOR(
             __alloc_ == _VSTD::nullopt ||
             __alloc_traits::propagate_on_container_move_assignment::value ||
             __alloc_ == __other.__alloc_,

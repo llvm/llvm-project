@@ -6,13 +6,15 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "clang/Analysis/CFG.h"
 #include "CFGBuildResult.h"
 #include "clang/AST/Decl.h"
 #include "clang/ASTMatchers/ASTMatchFinder.h"
+#include "clang/Analysis/Analyses/IntervalPartition.h"
 #include "clang/Analysis/AnalysisDeclContext.h"
-#include "clang/Analysis/CFG.h"
 #include "clang/Analysis/FlowSensitive/DataflowWorklist.h"
 #include "clang/Tooling/Tooling.h"
+#include "gmock/gmock.h"
 #include "gtest/gtest.h"
 #include <algorithm>
 #include <string>
@@ -244,6 +246,8 @@ TEST(CFG, ElementRefIterator) {
 TEST(CFG, Worklists) {
   const char *Code = "int f(bool cond) {\n"
                      "  int a = 5;\n"
+                     "  while (a < 6)\n"
+                     "    ++a;\n"
                      "  if (cond)\n"
                      "    a += 1;\n"
                      "  return a;\n"
@@ -270,6 +274,30 @@ TEST(CFG, Worklists) {
     EXPECT_EQ(ForwardNodes.size(), ReferenceOrder.size());
     EXPECT_TRUE(std::equal(ReferenceOrder.begin(), ReferenceOrder.end(),
                            ForwardNodes.begin()));
+  }
+
+  // RPO: 876321054
+  // WTO: 876534210
+  // So, we construct the WTO order accordingly from the reference order.
+  std::vector<const CFGBlock *> WTOOrder = {
+      ReferenceOrder[0], ReferenceOrder[1], ReferenceOrder[2],
+      ReferenceOrder[7], ReferenceOrder[3], ReferenceOrder[8],
+      ReferenceOrder[4], ReferenceOrder[5], ReferenceOrder[6]};
+
+  {
+    using ::testing::ElementsAreArray;
+    std::optional<WeakTopologicalOrdering> WTO = getIntervalWTO(*CFG);
+    ASSERT_TRUE(WTO);
+    WTOCompare WCmp(*WTO);
+    WTODataflowWorklist WTOWorklist(*CFG, WCmp);
+    for (const auto *B : *CFG)
+      WTOWorklist.enqueueBlock(B);
+
+    std::vector<const CFGBlock *> WTONodes;
+    while (const CFGBlock *B = WTOWorklist.dequeue())
+      WTONodes.push_back(B);
+
+    EXPECT_THAT(WTONodes, ElementsAreArray(WTOOrder));
   }
 
   std::reverse(ReferenceOrder.begin(), ReferenceOrder.end());

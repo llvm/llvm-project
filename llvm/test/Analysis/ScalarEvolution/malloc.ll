@@ -23,4 +23,15 @@ define ptr @f2() {
   ret ptr %alloc
 }
 
+define ptr @undefined_max() {
+; CHECK-LABEL: 'undefined_max'
+; CHECK-NEXT:  Classifying expressions for: @undefined_max
+; CHECK-NEXT:    %alloc = call nonnull ptr @malloc(i64 -1)
+; CHECK-NEXT:    -->  %alloc U: full-set S: full-set
+; CHECK-NEXT:  Determining loop execution counts for: @undefined_max
+;
+  %alloc = call nonnull ptr @malloc(i64 -1)
+  ret ptr %alloc
+}
+
 declare noalias noundef ptr @malloc(i64 noundef) allockind("alloc,uninitialized") allocsize(0)

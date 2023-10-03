@@ -69,50 +69,12 @@ struct const_pointer_or_const_ref<T, std::enable_if_t<std::is_pointer_v<T>>> {
 };
 
 namespace detail {
-/// Internal utility to detect trivial copy construction.
-template<typename T> union copy_construction_triviality_helper {
-    T t;
-    copy_construction_triviality_helper() = default;
-    copy_construction_triviality_helper(const copy_construction_triviality_helper&) = default;
-    ~copy_construction_triviality_helper() = default;
-};
-/// Internal utility to detect trivial move construction.
-template<typename T> union move_construction_triviality_helper {
-    T t;
-    move_construction_triviality_helper() = default;
-    move_construction_triviality_helper(move_construction_triviality_helper&&) = default;
-    ~move_construction_triviality_helper() = default;
-};
-
 template<class T>
 union trivial_helper {
     T t;
 };
 
 } // end namespace detail
-
-/// An implementation of `std::is_trivially_copy_constructible` since we have
-/// users with STLs that don't yet include it.
-template <typename T>
-struct is_trivially_copy_constructible
-    : std::is_copy_constructible<
-          ::llvm::detail::copy_construction_triviality_helper<T>> {};
-template <typename T>
-struct is_trivially_copy_constructible<T &> : std::true_type {};
-template <typename T>
-struct is_trivially_copy_constructible<T &&> : std::false_type {};
-
-/// An implementation of `std::is_trivially_move_constructible` since we have
-/// users with STLs that don't yet include it.
-template <typename T>
-struct is_trivially_move_constructible
-    : std::is_move_constructible<
-          ::llvm::detail::move_construction_triviality_helper<T>> {};
-template <typename T>
-struct is_trivially_move_constructible<T &> : std::true_type {};
-template <typename T>
-struct is_trivially_move_constructible<T &&> : std::true_type {};
-
 
 template <typename T>
 struct is_copy_assignable {

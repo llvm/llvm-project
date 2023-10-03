@@ -506,9 +506,14 @@ struct ConvertLoad : public ConvertAliasResource<spirv::LoadOp> {
               dstElemVecType.getElementType()) {
             int64_t count =
                 dstNumBytes / (srcElemVecType.getElementTypeBitWidth() / 8);
-            auto castType =
-                VectorType::get({count}, srcElemVecType.getElementType());
-            for (auto &c : components)
+
+            // Make sure not to create 1-element vectors, which are illegal in
+            // SPIR-V.
+            Type castType = srcElemVecType.getElementType();
+            if (count > 1)
+              castType = VectorType::get({count}, castType);
+
+            for (Value &c : components)
               c = rewriter.create<spirv::BitcastOp>(loc, castType, c);
           }
         }

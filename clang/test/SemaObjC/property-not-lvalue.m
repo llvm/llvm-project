@@ -22,8 +22,6 @@ void foo(void) {
 	f.size.inner.dim = 200; // expected-error {{expression is not assignable}}
 }
 
-// radar 7628953
-
 @interface Gorf  {
 }
 - (NSSize)size;

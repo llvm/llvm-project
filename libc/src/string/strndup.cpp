@@ -7,7 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "src/string/strndup.h"
-#include "src/string/memory_utils/memcpy_implementations.h"
+#include "src/string/memory_utils/inline_memcpy.h"
 #include "src/string/string_utils.h"
 
 #include "src/__support/CPP/new.h"
@@ -15,7 +15,7 @@
 
 #include <stddef.h>
 
-namespace __llvm_libc {
+namespace LIBC_NAMESPACE {
 
 LLVM_LIBC_FUNCTION(char *, strndup, (const char *src, size_t size)) {
   if (src == nullptr)
@@ -32,4 +32,4 @@ LLVM_LIBC_FUNCTION(char *, strndup, (const char *src, size_t size)) {
   return dest;
 }
 
-} // namespace __llvm_libc
+} // namespace LIBC_NAMESPACE

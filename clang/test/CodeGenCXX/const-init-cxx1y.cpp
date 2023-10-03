@@ -34,8 +34,8 @@ namespace ModifyStaticTemporary {
   // 'c.temporary', not the value as modified by the partial evaluation within
   // the initialization of 'c.x'.
   A c = { 10, (++c.temporary, b.x) };
-  // CHECK: @_ZGRN21ModifyStaticTemporary1cE_ = internal global i32 10
   // CHECK: @_ZN21ModifyStaticTemporary1cE ={{.*}} global {{.*}} zeroinitializer
+  // CHECK: @_ZGRN21ModifyStaticTemporary1cE_ = internal global i32 10
 }
 
 // CHECK: @_ZGRN28VariableTemplateWithConstRef1iIvEE_ = linkonce_odr constant i32 5, align 4
@@ -75,6 +75,19 @@ namespace VariableTemplateWithPack {
   S &&s = {A{N}...};
   S *p = &s<1, 2, 3, 4>;
 }
+
+
+// CHECK: @_ZGR1z_ ={{.*}} global [2 x i32] [i32 10, i32 2]
+// CHECK: @z = global { ptr, i32 } { ptr @_ZGR1z_, i32 10 }
+typedef int v[2];
+struct Z { int &&x, y; };
+Z z = { v{1,2}[0], z.x = 10 };
+
+// CHECK: @_ZGR2z2_ ={{.*}} global %struct.R { i64 10 }
+// @z = {{.}} global %struct.Z { ptr @_ZGR1z_, %struct.R { i64 10 } }
+struct R { mutable long x; };
+struct Z2 { const R &x, y; };
+Z2 z2 = { R{1}, z2.x.x = 10 };
 
 // CHECK: __cxa_atexit({{.*}} @_ZN1BD1Ev, {{.*}} @b
 

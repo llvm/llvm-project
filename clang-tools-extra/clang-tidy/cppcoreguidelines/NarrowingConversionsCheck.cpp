@@ -487,7 +487,7 @@ void NarrowingConversionsCheck::handleFloatingCast(const ASTContext &Context,
       // not within destination range. We convert the value to the destination
       // type and check if the resulting value is infinity.
       llvm::APFloat Tmp = Constant.getFloat();
-      bool UnusedLosesInfo;
+      bool UnusedLosesInfo = false;
       Tmp.convert(Context.getFloatTypeSemantics(ToType->desugar()),
                   llvm::APFloatBase::rmNearestTiesToEven, &UnusedLosesInfo);
       if (Tmp.isInfinity())

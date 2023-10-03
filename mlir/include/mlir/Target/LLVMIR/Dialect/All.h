@@ -46,6 +46,24 @@ static inline void registerAllToLLVMIRTranslations(DialectRegistry &registry) {
   registerOpenMPDialectTranslation(registry);
   registerROCDLDialectTranslation(registry);
   registerX86VectorDialectTranslation(registry);
+
+  // Extension required for translating GPU offloading Ops.
+  gpu::registerOffloadingLLVMTranslationInterfaceExternalModels(registry);
+}
+
+/// Registers all the translations to LLVM IR required by GPU passes.
+/// TODO: Remove this function when a safe dialect interface registration
+/// mechanism is implemented, see D157703.
+static inline void
+registerAllGPUToLLVMIRTranslations(DialectRegistry &registry) {
+  registerBuiltinDialectTranslation(registry);
+  registerGPUDialectTranslation(registry);
+  registerLLVMDialectTranslation(registry);
+  registerNVVMDialectTranslation(registry);
+  registerROCDLDialectTranslation(registry);
+
+  // Extension required for translating GPU offloading Ops.
+  gpu::registerOffloadingLLVMTranslationInterfaceExternalModels(registry);
 }
 
 /// Registers all dialects that can be translated from LLVM IR and the

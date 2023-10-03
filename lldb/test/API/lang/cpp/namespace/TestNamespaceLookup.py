@@ -166,8 +166,7 @@ class NamespaceLookupTestCase(TestBase):
         self.runToBkpt("continue")
         # FIXME: In DWARF 5 with dsyms, the ordering of functions is slightly
         # different, which also hits the same issues mentioned previously.
-        if (configuration.dwarf_version <= 4 or
-            self.getDebugInfo() == 'dwarf'):
+        if configuration.dwarf_version <= 4 or self.getDebugInfo() == "dwarf":
             self.expect_expr("func()", result_type="int", result_value="2")
 
         # Continue to BP_ns_scope at ns scope

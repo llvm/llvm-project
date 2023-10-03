@@ -23,7 +23,7 @@ namespace llvm {
 
 class GCNSubtarget;
 class LiveIntervals;
-class LivePhysRegs;
+class LiveRegUnits;
 class RegisterBank;
 struct SGPRSpillBuilder;
 
@@ -157,10 +157,6 @@ public:
   bool spillEmergencySGPR(MachineBasicBlock::iterator MI,
                           MachineBasicBlock &RestoreMBB, Register SGPR,
                           RegScavenger *RS) const;
-
-  bool supportsBackwardScavenger() const override {
-    return true;
-  }
 
   bool eliminateFrameIndex(MachineBasicBlock::iterator MI, int SPAdj,
                            unsigned FIOperandNum,
@@ -419,14 +415,14 @@ public:
   // Insert spill or restore instructions.
   // When lowering spill pseudos, the RegScavenger should be set.
   // For creating spill instructions during frame lowering, where no scavenger
-  // is available, LiveRegs can be used.
+  // is available, LiveUnits can be used.
   void buildSpillLoadStore(MachineBasicBlock &MBB,
                            MachineBasicBlock::iterator MI, const DebugLoc &DL,
                            unsigned LoadStoreOp, int Index, Register ValueReg,
                            bool ValueIsKill, MCRegister ScratchOffsetReg,
                            int64_t InstrOffset, MachineMemOperand *MMO,
                            RegScavenger *RS,
-                           LivePhysRegs *LiveRegs = nullptr) const;
+                           LiveRegUnits *LiveUnits = nullptr) const;
 
   // Return alignment in register file of first register in a register tuple.
   unsigned getRegClassAlignmentNumBits(const TargetRegisterClass *RC) const {
@@ -447,6 +443,11 @@ public:
   unsigned getSubRegAlignmentNumBits(const TargetRegisterClass *RC,
                                      unsigned SubReg) const;
 };
+
+namespace AMDGPU {
+/// Get the size in bits of a register from the register class \p RC.
+unsigned getRegBitWidth(const TargetRegisterClass &RC);
+} // namespace AMDGPU
 
 } // End namespace llvm
 

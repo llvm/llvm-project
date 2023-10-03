@@ -9,13 +9,13 @@
 #include "src/string/strcmp.h"
 
 #include "src/__support/common.h"
-#include "src/string/memory_utils/strcmp_implementations.h"
+#include "src/string/memory_utils/inline_strcmp.h"
 
-namespace __llvm_libc {
+namespace LIBC_NAMESPACE {
 
 LLVM_LIBC_FUNCTION(int, strcmp, (const char *left, const char *right)) {
   auto comp = [](char l, char r) -> int { return l - r; };
-  return strcmp_implementation(left, right, comp);
+  return inline_strcmp(left, right, comp);
 }
 
-} // namespace __llvm_libc
+} // namespace LIBC_NAMESPACE

@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "lldb/Expression/IRInterpreter.h"
+#include "lldb/Core/Debugger.h"
 #include "lldb/Core/Module.h"
 #include "lldb/Core/ModuleSpec.h"
 #include "lldb/Core/ValueObject.h"
@@ -464,13 +465,16 @@ static const char *unsupported_operand_error =
     "Interpreter doesn't handle one of the expression's operands";
 static const char *interpreter_internal_error =
     "Interpreter encountered an internal error";
+static const char *interrupt_error =
+    "Interrupted while interpreting expression";
 static const char *bad_value_error =
     "Interpreter couldn't resolve a value during execution";
 static const char *memory_allocation_error =
     "Interpreter couldn't allocate memory";
 static const char *memory_write_error = "Interpreter couldn't write to memory";
 static const char *memory_read_error = "Interpreter couldn't read from memory";
-static const char *infinite_loop_error = "Interpreter ran for too many cycles";
+static const char *timeout_error =
+    "Reached timeout while interpreting expression";
 static const char *too_many_functions_error =
     "Interpreter doesn't handle modules with multiple function bodies.";
 
@@ -683,7 +687,8 @@ bool IRInterpreter::Interpret(llvm::Module &module, llvm::Function &function,
                               lldb_private::Status &error,
                               lldb::addr_t stack_frame_bottom,
                               lldb::addr_t stack_frame_top,
-                              lldb_private::ExecutionContext &exe_ctx) {
+                              lldb_private::ExecutionContext &exe_ctx,
+                              lldb_private::Timeout<std::micro> timeout) {
   lldb_private::Log *log(GetLog(LLDBLog::Expressions));
 
   if (log) {
@@ -722,11 +727,36 @@ bool IRInterpreter::Interpret(llvm::Module &module, llvm::Function &function,
     frame.MakeArgument(&*ai, ptr);
   }
 
-  uint32_t num_insts = 0;
-
   frame.Jump(&function.front());
 
-  while (frame.m_ii != frame.m_ie && (++num_insts < 4096)) {
+  lldb_private::Process *process = exe_ctx.GetProcessPtr();
+  lldb_private::Target *target = exe_ctx.GetTargetPtr();
+
+  using clock = std::chrono::steady_clock;
+
+  // Compute the time at which the timeout has been exceeded.
+  std::optional<clock::time_point> end_time;
+  if (timeout && timeout->count() > 0)
+    end_time = clock::now() + *timeout;
+
+  while (frame.m_ii != frame.m_ie) {
+    // Timeout reached: stop interpreting.
+    if (end_time && clock::now() >= *end_time) {
+      error.SetErrorToGenericError();
+      error.SetErrorString(timeout_error);
+      return false;
+    }
+
+    // If we have access to the debugger we can honor an interrupt request.
+    if (target) {
+      if (INTERRUPT_REQUESTED(target->GetDebugger(),
+                              "Interrupted in IR interpreting.")) {
+        error.SetErrorToGenericError();
+        error.SetErrorString(interrupt_error);
+        return false;
+      }
+    }
+
     const Instruction *inst = &*frame.m_ii;
 
     LLDB_LOGF(log, "Interpreting %s", PrintValue(inst).c_str());
@@ -1418,7 +1448,7 @@ bool IRInterpreter::Interpret(llvm::Module &module, llvm::Function &function,
       }
 
       // Make sure we have a valid process
-      if (!exe_ctx.GetProcessPtr()) {
+      if (!process) {
         error.SetErrorToGenericError();
         error.SetErrorString("unable to get the process");
         return false;
@@ -1524,11 +1554,11 @@ bool IRInterpreter::Interpret(llvm::Module &module, llvm::Function &function,
         return false;
       }
 
-      exe_ctx.GetProcessPtr()->SetRunningUserExpression(true);
+      process->SetRunningUserExpression(true);
 
       // Execute the actual function call thread plan
-      lldb::ExpressionResults res = exe_ctx.GetProcessRef().RunThreadPlan(
-          exe_ctx, call_plan_sp, options, diagnostics);
+      lldb::ExpressionResults res =
+          process->RunThreadPlan(exe_ctx, call_plan_sp, options, diagnostics);
 
       // Check that the thread plan completed successfully
       if (res != lldb::ExpressionResults::eExpressionCompleted) {
@@ -1537,7 +1567,7 @@ bool IRInterpreter::Interpret(llvm::Module &module, llvm::Function &function,
         return false;
       }
 
-      exe_ctx.GetProcessPtr()->SetRunningUserExpression(false);
+      process->SetRunningUserExpression(false);
 
       // Void return type
       if (returnType->isVoidTy()) {
@@ -1569,12 +1599,6 @@ bool IRInterpreter::Interpret(llvm::Module &module, llvm::Function &function,
     }
 
     ++frame.m_ii;
-  }
-
-  if (num_insts >= 4096) {
-    error.SetErrorToGenericError();
-    error.SetErrorString(infinite_loop_error);
-    return false;
   }
 
   return false;

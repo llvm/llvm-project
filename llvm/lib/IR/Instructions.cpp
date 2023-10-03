@@ -130,7 +130,7 @@ Value *PHINode::removeIncomingValue(unsigned Idx, bool DeletePHIIfEmpty) {
   // clients might not expect this to happen.  The code as it is thrashes the
   // use/def lists, which is kinda lame.
   std::copy(op_begin() + Idx + 1, op_end(), op_begin() + Idx);
-  copyIncomingBlocks(make_range(block_begin() + Idx + 1, block_end()), Idx);
+  copyIncomingBlocks(drop_begin(blocks(), Idx + 1), Idx);
 
   // Nuke the last value.
   Op<-1>().set(nullptr);
@@ -143,6 +143,39 @@ Value *PHINode::removeIncomingValue(unsigned Idx, bool DeletePHIIfEmpty) {
     eraseFromParent();
   }
   return Removed;
+}
+
+void PHINode::removeIncomingValueIf(function_ref<bool(unsigned)> Predicate,
+                                    bool DeletePHIIfEmpty) {
+  SmallDenseSet<unsigned> RemoveIndices;
+  for (unsigned Idx = 0; Idx < getNumIncomingValues(); ++Idx)
+    if (Predicate(Idx))
+      RemoveIndices.insert(Idx);
+
+  if (RemoveIndices.empty())
+    return;
+
+  // Remove operands.
+  auto NewOpEnd = remove_if(operands(), [&](Use &U) {
+    return RemoveIndices.contains(U.getOperandNo());
+  });
+  for (Use &U : make_range(NewOpEnd, op_end()))
+    U.set(nullptr);
+
+  // Remove incoming blocks.
+  (void)std::remove_if(const_cast<block_iterator>(block_begin()),
+                 const_cast<block_iterator>(block_end()), [&](BasicBlock *&BB) {
+                   return RemoveIndices.contains(&BB - block_begin());
+                 });
+
+  setNumHungOffUseOperands(getNumOperands() - RemoveIndices.size());
+
+  // If the PHI node is dead, because it has zero entries, nuke it now.
+  if (getNumOperands() == 0 && DeletePHIIfEmpty) {
+    // If anyone is using this PHI, make them use a dummy value instead...
+    replaceAllUsesWith(PoisonValue::get(getType()));
+    eraseFromParent();
+  }
 }
 
 /// growOperands - grow operands - This grows the operand list in response
@@ -774,204 +807,6 @@ void CallInst::updateProfWeight(uint64_t S, uint64_t T) {
                            Val.udiv(APT).getLimitedValue())));
     }
   setMetadata(LLVMContext::MD_prof, MDNode::get(getContext(), Vals));
-}
-
-/// IsConstantOne - Return true only if val is constant int 1
-static bool IsConstantOne(Value *val) {
-  assert(val && "IsConstantOne does not work with nullptr val");
-  const ConstantInt *CVal = dyn_cast<ConstantInt>(val);
-  return CVal && CVal->isOne();
-}
-
-static Instruction *createMalloc(Instruction *InsertBefore,
-                                 BasicBlock *InsertAtEnd, Type *IntPtrTy,
-                                 Type *AllocTy, Value *AllocSize,
-                                 Value *ArraySize,
-                                 ArrayRef<OperandBundleDef> OpB,
-                                 Function *MallocF, const Twine &Name) {
-  assert(((!InsertBefore && InsertAtEnd) || (InsertBefore && !InsertAtEnd)) &&
-         "createMalloc needs either InsertBefore or InsertAtEnd");
-
-  // malloc(type) becomes:
-  //       bitcast (i8* malloc(typeSize)) to type*
-  // malloc(type, arraySize) becomes:
-  //       bitcast (i8* malloc(typeSize*arraySize)) to type*
-  if (!ArraySize)
-    ArraySize = ConstantInt::get(IntPtrTy, 1);
-  else if (ArraySize->getType() != IntPtrTy) {
-    if (InsertBefore)
-      ArraySize = CastInst::CreateIntegerCast(ArraySize, IntPtrTy, false,
-                                              "", InsertBefore);
-    else
-      ArraySize = CastInst::CreateIntegerCast(ArraySize, IntPtrTy, false,
-                                              "", InsertAtEnd);
-  }
-
-  if (!IsConstantOne(ArraySize)) {
-    if (IsConstantOne(AllocSize)) {
-      AllocSize = ArraySize;         // Operand * 1 = Operand
-    } else if (Constant *CO = dyn_cast<Constant>(ArraySize)) {
-      Constant *Scale = ConstantExpr::getIntegerCast(CO, IntPtrTy,
-                                                     false /*ZExt*/);
-      // Malloc arg is constant product of type size and array size
-      AllocSize = ConstantExpr::getMul(Scale, cast<Constant>(AllocSize));
-    } else {
-      // Multiply type size by the array size...
-      if (InsertBefore)
-        AllocSize = BinaryOperator::CreateMul(ArraySize, AllocSize,
-                                              "mallocsize", InsertBefore);
-      else
-        AllocSize = BinaryOperator::CreateMul(ArraySize, AllocSize,
-                                              "mallocsize", InsertAtEnd);
-    }
-  }
-
-  assert(AllocSize->getType() == IntPtrTy && "malloc arg is wrong size");
-  // Create the call to Malloc.
-  BasicBlock *BB = InsertBefore ? InsertBefore->getParent() : InsertAtEnd;
-  Module *M = BB->getParent()->getParent();
-  Type *BPTy = Type::getInt8PtrTy(BB->getContext());
-  FunctionCallee MallocFunc = MallocF;
-  if (!MallocFunc)
-    // prototype malloc as "void *malloc(size_t)"
-    MallocFunc = M->getOrInsertFunction("malloc", BPTy, IntPtrTy);
-  PointerType *AllocPtrType = PointerType::getUnqual(AllocTy);
-  CallInst *MCall = nullptr;
-  Instruction *Result = nullptr;
-  if (InsertBefore) {
-    MCall = CallInst::Create(MallocFunc, AllocSize, OpB, "malloccall",
-                             InsertBefore);
-    Result = MCall;
-    if (Result->getType() != AllocPtrType)
-      // Create a cast instruction to convert to the right type...
-      Result = new BitCastInst(MCall, AllocPtrType, Name, InsertBefore);
-  } else {
-    MCall = CallInst::Create(MallocFunc, AllocSize, OpB, "malloccall");
-    Result = MCall;
-    if (Result->getType() != AllocPtrType) {
-      MCall->insertInto(InsertAtEnd, InsertAtEnd->end());
-      // Create a cast instruction to convert to the right type...
-      Result = new BitCastInst(MCall, AllocPtrType, Name);
-    }
-  }
-  MCall->setTailCall();
-  if (Function *F = dyn_cast<Function>(MallocFunc.getCallee())) {
-    MCall->setCallingConv(F->getCallingConv());
-    if (!F->returnDoesNotAlias())
-      F->setReturnDoesNotAlias();
-  }
-  assert(!MCall->getType()->isVoidTy() && "Malloc has void return type");
-
-  return Result;
-}
-
-/// CreateMalloc - Generate the IR for a call to malloc:
-/// 1. Compute the malloc call's argument as the specified type's size,
-///    possibly multiplied by the array size if the array size is not
-///    constant 1.
-/// 2. Call malloc with that argument.
-/// 3. Bitcast the result of the malloc call to the specified type.
-Instruction *CallInst::CreateMalloc(Instruction *InsertBefore,
-                                    Type *IntPtrTy, Type *AllocTy,
-                                    Value *AllocSize, Value *ArraySize,
-                                    Function *MallocF,
-                                    const Twine &Name) {
-  return createMalloc(InsertBefore, nullptr, IntPtrTy, AllocTy, AllocSize,
-                      ArraySize, std::nullopt, MallocF, Name);
-}
-Instruction *CallInst::CreateMalloc(Instruction *InsertBefore,
-                                    Type *IntPtrTy, Type *AllocTy,
-                                    Value *AllocSize, Value *ArraySize,
-                                    ArrayRef<OperandBundleDef> OpB,
-                                    Function *MallocF,
-                                    const Twine &Name) {
-  return createMalloc(InsertBefore, nullptr, IntPtrTy, AllocTy, AllocSize,
-                      ArraySize, OpB, MallocF, Name);
-}
-
-/// CreateMalloc - Generate the IR for a call to malloc:
-/// 1. Compute the malloc call's argument as the specified type's size,
-///    possibly multiplied by the array size if the array size is not
-///    constant 1.
-/// 2. Call malloc with that argument.
-/// 3. Bitcast the result of the malloc call to the specified type.
-/// Note: This function does not add the bitcast to the basic block, that is the
-/// responsibility of the caller.
-Instruction *CallInst::CreateMalloc(BasicBlock *InsertAtEnd,
-                                    Type *IntPtrTy, Type *AllocTy,
-                                    Value *AllocSize, Value *ArraySize,
-                                    Function *MallocF, const Twine &Name) {
-  return createMalloc(nullptr, InsertAtEnd, IntPtrTy, AllocTy, AllocSize,
-                      ArraySize, std::nullopt, MallocF, Name);
-}
-Instruction *CallInst::CreateMalloc(BasicBlock *InsertAtEnd,
-                                    Type *IntPtrTy, Type *AllocTy,
-                                    Value *AllocSize, Value *ArraySize,
-                                    ArrayRef<OperandBundleDef> OpB,
-                                    Function *MallocF, const Twine &Name) {
-  return createMalloc(nullptr, InsertAtEnd, IntPtrTy, AllocTy, AllocSize,
-                      ArraySize, OpB, MallocF, Name);
-}
-
-static Instruction *createFree(Value *Source,
-                               ArrayRef<OperandBundleDef> Bundles,
-                               Instruction *InsertBefore,
-                               BasicBlock *InsertAtEnd) {
-  assert(((!InsertBefore && InsertAtEnd) || (InsertBefore && !InsertAtEnd)) &&
-         "createFree needs either InsertBefore or InsertAtEnd");
-  assert(Source->getType()->isPointerTy() &&
-         "Can not free something of nonpointer type!");
-
-  BasicBlock *BB = InsertBefore ? InsertBefore->getParent() : InsertAtEnd;
-  Module *M = BB->getParent()->getParent();
-
-  Type *VoidTy = Type::getVoidTy(M->getContext());
-  Type *IntPtrTy = Type::getInt8PtrTy(M->getContext());
-  // prototype free as "void free(void*)"
-  FunctionCallee FreeFunc = M->getOrInsertFunction("free", VoidTy, IntPtrTy);
-  CallInst *Result = nullptr;
-  Value *PtrCast = Source;
-  if (InsertBefore) {
-    if (Source->getType() != IntPtrTy)
-      PtrCast = new BitCastInst(Source, IntPtrTy, "", InsertBefore);
-    Result = CallInst::Create(FreeFunc, PtrCast, Bundles, "", InsertBefore);
-  } else {
-    if (Source->getType() != IntPtrTy)
-      PtrCast = new BitCastInst(Source, IntPtrTy, "", InsertAtEnd);
-    Result = CallInst::Create(FreeFunc, PtrCast, Bundles, "");
-  }
-  Result->setTailCall();
-  if (Function *F = dyn_cast<Function>(FreeFunc.getCallee()))
-    Result->setCallingConv(F->getCallingConv());
-
-  return Result;
-}
-
-/// CreateFree - Generate the IR for a call to the builtin free function.
-Instruction *CallInst::CreateFree(Value *Source, Instruction *InsertBefore) {
-  return createFree(Source, std::nullopt, InsertBefore, nullptr);
-}
-Instruction *CallInst::CreateFree(Value *Source,
-                                  ArrayRef<OperandBundleDef> Bundles,
-                                  Instruction *InsertBefore) {
-  return createFree(Source, Bundles, InsertBefore, nullptr);
-}
-
-/// CreateFree - Generate the IR for a call to the builtin free function.
-/// Note: This function does not add the call to the basic block, that is the
-/// responsibility of the caller.
-Instruction *CallInst::CreateFree(Value *Source, BasicBlock *InsertAtEnd) {
-  Instruction *FreeCall =
-      createFree(Source, std::nullopt, nullptr, InsertAtEnd);
-  assert(FreeCall && "CreateFree did not create a CallInst");
-  return FreeCall;
-}
-Instruction *CallInst::CreateFree(Value *Source,
-                                  ArrayRef<OperandBundleDef> Bundles,
-                                  BasicBlock *InsertAtEnd) {
-  Instruction *FreeCall = createFree(Source, Bundles, nullptr, InsertAtEnd);
-  assert(FreeCall && "CreateFree did not create a CallInst");
-  return FreeCall;
 }
 
 //===----------------------------------------------------------------------===//
@@ -2607,7 +2442,7 @@ static bool isReplicationMaskWithParams(ArrayRef<int> Mask,
   assert(Mask.size() == (unsigned)ReplicationFactor * VF &&
          "Unexpected mask size.");
 
-  for (int CurrElt : seq(0, VF)) {
+  for (int CurrElt : seq(VF)) {
     ArrayRef<int> CurrSubMask = Mask.take_front(ReplicationFactor);
     assert(CurrSubMask.size() == (unsigned)ReplicationFactor &&
            "Run out of mask?");
@@ -2692,10 +2527,10 @@ bool ShuffleVectorInst::isOneUseSingleSourceMask(ArrayRef<int> Mask, int VF) {
     if (all_of(SubMask, [](int Idx) { return Idx == PoisonMaskElem; }))
       continue;
     SmallBitVector Used(VF, false);
-    for_each(SubMask, [&Used, VF](int Idx) {
+    for (int Idx : SubMask) {
       if (Idx != PoisonMaskElem && Idx < VF)
         Used.set(Idx);
-    });
+    }
     if (!Used.all())
       return false;
   }
@@ -2804,6 +2639,45 @@ bool ShuffleVectorInst::isInterleaveMask(
   }
 
   return true;
+}
+
+/// Try to lower a vector shuffle as a bit rotation.
+///
+/// Look for a repeated rotation pattern in each sub group.
+/// Returns an element-wise left bit rotation amount or -1 if failed.
+static int matchShuffleAsBitRotate(ArrayRef<int> Mask, int NumSubElts) {
+  int NumElts = Mask.size();
+  assert((NumElts % NumSubElts) == 0 && "Illegal shuffle mask");
+
+  int RotateAmt = -1;
+  for (int i = 0; i != NumElts; i += NumSubElts) {
+    for (int j = 0; j != NumSubElts; ++j) {
+      int M = Mask[i + j];
+      if (M < 0)
+        continue;
+      if (M < i || M >= i + NumSubElts)
+        return -1;
+      int Offset = (NumSubElts - (M - (i + j))) % NumSubElts;
+      if (0 <= RotateAmt && Offset != RotateAmt)
+        return -1;
+      RotateAmt = Offset;
+    }
+  }
+  return RotateAmt;
+}
+
+bool ShuffleVectorInst::isBitRotateMask(
+    ArrayRef<int> Mask, unsigned EltSizeInBits, unsigned MinSubElts,
+    unsigned MaxSubElts, unsigned &NumSubElts, unsigned &RotateAmt) {
+  for (NumSubElts = MinSubElts; NumSubElts <= MaxSubElts; NumSubElts *= 2) {
+    int EltRotateAmt = matchShuffleAsBitRotate(Mask, NumSubElts);
+    if (EltRotateAmt < 0)
+      continue;
+    RotateAmt = EltRotateAmt * EltSizeInBits;
+    return true;
+  }
+
+  return false;
 }
 
 //===----------------------------------------------------------------------===//

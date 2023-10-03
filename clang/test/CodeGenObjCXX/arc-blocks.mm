@@ -9,7 +9,6 @@
 
 // CHECK: [[LAYOUT0:@.*]] = private unnamed_addr constant [3 x i8] c" 9\00"
 
-// rdar://13045269
 // If a __block variable requires extended layout information *and*
 // a copy/dispose helper, be sure to adjust the offsets used in copy/dispose.
 namespace test0 {

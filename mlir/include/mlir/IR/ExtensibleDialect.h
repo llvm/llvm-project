@@ -24,6 +24,7 @@
 #include "mlir/IR/DialectInterface.h"
 #include "mlir/IR/MLIRContext.h"
 #include "mlir/IR/OpDefinition.h"
+#include "mlir/IR/OperationSupport.h"
 #include "mlir/Support/TypeID.h"
 #include "llvm/ADT/StringMap.h"
 #include "llvm/Support/ErrorHandling.h"
@@ -475,7 +476,7 @@ public:
   void populateInherentAttrs(Operation *op, NamedAttrList &attrs) final {}
   LogicalResult
   verifyInherentAttrs(OperationName opName, NamedAttrList &attributes,
-                      function_ref<InFlightDiagnostic()> getDiag) final {
+                      function_ref<InFlightDiagnostic()> emitError) final {
     return success();
   }
   int getOpPropertyByteSize() final { return 0; }
@@ -485,12 +486,16 @@ public:
   void populateDefaultProperties(OperationName opName,
                                  OpaqueProperties properties) final {}
 
-  LogicalResult setPropertiesFromAttr(Operation *op, Attribute attr,
-                                      InFlightDiagnostic *diag) final {
+  LogicalResult
+  setPropertiesFromAttr(OperationName opName, OpaqueProperties properties,
+                        Attribute attr,
+                        function_ref<InFlightDiagnostic()> emitError) final {
+    emitError() << "extensible Dialects don't support properties";
     return failure();
   }
   Attribute getPropertiesAsAttr(Operation *op) final { return {}; }
   void copyProperties(OpaqueProperties lhs, OpaqueProperties rhs) final {}
+  bool compareProperties(OpaqueProperties, OpaqueProperties) final { return false; }
   llvm::hash_code hashProperties(OpaqueProperties prop) final { return {}; }
 
 private:
@@ -542,10 +547,7 @@ public:
 
   /// Returns nullptr if the definition was not found.
   DynamicTypeDefinition *lookupTypeDefinition(StringRef name) const {
-    auto it = nameToDynTypes.find(name);
-    if (it == nameToDynTypes.end())
-      return nullptr;
-    return it->second;
+    return nameToDynTypes.lookup(name);
   }
 
   /// Returns nullptr if the definition was not found.
@@ -558,10 +560,7 @@ public:
 
   /// Returns nullptr if the definition was not found.
   DynamicAttrDefinition *lookupAttrDefinition(StringRef name) const {
-    auto it = nameToDynAttrs.find(name);
-    if (it == nameToDynAttrs.end())
-      return nullptr;
-    return it->second;
+    return nameToDynAttrs.lookup(name);
   }
 
   /// Returns nullptr if the definition was not found.

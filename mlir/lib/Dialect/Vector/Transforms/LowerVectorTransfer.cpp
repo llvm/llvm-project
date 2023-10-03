@@ -115,8 +115,11 @@ struct TransferReadPermutationLowering
     // Apply the reverse transpose to deduce the type of the transfer_read.
     ArrayRef<int64_t> originalShape = op.getVectorType().getShape();
     SmallVector<int64_t> newVectorShape(originalShape.size());
+    ArrayRef<bool> originalScalableDims = op.getVectorType().getScalableDims();
+    SmallVector<bool> newScalableDims(originalShape.size());
     for (const auto &pos : llvm::enumerate(permutation)) {
       newVectorShape[pos.value()] = originalShape[pos.index()];
+      newScalableDims[pos.value()] = originalScalableDims[pos.index()];
     }
 
     // Transpose in_bounds attribute.
@@ -126,8 +129,8 @@ struct TransferReadPermutationLowering
                          : ArrayAttr();
 
     // Generate new transfer_read operation.
-    VectorType newReadType =
-        VectorType::get(newVectorShape, op.getVectorType().getElementType());
+    VectorType newReadType = VectorType::get(
+        newVectorShape, op.getVectorType().getElementType(), newScalableDims);
     Value newRead = rewriter.create<vector::TransferReadOp>(
         op.getLoc(), newReadType, op.getSource(), op.getIndices(),
         AffineMapAttr::get(newMap), op.getPadding(), op.getMask(),
@@ -345,14 +348,16 @@ struct TransferOpReduceRank : public OpRewritePattern<vector::TransferReadOp> {
       return success();
     }
 
-    SmallVector<int64_t> newShape = llvm::to_vector<4>(
+    SmallVector<int64_t> newShape(
         originalVecType.getShape().take_back(reducedShapeRank));
+    SmallVector<bool> newScalableDims(
+        originalVecType.getScalableDims().take_back(reducedShapeRank));
     // Vector rank cannot be zero. Handled by TransferReadToVectorLoadLowering.
     if (newShape.empty())
       return rewriter.notifyMatchFailure(op, "rank-reduced vector is 0-d");
 
-    VectorType newReadType =
-        VectorType::get(newShape, originalVecType.getElementType());
+    VectorType newReadType = VectorType::get(
+        newShape, originalVecType.getElementType(), newScalableDims);
     ArrayAttr newInBoundsAttr =
         op.getInBounds()
             ? rewriter.getArrayAttr(
@@ -429,7 +434,7 @@ struct TransferReadToVectorLoadLowering
                                                   vectorShape.end());
     for (unsigned i : broadcastedDims)
       unbroadcastedVectorShape[i] = 1;
-    VectorType unbroadcastedVectorType = VectorType::get(
+    VectorType unbroadcastedVectorType = read.getVectorType().cloneWith(
         unbroadcastedVectorShape, read.getVectorType().getElementType());
 
     // `vector.load` supports vector types as memref's elements only when the
@@ -450,6 +455,12 @@ struct TransferReadToVectorLoadLowering
     // Create vector load op.
     Operation *loadOp;
     if (read.getMask()) {
+      if (read.getVectorType().getRank() != 1)
+        // vector.maskedload operates on 1-D vectors.
+        return rewriter.notifyMatchFailure(
+            read, "vector type is not rank 1, can't create masked load, needs "
+                  "VectorToSCF");
+
       Value fill = rewriter.create<vector::SplatOp>(
           read.getLoc(), unbroadcastedVectorType, read.getPadding());
       loadOp = rewriter.create<vector::MaskedLoadOp>(
@@ -593,6 +604,15 @@ struct TransferWriteToVectorStoreLowering
         diag << "out of bounds dim: " << write;
       });
     if (write.getMask()) {
+      if (write.getVectorType().getRank() != 1)
+        // vector.maskedstore operates on 1-D vectors.
+        return rewriter.notifyMatchFailure(
+            write.getLoc(), [=](Diagnostic &diag) {
+              diag << "vector type is not rank 1, can't create masked store, "
+                      "needs VectorToSCF: "
+                   << write;
+            });
+
       rewriter.replaceOpWithNewOp<vector::MaskedStoreOp>(
           write, write.getSource(), write.getIndices(), write.getMask(),
           write.getVector());

@@ -65,8 +65,8 @@ enum {
 
 class PluginProperties : public Properties {
 public:
-  static ConstString GetSettingName() {
-    return ConstString(ProcessKDP::GetPluginNameStatic());
+  static llvm::StringRef GetSettingName() {
+    return ProcessKDP::GetPluginNameStatic();
   }
 
   PluginProperties() : Properties() {

@@ -769,7 +769,7 @@ void M68kInstrInfo::loadRegFromStackSlot(MachineBasicBlock &MBB,
   M68k::addFrameReference(BuildMI(MBB, MI, DL, get(Opc), DstReg), FrameIndex);
 }
 
-/// Return a virtual register initialized with the the global base register
+/// Return a virtual register initialized with the global base register
 /// value. Output instructions required to initialize the register in the
 /// function entry block, if necessary.
 ///

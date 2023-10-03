@@ -56,8 +56,8 @@
 #include "lldb/Core/DumpDataExtractor.h"
 #include "lldb/Core/Module.h"
 #include "lldb/Core/PluginManager.h"
-#include "lldb/Core/StreamFile.h"
 #include "lldb/Core/UniqueCStringMap.h"
+#include "lldb/Host/StreamFile.h"
 #include "lldb/Symbol/ObjectFile.h"
 #include "lldb/Symbol/SymbolFile.h"
 #include "lldb/Target/ExecutionContext.h"
@@ -485,9 +485,6 @@ static void ParseLangArgs(LangOptions &Opts, InputKind IK, const char *triple) {
     case clang::Language::OpenCLCXX:
       LangStd = LangStandard::lang_openclcpp10;
       break;
-    case clang::Language::CUDA:
-      LangStd = LangStandard::lang_cuda;
-      break;
     case clang::Language::Asm:
     case clang::Language::C:
     case clang::Language::ObjC:
@@ -497,8 +494,9 @@ static void ParseLangArgs(LangOptions &Opts, InputKind IK, const char *triple) {
     case clang::Language::ObjCXX:
       LangStd = LangStandard::lang_gnucxx98;
       break;
+    case clang::Language::CUDA:
     case clang::Language::HIP:
-      LangStd = LangStandard::lang_hip;
+      LangStd = LangStandard::lang_gnucxx17;
       break;
     case clang::Language::HLSL:
       LangStd = LangStandard::lang_hlsl;
@@ -5363,11 +5361,8 @@ uint32_t TypeSystemClang::GetNumChildren(lldb::opaque_compiler_type_t type,
           num_children += cxx_record_decl->getNumBases();
         }
       }
-      clang::RecordDecl::field_iterator field, field_end;
-      for (field = record_decl->field_begin(),
-          field_end = record_decl->field_end();
-           field != field_end; ++field)
-        ++num_children;
+      num_children += std::distance(record_decl->field_begin(),
+                               record_decl->field_end());
     }
     break;
 
@@ -5578,13 +5573,8 @@ uint32_t TypeSystemClang::GetNumFields(lldb::opaque_compiler_type_t type) {
       if (record_type) {
         clang::RecordDecl *record_decl = record_type->getDecl();
         if (record_decl) {
-          uint32_t field_idx = 0;
-          clang::RecordDecl::field_iterator field, field_end;
-          for (field = record_decl->field_begin(),
-              field_end = record_decl->field_end();
-               field != field_end; ++field)
-            ++field_idx;
-          count = field_idx;
+          count = std::distance(record_decl->field_begin(),
+                                record_decl->field_end());
         }
       }
     }

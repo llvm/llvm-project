@@ -123,7 +123,7 @@ struct __declspec(deprecated) DS1 { int i; float f; }; // expected-note {{'DS1' 
 #define MY_TEXT		"This is also deprecated"
 __declspec(deprecated(MY_TEXT)) void Dfunc1( void ) {} // expected-note {{'Dfunc1' has been explicitly marked deprecated here}}
 
-struct __declspec(deprecated(123)) DS2 {};	// expected-error {{'deprecated' attribute requires a string}}
+struct __declspec(deprecated(123)) DS2 {};	// expected-error {{expected string literal as argument of 'deprecated' attribute}}
 
 void test( void ) {
 	e1 = one;	// expected-warning {{'e1' is deprecated: This is deprecated}}

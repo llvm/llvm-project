@@ -138,7 +138,18 @@ public:
       } else {
         fir::runtime::genAssign(builder, loc, to, from);
       }
-    } else if (lhs.isArray()) {
+    } else if (lhs.isArray() ||
+               // Special case for element-by-element (or scalar) assignments
+               // generated for creating polymorphic expressions.
+               // The LHS of these assignments is a box describing just
+               // a single element, not the whole allocatable temp.
+               // They do not have 'realloc' attribute, because reallocation
+               // must not happen. The only expected effect of such an
+               // assignment is the copy of the contents, because the dynamic
+               // types of the LHS and the RHS must match already. We use the
+               // runtime in this case so that the polymorphic (including
+               // unlimited) content is copied properly.
+               (lhs.isPolymorphic() && assignOp.isTemporaryLHS())) {
       // Use the runtime for simplicity. An optimization pass will be added to
       // inline array assignment when profitable.
       mlir::Value from = emboxRHS(rhsExv);
@@ -153,11 +164,18 @@ public:
       else
         fir::runtime::genAssign(builder, loc, toMutableBox, from);
     } else {
+      // TODO: use the type specification to see if IsFinalizable is set,
+      // or propagate IsFinalizable attribute from lowering.
+      bool needFinalization =
+          !assignOp.isTemporaryLHS() &&
+          mlir::isa<fir::RecordType>(fir::getElementTypeOf(lhsExv));
+
       // genScalarAssignment() must take care of potential overlap
       // between LHS and RHS. Note that the overlap is possible
       // also for components of LHS/RHS, and the Assign() runtime
       // must take care of it.
       fir::factory::genScalarAssignment(builder, loc, lhsExv, rhsExv,
+                                        needFinalization,
                                         assignOp.isTemporaryLHS());
     }
     rewriter.eraseOp(assignOp);
@@ -233,8 +251,7 @@ public:
   matchAndRewrite(hlfir::CopyInOp copyInOp,
                   mlir::PatternRewriter &rewriter) const override {
     mlir::Location loc = copyInOp.getLoc();
-    auto module = copyInOp->getParentOfType<mlir::ModuleOp>();
-    fir::FirOpBuilder builder(rewriter, fir::getKindMapping(module));
+    fir::FirOpBuilder builder(rewriter, copyInOp.getOperation());
     CopyInResult result = copyInOp.getVarIsPresent()
                               ? genOptionalCopyIn(loc, builder, copyInOp)
                               : genNonOptionalCopyIn(loc, builder, copyInOp);
@@ -252,8 +269,7 @@ public:
   matchAndRewrite(hlfir::CopyOutOp copyOutOp,
                   mlir::PatternRewriter &rewriter) const override {
     mlir::Location loc = copyOutOp.getLoc();
-    auto module = copyOutOp->getParentOfType<mlir::ModuleOp>();
-    fir::FirOpBuilder builder(rewriter, fir::getKindMapping(module));
+    fir::FirOpBuilder builder(rewriter, copyOutOp.getOperation());
 
     builder.genIfThen(loc, copyOutOp.getWasCopied())
         .genThen([&]() {
@@ -307,17 +323,24 @@ public:
     if (auto attrs = declareOp.getFortranAttrs())
       fortranAttrs =
           fir::FortranVariableFlagsAttr::get(rewriter.getContext(), *attrs);
-    auto firBase = rewriter
-                       .create<fir::DeclareOp>(
-                           loc, memref.getType(), memref, declareOp.getShape(),
-                           declareOp.getTypeparams(), declareOp.getUniqName(),
-                           fortranAttrs)
-                       .getResult();
+    auto firDeclareOp = rewriter.create<fir::DeclareOp>(
+        loc, memref.getType(), memref, declareOp.getShape(),
+        declareOp.getTypeparams(), declareOp.getUniqName(), fortranAttrs);
+
+    // Propagate other attributes from hlfir.declare to fir.declare.
+    // OpenACC's acc.declare is one example. Right now, the propagation
+    // is verbatim.
+    mlir::NamedAttrList elidedAttrs =
+        mlir::NamedAttrList{firDeclareOp->getAttrs()};
+    for (const mlir::NamedAttribute &attr : declareOp->getAttrs())
+      if (!elidedAttrs.get(attr.getName()))
+        firDeclareOp->setAttr(attr.getName(), attr.getValue());
+
+    auto firBase = firDeclareOp.getResult();
     mlir::Value hlfirBase;
     mlir::Type hlfirBaseType = declareOp.getBase().getType();
     if (hlfirBaseType.isa<fir::BaseBoxType>()) {
-      auto module = declareOp->getParentOfType<mlir::ModuleOp>();
-      fir::FirOpBuilder builder(rewriter, fir::getKindMapping(module));
+      fir::FirOpBuilder builder(rewriter, declareOp.getOperation());
       // Helper to generate the hlfir fir.box with the local lower bounds and
       // type parameters.
       auto genHlfirBox = [&]() -> mlir::Value {
@@ -342,6 +365,15 @@ public:
       if (!mlir::cast<fir::FortranVariableOpInterface>(declareOp.getOperation())
                .isOptional()) {
         hlfirBase = genHlfirBox();
+        // If the original base is a box too, we could as well
+        // use the HLFIR box as the FIR base: otherwise, the two
+        // boxes are "alive" at the same time, and the FIR box
+        // is used for accessing the base_addr and the HLFIR box
+        // is used for accessing the bounds etc. Using the HLFIR box,
+        // that holds the same base_addr at this point, makes
+        // the representation a little bit more clear.
+        if (hlfirBase.getType() == firBase.getType())
+          firBase = hlfirBase;
       } else {
         // Need to conditionally rebox/embox the optional: the input fir.box
         // may be null and the rebox would be illegal. It is also important to
@@ -416,8 +448,7 @@ public:
   matchAndRewrite(hlfir::DesignateOp designate,
                   mlir::PatternRewriter &rewriter) const override {
     mlir::Location loc = designate.getLoc();
-    auto module = designate->getParentOfType<mlir::ModuleOp>();
-    fir::FirOpBuilder builder(rewriter, fir::getKindMapping(module));
+    fir::FirOpBuilder builder(rewriter, designate.getOperation());
 
     hlfir::Entity baseEntity(designate.getMemref());
 

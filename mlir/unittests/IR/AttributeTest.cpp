@@ -74,6 +74,20 @@ TEST(DenseSplatTest, BoolSplatRawRoundtrip) {
   EXPECT_EQ(trueSplat, trueSplatFromRaw);
 }
 
+TEST(DenseSplatTest, BoolSplatSmall) {
+  MLIRContext context;
+  Builder builder(&context);
+
+  // Check that splats that don't fill entire byte are handled properly.
+  auto tensorType = RankedTensorType::get({4}, builder.getI1Type());
+  std::vector<char> data{0b00001111};
+  auto trueSplatFromRaw =
+      DenseIntOrFPElementsAttr::getFromRawBuffer(tensorType, data);
+  EXPECT_TRUE(trueSplatFromRaw.isSplat());
+  DenseElementsAttr trueSplat = DenseElementsAttr::get(tensorType, true);
+  EXPECT_EQ(trueSplat, trueSplatFromRaw);
+}
+
 TEST(DenseSplatTest, LargeBoolSplat) {
   constexpr int64_t boolCount = 56;
 
@@ -418,7 +432,7 @@ TEST(SparseElementsAttrTest, GetZero) {
 
   auto zeroStringValue =
       cast<StringAttr>(sparseString.getValues<Attribute>()[{1, 1}]);
-  EXPECT_TRUE(zeroStringValue.getValue().empty());
+  EXPECT_TRUE(zeroStringValue.empty());
   EXPECT_TRUE(zeroStringValue.getType() == stringTy);
 }
 

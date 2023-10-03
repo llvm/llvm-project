@@ -105,7 +105,8 @@ class GlobalISelMatchTableExecutorEmitter {
     if (!Predicates.empty()) {
       OS << "  switch (PredicateID) {\n";
       for (const auto &Pred : Predicates) {
-        const auto Code = GetPredCode(Pred);
+        // Ensure all code is indented.
+        const auto Code = join(split(GetPredCode(Pred).str(), "\n"), "\n    ");
         OS << "  case GICXXPred_" << TypeIdentifier << "_Predicate_"
            << GetPredEnumName(Pred) << ": {\n"
            << "    " << Code << "\n";
@@ -222,6 +223,8 @@ public:
 
   // Map of predicates to their subtarget features.
   SubtargetFeatureInfoMap SubtargetFeatures;
+
+  std::map<std::string, unsigned> HwModes;
 };
 } // namespace llvm
 

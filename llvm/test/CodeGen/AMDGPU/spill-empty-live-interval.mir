@@ -63,9 +63,9 @@ body:             |
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.1:
   ; CHECK-NEXT:   S_NOP 0, implicit %1.sub2
+  ; CHECK-NEXT:   S_NOP 0, implicit undef %4.sub0:vreg_128
   ; CHECK-NEXT:   undef %2.sub2:vreg_128 = V_MOV_B32_e32 0, implicit $exec
   ; CHECK-NEXT:   S_NOP 0, implicit %2.sub2
-  ; CHECK-NEXT:   S_NOP 0, implicit undef %4.sub0:vreg_128
   bb.0:
     successors: %bb.1
 

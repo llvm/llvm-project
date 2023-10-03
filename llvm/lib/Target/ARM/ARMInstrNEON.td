@@ -5711,19 +5711,19 @@ let PostEncoderMethod = "NEONThumb2V8PostEncoder", DecoderNamespace = "v8NEON" i
   def NEON_VMAXNMNDf  : N3VDIntnp<0b00110, 0b00, 0b1111, 0, 1,
                                   N3RegFrm, NoItinerary, "vmaxnm", "f32",
                                   v2f32, v2f32, fmaxnum, 1>,
-                                  Requires<[HasV8, HasNEON]>;
+                                  Requires<[HasFPARMv8, HasNEON]>;
   def NEON_VMAXNMNQf  : N3VQIntnp<0b00110, 0b00, 0b1111, 1, 1,
                                   N3RegFrm, NoItinerary, "vmaxnm", "f32",
                                   v4f32, v4f32, fmaxnum, 1>,
-                                  Requires<[HasV8, HasNEON]>;
+                                  Requires<[HasFPARMv8, HasNEON]>;
   def NEON_VMAXNMNDh  : N3VDIntnp<0b00110, 0b01, 0b1111, 0, 1,
                                   N3RegFrm, NoItinerary, "vmaxnm", "f16",
                                   v4f16, v4f16, fmaxnum, 1>,
-                                  Requires<[HasV8, HasNEON, HasFullFP16]>;
+                                  Requires<[HasFPARMv8, HasNEON, HasFullFP16]>;
   def NEON_VMAXNMNQh  : N3VQIntnp<0b00110, 0b01, 0b1111, 1, 1,
                                   N3RegFrm, NoItinerary, "vmaxnm", "f16",
                                   v8f16, v8f16, fmaxnum, 1>,
-                                  Requires<[HasV8, HasNEON, HasFullFP16]>;
+                                  Requires<[HasFPARMv8, HasNEON, HasFullFP16]>;
 }
 
 //   VMIN     : Vector Minimum
@@ -5753,19 +5753,19 @@ let PostEncoderMethod = "NEONThumb2V8PostEncoder", DecoderNamespace = "v8NEON" i
   def NEON_VMINNMNDf  : N3VDIntnp<0b00110, 0b10, 0b1111, 0, 1,
                                   N3RegFrm, NoItinerary, "vminnm", "f32",
                                   v2f32, v2f32, fminnum, 1>,
-                                  Requires<[HasV8, HasNEON]>;
+                                  Requires<[HasFPARMv8, HasNEON]>;
   def NEON_VMINNMNQf  : N3VQIntnp<0b00110, 0b10, 0b1111, 1, 1,
                                   N3RegFrm, NoItinerary, "vminnm", "f32",
                                   v4f32, v4f32, fminnum, 1>,
-                                  Requires<[HasV8, HasNEON]>;
+                                  Requires<[HasFPARMv8, HasNEON]>;
   def NEON_VMINNMNDh  : N3VDIntnp<0b00110, 0b11, 0b1111, 0, 1,
                                   N3RegFrm, NoItinerary, "vminnm", "f16",
                                   v4f16, v4f16, fminnum, 1>,
-                                  Requires<[HasV8, HasNEON, HasFullFP16]>;
+                                  Requires<[HasFPARMv8, HasNEON, HasFullFP16]>;
   def NEON_VMINNMNQh  : N3VQIntnp<0b00110, 0b11, 0b1111, 1, 1,
                                   N3RegFrm, NoItinerary, "vminnm", "f16",
                                   v8f16, v8f16, fminnum, 1>,
-                                  Requires<[HasV8, HasNEON, HasFullFP16]>;
+                                  Requires<[HasFPARMv8, HasNEON, HasFullFP16]>;
 }
 
 // Vector Pairwise Operations.
@@ -6396,6 +6396,10 @@ def VGETLNi32 : NVGetLane<{1,1,1,0,0,0,?,1}, 0b1011, 0b00,
                 Requires<[HasFPRegs, HasFastVGETLNi32]> {
   let Inst{21} = lane{0};
 }
+// VGETLNi32 is also legal as just vmov r0,d0[0] without the .32 suffix
+def : InstAlias<"vmov${p} $R, $V$lane",
+    (VGETLNi32 GPR:$R, DPR:$V, VectorIndex32:$lane, pred:$p), 0>,
+    Requires<VGETLNi32.Predicates>;
 let Predicates = [HasNEON] in {
 // def VGETLNf32: see FMRDH and FMRDL in ARMInstrVFP.td
 def : Pat<(ARMvgetlanes (v16i8 QPR:$src), imm:$lane),
@@ -6538,6 +6542,10 @@ def VSETLNi32 : NVSetLane<{1,1,1,0,0,0,?,0}, 0b1011, 0b00, (outs DPR:$V),
   let isInsertSubreg = 1;
 }
 }
+// VSETLNi32 is also legal as just vmov d0[0],r0 without the .32 suffix
+def : InstAlias<"vmov${p} $V$lane, $R",
+    (VSETLNi32 DPR:$V, GPR:$R, VectorIndex32:$lane, pred:$p), 0>,
+    Requires<VSETLNi32.Predicates>;
 
 // TODO: for odd lanes we could optimize this a bit by using the VINS
 // FullFP16 instruction when it is available

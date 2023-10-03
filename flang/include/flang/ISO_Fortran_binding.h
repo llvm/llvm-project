@@ -18,7 +18,9 @@
  * implementation.
  */
 
-#include "Runtime/api-attrs.h"
+#ifndef RT_API_ATTRS
+#define RT_API_ATTRS
+#endif
 
 #ifdef __cplusplus
 namespace Fortran {
@@ -132,15 +134,21 @@ template <typename T> struct FlexibleArray : T {
 #endif
 
 /* 18.5.3 generic data descriptor */
-typedef struct CFI_cdesc_t {
-  /* These three members must appear first, in exactly this order. */
-  void *base_addr;
-  size_t elem_len; /* element size in bytes */
-  int version; /* == CFI_VERSION */
-  CFI_rank_t rank; /* [0 .. CFI_MAX_RANK] */
-  CFI_type_t type;
-  CFI_attribute_t attribute;
+
+/* Descriptor header members */
+#define _CFI_CDESC_T_HEADER_MEMBERS \
+  /* These three members must appear first, \
+   * in exactly this order. */ \
+  void *base_addr; \
+  size_t elem_len; /* element size in bytes */ \
+  int version; /* == CFI_VERSION */ \
+  CFI_rank_t rank; /* [0 .. CFI_MAX_RANK] */ \
+  CFI_type_t type; \
+  CFI_attribute_t attribute; \
   unsigned char f18Addendum;
+
+typedef struct CFI_cdesc_t {
+  _CFI_CDESC_T_HEADER_MEMBERS
 #ifdef __cplusplus
   cfi_internal::FlexibleArray<CFI_dim_t> dim;
 #else
@@ -150,8 +158,9 @@ typedef struct CFI_cdesc_t {
 
 /* 18.5.4 */
 #ifdef __cplusplus
-// The struct below take care of getting the memory storage for C++ CFI_cdesc_t
-// that contain an emulated flexible array.
+// This struct acquires the additional storage, if any is
+// needed, for C++'s CFI_cdesc_t's emulated flexible
+// dim[] array.
 namespace cfi_internal {
 template <int r> struct CdescStorage : public CFI_cdesc_t {
   static_assert((r > 1 && r <= CFI_MAX_RANK), "CFI_INVALID_RANK");
@@ -162,10 +171,10 @@ template <> struct CdescStorage<0> : public CFI_cdesc_t {};
 } // namespace cfi_internal
 #define CFI_CDESC_T(rank) cfi_internal::CdescStorage<rank>
 #else
-#define CFI_CDESC_T(rank) \
+#define CFI_CDESC_T(_RANK) \
   struct { \
-    CFI_cdesc_t cdesc; /* must be first */ \
-    CFI_dim_t dim[rank]; \
+    _CFI_CDESC_T_HEADER_MEMBERS \
+    CFI_dim_t dim[_RANK]; \
   }
 #endif
 

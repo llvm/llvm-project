@@ -11,9 +11,3 @@ set(LLVM_DISTRIBUTION_COMPONENTS
   clang
   clang-resource-headers
   CACHE STRING "")
-
-# Disable function splitting enabled by default in GCC8+
-if("${CMAKE_CXX_COMPILER_ID}" MATCHES "GNU")
-  set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -fno-reorder-blocks-and-partition")
-  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fno-reorder-blocks-and-partition")
-endif()

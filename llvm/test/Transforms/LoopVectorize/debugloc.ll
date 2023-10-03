@@ -137,12 +137,50 @@ exit:
   ret i32 0
 }
 
+define void @test_misc(ptr nocapture %a, ptr noalias %b, i64 %size) !dbg !35 {
+; CHECK-LABEL: define void @test_misc(
+; CHECK:       vector.body:
+; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %vector.ph ], [ [[INDEX_NEXT:%.*]], %vector.body ]
+; CHECK-NEXT:    [[TMP0:%.*]] = add i64 [[INDEX]], 0
+; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr inbounds i32, ptr %a, i64 [[TMP0]]
+; CHECK-NEXT:    [[TMP2:%.*]] = getelementptr inbounds i32, ptr %b, i64 [[TMP0]]
+; CHECK-NEXT:    [[TMP3:%.*]] = getelementptr inbounds i32, ptr [[TMP1]], i32 0
+; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <2 x i32>, ptr [[TMP3]], align 4
+; CHECK-NEXT:    [[TMP4:%.*]] = icmp uge <2 x i32> [[WIDE_LOAD]], <i32 10, i32 10>
+; CHECK-NEXT:    [[TMP5:%.*]] = select <2 x i1> [[TMP4]], <2 x i32> [[WIDE_LOAD]], <2 x i32> zeroinitializer, !dbg [[LOC6:![0-9]+]]
+; CHECK-NEXT:    [[TMP6:%.*]] = getelementptr inbounds i32, ptr [[TMP2]], i32 0, !dbg [[LOC7:![0-9]+]]
+; CHECK-NEXT:    store <2 x i32> [[TMP5]], ptr [[TMP6]], align 4, !dbg [[LOC7]]
+; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 2
+; CHECK-NEXT:    [[TMP7:%.*]] = icmp eq i64 [[INDEX_NEXT]],
+; CHECK-NEXT:    br i1 [[TMP7]], label %middle.block, label %vector.body
+;
+entry:
+  br label %loop
+
+loop:
+  %iv = phi i64 [ 0, %entry ], [ %iv.next, %loop ]
+  %arrayidx.1 = getelementptr inbounds i32, ptr %a, i64 %iv
+  %arrayidx.2 = getelementptr inbounds i32, ptr %b, i64 %iv
+  %l.1 = load i32, ptr %arrayidx.1, align 4
+  %c = icmp uge i32 %l.1, 10
+  %sel = select i1 %c, i32 %l.1, i32 0, !dbg !37
+  store i32 %sel, ptr %arrayidx.2, !dbg !38
+  %iv.next = add i64 %iv, 1
+  %exitcond = icmp ne i64 %iv.next, %size
+  br i1 %exitcond, label %loop, label %exit
+
+exit:
+  ret void
+}
+
 ; CHECK: ![[LOC2]] = !DILocation(line: 3
 ; CHECK: ![[BR_LOC]] = !DILocation(line: 5,
 ; CHECK: ![[LOC1]] = !DILocation(line: 6
 ; CHECK: [[LOC3]] = !DILocation(line: 137
 ; CHECK: [[LOC4]] = !DILocation(line: 210
 ; CHECK: [[LOC5]] = !DILocation(line: 320
+; CHECK: [[LOC6]] = !DILocation(line: 430
+; CHECK: [[LOC7]] = !DILocation(line: 540
 
 
 declare void @llvm.dbg.declare(metadata, metadata, metadata)
@@ -183,3 +221,7 @@ declare void @llvm.dbg.value(metadata, metadata, metadata)
 !32 = distinct !DILexicalBlock(scope: !31, file: !5, line: 137, column: 2)
 !33 = !DILocation(line: 210, column: 44, scope: !32)
 !34 = !DILocation(line: 320, column: 44, scope: !32)
+!35 = distinct !DISubprogram(name: "test_misc", line: 3, isLocal: false, isDefinition: true, virtualIndex: 6, flags: DIFlagPrototyped, isOptimized: true, unit: !0, scopeLine: 3, file: !5, scope: !6, type: !7, retainedNodes: !12)
+!36 = distinct !DILexicalBlock(scope: !35, file: !5, line: 137, column: 2)
+!37 = !DILocation(line: 430, column: 44, scope: !36)
+!38 = !DILocation(line: 540, column: 44, scope: !36)

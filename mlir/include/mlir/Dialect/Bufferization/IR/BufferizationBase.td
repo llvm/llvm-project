@@ -28,7 +28,8 @@ def Bufferization_Dialect : Dialect {
     deallocation](/docs/BufferDeallocationInternals/).
   }];
   let dependentDialects = [
-    "affine::AffineDialect", "memref::MemRefDialect", "tensor::TensorDialect"
+    "affine::AffineDialect", "memref::MemRefDialect", "tensor::TensorDialect",
+    "arith::ArithDialect"
   ];
 
   let extraClassDeclaration = [{
@@ -59,19 +60,8 @@ def Bufferization_Dialect : Dialect {
     /// arguments during One-Shot Module Bufferize.
     constexpr const static ::llvm::StringLiteral
         kBufferLayoutAttrName = "bufferization.buffer_layout";
-
-    /// Attribute name used to mark escaping behavior of buffer allocations.
-    /// Escaping allocations cannot be deallocated in the same block and must
-    /// be treated specially: They are currently deallocated with the
-    /// BufferDeallocation pass.
-    ///
-    /// Note: Only ops with at least one OpResult that bufferizes to a buffer
-    /// allocation (as per BufferizableOpInterface) may have this attribute.
-    constexpr const static ::llvm::StringLiteral
-        kEscapeAttrName = "bufferization.escape";
   }];
   let hasOperationAttrVerify = 1;
-  let usePropertiesForAttributes = 1;
 }
 
 #endif // BUFFERIZATION_BASE

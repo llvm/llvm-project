@@ -130,5 +130,43 @@ std::string hashBlock(BinaryContext &BC, const BinaryBasicBlock &BB,
   return HashString;
 }
 
+/// A "loose" hash of a basic block to use with the stale profile matching. The
+/// computed value will be the same for blocks with minor changes (such as
+/// reordering of instructions or using different operands) but may result in
+/// collisions that need to be resolved by a stronger hashing.
+std::string hashBlockLoose(BinaryContext &BC, const BinaryBasicBlock &BB) {
+  // The hash is computed by creating a string of all lexicographically ordered
+  // instruction opcodes, which is then hashed with std::hash.
+  std::set<std::string> Opcodes;
+  for (const MCInst &Inst : BB) {
+    // Skip pseudo instructions and nops.
+    if (BC.MIB->isPseudo(Inst) || BC.MIB->isNoop(Inst))
+      continue;
+
+    // Ignore unconditional jumps, as they can be added / removed as a result
+    // of basic block reordering.
+    if (BC.MIB->isUnconditionalBranch(Inst))
+      continue;
+
+    // Do not distinguish different types of conditional jumps.
+    if (BC.MIB->isConditionalBranch(Inst)) {
+      Opcodes.insert("JMP");
+      continue;
+    }
+
+    std::string Mnemonic = BC.InstPrinter->getMnemonic(&Inst).first;
+    Mnemonic.erase(
+        std::remove_if(Mnemonic.begin(), Mnemonic.end(),
+                       [](unsigned char ch) { return std::isspace(ch); }),
+        Mnemonic.end());
+    Opcodes.insert(Mnemonic);
+  }
+
+  std::string HashString;
+  for (const std::string &Opcode : Opcodes)
+    HashString.append(Opcode);
+  return HashString;
+}
+
 } // namespace bolt
 } // namespace llvm

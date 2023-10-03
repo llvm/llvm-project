@@ -11,7 +11,7 @@ int foo(A);
 void bar(A &a)
 {
     // CHECK: call void asm
-    asm("" : : "r"(foo(a)) ); // rdar://8540491
+    asm("" : : "r"(foo(a)) );
     // CHECK: call void @_ZN1AD1Ev
 }
 

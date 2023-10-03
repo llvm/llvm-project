@@ -38,12 +38,8 @@ public:
   class ExceptionInfo {
   public:
     using Throwables = llvm::SmallSet<const Type *, 2>;
-    static ExceptionInfo createUnknown() {
-      return ExceptionInfo(State::Unknown);
-    }
-    static ExceptionInfo createNonThrowing() {
-      return ExceptionInfo(State::Throwing);
-    }
+    static ExceptionInfo createUnknown() { return {State::Unknown}; }
+    static ExceptionInfo createNonThrowing() { return {State::Throwing}; }
 
     /// By default the exception situation is unknown and must be
     /// clarified step-wise.
@@ -78,7 +74,7 @@ public:
     /// possible to catch multiple exception types by one 'catch' if they
     /// are a subclass of the 'catch'ed exception type.
     /// Returns 'true' if some exceptions were filtered, otherwise 'false'.
-    bool filterByCatch(const Type *BaseClass, const ASTContext &Context);
+    bool filterByCatch(const Type *HandlerTy, const ASTContext &Context);
 
     /// Filter the set of thrown exception type against a set of ignored
     /// types that shall not be considered in the exception analysis.
@@ -145,7 +141,7 @@ private:
 
   bool IgnoreBadAlloc = true;
   llvm::StringSet<> IgnoredExceptions;
-  llvm::DenseMap<const FunctionDecl *, ExceptionInfo> FunctionCache{32u};
+  llvm::DenseMap<const FunctionDecl *, ExceptionInfo> FunctionCache{32U};
 };
 
 } // namespace clang::tidy::utils

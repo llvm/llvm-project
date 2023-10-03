@@ -52,7 +52,7 @@ class ForOp:
                 ip=ip,
             )
         )
-        self.regions[0].blocks.append(IndexType.get(), *results)
+        self.regions[0].blocks.append(self.operands[0].type, *results)
 
     @property
     def body(self):

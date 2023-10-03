@@ -48,6 +48,10 @@ static bool useCompactUnwind(const Triple &T) {
   if (T.isiOS() && T.isX86())
     return true;
 
+  // The rest of the simulators always have it.
+  if (T.isSimulatorEnvironment())
+    return true;
+
   return false;
 }
 
@@ -62,7 +66,8 @@ void MCObjectFileInfo::initMachOMCObjectFileInfo(const Triple &T) {
       SectionKind::getReadOnly());
 
   if (T.isOSDarwin() &&
-      (T.getArch() == Triple::aarch64 || T.getArch() == Triple::aarch64_32))
+      (T.getArch() == Triple::aarch64 || T.getArch() == Triple::aarch64_32 ||
+      T.isSimulatorEnvironment()))
     SupportsCompactUnwindWithoutEHFrame = true;
 
   switch (Ctx->emitDwarfUnwindInfo()) {

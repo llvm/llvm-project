@@ -347,8 +347,13 @@ template <class ELFT> void elf::createSyntheticSections() {
 
     if (config->emachine == EM_AARCH64 &&
         config->androidMemtagMode != ELF::NT_MEMTAG_LEVEL_NONE) {
+      if (!config->relocatable && !config->shared && !needsInterpSection())
+        error("--android-memtag-mode is incompatible with fully-static "
+              "executables (-static)");
       part.memtagAndroidNote = std::make_unique<MemtagAndroidNote>();
       add(*part.memtagAndroidNote);
+      part.memtagDescriptors = std::make_unique<MemtagDescriptors>();
+      add(*part.memtagDescriptors);
     }
 
     if (config->androidPackDynRelocs)
@@ -453,6 +458,13 @@ template <class ELFT> void elf::createSyntheticSections() {
   add(*in.gotPlt);
   in.igotPlt = std::make_unique<IgotPltSection>();
   add(*in.igotPlt);
+  // Add .relro_padding if DATA_SEGMENT_RELRO_END is used; otherwise, add the
+  // section in the absence of PHDRS/SECTIONS commands.
+  if (config->zRelro && ((script->phdrsCommands.empty() &&
+        !script->hasSectionsCommand) || script->seenRelroEnd)) {
+    in.relroPadding = std::make_unique<RelroPaddingSection>();
+    add(*in.relroPadding);
+  }
 
   if (config->emachine == EM_ARM) {
     in.armCmseSGSection = std::make_unique<ArmCmseSGSection>();
@@ -672,7 +684,7 @@ static bool shouldKeepInSymtab(const Defined &sym) {
   return true;
 }
 
-static bool includeInSymtab(const Symbol &b) {
+bool lld::elf::includeInSymtab(const Symbol &b) {
   if (auto *d = dyn_cast<Defined>(&b)) {
     // Always include absolute symbols.
     SectionBase *sec = d->section;
@@ -813,6 +825,9 @@ static bool isRelroSection(const OutputSection *sec) {
   if (sec == in.gotPlt->getParent())
     return config->zNow;
 
+  if (in.relroPadding && sec == in.relroPadding->getParent())
+    return true;
+
   // .dynamic section contains data for the dynamic linker, and
   // there's no need to write to it at runtime, so it's better to put
   // it into RELRO.
@@ -852,7 +867,7 @@ enum RankFlags {
   RF_BSS = 1 << 7,
 };
 
-static unsigned getSectionRank(const OutputSection &osec) {
+static unsigned getSectionRank(OutputSection &osec) {
   unsigned rank = osec.partition * RF_PARTITION;
 
   // We want to put section specified by -T option first, so we
@@ -915,7 +930,9 @@ static unsigned getSectionRank(const OutputSection &osec) {
     // TLS sections directly before the other RELRO sections.
     if (!(osec.flags & SHF_TLS))
       rank |= RF_NOT_TLS;
-    if (!isRelroSection(&osec))
+    if (isRelroSection(&osec))
+      osec.relro = true;
+    else
       rank |= RF_NOT_RELRO;
     // Place .ldata and .lbss after .bss. Making .bss closer to .text alleviates
     // relocation overflow pressure.
@@ -936,12 +953,10 @@ static unsigned getSectionRank(const OutputSection &osec) {
     // their coverage by a single signed 16-bit offset from the TOC base
     // pointer.
     StringRef name = osec.name;
-    if (name == ".branch_lt")
+    if (name == ".got")
       rank |= 1;
-    else if (name == ".got")
-      rank |= 2;
     else if (name == ".toc")
-      rank |= 4;
+      rank |= 2;
   }
 
   if (config->emachine == EM_MIPS) {
@@ -1136,6 +1151,18 @@ static SmallVectorImpl<SectionCommand *>::iterator
 findOrphanPos(SmallVectorImpl<SectionCommand *>::iterator b,
               SmallVectorImpl<SectionCommand *>::iterator e) {
   OutputSection *sec = &cast<OutputDesc>(*e)->osec;
+
+  // As a special case, place .relro_padding before the SymbolAssignment using
+  // DATA_SEGMENT_RELRO_END, if present.
+  if (in.relroPadding && sec == in.relroPadding->getParent()) {
+    auto i = std::find_if(b, e, [=](SectionCommand *a) {
+      if (auto *assign = dyn_cast<SymbolAssignment>(a))
+        return assign->dataSegmentRelroEnd;
+      return false;
+    });
+    if (i != e)
+      return i;
+  }
 
   // Find the first element that has as close a rank as possible.
   auto i = std::max_element(b, e, [=](SectionCommand *a, SectionCommand *b) {
@@ -1652,6 +1679,8 @@ template <class ELFT> void Writer<ELFT>::finalizeAddressDependentContent() {
       changed |= part.relaDyn->updateAllocSize();
       if (part.relrDyn)
         changed |= part.relrDyn->updateAllocSize();
+      if (part.memtagDescriptors)
+        changed |= part.memtagDescriptors->updateAllocSize();
     }
 
     const Defined *changedSym = script->assignAddresses();
@@ -2158,7 +2187,7 @@ template <class ELFT> void Writer<ELFT>::finalizeSections() {
   for (OutputSection *sec : outputSections)
     sec->finalize();
 
-  script->checkMemoryRegions();
+  script->checkFinalScriptConditions();
 
   if (config->emachine == EM_ARM && !config->isLE && config->armBe8) {
     addArmInputSectionMappingSymbols();
@@ -2329,6 +2358,7 @@ SmallVector<PhdrEntry *, 0> Writer<ELFT>::createPhdrs(Partition &part) {
       relroEnd = sec;
     }
   }
+  relRo->p_align = 1;
 
   for (OutputSection *sec : outputSections) {
     if (!needsPtLoad(sec))
@@ -2672,16 +2702,6 @@ template <class ELFT> void Writer<ELFT>::setPhdrs(Partition &part) {
       if (!p->hasLMA)
         p->p_paddr = first->getLMA();
     }
-
-    if (p->p_type == PT_GNU_RELRO) {
-      p->p_align = 1;
-      // musl/glibc ld.so rounds the size down, so we need to round up
-      // to protect the last page. This is a no-op on FreeBSD which always
-      // rounds up.
-      p->p_memsz =
-          alignToPowerOf2(p->p_offset + p->p_memsz, config->commonPageSize) -
-          p->p_offset;
-    }
   }
 }
 
@@ -2993,7 +3013,7 @@ template <class ELFT> void Writer<ELFT>::writeBuildId() {
   switch (config->buildId) {
   case BuildIdKind::Fast:
     computeHash(output, input, [](uint8_t *dest, ArrayRef<uint8_t> arr) {
-      write64le(dest, xxHash64(arr));
+      write64le(dest, xxh3_64bits(arr));
     });
     break;
   case BuildIdKind::Md5:

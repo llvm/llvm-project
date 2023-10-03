@@ -60,6 +60,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/CodeGen/ComplexDeinterleavingPass.h"
+#include "llvm/ADT/MapVector.h"
 #include "llvm/ADT/Statistic.h"
 #include "llvm/Analysis/TargetLibraryInfo.h"
 #include "llvm/Analysis/TargetTransformInfo.h"
@@ -99,6 +100,13 @@ static bool isInterleavingMask(ArrayRef<int> Mask);
 /// (e.g. an 8x vector deinterleaving mask would be either <0, 2, 4, 6> or
 /// <1, 3, 5, 7>).
 static bool isDeinterleavingMask(ArrayRef<int> Mask);
+
+/// Returns true if the operation is a negation of V, and it works for both
+/// integers and floats.
+static bool isNeg(Value *V);
+
+/// Returns the operand for negation operation.
+static Value *getNegOperand(Value *V);
 
 namespace {
 
@@ -146,7 +154,7 @@ public:
   // This two members are required exclusively for generating
   // ComplexDeinterleavingOperation::Symmetric operations.
   unsigned Opcode;
-  FastMathFlags Flags;
+  std::optional<FastMathFlags> Flags;
 
   ComplexDeinterleavingRotation Rotation =
       ComplexDeinterleavingRotation::Rotation_0;
@@ -219,6 +227,7 @@ private:
   const TargetLowering *TL = nullptr;
   const TargetLibraryInfo *TLI = nullptr;
   SmallVector<NodePtr> CompositeNodes;
+  DenseMap<std::pair<Value *, Value *>, NodePtr> CachedResult;
 
   SmallPtrSet<Instruction *, 16> FinalInstructions;
 
@@ -250,7 +259,7 @@ private:
   ///
   /// %OutsideUser can be `llvm.vector.reduce.fadd` or `fadd` preceding
   /// `llvm.vector.reduce.fadd` when unroll factor isn't one.
-  std::map<Instruction *, std::pair<PHINode *, Instruction *>> ReductionInfo;
+  MapVector<Instruction *, std::pair<PHINode *, Instruction *>> ReductionInfo;
 
   /// In the process of detecting a reduction, we consider a pair of
   /// %ReductionOP, which we refer to as real and imag (or vice versa), and
@@ -285,15 +294,9 @@ private:
 
   NodePtr submitCompositeNode(NodePtr Node) {
     CompositeNodes.push_back(Node);
+    if (Node->Real && Node->Imag)
+      CachedResult[{Node->Real, Node->Imag}] = Node;
     return Node;
-  }
-
-  NodePtr getContainingComposite(Value *R, Value *I) {
-    for (const auto &CN : CompositeNodes) {
-      if (CN->Real == R && CN->Imag == I)
-        return CN;
-    }
-    return nullptr;
   }
 
   /// Identifies a complex partial multiply pattern and its rotation, based on
@@ -333,7 +336,8 @@ private:
   /// Return nullptr if it is not possible to construct a complex number.
   /// \p Flags are needed to generate symmetric Add and Sub operations.
   NodePtr identifyAdditions(std::list<Addend> &RealAddends,
-                            std::list<Addend> &ImagAddends, FastMathFlags Flags,
+                            std::list<Addend> &ImagAddends,
+                            std::optional<FastMathFlags> Flags,
                             NodePtr Accumulator);
 
   /// Extract one addend that have both real and imaginary parts positive.
@@ -512,6 +516,19 @@ static bool isDeinterleavingMask(ArrayRef<int> Mask) {
   return true;
 }
 
+bool isNeg(Value *V) {
+  return match(V, m_FNeg(m_Value())) || match(V, m_Neg(m_Value()));
+}
+
+Value *getNegOperand(Value *V) {
+  assert(isNeg(V));
+  auto *I = cast<Instruction>(V);
+  if (I->getOpcode() == Instruction::FNeg)
+    return I->getOperand(0);
+
+  return I->getOperand(1);
+}
+
 bool ComplexDeinterleaving::evaluateBasicBlock(BasicBlock *B) {
   ComplexDeinterleavingGraph Graph(TL, TLI);
   if (Graph.collectPotentialReductions(B))
@@ -540,9 +557,12 @@ ComplexDeinterleavingGraph::identifyNodeWithImplicitAdd(
     return nullptr;
   }
 
-  if (Real->getOpcode() != Instruction::FMul ||
-      Imag->getOpcode() != Instruction::FMul) {
-    LLVM_DEBUG(dbgs() << "  - Real or imaginary instruction is not fmul\n");
+  if ((Real->getOpcode() != Instruction::FMul &&
+       Real->getOpcode() != Instruction::Mul) ||
+      (Imag->getOpcode() != Instruction::FMul &&
+       Imag->getOpcode() != Instruction::Mul)) {
+    LLVM_DEBUG(
+        dbgs() << "  - Real or imaginary instruction is not fmul or mul\n");
     return nullptr;
   }
 
@@ -563,7 +583,7 @@ ComplexDeinterleavingGraph::identifyNodeWithImplicitAdd(
     R1 = Op;
   }
 
-  if (match(I0, m_Neg(m_Value(Op)))) {
+  if (isNeg(I0)) {
     Negs |= 2;
     Negs ^= 1;
     I0 = Op;
@@ -634,26 +654,29 @@ ComplexDeinterleavingGraph::identifyPartialMul(Instruction *Real,
   LLVM_DEBUG(dbgs() << "identifyPartialMul " << *Real << " / " << *Imag
                     << "\n");
   // Determine rotation
+  auto IsAdd = [](unsigned Op) {
+    return Op == Instruction::FAdd || Op == Instruction::Add;
+  };
+  auto IsSub = [](unsigned Op) {
+    return Op == Instruction::FSub || Op == Instruction::Sub;
+  };
   ComplexDeinterleavingRotation Rotation;
-  if (Real->getOpcode() == Instruction::FAdd &&
-      Imag->getOpcode() == Instruction::FAdd)
+  if (IsAdd(Real->getOpcode()) && IsAdd(Imag->getOpcode()))
     Rotation = ComplexDeinterleavingRotation::Rotation_0;
-  else if (Real->getOpcode() == Instruction::FSub &&
-           Imag->getOpcode() == Instruction::FAdd)
+  else if (IsSub(Real->getOpcode()) && IsAdd(Imag->getOpcode()))
     Rotation = ComplexDeinterleavingRotation::Rotation_90;
-  else if (Real->getOpcode() == Instruction::FSub &&
-           Imag->getOpcode() == Instruction::FSub)
+  else if (IsSub(Real->getOpcode()) && IsSub(Imag->getOpcode()))
     Rotation = ComplexDeinterleavingRotation::Rotation_180;
-  else if (Real->getOpcode() == Instruction::FAdd &&
-           Imag->getOpcode() == Instruction::FSub)
+  else if (IsAdd(Real->getOpcode()) && IsSub(Imag->getOpcode()))
     Rotation = ComplexDeinterleavingRotation::Rotation_270;
   else {
     LLVM_DEBUG(dbgs() << "  - Unhandled rotation.\n");
     return nullptr;
   }
 
-  if (!Real->getFastMathFlags().allowContract() ||
-      !Imag->getFastMathFlags().allowContract()) {
+  if (isa<FPMathOperator>(Real) &&
+      (!Real->getFastMathFlags().allowContract() ||
+       !Imag->getFastMathFlags().allowContract())) {
     LLVM_DEBUG(dbgs() << "  - Contract is missing from the FastMath flags.\n");
     return nullptr;
   }
@@ -816,6 +839,9 @@ static bool isInstructionPotentiallySymmetric(Instruction *I) {
   case Instruction::FSub:
   case Instruction::FMul:
   case Instruction::FNeg:
+  case Instruction::Add:
+  case Instruction::Sub:
+  case Instruction::Mul:
     return true;
   default:
     return false;
@@ -870,9 +896,11 @@ ComplexDeinterleavingGraph::identifyNode(Value *R, Value *I) {
   LLVM_DEBUG(dbgs() << "identifyNode on " << *R << " / " << *I << "\n");
   assert(R->getType() == I->getType() &&
          "Real and imaginary parts should not have different types");
-  if (NodePtr CN = getContainingComposite(R, I)) {
+
+  auto It = CachedResult.find({R, I});
+  if (It != CachedResult.end()) {
     LLVM_DEBUG(dbgs() << " - Folding to existing node\n");
-    return CN;
+    return It->second;
   }
 
   if (NodePtr CN = identifySplat(R, I))
@@ -919,33 +947,38 @@ ComplexDeinterleavingGraph::identifyNode(Value *R, Value *I) {
     return CN;
 
   LLVM_DEBUG(dbgs() << "  - Not recognised as a valid pattern.\n");
+  CachedResult[{R, I}] = nullptr;
   return nullptr;
 }
 
 ComplexDeinterleavingGraph::NodePtr
 ComplexDeinterleavingGraph::identifyReassocNodes(Instruction *Real,
                                                  Instruction *Imag) {
+  auto IsOperationSupported = [](unsigned Opcode) -> bool {
+    return Opcode == Instruction::FAdd || Opcode == Instruction::FSub ||
+           Opcode == Instruction::FNeg || Opcode == Instruction::Add ||
+           Opcode == Instruction::Sub;
+  };
 
-  if ((Real->getOpcode() != Instruction::FAdd &&
-       Real->getOpcode() != Instruction::FSub &&
-       Real->getOpcode() != Instruction::FNeg) ||
-      (Imag->getOpcode() != Instruction::FAdd &&
-       Imag->getOpcode() != Instruction::FSub &&
-       Imag->getOpcode() != Instruction::FNeg))
+  if (!IsOperationSupported(Real->getOpcode()) ||
+      !IsOperationSupported(Imag->getOpcode()))
     return nullptr;
 
-  if (Real->getFastMathFlags() != Imag->getFastMathFlags()) {
-    LLVM_DEBUG(
-        dbgs()
-        << "The flags in Real and Imaginary instructions are not identical\n");
-    return nullptr;
-  }
+  std::optional<FastMathFlags> Flags;
+  if (isa<FPMathOperator>(Real)) {
+    if (Real->getFastMathFlags() != Imag->getFastMathFlags()) {
+      LLVM_DEBUG(dbgs() << "The flags in Real and Imaginary instructions are "
+                           "not identical\n");
+      return nullptr;
+    }
 
-  FastMathFlags Flags = Real->getFastMathFlags();
-  if (!Flags.allowReassoc()) {
-    LLVM_DEBUG(
-        dbgs() << "the 'Reassoc' attribute is missing in the FastMath flags\n");
-    return nullptr;
+    Flags = Real->getFastMathFlags();
+    if (!Flags->allowReassoc()) {
+      LLVM_DEBUG(
+          dbgs()
+          << "the 'Reassoc' attribute is missing in the FastMath flags\n");
+      return nullptr;
+    }
   }
 
   // Collect multiplications and addend instructions from the given instruction
@@ -978,35 +1011,52 @@ ComplexDeinterleavingGraph::identifyReassocNodes(Instruction *Real,
         Addends.emplace_back(I, IsPositive);
         continue;
       }
-
-      if (I->getOpcode() == Instruction::FAdd) {
+      switch (I->getOpcode()) {
+      case Instruction::FAdd:
+      case Instruction::Add:
         Worklist.emplace_back(I->getOperand(1), IsPositive);
         Worklist.emplace_back(I->getOperand(0), IsPositive);
-      } else if (I->getOpcode() == Instruction::FSub) {
+        break;
+      case Instruction::FSub:
         Worklist.emplace_back(I->getOperand(1), !IsPositive);
         Worklist.emplace_back(I->getOperand(0), IsPositive);
-      } else if (I->getOpcode() == Instruction::FMul) {
+        break;
+      case Instruction::Sub:
+        if (isNeg(I)) {
+          Worklist.emplace_back(getNegOperand(I), !IsPositive);
+        } else {
+          Worklist.emplace_back(I->getOperand(1), !IsPositive);
+          Worklist.emplace_back(I->getOperand(0), IsPositive);
+        }
+        break;
+      case Instruction::FMul:
+      case Instruction::Mul: {
         Value *A, *B;
-        if (match(I->getOperand(0), m_FNeg(m_Value(A)))) {
+        if (isNeg(I->getOperand(0))) {
+          A = getNegOperand(I->getOperand(0));
           IsPositive = !IsPositive;
         } else {
           A = I->getOperand(0);
         }
 
-        if (match(I->getOperand(1), m_FNeg(m_Value(B)))) {
+        if (isNeg(I->getOperand(1))) {
+          B = getNegOperand(I->getOperand(1));
           IsPositive = !IsPositive;
         } else {
           B = I->getOperand(1);
         }
         Muls.push_back(Product{A, B, IsPositive});
-      } else if (I->getOpcode() == Instruction::FNeg) {
+        break;
+      }
+      case Instruction::FNeg:
         Worklist.emplace_back(I->getOperand(0), !IsPositive);
-      } else {
+        break;
+      default:
         Addends.emplace_back(I, IsPositive);
         continue;
       }
 
-      if (I->getFastMathFlags() != Flags) {
+      if (Flags && I->getFastMathFlags() != *Flags) {
         LLVM_DEBUG(dbgs() << "The instruction's fast math flags are "
                              "inconsistent with the root instructions' flags: "
                           << *I << "\n");
@@ -1258,10 +1308,9 @@ ComplexDeinterleavingGraph::identifyMultiplications(
 }
 
 ComplexDeinterleavingGraph::NodePtr
-ComplexDeinterleavingGraph::identifyAdditions(std::list<Addend> &RealAddends,
-                                              std::list<Addend> &ImagAddends,
-                                              FastMathFlags Flags,
-                                              NodePtr Accumulator = nullptr) {
+ComplexDeinterleavingGraph::identifyAdditions(
+    std::list<Addend> &RealAddends, std::list<Addend> &ImagAddends,
+    std::optional<FastMathFlags> Flags, NodePtr Accumulator = nullptr) {
   if (RealAddends.size() != ImagAddends.size())
     return nullptr;
 
@@ -1312,14 +1361,22 @@ ComplexDeinterleavingGraph::identifyAdditions(std::list<Addend> &RealAddends,
         if (Rotation == llvm::ComplexDeinterleavingRotation::Rotation_0) {
           TmpNode = prepareCompositeNode(
               ComplexDeinterleavingOperation::Symmetric, nullptr, nullptr);
-          TmpNode->Opcode = Instruction::FAdd;
-          TmpNode->Flags = Flags;
+          if (Flags) {
+            TmpNode->Opcode = Instruction::FAdd;
+            TmpNode->Flags = *Flags;
+          } else {
+            TmpNode->Opcode = Instruction::Add;
+          }
         } else if (Rotation ==
                    llvm::ComplexDeinterleavingRotation::Rotation_180) {
           TmpNode = prepareCompositeNode(
               ComplexDeinterleavingOperation::Symmetric, nullptr, nullptr);
-          TmpNode->Opcode = Instruction::FSub;
-          TmpNode->Flags = Flags;
+          if (Flags) {
+            TmpNode->Opcode = Instruction::FSub;
+            TmpNode->Flags = *Flags;
+          } else {
+            TmpNode->Opcode = Instruction::Sub;
+          }
         } else {
           TmpNode = prepareCompositeNode(ComplexDeinterleavingOperation::CAdd,
                                          nullptr, nullptr);
@@ -1368,7 +1425,17 @@ bool ComplexDeinterleavingGraph::identifyNodes(Instruction *RootI) {
   // CompositeNode we should choose only one either Real or Imag instruction to
   // use as an anchor for generating complex instruction.
   auto It = RootToNode.find(RootI);
-  if (It != RootToNode.end() && It->second->Real == RootI) {
+  if (It != RootToNode.end()) {
+    auto RootNode = It->second;
+    assert(RootNode->Operation ==
+           ComplexDeinterleavingOperation::ReductionOperation);
+    // Find out which part, Real or Imag, comes later, and only if we come to
+    // the latest part, add it to OrderedRoots.
+    auto *R = cast<Instruction>(RootNode->Real);
+    auto *I = cast<Instruction>(RootNode->Imag);
+    auto *ReplacementAnchor = R->comesBefore(I) ? I : R;
+    if (ReplacementAnchor != RootI)
+      return false;
     OrderedRoots.push_back(RootI);
     return true;
   }
@@ -1815,8 +1882,8 @@ ComplexDeinterleavingGraph::identifySelectNode(Instruction *Real,
 }
 
 static Value *replaceSymmetricNode(IRBuilderBase &B, unsigned Opcode,
-                                   FastMathFlags Flags, Value *InputA,
-                                   Value *InputB) {
+                                   std::optional<FastMathFlags> Flags,
+                                   Value *InputA, Value *InputB) {
   Value *I;
   switch (Opcode) {
   case Instruction::FNeg:
@@ -1825,16 +1892,26 @@ static Value *replaceSymmetricNode(IRBuilderBase &B, unsigned Opcode,
   case Instruction::FAdd:
     I = B.CreateFAdd(InputA, InputB);
     break;
+  case Instruction::Add:
+    I = B.CreateAdd(InputA, InputB);
+    break;
   case Instruction::FSub:
     I = B.CreateFSub(InputA, InputB);
+    break;
+  case Instruction::Sub:
+    I = B.CreateSub(InputA, InputB);
     break;
   case Instruction::FMul:
     I = B.CreateFMul(InputA, InputB);
     break;
+  case Instruction::Mul:
+    I = B.CreateMul(InputA, InputB);
+    break;
   default:
     llvm_unreachable("Incorrect symmetric opcode");
   }
-  cast<Instruction>(I)->setFastMathFlags(Flags);
+  if (Flags)
+    cast<Instruction>(I)->setFastMathFlags(*Flags);
   return I;
 }
 

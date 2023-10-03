@@ -7,13 +7,13 @@
 @_ZN4ompx5state9TeamStateE = internal addrspace(3) global %"struct.ompx::state::TeamStateTy" undef
 
 define weak_odr amdgpu_kernel void @__omp_offloading_16_1d1156__Z38test_target_teams_distribute__parallelv_l16() {
-  %1 = tail call i32 @__kmpc_target_init(ptr null, i8 0, i1 false)
+  %1 = tail call i32 @__kmpc_target_init(ptr null)
   ret void
 }
 
-define internal i32 @__kmpc_target_init(ptr %0, i8 %1, i1 %2) {
+define internal i32 @__kmpc_target_init(ptr %0) {
   store <2 x i32> zeroinitializer, ptr addrspace(3) @_ZN4ompx5state9TeamStateE, align 16
-  %4 = call i1 @__kmpc_kernel_parallel()
+  %2 = call i1 @__kmpc_kernel_parallel()
   ret i32 0
 }
 
@@ -29,14 +29,14 @@ define internal i1 @__kmpc_kernel_parallel() {
 ; CHECK: @[[_ZN4OMPX5STATE9TEAMSTATEE:[a-zA-Z0-9_$"\\.-]+]] = internal addrspace(3) global %"struct.ompx::state::TeamStateTy" undef
 ;.
 ; CHECK-LABEL: define {{[^@]+}}@__omp_offloading_16_1d1156__Z38test_target_teams_distribute__parallelv_l16() {
-; CHECK-NEXT:    [[TMP1:%.*]] = tail call i32 @__kmpc_target_init(ptr null, i8 0, i1 false)
+; CHECK-NEXT:    [[TMP1:%.*]] = tail call i32 @__kmpc_target_init(ptr null)
 ; CHECK-NEXT:    ret void
 ;
 ;
 ; CHECK-LABEL: define {{[^@]+}}@__kmpc_target_init
-; CHECK-SAME: (ptr [[TMP0:%.*]], i8 [[TMP1:%.*]], i1 [[TMP2:%.*]]) {
+; CHECK-SAME: (ptr [[TMP0:%.*]]) {
 ; CHECK-NEXT:    store <2 x i32> zeroinitializer, ptr addrspace(3) @_ZN4ompx5state9TeamStateE, align 16
-; CHECK-NEXT:    [[TMP4:%.*]] = call i1 @__kmpc_kernel_parallel()
+; CHECK-NEXT:    [[TMP2:%.*]] = call i1 @__kmpc_kernel_parallel()
 ; CHECK-NEXT:    ret i32 0
 ;
 ;

@@ -16,33 +16,39 @@
 #define LLVM_LIB_TARGET_WEBASSEMBLY_UTILS_WEBASSEMBLYTYPEUTILITIES_H
 
 #include "MCTargetDesc/WebAssemblyMCTypeUtilities.h"
+#include "WasmAddressSpaces.h"
 #include "llvm/BinaryFormat/Wasm.h"
 #include "llvm/CodeGen/MachineValueType.h"
-#include "llvm/CodeGen/WasmAddressSpaces.h"
 #include "llvm/IR/DerivedTypes.h"
 #include "llvm/MC/MCSymbolWasm.h"
 
 namespace llvm {
 
-class TargetRegisterClass;
-
 namespace WebAssembly {
 
 /// Return true if this is a WebAssembly Externref Type.
 inline bool isWebAssemblyExternrefType(const Type *Ty) {
-  return Ty->getPointerAddressSpace() ==
-         WebAssembly::WasmAddressSpace::WASM_ADDRESS_SPACE_EXTERNREF;
+  return Ty->isPointerTy() &&
+         Ty->getPointerAddressSpace() ==
+             WebAssembly::WasmAddressSpace::WASM_ADDRESS_SPACE_EXTERNREF;
 }
 
 /// Return true if this is a WebAssembly Funcref Type.
 inline bool isWebAssemblyFuncrefType(const Type *Ty) {
-  return Ty->getPointerAddressSpace() ==
-         WebAssembly::WasmAddressSpace::WASM_ADDRESS_SPACE_FUNCREF;
+  return Ty->isPointerTy() &&
+         Ty->getPointerAddressSpace() ==
+             WebAssembly::WasmAddressSpace::WASM_ADDRESS_SPACE_FUNCREF;
 }
 
 /// Return true if this is a WebAssembly Reference Type.
 inline bool isWebAssemblyReferenceType(const Type *Ty) {
   return isWebAssemblyExternrefType(Ty) || isWebAssemblyFuncrefType(Ty);
+}
+
+/// Return true if the table represents a WebAssembly table type.
+inline bool isWebAssemblyTableType(const Type *Ty) {
+  return Ty->isArrayTy() &&
+         isWebAssemblyReferenceType(Ty->getArrayElementType());
 }
 
 // Convert StringRef to ValType / HealType / BlockType
@@ -51,9 +57,6 @@ MVT parseMVT(StringRef Type);
 
 // Convert a MVT into its corresponding wasm ValType.
 wasm::ValType toValType(MVT Type);
-
-// Convert a register class to a wasm ValType.
-wasm::ValType regClassToValType(const TargetRegisterClass *RC);
 
 /// Sets a Wasm Symbol Type.
 void wasmSymbolSetType(MCSymbolWasm *Sym, const Type *GlobalVT,

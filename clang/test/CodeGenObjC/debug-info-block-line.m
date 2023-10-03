@@ -1,7 +1,6 @@
 // REQUIRES: x86-registered-target
 // RUN: %clang_cc1 -emit-llvm -fblocks -fobjc-arc -debug-info-kind=limited -triple x86_64-apple-darwin10 %s -o - | FileCheck %s
 
-// rdar://11562117
 typedef unsigned int NSUInteger;
 typedef long NSInteger;
 typedef signed char BOOL;

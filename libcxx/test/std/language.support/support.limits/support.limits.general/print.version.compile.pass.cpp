@@ -11,6 +11,8 @@
 //
 // clang-format off
 
+// UNSUPPORTED: no-filesystem
+
 // <print>
 
 // Test the feature test macros defined by <print>

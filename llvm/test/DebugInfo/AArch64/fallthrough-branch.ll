@@ -10,16 +10,17 @@ define swiftcc void @"$s1t1f1bySb_tF"(i1 %0) !dbg !35 {
   %3 = bitcast i1* %2 to i8*
   call void @llvm.memset.p0i8.i64(i8* align 8 %3, i8 0, i64 1, i1 false)
   store i1 %0, i1* %2, align 8, !dbg !37
-; CHECK:   B %bb.1, debug-location !{{[0-9]+}}
+; CHECK:   B %[[BB4:bb\.[0-9]+]], debug-location !{{[0-9]+}}
   br i1 %0, label %4, label %5, !dbg !38
 
 4:                                                ; preds = %1
+; CHECK:   [[BB4]]
 ; Check that at -O0 the branches and their debug locations are not eliminated.
-; CHECK:   B %bb.3, debug-location !{{[0-9]+}}
+; CHECK:   B %[[BB6:bb\.[0-9]+]], debug-location !{{[0-9]+}}
   br label %6, !dbg !39
 
 5:                                                ; preds = %1
-; CHECK:   B %bb.3, debug-location !{{[0-9]+}}
+; CHECK:   B %[[BB6]], debug-location !{{[0-9]+}}
   br label %6, !dbg !40
 
 6:                                                ; preds = %4, %5

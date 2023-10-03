@@ -154,8 +154,11 @@ int finally_with_return(void) {
   }
 }
 // CHECK-LABEL: define dso_local i32 @finally_with_return()
+// CHECK: store i32 1, ptr %cleanup.dest.slot
+// CHECK: %cleanup.dest = load i32, ptr %cleanup.dest.slot
+// CHECK: icmp ne i32 %cleanup.dest
 // CHECK: call void @"?fin$0@0@finally_with_return@@"({{.*}})
-// CHECK-NEXT: ret i32 42
+// CHECK: ret i32 42
 
 // CHECK: define internal void @"?fin$0@0@finally_with_return@@"({{.*}})
 // CHECK-SAME: [[finally_attrs]]

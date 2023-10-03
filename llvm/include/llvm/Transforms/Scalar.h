@@ -197,12 +197,6 @@ Pass *createLowerAtomicPass();
 
 //===----------------------------------------------------------------------===//
 //
-// LowerGuardIntrinsic - Lower guard intrinsics to normal control flow.
-//
-Pass *createLowerGuardIntrinsicPass();
-
-//===----------------------------------------------------------------------===//
-//
 // LowerWidenableCondition - Lower widenable condition to i1 true.
 //
 Pass *createLowerWidenableConditionPass();

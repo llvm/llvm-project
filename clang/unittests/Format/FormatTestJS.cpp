@@ -1505,6 +1505,12 @@ TEST_F(FormatTestJS, TryCatch) {
 TEST_F(FormatTestJS, StringLiteralConcatenation) {
   verifyFormat("var literal = 'hello ' +\n"
                "    'world';");
+
+  // String breaking is disabled for now.
+  verifyFormat("var literal =\n"
+               "    'xxxxxxxx xxxxxxxx';",
+               "var literal = 'xxxxxxxx xxxxxxxx';",
+               getGoogleJSStyleWithColumns(17));
 }
 
 TEST_F(FormatTestJS, RegexLiteralClassification) {

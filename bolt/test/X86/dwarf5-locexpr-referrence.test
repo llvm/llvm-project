@@ -16,6 +16,6 @@
 # CHECK: version = 0x0005
 # CHECK: DW_TAG_variable
 # CHECK-NEXT: DW_AT_location
-# CHECK-SAME: DW_OP_convert (0x00000028 -> 0x0000008f)
-# CHECK-SAME: DW_OP_convert (0x0000002c -> 0x00000093)
+# CHECK-SAME: DW_OP_convert (0x00000028 -> 0x00000092)
+# CHECK-SAME: DW_OP_convert (0x0000002c -> 0x00000096)
 # CHECK: version = 0x0005

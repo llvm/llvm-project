@@ -41,6 +41,9 @@ extern int targetDataUpdate(ident_t *Loc, DeviceTy &Device, int32_t ArgNum,
 extern int target(ident_t *Loc, DeviceTy &Device, void *HostPtr,
                   KernelArgsTy &KernelArgs, AsyncInfoTy &AsyncInfo);
 
+extern int target_activate_rr(DeviceTy &Device, uint64_t MemorySize,
+                              bool isRecord, bool SaveOutput);
+
 extern int target_replay(ident_t *Loc, DeviceTy &Device, void *HostPtr,
                          void *DeviceMemory, int64_t DeviceMemorySize,
                          void **TgtArgs, ptrdiff_t *TgtOffsets, int32_t NumArgs,
@@ -426,9 +429,15 @@ public:
 #define TIMESCOPE_WITH_NAME_AND_IDENT(NAME, IDENT)                             \
   SourceInfo SI(IDENT);                                                        \
   llvm::TimeTraceScope TimeScope(NAME, SI.getProfileLocation())
+#define TIMESCOPE_WITH_RTM_AND_IDENT(RegionTypeMsg, IDENT)                     \
+  SourceInfo SI(IDENT);                                                        \
+  std::string ProfileLocation = SI.getProfileLocation();                       \
+  std::string RTM = RegionTypeMsg;                                             \
+  llvm::TimeTraceScope TimeScope(__FUNCTION__, ProfileLocation + RTM)
 #else
 #define TIMESCOPE()
 #define TIMESCOPE_WITH_IDENT(IDENT)
 #define TIMESCOPE_WITH_NAME_AND_IDENT(NAME, IDENT)
+#define TIMESCOPE_WITH_RTM_AND_IDENT(RegionTypeMsg, IDENT)
 
 #endif

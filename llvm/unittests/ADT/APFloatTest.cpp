@@ -6587,4 +6587,67 @@ TEST(APFloatTest, FloatTF32ToFloat) {
   EXPECT_TRUE(std::isnan(QNaN.convertToFloat()));
 }
 
+TEST(APFloatTest, getExactLog2) {
+  for (unsigned I = 0; I != APFloat::S_MaxSemantics + 1; ++I) {
+    auto SemEnum = static_cast<APFloat::Semantics>(I);
+    const fltSemantics &Semantics = APFloat::EnumToSemantics(SemEnum);
+
+    APFloat One(Semantics, "1.0");
+
+    if (I == APFloat::S_PPCDoubleDouble) {
+      // Not implemented
+      EXPECT_EQ(INT_MIN, One.getExactLog2());
+      EXPECT_EQ(INT_MIN, One.getExactLog2Abs());
+      continue;
+    }
+
+    int MinExp = APFloat::semanticsMinExponent(Semantics);
+    int MaxExp = APFloat::semanticsMaxExponent(Semantics);
+    int Precision = APFloat::semanticsPrecision(Semantics);
+
+    EXPECT_EQ(0, One.getExactLog2());
+    EXPECT_EQ(INT_MIN, APFloat(Semantics, "3.0").getExactLog2());
+    EXPECT_EQ(INT_MIN, APFloat(Semantics, "-3.0").getExactLog2());
+    EXPECT_EQ(INT_MIN, APFloat(Semantics, "3.0").getExactLog2Abs());
+    EXPECT_EQ(INT_MIN, APFloat(Semantics, "-3.0").getExactLog2Abs());
+    EXPECT_EQ(3, APFloat(Semantics, "8.0").getExactLog2());
+    EXPECT_EQ(INT_MIN, APFloat(Semantics, "-8.0").getExactLog2());
+    EXPECT_EQ(-2, APFloat(Semantics, "0.25").getExactLog2());
+    EXPECT_EQ(-2, APFloat(Semantics, "0.25").getExactLog2Abs());
+    EXPECT_EQ(INT_MIN, APFloat(Semantics, "-0.25").getExactLog2());
+    EXPECT_EQ(-2, APFloat(Semantics, "-0.25").getExactLog2Abs());
+    EXPECT_EQ(3, APFloat(Semantics, "8.0").getExactLog2Abs());
+    EXPECT_EQ(3, APFloat(Semantics, "-8.0").getExactLog2Abs());
+
+    EXPECT_EQ(INT_MIN, APFloat::getZero(Semantics, false).getExactLog2());
+    EXPECT_EQ(INT_MIN, APFloat::getZero(Semantics, true).getExactLog2());
+    EXPECT_EQ(INT_MIN, APFloat::getInf(Semantics).getExactLog2());
+    EXPECT_EQ(INT_MIN, APFloat::getInf(Semantics, true).getExactLog2());
+    EXPECT_EQ(INT_MIN, APFloat::getNaN(Semantics, false).getExactLog2());
+    EXPECT_EQ(INT_MIN, APFloat::getNaN(Semantics, true).getExactLog2());
+
+    EXPECT_EQ(INT_MIN, APFloat::getZero(Semantics, false).getExactLog2Abs());
+    EXPECT_EQ(INT_MIN, APFloat::getZero(Semantics, true).getExactLog2Abs());
+    EXPECT_EQ(INT_MIN, APFloat::getInf(Semantics).getExactLog2Abs());
+    EXPECT_EQ(INT_MIN, APFloat::getInf(Semantics, true).getExactLog2Abs());
+    EXPECT_EQ(INT_MIN, APFloat::getNaN(Semantics, false).getExactLog2Abs());
+    EXPECT_EQ(INT_MIN, APFloat::getNaN(Semantics, true).getExactLog2Abs());
+
+    EXPECT_EQ(INT_MIN,
+              scalbn(One, MinExp - Precision - 1, APFloat::rmNearestTiesToEven)
+                  .getExactLog2());
+    EXPECT_EQ(INT_MIN,
+              scalbn(One, MinExp - Precision, APFloat::rmNearestTiesToEven)
+                  .getExactLog2());
+
+    EXPECT_EQ(
+        INT_MIN,
+        scalbn(One, MaxExp + 1, APFloat::rmNearestTiesToEven).getExactLog2());
+
+    for (int i = MinExp - Precision + 1; i <= MaxExp; ++i) {
+      EXPECT_EQ(i, scalbn(One, i, APFloat::rmNearestTiesToEven).getExactLog2());
+    }
+  }
+}
+
 } // namespace

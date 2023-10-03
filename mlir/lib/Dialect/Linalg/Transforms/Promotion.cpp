@@ -54,10 +54,16 @@ static Value allocBuffer(ImplicitLocOpBuilder &b,
   if (alignment.has_value())
     alignmentAttr = b.getI64IntegerAttr(alignment.value());
 
+  Attribute memorySpaceAttr;
+  if (options.memorySpace.has_value())
+    memorySpaceAttr = *options.memorySpace;
+
   // Static buffer.
   if (std::optional<int64_t> cst = getConstantIntValue(allocSize)) {
     auto staticBufferType =
         MemRefType::get(width * cst.value(), b.getIntegerType(8));
+    staticBufferType =
+        MemRefType::Builder(staticBufferType).setMemorySpace(memorySpaceAttr);
     if (options.useAlloca) {
       return b.create<memref::AllocaOp>(staticBufferType, ValueRange{},
                                         alignmentAttr);
@@ -69,6 +75,8 @@ static Value allocBuffer(ImplicitLocOpBuilder &b,
   // Fallback dynamic buffer.
   auto dynamicBufferType =
       MemRefType::get(ShapedType::kDynamic, b.getIntegerType(8));
+  dynamicBufferType =
+      MemRefType::Builder(dynamicBufferType).setMemorySpace(memorySpaceAttr);
   Value mul = b.createOrFold<arith::MulIOp>(
       b.create<arith::ConstantIndexOp>(width), allocSize);
   if (options.useAlloca)
@@ -89,6 +97,10 @@ static std::optional<Value> defaultAllocBufferCallBack(
   auto zero = b.create<arith::ConstantIndexOp>(0);
   auto one = b.create<arith::ConstantIndexOp>(1);
 
+  Attribute memorySpaceAttr;
+  if (options.memorySpace.has_value())
+    memorySpaceAttr = *options.memorySpace;
+
   Value allocSize = one;
   for (const auto &size : llvm::enumerate(boundingSubViewSize))
     allocSize = b.createOrFold<arith::MulIOp>(allocSize, size.value());
@@ -96,9 +108,12 @@ static std::optional<Value> defaultAllocBufferCallBack(
                              layout, alignment);
   SmallVector<int64_t, 4> dynSizes(boundingSubViewSize.size(),
                                    ShapedType::kDynamic);
-  Value view = b.createOrFold<memref::ViewOp>(
-      MemRefType::get(dynSizes, viewType.getElementType()), buffer, zero,
-      boundingSubViewSize);
+
+  auto viewMemRefType = MemRefType::get(dynSizes, viewType.getElementType());
+  viewMemRefType =
+      MemRefType::Builder(viewMemRefType).setMemorySpace(memorySpaceAttr);
+  Value view = b.createOrFold<memref::ViewOp>(viewMemRefType, buffer, zero,
+                                              boundingSubViewSize);
   return view;
 }
 

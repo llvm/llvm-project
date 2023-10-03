@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "lldb/API/SBTarget.h"
+#include "lldb/Symbol/LocateSymbolFile.h"
 #include "lldb/Utility/Instrumentation.h"
 #include "lldb/Utility/LLDBLog.h"
 #include "lldb/lldb-public.h"
@@ -1321,27 +1322,39 @@ SBWatchpoint SBTarget::FindWatchpointByID(lldb::watch_id_t wp_id) {
 }
 
 lldb::SBWatchpoint SBTarget::WatchAddress(lldb::addr_t addr, size_t size,
-                                          bool read, bool write,
+                                          bool read, bool modify,
                                           SBError &error) {
   LLDB_INSTRUMENT_VA(this, addr, size, read, write, error);
+
+  SBWatchpointOptions options;
+  options.SetWatchpointTypeRead(read);
+  options.SetWatchpointTypeWrite(eWatchpointWriteTypeOnModify);
+  return WatchpointCreateByAddress(addr, size, options, error);
+}
+
+lldb::SBWatchpoint
+SBTarget::WatchpointCreateByAddress(lldb::addr_t addr, size_t size,
+                                    SBWatchpointOptions options,
+                                    SBError &error) {
+  LLDB_INSTRUMENT_VA(this, addr, size, options, error);
 
   SBWatchpoint sb_watchpoint;
   lldb::WatchpointSP watchpoint_sp;
   TargetSP target_sp(GetSP());
-  if (target_sp && (read || write) && addr != LLDB_INVALID_ADDRESS &&
-      size > 0) {
+  uint32_t watch_type = 0;
+  if (options.GetWatchpointTypeRead())
+    watch_type |= LLDB_WATCH_TYPE_READ;
+  if (options.GetWatchpointTypeWrite() == eWatchpointWriteTypeAlways)
+    watch_type |= LLDB_WATCH_TYPE_WRITE;
+  if (options.GetWatchpointTypeWrite() == eWatchpointWriteTypeOnModify)
+    watch_type |= LLDB_WATCH_TYPE_MODIFY;
+  if (watch_type == 0) {
+    error.SetErrorString("Can't create a watchpoint that is neither read nor "
+                         "write nor modify.");
+    return sb_watchpoint;
+  }
+  if (target_sp && addr != LLDB_INVALID_ADDRESS && size > 0) {
     std::lock_guard<std::recursive_mutex> guard(target_sp->GetAPIMutex());
-    uint32_t watch_type = 0;
-    if (read)
-      watch_type |= LLDB_WATCH_TYPE_READ;
-    if (write)
-      watch_type |= LLDB_WATCH_TYPE_WRITE;
-    if (watch_type == 0) {
-      error.SetErrorString(
-          "Can't create a watchpoint that is neither read nor write.");
-      return sb_watchpoint;
-    }
-
     // Target::CreateWatchpoint() is thread safe.
     Status cw_error;
     // This API doesn't take in a type, so we can't figure out what it is.
@@ -1477,28 +1490,29 @@ lldb::SBModule SBTarget::AddModule(const char *path, const char *triple,
                                    const char *uuid_cstr, const char *symfile) {
   LLDB_INSTRUMENT_VA(this, path, triple, uuid_cstr, symfile);
 
-  lldb::SBModule sb_module;
   TargetSP target_sp(GetSP());
-  if (target_sp) {
-    ModuleSpec module_spec;
-    if (path)
-      module_spec.GetFileSpec().SetFile(path, FileSpec::Style::native);
+  if (!target_sp)
+    return {};
 
-    if (uuid_cstr)
-      module_spec.GetUUID().SetFromStringRef(uuid_cstr);
+  ModuleSpec module_spec;
+  if (path)
+    module_spec.GetFileSpec().SetFile(path, FileSpec::Style::native);
 
-    if (triple)
-      module_spec.GetArchitecture() = Platform::GetAugmentedArchSpec(
-          target_sp->GetPlatform().get(), triple);
-    else
-      module_spec.GetArchitecture() = target_sp->GetArchitecture();
+  if (uuid_cstr)
+    module_spec.GetUUID().SetFromStringRef(uuid_cstr);
 
-    if (symfile)
-      module_spec.GetSymbolFileSpec().SetFile(symfile, FileSpec::Style::native);
+  if (triple)
+    module_spec.GetArchitecture() =
+        Platform::GetAugmentedArchSpec(target_sp->GetPlatform().get(), triple);
+  else
+    module_spec.GetArchitecture() = target_sp->GetArchitecture();
 
-    sb_module.SetSP(target_sp->GetOrCreateModule(module_spec, true /* notify */));
-  }
-  return sb_module;
+  if (symfile)
+    module_spec.GetSymbolFileSpec().SetFile(symfile, FileSpec::Style::native);
+
+  SBModuleSpec sb_modulespec(module_spec);
+
+  return AddModule(sb_modulespec);
 }
 
 lldb::SBModule SBTarget::AddModule(const SBModuleSpec &module_spec) {
@@ -1506,9 +1520,26 @@ lldb::SBModule SBTarget::AddModule(const SBModuleSpec &module_spec) {
 
   lldb::SBModule sb_module;
   TargetSP target_sp(GetSP());
-  if (target_sp)
+  if (target_sp) {
     sb_module.SetSP(target_sp->GetOrCreateModule(*module_spec.m_opaque_up,
                                                  true /* notify */));
+    if (!sb_module.IsValid() && module_spec.m_opaque_up->GetUUID().IsValid()) {
+      Status error;
+      if (Symbols::DownloadObjectAndSymbolFile(*module_spec.m_opaque_up, error,
+                                               /* force_lookup */ true)) {
+        if (FileSystem::Instance().Exists(
+                module_spec.m_opaque_up->GetFileSpec())) {
+          sb_module.SetSP(target_sp->GetOrCreateModule(*module_spec.m_opaque_up,
+                                                       true /* notify */));
+        }
+      }
+    }
+  }
+  // If the target hasn't initialized any architecture yet, use the
+  // binary's architecture.
+  if (sb_module.IsValid() && !target_sp->GetArchitecture().IsValid() &&
+      sb_module.GetSP()->GetArchitecture().IsValid())
+    target_sp->SetArchitecture(sb_module.GetSP()->GetArchitecture());
   return sb_module;
 }
 

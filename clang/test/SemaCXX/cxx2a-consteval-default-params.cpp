@@ -41,19 +41,21 @@ struct UnusedInitWithLambda {
     }();
 };
 
-consteval int ub(int n) { // expected-note {{declared here}}
+consteval int ub(int n) {
     return 0/n;
 }
 
-struct InitWithLambda {
-    int b = [](int error = undefined()) { // expected-error {{cannot take address of consteval function 'undefined' outside of an immediate invocation}}
+struct InitWithLambda { // expected-note {{'InitWithLambda' is an immediate constructor because the default initializer of 'b' contains a call to a consteval function 'undefined' and that call is not a constant expression}}
+    int b = [](int error = undefined()) {  // expected-note {{undefined function 'undefined' cannot be used in a constant expression}}
         return error;
     }();
-    int c = [](int error = sizeof(undefined()) + ub(0)) { // expected-error {{cannot take address of consteval function 'ub' outside of an immediate invocation}}
+    int c = [](int error = sizeof(undefined()) + ub(0)) {
 
         return error;
     }();
 } i;
+// expected-error@-1 {{call to immediate function 'InitWithLambda::InitWithLambda' is not a constant expression}} \
+   expected-note@-1 {{in call to 'InitWithLambda()'}}
 
 namespace ShouldNotCrash {
     template<typename T>

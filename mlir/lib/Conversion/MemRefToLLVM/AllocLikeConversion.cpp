@@ -18,7 +18,7 @@ namespace {
 // with SymbolTable trait instead of ModuleOp and make similar change here. This
 // allows call sites to use getParentWithTrait<OpTrait::SymbolTable> instead
 // of getParentOfType<ModuleOp> to pass down the operation.
-LLVM::LLVMFuncOp getNotalignedAllocFn(LLVMTypeConverter *typeConverter,
+LLVM::LLVMFuncOp getNotalignedAllocFn(const LLVMTypeConverter *typeConverter,
                                       ModuleOp module, Type indexType) {
   bool useGenericFn = typeConverter->getOptions().useGenericFunctions;
 
@@ -30,7 +30,7 @@ LLVM::LLVMFuncOp getNotalignedAllocFn(LLVMTypeConverter *typeConverter,
                                       typeConverter->useOpaquePointers());
 }
 
-LLVM::LLVMFuncOp getAlignedAllocFn(LLVMTypeConverter *typeConverter,
+LLVM::LLVMFuncOp getAlignedAllocFn(const LLVMTypeConverter *typeConverter,
                                    ModuleOp module, Type indexType) {
   bool useGenericFn = typeConverter->getOptions().useGenericFunctions;
 
@@ -57,7 +57,7 @@ Value AllocationOpLLVMLowering::createAligned(
 static Value castAllocFuncResult(ConversionPatternRewriter &rewriter,
                                  Location loc, Value allocatedPtr,
                                  MemRefType memRefType, Type elementPtrType,
-                                 LLVMTypeConverter &typeConverter) {
+                                 const LLVMTypeConverter &typeConverter) {
   auto allocatedPtrTy = cast<LLVM::LLVMPointerType>(allocatedPtr.getType());
   unsigned memrefAddrSpace = *typeConverter.getMemRefAddressSpace(memRefType);
   if (allocatedPtrTy.getAddressSpace() != memrefAddrSpace)
@@ -138,7 +138,8 @@ bool AllocationOpLLVMLowering::isMemRefSizeMultipleOf(
 Value AllocationOpLLVMLowering::allocateBufferAutoAlign(
     ConversionPatternRewriter &rewriter, Location loc, Value sizeBytes,
     Operation *op, const DataLayout *defaultLayout, int64_t alignment) const {
-  Value allocAlignment = createIndexConstant(rewriter, loc, alignment);
+  Value allocAlignment =
+      createIndexAttrConstant(rewriter, loc, getIndexType(), alignment);
 
   MemRefType memRefType = getMemRefResultType(op);
   // Function aligned_alloc requires size to be a multiple of alignment; we pad

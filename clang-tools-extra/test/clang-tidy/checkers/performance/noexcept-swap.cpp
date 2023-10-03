@@ -201,3 +201,20 @@ struct OK21 {
 template <typename T>
 void swap(OK21<T> &, OK21<T> &) noexcept(noexcept(TemplateNoexceptWithInt<int>::f()));
 void swap(OK21<int> &, OK21<int> &) noexcept(noexcept(TemplateNoexceptWithInt<int>::f()));
+
+namespace PR64303 {
+  void swap();
+  void swap(int&, bool&);
+  void swap(int&, int&, int&);
+  void swap(int&);
+
+  struct Test {
+    void swap();
+    void swap(Test&, Test&);
+    void swap(int&);
+    static void swap(int&, int&);
+
+    friend void swap(Test&, Test&);
+    // CHECK-MESSAGES: :[[@LINE-1]]:17: warning: swap functions should be marked noexcept [performance-noexcept-swap]
+  };
+}

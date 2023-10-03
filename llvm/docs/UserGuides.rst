@@ -34,7 +34,9 @@ intermediate LLVM representation.
    Docker
    FatLTO
    ExtendingLLVM
+   GitHub
    GoldPlugin
+   GlobalISel/MIRPatterns
    HowToBuildOnARM
    HowToBuildWithPGO
    HowToBuildWindowsItaniumPrograms
@@ -190,6 +192,13 @@ Code Generation
    Describes the TableGen tool, which is used heavily by the LLVM code
    generator.
 
+==========
+GlobalISel
+==========
+
+:doc:`MIRPatterns <GlobalISel/MIRPatterns>`
+   Describes the design of MIR Patterns and how to use them.
+
 ===
 JIT
 ===
@@ -261,4 +270,3 @@ Additional Topics
 
 :doc:`RISCVUsage`
    This document describes using the RISCV-V target.
-

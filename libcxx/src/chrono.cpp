@@ -31,7 +31,7 @@
 # include <sys/time.h> // for gettimeofday and timeval
 #endif
 
-#if defined(__APPLE__) || (defined(_POSIX_TIMERS) && _POSIX_TIMERS > 0)
+#if defined(__APPLE__) || defined (__gnu_hurd__) || (defined(_POSIX_TIMERS) && _POSIX_TIMERS > 0)
 # define _LIBCPP_HAS_CLOCK_GETTIME
 #endif
 
@@ -99,7 +99,7 @@ static system_clock::time_point __libcpp_system_clock_now() {
                                                     nanoseconds::period>>;
 
   // The Windows epoch is Jan 1 1601, the Unix epoch Jan 1 1970.
-  static _LIBCPP_CONSTEXPR const seconds nt_to_unix_epoch{11644473600};
+  static constexpr const seconds nt_to_unix_epoch{11644473600};
 
   FILETIME ft;
 #if (_WIN32_WINNT >= _WIN32_WINNT_WIN8 && WINAPI_FAMILY_PARTITION(WINAPI_PARTITION_DESKTOP)) || \

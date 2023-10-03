@@ -11,7 +11,7 @@
 #include <memory>
 
 namespace mlir {
-
+class DialectRegistry;
 class LLVMTypeConverter;
 class RewritePatternSet;
 class Pass;
@@ -20,6 +20,8 @@ class Pass;
 #include "mlir/Conversion/Passes.h.inc"
 
 void populateNVVMToLLVMConversionPatterns(RewritePatternSet &patterns);
+
+void registerConvertNVVMToLLVMInterface(DialectRegistry &registry);
 
 } // namespace mlir
 

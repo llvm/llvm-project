@@ -180,7 +180,7 @@ public:
   // Use in places where a scalable count doesn't make sense (e.g. non-vector
   // types, or vectors in backends which don't support scalable vectors).
   constexpr ScalarTy getFixedValue() const {
-    assert(!isScalable() &&
+    assert((!isScalable() || isZero()) &&
            "Request for a fixed element count on a scalable object");
     return getKnownMinValue();
   }

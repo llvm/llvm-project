@@ -152,7 +152,7 @@ static void replaceAndPropagateMemRefType(RewriterBase &rewriter,
       // This may have to be revised in the future; e.g., there may be ops that
       // do not support non-identity layout maps.
       for (OpOperand &operand : user->getOpOperands()) {
-        if (auto castOp =
+        if ([[maybe_unused]] auto castOp =
                 operand.get().getDefiningOp<UnrealizedConversionCastOp>()) {
           rewriter.updateRootInPlace(
               user, [&]() { operand.set(conversion->getOperand(0)); });
@@ -177,4 +177,28 @@ FailureOr<Value> memref::replaceWithIndependentOp(RewriterBase &rewriter,
   replaceAndPropagateMemRefType(rewriter, allocaOp,
                                 replacement->getDefiningOp());
   return replacement;
+}
+
+memref::AllocaOp memref::allocToAlloca(
+    RewriterBase &rewriter, memref::AllocOp alloc,
+    function_ref<bool(memref::AllocOp, memref::DeallocOp)> filter) {
+  memref::DeallocOp dealloc = nullptr;
+  for (Operation &candidate :
+       llvm::make_range(alloc->getIterator(), alloc->getBlock()->end())) {
+    dealloc = dyn_cast<memref::DeallocOp>(candidate);
+    if (dealloc && dealloc.getMemref() == alloc.getMemref() &&
+        (!filter || filter(alloc, dealloc))) {
+      break;
+    }
+  }
+
+  if (!dealloc)
+    return nullptr;
+
+  OpBuilder::InsertionGuard guard(rewriter);
+  rewriter.setInsertionPoint(alloc);
+  auto alloca = rewriter.replaceOpWithNewOp<memref::AllocaOp>(
+      alloc, alloc.getMemref().getType(), alloc.getOperands());
+  rewriter.eraseOp(dealloc);
+  return alloca;
 }

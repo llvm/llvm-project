@@ -24,7 +24,6 @@ void InitializeAArch64ExegesisTarget();
 
 namespace {
 
-using testing::Gt;
 using testing::IsEmpty;
 using testing::Not;
 using testing::NotNull;

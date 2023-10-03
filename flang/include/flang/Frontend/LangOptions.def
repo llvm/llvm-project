@@ -38,6 +38,8 @@ LANGOPT(ReciprocalMath, 1, false)
 LANGOPT(OpenMPVersion, 32, 0)
 /// Generate code only for OpenMP target device
 LANGOPT(OpenMPIsTargetDevice, 1, false)
+/// Generate OpenMP target code only for GPUs
+LANGOPT(OpenMPIsGPU, 1, false)
 /// Enable debugging in the OpenMP offloading device RTL
 LANGOPT(OpenMPTargetDebug, 32, 0)
 /// Assume work-shared loops do not have more iterations than participating
@@ -50,6 +52,9 @@ LANGOPT(OpenMPTeamSubscription, 1, 0)
 LANGOPT(OpenMPNoThreadState, 1, 0)
 /// Assume that no thread in a parallel region will encounter a parallel region
 LANGOPT(OpenMPNoNestedParallelism, 1, 0)
+
+LANGOPT(VScaleMin, 32, 0)  ///< Minimum vscale range value
+LANGOPT(VScaleMax, 32, 0)  ///< Maximum vscale range value
 
 #undef LANGOPT
 #undef ENUM_LANGOPT

@@ -147,6 +147,9 @@ public:
 
     /// Expected type identifier for indirect calls with a CFI check.
     const ConstantInt *CFIType = nullptr;
+
+    /// True if this call results in convergent operations.
+    bool IsConvergent = true;
   };
 
   /// Argument handling is mostly uniform between the four places that

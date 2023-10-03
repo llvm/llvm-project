@@ -4,36 +4,35 @@
 define signext i32 @test(ptr noalias %PtrA, ptr noalias %PtrB, i32 signext %LenA, i32 signext %LenB) #0 {
 ; CHECK-LABEL: test:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    li 6, 0
-; CHECK-NEXT:    addi 7, 3, 4
+; CHECK-NEXT:    addi 6, 3, 4
 ; CHECK-NEXT:    addi 4, 4, -4
 ; CHECK-NEXT:    li 8, 0
+; CHECK-NEXT:    li 7, 0
 ; CHECK-NEXT:  .LBB0_1: # %block3
 ; CHECK-NEXT:    # =>This Loop Header: Depth=1
 ; CHECK-NEXT:    # Child Loop BB0_2 Depth 2
-; CHECK-NEXT:    mr 9, 6
-; CHECK-NEXT:    addi 6, 6, 1
-; CHECK-NEXT:    extsw 8, 8
-; CHECK-NEXT:    cmpw 6, 5
-; CHECK-NEXT:    extsw 9, 9
-; CHECK-NEXT:    crnot 20, 0
-; CHECK-NEXT:    sldi 10, 8, 2
-; CHECK-NEXT:    sldi 9, 9, 2
+; CHECK-NEXT:    extsw 9, 8
 ; CHECK-NEXT:    addi 8, 8, 1
+; CHECK-NEXT:    extsw 7, 7
+; CHECK-NEXT:    cmpw 8, 5
+; CHECK-NEXT:    sldi 10, 7, 2
+; CHECK-NEXT:    sldi 9, 9, 2
+; CHECK-NEXT:    addi 7, 7, 1
 ; CHECK-NEXT:    add 10, 4, 10
+; CHECK-NEXT:    crnot 20, 0
 ; CHECK-NEXT:    bc 12, 20, .LBB0_5
 ; CHECK-NEXT:    .p2align 5
 ; CHECK-NEXT:  .LBB0_2: # %if.end
 ; CHECK-NEXT:    # Parent Loop BB0_1 Depth=1
 ; CHECK-NEXT:    # => This Inner Loop Header: Depth=2
-; CHECK-NEXT:    lwz 11, 4(10)
-; CHECK-NEXT:    cmplwi 11, 0
+; CHECK-NEXT:    lwz 12, 4(10)
 ; CHECK-NEXT:    addi 11, 10, 4
+; CHECK-NEXT:    cmplwi 12, 0
 ; CHECK-NEXT:    beq 0, .LBB0_4
 ; CHECK-NEXT:  # %bb.3: # %if.then4
 ; CHECK-NEXT:    #
-; CHECK-NEXT:    lwzx 12, 7, 9
-; CHECK-NEXT:    addi 8, 8, 1
+; CHECK-NEXT:    lwzx 12, 6, 9
+; CHECK-NEXT:    addi 7, 7, 1
 ; CHECK-NEXT:    stw 12, 8(10)
 ; CHECK-NEXT:    mr 10, 11
 ; CHECK-NEXT:    bc 4, 20, .LBB0_2
@@ -41,9 +40,9 @@ define signext i32 @test(ptr noalias %PtrA, ptr noalias %PtrB, i32 signext %LenA
 ; CHECK-NEXT:    .p2align 4
 ; CHECK-NEXT:  .LBB0_4: # %if.end9
 ; CHECK-NEXT:    #
-; CHECK-NEXT:    lwzx 10, 7, 9
+; CHECK-NEXT:    lwzx 10, 6, 9
 ; CHECK-NEXT:    addi 10, 10, 1
-; CHECK-NEXT:    stwx 10, 7, 9
+; CHECK-NEXT:    stwx 10, 6, 9
 ; CHECK-NEXT:    b .LBB0_1
 ; CHECK-NEXT:  .LBB0_5: # %if.then
 ; CHECK-NEXT:    lwax 3, 9, 3

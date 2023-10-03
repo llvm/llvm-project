@@ -2,13 +2,13 @@
 
 // Check when we can convert !(A Op B) -> !A InvOp !B.
 // RUN: %check_clang_tidy -check-suffixes=",RELAXED" %s \
-// RUN: readability-simplify-boolean-expr %t -- -config="{CheckOptions: [{ \
-// RUN: key: "readability-simplify-boolean-expr.SimplifyDeMorganRelaxed", value: true}]}" --
+// RUN: readability-simplify-boolean-expr %t -- -config="{CheckOptions: { \
+// RUN: readability-simplify-boolean-expr.SimplifyDeMorganRelaxed: true}}" --
 
 // Verify warning issued when invalid options are specified.
-// RUN: clang-tidy %s -checks=-*,readability-simplify-boolean-expr -config="{CheckOptions: [ \
-// RUN:   {key: readability-simplify-boolean-expr.SimplifyDeMorgan, value: false}, \
-// RUN:   {key: readability-simplify-boolean-expr.SimplifyDeMorganRelaxed, value: true}]}" \
+// RUN: clang-tidy %s -checks=-*,readability-simplify-boolean-expr -config="{CheckOptions: { \
+// RUN:   readability-simplify-boolean-expr.SimplifyDeMorgan: false, \
+// RUN:   readability-simplify-boolean-expr.SimplifyDeMorganRelaxed: true}}" \
 // RUN: -- 2>&1 | FileCheck %s -check-prefix=CHECK-BAD-CONFIG \
 // RUN:       -implicit-check-not="{{warning|error}}:"
 

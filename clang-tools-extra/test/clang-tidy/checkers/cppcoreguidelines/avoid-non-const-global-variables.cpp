@@ -236,3 +236,17 @@ int main() {
     nonConstInt = nonConstLoopVariable + i + staticNonConstLoopVariable;
   }
 }
+
+// CHECKING AGAINST FALSE POSITIVES INSIDE STRUCT SCOPE /////////////////////
+struct StructWithStatic {
+  static DummyStruct nonConstDummyStructInstance;
+  static int value;
+  static int* valuePtr;
+  static int& valueRef;
+};
+
+DummyStruct StructWithStatic::nonConstDummyStructInstance;
+int StructWithStatic::value = 0;
+int* StructWithStatic::valuePtr = &StructWithStatic::value;
+int& StructWithStatic::valueRef = StructWithStatic::value;
+

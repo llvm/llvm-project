@@ -62,10 +62,8 @@ structured_op: !LinalgStructuredOpConfig
 
 # ODS-LABEL:  def Test1Op : LinalgStructuredBase_Op<"test1"
 
-#       ODS:  let summary = [{ Title. }];
-#  ODS-NEXT:  let description = [{
-#  ODS-NEXT:    Detailed description.
-#  ODS-NEXT:  }];
+#       ODS:  let summary = [{Title.}];
+#  ODS-NEXT:  let description = [{Detailed description.}];
 
 #       ODS:  let arguments =
 #  ODS-NEXT:    Variadic<AnyType>:$inputs,
@@ -84,6 +82,9 @@ structured_op: !LinalgStructuredOpConfig
 #       ODS:    buildStructuredOp($_builder, $_state, resultTensorTypes,
 #  ODS-NEXT:      attributes, Test1Op::getRegionBuilder())
 
+#       ODS:    MutableOperandRange getDpsInitsMutable() {
+#  ODS-NEXT:      return getOutputsMutable()
+#  ODS-NEXT:    }
 
 # IMPL-LABEL:  void Test1Op::regionBuilder(ImplicitLocOpBuilder &b,
 #  IMPL-NEXT:    Block &block, ArrayRef<NamedAttribute> attrs)

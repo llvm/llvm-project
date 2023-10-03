@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_LIBC_SRC_SUPPORT_FPUTIL_X86_64_LONG_DOUBLE_BITS_H
-#define LLVM_LIBC_SRC_SUPPORT_FPUTIL_X86_64_LONG_DOUBLE_BITS_H
+#ifndef LLVM_LIBC_SRC___SUPPORT_FPUTIL_X86_64_LONGDOUBLEBITS_H
+#define LLVM_LIBC_SRC___SUPPORT_FPUTIL_X86_64_LONGDOUBLEBITS_H
 
 #include "src/__support/CPP/bit.h"
 #include "src/__support/UInt128.h"
@@ -22,7 +22,7 @@
 
 #include <stdint.h>
 
-namespace __llvm_libc {
+namespace LIBC_NAMESPACE {
 namespace fputil {
 
 template <unsigned Width> struct Padding;
@@ -135,9 +135,24 @@ template <> struct FPBits<long double> {
   }
 
   LIBC_INLINE int get_exponent() const {
-    if (get_unbiased_exponent() == 0)
-      return int(1) - EXPONENT_BIAS;
     return int(get_unbiased_exponent()) - EXPONENT_BIAS;
+  }
+
+  // If the number is subnormal, the exponent is treated as if it were the
+  // minimum exponent for a normal number. This is to keep continuity between
+  // the normal and subnormal ranges, but it causes problems for functions where
+  // values are calculated from the exponent, since just subtracting the bias
+  // will give a slightly incorrect result. Additionally, zero has an exponent
+  // of zero, and that should actually be treated as zero.
+  LIBC_INLINE int get_explicit_exponent() const {
+    const int unbiased_exp = int(get_unbiased_exponent());
+    if (is_zero()) {
+      return 0;
+    } else if (unbiased_exp == 0) {
+      return 1 - EXPONENT_BIAS;
+    } else {
+      return unbiased_exp - EXPONENT_BIAS;
+    }
   }
 
   LIBC_INLINE bool is_zero() const {
@@ -218,6 +233,6 @@ static_assert(
     "Internal long double representation does not match the machine format.");
 
 } // namespace fputil
-} // namespace __llvm_libc
+} // namespace LIBC_NAMESPACE
 
-#endif // LLVM_LIBC_SRC_SUPPORT_FPUTIL_X86_64_LONG_DOUBLE_BITS_H
+#endif // LLVM_LIBC_SRC___SUPPORT_FPUTIL_X86_64_LONGDOUBLEBITS_H

@@ -139,9 +139,16 @@ void mlir::registerPass(const PassAllocatorFunction &function) {
 }
 
 /// Returns the pass info for the specified pass argument or null if unknown.
-const PassInfo *mlir::Pass::lookupPassInfo(StringRef passArg) {
+const PassInfo *mlir::PassInfo::lookup(StringRef passArg) {
   auto it = passRegistry->find(passArg);
   return it == passRegistry->end() ? nullptr : &it->second;
+}
+
+/// Returns the pass pipeline info for the specified pass pipeline argument or
+/// null if unknown.
+const PassPipelineInfo *mlir::PassPipelineInfo::lookup(StringRef pipelineArg) {
+  auto it = passPipelineRegistry->find(pipelineArg);
+  return it == passPipelineRegistry->end() ? nullptr : &it->second;
 }
 
 //===----------------------------------------------------------------------===//
@@ -653,16 +660,14 @@ TextualPipeline::resolvePipelineElement(PipelineElement &element,
   // pipeline.
   if (!element.innerPipeline.empty())
     return resolvePipelineElements(element.innerPipeline, errorHandler);
+
   // Otherwise, this must be a pass or pass pipeline.
   // Check to see if a pipeline was registered with this name.
-  auto pipelineRegistryIt = passPipelineRegistry->find(element.name);
-  if (pipelineRegistryIt != passPipelineRegistry->end()) {
-    element.registryEntry = &pipelineRegistryIt->second;
+  if ((element.registryEntry = PassPipelineInfo::lookup(element.name)))
     return success();
-  }
 
   // If not, then this must be a specific pass name.
-  if ((element.registryEntry = Pass::lookupPassInfo(element.name)))
+  if ((element.registryEntry = PassInfo::lookup(element.name)))
     return success();
 
   // Emit an error for the unknown pass.

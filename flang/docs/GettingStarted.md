@@ -8,9 +8,10 @@
 
 # Getting Started
 
-```eval_rst
-.. contents::
-   :local:
+```{contents}
+---
+local:
+---
 ```
 
 ## Building flang
@@ -443,7 +444,8 @@ system to create HTML pages which would be hosted on the webpage of flang and
 updated periodically.
 
 If you would like to generate and view the HTML locally:
-- Install [Sphinx](http://sphinx-doc.org/), including the [sphinx-markdown-tables](https://pypi.org/project/sphinx-markdown-tables/) extension.
+- Install [Sphinx](http://sphinx-doc.org/), and the required extensions
+  using `pip install --user -r ~/llvm-projects/docs/requirements.txt`
 - Pass `-DLLVM_ENABLE_SPHINX=ON -DSPHINX_WARNINGS_AS_ERRORS=OFF` to the cmake command.
 
 ```bash

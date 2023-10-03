@@ -19,7 +19,7 @@ int func() {
 
   int arr[N];
 
-#pragma omp target
+#pragma omp target teams thread_limit(42)
   for (int i = 0; i < N; i++) {
     arr[i] = callable(arr[i]);
   }
@@ -28,16 +28,16 @@ int func() {
 }
 
 int callable(int x) {
-  // ALL-LABEL: @_Z8callablei(i32 noundef %x) #1
+  // ALL-LABEL: @_Z8callablei(i32 noundef %x) #2
   return x + 1;
 }
 
-// DEFAULT: attributes #0 = { convergent mustprogress noinline norecurse nounwind optnone "kernel" "no-trapping-math"="true" "stack-protector-buffer-size"="8" "uniform-work-group-size"="true" }
-// CPU: attributes #0 = { convergent mustprogress noinline norecurse nounwind optnone "kernel" "no-trapping-math"="true" "stack-protector-buffer-size"="8" "target-cpu"="gfx900" "target-features"="+16-bit-insts,+ci-insts,+dpp,+gfx8-insts,+gfx9-insts,+s-memrealtime,+s-memtime-inst,+wavefrontsize64" "uniform-work-group-size"="true" }
-// NOIEEE: attributes #0 = { convergent mustprogress noinline norecurse nounwind optnone "amdgpu-ieee"="false" "kernel" "no-nans-fp-math"="true" "no-trapping-math"="true" "stack-protector-buffer-size"="8" "uniform-work-group-size"="true" }
-// UNSAFEATOMIC: attributes #0 = { convergent mustprogress noinline norecurse nounwind optnone "amdgpu-unsafe-fp-atomics"="true" "kernel" "no-trapping-math"="true" "stack-protector-buffer-size"="8" "uniform-work-group-size"="true" }
+// DEFAULT: attributes #0 = { convergent mustprogress noinline norecurse nounwind optnone "amdgpu-flat-work-group-size"="1,42" "kernel" "no-trapping-math"="true" "omp_target_thread_limit"="42" "stack-protector-buffer-size"="8" "uniform-work-group-size"="true" }
+// CPU: attributes #0 = { convergent mustprogress noinline norecurse nounwind optnone "amdgpu-flat-work-group-size"="1,42" "kernel" "no-trapping-math"="true" "omp_target_thread_limit"="42" "stack-protector-buffer-size"="8" "target-cpu"="gfx900" "target-features"="+16-bit-insts,+ci-insts,+dpp,+gfx8-insts,+gfx9-insts,+s-memrealtime,+s-memtime-inst,+wavefrontsize64" "uniform-work-group-size"="true" }
+// NOIEEE: attributes #0 = { convergent mustprogress noinline norecurse nounwind optnone "amdgpu-flat-work-group-size"="1,42" "amdgpu-ieee"="false" "kernel" "no-nans-fp-math"="true" "no-trapping-math"="true" "omp_target_thread_limit"="42" "stack-protector-buffer-size"="8" "uniform-work-group-size"="true" }
+// UNSAFEATOMIC: attributes #0 = { convergent mustprogress noinline norecurse nounwind optnone "amdgpu-flat-work-group-size"="1,42" "amdgpu-unsafe-fp-atomics"="true" "kernel" "no-trapping-math"="true" "omp_target_thread_limit"="42" "stack-protector-buffer-size"="8" "uniform-work-group-size"="true" }
 
-// DEFAULT: attributes #1 = { convergent mustprogress noinline nounwind optnone "no-trapping-math"="true" "stack-protector-buffer-size"="8" }
-// CPU: attributes #1 = { convergent mustprogress noinline nounwind optnone "no-trapping-math"="true" "stack-protector-buffer-size"="8" "target-cpu"="gfx900" "target-features"="+16-bit-insts,+ci-insts,+dpp,+gfx8-insts,+gfx9-insts,+s-memrealtime,+s-memtime-inst,+wavefrontsize64" }
-// NOIEEE: attributes #1 = { convergent mustprogress noinline nounwind optnone "amdgpu-ieee"="false" "no-nans-fp-math"="true" "no-trapping-math"="true" "stack-protector-buffer-size"="8" }
-// UNSAFEATOMIC: attributes #1 = { convergent mustprogress noinline nounwind optnone "amdgpu-unsafe-fp-atomics"="true" "no-trapping-math"="true" "stack-protector-buffer-size"="8" }
+// DEFAULT: attributes #2 = { convergent mustprogress noinline nounwind optnone "no-trapping-math"="true" "stack-protector-buffer-size"="8" }
+// CPU: attributes #2 = { convergent mustprogress noinline nounwind optnone "no-trapping-math"="true" "stack-protector-buffer-size"="8" "target-cpu"="gfx900" "target-features"="+16-bit-insts,+ci-insts,+dpp,+gfx8-insts,+gfx9-insts,+s-memrealtime,+s-memtime-inst,+wavefrontsize64" }
+// NOIEEE: attributes #2 = { convergent mustprogress noinline nounwind optnone "amdgpu-ieee"="false" "no-nans-fp-math"="true" "no-trapping-math"="true" "stack-protector-buffer-size"="8" }
+// UNSAFEATOMIC: attributes #2 = { convergent mustprogress noinline nounwind optnone "amdgpu-unsafe-fp-atomics"="true" "no-trapping-math"="true" "stack-protector-buffer-size"="8" }

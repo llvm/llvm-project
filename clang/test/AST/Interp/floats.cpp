@@ -86,6 +86,54 @@ namespace compound {
     return f;
   }
   static_assert(f2() == __FLT_MAX__, "");
+
+  constexpr float ff() {
+    float a[] = {1,2};
+    int i = 0;
+
+    // RHS should be evaluated before LHS, so this should
+    // write to a[1];
+    a[i++] += ++i;
+#if __cplusplus <= 201402L
+                  // expected-warning@-2 {{multiple unsequenced modifications}} \
+                  // ref-warning@-2 {{multiple unsequenced modifications}}
+#endif
+
+    return a[1];
+  }
+  static_assert(ff() == 3, "");
+
+  constexpr float intPlusDouble() {
+   int a = 0;
+   a += 2.0;
+
+   return a;
+  }
+  static_assert(intPlusDouble() == 2, "");
+
+  constexpr double doublePlusInt() {
+   double a = 0.0;
+   a += 2;
+
+   return a;
+  }
+  static_assert(doublePlusInt() == 2, "");
+
+  constexpr float boolPlusDouble() {
+   bool a = 0;
+   a += 1.0;
+
+   return a;
+  }
+  static_assert(boolPlusDouble(), "");
+
+  constexpr bool doublePlusbool() {
+   double a = 0.0;
+   a += true;
+
+   return a;
+  }
+  static_assert(doublePlusbool() == 1.0, "");
 }
 
 namespace unary {
@@ -125,3 +173,47 @@ namespace ZeroInit {
   constexpr A<double> b{12};
   static_assert(a.f == 0.0, "");
 };
+
+namespace LongDouble {
+  constexpr long double ld = 3.1425926539;
+
+  constexpr long double f() {
+    const long double L = __LDBL_MAX__;
+
+    return L;
+  };
+  static_assert(f() == __LDBL_MAX__, "");
+
+#ifdef __FLOAT128__
+  constexpr __float128 f128() {
+    const __float128 L = __LDBL_MAX__;
+
+    return L;
+  };
+  static_assert(f128() == __LDBL_MAX__, "");
+#endif
+}
+
+namespace Compare {
+  constexpr float nan = __builtin_nan("");
+  constexpr float inf = __builtin_inf();
+  static_assert(!(nan == nan), "");
+  static_assert(nan != nan, "");
+  static_assert(!(inf < nan), "");
+  static_assert(!(inf > nan), "");
+}
+
+namespace nan {
+  constexpr double nan = __builtin_nan("");
+  static_assert(nan);
+
+  constexpr double D1 = 1 + nan; // ref-error {{must be initialized by a constant expression}} \
+                                 // ref-note {{produces a NaN}} \
+                                 // expected-error {{must be initialized by a constant expression}} \
+                                 // expected-note {{produces a NaN}}
+
+  constexpr double D2 = __builtin_inf() / __builtin_inf(); // ref-error {{must be initialized by a constant expression}} \
+                                                           // ref-note {{produces a NaN}} \
+                                                           // expected-error {{must be initialized by a constant expression}} \
+                                                           // expected-note {{produces a NaN}}
+}

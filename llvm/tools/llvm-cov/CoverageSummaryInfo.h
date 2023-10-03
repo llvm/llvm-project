@@ -222,6 +222,7 @@ struct FileCoverageSummary {
   FunctionCoverageInfo FunctionCoverage;
   FunctionCoverageInfo InstantiationCoverage;
 
+  FileCoverageSummary() = default;
   FileCoverageSummary(StringRef Name) : Name(Name) {}
 
   FileCoverageSummary &operator+=(const FileCoverageSummary &RHS) {

@@ -19,7 +19,8 @@
 
 // We cannot check much for -mcpu=native, but it should be replaced by either generic or a valid
 // Arm cpu string, depending on the host.
-// RUN: %clang --target=arm64 -mcpu=native -### -c %s 2>&1 | FileCheck -check-prefix=ARM64-NATIVE %s
+// RUN: %clang --target=arm64 -mcpu=native -### -c %s 2> %t.err || true
+// RUN: FileCheck --input-file=%t.err -check-prefix=ARM64-NATIVE %s
 // ARM64-NATIVE-NOT: "-cc1"{{.*}} "-triple" "arm64{{.*}}" "-target-cpu" "native"
 
 // RUN: %clang --target=arm64-apple-ios -arch arm64 -### -c %s 2>&1 | FileCheck -check-prefix=ARM64-IOS %s

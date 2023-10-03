@@ -20,6 +20,15 @@
 #include <stddef.h>
 #include <stdint.h>
 // IWYU pragma: no_include <__stddef_max_align_t.h>
+// IWYU pragma: no_include <__stddef_null.h>
+// IWYU pragma: no_include <__stddef_nullptr_t.h>
+// IWYU pragma: no_include <__stddef_offsetof.h>
+// IWYU pragma: no_include <__stddef_ptrdiff_t.h>
+// IWYU pragma: no_include <__stddef_rsize_t.h>
+// IWYU pragma: no_include <__stddef_size_t.h>
+// IWYU pragma: no_include <__stddef_unreachable.h>
+// IWYU pragma: no_include <__stddef_wchar_t.h>
+// IWYU pragma: no_include <__stddef_wint_t.h>
 
 namespace gwp_asan {
 // This class is the primary implementation of the allocator portion of GWP-

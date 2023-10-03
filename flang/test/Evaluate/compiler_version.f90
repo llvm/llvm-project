@@ -4,7 +4,7 @@ program main
     use ISO_FORTRAN_ENV, only: compiler_version
     implicit none
     character (len = :), allocatable :: v
-! CHECK: v="{{.*}}flang version {{[0-9]*.[0-9]*.[0-9]}} {{.*}}"
+! CHECK: v="{{.*}}flang version {{[0-9]+\.[0-9.]+.*}}"
     v = compiler_version()
     print *, v
     deallocate(v)

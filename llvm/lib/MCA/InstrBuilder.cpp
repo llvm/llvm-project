@@ -69,7 +69,7 @@ static void initializeUsedResources(InstrDesc &ID,
   for (unsigned I = 0, E = SCDesc.NumWriteProcResEntries; I < E; ++I) {
     const MCWriteProcResEntry *PRE = STI.getWriteProcResBegin(&SCDesc) + I;
     const MCProcResourceDesc &PR = *SM.getProcResource(PRE->ProcResourceIdx);
-    if (!PRE->Cycles) {
+    if (!PRE->ReleaseAtCycle) {
 #ifndef NDEBUG
       WithColor::warning()
           << "Ignoring invalid write of zero cycles on processor resource "
@@ -89,11 +89,11 @@ static void initializeUsedResources(InstrDesc &ID,
       AllInOrderResources &= (PR.BufferSize <= 1);
     }
 
-    CycleSegment RCy(0, PRE->Cycles, false);
+    CycleSegment RCy(0, PRE->ReleaseAtCycle, false);
     Worklist.emplace_back(ResourcePlusCycles(Mask, ResourceUsage(RCy)));
     if (PR.SuperIdx) {
       uint64_t Super = ProcResourceMasks[PR.SuperIdx];
-      SuperResources[Super] += PRE->Cycles;
+      SuperResources[Super] += PRE->ReleaseAtCycle;
     }
   }
 
@@ -156,7 +156,7 @@ static void initializeUsedResources(InstrDesc &ID,
   // is reserved. For example (on target x86; cpu Haswell):
   //
   //  SchedWriteRes<[HWPort0, HWPort1, HWPort01]> {
-  //    let ResourceCycles = [2, 2, 3];
+  //    let ReleaseAtCycles = [2, 2, 3];
   //  }
   //
   // This means:

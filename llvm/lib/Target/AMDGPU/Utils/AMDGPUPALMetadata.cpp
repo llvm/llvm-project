@@ -18,7 +18,6 @@
 #include "AMDGPUPTNote.h"
 #include "SIDefines.h"
 #include "llvm/BinaryFormat/ELF.h"
-#include "llvm/CodeGen/MachineFunction.h"
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/Module.h"
 #include "llvm/Support/AMDGPUMetadata.h"
@@ -242,30 +241,28 @@ void AMDGPUPALMetadata::setScratchSize(CallingConv::ID CC, unsigned Val) {
 }
 
 // Set the stack frame size of a function in the metadata.
-void AMDGPUPALMetadata::setFunctionScratchSize(const MachineFunction &MF,
-                                               unsigned Val) {
-  auto Node = getShaderFunction(MF.getFunction().getName());
+void AMDGPUPALMetadata::setFunctionScratchSize(StringRef FnName, unsigned Val) {
+  auto Node = getShaderFunction(FnName);
   Node[".stack_frame_size_in_bytes"] = MsgPackDoc.getNode(Val);
 }
 
 // Set the amount of LDS used in bytes in the metadata.
-void AMDGPUPALMetadata::setFunctionLdsSize(const MachineFunction &MF,
-                                           unsigned Val) {
-  auto Node = getShaderFunction(MF.getFunction().getName());
+void AMDGPUPALMetadata::setFunctionLdsSize(StringRef FnName, unsigned Val) {
+  auto Node = getShaderFunction(FnName);
   Node[".lds_size"] = MsgPackDoc.getNode(Val);
 }
 
 // Set the number of used vgprs in the metadata.
-void AMDGPUPALMetadata::setFunctionNumUsedVgprs(const MachineFunction &MF,
+void AMDGPUPALMetadata::setFunctionNumUsedVgprs(StringRef FnName,
                                                 unsigned Val) {
-  auto Node = getShaderFunction(MF.getFunction().getName());
+  auto Node = getShaderFunction(FnName);
   Node[".vgpr_count"] = MsgPackDoc.getNode(Val);
 }
 
 // Set the number of used vgprs in the metadata.
-void AMDGPUPALMetadata::setFunctionNumUsedSgprs(const MachineFunction &MF,
+void AMDGPUPALMetadata::setFunctionNumUsedSgprs(StringRef FnName,
                                                 unsigned Val) {
-  auto Node = getShaderFunction(MF.getFunction().getName());
+  auto Node = getShaderFunction(FnName);
   Node[".sgpr_count"] = MsgPackDoc.getNode(Val);
 }
 
@@ -911,6 +908,7 @@ void AMDGPUPALMetadata::reset() {
   MsgPackDoc.clear();
   Registers = MsgPackDoc.getEmptyNode();
   HwStages = MsgPackDoc.getEmptyNode();
+  ShaderFunctions = MsgPackDoc.getEmptyNode();
 }
 
 unsigned AMDGPUPALMetadata::getPALVersion(unsigned idx) {

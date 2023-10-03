@@ -34,9 +34,8 @@ class Value {
 public:
   enum class Kind {
     Integer,
-    Reference,
     Pointer,
-    Struct,
+    Record,
 
     // TODO: Top values should not be need to be type-specific.
     TopBool,
@@ -82,8 +81,8 @@ private:
 /// transitivity. It does *not* include comparison of `Properties`.
 ///
 /// Computes equivalence for these subclasses:
-/// * ReferenceValue, PointerValue -- pointee locations are equal. Does not
-///   compute deep equality of `Value` at said location.
+/// * PointerValue -- pointee locations are equal. Does not compute deep
+///   equality of `Value` at said location.
 /// * TopBoolValue -- both are `TopBoolValue`s.
 ///
 /// Otherwise, falls back to pointer equality.
@@ -165,23 +164,6 @@ public:
   }
 };
 
-/// Models a dereferenced pointer. For example, a reference in C++ or an lvalue
-/// in C.
-class ReferenceValue final : public Value {
-public:
-  explicit ReferenceValue(StorageLocation &ReferentLoc)
-      : Value(Kind::Reference), ReferentLoc(ReferentLoc) {}
-
-  static bool classof(const Value *Val) {
-    return Val->getKind() == Kind::Reference;
-  }
-
-  StorageLocation &getReferentLoc() const { return ReferentLoc; }
-
-private:
-  StorageLocation &ReferentLoc;
-};
-
 /// Models a symbolic pointer. Specifically, any value of type `T*`.
 class PointerValue final : public Value {
 public:
@@ -198,38 +180,53 @@ private:
   StorageLocation &PointeeLoc;
 };
 
-/// Models a value of `struct` or `class` type, with a flat map of fields to
-/// child storage locations, containing all accessible members of base struct
-/// and class types.
-class StructValue final : public Value {
+/// Models a value of `struct` or `class` type.
+/// In C++, prvalues of class type serve only a limited purpose: They can only
+/// be used to initialize a result object. It is not possible to access member
+/// variables or call member functions on a prvalue of class type.
+/// Correspondingly, `RecordValue` also serves only two limited purposes:
+/// - It conveys a prvalue of class type from the place where the object is
+///   constructed to the result object that it initializes.
+///
+///   When creating a prvalue of class type, we already need a storage location
+///   for `this`, even though prvalues are otherwise not associated with storage
+///   locations. `RecordValue` is therefore essentially a wrapper for a storage
+///   location, which is then used to set the storage location for the result
+///   object when we process the AST node for that result object.
+///
+///   For example:
+///      MyStruct S = MyStruct(3);
+///
+///   In this example, `MyStruct(3) is a prvalue, which is modeled as a
+///   `RecordValue` that wraps a `RecordStorageLocation`. This
+//    `RecordStorageLocation` is then used as the storage location for `S`.
+///
+/// - It allows properties to be associated with an object of class type.
+///   Note that when doing so, you should avoid mutating the properties of an
+///   existing `RecordValue` in place, as these changes would be visible to
+///   other `Environment`s that share the same `RecordValue`. Instead, associate
+///   a new `RecordValue` with the `RecordStorageLocation` and set the
+///   properties on this new `RecordValue`. (See also `refreshRecordValue()` in
+///   DataflowEnvironment.h, which makes this easy.)
+///   Note also that this implies that it is common for the same
+///   `RecordStorageLocation` to be associated with different `RecordValue`s
+///   in different environments.
+/// Over time, we may eliminate `RecordValue` entirely. See also the discussion
+/// here: https://reviews.llvm.org/D155204#inline-1503204
+class RecordValue final : public Value {
 public:
-  StructValue() : StructValue(llvm::DenseMap<const ValueDecl *, Value *>()) {}
-
-  explicit StructValue(llvm::DenseMap<const ValueDecl *, Value *> Children)
-      : Value(Kind::Struct), Children(std::move(Children)) {}
+  explicit RecordValue(RecordStorageLocation &Loc)
+      : Value(Kind::Record), Loc(Loc) {}
 
   static bool classof(const Value *Val) {
-    return Val->getKind() == Kind::Struct;
+    return Val->getKind() == Kind::Record;
   }
 
-  /// Returns the child value that is assigned for `D` or null if the child is
-  /// not initialized.
-  Value *getChild(const ValueDecl &D) const { return Children.lookup(&D); }
-
-  /// Assigns `Val` as the child value for `D`.
-  void setChild(const ValueDecl &D, Value &Val) { Children[&D] = &Val; }
-
-  /// Clears any value assigned as the child value for `D`.
-  void clearChild(const ValueDecl &D) { Children.erase(&D); }
-
-  llvm::iterator_range<
-      llvm::DenseMap<const ValueDecl *, Value *>::const_iterator>
-  children() const {
-    return {Children.begin(), Children.end()};
-  }
+  /// Returns the storage location that this `RecordValue` is associated with.
+  RecordStorageLocation &getLoc() const { return Loc; }
 
 private:
-  llvm::DenseMap<const ValueDecl *, Value *> Children;
+  RecordStorageLocation &Loc;
 };
 
 raw_ostream &operator<<(raw_ostream &OS, const Value &Val);

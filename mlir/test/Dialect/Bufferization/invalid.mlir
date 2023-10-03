@@ -26,39 +26,7 @@ func.func @alloc_tensor_copy_and_dims(%t: tensor<?xf32>, %sz: index) {
 
 // -----
 
-func.func @alloc_tensor_invalid_escape_attr(%sz: index) {
-  // expected-error @+1{{'bufferization.escape' is expected to be a bool array attribute}}
-  %0 = bufferization.alloc_tensor(%sz) {bufferization.escape = 5} : tensor<?xf32>
-  return
-}
-
-// -----
-
-func.func @alloc_tensor_invalid_escape_attr_size(%sz: index) {
-  // expected-error @+1{{'bufferization.escape' has wrong number of elements, expected 1, got 2}}
-  %0 = bufferization.alloc_tensor(%sz) {bufferization.escape = [true, false]} : tensor<?xf32>
-  return
-}
-
-// -----
-
-func.func @escape_attr_non_allocating(%t0: tensor<?xf32>) {
-  // expected-error @+1{{'bufferization.escape' only valid for allocation results}}
-  %0 = tensor.extract_slice %t0[0][5][1] {bufferization.escape = [true]} : tensor<?xf32> to tensor<5xf32>
-  return
-}
-
-// -----
-
-func.func @escape_attr_non_bufferizable(%m0: memref<?xf32>) {
-  // expected-error @+1{{'bufferization.escape' only valid on bufferizable ops}}
-  %0 = memref.cast %m0 {bufferization.escape = [true]} : memref<?xf32> to memref<10xf32>
-  return
-}
-
-// -----
-
-#DCSR = #sparse_tensor.encoding<{ lvlTypes = [ "compressed", "compressed" ] }>
+#DCSR = #sparse_tensor.encoding<{ map = (d0, d1) -> (d0 : compressed, d1 : compressed) }>
 
 func.func @sparse_alloc_direct_return() -> tensor<20x40xf32, #DCSR> {
   // expected-error @+1{{sparse tensor allocation should not escape function}}
@@ -68,7 +36,7 @@ func.func @sparse_alloc_direct_return() -> tensor<20x40xf32, #DCSR> {
 
 // -----
 
-#DCSR = #sparse_tensor.encoding<{ lvlTypes = [ "compressed", "compressed" ] }>
+#DCSR = #sparse_tensor.encoding<{ map = (d0, d1) -> (d0 : compressed, d1 : compressed) }>
 
 func.func private @foo(tensor<20x40xf32, #DCSR>) -> ()
 
@@ -99,15 +67,31 @@ func.func @invalid_writable_on_op() {
 // -----
 
 // expected-note @below{{prior use here}}
-func.func @invalid_tensor_copy(%arg0: tensor<?xf32>, %arg1: tensor<5xf32>) {
+func.func @invalid_materialize_in_destination(%arg0: tensor<?xf32>, %arg1: tensor<5xf32>) {
   // expected-error @below{{expects different type than prior uses: 'tensor<?xf32>' vs 'tensor<5xf32>'}}
-  bufferization.copy_tensor %arg0, %arg1 : tensor<?xf32>
+  bufferization.materialize_in_destination %arg0 in %arg1 : tensor<?xf32>
 }
 
 // -----
 
-func.func @invalid_dealloc_memref_condition_mismatch(%arg0: memref<2xf32>, %arg1: memref<4xi32>, %arg2: i1) -> i1 {
+func.func @invalid_dealloc_memref_condition_mismatch(%arg0: memref<2xf32>, %arg1: memref<4xi32>, %arg2: i1) {
   // expected-error @below{{must have the same number of conditions as memrefs to deallocate}}
-  %0 = bufferization.dealloc (%arg0, %arg1 : memref<2xf32>, memref<4xi32>) if (%arg2)
-  return %0 : i1
+  bufferization.dealloc (%arg0, %arg1 : memref<2xf32>, memref<4xi32>) if (%arg2)
+  return
+}
+
+// -----
+
+func.func @invalid_dealloc_wrong_number_of_results(%arg0: memref<2xf32>, %arg1: memref<4xi32>, %arg2: i1) -> i1 {
+  // expected-error @below{{operation defines 1 results but was provided 2 to bind}}
+  %0:2 = bufferization.dealloc (%arg0, %arg1 : memref<2xf32>, memref<4xi32>) if (%arg2, %arg2) retain (%arg1 : memref<4xi32>)
+  return %0#0 : i1
+}
+
+// -----
+
+func.func @invalid_dealloc_wrong_number_of_results(%arg0: memref<2xf32>, %arg1: memref<4xi32>, %arg2: i1) -> i1 {
+  // expected-error @below{{must have the same number of updated conditions (results) as retained operands}}
+  %0:3 = "bufferization.dealloc"(%arg0, %arg1, %arg2, %arg2, %arg1) <{operandSegmentSizes = array<i32: 2, 2, 1>}> : (memref<2xf32>, memref<4xi32>, i1, i1, memref<4xi32>) -> (i1, i1, i1)
+  return %0#0 : i1
 }

@@ -53,9 +53,6 @@ llvm::Triple::ArchType darwin::getArchTypeForMachOArchName(StringRef Str) {
   // translation.
 
   return llvm::StringSwitch<llvm::Triple::ArchType>(Str)
-      .Cases("ppc", "ppc601", "ppc603", "ppc604", "ppc604e", llvm::Triple::ppc)
-      .Cases("ppc750", "ppc7400", "ppc7450", "ppc970", llvm::Triple::ppc)
-      .Case("ppc64", llvm::Triple::ppc64)
       .Cases("i386", "i486", "i486SX", "i586", "i686", llvm::Triple::x86)
       .Cases("pentium", "pentpro", "pentIIm3", "pentIIm5", "pentium4",
              llvm::Triple::x86)
@@ -615,10 +612,6 @@ void darwin::Linker::ConstructJob(Compilation &C, const JobAction &JA,
       if (getMachOToolChain().getMachOArchName(Args) == "arm64") {
         CmdArgs.push_back("-mllvm");
         CmdArgs.push_back("-enable-machine-outliner");
-
-        // Outline from linkonceodr functions by default in LTO.
-        CmdArgs.push_back("-mllvm");
-        CmdArgs.push_back("-enable-linkonceodr-outlining");
       }
     } else {
       // Disable all outlining behaviour if we have mno-outline. We need to do
@@ -628,6 +621,12 @@ void darwin::Linker::ConstructJob(Compilation &C, const JobAction &JA,
       CmdArgs.push_back("-enable-machine-outliner=never");
     }
   }
+
+  // Outline from linkonceodr functions by default in LTO, whenever the outliner
+  // is enabled.  Note that the target may enable the machine outliner
+  // independently of -moutline.
+  CmdArgs.push_back("-mllvm");
+  CmdArgs.push_back("-enable-linkonceodr-outlining");
 
   // Setup statistics file output.
   SmallString<128> StatsFile =
@@ -1484,9 +1483,13 @@ void DarwinClang::AddLinkRuntimeLibArgs(const ArgList &Args,
 
   if (Sanitize.linkRuntimes()) {
     if (Sanitize.needsAsanRt()) {
-      assert(Sanitize.needsSharedRt() &&
-             "Static sanitizer runtimes not supported");
-      AddLinkSanitizerLibArgs(Args, CmdArgs, "asan");
+      if (Sanitize.needsStableAbi()) {
+        AddLinkSanitizerLibArgs(Args, CmdArgs, "asan_abi", /*shared=*/false);
+      } else {
+        assert(Sanitize.needsSharedRt() &&
+               "Static sanitizer runtimes not supported");
+        AddLinkSanitizerLibArgs(Args, CmdArgs, "asan");
+      }
     }
     if (Sanitize.needsLsanRt())
       AddLinkSanitizerLibArgs(Args, CmdArgs, "lsan");
@@ -2198,7 +2201,7 @@ void Darwin::AddDeploymentTarget(DerivedArgList &Args) const {
           std::string OSVersionArg =
               OSVersionArgTarget->getAsString(Args, Opts);
           std::string TargetArg = OSTarget->getAsString(Args, Opts);
-          getDriver().Diag(clang::diag::warn_drv_overriding_flag_option)
+          getDriver().Diag(clang::diag::warn_drv_overriding_option)
               << OSVersionArg << TargetArg;
         }
       }
@@ -2840,6 +2843,25 @@ bool Darwin::isAlignedAllocationUnavailable() const {
   return TargetVersion < alignedAllocMinVersion(OS);
 }
 
+static bool sdkSupportsBuiltinModules(const Darwin::DarwinPlatformKind &TargetPlatform, const std::optional<DarwinSDKInfo> &SDKInfo) {
+  if (!SDKInfo)
+    return false;
+
+  VersionTuple SDKVersion = SDKInfo->getVersion();
+  switch (TargetPlatform) {
+  case Darwin::MacOS:
+    return SDKVersion >= VersionTuple(99U);
+  case Darwin::IPhoneOS:
+    return SDKVersion >= VersionTuple(99U);
+  case Darwin::TvOS:
+    return SDKVersion >= VersionTuple(99U);
+  case Darwin::WatchOS:
+    return SDKVersion >= VersionTuple(99U);
+  default:
+    return true;
+  }
+}
+
 void Darwin::addClangTargetOptions(const llvm::opt::ArgList &DriverArgs,
                                    llvm::opt::ArgStringList &CC1Args,
                                    Action::OffloadKind DeviceOffloadKind) const {
@@ -2862,6 +2884,20 @@ void Darwin::addClangTargetOptions(const llvm::opt::ArgList &DriverArgs,
           options::OPT_fvisibility_inlines_hidden_static_local_var,
           options::OPT_fno_visibility_inlines_hidden_static_local_var))
     CC1Args.push_back("-fvisibility-inlines-hidden-static-local-var");
+
+  // Earlier versions of the darwin SDK have the C standard library headers
+  // all together in the Darwin module. That leads to module cycles with
+  // the _Builtin_ modules. e.g. <inttypes.h> on darwin includes <stdint.h>.
+  // The builtin <stdint.h> include-nexts <stdint.h>. When both of those
+  // darwin headers are in the Darwin module, there's a module cycle Darwin ->
+  // _Builtin_stdint -> Darwin (i.e. inttypes.h (darwin) -> stdint.h (builtin) ->
+  // stdint.h (darwin)). This is fixed in later versions of the darwin SDK,
+  // but until then, the builtin headers need to join the system modules.
+  // i.e. when the builtin stdint.h is in the Darwin module too, the cycle
+  // goes away. Note that -fbuiltin-headers-in-system-modules does nothing
+  // to fix the same problem with C++ headers, and is generally fragile.
+  if (!sdkSupportsBuiltinModules(TargetPlatform, SDKInfo))
+    CC1Args.push_back("-fbuiltin-headers-in-system-modules");
 }
 
 void Darwin::addClangCC1ASTargetOptions(

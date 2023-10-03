@@ -287,6 +287,13 @@ bool MCAssembler::evaluateFixup(const MCAsmLayout &Layout,
     WasForced = true;
   }
 
+  // A linker relaxation target may emit ADD/SUB relocations for A-B+C. Let
+  // recordRelocation handle non-VK_None cases like A@plt-B+C.
+  if (!IsResolved && Target.getSymA() && Target.getSymB() &&
+      Target.getSymA()->getKind() == MCSymbolRefExpr::VK_None &&
+      getBackend().handleAddSubRelocations(Layout, *DF, Fixup, Target, Value))
+    return true;
+
   return IsResolved;
 }
 
@@ -303,7 +310,7 @@ uint64_t MCAssembler::computeFragmentSize(const MCAsmLayout &Layout,
   case MCFragment::FT_Fill: {
     auto &FF = cast<MCFillFragment>(F);
     int64_t NumValues = 0;
-    if (!FF.getNumValues().evaluateAsAbsolute(NumValues, Layout)) {
+    if (!FF.getNumValues().evaluateKnownAbsolute(NumValues, Layout)) {
       getContext().reportError(FF.getLoc(),
                                "expected assembly-time absolute expression");
       return 0;
@@ -1002,8 +1009,11 @@ bool MCAssembler::relaxLEB(MCAsmLayout &Layout, MCLEBFragment &LF) {
   uint64_t OldSize = LF.getContents().size();
   int64_t Value;
   bool Abs = LF.getValue().evaluateKnownAbsolute(Value, Layout);
-  if (!Abs)
-    report_fatal_error("sleb128 and uleb128 expressions must be absolute");
+  if (!Abs) {
+    getContext().reportError(LF.getValue().getLoc(),
+                             Twine(LF.isSigned() ? ".s" : ".u") +
+                                 "leb128 expression is not absolute");
+  }
   SmallString<8> &Data = LF.getContents();
   Data.clear();
   raw_svector_ostream OSE(Data);

@@ -593,11 +593,10 @@ void PipelineSolver::populateReadyList(
   for (; I != E; ++I) {
     std::vector<std::pair<SUnit *, SUnit *>> AddedEdges;
     int CandSGID = *I;
-    SchedGroup *Match;
-    for (auto &SG : SyncPipeline) {
-      if (SG.getSGID() == CandSGID)
-        Match = &SG;
-    }
+    SchedGroup *Match = llvm::find_if(SyncPipeline, [CandSGID](SchedGroup &SG) {
+      return SG.getSGID() == CandSGID;
+    });
+    assert(Match);
 
     if (UseCostHeur) {
       if (Match->isFull()) {
@@ -739,11 +738,10 @@ void PipelineSolver::greedyFind(
   for (; I != E; ++I) {
     std::vector<std::pair<SUnit *, SUnit *>> AddedEdges;
     int CandSGID = *I;
-    SchedGroup *Match;
-    for (auto &SG : SyncPipeline) {
-      if (SG.getSGID() == CandSGID)
-        Match = &SG;
-    }
+    SchedGroup *Match = llvm::find_if(SyncPipeline, [CandSGID](SchedGroup &SG) {
+      return SG.getSGID() == CandSGID;
+    });
+    assert(Match);
 
     LLVM_DEBUG(dbgs() << "Trying SGID # " << CandSGID << " with Mask "
                       << (int)Match->getMask() << "\n");
@@ -1154,8 +1152,7 @@ void MFMASmallGemmSingleWaveOpt::applyIGLPStrategy(
       if (Pred.getSUnit()->getInstr()->getOpcode() != AMDGPU::V_PERM_B32_e64)
         continue;
 
-      if (Cand &&
-          std::find(Counted.begin(), Counted.end(), Cand) != Counted.end())
+      if (Cand && llvm::is_contained(Counted, Cand))
         break;
 
       for (auto &Succ : Pred.getSUnit()->Succs) {
@@ -1176,7 +1173,7 @@ void MFMASmallGemmSingleWaveOpt::applyIGLPStrategy(
         }
 
         Cand = VMEMLookup[MI];
-        if (std::find(Counted.begin(), Counted.end(), Cand) != Counted.end()) {
+        if (llvm::is_contained(Counted, Cand)) {
           MissedAny = true;
           break;
         }

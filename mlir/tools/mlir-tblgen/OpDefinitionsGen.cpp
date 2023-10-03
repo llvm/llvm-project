@@ -34,6 +34,7 @@
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/Signals.h"
+#include "llvm/Support/raw_ostream.h"
 #include "llvm/TableGen/Error.h"
 #include "llvm/TableGen/Record.h"
 #include "llvm/TableGen/TableGenBackend.h"
@@ -51,12 +52,12 @@ static const char *const builderOpState = "odsState";
 static const char *const propertyStorage = "propStorage";
 static const char *const propertyValue = "propValue";
 static const char *const propertyAttr = "propAttr";
-static const char *const propertyDiag = "propDiag";
+static const char *const propertyDiag = "emitError";
 
 /// The names of the implicit attributes that contain variadic operand and
 /// result segment sizes.
-static const char *const operandSegmentAttrName = "operand_segment_sizes";
-static const char *const resultSegmentAttrName = "result_segment_sizes";
+static const char *const operandSegmentAttrName = "operandSegmentSizes";
+static const char *const resultSegmentAttrName = "resultSegmentSizes";
 
 /// Code for an Op to lookup an attribute. Uses cached identifiers and subrange
 /// lookup.
@@ -115,6 +116,10 @@ static const char *const adapterSegmentSizeAttrInitCode = R"(
   assert({0} && "missing segment size attribute for op");
   auto sizeAttr = ::llvm::cast<::mlir::DenseI32ArrayAttr>({0});
 )";
+static const char *const adapterSegmentSizeAttrInitCodeProperties = R"(
+  ::llvm::ArrayRef<int32_t> sizeAttr = {0};
+)";
+
 /// The code snippet to initialize the sizes for the value range calculation.
 ///
 /// {0}: The code to get the attribute.
@@ -148,6 +153,29 @@ static const char *const valueRangeReturnCode = R"(
   auto valueRange = {1};
   return {{std::next({0}, valueRange.first),
            std::next({0}, valueRange.first + valueRange.second)};
+)";
+
+/// Read operand/result segment_size from bytecode.
+static const char *const readBytecodeSegmentSize = R"(
+if ($_reader.getBytecodeVersion() < /*kNativePropertiesODSSegmentSize=*/6) {
+  ::mlir::DenseI32ArrayAttr attr;
+  if (::mlir::failed($_reader.readAttribute(attr))) return ::mlir::failure();
+  if (attr.size() > static_cast<int64_t>(sizeof($_storage) / sizeof(int32_t))) {
+    $_reader.emitError("size mismatch for operand/result_segment_size");
+    return ::mlir::failure();
+  }
+  ::llvm::copy(::llvm::ArrayRef<int32_t>(attr), $_storage.begin());
+} else {
+  return $_reader.readSparseArray(::llvm::MutableArrayRef($_storage));
+}
+)";
+
+/// Write operand/result segment_size to bytecode.
+static const char *const writeBytecodeSegmentSize = R"(
+if ($_writer.getBytecodeVersion() < /*kNativePropertiesODSSegmentSize=*/6)
+  $_writer.writeAttribute(::mlir::DenseI32ArrayAttr::get(getContext(), $_storage));
+else
+  $_writer.writeSparseArray(::llvm::ArrayRef($_storage));
 )";
 
 /// A header for indicating code sections.
@@ -343,11 +371,22 @@ public:
       return true;
     if (!op.getDialect().usePropertiesForAttributes())
       return false;
+    if (op.getTrait("::mlir::OpTrait::AttrSizedOperandSegments") ||
+        op.getTrait("::mlir::OpTrait::AttrSizedResultSegments"))
+      return true;
     return llvm::any_of(getAttrMetadata(),
                         [](const std::pair<StringRef, AttributeMetadata> &it) {
                           return !it.second.constraint ||
                                  !it.second.constraint->isDerivedAttr();
                         });
+  }
+
+  std::optional<NamedProperty> &getOperandSegmentsSize() {
+    return operandSegmentsSize;
+  }
+
+  std::optional<NamedProperty> &getResultSegmentsSize() {
+    return resultSegmentsSize;
   }
 
 private:
@@ -361,6 +400,13 @@ private:
 
   // The attribute metadata, mapped by name.
   llvm::MapVector<StringRef, AttributeMetadata> attrMetadata;
+
+  // Property
+  std::optional<NamedProperty> operandSegmentsSize;
+  std::string operandSegmentsSizeStorage;
+  std::optional<NamedProperty> resultSegmentsSize;
+  std::string resultSegmentsSizeStorage;
+
   // The number of required attributes.
   unsigned numRequired;
 };
@@ -377,18 +423,51 @@ void OpOrAdaptorHelper::computeAttrMetadata() {
     attrMetadata.insert(
         {namedAttr.name, AttributeMetadata{namedAttr.name, !isOptional, attr}});
   }
+
+  auto makeProperty = [&](StringRef storageType) {
+    return Property(
+        /*storageType=*/storageType,
+        /*interfaceType=*/"::llvm::ArrayRef<int32_t>",
+        /*convertFromStorageCall=*/"$_storage",
+        /*assignToStorageCall=*/
+        "::llvm::copy($_value, $_storage.begin())",
+        /*convertToAttributeCall=*/
+        "::mlir::DenseI32ArrayAttr::get($_ctxt, $_storage)",
+        /*convertFromAttributeCall=*/
+        "return convertFromAttribute($_storage, $_attr, $_diag);",
+        /*readFromMlirBytecodeCall=*/readBytecodeSegmentSize,
+        /*writeToMlirBytecodeCall=*/writeBytecodeSegmentSize,
+        /*hashPropertyCall=*/
+        "::llvm::hash_combine_range(std::begin($_storage), "
+        "std::end($_storage));",
+        /*StringRef defaultValue=*/"");
+  };
   // Include key attributes from several traits as implicitly registered.
   if (op.getTrait("::mlir::OpTrait::AttrSizedOperandSegments")) {
-    attrMetadata.insert(
-        {operandSegmentAttrName,
-         AttributeMetadata{operandSegmentAttrName, /*isRequired=*/true,
-                           /*attr=*/std::nullopt}});
+    if (op.getDialect().usePropertiesForAttributes()) {
+      operandSegmentsSizeStorage =
+          llvm::formatv("std::array<int32_t, {0}>", op.getNumOperands());
+      operandSegmentsSize = {"operandSegmentSizes",
+                             makeProperty(operandSegmentsSizeStorage)};
+    } else {
+      attrMetadata.insert(
+          {operandSegmentAttrName, AttributeMetadata{operandSegmentAttrName,
+                                                     /*isRequired=*/true,
+                                                     /*attr=*/std::nullopt}});
+    }
   }
   if (op.getTrait("::mlir::OpTrait::AttrSizedResultSegments")) {
-    attrMetadata.insert(
-        {resultSegmentAttrName,
-         AttributeMetadata{resultSegmentAttrName, /*isRequired=*/true,
-                           /*attr=*/std::nullopt}});
+    if (op.getDialect().usePropertiesForAttributes()) {
+      resultSegmentsSizeStorage =
+          llvm::formatv("std::array<int32_t, {0}>", op.getNumResults());
+      resultSegmentsSize = {"resultSegmentSizes",
+                            makeProperty(resultSegmentsSizeStorage)};
+    } else {
+      attrMetadata.insert(
+          {resultSegmentAttrName,
+           AttributeMetadata{resultSegmentAttrName, /*isRequired=*/true,
+                             /*attr=*/std::nullopt}});
+    }
   }
 
   // Store the metadata in sorted order.
@@ -420,6 +499,9 @@ void OpOrAdaptorHelper::computeAttrMetadata() {
 namespace {
 // Helper class to emit a record into the given output stream.
 class OpEmitter {
+  using ConstArgument =
+      llvm::PointerUnion<const AttributeMetadata *, const NamedProperty *>;
+
 public:
   static void
   emitDecl(const Operator &op, raw_ostream &os,
@@ -446,6 +528,10 @@ private:
 
   // Generates code to manage the properties, if any!
   void genPropertiesSupport();
+
+  // Generates code to manage the encoding of properties to bytecode.
+  void
+  genPropertiesSupportForBytecode(ArrayRef<ConstArgument> attrOrProperties);
 
   // Generates getters for the attributes.
   void genAttrGetters();
@@ -660,14 +746,17 @@ static void genNativeTraitAttrVerifier(MethodBody &body,
   // Verify a few traits first so that we can use getODSOperands() and
   // getODSResults() in the rest of the verifier.
   auto &op = emitHelper.getOp();
-  if (op.getTrait("::mlir::OpTrait::AttrSizedOperandSegments")) {
-    body << formatv(checkAttrSizedValueSegmentsCode, operandSegmentAttrName,
-                    op.getNumOperands(), "operand",
-                    emitHelper.emitErrorPrefix());
-  }
-  if (op.getTrait("::mlir::OpTrait::AttrSizedResultSegments")) {
-    body << formatv(checkAttrSizedValueSegmentsCode, resultSegmentAttrName,
-                    op.getNumResults(), "result", emitHelper.emitErrorPrefix());
+  if (!op.getDialect().usePropertiesForAttributes()) {
+    if (op.getTrait("::mlir::OpTrait::AttrSizedOperandSegments")) {
+      body << formatv(checkAttrSizedValueSegmentsCode, operandSegmentAttrName,
+                      op.getNumOperands(), "operand",
+                      emitHelper.emitErrorPrefix());
+    }
+    if (op.getTrait("::mlir::OpTrait::AttrSizedResultSegments")) {
+      body << formatv(checkAttrSizedValueSegmentsCode, resultSegmentAttrName,
+                      op.getNumResults(), "result",
+                      emitHelper.emitErrorPrefix());
+    }
   }
 }
 
@@ -786,10 +875,12 @@ while (true) {{
   if (useProperties) {
     for (const std::pair<StringRef, AttributeMetadata> &it :
          emitHelper.getAttrMetadata()) {
+      const AttributeMetadata &metadata = it.second;
+      if (metadata.constraint && metadata.constraint->isDerivedAttr())
+        continue;
       body << formatv(
           "auto tblgen_{0} = getProperties().{0}; (void)tblgen_{0};\n",
           it.first);
-      const AttributeMetadata &metadata = it.second;
       if (metadata.isRequired)
         body << formatv(
             "if (!tblgen_{0}) return {1}\"requires attribute '{0}'\");\n",
@@ -964,14 +1055,16 @@ static void errorIfPruned(size_t line, Method *m, const Twine &methodName,
 void OpEmitter::genAttrNameGetters() {
   const llvm::MapVector<StringRef, AttributeMetadata> &attributes =
       emitHelper.getAttrMetadata();
-
+  bool hasOperandSegmentsSize =
+      op.getDialect().usePropertiesForAttributes() &&
+      op.getTrait("::mlir::OpTrait::AttrSizedOperandSegments");
   // Emit the getAttributeNames method.
   {
     auto *method = opClass.addStaticInlineMethod(
         "::llvm::ArrayRef<::llvm::StringRef>", "getAttributeNames");
     ERROR_IF_PRUNED(method, "getAttributeNames", op);
     auto &body = method->body();
-    if (attributes.empty()) {
+    if (!hasOperandSegmentsSize && attributes.empty()) {
       body << "  return {};";
       // Nothing else to do if there are no registered attributes. Exit early.
       return;
@@ -981,6 +1074,11 @@ void OpEmitter::genAttrNameGetters() {
                           [&](StringRef attrName) {
                             body << "::llvm::StringRef(\"" << attrName << "\")";
                           });
+    if (hasOperandSegmentsSize) {
+      if (!attributes.empty())
+        body << ", ";
+      body << "::llvm::StringRef(\"" << operandSegmentAttrName << "\")";
+    }
     body << "};\n  return ::llvm::ArrayRef(attrNames);";
   }
 
@@ -1000,12 +1098,16 @@ void OpEmitter::genAttrNameGetters() {
         MethodParameter("unsigned", "index"));
     ERROR_IF_PRUNED(method, "getAttributeNameForIndex", op);
 
-    const char *const getAttrName = R"(
+    if (attributes.empty()) {
+      method->body() << "  return {};";
+    } else {
+      const char *const getAttrName = R"(
   assert(index < {0} && "invalid attribute index");
   assert(name.getStringRef() == getOperationName() && "invalid operation name");
   return name.getAttributeNames()[index];
 )";
-    method->body() << formatv(getAttrName, attributes.size());
+      method->body() << formatv(getAttrName, attributes.size());
+    }
   }
 
   // Generate the <attr>AttrName methods, that expose the attribute names to
@@ -1031,6 +1133,26 @@ void OpEmitter::genAttrNameGetters() {
       ERROR_IF_PRUNED(method, methodName, op);
       method->body() << llvm::formatv(attrNameMethodBody,
                                       "name, " + Twine(index));
+    }
+  }
+  if (hasOperandSegmentsSize) {
+    std::string name = op.getGetterName(operandSegmentAttrName);
+    std::string methodName = name + "AttrName";
+    // Generate the non-static variant.
+    {
+      auto *method = opClass.addInlineMethod("::mlir::StringAttr", methodName);
+      ERROR_IF_PRUNED(method, methodName, op);
+      method->body()
+          << " return (*this)->getName().getAttributeNames().back();";
+    }
+
+    // Generate the static variant.
+    {
+      auto *method = opClass.addStaticInlineMethod(
+          "::mlir::StringAttr", methodName,
+          MethodParameter("::mlir::OperationName", "name"));
+      ERROR_IF_PRUNED(method, methodName, op);
+      method->body() << " return name.getAttributeNames().back();";
     }
   }
 }
@@ -1069,8 +1191,6 @@ static void emitAttrGetterWithReturnType(FmtContext &fctx,
 void OpEmitter::genPropertiesSupport() {
   if (!emitHelper.hasProperties())
     return;
-  using ConstArgument =
-      llvm::PointerUnion<const AttributeMetadata *, const NamedProperty *>;
 
   SmallVector<ConstArgument> attrOrProperties;
   for (const std::pair<StringRef, AttributeMetadata> &it :
@@ -1080,6 +1200,10 @@ void OpEmitter::genPropertiesSupport() {
   }
   for (const NamedProperty &prop : op.getProperties())
     attrOrProperties.push_back(&prop);
+  if (emitHelper.getOperandSegmentsSize())
+    attrOrProperties.push_back(&emitHelper.getOperandSegmentsSize().value());
+  if (emitHelper.getResultSegmentsSize())
+    attrOrProperties.push_back(&emitHelper.getResultSegmentsSize().value());
   if (attrOrProperties.empty())
     return;
   auto &setPropMethod =
@@ -1088,7 +1212,9 @@ void OpEmitter::genPropertiesSupport() {
               "::mlir::LogicalResult", "setPropertiesFromAttr",
               MethodParameter("Properties &", "prop"),
               MethodParameter("::mlir::Attribute", "attr"),
-              MethodParameter("::mlir::InFlightDiagnostic *", "diag"))
+              MethodParameter(
+                  "::llvm::function_ref<::mlir::InFlightDiagnostic()>",
+                  "emitError"))
           ->body();
   auto &getPropMethod =
       opClass
@@ -1104,6 +1230,7 @@ void OpEmitter::genPropertiesSupport() {
   auto &getInherentAttrMethod =
       opClass
           .addStaticMethod("std::optional<mlir::Attribute>", "getInherentAttr",
+                           MethodParameter("::mlir::MLIRContext *", "ctx"),
                            MethodParameter("const Properties &", "prop"),
                            MethodParameter("llvm::StringRef", "name"))
           ->body();
@@ -1117,6 +1244,7 @@ void OpEmitter::genPropertiesSupport() {
   auto &populateInherentAttrsMethod =
       opClass
           .addStaticMethod("void", "populateInherentAttrs",
+                           MethodParameter("::mlir::MLIRContext *", "ctx"),
                            MethodParameter("const Properties &", "prop"),
                            MethodParameter("::mlir::NamedAttrList &", "attrs"))
           ->body();
@@ -1128,22 +1256,7 @@ void OpEmitter::genPropertiesSupport() {
               MethodParameter("::mlir::NamedAttrList &", "attrs"),
               MethodParameter(
                   "llvm::function_ref<::mlir::InFlightDiagnostic()>",
-                  "getDiag"))
-          ->body();
-
-  auto &readPropertiesMethod =
-      opClass
-          .addStaticMethod(
-              "::mlir::LogicalResult", "readProperties",
-              MethodParameter("::mlir::DialectBytecodeReader &", "reader"),
-              MethodParameter("::mlir::OperationState &", "state"))
-          ->body();
-
-  auto &writePropertiesMethod =
-      opClass
-          .addMethod(
-              "void", "writeProperties",
-              MethodParameter("::mlir::DialectBytecodeWriter &", "writer"))
+                  "emitError"))
           ->body();
 
   opClass.declare<UsingDeclaration>("Properties", "FoldAdaptor::Properties");
@@ -1153,8 +1266,7 @@ void OpEmitter::genPropertiesSupport() {
   setPropMethod << R"decl(
   ::mlir::DictionaryAttr dict = ::llvm::dyn_cast<::mlir::DictionaryAttr>(attr);
   if (!dict) {
-    if (diag)
-      *diag << "expected DictionaryAttr to set properties";
+    emitError() << "expected DictionaryAttr to set properties";
     return ::mlir::failure();
   }
     )decl";
@@ -1162,43 +1274,71 @@ void OpEmitter::genPropertiesSupport() {
   const char *propFromAttrFmt = R"decl(;
     {{
       auto setFromAttr = [] (auto &propStorage, ::mlir::Attribute propAttr,
-                             ::mlir::InFlightDiagnostic *propDiag) {{
+               ::llvm::function_ref<::mlir::InFlightDiagnostic()> emitError) {{
         {0};
       };
-      auto attr = dict.get("{1}");
+      {2};
       if (!attr) {{
-        if (diag)
-          *diag << "expected key entry for {1} in DictionaryAttr to set "
+        emitError() << "expected key entry for {1} in DictionaryAttr to set "
                    "Properties.";
         return ::mlir::failure();
       }
-      if (::mlir::failed(setFromAttr(prop.{1}, attr, diag)))
+      if (::mlir::failed(setFromAttr(prop.{1}, attr, emitError)))
         return ::mlir::failure();
     }
 )decl";
+
   for (const auto &attrOrProp : attrOrProperties) {
     if (const auto *namedProperty =
             llvm::dyn_cast_if_present<const NamedProperty *>(attrOrProp)) {
       StringRef name = namedProperty->name;
       auto &prop = namedProperty->prop;
       FmtContext fctx;
+
+      std::string getAttr;
+      llvm::raw_string_ostream os(getAttr);
+      os << "   auto attr = dict.get(\"" << name << "\");";
+      if (name == operandSegmentAttrName) {
+        // Backward compat for now, TODO: Remove at some point.
+        os << "   if (!attr) attr = dict.get(\"operand_segment_sizes\");";
+      }
+      if (name == resultSegmentAttrName) {
+        // Backward compat for now, TODO: Remove at some point.
+        os << "   if (!attr) attr = dict.get(\"result_segment_sizes\");";
+      }
+      os.flush();
+
       setPropMethod << formatv(propFromAttrFmt,
                                tgfmt(prop.getConvertFromAttributeCall(),
                                      &fctx.addSubst("_attr", propertyAttr)
                                           .addSubst("_storage", propertyStorage)
                                           .addSubst("_diag", propertyDiag)),
-                               name);
+                               name, getAttr);
+
     } else {
-      const auto *namedAttr = llvm::dyn_cast_if_present<const AttributeMetadata *>(attrOrProp);
+      const auto *namedAttr =
+          llvm::dyn_cast_if_present<const AttributeMetadata *>(attrOrProp);
       StringRef name = namedAttr->attrName;
+      std::string getAttr;
+      llvm::raw_string_ostream os(getAttr);
+      os << "   auto attr = dict.get(\"" << name << "\");";
+      if (name == operandSegmentAttrName) {
+        // Backward compat for now
+        os << "   if (!attr) attr = dict.get(\"operand_segment_sizes\");";
+      }
+      if (name == resultSegmentAttrName) {
+        // Backward compat for now
+        os << "   if (!attr) attr = dict.get(\"result_segment_sizes\");";
+      }
+      os.flush();
+
       setPropMethod << formatv(R"decl(
   {{
     auto &propStorage = prop.{0};
-    auto attr = dict.get("{0}");
+    {2}
     if (attr || /*isRequired=*/{1}) {{
       if (!attr) {{
-        if (diag)
-          *diag << "expected key entry for {0} in DictionaryAttr to set "
+        emitError() << "expected key entry for {0} in DictionaryAttr to set "
                    "Properties.";
         return ::mlir::failure();
       }
@@ -1206,14 +1346,13 @@ void OpEmitter::genPropertiesSupport() {
       if (convertedAttr) {{
         propStorage = convertedAttr;
       } else {{
-        if (diag)
-          *diag << "Invalid attribute `{0}` in property conversion: " << attr;
+        emitError() << "Invalid attribute `{0}` in property conversion: " << attr;
         return ::mlir::failure();
       }
     }
   }
 )decl",
-                               name, namedAttr->isRequired);
+                               name, namedAttr->isRequired, getAttr);
     }
   }
   setPropMethod << "  return ::mlir::success();\n";
@@ -1242,7 +1381,8 @@ void OpEmitter::genPropertiesSupport() {
                      .addSubst("_storage", propertyStorage)));
       continue;
     }
-    const auto *namedAttr = llvm::dyn_cast_if_present<const AttributeMetadata *>(attrOrProp);
+    const auto *namedAttr =
+        llvm::dyn_cast_if_present<const AttributeMetadata *>(attrOrProp);
     StringRef name = namedAttr->attrName;
     getPropMethod << formatv(R"decl(
     {{
@@ -1301,7 +1441,7 @@ void OpEmitter::genPropertiesSupport() {
 )decl";
   const char *setInherentAttrMethodFmt = R"decl(
     if (name == "{0}") {{
-       prop.{0} = dyn_cast_or_null<std::remove_reference_t<decltype(prop.{0})>>(value);
+       prop.{0} = ::llvm::dyn_cast_or_null<std::remove_reference_t<decltype(prop.{0})>>(value);
        return;
     }
 )decl";
@@ -1318,6 +1458,60 @@ void OpEmitter::genPropertiesSupport() {
           << formatv(populateInherentAttrsMethodFmt, name);
       continue;
     }
+    // The ODS segment size property is "special": we expose it as an attribute
+    // even though it is a native property.
+    const auto *namedProperty = cast<const NamedProperty *>(attrOrProp);
+    StringRef name = namedProperty->name;
+    if (name != operandSegmentAttrName && name != resultSegmentAttrName)
+      continue;
+    auto &prop = namedProperty->prop;
+    FmtContext fctx;
+    fctx.addSubst("_ctxt", "ctx");
+    fctx.addSubst("_storage", Twine("prop.") + name);
+    if (name == operandSegmentAttrName) {
+      getInherentAttrMethod
+          << formatv("    if (name == \"operand_segment_sizes\" || name == "
+                     "\"{0}\") return ",
+                     operandSegmentAttrName);
+    } else {
+      getInherentAttrMethod
+          << formatv("    if (name == \"result_segment_sizes\" || name == "
+                     "\"{0}\") return ",
+                     resultSegmentAttrName);
+    }
+    getInherentAttrMethod << tgfmt(prop.getConvertToAttributeCall(), &fctx)
+                          << ";\n";
+
+    if (name == operandSegmentAttrName) {
+      setInherentAttrMethod
+          << formatv("        if (name == \"operand_segment_sizes\" || name == "
+                     "\"{0}\") {{",
+                     operandSegmentAttrName);
+    } else {
+      setInherentAttrMethod
+          << formatv("        if (name == \"result_segment_sizes\" || name == "
+                     "\"{0}\") {{",
+                     resultSegmentAttrName);
+    }
+    setInherentAttrMethod << formatv(R"decl(
+       auto arrAttr = ::llvm::dyn_cast_or_null<::mlir::DenseI32ArrayAttr>(value);
+       if (!arrAttr) return;
+       if (arrAttr.size() != sizeof(prop.{0}) / sizeof(int32_t))
+         return;
+       llvm::copy(arrAttr.asArrayRef(), prop.{0}.begin());
+       return;
+    }
+)decl",
+                                     name);
+    if (name == operandSegmentAttrName) {
+      populateInherentAttrsMethod
+          << formatv("  attrs.append(\"{0}\", {1});\n", operandSegmentAttrName,
+                     tgfmt(prop.getConvertToAttributeCall(), &fctx));
+    } else {
+      populateInherentAttrsMethod
+          << formatv("  attrs.append(\"{0}\", {1});\n", resultSegmentAttrName,
+                     tgfmt(prop.getConvertToAttributeCall(), &fctx));
+    }
   }
   getInherentAttrMethod << "  return std::nullopt;\n";
 
@@ -1325,7 +1519,8 @@ void OpEmitter::genPropertiesSupport() {
   // syntax. This method verifies the constraint on the properties attributes
   // before they are set, since dyn_cast<> will silently omit failures.
   for (const auto &attrOrProp : attrOrProperties) {
-    const auto *namedAttr = llvm::dyn_cast_if_present<const AttributeMetadata *>(attrOrProp);
+    const auto *namedAttr =
+        llvm::dyn_cast_if_present<const AttributeMetadata *>(attrOrProp);
     if (!namedAttr || !namedAttr->constraint)
       continue;
     Attribute attr = *namedAttr->constraint;
@@ -1340,7 +1535,7 @@ void OpEmitter::genPropertiesSupport() {
           << formatv(R"(
     {{
       ::mlir::Attribute attr = attrs.get({0}AttrName(opName));
-      if (attr && ::mlir::failed({1}(attr, "{2}", getDiag)))
+      if (attr && ::mlir::failed({1}(attr, "{2}", emitError)))
         return ::mlir::failure();
     }
 )",
@@ -1348,6 +1543,38 @@ void OpEmitter::genPropertiesSupport() {
     }
   }
   verifyInherentAttrsMethod << "    return ::mlir::success();";
+
+  // Generate methods to interact with bytecode.
+  genPropertiesSupportForBytecode(attrOrProperties);
+}
+
+void OpEmitter::genPropertiesSupportForBytecode(
+    ArrayRef<ConstArgument> attrOrProperties) {
+  if (op.useCustomPropertiesEncoding()) {
+    opClass.declareStaticMethod(
+        "::mlir::LogicalResult", "readProperties",
+        MethodParameter("::mlir::DialectBytecodeReader &", "reader"),
+        MethodParameter("::mlir::OperationState &", "state"));
+    opClass.declareMethod(
+        "void", "writeProperties",
+        MethodParameter("::mlir::DialectBytecodeWriter &", "writer"));
+    return;
+  }
+
+  auto &readPropertiesMethod =
+      opClass
+          .addStaticMethod(
+              "::mlir::LogicalResult", "readProperties",
+              MethodParameter("::mlir::DialectBytecodeReader &", "reader"),
+              MethodParameter("::mlir::OperationState &", "state"))
+          ->body();
+
+  auto &writePropertiesMethod =
+      opClass
+          .addMethod(
+              "void", "writeProperties",
+              MethodParameter("::mlir::DialectBytecodeWriter &", "writer"))
+          ->body();
 
   // Populate bytecode serialization logic.
   readPropertiesMethod
@@ -1360,7 +1587,8 @@ void OpEmitter::genPropertiesSupport() {
       FmtContext fctx;
       fctx.addSubst("_reader", "reader")
           .addSubst("_writer", "writer")
-          .addSubst("_storage", propertyStorage);
+          .addSubst("_storage", propertyStorage)
+          .addSubst("_ctxt", "this->getContext()");
       readPropertiesMethod << formatv(
           R"(
   {{
@@ -1814,8 +2042,13 @@ void OpEmitter::genNamedOperandGetters() {
   // array.
   std::string attrSizeInitCode;
   if (op.getTrait("::mlir::OpTrait::AttrSizedOperandSegments")) {
-    attrSizeInitCode = formatv(opSegmentSizeAttrInitCode,
-                               emitHelper.getAttr(operandSegmentAttrName));
+    if (op.getDialect().usePropertiesForAttributes())
+      attrSizeInitCode = formatv(adapterSegmentSizeAttrInitCodeProperties,
+                                 "getProperties().operandSegmentSizes");
+
+    else
+      attrSizeInitCode = formatv(opSegmentSizeAttrInitCode,
+                                 emitHelper.getAttr(operandSegmentAttrName));
   }
 
   generateNamedOperandGetters(
@@ -1850,10 +2083,11 @@ void OpEmitter::genNamedOperandSetters() {
             "range.first, range.second";
     if (attrSizedOperands) {
       if (emitHelper.hasProperties())
-        body << formatv(
-            ", ::mlir::MutableOperandRange::OperandSegment({0}u, "
-            "{getOperandSegmentSizesAttrName(), getProperties().{1}})",
-            i, operandSegmentAttrName);
+        body << formatv(", ::mlir::MutableOperandRange::OperandSegment({0}u, "
+                        "{{getOperandSegmentSizesAttrName(), "
+                        "::mlir::DenseI32ArrayAttr::get(getContext(), "
+                        "getProperties().operandSegmentSizes)})",
+                        i);
       else
         body << formatv(
             ", ::mlir::MutableOperandRange::OperandSegment({0}u, *{1})", i,
@@ -1909,8 +2143,13 @@ void OpEmitter::genNamedResultGetters() {
   // Build the initializer string for the result segment size attribute.
   std::string attrSizeInitCode;
   if (attrSizedResults) {
-    attrSizeInitCode = formatv(opSegmentSizeAttrInitCode,
-                               emitHelper.getAttr(resultSegmentAttrName));
+    if (op.getDialect().usePropertiesForAttributes())
+      attrSizeInitCode = formatv(adapterSegmentSizeAttrInitCodeProperties,
+                                 "getProperties().resultSegmentSizes");
+
+    else
+      attrSizeInitCode = formatv(opSegmentSizeAttrInitCode,
+                                 emitHelper.getAttr(resultSegmentAttrName));
   }
 
   generateValueRangeStartAndEnd(
@@ -2081,14 +2320,11 @@ void OpEmitter::genSeparateArgParamBuilder() {
              << ");\n";
       }
 
-      // Automatically create the 'result_segment_sizes' attribute using
+      // Automatically create the 'resultSegmentSizes' attribute using
       // the length of the type ranges.
       if (op.getTrait("::mlir::OpTrait::AttrSizedResultSegments")) {
         if (op.getDialect().usePropertiesForAttributes()) {
-          body << "  (" << builderOpState
-               << ".getOrAddProperties<Properties>()." << resultSegmentAttrName
-               << " = \n"
-                  "        odsBuilder.getDenseI32ArrayAttr({";
+          body << "  ::llvm::copy(::llvm::ArrayRef<int32_t>({";
         } else {
           std::string getterName = op.getGetterName(resultSegmentAttrName);
           body << " " << builderOpState << ".addAttribute(" << getterName
@@ -2111,7 +2347,13 @@ void OpEmitter::genSeparateArgParamBuilder() {
                 body << "static_cast<int32_t>(" << resultNames[i] << ".size())";
               }
             });
-        body << "}));\n";
+        if (op.getDialect().usePropertiesForAttributes()) {
+          body << "}), " << builderOpState
+               << ".getOrAddProperties<Properties>()."
+                  "resultSegmentSizes.begin());\n";
+        } else {
+          body << "}));\n";
+        }
       }
 
       return;
@@ -2576,7 +2818,8 @@ void OpEmitter::buildParamList(SmallVectorImpl<MethodParameter> &paramList,
     // Calculate the start index from which we can attach default values in the
     // builder declaration.
     for (int i = op.getNumArgs() - 1; i >= 0; --i) {
-      auto *namedAttr = llvm::dyn_cast_if_present<tblgen::NamedAttribute *>(op.getArg(i));
+      auto *namedAttr =
+          llvm::dyn_cast_if_present<tblgen::NamedAttribute *>(op.getArg(i));
       if (!namedAttr || !namedAttr->attr.hasDefaultValue())
         break;
 
@@ -2606,7 +2849,8 @@ void OpEmitter::buildParamList(SmallVectorImpl<MethodParameter> &paramList,
 
   for (int i = 0, e = op.getNumArgs(), numOperands = 0; i < e; ++i) {
     Argument arg = op.getArg(i);
-    if (const auto *operand = llvm::dyn_cast_if_present<NamedTypeConstraint *>(arg)) {
+    if (const auto *operand =
+            llvm::dyn_cast_if_present<NamedTypeConstraint *>(arg)) {
       StringRef type;
       if (operand->isVariadicOfVariadic())
         type = "::llvm::ArrayRef<::mlir::ValueRange>";
@@ -2619,7 +2863,8 @@ void OpEmitter::buildParamList(SmallVectorImpl<MethodParameter> &paramList,
                              operand->isOptional());
       continue;
     }
-    if (const auto *operand = llvm::dyn_cast_if_present<NamedProperty *>(arg)) {
+    if ([[maybe_unused]] const auto *operand =
+            llvm::dyn_cast_if_present<NamedProperty *>(arg)) {
       // TODO
       continue;
     }
@@ -2705,17 +2950,7 @@ void OpEmitter::genCodeForAddingArgAndRegionForBuilder(
   }
 
   // If the operation has the operand segment size attribute, add it here.
-  if (op.getTrait("::mlir::OpTrait::AttrSizedOperandSegments")) {
-    std::string sizes = op.getGetterName(operandSegmentAttrName);
-    if (op.getDialect().usePropertiesForAttributes()) {
-      body << "   (" << builderOpState << ".getOrAddProperties<Properties>()."
-           << operandSegmentAttrName << "= "
-           << "odsBuilder.getDenseI32ArrayAttr({";
-    } else {
-      body << "  " << builderOpState << ".addAttribute(" << sizes << "AttrName("
-           << builderOpState << ".name), "
-           << "odsBuilder.getDenseI32ArrayAttr({";
-    }
+  auto emitSegment = [&]() {
     interleaveComma(llvm::seq<int>(0, op.getNumOperands()), body, [&](int i) {
       const NamedTypeConstraint &operand = op.getOperand(i);
       if (!operand.isVariableLength()) {
@@ -2736,7 +2971,22 @@ void OpEmitter::genCodeForAddingArgAndRegionForBuilder(
         body << "static_cast<int32_t>(" << getArgumentName(op, i) << ".size())";
       }
     });
-    body << "}));\n";
+  };
+  if (op.getTrait("::mlir::OpTrait::AttrSizedOperandSegments")) {
+    std::string sizes = op.getGetterName(operandSegmentAttrName);
+    if (op.getDialect().usePropertiesForAttributes()) {
+      body << "  ::llvm::copy(::llvm::ArrayRef<int32_t>({";
+      emitSegment();
+      body << "}), " << builderOpState
+           << ".getOrAddProperties<Properties>()."
+              "operandSegmentSizes.begin());\n";
+    } else {
+      body << "  " << builderOpState << ".addAttribute(" << sizes << "AttrName("
+           << builderOpState << ".name), "
+           << "odsBuilder.getDenseI32ArrayAttr({";
+      emitSegment();
+      body << "}));\n";
+    }
   }
 
   // Push all attributes to the result.
@@ -2832,7 +3082,7 @@ void OpEmitter::genCanonicalizerDecls() {
   auto *method = opClass.addMethod("void", "getCanonicalizationPatterns", kind,
                                    std::move(paramList));
 
-  // If synthesizing the method, fill it it.
+  // If synthesizing the method, fill it.
   if (hasBody) {
     ERROR_IF_PRUNED(method, "getCanonicalizationPatterns", op);
     method->body() << "  results.add(canonicalize);\n";
@@ -2961,9 +3211,11 @@ void OpEmitter::genSideEffectInterfaceMethods() {
   // The code used to add an effect instance.
   // {0}: The effect class.
   // {1}: Optional value or symbol reference.
-  // {1}: The resource class.
+  // {2}: The side effect stage.
+  // {3}: Does this side effect act on every single value of resource.
+  // {4}: The resource class.
   const char *addEffectCode =
-      "  effects.emplace_back({0}::get(), {1}{2}::get());\n";
+      "  effects.emplace_back({0}::get(), {1}{2}, {3}, {4}::get());\n";
 
   for (auto &it : interfaceEffects) {
     // Generate the 'getEffects' method.
@@ -2980,20 +3232,25 @@ void OpEmitter::genSideEffectInterfaceMethods() {
     for (auto &location : it.second) {
       StringRef effect = location.effect.getName();
       StringRef resource = location.effect.getResource();
+      int stage = (int)location.effect.getStage();
+      bool effectOnFullRegion = (int)location.effect.getEffectOnfullRegion();
       if (location.kind == EffectKind::Static) {
         // A static instance has no attached value.
-        body << llvm::formatv(addEffectCode, effect, "", resource).str();
+        body << llvm::formatv(addEffectCode, effect, "", stage,
+                              effectOnFullRegion, resource)
+                    .str();
       } else if (location.kind == EffectKind::Symbol) {
         // A symbol reference requires adding the proper attribute.
         const auto *attr = op.getArg(location.index).get<NamedAttribute *>();
         std::string argName = op.getGetterName(attr->name);
         if (attr->attr.isOptional()) {
           body << "  if (auto symbolRef = " << argName << "Attr())\n  "
-               << llvm::formatv(addEffectCode, effect, "symbolRef, ", resource)
+               << llvm::formatv(addEffectCode, effect, "symbolRef, ", stage,
+                                effectOnFullRegion, resource)
                       .str();
         } else {
           body << llvm::formatv(addEffectCode, effect, argName + "Attr(), ",
-                                resource)
+                                stage, effectOnFullRegion, resource)
                       .str();
         }
       } else {
@@ -3001,7 +3258,9 @@ void OpEmitter::genSideEffectInterfaceMethods() {
         body << "  for (::mlir::Value value : getODS"
              << (location.kind == EffectKind::Operand ? "Operands" : "Results")
              << "(" << location.index << "))\n  "
-             << llvm::formatv(addEffectCode, effect, "value, ", resource).str();
+             << llvm::formatv(addEffectCode, effect, "value, ", stage,
+                              effectOnFullRegion, resource)
+                    .str();
       }
     }
   }
@@ -3540,6 +3799,10 @@ OpOperandAdaptorEmitter::OpOperandAdaptorEmitter(
     }
     for (const NamedProperty &prop : op.getProperties())
       attrOrProperties.push_back(&prop);
+    if (emitHelper.getOperandSegmentsSize())
+      attrOrProperties.push_back(&emitHelper.getOperandSegmentsSize().value());
+    if (emitHelper.getResultSegmentsSize())
+      attrOrProperties.push_back(&emitHelper.getResultSegmentsSize().value());
     assert(!attrOrProperties.empty());
     std::string declarations = "  struct Properties {\n";
     llvm::raw_string_ostream os(declarations);
@@ -3583,7 +3846,8 @@ OpOperandAdaptorEmitter::OpOperandAdaptorEmitter(
                                  .addSubst("_storage", propertyStorage)));
         continue;
       }
-      const auto *namedAttr = llvm::dyn_cast_if_present<const AttributeMetadata *>(attrOrProp);
+      const auto *namedAttr =
+          llvm::dyn_cast_if_present<const AttributeMetadata *>(attrOrProp);
       const Attribute *attr = nullptr;
       if (namedAttr->constraint)
         attr = &*namedAttr->constraint;
@@ -3707,10 +3971,44 @@ OpOperandAdaptorEmitter::OpOperandAdaptorEmitter(
     }
   }
 
+  // Create constructors constructing the adaptor from an instance of the op.
+  // This takes the attributes, properties and regions from the op instance
+  // and the value range from the parameter.
+  {
+    // Base class is in the cpp file and can simply access the members of the op
+    // class to initialize the template independent fields.
+    auto *constructor = genericAdaptorBase.addConstructor(
+        MethodParameter(op.getCppClassName(), "op"));
+    constructor->addMemberInitializer(
+        genericAdaptorBase.getClassName(),
+        llvm::Twine(!useProperties ? "op->getAttrDictionary()"
+                                   : "op->getDiscardableAttrDictionary()") +
+            ", op.getProperties(), op->getRegions()");
+
+    // Generic adaptor is templated and therefore defined inline in the header.
+    // We cannot use the Op class here as it is an incomplete type (we have a
+    // circular reference between the two).
+    // Use a template trick to make the constructor be instantiated at call site
+    // when the op class is complete.
+    constructor = genericAdaptor.addConstructor(
+        MethodParameter("RangeT", "values"), MethodParameter("LateInst", "op"));
+    constructor->addTemplateParam("LateInst = " + op.getCppClassName());
+    constructor->addTemplateParam(
+        "= std::enable_if_t<std::is_same_v<LateInst, " + op.getCppClassName() +
+        ">>");
+    constructor->addMemberInitializer("Base", "op");
+    constructor->addMemberInitializer("odsOperands", "values");
+  }
+
   std::string sizeAttrInit;
   if (op.getTrait("::mlir::OpTrait::AttrSizedOperandSegments")) {
-    sizeAttrInit = formatv(adapterSegmentSizeAttrInitCode,
-                           emitHelper.getAttr(operandSegmentAttrName));
+    if (op.getDialect().usePropertiesForAttributes())
+      sizeAttrInit =
+          formatv(adapterSegmentSizeAttrInitCodeProperties,
+                  llvm::formatv("getProperties().operandSegmentSizes"));
+    else
+      sizeAttrInit = formatv(adapterSegmentSizeAttrInitCode,
+                             emitHelper.getAttr(operandSegmentAttrName));
   }
   generateNamedOperandGetters(op, genericAdaptor,
                               /*genericAdaptorBase=*/&genericAdaptorBase,
@@ -3815,9 +4113,8 @@ OpOperandAdaptorEmitter::OpOperandAdaptorEmitter(
     // Constructor taking the Op as single parameter.
     auto *constructor =
         adaptor.addConstructor(MethodParameter(op.getCppClassName(), "op"));
-    constructor->addMemberInitializer(
-        adaptor.getClassName(), "op->getOperands(), op->getAttrDictionary(), "
-                                "op.getProperties(), op->getRegions()");
+    constructor->addMemberInitializer(genericAdaptorClassName,
+                                      "op->getOperands(), op");
   }
 
   // Add verification function.
@@ -3937,7 +4234,7 @@ static void emitOpList(const std::vector<Record *> &defs, raw_ostream &os) {
 }
 
 static bool emitOpDecls(const RecordKeeper &recordKeeper, raw_ostream &os) {
-  emitSourceFileHeader("Op Declarations", os);
+  emitSourceFileHeader("Op Declarations", os, recordKeeper);
 
   std::vector<Record *> defs = getRequestedOpDefinitions(recordKeeper);
   emitOpClasses(recordKeeper, defs, os, /*emitDecl=*/true);
@@ -3946,7 +4243,7 @@ static bool emitOpDecls(const RecordKeeper &recordKeeper, raw_ostream &os) {
 }
 
 static bool emitOpDefs(const RecordKeeper &recordKeeper, raw_ostream &os) {
-  emitSourceFileHeader("Op Definitions", os);
+  emitSourceFileHeader("Op Definitions", os, recordKeeper);
 
   std::vector<Record *> defs = getRequestedOpDefinitions(recordKeeper);
   emitOpList(defs, os);

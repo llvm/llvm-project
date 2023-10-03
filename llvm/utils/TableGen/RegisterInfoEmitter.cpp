@@ -146,8 +146,7 @@ void RegisterInfoEmitter::runEnums(raw_ostream &OS,
       OS << "namespace " << Namespace << " {\n";
     OS << "enum {\n";
     for (const auto &RC : RegisterClasses)
-      OS << "  " << RC.getName() << "RegClassID"
-         << " = " << RC.EnumValue << ",\n";
+      OS << "  " << RC.getIdName() << " = " << RC.EnumValue << ",\n";
     OS << "\n};\n";
     if (!Namespace.empty())
       OS << "} // end namespace " << Namespace << "\n\n";
@@ -932,12 +931,6 @@ RegisterInfoEmitter::runMCDesc(raw_ostream &OS, CodeGenTarget &Target,
     MaskVec &LaneMaskVec = RegUnitLaneMasks[i];
     assert(LaneMaskVec.empty());
     llvm::append_range(LaneMaskVec, RUMasks);
-    // Terminator mask should not be used inside of the list.
-#ifndef NDEBUG
-    for (LaneBitmask M : LaneMaskVec) {
-      assert(!M.all() && "terminator mask should not be part of the list");
-    }
-#endif
     LaneMaskSeqs.add(LaneMaskVec);
   }
 
@@ -957,6 +950,8 @@ RegisterInfoEmitter::runMCDesc(raw_ostream &OS, CodeGenTarget &Target,
 
   // Emit the shared table of regunit lane mask sequences.
   OS << "extern const LaneBitmask " << TargetName << "LaneMaskLists[] = {\n";
+  // TODO: Omit the terminator since it is never used. The length of this list
+  // is known implicitly from the corresponding reg unit list.
   LaneMaskSeqs.emit(OS, printMask, "LaneBitmask::getAll()");
   OS << "};\n\n";
 
@@ -1072,8 +1067,8 @@ RegisterInfoEmitter::runMCDesc(raw_ostream &OS, CodeGenTarget &Target,
       RegSize = RC.RSI.getSimple().RegSize;
     OS << "  { " << RCName << ", " << RCBitsName << ", "
        << RegClassStrings.get(RC.getName()) << ", " << RC.getOrder().size()
-       << ", " << RCBitsSize << ", " << RC.getQualifiedName() + "RegClassID"
-       << ", " << RegSize << ", " << RC.CopyCost << ", "
+       << ", " << RCBitsSize << ", " << RC.getQualifiedIdName() << ", "
+       << RegSize << ", " << RC.CopyCost << ", "
        << (RC.Allocatable ? "true" : "false") << " },\n";
   }
 
@@ -1295,7 +1290,7 @@ RegisterInfoEmitter::runTargetDesc(raw_ostream &OS, CodeGenTarget &Target,
         for (const ValueTypeByHwMode &VVT : RC.VTs)
           if (VVT.hasDefault() || VVT.hasMode(M))
             VTs.push_back(VVT.get(M).SimpleTy);
-        OS << ", VTLists+" << VTSeqs.get(VTs) << " },    // "
+        OS << ", /*VTLists+*/" << VTSeqs.get(VTs) << " },    // "
            << RC.getName() << '\n';
       }
     }
@@ -1591,8 +1586,8 @@ RegisterInfoEmitter::runTargetDesc(raw_ostream &OS, CodeGenTarget &Target,
         BaseClasses.push_back(&RC);
     }
     if (!BaseClasses.empty()) {
-      // Represent class indexes with uint8_t and allocate one index for nullptr
-      assert(BaseClasses.size() <= UINT8_MAX && "Too many base register classes");
+      assert(BaseClasses.size() < UINT16_MAX &&
+             "Too many base register classes");
 
       // Apply order
       struct BaseClassOrdering {
@@ -1603,30 +1598,34 @@ RegisterInfoEmitter::runTargetDesc(raw_ostream &OS, CodeGenTarget &Target,
       };
       llvm::stable_sort(BaseClasses, BaseClassOrdering());
 
-      // Build mapping for Regs (+1 for NoRegister)
-      std::vector<uint8_t> Mapping(Regs.size() + 1, 0);
-      for (int RCIdx = BaseClasses.size() - 1; RCIdx >= 0; --RCIdx) {
-        for (const auto Reg : BaseClasses[RCIdx]->getMembers())
-          Mapping[Reg->EnumValue] = RCIdx + 1;
-      }
-
       OS << "\n// Register to base register class mapping\n\n";
       OS << "\n";
       OS << "const TargetRegisterClass *" << ClassName
          << "::getPhysRegBaseClass(MCRegister Reg)"
          << " const {\n";
-      OS << "  static const TargetRegisterClass *BaseClasses[" << (BaseClasses.size() + 1) << "] = {\n";
-      OS << "    nullptr,\n";
-      for (const auto RC : BaseClasses)
-        OS << "    &" << RC->getQualifiedName() << "RegClass,\n";
-      OS << "  };\n";
-      OS << "  static const uint8_t Mapping[" << Mapping.size() << "] = {\n    ";
-      for (const uint8_t Value : Mapping)
-        OS << (unsigned)Value << ",";
-      OS << "  };\n\n";
-      OS << "  assert(Reg < sizeof(Mapping));\n";
-      OS << "  return BaseClasses[Mapping[Reg]];\n";
-      OS << "}\n";
+      OS << "  static const uint16_t InvalidRegClassID = UINT16_MAX;\n\n";
+      OS << "  static const uint16_t Mapping[" << Regs.size() + 1 << "] = {\n";
+      OS << "    InvalidRegClassID,  // NoRegister\n";
+      for (const CodeGenRegister &Reg : Regs) {
+        const CodeGenRegisterClass *BaseRC = nullptr;
+        for (const CodeGenRegisterClass *RC : BaseClasses) {
+          if (is_contained(RC->getMembers(), &Reg)) {
+            BaseRC = RC;
+            break;
+          }
+        }
+
+        OS << "    "
+           << (BaseRC ? BaseRC->getQualifiedIdName() : "InvalidRegClassID")
+           << ",  // " << Reg.getName() << "\n";
+      }
+      OS << "  };\n\n"
+            "  assert(Reg < ArrayRef(Mapping).size());\n"
+            "  unsigned RCID = Mapping[Reg];\n"
+            "  if (RCID == InvalidRegClassID)\n"
+            "    return nullptr;\n"
+            "  return RegisterClasses[RCID];\n"
+            "}\n";
     }
   }
 
@@ -1653,7 +1652,7 @@ RegisterInfoEmitter::runTargetDesc(raw_ostream &OS, CodeGenTarget &Target,
      << "             SubRegIndexNameTable, SubRegIndexLaneMaskTable,\n"
      << "             ";
   printMask(OS, RegBank.CoveringLanes);
-  OS << ", RegClassInfos, HwMode) {\n"
+  OS << ", RegClassInfos, VTLists, HwMode) {\n"
      << "  InitMCRegisterInfo(" << TargetName << "RegDesc, " << Regs.size() + 1
      << ", RA, PC,\n                     " << TargetName
      << "MCRegisterClasses, " << RegisterClasses.size() << ",\n"

@@ -56,11 +56,6 @@
 # BAD-MODE: error: unknown --android-memtag-mode value: "asymm", should be one of
 # BAD-MODE: {async, sync, none}
 
-# RUN: not ld.lld -shared --android-memtag-mode=async 2>&1 | \
-# RUN:    FileCheck %s --check-prefix=MISSING-STACK-OR-HEAP
-# MISSING-STACK-OR-HEAP: error: when using --android-memtag-mode, at least one of
-# MISSING-STACK-OR-HEAP: --android-memtag-heap or --android-memtag-stack is required
-
 .globl _start
 _start:
   ret

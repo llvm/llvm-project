@@ -475,7 +475,7 @@ sense after reading the remainder of this guide.
        def Foo#i;
 
 .. productionlist::
-   SimpleValue8: `ClassID` "<" `ValueListNE` ">"
+   SimpleValue8: `ClassID` "<" `ArgValueList` ">"
 
 This form creates a new anonymous record definition (as would be created by an
 unnamed ``def`` inheriting from the given class with the given template
@@ -642,11 +642,30 @@ of the fields of the class or record.
    RecordBody: `ParentClassList` `Body`
    ParentClassList: [":" `ParentClassListNE`]
    ParentClassListNE: `ClassRef` ("," `ClassRef`)*
-   ClassRef: (`ClassID` | `MultiClassID`) ["<" [`ValueList`] ">"]
+   ClassRef: (`ClassID` | `MultiClassID`) ["<" [`ArgValueList`] ">"]
+   ArgValueList: `PostionalArgValueList` [","] `NamedArgValueList`
+   PostionalArgValueList: [`Value` {"," `Value`}*]
+   NamedArgValueList: [`NameValue` "=" `Value` {"," `NameValue` "=" `Value`}*]
 
 A :token:`ParentClassList` containing a :token:`MultiClassID` is valid only
 in the class list of a ``defm`` statement. In that case, the ID must be the
 name of a multiclass.
+
+The argument values can be specified in two forms:
+
+* Positional argument (``value``). The value is assigned to the argument in the
+  corresponding position. For ``Foo<a0, a1>``, ``a0`` will be assigned to first
+  argument and ``a1`` will be assigned to second argument.
+* Named argument (``name=value``). The value is assigned to the argument with
+  the specified name. For ``Foo<a=a0, b=a1>``, ``a0`` will be assigned to the
+  argument with name ``a`` and ``a1`` will be assigned to the argument with
+  name ``b``.
+
+Required arguments can alse be specified as named argument.
+
+Note that the argument can only be specified once regardless of the way (named
+or positional) to specify and positional arguments should be put before named
+arguments.
 
 .. productionlist::
    Body: ";" | "{" `BodyItem`* "}"
@@ -1812,11 +1831,21 @@ and non-0 as true.
     result. A logical OR can be performed if all the arguments are either
     0 or 1.
 
-``!range([``\ *a*\ ``,``] *b*\ ``)``
-    This operator produces half-open range sequence ``[a : b)`` as ``list<int>``.
-    *a* is ``0`` by default. ``!range(4)`` is equivalent to ``!range(0, 4)``.
-    The result is `[0, 1, 2, 3]`.
-    If *a* ``>=`` *b*, then the result is `[]<list<int>>`.
+``!range([``\ *start*\ ``,]`` *end*\ ``[, ``\ *step*\ ``])``
+    This operator produces half-open range sequence ``[start : end : step)`` as
+    ``list<int>``. *start* is ``0`` and *step* is ``1`` by default. *step* can
+    be negative and cannot be 0. If *start* ``<`` *end* and *step* is negative,
+    or *start* ``>`` *end* and *step* is positive, the result is an empty list
+    ``[]<list<int>>``.
+
+    For example:
+
+    * ``!range(4)`` is equivalent to ``!range(0, 4, 1)`` and the result is
+      `[0, 1, 2, 3]`.
+    * ``!range(1, 4)`` is equivalent to ``!range(1, 4, 1)`` and the result is
+      `[1, 2, 3]`.
+    * The result of ``!range(0, 4, 2)`` is `[0, 2]`.
+    * The results of ``!range(0, 4, -1)`` and ``!range(4, 0, 1)`` are empty.
 
 ``!range(``\ *list*\ ``)``
     Equivalent to ``!range(0, !size(list))``.

@@ -56,7 +56,7 @@ public:
   Frame *getCaller() const override;
 
   /// Returns the location of the call to the frame.
-  SourceLocation getCallLocation() const override;
+  SourceRange getCallRange() const override;
 
   /// Returns the caller.
   const FunctionDecl *getCallee() const override;
@@ -118,6 +118,7 @@ public:
   virtual SourceInfo getSource(CodePtr PC) const;
   const Expr *getExpr(CodePtr PC) const;
   SourceLocation getLocation(CodePtr PC) const;
+  SourceRange getRange(CodePtr PC) const;
 
   unsigned getDepth() const { return Depth; }
 
@@ -138,7 +139,7 @@ private:
     return reinterpret_cast<Block *>(Locals.get() + Offset - sizeof(Block));
   }
 
-  // Returns the inline descriptor of the local.
+  /// Returns the inline descriptor of the local.
   InlineDescriptor *localInlineDesc(unsigned Offset) const {
     return reinterpret_cast<InlineDescriptor *>(Locals.get() + Offset);
   }

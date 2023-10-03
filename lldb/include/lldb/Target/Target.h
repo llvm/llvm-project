@@ -167,6 +167,8 @@ public:
 
   bool GetEnableSyntheticValue() const;
 
+  bool ShowHexVariableValuesWithLeadingZeroes() const;
+
   uint32_t GetMaxZeroPaddingInFloatFormat() const;
 
   uint32_t GetMaximumNumberOfChildrenToDisplay() const;
@@ -1625,12 +1627,6 @@ private:
 
   Target(const Target &) = delete;
   const Target &operator=(const Target &) = delete;
-
-private:
-  void CallLocateModuleCallbackIfSet(const ModuleSpec &module_spec,
-                                     lldb::ModuleSP &module_sp,
-                                     FileSpec &symbol_file_spec,
-                                     bool &did_create_module);
 };
 
 } // namespace lldb_private

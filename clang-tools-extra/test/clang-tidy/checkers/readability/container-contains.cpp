@@ -1,4 +1,4 @@
-// RUN: %check_clang_tidy -std=c++20 %s readability-container-contains %t
+// RUN: %check_clang_tidy -std=c++20-or-later %s readability-container-contains %t
 
 // Some *very* simplified versions of `map` etc.
 namespace std {

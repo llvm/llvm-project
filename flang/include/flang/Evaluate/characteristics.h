@@ -81,23 +81,24 @@ public:
   bool operator!=(const TypeAndShape &that) const { return !(*this == that); }
 
   static std::optional<TypeAndShape> Characterize(
-      const semantics::Symbol &, FoldingContext &);
+      const semantics::Symbol &, FoldingContext &, bool invariantOnly = false);
   static std::optional<TypeAndShape> Characterize(
-      const semantics::DeclTypeSpec &, FoldingContext &);
+      const semantics::DeclTypeSpec &, FoldingContext &,
+      bool invariantOnly = false);
   static std::optional<TypeAndShape> Characterize(
-      const ActualArgument &, FoldingContext &);
+      const ActualArgument &, FoldingContext &, bool invariantOnly = false);
 
-  // General case for Expr<T>, ActualArgument, &c.
+  // General case for Expr<T>, &c.
   template <typename A>
   static std::optional<TypeAndShape> Characterize(
-      const A &x, FoldingContext &context) {
-    if (const auto *symbol{UnwrapWholeSymbolOrComponentDataRef(x)}) {
-      if (auto result{Characterize(*symbol, context)}) {
+      const A &x, FoldingContext &context, bool invariantOnly = false) {
+    if (const auto *symbol{UnwrapWholeSymbolDataRef(x)}) {
+      if (auto result{Characterize(*symbol, context, invariantOnly)}) {
         return result;
       }
     }
     if (auto type{x.GetType()}) {
-      TypeAndShape result{*type, GetShape(context, x)};
+      TypeAndShape result{*type, GetShape(context, x, invariantOnly)};
       if (type->category() == TypeCategory::Character) {
         if (const auto *chExpr{UnwrapExpr<Expr<SomeCharacter>>(x)}) {
           if (auto length{chExpr->LEN()}) {
@@ -114,14 +115,14 @@ public:
   template <int KIND>
   static std::optional<TypeAndShape> Characterize(
       const Designator<Type<TypeCategory::Character, KIND>> &x,
-      FoldingContext &context) {
-    if (const auto *symbol{UnwrapWholeSymbolOrComponentDataRef(x)}) {
-      if (auto result{Characterize(*symbol, context)}) {
+      FoldingContext &context, bool invariantOnly = true) {
+    if (const auto *symbol{UnwrapWholeSymbolDataRef(x)}) {
+      if (auto result{Characterize(*symbol, context, invariantOnly)}) {
         return result;
       }
     }
     if (auto type{x.GetType()}) {
-      TypeAndShape result{*type, GetShape(context, x)};
+      TypeAndShape result{*type, GetShape(context, x, invariantOnly)};
       if (auto length{x.LEN()}) {
         result.set_LEN(std::move(*length));
       }
@@ -131,19 +132,19 @@ public:
   }
 
   template <typename A>
-  static std::optional<TypeAndShape> Characterize(
-      const std::optional<A> &x, FoldingContext &context) {
+  static std::optional<TypeAndShape> Characterize(const std::optional<A> &x,
+      FoldingContext &context, bool invariantOnly = false) {
     if (x) {
-      return Characterize(*x, context);
+      return Characterize(*x, context, invariantOnly);
     } else {
       return std::nullopt;
     }
   }
   template <typename A>
   static std::optional<TypeAndShape> Characterize(
-      A *ptr, FoldingContext &context) {
+      A *ptr, FoldingContext &context, bool invariantOnly = false) {
     if (ptr) {
-      return Characterize(std::as_const(*ptr), context);
+      return Characterize(std::as_const(*ptr), context, invariantOnly);
     } else {
       return std::nullopt;
     }
@@ -181,9 +182,8 @@ public:
 
 private:
   static std::optional<TypeAndShape> Characterize(
-      const semantics::AssocEntityDetails &, FoldingContext &);
-  static std::optional<TypeAndShape> Characterize(
-      const semantics::ProcEntityDetails &, FoldingContext &);
+      const semantics::AssocEntityDetails &, FoldingContext &,
+      bool invariantOnly = true);
   void AcquireAttrs(const semantics::Symbol &);
   void AcquireLEN();
   void AcquireLEN(const semantics::Symbol &);
@@ -199,8 +199,11 @@ protected:
 // 15.3.2.2
 struct DummyDataObject {
   ENUM_CLASS(Attr, Optional, Allocatable, Asynchronous, Contiguous, Value,
-      Volatile, Pointer, Target)
+      Volatile, Pointer, Target, DeducedFromActual)
   using Attrs = common::EnumSet<Attr, Attr_enumSize>;
+  static bool IdenticalSignificantAttrs(const Attrs &x, const Attrs &y) {
+    return (x - Attr::DeducedFromActual) == (y - Attr::DeducedFromActual);
+  }
   DEFAULT_CONSTRUCTORS_AND_ASSIGNMENTS(DummyDataObject)
   explicit DummyDataObject(const TypeAndShape &t) : type{t} {}
   explicit DummyDataObject(TypeAndShape &&t) : type{std::move(t)} {}
@@ -215,6 +218,7 @@ struct DummyDataObject {
       const semantics::Symbol &, FoldingContext &);
   bool CanBePassedViaImplicitInterface() const;
   llvm::raw_ostream &Dump(llvm::raw_ostream &) const;
+
   TypeAndShape type;
   std::vector<Expr<SubscriptInteger>> coshape;
   common::Intent intent{common::Intent::Default};
@@ -343,6 +347,8 @@ struct Procedure {
       const ProcedureDesignator &, FoldingContext &);
   static std::optional<Procedure> Characterize(
       const ProcedureRef &, FoldingContext &);
+  static std::optional<Procedure> Characterize(
+      const Expr<SomeType> &, FoldingContext &);
   // Characterizes the procedure being referenced, deducing dummy argument
   // types from actual arguments in the case of an implicit interface.
   static std::optional<Procedure> FromActuals(

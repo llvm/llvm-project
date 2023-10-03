@@ -180,6 +180,8 @@ private:
   bool showMatchError(SMLoc Loc, unsigned ErrCode, uint64_t ErrorInfo,
                       OperandVector &Operands);
 
+  bool parseAuthExpr(const MCExpr *&Res, SMLoc &EndLoc);
+
   bool parseDirectiveArch(SMLoc L);
   bool parseDirectiveArchExtension(SMLoc L);
   bool parseDirectiveCPU(SMLoc L);
@@ -316,13 +318,14 @@ public:
                     const MCParsedAsmOperand &Op2) const override;
   bool ParseInstruction(ParseInstructionInfo &Info, StringRef Name,
                         SMLoc NameLoc, OperandVector &Operands) override;
-  bool parseRegister(MCRegister &RegNo, SMLoc &StartLoc,
-                     SMLoc &EndLoc) override;
-  OperandMatchResultTy tryParseRegister(MCRegister &RegNo, SMLoc &StartLoc,
-                                        SMLoc &EndLoc) override;
+  bool parseRegister(MCRegister &Reg, SMLoc &StartLoc, SMLoc &EndLoc) override;
+  ParseStatus tryParseRegister(MCRegister &Reg, SMLoc &StartLoc,
+                               SMLoc &EndLoc) override;
   bool ParseDirective(AsmToken DirectiveID) override;
   unsigned validateTargetOperandClass(MCParsedAsmOperand &Op,
                                       unsigned Kind) override;
+
+  bool parsePrimaryExpr(const MCExpr *&Res, SMLoc &EndLoc) override;
 
   static bool classifySymbolRef(const MCExpr *Expr,
                                 AArch64MCExpr::VariantKind &ELFRefKind,
@@ -1229,6 +1232,8 @@ public:
     case AArch64::PPRRegClassID:
     case AArch64::PPR_3bRegClassID:
     case AArch64::PPR_p8to15RegClassID:
+    case AArch64::PNRRegClassID:
+    case AArch64::PNR_p8to15RegClassID:
       RK = RegKind::SVEPredicateAsCounter;
       break;
     default:
@@ -1249,6 +1254,9 @@ public:
       break;
     case AArch64::PPRRegClassID:
     case AArch64::PPR_3bRegClassID:
+    case AArch64::PPR_p8to15RegClassID:
+    case AArch64::PNRRegClassID:
+    case AArch64::PNR_p8to15RegClassID:
       RK = RegKind::SVEPredicateVector;
       break;
     default:
@@ -1731,6 +1739,12 @@ public:
       llvm_unreachable("Unsupported width");
     }
     Inst.addOperand(MCOperand::createReg(AArch64::Z0 + getReg() - Base));
+  }
+
+  void addPNRasPPRRegOperands(MCInst &Inst, unsigned N) const {
+    assert(N == 1 && "Invalid number of operands!");
+    Inst.addOperand(
+        MCOperand::createReg((getReg() - AArch64::PN0) + AArch64::P0));
   }
 
   void addVectorReg64Operands(MCInst &Inst, unsigned N) const {
@@ -2697,22 +2711,22 @@ static unsigned matchSVEPredicateVectorRegName(StringRef Name) {
 
 static unsigned matchSVEPredicateAsCounterRegName(StringRef Name) {
   return StringSwitch<unsigned>(Name.lower())
-      .Case("pn0", AArch64::P0)
-      .Case("pn1", AArch64::P1)
-      .Case("pn2", AArch64::P2)
-      .Case("pn3", AArch64::P3)
-      .Case("pn4", AArch64::P4)
-      .Case("pn5", AArch64::P5)
-      .Case("pn6", AArch64::P6)
-      .Case("pn7", AArch64::P7)
-      .Case("pn8", AArch64::P8)
-      .Case("pn9", AArch64::P9)
-      .Case("pn10", AArch64::P10)
-      .Case("pn11", AArch64::P11)
-      .Case("pn12", AArch64::P12)
-      .Case("pn13", AArch64::P13)
-      .Case("pn14", AArch64::P14)
-      .Case("pn15", AArch64::P15)
+      .Case("pn0", AArch64::PN0)
+      .Case("pn1", AArch64::PN1)
+      .Case("pn2", AArch64::PN2)
+      .Case("pn3", AArch64::PN3)
+      .Case("pn4", AArch64::PN4)
+      .Case("pn5", AArch64::PN5)
+      .Case("pn6", AArch64::PN6)
+      .Case("pn7", AArch64::PN7)
+      .Case("pn8", AArch64::PN8)
+      .Case("pn9", AArch64::PN9)
+      .Case("pn10", AArch64::PN10)
+      .Case("pn11", AArch64::PN11)
+      .Case("pn12", AArch64::PN12)
+      .Case("pn13", AArch64::PN13)
+      .Case("pn14", AArch64::PN14)
+      .Case("pn15", AArch64::PN15)
       .Default(0);
 }
 
@@ -2835,16 +2849,15 @@ static unsigned matchMatrixRegName(StringRef Name) {
       .Default(0);
 }
 
-bool AArch64AsmParser::parseRegister(MCRegister &RegNo, SMLoc &StartLoc,
+bool AArch64AsmParser::parseRegister(MCRegister &Reg, SMLoc &StartLoc,
                                      SMLoc &EndLoc) {
-  return tryParseRegister(RegNo, StartLoc, EndLoc) != MatchOperand_Success;
+  return !tryParseRegister(Reg, StartLoc, EndLoc).isSuccess();
 }
 
-OperandMatchResultTy AArch64AsmParser::tryParseRegister(MCRegister &RegNo,
-                                                        SMLoc &StartLoc,
-                                                        SMLoc &EndLoc) {
+ParseStatus AArch64AsmParser::tryParseRegister(MCRegister &Reg, SMLoc &StartLoc,
+                                               SMLoc &EndLoc) {
   StartLoc = getLoc();
-  auto Res = tryParseScalarRegister(RegNo);
+  ParseStatus Res = tryParseScalarRegister(Reg);
   EndLoc = SMLoc::getFromPointer(getLoc().getPointer() - 1);
   return Res;
 }
@@ -7448,6 +7461,112 @@ bool AArch64AsmParser::parseDirectiveSEHSaveAnyReg(SMLoc L, bool Paired,
   } else {
     return Error(Start, "save_any_reg register must be x, q or d register");
   }
+  return false;
+}
+
+bool AArch64AsmParser::parsePrimaryExpr(const MCExpr *&Res, SMLoc &EndLoc) {
+  // Try @AUTH expressions: they're more complex than the usual symbol variants.
+  if (!parseAuthExpr(Res, EndLoc))
+    return false;
+  return getParser().parsePrimaryExpr(Res, EndLoc, nullptr);
+}
+
+///  parseAuthExpr
+///  ::= _sym@AUTH(ib,123[,addr])
+///  ::= (_sym + 5)@AUTH(ib,123[,addr])
+///  ::= (_sym - 5)@AUTH(ib,123[,addr])
+bool AArch64AsmParser::parseAuthExpr(const MCExpr *&Res, SMLoc &EndLoc) {
+  MCAsmParser &Parser = getParser();
+  MCContext &Ctx = getContext();
+
+  AsmToken Tok = Parser.getTok();
+
+  // Look for '_sym@AUTH' ...
+  if (Tok.is(AsmToken::Identifier) && Tok.getIdentifier().endswith("@AUTH")) {
+    StringRef SymName = Tok.getIdentifier().drop_back(strlen("@AUTH"));
+    if (SymName.find('@') != StringRef::npos)
+      return TokError(
+          "combination of @AUTH with other modifiers not supported");
+    Res = MCSymbolRefExpr::create(Ctx.getOrCreateSymbol(SymName), Ctx);
+
+    Parser.Lex(); // Eat the identifier.
+  } else {
+    // ... or look for a more complex symbol reference, such as ...
+    SmallVector<AsmToken, 6> Tokens;
+
+    // ... '"_long sym"@AUTH' ...
+    if (Tok.is(AsmToken::String))
+      Tokens.resize(2);
+    // ... or '(_sym + 5)@AUTH'.
+    else if (Tok.is(AsmToken::LParen))
+      Tokens.resize(6);
+    else
+      return true;
+
+    if (Parser.getLexer().peekTokens(Tokens) != Tokens.size())
+      return true;
+
+    // In either case, the expression ends with '@' 'AUTH'.
+    if (Tokens[Tokens.size() - 2].isNot(AsmToken::At) ||
+        Tokens[Tokens.size() - 1].isNot(AsmToken::Identifier) ||
+        Tokens[Tokens.size() - 1].getIdentifier() != "AUTH")
+      return true;
+
+    if (Tok.is(AsmToken::String)) {
+      StringRef SymName;
+      if (Parser.parseIdentifier(SymName))
+        return true;
+      Res = MCSymbolRefExpr::create(Ctx.getOrCreateSymbol(SymName), Ctx);
+    } else {
+      if (Parser.parsePrimaryExpr(Res, EndLoc, nullptr))
+        return true;
+    }
+
+    Parser.Lex(); // '@'
+    Parser.Lex(); // 'AUTH'
+  }
+
+  // At this point, we encountered "<id>@AUTH". There is no fallback anymore.
+  if (parseToken(AsmToken::LParen, "expected '('"))
+    return true;
+
+  if (Parser.getTok().isNot(AsmToken::Identifier))
+    return TokError("expected key name");
+
+  StringRef KeyStr = Parser.getTok().getIdentifier();
+  auto KeyIDOrNone = AArch64StringToPACKeyID(KeyStr);
+  if (!KeyIDOrNone)
+    return TokError("invalid key '" + KeyStr + "'");
+  Parser.Lex();
+
+  if (parseToken(AsmToken::Comma, "expected ','"))
+    return true;
+
+  if (Parser.getTok().isNot(AsmToken::Integer))
+    return TokError("expected integer discriminator");
+  int64_t Discriminator = Parser.getTok().getIntVal();
+
+  if (!isUInt<16>(Discriminator))
+    return TokError("integer discriminator " + Twine(Discriminator) +
+                    " out of range [0, 0xFFFF]");
+  Parser.Lex();
+
+  bool UseAddressDiversity = false;
+  if (Parser.getTok().is(AsmToken::Comma)) {
+    Parser.Lex();
+    if (Parser.getTok().isNot(AsmToken::Identifier) ||
+        Parser.getTok().getIdentifier() != "addr")
+      return TokError("expected 'addr'");
+    UseAddressDiversity = true;
+    Parser.Lex();
+  }
+
+  EndLoc = Parser.getTok().getEndLoc();
+  if (parseToken(AsmToken::RParen, "expected ')'"))
+    return true;
+
+  Res = AArch64AuthMCExpr::create(Res, Discriminator, *KeyIDOrNone,
+                                  UseAddressDiversity, Ctx);
   return false;
 }
 

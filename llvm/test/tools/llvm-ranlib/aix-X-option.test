@@ -1,0 +1,130 @@
+# REQUIRES: system-aix
+## Test the -X option.
+## The option specifies the type of object file on which llvm-ranlib will operate.
+
+# RUN: rm -rf %t && mkdir %t && cd %t
+# RUN: yaml2obj --docnum=1 -DFLAG=0x1DF %s -o t32_1.o
+# RUN: yaml2obj --docnum=1 -DFLAG=0x1F7 %s -o t64_1.o
+# RUN: yaml2obj --docnum=2 -DFLAG=0x1DF %s -o t32_2.o
+# RUN: yaml2obj --docnum=2 -DFLAG=0x1F7 %s -o t64_2.o
+
+# RUN: llvm-ar qS t_all.a t32_1.o t64_1.o t32_2.o t64_2.o
+# RUN: cp t_all.a t_X32.a
+# RUN: cp t_all.a t_X64.a
+# RUN: cp t_all.a t_X32_64.a
+
+## Test the OBJECT_MODE environment variable when adding symbol table.
+# RUN: unset OBJECT_MODE
+# RUN: llvm-ranlib t_X32.a
+# RUN: llvm-nm --print-armap t_X32.a 2>&1 | FileCheck --check-prefixes=GLOB32 --implicit-check-not="in t64" %s
+# RUN: cp t_all.a t_X32.a
+# RUN: env OBJECT_MODE=32 llvm-ranlib t_X32.a
+# RUN: llvm-nm --print-armap t_X32.a 2>&1 | FileCheck --check-prefixes=GLOB32 --implicit-check-not="in t64" %s
+
+# RUN: env OBJECT_MODE=64 llvm-ranlib t_X64.a
+# RUN: llvm-nm --print-armap t_X64.a 2>&1 | FileCheck --check-prefixes=GLOB64 --implicit-check-not="in t32" %s
+
+# RUN: env OBJECT_MODE=32_64 llvm-ranlib t_X32_64.a
+# RUN: llvm-nm --print-armap t_X32_64.a 2>&1 | FileCheck --check-prefixes=GLOB32,GLOB64 %s
+# RUN: cp t_all.a t_X32_64.a
+# RUN: env OBJECT_MODE=any llvm-ranlib t_X32_64.a
+# RUN: llvm-nm --print-armap t_X32_64.a 2>&1 | FileCheck --check-prefixes=GLOB32,GLOB64 %s
+
+# RUN: cp t_all.a t_X32.a
+# RUN: cp t_all.a t_X64.a
+# RUN: cp t_all.a t_X32_64.a
+
+## Test the -X option when adding symbol table.
+# RUN: llvm-ranlib -X32 t_X32.a
+# RUN: llvm-nm --print-armap t_X32.a 2>&1 | FileCheck --check-prefixes=GLOB32 --implicit-check-not="in t64" %s
+# RUN: llvm-ranlib -X64 t_X32.a
+# RUN: llvm-nm --print-armap t_X32.a 2>&1 | FileCheck --check-prefixes=GLOB32,GLOB64 %s
+
+# RUN: llvm-ranlib -X64 t_X64.a
+# RUN: llvm-nm --print-armap t_X64.a 2>&1 | FileCheck --check-prefixes=GLOB64 --implicit-check-not="in t32" %s
+# RUN: llvm-ranlib -X32 t_X64.a
+# RUN: llvm-nm --print-armap t_X32.a 2>&1 | FileCheck --check-prefixes=GLOB32,GLOB64 %s
+
+# RUN: llvm-ranlib -X32_64 t_X32_64.a
+# RUN: llvm-nm --print-armap t_X32_64.a 2>&1 | FileCheck --check-prefixes=GLOB32,GLOB64 %s
+# RUN: cp t_all.a t_X32_64.a
+# RUN: llvm-ranlib -Xany t_X32_64.a
+# RUN: llvm-nm --print-armap t_X32_64.a 2>&1 | FileCheck --check-prefixes=GLOB32,GLOB64 %s
+
+# RUN: cp t_all.a t_X32.a
+# RUN: cp t_all.a t_X64.a
+
+## Test that the -X option will override the "OBJECT_MODE" environment variable.
+# RUN: env OBJECT_MODE=32_64 llvm-ranlib -X32 t_X32.a
+# RUN: llvm-nm --print-armap t_X32.a 2>&1 | FileCheck --check-prefixes=GLOB32 --implicit-check-not="in t64" %s
+
+# RUN: env OBJECT_MODE=32 llvm-ranlib -X64 t_X64.a
+# RUN: llvm-nm --print-armap t_X64.a 2>&1 | FileCheck --check-prefixes=GLOB64 --implicit-check-not="in t32" %s
+
+# GLOB32:      sym1_0x1DF in t32_1.o
+# GLOB32-NEXT: sym2_0x1DF in t32_1.o
+# GLOB32-NEXT: sym3_0x1DF in t32_2.o
+# GLOB32-NEXT: sym4_0x1DF in t32_2.o
+
+# GLOB64:      sym1_0x1F7 in t64_1.o
+# GLOB64-NEXT: sym2_0x1F7 in t64_1.o
+# GLOB64-NEXT: sym3_0x1F7 in t64_2.o
+# GLOB64-NEXT: sym4_0x1F7 in t64_2.o
+
+## Test invalid -X option and OBJECT_MODE enviornment var.
+# RUN: not env OBJECT_MODE= llvm-ranlib t_X32.a 2>&1 | FileCheck --implicit-check-not="error:"  --check-prefixes=INVALID-OBJECT-MODE %s
+# RUN: not env OBJECT_MODE="" llvm-ranlib t_X32.a 2>&1 | FileCheck --implicit-check-not="error:"  --check-prefixes=INVALID-OBJECT-MODE %s
+# RUN: not env OBJECT_MODE=31 llvm-ranlib t_X64.a 2>&1 | FileCheck --implicit-check-not="error:"  --check-prefixes=INVALID-OBJECT-MODE %s
+# RUN: not llvm-ranlib -X t_X64.a 2>&1 | FileCheck --implicit-check-not="error:"  --check-prefixes=INVALID-X-OPTION %s
+# RUN: not llvm-ranlib -X31 t_X64.a 2>&1 | FileCheck --implicit-check-not="error:"  --check-prefixes=INVALID-X-OPTION %s
+
+# INVALID-OBJECT-MODE: error: the OBJECT_MODE environment variable has an invalid value. OBJECT_MODE must be 32, 64, 32_64, or any
+# INVALID-X-OPTION: error: the specified object mode is not valid. Specify -X32, -X64, -X32_64, or -Xany
+
+--- !XCOFF
+FileHeader:
+  MagicNumber:       [[FLAG]]
+Sections:
+  - Name:            .data
+    Flags:           [ STYP_DATA ]
+Symbols:
+  - Name:            sym1_[[FLAG]]
+    Section:         .data
+    Type:            0x4000
+    StorageClass:    C_EXT
+    AuxEntries:
+     - Type:                   AUX_CSECT
+       SymbolAlignmentAndType: 0x09
+       StorageMappingClass:    XMC_RW
+  - Name:            sym2_[[FLAG]]
+    Section:         .data
+    Type:            0x4000
+    StorageClass:    C_EXT
+    AuxEntries:
+     - Type:                   AUX_CSECT
+       SymbolAlignmentAndType: 0x09
+       StorageMappingClass:    XMC_RW
+
+--- !XCOFF
+FileHeader:
+  MagicNumber:       [[FLAG]]
+Sections:
+  - Name:            .text
+    Flags:           [ STYP_DATA ]
+Symbols:
+  - Name:            sym3_[[FLAG]]
+    Section:         .text
+    Type:            0x4000
+    StorageClass:    C_EXT
+    AuxEntries:
+     - Type:                   AUX_CSECT
+       SymbolAlignmentAndType: 0x09
+       StorageMappingClass:    XMC_PR
+  - Name:            sym4_[[FLAG]]
+    Section:         .text
+    Type:            0x4000
+    StorageClass:    C_EXT
+    AuxEntries:
+     - Type:                   AUX_CSECT
+       SymbolAlignmentAndType: 0x09
+       StorageMappingClass:    XMC_PR

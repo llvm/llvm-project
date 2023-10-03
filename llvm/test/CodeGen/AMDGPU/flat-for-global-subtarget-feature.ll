@@ -1,24 +1,23 @@
-; RUN: sed 's/CODE_OBJECT_VERSION/200/g' %s | llc -mtriple=amdgcn--amdhsa -mcpu=kaveri -mattr=+flat-for-global | FileCheck -check-prefix=HSA -check-prefix=HSA-DEFAULT -check-prefix=ALL %s
-; RUN: sed 's/CODE_OBJECT_VERSION/200/g' %s | llc -mtriple=amdgcn--amdhsa -mcpu=kaveri -mattr=-flat-for-global | FileCheck -check-prefix=HSA -check-prefix=HSA-NODEFAULT -check-prefix=ALL %s
-; RUN: sed 's/CODE_OBJECT_VERSION/400/g' %s | llc -mtriple=amdgcn-- -mcpu=tonga | FileCheck -check-prefix=HSA-NOADDR64 -check-prefix=ALL %s
-; RUN: sed 's/CODE_OBJECT_VERSION/400/g' %s | llc -mtriple=amdgcn-- -mcpu=kaveri -mattr=-flat-for-global | FileCheck -check-prefix=NOHSA-DEFAULT -check-prefix=ALL %s
-; RUN: sed 's/CODE_OBJECT_VERSION/400/g' %s | llc -mtriple=amdgcn-- -mcpu=kaveri -mattr=+flat-for-global | FileCheck -check-prefix=NOHSA-NODEFAULT -check-prefix=ALL %s
-; RUN: sed 's/CODE_OBJECT_VERSION/400/g' %s | llc -mtriple=amdgcn-- -mcpu=tonga | FileCheck -check-prefix=NOHSA-NOADDR64 -check-prefix=ALL %s
+; RUN: llc < %s -mtriple=amdgcn--amdhsa -mcpu=kaveri -mattr=+flat-for-global | FileCheck -check-prefix=HSA -check-prefix=HSA-DEFAULT -check-prefix=ALL %s
+; RUN: llc < %s -mtriple=amdgcn--amdhsa -mcpu=kaveri -mattr=-flat-for-global | FileCheck -check-prefix=HSA -check-prefix=HSA-NODEFAULT -check-prefix=ALL %s
+; RUN: llc < %s -mtriple=amdgcn-- -mcpu=tonga | FileCheck -check-prefix=HSA-NOADDR64 -check-prefix=ALL %s
+; RUN: llc < %s -mtriple=amdgcn-- -mcpu=kaveri -mattr=-flat-for-global | FileCheck -check-prefix=NOHSA-DEFAULT -check-prefix=ALL %s
+; RUN: llc < %s -mtriple=amdgcn-- -mcpu=kaveri -mattr=+flat-for-global | FileCheck -check-prefix=NOHSA-NODEFAULT -check-prefix=ALL %s
+; RUN: llc < %s -mtriple=amdgcn-- -mcpu=tonga | FileCheck -check-prefix=NOHSA-NOADDR64 -check-prefix=ALL %s
 
 
 ; There are no stack objects even though flat is used by default, so
 ; flat_scratch_init should be disabled.
 
 ; ALL-LABEL: {{^}}test:
-; HSA: .amd_kernel_code_t
-; HSA: enable_sgpr_flat_scratch_init = 0
-; HSA: .end_amd_kernel_code_t
 
 ; ALL-NOT: flat_scr
 
 ; HSA-DEFAULT: flat_store_dword
 ; HSA-NODEFAULT: buffer_store_dword
 ; HSA-NOADDR64: flat_store_dword
+
+; HSA: .amdhsa_user_sgpr_flat_scratch_init 0
 
 ; NOHSA-DEFAULT: buffer_store_dword
 ; NOHSA-NODEFAULT: flat_store_dword
@@ -53,4 +52,4 @@ entry:
 }
 
 !llvm.module.flags = !{!0}
-!0 = !{i32 1, !"amdgpu_code_object_version", i32 CODE_OBJECT_VERSION}
+!0 = !{i32 1, !"amdgpu_code_object_version", i32 400}

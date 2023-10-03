@@ -285,6 +285,7 @@ def Arith_SubIOp : Arith_TotalIntBinaryOp<"subi"> {
 def Arith_MulIOp : Arith_TotalIntBinaryOp<"muli", [Commutative]> {
   let summary = "integer multiplication operation";
   let hasFolder = 1;
+  let hasCanonicalizer = 1;
 }
 
 //===----------------------------------------------------------------------===//
@@ -831,16 +832,16 @@ def Arith_SubFOp : Arith_FloatBinaryOp<"subf"> {
 }
 
 //===----------------------------------------------------------------------===//
-// MaxFOp
+// MaximumFOp
 //===----------------------------------------------------------------------===//
 
-def Arith_MaxFOp : Arith_FloatBinaryOp<"maxf", [Commutative]> {
+def Arith_MaximumFOp : Arith_FloatBinaryOp<"maximumf", [Commutative]> {
   let summary = "floating-point maximum operation";
   let description = [{
     Syntax:
 
     ```
-    operation ::= ssa-id `=` `arith.maxf` ssa-use `,` ssa-use `:` type
+    operation ::= ssa-id `=` `arith.maximumf` ssa-use `,` ssa-use `:` type
     ```
 
     Returns the maximum of the two arguments, treating -0.0 as less than +0.0.
@@ -850,11 +851,39 @@ def Arith_MaxFOp : Arith_FloatBinaryOp<"maxf", [Commutative]> {
 
     ```mlir
     // Scalar floating-point maximum.
-    %a = arith.maxf %b, %c : f64
+    %a = arith.maximumf %b, %c : f64
     ```
   }];
   let hasFolder = 1;
 }
+
+//===----------------------------------------------------------------------===//
+// MaxNumFOp
+//===----------------------------------------------------------------------===//
+
+def Arith_MaxNumFOp : Arith_FloatBinaryOp<"maxnumf", [Commutative]> {
+  let summary = "floating-point maximum operation";
+  let description = [{
+    Syntax:
+
+    ```
+    operation ::= ssa-id `=` `arith.maxnumf` ssa-use `,` ssa-use `:` type
+    ```
+
+    Returns the maximum of the two arguments.
+    If the arguments are -0.0 and +0.0, then the result is either of them.
+    If one of the arguments is NaN, then the result is the other argument.
+
+    Example:
+
+    ```mlir
+    // Scalar floating-point maximum.
+    %a = arith.maxnumf %b, %c : f64
+    ```
+  }];
+  let hasFolder = 1;
+}
+
 
 //===----------------------------------------------------------------------===//
 // MaxSIOp
@@ -875,16 +904,16 @@ def Arith_MaxUIOp : Arith_TotalIntBinaryOp<"maxui", [Commutative]> {
 }
 
 //===----------------------------------------------------------------------===//
-// MinFOp
+// MinimumFOp
 //===----------------------------------------------------------------------===//
 
-def Arith_MinFOp : Arith_FloatBinaryOp<"minf", [Commutative]> {
+def Arith_MinimumFOp : Arith_FloatBinaryOp<"minimumf", [Commutative]> {
   let summary = "floating-point minimum operation";
   let description = [{
     Syntax:
 
     ```
-    operation ::= ssa-id `=` `arith.minf` ssa-use `,` ssa-use `:` type
+    operation ::= ssa-id `=` `arith.minimumf` ssa-use `,` ssa-use `:` type
     ```
 
     Returns the minimum of the two arguments, treating -0.0 as less than +0.0.
@@ -894,7 +923,34 @@ def Arith_MinFOp : Arith_FloatBinaryOp<"minf", [Commutative]> {
 
     ```mlir
     // Scalar floating-point minimum.
-    %a = arith.minf %b, %c : f64
+    %a = arith.minimumf %b, %c : f64
+    ```
+  }];
+  let hasFolder = 1;
+}
+
+//===----------------------------------------------------------------------===//
+// MinNumFOp
+//===----------------------------------------------------------------------===//
+
+def Arith_MinNumFOp : Arith_FloatBinaryOp<"minnumf", [Commutative]> {
+  let summary = "floating-point minimum operation";
+  let description = [{
+    Syntax:
+
+    ```
+    operation ::= ssa-id `=` `arith.minnumf` ssa-use `,` ssa-use `:` type
+    ```
+
+    Returns the minimum of the two arguments.
+    If the arguments are -0.0 and +0.0, then the result is either of them.
+    If one of the arguments is NaN, then the result is the other argument.
+
+    Example:
+
+    ```mlir
+    // Scalar floating-point minimum.
+    %a = arith.minnumf %b, %c : f64
     ```
   }];
   let hasFolder = 1;

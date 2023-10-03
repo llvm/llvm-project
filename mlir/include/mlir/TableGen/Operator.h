@@ -352,6 +352,10 @@ public:
 
   bool hasFolder() const;
 
+  /// Whether to generate the `readProperty`/`writeProperty` methods for
+  /// bytecode emission.
+  bool useCustomPropertiesEncoding() const;
+
 private:
   /// Populates the vectors containing operands, attributes, results and traits.
   void populateOpStructure();

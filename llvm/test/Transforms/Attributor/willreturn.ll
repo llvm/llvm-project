@@ -1143,16 +1143,16 @@ define void @willreturn_mustprogress_caller_1() mustprogress {
   ret void
 }
 define void @willreturn_mustprogress_caller_2() mustprogress {
-; TUNIT: Function Attrs: mustprogress willreturn memory(read)
+; TUNIT: Function Attrs: mustprogress nosync willreturn memory(read)
 ; TUNIT-LABEL: define {{[^@]+}}@willreturn_mustprogress_caller_2
 ; TUNIT-SAME: () #[[ATTR23:[0-9]+]] {
-; TUNIT-NEXT:    call void @readonly() #[[ATTR19:[0-9]+]]
+; TUNIT-NEXT:    call void @readonly() #[[ATTR34:[0-9]+]]
 ; TUNIT-NEXT:    ret void
 ;
-; CGSCC: Function Attrs: mustprogress willreturn memory(read)
+; CGSCC: Function Attrs: mustprogress nosync willreturn memory(read)
 ; CGSCC-LABEL: define {{[^@]+}}@willreturn_mustprogress_caller_2
 ; CGSCC-SAME: () #[[ATTR24:[0-9]+]] {
-; CGSCC-NEXT:    call void @readonly() #[[ATTR20:[0-9]+]]
+; CGSCC-NEXT:    call void @readonly() #[[ATTR35:[0-9]+]]
 ; CGSCC-NEXT:    ret void
 ;
   call void @readonly()
@@ -1162,13 +1162,13 @@ define void @willreturn_mustprogress_caller_3() mustprogress {
 ; TUNIT: Function Attrs: mustprogress nosync willreturn memory(none)
 ; TUNIT-LABEL: define {{[^@]+}}@willreturn_mustprogress_caller_3
 ; TUNIT-SAME: () #[[ATTR24:[0-9]+]] {
-; TUNIT-NEXT:    call void @readnone()
+; TUNIT-NEXT:    call void @readnone() #[[ATTR35:[0-9]+]]
 ; TUNIT-NEXT:    ret void
 ;
 ; CGSCC: Function Attrs: mustprogress nosync willreturn memory(none)
 ; CGSCC-LABEL: define {{[^@]+}}@willreturn_mustprogress_caller_3
 ; CGSCC-SAME: () #[[ATTR25:[0-9]+]] {
-; CGSCC-NEXT:    call void @readnone()
+; CGSCC-NEXT:    call void @readnone() #[[ATTR36:[0-9]+]]
 ; CGSCC-NEXT:    ret void
 ;
   call void @readnone()
@@ -1183,16 +1183,16 @@ define void @willreturn_mustprogress_callee_1() {
   ret void
 }
 define void @willreturn_mustprogress_callee_2() {
-; TUNIT: Function Attrs: mustprogress willreturn memory(read)
+; TUNIT: Function Attrs: mustprogress nosync willreturn memory(read)
 ; TUNIT-LABEL: define {{[^@]+}}@willreturn_mustprogress_callee_2
 ; TUNIT-SAME: () #[[ATTR23]] {
-; TUNIT-NEXT:    call void @readonly_mustprogress() #[[ATTR34:[0-9]+]]
+; TUNIT-NEXT:    call void @readonly_mustprogress() #[[ATTR36:[0-9]+]]
 ; TUNIT-NEXT:    ret void
 ;
-; CGSCC: Function Attrs: mustprogress willreturn memory(read)
+; CGSCC: Function Attrs: mustprogress nosync willreturn memory(read)
 ; CGSCC-LABEL: define {{[^@]+}}@willreturn_mustprogress_callee_2
 ; CGSCC-SAME: () #[[ATTR24]] {
-; CGSCC-NEXT:    call void @readonly_mustprogress() #[[ATTR35:[0-9]+]]
+; CGSCC-NEXT:    call void @readonly_mustprogress() #[[ATTR37:[0-9]+]]
 ; CGSCC-NEXT:    ret void
 ;
   call void @readonly_mustprogress()
@@ -1207,16 +1207,16 @@ define void @willreturn_mustprogress_callee_3() {
   ret void
 }
 define void @willreturn_mustprogress_callee_4() {
-; TUNIT: Function Attrs: mustprogress willreturn memory(read)
+; TUNIT: Function Attrs: mustprogress nosync willreturn memory(read)
 ; TUNIT-LABEL: define {{[^@]+}}@willreturn_mustprogress_callee_4
 ; TUNIT-SAME: () #[[ATTR23]] {
-; TUNIT-NEXT:    call void @willreturn_mustprogress_callee_2() #[[ATTR34]]
+; TUNIT-NEXT:    call void @willreturn_mustprogress_callee_2() #[[ATTR36]]
 ; TUNIT-NEXT:    ret void
 ;
-; CGSCC: Function Attrs: mustprogress willreturn memory(read)
+; CGSCC: Function Attrs: mustprogress nosync willreturn memory(read)
 ; CGSCC-LABEL: define {{[^@]+}}@willreturn_mustprogress_callee_4
 ; CGSCC-SAME: () #[[ATTR24]] {
-; CGSCC-NEXT:    call void @willreturn_mustprogress_callee_2() #[[ATTR35]]
+; CGSCC-NEXT:    call void @willreturn_mustprogress_callee_2() #[[ATTR38:[0-9]+]]
 ; CGSCC-NEXT:    ret void
 ;
   call void @willreturn_mustprogress_callee_2()
@@ -1237,25 +1237,25 @@ define weak void @implied_mustprogress1() willreturn {
   ret void
 }
 define weak void @implied_willreturn1() readnone mustprogress {
-; TUNIT: Function Attrs: mustprogress willreturn memory(none)
+; TUNIT: Function Attrs: mustprogress nosync willreturn memory(none)
 ; TUNIT-LABEL: define {{[^@]+}}@implied_willreturn1
-; TUNIT-SAME: () #[[ATTR26:[0-9]+]] {
+; TUNIT-SAME: () #[[ATTR24]] {
 ; TUNIT-NEXT:    ret void
 ;
-; CGSCC: Function Attrs: mustprogress willreturn memory(none)
+; CGSCC: Function Attrs: mustprogress nosync willreturn memory(none)
 ; CGSCC-LABEL: define {{[^@]+}}@implied_willreturn1
-; CGSCC-SAME: () #[[ATTR27:[0-9]+]] {
+; CGSCC-SAME: () #[[ATTR25]] {
 ; CGSCC-NEXT:    ret void
 ;
   ret void
 }
 define weak void @implied_willreturn2() readonly mustprogress {
-; TUNIT: Function Attrs: mustprogress willreturn memory(read)
+; TUNIT: Function Attrs: mustprogress nosync willreturn memory(read)
 ; TUNIT-LABEL: define {{[^@]+}}@implied_willreturn2
 ; TUNIT-SAME: () #[[ATTR23]] {
 ; TUNIT-NEXT:    ret void
 ;
-; CGSCC: Function Attrs: mustprogress willreturn memory(read)
+; CGSCC: Function Attrs: mustprogress nosync willreturn memory(read)
 ; CGSCC-LABEL: define {{[^@]+}}@implied_willreturn2
 ; CGSCC-SAME: () #[[ATTR24]] {
 ; CGSCC-NEXT:    ret void
@@ -1276,14 +1276,14 @@ define weak void @not_implied_willreturn1() mustprogress {
   ret void
 }
 define weak void @not_implied_willreturn2() readnone {
-; TUNIT: Function Attrs: memory(none)
+; TUNIT: Function Attrs: nosync memory(none)
 ; TUNIT-LABEL: define {{[^@]+}}@not_implied_willreturn2
-; TUNIT-SAME: () #[[ATTR20:[0-9]+]] {
+; TUNIT-SAME: () #[[ATTR26:[0-9]+]] {
 ; TUNIT-NEXT:    ret void
 ;
-; CGSCC: Function Attrs: memory(none)
+; CGSCC: Function Attrs: nosync memory(none)
 ; CGSCC-LABEL: define {{[^@]+}}@not_implied_willreturn2
-; CGSCC-SAME: () #[[ATTR21:[0-9]+]] {
+; CGSCC-SAME: () #[[ATTR27:[0-9]+]] {
 ; CGSCC-NEXT:    ret void
 ;
   ret void
@@ -1311,22 +1311,24 @@ attributes #1 = { uwtable noinline }
 ; TUNIT: attributes #[[ATTR16:[0-9]+]] = { noreturn nounwind }
 ; TUNIT: attributes #[[ATTR17]] = { nofree norecurse nosync nounwind memory(none) }
 ; TUNIT: attributes #[[ATTR18]] = { mustprogress nofree norecurse nosync nounwind willreturn memory(none) }
-; TUNIT: attributes #[[ATTR19]] = { memory(read) }
-; TUNIT: attributes #[[ATTR20]] = { memory(none) }
+; TUNIT: attributes #[[ATTR19:[0-9]+]] = { memory(read) }
+; TUNIT: attributes #[[ATTR20:[0-9]+]] = { memory(none) }
 ; TUNIT: attributes #[[ATTR21]] = { mustprogress }
 ; TUNIT: attributes #[[ATTR22:[0-9]+]] = { mustprogress memory(read) }
-; TUNIT: attributes #[[ATTR23]] = { mustprogress willreturn memory(read) }
+; TUNIT: attributes #[[ATTR23]] = { mustprogress nosync willreturn memory(read) }
 ; TUNIT: attributes #[[ATTR24]] = { mustprogress nosync willreturn memory(none) }
 ; TUNIT: attributes #[[ATTR25]] = { mustprogress willreturn }
-; TUNIT: attributes #[[ATTR26]] = { mustprogress willreturn memory(none) }
+; TUNIT: attributes #[[ATTR26]] = { nosync memory(none) }
 ; TUNIT: attributes #[[ATTR27]] = { nofree nosync nounwind memory(none) }
 ; TUNIT: attributes #[[ATTR28]] = { nofree nounwind willreturn }
 ; TUNIT: attributes #[[ATTR29]] = { nofree nosync nounwind }
-; TUNIT: attributes #[[ATTR30]] = { nofree willreturn }
+; TUNIT: attributes #[[ATTR30]] = { nofree nosync willreturn }
 ; TUNIT: attributes #[[ATTR31]] = { nounwind }
 ; TUNIT: attributes #[[ATTR32]] = { willreturn }
 ; TUNIT: attributes #[[ATTR33]] = { nounwind willreturn }
-; TUNIT: attributes #[[ATTR34]] = { willreturn memory(read) }
+; TUNIT: attributes #[[ATTR34]] = { nosync memory(read) }
+; TUNIT: attributes #[[ATTR35]] = { nosync }
+; TUNIT: attributes #[[ATTR36]] = { nosync willreturn memory(read) }
 ;.
 ; CGSCC: attributes #[[ATTR0]] = { mustprogress nofree noinline norecurse nosync nounwind willreturn memory(none) uwtable }
 ; CGSCC: attributes #[[ATTR1]] = { nofree noinline nosync nounwind memory(none) uwtable }
@@ -1348,20 +1350,23 @@ attributes #1 = { uwtable noinline }
 ; CGSCC: attributes #[[ATTR17]] = { nofree norecurse nosync nounwind memory(none) }
 ; CGSCC: attributes #[[ATTR18]] = { mustprogress nofree norecurse nosync nounwind willreturn memory(none) }
 ; CGSCC: attributes #[[ATTR19]] = { nofree nosync nounwind memory(none) }
-; CGSCC: attributes #[[ATTR20]] = { memory(read) }
-; CGSCC: attributes #[[ATTR21]] = { memory(none) }
+; CGSCC: attributes #[[ATTR20:[0-9]+]] = { memory(read) }
+; CGSCC: attributes #[[ATTR21:[0-9]+]] = { memory(none) }
 ; CGSCC: attributes #[[ATTR22]] = { mustprogress }
 ; CGSCC: attributes #[[ATTR23:[0-9]+]] = { mustprogress memory(read) }
-; CGSCC: attributes #[[ATTR24]] = { mustprogress willreturn memory(read) }
+; CGSCC: attributes #[[ATTR24]] = { mustprogress nosync willreturn memory(read) }
 ; CGSCC: attributes #[[ATTR25]] = { mustprogress nosync willreturn memory(none) }
 ; CGSCC: attributes #[[ATTR26]] = { mustprogress willreturn }
-; CGSCC: attributes #[[ATTR27]] = { mustprogress willreturn memory(none) }
+; CGSCC: attributes #[[ATTR27]] = { nosync memory(none) }
 ; CGSCC: attributes #[[ATTR28]] = { nofree nounwind willreturn }
 ; CGSCC: attributes #[[ATTR29]] = { nofree nosync nounwind }
-; CGSCC: attributes #[[ATTR30]] = { nofree willreturn }
+; CGSCC: attributes #[[ATTR30]] = { nofree nosync willreturn }
 ; CGSCC: attributes #[[ATTR31]] = { nounwind }
 ; CGSCC: attributes #[[ATTR32]] = { willreturn }
 ; CGSCC: attributes #[[ATTR33]] = { nounwind willreturn }
-; CGSCC: attributes #[[ATTR34]] = { nofree }
-; CGSCC: attributes #[[ATTR35]] = { willreturn memory(read) }
+; CGSCC: attributes #[[ATTR34]] = { nofree nosync }
+; CGSCC: attributes #[[ATTR35]] = { nosync memory(read) }
+; CGSCC: attributes #[[ATTR36]] = { nosync }
+; CGSCC: attributes #[[ATTR37]] = { nosync willreturn memory(read) }
+; CGSCC: attributes #[[ATTR38]] = { willreturn memory(read) }
 ;.

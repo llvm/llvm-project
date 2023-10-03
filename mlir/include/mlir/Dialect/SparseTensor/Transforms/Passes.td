@@ -31,7 +31,7 @@ def PreSparsificationRewrite : Pass<"pre-sparsification-rewrite", "ModuleOp"> {
 def SparsificationPass : Pass<"sparsification", "ModuleOp"> {
   let summary = "Automatically generate sparse tensor code from sparse tensor types";
   let description = [{
-    A pass that implements the core functionality of a **sparse compiler**.
+    A pass that implements the core functionality of a **sparsifier**.
     Each Linalg operation (MLIR's tensor index notation) that operates on
     sparse tensor types is converted into code in which the sparsity is
     explicit both in terms of co-iterating looping logic as well as
@@ -102,6 +102,19 @@ def SparsificationPass : Pass<"sparsification", "ModuleOp"> {
              clEnumValN(mlir::SparseParallelizationStrategy::kAnyStorageAnyLoop,
                         "any-storage-any-loop",
                         "Enable sparse parallelization for any storage and loop."))}]>,
+    Option<"gpuDataTransfer", "gpu-data-transfer-strategy", "mlir::GPUDataTransferStrategy",
+            "mlir::GPUDataTransferStrategy::kRegularDMA",
+            "Set the data transfer strategy", [{llvm::cl::values(
+               clEnumValN(mlir::GPUDataTransferStrategy::kRegularDMA,
+                     "regular-dma",
+                     "Default option: malloc on host without additional "
+                     "options or care and then use DMA to copy the data"),
+          clEnumValN(mlir::GPUDataTransferStrategy::kPinnedDMA, "pinned-dma",
+                     "Based on the default option, pin the host memory to "
+                     "accelerate the data transfer"),
+          clEnumValN(mlir::GPUDataTransferStrategy::kZeroCopy, "zero-copy",
+                     "Use zero-copy to perform the data transfer from the host "
+                     "to the GPU"))}]>,
     Option<"enableGPULibgen", "enable-gpu-libgen", "bool",
            "false",
            "Enable GPU acceleration by means of direct library calls (like cuSPARSE)">,
@@ -319,7 +332,7 @@ def SparseVectorization : Pass<"sparse-vectorization", "ModuleOp"> {
 def SparseGPUCodegen : Pass<"sparse-gpu-codegen", "ModuleOp"> {
   let summary = "Generates GPU code during sparsification";
   let description = [{
-    Enables sparse compiler to use GPU acceleration.
+    Enables the sparsifier to use GPU acceleration.
   }];
   let constructor = "mlir::createSparseGPUCodegenPass()";
   let dependentDialects = [
@@ -356,6 +369,25 @@ def StorageSpecifierToLLVM : Pass<"sparse-storage-specifier-to-llvm", "ModuleOp"
   let dependentDialects = [
     "arith::ArithDialect",
     "LLVM::LLVMDialect",
+    "sparse_tensor::SparseTensorDialect",
+  ];
+}
+
+def SparsificationAndBufferization : Pass<"sparsification-and-bufferization", "ModuleOp"> {
+  let summary = "Mini-pipeline that combines bufferization and sparsifiation";
+  let description = [{
+     This pass forms a mini-pipeline that combines bufferization and sparsifiation.
+  }];
+  let constructor = "mlir::createSparsificationAndBufferizationPass()";
+  let dependentDialects = [
+    "affine::AffineDialect",
+    "arith::ArithDialect",
+    "bufferization::BufferizationDialect",
+    "gpu::GPUDialect",
+    "LLVM::LLVMDialect",
+    "linalg::LinalgDialect",
+    "memref::MemRefDialect",
+    "scf::SCFDialect",
     "sparse_tensor::SparseTensorDialect",
   ];
 }

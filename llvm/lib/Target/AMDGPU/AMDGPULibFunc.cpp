@@ -527,6 +527,16 @@ AMDGPUMangledLibFunc::AMDGPUMangledLibFunc(
   Leads[1] = copyFrom.Leads[1];
 }
 
+AMDGPUMangledLibFunc::AMDGPUMangledLibFunc(EFuncId id, FunctionType *FT,
+                                           bool SignedInts) {
+  FuncId = id;
+  unsigned NumArgs = FT->getNumParams();
+  if (NumArgs >= 1)
+    Leads[0] = Param::getFromTy(FT->getParamType(0), SignedInts);
+  if (NumArgs >= 2)
+    Leads[1] = Param::getFromTy(FT->getParamType(1), SignedInts);
+}
+
 ///////////////////////////////////////////////////////////////////////////////
 // Demangling
 
@@ -875,6 +885,50 @@ std::string AMDGPUMangledLibFunc::mangleNameItanium() const {
 ///////////////////////////////////////////////////////////////////////////////
 // Misc
 
+AMDGPULibFuncBase::Param AMDGPULibFuncBase::Param::getFromTy(Type *Ty,
+                                                             bool Signed) {
+  Param P;
+  if (FixedVectorType *VT = dyn_cast<FixedVectorType>(Ty)) {
+    P.VectorSize = VT->getNumElements();
+    Ty = VT->getElementType();
+  }
+
+  switch (Ty->getTypeID()) {
+  case Type::FloatTyID:
+    P.ArgType = AMDGPULibFunc::F32;
+    break;
+  case Type::DoubleTyID:
+    P.ArgType = AMDGPULibFunc::F64;
+    break;
+  case Type::HalfTyID:
+    P.ArgType = AMDGPULibFunc::F16;
+    break;
+  case Type::IntegerTyID:
+    switch (cast<IntegerType>(Ty)->getBitWidth()) {
+    case 8:
+      P.ArgType = Signed ? AMDGPULibFunc::I8 : AMDGPULibFunc::U8;
+      break;
+    case 16:
+      P.ArgType = Signed ? AMDGPULibFunc::I16 : AMDGPULibFunc::U16;
+      break;
+    case 32:
+      P.ArgType = Signed ? AMDGPULibFunc::I32 : AMDGPULibFunc::U32;
+      break;
+    case 64:
+      P.ArgType = Signed ? AMDGPULibFunc::I64 : AMDGPULibFunc::U64;
+      break;
+    default:
+      llvm_unreachable("unhandled libcall argument type");
+    }
+
+    break;
+  default:
+    llvm_unreachable("unhandled libcall argument type");
+  }
+
+  return P;
+}
+
 static Type* getIntrinsicParamType(
   LLVMContext& C,
   const AMDGPULibFunc::Param& P,
@@ -945,18 +999,25 @@ std::string AMDGPUMangledLibFunc::getName() const {
   return std::string(OS.str());
 }
 
+bool AMDGPULibFunc::isCompatibleSignature(const FunctionType *FuncTy) const {
+  // TODO: Validate types make sense
+  return !FuncTy->isVarArg() && FuncTy->getNumParams() == getNumArgs();
+}
+
 Function *AMDGPULibFunc::getFunction(Module *M, const AMDGPULibFunc &fInfo) {
   std::string FuncName = fInfo.mangle();
   Function *F = dyn_cast_or_null<Function>(
     M->getValueSymbolTable().lookup(FuncName));
+  if (!F || F->isDeclaration())
+    return nullptr;
 
-  // check formal with actual types conformance
-  if (F && !F->isDeclaration()
-        && !F->isVarArg()
-        && F->arg_size() == fInfo.getNumArgs()) {
-    return F;
-  }
-  return nullptr;
+  if (F->hasFnAttribute(Attribute::NoBuiltin))
+    return nullptr;
+
+  if (!fInfo.isCompatibleSignature(F->getFunctionType()))
+    return nullptr;
+
+  return F;
 }
 
 FunctionCallee AMDGPULibFunc::getOrInsertFunction(Module *M,
@@ -965,11 +1026,12 @@ FunctionCallee AMDGPULibFunc::getOrInsertFunction(Module *M,
   Function *F = dyn_cast_or_null<Function>(
     M->getValueSymbolTable().lookup(FuncName));
 
-  // check formal with actual types conformance
-  if (F && !F->isDeclaration()
-        && !F->isVarArg()
-        && F->arg_size() == fInfo.getNumArgs()) {
-    return F;
+  if (F) {
+    if (F->hasFnAttribute(Attribute::NoBuiltin))
+      return nullptr;
+    if (!F->isDeclaration() &&
+        fInfo.isCompatibleSignature(F->getFunctionType()))
+      return F;
   }
 
   FunctionType *FuncTy = fInfo.getFunctionType(*M);
@@ -1041,6 +1103,10 @@ AMDGPULibFunc::AMDGPULibFunc(EFuncId Id, const AMDGPULibFunc &CopyFrom) {
          "not supported");
   Impl.reset(new AMDGPUMangledLibFunc(
       Id, *cast<AMDGPUMangledLibFunc>(CopyFrom.Impl.get())));
+}
+
+AMDGPULibFunc::AMDGPULibFunc(EFuncId Id, FunctionType *FT, bool SignedInts) {
+  Impl.reset(new AMDGPUMangledLibFunc(Id, FT, SignedInts));
 }
 
 AMDGPULibFunc::AMDGPULibFunc(StringRef Name, FunctionType *FT) {

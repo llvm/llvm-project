@@ -76,6 +76,7 @@ private:
   llvm::raw_ostream &PutAttrs(llvm::raw_ostream &, Attrs,
       const std::string * = nullptr, bool = false, std::string before = ","s,
       std::string after = ""s) const;
+  void PutDirective(llvm::raw_ostream &, const Symbol &);
 };
 
 class ModFileReader {

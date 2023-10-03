@@ -22,10 +22,17 @@ class ProcessLaunchTestCase(TestBase):
         self.runCmd("continue")
 
         with open(outfile) as f:
-           self.assertEqual(dedent("""\
+            self.assertEqual(
+                dedent(
+                    """\
                 Got 1 argument(s).
                 [0]: {}
-                """.format(exe)), f.read())
+                """.format(
+                        exe
+                    )
+                ),
+                f.read(),
+            )
 
     def test_process_launch_command_args(self):
         exe, outfile = self.setup()
@@ -35,13 +42,20 @@ class ProcessLaunchTestCase(TestBase):
         self.runCmd("continue")
 
         with open(outfile) as f:
-           self.assertEqual(dedent("""\
+            self.assertEqual(
+                dedent(
+                    """\
                 Got 4 argument(s).
                 [0]: {}
                 [1]: A
                 [2]: B
                 [3]: C
-                """.format(exe)), f.read())
+                """.format(
+                        exe
+                    )
+                ),
+                f.read(),
+            )
 
     def test_process_launch_target_args(self):
         exe, outfile = self.setup()
@@ -51,9 +65,16 @@ class ProcessLaunchTestCase(TestBase):
         self.runCmd("continue")
 
         with open(outfile) as f:
-           self.assertEqual(dedent("""\
+            self.assertEqual(
+                dedent(
+                    """\
                 Got 3 argument(s).
                 [0]: {}
                 [1]: D
                 [2]: E
-                """.format(exe)), f.read())
+                """.format(
+                        exe
+                    )
+                ),
+                f.read(),
+            )

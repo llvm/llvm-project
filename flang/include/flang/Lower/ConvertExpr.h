@@ -234,6 +234,9 @@ inline mlir::NamedAttribute getAdaptToByRefAttr(fir::FirOpBuilder &builder) {
           builder.getUnitAttr()};
 }
 
+mlir::Value addCrayPointerInst(mlir::Location loc, fir::FirOpBuilder &builder,
+                               mlir::Value ptrVal, mlir::Type ptrTy,
+                               mlir::Type pteTy);
 } // namespace Fortran::lower
 
 #endif // FORTRAN_LOWER_CONVERTEXPR_H

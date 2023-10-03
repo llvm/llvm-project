@@ -30,10 +30,10 @@ class StackAddrEscapeChecker
     : public Checker<check::PreCall, check::PreStmt<ReturnStmt>,
                      check::EndFunction> {
   mutable IdentifierInfo *dispatch_semaphore_tII = nullptr;
-  mutable std::unique_ptr<BuiltinBug> BT_stackleak;
-  mutable std::unique_ptr<BuiltinBug> BT_returnstack;
-  mutable std::unique_ptr<BuiltinBug> BT_capturedstackasync;
-  mutable std::unique_ptr<BuiltinBug> BT_capturedstackret;
+  mutable std::unique_ptr<BugType> BT_stackleak;
+  mutable std::unique_ptr<BugType> BT_returnstack;
+  mutable std::unique_ptr<BugType> BT_capturedstackasync;
+  mutable std::unique_ptr<BugType> BT_capturedstackret;
 
 public:
   enum CheckKind {
@@ -154,7 +154,7 @@ void StackAddrEscapeChecker::EmitStackError(CheckerContext &C,
   if (!N)
     return;
   if (!BT_returnstack)
-    BT_returnstack = std::make_unique<BuiltinBug>(
+    BT_returnstack = std::make_unique<BugType>(
         CheckNames[CK_StackAddrEscapeChecker],
         "Return of address to stack-allocated memory");
   // Generate a report for this bug.
@@ -194,7 +194,7 @@ void StackAddrEscapeChecker::checkAsyncExecutedBlockCaptures(
     if (!N)
       continue;
     if (!BT_capturedstackasync)
-      BT_capturedstackasync = std::make_unique<BuiltinBug>(
+      BT_capturedstackasync = std::make_unique<BugType>(
           CheckNames[CK_StackAddrAsyncEscapeChecker],
           "Address of stack-allocated memory is captured");
     SmallString<128> Buf;
@@ -218,7 +218,7 @@ void StackAddrEscapeChecker::checkReturnedBlockCaptures(
     if (!N)
       continue;
     if (!BT_capturedstackret)
-      BT_capturedstackret = std::make_unique<BuiltinBug>(
+      BT_capturedstackret = std::make_unique<BugType>(
           CheckNames[CK_StackAddrEscapeChecker],
           "Address of stack-allocated memory is captured");
     SmallString<128> Buf;
@@ -364,15 +364,12 @@ void StackAddrEscapeChecker::checkEndFunction(const ReturnStmt *RS,
     return;
 
   if (!BT_stackleak)
-    BT_stackleak = std::make_unique<BuiltinBug>(
-        CheckNames[CK_StackAddrEscapeChecker],
-        "Stack address stored into global variable",
-        "Stack address was saved into a global variable. "
-        "This is dangerous because the address will become "
-        "invalid after returning from the function");
+    BT_stackleak =
+        std::make_unique<BugType>(CheckNames[CK_StackAddrEscapeChecker],
+                                  "Stack address stored into global variable");
 
   for (const auto &P : Cb.V) {
-    const MemRegion *Referrer = P.first;
+    const MemRegion *Referrer = P.first->getBaseRegion();
     const MemRegion *Referred = P.second;
 
     // Generate a report for this bug.
@@ -387,6 +384,8 @@ void StackAddrEscapeChecker::checkEndFunction(const ReturnStmt *RS,
           << CommonSuffix;
       auto Report =
           std::make_unique<PathSensitiveBugReport>(*BT_stackleak, Out.str(), N);
+      if (Range.isValid())
+        Report->addRange(Range);
       Ctx.emitReport(std::move(Report));
       return;
     }
@@ -400,8 +399,14 @@ void StackAddrEscapeChecker::checkEndFunction(const ReturnStmt *RS,
       return "stack";
     }(Referrer->getMemorySpace());
 
-    // This cast supposed to succeed.
-    const VarRegion *ReferrerVar = cast<VarRegion>(Referrer->getBaseRegion());
+    // We should really only have VarRegions here.
+    // Anything else is really surprising, and we should get notified if such
+    // ever happens.
+    const auto *ReferrerVar = dyn_cast<VarRegion>(Referrer);
+    if (!ReferrerVar) {
+      assert(false && "We should have a VarRegion here");
+      continue; // Defensively skip this one.
+    }
     const std::string ReferrerVarName =
         ReferrerVar->getDecl()->getDeclName().getAsString();
 

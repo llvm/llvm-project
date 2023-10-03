@@ -15,19 +15,19 @@
 # POSTCHECK: version = 0x0005
 # POSTCHECK: DW_TAG_compile_unit
 # POSTCHECK: DW_TAG_variable [14]
-# POSTCHECK: DW_AT_type [DW_FORM_ref_addr] (0x00000000000001f8 "Foo2a")
+# POSTCHECK: DW_AT_type [DW_FORM_ref_addr] (0x{{[0-9a-f]+}} "Foo2a")
 # POSTCHECK: version = 0x0005
 # POSTCHECK: DW_TAG_compile_unit
 # POSTCHECK: DW_TAG_variable [14]
-# POSTCHECK: DW_AT_type [DW_FORM_ref_addr] (0x0000000000000199 "Foo")
+# POSTCHECK: DW_AT_type [DW_FORM_ref_addr] (0x{{[0-9a-f]+}} "Foo")
 # POSTCHECK: version = 0x0004
 # POSTCHECK: DW_TAG_compile_unit
 # POSTCHECK: DW_TAG_variable [20]
-# POSTCHECK: DW_AT_type [DW_FORM_ref_addr] (0x00000000000002f4 "Foo4a")
+# POSTCHECK: DW_AT_type [DW_FORM_ref_addr] (0x{{[0-9a-f]+}} "Foo4a")
 # POSTCHECK: version = 0x0004
 # POSTCHECK: DW_TAG_compile_unit
 # POSTCHECK: DW_TAG_variable [20]
-# POSTCHECK: DW_AT_type [DW_FORM_ref_addr] (0x0000000000000276 "Foo3a")
+# POSTCHECK: DW_AT_type [DW_FORM_ref_addr] (0x{{[0-9a-f]+}} "Foo3a")
 
 # POSTCHECKTU: version = 0x0004
 # POSTCHECKTU: DW_TAG_type_unit

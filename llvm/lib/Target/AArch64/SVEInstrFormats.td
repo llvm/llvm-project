@@ -2317,7 +2317,10 @@ multiclass sve_fp_3op_p_zds_a<bits<2> opc, string asm, string Ps,
            SVEPseudo2Instr<Ps # _D, 1>, SVEInstr2Rev<NAME # _D, revname # _D, isReverseInstr>;
 
   def : SVE_4_Op_Pat<nxv8f16, op, nxv8i1, nxv8f16, nxv8f16, nxv8f16, !cast<Instruction>(NAME # _H)>;
+  def : SVE_4_Op_Pat<nxv4f16, op, nxv4i1, nxv4f16, nxv4f16, nxv4f16, !cast<Instruction>(NAME # _H)>;
+  def : SVE_4_Op_Pat<nxv2f16, op, nxv2i1, nxv2f16, nxv2f16, nxv2f16, !cast<Instruction>(NAME # _H)>;
   def : SVE_4_Op_Pat<nxv4f32, op, nxv4i1, nxv4f32, nxv4f32, nxv4f32, !cast<Instruction>(NAME # _S)>;
+  def : SVE_4_Op_Pat<nxv2f32, op, nxv2i1, nxv2f32, nxv2f32, nxv2f32, !cast<Instruction>(NAME # _S)>;
   def : SVE_4_Op_Pat<nxv2f64, op, nxv2i1, nxv2f64, nxv2f64, nxv2f64, !cast<Instruction>(NAME # _D)>;
 }
 
@@ -7200,6 +7203,10 @@ multiclass sve_int_perm_cpy_v<string asm, SDPatternOperator op> {
 
   def : Pat<(nxv8f16 (op nxv8i1:$pg, f16:$splat, nxv8f16:$passthru)),
             (!cast<Instruction>(NAME # _H) $passthru, $pg, $splat)>;
+  def : Pat<(nxv4f16 (op nxv4i1:$pg, f16:$splat, nxv4f16:$passthru)),
+            (!cast<Instruction>(NAME # _H) $passthru, $pg, $splat)>;
+  def : Pat<(nxv2f16 (op nxv2i1:$pg, f16:$splat, nxv2f16:$passthru)),
+            (!cast<Instruction>(NAME # _H) $passthru, $pg, $splat)>;
   def : Pat<(nxv2f32 (op nxv2i1:$pg, f32:$splat, nxv2f32:$passthru)),
             (!cast<Instruction>(NAME # _S) $passthru, $pg, $splat)>;
   def : Pat<(nxv4f32 (op nxv4i1:$pg, f32:$splat, nxv4f32:$passthru)),
@@ -9379,6 +9386,12 @@ class sve2p1_mem_cld_ss_2z<string mnemonic, bits<2> msz, bit n,
   let mayLoad = 1;
 }
 
+multiclass sve2p1_mem_cld_ss_2z<string mnemonic, bits<2> msz, bit n,
+                         RegisterOperand vector_ty, RegisterOperand gpr_ty, RegisterOperand vector_pseudo_ty> {
+  def NAME # _PSEUDO : Pseudo<(outs vector_pseudo_ty:$Zt), (ins PNRAny_p8to15:$PNg, GPR64sp:$Rn, gpr_ty:$Rm), []>;
+  def NAME : sve2p1_mem_cld_ss_2z<mnemonic, msz, n, vector_ty, gpr_ty>;
+}
+
 // SME2 multi-vec contiguous load (scalar plus immediate, two registers)
 class sve2p1_mem_cld_si_2z<string mnemonic, bits<2> msz, bit n,
                          RegisterOperand vector_ty>
@@ -9404,11 +9417,11 @@ class sve2p1_mem_cld_si_2z<string mnemonic, bits<2> msz, bit n,
 }
 
 multiclass sve2p1_mem_cld_si_2z<string mnemonic, bits<2> msz, bit n,
-                              RegisterOperand vector_ty> {
+                              RegisterOperand vector_ty, RegisterOperand vector_pseudo_ty> {
   def NAME : sve2p1_mem_cld_si_2z<mnemonic, msz, n, vector_ty>;
-
   def : InstAlias<mnemonic # " $Zt, $PNg/z, [$Rn]",
                   (!cast<Instruction>(NAME) vector_ty:$Zt, PNRAny_p8to15:$PNg, GPR64sp:$Rn, 0), 1>;
+  def NAME # _PSEUDO : Pseudo<(outs vector_pseudo_ty:$Zt), (ins PNRAny_p8to15:$PNg, GPR64sp:$Rn, simm4s2:$imm4), []>;
 }
 
 // SME2 multi-vec contiguous load (scalar plus scalar, four registers)
@@ -9434,6 +9447,12 @@ class sve2p1_mem_cld_ss_4z<string mnemonic, bits<2> msz, bit n,
 
   let hasSideEffects = 0;
   let mayLoad = 1;
+}
+
+multiclass sve2p1_mem_cld_ss_4z<string mnemonic, bits<2> msz, bit n,
+                         RegisterOperand vector_ty, RegisterOperand gpr_ty, RegisterOperand vector_pseudo_ty> {
+  def NAME # _PSEUDO : Pseudo<(outs vector_pseudo_ty:$Zt), (ins PNRAny_p8to15:$PNg, GPR64sp:$Rn, gpr_ty:$Rm), []>;
+  def NAME : sve2p1_mem_cld_ss_4z<mnemonic, msz, n, vector_ty, gpr_ty>;
 }
 
 // SME2 multi-vec contiguous load (scalar plus immediate, four registers)
@@ -9462,13 +9481,12 @@ class sve2p1_mem_cld_si_4z<string mnemonic, bits<2> msz, bit n,
 }
 
 multiclass sve2p1_mem_cld_si_4z<string mnemonic, bits<2> msz, bit n,
-                              RegisterOperand vector_ty> {
+                              RegisterOperand vector_ty, RegisterOperand vector_pseudo_ty> {
   def NAME : sve2p1_mem_cld_si_4z<mnemonic, msz, n, vector_ty>;
-
   def : InstAlias<mnemonic # " $Zt, $PNg/z, [$Rn]",
                   (!cast<Instruction>(NAME) vector_ty:$Zt, PNRAny_p8to15:$PNg, GPR64sp:$Rn, 0), 1>;
+  def NAME # _PSEUDO : Pseudo<(outs vector_pseudo_ty:$Zt), (ins PNRAny_p8to15:$PNg, GPR64sp:$Rn, simm4s4:$imm4), []>;
 }
-
 
 // SME2 multi-vec contiguous store (scalar plus scalar, two registers)
 class sve2p1_mem_cst_ss_2z<string mnemonic, bits<2> msz, bit n,

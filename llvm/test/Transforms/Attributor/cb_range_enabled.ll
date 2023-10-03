@@ -150,5 +150,5 @@ define i32 @test2_ncheck(i32 %unknown) {
 ;.
 ; CGSCC: attributes #[[ATTR0]] = { mustprogress nofree norecurse nosync nounwind willreturn memory(none) }
 ; CGSCC: attributes #[[ATTR1]] = { mustprogress nofree nosync nounwind willreturn memory(none) }
-; CGSCC: attributes #[[ATTR2:[0-9]+]] = { nofree willreturn }
+; CGSCC: attributes #[[ATTR2:[0-9]+]] = { nofree nosync willreturn }
 ;.

@@ -18,6 +18,7 @@ add_clang_library(clangAnalysisFlowSensitive
   LINK_LIBS
   clangAnalysis
   clangAST
+  clangASTMatchers
   clangBasic
   clangLex
   )

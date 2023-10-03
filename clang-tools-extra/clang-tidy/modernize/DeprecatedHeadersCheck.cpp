@@ -199,11 +199,12 @@ void IncludeModernizePPCallbacks::InclusionDirective(
   // 3. Do nothing and let the user deal with the migration himself.
   SourceLocation DiagLoc = FilenameRange.getBegin();
   if (CStyledHeaderToCxx.count(FileName) != 0) {
-    IncludesToBeProcessed.push_back(
+    IncludesToBeProcessed.emplace_back(
         IncludeMarker{CStyledHeaderToCxx[FileName], FileName,
                       FilenameRange.getAsRange(), DiagLoc});
   } else if (DeleteHeaders.count(FileName) != 0) {
-    IncludesToBeProcessed.push_back(
+    IncludesToBeProcessed.emplace_back(
+        // NOLINTNEXTLINE(modernize-use-emplace) - false-positive
         IncludeMarker{std::string{}, FileName,
                       SourceRange{HashLoc, FilenameRange.getEnd()}, DiagLoc});
   }

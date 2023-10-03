@@ -330,9 +330,10 @@ void RISCVInstrInfo::copyPhysReg(MachineBasicBlock &MBB,
     if (STI.hasStdExtZfh()) {
       Opc = RISCV::FSGNJ_H;
     } else {
-      assert(STI.hasStdExtF() && STI.hasStdExtZfhmin() &&
+      assert(STI.hasStdExtF() &&
+             (STI.hasStdExtZfhmin() || STI.hasStdExtZfbfmin()) &&
              "Unexpected extensions");
-      // Zfhmin subset doesn't have FSGNJ_H, replaces FSGNJ_H with FSGNJ_S.
+      // Zfhmin/Zfbfmin doesn't have FSGNJ_H, replace FSGNJ_H with FSGNJ_S.
       DstReg = TRI->getMatchingSuperReg(DstReg, RISCV::sub_16,
                                         &RISCV::FPR32RegClass);
       SrcReg = TRI->getMatchingSuperReg(SrcReg, RISCV::sub_16,
@@ -517,10 +518,6 @@ void RISCVInstrInfo::storeRegToStackSlot(MachineBasicBlock &MBB,
                                          const TargetRegisterClass *RC,
                                          const TargetRegisterInfo *TRI,
                                          Register VReg) const {
-  DebugLoc DL;
-  if (I != MBB.end())
-    DL = I->getDebugLoc();
-
   MachineFunction *MF = MBB.getParent();
   MachineFrameInfo &MFI = MF->getFrameInfo();
 
@@ -581,7 +578,7 @@ void RISCVInstrInfo::storeRegToStackSlot(MachineBasicBlock &MBB,
         MemoryLocation::UnknownSize, MFI.getObjectAlign(FI));
 
     MFI.setStackID(FI, TargetStackID::ScalableVector);
-    BuildMI(MBB, I, DL, get(Opcode))
+    BuildMI(MBB, I, DebugLoc(), get(Opcode))
         .addReg(SrcReg, getKillRegState(IsKill))
         .addFrameIndex(FI)
         .addMemOperand(MMO);
@@ -590,7 +587,7 @@ void RISCVInstrInfo::storeRegToStackSlot(MachineBasicBlock &MBB,
         MachinePointerInfo::getFixedStack(*MF, FI), MachineMemOperand::MOStore,
         MFI.getObjectSize(FI), MFI.getObjectAlign(FI));
 
-    BuildMI(MBB, I, DL, get(Opcode))
+    BuildMI(MBB, I, DebugLoc(), get(Opcode))
         .addReg(SrcReg, getKillRegState(IsKill))
         .addFrameIndex(FI)
         .addImm(0)
@@ -604,10 +601,6 @@ void RISCVInstrInfo::loadRegFromStackSlot(MachineBasicBlock &MBB,
                                           const TargetRegisterClass *RC,
                                           const TargetRegisterInfo *TRI,
                                           Register VReg) const {
-  DebugLoc DL;
-  if (I != MBB.end())
-    DL = I->getDebugLoc();
-
   MachineFunction *MF = MBB.getParent();
   MachineFrameInfo &MFI = MF->getFrameInfo();
 
@@ -668,7 +661,7 @@ void RISCVInstrInfo::loadRegFromStackSlot(MachineBasicBlock &MBB,
         MemoryLocation::UnknownSize, MFI.getObjectAlign(FI));
 
     MFI.setStackID(FI, TargetStackID::ScalableVector);
-    BuildMI(MBB, I, DL, get(Opcode), DstReg)
+    BuildMI(MBB, I, DebugLoc(), get(Opcode), DstReg)
         .addFrameIndex(FI)
         .addMemOperand(MMO);
   } else {
@@ -676,7 +669,7 @@ void RISCVInstrInfo::loadRegFromStackSlot(MachineBasicBlock &MBB,
         MachinePointerInfo::getFixedStack(*MF, FI), MachineMemOperand::MOLoad,
         MFI.getObjectSize(FI), MFI.getObjectAlign(FI));
 
-    BuildMI(MBB, I, DL, get(Opcode), DstReg)
+    BuildMI(MBB, I, DebugLoc(), get(Opcode), DstReg)
         .addFrameIndex(FI)
         .addImm(0)
         .addMemOperand(MMO);
@@ -763,19 +756,19 @@ void RISCVInstrInfo::movImm(MachineBasicBlock &MBB,
       break;
     case RISCVMatInt::RegX0:
       BuildMI(MBB, MBBI, DL, get(Inst.getOpcode()), DstReg)
-          .addReg(SrcReg, RegState::Kill)
+          .addReg(SrcReg, getKillRegState(SrcReg != RISCV::X0))
           .addReg(RISCV::X0)
           .setMIFlag(Flag);
       break;
     case RISCVMatInt::RegReg:
       BuildMI(MBB, MBBI, DL, get(Inst.getOpcode()), DstReg)
-          .addReg(SrcReg, RegState::Kill)
-          .addReg(SrcReg, RegState::Kill)
+          .addReg(SrcReg, getKillRegState(SrcReg != RISCV::X0))
+          .addReg(SrcReg, getKillRegState(SrcReg != RISCV::X0))
           .setMIFlag(Flag);
       break;
     case RISCVMatInt::RegImm:
       BuildMI(MBB, MBBI, DL, get(Inst.getOpcode()), DstReg)
-          .addReg(SrcReg, RegState::Kill)
+          .addReg(SrcReg, getKillRegState(SrcReg != RISCV::X0))
           .addImm(Inst.getImm())
           .setMIFlag(Flag);
       break;
@@ -896,6 +889,10 @@ bool RISCVInstrInfo::analyzeBranch(MachineBasicBlock &MBB,
 
   // We can't handle blocks that end in an indirect branch.
   if (I->getDesc().isIndirectBranch())
+    return true;
+
+  // We can't handle Generic branch opcodes from Global ISel.
+  if (I->isPreISelOpcode())
     return true;
 
   // We can't handle blocks with more than 2 terminators.
@@ -1109,12 +1106,31 @@ unsigned getPredicatedOpcode(unsigned Opcode) {
   switch (Opcode) {
   case RISCV::ADD:   return RISCV::PseudoCCADD;   break;
   case RISCV::SUB:   return RISCV::PseudoCCSUB;   break;
+  case RISCV::SLL:   return RISCV::PseudoCCSLL;   break;
+  case RISCV::SRL:   return RISCV::PseudoCCSRL;   break;
+  case RISCV::SRA:   return RISCV::PseudoCCSRA;   break;
   case RISCV::AND:   return RISCV::PseudoCCAND;   break;
   case RISCV::OR:    return RISCV::PseudoCCOR;    break;
   case RISCV::XOR:   return RISCV::PseudoCCXOR;   break;
 
+  case RISCV::ADDI:  return RISCV::PseudoCCADDI;  break;
+  case RISCV::SLLI:  return RISCV::PseudoCCSLLI;  break;
+  case RISCV::SRLI:  return RISCV::PseudoCCSRLI;  break;
+  case RISCV::SRAI:  return RISCV::PseudoCCSRAI;  break;
+  case RISCV::ANDI:  return RISCV::PseudoCCANDI;  break;
+  case RISCV::ORI:   return RISCV::PseudoCCORI;   break;
+  case RISCV::XORI:  return RISCV::PseudoCCXORI;  break;
+
   case RISCV::ADDW:  return RISCV::PseudoCCADDW;  break;
   case RISCV::SUBW:  return RISCV::PseudoCCSUBW;  break;
+  case RISCV::SLLW:  return RISCV::PseudoCCSLLW;  break;
+  case RISCV::SRLW:  return RISCV::PseudoCCSRLW;  break;
+  case RISCV::SRAW:  return RISCV::PseudoCCSRAW;  break;
+
+  case RISCV::ADDIW: return RISCV::PseudoCCADDIW; break;
+  case RISCV::SLLIW: return RISCV::PseudoCCSLLIW; break;
+  case RISCV::SRLIW: return RISCV::PseudoCCSRLIW; break;
+  case RISCV::SRAIW: return RISCV::PseudoCCSRAIW; break;
   }
 
   return RISCV::INSTRUCTION_LIST_END;
@@ -1134,6 +1150,10 @@ static MachineInstr *canFoldAsPredicatedOp(Register Reg,
     return nullptr;
   // Check if MI can be predicated and folded into the CCMOV.
   if (getPredicatedOpcode(MI->getOpcode()) == RISCV::INSTRUCTION_LIST_END)
+    return nullptr;
+  // Don't predicate li idiom.
+  if (MI->getOpcode() == RISCV::ADDI && MI->getOperand(1).isReg() &&
+      MI->getOperand(1).getReg() == RISCV::X0)
     return nullptr;
   // Check if MI has any other defs or physreg uses.
   for (const MachineOperand &MO : llvm::drop_begin(MI->operands())) {
@@ -2193,9 +2213,9 @@ std::string RISCVInstrInfo::createMIROperandComment(
   case CASE_VFMA_OPCODE_LMULS_MF4(OP, TYPE)
 
 #define CASE_VFMA_SPLATS(OP)                                                   \
-  CASE_VFMA_OPCODE_LMULS_MF4(OP, VF16):                                        \
-  case CASE_VFMA_OPCODE_LMULS_MF2(OP, VF32):                                   \
-  case CASE_VFMA_OPCODE_LMULS_M1(OP, VF64)
+  CASE_VFMA_OPCODE_LMULS_MF4(OP, VFPR16):                                      \
+  case CASE_VFMA_OPCODE_LMULS_MF2(OP, VFPR32):                                 \
+  case CASE_VFMA_OPCODE_LMULS_M1(OP, VFPR64)
 // clang-format on
 
 bool RISCVInstrInfo::findCommutedOpIndices(const MachineInstr &MI,
@@ -2356,9 +2376,9 @@ bool RISCVInstrInfo::findCommutedOpIndices(const MachineInstr &MI,
   CASE_VFMA_CHANGE_OPCODE_LMULS_MF4(OLDOP, NEWOP, TYPE)
 
 #define CASE_VFMA_CHANGE_OPCODE_SPLATS(OLDOP, NEWOP)                           \
-  CASE_VFMA_CHANGE_OPCODE_LMULS_MF4(OLDOP, NEWOP, VF16)                        \
-  CASE_VFMA_CHANGE_OPCODE_LMULS_MF2(OLDOP, NEWOP, VF32)                        \
-  CASE_VFMA_CHANGE_OPCODE_LMULS_M1(OLDOP, NEWOP, VF64)
+  CASE_VFMA_CHANGE_OPCODE_LMULS_MF4(OLDOP, NEWOP, VFPR16)                      \
+  CASE_VFMA_CHANGE_OPCODE_LMULS_MF2(OLDOP, NEWOP, VFPR32)                      \
+  CASE_VFMA_CHANGE_OPCODE_LMULS_M1(OLDOP, NEWOP, VFPR64)
 
 MachineInstr *RISCVInstrInfo::commuteInstructionImpl(MachineInstr &MI,
                                                      bool NewMI,
@@ -2826,4 +2846,116 @@ bool RISCV::hasEqualFRM(const MachineInstr &MI1, const MachineInstr &MI2) {
   MachineOperand FrmOp1 = MI1.getOperand(MI1FrmOpIdx);
   MachineOperand FrmOp2 = MI2.getOperand(MI2FrmOpIdx);
   return FrmOp1.getImm() == FrmOp2.getImm();
+}
+
+std::optional<unsigned>
+RISCV::getVectorLowDemandedScalarBits(uint16_t Opcode, unsigned Log2SEW) {
+  // TODO: Handle Zvbb instructions
+  switch (Opcode) {
+  default:
+    return std::nullopt;
+
+  // 11.6. Vector Single-Width Shift Instructions
+  case RISCV::VSLL_VX:
+  case RISCV::VSRL_VX:
+  case RISCV::VSRA_VX:
+  // 12.4. Vector Single-Width Scaling Shift Instructions
+  case RISCV::VSSRL_VX:
+  case RISCV::VSSRA_VX:
+    // Only the low lg2(SEW) bits of the shift-amount value are used.
+    return Log2SEW;
+
+  // 11.7 Vector Narrowing Integer Right Shift Instructions
+  case RISCV::VNSRL_WX:
+  case RISCV::VNSRA_WX:
+  // 12.5. Vector Narrowing Fixed-Point Clip Instructions
+  case RISCV::VNCLIPU_WX:
+  case RISCV::VNCLIP_WX:
+    // Only the low lg2(2*SEW) bits of the shift-amount value are used.
+    return Log2SEW + 1;
+
+  // 11.1. Vector Single-Width Integer Add and Subtract
+  case RISCV::VADD_VX:
+  case RISCV::VSUB_VX:
+  case RISCV::VRSUB_VX:
+  // 11.2. Vector Widening Integer Add/Subtract
+  case RISCV::VWADDU_VX:
+  case RISCV::VWSUBU_VX:
+  case RISCV::VWADD_VX:
+  case RISCV::VWSUB_VX:
+  case RISCV::VWADDU_WX:
+  case RISCV::VWSUBU_WX:
+  case RISCV::VWADD_WX:
+  case RISCV::VWSUB_WX:
+  // 11.4. Vector Integer Add-with-Carry / Subtract-with-Borrow Instructions
+  case RISCV::VADC_VXM:
+  case RISCV::VADC_VIM:
+  case RISCV::VMADC_VXM:
+  case RISCV::VMADC_VIM:
+  case RISCV::VMADC_VX:
+  case RISCV::VSBC_VXM:
+  case RISCV::VMSBC_VXM:
+  case RISCV::VMSBC_VX:
+  // 11.5 Vector Bitwise Logical Instructions
+  case RISCV::VAND_VX:
+  case RISCV::VOR_VX:
+  case RISCV::VXOR_VX:
+  // 11.8. Vector Integer Compare Instructions
+  case RISCV::VMSEQ_VX:
+  case RISCV::VMSNE_VX:
+  case RISCV::VMSLTU_VX:
+  case RISCV::VMSLT_VX:
+  case RISCV::VMSLEU_VX:
+  case RISCV::VMSLE_VX:
+  case RISCV::VMSGTU_VX:
+  case RISCV::VMSGT_VX:
+  // 11.9. Vector Integer Min/Max Instructions
+  case RISCV::VMINU_VX:
+  case RISCV::VMIN_VX:
+  case RISCV::VMAXU_VX:
+  case RISCV::VMAX_VX:
+  // 11.10. Vector Single-Width Integer Multiply Instructions
+  case RISCV::VMUL_VX:
+  case RISCV::VMULH_VX:
+  case RISCV::VMULHU_VX:
+  case RISCV::VMULHSU_VX:
+  // 11.11. Vector Integer Divide Instructions
+  case RISCV::VDIVU_VX:
+  case RISCV::VDIV_VX:
+  case RISCV::VREMU_VX:
+  case RISCV::VREM_VX:
+  // 11.12. Vector Widening Integer Multiply Instructions
+  case RISCV::VWMUL_VX:
+  case RISCV::VWMULU_VX:
+  case RISCV::VWMULSU_VX:
+  // 11.13. Vector Single-Width Integer Multiply-Add Instructions
+  case RISCV::VMACC_VX:
+  case RISCV::VNMSAC_VX:
+  case RISCV::VMADD_VX:
+  case RISCV::VNMSUB_VX:
+  // 11.14. Vector Widening Integer Multiply-Add Instructions
+  case RISCV::VWMACCU_VX:
+  case RISCV::VWMACC_VX:
+  case RISCV::VWMACCSU_VX:
+  case RISCV::VWMACCUS_VX:
+  // 11.15. Vector Integer Merge Instructions
+  case RISCV::VMERGE_VXM:
+  // 11.16. Vector Integer Move Instructions
+  case RISCV::VMV_V_X:
+  // 12.1. Vector Single-Width Saturating Add and Subtract
+  case RISCV::VSADDU_VX:
+  case RISCV::VSADD_VX:
+  case RISCV::VSSUBU_VX:
+  case RISCV::VSSUB_VX:
+  // 12.2. Vector Single-Width Averaging Add and Subtract
+  case RISCV::VAADDU_VX:
+  case RISCV::VAADD_VX:
+  case RISCV::VASUBU_VX:
+  case RISCV::VASUB_VX:
+  // 12.3. Vector Single-Width Fractional Multiply with Rounding and Saturation
+  case RISCV::VSMUL_VX:
+  // 16.1. Integer Scalar Move Instructions
+  case RISCV::VMV_S_X:
+    return 1U << Log2SEW;
+  }
 }

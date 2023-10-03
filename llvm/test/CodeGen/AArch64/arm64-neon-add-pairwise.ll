@@ -137,9 +137,8 @@ define i32 @addp_v4i32(<4 x i32> %a, <4 x i32> %b) {
 ; CHECK-GI-LABEL: addp_v4i32:
 ; CHECK-GI:       // %bb.0:
 ; CHECK-GI-NEXT:    add v0.4s, v0.4s, v1.4s
-; CHECK-GI-NEXT:    ext v1.16b, v0.16b, v0.16b, #0
-; CHECK-GI-NEXT:    ext v0.16b, v0.16b, v0.16b, #8
-; CHECK-GI-NEXT:    addp v0.2s, v1.2s, v0.2s
+; CHECK-GI-NEXT:    mov d1, v0.d[1]
+; CHECK-GI-NEXT:    addp v0.2s, v0.2s, v1.2s
 ; CHECK-GI-NEXT:    rev64 v1.2s, v0.2s
 ; CHECK-GI-NEXT:    add v0.2s, v0.2s, v1.2s
 ; CHECK-GI-NEXT:    fmov w0, s0
@@ -165,9 +164,8 @@ define <4 x i16> @addp_v8i16(<8 x i16> %a, <8 x i16> %b) {
 ; CHECK-GI-LABEL: addp_v8i16:
 ; CHECK-GI:       // %bb.0:
 ; CHECK-GI-NEXT:    add v0.8h, v0.8h, v1.8h
-; CHECK-GI-NEXT:    ext v1.16b, v0.16b, v0.16b, #0
-; CHECK-GI-NEXT:    ext v0.16b, v0.16b, v0.16b, #8
-; CHECK-GI-NEXT:    addp v0.4h, v1.4h, v0.4h
+; CHECK-GI-NEXT:    mov d1, v0.d[1]
+; CHECK-GI-NEXT:    addp v0.4h, v0.4h, v1.4h
 ; CHECK-GI-NEXT:    ret
   %1 = add <8 x i16> %a, %b
   %2 = shufflevector <8 x i16> %1, <8 x i16> poison, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
@@ -187,9 +185,8 @@ define <8 x i8> @addp_v16i8(<16 x i8> %a, <16 x i8> %b) {
 ; CHECK-GI-LABEL: addp_v16i8:
 ; CHECK-GI:       // %bb.0:
 ; CHECK-GI-NEXT:    add v0.16b, v0.16b, v1.16b
-; CHECK-GI-NEXT:    ext v1.16b, v0.16b, v0.16b, #0
-; CHECK-GI-NEXT:    ext v0.16b, v0.16b, v0.16b, #8
-; CHECK-GI-NEXT:    addp v0.8b, v1.8b, v0.8b
+; CHECK-GI-NEXT:    mov d1, v0.d[1]
+; CHECK-GI-NEXT:    addp v0.8b, v0.8b, v1.8b
 ; CHECK-GI-NEXT:    ret
   %1 = add <16 x i8> %a, %b
   %2 = shufflevector <16 x i8> %1, <16 x i8> poison, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>

@@ -1,5 +1,10 @@
 // RUN: dsymutil -f -y %p/dummy-debug-map.map -oso-prepend-path %p/../Inputs/dead-stripped -o - | llvm-dwarfdump - --debug-info | FileCheck %s --implicit-check-not "{{DW_AT_low_pc|DW_AT_high_pc|DW_AT_location|DW_TAG|NULL}}"
 
+// RUN: dsymutil --linker llvm -f -y %p/dummy-debug-map.map -oso-prepend-path \
+// RUN: %p/../Inputs/dead-stripped -o - | llvm-dwarfdump - --debug-info | \
+// RUN: FileCheck %s --implicit-check-not \
+// RUN: "{{DW_AT_low_pc|DW_AT_high_pc|DW_AT_location|DW_TAG|NULL}}"
+
 // The test was compiled with:
 // clang++ -O2 -g -c dead-strip.cpp -o 1.o
 

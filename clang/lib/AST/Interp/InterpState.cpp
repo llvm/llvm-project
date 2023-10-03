@@ -58,9 +58,13 @@ void InterpState::deallocate(Block *B) {
         reinterpret_cast<char *>(std::malloc(sizeof(DeadBlock) + Size));
     auto *D = new (Memory) DeadBlock(DeadBlocks, B);
 
-    // Move data from one block to another.
-    if (Desc->MoveFn)
+    // Move data and metadata from the old block to the new (dead)block.
+    if (Desc->MoveFn) {
       Desc->MoveFn(B, B->data(), D->data(), Desc);
+      if (Desc->getMetadataSize() > 0)
+        std::memcpy(D->rawData(), B->rawData(), Desc->getMetadataSize());
+    }
+
   } else {
     // Free storage, if necessary.
     if (Desc->DtorFn)

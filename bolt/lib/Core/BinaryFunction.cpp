@@ -25,7 +25,6 @@
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Demangle/Demangle.h"
 #include "llvm/MC/MCAsmInfo.h"
-#include "llvm/MC/MCAsmLayout.h"
 #include "llvm/MC/MCContext.h"
 #include "llvm/MC/MCDisassembler/MCDisassembler.h"
 #include "llvm/MC/MCExpr.h"
@@ -182,9 +181,9 @@ static SMLoc findDebugLineInformationForInstructionAt(
   // We use the pointer in SMLoc to store an instance of DebugLineTableRowRef,
   // which occupies 64 bits. Thus, we can only proceed if the struct fits into
   // the pointer itself.
-  assert(sizeof(decltype(SMLoc().getPointer())) >=
-             sizeof(DebugLineTableRowRef) &&
-         "Cannot fit instruction debug line information into SMLoc's pointer");
+  static_assert(
+      sizeof(decltype(SMLoc().getPointer())) >= sizeof(DebugLineTableRowRef),
+      "Cannot fit instruction debug line information into SMLoc's pointer");
 
   SMLoc NullResult = DebugLineTableRowRef::NULL_ROW.toSMLoc();
   uint32_t RowIndex = LineTable->lookupAddress(
@@ -1639,16 +1638,20 @@ void BinaryFunction::postProcessJumpTables() {
         JT.Entries.push_back(Label);
         continue;
       }
-      // Create local label for targets cannot be reached by other fragments
-      // Otherwise, secondary entry point to target function
+      // Create a local label for targets that cannot be reached by other
+      // fragments. Otherwise, create a secondary entry point in the target
+      // function.
       BinaryFunction *TargetBF =
           BC.getBinaryFunctionContainingAddress(EntryAddress);
-      if (uint64_t Offset = EntryAddress - TargetBF->getAddress()) {
-        MCSymbol *Label = (HasOneParent && TargetBF == this)
-                              ? getOrCreateLocalLabel(EntryAddress, true)
-                              : TargetBF->addEntryPointAtOffset(Offset);
-        JT.Entries.push_back(Label);
+      MCSymbol *Label;
+      if (HasOneParent && TargetBF == this) {
+        Label = getOrCreateLocalLabel(EntryAddress, true);
+      } else {
+        const uint64_t Offset = EntryAddress - TargetBF->getAddress();
+        Label = Offset ? TargetBF->addEntryPointAtOffset(Offset)
+                       : TargetBF->getSymbol();
       }
+      JT.Entries.push_back(Label);
     }
   }
 
@@ -2217,8 +2220,8 @@ void BinaryFunction::calculateMacroOpFusionStats() {
                       << Twine::utohexstr(getAddress() + Offset)
                       << " in function " << *this << "; executed "
                       << BB.getKnownExecutionCount() << " times.\n");
-    ++BC.MissedMacroFusionPairs;
-    BC.MissedMacroFusionExecCount += BB.getKnownExecutionCount();
+    ++BC.Stats.MissedMacroFusionPairs;
+    BC.Stats.MissedMacroFusionExecCount += BB.getKnownExecutionCount();
   }
 }
 
@@ -2301,6 +2304,12 @@ void BinaryFunction::removeConditionalTailCalls() {
 
     // This branch is no longer a conditional tail call.
     BC.MIB->unsetConditionalTailCall(*CTCInstr);
+
+    // Move offset from CTCInstr to TailCallInstr.
+    if (std::optional<uint32_t> Offset = BC.MIB->getOffset(*CTCInstr)) {
+      BC.MIB->setOffset(TailCallInstr, *Offset);
+      BC.MIB->clearOffset(*CTCInstr);
+    }
   }
 
   insertBasicBlocks(std::prev(end()), std::move(NewBlocks),
@@ -2845,6 +2854,14 @@ bool BinaryFunction::requiresAddressTranslation() const {
   return opts::EnableBAT || hasSDTMarker() || hasPseudoProbe();
 }
 
+bool BinaryFunction::requiresAddressMap() const {
+  if (isInjected())
+    return false;
+
+  return opts::UpdateDebugSections || isMultiEntry() ||
+         requiresAddressTranslation();
+}
+
 uint64_t BinaryFunction::getInstructionCount() const {
   uint64_t Count = 0;
   for (const BinaryBasicBlock &BB : blocks())
@@ -3139,6 +3156,10 @@ void BinaryFunction::dumpGraphToFile(std::string Filename) const {
 }
 
 bool BinaryFunction::validateCFG() const {
+  // Skip the validation of CFG after it is finalized
+  if (CurrentState == State::CFG_Finalized)
+    return true;
+
   bool Valid = true;
   for (BinaryBasicBlock *BB : BasicBlocks)
     Valid &= BB->validateSuccessorInvariants();
@@ -4012,7 +4033,7 @@ void BinaryFunction::calculateLoopInfo() {
   }
 }
 
-void BinaryFunction::updateOutputValues(const MCAsmLayout &Layout) {
+void BinaryFunction::updateOutputValues(const BOLTLinker &Linker) {
   if (!isEmitted()) {
     assert(!isInjected() && "injected function should be emitted");
     setOutputAddress(getAddress());
@@ -4020,16 +4041,17 @@ void BinaryFunction::updateOutputValues(const MCAsmLayout &Layout) {
     return;
   }
 
-  const uint64_t BaseAddress = getCodeSection()->getOutputAddress();
+  const auto SymbolInfo = Linker.lookupSymbolInfo(getSymbol()->getName());
+  assert(SymbolInfo && "Cannot find function entry symbol");
+  setOutputAddress(SymbolInfo->Address);
+  setOutputSize(SymbolInfo->Size);
+
   if (BC.HasRelocations || isInjected()) {
-    const uint64_t StartOffset = Layout.getSymbolOffset(*getSymbol());
-    const uint64_t EndOffset = Layout.getSymbolOffset(*getFunctionEndLabel());
-    setOutputAddress(BaseAddress + StartOffset);
-    setOutputSize(EndOffset - StartOffset);
     if (hasConstantIsland()) {
-      const uint64_t DataOffset =
-          Layout.getSymbolOffset(*getFunctionConstantIslandLabel());
-      setOutputDataAddress(BaseAddress + DataOffset);
+      const auto DataAddress =
+          Linker.lookupSymbol(getFunctionConstantIslandLabel()->getName());
+      assert(DataAddress && "Cannot find function CI symbol");
+      setOutputDataAddress(*DataAddress);
       for (auto It : Islands->Offsets) {
         const uint64_t OldOffset = It.first;
         BinaryData *BD = BC.getBinaryDataAtAddress(getAddress() + OldOffset);
@@ -4037,8 +4059,11 @@ void BinaryFunction::updateOutputValues(const MCAsmLayout &Layout) {
           continue;
 
         MCSymbol *Symbol = It.second;
-        const uint64_t NewOffset = Layout.getSymbolOffset(*Symbol);
-        BD->setOutputLocation(*getCodeSection(), NewOffset);
+        const auto NewAddress = Linker.lookupSymbol(Symbol->getName());
+        assert(NewAddress && "Cannot find CI symbol");
+        auto &Section = *getCodeSection();
+        const auto NewOffset = *NewAddress - Section.getOutputAddress();
+        BD->setOutputLocation(Section, NewOffset);
       }
     }
     if (isSplit()) {
@@ -4048,7 +4073,6 @@ void BinaryFunction::updateOutputValues(const MCAsmLayout &Layout) {
         // If fragment is empty, cold section might not exist
         if (FF.empty() && ColdSection.getError())
           continue;
-        const uint64_t ColdBaseAddress = ColdSection->getOutputAddress();
 
         const MCSymbol *ColdStartSymbol = getSymbol(FF.getFragmentNum());
         // If fragment is empty, symbol might have not been emitted
@@ -4057,31 +4081,24 @@ void BinaryFunction::updateOutputValues(const MCAsmLayout &Layout) {
           continue;
         assert(ColdStartSymbol && ColdStartSymbol->isDefined() &&
                "split function should have defined cold symbol");
-        const MCSymbol *ColdEndSymbol =
-            getFunctionEndLabel(FF.getFragmentNum());
-        assert(ColdEndSymbol && ColdEndSymbol->isDefined() &&
-               "split function should have defined cold end symbol");
-        const uint64_t ColdStartOffset =
-            Layout.getSymbolOffset(*ColdStartSymbol);
-        const uint64_t ColdEndOffset = Layout.getSymbolOffset(*ColdEndSymbol);
-        FF.setAddress(ColdBaseAddress + ColdStartOffset);
-        FF.setImageSize(ColdEndOffset - ColdStartOffset);
+        const auto ColdStartSymbolInfo =
+            Linker.lookupSymbolInfo(ColdStartSymbol->getName());
+        assert(ColdStartSymbolInfo && "Cannot find cold start symbol");
+        FF.setAddress(ColdStartSymbolInfo->Address);
+        FF.setImageSize(ColdStartSymbolInfo->Size);
         if (hasConstantIsland()) {
-          const uint64_t DataOffset =
-              Layout.getSymbolOffset(*getFunctionColdConstantIslandLabel());
-          setOutputColdDataAddress(ColdBaseAddress + DataOffset);
+          const auto DataAddress = Linker.lookupSymbol(
+              getFunctionColdConstantIslandLabel()->getName());
+          assert(DataAddress && "Cannot find cold CI symbol");
+          setOutputColdDataAddress(*DataAddress);
         }
       }
     }
-  } else {
-    setOutputAddress(getAddress());
-    setOutputSize(Layout.getSymbolOffset(*getFunctionEndLabel()));
   }
 
   // Update basic block output ranges for the debug info, if we have
   // secondary entry points in the symbol table to update or if writing BAT.
-  if (!opts::UpdateDebugSections && !isMultiEntry() &&
-      !requiresAddressTranslation())
+  if (!requiresAddressMap())
     return;
 
   // Output ranges should match the input if the body hasn't changed.
@@ -4108,17 +4125,22 @@ void BinaryFunction::updateOutputValues(const MCAsmLayout &Layout) {
           assert(FragmentBaseAddress == FF.getAddress());
         else
           assert(FragmentBaseAddress == getOutputAddress());
+        (void)FragmentBaseAddress;
       }
 
-      const uint64_t BBOffset = Layout.getSymbolOffset(*BB->getLabel());
-      const uint64_t BBAddress = FragmentBaseAddress + BBOffset;
+      // Injected functions likely will fail lookup, as they have no
+      // input range. Just assign the BB the output address of the
+      // function.
+      auto MaybeBBAddress =
+          BC.getIOAddressMap().lookup(BB->getInputOffset() + getAddress());
+      const uint64_t BBAddress = MaybeBBAddress  ? *MaybeBBAddress
+                                 : BB->isSplit() ? FF.getAddress()
+                                                 : getOutputAddress();
       BB->setOutputStartAddress(BBAddress);
 
       if (PrevBB)
         PrevBB->setOutputEndAddress(BBAddress);
       PrevBB = BB;
-
-      BB->updateOutputValues(Layout);
     }
 
     PrevBB->setOutputEndAddress(PrevBB->isSplit()
@@ -4171,9 +4193,8 @@ uint64_t BinaryFunction::translateInputToOutputAddress(uint64_t Address) const {
 
   // Check if the address is associated with an instruction that is tracked
   // by address translation.
-  auto KV = InputOffsetToAddressMap.find(Address - getAddress());
-  if (KV != InputOffsetToAddressMap.end())
-    return KV->second;
+  if (auto OutputAddress = BC.getIOAddressMap().lookup(Address))
+    return *OutputAddress;
 
   // FIXME: #18950828 - we rely on relative offsets inside basic blocks to stay
   //        intact. Instead we can use pseudo instructions and/or annotations.

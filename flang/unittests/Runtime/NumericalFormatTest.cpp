@@ -57,6 +57,22 @@ static bool CompareFormatReal(const char *format, std::uint64_t xInt,
   return CompareFormatReal(format, x, expect, got);
 }
 
+static bool CompareFormatInteger(
+    const char *format, std::int64_t x, const char *expect, std::string &got) {
+  char buffer[800];
+  auto cookie{IONAME(BeginInternalFormattedOutput)(
+      buffer, sizeof buffer, format, std::strlen(format))};
+  EXPECT_TRUE(IONAME(OutputInteger64)(cookie, x));
+  auto status{IONAME(EndIoStatement)(cookie)};
+  EXPECT_EQ(status, 0);
+  got = std::string{buffer, sizeof buffer};
+  auto lastNonBlank{got.find_last_not_of(" ")};
+  if (lastNonBlank != std::string::npos) {
+    got.resize(lastNonBlank + 1);
+  }
+  return CompareFormattedStrings(expect, got);
+}
+
 struct IOApiTests : CrashHandlerFixture {};
 
 TEST(IOApiTests, HelloWorldOutputTest) {
@@ -690,6 +706,71 @@ TEST(IOApiTests, FormatDoubleValues) {
     ASSERT_TRUE(CompareFormatReal("(EN10.1)", value, expect, got))
         << "Failed to format EN10.1, expected '" << expect << "', got '" << got
         << "'";
+  }
+}
+
+TEST(IOApiTests, FormatIntegerValues) {
+  using IntTestCaseTy = std::tuple<const char *, std::int64_t, const char *>;
+  static const std::vector<IntTestCaseTy> intTestCases{
+      {"(I4)", 0, "   0"},
+      {"(I4)", 1, "   1"},
+      {"(I4)", 9999, "9999"},
+      {"(SP,I4)", 1, "  +1"},
+      {"(SP,I4)", 9999, "****"},
+      {"(SP,I4)", 999, "+999"},
+      {"(I4)", -1, "  -1"},
+      {"(I4)", -9999, "****"},
+      {"(I4)", -999, "-999"},
+      {"(I4.2)", 1, "  01"},
+      {"(I4.2)", -1, " -01"},
+      {"(I4.2)", 999, " 999"},
+      {"(I4.4)", 999, "0999"},
+      {"(I0)", 0, "0"},
+      {"(I0)", 1, "1"},
+      {"(I0)", 9999, "9999"},
+      {"(SP,I0)", 1, "+1"},
+      {"(SP,I0)", 9999, "+9999"},
+      {"(SP,I0)", 999, "+999"},
+      {"(I0)", -1, "-1"},
+      {"(I0)", -9999, "-9999"},
+      {"(I0)", -999, "-999"},
+      {"(I0.2)", 1, "01"},
+      {"(I0.2)", -1, "-01"},
+      {"(I0.2)", 999, "999"},
+      {"(I0.4)", 999, "0999"},
+      {"(G4)", 0, "   0"},
+      {"(G4)", 1, "   1"},
+      {"(G4)", 9999, "9999"},
+      {"(SP,G4)", 1, "  +1"},
+      {"(SP,G4)", 9999, "****"},
+      {"(SP,G4)", 999, "+999"},
+      {"(G4)", -1, "  -1"},
+      {"(G4)", -9999, "****"},
+      {"(G4)", -999, "-999"},
+      {"(G4.2)", 1, "   1"},
+      {"(G4.2)", -1, "  -1"},
+      {"(G4.2)", 999, " 999"},
+      {"(G4.4)", 999, " 999"},
+      {"(G0)", 0, "0"},
+      {"(G0)", 1, "1"},
+      {"(G0)", 9999, "9999"},
+      {"(SP,G0)", 1, "+1"},
+      {"(SP,G0)", 9999, "+9999"},
+      {"(SP,G0)", 999, "+999"},
+      {"(G0)", -1, "-1"},
+      {"(G0)", -9999, "-9999"},
+      {"(G0)", -999, "-999"},
+      {"(G0.2)", 1, "1"},
+      {"(G0.2)", -1, "-1"},
+      {"(G0.2)", 999, "999"},
+      {"(G0.4)", 999, "999"},
+  };
+
+  for (auto const &[fmt, value, expect] : intTestCases) {
+    std::string got;
+    ASSERT_TRUE(CompareFormatInteger(fmt, value, expect, got))
+        << "Failed to format " << fmt << ", expected '" << expect << "', got '"
+        << got << "'";
   }
 }
 

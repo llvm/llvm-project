@@ -75,7 +75,8 @@ inline std::error_code make_error_code(coveragemap_error E) {
 
 class CoverageMapError : public ErrorInfo<CoverageMapError> {
 public:
-  CoverageMapError(coveragemap_error Err) : Err(Err) {
+  CoverageMapError(coveragemap_error Err, const Twine &ErrStr = Twine())
+      : Err(Err), Msg(ErrStr.str()) {
     assert(Err != coveragemap_error::success && "Not an error");
   }
 
@@ -88,11 +89,13 @@ public:
   }
 
   coveragemap_error get() const { return Err; }
+  const std::string &getMessage() const { return Msg; }
 
   static char ID;
 
 private:
   coveragemap_error Err;
+  std::string Msg;
 };
 
 /// A Counter is an abstract value that describes how to compute the
@@ -864,7 +867,8 @@ struct CovMapFunctionRecordV1 {
     uint32_t NameS = support::endian::byte_swap<uint32_t, Endian>(NameSize);
     FuncName = ProfileNames.getFuncName(NameRef, NameS);
     if (NameS && FuncName.empty())
-      return make_error<CoverageMapError>(coveragemap_error::malformed);
+      return make_error<CoverageMapError>(coveragemap_error::malformed,
+                                          "function name is empty");
     return Error::success();
   }
 
@@ -1025,6 +1029,20 @@ enum CovMapVersion {
   Version6 = 5,
   // The current version is Version6.
   CurrentVersion = INSTR_PROF_COVMAP_VERSION
+};
+
+// Correspond to "llvmcovm", in little-endian.
+constexpr uint64_t TestingFormatMagic = 0x6d766f636d766c6c;
+
+enum class TestingFormatVersion : uint64_t {
+  // The first version's number corresponds to the string "testdata" in
+  // little-endian. This is for a historical reason.
+  Version1 = 0x6174616474736574,
+  // Version1 has a defect that it can't store multiple file records. Version2
+  // fix this problem by adding a new field before the file records section.
+  Version2 = 1,
+  // The current testing format version is Version2.
+  CurrentVersion = Version2
 };
 
 template <int CovMapVersion, class IntPtrT> struct CovMapTraits {

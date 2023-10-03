@@ -185,10 +185,6 @@ public:
     /// regions in the document.
     bool PublishInactiveRegions = false;
 
-    /// Whether to run preamble indexing asynchronously in an independent
-    /// thread.
-    bool AsyncPreambleIndexing = false;
-
     explicit operator TUScheduler::Options() const;
   };
   // Sensible default options for use in tests.
@@ -389,13 +385,6 @@ public:
   /// tweaks) for a given range in a file.
   void codeAction(const CodeActionInputs &Inputs,
                   Callback<CodeActionResult> CB);
-
-  /// Enumerate the code tweaks available to the user at a specified point.
-  /// Tweaks where Filter returns false will not be checked or included.
-  /// Deprecated, use codeAction instead.
-  void enumerateTweaks(PathRef File, Range Sel,
-                       llvm::unique_function<bool(const Tweak &)> Filter,
-                       Callback<std::vector<TweakRef>> CB);
 
   /// Apply the code tweak with a specified \p ID.
   void applyTweak(PathRef File, Range Sel, StringRef ID,

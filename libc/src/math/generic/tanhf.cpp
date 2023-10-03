@@ -15,7 +15,7 @@
 #include "src/__support/macros/properties/cpu_features.h"
 #include "src/math/generic/explogxf.h"
 
-namespace __llvm_libc {
+namespace LIBC_NAMESPACE {
 
 // 2^6 * log2(e)
 constexpr double LOG2_E_EXP2_6 = ExpBase::LOG2_B * 2.0;
@@ -56,7 +56,7 @@ LLVM_LIBC_FUNCTION(float, tanhf, (float x)) {
     if (LIBC_UNLIKELY(xbits.is_nan()))
       return x + 1.0f; // sNaN to qNaN + signal
 
-    const double SIGNS[2][2] = {{1.0f, -0x1.0p-25f}, {-1.0f, 0x1.0p-25f}};
+    constexpr float SIGNS[2][2] = {{1.0f, -0x1.0p-25f}, {-1.0f, 0x1.0p-25f}};
 
     bool sign = xbits.get_sign();
     int idx = static_cast<int>(sign);
@@ -118,4 +118,4 @@ LLVM_LIBC_FUNCTION(float, tanhf, (float x)) {
   return static_cast<float>((r - mh) / (r + mh));
 }
 
-} // namespace __llvm_libc
+} // namespace LIBC_NAMESPACE

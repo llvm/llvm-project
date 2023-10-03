@@ -151,6 +151,31 @@ def OffloadModuleInterface : OpInterface<"OffloadModuleInterface"> {
       }]>,
     InterfaceMethod<
       /*description=*/[{
+      Set the attribute on the current module with the specified boolean
+      argument.
+      }],
+      /*retTy=*/"void",
+      /*methodName=*/"setIsGPU",
+      (ins "bool":$isGPU), [{}], [{
+        $_op->setAttr(
+          mlir::StringAttr::get($_op->getContext(), "omp.is_gpu"),
+            mlir::BoolAttr::get($_op->getContext(), isGPU));
+      }]>,
+    InterfaceMethod<
+      /*description=*/[{
+        Get the attribute on the current module if it exists and
+        return its value, if it doesn't exist it returns false by default.
+      }],
+      /*retTy=*/"bool",
+      /*methodName=*/"getIsGPU",
+      (ins), [{}], [{
+        if (Attribute isTargetCGAttr = $_op->getAttr("omp.is_gpu"))
+          if (auto isTargetCGVal = isTargetCGAttr.dyn_cast<BoolAttr>())
+           return isTargetCGVal.getValue();
+        return false;
+      }]>,
+    InterfaceMethod<
+      /*description=*/[{
         Get the FlagsAttr attribute on the current module if it exists
         and return the attribute, if it doesn't exit it returns a nullptr
       }],

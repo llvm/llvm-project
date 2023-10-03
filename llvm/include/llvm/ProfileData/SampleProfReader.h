@@ -347,7 +347,7 @@ class SampleProfileReader {
 public:
   SampleProfileReader(std::unique_ptr<MemoryBuffer> B, LLVMContext &C,
                       SampleProfileFormat Format = SPF_None)
-      : Profiles(0), Ctx(C), Buffer(std::move(B)), Format(Format) {}
+      : Profiles(), Ctx(C), Buffer(std::move(B)), Format(Format) {}
 
   virtual ~SampleProfileReader() = default;
 
@@ -383,8 +383,8 @@ public:
   /// The implementaion to read sample profiles from the associated file.
   virtual std::error_code readImpl() = 0;
 
-  /// Print the profile for \p FContext on stream \p OS.
-  void dumpFunctionProfile(SampleContext FContext, raw_ostream &OS = dbgs());
+  /// Print the profile for \p FunctionSamples on stream \p OS.
+  void dumpFunctionProfile(const FunctionSamples &FS, raw_ostream &OS = dbgs());
 
   /// Collect functions with definitions in Module M. For reader which
   /// support loading function profiles on demand, return true when the
@@ -407,26 +407,8 @@ public:
     return getSamplesFor(CanonName);
   }
 
-  /// Return the samples collected for function \p F, create empty
-  /// FunctionSamples if it doesn't exist.
-  FunctionSamples *getOrCreateSamplesFor(const Function &F) {
-    std::string FGUID;
-    StringRef CanonName = FunctionSamples::getCanonicalFnName(F);
-    CanonName = getRepInFormat(CanonName, useMD5(), FGUID);
-    auto It = Profiles.find(CanonName);
-    if (It != Profiles.end())
-      return &It->second;
-    if (!FGUID.empty()) {
-      assert(useMD5() && "New name should only be generated for md5 profile");
-      CanonName = *MD5NameBuffer.insert(FGUID).first;
-    }
-    return &Profiles[CanonName];
-  }
-
   /// Return the samples collected for function \p F.
-  virtual FunctionSamples *getSamplesFor(StringRef Fname) {
-    std::string FGUID;
-    Fname = getRepInFormat(Fname, useMD5(), FGUID);
+  FunctionSamples *getSamplesFor(StringRef Fname) {
     auto It = Profiles.find(Fname);
     if (It != Profiles.end())
       return &It->second;
@@ -654,15 +636,16 @@ protected:
   /// Read the whole name table.
   std::error_code readNameTable();
 
-  /// Read a string indirectly via the name table.
-  ErrorOr<StringRef> readStringFromTable();
+  /// Read a string indirectly via the name table. Optionally return the index.
+  ErrorOr<StringRef> readStringFromTable(size_t *RetIdx = nullptr);
 
-  /// Read a context indirectly via the CSNameTable.
-  ErrorOr<SampleContextFrames> readContextFromTable();
+  /// Read a context indirectly via the CSNameTable. Optionally return the
+  /// index.
+  ErrorOr<SampleContextFrames> readContextFromTable(size_t *RetIdx = nullptr);
 
   /// Read a context indirectly via the CSNameTable if the profile has context,
-  /// otherwise same as readStringFromTable.
-  ErrorOr<SampleContext> readSampleContextFromTable();
+  /// otherwise same as readStringFromTable, also return its hash value.
+  ErrorOr<std::pair<SampleContext, uint64_t>> readSampleContextFromTable();
 
   /// Points to the current location in the buffer.
   const uint8_t *Data = nullptr;
@@ -682,12 +665,23 @@ protected:
   /// the lifetime of MD5StringBuf is not shorter than that of NameTable.
   std::vector<std::string> MD5StringBuf;
 
-  /// The starting address of NameTable containing fixed length MD5.
+  /// The starting address of fixed length MD5 name table section.
   const uint8_t *MD5NameMemStart = nullptr;
 
   /// CSNameTable is used to save full context vectors. It is the backing buffer
   /// for SampleContextFrames.
   std::vector<SampleContextFrameVector> CSNameTable;
+
+  /// Table to cache MD5 values of sample contexts corresponding to
+  /// readSampleContextFromTable(), used to index into Profiles or
+  /// FuncOffsetTable.
+  std::vector<uint64_t> MD5SampleContextTable;
+
+  /// The starting address of the table of MD5 values of sample contexts. For
+  /// fixed length MD5 non-CS profile it is same as MD5NameMemStart because
+  /// hashes of non-CS contexts are already in the profile. Otherwise it points
+  /// to the start of MD5SampleContextTable.
+  const uint64_t *MD5SampleContextStart = nullptr;
 
 private:
   std::error_code readSummaryEntry(std::vector<ProfileSummaryEntry> &Entries);
@@ -762,10 +756,10 @@ protected:
 
   std::unique_ptr<ProfileSymbolList> ProfSymList;
 
-  /// The table mapping from function context to the offset of its
+  /// The table mapping from a function context's MD5 to the offset of its
   /// FunctionSample towards file start.
   /// At most one of FuncOffsetTable and FuncOffsetList is populated.
-  DenseMap<SampleContext, uint64_t> FuncOffsetTable;
+  DenseMap<hash_code, uint64_t> FuncOffsetTable;
 
   /// The list version of FuncOffsetTable. This is used if every entry is
   /// being accessed.

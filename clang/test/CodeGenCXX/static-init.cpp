@@ -91,7 +91,6 @@ namespace union_static_local {
   }
 }
 
-// rdar://problem/11091093
 //   Static variables should be consistent across constructor
 //   or destructor variants.
 namespace test2 {

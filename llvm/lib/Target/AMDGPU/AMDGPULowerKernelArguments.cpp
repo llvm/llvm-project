@@ -14,17 +14,59 @@
 #include "AMDGPU.h"
 #include "GCNSubtarget.h"
 #include "llvm/CodeGen/TargetPassConfig.h"
-#include "llvm/IR/IntrinsicsAMDGPU.h"
 #include "llvm/IR/IRBuilder.h"
+#include "llvm/IR/IntrinsicsAMDGPU.h"
 #include "llvm/IR/MDBuilder.h"
 #include "llvm/Target/TargetMachine.h"
+
 #define DEBUG_TYPE "amdgpu-lower-kernel-arguments"
 
 using namespace llvm;
 
 namespace {
 
-class AMDGPULowerKernelArguments : public FunctionPass{
+class PreloadKernelArgInfo {
+private:
+  Function &F;
+  const GCNSubtarget &ST;
+  unsigned NumFreeUserSGPRs;
+
+public:
+  SmallVector<llvm::Metadata *, 8> KernelArgMetadata;
+
+  PreloadKernelArgInfo(Function &F, const GCNSubtarget &ST) : F(F), ST(ST) {
+    setInitialFreeUserSGPRsCount();
+  }
+
+  // Returns the maximum number of user SGPRs that we have available to preload
+  // arguments.
+  void setInitialFreeUserSGPRsCount() {
+    const unsigned MaxUserSGPRs = ST.getMaxNumUserSGPRs();
+    GCNUserSGPRUsageInfo UserSGPRInfo(F, ST);
+
+    NumFreeUserSGPRs = MaxUserSGPRs - UserSGPRInfo.getNumUsedUserSGPRs();
+  }
+
+  bool tryAllocPreloadSGPRs(unsigned AllocSize, uint64_t ArgOffset,
+                            uint64_t LastExplicitArgOffset) {
+    //  Check if this argument may be loaded into the same register as the
+    //  previous argument.
+    if (!isAligned(Align(4), ArgOffset) && AllocSize < 4)
+      return true;
+
+    // Pad SGPRs for kernarg alignment.
+    unsigned Padding = ArgOffset - LastExplicitArgOffset;
+    unsigned PaddingSGPRs = alignTo(Padding, 4) / 4;
+    unsigned NumPreloadSGPRs = alignTo(AllocSize, 4) / 4;
+    if (NumPreloadSGPRs + PaddingSGPRs > NumFreeUserSGPRs)
+      return false;
+
+    NumFreeUserSGPRs -= (NumPreloadSGPRs + PaddingSGPRs);
+    return true;
+  }
+};
+
+class AMDGPULowerKernelArguments : public FunctionPass {
 public:
   static char ID;
 
@@ -55,14 +97,11 @@ static BasicBlock::iterator getInsertPt(BasicBlock &BB) {
   return InsPt;
 }
 
-bool AMDGPULowerKernelArguments::runOnFunction(Function &F) {
+static bool lowerKernelArguments(Function &F, const TargetMachine &TM) {
   CallingConv::ID CC = F.getCallingConv();
   if (CC != CallingConv::AMDGPU_KERNEL || F.arg_empty())
     return false;
 
-  auto &TPC = getAnalysis<TargetPassConfig>();
-
-  const TargetMachine &TM = TPC.getTM<TargetMachine>();
   const GCNSubtarget &ST = TM.getSubtarget<GCNSubtarget>(F);
   LLVMContext &Ctx = F.getParent()->getContext();
   const DataLayout &DL = F.getParent()->getDataLayout();
@@ -87,6 +126,9 @@ bool AMDGPULowerKernelArguments::runOnFunction(Function &F) {
       Attribute::getWithDereferenceableBytes(Ctx, TotalKernArgSize));
 
   uint64_t ExplicitArgOffset = 0;
+  // Preloaded kernel arguments must be sequential.
+  bool InPreloadSequence = true;
+  PreloadKernelArgInfo PreloadInfo(F, ST);
 
   for (Argument &Arg : F.args()) {
     const bool IsByRef = Arg.hasByRefAttr();
@@ -98,7 +140,18 @@ bool AMDGPULowerKernelArguments::runOnFunction(Function &F) {
     uint64_t AllocSize = DL.getTypeAllocSize(ArgTy);
 
     uint64_t EltOffset = alignTo(ExplicitArgOffset, ABITypeAlign) + BaseOffset;
+    uint64_t LastExplicitArgOffset = ExplicitArgOffset;
     ExplicitArgOffset = alignTo(ExplicitArgOffset, ABITypeAlign) + AllocSize;
+
+    // Try to preload this argument into user SGPRs.
+    if (Arg.hasInRegAttr() && InPreloadSequence && ST.hasKernargPreload() &&
+        !ST.needsKernargPreloadBackwardsCompatibility() &&
+        !Arg.getType()->isAggregateType())
+      if (PreloadInfo.tryAllocPreloadSGPRs(AllocSize, EltOffset,
+                                           LastExplicitArgOffset))
+        continue;
+
+    InPreloadSequence = false;
 
     if (Arg.use_empty())
       continue;
@@ -232,6 +285,12 @@ bool AMDGPULowerKernelArguments::runOnFunction(Function &F) {
   return true;
 }
 
+bool AMDGPULowerKernelArguments::runOnFunction(Function &F) {
+  auto &TPC = getAnalysis<TargetPassConfig>();
+  const TargetMachine &TM = TPC.getTM<TargetMachine>();
+  return lowerKernelArguments(F, TM);
+}
+
 INITIALIZE_PASS_BEGIN(AMDGPULowerKernelArguments, DEBUG_TYPE,
                       "AMDGPU Lower Kernel Arguments", false, false)
 INITIALIZE_PASS_END(AMDGPULowerKernelArguments, DEBUG_TYPE, "AMDGPU Lower Kernel Arguments",
@@ -241,4 +300,17 @@ char AMDGPULowerKernelArguments::ID = 0;
 
 FunctionPass *llvm::createAMDGPULowerKernelArgumentsPass() {
   return new AMDGPULowerKernelArguments();
+}
+
+PreservedAnalyses
+AMDGPULowerKernelArgumentsPass::run(Function &F, FunctionAnalysisManager &AM) {
+  bool Changed = lowerKernelArguments(F, TM);
+  if (Changed) {
+    // TODO: Preserves a lot more.
+    PreservedAnalyses PA;
+    PA.preserveSet<CFGAnalyses>();
+    return PA;
+  }
+
+  return PreservedAnalyses::all();
 }

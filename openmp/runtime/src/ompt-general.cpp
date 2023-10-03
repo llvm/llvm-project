@@ -498,8 +498,8 @@ void ompt_post_init() {
       ompt_callbacks.ompt_callback(ompt_callback_thread_begin)(
           ompt_thread_initial, __ompt_get_thread_data_internal());
     }
-    ompt_data_t *task_data;
-    ompt_data_t *parallel_data;
+    ompt_data_t *task_data = nullptr;
+    ompt_data_t *parallel_data = nullptr;
     __ompt_get_task_info_internal(0, NULL, &task_data, NULL, &parallel_data,
                                   NULL);
     if (ompt_enabled.ompt_callback_implicit_task) {
@@ -878,6 +878,12 @@ static ompt_interface_fn_t ompt_fn_lookup(const char *s) {
   return NULL;
 }
 
+static ompt_data_t *ompt_get_task_data() { return __ompt_get_task_data(); }
+
+static ompt_data_t *ompt_get_target_task_data() {
+  return __ompt_get_target_task_data();
+}
+
 /// Lookup function to query libomp callbacks registered by the tool
 static ompt_interface_fn_t ompt_libomp_target_fn_lookup(const char *s) {
 #define provide_fn(fn)                                                         \
@@ -885,6 +891,8 @@ static ompt_interface_fn_t ompt_libomp_target_fn_lookup(const char *s) {
     return (ompt_interface_fn_t)fn;
 
   provide_fn(ompt_get_callback);
+  provide_fn(ompt_get_task_data);
+  provide_fn(ompt_get_target_task_data);
 #undef provide_fn
 
 #define ompt_interface_fn(fn, type, code)                                      \

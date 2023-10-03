@@ -13,6 +13,7 @@
 #ifndef LLVM_LIB_TARGET_NVPTX_NVPTXUTILITIES_H
 #define LLVM_LIB_TARGET_NVPTX_NVPTXUTILITIES_H
 
+#include "llvm/CodeGen/ValueTypes.h"
 #include "llvm/IR/Function.h"
 #include "llvm/IR/GlobalVariable.h"
 #include "llvm/IR/IntrinsicInst.h"
@@ -54,6 +55,7 @@ bool getReqNTIDx(const Function &, unsigned &);
 bool getReqNTIDy(const Function &, unsigned &);
 bool getReqNTIDz(const Function &, unsigned &);
 
+bool getMaxClusterRank(const Function &, unsigned &);
 bool getMinCTASm(const Function &, unsigned &);
 bool getMaxNReg(const Function &, unsigned &);
 bool isKernelFunction(const Function &);
@@ -74,6 +76,8 @@ inline unsigned promoteScalarArgumentSize(unsigned size) {
 }
 
 bool shouldEmitPTXNoReturn(const Value *V, const TargetMachine &TM);
+
+bool Isv2x16VT(EVT VT);
 }
 
 #endif

@@ -1112,20 +1112,20 @@ CodeGenAction::loadModule(MemoryBufferRef MBRef) {
   CompilerInstance &CI = getCompilerInstance();
   SourceManager &SM = CI.getSourceManager();
 
+  auto DiagErrors = [&](Error E) -> std::unique_ptr<llvm::Module> {
+    unsigned DiagID =
+        CI.getDiagnostics().getCustomDiagID(DiagnosticsEngine::Error, "%0");
+    handleAllErrors(std::move(E), [&](ErrorInfoBase &EIB) {
+      CI.getDiagnostics().Report(DiagID) << EIB.message();
+    });
+    return {};
+  };
+
   // For ThinLTO backend invocations, ensure that the context
   // merges types based on ODR identifiers. We also need to read
   // the correct module out of a multi-module bitcode file.
   if (!CI.getCodeGenOpts().ThinLTOIndexFile.empty()) {
     VMContext->enableDebugTypeODRUniquing();
-
-    auto DiagErrors = [&](Error E) -> std::unique_ptr<llvm::Module> {
-      unsigned DiagID =
-          CI.getDiagnostics().getCustomDiagID(DiagnosticsEngine::Error, "%0");
-      handleAllErrors(std::move(E), [&](ErrorInfoBase &EIB) {
-        CI.getDiagnostics().Report(DiagID) << EIB.message();
-      });
-      return {};
-    };
 
     Expected<std::vector<BitcodeModule>> BMsOrErr = getBitcodeModuleList(MBRef);
     if (!BMsOrErr)
@@ -1151,9 +1151,34 @@ CodeGenAction::loadModule(MemoryBufferRef MBRef) {
   if (loadLinkModules(CI))
     return nullptr;
 
+  // Handle textual IR and bitcode file with one single module.
   llvm::SMDiagnostic Err;
   if (std::unique_ptr<llvm::Module> M = parseIR(MBRef, Err, *VMContext))
     return M;
+
+  // If MBRef is a bitcode with multiple modules (e.g., -fsplit-lto-unit
+  // output), place the extra modules (actually only one, a regular LTO module)
+  // into LinkModules as if we are using -mlink-bitcode-file.
+  Expected<std::vector<BitcodeModule>> BMsOrErr = getBitcodeModuleList(MBRef);
+  if (BMsOrErr && BMsOrErr->size()) {
+    std::unique_ptr<llvm::Module> FirstM;
+    for (auto &BM : *BMsOrErr) {
+      Expected<std::unique_ptr<llvm::Module>> MOrErr =
+          BM.parseModule(*VMContext);
+      if (!MOrErr)
+        return DiagErrors(MOrErr.takeError());
+      if (FirstM)
+        LinkModules.push_back({std::move(*MOrErr), /*PropagateAttrs=*/false,
+                               /*Internalize=*/false, /*LinkFlags=*/{}});
+      else
+        FirstM = std::move(*MOrErr);
+    }
+    if (FirstM)
+      return FirstM;
+  }
+  // If BMsOrErr fails, consume the error and use the error message from
+  // parseIR.
+  consumeError(BMsOrErr.takeError());
 
   // Translate from the diagnostic info to the SourceManager location if
   // available.

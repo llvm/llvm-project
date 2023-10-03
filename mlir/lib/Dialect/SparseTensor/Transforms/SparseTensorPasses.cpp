@@ -65,6 +65,7 @@ struct SparsificationPass
   SparsificationPass(const SparsificationPass &pass) = default;
   SparsificationPass(const SparsificationOptions &options) {
     parallelization = options.parallelizationStrategy;
+    gpuDataTransfer = options.gpuDataTransferStrategy;
     enableIndexReduction = options.enableIndexReduction;
     enableGPULibgen = options.enableGPULibgen;
     enableRuntimeLibrary = options.enableRuntimeLibrary;
@@ -73,12 +74,17 @@ struct SparsificationPass
   void runOnOperation() override {
     auto *ctx = &getContext();
     // Translate strategy flags to strategy options.
-    SparsificationOptions options(parallelization, enableIndexReduction,
-                                  enableGPULibgen, enableRuntimeLibrary);
+    SparsificationOptions options(parallelization, gpuDataTransfer,
+                                  enableIndexReduction, enableGPULibgen,
+                                  enableRuntimeLibrary);
     // Apply GPU libgen (if requested), sparsification, and cleanup rewriting.
     RewritePatternSet patterns(ctx);
     if (enableGPULibgen) {
-      populateSparseGPULibgenPatterns(patterns, enableRuntimeLibrary);
+      // TODO : Zero copy is disabled due to correctness bugs.Tracker #64316
+      assert(gpuDataTransfer != GPUDataTransferStrategy::kZeroCopy &&
+             "zero-copy transfer not supported with GPU libgen");
+      populateSparseGPULibgenPatterns(patterns, enableRuntimeLibrary,
+                                      gpuDataTransfer);
     }
     populateSparsificationPatterns(patterns, options);
     scf::ForOp::getCanonicalizationPatterns(patterns, ctx);
@@ -201,13 +207,14 @@ struct SparseTensorCodegenPass
     ConversionTarget target(*ctx);
     // Most ops in the sparse dialect must go!
     target.addIllegalDialect<SparseTensorDialect>();
-    target.addLegalOp<SortOp>();
     target.addLegalOp<SortCooOp>();
     target.addLegalOp<PushBackOp>();
     // Storage specifier outlives sparse tensor pipeline.
     target.addLegalOp<GetStorageSpecifierOp>();
     target.addLegalOp<SetStorageSpecifierOp>();
     target.addLegalOp<StorageSpecifierInitOp>();
+    // Note that tensor::FromElementsOp might be yield after lowering unpack.
+    target.addLegalOp<tensor::FromElementsOp>();
     // All dynamic rules below accept new function, call, return, and
     // various tensor and bufferization operations as legal output of the
     // rewriting provided that all sparse tensor types have been fully

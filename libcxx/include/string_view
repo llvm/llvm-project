@@ -323,8 +323,8 @@ public:
     constexpr _LIBCPP_HIDE_FROM_ABI basic_string_view(_It __begin, _End __end)
        : __data_(_VSTD::to_address(__begin)), __size_(__end - __begin)
     {
-      _LIBCPP_ASSERT_UNCATEGORIZED((__end - __begin) >= 0,
-                                   "std::string_view::string_view(iterator, sentinel) received invalid range");
+      _LIBCPP_ASSERT_VALID_INPUT_RANGE((__end - __begin) >= 0,
+                                       "std::string_view::string_view(iterator, sentinel) received invalid range");
     }
 #endif // _LIBCPP_STD_VER >= 20
 
@@ -405,7 +405,7 @@ public:
     // [string.view.access], element access
     _LIBCPP_CONSTEXPR _LIBCPP_INLINE_VISIBILITY
     const_reference operator[](size_type __pos) const _NOEXCEPT {
-      return _LIBCPP_ASSERT_UNCATEGORIZED(__pos < size(), "string_view[] index out of bounds"), __data_[__pos];
+      return _LIBCPP_ASSERT_VALID_ELEMENT_ACCESS(__pos < size(), "string_view[] index out of bounds"), __data_[__pos];
     }
 
     _LIBCPP_CONSTEXPR _LIBCPP_INLINE_VISIBILITY
@@ -419,13 +419,14 @@ public:
     _LIBCPP_CONSTEXPR _LIBCPP_INLINE_VISIBILITY
     const_reference front() const _NOEXCEPT
     {
-        return _LIBCPP_ASSERT_UNCATEGORIZED(!empty(), "string_view::front(): string is empty"), __data_[0];
+        return _LIBCPP_ASSERT_VALID_ELEMENT_ACCESS(!empty(), "string_view::front(): string is empty"), __data_[0];
     }
 
     _LIBCPP_CONSTEXPR _LIBCPP_INLINE_VISIBILITY
     const_reference back() const _NOEXCEPT
     {
-        return _LIBCPP_ASSERT_UNCATEGORIZED(!empty(), "string_view::back(): string is empty"), __data_[__size_-1];
+        return _LIBCPP_ASSERT_VALID_ELEMENT_ACCESS(!empty(), "string_view::back(): string is empty"),
+               __data_[__size_ - 1];
     }
 
     _LIBCPP_CONSTEXPR _LIBCPP_INLINE_VISIBILITY
@@ -435,7 +436,7 @@ public:
     _LIBCPP_CONSTEXPR_SINCE_CXX14 _LIBCPP_INLINE_VISIBILITY
     void remove_prefix(size_type __n) _NOEXCEPT
     {
-        _LIBCPP_ASSERT_UNCATEGORIZED(__n <= size(), "remove_prefix() can't remove more than size()");
+        _LIBCPP_ASSERT_VALID_ELEMENT_ACCESS(__n <= size(), "remove_prefix() can't remove more than size()");
         __data_ += __n;
         __size_ -= __n;
     }
@@ -443,7 +444,7 @@ public:
     _LIBCPP_CONSTEXPR_SINCE_CXX14 _LIBCPP_INLINE_VISIBILITY
     void remove_suffix(size_type __n) _NOEXCEPT
     {
-        _LIBCPP_ASSERT_UNCATEGORIZED(__n <= size(), "remove_suffix() can't remove more than size()");
+        _LIBCPP_ASSERT_VALID_ELEMENT_ACCESS(__n <= size(), "remove_suffix() can't remove more than size()");
         __size_ -= __n;
     }
 
@@ -775,7 +776,35 @@ template <ranges::contiguous_range _Range>
 #endif
 
 // [string.view.comparison]
+
+#if _LIBCPP_STD_VER >= 20
+
+template<class _CharT, class _Traits>
+_LIBCPP_HIDE_FROM_ABI constexpr
+bool operator==(basic_string_view<_CharT, _Traits> __lhs,
+                type_identity_t<basic_string_view<_CharT, _Traits>> __rhs) noexcept {
+    if (__lhs.size() != __rhs.size()) return false;
+    return __lhs.compare(__rhs) == 0;
+}
+
+template <class _CharT, class _Traits>
+_LIBCPP_HIDE_FROM_ABI constexpr auto operator<=>(
+    basic_string_view<_CharT, _Traits> __lhs, type_identity_t<basic_string_view<_CharT, _Traits>> __rhs) noexcept {
+    if constexpr (requires { typename _Traits::comparison_category; }) {
+        // [string.view]/4
+        static_assert(
+            __comparison_category<typename _Traits::comparison_category>,
+            "return type is not a comparison category type");
+        return static_cast<typename _Traits::comparison_category>(__lhs.compare(__rhs) <=> 0);
+    } else {
+        return static_cast<weak_ordering>(__lhs.compare(__rhs) <=> 0);
+    }
+}
+
+#else
+
 // operator ==
+
 template<class _CharT, class _Traits>
 _LIBCPP_CONSTEXPR_SINCE_CXX14 _LIBCPP_INLINE_VISIBILITY
 bool operator==(basic_string_view<_CharT, _Traits> __lhs,
@@ -796,8 +825,6 @@ bool operator==(basic_string_view<_CharT, _Traits> __lhs,
     return __lhs.compare(__rhs) == 0;
 }
 
-#if _LIBCPP_STD_VER < 20
-// This overload is automatically generated in C++20.
 template<class _CharT, class _Traits, int = 2>
 _LIBCPP_CONSTEXPR_SINCE_CXX14 _LIBCPP_INLINE_VISIBILITY
 bool operator==(__type_identity_t<basic_string_view<_CharT, _Traits> > __lhs,
@@ -806,41 +833,6 @@ bool operator==(__type_identity_t<basic_string_view<_CharT, _Traits> > __lhs,
     if (__lhs.size() != __rhs.size()) return false;
     return __lhs.compare(__rhs) == 0;
 }
-#endif // _LIBCPP_STD_VER >= 20
-
-// operator <=>
-
-#if _LIBCPP_STD_VER >= 20
-
-template <class _CharT, class _Traits>
-_LIBCPP_HIDE_FROM_ABI constexpr auto
-operator<=>(basic_string_view<_CharT, _Traits> __lhs, basic_string_view<_CharT, _Traits> __rhs) noexcept {
-    if constexpr (requires { typename _Traits::comparison_category; }) {
-        // [string.view]/4
-        static_assert(
-            __comparison_category<typename _Traits::comparison_category>,
-            "return type is not a comparison category type");
-        return static_cast<typename _Traits::comparison_category>(__lhs.compare(__rhs) <=> 0);
-    } else {
-        return static_cast<weak_ordering>(__lhs.compare(__rhs) <=> 0);
-    }
-}
-
-template <class _CharT, class _Traits, int = 1>
-_LIBCPP_HIDE_FROM_ABI constexpr auto operator<=>(
-    basic_string_view<_CharT, _Traits> __lhs, type_identity_t<basic_string_view<_CharT, _Traits>> __rhs) noexcept {
-    if constexpr (requires { typename _Traits::comparison_category; }) {
-        // [string.view]/4
-        static_assert(
-            __comparison_category<typename _Traits::comparison_category>,
-            "return type is not a comparison category type");
-        return static_cast<typename _Traits::comparison_category>(__lhs.compare(__rhs) <=> 0);
-    } else {
-        return static_cast<weak_ordering>(__lhs.compare(__rhs) <=> 0);
-    }
-}
-
-#else //  _LIBCPP_STD_VER >= 20
 
 // operator !=
 template<class _CharT, class _Traits>

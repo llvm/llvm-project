@@ -14,7 +14,6 @@ struct BreakpointBase;
 struct ExceptionBreakpoint;
 struct FunctionBreakpoint;
 struct SourceBreakpoint;
-struct SourceReference;
 } // namespace lldb_vscode
 
 namespace lldb {

@@ -20,8 +20,6 @@
 namespace llvm {
 namespace bolt {
 
-uint16_t hash_64_to_16(const uint64_t Hash);
-
 std::string hashInteger(uint64_t Value);
 
 std::string hashSymbol(BinaryContext &BC, const MCSymbol &Symbol);
@@ -34,6 +32,8 @@ using OperandHashFuncTy = function_ref<typename std::string(const MCOperand &)>;
 
 std::string hashBlock(BinaryContext &BC, const BinaryBasicBlock &BB,
                       OperandHashFuncTy OperandHashFunc);
+
+std::string hashBlockLoose(BinaryContext &BC, const BinaryBasicBlock &BB);
 
 } // namespace bolt
 } // namespace llvm

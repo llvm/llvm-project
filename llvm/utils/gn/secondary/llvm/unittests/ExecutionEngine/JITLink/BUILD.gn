@@ -16,6 +16,9 @@ unittest("JITLinkTests") {
   sources = [
     "AArch32Tests.cpp",
     "EHFrameSupportTests.cpp",
+    "JITLinkMocks.cpp",
     "LinkGraphTests.cpp",
+    "MemoryManagerErrorTests.cpp",
+    "StubsTests.cpp",
   ]
 }

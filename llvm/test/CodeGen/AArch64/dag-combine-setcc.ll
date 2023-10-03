@@ -35,8 +35,8 @@ define i1 @combine_setcc_eq_vecreduce_or_v32i1(<32 x i8> %a) {
 ; CHECK-LABEL: combine_setcc_eq_vecreduce_or_v32i1:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    cmeq v1.16b, v1.16b, #0
-; CHECK-NEXT:    mov w8, #1 // =0x1
 ; CHECK-NEXT:    cmeq v0.16b, v0.16b, #0
+; CHECK-NEXT:    mov w8, #1 // =0x1
 ; CHECK-NEXT:    orr v0.16b, v0.16b, v1.16b
 ; CHECK-NEXT:    umaxv b0, v0.16b
 ; CHECK-NEXT:    fmov w9, s0
@@ -52,16 +52,16 @@ define i1 @combine_setcc_eq_vecreduce_or_v64i1(<64 x i8> %a) {
 ; CHECK-LABEL: combine_setcc_eq_vecreduce_or_v64i1:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    cmeq v2.16b, v2.16b, #0
-; CHECK-NEXT:    mov w8, #1 // =0x1
+; CHECK-NEXT:    cmeq v0.16b, v0.16b, #0
+; CHECK-NEXT:    mov w9, #1 // =0x1
 ; CHECK-NEXT:    cmeq v3.16b, v3.16b, #0
 ; CHECK-NEXT:    cmeq v1.16b, v1.16b, #0
-; CHECK-NEXT:    cmeq v0.16b, v0.16b, #0
-; CHECK-NEXT:    orr v1.16b, v1.16b, v3.16b
 ; CHECK-NEXT:    orr v0.16b, v0.16b, v2.16b
+; CHECK-NEXT:    orr v1.16b, v1.16b, v3.16b
 ; CHECK-NEXT:    orr v0.16b, v0.16b, v1.16b
 ; CHECK-NEXT:    umaxv b0, v0.16b
-; CHECK-NEXT:    fmov w9, s0
-; CHECK-NEXT:    bic w0, w8, w9
+; CHECK-NEXT:    fmov w8, s0
+; CHECK-NEXT:    bic w0, w9, w8
 ; CHECK-NEXT:    ret
   %cmp1 = icmp eq <64 x i8> %a, zeroinitializer
   %cast = bitcast <64 x i1> %cmp1 to i64
@@ -223,8 +223,8 @@ define i1 @combine_setcc_ne_vecreduce_and_v32i1(<32 x i8> %a) {
 ; CHECK-LABEL: combine_setcc_ne_vecreduce_and_v32i1:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    cmtst v0.16b, v0.16b, v0.16b
-; CHECK-NEXT:    mov w8, #1 // =0x1
 ; CHECK-NEXT:    cmeq v1.16b, v1.16b, #0
+; CHECK-NEXT:    mov w8, #1 // =0x1
 ; CHECK-NEXT:    bic v0.16b, v0.16b, v1.16b
 ; CHECK-NEXT:    uminv b0, v0.16b
 ; CHECK-NEXT:    fmov w9, s0
@@ -240,16 +240,16 @@ define i1 @combine_setcc_ne_vecreduce_and_v64i1(<64 x i8> %a) {
 ; CHECK-LABEL: combine_setcc_ne_vecreduce_and_v64i1:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    cmtst v1.16b, v1.16b, v1.16b
-; CHECK-NEXT:    mov w8, #1 // =0x1
 ; CHECK-NEXT:    cmtst v0.16b, v0.16b, v0.16b
-; CHECK-NEXT:    cmeq v3.16b, v3.16b, #0
+; CHECK-NEXT:    mov w9, #1 // =0x1
 ; CHECK-NEXT:    cmeq v2.16b, v2.16b, #0
+; CHECK-NEXT:    cmeq v3.16b, v3.16b, #0
 ; CHECK-NEXT:    bic v1.16b, v1.16b, v3.16b
 ; CHECK-NEXT:    bic v0.16b, v0.16b, v2.16b
 ; CHECK-NEXT:    and v0.16b, v0.16b, v1.16b
 ; CHECK-NEXT:    uminv b0, v0.16b
-; CHECK-NEXT:    fmov w9, s0
-; CHECK-NEXT:    bic w0, w8, w9
+; CHECK-NEXT:    fmov w8, s0
+; CHECK-NEXT:    bic w0, w9, w8
 ; CHECK-NEXT:    ret
   %cmp1 = icmp ne <64 x i8> %a, zeroinitializer
   %cast = bitcast <64 x i1> %cmp1 to i64
@@ -260,10 +260,10 @@ define i1 @combine_setcc_ne_vecreduce_and_v64i1(<64 x i8> %a) {
 define i1 @combine_setcc_eq0_conjunction_xor_or(ptr %a, ptr %b) {
 ; CHECK-LABEL: combine_setcc_eq0_conjunction_xor_or:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ldp x8, x9, [x0]
-; CHECK-NEXT:    ldp x10, x11, [x1]
-; CHECK-NEXT:    cmp x8, x10
-; CHECK-NEXT:    ccmp x9, x11, #0, eq
+; CHECK-NEXT:    ldp x8, x11, [x1]
+; CHECK-NEXT:    ldp x9, x10, [x0]
+; CHECK-NEXT:    cmp x9, x8
+; CHECK-NEXT:    ccmp x10, x11, #0, eq
 ; CHECK-NEXT:    cset w0, eq
 ; CHECK-NEXT:    ret
   %bcmp = tail call i32 @bcmp(ptr dereferenceable(16) %a, ptr dereferenceable(16) %b, i64 16)
@@ -274,10 +274,10 @@ define i1 @combine_setcc_eq0_conjunction_xor_or(ptr %a, ptr %b) {
 define i1 @combine_setcc_ne0_conjunction_xor_or(ptr %a, ptr %b) {
 ; CHECK-LABEL: combine_setcc_ne0_conjunction_xor_or:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ldp x8, x9, [x0]
-; CHECK-NEXT:    ldp x10, x11, [x1]
-; CHECK-NEXT:    cmp x8, x10
-; CHECK-NEXT:    ccmp x9, x11, #0, eq
+; CHECK-NEXT:    ldp x8, x11, [x1]
+; CHECK-NEXT:    ldp x9, x10, [x0]
+; CHECK-NEXT:    cmp x9, x8
+; CHECK-NEXT:    ccmp x10, x11, #0, eq
 ; CHECK-NEXT:    cset w0, ne
 ; CHECK-NEXT:    ret
   %bcmp = tail call i32 @bcmp(ptr dereferenceable(16) %a, ptr dereferenceable(16) %b, i64 16)
@@ -289,9 +289,9 @@ define i1 @combine_setcc_ne0_conjunction_xor_or(ptr %a, ptr %b) {
 define i32 @combine_setcc_multiuse(i32 %0, i32 %1, i32 %2, i32 %3) {
 ; CHECK-LABEL: combine_setcc_multiuse:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    eor w8, w1, w0
-; CHECK-NEXT:    eor w9, w3, w2
-; CHECK-NEXT:    orr w8, w9, w8
+; CHECK-NEXT:    eor w8, w3, w2
+; CHECK-NEXT:    eor w9, w1, w0
+; CHECK-NEXT:    orr w8, w8, w9
 ; CHECK-NEXT:    cbz w8, .LBB18_2
 ; CHECK-NEXT:  // %bb.1:
 ; CHECK-NEXT:    mov w0, w8

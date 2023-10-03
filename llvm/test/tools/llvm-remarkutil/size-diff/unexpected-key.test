@@ -1,0 +1,3 @@
+RUN: not llvm-remarkutil size-diff %p/Inputs/unexpected-key.yaml %p/Inputs/1-func-1-instr-1-stack.yaml --parser=yaml 2>&1 | FileCheck %s
+
+; CHECK: Expected 'NumInstructions', got 'Wrong'

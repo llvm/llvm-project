@@ -125,21 +125,19 @@ static LogicalResult setProfilingAttr(OpBuilder &builder, llvm::MDNode *node,
     branchWeights.push_back(branchWeight->getZExtValue());
   }
 
-  return TypeSwitch<Operation *, LogicalResult>(op)
-      .Case<CondBrOp, SwitchOp, CallOp, InvokeOp>([&](auto branchWeightOp) {
-        branchWeightOp.setBranchWeightsAttr(
-            builder.getI32VectorAttr(branchWeights));
-        return success();
-      })
-      .Default([](auto) { return failure(); });
+  if (auto iface = dyn_cast<BranchWeightOpInterface>(op)) {
+    iface.setBranchWeights(builder.getDenseI32ArrayAttr(branchWeights));
+    return success();
+  }
+  return failure();
 }
 
-/// Searches the symbol reference pointing to the metadata operation that
-/// maps to the given TBAA metadata `node` and attaches it to the imported
-/// operation if the lookup succeeds. Returns failure otherwise.
+/// Searches for the attribute that maps to the given TBAA metadata `node` and
+/// attaches it to the imported operation if the lookup succeeds. Returns
+/// failure otherwise.
 static LogicalResult setTBAAAttr(const llvm::MDNode *node, Operation *op,
                                  LLVM::ModuleImport &moduleImport) {
-  SymbolRefAttr tbaaTagSym = moduleImport.lookupTBAAAttr(node);
+  Attribute tbaaTagSym = moduleImport.lookupTBAAAttr(node);
   if (!tbaaTagSym)
     return failure();
 
@@ -151,10 +149,9 @@ static LogicalResult setTBAAAttr(const llvm::MDNode *node, Operation *op,
   return success();
 }
 
-/// Looks up all the symbol references pointing to the access group operations
-/// that map to the access group nodes starting from the access group metadata
-/// `node`, and attaches all of them to the imported operation if the lookups
-/// succeed. Returns failure otherwise.
+/// Looks up all the access group attributes that map to the access group nodes
+/// starting from the access group metadata `node`, and attaches all of them to
+/// the imported operation if the lookups succeed. Returns failure otherwise.
 static LogicalResult setAccessGroupsAttr(const llvm::MDNode *node,
                                          Operation *op,
                                          LLVM::ModuleImport &moduleImport) {
@@ -209,10 +206,9 @@ static LogicalResult setAliasScopesAttr(const llvm::MDNode *node, Operation *op,
   return success();
 }
 
-/// Looks up all the symbol references pointing to the alias scope operations
-/// that map to the alias scope nodes starting from the noalias metadata `node`,
-/// and attaches all of them to the imported operation if the lookups succeed.
-/// Returns failure otherwise.
+/// Looks up all the alias scope attributes that map to the alias scope nodes
+/// starting from the noalias metadata `node`, and attaches all of them to the
+/// imported operation if the lookups succeed. Returns failure otherwise.
 static LogicalResult setNoaliasScopesAttr(const llvm::MDNode *node,
                                           Operation *op,
                                           LLVM::ModuleImport &moduleImport) {

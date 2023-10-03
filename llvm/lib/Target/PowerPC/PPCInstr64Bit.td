@@ -1958,8 +1958,8 @@ def : Pat<(add i64:$in, (PPChi tblockaddress:$g, 0)),
 def : Pat<(i64 (PPCtoc_entry tglobaltlsaddr:$disp, i64:$reg)),
           (i64 (LDtoc tglobaltlsaddr:$disp, i64:$reg))>;
 
-// The following pattern matches 64-bit local-exec TLS accesses on AIX.
-// PPCaddTls is used in local-exec accesses in order to:
+// The following pattern matches 64-bit local- and initial-exec TLS accesses on AIX.
+// PPCaddTls is used in local- and initial-exec accesses in order to:
 //   - Get the address of a variable (adding the variable offset to the thread
 //     pointer in r13).
 //   - Create an opportunity to optimize the user of the loaded address.
@@ -1970,8 +1970,8 @@ def : Pat<(PPCaddTls i64:$in, i64:$addr),
 def : Pat<(atomic_load_64 DSForm:$src), (LD  memrix:$src)>;
 def : Pat<(atomic_load_64 XForm:$src),  (LDX memrr:$src)>;
 
-def : Pat<(atomic_store_64 DSForm:$ptr, i64:$val), (STD  g8rc:$val, memrix:$ptr)>;
-def : Pat<(atomic_store_64 XForm:$ptr,  i64:$val), (STDX g8rc:$val, memrr:$ptr)>;
+def : Pat<(atomic_store_64 i64:$val, DSForm:$ptr), (STD  g8rc:$val, memrix:$ptr)>;
+def : Pat<(atomic_store_64 i64:$val, XForm:$ptr), (STDX g8rc:$val, memrr:$ptr)>;
 
 let Predicates = [IsISA3_0, In64BitMode] in {
 def : Pat<(i64 (int_ppc_cmpeqb g8rc:$a, g8rc:$b)),

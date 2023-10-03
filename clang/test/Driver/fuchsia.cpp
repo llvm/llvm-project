@@ -1,32 +1,32 @@
 // RUN: %clangxx -### %s --target=x86_64-unknown-fuchsia \
 // RUN:     -ccc-install-dir %S/Inputs/basic_fuchsia_tree/bin \
 // RUN:     -resource-dir=%S/Inputs/resource_dir_with_per_target_subdir \
-// RUN:     --sysroot=%S/platform -fuse-ld=lld 2>&1 \
+// RUN:     --sysroot=%S/platform -fuse-ld=ld 2>&1 \
 // RUN:     | FileCheck -check-prefixes=CHECK,CHECK-X86_64 %s
 // RUN: %clangxx -### %s --target=aarch64-unknown-fuchsia \
 // RUN:     -ccc-install-dir %S/Inputs/basic_fuchsia_tree/bin \
 // RUN:     -resource-dir=%S/Inputs/resource_dir_with_per_target_subdir \
-// RUN:     --sysroot=%S/platform -fuse-ld=lld 2>&1 \
+// RUN:     --sysroot=%S/platform -fuse-ld=ld 2>&1 \
 // RUN:     | FileCheck -check-prefixes=CHECK,CHECK-AARCH64 %s
 // RUN: %clangxx -### %s --target=riscv64-unknown-fuchsia \
 // RUN:     -ccc-install-dir %S/Inputs/basic_fuchsia_tree/bin \
 // RUN:     -resource-dir=%S/Inputs/resource_dir_with_per_target_subdir \
-// RUN:     --sysroot=%S/platform -fuse-ld=lld 2>&1 \
+// RUN:     --sysroot=%S/platform -fuse-ld=ld 2>&1 \
 // RUN:     | FileCheck -check-prefixes=CHECK,CHECK-RISCV64 %s
 // RUN: %clangxx -### %s --target=x86_64-fuchsia \
 // RUN:     -ccc-install-dir %S/Inputs/basic_fuchsia_tree/bin \
 // RUN:     -resource-dir=%S/Inputs/resource_dir_with_per_target_subdir \
-// RUN:     --sysroot=%S/platform -fuse-ld=lld 2>&1 \
+// RUN:     --sysroot=%S/platform -fuse-ld=ld 2>&1 \
 // RUN:     | FileCheck -check-prefixes=CHECK,CHECK-X86_64 %s
 // RUN: %clangxx -### %s --target=aarch64-fuchsia \
 // RUN:     -ccc-install-dir %S/Inputs/basic_fuchsia_tree/bin \
 // RUN:     -resource-dir=%S/Inputs/resource_dir_with_per_target_subdir \
-// RUN:     --sysroot=%S/platform -fuse-ld=lld 2>&1 \
+// RUN:     --sysroot=%S/platform -fuse-ld=ld 2>&1 \
 // RUN:     | FileCheck -check-prefixes=CHECK,CHECK-AARCH64 %s
 // RUN: %clangxx -### %s --target=riscv64-fuchsia \
 // RUN:     -ccc-install-dir %S/Inputs/basic_fuchsia_tree/bin \
 // RUN:     -resource-dir=%S/Inputs/resource_dir_with_per_target_subdir \
-// RUN:     --sysroot=%S/platform -fuse-ld=lld 2>&1 \
+// RUN:     --sysroot=%S/platform -fuse-ld=ld 2>&1 \
 // RUN:     | FileCheck -check-prefixes=CHECK,CHECK-RISCV64 %s
 // CHECK: "-cc1"
 // CHECK-X86_64: "-triple" "x86_64-unknown-fuchsia"
@@ -40,7 +40,7 @@
 // CHECK-RISCV64: "-internal-isystem" "{{.*[/\\]}}include{{/|\\\\}}riscv64-unknown-fuchsia{{/|\\\\}}c++{{/|\\\\}}v1"
 // CHECK: "-internal-isystem" "{{.*[/\\]}}include{{/|\\\\}}c++{{/|\\\\}}v1"
 // CHECK: "-internal-externc-isystem" "[[SYSROOT]]{{/|\\\\}}include"
-// CHECK: {{.*}}ld.lld{{.*}}" "-z" "now" "-z" "rodynamic" "-z" "separate-loadable-segments"
+// CHECK: {{.*}}ld.lld{{.*}}" "-z" "now" "-z" "start-stop-visibility=hidden" "-z" "rodynamic" "-z" "separate-loadable-segments" "-z" "rel" "--pack-dyn-relocs=relr"
 // CHECK: "--sysroot=[[SYSROOT]]"
 // CHECK: "-pie"
 // CHECK: "--build-id"
@@ -61,13 +61,12 @@
 // CHECK-NOT: crtend.o
 // CHECK-NOT: crtn.o
 
-// RUN: %clangxx -### %s --target=x86_64-unknown-fuchsia -stdlib=libstdc++ \
-// RUN:     -fuse-ld=lld 2>&1 \
+// RUN: not %clangxx -### %s --target=x86_64-unknown-fuchsia -stdlib=libstdc++ 2>&1 \
 // RUN:     | FileCheck %s -check-prefix=CHECK-STDLIB
 // CHECK-STDLIB: error: invalid library name in argument '-stdlib=libstdc++'
 
 // RUN: %clangxx -### %s --target=x86_64-unknown-fuchsia -static-libstdc++ \
-// RUN:     -fuse-ld=lld 2>&1 \
+// RUN:     -fuse-ld=ld 2>&1 \
 // RUN:     | FileCheck %s -check-prefix=CHECK-STATIC
 // CHECK-STATIC: "--push-state"
 // CHECK-STATIC: "--as-needed"
@@ -78,7 +77,7 @@
 // CHECK-STATIC: "--pop-state"
 // CHECK-STATIC: "-lc"
 
-// RUN: %clangxx -### %s --target=x86_64-unknown-fuchsia -nostdlib++ -fuse-ld=lld 2>&1 \
+// RUN: %clangxx -### %s --target=x86_64-unknown-fuchsia -nostdlib++ -fuse-ld=ld 2>&1 \
 // RUN:     | FileCheck %s -check-prefix=CHECK-NOSTDLIBXX
 // CHECK-NOSTDLIBXX-NOT: "-lc++"
 // CHECK-NOSTDLIBXX-NOT: "-lm"
@@ -87,49 +86,49 @@
 // RUN: %clangxx -### %s --target=x86_64-unknown-fuchsia \
 // RUN:     -ccc-install-dir %S/Inputs/basic_fuchsia_tree/bin \
 // RUN:     -resource-dir=%S/Inputs/resource_dir_with_per_target_subdir \
-// RUN:     -fuse-ld=lld 2>&1\
+// RUN:     -fuse-ld=ld 2>&1\
 // RUN:     | FileCheck %s -check-prefixes=CHECK-MULTILIB-X86
 // RUN: %clangxx -### %s --target=x86_64-unknown-fuchsia -fsanitize=address \
 // RUN:     -ccc-install-dir %S/Inputs/basic_fuchsia_tree/bin \
 // RUN:     -resource-dir=%S/Inputs/resource_dir_with_per_target_subdir \
-// RUN:     -fuse-ld=lld 2>&1\
+// RUN:     -fuse-ld=ld 2>&1\
 // RUN:     | FileCheck %s -check-prefixes=CHECK-MULTILIB-X86,CHECK-MULTILIB-ASAN-X86
 // RUN: %clangxx -### %s --target=x86_64-unknown-fuchsia -fno-exceptions \
 // RUN:     -ccc-install-dir %S/Inputs/basic_fuchsia_tree/bin \
 // RUN:     -resource-dir=%S/Inputs/resource_dir_with_per_target_subdir \
-// RUN:     -fuse-ld=lld 2>&1\
+// RUN:     -fuse-ld=ld 2>&1\
 // RUN:     | FileCheck %s -check-prefixes=CHECK-MULTILIB-X86,CHECK-MULTILIB-NOEXCEPT-X86
 // RUN: %clangxx -### %s --target=x86_64-unknown-fuchsia -fsanitize=address -fno-exceptions \
 // RUN:     -ccc-install-dir %S/Inputs/basic_fuchsia_tree/bin \
 // RUN:     -resource-dir=%S/Inputs/resource_dir_with_per_target_subdir \
-// RUN:     -fuse-ld=lld 2>&1\
+// RUN:     -fuse-ld=ld 2>&1\
 // RUN:     | FileCheck %s -check-prefixes=CHECK-MULTILIB-X86,CHECK-MULTILIB-ASAN-NOEXCEPT-X86
 // RUN: %clangxx -### %s --target=x86_64-unknown-fuchsia -fsanitize=hwaddress \
 // RUN:     -ccc-install-dir %S/Inputs/basic_fuchsia_tree/bin \
 // RUN:     -resource-dir=%S/Inputs/resource_dir_with_per_target_subdir \
-// RUN:     -fuse-ld=lld 2>&1\
+// RUN:     -fuse-ld=ld 2>&1\
 // RUN:     | FileCheck %s -check-prefixes=CHECK-MULTILIB-X86,CHECK-MULTILIB-HWASAN-X86
 // RUN: %clangxx -### %s --target=x86_64-unknown-fuchsia -fsanitize=hwaddress -fno-exceptions \
 // RUN:     -ccc-install-dir %S/Inputs/basic_fuchsia_tree/bin \
 // RUN:     -resource-dir=%S/Inputs/resource_dir_with_per_target_subdir \
-// RUN:     -fuse-ld=lld 2>&1\
+// RUN:     -fuse-ld=ld 2>&1\
 // RUN:     | FileCheck %s -check-prefixes=CHECK-MULTILIB-X86,CHECK-MULTILIB-HWASAN-NOEXCEPT-X86
 
 // Test compat multilibs.
 // RUN: %clangxx -### %s --target=x86_64-unknown-fuchsia -fc++-abi=itanium \
 // RUN:     -ccc-install-dir %S/Inputs/basic_fuchsia_tree/bin \
 // RUN:     -resource-dir=%S/Inputs/resource_dir_with_per_target_subdir \
-// RUN:     -fuse-ld=lld 2>&1\
+// RUN:     -fuse-ld=ld 2>&1\
 // RUN:     | FileCheck %s -check-prefixes=CHECK-MULTILIB-X86,CHECK-MULTILIB-COMPAT-X86
 // RUN: %clangxx -### %s --target=x86_64-unknown-fuchsia -fc++-abi=itanium -fc++-abi=fuchsia \
 // RUN:     -ccc-install-dir %S/Inputs/basic_fuchsia_tree/bin \
 // RUN:     -resource-dir=%S/Inputs/resource_dir_with_per_target_subdir \
-// RUN:     -fuse-ld=lld 2>&1\
+// RUN:     -fuse-ld=ld 2>&1\
 // RUN:     | FileCheck %s -check-prefixes=CHECK-MULTILIB-X86
 // RUN: %clangxx -### %s --target=x86_64-unknown-fuchsia -fc++-abi=fuchsia -fc++-abi=itanium \
 // RUN:     -ccc-install-dir %S/Inputs/basic_fuchsia_tree/bin \
 // RUN:     -resource-dir=%S/Inputs/resource_dir_with_per_target_subdir \
-// RUN:     -fuse-ld=lld 2>&1\
+// RUN:     -fuse-ld=ld 2>&1\
 // RUN:     | FileCheck %s -check-prefixes=CHECK-MULTILIB-X86,CHECK-MULTILIB-COMPAT-X86
 // CHECK-MULTILIB-X86: "-resource-dir" "[[RESOURCE_DIR:[^"]+]]"
 // CHECK-MULTILIB-ASAN-X86: "-L{{.*}}{{/|\\\\}}..{{/|\\\\}}lib{{/|\\\\}}x86_64-unknown-fuchsia{{/|\\\\}}asan"

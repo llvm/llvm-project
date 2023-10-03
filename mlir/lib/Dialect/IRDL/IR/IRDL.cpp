@@ -9,10 +9,13 @@
 #include "mlir/Dialect/IRDL/IR/IRDL.h"
 #include "mlir/IR/Builders.h"
 #include "mlir/IR/BuiltinAttributes.h"
+#include "mlir/IR/Diagnostics.h"
 #include "mlir/IR/DialectImplementation.h"
 #include "mlir/IR/ExtensibleDialect.h"
 #include "mlir/IR/OpDefinition.h"
 #include "mlir/IR/OpImplementation.h"
+#include "mlir/IR/Operation.h"
+#include "mlir/Support/LLVM.h"
 #include "mlir/Support/LogicalResult.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/TypeSwitch.h"
@@ -38,6 +41,10 @@ void IRDLDialect::initialize() {
   addTypes<
 #define GET_TYPEDEF_LIST
 #include "mlir/Dialect/IRDL/IR/IRDLTypesGen.cpp.inc"
+      >();
+  addAttributes<
+#define GET_ATTRDEF_LIST
+#include "mlir/Dialect/IRDL/IR/IRDLAttributes.cpp.inc"
       >();
 }
 
@@ -71,9 +78,35 @@ LogicalResult DialectOp::verify() {
   return success();
 }
 
+LogicalResult OperandsOp::verify() {
+  size_t numVariadicities = getVariadicity().size();
+  size_t numOperands = getNumOperands();
+
+  if (numOperands != numVariadicities)
+    return emitOpError()
+           << "the number of operands and their variadicities must be "
+              "the same, but got "
+           << numOperands << " and " << numVariadicities << " respectively";
+
+  return success();
+}
+
+LogicalResult ResultsOp::verify() {
+  size_t numVariadicities = getVariadicity().size();
+  size_t numOperands = this->getNumOperands();
+
+  if (numOperands != numVariadicities)
+    return emitOpError()
+           << "the number of operands and their variadicities must be "
+              "the same, but got "
+           << numOperands << " and " << numVariadicities << " respectively";
+
+  return success();
+}
+
 LogicalResult AttributesOp::verify() {
-  const size_t namesSize = getAttributeValueNames().size();
-  const size_t valuesSize = getAttributeValues().size();
+  size_t namesSize = getAttributeValueNames().size();
+  size_t valuesSize = getAttributeValues().size();
 
   if (namesSize != valuesSize)
     return emitOpError()
@@ -82,6 +115,83 @@ LogicalResult AttributesOp::verify() {
            << namesSize << " and " << valuesSize << " respectively";
 
   return success();
+}
+
+/// Parse a value with its variadicity first. By default, the variadicity is
+/// single.
+///
+/// value-with-variadicity ::= ("single" | "optional" | "variadic")? ssa-value
+static ParseResult
+parseValueWithVariadicity(OpAsmParser &p,
+                          OpAsmParser::UnresolvedOperand &operand,
+                          VariadicityAttr &variadicityAttr) {
+  MLIRContext *ctx = p.getBuilder().getContext();
+
+  // Parse the variadicity, if present
+  if (p.parseOptionalKeyword("single").succeeded()) {
+    variadicityAttr = VariadicityAttr::get(ctx, Variadicity::single);
+  } else if (p.parseOptionalKeyword("optional").succeeded()) {
+    variadicityAttr = VariadicityAttr::get(ctx, Variadicity::optional);
+  } else if (p.parseOptionalKeyword("variadic").succeeded()) {
+    variadicityAttr = VariadicityAttr::get(ctx, Variadicity::variadic);
+  } else {
+    variadicityAttr = VariadicityAttr::get(ctx, Variadicity::single);
+  }
+
+  // Parse the value
+  if (p.parseOperand(operand))
+    return failure();
+  return success();
+}
+
+/// Parse a list of values with their variadicities first. By default, the
+/// variadicity is single.
+///
+/// values-with-variadicity ::=
+///   `(` (value-with-variadicity (`,` value-with-variadicity)*)? `)`
+/// value-with-variadicity ::= ("single" | "optional" | "variadic")? ssa-value
+static ParseResult parseValuesWithVariadicity(
+    OpAsmParser &p, SmallVectorImpl<OpAsmParser::UnresolvedOperand> &operands,
+    VariadicityArrayAttr &variadicityAttr) {
+  Builder &builder = p.getBuilder();
+  MLIRContext *ctx = builder.getContext();
+  SmallVector<VariadicityAttr> variadicities;
+
+  // Parse a single value with its variadicity
+  auto parseOne = [&] {
+    OpAsmParser::UnresolvedOperand operand;
+    VariadicityAttr variadicity;
+    if (parseValueWithVariadicity(p, operand, variadicity))
+      return failure();
+    operands.push_back(operand);
+    variadicities.push_back(variadicity);
+    return success();
+  };
+
+  if (p.parseCommaSeparatedList(OpAsmParser::Delimiter::Paren, parseOne))
+    return failure();
+  variadicityAttr = VariadicityArrayAttr::get(ctx, variadicities);
+  return success();
+}
+
+/// Print a list of values with their variadicities first. By default, the
+/// variadicity is single.
+///
+/// values-with-variadicity ::=
+///   `(` (value-with-variadicity (`,` value-with-variadicity)*)? `)`
+/// value-with-variadicity ::= ("single" | "optional" | "variadic")? ssa-value
+static void printValuesWithVariadicity(OpAsmPrinter &p, Operation *op,
+                                       OperandRange operands,
+                                       VariadicityArrayAttr variadicityAttr) {
+  p << "(";
+  interleaveComma(llvm::seq<int>(0, operands.size()), p, [&](int i) {
+    Variadicity variadicity = variadicityAttr[i].getValue();
+    if (variadicity != Variadicity::single) {
+      p << stringifyVariadicity(variadicity) << " ";
+    }
+    p << operands[i];
+  });
+  p << ")";
 }
 
 static ParseResult
@@ -114,10 +224,24 @@ static void printAttributesOp(OpAsmPrinter &p, AttributesOp op,
   p << '}';
 }
 
+LogicalResult RegionOp::verify() {
+  if (IntegerAttr numberOfBlocks = getNumberOfBlocksAttr())
+    if (int64_t number = numberOfBlocks.getInt(); number <= 0) {
+      return emitOpError("the number of blocks is expected to be >= 1 but got ")
+             << number;
+    }
+  return success();
+}
+
 #include "mlir/Dialect/IRDL/IR/IRDLInterfaces.cpp.inc"
 
 #define GET_TYPEDEF_CLASSES
 #include "mlir/Dialect/IRDL/IR/IRDLTypesGen.cpp.inc"
+
+#include "mlir/Dialect/IRDL/IR/IRDLEnums.cpp.inc"
+
+#define GET_ATTRDEF_CLASSES
+#include "mlir/Dialect/IRDL/IR/IRDLAttributes.cpp.inc"
 
 #define GET_OP_CLASSES
 #include "mlir/Dialect/IRDL/IR/IRDLOps.cpp.inc"

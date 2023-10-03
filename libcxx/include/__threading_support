@@ -14,7 +14,8 @@
 #include <__chrono/convert_to_timespec.h>
 #include <__chrono/duration.h>
 #include <__config>
-#include <__thread/poll_with_backoff.h>
+#include <__fwd/hash.h>
+#include <ctime>
 #include <errno.h>
 
 #ifdef __MVS__
@@ -30,6 +31,14 @@
 #elif !defined(_LIBCPP_HAS_NO_THREADS)
 
 #if defined(_LIBCPP_HAS_THREAD_API_PTHREAD)
+// Some platforms require <bits/atomic_wide_counter.h> in order for
+// PTHREAD_COND_INITIALIZER to be expanded. Normally that would come
+// in via <pthread.h>, but it's a non-modular header on those platforms,
+// so libc++'s <math.h> usually absorbs atomic_wide_counter.h into the
+// module with <math.h> and makes atomic_wide_counter.h invisible.
+// Include <math.h> here to work around that.
+# include <math.h>
+
 # include <pthread.h>
 # include <sched.h>
 #elif defined(_LIBCPP_HAS_THREAD_API_C11)
@@ -93,7 +102,7 @@ typedef cnd_t __libcpp_condvar_t;
 #define _LIBCPP_CONDVAR_INITIALIZER {}
 
 // Execute once
-typedef once_flag __libcpp_exec_once_flag;
+typedef ::once_flag __libcpp_exec_once_flag;
 #define _LIBCPP_EXEC_ONCE_INITIALIZER ONCE_FLAG_INIT
 
 // Thread id

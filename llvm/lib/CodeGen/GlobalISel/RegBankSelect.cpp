@@ -623,7 +623,7 @@ bool RegBankSelect::applyMapping(
 
   // Second, rewrite the instruction.
   LLVM_DEBUG(dbgs() << "Actual mapping of the operands: " << OpdMapper << '\n');
-  RBI->applyMapping(OpdMapper);
+  RBI->applyMapping(MIRBuilder, OpdMapper);
 
   return true;
 }

@@ -304,15 +304,15 @@ public:
 
     _LIBCPP_NODISCARD _LIBCPP_HIDE_FROM_ABI const _Container& __get_container() const { return c; }
 
-    template <class T1, class _C1>
+    template <class _T1, class _OtherContainer>
     friend
     bool
-    operator==(const stack<T1, _C1>& __x, const stack<T1, _C1>& __y);
+    operator==(const stack<_T1, _OtherContainer>& __x, const stack<_T1, _OtherContainer>& __y);
 
-    template <class T1, class _C1>
+    template <class _T1, class _OtherContainer>
     friend
     bool
-    operator< (const stack<T1, _C1>& __x, const stack<T1, _C1>& __y);
+    operator< (const stack<_T1, _OtherContainer>& __x, const stack<_T1, _OtherContainer>& __y);
 };
 
 #if _LIBCPP_STD_VER >= 17
@@ -414,9 +414,9 @@ operator<=>(const stack<_Tp, _Container>& __x, const stack<_Tp, _Container>& __y
 
 #endif
 
-template <class _Tp, class _Container>
+template <class _Tp, class _Container, __enable_if_t<__is_swappable<_Container>::value, int> = 0>
 inline _LIBCPP_INLINE_VISIBILITY
-__enable_if_t<__is_swappable<_Container>::value, void>
+void
 swap(stack<_Tp, _Container>& __x, stack<_Tp, _Container>& __y)
     _NOEXCEPT_(_NOEXCEPT_(__x.swap(__y)))
 {

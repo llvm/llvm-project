@@ -413,9 +413,13 @@ Error InstrProfWriter::writeImpl(ProfOStream &OS) {
   InfoObj->CSSummaryBuilder = &CSISB;
 
   // Populate the hash table generator.
+  SmallVector<std::pair<StringRef, const ProfilingData *>, 0> OrderedData;
   for (const auto &I : FunctionData)
     if (shouldEncodeData(I.getValue()))
-      Generator.insert(I.getKey(), &I.getValue());
+      OrderedData.emplace_back((I.getKey()), &I.getValue());
+  llvm::sort(OrderedData, less_first());
+  for (const auto &I : OrderedData)
+    Generator.insert(I.first, I.second);
 
   // Write the header.
   IndexedInstrProf::Header Header;

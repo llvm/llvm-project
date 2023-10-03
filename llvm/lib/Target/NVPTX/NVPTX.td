@@ -28,6 +28,8 @@ class FeatureSM<int version>:
    SubtargetFeature<"sm_"# version, "SmVersion",
                     "" # version,
                     "Target SM " # version>;
+def SM90a: FeatureSM<90>;
+
 class FeaturePTX<int version>:
    SubtargetFeature<"ptx"# version, "PTXVersion",
                     "" # version,
@@ -68,6 +70,7 @@ def : Proc<"sm_86", [SM86, PTX71]>;
 def : Proc<"sm_87", [SM87, PTX74]>;
 def : Proc<"sm_89", [SM89, PTX78]>;
 def : Proc<"sm_90", [SM90, PTX78]>;
+def : Proc<"sm_90a", [SM90a, PTX80]>;
 
 def NVPTXInstrInfo : InstrInfo {
 }

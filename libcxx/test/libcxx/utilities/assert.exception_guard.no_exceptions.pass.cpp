@@ -8,10 +8,9 @@
 
 // REQUIRES: has-unix-headers
 // UNSUPPORTED: c++03
-// UNSUPPORTED: !libcpp-has-hardened-mode && !libcpp-has-debug-mode
+// REQUIRES: libcpp-hardening-mode={{safe|debug}}
 // XFAIL: availability-verbose_abort-missing
 // ADDITIONAL_COMPILE_FLAGS: -fno-exceptions
-// ADDITIONAL_COMPILE_FLAGS: -Wno-private-header
 
 #include <__utility/exception_guard.h>
 

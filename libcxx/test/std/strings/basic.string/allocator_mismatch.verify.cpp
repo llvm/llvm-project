@@ -11,4 +11,5 @@
 
 #include <string>
 
-std::basic_string<char, std::char_traits<char>, std::allocator<int> > s; // expected-error@*:* {{Allocator::value_type must be same type as value_type}}
+std::basic_string<char, std::char_traits<char>, std::allocator<int> >
+    s; // expected-error@*:* {{Allocator::value_type must be same type as value_type}}

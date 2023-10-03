@@ -104,6 +104,7 @@ cc_binary(
         "//mlir:CastInterfaces",
         "//mlir:FuncDialect",
         "//mlir:FuncExtensions",
+        "//mlir:FunctionInterfaces",
         "//mlir:IR",
         "//mlir:MemRefDialect",
         "//mlir:Parser",

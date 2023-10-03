@@ -367,17 +367,24 @@ Init *UnsetInit::convertInitializerTo(RecTy *Ty) const {
   return const_cast<UnsetInit *>(this);
 }
 
-static void ProfileArgumentInit(FoldingSetNodeID &ID, Init *Value) {
+static void ProfileArgumentInit(FoldingSetNodeID &ID, Init *Value,
+                                ArgAuxType Aux) {
+  auto I = Aux.index();
+  ID.AddInteger(I);
+  if (I == ArgumentInit::Positional)
+    ID.AddInteger(std::get<ArgumentInit::Positional>(Aux));
+  if (I == ArgumentInit::Named)
+    ID.AddPointer(std::get<ArgumentInit::Named>(Aux));
   ID.AddPointer(Value);
 }
 
 void ArgumentInit::Profile(FoldingSetNodeID &ID) const {
-  ProfileArgumentInit(ID, Value);
+  ProfileArgumentInit(ID, Value, Aux);
 }
 
-ArgumentInit *ArgumentInit::get(Init *Value) {
+ArgumentInit *ArgumentInit::get(Init *Value, ArgAuxType Aux) {
   FoldingSetNodeID ID;
-  ProfileArgumentInit(ID, Value);
+  ProfileArgumentInit(ID, Value, Aux);
 
   RecordKeeper &RK = Value->getRecordKeeper();
   detail::RecordKeeperImpl &RKImpl = RK.getImpl();
@@ -385,7 +392,7 @@ ArgumentInit *ArgumentInit::get(Init *Value) {
   if (ArgumentInit *I = RKImpl.TheArgumentInitPool.FindNodeOrInsertPos(ID, IP))
     return I;
 
-  ArgumentInit *I = new (RKImpl.Allocator) ArgumentInit(Value);
+  ArgumentInit *I = new (RKImpl.Allocator) ArgumentInit(Value, Aux);
   RKImpl.TheArgumentInitPool.InsertNode(I, IP);
   return I;
 }
@@ -393,7 +400,7 @@ ArgumentInit *ArgumentInit::get(Init *Value) {
 Init *ArgumentInit::resolveReferences(Resolver &R) const {
   Init *NewValue = Value->resolveReferences(R);
   if (NewValue != Value)
-    return ArgumentInit::get(NewValue);
+    return cloneWithValue(NewValue);
 
   return const_cast<ArgumentInit *>(this);
 }
@@ -1280,7 +1287,6 @@ Init *BinOpInit::Fold(Record *CurRec) const {
     }
     return ListInit::get(Args, TheList->getElementType());
   }
-  case RANGE:
   case RANGEC: {
     auto *LHSi = dyn_cast<IntInit>(LHS);
     auto *RHSi = dyn_cast<IntInit>(RHS);
@@ -1480,8 +1486,9 @@ std::string BinOpInit::getAsString() const {
   case GT: Result = "!gt"; break;
   case LISTCONCAT: Result = "!listconcat"; break;
   case LISTSPLAT: Result = "!listsplat"; break;
-  case LISTREMOVE: Result = "!listremove"; break;
-  case RANGE: Result = "!range"; break;
+  case LISTREMOVE:
+    Result = "!listremove";
+    break;
   case STRCONCAT: Result = "!strconcat"; break;
   case INTERLEAVE: Result = "!interleave"; break;
   case SETDAGOP: Result = "!setdagop"; break;
@@ -1697,6 +1704,34 @@ Init *TernOpInit::Fold(Record *CurRec) const {
     break;
   }
 
+  case RANGE: {
+    auto *LHSi = dyn_cast<IntInit>(LHS);
+    auto *MHSi = dyn_cast<IntInit>(MHS);
+    auto *RHSi = dyn_cast<IntInit>(RHS);
+    if (!LHSi || !MHSi || !RHSi)
+      break;
+
+    auto Start = LHSi->getValue();
+    auto End = MHSi->getValue();
+    auto Step = RHSi->getValue();
+    if (Step == 0)
+      PrintError(CurRec->getLoc(), "Step of !range can't be 0");
+
+    SmallVector<Init *, 8> Args;
+    if (Start < End && Step > 0) {
+      Args.reserve((End - Start) / Step);
+      for (auto I = Start; I < End; I += Step)
+        Args.push_back(IntInit::get(getRecordKeeper(), I));
+    } else if (Start > End && Step < 0) {
+      Args.reserve((Start - End) / -Step);
+      for (auto I = Start; I > End; I += Step)
+        Args.push_back(IntInit::get(getRecordKeeper(), I));
+    } else {
+      // Empty set
+    }
+    return ListInit::get(Args, LHSi->getType());
+  }
+
   case SUBSTR: {
     StringInit *LHSs = dyn_cast<StringInit>(LHS);
     IntInit *MHSi = dyn_cast<IntInit>(MHS);
@@ -1816,6 +1851,9 @@ std::string TernOpInit::getAsString() const {
   case FILTER: Result = "!filter"; UnquotedLHS = true; break;
   case FOREACH: Result = "!foreach"; UnquotedLHS = true; break;
   case IF: Result = "!if"; break;
+  case RANGE:
+    Result = "!range";
+    break;
   case SUBST: Result = "!subst"; break;
   case SUBSTR: Result = "!substr"; break;
   case FIND: Result = "!find"; break;
@@ -2219,13 +2257,16 @@ DefInit *VarDefInit::instantiate() {
     ArrayRef<Init *> TArgs = Class->getTemplateArgs();
     MapResolver R(NewRec);
 
-    for (unsigned i = 0, e = TArgs.size(); i != e; ++i) {
-      if (i < args_size())
-        R.set(TArgs[i], getArg(i)->getValue());
-      else
-        R.set(TArgs[i], NewRec->getValue(TArgs[i])->getValue());
+    for (unsigned I = 0, E = TArgs.size(); I != E; ++I) {
+      R.set(TArgs[I], NewRec->getValue(TArgs[I])->getValue());
+      NewRec->removeValue(TArgs[I]);
+    }
 
-      NewRec->removeValue(TArgs[i]);
+    for (auto *Arg : args()) {
+      if (Arg->isPositional())
+        R.set(TArgs[Arg->getIndex()], Arg->getValue());
+      if (Arg->isNamed())
+        R.set(Arg->getName(), Arg->getValue());
     }
 
     NewRec->resolveReferences(R);

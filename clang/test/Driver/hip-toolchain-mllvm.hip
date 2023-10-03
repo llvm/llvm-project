@@ -6,26 +6,26 @@
 // -mllvm options are passed to clang only.
 
 // RUN: %clang -### --target=x86_64-linux-gnu \
-// RUN:   --cuda-gpu-arch=gfx803 --cuda-gpu-arch=gfx900 \
-// RUN:   -mllvm -unroll-count=10 \
+// RUN:   --offload-arch=gfx803 --offload-arch=gfx900 \
+// RUN:   -nogpuinc -nogpulib -mllvm -unroll-count=10 \
 // RUN:   -Xoffload-linker -mllvm=-inline-threshold=100 \
 // RUN:   %s 2>&1 | FileCheck %s
 
 // RUN: %clang -### --target=x86_64-linux-gnu \
-// RUN:   --cuda-gpu-arch=gfx803 --cuda-gpu-arch=gfx900 \
-// RUN:   -mllvm -unroll-count=10 \
+// RUN:   --offload-arch=gfx803 --offload-arch=gfx900 \
+// RUN:   -nogpuinc -nogpulib -mllvm -unroll-count=10 \
 // RUN:   -Xoffload-linker -mllvm=-inline-threshold=100 \
 // RUN:   %s 2>&1 | FileCheck -check-prefix=NEG %s
 
 // RUN: %clang -### --target=x86_64-linux-gnu \
-// RUN:   --cuda-gpu-arch=gfx803 --cuda-gpu-arch=gfx900 \
-// RUN:   -fgpu-rdc -mllvm -unroll-count=10 \
+// RUN:   --offload-arch=gfx803 --offload-arch=gfx900 \
+// RUN:   -nogpuinc -nogpulib -fgpu-rdc -mllvm -unroll-count=10 \
 // RUN:   -Xoffload-linker -mllvm=-inline-threshold=100 \
 // RUN:   %s 2>&1 | FileCheck %s
 
 // RUN: %clang -### --target=x86_64-linux-gnu \
-// RUN:   --cuda-gpu-arch=gfx803 --cuda-gpu-arch=gfx900 \
-// RUN:   -fgpu-rdc -mllvm -unroll-count=10 \
+// RUN:   --offload-arch=gfx803 --offload-arch=gfx900 \
+// RUN:   -nogpuinc -nogpulib -fgpu-rdc -mllvm -unroll-count=10 \
 // RUN:   -Xoffload-linker -mllvm=-inline-threshold=100 \
 // RUN:   %s 2>&1 | FileCheck -check-prefix=NEG %s
 

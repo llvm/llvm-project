@@ -10,6 +10,7 @@
 #ifndef _LIBCPP___STOP_TOKEN_INTRUSIVE_SHARED_PTR_H
 #define _LIBCPP___STOP_TOKEN_INTRUSIVE_SHARED_PTR_H
 
+#include <__atomic/atomic.h>
 #include <__atomic/memory_order.h>
 #include <__config>
 #include <__type_traits/is_reference.h>

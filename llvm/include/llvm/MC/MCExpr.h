@@ -299,6 +299,7 @@ public:
     VK_PPC_TLSGD,           // symbol@tlsgd
     VK_PPC_AIX_TLSGD,       // symbol@gd
     VK_PPC_AIX_TLSGDM,      // symbol@m
+    VK_PPC_AIX_TLSIE,       // symbol@ie
     VK_PPC_AIX_TLSLE,       // symbol@le
     VK_PPC_GOT_TLSLD,       // symbol@got@tlsld
     VK_PPC_GOT_TLSLD_LO,    // symbol@got@tlsld@l

@@ -1,5 +1,3 @@
-from __future__ import absolute_import
-
 # System modules
 from distutils.version import LooseVersion
 from functools import wraps
@@ -1027,6 +1025,10 @@ def skipIfXmlSupportMissing(func):
 
 def skipIfEditlineSupportMissing(func):
     return _get_bool_config_skip_if_decorator("editline")(func)
+
+
+def skipIfEditlineWideCharSupportMissing(func):
+    return _get_bool_config_skip_if_decorator("editline_wchar")(func)
 
 
 def skipIfFBSDVMCoreSupportMissing(func):

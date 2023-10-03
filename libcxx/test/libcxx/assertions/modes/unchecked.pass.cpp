@@ -9,7 +9,7 @@
 // This test checks that if no hardening mode is defined (i.e., in the unchecked mode), by default assertions aren't
 // triggered.
 
-// UNSUPPORTED: libcpp-has-hardened-mode, libcpp-has-debug-mode
+// REQUIRES: libcpp-hardening-mode=unchecked
 
 #include <cassert>
 
@@ -17,9 +17,9 @@ bool executed_condition = false;
 bool f() { executed_condition = true; return false; }
 
 int main(int, char**) {
-  _LIBCPP_ASSERT_UNCATEGORIZED(true, "Should not fire");
-  _LIBCPP_ASSERT_UNCATEGORIZED(false, "Also should not fire");
-  _LIBCPP_ASSERT_UNCATEGORIZED(f(), "Should not execute anything");
+  _LIBCPP_ASSERT_VALID_ELEMENT_ACCESS(true, "Should not fire");
+  _LIBCPP_ASSERT_VALID_ELEMENT_ACCESS(false, "Also should not fire");
+  _LIBCPP_ASSERT_VALID_ELEMENT_ACCESS(f(), "Should not execute anything");
   assert(!executed_condition); // Really make sure we did not execute anything.
 
   return 0;

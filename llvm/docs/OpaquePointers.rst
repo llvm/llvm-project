@@ -180,7 +180,7 @@ While direct usage of pointer element types is immediately apparent in code,
 there is a more subtle issue that opaque pointers need to contend with: A lot
 of code assumes that pointer equality also implies that the used load/store
 type or GEP source element type is the same. Consider the following examples
-with typed an opaque pointers:
+with typed and opaque pointers:
 
 .. code-block:: llvm
 

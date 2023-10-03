@@ -1,12 +1,19 @@
 // RUN: fir-opt -split-input-file --omp-function-filtering %s | FileCheck %s
 
-// CHECK:     func.func @any
-// CHECK:     func.func @nohost
-// CHECK-NOT: func.func @host
-// CHECK-NOT: func.func @none
-// CHECK:     func.func @nohost_target
-// CHECK:     func.func @host_target
-// CHECK:     func.func @none_target
+// CHECK: func.func @any
+// CHECK: return
+// CHECK: func.func @nohost
+// CHECK: return
+// CHECK: func.func private @host
+// CHECK-NOT: return
+// CHECK: func.func private @none
+// CHECK-NOT: return
+// CHECK: func.func @nohost_target
+// CHECK: return
+// CHECK: func.func @host_target
+// CHECK: return
+// CHECK: func.func @none_target
+// CHECK: return
 module attributes {omp.is_target_device = true} {
   func.func @any() -> ()
       attributes {
@@ -56,13 +63,20 @@ module attributes {omp.is_target_device = true} {
 
 // -----
 
-// CHECK:     func.func @any
-// CHECK-NOT: func.func @nohost
-// CHECK:     func.func @host
-// CHECK:     func.func @none
-// CHECK:     func.func @nohost_target
-// CHECK:     func.func @host_target
-// CHECK:     func.func @none_target
+// CHECK: func.func @any
+// CHECK: return
+// CHECK: func.func @nohost
+// CHECK: return
+// CHECK: func.func @host
+// CHECK: return
+// CHECK: func.func @none
+// CHECK: return
+// CHECK: func.func @nohost_target
+// CHECK: return
+// CHECK: func.func @host_target
+// CHECK: return
+// CHECK: func.func @none_target
+// CHECK: return
 module attributes {omp.is_target_device = false} {
   func.func @any() -> ()
       attributes {

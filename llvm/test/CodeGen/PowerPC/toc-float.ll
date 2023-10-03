@@ -53,9 +53,9 @@ define float @floatConstantArray() local_unnamed_addr  {
 ; CHECK-P8-LABEL: floatConstantArray:
 ; CHECK-P8:       # %bb.0:
 ; CHECK-P8-NEXT:    addis 3, 2, FArr@toc@ha+12
-; CHECK-P8-NEXT:    addis 4, 2, .LCPI2_0@toc@ha
 ; CHECK-P8-NEXT:    lfs 0, FArr@toc@l+12(3)
-; CHECK-P8-NEXT:    lfs 1, .LCPI2_0@toc@l(4)
+; CHECK-P8-NEXT:    addis 3, 2, .LCPI2_0@toc@ha
+; CHECK-P8-NEXT:    lfs 1, .LCPI2_0@toc@l(3)
 ; CHECK-P8-NEXT:    xsaddsp 1, 0, 1
 ; CHECK-P8-NEXT:    blr
   %1 = load float, ptr getelementptr inbounds ([10 x float], ptr @FArr, i64 0, i64 3), align 4
@@ -95,9 +95,9 @@ define double @doubleConstantArray()  {
 ; CHECK-P8-LABEL: doubleConstantArray:
 ; CHECK-P8:       # %bb.0:
 ; CHECK-P8-NEXT:    addis 3, 2, d@toc@ha+24
-; CHECK-P8-NEXT:    addis 4, 2, .LCPI4_0@toc@ha
 ; CHECK-P8-NEXT:    lfd 0, d@toc@l+24(3)
-; CHECK-P8-NEXT:    lfd 1, .LCPI4_0@toc@l(4)
+; CHECK-P8-NEXT:    addis 3, 2, .LCPI4_0@toc@ha
+; CHECK-P8-NEXT:    lfd 1, .LCPI4_0@toc@l(3)
 ; CHECK-P8-NEXT:    xsadddp 1, 0, 1
 ; CHECK-P8-NEXT:    blr
   %1 = load double, ptr getelementptr inbounds ([200 x double], ptr @d, i64 0, i64 3), align 8
@@ -125,11 +125,11 @@ define double @doubleLargeConstantArray()  {
 ; CHECK-P8:       # %bb.0:
 ; CHECK-P8-NEXT:    addis 3, 2, arr@toc@ha
 ; CHECK-P8-NEXT:    li 4, 0
-; CHECK-P8-NEXT:    addis 5, 2, .LCPI5_0@toc@ha
 ; CHECK-P8-NEXT:    addi 3, 3, arr@toc@l
 ; CHECK-P8-NEXT:    ori 4, 4, 32768
-; CHECK-P8-NEXT:    lfd 1, .LCPI5_0@toc@l(5)
 ; CHECK-P8-NEXT:    lfdx 0, 3, 4
+; CHECK-P8-NEXT:    addis 3, 2, .LCPI5_0@toc@ha
+; CHECK-P8-NEXT:    lfd 1, .LCPI5_0@toc@l(3)
 ; CHECK-P8-NEXT:    xsadddp 1, 0, 1
 ; CHECK-P8-NEXT:    blr
   %1 = load double, ptr getelementptr inbounds ([20000 x double], ptr @arr, i64 0, i64 4096), align 8

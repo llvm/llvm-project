@@ -25,8 +25,8 @@ using namespace ento;
 namespace {
 class ObjCAtSyncChecker
     : public Checker< check::PreStmt<ObjCAtSynchronizedStmt> > {
-  mutable std::unique_ptr<BuiltinBug> BT_null;
-  mutable std::unique_ptr<BuiltinBug> BT_undef;
+  mutable std::unique_ptr<BugType> BT_null;
+  mutable std::unique_ptr<BugType> BT_undef;
 
 public:
   void checkPreStmt(const ObjCAtSynchronizedStmt *S, CheckerContext &C) const;
@@ -44,8 +44,8 @@ void ObjCAtSyncChecker::checkPreStmt(const ObjCAtSynchronizedStmt *S,
   if (isa<UndefinedVal>(V)) {
     if (ExplodedNode *N = C.generateErrorNode()) {
       if (!BT_undef)
-        BT_undef.reset(new BuiltinBug(this, "Uninitialized value used as mutex "
-                                            "for @synchronized"));
+        BT_undef.reset(new BugType(this, "Uninitialized value used as mutex "
+                                         "for @synchronized"));
       auto report = std::make_unique<PathSensitiveBugReport>(
           *BT_undef, BT_undef->getDescription(), N);
       bugreporter::trackExpressionValue(N, Ex, *report);
@@ -67,9 +67,9 @@ void ObjCAtSyncChecker::checkPreStmt(const ObjCAtSynchronizedStmt *S,
       // a null mutex just means no synchronization occurs.
       if (ExplodedNode *N = C.generateNonFatalErrorNode(nullState)) {
         if (!BT_null)
-          BT_null.reset(new BuiltinBug(
-              this, "Nil value used as mutex for @synchronized() "
-                    "(no synchronization will occur)"));
+          BT_null.reset(
+              new BugType(this, "Nil value used as mutex for @synchronized() "
+                                "(no synchronization will occur)"));
         auto report = std::make_unique<PathSensitiveBugReport>(
             *BT_null, BT_null->getDescription(), N);
         bugreporter::trackExpressionValue(N, Ex, *report);

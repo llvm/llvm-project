@@ -43,6 +43,9 @@
 #include <unistd.h>
 #endif
 
+#define GET_AVAILABLE_OPCODE_CHECKER
+#include "X86GenInstrInfo.inc"
+
 namespace llvm {
 namespace exegesis {
 
@@ -669,7 +672,8 @@ private:
 
 class ExegesisX86Target : public ExegesisTarget {
 public:
-  ExegesisX86Target() : ExegesisTarget(X86CpuPfmCounters) {}
+  ExegesisX86Target()
+      : ExegesisTarget(X86CpuPfmCounters, X86_MC::isOpcodeAvailable) {}
 
   Expected<std::unique_ptr<pfm::Counter>>
   createCounter(StringRef CounterName, const LLVMState &State,
@@ -1083,11 +1087,11 @@ ExegesisX86Target::generateExitSyscall(unsigned ExitCode) const {
 #define MAP_FIXED_NOREPLACE MAP_FIXED
 #endif
 
-// 32 bit ARM doesn't have mmap and uses mmap2 instead. The only difference
-// between the two syscalls is that mmap2's offset parameter is in terms 4096
-// byte offsets rather than individual bytes, so for our purposes they are
-// effectively the same as all ofsets here are set to 0.
-#ifdef __arm__
+// Some 32-bit architectures don't have mmap and define mmap2 instead. The only
+// difference between the two syscalls is that mmap2's offset parameter is in
+// terms 4096 byte offsets rather than individual bytes, so for our purposes
+// they are effectively the same as all ofsets here are set to 0.
+#if defined(SYS_mmap2) && !defined(SYS_mmap)
 #define SYS_mmap SYS_mmap2
 #endif
 

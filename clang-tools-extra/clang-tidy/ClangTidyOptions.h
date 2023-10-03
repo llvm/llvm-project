@@ -30,7 +30,7 @@ struct FileFilter {
   std::string Name;
 
   /// LineRange is a pair<start, end> (inclusive).
-  typedef std::pair<unsigned, unsigned> LineRange;
+  using LineRange = std::pair<unsigned int, unsigned int>;
 
   /// A list of line ranges in this file, for which we show warnings.
   std::vector<LineRange> LineRanges;
@@ -118,13 +118,13 @@ struct ClangTidyOptions {
     /// files to disambiguate local vs global value from different levels.
     unsigned Priority = 0;
   };
-  typedef std::pair<std::string, std::string> StringPair;
-  typedef llvm::StringMap<ClangTidyValue> OptionMap;
+  using StringPair = std::pair<std::string, std::string>;
+  using OptionMap = llvm::StringMap<ClangTidyValue>;
 
   /// Key-value mapping used to store check-specific options.
   OptionMap CheckOptions;
 
-  typedef std::vector<std::string> ArgList;
+  using ArgList = std::vector<std::string>;
 
   /// Add extra compilation arguments to the end of the list.
   std::optional<ArgList> ExtraArgs;
@@ -165,7 +165,7 @@ public:
   ///       commandline option is specified, clang-tidy will ignore the
   ///       configuration file.
   ///    * '-checks' commandline option.
-  typedef std::pair<ClangTidyOptions, std::string> OptionsSource;
+  using OptionsSource = std::pair<ClangTidyOptions, std::string>;
 
   /// Returns an ordered vector of OptionsSources, in order of increasing
   /// priority.
@@ -199,9 +199,7 @@ class FileOptionsBaseProvider : public DefaultOptionsProvider {
 protected:
   // A pair of configuration file base name and a function parsing
   // configuration from text in the corresponding format.
-  typedef std::pair<std::string, std::function<llvm::ErrorOr<ClangTidyOptions>(
-                                     llvm::MemoryBufferRef)>>
-      ConfigFileHandler;
+  using ConfigFileHandler = std::pair<std::string, std::function<llvm::ErrorOr<ClangTidyOptions> (llvm::MemoryBufferRef)>>;
 
   /// Configuration file handlers listed in the order of priority.
   ///
@@ -220,7 +218,7 @@ protected:
   ///
   /// With the order of handlers shown above, the ".my-tidy-config" file would
   /// take precedence over ".clang-tidy" if both reside in the same directory.
-  typedef std::vector<ConfigFileHandler> ConfigFileHandlers;
+  using ConfigFileHandlers = std::vector<ConfigFileHandler>;
 
   FileOptionsBaseProvider(ClangTidyGlobalOptions GlobalOptions,
                           ClangTidyOptions DefaultOptions,
@@ -232,7 +230,6 @@ protected:
                           ClangTidyOptions OverrideOptions,
                           ConfigFileHandlers ConfigHandlers);
 
-protected:
   void addRawFileOptions(llvm::StringRef AbsolutePath,
                          std::vector<OptionsSource> &CurOptions);
 

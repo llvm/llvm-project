@@ -4,6 +4,9 @@ set(LLVM_LINK_COMPONENTS
 
 add_clang_library(clangApplyReplacements
   lib/Tooling/ApplyReplacements.cpp
+
+  DEPENDS
+  ClangDriverOptions
 )
 
 clang_target_link_libraries(clangApplyReplacements

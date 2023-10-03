@@ -736,14 +736,6 @@ public:
     return true;
   }
 
-  bool VisitAutoTypeLoc(AutoTypeLoc L) {
-    if (L.isConstrained()) {
-      H.addAngleBracketTokens(L.getLAngleLoc(), L.getRAngleLoc());
-      H.addToken(L.getConceptNameInfo().getLoc(), HighlightingKind::Concept);
-    }
-    return true;
-  }
-
   bool VisitFunctionDecl(FunctionDecl *D) {
     if (D->isOverloadedOperator()) {
       const auto AddOpDeclToken = [&](SourceLocation Loc) {

@@ -78,18 +78,18 @@ define i32 @out32_constmask(i32 %x, i32 %y) {
 define i64 @out64_constmask(i64 %x, i64 %y) {
 ; CHECK-NOBMI-LABEL: out64_constmask:
 ; CHECK-NOBMI:       # %bb.0:
-; CHECK-NOBMI-NEXT:    movl %edi, %edi
+; CHECK-NOBMI-NEXT:    movl %edi, %ecx
 ; CHECK-NOBMI-NEXT:    movabsq $-4294967296, %rax # imm = 0xFFFFFFFF00000000
 ; CHECK-NOBMI-NEXT:    andq %rsi, %rax
-; CHECK-NOBMI-NEXT:    orq %rdi, %rax
+; CHECK-NOBMI-NEXT:    orq %rcx, %rax
 ; CHECK-NOBMI-NEXT:    retq
 ;
 ; CHECK-BMI-LABEL: out64_constmask:
 ; CHECK-BMI:       # %bb.0:
-; CHECK-BMI-NEXT:    movl %edi, %edi
+; CHECK-BMI-NEXT:    movl %edi, %ecx
 ; CHECK-BMI-NEXT:    movabsq $-4294967296, %rax # imm = 0xFFFFFFFF00000000
 ; CHECK-BMI-NEXT:    andq %rsi, %rax
-; CHECK-BMI-NEXT:    orq %rdi, %rax
+; CHECK-BMI-NEXT:    orq %rcx, %rax
 ; CHECK-BMI-NEXT:    retq
   %mx = and i64 %x, 4294967295
   %my = and i64 %y, -4294967296

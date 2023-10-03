@@ -351,10 +351,10 @@ struct UniquePtrCast : public CastIsPossible<To, From *> {
 
   static inline CastResultType castFailed() { return CastResultType(nullptr); }
 
-  static inline CastResultType doCastIfPossible(std::unique_ptr<From> &&f) {
-    if (!Self::isPossible(f))
+  static inline CastResultType doCastIfPossible(std::unique_ptr<From> &f) {
+    if (!Self::isPossible(f.get()))
       return castFailed();
-    return doCast(f);
+    return doCast(std::move(f));
   }
 };
 
@@ -664,10 +664,9 @@ template <typename To, typename From>
 }
 
 template <typename To, typename From>
-[[nodiscard]] inline decltype(auto) dyn_cast(std::unique_ptr<From> &&Val) {
+[[nodiscard]] inline decltype(auto) dyn_cast(std::unique_ptr<From> &Val) {
   assert(detail::isPresent(Val) && "dyn_cast on a non-existent value");
-  return CastInfo<To, std::unique_ptr<From>>::doCastIfPossible(
-      std::forward<std::unique_ptr<From> &&>(Val));
+  return CastInfo<To, std::unique_ptr<From>>::doCastIfPossible(Val);
 }
 
 /// isa_and_present<X> - Functionally identical to isa, except that a null value

@@ -114,6 +114,7 @@ bool IsConstantExprHelper<INVARIANT>::operator()(
   // LBOUND, UBOUND, and SIZE with truly constant DIM= arguments will have
   // been rewritten into DescriptorInquiry operations.
   if (const auto *intrinsic{std::get_if<SpecificIntrinsic>(&call.proc().u)}) {
+    const characteristics::Procedure &proc{intrinsic->characteristics.value()};
     if (intrinsic->name == "kind" ||
         intrinsic->name == IntrinsicProcTable::InvalidName ||
         call.arguments().empty() || !call.arguments()[0]) {
@@ -129,6 +130,16 @@ bool IsConstantExprHelper<INVARIANT>::operator()(
     } else if (intrinsic->name == "shape" || intrinsic->name == "size") {
       auto shape{GetShape(call.arguments()[0]->UnwrapExpr())};
       return shape && IsConstantExprShape(*shape);
+    } else if (proc.IsPure()) {
+      for (const auto &arg : call.arguments()) {
+        if (!arg) {
+          return false;
+        } else if (const auto *expr{arg->UnwrapExpr()};
+                   !expr || !(*this)(*expr)) {
+          return false;
+        }
+      }
+      return true;
     }
     // TODO: STORAGE_SIZE
   }
@@ -756,9 +767,15 @@ public:
   explicit IsContiguousHelper(FoldingContext &c) : Base{*this}, context_{c} {}
   using Base::operator();
 
+  template <typename T> Result operator()(const Constant<T> &) const {
+    return true;
+  }
+  Result operator()(const StaticDataObject &) const { return true; }
   Result operator()(const semantics::Symbol &symbol) const {
     const auto &ultimate{symbol.GetUltimate()};
     if (ultimate.attrs().test(semantics::Attr::CONTIGUOUS)) {
+      return true;
+    } else if (!IsVariable(symbol)) {
       return true;
     } else if (ultimate.Rank() == 0) {
       // Extension: accept scalars as a degenerate case of
@@ -853,24 +870,44 @@ private:
     // Detect any provably empty dimension in this array section, which would
     // render the whole section empty and therefore vacuously contiguous.
     std::optional<bool> result;
-    for (auto j{subscript.size()}; j-- > 0;) {
+    bool mayBeEmpty{false};
+    auto dims{subscript.size()};
+    std::vector<bool> knownPartialSlice(dims, false);
+    for (auto j{dims}; j-- > 0;) {
+      std::optional<ConstantSubscript> dimLbound;
+      std::optional<ConstantSubscript> dimUbound;
+      std::optional<ConstantSubscript> dimExtent;
+      if (baseLbounds && j < baseLbounds->size()) {
+        if (const auto &lb{baseLbounds->at(j)}) {
+          dimLbound = ToInt64(Fold(context_, Expr<SubscriptInteger>{*lb}));
+        }
+      }
+      if (baseUbounds && j < baseUbounds->size()) {
+        if (const auto &ub{baseUbounds->at(j)}) {
+          dimUbound = ToInt64(Fold(context_, Expr<SubscriptInteger>{*ub}));
+        }
+      }
+      if (dimLbound && dimUbound) {
+        if (*dimLbound <= *dimUbound) {
+          dimExtent = *dimUbound - *dimLbound + 1;
+        } else {
+          // This is an empty dimension.
+          result = true;
+          dimExtent = 0;
+        }
+      }
+
       if (const auto *triplet{std::get_if<Triplet>(&subscript[j].u)}) {
         ++rank;
         if (auto stride{ToInt64(triplet->stride())}) {
           const Expr<SubscriptInteger> *lowerBound{triplet->GetLower()};
-          if (!lowerBound && baseLbounds && j < baseLbounds->size()) {
-            lowerBound = common::GetPtrFromOptional(baseLbounds->at(j));
-          }
           const Expr<SubscriptInteger> *upperBound{triplet->GetUpper()};
-          if (!upperBound && baseUbounds && j < baseUbounds->size()) {
-            upperBound = common::GetPtrFromOptional(baseUbounds->at(j));
-          }
           std::optional<ConstantSubscript> lowerVal{lowerBound
                   ? ToInt64(Fold(context_, Expr<SubscriptInteger>{*lowerBound}))
-                  : std::nullopt};
+                  : dimLbound};
           std::optional<ConstantSubscript> upperVal{upperBound
                   ? ToInt64(Fold(context_, Expr<SubscriptInteger>{*upperBound}))
-                  : std::nullopt};
+                  : dimUbound};
           if (lowerVal && upperVal) {
             if (*lowerVal < *upperVal) {
               if (*stride < 0) {
@@ -886,13 +923,25 @@ private:
                   *lowerVal + *stride >= *upperVal) {
                 result = false; // discontiguous if not empty
               }
+            } else {
+              mayBeEmpty = true;
             }
+          } else {
+            mayBeEmpty = true;
           }
+        } else {
+          mayBeEmpty = true;
         }
       } else if (subscript[j].Rank() > 0) {
         ++rank;
         if (!result) {
           result = false; // vector subscript
+        }
+        mayBeEmpty = true;
+      } else {
+        // Scalar subscript.
+        if (dimExtent && *dimExtent > 1) {
+          knownPartialSlice[j] = true;
         }
       }
     }
@@ -920,7 +969,13 @@ private:
         }
         ++rank;
       } else if (anyTriplet) {
-        return std::nullopt;
+        // If the section cannot be empty, and this dimension's
+        // scalar subscript is known not to cover the whole
+        // dimension, then the array section is provably
+        // discontiguous.
+        return (mayBeEmpty || !knownPartialSlice[j])
+            ? std::nullopt
+            : std::make_optional(false);
       }
     }
     return true; // simply contiguous
@@ -931,11 +986,7 @@ private:
 
 template <typename A>
 std::optional<bool> IsContiguous(const A &x, FoldingContext &context) {
-  if (IsVariable(x)) {
-    return IsContiguousHelper{context}(x);
-  } else {
-    return true; // not a variable
-  }
+  return IsContiguousHelper{context}(x);
 }
 
 template std::optional<bool> IsContiguous(

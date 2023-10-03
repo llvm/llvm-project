@@ -6,8 +6,6 @@
 //
 //===----------------------------------------------------------------------===//
 
-// ADDITIONAL_COMPILE_FLAGS: -Wno-private-header
-
 // _Tp* __constexpr_memmove(_Tp* __dest, _Up* __src, __element_count __n);
 //
 // General tests for __constexpr_memmove.
@@ -34,7 +32,7 @@
 // than that.
 struct CopyConstructible {
   CopyConstructible() = default;
-  int value = 0;
+  int value           = 0;
 
   CopyConstructible(const CopyConstructible&)            = default;
   CopyConstructible(CopyConstructible&&)                 = delete;
@@ -44,7 +42,7 @@ struct CopyConstructible {
 
 struct MoveConstructible {
   MoveConstructible() = default;
-  int value = 0;
+  int value           = 0;
 
   MoveConstructible(const MoveConstructible&)            = delete;
   MoveConstructible(MoveConstructible&&)                 = default;
@@ -54,7 +52,7 @@ struct MoveConstructible {
 
 struct CopyAssignable {
   CopyAssignable() = default;
-  int value = 0;
+  int value        = 0;
 
   CopyAssignable(const CopyAssignable&)            = delete;
   CopyAssignable(CopyAssignable&&)                 = delete;
@@ -64,7 +62,7 @@ struct CopyAssignable {
 
 struct MoveAssignable {
   MoveAssignable() = default;
-  int value = 0;
+  int value        = 0;
 
   MoveAssignable(const MoveAssignable&)            = delete;
   MoveAssignable(MoveAssignable&&)                 = delete;
@@ -98,7 +96,7 @@ TEST_CONSTEXPR_CXX14 void test_user_defined_types() {
 template <class Source, class Dest>
 TEST_CONSTEXPR_CXX14 void test_builtin_types() {
   Source src[3] = {1, 2, 3};
-  Dest dst[3] = {111, 111, 111};
+  Dest dst[3]   = {111, 111, 111};
 
   Dest* result = std::__constexpr_memmove(dst, src, std::__element_count(3));
   assert(result == dst);
@@ -112,7 +110,7 @@ TEST_CONSTEXPR_CXX14 void test_pointer_types() {
   ObjectType objs[3] = {1, 2, 3};
 
   SourcePtr src[3] = {objs + 0, objs + 1, objs + 2};
-  DestPtr dst[3] = {nullptr, nullptr, nullptr};
+  DestPtr dst[3]   = {nullptr, nullptr, nullptr};
 
   DestPtr* result = std::__constexpr_memmove(dst, src, std::__element_count(3));
   assert(result == dst);

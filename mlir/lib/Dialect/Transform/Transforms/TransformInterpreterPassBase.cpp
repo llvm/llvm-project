@@ -15,9 +15,9 @@
 #include "mlir/Dialect/Transform/IR/TransformDialect.h"
 #include "mlir/Dialect/Transform/IR/TransformInterfaces.h"
 #include "mlir/IR/BuiltinOps.h"
-#include "mlir/IR/FunctionInterfaces.h"
 #include "mlir/IR/Verifier.h"
 #include "mlir/IR/Visitors.h"
+#include "mlir/Interfaces/FunctionInterfaces.h"
 #include "mlir/Parser/Parser.h"
 #include "mlir/Pass/Pass.h"
 #include "mlir/Support/FileUtilities.h"
@@ -68,7 +68,7 @@ parseTransformModuleFromFile(MLIRContext *context,
   if (!memoryBuffer) {
     return emitError(FileLineColLoc::get(
                StringAttr::get(context, transformFileName), 0, 0))
-           << "failed to parse transform file";
+           << "failed to open transform file: " << errorMessage;
   }
   // Tell sourceMgr about this buffer, the parser will pick it up.
   llvm::SourceMgr sourceMgr;

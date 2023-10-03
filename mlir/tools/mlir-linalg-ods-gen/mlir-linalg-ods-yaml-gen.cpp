@@ -563,9 +563,8 @@ def {0} : LinalgStructuredBase_Op<"{1}", !listconcat([AttrSizedOperandSegments],
         return regionBuilder;
       }
 
-      std::pair<int64_t, int64_t> getDpsInitsPositionRange() {{
-        int64_t getNumOperands = this->getNumOperands();
-        return {{getNumOperands - 1, getNumOperands};
+      ::mlir::MutableOperandRange getDpsInitsMutable() {{
+        return getOutputsMutable();
       }
 
       // Generic methods.
@@ -661,7 +660,7 @@ void {0}::getEffects(SmallVectorImpl<
     SideEffects::EffectInstance<MemoryEffects::Effect> >&effects) {{
       if (hasTensorSemantics()) return;
       getGenericEffectsImpl(effects,
-        getOperation()->getResults(), getDpsInputOperands(), getDpsInitOperands());
+        getOperation()->getResults(), getDpsInputs(), getDpsInits());
 }
 )FMT";
 
@@ -693,14 +692,13 @@ static LogicalResult generateNamedGenericOpOds(LinalgOpConfig &opConfig,
   std::string doc;
   if (opConfig.metadata->doc) {
     static const char structuredOpDocFmt[] = R"FMT(
-  let summary = [{ {0} }];
-  let description = [{
-    {1}
-  }];
+  let summary = [{{{0}}];
+  let description = [{{{1}}];
 )FMT";
     StringRef summary, description;
     std::tie(summary, description) =
-        StringRef(*opConfig.metadata->doc).trim().split('\n');
+        StringRef(*opConfig.metadata->doc).trim().split("\n\n");
+
     doc = llvm::formatv(structuredOpDocFmt, summary.trim(), description.trim());
   }
 

@@ -231,7 +231,6 @@ feature_test_macros = [
             "name": "__cpp_lib_bitset",
             "values": {"c++26": 202306}, # P2697R1 Interfacing bitset with string_view
             "headers": ["bitset"],
-            "unimplemented": True,
         },
         {
             "name": "__cpp_lib_bool_constant",
@@ -630,9 +629,8 @@ feature_test_macros = [
             "name": "__cpp_lib_jthread",
             "values": {"c++20": 201911},
             "headers": ["stop_token", "thread"],
-            "test_suite_guard": "!defined(_LIBCPP_HAS_NO_THREADS)",
-            "libcxx_guard": "!defined(_LIBCPP_HAS_NO_THREADS)",
-            "unimplemented": True,
+            "test_suite_guard": "!defined(_LIBCPP_HAS_NO_THREADS) && !defined(_LIBCPP_HAS_NO_EXPERIMENTAL_STOP_TOKEN) && !defined(_LIBCPP_AVAILABILITY_HAS_NO_SYNC)",
+            "libcxx_guard": "!defined(_LIBCPP_HAS_NO_THREADS) && !defined(_LIBCPP_HAS_NO_EXPERIMENTAL_STOP_TOKEN) && !defined(_LIBCPP_AVAILABILITY_HAS_NO_SYNC)",
         },
         {
             "name": "__cpp_lib_latch",
@@ -802,7 +800,6 @@ feature_test_macros = [
             "name": "__cpp_lib_ranges_chunk_by",
             "values": {"c++23": 202202},
             "headers": ["ranges"],
-            "unimplemented": True,
         },
         {
             "name": "__cpp_lib_ranges_iota",
@@ -815,6 +812,11 @@ feature_test_macros = [
             "values": {"c++23": 202202},
             "headers": ["ranges"],
             "unimplemented": True,
+        },
+        {
+            "name": "__cpp_lib_ranges_repeat",
+            "values": { "c++23": 202207},
+            "headers": ["ranges"],
         },
         {
             "name": "__cpp_lib_ranges_slide",
@@ -836,8 +838,8 @@ feature_test_macros = [
                 "forward_list",
                 "list",
                 "map",
-                "priority_queue",
                 "queue",
+                "ranges",
                 "set",
                 "stack",
                 "string",
@@ -845,7 +847,6 @@ feature_test_macros = [
                 "unordered_set",
                 "vector",
             ],
-            "unimplemented": True,
         },
         {
             "name": "__cpp_lib_ranges_zip",
@@ -1051,7 +1052,7 @@ feature_test_macros = [
             "name": "__cpp_lib_to_chars",
             "values": {
                          "c++17": 201611,
-                         #"c++26: 202306, # P2497R0 Testing for success or failure of <charconv> functions
+                         "c++26": 202306, # P2497R0 Testing for success or failure of <charconv> functions
                       },
             "headers": ["charconv"],
             "unimplemented": True,
@@ -1175,6 +1176,7 @@ lit_markup = {
     "locale": ["UNSUPPORTED: no-localization"],
     "mutex": ["UNSUPPORTED: no-threads"],
     "ostream": ["UNSUPPORTED: no-localization"],
+    "print": ["UNSUPPORTED: no-filesystem"],
     "regex": ["UNSUPPORTED: no-localization"],
     "semaphore": ["UNSUPPORTED: no-threads"],
     "shared_mutex": ["UNSUPPORTED: no-threads"],

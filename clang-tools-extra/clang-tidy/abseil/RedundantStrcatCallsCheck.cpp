@@ -103,9 +103,9 @@ StrCatCheckResult processCall(const CallExpr *RootCall, bool IsAppend,
 }  // namespace
 
 void RedundantStrcatCallsCheck::check(const MatchFinder::MatchResult& Result) {
-  bool IsAppend;
+  bool IsAppend = false;
 
-  const CallExpr* RootCall;
+  const CallExpr *RootCall = nullptr;
   if ((RootCall = Result.Nodes.getNodeAs<CallExpr>("StrCat"))) 
   	IsAppend = false;
   else if ((RootCall = Result.Nodes.getNodeAs<CallExpr>("StrAppend"))) 

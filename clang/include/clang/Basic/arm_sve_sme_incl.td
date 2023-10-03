@@ -220,6 +220,8 @@ def IsStreaming               : FlagType<0x2000000000>;
 def IsStreamingCompatible     : FlagType<0x4000000000>;
 def IsSharedZA                : FlagType<0x8000000000>;
 def IsPreservesZA             : FlagType<0x10000000000>;
+def IsReadZA                  : FlagType<0x20000000000>;
+def IsWriteZA                 : FlagType<0x40000000000>;
 
 // These must be kept in sync with the flags in include/clang/Basic/TargetBuiltins.h
 class ImmCheckType<int val> {
@@ -243,6 +245,7 @@ def ImmCheck0_2                 : ImmCheckType<14>; // 0..2
 def ImmCheck0_3                 : ImmCheckType<15>; // 0..3
 def ImmCheck0_0                 : ImmCheckType<16>; // 0..0
 def ImmCheck0_15                : ImmCheckType<17>; // 0..15
+def ImmCheck0_255               : ImmCheckType<18>; // 0..255
 
 class ImmCheck<int arg, ImmCheckType kind, int eltSizeArg = -1> {
   int Arg = arg;

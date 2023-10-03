@@ -31,6 +31,70 @@ using namespace llvm::jitlink;
 constexpr StringRef ELFTOCSymbolName = ".TOC.";
 constexpr StringRef TOCSymbolAliasIdent = "__TOC__";
 constexpr uint64_t ELFTOCBaseOffset = 0x8000;
+constexpr StringRef ELFTLSInfoSectionName = "$__TLSINFO";
+
+template <support::endianness Endianness>
+class TLSInfoTableManager_ELF_ppc64
+    : public TableManager<TLSInfoTableManager_ELF_ppc64<Endianness>> {
+public:
+  static const uint8_t TLSInfoEntryContent[16];
+
+  static StringRef getSectionName() { return ELFTLSInfoSectionName; }
+
+  bool visitEdge(LinkGraph &G, Block *B, Edge &E) {
+    Edge::Kind K = E.getKind();
+    if (K == ppc64::RequestTLSDescInGOTAndTransformToTOCDelta16HA) {
+      E.setKind(ppc64::TOCDelta16HA);
+      E.setTarget(this->getEntryForTarget(G, E.getTarget()));
+      return true;
+    }
+    if (K == ppc64::RequestTLSDescInGOTAndTransformToTOCDelta16LO) {
+      E.setKind(ppc64::TOCDelta16LO);
+      E.setTarget(this->getEntryForTarget(G, E.getTarget()));
+      return true;
+    }
+    return false;
+  }
+
+  Symbol &createEntry(LinkGraph &G, Symbol &Target) {
+    // The TLS Info entry's key value will be written by
+    // `fixTLVSectionsAndEdges`, so create mutable content.
+    auto &TLSInfoEntry = G.createMutableContentBlock(
+        getTLSInfoSection(G), G.allocateContent(getTLSInfoEntryContent()),
+        orc::ExecutorAddr(), 8, 0);
+    TLSInfoEntry.addEdge(ppc64::Pointer64, 8, Target, 0);
+    return G.addAnonymousSymbol(TLSInfoEntry, 0, 16, false, false);
+  }
+
+private:
+  Section &getTLSInfoSection(LinkGraph &G) {
+    if (!TLSInfoTable)
+      TLSInfoTable =
+          &G.createSection(ELFTLSInfoSectionName, orc::MemProt::Read);
+    return *TLSInfoTable;
+  }
+
+  ArrayRef<char> getTLSInfoEntryContent() const {
+    return {reinterpret_cast<const char *>(TLSInfoEntryContent),
+            sizeof(TLSInfoEntryContent)};
+  }
+
+  Section *TLSInfoTable = nullptr;
+};
+
+template <>
+const uint8_t TLSInfoTableManager_ELF_ppc64<
+    support::endianness::little>::TLSInfoEntryContent[16] = {
+    0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, /*pthread key */
+    0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00  /*data address*/
+};
+
+template <>
+const uint8_t TLSInfoTableManager_ELF_ppc64<
+    support::endianness::big>::TLSInfoEntryContent[16] = {
+    0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, /*pthread key */
+    0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00  /*data address*/
+};
 
 template <support::endianness Endianness>
 Symbol &createELFGOTHeader(LinkGraph &G,
@@ -91,8 +155,8 @@ Error buildTables_ELF_ppc64(LinkGraph &G) {
   registerExistingGOTEntries(G, TOC);
 
   ppc64::PLTTableManager<Endianness> PLT(TOC);
-  visitExistingEdges(G, TOC, PLT);
-  // TODO: Add TLS support.
+  TLSInfoTableManager_ELF_ppc64<Endianness> TLSInfo;
+  visitExistingEdges(G, TOC, PLT, TLSInfo);
 
   // After visiting edges in LinkGraph, we have GOT entries built in the
   // synthesized section.
@@ -164,6 +228,13 @@ private:
     if (LLVM_UNLIKELY(ELFReloc == ELF::R_PPC64_NONE))
       return Error::success();
 
+    // TLS model markers. We only support global-dynamic model now.
+    if (ELFReloc == ELF::R_PPC64_TLSGD)
+      return Error::success();
+    if (ELFReloc == ELF::R_PPC64_TLSLD)
+      return make_error<StringError>("Local-dynamic TLS model is not supported",
+                                     inconvertibleErrorCode());
+
     auto ObjSymbol = Base::Obj.getRelocationSymbol(Rel, Base::SymTabSec);
     if (!ObjSymbol)
       return ObjSymbol.takeError();
@@ -192,8 +263,59 @@ private:
     case ELF::R_PPC64_ADDR64:
       Kind = ppc64::Pointer64;
       break;
+    case ELF::R_PPC64_ADDR32:
+      Kind = ppc64::Pointer32;
+      break;
+    case ELF::R_PPC64_ADDR16:
+      Kind = ppc64::Pointer16;
+      break;
+    case ELF::R_PPC64_ADDR16_DS:
+      Kind = ppc64::Pointer16DS;
+      break;
+    case ELF::R_PPC64_ADDR16_HA:
+      Kind = ppc64::Pointer16HA;
+      break;
+    case ELF::R_PPC64_ADDR16_HI:
+      Kind = ppc64::Pointer16HI;
+      break;
+    case ELF::R_PPC64_ADDR16_HIGH:
+      Kind = ppc64::Pointer16HIGH;
+      break;
+    case ELF::R_PPC64_ADDR16_HIGHA:
+      Kind = ppc64::Pointer16HIGHA;
+      break;
+    case ELF::R_PPC64_ADDR16_HIGHER:
+      Kind = ppc64::Pointer16HIGHER;
+      break;
+    case ELF::R_PPC64_ADDR16_HIGHERA:
+      Kind = ppc64::Pointer16HIGHERA;
+      break;
+    case ELF::R_PPC64_ADDR16_HIGHEST:
+      Kind = ppc64::Pointer16HIGHEST;
+      break;
+    case ELF::R_PPC64_ADDR16_HIGHESTA:
+      Kind = ppc64::Pointer16HIGHESTA;
+      break;
+    case ELF::R_PPC64_ADDR16_LO:
+      Kind = ppc64::Pointer16LO;
+      break;
+    case ELF::R_PPC64_ADDR16_LO_DS:
+      Kind = ppc64::Pointer16LODS;
+      break;
+    case ELF::R_PPC64_ADDR14:
+      Kind = ppc64::Pointer14;
+      break;
+    case ELF::R_PPC64_TOC:
+      Kind = ppc64::TOC;
+      break;
+    case ELF::R_PPC64_TOC16:
+      Kind = ppc64::TOCDelta16;
+      break;
     case ELF::R_PPC64_TOC16_HA:
       Kind = ppc64::TOCDelta16HA;
+      break;
+    case ELF::R_PPC64_TOC16_HI:
+      Kind = ppc64::TOCDelta16HI;
       break;
     case ELF::R_PPC64_TOC16_DS:
       Kind = ppc64::TOCDelta16DS;
@@ -210,6 +332,9 @@ private:
     case ELF::R_PPC64_REL16_HA:
       Kind = ppc64::Delta16HA;
       break;
+    case ELF::R_PPC64_REL16_HI:
+      Kind = ppc64::Delta16HI;
+      break;
     case ELF::R_PPC64_REL16_LO:
       Kind = ppc64::Delta16LO;
       break;
@@ -217,25 +342,29 @@ private:
       Kind = ppc64::Delta32;
       break;
     case ELF::R_PPC64_REL24_NOTOC:
-    case ELF::R_PPC64_REL24: {
-      bool isLocal = !GraphSymbol->isExternal();
-      if (isLocal) {
-        // TODO: There are cases a local function call need a call stub.
-        // 1. Caller uses TOC, the callee doesn't, need a r2 save stub.
-        // 2. Caller doesn't use TOC, the callee does, need a r12 setup stub.
-        // FIXME: For a local call, we might need a thunk if branch target is
-        // out of range.
-        Kind = ppc64::CallBranchDelta;
-        // Branch to local entry.
-        Addend += ELF::decodePPC64LocalEntryOffset((*ObjSymbol)->st_other);
-      } else {
-        Kind = ELFReloc == ELF::R_PPC64_REL24 ? ppc64::RequestPLTCallStubSaveTOC
-                                              : ppc64::RequestPLTCallStub;
-      }
+      Kind = ppc64::RequestCallNoTOC;
       break;
-    }
+    case ELF::R_PPC64_REL24:
+      Kind = ppc64::RequestCall;
+      // Determining a target is external or not is deferred in PostPrunePass.
+      // We assume branching to local entry by default, since in PostPrunePass,
+      // we don't have any context to determine LocalEntryOffset. If it finally
+      // turns out to be an external call, we'll have a stub for the external
+      // target, the target of this edge will be the stub and its addend will be
+      // set 0.
+      Addend += ELF::decodePPC64LocalEntryOffset((*ObjSymbol)->st_other);
+      break;
     case ELF::R_PPC64_REL64:
       Kind = ppc64::Delta64;
+      break;
+    case ELF::R_PPC64_PCREL34:
+      Kind = ppc64::Delta34;
+      break;
+    case ELF::R_PPC64_GOT_TLSGD16_HA:
+      Kind = ppc64::RequestTLSDescInGOTAndTransformToTOCDelta16HA;
+      break;
+    case ELF::R_PPC64_GOT_TLSGD16_LO:
+      Kind = ppc64::RequestTLSDescInGOTAndTransformToTOCDelta16LO;
       break;
     }
 
@@ -346,7 +475,7 @@ void link_ELF_ppc64(std::unique_ptr<LinkGraph> G,
   if (Ctx->shouldAddDefaultTargetPasses(G->getTargetTriple())) {
     // Construct a JITLinker and run the link function.
 
-    // Add eh-frame passses.
+    // Add eh-frame passes.
     Config.PrePrunePasses.push_back(DWARFRecordSectionSplitter(".eh_frame"));
     Config.PrePrunePasses.push_back(EHFrameEdgeFixer(
         ".eh_frame", G->getPointerSize(), ppc64::Pointer32, ppc64::Pointer64,

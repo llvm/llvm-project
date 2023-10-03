@@ -385,10 +385,33 @@ static bool forEachDriverJob(
   if (!Compilation)
     return false;
 
+  if (Compilation->containsError())
+    return false;
+
   for (const driver::Command &Job : Compilation->getJobs()) {
     if (!Callback(Job))
       return false;
   }
+  return true;
+}
+
+static bool createAndRunToolInvocation(
+    std::vector<std::string> CommandLine, DependencyScanningAction &Action,
+    FileManager &FM,
+    std::shared_ptr<clang::PCHContainerOperations> &PCHContainerOps,
+    DiagnosticsEngine &Diags, DependencyConsumer &Consumer) {
+
+  // Save executable path before providing CommandLine to ToolInvocation
+  std::string Executable = CommandLine[0];
+  ToolInvocation Invocation(std::move(CommandLine), &Action, &FM,
+                            PCHContainerOps);
+  Invocation.setDiagnosticConsumer(Diags.getClient());
+  Invocation.setDiagnosticOptions(&Diags.getDiagnosticOptions());
+  if (!Invocation.run())
+    return false;
+
+  std::vector<std::string> Args = Action.takeLastCC1Arguments();
+  Consumer.handleBuildCommand({std::move(Executable), std::move(Args)});
   return true;
 }
 
@@ -454,37 +477,37 @@ bool DependencyScanningWorker::computeDependencies(
   DependencyScanningAction Action(WorkingDirectory, Consumer, Controller, DepFS,
                                   Format, OptimizeArgs, EagerLoadModules,
                                   DisableFree, ModuleName);
-  bool Success = forEachDriverJob(
-      FinalCommandLine, *Diags, *FileMgr, [&](const driver::Command &Cmd) {
-        if (StringRef(Cmd.getCreator().getName()) != "clang") {
-          // Non-clang command. Just pass through to the dependency
-          // consumer.
-          Consumer.handleBuildCommand(
-              {Cmd.getExecutable(),
-               {Cmd.getArguments().begin(), Cmd.getArguments().end()}});
-          return true;
-        }
 
-        std::vector<std::string> Argv;
-        Argv.push_back(Cmd.getExecutable());
-        Argv.insert(Argv.end(), Cmd.getArguments().begin(),
-                    Cmd.getArguments().end());
+  bool Success = false;
+  if (FinalCommandLine[1] == "-cc1") {
+    Success = createAndRunToolInvocation(FinalCommandLine, Action, *FileMgr,
+                                         PCHContainerOps, *Diags, Consumer);
+  } else {
+    Success = forEachDriverJob(
+        FinalCommandLine, *Diags, *FileMgr, [&](const driver::Command &Cmd) {
+          if (StringRef(Cmd.getCreator().getName()) != "clang") {
+            // Non-clang command. Just pass through to the dependency
+            // consumer.
+            Consumer.handleBuildCommand(
+                {Cmd.getExecutable(),
+                 {Cmd.getArguments().begin(), Cmd.getArguments().end()}});
+            return true;
+          }
 
-        // Create an invocation that uses the underlying file
-        // system to ensure that any file system requests that
-        // are made by the driver do not go through the
-        // dependency scanning filesystem.
-        ToolInvocation Invocation(std::move(Argv), &Action, &*FileMgr,
-                                  PCHContainerOps);
-        Invocation.setDiagnosticConsumer(Diags->getClient());
-        Invocation.setDiagnosticOptions(&Diags->getDiagnosticOptions());
-        if (!Invocation.run())
-          return false;
+          // Insert -cc1 comand line options into Argv
+          std::vector<std::string> Argv;
+          Argv.push_back(Cmd.getExecutable());
+          Argv.insert(Argv.end(), Cmd.getArguments().begin(),
+                      Cmd.getArguments().end());
 
-        std::vector<std::string> Args = Action.takeLastCC1Arguments();
-        Consumer.handleBuildCommand({Cmd.getExecutable(), std::move(Args)});
-        return true;
-      });
+          // Create an invocation that uses the underlying file
+          // system to ensure that any file system requests that
+          // are made by the driver do not go through the
+          // dependency scanning filesystem.
+          return createAndRunToolInvocation(std::move(Argv), Action, *FileMgr,
+                                            PCHContainerOps, *Diags, Consumer);
+        });
+  }
 
   if (Success && !Action.hasScanned())
     Diags->Report(diag::err_fe_expected_compiler_job)

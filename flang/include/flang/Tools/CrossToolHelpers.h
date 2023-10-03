@@ -24,13 +24,13 @@ struct OffloadModuleOpts {
   OffloadModuleOpts(uint32_t OpenMPTargetDebug, bool OpenMPTeamSubscription,
       bool OpenMPThreadSubscription, bool OpenMPNoThreadState,
       bool OpenMPNoNestedParallelism, bool OpenMPIsTargetDevice,
-      uint32_t OpenMPVersion, std::string OMPHostIRFile = {})
+      bool OpenMPIsGPU, uint32_t OpenMPVersion, std::string OMPHostIRFile = {})
       : OpenMPTargetDebug(OpenMPTargetDebug),
         OpenMPTeamSubscription(OpenMPTeamSubscription),
         OpenMPThreadSubscription(OpenMPThreadSubscription),
         OpenMPNoThreadState(OpenMPNoThreadState),
         OpenMPNoNestedParallelism(OpenMPNoNestedParallelism),
-        OpenMPIsTargetDevice(OpenMPIsTargetDevice),
+        OpenMPIsTargetDevice(OpenMPIsTargetDevice), OpenMPIsGPU(OpenMPIsGPU),
         OpenMPVersion(OpenMPVersion), OMPHostIRFile(OMPHostIRFile) {}
 
   OffloadModuleOpts(Fortran::frontend::LangOptions &Opts)
@@ -40,7 +40,8 @@ struct OffloadModuleOpts {
         OpenMPNoThreadState(Opts.OpenMPNoThreadState),
         OpenMPNoNestedParallelism(Opts.OpenMPNoNestedParallelism),
         OpenMPIsTargetDevice(Opts.OpenMPIsTargetDevice),
-        OpenMPVersion(Opts.OpenMPVersion), OMPHostIRFile(Opts.OMPHostIRFile) {}
+        OpenMPIsGPU(Opts.OpenMPIsGPU), OpenMPVersion(Opts.OpenMPVersion),
+        OMPHostIRFile(Opts.OMPHostIRFile) {}
 
   uint32_t OpenMPTargetDebug = 0;
   bool OpenMPTeamSubscription = false;
@@ -48,6 +49,7 @@ struct OffloadModuleOpts {
   bool OpenMPNoThreadState = false;
   bool OpenMPNoNestedParallelism = false;
   bool OpenMPIsTargetDevice = false;
+  bool OpenMPIsGPU = false;
   uint32_t OpenMPVersion = 11;
   std::string OMPHostIRFile = {};
 };
@@ -60,6 +62,7 @@ void setOffloadModuleInterfaceAttributes(
   if (auto offloadMod = llvm::dyn_cast<mlir::omp::OffloadModuleInterface>(
           module.getOperation())) {
     offloadMod.setIsTargetDevice(Opts.OpenMPIsTargetDevice);
+    offloadMod.setIsGPU(Opts.OpenMPIsGPU);
     if (Opts.OpenMPIsTargetDevice) {
       offloadMod.setFlags(Opts.OpenMPTargetDebug, Opts.OpenMPTeamSubscription,
           Opts.OpenMPThreadSubscription, Opts.OpenMPNoThreadState,

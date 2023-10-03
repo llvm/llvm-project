@@ -5,8 +5,6 @@
 // The two visibility options above are how we translate
 // -fvisibility-ms-compat in the driver.
 
-// rdar://13079314
-
 #define HIDDEN __attribute__((visibility("hidden")))
 #define PROTECTED __attribute__((visibility("protected")))
 #define DEFAULT __attribute__((visibility("default")))

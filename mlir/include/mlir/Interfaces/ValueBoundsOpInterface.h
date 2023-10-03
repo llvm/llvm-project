@@ -270,24 +270,4 @@ protected:
 
 #include "mlir/Interfaces/ValueBoundsOpInterface.h.inc"
 
-namespace mlir {
-
-/// Default implementation for destination style ops: Tied OpResults and
-/// OpOperands have the same type.
-template <typename ConcreteOp>
-struct DstValueBoundsOpInterfaceExternalModel
-    : public ValueBoundsOpInterface::ExternalModel<
-          DstValueBoundsOpInterfaceExternalModel<ConcreteOp>, ConcreteOp> {
-  void populateBoundsForShapedValueDim(Operation *op, Value value, int64_t dim,
-                                       ValueBoundsConstraintSet &cstr) const {
-    auto dstOp = cast<DestinationStyleOpInterface>(op);
-    assert(value.getDefiningOp() == dstOp);
-
-    Value tiedOperand = dstOp.getTiedOpOperand(cast<OpResult>(value))->get();
-    cstr.bound(value)[dim] == cstr.getExpr(tiedOperand, dim);
-  }
-};
-
-} // namespace mlir
-
 #endif // MLIR_INTERFACES_VALUEBOUNDSOPINTERFACE_H_

@@ -1,43 +1,43 @@
 ; NOTE: This test case generates a jump table on PowerPC big and little endian
 ; NOTE: then verifies that the command line option to enable absolute jump
 ; NOTE: table works correctly.
-; RUN:  llc -mtriple=powerpc64le-unknown-linux-gnu -o - \
+; RUN:  llc -mtriple=powerpc64le-unknown-linux-gnu -ppc-min-jump-table-entries=4 -o - \
 ; RUN:      -ppc-use-absolute-jumptables -ppc-asm-full-reg-names \
 ; RUN:      -verify-machineinstrs %s | FileCheck %s -check-prefix=CHECK-LE
-; RUN:  llc -mtriple=powerpc64-unknown-linux-gnu -o - \
+; RUN:  llc -mtriple=powerpc64-unknown-linux-gnu -ppc-min-jump-table-entries=4 -o - \
 ; RUN:      -ppc-use-absolute-jumptables -ppc-asm-full-reg-names \
 ; RUN:      -verify-machineinstrs %s | FileCheck %s -check-prefix=CHECK-BE
-; RUN:  llc -mtriple=powerpc64-ibm-aix-xcoff -o - \
+; RUN:  llc -mtriple=powerpc64-ibm-aix-xcoff -ppc-min-jump-table-entries=4 -o - \
 ; RUN:      -ppc-use-absolute-jumptables -ppc-asm-full-reg-names \
 ; RUN:      -verify-machineinstrs %s | FileCheck %s -check-prefix=CHECK-AIX
-; RUN:  llc -mtriple=powerpc64le-unknown-linux-gnu -o - \
+; RUN:  llc -mtriple=powerpc64le-unknown-linux-gnu -ppc-min-jump-table-entries=4 -o - \
 ; RUN:      -ppc-use-absolute-jumptables=true --relocation-model=pic < %s | FileCheck %s \
 ; RUN:      -check-prefix=CHECK-A-PIC-LE
-; RUN:  llc -mtriple=powerpc64le-unknown-linux-gnu -o - \
+; RUN:  llc -mtriple=powerpc64le-unknown-linux-gnu -ppc-min-jump-table-entries=4 -o - \
 ; RUN:      -ppc-use-absolute-jumptables=false --relocation-model=pic < %s | FileCheck %s \
 ; RUN:      -check-prefix=CHECK-R-PIC-LE
-; RUN:  llc -mtriple=powerpc64-unknown-linux-gnu -o - \
+; RUN:  llc -mtriple=powerpc64-unknown-linux-gnu -ppc-min-jump-table-entries=4 -o - \
 ; RUN:      -ppc-use-absolute-jumptables=true --relocation-model=pic < %s | FileCheck %s \
 ; RUN:      -check-prefix=CHECK-A-PIC-BE
-; RUN:  llc -mtriple=powerpc64-unknown-linux-gnu -o - \
+; RUN:  llc -mtriple=powerpc64-unknown-linux-gnu -ppc-min-jump-table-entries=4 -o - \
 ; RUN:      -ppc-use-absolute-jumptables=false --relocation-model=pic < %s | FileCheck %s \
 ; RUN:      -check-prefix=CHECK-R-PIC-BE
-; RUN:  llc -mtriple=powerpc64-ibm-aix-xcoff -o - \
+; RUN:  llc -mtriple=powerpc64-ibm-aix-xcoff -ppc-min-jump-table-entries=4 -o - \
 ; RUN:      -ppc-use-absolute-jumptables=true --relocation-model=pic < %s | FileCheck %s \
 ; RUN:      -check-prefix=CHECK-A-PIC-AIX
-; RUN:  llc -mtriple=powerpc64-ibm-aix-xcoff -o - \
+; RUN:  llc -mtriple=powerpc64-ibm-aix-xcoff -ppc-min-jump-table-entries=4 -o - \
 ; RUN:      -ppc-use-absolute-jumptables=false --relocation-model=pic < %s | FileCheck %s \
 ; RUN:      -check-prefix=CHECK-R-PIC-AIX
-; RUN:  llc -mtriple=powerpc64le-unknown-linux-gnu -o - \
+; RUN:  llc -mtriple=powerpc64le-unknown-linux-gnu -ppc-min-jump-table-entries=4 -o - \
 ; RUN:      -ppc-use-absolute-jumptables=true --relocation-model=static < %s | FileCheck %s \
 ; RUN:      -check-prefix=CHECK-A-STATIC-LE
-; RUN:  llc -mtriple=powerpc64le-unknown-linux-gnu -o - \
+; RUN:  llc -mtriple=powerpc64le-unknown-linux-gnu -ppc-min-jump-table-entries=4 -o - \
 ; RUN:      -ppc-use-absolute-jumptables=false --relocation-model=static < %s | FileCheck %s \
 ; RUN:      -check-prefix=CHECK-R-STATIC-LE
-; RUN:  llc -mtriple=powerpc64-unknown-linux-gnu -o - \
+; RUN:  llc -mtriple=powerpc64-unknown-linux-gnu -ppc-min-jump-table-entries=4 -o - \
 ; RUN:      -ppc-use-absolute-jumptables=true --relocation-model=static < %s | FileCheck %s \
 ; RUN:      -check-prefix=CHECK-A-STATIC-BE
-; RUN:  llc -mtriple=powerpc64-unknown-linux-gnu -o - \
+; RUN:  llc -mtriple=powerpc64-unknown-linux-gnu -ppc-min-jump-table-entries=4 -o - \
 ; RUN:      -ppc-use-absolute-jumptables=false --relocation-model=static < %s | FileCheck %s \
 ; RUN:      -check-prefix=CHECK-R-STATIC-BE
 

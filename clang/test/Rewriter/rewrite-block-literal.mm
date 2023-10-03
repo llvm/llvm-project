@@ -5,10 +5,7 @@
 // RUN: %clang_cc1 -x objective-c++ -Wno-return-type -fblocks -fms-extensions -rewrite-objc %s -o %t-modern-rw.cpp
 // RUN: %clang_cc1 -fsyntax-only -Wno-address-of-temporary -D"Class=void*" -D"id=void*" -D"SEL=void*" -D"__declspec(X)=" %t-modern-rw.cpp
 
-// rdar://11375908
 typedef unsigned long size_t;
-
-// rdar: // 11006566
 
 void I( void (^)(void));
 void (^noop)(void);

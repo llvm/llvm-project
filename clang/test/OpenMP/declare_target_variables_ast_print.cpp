@@ -27,6 +27,10 @@ struct target{
 };
 static target S;
 
+static int var3 = 100;
+static int *ptr_3 = &var3;
+static char c = 'a';
+
 #pragma omp declare target
 int target_var = variable;
 float target_var1 = variable2;
@@ -36,6 +40,9 @@ int (**ptr3)[2] = &arrptr;
 declare **obj3 = &obj2;
 target *S1 = &S;
 #pragma omp end declare target
+#pragma omp declare target(ptr_3)
+#pragma omp declare target to(c)
+
 // CHECK: #pragma omp declare target
 // CHECK-NEXT: static int variable = 100;
 // CHECK-NEXT: #pragma omp end declare target
@@ -87,7 +94,15 @@ target *S1 = &S;
 // CHECK-NEXT: #pragma omp declare target
 // CHECK-NEXT: static target S;
 // CHECK-NEXT: #pragma omp end declare target
-
+// CHECK-NEXT: #pragma omp declare target
+// CHECK-NEXT: static int var3 = 100;
+// CHECK-NEXT: #pragma omp end declare target
+// CHECK-NEXT: #pragma omp declare target
+// CHECK-NEXT: static int *ptr_3 = &var3;
+// CHECK-NEXT: #pragma omp end declare target
+// CHECK-NEXT: #pragma omp declare target
+// CHECK-NEXT: static char c = 'a';
+// CHECK-NEXT: #pragma omp end declare target
 // CHECK-NEXT: #pragma omp declare target
 // CHECK-NEXT: int target_var = variable;
 // CHECK-NEXT: #pragma omp end declare target

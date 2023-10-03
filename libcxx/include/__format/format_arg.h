@@ -53,7 +53,7 @@ namespace __format {
 /// handle to satisfy the user observable behaviour. The internal function
 /// __visit_format_arg doesn't do this wrapping. So in the format functions
 /// this function is used to avoid unneeded overhead.
-enum class _LIBCPP_ENUM_VIS __arg_t : uint8_t {
+enum class __arg_t : uint8_t {
   __none,
   __boolean,
   __char_type,

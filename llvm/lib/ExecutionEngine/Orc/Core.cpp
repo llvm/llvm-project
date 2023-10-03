@@ -31,6 +31,7 @@ char SymbolsCouldNotBeRemoved::ID = 0;
 char MissingSymbolDefinitions::ID = 0;
 char UnexpectedSymbolDefinitions::ID = 0;
 char MaterializationTask::ID = 0;
+char LookupTask::ID = 0;
 
 RegisterDependenciesFunction NoDependenciesToRegister =
     RegisterDependenciesFunction();
@@ -348,7 +349,7 @@ void ReExportsMaterializationUnit::materialize(
     }
   }
 
-  // The OnResolveInfo struct will hold the aliases and responsibilty for each
+  // The OnResolveInfo struct will hold the aliases and responsibility for each
   // query in the list.
   struct OnResolveInfo {
     OnResolveInfo(std::unique_ptr<MaterializationResponsibility> R,
@@ -529,11 +530,16 @@ public:
   SymbolLookupSet LookupSet;
   SymbolState RequiredState;
 
-  std::unique_lock<std::mutex> GeneratorLock;
   size_t CurSearchOrderIndex = 0;
   bool NewJITDylib = true;
   SymbolLookupSet DefGeneratorCandidates;
   SymbolLookupSet DefGeneratorNonCandidates;
+
+  enum {
+    NotInGenerator,      // Not currently using a generator.
+    ResumedForGenerator, // Resumed after being auto-suspended before generator.
+    InGenerator          // Currently using generator.
+  } GenState = NotInGenerator;
   std::vector<std::weak_ptr<DefinitionGenerator>> CurDefGeneratorStack;
 };
 
@@ -547,15 +553,11 @@ public:
         OnComplete(std::move(OnComplete)) {}
 
   void complete(std::unique_ptr<InProgressLookupState> IPLS) override {
-    GeneratorLock = {}; // Unlock and release.
     auto &ES = SearchOrder.front().first->getExecutionSession();
     ES.OL_completeLookupFlags(std::move(IPLS), std::move(OnComplete));
   }
 
-  void fail(Error Err) override {
-    GeneratorLock = {}; // Unlock and release.
-    OnComplete(std::move(Err));
-  }
+  void fail(Error Err) override { OnComplete(std::move(Err)); }
 
 private:
   unique_function<void(Expected<SymbolFlagsMap>)> OnComplete;
@@ -574,14 +576,12 @@ public:
   }
 
   void complete(std::unique_ptr<InProgressLookupState> IPLS) override {
-    GeneratorLock = {}; // Unlock and release.
     auto &ES = SearchOrder.front().first->getExecutionSession();
     ES.OL_completeLookup(std::move(IPLS), std::move(Q),
                          std::move(RegisterDependencies));
   }
 
   void fail(Error Err) override {
-    GeneratorLock = {};
     Q->detach();
     Q->handleFailed(std::move(Err));
   }
@@ -638,7 +638,19 @@ void LookupState::continueLookup(Error Err) {
   ES.OL_applyQueryPhase1(std::move(IPLS), std::move(Err));
 }
 
-DefinitionGenerator::~DefinitionGenerator() = default;
+DefinitionGenerator::~DefinitionGenerator() {
+  std::deque<LookupState> LookupsToFail;
+  {
+    std::lock_guard<std::mutex> Lock(M);
+    std::swap(PendingLookups, LookupsToFail);
+    InUse = false;
+  }
+
+  for (auto &LS : LookupsToFail)
+    LS.continueLookup(make_error<StringError>(
+        "Query waiting on DefinitionGenerator that was destroyed",
+        inconvertibleErrorCode()));
+}
 
 JITDylib::~JITDylib() {
   LLVM_DEBUG(dbgs() << "Destroying JITDylib " << getName() << "\n");
@@ -677,6 +689,10 @@ ResourceTrackerSP JITDylib::createResourceTracker() {
 }
 
 void JITDylib::removeGenerator(DefinitionGenerator &G) {
+  // DefGenerator moved into TmpDG to ensure that it's destroyed outside the
+  // session lock (since it may have to send errors to pending queries).
+  std::shared_ptr<DefinitionGenerator> TmpDG;
+
   ES.runSessionLocked([&] {
     assert(State == Open && "JD is defunct");
     auto I = llvm::find_if(DefGenerators,
@@ -684,6 +700,7 @@ void JITDylib::removeGenerator(DefinitionGenerator &G) {
                              return H.get() == &G;
                            });
     assert(I != DefGenerators.end() && "Generator not found");
+    TmpDG = std::move(*I);
     DefGenerators.erase(I);
   });
 }
@@ -1903,6 +1920,10 @@ void MaterializationTask::printDescription(raw_ostream &OS) {
 
 void MaterializationTask::run() { MU->materialize(std::move(MR)); }
 
+void LookupTask::printDescription(raw_ostream &OS) { OS << "Lookup task"; }
+
+void LookupTask::run() { LS.continueLookup(Error::success()); }
+
 ExecutionSession::ExecutionSession(std::unique_ptr<ExecutorProcessControl> EPC)
     : EPC(std::move(EPC)) {
   // Associated EPC and this.
@@ -1918,16 +1939,14 @@ ExecutionSession::~ExecutionSession() {
 Error ExecutionSession::endSession() {
   LLVM_DEBUG(dbgs() << "Ending ExecutionSession " << this << "\n");
 
-  std::vector<JITDylibSP> JITDylibsToClose = runSessionLocked([&] {
+  auto JDsToRemove = runSessionLocked([&] {
     SessionOpen = false;
-    return std::move(JDs);
+    return JDs;
   });
 
-  // TODO: notifiy platform? run static deinits?
+  std::reverse(JDsToRemove.begin(), JDsToRemove.end());
 
-  Error Err = Error::success();
-  for (auto &JD : reverse(JITDylibsToClose))
-    Err = joinErrors(std::move(Err), JD->clear());
+  auto Err = removeJITDylibs(std::move(JDsToRemove));
 
   Err = joinErrors(std::move(Err), EPC->disconnect());
 
@@ -1977,42 +1996,44 @@ Expected<JITDylib &> ExecutionSession::createJITDylib(std::string Name) {
   return JD;
 }
 
-Error ExecutionSession::removeJITDylib(JITDylib &JD) {
-  // Keep JD alive throughout this routine, even if all other references
-  // have been dropped.
-  JITDylibSP JDKeepAlive = &JD;
+Error ExecutionSession::removeJITDylibs(std::vector<JITDylibSP> JDsToRemove) {
 
   // Set JD to 'Closing' state and remove JD from the ExecutionSession.
   runSessionLocked([&] {
-    assert(JD.State == JITDylib::Open && "JD already closed");
-    JD.State = JITDylib::Closing;
-    auto I = llvm::find(JDs, &JD);
-    assert(I != JDs.end() && "JD does not appear in session JDs");
-    JDs.erase(I);
+    for (auto &JD : JDsToRemove) {
+      assert(JD->State == JITDylib::Open && "JD already closed");
+      JD->State = JITDylib::Closing;
+      auto I = llvm::find(JDs, JD);
+      assert(I != JDs.end() && "JD does not appear in session JDs");
+      JDs.erase(I);
+    }
   });
 
-  // Clear the JITDylib. Hold on to any error while we clean up the
-  // JITDylib members below.
-  auto Err = JD.clear();
-
-  // Notify the platform of the teardown.
-  if (P)
-    Err = joinErrors(std::move(Err), P->teardownJITDylib(JD));
+  // Clear JITDylibs and notify the platform.
+  Error Err = Error::success();
+  for (auto JD : JDsToRemove) {
+    Err = joinErrors(std::move(Err), JD->clear());
+    if (P)
+      Err = joinErrors(std::move(Err), P->teardownJITDylib(*JD));
+  }
 
   // Set JD to closed state. Clear remaining data structures.
   runSessionLocked([&] {
-    assert(JD.State == JITDylib::Closing && "JD should be closing");
-    JD.State = JITDylib::Closed;
-    assert(JD.Symbols.empty() && "JD.Symbols is not empty after clear");
-    assert(JD.UnmaterializedInfos.empty() &&
-           "JD.UnmaterializedInfos is not empty after clear");
-    assert(JD.MaterializingInfos.empty() &&
-           "JD.MaterializingInfos is not empty after clear");
-    assert(JD.TrackerSymbols.empty() &&
-           "TrackerSymbols is not empty after clear");
-    JD.DefGenerators.clear();
-    JD.LinkOrder.clear();
+    for (auto &JD : JDsToRemove) {
+      assert(JD->State == JITDylib::Closing && "JD should be closing");
+      JD->State = JITDylib::Closed;
+      assert(JD->Symbols.empty() && "JD.Symbols is not empty after clear");
+      assert(JD->UnmaterializedInfos.empty() &&
+             "JD.UnmaterializedInfos is not empty after clear");
+      assert(JD->MaterializingInfos.empty() &&
+             "JD.MaterializingInfos is not empty after clear");
+      assert(JD->TrackerSymbols.empty() &&
+             "TrackerSymbols is not empty after clear");
+      JD->DefGenerators.clear();
+      JD->LinkOrder.clear();
+    }
   });
+
   return Err;
 }
 
@@ -2406,6 +2427,37 @@ Error ExecutionSession::IL_updateCandidatesFor(
       });
 }
 
+void ExecutionSession::OL_resumeLookupAfterGeneration(
+    InProgressLookupState &IPLS) {
+
+  assert(IPLS.GenState != InProgressLookupState::NotInGenerator &&
+         "Should not be called for not-in-generator lookups");
+  IPLS.GenState = InProgressLookupState::NotInGenerator;
+
+  LookupState LS;
+
+  if (auto DG = IPLS.CurDefGeneratorStack.back().lock()) {
+    IPLS.CurDefGeneratorStack.pop_back();
+    std::lock_guard<std::mutex> Lock(DG->M);
+
+    // If there are no pending lookups then mark the generator as free and
+    // return.
+    if (DG->PendingLookups.empty()) {
+      DG->InUse = false;
+      return;
+    }
+
+    // Otherwise resume the next lookup.
+    LS = std::move(DG->PendingLookups.front());
+    DG->PendingLookups.pop_front();
+  }
+
+  if (LS.IPLS) {
+    LS.IPLS->GenState = InProgressLookupState::ResumedForGenerator;
+    dispatchTask(std::make_unique<LookupTask>(std::move(LS)));
+  }
+}
+
 void ExecutionSession::OL_applyQueryPhase1(
     std::unique_ptr<InProgressLookupState> IPLS, Error Err) {
 
@@ -2421,6 +2473,12 @@ void ExecutionSession::OL_applyQueryPhase1(
            << "  Definition generator non-candidates: "
            << IPLS->DefGeneratorNonCandidates << "\n";
   });
+
+  if (IPLS->GenState == InProgressLookupState::InGenerator)
+    OL_resumeLookupAfterGeneration(*IPLS);
+
+  assert(IPLS->GenState != InProgressLookupState::InGenerator &&
+         "Lookup should not be in InGenerator state here");
 
   // FIXME: We should attach the query as we go: This provides a result in a
   // single pass in the common case where all symbols have already reached the
@@ -2447,10 +2505,6 @@ void ExecutionSession::OL_applyQueryPhase1(
 
     // If we've just reached a new JITDylib then perform some setup.
     if (IPLS->NewJITDylib) {
-
-      // Acquire the generator lock for this JITDylib.
-      IPLS->GeneratorLock = std::unique_lock<std::mutex>(JD.GeneratorsMutex);
-
       // Add any non-candidates from the last JITDylib (if any) back on to the
       // list of definition candidates for this JITDylib, reset definition
       // non-candidates to the empty set.
@@ -2488,6 +2542,13 @@ void ExecutionSession::OL_applyQueryPhase1(
         dbgs() << "    Remaining candidates = " << IPLS->DefGeneratorCandidates
                << "\n";
       });
+
+      // If this lookup was resumed after auto-suspension but all candidates
+      // have already been generated (by some previous call to the generator)
+      // treat the lookup as if it had completed generation.
+      if (IPLS->GenState == InProgressLookupState::ResumedForGenerator &&
+          IPLS->DefGeneratorCandidates.empty())
+        OL_resumeLookupAfterGeneration(*IPLS);
     });
 
     // If we encountered an error while filtering generation candidates then
@@ -2509,12 +2570,31 @@ void ExecutionSession::OL_applyQueryPhase1(
     while (!IPLS->CurDefGeneratorStack.empty() &&
            !IPLS->DefGeneratorCandidates.empty()) {
       auto DG = IPLS->CurDefGeneratorStack.back().lock();
-      IPLS->CurDefGeneratorStack.pop_back();
 
       if (!DG)
         return IPLS->fail(make_error<StringError>(
             "DefinitionGenerator removed while lookup in progress",
             inconvertibleErrorCode()));
+
+      // At this point the lookup is in either the NotInGenerator state, or in
+      // the ResumedForGenerator state.
+      // If this lookup is in the NotInGenerator state then check whether the
+      // generator is in use. If the generator is not in use then move the
+      // lookup to the InGenerator state and continue. If the generator is
+      // already in use then just add this lookup to the pending lookups list
+      // and bail out.
+      // If this lookup is in the ResumedForGenerator state then just move it
+      // to InGenerator and continue.
+      if (IPLS->GenState == InProgressLookupState::NotInGenerator) {
+        std::lock_guard<std::mutex> Lock(DG->M);
+        if (DG->InUse) {
+          DG->PendingLookups.push_back(std::move(IPLS));
+          return;
+        }
+        DG->InUse = true;
+      }
+
+      IPLS->GenState = InProgressLookupState::InGenerator;
 
       auto K = IPLS->K;
       auto &LookupSet = IPLS->DefGeneratorCandidates;
@@ -2527,6 +2607,11 @@ void ExecutionSession::OL_applyQueryPhase1(
         Err = DG->tryToGenerate(LS, K, JD, JDLookupFlags, LookupSet);
         IPLS = std::move(LS.IPLS);
       }
+
+      // If the lookup returned then pop the generator stack and unblock the
+      // next lookup on this generator (if any).
+      if (IPLS)
+        OL_resumeLookupAfterGeneration(*IPLS);
 
       // If there was an error then fail the query.
       if (Err) {
@@ -2677,7 +2762,7 @@ void ExecutionSession::OL_completeLookup(
 
             // Otherwise this is a match.
 
-            // If this symbol is already in the requried state then notify the
+            // If this symbol is already in the required state then notify the
             // query, remove the symbol and continue.
             if (SymI->second.getState() >= Q->getRequiredState()) {
               LLVM_DEBUG(dbgs()

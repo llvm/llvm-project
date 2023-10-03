@@ -2,6 +2,7 @@
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/IR/Function.h"
 #include "llvm/ProfileData/InstrProf.h"
+#include "llvm/ProfileData/SampleProf.h"
 #include "llvm/Support/Endian.h"
 #include "llvm/Support/EndianStream.h"
 
@@ -71,14 +72,17 @@ IndexedMemProfRecord::deserialize(const MemProfSchema &Schema,
 }
 
 GlobalValue::GUID IndexedMemProfRecord::getGUID(const StringRef FunctionName) {
-  const auto Pos = FunctionName.find(".llvm.");
+  // Canonicalize the function name to drop suffixes such as ".llvm.", ".uniq."
+  // etc. We can then match functions in the profile use phase prior to the
+  // addition of these suffixes. Note that this applies to both instrumented and
+  // sampled function names.
+  StringRef CanonicalName =
+      sampleprof::FunctionSamples::getCanonicalFnName(FunctionName);
 
   // We use the function guid which we expect to be a uint64_t. At
-  // this time, it is the lower 64 bits of the md5 of the function
-  // name. Any suffix with .llvm. is trimmed since these are added by
-  // thinLTO global promotion. At the time the profile is consumed,
-  // these suffixes will not be present.
-  return Function::getGUID(FunctionName.take_front(Pos));
+  // this time, it is the lower 64 bits of the md5 of the canonical
+  // function name.
+  return Function::getGUID(CanonicalName);
 }
 
 Expected<MemProfSchema> readMemProfSchema(const unsigned char *&Buffer) {

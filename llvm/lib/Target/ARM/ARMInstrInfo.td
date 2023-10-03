@@ -4854,7 +4854,7 @@ class AI_crc32<bit C, bits<2> sz, string suffix, SDPatternOperator builtin>
   : AInoP<(outs GPRnopc:$Rd), (ins GPRnopc:$Rn, GPRnopc:$Rm), MiscFrm, NoItinerary,
                !strconcat("crc32", suffix), "\t$Rd, $Rn, $Rm",
                [(set GPRnopc:$Rd, (builtin GPRnopc:$Rn, GPRnopc:$Rm))]>,
-               Requires<[IsARM, HasV8, HasCRC]> {
+               Requires<[IsARM, HasCRC]> {
   bits<4> Rd;
   bits<4> Rn;
   bits<4> Rm;
@@ -5357,7 +5357,7 @@ def atomic_load_acquire_16 : acquiring_load<atomic_load_16>;
 def atomic_load_acquire_32 : acquiring_load<atomic_load_32>;
 
 class releasing_store<PatFrag base>
-  : PatFrag<(ops node:$ptr, node:$val), (base node:$ptr, node:$val), [{
+  : PatFrag<(ops node:$ptr, node:$val), (base node:$val, node:$ptr), [{
   AtomicOrdering Ordering = cast<AtomicSDNode>(N)->getSuccessOrdering();
   return isReleaseOrStronger(Ordering);
 }]>;
@@ -6184,15 +6184,15 @@ def : ARMPat<(atomic_load_32 ldst_so_reg:$src),
              (LDRrs ldst_so_reg:$src)>;
 def : ARMPat<(atomic_load_32 addrmode_imm12:$src),
              (LDRi12 addrmode_imm12:$src)>;
-def : ARMPat<(atomic_store_8 ldst_so_reg:$ptr, GPR:$val),
+def : ARMPat<(atomic_store_8 GPR:$val, ldst_so_reg:$ptr),
              (STRBrs GPR:$val, ldst_so_reg:$ptr)>;
-def : ARMPat<(atomic_store_8 addrmode_imm12:$ptr, GPR:$val),
+def : ARMPat<(atomic_store_8 GPR:$val, addrmode_imm12:$ptr),
              (STRBi12 GPR:$val, addrmode_imm12:$ptr)>;
-def : ARMPat<(atomic_store_16 addrmode3:$ptr, GPR:$val),
+def : ARMPat<(atomic_store_16 GPR:$val, addrmode3:$ptr),
              (STRH GPR:$val, addrmode3:$ptr)>;
-def : ARMPat<(atomic_store_32 ldst_so_reg:$ptr, GPR:$val),
+def : ARMPat<(atomic_store_32 GPR:$val, ldst_so_reg:$ptr),
              (STRrs GPR:$val, ldst_so_reg:$ptr)>;
-def : ARMPat<(atomic_store_32 addrmode_imm12:$ptr, GPR:$val),
+def : ARMPat<(atomic_store_32 GPR:$val, addrmode_imm12:$ptr),
              (STRi12 GPR:$val, addrmode_imm12:$ptr)>;
 
 

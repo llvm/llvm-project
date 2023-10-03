@@ -31,6 +31,12 @@ static void test() {
     assert(s == STR("testing"));
     assert(ss.view().empty());
   }
+  {
+    std::basic_istringstream<CharT> ss;
+    std::basic_string<CharT> s = std::move(ss).str();
+    assert(s.empty());
+    assert(ss.view().empty());
+  }
 }
 
 int main(int, char**) {

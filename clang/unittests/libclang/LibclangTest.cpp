@@ -1172,6 +1172,126 @@ TEST_F(LibclangParseTest, UnaryOperator) {
   });
 }
 
+TEST_F(LibclangParseTest, VisitStaticAssertDecl_noMessage) {
+  const char testSource[] = R"cpp(static_assert(true))cpp";
+  std::string fileName = "main.cpp";
+  WriteFile(fileName, testSource);
+  const char *Args[] = {"-xc++"};
+  ClangTU = clang_parseTranslationUnit(Index, fileName.c_str(), Args, 1,
+                                       nullptr, 0, TUFlags);
+
+  std::optional<CXCursor> staticAssertCsr;
+  Traverse([&](CXCursor cursor, CXCursor parent) -> CXChildVisitResult {
+    if (cursor.kind == CXCursor_StaticAssert) {
+      staticAssertCsr.emplace(cursor);
+      return CXChildVisit_Break;
+    }
+    return CXChildVisit_Recurse;
+  });
+  ASSERT_TRUE(staticAssertCsr.has_value());
+  Traverse(*staticAssertCsr, [](CXCursor cursor, CXCursor parent) {
+    EXPECT_EQ(cursor.kind, CXCursor_CXXBoolLiteralExpr);
+    return CXChildVisit_Break;
+  });
+  EXPECT_EQ(fromCXString(clang_getCursorSpelling(*staticAssertCsr)), "");
+}
+
+TEST_F(LibclangParseTest, VisitStaticAssertDecl_exprMessage) {
+  const char testSource[] = R"cpp(
+template <unsigned s>
+constexpr unsigned size(const char (&)[s])
+{
+    return s - 1;
+}
+
+struct Message {
+    static constexpr char message[] = "Hello World!";
+    constexpr const char* data() const { return message;}
+    constexpr unsigned size() const
+    {
+        return ::size(message);
+    }
+};
+Message message;
+static_assert(true, message);
+)cpp";
+  std::string fileName = "main.cpp";
+  WriteFile(fileName, testSource);
+  const char *Args[] = {"-xc++", "-std=c++26"};
+  ClangTU = clang_parseTranslationUnit(Index, fileName.c_str(), Args,
+                                       std::size(Args), nullptr, 0, TUFlags);
+  ASSERT_EQ(clang_getNumDiagnostics(ClangTU), 0u);
+  std::optional<CXCursor> staticAssertCsr;
+  Traverse([&](CXCursor cursor, CXCursor parent) -> CXChildVisitResult {
+    if (cursor.kind == CXCursor_StaticAssert) {
+      staticAssertCsr.emplace(cursor);
+    }
+    return CXChildVisit_Continue;
+  });
+  ASSERT_TRUE(staticAssertCsr.has_value());
+  int argCnt = 0;
+  Traverse(*staticAssertCsr, [&argCnt](CXCursor cursor, CXCursor parent) {
+    switch (argCnt) {
+    case 0:
+      EXPECT_EQ(cursor.kind, CXCursor_CXXBoolLiteralExpr);
+      break;
+    case 1:
+      EXPECT_EQ(cursor.kind, CXCursor_DeclRefExpr);
+      break;
+    }
+    ++argCnt;
+    return CXChildVisit_Continue;
+  });
+  ASSERT_EQ(argCnt, 2);
+  EXPECT_EQ(fromCXString(clang_getCursorSpelling(*staticAssertCsr)), "");
+}
+
+TEST_F(LibclangParseTest, ExposesAnnotateArgs) {
+  const char testSource[] = R"cpp(
+[[clang::annotate("category", 42)]]
+void func() {}
+)cpp";
+  std::string fileName = "main.cpp";
+  WriteFile(fileName, testSource);
+
+  const char *Args[] = {"-xc++"};
+  ClangTU = clang_parseTranslationUnit(Index, fileName.c_str(), Args, 1,
+                                       nullptr, 0, TUFlags);
+
+  int attrCount = 0;
+
+  Traverse(
+      [&attrCount](CXCursor cursor, CXCursor parent) -> CXChildVisitResult {
+        if (cursor.kind == CXCursor_AnnotateAttr) {
+          int childCount = 0;
+          clang_visitChildren(
+              cursor,
+              [](CXCursor child, CXCursor,
+                 CXClientData data) -> CXChildVisitResult {
+                int *pcount = static_cast<int *>(data);
+
+                // we only expect one argument here, so bail otherwise
+                EXPECT_EQ(*pcount, 0);
+
+                auto *result = clang_Cursor_Evaluate(child);
+                EXPECT_NE(result, nullptr);
+                EXPECT_EQ(clang_EvalResult_getAsInt(result), 42);
+                clang_EvalResult_dispose(result);
+
+                ++*pcount;
+
+                return CXChildVisit_Recurse;
+              },
+              &childCount);
+          attrCount++;
+          return CXChildVisit_Continue;
+        }
+        return CXChildVisit_Recurse;
+      });
+
+  EXPECT_EQ(attrCount, 1);
+}
+
 class LibclangRewriteTest : public LibclangParseTest {
 public:
   CXRewriter Rew = nullptr;

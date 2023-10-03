@@ -12,15 +12,15 @@ module modCommonNoInit1
   real :: x_named1
   common /named1/ x_named1
 end module
-! CHECK-LABEL: fir.global common @_QC(dense<0> : vector<4xi8>) : !fir.array<4xi8>
-! CHECK-LABEL: fir.global common @_QCnamed1(dense<0> : vector<4xi8>) : !fir.array<4xi8>
+! CHECK-LABEL: fir.global common @__BLNK__(dense<0> : vector<4xi8>) : !fir.array<4xi8>
+! CHECK-LABEL: fir.global common @named1_(dense<0> : vector<4xi8>) : !fir.array<4xi8>
 
 ! Module defines variable in common block with initialization
 module modCommonInit1
   integer :: i_named2 = 42
   common /named2/ i_named2
 end module
-! CHECK-LABEL: fir.global @_QCnamed2 : tuple<i32> {
+! CHECK-LABEL: fir.global @named2_ : tuple<i32> {
   ! CHECK: %[[init:.*]] = fir.insert_value %{{.*}}, %c42{{.*}}, [0 : index] : (tuple<i32>, i32) -> tuple<i32>
   ! CHECK: fir.has_value %[[init]] : tuple<i32>
 

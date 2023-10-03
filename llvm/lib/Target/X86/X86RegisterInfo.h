@@ -143,6 +143,12 @@ public:
                            int SPAdj, unsigned FIOperandNum,
                            RegScavenger *RS = nullptr) const override;
 
+  /// Process frame indices in forwards block order because
+  /// X86InstrInfo::getSPAdjust relies on it when searching for the
+  /// ADJCALLSTACKUP pseudo following a call.
+  /// TODO: Fix this and return true like all other targets.
+  bool eliminateFrameIndicesBackwards() const override { return false; }
+
   /// findDeadCallerSavedReg - Return a caller-saved register that isn't live
   /// when it reaches the "return" instruction. We can then pop a stack object
   /// to this register without worry about clobbering it.

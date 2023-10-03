@@ -310,7 +310,7 @@ entry:
 define weak_odr void @t3() {
 ; CHECK-LABEL: define {{[^@]+}}@t3() {
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[TMP0:%.*]] = call i32 @__kmpc_target_init(ptr noundef align 4294967296 null, i8 noundef 0, i1 noundef false, i1 noundef false)
+; CHECK-NEXT:    [[TMP0:%.*]] = call i32 @__kmpc_target_init(ptr noundef align 4294967296 null)
 ; CHECK-NEXT:    br label [[USER_CODE_ENTRY:%.*]]
 ; CHECK:       user_code.entry:
 ; CHECK-NEXT:    br label [[FOR_COND:%.*]]
@@ -321,7 +321,7 @@ define weak_odr void @t3() {
 ; CHECK-NEXT:    ret void
 ;
 entry:
-  %0 = call i32 @__kmpc_target_init(ptr null, i8 0, i1 false, i1 false)
+  %0 = call i32 @__kmpc_target_init(ptr null)
   br label %user_code.entry
 
 user_code.entry:                                  ; preds = %entry
@@ -335,7 +335,7 @@ for.body:                                         ; preds = %for.cond
   ret void
 }
 
-declare i32 @__kmpc_target_init(ptr, i8, i1, i1)
+declare i32 @__kmpc_target_init(ptr)
 
 define %S.2 @t3.helper() {
 ; CHECK-LABEL: define {{[^@]+}}@t3.helper() {
@@ -383,22 +383,15 @@ define dso_local void @spam() {
 ; TUNIT-NEXT:    [[TRUETMP18:%.*]] = icmp eq i32 [[X]], 0
 ; TUNIT-NEXT:    br i1 [[TRUETMP18]], label [[BB35:%.*]], label [[BB19:%.*]]
 ; TUNIT:       bb19:
-; TUNIT-NEXT:    [[TRUETMP21:%.*]] = load float, ptr [[TMP]], align 4
-; TUNIT-NEXT:    [[TRUETMP22:%.*]] = fadd fast float [[TRUETMP21]], 0.000000e+00
 ; TUNIT-NEXT:    br label [[BB23:%.*]]
 ; TUNIT:       bb23:
-; TUNIT-NEXT:    [[TRUETMP24:%.*]] = phi <2 x float> [ undef, [[BB19]] ], [ [[TRUETMP26:%.*]], [[BB34:%.*]] ]
 ; TUNIT-NEXT:    br label [[BB25:%.*]]
 ; TUNIT:       bb25:
-; TUNIT-NEXT:    [[TRUETMP26]] = phi <2 x float> [ [[TRUETMP30:%.*]], [[BB28:%.*]] ], [ [[TRUETMP24]], [[BB23]] ]
-; TUNIT-NEXT:    [[TRUETMP27:%.*]] = icmp ult i32 undef, 8
-; TUNIT-NEXT:    br i1 [[TRUETMP27]], label [[BB28]], label [[BB34]]
+; TUNIT-NEXT:    unreachable
 ; TUNIT:       bb28:
-; TUNIT-NEXT:    [[TRUETMP29:%.*]] = insertelement <2 x float> [[TRUETMP26]], float undef, i32 0
-; TUNIT-NEXT:    [[TRUETMP30]] = insertelement <2 x float> [[TRUETMP29]], float [[TRUETMP22]], i32 1
-; TUNIT-NEXT:    br label [[BB25]]
+; TUNIT-NEXT:    unreachable
 ; TUNIT:       bb34:
-; TUNIT-NEXT:    br label [[BB23]]
+; TUNIT-NEXT:    unreachable
 ; TUNIT:       bb35:
 ; TUNIT-NEXT:    unreachable
 ;
@@ -414,22 +407,15 @@ define dso_local void @spam() {
 ; CGSCC-NEXT:    [[TRUETMP18:%.*]] = icmp eq i32 [[X]], 0
 ; CGSCC-NEXT:    br i1 [[TRUETMP18]], label [[BB35:%.*]], label [[BB19:%.*]]
 ; CGSCC:       bb19:
-; CGSCC-NEXT:    [[TRUETMP21:%.*]] = load float, ptr [[TMP]], align 4
-; CGSCC-NEXT:    [[TRUETMP22:%.*]] = fadd fast float [[TRUETMP21]], 0.000000e+00
 ; CGSCC-NEXT:    br label [[BB23:%.*]]
 ; CGSCC:       bb23:
-; CGSCC-NEXT:    [[TRUETMP24:%.*]] = phi <2 x float> [ undef, [[BB19]] ], [ [[TRUETMP26:%.*]], [[BB34:%.*]] ]
 ; CGSCC-NEXT:    br label [[BB25:%.*]]
 ; CGSCC:       bb25:
-; CGSCC-NEXT:    [[TRUETMP26]] = phi <2 x float> [ [[TRUETMP30:%.*]], [[BB28:%.*]] ], [ [[TRUETMP24]], [[BB23]] ]
-; CGSCC-NEXT:    [[TRUETMP27:%.*]] = icmp ult i32 undef, 8
-; CGSCC-NEXT:    br i1 [[TRUETMP27]], label [[BB28]], label [[BB34]]
+; CGSCC-NEXT:    unreachable
 ; CGSCC:       bb28:
-; CGSCC-NEXT:    [[TRUETMP29:%.*]] = insertelement <2 x float> [[TRUETMP26]], float undef, i32 0
-; CGSCC-NEXT:    [[TRUETMP30]] = insertelement <2 x float> [[TRUETMP29]], float [[TRUETMP22]], i32 1
-; CGSCC-NEXT:    br label [[BB25]]
+; CGSCC-NEXT:    unreachable
 ; CGSCC:       bb34:
-; CGSCC-NEXT:    br label [[BB23]]
+; CGSCC-NEXT:    unreachable
 ; CGSCC:       bb35:
 ; CGSCC-NEXT:    unreachable
 ;
@@ -625,7 +611,7 @@ entry:
 ; CGSCC: attributes #[[ATTR4]] = { mustprogress nofree norecurse nosync nounwind willreturn memory(argmem: readwrite) }
 ; CGSCC: attributes #[[ATTR5]] = { nofree norecurse noreturn nosync nounwind memory(none) }
 ; CGSCC: attributes #[[ATTR6]] = { nofree nounwind willreturn memory(write) }
-; CGSCC: attributes #[[ATTR7]] = { nofree willreturn }
+; CGSCC: attributes #[[ATTR7]] = { nofree nosync willreturn }
 ; CGSCC: attributes #[[ATTR8]] = { nofree nounwind willreturn }
 ; CGSCC: attributes #[[ATTR9]] = { nofree nounwind willreturn memory(readwrite) }
 ;.

@@ -16,7 +16,7 @@
 #include <__atomic/memory_order.h>
 #include <__config>
 #include <__functional/operations.h>
-#include <__iterator/iterator_traits.h>
+#include <__iterator/concepts.h>
 #include <__type_traits/is_execution_policy.h>
 #include <__utility/pair.h>
 #include <__utility/terminate_on_exception.h>
@@ -67,7 +67,7 @@ template <class _ExecutionPolicy, class _ForwardIterator, class _Predicate>
 _LIBCPP_HIDE_FROM_ABI bool
 __pstl_any_of(__cpu_backend_tag, _ForwardIterator __first, _ForwardIterator __last, _Predicate __pred) {
   if constexpr (__is_parallel_execution_policy_v<_ExecutionPolicy> &&
-                __has_random_access_iterator_category<_ForwardIterator>::value) {
+                __has_random_access_iterator_category_or_concept<_ForwardIterator>::value) {
     return std::__terminate_on_exception([&] {
       return std::__parallel_or(
           __first, __last, [&__pred](_ForwardIterator __brick_first, _ForwardIterator __brick_last) {
@@ -76,7 +76,7 @@ __pstl_any_of(__cpu_backend_tag, _ForwardIterator __first, _ForwardIterator __la
           });
     });
   } else if constexpr (__is_unsequenced_execution_policy_v<_ExecutionPolicy> &&
-                       __has_random_access_iterator_category<_ForwardIterator>::value) {
+                       __has_random_access_iterator_category_or_concept<_ForwardIterator>::value) {
     return std::__simd_or(__first, __last - __first, __pred);
   } else {
     return std::any_of(__first, __last, __pred);

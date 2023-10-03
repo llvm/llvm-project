@@ -93,7 +93,9 @@ public:
     assert(expr);
     return expr.getKind();
   }
-  MLIRContext *getContext() const { return expr ? expr.getContext() : nullptr; }
+  MLIRContext *tryGetContext() const {
+    return expr ? expr.getContext() : nullptr;
+  }
 
   //
   // Getters for handling `AffineExpr` subclasses.
@@ -103,10 +105,14 @@ public:
   // TODO(wrengr): Most if not all of these don't actually need to be
   // methods, they could be free-functions instead.
   //
+  Var castAnyVar() const;
+  std::optional<Var> dyn_castAnyVar() const;
   SymVar castSymVar() const;
+  std::optional<SymVar> dyn_castSymVar() const;
   Var castDimLvlVar() const;
+  std::optional<Var> dyn_castDimLvlVar() const;
   int64_t castConstantValue() const;
-  std::optional<int64_t> tryGetConstantValue() const;
+  std::optional<int64_t> dyn_castConstantValue() const;
   bool hasConstantValue(int64_t val) const;
   DimLvlExpr getLHS() const;
   DimLvlExpr getRHS() const;
@@ -114,8 +120,9 @@ public:
 
   /// Checks whether the variables bound/used by this spec are valid
   /// with respect to the given ranks.
-  bool isValid(Ranks const &ranks) const;
+  [[nodiscard]] bool isValid(Ranks const &ranks) const;
 
+  std::string str() const;
   void print(llvm::raw_ostream &os) const;
   void print(AsmPrinter &printer) const;
   void dump() const;
@@ -153,6 +160,12 @@ public:
     return expr->getExprKind() == Kind;
   }
   constexpr explicit DimExpr(AffineExpr expr) : DimLvlExpr(Kind, expr) {}
+
+  LvlVar castLvlVar() const { return castDimLvlVar().cast<LvlVar>(); }
+  std::optional<LvlVar> dyn_castLvlVar() const {
+    const auto var = dyn_castDimLvlVar();
+    return var ? std::make_optional(var->cast<LvlVar>()) : std::nullopt;
+  }
 };
 static_assert(IsZeroCostAbstraction<DimExpr>);
 
@@ -167,6 +180,12 @@ public:
     return expr->getExprKind() == Kind;
   }
   constexpr explicit LvlExpr(AffineExpr expr) : DimLvlExpr(Kind, expr) {}
+
+  DimVar castDimVar() const { return castDimLvlVar().cast<DimVar>(); }
+  std::optional<DimVar> dyn_castDimVar() const {
+    const auto var = dyn_castDimLvlVar();
+    return var ? std::make_optional(var->cast<DimVar>()) : std::nullopt;
+  }
 };
 static_assert(IsZeroCostAbstraction<LvlExpr>);
 
@@ -209,6 +228,8 @@ class DimSpec final {
 public:
   DimSpec(DimVar var, DimExpr expr, SparseTensorDimSliceAttr slice);
 
+  MLIRContext *tryGetContext() const { return expr.tryGetContext(); }
+
   constexpr DimVar getBoundVar() const { return var; }
   bool hasExpr() const { return static_cast<bool>(expr); }
   constexpr DimExpr getExpr() const { return expr; }
@@ -220,15 +241,18 @@ public:
   void setElideExpr(bool b) { elideExpr = b; }
   constexpr SparseTensorDimSliceAttr getSlice() const { return slice; }
 
-  /// Checks whether the variables bound/used by this spec are valid
-  /// with respect to the given ranks.
-  bool isValid(Ranks const &ranks) const;
+  /// Checks whether the variables bound/used by this spec are valid with
+  /// respect to the given ranks.  Note that null `DimExpr` is considered
+  /// to be vacuously valid, and therefore calling `setExpr` invalidates
+  /// the result of this predicate.
+  [[nodiscard]] bool isValid(Ranks const &ranks) const;
 
   // TODO(wrengr): Use it or loose it.
   bool isFunctionOf(Var var) const;
   bool isFunctionOf(VarSet const &vars) const;
   void getFreeVars(VarSet &vars) const;
 
+  std::string str(bool wantElision = true) const;
   void print(llvm::raw_ostream &os, bool wantElision = true) const;
   void print(AsmPrinter &printer, bool wantElision = true) const;
   void dump() const;
@@ -260,6 +284,12 @@ class LvlSpec final {
 public:
   LvlSpec(LvlVar var, LvlExpr expr, DimLevelType type);
 
+  MLIRContext *getContext() const {
+    MLIRContext *ctx = expr.tryGetContext();
+    assert(ctx);
+    return ctx;
+  }
+
   constexpr LvlVar getBoundVar() const { return var; }
   constexpr bool canElideVar() const { return elideVar; }
   void setElideVar(bool b) { elideVar = b; }
@@ -271,13 +301,14 @@ public:
   //
   // NOTE: Once we introduce "counting expressions" this will need
   // a more sophisticated implementation than `DimSpec::isValid` does.
-  bool isValid(Ranks const &ranks) const;
+  [[nodiscard]] bool isValid(Ranks const &ranks) const;
 
   // TODO(wrengr): Use it or loose it.
   bool isFunctionOf(Var var) const;
   bool isFunctionOf(VarSet const &vars) const;
   void getFreeVars(VarSet &vars) const;
 
+  std::string str(bool wantElision = true) const;
   void print(llvm::raw_ostream &os, bool wantElision = true) const;
   void print(AsmPrinter &printer, bool wantElision = true) const;
   void dump() const;
@@ -288,15 +319,6 @@ static_assert(IsZeroCostAbstraction<LvlSpec>);
 
 //===----------------------------------------------------------------------===//
 class DimLvlMap final {
-  // TODO(wrengr): Need to define getters
-  unsigned symRank;
-  SmallVector<DimSpec> dimSpecs;
-  SmallVector<LvlSpec> lvlSpecs;
-
-  // Checks for integrity of variable-binding structure.
-  // This is already called by the ctor.
-  bool isWF() const;
-
 public:
   DimLvlMap(unsigned symRank, ArrayRef<DimSpec> dimSpecs,
             ArrayRef<LvlSpec> lvlSpecs);
@@ -307,11 +329,42 @@ public:
   unsigned getRank(VarKind vk) const { return getRanks().getRank(vk); }
   Ranks getRanks() const { return {getSymRank(), getDimRank(), getLvlRank()}; }
 
-  DimLevelType getDimLevelType(unsigned i) { return lvlSpecs[i].getType(); }
+  ArrayRef<DimSpec> getDims() const { return dimSpecs; }
+  const DimSpec &getDim(Dimension dim) const { return dimSpecs[dim]; }
+  SparseTensorDimSliceAttr getDimSlice(Dimension dim) const {
+    return getDim(dim).getSlice();
+  }
 
+  ArrayRef<LvlSpec> getLvls() const { return lvlSpecs; }
+  const LvlSpec &getLvl(Level lvl) const { return lvlSpecs[lvl]; }
+  DimLevelType getLvlType(Level lvl) const { return getLvl(lvl).getType(); }
+
+  AffineMap getDimToLvlMap(MLIRContext *context) const;
+  AffineMap getLvlToDimMap(MLIRContext *context) const;
+
+  std::string str(bool wantElision = true) const;
   void print(llvm::raw_ostream &os, bool wantElision = true) const;
   void print(AsmPrinter &printer, bool wantElision = true) const;
   void dump() const;
+
+private:
+  /// Checks for integrity of variable-binding structure.
+  /// This is already called by the ctor.
+  [[nodiscard]] bool isWF() const;
+
+  /// Helper function to call `DimSpec::setExpr` while asserting that
+  /// the invariant established by `DimLvlMap:isWF` is maintained.
+  /// This is used by the ctor.
+  void setDimExpr(Dimension dim, DimExpr expr) {
+    assert(expr && getRanks().isValid(expr));
+    dimSpecs[dim].setExpr(expr);
+  }
+
+  // All these fields are const-after-ctor.
+  unsigned symRank;
+  SmallVector<DimSpec> dimSpecs;
+  SmallVector<LvlSpec> lvlSpecs;
+  bool mustPrintLvlVars;
 };
 
 //===----------------------------------------------------------------------===//

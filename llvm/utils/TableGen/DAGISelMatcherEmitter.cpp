@@ -472,12 +472,16 @@ EmitMatcher(const Matcher *N, const unsigned Indent, unsigned CurrentIdx,
     return 2;
 
   case Matcher::CheckPatternPredicate: {
-    StringRef Pred =cast<CheckPatternPredicateMatcher>(N)->getPredicate();
-    OS << "OPC_CheckPatternPredicate, " << getPatternPredicate(Pred) << ',';
+    StringRef Pred = cast<CheckPatternPredicateMatcher>(N)->getPredicate();
+    unsigned PredNo = getPatternPredicate(Pred);
+    if (PredNo > 255)
+      OS << "OPC_CheckPatternPredicate2, TARGET_VAL(" << PredNo << "),";
+    else
+      OS << "OPC_CheckPatternPredicate, " << PredNo << ',';
     if (!OmitComments)
       OS << " // " << Pred;
     OS << '\n';
-    return 2;
+    return 2 + (PredNo > 255);
   }
   case Matcher::CheckPredicate: {
     TreePredicateFn Pred = cast<CheckPredicateMatcher>(N)->getPredicate();

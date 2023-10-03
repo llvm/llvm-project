@@ -184,6 +184,15 @@ std::string getPGOFuncName(StringRef RawFuncName,
                            StringRef FileName,
                            uint64_t Version = INSTR_PROF_INDEX_VERSION);
 
+/// \return the modified name for function \c F suitable to be
+/// used as the key for IRPGO profile lookup. \c InLTO indicates if this is
+/// called from LTO optimization passes.
+std::string getIRPGOFuncName(const Function &F, bool InLTO = false);
+
+/// \return the filename and the function name parsed from the output of
+/// \c getIRPGOFuncName()
+std::pair<StringRef, StringRef> getParsedIRPGOFuncName(StringRef IRPGOFuncName);
+
 /// Return the name of the global variable used to store a function
 /// name in PGO instrumentation. \c FuncName is the name of the function
 /// returned by the \c getPGOFuncName call.
@@ -434,6 +443,8 @@ private:
     return "** External Symbol **";
   }
 
+  Error addFuncWithName(Function &F, StringRef PGOFuncName);
+
   // If the symtab is created by a series of calls to \c addFuncName, \c
   // finalizeSymtab needs to be called before looking up function names.
   // This is required because the underlying map is a vector (for space
@@ -516,19 +527,11 @@ public:
   /// Return function from the name's md5 hash. Return nullptr if not found.
   inline Function *getFunction(uint64_t FuncMD5Hash);
 
-  /// Return the function's original assembly name by stripping off
-  /// the prefix attached (to symbols with priviate linkage). For
-  /// global functions, it returns the same string as getFuncName.
-  inline StringRef getOrigFuncName(uint64_t FuncMD5Hash);
-
   /// Return the name section data.
   inline StringRef getNameData() const { return Data; }
 
   /// Dump the symbols in this table.
-  void dumpNames(raw_ostream &OS) const {
-    for (StringRef S : NameTab.keys())
-      OS << S << "\n";
-  }
+  void dumpNames(raw_ostream &OS) const;
 };
 
 Error InstrProfSymtab::create(StringRef D, uint64_t BaseAddr) {
@@ -587,16 +590,6 @@ Function* InstrProfSymtab::getFunction(uint64_t FuncMD5Hash) {
   if (Result != MD5FuncMap.end() && Result->first == FuncMD5Hash)
     return Result->second;
   return nullptr;
-}
-
-// See also getPGOFuncName implementation. These two need to be
-// matched.
-StringRef InstrProfSymtab::getOrigFuncName(uint64_t FuncMD5Hash) {
-  StringRef PGOName = getFuncName(FuncMD5Hash);
-  size_t S = PGOName.find_first_of(':');
-  if (S == StringRef::npos)
-    return PGOName;
-  return PGOName.drop_front(S + 1);
 }
 
 // To store the sums of profile count values, or the percentage of

@@ -217,7 +217,7 @@ def div_unsigned(
     a `linalg.broadcast` + `linalg.div` sequence can be lowered to a
     `linalg.generic` with different affine maps for the two operands.
     """
-    O[None] = lhs[None] / rhs[None]
+    O[None] = BinaryFn.div_unsigned(lhs[None], rhs[None])
 
 
 @linalg_structured_op
@@ -348,6 +348,27 @@ def mmt4d(
     accum[D.m, D.n, D.m0, D.n0] += TypeFn.cast_signed(
         TV.AccumType, lhs[D.m, D.k, D.m0, D.k0]
     ) * TypeFn.cast_signed(TV.AccumType, rhs[D.n, D.k, D.n0, D.k0])
+
+
+@linalg_structured_op
+def batch_mmt4d(
+    lhs=TensorDef(TV.LhsType, Batch, S.M, S.K, S.M0, S.K0),
+    rhs=TensorDef(TV.RhsType, Batch, S.N, S.K, S.N0, S.K0),
+    accum=TensorDef(TV.AccumType, Batch, S.M, S.N, S.M0, S.N0, output=True),
+):
+    """Performs a batched matrix-matrix-transpose multiplication of two
+    batched-4D (5D) inputs.
+
+    Besides the outermost batch dimension has the same semantic as
+    linalg.batch_matmul, the differences from linalg.batch_matmul in the
+    non-batch dimensions are the same as linalg.mmt4d vs. linalg.matmul. See the
+    description of lingalg.mmt4d.
+    """
+    domain(D.b, D.m, D.n, D.k, D.m0, D.n0, D.k0)
+    implements(ContractionOpInterface)
+    accum[D.b, D.m, D.n, D.m0, D.n0] += TypeFn.cast_signed(
+        TV.AccumType, lhs[D.b, D.m, D.k, D.m0, D.k0]
+    ) * TypeFn.cast_signed(TV.AccumType, rhs[D.b, D.n, D.k, D.n0, D.k0])
 
 
 @linalg_structured_op

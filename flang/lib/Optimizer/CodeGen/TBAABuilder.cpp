@@ -37,107 +37,58 @@ static llvm::cl::opt<unsigned>
                        llvm::cl::init(kTagAttachmentUnlimited));
 
 namespace fir {
-std::string TBAABuilder::getNewTBAANodeName(llvm::StringRef basename) {
-  return (llvm::Twine(basename) + llvm::Twine('_') +
-          llvm::Twine(tbaaNodeCounter++))
-      .str();
-}
 
-TBAABuilder::TBAABuilder(mlir::ModuleOp module, bool applyTBAA)
+TBAABuilder::TBAABuilder(MLIRContext *context, bool applyTBAA)
     : enableTBAA(applyTBAA && !disableTBAA) {
   if (!enableTBAA)
     return;
 
-  // In the usual Flang compilation flow, FIRToLLVMPass is run once,
-  // and the MetadataOp holding TBAA operations is created at the beginning
-  // of the pass. With tools like tco it is possible to invoke
-  // FIRToLLVMPass on already converted MLIR, so the MetadataOp
-  // already exists and creating a new one with the same name would
-  // be incorrect. If the TBAA MetadataOp is already present,
-  // we just disable all TBAABuilder actions (e.g. attachTBAATag()
-  // is a no-op).
-  if (llvm::any_of(
-          module.getBodyRegion().getOps<LLVM::MetadataOp>(),
-          [&](auto metaOp) { return metaOp.getSymName() == tbaaMetaOpName; })) {
-    enableTBAA = false;
-    return;
-  }
-
-  LLVM_DEBUG(llvm::dbgs() << "Creating TBAA MetadataOp for module '"
-                          << module.getName().value_or("<unknown>") << "'\n");
-
-  // Create TBAA MetadataOp with the root and basic type descriptors.
-  Location loc = module.getLoc();
-  MLIRContext *context = module.getContext();
-  OpBuilder builder(module.getBody(), module.getBody()->end());
-  tbaaMetaOp = builder.create<MetadataOp>(loc, tbaaMetaOpName);
-  builder.setInsertionPointToStart(&tbaaMetaOp.getBody().front());
-
   // Root node.
-  auto rootOp = builder.create<TBAARootMetadataOp>(
-      loc, getNewTBAANodeName(kRootSymBasename), flangTBAARootId);
-  flangTBAARoot = FlatSymbolRefAttr::get(rootOp);
+  flangTBAARoot =
+      TBAARootAttr::get(context, StringAttr::get(context, flangTBAARootId));
 
   // Any access node.
-  auto anyAccessOp = builder.create<TBAATypeDescriptorOp>(
-      loc, getNewTBAANodeName(kTypeDescSymBasename),
-      StringAttr::get(context, anyAccessTypeDescId),
-      ArrayAttr::get(context, flangTBAARoot), ArrayRef<int64_t>{0});
-  anyAccessTypeDesc = FlatSymbolRefAttr::get(anyAccessOp);
+  anyAccessTypeDesc = TBAATypeDescriptorAttr::get(
+      context, anyAccessTypeDescId, TBAAMemberAttr::get(flangTBAARoot, 0));
 
   // Any data access node.
-  auto anyDataAccessOp = builder.create<TBAATypeDescriptorOp>(
-      loc, getNewTBAANodeName(kTypeDescSymBasename),
-      StringAttr::get(context, anyDataAccessTypeDescId),
-      ArrayAttr::get(context, anyAccessTypeDesc), ArrayRef<int64_t>{0});
-  anyDataAccessTypeDesc = FlatSymbolRefAttr::get(anyDataAccessOp);
+  anyDataAccessTypeDesc =
+      TBAATypeDescriptorAttr::get(context, anyDataAccessTypeDescId,
+                                  TBAAMemberAttr::get(anyAccessTypeDesc, 0));
 
   // Box member access node.
-  auto boxMemberOp = builder.create<TBAATypeDescriptorOp>(
-      loc, getNewTBAANodeName(kTypeDescSymBasename),
-      StringAttr::get(context, boxMemberTypeDescId),
-      ArrayAttr::get(context, anyAccessTypeDesc), ArrayRef<int64_t>{0});
-  boxMemberTypeDesc = FlatSymbolRefAttr::get(boxMemberOp);
+  boxMemberTypeDesc = TBAATypeDescriptorAttr::get(
+      context, boxMemberTypeDescId, TBAAMemberAttr::get(anyAccessTypeDesc, 0));
 }
 
-SymbolRefAttr TBAABuilder::getAccessTag(SymbolRefAttr baseTypeDesc,
-                                        SymbolRefAttr accessTypeDesc,
-                                        int64_t offset) {
-  SymbolRefAttr &tag = tagsMap[{baseTypeDesc, accessTypeDesc, offset}];
+TBAATagAttr TBAABuilder::getAccessTag(TBAATypeDescriptorAttr baseTypeDesc,
+                                      TBAATypeDescriptorAttr accessTypeDesc,
+                                      int64_t offset) {
+  TBAATagAttr &tag = tagsMap[{baseTypeDesc, accessTypeDesc, offset}];
   if (tag)
     return tag;
 
   // Initialize new tag.
-  Location loc = tbaaMetaOp.getLoc();
-  OpBuilder builder(&tbaaMetaOp.getBody().back(),
-                    tbaaMetaOp.getBody().back().end());
-  auto tagOp = builder.create<TBAATagOp>(
-      loc, getNewTBAANodeName(kTagSymBasename), baseTypeDesc.getLeafReference(),
-      accessTypeDesc.getLeafReference(), offset);
-  // TBAATagOp symbols must be referenced by their fully qualified
-  // names, so create a path to TBAATagOp symbol.
-  StringAttr metaOpName = SymbolTable::getSymbolName(tbaaMetaOp);
-  tag = SymbolRefAttr::get(builder.getContext(), metaOpName,
-                           FlatSymbolRefAttr::get(tagOp));
+  tag = TBAATagAttr::get(baseTypeDesc, accessTypeDesc, offset);
   return tag;
 }
 
-SymbolRefAttr TBAABuilder::getAnyBoxAccessTag() {
+TBAATagAttr TBAABuilder::getAnyBoxAccessTag() {
   return getAccessTag(boxMemberTypeDesc, boxMemberTypeDesc, /*offset=*/0);
 }
 
-SymbolRefAttr TBAABuilder::getBoxAccessTag(Type baseFIRType, Type accessFIRType,
-                                           GEPOp gep) {
+TBAATagAttr TBAABuilder::getBoxAccessTag(Type baseFIRType, Type accessFIRType,
+                                         GEPOp gep) {
   return getAnyBoxAccessTag();
 }
 
-SymbolRefAttr TBAABuilder::getAnyDataAccessTag() {
+TBAATagAttr TBAABuilder::getAnyDataAccessTag() {
   return getAccessTag(anyDataAccessTypeDesc, anyDataAccessTypeDesc,
                       /*offset=*/0);
 }
 
-SymbolRefAttr TBAABuilder::getDataAccessTag(Type baseFIRType,
-                                            Type accessFIRType, GEPOp gep) {
+TBAATagAttr TBAABuilder::getDataAccessTag(Type baseFIRType, Type accessFIRType,
+                                          GEPOp gep) {
   return getAnyDataAccessTag();
 }
 
@@ -154,7 +105,7 @@ void TBAABuilder::attachTBAATag(AliasAnalysisOpInterface op, Type baseFIRType,
   LLVM_DEBUG(llvm::dbgs() << "Attaching TBAA tag #" << tagAttachmentCounter
                           << "\n");
 
-  SymbolRefAttr tbaaTagSym;
+  TBAATagAttr tbaaTagSym;
   if (baseFIRType.isa<fir::BaseBoxType>())
     tbaaTagSym = getBoxAccessTag(baseFIRType, accessFIRType, gep);
   else

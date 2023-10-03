@@ -43,6 +43,9 @@ public:
       delete OutputFile;
   }
 
+  HeaderIncludesCallback(const HeaderIncludesCallback &) = delete;
+  HeaderIncludesCallback &operator=(const HeaderIncludesCallback &) = delete;
+
   void FileChanged(SourceLocation Loc, FileChangeReason Reason,
                    SrcMgr::CharacteristicKind FileType,
                    FileID PrevFID) override;
@@ -89,6 +92,10 @@ public:
     if (OwnsOutputFile)
       delete OutputFile;
   }
+
+  HeaderIncludesJSONCallback(const HeaderIncludesJSONCallback &) = delete;
+  HeaderIncludesJSONCallback &
+  operator=(const HeaderIncludesJSONCallback &) = delete;
 
   void EndOfMainFile() override;
 
@@ -252,7 +259,7 @@ void HeaderIncludesCallback::FileSkipped(const FileEntryRef &SkippedFile, const
 }
 
 void HeaderIncludesJSONCallback::EndOfMainFile() {
-  const FileEntry *FE = SM.getFileEntryForID(SM.getMainFileID());
+  OptionalFileEntryRef FE = SM.getFileEntryRefForID(SM.getMainFileID());
   SmallString<256> MainFile(FE->getName());
   SM.getFileManager().makeAbsolutePath(MainFile);
 

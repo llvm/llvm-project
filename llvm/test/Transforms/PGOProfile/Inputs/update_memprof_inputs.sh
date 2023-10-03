@@ -1,11 +1,12 @@
 #!/bin/bash
 
-if [ -z $1 ]; then
-  echo "Path to clang required!"
-  echo "Usage: update_memprof_inputs.sh /path/to/updated/clang"
+if [ $# -lt 2 ]; then
+  echo "Path to clang and llvm-profdata required!"
+  echo "Usage: update_memprof_inputs.sh /path/to/updated/clang /path/to/updated/llvm-profdata"
   exit 1
 else
   CLANG=$1
+  LLVMPROFDATA=$2
 fi
 
 # Allows the script to be invoked from other directories.
@@ -84,6 +85,8 @@ env MEMPROF_OPTIONS=log_path=stdout ${OUTDIR}/memprof.exe > ${OUTDIR}/memprof.me
 ${CLANG} ${COMMON_FLAGS} -fprofile-generate=. \
   ${OUTDIR}/memprof.cc -o ${OUTDIR}/pgo.exe
 env LLVM_PROFILE_FILE=${OUTDIR}/memprof_pgo.profraw ${OUTDIR}/pgo.exe
+${LLVMPROFDATA} merge --text ${OUTDIR}/memprof_pgo.profraw -o ${OUTDIR}/memprof_pgo.proftext
 
 rm ${OUTDIR}/memprof.cc
 rm ${OUTDIR}/pgo.exe
+rm ${OUTDIR}/memprof_pgo.profraw

@@ -22,6 +22,7 @@
 #ifndef CLANG_INCLUDE_CLEANER_TYPES_H
 #define CLANG_INCLUDE_CLEANER_TYPES_H
 
+#include "clang/Basic/FileEntry.h"
 #include "clang/Basic/SourceLocation.h"
 #include "clang/Tooling/Inclusions/StandardLibrary.h"
 #include "llvm/ADT/ArrayRef.h"
@@ -30,7 +31,9 @@
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringMap.h"
 #include "llvm/ADT/StringRef.h"
+#include "llvm/ADT/StringSet.h"
 #include <memory>
+#include <string>
 #include <utility>
 #include <variant>
 #include <vector>
@@ -40,13 +43,12 @@ class raw_ostream;
 } // namespace llvm
 namespace clang {
 class Decl;
-class FileEntry;
 class IdentifierInfo;
 namespace include_cleaner {
 
 /// We consider a macro to be a different symbol each time it is defined.
 struct Macro {
-  IdentifierInfo *Name;
+  const IdentifierInfo *Name;
   /// The location of the Name where the macro is defined.
   SourceLocation Definition;
 
@@ -120,7 +122,7 @@ struct Header {
     Verbatim,
   };
 
-  Header(const FileEntry *FE) : Storage(FE) {}
+  Header(FileEntryRef FE) : Storage(FE) {}
   Header(tooling::stdlib::Header H) : Storage(H) {}
   Header(StringRef VerbatimSpelling) : Storage(VerbatimSpelling) {}
 
@@ -128,7 +130,7 @@ struct Header {
   bool operator==(const Header &RHS) const { return Storage == RHS.Storage; }
   bool operator<(const Header &RHS) const;
 
-  const FileEntry *physical() const { return std::get<Physical>(Storage); }
+  FileEntryRef physical() const { return std::get<Physical>(Storage); }
   tooling::stdlib::Header standard() const {
     return std::get<Standard>(Storage);
   }
@@ -140,7 +142,7 @@ struct Header {
 
 private:
   // Order must match Kind enum!
-  std::variant<const FileEntry *, tooling::stdlib::Header, StringRef> Storage;
+  std::variant<FileEntryRef, tooling::stdlib::Header, StringRef> Storage;
 
   // Disambiguation tag to make sure we can call the right constructor from
   // DenseMapInfo methods.
@@ -154,8 +156,8 @@ llvm::raw_ostream &operator<<(llvm::raw_ostream &, const Header &);
 /// A single #include directive written in the main file.
 struct Include {
   llvm::StringRef Spelled;             // e.g. vector
-  const FileEntry *Resolved = nullptr; // e.g. /path/to/c++/v1/vector
-                                       // nullptr if the header was not found
+  OptionalFileEntryRef Resolved;       // e.g. /path/to/c++/v1/vector
+                                       // nullopt if the header was not found
   SourceLocation HashLocation;         // of hash in #include <vector>
   unsigned Line = 0;                   // 1-based line number for #include
   bool Angled = false;                 // True if spelled with <angle> quotes.
@@ -167,6 +169,20 @@ llvm::raw_ostream &operator<<(llvm::raw_ostream &, const Include &);
 /// Supports efficiently hit-testing Headers against Includes.
 class Includes {
 public:
+  /// Registers a directory on the include path (-I etc) from HeaderSearch.
+  /// This allows reasoning about equivalence of e.g. "path/a/b.h" and "a/b.h".
+  /// This must be called before calling add() in order to take effect.
+  ///
+  /// The paths may be relative or absolute, but the paths passed to
+  /// addSearchDirectory() and add() (that is: Include.Resolved->getName())
+  /// should be consistent, as they are compared lexically.
+  /// Generally, this is satisfied if you obtain paths through HeaderSearch
+  /// and FileEntries through PPCallbacks::IncludeDirective().
+  void addSearchDirectory(llvm::StringRef);
+
+  /// Registers an include directive seen in the main file.
+  ///
+  /// This should only be called after all search directories are added.
   void add(const Include &);
 
   /// All #includes seen, in the order they appear.
@@ -183,9 +199,13 @@ public:
   const Include *atLine(unsigned OneBasedIndex) const;
 
 private:
+  llvm::StringSet<> SearchPath;
+
   std::vector<Include> All;
   // Lookup structures for match(), values are index into All.
   llvm::StringMap<llvm::SmallVector<unsigned>> BySpelling;
+  // Heuristic spellings that likely resolve to the given file.
+  llvm::StringMap<llvm::SmallVector<unsigned>> BySpellingAlternate;
   llvm::DenseMap<const FileEntry *, llvm::SmallVector<unsigned>> ByFile;
   llvm::DenseMap<unsigned, unsigned> ByLine;
 };

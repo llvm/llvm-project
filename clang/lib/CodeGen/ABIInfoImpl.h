@@ -122,13 +122,19 @@ Address emitMergePHI(CodeGenFunction &CGF, Address Addr1,
                      llvm::BasicBlock *Block2, const llvm::Twine &Name = "");
 
 /// isEmptyField - Return true iff a the field is "empty", that is it
-/// is an unnamed bit-field or an (array of) empty record(s).
-bool isEmptyField(ASTContext &Context, const FieldDecl *FD, bool AllowArrays);
+/// is an unnamed bit-field or an (array of) empty record(s). If
+/// AsIfNoUniqueAddr is true, then C++ record fields are considered empty if
+/// the [[no_unique_address]] attribute would have made them empty.
+bool isEmptyField(ASTContext &Context, const FieldDecl *FD, bool AllowArrays,
+                  bool AsIfNoUniqueAddr = false);
 
 /// isEmptyRecord - Return true iff a structure contains only empty
 /// fields. Note that a structure with a flexible array member is not
-/// considered empty.
-bool isEmptyRecord(ASTContext &Context, QualType T, bool AllowArrays);
+/// considered empty. If AsIfNoUniqueAddr is true, then C++ record fields are
+/// considered empty if the [[no_unique_address]] attribute would have made
+/// them empty.
+bool isEmptyRecord(ASTContext &Context, QualType T, bool AllowArrays,
+                   bool AsIfNoUniqueAddr = false);
 
 /// isSingleElementStruct - Determine if a structure is a "single
 /// element struct", i.e. it has exactly one non-empty field or
