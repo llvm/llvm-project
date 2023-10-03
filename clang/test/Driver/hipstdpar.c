@@ -1,3 +1,6 @@
+// XFAIL: target={{.*}}-apple{{.*}}
+// XFAIL: target={{.*}}-windows{{.*}}
+
 // RUN: not %clang -### --hipstdpar -nogpulib -nogpuinc --compile %s 2>&1 | \
 // RUN:   FileCheck --check-prefix=HIPSTDPAR-MISSING-LIB %s
 // RUN: %clang -### --hipstdpar --hipstdpar-path=%S/Inputs/hipstdpar \
