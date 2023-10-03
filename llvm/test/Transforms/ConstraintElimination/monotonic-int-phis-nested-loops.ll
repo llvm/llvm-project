@@ -17,8 +17,7 @@ define void @start_value_of_inner_add_rec_is_add_rec_condition_can_be_simplified
 ; CHECK-NEXT:    [[CMP2_NOT:%.*]] = icmp eq i32 [[K_0]], [[LEN]]
 ; CHECK-NEXT:    br i1 [[CMP2_NOT]], label [[OUTER_LATCH]], label [[INNER_LATCH]]
 ; CHECK:       inner.latch:
-; CHECK-NEXT:    [[CMP_NOT_I:%.*]] = icmp ult i32 [[K_0]], [[LEN]]
-; CHECK-NEXT:    call void @use(i1 [[CMP_NOT_I]])
+; CHECK-NEXT:    call void @use(i1 true)
 ; CHECK-NEXT:    [[K_INC]] = add i32 [[K_0]], 1
 ; CHECK-NEXT:    br label [[INNER_HEADER]]
 ; CHECK:       outer.latch:
