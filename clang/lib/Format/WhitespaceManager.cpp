@@ -372,9 +372,10 @@ AlignTokenSequence(const FormatStyle &Style, unsigned Start, unsigned End,
           return true;
         }
 
-        // Continued function call
+        // Continued (template) function call.
         if (ScopeStart > Start + 1 &&
-            Changes[ScopeStart - 2].Tok->is(tok::identifier) &&
+            Changes[ScopeStart - 2].Tok->isOneOf(tok::identifier,
+                                                 TT_TemplateCloser) &&
             Changes[ScopeStart - 1].Tok->is(tok::l_paren) &&
             Changes[ScopeStart].Tok->isNot(TT_LambdaLSquare)) {
           if (Changes[i].Tok->MatchingParen &&

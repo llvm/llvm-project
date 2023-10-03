@@ -18525,11 +18525,16 @@ TEST_F(FormatTest, AlignConsecutiveAssignments) {
                "                     a_longer_name_for_wrap}};",
                Alignment);
 
-  Alignment.ColumnLimit = 60;
+  Alignment = getLLVMStyleWithColumns(60);
+  Alignment.AlignConsecutiveAssignments.Enabled = true;
   verifyFormat("using II = typename TI<T, std::tuple<Types...>>::I;\n"
                "using I  = std::conditional_t<II::value >= 0,\n"
                "                              std::ic<int, II::value + 1>,\n"
                "                              std::ic<int, -1>>;",
+               Alignment);
+  verifyFormat("SomeName = Foo;\n"
+               "X        = func<Type, Type>(looooooooooooooooooooooooong,\n"
+               "                            arrrrrrrrrrg);",
                Alignment);
 }
 
