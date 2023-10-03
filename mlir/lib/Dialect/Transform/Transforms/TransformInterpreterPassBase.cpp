@@ -379,7 +379,7 @@ static LogicalResult defineDeclaredSymbols(Block &block, ModuleOp definitions) {
 LogicalResult transform::detail::interpreterBaseRunOnOperationImpl(
     Operation *target, StringRef passName,
     const std::shared_ptr<OwningOpRef<ModuleOp>> &sharedTransformModule,
-    const std::shared_ptr<OwningOpRef<ModuleOp>> &libraryModule,
+    const std::shared_ptr<OwningOpRef<ModuleOp>> &transformLibraryModule,
     const RaggedArray<MappedValue> &extraMappings,
     const TransformOptions &options,
     const Pass::Option<std::string> &transformFileName,
@@ -387,6 +387,12 @@ LogicalResult transform::detail::interpreterBaseRunOnOperationImpl(
     const Pass::Option<std::string> &debugPayloadRootTag,
     const Pass::Option<std::string> &debugTransformRootTag,
     StringRef binaryName) {
+  bool hasSharedTransformModule =
+      sharedTransformModule && *sharedTransformModule;
+  bool hasTransformLibraryModule =
+      transformLibraryModule && *transformLibraryModule;
+  assert((!hasSharedTransformModule || !hasTransformLibraryModule) &&
+         "at most one of shared or library transform module can be set");
 
   // Step 1
   // ------
@@ -407,9 +413,24 @@ LogicalResult transform::detail::interpreterBaseRunOnOperationImpl(
   // transform is embedded in the payload IR. If debugTransformRootTag was
   // passed, then we are in user-specified selection of the transforming IR.
   // This corresponds to REPL debug mode.
-  bool sharedTransform = (sharedTransformModule && *sharedTransformModule);
-  Operation *transformContainer =
-      sharedTransform ? sharedTransformModule->get() : target;
+
+  OwningOpRef<Operation *> transformContainerClone;
+  Operation *transformContainer;
+  if (hasTransformLibraryModule) {
+    // If we have a library module, then the transform script is embedded in the
+    // target, which we don't want to modify when loading the library. We thus
+    // clone the target and use that as transform container.
+    assert(!hasSharedTransformModule);
+    transformContainerClone = target->clone();
+    transformContainer = transformContainerClone.get();
+  } else {
+    // If we have a shared library, which is private to us, we can modify it
+    // when loading the library, so we use that. Otherwise, we don't have any
+    // library to load, so we can use the target and won't modify it.
+    transformContainer =
+        hasSharedTransformModule ? sharedTransformModule->get() : target;
+  }
+
   Operation *transformRoot =
       debugTransformRootTag.empty()
           ? findTopLevelTransform(transformContainer,
@@ -430,8 +451,8 @@ LogicalResult transform::detail::interpreterBaseRunOnOperationImpl(
   // Copy external defintions for symbols if provided. Be aware of potential
   // concurrent execution (normally, the error shouldn't be triggered unless the
   // transform IR modifies itself in a pass, which is also forbidden elsewhere).
-  if (!sharedTransform && libraryModule && *libraryModule) {
-    if (!target->isProperAncestor(transformRoot)) {
+  if (hasTransformLibraryModule) {
+    if (!transformContainer->isProperAncestor(transformRoot)) {
       InFlightDiagnostic diag =
           transformRoot->emitError()
           << "cannot inject transform definitions next to pass anchor op";
@@ -439,7 +460,7 @@ LogicalResult transform::detail::interpreterBaseRunOnOperationImpl(
       return diag;
     }
     if (failed(defineDeclaredSymbols(*transformRoot->getBlock(),
-                                     libraryModule->get())))
+                                     transformLibraryModule->get())))
       return failure();
   }
 
@@ -461,25 +482,27 @@ LogicalResult transform::detail::interpreterBaseRunOnOperationImpl(
 LogicalResult transform::detail::interpreterBaseInitializeImpl(
     MLIRContext *context, StringRef transformFileName,
     StringRef transformLibraryFileName,
-    std::shared_ptr<OwningOpRef<ModuleOp>> &module,
-    std::shared_ptr<OwningOpRef<ModuleOp>> &libraryModule,
+    std::shared_ptr<OwningOpRef<ModuleOp>> &sharedTransformModule,
+    std::shared_ptr<OwningOpRef<ModuleOp>> &transformLibraryModule,
     function_ref<std::optional<LogicalResult>(OpBuilder &, Location)>
         moduleBuilder) {
-  OwningOpRef<ModuleOp> parsed;
-  if (failed(parseTransformModuleFromFile(context, transformFileName, parsed)))
+  OwningOpRef<ModuleOp> parsedTransformModule;
+  if (failed(parseTransformModuleFromFile(context, transformFileName,
+                                          parsedTransformModule)))
     return failure();
-  if (parsed && failed(mlir::verify(*parsed)))
+  if (parsedTransformModule && failed(mlir::verify(*parsedTransformModule)))
     return failure();
 
-  OwningOpRef<ModuleOp> parsedLibrary;
+  OwningOpRef<ModuleOp> parsedLibraryModule;
   if (failed(parseTransformModuleFromFile(context, transformLibraryFileName,
-                                          parsedLibrary)))
+                                          parsedLibraryModule)))
     return failure();
-  if (parsedLibrary && failed(mlir::verify(*parsedLibrary)))
+  if (parsedLibraryModule && failed(mlir::verify(*parsedLibraryModule)))
     return failure();
 
-  if (parsed) {
-    module = std::make_shared<OwningOpRef<ModuleOp>>(std::move(parsed));
+  if (parsedTransformModule) {
+    sharedTransformModule = std::make_shared<OwningOpRef<ModuleOp>>(
+        std::move(parsedTransformModule));
   } else if (moduleBuilder) {
     // TODO: better location story.
     auto location = UnknownLoc::get(context);
@@ -491,20 +514,20 @@ LogicalResult transform::detail::interpreterBaseInitializeImpl(
     if (std::optional<LogicalResult> result = moduleBuilder(b, location)) {
       if (failed(*result))
         return failure();
-      module = std::move(localModule);
+      sharedTransformModule = std::move(localModule);
     }
   }
 
-  if (!parsedLibrary || !*parsedLibrary)
+  if (!parsedLibraryModule || !*parsedLibraryModule)
     return success();
 
-  if (module && *module) {
-    if (failed(defineDeclaredSymbols(*module->get().getBody(),
-                                     parsedLibrary.get())))
+  if (sharedTransformModule && *sharedTransformModule) {
+    if (failed(defineDeclaredSymbols(*sharedTransformModule->get().getBody(),
+                                     parsedLibraryModule.get())))
       return failure();
   } else {
-    libraryModule =
-        std::make_shared<OwningOpRef<ModuleOp>>(std::move(parsedLibrary));
+    transformLibraryModule =
+        std::make_shared<OwningOpRef<ModuleOp>>(std::move(parsedLibraryModule));
   }
   return success();
 }
