@@ -467,94 +467,6 @@ static bool canUseDirectConversion(ArrayRef<DimLevelType> dimTypes) {
   return true;
 }
 
-/// Helper method to translate coordinates during a reshaping operation.
-/// TODO: provide as general utility to MLIR at large?
-static void reshapeCoords(Location loc, OpBuilder &builder,
-                          ArrayRef<ReassociationIndices> reassociation,
-                          ValueRange srcSizes, Value srcCoords,
-                          ValueRange dstSizes, Value dstCoords) {
-  const auto srcCvs = loadAll(builder, loc, srcSizes.size(), srcCoords);
-  SmallVector<Value> dstCvs;
-  reshapeCvs(builder, loc, reassociation, srcSizes, srcCvs, dstSizes, dstCvs);
-  assert(dstCvs.size() == dstSizes.size());
-  storeAll(builder, loc, dstCoords, dstCvs);
-}
-
-/// Generate code for a general sparse to sparse reshaping operation.
-/// Note that unlike dense reshaping (which can be done with a "cheap"
-/// change of view), sparse reshaping is currently done with actual
-/// data shuffling.
-///
-/// TODO: proportional to nnz, but still a lot of data movement
-///       https://github.com/llvm/llvm-project/issues/56477
-///
-///   iter = src->toCOO();
-///   coo = newSparseCOO()
-///   while (elem = iter->getNext()) {
-///     coo->add(reshape(elem.coords), elem.value)
-///   }
-///   s = newSparseTensor(coo)
-template <typename ReshapeOp>
-static LogicalResult
-genSparse2SparseReshape(ReshapeOp op, typename ReshapeOp::Adaptor adaptor,
-                        ConversionPatternRewriter &rewriter) {
-  Location loc = op.getLoc();
-  const auto srcTp = getSparseTensorType(op.getSrc());
-  const auto dstTp = getSparseTensorType(op.getResult());
-  if (!srcTp.hasEncoding() || !dstTp.hasEncoding())
-    return failure();
-  Type elemTp = srcTp.getElementType();
-  assert(elemTp == dstTp.getElementType() &&
-         "reshape should not change element type");
-  // Start an iterator over the source tensor (in coordinate order).
-  SmallVector<Value> srcDimSizes =
-      getDimSizes(rewriter, loc, srcTp, adaptor.getSrc());
-  NewCallParams params(rewriter, loc);
-  Value iter = params.genBuffers(srcTp.withoutDimToLvl(), srcDimSizes)
-                   .genNewCall(Action::kToIterator, adaptor.getSrc());
-  // Start a new COO for the destination tensor.
-  SmallVector<Value> dstDimSizes;
-  if (dstTp.hasStaticDimShape())
-    // Static "shapes" are in fact "sizes".
-    fillDimShape(rewriter, loc, dstTp, dstDimSizes);
-  else
-    genReshapeDstShape(rewriter, loc, dstDimSizes, srcDimSizes,
-                       dstTp.getDimShape(), op.getReassociationIndices());
-  const Value coo =
-      params.genBuffers(dstTp, dstDimSizes).genNewCall(Action::kEmptyCOO);
-  const Value dstDimToLvl = params.getDimToLvl();
-  // Construct a while loop over the iterator.
-  const Type iTp = rewriter.getIndexType();
-  const Value srcDimCoords = genAlloca(rewriter, loc, srcTp.getDimRank(), iTp);
-  const Value dstDimCoords = genAlloca(rewriter, loc, dstTp.getDimRank(), iTp);
-  const Value elemPtr = genAllocaScalar(rewriter, loc, elemTp);
-  const SmallVector<Value> noArgs;
-  const SmallVector<Type> noTypes;
-  auto whileOp = rewriter.create<scf::WhileOp>(loc, noTypes, noArgs);
-  Block *before = rewriter.createBlock(&whileOp.getBefore(), {}, noTypes);
-  rewriter.setInsertionPointToEnd(before);
-  Value cond = genGetNextCall(rewriter, loc, iter, srcDimCoords, elemPtr);
-  rewriter.create<scf::ConditionOp>(loc, cond, before->getArguments());
-  // Translate coordinates from source to target and insert. Note that we do
-  // not need to store the value in elemPtr, as the value is still there.
-  Block *after = rewriter.createBlock(&whileOp.getAfter(), {}, noTypes);
-  rewriter.setInsertionPointToStart(after);
-  // We probably don't need these assertions, but better safe than sorry.
-  assert(srcTp.getDimRank() == srcDimSizes.size());
-  assert(dstTp.getDimRank() == dstDimSizes.size());
-  reshapeCoords(loc, rewriter, op.getReassociationIndices(), srcDimSizes,
-                srcDimCoords, dstDimSizes, dstDimCoords);
-  genAddEltCall(rewriter, loc, elemTp, coo, elemPtr, dstDimCoords, dstDimToLvl);
-  rewriter.create<scf::YieldOp>(loc);
-  // Final call to construct sparse tensor storage and free temporary resources.
-  rewriter.setInsertionPointAfter(whileOp);
-  Value dst = params.genNewCall(Action::kFromCOO, coo);
-  genDelCOOCall(rewriter, loc, elemTp, coo);
-  genDelIteratorCall(rewriter, loc, elemTp, iter);
-  rewriter.replaceOp(op, dst);
-  return success();
-}
-
 // Generates a while loop that iterates over the COO list extracted
 // from `t`, using `bodyBuilder` to build the loop body.
 //   while (elem = coo->getNext()) {
@@ -710,19 +622,6 @@ public:
       return failure();
     rewriter.replaceOp(op, adaptor.getOperands());
     return success();
-  }
-};
-
-/// Sparse conversion rule for a reshape operator.
-template <typename ReshapeOp>
-class SparseReshapeConverter : public OpConversionPattern<ReshapeOp> {
-public:
-  using OpAdaptor = typename OpConversionPattern<ReshapeOp>::OpAdaptor;
-  using OpConversionPattern<ReshapeOp>::OpConversionPattern;
-  LogicalResult
-  matchAndRewrite(ReshapeOp op, OpAdaptor adaptor,
-                  ConversionPatternRewriter &rewriter) const override {
-    return genSparse2SparseReshape(op, adaptor, rewriter);
   }
 };
 
@@ -1538,8 +1437,6 @@ void mlir::populateSparseTensorConversionPatterns(
   patterns
       .add<SparseReturnConverter, SparseTensorToDimSizeConverter,
            SparseCastConverter, SparseTensorNewConverter,
-           SparseReshapeConverter<tensor::ExpandShapeOp>,
-           SparseReshapeConverter<tensor::CollapseShapeOp>,
            SparseTensorConcatConverter, SparseTensorAllocConverter,
            SparseTensorEmptyConverter, SparseTensorDeallocConverter,
            SparseTensorToPositionsConverter, SparseTensorToCoordinatesConverter,
