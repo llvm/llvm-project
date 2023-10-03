@@ -78,8 +78,8 @@ bool formatAndApplyAllReplacements(
     const std::string &FilePath = FileAndReplaces.first;
     auto &CurReplaces = FileAndReplaces.second;
 
-    OptionalFileEntryRef Entry = Files.getOptionalFileRef(FilePath);
-    FileID ID = SM.getOrCreateFileID(*Entry, SrcMgr::C_User);
+    FileEntryRef Entry = llvm::cantFail(Files.getFileRef(FilePath));
+    FileID ID = SM.getOrCreateFileID(Entry, SrcMgr::C_User);
     StringRef Code = SM.getBufferData(ID);
 
     auto CurStyle = format::getStyle(Style, FilePath, "LLVM");

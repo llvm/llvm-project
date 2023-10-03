@@ -2364,8 +2364,9 @@ SourceManagerForFile::SourceManagerForFile(StringRef FileName,
       IntrusiveRefCntPtr<DiagnosticIDs>(new DiagnosticIDs),
       new DiagnosticOptions);
   SourceMgr = std::make_unique<SourceManager>(*Diagnostics, *FileMgr);
-  FileID ID = SourceMgr->createFileID(*FileMgr->getOptionalFileRef(FileName),
-                                      SourceLocation(), clang::SrcMgr::C_User);
+  FileEntryRef FE = llvm::cantFail(FileMgr->getFileRef(FileName));
+  FileID ID =
+      SourceMgr->createFileID(FE, SourceLocation(), clang::SrcMgr::C_User);
   assert(ID.isValid());
   SourceMgr->setMainFileID(ID);
 }
