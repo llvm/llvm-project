@@ -19,6 +19,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "SPIRV.h"
+#include "SPIRVSubtarget.h"
 #include "SPIRVTargetMachine.h"
 #include "SPIRVUtils.h"
 #include "llvm/CodeGen/IntrinsicLowering.h"
@@ -38,12 +39,13 @@ void initializeSPIRVPrepareFunctionsPass(PassRegistry &);
 namespace {
 
 class SPIRVPrepareFunctions : public ModulePass {
+  const SPIRVTargetMachine &TM;
   bool substituteIntrinsicCalls(Function *F);
   Function *removeAggregateTypesFromSignature(Function *F);
 
 public:
   static char ID;
-  SPIRVPrepareFunctions() : ModulePass(ID) {
+  SPIRVPrepareFunctions(const SPIRVTargetMachine &TM) : ModulePass(ID), TM(TM) {
     initializeSPIRVPrepareFunctionsPass(*PassRegistry::getPassRegistry());
   }
 
@@ -300,10 +302,8 @@ bool SPIRVPrepareFunctions::substituteIntrinsicCalls(Function *F) {
         Changed = true;
       } else if (II->getIntrinsicID() == Intrinsic::assume ||
                  II->getIntrinsicID() == Intrinsic::expect) {
-        TargetMachine &TM = M.getTargetMachine();
-        const TargetSubtargetInfo &STI = TM.getSubtarget<TargetSubtargetInfo>();
-
-        if(STI.canUse(SPIRV::Extension::SPV_KHR_expect_assume))
+        const SPIRVSubtarget &STI = TM.getSubtarget<SPIRVSubtarget>(*F);
+        if(STI.canUseExtension(SPIRV::Extension::SPV_KHR_expect_assume))
           lowerExpectAssume(II);
         Changed = true;
       }
@@ -381,12 +381,8 @@ SPIRVPrepareFunctions::removeAggregateTypesFromSignature(Function *F) {
 bool SPIRVPrepareFunctions::runOnModule(Module &M) {
   bool Changed = false;
 
-  // Get target machine and from it, the subtarget.
-  TargetMachine &TM = M.getTargetMachine();
-  const TargetSubtargetInfo &STI = TM.getSubtarget<TargetSubtargetInfo>();
-
   for (Function &F : M)
-    Changed |= substituteIntrinsicCalls(&F, STI);
+    Changed |= substituteIntrinsicCalls(&F);
 
   std::vector<Function *> FuncsWorklist;
   for (auto &F : M)
@@ -403,6 +399,6 @@ bool SPIRVPrepareFunctions::runOnModule(Module &M) {
   return Changed;
 }
 
-ModulePass *llvm::createSPIRVPrepareFunctionsPass() {
-  return new SPIRVPrepareFunctions();
+ModulePass *llvm::createSPIRVPrepareFunctionsPass(const SPIRVTargetMachine &TM) {
+  return new SPIRVPrepareFunctions(TM);
 }
