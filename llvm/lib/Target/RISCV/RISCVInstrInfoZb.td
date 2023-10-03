@@ -235,12 +235,18 @@ def SimmShiftRightBy3XForm : SDNodeXForm<imm, [{
 }]>;
 
 // Pattern to exclude simm12 immediates from matching.
+// Note: this will be removed once the GISel complex patterns for
+// SHXADD_UW is landed.
 def non_imm12 : PatLeaf<(XLenVT GPR:$a), [{
   auto *C = dyn_cast<ConstantSDNode>(N);
   return !C || !isInt<12>(C->getSExtValue());
 }]>;
 
-class binop_with_non_imm12<SDPatternOperator binop> : PatFrag<(ops node:$x, node:$y), (binop node:$x, node:$y), [{
+// GISel currently doesn't support PatFrag for leaf nodes, so `non_imm12`
+// cannot be directly supported in GISel. To reuse patterns between the two
+// ISels, we instead create PatFrag on operators that use `non_imm12`.
+class binop_with_non_imm12<SDPatternOperator binop>
+  : PatFrag<(ops node:$x, node:$y), (binop node:$x, node:$y), [{
   auto *C = dyn_cast<ConstantSDNode>(Operands[1]);
   return !C || !isInt<12>(C->getSExtValue());
 }]> {
@@ -259,9 +265,8 @@ class binop_with_non_imm12<SDPatternOperator binop> : PatFrag<(ops node:$x, node
     return true;
   }];
 }
-def add_non_imm12 : binop_with_non_imm12<add>;
+def add_non_imm12       : binop_with_non_imm12<add>;
 def or_is_add_non_imm12 : binop_with_non_imm12<or_is_add>;
-
 
 def Shifted32OnesMask : PatLeaf<(imm), [{
   uint64_t Imm = N->getZExtValue();

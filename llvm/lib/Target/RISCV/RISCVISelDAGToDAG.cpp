@@ -2443,15 +2443,6 @@ bool RISCVDAGToDAGISel::SelectAddrRegImm(SDValue Addr, SDValue &Base,
   return true;
 }
 
-bool RISCVDAGToDAGISel::selectNonImm12(SDValue N, SDValue &Opnd) {
-  auto *C = dyn_cast<ConstantSDNode>(N);
-  if (!C || !isInt<12>(C->getSExtValue())) {
-    Opnd = N;
-    return true;
-  }
-  return false;
-}
-
 bool RISCVDAGToDAGISel::selectShiftMask(SDValue N, unsigned ShiftWidth,
                                         SDValue &ShAmt) {
   ShAmt = N;
