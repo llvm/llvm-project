@@ -92,6 +92,10 @@ TBAATagAttr TBAABuilder::getDataAccessTag(Type baseFIRType, Type accessFIRType,
   return getAnyDataAccessTag();
 }
 
+TBAATagAttr TBAABuilder::getAnyAccessTag() {
+  return getAccessTag(anyAccessTypeDesc, anyAccessTypeDesc, /*offset=*/0);
+}
+
 void TBAABuilder::attachTBAATag(AliasAnalysisOpInterface op, Type baseFIRType,
                                 Type accessFIRType, GEPOp gep) {
   if (!enableTBAA)
@@ -106,10 +110,17 @@ void TBAABuilder::attachTBAATag(AliasAnalysisOpInterface op, Type baseFIRType,
                           << "\n");
 
   TBAATagAttr tbaaTagSym;
-  if (baseFIRType.isa<fir::BaseBoxType>())
+  if (fir::isRecordWithDescriptorMember(baseFIRType)) {
+    // A memory access that addresses an aggregate that contains
+    // a mix of data members and descriptor members may alias
+    // with both data and descriptor accesses.
+    // Conservatively set any-access tag if there is any descriptor member.
+    tbaaTagSym = getAnyAccessTag();
+  } else if (baseFIRType.isa<fir::BaseBoxType>()) {
     tbaaTagSym = getBoxAccessTag(baseFIRType, accessFIRType, gep);
-  else
+  } else {
     tbaaTagSym = getDataAccessTag(baseFIRType, accessFIRType, gep);
+  }
 
   if (!tbaaTagSym)
     return;

@@ -188,6 +188,9 @@ private:
   // Returns TBAATagAttr representing access tag:
   //   < <any data access>, <any data access>, 0 >
   mlir::LLVM::TBAATagAttr getAnyDataAccessTag();
+  // Returns TBAATagAttr representing access tag:
+  //   < <any access>, <any access>, 0 >
+  mlir::LLVM::TBAATagAttr getAnyAccessTag();
 
   // Returns TBAATagAttr representing access tag described by the base and
   // access FIR types and the LLVM::GepOp representing the access in terms of
