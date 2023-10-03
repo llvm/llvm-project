@@ -606,10 +606,10 @@ void test_fpclassify()
     static_assert((std::is_same<decltype(fpclassify(Value<float>())), int>::value), "");
     static_assert((std::is_same<decltype(fpclassify(Value<double>())), int>::value), "");
     static_assert((std::is_same<decltype(fpclassify(Value<long double>())), int>::value), "");
-    static_assert(noexcept(std::fpclassify((float)0)), "");
-    static_assert(noexcept(std::fpclassify((double)0)), "");
-    static_assert(noexcept(std::fpclassify((long double)0)), "");
-    static_assert(noexcept(std::fpclassify(0)), "");
+    ASSERT_NOEXCEPT(std::fpclassify((float)0));
+    ASSERT_NOEXCEPT(std::fpclassify((double)0));
+    ASSERT_NOEXCEPT(std::fpclassify((long double)0));
+    ASSERT_NOEXCEPT(std::fpclassify(0));
     assert(std::fpclassify(-1.0) == FP_NORMAL);
     assert(std::fpclassify(0) == FP_ZERO);
     assert(std::fpclassify(1) == FP_NORMAL);
