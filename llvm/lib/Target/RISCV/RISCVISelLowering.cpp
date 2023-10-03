@@ -779,15 +779,22 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
       // Splice
       setOperationAction(ISD::VECTOR_SPLICE, VT, Custom);
 
+      if (Subtarget.hasStdExtZvkb()) {
+        setOperationAction(ISD::BSWAP, VT, Legal);
+        setOperationAction(ISD::VP_BSWAP, VT, Custom);
+      } else {
+        setOperationAction({ISD::BSWAP, ISD::VP_BSWAP}, VT, Expand);
+        setOperationAction({ISD::ROTL, ISD::ROTR}, VT, Expand);
+      }
+
       if (Subtarget.hasStdExtZvbb()) {
-        setOperationAction({ISD::BITREVERSE, ISD::BSWAP}, VT, Legal);
-        setOperationAction({ISD::VP_BITREVERSE, ISD::VP_BSWAP}, VT, Custom);
+        setOperationAction(ISD::BITREVERSE, VT, Legal);
+        setOperationAction(ISD::VP_BITREVERSE, VT, Custom);
         setOperationAction({ISD::VP_CTLZ, ISD::VP_CTLZ_ZERO_UNDEF, ISD::VP_CTTZ,
                             ISD::VP_CTTZ_ZERO_UNDEF, ISD::VP_CTPOP},
                            VT, Custom);
       } else {
-        setOperationAction({ISD::BITREVERSE, ISD::BSWAP}, VT, Expand);
-        setOperationAction({ISD::VP_BITREVERSE, ISD::VP_BSWAP}, VT, Expand);
+        setOperationAction({ISD::BITREVERSE, ISD::VP_BITREVERSE}, VT, Expand);
         setOperationAction({ISD::CTLZ, ISD::CTTZ, ISD::CTPOP}, VT, Expand);
         setOperationAction({ISD::VP_CTLZ, ISD::VP_CTLZ_ZERO_UNDEF, ISD::VP_CTTZ,
                             ISD::VP_CTTZ_ZERO_UNDEF, ISD::VP_CTPOP},
@@ -802,8 +809,6 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
                               ISD::VP_CTLZ_ZERO_UNDEF, ISD::VP_CTTZ_ZERO_UNDEF},
                              VT, Custom);
         }
-
-        setOperationAction({ISD::ROTL, ISD::ROTR}, VT, Expand);
       }
     }
 
@@ -1109,11 +1114,12 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
 
         setOperationAction(IntegerVPOps, VT, Custom);
 
+        if (Subtarget.hasStdExtZvkb())
+          setOperationAction({ISD::BSWAP, ISD::ROTL, ISD::ROTR}, VT, Custom);
+
         if (Subtarget.hasStdExtZvbb()) {
-          setOperationAction({ISD::BITREVERSE, ISD::BSWAP, ISD::CTLZ,
-                              ISD::CTLZ_ZERO_UNDEF, ISD::CTTZ,
-                              ISD::CTTZ_ZERO_UNDEF, ISD::CTPOP, ISD::ROTL,
-                              ISD::ROTR},
+          setOperationAction({ISD::BITREVERSE, ISD::CTLZ, ISD::CTLZ_ZERO_UNDEF,
+                              ISD::CTTZ, ISD::CTTZ_ZERO_UNDEF, ISD::CTPOP},
                              VT, Custom);
         } else {
           // Lower CTLZ_ZERO_UNDEF and CTTZ_ZERO_UNDEF if element of VT in the
@@ -4376,7 +4382,7 @@ static SDValue lowerBitreverseShuffle(ShuffleVectorSDNode *SVN,
 
 // Given a shuffle mask like <3, 0, 1, 2, 7, 4, 5, 6> for v8i8, we can
 // reinterpret it as a v2i32 and rotate it right by 8 instead. We can lower this
-// as a vror.vi if we have zvbb, or otherwise as a vsll, vsrl and vor.
+// as a vror.vi if we have Zvkb, or otherwise as a vsll, vsrl and vor.
 static SDValue lowerVECTOR_SHUFFLEAsRotate(ShuffleVectorSDNode *SVN,
                                            SelectionDAG &DAG,
                                            const RISCVSubtarget &Subtarget) {
@@ -4527,9 +4533,9 @@ static SDValue lowerVECTOR_SHUFFLE(SDValue Op, SelectionDAG &DAG,
           lowerVECTOR_SHUFFLEAsVSlidedown(DL, VT, V1, V2, Mask, Subtarget, DAG))
     return V;
 
-  // A bitrotate will be one instruction on zvbb, so try to lower to it first if
+  // A bitrotate will be one instruction on Zvkb, so try to lower to it first if
   // available.
-  if (Subtarget.hasStdExtZvbb())
+  if (Subtarget.hasStdExtZvkb())
     if (SDValue V = lowerVECTOR_SHUFFLEAsRotate(SVN, DAG, Subtarget))
       return V;
 
@@ -4660,7 +4666,7 @@ static SDValue lowerVECTOR_SHUFFLE(SDValue Op, SelectionDAG &DAG,
     return DAG.getNode(ISD::VSELECT, DL, VT, SelectMask, V1, V2);
 
   // We might be able to express the shuffle as a bitrotate. But even if we
-  // don't have zvbb and have to expand, the expanded sequence of approx. 2
+  // don't have Zvkb and have to expand, the expanded sequence of approx. 2
   // shifts and a vor will have a higher throughput than a vrgather.
   if (SDValue V = lowerVECTOR_SHUFFLEAsRotate(SVN, DAG, Subtarget))
     return V;
@@ -5482,7 +5488,7 @@ SDValue RISCVTargetLowering::LowerOperation(SDValue Op,
   case ISD::ROTL:
   case ISD::ROTR:
     if (Op.getValueType().isFixedLengthVector()) {
-      assert(Subtarget.hasStdExtZvbb());
+      assert(Subtarget.hasStdExtZvkb());
       return lowerToScalableOp(Op, DAG);
     }
     assert(Subtarget.hasVendorXTHeadBb() &&
