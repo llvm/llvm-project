@@ -2519,11 +2519,11 @@ def TestEffectsOpA : TEST_Op<"op_with_effects_a"> {
     Arg<OptionalAttr<SymbolRefAttr>, "", [MemRead]>:$optional_symbol
   );
 
-  let results = (outs Res<AnyMemRef, "", [MemAlloc<TestResource>]>);
+  let results = (outs Res<AnyMemRef, "", [MemAlloc<TestResource, 0>]>);
 }
 
 def TestEffectsOpB : TEST_Op<"op_with_effects_b",
-    [MemoryEffects<[MemWrite<TestResource>]>]>;
+    [MemoryEffects<[MemWrite<TestResource, 0>]>]>;
 
 def TestEffectsRead : TEST_Op<"op_with_memread",
     [MemoryEffects<[MemRead]>]> {

@@ -911,7 +911,13 @@ void RISCVDAGToDAGISel::Select(SDNode *Node) {
       break;
     }
 
-    SDNode *Res = CurDAG->getMachineNode(Opc, DL, VT, Imm);
+    SDNode *Res;
+    if (Opc == RISCV::FCVT_D_W_IN32X || Opc == RISCV::FCVT_D_W)
+      Res = CurDAG->getMachineNode(
+          Opc, DL, VT, Imm,
+          CurDAG->getTargetConstant(RISCVFPRndMode::RNE, DL, XLenVT));
+    else
+      Res = CurDAG->getMachineNode(Opc, DL, VT, Imm);
 
     // For f64 -0.0, we need to insert a fneg.d idiom.
     if (NegZeroF64)
@@ -2889,7 +2895,7 @@ static bool vectorPseudoHasAllNBitUsers(SDNode *User, unsigned UserOpNo,
   case RISCV::VSMUL_VX:
   // 16.1. Integer Scalar Move Instructions
   case RISCV::VMV_S_X:
-    if (Bits < (1 << Log2SEW))
+    if (Bits < (1U << Log2SEW))
       return false;
   }
   return true;

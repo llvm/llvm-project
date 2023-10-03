@@ -71,6 +71,14 @@ func.func @ops(%arg0: i32, %arg1: f32,
   %20 = llvm.mlir.addressof @foo : !llvm.ptr
   %21 = llvm.call %20(%arg0) : !llvm.ptr, (i32) -> !llvm.struct<(i32, f64, i32)>
 
+// Variadic calls
+// CHECK:  llvm.call @vararg_func(%arg0, %arg0) vararg(!llvm.func<void (i32, ...)>) : (i32, i32) -> ()
+// CHECK:  %[[VARIADIC_FUNC:.*]] = llvm.mlir.addressof @vararg_func : !llvm.ptr
+// CHECK:  llvm.call %[[VARIADIC_FUNC]](%[[I32]], %[[I32]]) vararg(!llvm.func<void (i32, ...)>) : !llvm.ptr, (i32, i32) -> ()
+  llvm.call @vararg_func(%arg0, %arg0) vararg(!llvm.func<void (i32, ...)>) : (i32, i32) -> ()
+  %variadic_func = llvm.mlir.addressof @vararg_func : !llvm.ptr
+  llvm.call %variadic_func(%arg0, %arg0) vararg(!llvm.func<void (i32, ...)>) : !llvm.ptr, (i32, i32) -> ()
+
 // Terminator operations and their successors.
 //
 // CHECK: llvm.br ^[[BB1:.*]]
@@ -182,6 +190,8 @@ llvm.func @gep(%ptr: !llvm.ptr, %idx: i64, %ptr2: !llvm.ptr) {
   llvm.getelementptr inbounds %ptr2[%idx, 0, %idx] : (!llvm.ptr, i64, i64) -> !llvm.ptr, !llvm.struct<(array<10 x f32>)>
   llvm.return
 }
+
+llvm.func @vararg_foo(i32, ...) -> !llvm.struct<(i32, f64, i32)>
 
 // An larger self-contained function.
 // CHECK-LABEL: llvm.func @foo(%{{.*}}: i32) -> !llvm.struct<(i32, f64, i32)> {
@@ -427,8 +437,21 @@ llvm.func @invokeLandingpad() -> i32 attributes { personality = @__gxx_personali
   %13 = llvm.invoke %12(%5) to ^bb2 unwind ^bb1 : !llvm.ptr, (i32) -> !llvm.struct<(i32, f64, i32)>
 
 // CHECK: ^[[BB5:.*]]:
-// CHECK:   llvm.return %[[V0]] : i32
+// CHECK: %{{.*}} = llvm.invoke @{{.*}} vararg(!llvm.func<struct<(i32, f64, i32)> (i32, ...)>) : (i32, i32) -> !llvm.struct<(i32, f64, i32)>
+
 ^bb5:
+  %14 = llvm.invoke @vararg_foo(%5, %5) to ^bb2 unwind ^bb1 vararg(!llvm.func<struct<(i32, f64, i32)> (i32, ...)>) : (i32, i32) -> !llvm.struct<(i32, f64, i32)>
+
+// CHECK: ^[[BB6:.*]]:
+// CHECK: %[[FUNC:.*]] = llvm.mlir.addressof @vararg_foo : !llvm.ptr
+// CHECK: %{{.*}} = llvm.invoke %[[FUNC]]{{.*}} vararg(!llvm.func<struct<(i32, f64, i32)> (i32, ...)>) : !llvm.ptr, (i32, i32) -> !llvm.struct<(i32, f64, i32)>
+^bb6:
+  %15 = llvm.mlir.addressof @vararg_foo : !llvm.ptr
+  %16 = llvm.invoke %15(%5, %5) to ^bb2 unwind ^bb1 vararg(!llvm.func<!llvm.struct<(i32, f64, i32)> (i32, ...)>) : !llvm.ptr, (i32, i32) -> !llvm.struct<(i32, f64, i32)>
+
+// CHECK: ^[[BB7:.*]]:
+// CHECK:   llvm.return %[[V0]] : i32
+^bb7:
   llvm.return %0 : i32
 }
 

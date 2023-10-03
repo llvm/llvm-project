@@ -1935,6 +1935,9 @@ static Triple withHostArch(Triple T) {
 #elif defined(__x86_64__)
   T.setArch(Triple::x86_64);
   T.setArchName("x86_64");
+#elif defined(__i386__)
+  T.setArch(Triple::x86);
+  T.setArchName("i386");
 #elif defined(__powerpc__)
   T.setArch(Triple::ppc);
   T.setArchName("powerpc");

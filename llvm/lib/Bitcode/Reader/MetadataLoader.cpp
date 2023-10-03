@@ -473,7 +473,8 @@ class MetadataLoader::MetadataLoaderImpl {
 
   Error parseOneMetadata(SmallVectorImpl<uint64_t> &Record, unsigned Code,
                          PlaceholderQueue &Placeholders, StringRef Blob,
-                         unsigned &NextMetadataNo);
+                         unsigned &NextMetadataNo,
+                         BasicBlock *ConstExprInsertBB);
   Error parseMetadataStrings(ArrayRef<uint64_t> Record, StringRef Blob,
                              function_ref<void(StringRef)> CallBack);
   Error parseGlobalObjectAttachment(GlobalObject &GO,
@@ -548,8 +549,6 @@ class MetadataLoader::MetadataLoaderImpl {
 
   /// Move local imports from DICompileUnit's 'imports' field to
   /// DISubprogram's retainedNodes.
-  /// Move fucntion-local enums from DICompileUnit's enums
-  /// to DISubprogram's retainedNodes.
   void upgradeCULocals() {
     if (NamedMDNode *CUNodes = TheModule.getNamedMetadata("llvm.dbg.cu")) {
       for (unsigned I = 0, E = CUNodes->getNumOperands(); I != E; ++I) {
@@ -557,66 +556,48 @@ class MetadataLoader::MetadataLoaderImpl {
         if (!CU)
           continue;
 
-        SetVector<Metadata *> MetadataToRemove;
-        // Collect imported entities to be moved.
-        if (CU->getRawImportedEntities())
+        if (CU->getRawImportedEntities()) {
+          // Collect a set of imported entities to be moved.
+          SetVector<Metadata *> EntitiesToRemove;
           for (Metadata *Op : CU->getImportedEntities()->operands()) {
             auto *IE = cast<DIImportedEntity>(Op);
-            if (dyn_cast_or_null<DILocalScope>(IE->getScope()))
-              MetadataToRemove.insert(IE);
-          }
-        // Collect enums to be moved.
-        if (CU->getRawEnumTypes())
-          for (Metadata *Op : CU->getEnumTypes()->operands()) {
-            auto *Enum = cast<DICompositeType>(Op);
-            if (dyn_cast_or_null<DILocalScope>(Enum->getScope()))
-              MetadataToRemove.insert(Enum);
+            if (dyn_cast_or_null<DILocalScope>(IE->getScope())) {
+              EntitiesToRemove.insert(IE);
+            }
           }
 
-        if (!MetadataToRemove.empty()) {
-          // Make a new list of CU's 'imports'.
-          SmallVector<Metadata *> NewImports;
-          if (CU->getRawImportedEntities())
-            for (Metadata *Op : CU->getImportedEntities()->operands())
-              if (!MetadataToRemove.contains(Op))
+          if (!EntitiesToRemove.empty()) {
+            // Make a new list of CU's 'imports'.
+            SmallVector<Metadata *> NewImports;
+            for (Metadata *Op : CU->getImportedEntities()->operands()) {
+              if (!EntitiesToRemove.contains(cast<DIImportedEntity>(Op))) {
                 NewImports.push_back(Op);
+              }
+            }
 
-          // Make a new list of CU's 'enums'.
-          SmallVector<Metadata *> NewEnums;
-          if (CU->getRawEnumTypes())
-            for (Metadata *Op : CU->getEnumTypes()->operands())
-              if (!MetadataToRemove.contains(Op))
-                NewEnums.push_back(Op);
+            // Find DISubprogram corresponding to each entity.
+            std::map<DISubprogram *, SmallVector<Metadata *>> SPToEntities;
+            for (auto *I : EntitiesToRemove) {
+              auto *Entity = cast<DIImportedEntity>(I);
+              if (auto *SP = findEnclosingSubprogram(
+                      cast<DILocalScope>(Entity->getScope()))) {
+                SPToEntities[SP].push_back(Entity);
+              }
+            }
 
-          // Find DISubprogram corresponding to each entity.
-          std::map<DISubprogram *, SmallVector<Metadata *>> SPToEntities;
-          for (auto *I : MetadataToRemove) {
-            DILocalScope *Scope = nullptr;
-            if (auto *Entity = dyn_cast<DIImportedEntity>(I))
-              Scope = cast<DILocalScope>(Entity->getScope());
-            else if (auto *Enum = dyn_cast<DICompositeType>(I))
-              Scope = cast<DILocalScope>(Enum->getScope());
+            // Update DISubprograms' retainedNodes.
+            for (auto I = SPToEntities.begin(); I != SPToEntities.end(); ++I) {
+              auto *SP = I->first;
+              auto RetainedNodes = SP->getRetainedNodes();
+              SmallVector<Metadata *> MDs(RetainedNodes.begin(),
+                                          RetainedNodes.end());
+              MDs.append(I->second);
+              SP->replaceRetainedNodes(MDNode::get(Context, MDs));
+            }
 
-            if (auto *SP = findEnclosingSubprogram(Scope))
-              SPToEntities[SP].push_back(I);
-          }
-
-          // Update DISubprograms' retainedNodes.
-          for (auto I = SPToEntities.begin(); I != SPToEntities.end(); ++I) {
-            auto *SP = I->first;
-            auto RetainedNodes = SP->getRetainedNodes();
-            SmallVector<Metadata *> MDs(RetainedNodes.begin(),
-                                        RetainedNodes.end());
-            MDs.append(I->second);
-            SP->replaceRetainedNodes(MDNode::get(Context, MDs));
-          }
-
-          // Remove entities with local scope from CU.
-          if (CU->getRawImportedEntities())
+            // Remove entities with local scope from CU.
             CU->replaceImportedEntities(MDTuple::get(Context, NewImports));
-          // Remove enums with local scope from CU.
-          if (CU->getRawEnumTypes())
-            CU->replaceEnumTypes(MDTuple::get(Context, NewEnums));
+          }
         }
       }
     }
@@ -742,7 +723,7 @@ public:
         TheModule(TheModule), Callbacks(std::move(Callbacks)),
         IsImporting(IsImporting) {}
 
-  Error parseMetadata(bool ModuleLevel);
+  Error parseMetadata(bool ModuleLevel, BasicBlock *ConstExprInsertBB);
 
   bool hasFwdRefs() const { return MetadataList.hasFwdRefs(); }
 
@@ -1067,7 +1048,8 @@ void MetadataLoader::MetadataLoaderImpl::callMDTypeCallback(Metadata **Val,
 
 /// Parse a METADATA_BLOCK. If ModuleLevel is true then we are parsing
 /// module level metadata.
-Error MetadataLoader::MetadataLoaderImpl::parseMetadata(bool ModuleLevel) {
+Error MetadataLoader::MetadataLoaderImpl::parseMetadata(
+    bool ModuleLevel, BasicBlock *ConstExprInsertBB) {
   if (!ModuleLevel && MetadataList.hasFwdRefs())
     return error("Invalid metadata: fwd refs into function blocks");
 
@@ -1150,7 +1132,7 @@ Error MetadataLoader::MetadataLoaderImpl::parseMetadata(bool ModuleLevel) {
     if (Expected<unsigned> MaybeCode =
             Stream.readRecord(Entry.ID, Record, &Blob)) {
       if (Error Err = parseOneMetadata(Record, MaybeCode.get(), Placeholders,
-                                       Blob, NextMetadataNo))
+                                       Blob, NextMetadataNo, ConstExprInsertBB))
         return Err;
     } else
       return MaybeCode.takeError();
@@ -1191,7 +1173,8 @@ void MetadataLoader::MetadataLoaderImpl::lazyLoadOneMetadata(
   if (Expected<unsigned> MaybeCode =
           IndexCursor.readRecord(Entry.ID, Record, &Blob)) {
     if (Error Err =
-            parseOneMetadata(Record, MaybeCode.get(), Placeholders, Blob, ID))
+            parseOneMetadata(Record, MaybeCode.get(), Placeholders, Blob, ID,
+                             /* ConstExprInsertBB */ nullptr))
       report_fatal_error("Can't lazyload MD, parseOneMetadata: " +
                          Twine(toString(std::move(Err))));
   } else
@@ -1235,7 +1218,8 @@ void MetadataLoader::MetadataLoaderImpl::resolveForwardRefsAndPlaceholders(
 
 Error MetadataLoader::MetadataLoaderImpl::parseOneMetadata(
     SmallVectorImpl<uint64_t> &Record, unsigned Code,
-    PlaceholderQueue &Placeholders, StringRef Blob, unsigned &NextMetadataNo) {
+    PlaceholderQueue &Placeholders, StringRef Blob, unsigned &NextMetadataNo,
+    BasicBlock *ConstExprInsertBB) {
 
   bool IsDistinct = false;
   auto getMD = [&](unsigned ID) -> Metadata * {
@@ -1389,8 +1373,7 @@ Error MetadataLoader::MetadataLoaderImpl::parseOneMetadata(
     if (!Ty || Ty->isMetadataTy() || Ty->isVoidTy())
       return error("Invalid record");
 
-    Value *V = ValueList.getValueFwdRef(Record[1], Ty, TyID,
-                                        /*ConstExprInsertBB*/ nullptr);
+    Value *V = ValueList.getValueFwdRef(Record[1], Ty, TyID, ConstExprInsertBB);
     if (!V)
       return error("Invalid value reference from metadata");
 
@@ -2479,8 +2462,9 @@ MetadataLoader::MetadataLoader(BitstreamCursor &Stream, Module &TheModule,
     : Pimpl(std::make_unique<MetadataLoaderImpl>(
           Stream, TheModule, ValueList, std::move(Callbacks), IsImporting)) {}
 
-Error MetadataLoader::parseMetadata(bool ModuleLevel) {
-  return Pimpl->parseMetadata(ModuleLevel);
+Error MetadataLoader::parseMetadata(bool ModuleLevel,
+                                    BasicBlock *ConstExprInsertBB) {
+  return Pimpl->parseMetadata(ModuleLevel, ConstExprInsertBB);
 }
 
 bool MetadataLoader::hasFwdRefs() const { return Pimpl->hasFwdRefs(); }

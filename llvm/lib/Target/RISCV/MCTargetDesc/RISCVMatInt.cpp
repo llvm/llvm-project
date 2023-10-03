@@ -257,10 +257,27 @@ InstSeq generateInstSeq(int64_t Val, const FeatureBitset &ActiveFeatures) {
   assert(ActiveFeatures[RISCV::Feature64Bit] &&
          "Expected RV32 to only need 2 instructions");
 
+  // If the lower 13 bits are something like 0x17ff, try to add 1 to change the
+  // lower 13 bits to 0x1800. We can restore this with an ADDI of -1 at the end
+  // of the sequence. Call generateInstSeqImpl on the new constant which may
+  // subtract 0xfffffffffffff800 to create another ADDI. This will leave a
+  // constant with more than 12 trailing zeros for the next recursive step.
+  if ((Val & 0xfff) != 0 && (Val & 0x1800) == 0x1000) {
+    int64_t Imm12 = -(0x800 - (Val & 0xfff));
+    int64_t AdjustedVal = Val - Imm12;
+    RISCVMatInt::InstSeq TmpSeq;
+    generateInstSeqImpl(AdjustedVal, ActiveFeatures, TmpSeq);
+
+    // Keep the new sequence if it is an improvement.
+    if ((TmpSeq.size() + 1) < Res.size()) {
+      TmpSeq.emplace_back(RISCV::ADDI, Imm12);
+      Res = TmpSeq;
+    }
+  }
+
   // If the constant is positive we might be able to generate a shifted constant
   // with no leading zeros and use a final SRLI to restore them.
-  if (Val > 0) {
-    assert(Res.size() > 2 && "Expected longer sequence");
+  if (Val > 0 && Res.size() > 2) {
     generateInstSeqLeadingZeros(Val, ActiveFeatures, Res);
   }
 
