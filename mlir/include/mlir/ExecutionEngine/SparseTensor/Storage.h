@@ -783,8 +783,11 @@ private:
     for (uint64_t l = 0; l < lvlRank; ++l) {
       const auto crd = lvlCoords[l];
       const auto cur = lvlCursor[l];
-      if (crd > cur || (crd == cur && !isUniqueLvl(l)))
+      if (crd > cur || (crd == cur && !isUniqueLvl(l)) ||
+          (crd < cur && !isOrderedLvl(l))) {
         return l;
+      }
+
       if (crd < cur) {
         assert(false && "non-lexicographic insertion");
         return -1u;
@@ -900,8 +903,7 @@ protected:
 
 //===----------------------------------------------------------------------===//
 template <typename P, typename C, typename V>
-class SparseTensorEnumerator final
-    : public SparseTensorEnumeratorBase<V> {
+class SparseTensorEnumerator final : public SparseTensorEnumeratorBase<V> {
   using Base = SparseTensorEnumeratorBase<V>;
   using StorageImpl = SparseTensorStorage<P, C, V>;
 
