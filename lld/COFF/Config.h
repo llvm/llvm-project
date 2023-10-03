@@ -48,7 +48,7 @@ enum class ExportSource {
   ModuleDefinition,
 };
 
-enum class EmitKind { Obj, LLVM };
+enum class EmitKind { Obj, LLVM, ASM };
 
 // Represents an /export option.
 struct Export {
