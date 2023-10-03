@@ -477,7 +477,7 @@ class SLocEntry {
   static constexpr int OffsetBits = 8 * sizeof(SourceLocation::UIntTy) - 2;
   SourceLocation::UIntTy Offset : OffsetBits;
   SourceLocation::UIntTy IsExpansion : 1;
-  SourceLocation::UIntTy Loaded : 1;
+  SourceLocation::UIntTy IsLoaded : 1;
   union {
     FileInfo File;
     ExpansionInfo Expansion;
