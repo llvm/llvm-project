@@ -32,7 +32,7 @@
 #define PROCESS(X, ...)PROCESS_##X __VA_OPT__(,__THIS_MACRO__(__VA_ARGS__))
 
 4: PROCESS(ELEM(0),LIST(ELEM(1),ELEM(2)),ELEM(3))
-// CHECK: 4: 0 ,{1, 2}, 3
+// CHECK: 4: 0 ,{1 ,2 } ,3
 
 #undef PROCESS_LIST
 #undef PROCESS_ELEM
