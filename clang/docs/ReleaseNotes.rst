@@ -216,7 +216,7 @@ Improvements to Clang's diagnostics
 - The fix-it emitted by ``-Wformat`` for scoped enumerations now take the
   enumeration's underlying type into account instead of suggesting a type just
   based on the format string specifier being used.
-- ``-Wfixed-enum-extension`` and ``-Wmicrosoft-fixed-enunm`` are no longer
+- ``-Wfixed-enum-extension`` and ``-Wmicrosoft-fixed-enum`` diagnostics are no longer
   emitted when building as C23, since C23 standardizes support for enums with a
   fixed underlying type.
 
