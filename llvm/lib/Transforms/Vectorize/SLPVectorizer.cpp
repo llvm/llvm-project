@@ -3812,7 +3812,7 @@ static void reorderOrder(SmallVectorImpl<unsigned> &Order, ArrayRef<int> Mask) {
     inversePermutation(Order, MaskOrder);
   }
   reorderReuses(MaskOrder, Mask);
-  if (ShuffleVectorInst::isIdentityMask(MaskOrder, MaskOrder.size())) {
+  if (ShuffleVectorInst::isIdentityMask(MaskOrder)) {
     Order.clear();
     return;
   }
@@ -4333,7 +4333,7 @@ BoUpSLP::getReorderingData(const TreeEntry &TE, bool TopToBottom) {
 static bool isRepeatedNonIdentityClusteredMask(ArrayRef<int> Mask,
                                                unsigned Sz) {
   ArrayRef<int> FirstCluster = Mask.slice(0, Sz);
-  if (ShuffleVectorInst::isIdentityMask(FirstCluster, Sz))
+  if (ShuffleVectorInst::isIdentityMask(FirstCluster))
     return false;
   for (unsigned I = Sz, E = Mask.size(); I < E; I += Sz) {
     ArrayRef<int> Cluster = Mask.slice(I, Sz);
@@ -6646,24 +6646,9 @@ protected:
                              bool IsStrict) {
     int Limit = Mask.size();
     int VF = VecTy->getNumElements();
-    int Index = -1;
-    if (VF == Limit && ShuffleVectorInst::isIdentityMask(Mask, Limit))
-      return true;
-    if (!IsStrict) {
-      // Consider extract subvector starting from index 0.
-      if (ShuffleVectorInst::isExtractSubvectorMask(Mask, VF, Index) &&
-          Index == 0)
-        return true;
-      // All VF-size submasks are identity (e.g.
-      // <poison,poison,poison,poison,0,1,2,poison,poison,1,2,3> etc. for VF 4).
-      if (Limit % VF == 0 && all_of(seq<int>(0, Limit / VF), [=](int Idx) {
-            ArrayRef<int> Slice = Mask.slice(Idx * VF, VF);
-            return all_of(Slice, [](int I) { return I == PoisonMaskElem; }) ||
-                   ShuffleVectorInst::isIdentityMask(Slice, VF);
-          }))
-        return true;
-    }
-    return false;
+    return (VF == Limit || !IsStrict) &&
+           all_of(Mask, [Limit](int Idx) { return Idx < Limit; }) &&
+           ShuffleVectorInst::isIdentityMask(Mask);
   }
 
   /// Tries to combine 2 different masks into single one.
@@ -6733,8 +6718,7 @@ protected:
       if (isIdentityMask(Mask, SVTy, /*IsStrict=*/false)) {
         if (!IdentityOp || !SinglePermute ||
             (isIdentityMask(Mask, SVTy, /*IsStrict=*/true) &&
-             !ShuffleVectorInst::isZeroEltSplatMask(IdentityMask,
-                                                    IdentityMask.size()))) {
+             !ShuffleVectorInst::isZeroEltSplatMask(IdentityMask))) {
           IdentityOp = SV;
           // Store current mask in the IdentityMask so later we did not lost
           // this info if IdentityOp is selected as the best candidate for the
@@ -6804,7 +6788,7 @@ protected:
     }
     if (auto *OpTy = dyn_cast<FixedVectorType>(Op->getType());
         !OpTy || !isIdentityMask(Mask, OpTy, SinglePermute) ||
-        ShuffleVectorInst::isZeroEltSplatMask(Mask, Mask.size())) {
+        ShuffleVectorInst::isZeroEltSplatMask(Mask)) {
       if (IdentityOp) {
         V = IdentityOp;
         assert(Mask.size() == IdentityMask.size() &&
@@ -6820,7 +6804,7 @@ protected:
                                /*IsStrict=*/true) ||
                 (Shuffle && Mask.size() == Shuffle->getShuffleMask().size() &&
                  Shuffle->isZeroEltSplat() &&
-                 ShuffleVectorInst::isZeroEltSplatMask(Mask, Mask.size())));
+                 ShuffleVectorInst::isZeroEltSplatMask(Mask)));
       }
       V = Op;
       return false;
@@ -6925,9 +6909,11 @@ protected:
           CombinedMask1[I] = CombinedMask2[I] + (Op1 == Op2 ? 0 : VF);
         }
       }
-      if (Op1 == Op2 &&
-          (ShuffleVectorInst::isIdentityMask(CombinedMask1, VF) ||
-           (ShuffleVectorInst::isZeroEltSplatMask(CombinedMask1, VF) &&
+      const int Limit = CombinedMask1.size() * 2;
+      if (Op1 == Op2 && Limit == 2 * VF &&
+          all_of(CombinedMask1, [=](int Idx) { return Idx < Limit; }) &&
+          (ShuffleVectorInst::isIdentityMask(CombinedMask1) ||
+           (ShuffleVectorInst::isZeroEltSplatMask(CombinedMask1) &&
             isa<ShuffleVectorInst>(Op1) &&
             cast<ShuffleVectorInst>(Op1)->getShuffleMask() ==
                 ArrayRef(CombinedMask1))))
@@ -6966,20 +6952,6 @@ class BoUpSLP::ShuffleCostEstimator : public BaseShuffleAnalysis {
   BoUpSLP &R;
   SmallPtrSetImpl<Value *> &CheckedExtracts;
   constexpr static TTI::TargetCostKind CostKind = TTI::TCK_RecipThroughput;
-
-  static Constant *getAllOnesValue(const DataLayout &DL, Type *Ty) {
-    if (Ty->getScalarType()->isPointerTy()) {
-      Constant *Res = ConstantExpr::getIntToPtr(
-          ConstantInt::getAllOnesValue(
-              IntegerType::get(Ty->getContext(),
-                               DL.getTypeStoreSizeInBits(Ty->getScalarType()))),
-          Ty->getScalarType());
-      if (auto *VTy = dyn_cast<VectorType>(Ty))
-        Res = ConstantVector::getSplat(VTy->getElementCount(), Res);
-      return Res;
-    }
-    return Constant::getAllOnesValue(Ty);
-  }
 
   InstructionCost getBuildVectorCost(ArrayRef<Value *> VL, Value *Root) {
     if ((!Root && allConstant(VL)) || all_of(VL, UndefValue::classof))
@@ -7211,12 +7183,11 @@ class BoUpSLP::ShuffleCostEstimator : public BaseShuffleAnalysis {
     const TargetTransformInfo &TTI;
 
     static bool isEmptyOrIdentity(ArrayRef<int> Mask, unsigned VF) {
-      int Index = -1;
+      int Limit = 2 * VF;
       return Mask.empty() ||
              (VF == Mask.size() &&
-              ShuffleVectorInst::isIdentityMask(Mask, VF)) ||
-             (ShuffleVectorInst::isExtractSubvectorMask(Mask, VF, Index) &&
-              Index == 0);
+              all_of(Mask, [Limit](int Idx) { return Idx < Limit; }) &&
+              ShuffleVectorInst::isIdentityMask(Mask));
     }
 
   public:
@@ -7229,17 +7200,21 @@ class BoUpSLP::ShuffleCostEstimator : public BaseShuffleAnalysis {
           cast<VectorType>(V1->getType())->getElementCount().getKnownMinValue();
       if (isEmptyOrIdentity(Mask, VF))
         return TTI::TCC_Free;
-      return TTI.getShuffleCost(TTI::SK_PermuteTwoSrc,
-                                cast<VectorType>(V1->getType()), Mask);
+      return TTI.getShuffleCost(
+          TTI::SK_PermuteTwoSrc,
+          FixedVectorType::get(
+              cast<VectorType>(V1->getType())->getElementType(), Mask.size()),
+          Mask);
     }
     InstructionCost createShuffleVector(Value *V1, ArrayRef<int> Mask) const {
       // Empty mask or identity mask are free.
-      unsigned VF =
-          cast<VectorType>(V1->getType())->getElementCount().getKnownMinValue();
-      if (isEmptyOrIdentity(Mask, VF))
+      if (isEmptyOrIdentity(Mask, Mask.size()))
         return TTI::TCC_Free;
-      return TTI.getShuffleCost(TTI::SK_PermuteSingleSrc,
-                                cast<VectorType>(V1->getType()), Mask);
+      return TTI.getShuffleCost(
+          TTI::SK_PermuteSingleSrc,
+          FixedVectorType::get(
+              cast<VectorType>(V1->getType())->getElementType(), Mask.size()),
+          Mask);
     }
     InstructionCost createIdentity(Value *) const { return TTI::TCC_Free; }
     InstructionCost createPoison(Type *Ty, unsigned VF) const {
@@ -7256,119 +7231,47 @@ class BoUpSLP::ShuffleCostEstimator : public BaseShuffleAnalysis {
                 const PointerUnion<Value *, const TreeEntry *> &P2,
                 ArrayRef<int> Mask) {
     ShuffleCostBuilder Builder(TTI);
-    SmallVector<int> CommonMask(Mask.begin(), Mask.end());
     Value *V1 = P1.dyn_cast<Value *>(), *V2 = P2.dyn_cast<Value *>();
-    unsigned CommonVF = Mask.size();
-    if (!V1 && !V2 && !P2.isNull()) {
-      // Shuffle 2 entry nodes.
+    unsigned CommonVF = 0;
+    if (!V1) {
       const TreeEntry *E = P1.get<const TreeEntry *>();
       unsigned VF = E->getVectorFactor();
-      const TreeEntry *E2 = P2.get<const TreeEntry *>();
-      CommonVF = std::max(VF, E2->getVectorFactor());
-      assert(all_of(Mask,
-                    [=](int Idx) {
-                      return Idx < 2 * static_cast<int>(CommonVF);
-                    }) &&
-             "All elements in mask must be less than 2 * CommonVF.");
-      if (E->Scalars.size() == E2->Scalars.size()) {
-        SmallVector<int> EMask = E->getCommonMask();
-        SmallVector<int> E2Mask = E2->getCommonMask();
-        if (!EMask.empty() || !E2Mask.empty()) {
-          for (int &Idx : CommonMask) {
-            if (Idx == PoisonMaskElem)
-              continue;
-            if (Idx < static_cast<int>(CommonVF) && !EMask.empty())
-              Idx = EMask[Idx];
-            else if (Idx >= static_cast<int>(CommonVF))
-              Idx = (E2Mask.empty() ? Idx - CommonVF : E2Mask[Idx - CommonVF]) +
-                    E->Scalars.size();
-          }
+      if (V2) {
+        unsigned V2VF = cast<FixedVectorType>(V2->getType())->getNumElements();
+        if (V2VF != VF && V2VF == E->Scalars.size())
+          VF = E->Scalars.size();
+      } else if (!P2.isNull()) {
+        const TreeEntry *E2 = P2.get<const TreeEntry *>();
+        if (E->Scalars.size() == E2->Scalars.size())
+          CommonVF = VF = E->Scalars.size();
+      } else {
+        // P2 is empty, check that we have same node + reshuffle (if any).
+        if (E->Scalars.size() == Mask.size() && VF != Mask.size()) {
+          VF = E->Scalars.size();
+          SmallVector<int> CommonMask(Mask.begin(), Mask.end());
+          ::addMask(CommonMask, E->getCommonMask());
+          V1 = Constant::getNullValue(
+              FixedVectorType::get(E->Scalars.front()->getType(), VF));
+          return BaseShuffleAnalysis::createShuffle<InstructionCost>(
+              V1, nullptr, CommonMask, Builder);
         }
-        CommonVF = E->Scalars.size();
       }
       V1 = Constant::getNullValue(
-          FixedVectorType::get(E->Scalars.front()->getType(), CommonVF));
-      V2 = getAllOnesValue(
-          *R.DL, FixedVectorType::get(E->Scalars.front()->getType(), CommonVF));
-    } else if (!V1 && P2.isNull()) {
-      // Shuffle single entry node.
-      const TreeEntry *E = P1.get<const TreeEntry *>();
-      unsigned VF = E->getVectorFactor();
-      CommonVF = VF;
-      assert(
-          all_of(Mask,
-                 [=](int Idx) { return Idx < static_cast<int>(CommonVF); }) &&
-          "All elements in mask must be less than CommonVF.");
-      if (E->Scalars.size() == Mask.size() && VF != Mask.size()) {
-        SmallVector<int> EMask = E->getCommonMask();
-        assert(!EMask.empty() && "Expected non-empty common mask.");
-        for (int &Idx : CommonMask) {
-          if (Idx != PoisonMaskElem)
-            Idx = EMask[Idx];
-        }
-        CommonVF = E->Scalars.size();
-      }
-      V1 = Constant::getNullValue(
-          FixedVectorType::get(E->Scalars.front()->getType(), CommonVF));
-    } else if (V1 && P2.isNull()) {
-      // Shuffle single vector.
-      CommonVF = cast<FixedVectorType>(V1->getType())->getNumElements();
-      assert(
-          all_of(Mask,
-                 [=](int Idx) { return Idx < static_cast<int>(CommonVF); }) &&
-          "All elements in mask must be less than CommonVF.");
-    } else if (V1 && !V2) {
-      // Shuffle vector and tree node.
-      unsigned VF = cast<FixedVectorType>(V1->getType())->getNumElements();
-      const TreeEntry *E2 = P2.get<const TreeEntry *>();
-      CommonVF = std::max(VF, E2->getVectorFactor());
-      assert(all_of(Mask,
-                    [=](int Idx) {
-                      return Idx < 2 * static_cast<int>(CommonVF);
-                    }) &&
-             "All elements in mask must be less than 2 * CommonVF.");
-      if (E2->Scalars.size() == VF && VF != CommonVF) {
-        SmallVector<int> E2Mask = E2->getCommonMask();
-        assert(!E2Mask.empty() && "Expected non-empty common mask.");
-        for (int &Idx : CommonMask) {
-          if (Idx == PoisonMaskElem)
-            continue;
-          if (Idx >= static_cast<int>(CommonVF))
-            Idx = E2Mask[Idx - CommonVF] + VF;
-        }
-        CommonVF = VF;
-      }
-      V1 = Constant::getNullValue(
-          FixedVectorType::get(E2->Scalars.front()->getType(), CommonVF));
-      V2 = getAllOnesValue(
-          *R.DL,
-          FixedVectorType::get(E2->Scalars.front()->getType(), CommonVF));
-    } else {
-      assert(V1 && V2 && "Expected both vectors.");
-      unsigned VF = cast<FixedVectorType>(V1->getType())->getNumElements();
-      CommonVF =
-          std::max(VF, cast<FixedVectorType>(V2->getType())->getNumElements());
-      assert(all_of(Mask,
-                    [=](int Idx) {
-                      return Idx < 2 * static_cast<int>(CommonVF);
-                    }) &&
-             "All elements in mask must be less than 2 * CommonVF.");
-      if (V1->getType() != V2->getType()) {
-        V1 = Constant::getNullValue(FixedVectorType::get(
-            cast<FixedVectorType>(V1->getType())->getElementType(), CommonVF));
-        V2 = getAllOnesValue(
-            *R.DL, FixedVectorType::get(
-                       cast<FixedVectorType>(V1->getType())->getElementType(),
-                       CommonVF));
-      }
+          FixedVectorType::get(E->Scalars.front()->getType(), VF));
     }
-    InVectors.front() = Constant::getNullValue(FixedVectorType::get(
-        cast<FixedVectorType>(V1->getType())->getElementType(),
-        CommonMask.size()));
-    if (InVectors.size() == 2)
-      InVectors.pop_back();
-    return BaseShuffleAnalysis::createShuffle<InstructionCost>(
-        V1, V2, CommonMask, Builder);
+    if (!V2 && !P2.isNull()) {
+      const TreeEntry *E = P2.get<const TreeEntry *>();
+      unsigned VF = E->getVectorFactor();
+      unsigned V1VF = cast<FixedVectorType>(V1->getType())->getNumElements();
+      if (!CommonVF && V1VF == E->Scalars.size())
+        CommonVF = E->Scalars.size();
+      if (CommonVF)
+        VF = CommonVF;
+      V2 = Constant::getNullValue(
+          FixedVectorType::get(E->Scalars.front()->getType(), VF));
+    }
+    return BaseShuffleAnalysis::createShuffle<InstructionCost>(V1, V2, Mask,
+                                                               Builder);
   }
 
 public:
@@ -7512,7 +7415,7 @@ public:
     }
     return ConstantVector::getSplat(
         ElementCount::getFixed(VL.size()),
-        getAllOnesValue(*R.DL, VL.front()->getType()));
+        Constant::getNullValue(VL.front()->getType()));
   }
   /// Finalize emission of the shuffles.
   InstructionCost
@@ -7521,21 +7424,30 @@ public:
     IsFinalized = true;
     if (Action) {
       const PointerUnion<Value *, const TreeEntry *> &Vec = InVectors.front();
-      if (InVectors.size() == 2)
+      if (InVectors.size() == 2) {
         Cost += createShuffle(Vec, InVectors.back(), CommonMask);
-      else
+        InVectors.pop_back();
+      } else {
         Cost += createShuffle(Vec, nullptr, CommonMask);
+      }
       for (unsigned Idx = 0, Sz = CommonMask.size(); Idx < Sz; ++Idx)
         if (CommonMask[Idx] != PoisonMaskElem)
           CommonMask[Idx] = Idx;
       assert(VF > 0 &&
              "Expected vector length for the final value before action.");
-      Value *V = Vec.get<Value *>();
+      Value *V = Vec.dyn_cast<Value *>();
+      if (!Vec.isNull() && !V)
+        V = Constant::getNullValue(FixedVectorType::get(
+            Vec.get<const TreeEntry *>()->Scalars.front()->getType(),
+            CommonMask.size()));
       Action(V, CommonMask);
-      InVectors.front() = V;
     }
     ::addMask(CommonMask, ExtMask, /*ExtendingManyInputs=*/true);
     if (CommonMask.empty())
+      return Cost;
+    int Limit = CommonMask.size() * 2;
+    if (all_of(CommonMask, [=](int Idx) { return Idx < Limit; }) &&
+        ShuffleVectorInst::isIdentityMask(CommonMask))
       return Cost;
     return Cost +
            createShuffle(InVectors.front(),
@@ -7712,7 +7624,7 @@ BoUpSLP::getEntryCost(const TreeEntry *E, ArrayRef<Value *> VectorizedVals,
   }
   if (NeedToShuffleReuses)
     ::addMask(Mask, E->ReuseShuffleIndices);
-  if (!Mask.empty() && !ShuffleVectorInst::isIdentityMask(Mask, Mask.size()))
+  if (!Mask.empty() && !ShuffleVectorInst::isIdentityMask(Mask))
     CommonCost =
         TTI->getShuffleCost(TTI::SK_PermuteSingleSrc, FinalVecTy, Mask);
   assert((E->State == TreeEntry::Vectorize ||
@@ -8063,7 +7975,7 @@ BoUpSLP::getEntryCost(const TreeEntry *E, ArrayRef<Value *> VectorizedVals,
         } else {
           SmallVector<int> Mask;
           inversePermutation(OpTE->ReorderIndices, Mask);
-          if (ShuffleVectorInst::isReverseMask(Mask, Mask.size()))
+          if (ShuffleVectorInst::isReverseMask(Mask))
             CCH = TTI::CastContextHint::Reversed;
         }
       }
@@ -8922,7 +8834,9 @@ InstructionCost BoUpSLP::getTreeCost(ArrayRef<Value *> VectorizedVals) {
     unsigned VecVF = TE->getVectorFactor();
     if (VF != VecVF &&
         (any_of(Mask, [VF](int Idx) { return Idx >= static_cast<int>(VF); }) ||
-         !ShuffleVectorInst::isIdentityMask(Mask, VF))) {
+         (all_of(Mask,
+                 [VF](int Idx) { return Idx < 2 * static_cast<int>(VF); }) &&
+          !ShuffleVectorInst::isIdentityMask(Mask)))) {
       SmallVector<int> OrigMask(VecVF, PoisonMaskElem);
       std::copy(Mask.begin(), std::next(Mask.begin(), std::min(VF, VecVF)),
                 OrigMask.begin());
@@ -8951,7 +8865,9 @@ InstructionCost BoUpSLP::getTreeCost(ArrayRef<Value *> VectorizedVals) {
       assert((TEs.size() == 1 || TEs.size() == 2) &&
              "Expected exactly 1 or 2 tree entries.");
       if (TEs.size() == 1) {
-        if (!ShuffleVectorInst::isIdentityMask(Mask, Mask.size())) {
+        int Limit = 2 * Mask.size();
+        if (!all_of(Mask, [Limit](int Idx) { return Idx < Limit; }) ||
+            !ShuffleVectorInst::isIdentityMask(Mask)) {
           InstructionCost C =
               TTI->getShuffleCost(TTI::SK_PermuteSingleSrc, FTy, Mask);
           LLVM_DEBUG(dbgs() << "SLP: Adding cost " << C
@@ -9727,7 +9643,7 @@ class BoUpSLP::ShuffleInstructionBuilder final : public BaseShuffleAnalysis {
         return V1;
       unsigned VF = Mask.size();
       unsigned LocalVF = cast<FixedVectorType>(V1->getType())->getNumElements();
-      if (VF == LocalVF && ShuffleVectorInst::isIdentityMask(Mask, VF))
+      if (VF == LocalVF && ShuffleVectorInst::isIdentityMask(Mask))
         return V1;
       Value *Vec = Builder.CreateShuffleVector(V1, Mask);
       if (auto *I = dyn_cast<Instruction>(Vec)) {
@@ -10140,7 +10056,9 @@ ResTy BoUpSLP::processBuildVector(const TreeEntry *E, Args &...Params) {
       return false;
     unsigned I =
         *find_if_not(Mask, [](int Idx) { return Idx == PoisonMaskElem; });
-    if (ShuffleVectorInst::isIdentityMask(Mask, Mask.size()))
+    int Sz = Mask.size();
+    if (all_of(Mask, [Sz](int Idx) { return Idx < 2 * Sz; }) &&
+        ShuffleVectorInst::isIdentityMask(Mask))
       std::iota(Mask.begin(), Mask.end(), 0);
     else
       std::fill(Mask.begin(), Mask.end(), I);
@@ -10384,11 +10302,11 @@ ResTy BoUpSLP::processBuildVector(const TreeEntry *E, Args &...Params) {
         (ExtractShuffle.value_or(TTI::SK_PermuteTwoSrc) ==
              TTI::SK_PermuteSingleSrc &&
          none_of(ExtractMask, [&](int I) { return I >= EMSz; }) &&
-         ShuffleVectorInst::isIdentityMask(ExtractMask, EMSz)) ||
+         ShuffleVectorInst::isIdentityMask(ExtractMask)) ||
         (GatherShuffle.value_or(TTI::SK_PermuteTwoSrc) ==
              TTI::SK_PermuteSingleSrc &&
          none_of(Mask, [&](int I) { return I >= MSz; }) &&
-         ShuffleVectorInst::isIdentityMask(Mask, MSz));
+         ShuffleVectorInst::isIdentityMask(Mask));
     bool EnoughConstsForShuffle =
         IsSingleShuffle &&
         (none_of(GatheredScalars,
@@ -10681,7 +10599,7 @@ Value *BoUpSLP::vectorizeTree(TreeEntry *E) {
       if ((!IsIdentity || Offset != 0 || !IsFirstUndef.all()) &&
           NumElts != NumScalars) {
         if (IsFirstUndef.all()) {
-          if (!ShuffleVectorInst::isIdentityMask(InsertMask, NumElts)) {
+          if (!ShuffleVectorInst::isIdentityMask(InsertMask)) {
             SmallBitVector IsFirstPoison =
                 isUndefVector<true>(FirstInsert->getOperand(0), UseMask);
             if (!IsFirstPoison.all()) {
@@ -11504,7 +11422,7 @@ Value *BoUpSLP::vectorizeTree(
             // non-resizing mask.
             if (Mask.size() != cast<FixedVectorType>(Vals.front()->getType())
                                    ->getNumElements() ||
-                !ShuffleVectorInst::isIdentityMask(Mask, Mask.size()))
+                !ShuffleVectorInst::isIdentityMask(Mask))
               return CreateShuffle(Vals.front(), nullptr, Mask);
             return Vals.front();
           }
