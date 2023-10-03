@@ -303,7 +303,7 @@ bool SPIRVPrepareFunctions::substituteIntrinsicCalls(Function *F) {
       } else if (II->getIntrinsicID() == Intrinsic::assume ||
                  II->getIntrinsicID() == Intrinsic::expect) {
         const SPIRVSubtarget &STI = TM.getSubtarget<SPIRVSubtarget>(*F);
-        if(STI.canUseExtension(SPIRV::Extension::SPV_KHR_expect_assume))
+        if (STI.canUseExtension(SPIRV::Extension::SPV_KHR_expect_assume))
           lowerExpectAssume(II);
         Changed = true;
       }
@@ -399,6 +399,7 @@ bool SPIRVPrepareFunctions::runOnModule(Module &M) {
   return Changed;
 }
 
-ModulePass *llvm::createSPIRVPrepareFunctionsPass(const SPIRVTargetMachine &TM) {
+ModulePass *
+llvm::createSPIRVPrepareFunctionsPass(const SPIRVTargetMachine &TM) {
   return new SPIRVPrepareFunctions(TM);
 }

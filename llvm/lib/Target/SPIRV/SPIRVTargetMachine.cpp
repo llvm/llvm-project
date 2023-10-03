@@ -109,7 +109,8 @@ public:
   void addOptimizedRegAlloc() override {}
 
   void addPostRegAlloc() override;
-  private:
+
+private:
   const SPIRVTargetMachine &TM;
 };
 } // namespace
