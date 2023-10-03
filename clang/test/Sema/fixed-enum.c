@@ -8,6 +8,7 @@
 // RUN: %clang_cc1 -pedantic    -std=c2x -xc -DC23 -verify %s
 // RUN: %clang_cc1 -Weverything -std=c23 -xc -DC23 -verify %s
 // RUN: %clang_cc1 -pedantic    -std=c23 -xc -DC23 -verify %s
+// RUN: %clang_cc1 -Weverything -std=c23 -xc -fms-extensions -DC23 -verify %s
 
 enum X : int {e};
 #if defined(CXX11)
