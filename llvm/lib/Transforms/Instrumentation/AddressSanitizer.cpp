@@ -815,11 +815,11 @@ public:
 private:
   void initializeCallbacks(Module &M);
 
-  void instrumentGlobals(IRBuilder<> &IRB, Module &M, bool *CtorComdat);
+  bool InstrumentGlobals(IRBuilder<> &IRB, Module &M, bool *CtorComdat);
   void InstrumentGlobalsCOFF(IRBuilder<> &IRB, Module &M,
                              ArrayRef<GlobalVariable *> ExtendedGlobals,
                              ArrayRef<Constant *> MetadataInitializers);
-  void instrumentGlobalsELF(IRBuilder<> &IRB, Module &M,
+  void InstrumentGlobalsELF(IRBuilder<> &IRB, Module &M,
                             ArrayRef<GlobalVariable *> ExtendedGlobals,
                             ArrayRef<Constant *> MetadataInitializers,
                             const std::string &UniqueModuleId);
@@ -2175,7 +2175,7 @@ void ModuleAddressSanitizer::InstrumentGlobalsCOFF(
     appendToCompilerUsed(M, MetadataGlobals);
 }
 
-void ModuleAddressSanitizer::instrumentGlobalsELF(
+void ModuleAddressSanitizer::InstrumentGlobalsELF(
     IRBuilder<> &IRB, Module &M, ArrayRef<GlobalVariable *> ExtendedGlobals,
     ArrayRef<Constant *> MetadataInitializers,
     const std::string &UniqueModuleId) {
@@ -2185,7 +2185,7 @@ void ModuleAddressSanitizer::instrumentGlobalsELF(
   // false negative odr violations at link time. If odr indicators are used, we
   // keep the comdat sections, as link time odr violations will be dectected on
   // the odr indicator symbols.
-  bool UseComdatForGlobalsGC = UseOdrIndicator && !UniqueModuleId.empty();
+  bool UseComdatForGlobalsGC = UseOdrIndicator;
 
   SmallVector<GlobalValue *, 16> MetadataGlobals(ExtendedGlobals.size());
   for (size_t i = 0; i < ExtendedGlobals.size(); i++) {
@@ -2235,7 +2235,7 @@ void ModuleAddressSanitizer::instrumentGlobalsELF(
 
   // We also need to unregister globals at the end, e.g., when a shared library
   // gets closed.
-  if (DestructorKind != AsanDtorKind::None && !MetadataGlobals.empty()) {
+  if (DestructorKind != AsanDtorKind::None) {
     IRBuilder<> IrbDtor(CreateAsanModuleDtor(M));
     IrbDtor.CreateCall(AsanUnregisterElfGlobals,
                        {IRB.CreatePointerCast(RegisteredFlag, IntptrTy),
@@ -2341,8 +2341,10 @@ void ModuleAddressSanitizer::InstrumentGlobalsWithMetadataArray(
 // redzones and inserts this function into llvm.global_ctors.
 // Sets *CtorComdat to true if the global registration code emitted into the
 // asan constructor is comdat-compatible.
-void ModuleAddressSanitizer::instrumentGlobals(IRBuilder<> &IRB, Module &M,
+bool ModuleAddressSanitizer::InstrumentGlobals(IRBuilder<> &IRB, Module &M,
                                                bool *CtorComdat) {
+  *CtorComdat = false;
+
   // Build set of globals that are aliased by some GA, where
   // getExcludedAliasedGlobal(GA) returns the relevant GlobalVariable.
   SmallPtrSet<const GlobalVariable *, 16> AliasedGlobalExclusions;
@@ -2360,6 +2362,11 @@ void ModuleAddressSanitizer::instrumentGlobals(IRBuilder<> &IRB, Module &M,
   }
 
   size_t n = GlobalsToChange.size();
+  if (n == 0) {
+    *CtorComdat = true;
+    return false;
+  }
+
   auto &DL = M.getDataLayout();
 
   // A global is described by a structure
@@ -2382,11 +2389,8 @@ void ModuleAddressSanitizer::instrumentGlobals(IRBuilder<> &IRB, Module &M,
 
   // We shouldn't merge same module names, as this string serves as unique
   // module ID in runtime.
-  GlobalVariable *ModuleName =
-      n != 0
-          ? createPrivateGlobalForString(M, M.getModuleIdentifier(),
-                                         /*AllowMerging*/ false, kAsanGenPrefix)
-          : nullptr;
+  GlobalVariable *ModuleName = createPrivateGlobalForString(
+      M, M.getModuleIdentifier(), /*AllowMerging*/ false, kAsanGenPrefix);
 
   for (size_t i = 0; i < n; i++) {
     GlobalVariable *G = GlobalsToChange[i];
@@ -2511,27 +2515,19 @@ void ModuleAddressSanitizer::instrumentGlobals(IRBuilder<> &IRB, Module &M,
   }
   appendToCompilerUsed(M, ArrayRef<GlobalValue *>(GlobalsToAddToUsedList));
 
-  if (UseGlobalsGC && TargetTriple.isOSBinFormatELF()) {
-    // Use COMDAT and register globals even if n == 0 to ensure that (a) the
-    // linkage unit will only have one module constructor, and (b) the register
-    // function will be called. The module destructor is not created when n ==
-    // 0.
+  std::string ELFUniqueModuleId =
+      (UseGlobalsGC && TargetTriple.isOSBinFormatELF()) ? getUniqueModuleId(&M)
+                                                        : "";
+
+  if (!ELFUniqueModuleId.empty()) {
+    InstrumentGlobalsELF(IRB, M, NewGlobals, Initializers, ELFUniqueModuleId);
     *CtorComdat = true;
-    instrumentGlobalsELF(IRB, M, NewGlobals, Initializers,
-                         getUniqueModuleId(&M));
-  } else if (n == 0) {
-    // When UseGlobalsGC is false, COMDAT can still be used if n == 0, because
-    // all compile units will have identical module constructor/destructor.
-    *CtorComdat = TargetTriple.isOSBinFormatELF();
+  } else if (UseGlobalsGC && TargetTriple.isOSBinFormatCOFF()) {
+    InstrumentGlobalsCOFF(IRB, M, NewGlobals, Initializers);
+  } else if (UseGlobalsGC && ShouldUseMachOGlobalsSection()) {
+    InstrumentGlobalsMachO(IRB, M, NewGlobals, Initializers);
   } else {
-    *CtorComdat = false;
-    if (UseGlobalsGC && TargetTriple.isOSBinFormatCOFF()) {
-      InstrumentGlobalsCOFF(IRB, M, NewGlobals, Initializers);
-    } else if (UseGlobalsGC && ShouldUseMachOGlobalsSection()) {
-      InstrumentGlobalsMachO(IRB, M, NewGlobals, Initializers);
-    } else {
-      InstrumentGlobalsWithMetadataArray(IRB, M, NewGlobals, Initializers);
-    }
+    InstrumentGlobalsWithMetadataArray(IRB, M, NewGlobals, Initializers);
   }
 
   // Create calls for poisoning before initializers run and unpoisoning after.
@@ -2539,6 +2535,7 @@ void ModuleAddressSanitizer::instrumentGlobals(IRBuilder<> &IRB, Module &M,
     createInitializerPoisonCalls(M, ModuleName);
 
   LLVM_DEBUG(dbgs() << M);
+  return true;
 }
 
 uint64_t
@@ -2602,10 +2599,10 @@ bool ModuleAddressSanitizer::instrumentModule(Module &M) {
     assert(AsanCtorFunction || ConstructorKind == AsanCtorKind::None);
     if (AsanCtorFunction) {
       IRBuilder<> IRB(AsanCtorFunction->getEntryBlock().getTerminator());
-      instrumentGlobals(IRB, M, &CtorComdat);
+      InstrumentGlobals(IRB, M, &CtorComdat);
     } else {
       IRBuilder<> IRB(*C);
-      instrumentGlobals(IRB, M, &CtorComdat);
+      InstrumentGlobals(IRB, M, &CtorComdat);
     }
   }
 
