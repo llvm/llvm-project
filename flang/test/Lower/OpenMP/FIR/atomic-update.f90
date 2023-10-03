@@ -69,8 +69,8 @@ program OmpAtomicUpdate
 !CHECK:  ^bb0(%[[ARG:.*]]: i32):
 !CHECK:    %[[LOADED_X:.*]] = fir.load %[[X]] : !fir.ref<i32>
 !CHECK:    %[[LOADED_Z:.*]] = fir.load %[[Z]] : !fir.ref<i32>
-!CHECK:    %{{.*}} = arith.cmpi sgt, %[[LOADED_X]], %[[ARG]] : i32
-!CHECK:    %{{.*}} = arith.select %{{.*}}, %[[LOADED_X]], %[[ARG]] : i32
+!CHECK:    %{{.*}} = arith.cmpi sgt, %[[ARG]], %[[LOADED_X]] : i32
+!CHECK:    %{{.*}} = arith.select %{{.*}}, %[[ARG]], %[[LOADED_X]] : i32
 !CHECK:    %{{.*}} = arith.cmpi sgt, %{{.*}}, %[[LOADED_Z]] : i32
 !CHECK:    %[[RESULT:.*]] = arith.select %{{.*}}, %{{.*}}, %[[LOADED_Z]] : i32
 !CHECK:    omp.yield(%[[RESULT]] : i32)
@@ -84,7 +84,7 @@ program OmpAtomicUpdate
     !$omp atomic relaxed update hint(omp_sync_hint_uncontended)
         x = x - 1
     !$omp atomic update relaxed 
-        y = max(x, y, z)
+        y = max(y, x, z)
     !$omp atomic relaxed hint(omp_sync_hint_contended)
         z = z + x
 
