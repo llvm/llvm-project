@@ -1232,8 +1232,25 @@ genUserCall(Fortran::lower::PreparedActualArguments &loweredActuals,
 
   if (!fir::getBase(result))
     return std::nullopt; // subroutine call.
-  // TODO: "move" non pointer results into hlfir.expr.
-  return extendedValueToHlfirEntity(loc, builder, result, ".tmp.func_result");
+
+  hlfir::Entity resultEntity =
+      extendedValueToHlfirEntity(loc, builder, result, ".tmp.func_result");
+
+  if (!fir::isPointerType(fir::getBase(result).getType())) {
+    resultEntity = loadTrivialScalar(loc, builder, resultEntity);
+
+    if (resultEntity.isVariable()) {
+      // Function result must not be freed, since it is allocated on the stack.
+      // Note that in non-elemental case, genCallOpAndResult()
+      // is responsible for establishing the clean-up that destroys
+      // the derived type result or deallocates its components
+      // without finalization.
+      auto asExpr = builder.create<hlfir::AsExprOp>(
+          loc, resultEntity, /*mustFree=*/builder.createBool(loc, false));
+      resultEntity = hlfir::EntityWithAttributes{asExpr.getResult()};
+    }
+  }
+  return hlfir::EntityWithAttributes{resultEntity};
 }
 
 /// Create an optional dummy argument value from an entity that may be
