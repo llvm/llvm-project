@@ -7819,10 +7819,17 @@ bool Sema::CheckExplicitlyDefaultedSpecialMember(CXXMethodDecl *MD,
                                   : isa<CXXConstructorDecl>(MD))) &&
       MD->isConstexpr() && !Constexpr &&
       MD->getTemplatedKind() == FunctionDecl::TK_NonTemplate) {
-    Diag(MD->getBeginLoc(), MD->isConsteval()
-                                ? diag::err_incorrect_defaulted_consteval
-                                : diag::err_incorrect_defaulted_constexpr)
-        << CSM;
+        if (!MD->isConsteval() && RD->getNumVBases()) {
+          Diag(MD->getBeginLoc(), diag::err_incorrect_defaulted_constexpr_with_vb)
+              << CSM;
+          for (const auto &I : RD->vbases())
+            Diag(I.getBeginLoc(), diag::note_constexpr_virtual_base_here);
+        } else {
+          Diag(MD->getBeginLoc(), MD->isConsteval()
+                                      ? diag::err_incorrect_defaulted_consteval
+                                      : diag::err_incorrect_defaulted_constexpr)
+              << CSM;
+        }
     // FIXME: Explain why the special member can't be constexpr.
     HadError = true;
   }
