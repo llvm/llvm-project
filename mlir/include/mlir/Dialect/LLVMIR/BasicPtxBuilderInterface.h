@@ -23,7 +23,7 @@ namespace mlir {
 namespace NVVM {
 /// Register read/write modifier to build constraint string for PTX inline
 /// https://docs.nvidia.com/cuda/inline-ptx-assembly/index.html#parameters
-enum class PTXRegisterMod : u_int32_t {
+enum class PTXRegisterMod {
   /// Read register with no modifier
   Read = 0,
   /// Read register with '+' modifier
