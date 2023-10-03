@@ -1,0 +1,22 @@
+@LIT_SITE_CFG_IN_HEADER@
+
+config.llvm_src_root = "@LLVM_SOURCE_DIR@"
+config.llvm_obj_root = "@LLVM_BINARY_DIR@"
+config.llvm_target_triple_env = "@LLVM_TARGET_TRIPLE_ENV@"
+config.llvm_tools_dir = lit_config.substitute("@LLVM_TOOLS_DIR@")
+config.llvm_build_mode = lit_config.substitute("@LLVM_BUILD_MODE@")
+config.lit_tools_dir = "@LLVM_LIT_TOOLS_DIR@"
+config.flang_bin_dir = "@FLANG_BINARY_DIR@/bin"
+config.flang_src_dir = "@FLANG_SOURCE_DIR@"
+config.flang_libs_dir = "@FLANG_BINARY_DIR@/lib"
+config.flang_rt_obj_root = "@FLANG_RT_BINARY_DIR@"
+config.flang_rt_src_dir = "@FLANG_RT_SOURCE_DIR@"
+config.flang_rt_lib_dir = "@FLANG_RT_BINARY_DIR@/lib"
+config.flang_rt_test_compiler = "@FLANG_RT_TEST_COMPILER@"
+config.flang_rt_test_triple = "@FLANG_RT_TEST_TARGET_TRIPLE@"
+config.flang_tools_dir = lit_config.substitute("@FLANG_TOOLS_DIR@")
+config.target_triple = "@LLVM_TARGET_TRIPLE@"
+config.python_executable = "@Python3_EXECUTABLE@"
+
+# Let the main config do the real work.
+lit_config.load_config(config, "@FLANG_RT_SOURCE_DIR@/test/Unit/lit.cfg.py")
