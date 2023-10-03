@@ -390,7 +390,7 @@ let Command = "expression" in {
     Arg<"Boolean">,
     Desc<"Persist expression result in a variable for subsequent use. "
     "Expression results will be labeled with $-prefixed variables, e.g. $0, "
-    "$1, etc. Defaults to true.">;
+    "$1, etc.">;
 }
 
 let Command = "frame diag" in {
