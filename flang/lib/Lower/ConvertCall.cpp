@@ -1619,37 +1619,33 @@ public:
     for (unsigned i = 0; i < numArgs; ++i) {
       auto &preparedActual = loweredActuals[i];
       if (preparedActual) {
-        hlfir::Entity actual = preparedActual->getOriginalActual();
         // Elemental procedure dummy arguments cannot be pointer/allocatables
         // (C15100), so it is safe to dereference any pointer or allocatable
         // actual argument now instead of doing this inside the elemental
         // region.
-        actual = hlfir::derefPointersAndAllocatables(loc, builder, actual);
+        preparedActual->derefPointersAndAllocatables(loc, builder);
         // Better to load scalars outside of the loop when possible.
         if (!preparedActual->handleDynamicOptional() &&
             impl().canLoadActualArgumentBeforeLoop(i))
-          actual = hlfir::loadTrivialScalar(loc, builder, actual);
+          preparedActual->loadTrivialScalar(loc, builder);
         // TODO: merge shape instead of using the first one.
-        if (!shape && actual.isArray()) {
+        if (!shape && preparedActual->isArray()) {
           if (preparedActual->handleDynamicOptional())
             optionalWithShape = &*preparedActual;
           else
-            shape = hlfir::genShape(loc, builder, actual);
+            shape = preparedActual->genShape(loc, builder);
         }
         // 15.8.3 p1. Elemental procedure with intent(out)/intent(inout)
         // arguments must be called in element order.
         if (impl().argMayBeModifiedByCall(i))
           mustBeOrdered = true;
-        // Propagates pointer dereferences and scalar loads.
-        preparedActual->setOriginalActual(actual);
       }
     }
     if (!shape && optionalWithShape) {
       // If all array operands appear in optional positions, then none of them
       // is allowed to be absent as per 15.5.2.12 point 3. (6). Just pick the
       // first operand.
-      shape =
-          hlfir::genShape(loc, builder, optionalWithShape->getOriginalActual());
+      shape = optionalWithShape->genShape(loc, builder);
       // TODO: There is an opportunity to add a runtime check here that
       // this array is present as required. Also, the optionality of all actual
       // could be checked and reset given the Fortran requirement.
@@ -1663,20 +1659,12 @@ public:
     // intent(inout) arguments. Note that the scalar arguments are handled
     // above.
     if (mustBeOrdered) {
-      for (unsigned i = 0; i < numArgs; ++i) {
-        auto &preparedActual = loweredActuals[i];
-        if (preparedActual) {
-          hlfir::Entity actual = preparedActual->getOriginalActual();
-          if (!actual.isVariable() && actual.isArray()) {
-            mlir::Type storageType = actual.getType();
-            hlfir::AssociateOp associate = hlfir::genAssociateExpr(
-                loc, builder, actual, storageType, "adapt.impure_arg_eval");
-            preparedActual->setOriginalActual(hlfir::Entity{associate});
-
-            fir::FirOpBuilder *bldr = &builder;
-            callContext.stmtCtx.attachCleanup(
-                [=]() { bldr->create<hlfir::EndAssociateOp>(loc, associate); });
-          }
+      for (auto &preparedActual : loweredActuals) {
+        if (hlfir::AssociateOp associate =
+                preparedActual->associateIfArrayExpr(loc, builder)) {
+          fir::FirOpBuilder *bldr = &builder;
+          callContext.stmtCtx.attachCleanup(
+              [=]() { bldr->create<hlfir::EndAssociateOp>(loc, associate); });
         }
       }
     }
@@ -1852,9 +1840,8 @@ public:
     if (intrinsic)
       if (intrinsic->name == "adjustr" || intrinsic->name == "adjustl" ||
           intrinsic->name == "merge")
-        return hlfir::genCharLength(
-            callContext.loc, callContext.getBuilder(),
-            loweredActuals[0].value().getOriginalActual());
+        return loweredActuals[0].value().genCharLength(
+            callContext.loc, callContext.getBuilder());
     // Character MIN/MAX is the min/max of the arguments length that are
     // present.
     TODO(callContext.loc,
@@ -1874,7 +1861,7 @@ public:
       // the same declared and dynamic types. So any of them can be used
       // for the mold.
       assert(!loweredActuals.empty());
-      return loweredActuals.front()->getOriginalActual();
+      return loweredActuals.front()->getPolymorphicMold(callContext.loc);
     }
 
     return {};

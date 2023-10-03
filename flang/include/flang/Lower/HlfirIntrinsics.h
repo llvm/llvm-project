@@ -19,6 +19,7 @@
 #define FORTRAN_LOWER_HLFIRINTRINSICS_H
 
 #include "flang/Optimizer/Builder/HLFIRTools.h"
+#include "flang/Optimizer/HLFIR/HLFIROps.h"
 #include "llvm/ADT/SmallVector.h"
 #include <cassert>
 #include <optional>
@@ -56,8 +57,45 @@ struct PreparedActualArgument {
                                  *oneBasedElementalIndices);
     return actual;
   }
-  hlfir::Entity getOriginalActual() const { return actual; }
-  void setOriginalActual(hlfir::Entity newActual) { actual = newActual; }
+
+  void derefPointersAndAllocatables(mlir::Location loc,
+                                    fir::FirOpBuilder &builder) {
+    actual = hlfir::derefPointersAndAllocatables(loc, builder, actual);
+  }
+
+  void loadTrivialScalar(mlir::Location loc, fir::FirOpBuilder &builder) {
+    actual = hlfir::loadTrivialScalar(loc, builder, actual);
+  }
+
+  /// Ensure an array expression argument is fully evaluated in memory before
+  /// the call. Useful for impure elemental calls.
+  hlfir::AssociateOp associateIfArrayExpr(mlir::Location loc,
+                                          fir::FirOpBuilder &builder) {
+    if (!actual.isVariable() && actual.isArray()) {
+      mlir::Type storageType = actual.getType();
+      hlfir::AssociateOp associate = hlfir::genAssociateExpr(
+          loc, builder, actual, storageType, "adapt.impure_arg_eval");
+      actual = hlfir::Entity{associate};
+      return associate;
+    }
+    return {};
+  }
+
+  bool isArray() const { return actual.isArray(); }
+
+  mlir::Value genShape(mlir::Location loc, fir::FirOpBuilder &builder) const {
+    return hlfir::genShape(loc, builder, actual);
+  }
+
+  mlir::Value genCharLength(mlir::Location loc,
+                            fir::FirOpBuilder &builder) const {
+    return hlfir::genCharLength(loc, builder, actual);
+  }
+
+  /// When the argument is polymorphic, get mold value with the same dynamic
+  /// type.
+  mlir::Value getPolymorphicMold(mlir::Location loc) const { return actual; }
+
   bool handleDynamicOptional() const { return isPresent.has_value(); }
   mlir::Value getIsPresent() const {
     assert(handleDynamicOptional() && "not a dynamic optional");
