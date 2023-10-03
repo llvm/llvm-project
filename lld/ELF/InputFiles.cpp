@@ -322,6 +322,13 @@ template <class ELFT> static void doParseFile(InputFile *file) {
 // Add symbols in File to the symbol table.
 void elf::parseFile(InputFile *file) { invokeELFT(doParseFile, file); }
 
+// This function is explicity instantiated in ARM.cpp. Mark it extern here,
+// to avoid warnings when building with MSVC.
+extern template void ObjFile<ELF32LE>::importCmseSymbols();
+extern template void ObjFile<ELF32BE>::importCmseSymbols();
+extern template void ObjFile<ELF64LE>::importCmseSymbols();
+extern template void ObjFile<ELF64BE>::importCmseSymbols();
+
 template <class ELFT> static void doParseArmCMSEImportLib(InputFile *file) {
   cast<ObjFile<ELFT>>(file)->importCmseSymbols();
 }
