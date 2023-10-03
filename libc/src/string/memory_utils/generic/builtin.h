@@ -20,7 +20,6 @@ namespace LIBC_NAMESPACE {
 static_assert(LIBC_HAS_BUILTIN(__builtin_memcpy), "Builtin not defined");
 static_assert(LIBC_HAS_BUILTIN(__builtin_memset), "Builtin not defined");
 static_assert(LIBC_HAS_BUILTIN(__builtin_memmove), "Builtin not defined");
-static_assert(LIBC_HAS_BUILTIN(__builtin_bcmp), "Builtin not defined");
 
 [[maybe_unused]] LIBC_INLINE void
 inline_memcpy_builtin(Ptr dst, CPtr src, size_t count, size_t offset = 0) {
@@ -35,11 +34,6 @@ inline_memcpy_builtin(Ptr dst, CPtr src, size_t count, size_t offset = 0) {
 [[maybe_unused]] LIBC_INLINE static void
 inline_memset_builtin(Ptr dst, uint8_t value, size_t count, size_t offset = 0) {
   __builtin_memset(dst + offset, value, count);
-}
-
-[[maybe_unused]] LIBC_INLINE int
-inline_bcmp_builtin(CPtr p1, CPtr p2, size_t count, size_t offset = 0) {
-  return __builtin_bcmp(p1 + offset, p2 + offset, count);
 }
 
 } // namespace LIBC_NAMESPACE
