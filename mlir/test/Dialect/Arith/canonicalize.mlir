@@ -2670,7 +2670,7 @@ func.func @extsi_poison() -> i64 {
   return %1 : i64
 }
 
-// Just checks that this doesn't crashes.
+// Just checks that this doesn't crash.
 // CHECK-LABEL: @unsignedExtendConstantResource
 func.func @unsignedExtendConstantResource() -> tensor<i16> {
   %c2 = arith.constant dense_resource<blob1> : tensor<i8>
