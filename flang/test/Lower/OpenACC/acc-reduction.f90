@@ -1059,7 +1059,7 @@ end subroutine
 ! CHECK: %[[BOUND:.*]] = acc.bounds lowerbound(%[[LB]] : index) upperbound(%[[UB]] : index) stride(%[[C1]] : index) startIdx(%[[C1]] : index)
 ! FIR:   %[[RED:.*]] = acc.reduction varPtr(%[[ARG0]] : !fir.ref<!fir.array<100xi32>>) bounds(%[[BOUND]]) -> !fir.ref<!fir.array<100xi32>> {name = "a(11:20)"}
 ! HLFIR: %[[RED:.*]] = acc.reduction varPtr(%[[DECLARG0]]#1 : !fir.ref<!fir.array<100xi32>>) bounds(%[[BOUND]]) -> !fir.ref<!fir.array<100xi32>> {name = "a(11:20)"}
-! CHECK: acc.parallel reduction(@reduction_add_section_lb19.ub10_ref_100xi32 -> %[[RED]] : !fir.ref<!fir.array<100xi32>>)
+! CHECK: acc.parallel reduction(@reduction_add_section_lb10.ub19_ref_100xi32 -> %[[RED]] : !fir.ref<!fir.array<100xi32>>)
 
 subroutine acc_reduction_add_dynamic_extent_add(a)
   integer :: a(:)
