@@ -197,7 +197,7 @@ The primary goal of experimental support is to assist in the process of ratifica
   LLVM implements the `1.0-rc1 draft specification <https://github.com/riscv/riscv-zacas/releases/tag/v1.0-rc1>`_.
 
 ``experimental-zfa``
-  LLVM implements the `0.2 draft specification <https://github.com/riscv/riscv-isa-manual/releases/download/draft-20230131-c0b298a/zfa-20230414.pdf>`__.
+  LLVM implements the `1.0 specification <https://github.com/riscv/riscv-isa-manual/releases/tag/riscv-isa-release-056b6ff-2023-10-02>`__.
 
 ``experimental-zfbfmin``, ``experimental-zvfbfmin``, ``experimental-zvfbfwma``
   LLVM implements assembler support for the `0.8.0 draft specification <https://github.com/riscv/riscv-bfloat16/releases/tag/20230629>`_.
