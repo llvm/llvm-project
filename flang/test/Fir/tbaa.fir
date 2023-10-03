@@ -354,7 +354,7 @@ func.func @tbaa(%arg0: !fir.box<!fir.array<?xi32>>) {
 
 // -----
 
-// Check that the aggregate load/store with a descriptor member
+// Check that the scalar aggregate load/store with a descriptor member
 // is mapped to any-access.
 // CHECK-DAG:     #[[ROOT:.*]] = #llvm.tbaa_root<id = "Flang Type TBAA Root">
 // CHECK-DAG:     #[[ANYACC:.*]] = #llvm.tbaa_type_desc<id = "any access", members = {<#[[ROOT]], 0>}>
@@ -363,6 +363,23 @@ func.func @tbaa(%arg0: !fir.box<!fir.array<?xi32>>) {
 func.func @tbaa(%arg0: !fir.ref<!fir.type<_QMtypesTt{x:!fir.box<!fir.heap<f32>>}>>, %arg1: !fir.ref<!fir.type<_QMtypesTt{x:!fir.box<!fir.heap<f32>>}>>) {
   %0 = fir.load %arg0 : !fir.ref<!fir.type<_QMtypesTt{x:!fir.box<!fir.heap<f32>>}>>
   fir.store %0 to %arg1 : !fir.ref<!fir.type<_QMtypesTt{x:!fir.box<!fir.heap<f32>>}>>
+  return
+}
+// CHECK-LABEL:   llvm.func @tbaa(
+// CHECK: llvm.load{{.*}}{tbaa = [#[[$ANYT]]]}
+// CHECK: llvm.store{{.*}}{tbaa = [#[[$ANYT]]]}
+
+// -----
+
+// Check that the array aggregate load/store with a descriptor member
+// is mapped to any-access.
+// CHECK-DAG:     #[[ROOT:.*]] = #llvm.tbaa_root<id = "Flang Type TBAA Root">
+// CHECK-DAG:     #[[ANYACC:.*]] = #llvm.tbaa_type_desc<id = "any access", members = {<#[[ROOT]], 0>}>
+// CHECK-DAG:     #[[$ANYT:.*]] = #llvm.tbaa_tag<base_type = #[[ANYACC]], access_type = #[[ANYACC]], offset = 0>
+
+func.func @tbaa(%arg0: !fir.ref<!fir.array<2x!fir.type<_QMtypesTt{x:!fir.box<!fir.heap<f32>>}>>>, %arg1: !fir.ref<!fir.array<2x!fir.type<_QMtypesTt{x:!fir.box<!fir.heap<f32>>}>>>) {
+  %0 = fir.load %arg0 : !fir.ref<!fir.array<2x!fir.type<_QMtypesTt{x:!fir.box<!fir.heap<f32>>}>>>
+  fir.store %0 to %arg1 : !fir.ref<!fir.array<2x!fir.type<_QMtypesTt{x:!fir.box<!fir.heap<f32>>}>>>
   return
 }
 // CHECK-LABEL:   llvm.func @tbaa(

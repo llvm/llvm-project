@@ -361,6 +361,7 @@ bool isRecordWithAllocatableMember(mlir::Type ty) {
 }
 
 bool isRecordWithDescriptorMember(mlir::Type ty) {
+  ty = unwrapSequenceType(ty);
   if (auto recTy = ty.dyn_cast<fir::RecordType>())
     for (auto [field, memTy] : recTy.getTypeList()) {
       if (mlir::isa<fir::BaseBoxType>(memTy))

@@ -349,7 +349,8 @@ mlir::Type unwrapInnerType(mlir::Type ty);
 /// Return true iff `ty` is a RecordType with members that are allocatable.
 bool isRecordWithAllocatableMember(mlir::Type ty);
 
-/// Return true iff `ty` is a RecordType with members that are descriptors.
+/// Return true iff `ty` is a scalar/array of RecordType
+/// with members that are descriptors.
 bool isRecordWithDescriptorMember(mlir::Type ty);
 
 /// Return true iff `ty` is a RecordType with type parameters.

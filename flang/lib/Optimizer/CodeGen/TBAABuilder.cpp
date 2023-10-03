@@ -110,15 +110,12 @@ void TBAABuilder::attachTBAATag(AliasAnalysisOpInterface op, Type baseFIRType,
                           << "\n");
 
   TBAATagAttr tbaaTagSym;
-  if (auto derivedTy = mlir::dyn_cast<fir::RecordType>(baseFIRType)) {
+  if (fir::isRecordWithDescriptorMember(baseFIRType)) {
     // A memory access that addresses an aggregate that contains
     // a mix of data members and descriptor members may alias
     // with both data and descriptor accesses.
     // Conservatively set any-access tag if there is any descriptor member.
-    if (fir::isRecordWithDescriptorMember(derivedTy))
-      tbaaTagSym = getAnyAccessTag();
-    else
-      tbaaTagSym = getDataAccessTag(baseFIRType, accessFIRType, gep);
+    tbaaTagSym = getAnyAccessTag();
   } else if (baseFIRType.isa<fir::BaseBoxType>()) {
     tbaaTagSym = getBoxAccessTag(baseFIRType, accessFIRType, gep);
   } else {
