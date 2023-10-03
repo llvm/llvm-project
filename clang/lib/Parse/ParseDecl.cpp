@@ -5019,7 +5019,7 @@ void Parser::ParseEnumSpecifier(SourceLocation StartLoc, DeclSpec &DS,
         else if (getLangOpts().MicrosoftExt)
           Diag(ColonLoc, diag::ext_ms_c_enum_fixed_underlying_type)
               << BaseRange;
-        else
+        else if (!getLangOpts().C23)
           Diag(ColonLoc, diag::ext_clang_c_enum_fixed_underlying_type)
               << BaseRange;
       }
