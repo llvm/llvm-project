@@ -1532,8 +1532,8 @@ struct SparseNewOpConverter : public OpConversionPattern<NewOp> {
       rewriter.setInsertionPointToStart(&ifOp.getThenRegion().front());
       auto xPerm = rewriter.getMultiDimIdentityMap(lvlRank);
       rewriter.create<SortOp>(loc, nse, xs, ValueRange{ys}, xPerm,
-                                 rewriter.getIndexAttr(0),
-                                 SparseTensorSortKind::HybridQuickSort);
+                              rewriter.getIndexAttr(0),
+                              SparseTensorSortKind::HybridQuickSort);
       rewriter.setInsertionPointAfter(ifOp);
     }
 
