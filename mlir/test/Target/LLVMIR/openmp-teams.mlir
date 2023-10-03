@@ -3,7 +3,7 @@
 llvm.func @foo()
 
 // CHECK-LABEL: @omp_teams_simple
-// CHECK: call void {{.*}} @__kmpc_fork_teams(ptr @{{.+}}, i32 0, ptr [[wrapperfn:.+]])
+// CHECK: call void {{.*}} @__kmpc_fork_teams(ptr @{{.+}}, i32 0, ptr [[WRAPPER_FN:.+]])
 // CHECK: ret void
 llvm.func @omp_teams_simple() {
     omp.teams {
@@ -13,11 +13,11 @@ llvm.func @omp_teams_simple() {
     llvm.return
 }
 
-// CHECK: define internal void @[[outlinedfn:.+]]()
+// CHECK: define internal void @[[OUTLINED_FN:.+]]()
 // CHECK:   call void @foo()
 // CHECK:   ret void
-// CHECK: define void [[wrapperfn]](ptr %[[global_tid:.+]], ptr %[[bound_tid:.+]])
-// CHECK:   call void @[[outlinedfn]]
+// CHECK: define void [[WRAPPER_FN]](ptr {{.+}}, ptr {{.+}})
+// CHECK:   call void @[[OUTLINED_FN]]
 // CHECK:   ret void
 
 // -----
@@ -25,12 +25,12 @@ llvm.func @omp_teams_simple() {
 llvm.func @foo(i32) -> ()
 
 // CHECK-LABEL: @omp_teams_shared_simple
-// CHECK-SAME: (i32 [[arg0:%.+]])
-// CHECK: [[structArg:%.+]] = alloca { i32 }
+// CHECK-SAME: (i32 [[ARG0:%.+]])
+// CHECK: [[STRUCT_ARG:%.+]] = alloca { i32 }
 // CHECK: br
-// CHECK: [[gep:%.+]] = getelementptr { i32 }, ptr [[structArg]], i32 0, i32 0
-// CHECK: store i32 [[arg0]], ptr [[gep]]
-// CHECK: call void {{.+}} @__kmpc_fork_teams(ptr @{{.+}}, i32 1, ptr [[wrapperfn:.+]], ptr [[structArg]])
+// CHECK: [[GEP:%.+]] = getelementptr { i32 }, ptr [[STRUCT_ARG]], i32 0, i32 0
+// CHECK: store i32 [[ARG0]], ptr [[GEP]]
+// CHECK: call void {{.+}} @__kmpc_fork_teams(ptr @{{.+}}, i32 1, ptr [[WRAPPER_FN:.+]], ptr [[STRUCT_ARG]])
 // CHECK: ret void
 llvm.func @omp_teams_shared_simple(%arg0: i32) {
     omp.teams {
@@ -40,13 +40,13 @@ llvm.func @omp_teams_shared_simple(%arg0: i32) {
     llvm.return
 }
 
-// CHECK: define internal void [[outlinedfn:@.+]](ptr [[structArg:%.+]])
-// CHECK:   [[gep:%.+]] = getelementptr { i32 }, ptr [[structArg]], i32 0, i32 0
-// CHECK:   [[loadgep:%.+]] = load i32, ptr [[gep]]
-// CHECK:   call void @foo(i32 [[loadgep]])
+// CHECK: define internal void [[OUTLINED_FN:@.+]](ptr [[STRUCT_ARG:%.+]])
+// CHECK:   [[GEP:%.+]] = getelementptr { i32 }, ptr [[STRUCT_ARG]], i32 0, i32 0
+// CHECK:   [[LOAD_GEP:%.+]] = load i32, ptr [[GEP]]
+// CHECK:   call void @foo(i32 [[LOAD_GEP]])
 // CHECK:   ret void
-// CHECK: define void [[wrapperfn]](ptr [[global_tid:.+]], ptr [[bound_tid:.+]], ptr [[structArg:.+]])
-// CHECK:   call void [[outlinedfn]](ptr [[structArg]])
+// CHECK: define void [[WRAPPER_FN]](ptr {{.+}}, ptr {{.+}}, ptr [[STRUCT_ARG:.+]])
+// CHECK:   call void [[OUTLINED_FN]](ptr [[STRUCT_ARG]])
 // CHECK:   ret void
 
 // -----
@@ -56,32 +56,32 @@ llvm.func @foo(i32, f32, !llvm.ptr<i32>, f128, !llvm.ptr<i32>, i32) -> ()
 llvm.func @bar()
 
 // CHECK-LABEL: @omp_teams_branching_shared
-// CHECK-SAME: (i1 [[condition:%.+]], i32 [[arg0:%.+]], float [[arg1:%.+]], ptr [[arg2:%.+]], fp128 [[arg3:%.+]])
+// CHECK-SAME: (i1 [[CONDITION:%.+]], i32 [[ARG0:%.+]], float [[ARG1:%.+]], ptr [[ARG2:%.+]], fp128 [[ARG3:%.+]])
 
 // Checking that the allocation for struct argument happens in the alloca block.
-// CHECK: [[structArg:%.+]] = alloca { i1, i32, float, ptr, fp128, ptr, i32 }
-// CHECK: [[allocated:%.+]] = call ptr @my_alloca_fn()
-// CHECK: [[loaded:%.+]] = load i32, ptr [[allocated]]
+// CHECK: [[STRUCT_ARG:%.+]] = alloca { i1, i32, float, ptr, fp128, ptr, i32 }
+// CHECK: [[ALLOCATED:%.+]] = call ptr @my_alloca_fn()
+// CHECK: [[LOADED:%.+]] = load i32, ptr [[ALLOCATED]]
 // CHECK: br label
 
 // Checking that the shared values are stored properly in the struct arg.
-// CHECK: [[conditionPtr:%.+]] = getelementptr {{.+}}, ptr [[structArg]]
-// CHECK: store i1 [[condition]], ptr [[conditionPtr]]
-// CHECK: [[arg0ptr:%.+]] = getelementptr {{.+}}, ptr [[structArg]], i32 0, i32 1
-// CHECK: store i32 [[arg0]], ptr [[arg0ptr]]
-// CHECK: [[arg1ptr:%.+]] = getelementptr {{.+}}, ptr [[structArg]], i32 0, i32 2
-// CHECK: store float [[arg1]], ptr [[arg1ptr]]
-// CHECK: [[arg2ptr:%.+]] = getelementptr {{.+}}, ptr [[structArg]], i32 0, i32 3
-// CHECK: store ptr [[arg2]], ptr [[arg2ptr]]
-// CHECK: [[arg3ptr:%.+]] = getelementptr {{.+}}, ptr [[structArg]], i32 0, i32 4
-// CHECK: store fp128 [[arg3]], ptr [[arg3ptr]]
-// CHECK: [[allocatedPtr:%.+]] = getelementptr {{.+}}, ptr [[structArg]], i32 0, i32 5
-// CHECK: store ptr [[allocated]], ptr [[allocatedPtr]]
-// CHECK: [[loadedPtr:%.+]] = getelementptr {{.+}}, ptr [[structArg]], i32 0, i32 6
-// CHECK: store i32 [[loaded]], ptr [[loadedPtr]]
+// CHECK: [[CONDITION_PTR:%.+]] = getelementptr {{.+}}, ptr [[STRUCT_ARG]]
+// CHECK: store i1 [[CONDITION]], ptr [[CONDITION_PTR]]
+// CHECK: [[ARG0_PTR:%.+]] = getelementptr {{.+}}, ptr [[STRUCT_ARG]], i32 0, i32 1
+// CHECK: store i32 [[ARG0]], ptr [[ARG0_PTR]]
+// CHECK: [[ARG1_PTR:%.+]] = getelementptr {{.+}}, ptr [[STRUCT_ARG]], i32 0, i32 2
+// CHECK: store float [[ARG1]], ptr [[ARG1_PTR]]
+// CHECK: [[ARG2_PTR:%.+]] = getelementptr {{.+}}, ptr [[STRUCT_ARG]], i32 0, i32 3
+// CHECK: store ptr [[ARG2]], ptr [[ARG2_PTR]]
+// CHECK: [[ARG3_PTR:%.+]] = getelementptr {{.+}}, ptr [[STRUCT_ARG]], i32 0, i32 4
+// CHECK: store fp128 [[ARG3]], ptr [[ARG3_PTR]]
+// CHECK: [[ALLOCATED_PTR:%.+]] = getelementptr {{.+}}, ptr [[STRUCT_ARG]], i32 0, i32 5
+// CHECK: store ptr [[ALLOCATED]], ptr [[ALLOCATED_PTR]]
+// CHECK: [[LOADED_PTR:%.+]] = getelementptr {{.+}}, ptr [[STRUCT_ARG]], i32 0, i32 6
+// CHECK: store i32 [[LOADED]], ptr [[LOADED_PTR]]
 
 // Runtime call.
-// CHECK: call void {{.+}} @__kmpc_fork_teams(ptr @{{.+}}, i32 1, ptr [[wrapperfn:@.+]], ptr [[structArg]])
+// CHECK: call void {{.+}} @__kmpc_fork_teams(ptr @{{.+}}, i32 1, ptr [[WRAPPER_FN:@.+]], ptr [[STRUCT_ARG]])
 // CHECK: br label
 // CHECK: call void @bar()
 // CHECK: ret void
@@ -105,32 +105,32 @@ llvm.func @omp_teams_branching_shared(%condition: i1, %arg0: i32, %arg1: f32, %a
 }
 
 // Check the outlined function.
-// CHECK: define internal void [[outlinedfn:@.+]](ptr [[data:%.+]])
-// CHECK:   [[conditionPtr:%.+]] = getelementptr {{.+}}, ptr [[data]]
-// CHECK:   [[condition:%.+]] = load i1, ptr [[conditionPtr]]
-// CHECK:   [[arg0ptr:%.+]] = getelementptr {{.+}}, ptr [[data]], i32 0, i32 1
-// CHECK:   [[arg0:%.+]] = load i32, ptr [[arg0ptr]]
-// CHECK:   [[arg1ptr:%.+]] = getelementptr {{.+}}, ptr [[data]], i32 0, i32 2
-// CHECK:   [[arg1:%.+]] = load float, ptr [[arg1ptr]]
-// CHECK:   [[arg2ptr:%.+]] = getelementptr {{.+}}, ptr [[data]], i32 0, i32 3
-// CHECK:   [[arg2:%.+]] = load ptr, ptr [[arg2ptr]]
-// CHECK:   [[arg3ptr:%.+]] = getelementptr {{.+}}, ptr [[data]], i32 0, i32 4
-// CHECK:   [[arg3:%.+]] = load fp128, ptr [[arg3ptr]]
-// CHECK:   [[allocatedPtr:%.+]] = getelementptr {{.+}}, ptr [[data]], i32 0, i32 5
-// CHECK:   [[allocated:%.+]] = load ptr, ptr [[allocatedPtr]]
-// CHECK:   [[loadedPtr:%.+]] = getelementptr {{.+}}, ptr [[data]], i32 0, i32 6
-// CHECK:   [[loaded:%.+]] = load i32, ptr [[loadedPtr]]
+// CHECK: define internal void [[OUTLINED_FN:@.+]](ptr [[DATA:%.+]])
+// CHECK:   [[CONDITION_PTR:%.+]] = getelementptr {{.+}}, ptr [[DATA]]
+// CHECK:   [[CONDITION:%.+]] = load i1, ptr [[CONDITION_PTR]]
+// CHECK:   [[ARG0_PTR:%.+]] = getelementptr {{.+}}, ptr [[DATA]], i32 0, i32 1
+// CHECK:   [[ARG0:%.+]] = load i32, ptr [[ARG0_PTR]]
+// CHECK:   [[ARG1_PTR:%.+]] = getelementptr {{.+}}, ptr [[DATA]], i32 0, i32 2
+// CHECK:   [[ARG1:%.+]] = load float, ptr [[ARG1_PTR]]
+// CHECK:   [[ARG2_PTR:%.+]] = getelementptr {{.+}}, ptr [[DATA]], i32 0, i32 3
+// CHECK:   [[ARG2:%.+]] = load ptr, ptr [[ARG2_PTR]]
+// CHECK:   [[ARG3_PTR:%.+]] = getelementptr {{.+}}, ptr [[DATA]], i32 0, i32 4
+// CHECK:   [[ARG3:%.+]] = load fp128, ptr [[ARG3_PTR]]
+// CHECK:   [[ALLOCATED_PTR:%.+]] = getelementptr {{.+}}, ptr [[DATA]], i32 0, i32 5
+// CHECK:   [[ALLOCATED:%.+]] = load ptr, ptr [[ALLOCATED_PTR]]
+// CHECK:   [[LOADED_PTR:%.+]] = getelementptr {{.+}}, ptr [[DATA]], i32 0, i32 6
+// CHECK:   [[LOADED:%.+]] = load i32, ptr [[LOADED_PTR]]
 // CHECK:   br label
 
-// CHECK:   br i1 [[condition]], label %[[true:.+]], label %[[false:.+]]
-// CHECK: [[false]]:
+// CHECK:   br i1 [[CONDITION]], label %[[TRUE:.+]], label %[[FALSE:.+]]
+// CHECK: [[FALSE]]:
 // CHECK-NEXT: br label
-// CHECK: [[true]]:
-// CHECK:   call void @foo(i32 [[arg0]], float [[arg1]], ptr [[arg2]], fp128 [[arg3]], ptr [[allocated]], i32 [[loaded]])
+// CHECK: [[TRUE]]:
+// CHECK:   call void @foo(i32 [[ARG0]], float [[ARG1]], ptr [[ARG2]], fp128 [[ARG3]], ptr [[ALLOCATED]], i32 [[LOADED]])
 // CHECK-NEXT: br label
 // CHECK: ret void
 
 // Check the wrapper function
-// CHECK: define void [[wrapperfn]](ptr [[globalTID:%.+]], ptr [[boundTID:%.+]], ptr [[data:%.+]])
-// CHECK:   call void [[outlinedfn]](ptr [[data]])
+// CHECK: define void [[WRAPPER_FN]](ptr {{.+}}, ptr {{.+}}, ptr [[DATA:%.+]])
+// CHECK:   call void [[OUTLINED_FN]](ptr [[DATA]])
 // CHECK:   ret void
