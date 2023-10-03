@@ -321,6 +321,11 @@ Changes in existing checks
   <clang-tidy/checks/readability/static-accessed-through-instance>` check to
   identify calls to static member functions with out-of-class inline definitions.
 
+- Improved :doc:`llvmlibc-callee-namespace
+  <clang-tidy/checks/llvmlibc/callee-namespace>` to support
+  customizable namespace. This matches the change made to implementation in
+  namespace.
+
 Removed checks
 ^^^^^^^^^^^^^^
 
