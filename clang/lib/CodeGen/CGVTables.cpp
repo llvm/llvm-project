@@ -1322,7 +1322,8 @@ void CodeGenModule::EmitVTableTypeMetadata(const CXXRecordDecl *RD,
   for (auto &&AP : VTLayout.getAddressPoints()) {
     AddressPoint N{AP.first.getBase(),
                    VTLayout.getVTableOffset(AP.second.VTableIndex) +
-                       AP.second.AddressPointIndex};
+                       AP.second.AddressPointIndex,
+                   {}};
     llvm::raw_string_ostream Stream(N.TypeName);
     getCXXABI().getMangleContext().mangleCanonicalTypeName(
         QualType(N.Base->getTypeForDecl(), 0), Stream);
