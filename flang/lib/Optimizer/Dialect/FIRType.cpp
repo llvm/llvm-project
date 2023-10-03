@@ -539,7 +539,7 @@ std::string getTypeAsString(mlir::Type ty, const fir::KindMapping &kindMap,
     } else if (auto seqTy = mlir::dyn_cast_or_null<fir::SequenceType>(ty)) {
       for (auto extent : seqTy.getShape()) {
         if (extent == fir::SequenceType::getUnknownExtent())
-          name << "?x";
+          name << "Ux";
         else
           name << extent << 'x';
       }

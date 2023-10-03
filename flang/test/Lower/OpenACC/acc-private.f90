@@ -3,7 +3,7 @@
 ! RUN: bbc -fopenacc -emit-fir %s -o - | FileCheck %s --check-prefixes=CHECK,FIR
 ! RUN: bbc -fopenacc -emit-hlfir %s -o - | FileCheck %s --check-prefixes=CHECK,HLFIR
 
-! CHECK-LABEL: acc.private.recipe @"privatization_box_?xi32" : !fir.box<!fir.array<?xi32>> init {
+! CHECK-LABEL: acc.private.recipe @privatization_box_Uxi32 : !fir.box<!fir.array<?xi32>> init {
 ! CHECK: ^bb0(%[[ARG0:.*]]: !fir.box<!fir.array<?xi32>>):
 ! HLFIR:   %[[C0:.*]] = arith.constant 0 : index
 ! HLFIR:   %[[BOX_DIMS:.*]]:3 = fir.box_dims %[[ARG0]], %[[C0]] : (!fir.box<!fir.array<?xi32>>, index) -> (index, index, index)
@@ -194,4 +194,4 @@ end subroutine
 ! HLFIR: %[[DECL_A:.*]]:2 = hlfir.declare %arg0 {uniq_name = "_QFacc_private_assumed_shapeEa"} : (!fir.box<!fir.array<?xi32>>) -> (!fir.box<!fir.array<?xi32>>, !fir.box<!fir.array<?xi32>>)
 ! HLFIR: %[[ADDR:.*]] = fir.box_addr %[[DECL_A]]#1 : (!fir.box<!fir.array<?xi32>>) -> !fir.ref<!fir.array<?xi32>>
 ! HLFIR: %[[PRIVATE:.*]] = acc.private varPtr(%[[ADDR]] : !fir.ref<!fir.array<?xi32>>) bounds(%{{.*}}) -> !fir.ref<!fir.array<?xi32>> {name = "a"}
-! HLFIR: acc.parallel private(@"privatization_box_?xi32" -> %[[PRIVATE]] : !fir.ref<!fir.array<?xi32>>) {
+! HLFIR: acc.parallel private(@privatization_box_Uxi32 -> %[[PRIVATE]] : !fir.ref<!fir.array<?xi32>>) {
