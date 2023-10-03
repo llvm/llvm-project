@@ -30,6 +30,7 @@ typedef unsigned int uintmax_t;
 
 // additional types for unwind.h
 
+typedef unsigned int uint32_t;
 typedef unsigned long long uint64_t;
 
 #endif /* STDINT_H */
