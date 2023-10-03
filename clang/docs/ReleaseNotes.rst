@@ -259,6 +259,11 @@ Bug Fixes in This Version
   (`#65557 <https://github.com/llvm/llvm-project/issues/65557>`_)
 - Fix value of predefined macro ``__FUNCTION__`` to match MSVC's value. Fixes
   (`#66114 <https://github.com/llvm/llvm-project/issues/66114>`_)
+- Fixes crash when trying to obtain the common sugared type of
+  `decltype(instantiation-dependent-expr)`.
+  Fixes (`#67603 <https://github.com/llvm/llvm-project/issues/67603>`_)
+- Fixes a crash caused by a multidimensional array being captured by a lambda
+  (`#67722 <https://github.com/llvm/llvm-project/issues/67722>`_).
 
 Bug Fixes to Compiler Builtins
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
