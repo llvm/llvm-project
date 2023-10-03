@@ -372,24 +372,24 @@
 // RUN: -fsyntax-only 2>&1 | FileCheck -check-prefix=RV32-ZFHMIN %s
 // RV32-ZFHMIN: "-target-feature" "+zfhmin"
 
-// RUN: not %clang --target=riscv32-unknown-elf -march=rv32izfa -### %s \
+// RUN: not %clang --target=riscv32-unknown-elf -march=rv32iztso -### %s \
 // RUN: -fsyntax-only 2>&1 | FileCheck -check-prefix=RV32-EXPERIMENTAL-NOFLAG %s
-// RV32-EXPERIMENTAL-NOFLAG: error: invalid arch name 'rv32izfa'
+// RV32-EXPERIMENTAL-NOFLAG: error: invalid arch name 'rv32iztso'
 // RV32-EXPERIMENTAL-NOFLAG: requires '-menable-experimental-extensions'
 
-// RUN: not %clang --target=riscv32-unknown-elf -march=rv32izfa -menable-experimental-extensions -### %s \
+// RUN: not %clang --target=riscv32-unknown-elf -march=rv32iztso -menable-experimental-extensions -### %s \
 // RUN: -fsyntax-only 2>&1 | FileCheck -check-prefix=RV32-EXPERIMENTAL-NOVERS %s
-// RV32-EXPERIMENTAL-NOVERS: error: invalid arch name 'rv32izfa'
+// RV32-EXPERIMENTAL-NOVERS: error: invalid arch name 'rv32iztso'
 // RV32-EXPERIMENTAL-NOVERS: experimental extension requires explicit version number
 
-// RUN: not %clang --target=riscv32-unknown-elf -march=rv32izfa0p1 -menable-experimental-extensions -### %s \
+// RUN: not %clang --target=riscv32-unknown-elf -march=rv32iztso0p7 -menable-experimental-extensions -### %s \
 // RUN: -fsyntax-only 2>&1 | FileCheck -check-prefix=RV32-EXPERIMENTAL-BADVERS %s
-// RV32-EXPERIMENTAL-BADVERS: error: invalid arch name 'rv32izfa0p1'
-// RV32-EXPERIMENTAL-BADVERS: unsupported version number 0.1 for experimental extension 'zfa' (this compiler supports 1.0)
+// RV32-EXPERIMENTAL-BADVERS: error: invalid arch name 'rv32iztso0p7'
+// RV32-EXPERIMENTAL-BADVERS: unsupported version number 0.7 for experimental extension 'ztso' (this compiler supports 0.1)
 
-// RUN: %clang --target=riscv32-unknown-elf -march=rv32izfa1p0 -menable-experimental-extensions -### %s \
+// RUN: %clang --target=riscv32-unknown-elf -march=rv32iztso0p1 -menable-experimental-extensions -### %s \
 // RUN: -fsyntax-only 2>&1 | FileCheck -check-prefix=RV32-EXPERIMENTAL-GOODVERS %s
-// RV32-EXPERIMENTAL-GOODVERS: "-target-feature" "+experimental-zfa"
+// RV32-EXPERIMENTAL-GOODVERS: "-target-feature" "+experimental-ztso"
 
 // RUN: %clang --target=riscv32-unknown-elf -march=rv32izbb1p0 -### %s \
 // RUN: -fsyntax-only 2>&1 | FileCheck -check-prefix=RV32-ZBB %s

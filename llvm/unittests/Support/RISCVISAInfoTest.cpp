@@ -653,6 +653,7 @@ R"(All available -march extensions for RISC-V
     zihpm               2.0
     zmmul               1.0
     zawrs               1.0
+    zfa                 1.0
     zfh                 1.0
     zfhmin              1.0
     zfinx               1.0
@@ -729,7 +730,6 @@ Experimental extensions
     zicfilp             0.2       This is a long dummy description
     zicond              1.0
     zacas               1.0
-    zfa                 1.0
     zfbfmin             0.8
     ztso                0.1
     zvbb                1.0
