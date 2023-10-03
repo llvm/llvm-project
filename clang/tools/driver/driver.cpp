@@ -346,7 +346,7 @@ static void SetInstallDir(SmallVectorImpl<const char *> &argv,
 
   int len = readlink("/proc/self/exe", ProcessAbsolutePath,
                      sizeof(ProcessAbsolutePath) - 1);
-  if ( len <= 0 ) {
+  if (len <= 0) {
     llvm::errs() << "Internal error: readlink(\"/proc/self/exe\") failed with "
                  << strerror(errno) << "\n";
     exit(1);
@@ -360,11 +360,11 @@ static void SetInstallDir(SmallVectorImpl<const char *> &argv,
   // The size must be higher than PROC_PIDPATHINFO_SIZE, otherwise the call
   // fails with ENOMEM (12) - Cannot allocate memory.
   // https://opensource.apple.com/source/Libc/Libc-498/darwin/libproc.c
-  char ProcessAbsolutePath[PROC_PIDPATHINFO_SIZE+1];
+  char ProcessAbsolutePath[PROC_PIDPATHINFO_SIZE + 1];
 
   int len = proc_pidpath(getpid(), ProcessAbsolutePath,
                          sizeof(ProcessAbsolutePath) - 1);
-  if ( len <= 0 ) {
+  if (len <= 0) {
     llvm::errs() << "Internal error: proc_pidpath() failed with "
                  << strerror(errno) << "\n";
     exit(1);
@@ -379,7 +379,7 @@ static void SetInstallDir(SmallVectorImpl<const char *> &argv,
 
   len = GetModuleFileName(NULL, ProcessAbsolutePath,
                           sizeof(ProcessAbsolutePath) - 1);
-  if ( len <= 0 ) {
+  if (len <= 0) {
     llvm::errs() << "Internal error: GetModuleFileName() failed with "
                  << strerror(errno) << "\n";
     exit(1);
