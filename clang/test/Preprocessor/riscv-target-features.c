@@ -1002,12 +1002,12 @@
 // CHECK-ZACAS-EXT: __riscv_zacas 1000000{{$}}
 
 // RUN: %clang --target=riscv32-unknown-linux-gnu -menable-experimental-extensions \
-// RUN: -march=rv32izfa0p2 -x c -E -dM %s \
+// RUN: -march=rv32izfa1p0 -x c -E -dM %s \
 // RUN: -o - | FileCheck --check-prefix=CHECK-ZFA-EXT %s
 // RUN: %clang --target=riscv64-unknown-linux-gnu -menable-experimental-extensions \
-// RUN: -march=rv64izfa0p2 -x c -E -dM %s \
+// RUN: -march=rv64izfa1p0 -x c -E -dM %s \
 // RUN: -o - | FileCheck --check-prefix=CHECK-ZFA-EXT %s
-// CHECK-ZFA-EXT: __riscv_zfa 2000{{$}}
+// CHECK-ZFA-EXT: __riscv_zfa 1000000{{$}}
 
 // RUN: %clang --target=riscv32 -menable-experimental-extensions \
 // RUN: -march=rv32izfbfmin0p8 -x c -E -dM %s \

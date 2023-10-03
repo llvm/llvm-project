@@ -729,7 +729,7 @@ Experimental extensions
     zicfilp             0.2       This is a long dummy description
     zicond              1.0
     zacas               1.0
-    zfa                 0.2
+    zfa                 1.0
     zfbfmin             0.8
     ztso                0.1
     zvbb                1.0
