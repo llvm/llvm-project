@@ -20,6 +20,7 @@
 #include <cassert>
 #include <cstring>
 #include <memory>
+#include <new>
 #include <utility>
 
 #include "test_macros.h"
