@@ -294,11 +294,7 @@ bool AddSubMulHelper(InterpState &S, CodePtr OpPC, unsigned Bits, const T &LHS,
     return true;
   } else {
     S.CCEDiag(E, diag::note_constexpr_overflow) << Value << Type;
-    if (!S.noteUndefinedBehavior()) {
-      S.Stk.pop<T>();
-      return false;
-    }
-    return true;
+    return S.noteUndefinedBehavior();
   }
 }
 
@@ -1583,7 +1579,7 @@ bool CastFloatingIntegral(InterpState &S, CodePtr OpPC) {
     S.Stk.push<T>(T(F.isNonZero()));
     return true;
   } else {
-    APSInt Result(std::max(8u, T::bitWidth()),
+    APSInt Result(std::max(8u, T::bitWidth() + 1),
                   /*IsUnsigned=*/!T::isSigned());
     auto Status = F.convertToInteger(Result);
 
@@ -1669,11 +1665,9 @@ inline bool Shr(InterpState &S, CodePtr OpPC) {
   if (!CheckShift(S, OpPC, LHS, RHS, Bits))
     return false;
 
-  typename LT::AsUnsigned R;
-  LT::AsUnsigned::shiftRight(LT::AsUnsigned::from(LHS),
-                             LT::AsUnsigned::from(RHS), Bits, &R);
-  S.Stk.push<LT>(LT::from(R));
-
+  Integral<LT::bitWidth(), false> R;
+  Integral<LT::bitWidth(), false>::shiftRight(LHS.toUnsigned(), RHS, Bits, &R);
+  S.Stk.push<LT>(R);
   return true;
 }
 
@@ -1688,10 +1682,9 @@ inline bool Shl(InterpState &S, CodePtr OpPC) {
   if (!CheckShift(S, OpPC, LHS, RHS, Bits))
     return false;
 
-  typename LT::AsUnsigned R;
-  LT::AsUnsigned::shiftLeft(LT::AsUnsigned::from(LHS),
-                            LT::AsUnsigned::from(RHS), Bits, &R);
-  S.Stk.push<LT>(LT::from(R));
+  Integral<LT::bitWidth(), false> R;
+  Integral<LT::bitWidth(), false>::shiftLeft(LHS.toUnsigned(), RHS, Bits, &R);
+  S.Stk.push<LT>(R);
   return true;
 }
 

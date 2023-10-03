@@ -103,7 +103,7 @@ std::optional<PrimType> Context::classify(QualType T) const {
     case 8:
       return PT_Sint8;
     default:
-      return PT_IntAPS;
+      return std::nullopt;
     }
   }
 
@@ -118,7 +118,7 @@ std::optional<PrimType> Context::classify(QualType T) const {
     case 8:
       return PT_Uint8;
     default:
-      return PT_IntAP;
+      return std::nullopt;
     }
   }
 
