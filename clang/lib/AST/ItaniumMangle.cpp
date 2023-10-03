@@ -112,8 +112,8 @@ public:
   void mangleCXXRTTI(QualType T, raw_ostream &) override;
   void mangleCXXRTTIName(QualType T, raw_ostream &,
                          bool NormalizeIntegers) override;
-  void mangleTypeName(QualType T, raw_ostream &,
-                      bool NormalizeIntegers) override;
+  void mangleCanonicalTypeName(QualType T, raw_ostream &,
+                               bool NormalizeIntegers) override;
 
   void mangleCXXCtorComdat(const CXXConstructorDecl *D, raw_ostream &) override;
   void mangleCXXDtorComdat(const CXXDestructorDecl *D, raw_ostream &) override;
@@ -7132,8 +7132,8 @@ void ItaniumMangleContextImpl::mangleCXXRTTIName(
   Mangler.mangleType(Ty);
 }
 
-void ItaniumMangleContextImpl::mangleTypeName(QualType Ty, raw_ostream &Out,
-                                              bool NormalizeIntegers = false) {
+void ItaniumMangleContextImpl::mangleCanonicalTypeName(
+    QualType Ty, raw_ostream &Out, bool NormalizeIntegers = false) {
   mangleCXXRTTIName(Ty, Out, NormalizeIntegers);
 }
 

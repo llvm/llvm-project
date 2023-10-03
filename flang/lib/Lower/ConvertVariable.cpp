@@ -1927,8 +1927,13 @@ void Fortran::lower::mapSymbolAttributes(
   if (ba.isChar()) {
     if (arg) {
       assert(!preAlloc && "dummy cannot be pre-allocated");
-      if (arg.getType().isa<fir::BoxCharType>())
+      if (arg.getType().isa<fir::BoxCharType>()) {
         std::tie(addr, len) = charHelp.createUnboxChar(arg);
+        // Ensure proper type is given to array/scalar that transited via
+        // fir.boxchar arg.
+        mlir::Type castTy = builder.getRefType(converter.genType(var));
+        addr = builder.createConvert(loc, castTy, addr);
+      }
     }
     if (std::optional<int64_t> cstLen = ba.getCharLenConst()) {
       // Static length
@@ -1952,13 +1957,6 @@ void Fortran::lower::mapSymbolAttributes(
         len = charHelp.readLengthFromBox(arg);
       }
     }
-  }
-
-  if (addr && addr.getDefiningOp<fir::UnboxCharOp>()) {
-    // Ensure proper type is given to array/scalar that transited via
-    // fir.boxchar arg.
-    mlir::Type castTy = builder.getRefType(converter.genType(var));
-    addr = builder.createConvert(loc, castTy, addr);
   }
 
   // Compute array extents and lower bounds.

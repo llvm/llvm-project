@@ -3530,8 +3530,8 @@ static SDValue lowerBuildVectorOfConstants(SDValue Op, SelectionDAG &DAG,
       (NumElts <= 4 || VT.getSizeInBits() > Subtarget.getRealMinVLen())) {
     unsigned SignBits = DAG.ComputeNumSignBits(Op);
     if (EltBitSize - SignBits < 8) {
-      SDValue Source =
-        DAG.getNode(ISD::TRUNCATE, DL, VT.changeVectorElementType(MVT::i8), Op);
+      SDValue Source = DAG.getBuildVector(VT.changeVectorElementType(MVT::i8),
+                                          DL, Op->ops());
       Source = convertToScalableVector(ContainerVT.changeVectorElementType(MVT::i8),
                                        Source, DAG, Subtarget);
       SDValue Res = DAG.getNode(RISCVISD::VSEXT_VL, DL, ContainerVT, Source, Mask, VL);
@@ -4972,24 +4972,22 @@ static SDValue lowerConstant(SDValue Op, SelectionDAG &DAG,
   if (Seq.size() <= Subtarget.getMaxBuildIntsCost())
     return Op;
 
-  // Special case. See if we can build the constant as (ADD (SLLI X, 32), X) do
+  // Optimizations below are disabled for opt size. If we're optimizing for
+  // size, use a constant pool.
+  if (DAG.shouldOptForSize())
+    return SDValue();
+
+  // Special case. See if we can build the constant as (ADD (SLLI X, C), X) do
   // that if it will avoid a constant pool.
   // It will require an extra temporary register though.
   // If we have Zba we can use (ADD_UW X, (SLLI X, 32)) to handle cases where
   // low and high 32 bits are the same and bit 31 and 63 are set.
-  if (!DAG.shouldOptForSize()) {
-    int64_t LoVal = SignExtend64<32>(Imm);
-    int64_t HiVal = SignExtend64<32>(((uint64_t)Imm - (uint64_t)LoVal) >> 32);
-    if (LoVal == HiVal ||
-        (Subtarget.hasStdExtZba() && Lo_32(Imm) == Hi_32(Imm))) {
-      RISCVMatInt::InstSeq SeqLo =
-          RISCVMatInt::generateInstSeq(LoVal, Subtarget.getFeatureBits());
-      if ((SeqLo.size() + 2) <= Subtarget.getMaxBuildIntsCost())
-        return Op;
-    }
-  }
+  unsigned ShiftAmt, AddOpc;
+  RISCVMatInt::InstSeq SeqLo = RISCVMatInt::generateTwoRegInstSeq(
+      Imm, Subtarget.getFeatureBits(), ShiftAmt, AddOpc);
+  if (!SeqLo.empty() && (SeqLo.size() + 2) <= Subtarget.getMaxBuildIntsCost())
+    return Op;
 
-  // Expand to a constant pool using the default expansion code.
   return SDValue();
 }
 
@@ -8335,23 +8333,40 @@ static unsigned getRVVReductionOp(unsigned ISDOpcode) {
   switch (ISDOpcode) {
   default:
     llvm_unreachable("Unhandled reduction");
+  case ISD::VP_REDUCE_ADD:
   case ISD::VECREDUCE_ADD:
     return RISCVISD::VECREDUCE_ADD_VL;
+  case ISD::VP_REDUCE_UMAX:
   case ISD::VECREDUCE_UMAX:
     return RISCVISD::VECREDUCE_UMAX_VL;
+  case ISD::VP_REDUCE_SMAX:
   case ISD::VECREDUCE_SMAX:
     return RISCVISD::VECREDUCE_SMAX_VL;
+  case ISD::VP_REDUCE_UMIN:
   case ISD::VECREDUCE_UMIN:
     return RISCVISD::VECREDUCE_UMIN_VL;
+  case ISD::VP_REDUCE_SMIN:
   case ISD::VECREDUCE_SMIN:
     return RISCVISD::VECREDUCE_SMIN_VL;
+  case ISD::VP_REDUCE_AND:
   case ISD::VECREDUCE_AND:
     return RISCVISD::VECREDUCE_AND_VL;
+  case ISD::VP_REDUCE_OR:
   case ISD::VECREDUCE_OR:
     return RISCVISD::VECREDUCE_OR_VL;
+  case ISD::VP_REDUCE_XOR:
   case ISD::VECREDUCE_XOR:
     return RISCVISD::VECREDUCE_XOR_VL;
+  case ISD::VP_REDUCE_FADD:
+    return RISCVISD::VECREDUCE_FADD_VL;
+  case ISD::VP_REDUCE_SEQ_FADD:
+    return RISCVISD::VECREDUCE_SEQ_FADD_VL;
+  case ISD::VP_REDUCE_FMAX:
+    return RISCVISD::VECREDUCE_FMAX_VL;
+  case ISD::VP_REDUCE_FMIN:
+    return RISCVISD::VECREDUCE_FMIN_VL;
   }
+
 }
 
 SDValue RISCVTargetLowering::lowerVectorMaskVecReduction(SDValue Op,
@@ -8583,37 +8598,6 @@ SDValue RISCVTargetLowering::lowerFPVECREDUCE(SDValue Op,
                            VectorVal, Mask, VL, DL, DAG, Subtarget);
 }
 
-static unsigned getRVVVPReductionOp(unsigned ISDOpcode) {
-  switch (ISDOpcode) {
-  default:
-    llvm_unreachable("Unhandled reduction");
-  case ISD::VP_REDUCE_ADD:
-    return RISCVISD::VECREDUCE_ADD_VL;
-  case ISD::VP_REDUCE_UMAX:
-    return RISCVISD::VECREDUCE_UMAX_VL;
-  case ISD::VP_REDUCE_SMAX:
-    return RISCVISD::VECREDUCE_SMAX_VL;
-  case ISD::VP_REDUCE_UMIN:
-    return RISCVISD::VECREDUCE_UMIN_VL;
-  case ISD::VP_REDUCE_SMIN:
-    return RISCVISD::VECREDUCE_SMIN_VL;
-  case ISD::VP_REDUCE_AND:
-    return RISCVISD::VECREDUCE_AND_VL;
-  case ISD::VP_REDUCE_OR:
-    return RISCVISD::VECREDUCE_OR_VL;
-  case ISD::VP_REDUCE_XOR:
-    return RISCVISD::VECREDUCE_XOR_VL;
-  case ISD::VP_REDUCE_FADD:
-    return RISCVISD::VECREDUCE_FADD_VL;
-  case ISD::VP_REDUCE_SEQ_FADD:
-    return RISCVISD::VECREDUCE_SEQ_FADD_VL;
-  case ISD::VP_REDUCE_FMAX:
-    return RISCVISD::VECREDUCE_FMAX_VL;
-  case ISD::VP_REDUCE_FMIN:
-    return RISCVISD::VECREDUCE_FMIN_VL;
-  }
-}
-
 SDValue RISCVTargetLowering::lowerVPREDUCE(SDValue Op,
                                            SelectionDAG &DAG) const {
   SDLoc DL(Op);
@@ -8626,7 +8610,7 @@ SDValue RISCVTargetLowering::lowerVPREDUCE(SDValue Op,
     return SDValue();
 
   MVT VecVT = VecEVT.getSimpleVT();
-  unsigned RVVOpcode = getRVVVPReductionOp(Op.getOpcode());
+  unsigned RVVOpcode = getRVVReductionOp(Op.getOpcode());
 
   if (VecVT.isFixedLengthVector()) {
     auto ContainerVT = getContainerForFixedLengthVector(VecVT);
