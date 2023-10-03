@@ -782,15 +782,6 @@ func.func @vector_extract_slice_f64(%tile: vector<[2]x[2]xf64>, %row: index) -> 
 
 // -----
 
-// CHECK-LABEL: @vector_extract_slice_i8
-func.func @vector_extract_slice_i8(%tile: vector<[16]x[16]xi8>, %row: index) -> vector<[16]xi8> {
-  // CHECK: %{{.*}} = "arm_sme.intr.read.horiz"(%{{.*}}, %{{.*}}, %{{.*}}, %{{.*}}) : (vector<[16]xi8>, vector<[16]xi1>, i32, i32) -> vector<[16]xi8>
-  %slice = vector.extract %tile[%row] : vector<[16]xi8> from vector<[16]x[16]xi8>
-  return %slice : vector<[16]xi8>
-}
-
-// -----
-
 // CHECK-LABEL: @vector_extract_element(
 // CHECK-SAME:                          %[[TILE:.*]]: vector<[4]x[4]xi32>,
 // CHECK-SAME:                          %[[ROW:.*]]: index,
