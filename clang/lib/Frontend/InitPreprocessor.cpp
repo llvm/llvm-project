@@ -1076,6 +1076,8 @@ static void InitializePredefinedMacros(const TargetInfo &TI,
   DefineFloatMacros(Builder, "FLT", &TI.getFloatFormat(), "F");
   DefineFloatMacros(Builder, "DBL", &TI.getDoubleFormat(), "");
   DefineFloatMacros(Builder, "LDBL", &TI.getLongDoubleFormat(), "L");
+  if (TI.hasFloat128Type())
+    DefineFloatMacros(Builder, "FLT128", &TI.getFloat128Format(), "Q");
 
   // Define a __POINTER_WIDTH__ macro for stdint.h.
   Builder.defineMacro("__POINTER_WIDTH__",
