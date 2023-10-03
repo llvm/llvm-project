@@ -1,4 +1,4 @@
-//===- File.h - Parsing sparse tensors from files ---------------*- C++ -*-===//
+//===- File.h - Reading/writing sparse tensors from/to files ----*- C++ -*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 //
-// This file implements reading and writing files in one of the following
-// external formats:
+// This file implements reading and writing sparse tensor files in one of the
+// following external formats:
 //
 // (1) Matrix Market Exchange (MME): *.mtx
 //     https://math.nist.gov/MatrixMarket/formats.html
