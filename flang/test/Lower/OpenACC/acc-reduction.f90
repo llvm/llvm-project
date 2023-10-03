@@ -1119,10 +1119,8 @@ end subroutine
 
 ! CHECK-LABEL: func.func @_QPacc_reduction_add_dynamic_extent_add_with_section(
 ! CHECK-SAME: %[[ARG0:.*]]: !fir.box<!fir.array<?xi32>> {fir.bindc_name = "a"})
-! HLFIR: %[[DECL:.*]]:2 = hlfir.declare %[[[ARG0]]] {uniq_name = "_QFacc_reduction_add_dynamic_extent_add_with_sectionEa"} : (!fir.box<!fir.array<?xi32>>) -> (!fir.box<!fir.array<?xi32>>, !fir.box<!fir.array<?xi32>>)
-! HLFIR: %[[C1:.*]] = arith.constant 1 : index
-! HLFIR: %[[C3:.*]] = arith.constant 3 : index
-! HLFIR: %[[BOUND:.*]] = acc.bounds lowerbound(%[[C1]] : index) upperbound(%[[C3]] : index) stride(%{{.*}}#2 : index) startIdx(%{{.*}} : index) {strideInBytes = true}
+! HLFIR: %[[DECL:.*]]:2 = hlfir.declare %[[ARG0]] {uniq_name = "_QFacc_reduction_add_dynamic_extent_add_with_sectionEa"} : (!fir.box<!fir.array<?xi32>>) -> (!fir.box<!fir.array<?xi32>>, !fir.box<!fir.array<?xi32>>)
+! HLFIR: %[[BOUND:.*]] = acc.bounds lowerbound(%c1{{.*}} : index) upperbound(%c3{{.*}} : index) stride(%{{.*}}#2 : index) startIdx(%{{.*}} : index) {strideInBytes = true}
 ! HLFIR: %[[BOX_ADDR:.*]] = fir.box_addr %[[DECL]]#1 : (!fir.box<!fir.array<?xi32>>) -> !fir.ref<!fir.array<?xi32>>
 ! HLFIR: %[[RED:.*]] = acc.reduction varPtr(%[[BOX_ADDR]] : !fir.ref<!fir.array<?xi32>>) bounds(%[[BOUND]]) -> !fir.ref<!fir.array<?xi32>> {name = "a(2:4)"}
-! HLFIR: acc.parallel reduction(@"reduction_add_section_lb3.ub1_ref_?xi32" -> %[[RED]] : !fir.ref<!fir.array<?xi32>>)
+! HLFIR: acc.parallel reduction(@"reduction_add_section_lb1.ub3_ref_?xi32" -> %[[RED]] : !fir.ref<!fir.array<?xi32>>)
