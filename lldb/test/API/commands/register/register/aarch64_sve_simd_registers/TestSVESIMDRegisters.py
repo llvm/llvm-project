@@ -42,8 +42,10 @@ class SVESIMDRegistersTestCase(TestBase):
             self.skipTest("SVE registers must be supported.")
 
         if (mode == Mode.SSVE) and not self.isAArch64SMEFA64():
-            self.skipTest("SSVE registers must be supported and the smefa64 "
-                          "extension must be present.")
+            self.skipTest(
+                "SSVE registers must be supported and the smefa64 "
+                "extension must be present."
+            )
 
     def make_simd_value(self, n):
         pad = " ".join(["0x00"] * 7)
