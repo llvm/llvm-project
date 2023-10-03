@@ -410,6 +410,8 @@ Miscellaneous Clang Crashes Fixed
   `Issue 64065 <https://github.com/llvm/llvm-project/issues/64065>`_
 - Fixed a crash when check array access on zero-length element.
   `Issue 64564 <https://github.com/llvm/llvm-project/issues/64564>`_
+- Fixed a crash when an ObjC ivar has an invalid type. See
+  (`#68001 <https://github.com/llvm/llvm-project/pull/68001>`_)
 
 Target Specific Changes
 -----------------------
