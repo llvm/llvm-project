@@ -2799,6 +2799,7 @@ bool GVNPass::processBlock(BasicBlock *BB) {
       salvageDebugInfo(*I);
       removeInstruction(I);
     }
+    ICF->clear();
     InstrsToErase.clear();
 
     if (AtStart)
