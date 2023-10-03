@@ -31,7 +31,7 @@ T template_muladd(T a, T b, T c) {
 
 float fp_contract_3(float a, float b, float c) {
 // CHECK: _Z13fp_contract_3fff
-// CHECK: tail call float @llvm.fmuladd
+// CHECK: tail call noundef float @llvm.fmuladd
   return template_muladd<float>(a, b, c);
 }
 
