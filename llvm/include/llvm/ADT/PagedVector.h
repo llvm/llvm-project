@@ -210,8 +210,8 @@ public:
     }
 
     /// Equality operator.
-    friend bool operator==(MaterializedIterator const &LHS,
-                           MaterializedIterator const &RHS) {
+    friend bool operator==(const MaterializedIterator &LHS,
+                           const MaterializedIterator &RHS) {
       return LHS.equals(RHS);
     }
 
@@ -229,8 +229,8 @@ public:
       return ElementIdx == Other.ElementIdx;
     }
 
-    friend bool operator!=(MaterializedIterator const &LHS,
-                           MaterializedIterator const &RHS) {
+    friend bool operator!=(const MaterializedIterator &LHS,
+                           const MaterializedIterator &RHS) {
       return !(LHS == RHS);
     }
 
