@@ -890,6 +890,52 @@ static mlir::Value genScalarCombiner(fir::FirOpBuilder &builder,
   TODO(loc, "reduction operator");
 }
 
+static fir::ShapeOp
+genShapeFromBounds(mlir::Location loc, fir::FirOpBuilder &builder,
+                   const llvm::SmallVector<mlir::Value> &args) {
+  assert(args.size() % 3 == 0 && "Triplets must be a multiple of 3");
+  llvm::SmallVector<mlir::Value> extents;
+  mlir::Type idxTy = builder.getIndexType();
+  mlir::Value one = builder.createIntegerConstant(loc, idxTy, 1);
+  mlir::Value zero = builder.createIntegerConstant(loc, idxTy, 0);
+  for (unsigned i = 0; i < args.size(); i += 3) {
+    mlir::Value s1 =
+        builder.create<mlir::arith::SubIOp>(loc, args[i + 1], args[0]);
+    mlir::Value s2 = builder.create<mlir::arith::AddIOp>(loc, s1, one);
+    mlir::Value s3 = builder.create<mlir::arith::DivSIOp>(loc, s2, args[i + 2]);
+    mlir::Value cmp = builder.create<mlir::arith::CmpIOp>(
+        loc, mlir::arith::CmpIPredicate::sgt, s3, zero);
+    mlir::Value ext = builder.create<mlir::arith::SelectOp>(loc, cmp, s3, zero);
+    extents.push_back(ext);
+  }
+  return builder.create<fir::ShapeOp>(loc, extents);
+}
+
+static llvm::SmallVector<mlir::Value>
+genConstantBounds(fir::FirOpBuilder &builder, mlir::Location loc,
+                  mlir::acc::DataBoundsOp &dataBound) {
+  mlir::Type idxTy = builder.getIndexType();
+  mlir::Value lb, ub, step;
+  if (dataBound.getLowerbound() &&
+      fir::getIntIfConstant(dataBound.getLowerbound()) &&
+      dataBound.getUpperbound() &&
+      fir::getIntIfConstant(dataBound.getUpperbound())) {
+    lb = builder.createIntegerConstant(
+        loc, idxTy, *fir::getIntIfConstant(dataBound.getLowerbound()));
+    ub = builder.createIntegerConstant(
+        loc, idxTy, *fir::getIntIfConstant(dataBound.getUpperbound()));
+    step = builder.createIntegerConstant(loc, idxTy, 1);
+  } else if (dataBound.getExtent()) {
+    lb = builder.createIntegerConstant(loc, idxTy, 0);
+    ub = builder.createIntegerConstant(
+        loc, idxTy, *fir::getIntIfConstant(dataBound.getExtent()) - 1);
+    step = builder.createIntegerConstant(loc, idxTy, 1);
+  } else {
+    llvm::report_fatal_error("Expect constant lb/ub or extent");
+  }
+  return {lb, ub, step};
+}
+
 static void genCombiner(fir::FirOpBuilder &builder, mlir::Location loc,
                         mlir::acc::ReductionOperator op, mlir::Type ty,
                         mlir::Value value1, mlir::Value value2,
@@ -907,30 +953,14 @@ static void genCombiner(fir::FirOpBuilder &builder, mlir::Location loc,
     if (allConstantBound) {
       // Use the constant bound directly in the combiner region so they do not
       // need to be passed as block argument.
-      mlir::Type idxTy = builder.getIndexType();
       for (auto bound : llvm::reverse(bounds)) {
         auto dataBound =
             mlir::dyn_cast<mlir::acc::DataBoundsOp>(bound.getDefiningOp());
-        mlir::Value lb, ub, step;
-        if (dataBound.getLowerbound() &&
-            fir::getIntIfConstant(dataBound.getLowerbound()) &&
-            dataBound.getUpperbound() &&
-            fir::getIntIfConstant(dataBound.getUpperbound())) {
-          lb = builder.createIntegerConstant(
-              loc, idxTy, *fir::getIntIfConstant(dataBound.getLowerbound()));
-          ub = builder.createIntegerConstant(
-              loc, idxTy, *fir::getIntIfConstant(dataBound.getUpperbound()));
-          step = builder.createIntegerConstant(loc, idxTy, 1);
-        } else if (dataBound.getExtent()) {
-          lb = builder.createIntegerConstant(loc, idxTy, 0);
-          ub = builder.createIntegerConstant(
-              loc, idxTy, *fir::getIntIfConstant(dataBound.getExtent()) - 1);
-          step = builder.createIntegerConstant(loc, idxTy, 1);
-        } else {
-          llvm::report_fatal_error("Expect constant lb/ub or extent");
-        }
-        auto loop = builder.create<fir::DoLoopOp>(loc, lb, ub, step,
-                                                  /*unordered=*/false);
+        llvm::SmallVector<mlir::Value> values =
+            genConstantBounds(builder, loc, dataBound);
+        auto loop =
+            builder.create<fir::DoLoopOp>(loc, values[0], values[1], values[2],
+                                          /*unordered=*/false);
         builder.setInsertionPointToStart(loop.getBody());
         loops.push_back(loop);
         ivs.push_back(loop.getInductionVar());
@@ -962,13 +992,55 @@ static void genCombiner(fir::FirOpBuilder &builder, mlir::Location loc,
     builder.create<fir::StoreOp>(loc, res, addr1);
     builder.setInsertionPointAfter(loops[0]);
   } else if (auto boxTy = mlir::dyn_cast<fir::BaseBoxType>(ty)) {
+    llvm::SmallVector<mlir::Value> tripletArgs;
     fir::SequenceType seqTy =
         mlir::dyn_cast_or_null<fir::SequenceType>(boxTy.getEleTy());
     if (!seqTy)
       TODO(loc, "Unsupported boxed type in OpenACC reduction");
-    hlfir::Entity left = hlfir::Entity{value1};
-    hlfir::Entity right = hlfir::Entity{value2};
-    auto shape = hlfir::genShape(loc, builder, left);
+
+    if (allConstantBound) {
+      for (auto bound : llvm::reverse(bounds)) {
+        auto dataBound =
+            mlir::cast<mlir::acc::DataBoundsOp>(bound.getDefiningOp());
+        tripletArgs.append(genConstantBounds(builder, loc, dataBound));
+      }
+    } else {
+      assert(((recipe.getCombinerRegion().getArguments().size() - 2) / 3 ==
+              seqTy.getDimension()) &&
+             "Expect 3 block arguments per dimension");
+      for (auto arg : recipe.getCombinerRegion().getArguments().drop_front(2))
+        tripletArgs.push_back(arg);
+    }
+    auto shape = genShapeFromBounds(loc, builder, tripletArgs);
+
+    hlfir::DesignateOp::Subscripts triplets;
+    for (unsigned i = 2; i < recipe.getCombinerRegion().getArguments().size();
+         i += 3)
+      triplets.emplace_back(hlfir::DesignateOp::Triplet{
+          recipe.getCombinerRegion().getArgument(i),
+          recipe.getCombinerRegion().getArgument(i + 1),
+          recipe.getCombinerRegion().getArgument(i + 2)});
+
+    llvm::SmallVector<mlir::Value> lenParamsLeft;
+    auto leftEntity = hlfir::Entity{value1};
+    hlfir::genLengthParameters(loc, builder, leftEntity, lenParamsLeft);
+    auto leftDesignate = builder.create<hlfir::DesignateOp>(
+        loc, value1.getType(), leftEntity, /*component=*/"",
+        /*componentShape=*/mlir::Value{}, triplets,
+        /*substring=*/mlir::ValueRange{}, /*complexPartAttr=*/std::nullopt,
+        shape, lenParamsLeft);
+    auto left = hlfir::Entity{leftDesignate.getResult()};
+
+    llvm::SmallVector<mlir::Value> lenParamsRight;
+    auto rightEntity = hlfir::Entity{value2};
+    hlfir::genLengthParameters(loc, builder, rightEntity, lenParamsRight);
+    auto rightDesignate = builder.create<hlfir::DesignateOp>(
+        loc, value2.getType(), rightEntity, /*component=*/"",
+        /*componentShape=*/mlir::Value{}, triplets,
+        /*substring=*/mlir::ValueRange{}, /*complexPartAttr=*/std::nullopt,
+        shape, lenParamsRight);
+    auto right = hlfir::Entity{rightDesignate.getResult()};
+
     llvm::SmallVector<mlir::Value, 1> typeParams;
     auto genKernel = [&builder, &loc, op, seqTy, &left, &right](
                          mlir::Location l, fir::FirOpBuilder &b,
@@ -1079,7 +1151,7 @@ genReductions(const Fortran::parser::AccObjectListWithReduction &objectList,
     std::string recipeName = fir::getTypeAsString(
         ty, converter.getKindMap(),
         ("reduction_" + stringifyReductionOperator(mlirOp)).str() + suffix);
-    if (!areAllBoundConstant(bounds))
+    if (!areAllBoundConstant(bounds) || fir::isAssumedShape(baseAddr.getType()))
       ty = baseAddr.getType();
     mlir::acc::ReductionRecipeOp recipe =
         Fortran::lower::createOrGetReductionRecipe(

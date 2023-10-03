@@ -3,6 +3,32 @@
 ! RUN: bbc -fopenacc -emit-fir %s -o - | FileCheck %s --check-prefixes=CHECK,FIR
 ! RUN: bbc -fopenacc -emit-hlfir %s -o - | FileCheck %s --check-prefixes=CHECK,HLFIR
 
+! CHECK-LABEL: acc.reduction.recipe @"reduction_add_section_lb1.ub3_ref_?xi32" : !fir.box<!fir.array<?xi32>> reduction_operator <add> init {
+! CHECK: ^bb0(%[[ARG0:.*]]: !fir.box<!fir.array<?xi32>>):
+! HLFIR:   %[[BOX_DIMS:.*]]:3 = fir.box_dims %[[ARG0]], %c0{{.*}} : (!fir.box<!fir.array<?xi32>>, index) -> (index, index, index)
+! HLFIR:   %[[SHAPE:.*]] = fir.shape %[[BOX_DIMS]]#1 : (index) -> !fir.shape<1>
+! HLFIR:   %[[TEMP:.*]] = fir.allocmem !fir.array<?xi32>, %0#1 {bindc_name = ".tmp", uniq_name = ""}
+! HLFIR:   %[[DECLARE:.*]]:2 = hlfir.declare %[[TEMP]](%[[SHAPE]]) {uniq_name = ".tmp"} : (!fir.heap<!fir.array<?xi32>>, !fir.shape<1>) -> (!fir.box<!fir.array<?xi32>>, !fir.heap<!fir.array<?xi32>>)
+! HLFIR:   hlfir.assign %c0{{.*}} to %[[DECLARE]]#0 : i32, !fir.box<!fir.array<?xi32>>
+! HLFIR:   acc.yield %[[DECLARE]]#0 : !fir.box<!fir.array<?xi32>>
+! CHECK: } combiner {
+! CHECK: ^bb0(%[[ARG0:.*]]: !fir.box<!fir.array<?xi32>>, %[[ARG1:.*]]: !fir.box<!fir.array<?xi32>>):
+! HLFIR:   %[[SHAPE:.*]] = fir.shape %{{.*}} : (index) -> !fir.shape<1>
+! HLFIR:   %[[DES1:.*]] = hlfir.designate %[[ARG0]] shape %[[SHAPE]] : (!fir.box<!fir.array<?xi32>>, !fir.shape<1>) -> !fir.box<!fir.array<?xi32>>
+! HLFIR:   %[[DES2:.*]] = hlfir.designate %[[ARG1]] shape %[[SHAPE]] : (!fir.box<!fir.array<?xi32>>, !fir.shape<1>) -> !fir.box<!fir.array<?xi32>>
+! HLFIR:   %[[ELEMENTAL:.*]] = hlfir.elemental %[[SHAPE]] unordered : (!fir.shape<1>) -> !hlfir.expr<?xi32> {
+! HLFIR:   ^bb0(%[[IV:.*]]: index):
+! HLFIR:     %[[DES_V1:.*]] = hlfir.designate %[[DES1]] (%[[IV]])  : (!fir.box<!fir.array<?xi32>>, index) -> !fir.ref<i32>
+! HLFIR:     %[[DES_V2:.*]] = hlfir.designate %[[DES2]] (%[[IV]])  : (!fir.box<!fir.array<?xi32>>, index) -> !fir.ref<i32>
+! HLFIR:     %[[LOAD_V1:.*]] = fir.load %[[DES_V1]] : !fir.ref<i32>
+! HLFIR:     %[[LOAD_V2:.*]] = fir.load %[[DES_V2]] : !fir.ref<i32>
+! HLFIR:     %[[COMBINED:.*]] = arith.addi %[[LOAD_V1]], %[[LOAD_V2]] : i32
+! HLFIR:     hlfir.yield_element %[[COMBINED]] : i32
+! HLFIR:   }
+! HLFIR:   hlfir.assign %[[ELEMENTAL]] to %[[ARG0]] : !hlfir.expr<?xi32>, !fir.box<!fir.array<?xi32>>
+! HLFIR:   acc.yield %[[ARG0]] : !fir.box<!fir.array<?xi32>>
+! HLFIR: }
+
 ! CHECK-LABEL: acc.reduction.recipe @"reduction_max_ref_?xf32" : !fir.box<!fir.array<?xf32>> reduction_operator <max> init {
 ! CHECK: ^bb0(%[[ARG0:.*]]: !fir.box<!fir.array<?xf32>>):
 ! CHECK:   %[[INIT_VALUE:.*]] = arith.constant -1.401300e-45 : f32
@@ -15,12 +41,12 @@
 ! HLFIR:   acc.yield %[[DECLARE]]#0 : !fir.box<!fir.array<?xf32>>
 ! CHECK: } combiner {
 ! CHECK: ^bb0(%[[ARG0:.*]]: !fir.box<!fir.array<?xf32>>, %[[ARG1:.*]]: !fir.box<!fir.array<?xf32>>
-! HLFIR:   %[[BOX_DIMS:.*]]:3 = fir.box_dims %[[ARG0]], %{{.*}} : (!fir.box<!fir.array<?xf32>>, index) -> (index, index, index)
-! HLFIR:   %[[SHAPE:.*]] = fir.shape %[[BOX_DIMS]]#1 : (index) -> !fir.shape<1>
-! HLFIR:   %[[ELEMENTAL:.*]] = hlfir.elemental %[[SHAPE]] unordered : (!fir.shape<1>) -> !hlfir.expr<?xf32> {
+! HLFIR:   %[[LEFT:.*]] = hlfir.designate %[[ARG0]] (%{{.*}}:%{{.*}}:%{{.*}}) shape %{{.*}} : (!fir.box<!fir.array<?xf32>>, index, index, index, !fir.shape<1>) -> !fir.box<!fir.array<?xf32>>
+! HLFIR:   %[[RIGHT:.*]] = hlfir.designate %[[ARG1]] (%{{.*}}:%{{.*}}:%{{.*}}) shape %{{.*}} : (!fir.box<!fir.array<?xf32>>, index, index, index, !fir.shape<1>) -> !fir.box<!fir.array<?xf32>>
+! HLFIR:   %[[ELEMENTAL:.*]] = hlfir.elemental %{{.*}} unordered : (!fir.shape<1>) -> !hlfir.expr<?xf32> {
 ! HLFIR:   ^bb0(%{{.*}}: index):
-! HLFIR:     %[[DES_V1:.*]] = hlfir.designate %[[ARG0]] (%{{.*}})  : (!fir.box<!fir.array<?xf32>>, index) -> !fir.ref<f32>
-! HLFIR:     %[[DES_V2:.*]] = hlfir.designate %[[ARG1]] (%{{.*}})  : (!fir.box<!fir.array<?xf32>>, index) -> !fir.ref<f32>
+! HLFIR:     %[[DES_V1:.*]] = hlfir.designate %[[LEFT]] (%{{.*}})  : (!fir.box<!fir.array<?xf32>>, index) -> !fir.ref<f32>
+! HLFIR:     %[[DES_V2:.*]] = hlfir.designate %[[RIGHT]] (%{{.*}})  : (!fir.box<!fir.array<?xf32>>, index) -> !fir.ref<f32>
 ! HLFIR:     %[[LOAD_V1:.*]] = fir.load %[[DES_V1]] : !fir.ref<f32>
 ! HLFIR:     %[[LOAD_V2:.*]] = fir.load %[[DES_V2]] : !fir.ref<f32>
 ! HLFIR:     %[[CMPF:.*]] = arith.cmpf ogt, %[[LOAD_V1]], %[[LOAD_V2]] : f32
@@ -43,12 +69,12 @@
 ! HLFIR:   acc.yield %[[DECLARE]]#0 : !fir.box<!fir.array<?xi32>>
 ! CHECK: } combiner {
 ! CHECK: ^bb0(%[[V1:.*]]: !fir.box<!fir.array<?xi32>>, %[[V2:.*]]: !fir.box<!fir.array<?xi32>>
-! HLFIR:   %[[BOX_DIMS]]:3 = fir.box_dims %[[V1]], %{{.*}} : (!fir.box<!fir.array<?xi32>>, index) -> (index, index, index)
-! HLFIR:   %[[SHAPE:.*]] = fir.shape %[[BOX_DIMS]]#1 : (index) -> !fir.shape<1>
-! HLFIR:   %[[ELEMENTAL:.*]] = hlfir.elemental %[[SHAPE]] unordered : (!fir.shape<1>) -> !hlfir.expr<?xi32> {
+! HLFIR:   %[[LEFT:.*]] = hlfir.designate %[[ARG0]] (%{{.*}}:%{{.*}}:%{{.*}}) shape %{{.*}} : (!fir.box<!fir.array<?xi32>>, index, index, index, !fir.shape<1>) -> !fir.box<!fir.array<?xi32>>
+! HLFIR:   %[[RIGHT:.*]] = hlfir.designate %[[ARG1]] (%{{.*}}:%{{.*}}:%{{.*}}) shape %{{.*}} : (!fir.box<!fir.array<?xi32>>, index, index, index, !fir.shape<1>) -> !fir.box<!fir.array<?xi32>>
+! HLFIR:   %[[ELEMENTAL:.*]] = hlfir.elemental %{{.*}} unordered : (!fir.shape<1>) -> !hlfir.expr<?xi32> {
 ! HLFIR:   ^bb0(%{{.*}}: index):
-! HLFIR:     %[[DES_V1:.*]] = hlfir.designate %[[V1]] (%{{.*}})  : (!fir.box<!fir.array<?xi32>>, index) -> !fir.ref<i32>
-! HLFIR:     %[[DES_V2:.*]] = hlfir.designate %[[V2]] (%{{.*}})  : (!fir.box<!fir.array<?xi32>>, index) -> !fir.ref<i32>
+! HLFIR:     %[[DES_V1:.*]] = hlfir.designate %[[LEFT]] (%{{.*}})  : (!fir.box<!fir.array<?xi32>>, index) -> !fir.ref<i32>
+! HLFIR:     %[[DES_V2:.*]] = hlfir.designate %[[RIGHT]] (%{{.*}})  : (!fir.box<!fir.array<?xi32>>, index) -> !fir.ref<i32>
 ! HLFIR:     %[[LOAD_V1:.*]] = fir.load %[[DES_V1]] : !fir.ref<i32>
 ! HLFIR:     %[[LOAD_V2:.*]] = fir.load %[[DES_V2]] : !fir.ref<i32>
 ! HLFIR:     %[[COMBINED:.*]] = arith.addi %[[LOAD_V1]], %[[LOAD_V2]] : i32
@@ -1084,3 +1110,17 @@ end subroutine
 ! HLFIR: %[[DECLARG0:.*]]:2 = hlfir.declare %[[ARG0]]
 ! HLFIR: %[[RED:.*]] = acc.reduction varPtr(%{{.*}} : !fir.ref<!fir.array<?xf32>>) bounds(%{{.*}}) -> !fir.ref<!fir.array<?xf32>> {name = "a"}
 ! HLFIR: acc.parallel reduction(@"reduction_max_ref_?xf32" -> %[[RED]] : !fir.ref<!fir.array<?xf32>>) {
+
+subroutine acc_reduction_add_dynamic_extent_add_with_section(a)
+  integer :: a(:)
+  !$acc parallel reduction(+:a(2:4))
+  !$acc end parallel
+end subroutine
+
+! CHECK-LABEL: func.func @_QPacc_reduction_add_dynamic_extent_add_with_section(
+! CHECK-SAME: %[[ARG0:.*]]: !fir.box<!fir.array<?xi32>> {fir.bindc_name = "a"})
+! HLFIR: %[[DECL:.*]]:2 = hlfir.declare %[[ARG0]] {uniq_name = "_QFacc_reduction_add_dynamic_extent_add_with_sectionEa"} : (!fir.box<!fir.array<?xi32>>) -> (!fir.box<!fir.array<?xi32>>, !fir.box<!fir.array<?xi32>>)
+! HLFIR: %[[BOUND:.*]] = acc.bounds lowerbound(%c1{{.*}} : index) upperbound(%c3{{.*}} : index) stride(%{{.*}}#2 : index) startIdx(%{{.*}} : index) {strideInBytes = true}
+! HLFIR: %[[BOX_ADDR:.*]] = fir.box_addr %[[DECL]]#1 : (!fir.box<!fir.array<?xi32>>) -> !fir.ref<!fir.array<?xi32>>
+! HLFIR: %[[RED:.*]] = acc.reduction varPtr(%[[BOX_ADDR]] : !fir.ref<!fir.array<?xi32>>) bounds(%[[BOUND]]) -> !fir.ref<!fir.array<?xi32>> {name = "a(2:4)"}
+! HLFIR: acc.parallel reduction(@"reduction_add_section_lb1.ub3_ref_?xi32" -> %[[RED]] : !fir.ref<!fir.array<?xi32>>)
