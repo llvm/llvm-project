@@ -1734,7 +1734,7 @@ bool OmpStructureChecker::IsOperatorValid(const T &node, const D &variable) {
     }
     return common::HasMember<T, AllowedBinaryOperators>;
   }
-  return true;
+  return false;
 }
 
 void OmpStructureChecker::CheckAtomicCaptureStmt(
@@ -1780,9 +1780,12 @@ void OmpStructureChecker::CheckAtomicUpdateStmt(
     const parser::AssignmentStmt &assignment) {
   const auto &expr{std::get<parser::Expr>(assignment.t)};
   const auto &var{std::get<parser::Variable>(assignment.t)};
+  bool isIntrinsicProcedure{false};
+  bool isValidOperator{false};
   common::visit(
       common::visitors{
           [&](const common::Indirection<parser::FunctionReference> &x) {
+            isIntrinsicProcedure = true;
             const auto &procedureDesignator{
                 std::get<parser::ProcedureDesignator>(x.value().v.t)};
             const parser::Name *name{
@@ -1794,46 +1797,61 @@ void OmpStructureChecker::CheckAtomicUpdateStmt(
               context_.Say(expr.source,
                   "Invalid intrinsic procedure name in "
                   "OpenMP ATOMIC (UPDATE) statement"_err_en_US);
-            } else if (name) {
-              bool foundMatch{false};
-              if (auto varDesignatorIndirection =
-                      std::get_if<Fortran::common::Indirection<
-                          Fortran::parser::Designator>>(&var.u)) {
-                const auto &varDesignator = varDesignatorIndirection->value();
-                if (const auto *dataRef = std::get_if<Fortran::parser::DataRef>(
-                        &varDesignator.u)) {
-                  if (const auto *name =
-                          std::get_if<Fortran::parser::Name>(&dataRef->u)) {
-                    const auto &varSymbol = *name->symbol;
-                    if (const auto *e{GetExpr(context_, expr)}) {
-                      for (const Symbol &symbol :
-                          evaluate::CollectSymbols(*e)) {
-                        if (symbol == varSymbol) {
-                          foundMatch = true;
-                          break;
-                        }
-                      }
-                    }
-                  }
-                }
-              }
-              if (!foundMatch) {
-                context_.Say(expr.source,
-                    "Atomic update variable '%s' not found in the "
-                    "argument list of intrinsic procedure"_err_en_US,
-                    var.GetSource().ToString());
-              }
             }
           },
           [&](const auto &x) {
             if (!IsOperatorValid(x, var)) {
               context_.Say(expr.source,
-                  "Invalid operator in OpenMP ATOMIC (UPDATE) "
+                  "Invalid or missing operator in atomic update "
                   "statement"_err_en_US);
-            }
+            } else
+              isValidOperator = true;
           },
       },
       expr.u);
+  if (const auto *e{GetExpr(context_, expr)}) {
+    const auto *v{GetExpr(context_, var)};
+    if (e->Rank() != 0)
+      context_.Say(expr.source,
+          "Expected scalar expression "
+          "on the RHS of atomic update assignment "
+          "statement"_err_en_US);
+    if (v->Rank() != 0)
+      context_.Say(var.GetSource(),
+          "Expected scalar variable "
+          "on the LHS of atomic update assignment "
+          "statement"_err_en_US);
+    const Symbol &varSymbol = evaluate::GetSymbolVector(*v).front();
+    int numOfSymbolMatches{0};
+    SymbolVector exprSymbols = evaluate::GetSymbolVector(*e);
+    for (const Symbol &symbol : exprSymbols) {
+      if (varSymbol == symbol)
+        numOfSymbolMatches++;
+    }
+    if (isIntrinsicProcedure) {
+      std::string varName = var.GetSource().ToString();
+      if (numOfSymbolMatches != 1)
+        context_.Say(expr.source,
+            "Intrinsic procedure"
+            " arguments in atomic update statement"
+            " must have exactly one occurence of '%s'"_err_en_US,
+            varName);
+      else if (varSymbol != exprSymbols.front() &&
+          varSymbol != exprSymbols.back())
+        context_.Say(expr.source,
+            "Atomic update statement "
+            "should be of the form `%s = intrinsic_procedure(%s, expr_list)` "
+            "OR `%s = intrinsic_procedure(expr_list, %s)`"_err_en_US,
+            varName, varName, varName, varName);
+    } else if (isValidOperator) {
+      if (numOfSymbolMatches != 1)
+        context_.Say(expr.source,
+            "Exactly one occurence of '%s' "
+            "expected on the RHS of atomic update assignment statement"_err_en_US,
+            var.GetSource().ToString());
+    }
+  }
+
   ErrIfAllocatableVariable(var);
 }
 

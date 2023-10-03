@@ -19157,7 +19157,7 @@ MarkVarDeclODRUsed(ValueDecl *V, SourceLocation Loc, Sema &SemaRef,
       // Diagnose ODR-use of host global variables in device functions.
       // Reference of device global variables in host functions is allowed
       // through shadow variables therefore it is not diagnosed.
-      if (SemaRef.LangOpts.CUDAIsDevice) {
+      if (SemaRef.LangOpts.CUDAIsDevice && !SemaRef.LangOpts.HIPStdPar) {
         SemaRef.targetDiag(Loc, diag::err_ref_bad_target)
             << /*host*/ 2 << /*variable*/ 1 << Var << UserTarget;
         SemaRef.targetDiag(Var->getLocation(),
