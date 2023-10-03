@@ -11768,6 +11768,16 @@ GVALinkage ASTContext::GetGVALinkageForFunction(const FunctionDecl *FD) const {
 
 static GVALinkage basicGVALinkageForVariable(const ASTContext &Context,
                                              const VarDecl *VD) {
+  // As an extension for interactive REPLs, make sure constant variables are
+  // only emitted once instead of LinkageComputer::getLVForNamespaceScopeDecl
+  // marking them as internal.
+  if (Context.getLangOpts().CPlusPlus &&
+      Context.getLangOpts().IncrementalExtensions &&
+      VD->getType().isConstQualified() &&
+      !VD->getType().isVolatileQualified() && !VD->isInline() &&
+      !isa<VarTemplateSpecializationDecl>(VD) && !VD->getDescribedVarTemplate())
+    return GVA_DiscardableODR;
+
   if (!VD->isExternallyVisible())
     return GVA_Internal;
 
