@@ -423,17 +423,10 @@ constexpr const char *test_func_simple(const char *__f = __builtin_FUNCTION()) {
 constexpr const char *get_function() {
   return __func__;
 }
-#ifdef MS
 constexpr bool test_function() {
-  return !is_equal(__func__, test_func_simple()) &&
-         !is_equal(get_function(), test_func_simple());
-}
-#else
-  constexpr bool test_function() {
   return is_equal(__func__, test_func_simple()) &&
          !is_equal(get_function(), test_func_simple());
 }
-#endif
 static_assert(test_function());
 
 template <class T, class U = SL>
@@ -475,11 +468,11 @@ class TestBI {
 public:
    TestBI() {
 #ifdef MS
-      static_assert(is_equal(__FUNCTION__, "test_func::TestBI<int>::TestBI"));
-      static_assert(is_equal(__func__, "TestBI"));
+     static_assert(is_equal(__FUNCTION__, "test_func::TestBI<int>::TestBI"));
+     static_assert(is_equal(__func__, "TestBI"));
 #else
-      static_assert(is_equal(__FUNCTION__, "TestBI"));
-      static_assert(is_equal(__func__, "TestBI"));
+     static_assert(is_equal(__FUNCTION__, "TestBI"));
+     static_assert(is_equal(__func__, "TestBI"));
 #endif
    }
 };
@@ -506,7 +499,7 @@ public:
       static_assert(is_equal(__FUNCTION__, "test_func::TestStruct<struct test_func::S>::TestStruct"));
       static_assert(is_equal(__func__, "TestStruct"));
 #else
-      static_assert(is_equal(__func__, "TestStruct"));
+      static_assert(is_equal(__FUNCTION__, "TestStruct"));
       static_assert(is_equal(__func__, "TestStruct"));
 #endif
    }
@@ -530,12 +523,13 @@ class C {};
 struct S {};
 enum E {};
 
-test_func::TestBI<int> t1;
-test_func::TestClass<C> t2;
-test_func::TestStruct<S> t3;
-test_func::TestEnum<E> t4;
+
 } // namespace test_func
 
+test_func::TestBI<int> t1;
+test_func::TestClass<test_func::C> t2;
+test_func::TestStruct<test_func::S> t3;
+test_func::TestEnum<test_func::E> t4;
 
 //===----------------------------------------------------------------------===//
 //                            __builtin_FUNCSIG()
@@ -721,16 +715,8 @@ constexpr bool test_in_func() {
   static_assert(is_equal(b.a.f, "test_func_passed.cpp"));
   static_assert(is_equal(b.a.f2, "test_func_passed.cpp"));
   static_assert(is_equal(b.a.info.file(), "test_func_passed.cpp"));
-#ifdef MS
-  static_assert(is_equal(b.a.func, "test_out_of_line_init::test_in_func"));
-#else
   static_assert(is_equal(b.a.func, "test_in_func"));
-#endif
-#ifdef MS
-  static_assert(is_equal(b.a.func2, "test_out_of_line_init::test_in_func"));
-#else
   static_assert(is_equal(b.a.func2, "test_in_func"));
-#endif
   static_assert(is_equal(b.a.info.function(), "bool test_out_of_line_init::test_in_func()"));
   return true;
 }
@@ -757,11 +743,7 @@ constexpr InInit II;
 
 static_assert(II.l == 5200, "");
 static_assert(is_equal(II.f, "in_init.cpp"));
-#ifdef MS
-static_assert(is_equal(II.func, "test_global_scope::InInit::InInit"));
-#else
 static_assert(is_equal(II.func, "InInit"));
-#endif
 
 #line 5400
 struct AggInit {
