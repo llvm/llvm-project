@@ -307,8 +307,9 @@ AlignTokenSequence(const FormatStyle &Style, unsigned Start, unsigned End,
   SmallVector<unsigned, 16> ScopeStack;
 
   for (unsigned i = Start; i != End; ++i) {
+    auto &CurrentChange = Changes[i];
     if (ScopeStack.size() != 0 &&
-        Changes[i].indentAndNestingLevel() <
+        CurrentChange.indentAndNestingLevel() <
             Changes[ScopeStack.back()].indentAndNestingLevel()) {
       ScopeStack.pop_back();
     }
@@ -320,18 +321,18 @@ AlignTokenSequence(const FormatStyle &Style, unsigned Start, unsigned End,
            Changes[PreviousNonComment].Tok->is(tok::comment)) {
       --PreviousNonComment;
     }
-    if (i != Start && Changes[i].indentAndNestingLevel() >
+    if (i != Start && CurrentChange.indentAndNestingLevel() >
                           Changes[PreviousNonComment].indentAndNestingLevel()) {
       ScopeStack.push_back(i);
     }
 
     bool InsideNestedScope = ScopeStack.size() != 0;
     bool ContinuedStringLiteral = i > Start &&
-                                  Changes[i].Tok->is(tok::string_literal) &&
+                                  CurrentChange.Tok->is(tok::string_literal) &&
                                   Changes[i - 1].Tok->is(tok::string_literal);
     bool SkipMatchCheck = InsideNestedScope || ContinuedStringLiteral;
 
-    if (Changes[i].NewlinesBefore > 0 && !SkipMatchCheck) {
+    if (CurrentChange.NewlinesBefore > 0 && !SkipMatchCheck) {
       Shift = 0;
       FoundMatchOnLine = false;
     }
@@ -339,23 +340,23 @@ AlignTokenSequence(const FormatStyle &Style, unsigned Start, unsigned End,
     // If this is the first matching token to be aligned, remember by how many
     // spaces it has to be shifted, so the rest of the changes on the line are
     // shifted by the same amount
-    if (!FoundMatchOnLine && !SkipMatchCheck && Matches(Changes[i])) {
+    if (!FoundMatchOnLine && !SkipMatchCheck && Matches(CurrentChange)) {
       FoundMatchOnLine = true;
-      Shift = Column - (RightJustify ? Changes[i].TokenLength : 0) -
-              Changes[i].StartOfTokenColumn;
-      Changes[i].Spaces += Shift;
+      Shift = Column - (RightJustify ? CurrentChange.TokenLength : 0) -
+              CurrentChange.StartOfTokenColumn;
+      CurrentChange.Spaces += Shift;
       // FIXME: This is a workaround that should be removed when we fix
       // http://llvm.org/PR53699. An assertion later below verifies this.
-      if (Changes[i].NewlinesBefore == 0) {
-        Changes[i].Spaces =
-            std::max(Changes[i].Spaces,
-                     static_cast<int>(Changes[i].Tok->SpacesRequiredBefore));
+      if (CurrentChange.NewlinesBefore == 0) {
+        CurrentChange.Spaces =
+            std::max(CurrentChange.Spaces,
+                     static_cast<int>(CurrentChange.Tok->SpacesRequiredBefore));
       }
     }
 
     // This is for function parameters that are split across multiple lines,
     // as mentioned in the ScopeStack comment.
-    if (InsideNestedScope && Changes[i].NewlinesBefore > 0) {
+    if (InsideNestedScope && CurrentChange.NewlinesBefore > 0) {
       unsigned ScopeStart = ScopeStack.back();
       auto ShouldShiftBeAdded = [&] {
         // Function declaration
@@ -378,30 +379,30 @@ AlignTokenSequence(const FormatStyle &Style, unsigned Start, unsigned End,
                                                  TT_TemplateCloser) &&
             Changes[ScopeStart - 1].Tok->is(tok::l_paren) &&
             Changes[ScopeStart].Tok->isNot(TT_LambdaLSquare)) {
-          if (Changes[i].Tok->MatchingParen &&
-              Changes[i].Tok->MatchingParen->is(TT_LambdaLBrace)) {
+          if (CurrentChange.Tok->MatchingParen &&
+              CurrentChange.Tok->MatchingParen->is(TT_LambdaLBrace)) {
             return false;
           }
           if (Changes[ScopeStart].NewlinesBefore > 0)
             return false;
-          if (Changes[i].Tok->is(tok::l_brace) &&
-              Changes[i].Tok->is(BK_BracedInit)) {
+          if (CurrentChange.Tok->is(tok::l_brace) &&
+              CurrentChange.Tok->is(BK_BracedInit)) {
             return true;
           }
           return Style.BinPackArguments;
         }
 
         // Ternary operator
-        if (Changes[i].Tok->is(TT_ConditionalExpr))
+        if (CurrentChange.Tok->is(TT_ConditionalExpr))
           return true;
 
         // Period Initializer .XXX = 1.
-        if (Changes[i].Tok->is(TT_DesignatedInitializerPeriod))
+        if (CurrentChange.Tok->is(TT_DesignatedInitializerPeriod))
           return true;
 
         // Continued ternary operator
-        if (Changes[i].Tok->Previous &&
-            Changes[i].Tok->Previous->is(TT_ConditionalExpr)) {
+        if (CurrentChange.Tok->Previous &&
+            CurrentChange.Tok->Previous->is(TT_ConditionalExpr)) {
           return true;
         }
 
@@ -409,8 +410,8 @@ AlignTokenSequence(const FormatStyle &Style, unsigned Start, unsigned End,
         if (ScopeStart > Start + 1 &&
             Changes[ScopeStart - 2].Tok->is(tok::identifier) &&
             Changes[ScopeStart - 1].Tok->is(tok::l_brace) &&
-            Changes[i].Tok->is(tok::l_brace) &&
-            Changes[i].Tok->is(BK_BracedInit)) {
+            CurrentChange.Tok->is(tok::l_brace) &&
+            CurrentChange.Tok->is(BK_BracedInit)) {
           return true;
         }
 
@@ -418,7 +419,7 @@ AlignTokenSequence(const FormatStyle &Style, unsigned Start, unsigned End,
         if (ScopeStart > Start + 1 &&
             Changes[ScopeStart - 2].Tok->isNot(tok::identifier) &&
             Changes[ScopeStart - 1].Tok->is(tok::l_brace) &&
-            Changes[i].Tok->isNot(tok::r_brace)) {
+            CurrentChange.Tok->isNot(tok::r_brace)) {
           for (unsigned OuterScopeStart : llvm::reverse(ScopeStack)) {
             // Lambda.
             if (OuterScopeStart > Start &&
@@ -439,26 +440,26 @@ AlignTokenSequence(const FormatStyle &Style, unsigned Start, unsigned End,
       };
 
       if (ShouldShiftBeAdded())
-        Changes[i].Spaces += Shift;
+        CurrentChange.Spaces += Shift;
     }
 
     if (ContinuedStringLiteral)
-      Changes[i].Spaces += Shift;
+      CurrentChange.Spaces += Shift;
 
     // We should not remove required spaces unless we break the line before.
     assert(Shift >= 0 || Changes[i].NewlinesBefore > 0 ||
-           Changes[i].Spaces >=
+           CurrentChange.Spaces >=
                static_cast<int>(Changes[i].Tok->SpacesRequiredBefore) ||
-           Changes[i].Tok->is(tok::eof));
+           CurrentChange.Tok->is(tok::eof));
 
-    Changes[i].StartOfTokenColumn += Shift;
+    CurrentChange.StartOfTokenColumn += Shift;
     if (i + 1 != Changes.size())
       Changes[i + 1].PreviousEndOfTokenColumn += Shift;
 
     // If PointerAlignment is PAS_Right, keep *s or &s next to the token
     if ((Style.PointerAlignment == FormatStyle::PAS_Right ||
          Style.ReferenceAlignment == FormatStyle::RAS_Right) &&
-        Changes[i].Spaces != 0) {
+        CurrentChange.Spaces != 0) {
       const bool ReferenceNotRightAligned =
           Style.ReferenceAlignment != FormatStyle::RAS_Right &&
           Style.ReferenceAlignment != FormatStyle::RAS_Pointer;
