@@ -1093,7 +1093,6 @@ void SIFixSGPRCopies::lowerVGPR2SGPRCopies(MachineFunction &MF) {
 }
 
 void SIFixSGPRCopies::fixSCCCopies(MachineFunction &MF) {
-  bool IsWave32 = MF.getSubtarget<GCNSubtarget>().isWave32();
   for (MachineFunction::iterator BI = MF.begin(), BE = MF.end(); BI != BE;
        ++BI) {
     MachineBasicBlock *MBB = &*BI;
@@ -1106,13 +1105,18 @@ void SIFixSGPRCopies::fixSCCCopies(MachineFunction &MF) {
       Register SrcReg = MI.getOperand(1).getReg();
       Register DstReg = MI.getOperand(0).getReg();
       if (SrcReg == AMDGPU::SCC) {
+        const TargetRegisterClass *DstRC =
+            TRI->getRegClassForOperandReg(*MRI, MI.getOperand(0));
+        unsigned DstRegSize = TRI->getRegSizeInBits(*DstRC);
+        assert((DstRegSize == 64 || DstRegSize == 32) &&
+               "Expected SCC dst to be 64 or 32 bits");
+        bool IsDst32Bit = DstRegSize == 32;
         Register SCCCopy = MRI->createVirtualRegister(
-            TRI->getRegClass(AMDGPU::SReg_1_XEXECRegClassID));
+            IsDst32Bit ? &AMDGPU::SReg_32RegClass : &AMDGPU::SReg_64RegClass);
+        unsigned Opcode =
+            IsDst32Bit ? AMDGPU::S_CSELECT_B32 : AMDGPU::S_CSELECT_B64;
         I = BuildMI(*MI.getParent(), std::next(MachineBasicBlock::iterator(MI)),
-                    MI.getDebugLoc(),
-                    TII->get(IsWave32 ? AMDGPU::S_CSELECT_B32
-                                      : AMDGPU::S_CSELECT_B64),
-                    SCCCopy)
+                    MI.getDebugLoc(), TII->get(Opcode), SCCCopy)
                 .addImm(-1)
                 .addImm(0);
         I = BuildMI(*MI.getParent(), std::next(I), I->getDebugLoc(),
@@ -1122,9 +1126,16 @@ void SIFixSGPRCopies::fixSCCCopies(MachineFunction &MF) {
         continue;
       }
       if (DstReg == AMDGPU::SCC) {
-        unsigned Opcode = IsWave32 ? AMDGPU::S_AND_B32 : AMDGPU::S_AND_B64;
-        Register Exec = IsWave32 ? AMDGPU::EXEC_LO : AMDGPU::EXEC;
-        Register Tmp = MRI->createVirtualRegister(TRI->getBoolRC());
+        const TargetRegisterClass *SrcRC =
+            TRI->getRegClassForOperandReg(*MRI, MI.getOperand(1));
+        unsigned SrcRegSize = TRI->getRegSizeInBits(*SrcRC);
+        assert((SrcRegSize == 64 || SrcRegSize == 32) &&
+               "Expected SCC src to be 64 or 32 bits");
+        bool IsSrc32Bit = SrcRegSize == 32;
+        unsigned Opcode = IsSrc32Bit ? AMDGPU::S_AND_B32 : AMDGPU::S_AND_B64;
+        Register Exec = IsSrc32Bit ? AMDGPU::EXEC_LO : AMDGPU::EXEC;
+        Register Tmp = MRI->createVirtualRegister(
+            IsSrc32Bit ? &AMDGPU::SReg_32RegClass : &AMDGPU::SReg_64RegClass);
         I = BuildMI(*MI.getParent(), std::next(MachineBasicBlock::iterator(MI)),
                     MI.getDebugLoc(), TII->get(Opcode))
                 .addReg(Tmp, getDefRegState(true))

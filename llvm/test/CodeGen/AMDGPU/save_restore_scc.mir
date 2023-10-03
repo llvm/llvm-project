@@ -1,0 +1,46 @@
+# RUN: llc -march=amdgcn -mcpu=gfx906  -verify-machineinstrs -run-pass si-fix-sgpr-copies %s -o - | FileCheck %s -check-prefixes=GFX906
+# RUN: llc -march=amdgcn -mcpu=gfx1030 -verify-machineinstrs -run-pass si-fix-sgpr-copies %s -o - | FileCheck %s -check-prefixes=GFX1030
+
+---
+
+# GFX1030-LABEL: name: waterfall_kills_scc_gfx1030
+# GFX1030: %1:sreg_32 = S_CSELECT_B32 -1, 0, implicit $scc
+# GFX1030: %2:sreg_32 = S_AND_B32 %0, $exec_lo, implicit-def $scc
+
+name:            waterfall_kills_scc_gfx1030
+body:             |
+  bb.0.entry:
+    successors: %bb.1(0x80000000)
+  
+    %1:sreg_32 = COPY $scc
+  
+  bb.1:
+    successors: %bb.1(0x80000000), %bb.2(0x40000000)
+  
+    $exec = S_XOR_B64_term $exec, -1, implicit-def $scc
+    SI_WATERFALL_LOOP %bb.2, implicit $exec
+  
+  bb.2:
+    $scc = COPY %1
+...
+
+# GFX906-LABEL: name: waterfall_kills_scc_gfx906
+# GFX906: %1:sreg_64 = S_CSELECT_B64 -1, 0, implicit $scc
+# GFX906: %2:sreg_64 = S_AND_B64 %0, $exec, implicit-def $scc
+---
+name:            waterfall_kills_scc_gfx906
+body:             |
+  bb.0.entry:
+    successors: %bb.1(0x80000000)
+  
+    %1:sreg_64_xexec = COPY $scc
+  
+  bb.1:
+    successors: %bb.1(0x80000000), %bb.2(0x40000000)
+  
+    $exec = S_XOR_B64_term $exec, -1, implicit-def $scc
+    SI_WATERFALL_LOOP %bb.2, implicit $exec
+  
+  bb.2:
+    $scc = COPY %1
+...
