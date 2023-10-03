@@ -490,8 +490,8 @@ public:
 
   bool isExpansion() const { return IsExpansion; }
   bool isFile() const { return !isExpansion(); }
-  bool isLoaded() const { return Loaded; }
-  void setLoaded(bool Value) { Loaded = Value; }
+  bool isLoaded() const { return IsLoaded; }
+  void setLoaded(bool Value) { IsLoaded = Value; }
 
   const FileInfo &getFile() const {
     assert(isFile() && "Not a file SLocEntry!");
