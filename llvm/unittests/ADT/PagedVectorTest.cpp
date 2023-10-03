@@ -185,13 +185,13 @@ TEST(PagedVectorTest, FillNonTrivialConstructor) {
 TEST(PagedVectorTest, IsMaterialized) {
   PagedVector<int, 10> V;
   V.resize(20);
-  EXPECT_EQ(V.isMaterialized(0), false);
-  EXPECT_EQ(V.isMaterialized(1), false);
-  EXPECT_EQ(V.isMaterialized(10), false);
+  EXPECT_FALSE(V.isMaterialized(0));
+  EXPECT_FALSE(V.isMaterialized(1));
+  EXPECT_FALSE(V.isMaterialized(10));
   V[0] = 0;
-  EXPECT_EQ(V.isMaterialized(0), true);
-  EXPECT_EQ(V.isMaterialized(1), true);
-  EXPECT_EQ(V.isMaterialized(10), false);
+  EXPECT_TRUE(V.isMaterialized(0));
+  EXPECT_TRUE(V.isMaterialized(1));
+  EXPECT_FALSE(V.isMaterialized(10));
 }
 
 // Elements are constructed, destructed in pages, so we expect
