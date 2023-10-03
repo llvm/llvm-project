@@ -71,14 +71,7 @@ using ElementConsumer =
 template <typename V>
 class SparseTensorCOO final {
 public:
-  using value_type = const Element<V>;
-  using reference = value_type &;
-  using const_reference = reference;
-  using vector_type = std::vector<Element<V>>;
-  using iterator = typename vector_type::const_iterator;
-  using const_iterator = iterator;
-  using difference_type = typename vector_type::difference_type;
-  using size_type = typename vector_type::size_type;
+  using const_iterator = typename std::vector<Element<V>>::const_iterator;
 
   /// Constructs a new coordinate-scheme sparse tensor with the given
   /// sizes and an optional initial storage capacity.
