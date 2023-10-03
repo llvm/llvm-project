@@ -7410,7 +7410,7 @@ private:
   llvm::ContextualFoldingSet<ConstraintSatisfaction, const ASTContext &>
       SatisfactionCache;
 
-  /// Intorduce the instantiated local variables into the local
+  /// Introduce the instantiated local variables into the local
   /// instantiation scope.
   void addInstantiatedLocalVarsToScope(FunctionDecl *Function,
                                        const FunctionDecl *PatternDecl,

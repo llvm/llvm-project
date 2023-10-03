@@ -4523,7 +4523,7 @@ TemplateDeclInstantiator::SubstFunctionType(FunctionDecl *D,
   return NewTInfo;
 }
 
-/// Intorduce the instantiated local variables into the local
+/// Introduce the instantiated local variables into the local
 /// instantiation scope.
 void Sema::addInstantiatedLocalVarsToScope(FunctionDecl *Function,
                                            const FunctionDecl *PatternDecl,
