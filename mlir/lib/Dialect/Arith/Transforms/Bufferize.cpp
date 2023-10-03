@@ -29,6 +29,8 @@ namespace {
 /// Pass to bufferize Arith ops.
 struct ArithBufferizePass
     : public arith::impl::ArithBufferizeBase<ArithBufferizePass> {
+  using arith::impl::ArithBufferizeBase<ArithBufferizePass>::ArithBufferizeBase;
+
   ArithBufferizePass(uint64_t alignment = 0, bool constantOpOnly = false)
       : constantOpOnly(constantOpOnly) {
     this->alignment = alignment;
@@ -57,10 +59,6 @@ private:
   bool constantOpOnly;
 };
 } // namespace
-
-std::unique_ptr<Pass> mlir::arith::createArithBufferizePass() {
-  return std::make_unique<ArithBufferizePass>();
-}
 
 std::unique_ptr<Pass>
 mlir::arith::createConstantBufferizePass(uint64_t alignment) {

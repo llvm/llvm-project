@@ -36,9 +36,6 @@ public:
   virtual std::vector<DILocal>
   symbolizeFrame(object::SectionedAddress ModuleOffset) const = 0;
 
-  virtual std::vector<object::SectionedAddress>
-  findSymbol(StringRef Symbol) const = 0;
-
   // Return true if this is a 32-bit x86 PE COFF module.
   virtual bool isWin32Module() const = 0;
 
