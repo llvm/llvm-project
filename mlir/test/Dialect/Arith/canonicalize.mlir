@@ -2669,3 +2669,20 @@ func.func @extsi_poison() -> i64 {
   %1 = arith.extsi %0 : i32 to i64
   return %1 : i64
 }
+
+// Just checks that this doesn't crash.
+// CHECK-LABEL: @unsignedExtendConstantResource
+func.func @unsignedExtendConstantResource() -> tensor<i16> {
+  %c2 = arith.constant dense_resource<blob1> : tensor<i8>
+  %ext = arith.extui %c2 : tensor<i8> to tensor<i16>
+  return %ext : tensor<i16>
+}
+
+{-#
+  dialect_resources: {
+    builtin: {
+      // Note: This is just copied blob, the actual value isn't used or checked.
+      blob1: "0x08000000010000000000000002000000000000000300000000000000"
+    }
+  }
+#-}
