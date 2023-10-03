@@ -472,8 +472,11 @@ public:
     llvm::raw_svector_ostream nameOstream(nameBuffer);
     nameOstream << kInsertFuncNamePrefix;
     const Level lvlRank = stt.getLvlRank();
-    for (Level l = 0; l < lvlRank; l++)
-      nameOstream << toMLIRString(stt.getLvlType(l)) << "_";
+    for (Level l = 0; l < lvlRank; l++) {
+      std::string lvlType = toMLIRString(stt.getLvlType(l));
+      replaceWithUnderscore(lvlType);
+      nameOstream << lvlType << "_";
+    }
     // Static dim sizes are used in the generated code while dynamic sizes are
     // loaded from the dimSizes buffer. This is the reason for adding the shape
     // to the function name.
@@ -489,6 +492,19 @@ public:
 
 private:
   TensorType rtp;
+  void replaceWithUnderscore(std::string &lvlType) {
+    for (auto it = lvlType.begin(); it != lvlType.end();) {
+      if (*it == '(') {
+        *it = '_';
+      } else if (*it == ')' || *it == ' ') {
+        it = lvlType.erase(it);
+        continue;
+      } else if (*it == ',') {
+        *it = '_';
+      }
+      it++;
+    }
+  }
 };
 
 /// Generations insertion finalization code.
