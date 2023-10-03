@@ -1210,6 +1210,25 @@ gentbl_filegroup(
 )
 
 gentbl_filegroup(
+    name = "NVGPUTransformOpsPyGen",
+    tbl_outs = [
+        (
+            [
+                "-gen-python-op-bindings",
+                "-bind-dialect=transform",
+                "-dialect-extension=nvgpu_transform",
+            ],
+            "mlir/dialects/_nvgpu_transform_ops_gen.py",
+        ),
+    ],
+    tblgen = "//mlir:mlir-tblgen",
+    td_file = "mlir/dialects/NVGPUTransformOps.td",
+    deps = [
+        "//mlir:NVGPUTransformOpsTdFiles",
+    ],
+)
+
+gentbl_filegroup(
     name = "PDLTransformOpsPyGen",
     tbl_outs = [
         (
@@ -1327,6 +1346,7 @@ filegroup(
         ":GPUTransformOpsPyGen",
         ":LoopTransformOpsPyGen",
         ":MemRefTransformOpsPyGen",
+        ":NVGPUTransformOpsPyGen",
         ":PDLTransformOpsPyGen",
         ":SparseTensorTransformOpsPyGen",
         ":StructureTransformEnumPyGen",
