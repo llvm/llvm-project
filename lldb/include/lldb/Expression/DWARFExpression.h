@@ -45,7 +45,7 @@ public:
   DWARFExpression(const DataExtractor &data);
 
   /// Destructor
-  virtual ~DWARFExpression();
+  ~DWARFExpression();
 
   /// Return true if the location expression contains data
   bool IsValid() const;
