@@ -779,15 +779,22 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
       // Splice
       setOperationAction(ISD::VECTOR_SPLICE, VT, Custom);
 
+      if (Subtarget.hasStdExtZvkb()) {
+        setOperationAction(ISD::BSWAP, VT, Legal);
+        setOperationAction(ISD::VP_BSWAP, VT, Custom);
+      } else {
+        setOperationAction({ISD::BSWAP, ISD::VP_BSWAP}, VT, Expand);
+        setOperationAction({ISD::ROTL, ISD::ROTR}, VT, Expand);
+      }
+
       if (Subtarget.hasStdExtZvbb()) {
-        setOperationAction({ISD::BITREVERSE, ISD::BSWAP}, VT, Legal);
-        setOperationAction({ISD::VP_BITREVERSE, ISD::VP_BSWAP}, VT, Custom);
+        setOperationAction(ISD::BITREVERSE, VT, Legal);
+        setOperationAction(ISD::VP_BITREVERSE, VT, Custom);
         setOperationAction({ISD::VP_CTLZ, ISD::VP_CTLZ_ZERO_UNDEF, ISD::VP_CTTZ,
                             ISD::VP_CTTZ_ZERO_UNDEF, ISD::VP_CTPOP},
                            VT, Custom);
       } else {
-        setOperationAction({ISD::BITREVERSE, ISD::BSWAP}, VT, Expand);
-        setOperationAction({ISD::VP_BITREVERSE, ISD::VP_BSWAP}, VT, Expand);
+        setOperationAction({ISD::BITREVERSE, ISD::VP_BITREVERSE}, VT, Expand);
         setOperationAction({ISD::CTLZ, ISD::CTTZ, ISD::CTPOP}, VT, Expand);
         setOperationAction({ISD::VP_CTLZ, ISD::VP_CTLZ_ZERO_UNDEF, ISD::VP_CTTZ,
                             ISD::VP_CTTZ_ZERO_UNDEF, ISD::VP_CTPOP},
@@ -802,8 +809,6 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
                               ISD::VP_CTLZ_ZERO_UNDEF, ISD::VP_CTTZ_ZERO_UNDEF},
                              VT, Custom);
         }
-
-        setOperationAction({ISD::ROTL, ISD::ROTR}, VT, Expand);
       }
     }
 
@@ -1109,11 +1114,12 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
 
         setOperationAction(IntegerVPOps, VT, Custom);
 
+        if (Subtarget.hasStdExtZvkb())
+          setOperationAction({ISD::BSWAP, ISD::ROTL, ISD::ROTR}, VT, Custom);
+
         if (Subtarget.hasStdExtZvbb()) {
-          setOperationAction({ISD::BITREVERSE, ISD::BSWAP, ISD::CTLZ,
-                              ISD::CTLZ_ZERO_UNDEF, ISD::CTTZ,
-                              ISD::CTTZ_ZERO_UNDEF, ISD::CTPOP, ISD::ROTL,
-                              ISD::ROTR},
+          setOperationAction({ISD::BITREVERSE, ISD::CTLZ, ISD::CTLZ_ZERO_UNDEF,
+                              ISD::CTTZ, ISD::CTTZ_ZERO_UNDEF, ISD::CTPOP},
                              VT, Custom);
         } else {
           // Lower CTLZ_ZERO_UNDEF and CTTZ_ZERO_UNDEF if element of VT in the
@@ -4333,7 +4339,8 @@ static SDValue lowerBitreverseShuffle(ShuffleVectorSDNode *SVN,
 
   assert(VT.getVectorElementType() == MVT::i1);
 
-  if (!ShuffleVectorInst::isReverseMask(SVN->getMask()) ||
+  if (!ShuffleVectorInst::isReverseMask(SVN->getMask(),
+                                        SVN->getMask().size()) ||
       !SVN->getOperand(1).isUndef())
     return SDValue();
 
@@ -4376,7 +4383,7 @@ static SDValue lowerBitreverseShuffle(ShuffleVectorSDNode *SVN,
 
 // Given a shuffle mask like <3, 0, 1, 2, 7, 4, 5, 6> for v8i8, we can
 // reinterpret it as a v2i32 and rotate it right by 8 instead. We can lower this
-// as a vror.vi if we have zvbb, or otherwise as a vsll, vsrl and vor.
+// as a vror.vi if we have Zvkb, or otherwise as a vsll, vsrl and vor.
 static SDValue lowerVECTOR_SHUFFLEAsRotate(ShuffleVectorSDNode *SVN,
                                            SelectionDAG &DAG,
                                            const RISCVSubtarget &Subtarget) {
@@ -4527,9 +4534,9 @@ static SDValue lowerVECTOR_SHUFFLE(SDValue Op, SelectionDAG &DAG,
           lowerVECTOR_SHUFFLEAsVSlidedown(DL, VT, V1, V2, Mask, Subtarget, DAG))
     return V;
 
-  // A bitrotate will be one instruction on zvbb, so try to lower to it first if
+  // A bitrotate will be one instruction on Zvkb, so try to lower to it first if
   // available.
-  if (Subtarget.hasStdExtZvbb())
+  if (Subtarget.hasStdExtZvkb())
     if (SDValue V = lowerVECTOR_SHUFFLEAsRotate(SVN, DAG, Subtarget))
       return V;
 
@@ -4660,7 +4667,7 @@ static SDValue lowerVECTOR_SHUFFLE(SDValue Op, SelectionDAG &DAG,
     return DAG.getNode(ISD::VSELECT, DL, VT, SelectMask, V1, V2);
 
   // We might be able to express the shuffle as a bitrotate. But even if we
-  // don't have zvbb and have to expand, the expanded sequence of approx. 2
+  // don't have Zvkb and have to expand, the expanded sequence of approx. 2
   // shifts and a vor will have a higher throughput than a vrgather.
   if (SDValue V = lowerVECTOR_SHUFFLEAsRotate(SVN, DAG, Subtarget))
     return V;
@@ -5482,7 +5489,7 @@ SDValue RISCVTargetLowering::LowerOperation(SDValue Op,
   case ISD::ROTL:
   case ISD::ROTR:
     if (Op.getValueType().isFixedLengthVector()) {
-      assert(Subtarget.hasStdExtZvbb());
+      assert(Subtarget.hasStdExtZvkb());
       return lowerToScalableOp(Op, DAG);
     }
     assert(Subtarget.hasVendorXTHeadBb() &&
@@ -11106,6 +11113,31 @@ void RISCVTargetLowering::ReplaceNodeResults(SDNode *N,
   }
 }
 
+/// Given an integer binary operator, return the generic ISD::VECREDUCE_OP
+/// which corresponds to it.
+static unsigned getVecReduceOpcode(unsigned Opc) {
+  switch (Opc) {
+  default:
+    llvm_unreachable("Unhandled binary to transfrom reduction");
+  case ISD::ADD:
+    return ISD::VECREDUCE_ADD;
+  case ISD::UMAX:
+    return ISD::VECREDUCE_UMAX;
+  case ISD::SMAX:
+    return ISD::VECREDUCE_SMAX;
+  case ISD::UMIN:
+    return ISD::VECREDUCE_UMIN;
+  case ISD::SMIN:
+    return ISD::VECREDUCE_SMIN;
+  case ISD::AND:
+    return ISD::VECREDUCE_AND;
+  case ISD::OR:
+    return ISD::VECREDUCE_OR;
+  case ISD::XOR:
+    return ISD::VECREDUCE_XOR;
+  }
+}
+
 /// Perform two related transforms whose purpose is to incrementally recognize
 /// an explode_vector followed by scalar reduction as a vector reduction node.
 /// This exists to recover from a deficiency in SLP which can't handle
@@ -11124,8 +11156,15 @@ combineBinOpOfExtractToReduceTree(SDNode *N, SelectionDAG &DAG,
 
   const SDLoc DL(N);
   const EVT VT = N->getValueType(0);
-  [[maybe_unused]] const unsigned Opc = N->getOpcode();
-  assert(Opc == ISD::ADD && "extend this to other reduction types");
+
+  // TODO: Handle floating point here.
+  if (!VT.isInteger())
+    return SDValue();
+
+  const unsigned Opc = N->getOpcode();
+  const unsigned ReduceOpc = getVecReduceOpcode(Opc);
+  assert(Opc == ISD::getVecReduceBaseOpcode(ReduceOpc) &&
+         "Inconsistent mappings");
   const SDValue LHS = N->getOperand(0);
   const SDValue RHS = N->getOperand(1);
 
@@ -11155,13 +11194,13 @@ combineBinOpOfExtractToReduceTree(SDNode *N, SelectionDAG &DAG,
     EVT ReduceVT = EVT::getVectorVT(*DAG.getContext(), VT, 2);
     SDValue Vec = DAG.getNode(ISD::EXTRACT_SUBVECTOR, DL, ReduceVT, SrcVec,
                               DAG.getVectorIdxConstant(0, DL));
-    return DAG.getNode(ISD::VECREDUCE_ADD, DL, VT, Vec);
+    return DAG.getNode(ReduceOpc, DL, VT, Vec);
   }
 
   // Match (binop (reduce (extract_subvector V, 0),
   //                      (extract_vector_elt V, sizeof(SubVec))))
   // into a reduction of one more element from the original vector V.
-  if (LHS.getOpcode() != ISD::VECREDUCE_ADD)
+  if (LHS.getOpcode() != ReduceOpc)
     return SDValue();
 
   SDValue ReduceVec = LHS.getOperand(0);
@@ -11177,7 +11216,7 @@ combineBinOpOfExtractToReduceTree(SDNode *N, SelectionDAG &DAG,
       EVT ReduceVT = EVT::getVectorVT(*DAG.getContext(), VT, Idx + 1);
       SDValue Vec = DAG.getNode(ISD::EXTRACT_SUBVECTOR, DL, ReduceVT, SrcVec,
                                 DAG.getVectorIdxConstant(0, DL));
-      return DAG.getNode(ISD::VECREDUCE_ADD, DL, VT, Vec);
+      return DAG.getNode(ReduceOpc, DL, VT, Vec);
     }
   }
 
@@ -11685,6 +11724,8 @@ static SDValue performANDCombine(SDNode *N,
 
   if (SDValue V = combineBinOpToReduce(N, DAG, Subtarget))
     return V;
+  if (SDValue V = combineBinOpOfExtractToReduceTree(N, DAG, Subtarget))
+    return V;
 
   if (DCI.isAfterLegalizeDAG())
     if (SDValue V = combineDeMorganOfBoolean(N, DAG))
@@ -11737,6 +11778,8 @@ static SDValue performORCombine(SDNode *N, TargetLowering::DAGCombinerInfo &DCI,
 
   if (SDValue V = combineBinOpToReduce(N, DAG, Subtarget))
     return V;
+  if (SDValue V = combineBinOpOfExtractToReduceTree(N, DAG, Subtarget))
+    return V;
 
   if (DCI.isAfterLegalizeDAG())
     if (SDValue V = combineDeMorganOfBoolean(N, DAG))
@@ -11788,6 +11831,9 @@ static SDValue performXORCombine(SDNode *N, SelectionDAG &DAG,
 
   if (SDValue V = combineBinOpToReduce(N, DAG, Subtarget))
     return V;
+  if (SDValue V = combineBinOpOfExtractToReduceTree(N, DAG, Subtarget))
+    return V;
+
   // fold (xor (select cond, 0, y), x) ->
   //      (select cond, x, (xor x, y))
   return combineSelectAndUseCommutative(N, DAG, /*AllOnes*/ false, Subtarget);
@@ -13993,8 +14039,13 @@ SDValue RISCVTargetLowering::PerformDAGCombine(SDNode *N,
   case ISD::SMAX:
   case ISD::SMIN:
   case ISD::FMAXNUM:
-  case ISD::FMINNUM:
-    return combineBinOpToReduce(N, DAG, Subtarget);
+  case ISD::FMINNUM: {
+    if (SDValue V = combineBinOpToReduce(N, DAG, Subtarget))
+      return V;
+    if (SDValue V = combineBinOpOfExtractToReduceTree(N, DAG, Subtarget))
+      return V;
+    return SDValue();
+  }
   case ISD::SETCC:
     return performSETCCCombine(N, DAG, Subtarget);
   case ISD::SIGN_EXTEND_INREG:
