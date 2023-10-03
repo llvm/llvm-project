@@ -937,7 +937,7 @@ static void genCombiner(fir::FirOpBuilder &builder, mlir::Location loc,
       }
     } else {
       // Lowerbound, upperbound and step are passed as block arguments.
-      unsigned nbRangeArgs =
+      [[maybe_unused]] unsigned nbRangeArgs =
           recipe.getCombinerRegion().getArguments().size() - 2;
       assert((nbRangeArgs / 3 == seqTy.getDimension()) &&
              "Expect 3 block arguments per dimension");
