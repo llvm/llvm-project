@@ -164,8 +164,6 @@ bool shouldPrint(const BinaryFunction &Function) {
 namespace llvm {
 namespace bolt {
 
-constexpr unsigned BinaryFunction::MinAlign;
-
 template <typename R> static bool emptyRange(const R &Range) {
   return Range.begin() == Range.end();
 }
