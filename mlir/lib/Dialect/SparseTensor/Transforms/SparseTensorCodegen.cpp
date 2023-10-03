@@ -494,13 +494,11 @@ private:
   TensorType rtp;
   void replaceWithUnderscore(std::string &lvlType) {
     for (auto it = lvlType.begin(); it != lvlType.end();) {
-      if (*it == '(') {
+      if (*it == '(' || *it == ',') {
         *it = '_';
       } else if (*it == ')' || *it == ' ') {
         it = lvlType.erase(it);
         continue;
-      } else if (*it == ',') {
-        *it = '_';
       }
       it++;
     }
