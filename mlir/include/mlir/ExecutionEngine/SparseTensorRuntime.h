@@ -6,9 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 //
-// This header file provides the enums and functions which comprise the
-// public API of the `ExecutionEngine/SparseTensorRuntime.cpp` runtime
-// support library for the SparseTensor dialect.
+// This header file provides the functions which comprise the public API of the
+// sparse tensor runtime support library for the SparseTensor dialect.
 //
 //===----------------------------------------------------------------------===//
 
@@ -153,8 +152,7 @@ MLIR_SPARSETENSOR_FOREVERY_V(DECL_GETNEXT)
 #undef DECL_GETNEXT
 
 /// Reads the sparse tensor, stores the coordinates and values to the given
-/// memrefs. Returns a boolean value to indicate whether the COO elements are
-/// sorted.
+/// memrefs. Returns a boolean to indicate whether the COO elements are sorted.
 #define DECL_GETNEXT(VNAME, V, CNAME, C)                                       \
   MLIR_CRUNNERUTILS_EXPORT bool                                                \
       _mlir_ciface_getSparseTensorReaderReadToBuffers##CNAME##VNAME(           \
@@ -240,8 +238,7 @@ MLIR_CRUNNERUTILS_EXPORT index_type getSparseTensorReaderNSE(void *p);
 MLIR_CRUNNERUTILS_EXPORT index_type getSparseTensorReaderDimSize(void *p,
                                                                  index_type d);
 
-/// Releases the SparseTensorReader. This also closes the file associated with
-/// the reader.
+/// Releases the SparseTensorReader and closes the associated file.
 MLIR_CRUNNERUTILS_EXPORT void delSparseTensorReader(void *p);
 
 /// Creates a SparseTensorWriter for outputting a sparse tensor to a file
