@@ -1363,7 +1363,7 @@ LogicalResult SelectOp::verify() {
   return success();
 }
 
-LogicalResult SortCooOp::verify() {
+LogicalResult SortOp::verify() {
   AffineMap xPerm = getPermMap();
   uint64_t nx = xPerm.getNumDims();
   if (nx < 1)
