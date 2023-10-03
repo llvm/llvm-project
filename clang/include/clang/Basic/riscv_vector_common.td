@@ -66,6 +66,7 @@
 //   t: ptrdiff_t, ignores "t"
 //   u: unsigned long, ignores "t"
 //   l: long, ignores "t"
+//   f: float32, ignores "t"
 //
 // So for instance if t is "i", i.e. int, then "e" will yield int again. "v"
 // will yield an RVV vector type (assume LMUL=1), so __rvv_int32m1_t.
