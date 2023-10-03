@@ -219,10 +219,9 @@ define <2 x i1> @negative_simplify_splat(<4 x i8> %x) {
 
 define i1 @slt_zero_eq_i1(i32 %a, i1 %b) {
 ; CHECK-LABEL: @slt_zero_eq_i1(
-; CHECK-NEXT:    [[CONV:%.*]] = zext i1 [[B:%.*]] to i32
-; CHECK-NEXT:    [[CMP1:%.*]] = lshr i32 [[A:%.*]], 31
-; CHECK-NEXT:    [[CMP2:%.*]] = icmp eq i32 [[CMP1]], [[CONV]]
-; CHECK-NEXT:    ret i1 [[CMP2]]
+; CHECK-NEXT:    [[TMP1:%.*]] = icmp sgt i32 [[A:%.*]], -1
+; CHECK-NEXT:    [[CMP21:%.*]] = xor i1 [[TMP1]], [[B:%.*]]
+; CHECK-NEXT:    ret i1 [[CMP21]]
 ;
   %conv = zext i1 %b to i32
   %cmp1 = lshr i32 %a, 31
@@ -245,11 +244,8 @@ define i1 @slt_zero_eq_i1_fail(i32 %a, i1 %b) {
 
 define i1 @slt_zero_eq_ne_0(i32 %a) {
 ; CHECK-LABEL: @slt_zero_eq_ne_0(
-; CHECK-NEXT:    [[CMP:%.*]] = icmp ne i32 [[A:%.*]], 0
-; CHECK-NEXT:    [[CONV:%.*]] = zext i1 [[CMP]] to i32
-; CHECK-NEXT:    [[CMP1:%.*]] = lshr i32 [[A]], 31
-; CHECK-NEXT:    [[CMP2:%.*]] = icmp eq i32 [[CMP1]], [[CONV]]
-; CHECK-NEXT:    ret i1 [[CMP2]]
+; CHECK-NEXT:    [[TMP1:%.*]] = icmp slt i32 [[A:%.*]], 1
+; CHECK-NEXT:    ret i1 [[TMP1]]
 ;
   %cmp = icmp ne i32 %a, 0
   %conv = zext i1 %cmp to i32
@@ -260,11 +256,8 @@ define i1 @slt_zero_eq_ne_0(i32 %a) {
 
 define i1 @slt_zero_ne_ne_0(i32 %a) {
 ; CHECK-LABEL: @slt_zero_ne_ne_0(
-; CHECK-NEXT:    [[CMP:%.*]] = icmp ne i32 [[A:%.*]], 0
-; CHECK-NEXT:    [[CONV:%.*]] = zext i1 [[CMP]] to i32
-; CHECK-NEXT:    [[CMP1:%.*]] = lshr i32 [[A]], 31
-; CHECK-NEXT:    [[CMP2:%.*]] = icmp ne i32 [[CMP1]], [[CONV]]
-; CHECK-NEXT:    ret i1 [[CMP2]]
+; CHECK-NEXT:    [[CMP21:%.*]] = icmp sgt i32 [[A:%.*]], 0
+; CHECK-NEXT:    ret i1 [[CMP21]]
 ;
   %cmp = icmp ne i32 %a, 0
   %conv = zext i1 %cmp to i32
@@ -275,11 +268,8 @@ define i1 @slt_zero_ne_ne_0(i32 %a) {
 
 define <4 x i1> @slt_zero_eq_ne_0_vec(<4 x i32> %a) {
 ; CHECK-LABEL: @slt_zero_eq_ne_0_vec(
-; CHECK-NEXT:    [[CMP:%.*]] = icmp ne <4 x i32> [[A:%.*]], zeroinitializer
-; CHECK-NEXT:    [[CONV:%.*]] = zext <4 x i1> [[CMP]] to <4 x i32>
-; CHECK-NEXT:    [[CMP1:%.*]] = lshr <4 x i32> [[A]], <i32 31, i32 31, i32 31, i32 31>
-; CHECK-NEXT:    [[CMP2:%.*]] = icmp eq <4 x i32> [[CMP1]], [[CONV]]
-; CHECK-NEXT:    ret <4 x i1> [[CMP2]]
+; CHECK-NEXT:    [[TMP1:%.*]] = icmp slt <4 x i32> [[A:%.*]], <i32 1, i32 1, i32 1, i32 1>
+; CHECK-NEXT:    ret <4 x i1> [[TMP1]]
 ;
   %cmp = icmp ne <4 x i32> %a, zeroinitializer
   %conv = zext <4 x i1> %cmp to <4 x i32>
@@ -291,10 +281,9 @@ define <4 x i1> @slt_zero_eq_ne_0_vec(<4 x i32> %a) {
 define i1 @slt_zero_ne_ne_b(i32 %a, i32 %b) {
 ; CHECK-LABEL: @slt_zero_ne_ne_b(
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp ne i32 [[A:%.*]], [[B:%.*]]
-; CHECK-NEXT:    [[CONV:%.*]] = zext i1 [[CMP]] to i32
-; CHECK-NEXT:    [[CMP1:%.*]] = lshr i32 [[A]], 31
-; CHECK-NEXT:    [[CMP2:%.*]] = icmp ne i32 [[CMP1]], [[CONV]]
-; CHECK-NEXT:    ret i1 [[CMP2]]
+; CHECK-NEXT:    [[TMP1:%.*]] = icmp slt i32 [[A]], 0
+; CHECK-NEXT:    [[CMP21:%.*]] = xor i1 [[TMP1]], [[CMP]]
+; CHECK-NEXT:    ret i1 [[CMP21]]
 ;
   %cmp = icmp ne i32 %a, %b
   %conv = zext i1 %cmp to i32
