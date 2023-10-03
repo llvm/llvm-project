@@ -7,12 +7,14 @@
 //===----------------------------------------------------------------------===//
 
 #include "lldb/API/SBPlatform.h"
+#include "lldb/API/SBDebugger.h"
 #include "lldb/API/SBEnvironment.h"
 #include "lldb/API/SBError.h"
 #include "lldb/API/SBFileSpec.h"
 #include "lldb/API/SBLaunchInfo.h"
 #include "lldb/API/SBModuleSpec.h"
 #include "lldb/API/SBPlatform.h"
+#include "lldb/API/SBTarget.h"
 #include "lldb/API/SBUnixSignals.h"
 #include "lldb/Host/File.h"
 #include "lldb/Target/Platform.h"
@@ -572,6 +574,29 @@ SBError SBPlatform::Launch(SBLaunchInfo &launch_info) {
     launch_info.set_ref(info);
     return error;
   });
+}
+
+SBProcess SBPlatform::Attach(SBAttachInfo &attach_info,
+                             const SBDebugger &debugger, SBTarget &target,
+                             SBError &error) {
+  LLDB_INSTRUMENT_VA(this, attach_info, debugger, target, error);
+
+  if (PlatformSP platform_sp = GetSP()) {
+    if (platform_sp->IsConnected()) {
+      ProcessAttachInfo &info = attach_info.ref();
+      Status status;
+      ProcessSP process_sp = platform_sp->Attach(info, debugger.ref(),
+                                                 target.GetSP().get(), status);
+      error.SetError(status);
+      return SBProcess(process_sp);
+    }
+
+    error.SetErrorString("not connected");
+    return {};
+  }
+
+  error.SetErrorString("invalid platform");
+  return {};
 }
 
 SBError SBPlatform::Kill(const lldb::pid_t pid) {
