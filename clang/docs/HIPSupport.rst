@@ -176,3 +176,65 @@ Predefined Macros
    * - ``HIP_API_PER_THREAD_DEFAULT_STREAM``
      - Alias to ``__HIP_API_PER_THREAD_DEFAULT_STREAM__``. Deprecated.
 
+Function Pointers Support in Clang with HIP
+===========================================
+
+Function pointers' support varies with the usage mode in Clang with HIP. The following table provides an overview of the support status across different use-cases and modes.
+
+.. list-table:: Function Pointers Support Overview
+   :widths: 25 25 25
+   :header-rows: 1
+
+   * - Use Case
+     - ``-fno-gpu-rdc`` Mode (default)
+     - ``-fgpu-rdc`` Mode
+   * - Defined and used in the same TU
+     - Supported
+     - Supported
+   * - Defined in one TU and used in another TU
+     - Not Supported
+     - Supported
+
+In the ``-fno-gpu-rdc`` mode, the compiler calculates the resource usage of kernels based only on functions present within the same Translation Unit (TU). This mode does not support the use of function pointers defined in a different TU due to the possibility of incorrect resource usage calculations, leading to undefined behavior.
+
+On the other hand, the ``-fgpu-rdc`` mode allows the definition and use of function pointers across different TUs, as resource usage calculations can accommodate functions from disparate TUs.
+
+Virtual Function Support in Clang with HIP
+==========================================
+
+In Clang with HIP, support for calling virtual functions of an object in device or host code is contingent on where the object is constructed.
+
+- **Constructed in Device Code**: Virtual functions of an object can be called in device code if the object is constructed in device code.
+- **Constructed in Host Code**: Virtual functions of an object can be called in host code if the object is constructed in host code.
+
+In other scenarios, calling virtual functions is not allowed.
+
+Explanation
+-----------
+
+An object constructed on the device side contains a pointer to the virtual function table on the device side, which is not accessible in host code, and vice versa. Thus, trying to invoke virtual functions from a context different from where the object was constructed will be disallowed because the appropriate virtual table cannot be accessed.
+
+Example Usage
+-------------
+
+.. code-block:: c++
+
+   class Base {
+   public:
+      __device__ virtual void virtualFunction() {
+         // Base virtual function implementation
+      }
+   };
+
+   class Derived : public Base {
+   public:
+      __device__ void virtualFunction() override {
+         // Derived virtual function implementation
+      }
+   };
+
+   __global__ void kernel() {
+      Derived obj;
+      Base* basePtr = &obj;
+      basePtr->virtualFunction(); // Allowed since obj is constructed in device code
+   }
