@@ -10,11 +10,11 @@
 
 declare void @llvm.assume(i1)
 
-; CHECK-DAG:  %9 = OpIEqual %5 %6 %7
-; EXT-NEXT:   OpAssumeTrueKHR %9
-; NOEXT-NOT:  OpAssumeTrueKHR %9
-define void @assumeeq(i32 %x, i32 %y) {
+; CHECK-DAG:  %8 = OpIEqual %3 %5 %6
+; EXT:        OpAssumeTrueKHR %8
+; NOEXT-NOT:  OpAssumeTrueKHR %8
+define i1 @assumeeq(i32 %x, i32 %y) {
     %cmp = icmp eq i32 %x, %y
     call void @llvm.assume(i1 %cmp)
-    ret void
+    ret i1 %cmp
 }
