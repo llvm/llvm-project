@@ -20,5 +20,3 @@ Revert: breaks build of libdevice
 Revert: waiting on pip install myst-parser 
  b6ff03206 "[Documentation] Replace recommonmark by myst-parser
 
-Revert: breaks hipify 
-  25a6b891cbcd: [clang] NFC: Remove unused `FileEntry::getLastRef()` (#68156)  
