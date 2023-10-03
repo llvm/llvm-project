@@ -31,7 +31,7 @@ This issue may be a good introductory issue for people new to working on LLVM. I
          e.g. use `make check-clang-ast` to only run Clang's AST tests.
   4) Create a `git` commit
   5) Run [`git clang-format HEAD~1`](https://clang.llvm.org/docs/ClangFormat.html#git-integration) to format your changes.
-  6) Submit the pull request in the [github repository](https://github.com/llvm/llvm-project/pulls).
+  6) Open a pull request to the [upstream repository](https://github.com/llvm/llvm-project/pulls) on GitHub.
     6.1) Detailed instructions can be found [here](https://docs.github.com/en/pull-requests/collaborating-with-pull-requests/proposing-changes-to-your-work-with-pull-requests/creating-a-pull-request)
 
 If you have any further questions about this issue, don't hesitate to ask via a comment on this Github issue.
