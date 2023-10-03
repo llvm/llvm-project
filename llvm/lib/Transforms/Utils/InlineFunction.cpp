@@ -1358,6 +1358,8 @@ static AttrBuilder IdentifyValidUBGeneratingAttributes(CallBase &CB) {
     Valid.addDereferenceableOrNullAttr(DerefOrNullBytes);
   if (CB.hasRetAttr(Attribute::NoAlias))
     Valid.addAttribute(Attribute::NoAlias);
+  if (CB.hasRetAttr(Attribute::NoUndef))
+    Valid.addAttribute(Attribute::NoUndef);
   return Valid;
 }
 
@@ -1367,6 +1369,8 @@ static AttrBuilder IdentifyValidPoisonGeneratingAttributes(CallBase &CB) {
   AttrBuilder Valid(CB.getContext());
   if (CB.hasRetAttr(Attribute::NonNull))
     Valid.addAttribute(Attribute::NonNull);
+  if (CB.hasRetAttr(Attribute::Alignment))
+    Valid.addAlignmentAttr(CB.getRetAlign());
   return Valid;
 }
 
@@ -1455,6 +1459,8 @@ static void AddReturnAttributes(CallBase &CB, ValueToValueMapTy &VMap) {
     // any new poison at @use will trigger UB anyways.
     // In case 3, we can never propagate nonnull because it may create UB due to
     // the noundef on @bar.
+    if (ValidPG.getAlignment().valueOrOne() < AL.getRetAlignment().valueOrOne())
+      ValidPG.removeAttribute(Attribute::Alignment);
     if (ValidPG.hasAttributes()) {
       // Three checks.
       // If the callsite has `noundef`, then a poison due to violating the
