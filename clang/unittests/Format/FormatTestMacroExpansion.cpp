@@ -47,9 +47,7 @@ TEST_F(FormatTestMacroExpansion, UnexpandConfiguredMacros) {
     { ID(a *b); });
 )",
                Style);
-  verifyIncompleteFormat(R"(ID3({, ID(a *b), ; });
-)",
-                         Style);
+  verifyIncompleteFormat("ID3({, ID(a *b), ; });", Style);
 
   verifyFormat("ID(CALL(CALL(return a * b;)));", Style);
 
