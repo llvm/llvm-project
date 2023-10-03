@@ -44,8 +44,10 @@ namespace mlir {
 namespace sparse_tensor {
 
 // Forward references.
-template <typename V> class SparseTensorEnumeratorBase;
-template <typename P, typename C, typename V> class SparseTensorEnumerator;
+template <typename V>
+class SparseTensorEnumeratorBase;
+template <typename P, typename C, typename V>
+class SparseTensorEnumerator;
 
 namespace detail {
 
