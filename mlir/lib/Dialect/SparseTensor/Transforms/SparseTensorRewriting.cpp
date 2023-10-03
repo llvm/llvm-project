@@ -1220,7 +1220,7 @@ private:
       assert(xPerm.isPermutation()); // must be a permutation.
 
       Value xs = genToCoordinatesBuffer(rewriter, loc, src);
-      rewriter.create<SortCooOp>(loc, nnz, xs, ValueRange{y}, xPerm,
+      rewriter.create<SortOp>(loc, nnz, xs, ValueRange{y}, xPerm,
                                  rewriter.getIndexAttr(0),
                                  SparseTensorSortKind::HybridQuickSort);
     }
