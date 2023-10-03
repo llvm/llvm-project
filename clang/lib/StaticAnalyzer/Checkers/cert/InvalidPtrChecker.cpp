@@ -91,6 +91,11 @@ public:
   // Check if invalidated region is being dereferenced.
   void checkLocation(SVal l, bool isLoad, const Stmt *S,
                      CheckerContext &C) const;
+
+private:
+  const NoteTag *createEnvInvalidationNote(CheckerContext &C,
+                                           ProgramStateRef State,
+                                           StringRef FunctionName) const;
 };
 
 } // namespace
@@ -109,43 +114,58 @@ REGISTER_SET_WITH_PROGRAMSTATE(GetenvEnvPtrRegions, const MemRegion *)
 REGISTER_MAP_WITH_PROGRAMSTATE(PreviousCallResultMap, const FunctionDecl *,
                                const MemRegion *)
 
+const NoteTag *InvalidPtrChecker::createEnvInvalidationNote(
+    CheckerContext &C, ProgramStateRef State, StringRef FunctionName) const {
+
+  const MemRegion *MainRegion = State->get<MainEnvPtrRegion>();
+  const auto GetenvRegions = State->get<GetenvEnvPtrRegions>();
+
+  return C.getNoteTag([this, MainRegion, GetenvRegions,
+                       FunctionName = std::string{FunctionName}](
+                          PathSensitiveBugReport &BR, llvm::raw_ostream &Out) {
+    auto IsInterestingForInvalidation = [this, &BR](const MemRegion *R) {
+      return R && &BR.getBugType() == &InvalidPtrBugType && BR.isInteresting(R);
+    };
+
+    // Craft the note tag message.
+    llvm::SmallVector<std::string, 2> InvalidLocationNames;
+    if (IsInterestingForInvalidation(MainRegion)) {
+      InvalidLocationNames.push_back("the environment parameter of 'main'");
+    }
+    if (llvm::any_of(GetenvRegions, IsInterestingForInvalidation))
+      InvalidLocationNames.push_back("the environment returned by 'getenv'");
+
+    if (InvalidLocationNames.size() >= 1)
+      Out << '\'' << FunctionName << "' call may invalidate "
+          << InvalidLocationNames[0];
+    if (InvalidLocationNames.size() == 2)
+      Out << ", and " << InvalidLocationNames[1];
+
+    // Mark all regions that were interesting before as NOT interesting now
+    // to avoid extra notes coming from other checkers.
+    if (IsInterestingForInvalidation(MainRegion))
+      BR.markNotInteresting(MainRegion);
+    for (const MemRegion *GetenvRegion : GetenvRegions)
+      if (IsInterestingForInvalidation(GetenvRegion))
+        BR.markNotInteresting(GetenvRegion);
+  });
+}
+
 void InvalidPtrChecker::EnvpInvalidatingCall(const CallEvent &Call,
                                              CheckerContext &C) const {
-  StringRef FunctionName = Call.getCalleeIdentifier()->getName();
-
-  auto PlaceInvalidationNote = [this, &C, FunctionName](ProgramStateRef State,
-                                                        const MemRegion *Region,
-                                                        StringRef Message,
-                                                        ExplodedNode *Pred) {
-    State = State->add<InvalidMemoryRegions>(Region);
-
-    // Make copy of string data for the time when notes are *actually* created.
-    const NoteTag *Note =
-        C.getNoteTag([this, Region, FunctionName = std::string{FunctionName},
-                      Message = std::string{Message}](
-                         PathSensitiveBugReport &BR, llvm::raw_ostream &Out) {
-          if (!BR.isInteresting(Region) ||
-              &BR.getBugType() != &InvalidPtrBugType)
-            return;
-          Out << '\'' << FunctionName << "' " << Message;
-          BR.markNotInteresting(Region);
-        });
-    return C.addTransition(State, Pred, Note);
-  };
-
+  // This callevent invalidates all previously generated pointers to the
+  // environment.
   ProgramStateRef State = C.getState();
-  ExplodedNode *CurrentChainEnd = C.getPredecessor();
-
   if (const MemRegion *MainEnvPtr = State->get<MainEnvPtrRegion>())
-    CurrentChainEnd = PlaceInvalidationNote(
-        State, MainEnvPtr,
-        "call may invalidate the environment parameter of 'main'",
-        CurrentChainEnd);
-
+    State = State->add<InvalidMemoryRegions>(MainEnvPtr);
   for (const MemRegion *EnvPtr : State->get<GetenvEnvPtrRegions>())
-    CurrentChainEnd = PlaceInvalidationNote(
-        State, EnvPtr, "call may invalidate the environment returned by getenv",
-        CurrentChainEnd);
+    State = State->add<InvalidMemoryRegions>(EnvPtr);
+
+  StringRef FunctionName = Call.getCalleeIdentifier()->getName();
+  const NoteTag *InvalidationNote =
+      createEnvInvalidationNote(C, State, FunctionName);
+
+  C.addTransition(State, InvalidationNote);
 }
 
 void InvalidPtrChecker::postPreviousReturnInvalidatingCall(

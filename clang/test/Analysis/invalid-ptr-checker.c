@@ -33,7 +33,7 @@ void setenv_after_getenv(void) {
   char *v1 = getenv("VAR1");
 
   setenv("VAR2", "...", 1);
-  // expected-note@-1{{'setenv' call may invalidate the environment returned by getenv}}
+  // expected-note@-1{{'setenv' call may invalidate the environment returned by 'getenv'}}
 
   strcmp(v1, "");
   // expected-warning@-1{{use of invalidated pointer 'v1' in a function call}}
