@@ -55,7 +55,7 @@ kDevNull = "/dev/null"
 #
 # COMMAND that follows %dbg(ARG) is also captured. COMMAND can be
 # empty as a result of conditinal substitution.
-kPdbgRegex = "%dbg\\(([^)'\"]*)\\)(.*)"
+kPdbgRegex = "%dbg\\(([^)'\"]*)\\)((?:.|\\n)*)"
 
 
 def buildPdbgCommand(msg, cmd):
