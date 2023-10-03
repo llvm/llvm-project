@@ -238,7 +238,7 @@ MLIR_CRUNNERUTILS_EXPORT index_type getSparseTensorReaderNSE(void *p);
 MLIR_CRUNNERUTILS_EXPORT index_type getSparseTensorReaderDimSize(void *p,
                                                                  index_type d);
 
-/// Releases the SparseTensorReaderand closes the associated file.
+/// Releases the SparseTensorReader and closes the associated file.
 MLIR_CRUNNERUTILS_EXPORT void delSparseTensorReader(void *p);
 
 /// Creates a SparseTensorWriter for outputting a sparse tensor to a file
