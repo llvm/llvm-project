@@ -107,14 +107,71 @@ static void findReturnsToZap(Function &F,
   }
 }
 
-static bool runIPSCCP(
-    Module &M, const DataLayout &DL, FunctionAnalysisManager *FAM,
-    std::function<const TargetLibraryInfo &(Function &)> GetTLI,
-    std::function<TargetTransformInfo &(Function &)> GetTTI,
-    std::function<AssumptionCache &(Function &)> GetAC,
-    std::function<DominatorTree &(Function &)> GetDT,
-    std::function<BlockFrequencyInfo &(Function &)> GetBFI,
-    bool IsFuncSpecEnabled) {
+static void createDebugConstantExpression(Module &M, GlobalVariable *GV) {
+  SmallVector<DIGlobalVariableExpression *, 1> GVEs;
+  GV->getDebugInfo(GVEs);
+  if (GVEs.size() != 1)
+    return;
+
+  DIBuilder DIB(M);
+
+  // Create integer constant expression.
+  auto createIntegerExpression = [&DIB](const Constant *CV) -> DIExpression * {
+    const APInt &API = cast<ConstantInt>(CV)->getValue();
+    std::optional<uint64_t> InitIntOpt;
+    if (API.isNonNegative())
+      InitIntOpt = API.tryZExtValue();
+    else if (auto Temp = API.trySExtValue(); Temp.has_value())
+      // Transform a signed optional to unsigned optional.
+      InitIntOpt = static_cast<uint64_t>(Temp.value());
+    return InitIntOpt ? DIB.createConstantValueExpression(InitIntOpt.value())
+                      : nullptr;
+  };
+
+  const Constant *CV = GV->getInitializer();
+  Type *Ty = GV->getValueType();
+  if (Ty->isIntegerTy()) {
+    DIExpression *InitExpr = createIntegerExpression(CV);
+    if (InitExpr)
+      GVEs[0]->replaceOperandWith(1, InitExpr);
+    return;
+  }
+
+  if (Ty->isFloatTy() || Ty->isDoubleTy()) {
+    const APFloat &APF = cast<ConstantFP>(CV)->getValueAPF();
+    GVEs[0]->replaceOperandWith(1, DIB.createConstantValueExpression(
+                                       APF.bitcastToAPInt().getZExtValue()));
+    return;
+  }
+
+  if (!Ty->isPointerTy())
+    return;
+
+  if (isa<ConstantPointerNull>(CV)) {
+    GVEs[0]->replaceOperandWith(1, DIB.createConstantValueExpression(0));
+    return;
+  }
+  if (const ConstantExpr *CE = dyn_cast<ConstantExpr>(CV);
+      CE->getNumOperands() == 1) {
+    const Value *V = CE->getOperand(0);
+    const Constant *CV = dyn_cast<Constant>(V);
+    if (CV && !isa<GlobalValue>(CV);
+        const ConstantInt *CI = dyn_cast<ConstantInt>(CV)) {
+      DIExpression *InitExpr = createIntegerExpression(CI);
+      if (InitExpr)
+        GVEs[0]->replaceOperandWith(1, InitExpr);
+    }
+  }
+}
+
+static bool
+runIPSCCP(Module &M, const DataLayout &DL, FunctionAnalysisManager *FAM,
+          std::function<const TargetLibraryInfo &(Function &)> GetTLI,
+          std::function<TargetTransformInfo &(Function &)> GetTTI,
+          std::function<AssumptionCache &(Function &)> GetAC,
+          std::function<DominatorTree &(Function &)> GetDT,
+          std::function<BlockFrequencyInfo &(Function &)> GetBFI,
+          bool IsFuncSpecEnabled) {
   SCCPSolver Solver(DL, GetTLI, M.getContext());
   FunctionSpecializer Specializer(Solver, M, FAM, GetBFI, GetTLI, GetTTI,
                                   GetAC);
@@ -373,50 +430,9 @@ static bool runIPSCCP(
       SI->eraseFromParent();
     }
 
-    // Try to create a debug constant expression for the glbal variable
+    // Try to create a debug constant expression for the global variable
     // initializer value.
-    SmallVector<DIGlobalVariableExpression *, 1> GVEs;
-    GV->getDebugInfo(GVEs);
-    if (GVEs.size() == 1) {
-      DIBuilder DIB(M);
-
-      // Create integer constant expression.
-      auto createIntExpression = [&DIB](const Constant *CV) -> DIExpression * {
-        const APInt &API = dyn_cast<ConstantInt>(CV)->getValue();
-        std::optional<uint64_t> InitIntOpt;
-        if (API.isNonNegative())
-          InitIntOpt = API.tryZExtValue();
-        else if (auto Temp = API.trySExtValue(); Temp.has_value())
-          // Transform a signed optional to unsigned optional.
-          InitIntOpt = (uint64_t)Temp.value();
-        return DIB.createConstantValueExpression(InitIntOpt.value());
-      };
-
-      const Constant *CV = GV->getInitializer();
-      Type *Ty = GV->getValueType();
-      if (Ty->isIntegerTy()) {
-        GVEs[0]->replaceOperandWith(1, createIntExpression(CV));
-      } else if (Ty->isFloatTy() || Ty->isDoubleTy()) {
-        const APFloat &APF = dyn_cast<ConstantFP>(CV)->getValueAPF();
-        DIExpression *NewExpr = DIB.createConstantValueExpression(
-            APF.bitcastToAPInt().getZExtValue());
-        GVEs[0]->replaceOperandWith(1, NewExpr);
-      } else if (Ty->isPointerTy()) {
-        if (isa<ConstantPointerNull>(CV)) {
-          GVEs[0]->replaceOperandWith(1, DIB.createConstantValueExpression(0));
-        } else {
-          if (const ConstantExpr *CE = dyn_cast<ConstantExpr>(CV)) {
-            if (CE->getNumOperands() == 1) {
-              const Value *V = CE->getOperand(0);
-              const Constant *CV = dyn_cast<Constant>(V);
-              if (CV && !isa<GlobalValue>(CV))
-                if (const ConstantInt *CI = dyn_cast<ConstantInt>(CV))
-                  GVEs[0]->replaceOperandWith(1, createIntExpression(CI));
-            }
-          }
-        }
-      }
-    }
+    createDebugConstantExpression(M, GV);
 
     MadeChanges = true;
     M.eraseGlobalVariable(GV);
