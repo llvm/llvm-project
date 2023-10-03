@@ -49,6 +49,7 @@ static char getRegisterType(Type type) {
     return 'l';
   }
   // register type for struct is not supported.
+  llvm_unreachable("The register type could not deduced from MLIR type");
   return '?';
 }
 
