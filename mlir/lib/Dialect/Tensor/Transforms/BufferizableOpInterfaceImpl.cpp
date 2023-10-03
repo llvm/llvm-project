@@ -253,10 +253,7 @@ struct DimOpInterface
   }
 };
 
-/// Bufferization of tensor.empty. This op does not bufferize, but we need an
-/// interface implementation, so that the result of this op is considered
-/// "writable" (default impl. of `isWritable`). Results of ops that do not
-/// implement `BufferizableOpInterface` are not writable.
+/// Bufferization of "tensor.empty". Replace with "bufferization.alloc_tensor".
 struct EmptyOpInterface
     : public BufferizableOpInterface::ExternalModel<EmptyOpInterface,
                                                     tensor::EmptyOp> {
@@ -268,17 +265,21 @@ struct EmptyOpInterface
 
   LogicalResult bufferize(Operation *op, RewriterBase &rewriter,
                           const BufferizationOptions &options) const {
+    auto emptyOp = cast<tensor::EmptyOp>(op);
+
+    // Optimization: Fold away the op if it has no uses.
     if (op->getUses().empty()) {
       rewriter.eraseOp(op);
       return success();
     }
 
-    // tensor.empty ops are used to indicate the shape of a tensor. They have
-    // no defined contents and cannot be bufferized. However, they can be
-    // converted to bufferization.alloc_tensor ops, which then bufferize to an
-    // allocation (--empty-tensor-to-alloc-tensor).
-    return op->emitOpError("cannot be bufferized, but can be converted to "
-                           "bufferization.alloc_tensor");
+    // Allocate a tensor. This emits a "bufferization.alloc_tensor" op.
+    FailureOr<Value> allocTensor = allocateTensorForShapedValue(
+        rewriter, op->getLoc(), emptyOp.getResult(), options, /*copy=*/false);
+    if (failed(allocTensor))
+      return failure();
+    rewriter.replaceOp(op, *allocTensor);
+    return success();
   }
 };
 
