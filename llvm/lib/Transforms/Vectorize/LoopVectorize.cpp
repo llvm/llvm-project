@@ -3818,34 +3818,16 @@ void InnerLoopVectorizer::fixReduction(VPReductionPHIRecipe *PhiR,
   // instead of the former. For an inloop reduction the reduction will already
   // be predicated, and does not need to be handled here.
   if (Cost->foldTailByMasking() && !PhiR->isInLoop()) {
-    for (unsigned Part = 0; Part < UF; ++Part) {
-      Value *VecLoopExitInst = State.get(LoopExitInstDef, Part);
-      SelectInst *Sel = nullptr;
-      for (User *U : VecLoopExitInst->users()) {
-        if (isa<SelectInst>(U)) {
-          assert((!Sel || U == Sel) &&
-                 "Reduction exit feeding two different selects");
-          Sel = cast<SelectInst>(U);
-        } else
-          assert(isa<PHINode>(U) && "Reduction exit must feed Phi's or select");
-      }
-      assert(Sel && "Reduction exit feeds no select");
-      State.reset(LoopExitInstDef, Sel, Part);
-
-      // If the target can create a predicated operator for the reduction at no
-      // extra cost in the loop (for example a predicated vadd), it can be
-      // cheaper for the select to remain in the loop than be sunk out of it,
-      // and so use the select value for the phi instead of the old
-      // LoopExitValue.
-      if (PreferPredicatedReductionSelect ||
-          TTI->preferPredicatedReductionSelect(
-              RdxDesc.getOpcode(), PhiTy,
-              TargetTransformInfo::ReductionFlags())) {
-        auto *VecRdxPhi =
-            cast<PHINode>(State.get(PhiR, Part));
-        VecRdxPhi->setIncomingValueForBlock(VectorLoopLatch, Sel);
+    VPValue *Def = nullptr;
+    for (VPUser *U : LoopExitInstDef->users()) {
+      auto *S = dyn_cast<VPInstruction>(U);
+      if (S && S->getOpcode() == Instruction::Select) {
+        Def = S;
+        break;
       }
     }
+    if (Def)
+      LoopExitInstDef = Def;
   }
 
   // If the vector reduction can be performed in a smaller type, we truncate
@@ -9099,6 +9081,11 @@ void LoopVectorizationPlanner::adjustRecipesForReductions(
               ? new VPInstruction(Instruction::Select, {Cond, Red, PhiR}, FMFs)
               : new VPInstruction(Instruction::Select, {Cond, Red, PhiR});
       Select->insertBefore(&*Builder.getInsertPoint());
+      if (PreferPredicatedReductionSelect ||
+          TTI.preferPredicatedReductionSelect(
+              PhiR->getRecurrenceDescriptor().getOpcode(), PhiTy,
+              TargetTransformInfo::ReductionFlags()))
+        PhiR->setOperand(1, Select);
     }
   }
 
