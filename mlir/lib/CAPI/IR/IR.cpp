@@ -665,9 +665,11 @@ bool mlirOperationRemoveAttributeByName(MlirOperation op, MlirStringRef name) {
   return !!unwrap(op)->removeAttr(unwrap(name));
 }
 
-void mlirOperationPrint(MlirOperation op, MlirStringCallback callback,
-                        void *userData) {
+void mlirOperationPrint(MlirOperation op, MlirAsmState state,
+                        MlirStringCallback callback, void *userData) {
   detail::CallbackOstream stream(callback, userData);
+  if (state.ptr)
+    unwrap(op)->print(stream, *unwrap(state));
   unwrap(op)->print(stream);
 }
 

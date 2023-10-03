@@ -369,7 +369,7 @@ static void printFirstOfEach(MlirContext ctx, MlirOperation operation) {
   mlirBlockPrint(block, printToStderr, NULL);
   fprintf(stderr, "\n");
   fprintf(stderr, "First operation: ");
-  mlirOperationPrint(operation, printToStderr, NULL);
+  mlirOperationPrint(operation, (MlirAsmState){NULL}, printToStderr, NULL);
   fprintf(stderr, "\n");
   // clang-format off
   // CHECK:   %[[C0:.*]] = arith.constant 0 : index
@@ -403,7 +403,7 @@ static void printFirstOfEach(MlirContext ctx, MlirOperation operation) {
   // Get the block terminator and print it.
   MlirOperation terminator = mlirBlockGetTerminator(block);
   fprintf(stderr, "Terminator: ");
-  mlirOperationPrint(terminator, printToStderr, NULL);
+  mlirOperationPrint(terminator, (MlirAsmState){NULL}, printToStderr, NULL);
   fprintf(stderr, "\n");
   // CHECK: Terminator: func.return
 
@@ -447,7 +447,7 @@ static void printFirstOfEach(MlirContext ctx, MlirOperation operation) {
       operation, mlirStringRefCreateFromCString("custom_attr"),
       mlirBoolAttrGet(ctx, 1));
   fprintf(stderr, "Op with set attr: ");
-  mlirOperationPrint(operation, printToStderr, NULL);
+  mlirOperationPrint(operation, (MlirAsmState){NULL}, printToStderr, NULL);
   fprintf(stderr, "\n");
   // CHECK: Op with set attr: {{.*}} {custom_attr = true}
 
@@ -1889,7 +1889,8 @@ int testOperands(void) {
   }
 
   fprintf(stderr, "Use owner: ");
-  mlirOperationPrint(mlirOpOperandGetOwner(use2), printToStderr, NULL);
+  mlirOperationPrint(mlirOpOperandGetOwner(use2), (MlirAsmState){NULL},
+                     printToStderr, NULL);
   fprintf(stderr, "\n");
   // CHECK: Use owner: "dummy.op"
 
@@ -1911,13 +1912,15 @@ int testOperands(void) {
 
   MlirOpOperand use3 = mlirValueGetFirstUse(constOneValue);
   fprintf(stderr, "First use owner: ");
-  mlirOperationPrint(mlirOpOperandGetOwner(use3), printToStderr, NULL);
+  mlirOperationPrint(mlirOpOperandGetOwner(use3), (MlirAsmState){NULL},
+                     printToStderr, NULL);
   fprintf(stderr, "\n");
   // CHECK: First use owner: "dummy.op2"
 
   use3 = mlirOpOperandGetNextUse(mlirValueGetFirstUse(constOneValue));
   fprintf(stderr, "Second use owner: ");
-  mlirOperationPrint(mlirOpOperandGetOwner(use3), printToStderr, NULL);
+  mlirOperationPrint(mlirOpOperandGetOwner(use3), (MlirAsmState){NULL},
+                     printToStderr, NULL);
   fprintf(stderr, "\n");
   // CHECK: Second use owner: "dummy.op"
 
@@ -1943,13 +1946,15 @@ int testOperands(void) {
 
   MlirOpOperand use4 = mlirValueGetFirstUse(constTwoValue);
   fprintf(stderr, "First replacement use owner: ");
-  mlirOperationPrint(mlirOpOperandGetOwner(use4), printToStderr, NULL);
+  mlirOperationPrint(mlirOpOperandGetOwner(use4), (MlirAsmState){NULL},
+                     printToStderr, NULL);
   fprintf(stderr, "\n");
   // CHECK: First replacement use owner: "dummy.op"
 
   use4 = mlirOpOperandGetNextUse(mlirValueGetFirstUse(constTwoValue));
   fprintf(stderr, "Second replacement use owner: ");
-  mlirOperationPrint(mlirOpOperandGetOwner(use4), printToStderr, NULL);
+  mlirOperationPrint(mlirOpOperandGetOwner(use4), (MlirAsmState){NULL},
+                     printToStderr, NULL);
   fprintf(stderr, "\n");
   // CHECK: Second replacement use owner: "dummy.op2"
 
@@ -1992,8 +1997,8 @@ int testClone(void) {
   MlirOperation constOne = mlirOperationClone(constZero);
   mlirOperationSetAttributeByName(constOne, valueStringRef, indexOneLiteral);
 
-  mlirOperationPrint(constZero, printToStderr, NULL);
-  mlirOperationPrint(constOne, printToStderr, NULL);
+  mlirOperationPrint(constZero, (MlirAsmState){NULL}, printToStderr, NULL);
+  mlirOperationPrint(constOne, (MlirAsmState){NULL}, printToStderr, NULL);
   // CHECK: arith.constant 0 : index
   // CHECK: arith.constant 1 : index
 

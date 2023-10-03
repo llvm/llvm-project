@@ -657,7 +657,7 @@ MLIR_CAPI_EXPORTED bool mlirOperationRemoveAttributeByName(MlirOperation op,
 /// Prints an operation by sending chunks of the string representation and
 /// forwarding `userData to `callback`. Note that the callback may be called
 /// several times with consecutive chunks of the string.
-MLIR_CAPI_EXPORTED void mlirOperationPrint(MlirOperation op,
+MLIR_CAPI_EXPORTED void mlirOperationPrint(MlirOperation op, MlirAsmState state,
                                            MlirStringCallback callback,
                                            void *userData);
 
