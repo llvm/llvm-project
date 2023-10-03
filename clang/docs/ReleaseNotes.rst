@@ -216,6 +216,9 @@ Improvements to Clang's diagnostics
 - The fix-it emitted by ``-Wformat`` for scoped enumerations now take the
   enumeration's underlying type into account instead of suggesting a type just
   based on the format string specifier being used.
+- Clang now displays an improved diagnostic and a note when a defaulted special
+  member is marked ``constexpr`` in a class with a virtual base class
+  (`#64843: <https://github.com/llvm/llvm-project/issues/64843>`_).
 
 Bug Fixes in This Version
 -------------------------
