@@ -185,8 +185,10 @@ end subroutine char_return
 ! CHECK:             %[[VAL_26:.*]] = fir.call @llvm.stacksave.p0() fastmath<contract> : () -> !fir.ref<i8>
 ! CHECK:             %[[VAL_27:.*]] = fir.call @_QPcallee(%[[VAL_2]], %[[VAL_25]], %[[VAL_20]]) fastmath<contract> : (!fir.ref<!fir.char<1,3>>, index, !fir.boxchar<1>) -> !fir.boxchar<1>
 ! CHECK:             %[[VAL_28:.*]]:2 = hlfir.declare %[[VAL_2]] typeparams %[[VAL_25]] {uniq_name = ".tmp.func_result"} : (!fir.ref<!fir.char<1,3>>, index) -> (!fir.ref<!fir.char<1,3>>, !fir.ref<!fir.char<1,3>>)
+! CHECK:             %[[MustFree:.*]] = arith.constant false
+! CHECK:             %[[ResultTemp:.*]] = hlfir.as_expr %[[VAL_28]]#0 move %[[MustFree]] : (!fir.ref<!fir.char<1,3>>, i1) -> !hlfir.expr<!fir.char<1,3>>
 ! CHECK:             fir.call @llvm.stackrestore.p0(%[[VAL_26]]) fastmath<contract> : (!fir.ref<i8>) -> ()
-! CHECK:             hlfir.yield_element %[[VAL_28]]#0 : !fir.ref<!fir.char<1,3>>
+! CHECK:             hlfir.yield_element %[[ResultTemp]] : !hlfir.expr<!fir.char<1,3>>
 ! CHECK:           }
 ! CHECK:           %[[VAL_29:.*]] = arith.constant 0 : index
 ! CHECK:           %[[VAL_30:.*]]:3 = fir.box_dims %[[VAL_10]]#0, %[[VAL_29]] : (!fir.box<!fir.array<?x!fir.char<1,3>>>, index) -> (index, index, index)

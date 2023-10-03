@@ -7,8 +7,6 @@
 #define INT_MAX __INT_MAX__
 
 typedef __INTPTR_TYPE__ intptr_t;
-typedef __int128 int128_t;
-typedef unsigned __int128 uint128_t;
 
 
 static_assert(true, "");
@@ -29,7 +27,10 @@ static_assert(number != 10, ""); // expected-error{{failed}} \
                                  // ref-note{{evaluates to}}
 
 
+#ifdef __SIZEOF_INT128__
 namespace i128 {
+  typedef __int128 int128_t;
+  typedef unsigned __int128 uint128_t;
   constexpr int128_t I128_1 = 12;
   static_assert(I128_1 == 12, "");
   static_assert(I128_1 != 10, "");
@@ -51,6 +52,9 @@ namespace i128 {
   constexpr int128_t Two = (int128_t)1 << 1ul;
   static_assert(Two == 2, "");
 
+  constexpr uint128_t AllOnes = ~static_cast<uint128_t>(0);
+  static_assert(AllOnes == UINT128_MAX, "");
+
 #if __cplusplus >= 201402L
   template <typename T>
   constexpr T CastFrom(__int128_t A) {
@@ -65,6 +69,14 @@ namespace i128 {
   static_assert(CastFrom<float>(12) == 12, "");
   static_assert(CastFrom<double>(12) == 12, "");
   static_assert(CastFrom<long double>(12) == 12, "");
+
+  static_assert(CastFrom<char>(AllOnes) == -1, "");
+  static_assert(CastFrom<unsigned char>(AllOnes) == 0xFF, "");
+  static_assert(CastFrom<long>(AllOnes) == -1, "");
+  static_assert(CastFrom<unsigned short>(AllOnes) == 0xFFFF, "");
+  static_assert(CastFrom<int>(AllOnes) == -1, "");
+  static_assert(CastFrom<int128_t>(AllOnes) == -1, "");
+  static_assert(CastFrom<uint128_t>(AllOnes) == AllOnes, "");
 
   template <typename T>
   constexpr __int128 CastTo(T A) {
@@ -87,6 +99,7 @@ constexpr int128_t Error = __LDBL_MAX__; // ref-warning {{implicit conversion of
                                          // expected-error {{must be initialized by a constant expression}} \
                                          // expected-note {{is outside the range of representable values of type}}
 }
+#endif
 
 constexpr bool b = number;
 static_assert(b, "");

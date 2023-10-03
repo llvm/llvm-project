@@ -18525,11 +18525,16 @@ TEST_F(FormatTest, AlignConsecutiveAssignments) {
                "                     a_longer_name_for_wrap}};",
                Alignment);
 
-  Alignment.ColumnLimit = 60;
+  Alignment = getLLVMStyleWithColumns(60);
+  Alignment.AlignConsecutiveAssignments.Enabled = true;
   verifyFormat("using II = typename TI<T, std::tuple<Types...>>::I;\n"
                "using I  = std::conditional_t<II::value >= 0,\n"
                "                              std::ic<int, II::value + 1>,\n"
                "                              std::ic<int, -1>>;",
+               Alignment);
+  verifyFormat("SomeName = Foo;\n"
+               "X        = func<Type, Type>(looooooooooooooooooooooooong,\n"
+               "                            arrrrrrrrrrg);",
                Alignment);
 }
 
@@ -26305,6 +26310,56 @@ TEST_F(FormatTest, RemoveParentheses) {
   verifyFormat("co_return 0;", "co_return ((0));", Style);
   verifyFormat("return 0;", "return (((0)));", Style);
   verifyFormat("return ({ 0; });", "return ((({ 0; })));", Style);
+  verifyFormat("inline decltype(auto) f() {\n"
+               "  if (a) {\n"
+               "    return (a);\n"
+               "  }\n"
+               "  return (b);\n"
+               "}",
+               "inline decltype(auto) f() {\n"
+               "  if (a) {\n"
+               "    return ((a));\n"
+               "  }\n"
+               "  return ((b));\n"
+               "}",
+               Style);
+  verifyFormat("auto g() {\n"
+               "  decltype(auto) x = [] {\n"
+               "    auto y = [] {\n"
+               "      if (a) {\n"
+               "        return a;\n"
+               "      }\n"
+               "      return b;\n"
+               "    };\n"
+               "    if (c) {\n"
+               "      return (c);\n"
+               "    }\n"
+               "    return (d);\n"
+               "  };\n"
+               "  if (e) {\n"
+               "    return e;\n"
+               "  }\n"
+               "  return f;\n"
+               "}",
+               "auto g() {\n"
+               "  decltype(auto) x = [] {\n"
+               "    auto y = [] {\n"
+               "      if (a) {\n"
+               "        return ((a));\n"
+               "      }\n"
+               "      return ((b));\n"
+               "    };\n"
+               "    if (c) {\n"
+               "      return ((c));\n"
+               "    }\n"
+               "    return ((d));\n"
+               "  };\n"
+               "  if (e) {\n"
+               "    return ((e));\n"
+               "  }\n"
+               "  return ((f));\n"
+               "}",
+               Style);
 
   Style.ColumnLimit = 25;
   verifyFormat("return (a + b) - (c + d);",

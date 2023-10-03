@@ -32,14 +32,22 @@ template <unsigned Bits, bool Signed> class Integral;
 class Boolean;
 
 template <bool Signed> class IntegralAP final {
-public:
+private:
+  friend IntegralAP<!Signed>;
   APSInt V;
+
+  template <typename T> static T truncateCast(const APSInt &V) {
+    return std::is_signed_v<T> ? V.trunc(sizeof(T) * 8).getSExtValue()
+                               : V.trunc(sizeof(T) * 8).getZExtValue();
+  }
 
 public:
   using AsUnsigned = IntegralAP<false>;
 
   template <typename T>
-  IntegralAP(T Value) : V(APInt(sizeof(T) * 8, Value, std::is_signed_v<T>)) {}
+  IntegralAP(T Value)
+      : V(APInt(sizeof(T) * 8, static_cast<uint64_t>(Value),
+                std::is_signed_v<T>)) {}
 
   IntegralAP(APInt V) : V(V) {}
   IntegralAP(APSInt V) : V(V) {}
@@ -53,18 +61,18 @@ public:
   bool operator<=(IntegralAP RHS) const { return V <= RHS.V; }
 
   explicit operator bool() const { return !V.isZero(); }
-  explicit operator int8_t() const { return V.getSExtValue(); }
-  explicit operator uint8_t() const { return V.getZExtValue(); }
-  explicit operator int16_t() const { return V.getSExtValue(); }
-  explicit operator uint16_t() const { return V.getZExtValue(); }
-  explicit operator int32_t() const { return V.getSExtValue(); }
-  explicit operator uint32_t() const { return V.getZExtValue(); }
-  explicit operator int64_t() const { return V.getSExtValue(); }
-  explicit operator uint64_t() const { return V.getZExtValue(); }
+  explicit operator int8_t() const { return truncateCast<int8_t>(V); }
+  explicit operator uint8_t() const { return truncateCast<uint8_t>(V); }
+  explicit operator int16_t() const { return truncateCast<int16_t>(V); }
+  explicit operator uint16_t() const { return truncateCast<uint16_t>(V); }
+  explicit operator int32_t() const { return truncateCast<int32_t>(V); }
+  explicit operator uint32_t() const { return truncateCast<uint32_t>(V); }
+  explicit operator int64_t() const { return truncateCast<int64_t>(V); }
+  explicit operator uint64_t() const { return truncateCast<uint64_t>(V); }
 
   template <typename T> static IntegralAP from(T Value, unsigned NumBits = 0) {
     assert(NumBits > 0);
-    APSInt Copy = APSInt(APInt(NumBits, Value, Signed), !Signed);
+    APSInt Copy = APSInt(APInt(NumBits, static_cast<int64_t>(Value), Signed), !Signed);
 
     return IntegralAP<Signed>(Copy);
   }
@@ -208,7 +216,6 @@ public:
   }
 
   static bool comp(IntegralAP A, IntegralAP *R) {
-    assert(false);
     *R = IntegralAP(~A.V);
     return false;
   }
