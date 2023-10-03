@@ -3128,7 +3128,7 @@ uint16_t ASTContext::getPointerAuthTypeDiscriminator(QualType T) {
   SmallString<256> Str;
   llvm::raw_svector_ostream Out(Str);
   std::unique_ptr<MangleContext> MC(createMangleContext());
-  MC->mangleTypeName(T, Out);
+  MC->mangleCanonicalTypeName(T, Out);
   return getPointerAuthStringDiscriminator(*this, Str.c_str());
 }
 
