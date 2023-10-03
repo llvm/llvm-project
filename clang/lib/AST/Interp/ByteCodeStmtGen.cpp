@@ -191,7 +191,7 @@ bool ByteCodeStmtGen<Emitter>::visitFunc(const FunctionDecl *F) {
           return false;
         if (!this->visitInitializer(InitExpr))
           return false;
-        if (!this->emitPopPtr(InitExpr))
+        if (!this->emitInitPtrPop(InitExpr))
           return false;
       }
     }
