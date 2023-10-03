@@ -57,6 +57,15 @@ using namespace clang;
 using namespace clang::driver;
 using namespace llvm::opt;
 
+#if defined(__linux__)
+#include <unistd.h>
+#elif defined(__APPLE__)
+#include <libproc.h>
+#include <unistd.h>
+#elif defined(__MINGW32__)
+#include <windows.h>
+#endif
+
 std::string GetExecutablePath(const char *Argv0, bool CanonicalPrefixes) {
   if (!CanonicalPrefixes) {
     SmallString<128> ExecutablePath(Argv0);
@@ -331,6 +340,56 @@ static void SetInstallDir(SmallVectorImpl<const char *> &argv,
   // path being a symlink.
   SmallString<128> InstalledPath(argv[0]);
 
+#if defined(__linux__)
+
+  char ProcessAbsolutePath[PATH_MAX];
+
+  int len = readlink("/proc/self/exe", ProcessAbsolutePath,
+                     sizeof(ProcessAbsolutePath) - 1);
+  if ( len <= 0 ) {
+    llvm::errs() << "Internal error: readlink(\"/proc/self/exe\") failed with "
+                 << strerror(errno) << "\n";
+    exit(1);
+  }
+
+  ProcessAbsolutePath[len] = 0;
+  InstalledPath = ProcessAbsolutePath;
+
+#elif defined(__APPLE__)
+
+  // The size must be higher than PROC_PIDPATHINFO_SIZE, otherwise the call
+  // fails with ENOMEM (12) - Cannot allocate memory.
+  // https://opensource.apple.com/source/Libc/Libc-498/darwin/libproc.c
+  char ProcessAbsolutePath[PROC_PIDPATHINFO_SIZE+1];
+
+  int len = proc_pidpath(getpid(), ProcessAbsolutePath,
+                         sizeof(ProcessAbsolutePath) - 1);
+  if ( len <= 0 ) {
+    llvm::errs() << "Internal error: proc_pidpath() failed with "
+                 << strerror(errno) << "\n";
+    exit(1);
+  }
+
+  ProcessAbsolutePath[len] = 0;
+  InstalledPath = ProcessAbsolutePath;
+
+#elif defined(__MINGW32__)
+
+  char ProcessAbsolutePath[PATH_MAX];
+
+  len = GetModuleFileName(NULL, ProcessAbsolutePath,
+                          sizeof(ProcessAbsolutePath) - 1);
+  if ( len <= 0 ) {
+    llvm::errs() << "Internal error: GetModuleFileName() failed with "
+                 << strerror(errno) << "\n";
+    exit(1);
+  }
+
+  ProcessAbsolutePath[len] = 0;
+  InstalledPath = ProcessAbsolutePath;
+
+#else
+
   // Do a PATH lookup, if there are no directory components.
   if (llvm::sys::path::filename(InstalledPath) == InstalledPath)
     if (llvm::ErrorOr<std::string> Tmp = llvm::sys::findProgramByName(
@@ -340,6 +399,8 @@ static void SetInstallDir(SmallVectorImpl<const char *> &argv,
   // FIXME: We don't actually canonicalize this, we just make it absolute.
   if (CanonicalPrefixes)
     llvm::sys::fs::make_absolute(InstalledPath);
+
+#endif
 
   StringRef InstalledPathParent(llvm::sys::path::parent_path(InstalledPath));
   if (llvm::sys::fs::exists(InstalledPathParent))
