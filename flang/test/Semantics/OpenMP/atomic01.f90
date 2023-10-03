@@ -55,40 +55,49 @@ use omp_lib
   !ERROR: More than one memory order clause not allowed on OpenMP Atomic construct
   !ERROR: At most one SEQ_CST clause can appear on the UPDATE directive
   !$omp atomic seq_cst seq_cst update
+  !ERROR: Invalid or missing operator in atomic update statement
     i = j
   !ERROR: More than one memory order clause not allowed on OpenMP Atomic construct
   !ERROR: At most one SEQ_CST clause can appear on the UPDATE directive
   !$omp atomic update seq_cst seq_cst
+  !ERROR: Invalid or missing operator in atomic update statement
     i = j
   !ERROR: More than one memory order clause not allowed on OpenMP Atomic construct
   !ERROR: At most one SEQ_CST clause can appear on the UPDATE directive
   !$omp atomic seq_cst update seq_cst
+  !ERROR: Invalid or missing operator in atomic update statement
     i = j
 
   !ERROR: More than one memory order clause not allowed on OpenMP Atomic construct
   !ERROR: At most one RELEASE clause can appear on the UPDATE directive
   !$omp atomic release release update
+  !ERROR: Invalid or missing operator in atomic update statement
     i = j
   !ERROR: More than one memory order clause not allowed on OpenMP Atomic construct
   !ERROR: At most one RELEASE clause can appear on the UPDATE directive
   !$omp atomic update release release
+  !ERROR: Invalid or missing operator in atomic update statement
     i = j
   !ERROR: More than one memory order clause not allowed on OpenMP Atomic construct
   !ERROR: At most one RELEASE clause can appear on the UPDATE directive
   !$omp atomic release update release
+  !ERROR: Invalid or missing operator in atomic update statement
     i = j
 
   !ERROR: More than one memory order clause not allowed on OpenMP Atomic construct
   !ERROR: At most one RELAXED clause can appear on the UPDATE directive
   !$omp atomic relaxed relaxed update
+  !ERROR: Invalid or missing operator in atomic update statement
     i = j
   !ERROR: More than one memory order clause not allowed on OpenMP Atomic construct
   !ERROR: At most one RELAXED clause can appear on the UPDATE directive
   !$omp atomic update relaxed relaxed
+  !ERROR: Invalid or missing operator in atomic update statement
     i = j
   !ERROR: More than one memory order clause not allowed on OpenMP Atomic construct
   !ERROR: At most one RELAXED clause can appear on the UPDATE directive
   !$omp atomic relaxed update relaxed
+  !ERROR: Invalid or missing operator in atomic update statement
     i = j
 
 !CAPTURE
@@ -240,14 +249,17 @@ use omp_lib
   !ERROR: More than one memory order clause not allowed on OpenMP Atomic construct
   !ERROR: At most one RELAXED clause can appear on the ATOMIC directive
   !$omp atomic relaxed relaxed
+  !ERROR: Invalid or missing operator in atomic update statement
     i = j
   !ERROR: More than one memory order clause not allowed on OpenMP Atomic construct
   !ERROR: At most one SEQ_CST clause can appear on the ATOMIC directive
   !$omp atomic seq_cst seq_cst
+  !ERROR: Invalid or missing operator in atomic update statement
     i = j
   !ERROR: More than one memory order clause not allowed on OpenMP Atomic construct
   !ERROR: At most one RELEASE clause can appear on the ATOMIC directive
   !$omp atomic release release
+  !ERROR: Invalid or missing operator in atomic update statement
     i = j
 
 ! 2.17.7.3
@@ -282,21 +294,27 @@ use omp_lib
     i = j
   !ERROR: At most one HINT clause can appear on the UPDATE directive
   !$omp atomic hint(omp_sync_hint_contended) hint(omp_sync_hint_speculative) update
+  !ERROR: Invalid or missing operator in atomic update statement
     i = j
   !ERROR: At most one HINT clause can appear on the UPDATE directive
   !$omp atomic hint(omp_sync_hint_nonspeculative) update hint(omp_sync_hint_nonspeculative)
+  !ERROR: Invalid or missing operator in atomic update statement
     i = j
   !ERROR: At most one HINT clause can appear on the UPDATE directive
   !$omp atomic update hint(omp_sync_hint_none) hint (omp_sync_hint_uncontended)
+  !ERROR: Invalid or missing operator in atomic update statement
     i = j
   !ERROR: At most one HINT clause can appear on the ATOMIC directive
   !$omp atomic hint(omp_sync_hint_contended) hint(omp_sync_hint_speculative)
+  !ERROR: Invalid or missing operator in atomic update statement
     i = j
   !ERROR: At most one HINT clause can appear on the ATOMIC directive
   !$omp atomic hint(omp_sync_hint_none) hint(omp_sync_hint_nonspeculative)
+  !ERROR: Invalid or missing operator in atomic update statement
     i = j
   !ERROR: At most one HINT clause can appear on the ATOMIC directive
   !$omp atomic hint(omp_sync_hint_none) hint (omp_sync_hint_uncontended)
+  !ERROR: Invalid or missing operator in atomic update statement
     i = j
 
   !ERROR: At most one HINT clause can appear on the CAPTURE directive
@@ -354,25 +372,31 @@ use omp_lib
 
   !ERROR: Clause ACQ_REL is not allowed if clause UPDATE appears on the ATOMIC directive
   !$omp atomic acq_rel update
+  !ERROR: Invalid or missing operator in atomic update statement
     i = j
   !ERROR: Clause ACQ_REL is not allowed if clause UPDATE appears on the ATOMIC directive
   !$omp atomic update acq_rel
+  !ERROR: Invalid or missing operator in atomic update statement
     i = j
 
   !ERROR: Clause ACQUIRE is not allowed if clause UPDATE appears on the ATOMIC directive
   !$omp atomic acquire update
+  !ERROR: Invalid or missing operator in atomic update statement
     i = j
 
   !ERROR: Clause ACQUIRE is not allowed if clause UPDATE appears on the ATOMIC directive
   !$omp atomic update acquire
+  !ERROR: Invalid or missing operator in atomic update statement
     i = j
 
   !ERROR: Clause ACQ_REL is not allowed on the ATOMIC directive
   !$omp atomic acq_rel
+  !ERROR: Invalid or missing operator in atomic update statement
     i = j
 
   !ERROR: Clause ACQUIRE is not allowed on the ATOMIC directive
   !$omp atomic acquire
+  !ERROR: Invalid or missing operator in atomic update statement
     i = j
 end program
 
