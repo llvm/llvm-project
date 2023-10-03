@@ -75,10 +75,14 @@ fadd.d a0, a1, a2
 # CHECK-ALIAS: fcvt.s.d a0, a0{{$}}
 fcvt.s.d a0, a0
 
-# FIXME: fcvt.d.s should have a default rounding mode.
+# For historical reasons defaults to frm==0b000 (rne) but doesn't print this
+# default rounding mode.
 # CHECK-INST: fcvt.d.s a0, a0{{$}}
 # CHECK-ALIAS: fcvt.d.s a0, a0{{$}}
 fcvt.d.s a0, a0
+# CHECK-INST: fcvt.d.s a0, a0{{$}}
+# CHECK-ALIAS: fcvt.d.s a0, a0{{$}}
+fcvt.d.s a0, a0, rne
 
 # CHECK-INST: fcvt.w.d a0, a0, dyn{{$}}
 # CHECK-ALIAS: fcvt.w.d a0, a0{{$}}

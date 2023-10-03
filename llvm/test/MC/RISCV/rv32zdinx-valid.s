@@ -59,6 +59,9 @@ fcvt.s.d x26, x28, dyn
 # CHECK-ASM-AND-OBJ: fcvt.d.s s10, t3
 # CHECK-ASM: encoding: [0x53,0x0d,0x0e,0x42]
 fcvt.d.s x26, x28
+# CHECK-ASM-AND-OBJ: fcvt.d.s s10, t3, rup
+# CHECK-ASM: encoding: [0x53,0x3d,0x0e,0x42]
+fcvt.d.s x26, x28, rup
 # CHECK-ASM-AND-OBJ: feq.d s10, t3, t5
 # CHECK-ASM: encoding: [0x53,0x2d,0xee,0xa3]
 feq.d x26, x28, x30
