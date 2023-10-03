@@ -1738,7 +1738,7 @@ def FUNSHFRCLAMP :
 // restriction in PTX?
 //
 // dest and src may be int32 or int64, but start and end are always int32.
-multiclass BFX<string Instr, RegisterClass RC> {
+multiclass BFE<string Instr, RegisterClass RC> {
   def rrr
     : NVPTXInst<(outs RC:$d),
                 (ins RC:$a, Int32Regs:$b, Int32Regs:$c),
@@ -1752,17 +1752,29 @@ multiclass BFX<string Instr, RegisterClass RC> {
                 (ins RC:$a, i32imm:$b, i32imm:$c),
                 !strconcat(Instr, " \t$d, $a, $b, $c;"), []>;
 }
+multiclass BFI<string Instr, RegisterClass RC> {
+  def rrr
+    : NVPTXInst<(outs RC:$f),
+                (ins RC:$a, RC:$b, Int32Regs:$c, Int32Regs:$d),
+                !strconcat(Instr, " \t$f, $a, $b, $c, $d;"), []>;
+  def rri
+    : NVPTXInst<(outs RC:$f),
+                (ins RC:$a, RC:$b, Int32Regs:$c, i32imm:$d),
+                !strconcat(Instr, " \t$f, $a, $b, $c, $d;"), []>;
+  def rii
+    : NVPTXInst<(outs RC:$f),
+                (ins RC:$a, RC:$b, i32imm:$c, i32imm:$d),
+                !strconcat(Instr, " \t$f, $a, $b, $c, $d;"), []>;
+}
 
 let hasSideEffects = false in {
-  defm BFE_S32 : BFX<"bfe.s32", Int32Regs>;
-  defm BFE_U32 : BFX<"bfe.u32", Int32Regs>;
-  defm BFE_S64 : BFX<"bfe.s64", Int64Regs>;
-  defm BFE_U64 : BFX<"bfe.u64", Int64Regs>;
+  defm BFE_S32 : BFE<"bfe.s32", Int32Regs>;
+  defm BFE_U32 : BFE<"bfe.u32", Int32Regs>;
+  defm BFE_S64 : BFE<"bfe.s64", Int64Regs>;
+  defm BFE_U64 : BFE<"bfe.u64", Int64Regs>;
 
-  defm BFI_S32 : BFX<"bfi.s32", Int32Regs>;
-  defm BFI_U32 : BFX<"bfi.u32", Int32Regs>;
-  defm BFI_S64 : BFX<"bfi.s64", Int64Regs>;
-  defm BFI_U64 : BFX<"bfi.u64", Int64Regs>;
+  defm BFI_B32 : BFI<"bfi.b32", Int32Regs>;
+  defm BFI_B64 : BFI<"bfi.b64", Int64Regs>;
 }
 
 // Common byte extraction patterns
@@ -1781,6 +1793,24 @@ def : Pat<(i16 (sext_inreg (trunc Int64Regs:$s), i8)),
           (CVT_s8_s64 Int64Regs:$s, CvtNONE)>;
 def : Pat<(i16 (sext_inreg (trunc (srl (i64 Int64Regs:$s),  (i32 imm:$o))), i8)),
           (CVT_s8_s64 (BFE_S64rii Int64Regs:$s, imm:$o, 8), CvtNONE)>;
+
+def ExtractFromV4I8 : ComplexPattern<i16, 2, "SelectExtractEltFromV4I8", [extractelt]>;
+def: Pat<(i32 (sext_inreg (i32 (anyext (ExtractFromV4I8 (v4i8 Int32Regs:$src), (i32 imm:$bitidx)))), i8)),
+         (BFE_S32rii Int32Regs:$src, imm:$bitidx, 8)>;
+def: Pat<(i32 (and (i32 (anyext (ExtractFromV4I8 (v4i8 Int32Regs:$src), (i32 imm:$bitidx)))), 255)),
+         (BFE_U32rii Int32Regs:$src, imm:$bitidx, 8)>;
+def: Pat<(i16 (sext_inreg (ExtractFromV4I8 (v4i8 Int32Regs:$src), (i32 imm:$bitidx)), i8)),
+         (CVT_s8_s32 (BFE_S32rii Int32Regs:$src, imm:$bitidx, 8), CvtNONE)>;
+def: Pat<(ExtractFromV4I8 (v4i8 Int32Regs:$src), (i32 imm:$bitidx)),
+         (CVT_s16_s32 (BFE_S32rii Int32Regs:$src, imm:$bitidx, 8), CvtNONE)>;
+
+
+def : Pat<(v4i8 (build_vector (i16 Int16Regs:$a), (i16 Int16Regs:$b),
+                              (i16 Int16Regs:$c), (i16 Int16Regs:$d))),
+          (BFI_B32rii
+           (BFI_B32rii (CVT_u32_u16 Int16Regs:$d, CvtNONE), (CVT_u32_u16 Int16Regs:$c, CvtNONE), 8, 8),
+           (BFI_B32rii (CVT_u32_u16 Int16Regs:$b, CvtNONE), (CVT_u32_u16 Int16Regs:$a, CvtNONE), 8, 8),
+           16, 16)>;
 
 //-----------------------------------
 // Comparison instructions (setp, set)
@@ -3293,10 +3323,6 @@ let hasSideEffects = false in {
                              (ins Int16Regs:$s1, Int16Regs:$s2,
                                   Int16Regs:$s3, Int16Regs:$s4),
                              "mov.b64 \t$d, {{$s1, $s2, $s3, $s4}};", []>;
-  def V4I8toI32  : NVPTXInst<(outs Int32Regs:$d),
-                             (ins Int16Regs:$s1, Int16Regs:$s2,
-                                  Int16Regs:$s3, Int16Regs:$s4),
-                             "mov.b32 \t$d, {{$s1, $s2, $s3, $s4}};", []>;
   def V2I16toI32 : NVPTXInst<(outs Int32Regs:$d),
                              (ins Int16Regs:$s1, Int16Regs:$s2),
                              "mov.b32 \t$d, {{$s1, $s2}};", []>;
@@ -3312,10 +3338,6 @@ let hasSideEffects = false in {
                                    Int16Regs:$d3, Int16Regs:$d4),
                              (ins Int64Regs:$s),
                              "mov.b64 \t{{$d1, $d2, $d3, $d4}}, $s;", []>;
-  def I32toV4I8  : NVPTXInst<(outs Int16Regs:$d1, Int16Regs:$d2,
-                                   Int16Regs:$d3, Int16Regs:$d4),
-                             (ins Int32Regs:$s),
-                             "mov.b32 \t{{$d1, $d2, $d3, $d4}}, $s;", []>;
   def I32toV2I16 : NVPTXInst<(outs Int16Regs:$d1, Int16Regs:$d2),
                              (ins Int32Regs:$s),
                              "mov.b32 \t{{$d1, $d2}}, $s;", []>;
@@ -3351,6 +3373,9 @@ def : Pat<(i32 (trunc (srl Int64Regs:$s, (i32 32)))),
 def : Pat<(i32 (trunc (sra Int64Regs:$s, (i32 32)))),
           (I64toI32H Int64Regs:$s)>;
 
+def: Pat<(i32 (sext (extractelt (v2i16 Int32Regs:$src), 0))),
+         (CVT_INREG_s32_s16 Int32Regs:$src)>;
+
 foreach vt = [v2f16, v2bf16, v2i16] in {
 def : Pat<(extractelt (vt Int32Regs:$src), 0),
           (I32toI16L Int32Regs:$src)>;
@@ -3363,9 +3388,6 @@ def : Pat<(v2bf16 (build_vector (bf16 Int16Regs:$a), (bf16 Int16Regs:$b))),
           (V2I16toI32 Int16Regs:$a, Int16Regs:$b)>;
 def : Pat<(v2i16 (build_vector (i16 Int16Regs:$a), (i16 Int16Regs:$b))),
           (V2I16toI32 Int16Regs:$a, Int16Regs:$b)>;
-def : Pat<(v4i8 (build_vector (i16 Int16Regs:$a), (i16 Int16Regs:$b),
-                              (i16 Int16Regs:$c), (i16 Int16Regs:$d))),
-          (V4I8toI32 Int16Regs:$a, Int16Regs:$b, Int16Regs:$c, Int16Regs:$d)>;
 
 // Count leading zeros
 let hasSideEffects = false in {

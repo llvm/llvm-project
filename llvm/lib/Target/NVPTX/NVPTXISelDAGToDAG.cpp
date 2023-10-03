@@ -14,6 +14,7 @@
 #include "MCTargetDesc/NVPTXBaseInfo.h"
 #include "NVPTXUtilities.h"
 #include "llvm/Analysis/ValueTracking.h"
+#include "llvm/CodeGen/ISDOpcodes.h"
 #include "llvm/IR/GlobalValue.h"
 #include "llvm/IR/Instructions.h"
 #include "llvm/IR/IntrinsicsNVPTX.h"
@@ -3567,6 +3568,23 @@ bool NVPTXDAGToDAGISel::SelectADDRri(SDNode *OpNode, SDValue Addr,
 bool NVPTXDAGToDAGISel::SelectADDRri64(SDNode *OpNode, SDValue Addr,
                                        SDValue &Base, SDValue &Offset) {
   return SelectADDRri_imp(OpNode, Addr, Base, Offset, MVT::i64);
+}
+
+bool NVPTXDAGToDAGISel::SelectExtractEltFromV4I8(SDValue N, SDValue &V,
+                                                 SDValue &BitOffset) {
+  SDValue Vector = N->getOperand(0);
+  if (!(N->getOpcode() == ISD::EXTRACT_VECTOR_ELT &&
+        Vector->getValueType(0) == MVT::v4i8))
+    return false;
+
+  if (const ConstantSDNode *IdxConst =
+          dyn_cast<ConstantSDNode>(N->getOperand(1))) {
+    V = Vector;
+    BitOffset = CurDAG->getTargetConstant(IdxConst->getZExtValue() * 8,
+                                          SDLoc(N), MVT::i32);
+    return true;
+  }
+  return false;
 }
 
 bool NVPTXDAGToDAGISel::ChkMemSDNodeAddressSpace(SDNode *N,

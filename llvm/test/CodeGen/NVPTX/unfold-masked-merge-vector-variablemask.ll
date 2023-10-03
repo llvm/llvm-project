@@ -60,20 +60,17 @@ define <1 x i16> @out_v1i16(<1 x i16> %x, <1 x i16> %y, <1 x i16> %mask) nounwin
 define <4 x i8> @out_v4i8(<4 x i8> %x, <4 x i8> %y, <4 x i8> %mask) nounwind {
 ; CHECK-LABEL: out_v4i8(
 ; CHECK:       {
-; CHECK-NEXT:    .reg .b16 %rs<2>;
-; CHECK-NEXT:    .reg .b32 %r<11>;
+; CHECK-NEXT:    .reg .b32 %r<10>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    ld.param.u32 %r1, [out_v4i8_param_2];
 ; CHECK-NEXT:    ld.param.u32 %r3, [out_v4i8_param_1];
 ; CHECK-NEXT:    ld.param.u32 %r4, [out_v4i8_param_0];
 ; CHECK-NEXT:    and.b32 %r5, %r4, %r1;
-; CHECK-NEXT:    mov.u16 %rs1, -1;
-; CHECK-NEXT:    mov.b32 %r7, {%rs1, %rs1, %rs1, %rs1};
-; CHECK-NEXT:    xor.b32 %r8, %r1, %r7;
-; CHECK-NEXT:    and.b32 %r9, %r3, %r8;
-; CHECK-NEXT:    or.b32 %r10, %r5, %r9;
-; CHECK-NEXT:    st.param.b32 [func_retval0+0], %r10;
+; CHECK-NEXT:    xor.b32 %r7, %r1, -1;
+; CHECK-NEXT:    and.b32 %r8, %r3, %r7;
+; CHECK-NEXT:    or.b32 %r9, %r5, %r8;
+; CHECK-NEXT:    st.param.b32 [func_retval0+0], %r9;
 ; CHECK-NEXT:    ret;
   %mx = and <4 x i8> %x, %mask
   %notmask = xor <4 x i8> %mask, <i8 -1, i8 -1, i8 -1, i8 -1>
@@ -85,20 +82,17 @@ define <4 x i8> @out_v4i8(<4 x i8> %x, <4 x i8> %y, <4 x i8> %mask) nounwind {
 define <4 x i8> @out_v4i8_undef(<4 x i8> %x, <4 x i8> %y, <4 x i8> %mask) nounwind {
 ; CHECK-LABEL: out_v4i8_undef(
 ; CHECK:       {
-; CHECK-NEXT:    .reg .b16 %rs<3>;
-; CHECK-NEXT:    .reg .b32 %r<11>;
+; CHECK-NEXT:    .reg .b32 %r<10>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    ld.param.u32 %r1, [out_v4i8_undef_param_2];
 ; CHECK-NEXT:    ld.param.u32 %r3, [out_v4i8_undef_param_1];
 ; CHECK-NEXT:    ld.param.u32 %r4, [out_v4i8_undef_param_0];
 ; CHECK-NEXT:    and.b32 %r5, %r4, %r1;
-; CHECK-NEXT:    mov.u16 %rs1, -1;
-; CHECK-NEXT:    mov.b32 %r7, {%rs1, %rs1, %rs2, %rs1};
-; CHECK-NEXT:    xor.b32 %r8, %r1, %r7;
-; CHECK-NEXT:    and.b32 %r9, %r3, %r8;
-; CHECK-NEXT:    or.b32 %r10, %r5, %r9;
-; CHECK-NEXT:    st.param.b32 [func_retval0+0], %r10;
+; CHECK-NEXT:    xor.b32 %r7, %r1, -1;
+; CHECK-NEXT:    and.b32 %r8, %r3, %r7;
+; CHECK-NEXT:    or.b32 %r9, %r5, %r8;
+; CHECK-NEXT:    st.param.b32 [func_retval0+0], %r9;
 ; CHECK-NEXT:    ret;
   %mx = and <4 x i8> %x, %mask
   %notmask = xor <4 x i8> %mask, <i8 -1, i8 -1, i8 undef, i8 -1>
@@ -158,8 +152,7 @@ define <1 x i32> @out_v1i32(<1 x i32> %x, <1 x i32> %y, <1 x i32> %mask) nounwin
 define <8 x i8> @out_v8i8(<8 x i8> %x, <8 x i8> %y, <8 x i8> %mask) nounwind {
 ; CHECK-LABEL: out_v8i8(
 ; CHECK:       {
-; CHECK-NEXT:    .reg .b16 %rs<2>;
-; CHECK-NEXT:    .reg .b32 %r<22>;
+; CHECK-NEXT:    .reg .b32 %r<21>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    ld.param.v2.u32 {%r1, %r2}, [out_v8i8_param_1];
@@ -167,15 +160,13 @@ define <8 x i8> @out_v8i8(<8 x i8> %x, <8 x i8> %y, <8 x i8> %mask) nounwind {
 ; CHECK-NEXT:    ld.param.v2.u32 {%r9, %r10}, [out_v8i8_param_0];
 ; CHECK-NEXT:    and.b32 %r11, %r9, %r5;
 ; CHECK-NEXT:    and.b32 %r13, %r10, %r6;
-; CHECK-NEXT:    mov.u16 %rs1, -1;
-; CHECK-NEXT:    mov.b32 %r15, {%rs1, %rs1, %rs1, %rs1};
-; CHECK-NEXT:    xor.b32 %r16, %r6, %r15;
-; CHECK-NEXT:    xor.b32 %r17, %r5, %r15;
-; CHECK-NEXT:    and.b32 %r18, %r1, %r17;
-; CHECK-NEXT:    and.b32 %r19, %r2, %r16;
-; CHECK-NEXT:    or.b32 %r20, %r13, %r19;
-; CHECK-NEXT:    or.b32 %r21, %r11, %r18;
-; CHECK-NEXT:    st.param.v2.b32 [func_retval0+0], {%r21, %r20};
+; CHECK-NEXT:    xor.b32 %r15, %r6, -1;
+; CHECK-NEXT:    xor.b32 %r16, %r5, -1;
+; CHECK-NEXT:    and.b32 %r17, %r1, %r16;
+; CHECK-NEXT:    and.b32 %r18, %r2, %r15;
+; CHECK-NEXT:    or.b32 %r19, %r13, %r18;
+; CHECK-NEXT:    or.b32 %r20, %r11, %r17;
+; CHECK-NEXT:    st.param.v2.b32 [func_retval0+0], {%r20, %r19};
 ; CHECK-NEXT:    ret;
   %mx = and <8 x i8> %x, %mask
   %notmask = xor <8 x i8> %mask, <i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1>
@@ -213,8 +204,7 @@ define <4 x i16> @out_v4i16(<4 x i16> %x, <4 x i16> %y, <4 x i16> %mask) nounwin
 define <4 x i16> @out_v4i16_undef(<4 x i16> %x, <4 x i16> %y, <4 x i16> %mask) nounwind {
 ; CHECK-LABEL: out_v4i16_undef(
 ; CHECK:       {
-; CHECK-NEXT:    .reg .b16 %rs<3>;
-; CHECK-NEXT:    .reg .b32 %r<22>;
+; CHECK-NEXT:    .reg .b32 %r<21>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    ld.param.v2.u32 {%r1, %r2}, [out_v4i16_undef_param_1];
@@ -222,15 +212,13 @@ define <4 x i16> @out_v4i16_undef(<4 x i16> %x, <4 x i16> %y, <4 x i16> %mask) n
 ; CHECK-NEXT:    ld.param.v2.u32 {%r9, %r10}, [out_v4i16_undef_param_0];
 ; CHECK-NEXT:    and.b32 %r11, %r9, %r5;
 ; CHECK-NEXT:    and.b32 %r13, %r10, %r6;
-; CHECK-NEXT:    mov.u16 %rs1, -1;
-; CHECK-NEXT:    mov.b32 %r15, {%rs2, %rs1};
-; CHECK-NEXT:    xor.b32 %r16, %r6, %r15;
-; CHECK-NEXT:    xor.b32 %r17, %r5, -1;
-; CHECK-NEXT:    and.b32 %r18, %r1, %r17;
-; CHECK-NEXT:    and.b32 %r19, %r2, %r16;
-; CHECK-NEXT:    or.b32 %r20, %r13, %r19;
-; CHECK-NEXT:    or.b32 %r21, %r11, %r18;
-; CHECK-NEXT:    st.param.v2.b32 [func_retval0+0], {%r21, %r20};
+; CHECK-NEXT:    xor.b32 %r15, %r6, -65536;
+; CHECK-NEXT:    xor.b32 %r16, %r5, -1;
+; CHECK-NEXT:    and.b32 %r17, %r1, %r16;
+; CHECK-NEXT:    and.b32 %r18, %r2, %r15;
+; CHECK-NEXT:    or.b32 %r19, %r13, %r18;
+; CHECK-NEXT:    or.b32 %r20, %r11, %r17;
+; CHECK-NEXT:    st.param.v2.b32 [func_retval0+0], {%r20, %r19};
 ; CHECK-NEXT:    ret;
   %mx = and <4 x i16> %x, %mask
   %notmask = xor <4 x i16> %mask, <i16 -1, i16 -1, i16 undef, i16 -1>
@@ -294,8 +282,7 @@ define <1 x i64> @out_v1i64(<1 x i64> %x, <1 x i64> %y, <1 x i64> %mask) nounwin
 define <16 x i8> @out_v16i8(<16 x i8> %x, <16 x i8> %y, <16 x i8> %mask) nounwind {
 ; CHECK-LABEL: out_v16i8(
 ; CHECK:       {
-; CHECK-NEXT:    .reg .b16 %rs<2>;
-; CHECK-NEXT:    .reg .b32 %r<42>;
+; CHECK-NEXT:    .reg .b32 %r<41>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    ld.param.v4.u32 {%r1, %r2, %r3, %r4}, [out_v16i8_param_1];
@@ -305,21 +292,19 @@ define <16 x i8> @out_v16i8(<16 x i8> %x, <16 x i8> %y, <16 x i8> %mask) nounwin
 ; CHECK-NEXT:    and.b32 %r23, %r18, %r10;
 ; CHECK-NEXT:    and.b32 %r25, %r19, %r11;
 ; CHECK-NEXT:    and.b32 %r27, %r20, %r12;
-; CHECK-NEXT:    mov.u16 %rs1, -1;
-; CHECK-NEXT:    mov.b32 %r29, {%rs1, %rs1, %rs1, %rs1};
-; CHECK-NEXT:    xor.b32 %r30, %r12, %r29;
-; CHECK-NEXT:    xor.b32 %r31, %r11, %r29;
-; CHECK-NEXT:    xor.b32 %r32, %r10, %r29;
-; CHECK-NEXT:    xor.b32 %r33, %r9, %r29;
-; CHECK-NEXT:    and.b32 %r34, %r1, %r33;
-; CHECK-NEXT:    and.b32 %r35, %r2, %r32;
-; CHECK-NEXT:    and.b32 %r36, %r3, %r31;
-; CHECK-NEXT:    and.b32 %r37, %r4, %r30;
-; CHECK-NEXT:    or.b32 %r38, %r27, %r37;
-; CHECK-NEXT:    or.b32 %r39, %r25, %r36;
-; CHECK-NEXT:    or.b32 %r40, %r23, %r35;
-; CHECK-NEXT:    or.b32 %r41, %r21, %r34;
-; CHECK-NEXT:    st.param.v4.b32 [func_retval0+0], {%r41, %r40, %r39, %r38};
+; CHECK-NEXT:    xor.b32 %r29, %r12, -1;
+; CHECK-NEXT:    xor.b32 %r30, %r11, -1;
+; CHECK-NEXT:    xor.b32 %r31, %r10, -1;
+; CHECK-NEXT:    xor.b32 %r32, %r9, -1;
+; CHECK-NEXT:    and.b32 %r33, %r1, %r32;
+; CHECK-NEXT:    and.b32 %r34, %r2, %r31;
+; CHECK-NEXT:    and.b32 %r35, %r3, %r30;
+; CHECK-NEXT:    and.b32 %r36, %r4, %r29;
+; CHECK-NEXT:    or.b32 %r37, %r27, %r36;
+; CHECK-NEXT:    or.b32 %r38, %r25, %r35;
+; CHECK-NEXT:    or.b32 %r39, %r23, %r34;
+; CHECK-NEXT:    or.b32 %r40, %r21, %r33;
+; CHECK-NEXT:    st.param.v4.b32 [func_retval0+0], {%r40, %r39, %r38, %r37};
 ; CHECK-NEXT:    ret;
   %mx = and <16 x i8> %x, %mask
   %notmask = xor <16 x i8> %mask, <i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1>

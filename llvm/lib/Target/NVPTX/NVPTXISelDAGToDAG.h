@@ -95,6 +95,7 @@ private:
                     SDValue &Offset);
   bool SelectADDRsi64(SDNode *OpNode, SDValue Addr, SDValue &Base,
                       SDValue &Offset);
+  bool SelectExtractEltFromV4I8(SDValue N, SDValue &Value, SDValue &Idx);
 
   bool ChkMemSDNodeAddressSpace(SDNode *N, unsigned int spN) const;
 

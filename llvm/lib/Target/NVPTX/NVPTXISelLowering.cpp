@@ -497,6 +497,10 @@ NVPTXTargetLowering::NVPTXTargetLowering(const NVPTXTargetMachine &TM,
   setOperationAction(ISD::INSERT_VECTOR_ELT, MVT::v2i16, Expand);
   setOperationAction(ISD::VECTOR_SHUFFLE, MVT::v2i16, Expand);
 
+  // TODO: we should eventually lower it as PRMT instruction.
+  setOperationAction(ISD::VECTOR_SHUFFLE, MVT::v4i8, Expand);
+  setOperationAction(ISD::BUILD_VECTOR, MVT::v4i8, Custom);
+
   // Operations not directly supported by NVPTX.
   for (MVT VT :
        {MVT::bf16, MVT::f16, MVT::v2bf16, MVT::v2f16, MVT::f32, MVT::f64,
@@ -2156,45 +2160,47 @@ NVPTXTargetLowering::LowerCONCAT_VECTORS(SDValue Op, SelectionDAG &DAG) const {
   return DAG.getBuildVector(Node->getValueType(0), dl, Ops);
 }
 
-// We can init constant f16x2 with a single .b32 move.  Normally it
+// We can init constant f16x2/v2i16/v4i8 with a single .b32 move.  Normally it
 // would get lowered as two constant loads and vector-packing move.
-//        mov.b16         %h1, 0x4000;
-//        mov.b16         %h2, 0x3C00;
-//        mov.b32         %hh2, {%h2, %h1};
 // Instead we want just a constant move:
 //        mov.b32         %hh2, 0x40003C00
-//
-// This results in better SASS code with CUDA 7.x. Ptxas in CUDA 8.0
-// generates good SASS in both cases.
 SDValue NVPTXTargetLowering::LowerBUILD_VECTOR(SDValue Op,
                                                SelectionDAG &DAG) const {
   EVT VT = Op->getValueType(0);
-  if (!(Isv2x16VT(VT)))
+  if (!(Isv2x16VT(VT) || VT == MVT::v4i8))
     return Op;
-  APInt E0;
-  APInt E1;
-  if (VT == MVT::v2f16 || VT == MVT::v2bf16) {
-    if (!(isa<ConstantFPSDNode>(Op->getOperand(0)) &&
-          isa<ConstantFPSDNode>(Op->getOperand(1))))
-      return Op;
 
-    E0 = cast<ConstantFPSDNode>(Op->getOperand(0))
-             ->getValueAPF()
-             .bitcastToAPInt();
-    E1 = cast<ConstantFPSDNode>(Op->getOperand(1))
-             ->getValueAPF()
-             .bitcastToAPInt();
+  if (!llvm::all_of(Op->ops(), [](SDValue Operand) {
+        return Operand->isUndef() || isa<ConstantSDNode>(Operand) ||
+               isa<ConstantFPSDNode>(Operand);
+      }))
+    return Op;
+
+  // Get value or the Nth operand as an APInt(32). Undef values treated as 0.
+  auto GetOperand = [](SDValue Op, int N) -> APInt {
+    const SDValue &Operand = Op->getOperand(N);
+    EVT VT = Op->getValueType(0);
+    if (Operand->isUndef())
+      return APInt(32, 0);
+    APInt Value;
+    if (VT == MVT::v2f16 || VT == MVT::v2bf16)
+      Value = cast<ConstantFPSDNode>(Operand)->getValueAPF().bitcastToAPInt();
+    else if (VT == MVT::v2i16 || VT == MVT::v4i8)
+      Value = cast<ConstantSDNode>(Operand)->getAPIntValue();
+    else
+      llvm_unreachable("Unsupported type");
+    return Value.zext(32);
+  };
+  APInt Value;
+  if (Isv2x16VT(VT)) {
+    Value = GetOperand(Op, 0) | GetOperand(Op, 1).shl(16);
+  } else if (VT == MVT::v4i8) {
+    Value = GetOperand(Op, 0) | GetOperand(Op, 1).shl(8) |
+            GetOperand(Op, 2).shl(16) | GetOperand(Op, 3).shl(24);
   } else {
-    assert(VT == MVT::v2i16);
-    if (!(isa<ConstantSDNode>(Op->getOperand(0)) &&
-          isa<ConstantSDNode>(Op->getOperand(1))))
-      return Op;
-
-    E0 = cast<ConstantSDNode>(Op->getOperand(0))->getAPIntValue();
-    E1 = cast<ConstantSDNode>(Op->getOperand(1))->getAPIntValue();
+    llvm_unreachable("Unsupported type");
   }
-  SDValue Const =
-      DAG.getConstant(E1.zext(32).shl(16) | E0.zext(32), SDLoc(Op), MVT::i32);
+  SDValue Const = DAG.getConstant(Value, SDLoc(Op), MVT::i32);
   return DAG.getNode(ISD::BITCAST, SDLoc(Op), Op->getValueType(0), Const);
 }
 
@@ -5262,11 +5268,12 @@ static SDValue PerformEXTRACTCombine(SDNode *N,
   SDValue Vector = N->getOperand(0);
   EVT VectorVT = Vector.getValueType();
   if (Vector->getOpcode() == ISD::LOAD && VectorVT.isSimple() &&
-      IsPTXVectorType(VectorVT.getSimpleVT()) && VectorVT != MVT::v4i8)
+      IsPTXVectorType(VectorVT.getSimpleVT()))
     return SDValue(); // Native vector loads already combine nicely w/
                       // extract_vector_elt, except for v4i8.
   // Don't mess with singletons or v2*16 types, we already handle them OK.
-  if (VectorVT.getVectorNumElements() == 1 || Isv2x16VT(VectorVT))
+  if (VectorVT.getVectorNumElements() == 1 || Isv2x16VT(VectorVT) ||
+      VectorVT == MVT::v4i8)
     return SDValue();
 
   uint64_t VectorBits = VectorVT.getSizeInBits();
