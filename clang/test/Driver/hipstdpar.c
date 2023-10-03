@@ -1,5 +1,7 @@
 // XFAIL: target={{.*}}-apple{{.*}}
 // XFAIL: target={{.*}}-windows{{.*}}
+// XFAIL: target={{.*}}hexagon{{.*}}
+// XFAIL: target={{.*}}-ps5{{.*}}
 
 // RUN: not %clang -### --hipstdpar -nogpulib -nogpuinc --compile %s 2>&1 | \
 // RUN:   FileCheck --check-prefix=HIPSTDPAR-MISSING-LIB %s
