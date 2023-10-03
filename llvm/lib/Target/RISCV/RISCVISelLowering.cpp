@@ -11129,7 +11129,7 @@ static unsigned getVecReduceOpcode(unsigned Opc) {
   case ISD::XOR:
     return ISD::VECREDUCE_XOR;
   }
-};
+}
 
 /// Perform two related transforms whose purpose is to incrementally recognize
 /// an explode_vector followed by scalar reduction as a vector reduction node.
