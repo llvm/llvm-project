@@ -554,13 +554,13 @@ struct VectorOuterProductToArmSMELowering
 ///
 /// Example:
 /// ```
-/// %el = vector.extract %tile[%y,%x]: i32 from vector<[4]x[4]xi32>
+/// %el = vector.extract %tile[%row, %col]: i32 from vector<[4]x[4]xi32>
 /// ```
 /// Becomes:
 /// ```
-/// %slice = arm_sme.move_tile_slice_to_vector %tile[%y]
+/// %slice = arm_sme.move_tile_slice_to_vector %tile[%row]
 ///            : vector<[4]xi32> from vector<[4]x[4]xi32>
-/// %el = vector.extract %slice[%x] : i32 from vector<[4]xi32>
+/// %el = vector.extract %slice[%col] : i32 from vector<[4]xi32>
 /// ```
 struct VectorExtractToArmSMELowering
     : public ConvertOpToLLVMPattern<vector::ExtractOp> {
@@ -609,14 +609,15 @@ struct VectorExtractToArmSMELowering
 ///
 /// Example:
 /// ```
-/// %new_tile = vector.insert %el, %tile[%y,%x] : i32 into vector<[4]x[4]xi32>
+/// %new_tile = vector.insert %el, %tile[%row, %col]
+///                     : i32 into vector<[4]x[4]xi32>
 /// ```
 /// Becomes:
 /// ```
-/// %slice = arm_sme.move_tile_slice_to_vector %tile[%y]
+/// %slice = arm_sme.move_tile_slice_to_vector %tile[%row]
 ///            : vector<[4]xi32> from vector<[4]x[4]xi32>
-/// %new_slice = vector.insert %el, %slice[%x] : i32 into vector<[4]xi32>
-/// %new_tile = arm_sme.move_vector_to_tile_slice %new_slice, %tile, %y
+/// %new_slice = vector.insert %el, %slice[%col] : i32 into vector<[4]xi32>
+/// %new_tile = arm_sme.move_vector_to_tile_slice %new_slice, %tile, %row
 ///               : vector<[4]xi32> into vector<[4]x[4]xi32>
 /// ```
 struct VectorInsertToArmSMELowering
