@@ -265,6 +265,12 @@ int16_t getNamedOperandIdx(uint16_t Opcode, uint16_t NamedIndex);
 // one of the instructions does not have rounding mode, false will be returned.
 bool hasEqualFRM(const MachineInstr &MI1, const MachineInstr &MI2);
 
+// If \p Opcode is a .vx vector instruction, returns the lower number of bits
+// that are used from the scalar .x operand for a given \p Log2SEW. Otherwise
+// returns null.
+std::optional<unsigned> getVectorLowDemandedScalarBits(uint16_t Opcode,
+                                                       unsigned Log2SEW);
+
 // Special immediate for AVL operand of V pseudo instructions to indicate VLMax.
 static constexpr int64_t VLMaxSentinel = -1LL;
 
