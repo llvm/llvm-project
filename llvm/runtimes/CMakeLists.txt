@@ -401,24 +401,17 @@ if(runtimes)
       endforeach()
     endif()
   endif()
-  set(EXTRA_CMAKE_ARGS "")
-  if("flang-rt" IN_LIST LLVM_ENABLE_RUNTIMES)
-    list(APPEND EXTRA_CMAKE_ARGS "-DLLVM_DIR=${LLVM_BINARY_DIR}/lib/cmake/llvm")
-    list(APPEND EXTRA_CMAKE_ARGS "-DFLANG_DIR=${LLVM_BINARY_DIR}/lib/cmake/flang")
-    list(APPEND EXTRA_CMAKE_ARGS "-DCLANG_DIR=${LLVM_BINARY_DIR}/lib/cmake/clang")
-    list(APPEND EXTRA_CMAKE_ARGS "-DMLIR_DIR=${LLVM_BINARY_DIR}/lib/cmake/mlir")
-  endif()
   if(NOT LLVM_RUNTIME_TARGETS)
     runtime_default_target(
       DEPENDS ${builtins_dep} ${extra_deps}
-      CMAKE_ARGS ${libc_cmake_args} ${EXTRA_CMAKE_ARGS}
+      CMAKE_ARGS ${libc_cmake_args}
       PREFIXES ${prefixes})
     set(test_targets check-runtimes)
   else()
     if("default" IN_LIST LLVM_RUNTIME_TARGETS)
       runtime_default_target(
         DEPENDS ${builtins_dep} ${extra_deps}
-        CMAKE_ARGS ${libc_cmake_args} ${EXTRA_CMAKE_ARGS}
+        CMAKE_ARGS ${libc_cmake_args}
         PREFIXES ${prefixes})
       list(REMOVE_ITEM LLVM_RUNTIME_TARGETS "default")
     else()
@@ -458,7 +451,7 @@ if(runtimes)
 
       runtime_register_target(${name}
         DEPENDS ${builtins_dep_name} ${libc_tools}
-        CMAKE_ARGS -DLLVM_DEFAULT_TARGET_TRIPLE=${name} ${libc_cmake_args} ${EXTRA_CMAKE_ARGS}
+        CMAKE_ARGS -DLLVM_DEFAULT_TARGET_TRIPLE=${name} ${libc_cmake_args}
         EXTRA_ARGS TARGET_TRIPLE ${name})
 
       add_dependencies(runtimes runtimes-${name})
@@ -488,7 +481,6 @@ if(runtimes)
           CMAKE_ARGS -DLLVM_DEFAULT_TARGET_TRIPLE=${name}
                      -DLLVM_RUNTIMES_PREFIX=${name}/
                      -DLLVM_RUNTIMES_LIBDIR_SUBDIR=${multilib}
-                     ${EXTRA_CMAKE_ARGS}
           BASE_NAME ${name}
           EXTRA_ARGS TARGET_TRIPLE ${name})
 
