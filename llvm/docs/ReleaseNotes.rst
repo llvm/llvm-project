@@ -109,6 +109,7 @@ Changes to the PowerPC Backend
 Changes to the RISC-V Backend
 -----------------------------
 
+* The Zfa extension version was upgraded to 1.0 and is no longer experimental.
 * Zihintntl extension version was upgraded to 1.0 and is no longer experimental.
 * Assembler support for version 1.0.1 of the Zcb extension was added.
 * Zca, Zcf, and Zcd extensions were upgraded to version 1.0.1.
