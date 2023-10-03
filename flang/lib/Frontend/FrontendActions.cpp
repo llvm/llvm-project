@@ -713,10 +713,10 @@ void CodeGenAction::generateLLVMIR() {
   pm.addPass(std::make_unique<Fortran::lower::VerifierPass>());
   pm.enableVerifier(/*verifyPasses=*/true);
 
+  MLIRToLLVMPassPipelineConfig config(level, opts);
+
   // Create the pass pipeline
-  fir::createMLIRToLLVMPassPipeline(pm, level, opts.StackArrays,
-                                    opts.Underscoring, opts.LoopVersioning,
-                                    opts.getDebugInfo());
+  fir::createMLIRToLLVMPassPipeline(pm, config);
   (void)mlir::applyPassManagerCLOptions(pm);
 
   // run the pass manager
