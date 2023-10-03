@@ -249,6 +249,15 @@ Sema::IdentifyCUDAPreference(const FunctionDecl *Caller,
       (CallerTarget == CFT_Global && CalleeTarget == CFT_Device))
     return CFP_Native;
 
+  // HipStdPar mode is special, in that assessing whether a device side call to
+  // a host target is deferred to a subsequent pass, and cannot unambiguously be
+  // adjudicated in the AST, hence we optimistically allow them to pass here.
+  if (getLangOpts().HIPStdPar &&
+      (CallerTarget == CFT_Global || CallerTarget == CFT_Device ||
+       CallerTarget == CFT_HostDevice) &&
+      CalleeTarget == CFT_Host)
+    return CFP_HostDevice;
+
   // (d) HostDevice behavior depends on compilation mode.
   if (CallerTarget == CFT_HostDevice) {
     // It's OK to call a compilation-mode matching function from an HD one.
@@ -895,7 +904,7 @@ void Sema::CUDACheckLambdaCapture(CXXMethodDecl *Callee,
   if (!ShouldCheck || !Capture.isReferenceCapture())
     return;
   auto DiagKind = SemaDiagnosticBuilder::K_Deferred;
-  if (Capture.isVariableCapture()) {
+  if (Capture.isVariableCapture() && !getLangOpts().HIPStdPar) {
     SemaDiagnosticBuilder(DiagKind, Capture.getLocation(),
                           diag::err_capture_bad_target, Callee, *this)
         << Capture.getVariable();
