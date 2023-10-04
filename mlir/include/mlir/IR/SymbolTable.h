@@ -63,6 +63,15 @@ public:
   LogicalResult rename(StringAttr from, StringRef to);
   LogicalResult rename(Operation *op, StringRef to);
 
+  /// Renames the given op or the op refered to by the given name to the a name
+  /// that is unique within this and the provided other symbol tables and
+  /// updates the symbol table and all usages of the symbol accordingly. Returns
+  /// the new name or failure if the renaming fails.
+  FailureOr<StringAttr> renameToUnique(StringAttr from,
+                                       ArrayRef<SymbolTable *> others);
+  FailureOr<StringAttr> renameToUnique(Operation *op,
+                                       ArrayRef<SymbolTable *> others);
+
   /// Return the name of the attribute used for symbol names.
   static StringRef getSymbolAttrName() { return "sym_name"; }
 

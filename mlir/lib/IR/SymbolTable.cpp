@@ -258,6 +258,39 @@ LogicalResult SymbolTable::rename(Operation *op, StringRef to) {
   return rename(op, toAttr);
 }
 
+FailureOr<StringAttr>
+SymbolTable::renameToUnique(StringAttr oldName,
+                            ArrayRef<SymbolTable *> others) {
+
+  // Determine new name that is unique in all symbol tables.
+  StringAttr newName;
+  {
+    MLIRContext *context = oldName.getContext();
+    SmallString<64> prefix = oldName.getValue();
+    int uniqueId = 0;
+    prefix.push_back('_');
+    while (true) {
+      newName = StringAttr::get(context, prefix + Twine(uniqueId++));
+      auto lookupNewName = [&](SymbolTable *st) { return st->lookup(newName); };
+      if (!lookupNewName(this) && llvm::none_of(others, lookupNewName)) {
+        break;
+      }
+    }
+  }
+
+  // Apply renaming.
+  if (failed(rename(oldName, newName)))
+    return failure();
+  return newName;
+}
+
+FailureOr<StringAttr>
+SymbolTable::renameToUnique(Operation *op, ArrayRef<SymbolTable *> others) {
+  StringAttr from = getNameIfSymbol(op);
+  assert(from && "expected valid 'name' attribute");
+  return renameToUnique(from, others);
+}
+
 /// Returns the name of the given symbol operation.
 StringAttr SymbolTable::getSymbolName(Operation *symbol) {
   StringAttr name = getNameIfSymbol(symbol);
