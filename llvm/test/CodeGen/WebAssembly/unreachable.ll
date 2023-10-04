@@ -6,12 +6,8 @@
 ; "end_function" lines intact when you commit.
 
 
-; --trap-unreachable and --no-trap-after-noreturn are sensitive and bug-prone
-; options for the WebAssembly back-end as, unlike in many other target
-; architechtures, unreachable code being compiled to a trap instruction (i.e.
-; WebAssembly "unreachable" instruction) is often necessary for the code to
-; pass wasm's validation step. We test that various combinations of
-; these options produce the expected output.
+; The --trap-unreachable and --no-trap-after-noreturn options are ignored, and
+; should have no effect.
 ; RUN: llc < %s -verify-machineinstrs | FileCheck %s
 ; RUN: llc < %s -fast-isel -fast-isel-abort=1 -verify-machineinstrs | FileCheck %s
 ; RUN: llc < %s -verify-machineinstrs --trap-unreachable | FileCheck %s
@@ -71,8 +67,8 @@ declare void @ext_func()
 declare i32 @ext_func_i32()
 declare void @ext_never_return() noreturn
 
-; This test emits wasm unreachable to fill in for the missing i32 return value,
-; which is necessary for the function to pass wasm validation.
+; The wasm unreachable in this test is necessary for the function to pass wasm
+; validation.
 define i32 @missing_ret_unreachable() {
 ; CHECK-LABEL: missing_ret_unreachable:
 ; CHECK:         .functype missing_ret_unreachable () -> (i32)
@@ -85,7 +81,8 @@ define i32 @missing_ret_unreachable() {
 }
 
 ; This is similar to the above test, but ensures wasm unreachable is emitted
-; even after a noreturn call.
+; even after a noreturn call. Using --no-trap-after-noreturn was previously
+; known to break this.
 define i32 @missing_ret_noreturn_unreachable() {
 ; CHECK-LABEL: missing_ret_noreturn_unreachable:
 ; CHECK:         .functype missing_ret_noreturn_unreachable () -> (i32)
@@ -95,57 +92,4 @@ define i32 @missing_ret_noreturn_unreachable() {
 ; CHECK-NEXT:    end_function
   call void @ext_never_return()
   unreachable
-}
-
-; We could emit no instructions at all for the llvm unreachables in these next
-; three tests, as the signatures match and reaching llvm unreachable is
-; undefined behaviour. But currently, wasm unreachable is emitted for them.
-
-define void @void_sig_match_unreachable() {
-; CHECK-LABEL: void_sig_match_unreachable:
-; CHECK:         .functype void_sig_match_unreachable () -> ()
-; CHECK-NEXT:  # %bb.0:
-; CHECK-NEXT:    call ext_func
-; CHECK-NEXT:    unreachable
-; CHECK-NEXT:    end_function
-  call void @ext_func()
-  unreachable
-}
-
-define i32 @i32_sig_match_unreachable() {
-; CHECK-LABEL: i32_sig_match_unreachable:
-; CHECK:         .functype i32_sig_match_unreachable () -> (i32)
-; CHECK-NEXT:  # %bb.0:
-; CHECK-NEXT:    call ext_func_i32
-; CHECK-NEXT:    drop
-; CHECK-NEXT:    unreachable
-; CHECK-NEXT:    end_function
-  call i32 @ext_func_i32()
-  unreachable
-}
-
-define void @void_sig_match_noreturn_unreachable() {
-; CHECK-LABEL: void_sig_match_noreturn_unreachable:
-; CHECK:         .functype void_sig_match_noreturn_unreachable () -> ()
-; CHECK-NEXT:  # %bb.0:
-; CHECK-NEXT:    call ext_never_return
-; CHECK-NEXT:    unreachable
-; CHECK-NEXT:    end_function
-  call void @ext_never_return()
-  unreachable
-}
-
-; This function currently doesn't emit wasm unreachable, even though the final
-; "ret void" instruction is dead code and could be replaced with an llvm
-; unreachable. Compare and contrast with the above function,
-; @void_sig_match_noreturn_unreachable().
-define void @void_sig_match_noreturn_ret() {
-; CHECK-LABEL: void_sig_match_noreturn_ret:
-; CHECK:         .functype void_sig_match_noreturn_ret () -> ()
-; CHECK-NEXT:  # %bb.0:
-; CHECK-NEXT:    call ext_never_return
-; CHECK-NEXT:    # fallthrough-return
-; CHECK-NEXT:    end_function
-  call void @ext_never_return()
-  ret void
 }
