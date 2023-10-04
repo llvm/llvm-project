@@ -1250,23 +1250,23 @@ TEST_P(MaybeSparseInstrProfTest, instr_prof_symtab_test) {
   FuncNames.push_back("bar3");
   InstrProfSymtab Symtab;
   EXPECT_THAT_ERROR(Symtab.create(FuncNames), Succeeded());
-  StringRef R = Symtab.getValueName(IndexedInstrProf::ComputeHash("func1"));
+  StringRef R = Symtab.getFuncOrVarName(IndexedInstrProf::ComputeHash("func1"));
   ASSERT_EQ(StringRef("func1"), R);
-  R = Symtab.getValueName(IndexedInstrProf::ComputeHash("func2"));
+  R = Symtab.getFuncOrVarName(IndexedInstrProf::ComputeHash("func2"));
   ASSERT_EQ(StringRef("func2"), R);
-  R = Symtab.getValueName(IndexedInstrProf::ComputeHash("func3"));
+  R = Symtab.getFuncOrVarName(IndexedInstrProf::ComputeHash("func3"));
   ASSERT_EQ(StringRef("func3"), R);
-  R = Symtab.getValueName(IndexedInstrProf::ComputeHash("bar1"));
+  R = Symtab.getFuncOrVarName(IndexedInstrProf::ComputeHash("bar1"));
   ASSERT_EQ(StringRef("bar1"), R);
-  R = Symtab.getValueName(IndexedInstrProf::ComputeHash("bar2"));
+  R = Symtab.getFuncOrVarName(IndexedInstrProf::ComputeHash("bar2"));
   ASSERT_EQ(StringRef("bar2"), R);
-  R = Symtab.getValueName(IndexedInstrProf::ComputeHash("bar3"));
+  R = Symtab.getFuncOrVarName(IndexedInstrProf::ComputeHash("bar3"));
   ASSERT_EQ(StringRef("bar3"), R);
 
   // negative tests
-  R = Symtab.getValueName(IndexedInstrProf::ComputeHash("bar4"));
+  R = Symtab.getFuncOrVarName(IndexedInstrProf::ComputeHash("bar4"));
   ASSERT_EQ(StringRef(), R);
-  R = Symtab.getValueName(IndexedInstrProf::ComputeHash("foo4"));
+  R = Symtab.getFuncOrVarName(IndexedInstrProf::ComputeHash("foo4"));
   ASSERT_EQ(StringRef(), R);
 
   // Now incrementally update the symtab
@@ -1275,23 +1275,23 @@ TEST_P(MaybeSparseInstrProfTest, instr_prof_symtab_test) {
   EXPECT_THAT_ERROR(Symtab.addFuncName("blah_3"), Succeeded());
 
   // Check again
-  R = Symtab.getValueName(IndexedInstrProf::ComputeHash("blah_1"));
+  R = Symtab.getFuncOrVarName(IndexedInstrProf::ComputeHash("blah_1"));
   ASSERT_EQ(StringRef("blah_1"), R);
-  R = Symtab.getValueName(IndexedInstrProf::ComputeHash("blah_2"));
+  R = Symtab.getFuncOrVarName(IndexedInstrProf::ComputeHash("blah_2"));
   ASSERT_EQ(StringRef("blah_2"), R);
-  R = Symtab.getValueName(IndexedInstrProf::ComputeHash("blah_3"));
+  R = Symtab.getFuncOrVarName(IndexedInstrProf::ComputeHash("blah_3"));
   ASSERT_EQ(StringRef("blah_3"), R);
-  R = Symtab.getValueName(IndexedInstrProf::ComputeHash("func1"));
+  R = Symtab.getFuncOrVarName(IndexedInstrProf::ComputeHash("func1"));
   ASSERT_EQ(StringRef("func1"), R);
-  R = Symtab.getValueName(IndexedInstrProf::ComputeHash("func2"));
+  R = Symtab.getFuncOrVarName(IndexedInstrProf::ComputeHash("func2"));
   ASSERT_EQ(StringRef("func2"), R);
-  R = Symtab.getValueName(IndexedInstrProf::ComputeHash("func3"));
+  R = Symtab.getFuncOrVarName(IndexedInstrProf::ComputeHash("func3"));
   ASSERT_EQ(StringRef("func3"), R);
-  R = Symtab.getValueName(IndexedInstrProf::ComputeHash("bar1"));
+  R = Symtab.getFuncOrVarName(IndexedInstrProf::ComputeHash("bar1"));
   ASSERT_EQ(StringRef("bar1"), R);
-  R = Symtab.getValueName(IndexedInstrProf::ComputeHash("bar2"));
+  R = Symtab.getFuncOrVarName(IndexedInstrProf::ComputeHash("bar2"));
   ASSERT_EQ(StringRef("bar2"), R);
-  R = Symtab.getValueName(IndexedInstrProf::ComputeHash("bar3"));
+  R = Symtab.getFuncOrVarName(IndexedInstrProf::ComputeHash("bar3"));
   ASSERT_EQ(StringRef("bar3"), R);
 }
 
@@ -1331,14 +1331,14 @@ TEST_P(MaybeSparseInstrProfTest, instr_prof_symtab_module_test) {
 
     std::string IRPGOName = getIRPGOFuncName(*F);
     auto IRPGOFuncName =
-        ProfSymtab.getValueName(IndexedInstrProf::ComputeHash(IRPGOName));
+        ProfSymtab.getFuncOrVarName(IndexedInstrProf::ComputeHash(IRPGOName));
     EXPECT_EQ(StringRef(IRPGOName), IRPGOFuncName);
     EXPECT_EQ(StringRef(Funcs[I]),
               getParsedIRPGOFuncName(IRPGOFuncName).second);
     // Ensure we can still read this old record name.
     std::string PGOName = getPGOFuncName(*F);
     auto PGOFuncName =
-        ProfSymtab.getValueName(IndexedInstrProf::ComputeHash(PGOName));
+        ProfSymtab.getFuncOrVarName(IndexedInstrProf::ComputeHash(PGOName));
     EXPECT_EQ(StringRef(PGOName), PGOFuncName);
     EXPECT_THAT(PGOFuncName.str(), EndsWith(Funcs[I].str()));
   }
@@ -1397,9 +1397,9 @@ TEST_P(MaybeSparseInstrProfTest, instr_prof_symtab_compression_test) {
       // Now do the checks:
       // First sampling some data points:
       StringRef R =
-          Symtab.getValueName(IndexedInstrProf::ComputeHash(FuncNames1[0]));
+          Symtab.getFuncOrVarName(IndexedInstrProf::ComputeHash(FuncNames1[0]));
       ASSERT_EQ(StringRef("func_0"), R);
-      R = Symtab.getValueName(IndexedInstrProf::ComputeHash(FuncNames1[1]));
+      R = Symtab.getFuncOrVarName(IndexedInstrProf::ComputeHash(FuncNames1[1]));
       ASSERT_EQ(StringRef("f oooooooooooooo_0"), R);
       for (int I = 0; I < 3; I++) {
         std::string N[4];
@@ -1409,7 +1409,7 @@ TEST_P(MaybeSparseInstrProfTest, instr_prof_symtab_compression_test) {
         N[3] = FuncNames2[2 * I + 1];
         for (int J = 0; J < 4; J++) {
           StringRef R =
-              Symtab.getValueName(IndexedInstrProf::ComputeHash(N[J]));
+              Symtab.getFuncOrVarName(IndexedInstrProf::ComputeHash(N[J]));
           ASSERT_EQ(StringRef(N[J]), R);
         }
       }

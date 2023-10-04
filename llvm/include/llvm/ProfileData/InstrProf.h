@@ -512,12 +512,12 @@ public:
 
   /// Return name of functions or global variables from the name's md5 hash
   /// value. If not found, return an empty string.
-  inline StringRef getValueName(uint64_t ValMD5Hash);
+  inline StringRef getFuncOrVarName(uint64_t ValMD5Hash);
 
-  /// Just like getValueName, except that it will return a non-empty StringRef
-  /// if the value (function or global variable) is external to this symbol
-  /// table. All such cases will be represented using the same StringRef value.
-  inline StringRef getValueNameOrExternalSymbol(uint64_t ValMD5Hash);
+  /// Just like getFuncOrVarName, except that it will return literal string
+  /// 'External Symbol' if the function or global variable is external to
+  /// this symbol table.
+  inline StringRef getFuncOrVarNameIfDefined(uint64_t ValMD5Hash);
 
   /// True if Symbol is the value used to represent external symbols.
   static bool isExternalSymbol(const StringRef &Symbol) {
@@ -565,14 +565,14 @@ void InstrProfSymtab::finalizeSymtab() {
   Sorted = true;
 }
 
-StringRef InstrProfSymtab::getValueNameOrExternalSymbol(uint64_t FuncMD5Hash) {
-  StringRef ret = getValueName(FuncMD5Hash);
+StringRef InstrProfSymtab::getFuncOrVarNameIfDefined(uint64_t FuncMD5Hash) {
+  StringRef ret = getFuncOrVarName(FuncMD5Hash);
   if (ret.empty())
     return InstrProfSymtab::getExternalSymbol();
   return ret;
 }
 
-StringRef InstrProfSymtab::getValueName(uint64_t FuncMD5Hash) {
+StringRef InstrProfSymtab::getFuncOrVarName(uint64_t FuncMD5Hash) {
   finalizeSymtab();
   auto Result = llvm::lower_bound(MD5NameMap, FuncMD5Hash,
                                   [](const std::pair<uint64_t, StringRef> &LHS,
