@@ -203,7 +203,7 @@ constexpr bool test() {
   types::for_each(types::type_list<char, short, int, long, long long,
                   TriviallyComparable<char>, TriviallyComparable<wchar_t>>{},
                   []<class T> {
-                    types::for_each(types::cpp20_input_iterator_list<T*>{}, 
+                    types::for_each(types::cpp20_input_iterator_list<T*>{},
                       []<class Iter> {
                       if constexpr (std::forward_iterator<Iter>)
                         test_iterators<Iter>();
@@ -212,10 +212,9 @@ constexpr bool test() {
                     });
                   });
 
-  {
+  { // count invocations of the projection
     int a[] = {1, 9, 0, 13, 25};
     int projection_count = 0;
-    // count invocations of the projection
     {
       bool ret = std::ranges::contains(a, a + 5, 0,
                                 [&](int i) { ++projection_count; return i; });
@@ -230,6 +229,7 @@ constexpr bool test() {
       assert(projection_count == 3);
     }
   }
+
   return true;
 }
 
@@ -239,7 +239,7 @@ int main(int, char**) {
 
   types::for_each(types::type_list<Comparable<char>, Comparable<wchar_t>>{},
                 []<class T> {
-                  types::for_each(types::cpp20_input_iterator_list<T*>{}, 
+                  types::for_each(types::cpp20_input_iterator_list<T*>{},
                     []<class Iter> {
                     if constexpr (std::forward_iterator<Iter>)
                       test_iterators<Iter>();

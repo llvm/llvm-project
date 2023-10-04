@@ -9,7 +9,6 @@
 #ifndef _LIBCPP___ALGORITHM_RANGES_CONTAINS_H
 #define _LIBCPP___ALGORITHM_RANGES_CONTAINS_H
 
-#include <__algorithm/in_in_result.h>
 #include <__algorithm/ranges_find.h>
 #include <__config>
 #include <__functional/identity.h>
@@ -44,7 +43,8 @@ struct __fn {
     requires indirect_binary_predicate<ranges::equal_to, projected<iterator_t<_Range>, _Proj>, const _Type*>
   _LIBCPP_NODISCARD_EXT _LIBCPP_HIDE_FROM_ABI constexpr bool
   operator()(_Range&& __range, const _Type& __value, _Proj __proj = {}) const {
-    return ranges::find(ranges::begin(__range), ranges::end(__range), __value, std::ref(__proj)) != ranges::end(__range);
+    return ranges::find(ranges::begin(__range), ranges::end(__range), __value,
+    std::ref(__proj)) != ranges::end(__range);
   }
 };
 } // namespace __contains
