@@ -193,7 +193,7 @@ static T &getAccelTable(std::unique_ptr<T> &Cache, const DWARFObject &Obj,
     return *Cache;
   DWARFDataExtractor AccelSection(Obj, Section, IsLittleEndian, 0);
   DataExtractor StrData(StringSection, IsLittleEndian, 0);
-  Cache.reset(new T(AccelSection, StrData));
+  Cache = std::make_unique<T>(AccelSection, StrData);
   if (Error E = Cache->extract())
     llvm::consumeError(std::move(E));
   return *Cache;
@@ -377,7 +377,7 @@ public:
             ? DWARFDataExtractor(DObj, DObj.getLocSection(), D.isLittleEndian(),
                                  D.getUnitAtIndex(0)->getAddressByteSize())
             : DWARFDataExtractor("", D.isLittleEndian(), 0);
-    Loc.reset(new DWARFDebugLoc(std::move(Data)));
+    Loc = std::make_unique<DWARFDebugLoc>(std::move(Data));
     return Loc.get();
   }
 
@@ -385,7 +385,7 @@ public:
     if (Aranges)
       return Aranges.get();
 
-    Aranges.reset(new DWARFDebugAranges());
+    Aranges = std::make_unique<DWARFDebugAranges>();
     Aranges->generate(&D);
     return Aranges.get();
   }
@@ -393,7 +393,7 @@ public:
   Expected<const DWARFDebugLine::LineTable *>
   getLineTableForUnit(DWARFUnit *U, function_ref<void(Error)> RecoverableErrorHandler) override {
     if (!Line)
-      Line.reset(new DWARFDebugLine);
+      Line = std::make_unique<DWARFDebugLine>();
 
     auto UnitDIE = U->getUnitDIE();
     if (!UnitDIE)
