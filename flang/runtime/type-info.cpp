@@ -8,11 +8,14 @@
 
 #include "type-info.h"
 #include "terminator.h"
+#include "tools.h"
 #include <cstdio>
 
 namespace Fortran::runtime::typeInfo {
 
-std::optional<TypeParameterValue> Value::GetValue(
+RT_OFFLOAD_API_GROUP_BEGIN
+
+RT_API_ATTRS std::optional<TypeParameterValue> Value::GetValue(
     const Descriptor *descriptor) const {
   switch (genre_) {
   case Genre::Explicit:
@@ -29,7 +32,8 @@ std::optional<TypeParameterValue> Value::GetValue(
   }
 }
 
-std::size_t Component::GetElementByteSize(const Descriptor &instance) const {
+RT_API_ATTRS std::size_t Component::GetElementByteSize(
+    const Descriptor &instance) const {
   switch (category()) {
   case TypeCategory::Integer:
   case TypeCategory::Real:
@@ -51,7 +55,8 @@ std::size_t Component::GetElementByteSize(const Descriptor &instance) const {
   return 0;
 }
 
-std::size_t Component::GetElements(const Descriptor &instance) const {
+RT_API_ATTRS std::size_t Component::GetElements(
+    const Descriptor &instance) const {
   std::size_t elements{1};
   if (int rank{rank_}) {
     if (const Value * boundValues{bounds()}) {
@@ -73,7 +78,8 @@ std::size_t Component::GetElements(const Descriptor &instance) const {
   return elements;
 }
 
-std::size_t Component::SizeInBytes(const Descriptor &instance) const {
+RT_API_ATTRS std::size_t Component::SizeInBytes(
+    const Descriptor &instance) const {
   if (genre() == Genre::Data) {
     return GetElementByteSize(instance) * GetElements(instance);
   } else if (category() == TypeCategory::Derived) {
@@ -85,7 +91,7 @@ std::size_t Component::SizeInBytes(const Descriptor &instance) const {
   }
 }
 
-void Component::EstablishDescriptor(Descriptor &descriptor,
+RT_API_ATTRS void Component::EstablishDescriptor(Descriptor &descriptor,
     const Descriptor &container, Terminator &terminator) const {
   ISO::CFI_attribute_t attribute{static_cast<ISO::CFI_attribute_t>(
       genre_ == Genre::Allocatable   ? CFI_attribute_allocatable
@@ -128,7 +134,7 @@ void Component::EstablishDescriptor(Descriptor &descriptor,
   }
 }
 
-void Component::CreatePointerDescriptor(Descriptor &descriptor,
+RT_API_ATTRS void Component::CreatePointerDescriptor(Descriptor &descriptor,
     const Descriptor &container, Terminator &terminator,
     const SubscriptValue *subscripts) const {
   RUNTIME_CHECK(terminator, genre_ == Genre::Data);
@@ -141,7 +147,7 @@ void Component::CreatePointerDescriptor(Descriptor &descriptor,
   descriptor.raw().attribute = CFI_attribute_pointer;
 }
 
-const DerivedType *DerivedType::GetParentType() const {
+RT_API_ATTRS const DerivedType *DerivedType::GetParentType() const {
   if (hasParent_) {
     const Descriptor &compDesc{component()};
     const Component &component{*compDesc.OffsetElement<const Component>()};
@@ -151,7 +157,7 @@ const DerivedType *DerivedType::GetParentType() const {
   }
 }
 
-const Component *DerivedType::FindDataComponent(
+RT_API_ATTRS const Component *DerivedType::FindDataComponent(
     const char *compName, std::size_t compNameLen) const {
   const Descriptor &compDesc{component()};
   std::size_t n{compDesc.Elements()};
@@ -162,13 +168,16 @@ const Component *DerivedType::FindDataComponent(
     INTERNAL_CHECK(component != nullptr);
     const Descriptor &nameDesc{component->name()};
     if (nameDesc.ElementBytes() == compNameLen &&
-        std::memcmp(compName, nameDesc.OffsetElement(), compNameLen) == 0) {
+        Fortran::runtime::memcmp(
+            compName, nameDesc.OffsetElement(), compNameLen) == 0) {
       return component;
     }
   }
   const DerivedType *parent{GetParentType()};
   return parent ? parent->FindDataComponent(compName, compNameLen) : nullptr;
 }
+
+RT_OFFLOAD_API_GROUP_END
 
 static void DumpScalarCharacter(
     FILE *f, const Descriptor &desc, const char *what) {
