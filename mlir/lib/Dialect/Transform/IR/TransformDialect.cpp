@@ -12,6 +12,8 @@
 #include "mlir/Dialect/Transform/IR/TransformOps.h"
 #include "mlir/Dialect/Transform/IR/TransformTypes.h"
 #include "mlir/IR/DialectImplementation.h"
+#include "mlir/Parser/Parser.h"
+#include "mlir/Support/TypeID.h"
 #include "llvm/ADT/SCCIterator.h"
 
 using namespace mlir;
@@ -171,4 +173,43 @@ LogicalResult transform::TransformDialect::verifyOperationAttribute(
   }
   return emitError(op->getLoc())
          << "unknown attribute: " << attribute.getName();
+}
+
+void transform::TransformLibraries::parseAndAddLibrary(StringRef filename) {
+  if (filename.empty())
+    return;
+
+  ParserConfig config(getContext());
+  addLibrary(parseSourceFile<ModuleOp>(filename, config));
+  if (!libraries.back()) {
+    hadFailures = true;
+    libraries.pop_back();
+  }
+}
+
+void transform::TransformLibraries::addLibrary(
+    OwningOpRef<ModuleOp> &&library) {
+  libraries.push_back(std::move(library));
+}
+
+namespace {
+class LibraryPreloaderExtension
+    : public transform::TransformDialectExtension<LibraryPreloaderExtension> {
+public:
+  explicit LibraryPreloaderExtension(StringRef filename)
+      : TransformDialectExtension(/*buildOnly=*/false) {
+    std::string ownedFilename = filename.str();
+    addDialectDataInitializer<transform::TransformLibraries>(
+        [ownedFilename](transform::TransformLibraries &libraries) {
+          libraries.parseAndAddLibrary(ownedFilename);
+        });
+  }
+};
+} // namespace
+
+MLIR_DEFINE_EXPLICIT_TYPE_ID(mlir::transform::TransformLibraries)
+
+void mlir::transform::registerTransformLibraryPreloader(
+    DialectRegistry &registry, StringRef filename) {
+  registry.addExtension(std::make_unique<LibraryPreloaderExtension>(filename));
 }

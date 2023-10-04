@@ -20,6 +20,7 @@
 #include "mlir/Debug/Observers/ActionLogging.h"
 #include "mlir/Dialect/IRDL/IR/IRDL.h"
 #include "mlir/Dialect/IRDL/IRDLLoading.h"
+#include "mlir/Dialect/Transform/IR/TransformDialect.h"
 #include "mlir/IR/AsmState.h"
 #include "mlir/IR/Attributes.h"
 #include "mlir/IR/BuiltinOps.h"
@@ -33,6 +34,7 @@
 #include "mlir/Support/FileUtilities.h"
 #include "mlir/Support/Timing.h"
 #include "mlir/Support/ToolUtilities.h"
+#include "mlir/Support/TypeID.h"
 #include "mlir/Tools/ParseUtilities.h"
 #include "mlir/Tools/Plugins/DialectPlugin.h"
 #include "mlir/Tools/Plugins/PassPlugin.h"
@@ -143,6 +145,12 @@ struct MlirOptMainConfigCLOptions : public MlirOptMainConfig {
         "verify-roundtrip",
         cl::desc("Round-trip the IR after parsing and ensure it succeeds"),
         cl::location(verifyRoundtripFlag), cl::init(false));
+
+    static cl::opt<std::string, /*ExternalStorage=*/true> transformLibrary(
+        "transform-library",
+        cl::desc("Library of transform dialect symbols to preload"),
+        cl::location(transformLibraryFlag), cl::init(""),
+        cl::value_desc("filename"));
 
     static cl::list<std::string> passPlugins(
         "load-pass-plugin", cl::desc("Load passes from plugin library"));
@@ -423,6 +431,17 @@ static LogicalResult processBuffer(raw_ostream &os,
 
   tracing::InstallDebugHandler installDebugHandler(context,
                                                    config.getDebugConfig());
+
+  // Preload the transform library if requested. This should happen after
+  // the debug handler configuration.
+  {
+    DialectRegistry localRegistry;
+    transform::registerTransformLibraryPreloader(localRegistry,
+                                                 config.getTransformLibrary());
+    context.appendDialectRegistry(localRegistry);
+    // Force extension loading.
+    context.loadDialect<transform::TransformDialect>();
+  }
 
   // If we are in verify diagnostics mode then we have a lot of work to do,
   // otherwise just perform the actions without worrying about it.

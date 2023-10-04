@@ -21,6 +21,7 @@
 #include "mlir/Parser/Parser.h"
 #include "mlir/Pass/Pass.h"
 #include "mlir/Support/FileUtilities.h"
+#include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/ScopeExit.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/Debug.h"
@@ -465,17 +466,25 @@ LogicalResult transform::detail::interpreterBaseInitializeImpl(
     std::shared_ptr<OwningOpRef<ModuleOp>> &libraryModule,
     function_ref<std::optional<LogicalResult>(OpBuilder &, Location)>
         moduleBuilder) {
+
+  const auto &libraries =
+      context->getLoadedDialect<transform::TransformDialect>()
+          ->getExtraData<transform::TransformLibraries>();
+  if (!libraries.isOk()) {
+    return emitError(UnknownLoc::get(context),
+                     "transform interpreter disabled due to earlier errors in "
+                     "preloading transform libraries");
+  }
+  auto libraryRange = libraries.getLibraries();
+  if (llvm::range_size(libraryRange) > 1) {
+    return emitError(UnknownLoc::get(context),
+                     "multiple library files not yet supported");
+  }
+
   OwningOpRef<ModuleOp> parsed;
   if (failed(parseTransformModuleFromFile(context, transformFileName, parsed)))
     return failure();
   if (parsed && failed(mlir::verify(*parsed)))
-    return failure();
-
-  OwningOpRef<ModuleOp> parsedLibrary;
-  if (failed(parseTransformModuleFromFile(context, transformLibraryFileName,
-                                          parsedLibrary)))
-    return failure();
-  if (parsedLibrary && failed(mlir::verify(*parsedLibrary)))
     return failure();
 
   if (parsed) {
@@ -495,16 +504,18 @@ LogicalResult transform::detail::interpreterBaseInitializeImpl(
     }
   }
 
-  if (!parsedLibrary || !*parsedLibrary)
+  if (libraryRange.empty())
     return success();
 
   if (module && *module) {
     if (failed(defineDeclaredSymbols(*module->get().getBody(),
-                                     parsedLibrary.get())))
+                                     libraryRange.begin()->get())))
       return failure();
   } else {
-    libraryModule =
-        std::make_shared<OwningOpRef<ModuleOp>>(std::move(parsedLibrary));
+    // TODO: we shouldn't clone or transfer ownership here, the dialect
+    // extension should be able to keep owning this instead.
+    libraryModule = std::make_shared<OwningOpRef<ModuleOp>>(
+        libraryRange.begin()->get().clone());
   }
   return success();
 }
