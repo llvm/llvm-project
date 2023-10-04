@@ -893,9 +893,21 @@ void GCNSchedStage::setupNewBlock() {
 
 void GCNSchedStage::finalizeGCNRegion() {
   DAG.Regions[RegionIdx] = std::pair(DAG.RegionBegin, DAG.RegionEnd);
-  DAG.RescheduleRegions[RegionIdx] = false;
+  PressureAfter = DAG.getRealRegPressure(RegionIdx);
+
   if (S.HasHighPressure)
     DAG.RegionsWithHighRP[RegionIdx] = true;
+
+  unsigned NewVGPRRP = PressureAfter.getVGPRNum(false);
+  unsigned NewAGPRRP = PressureAfter.getAGPRNum();
+  unsigned NewSGPRRP = PressureAfter.getSGPRNum();
+
+  if ((NewVGPRRP >= S.VGPRExcessLimit - S.VGPRExcessMargin) ||
+      (NewAGPRRP >= S.VGPRExcessLimit - S.VGPRExcessMargin) ||
+      (NewSGPRRP >= S.SGPRExcessLimit - S.SGPRExcessMargin)) {
+    DAG.RegionsWithExcessRP[RegionIdx] = true;
+    DAG.RescheduleRegions[RegionIdx] = true;
+  }
 
   // Revert scheduling if we have dropped occupancy or there is some other
   // reason that the original schedule is better.
@@ -911,7 +923,6 @@ void GCNSchedStage::finalizeGCNRegion() {
 
 void GCNSchedStage::checkScheduling() {
   // Check the results of scheduling.
-  PressureAfter = DAG.getRealRegPressure(RegionIdx);
   LLVM_DEBUG(dbgs() << "Pressure after scheduling: " << print(PressureAfter));
   LLVM_DEBUG(dbgs() << "Region: " << RegionIdx << ".\n");
 
@@ -958,16 +969,8 @@ void GCNSchedStage::checkScheduling() {
                       << DAG.MinOccupancy << ".\n");
   }
 
-  unsigned MaxVGPRs = ST.getMaxNumVGPRs(MF);
-  unsigned MaxSGPRs = ST.getMaxNumSGPRs(MF);
-  if (PressureAfter.getVGPRNum(false) > MaxVGPRs ||
-      PressureAfter.getAGPRNum() > MaxVGPRs ||
-      PressureAfter.getSGPRNum() > MaxSGPRs) {
-    DAG.RescheduleRegions[RegionIdx] = true;
-    DAG.RegionsWithHighRP[RegionIdx] = true;
-    DAG.RegionsWithExcessRP[RegionIdx] = true;
-  }
-
+  // Revert if this region's schedule would cause a drop in occupancy or
+  // spilling.
   if (shouldRevertScheduling(WavesAfter, WavesBefore)) {
     revertScheduling();
   } else {
@@ -998,6 +1001,25 @@ bool OccInitialScheduleStage::shouldRevertScheduling(unsigned WavesAfter,
 
 bool UnclusteredHighRPStage::shouldRevertScheduling(unsigned WavesAfter,
                                                     unsigned WavesBefore) {
+  // If RP is not reduced in the unclustered reschedule stage, revert to the
+  // old schedule.
+  if (DAG.RegionsWithExcessRP[RegionIdx]) {
+    unsigned NewVGPRRP = PressureAfter.getVGPRNum(false);
+    unsigned NewAGPRRP = PressureAfter.getAGPRNum();
+    unsigned NewSGPRRP = PressureAfter.getSGPRNum();
+
+    unsigned OldVGPRRP = PressureBefore.getVGPRNum(false);
+    unsigned OldAGPRRP = PressureBefore.getAGPRNum();
+    unsigned OldSGPRRP = PressureBefore.getSGPRNum();
+
+    if (NewVGPRRP > S.VGPRExcessLimit && NewVGPRRP >= OldVGPRRP)
+      return true;
+    if (NewAGPRRP > S.VGPRExcessLimit && NewAGPRRP >= OldAGPRRP)
+      return true;
+    if (NewSGPRRP > S.SGPRExcessLimit && NewSGPRRP >= OldSGPRRP)
+      return true;
+    return false;
+  }
   // Revert if may cause spilling. Otherwise rely on the metric computed by the
   // strategy class. Exception: does not make sense to revert the unclustered
   // schedule if we are still in excess RP state as it will not become better.

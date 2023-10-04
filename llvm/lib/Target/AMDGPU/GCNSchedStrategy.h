@@ -56,10 +56,6 @@ protected:
 
   std::vector<unsigned> MaxPressure;
 
-  unsigned SGPRExcessLimit;
-
-  unsigned VGPRExcessLimit;
-
   unsigned TargetOccupancy;
 
   MachineFunction *MF;
@@ -94,9 +90,17 @@ public:
 
   unsigned VGPRCriticalLimit;
 
+  unsigned SGPRExcessLimit;
+
+  unsigned VGPRExcessLimit;
+
   unsigned SGPRLimitBias = 0;
 
   unsigned VGPRLimitBias = 0;
+
+  unsigned VGPRExcessMargin = 1;
+
+  unsigned SGPRExcessMargin = 1;
 
   GCNSchedStrategy(const MachineSchedContext *C);
 
