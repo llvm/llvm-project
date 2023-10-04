@@ -1986,8 +1986,8 @@ bool SourceManager::isInTheSameTranslationUnitImpl(
 
   if (isLoadedFileID(LOffs.first) && isLoadedFileID(ROffs.first)) {
     auto FindSLocEntryAlloc = [this](FileID FID) {
-      // FileIDs are negative, we store the beginning of each allocation (the
-      // lowest FileID), later allocations have lower FileIDs.
+      // Loaded FileIDs are negative, we store the lowest FileID from each
+      // allocation, later allocations have lower FileIDs.
       return llvm::upper_bound(LoadedSLocEntryAllocBegin, FID, std::greater{});
     };
 
