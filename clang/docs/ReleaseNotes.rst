@@ -435,6 +435,11 @@ Bug Fixes to C++ Support
   we now produce a diagnostic. Fixes:
   (`#65522 <https://github.com/llvm/llvm-project/issues/65522>`_)
 
+- Fixed a bug where clang incorrectly considered implicitly generated deduction
+  guides from a non-templated constructor and a templated constructor as ambiguous,
+  rather than prefer the non-templated constructor as specified in
+  [standard.group]p3.
+
 Bug Fixes to AST Handling
 ^^^^^^^^^^^^^^^^^^^^^^^^^
 - Fixed an import failure of recursive friend class template.
