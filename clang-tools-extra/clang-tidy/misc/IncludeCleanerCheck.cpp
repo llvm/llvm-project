@@ -98,9 +98,9 @@ bool IncludeCleanerCheck::shouldIgnore(const include_cleaner::Header &H) {
   return llvm::any_of(IgnoreHeadersRegex, [&H](const llvm::Regex &R) {
     switch (H.kind()) {
     case include_cleaner::Header::Standard:
-      // We don't trim braces around standard library headers deliberately, so
-      // that they are only matched as <vector>, otherwise having just
-      // `.*/vector` might yield false positives.
+      // We don't trim angle brackets around standard library headers
+      // deliberately, so that they are only matched as <vector>, otherwise
+      // having just `.*/vector` might yield false positives.
       return R.match(H.standard().name());
     case include_cleaner::Header::Verbatim:
       return R.match(H.verbatim().trim("<>\""));
