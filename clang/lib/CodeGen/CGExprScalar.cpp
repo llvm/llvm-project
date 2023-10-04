@@ -3723,10 +3723,12 @@ static Value *emitPointerArithmetic(CodeGenFunction &CGF,
   // Explicitly handle GNU void* and function pointer arithmetic extensions. The
   // GNU void* casts amount to no-ops since our void* type is i8*, but this is
   // future proof.
+  llvm::Type *elemTy;
   if (elementType->isVoidType() || elementType->isFunctionType())
-    return CGF.Builder.CreateGEP(CGF.Int8Ty, pointer, index, "add.ptr");
+    elemTy = CGF.Int8Ty;
+  else
+    elemTy = CGF.ConvertTypeForMem(elementType);
 
-  llvm::Type *elemTy = CGF.ConvertTypeForMem(elementType);
   if (CGF.getLangOpts().isSignedOverflowDefined())
     return CGF.Builder.CreateGEP(elemTy, pointer, index, "add.ptr");
 
