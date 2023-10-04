@@ -100,13 +100,13 @@ func.func @sparse_convert(%arg0: tensor<?xf32, #SparseVector64>) -> tensor<?xf32
 }
 
 #SparseSingleton64 = #sparse_tensor.encoding<{
-  map = (d0) -> (d0 : singleton),
+  map = (d0) -> (d0 : compressed),
   posWidth = 64,
   crdWidth = 64
 }>
 
 #SparseSingleton32 = #sparse_tensor.encoding<{
-  map = (d0) -> (d0 : singleton),
+  map = (d0) -> (d0 : compressed),
   posWidth = 32,
   crdWidth = 32
 }>
@@ -136,6 +136,7 @@ func.func @sparse_convert_singleton(%arg0: tensor<?xf32, #SparseSingleton64>) ->
   return %0 : tensor<?xf32, #SparseSingleton32>
 }
 
+<<<<<<< HEAD
 // CHECK-LABEL:   func.func @sparse_convert_permuted(
 // CHECK-SAME:      %[[VAL_0:.*]]: !llvm.ptr<i8>) -> !llvm.ptr<i8> {
 // CHECK-DAG:       %[[VAL_1:.*]] = arith.constant 5 : i32
@@ -184,6 +185,40 @@ func.func @sparse_convert_singleton(%arg0: tensor<?xf32, #SparseSingleton64>) ->
 func.func @sparse_convert_permuted(%arg0: tensor<?x?x?xf32, #SortedCOO3D>) -> tensor<?x?x?xf32, #TsssPermuted> {
   %0 = sparse_tensor.convert %arg0 : tensor<?x?x?xf32, #SortedCOO3D> to tensor<?x?x?xf32, #TsssPermuted>
   return %0 : tensor<?x?x?xf32, #TsssPermuted>
+=======
+// CHECK-RWT-LABEL: func.func @sparse_convert_permuted(
+//  CHECK-RWT-SAME: %[[VAL_0:.*]]: tensor<?x?x?xf32, #{{.*}}>>) -> tensor<?x?x?xf32, #{{.*}}>> {
+//   CHECK-RWT-DAG: %[[VAL_1:.*]] = arith.constant 0 : index
+//   CHECK-RWT-DAG: %[[VAL_2:.*]] = arith.constant 1 : index
+//   CHECK-RWT-DAG: %[[VAL_3:.*]] = arith.constant 2 : index
+//   CHECK-RWT-DAG: %[[VAL_4:.*]] = tensor.dim %[[VAL_0]], %[[VAL_1]]
+//   CHECK-RWT-DAG: %[[VAL_5:.*]] = tensor.dim %[[VAL_0]], %[[VAL_2]]
+//   CHECK-RWT-DAG: %[[VAL_6:.*]] = tensor.dim %[[VAL_0]], %[[VAL_3]]
+//   CHECK-RWT-DAG: %[[VAL_7:.*]] = sparse_tensor.number_of_entries %[[VAL_0]]
+//       CHECK-RWT: %[[VAL_8:.*]] = bufferization.alloc_tensor(%[[VAL_4]], %[[VAL_5]], %[[VAL_6]]) size_hint=%[[VAL_7]]
+//       CHECK-RWT: %[[VAL_9:.*]] = sparse_tensor.foreach in %[[VAL_0]] init(%[[VAL_8]])
+//       CHECK-RWT: ^bb0(%[[VAL_10:.*]]: index, %[[VAL_11:.*]]: index, %[[VAL_12:.*]]: index, %[[VAL_13:.*]]: f32, %[[VAL_14:.*]]: tensor<?x?x?xf32, #{{.*}}>>):
+//       CHECK-RWT:   %[[VAL_15:.*]] = sparse_tensor.insert %[[VAL_13]] into %[[VAL_14]]{{\[}}%[[VAL_12]], %[[VAL_10]], %[[VAL_11]]]
+//       CHECK-RWT:   sparse_tensor.yield %[[VAL_15]] : tensor<?x?x?xf32, #{{.*}}>>
+//       CHECK-RWT: }
+//       CHECK-RWT: %[[VAL_16:.*]] = sparse_tensor.load %[[VAL_17:.*]] hasInserts : tensor<?x?x?xf32, #{{.*}}>>
+//       CHECK-RWT: %[[VAL_18:.*]] = sparse_tensor.values %[[VAL_16]] : tensor<?x?x?xf32, #{{.*}}>> to memref<?xf32>
+//       CHECK-RWT: %[[VAL_19:.*]] = sparse_tensor.coordinates_buffer %[[VAL_16]] : tensor<?x?x?xf32, #{{.*}}>> to memref<?xindex>
+//       CHECK-RWT: sparse_tensor.sort  hybrid_quick_sort %[[VAL_7]], %[[VAL_19]] jointly %[[VAL_18]] {ny = 0 : index, perm_map = #map}
+//       CHECK-RWT: %[[VAL_20:.*]] = bufferization.alloc_tensor(%[[VAL_4]], %[[VAL_5]], %[[VAL_6]]) size_hint=%[[VAL_7]]
+//       CHECK-RWT: %[[VAL_21:.*]] = sparse_tensor.foreach in %[[VAL_16]] init(%[[VAL_20]])
+//       CHECK-RWT: ^bb0(%[[VAL_22:.*]]: index, %[[VAL_23:.*]]: index, %[[VAL_24:.*]]: index, %[[VAL_25:.*]]: f32, %[[VAL_26:.*]]: tensor<?x?x?xf32, #{{.*}}>>):
+//       CHECK-RWT:   %[[VAL_27:.*]] = sparse_tensor.insert %[[VAL_25]] into %[[VAL_26]]{{\[}}%[[VAL_24]], %[[VAL_22]], %[[VAL_23]]]
+//       CHECK-RWT:   sparse_tensor.yield %[[VAL_27]]
+//       CHECK-RWT: }
+//       CHECK-RWT: bufferization.dealloc_tensor %[[VAL_16]]
+//       CHECK-RWT: %[[VAL_28:.*]] = sparse_tensor.load %[[VAL_29:.*]] hasInserts
+//       CHECK-RWT: %[[VAL_30:.*]] = sparse_tensor.convert %[[VAL_28]]
+//       CHECK-RWT: return %[[VAL_30]]
+func.func @sparse_convert_permuted(%arg0: tensor<2x3x4xf32, #SortedCOO3D>) -> tensor<2x3x4xf32, #TsssPermuted> {
+  %0 = sparse_tensor.convert %arg0 : tensor<2x3x4xf32, #SortedCOO3D> to tensor<2x3x4xf32, #TsssPermuted>
+  return %0 : tensor<2x3x4xf32, #TsssPermuted>
+>>>>>>> dbb1ebbabd07 (implement direct convert rewriter (cont.))
 }
 
 // CHECK-LABEL:   func.func @sparse_convert_slice(

@@ -1038,11 +1038,10 @@ struct DirectConvertRewriter : public OpRewritePattern<ConvertOp> {
     SparseTensorType srcStt = getSparseTensorType(op.getSource());
     SparseTensorType dstStt = getSparseTensorType(op.getDest());
 
-    // We traverse the source tensor in the same level order as specified
-    // by the destinate tensor if the destinate tensor should be sorted.
-    AffineMap foreachOrder = dstStt.isAllOrdered()
-                                 ? dstStt.getExpandedDimToLvl()
-                                 : srcStt.getExpandedDimToLvl();
+    const AffineMapAttr foreachOrder =
+        (!dstStt.isIdentity() && !srcStt.hasEncoding())
+            ? AffineMapAttr::get(dstStt.getExpandedDimToLvl())
+            : nullptr;
 
     bool spSrc = srcStt.hasEncoding();
     SmallVector<Value> sizes;
@@ -1050,7 +1049,7 @@ struct DirectConvertRewriter : public OpRewritePattern<ConvertOp> {
     ValueRange vs;
     TensorLike dstBuf(rewriter, loc, dstStt.getRankedTensorType(), sizes);
     auto foreachOp = rewriter.create<ForeachOp>(
-        loc, src, dstBuf.getIterSSA(), AffineMapAttr::get(foreachOrder),
+        loc, src, dstBuf.getIterSSA(), foreachOrder,
         [&](OpBuilder &builder, Location loc, ValueRange dcvs, Value v,
             ValueRange reduc) {
           // Enters the loop, update the SSA value for insertion chain.
@@ -1600,13 +1599,12 @@ void mlir::populatePostSparsificationRewriting(RewritePatternSet &patterns,
   if (enableForeach)
     patterns.add<ForeachRewriter>(patterns.getContext());
 
-  if (enableConvert)
-    patterns.add<DirectConvertRewriter>(patterns.getContext());
-
   // TODO: If RT not enabled, rewrite concatenate ops, etc here.
   if (!enableRT) {
     patterns.add<NewRewriter, OutRewriter>(patterns.getContext());
-    if (enableConvert)
-      patterns.add<SortConvertRewriter>(patterns.getContext());
+    if (enableConvert) {
+      patterns.add<DirectConvertRewriter>(patterns.getContext());
+      // patterns.add<SortConvertRewriter>(patterns.getContext());
+    }
   }
 }
