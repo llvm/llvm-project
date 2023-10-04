@@ -565,19 +565,19 @@ void InstrProfSymtab::finalizeSymtab() {
   Sorted = true;
 }
 
-StringRef InstrProfSymtab::getFuncOrVarNameIfDefined(uint64_t FuncMD5Hash) {
-  StringRef ret = getFuncOrVarName(FuncMD5Hash);
+StringRef InstrProfSymtab::getFuncOrVarNameIfDefined(uint64_t MD5Hash) {
+  StringRef ret = getFuncOrVarName(MD5Hash);
   if (ret.empty())
     return InstrProfSymtab::getExternalSymbol();
   return ret;
 }
 
-StringRef InstrProfSymtab::getFuncOrVarName(uint64_t FuncMD5Hash) {
+StringRef InstrProfSymtab::getFuncOrVarName(uint64_t MD5Hash) {
   finalizeSymtab();
-  auto Result = llvm::lower_bound(MD5NameMap, FuncMD5Hash,
+  auto Result = llvm::lower_bound(MD5NameMap, MD5Hash,
                                   [](const std::pair<uint64_t, StringRef> &LHS,
                                      uint64_t RHS) { return LHS.first < RHS; });
-  if (Result != MD5NameMap.end() && Result->first == FuncMD5Hash)
+  if (Result != MD5NameMap.end() && Result->first == MD5Hash)
     return Result->second;
   return StringRef();
 }
