@@ -528,7 +528,10 @@ bool MachineSinking::PerformSinkAndFold(MachineInstr &MI,
           continue;
         MachineInstr *NewDbgMI = SinkDst->getMF()->CloneMachineInstr(DbgMI);
         SinkMBB.insertAfter(InsertPt, NewDbgMI);
-        NewDbgMI->getOperand(0).setReg(DstReg);
+        for (auto &SrcMO : DbgMI->getDebugOperandsForReg(DefReg)) {
+          auto &DstMO = NewDbgMI->getOperand(SrcMO.getOperandNo());
+          DstMO.setReg(DstReg);
+        }
       }
     } else {
       // Fold instruction into the addressing mode of a memory instruction.

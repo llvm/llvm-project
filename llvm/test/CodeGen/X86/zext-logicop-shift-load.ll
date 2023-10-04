@@ -14,7 +14,7 @@ define i64 @test1(i8* %data) {
 ;
 ; X64-LABEL: test1:
 ; X64:       # %bb.0: # %entry
-; X64-NEXT:    movl (%rdi), %eax
+; X64-NEXT:    movzbl (%rdi), %eax
 ; X64-NEXT:    shll $2, %eax
 ; X64-NEXT:    andl $60, %eax
 ; X64-NEXT:    retq
@@ -37,7 +37,7 @@ define i8* @test2(i8* %data) {
 ;
 ; X64-LABEL: test2:
 ; X64:       # %bb.0: # %entry
-; X64-NEXT:    movl (%rdi), %eax
+; X64-NEXT:    movzbl (%rdi), %eax
 ; X64-NEXT:    andl $15, %eax
 ; X64-NEXT:    leaq (%rdi,%rax,4), %rax
 ; X64-NEXT:    retq
