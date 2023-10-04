@@ -20,6 +20,7 @@
 #include "mlir/Conversion/MathToLLVM/MathToLLVM.h"
 #include "mlir/Conversion/MemRefToLLVM/MemRefToLLVM.h"
 #include "mlir/Conversion/NVGPUToNVVM/NVGPUToNVVM.h"
+#include "mlir/Conversion/NVVMToLLVM/NVVMToLLVM.h"
 #include "mlir/Conversion/ReconcileUnrealizedCasts/ReconcileUnrealizedCasts.h"
 #include "mlir/Conversion/SCFToControlFlow/SCFToControlFlow.h"
 #include "mlir/Conversion/VectorToLLVM/ConvertVectorToLLVMPass.h"
@@ -74,6 +75,10 @@ struct TestLowerToNVVMOptions
       *this, "cubin-format",
       llvm::cl::desc("Compilation format to use to serialize to cubin."),
       llvm::cl::init("isa")};
+  PassOptions::Option<int> optLevel{
+      *this, "opt-level",
+      llvm::cl::desc("Optimization level for NVVM compilation"),
+      llvm::cl::init(2)};
 };
 
 //===----------------------------------------------------------------------===//
@@ -139,11 +144,6 @@ void buildGpuPassPipeline(OpPassManager &pm,
   pm.addNestedPass<gpu::GPUModuleOp>(
       createConvertGpuOpsToNVVMOps(convertGpuOpsToNVVMOpsOptions));
 
-  // TODO: C++20 designated initializers.
-  ConvertNVGPUToNVVMPassOptions convertNVGPUToNVVMPassOptions;
-  convertNVGPUToNVVMPassOptions.useOpaquePointers = true;
-  pm.addNestedPass<gpu::GPUModuleOp>(
-      createConvertNVGPUToNVVMPass(convertNVGPUToNVVMPassOptions));
   pm.addNestedPass<gpu::GPUModuleOp>(createConvertSCFToCFPass());
 
   // Convert vector to LLVM (always needed).
@@ -152,6 +152,9 @@ void buildGpuPassPipeline(OpPassManager &pm,
   convertVectorToLLVMPassOptions.reassociateFPReductions = true;
   pm.addNestedPass<gpu::GPUModuleOp>(
       createConvertVectorToLLVMPass(convertVectorToLLVMPassOptions));
+
+  // This pass is needed for PTX building
+  pm.addNestedPass<gpu::GPUModuleOp>(createConvertNVVMToLLVMPass());
 
   // Sprinkle some cleanups.
   pm.addPass(createCanonicalizerPass());
@@ -163,6 +166,20 @@ void buildGpuPassPipeline(OpPassManager &pm,
 
 void buildLowerToNVVMPassPipeline(OpPassManager &pm,
                                   const TestLowerToNVVMOptions &options) {
+  // Start with a cleanup pass.
+  pm.addPass(createCanonicalizerPass());
+  pm.addPass(createCSEPass());
+
+  //===----------------------------------------------------------------------===//
+  // NVGPU lowers device code as well as host code to the driver, so must run
+  // before outlining.
+  //===----------------------------------------------------------------------===//
+  // TODO: C++20 designated initializers.
+  ConvertNVGPUToNVVMPassOptions convertNVGPUToNVVMPassOptions;
+  convertNVGPUToNVVMPassOptions.useOpaquePointers = true;
+  pm.addNestedPass<func::FuncOp>(
+      createConvertNVGPUToNVVMPass(convertNVGPUToNVVMPassOptions));
+
   //===----------------------------------------------------------------------===//
   // Host-specific stuff.
   //===----------------------------------------------------------------------===//
@@ -242,6 +259,7 @@ void buildLowerToNVVMPassPipeline(OpPassManager &pm,
   nvvmTargetOptions.triple = options.cubinTriple;
   nvvmTargetOptions.chip = options.cubinChip;
   nvvmTargetOptions.features = options.cubinFeatures;
+  nvvmTargetOptions.optLevel = options.optLevel;
   pm.addPass(createGpuNVVMAttachTarget(nvvmTargetOptions));
 
   // Convert GPU to LLVM.
