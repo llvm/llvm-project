@@ -697,7 +697,7 @@ RecurrenceDescriptor::isFindLastIVPattern(Loop *Loop, PHINode *OrigPhi,
                          m_Value())))
     return InstDesc(false, I);
 
-  SelectInst *SI = cast<SelectInst>(I);
+  auto *SI = cast<SelectInst>(I);
   Value *NonRdxPhi = nullptr;
 
   if (OrigPhi == dyn_cast<PHINode>(SI->getTrueValue()))
