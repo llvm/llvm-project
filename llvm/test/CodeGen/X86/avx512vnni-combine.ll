@@ -73,7 +73,7 @@ define <8 x i64> @foo_512(i32 %0, <8 x i64> %1, <8 x i64> %2, ptr %3) {
 ; CHECK-NEXT:  # %bb.4: # %.preheader
 ; CHECK-NEXT:    shlq $6, %rcx
 ; CHECK-NEXT:    addq %rcx, %rsi
-; CHECK-NEXT:    shll $6, %eax
+; CHECK-NEXT:    shlq $6, %rax
 ; CHECK-NEXT:    xorl %ecx, %ecx
 ; CHECK-NEXT:    .p2align 4, 0x90
 ; CHECK-NEXT:  .LBB1_5: # =>This Inner Loop Header: Depth=1

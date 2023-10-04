@@ -194,7 +194,7 @@ define i64 @sel_shift_bool_i64(i1 %t) {
 ; ANY:       # %bb.0:
 ; ANY-NEXT:    movl %edi, %eax
 ; ANY-NEXT:    andl $1, %eax
-; ANY-NEXT:    shll $16, %eax
+; ANY-NEXT:    shlq $16, %rax
 ; ANY-NEXT:    retq
   %shl = select i1 %t, i64 65536, i64 0
   ret i64 %shl

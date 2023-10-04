@@ -368,20 +368,20 @@ define i64 @test_bitreverse_shli_bitreverse_i64(i64 %a) nounwind {
 ; X64-NEXT:    bswapq %rax
 ; X64-NEXT:    movl %eax, %ecx
 ; X64-NEXT:    andl $235867919, %ecx # imm = 0xE0F0F0F
-; X64-NEXT:    shll $4, %ecx
+; X64-NEXT:    shlq $4, %rcx
 ; X64-NEXT:    shrl $4, %eax
 ; X64-NEXT:    andl $252645135, %eax # imm = 0xF0F0F0F
-; X64-NEXT:    orl %ecx, %eax
+; X64-NEXT:    orq %rcx, %rax
 ; X64-NEXT:    movl %eax, %ecx
 ; X64-NEXT:    andl $590558003, %ecx # imm = 0x23333333
 ; X64-NEXT:    shrl $2, %eax
 ; X64-NEXT:    andl $858993459, %eax # imm = 0x33333333
-; X64-NEXT:    leal (%rax,%rcx,4), %eax
+; X64-NEXT:    leaq (%rax,%rcx,4), %rax
 ; X64-NEXT:    movl %eax, %ecx
 ; X64-NEXT:    andl $357913941, %ecx # imm = 0x15555555
 ; X64-NEXT:    shrl %eax
 ; X64-NEXT:    andl $1431655765, %eax # imm = 0x55555555
-; X64-NEXT:    leal (%rax,%rcx,2), %eax
+; X64-NEXT:    leaq (%rax,%rcx,2), %rax
 ; X64-NEXT:    retq
     %1 = call i64 @llvm.bitreverse.i64(i64 %a)
     %2 = shl i64 %1, 33

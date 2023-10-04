@@ -1933,7 +1933,8 @@ define i64 @test_i64_2147483647_mask_shl_1(i64 %a0) {
 ;
 ; X64-LABEL: test_i64_2147483647_mask_shl_1:
 ; X64:       # %bb.0:
-; X64-NEXT:    leal (%rdi,%rdi), %eax
+; X64-NEXT:    andl $2147483647, %edi # imm = 0x7FFFFFFF
+; X64-NEXT:    leaq (%rdi,%rdi), %rax
 ; X64-NEXT:    retq
   %t0 = and i64 %a0, 2147483647
   %t1 = shl i64 %t0, 1

@@ -67,7 +67,7 @@ define void @foo(ptr %arg3, i1 %icmp16) #0 {
 ; CHECK-NEXT:    xorl %edi, %edi
 ; CHECK-NEXT:    xorl %eax, %eax
 ; CHECK-NEXT:    callq *%rax
-; CHECK-NEXT:    shll $4, %r14d
+; CHECK-NEXT:    shlq $4, %r14
 ; CHECK-NEXT:    addq {{[-0-9]+}}(%r{{[sb]}}p), %r14 # 8-byte Folded Reload
 ; CHECK-NEXT:    movl %r13d, 0
 ; CHECK-NEXT:    movb $0, 4

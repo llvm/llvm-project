@@ -15,8 +15,9 @@ define dso_local i32 @test_lshr_and(i32 %x) {
 ; X64-LABEL: test_lshr_and:
 ; X64:       # %bb.0:
 ; X64-NEXT:    # kill: def $edi killed $edi def $rdi
-; X64-NEXT:    andl $12, %edi
-; X64-NEXT:    movl array(%rdi), %eax
+; X64-NEXT:    shrl $2, %edi
+; X64-NEXT:    andl $3, %edi
+; X64-NEXT:    movl array(,%rdi,4), %eax
 ; X64-NEXT:    retq
   %tmp2 = lshr i32 %x, 2
   %tmp3 = and i32 %tmp2, 3
@@ -103,8 +104,8 @@ define dso_local ptr @test_exact4(i32 %a, i32 %b, ptr %x)  {
 ; X64:       # %bb.0:
 ; X64-NEXT:    # kill: def $esi killed $esi def $rsi
 ; X64-NEXT:    subl %edi, %esi
-; X64-NEXT:    shrl %esi
-; X64-NEXT:    leaq (%rsi,%rdx), %rax
+; X64-NEXT:    shrl $3, %esi
+; X64-NEXT:    leaq (%rdx,%rsi,4), %rax
 ; X64-NEXT:    retq
   %sub = sub i32 %b, %a
   %shr = lshr exact i32 %sub, 3
@@ -125,8 +126,8 @@ define dso_local ptr @test_exact5(i32 %a, i32 %b, ptr %x)  {
 ; X64:       # %bb.0:
 ; X64-NEXT:    # kill: def $esi killed $esi def $rsi
 ; X64-NEXT:    subl %edi, %esi
-; X64-NEXT:    shrl %esi
-; X64-NEXT:    leaq (%rsi,%rdx), %rax
+; X64-NEXT:    shrl $3, %esi
+; X64-NEXT:    leaq (%rdx,%rsi,4), %rax
 ; X64-NEXT:    retq
   %sub = sub i32 %b, %a
   %shr = lshr exact i32 %sub, 3

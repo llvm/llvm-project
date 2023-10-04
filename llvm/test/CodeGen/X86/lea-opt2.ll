@@ -192,7 +192,7 @@ define void @test9(i64 %p, i64 %s) {
 ; CHECK-NEXT:    xorl %ecx, %ecx
 ; CHECK-NEXT:    testl $4095, %eax # imm = 0xFFF
 ; CHECK-NEXT:    setne %cl
-; CHECK-NEXT:    shll $12, %ecx
+; CHECK-NEXT:    shlq $12, %rcx
 ; CHECK-NEXT:    addq %rax, %rcx
 ; CHECK-NEXT:    andq $-4096, %rcx # imm = 0xF000
 ; CHECK-NEXT:    addq %rcx, %rdi

@@ -64,7 +64,7 @@ define i64 @t3(i64 %x) nounwind readnone ssp {
 ; X64-NEXT:    xorl %eax, %eax
 ; X64-NEXT:    cmpq $18, %rdi
 ; X64-NEXT:    setb %al
-; X64-NEXT:    shll $6, %eax
+; X64-NEXT:    shlq $6, %rax
 ; X64-NEXT:    retq
   %t0 = icmp ult i64 %x, 18
   %if = select i1 %t0, i64 64, i64 0
