@@ -1491,17 +1491,22 @@ int ASTReader::getSLocEntryID(SourceLocation::UIntTy SLocOffset) {
 
   auto It = llvm::upper_bound(
       llvm::index_range(0, F->LocalNumSLocEntries), SLocOffset,
-      [&](SourceLocation::UIntTy Offset, std::size_t Index) {
-        if (F->SLocEntryOffsetLoaded[Index] == -1U) {
-          auto MaybeEntryOffset = readSLocOffset(F, Index);
+      [&](SourceLocation::UIntTy Offset, std::size_t LocalIndex) {
+        int ID = F->SLocEntryBaseID + LocalIndex;
+        std::size_t Index = -ID - 2;
+        if (!SourceMgr.SLocEntryOffsetLoaded[Index]) {
+          assert(!SourceMgr.SLocEntryLoaded[Index]);
+          auto MaybeEntryOffset = readSLocOffset(F, LocalIndex);
           if (!MaybeEntryOffset) {
             Error(MaybeEntryOffset.takeError());
             Invalid = true;
             return true;
           }
-          F->SLocEntryOffsetLoaded[Index] = *MaybeEntryOffset;
+          SourceMgr.LoadedSLocEntryTable[Index] =
+              SrcMgr::SLocEntry::getOffsetOnly(*MaybeEntryOffset);
+          SourceMgr.SLocEntryOffsetLoaded[Index] = true;
         }
-        return Offset < F->SLocEntryOffsetLoaded[Index];
+        return Offset < SourceMgr.LoadedSLocEntryTable[Index].getOffset();
       });
 
   if (Invalid)
@@ -1610,7 +1615,6 @@ bool ASTReader::ReadSLocEntry(int ID) {
 
   case SM_SLOC_FILE_ENTRY: {
     SourceLocation::UIntTy Offset = BaseOffset + Record[0];
-    F->SLocEntryOffsetLoaded[Index] = Offset;
 
     // We will detect whether a file changed and return 'Failure' for it, but
     // we will also try to fail gracefully by setting up the SLocEntry.
@@ -1664,7 +1668,6 @@ bool ASTReader::ReadSLocEntry(int ID) {
 
   case SM_SLOC_BUFFER_ENTRY: {
     SourceLocation::UIntTy Offset = BaseOffset + Record[0];
-    F->SLocEntryOffsetLoaded[Index] = Offset;
 
     const char *Name = Blob.data();
     SrcMgr::CharacteristicKind
@@ -1689,7 +1692,6 @@ bool ASTReader::ReadSLocEntry(int ID) {
 
   case SM_SLOC_EXPANSION_ENTRY: {
     SourceLocation::UIntTy Offset = BaseOffset + Record[0];
-    F->SLocEntryOffsetLoaded[Index] = Offset;
 
     LocSeq::State Seq;
     SourceLocation SpellingLoc = ReadSourceLocation(*F, Record[1], Seq);
@@ -3618,7 +3620,6 @@ llvm::Error ASTReader::ReadASTBlock(ModuleFile &F,
         return llvm::createStringError(std::errc::invalid_argument,
                                        "ran out of source locations");
       }
-      F.SLocEntryOffsetLoaded.resize(F.LocalNumSLocEntries, -1U);
       // Make our entry in the range map. BaseID is negative and growing, so
       // we invert it. Because we invert it, though, we need the other end of
       // the range.

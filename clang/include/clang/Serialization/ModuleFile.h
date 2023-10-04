@@ -291,9 +291,6 @@ public:
   /// Stream bit offsets for all of the source location entries in the AST file.
   const uint32_t *SLocEntryOffsets = nullptr;
 
-  /// SLocEntry offsets that have been loaded from the AST file.
-  std::vector<SourceLocation::UIntTy> SLocEntryOffsetLoaded;
-
   /// SLocEntries that we're going to preload.
   SmallVector<uint64_t, 4> PreloadSLocEntries;
 
