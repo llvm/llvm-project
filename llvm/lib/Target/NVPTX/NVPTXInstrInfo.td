@@ -107,6 +107,21 @@ def VecElement : Operand<i32> {
   let PrintMethod = "printVecElement";
 }
 
+// PRMT modes
+// These must match the enum in NVPTX.h
+def PrmtNONE : PatLeaf<(i32 0x0)>;
+def PrmtF4E  : PatLeaf<(i32 0x1)>;
+def PrmtB4E  : PatLeaf<(i32 0x2)>;
+def PrmtRC8  : PatLeaf<(i32 0x3)>;
+def PrmtECL  : PatLeaf<(i32 0x4)>;
+def PrmtECR  : PatLeaf<(i32 0x5)>;
+def PrmtRC16 : PatLeaf<(i32 0x6)>;
+
+def PrmtMode : Operand<i32> {
+  let PrintMethod = "printPrmtMode";
+}
+
+
 //===----------------------------------------------------------------------===//
 // NVPTX Instruction Predicate Definitions
 //===----------------------------------------------------------------------===//
@@ -742,7 +757,7 @@ defm SELP_f64 : SELP_PATTERN<"f64", f64, Float64Regs, f64imm, fpimm>;
 // def v2f16imm : Operand<v2f16>;
 // defm SELP_f16x2 : SELP_PATTERN<"b32", v2f16, Int32Regs, v2f16imm, imm>;
 
-foreach vt = [v2f16, v2bf16, v2i16] in {
+foreach vt = [v2f16, v2bf16, v2i16, v4i8] in {
 def : Pat<(vt (select Int1Regs:$p, (vt Int32Regs:$a), (vt Int32Regs:$b))),
           (SELP_b32rr Int32Regs:$a, Int32Regs:$b, Int1Regs:$p)>;
 }
@@ -1738,46 +1753,119 @@ def FUNSHFRCLAMP :
 // restriction in PTX?
 //
 // dest and src may be int32 or int64, but start and end are always int32.
-multiclass BFE<string Instr, RegisterClass RC> {
+def SDTBFE :
+  SDTypeProfile<1, 3, [SDTCisSameAs<0, 1>, SDTCisInt<0>,
+                       SDTCisVT<2, i32>, SDTCisVT<3, i32>]>;
+def bfe : SDNode<"NVPTXISD::BFE", SDTBFE>;
+
+def SDTBFI :
+  SDTypeProfile<1, 4, [SDTCisInt<0>, SDTCisSameAs<0, 1>, SDTCisSameAs<0, 2>, 
+                       SDTCisVT<3, i32>, SDTCisVT<4, i32>]>;
+def bfi : SDNode<"NVPTXISD::BFI", SDTBFI>;
+
+def SDTPRMT :
+  SDTypeProfile<1, 4, [SDTCisVT<0, i32>, SDTCisVT<1, i32>,
+                       SDTCisVT<2, i32>, SDTCisVT<3, i32>, SDTCisVT<4, i32>,]>;
+def prmt : SDNode<"NVPTXISD::PRMT", SDTPRMT>;
+
+multiclass BFE<string Instr, ValueType T, RegisterClass RC> {
   def rrr
     : NVPTXInst<(outs RC:$d),
                 (ins RC:$a, Int32Regs:$b, Int32Regs:$c),
-                !strconcat(Instr, " \t$d, $a, $b, $c;"), []>;
+                !strconcat(Instr, " \t$d, $a, $b, $c;"),
+                [(set (T RC:$d), (bfe (T RC:$a), (i32 Int32Regs:$b), (i32 Int32Regs:$c)))]>;
   def rri
     : NVPTXInst<(outs RC:$d),
                 (ins RC:$a, Int32Regs:$b, i32imm:$c),
-                !strconcat(Instr, " \t$d, $a, $b, $c;"), []>;
+                !strconcat(Instr, " \t$d, $a, $b, $c;"),
+                [(set (T RC:$d), (bfe (T RC:$a), (i32 Int32Regs:$b), (i32 imm:$c)))]>;
   def rii
     : NVPTXInst<(outs RC:$d),
                 (ins RC:$a, i32imm:$b, i32imm:$c),
-                !strconcat(Instr, " \t$d, $a, $b, $c;"), []>;
+                !strconcat(Instr, " \t$d, $a, $b, $c;"),
+                [(set (T RC:$d), (bfe (T RC:$a), (i32 imm:$b), (i32 imm:$c)))]>;
 }
-multiclass BFI<string Instr, RegisterClass RC> {
-  def rrr
+
+multiclass BFI<string Instr, ValueType T, RegisterClass RC, Operand ImmCls> {
+  def rrrr
     : NVPTXInst<(outs RC:$f),
                 (ins RC:$a, RC:$b, Int32Regs:$c, Int32Regs:$d),
-                !strconcat(Instr, " \t$f, $a, $b, $c, $d;"), []>;
-  def rri
+                !strconcat(Instr, " \t$f, $a, $b, $c, $d;"),
+                [(set (T RC:$f), (bfi (T RC:$a), (T RC:$b), (i32 Int32Regs:$c), (i32 Int32Regs:$d)))]>;
+  def rrri
     : NVPTXInst<(outs RC:$f),
                 (ins RC:$a, RC:$b, Int32Regs:$c, i32imm:$d),
-                !strconcat(Instr, " \t$f, $a, $b, $c, $d;"), []>;
-  def rii
+                !strconcat(Instr, " \t$f, $a, $b, $c, $d;"),
+                [(set (T RC:$f), (bfi (T RC:$a), (T RC:$b), (i32 Int32Regs:$c), (i32 imm:$d)))]>;
+  def rrii
     : NVPTXInst<(outs RC:$f),
                 (ins RC:$a, RC:$b, i32imm:$c, i32imm:$d),
-                !strconcat(Instr, " \t$f, $a, $b, $c, $d;"), []>;
+                !strconcat(Instr, " \t$f, $a, $b, $c, $d;"),
+                [(set (T RC:$f), (bfi (T RC:$a), (T RC:$b), (i32 imm:$c), (i32 imm:$d)))]>;
+  def irrr
+    : NVPTXInst<(outs RC:$f),
+                (ins ImmCls:$a, RC:$b, Int32Regs:$c, Int32Regs:$d),
+                !strconcat(Instr, " \t$f, $a, $b, $c, $d;"),
+                [(set (T RC:$f), (bfi (T imm:$a), (T RC:$b), (i32 Int32Regs:$c), (i32 Int32Regs:$d)))]>;
+  def irri
+    : NVPTXInst<(outs RC:$f),
+                (ins ImmCls:$a, RC:$b, Int32Regs:$c, i32imm:$d),
+                !strconcat(Instr, " \t$f, $a, $b, $c, $d;"),
+                [(set (T RC:$f), (bfi (T imm:$a), (T RC:$b), (i32 Int32Regs:$c), (i32 imm:$d)))]>;
+  def irii
+    : NVPTXInst<(outs RC:$f),
+                (ins ImmCls:$a, RC:$b, i32imm:$c, i32imm:$d),
+                !strconcat(Instr, " \t$f, $a, $b, $c, $d;"),
+                [(set (T RC:$f), (bfi (T imm:$a), (T RC:$b), (i32 imm:$c), (i32 imm:$d)))]>;
+}
+
+multiclass PRMT<ValueType T, RegisterClass RC> {
+  def rrr
+    : NVPTXInst<(outs RC:$d),
+                (ins RC:$a, Int32Regs:$b, Int32Regs:$c, i32imm:$mode),
+                !strconcat("prmt.b32${mode}", " \t$d, $a, $b, $c;"),
+                [(set (T RC:$d), (prmt (T RC:$a), (T RC:$b), (i32 Int32Regs:$c), imm:$mode))]>;
+  def rri
+    : NVPTXInst<(outs RC:$d),
+                (ins RC:$a, Int32Regs:$b, i32imm:$c, i32imm:$mode),
+                !strconcat("prmt.b32${mode}", " \t$d, $a, $b, $c;"),
+                [(set (T RC:$d), (prmt (T RC:$a), (T RC:$b), (i32 imm:$c), imm:$mode))]>;
+  def rii
+    : NVPTXInst<(outs RC:$d),
+                (ins RC:$a, i32imm:$b, i32imm:$c, i32imm:$mode),
+                !strconcat("prmt.b32${mode}", " \t$d, $a, $b, $c;"),
+                [(set (T RC:$d), (prmt (T RC:$a), (T imm:$b), (i32 imm:$c), imm:$mode))]>;
 }
 
 let hasSideEffects = false in {
-  defm BFE_S32 : BFE<"bfe.s32", Int32Regs>;
-  defm BFE_U32 : BFE<"bfe.u32", Int32Regs>;
-  defm BFE_S64 : BFE<"bfe.s64", Int64Regs>;
-  defm BFE_U64 : BFE<"bfe.u64", Int64Regs>;
+  defm BFE_S32 : BFE<"bfe.s32", i32, Int32Regs>;
+  defm BFE_U32 : BFE<"bfe.u32", i32, Int32Regs>;
+  defm BFE_S64 : BFE<"bfe.s64", i64, Int64Regs>;
+  defm BFE_U64 : BFE<"bfe.u64", i64, Int64Regs>;
 
-  defm BFI_B32 : BFI<"bfi.b32", Int32Regs>;
-  defm BFI_B64 : BFI<"bfi.b64", Int64Regs>;
+  defm BFI_B32 : BFI<"bfi.b32", i32, Int32Regs, i32imm>;
+  defm BFI_B64 : BFI<"bfi.b64", i64, Int64Regs, i64imm>;
+
+  defm PRMT_B32 : PRMT<i32, Int32Regs>;
 }
 
-// Common byte extraction patterns
+
+// byte extraction + signed/unsigned extension to i32.
+def : Pat<(i32 (sext_inreg (bfe (i32 Int32Regs:$s),  (i32 Int32Regs:$o), 8), i8)),
+          (BFE_S32rri Int32Regs:$s, Int32Regs:$o, 8)>;
+def : Pat<(i32 (sext_inreg (bfe (i32 Int32Regs:$s),  (i32 imm:$o), 8), i8)),
+          (BFE_S32rii Int32Regs:$s, imm:$o, 8)>;
+def : Pat<(i32 (and (bfe (i32 Int32Regs:$s),  (i32 Int32Regs:$o), 8), 255)),
+          (BFE_U32rri Int32Regs:$s, Int32Regs:$o, 8)>;
+def : Pat<(i32 (and (bfe (i32 Int32Regs:$s),  (i32 imm:$o), 8), 255)),
+          (BFE_U32rii Int32Regs:$s, imm:$o, 8)>;
+
+// byte extraction + signed extension to i16
+def : Pat<(i16 (sext_inreg (trunc (bfe (i32 Int32Regs:$s),  (i32 imm:$o), 8)), i8)),
+          (CVT_s8_s32 (BFE_S32rii Int32Regs:$s, imm:$o, 8), CvtNONE)>;
+
+
+// Byte extraction via shift/trunc/sext
 def : Pat<(i16 (sext_inreg (trunc Int32Regs:$s), i8)),
           (CVT_s8_s32 Int32Regs:$s, CvtNONE)>;
 def : Pat<(i16 (sext_inreg (trunc (srl (i32 Int32Regs:$s),  (i32 imm:$o))), i8)),
@@ -1786,31 +1874,12 @@ def : Pat<(sext_inreg (srl (i32 Int32Regs:$s),  (i32 imm:$o)), i8),
           (BFE_S32rii Int32Regs:$s, imm:$o, 8)>;
 def : Pat<(i16 (sra (i16 (trunc Int32Regs:$s)), (i32 8))),
           (CVT_s8_s32 (BFE_S32rii Int32Regs:$s, 8, 8), CvtNONE)>;
-
 def : Pat<(sext_inreg (srl (i64 Int64Regs:$s),  (i32 imm:$o)), i8),
           (BFE_S64rii Int64Regs:$s, imm:$o, 8)>;
 def : Pat<(i16 (sext_inreg (trunc Int64Regs:$s), i8)),
           (CVT_s8_s64 Int64Regs:$s, CvtNONE)>;
 def : Pat<(i16 (sext_inreg (trunc (srl (i64 Int64Regs:$s),  (i32 imm:$o))), i8)),
           (CVT_s8_s64 (BFE_S64rii Int64Regs:$s, imm:$o, 8), CvtNONE)>;
-
-def ExtractFromV4I8 : ComplexPattern<i16, 2, "SelectExtractEltFromV4I8", [extractelt]>;
-def: Pat<(i32 (sext_inreg (i32 (anyext (ExtractFromV4I8 (v4i8 Int32Regs:$src), (i32 imm:$bitidx)))), i8)),
-         (BFE_S32rii Int32Regs:$src, imm:$bitidx, 8)>;
-def: Pat<(i32 (and (i32 (anyext (ExtractFromV4I8 (v4i8 Int32Regs:$src), (i32 imm:$bitidx)))), 255)),
-         (BFE_U32rii Int32Regs:$src, imm:$bitidx, 8)>;
-def: Pat<(i16 (sext_inreg (ExtractFromV4I8 (v4i8 Int32Regs:$src), (i32 imm:$bitidx)), i8)),
-         (CVT_s8_s32 (BFE_S32rii Int32Regs:$src, imm:$bitidx, 8), CvtNONE)>;
-def: Pat<(ExtractFromV4I8 (v4i8 Int32Regs:$src), (i32 imm:$bitidx)),
-         (CVT_s16_s32 (BFE_S32rii Int32Regs:$src, imm:$bitidx, 8), CvtNONE)>;
-
-
-def : Pat<(v4i8 (build_vector (i16 Int16Regs:$a), (i16 Int16Regs:$b),
-                              (i16 Int16Regs:$c), (i16 Int16Regs:$d))),
-          (BFI_B32rii
-           (BFI_B32rii (CVT_u32_u16 Int16Regs:$d, CvtNONE), (CVT_u32_u16 Int16Regs:$c, CvtNONE), 8, 8),
-           (BFI_B32rii (CVT_u32_u16 Int16Regs:$b, CvtNONE), (CVT_u32_u16 Int16Regs:$a, CvtNONE), 8, 8),
-           16, 16)>;
 
 //-----------------------------------
 // Comparison instructions (setp, set)
@@ -2140,6 +2209,29 @@ def : Pat<(seteq Int1Regs:$a, Int1Regs:$b),
           (NOT1 (XORb1rr Int1Regs:$a, Int1Regs:$b))>;
 def : Pat<(setueq Int1Regs:$a, Int1Regs:$b),
           (NOT1 (XORb1rr Int1Regs:$a, Int1Regs:$b))>;
+
+// comparisons of i8 extracted with BFE as i32
+def: Pat<(setgt (sext_inreg (trunc Int32Regs:$a), i8), (sext_inreg (trunc Int32Regs:$b), i8)),
+         (SETP_s32rr Int32Regs:$a, Int32Regs:$b, CmpGT)>;
+def: Pat<(setge (sext_inreg (trunc Int32Regs:$a), i8), (sext_inreg (trunc Int32Regs:$b), i8)),
+         (SETP_s32rr Int32Regs:$a, Int32Regs:$b, CmpGE)>;
+def: Pat<(setlt (sext_inreg (trunc Int32Regs:$a), i8), (sext_inreg (trunc Int32Regs:$b), i8)),
+         (SETP_s32rr Int32Regs:$a, Int32Regs:$b, CmpLT)>;
+def: Pat<(setle (sext_inreg (trunc Int32Regs:$a), i8), (sext_inreg (trunc Int32Regs:$b), i8)),
+         (SETP_s32rr Int32Regs:$a, Int32Regs:$b, CmpLE)>;
+
+def: Pat<(setugt (i16 (and (trunc Int32Regs:$a), 255)), (i16 (and (trunc Int32Regs:$b), 255))),
+         (SETP_u32rr Int32Regs:$a, Int32Regs:$b, CmpGTU)>;
+def: Pat<(setuge (i16 (and (trunc Int32Regs:$a), 255)), (i16 (and (trunc Int32Regs:$b), 255))),
+         (SETP_u32rr Int32Regs:$a, Int32Regs:$b, CmpGEU)>;
+def: Pat<(setult (i16 (and (trunc Int32Regs:$a), 255)), (i16 (and (trunc Int32Regs:$b), 255))),
+         (SETP_u32rr Int32Regs:$a, Int32Regs:$b, CmpLTU)>;
+def: Pat<(setule (i16 (and (trunc Int32Regs:$a), 255)), (i16 (and (trunc Int32Regs:$b), 255))),
+         (SETP_u32rr Int32Regs:$a, Int32Regs:$b, CmpLEU)>;
+def: Pat<(seteq (i16 (and (trunc Int32Regs:$a), 255)), (i16 (and (trunc Int32Regs:$b), 255))),
+         (SETP_u32rr Int32Regs:$a, Int32Regs:$b, CmpEQ)>;
+def: Pat<(setne (i16 (and (trunc Int32Regs:$a), 255)), (i16 (and (trunc Int32Regs:$b), 255))),
+         (SETP_u32rr Int32Regs:$a, Int32Regs:$b, CmpNE)>;
 
 // i1 compare -> i32
 def : Pat<(i32 (setne Int1Regs:$a, Int1Regs:$b)),

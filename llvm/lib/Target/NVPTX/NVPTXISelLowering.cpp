@@ -497,17 +497,30 @@ NVPTXTargetLowering::NVPTXTargetLowering(const NVPTXTargetMachine &TM,
   setOperationAction(ISD::INSERT_VECTOR_ELT, MVT::v2i16, Expand);
   setOperationAction(ISD::VECTOR_SHUFFLE, MVT::v2i16, Expand);
 
-  // TODO: we should eventually lower it as PRMT instruction.
-  setOperationAction(ISD::VECTOR_SHUFFLE, MVT::v4i8, Expand);
   setOperationAction(ISD::BUILD_VECTOR, MVT::v4i8, Custom);
+  setOperationAction(ISD::EXTRACT_VECTOR_ELT, MVT::v4i8, Custom);
+  setOperationAction(ISD::INSERT_VECTOR_ELT, MVT::v4i8, Custom);
+  setOperationAction(ISD::VECTOR_SHUFFLE, MVT::v4i8, Custom);
+  // Only logical ops can be done on v4i8 directly, others must be done
+  // elementwise.
+  setOperationAction(
+      {ISD::ADD,       ISD::MUL,        ISD::ABS,        ISD::SMIN,
+       ISD::SMAX,      ISD::UMIN,       ISD::UMAX,       ISD::CTPOP,
+       ISD::CTLZ,      ISD::ADD,        ISD::SUB,        ISD::MUL,
+       ISD::SHL,       ISD::SREM,       ISD::UREM,       ISD::SDIV,
+       ISD::UDIV,      ISD::SRA,        ISD::SRL,        ISD::MULHS,
+       ISD::MULHU,     ISD::FP_TO_SINT, ISD::FP_TO_UINT, ISD::SINT_TO_FP,
+       ISD::UINT_TO_FP},
+      MVT::v4i8, Expand);
 
   // Operations not directly supported by NVPTX.
-  for (MVT VT :
-       {MVT::bf16, MVT::f16, MVT::v2bf16, MVT::v2f16, MVT::f32, MVT::f64,
-        MVT::i1, MVT::i8, MVT::i16, MVT::v2i16, MVT::i32, MVT::i64}) {
+  for (MVT VT : {MVT::bf16, MVT::f16, MVT::v2bf16, MVT::v2f16, MVT::f32,
+                 MVT::f64, MVT::i1, MVT::i8, MVT::i16, MVT::v2i16, MVT::v4i8,
+                 MVT::i32, MVT::i64}) {
     setOperationAction(ISD::SELECT_CC, VT, Expand);
     setOperationAction(ISD::BR_CC, VT, Expand);
   }
+
 
   // Some SIGN_EXTEND_INREG can be done using cvt instruction.
   // For others we will expand to a SHL/SRA pair.
@@ -682,7 +695,8 @@ NVPTXTargetLowering::NVPTXTargetLowering(const NVPTXTargetMachine &TM,
 
   // We have some custom DAG combine patterns for these nodes
   setTargetDAGCombine({ISD::ADD, ISD::AND, ISD::FADD, ISD::MUL, ISD::SHL,
-                       ISD::SREM, ISD::UREM, ISD::EXTRACT_VECTOR_ELT});
+                       ISD::SREM, ISD::UREM, ISD::EXTRACT_VECTOR_ELT,
+                       ISD::VSELECT});
 
   // setcc for f16x2 and bf16x2 needs special handling to prevent
   // legalizer's attempt to scalarize it due to v2i1 not being legal.
@@ -891,6 +905,12 @@ const char *NVPTXTargetLowering::getTargetNodeName(unsigned Opcode) const {
     return "NVPTXISD::FUN_SHFR_CLAMP";
   case NVPTXISD::IMAD:
     return "NVPTXISD::IMAD";
+  case NVPTXISD::BFE:
+    return "NVPTXISD::BFE";
+  case NVPTXISD::BFI:
+    return "NVPTXISD::BFI";
+  case NVPTXISD::PRMT:
+    return "NVPTXISD::PRMT";
   case NVPTXISD::SETP_F16X2:
     return "NVPTXISD::SETP_F16X2";
   case NVPTXISD::Dummy:
@@ -2163,18 +2183,39 @@ NVPTXTargetLowering::LowerCONCAT_VECTORS(SDValue Op, SelectionDAG &DAG) const {
 // We can init constant f16x2/v2i16/v4i8 with a single .b32 move.  Normally it
 // would get lowered as two constant loads and vector-packing move.
 // Instead we want just a constant move:
-//        mov.b32         %hh2, 0x40003C00
+//        mov.b32         %r2, 0x40003C00
 SDValue NVPTXTargetLowering::LowerBUILD_VECTOR(SDValue Op,
                                                SelectionDAG &DAG) const {
   EVT VT = Op->getValueType(0);
   if (!(Isv2x16VT(VT) || VT == MVT::v4i8))
     return Op;
 
+  SDLoc DL(Op);
+
   if (!llvm::all_of(Op->ops(), [](SDValue Operand) {
         return Operand->isUndef() || isa<ConstantSDNode>(Operand) ||
                isa<ConstantFPSDNode>(Operand);
-      }))
+      })) {
+    // Lower non-const v4i8 vector as byte-wise constructed i32, which allows us
+    // to optimize calculation of constant parts.
+    if (VT == MVT::v4i8) {
+      SDValue C8 = DAG.getConstant(8, DL, MVT::i32);
+      SDValue E01 = DAG.getNode(
+          NVPTXISD::BFI, DL, MVT::i32,
+          DAG.getAnyExtOrTrunc(Op->getOperand(1), DL, MVT::i32),
+          DAG.getAnyExtOrTrunc(Op->getOperand(0), DL, MVT::i32), C8, C8);
+      SDValue E012 =
+          DAG.getNode(NVPTXISD::BFI, DL, MVT::i32,
+                      DAG.getAnyExtOrTrunc(Op->getOperand(2), DL, MVT::i32), E01,
+                      DAG.getConstant(16, DL, MVT::i32), C8);
+      SDValue E0123 =
+          DAG.getNode(NVPTXISD::BFI, DL, MVT::i32,
+                      DAG.getAnyExtOrTrunc(Op->getOperand(3), DL, MVT::i32), E012,
+                      DAG.getConstant(24, DL, MVT::i32), C8);
+      return DAG.getNode(ISD::BITCAST, DL, VT, E0123);
+    }
     return Op;
+  }
 
   // Get value or the Nth operand as an APInt(32). Undef values treated as 0.
   auto GetOperand = [](SDValue Op, int N) -> APInt {
@@ -2207,13 +2248,26 @@ SDValue NVPTXTargetLowering::LowerBUILD_VECTOR(SDValue Op,
 SDValue NVPTXTargetLowering::LowerEXTRACT_VECTOR_ELT(SDValue Op,
                                                      SelectionDAG &DAG) const {
   SDValue Index = Op->getOperand(1);
+  SDValue Vector = Op->getOperand(0);
+  SDLoc DL(Op);
+  EVT VectorVT = Vector.getValueType();
+
+  if (VectorVT == MVT::v4i8) {
+    SDValue BFE =
+        DAG.getNode(NVPTXISD::BFE, DL, MVT::i32,
+                    {Vector,
+                     DAG.getNode(ISD::MUL, DL, MVT::i32,
+                                 DAG.getZExtOrTrunc(Index, DL, MVT::i32),
+                                 DAG.getConstant(8, DL, MVT::i32)),
+                     DAG.getConstant(8, DL, MVT::i32)});
+    return DAG.getZExtOrTrunc(BFE, DL, Op->getValueType(0));
+  }
+
   // Constant index will be matched by tablegen.
   if (isa<ConstantSDNode>(Index.getNode()))
     return Op;
 
   // Extract individual elements and select one of them.
-  SDValue Vector = Op->getOperand(0);
-  EVT VectorVT = Vector.getValueType();
   assert(Isv2x16VT(VectorVT) && "Unexpected vector type.");
   EVT EltVT = VectorVT.getVectorElementType();
 
@@ -2226,6 +2280,34 @@ SDValue NVPTXTargetLowering::LowerEXTRACT_VECTOR_ELT(SDValue Op,
                          ISD::CondCode::SETEQ);
 }
 
+SDValue NVPTXTargetLowering::LowerINSERT_VECTOR_ELT(SDValue Op,
+                                                    SelectionDAG &DAG) const {
+  SDValue Vector = Op->getOperand(0);
+  EVT VectorVT = Vector.getValueType();
+
+  if (VectorVT != MVT::v4i8)
+    return Op;
+  SDLoc DL(Op);
+  SDValue Value = Op->getOperand(1);
+  if (Value->isUndef())
+    return Vector;
+
+  SDValue Index = Op->getOperand(2);
+
+  SDValue BFI =
+      DAG.getNode(NVPTXISD::BFI, DL, MVT::i32,
+                  {DAG.getZExtOrTrunc(Value, DL, MVT::i32), Vector,
+                   DAG.getNode(ISD::MUL, DL, MVT::i32,
+                               DAG.getZExtOrTrunc(Index, DL, MVT::i32),
+                               DAG.getConstant(8, DL, MVT::i32)),
+                   DAG.getConstant(8, DL, MVT::i32)});
+  return DAG.getNode(ISD::BITCAST, DL, Op->getValueType(0), BFI);
+}
+
+SDValue NVPTXTargetLowering::LowerVECTOR_SHUFFLE(SDValue Op,
+                                                 SelectionDAG &DAG) const {
+  return SDValue();
+}
 /// LowerShiftRightParts - Lower SRL_PARTS, SRA_PARTS, which
 /// 1) returns two i32 values and take a 2 x i32 value to shift plus a shift
 ///    amount, or
@@ -2476,6 +2558,10 @@ NVPTXTargetLowering::LowerOperation(SDValue Op, SelectionDAG &DAG) const {
     return Op;
   case ISD::EXTRACT_VECTOR_ELT:
     return LowerEXTRACT_VECTOR_ELT(Op, DAG);
+  case ISD::INSERT_VECTOR_ELT:
+    return LowerINSERT_VECTOR_ELT(Op, DAG);
+  case ISD::VECTOR_SHUFFLE:
+    return LowerVECTOR_SHUFFLE(Op, DAG);
   case ISD::CONCAT_VECTORS:
     return LowerCONCAT_VECTORS(Op, DAG);
   case ISD::STORE:
@@ -4987,6 +5073,32 @@ static SDValue PerformANDCombine(SDNode *N,
   }
 
   SDValue AExt;
+
+  // Convert BFE-> truncate i16 -> and 255
+  // To just BFE-> truncate i16, as the value already has all the bits in the
+  // right places.
+  if (Val.getOpcode() == ISD::TRUNCATE) {
+    SDValue BFE = Val.getOperand(0);
+    if (BFE.getOpcode() != NVPTXISD::BFE)
+      return SDValue();
+
+    ConstantSDNode *BFEBits = dyn_cast<ConstantSDNode>(BFE.getOperand(0));
+    if (!BFEBits)
+      return SDValue();
+    uint64_t BFEBitsVal = BFEBits->getZExtValue();
+
+    ConstantSDNode *MaskCnst = dyn_cast<ConstantSDNode>(Mask);
+    if (!MaskCnst) {
+      // Not an AND with a constant
+      return SDValue();
+    }
+    uint64_t MaskVal = MaskCnst->getZExtValue();
+
+    if (MaskVal != (uint64_t(1) << BFEBitsVal) - 1)
+      return SDValue();
+    // If we get here, the AND is unnecessary.  Just replace it with the trunc
+    DCI.CombineTo(N, Val, false);
+  }
   // Generally, we will see zextload -> IMOV16rr -> ANY_EXTEND -> and
   if (Val.getOpcode() == ISD::ANY_EXTEND) {
     AExt = Val;
@@ -5266,6 +5378,7 @@ static SDValue PerformSETCCCombine(SDNode *N,
 static SDValue PerformEXTRACTCombine(SDNode *N,
                                      TargetLowering::DAGCombinerInfo &DCI) {
   SDValue Vector = N->getOperand(0);
+  SDLoc DL(N);
   EVT VectorVT = Vector.getValueType();
   if (Vector->getOpcode() == ISD::LOAD && VectorVT.isSimple() &&
       IsPTXVectorType(VectorVT.getSimpleVT()))
@@ -5286,7 +5399,6 @@ static SDValue PerformEXTRACTCombine(SDNode *N,
   if (!Index || Index->getZExtValue() == 0)
     return SDValue();
 
-  SDLoc DL(N);
 
   MVT IVT = MVT::getIntegerVT(VectorBits);
   EVT EltVT = VectorVT.getVectorElementType();
@@ -5307,6 +5419,38 @@ static SDValue PerformEXTRACTCombine(SDNode *N,
     Result = DCI.DAG.getNode(ISD::ANY_EXTEND, DL, N->getValueType(0), Result);
 
   return Result;
+}
+
+static SDValue PerformVSELECTCombine(SDNode *N,
+                                     TargetLowering::DAGCombinerInfo &DCI) {
+  SDValue VA = N->getOperand(1);
+  EVT VectorVT = VA.getValueType();
+  if (VectorVT != MVT::v4i8)
+    return SDValue();
+
+  // We need to split vselect into individual per-element operations Because we
+  // use BFE/BFI instruction for byte extraction/insertion, we do end up with
+  // 32-bit values, so we may as well do comparison as i32 to avoid conversions
+  // to/from i16 normally used for i8 values.
+  SmallVector<SDValue, 4> E;
+  SDLoc DL(N);
+  SDValue VCond = N->getOperand(0);
+  SDValue VB = N->getOperand(2);
+  for (int I = 0; I < 4; ++I) {
+    SDValue C = DCI.DAG.getNode(ISD::EXTRACT_VECTOR_ELT, DL, MVT::i1, VCond,
+                                DCI.DAG.getConstant(I, DL, MVT::i32));
+    SDValue EA = DCI.DAG.getAnyExtOrTrunc(
+        DCI.DAG.getNode(ISD::EXTRACT_VECTOR_ELT, DL, MVT::i8, VA,
+                        DCI.DAG.getConstant(I, DL, MVT::i32)),
+        DL, MVT::i32);
+    SDValue EB = DCI.DAG.getAnyExtOrTrunc(
+        DCI.DAG.getNode(ISD::EXTRACT_VECTOR_ELT, DL, MVT::i8, VB,
+                        DCI.DAG.getConstant(I, DL, MVT::i32)),
+        DL, MVT::i32);
+    E.push_back(DCI.DAG.getAnyExtOrTrunc(
+        DCI.DAG.getNode(ISD::SELECT, DL, MVT::i32, C, EA, EB), DL, MVT::i8));
+  }
+  return DCI.DAG.getNode(ISD::BUILD_VECTOR, DL, MVT::v4i8, E);
 }
 
 SDValue NVPTXTargetLowering::PerformDAGCombine(SDNode *N,
@@ -5334,6 +5478,8 @@ SDValue NVPTXTargetLowering::PerformDAGCombine(SDNode *N,
       return PerformStoreRetvalCombine(N);
     case ISD::EXTRACT_VECTOR_ELT:
       return PerformEXTRACTCombine(N, DCI);
+    case ISD::VSELECT:
+      return PerformVSELECTCombine(N, DCI);
   }
   return SDValue();
 }

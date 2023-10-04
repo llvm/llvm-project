@@ -3577,11 +3577,12 @@ bool NVPTXDAGToDAGISel::SelectExtractEltFromV4I8(SDValue N, SDValue &V,
         Vector->getValueType(0) == MVT::v4i8))
     return false;
 
-  if (const ConstantSDNode *IdxConst =
-          dyn_cast<ConstantSDNode>(N->getOperand(1))) {
-    V = Vector;
-    BitOffset = CurDAG->getTargetConstant(IdxConst->getZExtValue() * 8,
-                                          SDLoc(N), MVT::i32);
+  SDLoc DL(N);
+  V = Vector;
+  SDValue Index = N->getOperand(1);
+  if (const ConstantSDNode *IdxConst = dyn_cast<ConstantSDNode>(Index)) {
+    BitOffset =
+        CurDAG->getTargetConstant(IdxConst->getZExtValue() * 8, DL, MVT::i32);
     return true;
   }
   return false;
