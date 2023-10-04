@@ -1702,7 +1702,8 @@ public:
             Alignment = VPI->getPointerAlignment().valueOrOne();
           unsigned AS = 0;
           if (ICA.getArgs().size() > 1)
-            if (auto *PtrTy = dyn_cast<PointerType>(ICA.getArgs()[0]->getType()))
+            if (auto *PtrTy =
+                    dyn_cast<PointerType>(ICA.getArgs()[0]->getType()))
               AS = PtrTy->getAddressSpace();
           return thisT()->getMemoryOpCost(*FOp, ICA.getReturnType(), Alignment,
                                           AS, CostKind);
@@ -1713,7 +1714,8 @@ public:
             Alignment = VPI->getPointerAlignment().valueOrOne();
           unsigned AS = 0;
           if (ICA.getArgs().size() >= 2)
-            if (auto *PtrTy = dyn_cast<PointerType>(ICA.getArgs()[1]->getType()))
+            if (auto *PtrTy =
+                    dyn_cast<PointerType>(ICA.getArgs()[1]->getType()))
               AS = PtrTy->getAddressSpace();
           return thisT()->getMemoryOpCost(*FOp, Args[0]->getType(), Alignment,
                                           AS, CostKind);
