@@ -274,7 +274,7 @@ Bug Fixes in This Version
   (`#62945 <https://github.com/llvm/llvm-project/issues/62945>`_)
 - Clang now allows an ``_Atomic`` qualified integer in a switch statement. Fixes
   (`#65557 <https://github.com/llvm/llvm-project/issues/65557>`_)
-- Fix value of predefined macro ``__FUNCTION__`` to match MSVC's value. Fixes 
+- Fix value of predefined macro ``__FUNCTION__`` to match MSVC's value. Fixes
   (`#66114 <https://github.com/llvm/llvm-project/issues/66114>`_)
 - Fixes crash when trying to obtain the common sugared type of
   `decltype(instantiation-dependent-expr)`.
