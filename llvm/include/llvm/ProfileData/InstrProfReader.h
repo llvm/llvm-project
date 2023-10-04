@@ -452,7 +452,7 @@ private:
   }
 
   StringRef getName(uint64_t NameRef) const {
-    return Symtab->getFuncName(swap(NameRef));
+    return Symtab->getValueName(swap(NameRef));
   }
 
   int getCounterTypeSize() const {
