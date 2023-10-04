@@ -640,8 +640,16 @@ void CodeGenVTables::addRelativeComponent(ConstantArrayBuilder &builder,
   // want the stub/proxy to be emitted for properly calculating the offset.
   // Examples where there would be no symbol emitted are available_externally
   // and private linkages.
-  auto stubLinkage = vtableHasLocalLinkage ? llvm::GlobalValue::InternalLinkage
-                                           : llvm::GlobalValue::ExternalLinkage;
+  //
+  // `internal` linkage results in STB_LOCAL Elf binding while still manifesting a
+  // local symbol.
+  //
+  // `linkonce_odr` linkage results in a STB_DEFAULT Elf binding but also allows for
+  // the rtti_proxy to be transparently replaced with a GOTPCREL reloc by a
+  // target that supports this replacement.
+  auto stubLinkage = vtableHasLocalLinkage
+                         ? llvm::GlobalValue::InternalLinkage
+                         : llvm::GlobalValue::LinkOnceODRLinkage;
 
   llvm::Constant *target;
   if (auto *func = dyn_cast<llvm::Function>(globalVal)) {
