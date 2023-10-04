@@ -11129,6 +11129,11 @@ combineBinOpOfExtractToReduceTree(SDNode *N, SelectionDAG &DAG,
   if (DAG.NewNodesMustHaveLegalTypes)
     return SDValue();
 
+  // Without V, this transform isn't useful.  We could form the (illegal)
+  // operations and let them be scalarized again, but there's really no point.
+  if (!Subtarget.hasVInstructions())
+    return SDValue();
+
   const SDLoc DL(N);
   const EVT VT = N->getValueType(0);
   [[maybe_unused]] const unsigned Opc = N->getOpcode();
