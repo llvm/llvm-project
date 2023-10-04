@@ -586,31 +586,67 @@ Attribute SparseTensorEncodingAttr::parse(AsmParser &parser, Type type) {
 }
 
 void SparseTensorEncodingAttr::print(AsmPrinter &printer) const {
-  // Print the struct-like storage in dictionary fashion.
-  printer << "<{ lvlTypes = [ ";
-  llvm::interleaveComma(getLvlTypes(), printer, [&](DimLevelType dlt) {
-    printer << "\"" << toMLIRString(dlt) << "\"";
-  });
-  printer << " ]";
+  auto map = static_cast<AffineMap>(getDimToLvl());
+  // Empty affine map indicates identity map
+  if (!map)
+    map = AffineMap::getMultiDimIdentityMap(getLvlTypes().size(), getContext());
+  printer << "<{ map = ";
+  printSymbols(map, printer);
+  printer << '(';
+  printDimensions(map, printer, getDimSlices());
+  printer << ") -> (";
+  printLevels(map, printer, getLvlTypes());
+  printer << ')';
   // Print remaining members only for non-default values.
-  if (!isIdentity())
-    printer << ", dimToLvl = affine_map<" << getDimToLvl() << ">";
   if (getPosWidth())
     printer << ", posWidth = " << getPosWidth();
   if (getCrdWidth())
     printer << ", crdWidth = " << getCrdWidth();
-  if (!getDimSlices().empty()) {
-    printer << ", dimSlices = [ ";
-    llvm::interleaveComma(getDimSlices(), printer,
-                          [&](SparseTensorDimSliceAttr attr) {
-                            // Calls SparseTensorDimSliceAttr::print directly to
-                            // skip mnemonic.
-                            attr.print(printer);
-                          });
-    printer << " ]";
-  }
-
   printer << " }>";
+}
+
+void SparseTensorEncodingAttr::printSymbols(AffineMap &map,
+                                            AsmPrinter &printer) const {
+  if (map.getNumSymbols() == 0)
+    return;
+  printer << '[';
+  for (unsigned i = 0, n = map.getNumSymbols() - 1; i < n; i++)
+    printer << 's' << i << ", ";
+  if (map.getNumSymbols() >= 1)
+    printer << 's' << map.getNumSymbols() - 1;
+  printer << ']';
+}
+
+void SparseTensorEncodingAttr::printDimensions(
+    AffineMap &map, AsmPrinter &printer,
+    ArrayRef<SparseTensorDimSliceAttr> dimSlices) const {
+  if (!dimSlices.empty()) {
+    for (unsigned i = 0, n = map.getNumDims() - 1; i < n; i++)
+      printer << 'd' << i << " : " << dimSlices[i] << ", ";
+    if (map.getNumDims() >= 1) {
+      printer << 'd' << map.getNumDims() - 1 << " : "
+              << dimSlices[map.getNumDims() - 1];
+    }
+  } else {
+    for (unsigned i = 0, n = map.getNumDims() - 1; i < n; i++)
+      printer << 'd' << i << ", ";
+    if (map.getNumDims() >= 1)
+      printer << 'd' << map.getNumDims() - 1;
+  }
+}
+
+void SparseTensorEncodingAttr::printLevels(
+    AffineMap &map, AsmPrinter &printer,
+    ArrayRef<DimLevelType> lvlTypes) const {
+  for (unsigned i = 0, n = map.getNumResults() - 1; i < n; i++) {
+    map.getResult(i).print(printer.getStream());
+    printer << " : " << toMLIRString(lvlTypes[i]) << ", ";
+  }
+  if (map.getNumResults() >= 1) {
+    auto lastIndex = map.getNumResults() - 1;
+    map.getResult(lastIndex).print(printer.getStream());
+    printer << " : " << toMLIRString(lvlTypes[lastIndex]);
+  }
 }
 
 LogicalResult
