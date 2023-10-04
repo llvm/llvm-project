@@ -1392,11 +1392,8 @@ return:                                           ; preds = %entry, %if.then
 define i64 @atomic_shl1_xor_64_const_br(ptr %v) nounwind {
 ; CHECK-LABEL: atomic_shl1_xor_64_const_br:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    xorl %eax, %eax
 ; CHECK-NEXT:    lock btcq $4, (%rdi)
-; CHECK-NEXT:    setb %al
-; CHECK-NEXT:    shlq $4, %rax
-; CHECK-NEXT:    je .LBB48_1
+; CHECK-NEXT:    jae .LBB48_1
 ; CHECK-NEXT:  # %bb.2: # %if.then
 ; CHECK-NEXT:    movq 32(%rdi), %rax
 ; CHECK-NEXT:    retq
@@ -1458,12 +1455,9 @@ return:                                           ; preds = %entry, %if.then
 define i64 @atomic_shl1_xor_64_const_brz(ptr %v) nounwind {
 ; CHECK-LABEL: atomic_shl1_xor_64_const_brz:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    xorl %eax, %eax
 ; CHECK-NEXT:    lock btcq $4, (%rdi)
-; CHECK-NEXT:    setb %al
-; CHECK-NEXT:    shlq $4, %rax
 ; CHECK-NEXT:    movl $123, %eax
-; CHECK-NEXT:    je .LBB50_1
+; CHECK-NEXT:    jae .LBB50_1
 ; CHECK-NEXT:  # %bb.2: # %return
 ; CHECK-NEXT:    retq
 ; CHECK-NEXT:  .LBB50_1: # %if.then
@@ -1524,11 +1518,8 @@ return:                                           ; preds = %entry, %if.then
 define i64 @atomic_shl1_xor_64_const_brnz(ptr %v) nounwind {
 ; CHECK-LABEL: atomic_shl1_xor_64_const_brnz:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    xorl %eax, %eax
 ; CHECK-NEXT:    lock btcq $4, (%rdi)
-; CHECK-NEXT:    setb %al
-; CHECK-NEXT:    shlq $4, %rax
-; CHECK-NEXT:    je .LBB52_1
+; CHECK-NEXT:    jae .LBB52_1
 ; CHECK-NEXT:  # %bb.2: # %if.then
 ; CHECK-NEXT:    movq 32(%rdi), %rax
 ; CHECK-NEXT:    retq
