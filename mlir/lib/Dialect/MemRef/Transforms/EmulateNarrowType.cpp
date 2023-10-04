@@ -211,7 +211,7 @@ struct ConvertMemRefLoad final : OpConversionPattern<memref::LoadOp> {
 };
 
 //===----------------------------------------------------------------------===//
-// ConvertMemRefAssumeAlignment
+// ConvertMemRefSubview
 //===----------------------------------------------------------------------===//
 
 struct ConvertMemRefSubview final : OpConversionPattern<memref::SubViewOp> {
