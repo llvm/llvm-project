@@ -7,11 +7,9 @@
  *===-----------------------------------------------------------------------===
  */
 
-#if !defined(_NULLPTR_T) || __has_feature(modules)
-/* Always define nullptr_t when modules are available. */
-#if !__has_feature(modules)
+#ifndef _NULLPTR_T
 #define _NULLPTR_T
-#endif
+
 #ifdef __cplusplus
 #if defined(_MSC_EXTENSIONS) && defined(_NATIVE_NULLPTR_SUPPORTED)
 namespace std {
@@ -19,7 +17,10 @@ typedef decltype(nullptr) nullptr_t;
 }
 using ::std::nullptr_t;
 #endif
-#else
+/* FIXME: This is using the placeholder dates Clang produces for these macros
+   in C2x mode; switch to the correct values once they've been published. */
+#elif defined(__STDC_VERSION__) && __STDC_VERSION__ >= 202000L
 typedef typeof(nullptr) nullptr_t;
 #endif
+
 #endif
