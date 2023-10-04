@@ -3210,6 +3210,9 @@ static bool isCtorOrDtorName(const FormatToken *Tok) {
 }
 
 void TokenAnnotator::annotate(AnnotatedLine &Line) {
+  for (auto &Child : Line.Children)
+    annotate(*Child);
+
   AnnotatingParser Parser(Style, Line, Keywords, Scopes);
   Line.Type = Parser.parseLine();
 
@@ -3230,7 +3233,7 @@ void TokenAnnotator::annotate(AnnotatedLine &Line) {
     auto *Tok = getFunctionName(Line);
     if (Tok && ((!Scopes.empty() && Scopes.back() == ST_Class) ||
                 Line.endsWith(TT_FunctionLBrace) || isCtorOrDtorName(Tok))) {
-      Tok->setFinalizedType(TT_CtorDtorDeclName);
+      Tok->setFinalizedType(TT_FunctionDeclarationName);
     }
   }
 
@@ -3243,9 +3246,6 @@ void TokenAnnotator::annotate(AnnotatedLine &Line) {
 
   Line.First->SpacesRequiredBefore = 1;
   Line.First->CanBreakBefore = Line.First->MustBreakBefore;
-
-  for (auto &Child : Line.Children)
-    annotate(*Child);
 }
 
 // This function heuristically determines whether 'Current' starts the name of a
@@ -3447,13 +3447,9 @@ void TokenAnnotator::calculateFormattingInformation(AnnotatedLine &Line) const {
        Tok = Tok->Next) {
     if (Tok->Previous->EndsCppAttributeGroup)
       AfterLastAttribute = Tok;
-    if (const bool IsCtorOrDtor = Tok->is(TT_CtorDtorDeclName);
-        IsCtorOrDtor ||
-        isFunctionDeclarationName(Style.isCpp(), *Tok, Line, ClosingParen)) {
-      if (!IsCtorOrDtor) {
-        LineIsFunctionDeclaration = true;
-        Tok->setFinalizedType(TT_FunctionDeclarationName);
-      }
+    if (isFunctionDeclarationName(Style.isCpp(), *Tok, Line, ClosingParen)) {
+      LineIsFunctionDeclaration = true;
+      Tok->setFinalizedType(TT_FunctionDeclarationName);
       if (AfterLastAttribute &&
           mustBreakAfterAttributes(*AfterLastAttribute, Style)) {
         AfterLastAttribute->MustBreakBefore = true;
