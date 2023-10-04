@@ -545,21 +545,23 @@ void RISCVInstructionSelector::getICMPOperandsForBranch(
         MachineInstr *Zero = MIB.buildConstant(
             MRI.getType(MaybeConstant->getOperand(0).getReg()), 0);
         selectConstant(*Zero, MIB, MRI);
-        CC = getRISCVCCFromICMP(CmpInst::Predicate::ICMP_SGE);
+        CC = RISCVCC::COND_GE;
         RHS = Zero->getOperand(0).getReg();
+        return;
       }
-      return;
+      break;
     case CmpInst::Predicate::ICMP_SLT:
       // Convert X < 1 to 0 >= X
       if (MaybeConstant->getOperand(1).getCImm()->getSExtValue() == 1) {
         MachineInstr *Zero = MIB.buildConstant(
             MRI.getType(MaybeConstant->getOperand(0).getReg()), 0);
         selectConstant(*Zero, MIB, MRI);
-        CC = getRISCVCCFromICMP(CmpInst::Predicate::ICMP_SGE);
+        CC = RISCVCC::COND_GE;
         RHS = LHS;
         LHS = Zero->getOperand(0).getReg();
+        return;
       }
-      return;
+      break;
     default:
       break;
     }
