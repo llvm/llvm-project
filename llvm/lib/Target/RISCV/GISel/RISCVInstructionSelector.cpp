@@ -26,6 +26,7 @@
 #define DEBUG_TYPE "riscv-isel"
 
 using namespace llvm;
+using namespace MIPatternMatch;
 
 #define GET_GLOBALISEL_PREDICATE_BITSET
 #include "RISCVGenGlobalISel.inc"
@@ -536,14 +537,12 @@ void RISCVInstructionSelector::getICMPOperandsForBranch(
   RHS = MI.getOperand(3).getReg();
 
   // Adjust comparisons to use comparison with 0 if possible.
-  MachineInstr *MaybeConstant = MRI.getVRegDef(RHS);
-  if (MaybeConstant && MaybeConstant->getOpcode() == TargetOpcode::G_CONSTANT) {
+  if (auto Constant = matchConstant<int64_t>(RHS, MRI)) {
     switch (ICMPCC) {
     case CmpInst::Predicate::ICMP_SGT:
       // Convert X > -1 to X >= 0
-      if (MaybeConstant->getOperand(1).getCImm()->getSExtValue() == -1) {
-        MachineInstr *Zero = MIB.buildConstant(
-            MRI.getType(MaybeConstant->getOperand(0).getReg()), 0);
+      if (*Constant == -1) {
+        MachineInstr *Zero = MIB.buildConstant(MRI.getType(RHS), 0);
         selectConstant(*Zero, MIB, MRI);
         CC = RISCVCC::COND_GE;
         RHS = Zero->getOperand(0).getReg();
@@ -552,9 +551,8 @@ void RISCVInstructionSelector::getICMPOperandsForBranch(
       break;
     case CmpInst::Predicate::ICMP_SLT:
       // Convert X < 1 to 0 >= X
-      if (MaybeConstant->getOperand(1).getCImm()->getSExtValue() == 1) {
-        MachineInstr *Zero = MIB.buildConstant(
-            MRI.getType(MaybeConstant->getOperand(0).getReg()), 0);
+      if (*Constant == 1) {
+        MachineInstr *Zero = MIB.buildConstant(MRI.getType(RHS), 0);
         selectConstant(*Zero, MIB, MRI);
         CC = RISCVCC::COND_GE;
         RHS = LHS;
@@ -598,12 +596,12 @@ bool RISCVInstructionSelector::selectSelect(MachineInstr &MI,
 
   // If MI is a G_SELECT(G_ICMP(tst, A, B), C, D) then we can use (A, B, tst)
   // as the (LHS, RHS, CC) of the Select_GPR_Using_CC_GPR.
-  MachineInstr *MaybeICMP = MRI.getVRegDef(MI.getOperand(1).getReg());
-  bool Op1IsICMP = MaybeICMP && MaybeICMP->getOpcode() == TargetOpcode::G_ICMP;
+  Register MIOp1Reg = MI.getOperand(1).getReg();
+  bool Op1IsICMP = mi_match(MIOp1Reg, MRI, m_GICmp(m_Pred(), m_Reg(), m_Reg()));
   RISCVCC::CondCode CC;
   Register LHS, RHS;
   if (Op1IsICMP)
-    getICMPOperandsForBranch(*MaybeICMP, MIB, MRI, CC, LHS, RHS);
+    getICMPOperandsForBranch(*MRI.getVRegDef(MIOp1Reg), MIB, MRI, CC, LHS, RHS);
 
   Register Op1 = Op1IsICMP ? LHS : MI.getOperand(1).getReg();
   Register Op2 = Op1IsICMP ? RHS : RISCV::X0;
