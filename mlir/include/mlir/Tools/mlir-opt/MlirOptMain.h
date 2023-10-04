@@ -61,6 +61,19 @@ public:
     return allowUnregisteredDialectsFlag;
   }
 
+  /// Set the callback to configure the context after processing the regular
+  /// dialect registry, e.g., for preloading a subset of dialects.
+  template <typename FuncTy>
+  MlirOptMainConfig &setContextConfigurationFn(FuncTy &&fn) {
+    contextConfigurationCallback = fn;
+    return *this;
+  }
+  LogicalResult setupContext(MLIRContext &context) const {
+    if (contextConfigurationCallback)
+      return contextConfigurationCallback(context);
+    return success();
+  }
+
   /// Set the debug configuration to use.
   MlirOptMainConfig &setDebugConfig(tracing::DebugConfig config) {
     debugConfig = std::move(config);
@@ -175,6 +188,10 @@ protected:
   /// This option is for convenience during testing only and discouraged in
   /// general.
   bool allowUnregisteredDialectsFlag = false;
+
+  /// The callback for additional configuration of the MLIR context after it has
+  /// been created and populated from the registry.
+  std::function<LogicalResult(MLIRContext &)> contextConfigurationCallback;
 
   /// Configuration for the debugging hooks.
   tracing::DebugConfig debugConfig;
