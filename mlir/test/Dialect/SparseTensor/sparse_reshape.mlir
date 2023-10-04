@@ -16,7 +16,7 @@
 //      CHECK-ROUND:  return %[[E]] : tensor<10x10xf64, #sparse_tensor.encoding<{{{.*}}}>>
 //
 // CHECK-LABEL:   func.func @sparse_expand(
-// CHECK-SAME:    %[[S:.*]]:
+// CHECK-SAME:    %[[S:.*0]]:
 // CHECK-DAG:     %[[C10:.*]] = arith.constant 10 : index
 // CHECK-DAG:     %[[C0:.*]] = arith.constant 0 : index
 // CHECK-DAG:     %[[C1:.*]] = arith.constant 1 : index
@@ -53,7 +53,7 @@ func.func @sparse_expand(%arg0: tensor<100xf64, #SparseVector>) -> tensor<10x10x
 //      CHECK-ROUND:  return %[[C]] : tensor<100xf64, #sparse_tensor.encoding<{{{.*}}}>>
 //
 // CHECK-LABEL:   func.func @sparse_collapse(
-// CHECK-SAME:    %[[S:.*]]:
+// CHECK-SAME:    %[[S:.*0]]:
 // CHECK-DAG:     %[[C10:.*]] = arith.constant 10 : index
 // CHECK-DAG:     %[[C0:.*]] = arith.constant 0 : index
 // CHECK-DAG:     %[[C1:.*]] = arith.constant 1 : index
@@ -99,7 +99,7 @@ func.func @sparse_collapse(%arg0: tensor<10x10xf64, #SparseMatrix>) -> tensor<10
 //      CHECK-ROUND:  return %[[E]] : tensor<?x10xf64, #sparse_tensor.encoding<{{{.*}}}>>
 //
 // CHECK-LABEL:   func.func @dynamic_sparse_expand(
-// CHECK-SAME:    %[[S:.*]]:
+// CHECK-SAME:    %[[S:.*0]]:
 // CHECK-DAG:     %[[C10:.*]] = arith.constant 10 : index
 // CHECK-DAG:     %[[C0:.*]] = arith.constant 0 : index
 // CHECK-DAG:     %[[C1:.*]] = arith.constant 1 : index
@@ -142,7 +142,7 @@ func.func @dynamic_sparse_expand(%arg0: tensor<?xf64, #SparseVector>) -> tensor<
 //      CHECK-ROUND:  return %[[C]] : tensor<?xf64, #sparse_tensor.encoding<{{{.*}}}>>
 //
 // CHECK-LABEL:   func.func @dynamic_sparse_collapse(
-// CHECK-SAME:    %[[S:.*]]:
+// CHECK-SAME:    %[[S:.*0]]:
 // CHECK-DAG:     %[[C10:.*]] = arith.constant 10 : index
 // CHECK-DAG:     %[[C0:.*]] = arith.constant 0 : index
 // CHECK-DAG:     %[[C1:.*]] = arith.constant 1 : index
