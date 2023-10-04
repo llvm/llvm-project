@@ -575,8 +575,12 @@ public:
 
     auto S = std::make_shared<DWOFile>();
     S->File = std::move(Obj.get());
-    S->Context = DWARFContext::create(*S->File.getBinary(),
-                                      DWARFContext::ProcessDebugRelocations::Ignore);
+    StringRef FileName = S->File.getBinary()->getFileName();
+    S->Context = DWARFContext::create(
+        *S->File.getBinary(), DWARFContext::ProcessDebugRelocations::Ignore,
+        nullptr, "", WithColor::defaultErrorHandler,
+        WithColor::defaultWarningHandler,
+        FileName.find(".dwp") != StringRef::npos);
     *Entry = S;
     auto *Ctxt = S->Context.get();
     return std::shared_ptr<DWARFContext>(std::move(S), Ctxt);
