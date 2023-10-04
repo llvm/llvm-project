@@ -124,9 +124,11 @@ int __llvm_profile_merge_from_buffer(const char *ProfileData,
   SrcCountersEnd = SrcCountersStart +
                    Header->NumCounters * __llvm_profile_counter_entry_size();
   SrcNameStart = SrcCountersEnd;
-  // This is to assume counter size is a multiple of 8 bytes.
 
-  // First, skip rather than merge them
+  // Skip vtable profile data section and vtable names sections for runtime
+  // profile merge. To merge runtime addresses from multiple profiles, the
+  // same instrumented binary should run with ASLR disabled -> in this set-up
+  // these two sections remain unchanged.
   uint64_t VTableSectionSize = Header->NumVTables * sizeof(VTableProfData);
   uint64_t PaddingBytesAfterVTableSection =
       __llvm_profile_get_num_padding_bytes(VTableSectionSize);

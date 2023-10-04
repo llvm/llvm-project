@@ -1431,8 +1431,6 @@ void InstrProfiling::emitVTableNames() {
   VTableNamesVar->setAlignment(Align(1));
   // Make VTableNames linker retained.
   UsedVars.push_back(VTableNamesVar);
-
-  // FIXME: Why emitNames call erase method?
 }
 
 void InstrProfiling::emitRegistration() {

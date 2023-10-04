@@ -220,7 +220,9 @@ cl::opt<bool> EnableVTableValueProfiling(
     cl::desc("If true, the virtual table address will be instrumented to know "
              "the types of a C++ pointer. The information could be used in "
              "indirect-call-promotion to do selective vtable-based comparison "
-             "and interprocedural type propagation."));
+             "and interprocedural type propagation. Requires type metadata and "
+             "type intrinsics (https://llvm.org/docs/TypeMetadata.html) to use"
+             " this option."));
 
 std::string getInstrProfSectionName(InstrProfSectKind IPSK,
                                     Triple::ObjectFormatType OF,
@@ -451,7 +453,6 @@ Error InstrProfSymtab::create(Module &M, bool InLTO) {
     Types.clear();
     G.getMetadata(LLVMContext::MD_type, Types);
     if (!Types.empty()) {
-      // errs() << "Insert " << G.getGUID() << "\t into MD5VTableMap\n";
       MD5VTableMap.emplace_back(G.getGUID(), &G);
     }
   }

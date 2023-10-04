@@ -327,12 +327,6 @@ lprofWriteDataImpl(ProfDataWriter *Writer, const __llvm_profile_data *DataBegin,
   if (binary_id_size == -1)
     return -1;
 
-  // Might be needed for debugging. Clean up before commit.
-  // uint64_t VTableProfDataOffset =
-  //    sizeof(__llvm_profile_header) + binary_id_size + DataSectionSize +
-  //    PaddingBytesBeforeCounters + CountersSectionSize +
-  //    PaddingBytesAfterCounters + NamesSize + PaddingBytesAfterNames;
-
   /* Write the profile data. */
   ProfDataIOVec IOVecData[] = {
       {DebugInfoCorrelate ? NULL : DataBegin, sizeof(uint8_t), DataSectionSize,
