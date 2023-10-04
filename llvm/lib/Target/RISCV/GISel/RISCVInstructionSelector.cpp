@@ -537,11 +537,12 @@ void RISCVInstructionSelector::getICMPOperandsForBranch(
   RHS = MI.getOperand(3).getReg();
 
   // Adjust comparisons to use comparison with 0 if possible.
-  if (auto Constant = matchConstant<int64_t>(RHS, MRI)) {
+  int64_t Constant;
+  if (mi_match(RHS, MRI, m_ICst(Constant))) {
     switch (ICMPCC) {
     case CmpInst::Predicate::ICMP_SGT:
       // Convert X > -1 to X >= 0
-      if (*Constant == -1) {
+      if (Constant == -1) {
         MachineInstr *Zero = MIB.buildConstant(MRI.getType(RHS), 0);
         selectConstant(*Zero, MIB, MRI);
         CC = RISCVCC::COND_GE;
@@ -551,7 +552,7 @@ void RISCVInstructionSelector::getICMPOperandsForBranch(
       break;
     case CmpInst::Predicate::ICMP_SLT:
       // Convert X < 1 to 0 >= X
-      if (*Constant == 1) {
+      if (Constant == 1) {
         MachineInstr *Zero = MIB.buildConstant(MRI.getType(RHS), 0);
         selectConstant(*Zero, MIB, MRI);
         CC = RISCVCC::COND_GE;
