@@ -2153,6 +2153,7 @@ genProcedureRef(CallContext &callContext) {
       }
 
       if (isElemental && !arg.hasValueAttribute() &&
+          Fortran::evaluate::IsVariable(*expr) &&
           Fortran::evaluate::HasVectorSubscript(*expr)) {
         // Vector subscripted arguments are copied in calls, except in elemental
         // calls without VALUE attribute where Fortran 2018 15.5.2.4 point 21

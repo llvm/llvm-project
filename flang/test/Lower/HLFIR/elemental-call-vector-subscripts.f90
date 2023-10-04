@@ -71,3 +71,23 @@ end subroutine
 ! CHECK:           }
 ! CHECK:           hlfir.destroy %[[VAL_10]] : !hlfir.expr<3xf32>
 ! CHECK:           return
+
+subroutine test_not_a_variable(i)
+  interface
+    elemental subroutine foo2(j)
+      integer(8), intent(in) :: j
+    end subroutine
+  end interface
+  integer(8) :: i(:)
+  call foo2((i(i)))
+end subroutine
+! CHECK-LABEL:   func.func @_QPtest_not_a_variable(
+! CHECK:           hlfir.elemental
+! CHECK:           %[[VAL_16:.*]] = hlfir.elemental
+! CHECK:           %[[VAL_20:.*]] = arith.constant 1 : index
+! CHECK:           fir.do_loop %[[VAL_21:.*]] = {{.*}}
+! CHECK:             %[[VAL_22:.*]] = hlfir.apply %[[VAL_16]], %[[VAL_21]] : (!hlfir.expr<?xi64>, index) -> i64
+! CHECK:             %[[VAL_23:.*]]:3 = hlfir.associate %[[VAL_22]] {uniq_name = "adapt.valuebyref"} : (i64) -> (!fir.ref<i64>, !fir.ref<i64>, i1)
+! CHECK:             fir.call @_QPfoo2(%[[VAL_23]]#1){{.*}}: (!fir.ref<i64>) -> ()
+! CHECK:             hlfir.end_associate %[[VAL_23]]#1, %[[VAL_23]]#2 : !fir.ref<i64>, i1
+! CHECK:           }
