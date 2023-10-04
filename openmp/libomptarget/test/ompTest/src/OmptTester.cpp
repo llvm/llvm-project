@@ -4,9 +4,6 @@
 #include <cstdlib>
 #include <cstring>
 
-std::unordered_map<std::string, TestSuite> TestRegistrar::Tests;
-std::atomic<ompt_id_t> NextOpId{0x8000000000000001};
-
 // From openmp/runtime/test/ompt/callback.h
 #define register_ompt_callback_t(name, type)                                   \
   do {                                                                         \
@@ -17,7 +14,94 @@ std::atomic<ompt_id_t> NextOpId{0x8000000000000001};
 
 #define register_ompt_callback(name) register_ompt_callback_t(name, name##_t)
 
+#define OMPT_BUFFER_REQUEST_SIZE 256
+
+std::unordered_map<std::string, TestSuite> TestRegistrar::Tests;
+static std::atomic<ompt_id_t> NextOpId{0x8000000000000001};
+static bool UseEMICallbacks = false;
+static bool UseTracing = false;
+
+// OMPT entry point handles
+static ompt_set_trace_ompt_t ompt_set_trace_ompt = 0;
+static ompt_start_trace_t ompt_start_trace = 0;
+static ompt_flush_trace_t ompt_flush_trace = 0;
+static ompt_stop_trace_t ompt_stop_trace = 0;
+static ompt_get_record_ompt_t ompt_get_record_ompt = 0;
+static ompt_advance_buffer_cursor_t ompt_advance_buffer_cursor = 0;
+static ompt_get_record_type_t ompt_get_record_type_fn = 0;
+
+// ToDo: Currently using only 1 device
+static ompt_device_t *Device = nullptr;
+
+// Tracing buffer helper function
+static void delete_buffer_ompt(ompt_buffer_t *buffer) {
+  free(buffer);
+  printf("Deallocated %p\n", buffer);
+}
+
 // OMPT callbacks
+
+// Trace record callbacks
+static void on_ompt_callback_buffer_request(int device_num,
+                                            ompt_buffer_t **buffer,
+                                            size_t *bytes) {
+  *bytes = OMPT_BUFFER_REQUEST_SIZE;
+  *buffer = malloc(*bytes);
+  printf("Allocated %lu bytes at %p in buffer request callback\n", *bytes,
+         *buffer);
+  OmptCallbackHandler::get().handleBufferRequest(device_num, buffer, bytes);
+}
+
+// Note: This callback must handle a null begin cursor. Currently,
+// ompt_get_record_ompt, print_record_ompt, and
+// ompt_advance_buffer_cursor handle a null cursor.
+static void on_ompt_callback_buffer_complete(
+    int device_num, ompt_buffer_t *buffer,
+    size_t bytes, /* bytes returned in this callback */
+    ompt_buffer_cursor_t begin, int buffer_owned) {
+  OmptCallbackHandler::get().handleBufferComplete(device_num, buffer, bytes,
+                                                  begin, buffer_owned);
+
+  int Status = 1;
+  ompt_buffer_cursor_t CurrentPos = begin;
+  while (Status) {
+    ompt_record_ompt_t *Record = ompt_get_record_ompt(buffer, CurrentPos);
+    if (ompt_get_record_type_fn(buffer, CurrentPos) != ompt_record_ompt) {
+      printf("WARNING: received non-ompt type buffer object\n");
+    }
+    // ToDo: Sometimes it may happen that the retrieved record may be null?!
+    // Only handle non-null records
+    if (Record != nullptr)
+      OmptCallbackHandler::get().handleBufferRecord(Record);
+    Status = ompt_advance_buffer_cursor(/*device=*/NULL, buffer, bytes,
+                                        CurrentPos, &CurrentPos);
+  }
+  if (buffer_owned)
+    delete_buffer_ompt(buffer);
+}
+
+static ompt_set_result_t set_trace_ompt() {
+  if (!ompt_set_trace_ompt)
+    return ompt_set_error;
+
+  if (UseEMICallbacks) {
+    ompt_set_trace_ompt(/*device=*/0, /*enable=*/1,
+                        /*etype=*/ompt_callback_target_emi);
+    ompt_set_trace_ompt(/*device=*/0, /*enable=*/1,
+                        /*etype=*/ompt_callback_target_data_op_emi);
+    ompt_set_trace_ompt(/*device=*/0, /*enable=*/1,
+                        /*etype=*/ompt_callback_target_submit_emi);
+  } else {
+    ompt_set_trace_ompt(/*device=*/0, /*enable=*/1,
+                        /*etype=*/ompt_callback_target);
+    ompt_set_trace_ompt(/*device=*/0, /*enable=*/1,
+                        /*etype=*/ompt_callback_target_data_op);
+    ompt_set_trace_ompt(/*device=*/0, /*enable=*/1,
+                        /*etype=*/ompt_callback_target_submit);
+  }
+
+  return ompt_set_always;
+}
 
 /////// HOST-RELATED //////
 
@@ -39,9 +123,9 @@ static void on_ompt_callback_parallel_begin(
       requested_parallelism, flags, codeptr_ra);
 }
 
-void on_ompt_callback_parallel_end(ompt_data_t *parallel_data,
-                                   ompt_data_t *encountering_task_data,
-                                   int flags, const void *codeptr_ra) {
+static void on_ompt_callback_parallel_end(ompt_data_t *parallel_data,
+                                          ompt_data_t *encountering_task_data,
+                                          int flags, const void *codeptr_ra) {
   OmptCallbackHandler::get().handleParallelEnd(
       parallel_data, encountering_task_data, flags, codeptr_ra);
 }
@@ -74,10 +158,11 @@ static void on_ompt_callback_implicit_task(ompt_scope_endpoint_t endpoint,
 
 // Callbacks as of Table 19.4, which are not considered required for a minimal
 // conforming OMPT implementation.
-void on_ompt_callback_work(ompt_work_t work_type,
-                           ompt_scope_endpoint_t endpoint,
-                           ompt_data_t *parallel_data, ompt_data_t *task_data,
-                           uint64_t count, const void *codeptr_ra) {
+static void on_ompt_callback_work(ompt_work_t work_type,
+                                  ompt_scope_endpoint_t endpoint,
+                                  ompt_data_t *parallel_data,
+                                  ompt_data_t *task_data, uint64_t count,
+                                  const void *codeptr_ra) {
   if (endpoint == ompt_scope_begin || endpoint == ompt_scope_beginend)
     OmptCallbackHandler::get().handleWorkBegin(
         work_type, endpoint, parallel_data, task_data, count, codeptr_ra);
@@ -96,6 +181,40 @@ static void on_ompt_callback_device_initialize(int device_num, const char *type,
                                                const char *documentation) {
   OmptCallbackHandler::get().handleDeviceInitialize(device_num, type, device,
                                                     lookup, documentation);
+  if (!UseTracing)
+    return;
+
+  if (!lookup) {
+    printf("Trace collection disabled on device %d\n", device_num);
+    return;
+  }
+
+  ompt_set_trace_ompt = (ompt_set_trace_ompt_t)lookup("ompt_set_trace_ompt");
+  ompt_start_trace = (ompt_start_trace_t)lookup("ompt_start_trace");
+  ompt_flush_trace = (ompt_flush_trace_t)lookup("ompt_flush_trace");
+  ompt_stop_trace = (ompt_stop_trace_t)lookup("ompt_stop_trace");
+  ompt_get_record_ompt = (ompt_get_record_ompt_t)lookup("ompt_get_record_ompt");
+  ompt_advance_buffer_cursor =
+      (ompt_advance_buffer_cursor_t)lookup("ompt_advance_buffer_cursor");
+
+  ompt_get_record_type_fn =
+      (ompt_get_record_type_t)lookup("ompt_get_record_type");
+  if (!ompt_get_record_type_fn) {
+    printf("WARNING: No function ompt_get_record_type found in device "
+           "callbacks\n");
+  }
+
+  Device = device;
+
+  set_trace_ompt();
+
+  // In many scenarios, this will be a good place to start the
+  // trace. If start_trace is called from the main program before this
+  // callback is dispatched, the start_trace handle will be null. This
+  // is because this device_init callback is invoked during the first
+  // target construct implementation.
+
+  start_trace();
 }
 
 static void on_ompt_callback_device_finalize(int device_num) {
@@ -178,6 +297,20 @@ static void on_ompt_callback_target_submit_emi(
       endpoint, target_data, host_op_id, requested_num_teams);
 }
 
+/// Load the value of a given boolean environmental variable.
+bool getBoolEnvironmentVariable(const char *VariableName) {
+  if (VariableName == nullptr)
+    return false;
+  if (const char *EnvValue = std::getenv(VariableName)) {
+    std::string S{EnvValue};
+    for (auto &C : S)
+      C = (char)std::tolower(C);
+    if (S == "1" || S == "on" || S == "true" || S == "yes")
+      return true;
+  }
+  return false;
+}
+
 /// Called by the OMP runtime to initialize the OMPT
 int ompt_initialize(ompt_function_lookup_t lookup, int initial_device_num,
                     ompt_data_t *tool_data) {
@@ -186,14 +319,8 @@ int ompt_initialize(ompt_function_lookup_t lookup, int initial_device_num,
   if (!ompt_set_callback)
     return 0; // failure
 
-  bool RegisterEMICallbacks = false;
-  if (const char *EnvUseEMI = std::getenv("OMPTEST_USE_OMPT_EMI")) {
-    std::string UseEMI{EnvUseEMI};
-    for (auto &C : UseEMI)
-      C = (char)std::tolower(C);
-    if (UseEMI == "1" || UseEMI == "on" || UseEMI == "true" || UseEMI == "yes")
-      RegisterEMICallbacks = true;
-  }
+  UseEMICallbacks = getBoolEnvironmentVariable("OMPTEST_USE_OMPT_EMI");
+  UseTracing = getBoolEnvironmentVariable("OMPTEST_USE_OMPT_TRACING");
 
   register_ompt_callback(ompt_callback_thread_begin);
   register_ompt_callback(ompt_callback_thread_end);
@@ -208,7 +335,7 @@ int ompt_initialize(ompt_function_lookup_t lookup, int initial_device_num,
   register_ompt_callback(ompt_callback_device_load);
   register_ompt_callback(ompt_callback_device_unload);
 
-  if (RegisterEMICallbacks) {
+  if (UseEMICallbacks) {
     register_ompt_callback(ompt_callback_target_emi);
     register_ompt_callback(ompt_callback_target_submit_emi);
     register_ompt_callback(ompt_callback_target_data_op_emi);
@@ -220,7 +347,11 @@ int ompt_initialize(ompt_function_lookup_t lookup, int initial_device_num,
 
   return 1; // success
 }
-void ompt_finalize(ompt_data_t *tool_data) {}
+
+void ompt_finalize(ompt_data_t *tool_data) {
+  // Remove any current subscribers since we are about to shut down
+  OmptCallbackHandler::get().clearSubscribers();
+}
 
 #ifdef __cplusplus
 extern "C" {
@@ -231,6 +362,25 @@ ompt_start_tool_result_t *ompt_start_tool(unsigned int omp_version,
   static ompt_start_tool_result_t ompt_start_tool_result = {
       &ompt_initialize, &ompt_finalize, {0}};
   return &ompt_start_tool_result;
+}
+
+int start_trace() {
+  if (!ompt_start_trace)
+    return 0;
+  return ompt_start_trace(Device, &on_ompt_callback_buffer_request,
+                          &on_ompt_callback_buffer_complete);
+}
+
+int flush_trace() {
+  if (!ompt_flush_trace)
+    return 0;
+  return ompt_flush_trace(Device);
+}
+
+int stop_trace() {
+  if (!ompt_stop_trace)
+    return 0;
+  return ompt_stop_trace(Device);
 }
 #ifdef __cplusplus
 }

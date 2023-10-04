@@ -157,6 +157,30 @@ struct OmptAssertEvent {
     return OmptAssertEvent(EName, new internal::DeviceUnload());
   }
 
+  static OmptAssertEvent BufferRequest(int DeviceNum, ompt_buffer_t **Buffer,
+                                       size_t *Bytes, const std::string &Name) {
+    auto EName = getName(Name);
+    return OmptAssertEvent(
+        EName, new internal::BufferRequest(DeviceNum, Buffer, Bytes));
+  }
+
+  static OmptAssertEvent BufferComplete(int DeviceNum, ompt_buffer_t *Buffer,
+                                        size_t Bytes,
+                                        ompt_buffer_cursor_t Begin,
+                                        int BufferOwned,
+                                        const std::string &Name) {
+    auto EName = getName(Name);
+    return OmptAssertEvent(
+        EName, new internal::BufferComplete(DeviceNum, Buffer, Bytes, Begin,
+                                            BufferOwned));
+  }
+
+  static OmptAssertEvent BufferRecord(ompt_record_ompt_t *Record,
+                                      const std::string &Name) {
+    auto EName = getName(Name);
+    return OmptAssertEvent(EName, new internal::BufferRecord(Record));
+  }
+
   /// Allow move construction (due to std::unique_ptr)
   OmptAssertEvent(OmptAssertEvent &&o) = default;
   OmptAssertEvent &operator=(OmptAssertEvent &&o) = default;

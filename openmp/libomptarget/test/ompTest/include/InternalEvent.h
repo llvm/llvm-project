@@ -4,11 +4,11 @@
 #include "omp-tools.h"
 
 #include <cassert>
+#include <cstring>
 #include <iomanip>
+#include <iostream>
 #include <sstream>
 #include <string>
-
-#include <iostream>
 
 namespace omptest {
 
@@ -34,7 +34,10 @@ enum class EventTy {
   DeviceInitialize,
   DeviceFinalize,
   DeviceLoad,
-  DeviceUnload
+  DeviceUnload,
+  BufferRequest,  // not part of OpenMP spec, used for implementation
+  BufferComplete, // not part of OpenMP spec, used for implementation
+  BufferRecord    // not part of OpenMP spec, used for implementation
 };
 
 /// String manipulation helper function. Takes up to 8 bytes of data and returns
@@ -106,8 +109,8 @@ event_class_w_custom_body(ParallelBegin,                                       \
                                                                                \
   int NumThreads;                                                              \
 )
-event_class_w_custom_body(ParallelEnd,
-  ParallelEnd() : InternalEvent(EventTy::ParallelEnd) {}
+event_class_w_custom_body(ParallelEnd,                                         \
+  ParallelEnd() : InternalEvent(EventTy::ParallelEnd) {}                       \
 )
 event_class_stub(TaskCreate)
 event_class_stub(TaskSchedule)
@@ -212,7 +215,7 @@ event_class_w_custom_body(TargetSubmitEmi,                                     \
 event_class_stub(ControlTool)
 event_class_w_custom_body(DeviceInitialize,                                    \
   DeviceInitialize(int DeviceNum, const char *Type, ompt_device_t *Device,     \
-    ompt_function_lookup_t LookupFn, const char *DocStr)                       \
+                   ompt_function_lookup_t LookupFn, const char *DocStr)        \
     : InternalEvent(EventTy::DeviceInitialize), DeviceNum(DeviceNum),          \
       Type(Type), Device(Device), LookupFn(LookupFn), DocStr(DocStr) {}        \
                                                                                \
@@ -230,8 +233,8 @@ event_class_w_custom_body(DeviceFinalize,                                      \
 )
 event_class_w_custom_body(DeviceLoad,                                          \
   DeviceLoad(int DeviceNum, const char *Filename, int64_t OffsetInFile,        \
-    void *VmaInFile, size_t Bytes, void *HostAddr, void *DeviceAddr,           \
-    uint64_t ModuleId)                                                         \
+             void *VmaInFile, size_t Bytes, void *HostAddr, void *DeviceAddr,  \
+             uint64_t ModuleId)                                                \
     : InternalEvent(EventTy::DeviceLoad), DeviceNum(DeviceNum),                \
       Filename(Filename), OffsetInFile(OffsetInFile), VmaInFile(VmaInFile),    \
       Bytes(Bytes), HostAddr(HostAddr), DeviceAddr(DeviceAddr),                \
@@ -247,7 +250,38 @@ event_class_w_custom_body(DeviceLoad,                                          \
   uint64_t ModuleId;                                                           \
 )
 event_class_stub(DeviceUnload)
-//     clang-format on
+event_class_w_custom_body(BufferRequest,                                       \
+  BufferRequest(int DeviceNum, ompt_buffer_t **Buffer, size_t *Bytes)          \
+    : InternalEvent(EventTy::BufferRequest), DeviceNum(DeviceNum),             \
+      Buffer(Buffer), Bytes(Bytes) {}                                          \
+                                                                               \
+  int DeviceNum;                                                               \
+  ompt_buffer_t **Buffer;                                                      \
+  size_t *Bytes;                                                               \
+)
+event_class_w_custom_body(BufferComplete,                                      \
+  BufferComplete(int DeviceNum, ompt_buffer_t *Buffer, size_t Bytes,           \
+                 ompt_buffer_cursor_t Begin, int BufferOwned)                  \
+    : InternalEvent(EventTy::BufferComplete), DeviceNum(DeviceNum),            \
+      Buffer(Buffer), Bytes(Bytes), Begin(Begin), BufferOwned(BufferOwned) {}  \
+                                                                               \
+  int DeviceNum;                                                               \
+  ompt_buffer_t *Buffer;                                                       \
+  size_t Bytes;                                                                \
+  ompt_buffer_cursor_t Begin;                                                  \
+  int BufferOwned;                                                             \
+)
+event_class_w_custom_body(BufferRecord,                                        \
+  BufferRecord(ompt_record_ompt_t *RecordPtr)                                  \
+    : InternalEvent(EventTy::BufferRecord), RecordPtr(RecordPtr) {             \
+      if (RecordPtr != nullptr) Record = *RecordPtr;                           \
+      else memset(&Record, 0, sizeof(ompt_record_ompt_t));                     \
+    }                                                                          \
+                                                                               \
+  ompt_record_ompt_t Record;                                                   \
+  ompt_record_ompt_t *RecordPtr;                                               \
+)
+// clang-format on
 
 std::string ThreadBegin::toString() const {
   std::string S{"OMPT Callback ThreadBegin: "};
@@ -390,6 +424,92 @@ std::string DeviceLoad::toString() const {
   return S;
 }
 
+std::string BufferRequest::toString() const {
+  std::string S{"Allocated "};
+  S.append(std::to_string(*Bytes)).append(" bytes at ");
+  S.append(makeHexString((uint64_t)*Buffer));
+  S.append(" in buffer request callback");
+  return S;
+}
+
+std::string BufferComplete::toString() const {
+  std::string S{"Executing buffer complete callback: "};
+  S.append(std::to_string(DeviceNum)).append(1, ' ');
+  S.append(makeHexString((uint64_t)Buffer)).append(1, ' ');
+  S.append(std::to_string(Bytes)).append(1, ' ');
+  S.append(makeHexString((uint64_t)Begin)).append(1, ' ');
+  S.append(std::to_string(BufferOwned));
+  return S;
+}
+
+std::string BufferRecord::toString() const {
+  std::string S{""};
+  // First line
+  S.append("rec=").append(makeHexString((uint64_t)RecordPtr));
+  S.append(" type=").append(std::to_string(Record.type));
+  S.append(" time=").append(std::to_string(Record.time));
+  S.append(" thread_id=").append(std::to_string(Record.thread_id));
+  S.append(" target_id=").append(std::to_string(Record.target_id));
+  S.append(1, '\n');
+
+  // Second line
+  switch (Record.type) {
+  case ompt_callback_target:
+  case ompt_callback_target_emi: {
+    // Handle Target Record
+    ompt_record_target_t TR = Record.record.target;
+    printf("\tRecord Target: kind=%d endpoint=%d device=%d task_id=%lu "
+           "target_id=%lu codeptr=%p\n",
+           TR.kind, TR.endpoint, TR.device_num, TR.task_id, TR.target_id,
+           TR.codeptr_ra);
+    S.append("\tRecord Target: kind=").append(std::to_string(TR.kind));
+    S.append(" endpoint=").append(std::to_string(TR.endpoint));
+    S.append(" device=").append(std::to_string(TR.device_num));
+    S.append(" task_id=").append(std::to_string(TR.task_id));
+    S.append(" target_id=").append(std::to_string(TR.target_id));
+    S.append(" codeptr=").append(makeHexString((uint64_t)TR.codeptr_ra));
+    break;
+  }
+  case ompt_callback_target_data_op:
+  case ompt_callback_target_data_op_emi: {
+    // Handle Target DataOp Record
+    ompt_record_target_data_op_t TDR = Record.record.target_data_op;
+    S.append("\t  Record DataOp: host_op_id=")
+        .append(std::to_string(TDR.host_op_id));
+    S.append(" optype=").append(std::to_string(TDR.optype));
+    S.append(" src_addr=").append(makeHexString((uint64_t)TDR.src_addr));
+    S.append(" src_device=").append(std::to_string(TDR.src_device_num));
+    S.append(" dest_addr=").append(makeHexString((uint64_t)TDR.dest_addr));
+    S.append(" dest_device=").append(std::to_string(TDR.dest_device_num));
+    S.append(" bytes=").append(std::to_string(TDR.bytes));
+    S.append(" end_time=").append(std::to_string(TDR.end_time));
+    S.append(" duration=").append(std::to_string(TDR.end_time - Record.time));
+    S.append(" ns codeptr=").append(makeHexString((uint64_t)TDR.codeptr_ra));
+    break;
+  }
+  case ompt_callback_target_submit:
+  case ompt_callback_target_submit_emi: {
+    // Handle Target Kernel Record
+    ompt_record_target_kernel_t TKR = Record.record.target_kernel;
+    S.append("\t  Record Submit: host_op_id=")
+        .append(std::to_string(TKR.host_op_id));
+    S.append(" requested_num_teams=")
+        .append(std::to_string(TKR.requested_num_teams));
+    S.append(" granted_num_teams=")
+        .append(std::to_string(TKR.granted_num_teams));
+    S.append(" end_time=").append(std::to_string(TKR.end_time));
+    S.append(" duration=").append(std::to_string(TKR.end_time - Record.time));
+    S.append(" ns");
+    break;
+  }
+  default:
+    S.append("Unsupported record type: ").append(std::to_string(Record.type));
+    break;
+  }
+
+  return S;
+}
+
 #define event_class_operator_stub(EvTy)                                        \
   bool operator==(const EvTy &a, const EvTy &b) { return true; }
 
@@ -417,6 +537,9 @@ event_class_operator_stub(DeviceInitialize)
 event_class_operator_stub(DeviceFinalize)
 event_class_operator_stub(DeviceLoad)
 event_class_operator_stub(DeviceUnload)
+event_class_operator_stub(BufferRequest)
+event_class_operator_stub(BufferComplete)
+event_class_operator_stub(BufferRecord)
 // clang-format on
 
 /// Template "base" for the cast functions generated in the define_cast_func
@@ -454,6 +577,9 @@ define_cast_func(DeviceInitialize)
 define_cast_func(DeviceFinalize)
 define_cast_func(DeviceLoad)
 define_cast_func(DeviceUnload)
+define_cast_func(BufferRequest)
+define_cast_func(BufferComplete)
+define_cast_func(BufferRecord)
 // clang-format on
 
 /// Auto generate the equals override to cast and dispatch to the specific class
@@ -484,6 +610,9 @@ class_equals_op(DeviceInitialize)
 class_equals_op(DeviceFinalize)
 class_equals_op(DeviceLoad)
 class_equals_op(DeviceUnload)
+class_equals_op(BufferRequest)
+class_equals_op(BufferComplete)
+class_equals_op(BufferRecord)
 // clang-format on
 
 } // namespace internal

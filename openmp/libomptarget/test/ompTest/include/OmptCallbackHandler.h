@@ -290,6 +290,44 @@ public:
       S->notify(omptest::OmptAssertEvent::DeviceUnload("Device Unload"));
   }
 
+  void handleBufferRequest(int DeviceNum, ompt_buffer_t **Buffer,
+                           size_t *Bytes) {
+    if (RecordAndReplay) {
+      recordEvent(omptest::OmptAssertEvent::BufferRequest(
+          DeviceNum, Buffer, Bytes, "Buffer Request"));
+      return;
+    }
+
+    for (const auto &S : Subscribers)
+      S->notify(omptest::OmptAssertEvent::BufferRequest(
+          DeviceNum, Buffer, Bytes, "Buffer Request"));
+  }
+
+  void handleBufferComplete(int DeviceNum, ompt_buffer_t *Buffer, size_t Bytes,
+                            ompt_buffer_cursor_t Begin, int BufferOwned) {
+    if (RecordAndReplay) {
+      recordEvent(omptest::OmptAssertEvent::BufferComplete(
+          DeviceNum, Buffer, Bytes, Begin, BufferOwned, "Buffer Complete"));
+      return;
+    }
+
+    for (const auto &S : Subscribers)
+      S->notify(omptest::OmptAssertEvent::BufferComplete(
+          DeviceNum, Buffer, Bytes, Begin, BufferOwned, "Buffer Complete"));
+  }
+
+  void handleBufferRecord(ompt_record_ompt_t *Record) {
+    if (RecordAndReplay) {
+      recordEvent(
+          omptest::OmptAssertEvent::BufferRecord(Record, "Buffer Record"));
+      return;
+    }
+
+    for (const auto &S : Subscribers)
+      S->notify(
+          omptest::OmptAssertEvent::BufferRecord(Record, "Buffer Record"));
+  }
+
   /// Not needed for a conforming minimal OMPT implementation
   void handleWorkBegin(ompt_work_t work_type, ompt_scope_endpoint_t endpoint,
                        ompt_data_t *parallel_data, ompt_data_t *task_data,

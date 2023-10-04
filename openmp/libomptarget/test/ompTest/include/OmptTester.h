@@ -24,6 +24,9 @@ extern "C" {
 #endif
 ompt_start_tool_result_t *ompt_start_tool(unsigned int omp_version,
                                           const char *runtime_version);
+int start_trace();
+int flush_trace();
+int stop_trace();
 #ifdef __cplusplus
 }
 #endif
