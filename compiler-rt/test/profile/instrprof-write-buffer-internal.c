@@ -54,6 +54,11 @@ int main(int argc, const char *argv[]) {
       __llvm_profile_begin_counters(), __llvm_profile_end_counters(),
       __llvm_profile_begin_names(), __llvm_profile_end_names());
 
+  if (ret != 0) {
+    fprintf(stderr, "failed to write buffer");
+    return ret;
+  }
+
   FILE *f = fopen(argv[1], "w");
   fwrite(buf, bufsize, 1, f);
   fclose(f);

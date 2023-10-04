@@ -590,11 +590,6 @@ public:
   /// this symbol table.
   inline StringRef getFuncOrVarNameIfDefined(uint64_t ValMD5Hash);
 
-  /// Just like getFuncName, except that it will return a non-empty StringRef
-  /// if the function is external to this symbol table. All such cases
-  /// will be represented using the same StringRef value.
-  // inline StringRef getVTableNameOrExternalSymbol(uint64_t VTableMD5Hash);
-
   /// True if Symbol is the value used to represent external symbols.
   static bool isExternalSymbol(const StringRef &Symbol) {
     return Symbol == InstrProfSymtab::getExternalSymbol();
