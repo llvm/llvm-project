@@ -13,9 +13,8 @@ define i32 @mask_add_sext_i32_i64(ptr %base, i32 %i) {
 ; X64-LABEL: mask_add_sext_i32_i64:
 ; X64:       # %bb.0:
 ; X64-NEXT:    sarl $24, %esi
-; X64-NEXT:    addl $3, %esi
 ; X64-NEXT:    movslq %esi, %rax
-; X64-NEXT:    movl (%rdi,%rax,4), %eax
+; X64-NEXT:    movl 12(%rdi,%rax,4), %eax
 ; X64-NEXT:    retq
   %mask = ashr i32 %i, 24
   %offset = add i32 %mask, 3
@@ -38,8 +37,7 @@ define i32 @mask_add_zext_i32_i64(ptr %base, i32 %i) {
 ; X64:       # %bb.0:
 ; X64-NEXT:    # kill: def $esi killed $esi def $rsi
 ; X64-NEXT:    andl $15, %esi
-; X64-NEXT:    addl $3, %esi
-; X64-NEXT:    movl (%rdi,%rsi,4), %eax
+; X64-NEXT:    movl 12(%rdi,%rsi,4), %eax
 ; X64-NEXT:    retq
   %mask = and i32 %i, 15
   %offset = add i32 %mask, 3
