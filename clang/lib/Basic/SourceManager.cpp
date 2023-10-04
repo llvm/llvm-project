@@ -461,9 +461,9 @@ SourceManager::AllocateLoadedSLocEntries(unsigned NumSLocEntries,
   LoadedSLocEntryTable.resize(LoadedSLocEntryTable.size() + NumSLocEntries);
   SLocEntryLoaded.resize(LoadedSLocEntryTable.size());
   CurrentLoadedOffset -= TotalSize;
-  int ID = LoadedSLocEntryTable.size();
-  LoadedSLocEntryAllocBegin.push_back(FileID::get(-ID - 2));
-  return std::make_pair(-ID - 1, CurrentLoadedOffset);
+  int BaseID = -int(LoadedSLocEntryTable.size()) - 1;
+  LoadedSLocEntryAllocBegin.push_back(FileID::get(BaseID));
+  return std::make_pair(BaseID, CurrentLoadedOffset);
 }
 
 /// As part of recovering from missing or changed content, produce a
@@ -1988,7 +1988,7 @@ bool SourceManager::isInTheSameTranslationUnitImpl(
     auto FindSLocEntryAlloc = [this](FileID FID) {
       // Loaded FileIDs are negative, we store the lowest FileID from each
       // allocation, later allocations have lower FileIDs.
-      return llvm::upper_bound(LoadedSLocEntryAllocBegin, FID, std::greater{});
+      return llvm::lower_bound(LoadedSLocEntryAllocBegin, FID, std::greater{});
     };
 
     // If both are loaded from different AST files.
