@@ -304,7 +304,10 @@ static void performOptionalDebugActions(
     transform->removeAttr(kTransformDialectTagAttrName);
 }
 
-/// Return whether `func1` can be merged into `func2`.
+/// Return whether `func1` can be merged into `func2`. For that to work `func1`
+/// has to be a declaration (aka has to be external) and `func2` either has to
+/// be a declaration as well, or it has to be public (otherwise, it wouldn't
+/// be visible by `func1`).
 bool canMergeInto(FunctionOpInterface func1, FunctionOpInterface func2) {
   return func1.isExternal() && (func2.isPublic() || func2.isExternal());
 }
@@ -381,9 +384,10 @@ static LogicalResult mergeSymbolsInto(Operation *target,
   // Rename private symbols in both ops in order to resolve conflicts that can
   // be resolved that way.
   LLVM_DEBUG(DBGS() << "renaming private symbols to resolve conflicts:\n");
-  for (auto [symbolTable, otherSymbolTable] : llvm::zip(
-           SmallVector<SymbolTable *>{&targetSymbolTable, &otherSymbolTable},
-           SmallVector<SymbolTable *>{&otherSymbolTable, &targetSymbolTable})) {
+  for (auto &&[symbolTable, otherSymbolTable] : llvm::zip(
+           SmallVector<SymbolTable *, 2>{&targetSymbolTable, &otherSymbolTable},
+           SmallVector<SymbolTable *, 2>{&otherSymbolTable,
+                                         &targetSymbolTable})) {
     Operation *symbolTableOp = symbolTable->getOp();
     for (Operation &op : symbolTableOp->getRegion(0).front()) {
       auto symbolOp = dyn_cast<SymbolOpInterface>(op);
@@ -449,9 +453,8 @@ static LogicalResult mergeSymbolsInto(Operation *target,
       }
 
       LLVM_DEBUG(llvm::dbgs() << ", emitting error\n");
-      InFlightDiagnostic diag =
-          emitError(symbolOp->getLoc(),
-                    Twine("doubly defined symbol @") + name.getValue());
+      InFlightDiagnostic diag = symbolOp.emitError()
+                                << "doubly defined symbol @" << name.getValue();
       diag.attachNote(collidingOp->getLoc()) << "previously defined here";
       return diag;
     }
@@ -459,8 +462,7 @@ static LogicalResult mergeSymbolsInto(Operation *target,
 
   for (auto *op : SmallVector<Operation *>{target, *other}) {
     if (failed(mlir::verify(op)))
-      return emitError(op->getLoc(),
-                       "failed to verify input op after renaming");
+      return op->emitError() << "failed to verify input op after renaming";
   }
 
   // Step 2:
@@ -520,8 +522,8 @@ static LogicalResult mergeSymbolsInto(Operation *target,
   }
 
   if (failed(mlir::verify(target)))
-    return emitError(target->getLoc(),
-                     "failed to verify target op after merging symbols");
+    return target->emitError()
+           << "failed to verify target op after merging symbols";
 
   LLVM_DEBUG(DBGS() << "done merging ops\n");
   return success();
