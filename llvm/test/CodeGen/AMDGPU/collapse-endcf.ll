@@ -449,14 +449,14 @@ define amdgpu_kernel void @nested_if_if_else(ptr addrspace(1) nocapture %arg) {
 ; GCN-O0-NEXT:    s_mov_b32 s5, s2
 ; GCN-O0-NEXT:    ; kill: def $sgpr0_sgpr1 killed $sgpr0_sgpr1 def $sgpr0_sgpr1_sgpr2_sgpr3
 ; GCN-O0-NEXT:    s_mov_b64 s[2:3], s[4:5]
-; GCN-O0-NEXT:    s_mov_b32 s4, 2
-; GCN-O0-NEXT:    v_lshlrev_b32_e64 v3, s4, v1
 ; GCN-O0-NEXT:    s_mov_b32 s4, 0
 ; GCN-O0-NEXT:    ; implicit-def: $sgpr4
+; GCN-O0-NEXT:    v_mov_b32_e32 v4, 0
 ; GCN-O0-NEXT:    s_waitcnt expcnt(0)
-; GCN-O0-NEXT:    v_mov_b32_e32 v2, 0
-; GCN-O0-NEXT:    ; kill: def $vgpr3 killed $vgpr3 def $vgpr3_vgpr4 killed $exec
-; GCN-O0-NEXT:    v_mov_b32_e32 v4, v2
+; GCN-O0-NEXT:    v_mov_b32_e32 v2, v1
+; GCN-O0-NEXT:    v_mov_b32_e32 v3, v4
+; GCN-O0-NEXT:    s_mov_b32 s4, 2
+; GCN-O0-NEXT:    v_lshl_b64 v[3:4], v[2:3], s4
 ; GCN-O0-NEXT:    v_mov_b32_e32 v2, 0
 ; GCN-O0-NEXT:    buffer_store_dword v2, v[3:4], s[0:3], 0 addr64
 ; GCN-O0-NEXT:    s_mov_b32 s0, 1
@@ -684,14 +684,15 @@ define amdgpu_kernel void @nested_if_else_if(ptr addrspace(1) nocapture %arg) {
 ; GCN-O0-NEXT:    s_load_dwordx2 s[4:5], s[4:5], 0x9
 ; GCN-O0-NEXT:    v_mov_b32_e32 v2, v1
 ; GCN-O0-NEXT:    buffer_store_dword v2, off, s[12:15], 0 offset:16 ; 4-byte Folded Spill
-; GCN-O0-NEXT:    s_mov_b32 s0, 2
-; GCN-O0-NEXT:    v_lshlrev_b32_e64 v3, s0, v1
-; GCN-O0-NEXT:    s_mov_b32 s1, 0
-; GCN-O0-NEXT:    ; implicit-def: $sgpr1
+; GCN-O0-NEXT:    s_mov_b32 s0, 0
+; GCN-O0-NEXT:    ; implicit-def: $sgpr0
+; GCN-O0-NEXT:    v_mov_b32_e32 v4, 0
 ; GCN-O0-NEXT:    s_waitcnt expcnt(0)
-; GCN-O0-NEXT:    v_mov_b32_e32 v2, 0
-; GCN-O0-NEXT:    ; kill: def $vgpr3 killed $vgpr3 def $vgpr3_vgpr4 killed $exec
-; GCN-O0-NEXT:    v_mov_b32_e32 v4, v2
+; GCN-O0-NEXT:    v_mov_b32_e32 v2, v1
+; GCN-O0-NEXT:    v_mov_b32_e32 v3, v4
+; GCN-O0-NEXT:    s_mov_b32 s0, 2
+; GCN-O0-NEXT:    s_mov_b32 s1, s0
+; GCN-O0-NEXT:    v_lshl_b64 v[3:4], v[2:3], s1
 ; GCN-O0-NEXT:    s_waitcnt lgkmcnt(0)
 ; GCN-O0-NEXT:    s_mov_b32 s2, s4
 ; GCN-O0-NEXT:    v_mov_b32_e32 v2, v3

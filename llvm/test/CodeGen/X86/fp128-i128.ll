@@ -137,7 +137,7 @@ define fp128 @TestI128_1(fp128 %x) #0 {
 ; SSE-NEXT:    xorl %ecx, %ecx
 ; SSE-NEXT:    testl %eax, %eax
 ; SSE-NEXT:    sets %cl
-; SSE-NEXT:    shll $4, %ecx
+; SSE-NEXT:    shlq $4, %rcx
 ; SSE-NEXT:    movaps {{\.?LCPI[0-9]+_[0-9]+}}(%rcx), %xmm0
 ; SSE-NEXT:    popq %rax
 ; SSE-NEXT:    retq
@@ -151,7 +151,7 @@ define fp128 @TestI128_1(fp128 %x) #0 {
 ; AVX-NEXT:    xorl %ecx, %ecx
 ; AVX-NEXT:    testl %eax, %eax
 ; AVX-NEXT:    sets %cl
-; AVX-NEXT:    shll $4, %ecx
+; AVX-NEXT:    shlq $4, %rcx
 ; AVX-NEXT:    vmovaps {{\.?LCPI[0-9]+_[0-9]+}}(%rcx), %xmm0
 ; AVX-NEXT:    popq %rax
 ; AVX-NEXT:    retq

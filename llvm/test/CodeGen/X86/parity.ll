@@ -637,7 +637,7 @@ define i64 @parity_64_shift(i64 %0) {
 ; X64-NOPOPCNT-NEXT:    xorl %eax, %eax
 ; X64-NOPOPCNT-NEXT:    xorb %ch, %cl
 ; X64-NOPOPCNT-NEXT:    setnp %al
-; X64-NOPOPCNT-NEXT:    addl %eax, %eax
+; X64-NOPOPCNT-NEXT:    addq %rax, %rax
 ; X64-NOPOPCNT-NEXT:    retq
 ;
 ; X86-POPCNT-LABEL: parity_64_shift:
@@ -654,7 +654,7 @@ define i64 @parity_64_shift(i64 %0) {
 ; X64-POPCNT:       # %bb.0:
 ; X64-POPCNT-NEXT:    popcntq %rdi, %rax
 ; X64-POPCNT-NEXT:    andl $1, %eax
-; X64-POPCNT-NEXT:    addl %eax, %eax
+; X64-POPCNT-NEXT:    addq %rax, %rax
 ; X64-POPCNT-NEXT:    retq
   %2 = tail call i64 @llvm.ctpop.i64(i64 %0)
   %3 = shl nuw nsw i64 %2, 1

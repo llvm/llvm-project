@@ -78,7 +78,7 @@ define <2 x i64> @foo_128(i32 %0, <2 x i64> %1, <2 x i64> %2, ptr %3) {
 ; AVX-NEXT:  # %bb.4: # %.preheader
 ; AVX-NEXT:    shlq $4, %rcx
 ; AVX-NEXT:    addq %rcx, %rsi
-; AVX-NEXT:    shll $4, %eax
+; AVX-NEXT:    shlq $4, %rax
 ; AVX-NEXT:    xorl %ecx, %ecx
 ; AVX-NEXT:    .p2align 4, 0x90
 ; AVX-NEXT:  .LBB1_5: # =>This Inner Loop Header: Depth=1
@@ -125,7 +125,7 @@ define <2 x i64> @foo_128(i32 %0, <2 x i64> %1, <2 x i64> %2, ptr %3) {
 ; AVX512-NEXT:  # %bb.4: # %.preheader
 ; AVX512-NEXT:    shlq $4, %rcx
 ; AVX512-NEXT:    addq %rcx, %rsi
-; AVX512-NEXT:    shll $4, %eax
+; AVX512-NEXT:    shlq $4, %rax
 ; AVX512-NEXT:    xorl %ecx, %ecx
 ; AVX512-NEXT:    .p2align 4, 0x90
 ; AVX512-NEXT:  .LBB1_5: # =>This Inner Loop Header: Depth=1
@@ -425,7 +425,7 @@ define <4 x i64> @foo_256(i32 %0, <4 x i64> %1, <4 x i64> %2, ptr %3) {
 ; AVX-NEXT:  # %bb.4: # %.preheader
 ; AVX-NEXT:    shlq $5, %rcx
 ; AVX-NEXT:    addq %rcx, %rsi
-; AVX-NEXT:    shll $5, %eax
+; AVX-NEXT:    shlq $5, %rax
 ; AVX-NEXT:    xorl %ecx, %ecx
 ; AVX-NEXT:    .p2align 4, 0x90
 ; AVX-NEXT:  .LBB4_5: # =>This Inner Loop Header: Depth=1
@@ -472,7 +472,7 @@ define <4 x i64> @foo_256(i32 %0, <4 x i64> %1, <4 x i64> %2, ptr %3) {
 ; AVX512-NEXT:  # %bb.4: # %.preheader
 ; AVX512-NEXT:    shlq $5, %rcx
 ; AVX512-NEXT:    addq %rcx, %rsi
-; AVX512-NEXT:    shll $5, %eax
+; AVX512-NEXT:    shlq $5, %rax
 ; AVX512-NEXT:    xorl %ecx, %ecx
 ; AVX512-NEXT:    .p2align 4, 0x90
 ; AVX512-NEXT:  .LBB4_5: # =>This Inner Loop Header: Depth=1
