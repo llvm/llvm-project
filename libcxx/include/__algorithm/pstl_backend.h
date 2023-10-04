@@ -35,11 +35,25 @@ A PSTL parallel backend is a tag type to which the following functions are assoc
   template <class _ExecutionPolicy, class _RandomAccessIterator, class _Comp>
   void __pstl_stable_sort(_Backend, _RandomAccessIterator __first, _RandomAccessIterator __last, _Comp __comp);
 
+  template <class _ExecutionPolicy,
+            class _ForwardIterator1,
+            class _ForwardIterator2,
+            class _ForwardOutIterator,
+            class _Comp>
+  _ForwardOutIterator __pstl_merge(_Backend,
+                                   _ForwardIterator1 __first1,
+                                   _ForwardIterator1 __last1,
+                                   _ForwardIterator2 __first2,
+                                   _ForwardIterator2 __last2,
+                                   _ForwardOutIterator __result,
+                                   _Comp __comp);
+
   template <class _ExecutionPolicy, class _InIterator, class _OutIterator, class _UnaryOperation>
-  _OutIterator __pstl_transform(_InIterator __first, _InIterator __last, _OutIterator __result, _UnaryOperation __op);
+  _OutIterator __pstl_transform(_Backend, _InIterator __first, _InIterator __last, _OutIterator __result, _UnaryOperation __op);
 
   template <class _ExecutionPolicy, class _InIterator1, class _InIterator2, class _OutIterator, class _BinaryOperation>
-  _OutIterator __pstl_transform(_InIterator1 __first1,
+  _OutIterator __pstl_transform(_Backend,
+                                _InIterator1 __first1,
                                 _InIterator1 __last1,
                                 _InIterator2 __first2,
                                 _OutIterator __result,
