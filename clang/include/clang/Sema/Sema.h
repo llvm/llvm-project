@@ -7387,7 +7387,8 @@ public:
   public:
     LambdaScopeForCallOperatorInstantiationRAII(
         Sema &SemasRef, FunctionDecl *FD, MultiLevelTemplateArgumentList MLTAL,
-        LocalInstantiationScope &Scope);
+        LocalInstantiationScope &Scope,
+        bool ShouldAddDeclsFromParentScope = true);
   };
 
   /// Check whether the given expression is a valid constraint expression.
@@ -7413,6 +7414,11 @@ private:
   llvm::ContextualFoldingSet<ConstraintSatisfaction, const ASTContext &>
       SatisfactionCache;
 
+  /// Introduce the instantiated local variables into the local
+  /// instantiation scope.
+  void addInstantiatedLocalVarsToScope(FunctionDecl *Function,
+                                       const FunctionDecl *PatternDecl,
+                                       LocalInstantiationScope &Scope);
   /// Introduce the instantiated function parameters into the local
   /// instantiation scope, and set the parameter names to those used
   /// in the template.

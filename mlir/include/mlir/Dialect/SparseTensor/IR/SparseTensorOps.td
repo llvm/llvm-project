@@ -762,7 +762,7 @@ def SparseTensor_OutOp : SparseTensor_Op<"out", []>,
 // Sparse Tensor Sorting Operations.
 //===----------------------------------------------------------------------===//
 
-def SparseTensor_SortCooOp : SparseTensor_Op<"sort_coo">,
+def SparseTensor_SortOp : SparseTensor_Op<"sort">,
     Arguments<(ins Index:$n, StridedMemRefRankOf<[AnyInteger, Index], [1]>:$xy,
                Variadic<StridedMemRefRankOf<[AnyType], [1]>>:$ys,
                AffineMapAttr:$perm_map, OptionalAttr<IndexAttr>:$ny,
@@ -770,7 +770,7 @@ def SparseTensor_SortCooOp : SparseTensor_Op<"sort_coo">,
   let summary = "Sorts the arrays in xs and ys lexicographically on the "
                 "integral values found in the xs list";
   let description = [{
-    Sparse_tensor.sort_coo sort the `xs` values along with some `ys` values
+    Sparse_tensor.sort sort the `xs` values along with some `ys` values
     that are put in a single linear buffer `xy`.
     The affine map attribute `perm_map` specifies the permutation to be applied on
     the `xs` before comparison, the rank of the permutation map
@@ -787,14 +787,8 @@ def SparseTensor_SortCooOp : SparseTensor_Op<"sort_coo">,
     Example:
 
     ```mlir
-    sparse_tensor.sort_coo insertion_sort_stable %n, %x { perm_map = affine_map<(i,j) -> (j,i)> }
+    sparse_tensor.sort insertion_sort_stable %n, %x { perm_map = affine_map<(i,j) -> (j,i)> }
       : memref<?xindex>
-    ```
-
-    ```mlir
-    sparse_tensor.sort hybrid_quick_sort %n, %xy jointly %y1
-      { nx = 2 : index, ny = 2 : index}
-      : memref<?xi64> jointly memref<?xf32>
     ```
   }];
 
