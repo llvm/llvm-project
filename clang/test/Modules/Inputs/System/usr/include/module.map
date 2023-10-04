@@ -1,7 +1,22 @@
 module cstd [system] {
+  // Only in system headers directory
+  module complex {
+    header "complex.h"
+  }
+
   // Only in compiler support directory
   module float_constants {
     header "float.h"
+  }
+
+  // In both directories (compiler support version wins, forwards)
+  module inttypes {
+    header "inttypes.h"
+  }
+
+  // Only in system headers directory
+  module math {
+    header "math.h"
   }
 
   // Only in system headers directory
