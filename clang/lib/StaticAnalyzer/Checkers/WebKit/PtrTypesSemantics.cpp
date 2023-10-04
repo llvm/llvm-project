@@ -18,24 +18,26 @@ using namespace clang;
 
 namespace {
 
-bool hasPublicRefAndDeref(const CXXRecordDecl *R) {
+bool hasPublicRefMethod(const CXXRecordDecl *R) {
   assert(R);
   assert(R->hasDefinition());
 
-  bool hasRef = false;
-  bool hasDeref = false;
   for (const CXXMethodDecl *MD : R->methods()) {
     const auto MethodName = safeGetName(MD);
+    if (MethodName == "ref" && MD->getAccess() == AS_public)
+      return true;
+  }
+  return false;
+}
 
-    if (MethodName == "ref" && MD->getAccess() == AS_public) {
-      if (hasDeref)
-        return true;
-      hasRef = true;
-    } else if (MethodName == "deref" && MD->getAccess() == AS_public) {
-      if (hasRef)
-        return true;
-      hasDeref = true;
-    }
+bool hasPublicDerefMethod(const CXXRecordDecl *R) {
+  assert(R);
+  assert(R->hasDefinition());
+
+  for (const CXXMethodDecl *MD : R->methods()) {
+    const auto MethodName = safeGetName(MD);
+    if (MethodName == "deref" && MD->getAccess() == AS_public)
+      return true;
   }
   return false;
 }
@@ -44,9 +46,8 @@ bool hasPublicRefAndDeref(const CXXRecordDecl *R) {
 
 namespace clang {
 
-std::optional<const clang::CXXRecordDecl*>
-isRefCountable(const CXXBaseSpecifier* Base)
-{
+std::optional<const clang::CXXRecordDecl *>
+hasPublicRefInBase(const CXXBaseSpecifier *Base) {
   assert(Base);
 
   const Type *T = Base->getType().getTypePtrOrNull();
@@ -59,7 +60,24 @@ isRefCountable(const CXXBaseSpecifier* Base)
   if (!R->hasDefinition())
     return std::nullopt;
 
-  return hasPublicRefAndDeref(R) ? R : nullptr;
+  return hasPublicRefMethod(R) ? R : nullptr;
+}
+
+std::optional<const clang::CXXRecordDecl *>
+hasPublicDerefInBase(const CXXBaseSpecifier *Base) {
+  assert(Base);
+
+  const Type *T = Base->getType().getTypePtrOrNull();
+  if (!T)
+    return std::nullopt;
+
+  const CXXRecordDecl *R = T->getAsCXXRecordDecl();
+  if (!R)
+    return std::nullopt;
+  if (!R->hasDefinition())
+    return std::nullopt;
+
+  return hasPublicDerefMethod(R) ? R : nullptr;
 }
 
 std::optional<bool> isRefCountable(const CXXRecordDecl* R)
@@ -70,29 +88,45 @@ std::optional<bool> isRefCountable(const CXXRecordDecl* R)
   if (!R)
     return std::nullopt;
 
-  if (hasPublicRefAndDeref(R))
+  bool hasRef = hasPublicRefMethod(R);
+  bool hasDeref = hasPublicDerefMethod(R);
+  if (hasRef && hasDeref)
     return true;
 
   CXXBasePaths Paths;
   Paths.setOrigin(const_cast<CXXRecordDecl *>(R));
 
   bool AnyInconclusiveBase = false;
-  const auto isRefCountableBase =
-      [&AnyInconclusiveBase](const CXXBaseSpecifier* Base, CXXBasePath&) {
-          std::optional<const clang::CXXRecordDecl*> IsRefCountable = clang::isRefCountable(Base);
-          if (!IsRefCountable) {
-              AnyInconclusiveBase = true;
-              return false;
-          }
-          return (*IsRefCountable) != nullptr;
+  const auto hasPublicRefInBase =
+      [&AnyInconclusiveBase](const CXXBaseSpecifier *Base, CXXBasePath &) {
+        auto hasRefInBase = clang::hasPublicRefInBase(Base);
+        if (!hasRefInBase) {
+          AnyInconclusiveBase = true;
+          return false;
+        }
+        return (*hasRefInBase) != nullptr;
       };
 
-  bool BasesResult = R->lookupInBases(isRefCountableBase, Paths,
-                                      /*LookupInDependent =*/true);
+  hasRef =
+      R->lookupInBases(hasPublicRefInBase, Paths, /*LookupInDependent =*/true);
   if (AnyInconclusiveBase)
     return std::nullopt;
 
-  return BasesResult;
+  const auto hasPublicDerefInBase =
+      [&AnyInconclusiveBase](const CXXBaseSpecifier *Base, CXXBasePath &) {
+        auto hasDerefInBase = clang::hasPublicDerefInBase(Base);
+        if (!hasDerefInBase) {
+          AnyInconclusiveBase = true;
+          return false;
+        }
+        return (*hasDerefInBase) != nullptr;
+      };
+  hasDeref = R->lookupInBases(hasPublicDerefInBase, Paths,
+                              /*LookupInDependent =*/true);
+  if (AnyInconclusiveBase)
+    return std::nullopt;
+
+  return hasRef && hasDeref;
 }
 
 bool isCtorOfRefCounted(const clang::FunctionDecl *F) {

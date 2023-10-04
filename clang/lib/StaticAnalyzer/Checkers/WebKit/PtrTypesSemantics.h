@@ -26,10 +26,15 @@ class Type;
 // In WebKit there are two ref-counted templated smart pointers: RefPtr<T> and
 // Ref<T>.
 
-/// \returns CXXRecordDecl of the base if the type is ref-countable, nullptr if
-/// not, std::nullopt if inconclusive.
-std::optional<const clang::CXXRecordDecl*>
-isRefCountable(const clang::CXXBaseSpecifier* Base);
+/// \returns CXXRecordDecl of the base if the type has ref as a public method,
+/// nullptr if not, std::nullopt if inconclusive.
+std::optional<const clang::CXXRecordDecl *>
+hasPublicRefInBase(const CXXBaseSpecifier *Base);
+
+/// \returns CXXRecordDecl of the base if the type has deref as a public
+/// method, nullptr if not, std::nullopt if inconclusive.
+std::optional<const clang::CXXRecordDecl *>
+hasPublicDerefInBase(const CXXBaseSpecifier *Base);
 
 /// \returns true if \p Class is ref-countable, false if not, std::nullopt if
 /// inconclusive.
