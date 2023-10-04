@@ -343,7 +343,7 @@ def GENX_MatrixElemType : AnyTypeOf<[AnyI8, AnyI16, AnyI32, F32, F16, BF16]>;
 
 def GENX_MatrixDPASOp : GENX_Op<"matrix.dpas">,
   Results<(outs FixedVectorOf<[GENX_MatrixElemType]>:$d)>,
-  Arguments<(ins 
+  Arguments<(ins
     FixedVectorOf<[GENX_MatrixElemType]>:$c,
     FixedVectorOf<[GENX_MatrixElemType]>:$a,
     FixedVectorOf<[GENX_MatrixElemType]>:$b,
@@ -386,7 +386,7 @@ def GENX_MatrixDPASOp : GENX_Op<"matrix.dpas">,
   string llvmBuilder = [{
     $d = createGenISADPAS(op, builder, moduleTranslation);
   }];
-    
+ 
   let assemblyFormat = [{
     operands attr-dict `:` functional-type(operands, results)
   }];
@@ -396,7 +396,7 @@ def GENX_MatrixDPASOp : GENX_Op<"matrix.dpas">,
 
 def GENX_Matrix2DBlockLoadOp : GENX_Op<"matrix.2Dblockload">,
   Results<(outs FixedVectorOf<[GENX_MatrixElemType]>:$res)>,
-  Arguments<(ins 
+  Arguments<(ins
     Arg<LLVM_PointerTo<GENX_MatrixElemType>, "", [MemRead]>:$ptr,
     I32:$base_width,
     I32:$base_height,
@@ -433,7 +433,7 @@ def GENX_Matrix2DBlockLoadOp : GENX_Op<"matrix.2Dblockload">,
   string llvmBuilder = [{
     $res = createGenISA2DBlockRead(op, builder, moduleTranslation);
   }];
-    
+ 
   let assemblyFormat = [{
     operands attr-dict `:` functional-type(operands, results)
   }];
@@ -442,7 +442,7 @@ def GENX_Matrix2DBlockLoadOp : GENX_Op<"matrix.2Dblockload">,
 }
 
 def GENX_Matrix2DBlockStoreOp : GENX_Op<"matrix.2Dblockstore">,
-  Arguments<(ins 
+  Arguments<(ins
     Arg<LLVM_PointerTo<GENX_MatrixElemType>, "", [MemWrite]>:$ptr,
     I32:$base_width,
     I32:$base_height,
@@ -481,7 +481,7 @@ def GENX_Matrix2DBlockStoreOp : GENX_Op<"matrix.2Dblockstore">,
   string llvmBuilder = [{
     createGenISA2DBlockWrite(op, builder, moduleTranslation);
   }];
-    
+ 
   let assemblyFormat = [{
     operands attr-dict `:` `(` type(operands) `)`
   }];

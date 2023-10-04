@@ -210,7 +210,7 @@ createGenISADPAS(GENX::MatrixDPASOp op, llvm::IRBuilderBase &builder,
   llvm::Module *module = builder.GetInsertBlock()->getModule();
   TypeRange opTypes = op->getOperandTypes();
   llvm::Function *fn = llvm::GenISAIntrinsic::getDeclaration(
-      module, llvm::GenISAIntrinsic::GenISA_dpas,
+      module, llvm::GenISAIntrinsic::GenISA_sub_group_dpas,
       {moduleTranslation.convertType(op->getResultTypes()[0]),
        moduleTranslation.convertType(opTypes[0]),
        moduleTranslation.convertType(opTypes[1]),
