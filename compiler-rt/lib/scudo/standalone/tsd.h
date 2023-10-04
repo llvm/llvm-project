@@ -53,9 +53,7 @@ template <class Allocator> struct alignas(SCUDO_CACHE_LINE_SIZE) TSD {
   inline void unlock() NO_THREAD_SAFETY_ANALYSIS { Mutex.unlock(); }
   inline uptr getPrecedence() { return atomic_load_relaxed(&Precedence); }
 
-  void commitBack(Allocator *Instance) {
-    Instance->commitBack(this);
-  }
+  void commitBack(Allocator *Instance) { Instance->commitBack(this); }
 
   // As the comments attached to `getCache()`, the TSD doesn't always need to be
   // locked. In that case, we would only skip the check before we have all TSDs
@@ -74,9 +72,7 @@ template <class Allocator> struct alignas(SCUDO_CACHE_LINE_SIZE) TSD {
   // TODO(chiahungduan): Ideally, we want to do `Mutex.assertHeld` but acquiring
   // TSD doesn't always require holding the lock. Add this assertion while the
   // lock is always acquired.
-  typename Allocator::CacheT &getCache() REQUIRES(Mutex) {
-    return Cache;
-  }
+  typename Allocator::CacheT &getCache() REQUIRES(Mutex) { return Cache; }
   typename Allocator::QuarantineCacheT &getQuarantineCache() REQUIRES(Mutex) {
     return QuarantineCache;
   }
