@@ -28,8 +28,11 @@ class BlockFrequency {
 public:
   BlockFrequency(uint64_t Freq = 0) : Frequency(Freq) { }
 
-  /// Returns the maximum possible frequency, the saturation value.
+  /// Returns the maximum possible frequency, the saturation value integer.
   static uint64_t getMaxFrequency() { return UINT64_MAX; }
+
+  /// Returns the maximum possible frequency, the saturation value.
+  static BlockFrequency max() { return BlockFrequency(UINT64_MAX); }
 
   /// Returns the frequency as a fixpoint number scaled by the entry
   /// frequency.

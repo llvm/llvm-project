@@ -452,7 +452,7 @@ class MachineBlockPlacement : public MachineFunctionPass {
   }
 
   /// Scale the DupThreshold according to basic block size.
-  BlockFrequency scaleThreshold(MachineBasicBlock *BB);
+  BlockFrequency scaleThreshold(const MachineBasicBlock &BB) const;
   void initDupThreshold();
 
   /// Decrease the UnscheduledPredecessors count for all blocks in chain, and
@@ -3146,9 +3146,9 @@ bool MachineBlockPlacement::maybeTailDuplicateBlock(
 }
 
 // Count the number of actual machine instructions.
-static uint64_t countMBBInstruction(MachineBasicBlock *MBB) {
+static uint64_t countMBBInstructions(const MachineBasicBlock &MBB) {
   uint64_t InstrCount = 0;
-  for (MachineInstr &MI : *MBB) {
+  for (const MachineInstr &MI : MBB) {
     if (!MI.isPHI() && !MI.isMetaInstruction())
       InstrCount += 1;
   }
@@ -3158,8 +3158,15 @@ static uint64_t countMBBInstruction(MachineBasicBlock *MBB) {
 // The size cost of duplication is the instruction size of the duplicated block.
 // So we should scale the threshold accordingly. But the instruction size is not
 // available on all targets, so we use the number of instructions instead.
-BlockFrequency MachineBlockPlacement::scaleThreshold(MachineBasicBlock *BB) {
-  return DupThreshold.getFrequency() * countMBBInstruction(BB);
+BlockFrequency
+MachineBlockPlacement::scaleThreshold(const MachineBasicBlock &MBB) const {
+  std::optional<BlockFrequency> threshold =
+      DupThreshold.mul(countMBBInstructions(MBB));
+  // Return maximum value in case of overflow so the `Gains > Threshold`
+  // in callers do not succeed.
+  if (!threshold)
+    return BlockFrequency::max();
+  return *threshold;
 }
 
 // Returns true if BB is Pred's best successor.
@@ -3196,7 +3203,7 @@ bool MachineBlockPlacement::isBestSuccessor(MachineBasicBlock *BB,
   // instead of another successor. Then compare it with threshold.
   BlockFrequency PredFreq = getBlockCountOrFrequency(Pred);
   BlockFrequency Gain = PredFreq * (BBProb - BestProb);
-  return Gain > scaleThreshold(BB);
+  return Gain > scaleThreshold(*BB);
 }
 
 // Find out the predecessors of BB and BB can be beneficially duplicated into
@@ -3207,7 +3214,7 @@ void MachineBlockPlacement::findDuplicateCandidates(
     BlockFilterSet *BlockFilter) {
   MachineBasicBlock *Fallthrough = nullptr;
   BranchProbability DefaultBranchProb = BranchProbability::getZero();
-  BlockFrequency BBDupThreshold(scaleThreshold(BB));
+  BlockFrequency BBDupThreshold(scaleThreshold(*BB));
   SmallVector<MachineBasicBlock *, 8> Preds(BB->predecessors());
   SmallVector<MachineBasicBlock *, 8> Succs(BB->successors());
 
