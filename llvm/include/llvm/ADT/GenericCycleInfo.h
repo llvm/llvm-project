@@ -255,6 +255,7 @@ public:
 
   void clear();
   void compute(FunctionT &F);
+  void splitCriticalEdge(BlockT *Pred, BlockT *Succ, BlockT *New);
 
   const FunctionT *getFunction() const { return Context.getFunction(); }
   const ContextT &getSSAContext() const { return Context; }
