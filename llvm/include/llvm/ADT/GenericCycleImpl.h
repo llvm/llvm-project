@@ -363,6 +363,25 @@ void GenericCycleInfo<ContextT>::compute(FunctionT &F) {
   assert(validateTree());
 }
 
+template <typename ContextT>
+void GenericCycleInfo<ContextT>::splitCriticalEdge(BlockT *Pred, BlockT *Succ,
+                                                   BlockT *NewBlock) {
+  // Edge Pred-Succ is replaced by edges Pred-NewBlock and NewBlock-Succ, all
+  // cycles that had blocks Pred and Succ also get NewBlock.
+  CycleT *Cycle = this->getCycle(Pred);
+  if (Cycle && Cycle->contains(Succ)) {
+    while (Cycle) {
+      // FixMe: Appending NewBlock is fine as a set of blocks in a cycle. When
+      // printing cycle NewBlock is at the end of list but it should be in the
+      // middle to represent actual traversal of a cycle.
+      Cycle->appendBlock(NewBlock);
+      BlockMap.try_emplace(NewBlock, Cycle);
+      Cycle = Cycle->getParentCycle();
+    }
+  }
+  assert(validateTree());
+}
+
 /// \brief Find the innermost cycle containing a given block.
 ///
 /// \returns the innermost cycle containing \p Block or nullptr if

@@ -22,6 +22,7 @@ body: |
   ; CHECK-NEXT:   [[PHI:%[0-9]+]]:sreg_32 = PHI [[S_MOV_B32_1]], %bb.0, %6, %bb.1
   ; CHECK-NEXT:   [[PHI1:%[0-9]+]]:sreg_32 = PHI [[S_MOV_B32_]], %bb.0, %8, %bb.1
   ; CHECK-NEXT:   [[S_ADD_I32_:%[0-9]+]]:sreg_32 = S_ADD_I32 [[PHI1]], [[S_MOV_B32_2]], implicit-def dead $scc
+  ; CHECK-NEXT:   [[V_ADD_U32_e64_:%[0-9]+]]:vgpr_32 = V_ADD_U32_e64 [[S_ADD_I32_]], [[S_ADD_I32_]], 0, implicit $exec
   ; CHECK-NEXT:   [[V_CVT_F32_U32_e64_:%[0-9]+]]:vgpr_32 = V_CVT_F32_U32_e64 [[S_ADD_I32_]], 0, 0, implicit $mode, implicit $exec
   ; CHECK-NEXT:   [[V_CMP_GT_F32_e64_:%[0-9]+]]:sreg_32 = nofpexcept V_CMP_GT_F32_e64 0, killed [[V_CVT_F32_U32_e64_]], 0, [[COPY]], 0, implicit $mode, implicit $exec
   ; CHECK-NEXT:   [[SI_IF_BREAK:%[0-9]+]]:sreg_32 = SI_IF_BREAK killed [[V_CMP_GT_F32_e64_]], [[PHI]], implicit-def dead $scc
@@ -30,7 +31,6 @@ body: |
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.2:
   ; CHECK-NEXT:   SI_END_CF [[SI_IF_BREAK]], implicit-def dead $exec, implicit-def dead $scc, implicit $exec
-  ; CHECK-NEXT:   [[V_ADD_U32_e64_:%[0-9]+]]:vgpr_32 = V_ADD_U32_e64 [[S_ADD_I32_]], [[S_ADD_I32_]], 0, implicit $exec
   ; CHECK-NEXT:   FLAT_STORE_DWORD [[COPY1]], [[V_ADD_U32_e64_]], 0, 0, implicit $exec, implicit $flat_scr :: (store (s32))
   ; CHECK-NEXT:   SI_RETURN
   bb.0:
@@ -83,6 +83,9 @@ body: |
   ; CHECK-NEXT:   [[PHI:%[0-9]+]]:sreg_32 = PHI [[S_MOV_B32_1]], %bb.0, %6, %bb.1
   ; CHECK-NEXT:   [[PHI1:%[0-9]+]]:sreg_32 = PHI [[S_MOV_B32_]], %bb.0, %8, %bb.1
   ; CHECK-NEXT:   [[S_ADD_I32_:%[0-9]+]]:sreg_32 = S_ADD_I32 [[PHI1]], [[S_MOV_B32_2]], implicit-def dead $scc
+  ; CHECK-NEXT:   [[S_ADD_I32_1:%[0-9]+]]:sreg_32 = S_ADD_I32 [[S_ADD_I32_]], [[S_MOV_B32_2]], implicit-def dead $scc
+  ; CHECK-NEXT:   [[S_ADD_I32_2:%[0-9]+]]:sreg_32 = S_ADD_I32 [[S_ADD_I32_1]], [[S_MOV_B32_2]], implicit-def dead $scc
+  ; CHECK-NEXT:   [[V_ADD_U32_e64_:%[0-9]+]]:vgpr_32 = V_ADD_U32_e64 [[S_ADD_I32_2]], [[S_ADD_I32_2]], 0, implicit $exec
   ; CHECK-NEXT:   [[V_CVT_F32_U32_e64_:%[0-9]+]]:vgpr_32 = V_CVT_F32_U32_e64 [[S_ADD_I32_]], 0, 0, implicit $mode, implicit $exec
   ; CHECK-NEXT:   [[V_CMP_GT_F32_e64_:%[0-9]+]]:sreg_32 = nofpexcept V_CMP_GT_F32_e64 0, killed [[V_CVT_F32_U32_e64_]], 0, [[COPY]], 0, implicit $mode, implicit $exec
   ; CHECK-NEXT:   [[SI_IF_BREAK:%[0-9]+]]:sreg_32 = SI_IF_BREAK killed [[V_CMP_GT_F32_e64_]], [[PHI]], implicit-def dead $scc
@@ -91,9 +94,6 @@ body: |
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.2:
   ; CHECK-NEXT:   SI_END_CF [[SI_IF_BREAK]], implicit-def dead $exec, implicit-def dead $scc, implicit $exec
-  ; CHECK-NEXT:   [[S_ADD_I32_1:%[0-9]+]]:sreg_32 = S_ADD_I32 [[S_ADD_I32_]], [[S_MOV_B32_2]], implicit-def dead $scc
-  ; CHECK-NEXT:   [[S_ADD_I32_2:%[0-9]+]]:sreg_32 = S_ADD_I32 [[S_ADD_I32_1]], [[S_MOV_B32_2]], implicit-def dead $scc
-  ; CHECK-NEXT:   [[V_ADD_U32_e64_:%[0-9]+]]:vgpr_32 = V_ADD_U32_e64 [[S_ADD_I32_2]], [[S_ADD_I32_2]], 0, implicit $exec
   ; CHECK-NEXT:   FLAT_STORE_DWORD [[COPY1]], [[V_ADD_U32_e64_]], 0, 0, implicit $exec, implicit $flat_scr :: (store (s32))
   ; CHECK-NEXT:   SI_RETURN
   bb.0:

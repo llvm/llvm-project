@@ -960,6 +960,10 @@ const MachineBasicBlock *MachineBasicBlock::getSingleSuccessor() const {
   return Successors.size() == 1 ? Successors[0] : nullptr;
 }
 
+const MachineBasicBlock *MachineBasicBlock::getSinglePredecessor() const {
+  return Predecessors.size() == 1 ? Predecessors[0] : nullptr;
+}
+
 MachineBasicBlock *MachineBasicBlock::getFallThrough(bool JumpToFallThrough) {
   MachineFunction::iterator Fallthrough = getIterator();
   ++Fallthrough;
