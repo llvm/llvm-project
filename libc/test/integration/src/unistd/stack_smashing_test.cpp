@@ -28,7 +28,7 @@ void no_stack_smashing_normal_exit() {
     // Child process
     char foo[30];
     for (int i = 0; i < 30; i++)
-      foo[i] = 42;
+      foo[i] = (foo[i] != 42) ? 42 : 24;
     return;
   }
   ASSERT_TRUE(pid > 0);
@@ -48,7 +48,7 @@ void stack_smashing_abort() {
     char *cur_ptr = &foo[0];
     // Corrupt the stack
     while (cur_ptr != frame_ptr) {
-      *cur_ptr = 42;
+      *cur_ptr = (*cur_ptr != 42) ? 42 : 24;
       cur_ptr++;
     }
     return;

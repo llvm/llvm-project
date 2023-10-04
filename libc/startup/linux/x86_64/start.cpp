@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "config/linux/app.h"
+#include "src/__support/OSUtil/io.h"
 #include "src/__support/OSUtil/syscall.h"
 #include "src/__support/threads/thread.h"
 #include "src/stdlib/abort.h"
@@ -24,7 +25,10 @@
 
 extern "C" int main(int, char **, char **);
 
-extern "C" void __stack_chk_fail() { __llvm_libc::abort(); }
+extern "C" void __stack_chk_fail() {
+  __llvm_libc::write_to_stderr("stack smashing detected");
+  __llvm_libc::abort();
+}
 
 namespace LIBC_NAMESPACE {
 
