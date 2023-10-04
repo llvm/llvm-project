@@ -43,7 +43,7 @@ struct MLIRToLLVMPassPipelineConfig {
   llvm::codegenoptions::DebugInfoKind DebugInfo =
       llvm::codegenoptions::NoDebugInfo; ///< Debug info generation.
   unsigned VScaleMin = 0; ///< SVE vector range minimum.
-  unsigned VScaleMax = 0; ///< SVE vector range minimum.
+  unsigned VScaleMax = 0; ///< SVE vector range maximum.
 };
 
 struct OffloadModuleOpts {

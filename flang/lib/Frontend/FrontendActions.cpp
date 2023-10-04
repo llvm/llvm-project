@@ -698,7 +698,8 @@ void CodeGenAction::lowerHLFIRToFIR() {
 // TODO: We should get this from TargetInfo. However, that depends on
 // too much of clang, so for now, replicate the functionality.
 static std::optional<std::pair<unsigned, unsigned>>
-getVScaleRange(CompilerInstance& ci, const Fortran::frontend::LangOptions &langOpts) {
+getVScaleRange(CompilerInstance &ci,
+               const Fortran::frontend::LangOptions &langOpts) {
   if (langOpts.VScaleMin || langOpts.VScaleMax)
     return std::pair<unsigned, unsigned>(
         langOpts.VScaleMin ? langOpts.VScaleMin : 1, langOpts.VScaleMax);
