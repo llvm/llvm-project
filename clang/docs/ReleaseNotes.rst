@@ -146,7 +146,7 @@ Non-comprehensive list of changes in this release
 
 New Compiler Flags
 ------------------
-* ``-fverify-intermediate-code`` and it's complement ``-fno-verify-intermediate-code``.
+* ``-fverify-intermediate-code`` and its complement ``-fno-verify-intermediate-code``.
   Enables or disables verification of the generated LLVM IR.
   Users can pass this to turn on extra verification to catch certain types of
   compiler bugs at the cost of extra compile time.
