@@ -354,6 +354,9 @@ AlignTokenSequence(const FormatStyle &Style, unsigned Start, unsigned End,
       }
     }
 
+    if (Shift == 0)
+      continue;
+
     // This is for function parameters that are split across multiple lines,
     // as mentioned in the ScopeStack comment.
     if (InsideNestedScope && CurrentChange.NewlinesBefore > 0) {
@@ -447,7 +450,7 @@ AlignTokenSequence(const FormatStyle &Style, unsigned Start, unsigned End,
       CurrentChange.Spaces += Shift;
 
     // We should not remove required spaces unless we break the line before.
-    assert(Shift >= 0 || Changes[i].NewlinesBefore > 0 ||
+    assert(Shift > 0 || Changes[i].NewlinesBefore > 0 ||
            CurrentChange.Spaces >=
                static_cast<int>(Changes[i].Tok->SpacesRequiredBefore) ||
            CurrentChange.Tok->is(tok::eof));
