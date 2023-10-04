@@ -1417,6 +1417,11 @@ static void AddReturnAttributes(CallBase &CB, ValueToValueMapTy &VMap) {
     // existing attribute value (i.e. attributes such as dereferenceable,
     // dereferenceable_or_null etc). See AttrBuilder::merge for more details.
     AttributeList AL = NewRetVal->getAttributes();
+    if (ValidUB.getDereferenceableBytes() < AL.getRetDereferenceableBytes())
+      ValidUB.removeAttribute(Attribute::Dereferenceable);
+    if (ValidUB.getDereferenceableOrNullBytes() <
+        AL.getRetDereferenceableOrNullBytes())
+      ValidUB.removeAttribute(Attribute::DereferenceableOrNull);
     AttributeList NewAL = AL.addRetAttributes(Context, ValidUB);
     // Attributes that may generate poison returns are a bit tricky. If we
     // propagate them, other uses of the callsite might have their behavior
