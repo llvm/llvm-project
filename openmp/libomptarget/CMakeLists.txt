@@ -95,6 +95,16 @@ if("libc" IN_LIST LLVM_ENABLE_RUNTIMES AND (LIBC_GPU_BUILD OR
                                             LIBC_GPU_ARCHITECTURES))
   set(LIBC_GPU_SUPPORT TRUE)
 endif()
+
+# Find the path of the GPU libc static library.
+find_library(GPU_LIBC_PATH NAMES cgpu
+             PATHS ${LIBOMPTARGET_LLVM_LIBRARY_DIR} NO_DEFAULT_PATH)
+if((NOT GPU_LIBC_PATH) OR (NOT LIBC_GPU_SUPPORT))
+  set(GPU_LIBC_PATH "")
+endif()
+
+set(LIBOMPTARGET_GPU_LIBC_PATH  ${GPU_LIBC_PATH} CACHE STRING
+    "Location of the 'libcgpu.a' library ")
 set(LIBOMPTARGET_GPU_LIBC_SUPPORT ${LIBC_GPU_SUPPORT} CACHE BOOL
     "Libomptarget support for the GPU libc")
 pythonize_bool(LIBOMPTARGET_GPU_LIBC_SUPPORT)
