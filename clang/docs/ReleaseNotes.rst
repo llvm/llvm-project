@@ -325,6 +325,8 @@ Bug Fixes in This Version
   (`#67722 <https://github.com/llvm/llvm-project/issues/67722>`_).
 - Fixes a crash when instantiating a lambda with requires clause.
   (`#64462 <https://github.com/llvm/llvm-project/issues/64462>`_)
+- Fixes a regression where the ``UserDefinedLiteral`` was not properly preserved
+  while evaluating consteval functions. (`#63898 <https://github.com/llvm/llvm-project/issues/63898>`_).
 
 Bug Fixes to Compiler Builtins
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
