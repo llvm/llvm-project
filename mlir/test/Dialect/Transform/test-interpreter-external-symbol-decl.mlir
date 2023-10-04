@@ -21,8 +21,8 @@
 // expected-remark @below {{internal colliding_4}}
 // expected-remark @below {{internal colliding_5}}
 module attributes {transform.with_named_sequence} {
-  // CHECK: transform.named_sequence @print_message(
-  // CHECK: transform.include @private_helper
+  // CHECK-DAG: transform.named_sequence @print_message(
+  // CHECK-DAG: transform.include @private_helper
   transform.named_sequence private @print_message(!transform.any_op {transform.readonly})
 
   // These ops collide with ops from the other module before or after renaming.
@@ -42,6 +42,8 @@ module attributes {transform.with_named_sequence} {
     transform.test_print_remark_at_operand %arg0, "internal colliding_3" : !transform.any_op
     transform.yield
   }
+  // This symbol is public and thus can't be renamed.
+  // CHECK-DAG: transform.named_sequence @colliding_4(
   transform.named_sequence @colliding_4(%arg0: !transform.any_op {transform.readonly}) {
     transform.test_print_remark_at_operand %arg0, "internal colliding_4" : !transform.any_op
     transform.yield
@@ -51,8 +53,8 @@ module attributes {transform.with_named_sequence} {
     transform.yield
   }
 
-  // CHECK: transform.named_sequence @unannotated(
-  // CHECK: test_print_remark_at_operand %{{.*}}, "unannotated"
+  // CHECK-DAG: transform.named_sequence @unannotated(
+  // CHECK-DAG: test_print_remark_at_operand %{{.*}}, "unannotated"
   transform.named_sequence @unannotated(!transform.any_op {transform.readonly})
 
   transform.sequence failures(propagate) {
