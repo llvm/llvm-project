@@ -3029,10 +3029,20 @@ void LinkerDriver::link(opt::InputArgList &args) {
   // partition.
   copySectionsIntoPartitions();
 
-  if (config->emachine == EM_AARCH64 &&
-      config->androidMemtagMode != ELF::NT_MEMTAG_LEVEL_NONE) {
+  if (canHaveMemtagGlobals()) {
     llvm::TimeTraceScope timeScope("Process memory tagged symbols");
     createTaggedSymbols(ctx.objectFiles);
+  } else if (config->emachine == EM_AARCH64) {
+    // For fully static executables, make sure we prune any potential
+    // SHT_AARCH64_MEMTAG_GLOBALS_STATIC sections.
+    for (InputFile* file : ctx.objectFiles) {
+      if (file->kind() != InputFile::ObjKind)
+        continue;
+      for (InputSectionBase *section : file->getSections()) {
+        if (section && section->type == SHT_AARCH64_MEMTAG_GLOBALS_STATIC)
+          section->markDead();
+      }
+    }
   }
 
   // Create synthesized sections such as .got and .plt. This is called before
