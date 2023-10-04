@@ -209,6 +209,74 @@ struct ConvertMemRefLoad final : OpConversionPattern<memref::LoadOp> {
     return success();
   }
 };
+
+//===----------------------------------------------------------------------===//
+// ConvertMemRefAssumeAlignment
+//===----------------------------------------------------------------------===//
+
+struct ConvertMemRefSubview final : OpConversionPattern<memref::SubViewOp> {
+  using OpConversionPattern::OpConversionPattern;
+
+  LogicalResult
+  matchAndRewrite(memref::SubViewOp op, OpAdaptor adaptor,
+                  ConversionPatternRewriter &rewriter) const override {
+    auto convertedType =
+        cast<MemRefType>(getTypeConverter()->convertType(op.getSourceType()));
+    auto convertedElementType = convertedType.getElementType();
+    auto oldElementType = op.getSourceType().getElementType();
+    int srcBits = oldElementType.getIntOrFloatBitWidth();
+    int dstBits = convertedElementType.getIntOrFloatBitWidth();
+    if (dstBits % srcBits != 0) {
+      return rewriter.notifyMatchFailure(
+          op, "only dstBits % srcBits == 0 supported");
+    }
+
+    MemRefType newTy =
+        cast<MemRefType>(getTypeConverter()->convertType(op.getType()));
+    if (!newTy) {
+      return rewriter.notifyMatchFailure(
+          op->getLoc(),
+          llvm::formatv("failed to convert memref type: {0}", op.getType()));
+    }
+
+    // Only support offset for 1-D subview.
+    if (op.getType().getRank() != 1) {
+      return rewriter.notifyMatchFailure(
+          op->getLoc(), "subview with rank > 1 is not supported");
+    }
+
+    // Only support stride of 1.
+    if (op.getStaticStride(0) != 1) {
+      return rewriter.notifyMatchFailure(
+          op->getLoc(), "subview with stride != 1 is not supported");
+    }
+
+    auto size = op.getStaticSize(0);
+    auto offset = op.getStaticOffset(0);
+    // Only support static sizes and offsets.
+    if (size == ShapedType::kDynamic || offset == ShapedType::kDynamic) {
+      return rewriter.notifyMatchFailure(
+          op->getLoc(), "subview with dynamic size or offset is not supported");
+    }
+
+    int elementsPerByte = dstBits / srcBits;
+    if (size % elementsPerByte != 0 || offset % elementsPerByte != 0) {
+      return rewriter.notifyMatchFailure(
+          op->getLoc(),
+          "subview with size or offset not multiple of elementsPerByte is not "
+          "supported");
+    }
+
+    size = size / elementsPerByte;
+    offset = offset / elementsPerByte;
+
+    rewriter.replaceOpWithNewOp<memref::SubViewOp>(
+        op, newTy, *adaptor.getODSOperands(0).begin(), offset, size,
+        op.getStaticStrides());
+    return success();
+  }
+};
+
 } // end anonymous namespace
 
 //===----------------------------------------------------------------------===//
@@ -220,9 +288,9 @@ void memref::populateMemRefNarrowTypeEmulationPatterns(
     RewritePatternSet &patterns) {
 
   // Populate `memref.*` conversion patterns.
-  patterns
-      .add<ConvertMemRefAlloc, ConvertMemRefLoad, ConvertMemRefAssumeAlignment>(
-          typeConverter, patterns.getContext());
+  patterns.add<ConvertMemRefAlloc, ConvertMemRefLoad,
+               ConvertMemRefAssumeAlignment, ConvertMemRefSubview>(
+      typeConverter, patterns.getContext());
   memref::populateResolveExtractStridedMetadataPatterns(patterns);
 }
 
