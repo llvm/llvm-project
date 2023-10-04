@@ -2251,7 +2251,7 @@ bool AArch64InstructionSelector::earlySelect(MachineInstr &I) {
     // Before selecting a DUP instruction, check if it is better selected as a
     // MOV or load from a constant pool.
     Register Src = I.getOperand(1).getReg();
-    auto ValAndVReg = getIConstantVRegValWithLookThrough(Src, MRI);
+    auto ValAndVReg = getAnyConstantVRegValWithLookThrough(Src, MRI);
     if (!ValAndVReg)
       return false;
     LLVMContext &Ctx = MF.getFunction().getContext();
@@ -5600,8 +5600,7 @@ MachineInstr *AArch64InstructionSelector::tryAdvSIMDModImmFP(
   if (DstSize == 128) {
     if (Bits.getHiBits(64) != Bits.getLoBits(64))
       return nullptr;
-    // Need to deal with 4f32
-    Op = AArch64::FMOVv2f64_ns;
+    Op = AArch64::FMOVv4f32_ns;
     IsWide = true;
   } else {
     Op = AArch64::FMOVv2f32_ns;
@@ -5610,9 +5609,10 @@ MachineInstr *AArch64InstructionSelector::tryAdvSIMDModImmFP(
   uint64_t Val = Bits.zextOrTrunc(64).getZExtValue();
 
   if (AArch64_AM::isAdvSIMDModImmType11(Val)) {
-    Val = AArch64_AM::encodeAdvSIMDModImmType7(Val);
+    Val = AArch64_AM::encodeAdvSIMDModImmType11(Val);
   } else if (IsWide && AArch64_AM::isAdvSIMDModImmType12(Val)) {
     Val = AArch64_AM::encodeAdvSIMDModImmType12(Val);
+    Op = AArch64::FMOVv2f64_ns;
   } else
     return nullptr;
 
