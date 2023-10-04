@@ -1955,9 +1955,8 @@ static Constant *constantFoldCanonicalize(const Type *Ty, const CallBase *CI,
     DenormalMode DenormMode =
         CI->getFunction()->getDenormalMode(Src.getSemantics());
 
-    // TODO: Should allow folding for pure IEEE.
     if (DenormMode == DenormalMode::getIEEE())
-      return nullptr;
+      return ConstantFP::get(CI->getContext(), Src);
 
     if (DenormMode.Input == DenormalMode::Dynamic)
       return nullptr;
