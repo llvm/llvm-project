@@ -156,17 +156,21 @@ template <TestCond C, typename T> FPMatcher<T, C> getMatcher(T expectedValue) {
   do {                                                                         \
     using namespace LIBC_NAMESPACE::fputil::testing;                           \
     ForceRoundingMode __r1(RoundingMode::Nearest);                             \
-    if (__r1.success)                                                          \
+    if (__r1.success) {                                                        \
       EXPECT_FP_EQ((expected), (actual));                                      \
+    }                                                                          \
     ForceRoundingMode __r2(RoundingMode::Upward);                              \
-    if (__r2.success)                                                          \
+    if (__r2.success) {                                                        \
       EXPECT_FP_EQ((expected), (actual));                                      \
+    }                                                                          \
     ForceRoundingMode __r3(RoundingMode::Downward);                            \
-    if (__r3.success)                                                          \
+    if (__r3.success) {                                                        \
       EXPECT_FP_EQ((expected), (actual));                                      \
+    }                                                                          \
     ForceRoundingMode __r4(RoundingMode::TowardZero);                          \
-    if (__r4.success)                                                          \
+    if (__r4.success) {                                                        \
       EXPECT_FP_EQ((expected), (actual));                                      \
+    }                                                                          \
   } while (0)
 
 #endif // LLVM_LIBC_UTILS_UNITTEST_FPMATCHER_H
