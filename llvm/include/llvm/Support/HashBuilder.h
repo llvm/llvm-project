@@ -86,15 +86,8 @@ private:
 };
 
 /// Implementation of the `HashBuilder` interface.
-///
-/// `support::endianness::native` is not supported. `HashBuilder` is
-/// expected to canonicalize `support::endianness::native` to one of
-/// `support::endianness::big` or `support::endianness::little`.
 template <typename HasherT, support::endianness Endianness>
 class HashBuilderImpl : public HashBuilderBase<HasherT> {
-  static_assert(Endianness != support::endianness::native,
-                "HashBuilder should canonicalize endianness");
-
 public:
   explicit HashBuilderImpl(HasherT &Hasher)
       : HashBuilderBase<HasherT>(Hasher) {}
@@ -395,10 +388,7 @@ private:
 /// Specifiying a non-`native` `Endianness` template parameter allows to compute
 /// stable hash across platforms with different endianness.
 template <class HasherT, support::endianness Endianness>
-using HashBuilder =
-    HashBuilderImpl<HasherT, (Endianness == support::endianness::native
-                                  ? support::endian::system_endianness()
-                                  : Endianness)>;
+using HashBuilder = HashBuilderImpl<HasherT, Endianness>;
 
 namespace hashbuilder_detail {
 class HashCodeHasher {

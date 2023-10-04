@@ -24,7 +24,11 @@
 namespace llvm {
 namespace support {
 
-enum endianness {big, little, native};
+enum endianness {
+  big,
+  little,
+  native = llvm::sys::IsBigEndianHost ? big : little
+};
 
 // These are named values for common alignments.
 enum {aligned = 0, unaligned = 1};
@@ -47,7 +51,7 @@ constexpr endianness system_endianness() {
 
 template <typename value_type>
 [[nodiscard]] inline value_type byte_swap(value_type value, endianness endian) {
-  if ((endian != native) && (endian != system_endianness()))
+  if (endian != native)
     sys::swapByteOrder(value);
   return value;
 }
