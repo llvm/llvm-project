@@ -360,6 +360,18 @@ bool isRecordWithAllocatableMember(mlir::Type ty) {
   return false;
 }
 
+bool isRecordWithDescriptorMember(mlir::Type ty) {
+  ty = unwrapSequenceType(ty);
+  if (auto recTy = ty.dyn_cast<fir::RecordType>())
+    for (auto [field, memTy] : recTy.getTypeList()) {
+      if (mlir::isa<fir::BaseBoxType>(memTy))
+        return true;
+      if (memTy.isa<fir::RecordType>() && isRecordWithDescriptorMember(memTy))
+        return true;
+    }
+  return false;
+}
+
 mlir::Type unwrapAllRefAndSeqType(mlir::Type ty) {
   while (true) {
     mlir::Type nt = unwrapSequenceType(unwrapRefType(ty));
