@@ -588,15 +588,14 @@ Attribute SparseTensorEncodingAttr::parse(AsmParser &parser, Type type) {
 void SparseTensorEncodingAttr::print(AsmPrinter &printer) const {
   auto map = static_cast<AffineMap>(getDimToLvl());
   // Empty affine map indicates identity map
-  if (!map) {
+  if (!map)
     map = AffineMap::getMultiDimIdentityMap(getLvlTypes().size(), getContext());
-  }
   printer << "<{ map = ";
-  printSymbol(map, printer);
+  printSymbols(map, printer);
   printer << '(';
-  printDimension(map, printer, getDimSlices());
+  printDimensions(map, printer, getDimSlices());
   printer << ") -> (";
-  printLevel(map, printer, getLvlTypes());
+  printLevels(map, printer, getLvlTypes());
   printer << ')';
   // Print remaining members only for non-default values.
   if (getPosWidth())
@@ -606,8 +605,8 @@ void SparseTensorEncodingAttr::print(AsmPrinter &printer) const {
   printer << " }>";
 }
 
-void SparseTensorEncodingAttr::printSymbol(AffineMap &map,
-                                           AsmPrinter &printer) const {
+void SparseTensorEncodingAttr::printSymbols(AffineMap &map,
+                                            AsmPrinter &printer) const {
   if (map.getNumSymbols() == 0)
     return;
   printer << '[';
@@ -618,7 +617,7 @@ void SparseTensorEncodingAttr::printSymbol(AffineMap &map,
   printer << ']';
 }
 
-void SparseTensorEncodingAttr::printDimension(
+void SparseTensorEncodingAttr::printDimensions(
     AffineMap &map, AsmPrinter &printer,
     ArrayRef<SparseTensorDimSliceAttr> dimSlices) const {
   if (!dimSlices.empty()) {
@@ -636,7 +635,7 @@ void SparseTensorEncodingAttr::printDimension(
   }
 }
 
-void SparseTensorEncodingAttr::printLevel(
+void SparseTensorEncodingAttr::printLevels(
     AffineMap &map, AsmPrinter &printer,
     ArrayRef<DimLevelType> lvlTypes) const {
   for (unsigned i = 0, n = map.getNumResults() - 1; i < n; i++) {
