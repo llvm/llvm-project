@@ -59,7 +59,8 @@ public:
 // value can be matching.
 class EnumCastOutOfRangeChecker : public Checker<check::PreStmt<CastExpr>> {
   mutable std::unique_ptr<BugType> EnumValueCastOutOfRange;
-  void reportWarning(CheckerContext &C, const EnumDecl *E) const;
+  void reportWarning(CheckerContext &C, const CastExpr *CE,
+                     const EnumDecl *E) const;
 
 public:
   void checkPreStmt(const CastExpr *CE, CheckerContext &C) const;
@@ -78,6 +79,7 @@ EnumValueVector getDeclValuesForEnum(const EnumDecl *ED) {
 } // namespace
 
 void EnumCastOutOfRangeChecker::reportWarning(CheckerContext &C,
+                                              const CastExpr *CE,
                                               const EnumDecl *E) const {
   assert(E && "valid EnumDecl* is expected");
   if (const ExplodedNode *N = C.generateNonFatalErrorNode()) {
@@ -98,6 +100,7 @@ void EnumCastOutOfRangeChecker::reportWarning(CheckerContext &C,
 
     auto BR = std::make_unique<PathSensitiveBugReport>(*EnumValueCastOutOfRange,
                                                        Msg, N);
+    bugreporter::trackExpressionValue(N, CE, *BR);
     BR->addNote("enum declared here",
                 PathDiagnosticLocation::create(E, C.getSourceManager()),
                 {E->getSourceRange()});
@@ -153,13 +156,13 @@ void EnumCastOutOfRangeChecker::checkPreStmt(const CastExpr *CE,
     return;
 
   // Check if any of the enum values possibly match.
-  bool PossibleValueMatch = llvm::any_of(
-      DeclValues, ConstraintBasedEQEvaluator(C, *ValueToCast));
+  bool PossibleValueMatch =
+      llvm::any_of(DeclValues, ConstraintBasedEQEvaluator(C, *ValueToCast));
 
   // If there is no value that can possibly match any of the enum values, then
   // warn.
   if (!PossibleValueMatch)
-    reportWarning(C, ED);
+    reportWarning(C, CE, ED);
 }
 
 void ento::registerEnumCastOutOfRangeChecker(CheckerManager &mgr) {
