@@ -1482,12 +1482,14 @@ def : InstAlias<"xpaclri", (XPACLRI), 0>;
 
 // Pseudos
 
+let Uses = [LR, SP], Defs = [LR] in {
 // Insertion point of LR signing code.
 def PAUTH_PROLOGUE : Pseudo<(outs), (ins), []>, Sched<[]>;
 // Insertion point of LR authentication code.
 // The RET terminator of the containing machine basic block may be replaced
 // with a combined RETA(A|B) instruction when rewriting this Pseudo.
 def PAUTH_EPILOGUE : Pseudo<(outs), (ins), []>, Sched<[]>;
+}
 
 // These pointer authentication instructions require armv8.3a
 let Predicates = [HasPAuth] in {
