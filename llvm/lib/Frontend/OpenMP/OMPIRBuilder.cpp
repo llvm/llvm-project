@@ -5733,7 +5733,8 @@ OpenMPIRBuilder::InsertPointTy OpenMPIRBuilder::createAtomicCompare(
 
 OpenMPIRBuilder::InsertPointTy
 OpenMPIRBuilder::createTeams(const LocationDescription &Loc,
-                             BodyGenCallbackTy BodyGenCB) {
+                             BodyGenCallbackTy BodyGenCB, Value *NumTeamsUpper,
+                             Value *ThreadLimit) {
   if (!updateToLocation(Loc))
     return InsertPointTy();
 
@@ -5770,6 +5771,17 @@ OpenMPIRBuilder::createTeams(const LocationDescription &Loc,
   BasicBlock *BodyBB = splitBB(Builder, /*CreateBranch=*/true, "teams.body");
   BasicBlock *AllocaBB =
       splitBB(Builder, /*CreateBranch=*/true, "teams.alloca");
+
+  // Push num_teams
+  if (NumTeamsUpper || ThreadLimit) {
+    NumTeamsUpper =
+        NumTeamsUpper == nullptr ? Builder.getInt32(0) : NumTeamsUpper;
+    ThreadLimit = ThreadLimit == nullptr ? Builder.getInt32(0) : ThreadLimit;
+    Value *ThreadNum = getOrCreateThreadID(Ident);
+    Builder.CreateCall(
+        getOrCreateRuntimeFunctionPtr(OMPRTL___kmpc_push_num_teams),
+        {Ident, ThreadNum, NumTeamsUpper, ThreadLimit});
+  }
 
   OutlineInfo OI;
   OI.EntryBB = AllocaBB;

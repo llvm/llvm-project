@@ -4082,6 +4082,121 @@ TEST_F(OpenMPIRBuilderTest, CreateTeams) {
                      [](Instruction &inst) { return isa<ICmpInst>(&inst); }));
 }
 
+TEST_F(OpenMPIRBuilderTest, CreateTeamsWithThreadLimit) {
+  using InsertPointTy = OpenMPIRBuilder::InsertPointTy;
+  OpenMPIRBuilder OMPBuilder(*M);
+  OMPBuilder.initialize();
+  F->setName("func");
+  IRBuilder<> &Builder = OMPBuilder.Builder;
+  Builder.SetInsertPoint(BB);
+
+  Function *FakeFunction =
+      Function::Create(FunctionType::get(Builder.getVoidTy(), false),
+                       GlobalValue::ExternalLinkage, "fakeFunction", M.get());
+
+  auto BodyGenCB = [&](InsertPointTy AllocaIP, InsertPointTy CodeGenIP) {
+    Builder.restoreIP(CodeGenIP);
+    Builder.CreateCall(FakeFunction, {});
+  };
+
+  OpenMPIRBuilder::LocationDescription Loc({Builder.saveIP(), DL});
+  Builder.restoreIP(
+      OMPBuilder.createTeams(Builder, BodyGenCB, nullptr, F->arg_begin()));
+
+  Builder.CreateRetVoid();
+  OMPBuilder.finalize();
+
+  ASSERT_FALSE(verifyModule(*M));
+
+  Function *PushNumTeamsRTL =
+      OMPBuilder.getOrCreateRuntimeFunctionPtr(OMPRTL___kmpc_push_num_teams);
+  EXPECT_EQ(PushNumTeamsRTL->getNumUses(), 1U);
+
+  CallInst *PushNumTeamsCallInst =
+      findSingleCall(F, OMPRTL___kmpc_push_num_teams, OMPBuilder);
+  ASSERT_NE(PushNumTeamsCallInst, nullptr);
+
+  EXPECT_EQ(PushNumTeamsCallInst->getArgOperand(2), Builder.getInt32(0));
+  EXPECT_EQ(PushNumTeamsCallInst->getArgOperand(3), &*F->arg_begin());
+
+  // Verifying that the next instruction to execute is kmpc_fork_teams
+  BranchInst *BrInst =
+      dyn_cast<BranchInst>(PushNumTeamsCallInst->getNextNonDebugInstruction());
+  ASSERT_NE(BrInst, nullptr);
+  ASSERT_EQ(BrInst->getNumSuccessors(), 1U);
+  Instruction *NextInstruction =
+      BrInst->getSuccessor(0)->getFirstNonPHIOrDbgOrLifetime();
+  CallInst *ForkTeamsCI = dyn_cast_if_present<CallInst>(NextInstruction);
+  ASSERT_NE(ForkTeamsCI, nullptr);
+  EXPECT_EQ(ForkTeamsCI->getCalledFunction(),
+            OMPBuilder.getOrCreateRuntimeFunctionPtr(OMPRTL___kmpc_fork_teams));
+}
+
+TEST_F(OpenMPIRBuilderTest, CreateTeamsWithNumTeams) {
+  using InsertPointTy = OpenMPIRBuilder::InsertPointTy;
+  OpenMPIRBuilder OMPBuilder(*M);
+  OMPBuilder.initialize();
+  F->setName("func");
+  IRBuilder<> &Builder = OMPBuilder.Builder;
+  Builder.SetInsertPoint(BB);
+
+  Function *FakeFunction =
+      Function::Create(FunctionType::get(Builder.getVoidTy(), false),
+                       GlobalValue::ExternalLinkage, "fakeFunction", M.get());
+
+  auto BodyGenCB = [&](InsertPointTy AllocaIP, InsertPointTy CodeGenIP) {
+    Builder.restoreIP(CodeGenIP);
+    Builder.CreateCall(FakeFunction, {});
+  };
+
+  OpenMPIRBuilder::LocationDescription Loc({Builder.saveIP(), DL});
+  Builder.restoreIP(OMPBuilder.createTeams(Builder, BodyGenCB, F->arg_begin()));
+
+  Builder.CreateRetVoid();
+  OMPBuilder.finalize();
+
+  ASSERT_FALSE(verifyModule(*M));
+
+  // M->print(dbgs(), nullptr);
+}
+
+TEST_F(OpenMPIRBuilderTest, CreateTeamsWithNumTeamsAndThreadLimit) {
+  using InsertPointTy = OpenMPIRBuilder::InsertPointTy;
+  OpenMPIRBuilder OMPBuilder(*M);
+  OMPBuilder.initialize();
+  F->setName("func");
+  IRBuilder<> &Builder = OMPBuilder.Builder;
+  Builder.SetInsertPoint(BB);
+
+  BasicBlock *CodegenBB = splitBB(Builder, true);
+  Builder.SetInsertPoint(CodegenBB);
+
+  Value *NumTeamsUpper =
+      Builder.CreateAdd(F->arg_begin(), Builder.getInt32(10), "numTeamsUpper");
+  Value *ThreadLimit =
+      Builder.CreateAdd(F->arg_begin(), Builder.getInt32(20), "threadLimit");
+
+  Function *FakeFunction =
+      Function::Create(FunctionType::get(Builder.getVoidTy(), false),
+                       GlobalValue::ExternalLinkage, "fakeFunction", M.get());
+
+  auto BodyGenCB = [&](InsertPointTy AllocaIP, InsertPointTy CodeGenIP) {
+    Builder.restoreIP(CodeGenIP);
+    Builder.CreateCall(FakeFunction, {});
+  };
+
+  OpenMPIRBuilder::LocationDescription Loc({Builder.saveIP(), DL});
+  Builder.restoreIP(
+      OMPBuilder.createTeams(Builder, BodyGenCB, NumTeamsUpper, ThreadLimit));
+
+  Builder.CreateRetVoid();
+  OMPBuilder.finalize();
+
+  ASSERT_FALSE(verifyModule(*M));
+
+  // M->print(dbgs(), nullptr);
+}
+
 /// Returns the single instruction of InstTy type in BB that uses the value V.
 /// If there is more than one such instruction, returns null.
 template <typename InstTy>
