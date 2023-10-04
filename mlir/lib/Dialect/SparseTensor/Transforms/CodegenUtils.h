@@ -308,17 +308,46 @@ Value reshapeValuesToLevels(OpBuilder &builder, Location loc,
                             SparseTensorEncodingAttr enc, ValueRange dimSizes,
                             Value valuesBuffer, Value lvlCoords);
 
+// Generates code to cast a tensor to a memref.
+TypedValue<BaseMemRefType> genToMemref(OpBuilder &builder, Location loc,
+                                       Value tensor);
+
+/// Infers the result type and generates `ToPositionsOp`.
+Value genToPositions(OpBuilder &builder, Location loc, Value tensor, Level lvl);
+
+/// Infers the result type and generates `ToCoordinatesOp`.  If the
+/// level is within a COO region, the result type is a memref with unknown
+/// stride and offset.  Otherwise, the result type is a memref without
+/// any specified layout.
+Value genToCoordinates(OpBuilder &builder, Location loc, Value tensor,
+                       Level lvl, Level cooStart);
+
+/// Infers the result type and generates `ToCoordinatesBufferOp`.
+Value genToCoordinatesBuffer(OpBuilder &builder, Location loc, Value tensor);
+
+/// Infers the result type and generates `ToValuesOp`.
+Value genToValues(OpBuilder &builder, Location loc, Value tensor);
+
+/// Generates code to retrieve the values size for the sparse tensor.
+Value genValMemSize(OpBuilder &builder, Location loc, Value tensor);
+
+/// Generates code to retrieve the slice offset for the sparse tensor slice,
+/// return a constant if the offset is statically known.
+Value createOrFoldSliceOffsetOp(OpBuilder &builder, Location loc, Value tensor,
+                                Dimension dim);
+
+/// Generates code to retrieve the slice slice for the sparse tensor slice,
+/// return a constant if the offset is statically known.
+Value createOrFoldSliceStrideOp(OpBuilder &builder, Location loc, Value tensor,
+                                Dimension dim);
+
 //===----------------------------------------------------------------------===//
 // Inlined constant generators.
 //
 // All these functions are just wrappers to improve code legibility;
 // therefore, we mark them as `inline` to avoid introducing any additional
-// overhead due to the legibility.
+// overhead due to the legibility. Ideally these should move upstream.
 //
-// TODO: Ideally these should move upstream, so that we don't
-// develop a design island.  However, doing so will involve
-// substantial design work.  For related prior discussion, see
-// <https://llvm.discourse.group/t/evolving-builder-apis-based-on-lessons-learned-from-edsc/879>
 //===----------------------------------------------------------------------===//
 
 /// Generates a 0-valued constant of the given type.  In addition to
@@ -420,38 +449,6 @@ inline bool isZeroRankedTensorOrScalar(Type type) {
   return !rtp || rtp.getRank() == 0;
 }
 
-// Generates code to cast a tensor to a memref.
-TypedValue<BaseMemRefType> genToMemref(OpBuilder &builder, Location loc,
-                                       Value tensor);
-
-/// Infers the result type and generates `ToPositionsOp`.
-Value genToPositions(OpBuilder &builder, Location loc, Value tensor, Level lvl);
-
-/// Infers the result type and generates `ToCoordinatesOp`.  If the
-/// level is within a COO region, the result type is a memref with unknown
-/// stride and offset.  Otherwise, the result type is a memref without
-/// any specified layout.
-Value genToCoordinates(OpBuilder &builder, Location loc, Value tensor,
-                       Level lvl, Level cooStart);
-
-/// Infers the result type and generates `ToCoordinatesBufferOp`.
-Value genToCoordinatesBuffer(OpBuilder &builder, Location loc, Value tensor);
-
-/// Infers the result type and generates `ToValuesOp`.
-Value genToValues(OpBuilder &builder, Location loc, Value tensor);
-
-/// Generates code to retrieve the values size for the sparse tensor.
-Value genValMemSize(OpBuilder &builder, Location loc, Value tensor);
-
-/// Generates code to retrieve the slice offset for the sparse tensor slice,
-/// return a constant if the offset is statically known.
-Value createOrFoldSliceOffsetOp(OpBuilder &builder, Location loc, Value tensor,
-                                Dimension dim);
-
-/// Generates code to retrieve the slice slice for the sparse tensor slice,
-/// return a constant if the offset is statically known.
-Value createOrFoldSliceStrideOp(OpBuilder &builder, Location loc, Value tensor,
-                                Dimension dim);
 } // namespace sparse_tensor
 } // namespace mlir
 
