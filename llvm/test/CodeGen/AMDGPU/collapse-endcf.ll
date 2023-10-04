@@ -472,14 +472,14 @@ define amdgpu_kernel void @nested_if_if_else(ptr addrspace(1) nocapture %arg) {
 ; GCN-O0-NEXT:    s_mov_b32 s5, s2
 ; GCN-O0-NEXT:    ; kill: def $sgpr0_sgpr1 killed $sgpr0_sgpr1 def $sgpr0_sgpr1_sgpr2_sgpr3
 ; GCN-O0-NEXT:    s_mov_b64 s[2:3], s[4:5]
-; GCN-O0-NEXT:    s_mov_b32 s4, 2
-; GCN-O0-NEXT:    v_lshlrev_b32_e64 v2, s4, v0
 ; GCN-O0-NEXT:    s_mov_b32 s4, 0
 ; GCN-O0-NEXT:    ; implicit-def: $sgpr4
+; GCN-O0-NEXT:    v_mov_b32_e32 v3, 0
 ; GCN-O0-NEXT:    s_waitcnt expcnt(0)
-; GCN-O0-NEXT:    v_mov_b32_e32 v1, 0
-; GCN-O0-NEXT:    ; kill: def $vgpr2 killed $vgpr2 def $vgpr2_vgpr3 killed $exec
-; GCN-O0-NEXT:    v_mov_b32_e32 v3, v1
+; GCN-O0-NEXT:    v_mov_b32_e32 v1, v0
+; GCN-O0-NEXT:    v_mov_b32_e32 v2, v3
+; GCN-O0-NEXT:    s_mov_b32 s4, 2
+; GCN-O0-NEXT:    v_lshl_b64 v[2:3], v[1:2], s4
 ; GCN-O0-NEXT:    v_mov_b32_e32 v1, 0
 ; GCN-O0-NEXT:    buffer_store_dword v1, v[2:3], s[0:3], 0 addr64
 ; GCN-O0-NEXT:    s_mov_b32 s0, 1
@@ -713,14 +713,15 @@ define amdgpu_kernel void @nested_if_else_if(ptr addrspace(1) nocapture %arg) {
 ; GCN-O0-NEXT:    s_load_dwordx2 s[4:5], s[2:3], 0x9
 ; GCN-O0-NEXT:    v_mov_b32_e32 v1, v0
 ; GCN-O0-NEXT:    buffer_store_dword v1, off, s[12:15], 0 offset:12 ; 4-byte Folded Spill
-; GCN-O0-NEXT:    s_mov_b32 s0, 2
-; GCN-O0-NEXT:    v_lshlrev_b32_e64 v2, s0, v0
-; GCN-O0-NEXT:    s_mov_b32 s1, 0
-; GCN-O0-NEXT:    ; implicit-def: $sgpr1
+; GCN-O0-NEXT:    s_mov_b32 s0, 0
+; GCN-O0-NEXT:    ; implicit-def: $sgpr0
+; GCN-O0-NEXT:    v_mov_b32_e32 v3, 0
 ; GCN-O0-NEXT:    s_waitcnt expcnt(0)
-; GCN-O0-NEXT:    v_mov_b32_e32 v1, 0
-; GCN-O0-NEXT:    ; kill: def $vgpr2 killed $vgpr2 def $vgpr2_vgpr3 killed $exec
-; GCN-O0-NEXT:    v_mov_b32_e32 v3, v1
+; GCN-O0-NEXT:    v_mov_b32_e32 v1, v0
+; GCN-O0-NEXT:    v_mov_b32_e32 v2, v3
+; GCN-O0-NEXT:    s_mov_b32 s0, 2
+; GCN-O0-NEXT:    s_mov_b32 s1, s0
+; GCN-O0-NEXT:    v_lshl_b64 v[2:3], v[1:2], s1
 ; GCN-O0-NEXT:    s_waitcnt lgkmcnt(0)
 ; GCN-O0-NEXT:    s_mov_b32 s2, s4
 ; GCN-O0-NEXT:    v_mov_b32_e32 v1, v2
