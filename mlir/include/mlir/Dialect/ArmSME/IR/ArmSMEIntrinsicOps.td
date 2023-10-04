@@ -10,8 +10,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef ARMSME_INTRINSICS_OPS
-#define ARMSME_INTRINSICS_OPS
+#ifndef ARMSME_INTRINSIC_OPS
+#define ARMSME_INTRINSIC_OPS
 
 include "ArmSME.td"
 
@@ -134,4 +134,4 @@ def LLVM_aarch64_sme_read_vert : LLVM_aarch64_sme_read<"vert">;
 def LLVM_aarch64_sme_za_enable : ArmSME_IntrOp<"za.enable">;
 def LLVM_aarch64_sme_za_disable : ArmSME_IntrOp<"za.disable">;
 
-#endif // ARMSME_INTRINSICS_OPS
+#endif // ARMSME_INTRINSIC_OPS

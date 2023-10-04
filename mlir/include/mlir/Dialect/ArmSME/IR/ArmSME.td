@@ -11,8 +11,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef ARMSME_OP_BASE
-#define ARMSME_OP_BASE
+#ifndef ARMSME
+#define ARMSME
 
 include "mlir/IR/DialectBase.td"
 include "mlir/Dialect/LLVMIR/LLVMOpBase.td"
@@ -49,4 +49,4 @@ def SVEPredicate : ScalableVectorOfRankAndLengthAndType<
   [1], [16, 8, 4, 2, 1], [I1]>;
 
 
-#endif // ARMSME_OP_BASE
+#endif // ARMSME

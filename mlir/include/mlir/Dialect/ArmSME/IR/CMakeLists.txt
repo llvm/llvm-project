@@ -5,10 +5,10 @@ add_mlir_doc(ArmSME ArmSME Dialects/ -gen-dialect-doc -dialect=arm_sme)
 set(LLVM_TARGET_DEFINITIONS ArmSMEOps.td)
 mlir_tablegen(ArmSMEOps.h.inc -gen-op-decls)
 mlir_tablegen(ArmSMEOps.cpp.inc -gen-op-defs)
-mlir_tablegen(ArmSMEAttrDefs.h.inc -gen-attrdef-decls -attrdefs-dialect=arm_sme)
-mlir_tablegen(ArmSMEAttrDefs.cpp.inc -gen-attrdef-defs -attrdefs-dialect=arm_sme)
 mlir_tablegen(ArmSMEEnums.h.inc -gen-enum-decls)
 mlir_tablegen(ArmSMEEnums.cpp.inc -gen-enum-defs)
+mlir_tablegen(ArmSMEAttrDefs.h.inc -gen-attrdef-decls -attrdefs-dialect=arm_sme)
+mlir_tablegen(ArmSMEAttrDefs.cpp.inc -gen-attrdef-defs -attrdefs-dialect=arm_sme)
 add_public_tablegen_target(MLIRArmSMEOpsIncGen)
 
 # Generate LLVM IR Conversions
