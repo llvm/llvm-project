@@ -523,7 +523,6 @@ libcxx/src/include/ryu/ryu.h
 libcxx/src/include/sso_allocator.h
 libcxx/src/ios.cpp
 libcxx/src/iostream.cpp
-libcxx/src/legacy_debug_handler.cpp
 libcxx/src/locale.cpp
 libcxx/src/memory.cpp
 libcxx/src/mutex.cpp
