@@ -714,6 +714,7 @@ R"(All available -march extensions for RISC-V
     xcvsimd             1.0
     xsfcie              1.0
     xsfvcp              1.0
+    xsfvfwmaccqqq       1.0
     xsfvqmaccdod        1.0
     xsfvqmaccqoq        1.0
     xtheadba            1.0
