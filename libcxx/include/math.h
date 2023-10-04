@@ -387,6 +387,7 @@ namespace __math {
 
 // fpclassify
 
+template <class = int>
 _LIBCPP_NODISCARD_EXT inline _LIBCPP_HIDE_FROM_ABI int fpclassify(float __x) _NOEXCEPT {
   return __builtin_fpclassify(FP_NAN, FP_INFINITE, FP_NORMAL, FP_SUBNORMAL, FP_ZERO, __x);
 }
@@ -396,6 +397,7 @@ _LIBCPP_NODISCARD_EXT inline _LIBCPP_HIDE_FROM_ABI int fpclassify(double __x) _N
   return __builtin_fpclassify(FP_NAN, FP_INFINITE, FP_NORMAL, FP_SUBNORMAL, FP_ZERO, __x);
 }
 
+template <class = int>
 _LIBCPP_NODISCARD_EXT inline _LIBCPP_HIDE_FROM_ABI int fpclassify(long double __x) _NOEXCEPT {
   return __builtin_fpclassify(FP_NAN, FP_INFINITE, FP_NORMAL, FP_SUBNORMAL, FP_ZERO, __x);
 }
@@ -409,11 +411,11 @@ _LIBCPP_NODISCARD_EXT inline _LIBCPP_HIDE_FROM_ABI int fpclassify(_A1 __x) _NOEX
 
 _LIBCPP_END_NAMESPACE_STD
 
+using std::__math::fpclassify;
 using std::__math::signbit;
 
 // The MSVC runtime already provides these functions as templates
 #ifndef _LIBCPP_MSVCRT
-using std::__math::fpclassify;
 using std::__math::isfinite;
 using std::__math::isgreater;
 using std::__math::isgreaterequal;
