@@ -1022,10 +1022,16 @@ defm BUFFER_ATOMIC_DEC_X2 : MUBUF_Pseudo_Atomics <
   "buffer_atomic_dec_x2", VReg_64, i64
 >;
 
-let SubtargetPredicate = HasGFX10_BEncoding in
-defm BUFFER_ATOMIC_CSUB : MUBUF_Pseudo_Atomics_RTN <
-  "buffer_atomic_csub", VGPR_32, i32, int_amdgcn_global_atomic_csub
->;
+let SubtargetPredicate = HasGFX10_BEncoding in {
+  defm BUFFER_ATOMIC_CSUB : MUBUF_Pseudo_Atomics_RTN <
+    "buffer_atomic_csub", VGPR_32, i32, int_amdgcn_global_atomic_csub
+  >;
+
+  let OtherPredicates = [HasAtomicCsubNoRtnInsts] in
+    defm BUFFER_ATOMIC_CSUB : MUBUF_Pseudo_Atomics_NO_RTN <
+      "buffer_atomic_csub", VGPR_32, i32
+    >;
+}
 
 let SubtargetPredicate = isGFX8GFX9 in {
 def BUFFER_STORE_LDS_DWORD : MUBUF_Pseudo_Store_Lds <"buffer_store_lds_dword">;
@@ -1560,6 +1566,9 @@ defm : SIBufferAtomicPat<"SIbuffer_atomic_or", i64, "BUFFER_ATOMIC_OR_X2">;
 defm : SIBufferAtomicPat<"SIbuffer_atomic_xor", i64, "BUFFER_ATOMIC_XOR_X2">;
 defm : SIBufferAtomicPat<"SIbuffer_atomic_inc", i64, "BUFFER_ATOMIC_INC_X2">;
 defm : SIBufferAtomicPat<"SIbuffer_atomic_dec", i64, "BUFFER_ATOMIC_DEC_X2">;
+
+let SubtargetPredicate = HasAtomicCsubNoRtnInsts in
+defm : SIBufferAtomicPat<"SIbuffer_atomic_csub", i32, "BUFFER_ATOMIC_CSUB", ["noret"]>;
 
 let SubtargetPredicate = isGFX6GFX7GFX10Plus in {
   defm : SIBufferAtomicPat<"SIbuffer_atomic_fmin", f32, "BUFFER_ATOMIC_FMIN">;
@@ -2491,7 +2500,7 @@ defm BUFFER_ATOMIC_FCMPSWAP_X2 : MUBUF_Real_Atomics_gfx6_gfx7_gfx10<0x05e>;
 defm BUFFER_ATOMIC_FMIN_X2     : MUBUF_Real_Atomics_gfx6_gfx7_gfx10<0x05f>;
 defm BUFFER_ATOMIC_FMAX_X2     : MUBUF_Real_Atomics_gfx6_gfx7_gfx10<0x060>;
 
-defm BUFFER_ATOMIC_CSUB       : MUBUF_Real_Atomics_RTN_gfx10<0x034>;
+defm BUFFER_ATOMIC_CSUB       : MUBUF_Real_Atomics_gfx10<0x034>;
 
 defm BUFFER_WBINVL1_SC        : MUBUF_Real_gfx6<0x070>;
 defm BUFFER_WBINVL1_VOL       : MUBUF_Real_gfx7<0x070>;

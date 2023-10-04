@@ -693,6 +693,13 @@ def FeatureAtomicGlobalPkAddBF16Inst : SubtargetFeature<"atomic-global-pk-add-bf
  [FeatureFlatGlobalInsts]
 >;
 
+def FeatureAtomicCsubNoRtnInsts : SubtargetFeature<"atomic-csub-no-rtn-insts",
+  "HasAtomicCsubNoRtnInsts",
+  "true",
+  "Has buffer_atomic_csub and global_atomic_csub instructions that don't "
+  "return original value"
+>;
+
 def FeatureFlatAtomicFaddF32Inst
   : SubtargetFeature<"flat-atomic-fadd-f32-inst",
   "HasFlatAtomicFaddF32Inst",
@@ -1926,6 +1933,8 @@ def HasGWS : Predicate<"Subtarget->hasGWS()">;
 
 def HasCvtFP8VOP1Bug : Predicate<"Subtarget->hasCvtFP8VOP1Bug()">;
 def HasNoCvtFP8VOP1Bug : Predicate<"!Subtarget->hasCvtFP8VOP1Bug()">;
+
+def HasAtomicCsubNoRtnInsts : Predicate<"Subtarget->hasAtomicCsubNoRtnInsts()">;
 
 // Include AMDGPU TD files
 include "SISchedule.td"

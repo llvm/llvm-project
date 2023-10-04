@@ -210,6 +210,7 @@ defm SIbuffer_atomic_or : SDBufferAtomicNoRet;
 defm SIbuffer_atomic_xor : SDBufferAtomicNoRet;
 defm SIbuffer_atomic_inc : SDBufferAtomicNoRet;
 defm SIbuffer_atomic_dec : SDBufferAtomicNoRet;
+defm SIbuffer_atomic_csub : SDBufferAtomicNoRet;
 defm SIbuffer_atomic_fadd : SDBufferAtomicNoRet;
 defm SIbuffer_atomic_fmin : SDBufferAtomicNoRet;
 defm SIbuffer_atomic_fmax : SDBufferAtomicNoRet;
