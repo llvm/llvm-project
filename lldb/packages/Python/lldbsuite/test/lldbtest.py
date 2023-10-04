@@ -1275,7 +1275,9 @@ class Base(unittest2.TestCase):
         # smefa64 allows the use of the full A64 instruction set in streaming
         # mode. This is required by certain test programs to setup register
         # state.
-        return self.isAArch64SME() and "smefa64" in self.getCPUInfo()
+        return self.isAArch64SME() and set(["sme", "smefa64"]).issuperset(
+            set(self.getCPUInfo())
+        )
 
     def isAArch64MTE(self):
         return self.isAArch64() and "mte" in self.getCPUInfo()
