@@ -38,7 +38,7 @@ template <class _ExecutionPolicy,
 _LIBCPP_NODISCARD_EXT _LIBCPP_HIDE_FROM_ABI bool
 is_partitioned(_ExecutionPolicy&& __policy, _ForwardIterator __first, _ForwardIterator __last, _Predicate __pred) {
   return std::__pstl_frontend_dispatch(
-      _LIBCPP_PSTL_CUSTOMIZATION_POINT(__pstl_is_partitioned),
+      _LIBCPP_PSTL_CUSTOMIZATION_POINT(__pstl_is_partitioned, _RawPolicy),
       [&__policy](_ForwardIterator __g_first, _ForwardIterator __g_last, _Predicate __g_pred) {
         __g_first = std::find_if_not(__policy, __g_first, __g_last, __g_pred);
         if (__g_first == __g_last)

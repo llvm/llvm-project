@@ -38,7 +38,7 @@ template <class _ExecutionPolicy,
 _LIBCPP_HIDE_FROM_ABI void
 sort(_ExecutionPolicy&& __policy, _RandomAccessIterator __first, _RandomAccessIterator __last, _Comp __comp) {
   std::__pstl_frontend_dispatch(
-      _LIBCPP_PSTL_CUSTOMIZATION_POINT(__pstl_sort),
+      _LIBCPP_PSTL_CUSTOMIZATION_POINT(__pstl_sort, _RawPolicy),
       [&__policy](_RandomAccessIterator __g_first, _RandomAccessIterator __g_last, _Comp __g_comp) {
         std::stable_sort(__policy, std::move(__g_first), std::move(__g_last), std::move(__g_comp));
       },

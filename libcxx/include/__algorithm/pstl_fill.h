@@ -42,7 +42,7 @@ _LIBCPP_HIDE_FROM_ABI void
 fill(_ExecutionPolicy&& __policy, _ForwardIterator __first, _ForwardIterator __last, const _Tp& __value) {
   _LIBCPP_REQUIRE_CPP17_FORWARD_ITERATOR(_ForwardIterator);
   std::__pstl_frontend_dispatch(
-      _LIBCPP_PSTL_CUSTOMIZATION_POINT(__pstl_fill),
+      _LIBCPP_PSTL_CUSTOMIZATION_POINT(__pstl_fill, _RawPolicy),
       [&](_ForwardIterator __g_first, _ForwardIterator __g_last, const _Tp& __g_value) {
         std::for_each(__policy, __g_first, __g_last, [&](__iter_reference<_ForwardIterator> __element) {
           __element = __g_value;
@@ -66,7 +66,7 @@ _LIBCPP_HIDE_FROM_ABI void
 fill_n(_ExecutionPolicy&& __policy, _ForwardIterator __first, _SizeT __n, const _Tp& __value) {
   _LIBCPP_REQUIRE_CPP17_FORWARD_ITERATOR(_ForwardIterator);
   std::__pstl_frontend_dispatch(
-      _LIBCPP_PSTL_CUSTOMIZATION_POINT(__pstl_fill_n),
+      _LIBCPP_PSTL_CUSTOMIZATION_POINT(__pstl_fill_n, _RawPolicy),
       [&](_ForwardIterator __g_first, _SizeT __g_n, const _Tp& __g_value) {
         if constexpr (__has_random_access_iterator_category_or_concept<_ForwardIterator>::value)
           std::fill(__policy, __g_first, __g_first + __g_n, __g_value);
