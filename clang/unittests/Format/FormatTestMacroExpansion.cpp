@@ -47,7 +47,11 @@ TEST_F(FormatTestMacroExpansion, UnexpandConfiguredMacros) {
     { ID(a *b); });
 )",
                Style);
-  verifyIncompleteFormat("ID3({, ID(a *b), ; });", Style);
+  verifyIncompleteFormat(R"(ID3({, ID(a *b),
+  ;
+  });
+)",
+                         Style);
 
   verifyFormat("ID(CALL(CALL(return a * b;)));", Style);
 
@@ -247,7 +251,9 @@ TEST_F(FormatTestMacroExpansion,
        ContinueFormattingAfterUnclosedParensAfterObjectLikeMacro) {
   FormatStyle Style = getLLVMStyle();
   Style.Macros.push_back("O=class {");
-  verifyIncompleteFormat("O(auto x = [](){f();}", Style);
+  verifyIncompleteFormat("O(auto x = [](){\n"
+                         "    f();}",
+                         Style);
 }
 
 } // namespace
