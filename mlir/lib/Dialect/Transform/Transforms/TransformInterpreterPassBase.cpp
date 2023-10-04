@@ -304,57 +304,6 @@ static void performOptionalDebugActions(
     transform->removeAttr(kTransformDialectTagAttrName);
 }
 
-/// Rename `op` to avoid a collision with `otherOp`. `symbolTable` and
-/// `otherSymbolTable` are the symbol tables of the two ops, respectively.
-/// `uniqueId` is used to generate a unique name in the context of the caller.
-LogicalResult renameToUnique(SymbolOpInterface op, SymbolOpInterface otherOp,
-                             SymbolTable &symbolTable,
-                             SymbolTable &otherSymbolTable, int &uniqueId) {
-  assert(symbolTable.lookup(op.getNameAttr()) == op &&
-         "symbol table does not contain op");
-  assert(otherSymbolTable.lookup(otherOp.getNameAttr()) == otherOp &&
-         "other symbol table does not contain other op");
-
-  // Determine new name that is unique in both symbol tables.
-  StringAttr oldName = op.getNameAttr();
-  StringAttr newName;
-  {
-    MLIRContext *context = op->getContext();
-    SmallString<64> prefix = oldName.getValue();
-    prefix.push_back('_');
-    while (true) {
-      newName = StringAttr::get(context, prefix + Twine(uniqueId++));
-      if (!symbolTable.lookup(newName) && !otherSymbolTable.lookup(newName)) {
-        break;
-      }
-    }
-  }
-
-  // Apply renaming.
-  LLVM_DEBUG(llvm::dbgs() << ", renaming to @" << newName.getValue() << "\n");
-  Operation *symbolTableOp = SymbolTable::getNearestSymbolTable(op);
-  if (failed(SymbolTable::replaceAllSymbolUses(op, newName, symbolTableOp))) {
-    InFlightDiagnostic diag =
-        emitError(op->getLoc(),
-                  Twine("failed to rename symbol to @") + newName.getValue());
-    diag.attachNote(otherOp->getLoc())
-        << "attempted renaming due to collision with this op";
-    return diag;
-  }
-
-  // Change the symbol in the op itself and update the symbol table.
-  symbolTable.remove(op);
-  SymbolTable::setSymbolName(op, newName);
-  symbolTable.insert(op);
-
-  assert(symbolTable.lookup(newName) == op &&
-         "symbol table does not resolve to renamed op");
-  assert(symbolTable.lookup(oldName) == nullptr &&
-         "symbol table still resolves old name");
-
-  return success();
-}
-
 /// Return whether `func1` can be merged into `func2`.
 bool canMergeInto(FunctionOpInterface func1, FunctionOpInterface func2) {
   return func1.isExternal() && (func2.isPublic() || func2.isExternal());
@@ -429,8 +378,6 @@ static LogicalResult mergeSymbolsInto(Operation *target,
   SymbolTable targetSymbolTable(target);
   SymbolTable otherSymbolTable(*other);
 
-  int uniqueId = 0;
-
   // Step 1:
   //
   // Rename private symbols in both ops in order to resolve conflicts that can
@@ -471,16 +418,34 @@ static LogicalResult mergeSymbolsInto(Operation *target,
         LLVM_DEBUG(llvm::dbgs() << " and both ops are function definitions");
       }
 
-      // Collision can be resolved if one of the ops is private.
+      // Collision can be resolved by renaming if one of the ops is private.
+      auto renameToUnique =
+          [&](SymbolOpInterface op, SymbolOpInterface otherOp,
+              SymbolTable &symbolTable,
+              SymbolTable &otherSymbolTable) -> LogicalResult {
+        LLVM_DEBUG(llvm::dbgs() << ", renaming\n");
+        FailureOr<StringAttr> maybeNewName =
+            symbolTable.renameToUnique(op, {&otherSymbolTable});
+        if (failed(maybeNewName)) {
+          InFlightDiagnostic diag = op->emitError("failed to rename symbol");
+          diag.attachNote(otherOp->getLoc())
+              << "attempted renaming due to collision with this op";
+          return diag;
+        }
+        LLVM_DEBUG(DBGS() << "      renamed to @" << maybeNewName->getValue()
+                          << "\n");
+        return success();
+      };
+
       if (symbolOp.isPrivate()) {
         if (failed(renameToUnique(symbolOp, collidingOp, *symbolTable,
-                                  *otherSymbolTable, uniqueId)))
+                                  *otherSymbolTable)))
           return failure();
         continue;
       }
       if (collidingOp.isPrivate()) {
         if (failed(renameToUnique(collidingOp, symbolOp, *otherSymbolTable,
-                                  *symbolTable, uniqueId)))
+                                  *symbolTable)))
           return failure();
         continue;
       }
