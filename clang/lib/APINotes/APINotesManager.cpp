@@ -80,13 +80,12 @@ APINotesManager::~APINotesManager() {
 }
 
 std::unique_ptr<APINotesReader>
-APINotesManager::loadAPINotes(const FileEntry *apiNotesFile) {
+APINotesManager::loadAPINotes(FileEntryRef apiNotesFile) {
   PrettyStackTraceDoubleString trace("Loading API notes from ",
-                                     apiNotesFile->getName());
+                                     apiNotesFile.getName());
 
   // Open the source file.
-  auto sourceFileID =
-      SourceMgr.getOrCreateFileID(apiNotesFile->getLastRef(), SrcMgr::C_User);
+  auto sourceFileID = SourceMgr.getOrCreateFileID(apiNotesFile, SrcMgr::C_User);
   auto sourceBuffer = SourceMgr.getBufferOrNone(sourceFileID, SourceLocation());
   if (!sourceBuffer) return nullptr;
 
@@ -128,7 +127,7 @@ APINotesManager::loadAPINotes(StringRef Buffer) {
   std::unique_ptr<llvm::MemoryBuffer> compiledBuffer;
   SourceMgrAdapter srcMgrAdapter(
       SourceMgr, SourceMgr.getDiagnostics(), diag::err_apinotes_message,
-      diag::warn_apinotes_message, diag::note_apinotes_message, nullptr);
+      diag::warn_apinotes_message, diag::note_apinotes_message, std::nullopt);
   llvm::raw_svector_ostream OS(apiNotesBuffer);
 
   if (api_notes::compileAPINotes(Buffer, nullptr, OS,
@@ -144,7 +143,7 @@ APINotesManager::loadAPINotes(StringRef Buffer) {
 }
 
 bool APINotesManager::loadAPINotes(const DirectoryEntry *HeaderDir,
-                                   const FileEntry *APINotesFile) {
+                                   FileEntryRef APINotesFile) {
   assert(Readers.find(HeaderDir) == Readers.end());
   if (auto reader = loadAPINotes(APINotesFile)) {
     Readers[HeaderDir] = reader.release();
@@ -192,7 +191,7 @@ OptionalDirectoryEntryRef APINotesManager::loadFrameworkAPINotes(
                               + SOURCE_APINOTES_EXTENSION));
 
   // Try to open the APINotes file.
-  auto APINotesFile = FileMgr.getFile(Path);
+  auto APINotesFile = FileMgr.getOptionalFileRef(Path);
   if (!APINotesFile)
     return std::nullopt;
 
@@ -453,7 +452,7 @@ llvm::SmallVector<APINotesReader *, 2> APINotesManager::findAPINotes(SourceLocat
 
       // If there is an API notes file here, try to load it.
       ++NumDirectoriesSearched;
-      if (auto APINotesFile = FileMgr.getFile(APINotesPath)) {
+      if (auto APINotesFile = FileMgr.getOptionalFileRef(APINotesPath)) {
         if (!loadAPINotes(*Dir, *APINotesFile)) {
           ++NumHeaderAPINotes;
           if (auto Reader = Readers[*Dir].dyn_cast<APINotesReader *>())

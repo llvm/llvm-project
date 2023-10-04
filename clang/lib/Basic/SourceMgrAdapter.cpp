@@ -26,7 +26,7 @@ SourceMgrAdapter::SourceMgrAdapter(SourceManager &srcMgr,
                                    unsigned errorDiagID,
                                    unsigned warningDiagID,
                                    unsigned noteDiagID,
-                                   const FileEntry *defaultFile)
+                                   OptionalFileEntryRef defaultFile)
   : SrcMgr(srcMgr), Diag(diag), ErrorDiagID(errorDiagID),
     WarningDiagID(warningDiagID), NoteDiagID(noteDiagID),
     DefaultFile(defaultFile) { }
@@ -52,11 +52,10 @@ SourceLocation SourceMgrAdapter::mapLocation(const llvm::SourceMgr &llvmSrcMgr,
     FileID fileID;
     if (DefaultFile) {
       // Map to the default file.
-      fileID =
-          SrcMgr.getOrCreateFileID(DefaultFile->getLastRef(), SrcMgr::C_User);
+      fileID = SrcMgr.getOrCreateFileID(*DefaultFile, SrcMgr::C_User);
 
       // Only do this once.
-      DefaultFile = nullptr;
+      DefaultFile = std::nullopt;
     } else {
       // Make a copy of the memory buffer.
       StringRef bufferName = buffer->getBufferIdentifier();

@@ -74,7 +74,7 @@ class APINotesManager {
   ///
   /// \returns the API notes reader for this file, or null if there is
   /// a failure.
-  std::unique_ptr<APINotesReader> loadAPINotes(const FileEntry *apiNotesFile);
+  std::unique_ptr<APINotesReader> loadAPINotes(FileEntryRef apiNotesFile);
 
   /// Load the API notes associated with the given buffer, whether it is
   /// the binary or source form of API notes.
@@ -88,8 +88,7 @@ class APINotesManager {
   /// \param HeaderDir The directory at which we
   ///
   /// \returns true if an error occurred.
-  bool loadAPINotes(const DirectoryEntry *HeaderDir,
-                    const FileEntry *APINotesFile);
+  bool loadAPINotes(const DirectoryEntry *HeaderDir, FileEntryRef APINotesFile);
 
   /// Look for API notes in the given directory.
   ///

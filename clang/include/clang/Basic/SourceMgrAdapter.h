@@ -38,7 +38,7 @@ class SourceMgrAdapter {
   unsigned ErrorDiagID, WarningDiagID, NoteDiagID;
 
   /// The default file to use when mapping buffers.
-  const FileEntry *DefaultFile;
+  OptionalFileEntryRef DefaultFile;
 
   /// A mapping from (LLVM source manager, buffer ID) pairs to the
   /// corresponding file ID within the Clang source manager.
@@ -53,7 +53,8 @@ public:
   /// manager and diagnostics engine.
   SourceMgrAdapter(SourceManager &srcMgr, DiagnosticsEngine &diag,
                    unsigned errorDiagID, unsigned warningDiagID,
-                   unsigned noteDiagID, const FileEntry *defaultFile = nullptr);
+                   unsigned noteDiagID,
+                   OptionalFileEntryRef defaultFile = std::nullopt);
 
   ~SourceMgrAdapter();
 
