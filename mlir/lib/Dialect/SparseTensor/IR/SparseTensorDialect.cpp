@@ -608,27 +608,28 @@ void SparseTensorEncodingAttr::print(AsmPrinter &printer) const {
 
 void SparseTensorEncodingAttr::printSymbol(AffineMap &map,
                                            AsmPrinter &printer) const {
-  if (map.getNumSymbols() != 0) {
-    printer << '[';
-    for (unsigned i = 0; i < map.getNumSymbols() - 1; ++i)
-      printer << 's' << i << ", ";
-    if (map.getNumSymbols() >= 1)
-      printer << 's' << map.getNumSymbols() - 1;
-    printer << ']';
-  }
+  if (map.getNumSymbols() == 0)
+    return;
+  printer << '[';
+  for (unsigned i = 0, n = map.getNumSymbols() - 1; i < n; i++)
+    printer << 's' << i << ", ";
+  if (map.getNumSymbols() >= 1)
+    printer << 's' << map.getNumSymbols() - 1;
+  printer << ']';
 }
 
 void SparseTensorEncodingAttr::printDimension(
     AffineMap &map, AsmPrinter &printer,
     ArrayRef<SparseTensorDimSliceAttr> dimSlices) const {
   if (!dimSlices.empty()) {
-    for (unsigned i = 0; i < map.getNumDims() - 1; ++i)
+    for (unsigned i = 0, n = map.getNumDims() - 1; i < n; i++)
       printer << 'd' << i << " : " << dimSlices[i] << ", ";
-    if (map.getNumDims() >= 1)
+    if (map.getNumDims() >= 1) {
       printer << 'd' << map.getNumDims() - 1 << " : "
               << dimSlices[map.getNumDims() - 1];
+    }
   } else {
-    for (unsigned i = 0; i < map.getNumDims() - 1; ++i)
+    for (unsigned i = 0, n = map.getNumDims() - 1; i < n; i++)
       printer << 'd' << i << ", ";
     if (map.getNumDims() >= 1)
       printer << 'd' << map.getNumDims() - 1;
@@ -638,7 +639,7 @@ void SparseTensorEncodingAttr::printDimension(
 void SparseTensorEncodingAttr::printLevel(
     AffineMap &map, AsmPrinter &printer,
     ArrayRef<DimLevelType> lvlTypes) const {
-  for (unsigned i = 0; i < map.getNumResults() - 1; ++i) {
+  for (unsigned i = 0, n = map.getNumResults() - 1; i < n; i++) {
     map.getResult(i).print(printer.getStream());
     printer << " : " << toMLIRString(lvlTypes[i]) << ", ";
   }
