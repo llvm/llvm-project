@@ -32,7 +32,8 @@ define amdgpu_cs void @test_load_zext(i32 inreg %0, i32 inreg %1, i32 inreg %res
 ; the base may be the RHS operand of the load in SDAG.
 ; GCN-LABEL: name: test_complex_reg_offset
 ; GCN-DAG: %[[BASE:.*]]:sreg_64 = SI_PC_ADD_REL_OFFSET target-flags(amdgpu-rel32-lo) @0 + 4,
-; GCN-DAG: %[[OFFSET:.*]]:sreg_32 = S_LSHL_B32
+; SDAG-DAG: %[[OFFSET:.*]]:sreg_32 = nuw nsw S_LSHL_B32
+; GISEL-DAG: %[[OFFSET:.*]]:sreg_32 = S_LSHL_B32
 ; SDAG: S_LOAD_DWORD_SGPR_IMM killed %[[BASE]], killed %[[OFFSET]], 0, 0
 ; GISEL: S_LOAD_DWORD_SGPR_IMM %[[BASE]], %[[OFFSET]], 0, 0
 define amdgpu_ps void @test_complex_reg_offset(ptr addrspace(1) %out) {
