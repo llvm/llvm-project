@@ -595,6 +595,7 @@ Error linkBitcodeFiles(SmallVectorImpl<OffloadFile> &InputFiles,
   StringRef Arch = Args.getLastArgValue(OPT_arch_EQ);
 
   SmallVector<OffloadFile, 4> BitcodeInputFiles;
+  DenseSet<StringRef> StrongResolutions;
   DenseSet<StringRef> UsedInRegularObj;
   DenseSet<StringRef> UsedInSharedLib;
   BumpPtrAllocator Alloc;
@@ -608,6 +609,18 @@ Error linkBitcodeFiles(SmallVectorImpl<OffloadFile> &InputFiles,
     file_magic Type = identify_magic(Buffer.getBuffer());
     switch (Type) {
     case file_magic::bitcode: {
+      Expected<IRSymtabFile> IRSymtabOrErr = readIRSymtab(Buffer);
+      if (!IRSymtabOrErr)
+        return IRSymtabOrErr.takeError();
+
+      // Check for any strong resolutions we need to preserve.
+      for (unsigned I = 0; I != IRSymtabOrErr->Mods.size(); ++I) {
+        for (const auto &Sym : IRSymtabOrErr->TheReader.module_symbols(I)) {
+          if (!Sym.isFormatSpecific() && Sym.isGlobal() && !Sym.isWeak() &&
+              !Sym.isUndefined())
+            StrongResolutions.insert(Saver.save(Sym.Name));
+        }
+      }
       BitcodeInputFiles.emplace_back(std::move(File));
       continue;
     }
@@ -696,6 +709,7 @@ Error linkBitcodeFiles(SmallVectorImpl<OffloadFile> &InputFiles,
       // it is undefined or another definition has already been used.
       Res.Prevailing =
           !Sym.isUndefined() &&
+          !(Sym.isWeak() && StrongResolutions.contains(Sym.getName())) &&
           PrevailingSymbols.insert(Saver.save(Sym.getName())).second;
 
       // We need LTO to preseve the following global symbols:
