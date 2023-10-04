@@ -14,6 +14,7 @@
 ///
 //===----------------------------------------------------------------------===//
 
+#include "llvm/Transforms/Utils/IRCanonicalizer.h"
 #include "llvm/ADT/SetVector.h"
 #include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/SmallString.h"
@@ -28,7 +29,6 @@
 #include "llvm/PassRegistry.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Transforms/Utils.h"
-#include "llvm/Transforms/Utils/IRCanonicalizer.h"
 #include <algorithm>
 #include <vector>
 
