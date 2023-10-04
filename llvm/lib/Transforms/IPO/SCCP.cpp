@@ -121,9 +121,9 @@ static void createDebugConstantExpression(Module &M, GlobalVariable *GV) {
     std::optional<uint64_t> InitIntOpt;
     if (API.isNonNegative())
       InitIntOpt = API.tryZExtValue();
-    else if (auto Temp = API.trySExtValue(); Temp.has_value())
+    else if (auto Temp = API.trySExtValue())
       // Transform a signed optional to unsigned optional.
-      InitIntOpt = static_cast<uint64_t>(Temp.value());
+      InitIntOpt = static_cast<uint64_t>(*Temp);
     return InitIntOpt ? DIB.createConstantValueExpression(InitIntOpt.value())
                       : nullptr;
   };
