@@ -52,8 +52,8 @@ SourceLocation SourceMgrAdapter::mapLocation(const llvm::SourceMgr &llvmSrcMgr,
     FileID fileID;
     if (DefaultFile) {
       // Map to the default file.
-      fileID = SrcMgr.createFileID(DefaultFile, SourceLocation(),
-                                   SrcMgr::C_User);
+      fileID =
+          SrcMgr.getOrCreateFileID(DefaultFile->getLastRef(), SrcMgr::C_User);
 
       // Only do this once.
       DefaultFile = nullptr;
