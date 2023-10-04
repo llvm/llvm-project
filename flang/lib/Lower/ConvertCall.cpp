@@ -1661,11 +1661,13 @@ public:
     // above.
     if (mustBeOrdered) {
       for (auto &preparedActual : loweredActuals) {
-        if (hlfir::AssociateOp associate =
-                preparedActual->associateIfArrayExpr(loc, builder)) {
-          fir::FirOpBuilder *bldr = &builder;
-          callContext.stmtCtx.attachCleanup(
-              [=]() { bldr->create<hlfir::EndAssociateOp>(loc, associate); });
+        if (preparedActual) {
+          if (hlfir::AssociateOp associate =
+                  preparedActual->associateIfArrayExpr(loc, builder)) {
+            fir::FirOpBuilder *bldr = &builder;
+            callContext.stmtCtx.attachCleanup(
+                [=]() { bldr->create<hlfir::EndAssociateOp>(loc, associate); });
+          }
         }
       }
     }
