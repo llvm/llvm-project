@@ -43,6 +43,14 @@ def Transform_Dialect : Dialect {
     constexpr const static ::llvm::StringLiteral kArgReadOnlyAttrName =
         "transform.readonly";
 
+    /// Above attribute names as `StringAttr`.
+    StringAttr getConsumedAttrName() const {
+      return StringAttr::get(getContext(), kArgConsumedAttrName);
+    }
+    StringAttr getReadOnlyAttrName() const {
+      return StringAttr::get(getContext(), kArgReadOnlyAttrName);
+    }
+
     template <typename DataTy>
     const DataTy &getExtraData() const {
       return *static_cast<const DataTy *>(

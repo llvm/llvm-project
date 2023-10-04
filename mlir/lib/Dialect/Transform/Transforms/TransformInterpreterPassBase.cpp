@@ -317,12 +317,6 @@ LogicalResult mergeInto(FunctionOpInterface func1, FunctionOpInterface func2) {
   assert(func1->getParentOp() == func2->getParentOp() &&
          "expected func1 and func2 to be in the same parent op");
 
-  MLIRContext *context = func1->getContext();
-  auto consumedName = StringAttr::get(
-      context, transform::TransformDialect::kArgConsumedAttrName);
-  auto readOnlyName = StringAttr::get(
-      context, transform::TransformDialect::kArgReadOnlyAttrName);
-
   // Check that function signatures match.
   if (func1.getFunctionType() != func2.getFunctionType()) {
     return func1.emitError()
@@ -331,6 +325,10 @@ LogicalResult mergeInto(FunctionOpInterface func1, FunctionOpInterface func2) {
   }
 
   // Check and merge argument attributes.
+  MLIRContext *context = func1->getContext();
+  auto td = context->getLoadedDialect<transform::TransformDialect>();
+  StringAttr consumedName = td->getConsumedAttrName();
+  StringAttr readOnlyName = td->getReadOnlyAttrName();
   for (unsigned i = 0, e = func1.getNumArguments(); i < e; ++i) {
     bool isExternalConsumed = func2.getArgAttr(i, consumedName) != nullptr;
     bool isExternalReadonly = func2.getArgAttr(i, readOnlyName) != nullptr;
