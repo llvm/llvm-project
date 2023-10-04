@@ -813,7 +813,7 @@ template <class FuncRecordTy, support::endianness Endian>
 Error getFuncNameViaRef(const FuncRecordTy *Record,
                         InstrProfSymtab &ProfileNames, StringRef &FuncName) {
   uint64_t NameRef = getFuncNameRef<FuncRecordTy, Endian>(Record);
-  FuncName = ProfileNames.getFuncName(NameRef);
+  FuncName = ProfileNames.getFuncOrVarName(NameRef);
   return Error::success();
 }
 

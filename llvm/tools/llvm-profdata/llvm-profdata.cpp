@@ -2390,7 +2390,7 @@ static void traverseAllValueSites(const InstrProfRecord &Func, uint32_t VK,
       if (Symtab == nullptr)
         OS << format("%4" PRIu64, VD[V].Value);
       else
-        OS << Symtab->getFuncName(VD[V].Value);
+        OS << Symtab->getFuncOrVarName(VD[V].Value);
       OS << ", " << format("%10" PRId64, VD[V].Count) << " ] ("
          << format("%.2f%%", (VD[V].Count * 100.0 / SiteSum)) << ")\n";
     }
@@ -2644,7 +2644,7 @@ static int showInstrProfile(
       OS << "  Temporal Profile Trace " << i << " (weight=" << Traces[i].Weight
          << " count=" << Traces[i].FunctionNameRefs.size() << "):\n";
       for (auto &NameRef : Traces[i].FunctionNameRefs)
-        OS << "    " << Reader->getSymtab().getFuncName(NameRef) << "\n";
+        OS << "    " << Reader->getSymtab().getFuncOrVarName(NameRef) << "\n";
     }
   }
 
@@ -3079,7 +3079,7 @@ static int order_main(int argc, const char *argv[]) {
   WithColor::note() << "# Ordered " << Nodes.size() << " functions\n";
   for (auto &N : Nodes) {
     auto [Filename, ParsedFuncName] =
-        getParsedIRPGOFuncName(Reader->getSymtab().getFuncName(N.Id));
+        getParsedIRPGOFuncName(Reader->getSymtab().getFuncOrVarName(N.Id));
     if (!Filename.empty())
       OS << "# " << Filename << "\n";
     OS << ParsedFuncName << "\n";
