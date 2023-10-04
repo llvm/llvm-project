@@ -21,24 +21,29 @@
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/SmallVector.h"
+#include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/StringMap.h"
 #include "llvm/ADT/StringRef.h"
+#include "llvm/BinaryFormat/Magic.h"
 #include "llvm/Object/Archive.h"
 #include "llvm/Object/ArchiveWriter.h"
 #include "llvm/Object/Binary.h"
 #include "llvm/Object/ObjectFile.h"
 #include "llvm/Support/Casting.h"
+#include "llvm/Support/Compression.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/EndianStream.h"
 #include "llvm/Support/Errc.h"
 #include "llvm/Support/Error.h"
 #include "llvm/Support/ErrorOr.h"
 #include "llvm/Support/FileSystem.h"
+#include "llvm/Support/MD5.h"
 #include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/Path.h"
 #include "llvm/Support/Program.h"
 #include "llvm/Support/Signals.h"
 #include "llvm/Support/StringSaver.h"
+#include "llvm/Support/Timer.h"
 #include "llvm/Support/WithColor.h"
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/TargetParser/Host.h"
@@ -48,6 +53,7 @@
 #include <cstddef>
 #include <cstdint>
 #include <forward_list>
+#include <llvm/Support/Process.h>
 #include <memory>
 #include <set>
 #include <string>
@@ -57,6 +63,10 @@
 using namespace llvm;
 using namespace llvm::object;
 using namespace clang;
+
+static llvm::TimerGroup
+    ClangOffloadBundlerTimerGroup("Clang Offload Bundler Timer Group",
+                                  "Timer group for clang offload bundler");
 
 /// Magic string that marks the existence of offloading data.
 #define OFFLOAD_BUNDLER_MAGIC_STR "__CLANG_OFFLOAD_BUNDLE__"
@@ -224,20 +234,22 @@ public:
 
   /// Write the header of the bundled file to \a OS based on the information
   /// gathered from \a Inputs.
-  virtual Error WriteHeader(raw_fd_ostream &OS,
+  virtual Error WriteHeader(raw_ostream &OS,
                             ArrayRef<std::unique_ptr<MemoryBuffer>> Inputs) = 0;
 
   /// Write the marker that initiates a bundle for the triple \a TargetTriple to
   /// \a OS.
-  virtual Error WriteBundleStart(raw_fd_ostream &OS,
-                                 StringRef TargetTriple) = 0;
+  virtual Error WriteBundleStart(raw_ostream &OS, StringRef TargetTriple) = 0;
 
   /// Write the marker that closes a bundle for the triple \a TargetTriple to \a
   /// OS.
-  virtual Error WriteBundleEnd(raw_fd_ostream &OS, StringRef TargetTriple) = 0;
+  virtual Error WriteBundleEnd(raw_ostream &OS, StringRef TargetTriple) = 0;
 
   /// Write the bundle from \a Input into \a OS.
-  virtual Error WriteBundle(raw_fd_ostream &OS, MemoryBuffer &Input) = 0;
+  virtual Error WriteBundle(raw_ostream &OS, MemoryBuffer &Input) = 0;
+
+  /// Finalize output file.
+  virtual Error finalizeOutputFile() { return Error::success(); }
 
   /// List bundle IDs in \a Input.
   virtual Error listBundleIDs(MemoryBuffer &Input) {
@@ -311,7 +323,7 @@ static uint64_t Read8byteIntegerFromBuffer(StringRef Buffer, size_t pos) {
 }
 
 /// Write 8-byte integers to a buffer in little-endian format.
-static void Write8byteIntegerToBuffer(raw_fd_ostream &OS, uint64_t Val) {
+static void Write8byteIntegerToBuffer(raw_ostream &OS, uint64_t Val) {
   llvm::support::endian::write(OS, Val, llvm::support::little);
 }
 
@@ -359,8 +371,7 @@ public:
       return Error::success();
 
     // Check if no magic was found.
-    StringRef Magic(FC.data(), sizeof(OFFLOAD_BUNDLER_MAGIC_STR) - 1);
-    if (!Magic.equals(OFFLOAD_BUNDLER_MAGIC_STR))
+    if (llvm::identify_magic(FC) != llvm::file_magic::offload_bundle)
       return Error::success();
 
     // Read number of bundles.
@@ -435,7 +446,7 @@ public:
     return Error::success();
   }
 
-  Error WriteHeader(raw_fd_ostream &OS,
+  Error WriteHeader(raw_ostream &OS,
                     ArrayRef<std::unique_ptr<MemoryBuffer>> Inputs) final {
 
     // Compute size of the header.
@@ -472,19 +483,27 @@ public:
     return Error::success();
   }
 
-  Error WriteBundleStart(raw_fd_ostream &OS, StringRef TargetTriple) final {
+  Error WriteBundleStart(raw_ostream &OS, StringRef TargetTriple) final {
     CurWriteBundleTarget = TargetTriple.str();
     return Error::success();
   }
 
-  Error WriteBundleEnd(raw_fd_ostream &OS, StringRef TargetTriple) final {
+  Error WriteBundleEnd(raw_ostream &OS, StringRef TargetTriple) final {
     return Error::success();
   }
 
-  Error WriteBundle(raw_fd_ostream &OS, MemoryBuffer &Input) final {
+  Error WriteBundle(raw_ostream &OS, MemoryBuffer &Input) final {
     auto BI = BundlesInfo[CurWriteBundleTarget];
-    OS.seek(BI.Offset);
+
+    // Pad with 0 to reach specified offset.
+    size_t CurrentPos = OS.tell();
+    size_t PaddingSize = BI.Offset > CurrentPos ? BI.Offset - CurrentPos : 0;
+    for (size_t I = 0; I < PaddingSize; ++I)
+      OS.write('\0');
+    assert(OS.tell() == BI.Offset);
+
     OS.write(Input.getBufferStart(), Input.getBufferSize());
+
     return Error::success();
   }
 };
@@ -541,7 +560,7 @@ class ObjectFileHandler final : public FileHandler {
       return NameOrErr.takeError();
 
     // If it does not start with the reserved suffix, just skip this section.
-    if (!NameOrErr->startswith(OFFLOAD_BUNDLER_MAGIC_STR))
+    if (llvm::identify_magic(*NameOrErr) != llvm::file_magic::offload_bundle)
       return std::nullopt;
 
     // Return the triple that is right after the reserved prefix.
@@ -607,7 +626,7 @@ public:
     return Error::success();
   }
 
-  Error WriteHeader(raw_fd_ostream &OS,
+  Error WriteHeader(raw_ostream &OS,
                     ArrayRef<std::unique_ptr<MemoryBuffer>> Inputs) final {
     assert(BundlerConfig.HostInputIndex != ~0u &&
            "Host input index not defined.");
@@ -617,12 +636,16 @@ public:
     return Error::success();
   }
 
-  Error WriteBundleStart(raw_fd_ostream &OS, StringRef TargetTriple) final {
+  Error WriteBundleStart(raw_ostream &OS, StringRef TargetTriple) final {
     ++NumberOfProcessedInputs;
     return Error::success();
   }
 
-  Error WriteBundleEnd(raw_fd_ostream &OS, StringRef TargetTriple) final {
+  Error WriteBundleEnd(raw_ostream &OS, StringRef TargetTriple) final {
+    return Error::success();
+  }
+
+  Error finalizeOutputFile() final {
     assert(NumberOfProcessedInputs <= NumberOfInputs &&
            "Processing more inputs that actually exist!");
     assert(BundlerConfig.HostInputIndex != ~0u &&
@@ -639,10 +662,6 @@ public:
 
     assert(BundlerConfig.ObjcopyPath != "" &&
            "llvm-objcopy path not specified");
-
-    // We write to the output file directly. So, we close it and use the name
-    // to pass down to llvm-objcopy.
-    OS.close();
 
     // Temporary files that need to be removed.
     TempFileHandlerRAII TempFiles;
@@ -684,7 +703,7 @@ public:
     return Error::success();
   }
 
-  Error WriteBundle(raw_fd_ostream &OS, MemoryBuffer &Input) final {
+  Error WriteBundle(raw_ostream &OS, MemoryBuffer &Input) final {
     return Error::success();
   }
 
@@ -781,22 +800,22 @@ protected:
     return Error::success();
   }
 
-  Error WriteHeader(raw_fd_ostream &OS,
+  Error WriteHeader(raw_ostream &OS,
                     ArrayRef<std::unique_ptr<MemoryBuffer>> Inputs) final {
     return Error::success();
   }
 
-  Error WriteBundleStart(raw_fd_ostream &OS, StringRef TargetTriple) final {
+  Error WriteBundleStart(raw_ostream &OS, StringRef TargetTriple) final {
     OS << BundleStartString << TargetTriple << "\n";
     return Error::success();
   }
 
-  Error WriteBundleEnd(raw_fd_ostream &OS, StringRef TargetTriple) final {
+  Error WriteBundleEnd(raw_ostream &OS, StringRef TargetTriple) final {
     OS << BundleEndString << TargetTriple << "\n";
     return Error::success();
   }
 
-  Error WriteBundle(raw_fd_ostream &OS, MemoryBuffer &Input) final {
+  Error WriteBundle(raw_ostream &OS, MemoryBuffer &Input) final {
     OS << Input.getBuffer();
     return Error::success();
   }
@@ -881,6 +900,181 @@ CreateFileHandler(MemoryBuffer &FirstInput,
                            "'" + FilesType + "': invalid file type specified");
 }
 
+OffloadBundlerConfig::OffloadBundlerConfig() {
+  auto IgnoreEnvVarOpt =
+      llvm::sys::Process::GetEnv("OFFLOAD_BUNDLER_IGNORE_ENV_VAR");
+  if (IgnoreEnvVarOpt.has_value() && IgnoreEnvVarOpt.value() == "1")
+    return;
+
+  auto VerboseEnvVarOpt = llvm::sys::Process::GetEnv("OFFLOAD_BUNDLER_VERBOSE");
+  if (VerboseEnvVarOpt.has_value())
+    Verbose = VerboseEnvVarOpt.value() == "1";
+
+  auto CompressEnvVarOpt =
+      llvm::sys::Process::GetEnv("OFFLOAD_BUNDLER_COMPRESS");
+  if (CompressEnvVarOpt.has_value())
+    Compress = CompressEnvVarOpt.value() == "1";
+}
+
+llvm::Expected<std::unique_ptr<llvm::MemoryBuffer>>
+CompressedOffloadBundle::compress(const llvm::MemoryBuffer &Input,
+                                  bool Verbose) {
+  llvm::Timer HashTimer("Hash Calculation Timer", "Hash calculation time",
+                        ClangOffloadBundlerTimerGroup);
+  if (Verbose)
+    HashTimer.startTimer();
+  llvm::MD5 Hash;
+  llvm::MD5::MD5Result Result;
+  Hash.update(Input.getBuffer());
+  Hash.final(Result);
+  uint64_t TruncatedHash = Result.low();
+  if (Verbose)
+    HashTimer.stopTimer();
+
+  SmallVector<uint8_t, 0> CompressedBuffer;
+  auto BufferUint8 = llvm::ArrayRef<uint8_t>(
+      reinterpret_cast<const uint8_t *>(Input.getBuffer().data()),
+      Input.getBuffer().size());
+
+  llvm::compression::Format CompressionFormat;
+
+  if (llvm::compression::zstd::isAvailable())
+    CompressionFormat = llvm::compression::Format::Zstd;
+  else if (llvm::compression::zlib::isAvailable())
+    CompressionFormat = llvm::compression::Format::Zlib;
+  else
+    return createStringError(llvm::inconvertibleErrorCode(),
+                             "Compression not supported");
+
+  llvm::Timer CompressTimer("Compression Timer", "Compression time",
+                            ClangOffloadBundlerTimerGroup);
+  if (Verbose)
+    CompressTimer.startTimer();
+  llvm::compression::compress(CompressionFormat, BufferUint8, CompressedBuffer);
+  if (Verbose)
+    CompressTimer.stopTimer();
+
+  uint16_t CompressionMethod = static_cast<uint16_t>(CompressionFormat);
+  uint32_t UncompressedSize = Input.getBuffer().size();
+
+  SmallVector<char, 0> FinalBuffer;
+  llvm::raw_svector_ostream OS(FinalBuffer);
+  OS << MagicNumber;
+  OS.write(reinterpret_cast<const char *>(&Version), sizeof(Version));
+  OS.write(reinterpret_cast<const char *>(&CompressionMethod),
+           sizeof(CompressionMethod));
+  OS.write(reinterpret_cast<const char *>(&UncompressedSize),
+           sizeof(UncompressedSize));
+  OS.write(reinterpret_cast<const char *>(&TruncatedHash),
+           sizeof(TruncatedHash));
+  OS.write(reinterpret_cast<const char *>(CompressedBuffer.data()),
+           CompressedBuffer.size());
+
+  if (Verbose) {
+    auto MethodUsed =
+        CompressionFormat == llvm::compression::Format::Zstd ? "zstd" : "zlib";
+    llvm::errs() << "Compressed bundle format version: " << Version << "\n"
+                 << "Compression method used: " << MethodUsed << "\n"
+                 << "Binary size before compression: " << UncompressedSize
+                 << " bytes\n"
+                 << "Binary size after compression: " << CompressedBuffer.size()
+                 << " bytes\n"
+                 << "Truncated MD5 hash: "
+                 << llvm::format_hex(TruncatedHash, 16) << "\n";
+  }
+
+  return llvm::MemoryBuffer::getMemBufferCopy(
+      llvm::StringRef(FinalBuffer.data(), FinalBuffer.size()));
+}
+
+llvm::Expected<std::unique_ptr<llvm::MemoryBuffer>>
+CompressedOffloadBundle::decompress(const llvm::MemoryBuffer &Input,
+                                    bool Verbose) {
+
+  StringRef Blob = Input.getBuffer();
+
+  if (Blob.size() < HeaderSize) {
+    return llvm::MemoryBuffer::getMemBufferCopy(Blob);
+  }
+  if (llvm::identify_magic(Blob) !=
+      llvm::file_magic::offload_bundle_compressed) {
+    if (Verbose)
+      llvm::errs() << "Uncompressed bundle.\n";
+    return llvm::MemoryBuffer::getMemBufferCopy(Blob);
+  }
+
+  uint16_t ThisVersion = *reinterpret_cast<const uint16_t *>(
+      Input.getBuffer().data() + MagicNumber.size());
+  uint16_t CompressionMethod = *reinterpret_cast<const uint16_t *>(
+      Blob.data() + MagicSize + VersionFieldSize);
+  uint32_t UncompressedSize = *reinterpret_cast<const uint32_t *>(
+      Blob.data() + MagicSize + VersionFieldSize + MethodFieldSize);
+  uint64_t StoredHash = *reinterpret_cast<const uint64_t *>(
+      Blob.data() + MagicSize + VersionFieldSize + MethodFieldSize +
+      SizeFieldSize);
+
+  llvm::compression::Format CompressionFormat;
+  if (CompressionMethod ==
+      static_cast<uint16_t>(llvm::compression::Format::Zlib))
+    CompressionFormat = llvm::compression::Format::Zlib;
+  else if (CompressionMethod ==
+           static_cast<uint16_t>(llvm::compression::Format::Zstd))
+    CompressionFormat = llvm::compression::Format::Zstd;
+  else
+    return createStringError(inconvertibleErrorCode(),
+                             "Unknown compressing method");
+
+  llvm::Timer DecompressTimer("Decompression Timer", "Decompression time",
+                              ClangOffloadBundlerTimerGroup);
+  if (Verbose)
+    DecompressTimer.startTimer();
+
+  SmallVector<uint8_t, 0> DecompressedData;
+  StringRef CompressedData = Blob.substr(HeaderSize);
+  if (llvm::Error DecompressionError = llvm::compression::decompress(
+          CompressionFormat, llvm::arrayRefFromStringRef(CompressedData),
+          DecompressedData, UncompressedSize))
+    return createStringError(inconvertibleErrorCode(),
+                             "Could not decompress embedded file contents: " +
+                                 llvm::toString(std::move(DecompressionError)));
+
+  if (Verbose) {
+    DecompressTimer.stopTimer();
+
+    // Recalculate MD5 hash
+    llvm::Timer HashRecalcTimer("Hash Recalculation Timer",
+                                "Hash recalculation time",
+                                ClangOffloadBundlerTimerGroup);
+    HashRecalcTimer.startTimer();
+    llvm::MD5 Hash;
+    llvm::MD5::MD5Result Result;
+    Hash.update(llvm::ArrayRef<uint8_t>(DecompressedData.data(),
+                                        DecompressedData.size()));
+    Hash.final(Result);
+    uint64_t RecalculatedHash = Result.low();
+    HashRecalcTimer.stopTimer();
+    bool HashMatch = (StoredHash == RecalculatedHash);
+
+    llvm::errs() << "Compressed bundle format version: " << ThisVersion << "\n"
+                 << "Decompression method: "
+                 << (CompressionFormat == llvm::compression::Format::Zlib
+                         ? "zlib"
+                         : "zstd")
+                 << "\n"
+                 << "Size before decompression: " << CompressedData.size()
+                 << " bytes\n"
+                 << "Size after decompression: " << UncompressedSize
+                 << " bytes\n"
+                 << "Stored hash: " << llvm::format_hex(StoredHash, 16) << "\n"
+                 << "Recalculated hash: "
+                 << llvm::format_hex(RecalculatedHash, 16) << "\n"
+                 << "Hashes match: " << (HashMatch ? "Yes" : "No") << "\n";
+  }
+
+  return llvm::MemoryBuffer::getMemBufferCopy(
+      llvm::toStringRef(DecompressedData));
+}
+
 // List bundle IDs. Return true if an error was found.
 Error OffloadBundler::ListBundleIDsInFile(
     StringRef InputFileName, const OffloadBundlerConfig &BundlerConfig) {
@@ -890,28 +1084,35 @@ Error OffloadBundler::ListBundleIDsInFile(
   if (std::error_code EC = CodeOrErr.getError())
     return createFileError(InputFileName, EC);
 
-  MemoryBuffer &Input = **CodeOrErr;
+  // Decompress the input if necessary.
+  Expected<std::unique_ptr<MemoryBuffer>> DecompressedBufferOrErr =
+      CompressedOffloadBundle::decompress(**CodeOrErr, BundlerConfig.Verbose);
+  if (!DecompressedBufferOrErr)
+    return createStringError(
+        inconvertibleErrorCode(),
+        "Failed to decompress input: " +
+            llvm::toString(DecompressedBufferOrErr.takeError()));
+
+  MemoryBuffer &DecompressedInput = **DecompressedBufferOrErr;
 
   // Select the right files handler.
   Expected<std::unique_ptr<FileHandler>> FileHandlerOrErr =
-      CreateFileHandler(Input, BundlerConfig);
+      CreateFileHandler(DecompressedInput, BundlerConfig);
   if (!FileHandlerOrErr)
     return FileHandlerOrErr.takeError();
 
   std::unique_ptr<FileHandler> &FH = *FileHandlerOrErr;
   assert(FH);
-  return FH->listBundleIDs(Input);
+  return FH->listBundleIDs(DecompressedInput);
 }
 
 /// Bundle the files. Return true if an error was found.
 Error OffloadBundler::BundleFiles() {
   std::error_code EC;
 
-  // Create output file.
-  raw_fd_ostream OutputFile(BundlerConfig.OutputFileNames.front(), EC,
-                            sys::fs::OF_None);
-  if (EC)
-    return createFileError(BundlerConfig.OutputFileNames.front(), EC);
+  // Create a buffer to hold the content before compressing.
+  SmallVector<char, 0> Buffer;
+  llvm::raw_svector_ostream BufferStream(Buffer);
 
   // Open input files.
   SmallVector<std::unique_ptr<MemoryBuffer>, 8u> InputBuffers;
@@ -938,22 +1139,46 @@ Error OffloadBundler::BundleFiles() {
   assert(FH);
 
   // Write header.
-  if (Error Err = FH->WriteHeader(OutputFile, InputBuffers))
+  if (Error Err = FH->WriteHeader(BufferStream, InputBuffers))
     return Err;
 
   // Write all bundles along with the start/end markers. If an error was found
   // writing the end of the bundle component, abort the bundle writing.
   auto Input = InputBuffers.begin();
   for (auto &Triple : BundlerConfig.TargetNames) {
-    if (Error Err = FH->WriteBundleStart(OutputFile, Triple))
+    if (Error Err = FH->WriteBundleStart(BufferStream, Triple))
       return Err;
-    if (Error Err = FH->WriteBundle(OutputFile, **Input))
+    if (Error Err = FH->WriteBundle(BufferStream, **Input))
       return Err;
-    if (Error Err = FH->WriteBundleEnd(OutputFile, Triple))
+    if (Error Err = FH->WriteBundleEnd(BufferStream, Triple))
       return Err;
     ++Input;
   }
-  return Error::success();
+
+  raw_fd_ostream OutputFile(BundlerConfig.OutputFileNames.front(), EC,
+                            sys::fs::OF_None);
+  if (EC)
+    return createFileError(BundlerConfig.OutputFileNames.front(), EC);
+
+  SmallVector<char, 0> CompressedBuffer;
+  if (BundlerConfig.Compress) {
+    std::unique_ptr<llvm::MemoryBuffer> BufferMemory =
+        llvm::MemoryBuffer::getMemBufferCopy(
+            llvm::StringRef(Buffer.data(), Buffer.size()));
+    auto CompressionResult =
+        CompressedOffloadBundle::compress(*BufferMemory, BundlerConfig.Verbose);
+    if (auto Error = CompressionResult.takeError())
+      return Error;
+
+    auto CompressedMemBuffer = std::move(CompressionResult.get());
+    CompressedBuffer.assign(CompressedMemBuffer->getBufferStart(),
+                            CompressedMemBuffer->getBufferEnd());
+  } else
+    CompressedBuffer = Buffer;
+
+  OutputFile.write(CompressedBuffer.data(), CompressedBuffer.size());
+
+  return FH->finalizeOutputFile();
 }
 
 // Unbundle the files. Return true if an error was found.
@@ -964,7 +1189,16 @@ Error OffloadBundler::UnbundleFiles() {
   if (std::error_code EC = CodeOrErr.getError())
     return createFileError(BundlerConfig.InputFileNames.front(), EC);
 
-  MemoryBuffer &Input = **CodeOrErr;
+  // Decompress the input if necessary.
+  Expected<std::unique_ptr<MemoryBuffer>> DecompressedBufferOrErr =
+      CompressedOffloadBundle::decompress(**CodeOrErr, BundlerConfig.Verbose);
+  if (!DecompressedBufferOrErr)
+    return createStringError(
+        inconvertibleErrorCode(),
+        "Failed to decompress input: " +
+            llvm::toString(DecompressedBufferOrErr.takeError()));
+
+  MemoryBuffer &Input = **DecompressedBufferOrErr;
 
   // Select the right files handler.
   Expected<std::unique_ptr<FileHandler>> FileHandlerOrErr =
@@ -1169,11 +1403,23 @@ Error OffloadBundler::UnbundleArchive() {
     if (!CodeObjectBufferRefOrErr)
       return CodeObjectBufferRefOrErr.takeError();
 
-    auto CodeObjectBuffer =
+    auto TempCodeObjectBuffer =
         MemoryBuffer::getMemBuffer(*CodeObjectBufferRefOrErr, false);
 
+    // Decompress the buffer if necessary.
+    Expected<std::unique_ptr<MemoryBuffer>> DecompressedBufferOrErr =
+        CompressedOffloadBundle::decompress(*TempCodeObjectBuffer,
+                                            BundlerConfig.Verbose);
+    if (!DecompressedBufferOrErr)
+      return createStringError(
+          inconvertibleErrorCode(),
+          "Failed to decompress code object: " +
+              llvm::toString(DecompressedBufferOrErr.takeError()));
+
+    MemoryBuffer &CodeObjectBuffer = **DecompressedBufferOrErr;
+
     Expected<std::unique_ptr<FileHandler>> FileHandlerOrErr =
-        CreateFileHandler(*CodeObjectBuffer, BundlerConfig);
+        CreateFileHandler(CodeObjectBuffer, BundlerConfig);
     if (!FileHandlerOrErr)
       return FileHandlerOrErr.takeError();
 
@@ -1181,11 +1427,11 @@ Error OffloadBundler::UnbundleArchive() {
     assert(FileHandler &&
            "FileHandle creation failed for file in the archive!");
 
-    if (Error ReadErr = FileHandler->ReadHeader(*CodeObjectBuffer))
+    if (Error ReadErr = FileHandler->ReadHeader(CodeObjectBuffer))
       return ReadErr;
 
     Expected<std::optional<StringRef>> CurBundleIDOrErr =
-        FileHandler->ReadBundleStart(*CodeObjectBuffer);
+        FileHandler->ReadBundleStart(CodeObjectBuffer);
     if (!CurBundleIDOrErr)
       return CurBundleIDOrErr.takeError();
 
@@ -1206,7 +1452,7 @@ Error OffloadBundler::UnbundleArchive() {
                                              BundlerConfig)) {
         std::string BundleData;
         raw_string_ostream DataStream(BundleData);
-        if (Error Err = FileHandler->ReadBundle(DataStream, *CodeObjectBuffer))
+        if (Error Err = FileHandler->ReadBundle(DataStream, CodeObjectBuffer))
           return Err;
 
         for (auto &CompatibleTarget : CompatibleTargets) {
@@ -1244,11 +1490,11 @@ Error OffloadBundler::UnbundleArchive() {
         }
       }
 
-      if (Error Err = FileHandler->ReadBundleEnd(*CodeObjectBuffer))
+      if (Error Err = FileHandler->ReadBundleEnd(CodeObjectBuffer))
         return Err;
 
       Expected<std::optional<StringRef>> NextTripleOrErr =
-          FileHandler->ReadBundleStart(*CodeObjectBuffer);
+          FileHandler->ReadBundleStart(CodeObjectBuffer);
       if (!NextTripleOrErr)
         return NextTripleOrErr.takeError();
 
