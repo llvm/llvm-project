@@ -136,7 +136,7 @@ llvm.func @genx.atomic.rmw(%ptr : !llvm.ptr<i32, 1>, %sptr : !llvm.ptr<i64, 3>, 
 }
 
 llvm.func @genx.dpas(%c : vector<8xi32>, %a : vector<8xi32>, %b : vector<8xi32>) {
-  // CHECK: %4 = call <8 x i32> @llvm.genx.GenISA.dpas.v8i32.v8i32.v8i32.v8i32(<8 x i32> %0, <8 x i32> %1, <8 x i32> %2, i32 7, i32 7, i32 8, i32 1, i1 false)
+  // CHECK: %4 = call <8 x i32> @llvm.genx.GenISA.sub.group.dpas.v8i32.v8i32.v8i32.v8i32(<8 x i32> %0, <8 x i32> %1, <8 x i32> %2, i32 7, i32 7, i32 8, i32 1, i1 false)
   %0 = genx.matrix.dpas %c, %a, %b {pa=7:i32, pb=7:i32, sd=8:i32, rc=1:i32} : (vector<8xi32>, vector<8xi32>, vector<8xi32>) -> vector<8xi32>
   llvm.return
 }
