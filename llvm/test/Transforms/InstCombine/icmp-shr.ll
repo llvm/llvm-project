@@ -1589,3 +1589,81 @@ define i1 @exactly_one_set_signbit_wrong_shamt_signed(i8 %x, i8 %y) {
   %r = icmp eq i8 %xsign, %yposz
   ret i1 %r
 }
+
+define i1 @slt_zero_ult_i1(i32 %a, i1 %b) {
+; CHECK-LABEL: @slt_zero_ult_i1(
+; CHECK-NEXT:    [[CONV:%.*]] = zext i1 [[B:%.*]] to i32
+; CHECK-NEXT:    [[CMP1:%.*]] = lshr i32 [[A:%.*]], 31
+; CHECK-NEXT:    [[CMP2:%.*]] = icmp ugt i32 [[CMP1]], [[CONV]]
+; CHECK-NEXT:    ret i1 [[CMP2]]
+;
+  %conv = zext i1 %b to i32
+  %cmp1 = lshr i32 %a, 31
+  %cmp2 = icmp ult i32 %conv, %cmp1
+  ret i1 %cmp2
+}
+
+define i1 @slt_zero_ult_i1_fail1(i32 %a, i1 %b) {
+; CHECK-LABEL: @slt_zero_ult_i1_fail1(
+; CHECK-NEXT:    [[CONV:%.*]] = zext i1 [[B:%.*]] to i32
+; CHECK-NEXT:    [[CMP1:%.*]] = lshr i32 [[A:%.*]], 30
+; CHECK-NEXT:    [[CMP2:%.*]] = icmp ugt i32 [[CMP1]], [[CONV]]
+; CHECK-NEXT:    ret i1 [[CMP2]]
+;
+  %conv = zext i1 %b to i32
+  %cmp1 = lshr i32 %a, 30
+  %cmp2 = icmp ult i32 %conv, %cmp1
+  ret i1 %cmp2
+}
+
+define i1 @slt_zero_ult_i1_fail2(i32 %a, i1 %b) {
+; CHECK-LABEL: @slt_zero_ult_i1_fail2(
+; CHECK-NEXT:    [[CONV:%.*]] = zext i1 [[B:%.*]] to i32
+; CHECK-NEXT:    [[CMP1:%.*]] = ashr i32 [[A:%.*]], 31
+; CHECK-NEXT:    [[CMP2:%.*]] = icmp ugt i32 [[CMP1]], [[CONV]]
+; CHECK-NEXT:    ret i1 [[CMP2]]
+;
+  %conv = zext i1 %b to i32
+  %cmp1 = ashr i32 %a, 31
+  %cmp2 = icmp ult i32 %conv, %cmp1
+  ret i1 %cmp2
+}
+
+define i1 @slt_zero_slt_i1_fail(i32 %a, i1 %b) {
+; CHECK-LABEL: @slt_zero_slt_i1_fail(
+; CHECK-NEXT:    [[CONV:%.*]] = zext i1 [[B:%.*]] to i32
+; CHECK-NEXT:    [[CMP1:%.*]] = lshr i32 [[A:%.*]], 31
+; CHECK-NEXT:    [[CMP2:%.*]] = icmp ugt i32 [[CMP1]], [[CONV]]
+; CHECK-NEXT:    ret i1 [[CMP2]]
+;
+  %conv = zext i1 %b to i32
+  %cmp1 = lshr i32 %a, 31
+  %cmp2 = icmp slt i32 %conv, %cmp1
+  ret i1 %cmp2
+}
+
+define i1 @slt_zero_eq_i1_signed(i32 %a, i1 %b) {
+; CHECK-LABEL: @slt_zero_eq_i1_signed(
+; CHECK-NEXT:    [[CONV:%.*]] = sext i1 [[B:%.*]] to i32
+; CHECK-NEXT:    [[CMP1:%.*]] = ashr i32 [[A:%.*]], 31
+; CHECK-NEXT:    [[CMP2:%.*]] = icmp eq i32 [[CMP1]], [[CONV]]
+; CHECK-NEXT:    ret i1 [[CMP2]]
+;
+  %conv = sext i1 %b to i32
+  %cmp1 = ashr i32 %a, 31
+  %cmp2 = icmp eq i32 %conv, %cmp1
+  ret i1 %cmp2
+}
+
+define i1 @slt_zero_eq_i1_fail_signed(i32 %a, i1 %b) {
+; CHECK-LABEL: @slt_zero_eq_i1_fail_signed(
+; CHECK-NEXT:    [[CONV:%.*]] = sext i1 [[B:%.*]] to i32
+; CHECK-NEXT:    [[CMP1:%.*]] = lshr i32 [[A:%.*]], 31
+; CHECK-NEXT:    [[CMP2:%.*]] = icmp eq i32 [[CMP1]], [[CONV]]
+; CHECK-NEXT:    ret i1 [[CMP2]]
+;
+  %conv = sext i1 %b to i32
+  %cmp1 = lshr i32 %a, 31
+  %cmp2 = icmp eq i32 %conv, %cmp1
+  ret i1 %cmp2
+}
