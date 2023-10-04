@@ -2586,6 +2586,9 @@ void LinkerDriver::linkerMain(ArrayRef<const char *> argsArr) {
     ctx.rootTimer.print();
 
   if (config->timeTraceEnabled) {
+    // Manually stop the topmost "COFF link" scope, since we're shutting down.
+    timeTraceProfilerEnd();
+
     checkError(timeTraceProfilerWrite(
         args.getLastArgValue(OPT_time_trace_eq).str(), config->outputFile));
     timeTraceProfilerCleanup();
