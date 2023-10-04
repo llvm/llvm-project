@@ -872,7 +872,8 @@ private:
     else
       ForwardedParams = {Params.begin(), Params.end()};
 
-    auto ForwardedParamsRef = maybeDropCxxExplicitObjectParameters(ForwardedParams);
+    auto ForwardedParamsRef =
+        maybeDropCxxExplicitObjectParameters(ForwardedParams);
     NameVec ParameterNames = chooseParameterNames(ForwardedParamsRef);
 
     // Exclude setters (i.e. functions with one argument whose name begins with
