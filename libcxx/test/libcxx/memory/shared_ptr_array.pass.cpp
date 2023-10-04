@@ -17,9 +17,9 @@
 #include <memory>
 
 int main() {
-    std::allocate_shared<int64_t[]>(std::allocator<int64_t>{}, 10);
-    std::make_shared<int64_t[]>(10);
+  std::allocate_shared<int64_t[]>(std::allocator<int64_t>{}, 10);
+  std::make_shared<int64_t[]>(10);
 
-    std::allocate_shared<int64_t[10]>(std::allocator<int64_t>{});
-    std::make_shared<int64_t[10]>();
+  std::allocate_shared<int64_t[10]>(std::allocator<int64_t>{});
+  std::make_shared<int64_t[10]>();
 }
