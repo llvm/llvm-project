@@ -330,7 +330,7 @@ def VScaleAttr : Pass<"vscale-attr", "mlir::func::FuncOp"> {
   let summary = "Add vscale_range attribute to functions";
   let description = [{
      Set an attribute for the vscale range on functions, to allow scalable
-     vector operations to be used on Arm processors.
+     vector operations to be used on processors with variable vector length.
   }];
   let options = [
     Option<"vscaleRange", "vscale-range",

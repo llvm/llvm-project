@@ -202,9 +202,6 @@ inline void createDefaultFIROptimizerPassPipeline(
   if (pc.LoopVersioning)
     pm.addPass(fir::createLoopVersioningPass());
 
-  if (pc.VScaleMin != 0)
-    pm.addPass(fir::createVScaleAttrPass({pc.VScaleMin,pc.VScaleMax}));
-
   pm.addPass(mlir::createCSEPass());
 
   if (pc.StackArrays)
@@ -302,6 +299,10 @@ inline void createDefaultFIRCodeGenPassPipeline(
   fir::addTargetRewritePass(pm);
   fir::addExternalNameConversionPass(pm, config.Underscoring);
   fir::createDebugPasses(pm, config.DebugInfo);
+
+  if (config.VScaleMin != 0)
+    pm.addPass(fir::createVScaleAttrPass({config.VScaleMin, config.VScaleMax}));
+
   fir::addFIRToLLVMPass(pm, config.OptLevel);
 }
 
