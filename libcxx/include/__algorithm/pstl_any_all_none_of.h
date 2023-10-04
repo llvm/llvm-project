@@ -39,7 +39,7 @@ _LIBCPP_NODISCARD_EXT _LIBCPP_HIDE_FROM_ABI bool
 any_of(_ExecutionPolicy&& __policy, _ForwardIterator __first, _ForwardIterator __last, _Predicate __pred) {
   _LIBCPP_REQUIRE_CPP17_FORWARD_ITERATOR(_ForwardIterator);
   return std::__pstl_frontend_dispatch(
-      _LIBCPP_PSTL_CUSTOMIZATION_POINT(__pstl_any_of),
+      _LIBCPP_PSTL_CUSTOMIZATION_POINT(__pstl_any_of, _RawPolicy),
       [&](_ForwardIterator __g_first, _ForwardIterator __g_last, _Predicate __g_pred) {
         return std::find_if(__policy, __g_first, __g_last, __g_pred) != __g_last;
       },
@@ -60,7 +60,7 @@ _LIBCPP_NODISCARD_EXT _LIBCPP_HIDE_FROM_ABI bool
 all_of(_ExecutionPolicy&& __policy, _ForwardIterator __first, _ForwardIterator __last, _Pred __pred) {
   _LIBCPP_REQUIRE_CPP17_FORWARD_ITERATOR(_ForwardIterator);
   return std::__pstl_frontend_dispatch(
-      _LIBCPP_PSTL_CUSTOMIZATION_POINT(__pstl_all_of),
+      _LIBCPP_PSTL_CUSTOMIZATION_POINT(__pstl_all_of, _RawPolicy),
       [&](_ForwardIterator __g_first, _ForwardIterator __g_last, _Pred __g_pred) {
         return !std::any_of(__policy, __g_first, __g_last, [&](__iter_reference<_ForwardIterator> __value) {
           return !__g_pred(__value);
@@ -83,7 +83,7 @@ _LIBCPP_NODISCARD_EXT _LIBCPP_HIDE_FROM_ABI bool
 none_of(_ExecutionPolicy&& __policy, _ForwardIterator __first, _ForwardIterator __last, _Pred __pred) {
   _LIBCPP_REQUIRE_CPP17_FORWARD_ITERATOR(_ForwardIterator);
   return std::__pstl_frontend_dispatch(
-      _LIBCPP_PSTL_CUSTOMIZATION_POINT(__pstl_none_of),
+      _LIBCPP_PSTL_CUSTOMIZATION_POINT(__pstl_none_of, _RawPolicy),
       [&](_ForwardIterator __g_first, _ForwardIterator __g_last, _Pred __g_pred) {
         return !std::any_of(__policy, __g_first, __g_last, __g_pred);
       },

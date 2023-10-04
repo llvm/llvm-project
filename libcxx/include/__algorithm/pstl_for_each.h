@@ -56,7 +56,7 @@ _LIBCPP_HIDE_FROM_ABI void
 for_each_n(_ExecutionPolicy&& __policy, _ForwardIterator __first, _Size __size, _Function __func) {
   _LIBCPP_REQUIRE_CPP17_FORWARD_ITERATOR(_ForwardIterator);
   return std::__pstl_frontend_dispatch(
-      _LIBCPP_PSTL_CUSTOMIZATION_POINT(__pstl_for_each_n),
+      _LIBCPP_PSTL_CUSTOMIZATION_POINT(__pstl_for_each_n, _RawPolicy),
       [&](_ForwardIterator __g_first, _Size __g_size, _Function __g_func) {
         if constexpr (__has_random_access_iterator_category_or_concept<_ForwardIterator>::value) {
           std::for_each(__policy, std::move(__g_first), __g_first + __g_size, std::move(__g_func));
