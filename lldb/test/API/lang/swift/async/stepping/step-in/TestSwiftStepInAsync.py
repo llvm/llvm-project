@@ -16,8 +16,8 @@ class TestCase(lldbtest.TestBase):
         src = lldb.SBFileSpec('main.swift')
         _, process, _, _ = lldbutil.run_to_source_breakpoint(self, 'await', src)
 
-	# When run with debug info enabled builds, this prevents stepping from
-	# stopping in Swift Concurrency runtime functions.
+        # When run with debug info enabled builds, this prevents stepping from
+        # stopping in Swift Concurrency runtime functions.
         self.runCmd("settings set target.process.thread.step-avoid-libraries libswift_Concurrency.dylib")
 
         # All thread actions are done on the currently selected thread.
@@ -38,18 +38,18 @@ class TestCase(lldbtest.TestBase):
                 caller_after = thread().frames[1].function.GetDisplayName()
                 line_after = thread().frames[0].line_entry.line
 
-		# Breakpoints on lines with an `await` may result in more than
-		# one breakpoint location. Specifically a location before an
-		# async function is called, and then a location on the resume
-		# function. In this case, running `step` on these lines will
-		# move execution forward within the same function, _not_ step
-		# into a new function.
+                # Breakpoints on lines with an `await` may result in more than
+                # one breakpoint location. Specifically a location before an
+                # async function is called, and then a location on the resume
+                # function. In this case, running `step` on these lines will
+                # move execution forward within the same function, _not_ step
+                # into a new function.
                 #
-		# As this test is for stepping into async functions, when the
-		# step-in keeps execution on the same or next line -- not a
-		# different function, then it can be ignored. rdar://76116620
+                # As this test is for stepping into async functions, when the
+                # step-in keeps execution on the same or next line -- not a
+                # different function, then it can be ignored. rdar://76116620
                 if line_after in (line_before, line_before + 1):
-		    # When stepping stops at breakpoint, don't continue.
+                    # When stepping stops at breakpoint, don't continue.
                     if thread().stop_reason != lldb.eStopReasonBreakpoint:
                         process.Continue()
                     continue
