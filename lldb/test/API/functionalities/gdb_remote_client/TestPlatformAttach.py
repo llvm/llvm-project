@@ -7,7 +7,7 @@ from lldbsuite.test.lldbgdbclient import GDBRemoteTestBase
 
 class TestPlatformAttach(GDBRemoteTestBase):
     @skipIfRemote
-    @expectedFailureAll(oslist=["windows"], bugnumber="llvm.org/pr52451")
+    @skipIfWindows
     def test_attach(self):
         """Test attaching by name"""
 

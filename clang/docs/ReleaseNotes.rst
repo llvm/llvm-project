@@ -383,6 +383,8 @@ Bug Fixes in This Version
   (`#67722 <https://github.com/llvm/llvm-project/issues/67722>`_).
 - Fixes a crash when instantiating a lambda with requires clause.
   (`#64462 <https://github.com/llvm/llvm-project/issues/64462>`_)
+- Fixes a regression where the ``UserDefinedLiteral`` was not properly preserved
+  while evaluating consteval functions. (`#63898 <https://github.com/llvm/llvm-project/issues/63898>`_).
 
 Bug Fixes to Compiler Builtins
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -650,11 +652,11 @@ Static Analyzer
 
 - A few crashes have been found and fixed using randomized testing related
   to the use of ``_BitInt()`` in tidy checks and in clang analysis. See
- `#67212 <https://github.com/llvm/llvm-project/pull/67212>`_,
- `#66782 <https://github.com/llvm/llvm-project/pull/66782>`_,
- `#65889 <https://github.com/llvm/llvm-project/pull/65889>`_,
- `#65888 <https://github.com/llvm/llvm-project/pull/65888>`_, and
- `#65887 <https://github.com/llvm/llvm-project/pull/65887>`_
+  `#67212 <https://github.com/llvm/llvm-project/pull/67212>`_,
+  `#66782 <https://github.com/llvm/llvm-project/pull/66782>`_,
+  `#65889 <https://github.com/llvm/llvm-project/pull/65889>`_,
+  `#65888 <https://github.com/llvm/llvm-project/pull/65888>`_, and
+  `#65887 <https://github.com/llvm/llvm-project/pull/65887>`_
 
 .. _release-notes-sanitizers:
 
