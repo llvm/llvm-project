@@ -664,6 +664,7 @@ cc_library(
         "//mlir:MemRefToLLVM",
         "//mlir:MemRefTransforms",
         "//mlir:NVGPUToNVVM",
+        "//mlir:NVVMToLLVM",
         "//mlir:NVVMToLLVMIRTranslation",
         "//mlir:Pass",
         "//mlir:ROCDLToLLVMIRTranslation",
