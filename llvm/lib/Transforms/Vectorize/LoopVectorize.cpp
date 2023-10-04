@@ -9451,8 +9451,8 @@ void LoopVectorizationPlanner::adjustRecipesForReductions(
     const RecurrenceDescriptor &RdxDesc = PhiR->getRecurrenceDescriptor();
     RecurKind Kind = RdxDesc.getRecurrenceKind();
     assert(
-        (!RecurrenceDescriptor::isAnyOfRecurrenceKind(Kind) &&
-         !RecurrenceDescriptor::isFindLastIVRecurrenceKind(Kind)) &&
+        !RecurrenceDescriptor::isAnyOfRecurrenceKind(Kind) &&
+         !RecurrenceDescriptor::isFindLastIVRecurrenceKind(Kind) &&
         "AnyOf and FindLast reductions are not allowed for in-loop reductions");
 
     // Collect the chain of "link" recipes for the reduction starting at PhiR.
