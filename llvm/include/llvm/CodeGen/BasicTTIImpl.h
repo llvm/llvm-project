@@ -1702,21 +1702,23 @@ public:
             Alignment = VPI->getPointerAlignment().valueOrOne();
           unsigned AS = 0;
           if (ICA.getArgs().size() > 1)
-            if (auto PtrTy = dyn_cast<PointerType>(ICA.getArgs()[0]->getType()))
+            if (auto *PtrTy = dyn_cast<PointerType>(ICA.getArgs()[0]->getType()))
               AS = PtrTy->getAddressSpace();
           return thisT()->getMemoryOpCost(*FOp, ICA.getReturnType(), Alignment,
                                           AS, CostKind);
-        } else if (ICA.getID() == Intrinsic::vp_store) {
+        }
+        if (ICA.getID() == Intrinsic::vp_store) {
           Align Alignment;
           if (auto *VPI = dyn_cast_or_null<VPIntrinsic>(ICA.getInst()))
             Alignment = VPI->getPointerAlignment().valueOrOne();
           unsigned AS = 0;
           if (ICA.getArgs().size() >= 2)
-            if (auto PtrTy = dyn_cast<PointerType>(ICA.getArgs()[1]->getType()))
+            if (auto *PtrTy = dyn_cast<PointerType>(ICA.getArgs()[1]->getType()))
               AS = PtrTy->getAddressSpace();
           return thisT()->getMemoryOpCost(*FOp, Args[0]->getType(), Alignment,
                                           AS, CostKind);
-        } else if (VPBinOpIntrinsic::isVPBinOp(ICA.getID())) {
+        }
+        if (VPBinOpIntrinsic::isVPBinOp(ICA.getID())) {
           return thisT()->getArithmeticInstrCost(*FOp, ICA.getReturnType(),
                                                  CostKind);
         }
@@ -1729,10 +1731,8 @@ public:
         assert(ICA.getArgs().size() >= 2 && ICA.getArgTypes().size() >= 2 &&
                "Expected VPIntrinsic to have Mask and Vector Length args and "
                "types");
-        ArrayRef<const Value *> NewArgs(ICA.getArgs().begin(),
-                                        ICA.getArgs().end() - 2);
-        ArrayRef<Type *> NewTys(ICA.getArgTypes().begin(),
-                                ICA.getArgTypes().end() - 2);
+        ArrayRef<const Value *> NewArgs = ArrayRef(ICA.getArgs()).drop_back(2);
+        ArrayRef<Type *> NewTys = ArrayRef(ICA.getArgTypes()).drop_back(2);
 
         IntrinsicCostAttributes NewICA(*FID, ICA.getReturnType(), NewArgs,
                                        NewTys, ICA.getFlags(), ICA.getInst(),
