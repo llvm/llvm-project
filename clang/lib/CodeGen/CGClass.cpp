@@ -28,6 +28,7 @@
 #include "clang/CodeGen/CGFunctionInfo.h"
 #include "llvm/IR/Intrinsics.h"
 #include "llvm/IR/Metadata.h"
+#include "llvm/Support/SaveAndRestore.h"
 #include "llvm/Transforms/Utils/SanitizerStats.h"
 #include <optional>
 
@@ -1291,10 +1292,10 @@ void CodeGenFunction::EmitCtorPrologue(const CXXConstructorDecl *CD,
     assert(BaseCtorContinueBB);
   }
 
-  llvm::Value *const OldThis = CXXThisValue;
   for (; B != E && (*B)->isBaseInitializer() && (*B)->isBaseVirtual(); B++) {
     if (!ConstructVBases)
       continue;
+    SaveAndRestore ThisRAII(CXXThisValue);
     if (CGM.getCodeGenOpts().StrictVTablePointers &&
         CGM.getCodeGenOpts().OptimizationLevel > 0 &&
         isInitializerOfDynamicClass(*B))
@@ -1311,15 +1312,13 @@ void CodeGenFunction::EmitCtorPrologue(const CXXConstructorDecl *CD,
   // Then, non-virtual base initializers.
   for (; B != E && (*B)->isBaseInitializer(); B++) {
     assert(!(*B)->isBaseVirtual());
-
+    SaveAndRestore ThisRAII(CXXThisValue);
     if (CGM.getCodeGenOpts().StrictVTablePointers &&
         CGM.getCodeGenOpts().OptimizationLevel > 0 &&
         isInitializerOfDynamicClass(*B))
       CXXThisValue = Builder.CreateLaunderInvariantGroup(LoadCXXThis());
     EmitBaseInitializer(*this, ClassDecl, *B);
   }
-
-  CXXThisValue = OldThis;
 
   InitializeVTablePointers(ClassDecl);
 
