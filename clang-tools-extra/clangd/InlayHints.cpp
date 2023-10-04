@@ -528,6 +528,13 @@ static FunctionProtoTypeLoc getPrototypeLoc(Expr *Fn) {
   return {};
 }
 
+ArrayRef<const ParmVarDecl *>
+maybeDropCxxExplicitObjectParameters(ArrayRef<const ParmVarDecl *> Params) {
+  if (!Params.empty() && Params.front()->isExplicitObjectParameter())
+    Params = Params.drop_front(1);
+  return Params;
+}
+
 struct Callee {
   // Only one of Decl or Loc is set.
   // Loc is for calls through function pointers.
@@ -614,15 +621,21 @@ public:
     // argument expressions present in the function call syntax preceded by the
     // implied object argument (E).
     //
-    // However, we don't have the implied object argument for static
-    // operator() per clang::Sema::BuildCallToObjectOfClassType.
+    // As well as the provision from P0847R7 Deducing This [expr.call]p7:
+    // ...If the function is an explicit object member function and there is an
+    // implied object argument ([over.call.func]), the list of provided
+    // arguments is preceded by the implied object argument for the purposes of
+    // this correspondence...
+    //
+    // However, we don't have the implied object argument
+    // for static operator() per clang::Sema::BuildCallToObjectOfClassType.
     llvm::ArrayRef<const Expr *> Args = {E->getArgs(), E->getNumArgs()};
-    if (IsFunctor)
-      // We don't have the implied object argument through
-      // a function pointer either.
-      if (const CXXMethodDecl *Method =
-              dyn_cast_or_null<CXXMethodDecl>(Callee.Decl);
-          Method && Method->isInstance())
+    // We don't have the implied object argument through a function pointer
+    // either.
+    if (const CXXMethodDecl *Method =
+            dyn_cast_or_null<CXXMethodDecl>(Callee.Decl))
+      if (Method->isInstance() &&
+          (IsFunctor || Method->hasCXXExplicitFunctionObjectParameter()))
         Args = Args.drop_front(1);
     processCall(Callee, Args);
     return true;
@@ -849,8 +862,8 @@ private:
         if (Ctor->isCopyOrMoveConstructor())
           return;
 
-    auto Params =
-        Callee.Decl ? Callee.Decl->parameters() : Callee.Loc.getParams();
+    auto Params = maybeDropCxxExplicitObjectParameters(
+        Callee.Decl ? Callee.Decl->parameters() : Callee.Loc.getParams());
 
     // Resolve parameter packs to their forwarded parameter
     SmallVector<const ParmVarDecl *> ForwardedParams;
@@ -859,7 +872,8 @@ private:
     else
       ForwardedParams = {Params.begin(), Params.end()};
 
-    NameVec ParameterNames = chooseParameterNames(ForwardedParams);
+    auto ForwardedParamsRef = maybeDropCxxExplicitObjectParameters(ForwardedParams);
+    NameVec ParameterNames = chooseParameterNames(ForwardedParamsRef);
 
     // Exclude setters (i.e. functions with one argument whose name begins with
     // "set"), and builtins like std::move/forward/... as their parameter name
@@ -878,7 +892,8 @@ private:
 
       StringRef Name = ParameterNames[I];
       bool NameHint = shouldHintName(Args[I], Name);
-      bool ReferenceHint = shouldHintReference(Params[I], ForwardedParams[I]);
+      bool ReferenceHint =
+          shouldHintReference(Params[I], ForwardedParamsRef[I]);
 
       if (NameHint || ReferenceHint) {
         addInlayHint(Args[I]->getSourceRange(), HintSide::Left,
@@ -1018,7 +1033,7 @@ private:
     return {};
   }
 
-  NameVec chooseParameterNames(SmallVector<const ParmVarDecl *> Parameters) {
+  NameVec chooseParameterNames(ArrayRef<const ParmVarDecl *> Parameters) {
     NameVec ParameterNames;
     for (const auto *P : Parameters) {
       if (isExpandedFromParameterPack(P)) {
