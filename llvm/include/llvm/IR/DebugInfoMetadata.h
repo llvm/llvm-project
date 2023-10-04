@@ -3073,6 +3073,67 @@ template <> struct DenseMapInfo<DIExpression::FragmentInfo> {
   static bool isEqual(const FragInfo &A, const FragInfo &B) { return A == B; }
 };
 
+/// Holds a DIExpression and keeps track of how many operands have been consumed
+/// so far.
+class DIExpressionCursor {
+  DIExpression::expr_op_iterator Start, End;
+
+public:
+  DIExpressionCursor(const DIExpression *Expr) {
+    if (!Expr) {
+      assert(Start == End);
+      return;
+    }
+    Start = Expr->expr_op_begin();
+    End = Expr->expr_op_end();
+  }
+
+  DIExpressionCursor(ArrayRef<uint64_t> Expr)
+      : Start(Expr.begin()), End(Expr.end()) {}
+
+  DIExpressionCursor(const DIExpressionCursor &) = default;
+
+  /// Consume one operation.
+  std::optional<DIExpression::ExprOperand> take() {
+    if (Start == End)
+      return std::nullopt;
+    return *(Start++);
+  }
+
+  /// Consume N operations.
+  void consume(unsigned N) { std::advance(Start, N); }
+
+  /// Return the current operation.
+  std::optional<DIExpression::ExprOperand> peek() const {
+    if (Start == End)
+      return std::nullopt;
+    return *(Start);
+  }
+
+  /// Return the next operation.
+  std::optional<DIExpression::ExprOperand> peekNext() const {
+    if (Start == End)
+      return std::nullopt;
+
+    auto Next = Start.getNext();
+    if (Next == End)
+      return std::nullopt;
+
+    return *Next;
+  }
+
+  /// Determine whether there are any operations left in this expression.
+  operator bool() const { return Start != End; }
+
+  DIExpression::expr_op_iterator begin() const { return Start; }
+  DIExpression::expr_op_iterator end() const { return End; }
+
+  /// Retrieve the fragment information, if any.
+  std::optional<DIExpression::FragmentInfo> getFragmentInfo() const {
+    return DIExpression::getFragmentInfo(Start, End);
+  }
+};
+
 /// Global variables.
 ///
 /// TODO: Remove DisplayName.  It's always equal to Name.
