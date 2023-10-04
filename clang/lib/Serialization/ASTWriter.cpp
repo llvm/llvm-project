@@ -4622,18 +4622,12 @@ time_t ASTWriter::getTimestampForOutput(const FileEntry *E) const {
 
 ASTFileSignature ASTWriter::WriteAST(Sema &SemaRef, StringRef OutputFile,
                                      Module *WritingModule, StringRef isysroot,
-                                     bool hasErrors,
                                      bool ShouldCacheASTInMemory) {
   llvm::TimeTraceScope scope("WriteAST", OutputFile);
   WritingAST = true;
 
-  ASTHasCompilerErrors = hasErrors;
-  bool trueHasErrors = SemaRef.PP.getDiagnostics().hasUncompilableErrorOccurred();
-  assert(ASTHasCompilerErrors == trueHasErrors);
-  if (trueHasErrors != ASTHasCompilerErrors) {
-      // forcing the compiler errors flag to be set correctly
-      ASTHasCompilerErrors = trueHasErrors;
-  }
+  ASTHasCompilerErrors =
+      SemaRef.PP.getDiagnostics().hasUncompilableErrorOccurred();
 
   // Emit the file header.
   Stream.Emit((unsigned)'C', 8);
