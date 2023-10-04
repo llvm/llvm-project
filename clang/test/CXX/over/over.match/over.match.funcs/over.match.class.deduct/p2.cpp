@@ -86,7 +86,7 @@ int main() {
 
 }
 
-namespace deduceTemplatedConstructor{
+namespace deduceTemplatedConstructor {
 template <typename X, typename Y> struct IsSame {
     static constexpr bool value = false;
 };
