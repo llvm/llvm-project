@@ -3346,6 +3346,12 @@ bool SIInstrInfo::FoldImmediate(MachineInstr &UseMI, MachineInstr &DefMI,
       if (pseudoToMCOpcode(NewOpc) == -1)
         return false;
 
+      // V_FMAAK_F16_t16 takes VGPR_32_Lo128 operands, so the rewrite
+      // would also require restricting their register classes. For now
+      // just bail out.
+      if (NewOpc == AMDGPU::V_FMAAK_F16_t16)
+        return false;
+
       const int64_t Imm = ImmOp->getImm();
 
       // FIXME: This would be a lot easier if we could return a new instruction
