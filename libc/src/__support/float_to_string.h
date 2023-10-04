@@ -708,7 +708,7 @@ FloatToString<long double>::get_negative_block(int block_index) {
     const int32_t SHIFT_CONST = TABLE_SHIFT_CONST;
 
     // if the requested block is zero
-    if (block_index <= MIN_BLOCK_2[idx]) {
+    if (block_index < MIN_BLOCK_2[idx]) {
       return 0;
     }
     const uint32_t p = POW10_OFFSET_2[idx] + block_index - MIN_BLOCK_2[idx];
