@@ -21,8 +21,6 @@
 using namespace llvm;
 using namespace mlir;
 
-using ::testing::StartsWith;
-
 StringLiteral IRWithResources = R"(
 module @TestDialectResources attributes {
   bytecode.test = dense_resource<resource> : tensor<4xi32>

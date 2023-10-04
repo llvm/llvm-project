@@ -49,10 +49,8 @@ using ::testing::IsEmpty;
 using ::testing::Matches;
 using ::testing::Pair;
 using ::testing::PrintToString;
-using ::testing::Property;
 using ::testing::SizeIs;
 using ::testing::UnorderedElementsAre;
-using ::testing::Value;
 
 namespace llvm {
 namespace cfi_verify {
