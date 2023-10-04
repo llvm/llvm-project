@@ -73,9 +73,9 @@ declare void @ext_never_return() noreturn
 
 ; This test emits wasm unreachable to fill in for the missing i32 return value,
 ; which is necessary for the function to pass wasm validation.
-define i32 @missing_ret_unreach() {
-; CHECK-LABEL: missing_ret_unreach:
-; CHECK:         .functype missing_ret_unreach () -> (i32)
+define i32 @missing_ret_unreachable() {
+; CHECK-LABEL: missing_ret_unreachable:
+; CHECK:         .functype missing_ret_unreachable () -> (i32)
 ; CHECK-NEXT:  # %bb.0:
 ; CHECK-NEXT:    call ext_func
 ; CHECK-NEXT:    unreachable
@@ -86,9 +86,9 @@ define i32 @missing_ret_unreach() {
 
 ; This is similar to the above test, but ensures wasm unreachable is emitted
 ; even after a noreturn call.
-define i32 @missing_ret_noreturn_unreach() {
-; CHECK-LABEL: missing_ret_noreturn_unreach:
-; CHECK:         .functype missing_ret_noreturn_unreach () -> (i32)
+define i32 @missing_ret_noreturn_unreachable() {
+; CHECK-LABEL: missing_ret_noreturn_unreachable:
+; CHECK:         .functype missing_ret_noreturn_unreachable () -> (i32)
 ; CHECK-NEXT:  # %bb.0:
 ; CHECK-NEXT:    call ext_never_return
 ; CHECK-NEXT:    unreachable
@@ -101,9 +101,9 @@ define i32 @missing_ret_noreturn_unreach() {
 ; three tests, as the signatures match and reaching llvm unreachable is
 ; undefined behaviour. But currently, wasm unreachable is emitted for them.
 
-define void @void_sig_match_unreach() {
-; CHECK-LABEL: void_sig_match_unreach:
-; CHECK:         .functype void_sig_match_unreach () -> ()
+define void @void_sig_match_unreachable() {
+; CHECK-LABEL: void_sig_match_unreachable:
+; CHECK:         .functype void_sig_match_unreachable () -> ()
 ; CHECK-NEXT:  # %bb.0:
 ; CHECK-NEXT:    call ext_func
 ; CHECK-NEXT:    unreachable
@@ -112,9 +112,9 @@ define void @void_sig_match_unreach() {
   unreachable
 }
 
-define i32 @i32_sig_match_unreach() {
-; CHECK-LABEL: i32_sig_match_unreach:
-; CHECK:         .functype i32_sig_match_unreach () -> (i32)
+define i32 @i32_sig_match_unreachable() {
+; CHECK-LABEL: i32_sig_match_unreachable:
+; CHECK:         .functype i32_sig_match_unreachable () -> (i32)
 ; CHECK-NEXT:  # %bb.0:
 ; CHECK-NEXT:    call ext_func_i32
 ; CHECK-NEXT:    drop
@@ -124,9 +124,9 @@ define i32 @i32_sig_match_unreach() {
   unreachable
 }
 
-define void @void_sig_match_noreturn_unreach() {
-; CHECK-LABEL: void_sig_match_noreturn_unreach:
-; CHECK:         .functype void_sig_match_noreturn_unreach () -> ()
+define void @void_sig_match_noreturn_unreachable() {
+; CHECK-LABEL: void_sig_match_noreturn_unreachable:
+; CHECK:         .functype void_sig_match_noreturn_unreachable () -> ()
 ; CHECK-NEXT:  # %bb.0:
 ; CHECK-NEXT:    call ext_never_return
 ; CHECK-NEXT:    unreachable
@@ -138,7 +138,7 @@ define void @void_sig_match_noreturn_unreach() {
 ; This function currently doesn't emit wasm unreachable, even though the final
 ; "ret void" instruction is dead code and could be replaced with an llvm
 ; unreachable. Compare and contrast with the above function,
-; @void_sig_match_noreturn_unreach().
+; @void_sig_match_noreturn_unreachable().
 define void @void_sig_match_noreturn_ret() {
 ; CHECK-LABEL: void_sig_match_noreturn_ret:
 ; CHECK:         .functype void_sig_match_noreturn_ret () -> ()
