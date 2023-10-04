@@ -1,0 +1,82 @@
+; REQUIRES: aarch64-registered-target
+; RUN: rm -rf %t && mkdir -p %t
+; RUN: split-file %s %t
+
+; RUN: llc --filetype=obj %t/a.ll -o %t/a.o
+; RUN: llc --filetype=obj %t/b.ll -o %t/b.o
+; RUN: llvm-cas --ingest %t/a.o %t/b.o --cas %t/cas > %t/just-blobs.id
+; RUN: llvm-cas-dump --cas %t/cas --object-stats - @%t/just-blobs.id | FileCheck %s --check-prefix=JUST-BLOBS
+
+; JUST-BLOBS: Kind                        Count            Parents           Children           Data (B)           Cost (B)        
+; JUST-BLOBS-NEXT: ====                        =====            =======           ========           ========           ========        
+; JUST-BLOBS-NEXT: builtin:node
+; JUST-BLOBS-NEXT: builtin:tree
+; JUST-BLOBS-NEXT: TOTAL
+
+; RUN: llc --filetype=obj --cas-backend --cas=%t/cas --mccas-casid --mtriple=arm64-apple-darwin %t/a.ll -o %t/a.id
+; RUN: llc --filetype=obj --cas-backend --cas=%t/cas --mccas-casid --mtriple=arm64-apple-darwin %t/b.ll -o %t/b.id
+; RUN: llvm-cas --ingest --casid-file %t/a.id %t/b.id --cas %t/cas > %t/casid-file.id
+; RUN: llvm-cas-dump --cas %t/cas --object-stats - @%t/casid-file.id | FileCheck %s --check-prefix=CASID-FILE
+
+; CASID-FILE: Kind                        Count            Parents           Children           Data (B)           Cost (B)        
+; CASID-FILE-NEXT: ====                        =====            =======           ========           ========           ========        
+; CASID-FILE-NEXT: builtin:node
+; CASID-FILE-NEXT: builtin:tree
+; CASID-FILE-NEXT: mc:addends
+; CASID-FILE-NEXT: mc:assembler
+; CASID-FILE-NEXT: mc:atom
+; CASID-FILE-NEXT: mc:cstring
+; CASID-FILE-NEXT: mc:data
+; CASID-FILE-NEXT: mc:data_in_code
+; CASID-FILE-NEXT: mc:group
+; CASID-FILE-NEXT: mc:header
+; CASID-FILE-NEXT: mc:padding
+; CASID-FILE-NEXT: mc:section
+; CASID-FILE-NEXT: mc:symbol_table
+; CASID-FILE-NEXT: TOTAL
+
+;--- a.ll
+; ModuleID = '/tmp/a.cpp'
+source_filename = "/tmp/a.cpp"
+target datalayout = "e-m:o-i64:64-i128:128-n32:64-S128"
+target triple = "arm64-apple-macosx14.0.0"
+
+; Function Attrs: mustprogress noinline nounwind optnone ssp uwtable(sync)
+define noundef i32 @_Z3foov() #0 {
+entry:
+  ret i32 1
+}
+
+attributes #0 = { mustprogress noinline nounwind optnone ssp uwtable(sync) "frame-pointer"="non-leaf" "no-trapping-math"="true" "stack-protector-buffer-size"="8" "target-cpu"="apple-m1" "target-features"="+aes,+crc,+dotprod,+fp-armv8,+fp16fml,+fullfp16,+lse,+neon,+ras,+rcpc,+rdm,+sha2,+sha3,+v8.1a,+v8.2a,+v8.3a,+v8.4a,+v8.5a,+v8a,+zcm,+zcz" }
+
+!llvm.module.flags = !{!0, !1, !2, !3}
+!llvm.ident = !{!4}
+
+!0 = !{i32 1, !"wchar_size", i32 4}
+!1 = !{i32 8, !"PIC Level", i32 2}
+!2 = !{i32 7, !"uwtable", i32 1}
+!3 = !{i32 7, !"frame-pointer", i32 1}
+!4 = !{!"clang version 18.0.0 (git@github.com:apple/llvm-project.git d3fd8ffd82db3374b06bfd2e30a85cf05916f565)"}
+
+;--- b.ll
+; ModuleID = '/tmp/b.cpp'
+source_filename = "/tmp/b.cpp"
+target datalayout = "e-m:o-i64:64-i128:128-n32:64-S128"
+target triple = "arm64-apple-macosx14.0.0"
+
+; Function Attrs: mustprogress noinline nounwind optnone ssp uwtable(sync)
+define noundef i32 @_Z3barv() #0 {
+entry:
+  ret i32 1
+}
+
+attributes #0 = { mustprogress noinline nounwind optnone ssp uwtable(sync) "frame-pointer"="non-leaf" "no-trapping-math"="true" "stack-protector-buffer-size"="8" "target-cpu"="apple-m1" "target-features"="+aes,+crc,+dotprod,+fp-armv8,+fp16fml,+fullfp16,+lse,+neon,+ras,+rcpc,+rdm,+sha2,+sha3,+v8.1a,+v8.2a,+v8.3a,+v8.4a,+v8.5a,+v8a,+zcm,+zcz" }
+
+!llvm.module.flags = !{!0, !1, !2, !3}
+!llvm.ident = !{!4}
+
+!0 = !{i32 1, !"wchar_size", i32 4}
+!1 = !{i32 8, !"PIC Level", i32 2}
+!2 = !{i32 7, !"uwtable", i32 1}
+!3 = !{i32 7, !"frame-pointer", i32 1}
+!4 = !{!"clang version 18.0.0 (git@github.com:apple/llvm-project.git d3fd8ffd82db3374b06bfd2e30a85cf05916f565)"}

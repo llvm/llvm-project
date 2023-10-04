@@ -1,6 +1,6 @@
 RUN: rm -rf %t && mkdir -p %t
 
-RUN: llvm-cas --cas %t/cas --ingest --prefix-map %S/Inputs=/^input --data %S/Inputs > %t/cas.id
+RUN: llvm-cas --cas %t/cas --ingest --prefix-map %S/Inputs=/^input %S/Inputs > %t/cas.id
 RUN: llvm-cas --cas %t/cas --ls-tree-recursive @%t/cas.id | FileCheck %s
 
 CHECK: syml
