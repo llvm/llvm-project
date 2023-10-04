@@ -362,3 +362,14 @@ TEST(StringExtrasTest, splitCharForLoop) {
     Result.push_back(x);
   EXPECT_THAT(Result, testing::ElementsAre("foo", "bar", "", "baz"));
 }
+
+TEST(StringExtrasTest, arrayToStringRef) {
+  auto roundTripTestString = [](llvm::StringRef Str) {
+    EXPECT_EQ(Str, toStringRef(arrayRefFromStringRef<uint8_t>(Str)));
+    EXPECT_EQ(Str, toStringRef(arrayRefFromStringRef<char>(Str)));
+  };
+  roundTripTestString("");
+  roundTripTestString("foo");
+  roundTripTestString("\0\n");
+  roundTripTestString("\xFF\xFE");
+}
