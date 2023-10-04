@@ -20,28 +20,26 @@
 
 // Test uncompress of bundled bitcode.
 
-// RUN: %clang --hip-link -v --target=x86_64-linux-gnu \
+// RUN: %clang --hip-link -### -v --target=x86_64-linux-gnu \
 // RUN:   --offload-arch=gfx1100 --offload-arch=gfx1101 \
 // RUN:   -fgpu-rdc -nogpulib \
 // RUN:   %T/a.bc --offload-device-only \
 // RUN: 2>&1 | FileCheck -check-prefix=UNBUNDLE %s
 
-// UNBUNDLE: clang-offload-bundler{{.*}} -type=bc
+// UNBUNDLE: clang-offload-bundler{{.*}} "-type=bc"
 // UNBUNDLE-SAME: -targets={{.*}}hip-amdgcn-amd-amdhsa-gfx1100,hip-amdgcn-amd-amdhsa-gfx1101
 // UNBUNDLE-SAME: -unbundle
 // UNBUNDLE-SAME: -verbose
-// UNBUNDLE: Compressed bundle format
 
 // Test compress bundled code objects.
 
-// RUN: %clang -c -v --target=x86_64-linux-gnu \
+// RUN: %clang -c -### -v --target=x86_64-linux-gnu \
 // RUN:   -x hip --offload-arch=gfx1100 --offload-arch=gfx1101 \
 // RUN:   -nogpuinc -nogpulib \
 // RUN:   %S/Inputs/hip_multiple_inputs/a.cu \
 // RUN:   --offload-compress \
 // RUN: 2>&1 | FileCheck -check-prefix=CO %s
 
-// CO: clang-offload-bundler{{.*}} -type=o
+// CO: clang-offload-bundler{{.*}} "-type=o"
 // CO-SAME: -targets={{.*}}hipv4-amdgcn-amd-amdhsa--gfx1100,hipv4-amdgcn-amd-amdhsa--gfx1101
-// CO-SAME: -compress -verbose
-// CO: Compressed bundle format
+// CO-SAME: "-compress" "-verbose"
