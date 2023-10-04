@@ -6754,6 +6754,8 @@ void Clang::ConstructJob(Compilation &C, const JobAction &Job,
       CmdArgs.push_back("-fhip-new-launch-api");
     Args.addOptInFlag(CmdArgs, options::OPT_fgpu_allow_device_init,
                       options::OPT_fno_gpu_allow_device_init);
+    Args.AddLastArg(CmdArgs, options::OPT_hipstdpar);
+    Args.AddLastArg(CmdArgs, options::OPT_hipstdpar_interpose_alloc);
     Args.addOptInFlag(CmdArgs, options::OPT_fhip_kernel_arg_name,
                       options::OPT_fno_hip_kernel_arg_name);
   }
