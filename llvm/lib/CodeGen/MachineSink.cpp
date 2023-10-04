@@ -735,6 +735,7 @@ bool MachineSinking::runOnMachineFunction(MachineFunction &MF) {
 
         MadeChange = true;
         ++NumSplit;
+        CI->splitCriticalEdge(Pair.first, Pair.second, NewSucc);
       } else
         LLVM_DEBUG(dbgs() << " *** Not legal to break critical edge\n");
     }
@@ -1261,6 +1262,9 @@ MachineSinking::FindSuccToSinkTo(MachineInstr &MI, MachineBasicBlock *MBB,
   // the source block (which this code does not yet do). So for now, forbid
   // doing so.
   if (SuccToSinkTo && SuccToSinkTo->isInlineAsmBrIndirectTarget())
+    return nullptr;
+
+  if (SuccToSinkTo && !TII->isSafeToSink(MI, SuccToSinkTo, CI))
     return nullptr;
 
   return SuccToSinkTo;

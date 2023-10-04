@@ -19,6 +19,7 @@
 #include "llvm/ADT/Uniformity.h"
 #include "llvm/CodeGen/MIRFormatter.h"
 #include "llvm/CodeGen/MachineBasicBlock.h"
+#include "llvm/CodeGen/MachineCycleAnalysis.h"
 #include "llvm/CodeGen/MachineFunction.h"
 #include "llvm/CodeGen/MachineInstr.h"
 #include "llvm/CodeGen/MachineInstrBuilder.h"
@@ -148,6 +149,11 @@ public:
   /// of instruction rematerialization or sinking.
   virtual bool isIgnorableUse(const MachineOperand &MO) const {
     return false;
+  }
+
+  virtual bool isSafeToSink(MachineInstr &MI, MachineBasicBlock *SuccToSinkTo,
+                            MachineCycleInfo *CI) const {
+    return true;
   }
 
 protected:
