@@ -320,7 +320,7 @@ DEFAULT_PARAMETERS = [
     Parameter(
         name="executor",
         type=str,
-        default=f"{sys.executable} {Path(__file__).resolve().parent.parent.parent / 'run.py'}",
+        default=f"\"{sys.executable}\" {Path(__file__).resolve().parent.parent.parent / 'run.py'}",
         help="Custom executor to use instead of the configured default.",
         actions=lambda executor: [AddSubstitution("%{executor}", executor)],
     )
