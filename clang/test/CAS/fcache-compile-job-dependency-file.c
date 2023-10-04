@@ -1,6 +1,6 @@
 // RUN: rm -rf %t && mkdir -p %t
 // RUN: split-file %s %t/src
-// RUN: llvm-cas --cas %t/cas --ingest --data %t/src > %t/casid
+// RUN: llvm-cas --cas %t/cas --ingest %t/src > %t/casid
 //
 // RUN: %clang -cc1 -triple x86_64-apple-macos11 \
 // RUN:   -fcas-path %t/cas -fcas-fs @%t/casid -fcache-compile-job \
@@ -58,7 +58,7 @@
 // DEPS_SYS: sys.h
 
 // Using another cas path to avoid reusing artifacts.
-// RUN: llvm-cas --cas %t/cas2 --ingest --data %t/src
+// RUN: llvm-cas --cas %t/cas2 --ingest %t/src
 
 // RUN: %clang -cc1 -triple x86_64-apple-macos11 \
 // RUN:   -fcas-path %t/cas2 -fcas-fs @%t/casid -fcache-compile-job \

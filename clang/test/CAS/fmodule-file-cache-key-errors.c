@@ -6,7 +6,7 @@
 // RUN: rm -rf %t %t.cas %t.cas_2
 // RUN: split-file %s %t
 
-// RUN: llvm-cas --cas %t.cas --ingest --data %t > %t/casid
+// RUN: llvm-cas --cas %t.cas --ingest %t > %t/casid
 
 // RUN: not %clang_cc1 -triple x86_64-apple-macos11 \
 // RUN:   -fmodules -fno-implicit-modules \

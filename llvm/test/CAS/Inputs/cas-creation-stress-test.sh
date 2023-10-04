@@ -16,7 +16,7 @@ for c in $(seq 1 $NUM_REPEAT); do
 
   pids=""
   for x in $(seq 1 10); do
-    $LLVM_CAS_TOOL --ingest --data $INGEST_FILE --cas $CAS_PATH &
+    $LLVM_CAS_TOOL --ingest $INGEST_FILE --cas $CAS_PATH &
     pids="$pids $!"
   done
 
