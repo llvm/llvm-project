@@ -958,8 +958,10 @@ getAssignFnsForCC(CallingConv::ID CC, const SITargetLowering &TLI) {
 
 static unsigned getCallOpcode(const MachineFunction &CallerF, bool IsIndirect,
                               bool IsTailCall, CallingConv::ID CC) {
-  assert(!(IsIndirect && IsTailCall) && "Indirect calls can't be tail calls, "
-                                        "because the address can be divergent");
+  // For calls to amdgpu_cs_chain functions, the address is known to be uniform.
+  assert((AMDGPU::isChainCC(CC) || !IsIndirect || !IsTailCall) &&
+         "Indirect calls can't be tail calls, "
+         "because the address can be divergent");
   if (!IsTailCall)
     return AMDGPU::G_SI_CALL;
 
@@ -1150,14 +1152,20 @@ bool AMDGPUCallLowering::isEligibleForTailCallOptimization(
 void AMDGPUCallLowering::handleImplicitCallArguments(
     MachineIRBuilder &MIRBuilder, MachineInstrBuilder &CallInst,
     const GCNSubtarget &ST, const SIMachineFunctionInfo &FuncInfo,
+    CallingConv::ID CalleeCC,
     ArrayRef<std::pair<MCRegister, Register>> ImplicitArgRegs) const {
   if (!ST.enableFlatScratch()) {
     // Insert copies for the SRD. In the HSA case, this should be an identity
     // copy.
     auto ScratchRSrcReg = MIRBuilder.buildCopy(LLT::fixed_vector(4, 32),
                                                FuncInfo.getScratchRSrcReg());
-    MIRBuilder.buildCopy(AMDGPU::SGPR0_SGPR1_SGPR2_SGPR3, ScratchRSrcReg);
-    CallInst.addReg(AMDGPU::SGPR0_SGPR1_SGPR2_SGPR3, RegState::Implicit);
+
+    auto CalleeRSrcReg = AMDGPU::isChainCC(CalleeCC)
+                             ? AMDGPU::SGPR48_SGPR49_SGPR50_SGPR51
+                             : AMDGPU::SGPR0_SGPR1_SGPR2_SGPR3;
+
+    MIRBuilder.buildCopy(CalleeRSrcReg, ScratchRSrcReg);
+    CallInst.addReg(CalleeRSrcReg, RegState::Implicit);
   }
 
   for (std::pair<MCRegister, Register> ArgReg : ImplicitArgRegs) {
@@ -1253,7 +1261,8 @@ bool AMDGPUCallLowering::lowerTailCall(
   // after the ordinary user argument registers.
   SmallVector<std::pair<MCRegister, Register>, 12> ImplicitArgRegs;
 
-  if (Info.CallConv != CallingConv::AMDGPU_Gfx) {
+  if (Info.CallConv != CallingConv::AMDGPU_Gfx &&
+      !AMDGPU::isChainCC(Info.CallConv)) {
     // With a fixed ABI, allocate fixed registers before user arguments.
     if (!passSpecialInputs(MIRBuilder, CCInfo, ImplicitArgRegs, Info))
       return false;
@@ -1269,7 +1278,8 @@ bool AMDGPUCallLowering::lowerTailCall(
   if (!handleAssignments(Handler, OutArgs, CCInfo, ArgLocs, MIRBuilder))
     return false;
 
-  handleImplicitCallArguments(MIRBuilder, MIB, ST, *FuncInfo, ImplicitArgRegs);
+  handleImplicitCallArguments(MIRBuilder, MIB, ST, *FuncInfo, CalleeCC,
+                              ImplicitArgRegs);
 
   // If we have -tailcallopt, we need to adjust the stack. We'll do the call
   // sequence start and end here.
@@ -1281,6 +1291,23 @@ bool AMDGPUCallLowering::lowerTailCall(
     // parameters so that when SP is reset, they will be in the correct
     // location.
     MIRBuilder.buildInstr(AMDGPU::ADJCALLSTACKDOWN).addImm(NumBytes).addImm(0);
+  }
+
+  // If this is a chain call, we need to set EXEC right before the call.
+  if (AMDGPU::isChainCC(Info.CallConv)) {
+    ArgInfo ExecArg = Info.OrigArgs[1];
+    assert(ExecArg.Regs.size() == 1 && "Too many regs for EXEC");
+
+    if (!ExecArg.Ty->isIntegerTy(ST.getWavefrontSize()))
+      return false;
+
+    unsigned MovOpc = ST.isWave32() ? AMDGPU::S_MOV_B32 : AMDGPU::S_MOV_B64;
+    MCRegister Exec = TRI->getExec();
+    auto SetExec =
+        MIRBuilder.buildInstr(MovOpc).addDef(Exec).addReg(ExecArg.Regs[0]);
+    SetExec->getOperand(1).setReg(constrainOperandRegClass(
+        MF, *TRI, MRI, *ST.getInstrInfo(), *ST.getRegBankInfo(), *SetExec,
+        SetExec->getDesc(), SetExec->getOperand(1), 1));
   }
 
   // Now we can add the actual call instruction to the correct basic block.
@@ -1303,8 +1330,60 @@ bool AMDGPUCallLowering::lowerTailCall(
   return true;
 }
 
+/// Lower a call to the @llvm.amdgcn.cs.chain intrinsic.
+bool AMDGPUCallLowering::lowerChainCall(MachineIRBuilder &MIRBuilder,
+                                        CallLoweringInfo &Info) const {
+  ArgInfo Callee = Info.OrigArgs[0];
+  ArgInfo SGPRArgs = Info.OrigArgs[2];
+  ArgInfo VGPRArgs = Info.OrigArgs[3];
+  ArgInfo Flags = Info.OrigArgs[4];
+
+  assert(cast<ConstantInt>(Flags.OrigValue)->isZero() &&
+         "Non-zero flags aren't supported yet.");
+  assert(Info.OrigArgs.size() == 5 && "Additional args aren't supported yet.");
+
+  MachineFunction &MF = MIRBuilder.getMF();
+  const Function &F = MF.getFunction();
+  const DataLayout &DL = F.getParent()->getDataLayout();
+
+  // The function to jump to is actually the first argument, so we'll change the
+  // Callee and other info to match that before using our existing helper.
+  const Value *CalleeV = Callee.OrigValue->stripPointerCasts();
+  if (const Function *F = dyn_cast<Function>(CalleeV)) {
+    Info.Callee = MachineOperand::CreateGA(F, 0);
+    Info.CallConv = F->getCallingConv();
+  } else {
+    assert(Callee.Regs.size() == 1 && "Too many regs for the callee");
+    Info.Callee = MachineOperand::CreateReg(Callee.Regs[0], false);
+    Info.CallConv = CallingConv::AMDGPU_CS_Chain; // amdgpu_cs_chain_preserve
+                                                  // behaves the same here.
+  }
+
+  // The function that we're calling cannot be vararg (only the intrinsic is).
+  Info.IsVarArg = false;
+
+  assert(std::all_of(SGPRArgs.Flags.begin(), SGPRArgs.Flags.end(),
+                     [](ISD::ArgFlagsTy F) { return F.isInReg(); }) &&
+         "SGPR arguments should be marked inreg");
+  assert(std::none_of(VGPRArgs.Flags.begin(), VGPRArgs.Flags.end(),
+                      [](ISD::ArgFlagsTy F) { return F.isInReg(); }) &&
+         "VGPR arguments should not be marked inreg");
+
+  SmallVector<ArgInfo, 8> OutArgs;
+  splitToValueTypes(SGPRArgs, OutArgs, DL, Info.CallConv);
+  splitToValueTypes(VGPRArgs, OutArgs, DL, Info.CallConv);
+
+  Info.IsMustTailCall = true;
+  return lowerTailCall(MIRBuilder, Info, OutArgs);
+}
+
 bool AMDGPUCallLowering::lowerCall(MachineIRBuilder &MIRBuilder,
                                    CallLoweringInfo &Info) const {
+  if (Function *F = Info.CB->getCalledFunction())
+    if (F->isIntrinsic())
+      return F->getIntrinsicID() == Intrinsic::amdgcn_cs_chain &&
+             lowerChainCall(MIRBuilder, Info);
+
   if (Info.IsVarArg) {
     LLVM_DEBUG(dbgs() << "Variadic functions not implemented\n");
     return false;
@@ -1395,7 +1474,8 @@ bool AMDGPUCallLowering::lowerCall(MachineIRBuilder &MIRBuilder,
 
   const SIMachineFunctionInfo *MFI = MF.getInfo<SIMachineFunctionInfo>();
 
-  handleImplicitCallArguments(MIRBuilder, MIB, ST, *MFI, ImplicitArgRegs);
+  handleImplicitCallArguments(MIRBuilder, MIB, ST, *MFI, Info.CallConv,
+                              ImplicitArgRegs);
 
   // Get a count of how many bytes are to be pushed on the stack.
   unsigned NumBytes = CCInfo.getStackSize();
