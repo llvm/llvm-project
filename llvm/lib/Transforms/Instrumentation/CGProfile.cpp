@@ -66,7 +66,7 @@ static bool runCGProfilePass(
     if (F.isDeclaration() || !F.getEntryCount())
       continue;
     auto &BFI = FAM.getResult<BlockFrequencyAnalysis>(F);
-    if (BFI.getEntryFreq() == 0)
+    if (BFI.getEntryFreq() == BlockFrequency())
       continue;
     TargetTransformInfo &TTI = FAM.getResult<TargetIRAnalysis>(F);
     for (auto &BB : F) {
