@@ -1183,6 +1183,10 @@ def fgpu_inline_threshold_EQ : Joined<["-"], "fgpu-inline-threshold=">,
 def fgpu_sanitize : Flag<["-"], "fgpu-sanitize">, Group<f_Group>,
   HelpText<"Enable sanitizer for supported offloading devices">;
 def fno_gpu_sanitize : Flag<["-"], "fno-gpu-sanitize">, Group<f_Group>;
+
+def offload_compress : Flag<["--"], "offload-compress">,
+  HelpText<"Compress offload device binaries (HIP only)">;
+def no_offload_compress : Flag<["--"], "no-offload-compress">;
 }
 
 // CUDA options
@@ -4283,7 +4287,7 @@ def mcmodel_EQ : Joined<["-"], "mcmodel=">, Group<m_Group>,
   MarshallingInfoString<TargetOpts<"CodeModel">, [{"default"}]>;
 def mlarge_data_threshold_EQ : Joined<["-"], "mlarge-data-threshold=">, Group<m_Group>,
   Visibility<[ClangOption, CC1Option]>,
-  MarshallingInfoInt<TargetOpts<"LargeDataThreshold">>;
+  MarshallingInfoInt<TargetOpts<"LargeDataThreshold">, "65535">;
 def mtls_size_EQ : Joined<["-"], "mtls-size=">, Group<m_Group>,
   Flags<[NoXarchOption]>, Visibility<[ClangOption, CC1Option]>,
   HelpText<"Specify bit size of immediate TLS offsets (AArch64 ELF only): "
