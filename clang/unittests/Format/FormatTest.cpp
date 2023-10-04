@@ -10622,6 +10622,12 @@ TEST_F(FormatTest, WrapsAtNestedNameSpecifiers) {
   verifyFormat("aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa::\n"
                "    aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa\n"
                "        .aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa();");
+
+  verifyFormat(
+      "LongClassNameToShowTheIssue::AndAnotherLongClassNameToShowTheIssue::\n"
+      "    AndAnotherLongClassNameToShowTheIssue() {}\n"
+      "LongClassNameToShowTheIssue::AndAnotherLongClassNameToShowTheIssue::\n"
+      "    ~AndAnotherLongClassNameToShowTheIssue() {}");
 }
 
 TEST_F(FormatTest, UnderstandsTemplateParameters) {
@@ -16339,7 +16345,7 @@ TEST_F(FormatTest, ConfigurableSpaceBeforeParens) {
 
   verifyFormat("int f();", SpaceFuncDef);
   verifyFormat("void f (int a, T b) {}", SpaceFuncDef);
-  verifyFormat("A::A () : a(1) {}", SpaceFuncDef);
+  verifyFormat("A::A() : a(1) {}", SpaceFuncDef);
   verifyFormat("void f() __attribute__((asdf));", SpaceFuncDef);
   verifyFormat("#define A(x) x", SpaceFuncDef);
   verifyFormat("#define A (x) x", SpaceFuncDef);
@@ -16364,7 +16370,7 @@ TEST_F(FormatTest, ConfigurableSpaceBeforeParens) {
   // verifyFormat("T A::operator() () {}", SpaceFuncDef);
   verifyFormat("auto lambda = [] () { return 0; };", SpaceFuncDef);
   verifyFormat("int x = int(y);", SpaceFuncDef);
-  verifyFormat("M (std::size_t R, std::size_t C) : C(C), data(R) {}",
+  verifyFormat("M(std::size_t R, std::size_t C) : C(C), data(R) {}",
                SpaceFuncDef);
 
   FormatStyle SpaceIfMacros = getLLVMStyle();
