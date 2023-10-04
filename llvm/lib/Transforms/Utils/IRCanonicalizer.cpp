@@ -174,12 +174,12 @@ void IRCanonicalizer::nameBasicBlocks(Function &F) {
 ///
 /// \param I Instruction to be renamed.
 void IRCanonicalizer::nameInstruction(Instruction *I) {
-  //ensure instructions are not renamed. This is done
-  //to prevent situation where instructions are used
-  //before their definition (in phi nodes)
+  // Ensure instructions are not renamed. This is done
+  // to prevent situation where instructions are used
+  // before their definition (in phi nodes)
   if (NamedInstructions.contains(I))
     return;
-  NamedInstructions.insert(I); 
+  NamedInstructions.insert(I);
   // Determine the type of instruction to name.
   if (isInitialInstruction(I)) {
     // This is an initial instruction.
@@ -381,7 +381,7 @@ void IRCanonicalizer::foldInstructionName(Instruction *I) {
   SmallVector<SmallString<64>, 4> Operands;
 
   for (auto &OP : I->operands()) {
-    if (const Instruction *IOP = dyn_cast<Instruction>(OP)) {
+    if (const auto *IOP = dyn_cast<Instruction>(OP)) {
       bool HasCanonicalName = I->getName().substr(0, 2) == "op" ||
                               I->getName().substr(0, 2) == "vl";
 
@@ -441,7 +441,7 @@ void IRCanonicalizer::reorderInstructions(
 void IRCanonicalizer::reorderInstruction(
     Instruction *Used, Instruction *User,
     SmallPtrSet<const Instruction *, 32> &Visited) {
-  if(isa<PHINode>(Used))
+  if (isa<PHINode>(Used))
     return;
   if (Visited.contains(Used))
     return;
