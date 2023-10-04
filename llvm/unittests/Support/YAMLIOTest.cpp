@@ -23,7 +23,6 @@ using llvm::yaml::Hex32;
 using llvm::yaml::Hex64;
 using llvm::yaml::Hex8;
 using llvm::yaml::Input;
-using llvm::yaml::IO;
 using llvm::yaml::isNumeric;
 using llvm::yaml::MappingNormalization;
 using llvm::yaml::MappingTraits;
