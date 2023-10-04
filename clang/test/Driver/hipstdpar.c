@@ -1,8 +1,9 @@
-// XFAIL: target={{.*}}-apple{{.*}}
+// REQUIRES: x86-registered-target
+// REQUIRES: amdgpu-registered-target
+// REQUIRES: system-linux
 // XFAIL: target={{.*}}hexagon{{.*}}
 // XFAIL: target={{.*}}-scei{{.*}}
 // XFAIL: target={{.*}}-sie{{.*}}
-// XFAIL: target={{.*}}-windows{{.*}}
 
 // RUN: not %clang -### --hipstdpar -nogpulib -nogpuinc --compile %s 2>&1 | \
 // RUN:   FileCheck --check-prefix=HIPSTDPAR-MISSING-LIB %s
