@@ -5416,6 +5416,8 @@ def note_constraint_normalization_here : Note<
 def note_parameter_mapping_substitution_here : Note<
   "while substituting into concept arguments here; substitution failures not "
   "allowed in concept arguments">;
+def note_building_deduction_guide_here : Note<
+  "while building implicit deduction guide first needed here">;
 def note_lambda_substitution_here : Note<
   "while substituting into a lambda expression here">;
 def note_instantiation_contexts_suppressed : Note<
@@ -9452,6 +9454,8 @@ def err_defaulted_copy_assign_not_ref : Error<
 def err_incorrect_defaulted_constexpr : Error<
   "defaulted definition of %sub{select_special_member_kind}0 "
   "is not constexpr">;
+def err_incorrect_defaulted_constexpr_with_vb: Error<
+  "%sub{select_special_member_kind}0 cannot be 'constexpr' in a class with virtual base class">;
 def err_incorrect_defaulted_consteval : Error<
   "defaulted declaration of %sub{select_special_member_kind}0 "
   "cannot be consteval because implicit definition is not constexpr">;

@@ -1183,6 +1183,10 @@ def fgpu_inline_threshold_EQ : Joined<["-"], "fgpu-inline-threshold=">,
 def fgpu_sanitize : Flag<["-"], "fgpu-sanitize">, Group<f_Group>,
   HelpText<"Enable sanitizer for supported offloading devices">;
 def fno_gpu_sanitize : Flag<["-"], "fno-gpu-sanitize">, Group<f_Group>;
+
+def offload_compress : Flag<["--"], "offload-compress">,
+  HelpText<"Compress offload device binaries (HIP only)">;
+def no_offload_compress : Flag<["--"], "no-offload-compress">;
 }
 
 // CUDA options
@@ -1258,6 +1262,32 @@ def rocm_path_EQ : Joined<["--"], "rocm-path=">, Group<hip_Group>,
   HelpText<"ROCm installation path, used for finding and automatically linking required bitcode libraries.">;
 def hip_path_EQ : Joined<["--"], "hip-path=">, Group<hip_Group>,
   HelpText<"HIP runtime installation path, used for finding HIP version and adding HIP include path.">;
+def hipstdpar : Flag<["--"], "hipstdpar">,
+  Visibility<[ClangOption, CC1Option]>,
+  Group<CompileOnly_Group>,
+  HelpText<"Enable HIP acceleration for standard parallel algorithms">,
+  MarshallingInfoFlag<LangOpts<"HIPStdPar">>;
+def hipstdpar_interpose_alloc : Flag<["--"], "hipstdpar-interpose-alloc">,
+  Visibility<[ClangOption, CC1Option]>,
+  Group<CompileOnly_Group>,
+  HelpText<"Replace all memory allocation / deallocation calls with "
+           "hipManagedMalloc / hipFree equivalents">,
+  MarshallingInfoFlag<LangOpts<"HIPStdParInterposeAlloc">>;
+// TODO: use MarshallingInfo here
+def hipstdpar_path_EQ : Joined<["--"], "hipstdpar-path=">, Group<i_Group>,
+  HelpText<
+    "HIP Standard Parallel Algorithm Acceleration library path, used for "
+    "finding and implicitly including the library header">;
+def hipstdpar_thrust_path_EQ : Joined<["--"], "hipstdpar-thrust-path=">,
+  Group<i_Group>,
+  HelpText<
+    "rocThrust path, required by the HIP Standard Parallel Algorithm "
+    "Acceleration library, used to implicitly include the rocThrust library">;
+def hipstdpar_prim_path_EQ : Joined<["--"], "hipstdpar-prim-path=">,
+  Group<i_Group>,
+  HelpText<
+    "rocPrim path, required by the HIP Standard Parallel Algorithm "
+    "Acceleration library, used to implicitly include the rocPrim library">;
 def rocm_device_lib_path_EQ : Joined<["--"], "rocm-device-lib-path=">, Group<hip_Group>,
   HelpText<"ROCm device library path. Alternative to rocm-path.">;
 def : Joined<["--"], "hip-device-lib-path=">, Alias<rocm_device_lib_path_EQ>;
@@ -4257,7 +4287,7 @@ def mcmodel_EQ : Joined<["-"], "mcmodel=">, Group<m_Group>,
   MarshallingInfoString<TargetOpts<"CodeModel">, [{"default"}]>;
 def mlarge_data_threshold_EQ : Joined<["-"], "mlarge-data-threshold=">, Group<m_Group>,
   Visibility<[ClangOption, CC1Option]>,
-  MarshallingInfoInt<TargetOpts<"LargeDataThreshold">>;
+  MarshallingInfoInt<TargetOpts<"LargeDataThreshold">, "65535">;
 def mtls_size_EQ : Joined<["-"], "mtls-size=">, Group<m_Group>,
   Flags<[NoXarchOption]>, Visibility<[ClangOption, CC1Option]>,
   HelpText<"Specify bit size of immediate TLS offsets (AArch64 ELF only): "
@@ -4563,13 +4593,11 @@ def msve_vector_bits_EQ : Joined<["-"], "msve-vector-bits=">, Group<m_aarch64_Fe
 } // let Flags = [TargetSpecific]
 
 def mvscale_min_EQ : Joined<["-"], "mvscale-min=">,
-  Group<m_aarch64_Features_Group>, Flags<[NoXarchOption]>,
-  Visibility<[ClangOption, CC1Option, FC1Option]>,
+  Visibility<[CC1Option, FC1Option]>,
   HelpText<"Specify the vscale minimum. Defaults to \"1\". (AArch64/RISC-V only)">,
   MarshallingInfoInt<LangOpts<"VScaleMin">>;
 def mvscale_max_EQ : Joined<["-"], "mvscale-max=">,
-  Group<m_aarch64_Features_Group>, Flags<[NoXarchOption]>,
-  Visibility<[ClangOption, CC1Option, FC1Option]>,
+  Visibility<[CC1Option, FC1Option]>,
   HelpText<"Specify the vscale maximum. Defaults to the"
            " vector length agnostic value of \"0\". (AArch64/RISC-V only)">,
   MarshallingInfoInt<LangOpts<"VScaleMax">>;

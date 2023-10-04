@@ -96,6 +96,17 @@ static bool hasFinalization(const Fortran::semantics::Symbol &sym) {
   return false;
 }
 
+// Does this variable have an allocatable direct component?
+static bool
+hasAllocatableDirectComponent(const Fortran::semantics::Symbol &sym) {
+  if (sym.has<Fortran::semantics::ObjectEntityDetails>())
+    if (const Fortran::semantics::DeclTypeSpec *declTypeSpec = sym.GetType())
+      if (const Fortran::semantics::DerivedTypeSpec *derivedTypeSpec =
+              declTypeSpec->AsDerived())
+        return Fortran::semantics::HasAllocatableDirectComponent(
+            *derivedTypeSpec);
+  return false;
+}
 //===----------------------------------------------------------------===//
 // Global variables instantiation (not for alias and common)
 //===----------------------------------------------------------------===//
@@ -669,6 +680,15 @@ needDeallocationOrFinalization(const Fortran::lower::pft::Variable &var) {
     if (Fortran::semantics::IsAllocatable(sym))
       return VariableCleanUp::Deallocate;
     if (hasFinalization(sym))
+      return VariableCleanUp::Finalize;
+    // hasFinalization() check above handled all cases that require
+    // finalization, but we also have to deallocate all allocatable
+    // components of local variables (since they are also local variables
+    // according to F18 5.4.3.2.2, p. 2, note 1).
+    // Here, the variable itself is not allocatable. If it has an allocatable
+    // component the Destroy runtime does the job. Use the Finalize clean-up,
+    // though there will be no finalization in runtime.
+    if (hasAllocatableDirectComponent(sym))
       return VariableCleanUp::Finalize;
   }
   return std::nullopt;
@@ -1927,8 +1947,13 @@ void Fortran::lower::mapSymbolAttributes(
   if (ba.isChar()) {
     if (arg) {
       assert(!preAlloc && "dummy cannot be pre-allocated");
-      if (arg.getType().isa<fir::BoxCharType>())
+      if (arg.getType().isa<fir::BoxCharType>()) {
         std::tie(addr, len) = charHelp.createUnboxChar(arg);
+        // Ensure proper type is given to array/scalar that transited via
+        // fir.boxchar arg.
+        mlir::Type castTy = builder.getRefType(converter.genType(var));
+        addr = builder.createConvert(loc, castTy, addr);
+      }
     }
     if (std::optional<int64_t> cstLen = ba.getCharLenConst()) {
       // Static length
@@ -1952,13 +1977,6 @@ void Fortran::lower::mapSymbolAttributes(
         len = charHelp.readLengthFromBox(arg);
       }
     }
-  }
-
-  if (addr && addr.getDefiningOp<fir::UnboxCharOp>()) {
-    // Ensure proper type is given to array/scalar that transited via
-    // fir.boxchar arg.
-    mlir::Type castTy = builder.getRefType(converter.genType(var));
-    addr = builder.createConvert(loc, castTy, addr);
   }
 
   // Compute array extents and lower bounds.

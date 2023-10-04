@@ -52,6 +52,9 @@ namespace i128 {
   constexpr int128_t Two = (int128_t)1 << 1ul;
   static_assert(Two == 2, "");
 
+  constexpr uint128_t AllOnes = ~static_cast<uint128_t>(0);
+  static_assert(AllOnes == UINT128_MAX, "");
+
 #if __cplusplus >= 201402L
   template <typename T>
   constexpr T CastFrom(__int128_t A) {
@@ -66,6 +69,14 @@ namespace i128 {
   static_assert(CastFrom<float>(12) == 12, "");
   static_assert(CastFrom<double>(12) == 12, "");
   static_assert(CastFrom<long double>(12) == 12, "");
+
+  static_assert(CastFrom<char>(AllOnes) == -1, "");
+  static_assert(CastFrom<unsigned char>(AllOnes) == 0xFF, "");
+  static_assert(CastFrom<long>(AllOnes) == -1, "");
+  static_assert(CastFrom<unsigned short>(AllOnes) == 0xFFFF, "");
+  static_assert(CastFrom<int>(AllOnes) == -1, "");
+  static_assert(CastFrom<int128_t>(AllOnes) == -1, "");
+  static_assert(CastFrom<uint128_t>(AllOnes) == AllOnes, "");
 
   template <typename T>
   constexpr __int128 CastTo(T A) {
