@@ -474,7 +474,13 @@ public:
     const Level lvlRank = stt.getLvlRank();
     for (Level l = 0; l < lvlRank; l++) {
       std::string lvlType = toMLIRString(stt.getLvlType(l));
-      replaceWithUnderscore(lvlType);
+      // Replace/remove punctuations in level properties.
+      std::replace_if(
+          lvlType.begin(), lvlType.end(),
+          [](char c) { return c == '(' || c == ','; }, '_');
+      lvlType.erase(std::remove_if(lvlType.begin(), lvlType.end(),
+                                   [](char c) { return c == ')' || c == ' '; }),
+                    lvlType.end());
       nameOstream << lvlType << "_";
     }
     // Static dim sizes are used in the generated code while dynamic sizes are
@@ -492,17 +498,6 @@ public:
 
 private:
   TensorType rtp;
-  void replaceWithUnderscore(std::string &lvlType) {
-    for (auto it = lvlType.begin(); it != lvlType.end();) {
-      if (*it == '(' || *it == ',') {
-        *it = '_';
-      } else if (*it == ')' || *it == ' ') {
-        it = lvlType.erase(it);
-        continue;
-      }
-      it++;
-    }
-  }
 };
 
 /// Generations insertion finalization code.

@@ -587,14 +587,27 @@ Attribute SparseTensorEncodingAttr::parse(AsmParser &parser, Type type) {
 
 void SparseTensorEncodingAttr::print(AsmPrinter &printer) const {
   auto map = static_cast<AffineMap>(getDimToLvl());
-  auto lvlTypes = getLvlTypes();
   // Empty affine map indicates identity map
   if (!map) {
     map = AffineMap::getMultiDimIdentityMap(getLvlTypes().size(), getContext());
   }
-  // Modified version of AsmPrinter::Impl::printAffineMap.
   printer << "<{ map = ";
-  // Symbolic identifiers.
+  printSymbol(map, printer);
+  printer << '(';
+  printDimension(map, printer, getDimSlices());
+  printer << ") -> (";
+  printLevel(map, printer, getLvlTypes());
+  printer << ')';
+  // Print remaining members only for non-default values.
+  if (getPosWidth())
+    printer << ", posWidth = " << getPosWidth();
+  if (getCrdWidth())
+    printer << ", crdWidth = " << getCrdWidth();
+  printer << " }>";
+}
+
+void SparseTensorEncodingAttr::printSymbol(AffineMap &map,
+                                           AsmPrinter &printer) const {
   if (map.getNumSymbols() != 0) {
     printer << '[';
     for (unsigned i = 0; i < map.getNumSymbols() - 1; ++i)
@@ -603,9 +616,11 @@ void SparseTensorEncodingAttr::print(AsmPrinter &printer) const {
       printer << 's' << map.getNumSymbols() - 1;
     printer << ']';
   }
-  // Dimension identifiers.
-  printer << '(';
-  auto dimSlices = getDimSlices();
+}
+
+void SparseTensorEncodingAttr::printDimension(
+    AffineMap &map, AsmPrinter &printer,
+    ArrayRef<SparseTensorDimSliceAttr> dimSlices) const {
   if (!dimSlices.empty()) {
     for (unsigned i = 0; i < map.getNumDims() - 1; ++i)
       printer << 'd' << i << " : " << dimSlices[i] << ", ";
@@ -618,9 +633,11 @@ void SparseTensorEncodingAttr::print(AsmPrinter &printer) const {
     if (map.getNumDims() >= 1)
       printer << 'd' << map.getNumDims() - 1;
   }
-  printer << ')';
-  // Level format and properties.
-  printer << " -> (";
+}
+
+void SparseTensorEncodingAttr::printLevel(
+    AffineMap &map, AsmPrinter &printer,
+    ArrayRef<DimLevelType> lvlTypes) const {
   for (unsigned i = 0; i < map.getNumResults() - 1; ++i) {
     map.getResult(i).print(printer.getStream());
     printer << " : " << toMLIRString(lvlTypes[i]) << ", ";
@@ -630,13 +647,6 @@ void SparseTensorEncodingAttr::print(AsmPrinter &printer) const {
     map.getResult(lastIndex).print(printer.getStream());
     printer << " : " << toMLIRString(lvlTypes[lastIndex]);
   }
-  printer << ')';
-  // Print remaining members only for non-default values.
-  if (getPosWidth())
-    printer << ", posWidth = " << getPosWidth();
-  if (getCrdWidth())
-    printer << ", crdWidth = " << getCrdWidth();
-  printer << " }>";
 }
 
 LogicalResult
