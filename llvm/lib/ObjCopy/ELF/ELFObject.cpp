@@ -2651,7 +2651,7 @@ Error BinaryWriter::write() {
 
   assert(LoadableSections.front()->Offset == 0);
 
-  for (std::size_t i = 0; i != LoadableSections.size(); ++i) {
+  for (size_t i = 0; i != LoadableSections.size(); ++i) {
     const SectionBase &Sec = *LoadableSections[i];
     if (Error Err = Sec.accept(*SecWriter))
       return Err;
@@ -2690,7 +2690,7 @@ Error BinaryWriter::finalize() {
   // file size. This might not be the same as the offset returned by
   // layoutSections, because we want to truncate the last segment to the end of
   // its last non-empty section, to match GNU objcopy's behaviour.
-  TotalSize = PadTo.value() > MinAddr ? PadTo.value() - MinAddr : 0;
+  TotalSize = PadTo > MinAddr ? PadTo - MinAddr : 0;
   for (SectionBase &Sec : Obj.allocSections())
     if (Sec.Type != SHT_NOBITS && Sec.Size > 0) {
       Sec.Offset = Sec.Addr - MinAddr;

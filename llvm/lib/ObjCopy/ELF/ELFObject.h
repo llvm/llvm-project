@@ -358,7 +358,7 @@ public:
 class BinaryWriter : public Writer {
 private:
   const uint8_t GapFill;
-  const std::optional<uint64_t> PadTo;
+  const uint64_t PadTo;
   std::unique_ptr<BinarySectionWriter> SecWriter;
 
   uint64_t TotalSize = 0;

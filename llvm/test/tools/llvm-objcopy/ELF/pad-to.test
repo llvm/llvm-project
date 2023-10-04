@@ -21,7 +21,7 @@
 ## Save the baseline, not padded output.
 # RUN: llvm-objcopy -O binary %t %t.bin
 
-## Pad to a address smaller than the binary size.
+## Pad to an address smaller than the binary size.
 # RUN: llvm-objcopy -O binary --pad-to=0x20 %t %t-p1
 # RUN: cmp %t.bin %t-p1
 # RUN: llvm-objcopy -O binary --pad-to=0x200 %t %t-p2

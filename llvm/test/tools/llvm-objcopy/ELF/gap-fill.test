@@ -1,27 +1,37 @@
-# RUN: yaml2obj %s -o %t
-
-## This test is partially based on one from D67689.
+# RUN: yaml2obj --docnum=1 %s -o %t
 
 # RUN: not llvm-objcopy --gap-fill 1 %t 2>&1 | FileCheck %s --check-prefix=NOT-BINARY
 # NOT-BINARY: error: '--gap-fill' is only supported for binary output
 
-# RUN: not llvm-objcopy -O binary --gap-fill %t 2>&1 | FileCheck %s --check-prefix=EMPTY
-# EMPTY: error: no input file specified
-
-# RUN: not llvm-objcopy -O binary --gap-fill= %t 2>&1 | FileCheck %s --check-prefix=BAD-FORMAT
+# RUN: not llvm-objcopy -O binary --gap-fill= %t %t.bin 2>&1 | FileCheck %s --check-prefix=BAD-FORMAT
 # BAD-FORMAT: error: --gap-fill: bad number:
 
-# RUN: not llvm-objcopy -O binary --gap-fill=x %t 2>&1 | FileCheck %s --check-prefix=BAD-INPUT
+# RUN: not llvm-objcopy -O binary --gap-fill=x %t %t.bin 2>&1 | FileCheck %s --check-prefix=BAD-INPUT
 # BAD-INPUT: error: --gap-fill: bad number: x
 
-# RUN: not llvm-objcopy -O binary --gap-fill=0x1G %t 2>&1 | FileCheck %s --check-prefix=BAD-INPUT2
-# BAD-INPUT2: error: --gap-fill: bad number: 0x1G
+# RUN: not llvm-objcopy -O binary --gap-fill=0x %t %t.bin 2>&1 | FileCheck %s --check-prefix=BAD-INPUT2
+# BAD-INPUT2: error: --gap-fill: bad number: 0x
 
-# RUN: not llvm-objcopy -O binary --gap-fill=ff %t 2>&1 | FileCheck %s --check-prefix=BAD-INPUT3
-# BAD-INPUT3: error: --gap-fill: bad number: ff
+# RUN: not llvm-objcopy -O binary --gap-fill=0x1G %t %t.bin 2>&1 | FileCheck %s --check-prefix=BAD-INPUT3
+# BAD-INPUT3: error: --gap-fill: bad number: 0x1G
 
-# RUN: llvm-objcopy -O binary --gap-fill=0x1122 %t %t-val16 2>&1 | FileCheck %s --check-prefix=TRUNCATED
-# TRUNCATED: warning: truncating gap-fill from 0x1122 to 0x22
+# RUN: not llvm-objcopy -O binary --gap-fill=ff %t %t.bin 2>&1 | FileCheck %s --check-prefix=BAD-INPUT4
+# BAD-INPUT4: error: --gap-fill: bad number: ff
+
+# RUN: llvm-objcopy -O binary --gap-fill=0x1122 %t %t-val16 2>&1 | FileCheck %s --check-prefix=TRUNCATED-ERR
+# TRUNCATED-ERR: warning: truncating gap-fill from 0x1122 to 0x22
+
+# RUN: od -v -Ax -t x1 %t-val16 | FileCheck %s --check-prefix=TRUNCATED --match-full-lines
+# TRUNCATED:      000000 ee ff 11 22 33 44 aa bb cc dd fe dc ba 22 a1 b2
+# TRUNCATED-NEXT: 000010 c3 d4 22 22 22 22 22 22 22 22 22 22 22 22 22 22
+# TRUNCATED-NEXT: 000020 22 22 22 22 22 22 22 22 22 22 22 22 22 22 22 22
+# TRUNCATED-NEXT: 000030 22 22 22 22 22 22 22 22 22 22 22 22 22 22 22 22
+# TRUNCATED-NEXT: 000040 22 22 22 22 22 22 22 22 22 22 22 22 22 22 22 22
+# TRUNCATED-NEXT: 000050 22 22 22 22 22 22 22 22 22 22 22 22 22 22 22 22
+# TRUNCATED-NEXT: 000060 22 22 22 22 22 22 22 22 22 22 22 22 22 22 22 22
+# TRUNCATED-NEXT: 000070 22 22 22 22 22 22 22 22 22 22 22 22 22 22 22 22
+# TRUNCATED-NEXT: 000080 22 22 89 ab cd ef
+# TRUNCATED-NEXT: 000086
 
 ## Test no gap fill with all allocatable output sections.
 # RUN: llvm-objcopy -O binary %t %t-default
@@ -37,7 +47,7 @@
 # DEFAULT-NEXT: 000080 00 00 89 ab cd ef
 # DEFAULT-NEXT: 000086
 
-## Test gap fill with all allocatable output sections
+## Test gap fill with all allocatable output sections.
 # RUN: llvm-objcopy -O binary --gap-fill=0xe9 %t %t-filled
 # RUN: od -v -Ax -t x1 %t-filled | FileCheck %s --check-prefix=FULL --match-full-lines
 # FULL:      000000 ee ff 11 22 33 44 aa bb cc dd fe dc ba e9 a1 b2
@@ -152,4 +162,37 @@ Sections:
     AddressAlign:    0x0001
     EntSize:         0x0001
     Content:         4743433A
-...
+
+## In this test, output sections are defined out of in respect to their load
+## addresses. Verify that gaps are still correctly filled.
+
+# RUN: yaml2obj --docnum=2 %s -o %t
+# RUN: llvm-objcopy -O binary --gap-fill=0xe9 %t %t-filled
+# RUN: od -v -Ax -t x1 %t-filled | FileCheck --match-full-lines %s
+# CHECK: 000000 aa bb cc dd e9 e9 e9 e9 11 22 33 44
+
+--- !ELF
+FileHeader:
+  Class:           ELFCLASS64
+  Data:            ELFDATA2LSB
+  Type:            ET_EXEC
+  Machine:         EM_X86_64
+Sections:
+  - Name:            .bss
+    Type:            SHT_NOBITS
+    Flags:           [ SHF_ALLOC, SHF_WRITE ]
+    Address:         0x0104
+    AddressAlign:    0x0001
+    Size:            4
+  - Name:            .section1
+    Type:            SHT_PROGBITS
+    Flags:           [ SHF_ALLOC, SHF_WRITE ]
+    Address:         0x0108
+    AddressAlign:    0x0001
+    Content:         '11223344'
+  - Name:            .section3
+    Type:            SHT_PROGBITS
+    Flags:           [ SHF_ALLOC, SHF_WRITE ]
+    Address:         0x0100
+    AddressAlign:    0x0001
+    Content:         'AABBCCDD'
