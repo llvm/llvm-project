@@ -83,10 +83,13 @@ private:
   void renderImm(MachineInstrBuilder &MIB, const MachineInstr &MI,
                  int OpIdx) const;
 
-  /// Returns a G_ICMP that is equivalent to MI, whose condition code matches
-  /// one of the comparisons supported directly by branches in the RISC-V ISA.
-  MachineInstr *createICMPForBranch(MachineInstr *MI, MachineIRBuilder &MIB,
-                                 MachineRegisterInfo &MRI) const;
+  /// Sets CC, LHS, and RHS so that they form an equivelent G_ICMP (CC, LHS,
+  /// RHS) to that of MI, but whose condition code matches one of the
+  /// comparisons supported directly by branches in the RISC-V ISA.
+  void setICMPOperandsForBranch(MachineInstr &MI, MachineIRBuilder &MIB,
+                                 MachineRegisterInfo &MRI,
+                                 CmpInst::Predicate &CC, MachineOperand &LHS,
+                                 MachineOperand &RHS) const;
 
   const RISCVSubtarget &STI;
   const RISCVInstrInfo &TII;
@@ -524,13 +527,13 @@ static RISCVCC::CondCode getRISCVCCFromICMP(CmpInst::Predicate CC) {
   }
 }
 
-MachineInstr *RISCVInstructionSelector::createICMPForBranch(
-    MachineInstr *MI, MachineIRBuilder &MIB, MachineRegisterInfo &MRI) const {
-  assert(MI->getOpcode() == TargetOpcode::G_ICMP);
-  CmpInst::Predicate CC =
-      static_cast<CmpInst::Predicate>(MI->getOperand(1).getPredicate());
-  MachineOperand &LHS = MI->getOperand(2);
-  MachineOperand &RHS = MI->getOperand(3);
+void RISCVInstructionSelector::setICMPOperandsForBranch(
+    MachineInstr &MI, MachineIRBuilder &MIB, MachineRegisterInfo &MRI,
+    CmpInst::Predicate &CC, MachineOperand &LHS, MachineOperand &RHS) const {
+  assert(MI.getOpcode() == TargetOpcode::G_ICMP);
+  CC = static_cast<CmpInst::Predicate>(MI.getOperand(1).getPredicate());
+  LHS = MI.getOperand(2);
+  RHS = MI.getOperand(3);
 
   // Adjust comparisons to use comparison with 0 if possible.
   MachineInstr *MaybeConstant = MRI.getVRegDef(RHS.getReg());
@@ -542,20 +545,21 @@ MachineInstr *RISCVInstructionSelector::createICMPForBranch(
         MachineInstr *Zero = MIB.buildConstant(
             MRI.getType(MaybeConstant->getOperand(0).getReg()), 0);
         selectConstant(*Zero, MIB, MRI);
-        return MIB.buildICmp(CmpInst::Predicate::ICMP_SGE, MI->getOperand(0),
-                             LHS, Zero->getOperand(0));
+        CC = CmpInst::Predicate::ICMP_SGE;
+        RHS = MachineOperand::CreateReg(Zero->getOperand(0).getReg(), false);
       }
-      break;
+      return;
     case CmpInst::Predicate::ICMP_SLT:
       // Convert X < 1 to 0 >= X
       if (MaybeConstant->getOperand(1).getCImm()->getSExtValue() == 1) {
-        MachineInstr *Zero= MIB.buildConstant(
+        MachineInstr *Zero = MIB.buildConstant(
             MRI.getType(MaybeConstant->getOperand(0).getReg()), 0);
         selectConstant(*Zero, MIB, MRI);
-        return MIB.buildICmp(CmpInst::Predicate::ICMP_SGE, MI->getOperand(0),
-                             Zero->getOperand(0), LHS);
+        CC =  CmpInst::Predicate::ICMP_SGE;
+        RHS = LHS;
+        LHS = MachineOperand::CreateReg(Zero->getOperand(0).getReg(), false);
       }
-      break;
+      return;
     default:
       break;
     }
@@ -571,15 +575,16 @@ MachineInstr *RISCVInstructionSelector::createICMPForBranch(
   case CmpInst::Predicate::ICMP_UGE:
   case CmpInst::Predicate::ICMP_SGE:
     // These CCs are supported directly by RISC-V branches.
-    return MI;
+    return;
   case CmpInst::Predicate::ICMP_SGT:
   case CmpInst::Predicate::ICMP_SLE:
   case CmpInst::Predicate::ICMP_UGT:
   case CmpInst::Predicate::ICMP_ULE:
     // These CCs are not supported directly by RISC-V branches, but changing the
     // direction of the CC and swapping LHS and RHS are.
-    return MIB.buildICmp(CmpInst::getSwappedPredicate(CC), MI->getOperand(0),
-                         RHS, LHS);
+    CC = CmpInst::getSwappedPredicate(CC);
+    std::swap(LHS, RHS);
+    return;
   }
 }
 
@@ -592,22 +597,17 @@ bool RISCVInstructionSelector::selectSelect(MachineInstr &MI,
   if (MaybeICMP && MaybeICMP->getOpcode() == TargetOpcode::G_ICMP) {
     // If MI is a G_SELECT(G_ICMP(tst, A, B), C, D) then we can use (A, B, tst)
     // as the (LHS, RHS, CC) of the Select_GPR_Using_CC_GPR.
-    MachineInstr *ICMPForBranch = createICMPForBranch(MaybeICMP, MIB, MRI);
-    CmpInst::Predicate CC = static_cast<CmpInst::Predicate>(
-        ICMPForBranch->getOperand(1).getPredicate());
+    CmpInst::Predicate CC;
+    MachineOperand LHS = MaybeICMP->getOperand(2);
+    MachineOperand RHS = MaybeICMP->getOperand(3);
+    setICMPOperandsForBranch(*MaybeICMP, MIB, MRI, CC, LHS, RHS);
     Result = MIB.buildInstr(RISCV::Select_GPR_Using_CC_GPR)
                  .addDef(MI.getOperand(0).getReg());
-    Result->addOperand(ICMPForBranch->getOperand(2));
-    Result->addOperand(ICMPForBranch->getOperand(3));
-    Result->addOperand(
-        MachineOperand::CreateImm(getRISCVCCFromICMP(CC)));
+    Result->addOperand(LHS);
+    Result->addOperand(RHS);
+    Result->addOperand(MachineOperand::CreateImm(getRISCVCCFromICMP(CC)));
     Result->addOperand(MI.getOperand(2));
     Result->addOperand(MI.getOperand(3));
-
-    // Delete ICMPForBranch since we know it has no users. Let the original
-    // G_ICMP be selected normally in case it has other users.
-    if (ICMPForBranch != MaybeICMP)
-      ICMPForBranch->eraseFromParent();
   } else {
     Result = MIB.buildInstr(RISCV::Select_GPR_Using_CC_GPR)
                  .addDef(MI.getOperand(0).getReg())
