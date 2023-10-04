@@ -5822,8 +5822,8 @@ OpenMPIRBuilder::createTeams(const LocationDescription &Loc,
     assert(StaleCI && "Error while outlining - no CallInst user found for the "
                       "outlined function.");
     Builder.SetInsertPoint(StaleCI);
-    SmallVector<Value *> Args = {Ident, Builder.getInt32(StaleCI->arg_size()),
-                                 &OutlinedFn};
+    SmallVector<Value *> Args = {
+        Ident, Builder.getInt32(StaleCI->arg_size() - 2), &OutlinedFn};
     if (HasShared)
       Args.push_back(StaleCI->getArgOperand(2));
     Builder.CreateCall(getOrCreateRuntimeFunctionPtr(
