@@ -288,6 +288,8 @@ Bug Fixes in This Version
   Fixes (`#67603 <https://github.com/llvm/llvm-project/issues/67603>`_)
 - Fixes a crash caused by a multidimensional array being captured by a lambda
   (`#67722 <https://github.com/llvm/llvm-project/issues/67722>`_).
+- Fixes a crash when instantiating a lambda with requires clause.
+  (`#64462 <https://github.com/llvm/llvm-project/issues/64462>`_)
 
 Bug Fixes to Compiler Builtins
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
