@@ -253,10 +253,7 @@ struct DimOpInterface
   }
 };
 
-/// Bufferization of tensor.empty. This op does not bufferize, but we need an
-/// interface implementation, so that the result of this op is considered
-/// "writable" (default impl. of `isWritable`). Results of ops that do not
-/// implement `BufferizableOpInterface` are not writable.
+/// Bufferization of "tensor.empty". Replace with "bufferization.alloc_tensor".
 struct EmptyOpInterface
     : public BufferizableOpInterface::ExternalModel<EmptyOpInterface,
                                                     tensor::EmptyOp> {
@@ -268,17 +265,21 @@ struct EmptyOpInterface
 
   LogicalResult bufferize(Operation *op, RewriterBase &rewriter,
                           const BufferizationOptions &options) const {
+    auto emptyOp = cast<tensor::EmptyOp>(op);
+
+    // Optimization: Fold away the op if it has no uses.
     if (op->getUses().empty()) {
       rewriter.eraseOp(op);
       return success();
     }
 
-    // tensor.empty ops are used to indicate the shape of a tensor. They have
-    // no defined contents and cannot be bufferized. However, they can be
-    // converted to bufferization.alloc_tensor ops, which then bufferize to an
-    // allocation (--empty-tensor-to-alloc-tensor).
-    return op->emitOpError("cannot be bufferized, but can be converted to "
-                           "bufferization.alloc_tensor");
+    // Allocate a tensor. This emits a "bufferization.alloc_tensor" op.
+    FailureOr<Value> allocTensor = allocateTensorForShapedValue(
+        rewriter, op->getLoc(), emptyOp.getResult(), options, /*copy=*/false);
+    if (failed(allocTensor))
+      return failure();
+    rewriter.replaceOp(op, *allocTensor);
+    return success();
   }
 };
 
@@ -635,11 +636,11 @@ struct InsertSliceOpInterface
     RankedTensorType destType = insertSliceOp.getDestType();
 
     // The source is always read.
-    if (&opOperand == &insertSliceOp.getSourceMutable()[0])
+    if (&opOperand == &insertSliceOp.getSourceMutable())
       return true;
 
     // For the destination, it depends...
-    assert(&opOperand == &insertSliceOp.getDestMutable()[0] && "expected dest");
+    assert(&opOperand == &insertSliceOp.getDestMutable() && "expected dest");
 
     // Dest is not read if it is entirely overwritten. E.g.:
     // tensor.insert_slice %a into %t[0][10][1] : ... into tensor<10xf32>
@@ -839,7 +840,7 @@ struct ReshapeOpInterface
   bool bufferizesToMemoryRead(Operation *op, OpOperand &opOperand,
                               const AnalysisState &state) const {
     auto reshapeOp = cast<tensor::ReshapeOp>(op);
-    return &opOperand == &reshapeOp.getShapeMutable()[0];
+    return &opOperand == &reshapeOp.getShapeMutable();
   }
 
   bool bufferizesToMemoryWrite(Operation *op, OpOperand &opOperand,
@@ -916,7 +917,7 @@ struct ParallelInsertSliceOpInterface
   bool bufferizesToMemoryWrite(Operation *op, OpOperand &opOperand,
                                const AnalysisState &state) const {
     auto parallelInsertSliceOp = cast<ParallelInsertSliceOp>(op);
-    return &opOperand == &parallelInsertSliceOp.getDestMutable()[0];
+    return &opOperand == &parallelInsertSliceOp.getDestMutable();
   }
 
   LogicalResult bufferize(Operation *op, RewriterBase &rewriter,
