@@ -74,6 +74,10 @@ struct TestLowerToNVVMOptions
       *this, "cubin-format",
       llvm::cl::desc("Compilation format to use to serialize to cubin."),
       llvm::cl::init("isa")};
+  PassOptions::Option<int> optLevel{
+      *this, "opt-level",
+      llvm::cl::desc("Optimization level for NVVM compilation"),
+      llvm::cl::init(2)};
 };
 
 //===----------------------------------------------------------------------===//
@@ -242,6 +246,7 @@ void buildLowerToNVVMPassPipeline(OpPassManager &pm,
   nvvmTargetOptions.triple = options.cubinTriple;
   nvvmTargetOptions.chip = options.cubinChip;
   nvvmTargetOptions.features = options.cubinFeatures;
+  nvvmTargetOptions.optLevel = options.optLevel;
   pm.addPass(createGpuNVVMAttachTarget(nvvmTargetOptions));
 
   // Convert GPU to LLVM.
