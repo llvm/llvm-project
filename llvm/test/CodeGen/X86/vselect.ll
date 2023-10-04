@@ -651,18 +651,18 @@ define i64 @vselect_any_extend_vector_inreg_crash(ptr %x) {
 ; SSE:       # %bb.0:
 ; SSE-NEXT:    movq {{.*#+}} xmm0 = mem[0],zero
 ; SSE-NEXT:    pcmpeqb {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
-; SSE-NEXT:    movq %xmm0, %rax
+; SSE-NEXT:    movd %xmm0, %eax
 ; SSE-NEXT:    andl $1, %eax
-; SSE-NEXT:    shlq $15, %rax
+; SSE-NEXT:    shll $15, %eax
 ; SSE-NEXT:    retq
 ;
 ; AVX-LABEL: vselect_any_extend_vector_inreg_crash:
 ; AVX:       # %bb.0:
 ; AVX-NEXT:    vmovq {{.*#+}} xmm0 = mem[0],zero
 ; AVX-NEXT:    vpcmpeqb {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
-; AVX-NEXT:    vmovq %xmm0, %rax
+; AVX-NEXT:    vmovd %xmm0, %eax
 ; AVX-NEXT:    andl $1, %eax
-; AVX-NEXT:    shlq $15, %rax
+; AVX-NEXT:    shll $15, %eax
 ; AVX-NEXT:    retq
 0:
   %1 = load <8 x i8>, ptr %x
