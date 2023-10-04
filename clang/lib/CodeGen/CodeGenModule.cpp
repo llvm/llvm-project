@@ -855,8 +855,8 @@ void CodeGenModule::Release() {
     // Currently, "-mprintf-kind" option is only supported for HIP
     if (LangOpts.HIP) {
       auto *MDStr = llvm::MDString::get(
-          getLLVMContext(), (getTarget().getTargetOpts().AMDGPUPrintfKindVal ==
-                             TargetOptions::AMDGPUPrintfKind::Hostcall)
+          getLLVMContext(), (getTarget().getTargetOpts().AMDGPUPrintfKindVal !=
+                             TargetOptions::AMDGPUPrintfKind::Buffered)
                                 ? "hostcall"
                                 : "buffered");
       getModule().addModuleFlag(llvm::Module::Error, "amdgpu_printf_kind",

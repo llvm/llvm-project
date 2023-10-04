@@ -92,16 +92,20 @@ public:
 
   /// \brief Enumeration values for AMDGPU printf lowering scheme
   enum class AMDGPUPrintfKind {
+    /// Use deafult lowering scheme, HIP programs use hostcall and OpenCL uses
+    /// buffered by default,
+    None = 0,
+
     /// printf lowering scheme involving hostcalls, currently used by HIP
     /// programs by default
-    Hostcall = 0,
+    Hostcall = 1,
 
     /// printf lowering scheme involving implicit printf buffers,
-    Buffered = 1,
+    Buffered = 2,
   };
 
   /// \brief AMDGPU Printf lowering scheme
-  AMDGPUPrintfKind AMDGPUPrintfKindVal = AMDGPUPrintfKind::Hostcall;
+  AMDGPUPrintfKind AMDGPUPrintfKindVal = AMDGPUPrintfKind::None;
 
   // The code model to be used as specified by the user. Corresponds to
   // CodeModel::Model enum defined in include/llvm/Support/CodeGen.h, plus

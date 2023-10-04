@@ -1251,15 +1251,17 @@ def emit_static_lib : Flag<["--"], "emit-static-lib">,
 
 def mprintf_kind_EQ : Joined<["-"], "mprintf-kind=">, Group<m_Group>,
   HelpText<"Specify the printf lowering scheme (AMDGPU only), allowed values are "
+  "\"none\" (Use default lowering scheme for a language, HIP uses hostcalls and "
+  "OpenCL uses Buffered scheme), "
   "\"hostcall\"(printing happens during kernel execution, this scheme "
   "relies on hostcalls which require system to support pcie atomics) "
   "and \"buffered\"(printing happens after all kernel threads exit, "
   "this uses a printf buffer and does not rely on pcie atomic support)">,
   Visibility<[ClangOption, CC1Option]>,
-  Values<"hostcall,buffered">,
+  Values<"none,hostcall,buffered">,
   NormalizedValuesScope<"TargetOptions::AMDGPUPrintfKind">,
-  NormalizedValues<["Hostcall", "Buffered"]>,
-  MarshallingInfoEnum<TargetOpts<"AMDGPUPrintfKindVal">, "Hostcall">;
+  NormalizedValues<["None", "Hostcall", "Buffered"]>,
+  MarshallingInfoEnum<TargetOpts<"AMDGPUPrintfKindVal">, "None">;
 
 // HIP options
 let Group = hip_Group in {
