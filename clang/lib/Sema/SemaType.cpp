@@ -1588,9 +1588,13 @@ static QualType ConvertDeclSpecToType(TypeProcessingState &state) {
   case DeclSpec::TST_decimal32:    // _Decimal32
   case DeclSpec::TST_decimal64:    // _Decimal64
   case DeclSpec::TST_decimal128:   // _Decimal128
-    S.Diag(DS.getTypeSpecTypeLoc(), diag::err_decimal_unsupported);
-    Result = TSTToDecimalFloatType(Context, DS.getTypeSpecType());
-    declarator.setInvalidType(true);
+    if (!S.getLangOpts().DecimalFloatingPoint) {
+      S.Diag(DS.getTypeSpecTypeLoc(), diag::err_dfp_disabled);
+      Result = Context.IntTy;
+      declarator.setInvalidType(true);
+    } else {
+      Result = TSTToDecimalFloatType(Context, DS.getTypeSpecType());
+    }
     break;
   case DeclSpec::TST_class:
   case DeclSpec::TST_enum:

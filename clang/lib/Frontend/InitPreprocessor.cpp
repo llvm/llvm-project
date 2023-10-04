@@ -498,6 +498,12 @@ static void InitializeStandardPredefinedMacros(const TargetInfo &TI,
   Builder.defineMacro("__STDC_UTF_16__", "1");
   Builder.defineMacro("__STDC_UTF_32__", "1");
 
+  // C23 decimal floating point extensions.
+  // FIXME: Define to 202311L when support for C23 decimal floating point
+  // FIXME: extensions is feature complete.
+  if (!LangOpts.CPlusPlus && LangOpts.DecimalFloatingPoint)
+    Builder.defineMacro("__STDC_IEC_60559_DFP__", "197001L");
+
   if (LangOpts.ObjC)
     Builder.defineMacro("__OBJC__");
 

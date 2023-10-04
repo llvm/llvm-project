@@ -10232,8 +10232,8 @@ def ext_missing_type_specifier : ExtWarn<
   "implicit int">, InGroup<ImplicitInt>, DefaultError;
 def err_missing_type_specifier : Error<
   "a type specifier is required for all declarations">;
-def err_decimal_unsupported : Error<
-  "GNU decimal type extension not supported">;
+def err_dfp_disabled : Error<
+  "decimal floating-point extensions are not enabled">;
 def err_objc_array_of_interfaces : Error<
   "array of interface %0 is invalid (probably should be an array of pointers)">;
 def ext_c99_array_usage : Extension<

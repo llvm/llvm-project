@@ -427,6 +427,9 @@ LANGOPT(FixedPoint, 1, 0, "fixed point types")
 LANGOPT(PaddingOnUnsignedFixedPoint, 1, 0,
         "unsigned fixed point types having one extra padding bit")
 
+// ISO/IEC TS 18661-2, ISO/IEC TR 24733, and C23 decimal floating-point.
+LANGOPT(DecimalFloatingPoint, 1, 0, "decimal floating-point extensions")
+
 LANGOPT(RegisterStaticDestructors, 1, 1, "Register C++ static destructors")
 
 LANGOPT(RegCall4, 1, 0, "Set __regcall4 as a default calling convention to respect __regcall ABI v.4")

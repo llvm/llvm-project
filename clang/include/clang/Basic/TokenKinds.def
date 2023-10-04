@@ -428,9 +428,9 @@ KEYWORD(_Fract                      , KEYNOCXX)
 KEYWORD(_Sat                        , KEYNOCXX)
 
 // ISO/IEC TS 18661-2, ISO/IEC TR 24733, and C23 decimal floating-point.
-KEYWORD(_Decimal32                  , KEYALL)
-KEYWORD(_Decimal64                  , KEYALL)
-KEYWORD(_Decimal128                 , KEYALL)
+KEYWORD(_Decimal32                  , KEYNOCXX)
+KEYWORD(_Decimal64                  , KEYNOCXX)
+KEYWORD(_Decimal128                 , KEYNOCXX)
 
 // GNU Extensions (in impl-reserved namespace)
 KEYWORD(__null                      , KEYCXX)
