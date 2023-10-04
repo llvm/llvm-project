@@ -1698,7 +1698,10 @@ static LogicalResult printOperation(KokkosCppEmitter &emitter, func::FuncOp func
   {
     //Prevent support lib function names from being mangled
     if(isSupportFunc)
+    {
+      os << "#ifndef PYTACO_CPP_DRIVER\n";
       os << "extern \"C\" ";
+    }
     if(pointerResults)
     {
       os << "void ";
@@ -1745,6 +1748,8 @@ static LogicalResult printOperation(KokkosCppEmitter &emitter, func::FuncOp func
       return failure();
     }
     os << ");\n";
+    if(isSupportFunc)
+      os << "#endif\n";
     return success();
   }
   // Otherwise, it's a function definition with body.
@@ -3200,6 +3205,9 @@ static void emitCppBoilerplate(KokkosCppEmitter &emitter, bool enablePythonWrapp
   if(enableSparseSupport)
   {
     // This is the definition of the StridedMemRefType class, copied from mlir/include/mlir/ExecutionEngine/CRunnerUtils.h
+    emitter << "// If building a CPP driver, we can use the original StridedMemRefType class from MLIR,\n";
+    emitter << "// so do not redefine it here.\n";
+    emitter << "#ifndef PYTACO_CPP_DRIVER\n";
     emitter << "template <typename T, int N>\n";
     emitter << "struct StridedMemRefType {\n";
     emitter << "  T *basePtr;\n";
@@ -3207,7 +3215,26 @@ static void emitCppBoilerplate(KokkosCppEmitter &emitter, bool enablePythonWrapp
     emitter << "  int64_t offset;\n";
     emitter << "  int64_t sizes[N];\n";
     emitter << "  int64_t strides[N];\n";
-    emitter << "};\n\n";
+    emitter << "};\n";
+    emitter << "#endif\n";
+    emitter << "\n";
+    emitter << "// If building a CPP driver, need to provide a version of\n";
+    emitter << "// _mlir_ciface_newSparseTensor() that takes underlying integer types, not enum types like DimLevelType.\n";
+    emitter << "// The MLIR-Kokkos generated code doesn't know about the enum types at all.\n";
+    emitter << "#ifdef PYTACO_CPP_DRIVER\n";
+    emitter << "int8_t* _mlir_ciface_newSparseTensor(\n";
+    emitter << "  StridedMemRefType<index_type, 1> *dimSizesRef,\n";
+    emitter << "  StridedMemRefType<index_type, 1> *lvlSizesRef,\n";
+    emitter << "  StridedMemRefType<int8_t, 1> *lvlTypesRef,\n";
+    emitter << "  StridedMemRefType<index_type, 1> *lvl2dimRef,\n";
+    emitter << "  StridedMemRefType<index_type, 1> *dim2lvlRef, int ptrTp,\n";
+    emitter << "  int indTp, int valTp, int action, int8_t* ptr) {\n";
+    emitter << "    return (int8_t*) _mlir_ciface_newSparseTensor(dimSizesRef, lvlSizesRef,\n";
+    emitter << "      reinterpret_cast<StridedMemRefType<DimLevelType, 1>*>(lvlTypesRef),\n";
+    emitter << "      lvl2dimRef, dim2lvlRef, (OverheadType) ptrTp, (OverheadType) indTp,\n";
+    emitter << "      (PrimaryType) valTp, (Action) action, ptr);\n";
+    emitter << "  }\n";
+    emitter << "#endif\n\n";
 
     // Define utility functions to convert between Kokkos views and sparse tensor runtime objects.
     // This is View to StridedMemRefType. Supported for any input View type as long as it's in HostSpace.
