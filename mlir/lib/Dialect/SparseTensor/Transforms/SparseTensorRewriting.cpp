@@ -1474,17 +1474,17 @@ void mlir::populatePostSparsificationRewriting(RewritePatternSet &patterns,
                                                bool enableRT,
                                                bool enableForeach,
                                                bool enableConvert) {
-  patterns.add<ReshapeRewriter<tensor::ExpandShapeOp>,
+  patterns.add<ConcatenateRewriter, ReshapeRewriter<tensor::ExpandShapeOp>,
                ReshapeRewriter<tensor::CollapseShapeOp>,
                Sparse2SparseReshapeRewriter<tensor::ExpandShapeOp>,
                Sparse2SparseReshapeRewriter<tensor::CollapseShapeOp>,
                TensorReshapeRewriter>(patterns.getContext());
   if (enableForeach)
     patterns.add<ForeachRewriter>(patterns.getContext());
+
   // TODO: If RT not enabled, rewrite concatenate ops, etc here.
   if (!enableRT) {
-    patterns.add<ConcatenateRewriter, NewRewriter, OutRewriter>(
-        patterns.getContext());
+    patterns.add<NewRewriter, OutRewriter>(patterns.getContext());
     if (enableConvert)
       patterns.add<ConvertRewriter>(patterns.getContext());
   }
