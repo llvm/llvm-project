@@ -55,6 +55,14 @@ public:
   /// after insertion as attribute.
   StringAttr insert(Operation *symbol, Block::iterator insertPt = {});
 
+  /// Renames the given op or the op refered to by the given name to the given
+  /// new name and updates the symbol table and all usages of the symbol
+  /// accordingly. Fails if the updating of the usages fails.
+  LogicalResult rename(StringAttr from, StringAttr to);
+  LogicalResult rename(Operation *op, StringAttr to);
+  LogicalResult rename(StringAttr from, StringRef to);
+  LogicalResult rename(Operation *op, StringRef to);
+
   /// Return the name of the attribute used for symbol names.
   static StringRef getSymbolAttrName() { return "sym_name"; }
 
