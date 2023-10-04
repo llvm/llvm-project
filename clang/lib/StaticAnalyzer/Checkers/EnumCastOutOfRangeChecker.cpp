@@ -59,7 +59,7 @@ public:
 // value can be matching.
 class EnumCastOutOfRangeChecker : public Checker<check::PreStmt<CastExpr>> {
   mutable std::unique_ptr<BugType> EnumValueCastOutOfRange;
-  void reportWarning(CheckerContext &C) const;
+  void reportWarning(CheckerContext &C, const EnumDecl *E) const;
 
 public:
   void checkPreStmt(const CastExpr *CE, CheckerContext &C) const;
@@ -72,21 +72,36 @@ EnumValueVector getDeclValuesForEnum(const EnumDecl *ED) {
   EnumValueVector DeclValues(
       std::distance(ED->enumerator_begin(), ED->enumerator_end()));
   llvm::transform(ED->enumerators(), DeclValues.begin(),
-                 [](const EnumConstantDecl *D) { return D->getInitVal(); });
+                  [](const EnumConstantDecl *D) { return D->getInitVal(); });
   return DeclValues;
 }
 } // namespace
 
-void EnumCastOutOfRangeChecker::reportWarning(CheckerContext &C) const {
+void EnumCastOutOfRangeChecker::reportWarning(CheckerContext &C,
+                                              const EnumDecl *E) const {
+  assert(E && "valid EnumDecl* is expected");
   if (const ExplodedNode *N = C.generateNonFatalErrorNode()) {
     if (!EnumValueCastOutOfRange)
       EnumValueCastOutOfRange.reset(
           new BugType(this, "Enum cast out of range"));
-    constexpr llvm::StringLiteral Msg =
-        "The value provided to the cast expression is not in the valid range"
-        " of values for the enum";
-    C.emitReport(std::make_unique<PathSensitiveBugReport>(
-        *EnumValueCastOutOfRange, Msg, N));
+
+    llvm::SmallString<128> Msg{"The value provided to the cast expression is "
+                               "not in the valid range of values for "};
+    StringRef EnumName{E->getName()};
+    if (EnumName.empty()) {
+      Msg += "the enum";
+    } else {
+      Msg += '\'';
+      Msg += EnumName;
+      Msg += '\'';
+    }
+
+    auto BR = std::make_unique<PathSensitiveBugReport>(*EnumValueCastOutOfRange,
+                                                       Msg, N);
+    BR->addNote("enum declared here",
+                PathDiagnosticLocation::create(E, C.getSourceManager()),
+                {E->getSourceRange()});
+    C.emitReport(std::move(BR));
   }
 }
 
@@ -144,7 +159,7 @@ void EnumCastOutOfRangeChecker::checkPreStmt(const CastExpr *CE,
   // If there is no value that can possibly match any of the enum values, then
   // warn.
   if (!PossibleValueMatch)
-    reportWarning(C);
+    reportWarning(C, ED);
 }
 
 void ento::registerEnumCastOutOfRangeChecker(CheckerManager &mgr) {

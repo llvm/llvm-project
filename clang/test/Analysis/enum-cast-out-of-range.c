@@ -2,6 +2,7 @@
 // RUN:   -analyzer-checker=core,alpha.cplusplus.EnumCastOutOfRange \
 // RUN:   -verify %s
 
+// expected-note@+1 6 {{enum declared here}}
 enum En_t {
   En_0 = -4,
   En_1,
@@ -11,17 +12,17 @@ enum En_t {
 };
 
 void unscopedUnspecifiedCStyle(void) {
-  enum En_t Below = (enum En_t)(-5);    // expected-warning {{not in the valid range}}
+  enum En_t Below = (enum En_t)(-5);    // expected-warning {{not in the valid range of values for 'En_t'}}
   enum En_t NegVal1 = (enum En_t)(-4);  // OK.
   enum En_t NegVal2 = (enum En_t)(-3);  // OK.
-  enum En_t InRange1 = (enum En_t)(-2); // expected-warning {{not in the valid range}}
-  enum En_t InRange2 = (enum En_t)(-1); // expected-warning {{not in the valid range}}
-  enum En_t InRange3 = (enum En_t)(0);  // expected-warning {{not in the valid range}}
+  enum En_t InRange1 = (enum En_t)(-2); // expected-warning {{not in the valid range of values for 'En_t'}}
+  enum En_t InRange2 = (enum En_t)(-1); // expected-warning {{not in the valid range of values for 'En_t'}}
+  enum En_t InRange3 = (enum En_t)(0);  // expected-warning {{not in the valid range of values for 'En_t'}}
   enum En_t PosVal1 = (enum En_t)(1);   // OK.
   enum En_t PosVal2 = (enum En_t)(2);   // OK.
-  enum En_t InRange4 = (enum En_t)(3);  // expected-warning {{not in the valid range}}
+  enum En_t InRange4 = (enum En_t)(3);  // expected-warning {{not in the valid range of values for 'En_t'}}
   enum En_t PosVal3 = (enum En_t)(4);   // OK.
-  enum En_t Above = (enum En_t)(5);     // expected-warning {{not in the valid range}}
+  enum En_t Above = (enum En_t)(5);     // expected-warning {{not in the valid range of values for 'En_t'}}
 }
 
 enum En_t unused;
