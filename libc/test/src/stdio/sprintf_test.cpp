@@ -2757,6 +2757,17 @@ TEST_F(LlvmLibcSPrintfTest, FloatAutoConv) {
   written = LIBC_NAMESPACE::sprintf(buff, "%.10g", 0x1.0p-1074);
   ASSERT_STREQ_LEN(written, buff, "4.940656458e-324");
 
+  written = LIBC_NAMESPACE::sprintf(buff, "%g", 0xa.aaaaaaaaaaaaaabp-7);
+  ASSERT_STREQ_LEN(written, buff, "0.0833333");
+
+  written = LIBC_NAMESPACE::sprintf(buff, "%Lg", 0xa.aaaaaaaaaaaaaabp-7L);
+  ASSERT_STREQ_LEN(written, buff, "0.0833333");
+
+  written = LIBC_NAMESPACE::sprintf(buff, "%.60Lg", 0xa.aaaaaaaaaaaaaabp-7L);
+  ASSERT_STREQ_LEN(
+      written, buff,
+      "0.0833333333333333333355920878593448009041821933351457118988037");
+
   // Long double precision tests.
   // These are currently commented out because they require long double support
   // that isn't ready yet.
