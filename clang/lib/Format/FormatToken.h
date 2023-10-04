@@ -61,6 +61,7 @@ namespace format {
   TYPE(CSharpStringLiteral)                                                    \
   TYPE(CtorInitializerColon)                                                   \
   TYPE(CtorInitializerComma)                                                   \
+  TYPE(CtorDtorDeclName)                                                       \
   TYPE(DesignatedInitializerLSquare)                                           \
   TYPE(DesignatedInitializerPeriod)                                            \
   TYPE(DictLiteral)                                                            \
