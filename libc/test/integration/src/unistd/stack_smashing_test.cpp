@@ -23,7 +23,7 @@
 #include <unistd.h>
 
 void no_stack_smashing_normal_exit() {
-  pid_t pid = __llvm_libc::fork();
+  pid_t pid = LIBC_NAMESPACE::fork();
   if (pid == 0) {
     // Child process
     char foo[30];
@@ -33,14 +33,14 @@ void no_stack_smashing_normal_exit() {
   }
   ASSERT_TRUE(pid > 0);
   int status;
-  pid_t cpid = __llvm_libc::wait(&status);
+  pid_t cpid = LIBC_NAMESPACE::wait(&status);
   ASSERT_TRUE(cpid > 0);
   ASSERT_EQ(cpid, pid);
   ASSERT_TRUE(WIFEXITED(status));
 }
 
 void stack_smashing_abort() {
-  pid_t pid = __llvm_libc::fork();
+  pid_t pid = LIBC_NAMESPACE::fork();
   if (pid == 0) {
     // Child process
     char foo[30];
@@ -55,7 +55,7 @@ void stack_smashing_abort() {
   }
   ASSERT_TRUE(pid > 0);
   int status;
-  pid_t cpid = __llvm_libc::wait(&status);
+  pid_t cpid = LIBC_NAMESPACE::wait(&status);
   ASSERT_TRUE(cpid > 0);
   ASSERT_EQ(cpid, pid);
   ASSERT_TRUE(WTERMSIG(status) == SIGABRT);

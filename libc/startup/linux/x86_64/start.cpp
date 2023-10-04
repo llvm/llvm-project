@@ -26,8 +26,8 @@
 extern "C" int main(int, char **, char **);
 
 extern "C" void __stack_chk_fail() {
-  __llvm_libc::write_to_stderr("stack smashing detected");
-  __llvm_libc::abort();
+  LIBC_NAMESPACE::write_to_stderr("stack smashing detected");
+  LIBC_NAMESPACE::abort();
 }
 
 namespace LIBC_NAMESPACE {
@@ -90,7 +90,7 @@ void init_tls(TLSDescriptor &tls_descriptor) {
   // We cannot call the get_random function here as the function sets errno on
   // failure. Since errno is implemented via a thread local variable, we cannot
   // use errno before TLS is setup.
-  ssize_t stackGuardRetVal = __llvm_libc::syscall_impl<ssize_t>(
+  ssize_t stackGuardRetVal = LIBC_NAMESPACE::syscall_impl<ssize_t>(
       SYS_getrandom, reinterpret_cast<long>(stackGuardAddr), sizeof(uint64_t),
       0);
   if (stackGuardRetVal < 0)
