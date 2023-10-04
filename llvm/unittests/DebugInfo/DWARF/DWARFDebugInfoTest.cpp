@@ -37,7 +37,6 @@
 using namespace llvm;
 using namespace dwarf;
 using namespace utils;
-using ::testing::HasSubstr;
 
 namespace {
 
