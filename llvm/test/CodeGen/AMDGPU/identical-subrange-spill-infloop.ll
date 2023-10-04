@@ -117,22 +117,6 @@ define void @main(i1 %arg) #0 {
 ; CHECK-NEXT:    s_cbranch_execz .LBB0_3
 ; CHECK-NEXT:  ; %bb.1: ; %bb48
 ; CHECK-NEXT:    s_waitcnt lgkmcnt(0)
-; CHECK-NEXT:    v_writelane_b32 v4, s36, 32
-; CHECK-NEXT:    v_writelane_b32 v4, s37, 33
-; CHECK-NEXT:    v_writelane_b32 v4, s38, 34
-; CHECK-NEXT:    v_writelane_b32 v4, s39, 35
-; CHECK-NEXT:    v_writelane_b32 v4, s40, 36
-; CHECK-NEXT:    v_writelane_b32 v4, s41, 37
-; CHECK-NEXT:    v_writelane_b32 v4, s42, 38
-; CHECK-NEXT:    v_writelane_b32 v4, s43, 39
-; CHECK-NEXT:    v_writelane_b32 v4, s44, 40
-; CHECK-NEXT:    v_writelane_b32 v4, s45, 41
-; CHECK-NEXT:    v_writelane_b32 v4, s46, 42
-; CHECK-NEXT:    v_writelane_b32 v4, s47, 43
-; CHECK-NEXT:    v_writelane_b32 v4, s48, 44
-; CHECK-NEXT:    v_writelane_b32 v4, s49, 45
-; CHECK-NEXT:    v_writelane_b32 v4, s50, 46
-; CHECK-NEXT:    v_writelane_b32 v4, s51, 47
 ; CHECK-NEXT:    v_readlane_b32 s36, v4, 0
 ; CHECK-NEXT:    v_readlane_b32 s44, v4, 8
 ; CHECK-NEXT:    v_readlane_b32 s45, v4, 9

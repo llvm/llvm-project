@@ -550,16 +550,22 @@ void InlineSpiller::eliminateRedundantSpills(LiveInterval &SLI, VNInfo *VNI) {
         continue;
       SlotIndex Idx = LIS.getInstructionIndex(MI);
 
+      bool SameVNI = LI->getVNInfoAt(Idx) == VNI;
+
       // The main range value numbers will differ if multiple instructions are
       // used to define its various subregisters. Check the subregister value
       // numbers as a fallback.
-      if (LI->getVNInfoAt(Idx) != VNI &&
-          (!SLI.hasSubRanges() ||
-           !allSubRangeValNoSame(*LI, SLI, MI, MRI, TRI, Idx)))
-        continue;
+      if (!SameVNI) {
+        if (!SLI.hasSubRanges() ||
+            !allSubRangeValNoSame(*LI, SLI, MI, MRI, TRI, Idx))
+          continue;
+      }
 
-      // Follow sibling copies down the dominator tree.
-      if (Register DstReg = isCopyOfBundle(MI, Reg, TII)) {
+      // Follow sibling copies down the dominator tree. Don't do this if we're
+      // relying on identical subranges to avoid infinitely recursing.
+      // TODO: Handle subrange case.
+      Register DstReg;
+      if (SameVNI && (DstReg = isCopyOfBundle(MI, Reg, TII))) {
         if (isSibling(DstReg)) {
           LiveInterval &DstLI = LIS.getInterval(DstReg);
           VNInfo *DstVNI = DstLI.getVNInfoAt(Idx.getRegSlot());
