@@ -462,6 +462,8 @@ bool DataInitializationCompiler<DSV>::InitElement(
             "DATA statement value '%s' for '%s' has the wrong length"_warn_en_US,
             folded.AsFortran(), DescribeElement());
         return true;
+      } else if (status == evaluate::InitialImage::TooManyElems) {
+        exprAnalyzer_.Say("DATA statement has too many elements"_err_en_US);
       } else {
         CHECK(exprAnalyzer_.context().AnyFatalError());
       }
