@@ -259,7 +259,7 @@ define <4 x i8> @buildvec_vid_stepn3_add3_v4i8() {
 ; CHECK-NEXT:    vsetivli zero, 4, e8, mf4, ta, ma
 ; CHECK-NEXT:    vmv.v.i v9, 3
 ; CHECK-NEXT:    vid.v v8
-; CHECK-NEXT:    li a0, -3
+; CHECK-NEXT:    li a0, 253
 ; CHECK-NEXT:    vmadd.vx v8, a0, v9
 ; CHECK-NEXT:    ret
   ret <4 x i8> <i8 3, i8 0, i8 -3, i8 -6>
