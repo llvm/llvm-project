@@ -259,6 +259,16 @@ static int libomp_target_memset_async_helper(kmp_int32 Gtid, kmp_task_t *Task) {
   return OFFLOAD_SUCCESS;
 }
 
+static inline
+void ConvertDepObjVector(llvm::SmallVector<kmp_depend_info_t> &Vec,
+                         int DepObjCount, omp_depend_t * DepObjList) {
+  for (int i = 0; i < DepObjCount; i++) {
+    omp_depend_t DepObj = DepObjList[i];
+    Vec.push_back(*((kmp_depend_info_t *)DepObj));
+  }
+}
+
+
 static int libomp_helper_memset_task_creation(TargetMemsetArgsTy *Args,
                                               int DepObjCount,
                                               omp_depend_t * DepObjList) {
@@ -284,10 +294,7 @@ static int libomp_helper_memset_task_creation(TargetMemsetArgsTy *Args,
 
   // Convert types of depend objects
   llvm::SmallVector<kmp_depend_info_t> DepObjs;
-  for (int i = 0; i < DepObjCount; i++) {
-    omp_depend_t DepObj = DepObjList[i];
-    DepObjs.push_back(*((kmp_depend_info_t *)DepObj));
-  }
+  ConvertDepObjVector(DepObjs, DepObjCount, DepObjList);
 
   // Launch the helper task
   int Rc = __kmpc_omp_task_with_deps(nullptr, Gtid, Task, DepObjCount,
@@ -381,10 +388,7 @@ static int libomp_helper_memcpy_task_creation(TargetMemcpyArgsTy *Args,
 
   // Convert the type of depend objects
   llvm::SmallVector<kmp_depend_info_t> DepObjs;
-  for (int i = 0; i < DepObjCount; i++) {
-    omp_depend_t DepObj = DepObjList[i];
-    DepObjs.push_back(*((kmp_depend_info_t *)DepObj));
-  }
+  ConvertDepObjVector(DepObjs, DepObjCount, DepObjList);
 
   // Launch the helper task
   int Rc = __kmpc_omp_task_with_deps(nullptr, Gtid, Ptr, DepObjCount,
