@@ -1577,9 +1577,9 @@ bool ASTReader::ReadSLocEntry(int ID) {
   };
 
   ModuleFile *F = GlobalSLocEntryMap.find(-ID)->second;
-  unsigned Index = ID - F->SLocEntryBaseID;
   if (llvm::Error Err = F->SLocEntryCursor.JumpToBit(
-          F->SLocEntryOffsetsBase + F->SLocEntryOffsets[Index])) {
+          F->SLocEntryOffsetsBase +
+          F->SLocEntryOffsets[ID - F->SLocEntryBaseID])) {
     Error(std::move(Err));
     return true;
   }
@@ -1614,8 +1614,6 @@ bool ASTReader::ReadSLocEntry(int ID) {
     return true;
 
   case SM_SLOC_FILE_ENTRY: {
-    SourceLocation::UIntTy Offset = BaseOffset + Record[0];
-
     // We will detect whether a file changed and return 'Failure' for it, but
     // we will also try to fail gracefully by setting up the SLocEntry.
     unsigned InputID = Record[4];
@@ -1636,8 +1634,8 @@ bool ASTReader::ReadSLocEntry(int ID) {
     }
     SrcMgr::CharacteristicKind
       FileCharacter = (SrcMgr::CharacteristicKind)Record[2];
-    FileID FID =
-        SourceMgr.createFileID(*File, IncludeLoc, FileCharacter, ID, Offset);
+    FileID FID = SourceMgr.createFileID(*File, IncludeLoc, FileCharacter, ID,
+                                        BaseOffset + Record[0]);
     SrcMgr::FileInfo &FileInfo =
           const_cast<SrcMgr::FileInfo&>(SourceMgr.getSLocEntry(FID).getFile());
     FileInfo.NumCreatedFIDs = Record[5];
@@ -1667,9 +1665,8 @@ bool ASTReader::ReadSLocEntry(int ID) {
   }
 
   case SM_SLOC_BUFFER_ENTRY: {
-    SourceLocation::UIntTy Offset = BaseOffset + Record[0];
-
     const char *Name = Blob.data();
+    unsigned Offset = Record[0];
     SrcMgr::CharacteristicKind
       FileCharacter = (SrcMgr::CharacteristicKind)Record[2];
     SourceLocation IncludeLoc = ReadSourceLocation(*F, Record[1]);
@@ -1681,7 +1678,7 @@ bool ASTReader::ReadSLocEntry(int ID) {
     if (!Buffer)
       return true;
     FileID FID = SourceMgr.createFileID(std::move(Buffer), FileCharacter, ID,
-                                        Offset, IncludeLoc);
+                                        BaseOffset + Offset, IncludeLoc);
     if (Record[3]) {
       auto &FileInfo =
           const_cast<SrcMgr::FileInfo &>(SourceMgr.getSLocEntry(FID).getFile());
@@ -1691,14 +1688,13 @@ bool ASTReader::ReadSLocEntry(int ID) {
   }
 
   case SM_SLOC_EXPANSION_ENTRY: {
-    SourceLocation::UIntTy Offset = BaseOffset + Record[0];
-
     LocSeq::State Seq;
     SourceLocation SpellingLoc = ReadSourceLocation(*F, Record[1], Seq);
     SourceLocation ExpansionBegin = ReadSourceLocation(*F, Record[2], Seq);
     SourceLocation ExpansionEnd = ReadSourceLocation(*F, Record[3], Seq);
     SourceMgr.createExpansionLoc(SpellingLoc, ExpansionBegin, ExpansionEnd,
-                                 Record[5], Record[4], ID, Offset);
+                                 Record[5], Record[4], ID,
+                                 BaseOffset + Record[0]);
     break;
   }
   }

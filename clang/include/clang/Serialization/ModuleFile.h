@@ -288,7 +288,8 @@ public:
   /// for the entry is SLocEntryOffsetsBase + SLocEntryOffsets[i].
   uint64_t SLocEntryOffsetsBase = 0;
 
-  /// Stream bit offsets for all of the source location entries in the AST file.
+  /// Offsets for all of the source location entries in the
+  /// AST file.
   const uint32_t *SLocEntryOffsets = nullptr;
 
   /// SLocEntries that we're going to preload.
