@@ -10440,6 +10440,21 @@ bool clang::isBetterOverloadCandidate(
       //  -- F1 is the copy deduction candidate(16.3.1.8) and F2 is not
       if (Guide1->getDeductionCandidateKind() == DeductionCandidate::Copy)
         return true;
+      if (Guide2->getDeductionCandidateKind() == DeductionCandidate::Copy)
+        return false;
+
+      //  --F1 is generated from a non-template constructor and F2 is generated
+      //  from a constructor template
+      const auto *Constructor1 = Guide1->getCorrespondingConstructor();
+      const auto *Constructor2 = Guide2->getCorrespondingConstructor();
+      if (Constructor1 && Constructor2) {
+        bool isC1Templated = Constructor1->getTemplatedKind() !=
+                             FunctionDecl::TemplatedKind::TK_NonTemplate;
+        bool isC2Templated = Constructor2->getTemplatedKind() !=
+                             FunctionDecl::TemplatedKind::TK_NonTemplate;
+        if (isC1Templated != isC2Templated)
+          return isC2Templated;
+      }
     }
   }
 
@@ -10483,7 +10498,7 @@ bool clang::isBetterOverloadCandidate(
     if (AS1 != AS2) {
       if (Qualifiers::isAddressSpaceSupersetOf(AS2, AS1))
         return true;
-      if (Qualifiers::isAddressSpaceSupersetOf(AS2, AS1))
+      if (Qualifiers::isAddressSpaceSupersetOf(AS1, AS2))
         return false;
     }
   }
