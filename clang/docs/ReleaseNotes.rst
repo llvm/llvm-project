@@ -206,6 +206,13 @@ New Compiler Flags
   Since enabling the verifier adds a non-trivial cost of a few percent impact on
   build times, it's disabled by default, unless your LLVM distribution itself is
   compiled with runtime checks enabled.
+* ``-fverify-machine-code`` and its complement ``-fno-verify-machine-code``.
+  Enable or disable the verification of the generated machine code.
+  Users can pass this to turn on extra verification to catch certain types of
+  compiler bugs at the cost of extra compile time.
+  This verifier adds a huge overhead to compile time, it's expected that build times
+  can double, so this is disabled by default.
+  This flag is currently limited to non-LTO builds.
 * ``-fkeep-system-includes`` modifies the behavior of the ``-E`` option,
   preserving ``#include`` directives for "system" headers instead of copying
   the preprocessed text to the output. This can greatly reduce the size of the

@@ -1925,6 +1925,12 @@ def fverify_intermediate_code : Flag<["-"], "fverify-intermediate-code">,
 def fno_verify_intermediate_code : Flag<["-"], "fno-verify-intermediate-code">,
   Group<f_clang_Group>, Visibility<[ClangOption, CLOption, DXCOption]>,
   HelpText<"Disable verification of LLVM IR">;
+def fverify_machine_code : Flag<["-"], "fverify-machine-code">,
+  Group<f_clang_Group>, Visibility<[ClangOption, CLOption, DXCOption]>,
+  HelpText<"Enable verification of generated machine code">;
+def fno_verify_machine_code : Flag<["-"], "fno-verify-machine-code">,
+  Group<f_clang_Group>, Visibility<[ClangOption, CLOption, DXCOption]>,
+  HelpText<"Disable verification of generated machine code">;
 def fdiscard_value_names : Flag<["-"], "fdiscard-value-names">,
   Group<f_clang_Group>, Visibility<[ClangOption, DXCOption]>,
   HelpText<"Discard value names in LLVM IR">;
