@@ -59,6 +59,24 @@
 #include "hsa/hsa_ext_amd.h"
 #endif
 
+// AMDGPU-specific, so not using the common ones from the device independent
+// includes.
+#ifdef OMPT_SUPPORT
+#define OMPT_IF_TRACING_OR_ENV_VAR_ENABLED(stmts)                              \
+  do {                                                                         \
+    if (llvm::omp::target::ompt::TracingActive || OMPX_EnableQueueProfiling) { \
+      stmts                                                                    \
+    }                                                                          \
+  } while (0)
+#else
+#define OMPT_IF_TRACING_OR_ENV_VAR_ENABLED(stmts)                              \
+  do {                                                                         \
+    if (OMPX_EnableQueueProfiling) {                                           \
+      stmts                                                                    \
+    }                                                                          \
+  } while (0)
+#endif
+
 #ifdef OMPT_SUPPORT
 #include "OmptDeviceTracing.h"
 
@@ -961,13 +979,14 @@ struct AMDGPUQueueTy {
   AMDGPUQueueTy() : Queue(nullptr), Mutex(), NumUsers(0) {}
 
   /// Lazily initialize a new queue belonging to a specific agent.
-  Error init(hsa_agent_t Agent, int32_t QueueSize) {
+  Error init(hsa_agent_t Agent, int32_t QueueSize,
+             int OMPX_EnableQueueProfiling) {
     if (Queue)
       return Plugin::success();
     hsa_status_t Status =
         hsa_queue_create(Agent, QueueSize, HSA_QUEUE_TYPE_MULTI, callbackError,
                          nullptr, UINT32_MAX, UINT32_MAX, &Queue);
-    OMPT_IF_TRACING_ENABLED(
+    OMPT_IF_TRACING_OR_ENV_VAR_ENABLED(
         hsa_amd_profiling_set_profiler_enabled(Queue, /*Enable=*/1););
     return Plugin::check(Status, "Error in hsa_queue_create: %s");
   }
@@ -1930,6 +1949,8 @@ struct AMDGPUStreamManagerTy final
   AMDGPUStreamManagerTy(GenericDeviceTy &Device, hsa_agent_t HSAAgent)
       : GenericDeviceResourceManagerTy(Device),
         OMPX_QueueTracking("LIBOMPTARGET_AMDGPU_HSA_QUEUE_BUSY_TRACKING", true),
+        OMPX_EnableQueueProfiling("LIBOMPTARGET_AMDGPU_ENABLE_QUEUE_PROFILING",
+                                  false),
         NextQueue(0), Agent(HSAAgent) {}
 
   Error init(uint32_t InitialSize, int NumHSAQueues, int HSAQueueSize) {
@@ -1937,7 +1958,8 @@ struct AMDGPUStreamManagerTy final
     QueueSize = HSAQueueSize;
     MaxNumQueues = NumHSAQueues;
     // Initialize one queue eagerly
-    if (auto Err = Queues.front().init(Agent, QueueSize))
+    if (auto Err =
+            Queues.front().init(Agent, QueueSize, OMPX_EnableQueueProfiling))
       return Err;
 
     return GenericDeviceResourceManagerTy::init(InitialSize);
@@ -1972,6 +1994,10 @@ struct AMDGPUStreamManagerTy final
 
   /// Enable/disable profiling of the HSA queues.
   void setOmptQueueProfile(int Enable) {
+    // If queue profiling is enabled with an env-var, it means that
+    // profiling is already ON and should remain so all the time.
+    if (OMPX_EnableQueueProfiling)
+      return;
     for (auto &Q : Queues)
       if (Q.isInitialized())
         hsa_amd_profiling_set_profiler_enabled(Q.getHsaQueue(), Enable);
@@ -2001,7 +2027,8 @@ private:
     }
 
     // Make sure the queue is initialized, then add user & assign.
-    if (auto Err = Queues[Index].init(Agent, QueueSize))
+    if (auto Err =
+            Queues[Index].init(Agent, QueueSize, OMPX_EnableQueueProfiling))
       return Err;
     Queues[Index].addUser();
     Stream->Queue = &Queues[Index];
@@ -2011,6 +2038,9 @@ private:
 
   /// Envar for controlling the tracking of busy HSA queues.
   BoolEnvar OMPX_QueueTracking;
+
+  /// Envar for controlling whether to always profile HSA queues.
+  BoolEnvar OMPX_EnableQueueProfiling;
 
   /// The next queue index to use for round robin selection.
   uint32_t NextQueue;
