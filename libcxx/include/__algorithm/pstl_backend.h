@@ -49,7 +49,11 @@ A PSTL parallel backend is a tag type to which the following functions are assoc
                                    _Comp __comp);
 
   template <class _ExecutionPolicy, class _InIterator, class _OutIterator, class _UnaryOperation>
-  _OutIterator __pstl_transform(_Backend, _InIterator __first, _InIterator __last, _OutIterator __result, _UnaryOperation __op);
+  _OutIterator __pstl_transform(_Backend,
+                                _InIterator __first,
+                                _InIterator __last,
+                                _OutIterator __result,
+                                _UnaryOperation __op);
 
   template <class _ExecutionPolicy, class _InIterator1, class _InIterator2, class _OutIterator, class _BinaryOperation>
   _OutIterator __pstl_transform(_Backend,
