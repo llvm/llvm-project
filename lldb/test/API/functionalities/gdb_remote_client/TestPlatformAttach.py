@@ -7,6 +7,7 @@ from lldbsuite.test.lldbgdbclient import GDBRemoteTestBase
 
 class TestPlatformAttach(GDBRemoteTestBase):
     @skipIfRemote
+    @skipIfWindows
     def test_attach(self):
         """Test attaching by name"""
 
