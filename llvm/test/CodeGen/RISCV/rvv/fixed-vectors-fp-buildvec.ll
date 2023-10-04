@@ -1083,3 +1083,132 @@ define <2 x float> @signbits() {
 entry:
   ret <2 x float> <float 0x36A0000000000000, float 0.000000e+00>
 }
+
+define <2 x half> @vid_v2f16() {
+; CHECK-LABEL: vid_v2f16:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vsetivli zero, 2, e16, mf4, ta, ma
+; CHECK-NEXT:    vid.v v8
+; CHECK-NEXT:    vfcvt.f.x.v v8, v8
+; CHECK-NEXT:    ret
+  ret <2 x half> <half 0.0, half 1.0>
+}
+
+define <2 x half> @vid_addend1_v2f16() {
+; CHECK-LABEL: vid_addend1_v2f16:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vsetivli zero, 2, e16, mf4, ta, ma
+; CHECK-NEXT:    vid.v v8
+; CHECK-NEXT:    vadd.vi v8, v8, 1
+; CHECK-NEXT:    vfcvt.f.x.v v8, v8
+; CHECK-NEXT:    ret
+  ret <2 x half> <half 1.0, half 2.0>
+}
+
+define <2 x half> @vid_denominator2_v2f16() {
+; CHECK-LABEL: vid_denominator2_v2f16:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    lui a0, %hi(.LCPI27_0)
+; CHECK-NEXT:    addi a0, a0, %lo(.LCPI27_0)
+; CHECK-NEXT:    vsetivli zero, 2, e16, mf4, ta, ma
+; CHECK-NEXT:    vle16.v v8, (a0)
+; CHECK-NEXT:    ret
+  ret <2 x half> <half 0.5, half 1.0>
+}
+
+define <2 x half> @vid_step2_v2f16() {
+; CHECK-LABEL: vid_step2_v2f16:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vsetivli zero, 2, e16, mf4, ta, ma
+; CHECK-NEXT:    vid.v v8
+; CHECK-NEXT:    vadd.vv v8, v8, v8
+; CHECK-NEXT:    vfcvt.f.x.v v8, v8
+; CHECK-NEXT:    ret
+  ret <2 x half> <half 0.0, half 2.0>
+}
+
+define <2 x float> @vid_v2f32() {
+; CHECK-LABEL: vid_v2f32:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vsetivli zero, 2, e32, mf2, ta, ma
+; CHECK-NEXT:    vid.v v8
+; CHECK-NEXT:    vfcvt.f.x.v v8, v8
+; CHECK-NEXT:    ret
+  ret <2 x float> <float 0.0, float 1.0>
+}
+
+define <2 x float> @vid_addend1_v2f32() {
+; CHECK-LABEL: vid_addend1_v2f32:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vsetivli zero, 2, e32, mf2, ta, ma
+; CHECK-NEXT:    vid.v v8
+; CHECK-NEXT:    vadd.vi v8, v8, 1
+; CHECK-NEXT:    vfcvt.f.x.v v8, v8
+; CHECK-NEXT:    ret
+  ret <2 x float> <float 1.0, float 2.0>
+}
+
+define <2 x float> @vid_denominator2_v2f32() {
+; CHECK-LABEL: vid_denominator2_v2f32:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    lui a0, %hi(.LCPI31_0)
+; CHECK-NEXT:    addi a0, a0, %lo(.LCPI31_0)
+; CHECK-NEXT:    vsetivli zero, 2, e32, mf2, ta, ma
+; CHECK-NEXT:    vle32.v v8, (a0)
+; CHECK-NEXT:    ret
+  ret <2 x float> <float 0.5, float 1.0>
+}
+
+define <2 x float> @vid_step2_v2f32() {
+; CHECK-LABEL: vid_step2_v2f32:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vsetivli zero, 2, e32, mf2, ta, ma
+; CHECK-NEXT:    vid.v v8
+; CHECK-NEXT:    vadd.vv v8, v8, v8
+; CHECK-NEXT:    vfcvt.f.x.v v8, v8
+; CHECK-NEXT:    ret
+  ret <2 x float> <float 0.0, float 2.0>
+}
+
+define <2 x double> @vid_v2f64() {
+; CHECK-LABEL: vid_v2f64:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vsetivli zero, 2, e64, m1, ta, ma
+; CHECK-NEXT:    vid.v v8
+; CHECK-NEXT:    vfcvt.f.x.v v8, v8
+; CHECK-NEXT:    ret
+  ret <2 x double> <double 0.0, double 1.0>
+}
+
+define <2 x double> @vid_addend1_v2f64() {
+; CHECK-LABEL: vid_addend1_v2f64:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vsetivli zero, 2, e64, m1, ta, ma
+; CHECK-NEXT:    vid.v v8
+; CHECK-NEXT:    vadd.vi v8, v8, 1
+; CHECK-NEXT:    vfcvt.f.x.v v8, v8
+; CHECK-NEXT:    ret
+  ret <2 x double> <double 1.0, double 2.0>
+}
+
+define <2 x double> @vid_denominator2_v2f64() {
+; CHECK-LABEL: vid_denominator2_v2f64:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    lui a0, %hi(.LCPI35_0)
+; CHECK-NEXT:    addi a0, a0, %lo(.LCPI35_0)
+; CHECK-NEXT:    vsetivli zero, 2, e64, m1, ta, ma
+; CHECK-NEXT:    vle64.v v8, (a0)
+; CHECK-NEXT:    ret
+  ret <2 x double> <double 0.5, double 1.0>
+}
+
+define <2 x double> @vid_step2_v2f64() {
+; CHECK-LABEL: vid_step2_v2f64:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vsetivli zero, 2, e64, m1, ta, ma
+; CHECK-NEXT:    vid.v v8
+; CHECK-NEXT:    vadd.vv v8, v8, v8
+; CHECK-NEXT:    vfcvt.f.x.v v8, v8
+; CHECK-NEXT:    ret
+  ret <2 x double> <double 0.0, double 2.0>
+}
