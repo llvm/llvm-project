@@ -63,7 +63,7 @@ struct InsertSliceOpInterface
     : public SubsetInsertionOpInterface::ExternalModel<InsertSliceOpInterface,
                                                        tensor::InsertSliceOp> {
   OpOperand &getSourceOperand(Operation *op) const {
-    return op->getOpOperand(0);
+    return cast<tensor::InsertSliceOp>(op).getSourceMutable();
   }
 
   bool
@@ -91,11 +91,11 @@ struct ParallelInsertSliceOpInterface
     : public SubsetInsertionOpInterface::ExternalModel<
           ParallelInsertSliceOpInterface, tensor::ParallelInsertSliceOp> {
   OpOperand &getSourceOperand(Operation *op) const {
-    return op->getOpOperand(0);
+    return cast<tensor::ParallelInsertSliceOp>(op).getSourceMutable();
   }
 
   OpOperand &getDestinationOperand(Operation *op) const {
-    return op->getOpOperand(1);
+    return cast<tensor::ParallelInsertSliceOp>(op).getDestMutable();
   }
 
   bool
