@@ -1066,6 +1066,91 @@ OpFoldResult ConvertOp::fold(FoldAdaptor adaptor) {
   return {};
 }
 
+bool ConvertOp::directConvertable() {
+  if (isSortCOOConvert())
+    return true;
+
+  SparseTensorType srcStt = getSparseTensorType(getSource());
+  SparseTensorType dstStt = getSparseTensorType(getDest());
+
+  // We can always directly convert to unordered sparse tensor or dense tensor
+  // since dense tensor support random access.
+  if (dstStt.isAllDense() || !dstStt.isAllOrdered())
+    return true;
+
+  if (srcStt.isAllOrdered() && dstStt.isAllOrdered() &&
+      srcStt.hasSameDimToLvl(dstStt)) {
+    return true;
+  }
+
+  // Source and dest tensors are ordered in different ways. We only do direct
+  // dense to sparse conversion when the dense input is defined by a sparse
+  // constant. Note that we can theoritically always directly convert from dense
+  // inputs by rotating dense loops but it leads to bad cache locality and hurt
+  // performance.
+  if (auto constOp = getSource().getDefiningOp<arith::ConstantOp>())
+    if (isa<SparseElementsAttr>(constOp.getValue()))
+      return true;
+
+  return false;
+}
+
+bool ConvertOp::isSortCOOConvert() {
+  // TODO: we should instead use a different sort_coo operation to handle
+  // the conversion between COOs (but with different ordering).
+  return isUniqueCOOType(getSource().getType()) &&
+         isUniqueCOOType(getDest().getType()) &&
+         getSparseTensorType(getDest()).isAllOrdered();
+}
+
+struct StageUnorderedConvert : public OpRewritePattern<ConvertOp> {
+  using OpRewritePattern<ConvertOp>::OpRewritePattern;
+
+  LogicalResult matchAndRewrite(ConvertOp op,
+                                PatternRewriter &rewriter) const override {
+    if (op.directConvertable())
+      return failure();
+
+    Location loc = op.getLoc();
+    SparseTensorType srcStt = getSparseTensorType(op.getSource());
+    SparseTensorType dstStt = getSparseTensorType(op.getDest());
+
+    // Just to make sure that convert to dense tensor is always direct.
+    assert(!dstStt.isAllDense());
+
+    // source -> coo
+    // The tmp COO must be unordered, otherwise it is a direct conversion.
+    assert(!(srcStt.hasSameDimToLvl(dstStt) && srcStt.isAllOrdered()));
+    Type srcCOOTp = getCOOFromTypeWithOrdering(
+        srcStt.getRankedTensorType(), dstStt.getDimToLvl(), /*ordered=*/false);
+    Value srcCOO = rewriter.create<ConvertOp>(loc, srcCOOTp, op.getSource());
+
+    // -> sort
+    Type dstCOOTp = getCOOFromTypeWithOrdering(
+        dstStt.getRankedTensorType(), dstStt.getDimToLvl(), /*ordered=*/true);
+    // TODO: this should be a sort_coo operation.
+    Value dstCOO = rewriter.create<ConvertOp>(loc, dstCOOTp, srcCOO);
+
+    // -> dest.
+    if (dstCOO.getType() == op.getType()) {
+      rewriter.replaceOp(op, dstCOO);
+    } else {
+      // Need an extra conversion if the target type is not COO.
+      rewriter.replaceOpWithNewOp<ConvertOp>(op, op.getDest().getType(),
+                                             dstCOO);
+    }
+    // TODO: deallocate extra COOs, we should probably delegate it to buffer
+    // deallocation pass.
+
+    return success();
+  }
+};
+
+void ConvertOp::getCanonicalizationPatterns(RewritePatternSet &results,
+                                            MLIRContext *context) {
+  results.add<StageUnorderedConvert>(context);
+}
+
 LogicalResult ToPositionsOp::verify() {
   auto e = getSparseTensorEncoding(getTensor().getType());
   if (failed(lvlIsInBounds(getLevel(), getTensor())))
@@ -1262,9 +1347,10 @@ LogicalResult ConcatenateOp::verify() {
         // If all dimension are statically known, the sum of all the input
         // dimensions should be equal to the output dimension.
         if (sumSz != dstSh)
-          return emitError(
-              "The concatenation dimension of the output tensor should be the "
-              "sum of all the concatenation dimensions of the input tensors.");
+          return emitError("The concatenation dimension of the output tensor "
+                           "should be the "
+                           "sum of all the concatenation dimensions of the "
+                           "input tensors.");
       }
     } else {
       DynSize prev = dstSh;
