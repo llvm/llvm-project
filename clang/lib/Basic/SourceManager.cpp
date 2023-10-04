@@ -458,14 +458,12 @@ SourceManager::AllocateLoadedSLocEntries(unsigned NumSLocEntries,
       CurrentLoadedOffset - TotalSize < NextLocalOffset) {
     return std::make_pair(0, 0);
   }
-
-  unsigned NewTableSize = LoadedSLocEntryTable.size() + NumSLocEntries;
-  LoadedSLocEntryTableSegments.push_back(NewTableSize);
-  LoadedSLocEntryTable.resize(NewTableSize);
-  SLocEntryLoaded.resize(NewTableSize);
-
+  LoadedSLocEntryTable.resize(LoadedSLocEntryTable.size() + NumSLocEntries);
+  SLocEntryLoaded.resize(LoadedSLocEntryTable.size());
   CurrentLoadedOffset -= TotalSize;
-  return std::make_pair(-NewTableSize - 1, CurrentLoadedOffset);
+  int ID = LoadedSLocEntryTable.size();
+  LoadedSLocEntryAllocBegin.push_back(FileID::get(-ID - 2));
+  return std::make_pair(-ID - 1, CurrentLoadedOffset);
 }
 
 /// As part of recovering from missing or changed content, produce a
@@ -1986,13 +1984,15 @@ bool SourceManager::isInTheSameTranslationUnitImpl(
   if (isLoadedFileID(LOffs.first) != isLoadedFileID(ROffs.first))
     return false;
 
-  // If both are loaded from different AST files.
   if (isLoadedFileID(LOffs.first) && isLoadedFileID(ROffs.first)) {
-    auto FindTableSegment = [this](FileID FID) {
-      return llvm::upper_bound(LoadedSLocEntryTableSegments, -FID.ID - 2);
+    auto FindSLocEntryAlloc = [this](FileID FID) {
+      // FileIDs are negative, we store the beginning of each allocation (the
+      // lowest FileID), later allocations have lower FileIDs.
+      return llvm::upper_bound(LoadedSLocEntryAllocBegin, FID, std::greater{});
     };
 
-    if (FindTableSegment(LOffs.first) != FindTableSegment(ROffs.first))
+    // If both are loaded from different AST files.
+    if (FindSLocEntryAlloc(LOffs.first) != FindSLocEntryAlloc(ROffs.first))
       return false;
   }
 

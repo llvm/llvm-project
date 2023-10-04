@@ -701,9 +701,10 @@ class SourceManager : public RefCountedBase<SourceManager> {
   /// use (-ID - 2).
   SmallVector<SrcMgr::SLocEntry, 0> LoadedSLocEntryTable;
 
-  /// For each allocation in LoadedSLocEntryTable, we keep the new size. This
-  /// can be used to determine whether two FileIDs come from the same AST file.
-  SmallVector<size_t, 0> LoadedSLocEntryTableSegments;
+  /// For each allocation in LoadedSLocEntryTable, we keep the first FileID.
+  /// We assume exactly one allocation per AST file, and use that to determine
+  /// whether two FileIDs come from the same AST file.
+  SmallVector<FileID, 0> LoadedSLocEntryAllocBegin;
 
   /// The starting offset of the next local SLocEntry.
   ///
