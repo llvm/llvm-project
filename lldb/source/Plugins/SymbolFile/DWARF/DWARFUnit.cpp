@@ -981,7 +981,7 @@ DWARFUnit::extract(SymbolFileDWARF &dwarf, user_id_t uid,
       entry = index.getFromOffset(expected_header->GetOffset());
     if (entry)
       if (llvm::Error err = expected_header->ApplyIndexEntry(entry))
-        return err;
+        return std::move(err);
   }
 
   const llvm::DWARFDebugAbbrev *abbr = dwarf.DebugAbbrev();
