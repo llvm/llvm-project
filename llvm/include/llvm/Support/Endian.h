@@ -22,13 +22,21 @@
 #include <type_traits>
 
 namespace llvm {
-namespace support {
 
-enum endianness {
+enum class endianness {
   big,
   little,
   native = llvm::sys::IsBigEndianHost ? big : little
 };
+
+namespace support {
+
+// TODO: Remove the following once we are done migrating to llvm::endianness,
+// llvm::endianness::big, etc.
+using endianness = llvm::endianness;
+constexpr llvm::endianness big = llvm::endianness::big;
+constexpr llvm::endianness little = llvm::endianness::little;
+constexpr llvm::endianness native = llvm::endianness::native;
 
 // These are named values for common alignments.
 enum {aligned = 0, unaligned = 1};
