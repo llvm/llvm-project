@@ -1082,26 +1082,25 @@ SwiftLanguage::GetHardcodedSynthetics() {
 
       casted_to_swift->SetName(ConstString("Swift_Type"));
 
-      ValueObjectSP target_valobj;
+      SyntheticChildrenSP synth_sp;
       if (should_wrap_in_ptr) {
-        // If we have a pointer to a Swift value type, dereference it.
+        // If we have a pointer to a Swift value type, dereference the pointer
+        // and present those as the contents instead.
         auto children = lldb_private::formatters::swift::
             ExtractChildrenFromSwiftPointerValueObject(casted_to_swift);
 
         if (children.empty())
           return nullptr;
-
         // The pointer should only have one child: the pointee.
         assert(children.size() == 1 &&
                "Unexpected size for pointer's children!");
-        target_valobj = children[0];
-      } else {
-        target_valobj = casted_to_swift;
-      }
 
-      SyntheticChildrenSP synth_sp =
-          SyntheticChildrenSP(new ValueObjectWrapperSyntheticChildren(
-              target_valobj, SyntheticChildren::Flags()));
+        synth_sp = SyntheticChildrenSP(new ValueObjectWrapperSyntheticChildren(
+            children[0], SyntheticChildren::Flags()));
+      } else {
+        synth_sp = SyntheticChildrenSP(new ValueObjectWrapperSyntheticChildren(
+            casted_to_swift, SyntheticChildren::Flags()));
+      }
       return synth_sp;
     });
     g_formatters.push_back([](lldb_private::ValueObject &valobj,
