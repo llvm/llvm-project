@@ -252,6 +252,7 @@ add_llvm_component_library(LLVMSupport
   YAMLTraits.cpp
   raw_os_ostream.cpp
   raw_ostream.cpp
+  raw_ostream_proxy.cpp
   regcomp.c
   regerror.c
   regexec.c
