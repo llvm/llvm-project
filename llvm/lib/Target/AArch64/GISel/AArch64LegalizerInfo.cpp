@@ -895,6 +895,14 @@ AArch64LegalizerInfo::AArch64LegalizerInfo(const AArch64Subtarget &ST)
       .clampMaxNumElements(1, s16, 8)
       .lower();
 
+  getActionDefinitionsBuilder(G_VECREDUCE_MUL)
+      .clampMaxNumElements(1, s64, 2)
+      .clampMaxNumElements(1, s32, 4)
+      .clampMaxNumElements(1, s16, 8)
+      .clampMaxNumElements(1, s8, 16)
+      .scalarize(1)
+      .lower();
+
   getActionDefinitionsBuilder(
       {G_VECREDUCE_OR, G_VECREDUCE_AND, G_VECREDUCE_XOR})
       // Try to break down into smaller vectors as long as they're at least 64
