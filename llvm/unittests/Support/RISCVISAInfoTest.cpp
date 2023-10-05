@@ -630,7 +630,7 @@ TEST(getTargetFeatureForExtension, RetrieveTargetFeatureFromOneExt) {
 
 TEST(RiscvExtensionsHelp, CheckExtensions) {
   std::string ExpectedOutput =
-R"(All available -march extensions for RISC-V
+      R"(All available -march extensions for RISC-V
 
     Name                Version   Description
     i                   2.1       This is a long dummy description
