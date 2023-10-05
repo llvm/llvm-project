@@ -2,7 +2,7 @@
 # RUN: llc -mtriple=riscv64 -run-pass=instruction-select %s -o - \
 # RUN: | FileCheck %s
 ---
-name:            load_i8
+name:            load_i8_i64
 legalized:       true
 regBankSelected: true
 tracksRegLiveness: true
@@ -10,7 +10,7 @@ body:            |
   bb.0:
     liveins: $x10
 
-    ; CHECK-LABEL: name: load_i8
+    ; CHECK-LABEL: name: load_i8_i64
     ; CHECK: liveins: $x10
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: [[COPY:%[0-9]+]]:gpr = COPY $x10
@@ -24,7 +24,7 @@ body:            |
 
 ...
 ---
-name:            load_i16
+name:            load_i16_i64
 legalized:       true
 regBankSelected: true
 tracksRegLiveness: true
@@ -32,7 +32,7 @@ body:            |
   bb.0:
     liveins: $x10
 
-    ; CHECK-LABEL: name: load_i16
+    ; CHECK-LABEL: name: load_i16_i64
     ; CHECK: liveins: $x10
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: [[COPY:%[0-9]+]]:gpr = COPY $x10
@@ -46,7 +46,7 @@ body:            |
 
 ...
 ---
-name:            load_i32
+name:            load_i32_i64
 legalized:       true
 regBankSelected: true
 tracksRegLiveness: true
@@ -54,7 +54,7 @@ body:            |
   bb.0:
     liveins: $x10
 
-    ; CHECK-LABEL: name: load_i32
+    ; CHECK-LABEL: name: load_i32_i64
     ; CHECK: liveins: $x10
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: [[COPY:%[0-9]+]]:gpr = COPY $x10
@@ -68,7 +68,7 @@ body:            |
 
 ...
 ---
-name:            load_i64
+name:            load_i64_i64
 legalized:       true
 regBankSelected: true
 tracksRegLiveness: true
@@ -76,7 +76,7 @@ body:            |
   bb.0:
     liveins: $x10
 
-    ; CHECK-LABEL: name: load_i64
+    ; CHECK-LABEL: name: load_i64_i64
     ; CHECK: liveins: $x10
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: [[COPY:%[0-9]+]]:gpr = COPY $x10
@@ -112,7 +112,7 @@ body:            |
 
 ...
 ---
-name:            zextload_i8
+name:            zextload_i8_i64
 legalized:       true
 regBankSelected: true
 tracksRegLiveness: true
@@ -120,7 +120,7 @@ body:            |
   bb.0:
     liveins: $x10
 
-    ; CHECK-LABEL: name: zextload_i8
+    ; CHECK-LABEL: name: zextload_i8_i64
     ; CHECK: liveins: $x10
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: [[COPY:%[0-9]+]]:gpr = COPY $x10
@@ -134,7 +134,7 @@ body:            |
 
 ...
 ---
-name:            zextload_i16
+name:            zextload_i16_i64
 legalized:       true
 regBankSelected: true
 tracksRegLiveness: true
@@ -142,7 +142,7 @@ body:            |
   bb.0:
     liveins: $x10
 
-    ; CHECK-LABEL: name: zextload_i16
+    ; CHECK-LABEL: name: zextload_i16_i64
     ; CHECK: liveins: $x10
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: [[COPY:%[0-9]+]]:gpr = COPY $x10
@@ -156,7 +156,7 @@ body:            |
 
 ...
 ---
-name:            zextload_i32
+name:            zextload_i32_i64
 legalized:       true
 regBankSelected: true
 tracksRegLiveness: true
@@ -164,7 +164,7 @@ body:            |
   bb.0:
     liveins: $x10
 
-    ; CHECK-LABEL: name: zextload_i32
+    ; CHECK-LABEL: name: zextload_i32_i64
     ; CHECK: liveins: $x10
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: [[COPY:%[0-9]+]]:gpr = COPY $x10
@@ -178,113 +178,137 @@ body:            |
 
 ...
 ---
-name:            store_i8
+name:            load_i8_i32
 legalized:       true
 regBankSelected: true
 tracksRegLiveness: true
 body:            |
   bb.0:
     liveins: $x10, $x11
-
-    ; CHECK-LABEL: name: store_i8
+    ; CHECK-LABEL: name: load_i8_i32
     ; CHECK: liveins: $x10, $x11
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: [[COPY:%[0-9]+]]:gpr = COPY $x10
     ; CHECK-NEXT: [[COPY1:%[0-9]+]]:gpr = COPY $x11
-    ; CHECK-NEXT: SB [[COPY]], [[COPY1]], 0 :: (store (s8))
-    ; CHECK-NEXT: PseudoRET
-    %0:gprb(s64) = COPY $x10
-    %1:gprb(p0) = COPY $x11
-    G_STORE %0(s64), %1(p0) :: (store (s8))
-    PseudoRET
+    ; CHECK-NEXT: [[LBU:%[0-9]+]]:gpr = LBU [[COPY]], 0 :: (load (s8))
+    ; CHECK-NEXT: [[ADDW:%[0-9]+]]:gpr = ADDW [[LBU]], [[COPY1]]
+    ; CHECK-NEXT: $x10 = COPY [[ADDW]]
+    ; CHECK-NEXT: PseudoRET implicit $x10
+    %0:gprb(p0) = COPY $x10
+    %2:gprb(s64) = COPY $x11
+    %9:gprb(s32) = G_LOAD %0(p0) :: (load (s8))
+    %7:gprb(s32) = G_TRUNC %2(s64)
+    %8:gprb(s32) = G_ADD %9, %7
+    %5:gprb(s64) = G_ANYEXT %8(s32)
+    $x10 = COPY %5(s64)
+    PseudoRET implicit $x10
 
 ...
 ---
-name:            store_i16
+name:            load_i16_i32
 legalized:       true
 regBankSelected: true
 tracksRegLiveness: true
 body:            |
   bb.0:
     liveins: $x10, $x11
-
-    ; CHECK-LABEL: name: store_i16
+    ; CHECK-LABEL: name: load_i16_i32
     ; CHECK: liveins: $x10, $x11
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: [[COPY:%[0-9]+]]:gpr = COPY $x10
     ; CHECK-NEXT: [[COPY1:%[0-9]+]]:gpr = COPY $x11
-    ; CHECK-NEXT: SH [[COPY]], [[COPY1]], 0 :: (store (s16))
-    ; CHECK-NEXT: PseudoRET
-    %0:gprb(s64) = COPY $x10
-    %1:gprb(p0) = COPY $x11
-    G_STORE %0(s64), %1(p0) :: (store (s16))
-    PseudoRET
+    ; CHECK-NEXT: [[LH:%[0-9]+]]:gpr = LH [[COPY]], 0 :: (load (s16))
+    ; CHECK-NEXT: [[ADDW:%[0-9]+]]:gpr = ADDW [[LH]], [[COPY1]]
+    ; CHECK-NEXT: $x10 = COPY [[ADDW]]
+    ; CHECK-NEXT: PseudoRET implicit $x10
+    %0:gprb(p0) = COPY $x10
+    %2:gprb(s64) = COPY $x11
+    %9:gprb(s32) = G_LOAD %0(p0) :: (load (s16))
+    %7:gprb(s32) = G_TRUNC %2(s64)
+    %8:gprb(s32) = G_ADD %9, %7
+    %5:gprb(s64) = G_ANYEXT %8(s32)
+    $x10 = COPY %5(s64)
+    PseudoRET implicit $x10
 
 ...
 ---
-name:            store_i32
+name:            load_i32_i32
 legalized:       true
 regBankSelected: true
 tracksRegLiveness: true
 body:            |
   bb.0:
     liveins: $x10, $x11
-
-    ; CHECK-LABEL: name: store_i32
+    ; CHECK-LABEL: name: load_i32_i32
     ; CHECK: liveins: $x10, $x11
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: [[COPY:%[0-9]+]]:gpr = COPY $x10
     ; CHECK-NEXT: [[COPY1:%[0-9]+]]:gpr = COPY $x11
-    ; CHECK-NEXT: SW [[COPY]], [[COPY1]], 0 :: (store (s32))
-    ; CHECK-NEXT: PseudoRET
-    %0:gprb(s64) = COPY $x10
-    %1:gprb(p0) = COPY $x11
-    G_STORE %0(s64), %1(p0) :: (store (s32))
-    PseudoRET
+    ; CHECK-NEXT: [[LW:%[0-9]+]]:gpr = LW [[COPY]], 0 :: (load (s32))
+    ; CHECK-NEXT: [[ADDW:%[0-9]+]]:gpr = ADDW [[LW]], [[COPY1]]
+    ; CHECK-NEXT: $x10 = COPY [[ADDW]]
+    ; CHECK-NEXT: PseudoRET implicit $x10
+    %0:gprb(p0) = COPY $x10
+    %2:gprb(s64) = COPY $x11
+    %9:gprb(s32) = G_LOAD %0(p0) :: (load (s32))
+    %7:gprb(s32) = G_TRUNC %2(s64)
+    %8:gprb(s32) = G_ADD %9, %7
+    %5:gprb(s64) = G_ANYEXT %8(s32)
+    $x10 = COPY %5(s64)
+    PseudoRET implicit $x10
 
 ...
 ---
-name:            store_i64
+name:            zextload_i8_i32
 legalized:       true
 regBankSelected: true
 tracksRegLiveness: true
 body:            |
   bb.0:
     liveins: $x10, $x11
-
-    ; CHECK-LABEL: name: store_i64
+    ; CHECK-LABEL: name: zextload_i8_i32
     ; CHECK: liveins: $x10, $x11
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: [[COPY:%[0-9]+]]:gpr = COPY $x10
     ; CHECK-NEXT: [[COPY1:%[0-9]+]]:gpr = COPY $x11
-    ; CHECK-NEXT: SD [[COPY]], [[COPY1]], 0 :: (store (s64))
-    ; CHECK-NEXT: PseudoRET
-    %0:gprb(s64) = COPY $x10
-    %1:gprb(p0) = COPY $x11
-    G_STORE %0(s64), %1(p0) :: (store (s64))
-    PseudoRET
+    ; CHECK-NEXT: [[LBU:%[0-9]+]]:gpr = LBU [[COPY]], 0 :: (load (s8))
+    ; CHECK-NEXT: [[ADDW:%[0-9]+]]:gpr = ADDW [[LBU]], [[COPY1]]
+    ; CHECK-NEXT: $x10 = COPY [[ADDW]]
+    ; CHECK-NEXT: PseudoRET implicit $x10
+    %0:gprb(p0) = COPY $x10
+    %2:gprb(s64) = COPY $x11
+    %9:gprb(s32) = G_ZEXTLOAD %0(p0) :: (load (s8))
+    %7:gprb(s32) = G_TRUNC %2(s64)
+    %8:gprb(s32) = G_ADD %9, %7
+    %5:gprb(s64) = G_ANYEXT %8(s32)
+    $x10 = COPY %5(s64)
+    PseudoRET implicit $x10
 
 ...
 ---
-name:            store_p0
+name:            zextload_i16_i32
 legalized:       true
 regBankSelected: true
 tracksRegLiveness: true
 body:            |
   bb.0:
     liveins: $x10, $x11
-
-    ; CHECK-LABEL: name: store_p0
+    ; CHECK-LABEL: name: zextload_i16_i32
     ; CHECK: liveins: $x10, $x11
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: [[COPY:%[0-9]+]]:gpr = COPY $x10
     ; CHECK-NEXT: [[COPY1:%[0-9]+]]:gpr = COPY $x11
-    ; CHECK-NEXT: SD [[COPY]], [[COPY1]], 0 :: (store (p0))
-    ; CHECK-NEXT: PseudoRET
-    %0:gprb(s64) = COPY $x10
-    %1:gprb(p0) = COPY $x11
-    G_STORE %0(s64), %1(p0) :: (store (p0))
-    PseudoRET
+    ; CHECK-NEXT: [[LHU:%[0-9]+]]:gpr = LHU [[COPY]], 0 :: (load (s16))
+    ; CHECK-NEXT: [[ADDW:%[0-9]+]]:gpr = ADDW [[LHU]], [[COPY1]]
+    ; CHECK-NEXT: $x10 = COPY [[ADDW]]
+    ; CHECK-NEXT: PseudoRET implicit $x10
+    %0:gprb(p0) = COPY $x10
+    %2:gprb(s64) = COPY $x11
+    %9:gprb(s32) = G_ZEXTLOAD %0(p0) :: (load (s16))
+    %7:gprb(s32) = G_TRUNC %2(s64)
+    %8:gprb(s32) = G_ADD %9, %7
+    %5:gprb(s64) = G_ANYEXT %8(s32)
+    $x10 = COPY %5(s64)
+    PseudoRET implicit $x10
 
 ...
-
