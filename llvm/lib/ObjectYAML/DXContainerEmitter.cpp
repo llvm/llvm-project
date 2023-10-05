@@ -244,6 +244,20 @@ void DXContainerWriter::writeParts(raw_ostream &OS) {
       PSV.write(OS, P.Info->Version);
       break;
     }
+    case dxbc::PartType::ISG1:
+    case dxbc::PartType::OSG1:
+    case dxbc::PartType::PSG1: {
+      mcdxbc::Signature Sig;
+      if (P.Signature.has_value()) {
+        for (const auto &Param : P.Signature->Parameters) {
+          Sig.addParam(Param.Stream, Param.Name, Param.Index, Param.SystemValue,
+                       Param.CompType, Param.Register, Param.Mask,
+                       Param.ExclusiveMask, Param.MinPrecision);
+        }
+      }
+      Sig.write(OS);
+      break;
+    }
     case dxbc::PartType::Unknown:
       break; // Skip any handling for unrecognized parts.
     }
