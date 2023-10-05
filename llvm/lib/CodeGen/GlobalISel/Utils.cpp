@@ -304,7 +304,7 @@ std::optional<APInt> llvm::getIConstantVRegVal(Register VReg,
 std::optional<int64_t>
 llvm::getIConstantVRegSExtVal(Register VReg, const MachineRegisterInfo &MRI,
                               bool LookThroughInstrs = false) {
-  std::optional<APInt> Val = getIConstantVRegVal(VReg, MRI);
+  std::optional<APInt> Val = getIConstantVRegVal(VReg, MRI, LookThroughInstrs);
   if (Val && Val->getBitWidth() <= 64)
     return Val->getSExtValue();
   return std::nullopt;
