@@ -26,3 +26,7 @@
 /llvm/lib/Transforms/Scalar/CorrelatedValuePropagation.cpp @nikic
 /llvm/lib/Transforms/Scalar/MemCpyOptimizer.cpp @nikic
 /llvm/lib/Transforms/InstCombine/ @nikic
+
+/clang/test/CXX/drs/ @Endilll
+/clang/www/cxx_dr_status.html @Endilll
+/clang/www/make_cxx_dr_status @Endilll
