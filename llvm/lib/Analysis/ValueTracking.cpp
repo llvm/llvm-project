@@ -163,9 +163,9 @@ void llvm::computeKnownBits(const Value *V, KnownBits &Known,
                             const DataLayout &DL, unsigned Depth,
                             AssumptionCache *AC, const Instruction *CxtI,
                             const DominatorTree *DT, bool UseInstrInfo) {
-  ::computeKnownBits(V, Known, Depth,
-                     SimplifyQuery(DL, /*TLI*/ nullptr, DT, AC,
-                                   safeCxtI(V, CxtI), UseInstrInfo));
+  ::computeKnownBits(
+      V, Known, Depth,
+      SimplifyQuery(DL, DT, AC, safeCxtI(V, CxtI), UseInstrInfo));
 }
 
 void llvm::computeKnownBits(const Value *V, const APInt &DemandedElts,
@@ -173,9 +173,9 @@ void llvm::computeKnownBits(const Value *V, const APInt &DemandedElts,
                             unsigned Depth, AssumptionCache *AC,
                             const Instruction *CxtI, const DominatorTree *DT,
                             bool UseInstrInfo) {
-  ::computeKnownBits(V, DemandedElts, Known, Depth,
-                     SimplifyQuery(DL, /*TLI*/ nullptr, DT, AC,
-                                   safeCxtI(V, CxtI), UseInstrInfo));
+  ::computeKnownBits(
+      V, DemandedElts, Known, Depth,
+      SimplifyQuery(DL, DT, AC, safeCxtI(V, CxtI), UseInstrInfo));
 }
 
 static KnownBits computeKnownBits(const Value *V, const APInt &DemandedElts,
@@ -188,18 +188,17 @@ KnownBits llvm::computeKnownBits(const Value *V, const DataLayout &DL,
                                  unsigned Depth, AssumptionCache *AC,
                                  const Instruction *CxtI,
                                  const DominatorTree *DT, bool UseInstrInfo) {
-  return ::computeKnownBits(V, Depth,
-                            SimplifyQuery(DL, /*TLI*/ nullptr, DT, AC,
-                                          safeCxtI(V, CxtI), UseInstrInfo));
+  return ::computeKnownBits(
+      V, Depth, SimplifyQuery(DL, DT, AC, safeCxtI(V, CxtI), UseInstrInfo));
 }
 
 KnownBits llvm::computeKnownBits(const Value *V, const APInt &DemandedElts,
                                  const DataLayout &DL, unsigned Depth,
                                  AssumptionCache *AC, const Instruction *CxtI,
                                  const DominatorTree *DT, bool UseInstrInfo) {
-  return ::computeKnownBits(V, DemandedElts, Depth,
-                            SimplifyQuery(DL, /*TLI*/ nullptr, DT, AC,
-                                          safeCxtI(V, CxtI), UseInstrInfo));
+  return ::computeKnownBits(
+      V, DemandedElts, Depth,
+      SimplifyQuery(DL, DT, AC, safeCxtI(V, CxtI), UseInstrInfo));
 }
 
 bool llvm::haveNoCommonBitsSet(const Value *LHS, const Value *RHS,
@@ -275,10 +274,9 @@ bool llvm::isKnownToBeAPowerOfTwo(const Value *V, const DataLayout &DL,
                                   bool OrZero, unsigned Depth,
                                   AssumptionCache *AC, const Instruction *CxtI,
                                   const DominatorTree *DT, bool UseInstrInfo) {
-  return ::isKnownToBeAPowerOfTwo(V, OrZero, Depth,
-                                  SimplifyQuery(DL, /*TLI*/ nullptr, DT, AC,
-                                                safeCxtI(V, CxtI),
-                                                UseInstrInfo));
+  return ::isKnownToBeAPowerOfTwo(
+      V, OrZero, Depth,
+      SimplifyQuery(DL, DT, AC, safeCxtI(V, CxtI), UseInstrInfo));
 }
 
 static bool isKnownNonZero(const Value *V, const APInt &DemandedElts,
@@ -290,9 +288,8 @@ static bool isKnownNonZero(const Value *V, unsigned Depth,
 bool llvm::isKnownNonZero(const Value *V, const DataLayout &DL, unsigned Depth,
                           AssumptionCache *AC, const Instruction *CxtI,
                           const DominatorTree *DT, bool UseInstrInfo) {
-  return ::isKnownNonZero(V, Depth,
-                          SimplifyQuery(DL, /*TLI*/ nullptr, DT, AC,
-                                        safeCxtI(V, CxtI), UseInstrInfo));
+  return ::isKnownNonZero(
+      V, Depth, SimplifyQuery(DL, DT, AC, safeCxtI(V, CxtI), UseInstrInfo));
 }
 
 bool llvm::isKnownNonNegative(const Value *V, const DataLayout &DL,
@@ -329,9 +326,9 @@ bool llvm::isKnownNonEqual(const Value *V1, const Value *V2,
                            const DataLayout &DL, AssumptionCache *AC,
                            const Instruction *CxtI, const DominatorTree *DT,
                            bool UseInstrInfo) {
-  return ::isKnownNonEqual(V1, V2, 0,
-                           SimplifyQuery(DL, /*TLI*/ nullptr, DT, AC,
-                                         safeCxtI(V2, V1, CxtI), UseInstrInfo));
+  return ::isKnownNonEqual(
+      V1, V2, 0,
+      SimplifyQuery(DL, DT, AC, safeCxtI(V2, V1, CxtI), UseInstrInfo));
 }
 
 static bool MaskedValueIsZero(const Value *V, const APInt &Mask, unsigned Depth,
@@ -341,9 +338,9 @@ bool llvm::MaskedValueIsZero(const Value *V, const APInt &Mask,
                              const DataLayout &DL, unsigned Depth,
                              AssumptionCache *AC, const Instruction *CxtI,
                              const DominatorTree *DT, bool UseInstrInfo) {
-  return ::MaskedValueIsZero(V, Mask, Depth,
-                             SimplifyQuery(DL, /*TLI*/ nullptr, DT, AC,
-                                           safeCxtI(V, CxtI), UseInstrInfo));
+  return ::MaskedValueIsZero(
+      V, Mask, Depth,
+      SimplifyQuery(DL, DT, AC, safeCxtI(V, CxtI), UseInstrInfo));
 }
 
 static unsigned ComputeNumSignBits(const Value *V, const APInt &DemandedElts,
@@ -361,9 +358,8 @@ unsigned llvm::ComputeNumSignBits(const Value *V, const DataLayout &DL,
                                   unsigned Depth, AssumptionCache *AC,
                                   const Instruction *CxtI,
                                   const DominatorTree *DT, bool UseInstrInfo) {
-  return ::ComputeNumSignBits(V, Depth,
-                              SimplifyQuery(DL, /*TLI*/ nullptr, DT, AC,
-                                            safeCxtI(V, CxtI), UseInstrInfo));
+  return ::ComputeNumSignBits(
+      V, Depth, SimplifyQuery(DL, DT, AC, safeCxtI(V, CxtI), UseInstrInfo));
 }
 
 unsigned llvm::ComputeMaxSignificantBits(const Value *V, const DataLayout &DL,
@@ -956,10 +952,9 @@ KnownBits llvm::analyzeKnownBitsFromAndXorOr(
   APInt DemandedElts =
       FVTy ? APInt::getAllOnes(FVTy->getNumElements()) : APInt(1, 1);
 
-  return getKnownBitsFromAndXorOr(I, DemandedElts, KnownLHS, KnownRHS, Depth,
-                                  SimplifyQuery(DL, /*TLI*/ nullptr, DT, AC,
-                                                safeCxtI(I, CxtI),
-                                                UseInstrInfo));
+  return getKnownBitsFromAndXorOr(
+      I, DemandedElts, KnownLHS, KnownRHS, Depth,
+      SimplifyQuery(DL, DT, AC, safeCxtI(I, CxtI), UseInstrInfo));
 }
 
 ConstantRange llvm::getVScaleRange(const Function *F, unsigned BitWidth) {
@@ -6383,9 +6378,8 @@ static OverflowResult computeOverflowForSignedAdd(const Value *LHS,
       (LHSRange.isAllNegative() || RHSRange.isAllNegative());
   if (LHSOrRHSKnownNonNegative || LHSOrRHSKnownNegative) {
     KnownBits AddKnown(LHSRange.getBitWidth());
-    computeKnownBitsFromAssume(
-        Add, AddKnown, /*Depth=*/0,
-        SimplifyQuery(DL, /*TLI*/ nullptr, DT, AC, CxtI, DT));
+    computeKnownBitsFromAssume(Add, AddKnown, /*Depth=*/0,
+                               SimplifyQuery(DL, DT, AC, CxtI, DT));
     if ((AddKnown.isNonNegative() && LHSOrRHSKnownNonNegative) ||
         (AddKnown.isNegative() && LHSOrRHSKnownNegative))
       return OverflowResult::NeverOverflows;
@@ -8758,56 +8752,50 @@ static ConstantRange getRangeForIntrinsic(const IntrinsicInst &II) {
   return ConstantRange::getFull(Width);
 }
 
-static void setLimitsForSelectPattern(const SelectInst &SI, APInt &Lower,
-                                      APInt &Upper, const InstrInfoQuery &IIQ) {
+static ConstantRange getRangeForSelectPattern(const SelectInst &SI,
+                                              const InstrInfoQuery &IIQ) {
+  unsigned BitWidth = SI.getType()->getScalarSizeInBits();
   const Value *LHS = nullptr, *RHS = nullptr;
   SelectPatternResult R = matchSelectPattern(&SI, LHS, RHS);
   if (R.Flavor == SPF_UNKNOWN)
-    return;
-
-  unsigned BitWidth = SI.getType()->getScalarSizeInBits();
+    return ConstantRange::getFull(BitWidth);
 
   if (R.Flavor == SelectPatternFlavor::SPF_ABS) {
     // If the negation part of the abs (in RHS) has the NSW flag,
     // then the result of abs(X) is [0..SIGNED_MAX],
     // otherwise it is [0..SIGNED_MIN], as -SIGNED_MIN == SIGNED_MIN.
-    Lower = APInt::getZero(BitWidth);
     if (match(RHS, m_Neg(m_Specific(LHS))) &&
         IIQ.hasNoSignedWrap(cast<Instruction>(RHS)))
-      Upper = APInt::getSignedMaxValue(BitWidth) + 1;
-    else
-      Upper = APInt::getSignedMinValue(BitWidth) + 1;
-    return;
+      return ConstantRange::getNonEmpty(APInt::getZero(BitWidth),
+                                        APInt::getSignedMaxValue(BitWidth) + 1);
+
+    return ConstantRange::getNonEmpty(APInt::getZero(BitWidth),
+                                      APInt::getSignedMinValue(BitWidth) + 1);
   }
 
   if (R.Flavor == SelectPatternFlavor::SPF_NABS) {
     // The result of -abs(X) is <= 0.
-    Lower = APInt::getSignedMinValue(BitWidth);
-    Upper = APInt(BitWidth, 1);
-    return;
+    return ConstantRange::getNonEmpty(APInt::getSignedMinValue(BitWidth),
+                                      APInt(BitWidth, 1));
   }
 
   const APInt *C;
   if (!match(LHS, m_APInt(C)) && !match(RHS, m_APInt(C)))
-    return;
+    return ConstantRange::getFull(BitWidth);
 
   switch (R.Flavor) {
-    case SPF_UMIN:
-      Upper = *C + 1;
-      break;
-    case SPF_UMAX:
-      Lower = *C;
-      break;
-    case SPF_SMIN:
-      Lower = APInt::getSignedMinValue(BitWidth);
-      Upper = *C + 1;
-      break;
-    case SPF_SMAX:
-      Lower = *C;
-      Upper = APInt::getSignedMaxValue(BitWidth) + 1;
-      break;
-    default:
-      break;
+  case SPF_UMIN:
+    return ConstantRange::getNonEmpty(APInt::getZero(BitWidth), *C + 1);
+  case SPF_UMAX:
+    return ConstantRange::getNonEmpty(*C, APInt::getZero(BitWidth));
+  case SPF_SMIN:
+    return ConstantRange::getNonEmpty(APInt::getSignedMinValue(BitWidth),
+                                      *C + 1);
+  case SPF_SMAX:
+    return ConstantRange::getNonEmpty(*C,
+                                      APInt::getSignedMaxValue(BitWidth) + 1);
+  default:
+    return ConstantRange::getFull(BitWidth);
   }
 }
 
@@ -8853,13 +8841,9 @@ ConstantRange llvm::computeConstantRange(const Value *V, bool ForSigned,
     CR = ConstantRange::getNonEmpty(Lower, Upper);
   } else if (auto *II = dyn_cast<IntrinsicInst>(V))
     CR = getRangeForIntrinsic(*II);
-  else if (auto *SI = dyn_cast<SelectInst>(V)) {
-    APInt Lower = APInt(BitWidth, 0);
-    APInt Upper = APInt(BitWidth, 0);
-    // TODO: Return ConstantRange.
-    setLimitsForSelectPattern(*SI, Lower, Upper, IIQ);
-    CR = ConstantRange::getNonEmpty(Lower, Upper);
-  } else if (isa<FPToUIInst>(V) || isa<FPToSIInst>(V)) {
+  else if (auto *SI = dyn_cast<SelectInst>(V))
+    CR = getRangeForSelectPattern(*SI, IIQ);
+  else if (isa<FPToUIInst>(V) || isa<FPToSIInst>(V)) {
     APInt Lower = APInt(BitWidth, 0);
     APInt Upper = APInt(BitWidth, 0);
     // TODO: Return ConstantRange.

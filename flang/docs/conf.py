@@ -35,6 +35,7 @@ extensions = ["sphinx.ext.todo", "sphinx.ext.mathjax", "sphinx.ext.intersphinx"]
 
 # Add any paths that contain templates here, relative to this directory.
 templates_path = ["_templates"]
+myst_heading_anchors = 6
 
 # The suffix of source filenames.
 source_suffix = {

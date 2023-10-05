@@ -118,7 +118,15 @@ struct SimplifyQuery {
                 bool CanUseUndef = true)
       : DL(DL), TLI(TLI), DT(DT), AC(AC), CxtI(CXTI), IIQ(UseInstrInfo),
         CanUseUndef(CanUseUndef) {}
-  SimplifyQuery getWithInstruction(Instruction *I) const {
+
+  SimplifyQuery(const DataLayout &DL, const DominatorTree *DT,
+                AssumptionCache *AC = nullptr,
+                const Instruction *CXTI = nullptr, bool UseInstrInfo = true,
+                bool CanUseUndef = true)
+      : DL(DL), DT(DT), AC(AC), CxtI(CXTI), IIQ(UseInstrInfo),
+        CanUseUndef(CanUseUndef) {}
+
+  SimplifyQuery getWithInstruction(const Instruction *I) const {
     SimplifyQuery Copy(*this);
     Copy.CxtI = I;
     return Copy;
