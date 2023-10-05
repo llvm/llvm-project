@@ -1160,15 +1160,29 @@ struct NVGPUWarpgroupMmaOpLowering
     : public ConvertOpToLLVMPattern<nvgpu::WarpgroupMmaOp> {
   using ConvertOpToLLVMPattern<nvgpu::WarpgroupMmaOp>::ConvertOpToLLVMPattern;
 
-  /// This class assists in generating WgmmaMmaAsyncOp instructions to complete
-  /// a specified shape. If the GEMM shape is larger than the shape of a wgmma
-  /// instrution, it can generate multiple wgmma instructions, group and execute
-  /// them asynchronously. The class also handles waiting for instruction
-  /// completion and iterates through GenerateGmmaDescriptor to create
-  /// descriptors for each instruction.
+  /// This is a helper class to generate required NVVM Ops for warp-group level
+  /// matrix multiplication.
+  /// When the given GEMM shape is larger than the shape of
+  /// a wgmma instrution in PTX, it can generate multiple NVVM::WgmmaMmaAsyncOp
+  /// Op(s), group and execute them asynchronously. The class also handles
+  /// waiting for completion and iterates through WarpgroupMatrixDescriptor to
+  /// create descriptors for each instruction.
+  ///
+  /// For example this is the case when the shape of GEMM is 128x128x128
+  ///
+  ///    nvvm.wgmma.fence.aligned
+  ///
+  ///    nvvm.wgmma.mma.async descA, descB
+  ///    iterate(descA, descB)
+  ///    nvvm.wgmma.mma.async descA, descB
+  ///    [6x times more]
+  ///
+  ///    nvvm.wgmma.group.sync.aligned
+  ///    nvvm.wgmma.wait.group.sync [groupId]
+  ///
   class WarpgroupGemm {
     nvgpu::WarpgroupMmaOp op;
-    ConversionPatternRewriter &rewriter;
+    ImplicitLocOpBuilder b;
     OpAdaptor adaptor;
     const LLVMTypeConverter &typeConverter;
 
@@ -1253,8 +1267,7 @@ struct NVGPUWarpgroupMmaOpLowering
 
     /// Basic function to generate Add
     Value makeAdd(Value lhs, Value rhs) {
-      return rewriter.create<LLVM::AddOp>(op->getLoc(), lhs.getType(), lhs,
-                                          rhs);
+      return b.create<LLVM::AddOp>(lhs.getType(), lhs, rhs);
     };
 
     /// Moves the descriptor pointer of matrix-A for the next wgmma instruction.
@@ -1287,7 +1300,7 @@ struct NVGPUWarpgroupMmaOpLowering
                         << incrementVal << " | \t ");
       if (!incrementVal)
         return desc;
-      return makeAdd(desc, makeI64Const(rewriter, op, incrementVal));
+      return makeAdd(desc, makeI64Const(b, incrementVal));
     }
 
     /// Moves the descriptor pointer of matrix-B for the next wgmma instruction.
@@ -1310,7 +1323,7 @@ struct NVGPUWarpgroupMmaOpLowering
       LLVM_DEBUG(DBGSE() << "Descriptor B + " << incrementVal << "\n");
       if (!incrementVal)
         return desc;
-      return makeAdd(desc, makeI64Const(rewriter, op, incrementVal));
+      return makeAdd(desc, makeI64Const(b, incrementVal));
     }
 
     /// This function generates a WgmmaMmaAsyncOp using provided GMMA matrix
@@ -1346,10 +1359,9 @@ struct NVGPUWarpgroupMmaOpLowering
 
       Type resultStructType = typeConverter.convertType(matrixD.getType());
 
-      return rewriter.create<NVVM::WgmmaMmaAsyncOp>(
-          op->getLoc(), resultStructType, matrixC, descriptorA, descriptorB,
-          shape, itypeA, itypeB, scaleOut, scaleIn, scaleIn, layoutA, layoutB,
-          overflow);
+      return b.create<NVVM::WgmmaMmaAsyncOp>(
+          resultStructType, matrixC, descriptorA, descriptorB, shape, itypeA,
+          itypeB, scaleOut, scaleIn, scaleIn, layoutA, layoutB, overflow);
     }
 
     /// Generates multiple wgmma instructions to complete the given GEMM shape
@@ -1370,10 +1382,9 @@ struct NVGPUWarpgroupMmaOpLowering
     }
 
   public:
-    WarpgroupGemm(nvgpu::WarpgroupMmaOp op, ConversionPatternRewriter &rewriter,
+    WarpgroupGemm(nvgpu::WarpgroupMmaOp op, ImplicitLocOpBuilder &b,
                   OpAdaptor adaptor, const LLVMTypeConverter &typeConverter)
-        : op(op), rewriter(rewriter), adaptor(adaptor),
-          typeConverter(typeConverter) {
+        : op(op), b(b), adaptor(adaptor), typeConverter(typeConverter) {
       // Find the entire GEMM Shape
       totalM = op.getDescriptorA().getType().getTensor().getDimSize(0);
       totalN = op.getDescriptorB().getType().getTensor().getDimSize(1);
@@ -1399,12 +1410,10 @@ struct NVGPUWarpgroupMmaOpLowering
     /// (WgmmaGroupSyncAlignedOp) for group synchronization
     /// (WgmmaWaitGroupSyncOp) after the instructions.
     SmallVector<Value> generateWarpgroupMma() {
-      Location loc = op->getLoc();
-      rewriter.create<NVVM::WgmmaFenceAlignedOp>(loc);
+      b.create<NVVM::WgmmaFenceAlignedOp>();
       SmallVector<Value> wgmmaResults = generateWgmmaGroup();
-      rewriter.create<NVVM::WgmmaGroupSyncAlignedOp>(loc);
-      rewriter.create<NVVM::WgmmaWaitGroupSyncOp>(loc, op.getWaitGroup());
-
+      b.create<NVVM::WgmmaGroupSyncAlignedOp>();
+      b.create<NVVM::WgmmaWaitGroupSyncOp>(op.getWaitGroup());
       return wgmmaResults;
     }
   };
@@ -1412,9 +1421,9 @@ struct NVGPUWarpgroupMmaOpLowering
   LogicalResult
   matchAndRewrite(nvgpu::WarpgroupMmaOp op, OpAdaptor adaptor,
                   ConversionPatternRewriter &rewriter) const override {
+    ImplicitLocOpBuilder b(op->getLoc(), rewriter);
     // Step 1. Build a helper class
-    WarpgroupGemm warpgroupGemm(op, rewriter, adaptor,
-                                *this->getTypeConverter());
+    WarpgroupGemm warpgroupGemm(op, b, adaptor, *this->getTypeConverter());
 
     // Step 2. Get the entire GEMM Shape
     SmallVector<Value> wgmmaResults = warpgroupGemm.generateWarpgroupMma();
