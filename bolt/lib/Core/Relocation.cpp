@@ -20,6 +20,13 @@
 using namespace llvm;
 using namespace bolt;
 
+namespace ELFReserved {
+enum {
+  R_RISCV_TPREL_I = 49,
+  R_RISCV_TPREL_S = 50,
+};
+} // namespace ELFReserved
+
 Triple::ArchType Relocation::Arch;
 
 static bool isSupportedX86(uint64_t Type) {
@@ -111,6 +118,13 @@ static bool isSupportedRISCV(uint64_t Type) {
   case ELF::R_RISCV_LO12_I:
   case ELF::R_RISCV_LO12_S:
   case ELF::R_RISCV_64:
+  case ELF::R_RISCV_TLS_GOT_HI20:
+  case ELF::R_RISCV_TPREL_HI20:
+  case ELF::R_RISCV_TPREL_ADD:
+  case ELF::R_RISCV_TPREL_LO12_I:
+  case ELF::R_RISCV_TPREL_LO12_S:
+  case ELFReserved::R_RISCV_TPREL_I:
+  case ELFReserved::R_RISCV_TPREL_S:
     return true;
   }
 }
@@ -214,6 +228,7 @@ static size_t getSizeForTypeRISCV(uint64_t Type) {
     return 4;
   case ELF::R_RISCV_64:
   case ELF::R_RISCV_GOT_HI20:
+  case ELF::R_RISCV_TLS_GOT_HI20:
     // See extractValueRISCV for why this is necessary.
     return 8;
   }
@@ -532,6 +547,7 @@ static uint64_t extractValueRISCV(uint64_t Type, uint64_t Contents,
   case ELF::R_RISCV_BRANCH:
     return extractBImmRISCV(Contents);
   case ELF::R_RISCV_GOT_HI20:
+  case ELF::R_RISCV_TLS_GOT_HI20:
     // We need to know the exact address of the GOT entry so we extract the
     // value from both the AUIPC and L[D|W]. We cannot rely on the symbol in the
     // relocation for this since it simply refers to the object that is stored
@@ -600,6 +616,7 @@ static bool isGOTRISCV(uint64_t Type) {
   default:
     return false;
   case ELF::R_RISCV_GOT_HI20:
+  case ELF::R_RISCV_TLS_GOT_HI20:
     return true;
   }
 }
@@ -636,6 +653,14 @@ static bool isTLSRISCV(uint64_t Type) {
   switch (Type) {
   default:
     return false;
+  case ELF::R_RISCV_TLS_GOT_HI20:
+  case ELF::R_RISCV_TPREL_HI20:
+  case ELF::R_RISCV_TPREL_ADD:
+  case ELF::R_RISCV_TPREL_LO12_I:
+  case ELF::R_RISCV_TPREL_LO12_S:
+  case ELFReserved::R_RISCV_TPREL_I:
+  case ELFReserved::R_RISCV_TPREL_S:
+    return true;
   }
 }
 
@@ -733,6 +758,7 @@ static bool isPCRelativeRISCV(uint64_t Type) {
   case ELF::R_RISCV_RVC_JUMP:
   case ELF::R_RISCV_RVC_BRANCH:
   case ELF::R_RISCV_32_PCREL:
+  case ELF::R_RISCV_TLS_GOT_HI20:
     return true;
   }
 }
