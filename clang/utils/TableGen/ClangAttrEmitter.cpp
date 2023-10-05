@@ -2700,7 +2700,7 @@ static void emitAttributes(RecordKeeper &Records, raw_ostream &OS,
           const auto &Name = SemanticToSyntacticMap[Idx];
           if (Uniques.insert(Name).second) {
             OS << "    case " << Name << ":\n";
-            OS << "      return  AttributeCommonInfo::Form";
+            OS << "      return AttributeCommonInfo::Form";
             emitFormInitializer(OS, S, Name);
             OS << ";\n";
           }
