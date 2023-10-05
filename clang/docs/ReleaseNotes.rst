@@ -339,6 +339,9 @@ Bug Fixes in This Version
   (`#64462 <https://github.com/llvm/llvm-project/issues/64462>`_)
 - Fixes a regression where the ``UserDefinedLiteral`` was not properly preserved
   while evaluating consteval functions. (`#63898 <https://github.com/llvm/llvm-project/issues/63898>`_).
+- Fix a crash when evaluating value-dependent structured binding
+  variables at compile time.
+  Fixes (`#67690 <https://github.com/llvm/llvm-project/issues/67690>`_)
 
 Bug Fixes to Compiler Builtins
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
