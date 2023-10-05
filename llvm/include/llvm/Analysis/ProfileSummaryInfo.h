@@ -209,7 +209,7 @@ public:
 
   template <typename BFIT>
   bool isColdBlock(BlockFrequency BlockFreq, const BFIT *BFI) const {
-    auto Count = BFI->getProfileCountFromFreq(BlockFreq.getFrequency());
+    auto Count = BFI->getProfileCountFromFreq(BlockFreq);
     return Count && isColdCount(*Count);
   }
 
@@ -315,7 +315,7 @@ private:
   bool isHotOrColdBlockNthPercentile(int PercentileCutoff,
                                      BlockFrequency BlockFreq,
                                      BFIT *BFI) const {
-    auto Count = BFI->getProfileCountFromFreq(BlockFreq.getFrequency());
+    auto Count = BFI->getProfileCountFromFreq(BlockFreq);
     if (isHot)
       return Count && isHotCountNthPercentile(PercentileCutoff, *Count);
     else

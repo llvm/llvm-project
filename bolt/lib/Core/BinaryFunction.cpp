@@ -1761,7 +1761,8 @@ bool BinaryFunction::postProcessIndirectBranches(
   uint64_t LastJT = 0;
   uint16_t LastJTIndexReg = BC.MIB->getNoRegister();
   for (BinaryBasicBlock &BB : blocks()) {
-    for (MCInst &Instr : BB) {
+    for (BinaryBasicBlock::iterator II = BB.begin(); II != BB.end(); ++II) {
+      MCInst &Instr = *II;
       if (!BC.MIB->isIndirectBranch(Instr))
         continue;
 
@@ -1789,7 +1790,7 @@ bool BinaryFunction::postProcessIndirectBranches(
         const MCExpr *DispExpr;
         MCInst *PCRelBaseInstr;
         IndirectBranchType Type = BC.MIB->analyzeIndirectBranch(
-            Instr, BB.begin(), BB.end(), PtrSize, MemLocInstr, BaseRegNum,
+            Instr, BB.begin(), II, PtrSize, MemLocInstr, BaseRegNum,
             IndexRegNum, DispValue, DispExpr, PCRelBaseInstr);
         if (Type != IndirectBranchType::UNKNOWN || MemLocInstr != nullptr)
           continue;

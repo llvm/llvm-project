@@ -505,7 +505,7 @@ func.func @warp_scf_for_multiple_yield(%arg0: index, %arg1: memref<?xf32>, %arg2
 //       CHECK-PROP:   %[[warp_op:.*]] = vector.warp_execute_on_lane_0(%[[laneid]])[32] -> (vector<1xf32>) {
 //       CHECK-PROP:     vector.yield %{{.*}} : vector<32xf32>
 //       CHECK-PROP:   }
-//       CHECK-PROP:   %[[a:.*]] = vector.extract %[[warp_op]][0] : vector<1xf32>
+//       CHECK-PROP:   %[[a:.*]] = vector.extract %[[warp_op]][0] : f32 from vector<1xf32>
 //       CHECK-PROP:   %[[r0:.*]], %{{.*}} = gpu.shuffle  xor %[[a]], %[[c1]], %[[c32]]
 //       CHECK-PROP:   %[[a0:.*]] = arith.addf %[[a]], %[[r0]]
 //       CHECK-PROP:   %[[r1:.*]], %{{.*}} = gpu.shuffle  xor %[[a0]], %[[c2]], %[[c32]]
@@ -663,7 +663,7 @@ func.func @warp_constant(%laneid: index) -> (vector<1xf32>) {
 func.func @vector_extract_1d(%laneid: index) -> (f32) {
   %r = vector.warp_execute_on_lane_0(%laneid)[32] -> (f32) {
     %0 = "some_def"() : () -> (vector<64xf32>)
-    %1 = vector.extract %0[9] : vector<64xf32>
+    %1 = vector.extract %0[9] : f32 from vector<64xf32>
     vector.yield %1 : f32
   }
   return %r : f32
@@ -676,12 +676,12 @@ func.func @vector_extract_1d(%laneid: index) -> (f32) {
 //       CHECK-PROP:     %[[V:.*]] = "some_def"
 //       CHECK-PROP:     vector.yield %[[V]] : vector<5x96xf32>
 //       CHECK-PROP:   }
-//       CHECK-PROP:   %[[E:.*]] = vector.extract %[[W]][2] : vector<5x3xf32>
+//       CHECK-PROP:   %[[E:.*]] = vector.extract %[[W]][2] : vector<3xf32> from vector<5x3xf32>
 //       CHECK-PROP:   return %[[E]]
 func.func @vector_extract_2d(%laneid: index) -> (vector<3xf32>) {
   %r = vector.warp_execute_on_lane_0(%laneid)[32] -> (vector<3xf32>) {
     %0 = "some_def"() : () -> (vector<5x96xf32>)
-    %1 = vector.extract %0[2] : vector<5x96xf32>
+    %1 = vector.extract %0[2] : vector<96xf32> from vector<5x96xf32>
     vector.yield %1 : vector<96xf32>
   }
   return %r : vector<3xf32>
@@ -694,12 +694,12 @@ func.func @vector_extract_2d(%laneid: index) -> (vector<3xf32>) {
 //       CHECK-PROP:     %[[V:.*]] = "some_def"
 //       CHECK-PROP:     vector.yield %[[V]] : vector<5x96xf32>
 //       CHECK-PROP:   }
-//       CHECK-PROP:   %[[E:.*]] = vector.extract %[[W]][1, 2] : vector<5x96xf32>
+//       CHECK-PROP:   %[[E:.*]] = vector.extract %[[W]][1, 2] : f32 from vector<5x96xf32>
 //       CHECK-PROP:   return %[[E]]
 func.func @vector_extract_2d_broadcast_scalar(%laneid: index) -> (f32) {
   %r = vector.warp_execute_on_lane_0(%laneid)[32] -> (f32) {
     %0 = "some_def"() : () -> (vector<5x96xf32>)
-    %1 = vector.extract %0[1, 2] : vector<5x96xf32>
+    %1 = vector.extract %0[1, 2] : f32 from vector<5x96xf32>
     vector.yield %1 : f32
   }
   return %r : f32
@@ -712,12 +712,12 @@ func.func @vector_extract_2d_broadcast_scalar(%laneid: index) -> (f32) {
 //       CHECK-PROP:     %[[V:.*]] = "some_def"
 //       CHECK-PROP:     vector.yield %[[V]] : vector<5x96xf32>
 //       CHECK-PROP:   }
-//       CHECK-PROP:   %[[E:.*]] = vector.extract %[[W]][2] : vector<5x96xf32>
+//       CHECK-PROP:   %[[E:.*]] = vector.extract %[[W]][2] : vector<96xf32> from vector<5x96xf32>
 //       CHECK-PROP:   return %[[E]]
 func.func @vector_extract_2d_broadcast(%laneid: index) -> (vector<96xf32>) {
   %r = vector.warp_execute_on_lane_0(%laneid)[32] -> (vector<96xf32>) {
     %0 = "some_def"() : () -> (vector<5x96xf32>)
-    %1 = vector.extract %0[2] : vector<5x96xf32>
+    %1 = vector.extract %0[2] : vector<96xf32> from vector<5x96xf32>
     vector.yield %1 : vector<96xf32>
   }
   return %r : vector<96xf32>
@@ -730,12 +730,12 @@ func.func @vector_extract_2d_broadcast(%laneid: index) -> (vector<96xf32>) {
 //       CHECK-PROP:     %[[V:.*]] = "some_def"
 //       CHECK-PROP:     vector.yield %[[V]] : vector<8x128x96xf32>
 //       CHECK-PROP:   }
-//       CHECK-PROP:   %[[E:.*]] = vector.extract %[[W]][2] : vector<8x4x96xf32>
+//       CHECK-PROP:   %[[E:.*]] = vector.extract %[[W]][2] : vector<4x96xf32> from vector<8x4x96xf32>
 //       CHECK-PROP:   return %[[E]]
 func.func @vector_extract_3d(%laneid: index) -> (vector<4x96xf32>) {
   %r = vector.warp_execute_on_lane_0(%laneid)[32] -> (vector<4x96xf32>) {
     %0 = "some_def"() : () -> (vector<8x128x96xf32>)
-    %1 = vector.extract %0[2] : vector<8x128x96xf32>
+    %1 = vector.extract %0[2] : vector<128x96xf32> from vector<8x128x96xf32>
     vector.yield %1 : vector<128x96xf32>
   }
   return %r : vector<4x96xf32>
@@ -1169,7 +1169,7 @@ func.func @vector_insert_2d_broadcast(%laneid: index) -> (vector<4x96xf32>) {
 //   CHECK-PROP-DAG:   %[[THREADID:.*]] = gpu.thread_id  x
 //       CHECK-PROP:   %[[W:.*]] = vector.warp_execute_on_lane_0(%[[THREADID]])[32] args(%[[IN2]]
 //       CHECK-PROP:     %[[GATHER:.*]] = vector.gather %[[AR1]][{{.*}}]
-//       CHECK-PROP:     %[[EXTRACT:.*]] = vector.extract %[[GATHER]][0] : vector<1x64xi32>
+//       CHECK-PROP:     %[[EXTRACT:.*]] = vector.extract %[[GATHER]][0] : vector<64xi32> from vector<1x64xi32>
 //       CHECK-PROP:     %[[CAST:.*]] = arith.index_cast %[[EXTRACT]] : vector<64xi32> to vector<64xindex>
 //       CHECK-PROP:     %[[EXTRACTELT:.*]] = vector.extractelement %[[CAST]][{{.*}}: i32] : vector<64xindex>
 //       CHECK-PROP:     %[[TRANSFERREAD:.*]] = vector.transfer_read %[[AR2]][%[[C0]], %[[EXTRACTELT]], %[[C0]]],
@@ -1188,7 +1188,7 @@ func.func @transfer_read_no_prop(%in2: vector<1x2xindex>, %ar1 :  memref<1x4x2xi
   %18 = vector.warp_execute_on_lane_0(%0)[32] args(%in2 : vector<1x2xindex>) -> (vector<2xf32>) {
   ^bb0(%arg4: vector<1x64xindex>):
     %28 = vector.gather %ar1[%c0, %c0, %c0] [%arg4], %cst_0, %cst : memref<1x4x2xi32>, vector<1x64xindex>, vector<1x64xi1>, vector<1x64xi32> into vector<1x64xi32>
-    %29 = vector.extract %28[0] : vector<1x64xi32>
+    %29 = vector.extract %28[0] : vector<64xi32> from vector<1x64xi32>
     %30 = arith.index_cast %29 : vector<64xi32> to vector<64xindex>
     %36 = vector.extractelement %30[%c0_i32 : i32] : vector<64xindex>
     %37 = vector.transfer_read %ar2[%c0, %36, %c0], %cst_6 {in_bounds = [true]} : memref<1x4x1024xf32>, vector<64xf32>

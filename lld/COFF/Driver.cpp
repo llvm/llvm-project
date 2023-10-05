@@ -645,23 +645,19 @@ void LinkerDriver::addClangLibSearchPaths(const std::string &argv0) {
 
   SmallString<128> libDir(rootDir);
   sys::path::append(libDir, "lib");
-  // We need to prepend the paths here in order to make sure that we always
-  // try to link the clang versions of the builtins over the ones supplied by
-  // MSVC.
-  searchPaths.insert(searchPaths.begin(), saver().save(libDir.str()));
 
   // Add the resource dir library path
   SmallString<128> runtimeLibDir(rootDir);
   sys::path::append(runtimeLibDir, "lib", "clang",
                     std::to_string(LLVM_VERSION_MAJOR), "lib");
-  searchPaths.insert(searchPaths.begin(), saver().save(runtimeLibDir.str()));
-
   // Resource dir + osname, which is hardcoded to windows since we are in the
   // COFF driver.
   SmallString<128> runtimeLibDirWithOS(runtimeLibDir);
   sys::path::append(runtimeLibDirWithOS, "windows");
-  searchPaths.insert(searchPaths.begin(),
-                     saver().save(runtimeLibDirWithOS.str()));
+
+  searchPaths.push_back(saver().save(runtimeLibDirWithOS.str()));
+  searchPaths.push_back(saver().save(runtimeLibDir.str()));
+  searchPaths.push_back(saver().save(libDir.str()));
 }
 
 void LinkerDriver::addWinSysRootLibSearchPaths() {
@@ -1564,12 +1560,13 @@ void LinkerDriver::linkerMain(ArrayRef<const char *> argsArr) {
 
   // Construct search path list.
   searchPaths.emplace_back("");
+  // Prefer the Clang provided builtins over the ones bundled with MSVC.
+  addClangLibSearchPaths(argsArr[0]);
   for (auto *arg : args.filtered(OPT_libpath))
     searchPaths.push_back(arg->getValue());
   detectWinSysRoot(args);
   if (!args.hasArg(OPT_lldignoreenv) && !args.hasArg(OPT_winsysroot))
     addLibSearchPaths();
-  addClangLibSearchPaths(argsArr[0]);
 
   // Handle /ignore
   for (auto *arg : args.filtered(OPT_ignore)) {
@@ -1855,6 +1852,19 @@ void LinkerDriver::linkerMain(ArrayRef<const char *> argsArr) {
   if (args.hasArg(OPT_lldsavetemps))
     config->saveTemps = true;
 
+  // Handle /lldemit
+  if (auto *arg = args.getLastArg(OPT_lldemit)) {
+    StringRef s = arg->getValue();
+    if (s == "obj")
+      config->emit = EmitKind::Obj;
+    else if (s == "llvm")
+      config->emit = EmitKind::LLVM;
+    else if (s == "asm")
+      config->emit = EmitKind::ASM;
+    else
+      error("/lldemit: unknown option: " + s);
+  }
+
   // Handle /kill-at
   if (args.hasArg(OPT_kill_at))
     config->killAt = true;
@@ -2084,8 +2094,11 @@ void LinkerDriver::linkerMain(ArrayRef<const char *> argsArr) {
     raw_svector_ostream stream(buffer);
     stream << "Library search paths:\n";
 
-    for (StringRef path : searchPaths)
+    for (StringRef path : searchPaths) {
+      if (path == "")
+        path = "(cwd)";
       stream << "  " << path << "\n";
+    }
 
     message(buffer);
   }
@@ -2395,7 +2408,8 @@ void LinkerDriver::linkerMain(ArrayRef<const char *> argsArr) {
   // If -thinlto-index-only is given, we should create only "index
   // files" and not object files. Index file creation is already done
   // in addCombinedLTOObject, so we are done if that's the case.
-  if (config->thinLTOIndexOnly)
+  // Likewise, don't emit object files for other /lldemit options.
+  if (config->emit != EmitKind::Obj || config->thinLTOIndexOnly)
     return;
 
   // If we generated native object files from bitcode files, this resolves

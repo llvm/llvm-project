@@ -302,7 +302,15 @@ static void instantiateDependentCUDALaunchBoundsAttr(
     MinBlocks = Result.getAs<Expr>();
   }
 
-  S.AddLaunchBoundsAttr(New, Attr, MaxThreads, MinBlocks);
+  Expr *MaxBlocks = nullptr;
+  if (Attr.getMaxBlocks()) {
+    Result = S.SubstExpr(Attr.getMaxBlocks(), TemplateArgs);
+    if (Result.isInvalid())
+      return;
+    MaxBlocks = Result.getAs<Expr>();
+  }
+
+  S.AddLaunchBoundsAttr(New, Attr, MaxThreads, MinBlocks, MaxBlocks);
 }
 
 static void
@@ -2132,7 +2140,7 @@ Decl *TemplateDeclInstantiator::VisitFunctionDecl(
     Function = CXXDeductionGuideDecl::Create(
         SemaRef.Context, DC, D->getInnerLocStart(),
         InstantiatedExplicitSpecifier, NameInfo, T, TInfo,
-        D->getSourceRange().getEnd(), /*Ctor=*/nullptr,
+        D->getSourceRange().getEnd(), DGuide->getCorrespondingConstructor(),
         DGuide->getDeductionCandidateKind());
     Function->setAccess(D->getAccess());
   } else {
@@ -4426,7 +4434,7 @@ TemplateDeclInstantiator::SubstFunctionType(FunctionDecl *D,
   Qualifiers ThisTypeQuals;
   if (CXXMethodDecl *Method = dyn_cast<CXXMethodDecl>(D)) {
     ThisContext = cast<CXXRecordDecl>(Owner);
-    ThisTypeQuals = Method->getMethodQualifiers();
+    ThisTypeQuals = Method->getFunctionObjectParameterType().getQualifiers();
   }
 
   TypeSourceInfo *NewTInfo = SemaRef.SubstFunctionDeclType(
@@ -4513,6 +4521,36 @@ TemplateDeclInstantiator::SubstFunctionType(FunctionDecl *D,
   }
 
   return NewTInfo;
+}
+
+/// Introduce the instantiated local variables into the local
+/// instantiation scope.
+void Sema::addInstantiatedLocalVarsToScope(FunctionDecl *Function,
+                                           const FunctionDecl *PatternDecl,
+                                           LocalInstantiationScope &Scope) {
+  LambdaScopeInfo *LSI = cast<LambdaScopeInfo>(getFunctionScopes().back());
+
+  for (auto *decl : PatternDecl->decls()) {
+    if (!isa<VarDecl>(decl) || isa<ParmVarDecl>(decl))
+      continue;
+
+    VarDecl *VD = cast<VarDecl>(decl);
+    IdentifierInfo *II = VD->getIdentifier();
+
+    auto it = llvm::find_if(Function->decls(), [&](Decl *inst) {
+      VarDecl *InstVD = dyn_cast<VarDecl>(inst);
+      return InstVD && InstVD->isLocalVarDecl() &&
+             InstVD->getIdentifier() == II;
+    });
+
+    if (it == Function->decls().end())
+      continue;
+
+    Scope.InstantiatedLocal(VD, *it);
+    LSI->addCapture(cast<VarDecl>(*it), /*isBlock=*/false, /*isByref=*/false,
+                    /*isNested=*/false, VD->getLocation(), SourceLocation(),
+                    VD->getType(), /*Invalid=*/false);
+  }
 }
 
 /// Introduce the instantiated function parameters into the local

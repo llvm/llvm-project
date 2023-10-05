@@ -128,6 +128,7 @@ protected:
   bool HasDPP = false;
   bool HasDPP8 = false;
   bool HasDPALU_DPP = false;
+  bool HasDPPSrc1SGPR = false;
   bool HasPackedFP32Ops = false;
   bool HasImageInsts = false;
   bool HasExtendedImageInsts = false;
@@ -193,6 +194,7 @@ protected:
   bool HasPackedTID = false;
   bool ScalarizeGlobal = false;
   bool HasSALUFloatInsts = false;
+  bool HasVGPRSingleUseHintInsts = false;
 
   bool HasVcmpxPermlaneHazard = false;
   bool HasVMEMtoScalarWriteHazard = false;
@@ -916,6 +918,8 @@ public:
     return HasDPALU_DPP;
   }
 
+  bool hasDPPSrc1SGPR() const { return HasDPPSrc1SGPR; }
+
   bool hasPackedFP32Ops() const {
     return HasPackedFP32Ops;
   }
@@ -1141,6 +1145,8 @@ public:
   bool hasGFX940Insts() const { return GFX940Insts; }
 
   bool hasSALUFloatInsts() const { return HasSALUFloatInsts; }
+
+  bool hasVGPRSingleUseHintInsts() const { return HasVGPRSingleUseHintInsts; }
 
   /// Return the maximum number of waves per SIMD for kernels using \p SGPRs
   /// SGPRs

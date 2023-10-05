@@ -183,22 +183,6 @@ convertOperationImpl(Operation &opInst, llvm::IRBuilderBase &builder,
 #include "mlir/Dialect/LLVMIR/LLVMConversions.inc"
 #include "mlir/Dialect/LLVMIR/LLVMIntrinsicConversions.inc"
 
-  // Helper function to reconstruct the function type for an indirect call given
-  // the result and argument types. The function cannot reconstruct the type of
-  // variadic functions since the call operation does not carry enough
-  // information to distinguish normal and variadic arguments. Supporting
-  // indirect variadic calls requires an additional type attribute on the call
-  // operation that stores the LLVM function type of the callee.
-  // TODO: Support indirect calls to variadic function pointers.
-  auto getCalleeFunctionType = [&](TypeRange resultTypes, ValueRange args) {
-    Type resultType = resultTypes.empty()
-                          ? LLVMVoidType::get(opInst.getContext())
-                          : resultTypes.front();
-    return llvm::cast<llvm::FunctionType>(moduleTranslation.convertType(
-        LLVMFunctionType::get(opInst.getContext(), resultType,
-                              llvm::to_vector(args.getTypes()), false)));
-  };
-
   // Emit function calls.  If the "callee" attribute is present, this is a
   // direct function call and we also need to look up the remapped function
   // itself.  Otherwise, this is an indirect call and the callee is the first
@@ -211,9 +195,10 @@ convertOperationImpl(Operation &opInst, llvm::IRBuilderBase &builder,
       call = builder.CreateCall(
           moduleTranslation.lookupFunction(attr.getValue()), operandsRef);
     } else {
-      call = builder.CreateCall(getCalleeFunctionType(callOp.getResultTypes(),
-                                                      callOp.getArgOperands()),
-                                operandsRef.front(), operandsRef.drop_front());
+      llvm::FunctionType *calleeType = llvm::cast<llvm::FunctionType>(
+          moduleTranslation.convertType(callOp.getCalleeFunctionType()));
+      call = builder.CreateCall(calleeType, operandsRef.front(),
+                                operandsRef.drop_front());
     }
     moduleTranslation.setAccessGroupsMetadata(callOp, call);
     moduleTranslation.setAliasScopeMetadata(callOp, call);
@@ -297,9 +282,10 @@ convertOperationImpl(Operation &opInst, llvm::IRBuilderBase &builder,
           moduleTranslation.lookupBlock(invOp.getSuccessor(0)),
           moduleTranslation.lookupBlock(invOp.getSuccessor(1)), operandsRef);
     } else {
+      llvm::FunctionType *calleeType = llvm::cast<llvm::FunctionType>(
+          moduleTranslation.convertType(invOp.getCalleeFunctionType()));
       result = builder.CreateInvoke(
-          getCalleeFunctionType(invOp.getResultTypes(), invOp.getArgOperands()),
-          operandsRef.front(),
+          calleeType, operandsRef.front(),
           moduleTranslation.lookupBlock(invOp.getSuccessor(0)),
           moduleTranslation.lookupBlock(invOp.getSuccessor(1)),
           operandsRef.drop_front());

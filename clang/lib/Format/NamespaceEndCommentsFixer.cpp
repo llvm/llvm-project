@@ -48,7 +48,7 @@ processTokens(const FormatToken *Tok, tok::TokenKind StartTok,
 const FormatToken *skipAttribute(const FormatToken *Tok) {
   if (!Tok)
     return nullptr;
-  if (Tok->is(tok::kw___attribute)) {
+  if (Tok->isAttribute()) {
     Tok = Tok->getNextNonComment();
     Tok = processTokens(Tok, tok::l_paren, tok::r_paren, nullptr);
   } else if (Tok->is(tok::l_square)) {

@@ -32,7 +32,7 @@ bool hasSymbols(const jitlink::Block &B) {
 Error markSectionsLive(jitlink::LinkGraph &G) {
   for (auto &Section : G.sections()) {
     // We only need allocatable sections.
-    if (Section.getMemLifetimePolicy() == orc::MemLifetimePolicy::NoAlloc)
+    if (Section.getMemLifetime() == orc::MemLifetime::NoAlloc)
       continue;
 
     // Skip empty sections.
@@ -141,6 +141,19 @@ struct JITLinkLinker::Context : jitlink::JITLinkContext {
             orc::ExecutorAddr(Address), JITSymbolFlags());
         continue;
       }
+
+      if (Linker.BC.isGOTSymbol(SymName)) {
+        if (const BinaryData *I = Linker.BC.getGOTSymbol()) {
+          uint64_t Address =
+              I->isMoved() ? I->getOutputAddress() : I->getAddress();
+          LLVM_DEBUG(dbgs() << "Resolved to address 0x"
+                            << Twine::utohexstr(Address) << "\n");
+          AllResults[Symbol.first] = orc::ExecutorSymbolDef(
+              orc::ExecutorAddr(Address), JITSymbolFlags());
+          continue;
+        }
+      }
+
       LLVM_DEBUG(dbgs() << "Resolved to address 0x0\n");
       AllResults[Symbol.first] =
           orc::ExecutorSymbolDef(orc::ExecutorAddr(0), JITSymbolFlags());
