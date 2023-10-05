@@ -106,7 +106,6 @@ namespace llvm {
 class AsmPrinter;
 class DwarfCompileUnit;
 class DwarfDebug;
-class DwarfTypeUnit;
 class MCSymbol;
 class raw_ostream;
 
@@ -198,9 +197,6 @@ public:
 
   template <typename... Types>
   void addName(DwarfStringPoolEntryRef Name, Types &&... Args);
-  void clear() { Entries.clear(); }
-  void addEntries(AccelTable<DataT> &Table);
-  const StringEntries getEntries() const { return Entries; }
 };
 
 template <typename AccelTableDataT>
@@ -217,16 +213,6 @@ void AccelTable<AccelTableDataT>::addName(DwarfStringPoolEntryRef Name,
   }
   It.Values.push_back(new (Allocator)
                           AccelTableDataT(std::forward<Types>(Args)...));
-}
-
-template <typename AccelTableDataT>
-void AccelTable<AccelTableDataT>::addEntries(
-    AccelTable<AccelTableDataT> &Table) {
-  for (auto &Entry : Table.getEntries()) {
-    for (AccelTableData *Value : Entry.second.Values)
-      addName(Entry.second.Name,
-              static_cast<AccelTableDataT *>(Value)->getDie());
-  }
 }
 
 /// A base class for different implementations of Data classes for Apple
@@ -264,10 +250,6 @@ public:
 /// emitDWARF5AccelTable function.
 class DWARF5AccelTableData : public AccelTableData {
 public:
-  struct AttributeEncoding {
-    dwarf::Index Index;
-    dwarf::Form Form;
-  };
   static uint32_t hash(StringRef Name) { return caseFoldingDjbHash(Name); }
 
   DWARF5AccelTableData(const DIE &Die) : Die(Die) {}
@@ -327,20 +309,17 @@ void emitAppleAccelTable(AsmPrinter *Asm, AccelTable<DataT> &Contents,
 void emitDWARF5AccelTable(AsmPrinter *Asm,
                           AccelTable<DWARF5AccelTableData> &Contents,
                           const DwarfDebug &DD,
-                          ArrayRef<std::unique_ptr<DwarfCompileUnit>> CUs,
-                          ArrayRef<std::unique_ptr<DwarfTypeUnit>> TUs);
-using GetIndexForEntryReturnType =
-    std::optional<std::pair<unsigned, DWARF5AccelTableData::AttributeEncoding>>;
+                          ArrayRef<std::unique_ptr<DwarfCompileUnit>> CUs);
+
 /// Emit a DWARFv5 Accelerator Table consisting of entries in the specified
 /// AccelTable. The \p CUs contains either symbols keeping offsets to the
 /// start of compilation unit, either offsets to the start of compilation
 /// unit themselves.
-void emitDWARF5AccelTable(AsmPrinter *Asm,
-                          AccelTable<DWARF5AccelTableStaticData> &Contents,
-                          ArrayRef<std::variant<MCSymbol *, uint64_t>> CUs,
-                          llvm::function_ref<GetIndexForEntryReturnType(
-                              const DWARF5AccelTableStaticData &)>
-                              getIndexForEntry);
+void emitDWARF5AccelTable(
+    AsmPrinter *Asm, AccelTable<DWARF5AccelTableStaticData> &Contents,
+    ArrayRef<std::variant<MCSymbol *, uint64_t>> CUs,
+    llvm::function_ref<unsigned(const DWARF5AccelTableStaticData &)>
+        getCUIndexForEntry);
 
 /// Accelerator table data implementation for simple Apple accelerator tables
 /// with just a DIE reference.
