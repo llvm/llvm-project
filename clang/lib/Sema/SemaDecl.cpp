@@ -12863,15 +12863,6 @@ QualType Sema::deduceVarTypeFromInitializer(VarDecl *VDecl,
   DeducedType *Deduced = Type->getContainedDeducedType();
   assert(Deduced && "deduceVarTypeFromInitializer for non-deduced type");
 
-  // Diagnose auto array declarations in C23, unless it's a supported extension.
-  if (getLangOpts().C23 && Type->isArrayType() &&
-      !isa_and_present<StringLiteral, InitListExpr>(Init)) {
-      Diag(Range.getBegin(), diag::err_auto_not_allowed)
-          << (int)Deduced->getContainedAutoType()->getKeyword()
-          << /*in array decl*/ 23 << Range;
-    return QualType();
-  }
-
   // C++11 [dcl.spec.auto]p3
   if (!Init) {
     assert(VDecl && "no init for init capture deduction?");
