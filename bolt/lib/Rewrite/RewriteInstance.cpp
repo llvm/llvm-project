@@ -2334,7 +2334,8 @@ void RewriteInstance::handleRelocation(const SectionRef &RelocatedSection,
     if (BC->isX86())
       return;
 
-    // The non-got related TLS relocations on AArch64 also could be skipped.
+    // The non-got related TLS relocations on AArch64 and RISC-V also could be
+    // skipped.
     if (!Relocation::isGOT(RType))
       return;
   }

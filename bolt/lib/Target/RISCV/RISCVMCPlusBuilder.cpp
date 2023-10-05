@@ -46,6 +46,7 @@ public:
     case ELF::R_RISCV_HI20:
     case ELF::R_RISCV_LO12_I:
     case ELF::R_RISCV_LO12_S:
+    case ELF::R_RISCV_TLS_GOT_HI20:
       return true;
     default:
       llvm_unreachable("Unexpected RISCV relocation type in code");
@@ -396,6 +397,7 @@ public:
     default:
       return Expr;
     case ELF::R_RISCV_GOT_HI20:
+    case ELF::R_RISCV_TLS_GOT_HI20:
       // The GOT is reused so no need to create GOT relocations
     case ELF::R_RISCV_PCREL_HI20:
       return RISCVMCExpr::create(Expr, RISCVMCExpr::VK_RISCV_PCREL_HI, Ctx);
