@@ -3570,24 +3570,6 @@ bool NVPTXDAGToDAGISel::SelectADDRri64(SDNode *OpNode, SDValue Addr,
   return SelectADDRri_imp(OpNode, Addr, Base, Offset, MVT::i64);
 }
 
-bool NVPTXDAGToDAGISel::SelectExtractEltFromV4I8(SDValue N, SDValue &V,
-                                                 SDValue &BitOffset) {
-  SDValue Vector = N->getOperand(0);
-  if (!(N->getOpcode() == ISD::EXTRACT_VECTOR_ELT &&
-        Vector->getValueType(0) == MVT::v4i8))
-    return false;
-
-  SDLoc DL(N);
-  V = Vector;
-  SDValue Index = N->getOperand(1);
-  if (const ConstantSDNode *IdxConst = dyn_cast<ConstantSDNode>(Index)) {
-    BitOffset =
-        CurDAG->getTargetConstant(IdxConst->getZExtValue() * 8, DL, MVT::i32);
-    return true;
-  }
-  return false;
-}
-
 bool NVPTXDAGToDAGISel::ChkMemSDNodeAddressSpace(SDNode *N,
                                                  unsigned int spN) const {
   const Value *Src = nullptr;

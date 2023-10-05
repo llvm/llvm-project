@@ -76,6 +76,10 @@ def CmpLT   : PatLeaf<(i32 2)>;
 def CmpLE   : PatLeaf<(i32 3)>;
 def CmpGT   : PatLeaf<(i32 4)>;
 def CmpGE   : PatLeaf<(i32 5)>;
+def CmpLO   : PatLeaf<(i32 6)>;
+def CmpLS   : PatLeaf<(i32 7)>;
+def CmpHI   : PatLeaf<(i32 8)>;
+def CmpHS   : PatLeaf<(i32 9)>;
 def CmpEQU  : PatLeaf<(i32 10)>;
 def CmpNEU  : PatLeaf<(i32 11)>;
 def CmpLTU  : PatLeaf<(i32 12)>;
@@ -2221,13 +2225,13 @@ def: Pat<(setle (sext_inreg (trunc Int32Regs:$a), i8), (sext_inreg (trunc Int32R
          (SETP_s32rr Int32Regs:$a, Int32Regs:$b, CmpLE)>;
 
 def: Pat<(setugt (i16 (and (trunc Int32Regs:$a), 255)), (i16 (and (trunc Int32Regs:$b), 255))),
-         (SETP_u32rr Int32Regs:$a, Int32Regs:$b, CmpGTU)>;
+         (SETP_u32rr Int32Regs:$a, Int32Regs:$b, CmpHI)>;
 def: Pat<(setuge (i16 (and (trunc Int32Regs:$a), 255)), (i16 (and (trunc Int32Regs:$b), 255))),
-         (SETP_u32rr Int32Regs:$a, Int32Regs:$b, CmpGEU)>;
+         (SETP_u32rr Int32Regs:$a, Int32Regs:$b, CmpHS)>;
 def: Pat<(setult (i16 (and (trunc Int32Regs:$a), 255)), (i16 (and (trunc Int32Regs:$b), 255))),
-         (SETP_u32rr Int32Regs:$a, Int32Regs:$b, CmpLTU)>;
+         (SETP_u32rr Int32Regs:$a, Int32Regs:$b, CmpLO)>;
 def: Pat<(setule (i16 (and (trunc Int32Regs:$a), 255)), (i16 (and (trunc Int32Regs:$b), 255))),
-         (SETP_u32rr Int32Regs:$a, Int32Regs:$b, CmpLEU)>;
+         (SETP_u32rr Int32Regs:$a, Int32Regs:$b, CmpLS)>;
 def: Pat<(seteq (i16 (and (trunc Int32Regs:$a), 255)), (i16 (and (trunc Int32Regs:$b), 255))),
          (SETP_u32rr Int32Regs:$a, Int32Regs:$b, CmpEQ)>;
 def: Pat<(setne (i16 (and (trunc Int32Regs:$a), 255)), (i16 (and (trunc Int32Regs:$b), 255))),

@@ -2259,7 +2259,7 @@ SDValue NVPTXTargetLowering::LowerEXTRACT_VECTOR_ELT(SDValue Op,
                                  DAG.getZExtOrTrunc(Index, DL, MVT::i32),
                                  DAG.getConstant(8, DL, MVT::i32)),
                      DAG.getConstant(8, DL, MVT::i32)});
-    return DAG.getZExtOrTrunc(BFE, DL, Op->getValueType(0));
+    return DAG.getAnyExtOrTrunc(BFE, DL, Op->getValueType(0));
   }
 
   // Constant index will be matched by tablegen.
