@@ -2128,7 +2128,7 @@ static void translateSetCCForBranch(const SDLoc &DL, SDValue &LHS, SDValue &RHS,
       }
       break;
     case ISD::SETLT:
-      // Convert X < 1 to 0 <= X.
+      // Convert X < 1 to 0 >= X.
       if (C == 1) {
         RHS = LHS;
         LHS = DAG.getConstant(0, DL, RHS.getValueType());
@@ -3392,18 +3392,16 @@ static SDValue lowerBuildVectorOfConstants(SDValue Op, SelectionDAG &DAG,
       VID = convertFromScalableVector(VIDVT, VID, DAG, Subtarget);
       if ((StepOpcode == ISD::MUL && SplatStepVal != 1) ||
           (StepOpcode == ISD::SHL && SplatStepVal != 0)) {
-        SDValue SplatStep = DAG.getSplatBuildVector(
-            VIDVT, DL, DAG.getConstant(SplatStepVal, DL, XLenVT));
+        SDValue SplatStep = DAG.getConstant(SplatStepVal, DL, VIDVT);
         VID = DAG.getNode(StepOpcode, DL, VIDVT, VID, SplatStep);
       }
       if (StepDenominator != 1) {
-        SDValue SplatStep = DAG.getSplatBuildVector(
-            VIDVT, DL, DAG.getConstant(Log2_64(StepDenominator), DL, XLenVT));
+        SDValue SplatStep =
+            DAG.getConstant(Log2_64(StepDenominator), DL, VIDVT);
         VID = DAG.getNode(ISD::SRL, DL, VIDVT, VID, SplatStep);
       }
       if (Addend != 0 || Negate) {
-        SDValue SplatAddend = DAG.getSplatBuildVector(
-            VIDVT, DL, DAG.getConstant(Addend, DL, XLenVT));
+        SDValue SplatAddend = DAG.getConstant(Addend, DL, VIDVT);
         VID = DAG.getNode(Negate ? ISD::SUB : ISD::ADD, DL, VIDVT, SplatAddend,
                           VID);
       }
@@ -11151,6 +11149,11 @@ combineBinOpOfExtractToReduceTree(SDNode *N, SelectionDAG &DAG,
   // to i64 (so that the vector element type matches the add type), and while
   // it's safe to introduce odd sized vector types.
   if (DAG.NewNodesMustHaveLegalTypes)
+    return SDValue();
+
+  // Without V, this transform isn't useful.  We could form the (illegal)
+  // operations and let them be scalarized again, but there's really no point.
+  if (!Subtarget.hasVInstructions())
     return SDValue();
 
   const SDLoc DL(N);
