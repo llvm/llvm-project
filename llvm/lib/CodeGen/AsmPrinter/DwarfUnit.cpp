@@ -1778,10 +1778,6 @@ void DwarfUnit::emitCommonHeader(bool UseOffsets, dwarf::UnitType UT) {
 }
 
 void DwarfTypeUnit::emitHeader(bool UseOffsets) {
-  if (!DD->useSplitDwarf()) {
-    LabelBegin = Asm->createTempSymbol("tu_begin");
-    Asm->OutStreamer->emitLabel(LabelBegin);
-  }
   DwarfUnit::emitCommonHeader(UseOffsets,
                               DD->useSplitDwarf() ? dwarf::DW_UT_split_type
                                                   : dwarf::DW_UT_type);

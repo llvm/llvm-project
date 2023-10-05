@@ -24,10 +24,6 @@ void DwarfFile::addUnit(std::unique_ptr<DwarfCompileUnit> U) {
   CUs.push_back(std::move(U));
 }
 
-void DwarfFile::addTypeUnit(std::unique_ptr<DwarfTypeUnit> U) {
-  TUs.push_back(std::move(U));
-}
-
 // Emit the various dwarf units to the unit section USection with
 // the abbreviations going into ASection.
 void DwarfFile::emitUnits(bool UseOffsets) {

@@ -228,7 +228,7 @@ void MachineBlockFrequencyInfo::view(const Twine &Name, bool isSimple) const {
 
 BlockFrequency
 MachineBlockFrequencyInfo::getBlockFreq(const MachineBasicBlock *MBB) const {
-  return MBFI ? MBFI->getBlockFreq(MBB) : 0;
+  return MBFI ? MBFI->getBlockFreq(MBB) : BlockFrequency(0);
 }
 
 std::optional<uint64_t> MachineBlockFrequencyInfo::getBlockProfileCount(
@@ -241,7 +241,7 @@ std::optional<uint64_t> MachineBlockFrequencyInfo::getBlockProfileCount(
 }
 
 std::optional<uint64_t>
-MachineBlockFrequencyInfo::getProfileCountFromFreq(uint64_t Freq) const {
+MachineBlockFrequencyInfo::getProfileCountFromFreq(BlockFrequency Freq) const {
   if (!MBFI)
     return std::nullopt;
 
@@ -263,7 +263,7 @@ void MachineBlockFrequencyInfo::onEdgeSplit(
   auto NewSuccFreq = MBFI->getBlockFreq(&NewPredecessor) *
                      MBPI.getEdgeProbability(&NewPredecessor, &NewSuccessor);
 
-  MBFI->setBlockFreq(&NewSuccessor, NewSuccFreq.getFrequency());
+  MBFI->setBlockFreq(&NewSuccessor, NewSuccFreq);
 }
 
 const MachineFunction *MachineBlockFrequencyInfo::getFunction() const {
@@ -286,6 +286,6 @@ MachineBlockFrequencyInfo::printBlockFreq(raw_ostream &OS,
   return MBFI ? MBFI->printBlockFreq(OS, MBB) : OS;
 }
 
-uint64_t MachineBlockFrequencyInfo::getEntryFreq() const {
-  return MBFI ? MBFI->getEntryFreq() : 0;
+BlockFrequency MachineBlockFrequencyInfo::getEntryFreq() const {
+  return MBFI ? MBFI->getEntryFreq() : BlockFrequency(0);
 }
