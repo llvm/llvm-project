@@ -1455,7 +1455,7 @@ Instruction *InstCombinerImpl::visitPHINode(PHINode &PN) {
   // This handles a small number of uses to keep the complexity down, and an
   // icmp(or(phi)) can equally be replaced with any non-zero constant as the
   // "or" will only add bits.
-  if (PN.hasOneUse() || PN.hasNUses(2)) {
+  if (!PN.hasNUsesOrMore(3)) {
     bool AllUsesOfPhiEndsInCmp = true;
     for (const auto *U : PN.users()) {
       auto *CmpInst = dyn_cast<ICmpInst>(U);
