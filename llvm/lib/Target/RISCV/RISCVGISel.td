@@ -137,8 +137,26 @@ def : Pat<(XLenVT (setle (Ty GPR:$rs1), (Ty GPR:$rs2))),
           (XORI (SLT GPR:$rs2, GPR:$rs1), 1)>;
 }
 
-// Define pattern expansions for load/extload operations on pointers
+// Define pattern expansions for load/extload operations for ptr return type
+def : LdPat<load, LW, PtrVT>, Requires<[IsRV32]>;
+def : LdPat<load, LD, PtrVT>, Requires<[IsRV64]>;
+
+// Define pattern expansions for rv64 load/extloads for i32 return type
+let Predicates = [IsRV64] in {
+def : LdPat<sextloadi8, LB, i32>;
+def : LdPat<extloadi8, LBU, i32>;
+def : LdPat<zextloadi8, LBU, i32>;
+def : LdPat<sextloadi16, LH, i32>;
+def : LdPat<extloadi16, LH, i32>;
+def : LdPat<zextloadi16, LHU, i32>;
+def : LdPat<load, LW, i32>;
+}
+/*
 def : Pat<(PtrVT (load (AddrRegImm (PtrVT GPR:$rs1), simm12:$imm12))),
           (LW GPR:$rs1, simm12:$imm12)>, Requires<[IsRV32]>;
+let Predicates = [IsRV64] in {
 def : Pat<(PtrVT (load (AddrRegImm (PtrVT GPR:$rs1), simm12:$imm12))),
-          (LD GPR:$rs1, simm12:$imm12)>, Requires<[IsRV64]>;
+          (LD GPR:$rs1, simm12:$imm12)>;
+def : Pat<(i32 (load (AddrRegImm (PtrVT GPR:$rs1), simm12:$imm12))),
+          (
+}*/
