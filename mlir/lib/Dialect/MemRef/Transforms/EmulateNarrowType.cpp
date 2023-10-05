@@ -17,6 +17,7 @@
 #include "mlir/Dialect/MemRef/Transforms/Transforms.h"
 #include "mlir/Dialect/MemRef/Utils/MemRefUtils.h"
 #include "mlir/Dialect/Vector/IR/VectorOps.h"
+#include "mlir/Support/MathExtras.h"
 #include "mlir/Transforms/DialectConversion.h"
 #include "llvm/Support/FormatVariadic.h"
 #include "llvm/Support/MathExtras.h"
@@ -214,29 +215,31 @@ struct ConvertMemRefLoad final : OpConversionPattern<memref::LoadOp> {
 // ConvertMemRefSubview
 //===----------------------------------------------------------------------===//
 
+/// Emulating narrow ints on subview have limited support, supporting only
+/// static offset and size and stride of 1. Ideally, the subview should be
+/// folded away before running narrow type emulation, and this pattern would
+/// never run. This pattern is mostly used for testing pruposes.
 struct ConvertMemRefSubview final : OpConversionPattern<memref::SubViewOp> {
   using OpConversionPattern::OpConversionPattern;
 
   LogicalResult
   matchAndRewrite(memref::SubViewOp op, OpAdaptor adaptor,
                   ConversionPatternRewriter &rewriter) const override {
-    auto convertedType =
-        cast<MemRefType>(getTypeConverter()->convertType(op.getSourceType()));
-    auto convertedElementType = convertedType.getElementType();
-    auto oldElementType = op.getSourceType().getElementType();
+    MemRefType newTy =
+        dyn_cast<MemRefType>(getTypeConverter()->convertType(op.getType()));
+    if (!newTy) {
+      return rewriter.notifyMatchFailure(
+          op->getLoc(),
+          llvm::formatv("failed to convert memref type: {0}", op.getType()));
+    }
+
+    auto convertedElementType = newTy.getElementType();
+    auto oldElementType = op.getType().getElementType();
     int srcBits = oldElementType.getIntOrFloatBitWidth();
     int dstBits = convertedElementType.getIntOrFloatBitWidth();
     if (dstBits % srcBits != 0) {
       return rewriter.notifyMatchFailure(
           op, "only dstBits % srcBits == 0 supported");
-    }
-
-    MemRefType newTy =
-        cast<MemRefType>(getTypeConverter()->convertType(op.getType()));
-    if (!newTy) {
-      return rewriter.notifyMatchFailure(
-          op->getLoc(),
-          llvm::formatv("failed to convert memref type: {0}", op.getType()));
     }
 
     // Only support offset for 1-D subview.
@@ -251,8 +254,8 @@ struct ConvertMemRefSubview final : OpConversionPattern<memref::SubViewOp> {
           op->getLoc(), "subview with stride != 1 is not supported");
     }
 
-    auto size = op.getStaticSize(0);
-    auto offset = op.getStaticOffset(0);
+    int64_t size = op.getStaticSize(0);
+    int64_t offset = op.getStaticOffset(0);
     // Only support static sizes and offsets.
     if (size == ShapedType::kDynamic || offset == ShapedType::kDynamic) {
       return rewriter.notifyMatchFailure(
@@ -260,14 +263,14 @@ struct ConvertMemRefSubview final : OpConversionPattern<memref::SubViewOp> {
     }
 
     int elementsPerByte = dstBits / srcBits;
-    if (size % elementsPerByte != 0 || offset % elementsPerByte != 0) {
+    if (offset % elementsPerByte != 0) {
       return rewriter.notifyMatchFailure(
           op->getLoc(),
-          "subview with size or offset not multiple of elementsPerByte is not "
+          "subview with offset not multiple of elementsPerByte is not "
           "supported");
     }
 
-    size = size / elementsPerByte;
+    size = ceilDiv(size, elementsPerByte);
     offset = offset / elementsPerByte;
 
     rewriter.replaceOpWithNewOp<memref::SubViewOp>(
