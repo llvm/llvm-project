@@ -731,7 +731,7 @@ def NVGPU_WarpgroupMmaOp : NVGPU_Op<"warpgroup.mma"> {
 def NVGPU_WarpgroupMmaStoreOp : NVGPU_Op<"warpgroup.mma.store"> {
   let description = [{
     The `nvgpu.warpgroup.mma.store` op performs the store of fragmented result 
-    in $matrixD to give memref. 
+    in $matrixD to given memref. 
 
     [See the details of register fragment layout for accumulator matrix D]
     (https://docs.nvidia.com/cuda/parallel-thread-execution/index.html#wgmma-64n16-d) 

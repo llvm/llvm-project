@@ -539,7 +539,7 @@ LogicalResult WarpgroupMmaStoreOp::verify() {
                               .getFragmented();
 
   int64_t totalFirstDimension = 0;
-  for (auto result : getMatrixD()) {
+  for (Value result : getMatrixD()) {
     VectorType vtype =
         result.getType().cast<WarpgroupAccumulatorType>().getFragmented();
     if (vtype != firstVtype)

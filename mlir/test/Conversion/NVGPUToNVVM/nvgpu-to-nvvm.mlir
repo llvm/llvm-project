@@ -866,9 +866,10 @@ func.func @warpgroup_mma_store(
 // CHECK: %[[S311:.+]] = llvm.mlir.constant(4 : i32) : i32
 // CHECK: %[[S313:.+]] = llvm.mlir.constant(8 : i32) : i32
 // CHECK: %[[S316:.+]] = llvm.mlir.constant(16 : i32) : i32
+// CHECK: %[[WS2:.+]] = llvm.mlir.constant(32 : i32) : i32
 // CHECK: %[[S317:.+]] = nvvm.read.ptx.sreg.tid.x : i32
-// CHECK: %[[S318:.+]] = llvm.urem %[[S317]], %[[WarpSize]]  : i32
-// CHECK: %[[S319:.+]] = llvm.udiv %[[S317]], %[[WarpSize]]  : i32
+// CHECK: %[[S318:.+]] = llvm.urem %[[S317]], %[[WS2]]  : i32
+// CHECK: %[[S319:.+]] = llvm.udiv %[[S317]], %[[WS2]]  : i32
 // CHECK: %[[S320:.+]] = llvm.udiv %[[S318]], %[[S311]]  : i32
 // CHECK: %[[S321:.+]] = llvm.urem %[[S318]], %[[S311]]  : i32
 // CHECK: %[[S322:.+]] = llvm.mul %[[S321]], %[[S312]]  : i32

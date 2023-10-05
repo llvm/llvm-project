@@ -54,26 +54,6 @@ static Value truncToI32(ImplicitLocOpBuilder &b, Value value) {
   return b.create<LLVM::TruncOp>(b.getI32Type(), value);
 }
 
-/// Returns warp-size as a value.
-static Value getWarpSizeValue(ImplicitLocOpBuilder &b) {
-  static std::optional<Value> warpSize = std::nullopt;
-  if (!warpSize.has_value()) {
-    warpSize = b.create<LLVM::ConstantOp>(IntegerType::get(b.getContext(), 32),
-                                          b.getI32IntegerAttr(kWarpSize));
-  }
-  return warpSize.value();
-}
-
-/// Returns warp-size as a value.
-static Value getWarpSizeValue(ImplicitLocOpBuilder &b) {
-  static std::optional<Value> warpSize = std::nullopt;
-  if (!warpSize.has_value()) {
-    warpSize = b.create<LLVM::ConstantOp>(IntegerType::get(b.getContext(), 32),
-                                          b.getI32IntegerAttr(kWarpSize));
-  }
-  return warpSize.value();
-}
-
 /// Returns the type for the intrinsic given the vectorResultType of the
 /// `gpu.mma.sync` operation.
 static Type inferIntrinsicResultType(Type vectorResultType) {
@@ -1467,7 +1447,7 @@ struct NVGPUWarpgroupMmaStoreOpLowering
   /// Here is what each threads (T) holds, each `d` is struct value with a
   /// number.
   ///
-  /// Threads in warp-group (128 threads) and what they owns in the matriD:
+  /// Threads in warp-group (128 threads) and what they owns in the matrixD:
   /// 0-31 	  Warp-0  -> MatrixD[0:15 ][0:N]
   /// 32-63 	Warp-1  -> MatrixD[16:31][0:N]
   /// 64-95 	Warp-2  -> MatrixD[32:47][0:N]
@@ -1510,7 +1490,7 @@ struct NVGPUWarpgroupMmaStoreOpLowering
     Value c4 = makeConst(4);
     Value c8 = makeConst(8);
     Value c16 = makeConst(16);
-    Value warpSize = getWarpSizeValue(b);
+    Value warpSize = makeConst(kWarpSize);
 
     auto makeMul = [&](Value lhs, Value rhs) -> Value {
       return b.create<LLVM::MulOp>(lhs.getType(), lhs, rhs);
