@@ -453,7 +453,7 @@ struct ProgramSignatureHeader {
 
   void swapBytes() {
     sys::swapByteOrder(ParamCount);
-    sys::swapByteOrder(ParamCount);
+    sys::swapByteOrder(FirstParamOffset);
   }
 };
 
