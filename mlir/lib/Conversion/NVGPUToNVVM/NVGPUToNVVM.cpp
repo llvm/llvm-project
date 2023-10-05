@@ -11,6 +11,7 @@
 #include "mlir/Conversion/GPUCommon/GPUCommonPass.h"
 #include "mlir/Conversion/LLVMCommon/ConversionTarget.h"
 #include "mlir/Conversion/LLVMCommon/Pattern.h"
+#include "mlir/Dialect/Arith/IR/Arith.h"
 #include "mlir/Dialect/GPU/IR/GPUDialect.h"
 #include "mlir/Dialect/LLVMIR/LLVMDialect.h"
 #include "mlir/Dialect/LLVMIR/LLVMTypes.h"
@@ -394,8 +395,8 @@ struct ConvertNVGPUToNVVMPass
   using Base::Base;
 
   void getDependentDialects(DialectRegistry &registry) const override {
-    registry
-        .insert<memref::MemRefDialect, LLVM::LLVMDialect, NVVM::NVVMDialect>();
+    registry.insert<memref::MemRefDialect, LLVM::LLVMDialect, NVVM::NVVMDialect,
+                    arith::ArithDialect>();
   }
 
   void runOnOperation() override {
@@ -436,6 +437,7 @@ struct ConvertNVGPUToNVVMPass
     populateNVGPUToNVVMConversionPatterns(converter, patterns);
     LLVMConversionTarget target(getContext());
     target.addLegalDialect<::mlir::LLVM::LLVMDialect>();
+    target.addLegalDialect<::mlir::arith::ArithDialect>();
     target.addLegalDialect<::mlir::memref::MemRefDialect>();
     target.addLegalDialect<::mlir::NVVM::NVVMDialect>();
     mlir::scf::populateSCFStructuralTypeConversionsAndLegality(
@@ -1434,6 +1436,116 @@ struct NVGPUWarpgroupMmaOpLowering
   }
 };
 
+struct NVGPUWarpgroupMmaStoreOpLowering
+    : public ConvertOpToLLVMPattern<nvgpu::WarpgroupMmaStoreOp> {
+  using ConvertOpToLLVMPattern<
+      nvgpu::WarpgroupMmaStoreOp>::ConvertOpToLLVMPattern;
+
+  /// This function stores a fragmented register matrix owned by a warp group
+  /// (128 threads) into a memref. Each thread has 64 registers, each the size
+  /// of a struct.
+  /// Here is what each threads (T) holds, each `d` is struct value with a
+  /// number.
+  ///
+  /// Threads in warp-group (128 threads) and what they owns in the matrixD:
+  /// 0-31 	  Warp-0  -> MatrixD[0:15 ][0:N]
+  /// 32-63 	Warp-1  -> MatrixD[16:31][0:N]
+  /// 64-95 	Warp-2  -> MatrixD[32:47][0:N]
+  /// 96-127 	Warp-3  -> MatrixD[48:64][0:N]
+  ///
+  /// Matrix-D:
+  ///   +______________________________________________________________________+
+  ///   |     0-1  |    2-3  |    4-5  |    6-7  |   8-9  |   10-11|..|N-8,N-7 |
+  /// 0 | T0:d0-d1 |T1:d0-d1 |T2:d0-d1 |T3:d0-d1 |T0:d4-d5| T1:d4-d5..|T0:dX-dY|
+  /// 1 | T4:d0-d1 |T5:d0-d1 |T6:d0-d1 |T7:d0-d1 |T4:d4-d5| T5:d4-d5..|T4:dX-dY|
+  /// ..| .........|.........|.........|.........|........|...........|........|
+  /// 8 | T0:d2-d3 |T1:d2-d3 |T2:d2-d3 |T3:d2-d3 |T0:d6-d7|T1:d6-d7,..|T0:dZ-dW|
+  /// 9 | T4:d2-d3 |T5:d2-d3 |T6:d2-d3 |T7:d2-d3 |T4:d6-d7| T5:d6-d7..|T4:dZ-dW|
+  /// ..| .........|.........|.........|.........|........|...........|........|
+  /// 15| T28:d2-d3|T29:d2-d3|T30:d2-d3|T31:d2-d3|........|...........|........|
+  /// 16| T32:d2-d3|T33:d2-d3|T34:d2-d3|T35:d2-d3|........|...........|........|
+  /// ..| .........|.........|.........|.........|........|...........|........|
+  /// 32| T64:d2-d3|T65:d2-d3|T66:d2-d3|T67:d2-d3|........|...........|........|
+  /// ..| .........|.........|.........|.........|........|...........|........|
+  /// 48| T96:d2-d3|T97:d2-d3|T98:d2-d3|T99:d2-d3|........|...........|........|
+  /// ..| .........|.........|.........|.........|........|...........|........|
+  ///   +______________________________________________________________________+
+  ///
+  /// \param rewriter: The pattern rewriter.
+  /// \param matrixD: Result of the warp-group MMA operation (fragmented
+  /// matrix). It is holded by a thread and a struct with 64 elements.
+  /// \param dstMemref: The memref where the registers will be stored.
+  /// \param offset: the offset within the memref where the registers will be
+  /// stored.
+  void storeFragmentedMatrix(ImplicitLocOpBuilder &b, Value matrixD,
+                             TypedValue<MemRefType> dstMemref,
+                             int offset) const {
+    Type i32 = b.getI32Type();
+
+    auto makeConst = [&](int32_t index) -> Value {
+      return b.create<LLVM::ConstantOp>(i32, b.getI32IntegerAttr(index));
+    };
+    Value c1 = makeConst(1);
+    Value c2 = makeConst(2);
+    Value c4 = makeConst(4);
+    Value c8 = makeConst(8);
+    Value c16 = makeConst(16);
+    Value warpSize = makeConst(kWarpSize);
+
+    auto makeMul = [&](Value lhs, Value rhs) -> Value {
+      return b.create<LLVM::MulOp>(lhs.getType(), lhs, rhs);
+    };
+    auto makeAdd = [&](Value lhs, Value rhs) -> Value {
+      return b.create<LLVM::AddOp>(lhs.getType(), lhs, rhs);
+    };
+
+    Value tidx = b.create<NVVM::ThreadIdXOp>(i32);
+    Value laneId = b.create<LLVM::URemOp>(i32, tidx, warpSize);
+    Value warpId = b.create<LLVM::UDivOp>(i32, tidx, warpSize);
+    Value lane4Id = b.create<LLVM::UDivOp>(i32, laneId, c4);
+    Value lane4modId = b.create<LLVM::URemOp>(i32, laneId, c4);
+
+    auto makeExtractAndStore = [&](int i, Value wgmmaResult, Value x, Value y,
+                                   TypedValue<::mlir::MemRefType> memref) {
+      Type it = b.getIndexType();
+      Value idx = b.create<arith::IndexCastOp>(it, x);
+      Value idy0 = b.create<arith::IndexCastOp>(it, y);
+      Value idy1 = b.create<arith::IndexCastOp>(it, makeAdd(y, c1));
+      Value d0 = b.create<LLVM::ExtractValueOp>(wgmmaResult, i);
+      Value d1 = b.create<LLVM::ExtractValueOp>(wgmmaResult, i + 1);
+      b.create<memref::StoreOp>(d0, memref, ValueRange{idx, idy0});
+      b.create<memref::StoreOp>(d1, memref, ValueRange{idx, idy1});
+    };
+
+    Value tj = makeMul(lane4modId, c2);
+    Value ti = makeAdd(lane4Id, makeMul(warpId, c16));
+    if (offset)
+      ti = makeAdd(ti, makeConst(offset));
+    for (int i = 0; i < 2; ++i) {
+      Value idx = makeAdd(ti, makeMul(makeConst(i), c8));
+      for (int j = 0; j < 16; ++j) {
+        Value idy = makeAdd(tj, makeMul(makeConst(j), c8));
+        int sIndex = i * 2 + j * 4;
+        makeExtractAndStore(sIndex, matrixD, idx, idy, dstMemref);
+      }
+    }
+  }
+
+  LogicalResult
+  matchAndRewrite(nvgpu::WarpgroupMmaStoreOp op, OpAdaptor adaptor,
+                  ConversionPatternRewriter &rewriter) const override {
+    int offset = 0;
+    ImplicitLocOpBuilder lb(op->getLoc(), rewriter);
+    for (Value matrixD : adaptor.getMatrixD()) {
+      auto structType = matrixD.getType().cast<LLVM::LLVMStructType>();
+      storeFragmentedMatrix(lb, matrixD, op.getDstMemref(), offset);
+      offset += structType.getBody().size();
+    }
+    rewriter.eraseOp(op);
+    return success();
+  }
+};
+
 } // namespace
 
 void mlir::populateNVGPUToNVVMConversionPatterns(LLVMTypeConverter &converter,
@@ -1450,6 +1562,7 @@ void mlir::populateNVGPUToNVVMConversionPatterns(LLVMTypeConverter &converter,
       NVGPUMBarrierArriveExpectTxLowering,   // nvgpu.mbarrier.arrive.expect_tx
       NVGPUGenerateWarpgroupDescriptorLowering, // nvgpu.warpgroup.generate.descriptor
       NVGPUWarpgroupMmaOpLowering,              // nvgpu.warpgroup.mma
+      NVGPUWarpgroupMmaStoreOpLowering,         // nvgpu.warpgroup.mma.store
       MmaSyncOptoNVVM, MmaLdMatrixOpToNVVM, NVGPUAsyncCopyLowering,
       NVGPUAsyncCreateGroupLowering, NVGPUAsyncWaitLowering,
       NVGPUMmaSparseSyncLowering>(converter);
