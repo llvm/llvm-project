@@ -175,8 +175,11 @@ public:
 
   Value *FoldCast(Instruction::CastOps Op, Value *V,
                   Type *DestTy) const override {
-    if (auto *C = dyn_cast<Constant>(V))
-      return ConstantExpr::getCast(Op, C, DestTy);
+    if (auto *C = dyn_cast<Constant>(V)) {
+      if (ConstantExpr::isDesirableCastOp(Op))
+        return ConstantExpr::getCast(Op, C, DestTy);
+      return ConstantFoldCastInstruction(Op, C, DestTy);
+    }
     return nullptr;
   }
 

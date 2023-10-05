@@ -2016,8 +2016,7 @@ private:
                Style.Language == FormatStyle::LK_Java) {
       Current.setType(TT_LambdaArrow);
     } else if (Current.is(tok::arrow) && AutoFound &&
-               (Line.MightBeFunctionDecl || Line.InPPDirective) &&
-               Current.NestingLevel == 0 &&
+               Line.MightBeFunctionDecl && Current.NestingLevel == 0 &&
                !Current.Previous->isOneOf(tok::kw_operator, tok::identifier)) {
       // not auto operator->() -> xxx;
       Current.setType(TT_TrailingReturnArrow);
@@ -3211,11 +3210,11 @@ static bool isCtorOrDtorName(const FormatToken *Tok) {
 }
 
 void TokenAnnotator::annotate(AnnotatedLine &Line) {
-  for (auto &Child : Line.Children)
-    annotate(*Child);
-
   AnnotatingParser Parser(Style, Line, Keywords, Scopes);
   Line.Type = Parser.parseLine();
+
+  for (auto &Child : Line.Children)
+    annotate(*Child);
 
   // With very deep nesting, ExpressionParser uses lots of stack and the
   // formatting algorithm is very slow. We're not going to do a good job here
@@ -3234,7 +3233,7 @@ void TokenAnnotator::annotate(AnnotatedLine &Line) {
     auto *Tok = getFunctionName(Line);
     if (Tok && ((!Scopes.empty() && Scopes.back() == ST_Class) ||
                 Line.endsWith(TT_FunctionLBrace) || isCtorOrDtorName(Tok))) {
-      Tok->setFinalizedType(TT_FunctionDeclarationName);
+      Tok->setFinalizedType(TT_CtorDtorDeclName);
     }
   }
 
@@ -3252,7 +3251,8 @@ void TokenAnnotator::annotate(AnnotatedLine &Line) {
 // This function heuristically determines whether 'Current' starts the name of a
 // function declaration.
 static bool isFunctionDeclarationName(bool IsCpp, const FormatToken &Current,
-                                      const AnnotatedLine &Line) {
+                                      const AnnotatedLine &Line,
+                                      FormatToken *&ClosingParen) {
   assert(Current.Previous);
 
   if (Current.is(TT_FunctionDeclarationName))
@@ -3344,16 +3344,16 @@ static bool isFunctionDeclarationName(bool IsCpp, const FormatToken &Current,
   // Check whether parameter list can belong to a function declaration.
   if (!Next || Next->isNot(tok::l_paren) || !Next->MatchingParen)
     return false;
+  ClosingParen = Next->MatchingParen;
+  assert(ClosingParen->is(tok::r_paren));
   // If the lines ends with "{", this is likely a function definition.
   if (Line.Last->is(tok::l_brace))
     return true;
-  if (Next->Next == Next->MatchingParen)
+  if (Next->Next == ClosingParen)
     return true; // Empty parentheses.
   // If there is an &/&& after the r_paren, this is likely a function.
-  if (Next->MatchingParen->Next &&
-      Next->MatchingParen->Next->is(TT_PointerOrReference)) {
+  if (ClosingParen->Next && ClosingParen->Next->is(TT_PointerOrReference))
     return true;
-  }
 
   // Check for K&R C function definitions (and C++ function definitions with
   // unnamed parameters), e.g.:
@@ -3370,7 +3370,7 @@ static bool isFunctionDeclarationName(bool IsCpp, const FormatToken &Current,
     return true;
   }
 
-  for (const FormatToken *Tok = Next->Next; Tok && Tok != Next->MatchingParen;
+  for (const FormatToken *Tok = Next->Next; Tok && Tok != ClosingParen;
        Tok = Tok->Next) {
     if (Tok->is(TT_TypeDeclarationParen))
       return true;
@@ -3442,13 +3442,18 @@ void TokenAnnotator::calculateFormattingInformation(AnnotatedLine &Line) const {
     calculateArrayInitializerColumnList(Line);
 
   bool LineIsFunctionDeclaration = false;
+  FormatToken *ClosingParen = nullptr;
   for (FormatToken *Tok = Current, *AfterLastAttribute = nullptr; Tok;
        Tok = Tok->Next) {
     if (Tok->Previous->EndsCppAttributeGroup)
       AfterLastAttribute = Tok;
-    if (isFunctionDeclarationName(Style.isCpp(), *Tok, Line)) {
-      LineIsFunctionDeclaration = true;
-      Tok->setFinalizedType(TT_FunctionDeclarationName);
+    if (const bool IsCtorOrDtor = Tok->is(TT_CtorDtorDeclName);
+        IsCtorOrDtor ||
+        isFunctionDeclarationName(Style.isCpp(), *Tok, Line, ClosingParen)) {
+      if (!IsCtorOrDtor) {
+        LineIsFunctionDeclaration = true;
+        Tok->setFinalizedType(TT_FunctionDeclarationName);
+      }
       if (AfterLastAttribute &&
           mustBreakAfterAttributes(*AfterLastAttribute, Style)) {
         AfterLastAttribute->MustBreakBefore = true;
@@ -3458,29 +3463,38 @@ void TokenAnnotator::calculateFormattingInformation(AnnotatedLine &Line) const {
     }
   }
 
-  if (Style.isCpp() && !LineIsFunctionDeclaration) {
-    // Annotate */&/&& in `operator` function calls as binary operators.
-    for (const auto *Tok = Line.First; Tok; Tok = Tok->Next) {
-      if (Tok->isNot(tok::kw_operator))
-        continue;
-      do {
-        Tok = Tok->Next;
-      } while (Tok && Tok->isNot(TT_OverloadedOperatorLParen));
-      if (!Tok)
-        break;
-      const auto *LeftParen = Tok;
-      for (Tok = Tok->Next; Tok && Tok != LeftParen->MatchingParen;
-           Tok = Tok->Next) {
-        if (Tok->isNot(tok::identifier))
+  if (Style.isCpp()) {
+    if (!LineIsFunctionDeclaration) {
+      // Annotate */&/&& in `operator` function calls as binary operators.
+      for (const auto *Tok = Line.First; Tok; Tok = Tok->Next) {
+        if (Tok->isNot(tok::kw_operator))
           continue;
-        auto *Next = Tok->Next;
-        const bool NextIsBinaryOperator =
-            Next && Next->isOneOf(tok::star, tok::amp, tok::ampamp) &&
-            Next->Next && Next->Next->is(tok::identifier);
-        if (!NextIsBinaryOperator)
-          continue;
-        Next->setType(TT_BinaryOperator);
-        Tok = Next;
+        do {
+          Tok = Tok->Next;
+        } while (Tok && Tok->isNot(TT_OverloadedOperatorLParen));
+        if (!Tok)
+          break;
+        const auto *LeftParen = Tok;
+        for (Tok = Tok->Next; Tok && Tok != LeftParen->MatchingParen;
+             Tok = Tok->Next) {
+          if (Tok->isNot(tok::identifier))
+            continue;
+          auto *Next = Tok->Next;
+          const bool NextIsBinaryOperator =
+              Next && Next->isOneOf(tok::star, tok::amp, tok::ampamp) &&
+              Next->Next && Next->Next->is(tok::identifier);
+          if (!NextIsBinaryOperator)
+            continue;
+          Next->setType(TT_BinaryOperator);
+          Tok = Next;
+        }
+      }
+    } else if (ClosingParen) {
+      for (auto *Tok = ClosingParen->Next; Tok; Tok = Tok->Next) {
+        if (Tok->is(tok::arrow)) {
+          Tok->setType(TT_TrailingReturnArrow);
+          break;
+        }
       }
     }
   }

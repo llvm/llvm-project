@@ -304,6 +304,10 @@ def GetPtrBasePop : Opcode {
   let Args = [ArgUint32];
 }
 
+def InitPtrPop : Opcode {
+  let Args = [];
+}
+
 def GetPtrDerivedPop : Opcode {
   let Args = [ArgUint32];
 }

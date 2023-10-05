@@ -34,8 +34,7 @@ end subroutine
 !CHECK: %[[val_11:.*]] = fir.coordinate_of %[[val_10]], %[[val_c49]] : (!fir.ref<!fir.array<?xi8>>, index) -> !fir.ref<i8>
 !CHECK: %[[val_12:.*]] = fir.convert %[[val_11]] : (!fir.ref<i8>) -> !fir.ref<!fir.array<5x!fir.char<1,5>>>
 !CHECK: %[[val_c5_0:.*]] = arith.constant 5 : index
-!CHECK: %[[val_13:.*]] = fir.convert %[[val_9]] : (!fir.ref<!fir.char<1,5>>) -> !fir.ref<!fir.char<1,?>>
-!CHECK: %[[val_14:.*]] = fir.emboxchar %[[val_13]], %[[val_c5]] : (!fir.ref<!fir.char<1,?>>, index) -> !fir.boxchar<1>
+!CHECK: %[[val_14:.*]] = fir.emboxchar %[[val_9]], %[[val_c5]] : (!fir.ref<!fir.char<1,5>>, index) -> !fir.boxchar<1>
 !CHECK: %[[val_15:.*]] = fir.convert %[[val_12]] : (!fir.ref<!fir.array<5x!fir.char<1,5>>>) -> !fir.ref<!fir.char<1,?>>
 !CHECK: %[[val_16:.*]] = fir.emboxchar %[[val_15]], %[[val_c5_0]] : (!fir.ref<!fir.char<1,?>>, index) -> !fir.boxchar<1>
 !CHECK: fir.call @_QPsub1(%[[val_3]], %[[val_6]], %[[val_14]], %[[val_16]]) fastmath<contract> : (!fir.ref<i32>, !fir.ref<!fir.array<10xf32>>, !fir.boxchar<1>, !fir.boxchar<1>) -> ()
@@ -44,15 +43,13 @@ end subroutine
 !CHECK: %[[val_22:.*]] = fir.alloca !fir.array<10xf32> {bindc_name = "b", pinned, uniq_name = "_QFprivate_clause_commonblockEb"}
 !CHECK: %[[val_23:.*]] = fir.alloca !fir.char<1,5> {bindc_name = "c", pinned, uniq_name = "_QFprivate_clause_commonblockEc"}
 !CHECK: %[[val_24:.*]] = fir.alloca !fir.array<5x!fir.char<1,5>> {bindc_name = "d", pinned, uniq_name = "_QFprivate_clause_commonblockEd"}
-!CHECK: %[[val_25:.*]] = fir.convert %[[val_23]] : (!fir.ref<!fir.char<1,5>>) -> !fir.ref<!fir.char<1,?>>
-!CHECK: %[[val_26:.*]] = fir.emboxchar %[[val_25]], %[[val_c5]] : (!fir.ref<!fir.char<1,?>>, index) -> !fir.boxchar<1>
+!CHECK: %[[val_26:.*]] = fir.emboxchar %[[val_23]], %[[val_c5]] : (!fir.ref<!fir.char<1,5>>, index) -> !fir.boxchar<1>
 !CHECK: %[[val_27:.*]] = fir.convert %[[val_24]] : (!fir.ref<!fir.array<5x!fir.char<1,5>>>) -> !fir.ref<!fir.char<1,?>>
 !CHECK: %[[val_28:.*]] = fir.emboxchar %[[val_27]], %[[val_c5_0]] : (!fir.ref<!fir.char<1,?>>, index) -> !fir.boxchar<1>
 !CHECK: fir.call @_QPsub2(%[[val_21]], %[[val_22]], %[[val_26]], %[[val_28]]) fastmath<contract> : (!fir.ref<i32>, !fir.ref<!fir.array<10xf32>>, !fir.boxchar<1>, !fir.boxchar<1>) -> ()
 !CHECK: omp.terminator
 !CHECK: }
-!CHECK: %[[val_17:.*]] = fir.convert %[[val_9]] : (!fir.ref<!fir.char<1,5>>) -> !fir.ref<!fir.char<1,?>>
-!CHECK: %[[val_18:.*]] = fir.emboxchar %[[val_17]], %[[val_c5]] : (!fir.ref<!fir.char<1,?>>, index) -> !fir.boxchar<1>
+!CHECK: %[[val_18:.*]] = fir.emboxchar %[[val_9]], %[[val_c5]] : (!fir.ref<!fir.char<1,5>>, index) -> !fir.boxchar<1>
 !CHECK: %[[val_19:.*]] = fir.convert %[[val_12]] : (!fir.ref<!fir.array<5x!fir.char<1,5>>>) -> !fir.ref<!fir.char<1,?>>
 !CHECK: %[[val_20:.*]] = fir.emboxchar %[[val_19]], %[[val_c5_0]] : (!fir.ref<!fir.char<1,?>>, index) -> !fir.boxchar<1>
 !CHECK: fir.call @_QPsub3(%[[val_3]], %[[val_6]], %[[val_18]], %[[val_20]]) fastmath<contract> : {{.*}}

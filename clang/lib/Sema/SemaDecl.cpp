@@ -8924,13 +8924,11 @@ bool Sema::AddOverriddenMethods(CXXRecordDecl *DC, CXXMethodDecl *MD) {
       CXXMethodDecl *BaseMD =
           dyn_cast<CXXMethodDecl>(BaseND->getCanonicalDecl());
       if (!BaseMD || !BaseMD->isVirtual() ||
-          IsOverload(MD, BaseMD, /*UseMemberUsingDeclRules=*/false,
-                     /*ConsiderCudaAttrs=*/true,
-                     // C++2a [class.virtual]p2 does not consider requires
-                     // clauses when overriding.
-                     /*ConsiderRequiresClauses=*/false))
+          IsOverride(MD, BaseMD, /*UseMemberUsingDeclRules=*/false,
+                     /*ConsiderCudaAttrs=*/true))
         continue;
-
+      if (!CheckExplicitObjectOverride(MD, BaseMD))
+        continue;
       if (Overridden.insert(BaseMD).second) {
         MD->addOverriddenMethod(BaseMD);
         CheckOverridingFunctionReturnType(MD, BaseMD);
@@ -9264,6 +9262,8 @@ static FunctionDecl *CreateNewFunctionDecl(Sema &SemaRef, Declarator &D,
     D.getMutableDeclSpec().ClearConstexprSpec();
   }
   Expr *TrailingRequiresClause = D.getTrailingRequiresClause();
+
+  SemaRef.CheckExplicitObjectMemberFunction(DC, D, Name, R);
 
   if (Name.getNameKind() == DeclarationName::CXXConstructorName) {
     // This is a C++ constructor declaration.
@@ -9766,8 +9766,9 @@ Sema::ActOnFunctionDeclarator(Scope *S, Declarator &D, DeclContext *DC,
       << DeclSpec::getSpecifierName(TSCS);
 
   if (D.isFirstDeclarationOfMember())
-    adjustMemberFunctionCC(R, D.isStaticMember(), D.isCtorOrDtor(),
-                           D.getIdentifierLoc());
+    adjustMemberFunctionCC(
+        R, !(D.isStaticMember() || D.isExplicitObjectMemberFunction()),
+        D.isCtorOrDtor(), D.getIdentifierLoc());
 
   bool isFriend = false;
   FunctionTemplateDecl *FunctionTemplate = nullptr;
@@ -11971,7 +11972,7 @@ bool Sema::CheckFunctionDeclaration(Scope *S, FunctionDecl *NewFD,
       // struct B { struct Y { ~Y(); }; using X = Y; };
       // template struct A<B>;
       if (NewFD->getFriendObjectKind() == Decl::FriendObjectKind::FOK_None ||
-          !Destructor->getThisObjectType()->isDependentType()) {
+          !Destructor->getFunctionObjectParameterType()->isDependentType()) {
         CXXRecordDecl *Record = Destructor->getParent();
         QualType ClassType = Context.getTypeDeclType(Record);
 
@@ -14918,9 +14919,32 @@ void Sema::CheckFunctionOrTemplateParamDeclarator(Scope *S, Declarator &D) {
   }
 }
 
+static void CheckExplicitObjectParameter(Sema &S, ParmVarDecl *P,
+                                         SourceLocation ExplicitThisLoc) {
+  if (!ExplicitThisLoc.isValid())
+    return;
+  assert(S.getLangOpts().CPlusPlus &&
+         "explicit parameter in non-cplusplus mode");
+  if (!S.getLangOpts().CPlusPlus23)
+    S.Diag(ExplicitThisLoc, diag::err_cxx20_deducing_this)
+        << P->getSourceRange();
+
+  // C++2b [dcl.fct/7] An explicit object parameter shall not be a function
+  // parameter pack.
+  if (P->isParameterPack()) {
+    S.Diag(P->getBeginLoc(), diag::err_explicit_object_parameter_pack)
+        << P->getSourceRange();
+    return;
+  }
+  P->setExplicitObjectParameterLoc(ExplicitThisLoc);
+  if (LambdaScopeInfo *LSI = S.getCurLambda())
+    LSI->ExplicitObjectParameter = P;
+}
+
 /// ActOnParamDeclarator - Called from Parser::ParseFunctionDeclarator()
 /// to introduce parameters into function prototype scope.
-Decl *Sema::ActOnParamDeclarator(Scope *S, Declarator &D) {
+Decl *Sema::ActOnParamDeclarator(Scope *S, Declarator &D,
+                                 SourceLocation ExplicitThisLoc) {
   const DeclSpec &DS = D.getDeclSpec();
 
   // Verify C99 6.7.5.3p2: The only SCS allowed is 'register'.
@@ -14997,6 +15021,8 @@ Decl *Sema::ActOnParamDeclarator(Scope *S, Declarator &D) {
 
   if (D.isInvalidType())
     New->setInvalidDecl();
+
+  CheckExplicitObjectParameter(*this, New, ExplicitThisLoc);
 
   assert(S->isFunctionPrototypeScope());
   assert(S->getFunctionPrototypeDepth() >= 1);
@@ -15395,6 +15421,8 @@ LambdaScopeInfo *Sema::RebuildLambdaScopeInfo(CXXMethodDecl *CallOperator) {
 
   LSI->IntroducerRange = DNI.getCXXOperatorNameRange();
   LSI->Mutable = !CallOperator->isConst();
+  if (CallOperator->isExplicitObjectMemberFunction())
+    LSI->ExplicitObjectParameter = CallOperator->getParamDecl(0);
 
   // Add the captures to the LSI so they can be noted as already
   // captured within tryCaptureVar.
@@ -18048,6 +18076,18 @@ void Sema::ActOnTagFinishDefinition(Scope *S, Decl *TagD,
                      [](const FieldDecl *FD) { return FD->isBitField(); }))
       Diag(BraceRange.getBegin(), diag::warn_pragma_align_not_xl_compatible);
   }
+
+  // Check the "counted_by" attribute to ensure that the count field exists in
+  // the struct.
+  if (const auto *RD = dyn_cast<RecordDecl>(Tag)) {
+    auto Pred = [](const Decl *D) {
+      if (const auto *FD = dyn_cast<FieldDecl>(D))
+        return FD->hasAttr<CountedByAttr>();
+      return false;
+    };
+    if (const FieldDecl *FD = RD->findFieldIf(Pred))
+      CheckCountedByAttr(S, FD);
+  }
 }
 
 void Sema::ActOnObjCContainerFinishDefinition() {
@@ -18622,6 +18662,9 @@ Decl *Sema::ActOnIvar(Scope *S, SourceLocation DeclStart, Declarator &D,
   ObjCIvarDecl *NewID = ObjCIvarDecl::Create(
       Context, EnclosingContext, DeclStart, Loc, II, T, TInfo, ac, BitWidth);
 
+  if (T->containsErrors())
+    NewID->setInvalidDecl();
+
   if (II) {
     NamedDecl *PrevDecl = LookupSingleName(S, II, Loc, LookupMemberName,
                                            ForVisibleRedeclaration);
@@ -18781,10 +18824,13 @@ static bool AreSpecialMemberFunctionsSameKind(ASTContext &Context,
   if (CSM == Sema::CXXDefaultConstructor)
     return bool(M1->getDescribedFunctionTemplate()) ==
            bool(M2->getDescribedFunctionTemplate());
-  if (!Context.hasSameType(M1->getParamDecl(0)->getType(),
-                           M2->getParamDecl(0)->getType()))
+  // FIXME: better resolve CWG
+  // https://cplusplus.github.io/CWG/issues/2787.html
+  if (!Context.hasSameType(M1->getNonObjectParameter(0)->getType(),
+                           M2->getNonObjectParameter(0)->getType()))
     return false;
-  if (!Context.hasSameType(M1->getThisType(), M2->getThisType()))
+  if (!Context.hasSameType(M1->getFunctionObjectParameterReferenceType(),
+                           M2->getFunctionObjectParameterReferenceType()))
     return false;
 
   return true;

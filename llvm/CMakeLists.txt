@@ -6,7 +6,14 @@ set(LLVM_COMMON_CMAKE_UTILS ${CMAKE_CURRENT_SOURCE_DIR}/../cmake)
 include(${LLVM_COMMON_CMAKE_UTILS}/Modules/CMakePolicy.cmake
   NO_POLICY_SCOPE)
 
-set(CMAKE_BUILD_WITH_INSTALL_NAME_DIR ON)
+# Builds with custom install names and installation rpath setups may not work
+# in the build tree. Allow these cases to use CMake's default build tree
+# behavior by setting `LLVM_NO_INSTALL_NAME_DIR_FOR_BUILD_TREE` to do this.
+option(LLVM_NO_INSTALL_NAME_DIR_FOR_BUILD_TREE "If set, use CMake's default build tree install name directory logic (Darwin only)" OFF)
+mark_as_advanced(LLVM_NO_INSTALL_NAME_DIR_FOR_BUILD_TREE)
+if(NOT LLVM_NO_INSTALL_NAME_DIR_FOR_BUILD_TREE)
+  set(CMAKE_BUILD_WITH_INSTALL_NAME_DIR ON)
+endif()
 
 if(NOT DEFINED LLVM_VERSION_MAJOR)
   set(LLVM_VERSION_MAJOR 18)
@@ -149,10 +156,7 @@ endif()
 # As we migrate runtimes to using the bootstrapping build, the set of default runtimes
 # should grow as we remove those runtimes from LLVM_ENABLE_PROJECTS above.
 set(LLVM_DEFAULT_RUNTIMES "libcxx;libcxxabi;libunwind")
-if ("flang" IN_LIST LLVM_ENABLE_PROJECTS)
-  set(LLVM_DEFAULT_RUNTIMES "libcxx;libcxxabi;libunwind;flang-rt")
-endif()
-set(LLVM_SUPPORTED_RUNTIMES "libc;libunwind;libcxxabi;pstl;libcxx;compiler-rt;openmp;llvm-libgcc;flang-rt")
+set(LLVM_SUPPORTED_RUNTIMES "libc;libunwind;libcxxabi;pstl;libcxx;compiler-rt;openmp;llvm-libgcc")
 set(LLVM_ENABLE_RUNTIMES "" CACHE STRING
   "Semicolon-separated list of runtimes to build, or \"all\" (${LLVM_DEFAULT_RUNTIMES}). Supported runtimes are ${LLVM_SUPPORTED_RUNTIMES}.")
 if(LLVM_ENABLE_RUNTIMES STREQUAL "all")
@@ -172,11 +176,6 @@ if ("libc" IN_LIST LLVM_ENABLE_RUNTIMES)
     message(STATUS "Enabling libc project to build libc build tools")
     list(APPEND LLVM_ENABLE_PROJECTS "libc")
   endif()
-endif()
-
-if ("flang" IN_LIST LLVM_ENABLE_PROJECTS AND NOT "flang-rt" IN_LIST LLVM_ENABLE_RUNTIMES)
-  message(STATUS "Enabling Flang-rt to be built with the Flang project.")
-  list(APPEND LLVM_ENABLE_RUNTIMES "flang-rt")
 endif()
 
 # LLVM_ENABLE_PROJECTS_USED is `ON` if the user has ever used the

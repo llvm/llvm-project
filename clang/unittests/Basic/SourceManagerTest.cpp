@@ -138,13 +138,7 @@ TEST_F(SourceManagerTest, isBeforeInTranslationUnit) {
   PP.EnterMainSourceFile();
 
   std::vector<Token> toks;
-  while (1) {
-    Token tok;
-    PP.Lex(tok);
-    if (tok.is(tok::eof))
-      break;
-    toks.push_back(tok);
-  }
+  PP.LexTokensUntilEOF(&toks);
 
   // Make sure we got the tokens that we expected.
   ASSERT_EQ(3U, toks.size());
@@ -195,13 +189,7 @@ TEST_F(SourceManagerTest, isBeforeInTranslationUnitWithTokenSplit) {
   llvm::SmallString<8> Scratch;
 
   std::vector<Token> toks;
-  while (1) {
-    Token tok;
-    PP.Lex(tok);
-    if (tok.is(tok::eof))
-      break;
-    toks.push_back(tok);
-  }
+  PP.LexTokensUntilEOF(&toks);
 
   // Make sure we got the tokens that we expected.
   ASSERT_EQ(4U, toks.size()) << "a >> b c";
@@ -452,13 +440,7 @@ TEST_F(SourceManagerTest, getMacroArgExpandedLocation) {
   PP.EnterMainSourceFile();
 
   std::vector<Token> toks;
-  while (1) {
-    Token tok;
-    PP.Lex(tok);
-    if (tok.is(tok::eof))
-      break;
-    toks.push_back(tok);
-  }
+  PP.LexTokensUntilEOF(&toks);
 
   // Make sure we got the tokens that we expected.
   ASSERT_EQ(4U, toks.size());
@@ -574,13 +556,7 @@ TEST_F(SourceManagerTest, isBeforeInTranslationUnitWithMacroInInclude) {
   PP.EnterMainSourceFile();
 
   std::vector<Token> toks;
-  while (1) {
-    Token tok;
-    PP.Lex(tok);
-    if (tok.is(tok::eof))
-      break;
-    toks.push_back(tok);
-  }
+  PP.LexTokensUntilEOF(&toks);
 
   // Make sure we got the tokens that we expected.
   ASSERT_EQ(0U, toks.size());
