@@ -136,7 +136,7 @@ struct BitcastBuffer {
   constexpr BitcastBuffer(std::byte *Buff, size_t BuffSize, bool BigEndian)
       : Buff(Buff), BuffSize(BuffSize), BigEndian(BigEndian) {}
 
-  std::byte *getBytes(size_t ByteOffset, size_t N) {
+  std::byte *getBytes(size_t ByteOffset, size_t NBytes, size_t NBits) {
     assert(ByteOffset >= this->ByteOffset && "we don't support stepping back");
 
     // All untouched bits before the requested bit offset
@@ -144,14 +144,15 @@ struct BitcastBuffer {
     // because they can't be read into non-uchar/non-std::byte
     // values.
     IndeterminateBits += (ByteOffset - this->ByteOffset);
+    IndeterminateBits += ((NBytes * 8) - NBits);
 
     size_t OldOffset = this->Offset;
 
-    this->Offset += N;
-    this->ByteOffset = ByteOffset + N;
+    this->Offset += NBytes;
+    this->ByteOffset = ByteOffset + NBytes;
 
     if (BigEndian)
-      return Buff + BuffSize - OldOffset - N;
+      return Buff + BuffSize - OldOffset - NBytes;
 
     // Little Endian target.
     return Buff + OldOffset;
@@ -213,7 +214,8 @@ static bool enumerateData(const Pointer &P, const Context &Ctx, size_t Offset,
     // TODO: Virtual bases?
 
     for (unsigned I = 0; I != R->getNumFields(); ++I) {
-      Pointer Elem = P.atField(R->getField(I)->Offset);
+      const Record::Field *Fi = R->getField(I);
+      Pointer Elem = P.atField(Fi->Offset);
       CharUnits FieldOffset =
           Ctx.getASTContext().toCharUnitsFromBits(Layout.getFieldOffset(I));
       size_t ByteOffset = Offset + FieldOffset.getQuantity();
@@ -302,6 +304,7 @@ static bool CheckBitcastType(InterpState &S, CodePtr OpPC, QualType T,
 /// This is used for bitcasting TO a single primitive value.
 bool DoBitCast(InterpState &S, CodePtr OpPC, const Pointer &P, std::byte *Buff,
                size_t BuffSize, unsigned &IndeterminateBits) {
+  llvm::errs() << __PRETTY_FUNCTION__ << "\n";
   assert(P.isLive());
   assert(Buff);
   assert(BuffSize > 0);
@@ -313,11 +316,10 @@ bool DoBitCast(InterpState &S, CodePtr OpPC, const Pointer &P, std::byte *Buff,
 
   const Context &Ctx = S.getContext();
   const ASTContext &ASTCtx = Ctx.getASTContext();
-  uint64_t PointerSize =
-      ASTCtx
-          .toCharUnitsFromBits(
-              ASTCtx.getTargetInfo().getPointerWidth(LangAS::Default))
-          .getQuantity();
+  uint64_t PointerSizeBits =
+      ASTCtx.getTargetInfo().getPointerWidth(LangAS::Default);
+  uint64_t PointerSizeBytes =
+      ASTCtx.toCharUnitsFromBits(PointerSizeBits).getQuantity();
 
   bool Success = enumeratePointerFields(
       P, S.getContext(),
@@ -326,16 +328,24 @@ bool DoBitCast(InterpState &S, CodePtr OpPC, const Pointer &P, std::byte *Buff,
           return false;
         if (T == PT_Ptr) {
           assert(Ptr.getType()->isNullPtrType());
-          std::byte *M = F.getBytes(ByteOffset, PointerSize);
-          std::memset(M, 0, PointerSize);
+          std::byte *M =
+              F.getBytes(ByteOffset, PointerSizeBytes, PointerSizeBits);
+          std::memset(M, 0, PointerSizeBytes);
           return true;
         }
 
+        CharUnits ObjectReprChars = ASTCtx.getTypeSizeInChars(Ptr.getType());
+        unsigned ObjectReprBytes =
+            ASTCtx.getTypeSizeInChars(Ptr.getType()).getQuantity();
+        unsigned BitWidth;
+        if (const FieldDecl *FD = Ptr.getField(); FD && FD->isBitField())
+          BitWidth = FD->getBitWidthValue(ASTCtx);
+        else
+          BitWidth = ASTCtx.toBits(ObjectReprChars);
+
         BITCAST_TYPE_SWITCH_WITH_FLOAT(T, {
           T Val = Ptr.deref<T>();
-          unsigned ObjectReprBytes =
-              ASTCtx.getTypeSizeInChars(Ptr.getType()).getQuantity();
-          std::byte *M = F.getBytes(ByteOffset, ObjectReprBytes);
+          std::byte *M = F.getBytes(ByteOffset, ObjectReprBytes, BitWidth);
           Val.bitcastToMemory(M);
         });
         return true;

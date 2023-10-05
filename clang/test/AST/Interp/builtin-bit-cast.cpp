@@ -681,3 +681,28 @@ namespace StringLiterals {
   static_assert(Foo.data[3] == '\0', ""); // ref-error {{not an integral constant expression}} \
                                           // ref-note {{initializer of 'Foo' is not a constant expression}}
 };
+
+/// The current interpreter does not support bitcasts involving bitfields at all,
+/// so the following is mainly from comparing diagnostic output with GCC.
+namespace Bitfields {
+  struct S {
+    char a : 8;
+  };
+
+  constexpr S s{4};
+  constexpr char c = __builtin_bit_cast(char, s); // ref-error {{must be initialized by a constant expression}} \
+                                                  // ref-note {{bit_cast involving bit-field is not yet supported}} \
+                                                  // ref-note{{declared here}}
+  static_assert(c == 4, ""); // ref-error {{not an integral constant expression}} \
+                             // ref-note {{initializer of 'c' is not a constant expression}}
+
+
+  struct S2 {
+    char a : 4;
+  };
+  constexpr S2 s2{4};
+  constexpr char c2 = __builtin_bit_cast(char, s2); // expected-error {{must be initialized by a constant expression}} \
+                                                    // expected-note {{indeterminate value can only initialize an object of type 'unsigned char' or 'std::byte'; 'char' is invalid}} \
+                                                    // ref-error {{must be initialized by a constant expression}} \
+                                                    // ref-note {{bit_cast involving bit-field is not yet supported}}
+}
