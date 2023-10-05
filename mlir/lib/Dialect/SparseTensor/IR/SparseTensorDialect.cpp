@@ -1068,7 +1068,7 @@ OpFoldResult ConvertOp::fold(FoldAdaptor adaptor) {
 
 bool ConvertOp::directConvertable() {
   if (isSortCOOConvert())
-    return true;
+    return false;
 
   SparseTensorType srcStt = getSparseTensorType(getSource());
   SparseTensorType dstStt = getSparseTensorType(getDest());
@@ -1100,6 +1100,7 @@ bool ConvertOp::isSortCOOConvert() {
   // the conversion between COOs (but with different ordering).
   return isUniqueCOOType(getSource().getType()) &&
          isUniqueCOOType(getDest().getType()) &&
+         !getSparseTensorType(getSource()).isAllOrdered() &&
          getSparseTensorType(getDest()).isAllOrdered();
 }
 
@@ -1108,7 +1109,7 @@ struct StageUnorderedConvert : public OpRewritePattern<ConvertOp> {
 
   LogicalResult matchAndRewrite(ConvertOp op,
                                 PatternRewriter &rewriter) const override {
-    if (op.directConvertable())
+    if (op.directConvertable() || op.isSortCOOConvert())
       return failure();
 
     Location loc = op.getLoc();
@@ -1122,7 +1123,7 @@ struct StageUnorderedConvert : public OpRewritePattern<ConvertOp> {
     // The tmp COO must be unordered, otherwise it is a direct conversion.
     assert(!(srcStt.hasSameDimToLvl(dstStt) && srcStt.isAllOrdered()));
     Type srcCOOTp = getCOOFromTypeWithOrdering(
-        srcStt.getRankedTensorType(), dstStt.getDimToLvl(), /*ordered=*/false);
+        dstStt.getRankedTensorType(), dstStt.getDimToLvl(), /*ordered=*/false);
     Value srcCOO = rewriter.create<ConvertOp>(loc, srcCOOTp, op.getSource());
 
     // -> sort
