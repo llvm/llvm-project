@@ -579,16 +579,17 @@ static unsigned AlignTokens(const FormatStyle &Style, F &&Matches,
 
   unsigned i = StartAt;
   for (unsigned e = Changes.size(); i != e; ++i) {
-    if (Changes[i].indentAndNestingLevel() < IndentAndNestingLevel)
+    auto &CurrentChange = Changes[i];
+    if (CurrentChange.indentAndNestingLevel() < IndentAndNestingLevel)
       break;
 
-    if (Changes[i].NewlinesBefore != 0) {
+    if (CurrentChange.NewlinesBefore != 0) {
       CommasBeforeMatch = 0;
       EndOfSequence = i;
 
       // Whether to break the alignment sequence because of an empty line.
       bool EmptyLineBreak =
-          (Changes[i].NewlinesBefore > 1) && !ACS.AcrossEmptyLines;
+          (CurrentChange.NewlinesBefore > 1) && !ACS.AcrossEmptyLines;
 
       // Whether to break the alignment sequence because of a line without a
       // match.
@@ -600,19 +601,19 @@ static unsigned AlignTokens(const FormatStyle &Style, F &&Matches,
 
       // A new line starts, re-initialize line status tracking bools.
       // Keep the match state if a string literal is continued on this line.
-      if (i == 0 || Changes[i].Tok->isNot(tok::string_literal) ||
+      if (i == 0 || CurrentChange.Tok->isNot(tok::string_literal) ||
           Changes[i - 1].Tok->isNot(tok::string_literal)) {
         FoundMatchOnLine = false;
       }
       LineIsComment = true;
     }
 
-    if (Changes[i].Tok->isNot(tok::comment))
+    if (CurrentChange.Tok->isNot(tok::comment))
       LineIsComment = false;
 
-    if (Changes[i].Tok->is(tok::comma)) {
+    if (CurrentChange.Tok->is(tok::comma)) {
       ++CommasBeforeMatch;
-    } else if (Changes[i].indentAndNestingLevel() > IndentAndNestingLevel) {
+    } else if (CurrentChange.indentAndNestingLevel() > IndentAndNestingLevel) {
       // Call AlignTokens recursively, skipping over this scope block.
       unsigned StoppedAt =
           AlignTokens(Style, Matches, Changes, i, ACS, RightJustify);
@@ -620,7 +621,7 @@ static unsigned AlignTokens(const FormatStyle &Style, F &&Matches,
       continue;
     }
 
-    if (!Matches(Changes[i]))
+    if (!Matches(CurrentChange))
       continue;
 
     // If there is more than one matching token per line, or if the number of
@@ -634,16 +635,16 @@ static unsigned AlignTokens(const FormatStyle &Style, F &&Matches,
     if (StartOfSequence == 0)
       StartOfSequence = i;
 
-    unsigned ChangeWidthLeft = Changes[i].StartOfTokenColumn;
+    unsigned ChangeWidthLeft = CurrentChange.StartOfTokenColumn;
     unsigned ChangeWidthAnchor = 0;
     unsigned ChangeWidthRight = 0;
     if (RightJustify)
       if (ACS.PadOperators)
-        ChangeWidthAnchor = Changes[i].TokenLength;
+        ChangeWidthAnchor = CurrentChange.TokenLength;
       else
-        ChangeWidthLeft += Changes[i].TokenLength;
+        ChangeWidthLeft += CurrentChange.TokenLength;
     else
-      ChangeWidthRight = Changes[i].TokenLength;
+      ChangeWidthRight = CurrentChange.TokenLength;
     for (unsigned j = i + 1; j != e && Changes[j].NewlinesBefore == 0; ++j) {
       ChangeWidthRight += Changes[j].Spaces;
       // Changes are generally 1:1 with the tokens, but a change could also be
