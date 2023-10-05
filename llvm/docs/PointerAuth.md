@@ -117,7 +117,7 @@ It returns a raw pointer value.  It does **not** check that the
 signature is valid.
 
 `key` should identify a key that is appropriate for `value`, as defined
-by the target-specific [keys](#key)).
+by the target-specific [keys](#keys)).
 
 If `value` is a raw pointer value, it is returned as-is (provided the `key`
 is appropriate for the pointer).
