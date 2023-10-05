@@ -876,9 +876,9 @@ class ExtractStridedMetadataOpReinterpretCastFolder
 /// With
 /// ```
 /// base, ... = extract_strided_metadata(src)
-/// offset = !dstTy.srcOffset.isDynamic()?
-///            dstTy.srcOffset :
-///            extract_strided_metadata(src).offset
+/// offset = !dstTy.srcOffset.isDynamic()
+///            ? dstTy.srcOffset
+///            : extract_strided_metadata(src).offset
 /// sizes = for each srcSize in dstTy.srcSizes:
 ///           !srcSize.isDynamic()
 ///             ? srcSize
