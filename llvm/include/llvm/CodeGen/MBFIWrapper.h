@@ -35,10 +35,9 @@ class MBFIWrapper {
 
   raw_ostream &printBlockFreq(raw_ostream &OS,
                               const MachineBasicBlock *MBB) const;
-  raw_ostream &printBlockFreq(raw_ostream &OS,
-                              const BlockFrequency Freq) const;
+  raw_ostream &printBlockFreq(raw_ostream &OS, BlockFrequency Freq) const;
   void view(const Twine &Name, bool isSimple = true);
-  uint64_t getEntryFreq() const;
+  BlockFrequency getEntryFreq() const;
   const MachineBlockFrequencyInfo &getMBFI() { return MBFI; }
 
  private:

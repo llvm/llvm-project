@@ -79,7 +79,7 @@ static cl::opt<unsigned> MaxNumberOfUseBBsForSinking(
 ///     AdjustedFreq(BBs) = 99 / SinkFrequencyPercentThreshold%
 static BlockFrequency adjustedSumFreq(SmallPtrSetImpl<BasicBlock *> &BBs,
                                       BlockFrequencyInfo &BFI) {
-  BlockFrequency T = 0;
+  BlockFrequency T(0);
   for (BasicBlock *B : BBs)
     T += BFI.getBlockFreq(B);
   if (BBs.size() > 1)

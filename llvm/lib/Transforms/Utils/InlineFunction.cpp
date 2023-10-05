@@ -1830,12 +1830,12 @@ static void updateCallerBFI(BasicBlock *CallSiteBlock,
       continue;
     auto *OrigBB = cast<BasicBlock>(Entry.first);
     auto *ClonedBB = cast<BasicBlock>(Entry.second);
-    uint64_t Freq = CalleeBFI->getBlockFreq(OrigBB).getFrequency();
+    BlockFrequency Freq = CalleeBFI->getBlockFreq(OrigBB);
     if (!ClonedBBs.insert(ClonedBB).second) {
       // Multiple blocks in the callee might get mapped to one cloned block in
       // the caller since we prune the callee as we clone it. When that happens,
       // we want to use the maximum among the original blocks' frequencies.
-      uint64_t NewFreq = CallerBFI->getBlockFreq(ClonedBB).getFrequency();
+      BlockFrequency NewFreq = CallerBFI->getBlockFreq(ClonedBB);
       if (NewFreq > Freq)
         Freq = NewFreq;
     }
@@ -1843,8 +1843,7 @@ static void updateCallerBFI(BasicBlock *CallSiteBlock,
   }
   BasicBlock *EntryClone = cast<BasicBlock>(VMap.lookup(&CalleeEntryBlock));
   CallerBFI->setBlockFreqAndScale(
-      EntryClone, CallerBFI->getBlockFreq(CallSiteBlock).getFrequency(),
-      ClonedBBs);
+      EntryClone, CallerBFI->getBlockFreq(CallSiteBlock), ClonedBBs);
 }
 
 /// Update the branch metadata for cloned call instructions.
@@ -2811,8 +2810,8 @@ llvm::InlineResult llvm::InlineFunction(CallBase &CB, InlineFunctionInfo &IFI,
 
   if (IFI.CallerBFI) {
     // Copy original BB's block frequency to AfterCallBB
-    IFI.CallerBFI->setBlockFreq(
-        AfterCallBB, IFI.CallerBFI->getBlockFreq(OrigBB).getFrequency());
+    IFI.CallerBFI->setBlockFreq(AfterCallBB,
+                                IFI.CallerBFI->getBlockFreq(OrigBB));
   }
 
   // Change the branch that used to go to AfterCallBB to branch to the first

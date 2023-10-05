@@ -139,7 +139,7 @@ class ShrinkWrap : public MachineFunctionPass {
   MachineOptimizationRemarkEmitter *ORE = nullptr;
 
   /// Frequency of the Entry block.
-  uint64_t EntryFreq = 0;
+  BlockFrequency EntryFreq;
 
   /// Current opcode for frame setup.
   unsigned FrameSetupOpcode = ~0u;
@@ -640,7 +640,7 @@ bool ShrinkWrap::postShrinkWrapping(bool HasCandidate, MachineFunction &MF,
       FindIDom<>(**DirtyPreds.begin(), DirtyPreds, *MDT, false);
 
   while (NewSave && (hasDirtyPred(ReachableByDirty, *NewSave) ||
-                     EntryFreq < MBFI->getBlockFreq(NewSave).getFrequency() ||
+                     EntryFreq < MBFI->getBlockFreq(NewSave) ||
                      /*Entry freq has been observed more than a loop block in
                         some cases*/
                      MLI->getLoopFor(NewSave)))
@@ -675,8 +675,8 @@ bool ShrinkWrap::postShrinkWrapping(bool HasCandidate, MachineFunction &MF,
          "Incorrect save or restore point due to dominance relations");
   assert((!MLI->getLoopFor(Save) && !MLI->getLoopFor(Restore)) &&
          "Unexpected save or restore point in a loop");
-  assert((EntryFreq >= MBFI->getBlockFreq(Save).getFrequency() &&
-          EntryFreq >= MBFI->getBlockFreq(Restore).getFrequency()) &&
+  assert((EntryFreq >= MBFI->getBlockFreq(Save) &&
+          EntryFreq >= MBFI->getBlockFreq(Restore)) &&
          "Incorrect save or restore point based on block frequency");
   return true;
 }
@@ -878,8 +878,8 @@ bool ShrinkWrap::performShrinkWrapping(
     return false;
   }
 
-  LLVM_DEBUG(dbgs() << "\n ** Results **\nFrequency of the Entry: " << EntryFreq
-                    << '\n');
+  LLVM_DEBUG(dbgs() << "\n ** Results **\nFrequency of the Entry: "
+                    << EntryFreq.getFrequency() << '\n');
 
   const TargetFrameLowering *TFI =
       MachineFunc->getSubtarget().getFrameLowering();
@@ -891,8 +891,8 @@ bool ShrinkWrap::performShrinkWrapping(
                       << MBFI->getBlockFreq(Restore).getFrequency() << '\n');
 
     bool IsSaveCheap, TargetCanUseSaveAsPrologue = false;
-    if (((IsSaveCheap = EntryFreq >= MBFI->getBlockFreq(Save).getFrequency()) &&
-         EntryFreq >= MBFI->getBlockFreq(Restore).getFrequency()) &&
+    if (((IsSaveCheap = EntryFreq >= MBFI->getBlockFreq(Save)) &&
+         EntryFreq >= MBFI->getBlockFreq(Restore)) &&
         ((TargetCanUseSaveAsPrologue = TFI->canUseAsPrologue(*Save)) &&
          TFI->canUseAsEpilogue(*Restore)))
       break;

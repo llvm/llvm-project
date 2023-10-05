@@ -607,7 +607,7 @@ bool RAGreedy::addSplitConstraints(InterferenceCache::Cursor Intf,
 
   // Reset interference dependent info.
   SplitConstraints.resize(UseBlocks.size());
-  BlockFrequency StaticCost = 0;
+  BlockFrequency StaticCost = BlockFrequency(0);
   for (unsigned I = 0; I != UseBlocks.size(); ++I) {
     const SplitAnalysis::BlockInfo &BI = UseBlocks[I];
     SpillPlacement::BlockConstraint &BC = SplitConstraints[I];
@@ -832,7 +832,7 @@ bool RAGreedy::calcCompactRegion(GlobalSplitCandidate &Cand) {
 /// calcSpillCost - Compute how expensive it would be to split the live range in
 /// SA around all use blocks instead of forming bundle regions.
 BlockFrequency RAGreedy::calcSpillCost() {
-  BlockFrequency Cost = 0;
+  BlockFrequency Cost = BlockFrequency(0);
   ArrayRef<SplitAnalysis::BlockInfo> UseBlocks = SA->getUseBlocks();
   for (const SplitAnalysis::BlockInfo &BI : UseBlocks) {
     unsigned Number = BI.MBB->getNumber();
@@ -852,7 +852,7 @@ BlockFrequency RAGreedy::calcSpillCost() {
 ///
 BlockFrequency RAGreedy::calcGlobalSplitCost(GlobalSplitCandidate &Cand,
                                              const AllocationOrder &Order) {
-  BlockFrequency GlobalCost = 0;
+  BlockFrequency GlobalCost = BlockFrequency(0);
   const BitVector &LiveBundles = Cand.LiveBundles;
   ArrayRef<SplitAnalysis::BlockInfo> UseBlocks = SA->getUseBlocks();
   for (unsigned I = 0; I != UseBlocks.size(); ++I) {
@@ -1056,7 +1056,7 @@ MCRegister RAGreedy::tryRegionSplit(const LiveInterval &VirtReg,
   if (HasCompact) {
     // Yes, keep GlobalCand[0] as the compact region candidate.
     NumCands = 1;
-    BestCost = BlockFrequency::getMaxFrequency();
+    BestCost = BlockFrequency::max();
   } else {
     // No benefit from the compact region, our fallback will be per-block
     // splitting. Make sure we find a solution that is cheaper than spilling.
@@ -1222,7 +1222,7 @@ bool RAGreedy::trySplitAroundHintReg(MCPhysReg Hint,
   if (ExtraInfo->getStage(VirtReg) >= RS_Split2)
     return false;
 
-  BlockFrequency Cost = 0;
+  BlockFrequency Cost = BlockFrequency(0);
   Register Reg = VirtReg.reg();
 
   // Compute the cost of assigning a non Hint physical register to VirtReg.
@@ -1249,7 +1249,7 @@ bool RAGreedy::trySplitAroundHintReg(MCPhysReg Hint,
   // Decrease the cost so it will be split in colder blocks.
   BranchProbability Threshold(SplitThresholdForRegWithHint, 100);
   Cost *= Threshold;
-  if (Cost == 0)
+  if (Cost == BlockFrequency(0))
     return false;
 
   unsigned NumCands = 0;
@@ -1630,8 +1630,8 @@ unsigned RAGreedy::tryLocalSplit(const LiveInterval &VirtReg,
   float BestDiff = 0;
 
   const float blockFreq =
-    SpillPlacer->getBlockFrequency(BI.MBB->getNumber()).getFrequency() *
-    (1.0f / MBFI->getEntryFreq());
+      SpillPlacer->getBlockFrequency(BI.MBB->getNumber()).getFrequency() *
+      (1.0f / MBFI->getEntryFreq().getFrequency());
   SmallVector<float, 8> GapWeight;
 
   for (MCPhysReg PhysReg : Order) {
@@ -2199,9 +2199,9 @@ void RAGreedy::initializeCSRCost() {
     return;
 
   // Raw cost is relative to Entry == 2^14; scale it appropriately.
-  uint64_t ActualEntry = MBFI->getEntryFreq();
+  uint64_t ActualEntry = MBFI->getEntryFreq().getFrequency();
   if (!ActualEntry) {
-    CSRCost = 0;
+    CSRCost = BlockFrequency(0);
     return;
   }
   uint64_t FixedEntry = 1 << 14;
@@ -2212,7 +2212,8 @@ void RAGreedy::initializeCSRCost() {
     CSRCost /= BranchProbability(FixedEntry, ActualEntry);
   else
     // Can't use BranchProbability in general, since it takes 32-bit numbers.
-    CSRCost = CSRCost.getFrequency() * (ActualEntry / FixedEntry);
+    CSRCost =
+        BlockFrequency(CSRCost.getFrequency() * (ActualEntry / FixedEntry));
 }
 
 /// Collect the hint info for \p Reg.
@@ -2243,7 +2244,7 @@ void RAGreedy::collectHintInfo(Register Reg, HintsInfo &Out) {
 /// \return The cost of \p List for \p PhysReg.
 BlockFrequency RAGreedy::getBrokenHintFreq(const HintsInfo &List,
                                            MCRegister PhysReg) {
-  BlockFrequency Cost = 0;
+  BlockFrequency Cost = BlockFrequency(0);
   for (const HintInfo &Info : List) {
     if (Info.PhysReg != PhysReg)
       Cost += Info.Freq;

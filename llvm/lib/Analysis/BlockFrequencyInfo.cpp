@@ -201,7 +201,7 @@ void BlockFrequencyInfo::calculate(const Function &F,
 }
 
 BlockFrequency BlockFrequencyInfo::getBlockFreq(const BasicBlock *BB) const {
-  return BFI ? BFI->getBlockFreq(BB) : 0;
+  return BFI ? BFI->getBlockFreq(BB) : BlockFrequency(0);
 }
 
 std::optional<uint64_t>
@@ -214,7 +214,7 @@ BlockFrequencyInfo::getBlockProfileCount(const BasicBlock *BB,
 }
 
 std::optional<uint64_t>
-BlockFrequencyInfo::getProfileCountFromFreq(uint64_t Freq) const {
+BlockFrequencyInfo::getProfileCountFromFreq(BlockFrequency Freq) const {
   if (!BFI)
     return std::nullopt;
   return BFI->getProfileCountFromFreq(*getFunction(), Freq);
@@ -225,17 +225,18 @@ bool BlockFrequencyInfo::isIrrLoopHeader(const BasicBlock *BB) {
   return BFI->isIrrLoopHeader(BB);
 }
 
-void BlockFrequencyInfo::setBlockFreq(const BasicBlock *BB, uint64_t Freq) {
+void BlockFrequencyInfo::setBlockFreq(const BasicBlock *BB,
+                                      BlockFrequency Freq) {
   assert(BFI && "Expected analysis to be available");
   BFI->setBlockFreq(BB, Freq);
 }
 
 void BlockFrequencyInfo::setBlockFreqAndScale(
-    const BasicBlock *ReferenceBB, uint64_t Freq,
+    const BasicBlock *ReferenceBB, BlockFrequency Freq,
     SmallPtrSetImpl<BasicBlock *> &BlocksToScale) {
   assert(BFI && "Expected analysis to be available");
   // Use 128 bits APInt to avoid overflow.
-  APInt NewFreq(128, Freq);
+  APInt NewFreq(128, Freq.getFrequency());
   APInt OldFreq(128, BFI->getBlockFreq(ReferenceBB).getFrequency());
   APInt BBFreq(128, 0);
   for (auto *BB : BlocksToScale) {
@@ -247,7 +248,7 @@ void BlockFrequencyInfo::setBlockFreqAndScale(
     // a hot spot, one of the options proposed in
     // https://reviews.llvm.org/D28535#650071 could be used to avoid this.
     BBFreq = BBFreq.udiv(OldFreq);
-    BFI->setBlockFreq(BB, BBFreq.getLimitedValue());
+    BFI->setBlockFreq(BB, BlockFrequency(BBFreq.getLimitedValue()));
   }
   BFI->setBlockFreq(ReferenceBB, Freq);
 }
@@ -266,8 +267,8 @@ const BranchProbabilityInfo *BlockFrequencyInfo::getBPI() const {
   return BFI ? &BFI->getBPI() : nullptr;
 }
 
-raw_ostream &BlockFrequencyInfo::
-printBlockFreq(raw_ostream &OS, const BlockFrequency Freq) const {
+raw_ostream &BlockFrequencyInfo::printBlockFreq(raw_ostream &OS,
+                                                BlockFrequency Freq) const {
   return BFI ? BFI->printBlockFreq(OS, Freq) : OS;
 }
 
@@ -277,8 +278,8 @@ BlockFrequencyInfo::printBlockFreq(raw_ostream &OS,
   return BFI ? BFI->printBlockFreq(OS, BB) : OS;
 }
 
-uint64_t BlockFrequencyInfo::getEntryFreq() const {
-  return BFI ? BFI->getEntryFreq() : 0;
+BlockFrequency BlockFrequencyInfo::getEntryFreq() const {
+  return BFI ? BFI->getEntryFreq() : BlockFrequency(0);
 }
 
 void BlockFrequencyInfo::releaseMemory() { BFI.reset(); }

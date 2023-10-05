@@ -202,7 +202,7 @@ Bonus InstCostVisitor::getUserBonus(Instruction *User, Value *Use, Constant *C) 
   CodeSize += TTI.getInstructionCost(User, TargetTransformInfo::TCK_CodeSize);
 
   uint64_t Weight = BFI.getBlockFreq(User->getParent()).getFrequency() /
-                    BFI.getEntryFreq();
+                    BFI.getEntryFreq().getFrequency();
 
   Cost Latency = Weight *
       TTI.getInstructionCost(User, TargetTransformInfo::TCK_Latency);
