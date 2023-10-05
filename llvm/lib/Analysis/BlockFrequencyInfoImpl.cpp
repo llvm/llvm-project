@@ -581,30 +581,27 @@ BlockFrequencyInfoImplBase::getBlockFreq(const BlockNode &Node) const {
       report_fatal_error(OS.str());
     }
 #endif
-    return 0;
+    return BlockFrequency(0);
   }
-  return Freqs[Node.Index].Integer;
+  return BlockFrequency(Freqs[Node.Index].Integer);
 }
 
 std::optional<uint64_t>
 BlockFrequencyInfoImplBase::getBlockProfileCount(const Function &F,
                                                  const BlockNode &Node,
                                                  bool AllowSynthetic) const {
-  return getProfileCountFromFreq(F, getBlockFreq(Node).getFrequency(),
-                                 AllowSynthetic);
+  return getProfileCountFromFreq(F, getBlockFreq(Node), AllowSynthetic);
 }
 
-std::optional<uint64_t>
-BlockFrequencyInfoImplBase::getProfileCountFromFreq(const Function &F,
-                                                    uint64_t Freq,
-                                                    bool AllowSynthetic) const {
+std::optional<uint64_t> BlockFrequencyInfoImplBase::getProfileCountFromFreq(
+    const Function &F, BlockFrequency Freq, bool AllowSynthetic) const {
   auto EntryCount = F.getEntryCount(AllowSynthetic);
   if (!EntryCount)
     return std::nullopt;
   // Use 128 bit APInt to do the arithmetic to avoid overflow.
   APInt BlockCount(128, EntryCount->getCount());
-  APInt BlockFreq(128, Freq);
-  APInt EntryFreq(128, getEntryFreq());
+  APInt BlockFreq(128, Freq.getFrequency());
+  APInt EntryFreq(128, getEntryFreq().getFrequency());
   BlockCount *= BlockFreq;
   // Rounded division of BlockCount by EntryFreq. Since EntryFreq is unsigned
   // lshr by 1 gives EntryFreq/2.
@@ -627,10 +624,10 @@ BlockFrequencyInfoImplBase::getFloatingBlockFreq(const BlockNode &Node) const {
 }
 
 void BlockFrequencyInfoImplBase::setBlockFreq(const BlockNode &Node,
-                                              uint64_t Freq) {
+                                              BlockFrequency Freq) {
   assert(Node.isValid() && "Expected valid node");
   assert(Node.Index < Freqs.size() && "Expected legal index");
-  Freqs[Node.Index].Integer = Freq;
+  Freqs[Node.Index].Integer = Freq.getFrequency();
 }
 
 std::string
@@ -651,9 +648,9 @@ BlockFrequencyInfoImplBase::printBlockFreq(raw_ostream &OS,
 
 raw_ostream &
 BlockFrequencyInfoImplBase::printBlockFreq(raw_ostream &OS,
-                                           const BlockFrequency &Freq) const {
+                                           BlockFrequency Freq) const {
   Scaled64 Block(Freq.getFrequency(), 0);
-  Scaled64 Entry(getEntryFreq(), 0);
+  Scaled64 Entry(getEntryFreq().getFrequency(), 0);
 
   return OS << Block / Entry;
 }
