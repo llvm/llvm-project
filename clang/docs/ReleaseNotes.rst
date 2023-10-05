@@ -137,6 +137,11 @@ C Language Changes
 - ``structs``, ``unions``, and ``arrays`` that are const may now be used as
   constant expressions.  This change is more consistent with the behavior of
   GCC.
+- Clang now supports the C-only attribute ``counted_by``. When applied to a
+  struct's flexible array member, it points to the struct field that holds the
+  number of elements in the flexible array member. This information can improve
+  the results of the array bound sanitizer and the
+  ``__builtin_dynamic_object_size`` builtin.
 
 C23 Feature Support
 ^^^^^^^^^^^^^^^^^^^
@@ -204,6 +209,13 @@ Non-comprehensive list of changes in this release
 
 New Compiler Flags
 ------------------
+* ``-fverify-intermediate-code`` and its complement ``-fno-verify-intermediate-code``.
+  Enables or disables verification of the generated LLVM IR.
+  Users can pass this to turn on extra verification to catch certain types of
+  compiler bugs at the cost of extra compile time.
+  Since enabling the verifier adds a non-trivial cost of a few percent impact on
+  build times, it's disabled by default, unless your LLVM distribution itself is
+  compiled with runtime checks enabled.
 
 Deprecated Compiler Flags
 -------------------------
