@@ -48,7 +48,7 @@ private:
 
   // A lowering phase that runs before any selection attempts.
   // Returns true if the instruction was modified.
-  bool preISelLower(MachineInstr &MI, MachineIRBuilder &MIB,
+  void preISelLower(MachineInstr &MI, MachineIRBuilder &MIB,
                     MachineRegisterInfo &MRI);
 
   bool replacePtrWithInt(MachineOperand &Op, MachineIRBuilder &MIB,
@@ -260,7 +260,6 @@ bool RISCVInstructionSelector::select(MachineInstr &MI) {
 bool RISCVInstructionSelector::replacePtrWithInt(MachineOperand &Op,
                                                  MachineIRBuilder &MIB,
                                                  MachineRegisterInfo &MRI) {
-  assert(Op.isReg() && "Operand is not a register!");
   Register PtrReg = Op.getReg();
   assert(MRI.getType(PtrReg).isPointer() && "Operand is not a pointer!");
 
@@ -272,7 +271,7 @@ bool RISCVInstructionSelector::replacePtrWithInt(MachineOperand &Op,
   return select(*PtrToInt);
 }
 
-bool RISCVInstructionSelector::preISelLower(MachineInstr &MI,
+void RISCVInstructionSelector::preISelLower(MachineInstr &MI,
                                             MachineIRBuilder &MIB,
                                             MachineRegisterInfo &MRI) {
   switch (MI.getOpcode()) {
@@ -283,10 +282,7 @@ bool RISCVInstructionSelector::preISelLower(MachineInstr &MI,
     replacePtrWithInt(MI.getOperand(1), MIB, MRI);
     MI.setDesc(TII.get(TargetOpcode::G_ADD));
     MRI.setType(DstReg, XLenLLT);
-    return true;
   }
-  default:
-    return false;
   }
 }
 
