@@ -17,10 +17,10 @@ _start:
 /// basic block should start there.
 // CHECK-LABEL: {{^}}.LBB00
 // CHECK: nop
-// CHECK-LABEL: {{^}}.Ltmp1
-// CHECK: auipc t0, %pcrel_hi(d) # Label: .Ltmp0
-// CHECK-NEXT: ld t0, %pcrel_lo(.Ltmp0)(t0)
-// CHECK-NEXT: j .Ltmp1
+// CHECK-LABEL: {{^}}.Ltmp0
+// CHECK: auipc t0, %pcrel_hi(d) # Label: .Ltmp1
+// CHECK-NEXT: ld t0, %pcrel_lo(.Ltmp1)(t0)
+// CHECK-NEXT: j .Ltmp0
   nop
 1:
   auipc t0, %pcrel_hi(d)

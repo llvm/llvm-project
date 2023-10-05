@@ -468,13 +468,6 @@ private:
   using LabelsMapType = std::map<uint32_t, MCSymbol *>;
   LabelsMapType Labels;
 
-  /// Map offset in the function to a label that should always point to the
-  /// corresponding instruction. This is used for labels that shouldn't point to
-  /// the start of a basic block but always to a specific instruction. This is
-  /// used, for example, on RISC-V where %pcrel_lo relocations point to the
-  /// corresponding %pcrel_hi.
-  LabelsMapType InstructionLabels;
-
   /// Temporary holder of instructions before CFG is constructed.
   /// Map offset in the function to MCInst.
   using InstrMapType = std::map<uint32_t, MCInst>;
@@ -597,11 +590,6 @@ private:
   /// NOTE: the function always returns a local (temp) symbol, even if there's
   ///       a global symbol that corresponds to an entry at this address.
   MCSymbol *getOrCreateLocalLabel(uint64_t Address, bool CreatePastEnd = false);
-
-  /// Return a label for the instruction at a given \p Address in the function.
-  /// This label will not be used to delineate basic blocks in the CFG but will
-  /// be attached to the corresponding instruction during disassembly.
-  MCSymbol *getOrCreateInstructionLabel(uint64_t Address);
 
   /// Register an data entry at a given \p Offset into the function.
   void markDataAtOffset(uint64_t Offset) {
@@ -734,7 +722,6 @@ private:
     clearList(LSDATypeAddressTable);
 
     clearList(LabelToBB);
-    clearList(InstructionLabels);
 
     if (!isMultiEntry())
       clearList(Labels);
