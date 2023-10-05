@@ -2933,8 +2933,8 @@ void DWARFASTParserClang::ParseSingleMember(
   // whereas GCC emits it only for static data members if not part of an
   // anonymous namespace. The flag that is consistently emitted for static
   // data members is DW_AT_declaration, so we check it instead.
-  // FIXME: Since DWARFv5, static data members are marked DW_AT_variable so we can
-  // consistently detect them on both GCC and Clang without below heuristic.
+  // FIXME: Since DWARFv5, static data members are marked DW_AT_variable so we
+  // can consistently detect them on both GCC and Clang without below heuristic.
   if (attrs.member_byte_offset == UINT32_MAX &&
       attrs.data_bit_offset == UINT64_MAX && attrs.is_declaration) {
     Type *var_type = die.ResolveTypeUID(attrs.encoding_form.Reference());
