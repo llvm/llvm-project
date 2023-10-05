@@ -2019,14 +2019,17 @@ bool RISCVTargetLowering::isFPImmLegal(const APFloat &Imm, EVT VT,
     // -0.0 can be created by fmv + fneg.
     return Imm.isZero();
   }
-  // Special case: the cost for -0.0 is 1.
-  int Cost = Imm.isNegZero()
-                 ? 1
-                 : RISCVMatInt::getIntMatCost(Imm.bitcastToAPInt(),
-                                              Subtarget.getXLen(),
-                                              Subtarget.getFeatureBits());
-  // If the constantpool data is already in cache, only Cost 1 is cheaper.
-  return Cost < FPImmCost;
+
+  // Special case: fmv + fneg
+  if (Imm.isNegZero())
+    return true;
+
+  // Building an integer and then converting requires a fmv at the end of
+  // the integer sequence.
+  const int Cost =
+    1 + RISCVMatInt::getIntMatCost(Imm.bitcastToAPInt(), Subtarget.getXLen(),
+                                   Subtarget.getFeatureBits());
+  return Cost <= FPImmCost;
 }
 
 // TODO: This is very conservative.
