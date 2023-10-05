@@ -24,6 +24,10 @@ void DwarfFile::addUnit(std::unique_ptr<DwarfCompileUnit> U) {
   CUs.push_back(std::move(U));
 }
 
+void DwarfFile::addTypeUnitSymbol(DwarfTypeUnit &U) {
+  TUSymbols.emplace_back(U.getLabelBegin(), U.getUniqueID());
+}
+
 // Emit the various dwarf units to the unit section USection with
 // the abbreviations going into ASection.
 void DwarfFile::emitUnits(bool UseOffsets) {

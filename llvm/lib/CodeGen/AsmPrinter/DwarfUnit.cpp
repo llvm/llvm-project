@@ -83,11 +83,13 @@ DwarfUnit::DwarfUnit(dwarf::Tag UnitTag, const DICompileUnit *Node,
                      AsmPrinter *A, DwarfDebug *DW, DwarfFile *DWU)
     : DIEUnit(UnitTag), CUNode(Node), Asm(A), DD(DW), DU(DWU) {}
 
+unsigned DwarfTypeUnit::UniqueID = 0;
 DwarfTypeUnit::DwarfTypeUnit(DwarfCompileUnit &CU, AsmPrinter *A,
                              DwarfDebug *DW, DwarfFile *DWU,
                              MCDwarfDwoLineTable *SplitLineTable)
     : DwarfUnit(dwarf::DW_TAG_type_unit, CU.getCUNode(), A, DW, DWU), CU(CU),
       SplitLineTable(SplitLineTable) {
+  ++DwarfTypeUnit::UniqueID;
 }
 
 DwarfUnit::~DwarfUnit() {
@@ -1777,6 +1779,10 @@ void DwarfUnit::emitCommonHeader(bool UseOffsets, dwarf::UnitType UT) {
 }
 
 void DwarfTypeUnit::emitHeader(bool UseOffsets) {
+  if (!DD->useSplitDwarf()) {
+    LabelBegin = Asm->createTempSymbol("tu_begin");
+    Asm->OutStreamer->emitLabel(LabelBegin);
+  }
   DwarfUnit::emitCommonHeader(UseOffsets,
                               DD->useSplitDwarf() ? dwarf::DW_UT_split_type
                                                   : dwarf::DW_UT_type);

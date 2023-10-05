@@ -44,7 +44,7 @@ CHECK:.debug_abbrev contents:
 CHECK-NEXT: Abbrev table for offset: 0x00000000
 
 CHECK: .debug_info contents:
-CHECK: 0x00000000: Compile Unit: length = 0x0000004a, format = DWARF32, version = 0x0005, unit_type = DW_UT_compile, abbr_offset = 0x0000, addr_size = 0x08 
+CHECK: 0x00000000: Compile Unit: length = 0x0000004a, format = DWARF32, version = 0x0005, unit_type = DW_UT_compile, abbr_offset = 0x0000, addr_size = 0x08
 CHECK: DW_AT_producer [DW_FORM_strx]     (indexed (00000000) string = "Apple clang version 14.0.3 (clang-1403.0.22.14.1)")
 CHECK: DW_AT_name [DW_FORM_strx] (indexed (00000001) string = "a.cpp")
 CHECK: DW_AT_LLVM_sysroot [DW_FORM_strx] (indexed (00000002) string = "/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX.sdk")
@@ -59,12 +59,12 @@ CHECK-NEXT:  DW_AT_low_pc [DW_FORM_addrx]     (indexed (00000000) address = 0x[[
 CHECK: DW_AT_linkage_name [DW_FORM_strx]       (indexed (00000005) string = "_Z4foo2i")
 CHECK: DW_AT_name [DW_FORM_strx]       (indexed (00000006) string = "foo2")
 CHECK: 0x0000003c:     DW_TAG_formal_parameter [3]   (0x0000002c)
-CHECK-NEXT:                   DW_AT_location [DW_FORM_sec_offset]   (0x[[LOCLIST_OFFSET:[0-9a-f]+]]: 
+CHECK-NEXT:                   DW_AT_location [DW_FORM_sec_offset]   (0x[[LOCLIST_OFFSET:[0-9a-f]+]]:
 CHECK-NEXT:                      [0x[[#%.16x,LOCLIST_PAIR_START:]], 0x[[#%.16x,LOCLIST_PAIR_END:]]): [[LOCLIST_EXPR:.*]]
 CHECK-NEXT:                      [0x[[#%.16x,LOCLIST_PAIR_START2:]], 0x[[#%.16x,LOCLIST_PAIR_END2:]]): [[LOCLIST_EXPR2:.*]])
 CHECK: DW_AT_name [DW_FORM_strx]     (indexed (00000007) string = "a")
 
-CHECK: 0x0000004e: Compile Unit: length = 0x00000072, format = DWARF32, version = 0x0004, abbr_offset = 0x00{{00|5a}}, addr_size = 0x08 
+CHECK: 0x0000004e: Compile Unit: length = 0x00000072, format = DWARF32, version = 0x0004, abbr_offset = 0x00{{00|5a}}, addr_size = 0x08
 CHECK: DW_AT_producer [DW_FORM_strp]     ( .debug_str[0x00000001] = "Apple clang version 14.0.3 (clang-1403.0.22.14.1)")
 CHECK: DW_AT_name [DW_FORM_strp] ( .debug_str[0x000000e0] = "b.cpp")
 CHECK: DW_AT_LLVM_sysroot [DW_FORM_strp] ( .debug_str[0x00000039] = "/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX.sdk")
@@ -79,7 +79,7 @@ CHECK-NEXT:                DW_AT_low_pc [DW_FORM_addr]     (0x[[#%.16x,LOC_LOWPC
 CHECK: DW_AT_linkage_name [DW_FORM_strp]       ( .debug_str[0x000000e6] = "_Z3bari")
 CHECK: DW_AT_name [DW_FORM_strp]       ( .debug_str[0x000000ee] = "bar")
 CHECK: 0x0000009d:     DW_TAG_formal_parameter {{.*}}   (0x00000080)
-CHECK-NEXT:                  DW_AT_location [DW_FORM_sec_offset]   (0x[[LOC_OFFSET:[0-9a-f]+]]: 
+CHECK-NEXT:                  DW_AT_location [DW_FORM_sec_offset]   (0x[[LOC_OFFSET:[0-9a-f]+]]:
 CHECK-NEXT:                     [0x[[#%.16x,LOC_PAIR_START:]], 0x[[#%.16x,LOC_PAIR_END:]]): [[LOC_EXPR:.*]]
 CHECK-NEXT:                     [0x[[#%.16x,LOC_PAIR_START2:]], 0x[[#%.16x,LOC_PAIR_END2:]]): [[LOC_EXPR2:.*]])
 CHECK: DW_AT_name [DW_FORM_strp]     ( .debug_str[0x000000f2] = "x")
@@ -91,7 +91,7 @@ CHECK-NEXT:            (0x[[#sub(LOC_PAIR_START2,LOC_LOWPC)]], 0x[[#sub(LOC_PAIR
 
 CHECK: .debug_loclists contents:
 CHECK-NEXT: 0x00000000: locations list header: length = 0x00000018, format = DWARF32, version = 0x0005, addr_size = 0x08, seg_size = 0x00, offset_entry_count = 0x00000000
-CHECK-NEXT: 0x[[LOCLIST_OFFSET]]: 
+CHECK-NEXT: 0x[[LOCLIST_OFFSET]]:
 CHECK-NEXT:            DW_LLE_base_addressx   (0x0000000000000000)
 CHECK-NEXT:            DW_LLE_offset_pair     (0x[[#sub(LOCLIST_PAIR_START,LOCLIST_LOWPC)]], 0x[[#sub(LOCLIST_PAIR_END,LOCLIST_LOWPC)]])
 CHECK-NEXT:            DW_LLE_offset_pair     (0x[[#sub(LOCLIST_PAIR_START2,LOCLIST_LOWPC)]], 0x[[#sub(LOCLIST_PAIR_END2,LOCLIST_LOWPC)]])
@@ -205,7 +205,7 @@ CHECK-NEXT: 0x00000028: 000000dc "int"
 CHECK: .debug_names contents:
 CHECK-NEXT: Name Index @ 0x0 {
 CHECK-NEXT:   Header {
-CHECK-NEXT:     Length: 0xBC
+CHECK-NEXT:     Length: 0xC4
 CHECK-NEXT:     Format: DWARF32
 CHECK-NEXT:     Version: 5
 CHECK-NEXT:     CU count: 2
@@ -213,6 +213,6 @@ CHECK-NEXT:     Local TU count: 0
 CHECK-NEXT:     Foreign TU count: 0
 CHECK-NEXT:     Bucket count: 5
 CHECK-NEXT:     Name count: 5
-CHECK-NEXT:     Abbreviations table size: 0x11
+CHECK-NEXT:     Abbreviations table size: 0x13
 CHECK-NEXT:     Augmentation: 'LLVM0700'
 CHECK-NEXT:   }

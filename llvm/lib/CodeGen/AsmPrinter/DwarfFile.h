@@ -28,6 +28,7 @@ class DbgLabel;
 class DINode;
 class DILocalScope;
 class DwarfCompileUnit;
+class DwarfTypeUnit;
 class DwarfUnit;
 class LexicalScope;
 class MCSection;
@@ -47,6 +48,14 @@ struct RangeSpanList {
   SmallVector<RangeSpan, 2> Ranges;
 };
 
+struct TypeUnitMetaInfo {
+  TypeUnitMetaInfo(MCSymbol *L, unsigned ID) : Label(L), UniqueID(ID) {}
+  // Symbol for start of the TU section.
+  MCSymbol *Label;
+  unsigned UniqueID;
+};
+using TUVectorTy = SmallVector<TypeUnitMetaInfo, 1>;
+
 class DwarfFile {
   // Target of Dwarf emission, used for sizing of abbreviations.
   AsmPrinter *Asm;
@@ -58,6 +67,9 @@ class DwarfFile {
 
   // A pointer to all units in the section.
   SmallVector<std::unique_ptr<DwarfCompileUnit>, 1> CUs;
+
+  // Symbols to start of all the TU sections that were generated.
+  TUVectorTy TUSymbols;
 
   DwarfStringPool StrPool;
 
@@ -103,6 +115,9 @@ public:
     return CUs;
   }
 
+  /// Returns type units that were constructed.
+  const TUVectorTy &getTypeUnitsSymbols() { return TUSymbols; }
+
   std::pair<uint32_t, RangeSpanList *> addRange(const DwarfCompileUnit &CU,
                                                 SmallVector<RangeSpan, 2> R);
 
@@ -123,6 +138,11 @@ public:
 
   /// Add a unit to the list of CUs.
   void addUnit(std::unique_ptr<DwarfCompileUnit> U);
+
+  /// Add a unit to the list of TUs.
+  /// Preserves type unit so that memory is not released before DWARF5
+  /// accelerator table is created.
+  void addTypeUnitSymbol(DwarfTypeUnit &U);
 
   /// Emit all of the units to the section listed with the given
   /// abbreviation section.

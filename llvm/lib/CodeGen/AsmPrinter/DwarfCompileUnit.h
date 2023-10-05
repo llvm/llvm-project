@@ -151,7 +151,7 @@ public:
                    UnitKind Kind = UnitKind::Full);
 
   bool hasRangeLists() const { return HasRangeLists; }
-  unsigned getUniqueID() const { return UniqueID; }
+  unsigned getUniqueID() const override { return UniqueID; }
 
   DwarfCompileUnit *getSkeleton() const {
     return Skeleton;

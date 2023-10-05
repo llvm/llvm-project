@@ -301,6 +301,9 @@ public:
   /// Get context owner's DIE.
   DIE *createTypeDIE(const DICompositeType *Ty);
 
+  /// Returns a unique ID.
+  virtual unsigned getUniqueID() const = 0;
+
 protected:
   ~DwarfUnit();
 
@@ -358,10 +361,13 @@ private:
 
 class DwarfTypeUnit final : public DwarfUnit {
   uint64_t TypeSignature;
+  static unsigned UniqueID;
   const DIE *Ty;
   DwarfCompileUnit &CU;
   MCDwarfDwoLineTable *SplitLineTable;
   bool UsedLineTable = false;
+  /// The start of the type unit within .debug_nfo section.
+  MCSymbol *LabelBegin = nullptr;
 
   unsigned getOrCreateSourceID(const DIFile *File) override;
   void finishNonUnitTypeDIE(DIE& D, const DICompositeType *CTy) override;
@@ -372,6 +378,8 @@ public:
                 DwarfFile *DWU, MCDwarfDwoLineTable *SplitLineTable = nullptr);
 
   void setTypeSignature(uint64_t Signature) { TypeSignature = Signature; }
+  /// Returns Type Signature.
+  uint64_t getTypeSignature() const { return TypeSignature; }
   void setType(const DIE *Ty) { this->Ty = Ty; }
 
   /// Emit the header for this unit, not including the initial length field.
@@ -385,6 +393,13 @@ public:
   void addGlobalType(const DIType *Ty, const DIE &Die,
                      const DIScope *Context) override;
   DwarfCompileUnit &getCU() override { return CU; }
+  /// Get the the symbol for start of the section for this type unit.
+  MCSymbol *getLabelBegin() const {
+    assert(LabelBegin && "LabelBegin is not initialized");
+    return LabelBegin;
+  }
+
+  unsigned getUniqueID() const override { return UniqueID; }
 };
 } // end llvm namespace
 #endif

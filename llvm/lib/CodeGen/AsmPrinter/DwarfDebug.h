@@ -17,7 +17,6 @@
 #include "DebugLocEntry.h"
 #include "DebugLocStream.h"
 #include "DwarfFile.h"
-#include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/DenseSet.h"
 #include "llvm/ADT/MapVector.h"
@@ -497,6 +496,7 @@ private:
 
   /// Accelerator tables.
   DWARF5AccelTable AccelDebugNames;
+  DWARF5AccelTable AccelTypeUntsDebugNames;
   AccelTable<AppleAccelTableOffsetData> AccelNames;
   AccelTable<AppleAccelTableOffsetData> AccelObjC;
   AccelTable<AppleAccelTableOffsetData> AccelNamespace;
@@ -514,6 +514,13 @@ private:
   const SmallVectorImpl<std::unique_ptr<DwarfCompileUnit>> &getUnits() {
     return InfoHolder.getUnits();
   }
+
+  /// Returns Type Units constructed for this module.
+  const TUVectorTy &getTypeUnitsSymbols() {
+    return InfoHolder.getTypeUnitsSymbols();
+  }
+
+  void addTypeUnitSymbol(DwarfTypeUnit &U);
 
   using InlinedEntity = DbgValueHistoryMap::InlinedEntity;
 
@@ -779,6 +786,9 @@ public:
 
   /// Returns what kind (if any) of accelerator tables to emit.
   AccelTableKind getAccelTableKind() const { return TheAccelTableKind; }
+
+  /// Seet TheAccelTableKind
+  void setTheAccelTableKind(AccelTableKind K) { TheAccelTableKind = K; };
 
   bool useAppleExtensionAttributes() const {
     return HasAppleExtensionAttributes;
