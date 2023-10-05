@@ -425,7 +425,7 @@ struct StructWithHashBuilderSupport {
   char C;
   int I;
   template <typename HasherT, llvm::support::endianness Endianness>
-  friend void addHash(llvm::HashBuilderImpl<HasherT, Endianness> &HBuilder,
+  friend void addHash(llvm::HashBuilder<HasherT, Endianness> &HBuilder,
                       const StructWithHashBuilderSupport &Value) {
     HBuilder.add(Value.C, Value.I);
   }
@@ -440,7 +440,7 @@ struct StructWithHashBuilderAndHashValueSupport {
   char C;
   int I;
   template <typename HasherT, llvm::support::endianness Endianness>
-  friend void addHash(llvm::HashBuilderImpl<HasherT, Endianness> &HBuilder,
+  friend void addHash(llvm::HashBuilder<HasherT, Endianness> &HBuilder,
                       const StructWithHashBuilderAndHashValueSupport &Value) {}
   friend hash_code
   hash_value(const StructWithHashBuilderAndHashValueSupport &Value) {
