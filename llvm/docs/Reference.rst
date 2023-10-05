@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 Reference
 =========
 
@@ -15,6 +16,7 @@ LLVM and API reference documentation.
    BranchWeightMetadata
    Bugpoint
    CommandGuide/index
+   ContentAddressableStorage
    ConvergenceAndUniformity
    ConvergentOperations
    Coroutines
@@ -232,3 +234,6 @@ Additional Topics
 :doc:`ConvergenceAndUniformity`
    A description of uniformity analysis in the presence of irreducible
    control flow, and its implementation.
+
+:doc:`ContentAddressableStorage`
+   A reference guide for using LLVM's CAS library.
