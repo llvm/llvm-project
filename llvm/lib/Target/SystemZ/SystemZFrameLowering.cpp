@@ -1423,6 +1423,18 @@ void SystemZXPLINKFrameLowering::processFunctionBeforeFrameFinalized(
 
   // Setup stack frame offset
   MFFrame.setOffsetAdjustment(Regs.getStackPointerBias());
+
+  // Nothing to do for leaf functions.
+  uint64_t StackSize = MFFrame.estimateStackSize(MF);
+  if (StackSize == 0 && MFFrame.getCalleeSavedInfo().empty())
+    return;
+
+  // Although the XPLINK specifications for AMODE64 state that minimum size
+  // of the param area is minimum 32 bytes and no rounding is otherwise
+  // specified, we round this area in 64 bytes increments to be compatible
+  // with existing compilers.
+  MFFrame.setMaxCallFrameSize(
+      std::max(64U, (unsigned)alignTo(MFFrame.getMaxCallFrameSize(), 64)));
 }
 
 // Determines the size of the frame, and creates the deferred spill objects.
