@@ -912,6 +912,15 @@ struct ReorderElementwiseOpsOnBroadcast final
       return failure();
     if (!OpTrait::hasElementwiseMappableTraits(op))
       return failure();
+    if (op->getNumOperands() == 0 ||
+        op->getResults()[0].getType() != op->getOperand(0).getType()) {
+      return failure();
+    }
+    // Avoid operations that only accept vector types, since broadcast
+    // source might be scalar types.
+    if (isa<vector::FMAOp>(op)) {
+      return failure();
+    }
 
     // Get the type of the lhs operand
     auto *lhsBcastOrSplat = op->getOperand(0).getDefiningOp();
@@ -1447,8 +1456,8 @@ void mlir::vector::
 
 void mlir::vector::populateSinkVectorBroadcastPatterns(
     RewritePatternSet &patterns, PatternBenefit benefit) {
-  patterns.add<ReorderElementwiseOpsOnBroadcast>(patterns.getContext(),
-                                                 benefit);
+  patterns.add<ReorderCastOpsOnBroadcast, ReorderElementwiseOpsOnBroadcast>(
+      patterns.getContext(), benefit);
 }
 
 //===----------------------------------------------------------------------===//
