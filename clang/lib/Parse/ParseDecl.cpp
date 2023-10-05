@@ -4038,7 +4038,7 @@ void Parser::ParseDeclarationSpecifiers(
       isStorageClass = true;
       break;
     case tok::kw_auto:
-      if (getLangOpts().CPlusPlus11) {
+      if (getLangOpts().CPlusPlus11 || getLangOpts().C23) {
         if (isKnownToBeTypeSpecifier(GetLookAheadToken(1))) {
           isInvalid = DS.SetStorageClassSpec(Actions, DeclSpec::SCS_auto, Loc,
                                              PrevSpec, DiagID, Policy);
@@ -7703,7 +7703,7 @@ void Parser::ParseBracketDeclarator(Declarator &D) {
     // Parse the constant-expression or assignment-expression now (depending
     // on dialect).
     if (getLangOpts().CPlusPlus) {
-      NumElements = ParseConstantExpression();
+      NumElements = ParseArrayBoundExpression();
     } else {
       EnterExpressionEvaluationContext Unevaluated(
           Actions, Sema::ExpressionEvaluationContext::ConstantEvaluated);

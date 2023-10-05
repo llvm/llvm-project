@@ -119,7 +119,11 @@ struct CollapseShapeOpInterface
                                                     tensor::CollapseShapeOp> {
   bool bufferizesToMemoryRead(Operation *op, OpOperand &opOperand,
                               const AnalysisState &state) const {
-    return false;
+    // tensor.collapse_shape may reallocate, at which point the source buffer is
+    // copied. I.e., there will be a memory read side effect on the bufferized
+    // source. This function conservatively returns "true" because whether a
+    // copy will be created or not is not known at this point.
+    return true;
   }
 
   bool bufferizesToMemoryWrite(Operation *op, OpOperand &opOperand,
@@ -257,6 +261,8 @@ struct DimOpInterface
 struct EmptyOpInterface
     : public BufferizableOpInterface::ExternalModel<EmptyOpInterface,
                                                     tensor::EmptyOp> {
+  bool bufferizesToAllocation(Operation *op, Value value) const { return true; }
+
   bool resultBufferizesToMemoryWrite(Operation *op, OpResult opResult,
                                      const AnalysisState &state) const {
     // The returned tensor does not have specified contents.
@@ -289,6 +295,8 @@ struct ExpandShapeOpInterface
                                                     tensor::ExpandShapeOp> {
   bool bufferizesToMemoryRead(Operation *op, OpOperand &opOperand,
                               const AnalysisState &state) const {
+    // In contrast to tensor.collapse_shape, this op can always be bufferized
+    // without a copy.
     return false;
   }
 
@@ -839,6 +847,7 @@ struct ReshapeOpInterface
                                                     tensor::ReshapeOp> {
   bool bufferizesToMemoryRead(Operation *op, OpOperand &opOperand,
                               const AnalysisState &state) const {
+    // Depending on the layout map, the source buffer may have to be copied.
     auto reshapeOp = cast<tensor::ReshapeOp>(op);
     return &opOperand == &reshapeOp.getShapeMutable();
   }
@@ -868,15 +877,20 @@ struct ReshapeOpInterface
       return failure();
 
     // memref.reshape requires the source buffer to have an identity layout.
-    // If the source memref does not have an identity layout, clone the source
+    // If the source memref does not have an identity layout, copy the source
     // into a new buffer with an identity layout.
     auto srcType = llvm::dyn_cast<MemRefType>(srcBuffer->getType());
     if (srcType && !srcType.getLayout().isIdentity()) {
-      auto identityType =
-          MemRefType::get(srcType.getShape(), srcType.getElementType());
+      FailureOr<Value> tensorAlloc = allocateTensorForShapedValue(
+          rewriter, op->getLoc(), reshapeOp.getSource(), options);
+      if (failed(tensorAlloc))
+        return failure();
+      auto memrefType = MemRefType::get(
+          srcType.getShape(), srcType.getElementType(), AffineMap(),
+          cast<BaseMemRefType>(srcBuffer->getType()).getMemorySpace());
       srcBuffer = rewriter
-                      .create<bufferization::CloneOp>(op->getLoc(),
-                                                      identityType, *srcBuffer)
+                      .create<bufferization::ToMemrefOp>(
+                          op->getLoc(), memrefType, *tensorAlloc)
                       .getResult();
     }
 
