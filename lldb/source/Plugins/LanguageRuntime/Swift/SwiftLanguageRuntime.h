@@ -73,9 +73,6 @@ protected:
   std::unique_ptr<SwiftLanguageRuntimeImpl> m_impl;
 
 public:
-  class MetadataPromise;
-  typedef std::shared_ptr<MetadataPromise> MetadataPromiseSP;
-
   static char ID;
 
   bool isA(const void *ClassID) const override {
@@ -240,24 +237,6 @@ public:
   CompilerType GetConcreteType(ExecutionContextScope *exe_scope,
                                ConstString abstract_type_name) override;
 
-  /// A proxy object to support lazy binding of Archetypes.
-  class MetadataPromise {
-    friend class SwiftLanguageRuntimeImpl;
-
-    MetadataPromise(ValueObject &, SwiftLanguageRuntimeImpl &, lldb::addr_t);
-
-    lldb::ValueObjectSP m_for_object_sp;
-    SwiftLanguageRuntimeImpl &m_swift_runtime;
-    lldb::addr_t m_metadata_location;
-    llvm::Optional<swift::MetadataKind> m_metadata_kind;
-    llvm::Optional<CompilerType> m_compiler_type;
-
-  public:
-    CompilerType FulfillTypePromise(Status *error = nullptr);
-  };
-
-  MetadataPromiseSP GetMetadataPromise(lldb::addr_t addr,
-                                       ValueObject &for_object);
   CompilerType GetTypeFromMetadata(TypeSystemSwift &tss, Address address);
   /// Build the artificial type metadata variable name for \p swift_type.
   static bool GetAbstractTypeName(StreamString &name, swift::Type swift_type);

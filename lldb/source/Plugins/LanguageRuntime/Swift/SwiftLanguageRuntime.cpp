@@ -270,12 +270,6 @@ public:
     return {};
   }
 
-  SwiftLanguageRuntime::MetadataPromiseSP
-  GetMetadataPromise(lldb::addr_t addr, ValueObject &for_object) {
-    STUB_LOG();
-    return {};
-  }
-
   void ModulesDidLoad(const ModuleList &module_list) {}
 
   bool IsStoredInlineInBuffer(CompilerType type) {
@@ -2384,12 +2378,6 @@ lldb::addr_t SwiftLanguageRuntime::FixupAddress(lldb::addr_t addr,
 CompilerType SwiftLanguageRuntime::GetTypeFromMetadata(TypeSystemSwift &tss,
                                                        Address addr) {
   FORWARD(GetTypeFromMetadata, tss, addr);
-}
-
-SwiftLanguageRuntime::MetadataPromiseSP
-SwiftLanguageRuntime::GetMetadataPromise(lldb::addr_t addr,
-                                         ValueObject &for_object) {
-  FORWARD(GetMetadataPromise, addr, for_object);
 }
 
 bool SwiftLanguageRuntime::IsStoredInlineInBuffer(CompilerType type) {

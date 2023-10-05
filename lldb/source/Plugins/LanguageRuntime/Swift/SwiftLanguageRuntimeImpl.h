@@ -111,8 +111,6 @@ public:
                                          ExecutionContextScope *exe_scope);
 
   CompilerType GetTypeFromMetadata(TypeSystemSwift &tss, Address address);
-  SwiftLanguageRuntime::MetadataPromiseSP
-  GetMetadataPromise(lldb::addr_t addr, ValueObject &for_object);
 
   llvm::Optional<uint64_t>
   GetMemberVariableOffsetRemoteAST(CompilerType instance_type,
@@ -377,7 +375,26 @@ protected:
                                           Address &address,
                                           Value::ValueType &value_type);
 
-  SwiftLanguageRuntime::MetadataPromiseSP
+  /// A proxy object to support lazy binding of Archetypes.
+  class MetadataPromise {
+    friend class SwiftLanguageRuntimeImpl;
+
+    MetadataPromise(ValueObject &, SwiftLanguageRuntimeImpl &, lldb::addr_t);
+
+    lldb::ValueObjectSP m_for_object_sp;
+    SwiftLanguageRuntimeImpl &m_swift_runtime;
+    lldb::addr_t m_metadata_location;
+    llvm::Optional<swift::MetadataKind> m_metadata_kind;
+    llvm::Optional<CompilerType> m_compiler_type;
+
+  public:
+    CompilerType FulfillTypePromise(Status *error = nullptr);
+  };
+  typedef std::shared_ptr<MetadataPromise> MetadataPromiseSP;
+
+  MetadataPromiseSP GetMetadataPromise(lldb::addr_t addr,
+                                       ValueObject &for_object);
+  MetadataPromiseSP
   GetPromiseForTypeNameAndFrame(const char *type_name, StackFrame *frame);
 
   llvm::Optional<lldb::addr_t>
@@ -408,7 +425,7 @@ protected:
   std::shared_ptr<LLDBMemoryReader> m_memory_reader_sp;
 
   llvm::DenseMap<std::pair<swift::ASTContext *, lldb::addr_t>,
-                 SwiftLanguageRuntime::MetadataPromiseSP>
+                 MetadataPromiseSP>
       m_promises_map;
 
   llvm::DenseMap<swift::ASTContext *,
