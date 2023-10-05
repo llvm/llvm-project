@@ -29,6 +29,18 @@ def Transform_Dialect : Dialect {
     constexpr const static ::llvm::StringLiteral
         kWithNamedSequenceAttrName = "transform.with_named_sequence";
 
+    /// Return the registered transform libraries.
+    ::llvm::ArrayRef<::mlir::ModuleOp> getLibraryModules();
+
+    /// Register a Transform library module
+    void registerLibraryModule(OwningOpRef<ModuleOp> &&library);
+
+    /// Return the transform identified using symbol ref attr. The root
+    /// symbol is the resource while the nested references index into the
+    /// selected library.
+    ::mlir::Operation* getRegisteredTransform(::llvm::StringRef resource,
+      ::mlir::SymbolRefAttr ref);
+
     /// Name of the attribute attachable to an operation so it can be
     /// identified as root by the default interpreter pass.
     constexpr const static ::llvm::StringLiteral kTargetTagAttrName =
