@@ -407,10 +407,6 @@ void DeadCodeAnalysis::visitRegionTerminator(
 
 void DeadCodeAnalysis::visitCallableTerminator(Operation *op,
                                                CallableOpInterface callable) {
-  // If there are no exiting values, we have nothing to do.
-  if (op->getNumOperands() == 0)
-    return;
-
   // Add as predecessors to all callsites this return op.
   auto *callsites = getOrCreateFor<PredecessorState>(op, callable);
   bool canResolve = op->hasTrait<OpTrait::ReturnLike>();
