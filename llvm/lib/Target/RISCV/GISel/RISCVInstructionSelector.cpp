@@ -537,7 +537,7 @@ void RISCVInstructionSelector::getICMPOperandsForBranch(
   RHS = MI.getOperand(3).getReg();
 
   // Adjust comparisons to use comparison with 0 if possible.
-  if (auto Constant = getIConstantVRegSExtVal(RHS, MRI)) {
+  if (auto Constant = getIConstantVRegSExtVal(RHS, MRI, true)) {
     switch (ICMPCC) {
     case CmpInst::Predicate::ICMP_SGT:
       // Convert X > -1 to X >= 0
