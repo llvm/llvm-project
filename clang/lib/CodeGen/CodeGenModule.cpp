@@ -1390,6 +1390,19 @@ void CodeGenModule::setGlobalVisibility(llvm::GlobalValue *GV,
   }
   if (!D)
     return;
+
+  // OpenMP declare target variables must be visible to the host so they can
+  // be registered. We require protected visibility unless the variable has
+  // the DT_nohost modifier and does not need to be registered.
+  if (Context.getLangOpts().OpenMP &&
+      Context.getLangOpts().OpenMPIsTargetDevice && isa<VarDecl>(D) &&
+      D->hasAttr<OMPDeclareTargetDeclAttr>() &&
+      D->getAttr<OMPDeclareTargetDeclAttr>()->getDevType() !=
+          OMPDeclareTargetDeclAttr::DT_NoHost) {
+    GV->setVisibility(llvm::GlobalValue::ProtectedVisibility);
+    return;
+  }
+
   // Set visibility for definitions, and for declarations if requested globally
   // or set explicitly.
   LinkageInfo LV = D->getLinkageAndVisibility();
