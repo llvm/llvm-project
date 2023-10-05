@@ -23,8 +23,6 @@
 // FIXME: we should not need this
 #include "Plugins/Language/ObjC/Cocoa.h"
 
-#include "llvm/ADT/StringRef.h"
-
 using namespace lldb;
 using namespace lldb_private;
 using namespace lldb_private::formatters;
