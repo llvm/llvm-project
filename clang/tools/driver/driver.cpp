@@ -329,8 +329,7 @@ static void SetInstallDir(SmallVectorImpl<const char *> &argv,
   // Attempt to find the original path used to invoke the driver, to determine
   // the installed path. We do this manually, because we want to support that
   // path being a symlink.
-  SmallString<128> InstalledPath(CanonicalPrefixes ? TheDriver.ClangExecutable
-                                                   : argv[0]);
+  SmallString<128> InstalledPath(argv[0]);
 
   // Do a PATH lookup, if there are no directory components.
   if (llvm::sys::path::filename(InstalledPath) == InstalledPath)
