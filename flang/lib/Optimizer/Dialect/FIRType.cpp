@@ -318,6 +318,18 @@ bool isAssumedShape(mlir::Type ty) {
   return false;
 }
 
+bool isAllocatableOrPointerArray(mlir::Type ty) {
+  if (auto refTy = fir::dyn_cast_ptrEleTy(ty))
+    ty = refTy;
+  if (auto boxTy = mlir::dyn_cast<fir::BoxType>(ty)) {
+    if (auto heapTy = mlir::dyn_cast<fir::HeapType>(boxTy.getEleTy()))
+      return mlir::isa<fir::SequenceType>(heapTy.getEleTy());
+    if (auto ptrTy = mlir::dyn_cast<fir::PointerType>(boxTy.getEleTy()))
+      return mlir::isa<fir::SequenceType>(ptrTy.getEleTy());
+  }
+  return false;
+}
+
 bool isPolymorphicType(mlir::Type ty) {
   if (auto refTy = fir::dyn_cast_ptrEleTy(ty))
     ty = refTy;
