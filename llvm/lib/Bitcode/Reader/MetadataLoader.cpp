@@ -473,8 +473,7 @@ class MetadataLoader::MetadataLoaderImpl {
 
   Error parseOneMetadata(SmallVectorImpl<uint64_t> &Record, unsigned Code,
                          PlaceholderQueue &Placeholders, StringRef Blob,
-                         unsigned &NextMetadataNo,
-                         BasicBlock *ConstExprInsertBB);
+                         unsigned &NextMetadataNo);
   Error parseMetadataStrings(ArrayRef<uint64_t> Record, StringRef Blob,
                              function_ref<void(StringRef)> CallBack);
   Error parseGlobalObjectAttachment(GlobalObject &GO,
@@ -723,7 +722,7 @@ public:
         TheModule(TheModule), Callbacks(std::move(Callbacks)),
         IsImporting(IsImporting) {}
 
-  Error parseMetadata(bool ModuleLevel, BasicBlock *ConstExprInsertBB);
+  Error parseMetadata(bool ModuleLevel);
 
   bool hasFwdRefs() const { return MetadataList.hasFwdRefs(); }
 
@@ -1048,8 +1047,7 @@ void MetadataLoader::MetadataLoaderImpl::callMDTypeCallback(Metadata **Val,
 
 /// Parse a METADATA_BLOCK. If ModuleLevel is true then we are parsing
 /// module level metadata.
-Error MetadataLoader::MetadataLoaderImpl::parseMetadata(
-    bool ModuleLevel, BasicBlock *ConstExprInsertBB) {
+Error MetadataLoader::MetadataLoaderImpl::parseMetadata(bool ModuleLevel) {
   if (!ModuleLevel && MetadataList.hasFwdRefs())
     return error("Invalid metadata: fwd refs into function blocks");
 
@@ -1132,7 +1130,7 @@ Error MetadataLoader::MetadataLoaderImpl::parseMetadata(
     if (Expected<unsigned> MaybeCode =
             Stream.readRecord(Entry.ID, Record, &Blob)) {
       if (Error Err = parseOneMetadata(Record, MaybeCode.get(), Placeholders,
-                                       Blob, NextMetadataNo, ConstExprInsertBB))
+                                       Blob, NextMetadataNo))
         return Err;
     } else
       return MaybeCode.takeError();
@@ -1173,8 +1171,7 @@ void MetadataLoader::MetadataLoaderImpl::lazyLoadOneMetadata(
   if (Expected<unsigned> MaybeCode =
           IndexCursor.readRecord(Entry.ID, Record, &Blob)) {
     if (Error Err =
-            parseOneMetadata(Record, MaybeCode.get(), Placeholders, Blob, ID,
-                             /* ConstExprInsertBB */ nullptr))
+            parseOneMetadata(Record, MaybeCode.get(), Placeholders, Blob, ID))
       report_fatal_error("Can't lazyload MD, parseOneMetadata: " +
                          Twine(toString(std::move(Err))));
   } else
@@ -1216,10 +1213,29 @@ void MetadataLoader::MetadataLoaderImpl::resolveForwardRefsAndPlaceholders(
   Placeholders.flush(MetadataList);
 }
 
+static Value *getValueFwdRef(BitcodeReaderValueList &ValueList, unsigned Idx,
+                             Type *Ty, unsigned TyID) {
+  Value *V = ValueList.getValueFwdRef(Idx, Ty, TyID,
+                                      /*ConstExprInsertBB*/ nullptr);
+  if (V)
+    return V;
+
+  // This is a reference to a no longer supported constant expression.
+  // Pretend that the constant was deleted, which will replace metadata
+  // references with undef.
+  // TODO: This is a rather indirect check. It would be more elegant to use
+  // a separate ErrorInfo for constant materialization failure and thread
+  // the error reporting through getValueFwdRef().
+  if (Idx < ValueList.size() && ValueList[Idx] &&
+      ValueList[Idx]->getType() == Ty)
+    return UndefValue::get(Ty);
+
+  return nullptr;
+}
+
 Error MetadataLoader::MetadataLoaderImpl::parseOneMetadata(
     SmallVectorImpl<uint64_t> &Record, unsigned Code,
-    PlaceholderQueue &Placeholders, StringRef Blob, unsigned &NextMetadataNo,
-    BasicBlock *ConstExprInsertBB) {
+    PlaceholderQueue &Placeholders, StringRef Blob, unsigned &NextMetadataNo) {
 
   bool IsDistinct = false;
   auto getMD = [&](unsigned ID) -> Metadata * {
@@ -1348,8 +1364,7 @@ Error MetadataLoader::MetadataLoaderImpl::parseOneMetadata(
       if (Ty->isMetadataTy())
         Elts.push_back(getMD(Record[i + 1]));
       else if (!Ty->isVoidTy()) {
-        Value *V = ValueList.getValueFwdRef(Record[i + 1], Ty, TyID,
-                                            /*ConstExprInsertBB*/ nullptr);
+        Value *V = getValueFwdRef(ValueList, Record[i + 1], Ty, TyID);
         if (!V)
           return error("Invalid value reference from old metadata");
         Metadata *MD = ValueAsMetadata::get(V);
@@ -1373,7 +1388,7 @@ Error MetadataLoader::MetadataLoaderImpl::parseOneMetadata(
     if (!Ty || Ty->isMetadataTy() || Ty->isVoidTy())
       return error("Invalid record");
 
-    Value *V = ValueList.getValueFwdRef(Record[1], Ty, TyID, ConstExprInsertBB);
+    Value *V = getValueFwdRef(ValueList, Record[1], Ty, TyID);
     if (!V)
       return error("Invalid value reference from metadata");
 
@@ -2462,9 +2477,8 @@ MetadataLoader::MetadataLoader(BitstreamCursor &Stream, Module &TheModule,
     : Pimpl(std::make_unique<MetadataLoaderImpl>(
           Stream, TheModule, ValueList, std::move(Callbacks), IsImporting)) {}
 
-Error MetadataLoader::parseMetadata(bool ModuleLevel,
-                                    BasicBlock *ConstExprInsertBB) {
-  return Pimpl->parseMetadata(ModuleLevel, ConstExprInsertBB);
+Error MetadataLoader::parseMetadata(bool ModuleLevel) {
+  return Pimpl->parseMetadata(ModuleLevel);
 }
 
 bool MetadataLoader::hasFwdRefs() const { return Pimpl->hasFwdRefs(); }
