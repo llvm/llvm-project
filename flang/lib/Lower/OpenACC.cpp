@@ -742,7 +742,26 @@ static mlir::Value getReductionInitValue(fir::FirOpBuilder &builder,
   if (auto boxTy = mlir::dyn_cast<fir::BaseBoxType>(ty))
     return getReductionInitValue(builder, loc, boxTy.getEleTy(), op);
 
+  if (auto heapTy = mlir::dyn_cast<fir::HeapType>(ty))
+    return getReductionInitValue(builder, loc, heapTy.getEleTy(), op);
+
+  if (auto ptrTy = mlir::dyn_cast<fir::PointerType>(ty))
+    return getReductionInitValue(builder, loc, ptrTy.getEleTy(), op);
+
   llvm::report_fatal_error("Unsupported OpenACC reduction type");
+}
+
+/// Return the nested sequence type if any.
+static mlir::Type extractSequenceType(mlir::Type ty) {
+  if (mlir::isa<fir::SequenceType>(ty))
+    return ty;
+  if (auto boxTy = mlir::dyn_cast<fir::BaseBoxType>(ty))
+    return extractSequenceType(boxTy.getEleTy());
+  if (auto heapTy = mlir::dyn_cast<fir::HeapType>(ty))
+    return extractSequenceType(heapTy.getEleTy());
+  if (auto ptrTy = mlir::dyn_cast<fir::PointerType>(ty))
+    return extractSequenceType(ptrTy.getEleTy());
+  return mlir::Type{};
 }
 
 static mlir::Value genReductionInitRegion(fir::FirOpBuilder &builder,
@@ -788,7 +807,8 @@ static mlir::Value genReductionInitRegion(fir::FirOpBuilder &builder,
       return declareOp.getBase();
     }
   } else if (auto boxTy = mlir::dyn_cast_or_null<fir::BaseBoxType>(ty)) {
-    if (!mlir::isa<fir::SequenceType>(boxTy.getEleTy()))
+    mlir::Type innerTy = extractSequenceType(boxTy);
+    if (!mlir::isa<fir::SequenceType>(innerTy))
       TODO(loc, "Unsupported boxed type for reduction");
     // Create the private copy from the initial fir.box.
     hlfir::Entity source = hlfir::Entity{builder.getBlock()->getArgument(0)};
@@ -993,8 +1013,9 @@ static void genCombiner(fir::FirOpBuilder &builder, mlir::Location loc,
     builder.setInsertionPointAfter(loops[0]);
   } else if (auto boxTy = mlir::dyn_cast<fir::BaseBoxType>(ty)) {
     llvm::SmallVector<mlir::Value> tripletArgs;
+    mlir::Type innerTy = extractSequenceType(boxTy);
     fir::SequenceType seqTy =
-        mlir::dyn_cast_or_null<fir::SequenceType>(boxTy.getEleTy());
+        mlir::dyn_cast_or_null<fir::SequenceType>(innerTy);
     if (!seqTy)
       TODO(loc, "Unsupported boxed type in OpenACC reduction");
 
@@ -1110,6 +1131,19 @@ mlir::acc::ReductionRecipeOp Fortran::lower::createOrGetReductionRecipe(
   return recipe;
 }
 
+static bool isSupportedReductionType(mlir::Type ty) {
+  ty = fir::unwrapRefType(ty);
+  if (auto boxTy = mlir::dyn_cast<fir::BaseBoxType>(ty))
+    return isSupportedReductionType(boxTy.getEleTy());
+  if (auto seqTy = mlir::dyn_cast<fir::SequenceType>(ty))
+    return isSupportedReductionType(seqTy.getEleTy());
+  if (auto heapTy = mlir::dyn_cast<fir::HeapType>(ty))
+    return isSupportedReductionType(heapTy.getEleTy());
+  if (auto ptrTy = mlir::dyn_cast<fir::PointerType>(ty))
+    return isSupportedReductionType(ptrTy.getEleTy());
+  return fir::isa_trivial(ty);
+}
+
 static void
 genReductions(const Fortran::parser::AccObjectListWithReduction &objectList,
               Fortran::lower::AbstractConverter &converter,
@@ -1135,10 +1169,7 @@ genReductions(const Fortran::parser::AccObjectListWithReduction &objectList,
     if (auto seqTy = mlir::dyn_cast<fir::SequenceType>(reductionTy))
       reductionTy = seqTy.getEleTy();
 
-    if (!fir::isa_trivial(reductionTy) &&
-        ((fir::isAllocatableType(reductionTy) ||
-          fir::isPointerType(reductionTy)) &&
-         !bounds.empty()))
+    if (!isSupportedReductionType(reductionTy))
       TODO(operandLocation, "reduction with unsupported type");
 
     auto op = createDataEntryOp<mlir::acc::ReductionOp>(
@@ -1146,13 +1177,16 @@ genReductions(const Fortran::parser::AccObjectListWithReduction &objectList,
         /*structured=*/true, /*implicit=*/false,
         mlir::acc::DataClause::acc_reduction, baseAddr.getType());
     mlir::Type ty = op.getAccPtr().getType();
+    if (!areAllBoundConstant(bounds) ||
+        fir::isAssumedShape(baseAddr.getType()) ||
+        fir::isAllocatableOrPointerArray(baseAddr.getType()))
+      ty = baseAddr.getType();
     std::string suffix =
         areAllBoundConstant(bounds) ? getBoundsString(bounds) : "";
     std::string recipeName = fir::getTypeAsString(
         ty, converter.getKindMap(),
         ("reduction_" + stringifyReductionOperator(mlirOp)).str() + suffix);
-    if (!areAllBoundConstant(bounds) || fir::isAssumedShape(baseAddr.getType()))
-      ty = baseAddr.getType();
+
     mlir::acc::ReductionRecipeOp recipe =
         Fortran::lower::createOrGetReductionRecipe(
             builder, recipeName, operandLocation, ty, mlirOp, bounds);
