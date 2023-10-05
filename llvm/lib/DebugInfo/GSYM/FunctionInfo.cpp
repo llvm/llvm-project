@@ -101,7 +101,7 @@ uint64_t FunctionInfo::cacheEncoding() {
   if (!isValid())
     return 0;
   raw_svector_ostream OutStrm(EncodingCache);
-  FileWriter FW(OutStrm, support::endian::system_endianness());
+  FileWriter FW(OutStrm, llvm::endianness::native);
   llvm::Expected<uint64_t> Result = encode(FW);
   if (!Result) {
     EncodingCache.clear();
@@ -123,7 +123,7 @@ llvm::Expected<uint64_t> FunctionInfo::encode(FileWriter &Out) const {
   // precompute exactly how big FunctionInfo objects encode into so we can
   // accurately make segments of a specific size.
   if (!EncodingCache.empty() &&
-      support::endian::system_endianness() == Out.getByteOrder()) {
+      llvm::endianness::native == Out.getByteOrder()) {
     // We already encoded this object, just write out the bytes.
     Out.writeData(llvm::ArrayRef<uint8_t>((const uint8_t *)EncodingCache.data(),
                                           EncodingCache.size()));

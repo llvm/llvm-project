@@ -53,9 +53,9 @@ struct PickAlignment {
 
 namespace endian {
 
-constexpr endianness system_endianness() {
-  return sys::IsBigEndianHost ? big : little;
-}
+LLVM_DEPRECATED("Use llvm::endianness::native instead",
+                "llvm::endianness::native")
+constexpr endianness system_endianness() { return llvm::endianness::native; }
 
 template <typename value_type>
 [[nodiscard]] inline value_type byte_swap(value_type value, endianness endian) {

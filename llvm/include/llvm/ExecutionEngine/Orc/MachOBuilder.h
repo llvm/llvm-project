@@ -86,7 +86,7 @@ private:
   using StringTable = std::vector<StringTableEntry>;
 
   static bool swapStruct() {
-    return MachOTraits::Endianness != support::endian::system_endianness();
+    return MachOTraits::Endianness != llvm::endianness::native;
   }
 
 public:
