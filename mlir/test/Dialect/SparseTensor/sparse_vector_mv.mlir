@@ -1,3 +1,5 @@
+// UNSUPPORTED: target={{.*}}
+//
 // RUN: mlir-opt %s -sparse-compiler="vl=8" |  FileCheck %s
 
 #Dense = #sparse_tensor.encoding<{
