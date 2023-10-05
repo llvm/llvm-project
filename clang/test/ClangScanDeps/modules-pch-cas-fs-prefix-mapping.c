@@ -18,9 +18,11 @@
 // RUN: FileCheck %s -input-file %t/pch_result.txt -DPREFIX=%t -DSDK_PREFIX=%S/Inputs/SDK -check-prefix=PCH
 
 // == Build PCH
+// RUN: %deps-to-rsp %t/pch_result.txt --module-name=_Builtin_stdarg > %t/stdarg.cc1.rsp
 // RUN: %deps-to-rsp %t/pch_result.txt --module-name=B > %t/B.cc1.rsp
 // RUN: %deps-to-rsp %t/pch_result.txt --module-name=A > %t/A.cc1.rsp
 // RUN: %deps-to-rsp %t/pch_result.txt --tu-index 0 > %t/pch.cc1.rsp
+// RUN: %clang @%t/stdarg.cc1.rsp
 // RUN: %clang @%t/B.cc1.rsp
 // RUN: %clang @%t/A.cc1.rsp
 // Ensure we load pcms from action cache
@@ -119,7 +121,11 @@
 // PCH:          }
 // PCH:          {
 // PCH:            "casfs-root-id": "[[B_ROOT_ID:llvmcas://[[:xdigit:]]+]]"
-// PCH:            "clang-module-deps": [],
+// PCH:            "clang-module-deps": [
+// PCH:               {
+// PCH:                 "module-name": "_Builtin_stdarg"
+// PCH:               }
+// PCH:             ],
 // PCH:            "clang-modulemap-file": "[[PREFIX]]/module.modulemap"
 // PCH:            "command-line": [
 // PCH:              "-fcas-path"
