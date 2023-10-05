@@ -1563,12 +1563,12 @@ def OpenACC_RoutineOp : OpenACC_Op<"routine", [IsolatedFromAbove]> {
   let arguments = (ins SymbolNameAttr:$sym_name,
                        SymbolNameAttr:$func_name,
                        OptionalAttr<StrAttr>:$bind_name,
-                       OptionalAttr<UnitAttr>:$gang,
-                       OptionalAttr<UnitAttr>:$worker,
-                       OptionalAttr<UnitAttr>:$vector,
-                       OptionalAttr<UnitAttr>:$seq,
-                       OptionalAttr<UnitAttr>:$nohost,
-                       OptionalAttr<UnitAttr>:$implicit,
+                       UnitAttr:$gang,
+                       UnitAttr:$worker,
+                       UnitAttr:$vector,
+                       UnitAttr:$seq,
+                       UnitAttr:$nohost,
+                       UnitAttr:$implicit,
                        OptionalAttr<APIntAttr>:$gangDim);
 
   let extraClassDeclaration = [{
