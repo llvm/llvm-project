@@ -408,8 +408,9 @@ static bool checkOffsets(const typename ELFT::Phdr &Phdr,
     return true;
 
   // Only non-empty sections can be at the end of a segment.
-  uint64_t SectionSize = Sec.sh_size ? Sec.sh_size : 1;
-  AddressRange SectionAddressRange(Sec.sh_offset, Sec.sh_offset + SectionSize);
+  uint64_t SectionSize = Sec.sh_size ? Sec.sh_size : 1ull;
+  AddressRange SectionAddressRange((uint64_t)Sec.sh_offset,
+                                   Sec.sh_offset + SectionSize);
   AddressRange SegmentAddressRange(Phdr.p_offset,
                                    Phdr.p_offset + Phdr.p_filesz);
   if (SegmentAddressRange.contains(SectionAddressRange))
@@ -425,8 +426,9 @@ template <class ELFT>
 static bool checkVMA(const typename ELFT::Phdr &Phdr,
                      const typename ELFT::Shdr &Sec, bool &Overlap) {
   // Only non-empty sections can be at the end of a segment.
-  uint64_t SectionSize = Sec.sh_size ? Sec.sh_size : 1;
-  AddressRange SectionAddressRange(Sec.sh_addr, Sec.sh_addr + SectionSize);
+  uint64_t SectionSize = Sec.sh_size ? Sec.sh_size : 1ull;
+  AddressRange SectionAddressRange((uint64_t)Sec.sh_addr,
+                                   Sec.sh_addr + SectionSize);
   AddressRange SegmentAddressRange(Phdr.p_vaddr, Phdr.p_vaddr + Phdr.p_memsz);
 
   if (SegmentAddressRange.contains(SectionAddressRange))
