@@ -1138,22 +1138,33 @@ define <2 x half> @test_bitcast_2xi8_to_2xhalf(i8 %a) #0 {
 define <4 x i8> @test_shufflevector(<4 x i8> %a) #0 {
 ; CHECK-LABEL: test_shufflevector(
 ; CHECK:       {
-; CHECK-NEXT:    .reg .b32 %r<10>;
+; CHECK-NEXT:    .reg .b32 %r<4>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    ld.param.u32 %r1, [test_shufflevector_param_0];
-; CHECK-NEXT:    bfe.s32 %r2, %r1, 24, 8;
-; CHECK-NEXT:    bfe.s32 %r3, %r1, 16, 8;
-; CHECK-NEXT:    bfi.b32 %r4, %r3, %r2, 8, 8;
-; CHECK-NEXT:    bfe.s32 %r5, %r1, 8, 8;
-; CHECK-NEXT:    bfi.b32 %r6, %r5, %r4, 16, 8;
-; CHECK-NEXT:    bfe.s32 %r7, %r1, 0, 8;
-; CHECK-NEXT:    bfi.b32 %r8, %r7, %r6, 24, 8;
-; CHECK-NEXT:    st.param.b32 [func_retval0+0], %r8;
+; CHECK-NEXT:    // implicit-def: %r3
+; CHECK-NEXT:    prmt.b32 %r2, %r1, %r3, 291;
+; CHECK-NEXT:    st.param.b32 [func_retval0+0], %r2;
 ; CHECK-NEXT:    ret;
   %s = shufflevector <4 x i8> %a, <4 x i8> undef, <4 x i32> <i32 3, i32 2, i32 1, i32 0>
   ret <4 x i8> %s
 }
+
+define <4 x i8> @test_shufflevector_2(<4 x i8> %a, <4 x i8> %b) #0 {
+; CHECK-LABEL: test_shufflevector_2(
+; CHECK:       {
+; CHECK-NEXT:    .reg .b32 %r<4>;
+; CHECK-EMPTY:
+; CHECK-NEXT:  // %bb.0:
+; CHECK-NEXT:    ld.param.u32 %r2, [test_shufflevector_2_param_1];
+; CHECK-NEXT:    ld.param.u32 %r1, [test_shufflevector_2_param_0];
+; CHECK-NEXT:    prmt.b32 %r3, %r1, %r2, 9527;
+; CHECK-NEXT:    st.param.b32 [func_retval0+0], %r3;
+; CHECK-NEXT:    ret;
+  %s = shufflevector <4 x i8> %a, <4 x i8> %b, <4 x i32> <i32 7, i32 3, i32 5, i32 2>
+  ret <4 x i8> %s
+}
+
 
 define <4 x i8> @test_insertelement(<4 x i8> %a, i8 %x) #0 {
 ; CHECK-LABEL: test_insertelement(

@@ -1822,17 +1822,17 @@ multiclass BFI<string Instr, ValueType T, RegisterClass RC, Operand ImmCls> {
 multiclass PRMT<ValueType T, RegisterClass RC> {
   def rrr
     : NVPTXInst<(outs RC:$d),
-                (ins RC:$a, Int32Regs:$b, Int32Regs:$c, i32imm:$mode),
+                (ins RC:$a, Int32Regs:$b, Int32Regs:$c, PrmtMode:$mode),
                 !strconcat("prmt.b32${mode}", " \t$d, $a, $b, $c;"),
                 [(set (T RC:$d), (prmt (T RC:$a), (T RC:$b), (i32 Int32Regs:$c), imm:$mode))]>;
   def rri
     : NVPTXInst<(outs RC:$d),
-                (ins RC:$a, Int32Regs:$b, i32imm:$c, i32imm:$mode),
+                (ins RC:$a, Int32Regs:$b, i32imm:$c, PrmtMode:$mode),
                 !strconcat("prmt.b32${mode}", " \t$d, $a, $b, $c;"),
                 [(set (T RC:$d), (prmt (T RC:$a), (T RC:$b), (i32 imm:$c), imm:$mode))]>;
   def rii
     : NVPTXInst<(outs RC:$d),
-                (ins RC:$a, i32imm:$b, i32imm:$c, i32imm:$mode),
+                (ins RC:$a, i32imm:$b, i32imm:$c, PrmtMode:$mode),
                 !strconcat("prmt.b32${mode}", " \t$d, $a, $b, $c;"),
                 [(set (T RC:$d), (prmt (T RC:$a), (T imm:$b), (i32 imm:$c), imm:$mode))]>;
 }
