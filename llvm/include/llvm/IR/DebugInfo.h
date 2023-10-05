@@ -320,11 +320,13 @@ bool isAssignmentTrackingEnabled(const Module &M);
 
 template <> struct DenseMapInfo<at::VarRecord> {
   static inline at::VarRecord getEmptyKey() {
-    return at::VarRecord{nullptr, nullptr};
+    return at::VarRecord{DenseMapInfo<DILocalVariable *>::getEmptyKey(),
+                         DenseMapInfo<DILocation *>::getEmptyKey()};
   }
 
   static inline at::VarRecord getTombstoneKey() {
-    return at::VarRecord{nullptr, nullptr};
+    return at::VarRecord{DenseMapInfo<DILocalVariable *>::getTombstoneKey(),
+                         DenseMapInfo<DILocation *>::getTombstoneKey()};
   }
 
   static unsigned getHashValue(const at::VarRecord &Var) {
