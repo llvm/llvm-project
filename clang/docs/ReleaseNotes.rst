@@ -717,6 +717,8 @@ Bug Fixes in This Version
   virtual member functions even if the target required a greater function
   alignment and/or did not have function pointers which point to function entry
   points (i.e., uses function descriptor objects instead).
+- Fixes a ``clang-17`` regression where ``LLVM_UNREACHABLE_OPTIMIZE=OFF``
+  cannot be used with ``Release`` mode builds. (`#68237 <https://github.com/llvm/llvm-project/issues/68237>`_).
 
 Bug Fixes to Compiler Builtins
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
