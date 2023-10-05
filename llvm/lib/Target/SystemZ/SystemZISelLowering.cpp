@@ -1816,13 +1816,6 @@ SystemZTargetLowering::LowerCall(CallLoweringInfo &CLI,
   // Get a count of how many bytes are to be pushed on the stack.
   unsigned NumBytes = ArgCCInfo.getStackSize();
 
-  if (Subtarget.isTargetXPLINK64())
-    // Although the XPLINK specifications for AMODE64 state that minimum size
-    // of the param area is minimum 32 bytes and no rounding is otherwise
-    // specified, we round this area in 64 bytes increments to be compatible
-    // with existing compilers.
-    NumBytes = std::max(64U, (unsigned)alignTo(NumBytes, 64));
-
   // Mark the start of the call.
   if (!IsTailCall)
     Chain = DAG.getCALLSEQ_START(Chain, NumBytes, 0, DL);
