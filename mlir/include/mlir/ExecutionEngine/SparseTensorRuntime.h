@@ -143,14 +143,6 @@ MLIR_CRUNNERUTILS_EXPORT void *_mlir_ciface_newSparseTensorFromReader(
 MLIR_CRUNNERUTILS_EXPORT void _mlir_ciface_getSparseTensorReaderDimSizes(
     StridedMemRefType<index_type, 1> *out, void *p);
 
-/// Returns the next element for the sparse tensor being read.
-#define DECL_GETNEXT(VNAME, V)                                                 \
-  MLIR_CRUNNERUTILS_EXPORT void _mlir_ciface_getSparseTensorReaderNext##VNAME( \
-      void *p, StridedMemRefType<index_type, 1> *dimCoordsRef,                 \
-      StridedMemRefType<V, 0> *vref);
-MLIR_SPARSETENSOR_FOREVERY_V(DECL_GETNEXT)
-#undef DECL_GETNEXT
-
 /// Reads the sparse tensor, stores the coordinates and values to the given
 /// memrefs. Returns a boolean to indicate whether the COO elements are sorted.
 #define DECL_GETNEXT(VNAME, V, CNAME, C)                                       \
