@@ -159,8 +159,6 @@ ObjectFile::createObjectFile(MemoryBufferRef Object, file_magic Type,
   case file_magic::cas_id: // MCCAS
   case file_magic::offload_binary:
   case file_magic::dxcontainer_object:
-  case file_magic::offload_bundle:
-  case file_magic::offload_bundle_compressed:
     return errorCodeToError(object_error::invalid_file_type);
   case file_magic::tapi_file:
     return errorCodeToError(object_error::invalid_file_type);
