@@ -10,6 +10,7 @@ class TestCase(lldbtest.TestBase):
 
     @swiftTest
     @skipIf(oslist=['windows', 'linux'])
+    @skipIf(bugnumber="rdar://116529018")
     def test(self):
         """Test step-in to async functions"""
         self.build()
