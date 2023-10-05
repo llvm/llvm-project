@@ -87,6 +87,7 @@ public:
       return false;
     case RISCV::JALR:
     case RISCV::C_JALR:
+    case RISCV::C_JR:
       return true;
     }
   }
@@ -158,6 +159,17 @@ public:
     DispValue = 0;
     DispExpr = nullptr;
     PCRelBaseOut = nullptr;
+
+    // Check for the following long tail call sequence:
+    // 1: auipc xi, %pcrel_hi(sym)
+    // jalr zero, %pcrel_lo(1b)(xi)
+    if (Instruction.getOpcode() == RISCV::JALR && Begin != End) {
+      MCInst &PrevInst = *std::prev(End);
+      if (isRISCVCall(PrevInst, Instruction) &&
+          Instruction.getOperand(0).getReg() == RISCV::X0)
+        return IndirectBranchType::POSSIBLE_TAIL_CALL;
+    }
+
     return IndirectBranchType::UNKNOWN;
   }
 
