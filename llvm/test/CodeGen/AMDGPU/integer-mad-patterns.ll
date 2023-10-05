@@ -4039,8 +4039,9 @@ define <2 x i8> @clpeak_imad_pat_v2i8(<2 x i8> %x, <2 x i8> %y) {
 ; GFX67-SDAG-NEXT:    v_lshlrev_b32_e32 v4, 8, v6
 ; GFX67-SDAG-NEXT:    v_mul_u32_u24_e32 v5, v0, v2
 ; GFX67-SDAG-NEXT:    v_or_b32_e32 v3, v4, v3
+; GFX67-SDAG-NEXT:    s_movk_i32 s4, 0x100
 ; GFX67-SDAG-NEXT:    v_mad_u32_u24 v0, v0, v2, 1
-; GFX67-SDAG-NEXT:    v_add_i32_e32 v3, vcc, 0x100, v3
+; GFX67-SDAG-NEXT:    v_add_i32_e32 v3, vcc, s4, v3
 ; GFX67-SDAG-NEXT:    v_and_b32_e32 v0, 0xff, v0
 ; GFX67-SDAG-NEXT:    v_lshlrev_b32_e32 v2, 8, v1
 ; GFX67-SDAG-NEXT:    v_or_b32_e32 v0, v2, v0

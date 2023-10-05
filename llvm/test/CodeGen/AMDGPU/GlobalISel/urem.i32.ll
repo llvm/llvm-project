@@ -222,10 +222,10 @@ define i32 @v_urem_i32_oddk_denom(i32 %num) {
 ; CHECK-NEXT:    v_mul_hi_u32 v1, v0, v1
 ; CHECK-NEXT:    v_mul_lo_u32 v1, v1, s4
 ; CHECK-NEXT:    v_sub_i32_e32 v0, vcc, v0, v1
-; CHECK-NEXT:    v_subrev_i32_e32 v1, vcc, 0x12d8fb, v0
+; CHECK-NEXT:    v_subrev_i32_e32 v1, vcc, s4, v0
 ; CHECK-NEXT:    v_cmp_le_u32_e32 vcc, s4, v0
 ; CHECK-NEXT:    v_cndmask_b32_e32 v0, v0, v1, vcc
-; CHECK-NEXT:    v_subrev_i32_e32 v1, vcc, 0x12d8fb, v0
+; CHECK-NEXT:    v_subrev_i32_e32 v1, vcc, s4, v0
 ; CHECK-NEXT:    v_cmp_le_u32_e32 vcc, s4, v0
 ; CHECK-NEXT:    v_cndmask_b32_e32 v0, v0, v1, vcc
 ; CHECK-NEXT:    s_setpc_b64 s[30:31]
@@ -253,13 +253,13 @@ define <2 x i32> @v_urem_v2i32_oddk_denom(<2 x i32> %num) {
 ; GISEL-NEXT:    v_mul_lo_u32 v3, v3, v2
 ; GISEL-NEXT:    v_sub_i32_e32 v0, vcc, v0, v4
 ; GISEL-NEXT:    v_sub_i32_e32 v1, vcc, v1, v3
-; GISEL-NEXT:    v_subrev_i32_e32 v3, vcc, 0x12d8fb, v0
+; GISEL-NEXT:    v_subrev_i32_e32 v3, vcc, s4, v0
 ; GISEL-NEXT:    v_subrev_i32_e32 v4, vcc, 0x12d8fb, v1
 ; GISEL-NEXT:    v_cmp_le_u32_e32 vcc, s4, v0
 ; GISEL-NEXT:    v_cndmask_b32_e32 v0, v0, v3, vcc
 ; GISEL-NEXT:    v_cmp_ge_u32_e32 vcc, v1, v2
 ; GISEL-NEXT:    v_cndmask_b32_e32 v1, v1, v4, vcc
-; GISEL-NEXT:    v_subrev_i32_e32 v3, vcc, 0x12d8fb, v0
+; GISEL-NEXT:    v_subrev_i32_e32 v3, vcc, s4, v0
 ; GISEL-NEXT:    v_subrev_i32_e32 v4, vcc, 0x12d8fb, v1
 ; GISEL-NEXT:    v_cmp_le_u32_e32 vcc, s4, v0
 ; GISEL-NEXT:    v_cndmask_b32_e32 v0, v0, v3, vcc
@@ -284,13 +284,13 @@ define <2 x i32> @v_urem_v2i32_oddk_denom(<2 x i32> %num) {
 ; CGP-NEXT:    v_mul_lo_u32 v2, v2, s4
 ; CGP-NEXT:    v_sub_i32_e32 v0, vcc, v0, v3
 ; CGP-NEXT:    v_sub_i32_e32 v1, vcc, v1, v2
-; CGP-NEXT:    v_subrev_i32_e32 v2, vcc, 0x12d8fb, v0
-; CGP-NEXT:    v_subrev_i32_e32 v3, vcc, 0x12d8fb, v1
+; CGP-NEXT:    v_subrev_i32_e32 v2, vcc, s4, v0
+; CGP-NEXT:    v_subrev_i32_e32 v3, vcc, s4, v1
 ; CGP-NEXT:    v_cmp_le_u32_e32 vcc, s4, v0
 ; CGP-NEXT:    v_cndmask_b32_e32 v0, v0, v2, vcc
 ; CGP-NEXT:    v_cmp_le_u32_e32 vcc, s4, v1
 ; CGP-NEXT:    v_cndmask_b32_e32 v1, v1, v3, vcc
-; CGP-NEXT:    v_subrev_i32_e32 v2, vcc, 0x12d8fb, v0
+; CGP-NEXT:    v_subrev_i32_e32 v2, vcc, s4, v0
 ; CGP-NEXT:    v_subrev_i32_e32 v3, vcc, 0x12d8fb, v1
 ; CGP-NEXT:    v_cmp_le_u32_e32 vcc, s4, v0
 ; CGP-NEXT:    v_cndmask_b32_e32 v0, v0, v2, vcc

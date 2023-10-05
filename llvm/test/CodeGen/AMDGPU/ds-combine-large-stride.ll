@@ -5,9 +5,9 @@
 ; GCN:     s_load_dword [[ARG:s[0-9]+]], s[4:5], 0x0
 ; GCN:     v_mov_b32_e32 [[BASE:v[0-9]+]], [[ARG]]
 
-; VI-DAG: v_add_u32_e32 [[B1:v[0-9]+]], vcc, 0x200, [[BASE]]
-; VI-DAG: v_add_u32_e32 [[B2:v[0-9]+]], vcc, 0x400, [[BASE]]
-; VI-DAG: v_add_u32_e32 [[B3:v[0-9]+]], vcc, 0x800, [[BASE]]
+; VI-DAG: v_add_u32_e32 [[B1:v[0-9]+]], vcc, {{s[0-9]+}}, [[BASE]]
+; VI-DAG: v_add_u32_e32 [[B2:v[0-9]+]], vcc, {{s[0-9]+}}, [[BASE]]
+; VI-DAG: v_add_u32_e32 [[B3:v[0-9]+]], vcc, {{s[0-9]+}}, [[BASE]]
 
 ; GFX9-DAG: v_add_u32_e32 [[B1:v[0-9]+]], 0x200, [[BASE]]
 ; GFX9-DAG: v_add_u32_e32 [[B2:v[0-9]+]], 0x400, [[BASE]]
@@ -50,8 +50,8 @@ bb:
 ; GCN:     s_load_dword [[ARG:s[0-9]+]], s[4:5], 0x0
 ; GCN:     v_mov_b32_e32 [[BASE:v[0-9]+]], [[ARG]]
 
-; VI-DAG: v_add_u32_e32 [[B1:v[0-9]+]], vcc, 0x400, [[BASE]]
-; VI-DAG: v_add_u32_e32 [[B2:v[0-9]+]], vcc, 0x800, [[BASE]]
+; VI-DAG: v_add_u32_e32 [[B1:v[0-9]+]], vcc, {{s[0-9]+}}, [[BASE]]
+; VI-DAG: v_add_u32_e32 [[B2:v[0-9]+]], vcc, {{s[0-9]+}}, [[BASE]]
 
 ; GFX9-DAG: v_add_u32_e32 [[B1:v[0-9]+]], 0x400, [[BASE]]
 ; GFX9-DAG: v_add_u32_e32 [[B2:v[0-9]+]], 0x800, [[BASE]]
@@ -94,9 +94,9 @@ bb:
 ; GCN:     s_load_dword [[ARG:s[0-9]+]], s[4:5], 0x0
 ; GCN:     v_mov_b32_e32 [[BASE:v[0-9]+]], [[ARG]]
 
-; VI-DAG: v_add_u32_e32 [[B1:v[0-9]+]], vcc, 0x800, [[BASE]]
+; VI-DAG: v_add_u32_e32 [[B1:v[0-9]+]], vcc, {{s[0-9]+}}, [[BASE]]
 ; VI-DAG: v_add_u32_e32 [[B2:v[0-9]+]], vcc, {{s[0-9]+}}, [[BASE]]
-; VI-DAG: v_add_u32_e32 [[B3:v[0-9]+]], vcc, 0x200, [[BASE]]
+; VI-DAG: v_add_u32_e32 [[B3:v[0-9]+]], vcc, {{s[0-9]+}}, [[BASE]]
 
 ; GFX9-DAG: v_add_u32_e32 [[B1:v[0-9]+]], 0x800, [[BASE]]
 ; GFX9-DAG: v_add_u32_e32 [[B2:v[0-9]+]], 0x400, [[BASE]]
@@ -173,9 +173,9 @@ bb:
 
 ; GCN-LABEL: ds_read32_combine_stride_8192_shifted:
 ; GCN:     s_load_dword [[ARG:s[0-9]+]], s[4:5], 0x0
-; GFX9:    v_mov_b32_e32 [[BASE:v[0-9]+]], [[ARG]]
+; GCN:     v_mov_b32_e32 [[BASE:v[0-9]+]], [[ARG]]
 
-; VI-DAG: v_add_u32_e64 [[B1:v[0-9]+]], vcc, [[ARG]], 8
+; VI-DAG: v_add_u32_e32 [[B1:v[0-9]+]], vcc, 8, [[BASE]]
 ; GFX9-DAG: v_add_u32_e32 [[B1:v[0-9]+]], 8, [[BASE]]
 
 ; GCN-DAG: ds_read2st64_b32 v[{{[0-9]+:[0-9]+}}], [[B1]] offset1:32
@@ -209,7 +209,7 @@ bb:
 ; GCN:     s_load_dword [[ARG:s[0-9]+]], s[4:5], 0x0
 ; GCN:     v_mov_b32_e32 [[BASE:v[0-9]+]], [[ARG]]
 
-; VI-DAG: v_add_u32_e32 [[B1:v[0-9]+]], vcc, 0x800, [[BASE]]
+; VI-DAG: v_add_u32_e32 [[B1:v[0-9]+]], vcc, {{s[0-9]+}}, [[BASE]]
 ; GFX9-DAG: v_add_u32_e32 [[B1:v[0-9]+]], 0x800, [[BASE]]
 
 ; GCN-DAG: ds_read2_b64  v[{{[0-9]+:[0-9]+}}], [[BASE]] offset1:50
@@ -247,9 +247,9 @@ bb:
 
 ; GCN-LABEL: ds_read64_combine_stride_8192_shifted:
 ; GCN:     s_load_dword [[ARG:s[0-9]+]], s[4:5], 0x0
-; GFX9:    v_mov_b32_e32 [[BASE:v[0-9]+]], [[ARG]]
+; GCN:     v_mov_b32_e32 [[BASE:v[0-9]+]], [[ARG]]
 
-; VI-DAG: v_add_u32_e64 [[B1:v[0-9]+]], vcc, [[ARG]], 8
+; VI-DAG: v_add_u32_e32 [[B1:v[0-9]+]], vcc, 8, [[BASE]]
 ; GFX9-DAG: v_add_u32_e32 [[B1:v[0-9]+]], 8, [[BASE]]
 
 ; GCN-DAG: ds_read2st64_b64 v[{{[0-9]+:[0-9]+}}], [[B1]] offset1:16
@@ -283,9 +283,9 @@ bb:
 ; GCN:     s_load_dword [[ARG:s[0-9]+]], s[4:5], 0x0
 ; GCN:     v_mov_b32_e32 [[BASE:v[0-9]+]], [[ARG]]
 
-; VI-DAG: v_add_u32_e32 [[B1:v[0-9]+]], vcc, 0x200, [[BASE]]
-; VI-DAG: v_add_u32_e32 [[B2:v[0-9]+]], vcc, 0x400, [[BASE]]
-; VI-DAG: v_add_u32_e32 [[B3:v[0-9]+]], vcc, 0x800, [[BASE]]
+; VI-DAG: v_add_u32_e32 [[B1:v[0-9]+]], vcc, {{s[0-9]+}}, [[BASE]]
+; VI-DAG: v_add_u32_e32 [[B2:v[0-9]+]], vcc, {{s[0-9]+}}, [[BASE]]
+; VI-DAG: v_add_u32_e32 [[B3:v[0-9]+]], vcc, {{s[0-9]+}}, [[BASE]]
 
 ; GFX9-DAG: v_add_u32_e32 [[B1:v[0-9]+]], 0x200, [[BASE]]
 ; GFX9-DAG: v_add_u32_e32 [[B2:v[0-9]+]], 0x400, [[BASE]]
@@ -319,9 +319,9 @@ bb:
 ; GCN:     s_load_dword [[ARG:s[0-9]+]], s[4:5], 0x0
 ; GCN:     v_mov_b32_e32 [[BASE:v[0-9]+]], [[ARG]]
 
-; VI-DAG: v_add_u32_e32 [[B1:v[0-9]+]], vcc, 0x800, [[BASE]]
-; VI-DAG: v_add_u32_e32 [[B2:v[0-9]+]], vcc, 0x400, [[BASE]]
-; VI-DAG: v_add_u32_e32 [[B3:v[0-9]+]], vcc, 0x200, [[BASE]]
+; VI-DAG: v_add_u32_e32 [[B1:v[0-9]+]], vcc, {{s[0-9]+}}, [[BASE]]
+; VI-DAG: v_add_u32_e32 [[B2:v[0-9]+]], vcc, {{s[0-9]+}}, [[BASE]]
+; VI-DAG: v_add_u32_e32 [[B3:v[0-9]+]], vcc, {{s[0-9]+}}, [[BASE]]
 
 ; GFX9-DAG: v_add_u32_e32 [[B1:v[0-9]+]], 0x800, [[BASE]]
 ; GFX9-DAG: v_add_u32_e32 [[B2:v[0-9]+]], 0x400, [[BASE]]
@@ -380,9 +380,9 @@ bb:
 
 ; GCN-LABEL: ds_write32_combine_stride_8192_shifted:
 ; GCN:     s_load_dword [[ARG:s[0-9]+]], s[4:5], 0x0
-; GFX9:    v_mov_b32_e32 [[BASE:v[0-9]+]], [[ARG]]
+; GCN:     v_mov_b32_e32 [[BASE:v[0-9]+]], [[ARG]]
 
-; VI-DAG: v_add_u32_e64 [[BASE:v[0-9]+]], vcc, [[ARG]], 4
+; VI-DAG: v_add_u32_e32 [[BASE:v[0-9]+]], vcc, 4, [[BASE]]
 ; GFX9-DAG: v_add_u32_e32 [[BASE:v[0-9]+]], 4, [[BASE]]
 
 ; GCN-DAG: ds_write2st64_b32 [[BASE]], v{{[0-9]+}}, v{{[0-9]+}} offset1:32
@@ -409,7 +409,7 @@ bb:
 ; GCN:     s_load_dword [[ARG:s[0-9]+]], s[4:5], 0x0
 ; GCN:     v_mov_b32_e32 [[BASE:v[0-9]+]], [[ARG]]
 
-; VI-DAG: v_add_u32_e32 [[B1:v[0-9]+]], vcc, 0x800, [[BASE]]
+; VI-DAG: v_add_u32_e32 [[B1:v[0-9]+]], vcc, {{s[0-9]+}}, [[BASE]]
 ; GFX9-DAG: v_add_u32_e32 [[B1:v[0-9]+]], 0x800, [[BASE]]
 
 ; GCN-DAG: ds_write2_b64 [[BASE]], v[{{[0-9]+:[0-9]+}}], v[{{[0-9]+:[0-9]+}}] offset1:50
@@ -438,9 +438,9 @@ bb:
 
 ; GCN-LABEL: ds_write64_combine_stride_8192_shifted:
 ; GCN:     s_load_dword [[ARG:s[0-9]+]], s[4:5], 0x0
-; GFX9:    v_mov_b32_e32 [[BASE:v[0-9]+]], [[ARG]]
+; GCN:     v_mov_b32_e32 [[BASE:v[0-9]+]], [[ARG]]
 
-; VI-DAG: v_add_u32_e64 [[BASE:v[0-9]+]], vcc, [[ARG]], 8
+; VI-DAG: v_add_u32_e32 [[BASE]], vcc, 8, [[BASE]]
 ; GFX9-DAG: v_add_u32_e32 [[BASE]], 8, [[BASE]]
 
 ; GCN-DAG: ds_write2st64_b64 [[BASE]], v[{{[0-9]+:[0-9]+}}], v[{{[0-9]+:[0-9]+}}] offset1:16

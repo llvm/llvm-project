@@ -1307,12 +1307,13 @@ define i64 @v_test_urem_pow2_k_den_i64(i64 %x) {
 ; GCN-IR-NEXT:    s_mov_b64 s[10:11], 0
 ; GCN-IR-NEXT:    v_mov_b32_e32 v11, 0
 ; GCN-IR-NEXT:    v_mov_b32_e32 v5, 0
+; GCN-IR-NEXT:    s_movk_i32 s12, 0x7fff
 ; GCN-IR-NEXT:  .LBB9_3: ; %udiv-do-while
 ; GCN-IR-NEXT:    ; =>This Inner Loop Header: Depth=1
 ; GCN-IR-NEXT:    v_lshl_b64 v[8:9], v[8:9], 1
 ; GCN-IR-NEXT:    v_lshrrev_b32_e32 v4, 31, v3
 ; GCN-IR-NEXT:    v_or_b32_e32 v8, v8, v4
-; GCN-IR-NEXT:    v_sub_i32_e32 v4, vcc, 0x7fff, v8
+; GCN-IR-NEXT:    v_sub_i32_e32 v4, vcc, s12, v8
 ; GCN-IR-NEXT:    v_lshl_b64 v[2:3], v[2:3], 1
 ; GCN-IR-NEXT:    v_subb_u32_e32 v4, vcc, 0, v9, vcc
 ; GCN-IR-NEXT:    v_add_i32_e32 v6, vcc, 1, v6
