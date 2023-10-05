@@ -43,14 +43,15 @@ static llvm::Value *createDeviceFunctionCall(llvm::IRBuilderBase &builder,
 }
 
 // Create a call to SPIR a "atomic_work_item_fence" function.
-static void createFence(llvm::IRBuilderBase &builder, uint32_t flags,
-                        GENX::MemoryOrder order, GENX::MemoryScope scope) {
+static void createFence(llvm::IRBuilderBase &builder,
+                        GENX::MemoryFenceFlag flags, GENX::MemoryOrder order,
+                        GENX::MemoryScope scope) {
   std::string fnName =
       "_Z22atomic_work_item_fencej12memory_order12memory_scope";
   llvm::IntegerType *i32Ty = builder.getInt32Ty();
   createDeviceFunctionCall(
       builder, fnName, builder.getVoidTy(), {i32Ty, i32Ty, i32Ty},
-      {llvm::ConstantInt::get(i32Ty, flags),
+      {llvm::ConstantInt::get(i32Ty, static_cast<int>(flags)),
        llvm::ConstantInt::get(i32Ty, static_cast<int>(order)),
        llvm::ConstantInt::get(i32Ty, static_cast<int>(scope))});
 }

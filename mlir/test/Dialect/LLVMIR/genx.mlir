@@ -38,18 +38,18 @@ func.func @genx.barrier() {
 
 func.func @genx.atomic_work_item_fence() {
   // CHECK-LABEL: genx.atomic_work_item_fence
-  // CHECK: genx.atomic_work_item_fence < LOCAL_MEM_FENCE >,  Relaxed,  work_item
-  genx.atomic_work_item_fence <LOCAL_MEM_FENCE>, Relaxed, work_item
-  // CHECK: genx.atomic_work_item_fence < GLOBAL_MEM_FENCE >,  Acquire,  work_group
-  genx.atomic_work_item_fence <GLOBAL_MEM_FENCE>, Acquire, work_group
-  // CHECK: genx.atomic_work_item_fence < IMAGE_MEM_FENCE >,  Release,  device
-  genx.atomic_work_item_fence <IMAGE_MEM_FENCE>, Release, device
-  // CHECK: genx.atomic_work_item_fence < LOCAL_MEM_FENCE >,  AcquireRelease,  all_svm_devices
-  genx.atomic_work_item_fence <LOCAL_MEM_FENCE>, AcquireRelease, all_svm_devices
-  // CHECK: genx.atomic_work_item_fence < GLOBAL_MEM_FENCE >,  SequentiallyConsistent,  sub_group
-  genx.atomic_work_item_fence <GLOBAL_MEM_FENCE>, SequentiallyConsistent, sub_group
-  // CHECK: genx.atomic_work_item_fence < LOCAL_MEM_FENCE, IMAGE_MEM_FENCE >,  Acquire,  sub_group
-  genx.atomic_work_item_fence <LOCAL_MEM_FENCE, IMAGE_MEM_FENCE>, Acquire, sub_group
+  // CHECK: genx.atomic_work_item_fence {flags = #genx.memory_fence_flag<LOCAL_MEM_FENCE>, order = #genx.memory_order<Relaxed>, scope = #genx.memory_scope<work_item>}
+  genx.atomic_work_item_fence {flags=#genx.memory_fence_flag<LOCAL_MEM_FENCE>, order=#genx.memory_order<Relaxed>, scope=#genx.memory_scope<work_item>}
+  // CHECK: genx.atomic_work_item_fence {flags = #genx.memory_fence_flag<GLOBAL_MEM_FENCE>, order = #genx.memory_order<Acquire>, scope = #genx.memory_scope<work_group>}
+  genx.atomic_work_item_fence {flags=#genx.memory_fence_flag<GLOBAL_MEM_FENCE>, order=#genx.memory_order<Acquire>, scope=#genx.memory_scope<work_group>}
+  // CHECK: genx.atomic_work_item_fence {flags = #genx.memory_fence_flag<IMAGE_MEM_FENCE>, order = #genx.memory_order<Release>, scope = #genx.memory_scope<device>}
+  genx.atomic_work_item_fence {flags=#genx.memory_fence_flag<IMAGE_MEM_FENCE>, order=#genx.memory_order<Release>, scope=#genx.memory_scope<device>}
+  // CHECK: genx.atomic_work_item_fence {flags = #genx.memory_fence_flag<LOCAL_MEM_FENCE>, order = #genx.memory_order<AcquireRelease>, scope = #genx.memory_scope<all_svm_devices>}
+  genx.atomic_work_item_fence {flags=#genx.memory_fence_flag<LOCAL_MEM_FENCE>, order=#genx.memory_order<AcquireRelease>, scope=#genx.memory_scope<all_svm_devices>}
+  // CHECK: genx.atomic_work_item_fence {flags = #genx.memory_fence_flag<GLOBAL_MEM_FENCE>, order = #genx.memory_order<SequentiallyConsistent>, scope = #genx.memory_scope<sub_group>}
+  genx.atomic_work_item_fence {flags=#genx.memory_fence_flag<GLOBAL_MEM_FENCE>, order=#genx.memory_order<SequentiallyConsistent>, scope=#genx.memory_scope<sub_group>}
+  // CHECK: genx.atomic_work_item_fence {flags = #genx.memory_fence_flag<LOCAL_MEM_FENCE, IMAGE_MEM_FENCE>, order = #genx.memory_order<Acquire>, scope = #genx.memory_scope<sub_group>}
+  genx.atomic_work_item_fence {flags=#genx.memory_fence_flag<LOCAL_MEM_FENCE, IMAGE_MEM_FENCE>, order=#genx.memory_order<Acquire>, scope=#genx.memory_scope<sub_group>}
   llvm.return
 }
 

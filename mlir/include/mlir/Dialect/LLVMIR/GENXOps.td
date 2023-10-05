@@ -158,16 +158,20 @@ def GENX_BarrierOp : GENX_Op<"barrier"> {
 }
 
 /// Enum attribute of the different memory fence flags.
-def MemoryFenceFlag : I32EnumAttr<"MemoryFenceFlag", "GENX memory fence flag",
+def MemoryFenceFlag : I32BitEnumAttr<"MemoryFenceFlag", "GENX memory fence flag",
   [
-    I32EnumAttrCase<"LOCAL_MEM_FENCE",  1>,
-    I32EnumAttrCase<"GLOBAL_MEM_FENCE", 2>,
-    I32EnumAttrCase<"IMAGE_MEM_FENCE",  4>
+    I32BitEnumAttrCaseBit<"LOCAL_MEM_FENCE",  0>,
+    I32BitEnumAttrCaseBit<"GLOBAL_MEM_FENCE", 1>,
+    I32BitEnumAttrCaseBit<"IMAGE_MEM_FENCE",  2>
   ]> {
-  let genSpecializedAttr = 0;
+  let separator = ", ";
   let cppNamespace = "::mlir::GENX";
+  let genSpecializedAttr = 0;
+  let printBitEnumPrimaryGroups = 1;
 }
-def MemoryFenceFlagAttr : EnumAttr<GENX_Dialect, MemoryFenceFlag, "memory_fence_flag">;
+def MemoryFenceFlagAttr : EnumAttr<GENX_Dialect, MemoryFenceFlag, "memory_fence_flag"> {
+  let assemblyFormat = "`<` $value `>`";
+}
 
 /// Enum attribute of the different memory order.
 def MemoryOrder : I32EnumAttr<"MemoryOrder", "GENX memory order",
@@ -181,7 +185,9 @@ def MemoryOrder : I32EnumAttr<"MemoryOrder", "GENX memory order",
   let genSpecializedAttr = 0;
   let cppNamespace = "::mlir::GENX";
 }
-def MemoryOrderAttr : EnumAttr<GENX_Dialect, MemoryOrder, "memory_order">;
+def MemoryOrderAttr : EnumAttr<GENX_Dialect, MemoryOrder, "memory_order"> {
+  let assemblyFormat = "`<` $value `>`";
+}
 
 /// Enum attribute of the different memory scope.
 def MemoryScope : I32EnumAttr<"MemoryScope", "GENX memory scope",
@@ -195,10 +201,12 @@ def MemoryScope : I32EnumAttr<"MemoryScope", "GENX memory scope",
   let genSpecializedAttr = 0;
   let cppNamespace = "::mlir::GENX";
 }
-def MemoryScopeAttr : EnumAttr<GENX_Dialect, MemoryScope, "memory_scope">;
+def MemoryScopeAttr : EnumAttr<GENX_Dialect, MemoryScope, "memory_scope"> {
+  let assemblyFormat = "`<` $value `>`";
+}
 
 def GENX_FenceOp : GENX_Op<"atomic_work_item_fence">,
-  Arguments<(ins ConfinedAttr<I32Attr, [IntMinValue<0>, IntMaxValue<7>]>:$flags,
+  Arguments<(ins MemoryFenceFlagAttr:$flags,
                  MemoryOrderAttr:$order,
                  MemoryScopeAttr:$scope)> {
   let summary = "Fence of memory accesses";
@@ -215,7 +223,7 @@ def GENX_FenceOp : GENX_Op<"atomic_work_item_fence">,
     createFence(builder, $flags, $order, $scope);
   }];
   let assemblyFormat = [{
-    ` ` `<` custom<MemoryFenceFlags>($flags) ` ``>` `,` $order `,` $scope attr-dict
+    attr-dict
   }];
 }
 
