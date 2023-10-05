@@ -477,6 +477,14 @@ LogicalResult transform::detail::interpreterBaseInitializeImpl(
   if (parsedTransformModule && failed(mlir::verify(*parsedTransformModule)))
     return failure();
 
+  auto libraryRange = context->getOrLoadDialect<transform::TransformDialect>()
+                          ->getLibraryModules();
+  if (!transformLibraryFileName.empty() && !libraryRange.empty()) {
+    return emitError((*libraryRange.begin()).getLoc())
+           << "library already supplied through the dialect, cannot parse "
+              "another library as requested by pass flags";
+  }
+
   OwningOpRef<ModuleOp> parsedLibraryModule;
   if (failed(parseTransformModuleFromFile(context, transformLibraryFileName,
                                           parsedLibraryModule)))
@@ -502,16 +510,22 @@ LogicalResult transform::detail::interpreterBaseInitializeImpl(
     }
   }
 
-  if (!parsedLibraryModule || !*parsedLibraryModule)
+  bool hasDialectLevelLibrary = !libraryRange.empty();
+  if (!hasDialectLevelLibrary &&
+      (!parsedLibraryModule || !*parsedLibraryModule))
     return success();
 
   if (sharedTransformModule && *sharedTransformModule) {
     if (failed(defineDeclaredSymbols(*sharedTransformModule->get().getBody(),
-                                     parsedLibraryModule.get())))
+                                     hasDialectLevelLibrary
+                                         ? *libraryRange.begin()
+                                         : parsedLibraryModule.get())))
       return failure();
   } else {
-    transformLibraryModule =
-        std::make_shared<OwningOpRef<ModuleOp>>(std::move(parsedLibraryModule));
+    transformLibraryModule = std::make_shared<OwningOpRef<ModuleOp>>(
+        hasDialectLevelLibrary
+            ? OwningOpRef<ModuleOp>((*libraryRange.begin()).clone())
+            : std::move(parsedLibraryModule));
   }
   return success();
 }

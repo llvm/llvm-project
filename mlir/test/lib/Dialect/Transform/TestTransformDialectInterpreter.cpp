@@ -264,5 +264,9 @@ void registerTestTransformDialectEraseSchedulePass() {
 void registerTestTransformDialectInterpreterPass() {
   PassRegistration<TestTransformDialectInterpreterPass> reg;
 }
+/// Creates an instance of the pass for applying transform dialect ops.
+std::unique_ptr<Pass> createTestTransformDialectInterpreterPass() {
+  return std::make_unique<TestTransformDialectInterpreterPass>();
+}
 } // namespace test
 } // namespace mlir

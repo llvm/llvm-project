@@ -326,6 +326,9 @@ static LogicalResult
 performActions(raw_ostream &os,
                const std::shared_ptr<llvm::SourceMgr> &sourceMgr,
                MLIRContext *context, const MlirOptMainConfig &config) {
+  if (failed(config.setupContext(*context)))
+    return failure();
+
   DefaultTimingManager tm;
   applyDefaultTimingManagerCLOptions(tm);
   TimingScope timing = tm.getRootScope();

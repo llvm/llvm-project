@@ -131,8 +131,12 @@ void mlir::registerPassManagerCLOptions() {
 }
 
 LogicalResult mlir::applyPassManagerCLOptions(PassManager &pm) {
-  if (!options.isConstructed())
+  if (!options.isConstructed()) {
+    emitError(UnknownLoc::get(pm.getContext()))
+        << "could not apply pass manager command line options.\n"
+           "Missing 'registerPassManagerCLOptions' call?\n";
     return failure();
+  }
 
   // Generate a reproducer on crash/failure.
   if (options->reproducerFile.getNumOccurrences())
