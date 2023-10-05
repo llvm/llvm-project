@@ -258,6 +258,7 @@ public:
 
   MetadataPromiseSP GetMetadataPromise(lldb::addr_t addr,
                                        ValueObject &for_object);
+  CompilerType GetTypeFromMetadata(TypeSystemSwift &tss, Address address);
   /// Build the artificial type metadata variable name for \p swift_type.
   static bool GetAbstractTypeName(StreamString &name, swift::Type swift_type);
 

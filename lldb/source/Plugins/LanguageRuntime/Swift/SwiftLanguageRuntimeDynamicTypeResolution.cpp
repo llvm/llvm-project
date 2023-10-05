@@ -1774,7 +1774,7 @@ bool SwiftLanguageRuntimeImpl::GetDynamicTypeAndAddress_ExistentialMetatype(
     return false;
 
   const swift::reflection::TypeRef *type_ref =
-      reflection_ctx->readTypeFromMetadata(ptr);
+      reflection_ctx->ReadTypeFromMetadata(ptr);
 
   auto tss = meta_type.GetTypeSystem().dyn_cast_or_null<TypeSystemSwift>();
   if (!tss)
@@ -1798,7 +1798,26 @@ bool SwiftLanguageRuntimeImpl::GetDynamicTypeAndAddress_ExistentialMetatype(
   address.SetRawAddress(ptr);
   return true;
 }
-  
+
+CompilerType SwiftLanguageRuntimeImpl::GetTypeFromMetadata(TypeSystemSwift &ts,
+                                                           Address address) {
+  lldb::addr_t ptr = address.GetLoadAddress(&GetProcess().GetTarget());
+  if (ptr == LLDB_INVALID_ADDRESS)
+    return {};
+
+  ThreadSafeReflectionContext reflection_ctx = GetReflectionContext();
+  if (!reflection_ctx)
+    return {};
+
+  const swift::reflection::TypeRef *type_ref =
+      reflection_ctx->ReadTypeFromMetadata(ptr);
+
+  using namespace swift::Demangle;
+  Demangler dem;
+  NodePointer node = type_ref->getDemangling(dem);
+  return ts.GetTypeSystemSwiftTypeRef().RemangleAsType(dem, node);
+}
+
 llvm::Optional<lldb::addr_t>
 SwiftLanguageRuntimeImpl::GetTypeMetadataForTypeNameAndFrame(
     StringRef mdvar_name, StackFrame &frame) {
