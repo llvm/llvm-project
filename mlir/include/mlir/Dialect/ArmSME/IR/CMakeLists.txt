@@ -1,5 +1,4 @@
 add_mlir_dialect(ArmSME arm_sme ArmSME)
-add_mlir_doc(ArmSME ArmSME Dialects/ -gen-dialect-doc -dialect=arm_sme)
 
 # Generate declarations and definitions of ArmSME Ops
 set(LLVM_TARGET_DEFINITIONS ArmSMEOps.td)
@@ -22,3 +21,7 @@ mlir_tablegen(ArmSMEIntrinsicOps.h.inc -gen-op-decls)
 mlir_tablegen(ArmSMEIntrinsicOps.cpp.inc -gen-op-defs)
 mlir_tablegen(ArmSMEIntrinsicConversions.inc -gen-llvmir-conversions)
 add_public_tablegen_target(MLIRArmSMEIntrinsicOpsIncGen)
+
+# Generate the docs
+add_mlir_doc(ArmSMEOps ArmSMEOps Dialects/ -gen-op-doc)
+add_mlir_doc(ArmSMEIntrinsicOps ArmSMEIntrinsicOps Dialects/ -gen-op-doc)
