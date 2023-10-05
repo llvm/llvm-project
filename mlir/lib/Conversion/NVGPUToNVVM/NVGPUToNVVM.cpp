@@ -1553,20 +1553,20 @@ struct NVGPUWarpgroupMmaInitAccumulatorOpLowering
   LogicalResult
   matchAndRewrite(nvgpu::WarpgroupMmaInitAccumulatorOp op, OpAdaptor adaptor,
                   ConversionPatternRewriter &rewriter) const override {
-    Location loc = op->getLoc();
+    ImplicitLocOpBuilder b(op->getLoc(), rewriter);
     SmallVector<Value> results;
-    for (Value matrixD : op.getMatrixC()) {
-      nvgpu::WarpgroupAccumulatorType matrixDType =
-          matrixD.getType().cast<nvgpu::WarpgroupAccumulatorType>();
-      Type stype = getTypeConverter()->convertType(matrixDType);
-      Value undefStruct = rewriter.create<LLVM::UndefOp>(loc, stype);
-      Type elemType = matrixDType.getFragmented().getElementType();
-      int64_t elemSize = matrixDType.getFragmented().getDimSize(0);
-      Value zero = rewriter.create<LLVM::ConstantOp>(
-          loc, elemType, rewriter.getZeroAttr(elemType));
+    for (OpResult m : op.getMatrixC()) {
+      nvgpu::WarpgroupAccumulatorType mType =
+          m.getType().cast<nvgpu::WarpgroupAccumulatorType>();
+      Type stype = getTypeConverter()->convertType(mType);
+      Value undefStruct = b.create<LLVM::UndefOp>(stype);
+      Type elemType = mType.getFragmented().getElementType();
+      int64_t elemSize = mType.getFragmented().getDimSize(0);
+      Value zero =
+          b.create<LLVM::ConstantOp>(elemType, rewriter.getZeroAttr(elemType));
       for (int64_t i = 0; i < elemSize; ++i) {
-        undefStruct = rewriter.create<LLVM::InsertValueOp>(
-            loc, stype, undefStruct, zero, ArrayRef<int64_t>({i}));
+        undefStruct = b.create<LLVM::InsertValueOp>(stype, undefStruct, zero,
+                                                    ArrayRef<int64_t>({i}));
       }
       results.push_back(undefStruct);
     }

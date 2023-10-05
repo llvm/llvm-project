@@ -757,6 +757,7 @@ def NVGPU_WarpgroupMmaInitAccumulatorOp : NVGPU_Op<"warpgroup.mma.init.accumulat
   }];
   let results = (outs Variadic<NVGPU_WarpgroupAccumulator>:$matrixC);
   let assemblyFormat = "attr-dict `->` type($matrixC)";
+  let hasVerifier = 1;
 }
 
 #endif // NVGPU
