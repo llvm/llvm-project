@@ -1555,7 +1555,7 @@ struct NVGPUWarpgroupMmaInitAccumulatorOpLowering
                   ConversionPatternRewriter &rewriter) const override {
     Location loc = op->getLoc();
     SmallVector<Value> results;
-    for (auto matrixD : op.getMatrixC()) {
+    for (Value matrixD : op.getMatrixC()) {
       nvgpu::WarpgroupAccumulatorType matrixDType =
           matrixD.getType().cast<nvgpu::WarpgroupAccumulatorType>();
       Type stype = getTypeConverter()->convertType(matrixDType);

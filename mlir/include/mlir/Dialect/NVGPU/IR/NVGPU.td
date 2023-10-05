@@ -749,7 +749,7 @@ def NVGPU_WarpgroupMmaStoreOp : NVGPU_Op<"warpgroup.mma.store"> {
 }
 
 def NVGPU_WarpgroupMmaInitAccumulatorOp : NVGPU_Op<"warpgroup.mma.init.accumulator"> {  
-  let summary = "Initialize accumulator matrix for `warppgroup.mma`";
+  let summary = "Initializes accumulator matrix for `warppgroup.mma`";
 
   let description = [{
     This Op generates and initilizes the accumulator matrix for 
