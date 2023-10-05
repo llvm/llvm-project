@@ -3082,6 +3082,7 @@ cc_library(
     deps = [
         ":GPUDialect",
         ":IR",
+        ":LLVMDialect",
         ":NVGPUIncGen",
         ":SideEffectInterfaces",
         "//llvm:Core",
