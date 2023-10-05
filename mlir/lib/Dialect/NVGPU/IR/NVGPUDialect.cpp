@@ -367,10 +367,10 @@ LogicalResult TmaCreateDescriptorOp::verify() {
 }
 
 //===----------------------------------------------------------------------===//
-// NVGPU_GenerateGmmaDescriptorOp
+// NVGPU_GenerateWarpgroupDescriptorOp
 //===----------------------------------------------------------------------===//
 
-LogicalResult GenerateGmmaDescriptorOp::verify() {
+LogicalResult GenerateWarpgroupDescriptorOp::verify() {
   MemRefType memrefType = getTensor().getType();
   MemRefType tensorMapType = getTensorMap().getType().getTensor();
 
