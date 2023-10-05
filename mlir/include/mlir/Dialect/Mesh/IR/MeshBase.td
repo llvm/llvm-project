@@ -78,7 +78,7 @@ def MeshSharding : AttrDef<Mesh_Dialect, "MeshSharding"> {
     its value is [x, y], it indicates that the tensor's i-th dimension is splitted
     along the x and y axes of the device mesh.
 
-    3. `partial_axes`: if not empty, this sifnifies that the tensor is partial
+    3. `partial_axes`: if not empty, this signifies that the tensor is partial
     one along the specified mesh axes. An all-reduce should be applied to obtain
     the complete tensor, with reduction type being specified by `partial_type`.
 
