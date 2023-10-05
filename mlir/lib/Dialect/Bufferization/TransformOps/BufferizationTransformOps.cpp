@@ -47,6 +47,10 @@ void transform::BufferLoopHoistingOp::getEffects(
 LogicalResult transform::OneShotBufferizeOp::verify() {
   if (getMemcpyOp() != "memref.copy" && getMemcpyOp() != "linalg.copy")
     return emitOpError() << "unsupported memcpy op";
+  if (getPrintConflicts() && !getTestAnalysisOnly())
+    return emitOpError() << "'print_conflicts' requires 'test_analysis_only'";
+  if (getDumpAliasSets() && !getTestAnalysisOnly())
+    return emitOpError() << "'dump_alias_sets' requires 'test_analysis_only'";
   return success();
 }
 
@@ -58,6 +62,7 @@ transform::OneShotBufferizeOp::apply(transform::TransformRewriter &rewriter,
   options.allowReturnAllocsFromLoops = getAllowReturnAllocsFromLoops();
   options.allowUnknownOps = getAllowUnknownOps();
   options.bufferizeFunctionBoundaries = getBufferizeFunctionBoundaries();
+  options.dumpAliasSets = getDumpAliasSets();
   options.testAnalysisOnly = getTestAnalysisOnly();
   options.printConflicts = getPrintConflicts();
   if (getFunctionBoundaryTypeConversion().has_value())
