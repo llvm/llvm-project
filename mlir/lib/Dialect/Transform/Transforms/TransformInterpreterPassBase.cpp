@@ -456,6 +456,8 @@ static LogicalResult mergeSymbolsInto(Operation *target,
     }
   }
 
+  // TODO: This duplicates pass infrastructure. We should split this pass into
+  //       several and let the pass infrastructure do the verification.
   for (auto *op : SmallVector<Operation *>{target, *other}) {
     if (failed(mlir::verify(op)))
       return op->emitError() << "failed to verify input op after renaming";
