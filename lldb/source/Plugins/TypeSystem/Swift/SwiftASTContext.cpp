@@ -5439,6 +5439,8 @@ SwiftASTContext::GetTypeInfo(opaque_compiler_type_t type,
     swift_flags |= eTypeHasChildren | eTypeIsStructUnion | eTypeIsProtocol;
     break;
   case swift::TypeKind::ExistentialMetatype:
+    swift_flags |= eTypeIsProtocol;
+    LLVM_FALLTHROUGH;
   case swift::TypeKind::Metatype:
     swift_flags |= eTypeIsMetatype | eTypeHasValue;
     break;
