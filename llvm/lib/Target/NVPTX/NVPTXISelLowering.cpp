@@ -521,7 +521,6 @@ NVPTXTargetLowering::NVPTXTargetLowering(const NVPTXTargetMachine &TM,
     setOperationAction(ISD::BR_CC, VT, Expand);
   }
 
-
   // Some SIGN_EXTEND_INREG can be done using cvt instruction.
   // For others we will expand to a SHL/SRA pair.
   setOperationAction(ISD::SIGN_EXTEND_INREG, MVT::i64, Legal);
@@ -2206,12 +2205,12 @@ SDValue NVPTXTargetLowering::LowerBUILD_VECTOR(SDValue Op,
           DAG.getAnyExtOrTrunc(Op->getOperand(0), DL, MVT::i32), C8, C8);
       SDValue E012 =
           DAG.getNode(NVPTXISD::BFI, DL, MVT::i32,
-                      DAG.getAnyExtOrTrunc(Op->getOperand(2), DL, MVT::i32), E01,
-                      DAG.getConstant(16, DL, MVT::i32), C8);
+                      DAG.getAnyExtOrTrunc(Op->getOperand(2), DL, MVT::i32),
+                      E01, DAG.getConstant(16, DL, MVT::i32), C8);
       SDValue E0123 =
           DAG.getNode(NVPTXISD::BFI, DL, MVT::i32,
-                      DAG.getAnyExtOrTrunc(Op->getOperand(3), DL, MVT::i32), E012,
-                      DAG.getConstant(24, DL, MVT::i32), C8);
+                      DAG.getAnyExtOrTrunc(Op->getOperand(3), DL, MVT::i32),
+                      E012, DAG.getConstant(24, DL, MVT::i32), C8);
       return DAG.getNode(ISD::BITCAST, DL, VT, E0123);
     }
     return Op;
@@ -5413,7 +5412,6 @@ static SDValue PerformEXTRACTCombine(SDNode *N,
   // Index == 0 is handled by generic DAG combiner.
   if (!Index || Index->getZExtValue() == 0)
     return SDValue();
-
 
   MVT IVT = MVT::getIntegerVT(VectorBits);
   EVT EltVT = VectorVT.getVectorElementType();
