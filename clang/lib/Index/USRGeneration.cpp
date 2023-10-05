@@ -114,14 +114,7 @@ public:
     IgnoreResults = true;
   }
 
-  void VisitUsingDecl(const UsingDecl *D) {
-    VisitDeclContext(D->getDeclContext());
-    Out << "@UD@";
-
-    bool EmittedDeclName = !EmitDeclName(D);
-    assert(EmittedDeclName && "EmitDeclName can not fail for UsingDecls");
-    (void)EmittedDeclName;
-  }
+  void VisitBaseUsingDecl(const BaseUsingDecl *D);
 
   bool ShouldGenerateLocation(const NamedDecl *D);
 
@@ -1068,6 +1061,24 @@ void USRGenerator::VisitMSGuidDecl(const MSGuidDecl *D) {
   VisitDeclContext(D->getDeclContext());
   Out << "@MG@";
   D->NamedDecl::printName(Out);
+}
+
+void USRGenerator::VisitBaseUsingDecl(const BaseUsingDecl *D) {
+  // Add the filename when needed to disambiguate using decls from different
+  // files.
+  if (ShouldGenerateLocation(D) && GenLoc(D, /*IncludeOffset=*/false))
+    return;
+  VisitDeclContext(D->getDeclContext());
+  Out << "@UD";
+
+  // When the using-decl is resolved also print the context of the first target
+  // decl. All shadows must be from the same decl-context.
+  if (auto FirstShadow = D->shadow_begin(); FirstShadow != D->shadow_end())
+    VisitDeclContext(FirstShadow->getTargetDecl()->getDeclContext());
+  Out << "@";
+  bool EmittedDeclName = !EmitDeclName(D);
+  assert(EmittedDeclName && "EmitDeclName can not fail for UsingDecls");
+  (void)EmittedDeclName;
 }
 
 //===----------------------------------------------------------------------===//

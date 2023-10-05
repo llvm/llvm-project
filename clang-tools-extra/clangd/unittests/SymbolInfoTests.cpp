@@ -202,7 +202,7 @@ TEST(SymbolInfoTests, All) {
                                      "def_bool"},
                ExpectedSymbolDetails{"foo", "", "c:@F@foo#I#", "def_int",
                                      "def_int"},
-               ExpectedSymbolDetails{"foo", "bar::", "c:@N@bar@UD@foo",
+               ExpectedSymbolDetails{"foo", "bar::", "c:TestTU.cpp@N@bar@UD@foo",
                                      "decl"}}},
           {
               R"cpp( // Multiple symbols returned - implicit conversion

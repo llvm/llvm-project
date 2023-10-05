@@ -6,5 +6,5 @@ namespace ns {
 }
 
 using ns::foo __attribute__((using_if_exists));
-// CHECK: [[@LINE-1]]:11 | using/C++ | foo | c:@UD@foo | <no-cgname> | Decl | rel: 0
+// CHECK: [[@LINE-1]]:11 | using/C++ | foo | c:using_if_exists.cpp@UD@foo | <no-cgname> | Decl | rel: 0
 // CHECK-NOT: <unknown>
