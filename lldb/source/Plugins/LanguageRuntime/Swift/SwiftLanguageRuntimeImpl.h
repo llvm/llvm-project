@@ -352,6 +352,12 @@ protected:
                                              bool use_local_buffer,
                                              lldb::addr_t existential_address);
 #endif
+
+  bool GetDynamicTypeAndAddress_ExistentialMetatype(
+      ValueObject &in_value, CompilerType meta_type,
+      lldb::DynamicValueType use_dynamic, TypeAndOrName &class_type_or_name,
+      Address &address);
+
   bool GetDynamicTypeAndAddress_Value(ValueObject &in_value,
                                       CompilerType &bound_type,
                                       lldb::DynamicValueType use_dynamic,

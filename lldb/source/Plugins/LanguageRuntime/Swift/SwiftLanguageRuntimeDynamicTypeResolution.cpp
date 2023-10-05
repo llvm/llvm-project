@@ -1759,6 +1759,46 @@ bool SwiftLanguageRuntimeImpl::GetDynamicTypeAndAddress_Protocol(
   return true;
 }
 
+bool SwiftLanguageRuntimeImpl::GetDynamicTypeAndAddress_ExistentialMetatype(
+    ValueObject &in_value, CompilerType meta_type,
+    lldb::DynamicValueType use_dynamic, TypeAndOrName &class_type_or_name,
+    Address &address) {
+  // Resolve the dynamic type of the metatype.
+  AddressType address_type;
+  lldb::addr_t ptr = in_value.GetPointerValue(&address_type);
+  if (ptr == LLDB_INVALID_ADDRESS || ptr == 0)
+    return false;
+
+  ThreadSafeReflectionContext reflection_ctx = GetReflectionContext();
+  if (!reflection_ctx)
+    return false;
+
+  const swift::reflection::TypeRef *type_ref =
+      reflection_ctx->readTypeFromMetadata(ptr);
+
+  auto tss = meta_type.GetTypeSystem().dyn_cast_or_null<TypeSystemSwift>();
+  if (!tss)
+    return false;
+  auto &ts = tss->GetTypeSystemSwiftTypeRef();
+
+  using namespace swift::Demangle;
+  Demangler dem;
+  NodePointer node = type_ref->getDemangling(dem);
+  // Wrap the resolved type in a metatype again for the data formatter to
+  // recognize.
+  if (!node || node->getKind() != Node::Kind::Type)
+    return false;
+  NodePointer wrapped = dem.createNode(Node::Kind::Type);
+  NodePointer meta = dem.createNode(Node::Kind::Metatype);
+  meta->addChild(node, dem);
+  wrapped->addChild(meta,dem);
+
+  meta_type = ts.GetTypeSystemSwiftTypeRef().RemangleAsType(dem, wrapped);
+  class_type_or_name.SetCompilerType(meta_type);
+  address.SetRawAddress(ptr);
+  return true;
+}
+  
 llvm::Optional<lldb::addr_t>
 SwiftLanguageRuntimeImpl::GetTypeMetadataForTypeNameAndFrame(
     StringRef mdvar_name, StackFrame &frame) {
@@ -2291,11 +2331,16 @@ bool SwiftLanguageRuntimeImpl::GetDynamicTypeAndAddress(
         in_value, use_dynamic, class_type_or_name, address, static_value_type);
   else if (type_info.AnySet(eTypeIsPack))
     success = GetDynamicTypeAndAddress_Pack(in_value, val_type, use_dynamic,
-                                           class_type_or_name, address, static_value_type);
+                                            class_type_or_name, address,
+                                            static_value_type);
   else if (type_info.AnySet(eTypeIsClass) ||
            type_info.AllSet(eTypeIsBuiltIn | eTypeIsPointer | eTypeHasValue))
     success = GetDynamicTypeAndAddress_Class(in_value, val_type, use_dynamic,
-                                             class_type_or_name, address, static_value_type);
+                                             class_type_or_name, address,
+                                             static_value_type);
+  else if (type_info.AllSet(eTypeIsMetatype | eTypeIsProtocol))
+    success = GetDynamicTypeAndAddress_ExistentialMetatype(
+        in_value, val_type, use_dynamic, class_type_or_name, address);
   else if (type_info.AnySet(eTypeIsProtocol))
     success = GetDynamicTypeAndAddress_Protocol(in_value, val_type, use_dynamic,
                                                 class_type_or_name, address);
