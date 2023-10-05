@@ -145,6 +145,7 @@ C23 Feature Support
   previous placeholder value. Clang continues to accept ``-std=c2x`` and
   ``-std=gnu2x`` as aliases for C23 and GNU C23, respectively.
 - Clang now supports `requires c23` for module maps.
+- Clang now supports ``N3007 Type inference for object definitions``.
 
 Non-comprehensive list of changes in this release
 -------------------------------------------------
