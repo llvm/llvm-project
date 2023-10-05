@@ -749,11 +749,11 @@ def NVGPU_WarpgroupMmaStoreOp : NVGPU_Op<"warpgroup.mma.store"> {
 }
 
 def NVGPU_WarpgroupMmaInitAccumulatorOp : NVGPU_Op<"warpgroup.mma.init.accumulator"> {  
-  let summary = "Initializes accumulator matrix for `warppgroup.mma`";
+  let summary = "Initializes the accumulator matrix";
 
   let description = [{
-    This Op generates and initilizes the accumulator matrix for 
-    `nvgpu.warpgroup.mma` op to perform matrix-multiply-and-accumulate (mma).
+    This Op generates and initializes the accumulator matrix for 
+    `nvgpu.warpgroup.mma` op to perform matrix-multiply-and-accumulate.
   }];
   let results = (outs Variadic<NVGPU_WarpgroupAccumulator>:$matrixC);
   let assemblyFormat = "attr-dict `->` type($matrixC)";
