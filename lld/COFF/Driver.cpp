@@ -1505,8 +1505,11 @@ void LinkerDriver::linkerMain(ArrayRef<const char *> argsArr) {
     v.push_back(arg->getValue());
     config->mllvmOpts.emplace_back(arg->getValue());
   }
-  cl::ResetAllOptionOccurrences();
-  cl::ParseCommandLineOptions(v.size(), v.data());
+  {
+    llvm::TimeTraceScope timeScope2("Parse cl::opt");
+    cl::ResetAllOptionOccurrences();
+    cl::ParseCommandLineOptions(v.size(), v.data());
+  }
 
   // Handle /errorlimit early, because error() depends on it.
   if (auto *arg = args.getLastArg(OPT_errorlimit)) {
@@ -1559,15 +1562,18 @@ void LinkerDriver::linkerMain(ArrayRef<const char *> argsArr) {
                                   " (use --error-limit=0 to see all errors)";
 
   // Handle /linkrepro and /reproduce.
-  if (std::optional<std::string> path = getReproduceFile(args)) {
-    Expected<std::unique_ptr<TarWriter>> errOrWriter =
-        TarWriter::create(*path, sys::path::stem(*path));
+  {
+    llvm::TimeTraceScope timeScope2("Reproducer");
+    if (std::optional<std::string> path = getReproduceFile(args)) {
+      Expected<std::unique_ptr<TarWriter>> errOrWriter =
+          TarWriter::create(*path, sys::path::stem(*path));
 
-    if (errOrWriter) {
-      tar = std::move(*errOrWriter);
-    } else {
-      error("/linkrepro: failed to open " + *path + ": " +
-            toString(errOrWriter.takeError()));
+      if (errOrWriter) {
+        tar = std::move(*errOrWriter);
+      } else {
+        error("/linkrepro: failed to open " + *path + ": " +
+              toString(errOrWriter.takeError()));
+      }
     }
   }
 
@@ -1579,14 +1585,17 @@ void LinkerDriver::linkerMain(ArrayRef<const char *> argsArr) {
   }
 
   // Construct search path list.
-  searchPaths.emplace_back("");
-  // Prefer the Clang provided builtins over the ones bundled with MSVC.
-  addClangLibSearchPaths(argsArr[0]);
-  for (auto *arg : args.filtered(OPT_libpath))
-    searchPaths.push_back(arg->getValue());
-  detectWinSysRoot(args);
-  if (!args.hasArg(OPT_lldignoreenv) && !args.hasArg(OPT_winsysroot))
-    addLibSearchPaths();
+  {
+    llvm::TimeTraceScope timeScope2("Search paths");
+    searchPaths.emplace_back("");
+    // Prefer the Clang provided builtins over the ones bundled with MSVC.
+    addClangLibSearchPaths(argsArr[0]);
+    for (auto *arg : args.filtered(OPT_libpath))
+      searchPaths.push_back(arg->getValue());
+    detectWinSysRoot(args);
+    if (!args.hasArg(OPT_lldignoreenv) && !args.hasArg(OPT_winsysroot))
+      addLibSearchPaths();
+  }
 
   // Handle /ignore
   for (auto *arg : args.filtered(OPT_ignore)) {
@@ -1721,16 +1730,22 @@ void LinkerDriver::linkerMain(ArrayRef<const char *> argsArr) {
       args.hasFlag(OPT_appcontainer, OPT_appcontainer_no, false);
 
   // Handle /machine
-  if (auto *arg = args.getLastArg(OPT_machine)) {
-    config->machine = getMachineType(arg->getValue());
-    if (config->machine == IMAGE_FILE_MACHINE_UNKNOWN)
-      fatal(Twine("unknown /machine argument: ") + arg->getValue());
-    addWinSysRootLibSearchPaths();
+  {
+    llvm::TimeTraceScope timeScope2("Machine arg");
+    if (auto *arg = args.getLastArg(OPT_machine)) {
+      config->machine = getMachineType(arg->getValue());
+      if (config->machine == IMAGE_FILE_MACHINE_UNKNOWN)
+        fatal(Twine("unknown /machine argument: ") + arg->getValue());
+      addWinSysRootLibSearchPaths();
+    }
   }
 
   // Handle /nodefaultlib:<filename>
-  for (auto *arg : args.filtered(OPT_nodefaultlib))
-    config->noDefaultLibs.insert(findLib(arg->getValue()).lower());
+  {
+    llvm::TimeTraceScope timeScope2("Nodefaultlib");
+    for (auto *arg : args.filtered(OPT_nodefaultlib))
+      config->noDefaultLibs.insert(findLib(arg->getValue()).lower());
+  }
 
   // Handle /nodefaultlib
   if (args.hasArg(OPT_nodefaultlib_all))
@@ -2068,30 +2083,33 @@ void LinkerDriver::linkerMain(ArrayRef<const char *> argsArr) {
   // Create a list of input files. These can be given as OPT_INPUT options
   // and OPT_wholearchive_file options, and we also need to track OPT_start_lib
   // and OPT_end_lib.
-  bool inLib = false;
-  for (auto *arg : args) {
-    switch (arg->getOption().getID()) {
-    case OPT_end_lib:
-      if (!inLib)
-        error("stray " + arg->getSpelling());
-      inLib = false;
-      break;
-    case OPT_start_lib:
-      if (inLib)
-        error("nested " + arg->getSpelling());
-      inLib = true;
-      break;
-    case OPT_wholearchive_file:
-      if (std::optional<StringRef> path = findFileIfNew(arg->getValue()))
-        enqueuePath(*path, true, inLib);
-      break;
-    case OPT_INPUT:
-      if (std::optional<StringRef> path = findFileIfNew(arg->getValue()))
-        enqueuePath(*path, isWholeArchive(*path), inLib);
-      break;
-    default:
-      // Ignore other options.
-      break;
+  {
+    llvm::TimeTraceScope timeScope2("Parse & queue inputs");
+    bool inLib = false;
+    for (auto *arg : args) {
+      switch (arg->getOption().getID()) {
+      case OPT_end_lib:
+        if (!inLib)
+          error("stray " + arg->getSpelling());
+        inLib = false;
+        break;
+      case OPT_start_lib:
+        if (inLib)
+          error("nested " + arg->getSpelling());
+        inLib = true;
+        break;
+      case OPT_wholearchive_file:
+        if (std::optional<StringRef> path = findFileIfNew(arg->getValue()))
+          enqueuePath(*path, true, inLib);
+        break;
+      case OPT_INPUT:
+        if (std::optional<StringRef> path = findFileIfNew(arg->getValue()))
+          enqueuePath(*path, isWholeArchive(*path), inLib);
+        break;
+      default:
+        // Ignore other options.
+        break;
+      }
     }
   }
 
