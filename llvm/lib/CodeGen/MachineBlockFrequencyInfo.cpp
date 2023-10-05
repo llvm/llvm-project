@@ -287,5 +287,5 @@ MachineBlockFrequencyInfo::printBlockFreq(raw_ostream &OS,
 }
 
 BlockFrequency MachineBlockFrequencyInfo::getEntryFreq() const {
-  return MBFI ? MBFI->getEntryFreq() : BlockFrequency();
+  return MBFI ? MBFI->getEntryFreq() : BlockFrequency(0);
 }

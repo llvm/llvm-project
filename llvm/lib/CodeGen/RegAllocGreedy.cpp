@@ -1249,7 +1249,7 @@ bool RAGreedy::trySplitAroundHintReg(MCPhysReg Hint,
   // Decrease the cost so it will be split in colder blocks.
   BranchProbability Threshold(SplitThresholdForRegWithHint, 100);
   Cost *= Threshold;
-  if (Cost == BlockFrequency())
+  if (Cost == BlockFrequency(0))
     return false;
 
   unsigned NumCands = 0;
@@ -2201,7 +2201,7 @@ void RAGreedy::initializeCSRCost() {
   // Raw cost is relative to Entry == 2^14; scale it appropriately.
   uint64_t ActualEntry = MBFI->getEntryFreq().getFrequency();
   if (!ActualEntry) {
-    CSRCost = BlockFrequency();
+    CSRCost = BlockFrequency(0);
     return;
   }
   uint64_t FixedEntry = 1 << 14;

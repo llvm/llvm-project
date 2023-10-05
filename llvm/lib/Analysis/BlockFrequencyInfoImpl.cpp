@@ -581,7 +581,7 @@ BlockFrequencyInfoImplBase::getBlockFreq(const BlockNode &Node) const {
       report_fatal_error(OS.str());
     }
 #endif
-    return BlockFrequency();
+    return BlockFrequency(0);
   }
   return BlockFrequency(Freqs[Node.Index].Integer);
 }

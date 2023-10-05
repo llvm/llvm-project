@@ -66,7 +66,7 @@ public:
   /// Compute the frequency of the block, relative to the entry block.
   /// This API assumes getEntryFreq() is non-zero.
   double getBlockFreqRelativeToEntryBlock(const MachineBasicBlock *MBB) const {
-    assert(getEntryFreq() != BlockFrequency() &&
+    assert(getEntryFreq() != BlockFrequency(0) &&
            "getEntryFreq() should not return 0 here!");
     return static_cast<double>(getBlockFreq(MBB).getFrequency()) /
            static_cast<double>(getEntryFreq().getFrequency());

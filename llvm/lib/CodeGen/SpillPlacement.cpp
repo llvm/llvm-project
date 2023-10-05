@@ -110,8 +110,8 @@ struct SpillPlacement::Node {
   /// clear - Reset per-query data, but preserve frequencies that only depend on
   /// the CFG.
   void clear(BlockFrequency Threshold) {
-    BiasN = BlockFrequency();
-    BiasP = BlockFrequency();
+    BiasN = BlockFrequency(0);
+    BiasP = BlockFrequency(0);
     Value = 0;
     SumLinkWeights = Threshold;
     Links.clear();
@@ -239,7 +239,7 @@ void SpillPlacement::activate(unsigned n) {
   // limiting the number of blocks visited and the number of links in the
   // Hopfield network.
   if (bundles->getBlocks(n).size() > 100) {
-    nodes[n].BiasP = BlockFrequency();
+    nodes[n].BiasP = BlockFrequency(0);
     BlockFrequency BiasN = MBFI->getEntryFreq();
     BiasN >>= 4;
     nodes[n].BiasN = BiasN;
