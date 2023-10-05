@@ -398,14 +398,10 @@ static bool AddVariableInfo(
   return true;
 }
 
-/// Create a \c VariableInfo record for each visible variable.
-static bool RegisterAllVariables(
-    SymbolContext &sc, lldb::StackFrameSP &stack_frame_sp,
-    SwiftASTContextForExpressions &ast_context,
-    llvm::SmallVectorImpl<SwiftASTManipulator::VariableInfo> &local_variables,
-    lldb::DynamicValueType use_dynamic,
-    lldb::BindGenericTypes bind_generic_types) {
-  LLDB_SCOPED_TIMER();
+/// Collets all the variables visible in the current scope.
+static bool CollectVariablesInScope(SymbolContext &sc,
+                                    lldb::StackFrameSP &stack_frame_sp,
+                                    VariableList &variables) {
   if (!sc.block && !sc.function)
     return true;
 
@@ -415,20 +411,9 @@ static bool RegisterAllVariables(
   if (!top_block)
     top_block = &sc.function->GetBlock(true);
 
-  SwiftLanguageRuntime *language_runtime = nullptr;
-
-  if (stack_frame_sp)
-    language_runtime =
-        SwiftLanguageRuntime::Get(stack_frame_sp->GetThread()->GetProcess());
-
   // The module scoped variables are stored at the CompUnit level, so
   // after we go through the current context, then we have to take one
   // more pass through the variables in the CompUnit.
-  VariableList variables;
-
-  // Proceed from the innermost scope outwards, adding all variables
-  // not already shadowed by an inner declaration.
-  llvm::SmallDenseSet<const char *, 8> processed_names;
   bool done = false;
   do {
     // Iterate over all parent contexts *including* the top_block.
@@ -457,7 +442,29 @@ static bool RegisterAllVariables(
     if (globals_sp)
       variables.AddVariables(globals_sp.get());
   }
+  return true;
+}
 
+/// Create a \c VariableInfo record for each visible variable.
+static bool RegisterAllVariables(
+    SymbolContext &sc, lldb::StackFrameSP &stack_frame_sp,
+    SwiftASTContextForExpressions &ast_context,
+    llvm::SmallVectorImpl<SwiftASTManipulator::VariableInfo> &local_variables,
+    lldb::DynamicValueType use_dynamic,
+    lldb::BindGenericTypes bind_generic_types) {
+  LLDB_SCOPED_TIMER();
+  SwiftLanguageRuntime *language_runtime = nullptr;
+
+  if (stack_frame_sp)
+    language_runtime =
+        SwiftLanguageRuntime::Get(stack_frame_sp->GetThread()->GetProcess());
+
+  VariableList variables;
+  CollectVariablesInScope(sc, stack_frame_sp, variables);
+
+  // Proceed from the innermost scope outwards, adding all variables
+  // not already shadowed by an inner declaration.
+  llvm::SmallDenseSet<const char *, 8> processed_names;
   for (size_t vi = 0, ve = variables.GetSize(); vi != ve; ++vi)
     if (!AddVariableInfo({variables.GetVariableAtIndex(vi)}, stack_frame_sp,
                          ast_context, language_runtime, processed_names,
