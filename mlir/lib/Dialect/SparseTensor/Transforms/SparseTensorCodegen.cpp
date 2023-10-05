@@ -679,16 +679,6 @@ public:
   }
 };
 
-#ifndef NDEBUG
-LLVM_ATTRIBUTE_UNUSED static void dumpIndexMemRef(OpBuilder &builder,
-                                                  Location loc, Value memref) {
-  memref = builder.create<memref::CastOp>(
-      loc, UnrankedMemRefType::get(builder.getIndexType(), 0), memref);
-  createFuncCall(builder, loc, "printMemrefInd", TypeRange{},
-                 ValueRange{memref}, EmitCInterface::On);
-}
-#endif
-
 // TODO: use a new SortCOO operation here instead of reusing convert op.
 struct SparseSortCOOConverter : public OpConversionPattern<ConvertOp> {
   using OpConversionPattern::OpConversionPattern;
