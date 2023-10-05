@@ -850,7 +850,8 @@ public:
   // Add SchedGroups to \p Pipeline to implement this Strategy.
   virtual void applyIGLPStrategy(
       DenseMap<int, SUnitsToCandidateSGsMap> &SyncedInstrs,
-      DenseMap<int, SmallVector<SchedGroup, 4>> &SyncedSchedGroups) = 0;
+      DenseMap<int, SmallVector<SchedGroup, 4>> &SyncedSchedGroups,
+      bool IsPostRA) = 0;
 
   // Returns true if this strategy should be applied to a ScheduleDAG.
   virtual bool shouldApplyStrategy(ScheduleDAGInstrs *DAG) = 0;
@@ -868,7 +869,8 @@ private:
 public:
   void applyIGLPStrategy(
       DenseMap<int, SUnitsToCandidateSGsMap> &SyncedInstrs,
-      DenseMap<int, SmallVector<SchedGroup, 4>> &SyncedSchedGroups) override;
+      DenseMap<int, SmallVector<SchedGroup, 4>> &SyncedSchedGroups,
+      bool IsPostRA) override;
 
   bool shouldApplyStrategy(ScheduleDAGInstrs *DAG) override { return true; }
 
@@ -880,7 +882,8 @@ public:
 
 void MFMASmallGemmOpt::applyIGLPStrategy(
     DenseMap<int, SUnitsToCandidateSGsMap> &SyncedInstrs,
-    DenseMap<int, SmallVector<SchedGroup, 4>> &SyncedSchedGroups) {
+    DenseMap<int, SmallVector<SchedGroup, 4>> &SyncedSchedGroups,
+    bool IsPostRA) {
   // Count the number of MFMA instructions.
   unsigned MFMACount = 0;
   for (const MachineInstr &I : *DAG)
@@ -899,11 +902,6 @@ void MFMASmallGemmOpt::applyIGLPStrategy(
     SG->initSchedGroup(SyncedInstrs[SG->getSyncID()]);
   }
 }
-
-static unsigned DSWCount = 0;
-static unsigned DSWWithPermCount = 0;
-static unsigned DSWWithSharedVMEMCount = 0;
-static bool HasDSWCounts = false;
 
 class MFMASmallGemmSingleWaveOpt final : public IGLPStrategy {
 private:
@@ -1103,7 +1101,8 @@ private:
 public:
   void applyIGLPStrategy(
       DenseMap<int, SUnitsToCandidateSGsMap> &SyncedInstrs,
-      DenseMap<int, SmallVector<SchedGroup, 4>> &SyncedSchedGroups) override;
+      DenseMap<int, SmallVector<SchedGroup, 4>> &SyncedSchedGroups,
+      bool IsPostRA) override;
 
   bool shouldApplyStrategy(ScheduleDAGInstrs *DAG) override { return true; }
 
@@ -1113,11 +1112,20 @@ public:
   }
 };
 
+static unsigned DSWCount = 0;
+static unsigned DSWWithPermCount = 0;
+static unsigned DSWWithSharedVMEMCount = 0;
+
 void MFMASmallGemmSingleWaveOpt::applyIGLPStrategy(
     DenseMap<int, SUnitsToCandidateSGsMap> &SyncedInstrs,
-    DenseMap<int, SmallVector<SchedGroup, 4>> &SyncedSchedGroups) {
+    DenseMap<int, SmallVector<SchedGroup, 4>> &SyncedSchedGroups,
+    bool IsPostRA) {
   unsigned MFMACount = 0;
   unsigned DSRCount = 0;
+
+  assert((IsPostRA ||
+          DSWCount == DSWWithPermCount == DSWWithSharedVMEMCount == 0) &&
+         "DSWCounters should be zero in pre-RA scheduling!");
   SmallVector<SUnit *, 6> DSWithPerms;
   for (auto &SU : DAG->SUnits) {
     auto I = SU.getInstr();
@@ -1126,7 +1134,7 @@ void MFMASmallGemmSingleWaveOpt::applyIGLPStrategy(
     else if (TII->isDS(*I)) {
       if (I->mayLoad())
         ++DSRCount;
-      else if (I->mayStore() && !HasDSWCounts) {
+      else if (I->mayStore() && !IsPostRA) {
         ++DSWCount;
         for (auto Pred : SU.Preds) {
           if (Pred.getSUnit()->getInstr()->getOpcode() ==
@@ -1139,7 +1147,7 @@ void MFMASmallGemmSingleWaveOpt::applyIGLPStrategy(
     }
   }
 
-  if (!HasDSWCounts) {
+  if (!IsPostRA) {
     DSWWithPermCount = DSWithPerms.size();
     auto I = DSWithPerms.begin();
     auto E = DSWithPerms.end();
@@ -1193,7 +1201,6 @@ void MFMASmallGemmSingleWaveOpt::applyIGLPStrategy(
       }
     }
   }
-  HasDSWCounts = true;
 
   assert(DSWWithSharedVMEMCount <= DSWWithPermCount);
   SchedGroup *SG;
@@ -1407,7 +1414,11 @@ public:
   // first created SchedGroup first.
   bool IsBottomUp = 1;
 
+  // Whether the mutation is being applied to post RA scheduling
+  bool IsPostRA = false;
+
   IGroupLPDAGMutation() = default;
+  IGroupLPDAGMutation(bool IsPostRA) : IsPostRA(IsPostRA) {}
 };
 
 unsigned SchedGroup::NumSchedGroups = 0;
@@ -1695,7 +1706,7 @@ void IGroupLPDAGMutation::initIGLPOpt(SUnit &SU) {
   auto S = createIGLPStrategy(StrategyID, DAG, TII);
   if (S->shouldApplyStrategy(DAG)) {
     IsBottomUp = S->IsBottomUp;
-    S->applyIGLPStrategy(SyncedInstrs, SyncedSchedGroups);
+    S->applyIGLPStrategy(SyncedInstrs, SyncedSchedGroups, IsPostRA);
   }
 }
 
@@ -1703,8 +1714,8 @@ void IGroupLPDAGMutation::initIGLPOpt(SUnit &SU) {
 
 namespace llvm {
 
-std::unique_ptr<ScheduleDAGMutation> createIGroupLPDAGMutation() {
-  return std::make_unique<IGroupLPDAGMutation>();
+std::unique_ptr<ScheduleDAGMutation> createIGroupLPDAGMutation(bool IsPostRA) {
+  return std::make_unique<IGroupLPDAGMutation>(IsPostRA);
 }
 
 } // end namespace llvm
