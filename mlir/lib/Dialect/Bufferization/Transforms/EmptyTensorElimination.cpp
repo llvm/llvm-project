@@ -149,6 +149,8 @@ LogicalResult mlir::bufferization::eliminateEmptyTensors(
           op.buildSubsetExtraction(rewriter, emptyTensorOp->getLoc());
       if (!replacement)
         continue;
+      if (emptyTensorOp == replacement.getDefiningOp())
+        continue;
       if (replacement.getType() != v.getType()) {
         rewriter.setInsertionPointAfterValue(replacement);
         replacement = rewriter.create<tensor::CastOp>(v.getLoc(), v.getType(),
