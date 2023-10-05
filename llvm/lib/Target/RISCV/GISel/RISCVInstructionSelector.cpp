@@ -282,6 +282,7 @@ void RISCVInstructionSelector::preISelLower(MachineInstr &MI,
     replacePtrWithInt(MI.getOperand(1), MIB, MRI);
     MI.setDesc(TII.get(TargetOpcode::G_ADD));
     MRI.setType(DstReg, XLenLLT);
+    break;
   }
   }
 }
