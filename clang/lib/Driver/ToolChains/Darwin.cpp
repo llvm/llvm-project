@@ -2494,7 +2494,7 @@ void DarwinClang::AddClangCXXStdlibIncludeArgs(
                    << "\"\n";
     }
 
-    // Check for the location where the executable is located, if different.
+    // Check for the folder where the executable is located, if different.
     if (getDriver().getInstalledDir() != getDriver().Dir) {
       InstallBin = llvm::StringRef(getDriver().Dir.c_str());
       llvm::sys::path::append(InstallBin, "..", "include", "c++", "v1");
