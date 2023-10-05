@@ -14178,7 +14178,7 @@ static void AnalyzeComparison(Sema &S, BinaryOperator *E) {
   // Otherwise, calculate the effective range of the signed operand.
   IntRange signedRange =
       GetExprRange(S.Context, signedOperand, S.isConstantEvaluatedContext(),
-                   /*Approximate=*/ true);
+                   /*Approximate=*/true);
 
   // Go ahead and analyze implicit conversions in the operands.  Note
   // that we skip the implicit conversions on both sides.
@@ -14197,7 +14197,7 @@ static void AnalyzeComparison(Sema &S, BinaryOperator *E) {
     unsigned comparisonWidth = S.Context.getIntWidth(T);
     IntRange unsignedRange =
         GetExprRange(S.Context, unsignedOperand, S.isConstantEvaluatedContext(),
-                     /*Approximate=*/ true);
+                     /*Approximate=*/true);
 
     // We should never be unable to prove that the unsigned operand is
     // non-negative.
@@ -15126,7 +15126,7 @@ static void CheckImplicitConversion(Sema &S, Expr *E, QualType T,
     // Determine the number of precision bits in the source integer type.
     IntRange SourceRange =
         GetExprRange(S.Context, E, S.isConstantEvaluatedContext(),
-                     /*Approximate=*/ true);
+                     /*Approximate=*/true);
     unsigned int SourcePrecision = SourceRange.Width;
 
     // Determine the number of precision bits in the

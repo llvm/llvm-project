@@ -1348,7 +1348,8 @@ public:
     bool IsCurrentlyCheckingDefaultArgumentOrInitializer = false;
 
     // We are in a constant context, but we also allow
-    // non constant expressions, for example for array bounds (which may be VLAs).
+    // non constant expressions, for example for array bounds (which may be
+    // VLAs).
     bool InConditionallyConstantEvaluateContext = false;
 
     // When evaluating immediate functions in the initializer of a default
