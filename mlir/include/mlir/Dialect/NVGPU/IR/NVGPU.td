@@ -174,7 +174,7 @@ def NVGPU_TensorMapDescriptor : NVGPU_Type<"TensorMapDescriptor", "tensormap.des
   let assemblyFormat = "`<` struct(params) `>`";
 }
 
-def NVGPU_WarpgroupMatrixDescriptor : NVGPU_Type<"WarpgroupMatrixDescriptor", "wgmma.descriptor", []> {
+def NVGPU_WarpgroupMatrixDescriptor : NVGPU_Type<"WarpgroupMatrixDescriptor", "warpgroup.descriptor", []> {
   let summary = "Warpgroup matrix descriptor type";
   let description = [{
   The descriptor specifies the properties of the matrix in shared memory that 
@@ -667,11 +667,12 @@ def NVGPU_TmaCreateDescriptorOp : NVGPU_Op<"tma.create.descriptor", []> {
   let hasVerifier = 1;
 }
 
-def NVGPU_GenerateGmmaDescriptorOp : NVGPU_Op<"wgmma.generate.descriptor", []> {
-  let summary = "Generate a wgmma matrix descriptor";
+def NVGPU_GenerateWarpgroupDescriptorOp : NVGPU_Op<"warpgroup.generate.descriptor", []> {
+  let summary = "Generate a warpgroup matrix descriptor";
   let description = [{
-  This Op builds a `nvgpu.wgmma.descriptor` that is used by warpgroup-level 
-  matrix multiply and accumulate.
+  This Op builds a `nvgpu.warpgroup.descriptor` that is used by 
+  `nvgpu.warpgroup.mma` to perform warpgroup-level matrix multiply and 
+  accumulate.
 
   The descriptor specifies the properties of the matrix in shared memory that 
   is a multiplicand in the matrix multiply and accumulate operation. 
@@ -702,9 +703,9 @@ def NVGPU_WarpgroupMmaOp : NVGPU_Op<"warpgroup.mma"> {
 
     Example:
     ```mlir
-      %r1,%r2 = nvgpu.warpgroup.mma %wgmmaDescA, %wgmmaDescB, %acc1, %acc2: 
-                 !nvgpu.wgmma.descriptor<tensor = memref<128x64xf16, 3>>, 
-                 !nvgpu.wgmma.descriptor<tensor = memref<64x128xf16, 3>>, 
+      %r1,%r2 = nvgpu.warpgroup.mma %descA, %descB, %acc1, %acc2: 
+                 !nvgpu.warpgroup.descriptor<tensor = memref<128x64xf16, 3>>, 
+                 !nvgpu.warpgroup.descriptor<tensor = memref<64x128xf16, 3>>, 
                  !nvgpu.warpgroup.accumulator<fragmented = vector<64x128xf32>>,
                  !nvgpu.warpgroup.accumulator<fragmented = vector<64x128xf32>>
                  -> 
