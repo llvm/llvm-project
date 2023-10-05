@@ -545,16 +545,17 @@ private:
 
 namespace {
 
-struct EraseSelfCopyOnBuffers : OpRewritePattern<CopyOp> {
+struct EraseSelfCopy : OpRewritePattern<CopyOp> {
   using OpRewritePattern<CopyOp>::OpRewritePattern;
   LogicalResult matchAndRewrite(CopyOp copyOp,
                                 PatternRewriter &rewriter) const override {
-    if (!copyOp.hasBufferSemantics())
-      return rewriter.notifyMatchFailure(copyOp,
-                                         "does not have buffer semantics");
-    if (copyOp.getInputs().front() != copyOp.getOutputs().front())
+    if (copyOp.getInputs() != copyOp.getOutputs())
       return rewriter.notifyMatchFailure(copyOp, "not a self copy");
-    rewriter.eraseOp(copyOp);
+    if (copyOp.hasBufferSemantics())
+      rewriter.eraseOp(copyOp);
+    else
+      rewriter.replaceOp(copyOp, copyOp.getInputs());
+
     return success();
   }
 };
@@ -563,7 +564,7 @@ struct EraseSelfCopyOnBuffers : OpRewritePattern<CopyOp> {
 
 void CopyOp::getCanonicalizationPatterns(RewritePatternSet &results,
                                          MLIRContext *context) {
-  results.add<EraseSelfCopyOnBuffers>(context);
+  results.add<EraseSelfCopy>(context);
 }
 
 //===----------------------------------------------------------------------===//
