@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "CalleeNamespaceCheck.h"
+#include "NamespaceConstants.h"
 #include "clang/AST/ASTContext.h"
 #include "clang/ASTMatchers/ASTMatchFinder.h"
 
@@ -45,10 +46,11 @@ void CalleeNamespaceCheck::check(const MatchFinder::MatchResult &Result) {
   if (FuncDecl->getBuiltinID() != 0)
     return;
 
-  // If the outermost namespace of the function starts with __llvm_libc, we're
-  // good.
+  // If the outermost namespace of the function is a macro that starts with
+  // __llvm_libc, we're good.
   const auto *NS = dyn_cast<NamespaceDecl>(getOutermostNamespace(FuncDecl));
-  if (NS && NS->getName().starts_with("__llvm_libc"))
+  if (NS && Result.SourceManager->isMacroBodyExpansion(NS->getLocation()) &&
+      NS->getName().starts_with(RequiredNamespaceStart))
     return;
 
   const DeclarationName &Name = FuncDecl->getDeclName();
@@ -58,7 +60,7 @@ void CalleeNamespaceCheck::check(const MatchFinder::MatchResult &Result) {
 
   diag(UsageSiteExpr->getBeginLoc(),
        "%0 must resolve to a function declared "
-       "within the '__llvm_libc' namespace (use macro `LIBC_NAMESPACE`)")
+       "within the namespace defined by the 'LIBC_NAMESPACE' macro")
       << FuncDecl;
 
   diag(FuncDecl->getLocation(), "resolves to this declaration",
