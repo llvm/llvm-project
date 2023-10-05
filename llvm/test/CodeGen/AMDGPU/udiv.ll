@@ -2527,7 +2527,7 @@ define i64 @v_test_udiv64_mulhi_fold(i64 %arg) {
 ; SI-NEXT:    v_mul_f32_e32 v2, 0x5f7ffffc, v2
 ; SI-NEXT:    v_mul_f32_e32 v3, 0x2f800000, v2
 ; SI-NEXT:    v_trunc_f32_e32 v3, v3
-; SI-NEXT:    v_mac_f32_e32 v2, 0xcf800000, v3
+; SI-NEXT:    v_madmk_f32 v2, v3, 0xcf800000, v2
 ; SI-NEXT:    v_cvt_u32_f32_e32 v2, v2
 ; SI-NEXT:    v_cvt_u32_f32_e32 v3, v3
 ; SI-NEXT:    v_mul_hi_u32 v4, v2, s4
@@ -2626,7 +2626,7 @@ define i64 @v_test_udiv64_mulhi_fold(i64 %arg) {
 ; VI-NEXT:    v_mul_f32_e32 v2, 0x5f7ffffc, v2
 ; VI-NEXT:    v_mul_f32_e32 v3, 0x2f800000, v2
 ; VI-NEXT:    v_trunc_f32_e32 v3, v3
-; VI-NEXT:    v_mac_f32_e32 v2, 0xcf800000, v3
+; VI-NEXT:    v_madmk_f32 v2, v3, 0xcf800000, v2
 ; VI-NEXT:    v_cvt_u32_f32_e32 v6, v2
 ; VI-NEXT:    v_cvt_u32_f32_e32 v7, v3
 ; VI-NEXT:    v_mad_u64_u32 v[2:3], s[4:5], v6, s6, 0
@@ -2713,7 +2713,7 @@ define i64 @v_test_udiv64_mulhi_fold(i64 %arg) {
 ; GCN-NEXT:    v_mul_f32_e32 v2, 0x5f7ffffc, v2
 ; GCN-NEXT:    v_mul_f32_e32 v3, 0x2f800000, v2
 ; GCN-NEXT:    v_trunc_f32_e32 v3, v3
-; GCN-NEXT:    v_mac_f32_e32 v2, 0xcf800000, v3
+; GCN-NEXT:    v_madmk_f32 v2, v3, 0xcf800000, v2
 ; GCN-NEXT:    v_cvt_u32_f32_e32 v6, v2
 ; GCN-NEXT:    v_cvt_u32_f32_e32 v7, v3
 ; GCN-NEXT:    v_mad_u64_u32 v[2:3], s[4:5], v6, s6, 0
