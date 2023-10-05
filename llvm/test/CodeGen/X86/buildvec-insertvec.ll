@@ -832,7 +832,7 @@ define void @pr59781(ptr %in, ptr %out) {
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    movzwl (%rdi), %eax
 ; CHECK-NEXT:    movzbl 2(%rdi), %ecx
-; CHECK-NEXT:    shlq $16, %rcx
+; CHECK-NEXT:    shll $16, %ecx
 ; CHECK-NEXT:    orq %rax, %rcx
 ; CHECK-NEXT:    movq %rcx, (%rsi)
 ; CHECK-NEXT:    retq
