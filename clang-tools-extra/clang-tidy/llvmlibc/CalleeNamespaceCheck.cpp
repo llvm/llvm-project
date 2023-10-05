@@ -11,6 +11,7 @@
 #include "clang/AST/ASTContext.h"
 #include "clang/ASTMatchers/ASTMatchFinder.h"
 
+#include "clang/ASTMatchers/ASTMatchers.h"
 #include "llvm/ADT/StringSet.h"
 
 using namespace clang::ast_matchers;
@@ -60,8 +61,8 @@ void CalleeNamespaceCheck::check(const MatchFinder::MatchResult &Result) {
 
   diag(UsageSiteExpr->getBeginLoc(),
        "%0 must resolve to a function declared "
-       "within the namespace defined by the 'LIBC_NAMESPACE' macro")
-      << FuncDecl;
+       "within the namespace defined by the '%1' macro")
+      << FuncDecl << RequiredNamespaceMacroName;
 
   diag(FuncDecl->getLocation(), "resolves to this declaration",
        clang::DiagnosticIDs::Note);
