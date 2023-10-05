@@ -5301,6 +5301,7 @@ cc_library(
     ]),
     includes = ["include"],
     deps = [
+        ":ArithDialect",
         ":ConversionPassIncGen",
         ":GPUCommonTransforms",
         ":GPUDialect",
@@ -5309,7 +5310,6 @@ cc_library(
         ":LLVMCommonConversion",
         ":LLVMDialect",
         ":MemRefDialect",
-        ":ArithDialect",
         ":NVGPUDialect",
         ":NVVMDialect",
         ":Pass",
