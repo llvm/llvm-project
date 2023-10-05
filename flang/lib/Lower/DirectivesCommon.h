@@ -800,15 +800,14 @@ genBoundsOps(fir::FirOpBuilder &builder, mlir::Location loc,
         }
       }
       if (!ubound) {
-        mlir::Value ext =
-            fir::factory::readExtent(builder, loc, dataExv, dimension);
+        extent = fir::factory::readExtent(builder, loc, dataExv, dimension);
         if (defaultLb) {
           // ub = extent - 1
-          ubound = builder.create<mlir::arith::SubIOp>(loc, ext, one);
+          ubound = builder.create<mlir::arith::SubIOp>(loc, extent, one);
         } else {
           // ub = baseLb + extent - 1
           mlir::Value lbExt =
-              builder.create<mlir::arith::AddIOp>(loc, ext, baseLb);
+              builder.create<mlir::arith::AddIOp>(loc, extent, baseLb);
           ubound = builder.create<mlir::arith::SubIOp>(loc, lbExt, one);
         }
       }
