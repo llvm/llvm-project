@@ -569,7 +569,16 @@ public:
     initializeLowerSwitchLegacyPassPass(*PassRegistry::getPassRegistry());
   }
 
+  // Remember the current function. Only used for verification.
+  Function *F;
+
   bool runOnFunction(Function &F) override;
+
+  void verifyAnalysis() const override {
+    for (auto &BB : *F)
+      assert(!isa<SwitchInst>(BB.getTerminator()) &&
+             "Found an unlowered switch!");
+  }
 
   void getAnalysisUsage(AnalysisUsage &AU) const override {
     AU.addRequired<LazyValueInfoWrapperPass>();
@@ -596,6 +605,7 @@ FunctionPass *llvm::createLowerSwitchPass() {
 }
 
 bool LowerSwitchLegacyPass::runOnFunction(Function &F) {
+  this->F = &F;
   LazyValueInfo *LVI = &getAnalysis<LazyValueInfoWrapperPass>().getLVI();
   auto *ACT = getAnalysisIfAvailable<AssumptionCacheTracker>();
   AssumptionCache *AC = ACT ? &ACT->getAssumptionCache(F) : nullptr;
