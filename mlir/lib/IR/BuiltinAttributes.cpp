@@ -467,8 +467,7 @@ static bool getBit(const char *rawData, size_t bitPos) {
 /// BE format.
 static void copyAPIntToArrayForBEmachine(APInt value, size_t numBytes,
                                          char *result) {
-  assert(llvm::support::endian::system_endianness() == // NOLINT
-         llvm::support::endianness::big);              // NOLINT
+  assert(llvm::endianness::native == llvm::endianness::big);
   assert(value.getNumWords() * APInt::APINT_WORD_SIZE >= numBytes);
 
   // Copy the words filled with data.
@@ -497,8 +496,7 @@ static void copyAPIntToArrayForBEmachine(APInt value, size_t numBytes,
 /// format.
 static void copyArrayToAPIntForBEmachine(const char *inArray, size_t numBytes,
                                          APInt &result) {
-  assert(llvm::support::endian::system_endianness() == // NOLINT
-         llvm::support::endianness::big);              // NOLINT
+  assert(llvm::endianness::native == llvm::endianness::big);
   assert(result.getNumWords() * APInt::APINT_WORD_SIZE >= numBytes);
 
   // Copy the data that fills the word of `result` from `inArray`.
@@ -539,8 +537,7 @@ static void writeBits(char *rawData, size_t bitPos, APInt value) {
 
   // Otherwise, the bit position is guaranteed to be byte aligned.
   assert((bitPos % CHAR_BIT) == 0 && "expected bitPos to be 8-bit aligned");
-  if (llvm::support::endian::system_endianness() ==
-      llvm::support::endianness::big) {
+  if (llvm::endianness::native == llvm::endianness::big) {
     // Copy from `value` to `rawData + (bitPos / CHAR_BIT)`.
     // Copying the first `llvm::divideCeil(bitWidth, CHAR_BIT)` bytes doesn't
     // work correctly in BE format.
@@ -565,8 +562,7 @@ static APInt readBits(const char *rawData, size_t bitPos, size_t bitWidth) {
   // Otherwise, the bit position must be 8-bit aligned.
   assert((bitPos % CHAR_BIT) == 0 && "expected bitPos to be 8-bit aligned");
   APInt result(bitWidth, 0);
-  if (llvm::support::endian::system_endianness() ==
-      llvm::support::endianness::big) {
+  if (llvm::endianness::native == llvm::endianness::big) {
     // Copy from `rawData + (bitPos / CHAR_BIT)` to `result`.
     // Copying the first `llvm::divideCeil(bitWidth, CHAR_BIT)` bytes doesn't
     // work correctly in BE format.
@@ -1367,8 +1363,7 @@ void DenseIntOrFPElementsAttr::convertEndianOfCharForBEmachine(
   using llvm::support::ulittle32_t;
   using llvm::support::ulittle64_t;
 
-  assert(llvm::support::endian::system_endianness() == // NOLINT
-         llvm::support::endianness::big);              // NOLINT
+  assert(llvm::endianness::native == llvm::endianness::big);
   // NOLINT to avoid warning message about replacing by static_assert()
 
   // Following std::copy_n always converts endianness on BE machine.

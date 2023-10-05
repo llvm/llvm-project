@@ -64,8 +64,7 @@ TEST(Bytecode, MultiModuleWithResource) {
 
   // FIXME: Parsing external resources does not work on big-endian
   // platforms currently.
-  if (llvm::support::endian::system_endianness() ==
-      llvm::support::endianness::big)
+  if (llvm::endianness::native == llvm::endianness::big)
     GTEST_SKIP();
 
   // Try to see if we have a valid resource in the parsed module.

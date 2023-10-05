@@ -23,11 +23,10 @@
 using namespace llvm;
 using namespace gsym;
 
-GsymReader::GsymReader(std::unique_ptr<MemoryBuffer> Buffer) :
-    MemBuffer(std::move(Buffer)),
-    Endian(support::endian::system_endianness()) {}
+GsymReader::GsymReader(std::unique_ptr<MemoryBuffer> Buffer)
+    : MemBuffer(std::move(Buffer)), Endian(llvm::endianness::native) {}
 
-  GsymReader::GsymReader(GsymReader &&RHS) = default;
+GsymReader::GsymReader(GsymReader &&RHS) = default;
 
 GsymReader::~GsymReader() = default;
 
@@ -60,8 +59,7 @@ GsymReader::create(std::unique_ptr<MemoryBuffer> &MemBuffer) {
 
 llvm::Error
 GsymReader::parse() {
-  BinaryStreamReader FileData(MemBuffer->getBuffer(),
-                              support::endian::system_endianness());
+  BinaryStreamReader FileData(MemBuffer->getBuffer(), llvm::endianness::native);
   // Check for the magic bytes. This file format is designed to be mmap'ed
   // into a process and accessed as read only. This is done for performance
   // and efficiency for symbolicating and parsing GSYM data.
@@ -69,7 +67,7 @@ GsymReader::parse() {
     return createStringError(std::errc::invalid_argument,
                              "not enough data for a GSYM header");
 
-  const auto HostByteOrder = support::endian::system_endianness();
+  const auto HostByteOrder = llvm::endianness::native;
   switch (Hdr->Magic) {
     case GSYM_MAGIC:
       Endian = HostByteOrder;

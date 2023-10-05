@@ -170,7 +170,7 @@ public:
     // `update` to guarantee the fast path.
     add(Value.size());
     if (hashbuilder_detail::IsHashableData<T>::value &&
-        Endianness == support::endian::system_endianness()) {
+        Endianness == llvm::endianness::native) {
       this->update(ArrayRef(reinterpret_cast<const uint8_t *>(Value.begin()),
                             Value.size() * sizeof(T)));
     } else {
@@ -248,7 +248,7 @@ public:
   ///   template <typename HasherT, support::endianness Endianness>
   ///   friend void addHash(HashBuilder<HasherT, Endianness> &HBuilder,
   ///                       const StructWithFastHash &Value) {
-  ///     if (Endianness == support::endian::system_endianness()) {
+  ///     if (Endianness == llvm::endianness::native) {
   ///       HBuilder.update(ArrayRef(
   ///           reinterpret_cast<const uint8_t *>(&Value), sizeof(Value)));
   ///     } else {
@@ -278,7 +278,7 @@ public:
   ///   template <typename HasherT, support::endianness Endianness>
   ///   friend void addHash(HashBuilder<HasherT, Endianness> &HBuilder,
   ///                       const CustomContainer &Value) {
-  ///     if (Endianness == support::endian::system_endianness()) {
+  ///     if (Endianness == llvm::endianness::native) {
   ///       HBuilder.update(ArrayRef(
   ///           reinterpret_cast<const uint8_t *>(&Value.Size),
   ///           sizeof(Value.Size) + Value.Size * sizeof(Value.Elements[0])));
@@ -373,7 +373,7 @@ private:
 
   template <typename T>
   std::enable_if_t<hashbuilder_detail::IsHashableData<T>::value &&
-                       Endianness == support::endian::system_endianness(),
+                       Endianness == llvm::endianness::native,
                    HashBuilder &>
   addRangeElementsImpl(T *First, T *Last, std::forward_iterator_tag) {
     this->update(ArrayRef(reinterpret_cast<const uint8_t *>(First),
