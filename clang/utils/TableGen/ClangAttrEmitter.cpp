@@ -2690,7 +2690,8 @@ static void emitAttributes(RecordKeeper &Records, raw_ostream &OS,
         OS << ", ";
         emitFormInitializer(OS, Spellings[0], "0");
       } else {
-        OS << ", (\n";
+        OS << ", [&]() {\n";
+        OS << "    switch (S) {\n";
         std::set<std::string> Uniques;
         unsigned Idx = 0;
         for (auto I = Spellings.begin(), E = Spellings.end(); I != E;
@@ -2698,15 +2699,19 @@ static void emitAttributes(RecordKeeper &Records, raw_ostream &OS,
           const FlattenedSpelling &S = *I;
           const auto &Name = SemanticToSyntacticMap[Idx];
           if (Uniques.insert(Name).second) {
-            OS << "    S == " << Name << " ? AttributeCommonInfo::Form";
+            OS << "    case " << Name << ":\n";
+            OS << "      return AttributeCommonInfo::Form";
             emitFormInitializer(OS, S, Name);
-            OS << " :\n";
+            OS << ";\n";
           }
         }
-        OS << "    (llvm_unreachable(\"Unknown attribute spelling!\"), "
-           << " AttributeCommonInfo::Form";
+        OS << "    default:\n";
+        OS << "      llvm_unreachable(\"Unknown attribute spelling!\");\n"
+           << "      return AttributeCommonInfo::Form";
         emitFormInitializer(OS, Spellings[0], "0");
-        OS << "))";
+        OS << ";\n"
+           << "    }\n"
+           << "  }()";
       }
 
       OS << ");\n";
