@@ -155,17 +155,6 @@ void HipBinAmd::initializeHipLdFlags() {
 }
 
 void HipBinAmd::initializeHipCFlags() {
-  string hipCFlags;
-  const OsType& os = getOSInfo();
-  if (os != windows) {
-    string hsaPath;
-    hsaPath = getHsaPath();
-    hipCFlags += " -isystem " + hsaPath + "/include";
-  }
-  string hipIncludePath;
-  hipIncludePath = getHipInclude();
-  hipCFlags += " -isystem \"" + hipIncludePath + "\"";
-  hipCFlags_ = hipCFlags;
 }
 
 const string& HipBinAmd::getHipCXXFlags() const {
@@ -197,14 +186,6 @@ void HipBinAmd::initializeHipCXXFlags() {
     " -Xclang -fallow-half-arguments-and-returns -D__HIP_HCC_COMPAT_MODE__=1";
   }
 
-  if (os != windows) {
-    const string& hsaPath = getHsaPath();
-    hipCXXFlags += " -isystem " + hsaPath + "/include";
-  }
-  // Add paths to common HIP includes:
-  string hipIncludePath;
-  hipIncludePath = getHipInclude();
-  hipCXXFlags += " -isystem \"" + hipIncludePath + "\"";
   hipCXXFlags_ = hipCXXFlags;
 }
 
