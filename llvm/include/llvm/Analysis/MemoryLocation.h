@@ -177,6 +177,13 @@ public:
     return {Value & ~(ImpreciseBit | ScalableBit), isScalable()};
   }
 
+  uint64_t getUintValue() const {
+    assert(hasValue() && "Getting value from an unknown LocationSize!");
+    assert((Value & ~(ImpreciseBit | ScalableBit)) < MaxValue &&
+           "Scalable bit of value should be masked");
+    return Value & ~(ImpreciseBit | ScalableBit);
+  }
+
   // Returns whether or not this value is precise. Note that if a value is
   // precise, it's guaranteed to not be unknown.
   bool isPrecise() const {

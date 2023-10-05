@@ -499,6 +499,8 @@ struct BasicAAResult::DecomposedGEP {
   const Value *Base;
   // Total constant offset from base.
   APInt Offset;
+  // Total scalable (vscale) offset from base (only for first GEP index)
+  APInt ScalableOffset;
   // Scaled variable (non-constant) indices.
   SmallVector<VariableGEPIndex, 4> VarIndices;
   // Are all operations inbounds GEPs or non-indexing operations?
@@ -512,6 +514,7 @@ struct BasicAAResult::DecomposedGEP {
   void print(raw_ostream &OS) const {
     OS << "(DecomposedGEP Base=" << Base->getName()
        << ", Offset=" << Offset
+       << ", ScalableOffset=" << ScalableOffset
        << ", VarIndices=[";
     for (size_t i = 0; i < VarIndices.size(); i++) {
       if (i != 0)
@@ -541,6 +544,7 @@ BasicAAResult::DecomposeGEPExpression(const Value *V, const DataLayout &DL,
   unsigned MaxIndexSize = DL.getMaxIndexSizeInBits();
   DecomposedGEP Decomposed;
   Decomposed.Offset = APInt(MaxIndexSize, 0);
+  Decomposed.ScalableOffset = APInt(MaxIndexSize, 0);
   do {
     // See if this is a bitcast or GEP.
     const Operator *Op = dyn_cast<Operator>(V);
@@ -608,6 +612,7 @@ BasicAAResult::DecomposeGEPExpression(const Value *V, const DataLayout &DL,
     for (User::const_op_iterator I = GEPOp->op_begin() + 1, E = GEPOp->op_end();
          I != E; ++I, ++GTI) {
       const Value *Index = *I;
+      const bool ScalableOffset = isa<ScalableVectorType>(GTI.getIndexedType());
       // Compute the (potentially symbolic) offset in bytes for this index.
       if (StructType *STy = GTI.getStructTypeOrNull()) {
         // For a struct, add the member offset.
@@ -615,29 +620,32 @@ BasicAAResult::DecomposeGEPExpression(const Value *V, const DataLayout &DL,
         if (FieldNo == 0)
           continue;
 
-        Decomposed.Offset += DL.getStructLayout(STy)->getElementOffset(FieldNo);
+        if (ScalableOffset)
+          Decomposed.ScalableOffset += DL.getStructLayout(STy)->getElementOffset(FieldNo);
+        else
+          Decomposed.Offset += DL.getStructLayout(STy)->getElementOffset(FieldNo);
         continue;
       }
 
+      TypeSize AllocTypeSize = DL.getTypeAllocSize(GTI.getIndexedType());
       // For an array/pointer, add the element offset, explicitly scaled.
       if (const ConstantInt *CIdx = dyn_cast<ConstantInt>(Index)) {
         if (CIdx->isZero())
           continue;
 
-        // Don't attempt to analyze GEPs if the scalable index is not zero.
-        TypeSize AllocTypeSize = DL.getTypeAllocSize(GTI.getIndexedType());
-        if (AllocTypeSize.isScalable()) {
-          Decomposed.Base = V;
-          return Decomposed;
-        }
-
-        Decomposed.Offset += AllocTypeSize.getFixedValue() *
+        if (!ScalableOffset) {
+          Decomposed.Offset += AllocTypeSize.getFixedValue() *
                              CIdx->getValue().sextOrTrunc(MaxIndexSize);
-        continue;
+          continue;
+        } else {
+          Decomposed.ScalableOffset += AllocTypeSize.getKnownMinValue() *
+                             CIdx->getValue().sextOrTrunc(MaxIndexSize);
+          continue;
+        }
       }
 
-      TypeSize AllocTypeSize = DL.getTypeAllocSize(GTI.getIndexedType());
-      if (AllocTypeSize.isScalable()) {
+      // Bail on analysis of variableIndex if it's scalable and occur on first index
+      if (I == GEPOp->op_begin() + 1 && ScalableOffset) {
         Decomposed.Base = V;
         return Decomposed;
       }
@@ -653,7 +661,7 @@ BasicAAResult::DecomposeGEPExpression(const Value *V, const DataLayout &DL,
           CastedValue(Index, 0, SExtBits, TruncBits), DL, 0, AC, DT);
 
       // Scale by the type size.
-      unsigned TypeSize = AllocTypeSize.getFixedValue();
+      unsigned TypeSize = AllocTypeSize.getKnownMinValue();
       LE = LE.mul(APInt(IndexSize, TypeSize), GEPOp->isInBounds());
       Decomposed.Offset += LE.Offset.sext(MaxIndexSize);
       APInt Scale = LE.Scale.sext(MaxIndexSize);
@@ -1059,26 +1067,50 @@ AliasResult BasicAAResult::aliasGEP(
 
   // If an inbounds GEP would have to start from an out of bounds address
   // for the two to alias, then we can assume noalias.
-  // TODO: Remove !isScalable() once BasicAA fully support scalable location
-  // size
+  // Depending on Scalable, sge is performed on either ScalableOffset or Offset.
+  // bool InBoundCheck;
+  // InBoundCheck = V2Size.isScalable() ? DecompGEP1.ScalableOffset.sge(V2Size.getValue()) : DecompGEP1.Offset.sge(V2Size.getValue());
+  // if (*DecompGEP1.InBounds && DecompGEP1.VarIndices.empty() &&
+      // V2Size.hasValue() &&
+      // InBoundCheck                             &&
+      // isBaseOfObject(DecompGEP2.Base))
+    // return AliasResult::NoAlias;
+
   if (*DecompGEP1.InBounds && DecompGEP1.VarIndices.empty() &&
-      V2Size.hasValue() && !V2Size.isScalable() &&
-      DecompGEP1.Offset.sge(V2Size.getValue()) &&
+      V2Size.hasValue() && DecompGEP1.Offset.sge(V2Size.getValue()) && DecompGEP1.ScalableOffset.isZero() &&
       isBaseOfObject(DecompGEP2.Base))
     return AliasResult::NoAlias;
 
+  if (*DecompGEP1.InBounds && DecompGEP1.VarIndices.empty() &&
+      V2Size.hasValue() && DecompGEP1.ScalableOffset.sge(V2Size.getValue()) && DecompGEP1.Offset.isZero() &&
+      isBaseOfObject(DecompGEP2.Base))
+    return AliasResult::NoAlias;
+
+
   if (isa<GEPOperator>(V2)) {
     // Symmetric case to above.
+    // InBoundCheck = V1Size.isScalable() ? DecompGEP1.ScalableOffset.sle(-V1Size.getValue()) : DecompGEP1.Offset.sle(-V1Size.getValue());
+    // if (*DecompGEP2.InBounds && DecompGEP1.VarIndices.empty() &&
+        // V1Size.hasValue() &&
+        // InBoundCheck  &&
+        // isBaseOfObject(DecompGEP1.Base))
+      // return AliasResult::NoAlias;
+
     if (*DecompGEP2.InBounds && DecompGEP1.VarIndices.empty() &&
-        V1Size.hasValue() && !V1Size.isScalable() &&
-        DecompGEP1.Offset.sle(-V1Size.getValue()) &&
+        V1Size.hasValue() && DecompGEP1.Offset.sle(-V1Size.getValue()) && DecompGEP1.ScalableOffset.isZero() &&
         isBaseOfObject(DecompGEP1.Base))
       return AliasResult::NoAlias;
+
+    if (*DecompGEP2.InBounds && DecompGEP1.VarIndices.empty() &&
+        V1Size.hasValue() && DecompGEP1.ScalableOffset.sle(-V1Size.getValue()) && DecompGEP1.Offset.isZero() &&
+        isBaseOfObject(DecompGEP1.Base))
+      return AliasResult::NoAlias;
+
   }
 
   // For GEPs with identical offsets, we can preserve the size and AAInfo
   // when performing the alias check on the underlying objects.
-  if (DecompGEP1.Offset == 0 && DecompGEP1.VarIndices.empty())
+  if (DecompGEP1.Offset == 0 && DecompGEP1.ScalableOffset == 0 && DecompGEP1.VarIndices.empty())
     return AAQI.AAR.alias(MemoryLocation(DecompGEP1.Base, V1Size),
                           MemoryLocation(DecompGEP2.Base, V2Size), AAQI);
 
@@ -1095,8 +1127,9 @@ AliasResult BasicAAResult::aliasGEP(
     return BaseAlias;
   }
 
-  // Bail on analysing scalable LocationSize
-  if (V1Size.isScalable() || V2Size.isScalable())
+  // if Scalable offset and constant offset has different sign, return may alias
+  if (DecompGEP1.Offset.isSignBitSet() != DecompGEP1.ScalableOffset.isSignBitSet() &&
+      !DecompGEP1.Offset.isZero() && !DecompGEP1.ScalableOffset.isZero())
     return AliasResult::MayAlias;
 
   // If there is a constant difference between the pointers, but the difference
@@ -1105,13 +1138,14 @@ AliasResult BasicAAResult::aliasGEP(
   // greater, we know they do not overlap.
   if (DecompGEP1.VarIndices.empty()) {
     APInt &Off = DecompGEP1.Offset;
+    APInt &ScalableOff = DecompGEP1.ScalableOffset;
 
     // Initialize for Off >= 0 (V2 <= GEP1) case.
     const Value *LeftPtr = V2;
     const Value *RightPtr = GEP1;
     LocationSize VLeftSize = V2Size;
     LocationSize VRightSize = V1Size;
-    const bool Swapped = Off.isNegative();
+    const bool Swapped = Off.isNegative() || ScalableOff.isNegative();
 
     if (Swapped) {
       // Swap if we have the situation where:
@@ -1123,31 +1157,64 @@ AliasResult BasicAAResult::aliasGEP(
       std::swap(LeftPtr, RightPtr);
       std::swap(VLeftSize, VRightSize);
       Off = -Off;
+      ScalableOff = -ScalableOff;
     }
 
     if (!VLeftSize.hasValue())
       return AliasResult::MayAlias;
 
-    const uint64_t LSize = VLeftSize.getValue();
-    if (Off.ult(LSize)) {
+      // +                          +
+      // | BaseOffset               |
+      // ---------------->          |
+      // |-->V1Size (scalable)      |-------> V2Size (non-scalable)
+      // GEP1                        V2
+      // In the case below, if V1Size is Scalable but V2Size is not, best guarantee is to return MayAlias
+    if (VLeftSize.isScalable() && !VRightSize.isScalable())
+      return AliasResult::MayAlias;
+
+    const uint64_t LSize = VLeftSize.getUintValue();
+    const bool LSizeIsScalable = VLeftSize.isScalable();
+    // If GEP1's size is scalable, partial overlap will occur if:
+    //  Case 1 :
+    //  4 x vscale   < 8 x vscale   and RSize is scalable
+    //  ScalableOff     LSize
+    //  =========================================================
+    //  Case 2 : (ScalableOff is less than LSize and (ScalableOff + Off) is less than LSize, for all positive vscale)
+    //  4 x vscale +    3   < 8 x vscale and Rsize is scalable
+    //  ScalableOff    Off         LSize
+    const bool MustPartialOverlap = LSizeIsScalable ? ScalableOff.ult(LSize) && (ScalableOff + Off).ult(LSize) && VRightSize.isScalable()
+                                                    : Off.ult(LSize) && ScalableOff.isZero() && !VRightSize.isScalable();
+    const bool MustNoAlias = LSizeIsScalable ? ScalableOff.uge(LSize) : (ScalableOff + Off).uge(LSize);
+    const APInt ChosenOff = LSizeIsScalable ? ScalableOff : Off;
+  // Partial overlap algo:
+  // for Vscale location size --> if ScalableOff is less than LSize and Offset is less than LSize
+  // for non-Scale Location Size --> Scalable offset must be 0, else there is no guarantee.
+    if (MustPartialOverlap) {
       // Conservatively drop processing if a phi was visited and/or offset is
       // too big.
       AliasResult AR = AliasResult::PartialAlias;
-      if (VRightSize.hasValue() && Off.ule(INT32_MAX) &&
-          (Off + VRightSize.getValue()).ule(LSize)) {
+      if (VRightSize.hasValue() && ChosenOff.ule(INT32_MAX) &&
+          (ChosenOff + VRightSize.getValue()).ule(LSize)) {
         // Memory referenced by right pointer is nested. Save the offset in
         // cache. Note that originally offset estimated as GEP1-V2, but
         // AliasResult contains the shift that represents GEP1+Offset=V2.
-        AR.setOffset(-Off.getSExtValue());
+        AR.setOffset(-ChosenOff.getSExtValue());
         AR.swap(Swapped);
       }
       return AR;
     }
-    return AliasResult::NoAlias;
+    if (MustNoAlias)
+      return AliasResult::NoAlias;
+    else
+      return AliasResult::MayAlias;
   }
 
   // We need to know both acess sizes for all the following heuristics.
   if (!V1Size.hasValue() || !V2Size.hasValue())
+    return AliasResult::MayAlias;
+
+  // Bail on Analysing VariableIndex if these conditions are met
+  if (!DecompGEP1.ScalableOffset.isZero() || V1Size.isScalable() || V2Size.isScalable())
     return AliasResult::MayAlias;
 
   APInt GCD;
@@ -1722,6 +1789,7 @@ void BasicAAResult::subtractDecomposedGEPs(DecomposedGEP &DestGEP,
                                            const DecomposedGEP &SrcGEP,
                                            const AAQueryInfo &AAQI) {
   DestGEP.Offset -= SrcGEP.Offset;
+  DestGEP.ScalableOffset -= SrcGEP.ScalableOffset;
   for (const VariableGEPIndex &Src : SrcGEP.VarIndices) {
     // Find V in Dest.  This is N^2, but pointer indices almost never have more
     // than a few variable indexes.
