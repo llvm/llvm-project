@@ -372,9 +372,9 @@ NaryReassociatePass::tryReassociateGEPAtIndex(GetElementPtrInst *GEP,
     // If the I-th index needs sext and the underlying add is not equipped with
     // nsw, we cannot split the add because
     //   sext(LHS + RHS) != sext(LHS) + sext(RHS).
+    SimplifyQuery SQ(*DL, DT, AC, GEP);
     if (requiresSignExtension(IndexToSplit, GEP) &&
-        computeOverflowForSignedAdd(AO, *DL, AC, GEP, DT) !=
-            OverflowResult::NeverOverflows)
+        computeOverflowForSignedAdd(AO, SQ) != OverflowResult::NeverOverflows)
       return nullptr;
 
     Value *LHS = AO->getOperand(0), *RHS = AO->getOperand(1);
