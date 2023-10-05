@@ -1,4 +1,4 @@
-//===- lispc.cpp - The Lisp Compiler ----------------------------------------===//
+//===- toyc.cpp - The Toy Compiler ----------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -6,11 +6,11 @@
 //
 //===----------------------------------------------------------------------===//
 //
-// This file implements the entry point for the Lisp compiler.
+// This file implements the entry point for the Toy compiler.
 //
 //===----------------------------------------------------------------------===//
 
-#include "lisp/Parser.h"
+#include "toy/Parser.h"
 
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/CommandLine.h"
@@ -18,11 +18,11 @@
 #include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/raw_ostream.h"
 
-using namespace lisp;
+using namespace toy;
 namespace cl = llvm::cl;
 
 static cl::opt<std::string> inputFilename(cl::Positional,
-                                          cl::desc("<input lisp file>"),
+                                          cl::desc("<input toy file>"),
                                           cl::init("-"),
                                           cl::value_desc("filename"));
 namespace {
@@ -33,8 +33,8 @@ static cl::opt<enum Action>
     emitAction("emit", cl::desc("Select the kind of output desired"),
                cl::values(clEnumValN(DumpAST, "ast", "output the AST dump")));
 
-/// Returns a Lisp AST resulting from parsing the file or a nullptr on error.
-std::unique_ptr<lisp::ModuleAST> parseInputFile(llvm::StringRef filename) {
+/// Returns a Toy AST resulting from parsing the file or a nullptr on error.
+std::unique_ptr<toy::ModuleAST> parseInputFile(llvm::StringRef filename) {
   llvm::ErrorOr<std::unique_ptr<llvm::MemoryBuffer>> fileOrErr =
       llvm::MemoryBuffer::getFileOrSTDIN(filename);
   if (std::error_code ec = fileOrErr.getError()) {
@@ -48,7 +48,7 @@ std::unique_ptr<lisp::ModuleAST> parseInputFile(llvm::StringRef filename) {
 }
 
 int main(int argc, char **argv) {
-  cl::ParseCommandLineOptions(argc, argv, "lisp compiler\n");
+  cl::ParseCommandLineOptions(argc, argv, "toy compiler\n");
 
   auto moduleAST = parseInputFile(inputFilename);
   if (!moduleAST)

@@ -1,4 +1,4 @@
-//===- AST.cpp - Helper for printing out the Lisp AST ----------------------===//
+//===- AST.cpp - Helper for printing out the Toy AST ----------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -6,17 +6,17 @@
 //
 //===----------------------------------------------------------------------===//
 //
-// This file implements the AST dump for the Lisp language.
+// This file implements the AST dump for the Toy language.
 //
 //===----------------------------------------------------------------------===//
 
-#include "lisp/AST.h"
+#include "toy/AST.h"
 
 #include "llvm/ADT/Twine.h"
 #include "llvm/ADT/TypeSwitch.h"
 #include "llvm/Support/raw_ostream.h"
 
-using namespace lisp;
+using namespace toy;
 
 namespace {
 
@@ -226,9 +226,9 @@ void ASTDumper::dump(ModuleAST *node) {
     dump(&f);
 }
 
-namespace lisp {
+namespace toy {
 
 // Public API
 void dump(ModuleAST &module) { ASTDumper().dump(&module); }
 
-} // namespace lisp
+} // namespace toy
