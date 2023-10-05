@@ -2494,6 +2494,19 @@ void DarwinClang::AddClangCXXStdlibIncludeArgs(
                    << "\"\n";
     }
 
+    // Check for the location where the executable is located, if different.
+    if (getDriver().getInstalledDir() != getDriver().Dir) {
+      InstallBin = llvm::StringRef(getDriver().Dir.c_str());
+      llvm::sys::path::append(InstallBin, "..", "include", "c++", "v1");
+      if (getVFS().exists(InstallBin)) {
+        addSystemInclude(DriverArgs, CC1Args, InstallBin);
+        return;
+      } else if (DriverArgs.hasArg(options::OPT_v)) {
+        llvm::errs() << "ignoring nonexistent directory \"" << InstallBin
+                     << "\"\n";
+      }
+    }
+
     // Otherwise, check for (2)
     llvm::SmallString<128> SysrootUsr = Sysroot;
     llvm::sys::path::append(SysrootUsr, "usr", "include", "c++", "v1");
