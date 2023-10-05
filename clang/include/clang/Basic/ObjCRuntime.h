@@ -483,7 +483,7 @@ public:
   }
 
   template <typename HasherT, llvm::support::endianness Endianness>
-  friend void addHash(llvm::HashBuilderImpl<HasherT, Endianness> &HBuilder,
+  friend void addHash(llvm::HashBuilder<HasherT, Endianness> &HBuilder,
                       const ObjCRuntime &OCR) {
     HBuilder.add(OCR.getKind(), OCR.getVersion());
   }
