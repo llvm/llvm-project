@@ -290,9 +290,10 @@ void llvm::reportGISelFailure(MachineFunction &MF, const TargetPassConfig &TPC,
 }
 
 std::optional<APInt> llvm::getIConstantVRegVal(Register VReg,
-                                               const MachineRegisterInfo &MRI) {
-  std::optional<ValueAndVReg> ValAndVReg = getIConstantVRegValWithLookThrough(
-      VReg, MRI, /*LookThroughInstrs*/ false);
+                                               const MachineRegisterInfo &MRI,
+                                               bool LookThroughInstrs = false) {
+  std::optional<ValueAndVReg> ValAndVReg =
+      getIConstantVRegValWithLookThrough(VReg, MRI, LookThroughInstrs);
   assert((!ValAndVReg || ValAndVReg->VReg == VReg) &&
          "Value found while looking through instrs");
   if (!ValAndVReg)
@@ -301,7 +302,8 @@ std::optional<APInt> llvm::getIConstantVRegVal(Register VReg,
 }
 
 std::optional<int64_t>
-llvm::getIConstantVRegSExtVal(Register VReg, const MachineRegisterInfo &MRI) {
+llvm::getIConstantVRegSExtVal(Register VReg, const MachineRegisterInfo &MRI,
+                              bool LookThroughInstrs = false) {
   std::optional<APInt> Val = getIConstantVRegVal(VReg, MRI);
   if (Val && Val->getBitWidth() <= 64)
     return Val->getSExtValue();
