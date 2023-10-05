@@ -180,6 +180,20 @@ TEST(PagedVectorTest, FillNonTrivialConstructor) {
   EXPECT_EQ(std::distance(V.materialized_begin(), V.materialized_end()), 10LL);
 }
 
+// Test that isMaterialized returns true for all the elements
+// of the page, not only the one that was accessed.
+TEST(PagedVectorTest, IsMaterialized) {
+  PagedVector<int, 10> V;
+  V.resize(20);
+  EXPECT_FALSE(V.isMaterialized(0));
+  EXPECT_FALSE(V.isMaterialized(1));
+  EXPECT_FALSE(V.isMaterialized(10));
+  V[0] = 0;
+  EXPECT_TRUE(V.isMaterialized(0));
+  EXPECT_TRUE(V.isMaterialized(1));
+  EXPECT_FALSE(V.isMaterialized(10));
+}
+
 // Elements are constructed, destructed in pages, so we expect
 // the number of constructed / destructed elements to be a multiple of the
 // page size and the constructor is invoked when the page is actually accessed

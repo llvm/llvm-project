@@ -103,6 +103,14 @@ public:
   /// Return the size of the vector.
   [[nodiscard]] size_t size() const { return Size; }
 
+  /// Return true if the element at `Index` belongs to a page which was already
+  /// materialized, i.e., had at least one element accessed.
+  [[nodiscard]] bool isMaterialized(size_t Index) const {
+    assert(Index < Size);
+    assert(Index / PageSize < PageToDataPtrs.size());
+    return PageToDataPtrs[Index / PageSize];
+  }
+
   /// Resize the vector. Notice that the constructor of the elements will not
   /// be invoked until an element of a given page is accessed, at which point
   /// all the elements of the page will be constructed.
