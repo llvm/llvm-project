@@ -305,7 +305,6 @@ void Loc::MMI::addFrameIndexExpr(const DIExpression *Expr, int FI) {
 
 static AccelTableKind computeAccelTableKind(unsigned DwarfVersion,
                                             bool GenerateTypeUnits,
-                                            bool HasSplitDwarf,
                                             DebuggerKind Tuning,
                                             const Triple &TT) {
   // Honor an explicit request.
@@ -313,8 +312,7 @@ static AccelTableKind computeAccelTableKind(unsigned DwarfVersion,
     return AccelTables;
 
   // Accelerator tables with type units are currently not supported.
-  if (GenerateTypeUnits &&
-      (DwarfVersion < 5 || HasSplitDwarf || !TT.isOSBinFormatELF()))
+  if (GenerateTypeUnits)
     return AccelTableKind::None;
 
   // Accelerator tables get emitted if targetting DWARF v5 or LLDB.  DWARF v5
@@ -326,9 +324,6 @@ static AccelTableKind computeAccelTableKind(unsigned DwarfVersion,
     return TT.isOSBinFormatMachO() ? AccelTableKind::Apple
                                    : AccelTableKind::Dwarf;
   return AccelTableKind::None;
-}
-void DwarfDebug::addTypeUnit(std::unique_ptr<DwarfTypeUnit> U) {
-  InfoHolder.addTypeUnit(std::move(U));
 }
 
 DwarfDebug::DwarfDebug(AsmPrinter *A)
@@ -405,9 +400,8 @@ DwarfDebug::DwarfDebug(AsmPrinter *A)
                        A->TM.getTargetTriple().isOSBinFormatWasm()) &&
                       GenerateDwarfTypeUnits;
 
-  TheAccelTableKind =
-      computeAccelTableKind(DwarfVersion, GenerateTypeUnits, HasSplitDwarf,
-                            DebuggerTuning, A->TM.getTargetTriple());
+  TheAccelTableKind = computeAccelTableKind(
+      DwarfVersion, GenerateTypeUnits, DebuggerTuning, A->TM.getTargetTriple());
 
   // Work around a GDB bug. GDB doesn't support the standard opcode;
   // SCE doesn't support GNU's; LLDB prefers the standard opcode, which
@@ -2400,7 +2394,7 @@ void DwarfDebug::emitAccelDebugNames() {
   if (getUnits().empty())
     return;
 
-  emitDWARF5AccelTable(Asm, AccelDebugNames, *this, getUnits(), getTypeUnits());
+  emitDWARF5AccelTable(Asm, AccelDebugNames, *this, getUnits());
 }
 
 // Emit visible names into a hashed accelerator table section.
@@ -3505,7 +3499,7 @@ void DwarfDebug::addDwarfTypeUnitType(DwarfCompileUnit &CU,
     // Types referencing entries in the address table cannot be placed in type
     // units.
     if (AddrPool.hasBeenUsed()) {
-      AccelTypeUntsDebugNames.clear();
+
       // Remove all the types built while building this type.
       // This is pessimistic as some of these types might not be dependent on
       // the type that used an address.
@@ -3520,15 +3514,11 @@ void DwarfDebug::addDwarfTypeUnitType(DwarfCompileUnit &CU,
       return;
     }
 
+    // If the type wasn't dependent on fission addresses, finish adding the type
+    // and all its dependent types.
     for (auto &TU : TypeUnitsToAdd) {
       InfoHolder.computeSizeAndOffsetsForUnit(TU.first.get());
       InfoHolder.emitUnit(TU.first.get(), useSplitDwarf());
-      if (getDwarfVersion() >= 5 &&
-          getAccelTableKind() == AccelTableKind::Dwarf) {
-        addTypeUnit(std::move(TU.first));
-        AccelDebugNames.addEntries(AccelTypeUntsDebugNames);
-        AccelTypeUntsDebugNames.clear();
-      }
     }
   }
   CU.addDIETypeSignature(RefDie, Signature);
@@ -3558,12 +3548,7 @@ void DwarfDebug::addAccelNameImpl(const DICompileUnit &CU,
     AppleAccel.addName(Ref, Die);
     break;
   case AccelTableKind::Dwarf:
-    // The type unit can be discarded, so need to add references to final
-    // acceleration table once we know it's complete and we emit it.
-    if (TypeUnitsUnderConstruction.empty())
-      AccelDebugNames.addName(Ref, Die);
-    else
-      AccelTypeUntsDebugNames.addName(Ref, Die);
+    AccelDebugNames.addName(Ref, Die);
     break;
   case AccelTableKind::Default:
     llvm_unreachable("Default should have already been resolved.");

@@ -22,6 +22,7 @@
 ; RUN:   | llvm-readobj --sections - | FileCheck --check-prefix=DEBUG_NAMES %s
 
 ; NONE-NOT: apple_names
+; NONE-NOT: debug_names
 
 ; DEBUG_NAMES-NOT: apple_names
 ; DEBUG_NAMES: debug_names

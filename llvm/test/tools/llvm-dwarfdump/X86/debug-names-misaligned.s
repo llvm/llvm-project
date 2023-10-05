@@ -84,7 +84,7 @@
 # CHECK:       Name 1 {
 # CHECK-NEXT:    String: 0x00000000 "foo"
 # CHECK-NEXT:    Entry @ 0x37 {
-# CHECK-NEXT:      Abbrev: 0x2e
+# CHECK-NEXT:      Abbrev: 0x2E
 # CHECK-NEXT:      Tag: DW_TAG_subprogram
 # CHECK-NEXT:      DW_IDX_die_offset: 0x00000001
 # CHECK-NEXT:    }
