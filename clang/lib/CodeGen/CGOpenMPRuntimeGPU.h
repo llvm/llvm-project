@@ -32,6 +32,18 @@ public:
     /// Unknown execution mode (orphaned directive).
     EM_Unknown,
   };
+
+  /// Target codegen is specialized based on two data-sharing modes: CUDA, in
+  /// which the local variables are actually global threadlocal, and Generic, in
+  /// which the local variables are placed in global memory if they may escape
+  /// their declaration context.
+  enum DataSharingMode {
+    /// CUDA data sharing mode.
+    DS_CUDA,
+    /// Generic data-sharing mode.
+    DS_Generic,
+  };
+
 private:
   /// Parallel outlined function work for workers to execute.
   llvm::SmallVector<llvm::Function *, 16> Work;
@@ -41,6 +53,8 @@ private:
   };
 
   ExecutionMode getExecutionMode() const;
+
+  DataSharingMode getDataSharingMode() const;
 
   /// Get barrier to synchronize all threads in a block.
   void syncCTAThreads(CodeGenFunction &CGF);
@@ -297,17 +311,6 @@ public:
   Address getAddressOfLocalVariable(CodeGenFunction &CGF,
                                     const VarDecl *VD) override;
 
-  /// Target codegen is specialized based on two data-sharing modes: CUDA, in
-  /// which the local variables are actually global threadlocal, and Generic, in
-  /// which the local variables are placed in global memory if they may escape
-  /// their declaration context.
-  enum DataSharingMode {
-    /// CUDA data sharing mode.
-    CUDA,
-    /// Generic data-sharing mode.
-    Generic,
-  };
-
   /// Cleans up references to the objects in finished function.
   ///
   void functionFinished(CodeGenFunction &CGF) override;
@@ -342,6 +345,10 @@ private:
   /// target region and used by containing directives such as 'parallel'
   /// to emit optimized code.
   ExecutionMode CurrentExecutionMode = EM_Unknown;
+
+  /// Track the data sharing mode when codegening directives within a target
+  /// region.
+  DataSharingMode CurrentDataSharingMode = DataSharingMode::DS_Generic;
 
   /// true if currently emitting code for target/teams/distribute region, false
   /// - otherwise.
