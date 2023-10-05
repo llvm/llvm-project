@@ -5308,7 +5308,7 @@ cc_library(
         ":LLVMCommonConversion",
         ":LLVMDialect",
         ":MemRefDialect",
-        ":MLIRArithDialect",
+        ":ArithDialect",
         ":NVGPUDialect",
         ":NVVMDialect",
         ":Pass",
