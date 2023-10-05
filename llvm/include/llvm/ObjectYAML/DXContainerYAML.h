@@ -154,7 +154,7 @@ struct Part {
   std::optional<ShaderFlags> Flags;
   std::optional<ShaderHash> Hash;
   std::optional<PSVInfo> Info;
-  std::optional<Signature> Signature;
+  std::optional<DXContainerYAML::Signature> Signature;
 };
 
 struct Object {
