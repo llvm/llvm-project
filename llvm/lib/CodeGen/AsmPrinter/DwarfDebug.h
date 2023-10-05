@@ -497,6 +497,7 @@ private:
 
   /// Accelerator tables.
   AccelTable<DWARF5AccelTableData> AccelDebugNames;
+  AccelTable<DWARF5AccelTableData> AccelTypeUntsDebugNames;
   AccelTable<AppleAccelTableOffsetData> AccelNames;
   AccelTable<AppleAccelTableOffsetData> AccelObjC;
   AccelTable<AppleAccelTableOffsetData> AccelNamespace;
@@ -514,6 +515,13 @@ private:
   const SmallVectorImpl<std::unique_ptr<DwarfCompileUnit>> &getUnits() {
     return InfoHolder.getUnits();
   }
+
+  /// Returns Type Units constructed for this module.
+  const SmallVectorImpl<std::unique_ptr<DwarfTypeUnit>> &getTypeUnits() {
+    return InfoHolder.getTypeUnits();
+  }
+
+  void addTypeUnit(std::unique_ptr<DwarfTypeUnit> U);
 
   using InlinedEntity = DbgValueHistoryMap::InlinedEntity;
 
@@ -779,6 +787,9 @@ public:
 
   /// Returns what kind (if any) of accelerator tables to emit.
   AccelTableKind getAccelTableKind() const { return TheAccelTableKind; }
+
+  /// Seet TheAccelTableKind
+  void setTheAccelTableKind(AccelTableKind K) { TheAccelTableKind = K; };
 
   bool useAppleExtensionAttributes() const {
     return HasAppleExtensionAttributes;
