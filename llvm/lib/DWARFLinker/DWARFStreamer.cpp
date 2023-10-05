@@ -307,8 +307,8 @@ void DwarfStreamer::emitDebugNames(
   }
 
   Asm->OutStreamer->switchSection(MOFI->getDwarfDebugNamesSection());
-  dwarf::Form Form =
-      DIEInteger::BestForm(/*IsSigned*/ false, (uint64_t)UniqueIdToCuMap.size() - 1);
+  dwarf::Form Form = DIEInteger::BestForm(/*IsSigned*/ false,
+                                          (uint64_t)UniqueIdToCuMap.size() - 1);
   /// llvm-dwarfutil doesn't support type units + .debug_names right now anyway,
   /// so just keeping current behavior.
   emitDWARF5AccelTable(
