@@ -18,6 +18,7 @@
 #include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/Statistic.h"
 #include "llvm/Analysis/TypeMetadataUtils.h"
+#include "llvm/Bitcode/BitcodeReader.h"
 #include "llvm/IR/Instructions.h"
 #include "llvm/IR/IntrinsicInst.h"
 #include "llvm/IR/Module.h"
@@ -25,6 +26,11 @@
 #include "llvm/Transforms/IPO.h"
 #include "llvm/Transforms/Utils/CtorUtils.h"
 #include "llvm/Transforms/Utils/GlobalStatus.h"
+
+#include "llvm/IR/ModuleSummaryIndex.h"
+#include "llvm/Support/FileSystem.h"
+#include "llvm/Support/GlobPattern.h"
+#include "llvm/Support/MemoryBuffer.h"
 
 using namespace llvm;
 
@@ -34,11 +40,222 @@ static cl::opt<bool>
     ClEnableVFE("enable-vfe", cl::Hidden, cl::init(true),
                 cl::desc("Enable virtual function elimination"));
 
+static cl::opt<std::string> ClReadSummary(
+    "globaldce-read-summary",
+    cl::desc("Read summary from given bitcode before running pass"),
+    cl::Hidden);
+
 STATISTIC(NumAliases  , "Number of global aliases removed");
 STATISTIC(NumFunctions, "Number of functions removed");
 STATISTIC(NumIFuncs,    "Number of indirect functions removed");
 STATISTIC(NumVariables, "Number of global variables removed");
 STATISTIC(NumVFuncs,    "Number of virtual functions removed");
+
+namespace llvm {
+
+// Returning a representative summary for the vtable, also set isSafe.
+static const GlobalVarSummary *
+getVTableFuncsForTId(const TypeIdOffsetVtableInfo &P, bool &isSafe) {
+  // Find a representative copy of the vtable initializer.
+  const GlobalVarSummary *VS = nullptr;
+  bool LocalFound = false;
+  for (auto &S : P.VTableVI.getSummaryList()) {
+    if (GlobalValue::isLocalLinkage(S->linkage())) {
+      if (LocalFound) {
+        isSafe = false;
+        return nullptr;
+      }
+      LocalFound = true;
+    }
+    auto *CurVS = cast<GlobalVarSummary>(S->getBaseObject());
+    // Ignore if vTableFuncs is empty and vtable is available_externally.
+    if (!CurVS->vTableFuncs().empty() ||
+        !GlobalValue::isAvailableExternallyLinkage(S->linkage())) {
+      VS = CurVS;
+      if (VS->getVCallVisibility() == GlobalObject::VCallVisibilityPublic) {
+        isSafe = false;
+        return VS;
+      }
+    }
+  }
+
+  if (!VS) {
+    isSafe = false;
+    return nullptr;
+  }
+  if (!VS->isLive()) {
+    isSafe = true;
+    return nullptr;
+  }
+  isSafe = true;
+  return VS;
+}
+
+static void collectSafeVTables(
+    ModuleSummaryIndex &Summary,
+    DenseMap<GlobalValue::GUID, std::vector<StringRef>> &NameByGUID,
+    std::map<ValueInfo, std::vector<VirtFuncOffset>> &VFESafeVTablesAndFns) {
+  // Update VFESafeVTablesAndFns with information from summary.
+  for (auto &P : Summary.typeIdCompatibleVtableMap()) {
+    NameByGUID[GlobalValue::getGUID(P.first)].push_back(P.first);
+    LLVM_DEBUG(dbgs() << "TId " << GlobalValue::getGUID(P.first) << " "
+                      << P.first << "\n");
+  }
+  llvm::errs() << "VFEThinLTO number of TIds: " << NameByGUID.size() << "\n";
+
+  // VFESafeVTablesAndFns: map from VI for vTable to VI for vfunc
+  std::map<ValueInfo, std::set<GlobalValue::GUID>> vFuncSet;
+  unsigned numSafeVFuncs = 0;
+  // Collect stats for VTables (safe, public-visibility, other).
+  std::set<ValueInfo> vTablePublicVis;
+  std::set<ValueInfo> vTableOther;
+  for (auto &TidSummary : Summary.typeIdCompatibleVtableMap()) {
+    for (const TypeIdOffsetVtableInfo &P : TidSummary.second) {
+      LLVM_DEBUG(dbgs() << "TId-vTable " << TidSummary.first << " "
+                        << P.VTableVI.name() << " " << P.AddressPointOffset
+                        << "\n");
+      bool isSafe = false;
+      const GlobalVarSummary *VS = getVTableFuncsForTId(P, isSafe);
+      if (!isSafe && VS)
+        vTablePublicVis.insert(P.VTableVI);
+      if ((isSafe && !VS) || (!isSafe && !VS))
+        vTableOther.insert(P.VTableVI);
+      if (!isSafe || !VS) {
+        continue;
+      }
+
+      // Go through VS->vTableFuncs
+      for (auto VTP : VS->vTableFuncs()) {
+        if (vFuncSet.find(P.VTableVI) == vFuncSet.end() ||
+            !vFuncSet[P.VTableVI].count(VTP.FuncVI.getGUID())) {
+          VFESafeVTablesAndFns[P.VTableVI].push_back(VTP);
+          LLVM_DEBUG(dbgs()
+                     << "vTable " << P.VTableVI.name() << " "
+                     << VTP.FuncVI.name() << " " << VTP.VTableOffset << "\n");
+          ++numSafeVFuncs;
+        }
+        vFuncSet[P.VTableVI].insert(VTP.FuncVI.getGUID());
+      }
+    }
+  }
+  llvm::errs() << "VFEThinLTO number of vTables: " << vFuncSet.size() << " "
+               << vTablePublicVis.size() << " " << vTableOther.size() << "\n";
+  llvm::errs() << "VFEThinLTO numSafeVFuncs: " << numSafeVFuncs << "\n";
+}
+
+static void checkVTableLoadsIndex(
+    ModuleSummaryIndex &Summary,
+    DenseMap<GlobalValue::GUID, std::vector<StringRef>> &NameByGUID,
+    std::map<ValueInfo, std::vector<VirtFuncOffset>> &VFESafeVTablesAndFns,
+    std::map<ValueInfo, std::vector<ValueInfo>> &VFuncsAndCallers) {
+  // Go through Function summarys for intrinsics, also funcHasNonVTableRef to
+  // erase entries from VFESafeVTableAndFns.
+  for (auto &PI : Summary) {
+    for (auto &S : PI.second.SummaryList) {
+      auto *FS = dyn_cast<FunctionSummary>(S.get());
+      if (!FS)
+        continue;
+      // We should ignore Tid if there is a type.checked.load with Offset not
+      // ConstantInt. Currently ModuleSummaryAnalysis will update TypeTests.
+      for (GlobalValue::GUID G : FS->type_tests()) {
+        if (NameByGUID.find(G) == NameByGUID.end())
+          continue;
+        auto TidSummary =
+            Summary.getTypeIdCompatibleVtableSummary(NameByGUID[G][0]);
+        for (const TypeIdOffsetVtableInfo &P : *TidSummary) {
+          LLVM_DEBUG(dbgs() << "unsafe-vtable due to type_tests: "
+                            << P.VTableVI.name() << "\n");
+          VFESafeVTablesAndFns.erase(P.VTableVI);
+        }
+      }
+      // Go through vTableFuncs to find the potential callees
+      auto CheckVLoad = [&](GlobalValue::GUID TId, uint64_t Offset) {
+        if (!NameByGUID.count(TId)) {
+          return;
+        }
+        auto TidSummary =
+            Summary.getTypeIdCompatibleVtableSummary(NameByGUID[TId][0]);
+        for (const TypeIdOffsetVtableInfo &P : *TidSummary) {
+          uint64_t VTableOffset = P.AddressPointOffset;
+          bool isSafe = false;
+          const GlobalVarSummary *VS = getVTableFuncsForTId(P, isSafe);
+          if (!isSafe || !VS)
+            continue;
+          unsigned foundCnt = 0;
+          for (auto VTP : VS->vTableFuncs()) {
+            if (VTP.VTableOffset != VTableOffset + Offset)
+              continue;
+            assert(foundCnt == 0);
+            foundCnt = 1;
+            VFuncsAndCallers[VTP.FuncVI].push_back(Summary.getValueInfo(PI));
+          }
+          if (foundCnt == 0) {
+            // A vtable is unsafe if a given vtable for the typeId doesn't have
+            // the offset.
+            VFESafeVTablesAndFns.erase(P.VTableVI);
+            LLVM_DEBUG(dbgs() << "unsafe-vtable can't find offset "
+                              << P.VTableVI.name() << " "
+                              << (VTableOffset + Offset) << "\n");
+          }
+        }
+      };
+      for (FunctionSummary::VFuncId VF : FS->type_checked_load_vcalls()) {
+        CheckVLoad(VF.GUID, VF.Offset);
+      }
+      for (const FunctionSummary::ConstVCall &VC :
+           FS->type_checked_load_const_vcalls()) {
+        CheckVLoad(VC.VFunc.GUID, VC.VFunc.Offset);
+      }
+    }
+  }
+}
+
+void runVFEOnIndex(ModuleSummaryIndex &Summary,
+                   function_ref<bool(GlobalValue::GUID)> isRetained) {
+  if (Summary.typeIdCompatibleVtableMap().empty())
+    return;
+
+  DenseMap<GlobalValue::GUID, std::vector<StringRef>> NameByGUID;
+  std::map<ValueInfo, std::vector<VirtFuncOffset>> VFESafeVTablesAndFns;
+  collectSafeVTables(Summary, NameByGUID, VFESafeVTablesAndFns);
+
+  // Go through Function summarys for intrinsics, also funcHasNonVTableRef to
+  // erase entries from VFESafeVTableAndFns.
+  std::map<ValueInfo, std::vector<ValueInfo>> VFuncsAndCallers;
+  checkVTableLoadsIndex(Summary, NameByGUID, VFESafeVTablesAndFns,
+                        VFuncsAndCallers);
+  llvm::errs() << "VFEThinLTO number of vTables: "
+               << VFESafeVTablesAndFns.size() << "\n";
+
+  // Generate list of vfuncs that can be removed.
+  std::set<ValueInfo> candidateSet;
+  for (auto entry : VFESafeVTablesAndFns) {
+    for (auto vfunc : entry.second) {
+      if (Summary.isFuncWithNonVtableRef(vfunc.FuncVI.getGUID())) {
+        LLVM_DEBUG(dbgs() << "unsafe-vfunc with non-vtable ref "
+                          << vfunc.FuncVI.name() << "\n");
+        continue;
+      }
+      if (!candidateSet.count(vfunc.FuncVI)) {
+        candidateSet.insert(vfunc.FuncVI);
+      }
+    }
+  }
+
+  // It is possible to use a workList to recursively mark vfuncs as removable.
+  // For now, only remove vfuncs that are not in VFuncsAndCallers.
+  std::set<ValueInfo> removable;
+  for (auto vfunc : candidateSet) {
+    if (!VFuncsAndCallers.count(vfunc) && !isRetained(vfunc.getGUID()))
+      removable.insert(vfunc);
+  }
+
+  for (auto fVI : removable) {
+    Summary.addFuncToBeRemoved(fVI.getGUID());
+  }
+  llvm::errs() << "VFEThinLTO removable " << removable.size() << "\n";
+}
+} // end namespace llvm
 
 /// Returns true if F is effectively empty.
 static bool isEmptyFunction(Function *F) {
@@ -220,6 +437,8 @@ void GlobalDCEPass::ScanTypeCheckedLoadIntrinsics(Module &M) {
 }
 
 void GlobalDCEPass::AddVirtualFunctionDependencies(Module &M) {
+  if (ImportSummary)
+    return; // only use results from Index with ThinLTO
   if (!ClEnableVFE)
     return;
 
@@ -247,6 +466,23 @@ void GlobalDCEPass::AddVirtualFunctionDependencies(Module &M) {
 }
 
 PreservedAnalyses GlobalDCEPass::run(Module &M, ModuleAnalysisManager &MAM) {
+  // Handle the command-line summary arguments. This code is for testing
+  // purposes only, so we handle errors directly.
+  std::unique_ptr<ModuleSummaryIndex> Summary =
+      std::make_unique<ModuleSummaryIndex>(/*HaveGVs=*/false);
+  if (!ClReadSummary.empty()) {
+    ExitOnError ExitOnErr("-globaldce-read-summary: " + ClReadSummary + ": ");
+    auto ReadSummaryFile =
+        ExitOnErr(errorOrToExpected(MemoryBuffer::getFile(ClReadSummary)));
+    if (Expected<std::unique_ptr<ModuleSummaryIndex>> SummaryOrErr =
+            getModuleSummaryIndex(*ReadSummaryFile)) {
+      Summary = std::move(*SummaryOrErr);
+    }
+    ImportSummary = Summary.get();
+    auto isRetained = [&](GlobalValue::GUID CalleeGUID) { return false; };
+    runVFEOnIndex(*(const_cast<ModuleSummaryIndex *>(ImportSummary)),
+                  isRetained);
+  }
   bool Changed = false;
 
   // The algorithm first computes the set L of global variables that are
@@ -338,12 +574,33 @@ PreservedAnalyses GlobalDCEPass::run(Module &M, ModuleAnalysisManager &MAM) {
 
   // The second pass drops the bodies of functions which are dead...
   std::vector<Function *> DeadFunctions;
-  for (Function &F : M)
+  std::set<Function *> DeadFunctionsSet;
+  auto funcRemovedInIndex = [&](Function *F) -> bool {
+    if (!ImportSummary)
+      return false;
+    auto &vfuncsRemoved = ImportSummary->funcsToBeRemoved();
+    // If function is internalized, its current GUID will be different
+    // from the GUID in funcsToBeRemoved. Treat it as a global and search
+    // again.
+    if (vfuncsRemoved.count(F->getGUID()))
+      return true;
+    if (vfuncsRemoved.count(GlobalValue::getGUID(F->getName())))
+      return true;
+    return false;
+  };
+  for (Function &F : M) {
     if (!AliveGlobals.count(&F)) {
-      DeadFunctions.push_back(&F);         // Keep track of dead globals
+      DeadFunctions.push_back(&F); // Keep track of dead globals
+      DeadFunctionsSet.insert(&F);
+      if (!F.isDeclaration())
+        F.deleteBody();
+    } else if (funcRemovedInIndex(&F)) {
+      DeadFunctions.push_back(&F); // Keep track of dead globals
+      DeadFunctionsSet.insert(&F);
       if (!F.isDeclaration())
         F.deleteBody();
     }
+  }
 
   // The third pass drops targets of aliases which are dead...
   std::vector<GlobalAlias*> DeadAliases;

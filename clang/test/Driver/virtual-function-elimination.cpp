@@ -1,6 +1,5 @@
 // RUN: not %clang -target x86_64-unknown-linux -fvirtual-function-elimination -### %s 2>&1 | FileCheck --check-prefix=BAD-LTO %s
-// RUN: not %clang -target x86_64-unknown-linux -fvirtual-function-elimination -flto=thin -### %s 2>&1 | FileCheck --check-prefix=BAD-LTO %s
-// BAD-LTO: invalid argument '-fvirtual-function-elimination' only allowed with '-flto=full'
+// BAD-LTO: invalid argument '-fvirtual-function-elimination' only allowed with '-flto'
 
 // RUN: %clang -target x86_64-unknown-linux -fvirtual-function-elimination -flto -### %s 2>&1 | FileCheck --check-prefix=GOOD %s
 // RUN: %clang -target x86_64-unknown-linux -fvirtual-function-elimination -flto=full -### %s 2>&1 | FileCheck --check-prefix=GOOD %s

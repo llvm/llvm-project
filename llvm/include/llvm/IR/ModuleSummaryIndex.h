@@ -1362,6 +1362,8 @@ private:
   // Temporary map while building StackIds list. Clear when index is completely
   // built via releaseTemporaryMemory.
   std::map<uint64_t, unsigned> StackIdToIndex;
+  std::set<GlobalValue::GUID> FuncsWithNonVtableRef;
+  std::set<GlobalValue::GUID> VFuncsToBeRemoved; // no need to serialize
 
   // YAML I/O support.
   friend yaml::MappingTraits<ModuleSummaryIndex>;
@@ -1809,6 +1811,26 @@ public:
         ModuleToDefinedGVSummaries[Summary->modulePath()][GUID] = Summary.get();
       }
     }
+  }
+
+  bool isFuncWithNonVtableRef(GlobalValue::GUID fId) const {
+    return FuncsWithNonVtableRef.count(fId);
+  }
+  void addFuncWithNonVtableRef(GlobalValue::GUID fId) {
+    FuncsWithNonVtableRef.insert(fId);
+  }
+  const std::set<GlobalValue::GUID> &funcsWithNonVtableRef() const {
+    return FuncsWithNonVtableRef;
+  }
+
+  bool isFuncToBeRemoved(GlobalValue::GUID fId) const {
+    return VFuncsToBeRemoved.count(fId);
+  }
+  void addFuncToBeRemoved(GlobalValue::GUID fId) {
+    VFuncsToBeRemoved.insert(fId);
+  }
+  const std::set<GlobalValue::GUID> &funcsToBeRemoved() const {
+    return VFuncsToBeRemoved;
   }
 
   /// Print to an output stream.

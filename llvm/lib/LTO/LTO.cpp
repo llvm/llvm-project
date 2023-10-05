@@ -51,6 +51,7 @@
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/Target/TargetOptions.h"
 #include "llvm/Transforms/IPO.h"
+#include "llvm/Transforms/IPO/GlobalDCE.h"
 #include "llvm/Transforms/IPO/MemProfContextDisambiguation.h"
 #include "llvm/Transforms/IPO/WholeProgramDevirt.h"
 #include "llvm/Transforms/Utils/FunctionImportUtils.h"
@@ -75,6 +76,7 @@ cl::opt<bool> EnableLTOInternalization(
     "enable-lto-internalization", cl::init(true), cl::Hidden,
     cl::desc("Enable global value internalization in LTO"));
 }
+extern cl::opt<bool> EnableVFEOnThinLTO;
 
 /// Indicate we are linking with an allocator that supports hot/cold operator
 /// new interfaces.
@@ -1736,6 +1738,12 @@ Error LTO::runThinLTO(AddStreamFn AddStream, FileCache Cache,
   std::map<ValueInfo, std::vector<VTableSlotSummary>> LocalWPDTargetsMap;
   runWholeProgramDevirtOnIndex(ThinLTO.CombinedIndex, ExportedGUIDs,
                                LocalWPDTargetsMap);
+  if (EnableVFEOnThinLTO) {
+    auto isRetained = [&](GlobalValue::GUID CalleeGUID) {
+      return GUIDPreservedSymbols.count(CalleeGUID);
+    };
+    runVFEOnIndex(ThinLTO.CombinedIndex, isRetained);
+  }
 
   auto isPrevailing = [&](GlobalValue::GUID GUID, const GlobalValueSummary *S) {
     return ThinLTO.PrevailingModuleForGUID[GUID] == S->modulePath();

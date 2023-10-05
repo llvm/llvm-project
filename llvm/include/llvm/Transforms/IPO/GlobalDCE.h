@@ -35,7 +35,16 @@ class Value;
 /// Pass to remove unused function declarations.
 class GlobalDCEPass : public PassInfoMixin<GlobalDCEPass> {
 public:
-  GlobalDCEPass(bool InLTOPostLink = false) : InLTOPostLink(InLTOPostLink) {}
+  GlobalDCEPass(bool InLTOPostLink = false)
+      : InLTOPostLink(InLTOPostLink), ExportSummary(nullptr),
+        ImportSummary(nullptr) {}
+  GlobalDCEPass(ModuleSummaryIndex *ExportSummary,
+                const ModuleSummaryIndex *ImportSummary,
+                bool InLTOPostLink = false)
+      : InLTOPostLink(InLTOPostLink), ExportSummary(ExportSummary),
+        ImportSummary(ImportSummary) {
+    assert(!(ExportSummary && ImportSummary));
+  }
 
   PreservedAnalyses run(Module &M, ModuleAnalysisManager &);
 
@@ -44,6 +53,8 @@ public:
 
 private:
   bool InLTOPostLink = false;
+  ModuleSummaryIndex *ExportSummary;
+  const ModuleSummaryIndex *ImportSummary;
 
   SmallPtrSet<GlobalValue*, 32> AliveGlobals;
 
@@ -78,6 +89,8 @@ private:
   void ComputeDependencies(Value *V, SmallPtrSetImpl<GlobalValue *> &U);
 };
 
+void runVFEOnIndex(ModuleSummaryIndex &Summary,
+                   function_ref<bool(GlobalValue::GUID)> isRetained);
 }
 
 #endif // LLVM_TRANSFORMS_IPO_GLOBALDCE_H

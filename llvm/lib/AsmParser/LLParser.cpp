@@ -950,6 +950,9 @@ bool LLParser::parseSummaryEntry() {
   case lltok::kw_blockcount:
     result = parseBlockCount();
     break;
+  case lltok::kw_FuncsWithNonVtableRef:
+    result = parseFuncsWithNonVtableRefEntry(SummaryID);
+    break;
   default:
     result = error(Lex.getLoc(), "unexpected summary kind");
     break;
@@ -8202,6 +8205,19 @@ bool LLParser::parseTypeIdSummary(TypeIdSummary &TIS) {
 
 static ValueInfo EmptyVI =
     ValueInfo(false, (GlobalValueSummaryMapTy::value_type *)-8);
+
+/// FuncsWithNonVtableRefEntry
+///   ::= 'FuncsWithNonVtableRef' ':' '('
+///   ')'
+bool LLParser::parseFuncsWithNonVtableRefEntry(unsigned ID) {
+  assert(Lex.getKind() == lltok::kw_FuncsWithNonVtableRef);
+  Lex.Lex();
+  std::string Name;
+  if (parseToken(lltok::colon, "expected ':' here") ||
+      parseToken(lltok::lparen, "expected '(' here"))
+    return true;
+  return false;
+}
 
 /// TypeIdCompatibleVtableEntry
 ///   ::= 'typeidCompatibleVTable' ':' '(' 'name' ':' STRINGCONSTANT ','

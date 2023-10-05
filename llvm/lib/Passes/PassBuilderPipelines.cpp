@@ -281,6 +281,9 @@ cl::opt<bool> EnableMemProfContextDisambiguation(
     cl::ZeroOrMore, cl::desc("Enable MemProf context disambiguation"));
 
 extern cl::opt<bool> EnableInferAlignmentPass;
+cl::opt<bool> EnableVFEOnThinLTO("enable-vfe-on-thinlto", cl::init(false),
+                                 cl::Hidden, cl::ZeroOrMore,
+                                 cl::desc("enable VFE with ThinLTO"));
 
 PipelineTuningOptions::PipelineTuningOptions() {
   LoopInterleaving = true;
@@ -1582,6 +1585,9 @@ PassBuilder::buildThinLTOPreLinkDefaultPipeline(OptimizationLevel Level) {
 ModulePassManager PassBuilder::buildThinLTODefaultPipeline(
     OptimizationLevel Level, const ModuleSummaryIndex *ImportSummary) {
   ModulePassManager MPM;
+
+  if (EnableVFEOnThinLTO && ImportSummary)
+    MPM.addPass(GlobalDCEPass(nullptr, ImportSummary));
 
   if (ImportSummary) {
     // For ThinLTO we must apply the context disambiguation decisions early, to

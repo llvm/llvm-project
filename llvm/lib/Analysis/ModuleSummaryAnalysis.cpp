@@ -54,6 +54,7 @@
 #include <algorithm>
 #include <cassert>
 #include <cstdint>
+#include <unordered_map>
 #include <vector>
 
 using namespace llvm;
@@ -80,6 +81,9 @@ static cl::opt<std::string> ModuleSummaryDotFile(
     "module-summary-dot-file", cl::Hidden, cl::value_desc("filename"),
     cl::desc("File to emit dot graph of new summary into"));
 
+static cl::opt<bool> EnableVFESummary("enable-vfe-summary", cl::init(false),
+                                      cl::Hidden, cl::ZeroOrMore,
+                                      cl::desc("enable VFE with ThinLTO"));
 extern cl::opt<bool> ScalePartialSampleProfileWorkingSetSize;
 
 // Walk through the operands of a given User via worklist iteration and populate
@@ -229,7 +233,11 @@ static void addIntrinsicToSummary(
     for (auto &Call : DevirtCalls)
       addVCallToSet(Call, Guid, TypeCheckedLoadVCalls,
                     TypeCheckedLoadConstVCalls);
-
+    if (EnableVFESummary && !HasNonCallUses &&
+        DevirtCalls.empty()) { // for VFE with thinLTO
+      auto *Offset = cast<ConstantInt>(CI->getArgOperand(1));
+      TypeCheckedLoadVCalls.insert({Guid, Offset->getZExtValue()});
+    }
     break;
   }
   default:
@@ -775,6 +783,58 @@ static void computeVariableSummary(ModuleSummaryIndex &Index,
   Index.addGlobalValueSummary(V, std::move(GVarSummary));
 }
 
+static void ComputeDependencies(
+    Value *V, SmallPtrSetImpl<const GlobalValue *> &Deps,
+    std::unordered_map<Constant *, SmallPtrSet<const GlobalValue *, 8>>
+        &ConstantDependenciesCache) {
+  if (auto *I = dyn_cast<Instruction>(V)) {
+    Function *Parent = I->getParent()->getParent();
+    Deps.insert(Parent);
+  } else if (auto *GV = dyn_cast<GlobalValue>(V)) {
+    Deps.insert(GV);
+  } else if (auto *CE = dyn_cast<Constant>(V)) {
+    // Avoid walking the whole tree of a big ConstantExprs multiple times.
+    auto Where = ConstantDependenciesCache.find(CE);
+    if (Where != ConstantDependenciesCache.end()) {
+      auto const &K = Where->second;
+      Deps.insert(K.begin(), K.end());
+    } else {
+      SmallPtrSetImpl<const GlobalValue *> &LocalDeps =
+          ConstantDependenciesCache[CE];
+      for (User *CEUser : CE->users())
+        ComputeDependencies(CEUser, LocalDeps, ConstantDependenciesCache);
+      Deps.insert(LocalDeps.begin(), LocalDeps.end());
+    }
+  }
+}
+
+static void updateNonVtableRef(const Module &M, ModuleSummaryIndex &Index) {
+  if (!EnableVFESummary)
+    return;
+  // If a function has a reference from a non-vtable, it is not safe
+  // to be eliminated by VFE.
+  std::unordered_map<Constant *, SmallPtrSet<const GlobalValue *, 8>>
+      ConstantDependenciesCache;
+  for (auto &F : M) {
+    SmallPtrSet<const GlobalValue *, 8> Deps;
+    for (const User *U : F.users())
+      ComputeDependencies(const_cast<User *>(U), Deps,
+                          ConstantDependenciesCache);
+    Deps.erase(&F); // Remove self-reference.
+    for (const GlobalValue *GVU : Deps) {
+      // Check if GVU is a vtable.
+      if (auto *gv = dyn_cast<GlobalVariable>(GVU)) {
+        if (gv->hasMetadata(LLVMContext::MD_type)) {
+          continue;
+        }
+      }
+      // Otherwise, add GUID for F to a list.
+      Index.addFuncWithNonVtableRef(F.getGUID());
+      break;
+    }
+  }
+}
+
 static void computeAliasSummary(ModuleSummaryIndex &Index, const GlobalAlias &A,
                                 DenseSet<GlobalValue::GUID> &CantBePromoted) {
   // Skip summary for indirect function aliases as summary for aliasee will not
@@ -933,6 +993,9 @@ ModuleSummaryIndex llvm::buildModuleSummaryIndex(
                            !LocalsUsed.empty() || HasLocalInlineAsmSymbol,
                            CantBePromoted, IsThinLTO, GetSSICallback);
   }
+  // If a function has a reference from a non-vtable, it is not safe
+  // to be eliminated by VFE.
+  updateNonVtableRef(M, Index);
 
   // Compute summaries for all variables defined in module, and save in the
   // index.

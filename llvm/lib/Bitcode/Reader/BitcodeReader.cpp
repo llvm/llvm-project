@@ -7497,6 +7497,11 @@ Error ModuleSummaryIndexBitcodeReader::parseEntireSummary(unsigned ID) {
       LastSeenGUID = 0;
       break;
     }
+    case bitc::OBJC_FUNC_NON_VTABLE_REF: {
+      for (unsigned I = 0; I != Record.size(); I++)
+        TheIndex.addFuncWithNonVtableRef(Record[I]);
+      break;
+    }
     case bitc::FS_TYPE_TESTS:
       assert(PendingTypeTests.empty());
       llvm::append_range(PendingTypeTests, Record);

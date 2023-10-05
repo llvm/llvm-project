@@ -2941,6 +2941,19 @@ void AssemblyWriter::printModuleSummaryIndex() {
     Out << ") ; guid = " << GUID << "\n";
   }
 
+  // Print FuncsWithNonVtableRef.
+  // Need to find a case where this is set.
+  if (!TheIndex->funcsWithNonVtableRef().empty()) {
+    Out << "^" << NumSlots << " = FuncsWithNonVtableRef: (";
+    FieldSeparator FS;
+    for (auto FID : TheIndex->funcsWithNonVtableRef()) {
+      Out << FS;
+      Out << "^" << Machine.getGUIDSlot(FID);
+    }
+    Out << ")\n";
+    ++NumSlots;
+  }
+
   // Don't emit flags when it's not really needed (value is zero by default).
   if (TheIndex->getFlags()) {
     Out << "^" << NumSlots << " = flags: " << TheIndex->getFlags() << "\n";

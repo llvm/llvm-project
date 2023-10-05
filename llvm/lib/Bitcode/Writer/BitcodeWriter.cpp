@@ -3906,6 +3906,19 @@ static void writeTypeIdSummaryRecord(SmallVector<uint64_t, 64> &NameVals,
                                       W.second);
 }
 
+static void writeFuncWithNonVTableRef(BitstreamWriter &Stream,
+                                      const std::set<uint64_t> &List,
+                                      SmallVectorImpl<uint64_t> &Record) {
+  if (List.empty())
+    return;
+
+  // For deterministic, we should sort the list.
+  for (auto l : List)
+    Record.push_back(l);
+  Stream.EmitRecord(bitc::OBJC_FUNC_NON_VTABLE_REF, Record);
+  Record.clear();
+}
+
 static void writeTypeIdCompatibleVtableSummaryRecord(
     SmallVector<uint64_t, 64> &NameVals, StringTableBuilder &StrtabBuilder,
     const std::string &Id, const TypeIdCompatibleVtableInfo &Summary,
@@ -4246,6 +4259,8 @@ void ModuleBitcodeWriterBase::writePerModuleGlobalValueSummary() {
     Stream.EmitRecord(bitc::FS_ALIAS, NameVals, FSAliasAbbrev);
     NameVals.clear();
   }
+  SmallVector<uint64_t, 64> Record;
+  writeFuncWithNonVTableRef(Stream, Index->funcsWithNonVtableRef(), Record);
 
   for (auto &S : Index->typeIdCompatibleVtableMap()) {
     writeTypeIdCompatibleVtableSummaryRecord(NameVals, StrtabBuilder, S.first,

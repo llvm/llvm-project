@@ -7378,10 +7378,10 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
   if (VirtualFunctionElimination) {
     // VFE requires full LTO (currently, this might be relaxed to allow ThinLTO
     // in the future).
-    if (LTOMode != LTOK_Full)
+    if (LTOMode != LTOK_Full && LTOMode != LTOK_Thin)
       D.Diag(diag::err_drv_argument_only_allowed_with)
           << "-fvirtual-function-elimination"
-          << "-flto=full";
+          << "-flto";
 
     CmdArgs.push_back("-fvirtual-function-elimination");
   }

@@ -399,6 +399,7 @@ enum Kind {
   kw_args,
   kw_typeid,
   kw_typeidCompatibleVTable,
+  kw_FuncsWithNonVtableRef,
   kw_summary,
   kw_typeTestRes,
   kw_kind,
