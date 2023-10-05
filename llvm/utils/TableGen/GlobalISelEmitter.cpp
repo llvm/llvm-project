@@ -357,8 +357,8 @@ private:
   /// to the number of named operands that predicate expects. Store locations in
   /// StoreIdxForName correspond to the order in which operand names appear in
   /// predicate's argument list.
-  /// When we visit named leaf operand and WaitingForNamedOperands is not zero,
-  /// add matcher that will record operand and decrease counter.
+  /// When we visit named operand and WaitingForNamedOperands is not zero, add
+  /// matcher that will record operand and decrease counter.
   unsigned WaitingForNamedOperands = 0;
   StringMap<unsigned> StoreIdxForName;
 
@@ -997,6 +997,17 @@ Error GlobalISelEmitter::importChildMatcher(
                           to_string(*SrcChild) + ")");
   }
 
+  // Try look up SrcChild for a (named) predicate operand if there is any.
+  if (WaitingForNamedOperands) {
+    auto &ScopedNames = SrcChild->getNamesAsPredicateArg();
+    if (!ScopedNames.empty()) {
+      auto PA = ScopedNames.begin();
+      std::string Name = getScopedName(PA->getScope(), PA->getIdentifier());
+      OM.addPredicate<RecordNamedOperandMatcher>(StoreIdxForName[Name], Name);
+      --WaitingForNamedOperands;
+    }
+  }
+
   // Check for nested instructions.
   if (!SrcChild->isLeaf()) {
     if (SrcChild->getOperator()->isSubClassOf("ComplexPattern")) {
@@ -1060,13 +1071,6 @@ Error GlobalISelEmitter::importChildMatcher(
   // Check for def's like register classes or ComplexPattern's.
   if (auto *ChildDefInit = dyn_cast<DefInit>(SrcChild->getLeafValue())) {
     auto *ChildRec = ChildDefInit->getDef();
-
-    if (WaitingForNamedOperands) {
-      auto PA = SrcChild->getNamesAsPredicateArg().begin();
-      std::string Name = getScopedName(PA->getScope(), PA->getIdentifier());
-      OM.addPredicate<RecordNamedOperandMatcher>(StoreIdxForName[Name], Name);
-      --WaitingForNamedOperands;
-    }
 
     // Check for register classes.
     if (ChildRec->isSubClassOf("RegisterClass") ||
