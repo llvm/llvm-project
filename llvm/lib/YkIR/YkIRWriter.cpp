@@ -51,6 +51,7 @@ enum OpCode {
 enum OperandKind {
   Constant = 0,
   LocalVariable,
+  Type,
   UnimplementedOperand = 255,
 };
 
@@ -123,8 +124,9 @@ private:
 
   // Return the index of the LLVM type `Ty`, inserting a new entry if
   // necessary.
-  size_t typeIndex(Type *Ty) {
-    vector<Type *>::iterator Found = std::find(Types.begin(), Types.end(), Ty);
+  size_t typeIndex(llvm::Type *Ty) {
+    vector<llvm::Type *>::iterator Found =
+        std::find(Types.begin(), Types.end(), Ty);
     if (Found != Types.end()) {
       return std::distance(Types.begin(), Found);
     }
@@ -211,9 +213,35 @@ public:
     InstIdx++;
   }
 
+  void serialiseAllocaInst(AllocaInst *I, ValueLoweringMap &VLMap,
+                           unsigned BBIdx, unsigned InstIdx) {
+    // type_index:
+    OutStreamer.emitSizeT(typeIndex(I->getType()));
+    // opcode:
+    serialiseOpcode(OpCode::Alloca);
+    // num_operands:
+    OutStreamer.emitInt32(2);
+
+    // OPERAND 0: allocated type
+    // Needs custom serialisation: not stored in the instruction's operand list.
+    //
+    // operand_kind:
+    OutStreamer.emitInt8(OperandKind::Type);
+    // type_index
+    OutStreamer.emitSizeT(typeIndex(I->getAllocatedType()));
+
+    // OPERAND 1: number of objects to allocate
+    Value *Op0 = I->getOperand(0);
+    assert(isa<ConstantInt>(Op0));
+    serialiseOperand(I, VLMap, Op0);
+
+    VLMap[I] = {BBIdx, InstIdx};
+    InstIdx++;
+  }
+
   void serialiseInst(Instruction *I, ValueLoweringMap &VLMap, unsigned BBIdx,
                      unsigned &InstIdx) {
-// Macro to help dispatch to generic lowering.
+// Macros to help dispatch to serialisers.
 //
 // Note that this is unhygenic so as to make the call-sites readable.
 #define GENERIC_INST_SERIALISE(LLVM_INST, LLVM_INST_TYPE, YKIR_OPCODE)         \
@@ -221,10 +249,14 @@ public:
     serialiseInstGeneric(LLVM_INST, VLMap, BBIdx, InstIdx, YKIR_OPCODE);       \
     return;                                                                    \
   }
+#define CUSTOM_INST_SERIALISE(LLVM_INST, LLVM_INST_TYPE, SERIALISER)           \
+  if (LLVM_INST_TYPE *II = dyn_cast<LLVM_INST_TYPE>(LLVM_INST)) {              \
+    SERIALISER(II, VLMap, BBIdx, InstIdx);                                     \
+    return;                                                                    \
+  }
 
     GENERIC_INST_SERIALISE(I, LoadInst, Load)
     GENERIC_INST_SERIALISE(I, StoreInst, Store)
-    GENERIC_INST_SERIALISE(I, AllocaInst, Alloca)
     GENERIC_INST_SERIALISE(I, CallInst, Call)
     GENERIC_INST_SERIALISE(I, GetElementPtrInst, GetElementPtr)
     GENERIC_INST_SERIALISE(I, BranchInst, Branch)
@@ -232,8 +264,10 @@ public:
     GENERIC_INST_SERIALISE(I, llvm::BinaryOperator, BinaryOperator)
     GENERIC_INST_SERIALISE(I, ReturnInst, Ret)
 
-    // GENERIC_INST_SERIALISE does an early return upon a match, so if we get
-    // here then the instruction wasn't handled.
+    CUSTOM_INST_SERIALISE(I, AllocaInst, serialiseAllocaInst)
+
+    // GENERIC_INST_SERIALISE and CUSTOM_INST_SERIALISE do an early return upon
+    // a match, so if we get here then the instruction wasn't handled.
     serialiseUnimplementedInstruction(I, VLMap, BBIdx, InstIdx);
   }
 
@@ -280,7 +314,7 @@ public:
     }
   }
 
-  void serialiseType(Type *Ty) {
+  void serialiseType(llvm::Type *Ty) {
     if (Ty->isVoidTy()) {
       OutStreamer.emitInt8(TypeKind::Void);
     } else if (Ty->isPointerTy()) {
@@ -341,7 +375,7 @@ public:
     // num_types:
     OutStreamer.emitSizeT(Types.size());
     // types:
-    for (Type *&Ty : Types) {
+    for (llvm::Type *&Ty : Types) {
       serialiseType(Ty);
     }
   }
