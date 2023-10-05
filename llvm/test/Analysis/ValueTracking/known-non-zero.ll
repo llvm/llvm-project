@@ -1160,3 +1160,65 @@ define i1 @sdiv_known_non_zero_fail(i8 %x, i8 %y) {
   %nz = icmp ne i8 %xy, 0
   ret i1 %nz
 }
+
+define <2 x i1> @cmp_excludes_zero_with_nonsplat_vec(<2 x i8> %a, <2 x i8> %b) {
+; CHECK-LABEL: @cmp_excludes_zero_with_nonsplat_vec(
+; CHECK-NEXT:    [[C:%.*]] = icmp sge <2 x i8> [[A:%.*]], <i8 1, i8 4>
+; CHECK-NEXT:    [[S:%.*]] = select <2 x i1> [[C]], <2 x i8> [[A]], <2 x i8> <i8 4, i8 5>
+; CHECK-NEXT:    [[AND:%.*]] = or <2 x i8> [[S]], [[B:%.*]]
+; CHECK-NEXT:    [[R:%.*]] = icmp eq <2 x i8> [[AND]], zeroinitializer
+; CHECK-NEXT:    ret <2 x i1> [[R]]
+;
+  %c = icmp sge <2 x i8> %a, <i8 1, i8 4>
+  %s = select <2 x i1> %c, <2 x i8> %a, <2 x i8> <i8 4, i8 5>
+  %and = or <2 x i8> %s, %b
+  %r = icmp eq <2 x i8> %and, zeroinitializer
+  ret <2 x i1> %r
+}
+
+define <2 x i1> @cmp_excludes_zero_with_nonsplat_vec_wundef(<2 x i8> %a, <2 x i8> %b) {
+; CHECK-LABEL: @cmp_excludes_zero_with_nonsplat_vec_wundef(
+; CHECK-NEXT:    [[C:%.*]] = icmp sge <2 x i8> [[A:%.*]], <i8 1, i8 undef>
+; CHECK-NEXT:    [[S:%.*]] = select <2 x i1> [[C]], <2 x i8> [[A]], <2 x i8> <i8 4, i8 5>
+; CHECK-NEXT:    [[AND:%.*]] = or <2 x i8> [[S]], [[B:%.*]]
+; CHECK-NEXT:    [[R:%.*]] = icmp eq <2 x i8> [[AND]], zeroinitializer
+; CHECK-NEXT:    ret <2 x i1> [[R]]
+;
+  %c = icmp sge <2 x i8> %a, <i8 1, i8 undef>
+  %s = select <2 x i1> %c, <2 x i8> %a, <2 x i8> <i8 4, i8 5>
+  %and = or <2 x i8> %s, %b
+  %r = icmp eq <2 x i8> %and, zeroinitializer
+  ret <2 x i1> %r
+}
+
+define <2 x i1> @cmp_excludes_zero_with_nonsplat_vec_wpoison(<2 x i8> %a, <2 x i8> %b) {
+; CHECK-LABEL: @cmp_excludes_zero_with_nonsplat_vec_wpoison(
+; CHECK-NEXT:    [[C:%.*]] = icmp sge <2 x i8> [[A:%.*]], <i8 1, i8 poison>
+; CHECK-NEXT:    [[S:%.*]] = select <2 x i1> [[C]], <2 x i8> [[A]], <2 x i8> <i8 4, i8 5>
+; CHECK-NEXT:    [[AND:%.*]] = or <2 x i8> [[S]], [[B:%.*]]
+; CHECK-NEXT:    [[R:%.*]] = icmp eq <2 x i8> [[AND]], zeroinitializer
+; CHECK-NEXT:    ret <2 x i1> [[R]]
+;
+  %c = icmp sge <2 x i8> %a, <i8 1, i8 poison>
+  %s = select <2 x i1> %c, <2 x i8> %a, <2 x i8> <i8 4, i8 5>
+  %and = or <2 x i8> %s, %b
+  %r = icmp eq <2 x i8> %and, zeroinitializer
+  ret <2 x i1> %r
+}
+
+
+define <2 x i1> @cmp_excludes_zero_with_nonsplat_vec_fail(<2 x i8> %a, <2 x i8> %b) {
+; CHECK-LABEL: @cmp_excludes_zero_with_nonsplat_vec_fail(
+; CHECK-NEXT:    [[C:%.*]] = icmp sge <2 x i8> [[A:%.*]], <i8 0, i8 4>
+; CHECK-NEXT:    [[S:%.*]] = select <2 x i1> [[C]], <2 x i8> [[A]], <2 x i8> <i8 4, i8 5>
+; CHECK-NEXT:    [[AND:%.*]] = or <2 x i8> [[S]], [[B:%.*]]
+; CHECK-NEXT:    [[R:%.*]] = icmp eq <2 x i8> [[AND]], zeroinitializer
+; CHECK-NEXT:    ret <2 x i1> [[R]]
+;
+  %c = icmp sge <2 x i8> %a, <i8 0, i8 4>
+  %s = select <2 x i1> %c, <2 x i8> %a, <2 x i8> <i8 4, i8 5>
+  %and = or <2 x i8> %s, %b
+  %r = icmp eq <2 x i8> %and, zeroinitializer
+  ret <2 x i1> %r
+}
+
