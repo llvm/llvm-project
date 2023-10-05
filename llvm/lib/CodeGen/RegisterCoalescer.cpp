@@ -4167,14 +4167,6 @@ bool RegisterCoalescer::runOnMachineFunction(MachineFunction &fn) {
   else
     JoinGlobalCopies = (EnableGlobalCopies == cl::BOU_TRUE);
 
-  // FIXME: MachineFunctionProperties cannot express the required pre-property
-  // no-SSA. When running a MIR testcase without any virtual register defs, the
-  // MIR parser assumes SSA. MachineFunctionPass::getClearedProperties is called
-  // after the pass is run, so the properties at this point say it's an SSA
-  // function.  Forcibly clear it here so -verify-coalescing doesn't complain
-  // after multiple virtual register defs are introduced.
-  MRI->leaveSSA();
-
   // If there are PHIs tracked by debug-info, they will need updating during
   // coalescing. Build an index of those PHIs to ease updating.
   SlotIndexes *Slots = LIS->getSlotIndexes();
