@@ -472,8 +472,17 @@ public:
     llvm::raw_svector_ostream nameOstream(nameBuffer);
     nameOstream << kInsertFuncNamePrefix;
     const Level lvlRank = stt.getLvlRank();
-    for (Level l = 0; l < lvlRank; l++)
-      nameOstream << toMLIRString(stt.getLvlType(l)) << "_";
+    for (Level l = 0; l < lvlRank; l++) {
+      std::string lvlType = toMLIRString(stt.getLvlType(l));
+      // Replace/remove punctuations in level properties.
+      std::replace_if(
+          lvlType.begin(), lvlType.end(),
+          [](char c) { return c == '(' || c == ','; }, '_');
+      lvlType.erase(std::remove_if(lvlType.begin(), lvlType.end(),
+                                   [](char c) { return c == ')' || c == ' '; }),
+                    lvlType.end());
+      nameOstream << lvlType << "_";
+    }
     // Static dim sizes are used in the generated code while dynamic sizes are
     // loaded from the dimSizes buffer. This is the reason for adding the shape
     // to the function name.
