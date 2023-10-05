@@ -72,6 +72,9 @@ struct DataWriter {
   /// Write ULEB128(V) to the data stream.
   void writeULEB128(uint64_t V) { encodeULEB128(V, DataStream); }
 
+  /// Write SLEB128(V) to the data stream.
+  void writeSLEB128(int64_t V) { encodeSLEB128(V, DataStream); }
+
   /// Write V to the data stream.
   void writeByte(uint8_t V) { DataStream << V; }
 
