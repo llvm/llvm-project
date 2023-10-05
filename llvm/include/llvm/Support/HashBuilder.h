@@ -85,258 +85,6 @@ private:
   HasherT &Hasher;
 };
 
-/// Implementation of the `HashBuilder` interface.
-template <typename HasherT, support::endianness Endianness>
-class HashBuilderImpl : public HashBuilderBase<HasherT> {
-public:
-  explicit HashBuilderImpl(HasherT &Hasher)
-      : HashBuilderBase<HasherT>(Hasher) {}
-  template <typename... ArgTypes>
-  explicit HashBuilderImpl(ArgTypes &&...Args)
-      : HashBuilderBase<HasherT>(Args...) {}
-
-  /// Implement hashing for hashable data types, e.g. integral or enum values.
-  template <typename T>
-  std::enable_if_t<hashbuilder_detail::IsHashableData<T>::value,
-                   HashBuilderImpl &>
-  add(T Value) {
-    return adjustForEndiannessAndAdd(Value);
-  }
-
-  /// Support hashing `ArrayRef`.
-  ///
-  /// `Value.size()` is taken into account to ensure cases like
-  /// ```
-  /// builder.add({1});
-  /// builder.add({2, 3});
-  /// ```
-  /// and
-  /// ```
-  /// builder.add({1, 2});
-  /// builder.add({3});
-  /// ```
-  /// do not collide.
-  template <typename T> HashBuilderImpl &add(ArrayRef<T> Value) {
-    // As of implementation time, simply calling `addRange(Value)` would also go
-    // through the `update` fast path. But that would rely on the implementation
-    // details of `ArrayRef::begin()` and `ArrayRef::end()`. Explicitly call
-    // `update` to guarantee the fast path.
-    add(Value.size());
-    if (hashbuilder_detail::IsHashableData<T>::value &&
-        Endianness == support::endian::system_endianness()) {
-      this->update(ArrayRef(reinterpret_cast<const uint8_t *>(Value.begin()),
-                            Value.size() * sizeof(T)));
-    } else {
-      for (auto &V : Value)
-        add(V);
-    }
-    return *this;
-  }
-
-  /// Support hashing `StringRef`.
-  ///
-  /// `Value.size()` is taken into account to ensure cases like
-  /// ```
-  /// builder.add("a");
-  /// builder.add("bc");
-  /// ```
-  /// and
-  /// ```
-  /// builder.add("ab");
-  /// builder.add("c");
-  /// ```
-  /// do not collide.
-  HashBuilderImpl &add(StringRef Value) {
-    // As of implementation time, simply calling `addRange(Value)` would also go
-    // through `update`. But that would rely on the implementation of
-    // `StringRef::begin()` and `StringRef::end()`. Explicitly call `update` to
-    // guarantee the fast path.
-    add(Value.size());
-    this->update(ArrayRef(reinterpret_cast<const uint8_t *>(Value.begin()),
-                          Value.size()));
-    return *this;
-  }
-
-  template <typename T>
-  using HasAddHashT =
-      decltype(addHash(std::declval<HashBuilderImpl &>(), std::declval<T &>()));
-  /// Implement hashing for user-defined `struct`s.
-  ///
-  /// Any user-define `struct` can participate in hashing via `HashBuilder` by
-  /// providing a `addHash` templated function.
-  ///
-  /// ```
-  /// template <typename HasherT, support::endianness Endianness>
-  /// void addHash(HashBuilder<HasherT, Endianness> &HBuilder,
-  ///              const UserDefinedStruct &Value);
-  /// ```
-  ///
-  /// For example:
-  /// ```
-  /// struct SimpleStruct {
-  ///   char c;
-  ///   int i;
-  /// };
-  ///
-  /// template <typename HasherT, support::endianness Endianness>
-  /// void addHash(HashBuilderImpl<HasherT, Endianness> &HBuilder,
-  ///              const SimpleStruct &Value) {
-  ///   HBuilder.add(Value.c);
-  ///   HBuilder.add(Value.i);
-  /// }
-  /// ```
-  ///
-  /// To avoid endianness issues, specializations of `addHash` should
-  /// generally rely on exising `add`, `addRange`, and `addRangeElements`
-  /// functions. If directly using `update`, an implementation must correctly
-  /// handle endianness.
-  ///
-  /// ```
-  /// struct __attribute__ ((packed)) StructWithFastHash {
-  ///   int I;
-  ///   char C;
-  ///
-  ///   // If possible, we want to hash both `I` and `C` in a single
-  ///   // `update` call for performance concerns.
-  ///   template <typename HasherT, support::endianness Endianness>
-  ///   friend void addHash(HashBuilderImpl<HasherT, Endianness> &HBuilder,
-  ///                       const StructWithFastHash &Value) {
-  ///     if (Endianness == support::endian::system_endianness()) {
-  ///       HBuilder.update(ArrayRef(
-  ///           reinterpret_cast<const uint8_t *>(&Value), sizeof(Value)));
-  ///     } else {
-  ///       // Rely on existing `add` methods to handle endianness.
-  ///       HBuilder.add(Value.I);
-  ///       HBuilder.add(Value.C);
-  ///     }
-  ///   }
-  /// };
-  /// ```
-  ///
-  /// To avoid collisions, specialization of `addHash` for variable-size
-  /// types must take the size into account.
-  ///
-  /// For example:
-  /// ```
-  /// struct CustomContainer {
-  /// private:
-  ///   size_t Size;
-  ///   int Elements[100];
-  ///
-  /// public:
-  ///   CustomContainer(size_t Size) : Size(Size) {
-  ///     for (size_t I = 0; I != Size; ++I)
-  ///       Elements[I] = I;
-  ///   }
-  ///   template <typename HasherT, support::endianness Endianness>
-  ///   friend void addHash(HashBuilderImpl<HasherT, Endianness> &HBuilder,
-  ///                       const CustomContainer &Value) {
-  ///     if (Endianness == support::endian::system_endianness()) {
-  ///       HBuilder.update(ArrayRef(
-  ///           reinterpret_cast<const uint8_t *>(&Value.Size),
-  ///           sizeof(Value.Size) + Value.Size * sizeof(Value.Elements[0])));
-  ///     } else {
-  ///       // `addRange` will take care of encoding the size.
-  ///       HBuilder.addRange(&Value.Elements[0], &Value.Elements[0] +
-  ///       Value.Size);
-  ///     }
-  ///   }
-  /// };
-  /// ```
-  template <typename T>
-  std::enable_if_t<is_detected<HasAddHashT, T>::value &&
-                       !hashbuilder_detail::IsHashableData<T>::value,
-                   HashBuilderImpl &>
-  add(const T &Value) {
-    addHash(*this, Value);
-    return *this;
-  }
-
-  template <typename T1, typename T2>
-  HashBuilderImpl &add(const std::pair<T1, T2> &Value) {
-    return add(Value.first, Value.second);
-  }
-
-  template <typename... Ts> HashBuilderImpl &add(const std::tuple<Ts...> &Arg) {
-    std::apply([this](const auto &...Args) { this->add(Args...); }, Arg);
-    return *this;
-  }
-
-  /// A convenenience variadic helper.
-  /// It simply iterates over its arguments, in order.
-  /// ```
-  /// add(Arg1, Arg2);
-  /// ```
-  /// is equivalent to
-  /// ```
-  /// add(Arg1)
-  /// add(Arg2)
-  /// ```
-  template <typename... Ts>
-  std::enable_if_t<(sizeof...(Ts) > 1), HashBuilderImpl &>
-  add(const Ts &...Args) {
-    return (add(Args), ...);
-  }
-
-  template <typename ForwardIteratorT>
-  HashBuilderImpl &addRange(ForwardIteratorT First, ForwardIteratorT Last) {
-    add(std::distance(First, Last));
-    return addRangeElements(First, Last);
-  }
-
-  template <typename RangeT> HashBuilderImpl &addRange(const RangeT &Range) {
-    return addRange(adl_begin(Range), adl_end(Range));
-  }
-
-  template <typename ForwardIteratorT>
-  HashBuilderImpl &addRangeElements(ForwardIteratorT First,
-                                    ForwardIteratorT Last) {
-    return addRangeElementsImpl(
-        First, Last,
-        typename std::iterator_traits<ForwardIteratorT>::iterator_category());
-  }
-
-  template <typename RangeT>
-  HashBuilderImpl &addRangeElements(const RangeT &Range) {
-    return addRangeElements(adl_begin(Range), adl_end(Range));
-  }
-
-  template <typename T>
-  using HasByteSwapT = decltype(support::endian::byte_swap(
-      std::declval<T &>(), support::endianness::little));
-  /// Adjust `Value` for the target endianness and add it to the hash.
-  template <typename T>
-  std::enable_if_t<is_detected<HasByteSwapT, T>::value, HashBuilderImpl &>
-  adjustForEndiannessAndAdd(const T &Value) {
-    T SwappedValue = support::endian::byte_swap(Value, Endianness);
-    this->update(ArrayRef(reinterpret_cast<const uint8_t *>(&SwappedValue),
-                          sizeof(SwappedValue)));
-    return *this;
-  }
-
-private:
-  // FIXME: Once available, specialize this function for `contiguous_iterator`s,
-  // and use it for `ArrayRef` and `StringRef`.
-  template <typename ForwardIteratorT>
-  HashBuilderImpl &addRangeElementsImpl(ForwardIteratorT First,
-                                        ForwardIteratorT Last,
-                                        std::forward_iterator_tag) {
-    for (auto It = First; It != Last; ++It)
-      add(*It);
-    return *this;
-  }
-
-  template <typename T>
-  std::enable_if_t<hashbuilder_detail::IsHashableData<T>::value &&
-                       Endianness == support::endian::system_endianness(),
-                   HashBuilderImpl &>
-  addRangeElementsImpl(T *First, T *Last, std::forward_iterator_tag) {
-    this->update(ArrayRef(reinterpret_cast<const uint8_t *>(First),
-                          (Last - First) * sizeof(T)));
-    return *this;
-  }
-};
-
 /// Interface to help hash various types through a hasher type.
 ///
 /// Via provided specializations of `add`, `addRange`, and `addRangeElements`
@@ -387,8 +135,252 @@ private:
 /// computation (for example when computing `add((int)123)`).
 /// Specifiying a non-`native` `Endianness` template parameter allows to compute
 /// stable hash across platforms with different endianness.
-template <class HasherT, support::endianness Endianness>
-using HashBuilder = HashBuilderImpl<HasherT, Endianness>;
+template <typename HasherT, support::endianness Endianness>
+class HashBuilder : public HashBuilderBase<HasherT> {
+public:
+  explicit HashBuilder(HasherT &Hasher) : HashBuilderBase<HasherT>(Hasher) {}
+  template <typename... ArgTypes>
+  explicit HashBuilder(ArgTypes &&...Args)
+      : HashBuilderBase<HasherT>(Args...) {}
+
+  /// Implement hashing for hashable data types, e.g. integral or enum values.
+  template <typename T>
+  std::enable_if_t<hashbuilder_detail::IsHashableData<T>::value, HashBuilder &>
+  add(T Value) {
+    return adjustForEndiannessAndAdd(Value);
+  }
+
+  /// Support hashing `ArrayRef`.
+  ///
+  /// `Value.size()` is taken into account to ensure cases like
+  /// ```
+  /// builder.add({1});
+  /// builder.add({2, 3});
+  /// ```
+  /// and
+  /// ```
+  /// builder.add({1, 2});
+  /// builder.add({3});
+  /// ```
+  /// do not collide.
+  template <typename T> HashBuilder &add(ArrayRef<T> Value) {
+    // As of implementation time, simply calling `addRange(Value)` would also go
+    // through the `update` fast path. But that would rely on the implementation
+    // details of `ArrayRef::begin()` and `ArrayRef::end()`. Explicitly call
+    // `update` to guarantee the fast path.
+    add(Value.size());
+    if (hashbuilder_detail::IsHashableData<T>::value &&
+        Endianness == support::endian::system_endianness()) {
+      this->update(ArrayRef(reinterpret_cast<const uint8_t *>(Value.begin()),
+                            Value.size() * sizeof(T)));
+    } else {
+      for (auto &V : Value)
+        add(V);
+    }
+    return *this;
+  }
+
+  /// Support hashing `StringRef`.
+  ///
+  /// `Value.size()` is taken into account to ensure cases like
+  /// ```
+  /// builder.add("a");
+  /// builder.add("bc");
+  /// ```
+  /// and
+  /// ```
+  /// builder.add("ab");
+  /// builder.add("c");
+  /// ```
+  /// do not collide.
+  HashBuilder &add(StringRef Value) {
+    // As of implementation time, simply calling `addRange(Value)` would also go
+    // through `update`. But that would rely on the implementation of
+    // `StringRef::begin()` and `StringRef::end()`. Explicitly call `update` to
+    // guarantee the fast path.
+    add(Value.size());
+    this->update(ArrayRef(reinterpret_cast<const uint8_t *>(Value.begin()),
+                          Value.size()));
+    return *this;
+  }
+
+  template <typename T>
+  using HasAddHashT =
+      decltype(addHash(std::declval<HashBuilder &>(), std::declval<T &>()));
+  /// Implement hashing for user-defined `struct`s.
+  ///
+  /// Any user-define `struct` can participate in hashing via `HashBuilder` by
+  /// providing a `addHash` templated function.
+  ///
+  /// ```
+  /// template <typename HasherT, support::endianness Endianness>
+  /// void addHash(HashBuilder<HasherT, Endianness> &HBuilder,
+  ///              const UserDefinedStruct &Value);
+  /// ```
+  ///
+  /// For example:
+  /// ```
+  /// struct SimpleStruct {
+  ///   char c;
+  ///   int i;
+  /// };
+  ///
+  /// template <typename HasherT, support::endianness Endianness>
+  /// void addHash(HashBuilder<HasherT, Endianness> &HBuilder,
+  ///              const SimpleStruct &Value) {
+  ///   HBuilder.add(Value.c);
+  ///   HBuilder.add(Value.i);
+  /// }
+  /// ```
+  ///
+  /// To avoid endianness issues, specializations of `addHash` should
+  /// generally rely on exising `add`, `addRange`, and `addRangeElements`
+  /// functions. If directly using `update`, an implementation must correctly
+  /// handle endianness.
+  ///
+  /// ```
+  /// struct __attribute__ ((packed)) StructWithFastHash {
+  ///   int I;
+  ///   char C;
+  ///
+  ///   // If possible, we want to hash both `I` and `C` in a single
+  ///   // `update` call for performance concerns.
+  ///   template <typename HasherT, support::endianness Endianness>
+  ///   friend void addHash(HashBuilder<HasherT, Endianness> &HBuilder,
+  ///                       const StructWithFastHash &Value) {
+  ///     if (Endianness == support::endian::system_endianness()) {
+  ///       HBuilder.update(ArrayRef(
+  ///           reinterpret_cast<const uint8_t *>(&Value), sizeof(Value)));
+  ///     } else {
+  ///       // Rely on existing `add` methods to handle endianness.
+  ///       HBuilder.add(Value.I);
+  ///       HBuilder.add(Value.C);
+  ///     }
+  ///   }
+  /// };
+  /// ```
+  ///
+  /// To avoid collisions, specialization of `addHash` for variable-size
+  /// types must take the size into account.
+  ///
+  /// For example:
+  /// ```
+  /// struct CustomContainer {
+  /// private:
+  ///   size_t Size;
+  ///   int Elements[100];
+  ///
+  /// public:
+  ///   CustomContainer(size_t Size) : Size(Size) {
+  ///     for (size_t I = 0; I != Size; ++I)
+  ///       Elements[I] = I;
+  ///   }
+  ///   template <typename HasherT, support::endianness Endianness>
+  ///   friend void addHash(HashBuilder<HasherT, Endianness> &HBuilder,
+  ///                       const CustomContainer &Value) {
+  ///     if (Endianness == support::endian::system_endianness()) {
+  ///       HBuilder.update(ArrayRef(
+  ///           reinterpret_cast<const uint8_t *>(&Value.Size),
+  ///           sizeof(Value.Size) + Value.Size * sizeof(Value.Elements[0])));
+  ///     } else {
+  ///       // `addRange` will take care of encoding the size.
+  ///       HBuilder.addRange(&Value.Elements[0], &Value.Elements[0] +
+  ///       Value.Size);
+  ///     }
+  ///   }
+  /// };
+  /// ```
+  template <typename T>
+  std::enable_if_t<is_detected<HasAddHashT, T>::value &&
+                       !hashbuilder_detail::IsHashableData<T>::value,
+                   HashBuilder &>
+  add(const T &Value) {
+    addHash(*this, Value);
+    return *this;
+  }
+
+  template <typename T1, typename T2>
+  HashBuilder &add(const std::pair<T1, T2> &Value) {
+    return add(Value.first, Value.second);
+  }
+
+  template <typename... Ts> HashBuilder &add(const std::tuple<Ts...> &Arg) {
+    std::apply([this](const auto &...Args) { this->add(Args...); }, Arg);
+    return *this;
+  }
+
+  /// A convenenience variadic helper.
+  /// It simply iterates over its arguments, in order.
+  /// ```
+  /// add(Arg1, Arg2);
+  /// ```
+  /// is equivalent to
+  /// ```
+  /// add(Arg1)
+  /// add(Arg2)
+  /// ```
+  template <typename... Ts>
+  std::enable_if_t<(sizeof...(Ts) > 1), HashBuilder &> add(const Ts &...Args) {
+    return (add(Args), ...);
+  }
+
+  template <typename ForwardIteratorT>
+  HashBuilder &addRange(ForwardIteratorT First, ForwardIteratorT Last) {
+    add(std::distance(First, Last));
+    return addRangeElements(First, Last);
+  }
+
+  template <typename RangeT> HashBuilder &addRange(const RangeT &Range) {
+    return addRange(adl_begin(Range), adl_end(Range));
+  }
+
+  template <typename ForwardIteratorT>
+  HashBuilder &addRangeElements(ForwardIteratorT First, ForwardIteratorT Last) {
+    return addRangeElementsImpl(
+        First, Last,
+        typename std::iterator_traits<ForwardIteratorT>::iterator_category());
+  }
+
+  template <typename RangeT>
+  HashBuilder &addRangeElements(const RangeT &Range) {
+    return addRangeElements(adl_begin(Range), adl_end(Range));
+  }
+
+  template <typename T>
+  using HasByteSwapT = decltype(support::endian::byte_swap(
+      std::declval<T &>(), support::endianness::little));
+  /// Adjust `Value` for the target endianness and add it to the hash.
+  template <typename T>
+  std::enable_if_t<is_detected<HasByteSwapT, T>::value, HashBuilder &>
+  adjustForEndiannessAndAdd(const T &Value) {
+    T SwappedValue = support::endian::byte_swap(Value, Endianness);
+    this->update(ArrayRef(reinterpret_cast<const uint8_t *>(&SwappedValue),
+                          sizeof(SwappedValue)));
+    return *this;
+  }
+
+private:
+  // FIXME: Once available, specialize this function for `contiguous_iterator`s,
+  // and use it for `ArrayRef` and `StringRef`.
+  template <typename ForwardIteratorT>
+  HashBuilder &addRangeElementsImpl(ForwardIteratorT First,
+                                    ForwardIteratorT Last,
+                                    std::forward_iterator_tag) {
+    for (auto It = First; It != Last; ++It)
+      add(*It);
+    return *this;
+  }
+
+  template <typename T>
+  std::enable_if_t<hashbuilder_detail::IsHashableData<T>::value &&
+                       Endianness == support::endian::system_endianness(),
+                   HashBuilder &>
+  addRangeElementsImpl(T *First, T *Last, std::forward_iterator_tag) {
+    this->update(ArrayRef(reinterpret_cast<const uint8_t *>(First),
+                          (Last - First) * sizeof(T)));
+    return *this;
+  }
+};
 
 namespace hashbuilder_detail {
 class HashCodeHasher {
