@@ -7494,3 +7494,69 @@ relative ordering of values is important. For example:
 attribute, they default to the value ``65535``.
 }];
 }
+
+def CountedByDocs : Documentation {
+  let Category = DocCatField;
+  let Content = [{
+Clang supports the ``counted_by`` attribute on the flexible array member of a
+structure in C. The argument for the attribute is the name of a field member in
+the same structure holding the count of elements in the flexible array. This
+information can be used to improve the results of the array bound sanitizer and
+the ``__builtin_dynamic_object_size`` builtin.
+
+For example, the following code:
+
+.. code-block:: c
+
+  struct bar;
+
+  struct foo {
+    size_t count;
+    char other;
+    struct bar *array[] __attribute__((counted_by(count)));
+  };
+
+specifies that the flexible array member ``array`` has the number of elements
+allocated for it stored in ``count``. This establishes a relationship between
+``array`` and ``count``. Specifically, ``p->array`` must have at least
+``p->count`` number of elements available. It's the user's responsibility to
+ensure that this relationship is maintained through changes to the structure.
+
+In the following example, the allocated array erroneously has fewer elements
+than what's specified by ``p->count``. This would result in an out-of-bounds
+access not being detected.
+
+.. code-block:: c
+
+  #define SIZE_INCR 42
+
+  struct foo *p;
+
+  void foo_alloc(size_t count) {
+    p = malloc(MAX(sizeof(struct foo),
+                   offsetof(struct foo, array[0]) + count * sizeof(struct bar *)));
+    p->count = count + SIZE_INCR;
+  }
+
+The next example updates ``p->count``, breaking the relationship requirement
+that ``p->array`` must have at least ``p->count`` number of elements available:
+
+.. code-block:: c
+
+  #define SIZE_INCR 42
+
+  struct foo *p;
+
+  void foo_alloc(size_t count) {
+    p = malloc(MAX(sizeof(struct foo),
+                   offsetof(struct foo, array[0]) + count * sizeof(struct bar *)));
+    p->count = count;
+  }
+
+  void use_foo(int index) {
+    p->count += SIZE_INCR + 1; /* 'count' is now larger than the number of elements of 'array'. */
+    p->array[index] = 0;       /* the sanitizer can't properly check if this is an out-of-bounds access. */
+  }
+
+  }];
+}
