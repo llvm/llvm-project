@@ -968,12 +968,12 @@ struct NVGPUTmaAsyncLoadOpLowering
   }
 };
 struct NVGPUGenerateWarpgroupDescriptorLowering
-    : public ConvertOpToLLVMPattern<nvgpu::GenerateWarpgroupDescriptorOp> {
+    : public ConvertOpToLLVMPattern<nvgpu::WarpgroupGenerateDescriptorOp> {
   using ConvertOpToLLVMPattern<
-      nvgpu::GenerateWarpgroupDescriptorOp>::ConvertOpToLLVMPattern;
+      nvgpu::WarpgroupGenerateDescriptorOp>::ConvertOpToLLVMPattern;
 
   LogicalResult
-  matchAndRewrite(nvgpu::GenerateWarpgroupDescriptorOp op, OpAdaptor adaptor,
+  matchAndRewrite(nvgpu::WarpgroupGenerateDescriptorOp op, OpAdaptor adaptor,
                   ConversionPatternRewriter &rewriter) const override {
 
     ImplicitLocOpBuilder b(op->getLoc(), rewriter);
