@@ -104,6 +104,7 @@ raw_ostream &MenuSeparator::log(raw_ostream &OS) const {
 
 raw_ostream &MenuExItem::log(raw_ostream &OS) const {
   OS << "  MenuExItem (" << Name << "), ID = " << Id;
+  OS << ", type: " << Type << ", state: " << State;
   return OS << "\n";
 }
 
@@ -116,6 +117,7 @@ raw_ostream &PopupItem::log(raw_ostream &OS) const {
 
 raw_ostream &PopupExItem::log(raw_ostream &OS) const {
   OS << "  Popup (" << Name << ")";
+  OS << ", type: " << Type << ", state: " << State << ", help ID: " << HelpId;
   OS << ":\n";
   return SubItems.log(OS);
 }
