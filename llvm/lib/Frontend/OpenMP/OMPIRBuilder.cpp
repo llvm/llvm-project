@@ -354,26 +354,24 @@ Value *createFakeIntVal(IRBuilder<> &Builder,
       Builder.CreateAlloca(Builder.getInt32Ty(), nullptr, Name + ".addr");
   ToBeDeleted.push(FakeValAddr);
 
-  if (AsPtr)
+  if (AsPtr) {
     FakeVal = FakeValAddr;
-  else {
+  } else {
     FakeVal =
         Builder.CreateLoad(Builder.getInt32Ty(), FakeValAddr, Name + ".val");
     ToBeDeleted.push(FakeVal);
   }
 
-  // We only need TIDAddr and ZeroAddr for modeling purposes to get the
-  // associated arguments in the outlined function, so we delete them later.
-
-  // Fake use of TID
+  // Generate a fake use of this value
   Builder.restoreIP(InnerAllocaIP);
   Instruction *UseFakeVal;
-  if (AsPtr)
+  if (AsPtr) {
     UseFakeVal =
         Builder.CreateLoad(Builder.getInt32Ty(), FakeVal, Name + ".use");
-  else
+  } else {
     UseFakeVal =
         cast<BinaryOperator>(Builder.CreateAdd(FakeVal, Builder.getInt32(10)));
+  }
   ToBeDeleted.push(UseFakeVal);
   return FakeVal;
 }
@@ -5758,7 +5756,6 @@ OpenMPIRBuilder::createTeams(const LocationDescription &Loc,
     BasicBlock *BodyBB = splitBB(Builder, /*CreateBranch=*/true, "teams.entry");
     Builder.SetInsertPoint(BodyBB, BodyBB->begin());
   }
-  InsertPointTy OuterAllocaIP(&OuterAllocaBB, OuterAllocaBB.begin());
 
   // The current basic block is split into four basic blocks. After outlining,
   // they will be mapped as follows:
@@ -5794,6 +5791,7 @@ OpenMPIRBuilder::createTeams(const LocationDescription &Loc,
 
   // Insert fake values for global tid and bound tid.
   std::stack<Instruction *> ToBeDeleted;
+  InsertPointTy OuterAllocaIP(&OuterAllocaBB, OuterAllocaBB.begin());
   OI.ExcludeArgsFromAggregate.push_back(createFakeIntVal(
       Builder, OuterAllocaIP, ToBeDeleted, AllocaIP, "gid", true));
   OI.ExcludeArgsFromAggregate.push_back(createFakeIntVal(
