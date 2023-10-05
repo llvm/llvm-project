@@ -43,7 +43,7 @@ replace_if(_ExecutionPolicy&& __policy,
            _Pred __pred,
            const _Tp& __new_value) {
   std::__pstl_frontend_dispatch(
-      _LIBCPP_PSTL_CUSTOMIZATION_POINT(__pstl_replace_if),
+      _LIBCPP_PSTL_CUSTOMIZATION_POINT(__pstl_replace_if, _RawPolicy),
       [&__policy](_ForwardIterator __g_first, _ForwardIterator __g_last, _Pred __g_pred, const _Tp& __g_new_value) {
         std::for_each(__policy, __g_first, __g_last, [&](__iter_reference<_ForwardIterator> __element) {
           if (__g_pred(__element))
@@ -71,7 +71,7 @@ replace(_ExecutionPolicy&& __policy,
         const _Tp& __old_value,
         const _Tp& __new_value) {
   std::__pstl_frontend_dispatch(
-      _LIBCPP_PSTL_CUSTOMIZATION_POINT(__pstl_replace),
+      _LIBCPP_PSTL_CUSTOMIZATION_POINT(__pstl_replace, _RawPolicy),
       [&__policy](
           _ForwardIterator __g_first, _ForwardIterator __g_last, const _Tp& __g_old_value, const _Tp& __g_new_value) {
         std::replace_if(
@@ -105,7 +105,7 @@ _LIBCPP_HIDE_FROM_ABI void replace_copy_if(
     _Pred __pred,
     const _Tp& __new_value) {
   std::__pstl_frontend_dispatch(
-      _LIBCPP_PSTL_CUSTOMIZATION_POINT(__pstl_replace_copy_if),
+      _LIBCPP_PSTL_CUSTOMIZATION_POINT(__pstl_replace_copy_if, _RawPolicy),
       [&__policy](_ForwardIterator __g_first,
                   _ForwardIterator __g_last,
                   _ForwardOutIterator __g_result,
@@ -139,7 +139,7 @@ _LIBCPP_HIDE_FROM_ABI void replace_copy(
     const _Tp& __old_value,
     const _Tp& __new_value) {
   std::__pstl_frontend_dispatch(
-      _LIBCPP_PSTL_CUSTOMIZATION_POINT(__pstl_replace_copy),
+      _LIBCPP_PSTL_CUSTOMIZATION_POINT(__pstl_replace_copy, _RawPolicy),
       [&__policy](_ForwardIterator __g_first,
                   _ForwardIterator __g_last,
                   _ForwardOutIterator __g_result,

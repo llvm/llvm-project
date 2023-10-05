@@ -1183,10 +1183,6 @@ def fgpu_inline_threshold_EQ : Joined<["-"], "fgpu-inline-threshold=">,
 def fgpu_sanitize : Flag<["-"], "fgpu-sanitize">, Group<f_Group>,
   HelpText<"Enable sanitizer for supported offloading devices">;
 def fno_gpu_sanitize : Flag<["-"], "fno-gpu-sanitize">, Group<f_Group>;
-
-def offload_compress : Flag<["--"], "offload-compress">,
-  HelpText<"Compress offload device binaries (HIP only)">;
-def no_offload_compress : Flag<["--"], "no-offload-compress">;
 }
 
 // CUDA options
@@ -1909,6 +1905,12 @@ defm safe_buffer_usage_suggestions : BoolFOption<"safe-buffer-usage-suggestions"
   PosFlag<SetTrue, [], [ClangOption, CC1Option],
           "Display suggestions to update code associated with -Wunsafe-buffer-usage warnings">,
   NegFlag<SetFalse>>;
+def fverify_intermediate_code : Flag<["-"], "fverify-intermediate-code">,
+  Group<f_clang_Group>, Visibility<[ClangOption, CLOption, DXCOption]>,
+  HelpText<"Enable verification of LLVM IR">, Flags<[NoXarchOption]>;
+def fno_verify_intermediate_code : Flag<["-"], "fno-verify-intermediate-code">,
+  Group<f_clang_Group>, Visibility<[ClangOption, CLOption, DXCOption]>,
+  HelpText<"Disable verification of LLVM IR">, Flags<[NoXarchOption]>;
 def fdiscard_value_names : Flag<["-"], "fdiscard-value-names">,
   Group<f_clang_Group>, Visibility<[ClangOption, DXCOption]>,
   HelpText<"Discard value names in LLVM IR">, Flags<[NoXarchOption]>;
