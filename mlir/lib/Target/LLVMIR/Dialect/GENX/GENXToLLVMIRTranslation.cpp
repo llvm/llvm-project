@@ -220,9 +220,9 @@ createGenISADPAS(GENX::MatrixDPASOp op, llvm::IRBuilderBase &builder,
       moduleTranslation.lookupValues(op.getOperands()));
   auto int32Ty = builder.getInt32Ty();
   auto int1Ty = builder.getInt1Ty();
-  args.push_back(llvm::ConstantInt::get(int32Ty, op.getPa()));
-  args.push_back(llvm::ConstantInt::get(int32Ty, op.getPb()));
-  args.push_back(llvm::ConstantInt::get(int32Ty, op.getSd()));
+  args.push_back(llvm::ConstantInt::get(int32Ty, static_cast<int>(op.getPa())));
+  args.push_back(llvm::ConstantInt::get(int32Ty, static_cast<int>(op.getPb())));
+  args.push_back(llvm::ConstantInt::get(int32Ty, 8 /* systolic depth */));
   args.push_back(llvm::ConstantInt::get(int32Ty, op.getRc()));
   args.push_back(llvm::ConstantInt::get(int1Ty, false));
   return builder.CreateCall(fn, args);

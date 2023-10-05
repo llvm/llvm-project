@@ -21,7 +21,11 @@ using namespace mlir;
 //===----------------------------------------------------------------------===//
 
 LogicalResult GENX::MatrixDPASOp::verify() {
-  // TODO
+  // TODO: Add verification for matrices and precisions.
+
+  if (getRc() != 1 && getRc() != 2 && getRc() != 4 && getRc() != 8)
+    return this->emitOpError("expecting repect count to be 1, 2, 4, or 8");
+
   return success();
 }
 

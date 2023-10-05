@@ -114,8 +114,8 @@ func.func @genx.atomic.rmw.i32(%ptr : !llvm.ptr<i32>, %val : i32) {
 }
 
 llvm.func @genx.dpas(%c : vector<8xi32>, %a : vector<8xi32>, %b : vector<8xi32>) {
-  // CHECK: %0 = genx.matrix.dpas %arg0, %arg1, %arg2 {pa = 7 : i32, pb = 7 : i32, rc = 1 : i32, sd = 8 : i32} : (vector<8xi32>, vector<8xi32>, vector<8xi32>) -> vector<8xi32>
-  %0 = genx.matrix.dpas %c, %a, %b {pa=7:i32, pb=7:i32, sd=8:i32, rc=1:i32} : (vector<8xi32>, vector<8xi32>, vector<8xi32>) -> vector<8xi32>
+  // CHECK: %0 = genx.matrix.dpas %arg0, %arg1, %arg2 {pa = #genx.precision_type<BF8>, pb = #genx.precision_type<BF8>, rc = 1 : i32} : (vector<8xi32>, vector<8xi32>, vector<8xi32>) -> vector<8xi32>
+  %0 = genx.matrix.dpas %c, %a, %b {pa=#genx.precision_type<BF8>, pb=#genx.precision_type<BF8>, rc=1:i32} : (vector<8xi32>, vector<8xi32>, vector<8xi32>) -> vector<8xi32>
   llvm.return
 }
 

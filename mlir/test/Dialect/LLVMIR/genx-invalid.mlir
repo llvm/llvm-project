@@ -1,5 +1,13 @@
 // RUN: mlir-opt -split-input-file -verify-diagnostics %s
 
+func.func @genx.dpas(%c : vector<8xi32>, %a : vector<8xi32>, %b : vector<8xi32>) {
+  // expected-error @+1 {{'genx.matrix.dpas' op expecting repect count to be 1, 2, 4, or 8}}
+  %0 = genx.matrix.dpas %c, %a, %b {pa=#genx.precision_type<BF8>, pb=#genx.precision_type<BF8>, rc=6:i32} : (vector<8xi32>, vector<8xi32>, vector<8xi32>) -> vector<8xi32>
+  llvm.return
+}
+
+// -----
+
 func.func @matrix_2Dblockload(%ptr : !llvm.ptr<i32>, %base_width : i32, %base_height : i32, %base_pitch : i32, %x : i32, %y : i32) {
   // expected-error @+1 {{'genx.matrix.2Dblockload' op expecting 'elem_size_in_bits' to be 8, 16, or 32}}
   %0 = genx.matrix.2Dblockload %ptr, %base_width, %base_height, %base_pitch, %x, %y {elem_size_in_bits=64:i32, tile_width=4:i32, tile_height=1:i32, v_blocks=1:i32, transpose=false, vnni_transform=false} : (!llvm.ptr<i32>, i32, i32, i32, i32, i32) -> vector<4xi32>
