@@ -5124,7 +5124,9 @@ ElementCount LoopVectorizationCostModel::getMaximizedVFForTarget(
     LLVM_DEBUG(dbgs() << "LV: Clamping the MaxVF to maximum power of two not "
                          "exceeding the constant trip count: "
                       << ClampedConstTripCount << "\n");
-    return ElementCount::getFixed(ClampedConstTripCount);
+    return ElementCount::get(
+        ClampedConstTripCount,
+        FoldTailByMasking ? MaxVectorElementCount.isScalable() : false);
   }
 
   TargetTransformInfo::RegisterKind RegKind =
