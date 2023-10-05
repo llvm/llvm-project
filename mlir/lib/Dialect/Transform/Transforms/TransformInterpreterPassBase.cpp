@@ -50,8 +50,6 @@ constexpr static llvm::StringLiteral kTransformDialectTagPayloadRootValue =
 constexpr static llvm::StringLiteral
     kTransformDialectTagTransformContainerValue = "transform_container";
 
-namespace {
-
 /// Utility to parse the content of a `transformFileName` MLIR file containing
 /// a transform dialect specification.
 static LogicalResult
@@ -180,8 +178,9 @@ printReproCall(llvm::raw_ostream &os, StringRef rootOpName, StringRef passName,
 
 /// Prints the module rooted at `root` to `os` and appends
 /// `transformContainer` if it is not nested in `root`.
-llvm::raw_ostream &printModuleForRepro(llvm::raw_ostream &os, Operation *root,
-                                       Operation *transform) {
+static llvm::raw_ostream &printModuleForRepro(llvm::raw_ostream &os,
+                                              Operation *root,
+                                              Operation *transform) {
   root->print(os);
   if (!root->isAncestor(transform))
     transform->print(os);
@@ -190,12 +189,13 @@ llvm::raw_ostream &printModuleForRepro(llvm::raw_ostream &os, Operation *root,
 
 /// Saves the payload and the transform IR into a temporary file and reports
 /// the file name to `os`.
-void saveReproToTempFile(
-    llvm::raw_ostream &os, Operation *target, Operation *transform,
-    StringRef passName, const Pass::Option<std::string> &debugPayloadRootTag,
-    const Pass::Option<std::string> &debugTransformRootTag,
-    const Pass::Option<std::string> &transformLibraryFileName,
-    StringRef binaryName) {
+static void
+saveReproToTempFile(llvm::raw_ostream &os, Operation *target,
+                    Operation *transform, StringRef passName,
+                    const Pass::Option<std::string> &debugPayloadRootTag,
+                    const Pass::Option<std::string> &debugTransformRootTag,
+                    const Pass::Option<std::string> &transformLibraryFileName,
+                    StringRef binaryName) {
   using llvm::sys::fs::TempFile;
   Operation *root = getRootOperation(target);
 
@@ -298,14 +298,15 @@ static void performOptionalDebugActions(
 /// has to be a declaration (aka has to be external) and `func2` either has to
 /// be a declaration as well, or it has to be public (otherwise, it wouldn't
 /// be visible by `func1`).
-bool canMergeInto(FunctionOpInterface func1, FunctionOpInterface func2) {
+static bool canMergeInto(FunctionOpInterface func1, FunctionOpInterface func2) {
   return func1.isExternal() && (func2.isPublic() || func2.isExternal());
 }
 
 /// Merge `func1` into `func2`. The two ops must be inside the same parent op
 /// and mergable according to `canMergeInto`. The function erases `func1` such
 /// that only `func2` exists when the function returns.
-LogicalResult mergeInto(FunctionOpInterface func1, FunctionOpInterface func2) {
+static LogicalResult mergeInto(FunctionOpInterface func1,
+                               FunctionOpInterface func2) {
   assert(canMergeInto(func1, func2));
   assert(func1->getParentOp() == func2->getParentOp() &&
          "expected func1 and func2 to be in the same parent op");
@@ -319,7 +320,7 @@ LogicalResult mergeInto(FunctionOpInterface func1, FunctionOpInterface func2) {
 
   // Check and merge argument attributes.
   MLIRContext *context = func1->getContext();
-  auto td = context->getLoadedDialect<transform::TransformDialect>();
+  auto *td = context->getLoadedDialect<transform::TransformDialect>();
   StringAttr consumedName = td->getConsumedAttrName();
   StringAttr readOnlyName = td->getReadOnlyAttrName();
   for (unsigned i = 0, e = func1.getNumArguments(); i < e; ++i) {
@@ -359,6 +360,10 @@ LogicalResult mergeInto(FunctionOpInterface func1, FunctionOpInterface func2) {
 /// instances of `SymbolOpInterface`, where collisions are allowed if at least
 /// one of the two is external, in which case the other op preserved (or any one
 /// of the two if both are external).
+// TODO: Reconsider cloning individual ops rather than forcing users of the
+//       function to clone (or move) `other` in order to improve efficiency.
+//       This might primarily make sense if we can also prune the symbols that
+//       are merged to a subset (such as those that are actually used).
 static LogicalResult mergeSymbolsInto(Operation *target,
                                       OwningOpRef<Operation *> other) {
   assert(target->hasTrait<OpTrait::SymbolTable>() &&
@@ -374,6 +379,7 @@ static LogicalResult mergeSymbolsInto(Operation *target,
   // Rename private symbols in both ops in order to resolve conflicts that can
   // be resolved that way.
   LLVM_DEBUG(DBGS() << "renaming private symbols to resolve conflicts:\n");
+  // TODO: Do we *actually* need to test in both directions?
   for (auto &&[symbolTable, otherSymbolTable] : llvm::zip(
            SmallVector<SymbolTable *, 2>{&targetSymbolTable, &otherSymbolTable},
            SmallVector<SymbolTable *, 2>{&otherSymbolTable,
@@ -518,8 +524,6 @@ static LogicalResult mergeSymbolsInto(Operation *target,
   LLVM_DEBUG(DBGS() << "done merging ops\n");
   return success();
 }
-
-} // namespace
 
 LogicalResult transform::detail::interpreterBaseRunOnOperationImpl(
     Operation *target, StringRef passName,

@@ -43,7 +43,8 @@ def Transform_Dialect : Dialect {
     constexpr const static ::llvm::StringLiteral kArgReadOnlyAttrName =
         "transform.readonly";
 
-    /// Above attribute names as `StringAttr`.
+    /// Names of the attributes indicating whether an argument of an external
+    /// transform dialect symbol is consumed or only read.
     StringAttr getConsumedAttrName() const {
       return StringAttr::get(getContext(), kArgConsumedAttrName);
     }
