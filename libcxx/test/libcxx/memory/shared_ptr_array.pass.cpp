@@ -16,10 +16,12 @@
 
 #include <memory>
 
-int main() {
+int main(int, char**) {
   std::allocate_shared<int64_t[]>(std::allocator<int64_t>{}, 10);
   std::make_shared<int64_t[]>(10);
 
   std::allocate_shared<int64_t[10]>(std::allocator<int64_t>{});
   std::make_shared<int64_t[10]>();
+
+  return 0;
 }
