@@ -3070,8 +3070,8 @@ TEST_F(OpenMPIRBuilderTest, CopyinBlocks) {
   OpenMPIRBuilder::LocationDescription Loc({Builder.saveIP(), DL});
 
   IntegerType *Int32 = Type::getInt32Ty(M->getContext());
-  AllocaInst *MasterAddress = Builder.CreateAlloca(Int32->getPointerTo());
-  AllocaInst *PrivAddress = Builder.CreateAlloca(Int32->getPointerTo());
+  AllocaInst *MasterAddress = Builder.CreateAlloca(Builder.getPtrTy());
+  AllocaInst *PrivAddress = Builder.CreateAlloca(Builder.getPtrTy());
 
   BasicBlock *EntryBB = BB;
 
