@@ -8472,6 +8472,11 @@ void OffloadBundler::ConstructJob(Compilation &C, const JobAction &JA,
     }
     CmdArgs.push_back(TCArgs.MakeArgString(UB));
   }
+  if (TCArgs.hasFlag(options::OPT_offload_compress,
+                     options::OPT_no_offload_compress, false))
+    CmdArgs.push_back("-compress");
+  if (TCArgs.hasArg(options::OPT_v))
+    CmdArgs.push_back("-verbose");
   // All the inputs are encoded as commands.
   C.addCommand(std::make_unique<Command>(
       JA, *this, ResponseFileSupport::None(),
@@ -8555,6 +8560,8 @@ void OffloadBundler::ConstructJobMultipleOutputs(
   }
   CmdArgs.push_back("-unbundle");
   CmdArgs.push_back("-allow-missing-bundles");
+  if (TCArgs.hasArg(options::OPT_v))
+    CmdArgs.push_back("-verbose");
 
   // All the inputs are encoded as commands.
   C.addCommand(std::make_unique<Command>(
