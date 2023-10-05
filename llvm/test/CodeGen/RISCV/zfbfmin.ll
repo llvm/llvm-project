@@ -73,8 +73,9 @@ define bfloat @bfloat_load(ptr %a) nounwind {
 define bfloat @bfloat_imm() nounwind {
 ; CHECKIZFBFMIN-LABEL: bfloat_imm:
 ; CHECKIZFBFMIN:       # %bb.0:
-; CHECKIZFBFMIN-NEXT:    lui a0, %hi(.LCPI7_0)
-; CHECKIZFBFMIN-NEXT:    flh fa0, %lo(.LCPI7_0)(a0)
+; CHECKIZFBFMIN-NEXT:    lui a0, 4
+; CHECKIZFBFMIN-NEXT:    addi a0, a0, 64
+; CHECKIZFBFMIN-NEXT:    fmv.h.x fa0, a0
 ; CHECKIZFBFMIN-NEXT:    ret
   ret bfloat 3.0
 }

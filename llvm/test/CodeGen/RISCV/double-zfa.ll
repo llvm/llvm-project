@@ -69,41 +69,71 @@ define double @loadfpimm8() {
 }
 
 define double @loadfpimm9() {
-; CHECK-LABEL: loadfpimm9:
-; CHECK:       # %bb.0:
-; CHECK-NEXT:    lui a0, %hi(.LCPI8_0)
-; CHECK-NEXT:    fld fa0, %lo(.LCPI8_0)(a0)
-; CHECK-NEXT:    ret
+; RV32IDZFA-LABEL: loadfpimm9:
+; RV32IDZFA:       # %bb.0:
+; RV32IDZFA-NEXT:    lui a0, %hi(.LCPI8_0)
+; RV32IDZFA-NEXT:    fld fa0, %lo(.LCPI8_0)(a0)
+; RV32IDZFA-NEXT:    ret
+;
+; RV64DZFA-LABEL: loadfpimm9:
+; RV64DZFA:       # %bb.0:
+; RV64DZFA-NEXT:    lui a0, 131967
+; RV64DZFA-NEXT:    slli a0, a0, 33
+; RV64DZFA-NEXT:    fmv.d.x fa0, a0
+; RV64DZFA-NEXT:    ret
   ret double 255.0
 }
 
 ; Negative test. This is 1 * 2^256.
 define double @loadfpimm10() {
-; CHECK-LABEL: loadfpimm10:
-; CHECK:       # %bb.0:
-; CHECK-NEXT:    lui a0, %hi(.LCPI9_0)
-; CHECK-NEXT:    fld fa0, %lo(.LCPI9_0)(a0)
-; CHECK-NEXT:    ret
+; RV32IDZFA-LABEL: loadfpimm10:
+; RV32IDZFA:       # %bb.0:
+; RV32IDZFA-NEXT:    lui a0, %hi(.LCPI9_0)
+; RV32IDZFA-NEXT:    fld fa0, %lo(.LCPI9_0)(a0)
+; RV32IDZFA-NEXT:    ret
+;
+; RV64DZFA-LABEL: loadfpimm10:
+; RV64DZFA:       # %bb.0:
+; RV64DZFA-NEXT:    li a0, 1
+; RV64DZFA-NEXT:    slli a0, a0, 60
+; RV64DZFA-NEXT:    fmv.d.x fa0, a0
+; RV64DZFA-NEXT:    ret
   ret double 0x1000000000000000
 }
 
 ; Negative test. This is a qnan with payload of 1.
 define double @loadfpimm11() {
-; CHECK-LABEL: loadfpimm11:
-; CHECK:       # %bb.0:
-; CHECK-NEXT:    lui a0, %hi(.LCPI10_0)
-; CHECK-NEXT:    fld fa0, %lo(.LCPI10_0)(a0)
-; CHECK-NEXT:    ret
+; RV32IDZFA-LABEL: loadfpimm11:
+; RV32IDZFA:       # %bb.0:
+; RV32IDZFA-NEXT:    lui a0, %hi(.LCPI10_0)
+; RV32IDZFA-NEXT:    fld fa0, %lo(.LCPI10_0)(a0)
+; RV32IDZFA-NEXT:    ret
+;
+; RV64DZFA-LABEL: loadfpimm11:
+; RV64DZFA:       # %bb.0:
+; RV64DZFA-NEXT:    lui a0, 4095
+; RV64DZFA-NEXT:    slli a0, a0, 39
+; RV64DZFA-NEXT:    addi a0, a0, 1
+; RV64DZFA-NEXT:    fmv.d.x fa0, a0
+; RV64DZFA-NEXT:    ret
   ret double 0x7ff8000000000001
 }
 
 ; Negative test. This is an snan with payload of 1.
 define double @loadfpimm12() {
-; CHECK-LABEL: loadfpimm12:
-; CHECK:       # %bb.0:
-; CHECK-NEXT:    lui a0, %hi(.LCPI11_0)
-; CHECK-NEXT:    fld fa0, %lo(.LCPI11_0)(a0)
-; CHECK-NEXT:    ret
+; RV32IDZFA-LABEL: loadfpimm12:
+; RV32IDZFA:       # %bb.0:
+; RV32IDZFA-NEXT:    lui a0, %hi(.LCPI11_0)
+; RV32IDZFA-NEXT:    fld fa0, %lo(.LCPI11_0)(a0)
+; RV32IDZFA-NEXT:    ret
+;
+; RV64DZFA-LABEL: loadfpimm12:
+; RV64DZFA:       # %bb.0:
+; RV64DZFA-NEXT:    li a0, 2047
+; RV64DZFA-NEXT:    slli a0, a0, 52
+; RV64DZFA-NEXT:    addi a0, a0, 1
+; RV64DZFA-NEXT:    fmv.d.x fa0, a0
+; RV64DZFA-NEXT:    ret
   ret double 0x7ff0000000000001
 }
 
@@ -125,11 +155,18 @@ define double @loadfpimm13() {
 
 ; Negative test. This is 2^-1023, a denormal.
 define double @loadfpimm15() {
-; CHECK-LABEL: loadfpimm15:
-; CHECK:       # %bb.0:
-; CHECK-NEXT:    lui a0, %hi(.LCPI13_0)
-; CHECK-NEXT:    fld fa0, %lo(.LCPI13_0)(a0)
-; CHECK-NEXT:    ret
+; RV32IDZFA-LABEL: loadfpimm15:
+; RV32IDZFA:       # %bb.0:
+; RV32IDZFA-NEXT:    lui a0, %hi(.LCPI13_0)
+; RV32IDZFA-NEXT:    fld fa0, %lo(.LCPI13_0)(a0)
+; RV32IDZFA-NEXT:    ret
+;
+; RV64DZFA-LABEL: loadfpimm15:
+; RV64DZFA:       # %bb.0:
+; RV64DZFA-NEXT:    li a0, 1
+; RV64DZFA-NEXT:    slli a0, a0, 51
+; RV64DZFA-NEXT:    fmv.d.x fa0, a0
+; RV64DZFA-NEXT:    ret
   ret double 0x0008000000000000
 }
 
@@ -144,11 +181,18 @@ define double @loadfpimm16() {
 ; Ensure fli isn't incorrectly used for negated versions of numbers in the fli
 ; table.
 define double @loadfpimm17() {
-; CHECK-LABEL: loadfpimm17:
-; CHECK:       # %bb.0:
-; CHECK-NEXT:    lui a0, %hi(.LCPI15_0)
-; CHECK-NEXT:    fld fa0, %lo(.LCPI15_0)(a0)
-; CHECK-NEXT:    ret
+; RV32IDZFA-LABEL: loadfpimm17:
+; RV32IDZFA:       # %bb.0:
+; RV32IDZFA-NEXT:    lui a0, %hi(.LCPI15_0)
+; RV32IDZFA-NEXT:    fld fa0, %lo(.LCPI15_0)(a0)
+; RV32IDZFA-NEXT:    ret
+;
+; RV64DZFA-LABEL: loadfpimm17:
+; RV64DZFA:       # %bb.0:
+; RV64DZFA-NEXT:    li a0, -1
+; RV64DZFA-NEXT:    slli a0, a0, 62
+; RV64DZFA-NEXT:    fmv.d.x fa0, a0
+; RV64DZFA-NEXT:    ret
   ret double -2.0
 }
 

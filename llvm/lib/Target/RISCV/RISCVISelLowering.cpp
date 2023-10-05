@@ -69,12 +69,6 @@ static cl::opt<unsigned> NumRepeatedDivisors(
              "transformation to multiplications by the reciprocal"),
     cl::init(2));
 
-static cl::opt<int>
-    FPImmCost(DEBUG_TYPE "-fpimm-cost", cl::Hidden,
-              cl::desc("Give the maximum number of instructions that we will "
-                       "use for creating a floating-point immediate value"),
-              cl::init(2));
-
 RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
                                          const RISCVSubtarget &STI)
     : TargetLowering(TM), Subtarget(STI) {
@@ -2031,10 +2025,10 @@ bool RISCVTargetLowering::isFPImmLegal(const APFloat &Imm, EVT VT,
 
   // Building an integer and then converting requires a fmv at the end of
   // the integer sequence.
-  const int Cost =
+  const unsigned Cost =
     1 + RISCVMatInt::getIntMatCost(Imm.bitcastToAPInt(), Subtarget.getXLen(),
                                    Subtarget.getFeatureBits());
-  return Cost <= FPImmCost;
+  return Cost <= Subtarget.getMaxBuildIntsCost();
 }
 
 // TODO: This is very conservative.

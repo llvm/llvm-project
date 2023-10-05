@@ -124,16 +124,17 @@ indirectgoto:
 define float @lower_constantpool(float %a) nounwind {
 ; RV32I-SMALL-LABEL: lower_constantpool:
 ; RV32I-SMALL:       # %bb.0:
-; RV32I-SMALL-NEXT:    lui a0, %hi(.LCPI3_0)
-; RV32I-SMALL-NEXT:    flw fa5, %lo(.LCPI3_0)(a0)
+; RV32I-SMALL-NEXT:    lui a0, 260097
+; RV32I-SMALL-NEXT:    addi a0, a0, -2048
+; RV32I-SMALL-NEXT:    fmv.w.x fa5, a0
 ; RV32I-SMALL-NEXT:    fadd.s fa0, fa0, fa5
 ; RV32I-SMALL-NEXT:    ret
 ;
 ; RV32I-MEDIUM-LABEL: lower_constantpool:
 ; RV32I-MEDIUM:       # %bb.0:
-; RV32I-MEDIUM-NEXT:  .Lpcrel_hi3:
-; RV32I-MEDIUM-NEXT:    auipc a0, %pcrel_hi(.LCPI3_0)
-; RV32I-MEDIUM-NEXT:    flw fa5, %pcrel_lo(.Lpcrel_hi3)(a0)
+; RV32I-MEDIUM-NEXT:    lui a0, 260097
+; RV32I-MEDIUM-NEXT:    addi a0, a0, -2048
+; RV32I-MEDIUM-NEXT:    fmv.w.x fa5, a0
 ; RV32I-MEDIUM-NEXT:    fadd.s fa0, fa0, fa5
 ; RV32I-MEDIUM-NEXT:    ret
   %1 = fadd float %a, 1.000244140625
@@ -152,9 +153,9 @@ define i32 @lower_extern_weak(i32 %a) nounwind {
 ;
 ; RV32I-MEDIUM-LABEL: lower_extern_weak:
 ; RV32I-MEDIUM:       # %bb.0:
-; RV32I-MEDIUM-NEXT:  .Lpcrel_hi4:
+; RV32I-MEDIUM-NEXT:  .Lpcrel_hi3:
 ; RV32I-MEDIUM-NEXT:    auipc a0, %got_pcrel_hi(W)
-; RV32I-MEDIUM-NEXT:    lw a0, %pcrel_lo(.Lpcrel_hi4)(a0)
+; RV32I-MEDIUM-NEXT:    lw a0, %pcrel_lo(.Lpcrel_hi3)(a0)
 ; RV32I-MEDIUM-NEXT:    lw a0, 0(a0)
 ; RV32I-MEDIUM-NEXT:    ret
   %1 = load volatile i32, ptr @W

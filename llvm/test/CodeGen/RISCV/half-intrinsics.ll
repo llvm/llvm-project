@@ -2127,8 +2127,9 @@ declare half @llvm.floor.f16(half)
 define half @floor_f16(half %a) nounwind {
 ; CHECKIZFH-LABEL: floor_f16:
 ; CHECKIZFH:       # %bb.0:
-; CHECKIZFH-NEXT:    lui a0, %hi(.LCPI17_0)
-; CHECKIZFH-NEXT:    flh fa5, %lo(.LCPI17_0)(a0)
+; CHECKIZFH-NEXT:    li a0, 25
+; CHECKIZFH-NEXT:    slli a0, a0, 10
+; CHECKIZFH-NEXT:    fmv.h.x fa5, a0
 ; CHECKIZFH-NEXT:    fabs.h fa4, fa0
 ; CHECKIZFH-NEXT:    flt.h a0, fa4, fa5
 ; CHECKIZFH-NEXT:    beqz a0, .LBB17_2
@@ -2141,8 +2142,8 @@ define half @floor_f16(half %a) nounwind {
 ;
 ; CHECKIZHINX-LABEL: floor_f16:
 ; CHECKIZHINX:       # %bb.0:
-; CHECKIZHINX-NEXT:    lui a1, %hi(.LCPI17_0)
-; CHECKIZHINX-NEXT:    lh a1, %lo(.LCPI17_0)(a1)
+; CHECKIZHINX-NEXT:    li a1, 25
+; CHECKIZHINX-NEXT:    slli a1, a1, 10
 ; CHECKIZHINX-NEXT:    fabs.h a2, a0
 ; CHECKIZHINX-NEXT:    flt.h a1, a2, a1
 ; CHECKIZHINX-NEXT:    beqz a1, .LBB17_2
@@ -2218,8 +2219,9 @@ declare half @llvm.ceil.f16(half)
 define half @ceil_f16(half %a) nounwind {
 ; CHECKIZFH-LABEL: ceil_f16:
 ; CHECKIZFH:       # %bb.0:
-; CHECKIZFH-NEXT:    lui a0, %hi(.LCPI18_0)
-; CHECKIZFH-NEXT:    flh fa5, %lo(.LCPI18_0)(a0)
+; CHECKIZFH-NEXT:    li a0, 25
+; CHECKIZFH-NEXT:    slli a0, a0, 10
+; CHECKIZFH-NEXT:    fmv.h.x fa5, a0
 ; CHECKIZFH-NEXT:    fabs.h fa4, fa0
 ; CHECKIZFH-NEXT:    flt.h a0, fa4, fa5
 ; CHECKIZFH-NEXT:    beqz a0, .LBB18_2
@@ -2232,8 +2234,8 @@ define half @ceil_f16(half %a) nounwind {
 ;
 ; CHECKIZHINX-LABEL: ceil_f16:
 ; CHECKIZHINX:       # %bb.0:
-; CHECKIZHINX-NEXT:    lui a1, %hi(.LCPI18_0)
-; CHECKIZHINX-NEXT:    lh a1, %lo(.LCPI18_0)(a1)
+; CHECKIZHINX-NEXT:    li a1, 25
+; CHECKIZHINX-NEXT:    slli a1, a1, 10
 ; CHECKIZHINX-NEXT:    fabs.h a2, a0
 ; CHECKIZHINX-NEXT:    flt.h a1, a2, a1
 ; CHECKIZHINX-NEXT:    beqz a1, .LBB18_2
@@ -2309,8 +2311,9 @@ declare half @llvm.trunc.f16(half)
 define half @trunc_f16(half %a) nounwind {
 ; CHECKIZFH-LABEL: trunc_f16:
 ; CHECKIZFH:       # %bb.0:
-; CHECKIZFH-NEXT:    lui a0, %hi(.LCPI19_0)
-; CHECKIZFH-NEXT:    flh fa5, %lo(.LCPI19_0)(a0)
+; CHECKIZFH-NEXT:    li a0, 25
+; CHECKIZFH-NEXT:    slli a0, a0, 10
+; CHECKIZFH-NEXT:    fmv.h.x fa5, a0
 ; CHECKIZFH-NEXT:    fabs.h fa4, fa0
 ; CHECKIZFH-NEXT:    flt.h a0, fa4, fa5
 ; CHECKIZFH-NEXT:    beqz a0, .LBB19_2
@@ -2323,8 +2326,8 @@ define half @trunc_f16(half %a) nounwind {
 ;
 ; CHECKIZHINX-LABEL: trunc_f16:
 ; CHECKIZHINX:       # %bb.0:
-; CHECKIZHINX-NEXT:    lui a1, %hi(.LCPI19_0)
-; CHECKIZHINX-NEXT:    lh a1, %lo(.LCPI19_0)(a1)
+; CHECKIZHINX-NEXT:    li a1, 25
+; CHECKIZHINX-NEXT:    slli a1, a1, 10
 ; CHECKIZHINX-NEXT:    fabs.h a2, a0
 ; CHECKIZHINX-NEXT:    flt.h a1, a2, a1
 ; CHECKIZHINX-NEXT:    beqz a1, .LBB19_2
@@ -2400,8 +2403,9 @@ declare half @llvm.rint.f16(half)
 define half @rint_f16(half %a) nounwind {
 ; CHECKIZFH-LABEL: rint_f16:
 ; CHECKIZFH:       # %bb.0:
-; CHECKIZFH-NEXT:    lui a0, %hi(.LCPI20_0)
-; CHECKIZFH-NEXT:    flh fa5, %lo(.LCPI20_0)(a0)
+; CHECKIZFH-NEXT:    li a0, 25
+; CHECKIZFH-NEXT:    slli a0, a0, 10
+; CHECKIZFH-NEXT:    fmv.h.x fa5, a0
 ; CHECKIZFH-NEXT:    fabs.h fa4, fa0
 ; CHECKIZFH-NEXT:    flt.h a0, fa4, fa5
 ; CHECKIZFH-NEXT:    beqz a0, .LBB20_2
@@ -2414,8 +2418,8 @@ define half @rint_f16(half %a) nounwind {
 ;
 ; CHECKIZHINX-LABEL: rint_f16:
 ; CHECKIZHINX:       # %bb.0:
-; CHECKIZHINX-NEXT:    lui a1, %hi(.LCPI20_0)
-; CHECKIZHINX-NEXT:    lh a1, %lo(.LCPI20_0)(a1)
+; CHECKIZHINX-NEXT:    li a1, 25
+; CHECKIZHINX-NEXT:    slli a1, a1, 10
 ; CHECKIZHINX-NEXT:    fabs.h a2, a0
 ; CHECKIZHINX-NEXT:    flt.h a1, a2, a1
 ; CHECKIZHINX-NEXT:    beqz a1, .LBB20_2
@@ -2611,8 +2615,9 @@ declare half @llvm.round.f16(half)
 define half @round_f16(half %a) nounwind {
 ; CHECKIZFH-LABEL: round_f16:
 ; CHECKIZFH:       # %bb.0:
-; CHECKIZFH-NEXT:    lui a0, %hi(.LCPI22_0)
-; CHECKIZFH-NEXT:    flh fa5, %lo(.LCPI22_0)(a0)
+; CHECKIZFH-NEXT:    li a0, 25
+; CHECKIZFH-NEXT:    slli a0, a0, 10
+; CHECKIZFH-NEXT:    fmv.h.x fa5, a0
 ; CHECKIZFH-NEXT:    fabs.h fa4, fa0
 ; CHECKIZFH-NEXT:    flt.h a0, fa4, fa5
 ; CHECKIZFH-NEXT:    beqz a0, .LBB22_2
@@ -2625,8 +2630,8 @@ define half @round_f16(half %a) nounwind {
 ;
 ; CHECKIZHINX-LABEL: round_f16:
 ; CHECKIZHINX:       # %bb.0:
-; CHECKIZHINX-NEXT:    lui a1, %hi(.LCPI22_0)
-; CHECKIZHINX-NEXT:    lh a1, %lo(.LCPI22_0)(a1)
+; CHECKIZHINX-NEXT:    li a1, 25
+; CHECKIZHINX-NEXT:    slli a1, a1, 10
 ; CHECKIZHINX-NEXT:    fabs.h a2, a0
 ; CHECKIZHINX-NEXT:    flt.h a1, a2, a1
 ; CHECKIZHINX-NEXT:    beqz a1, .LBB22_2
@@ -2702,8 +2707,9 @@ declare half @llvm.roundeven.f16(half)
 define half @roundeven_f16(half %a) nounwind {
 ; CHECKIZFH-LABEL: roundeven_f16:
 ; CHECKIZFH:       # %bb.0:
-; CHECKIZFH-NEXT:    lui a0, %hi(.LCPI23_0)
-; CHECKIZFH-NEXT:    flh fa5, %lo(.LCPI23_0)(a0)
+; CHECKIZFH-NEXT:    li a0, 25
+; CHECKIZFH-NEXT:    slli a0, a0, 10
+; CHECKIZFH-NEXT:    fmv.h.x fa5, a0
 ; CHECKIZFH-NEXT:    fabs.h fa4, fa0
 ; CHECKIZFH-NEXT:    flt.h a0, fa4, fa5
 ; CHECKIZFH-NEXT:    beqz a0, .LBB23_2
@@ -2716,8 +2722,8 @@ define half @roundeven_f16(half %a) nounwind {
 ;
 ; CHECKIZHINX-LABEL: roundeven_f16:
 ; CHECKIZHINX:       # %bb.0:
-; CHECKIZHINX-NEXT:    lui a1, %hi(.LCPI23_0)
-; CHECKIZHINX-NEXT:    lh a1, %lo(.LCPI23_0)(a1)
+; CHECKIZHINX-NEXT:    li a1, 25
+; CHECKIZHINX-NEXT:    slli a1, a1, 10
 ; CHECKIZHINX-NEXT:    fabs.h a2, a0
 ; CHECKIZHINX-NEXT:    flt.h a1, a2, a1
 ; CHECKIZHINX-NEXT:    beqz a1, .LBB23_2

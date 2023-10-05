@@ -944,8 +944,9 @@ define double @floor_f64(double %a) nounwind {
 ;
 ; RV64IFD-LABEL: floor_f64:
 ; RV64IFD:       # %bb.0:
-; RV64IFD-NEXT:    lui a0, %hi(.LCPI17_0)
-; RV64IFD-NEXT:    fld fa5, %lo(.LCPI17_0)(a0)
+; RV64IFD-NEXT:    li a0, 1075
+; RV64IFD-NEXT:    slli a0, a0, 52
+; RV64IFD-NEXT:    fmv.d.x fa5, a0
 ; RV64IFD-NEXT:    fabs.d fa4, fa0
 ; RV64IFD-NEXT:    flt.d a0, fa4, fa5
 ; RV64IFD-NEXT:    beqz a0, .LBB17_2
@@ -967,8 +968,8 @@ define double @floor_f64(double %a) nounwind {
 ;
 ; RV64IZFINXZDINX-LABEL: floor_f64:
 ; RV64IZFINXZDINX:       # %bb.0:
-; RV64IZFINXZDINX-NEXT:    lui a1, %hi(.LCPI17_0)
-; RV64IZFINXZDINX-NEXT:    ld a1, %lo(.LCPI17_0)(a1)
+; RV64IZFINXZDINX-NEXT:    li a1, 1075
+; RV64IZFINXZDINX-NEXT:    slli a1, a1, 52
 ; RV64IZFINXZDINX-NEXT:    fabs.d a2, a0
 ; RV64IZFINXZDINX-NEXT:    flt.d a1, a2, a1
 ; RV64IZFINXZDINX-NEXT:    beqz a1, .LBB17_2
@@ -1009,8 +1010,9 @@ define double @ceil_f64(double %a) nounwind {
 ;
 ; RV64IFD-LABEL: ceil_f64:
 ; RV64IFD:       # %bb.0:
-; RV64IFD-NEXT:    lui a0, %hi(.LCPI18_0)
-; RV64IFD-NEXT:    fld fa5, %lo(.LCPI18_0)(a0)
+; RV64IFD-NEXT:    li a0, 1075
+; RV64IFD-NEXT:    slli a0, a0, 52
+; RV64IFD-NEXT:    fmv.d.x fa5, a0
 ; RV64IFD-NEXT:    fabs.d fa4, fa0
 ; RV64IFD-NEXT:    flt.d a0, fa4, fa5
 ; RV64IFD-NEXT:    beqz a0, .LBB18_2
@@ -1032,8 +1034,8 @@ define double @ceil_f64(double %a) nounwind {
 ;
 ; RV64IZFINXZDINX-LABEL: ceil_f64:
 ; RV64IZFINXZDINX:       # %bb.0:
-; RV64IZFINXZDINX-NEXT:    lui a1, %hi(.LCPI18_0)
-; RV64IZFINXZDINX-NEXT:    ld a1, %lo(.LCPI18_0)(a1)
+; RV64IZFINXZDINX-NEXT:    li a1, 1075
+; RV64IZFINXZDINX-NEXT:    slli a1, a1, 52
 ; RV64IZFINXZDINX-NEXT:    fabs.d a2, a0
 ; RV64IZFINXZDINX-NEXT:    flt.d a1, a2, a1
 ; RV64IZFINXZDINX-NEXT:    beqz a1, .LBB18_2
@@ -1074,8 +1076,9 @@ define double @trunc_f64(double %a) nounwind {
 ;
 ; RV64IFD-LABEL: trunc_f64:
 ; RV64IFD:       # %bb.0:
-; RV64IFD-NEXT:    lui a0, %hi(.LCPI19_0)
-; RV64IFD-NEXT:    fld fa5, %lo(.LCPI19_0)(a0)
+; RV64IFD-NEXT:    li a0, 1075
+; RV64IFD-NEXT:    slli a0, a0, 52
+; RV64IFD-NEXT:    fmv.d.x fa5, a0
 ; RV64IFD-NEXT:    fabs.d fa4, fa0
 ; RV64IFD-NEXT:    flt.d a0, fa4, fa5
 ; RV64IFD-NEXT:    beqz a0, .LBB19_2
@@ -1097,8 +1100,8 @@ define double @trunc_f64(double %a) nounwind {
 ;
 ; RV64IZFINXZDINX-LABEL: trunc_f64:
 ; RV64IZFINXZDINX:       # %bb.0:
-; RV64IZFINXZDINX-NEXT:    lui a1, %hi(.LCPI19_0)
-; RV64IZFINXZDINX-NEXT:    ld a1, %lo(.LCPI19_0)(a1)
+; RV64IZFINXZDINX-NEXT:    li a1, 1075
+; RV64IZFINXZDINX-NEXT:    slli a1, a1, 52
 ; RV64IZFINXZDINX-NEXT:    fabs.d a2, a0
 ; RV64IZFINXZDINX-NEXT:    flt.d a1, a2, a1
 ; RV64IZFINXZDINX-NEXT:    beqz a1, .LBB19_2
@@ -1139,8 +1142,9 @@ define double @rint_f64(double %a) nounwind {
 ;
 ; RV64IFD-LABEL: rint_f64:
 ; RV64IFD:       # %bb.0:
-; RV64IFD-NEXT:    lui a0, %hi(.LCPI20_0)
-; RV64IFD-NEXT:    fld fa5, %lo(.LCPI20_0)(a0)
+; RV64IFD-NEXT:    li a0, 1075
+; RV64IFD-NEXT:    slli a0, a0, 52
+; RV64IFD-NEXT:    fmv.d.x fa5, a0
 ; RV64IFD-NEXT:    fabs.d fa4, fa0
 ; RV64IFD-NEXT:    flt.d a0, fa4, fa5
 ; RV64IFD-NEXT:    beqz a0, .LBB20_2
@@ -1162,8 +1166,8 @@ define double @rint_f64(double %a) nounwind {
 ;
 ; RV64IZFINXZDINX-LABEL: rint_f64:
 ; RV64IZFINXZDINX:       # %bb.0:
-; RV64IZFINXZDINX-NEXT:    lui a1, %hi(.LCPI20_0)
-; RV64IZFINXZDINX-NEXT:    ld a1, %lo(.LCPI20_0)(a1)
+; RV64IZFINXZDINX-NEXT:    li a1, 1075
+; RV64IZFINXZDINX-NEXT:    slli a1, a1, 52
 ; RV64IZFINXZDINX-NEXT:    fabs.d a2, a0
 ; RV64IZFINXZDINX-NEXT:    flt.d a1, a2, a1
 ; RV64IZFINXZDINX-NEXT:    beqz a1, .LBB20_2
@@ -1245,8 +1249,9 @@ define double @round_f64(double %a) nounwind {
 ;
 ; RV64IFD-LABEL: round_f64:
 ; RV64IFD:       # %bb.0:
-; RV64IFD-NEXT:    lui a0, %hi(.LCPI22_0)
-; RV64IFD-NEXT:    fld fa5, %lo(.LCPI22_0)(a0)
+; RV64IFD-NEXT:    li a0, 1075
+; RV64IFD-NEXT:    slli a0, a0, 52
+; RV64IFD-NEXT:    fmv.d.x fa5, a0
 ; RV64IFD-NEXT:    fabs.d fa4, fa0
 ; RV64IFD-NEXT:    flt.d a0, fa4, fa5
 ; RV64IFD-NEXT:    beqz a0, .LBB22_2
@@ -1268,8 +1273,8 @@ define double @round_f64(double %a) nounwind {
 ;
 ; RV64IZFINXZDINX-LABEL: round_f64:
 ; RV64IZFINXZDINX:       # %bb.0:
-; RV64IZFINXZDINX-NEXT:    lui a1, %hi(.LCPI22_0)
-; RV64IZFINXZDINX-NEXT:    ld a1, %lo(.LCPI22_0)(a1)
+; RV64IZFINXZDINX-NEXT:    li a1, 1075
+; RV64IZFINXZDINX-NEXT:    slli a1, a1, 52
 ; RV64IZFINXZDINX-NEXT:    fabs.d a2, a0
 ; RV64IZFINXZDINX-NEXT:    flt.d a1, a2, a1
 ; RV64IZFINXZDINX-NEXT:    beqz a1, .LBB22_2
@@ -1310,8 +1315,9 @@ define double @roundeven_f64(double %a) nounwind {
 ;
 ; RV64IFD-LABEL: roundeven_f64:
 ; RV64IFD:       # %bb.0:
-; RV64IFD-NEXT:    lui a0, %hi(.LCPI23_0)
-; RV64IFD-NEXT:    fld fa5, %lo(.LCPI23_0)(a0)
+; RV64IFD-NEXT:    li a0, 1075
+; RV64IFD-NEXT:    slli a0, a0, 52
+; RV64IFD-NEXT:    fmv.d.x fa5, a0
 ; RV64IFD-NEXT:    fabs.d fa4, fa0
 ; RV64IFD-NEXT:    flt.d a0, fa4, fa5
 ; RV64IFD-NEXT:    beqz a0, .LBB23_2
@@ -1333,8 +1339,8 @@ define double @roundeven_f64(double %a) nounwind {
 ;
 ; RV64IZFINXZDINX-LABEL: roundeven_f64:
 ; RV64IZFINXZDINX:       # %bb.0:
-; RV64IZFINXZDINX-NEXT:    lui a1, %hi(.LCPI23_0)
-; RV64IZFINXZDINX-NEXT:    ld a1, %lo(.LCPI23_0)(a1)
+; RV64IZFINXZDINX-NEXT:    li a1, 1075
+; RV64IZFINXZDINX-NEXT:    slli a1, a1, 52
 ; RV64IZFINXZDINX-NEXT:    fabs.d a2, a0
 ; RV64IZFINXZDINX-NEXT:    flt.d a1, a2, a1
 ; RV64IZFINXZDINX-NEXT:    beqz a1, .LBB23_2
