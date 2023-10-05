@@ -667,7 +667,7 @@ def NVGPU_TmaCreateDescriptorOp : NVGPU_Op<"tma.create.descriptor", []> {
   let hasVerifier = 1;
 }
 
-def NVGPU_GenerateWarpgroupDescriptorOp : NVGPU_Op<"warpgroup.generate.descriptor", []> {
+def NVGPU_WarpgroupGenerateDescriptorOp : NVGPU_Op<"warpgroup.generate.descriptor", []> {
   let summary = "Generate a warpgroup matrix descriptor";
   let description = [{
   This Op builds a `nvgpu.warpgroup.descriptor` that is used by 
