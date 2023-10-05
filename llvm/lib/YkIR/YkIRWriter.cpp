@@ -83,12 +83,36 @@ template <class C, class E> size_t getIndex(C *Container, E *FindElement) {
   return Idx;
 }
 
-#define GENERIC_INST_SERIALISE(LLVM_INST, LLVM_INST_TYPE, YKIR_OPCODE)         \
-  if (isa<LLVM_INST_TYPE>(LLVM_INST)) {                                        \
-    serialiseInstGeneric(LLVM_INST, YKIR_OPCODE);                              \
-    return;                                                                    \
-  }
+// A <BBIdx, InstrIdx> pair that Uniquely identifies an Yk IR instruction within
+// a function.
+using InstrLoc = std::tuple<size_t, size_t>;
 
+// Maps an LLVM instruction that generates a value to the corresponding Yk IR
+// instruction.
+using ValueLoweringMap = map<Instruction *, InstrLoc>;
+
+// The class responsible for serialising our IR into the interpreter binary.
+//
+// It walks over the LLVM IR, lowering each function, block, instruction, etc.
+// into a Yk IR equivalent.
+//
+// As it does this there are some invariants that must be maintained:
+//
+//  - The current basic block index (BBIdx) is passed down the lowering process.
+//    This must be incremented each time we finish a Yk IR basic block.
+//
+//  - Similarly for instructions. Each time we finish a Yk IR instruction,
+//    we must increment the current instruction index (InstIdx).
+//
+//  - When we are done lowering an LLVM instruction that generates a value, we
+//    must update the `VLMap` with an entry that maps the LLVM instruction to
+//    the final Yk IR instruction in the lowering. If the LLVM instruction
+//    doesn't generate a value, or the LLVM instruction lowered to exactly zero
+//    Yk IR instructions, then there is no need to update the `VLMap`.
+//
+// These invariants are required so that when we encounter a local variable as
+// an operand to an LLVM instruction, we can quickly find the corresponding Yk
+// IR local variable.
 class YkIRWriter {
 private:
   Module &M;
@@ -139,18 +163,10 @@ public:
     OutStreamer.emitSizeT(constantIndex(C));
   }
 
-  void serialiseLocalVariableOperand(Instruction *I) {
-    // For now we assume that there is a one to one relationship between LLVM
-    // instructions and Yk IR instructions, and that the instruction
-    // (and block) indices are the same in both IRs.
-    BasicBlock *ParentBlock = I->getParent();
-    Function *ParentFunc = ParentBlock->getParent();
-
-    size_t BlockIdx = getIndex(ParentFunc, ParentBlock);
-    size_t InstIdx = getIndex(ParentBlock, I);
-
+  void serialiseLocalVariableOperand(Instruction *I, ValueLoweringMap &VLMap) {
+    auto [BBIdx, InstIdx] = VLMap.at(I);
     OutStreamer.emitInt8(OperandKind::LocalVariable);
-    OutStreamer.emitSizeT(BlockIdx);
+    OutStreamer.emitSizeT(BBIdx);
     OutStreamer.emitSizeT(InstIdx);
   }
 
@@ -167,12 +183,13 @@ public:
     serialiseString(toString(V));
   }
 
-  void serialiseOperand(Instruction *Parent, Value *V) {
+  void serialiseOperand(Instruction *Parent, ValueLoweringMap &VLMap,
+                        Value *V) {
     if (llvm::Constant *C = dyn_cast<llvm::Constant>(V)) {
       serialiseConstantOperand(Parent, C);
     } else if (Instruction *I = dyn_cast<Instruction>(V)) {
       // If an instruction defines the operand, it's a local variable.
-      serialiseLocalVariableOperand(I);
+      serialiseLocalVariableOperand(I, VLMap);
     } else {
       serialiseUnimplementedOperand(V);
     }
@@ -180,16 +197,31 @@ public:
 
   /// Does a naiave serialisation of an LLVM instruction by iterating over its
   /// operands and serialising them in turn.
-  void serialiseInstGeneric(Instruction *I, OpCode Opc) {
+  void serialiseInstGeneric(Instruction *I, ValueLoweringMap &VLMap,
+                            unsigned BBIdx, unsigned &InstIdx, OpCode Opc) {
     OutStreamer.emitSizeT(typeIndex(I->getType()));
     serialiseOpcode(Opc);
     OutStreamer.emitInt32(I->getNumOperands());
     for (Value *O : I->operands()) {
-      serialiseOperand(I, O);
+      serialiseOperand(I, VLMap, O);
     }
+    if (!I->getType()->isVoidTy()) {
+      VLMap[I] = {BBIdx, InstIdx};
+    }
+    InstIdx++;
   }
 
-  void serialiseInst(Instruction *I) {
+  void serialiseInst(Instruction *I, ValueLoweringMap &VLMap, unsigned BBIdx,
+                     unsigned &InstIdx) {
+// Macro to help dispatch to generic lowering.
+//
+// Note that this is unhygenic so as to make the call-sites readable.
+#define GENERIC_INST_SERIALISE(LLVM_INST, LLVM_INST_TYPE, YKIR_OPCODE)         \
+  if (isa<LLVM_INST_TYPE>(LLVM_INST)) {                                        \
+    serialiseInstGeneric(LLVM_INST, VLMap, BBIdx, InstIdx, YKIR_OPCODE);       \
+    return;                                                                    \
+  }
+
     GENERIC_INST_SERIALISE(I, LoadInst, Load)
     GENERIC_INST_SERIALISE(I, StoreInst, Store)
     GENERIC_INST_SERIALISE(I, AllocaInst, Alloca)
@@ -202,27 +234,37 @@ public:
 
     // GENERIC_INST_SERIALISE does an early return upon a match, so if we get
     // here then the instruction wasn't handled.
-    serialiseUnimplementedInstruction(I);
+    serialiseUnimplementedInstruction(I, VLMap, BBIdx, InstIdx);
   }
 
   // An unimplemented instruction is lowered to an instruction with one
   // unimplemented operand containing the textual LLVM IR we couldn't handle.
-  void serialiseUnimplementedInstruction(Instruction *I) {
+  void serialiseUnimplementedInstruction(Instruction *I,
+                                         ValueLoweringMap &VLMap,
+                                         unsigned BBIdx, unsigned &InstIdx) {
     // opcode:
     serialiseOpcode(UnimplementedInstruction);
     // num_operands:
     OutStreamer.emitInt32(1);
     // problem instruction:
     serialiseUnimplementedOperand(I);
+
+    if (!I->getType()->isVoidTy()) {
+      VLMap[I] = {BBIdx, InstIdx};
+    }
+    InstIdx++;
   }
 
-  void serialiseBlock(BasicBlock &BB) {
+  void serialiseBlock(BasicBlock &BB, ValueLoweringMap &VLMap,
+                      unsigned &BBIdx) {
     // num_instrs:
     OutStreamer.emitSizeT(BB.size());
     // instrs:
+    unsigned InstIdx = 0;
     for (Instruction &I : BB) {
-      serialiseInst(&I);
+      serialiseInst(&I, VLMap, BBIdx, InstIdx);
     }
+    BBIdx++;
   }
 
   void serialiseFunc(Function &F) {
@@ -231,8 +273,10 @@ public:
     // num_blocks:
     OutStreamer.emitSizeT(F.size());
     // blocks:
+    unsigned BBIdx = 0;
+    ValueLoweringMap VLMap;
     for (BasicBlock &BB : F) {
-      serialiseBlock(BB);
+      serialiseBlock(BB, VLMap, BBIdx);
     }
   }
 
