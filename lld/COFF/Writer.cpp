@@ -706,10 +706,6 @@ void Writer::run() {
   if (!ctx.config.pdbPath.empty() && ctx.config.debug) {
     assert(buildId);
     createPDB(ctx, sectionTable, buildId->buildId);
-
-    // Manually end this profile point to measure ~PDBLinker().
-    if (getTimeTraceProfilerInstance() != nullptr)
-      timeTraceProfilerEnd();
   }
   writeBuildId();
 

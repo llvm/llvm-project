@@ -1607,30 +1607,35 @@ void lld::coff::createPDB(COFFLinkerContext &ctx,
                           llvm::codeview::DebugInfo *buildId) {
   llvm::TimeTraceScope timeScope("PDB file");
   ScopedTimer t1(ctx.totalPdbLinkTimer);
-  PDBLinker pdb(ctx);
-
-  pdb.initialize(buildId);
-  pdb.addObjectsToPDB();
-  pdb.addImportFilesToPDB();
-  pdb.addSections(sectionTable);
-  pdb.addNatvisFiles();
-  pdb.addNamedStreams();
-  pdb.addPublicsToPDB();
-
   {
-    llvm::TimeTraceScope timeScope("Commit PDB file to disk");
-    ScopedTimer t2(ctx.diskCommitTimer);
-    codeview::GUID guid;
-    pdb.commit(&guid);
-    memcpy(&buildId->PDB70.Signature, &guid, 16);
+    PDBLinker pdb(ctx);
+
+    pdb.initialize(buildId);
+    pdb.addObjectsToPDB();
+    pdb.addImportFilesToPDB();
+    pdb.addSections(sectionTable);
+    pdb.addNatvisFiles();
+    pdb.addNamedStreams();
+    pdb.addPublicsToPDB();
+
+    {
+      llvm::TimeTraceScope timeScope("Commit PDB file to disk");
+      ScopedTimer t2(ctx.diskCommitTimer);
+      codeview::GUID guid;
+      pdb.commit(&guid);
+      memcpy(&buildId->PDB70.Signature, &guid, 16);
+    }
+
+    t1.stop();
+    pdb.printStats();
+
+    // Manually start this profile point to measure ~PDBLinker().
+    if (getTimeTraceProfilerInstance() != nullptr)
+      timeTraceProfilerBegin("PDBLinker destructor", StringRef(""));
   }
-
-  t1.stop();
-  pdb.printStats();
-
-  // Manually start this profile point to measure ~PDBLinker().
+  // Manually end this profile point to measure ~PDBLinker().
   if (getTimeTraceProfilerInstance() != nullptr)
-    timeTraceProfilerBegin("PDBLinker destructor", StringRef(""));
+    timeTraceProfilerEnd();
 }
 
 void PDBLinker::initialize(llvm::codeview::DebugInfo *buildId) {
