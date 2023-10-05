@@ -426,6 +426,74 @@ struct ResourceBindInfo : public v0::ResourceBindInfo {
 } // namespace v2
 } // namespace PSV
 
+#define COMPONENT_PRECISION(Val, Enum) Enum = Val,
+enum class SigMinPrecision : uint32_t {
+#include "DXContainerConstants.def"
+};
+
+ArrayRef<EnumEntry<SigMinPrecision>> getSigMinPrecisions();
+
+#define D3D_SYSTEM_VALUE(Val, Enum) Enum = Val,
+enum class D3DSystemValue : uint32_t {
+#include "DXContainerConstants.def"
+};
+
+ArrayRef<EnumEntry<D3DSystemValue>> getD3DSystemValues();
+
+#define COMPONENT_TYPE(Val, Enum) Enum = Val,
+enum class SigComponentType : uint32_t {
+#include "DXContainerConstants.def"
+};
+
+ArrayRef<EnumEntry<SigComponentType>> getSigComponentTypes();
+
+struct ProgramSignatureHeader {
+  uint32_t ParamCount;
+  uint32_t FirstParamOffset;
+
+  void swapBytes() {
+    sys::swapByteOrder(ParamCount);
+    sys::swapByteOrder(ParamCount);
+  }
+};
+
+struct ProgramSignatureElement {
+  uint32_t Stream;     // Stream index (parameters must appear in non-decreasing
+                       // stream order)
+  uint32_t NameOffset; // Offset from the start of the ProgramSignatureHeader to
+                       // the start of the null terminated string for the name.
+  uint32_t Index;      // Semantic Index
+  D3DSystemValue SystemValue; // Semantic type. Similar to PSV::SemanticKind.
+  SigComponentType CompType;  // Type of bits.
+  uint32_t Register;          // Register Index (row index)
+  uint8_t Mask;               // Mask (column allocation)
+
+  // The ExclusiveMask has a different meaning for input and output signatures.
+  // For an output signature, masked components of the output register are never
+  // written to.
+  // For an input signature, masked components of the input register are always
+  // read.
+  uint8_t ExclusiveMask;
+
+  uint16_t Unused;
+  SigMinPrecision MinPrecision; // Minimum precision of input/output data
+
+  void swapBytes() {
+    sys::swapByteOrder(Stream);
+    sys::swapByteOrder(NameOffset);
+    sys::swapByteOrder(Index);
+    sys::swapByteOrder(SystemValue);
+    sys::swapByteOrder(CompType);
+    sys::swapByteOrder(Register);
+    sys::swapByteOrder(Mask);
+    sys::swapByteOrder(ExclusiveMask);
+    sys::swapByteOrder(MinPrecision);
+  }
+};
+
+static_assert(sizeof(ProgramSignatureElement) == 32,
+              "ProgramSignatureElement is misaligned");
+
 } // namespace dxbc
 } // namespace llvm
 

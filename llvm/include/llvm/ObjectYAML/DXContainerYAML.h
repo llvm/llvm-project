@@ -129,6 +129,22 @@ struct PSVInfo {
   PSVInfo(const dxbc::PSV::v2::RuntimeInfo *P);
 };
 
+struct SignatureParameter {
+  uint32_t Stream;
+  std::string Name;
+  uint32_t Index;
+  dxbc::D3DSystemValue SystemValue;
+  dxbc::SigComponentType CompType;
+  uint32_t Register;
+  uint8_t Mask;
+  uint8_t ExclusiveMask;
+  dxbc::SigMinPrecision MinPrecision;
+};
+
+struct Signature {
+  llvm::SmallVector<SignatureParameter> Parameters;
+};
+
 struct Part {
   Part() = default;
   Part(std::string N, uint32_t S) : Name(N), Size(S) {}
@@ -138,6 +154,7 @@ struct Part {
   std::optional<ShaderFlags> Flags;
   std::optional<ShaderHash> Hash;
   std::optional<PSVInfo> Info;
+  std::optional<Signature> Signature;
 };
 
 struct Object {
@@ -152,9 +169,13 @@ LLVM_YAML_IS_SEQUENCE_VECTOR(llvm::DXContainerYAML::Part)
 LLVM_YAML_IS_SEQUENCE_VECTOR(llvm::DXContainerYAML::ResourceBindInfo)
 LLVM_YAML_IS_SEQUENCE_VECTOR(llvm::DXContainerYAML::SignatureElement)
 LLVM_YAML_IS_SEQUENCE_VECTOR(llvm::DXContainerYAML::PSVInfo::MaskVector)
+LLVM_YAML_IS_SEQUENCE_VECTOR(llvm::DXContainerYAML::SignatureParameter)
 LLVM_YAML_DECLARE_ENUM_TRAITS(llvm::dxbc::PSV::SemanticKind)
 LLVM_YAML_DECLARE_ENUM_TRAITS(llvm::dxbc::PSV::ComponentType)
 LLVM_YAML_DECLARE_ENUM_TRAITS(llvm::dxbc::PSV::InterpolationMode)
+LLVM_YAML_DECLARE_ENUM_TRAITS(llvm::dxbc::D3DSystemValue)
+LLVM_YAML_DECLARE_ENUM_TRAITS(llvm::dxbc::SigComponentType)
+LLVM_YAML_DECLARE_ENUM_TRAITS(llvm::dxbc::SigMinPrecision)
 
 namespace llvm {
 
@@ -200,6 +221,14 @@ template <> struct MappingTraits<DXContainerYAML::ResourceBindInfo> {
 
 template <> struct MappingTraits<DXContainerYAML::SignatureElement> {
   static void mapping(IO &IO, llvm::DXContainerYAML::SignatureElement &El);
+};
+
+template <> struct MappingTraits<DXContainerYAML::SignatureParameter> {
+  static void mapping(IO &IO, llvm::DXContainerYAML::SignatureParameter &El);
+};
+
+template <> struct MappingTraits<DXContainerYAML::Signature> {
+  static void mapping(IO &IO, llvm::DXContainerYAML::Signature &El);
 };
 
 } // namespace yaml
