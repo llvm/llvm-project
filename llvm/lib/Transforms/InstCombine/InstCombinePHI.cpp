@@ -1452,9 +1452,9 @@ Instruction *InstCombinerImpl::visitPHINode(PHINode &PN) {
   // %p = phi [%v, BB] ...
   //      icmp eq, %p, 0
   // FIXME: To be simple, handle only integer type for now.
-  // Extend to 2 use of phi -> icmp and or(icmp). Putting a limit on number of
-  // uses as it turns a O(1) algorithm into a O(n) algorithm. And if we are
-  // doing it for each instruction it turns into O(n^2).
+  // This handles a small number of uses to keep the complexity down, and an
+  // icmp(or(phi)) can equally be replaced with any non-zero constant as the
+  // "or" will only add bits.
   if (PN.hasOneUse() || PN.hasNUses(2)) {
     bool AllUsesOfPhiEndsInCmp = true;
     for (const auto *U : PN.users()) {
