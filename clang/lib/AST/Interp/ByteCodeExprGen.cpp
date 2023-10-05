@@ -2305,6 +2305,10 @@ template <class Emitter>
 bool ByteCodeExprGen<Emitter>::VisitCXXThisExpr(const CXXThisExpr *E) {
   if (DiscardResult)
     return true;
+
+  if (this->LambdaThisCapture > 0)
+    return this->emitGetThisFieldPtr(this->LambdaThisCapture, E);
+
   return this->emitThis(E);
 }
 
@@ -2536,7 +2540,8 @@ bool ByteCodeExprGen<Emitter>::VisitDeclRefExpr(const DeclRefExpr *E) {
   // This happens in C.
   if (!Ctx.getLangOpts().CPlusPlus) {
     if (const auto *VD = dyn_cast<VarDecl>(D);
-        VD && VD->hasGlobalStorage() && VD->getAnyInitializer()) {
+        VD && VD->hasGlobalStorage() && VD->getAnyInitializer() &&
+        VD->getType().isConstQualified()) {
       if (!this->visitVarDecl(VD))
         return false;
       // Retry.

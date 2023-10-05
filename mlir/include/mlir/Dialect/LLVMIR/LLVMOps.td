@@ -303,8 +303,13 @@ def LLVM_GEPOp : LLVM_Op<"getelementptr", [Pure,
         indices.push_back(
             builder.getInt32(valueOrAttr.get<IntegerAttr>().getInt()));
     }
-    Type baseElementType = op.getSourceElementType();
-    llvm::Type *elementType = moduleTranslation.convertType(baseElementType);
+
+    Type elemTypeFromAttr = op.getSourceElementType();
+    auto ptrType = ::llvm::cast<LLVMPointerType>(op.getType());
+    Type elemTypeFromPtrType = ptrType.getElementType();
+
+    llvm::Type *elementType = moduleTranslation.convertType(
+        elemTypeFromAttr ? elemTypeFromAttr : elemTypeFromPtrType);
     $res = builder.CreateGEP(elementType, $base, indices, "", $inbounds);
   }];
   let assemblyFormat = [{
