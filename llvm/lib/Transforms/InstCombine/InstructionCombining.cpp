@@ -2732,22 +2732,8 @@ Instruction *InstCombinerImpl::visitFree(CallInst &FI, Value *Op) {
 }
 
 Instruction *InstCombinerImpl::visitReturnInst(ReturnInst &RI) {
-  Value *RetVal = RI.getReturnValue();
-  if (!RetVal || !AttributeFuncs::isNoFPClassCompatibleType(RetVal->getType()))
-    return nullptr;
-
-  Function *F = RI.getFunction();
-  FPClassTest ReturnClass = F->getAttributes().getRetNoFPClass();
-  if (ReturnClass == fcNone)
-    return nullptr;
-
-  KnownFPClass KnownClass;
-  Value *Simplified =
-      SimplifyDemandedUseFPClass(RetVal, ~ReturnClass, KnownClass, 0, &RI);
-  if (!Simplified)
-    return nullptr;
-
-  return ReturnInst::Create(RI.getContext(), Simplified);
+  // Nothing for now.
+  return nullptr;
 }
 
 // WARNING: keep in sync with SimplifyCFGOpt::simplifyUnreachable()!
