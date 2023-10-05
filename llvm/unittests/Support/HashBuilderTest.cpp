@@ -156,7 +156,7 @@ struct /* __attribute__((packed)) */ StructWithFastHash {
   template <typename HasherT, llvm::support::endianness Endianness>
   friend void addHash(llvm::HashBuilder<HasherT, Endianness> &HBuilder,
                       const StructWithFastHash &Value) {
-    if (Endianness == llvm::support::endian::system_endianness()) {
+    if (Endianness == llvm::endianness::native) {
       HBuilder.update(llvm::ArrayRef(reinterpret_cast<const uint8_t *>(&Value),
                                      sizeof(Value)));
     } else {
@@ -180,7 +180,7 @@ public:
   template <typename HasherT, llvm::support::endianness Endianness>
   friend void addHash(llvm::HashBuilder<HasherT, Endianness> &HBuilder,
                       const CustomContainer &Value) {
-    if (Endianness == llvm::support::endian::system_endianness()) {
+    if (Endianness == llvm::endianness::native) {
       HBuilder.update(llvm::ArrayRef(
           reinterpret_cast<const uint8_t *>(&Value.Size),
           sizeof(Value.Size) + Value.Size * sizeof(Value.Elements[0])));

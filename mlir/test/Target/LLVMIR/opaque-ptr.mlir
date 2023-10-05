@@ -42,6 +42,15 @@ llvm.func @opaque_ptr_gep_struct(%arg0: !llvm.ptr, %arg1: i32) -> !llvm.ptr {
   llvm.return %0 : !llvm.ptr
 }
 
+// CHECK-LABEL: @opaque_ptr_elem_type
+llvm.func @opaque_ptr_elem_type(%0: !llvm.ptr) -> !llvm.ptr {
+  // CHECK: getelementptr ptr, ptr
+  %1 = llvm.getelementptr %0[0] { elem_type = !llvm.ptr } : (!llvm.ptr) -> !llvm.ptr
+  // CHECK: getelementptr ptr, ptr
+  %2 = llvm.getelementptr %0[0] : (!llvm.ptr) -> !llvm.ptr<ptr>
+  llvm.return %1 : !llvm.ptr
+}
+
 // CHECK-LABEL: @opaque_ptr_matrix_load_store
 llvm.func @opaque_ptr_matrix_load_store(%ptr: !llvm.ptr, %stride: i64) -> vector<48 x f32> {
   // CHECK: call <48 x float> @llvm.matrix.column.major.load.v48f32.i64
