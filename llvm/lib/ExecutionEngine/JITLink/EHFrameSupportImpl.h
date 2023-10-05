@@ -81,11 +81,9 @@ private:
   };
 
   Error processBlock(ParseContext &PC, Block &B);
-  Error processCIE(ParseContext &PC, Block &B, size_t RecordOffset,
-                   size_t RecordLength, size_t CIEDeltaFieldOffset,
+  Error processCIE(ParseContext &PC, Block &B, size_t CIEDeltaFieldOffset,
                    const BlockEdgeMap &BlockEdges);
-  Error processFDE(ParseContext &PC, Block &B, size_t RecordOffset,
-                   size_t RecordLength, size_t CIEDeltaFieldOffset,
+  Error processFDE(ParseContext &PC, Block &B, size_t CIEDeltaFieldOffset,
                    uint32_t CIEDelta, const BlockEdgeMap &BlockEdges);
 
   Expected<AugmentationInfo>
