@@ -4003,7 +4003,7 @@ std::pair<Value *, FPClassTest> llvm::fcmpToClassTest(FCmpInst::Predicate Pred,
                                                       bool LookThroughSrc) {
   const APFloat *ConstRHS;
   if (!match(RHS, m_APFloatAllowUndef(ConstRHS)))
-    return {nullptr, fcNone};
+    return {nullptr, fcAllFlags};
 
   return fcmpToClassTest(Pred, F, LHS, ConstRHS, LookThroughSrc);
 }
@@ -4025,7 +4025,7 @@ llvm::fcmpToClassTest(FCmpInst::Predicate Pred, const Function &F, Value *LHS,
     // TODO: Handle DAZ by expanding masks to cover subnormal cases.
     if (Pred != FCmpInst::FCMP_ORD && Pred != FCmpInst::FCMP_UNO &&
         !inputDenormalIsIEEE(F, LHS->getType()))
-      return {nullptr, fcNone};
+      return {nullptr, fcAllFlags};
 
     switch (Pred) {
     case FCmpInst::FCMP_OEQ: // Match x == 0.0
@@ -4062,7 +4062,7 @@ llvm::fcmpToClassTest(FCmpInst::Predicate Pred, const Function &F, Value *LHS,
       break;
     }
 
-    return {nullptr, fcNone};
+    return {nullptr, fcAllFlags};
   }
 
   Value *Src = LHS;
@@ -4146,7 +4146,7 @@ llvm::fcmpToClassTest(FCmpInst::Predicate Pred, const Function &F, Value *LHS,
     case FCmpInst::FCMP_OGE:
     case FCmpInst::FCMP_ULT: {
       if (ConstRHS->isNegative()) // TODO
-        return {nullptr, fcNone};
+        return {nullptr, fcAllFlags};
 
       // fcmp oge fabs(x), +inf -> fcInf
       // fcmp oge x, +inf -> fcPosInf
@@ -4160,14 +4160,14 @@ llvm::fcmpToClassTest(FCmpInst::Predicate Pred, const Function &F, Value *LHS,
     case FCmpInst::FCMP_OGT:
     case FCmpInst::FCMP_ULE: {
       if (ConstRHS->isNegative())
-        return {nullptr, fcNone};
+        return {nullptr, fcAllFlags};
 
       // No value is ordered and greater than infinity.
       Mask = fcNone;
       break;
     }
     default:
-      return {nullptr, fcNone};
+      return {nullptr, fcAllFlags};
     }
   } else if (ConstRHS->isSmallestNormalized() && !ConstRHS->isNegative()) {
     // Match pattern that's used in __builtin_isnormal.
@@ -4196,14 +4196,14 @@ llvm::fcmpToClassTest(FCmpInst::Predicate Pred, const Function &F, Value *LHS,
       break;
     }
     default:
-      return {nullptr, fcNone};
+      return {nullptr, fcAllFlags};
     }
   } else if (ConstRHS->isNaN()) {
     // fcmp o__ x, nan -> false
     // fcmp u__ x, nan -> true
     Mask = fcNone;
   } else
-    return {nullptr, fcNone};
+    return {nullptr, fcAllFlags};
 
   // Invert the comparison for the unordered cases.
   if (FCmpInst::isUnordered(Pred))
