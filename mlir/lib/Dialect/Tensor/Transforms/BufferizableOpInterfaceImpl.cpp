@@ -257,6 +257,8 @@ struct DimOpInterface
 struct EmptyOpInterface
     : public BufferizableOpInterface::ExternalModel<EmptyOpInterface,
                                                     tensor::EmptyOp> {
+  bool bufferizesToAllocation(Operation *op, Value value) const { return true; }
+
   bool resultBufferizesToMemoryWrite(Operation *op, OpResult opResult,
                                      const AnalysisState &state) const {
     // The returned tensor does not have specified contents.
