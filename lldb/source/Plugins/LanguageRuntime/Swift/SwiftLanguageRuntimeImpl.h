@@ -110,6 +110,7 @@ public:
   llvm::Optional<size_t> GetBitAlignment(CompilerType type,
                                          ExecutionContextScope *exe_scope);
 
+  CompilerType GetTypeFromMetadata(TypeSystemSwift &tss, Address address);
   SwiftLanguageRuntime::MetadataPromiseSP
   GetMetadataPromise(lldb::addr_t addr, ValueObject &for_object);
 
