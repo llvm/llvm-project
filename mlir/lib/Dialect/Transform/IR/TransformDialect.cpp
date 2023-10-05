@@ -16,7 +16,9 @@
 #include "mlir/IR/OpImplementation.h"
 #include "mlir/Parser/Parser.h"
 #include "llvm/ADT/SCCIterator.h"
+#include "llvm/Support/FileSystem.h"
 #include "llvm/Support/MemoryBuffer.h"
+#include "llvm/Support/RWMutex.h"
 #include "llvm/Support/SourceMgr.h"
 
 using namespace mlir;
@@ -74,16 +76,18 @@ struct TransformResourceBlobManagerInterface
       ResourceBlobManagerDialectInterfaceBase;
 };
 
-struct TransformOpAsmInterface : public OpAsmDialectInterface {
+//===----------------------------------------------------------------------===//
+// TransformOpAsmInterface
+//===----------------------------------------------------------------------===//
+
+class mlir::transform::detail::TransformOpAsmInterface
+    : public OpAsmDialectInterface {
+public:
   using OpAsmDialectInterface::OpAsmDialectInterface;
   TransformOpAsmInterface(Dialect *dialect,
                           TransformResourceBlobManagerInterface &mgr)
-      : OpAsmDialectInterface(dialect), blobManager(mgr) {}
-
-  ~TransformOpAsmInterface() override {
-    for (auto op : orderedLibraryModules)
-      op->erase();
-  }
+      : OpAsmDialectInterface(dialect), blobManager(mgr),
+        dialect(*static_cast<transform::TransformDialect *>(dialect)) {}
 
   //===------------------------------------------------------------------===//
   // Resources
@@ -123,9 +127,8 @@ struct TransformOpAsmInterface : public OpAsmDialectInterface {
     if (!transformModule)
       return entry.emitError() << "failed to parse Transform module";
 
-    orderedLibraryNames.push_back({entry.getKey().str(), *name});
-    registerLibraryModule(entry.getKey(), std::move(transformModule));
-    return success();
+    return dialect.libraryManager.registerLibraryModule(
+        entry.getKey(), std::move(transformModule), *name);
   }
 
   void
@@ -136,60 +139,71 @@ struct TransformOpAsmInterface : public OpAsmDialectInterface {
     // referenced to capture state.
     if (op->getParentOp() == nullptr) {
       // On top-level op print libraries additionally.
-      for (auto it : orderedLibraryNames)
-        provider.buildString(std::get<0>(it), std::get<1>(it));
+      for (auto &&[key, filename] :
+           dialect.libraryManager.getOrderedLibraryNames())
+        provider.buildString(key, filename);
     }
-  }
-
-  /// Returns a range of registered library modules.
-  ArrayRef<ModuleOp> getLibraryModules() { return orderedLibraryModules; }
-
-  void registerLibraryModule(StringRef key,
-                             OwningOpRef<ModuleOp> &&library) const {
-    libraryModules[key] = orderedLibraryModules.emplace_back(library.release());
-  }
-
-  void registerLibraryModule(OwningOpRef<ModuleOp> &&library) const {
-    orderedLibraryModules.push_back(library.release());
-  }
-
-  Operation *getRegisteredTransform(StringRef resource, SymbolRefAttr ref) {
-    auto it = libraryModules.find(resource);
-    if (it == libraryModules.end()) {
-      return nullptr;
-    }
-
-    return SymbolTable::lookupSymbolIn(it->second, ref);
   }
 
 private:
   /// The blob manager for the dialect.
   TransformResourceBlobManagerInterface &blobManager;
 
-  /// Library modules registered.
-  mutable llvm::StringMap<ModuleOp> libraryModules;
-  /// Keep a sorted list too for iteration.
-  mutable llvm::SmallVector<ModuleOp, 2> orderedLibraryModules;
-  /// Keep list of external files used for printing again.
-  mutable llvm::SmallVector<std::pair<std::string, std::string>, 2>
-      orderedLibraryNames;
+  /// Back reference to the dialect to which the interface is attached.
+  TransformDialect &dialect;
 };
 
-ArrayRef<ModuleOp> transform::TransformDialect::getLibraryModules() {
-  return getRegisteredInterface<TransformOpAsmInterface>()->getLibraryModules();
+//===----------------------------------------------------------------------===//
+// TransformLibraryManager
+//===----------------------------------------------------------------------===//
+
+SmallVector<ModuleOp, 2>
+transform::detail::TransformLibraryManager::getLibraryModules() const {
+  llvm::sys::SmartScopedReader<true> lock(mutex);
+  return llvm::to_vector<2>(llvm::map_range(
+      orderedOwningLibraryModules,
+      [](const OwningOpRef<ModuleOp> &owning) { return owning.get(); }));
 }
 
-void transform::TransformDialect::registerLibraryModule(
-    OwningOpRef<ModuleOp> &&library) {
-  getRegisteredInterface<TransformOpAsmInterface>()->registerLibraryModule(
-      std::move(library));
+SmallVector<std::pair<std::string, std::string>, 2>
+transform::detail::TransformLibraryManager::getOrderedLibraryNames() const {
+  llvm::sys::SmartScopedReader<true> lock(mutex);
+  return orderedLibraryNames;
 }
 
-Operation *
-transform::TransformDialect::getRegisteredTransform(StringRef resource, SymbolRefAttr ref) {
-  auto &interface = *getRegisteredInterface<TransformOpAsmInterface>();
-  return interface.getRegisteredTransform(resource, ref);
+Operation *transform::detail::TransformLibraryManager::getRegisteredTransform(
+    StringRef key, StringAttr symbolName) const {
+  llvm::sys::SmartScopedReader<true> lock(mutex);
+  auto it = libraryModulePositions.find(key);
+  if (it == libraryModulePositions.end())
+    return nullptr;
+
+  return orderedSymbolTables[it->second].lookup(symbolName);
 }
+
+LogicalResult transform::detail::TransformLibraryManager::registerLibraryModule(
+    StringRef key, OwningOpRef<ModuleOp> &&library, StringRef filename) {
+  llvm::sys::SmartScopedWriter<true> lock(mutex);
+  size_t position = orderedOwningLibraryModules.size();
+  orderedOwningLibraryModules.push_back(std::move(library));
+  ModuleOp nonOwning = orderedOwningLibraryModules.back().get();
+  if (!libraryModulePositions.insert({key, position}).second) {
+    // InFlightDiagnostic diag = emitError(nonOwning->getLoc())
+    //                           << "module for key '" << key
+    //                           << "' already registered";
+    orderedOwningLibraryModules.pop_back();
+    // return diag;
+    return success();
+  }
+
+  orderedLibraryNames.push_back({key.str(), filename.str()});
+  orderedSymbolTables.emplace_back(nonOwning.getOperation());
+  return success();
+}
+
+//===----------------------------------------------------------------------===//
+// TransformDialect
+//===----------------------------------------------------------------------===//
 
 void transform::TransformDialect::initialize() {
   // Using the checked versions to enable the same assertions as for the ops
@@ -201,7 +215,7 @@ void transform::TransformDialect::initialize() {
   initializeTypes();
 
   auto &blobInterface = addInterface<TransformResourceBlobManagerInterface>();
-  addInterface<TransformOpAsmInterface>(blobInterface);
+  addInterface<detail::TransformOpAsmInterface>(blobInterface);
 }
 
 Type transform::TransformDialect::parseType(DialectAsmParser &parser) const {

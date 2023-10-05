@@ -35,7 +35,6 @@ LogicalResult interpreterBaseInitializeImpl(
     MLIRContext *context, StringRef transformFileName,
     ArrayRef<std::string> transformLibraryPaths,
     std::shared_ptr<OwningOpRef<ModuleOp>> &module,
-    std::shared_ptr<OwningOpRef<ModuleOp>> &libraryModule,
     function_ref<std::optional<LogicalResult>(OpBuilder &, Location)>
         moduleBuilder = nullptr);
 
@@ -44,7 +43,6 @@ LogicalResult interpreterBaseInitializeImpl(
 LogicalResult interpreterBaseRunOnOperationImpl(
     Operation *target, StringRef passName,
     const std::shared_ptr<OwningOpRef<ModuleOp>> &sharedTransformModule,
-    const std::shared_ptr<OwningOpRef<ModuleOp>> &libraryModule,
     const RaggedArray<MappedValue> &extraMappings,
     const TransformOptions &options,
     const Pass::Option<std::string> &transformFileName,
@@ -101,7 +99,6 @@ public:
 
   TransformInterpreterPassBase(const TransformInterpreterPassBase &pass) {
     sharedTransformModule = pass.sharedTransformModule;
-    transformLibraryModule = pass.transformLibraryModule;
     options = pass.options;
   }
 
@@ -139,8 +136,7 @@ public:
         static_cast<Concrete *>(this)->transformLibraryPaths;
     return detail::interpreterBaseInitializeImpl(
         context, transformFileName, transformLibraryPaths,
-        sharedTransformModule, transformLibraryModule,
-        [this](OpBuilder &builder, Location loc) {
+        sharedTransformModule, [this](OpBuilder &builder, Location loc) {
           return static_cast<Concrete *>(this)->constructTransformModule(
               builder, loc);
         });
@@ -171,7 +167,6 @@ public:
     if (failed(pass->runBeforeInterpreter(op)) ||
         failed(detail::interpreterBaseRunOnOperationImpl(
             op, pass->getArgument(), sharedTransformModule,
-            transformLibraryModule,
             /*extraMappings=*/{}, options, pass->transformFileName,
             pass->transformLibraryPaths, pass->debugPayloadRootTag,
             pass->debugTransformRootTag, binaryName)) ||
@@ -190,24 +185,12 @@ protected:
     return sharedTransformModule;
   }
 
-  /// Returns a read-only reference to the transform library module.
-  const std::shared_ptr<OwningOpRef<ModuleOp>> &
-  getTransformLibraryModule() const {
-    return transformLibraryModule;
-  }
-
 private:
   /// The separate transform module to be used for transformations, shared
   /// across multiple instances of the pass if it is applied in parallel to
   /// avoid potentially expensive cloning. MUST NOT be modified after the pass
   /// has been initialized.
   std::shared_ptr<OwningOpRef<ModuleOp>> sharedTransformModule = nullptr;
-
-  /// The transform module containing symbol definitions that become available
-  /// in the transform scripts. Similar to dynamic linking for binaries. This is
-  /// shared across multiple instances of the pass and therefore MUST NOT be
-  /// modified after the pass has been initialized.
-  std::shared_ptr<OwningOpRef<ModuleOp>> transformLibraryModule = nullptr;
 };
 
 } // namespace transform
