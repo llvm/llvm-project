@@ -229,7 +229,6 @@ private:
   const std::vector<uint64_t> lvl2dim;
 };
 
-
 /// A memory-resident sparse tensor using a storage scheme based on
 /// per-level sparse/dense annotations.  This data structure provides
 /// a bufferized form of a sparse tensor type.  In contrast to generating
@@ -780,8 +779,7 @@ protected:
 
 //===----------------------------------------------------------------------===//
 template <typename P, typename C, typename V>
-class SparseTensorEnumerator final
-    : public SparseTensorEnumeratorBase<V> {
+class SparseTensorEnumerator final : public SparseTensorEnumeratorBase<V> {
   using Base = SparseTensorEnumeratorBase<V>;
   using StorageImpl = SparseTensorStorage<P, C, V>;
 
