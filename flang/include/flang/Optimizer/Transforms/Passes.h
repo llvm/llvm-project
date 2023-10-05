@@ -80,6 +80,10 @@ std::unique_ptr<mlir::Pass> createOMPFunctionFilteringPass();
 std::unique_ptr<mlir::OperationPass<mlir::ModuleOp>>
 createOMPMarkDeclareTargetPass();
 
+std::unique_ptr<mlir::Pass> createVScaleAttrPass();
+std::unique_ptr<mlir::Pass>
+createVScaleAttrPass(std::pair<unsigned, unsigned> vscaleAttr);
+
 // declarative passes
 #define GEN_PASS_REGISTRATION
 #include "flang/Optimizer/Transforms/Passes.h.inc"
