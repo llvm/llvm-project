@@ -172,43 +172,41 @@ module {
     // TODO: Investigates why reusing the same %tmp above would cause bufferization
     // errors.
     //
-    // FIXME: The canonicalizer for tensor.extract_slice does not work with sparse tensors.
-    //
-    // %tmp1 = sparse_tensor.convert %sa : tensor<8x8xf64> to tensor<8x8xf64, #CSR>
-    // %a_dyn = tensor.extract_slice %tmp1[%c1, %c1][%c4, %c4][%c1, %c2] : tensor<8x8xf64, #CSR> to
-    //                                                                     tensor<?x?xf64, #CSR_SLICE_DYN>
-    // %tmp1_coo = sparse_tensor.convert %sa : tensor<8x8xf64> to tensor<8x8xf64, #COO>
-    // %a_dyn_coo = tensor.extract_slice %tmp1_coo[%c1, %c1][%c4, %c4][%c1, %c2] : tensor<8x8xf64, #COO> to
-    //                                                                             tensor<?x?xf64, #COO_SLICE_DYN>
+     %tmp1 = sparse_tensor.convert %sa : tensor<8x8xf64> to tensor<8x8xf64, #CSR>
+     %a_dyn = tensor.extract_slice %tmp1[%c1, %c1][%c4, %c4][%c1, %c2] : tensor<8x8xf64, #CSR> to
+                                                                         tensor<?x?xf64, #CSR_SLICE_DYN>
+     %tmp1_coo = sparse_tensor.convert %sa : tensor<8x8xf64> to tensor<8x8xf64, #COO>
+     %a_dyn_coo = tensor.extract_slice %tmp1_coo[%c1, %c1][%c4, %c4][%c1, %c2] : tensor<8x8xf64, #COO> to
+                                                                                 tensor<?x?xf64, #COO_SLICE_DYN>
 
     //
-    // C_HECK-NEXT: 1
-    // C_HECK-NEXT: 0
-    // C_HECK-NEXT: 2.3
-    // C_HECK-NEXT: 2
-    // C_HECK-NEXT: 3
-    // C_HECK-NEXT: 1
-    // C_HECK-NEXT: 3
-    // C_HECK-NEXT: 2
-    // C_HECK-NEXT: 2.1
+    // CHECK-NEXT: 1
+    // CHECK-NEXT: 0
+    // CHECK-NEXT: 2.3
+    // CHECK-NEXT: 2
+    // CHECK-NEXT: 3
+    // CHECK-NEXT: 1
+    // CHECK-NEXT: 3
+    // CHECK-NEXT: 2
+    // CHECK-NEXT: 2.1
     //
-    // call @foreach_print_slice_dyn(%a_dyn) : (tensor<?x?xf64, #CSR_SLICE_DYN>) -> ()
-    // C_HECK-NEXT: 1
-    // C_HECK-NEXT: 0
-    // C_HECK-NEXT: 2.3
-    // C_HECK-NEXT: 2
-    // C_HECK-NEXT: 3
-    // C_HECK-NEXT: 1
-    // C_HECK-NEXT: 3
-    // C_HECK-NEXT: 2
-    // C_HECK-NEXT: 2.1
+    call @foreach_print_slice_dyn(%a_dyn) : (tensor<?x?xf64, #CSR_SLICE_DYN>) -> ()
+    // CHECK-NEXT: 1
+    // CHECK-NEXT: 0
+    // CHECK-NEXT: 2.3
+    // CHECK-NEXT: 2
+    // CHECK-NEXT: 3
+    // CHECK-NEXT: 1
+    // CHECK-NEXT: 3
+    // CHECK-NEXT: 2
+    // CHECK-NEXT: 2.1
     //
-    // call @foreach_print_slice_coo_dyn(%a_dyn_coo) : (tensor<?x?xf64, #COO_SLICE_DYN>) -> ()
+    call @foreach_print_slice_coo_dyn(%a_dyn_coo) : (tensor<?x?xf64, #COO_SLICE_DYN>) -> ()
 
     bufferization.dealloc_tensor %tmp : tensor<8x8xf64, #CSR>
-    //bufferization.dealloc_tensor %tmp1 : tensor<8x8xf64, #CSR>
+    bufferization.dealloc_tensor %tmp1 : tensor<8x8xf64, #CSR>
     bufferization.dealloc_tensor %tmp_coo : tensor<8x8xf64, #COO>
-    //bufferization.dealloc_tensor %tmp1_coo : tensor<8x8xf64, #COO>
+    bufferization.dealloc_tensor %tmp1_coo : tensor<8x8xf64, #COO>
     bufferization.dealloc_tensor %b : tensor<4x4xf64, #CSR>
     return
   }

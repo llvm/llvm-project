@@ -210,7 +210,6 @@ def SparseTensor_ConvertOp : SparseTensor_Op<"convert",
   let assemblyFormat = "$source attr-dict `:` type($source) `to` type($dest)";
   let hasFolder = 1;
   let hasVerifier = 1;
-  let hasCanonicalizer = 1;
 }
 
 def SparseTensor_ToPositionsOp : SparseTensor_Op<"positions", [Pure]>,

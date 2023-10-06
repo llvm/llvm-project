@@ -1104,54 +1104,6 @@ bool ConvertOp::isSortCOOConvert() {
          getSparseTensorType(getDest()).isAllOrdered();
 }
 
-struct StageUnorderedConvert : public OpRewritePattern<ConvertOp> {
-  using OpRewritePattern<ConvertOp>::OpRewritePattern;
-
-  LogicalResult matchAndRewrite(ConvertOp op,
-                                PatternRewriter &rewriter) const override {
-    if (op.directConvertable() || op.isSortCOOConvert())
-      return failure();
-
-    Location loc = op.getLoc();
-    SparseTensorType srcStt = getSparseTensorType(op.getSource());
-    SparseTensorType dstStt = getSparseTensorType(op.getDest());
-
-    // Just to make sure that convert to dense tensor is always direct.
-    assert(!dstStt.isAllDense());
-
-    // source -> coo
-    // The tmp COO must be unordered, otherwise it is a direct conversion.
-    assert(!(srcStt.hasSameDimToLvl(dstStt) && srcStt.isAllOrdered()));
-    Type srcCOOTp = getCOOFromTypeWithOrdering(
-        dstStt.getRankedTensorType(), dstStt.getDimToLvl(), /*ordered=*/false);
-    Value srcCOO = rewriter.create<ConvertOp>(loc, srcCOOTp, op.getSource());
-
-    // -> sort
-    Type dstCOOTp = getCOOFromTypeWithOrdering(
-        dstStt.getRankedTensorType(), dstStt.getDimToLvl(), /*ordered=*/true);
-    // TODO: this should be a sort_coo operation.
-    Value dstCOO = rewriter.create<ConvertOp>(loc, dstCOOTp, srcCOO);
-
-    // -> dest.
-    if (dstCOO.getType() == op.getType()) {
-      rewriter.replaceOp(op, dstCOO);
-    } else {
-      // Need an extra conversion if the target type is not COO.
-      rewriter.replaceOpWithNewOp<ConvertOp>(op, op.getDest().getType(),
-                                             dstCOO);
-    }
-    // TODO: deallocate extra COOs, we should probably delegate it to buffer
-    // deallocation pass.
-
-    return success();
-  }
-};
-
-void ConvertOp::getCanonicalizationPatterns(RewritePatternSet &results,
-                                            MLIRContext *context) {
-  results.add<StageUnorderedConvert>(context);
-}
-
 LogicalResult ToPositionsOp::verify() {
   auto e = getSparseTensorEncoding(getTensor().getType());
   if (failed(lvlIsInBounds(getLevel(), getTensor())))

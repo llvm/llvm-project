@@ -142,7 +142,7 @@ public:
     {
       OpPassManager pm("builtin.module");
       pm.addPass(createSparsificationPass(sparsificationOptions));
-      pm.addPass(createCanonicalizerPass());
+      pm.addNestedPass<func::FuncOp>(createStageSparseOperationsPass());
       pm.addPass(createPostSparsificationRewritePass(enableRuntimeLibrary));
       if (vectorLength > 0) {
         pm.addPass(mlir::createLoopInvariantCodeMotionPass());

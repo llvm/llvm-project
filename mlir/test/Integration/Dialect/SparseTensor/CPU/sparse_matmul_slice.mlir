@@ -231,23 +231,22 @@ module {
     %c4u_coo = tensor.cast %c4_coo : tensor<4x4xf64> to tensor<*xf64>
     call @printMemrefF64(%c4u_coo) : (tensor<*xf64>) -> ()
 
-    // FIXME: The canonicalizer for tensor.extract_slice does not work with sparse tensors.
     //
     // slice x slice (same as above, but with dynamic stride information)
     //
-    // C_HECK:      [2.3,   0,   0,   0],
-    // C_HECK-NEXT: [6.9,   0,   0,   0],
-    // C_HECK-NEXT: [0,   0,   0,   0],
-    // C_HECK-NEXT: [12.6,   0,   0,   0]]
+    // CHECK:      [2.3,   0,   0,   0],
+    // CHECK-NEXT: [6.9,   0,   0,   0],
+    // CHECK-NEXT: [0,   0,   0,   0],
+    // CHECK-NEXT: [12.6,   0,   0,   0]]
     //
-    // %s1_dyn = tensor.extract_slice %tmp[%c_0, %c_1][4, 4][%c_2, %c_1] : tensor<8x8xf64, #DCSR> to tensor<4x4xf64, #DCSR_SLICE_dyn>
-    // %s2_dyn = tensor.extract_slice %b1[%c_0, %c_0][4, 4][%c_2, %c_1] : tensor<8x4xf64, #CSR> to tensor<4x4xf64, #CSR_SLICE_dyn>
-    // %dyn_4 = call @matmul_dyn(%s2_dyn, %s1_dyn)
-    //    : (tensor<4x4xf64, #CSR_SLICE_dyn>,
-    //       tensor<4x4xf64, #DCSR_SLICE_dyn>) -> tensor<4x4xf64, #CSR>
-    // %c4_dyn = sparse_tensor.convert %dyn_4 : tensor<4x4xf64, #CSR> to tensor<4x4xf64>
-    // %c4u_dyn = tensor.cast %c4_dyn : tensor<4x4xf64> to tensor<*xf64>
-    // call @printMemrefF64(%c4u_dyn) : (tensor<*xf64>) -> ()
+    %s1_dyn = tensor.extract_slice %tmp[%c_0, %c_1][4, 4][%c_2, %c_1] : tensor<8x8xf64, #DCSR> to tensor<4x4xf64, #DCSR_SLICE_dyn>
+    %s2_dyn = tensor.extract_slice %b1[%c_0, %c_0][4, 4][%c_2, %c_1] : tensor<8x4xf64, #CSR> to tensor<4x4xf64, #CSR_SLICE_dyn>
+    %dyn_4 = call @matmul_dyn(%s2_dyn, %s1_dyn)
+       : (tensor<4x4xf64, #CSR_SLICE_dyn>,
+          tensor<4x4xf64, #DCSR_SLICE_dyn>) -> tensor<4x4xf64, #CSR>
+    %c4_dyn = sparse_tensor.convert %dyn_4 : tensor<4x4xf64, #CSR> to tensor<4x4xf64>
+    %c4u_dyn = tensor.cast %c4_dyn : tensor<4x4xf64> to tensor<*xf64>
+    call @printMemrefF64(%c4u_dyn) : (tensor<*xf64>) -> ()
 
     // sparse slices should generate the same result as dense slices
     //
