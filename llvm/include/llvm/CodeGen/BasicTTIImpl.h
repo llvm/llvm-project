@@ -945,7 +945,7 @@ public:
       if (ShuffleVectorInst::isZeroEltSplatMask(Mask, NumSrcElts))
         return TTI::SK_Broadcast;
       if (ShuffleVectorInst::isExtractSubvectorMask(Mask, NumSrcElts, Index) &&
-          (Index + Mask.size()) <= NumSrcElts) {
+          (Index + Mask.size()) <= (size_t)NumSrcElts) {
         SubTy = FixedVectorType::get(Ty->getElementType(), Mask.size());
         return TTI::SK_ExtractSubvector;
       }
