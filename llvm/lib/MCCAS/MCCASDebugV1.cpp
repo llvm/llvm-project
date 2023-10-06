@@ -255,6 +255,13 @@ void AbbrevEntryWriter::writeAbbrevEntry(DWARFDie DIE) {
     if (Form == dwarf::Form::DW_FORM_strp)
       Form = dwarf::Form::DW_FORM_strp_cas;
     writeULEB128(Form);
+    // Dwarf 5: Section 7.4:
+    // The form DW_FORM_implicit_const has to be handled specially. It's
+    // specification contains a third part, which is a signed LEB128 number.
+    // This number is used as the value of the attribute with the aformentioned
+    // form and nothing is stored in the .debug_info section.
+    if (Form == dwarf::Form::DW_FORM_implicit_const)
+      writeSLEB128(AttrValue.Value.getRawSValue());
   }
 }
 
@@ -281,11 +288,32 @@ Expected<dwarf::Attribute> AbbrevEntryReader::readAttr() {
   return static_cast<dwarf::Attribute>(AttrAsInt);
 }
 
+static Expected<int64_t> handleImplicitConst(BinaryStreamReader &Reader) {
+  int64_t ImplicitVal;
+  if (auto E = Reader.readSLEB128(ImplicitVal))
+    return E;
+  return ImplicitVal;
+}
+
 Expected<dwarf::Form> AbbrevEntryReader::readForm() {
   uint64_t FormAsInt;
   if (auto E = DataStream.readULEB128(FormAsInt))
     return std::move(E);
-  return static_cast<dwarf::Form>(FormAsInt);
+  auto Form = static_cast<dwarf::Form>(FormAsInt);
+
+  // Dwarf 5: Section 7.4:
+  // The form DW_FORM_implicit_const has to be handled specially. It's
+  // specification contains a third part, which is a signed LEB128 number. This
+  // number is used as the value of the attribute with the aformentioned form
+  // and nothing is stored in the .debug_info section.
+
+  // Advance reader to beyond the implicit_const value, to read Forms correctly.
+  if (Form == dwarf::Form::DW_FORM_implicit_const) {
+    auto ImplicitVal = handleImplicitConst(DataStream);
+    if (!ImplicitVal)
+      return ImplicitVal.takeError();
+  }
+  return Form;
 }
 
 uint64_t
@@ -330,6 +358,18 @@ mccasformats::v1::reconstructAbbrevSection(raw_ostream &OS,
         Form = dwarf::Form::DW_FORM_strp;
 
       WrittenSize += encodeULEB128(Form, OS);
+
+      // Dwarf 5: Section 7.4:
+      // The form DW_FORM_implicit_const has to be handled specially. It's
+      // specification contains a third part, which is a signed LEB128 number.
+      // This number is used as the value of the attribute with the
+      // aformentioned form and nothing is stored in the .debug_info section.
+      if (Form == dwarf::Form::DW_FORM_implicit_const) {
+        auto ImplicitVal = handleImplicitConst(Reader);
+        if (!ImplicitVal)
+          handleAllErrors(ImplicitVal.takeError());
+        WrittenSize += encodeSLEB128(*ImplicitVal, OS);
+      }
     }
 
     // Dwarf 5: Section 7.5.3:
