@@ -7367,10 +7367,9 @@ AArch64TargetLowering::LowerCall(CallLoweringInfo &CLI,
     SDValue NumZaSaveSlices;
     if (!CalleeAttrs.preservesZA()) {
       // Set up a lazy save mechanism by storing the runtime live slices
-      // (worst-case SVL*SVL) to the TPIDR2 stack object.
-      SDValue SVL = DAG.getNode(AArch64ISD::RDSVL, DL, MVT::i64,
-                                DAG.getConstant(1, DL, MVT::i32));
-      NumZaSaveSlices = DAG.getNode(ISD::MUL, DL, MVT::i64, SVL, SVL);
+      // (worst-case SVL) to the TPIDR2 stack object.
+      NumZaSaveSlices = DAG.getNode(AArch64ISD::RDSVL, DL, MVT::i64,
+                                    DAG.getConstant(1, DL, MVT::i32));
     } else if (CalleeAttrs.preservesZA()) {
       NumZaSaveSlices = DAG.getConstant(0, DL, MVT::i64);
     }
@@ -11813,7 +11812,7 @@ SDValue AArch64TargetLowering::LowerVECTOR_SHUFFLE(SDValue Op,
 
   if (((VT.getVectorNumElements() == 8 && VT.getScalarSizeInBits() == 16) ||
        (VT.getVectorNumElements() == 16 && VT.getScalarSizeInBits() == 8)) &&
-      ShuffleVectorInst::isReverseMask(ShuffleMask)) {
+      ShuffleVectorInst::isReverseMask(ShuffleMask, ShuffleMask.size())) {
     SDValue Rev = DAG.getNode(AArch64ISD::REV64, dl, VT, V1);
     return DAG.getNode(AArch64ISD::EXT, dl, VT, Rev, Rev,
                        DAG.getConstant(8, dl, MVT::i32));
@@ -25837,7 +25836,8 @@ static SDValue GenerateFixedLengthSVETBL(SDValue Op, SDValue Op1, SDValue Op2,
   SDLoc DL(Op);
   unsigned MinSVESize = Subtarget.getMinSVEVectorSizeInBits();
   unsigned MaxSVESize = Subtarget.getMaxSVEVectorSizeInBits();
-  bool IsSingleOp = ShuffleVectorInst::isSingleSourceMask(ShuffleMask);
+  bool IsSingleOp =
+      ShuffleVectorInst::isSingleSourceMask(ShuffleMask, ShuffleMask.size());
 
   // Ignore two operands if no SVE2 or all index numbers couldn't
   // be represented.
@@ -26021,7 +26021,8 @@ SDValue AArch64TargetLowering::LowerFixedLengthVECTOR_SHUFFLEToSVE(
   unsigned MinSVESize = Subtarget->getMinSVEVectorSizeInBits();
   unsigned MaxSVESize = Subtarget->getMaxSVEVectorSizeInBits();
   if (MinSVESize == MaxSVESize && MaxSVESize == VT.getSizeInBits()) {
-    if (ShuffleVectorInst::isReverseMask(ShuffleMask) && Op2.isUndef()) {
+    if (ShuffleVectorInst::isReverseMask(ShuffleMask, ShuffleMask.size()) &&
+        Op2.isUndef()) {
       Op = DAG.getNode(ISD::VECTOR_REVERSE, DL, ContainerVT, Op1);
       return convertFromScalableVector(DAG, VT, Op);
     }

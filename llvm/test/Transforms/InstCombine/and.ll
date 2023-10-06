@@ -2552,15 +2552,17 @@ define i32 @canonicalize_and_add_power2_or_zero(i32 %x, i32 %y) {
 ; CHECK-NEXT:    [[NY:%.*]] = sub i32 0, [[Y:%.*]]
 ; CHECK-NEXT:    [[P2:%.*]] = and i32 [[NY]], [[Y]]
 ; CHECK-NEXT:    call void @use32(i32 [[P2]])
-; CHECK-NEXT:    [[TMP1:%.*]] = xor i32 [[X:%.*]], -1
+; CHECK-NEXT:    [[X2:%.*]] = mul i32 [[X:%.*]], [[X]]
+; CHECK-NEXT:    [[TMP1:%.*]] = xor i32 [[X2]], -1
 ; CHECK-NEXT:    [[AND:%.*]] = and i32 [[P2]], [[TMP1]]
 ; CHECK-NEXT:    ret i32 [[AND]]
 ;
   %ny = sub i32 0, %y
-  %p2 = and i32 %y, %ny
+  %p2 = and i32 %ny, %y
   call void @use32(i32 %p2) ; keep p2
 
-  %val = add i32 %x, %p2
+  %x2 = mul i32 %x, %x ; thwart complexity-based canonicalization
+  %val = add i32 %x2, %p2
   %and = and i32 %val, %p2
   ret i32 %and
 }
@@ -2575,7 +2577,7 @@ define i32 @canonicalize_and_sub_power2_or_zero(i32 %x, i32 %y) {
 ; CHECK-NEXT:    ret i32 [[AND]]
 ;
   %ny = sub i32 0, %y
-  %p2 = and i32 %y, %ny
+  %p2 = and i32 %ny, %y
   call void @use32(i32 %p2) ; keep p2
 
   %val = sub i32 %x, %p2
@@ -2593,7 +2595,7 @@ define i32 @canonicalize_and_add_power2_or_zero_commuted1(i32 %x, i32 %y) {
 ; CHECK-NEXT:    ret i32 [[AND]]
 ;
   %ny = sub i32 0, %y
-  %p2 = and i32 %y, %ny
+  %p2 = and i32 %ny, %y
   call void @use32(i32 %p2) ; keep p2
 
   %val = add i32 %p2, %x
@@ -2606,15 +2608,17 @@ define i32 @canonicalize_and_add_power2_or_zero_commuted2(i32 %x, i32 %y) {
 ; CHECK-NEXT:    [[NY:%.*]] = sub i32 0, [[Y:%.*]]
 ; CHECK-NEXT:    [[P2:%.*]] = and i32 [[NY]], [[Y]]
 ; CHECK-NEXT:    call void @use32(i32 [[P2]])
-; CHECK-NEXT:    [[TMP1:%.*]] = xor i32 [[X:%.*]], -1
+; CHECK-NEXT:    [[X2:%.*]] = mul i32 [[X:%.*]], [[X]]
+; CHECK-NEXT:    [[TMP1:%.*]] = xor i32 [[X2]], -1
 ; CHECK-NEXT:    [[AND:%.*]] = and i32 [[P2]], [[TMP1]]
 ; CHECK-NEXT:    ret i32 [[AND]]
 ;
   %ny = sub i32 0, %y
-  %p2 = and i32 %y, %ny
+  %p2 = and i32 %ny, %y
   call void @use32(i32 %p2) ; keep p2
 
-  %val = add i32 %x, %p2
+  %x2 = mul i32 %x, %x ; thwart complexity-based canonicalization
+  %val = add i32 %x2, %p2
   %and = and i32 %p2, %val
   ret i32 %and
 }
@@ -2629,7 +2633,7 @@ define i32 @canonicalize_and_add_power2_or_zero_commuted3(i32 %x, i32 %y) {
 ; CHECK-NEXT:    ret i32 [[AND]]
 ;
   %ny = sub i32 0, %y
-  %p2 = and i32 %y, %ny
+  %p2 = and i32 %ny, %y
   call void @use32(i32 %p2) ; keep p2
 
   %val = add i32 %p2, %x
@@ -2647,7 +2651,7 @@ define i32 @canonicalize_and_sub_power2_or_zero_commuted_nofold(i32 %x, i32 %y) 
 ; CHECK-NEXT:    ret i32 [[AND]]
 ;
   %ny = sub i32 0, %y
-  %p2 = and i32 %y, %ny
+  %p2 = and i32 %ny, %y
   call void @use32(i32 %p2) ; keep p2
 
   %val = sub i32 %p2, %x
@@ -2671,16 +2675,18 @@ define i32 @canonicalize_and_add_power2_or_zero_multiuse_nofold(i32 %x, i32 %y) 
 ; CHECK-NEXT:    [[NY:%.*]] = sub i32 0, [[Y:%.*]]
 ; CHECK-NEXT:    [[P2:%.*]] = and i32 [[NY]], [[Y]]
 ; CHECK-NEXT:    call void @use32(i32 [[P2]])
-; CHECK-NEXT:    [[VAL:%.*]] = add i32 [[P2]], [[X:%.*]]
+; CHECK-NEXT:    [[X2:%.*]] = mul i32 [[X:%.*]], [[X]]
+; CHECK-NEXT:    [[VAL:%.*]] = add i32 [[X2]], [[P2]]
 ; CHECK-NEXT:    call void @use32(i32 [[VAL]])
 ; CHECK-NEXT:    [[AND:%.*]] = and i32 [[VAL]], [[P2]]
 ; CHECK-NEXT:    ret i32 [[AND]]
 ;
   %ny = sub i32 0, %y
-  %p2 = and i32 %y, %ny
+  %p2 = and i32 %ny, %y
   call void @use32(i32 %p2) ; keep p2
 
-  %val = add i32 %x, %p2
+  %x2 = mul i32 %x, %x ; thwart complexity-based canonicalization
+  %val = add i32 %x2, %p2
   call void @use32(i32 %val)
   %and = and i32 %val, %p2
   ret i32 %and
@@ -2697,7 +2703,7 @@ define i32 @canonicalize_and_sub_power2_or_zero_multiuse_nofold(i32 %x, i32 %y) 
 ; CHECK-NEXT:    ret i32 [[AND]]
 ;
   %ny = sub i32 0, %y
-  %p2 = and i32 %y, %ny
+  %p2 = and i32 %ny, %y
   call void @use32(i32 %p2) ; keep p2
 
   %val = sub i32 %x, %p2

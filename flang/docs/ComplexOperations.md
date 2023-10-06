@@ -1,8 +1,9 @@
 # Complex Operations
 
-```{eval-rst}
-.. toctree::
-   :local:
+```{contents}
+---
+local:
+---
 ```
 
 Fortran includes support for complex number types and a set of operators and
@@ -66,7 +67,7 @@ libm functions.
 
 Similarly to the numerical lowering through the math dialect, certain MLIR
 optimisations could violate the precise floating point model, so when that is
-requested lowering manually emits calls to libm, rather than going through the 
+requested lowering manually emits calls to libm, rather than going through the
 MLIR complex dialect.
 
 The ComplexToStandard dialect does still call into libm for some floating

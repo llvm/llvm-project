@@ -27,7 +27,7 @@ define { float, i32 } @ret_frexp_f32_nonan(float nofpclass(nan) %arg0) {
 
 define float @ret_frexp_f32_0_nonan(float nofpclass(nan) %arg0) {
 ; CHECK-LABEL: define nofpclass(nan sub) float @ret_frexp_f32_0_nonan
-; CHECK-SAME: (float nofpclass(nan) [[ARG0:%.*]]) #[[ATTR1]] {
+; CHECK-SAME: (float nofpclass(nan sub) [[ARG0:%.*]]) #[[ATTR1]] {
 ; CHECK-NEXT:    [[CALL:%.*]] = call { float, i32 } @llvm.frexp.f32.i32(float [[ARG0]]) #[[ATTR7]]
 ; CHECK-NEXT:    [[CALL_0:%.*]] = extractvalue { float, i32 } [[CALL]], 0
 ; CHECK-NEXT:    ret float [[CALL_0]]
@@ -39,7 +39,7 @@ define float @ret_frexp_f32_0_nonan(float nofpclass(nan) %arg0) {
 
 define float @ret_frexp_f32_0_nosnan(float nofpclass(snan) %arg0) {
 ; CHECK-LABEL: define nofpclass(snan sub) float @ret_frexp_f32_0_nosnan
-; CHECK-SAME: (float nofpclass(snan) [[ARG0:%.*]]) #[[ATTR1]] {
+; CHECK-SAME: (float nofpclass(snan sub) [[ARG0:%.*]]) #[[ATTR1]] {
 ; CHECK-NEXT:    [[CALL:%.*]] = call { float, i32 } @llvm.frexp.f32.i32(float [[ARG0]]) #[[ATTR7]]
 ; CHECK-NEXT:    [[CALL_0:%.*]] = extractvalue { float, i32 } [[CALL]], 0
 ; CHECK-NEXT:    ret float [[CALL_0]]
@@ -51,7 +51,7 @@ define float @ret_frexp_f32_0_nosnan(float nofpclass(snan) %arg0) {
 
 define float @ret_frexp_f32_0_noqnan(float nofpclass(qnan) %arg0) {
 ; CHECK-LABEL: define nofpclass(sub) float @ret_frexp_f32_0_noqnan
-; CHECK-SAME: (float nofpclass(qnan) [[ARG0:%.*]]) #[[ATTR1]] {
+; CHECK-SAME: (float nofpclass(qnan sub) [[ARG0:%.*]]) #[[ATTR1]] {
 ; CHECK-NEXT:    [[CALL:%.*]] = call { float, i32 } @llvm.frexp.f32.i32(float [[ARG0]]) #[[ATTR7]]
 ; CHECK-NEXT:    [[CALL_0:%.*]] = extractvalue { float, i32 } [[CALL]], 0
 ; CHECK-NEXT:    ret float [[CALL_0]]
@@ -75,7 +75,7 @@ define i32 @ret_frexp_f32_1_nonan(float nofpclass(nan) %arg0) {
 
 define <2 x float> @ret_frexp_v2f32_0_nonan(<2 x float> nofpclass(nan) %arg0) {
 ; CHECK-LABEL: define nofpclass(nan sub) <2 x float> @ret_frexp_v2f32_0_nonan
-; CHECK-SAME: (<2 x float> nofpclass(nan) [[ARG0:%.*]]) #[[ATTR1]] {
+; CHECK-SAME: (<2 x float> nofpclass(nan sub) [[ARG0:%.*]]) #[[ATTR1]] {
 ; CHECK-NEXT:    [[CALL:%.*]] = call { <2 x float>, <2 x i32> } @llvm.frexp.v2f32.v2i32(<2 x float> [[ARG0]]) #[[ATTR7]]
 ; CHECK-NEXT:    [[CALL_0:%.*]] = extractvalue { <2 x float>, <2 x i32> } [[CALL]], 0
 ; CHECK-NEXT:    ret <2 x float> [[CALL_0]]
@@ -99,7 +99,7 @@ define <2 x i32> @ret_frexp_v2f32_1_nonan(<2 x float> nofpclass(nan) %arg0) {
 
 define float @ret_frexp_v4f32_0_nonan_elt1(<4 x float> nofpclass(nan) %arg0) {
 ; CHECK-LABEL: define nofpclass(nan sub) float @ret_frexp_v4f32_0_nonan_elt1
-; CHECK-SAME: (<4 x float> nofpclass(nan) [[ARG0:%.*]]) #[[ATTR1]] {
+; CHECK-SAME: (<4 x float> nofpclass(nan sub) [[ARG0:%.*]]) #[[ATTR1]] {
 ; CHECK-NEXT:    [[CALL:%.*]] = call { <4 x float>, <4 x i32> } @llvm.frexp.v4f32.v4i32(<4 x float> [[ARG0]]) #[[ATTR7]]
 ; CHECK-NEXT:    [[CALL_0:%.*]] = extractvalue { <4 x float>, <4 x i32> } [[CALL]], 0
 ; CHECK-NEXT:    [[ELT_2:%.*]] = extractelement <4 x float> [[CALL_0]], i32 2
@@ -113,7 +113,7 @@ define float @ret_frexp_v4f32_0_nonan_elt1(<4 x float> nofpclass(nan) %arg0) {
 
 define float @ret_frexp_f32_0_nopos_nopzero(float nofpclass(pinf psub pnorm pzero) %arg0) {
 ; CHECK-LABEL: define nofpclass(pinf pzero sub pnorm) float @ret_frexp_f32_0_nopos_nopzero
-; CHECK-SAME: (float nofpclass(pinf pzero psub pnorm) [[ARG0:%.*]]) #[[ATTR1]] {
+; CHECK-SAME: (float nofpclass(pinf pzero sub pnorm) [[ARG0:%.*]]) #[[ATTR1]] {
 ; CHECK-NEXT:    [[CALL:%.*]] = call { float, i32 } @llvm.frexp.f32.i32(float [[ARG0]]) #[[ATTR7]]
 ; CHECK-NEXT:    [[CALL_0:%.*]] = extractvalue { float, i32 } [[CALL]], 0
 ; CHECK-NEXT:    ret float [[CALL_0]]
@@ -125,7 +125,7 @@ define float @ret_frexp_f32_0_nopos_nopzero(float nofpclass(pinf psub pnorm pzer
 
 define float @ret_frexp_f32_0_nopos_nopzero_nonan(float nofpclass(pinf psub pnorm pzero nan) %arg0) {
 ; CHECK-LABEL: define nofpclass(nan pinf pzero sub pnorm) float @ret_frexp_f32_0_nopos_nopzero_nonan
-; CHECK-SAME: (float nofpclass(nan pinf pzero psub pnorm) [[ARG0:%.*]]) #[[ATTR1]] {
+; CHECK-SAME: (float nofpclass(nan pinf pzero sub pnorm) [[ARG0:%.*]]) #[[ATTR1]] {
 ; CHECK-NEXT:    [[CALL:%.*]] = call { float, i32 } @llvm.frexp.f32.i32(float [[ARG0]]) #[[ATTR7]]
 ; CHECK-NEXT:    [[CALL_0:%.*]] = extractvalue { float, i32 } [[CALL]], 0
 ; CHECK-NEXT:    ret float [[CALL_0]]
@@ -137,7 +137,7 @@ define float @ret_frexp_f32_0_nopos_nopzero_nonan(float nofpclass(pinf psub pnor
 
 define float @ret_frexp_f32_0_nopos(float nofpclass(pinf psub pnorm) %arg0) {
 ; CHECK-LABEL: define nofpclass(pinf sub) float @ret_frexp_f32_0_nopos
-; CHECK-SAME: (float nofpclass(pinf psub pnorm) [[ARG0:%.*]]) #[[ATTR1]] {
+; CHECK-SAME: (float nofpclass(pinf sub pnorm) [[ARG0:%.*]]) #[[ATTR1]] {
 ; CHECK-NEXT:    [[CALL:%.*]] = call { float, i32 } @llvm.frexp.f32.i32(float [[ARG0]]) #[[ATTR7]]
 ; CHECK-NEXT:    [[CALL_0:%.*]] = extractvalue { float, i32 } [[CALL]], 0
 ; CHECK-NEXT:    ret float [[CALL_0]]
@@ -149,7 +149,7 @@ define float @ret_frexp_f32_0_nopos(float nofpclass(pinf psub pnorm) %arg0) {
 
 define float @ret_frexp_f32_0_nopos_nonan(float nofpclass(pinf psub pnorm nan) %arg0) {
 ; CHECK-LABEL: define nofpclass(nan pinf sub) float @ret_frexp_f32_0_nopos_nonan
-; CHECK-SAME: (float nofpclass(nan pinf psub pnorm) [[ARG0:%.*]]) #[[ATTR1]] {
+; CHECK-SAME: (float nofpclass(nan pinf sub pnorm) [[ARG0:%.*]]) #[[ATTR1]] {
 ; CHECK-NEXT:    [[CALL:%.*]] = call { float, i32 } @llvm.frexp.f32.i32(float [[ARG0]]) #[[ATTR7]]
 ; CHECK-NEXT:    [[CALL_0:%.*]] = extractvalue { float, i32 } [[CALL]], 0
 ; CHECK-NEXT:    ret float [[CALL_0]]
@@ -161,7 +161,7 @@ define float @ret_frexp_f32_0_nopos_nonan(float nofpclass(pinf psub pnorm nan) %
 
 define float @ret_frexp_f32_0_nopos_nozero(float nofpclass(pinf psub pnorm zero) %arg0) {
 ; CHECK-LABEL: define nofpclass(pinf zero sub pnorm) float @ret_frexp_f32_0_nopos_nozero
-; CHECK-SAME: (float nofpclass(pinf zero psub pnorm) [[ARG0:%.*]]) #[[ATTR1]] {
+; CHECK-SAME: (float nofpclass(pinf zero sub pnorm) [[ARG0:%.*]]) #[[ATTR1]] {
 ; CHECK-NEXT:    [[CALL:%.*]] = call { float, i32 } @llvm.frexp.f32.i32(float [[ARG0]]) #[[ATTR7]]
 ; CHECK-NEXT:    [[CALL_0:%.*]] = extractvalue { float, i32 } [[CALL]], 0
 ; CHECK-NEXT:    ret float [[CALL_0]]
@@ -173,7 +173,7 @@ define float @ret_frexp_f32_0_nopos_nozero(float nofpclass(pinf psub pnorm zero)
 
 define float @ret_frexp_f32_0_noneg_nonzero(float nofpclass(ninf nsub nnorm nzero) %arg0) {
 ; CHECK-LABEL: define nofpclass(ninf nzero sub nnorm) float @ret_frexp_f32_0_noneg_nonzero
-; CHECK-SAME: (float nofpclass(ninf nzero nsub nnorm) [[ARG0:%.*]]) #[[ATTR1]] {
+; CHECK-SAME: (float nofpclass(ninf nzero sub nnorm) [[ARG0:%.*]]) #[[ATTR1]] {
 ; CHECK-NEXT:    [[CALL:%.*]] = call { float, i32 } @llvm.frexp.f32.i32(float [[ARG0]]) #[[ATTR7]]
 ; CHECK-NEXT:    [[CALL_0:%.*]] = extractvalue { float, i32 } [[CALL]], 0
 ; CHECK-NEXT:    ret float [[CALL_0]]
@@ -185,7 +185,7 @@ define float @ret_frexp_f32_0_noneg_nonzero(float nofpclass(ninf nsub nnorm nzer
 
 define float @ret_frexp_f32_0_noneg_nonzero_nonan(float nofpclass(ninf nsub nnorm nzero nan) %arg0) {
 ; CHECK-LABEL: define nofpclass(nan ninf nzero sub nnorm) float @ret_frexp_f32_0_noneg_nonzero_nonan
-; CHECK-SAME: (float nofpclass(nan ninf nzero nsub nnorm) [[ARG0:%.*]]) #[[ATTR1]] {
+; CHECK-SAME: (float nofpclass(nan ninf nzero sub nnorm) [[ARG0:%.*]]) #[[ATTR1]] {
 ; CHECK-NEXT:    [[CALL:%.*]] = call { float, i32 } @llvm.frexp.f32.i32(float [[ARG0]]) #[[ATTR7]]
 ; CHECK-NEXT:    [[CALL_0:%.*]] = extractvalue { float, i32 } [[CALL]], 0
 ; CHECK-NEXT:    ret float [[CALL_0]]
@@ -197,7 +197,7 @@ define float @ret_frexp_f32_0_noneg_nonzero_nonan(float nofpclass(ninf nsub nnor
 
 define float @ret_frexp_f32_0_noneg(float nofpclass(ninf nsub nnorm) %arg0) {
 ; CHECK-LABEL: define nofpclass(ninf sub) float @ret_frexp_f32_0_noneg
-; CHECK-SAME: (float nofpclass(ninf nsub nnorm) [[ARG0:%.*]]) #[[ATTR1]] {
+; CHECK-SAME: (float nofpclass(ninf sub nnorm) [[ARG0:%.*]]) #[[ATTR1]] {
 ; CHECK-NEXT:    [[CALL:%.*]] = call { float, i32 } @llvm.frexp.f32.i32(float [[ARG0]]) #[[ATTR7]]
 ; CHECK-NEXT:    [[CALL_0:%.*]] = extractvalue { float, i32 } [[CALL]], 0
 ; CHECK-NEXT:    ret float [[CALL_0]]
@@ -209,7 +209,7 @@ define float @ret_frexp_f32_0_noneg(float nofpclass(ninf nsub nnorm) %arg0) {
 
 define float @ret_frexp_f32_0_noneg_nonan(float nofpclass(ninf nsub nnorm nan) %arg0) {
 ; CHECK-LABEL: define nofpclass(nan ninf sub) float @ret_frexp_f32_0_noneg_nonan
-; CHECK-SAME: (float nofpclass(nan ninf nsub nnorm) [[ARG0:%.*]]) #[[ATTR1]] {
+; CHECK-SAME: (float nofpclass(nan ninf sub nnorm) [[ARG0:%.*]]) #[[ATTR1]] {
 ; CHECK-NEXT:    [[CALL:%.*]] = call { float, i32 } @llvm.frexp.f32.i32(float [[ARG0]]) #[[ATTR7]]
 ; CHECK-NEXT:    [[CALL_0:%.*]] = extractvalue { float, i32 } [[CALL]], 0
 ; CHECK-NEXT:    ret float [[CALL_0]]
@@ -221,7 +221,7 @@ define float @ret_frexp_f32_0_noneg_nonan(float nofpclass(ninf nsub nnorm nan) %
 
 define float @ret_frexp_f32_0_noneg_nozero(float nofpclass(ninf nsub nnorm nzero) %arg0) {
 ; CHECK-LABEL: define nofpclass(ninf nzero sub nnorm) float @ret_frexp_f32_0_noneg_nozero
-; CHECK-SAME: (float nofpclass(ninf nzero nsub nnorm) [[ARG0:%.*]]) #[[ATTR1]] {
+; CHECK-SAME: (float nofpclass(ninf nzero sub nnorm) [[ARG0:%.*]]) #[[ATTR1]] {
 ; CHECK-NEXT:    [[CALL:%.*]] = call { float, i32 } @llvm.frexp.f32.i32(float [[ARG0]]) #[[ATTR7]]
 ; CHECK-NEXT:    [[CALL_0:%.*]] = extractvalue { float, i32 } [[CALL]], 0
 ; CHECK-NEXT:    ret float [[CALL_0]]
@@ -233,7 +233,7 @@ define float @ret_frexp_f32_0_noneg_nozero(float nofpclass(ninf nsub nnorm nzero
 
 define float @ret_frexp_f32_0_nopzero(float nofpclass(pzero) %arg0) {
 ; CHECK-LABEL: define nofpclass(pzero sub) float @ret_frexp_f32_0_nopzero
-; CHECK-SAME: (float nofpclass(pzero) [[ARG0:%.*]]) #[[ATTR1]] {
+; CHECK-SAME: (float nofpclass(pzero sub) [[ARG0:%.*]]) #[[ATTR1]] {
 ; CHECK-NEXT:    [[CALL:%.*]] = call { float, i32 } @llvm.frexp.f32.i32(float [[ARG0]]) #[[ATTR7]]
 ; CHECK-NEXT:    [[CALL_0:%.*]] = extractvalue { float, i32 } [[CALL]], 0
 ; CHECK-NEXT:    ret float [[CALL_0]]
@@ -245,7 +245,7 @@ define float @ret_frexp_f32_0_nopzero(float nofpclass(pzero) %arg0) {
 
 define float @ret_frexp_f32_0_nonzero(float nofpclass(nzero) %arg0) {
 ; CHECK-LABEL: define nofpclass(nzero sub) float @ret_frexp_f32_0_nonzero
-; CHECK-SAME: (float nofpclass(nzero) [[ARG0:%.*]]) #[[ATTR1]] {
+; CHECK-SAME: (float nofpclass(nzero sub) [[ARG0:%.*]]) #[[ATTR1]] {
 ; CHECK-NEXT:    [[CALL:%.*]] = call { float, i32 } @llvm.frexp.f32.i32(float [[ARG0]]) #[[ATTR7]]
 ; CHECK-NEXT:    [[CALL_0:%.*]] = extractvalue { float, i32 } [[CALL]], 0
 ; CHECK-NEXT:    ret float [[CALL_0]]
@@ -257,7 +257,7 @@ define float @ret_frexp_f32_0_nonzero(float nofpclass(nzero) %arg0) {
 
 define float @ret_frexp_f32_0_nozero(float nofpclass(zero) %arg0) {
 ; CHECK-LABEL: define nofpclass(zero sub) float @ret_frexp_f32_0_nozero
-; CHECK-SAME: (float nofpclass(zero) [[ARG0:%.*]]) #[[ATTR1]] {
+; CHECK-SAME: (float nofpclass(zero sub) [[ARG0:%.*]]) #[[ATTR1]] {
 ; CHECK-NEXT:    [[CALL:%.*]] = call { float, i32 } @llvm.frexp.f32.i32(float [[ARG0]]) #[[ATTR7]]
 ; CHECK-NEXT:    [[CALL_0:%.*]] = extractvalue { float, i32 } [[CALL]], 0
 ; CHECK-NEXT:    ret float [[CALL_0]]
@@ -269,7 +269,7 @@ define float @ret_frexp_f32_0_nozero(float nofpclass(zero) %arg0) {
 
 define float @ret_frexp_f32_0_nopinf(float nofpclass(pinf) %arg0) {
 ; CHECK-LABEL: define nofpclass(pinf sub) float @ret_frexp_f32_0_nopinf
-; CHECK-SAME: (float nofpclass(pinf) [[ARG0:%.*]]) #[[ATTR1]] {
+; CHECK-SAME: (float nofpclass(pinf sub) [[ARG0:%.*]]) #[[ATTR1]] {
 ; CHECK-NEXT:    [[CALL:%.*]] = call { float, i32 } @llvm.frexp.f32.i32(float [[ARG0]]) #[[ATTR7]]
 ; CHECK-NEXT:    [[CALL_0:%.*]] = extractvalue { float, i32 } [[CALL]], 0
 ; CHECK-NEXT:    ret float [[CALL_0]]
@@ -281,7 +281,7 @@ define float @ret_frexp_f32_0_nopinf(float nofpclass(pinf) %arg0) {
 
 define float @ret_frexp_f32_0_noninf(float nofpclass(ninf) %arg0) {
 ; CHECK-LABEL: define nofpclass(ninf sub) float @ret_frexp_f32_0_noninf
-; CHECK-SAME: (float nofpclass(ninf) [[ARG0:%.*]]) #[[ATTR1]] {
+; CHECK-SAME: (float nofpclass(ninf sub) [[ARG0:%.*]]) #[[ATTR1]] {
 ; CHECK-NEXT:    [[CALL:%.*]] = call { float, i32 } @llvm.frexp.f32.i32(float [[ARG0]]) #[[ATTR7]]
 ; CHECK-NEXT:    [[CALL_0:%.*]] = extractvalue { float, i32 } [[CALL]], 0
 ; CHECK-NEXT:    ret float [[CALL_0]]
@@ -293,7 +293,7 @@ define float @ret_frexp_f32_0_noninf(float nofpclass(ninf) %arg0) {
 
 define float @ret_frexp_f32_0_noinf(float nofpclass(inf) %arg0) {
 ; CHECK-LABEL: define nofpclass(inf sub) float @ret_frexp_f32_0_noinf
-; CHECK-SAME: (float nofpclass(inf) [[ARG0:%.*]]) #[[ATTR1]] {
+; CHECK-SAME: (float nofpclass(inf sub) [[ARG0:%.*]]) #[[ATTR1]] {
 ; CHECK-NEXT:    [[CALL:%.*]] = call { float, i32 } @llvm.frexp.f32.i32(float [[ARG0]]) #[[ATTR7]]
 ; CHECK-NEXT:    [[CALL_0:%.*]] = extractvalue { float, i32 } [[CALL]], 0
 ; CHECK-NEXT:    ret float [[CALL_0]]
@@ -305,7 +305,7 @@ define float @ret_frexp_f32_0_noinf(float nofpclass(inf) %arg0) {
 
 define float @ret_frexp_f32_0_nozero_nonan(float nofpclass(zero nan) %arg0) {
 ; CHECK-LABEL: define nofpclass(nan zero sub) float @ret_frexp_f32_0_nozero_nonan
-; CHECK-SAME: (float nofpclass(nan zero) [[ARG0:%.*]]) #[[ATTR1]] {
+; CHECK-SAME: (float nofpclass(nan zero sub) [[ARG0:%.*]]) #[[ATTR1]] {
 ; CHECK-NEXT:    [[CALL:%.*]] = call { float, i32 } @llvm.frexp.f32.i32(float [[ARG0]]) #[[ATTR7]]
 ; CHECK-NEXT:    [[CALL_0:%.*]] = extractvalue { float, i32 } [[CALL]], 0
 ; CHECK-NEXT:    ret float [[CALL_0]]
@@ -317,7 +317,7 @@ define float @ret_frexp_f32_0_nozero_nonan(float nofpclass(zero nan) %arg0) {
 
 define float @ret_frexp_f32_0_nozero_noinf(float nofpclass(zero inf) %arg0) {
 ; CHECK-LABEL: define nofpclass(inf zero sub) float @ret_frexp_f32_0_nozero_noinf
-; CHECK-SAME: (float nofpclass(inf zero) [[ARG0:%.*]]) #[[ATTR1]] {
+; CHECK-SAME: (float nofpclass(inf zero sub) [[ARG0:%.*]]) #[[ATTR1]] {
 ; CHECK-NEXT:    [[CALL:%.*]] = call { float, i32 } @llvm.frexp.f32.i32(float [[ARG0]]) #[[ATTR7]]
 ; CHECK-NEXT:    [[CALL_0:%.*]] = extractvalue { float, i32 } [[CALL]], 0
 ; CHECK-NEXT:    ret float [[CALL_0]]
@@ -329,7 +329,7 @@ define float @ret_frexp_f32_0_nozero_noinf(float nofpclass(zero inf) %arg0) {
 
 define float @ret_frexp_f32_0_nozero_nonan_noinf(float nofpclass(zero nan inf) %arg0) {
 ; CHECK-LABEL: define nofpclass(nan inf zero sub) float @ret_frexp_f32_0_nozero_nonan_noinf
-; CHECK-SAME: (float nofpclass(nan inf zero) [[ARG0:%.*]]) #[[ATTR1]] {
+; CHECK-SAME: (float nofpclass(nan inf zero sub) [[ARG0:%.*]]) #[[ATTR1]] {
 ; CHECK-NEXT:    [[CALL:%.*]] = call { float, i32 } @llvm.frexp.f32.i32(float [[ARG0]]) #[[ATTR7]]
 ; CHECK-NEXT:    [[CALL_0:%.*]] = extractvalue { float, i32 } [[CALL]], 0
 ; CHECK-NEXT:    ret float [[CALL_0]]
@@ -341,7 +341,7 @@ define float @ret_frexp_f32_0_nozero_nonan_noinf(float nofpclass(zero nan inf) %
 
 define float @ret_frexp_f32_0_nonzero_ftz_daz(float nofpclass(nzero) %arg0) #1 {
 ; CHECK-LABEL: define nofpclass(sub) float @ret_frexp_f32_0_nonzero_ftz_daz
-; CHECK-SAME: (float nofpclass(nzero) [[ARG0:%.*]]) #[[ATTR2:[0-9]+]] {
+; CHECK-SAME: (float nofpclass(nzero sub) [[ARG0:%.*]]) #[[ATTR2:[0-9]+]] {
 ; CHECK-NEXT:    [[CALL:%.*]] = call { float, i32 } @llvm.frexp.f32.i32(float [[ARG0]]) #[[ATTR7]]
 ; CHECK-NEXT:    [[CALL_0:%.*]] = extractvalue { float, i32 } [[CALL]], 0
 ; CHECK-NEXT:    ret float [[CALL_0]]
@@ -353,7 +353,7 @@ define float @ret_frexp_f32_0_nonzero_ftz_daz(float nofpclass(nzero) %arg0) #1 {
 
 define float @ret_frexp_f32_0_nonzero_ftpz_dapz(float nofpclass(nzero) %arg0) #2 {
 ; CHECK-LABEL: define nofpclass(nzero sub) float @ret_frexp_f32_0_nonzero_ftpz_dapz
-; CHECK-SAME: (float nofpclass(nzero) [[ARG0:%.*]]) #[[ATTR3:[0-9]+]] {
+; CHECK-SAME: (float nofpclass(nzero sub) [[ARG0:%.*]]) #[[ATTR3:[0-9]+]] {
 ; CHECK-NEXT:    [[CALL:%.*]] = call { float, i32 } @llvm.frexp.f32.i32(float [[ARG0]]) #[[ATTR7]]
 ; CHECK-NEXT:    [[CALL_0:%.*]] = extractvalue { float, i32 } [[CALL]], 0
 ; CHECK-NEXT:    ret float [[CALL_0]]
@@ -365,7 +365,7 @@ define float @ret_frexp_f32_0_nonzero_ftpz_dapz(float nofpclass(nzero) %arg0) #2
 
 define float @ret_frexp_f32_0_nonzero_dynamic_dynamic(float nofpclass(nzero) %arg0) #3 {
 ; CHECK-LABEL: define nofpclass(sub) float @ret_frexp_f32_0_nonzero_dynamic_dynamic
-; CHECK-SAME: (float nofpclass(nzero) [[ARG0:%.*]]) #[[ATTR4:[0-9]+]] {
+; CHECK-SAME: (float nofpclass(nzero sub) [[ARG0:%.*]]) #[[ATTR4:[0-9]+]] {
 ; CHECK-NEXT:    [[CALL:%.*]] = call { float, i32 } @llvm.frexp.f32.i32(float [[ARG0]]) #[[ATTR7]]
 ; CHECK-NEXT:    [[CALL_0:%.*]] = extractvalue { float, i32 } [[CALL]], 0
 ; CHECK-NEXT:    ret float [[CALL_0]]
@@ -377,7 +377,7 @@ define float @ret_frexp_f32_0_nonzero_dynamic_dynamic(float nofpclass(nzero) %ar
 
 define float @ret_frexp_f32_0_nonzero_ieee_daz(float nofpclass(nzero) %arg0) #4 {
 ; CHECK-LABEL: define nofpclass(sub) float @ret_frexp_f32_0_nonzero_ieee_daz
-; CHECK-SAME: (float nofpclass(nzero) [[ARG0:%.*]]) #[[ATTR5:[0-9]+]] {
+; CHECK-SAME: (float nofpclass(nzero sub) [[ARG0:%.*]]) #[[ATTR5:[0-9]+]] {
 ; CHECK-NEXT:    [[CALL:%.*]] = call { float, i32 } @llvm.frexp.f32.i32(float [[ARG0]]) #[[ATTR7]]
 ; CHECK-NEXT:    [[CALL_0:%.*]] = extractvalue { float, i32 } [[CALL]], 0
 ; CHECK-NEXT:    ret float [[CALL_0]]
@@ -389,7 +389,7 @@ define float @ret_frexp_f32_0_nonzero_ieee_daz(float nofpclass(nzero) %arg0) #4 
 
 define float @ret_frexp_f32_0_nonzero_daz_ieee(float nofpclass(nzero) %arg0) #5 {
 ; CHECK-LABEL: define nofpclass(nzero sub) float @ret_frexp_f32_0_nonzero_daz_ieee
-; CHECK-SAME: (float nofpclass(nzero) [[ARG0:%.*]]) #[[ATTR6:[0-9]+]] {
+; CHECK-SAME: (float nofpclass(nzero sub) [[ARG0:%.*]]) #[[ATTR6:[0-9]+]] {
 ; CHECK-NEXT:    [[CALL:%.*]] = call { float, i32 } @llvm.frexp.f32.i32(float [[ARG0]]) #[[ATTR7]]
 ; CHECK-NEXT:    [[CALL_0:%.*]] = extractvalue { float, i32 } [[CALL]], 0
 ; CHECK-NEXT:    ret float [[CALL_0]]
@@ -401,7 +401,7 @@ define float @ret_frexp_f32_0_nonzero_daz_ieee(float nofpclass(nzero) %arg0) #5 
 
 define float @ret_frexp_f32_0_nopzero_ftz_daz(float nofpclass(pzero) %arg0) #1 {
 ; CHECK-LABEL: define nofpclass(sub) float @ret_frexp_f32_0_nopzero_ftz_daz
-; CHECK-SAME: (float nofpclass(pzero) [[ARG0:%.*]]) #[[ATTR2]] {
+; CHECK-SAME: (float nofpclass(pzero sub) [[ARG0:%.*]]) #[[ATTR2]] {
 ; CHECK-NEXT:    [[CALL:%.*]] = call { float, i32 } @llvm.frexp.f32.i32(float [[ARG0]]) #[[ATTR7]]
 ; CHECK-NEXT:    [[CALL_0:%.*]] = extractvalue { float, i32 } [[CALL]], 0
 ; CHECK-NEXT:    ret float [[CALL_0]]
@@ -413,7 +413,7 @@ define float @ret_frexp_f32_0_nopzero_ftz_daz(float nofpclass(pzero) %arg0) #1 {
 
 define float @ret_frexp_f32_0_nopzero_ftpz_dapz(float nofpclass(pzero) %arg0) #2 {
 ; CHECK-LABEL: define nofpclass(sub) float @ret_frexp_f32_0_nopzero_ftpz_dapz
-; CHECK-SAME: (float nofpclass(pzero) [[ARG0:%.*]]) #[[ATTR3]] {
+; CHECK-SAME: (float nofpclass(pzero sub) [[ARG0:%.*]]) #[[ATTR3]] {
 ; CHECK-NEXT:    [[CALL:%.*]] = call { float, i32 } @llvm.frexp.f32.i32(float [[ARG0]]) #[[ATTR7]]
 ; CHECK-NEXT:    [[CALL_0:%.*]] = extractvalue { float, i32 } [[CALL]], 0
 ; CHECK-NEXT:    ret float [[CALL_0]]
@@ -425,7 +425,7 @@ define float @ret_frexp_f32_0_nopzero_ftpz_dapz(float nofpclass(pzero) %arg0) #2
 
 define float @ret_frexp_f32_0_nopzero_dynamic_dynamic(float nofpclass(pzero) %arg0) #3 {
 ; CHECK-LABEL: define nofpclass(sub) float @ret_frexp_f32_0_nopzero_dynamic_dynamic
-; CHECK-SAME: (float nofpclass(pzero) [[ARG0:%.*]]) #[[ATTR4]] {
+; CHECK-SAME: (float nofpclass(pzero sub) [[ARG0:%.*]]) #[[ATTR4]] {
 ; CHECK-NEXT:    [[CALL:%.*]] = call { float, i32 } @llvm.frexp.f32.i32(float [[ARG0]]) #[[ATTR7]]
 ; CHECK-NEXT:    [[CALL_0:%.*]] = extractvalue { float, i32 } [[CALL]], 0
 ; CHECK-NEXT:    ret float [[CALL_0]]
@@ -437,7 +437,7 @@ define float @ret_frexp_f32_0_nopzero_dynamic_dynamic(float nofpclass(pzero) %ar
 
 define float @ret_frexp_f32_0_nopzero_ieee_daz(float nofpclass(pzero) %arg0) #4 {
 ; CHECK-LABEL: define nofpclass(sub) float @ret_frexp_f32_0_nopzero_ieee_daz
-; CHECK-SAME: (float nofpclass(pzero) [[ARG0:%.*]]) #[[ATTR5]] {
+; CHECK-SAME: (float nofpclass(pzero sub) [[ARG0:%.*]]) #[[ATTR5]] {
 ; CHECK-NEXT:    [[CALL:%.*]] = call { float, i32 } @llvm.frexp.f32.i32(float [[ARG0]]) #[[ATTR7]]
 ; CHECK-NEXT:    [[CALL_0:%.*]] = extractvalue { float, i32 } [[CALL]], 0
 ; CHECK-NEXT:    ret float [[CALL_0]]
@@ -449,7 +449,7 @@ define float @ret_frexp_f32_0_nopzero_ieee_daz(float nofpclass(pzero) %arg0) #4 
 
 define float @ret_frexp_f32_0_nopzero_daz_ieee(float nofpclass(pzero) %arg0) #5 {
 ; CHECK-LABEL: define nofpclass(pzero sub) float @ret_frexp_f32_0_nopzero_daz_ieee
-; CHECK-SAME: (float nofpclass(pzero) [[ARG0:%.*]]) #[[ATTR6]] {
+; CHECK-SAME: (float nofpclass(pzero sub) [[ARG0:%.*]]) #[[ATTR6]] {
 ; CHECK-NEXT:    [[CALL:%.*]] = call { float, i32 } @llvm.frexp.f32.i32(float [[ARG0]]) #[[ATTR7]]
 ; CHECK-NEXT:    [[CALL_0:%.*]] = extractvalue { float, i32 } [[CALL]], 0
 ; CHECK-NEXT:    ret float [[CALL_0]]

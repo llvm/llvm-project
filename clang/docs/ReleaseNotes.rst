@@ -145,6 +145,7 @@ C23 Feature Support
   previous placeholder value. Clang continues to accept ``-std=c2x`` and
   ``-std=gnu2x`` as aliases for C23 and GNU C23, respectively.
 - Clang now supports `requires c23` for module maps.
+- Clang now supports ``N3007 Type inference for object definitions``.
 
 Non-comprehensive list of changes in this release
 -------------------------------------------------
@@ -342,6 +343,8 @@ Bug Fixes in This Version
 - Fix a crash when evaluating value-dependent structured binding
   variables at compile time.
   Fixes (`#67690 <https://github.com/llvm/llvm-project/issues/67690>`_)
+- Fixes a ``clang-17`` regression where ``LLVM_UNREACHABLE_OPTIMIZE=OFF``
+  cannot be used with ``Release`` mode builds. (`#68237 <https://github.com/llvm/llvm-project/issues/68237>`_).
 
 Bug Fixes to Compiler Builtins
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^

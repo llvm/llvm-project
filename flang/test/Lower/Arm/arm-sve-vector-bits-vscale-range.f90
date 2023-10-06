@@ -1,3 +1,4 @@
+! REQUIRES: aarch64-registered-target
 ! RUN: %flang_fc1 -triple aarch64-none-linux-gnu -target-feature +sve -mvscale-min=1 -mvscale-max=1  -emit-llvm -o - %s | FileCheck %s -D#VBITS=1
 ! RUN: %flang_fc1 -triple aarch64-none-linux-gnu -target-feature +sve -mvscale-min=2 -mvscale-max=2  -emit-llvm -o - %s | FileCheck %s -D#VBITS=2
 ! RUN: %flang_fc1 -triple aarch64-none-linux-gnu -target-feature +sve -mvscale-min=4 -mvscale-max=4  -emit-llvm -o - %s | FileCheck %s -D#VBITS=4
