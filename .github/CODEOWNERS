@@ -30,3 +30,5 @@
 /clang/test/CXX/drs/ @Endilll
 /clang/www/cxx_dr_status.html @Endilll
 /clang/www/make_cxx_dr_status @Endilll
+
+/lldb/ @JDevlieghere
