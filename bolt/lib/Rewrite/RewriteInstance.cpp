@@ -272,20 +272,21 @@ extern const char *BoltRevision;
 MCPlusBuilder *createMCPlusBuilder(const Triple::ArchType Arch,
                                    const MCInstrAnalysis *Analysis,
                                    const MCInstrInfo *Info,
-                                   const MCRegisterInfo *RegInfo) {
+                                   const MCRegisterInfo *RegInfo,
+                                   const MCSubtargetInfo *STI) {
 #ifdef X86_AVAILABLE
   if (Arch == Triple::x86_64)
-    return createX86MCPlusBuilder(Analysis, Info, RegInfo);
+    return createX86MCPlusBuilder(Analysis, Info, RegInfo, STI);
 #endif
 
 #ifdef AARCH64_AVAILABLE
   if (Arch == Triple::aarch64)
-    return createAArch64MCPlusBuilder(Analysis, Info, RegInfo);
+    return createAArch64MCPlusBuilder(Analysis, Info, RegInfo, STI);
 #endif
 
 #ifdef RISCV_AVAILABLE
   if (Arch == Triple::riscv64)
-    return createRISCVMCPlusBuilder(Analysis, Info, RegInfo);
+    return createRISCVMCPlusBuilder(Analysis, Info, RegInfo, STI);
 #endif
 
   llvm_unreachable("architecture unsupported by MCPlusBuilder");
@@ -348,8 +349,9 @@ RewriteInstance::RewriteInstance(ELFObjectFileBase *File, const int Argc,
     return;
   }
   BC = std::move(BCOrErr.get());
-  BC->initializeTarget(std::unique_ptr<MCPlusBuilder>(createMCPlusBuilder(
-      BC->TheTriple->getArch(), BC->MIA.get(), BC->MII.get(), BC->MRI.get())));
+  BC->initializeTarget(std::unique_ptr<MCPlusBuilder>(
+      createMCPlusBuilder(BC->TheTriple->getArch(), BC->MIA.get(),
+                          BC->MII.get(), BC->MRI.get(), BC->STI.get())));
 
   BAT = std::make_unique<BoltAddressTranslation>();
 
@@ -2544,7 +2546,17 @@ void RewriteInstance::handleRelocation(const SectionRef &RelocatedSection,
     // Adjust the point of reference to a code location inside a function.
     if (ReferencedBF->containsAddress(Address, /*UseMaxSize = */ true)) {
       RefFunctionOffset = Address - ReferencedBF->getAddress();
-      if (RefFunctionOffset) {
+      if (Relocation::isInstructionReference(RType)) {
+        // Instruction labels are created while disassembling so we just leave
+        // the symbol empty for now. Since the extracted value is typically
+        // unrelated to the referenced symbol (e.g., %pcrel_lo in RISC-V
+        // references an instruction but the patched value references the low
+        // bits of a data address), we set the extracted value to the symbol
+        // address in order to be able to correctly reconstruct the reference
+        // later.
+        ReferencedSymbol = nullptr;
+        ExtractedValue = Address;
+      } else if (RefFunctionOffset) {
         if (ContainingBF && ContainingBF != ReferencedBF) {
           ReferencedSymbol =
               ReferencedBF->addEntryPointAtOffset(RefFunctionOffset);
