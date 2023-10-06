@@ -366,24 +366,80 @@ GCOVBlock &GCOVFunction::getExitBlock() const {
 // outgoing edge counts by Kirchoff's circuit law. If the unmeasured arcs form a
 // spanning tree, the count for each unmeasured arc (GCOV_ARC_ON_TREE) can be
 // uniquely identified.
-uint64_t GCOVFunction::propagateCounts(const GCOVBlock &v, GCOVArc *pred) {
-  // If GCOV_ARC_ON_TREE edges do form a tree, visited is not needed; otherwise
-  // this prevents infinite recursion.
-  if (!visited.insert(&v).second)
-    return 0;
+uint64_t GCOVFunction::propagateCounts(const GCOVBlock &V, GCOVArc *Pred) {
+  struct StackElem {
+    const GCOVBlock &Block;
+    GCOVArc *Pred;
+    size_t PrevStackElemIdx;
+    uint64_t Excess = 0;
+    bool IsInSrcs = true;
+    bool Visited = false;
+  };
 
-  uint64_t excess = 0;
-  for (GCOVArc *e : v.srcs())
-    if (e != pred)
-      excess += e->onTree() ? propagateCounts(e->src, e) : e->count;
-  for (GCOVArc *e : v.dsts())
-    if (e != pred)
-      excess -= e->onTree() ? propagateCounts(e->dst, e) : e->count;
-  if (int64_t(excess) < 0)
-    excess = -excess;
-  if (pred)
-    pred->count = excess;
-  return excess;
+  std::vector<StackElem> BlockStack;
+  BlockStack.push_back({V, nullptr, 0});
+
+  while (!BlockStack.empty()) {
+    StackElem &Current = BlockStack.back();
+    size_t Idx = BlockStack.size() - 1;
+
+    if (!Current.Visited) {
+      Current.Visited = true;
+      // If GCOV_ARC_ON_TREE edges do form a tree, visited is not needed;
+      // otherwise this prevents infinite recursion.
+      if (!visited.insert(&Current.Block).second) {
+        BlockStack.pop_back();
+        continue;
+      }
+
+      std::vector<StackElem> ChildBlockStack;
+      for (GCOVArc *E : Current.Block.srcs()) {
+        if (E != Current.Pred) {
+          if (E->onTree()) {
+            ChildBlockStack.push_back({E->src, E, Idx});
+          } else {
+            Current.Excess += E->count;
+          }
+        }
+      }
+
+      for (GCOVArc *E : Current.Block.dsts()) {
+        if (E != Current.Pred) {
+          if (E->onTree()) {
+            ChildBlockStack.push_back({E->dst, E, Idx, 0, false});
+          } else {
+            Current.Excess -= E->count;
+          }
+        }
+      }
+
+      for (auto &E : ChildBlockStack)
+        BlockStack.emplace_back(std::move(E));
+    } else {
+      // second visit, ready to pop out the value
+      // Excess is already calculated from the children
+      if (static_cast<int64_t>(Current.Excess) < 0)
+        Current.Excess = -Current.Excess;
+
+      if (Idx == 0) {
+        return Current.Excess;
+      }
+
+      if (Current.Pred)
+        Current.Pred->count = Current.Excess;
+
+      // updates parent Excess value
+      if (Current.IsInSrcs) {
+        BlockStack[Current.PrevStackElemIdx].Excess += Current.Excess;
+      } else {
+        BlockStack[Current.PrevStackElemIdx].Excess -= Current.Excess;
+      }
+
+      BlockStack.pop_back();
+    }
+  }
+
+  return 0;
 }
 
 void GCOVFunction::print(raw_ostream &OS) const {
