@@ -1662,18 +1662,18 @@ private:
   /// elements is a power-of-2 larger than zero. If scalable vectorization is
   /// disabled or unsupported, then the scalable part will be equal to
   /// ElementCount::getScalable(0).
-  FixedScalableVFPair computeFeasibleMaxVF(unsigned ConstTripCount,
-                                           unsigned MaxTripCount,
+  FixedScalableVFPair computeFeasibleMaxVF(unsigned MaxTripCount,
                                            ElementCount UserVF,
                                            bool FoldTailByMasking);
 
   /// \return the maximized element count based on the targets vector
   /// registers and the loop trip-count, but limited to a maximum safe VF.
   /// This is a helper function of computeFeasibleMaxVF.
-  ElementCount
-  getMaximizedVFForTarget(unsigned ConstTripCount, unsigned MaxTripCount,
-                          unsigned SmallestType, unsigned WidestType,
-                          ElementCount MaxSafeVF, bool FoldTailByMasking);
+  ElementCount getMaximizedVFForTarget(unsigned MaxTripCount,
+                                       unsigned SmallestType,
+                                       unsigned WidestType,
+                                       ElementCount MaxSafeVF,
+                                       bool FoldTailByMasking);
 
   /// \return the maximum legal scalable VF, based on the safe max number
   /// of elements.
@@ -4811,8 +4811,7 @@ LoopVectorizationCostModel::getMaxLegalScalableVF(unsigned MaxSafeElements) {
 }
 
 FixedScalableVFPair LoopVectorizationCostModel::computeFeasibleMaxVF(
-    unsigned ConstTripCount, unsigned MaxTripCount, ElementCount UserVF,
-    bool FoldTailByMasking) {
+    unsigned MaxTripCount, ElementCount UserVF, bool FoldTailByMasking) {
   MinBWs = computeMinimumValueSizes(TheLoop->getBlocks(), *DB, &TTI);
   unsigned SmallestType, WidestType;
   std::tie(SmallestType, WidestType) = getSmallestAndWidestTypes();
@@ -4899,14 +4898,14 @@ FixedScalableVFPair LoopVectorizationCostModel::computeFeasibleMaxVF(
 
   FixedScalableVFPair Result(ElementCount::getFixed(1),
                              ElementCount::getScalable(0));
-  if (auto MaxVF = getMaximizedVFForTarget(ConstTripCount, MaxTripCount,
-                                           SmallestType, WidestType,
-                                           MaxSafeFixedVF, FoldTailByMasking))
+  if (auto MaxVF =
+          getMaximizedVFForTarget(MaxTripCount, SmallestType, WidestType,
+                                  MaxSafeFixedVF, FoldTailByMasking))
     Result.FixedVF = MaxVF;
 
-  if (auto MaxVF = getMaximizedVFForTarget(
-          ConstTripCount, MaxTripCount, SmallestType, WidestType,
-          MaxSafeScalableVF, FoldTailByMasking))
+  if (auto MaxVF =
+          getMaximizedVFForTarget(MaxTripCount, SmallestType, WidestType,
+                                  MaxSafeScalableVF, FoldTailByMasking))
     if (MaxVF.isScalable()) {
       Result.ScalableVF = MaxVF;
       LLVM_DEBUG(dbgs() << "LV: Found feasible scalable VF = " << MaxVF
@@ -4940,7 +4939,7 @@ LoopVectorizationCostModel::computeMaxVF(ElementCount UserVF, unsigned UserIC) {
 
   switch (ScalarEpilogueStatus) {
   case CM_ScalarEpilogueAllowed:
-    return computeFeasibleMaxVF(TC, MaxTC, UserVF, false);
+    return computeFeasibleMaxVF(MaxTC, UserVF, false);
   case CM_ScalarEpilogueNotAllowedUsePredicate:
     [[fallthrough]];
   case CM_ScalarEpilogueNotNeededUsePredicate:
@@ -4978,7 +4977,7 @@ LoopVectorizationCostModel::computeMaxVF(ElementCount UserVF, unsigned UserIC) {
       LLVM_DEBUG(dbgs() << "LV: Cannot fold tail by masking: vectorize with a "
                            "scalar epilogue instead.\n");
       ScalarEpilogueStatus = CM_ScalarEpilogueAllowed;
-      return computeFeasibleMaxVF(TC, MaxTC, UserVF, false);
+      return computeFeasibleMaxVF(MaxTC, UserVF, false);
     }
     return FixedScalableVFPair::getNone();
   }
@@ -4995,8 +4994,7 @@ LoopVectorizationCostModel::computeMaxVF(ElementCount UserVF, unsigned UserIC) {
     InterleaveInfo.invalidateGroupsRequiringScalarEpilogue();
   }
 
-  FixedScalableVFPair MaxFactors =
-      computeFeasibleMaxVF(TC, MaxTC, UserVF, true);
+  FixedScalableVFPair MaxFactors = computeFeasibleMaxVF(MaxTC, UserVF, true);
 
   // Avoid tail folding if the trip count is known to be a multiple of any VF
   // we choose.
@@ -5072,8 +5070,8 @@ LoopVectorizationCostModel::computeMaxVF(ElementCount UserVF, unsigned UserIC) {
 }
 
 ElementCount LoopVectorizationCostModel::getMaximizedVFForTarget(
-    unsigned ConstTripCount, unsigned MaxTripCount, unsigned SmallestType,
-    unsigned WidestType, ElementCount MaxSafeVF, bool FoldTailByMasking) {
+    unsigned MaxTripCount, unsigned SmallestType, unsigned WidestType,
+    ElementCount MaxSafeVF, bool FoldTailByMasking) {
   bool ComputeScalableMaxVF = MaxSafeVF.isScalable();
   const TypeSize WidestRegister = TTI.getRegisterBitWidth(
       ComputeScalableMaxVF ? TargetTransformInfo::RGK_ScalableVector
