@@ -16,6 +16,7 @@
 #include <cinttypes>
 
 #include <cassert>
+#include <vector>
 
 namespace mlir {
 namespace sparse_tensor {
@@ -23,12 +24,11 @@ namespace sparse_tensor {
 /// A class for capturing the sparse tensor type map with a compact encoding.
 ///
 /// Currently, the following situations are supported:
-///   (1) map is an identity
-///   (2) map is a permutation
-///   (3) map has affine ops (restricted set)
+///   (1) map is a permutation
+///   (2) map has affine ops (restricted set)
 ///
-/// The pushforward/backward operations are fast for (1) and (2) but
-/// incur some obvious overhead for situation (3).
+/// The pushforward/backward operations are fast for (1) but incur some obvious
+/// overhead for situation (2).
 ///
 class MapRef final {
 public:
@@ -38,20 +38,12 @@ public:
   // Push forward maps from dimensions to levels.
   //
 
-  template <typename T>
-  inline void pushforward(const T *in, T *out) const {
-    switch (kind) {
-    case MapKind::kIdentity:
-      for (uint64_t i = 0; i < dimRank; ++i)
-        out[i] = in[i]; // TODO: optimize with in == out ?
-      break;
-    case MapKind::kPermutation:
-      for (uint64_t i = 0; i < dimRank; ++i)
-        out[dim2lvl[i]] = in[i];
-      break;
-    case MapKind::kAffine:
+  template <typename T> inline void pushforward(const T *in, T *out) const {
+    if (isPermutation) {
+      for (uint64_t i = 0; i < lvlRank; ++i)
+        out[i] = in[lvl2dim[i]];
+    } else {
       assert(0 && "coming soon");
-      break;
     }
   }
 
@@ -59,20 +51,12 @@ public:
   // Push backward maps from levels to dimensions.
   //
 
-  template <typename T>
-  inline void pushbackward(const T *in, T *out) const {
-    switch (kind) {
-    case MapKind::kIdentity:
-      for (uint64_t i = 0; i < lvlRank; ++i)
-        out[i] = in[i];
-      break;
-    case MapKind::kPermutation:
-      for (uint64_t i = 0; i < lvlRank; ++i)
-        out[lvl2dim[i]] = in[i];
-      break;
-    case MapKind::kAffine:
+  template <typename T> inline void pushbackward(const T *in, T *out) const {
+    if (isPermutation) {
+      for (uint64_t i = 0; i < dimRank; ++i)
+        out[i] = in[dim2lvl[i]];
+    } else {
       assert(0 && "coming soon");
-      break;
     }
   }
 
@@ -80,16 +64,13 @@ public:
   uint64_t getLvlRank() const { return lvlRank; }
 
 private:
-  enum class MapKind { kIdentity, kPermutation, kAffine };
+  bool isPermutationMap() const;
 
-  bool isIdentity() const;
-  bool isPermutation() const;
-
-  MapKind kind;
   const uint64_t dimRank;
   const uint64_t lvlRank;
   const uint64_t *const dim2lvl; // non-owning pointer
   const uint64_t *const lvl2dim; // non-owning pointer
+  const bool isPermutation;
 };
 
 } // namespace sparse_tensor

@@ -6,39 +6,19 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include <vector>
-
 #include "mlir/ExecutionEngine/SparseTensor/MapRef.h"
 
 mlir::sparse_tensor::MapRef::MapRef(uint64_t d, uint64_t l, const uint64_t *d2l,
                                     const uint64_t *l2d)
-    : dimRank(d), lvlRank(l), dim2lvl(d2l), lvl2dim(l2d) {
-  assert(d2l && l2d);
-  // Determine the kind of mapping (and asserts on simple inference).
-  if (isIdentity()) {
-    kind = MapKind::kIdentity;
-    for (uint64_t i = 0; i < dimRank; i++)
-      assert(lvl2dim[i] == i);
-  } else if (isPermutation()) {
-    kind = MapKind::kPermutation;
+    : dimRank(d), lvlRank(l), dim2lvl(d2l), lvl2dim(l2d),
+      isPermutation(isPermutationMap()) {
+  if (isPermutation) {
     for (uint64_t i = 0; i < dimRank; i++)
       assert(lvl2dim[dim2lvl[i]] == i);
-  } else {
-    kind = MapKind::kAffine;
   }
 }
 
-bool mlir::sparse_tensor::MapRef::isIdentity() const {
-  if (dimRank != lvlRank)
-    return false;
-  for (uint64_t i = 0; i < dimRank; i++) {
-    if (dim2lvl[i] != i)
-      return false;
-  }
-  return true;
-}
-
-bool mlir::sparse_tensor::MapRef::isPermutation() const {
+bool mlir::sparse_tensor::MapRef::isPermutationMap() const {
   if (dimRank != lvlRank)
     return false;
   std::vector<bool> seen(dimRank, false);
