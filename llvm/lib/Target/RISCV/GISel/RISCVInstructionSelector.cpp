@@ -48,6 +48,8 @@ private:
   bool selectCopy(MachineInstr &MI, MachineRegisterInfo &MRI) const;
   bool selectConstant(MachineInstr &MI, MachineIRBuilder &MIB,
                       MachineRegisterInfo &MRI) const;
+  bool selectGlobalValue(MachineInstr &MI, MachineIRBuilder &MIB,
+                         MachineRegisterInfo &MRI) const;
   bool selectSExtInreg(MachineInstr &MI, MachineIRBuilder &MIB) const;
 
   bool earlySelectShift(unsigned Opc, MachineInstr &I, MachineIRBuilder &MIB,
@@ -88,7 +90,8 @@ private:
 RISCVInstructionSelector::RISCVInstructionSelector(
     const RISCVTargetMachine &TM, const RISCVSubtarget &STI,
     const RISCVRegisterBankInfo &RBI)
-    : STI(STI), TII(*STI.getInstrInfo()), TRI(*STI.getRegisterInfo()), RBI(RBI), TM(TM),
+    : STI(STI), TII(*STI.getInstrInfo()), TRI(*STI.getRegisterInfo()), RBI(RBI),
+      TM(TM),
 
 #define GET_GLOBALISEL_PREDICATES_INIT
 #include "RISCVGenGlobalISel.inc"
@@ -230,6 +233,8 @@ bool RISCVInstructionSelector::select(MachineInstr &MI) {
     return selectCopy(MI, MRI);
   case TargetOpcode::G_CONSTANT:
     return selectConstant(MI, MIB, MRI);
+  case TargetOpcode::G_GLOBAL_VALUE:
+    return selectGlobalValue(MI, MIB, MRI);
   case TargetOpcode::G_BRCOND: {
     // TODO: Fold with G_ICMP.
     auto Bcc =
@@ -352,6 +357,38 @@ bool RISCVInstructionSelector::selectConstant(MachineInstr &MI,
 
   MI.eraseFromParent();
   return true;
+}
+
+bool RISCVInstructionSelector::selectGlobalValue(MachineInstr &MI, MachineIRBuilder &MIB,
+                                                 MachineRegisterInfo &MRI) const {
+  assert(MI.getOpcode() == TargetOpcode::G_GLOBAL_VALUE &&
+         "Wrong selector used!");
+
+  switch (TM.getCodeModel()) {
+  case CodeModel::Small: {
+    Register DstReg = MI.getOperand(0).getReg();
+    const GlobalValue *GV = MI.getOperand(1).getGlobal();
+    Register TmpReg = MRI.createVirtualRegister(&RISCV::GPRRegClass);
+    MachineInstr *Result =
+        MIB.buildInstr(RISCV::LUI).addDef(TmpReg).addGlobalAddress(GV, 0, RISCVII::MO_HI);
+
+    if (!constrainSelectedInstRegOperands(*Result, TII, TRI, RBI))
+      return false;
+
+    Result = MIB.buildInstr(RISCV::ADDI)
+      .addDef(DstReg)
+                 .addReg(TmpReg)
+                 .addGlobalAddress(GV, 0, RISCVII::MO_LO);
+
+    if (!constrainSelectedInstRegOperands(*Result, TII, TRI, RBI))
+      return false;
+
+    MI.eraseFromParent();
+    return true;
+  }
+  default:
+    return false;
+  }
 }
 
 bool RISCVInstructionSelector::selectSExtInreg(MachineInstr &MI,

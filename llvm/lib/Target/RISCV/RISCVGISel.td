@@ -16,26 +16,6 @@
 include "RISCV.td"
 include "RISCVCombine.td"
 
-class RISCVGenericInstruction : GenericInstruction {
-  let Namespace = "RISCV";
-}
-
-// A pseudo to represent a relocatable add instruction as part of address
-// computation.
-def G_ADD_LO : RISCVGenericInstruction {
-  let OutOperandList = (outs type0:$dst);
-  let InOperandList = (ins type1:$src, type2:$imm);
-  let hasSideEffects = 0;
-}
-def : GINodeEquiv<G_ADD_LO, riscv_add_lo>;
-
-def G_HI : RISCVGenericInstruction {
-  let OutOperandList = (outs type0:$dst);
-  let InOperandList = (ins type1:$imm);
-  let hasSideEffects = 0;
-}
-def : GINodeEquiv<G_HI, riscv_hi>;
-
 def simm12Plus1 : ImmLeaf<XLenVT, [{
     return (isInt<12>(Imm) && Imm != -2048) || Imm == 2048;}]>;
 

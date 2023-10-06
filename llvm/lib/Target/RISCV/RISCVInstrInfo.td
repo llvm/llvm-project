@@ -2033,6 +2033,28 @@ def : Pat<(binop_allwusers<add> GPR:$rs1, (AddiPair:$rs2)),
 }
 
 //===----------------------------------------------------------------------===//
+// GlobalISel generic instruction definitions
+/* /===----------------------------------------------------------------------===//
+
+class RISCVGenericInstruction : GenericInstruction {
+  let Namespace = "RISCV";
+}
+
+def G_ADD_LO : RISCVGenericInstruction {
+  let OutOperandList = (outs type0:$dst);
+  let InOperandList = (ins type1:$src, type2:$imm);
+  let hasSideEffects = 0;
+}
+def : GINodeEquiv<G_ADD_LO, riscv_add_lo>;
+
+def G_HI : RISCVGenericInstruction {
+  let OutOperandList = (outs type0:$dst);
+  let InOperandList = (ins type1:$imm);
+  let hasSideEffects = 0;
+}
+def : GINodeEquiv<G_HI, riscv_hi>;
+*/
+//===----------------------------------------------------------------------===//
 // Standard extensions
 //===----------------------------------------------------------------------===//
 
