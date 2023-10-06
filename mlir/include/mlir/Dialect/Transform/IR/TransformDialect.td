@@ -20,107 +20,109 @@ def Transform_Dialect : Dialect {
 
   let hasOperationAttrVerify = 1;
   let extraClassDeclaration = [{
-      /// Name of the attribute attachable to the symbol table operation
-      /// containing named sequences. This is used to trigger verification.
-      constexpr const static ::llvm::StringLiteral
-          kWithNamedSequenceAttrName = "transform.with_named_sequence";
+    /// Name of the attribute attachable to the symbol table operation
+    /// containing named sequences. This is used to trigger verification.
+    constexpr const static ::llvm::StringLiteral kWithNamedSequenceAttrName =
+        "transform.with_named_sequence";
 
-      /// Name of the attribute attachable to an operation so it can be
-      /// identified as root by the default interpreter pass.
-      constexpr const static ::llvm::StringLiteral
-          kTargetTagAttrName = "transform.target_tag";
+    /// Name of the attribute attachable to an operation so it can be
+    /// identified as root by the default interpreter pass.
+    constexpr const static ::llvm::StringLiteral kTargetTagAttrName =
+        "transform.target_tag";
 
-      /// Name of the attribute attachable to an operation, indicating that
-      /// TrackingListener failures should be silenced.
-      constexpr const static ::llvm::StringLiteral
-          kSilenceTrackingFailuresAttrName = "transform.silence_tracking_failures";
+    /// Name of the attribute attachable to an operation, indicating that
+    /// TrackingListener failures should be silenced.
+    constexpr const static ::llvm::StringLiteral
+        kSilenceTrackingFailuresAttrName =
+            "transform.silence_tracking_failures";
 
-      /// Names of the attributes indicating whether an argument of an external
-      /// transform dialect symbol is consumed or only read.
-      constexpr const static ::llvm::StringLiteral
-          kArgConsumedAttrName = "transform.consumed";
-      constexpr const static ::llvm::StringLiteral
-          kArgReadOnlyAttrName = "transform.readonly";
+    /// Names of the attributes indicating whether an argument of an external
+    /// transform dialect symbol is consumed or only read.
+    constexpr const static ::llvm::StringLiteral kArgConsumedAttrName =
+        "transform.consumed";
+    constexpr const static ::llvm::StringLiteral kArgReadOnlyAttrName =
+        "transform.readonly";
 
-      template <typename DataTy>
-      const DataTy &getExtraData() const {
-        return *static_cast<const DataTy *>(extraData.at(::mlir::TypeID::get<DataTy>()).get());
-      }
+    template <typename DataTy>
+    const DataTy &getExtraData() const {
+      return *static_cast<const DataTy *>(
+          extraData.at(::mlir::TypeID::get<DataTy>()).get());
+    }
 
-      /// Parses a type registered by this dialect or one of its extensions.
-      ::mlir::Type parseType(::mlir::DialectAsmParser &parser) const override;
+    /// Parses a type registered by this dialect or one of its extensions.
+    ::mlir::Type parseType(::mlir::DialectAsmParser & parser) const override;
 
-      /// Prints a type registered by this dialect or one of its extensions.
-      void printType(::mlir::Type type,
-                     ::mlir::DialectAsmPrinter &printer) const override;
+    /// Prints a type registered by this dialect or one of its extensions.
+    void printType(::mlir::Type type, ::mlir::DialectAsmPrinter & printer)
+        const override;
 
-      /// Parser callback for an individual type registered by this dialect or
-      /// its extensions.
-      using ExtensionTypeParsingHook = ::mlir::Type (*)(::mlir::AsmParser &);
+    /// Parser callback for an individual type registered by this dialect or
+    /// its extensions.
+    using ExtensionTypeParsingHook = ::mlir::Type (*)(::mlir::AsmParser &);
 
-      /// Printer callback for an individual type registered by this dialect or
-      /// its extensions.
-      using ExtensionTypePrintingHook =
-          std::function<void (::mlir::Type, ::mlir::AsmPrinter &)>;
+    /// Printer callback for an individual type registered by this dialect or
+    /// its extensions.
+    using ExtensionTypePrintingHook =
+        std::function<void(::mlir::Type, ::mlir::AsmPrinter &)>;
 
-    private:
-      /// Registers operations specified as template parameters with this
-      /// dialect. Checks that they implement the required interfaces.
-      template <typename... OpTys>
-      void addOperationsChecked() {
-        (addOperationIfNotRegistered<OpTys>(), ...);
-      }
-      template <typename OpTy>
-      void addOperationIfNotRegistered();
+  private:
+    /// Registers operations specified as template parameters with this
+    /// dialect. Checks that they implement the required interfaces.
+    template <typename... OpTys>
+    void addOperationsChecked() {
+      (addOperationIfNotRegistered<OpTys>(), ...);
+    }
+    template <typename OpTy>
+    void addOperationIfNotRegistered();
 
-      /// Reports a repeated registration error of an op with the given name.
-      [[noreturn]] void reportDuplicateOpRegistration(StringRef opName);
+    /// Reports a repeated registration error of an op with the given name.
+    [[noreturn]] void reportDuplicateOpRegistration(StringRef opName);
 
-      /// Registers the types specified as template parameters with the
-      /// Transform dialect. Checks that they meet the requirements for
-      /// Transform IR types.
-      template <typename... TypeTys>
-      void addTypesChecked() {
-        (addTypeIfNotRegistered<TypeTys>(), ...);
-      }
-      template <typename Type>
-      void addTypeIfNotRegistered();
+    /// Registers types specified as template parameters with the Transform
+    /// dialect. Checks that they meet the requirements for Transform IR types.
+    template <typename... TypeTys>
+    void addTypesChecked() {
+      (addTypeIfNotRegistered<TypeTys>(), ...);
+    }
+    template <typename Type>
+    void addTypeIfNotRegistered();
 
-      /// Reports a repeated registration error of a type with the given
-      /// mnemonic.
-      [[noreturn]] void reportDuplicateTypeRegistration(StringRef mnemonic);
+    /// Reports a repeated registration error of a type with the given
+    /// mnemonic.
+    [[noreturn]] void reportDuplicateTypeRegistration(StringRef mnemonic);
 
-      /// Registers dialect types with the context.
-      void initializeTypes();
+    /// Registers dialect types with the context.
+    void initializeTypes();
 
-      // Give extensions access to injection functions.
-      template <typename, typename...>
-      friend class TransformDialectExtension;
+    // Give extensions access to injection functions.
+    template <typename, typename...>
+    friend class TransformDialectExtension;
 
-      /// Gets a mutable reference to extra data of the kind specified as
-      /// template argument. Allocates the data on the first call.
-      template <typename DataTy>
-      DataTy &getOrCreateExtraData();
+    /// Gets a mutable reference to extra data of the kind specified as
+    /// template argument. Allocates the data on the first call.
+    template <typename DataTy>
+    DataTy &getOrCreateExtraData();
 
-      //===----------------------------------------------------------------===//
-      // Data fields
-      //===----------------------------------------------------------------===//
+    //===----------------------------------------------------------------===//
+    // Data fields
+    //===----------------------------------------------------------------===//
 
-      /// Additional data associated with and owned by the dialect. Accessible
-      /// to extensions.
-      ::llvm::DenseMap<::mlir::TypeID, std::unique_ptr<
-            ::mlir::transform::detail::TransformDialectDataBase>>
-          extraData;
+    /// Additional data associated with and owned by the dialect. Accessible
+    /// to extensions.
+    ::llvm::DenseMap<
+        ::mlir::TypeID,
+        std::unique_ptr<::mlir::transform::detail::TransformDialectDataBase>>
+        extraData;
 
-      /// A map from type mnemonic to its parsing function for the remainder of
-      /// the syntax. The parser has access to the mnemonic, so it is used for
-      /// further dispatch.
-      ::llvm::StringMap<ExtensionTypeParsingHook> typeParsingHooks;
+    /// A map from type mnemonic to its parsing function for the remainder of
+    /// the syntax. The parser has access to the mnemonic, so it is used for
+    /// further dispatch.
+    ::llvm::StringMap<ExtensionTypeParsingHook> typeParsingHooks;
 
-      /// A map from type TypeID to its printing function. No need to do string
-      /// lookups when the type is fully constructed.
-      ::llvm::DenseMap<::mlir::TypeID, ExtensionTypePrintingHook>
-      typePrintingHooks;
+    /// A map from type TypeID to its printing function. No need to do string
+    /// lookups when the type is fully constructed.
+    ::llvm::DenseMap<::mlir::TypeID, ExtensionTypePrintingHook>
+        typePrintingHooks;
   }];
 }
 
