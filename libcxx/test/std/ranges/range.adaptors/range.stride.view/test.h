@@ -13,6 +13,11 @@
 #include <iterator>
 #include <ranges>
 
+template <typename I, std::ranges::range_difference_t<I> D>
+concept CanStrideView = requires {
+  std::ranges::stride_view<I>{I{}, D};
+};
+
 template <typename T = int>
 struct InstrumentedBasicRange {
   T* begin() const;
