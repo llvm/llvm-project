@@ -35,6 +35,7 @@ exception_ptr& exception_ptr::operator=(const exception_ptr& other) noexcept
     return *this;
 }
 
+#  ifndef _LIBCPP_HAS_NO_EXCEPTIONS
 void *exception_ptr::__init_native_exception(size_t size, type_info *tinfo, void (*dest)(void *)) noexcept
 {
     void *__ex = __cxa_allocate_exception(size);
@@ -54,6 +55,7 @@ exception_ptr exception_ptr::__from_native_exception_pointer(void *__e) noexcept
 
     return ptr;
 }
+#  endif
 
 nested_exception::nested_exception() noexcept
     : __ptr_(current_exception())

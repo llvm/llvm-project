@@ -28,7 +28,8 @@ namespace std { // purposefully not using versioning namespace
 class _LIBCPP_EXPORTED_FROM_ABI exception_ptr {
   void* __ptr_;
 
-#  if defined(LIBCXX_BUILDING_LIBCXXABI)
+#  ifndef _LIBCPP_HAS_NO_EXCEPTIONS
+#    if defined(LIBCXX_BUILDING_LIBCXXABI)
   template <class _Ep>
   static inline void __dest_thunk(void* __x) {
     static_cast<_Ep*>(__x)->~_Ep();
@@ -40,6 +41,7 @@ class _LIBCPP_EXPORTED_FROM_ABI exception_ptr {
 
   template <class _Ep>
   friend _LIBCPP_HIDE_FROM_ABI exception_ptr make_exception_ptr(_Ep) _NOEXCEPT;
+#  endif
 #  endif
 
 public:
