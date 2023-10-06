@@ -45,7 +45,8 @@ constexpr bool test() {
   // Check the && overload (again)
   {
     InstrumentedBasicView range(buff, buff + 8);
-    std::same_as<InstrumentedBasicView<int>> decltype(auto) result = std::ranges::stride_view<InstrumentedBasicView<int>>(range, 3).base();
+    std::same_as<InstrumentedBasicView<int>> decltype(auto) result =
+        std::ranges::stride_view<InstrumentedBasicView<int>>(range, 3).base();
     assert(result.wasMoveInitialized);
     assert(result.begin() == buff);
     assert(result.end() == buff + 8);
