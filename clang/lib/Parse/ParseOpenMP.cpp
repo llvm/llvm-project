@@ -3416,6 +3416,17 @@ OMPClause *Parser::ParseOpenMPClause(OpenMPDirectiveKind DKind,
   case OMPC_ompx_attribute:
     Clause = ParseOpenMPOMPXAttributesClause(WrongDirective);
     break;
+  case OMPC_ompx_bare:
+    if (WrongDirective)
+      Diag(Tok, diag::note_ompx_bare_clause)
+          << getOpenMPClauseName(CKind) << "target teams";
+    if (!ErrorFound && !getLangOpts().OpenMPExtensions) {
+      Diag(Tok, diag::err_omp_unexpected_clause_extension_only)
+          << getOpenMPClauseName(CKind) << getOpenMPDirectiveName(DKind);
+      ErrorFound = true;
+    }
+    Clause = ParseOpenMPClause(CKind, WrongDirective);
+    break;
   default:
     break;
   }
