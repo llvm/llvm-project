@@ -2432,10 +2432,13 @@ bool SIRegisterInfo::eliminateFrameIndex(MachineBasicBlock::iterator MI,
         if (Offset == 0) {
           unsigned OpCode = IsSALU && !LiveSCC ? AMDGPU::S_LSHR_B32
                                                : AMDGPU::V_LSHRREV_B32_e64;
-          // XXX - This never happens because of emergency scavenging slot at 0?
-          auto Shift = BuildMI(*MBB, MI, DL, TII->get(OpCode), ResultReg)
-                           .addImm(ST.getWavefrontSizeLog2())
-                           .addReg(FrameReg);
+          auto Shift = BuildMI(*MBB, MI, DL, TII->get(OpCode), ResultReg);
+          if (OpCode == AMDGPU::V_LSHRREV_B32_e64)
+            // For V_LSHRREV, the operands are reversed (the shift count goes
+            // first).
+            Shift.addImm(ST.getWavefrontSizeLog2()).addReg(FrameReg);
+          else
+            Shift.addReg(FrameReg).addImm(ST.getWavefrontSizeLog2());
           if (IsSALU && !LiveSCC)
             Shift.getInstr()->getOperand(3).setIsDead(); // Mark SCC as dead.
           if (IsSALU && LiveSCC) {
