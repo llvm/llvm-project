@@ -168,6 +168,9 @@ Modified Compiler Flags
 
 * ``-Woverriding-t-option`` is renamed to ``-Woverriding-option``.
 * ``-Winterrupt-service-routine`` is renamed to ``-Wexcessive-regsave`` as a generalization
+* ``-frewrite-includes`` now guards the original #include directives with
+  ``__CLANG_REWRITTEN_INCLUDES``, and ``__CLANG_REWRITTEN_SYSTEM_INCLUDES`` as
+  appropriate.
 
 Removed Compiler Flags
 -------------------------
