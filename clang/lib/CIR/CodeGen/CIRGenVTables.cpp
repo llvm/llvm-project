@@ -231,7 +231,7 @@ void CIRGenVTables::addVTableComponent(ConstantArrayBuilder &builder,
 
       // For NVPTX devices in OpenMP emit special functon as null pointers,
       // otherwise linking ends up with unresolved references.
-      if (CGM.getLangOpts().OpenMP && CGM.getLangOpts().OpenMP &&
+      if (CGM.getLangOpts().OpenMP && CGM.getLangOpts().OpenMPIsTargetDevice &&
           CGM.getTriple().isNVPTX())
         llvm_unreachable("NYI");
 
