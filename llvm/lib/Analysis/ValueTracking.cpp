@@ -8492,6 +8492,11 @@ static void setLimitsForBinOp(const BinaryOperator &BO, APInt &Lower,
     if (match(BO.getOperand(1), m_APInt(C)))
       // 'and x, C' produces [0, C].
       Upper = *C + 1;
+    // X & -X is a power of two or zero. So we can cap the value at max power of
+    // two.
+    if (match(BO.getOperand(0), m_Neg(m_Specific(BO.getOperand(1)))) ||
+        match(BO.getOperand(1), m_Neg(m_Specific(BO.getOperand(0)))))
+      Upper = APInt::getSignedMinValue(Width) + 1;
     break;
 
   case Instruction::Or:
