@@ -12,6 +12,8 @@
 #include "mlir/Dialect/ArmSVE/Transforms/Transforms.h"
 #include "mlir/Dialect/Func/IR/FuncOps.h"
 #include "mlir/Dialect/LLVMIR/LLVMDialect.h"
+#include "mlir/Dialect/Utils/IndexingUtils.h"
+#include "mlir/Dialect/Vector/IR/VectorOps.h"
 #include "mlir/IR/BuiltinOps.h"
 #include "mlir/IR/PatternMatch.h"
 
@@ -66,6 +68,54 @@ using ScalableMaskedDivFOpLowering =
     OneToOneConvertToLLVMPattern<ScalableMaskedDivFOp,
                                  ScalableMaskedDivFIntrOp>;
 
+namespace {
+
+template <typename Op, typename IntrOp>
+struct SvboolConversionOpLowering : public ConvertOpToLLVMPattern<Op> {
+  using ConvertOpToLLVMPattern<Op>::ConvertOpToLLVMPattern;
+
+  LogicalResult
+  matchAndRewrite(Op convertOp, typename Op::Adaptor,
+                  ConversionPatternRewriter &rewriter) const override {
+    auto loc = convertOp.getLoc();
+
+    auto source = convertOp.getSource();
+    VectorType sourceType = source.getType();
+    VectorType resultType = convertOp.getResult().getType();
+
+    Value result = rewriter.create<arith::ConstantOp>(
+        loc, resultType, rewriter.getZeroAttr(resultType));
+
+    SmallVector<int64_t> tileShape(sourceType.getRank(), 1);
+    tileShape.back() = sourceType.getShape().back();
+
+    for (SmallVector<int64_t> index :
+         StaticTileOffsetRange(sourceType.getShape(), tileShape)) {
+      auto extractOrInsertPosition = ArrayRef(index).drop_back();
+      auto sourceVector = rewriter.create<vector::ExtractOp>(
+          loc, source, extractOrInsertPosition);
+      auto convertedType =
+          VectorType::Builder(llvm::cast<VectorType>(sourceVector.getType()))
+              .setDim(0, resultType.getShape().back());
+      auto convertedVector =
+          rewriter.create<IntrOp>(loc, TypeRange{convertedType}, sourceVector);
+      result = rewriter.create<vector::InsertOp>(loc, convertedVector, result,
+                                                 extractOrInsertPosition);
+    }
+
+    rewriter.replaceOp(convertOp, result);
+    return success();
+  }
+};
+
+using ConvertToSvboolOpLowering =
+    SvboolConversionOpLowering<ConvertToSvboolOp, ConvertToSvboolIntrOp>;
+
+using ConvertFromSvboolOpLowering =
+    SvboolConversionOpLowering<ConvertFromSvboolOp, ConvertFromSvboolIntrOp>;
+
+} // namespace
+
 /// Populate the given list with patterns that convert from ArmSVE to LLVM.
 void mlir::populateArmSVELegalizeForLLVMExportPatterns(
     LLVMTypeConverter &converter, RewritePatternSet &patterns) {
@@ -88,7 +138,9 @@ void mlir::populateArmSVELegalizeForLLVMExportPatterns(
                ScalableMaskedMulFOpLowering,
                ScalableMaskedSDivIOpLowering,
                ScalableMaskedUDivIOpLowering,
-               ScalableMaskedDivFOpLowering>(converter);
+               ScalableMaskedDivFOpLowering,
+               ConvertToSvboolOpLowering,
+               ConvertFromSvboolOpLowering>(converter);
   // clang-format on
 }
 
@@ -107,7 +159,9 @@ void mlir::configureArmSVELegalizeForExportTarget(
                     ScalableMaskedMulFIntrOp,
                     ScalableMaskedSDivIIntrOp,
                     ScalableMaskedUDivIIntrOp,
-                    ScalableMaskedDivFIntrOp>();
+                    ScalableMaskedDivFIntrOp,
+                    ConvertToSvboolIntrOp,
+                    ConvertFromSvboolIntrOp>();
   target.addIllegalOp<SdotOp,
                       SmmlaOp,
                       UdotOp,
@@ -120,6 +174,8 @@ void mlir::configureArmSVELegalizeForExportTarget(
                       ScalableMaskedMulFOp,
                       ScalableMaskedSDivIOp,
                       ScalableMaskedUDivIOp,
-                      ScalableMaskedDivFOp>();
+                      ScalableMaskedDivFOp,
+                      ConvertToSvboolOp,
+                      ConvertFromSvboolOp>();
   // clang-format on
 }

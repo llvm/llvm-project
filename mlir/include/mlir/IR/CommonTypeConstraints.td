@@ -37,6 +37,12 @@ def IsFixedVectorTypePred : CPred<[{::llvm::isa<::mlir::VectorType>($_self) &&
 def IsScalableVectorTypePred : CPred<[{::llvm::isa<::mlir::VectorType>($_self) &&
                                    ::llvm::cast<VectorType>($_self).isScalable()}]>;
 
+// Whether a type is a scalable VectorType, with a single trailing scalable dimension.
+def IsTrailingScalableVectorTypePred : And<[CPred<"::llvm::isa<::mlir::VectorType>($_self)">,
+                            CPred<"::llvm::cast<::mlir::VectorType>($_self).getRank() > 0">,
+                            CPred<"::llvm::cast<::mlir::VectorType>($_self).getScalableDims().back()">,
+                            CPred<"!llvm::is_contained(::llvm::cast<::mlir::VectorType>($_self).getScalableDims().drop_back(), true)">]>;
+
 // Whether a type is a VectorType and all dimensions are scalable.
 def allDimsScalableVectorTypePred : And<[
   IsVectorTypePred,
@@ -404,6 +410,10 @@ class ScalableVectorOf<list<Type> allowedTypes> :
   ShapedContainerType<allowedTypes, IsScalableVectorTypePred,
           "scalable vector", "::mlir::VectorType">;
 
+class TrailingScalableVectorOf<list<Type> allowedTypes> :
+  ShapedContainerType<allowedTypes, IsTrailingScalableVectorTypePred,
+          "trailing scalable vector", "::mlir::VectorType">;
+
 // Whether the number of elements of a vector is from the given
 // `allowedRanks` list
 class IsVectorOfRankPred<list<int> allowedRanks> :
@@ -481,9 +491,31 @@ class IsScalableVectorOfLengthPred<list<int> allowedLengths> :
                            == }]
                          # allowedlength>)>]>;
 
+class abs<int value> {
+  int ret = !if(!lt(value, 0), !sub(0, value), value);
+}
+
+// Whether the n-th (starting from 1) dim of the shape matches the given `size`.
+// Negative values index in reverse.
+class IsNthDimSizeIsOneOfPred<int n, list<int> allowedSizes>
+  : And<[CPred<"::llvm::cast<::mlir::ShapedType>($_self).getRank() >= " # abs<n>.ret>,
+        CPred<"::llvm::is_contained(ArrayRef<int64_t>({" # !interleave(allowedSizes, ", ") # "}), "
+          # "::llvm::cast<::mlir::ShapedType>($_self).getDimSize("
+          #   !if(!lt(n, 0),
+                "::llvm::cast<::mlir::ShapedType>($_self).getRank() + " # n,
+                "" # !sub(n, 1))
+          # "))">]>;
+
 // Whether the shape of a vector matches the given `shape` list.
 class IsVectorOfShape<list<int> shape>
   : CPred<"::llvm::cast<::mlir::VectorType>($_self).getShape() == ArrayRef<int64_t>({" # !interleave(shape, ", ") # "})">;
+
+// Any ShapedType where the size of the n-th dim is contained in `sizes`.
+// Negative values index in reverse.
+class ShapedTypeWithNthDimOfSize<int n, list<int> allowedSizes> : Type<
+  IsNthDimSizeIsOneOfPred<n, allowedSizes>,
+  " with dim " # n # " having a size of {" # !interleave(allowedSizes, ", ") # "}",
+  "::mlir::ShapedType">;
 
 // Any vector where the number of elements is from the given
 // `allowedLengths` list
@@ -544,6 +576,17 @@ class ScalableVectorOfRankAndLengthAndType<list<int> allowedRanks,
   ScalableVectorOfRank<allowedRanks>.summary #
   ScalableVectorOf<allowedTypes>.summary #
   ScalableVectorOfLength<allowedLengths>.summary,
+  "::mlir::VectorType">;
+
+// Any scalable vector with a single trailing scalable dimensions, where the
+// size of the trailing dimension is in `allowedTrailingSizes` list, and the
+// type is in the `allowedTypes` list.
+class TrailingScalableVectorOfSizeAndType<list<int> allowedTrailingSizes,
+                                           list<Type> allowedTypes> : AllOfType<
+  [TrailingScalableVectorOf<allowedTypes>,
+   ShapedTypeWithNthDimOfSize<-1, allowedTrailingSizes>],
+   TrailingScalableVectorOf<allowedTypes>.summary #
+   ShapedTypeWithNthDimOfSize<-1, allowedTrailingSizes>.summary,
   "::mlir::VectorType">;
 
 def AnyVector : VectorOf<[AnyType]>;

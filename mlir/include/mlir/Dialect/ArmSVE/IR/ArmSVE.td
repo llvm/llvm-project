@@ -28,6 +28,8 @@ def ArmSVE_Dialect : Dialect {
     This dialect contains the definitions necessary to target specific Arm SVE
     scalable vector operations.
   }];
+
+  let dependentDialects = ["vector::VectorDialect"];
 }
 
 //===----------------------------------------------------------------------===//
@@ -39,6 +41,11 @@ def SVBool : ScalableVectorOfRankAndLengthAndType<
 
 def SVEPredicate : ScalableVectorOfRankAndLengthAndType<
   [1], [16, 8, 4, 2, 1], [I1]>;
+
+// Generalizations of SVBool and SVEPredicate to ranks >= 1.
+// These are masks with a single trailing scalable dimension.
+def SVBoolMask : TrailingScalableVectorOfSizeAndType<[16], [I1]>;
+def SVEMask : TrailingScalableVectorOfSizeAndType<[16, 8, 4, 2, 1], [I1]>;
 
 //===----------------------------------------------------------------------===//
 // ArmSVE op definitions
@@ -234,6 +241,66 @@ def UmmlaOp : ArmSVE_Op<"ummla",
   let results = (outs ScalableVectorOfLengthAndType<[4], [I32]>:$dst);
   let assemblyFormat =
     "$acc `,` $src1 `,` $src2 attr-dict `:` type($src1) `to` type($dst)";
+}
+
+
+class SvboolTypeContraint<string lhsArg, string rhsArg> : TypesMatchWith<
+      "expected corresponding svbool type widened to [16]xi1",
+      lhsArg, rhsArg,
+      "VectorType(VectorType::Builder(::llvm::cast<VectorType>($_self)).setDim(::llvm::cast<VectorType>($_self).getRank() - 1, 16))">;
+
+def ConvertFromSvboolOp : ArmSVE_Op<"convert_from_svbool",
+                            [Pure, SvboolTypeContraint<"result", "source">]>
+{
+  let summary = "Convert a svbool type to a SVE predicate type";
+  let description = [{
+    Converts svbool types (`vector<[16]xi1>` or vectors of that type, e.g.
+    `vector<2x3x[16]xi1>`) to SVE predicate types. Note: Only the trailing
+    dimension can be scalable.
+
+    Example 1: Convert a 1-D svbool mask to a SVE predicate.
+    ```mlir
+    %svbool = vector.load %memref[%c0] : memref<?xi1>, vector<[16]xi1>
+    %mask = arm_sve.convert_from_svbool %svbool : vector<[4]xi1>
+    ```
+
+    Example 2: Convert a 2-D svbool mask to a mask of SVE predicates.
+    ```mlir
+    %svbool = vector.load %memref[%c0, %c0] : memref<2x?xi1>, vector<2x[16]xi1>
+    %mask = arm_sve.convert_from_svbool %svbool : vector<2x[8]xi1>
+    ```
+  }];
+  let arguments = (ins SVBoolMask:$source);
+  let results = (outs SVEMask:$result);
+  let assemblyFormat = "$source attr-dict `:` type($result)";
+}
+
+def ConvertToSvboolOp : ArmSVE_Op<"convert_to_svbool",
+                            [Pure, SvboolTypeContraint<"source", "result">]>
+{
+  let summary = "Convert a predicate type to a svbool type";
+  let description = [{
+    Converts SVE predicate types (or vectors of predicate types, e.g.
+    `vector<4x[4]xi1>`) to svbool types. Note: Only the trailing dimension can
+    be scalable.
+
+    Example 1: Convert a 1-D SVE predicate to a svbool mask.
+    ```mlir
+    %mask = vector.create_mask %dim_size : vector<[4]xi1>
+    %svbool = arm_sve.convert_to_svbool %mask : vector<[4]xi1>
+    // => Results in vector<[16]xi1>
+    ```
+
+    Example 2: Convert a 2-D mask of SVE predicates to a svbool mask.
+    ```mlir
+    %mask = vector.create_mask %c2, %dim_size : vector<2x[2]xi1>
+    %svbool = arm_sve.convert_to_svbool %mask : vector<2x[2]xi1>
+    // => Results in vector<2x[16]xi1>
+    ```
+  }];
+  let arguments = (ins SVEMask:$source);
+  let results = (outs SVBoolMask:$result);
+  let assemblyFormat = "$source attr-dict `:` type($source)";
 }
 
 def ScalableMaskedAddIOp : ScalableMaskedIOp<"masked.addi", "addition",
