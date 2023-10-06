@@ -178,7 +178,7 @@ void DepscanPrefixMapping::remapInvocationPaths(CompilerInvocation &Invocation,
   Mapper.mapInPlace(CodeGenOpts.CoverageCompilationDir);
 
   // Sanitizer options.
-  mapInPlaceAll(Invocation.getLangOpts()->NoSanitizeFiles);
+  mapInPlaceAll(Invocation.getLangOpts().NoSanitizeFiles);
 
   // Handle coverage mappings.
   Mapper.mapInPlace(CodeGenOpts.ProfileInstrumentUsePath);

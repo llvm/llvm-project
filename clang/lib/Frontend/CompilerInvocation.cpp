@@ -131,40 +131,158 @@ static Expected<std::optional<uint32_t>> parseToleranceOption(StringRef Arg) {
 // Initialization.
 //===----------------------------------------------------------------------===//
 
-CompilerInvocationRefBase::CompilerInvocationRefBase()
-    : LangOpts(new LangOptions()), TargetOpts(new TargetOptions()),
-      DiagnosticOpts(new DiagnosticOptions()),
-      HeaderSearchOpts(new HeaderSearchOptions()),
-      PreprocessorOpts(new PreprocessorOptions()),
-      AnalyzerOpts(new AnalyzerOptions()) {}
+namespace {
+template <class T> std::shared_ptr<T> make_shared_copy(const T &X) {
+  return std::make_shared<T>(X);
+}
 
-CompilerInvocationRefBase::CompilerInvocationRefBase(
-    const CompilerInvocationRefBase &X)
-    : LangOpts(new LangOptions(*X.getLangOpts())),
-      TargetOpts(new TargetOptions(X.getTargetOpts())),
-      DiagnosticOpts(new DiagnosticOptions(X.getDiagnosticOpts())),
-      HeaderSearchOpts(new HeaderSearchOptions(X.getHeaderSearchOpts())),
-      PreprocessorOpts(new PreprocessorOptions(X.getPreprocessorOpts())),
-      AnalyzerOpts(new AnalyzerOptions(*X.getAnalyzerOpts())) {}
+template <class T>
+llvm::IntrusiveRefCntPtr<T> makeIntrusiveRefCntCopy(const T &X) {
+  return llvm::makeIntrusiveRefCnt<T>(X);
+}
+} // namespace
 
-CompilerInvocationRefBase::CompilerInvocationRefBase(
-    CompilerInvocationRefBase &&X) = default;
+CompilerInvocationBase::CompilerInvocationBase()
+    : LangOpts(std::make_shared<LangOptions>()),
+      TargetOpts(std::make_shared<TargetOptions>()),
+      DiagnosticOpts(llvm::makeIntrusiveRefCnt<DiagnosticOptions>()),
+      HSOpts(std::make_shared<HeaderSearchOptions>()),
+      PPOpts(std::make_shared<PreprocessorOptions>()),
+      AnalyzerOpts(llvm::makeIntrusiveRefCnt<AnalyzerOptions>()),
+      MigratorOpts(std::make_shared<MigratorOptions>()),
+      APINotesOpts(std::make_shared<APINotesOptions>()),
+      CASOpts(std::make_shared<CASOptions>()),
+      CodeGenOpts(std::make_shared<CodeGenOptions>()),
+      FSOpts(std::make_shared<FileSystemOptions>()),
+      FrontendOpts(std::make_shared<FrontendOptions>()),
+      DependencyOutputOpts(std::make_shared<DependencyOutputOptions>()),
+      PreprocessorOutputOpts(std::make_shared<PreprocessorOutputOptions>()) {}
 
-CompilerInvocationRefBase &
-CompilerInvocationRefBase::operator=(CompilerInvocationRefBase X) {
-  LangOpts.swap(X.LangOpts);
-  TargetOpts.swap(X.TargetOpts);
-  DiagnosticOpts.swap(X.DiagnosticOpts);
-  HeaderSearchOpts.swap(X.HeaderSearchOpts);
-  PreprocessorOpts.swap(X.PreprocessorOpts);
-  AnalyzerOpts.swap(X.AnalyzerOpts);
+CompilerInvocationBase &
+CompilerInvocationBase::deep_copy_assign(const CompilerInvocationBase &X) {
+  if (this != &X) {
+    LangOpts = make_shared_copy(X.getLangOpts());
+    TargetOpts = make_shared_copy(X.getTargetOpts());
+    DiagnosticOpts = makeIntrusiveRefCntCopy(X.getDiagnosticOpts());
+    HSOpts = make_shared_copy(X.getHeaderSearchOpts());
+    PPOpts = make_shared_copy(X.getPreprocessorOpts());
+    AnalyzerOpts = makeIntrusiveRefCntCopy(X.getAnalyzerOpts());
+    MigratorOpts = make_shared_copy(X.getMigratorOpts());
+    APINotesOpts = make_shared_copy(X.getAPINotesOpts());
+    CASOpts = make_shared_copy(X.getCASOpts());
+    CodeGenOpts = make_shared_copy(X.getCodeGenOpts());
+    FSOpts = make_shared_copy(X.getFileSystemOpts());
+    FrontendOpts = make_shared_copy(X.getFrontendOpts());
+    DependencyOutputOpts = make_shared_copy(X.getDependencyOutputOpts());
+    PreprocessorOutputOpts = make_shared_copy(X.getPreprocessorOutputOpts());
+  }
   return *this;
 }
 
-CompilerInvocationRefBase &
-CompilerInvocationRefBase::operator=(CompilerInvocationRefBase &&X) = default;
+CompilerInvocationBase &
+CompilerInvocationBase::shallow_copy_assign(const CompilerInvocationBase &X) {
+  if (this != &X) {
+    LangOpts = X.LangOpts;
+    TargetOpts = X.TargetOpts;
+    DiagnosticOpts = X.DiagnosticOpts;
+    HSOpts = X.HSOpts;
+    PPOpts = X.PPOpts;
+    AnalyzerOpts = X.AnalyzerOpts;
+    MigratorOpts = X.MigratorOpts;
+    APINotesOpts = X.APINotesOpts;
+    CASOpts = X.CASOpts;
+    CodeGenOpts = X.CodeGenOpts;
+    FSOpts = X.FSOpts;
+    FrontendOpts = X.FrontendOpts;
+    DependencyOutputOpts = X.DependencyOutputOpts;
+    PreprocessorOutputOpts = X.PreprocessorOutputOpts;
+  }
+  return *this;
+}
 
-CompilerInvocationRefBase::~CompilerInvocationRefBase() = default;
+CompilerInvocation::CompilerInvocation(const CowCompilerInvocation &X)
+    : CompilerInvocationBase(EmptyConstructor{}) {
+  CompilerInvocationBase::deep_copy_assign(X);
+}
+
+CompilerInvocation &
+CompilerInvocation::operator=(const CowCompilerInvocation &X) {
+  CompilerInvocationBase::deep_copy_assign(X);
+  return *this;
+}
+
+namespace {
+template <typename T>
+T &ensureOwned(std::shared_ptr<T> &Storage) {
+  if (Storage.use_count() > 1)
+    Storage = std::make_shared<T>(*Storage);
+  return *Storage;
+}
+
+template <typename T>
+T &ensureOwned(llvm::IntrusiveRefCntPtr<T> &Storage) {
+  if (Storage.useCount() > 1)
+    Storage = llvm::makeIntrusiveRefCnt<T>(*Storage);
+  return *Storage;
+}
+} // namespace
+
+LangOptions &CowCompilerInvocation::getMutLangOpts() {
+  return ensureOwned(LangOpts);
+}
+
+TargetOptions &CowCompilerInvocation::getMutTargetOpts() {
+  return ensureOwned(TargetOpts);
+}
+
+DiagnosticOptions &CowCompilerInvocation::getMutDiagnosticOpts() {
+  return ensureOwned(DiagnosticOpts);
+}
+
+HeaderSearchOptions &CowCompilerInvocation::getMutHeaderSearchOpts() {
+  return ensureOwned(HSOpts);
+}
+
+PreprocessorOptions &CowCompilerInvocation::getMutPreprocessorOpts() {
+  return ensureOwned(PPOpts);
+}
+
+AnalyzerOptions &CowCompilerInvocation::getMutAnalyzerOpts() {
+  return ensureOwned(AnalyzerOpts);
+}
+
+MigratorOptions &CowCompilerInvocation::getMutMigratorOpts() {
+  return ensureOwned(MigratorOpts);
+}
+
+APINotesOptions &CowCompilerInvocation::getMutAPINotesOpts() {
+  return ensureOwned(APINotesOpts);
+}
+
+CASOptions &CowCompilerInvocation::getMutCASOpts() {
+  return ensureOwned(CASOpts);
+}
+
+CodeGenOptions &CowCompilerInvocation::getMutCodeGenOpts() {
+  return ensureOwned(CodeGenOpts);
+}
+
+FileSystemOptions &CowCompilerInvocation::getMutFileSystemOpts() {
+  return ensureOwned(FSOpts);
+}
+
+FrontendOptions &CowCompilerInvocation::getMutFrontendOpts() {
+  return ensureOwned(FrontendOpts);
+}
+
+DependencyOutputOptions &CowCompilerInvocation::getMutDependencyOutputOpts() {
+  return ensureOwned(DependencyOutputOpts);
+}
+
+PreprocessorOutputOptions &
+CowCompilerInvocation::getMutPreprocessorOutputOpts() {
+  return ensureOwned(PreprocessorOutputOpts);
+}
 
 //===----------------------------------------------------------------------===//
 // Normalizers
@@ -490,7 +608,7 @@ static bool FixupInvocation(CompilerInvocation &Invocation,
                             InputKind IK) {
   unsigned NumErrorsBefore = Diags.getNumErrors();
 
-  LangOptions &LangOpts = *Invocation.getLangOpts();
+  LangOptions &LangOpts = Invocation.getLangOpts();
   CodeGenOptions &CodeGenOpts = Invocation.getCodeGenOpts();
   TargetOptions &TargetOpts = Invocation.getTargetOpts();
   FrontendOptions &FrontendOpts = Invocation.getFrontendOpts();
@@ -878,7 +996,7 @@ static void getAllNoBuiltinFuncValues(ArgList &Args,
   Funcs.insert(Funcs.end(), Values.begin(), BuiltinEnd);
 }
 
-static void GenerateAnalyzerArgs(AnalyzerOptions &Opts,
+static void GenerateAnalyzerArgs(const AnalyzerOptions &Opts,
                                  ArgumentConsumer Consumer) {
   const AnalyzerOptions *AnalyzerOpts = &Opts;
 
@@ -1564,11 +1682,11 @@ static bool parsePointerAuthOptions(PointerAuthOptions &Opts,
   return false;
 }
 
-void CompilerInvocation::GenerateCodeGenArgs(const CodeGenOptions &Opts,
-                                             ArgumentConsumer Consumer,
-                                             const llvm::Triple &T,
-                                             const std::string &OutputFile,
-                                             const LangOptions *LangOpts) {
+void CompilerInvocationBase::GenerateCodeGenArgs(const CodeGenOptions &Opts,
+                                                 ArgumentConsumer Consumer,
+                                                 const llvm::Triple &T,
+                                                 const std::string &OutputFile,
+                                                 const LangOptions *LangOpts) {
   const CodeGenOptions &CodeGenOpts = Opts;
 
   if (Opts.OptimizationLevel == 0)
@@ -2448,8 +2566,8 @@ static bool checkVerifyPrefixes(const std::vector<std::string> &VerifyPrefixes,
   return Success;
 }
 
-void CompilerInvocation::GenerateCASArgs(const CASOptions &Opts,
-                                         ArgumentConsumer Consumer) {
+void CompilerInvocationBase::GenerateCASArgs(const CASOptions &Opts,
+                                             ArgumentConsumer Consumer) {
   const CASOptions &CASOpts = Opts;
 
 #define CAS_OPTION_WITH_MARSHALLING(...)                                       \
@@ -2518,9 +2636,9 @@ static bool ParseMigratorArgs(MigratorOptions &Opts, const ArgList &Args,
   return Diags.getNumErrors() == NumErrorsBefore;
 }
 
-void CompilerInvocation::GenerateDiagnosticArgs(const DiagnosticOptions &Opts,
-                                                ArgumentConsumer Consumer,
-                                                bool DefaultDiagColor) {
+void CompilerInvocationBase::GenerateDiagnosticArgs(
+    const DiagnosticOptions &Opts, ArgumentConsumer Consumer,
+    bool DefaultDiagColor) {
   const DiagnosticOptions *DiagnosticOpts = &Opts;
 #define DIAG_OPTION_WITH_MARSHALLING(...)                                      \
   GENERATE_OPTION_WITH_MARSHALLING(Consumer, __VA_ARGS__)
@@ -3262,7 +3380,7 @@ std::string CompilerInvocation::GetResourcesPath(const char *Argv0,
   return Driver::GetResourcesPath(ClangExecutable, CLANG_RESOURCE_DIR);
 }
 
-static void GenerateHeaderSearchArgs(HeaderSearchOptions &Opts,
+static void GenerateHeaderSearchArgs(const HeaderSearchOptions &Opts,
                                      ArgumentConsumer Consumer) {
   const HeaderSearchOptions *HeaderSearchOpts = &Opts;
 #define HEADER_SEARCH_OPTION_WITH_MARSHALLING(...)                             \
@@ -3538,7 +3656,7 @@ static void ParseAPINotesArgs(APINotesOptions &Opts, ArgList &Args,
         << "-fapinotes";
 }
 
-static void GeneratePointerAuthArgs(LangOptions &Opts,
+static void GeneratePointerAuthArgs(const LangOptions &Opts,
                                     ArgumentConsumer Consumer) {
   if (Opts.PointerAuthIntrinsics)
     GenerateArg(Consumer, OPT_fptrauth_intrinsics);
@@ -3659,9 +3777,10 @@ static StringRef GetInputKindName(InputKind IK) {
   llvm_unreachable("unknown input language");
 }
 
-void CompilerInvocation::GenerateLangArgs(const LangOptions &Opts,
-                                          ArgumentConsumer Consumer,
-                                          const llvm::Triple &T, InputKind IK) {
+void CompilerInvocationBase::GenerateLangArgs(const LangOptions &Opts,
+                                              ArgumentConsumer Consumer,
+                                              const llvm::Triple &T,
+                                              InputKind IK) {
   if (IK.getFormat() == InputKind::Precompiled ||
       IK.getLanguage() == Language::LLVM_IR) {
     if (Opts.ObjCAutoRefCount)
@@ -4524,12 +4643,12 @@ static bool isStrictlyPreprocessorAction(frontend::ActionKind Action) {
   llvm_unreachable("invalid frontend action");
 }
 
-static void GeneratePreprocessorArgs(PreprocessorOptions &Opts,
+static void GeneratePreprocessorArgs(const PreprocessorOptions &Opts,
                                      ArgumentConsumer Consumer,
                                      const LangOptions &LangOpts,
                                      const FrontendOptions &FrontendOpts,
                                      const CodeGenOptions &CodeGenOpts) {
-  PreprocessorOptions *PreprocessorOpts = &Opts;
+  const PreprocessorOptions *PreprocessorOpts = &Opts;
 
 #define PREPROCESSOR_OPTION_WITH_MARSHALLING(...)                              \
   GENERATE_OPTION_WITH_MARSHALLING(Consumer, __VA_ARGS__)
@@ -4787,7 +4906,7 @@ bool CompilerInvocation::CreateFromArgsImpl(
   InputArgList Args = Opts.ParseArgs(CommandLineArgs, MissingArgIndex,
                                      MissingArgCount, IncludedFlagsBitmask);
 
-  LangOptions &LangOpts = *Res.getLangOpts();
+  LangOptions &LangOpts = Res.getLangOpts();
 
   // Check for missing argument error.
   if (MissingArgCount)
@@ -4808,7 +4927,7 @@ bool CompilerInvocation::CreateFromArgsImpl(
   ParseCASArgs(Res.getCASOpts(), Args, Diags);
   ParseFileSystemArgs(Res.getFileSystemOpts(), Args, Diags);
   ParseMigratorArgs(Res.getMigratorOpts(), Args, Diags);
-  ParseAnalyzerArgs(*Res.getAnalyzerOpts(), Args, Diags);
+  ParseAnalyzerArgs(Res.getAnalyzerOpts(), Args, Diags);
   ParseDiagnosticArgs(Res.getDiagnosticOpts(), Args, &Diags,
                       /*DefaultDiagColor=*/false);
   ParseFrontendArgs(Res.getFrontendOpts(), Args, Res.getCASOpts(), Diags,
@@ -4889,7 +5008,7 @@ bool CompilerInvocation::CreateFromArgsImpl(
 
   // If sanitizer is enabled, disable OPT_ffine_grained_bitfield_accesses.
   if (Res.getCodeGenOpts().FineGrainedBitfieldAccesses &&
-      !Res.getLangOpts()->Sanitize.empty()) {
+      !Res.getLangOpts().Sanitize.empty()) {
     Res.getCodeGenOpts().FineGrainedBitfieldAccesses = false;
     Diags.Report(diag::warn_drv_fine_grained_bitfield_accesses_ignored);
   }
@@ -4955,15 +5074,15 @@ std::string CompilerInvocation::getModuleHash(DiagnosticsEngine &Diags) const {
 #define BENIGN_ENUM_LANGOPT(Name, Type, Bits, Default, Description)
 #include "clang/Basic/LangOptions.def"
 
-  HBuilder.addRange(LangOpts->ModuleFeatures);
+  HBuilder.addRange(getLangOpts().ModuleFeatures);
 
-  HBuilder.add(LangOpts->ObjCRuntime);
-  HBuilder.addRange(LangOpts->CommentOpts.BlockCommandNames);
+  HBuilder.add(getLangOpts().ObjCRuntime);
+  HBuilder.addRange(getLangOpts().CommentOpts.BlockCommandNames);
 
   // Extend the signature with the target options.
-  HBuilder.add(TargetOpts->Triple, TargetOpts->CPU, TargetOpts->TuneCPU,
-               TargetOpts->ABI);
-  HBuilder.addRange(TargetOpts->FeaturesAsWritten);
+  HBuilder.add(getTargetOpts().Triple, getTargetOpts().CPU,
+               getTargetOpts().TuneCPU, getTargetOpts().ABI);
+  HBuilder.addRange(getTargetOpts().FeaturesAsWritten);
 
   // Extend the signature with preprocessor options.
   const PreprocessorOptions &ppOpts = getPreprocessorOpts();
@@ -5030,7 +5149,7 @@ std::string CompilerInvocation::getModuleHash(DiagnosticsEngine &Diags) const {
 
   // Extend the signature with the enabled sanitizers, if at least one is
   // enabled. Sanitizers which cannot affect AST generation aren't hashed.
-  SanitizerSet SanHash = LangOpts->Sanitize;
+  SanitizerSet SanHash = getLangOpts().Sanitize;
   SanHash.clear(getPPTransparentSanitizers());
   if (!SanHash.empty())
     HBuilder.add(SanHash.Mask);
@@ -5039,7 +5158,7 @@ std::string CompilerInvocation::getModuleHash(DiagnosticsEngine &Diags) const {
   //  -Werror: consider all warnings into the hash
   //  -Werror=something: consider only the specified into the hash
   //  -pedantic-error
-  if (getLangOpts()->ModulesHashErrorDiags) {
+  if (getLangOpts().ModulesHashErrorDiags) {
     bool ConsiderAllWarningsAsErrors = Diags.getWarningsAsErrors();
     HBuilder.add(isExtHandlingFromDiagsError(Diags));
     for (auto DiagIDMappingPair : Diags.getDiagnosticMappings()) {
@@ -5063,31 +5182,32 @@ std::string CompilerInvocation::getModuleHash(DiagnosticsEngine &Diags) const {
   return toString(llvm::APInt(64, Hash), 36, /*Signed=*/false);
 }
 
-void CompilerInvocation::generateCC1CommandLine(
+void CompilerInvocationBase::generateCC1CommandLine(
     ArgumentConsumer Consumer) const {
-  llvm::Triple T(TargetOpts->Triple);
+  llvm::Triple T(getTargetOpts().Triple);
 
-  GenerateCASArgs(CASOpts, Consumer);
-  GenerateFileSystemArgs(FileSystemOpts, Consumer);
-  GenerateMigratorArgs(MigratorOpts, Consumer);
-  GenerateAnalyzerArgs(*AnalyzerOpts, Consumer);
-  GenerateDiagnosticArgs(*DiagnosticOpts, Consumer, false);
-  GenerateFrontendArgs(FrontendOpts, Consumer, LangOpts->IsHeaderFile);
-  GenerateTargetArgs(*TargetOpts, Consumer);
-  GenerateHeaderSearchArgs(*HeaderSearchOpts, Consumer);
-  GenerateAPINotesArgs(APINotesOpts, Consumer);
-  GeneratePointerAuthArgs(*LangOpts, Consumer);
-  GenerateLangArgs(*LangOpts, Consumer, T, FrontendOpts.DashX);
-  GenerateCodeGenArgs(CodeGenOpts, Consumer, T, FrontendOpts.OutputFile,
-                      &*LangOpts);
-  GeneratePreprocessorArgs(*PreprocessorOpts, Consumer, *LangOpts, FrontendOpts,
-                           CodeGenOpts);
-  GeneratePreprocessorOutputArgs(PreprocessorOutputOpts, Consumer,
-                                 FrontendOpts.ProgramAction);
-  GenerateDependencyOutputArgs(DependencyOutputOpts, Consumer);
+  GenerateCASArgs(getCASOpts(), Consumer);
+  GenerateFileSystemArgs(getFileSystemOpts(), Consumer);
+  GenerateMigratorArgs(getMigratorOpts(), Consumer);
+  GenerateAnalyzerArgs(getAnalyzerOpts(), Consumer);
+  GenerateDiagnosticArgs(getDiagnosticOpts(), Consumer,
+                         /*DefaultDiagColor=*/false);
+  GenerateFrontendArgs(getFrontendOpts(), Consumer, getLangOpts().IsHeaderFile);
+  GenerateTargetArgs(getTargetOpts(), Consumer);
+  GenerateHeaderSearchArgs(getHeaderSearchOpts(), Consumer);
+  GenerateAPINotesArgs(getAPINotesOpts(), Consumer);
+  GeneratePointerAuthArgs(getLangOpts(), Consumer);
+  GenerateLangArgs(getLangOpts(), Consumer, T, getFrontendOpts().DashX);
+  GenerateCodeGenArgs(getCodeGenOpts(), Consumer, T,
+                      getFrontendOpts().OutputFile, &getLangOpts());
+  GeneratePreprocessorArgs(getPreprocessorOpts(), Consumer, getLangOpts(),
+                           getFrontendOpts(), getCodeGenOpts());
+  GeneratePreprocessorOutputArgs(getPreprocessorOutputOpts(), Consumer,
+                                 getFrontendOpts().ProgramAction);
+  GenerateDependencyOutputArgs(getDependencyOutputOpts(), Consumer);
 }
 
-std::vector<std::string> CompilerInvocation::getCC1CommandLine() const {
+std::vector<std::string> CompilerInvocationBase::getCC1CommandLine() const {
   std::vector<std::string> Args{"-cc1"};
   generateCC1CommandLine(
       [&Args](const Twine &Arg) { Args.push_back(Arg.str()); });
@@ -5095,12 +5215,12 @@ std::vector<std::string> CompilerInvocation::getCC1CommandLine() const {
 }
 
 void CompilerInvocation::resetNonModularOptions() {
-  getLangOpts()->resetNonModularOptions();
+  getLangOpts().resetNonModularOptions();
   getPreprocessorOpts().resetNonModularOptions();
 }
 
 void CompilerInvocation::clearImplicitModuleBuildOptions() {
-  getLangOpts()->ImplicitModules = false;
+  getLangOpts().ImplicitModules = false;
   getHeaderSearchOpts().ImplicitModuleMaps = false;
   getHeaderSearchOpts().ModuleCachePath.clear();
   getHeaderSearchOpts().ModulesValidateOncePerBuildSession = false;

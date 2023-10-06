@@ -40,7 +40,7 @@ private:
 
   Error initializeModuleBuild(CompilerInstance &ModuleScanInstance) override;
   Error finalizeModuleBuild(CompilerInstance &ModuleScanInstance) override;
-  Error finalizeModuleInvocation(CompilerInvocation &CI,
+  Error finalizeModuleInvocation(CowCompilerInvocation &CI,
                                  const ModuleDeps &MD) override;
 
 private:
@@ -392,17 +392,22 @@ Error IncludeTreeActionController::finalizeModuleBuild(
 }
 
 Error IncludeTreeActionController::finalizeModuleInvocation(
-    CompilerInvocation &CI, const ModuleDeps &MD) {
+    CowCompilerInvocation &CowCI, const ModuleDeps &MD) {
   if (!MD.IncludeTreeID)
     return llvm::createStringError(llvm::inconvertibleErrorCode(),
                                    "missing include-tree for module '%s'",
                                    MD.ID.ModuleName.c_str());
+
+  // TODO: Avoid this copy.
+  CompilerInvocation CI(CowCI);
 
   configureInvocationForCaching(CI, CASOpts, *MD.IncludeTreeID,
                                 /*CASFSWorkingDir=*/"",
                                 /*ProduceIncludeTree=*/true);
 
   DepscanPrefixMapping::remapInvocationPaths(CI, PrefixMapper);
+
+  CowCI = CI;
   return Error::success();
 }
 
@@ -563,7 +568,7 @@ IncludeTreeBuilder::finishIncludeTree(CompilerInstance &ScanInstance,
     return addToFileList(FM, *FE).moveInto(Ref);
   };
 
-  for (StringRef FilePath : NewInvocation.getLangOpts()->NoSanitizeFiles) {
+  for (StringRef FilePath : NewInvocation.getLangOpts().NoSanitizeFiles) {
     if (Error E = addFile(FilePath))
       return std::move(E);
   }

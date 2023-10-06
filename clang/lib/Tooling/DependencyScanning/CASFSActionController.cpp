@@ -32,7 +32,7 @@ public:
   initializeModuleBuild(CompilerInstance &ModuleScanInstance) override;
   llvm::Error
   finalizeModuleBuild(CompilerInstance &ModuleScanInstance) override;
-  llvm::Error finalizeModuleInvocation(CompilerInvocation &CI,
+  llvm::Error finalizeModuleInvocation(CowCompilerInvocation &CI,
                                        const ModuleDeps &MD) override;
 
 private:
@@ -178,8 +178,11 @@ Error CASFSActionController::finalizeModuleBuild(
   return Error::success();
 }
 
-Error CASFSActionController::finalizeModuleInvocation(CompilerInvocation &CI,
-                                                      const ModuleDeps &MD) {
+Error CASFSActionController::finalizeModuleInvocation(
+    CowCompilerInvocation &CowCI, const ModuleDeps &MD) {
+  // TODO: Avoid this copy.
+  CompilerInvocation CI(CowCI);
+
   if (auto ID = MD.CASFileSystemRootID) {
     configureInvocationForCaching(CI, CASOpts, ID->toString(),
                                   CacheFS.getCurrentWorkingDirectory().get(),
@@ -189,6 +192,7 @@ Error CASFSActionController::finalizeModuleInvocation(CompilerInvocation &CI,
   if (Mapper)
     DepscanPrefixMapping::remapInvocationPaths(CI, *Mapper);
 
+  CowCI = CI;
   return llvm::Error::success();
 }
 

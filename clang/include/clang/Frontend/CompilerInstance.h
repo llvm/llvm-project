@@ -270,9 +270,7 @@ public:
   /// @name Forwarding Methods
   /// {
 
-  AnalyzerOptionsRef getAnalyzerOpts() {
-    return Invocation->getAnalyzerOpts();
-  }
+  AnalyzerOptions &getAnalyzerOpts() { return Invocation->getAnalyzerOpts(); }
 
   CodeGenOptions &getCodeGenOpts() {
     return Invocation->getCodeGenOpts();
@@ -326,12 +324,8 @@ public:
     return Invocation->getAPINotesOpts();
   }
 
-  LangOptions &getLangOpts() {
-    return *Invocation->getLangOpts();
-  }
-  const LangOptions &getLangOpts() const {
-    return *Invocation->getLangOpts();
-  }
+  LangOptions &getLangOpts() { return Invocation->getLangOpts(); }
+  const LangOptions &getLangOpts() const { return Invocation->getLangOpts(); }
 
   PreprocessorOptions &getPreprocessorOpts() {
     return Invocation->getPreprocessorOpts();
