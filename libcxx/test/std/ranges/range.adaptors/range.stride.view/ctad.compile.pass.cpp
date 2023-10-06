@@ -23,24 +23,15 @@ constexpr bool test() {
   InstrumentedBasicView<int> bv{arr, arr + 3};
   InstrumentedBasicRange<int> br{};
 
-  static_assert(std::same_as<
-      decltype(std::ranges::stride_view(bv, 2)),
-      std::ranges::stride_view<decltype(bv)>
-  >);
-  static_assert(std::same_as<
-      decltype(std::ranges::stride_view(std::move(bv), 2)),
-      std::ranges::stride_view<decltype(bv)>
-  >);
+  static_assert(std::same_as< decltype(std::ranges::stride_view(bv, 2)), std::ranges::stride_view<decltype(bv)> >);
+  static_assert(
+      std::same_as< decltype(std::ranges::stride_view(std::move(bv), 2)), std::ranges::stride_view<decltype(bv)> >);
 
-  static_assert(std::same_as<
-      decltype(std::ranges::drop_view(br, 0)),
-      std::ranges::drop_view<std::ranges::ref_view<InstrumentedBasicRange<int>>>
-  >);
+  static_assert(std::same_as< decltype(std::ranges::drop_view(br, 0)),
+                              std::ranges::drop_view<std::ranges::ref_view<InstrumentedBasicRange<int>>> >);
 
-  static_assert(std::same_as<
-      decltype(std::ranges::drop_view(std::move(br), 0)),
-      std::ranges::drop_view<std::ranges::owning_view<InstrumentedBasicRange<int>>>
-  >);
+  static_assert(std::same_as< decltype(std::ranges::drop_view(std::move(br), 0)),
+                              std::ranges::drop_view<std::ranges::owning_view<InstrumentedBasicRange<int>>> >);
   return true;
 }
 
@@ -50,4 +41,3 @@ int main(int, char**) {
 
   return 0;
 }
-
