@@ -160,6 +160,7 @@ protected:
   const MCInstrAnalysis *Analysis;
   const MCInstrInfo *Info;
   const MCRegisterInfo *RegInfo;
+  const MCSubtargetInfo *STI;
 
   /// Map annotation name into an annotation index.
   StringMap<uint64_t> AnnotationNameIndexMap;
@@ -331,8 +332,8 @@ public:
 
 public:
   MCPlusBuilder(const MCInstrAnalysis *Analysis, const MCInstrInfo *Info,
-                const MCRegisterInfo *RegInfo)
-      : Analysis(Analysis), Info(Info), RegInfo(RegInfo) {
+                const MCRegisterInfo *RegInfo, const MCSubtargetInfo *STI)
+      : Analysis(Analysis), Info(Info), RegInfo(RegInfo), STI(STI) {
     // Initialize the default annotation allocator with id 0
     AnnotationAllocators.emplace(0, AnnotationAllocator());
     MaxAllocatorId++;
@@ -2079,15 +2080,18 @@ public:
 
 MCPlusBuilder *createX86MCPlusBuilder(const MCInstrAnalysis *,
                                       const MCInstrInfo *,
-                                      const MCRegisterInfo *);
+                                      const MCRegisterInfo *,
+                                      const MCSubtargetInfo *);
 
 MCPlusBuilder *createAArch64MCPlusBuilder(const MCInstrAnalysis *,
                                           const MCInstrInfo *,
-                                          const MCRegisterInfo *);
+                                          const MCRegisterInfo *,
+                                          const MCSubtargetInfo *);
 
 MCPlusBuilder *createRISCVMCPlusBuilder(const MCInstrAnalysis *,
                                         const MCInstrInfo *,
-                                        const MCRegisterInfo *);
+                                        const MCRegisterInfo *,
+                                        const MCSubtargetInfo *);
 
 } // namespace bolt
 } // namespace llvm

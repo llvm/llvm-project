@@ -128,9 +128,7 @@ static InstructionListType createIncMemory(MCPhysReg RegTo, MCPhysReg RegTmp) {
 }
 class AArch64MCPlusBuilder : public MCPlusBuilder {
 public:
-  AArch64MCPlusBuilder(const MCInstrAnalysis *Analysis, const MCInstrInfo *Info,
-                       const MCRegisterInfo *RegInfo)
-      : MCPlusBuilder(Analysis, Info, RegInfo) {}
+  using MCPlusBuilder::MCPlusBuilder;
 
   bool equals(const MCTargetExpr &A, const MCTargetExpr &B,
               CompFuncTy Comp) const override {
@@ -1654,8 +1652,9 @@ namespace bolt {
 
 MCPlusBuilder *createAArch64MCPlusBuilder(const MCInstrAnalysis *Analysis,
                                           const MCInstrInfo *Info,
-                                          const MCRegisterInfo *RegInfo) {
-  return new AArch64MCPlusBuilder(Analysis, Info, RegInfo);
+                                          const MCRegisterInfo *RegInfo,
+                                          const MCSubtargetInfo *STI) {
+  return new AArch64MCPlusBuilder(Analysis, Info, RegInfo, STI);
 }
 
 } // namespace bolt
