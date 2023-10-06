@@ -217,7 +217,6 @@ template <class T, class Allocator, class Predicate>
 #include <__memory/allocator.h>
 #include <__memory/allocator_traits.h>
 #include <__memory/compressed_pair.h>
-#include <__memory/construct_at.h>
 #include <__memory/pointer_traits.h>
 #include <__memory/swap_allocator.h>
 #include <__memory_resource/polymorphic_allocator.h>
@@ -238,7 +237,6 @@ template <class T, class Allocator, class Predicate>
 #include <__utility/swap.h>
 #include <cstring>
 #include <limits>
-#include <new> // __launder
 #include <version>
 
 // standard-mandated includes
@@ -310,9 +308,6 @@ struct __list_node_base
     __list_node_base() : __prev_(_NodeTraits::__unsafe_link_pointer_cast(__self())),
                          __next_(_NodeTraits::__unsafe_link_pointer_cast(__self())) {}
 
-    _LIBCPP_HIDE_FROM_ABI explicit __list_node_base(__link_pointer __prev, __link_pointer __next)
-        : __prev_(__prev), __next_(__next) {}
-
     _LIBCPP_INLINE_VISIBILITY
     __base_pointer __self() {
         return pointer_traits<__base_pointer>::pointer_to(*this);
@@ -325,34 +320,13 @@ struct __list_node_base
 };
 
 template <class _Tp, class _VoidPtr>
-struct __list_node
+struct _LIBCPP_STANDALONE_DEBUG __list_node
     : public __list_node_base<_Tp, _VoidPtr>
 {
-    // We allow starting the lifetime of nodes without initializing the value held by the node,
-    // since that is handled by the list itself in order to be allocator-aware.
-#ifndef _LIBCPP_CXX03_LANG
-private:
-    union {
-        _Tp __value_;
-    };
-
-public:
-    _LIBCPP_HIDE_FROM_ABI _Tp& __get_value() { return __value_; }
-#else
-private:
-    _ALIGNAS_TYPE(_Tp) char __buffer_[sizeof(_Tp)];
-
-public:
-    _LIBCPP_HIDE_FROM_ABI _Tp& __get_value() {
-        return *std::__launder(reinterpret_cast<_Tp*>(&__buffer_));
-    }
-#endif
+    _Tp __value_;
 
     typedef __list_node_base<_Tp, _VoidPtr> __base;
     typedef typename __base::__link_pointer __link_pointer;
-
-    _LIBCPP_HIDE_FROM_ABI explicit __list_node(__link_pointer __prev, __link_pointer __next) : __base(__prev, __next) {}
-    _LIBCPP_HIDE_FROM_ABI ~__list_node() {}
 
     _LIBCPP_INLINE_VISIBILITY
     __link_pointer __as_link() {
@@ -396,12 +370,12 @@ public:
     _LIBCPP_INLINE_VISIBILITY
     reference operator*() const
     {
-        return __ptr_->__as_node()->__get_value();
+        return __ptr_->__as_node()->__value_;
     }
     _LIBCPP_INLINE_VISIBILITY
     pointer operator->() const
     {
-        return pointer_traits<pointer>::pointer_to(__ptr_->__as_node()->__get_value());
+        return pointer_traits<pointer>::pointer_to(__ptr_->__as_node()->__value_);
     }
 
     _LIBCPP_INLINE_VISIBILITY
@@ -468,12 +442,12 @@ public:
     _LIBCPP_INLINE_VISIBILITY
     reference operator*() const
     {
-        return __ptr_->__as_node()->__get_value();
+        return __ptr_->__as_node()->__value_;
     }
     _LIBCPP_INLINE_VISIBILITY
     pointer operator->() const
     {
-        return pointer_traits<pointer>::pointer_to(__ptr_->__as_node()->__get_value());
+        return pointer_traits<pointer>::pointer_to(__ptr_->__as_node()->__value_);
     }
 
     _LIBCPP_INLINE_VISIBILITY
@@ -626,26 +600,16 @@ protected:
     _LIBCPP_HIDE_FROM_ABI __node_pointer __create_node(__link_pointer __prev, __link_pointer __next, _Args&& ...__args) {
         __node_allocator& __alloc = __node_alloc();
         __allocation_guard<__node_allocator> __guard(__alloc, 1);
-        // Begin the lifetime of the node itself. Note that this doesn't begin the lifetime of the value
-        // held inside the node, since we need to use the allocator's construct() method for that.
-        //
-        // We don't use the allocator's construct() method to construct the node itself since the
-        // Cpp17FooInsertable named requirements don't require the allocator's construct() method
-        // to work on anything other than the value_type.
-        std::__construct_at(std::addressof(*__guard.__get()), __prev, __next);
-
-        // Now construct the value_type using the allocator's construct() method.
-        __node_alloc_traits::construct(__alloc, std::addressof(__guard.__get()->__get_value()), std::forward<_Args>(__args)...);
+        __guard.__get()->__prev_ = __prev;
+        __guard.__get()->__next_ = __next;
+        __node_alloc_traits::construct(__alloc, std::addressof(__guard.__get()->__value_), std::forward<_Args>(__args)...);
         return __guard.__release_ptr();
     }
 
     template <class ..._Args>
     _LIBCPP_HIDE_FROM_ABI void __delete_node(__node_pointer __node) {
-        // For the same reason as above, we use the allocator's destroy() method for the value_type,
-        // but not for the node itself.
         __node_allocator& __alloc = __node_alloc();
-        __node_alloc_traits::destroy(__alloc, std::addressof(__node->__get_value()));
-        std::__destroy_at(std::addressof(*__node));
+        __node_alloc_traits::destroy(__alloc, std::addressof(__node->__value_));
         __node_alloc_traits::deallocate(__alloc, __node, 1);
     }
 
@@ -930,25 +894,25 @@ public:
     reference front()
     {
         _LIBCPP_ASSERT_VALID_ELEMENT_ACCESS(!empty(), "list::front called on empty list");
-        return base::__end_.__next_->__as_node()->__get_value();
+        return base::__end_.__next_->__as_node()->__value_;
     }
     _LIBCPP_INLINE_VISIBILITY
     const_reference front() const
     {
         _LIBCPP_ASSERT_VALID_ELEMENT_ACCESS(!empty(), "list::front called on empty list");
-        return base::__end_.__next_->__as_node()->__get_value();
+        return base::__end_.__next_->__as_node()->__value_;
     }
     _LIBCPP_INLINE_VISIBILITY
     reference back()
     {
         _LIBCPP_ASSERT_VALID_ELEMENT_ACCESS(!empty(), "list::back called on empty list");
-        return base::__end_.__prev_->__as_node()->__get_value();
+        return base::__end_.__prev_->__as_node()->__value_;
     }
     _LIBCPP_INLINE_VISIBILITY
     const_reference back() const
     {
         _LIBCPP_ASSERT_VALID_ELEMENT_ACCESS(!empty(), "list::back called on empty list");
-        return base::__end_.__prev_->__as_node()->__get_value();
+        return base::__end_.__prev_->__as_node()->__value_;
     }
 
 #ifndef _LIBCPP_CXX03_LANG
@@ -1538,7 +1502,7 @@ list<_Tp, _Alloc>::emplace_front(_Args&&... __args)
     __link_nodes_at_front(__nl, __nl);
     ++base::__sz();
 #if _LIBCPP_STD_VER >= 17
-    return __node->__get_value();
+    return __node->__value_;
 #endif
 }
 
@@ -1556,7 +1520,7 @@ list<_Tp, _Alloc>::emplace_back(_Args&&... __args)
     __link_nodes_at_back(__nl, __nl);
     ++base::__sz();
 #if _LIBCPP_STD_VER >= 17
-    return __node->__get_value();
+    return __node->__value_;
 #endif
 }
 

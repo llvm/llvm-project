@@ -21,7 +21,6 @@
 #include <__memory/addressof.h>
 #include <__memory/allocator_traits.h>
 #include <__memory/compressed_pair.h>
-#include <__memory/construct_at.h>
 #include <__memory/pointer_traits.h>
 #include <__memory/swap_allocator.h>
 #include <__memory/unique_ptr.h>
@@ -46,7 +45,6 @@
 #include <cmath>
 #include <cstring>
 #include <initializer_list>
-#include <new> // __launder
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #  pragma GCC system_header
@@ -109,44 +107,19 @@ struct __hash_node_base
     }
 
     _LIBCPP_INLINE_VISIBILITY __hash_node_base() _NOEXCEPT : __next_(nullptr) {}
-    _LIBCPP_HIDE_FROM_ABI explicit __hash_node_base(__next_pointer __next) _NOEXCEPT : __next_(__next) {}
 };
 
 template <class _Tp, class _VoidPtr>
-struct __hash_node
+struct _LIBCPP_STANDALONE_DEBUG __hash_node
     : public __hash_node_base
              <
                  __rebind_pointer_t<_VoidPtr, __hash_node<_Tp, _VoidPtr> >
              >
 {
     typedef _Tp __node_value_type;
-    using _Base = __hash_node_base<__rebind_pointer_t<_VoidPtr, __hash_node<_Tp, _VoidPtr> > >;
-    using __next_pointer = typename _Base::__next_pointer;
 
     size_t            __hash_;
-
-    // We allow starting the lifetime of nodes without initializing the value held by the node,
-    // since that is handled by the hash table itself in order to be allocator-aware.
-#ifndef _LIBCPP_CXX03_LANG
-private:
-    union {
-        _Tp __value_;
-    };
-
-public:
-    _LIBCPP_HIDE_FROM_ABI _Tp& __get_value() { return __value_; }
-#else
-private:
-    _ALIGNAS_TYPE(_Tp) char __buffer_[sizeof(_Tp)];
-
-public:
-    _LIBCPP_HIDE_FROM_ABI _Tp& __get_value() {
-        return *std::__launder(reinterpret_cast<_Tp*>(&__buffer_));
-    }
-#endif
-
-    _LIBCPP_HIDE_FROM_ABI explicit __hash_node(__next_pointer __next, size_t __hash) : _Base(__next), __hash_(__hash) {}
-    _LIBCPP_HIDE_FROM_ABI ~__hash_node() {}
+    __node_value_type __value_;
 };
 
 inline _LIBCPP_INLINE_VISIBILITY
@@ -338,12 +311,12 @@ public:
 
     _LIBCPP_INLINE_VISIBILITY
     reference operator*() const {
-        return __node_->__upcast()->__get_value();
+        return __node_->__upcast()->__value_;
     }
 
     _LIBCPP_INLINE_VISIBILITY
     pointer operator->() const {
-        return pointer_traits<pointer>::pointer_to(__node_->__upcast()->__get_value());
+        return pointer_traits<pointer>::pointer_to(__node_->__upcast()->__value_);
     }
 
     _LIBCPP_INLINE_VISIBILITY
@@ -414,11 +387,11 @@ public:
 
     _LIBCPP_INLINE_VISIBILITY
     reference operator*() const {
-        return __node_->__upcast()->__get_value();
+        return __node_->__upcast()->__value_;
     }
     _LIBCPP_INLINE_VISIBILITY
     pointer operator->() const {
-        return pointer_traits<pointer>::pointer_to(__node_->__upcast()->__get_value());
+        return pointer_traits<pointer>::pointer_to(__node_->__upcast()->__value_);
     }
 
     _LIBCPP_INLINE_VISIBILITY
@@ -480,12 +453,12 @@ public:
 
     _LIBCPP_INLINE_VISIBILITY
     reference operator*() const {
-        return __node_->__upcast()->__get_value();
+        return __node_->__upcast()->__value_;
     }
 
     _LIBCPP_INLINE_VISIBILITY
     pointer operator->() const {
-        return pointer_traits<pointer>::pointer_to(__node_->__upcast()->__get_value());
+        return pointer_traits<pointer>::pointer_to(__node_->__upcast()->__value_);
     }
 
     _LIBCPP_INLINE_VISIBILITY
@@ -570,12 +543,12 @@ public:
 
     _LIBCPP_INLINE_VISIBILITY
     reference operator*() const {
-        return __node_->__upcast()->__get_value();
+        return __node_->__upcast()->__value_;
     }
 
     _LIBCPP_INLINE_VISIBILITY
     pointer operator->() const {
-        return pointer_traits<pointer>::pointer_to(__node_->__upcast()->__get_value());
+        return pointer_traits<pointer>::pointer_to(__node_->__upcast()->__value_);
     }
 
     _LIBCPP_INLINE_VISIBILITY
@@ -697,10 +670,8 @@ public:
     _LIBCPP_INLINE_VISIBILITY
     void operator()(pointer __p) _NOEXCEPT
     {
-        if (__value_constructed) {
-            __alloc_traits::destroy(__na_, _NodeTypes::__get_ptr(__p->__get_value()));
-            std::__destroy_at(std::addressof(*__p));
-        }
+        if (__value_constructed)
+            __alloc_traits::destroy(__na_, _NodeTypes::__get_ptr(__p->__value_));
         if (__p)
             __alloc_traits::deallocate(__na_, __p, 1);
     }
@@ -1394,8 +1365,7 @@ __hash_table<_Tp, _Hash, _Equal, _Alloc>::__deallocate_node(__next_pointer __np)
     {
         __next_pointer __next = __np->__next_;
         __node_pointer __real_np = __np->__upcast();
-        __node_traits::destroy(__na, _NodeTypes::__get_ptr(__real_np->__get_value()));
-        std::__destroy_at(std::addressof(*__real_np));
+        __node_traits::destroy(__na, _NodeTypes::__get_ptr(__real_np->__value_));
         __node_traits::deallocate(__na, __real_np, 1);
         __np = __next;
     }
@@ -1464,8 +1434,8 @@ __hash_table<_Tp, _Hash, _Equal, _Alloc>::__move_assign(
                 const_iterator __i = __u.begin();
                 while (__cache != nullptr && __u.size() != 0)
                 {
-                    __cache->__upcast()->__get_value() =
-                        _VSTD::move(__u.remove(__i++)->__get_value());
+                    __cache->__upcast()->__value_ =
+                        _VSTD::move(__u.remove(__i++)->__value_);
                     __next_pointer __next = __cache->__next_;
                     __node_insert_multi(__cache->__upcast());
                     __cache = __next;
@@ -1483,7 +1453,7 @@ __hash_table<_Tp, _Hash, _Equal, _Alloc>::__move_assign(
         const_iterator __i = __u.begin();
         while (__u.size() != 0)
         {
-            __node_holder __h = __construct_node(_NodeTypes::__move(__u.remove(__i++)->__get_value()));
+            __node_holder __h = __construct_node(_NodeTypes::__move(__u.remove(__i++)->__value_));
             __node_insert_multi(__h.get());
             __h.release();
         }
@@ -1525,7 +1495,7 @@ __hash_table<_Tp, _Hash, _Equal, _Alloc>::__assign_unique(_InputIterator __first
 #endif // _LIBCPP_HAS_NO_EXCEPTIONS
             for (; __cache != nullptr && __first != __last; ++__first)
             {
-                __cache->__upcast()->__get_value() = *__first;
+                __cache->__upcast()->__value_ = *__first;
                 __next_pointer __next = __cache->__next_;
                 __node_insert_unique(__cache->__upcast());
                 __cache = __next;
@@ -1565,7 +1535,7 @@ __hash_table<_Tp, _Hash, _Equal, _Alloc>::__assign_multi(_InputIterator __first,
 #endif // _LIBCPP_HAS_NO_EXCEPTIONS
             for (; __cache != nullptr && __first != __last; ++__first)
             {
-                __cache->__upcast()->__get_value() = *__first;
+                __cache->__upcast()->__value_ = *__first;
                 __next_pointer __next = __cache->__next_;
                 __node_insert_multi(__cache->__upcast());
                 __cache = __next;
@@ -1659,7 +1629,7 @@ __hash_table<_Tp, _Hash, _Equal, _Alloc>::__node_insert_unique_prepare(
                                                      __ndptr = __ndptr->__next_)
             {
                 if ((__ndptr->__hash() == __hash) &&
-                    key_eq()(__ndptr->__upcast()->__get_value(), __value))
+                    key_eq()(__ndptr->__upcast()->__value_, __value))
                     return __ndptr;
             }
         }
@@ -1708,9 +1678,9 @@ template <class _Tp, class _Hash, class _Equal, class _Alloc>
 pair<typename __hash_table<_Tp, _Hash, _Equal, _Alloc>::iterator, bool>
 __hash_table<_Tp, _Hash, _Equal, _Alloc>::__node_insert_unique(__node_pointer __nd)
 {
-    __nd->__hash_ = hash_function()(__nd->__get_value());
+    __nd->__hash_ = hash_function()(__nd->__value_);
     __next_pointer __existing_node =
-        __node_insert_unique_prepare(__nd->__hash(), __nd->__get_value());
+        __node_insert_unique_prepare(__nd->__hash(), __nd->__value_);
 
     // Insert the node, unless it already exists in the container.
     bool __inserted = false;
@@ -1756,7 +1726,7 @@ __hash_table<_Tp, _Hash, _Equal, _Alloc>::__node_insert_multi_prepare(
             //      false       true        set __found to true
             //      true        false       break
             if (__found != (__pn->__next_->__hash() == __cp_hash &&
-                            key_eq()(__pn->__next_->__upcast()->__get_value(), __cp_val)))
+                            key_eq()(__pn->__next_->__upcast()->__value_, __cp_val)))
             {
                 if (!__found)
                     __found = true;
@@ -1810,8 +1780,8 @@ template <class _Tp, class _Hash, class _Equal, class _Alloc>
 typename __hash_table<_Tp, _Hash, _Equal, _Alloc>::iterator
 __hash_table<_Tp, _Hash, _Equal, _Alloc>::__node_insert_multi(__node_pointer __cp)
 {
-    __cp->__hash_ = hash_function()(__cp->__get_value());
-    __next_pointer __pn = __node_insert_multi_prepare(__cp->__hash(), __cp->__get_value());
+    __cp->__hash_ = hash_function()(__cp->__value_);
+    __next_pointer __pn = __node_insert_multi_prepare(__cp->__hash(), __cp->__value_);
     __node_insert_multi_perform(__cp, __pn);
 
     return iterator(__cp->__ptr());
@@ -1822,7 +1792,7 @@ typename __hash_table<_Tp, _Hash, _Equal, _Alloc>::iterator
 __hash_table<_Tp, _Hash, _Equal, _Alloc>::__node_insert_multi(
         const_iterator __p, __node_pointer __cp)
 {
-    if (__p != end() && key_eq()(*__p, __cp->__get_value()))
+    if (__p != end() && key_eq()(*__p, __cp->__value_))
     {
         __next_pointer __np = __p.__node_;
         __cp->__hash_ = __np->__hash();
@@ -1869,7 +1839,7 @@ __hash_table<_Tp, _Hash, _Equal, _Alloc>::__emplace_unique_key_args(_Key const& 
                                                            __nd = __nd->__next_)
             {
                 if ((__nd->__hash() == __hash) &&
-                    key_eq()(__nd->__upcast()->__get_value(), __k))
+                    key_eq()(__nd->__upcast()->__value_, __k))
                     goto __done;
             }
         }
@@ -2013,9 +1983,9 @@ __hash_table<_Tp, _Hash, _Equal, _Alloc>::__node_handle_merge_unique(
          __it != __source.end();)
     {
         __node_pointer __src_ptr = __it.__node_->__upcast();
-        size_t __hash = hash_function()(__src_ptr->__get_value());
+        size_t __hash = hash_function()(__src_ptr->__value_);
         __next_pointer __existing_node =
-            __node_insert_unique_prepare(__hash, __src_ptr->__get_value());
+            __node_insert_unique_prepare(__hash, __src_ptr->__value_);
         auto __prev_iter = __it++;
         if (__existing_node == nullptr)
         {
@@ -2067,9 +2037,9 @@ __hash_table<_Tp, _Hash, _Equal, _Alloc>::__node_handle_merge_multi(
          __it != __source.end();)
     {
         __node_pointer __src_ptr = __it.__node_->__upcast();
-        size_t __src_hash = hash_function()(__src_ptr->__get_value());
+        size_t __src_hash = hash_function()(__src_ptr->__value_);
         __next_pointer __pn =
-            __node_insert_multi_prepare(__src_hash, __src_ptr->__get_value());
+            __node_insert_multi_prepare(__src_hash, __src_ptr->__value_);
         (void)__source.remove(__it++).release();
         __src_ptr->__hash_ = __src_hash;
         __node_insert_multi_perform(__src_ptr, __pn);
@@ -2143,8 +2113,8 @@ __hash_table<_Tp, _Hash, _Equal, _Alloc>::__do_rehash(size_type __nbc)
                         if _LIBCPP_CONSTEXPR_SINCE_CXX17 (!_UniqueKeys)
                         {
                             for (; __np->__next_ != nullptr &&
-                                   key_eq()(__cp->__upcast()->__get_value(),
-                                            __np->__next_->__upcast()->__get_value());
+                                   key_eq()(__cp->__upcast()->__value_,
+                                            __np->__next_->__upcast()->__value_);
                                                                __np = __np->__next_)
                                 ;
                         }
@@ -2178,7 +2148,7 @@ __hash_table<_Tp, _Hash, _Equal, _Alloc>::find(const _Key& __k)
                                                            __nd = __nd->__next_)
             {
                 if ((__nd->__hash() == __hash)
-                    && key_eq()(__nd->__upcast()->__get_value(), __k))
+                    && key_eq()(__nd->__upcast()->__value_, __k))
                     return iterator(__nd);
             }
         }
@@ -2205,7 +2175,7 @@ __hash_table<_Tp, _Hash, _Equal, _Alloc>::find(const _Key& __k) const
                                                            __nd = __nd->__next_)
             {
                 if ((__nd->__hash() == __hash)
-                    && key_eq()(__nd->__upcast()->__get_value(), __k))
+                    && key_eq()(__nd->__upcast()->__value_, __k))
                     return const_iterator(__nd);
             }
         }
@@ -2223,20 +2193,10 @@ __hash_table<_Tp, _Hash, _Equal, _Alloc>::__construct_node(_Args&& ...__args)
                   "Construct cannot be called with a hash value type");
     __node_allocator& __na = __node_alloc();
     __node_holder __h(__node_traits::allocate(__na, 1), _Dp(__na));
-
-    // Begin the lifetime of the node itself. Note that this doesn't begin the lifetime of the value
-    // held inside the node, since we need to use the allocator's construct() method for that.
-    //
-    // We don't use the allocator's construct() method to construct the node itself since the
-    // Cpp17FooInsertable named requirements don't require the allocator's construct() method
-    // to work on anything other than the value_type.
-    std::__construct_at(std::addressof(*__h), /* next = */nullptr, /* hash = */0);
-
-    // Now construct the value_type using the allocator's construct() method.
-    __node_traits::construct(__na, _NodeTypes::__get_ptr(__h->__get_value()), _VSTD::forward<_Args>(__args)...);
+    __node_traits::construct(__na, _NodeTypes::__get_ptr(__h->__value_), _VSTD::forward<_Args>(__args)...);
     __h.get_deleter().__value_constructed = true;
-
-    __h->__hash_ = hash_function()(__h->__get_value());
+    __h->__hash_ = hash_function()(__h->__value_);
+    __h->__next_ = nullptr;
     return __h;
 }
 
@@ -2250,11 +2210,12 @@ __hash_table<_Tp, _Hash, _Equal, _Alloc>::__construct_node_hash(
                   "Construct cannot be called with a hash value type");
     __node_allocator& __na = __node_alloc();
     __node_holder __h(__node_traits::allocate(__na, 1), _Dp(__na));
-    std::__construct_at(std::addressof(*__h), /* next = */nullptr, /* hash = */__hash);
-    __node_traits::construct(__na, _NodeTypes::__get_ptr(__h->__get_value()),
+    __node_traits::construct(__na, _NodeTypes::__get_ptr(__h->__value_),
                              _VSTD::forward<_First>(__f),
                              _VSTD::forward<_Rest>(__rest)...);
     __h.get_deleter().__value_constructed = true;
+    __h->__hash_ = __hash;
+    __h->__next_ = nullptr;
     return __h;
 }
 
