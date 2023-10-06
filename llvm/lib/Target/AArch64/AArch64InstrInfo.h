@@ -120,6 +120,9 @@ public:
   /// Returns whether the instruction is in Q form (128 bit operands)
   static bool isQForm(const MachineInstr &MI);
 
+  /// Returns whether the instruction can be compatible with non-zero BTYPE.
+  static bool hasBTISemantics(const MachineInstr &MI);
+
   /// Returns the index for the immediate for a given instruction.
   static unsigned getLoadStoreImmIdx(unsigned Opc);
 

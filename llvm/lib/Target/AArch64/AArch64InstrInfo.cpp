@@ -1133,6 +1133,11 @@ bool AArch64InstrInfo::isSchedulingBoundary(const MachineInstr &MI,
                                             const MachineFunction &MF) const {
   if (TargetInstrInfo::isSchedulingBoundary(MI, MBB, MF))
     return true;
+
+  // Do not move an instruction that can be recognized as a branch target.
+  if (hasBTISemantics(MI))
+    return true;
+
   switch (MI.getOpcode()) {
   case AArch64::HINT:
     // CSDB hints are scheduling barriers.
@@ -4079,6 +4084,32 @@ bool AArch64InstrInfo::isQForm(const MachineInstr &MI) {
            TRC == &AArch64::FPR128_loRegClass;
   };
   return llvm::any_of(MI.operands(), IsQFPR);
+}
+
+bool AArch64InstrInfo::hasBTISemantics(const MachineInstr &MI) {
+  switch (MI.getOpcode()) {
+  case AArch64::BRK:
+  case AArch64::HLT:
+  case AArch64::PACIASP:
+  case AArch64::PACIBSP:
+    // Implicit BTI behavior.
+    return true;
+  case AArch64::PAUTH_PROLOGUE:
+    // PAUTH_PROLOGUE expands to PACI(A|B)SP.
+    return true;
+  case AArch64::HINT: {
+    unsigned Imm = MI.getOperand(0).getImm();
+    // Explicit BTI instruction.
+    if (Imm == 32 || Imm == 34 || Imm == 36 || Imm == 38)
+      return true;
+    // PACI(A|B)SP instructions.
+    if (Imm == 25 || Imm == 27)
+      return true;
+    return false;
+  }
+  default:
+    return false;
+  }
 }
 
 bool AArch64InstrInfo::isFpOrNEON(const MachineInstr &MI) {
@@ -8829,11 +8860,8 @@ AArch64InstrInfo::getOutliningTypeImpl(MachineBasicBlock::iterator &MIT,
 
   // Don't outline BTI instructions, because that will prevent the outlining
   // site from being indirectly callable.
-  if (MI.getOpcode() == AArch64::HINT) {
-    int64_t Imm = MI.getOperand(0).getImm();
-    if (Imm == 32 || Imm == 34 || Imm == 36 || Imm == 38)
-      return outliner::InstrType::Illegal;
-  }
+  if (hasBTISemantics(MI))
+    return outliner::InstrType::Illegal;
 
   return outliner::InstrType::Legal;
 }
