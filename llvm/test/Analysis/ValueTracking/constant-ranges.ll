@@ -3,9 +3,7 @@
 
 define i1 @shl_C_X_ugt(i8 %x) {
 ; CHECK-LABEL: @shl_C_X_ugt(
-; CHECK-NEXT:    [[SHL:%.*]] = shl i8 7, [[X:%.*]]
-; CHECK-NEXT:    [[R:%.*]] = icmp ugt i8 [[SHL]], -32
-; CHECK-NEXT:    ret i1 [[R]]
+; CHECK-NEXT:    ret i1 false
 ;
   %shl = shl i8 7, %x
   %r = icmp ugt i8 %shl, 224
@@ -14,9 +12,7 @@ define i1 @shl_C_X_ugt(i8 %x) {
 
 define i1 @shl_C_X_ugt2(i8 %x) {
 ; CHECK-LABEL: @shl_C_X_ugt2(
-; CHECK-NEXT:    [[SHL:%.*]] = shl i8 5, [[X:%.*]]
-; CHECK-NEXT:    [[R:%.*]] = icmp ugt i8 [[SHL]], -64
-; CHECK-NEXT:    ret i1 [[R]]
+; CHECK-NEXT:    ret i1 false
 ;
   %shl = shl i8 5, %x
   %r = icmp ugt i8 %shl, 192
@@ -69,9 +65,7 @@ define i1 @shl_C_X_ugt_todo(i8 %x) {
 
 define i1 @shl_X_C_ugt(i8 %x) {
 ; CHECK-LABEL: @shl_X_C_ugt(
-; CHECK-NEXT:    [[SHL:%.*]] = shl i8 [[X:%.*]], 6
-; CHECK-NEXT:    [[R:%.*]] = icmp ugt i8 [[SHL]], -64
-; CHECK-NEXT:    ret i1 [[R]]
+; CHECK-NEXT:    ret i1 false
 ;
   %shl = shl i8 %x, 6
   %r = icmp ugt i8 %shl, 192
