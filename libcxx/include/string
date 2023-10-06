@@ -1198,11 +1198,17 @@ public:
 
   _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 const_reference operator[](size_type __pos) const _NOEXCEPT {
     _LIBCPP_ASSERT_VALID_ELEMENT_ACCESS(__pos <= size(), "string index out of bounds");
+    if (__builtin_constant_p(__pos) && !__fits_in_sso(__pos)) {
+      return *(__get_long_pointer() + __pos);
+    }
     return *(data() + __pos);
   }
 
   _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 reference operator[](size_type __pos) _NOEXCEPT {
     _LIBCPP_ASSERT_VALID_ELEMENT_ACCESS(__pos <= size(), "string index out of bounds");
+    if (__builtin_constant_p(__pos) && !__fits_in_sso(__pos)) {
+      return *(__get_long_pointer() + __pos);
+    }
     return *(__get_pointer() + __pos);
   }
 
