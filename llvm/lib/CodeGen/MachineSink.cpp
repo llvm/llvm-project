@@ -540,6 +540,8 @@ bool MachineSinking::PerformSinkAndFold(MachineInstr &MI,
     }
     LLVM_DEBUG(dbgs() << "yielding"; New->dump());
     SinkDst->eraseFromParent();
+    // Clear the StoreInstrCache, since we may have invalidated it by erasing.
+    StoreInstrCache.clear();
   }
 
   // Collect operands that need to be cleaned up because the registers no longer
