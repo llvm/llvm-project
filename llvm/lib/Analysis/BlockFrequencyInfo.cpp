@@ -78,14 +78,13 @@ cl::opt<PGOViewCountsType> PGOViewCounts(
                clEnumValN(PGOVCT_Graph, "graph", "show a graph."),
                clEnumValN(PGOVCT_Text, "text", "show in text.")));
 
-static cl::opt<bool> PrintBlockFreq(
-    "print-bfi", cl::init(false), cl::Hidden,
-    cl::desc("Print the block frequency info."));
+static cl::opt<bool> PrintBFI("print-bfi", cl::init(false), cl::Hidden,
+                              cl::desc("Print the block frequency info."));
 
-cl::opt<std::string> PrintBlockFreqFuncName(
-    "print-bfi-func-name", cl::Hidden,
-    cl::desc("The option to specify the name of the function "
-             "whose block frequency info is printed."));
+cl::opt<std::string>
+    PrintBFIFuncName("print-bfi-func-name", cl::Hidden,
+                     cl::desc("The option to specify the name of the function "
+                              "whose block frequency info is printed."));
 } // namespace llvm
 
 namespace llvm {
@@ -193,9 +192,8 @@ void BlockFrequencyInfo::calculate(const Function &F,
        F.getName().equals(ViewBlockFreqFuncName))) {
     view();
   }
-  if (PrintBlockFreq &&
-      (PrintBlockFreqFuncName.empty() ||
-       F.getName().equals(PrintBlockFreqFuncName))) {
+  if (PrintBFI &&
+      (PrintBFIFuncName.empty() || F.getName().equals(PrintBFIFuncName))) {
     print(dbgs());
   }
 }
@@ -267,17 +265,6 @@ const BranchProbabilityInfo *BlockFrequencyInfo::getBPI() const {
   return BFI ? &BFI->getBPI() : nullptr;
 }
 
-raw_ostream &BlockFrequencyInfo::printBlockFreq(raw_ostream &OS,
-                                                BlockFrequency Freq) const {
-  return BFI ? BFI->printBlockFreq(OS, Freq) : OS;
-}
-
-raw_ostream &
-BlockFrequencyInfo::printBlockFreq(raw_ostream &OS,
-                                   const BasicBlock *BB) const {
-  return BFI ? BFI->printBlockFreq(OS, BB) : OS;
-}
-
 BlockFrequency BlockFrequencyInfo::getEntryFreq() const {
   return BFI ? BFI->getEntryFreq() : BlockFrequency(0);
 }
@@ -292,6 +279,18 @@ void BlockFrequencyInfo::print(raw_ostream &OS) const {
 void BlockFrequencyInfo::verifyMatch(BlockFrequencyInfo &Other) const {
   if (BFI)
     BFI->verifyMatch(*Other.BFI);
+}
+
+Printable llvm::printBlockFreq(const BlockFrequencyInfo &BFI,
+                               BlockFrequency Freq) {
+  return Printable([&BFI, Freq](raw_ostream &OS) {
+    printBlockFreqImpl(OS, BFI.getEntryFreq(), Freq);
+  });
+}
+
+Printable llvm::printBlockFreq(const BlockFrequencyInfo &BFI,
+                               const BasicBlock &BB) {
+  return printBlockFreq(BFI, BFI.getBlockFreq(&BB));
 }
 
 INITIALIZE_PASS_BEGIN(BlockFrequencyInfoWrapperPass, "block-freq",
