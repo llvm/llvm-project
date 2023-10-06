@@ -259,19 +259,18 @@ static int libomp_target_memset_async_helper(kmp_int32 Gtid, kmp_task_t *Task) {
   return OFFLOAD_SUCCESS;
 }
 
-static inline
-void ConvertDepObjVector(llvm::SmallVector<kmp_depend_info_t> &Vec,
-                         int DepObjCount, omp_depend_t * DepObjList) {
-  for (int i = 0; i < DepObjCount; i++) {
+static inline void
+ConvertDepObjVector(llvm::SmallVector<kmp_depend_info_t> &Vec, int DepObjCount,
+                    omp_depend_t *DepObjList) {
+  for (int i = 0; i < DepObjCount; ++i) {
     omp_depend_t DepObj = DepObjList[i];
     Vec.push_back(*((kmp_depend_info_t *)DepObj));
   }
 }
 
-
 static int libomp_helper_memset_task_creation(TargetMemsetArgsTy *Args,
                                               int DepObjCount,
-                                              omp_depend_t * DepObjList) {
+                                              omp_depend_t *DepObjList) {
   // Create global thread ID
   int Gtid = __kmpc_global_thread_num(nullptr);
   int (*Fn)(kmp_int32, kmp_task_t *) = &libomp_target_memset_async_helper;
@@ -282,8 +281,8 @@ static int libomp_helper_memset_task_creation(TargetMemsetArgsTy *Args,
   InputFlags->hidden_helper = 1;
 
   // Alloc the helper task
-  kmp_task_t *Task = __kmpc_omp_target_task_alloc(nullptr, Gtid, Flags,
-                                                 sizeof(kmp_task_t), 0, Fn, -1);
+  kmp_task_t *Task = __kmpc_omp_target_task_alloc(
+      nullptr, Gtid, Flags, sizeof(kmp_task_t), 0, Fn, -1);
   if (!Task) {
     delete Args;
     return OFFLOAD_FAIL;
@@ -303,7 +302,7 @@ static int libomp_helper_memset_task_creation(TargetMemsetArgsTy *Args,
   return Rc;
 }
 
-EXTERN void * omp_target_memset(void * Ptr, int C, size_t N, int DeviceNum) {
+EXTERN void *omp_target_memset(void *Ptr, int C, size_t N, int DeviceNum) {
   TIMESCOPE();
   DP("Call to omp_target_memset, device %d, device pointer %p, size %zu\n",
      DeviceNum, Ptr, N);
@@ -316,9 +315,8 @@ EXTERN void * omp_target_memset(void * Ptr, int C, size_t N, int DeviceNum) {
 
   if (DeviceNum == omp_get_initial_device()) {
     DP("filling memory on host via memset");
-    memset(Ptr, C, N);  // ignore return value, memset() cannot fail
-  }
-  else {
+    memset(Ptr, C, N); // ignore return value, memset() cannot fail
+  } else {
     // TODO: replace the omp_target_memset() slow path with the fast path.
     // That will require the ability to execute a kernel from within
     // libomptarget.so (which we do not have at the moment).
@@ -326,20 +324,19 @@ EXTERN void * omp_target_memset(void * Ptr, int C, size_t N, int DeviceNum) {
     // This is a very slow path: create a filled array on the host and upload
     // it to the GPU device.
     int InitialDevice = omp_get_initial_device();
-    void * Shadow = omp_target_alloc(N, InitialDevice);
-    memset(Shadow, C, N);
-    omp_target_memcpy(Ptr, Shadow, N, 0, 0, DeviceNum, InitialDevice);
-    omp_target_free(Shadow, InitialDevice);
+    void *Shadow = omp_target_alloc(N, InitialDevice);
+    (void)memset(Shadow, C, N);
+    (void)omp_target_memcpy(Ptr, Shadow, N, 0, 0, DeviceNum, InitialDevice);
+    (void)omp_target_free(Shadow, InitialDevice);
   }
 
   DP("omp_target_memset returns %p\n", Ptr);
   return Ptr;
 }
 
-
-EXTERN void * omp_target_memset_async(void * Ptr, int C, size_t N, int DeviceNum,
-                                      int DepObjCount,
-                                      omp_depend_t * DepObjList) {
+EXTERN void *omp_target_memset_async(void *Ptr, int C, size_t N, int DeviceNum,
+                                     int DepObjCount,
+                                     omp_depend_t *DepObjList) {
   DP("Call to omp_target_memset_async, device %d, device pointer %p, size %zu",
      DeviceNum, Ptr, N);
 
@@ -354,7 +351,7 @@ EXTERN void * omp_target_memset_async(void * Ptr, int C, size_t N, int DeviceNum
 
   // omp_target_memset_async() cannot fail via a return code, so ignore the
   // return code of the helper function
-  (void) libomp_helper_memset_task_creation(Args, DepObjCount, DepObjList);
+  (void)libomp_helper_memset_task_creation(Args, DepObjCount, DepObjList);
 
   return Ptr;
 }
