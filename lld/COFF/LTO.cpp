@@ -86,6 +86,8 @@ lto::Config BitcodeCompiler::createConfig() {
   c.CSIRProfile = std::string(ctx.config.ltoCSProfileFile);
   c.RunCSIRInstr = ctx.config.ltoCSProfileGenerate;
   c.PGOWarnMismatch = ctx.config.ltoPGOWarnMismatch;
+  c.TimeTraceEnabled = ctx.config.timeTraceEnabled;
+  c.TimeTraceGranularity = ctx.config.timeTraceGranularity;
 
   if (ctx.config.emit == EmitKind::LLVM) {
     c.PostInternalizeModuleHook = [this](size_t task, const Module &m) {
