@@ -732,8 +732,8 @@ RecurrenceDescriptor::isFindLastIVPattern(Loop *Loop, PHINode *OrigPhi,
     // TODO: This range restriction can be lifted by adding an additional
     // virtual OR reduction.
     const APInt Sentinel = APInt::getSignedMinValue(NumBits);
-    const ConstantRange ValidRange = ConstantRange::getNonEmpty(
-        Sentinel + 1, APInt::getSignedMinValue(NumBits));
+    const ConstantRange ValidRange =
+        ConstantRange::getFull(NumBits).difference(ConstantRange(Sentinel));
     LLVM_DEBUG(dbgs() << "LV: FindLastIV valid range is " << ValidRange
                       << ", and the signed range of " << *AR << " is "
                       << IVRange << "\n");
