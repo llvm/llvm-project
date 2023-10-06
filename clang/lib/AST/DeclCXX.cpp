@@ -1511,7 +1511,8 @@ void CXXRecordDecl::setCaptures(ASTContext &Context,
     if (Captures[I].isExplicit())
       ++Data.NumExplicitCaptures;
 
-    *ToCapture++ = Captures[I];
+    new (ToCapture) LambdaCapture(Captures[I]);
+    ToCapture++;
   }
 
   if (!lambdaIsDefaultConstructibleAndAssignable())
