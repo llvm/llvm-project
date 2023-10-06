@@ -220,10 +220,6 @@ else()
       set(TSAN_ASM_SOURCES
         tsan_rtl_mips64.S
         )
-    elseif(arch MATCHES "riscv64")
-      set(TSAN_ASM_SOURCES
-        tsan_rtl_riscv64.S
-        )
     elseif(arch MATCHES "s390x")
       set(TSAN_ASM_SOURCES
         tsan_rtl_s390x.S
