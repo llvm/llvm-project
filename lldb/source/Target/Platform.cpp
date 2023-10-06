@@ -989,6 +989,14 @@ uint32_t Platform::FindProcesses(const ProcessInstanceInfoMatch &match_info,
   return match_count;
 }
 
+ProcessInstanceInfoList Platform::GetAllProcesses() {
+  ProcessInstanceInfoList processes;
+  ProcessInstanceInfoMatch match;
+  assert(match.MatchAllProcesses());
+  FindProcesses(match, processes);
+  return processes;
+}
+
 Status Platform::LaunchProcess(ProcessLaunchInfo &launch_info) {
   Status error;
   Log *log = GetLog(LLDBLog::Platform);
