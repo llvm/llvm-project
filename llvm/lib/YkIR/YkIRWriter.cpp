@@ -239,6 +239,30 @@ public:
     InstIdx++;
   }
 
+  void serialiseCallInst(CallInst *I, ValueLoweringMap &VLMap, unsigned BBIdx,
+                         unsigned InstIdx) {
+    // type_index:
+    OutStreamer.emitSizeT(typeIndex(I->getType()));
+    // opcode:
+    serialiseOpcode(OpCode::Call);
+    // num_operands:
+    unsigned NumOpers = I->getNumOperands();
+    OutStreamer.emitInt32(NumOpers);
+
+    // OPERAND 0: What to call.
+    //
+    // In LLVM IR this is the final operand, which is a cause of confusion.
+    serialiseOperand(I, VLMap, I->getOperand(NumOpers - 1));
+
+    // Now the rest of the operands.
+    for (unsigned OI = 0; OI < NumOpers - 1; OI++) {
+      serialiseOperand(I, VLMap, I->getOperand(OI));
+    }
+
+    VLMap[I] = {BBIdx, InstIdx};
+    InstIdx++;
+  }
+
   void serialiseInst(Instruction *I, ValueLoweringMap &VLMap, unsigned BBIdx,
                      unsigned &InstIdx) {
 // Macros to help dispatch to serialisers.
@@ -257,7 +281,6 @@ public:
 
     GENERIC_INST_SERIALISE(I, LoadInst, Load)
     GENERIC_INST_SERIALISE(I, StoreInst, Store)
-    GENERIC_INST_SERIALISE(I, CallInst, Call)
     GENERIC_INST_SERIALISE(I, GetElementPtrInst, GetElementPtr)
     GENERIC_INST_SERIALISE(I, BranchInst, Branch)
     GENERIC_INST_SERIALISE(I, ICmpInst, ICmp)
@@ -265,6 +288,7 @@ public:
     GENERIC_INST_SERIALISE(I, ReturnInst, Ret)
 
     CUSTOM_INST_SERIALISE(I, AllocaInst, serialiseAllocaInst)
+    CUSTOM_INST_SERIALISE(I, CallInst, serialiseCallInst)
 
     // GENERIC_INST_SERIALISE and CUSTOM_INST_SERIALISE do an early return upon
     // a match, so if we get here then the instruction wasn't handled.
