@@ -1085,7 +1085,7 @@ bool ConvertOp::directConvertable() {
 
   // Source and dest tensors are ordered in different ways. We only do direct
   // dense to sparse conversion when the dense input is defined by a sparse
-  // constant. Note that we can theoritically always directly convert from dense
+  // constant. Note that we can theoretically always directly convert from dense
   // inputs by rotating dense loops but it leads to bad cache locality and hurt
   // performance.
   if (auto constOp = getSource().getDefiningOp<arith::ConstantOp>())

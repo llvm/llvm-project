@@ -196,7 +196,6 @@ def SparseTensor_ConvertOp : SparseTensor_Op<"convert",
 
   }];
 
-
   let extraClassDeclaration = [{
      // Whether the convert can be done by a single step (either a sort or a foreach),
      // or it would require a tmp buffer (sort, then foreach).

@@ -231,7 +231,6 @@ module {
     %c4u_coo = tensor.cast %c4_coo : tensor<4x4xf64> to tensor<*xf64>
     call @printMemrefF64(%c4u_coo) : (tensor<*xf64>) -> ()
 
-    //
     // slice x slice (same as above, but with dynamic stride information)
     //
     // CHECK:      [2.3,   0,   0,   0],
@@ -275,7 +274,7 @@ module {
     bufferization.dealloc_tensor %4  : tensor<4x4xf64, #CSR>
     bufferization.dealloc_tensor %3  : tensor<4x4xf64, #CSR>
     bufferization.dealloc_tensor %2  : tensor<4x4xf64, #DCSR>
-    // bufferization.dealloc_tensor %dyn_4 : tensor<4x4xf64, #CSR>
+    bufferization.dealloc_tensor %dyn_4 : tensor<4x4xf64, #CSR>
 
     return
   }
