@@ -1076,7 +1076,7 @@ static bool ProcessFormatStringLiteral(const Expr *FormatExpr,
 void Sema::checkFortifiedBuiltinMemoryFunction(FunctionDecl *FD,
                                                CallExpr *TheCall) {
   if (TheCall->isValueDependent() || TheCall->isTypeDependent() ||
-      isConstantEvaluated())
+      isConstantEvaluatedContext())
     return;
 
   bool UseDABAttr = false;
@@ -3504,7 +3504,7 @@ bool Sema::CheckCDEBuiltinFunctionCall(const TargetInfo &TI, unsigned BuiltinID,
 
 bool Sema::CheckARMCoprocessorImmediate(const TargetInfo &TI,
                                         const Expr *CoprocArg, bool WantCDE) {
-  if (isConstantEvaluated())
+  if (isConstantEvaluatedContext())
     return false;
 
   // We can't check the value of a dependent argument.
@@ -6928,7 +6928,7 @@ static void CheckNonNullArguments(Sema &S,
   assert((FDecl || Proto) && "Need a function declaration or prototype");
 
   // Already checked by constant evaluator.
-  if (S.isConstantEvaluated())
+  if (S.isConstantEvaluatedContext())
     return;
   // Check the attributes attached to the method/function itself.
   llvm::SmallBitVector NonNullArgs;
@@ -9292,7 +9292,7 @@ bool Sema::SemaBuiltinConstantArg(CallExpr *TheCall, int ArgNum,
 /// TheCall is a constant expression in the range [Low, High].
 bool Sema::SemaBuiltinConstantArgRange(CallExpr *TheCall, int ArgNum,
                                        int Low, int High, bool RangeIsError) {
-  if (isConstantEvaluated())
+  if (isConstantEvaluatedContext())
     return false;
   llvm::APSInt Result;
 
@@ -10006,7 +10006,7 @@ checkFormatStringExpr(Sema &S, const Expr *E, ArrayRef<const Expr *> Args,
                       llvm::SmallBitVector &CheckedVarArgs,
                       UncoveredArgHandler &UncoveredArg, llvm::APSInt Offset,
                       bool IgnoreStringsWithoutSpecifiers = false) {
-  if (S.isConstantEvaluated())
+  if (S.isConstantEvaluatedContext())
     return SLCT_NotALiteral;
 tryAgain:
   assert(Offset.isSigned() && "invalid offset");
@@ -10046,8 +10046,8 @@ tryAgain:
     bool CheckLeft = true, CheckRight = true;
 
     bool Cond;
-    if (C->getCond()->EvaluateAsBooleanCondition(Cond, S.getASTContext(),
-                                                 S.isConstantEvaluated())) {
+    if (C->getCond()->EvaluateAsBooleanCondition(
+            Cond, S.getASTContext(), S.isConstantEvaluatedContext())) {
       if (Cond)
         CheckRight = false;
       else
@@ -10311,9 +10311,11 @@ tryAgain:
       Expr::EvalResult LResult, RResult;
 
       bool LIsInt = BinOp->getLHS()->EvaluateAsInt(
-          LResult, S.Context, Expr::SE_NoSideEffects, S.isConstantEvaluated());
+          LResult, S.Context, Expr::SE_NoSideEffects,
+          S.isConstantEvaluatedContext());
       bool RIsInt = BinOp->getRHS()->EvaluateAsInt(
-          RResult, S.Context, Expr::SE_NoSideEffects, S.isConstantEvaluated());
+          RResult, S.Context, Expr::SE_NoSideEffects,
+          S.isConstantEvaluatedContext());
 
       if (LIsInt != RIsInt) {
         BinaryOperatorKind BinOpKind = BinOp->getOpcode();
@@ -10341,7 +10343,7 @@ tryAgain:
       Expr::EvalResult IndexResult;
       if (ASE->getRHS()->EvaluateAsInt(IndexResult, S.Context,
                                        Expr::SE_NoSideEffects,
-                                       S.isConstantEvaluated())) {
+                                       S.isConstantEvaluatedContext())) {
         sumOffsets(Offset, IndexResult.Val.getInt(), BO_Add,
                    /*RHS is int*/ true);
         E = ASE->getBase();
@@ -14274,7 +14276,7 @@ static bool CheckTautologicalComparison(Sema &S, BinaryOperator *E,
     return false;
 
   IntRange OtherValueRange = GetExprRange(
-      S.Context, Other, S.isConstantEvaluated(), /*Approximate*/ false);
+      S.Context, Other, S.isConstantEvaluatedContext(), /*Approximate=*/false);
 
   QualType OtherT = Other->getType();
   if (const auto *AT = OtherT->getAs<AtomicType>())
@@ -14489,8 +14491,9 @@ static void AnalyzeComparison(Sema &S, BinaryOperator *E) {
   }
 
   // Otherwise, calculate the effective range of the signed operand.
-  IntRange signedRange = GetExprRange(
-      S.Context, signedOperand, S.isConstantEvaluated(), /*Approximate*/ true);
+  IntRange signedRange =
+      GetExprRange(S.Context, signedOperand, S.isConstantEvaluatedContext(),
+                   /*Approximate=*/true);
 
   // Go ahead and analyze implicit conversions in the operands.  Note
   // that we skip the implicit conversions on both sides.
@@ -14508,8 +14511,8 @@ static void AnalyzeComparison(Sema &S, BinaryOperator *E) {
   if (E->isEqualityOp()) {
     unsigned comparisonWidth = S.Context.getIntWidth(T);
     IntRange unsignedRange =
-        GetExprRange(S.Context, unsignedOperand, S.isConstantEvaluated(),
-                     /*Approximate*/ true);
+        GetExprRange(S.Context, unsignedOperand, S.isConstantEvaluatedContext(),
+                     /*Approximate=*/true);
 
     // We should never be unable to prove that the unsigned operand is
     // non-negative.
@@ -15372,7 +15375,7 @@ static void CheckImplicitConversion(Sema &S, Expr *E, QualType T,
     if (Target->isUnsaturatedFixedPointType()) {
       Expr::EvalResult Result;
       if (E->EvaluateAsFixedPoint(Result, S.Context, Expr::SE_AllowSideEffects,
-                                  S.isConstantEvaluated())) {
+                                  S.isConstantEvaluatedContext())) {
         llvm::APFixedPoint Value = Result.Val.getFixedPoint();
         llvm::APFixedPoint MaxVal = S.Context.getFixedPointMax(T);
         llvm::APFixedPoint MinVal = S.Context.getFixedPointMin(T);
@@ -15387,7 +15390,7 @@ static void CheckImplicitConversion(Sema &S, Expr *E, QualType T,
       }
     } else if (Target->isIntegerType()) {
       Expr::EvalResult Result;
-      if (!S.isConstantEvaluated() &&
+      if (!S.isConstantEvaluatedContext() &&
           E->EvaluateAsFixedPoint(Result, S.Context,
                                   Expr::SE_AllowSideEffects)) {
         llvm::APFixedPoint FXResult = Result.Val.getFixedPoint();
@@ -15410,7 +15413,7 @@ static void CheckImplicitConversion(Sema &S, Expr *E, QualType T,
   } else if (Target->isUnsaturatedFixedPointType()) {
     if (Source->isIntegerType()) {
       Expr::EvalResult Result;
-      if (!S.isConstantEvaluated() &&
+      if (!S.isConstantEvaluatedContext() &&
           E->EvaluateAsInt(Result, S.Context, Expr::SE_AllowSideEffects)) {
         llvm::APSInt Value = Result.Val.getInt();
 
@@ -15436,8 +15439,9 @@ static void CheckImplicitConversion(Sema &S, Expr *E, QualType T,
   if (SourceBT && TargetBT && SourceBT->isIntegerType() &&
       TargetBT->isFloatingType() && !IsListInit) {
     // Determine the number of precision bits in the source integer type.
-    IntRange SourceRange = GetExprRange(S.Context, E, S.isConstantEvaluated(),
-                                        /*Approximate*/ true);
+    IntRange SourceRange =
+        GetExprRange(S.Context, E, S.isConstantEvaluatedContext(),
+                     /*Approximate=*/true);
     unsigned int SourcePrecision = SourceRange.Width;
 
     // Determine the number of precision bits in the
@@ -15505,8 +15509,8 @@ static void CheckImplicitConversion(Sema &S, Expr *E, QualType T,
 
   IntRange SourceTypeRange =
       IntRange::forTargetOfCanonicalType(S.Context, Source);
-  IntRange LikelySourceRange =
-      GetExprRange(S.Context, E, S.isConstantEvaluated(), /*Approximate*/ true);
+  IntRange LikelySourceRange = GetExprRange(
+      S.Context, E, S.isConstantEvaluatedContext(), /*Approximate=*/true);
   IntRange TargetRange = IntRange::forTargetOfCanonicalType(S.Context, Target);
 
   if (LikelySourceRange.Width > TargetRange.Width) {
@@ -15514,7 +15518,7 @@ static void CheckImplicitConversion(Sema &S, Expr *E, QualType T,
     // TODO: this should happen for bitfield stores, too.
     Expr::EvalResult Result;
     if (E->EvaluateAsInt(Result, S.Context, Expr::SE_AllowSideEffects,
-                         S.isConstantEvaluated())) {
+                         S.isConstantEvaluatedContext())) {
       llvm::APSInt Value(32);
       Value = Result.Val.getInt();
 
@@ -16378,7 +16382,8 @@ class SequenceChecker : public ConstEvaluatedExprVisitor<SequenceChecker> {
       if (!EvalOK || E->isValueDependent())
         return false;
       EvalOK = E->EvaluateAsBooleanCondition(
-          Result, Self.SemaRef.Context, Self.SemaRef.isConstantEvaluated());
+          Result, Self.SemaRef.Context,
+          Self.SemaRef.isConstantEvaluatedContext());
       return EvalOK;
     }
 
@@ -17505,7 +17510,7 @@ void Sema::CheckArrayAccess(const Expr *BaseExpr, const Expr *IndexExpr,
                             const ArraySubscriptExpr *ASE,
                             bool AllowOnePastEnd, bool IndexNegated) {
   // Already diagnosed by the constant evaluator.
-  if (isConstantEvaluated())
+  if (isConstantEvaluatedContext())
     return;
 
   IndexExpr = IndexExpr->IgnoreParenImpCasts();
@@ -18894,7 +18899,7 @@ void Sema::CheckArgumentWithTypeTag(const ArgumentWithTypeTagAttr *Attr,
   TypeTagData TypeInfo;
   if (!GetMatchingCType(ArgumentKind, TypeTagExpr, Context,
                         TypeTagForDatatypeMagicValues.get(), FoundWrongKind,
-                        TypeInfo, isConstantEvaluated())) {
+                        TypeInfo, isConstantEvaluatedContext())) {
     if (FoundWrongKind)
       Diag(TypeTagExpr->getExprLoc(),
            diag::warn_type_tag_for_datatype_wrong_kind)
