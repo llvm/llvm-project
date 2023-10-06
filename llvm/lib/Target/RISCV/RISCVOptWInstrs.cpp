@@ -13,11 +13,13 @@
 // by an earlier instruction.
 //
 // Then it removes the -w suffix from opw instructions whenever all users are
-// dependent only on the lower word of the result of the instruction.  This is
-// profitable for addw because c.add has a larger register encoding than c.addw.
-// For the remaining opw instructions, there is no compressed w variant. This
-// tramsform also has the side effect of making RV32 and RV64 codegen for 32
-// bit constants match which helps reduce check duplication in LIT tests.
+// dependent only on the lower word of the result of the instruction.
+// The cases handled are:
+// * addw because c.add has a larger register encoding than c.addw.
+// * addiw because it helps reduce test differences between RV32 and RV64
+//   w/o being a pessimization.
+// * mulw because c.mulw doesn't exist but c.mul does (w/ zcb)
+// * slliw because c.slliw doesn't exist and c.slli does
 //
 //===---------------------------------------------------------------------===//
 
