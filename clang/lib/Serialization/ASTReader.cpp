@@ -1450,7 +1450,7 @@ ASTReader::readSLocOffset(ModuleFile *F, unsigned Index) {
   SavedStreamPosition SavedPosition(Cursor);
   if (llvm::Error Err = Cursor.JumpToBit(F->SLocEntryOffsetsBase +
                                          F->SLocEntryOffsets[Index]))
-    return Err;
+    return std::move(Err);
 
   Expected<llvm::BitstreamEntry> MaybeEntry = Cursor.advance();
   if (!MaybeEntry)
