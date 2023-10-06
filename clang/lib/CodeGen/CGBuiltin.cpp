@@ -9716,13 +9716,16 @@ Value *CodeGenFunction::EmitSMELdrStr(const SVETypeFlags &TypeFlags,
   if (Ops.size() == 3) {
     Function *Cntsb = CGM.getIntrinsic(Intrinsic::aarch64_sme_cntsb);
     llvm::Value *CntsbCall = Builder.CreateCall(Cntsb, {}, "svlb");
-    llvm::Value *MulVL = Builder.CreateMul(
-        CntsbCall,
-        Builder.getInt64(cast<llvm::ConstantInt>(Ops[2])->getZExtValue()),
-        "mulvl");
+
+    llvm::Value *VecNum = Ops[2];
+    if (auto *C = dyn_cast<ConstantInt>(VecNum))
+      VecNum = Builder.getInt64(C->getZExtValue());
+
+    llvm::Value *MulVL = Builder.CreateMul(CntsbCall, VecNum, "mulvl");
 
     Ops[1] = Builder.CreateGEP(Int8Ty, Ops[1], MulVL);
-    Ops[0] = EmitTileslice(Ops[0], Ops[2]);
+    Ops[0] =
+        EmitTileslice(Ops[0], Builder.CreateIntCast(VecNum, Int32Ty, true));
     Ops.erase(&Ops[2]);
   }
   Function *F = CGM.getIntrinsic(IntID, {});
