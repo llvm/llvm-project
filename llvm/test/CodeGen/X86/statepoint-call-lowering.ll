@@ -247,8 +247,6 @@ define i8 @test_signext_return(ptr) gc "statepoint-example" {
 ; CHECK-NEXT:    .cfi_def_cfa_offset 16
 ; CHECK-NEXT:    callq signext_return_i1@PLT
 ; CHECK-NEXT:  .Ltmp10:
-; CHECK-NEXT:    andb $1, %al
-; CHECK-NEXT:    negb %al
 ; CHECK-NEXT:    popq %rcx
 ; CHECK-NEXT:    .cfi_def_cfa_offset 8
 ; CHECK-NEXT:    retq
@@ -266,7 +264,6 @@ define i8 @test_zeroext_return() gc "statepoint-example" {
 ; CHECK-NEXT:    .cfi_def_cfa_offset 16
 ; CHECK-NEXT:    callq return_i1@PLT
 ; CHECK-NEXT:  .Ltmp11:
-; CHECK-NEXT:    andb $1, %al
 ; CHECK-NEXT:    popq %rcx
 ; CHECK-NEXT:    .cfi_def_cfa_offset 8
 ; CHECK-NEXT:    retq
