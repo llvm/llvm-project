@@ -46,8 +46,7 @@ static std::optional<Type> convertSparseTensorTypes(Type type) {
   return std::nullopt;
 }
 
-/// Replaces the `op` with  a `CallOp` to the function reference returned
-/// by `getFunc()`.
+/// Replaces the `op` with a `CallOp` to the `getFunc()` function reference.
 static func::CallOp replaceOpWithFuncCall(RewriterBase &rewriter, Operation *op,
                                           StringRef name, TypeRange resultType,
                                           ValueRange operands,
@@ -138,27 +137,6 @@ static SmallVector<Value> getDimSizes(OpBuilder &builder, Location loc,
                                       Value tensor = Value()) {
   SmallVector<Value> out;
   fillDimSizes(builder, loc, stt, tensor, out);
-  return out;
-}
-
-/// Populates the array with the dimension-shape of the given
-/// `SparseTensorType`, where dynamic sizes are represented by zero.
-static void fillDimShape(OpBuilder &builder, Location loc, SparseTensorType stt,
-                         SmallVectorImpl<Value> &out) {
-  out.clear();
-  out.reserve(stt.getDimRank());
-  for (const DynSize sh : stt.getDimShape()) {
-    const auto s = ShapedType::isDynamic(sh) ? 0 : sh;
-    out.push_back(constantIndex(builder, loc, s));
-  }
-}
-
-/// Returns an array with the dimension-shape of the given `SparseTensorType`,
-/// where dynamic sizes are represented by zero.
-static SmallVector<Value> getDimShape(OpBuilder &builder, Location loc,
-                                      SparseTensorType stt) {
-  SmallVector<Value> out;
-  fillDimShape(builder, loc, stt, out);
   return out;
 }
 
@@ -503,84 +481,27 @@ public:
     const auto stt = getSparseTensorType(op);
     if (!stt.hasEncoding())
       return failure();
-    const Dimension dimRank = stt.getDimRank();
-    const Level lvlRank = stt.getLvlRank();
-    // Construct the dimShape.
-    SmallVector<Value> dimShapeValues = getDimShape(rewriter, loc, stt);
-    Value dimShapeBuffer = allocaBuffer(rewriter, loc, dimShapeValues);
-    // Allocate `SparseTensorReader` and perform all initial setup that
-    // does not depend on lvlSizes (nor dimToLvl, lvlToDim, etc).
-    Type opaqueTp = getOpaquePointerType(rewriter);
-    Value valTp =
-        constantPrimaryTypeEncoding(rewriter, loc, stt.getElementType());
-    Value reader =
-        createFuncCall(rewriter, loc, "createCheckedSparseTensorReader",
-                       opaqueTp,
-                       {adaptor.getOperands()[0], dimShapeBuffer, valTp},
-                       EmitCInterface::On)
-            .getResult(0);
-    // Construct the lvlSizes.  If the dimShape is static, then it's
-    // identical to dimSizes: so we can compute lvlSizes entirely at
-    // compile-time.  If dimShape is dynamic, then we'll need to generate
-    // code for computing lvlSizes from the `reader`'s actual dimSizes.
-    //
-    // TODO: For now we're still assuming `dimToLvl` is a permutation.
-    // But since we're computing lvlSizes here (rather than in the runtime),
-    // we can easily generalize that simply by adjusting this code.
-    //
-    // FIXME: reduce redundancy vs `NewCallParams::genBuffers`.
+    // Construct the reader opening method calls.
+    SmallVector<Value> dimShapesValues;
     Value dimSizesBuffer;
-    if (stt.hasDynamicDimShape()) {
-      Type indexTp = rewriter.getIndexType();
-      auto memTp = MemRefType::get({ShapedType::kDynamic}, indexTp);
-      dimSizesBuffer =
-          createFuncCall(rewriter, loc, "getSparseTensorReaderDimSizes", memTp,
-                         reader, EmitCInterface::On)
-              .getResult(0);
-    }
-    Value lvlSizesBuffer;
-    Value lvlToDimBuffer;
-    Value dimToLvlBuffer;
-    if (!stt.isIdentity()) {
-      const auto dimToLvl = stt.getDimToLvl();
-      assert(dimToLvl.isPermutation() && "Got non-permutation");
-      // We preinitialize `dimToLvlValues` since we need random-access writing.
-      // And we preinitialize the others for stylistic consistency.
-      SmallVector<Value> lvlSizeValues(lvlRank);
-      SmallVector<Value> lvlToDimValues(lvlRank);
-      SmallVector<Value> dimToLvlValues(dimRank);
-      for (Level l = 0; l < lvlRank; l++) {
-        // The `d`th source variable occurs in the `l`th result position.
-        Dimension d = dimToLvl.getDimPosition(l);
-        Value lvl = constantIndex(rewriter, loc, l);
-        Value dim = constantIndex(rewriter, loc, d);
-        dimToLvlValues[d] = lvl;
-        lvlToDimValues[l] = dim;
-        lvlSizeValues[l] =
-            stt.isDynamicDim(d)
-                ? rewriter.create<memref::LoadOp>(loc, dimSizesBuffer, dim)
-                : dimShapeValues[d];
-      }
-      lvlSizesBuffer = allocaBuffer(rewriter, loc, lvlSizeValues);
-      lvlToDimBuffer = allocaBuffer(rewriter, loc, lvlToDimValues);
-      dimToLvlBuffer = allocaBuffer(rewriter, loc, dimToLvlValues);
-    } else {
-      // The `SparseTensorType` ctor already ensures `dimRank == lvlRank`
-      // when `isIdentity`; so no need to re-assert it here.
-      SmallVector<Value> iotaValues;
-      iotaValues.reserve(lvlRank);
-      for (Level l = 0; l < lvlRank; l++)
-        iotaValues.push_back(constantIndex(rewriter, loc, l));
-      lvlSizesBuffer = dimSizesBuffer ? dimSizesBuffer : dimShapeBuffer;
-      dimToLvlBuffer = lvlToDimBuffer = allocaBuffer(rewriter, loc, iotaValues);
-    }
+    Value reader = genReader(rewriter, loc, stt, adaptor.getOperands()[0],
+                             dimShapesValues, dimSizesBuffer);
+    // Now construct the lvlSizes, dim2lvl, and lvl2dim buffers.
+    Value dim2lvlBuffer;
+    Value lvl2dimBuffer;
+    Value lvlSizesBuffer =
+        genReaderBuffers(rewriter, loc, stt, dimShapesValues, dimSizesBuffer,
+                         dim2lvlBuffer, lvl2dimBuffer);
     // Use the `reader` to parse the file.
+    Type opaqueTp = getOpaquePointerType(rewriter);
+    Type eltTp = stt.getElementType();
+    Value valTp = constantPrimaryTypeEncoding(rewriter, loc, eltTp);
     SmallVector<Value, 8> params{
         reader,
         lvlSizesBuffer,
         genLvlTypesBuffer(rewriter, loc, stt),
-        lvlToDimBuffer,
-        dimToLvlBuffer,
+        dim2lvlBuffer,
+        lvl2dimBuffer,
         constantPosTypeEncoding(rewriter, loc, stt.getEncoding()),
         constantCrdTypeEncoding(rewriter, loc, stt.getEncoding()),
         valTp};

@@ -8643,6 +8643,7 @@ cc_library(
     name = "SparseTensorRuntime",
     srcs = [
         "lib/ExecutionEngine/SparseTensor/File.cpp",
+        "lib/ExecutionEngine/SparseTensor/MapRef.cpp",
         "lib/ExecutionEngine/SparseTensor/NNZ.cpp",
         "lib/ExecutionEngine/SparseTensor/Storage.cpp",
     ],
@@ -8651,6 +8652,7 @@ cc_library(
         "include/mlir/ExecutionEngine/SparseTensor/COO.h",
         "include/mlir/ExecutionEngine/SparseTensor/ErrorHandling.h",
         "include/mlir/ExecutionEngine/SparseTensor/File.h",
+        "include/mlir/ExecutionEngine/SparseTensor/MapRef.h",
         "include/mlir/ExecutionEngine/SparseTensor/Storage.h",
     ],
     includes = ["include"],
