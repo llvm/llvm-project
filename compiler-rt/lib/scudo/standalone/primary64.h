@@ -214,7 +214,7 @@ public:
         return B;
     }
 
-    bool PrintStats = false;
+    bool ReportRegionExhausted = false;
     TransferBatch *B = nullptr;
 
     while (true) {
@@ -235,19 +235,13 @@ public:
       const bool RegionIsExhausted = Region->Exhausted;
       if (!RegionIsExhausted)
         B = populateFreeListAndPopBatch(C, ClassId, Region);
-      PrintStats = !RegionIsExhausted && Region->Exhausted;
+      ReportRegionExhausted = !RegionIsExhausted && Region->Exhausted;
       break;
     }
 
-    // Note that `getStats()` requires locking each region so we can't call it
-    // while locking the Region->Mutex in the above.
-    if (UNLIKELY(PrintStats)) {
-      ScopedString Str;
-      getStats(&Str);
-      Str.append(
-          "Scudo OOM: The process has exhausted %zuM for size class %zu.\n",
-          RegionSize >> 20, getSizeByClassId(ClassId));
-      Str.output();
+    if (UNLIKELY(ReportRegionExhausted)) {
+      Printf("Can't populate more pages for size class %zu.\n",
+             getSizeByClassId(ClassId));
 
       // Theoretically, BatchClass shouldn't be used up. Abort immediately  when
       // it happens.
@@ -978,7 +972,7 @@ private:
         "%s %02zu (%6zu): mapped: %6zuK popped: %7zu pushed: %7zu "
         "inuse: %6zu total: %6zu releases: %6zu last "
         "released: %6zuK latest pushed bytes: %6zuK region: 0x%zx (0x%zx)\n",
-        Region->Exhausted ? "F" : " ", ClassId, getSizeByClassId(ClassId),
+        Region->Exhausted ? "E" : " ", ClassId, getSizeByClassId(ClassId),
         Region->MemMapInfo.MappedUser >> 10, Region->FreeListInfo.PoppedBlocks,
         Region->FreeListInfo.PushedBlocks, InUseBlocks, TotalChunks,
         Region->ReleaseInfo.RangesReleased,
