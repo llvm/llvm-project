@@ -14,6 +14,7 @@
 #include "mlir/Dialect/Transform/Transforms/TransformInterpreterPassBase.h"
 #include "mlir/Dialect/Transform/IR/TransformDialect.h"
 #include "mlir/Dialect/Transform/IR/TransformInterfaces.h"
+#include "mlir/Dialect/Transform/IR/TransformOps.h"
 #include "mlir/IR/BuiltinOps.h"
 #include "mlir/IR/Verifier.h"
 #include "mlir/IR/Visitors.h"
@@ -194,7 +195,7 @@ saveReproToTempFile(llvm::raw_ostream &os, Operation *target,
                     Operation *transform, StringRef passName,
                     const Pass::Option<std::string> &debugPayloadRootTag,
                     const Pass::Option<std::string> &debugTransformRootTag,
-                    const Pass::Option<std::string> &transformLibraryFileName,
+                    const Pass::ListOption<std::string> &transformLibraryPaths,
                     StringRef binaryName) {
   using llvm::sys::fs::TempFile;
   Operation *root = getRootOperation(target);
@@ -231,7 +232,7 @@ static void performOptionalDebugActions(
     Operation *target, Operation *transform, StringRef passName,
     const Pass::Option<std::string> &debugPayloadRootTag,
     const Pass::Option<std::string> &debugTransformRootTag,
-    const Pass::Option<std::string> &transformLibraryFileName,
+    const Pass::ListOption<std::string> &transformLibraryPaths,
     StringRef binaryName) {
   MLIRContext *context = target->getContext();
 
@@ -284,7 +285,7 @@ static void performOptionalDebugActions(
   DEBUG_WITH_TYPE(DEBUG_TYPE_DUMP_FILE, {
     saveReproToTempFile(llvm::dbgs(), target, transform, passName,
                         debugPayloadRootTag, debugTransformRootTag,
-                        transformLibraryFileName, binaryName);
+                        transformLibraryPaths, binaryName);
   });
 
   // Remove temporary attributes if they were set.
@@ -534,7 +535,7 @@ LogicalResult transform::detail::interpreterBaseRunOnOperationImpl(
     const RaggedArray<MappedValue> &extraMappings,
     const TransformOptions &options,
     const Pass::Option<std::string> &transformFileName,
-    const Pass::Option<std::string> &transformLibraryFileName,
+    const Pass::ListOption<std::string> &transformLibraryPaths,
     const Pass::Option<std::string> &debugPayloadRootTag,
     const Pass::Option<std::string> &debugTransformRootTag,
     StringRef binaryName) {
@@ -597,7 +598,8 @@ LogicalResult transform::detail::interpreterBaseRunOnOperationImpl(
     if (failed(
             mergeSymbolsInto(SymbolTable::getNearestSymbolTable(transformRoot),
                              transformLibraryModule->get()->clone())))
-      return failure();
+      return emitError(transformRoot->getLoc(),
+                       "failed to merge library symbols into transform root");
   }
 
   // Step 4
@@ -606,7 +608,7 @@ LogicalResult transform::detail::interpreterBaseRunOnOperationImpl(
   // repro to stderr and/or a file.
   performOptionalDebugActions(target, transformRoot, passName,
                               debugPayloadRootTag, debugTransformRootTag,
-                              transformLibraryFileName, binaryName);
+                              transformLibraryPaths, binaryName);
 
   // Step 5
   // ------
@@ -615,55 +617,148 @@ LogicalResult transform::detail::interpreterBaseRunOnOperationImpl(
                          extraMappings, options);
 }
 
+/// Expands the given list of `paths` to a list of `.mlir` files.
+///
+/// Each entry in `paths` may either be a regular file, in which case it ends up
+/// in the result list, or a directory, in which case all (regular) `.mlir`
+/// files in that directory are added. Any other file types lead to a failure.
+static LogicalResult
+expandPathsToMLIRFiles(ArrayRef<std::string> &paths, MLIRContext *const context,
+                       SmallVectorImpl<std::string> &fileNames) {
+  for (const std::string &path : paths) {
+    auto loc = FileLineColLoc::get(context, path, 0, 0);
+
+    if (llvm::sys::fs::is_regular_file(path)) {
+      LLVM_DEBUG(DBGS() << "Adding '" << path << "' to list of files\n");
+      fileNames.push_back(path);
+      continue;
+    }
+
+    if (!llvm::sys::fs::is_directory(path)) {
+      return emitError(loc)
+             << "'" << path << "' is neither a file nor a directory";
+    }
+
+    LLVM_DEBUG(DBGS() << "Looking for files in '" << path << "':\n");
+
+    std::error_code ec;
+    for (llvm::sys::fs::directory_iterator it(path, ec), itEnd;
+         it != itEnd && !ec; it.increment(ec)) {
+      const std::string &fileName = it->path();
+
+      if (it->type() != llvm::sys::fs::file_type::regular_file) {
+        LLVM_DEBUG(DBGS() << "  Skipping non-regular file '" << fileName
+                          << "'\n");
+        continue;
+      }
+
+      if (!StringRef(fileName).endswith(".mlir")) {
+        LLVM_DEBUG(DBGS() << "  Skipping '" << fileName
+                          << "' because it does not end with '.mlir'\n");
+        continue;
+      }
+
+      LLVM_DEBUG(DBGS() << "  Adding '" << fileName << "' to list of files\n");
+      fileNames.push_back(fileName);
+    }
+
+    if (ec)
+      return emitError(loc) << "error while opening files in '" << path
+                            << "': " << ec.message();
+  }
+
+  return success();
+}
+
 LogicalResult transform::detail::interpreterBaseInitializeImpl(
     MLIRContext *context, StringRef transformFileName,
-    StringRef transformLibraryFileName,
+    ArrayRef<std::string> transformLibraryPaths,
     std::shared_ptr<OwningOpRef<ModuleOp>> &sharedTransformModule,
     std::shared_ptr<OwningOpRef<ModuleOp>> &transformLibraryModule,
     function_ref<std::optional<LogicalResult>(OpBuilder &, Location)>
         moduleBuilder) {
-  OwningOpRef<ModuleOp> parsedTransformModule;
-  if (failed(parseTransformModuleFromFile(context, transformFileName,
-                                          parsedTransformModule)))
-    return failure();
-  if (parsedTransformModule && failed(mlir::verify(*parsedTransformModule)))
+  auto unknownLoc = UnknownLoc::get(context);
+
+  // Parse module from file.
+  OwningOpRef<ModuleOp> moduleFromFile;
+  {
+    auto loc = FileLineColLoc::get(context, transformFileName, 0, 0);
+    if (failed(parseTransformModuleFromFile(context, transformFileName,
+                                            moduleFromFile)))
+      return emitError(loc) << "failed to parse transform module";
+    if (moduleFromFile && failed(mlir::verify(*moduleFromFile)))
+      return emitError(loc) << "failed to verify transform module";
+  }
+
+  // Assemble list of library files.
+  SmallVector<std::string> libraryFileNames;
+  if (failed(expandPathsToMLIRFiles(transformLibraryPaths, context,
+                                    libraryFileNames)))
     return failure();
 
-  OwningOpRef<ModuleOp> parsedLibraryModule;
-  if (failed(parseTransformModuleFromFile(context, transformLibraryFileName,
-                                          parsedLibraryModule)))
-    return failure();
-  if (parsedLibraryModule && failed(mlir::verify(*parsedLibraryModule)))
-    return failure();
+  // Parse modules from library files.
+  SmallVector<OwningOpRef<ModuleOp>> parsedLibraries;
+  for (const std::string &libraryFileName : libraryFileNames) {
+    OwningOpRef<ModuleOp> parsedLibrary;
+    auto loc = FileLineColLoc::get(context, libraryFileName, 0, 0);
+    if (failed(parseTransformModuleFromFile(context, libraryFileName,
+                                            parsedLibrary)))
+      return emitError(loc) << "failed to parse transform library module";
+    if (parsedLibrary && failed(mlir::verify(*parsedLibrary)))
+      return emitError(loc) << "failed to verify transform library module";
+    parsedLibraries.push_back(std::move(parsedLibrary));
+  }
 
-  if (parsedTransformModule) {
-    sharedTransformModule = std::make_shared<OwningOpRef<ModuleOp>>(
-        std::move(parsedTransformModule));
+  // Build shared transform module.
+  if (moduleFromFile) {
+    sharedTransformModule =
+        std::make_shared<OwningOpRef<ModuleOp>>(std::move(moduleFromFile));
   } else if (moduleBuilder) {
-    // TODO: better location story.
-    auto location = UnknownLoc::get(context);
+    auto loc = FileLineColLoc::get(context, "<shared-transform-module>", 0, 0);
     auto localModule = std::make_shared<OwningOpRef<ModuleOp>>(
-        ModuleOp::create(location, "__transform"));
+        ModuleOp::create(unknownLoc, "__transform"));
 
     OpBuilder b(context);
     b.setInsertionPointToEnd(localModule->get().getBody());
-    if (std::optional<LogicalResult> result = moduleBuilder(b, location)) {
+    if (std::optional<LogicalResult> result = moduleBuilder(b, loc)) {
       if (failed(*result))
-        return failure();
+        return (*localModule)->emitError()
+               << "failed to create shared transform module";
       sharedTransformModule = std::move(localModule);
     }
   }
 
-  if (!parsedLibraryModule || !*parsedLibraryModule)
+  if (parsedLibraries.empty())
     return success();
 
+  // Merge parsed libraries into one module.
+  auto loc = FileLineColLoc::get(context, "<shared-library-module>", 0, 0);
+  OwningOpRef<ModuleOp> mergedParsedLibraries =
+      ModuleOp::create(loc, "__transform");
+  {
+    mergedParsedLibraries.get()->setAttr("transform.with_named_sequence",
+                                         UnitAttr::get(context));
+    IRRewriter rewriter(context);
+    // TODO: extend `mergeSymbolsInto` to support multiple `other` modules.
+    for (OwningOpRef<ModuleOp> &parsedLibrary : parsedLibraries) {
+      if (failed(mergeSymbolsInto(mergedParsedLibraries.get(),
+                                  std::move(parsedLibrary))))
+        return mergedParsedLibraries->emitError()
+               << "failed to verify merged transform module";
+    }
+  }
+
+  // Use parsed libaries to resolve symbols in shared transform module or return
+  // as separate library module.
   if (sharedTransformModule && *sharedTransformModule) {
     if (failed(mergeSymbolsInto(sharedTransformModule->get(),
-                                std::move(parsedLibraryModule))))
-      return failure();
+                                std::move(mergedParsedLibraries))))
+      return (*sharedTransformModule)->emitError()
+             << "failed to merge symbols from library files "
+                "into shared transform module";
   } else {
-    transformLibraryModule =
-        std::make_shared<OwningOpRef<ModuleOp>>(std::move(parsedLibraryModule));
+    transformLibraryModule = std::make_shared<OwningOpRef<ModuleOp>>(
+        std::move(mergedParsedLibraries));
   }
   return success();
 }
