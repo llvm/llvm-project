@@ -419,14 +419,11 @@ define amdgpu_kernel void @v_test_i32_x_sub_65(ptr addrspace(1) %out, ptr addrsp
 ; SI-GISEL-NEXT:    s_load_dwordx4 s[0:3], s[0:1], 0x9
 ; SI-GISEL-NEXT:    v_lshlrev_b32_e32 v0, 2, v0
 ; SI-GISEL-NEXT:    v_mov_b32_e32 v1, 0
-; SI-GISEL-NEXT:    s_mov_b32 s6, 0
-; SI-GISEL-NEXT:    s_mov_b32 s7, 0xf000
 ; SI-GISEL-NEXT:    s_waitcnt lgkmcnt(0)
-; SI-GISEL-NEXT:    s_mov_b64 s[4:5], s[2:3]
-; SI-GISEL-NEXT:    buffer_load_dword v2, v[0:1], s[4:7], 0 addr64
-; SI-GISEL-NEXT:    s_waitcnt vmcnt(0)
-; SI-GISEL-NEXT:    v_subrev_i32_e32 v2, vcc, 0x41, v2
-; SI-GISEL-NEXT:    s_mov_b64 s[2:3], s[6:7]
+; SI-GISEL-NEXT:    s_mov_b32 s2, 0
+; SI-GISEL-NEXT:    s_mov_b32 s3, 0xf000
+; SI-GISEL-NEXT:    v_mov_b32_e32 v2, 0x41
+; SI-GISEL-NEXT:    v_sub_i32_e32 v2, vcc, 0x41, v2
 ; SI-GISEL-NEXT:    buffer_store_dword v2, v[0:1], s[0:3], 0 addr64
 ; SI-GISEL-NEXT:    s_endpgm
 ;
@@ -452,17 +449,12 @@ define amdgpu_kernel void @v_test_i32_x_sub_65(ptr addrspace(1) %out, ptr addrsp
 ; VI-GISEL-NEXT:    s_load_dwordx4 s[0:3], s[0:1], 0x24
 ; VI-GISEL-NEXT:    v_lshlrev_b32_e32 v2, 2, v0
 ; VI-GISEL-NEXT:    s_waitcnt lgkmcnt(0)
-; VI-GISEL-NEXT:    v_mov_b32_e32 v0, s2
-; VI-GISEL-NEXT:    v_mov_b32_e32 v1, s3
-; VI-GISEL-NEXT:    v_add_u32_e32 v0, vcc, v0, v2
-; VI-GISEL-NEXT:    v_addc_u32_e32 v1, vcc, 0, v1, vcc
-; VI-GISEL-NEXT:    flat_load_dword v3, v[0:1]
 ; VI-GISEL-NEXT:    v_mov_b32_e32 v0, s0
 ; VI-GISEL-NEXT:    v_mov_b32_e32 v1, s1
 ; VI-GISEL-NEXT:    v_add_u32_e32 v0, vcc, v0, v2
+; VI-GISEL-NEXT:    v_mov_b32_e32 v2, 0x41
 ; VI-GISEL-NEXT:    v_addc_u32_e32 v1, vcc, 0, v1, vcc
-; VI-GISEL-NEXT:    s_waitcnt vmcnt(0)
-; VI-GISEL-NEXT:    v_subrev_u32_e32 v2, vcc, 0x41, v3
+; VI-GISEL-NEXT:    v_sub_u32_e32 v2, vcc, 0x41, v2
 ; VI-GISEL-NEXT:    flat_store_dword v[0:1], v2
 ; VI-GISEL-NEXT:    s_endpgm
 ;
@@ -941,14 +933,11 @@ define amdgpu_kernel void @v_test_i32_x_sub_neg17(ptr addrspace(1) %out, ptr add
 ; SI-GISEL-NEXT:    s_load_dwordx4 s[0:3], s[0:1], 0x9
 ; SI-GISEL-NEXT:    v_lshlrev_b32_e32 v0, 2, v0
 ; SI-GISEL-NEXT:    v_mov_b32_e32 v1, 0
-; SI-GISEL-NEXT:    s_mov_b32 s6, 0
-; SI-GISEL-NEXT:    s_mov_b32 s7, 0xf000
 ; SI-GISEL-NEXT:    s_waitcnt lgkmcnt(0)
-; SI-GISEL-NEXT:    s_mov_b64 s[4:5], s[2:3]
-; SI-GISEL-NEXT:    buffer_load_dword v2, v[0:1], s[4:7], 0 addr64
-; SI-GISEL-NEXT:    s_waitcnt vmcnt(0)
-; SI-GISEL-NEXT:    v_subrev_i32_e32 v2, vcc, 0xffffffef, v2
-; SI-GISEL-NEXT:    s_mov_b64 s[2:3], s[6:7]
+; SI-GISEL-NEXT:    s_mov_b32 s2, 0
+; SI-GISEL-NEXT:    s_mov_b32 s3, 0xf000
+; SI-GISEL-NEXT:    v_mov_b32_e32 v2, 0xffffffef
+; SI-GISEL-NEXT:    v_sub_i32_e32 v2, vcc, 0xffffffef, v2
 ; SI-GISEL-NEXT:    buffer_store_dword v2, v[0:1], s[0:3], 0 addr64
 ; SI-GISEL-NEXT:    s_endpgm
 ;
@@ -974,17 +963,12 @@ define amdgpu_kernel void @v_test_i32_x_sub_neg17(ptr addrspace(1) %out, ptr add
 ; VI-GISEL-NEXT:    s_load_dwordx4 s[0:3], s[0:1], 0x24
 ; VI-GISEL-NEXT:    v_lshlrev_b32_e32 v2, 2, v0
 ; VI-GISEL-NEXT:    s_waitcnt lgkmcnt(0)
-; VI-GISEL-NEXT:    v_mov_b32_e32 v0, s2
-; VI-GISEL-NEXT:    v_mov_b32_e32 v1, s3
-; VI-GISEL-NEXT:    v_add_u32_e32 v0, vcc, v0, v2
-; VI-GISEL-NEXT:    v_addc_u32_e32 v1, vcc, 0, v1, vcc
-; VI-GISEL-NEXT:    flat_load_dword v3, v[0:1]
 ; VI-GISEL-NEXT:    v_mov_b32_e32 v0, s0
 ; VI-GISEL-NEXT:    v_mov_b32_e32 v1, s1
 ; VI-GISEL-NEXT:    v_add_u32_e32 v0, vcc, v0, v2
+; VI-GISEL-NEXT:    v_mov_b32_e32 v2, 0xffffffef
 ; VI-GISEL-NEXT:    v_addc_u32_e32 v1, vcc, 0, v1, vcc
-; VI-GISEL-NEXT:    s_waitcnt vmcnt(0)
-; VI-GISEL-NEXT:    v_subrev_u32_e32 v2, vcc, 0xffffffef, v3
+; VI-GISEL-NEXT:    v_sub_u32_e32 v2, vcc, 0xffffffef, v2
 ; VI-GISEL-NEXT:    flat_store_dword v[0:1], v2
 ; VI-GISEL-NEXT:    s_endpgm
 ;
@@ -1931,12 +1915,12 @@ define amdgpu_kernel void @v_test_v2i16_x_sub_64_123(ptr addrspace(1) %out, ptr 
 ; SI-GISEL-NEXT:    s_waitcnt lgkmcnt(0)
 ; SI-GISEL-NEXT:    s_mov_b64 s[4:5], s[2:3]
 ; SI-GISEL-NEXT:    buffer_load_dword v2, v[0:1], s[4:7], 0 addr64
-; SI-GISEL-NEXT:    s_waitcnt vmcnt(0)
-; SI-GISEL-NEXT:    v_lshrrev_b32_e32 v3, 16, v2
-; SI-GISEL-NEXT:    v_subrev_i32_e32 v2, vcc, 64, v2
-; SI-GISEL-NEXT:    v_subrev_i32_e32 v3, vcc, 0x7b, v3
-; SI-GISEL-NEXT:    v_and_b32_e32 v2, 0xffff, v2
+; SI-GISEL-NEXT:    v_mov_b32_e32 v3, 0x7b
+; SI-GISEL-NEXT:    v_sub_i32_e32 v3, vcc, 0x7b, v3
 ; SI-GISEL-NEXT:    v_and_b32_e32 v3, 0xffff, v3
+; SI-GISEL-NEXT:    s_waitcnt vmcnt(0)
+; SI-GISEL-NEXT:    v_subrev_i32_e32 v2, vcc, 64, v2
+; SI-GISEL-NEXT:    v_and_b32_e32 v2, 0xffff, v2
 ; SI-GISEL-NEXT:    v_lshlrev_b32_e32 v3, 16, v3
 ; SI-GISEL-NEXT:    v_or_b32_e32 v2, v2, v3
 ; SI-GISEL-NEXT:    s_mov_b64 s[2:3], s[6:7]
@@ -2317,11 +2301,11 @@ define amdgpu_kernel void @v_test_v2i16_x_sub_0_1_0(ptr addrspace(1) %out, ptr a
 ; SI-GISEL-NEXT:    s_waitcnt lgkmcnt(0)
 ; SI-GISEL-NEXT:    s_mov_b64 s[4:5], s[2:3]
 ; SI-GISEL-NEXT:    buffer_load_dword v2, v[0:1], s[4:7], 0 addr64
-; SI-GISEL-NEXT:    s_waitcnt vmcnt(0)
-; SI-GISEL-NEXT:    v_lshrrev_b32_e32 v3, 16, v2
-; SI-GISEL-NEXT:    v_subrev_i32_e32 v3, vcc, 0xffffc400, v3
-; SI-GISEL-NEXT:    v_and_b32_e32 v2, 0xffff, v2
+; SI-GISEL-NEXT:    v_mov_b32_e32 v3, 0xffffc400
+; SI-GISEL-NEXT:    v_sub_i32_e32 v3, vcc, 0xffffc400, v3
 ; SI-GISEL-NEXT:    v_and_b32_e32 v3, 0xffff, v3
+; SI-GISEL-NEXT:    s_waitcnt vmcnt(0)
+; SI-GISEL-NEXT:    v_and_b32_e32 v2, 0xffff, v2
 ; SI-GISEL-NEXT:    v_lshlrev_b32_e32 v3, 16, v3
 ; SI-GISEL-NEXT:    v_or_b32_e32 v2, v2, v3
 ; SI-GISEL-NEXT:    s_mov_b64 s[2:3], s[6:7]
@@ -2452,11 +2436,11 @@ define amdgpu_kernel void @v_test_v2i16_x_sub_0_neg1_0(ptr addrspace(1) %out, pt
 ; SI-GISEL-NEXT:    s_waitcnt lgkmcnt(0)
 ; SI-GISEL-NEXT:    s_mov_b64 s[4:5], s[2:3]
 ; SI-GISEL-NEXT:    buffer_load_dword v2, v[0:1], s[4:7], 0 addr64
-; SI-GISEL-NEXT:    s_waitcnt vmcnt(0)
-; SI-GISEL-NEXT:    v_lshrrev_b32_e32 v3, 16, v2
-; SI-GISEL-NEXT:    v_subrev_i32_e32 v3, vcc, 0x4400, v3
-; SI-GISEL-NEXT:    v_and_b32_e32 v2, 0xffff, v2
+; SI-GISEL-NEXT:    v_mov_b32_e32 v3, 0x4400
+; SI-GISEL-NEXT:    v_sub_i32_e32 v3, vcc, 0x4400, v3
 ; SI-GISEL-NEXT:    v_and_b32_e32 v3, 0xffff, v3
+; SI-GISEL-NEXT:    s_waitcnt vmcnt(0)
+; SI-GISEL-NEXT:    v_and_b32_e32 v2, 0xffff, v2
 ; SI-GISEL-NEXT:    v_lshlrev_b32_e32 v3, 16, v3
 ; SI-GISEL-NEXT:    v_or_b32_e32 v2, v2, v3
 ; SI-GISEL-NEXT:    s_mov_b64 s[2:3], s[6:7]
@@ -2591,11 +2575,10 @@ define amdgpu_kernel void @v_test_v2i16_x_add_neg32_neg32(ptr addrspace(1) %out,
 ; SI-GISEL-NEXT:    s_waitcnt lgkmcnt(0)
 ; SI-GISEL-NEXT:    s_mov_b64 s[4:5], s[2:3]
 ; SI-GISEL-NEXT:    buffer_load_dword v2, v[0:1], s[4:7], 0 addr64
-; SI-GISEL-NEXT:    s_movk_i32 s2, 0xffe0
 ; SI-GISEL-NEXT:    s_waitcnt vmcnt(0)
 ; SI-GISEL-NEXT:    v_lshrrev_b32_e32 v3, 16, v2
-; SI-GISEL-NEXT:    v_add_i32_e32 v2, vcc, s2, v2
-; SI-GISEL-NEXT:    v_add_i32_e32 v3, vcc, s2, v3
+; SI-GISEL-NEXT:    v_add_i32_e32 v2, vcc, 0xffffffe0, v2
+; SI-GISEL-NEXT:    v_add_i32_e32 v3, vcc, 0xffffffe0, v3
 ; SI-GISEL-NEXT:    v_and_b32_e32 v2, 0xffff, v2
 ; SI-GISEL-NEXT:    v_and_b32_e32 v3, 0xffff, v3
 ; SI-GISEL-NEXT:    v_lshlrev_b32_e32 v3, 16, v3
@@ -2753,11 +2736,11 @@ define amdgpu_kernel void @v_test_v2i16_x_add_0_neg32(ptr addrspace(1) %out, ptr
 ; SI-GISEL-NEXT:    s_waitcnt lgkmcnt(0)
 ; SI-GISEL-NEXT:    s_mov_b64 s[4:5], s[2:3]
 ; SI-GISEL-NEXT:    buffer_load_dword v2, v[0:1], s[4:7], 0 addr64
-; SI-GISEL-NEXT:    s_waitcnt vmcnt(0)
-; SI-GISEL-NEXT:    v_lshrrev_b32_e32 v3, 16, v2
+; SI-GISEL-NEXT:    v_mov_b32_e32 v3, 0xffffffe0
 ; SI-GISEL-NEXT:    v_add_i32_e32 v3, vcc, 0xffffffe0, v3
-; SI-GISEL-NEXT:    v_and_b32_e32 v2, 0xffff, v2
 ; SI-GISEL-NEXT:    v_and_b32_e32 v3, 0xffff, v3
+; SI-GISEL-NEXT:    s_waitcnt vmcnt(0)
+; SI-GISEL-NEXT:    v_and_b32_e32 v2, 0xffff, v2
 ; SI-GISEL-NEXT:    v_lshlrev_b32_e32 v3, 16, v3
 ; SI-GISEL-NEXT:    v_or_b32_e32 v2, v2, v3
 ; SI-GISEL-NEXT:    s_mov_b64 s[2:3], s[6:7]
@@ -2913,12 +2896,13 @@ define amdgpu_kernel void @v_test_v2i16_x_add_neg32_0(ptr addrspace(1) %out, ptr
 ; SI-GISEL-NEXT:    s_waitcnt lgkmcnt(0)
 ; SI-GISEL-NEXT:    s_mov_b64 s[4:5], s[2:3]
 ; SI-GISEL-NEXT:    buffer_load_dword v2, v[0:1], s[4:7], 0 addr64
+; SI-GISEL-NEXT:    v_mov_b32_e32 v3, 0xffffffe0
+; SI-GISEL-NEXT:    v_add_i32_e32 v3, vcc, 0xffffffe0, v3
 ; SI-GISEL-NEXT:    s_waitcnt vmcnt(0)
-; SI-GISEL-NEXT:    v_lshrrev_b32_e32 v3, 16, v2
-; SI-GISEL-NEXT:    v_add_i32_e32 v2, vcc, 0xffffffe0, v2
-; SI-GISEL-NEXT:    v_and_b32_e32 v2, 0xffff, v2
-; SI-GISEL-NEXT:    v_lshlrev_b32_e32 v3, 16, v3
-; SI-GISEL-NEXT:    v_or_b32_e32 v2, v2, v3
+; SI-GISEL-NEXT:    v_lshrrev_b32_e32 v2, 16, v2
+; SI-GISEL-NEXT:    v_and_b32_e32 v3, 0xffff, v3
+; SI-GISEL-NEXT:    v_lshlrev_b32_e32 v2, 16, v2
+; SI-GISEL-NEXT:    v_or_b32_e32 v2, v3, v2
 ; SI-GISEL-NEXT:    s_mov_b64 s[2:3], s[6:7]
 ; SI-GISEL-NEXT:    buffer_store_dword v2, v[0:1], s[0:3], 0 addr64
 ; SI-GISEL-NEXT:    s_endpgm
@@ -3554,11 +3538,10 @@ define amdgpu_kernel void @v_test_v2i16_x_add_neg_fpone(ptr addrspace(1) %out, p
 ; SI-GISEL-NEXT:    s_waitcnt lgkmcnt(0)
 ; SI-GISEL-NEXT:    s_mov_b64 s[4:5], s[2:3]
 ; SI-GISEL-NEXT:    buffer_load_dword v2, v[0:1], s[4:7], 0 addr64
-; SI-GISEL-NEXT:    s_movk_i32 s2, 0xc400
 ; SI-GISEL-NEXT:    s_waitcnt vmcnt(0)
 ; SI-GISEL-NEXT:    v_lshrrev_b32_e32 v3, 16, v2
-; SI-GISEL-NEXT:    v_add_i32_e32 v2, vcc, s2, v2
-; SI-GISEL-NEXT:    v_add_i32_e32 v3, vcc, s2, v3
+; SI-GISEL-NEXT:    v_add_i32_e32 v2, vcc, 0xffffc400, v2
+; SI-GISEL-NEXT:    v_add_i32_e32 v3, vcc, 0xffffc400, v3
 ; SI-GISEL-NEXT:    v_and_b32_e32 v2, 0xffff, v2
 ; SI-GISEL-NEXT:    v_and_b32_e32 v3, 0xffff, v3
 ; SI-GISEL-NEXT:    v_lshlrev_b32_e32 v3, 16, v3
@@ -3720,11 +3703,10 @@ define amdgpu_kernel void @v_test_v2i16_x_add_neg_negfpone(ptr addrspace(1) %out
 ; SI-GISEL-NEXT:    s_waitcnt lgkmcnt(0)
 ; SI-GISEL-NEXT:    s_mov_b64 s[4:5], s[2:3]
 ; SI-GISEL-NEXT:    buffer_load_dword v2, v[0:1], s[4:7], 0 addr64
-; SI-GISEL-NEXT:    s_movk_i32 s2, 0x4400
 ; SI-GISEL-NEXT:    s_waitcnt vmcnt(0)
 ; SI-GISEL-NEXT:    v_lshrrev_b32_e32 v3, 16, v2
-; SI-GISEL-NEXT:    v_add_i32_e32 v2, vcc, s2, v2
-; SI-GISEL-NEXT:    v_add_i32_e32 v3, vcc, s2, v3
+; SI-GISEL-NEXT:    v_add_i32_e32 v2, vcc, 0x4400, v2
+; SI-GISEL-NEXT:    v_add_i32_e32 v3, vcc, 0x4400, v3
 ; SI-GISEL-NEXT:    v_and_b32_e32 v2, 0xffff, v2
 ; SI-GISEL-NEXT:    v_and_b32_e32 v3, 0xffff, v3
 ; SI-GISEL-NEXT:    v_lshlrev_b32_e32 v3, 16, v3
@@ -3886,11 +3868,10 @@ define amdgpu_kernel void @v_test_v2i16_x_add_neg_fptwo(ptr addrspace(1) %out, p
 ; SI-GISEL-NEXT:    s_waitcnt lgkmcnt(0)
 ; SI-GISEL-NEXT:    s_mov_b64 s[4:5], s[2:3]
 ; SI-GISEL-NEXT:    buffer_load_dword v2, v[0:1], s[4:7], 0 addr64
-; SI-GISEL-NEXT:    s_movk_i32 s2, 0x4000
 ; SI-GISEL-NEXT:    s_waitcnt vmcnt(0)
 ; SI-GISEL-NEXT:    v_lshrrev_b32_e32 v3, 16, v2
-; SI-GISEL-NEXT:    v_add_i32_e32 v2, vcc, s2, v2
-; SI-GISEL-NEXT:    v_add_i32_e32 v3, vcc, s2, v3
+; SI-GISEL-NEXT:    v_add_i32_e32 v2, vcc, 0x4000, v2
+; SI-GISEL-NEXT:    v_add_i32_e32 v3, vcc, 0x4000, v3
 ; SI-GISEL-NEXT:    v_and_b32_e32 v2, 0xffff, v2
 ; SI-GISEL-NEXT:    v_and_b32_e32 v3, 0xffff, v3
 ; SI-GISEL-NEXT:    v_lshlrev_b32_e32 v3, 16, v3
@@ -4052,11 +4033,10 @@ define amdgpu_kernel void @v_test_v2i16_x_add_neg_negfptwo(ptr addrspace(1) %out
 ; SI-GISEL-NEXT:    s_waitcnt lgkmcnt(0)
 ; SI-GISEL-NEXT:    s_mov_b64 s[4:5], s[2:3]
 ; SI-GISEL-NEXT:    buffer_load_dword v2, v[0:1], s[4:7], 0 addr64
-; SI-GISEL-NEXT:    s_movk_i32 s2, 0xc000
 ; SI-GISEL-NEXT:    s_waitcnt vmcnt(0)
 ; SI-GISEL-NEXT:    v_lshrrev_b32_e32 v3, 16, v2
-; SI-GISEL-NEXT:    v_add_i32_e32 v2, vcc, s2, v2
-; SI-GISEL-NEXT:    v_add_i32_e32 v3, vcc, s2, v3
+; SI-GISEL-NEXT:    v_add_i32_e32 v2, vcc, 0xffffc000, v2
+; SI-GISEL-NEXT:    v_add_i32_e32 v3, vcc, 0xffffc000, v3
 ; SI-GISEL-NEXT:    v_and_b32_e32 v2, 0xffff, v2
 ; SI-GISEL-NEXT:    v_and_b32_e32 v3, 0xffff, v3
 ; SI-GISEL-NEXT:    v_lshlrev_b32_e32 v3, 16, v3
@@ -4211,17 +4191,13 @@ define amdgpu_kernel void @v_test_v2i16_x_add_undef_neg32(ptr addrspace(1) %out,
 ; SI-GISEL-NEXT:    s_load_dwordx4 s[0:3], s[0:1], 0x9
 ; SI-GISEL-NEXT:    v_lshlrev_b32_e32 v0, 2, v0
 ; SI-GISEL-NEXT:    v_mov_b32_e32 v1, 0
-; SI-GISEL-NEXT:    s_mov_b32 s6, 0
-; SI-GISEL-NEXT:    s_mov_b32 s7, 0xf000
+; SI-GISEL-NEXT:    v_mov_b32_e32 v2, 0xffffffe0
 ; SI-GISEL-NEXT:    s_waitcnt lgkmcnt(0)
-; SI-GISEL-NEXT:    s_mov_b64 s[4:5], s[2:3]
-; SI-GISEL-NEXT:    buffer_load_dword v2, v[0:1], s[4:7], 0 addr64
-; SI-GISEL-NEXT:    s_waitcnt vmcnt(0)
-; SI-GISEL-NEXT:    v_lshrrev_b32_e32 v2, 16, v2
+; SI-GISEL-NEXT:    s_mov_b32 s2, 0
+; SI-GISEL-NEXT:    s_mov_b32 s3, 0xf000
 ; SI-GISEL-NEXT:    v_add_i32_e32 v2, vcc, 0xffffffe0, v2
 ; SI-GISEL-NEXT:    v_and_b32_e32 v2, 0xffff, v2
 ; SI-GISEL-NEXT:    v_lshlrev_b32_e32 v2, 16, v2
-; SI-GISEL-NEXT:    s_mov_b64 s[2:3], s[6:7]
 ; SI-GISEL-NEXT:    buffer_store_dword v2, v[0:1], s[0:3], 0 addr64
 ; SI-GISEL-NEXT:    s_endpgm
 ;
@@ -4368,15 +4344,12 @@ define amdgpu_kernel void @v_test_v2i16_x_add_neg32_undef(ptr addrspace(1) %out,
 ; SI-GISEL-NEXT:    s_load_dwordx4 s[0:3], s[0:1], 0x9
 ; SI-GISEL-NEXT:    v_lshlrev_b32_e32 v0, 2, v0
 ; SI-GISEL-NEXT:    v_mov_b32_e32 v1, 0
-; SI-GISEL-NEXT:    s_mov_b32 s6, 0
-; SI-GISEL-NEXT:    s_mov_b32 s7, 0xf000
 ; SI-GISEL-NEXT:    s_waitcnt lgkmcnt(0)
-; SI-GISEL-NEXT:    s_mov_b64 s[4:5], s[2:3]
-; SI-GISEL-NEXT:    buffer_load_dword v2, v[0:1], s[4:7], 0 addr64
-; SI-GISEL-NEXT:    s_waitcnt vmcnt(0)
+; SI-GISEL-NEXT:    s_mov_b32 s2, 0
+; SI-GISEL-NEXT:    s_mov_b32 s3, 0xf000
+; SI-GISEL-NEXT:    v_mov_b32_e32 v2, 0xffffffe0
 ; SI-GISEL-NEXT:    v_add_i32_e32 v2, vcc, 0xffffffe0, v2
 ; SI-GISEL-NEXT:    v_and_b32_e32 v2, 0xffff, v2
-; SI-GISEL-NEXT:    s_mov_b64 s[2:3], s[6:7]
 ; SI-GISEL-NEXT:    buffer_store_dword v2, v[0:1], s[0:3], 0 addr64
 ; SI-GISEL-NEXT:    s_endpgm
 ;
