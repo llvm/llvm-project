@@ -4,8 +4,25 @@
 define void @toggle_pstate_za() {
 ; CHECK-LABEL: toggle_pstate_za:
 ; CHECK:       // %bb.0:
+; CHECK-NEXT:    stp d15, d14, [sp, #-64]! // 16-byte Folded Spill
+; CHECK-NEXT:    stp d13, d12, [sp, #16] // 16-byte Folded Spill
+; CHECK-NEXT:    stp d11, d10, [sp, #32] // 16-byte Folded Spill
+; CHECK-NEXT:    stp d9, d8, [sp, #48] // 16-byte Folded Spill
+; CHECK-NEXT:    .cfi_def_cfa_offset 64
+; CHECK-NEXT:    .cfi_offset b8, -8
+; CHECK-NEXT:    .cfi_offset b9, -16
+; CHECK-NEXT:    .cfi_offset b10, -24
+; CHECK-NEXT:    .cfi_offset b11, -32
+; CHECK-NEXT:    .cfi_offset b12, -40
+; CHECK-NEXT:    .cfi_offset b13, -48
+; CHECK-NEXT:    .cfi_offset b14, -56
+; CHECK-NEXT:    .cfi_offset b15, -64
 ; CHECK-NEXT:    smstart za
 ; CHECK-NEXT:    smstop za
+; CHECK-NEXT:    ldp d9, d8, [sp, #48] // 16-byte Folded Reload
+; CHECK-NEXT:    ldp d11, d10, [sp, #32] // 16-byte Folded Reload
+; CHECK-NEXT:    ldp d13, d12, [sp, #16] // 16-byte Folded Reload
+; CHECK-NEXT:    ldp d15, d14, [sp], #64 // 16-byte Folded Reload
 ; CHECK-NEXT:    ret
   call void @llvm.aarch64.sme.za.enable()
   call void @llvm.aarch64.sme.za.disable()

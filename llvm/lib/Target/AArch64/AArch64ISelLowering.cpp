@@ -4819,6 +4819,7 @@ SDValue AArch64TargetLowering::getPStateSM(SelectionDAG &DAG, SDValue Chain,
 
 SDValue AArch64TargetLowering::LowerINTRINSIC_VOID(SDValue Op,
                                                    SelectionDAG &DAG) const {
+  const AArch64RegisterInfo *TRI = Subtarget->getRegisterInfo();
   unsigned IntNo = Op.getConstantOperandVal(1);
   SDLoc DL(Op);
   switch (IntNo) {
@@ -4845,13 +4846,15 @@ SDValue AArch64TargetLowering::LowerINTRINSIC_VOID(SDValue Op,
         AArch64ISD::SMSTART, DL, MVT::Other,
         Op->getOperand(0), // Chain
         DAG.getTargetConstant((int32_t)(AArch64SVCR::SVCRZA), DL, MVT::i32),
-        DAG.getConstant(0, DL, MVT::i64), DAG.getConstant(1, DL, MVT::i64));
+        DAG.getConstant(0, DL, MVT::i64), DAG.getConstant(1, DL, MVT::i64),
+        DAG.getRegisterMask(TRI->getSMStartStopCallPreservedMask()));
   case Intrinsic::aarch64_sme_za_disable:
     return DAG.getNode(
         AArch64ISD::SMSTOP, DL, MVT::Other,
         Op->getOperand(0), // Chain
         DAG.getTargetConstant((int32_t)(AArch64SVCR::SVCRZA), DL, MVT::i32),
-        DAG.getConstant(0, DL, MVT::i64), DAG.getConstant(1, DL, MVT::i64));
+        DAG.getConstant(0, DL, MVT::i64), DAG.getConstant(1, DL, MVT::i64),
+        DAG.getRegisterMask(TRI->getSMStartStopCallPreservedMask()));
   }
 }
 
@@ -7850,7 +7853,8 @@ AArch64TargetLowering::LowerCall(CallLoweringInfo &CLI,
       Result = DAG.getNode(
           AArch64ISD::SMSTART, DL, MVT::Other, Result,
           DAG.getTargetConstant((int32_t)(AArch64SVCR::SVCRZA), DL, MVT::i32),
-          DAG.getConstant(0, DL, MVT::i64), DAG.getConstant(1, DL, MVT::i64));
+          DAG.getConstant(0, DL, MVT::i64), DAG.getConstant(1, DL, MVT::i64),
+          DAG.getRegisterMask(TRI->getSMStartStopCallPreservedMask()));
 
       // Conditionally restore the lazy save using a pseudo node.
       unsigned FI = FuncInfo->getLazySaveTPIDR2Obj();
