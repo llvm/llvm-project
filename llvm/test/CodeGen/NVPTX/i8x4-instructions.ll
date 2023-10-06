@@ -757,6 +757,30 @@ define void @test_ldst_v4i8(ptr %a, ptr %b) {
   ret void
 }
 
+define void @test_ldst_v4i8_unaligned(ptr %a, ptr %b) {
+; CHECK-LABEL: test_ldst_v4i8_unaligned(
+; CHECK:       {
+; CHECK-NEXT:    .reg .b32 %r<5>;
+; CHECK-NEXT:    .reg .b64 %rd<3>;
+; CHECK-EMPTY:
+; CHECK-NEXT:  // %bb.0:
+; CHECK-NEXT:    ld.param.u64 %rd2, [test_ldst_v4i8_unaligned_param_1];
+; CHECK-NEXT:    ld.param.u64 %rd1, [test_ldst_v4i8_unaligned_param_0];
+; CHECK-NEXT:    ld.u8 %r1, [%rd1];
+; CHECK-NEXT:    ld.u8 %r2, [%rd1+1];
+; CHECK-NEXT:    ld.u8 %r3, [%rd1+2];
+; CHECK-NEXT:    ld.u8 %r4, [%rd1+3];
+; CHECK-NEXT:    st.u8 [%rd2+3], %r4;
+; CHECK-NEXT:    st.u8 [%rd2+2], %r3;
+; CHECK-NEXT:    st.u8 [%rd2+1], %r2;
+; CHECK-NEXT:    st.u8 [%rd2], %r1;
+; CHECK-NEXT:    ret;
+  %t1 = load <4 x i8>, ptr %a, align 1
+  store <4 x i8> %t1, ptr %b, align 1
+  ret void
+}
+
+
 define void @test_ldst_v8i8(ptr %a, ptr %b) {
 ; CHECK-LABEL: test_ldst_v8i8(
 ; CHECK:       {
