@@ -151,18 +151,18 @@ void SectionDescriptor::emitIntVal(uint64_t Val, unsigned Size) {
   } break;
   case 2: {
     uint16_t ShortVal = static_cast<uint16_t>(Val);
-    if ((Endianess == support::endianness::little) != sys::IsLittleEndianHost)
+    if (Endianess != llvm::endianness::native)
       sys::swapByteOrder(ShortVal);
     OS.write(reinterpret_cast<const char *>(&ShortVal), Size);
   } break;
   case 4: {
     uint32_t ShortVal = static_cast<uint32_t>(Val);
-    if ((Endianess == support::endianness::little) != sys::IsLittleEndianHost)
+    if (Endianess != llvm::endianness::native)
       sys::swapByteOrder(ShortVal);
     OS.write(reinterpret_cast<const char *>(&ShortVal), Size);
   } break;
   case 8: {
-    if ((Endianess == support::endianness::little) != sys::IsLittleEndianHost)
+    if (Endianess != llvm::endianness::native)
       sys::swapByteOrder(Val);
     OS.write(reinterpret_cast<const char *>(&Val), Size);
   } break;
