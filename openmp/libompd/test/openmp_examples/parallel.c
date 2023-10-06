@@ -13,7 +13,7 @@ int main(int argc, char** argv) {
   #pragma omp parallel for
   for(i = 0; i < 100; ++i)
   {
-         #pragma omp tas
+         #pragma omp task
          {
                 a[i] = 42;
                 ompd_tool_test(0);
