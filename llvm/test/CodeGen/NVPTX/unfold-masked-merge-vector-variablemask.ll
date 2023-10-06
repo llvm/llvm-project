@@ -89,7 +89,7 @@ define <4 x i8> @out_v4i8_undef(<4 x i8> %x, <4 x i8> %y, <4 x i8> %mask) nounwi
 ; CHECK-NEXT:    ld.param.u32 %r3, [out_v4i8_undef_param_1];
 ; CHECK-NEXT:    ld.param.u32 %r4, [out_v4i8_undef_param_0];
 ; CHECK-NEXT:    and.b32 %r5, %r4, %r1;
-; CHECK-NEXT:    xor.b32 %r7, %r1, -1;
+; CHECK-NEXT:    xor.b32 %r7, %r1, -16711681;
 ; CHECK-NEXT:    and.b32 %r8, %r3, %r7;
 ; CHECK-NEXT:    or.b32 %r9, %r5, %r8;
 ; CHECK-NEXT:    st.param.b32 [func_retval0+0], %r9;
