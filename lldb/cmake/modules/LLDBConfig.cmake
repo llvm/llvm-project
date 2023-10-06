@@ -123,7 +123,10 @@ if(APPLE AND CMAKE_GENERATOR STREQUAL Xcode)
 endif()
 
 set(LLDB_EXPORT_ALL_SYMBOLS 0 CACHE BOOL
-  "Causes lldb to export all symbols when building liblldb.")
+  "Causes lldb to export some private symbols when building liblldb. See lldb/source/API/liblldb-private.exports for the full list of symbols that get exported.")
+
+set(LLDB_EXPORT_ALL_SYMBOLS_EXPORTS_FILE "" CACHE PATH
+  "When `LLDB_EXPORT_ALL_SYMBOLS` is enabled, this specifies the exports file to use when building liblldb.")
 
 if ((NOT MSVC) OR MSVC12)
   add_definitions( -DHAVE_ROUND )
