@@ -274,8 +274,10 @@ std::optional<MCSymbol *> MCPlusBuilder::getLabel(const MCInst &Inst) const {
   return std::nullopt;
 }
 
-bool MCPlusBuilder::setLabel(MCInst &Inst, MCSymbol *Label) {
-  getOrCreateAnnotationAs<MCSymbol *>(Inst, MCAnnotation::kLabel) = Label;
+bool MCPlusBuilder::setLabel(MCInst &Inst, MCSymbol *Label,
+                             AllocatorIdTy AllocatorId) {
+  getOrCreateAnnotationAs<MCSymbol *>(Inst, MCAnnotation::kLabel, AllocatorId) =
+      Label;
   return true;
 }
 
