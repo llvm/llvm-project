@@ -2037,3 +2037,75 @@ transform.sequence failures(propagate) {
   // expected-remark @below{{0}}
   test_print_number_of_associated_payload_ir_ops %empty_op : !transform.any_op
 }
+
+
+// -----
+
+func.func @no_constant_under_loop(%lb: index, %ub: index, %step: index) {
+  scf.for %i= %lb to %ub step %step {
+    arith.constant 0 : index
+  }
+  return
+}
+
+module @named_inclusion attributes { transform.with_named_sequence } {
+// Match `arith.constant`s that are not nested under a `scf.for` and ensure
+// there are none in the program
+
+transform.named_sequence @print(%root: !transform.any_op {transform.readonly}) {
+  transform.test_print_remark_at_operand %root, "matched func" : !transform.any_op
+  transform.yield 
+}
+
+transform.named_sequence @match_constant_not_under_scf_for(%root: !transform.any_op {transform.readonly}) 
+  -> !transform.any_op {
+  transform.match.operation_name %root ["arith.constant"] : !transform.any_op
+  %for = transform.get_parent_op %root { op_name = "scf.for", allow_empty_results }
+    : (!transform.any_op) -> (!transform.any_op)
+  transform.match.operation_empty %for : !transform.any_op
+  transform.yield %root : !transform.any_op
+}
+
+transform.sequence failures(propagate) {
+^bb0(%arg0: !transform.any_op):
+  transform.foreach_match in %arg0
+      @match_constant_not_under_scf_for -> @print
+    : (!transform.any_op) -> (!transform.any_op)
+  transform.yield 
+}
+}
+
+// -----
+
+func.func @no_constant_under_loop(%lb: index, %ub: index, %step: index) {
+  // expected-remark @below {{no parent scf.for}}
+  arith.constant 0 : index
+  return
+}
+
+module @named_inclusion attributes { transform.with_named_sequence } {
+// Match `arith.constant`s that are not nested under a `scf.for` and ensure
+// there are none in the program
+
+transform.named_sequence @print(%root: !transform.any_op {transform.readonly}) {
+  transform.test_print_remark_at_operand %root, "no parent scf.for" : !transform.any_op
+  transform.yield 
+}
+
+transform.named_sequence @match_constant_not_under_scf_for(%root: !transform.any_op {transform.readonly}) 
+  -> !transform.any_op {
+  transform.match.operation_name %root ["arith.constant"] : !transform.any_op
+  %for = transform.get_parent_op %root { op_name = "scf.for", allow_empty_results }
+    : (!transform.any_op) -> (!transform.any_op)
+  transform.match.operation_empty %for : !transform.any_op
+  transform.yield %root : !transform.any_op
+}
+
+transform.sequence failures(propagate) {
+^bb0(%arg0: !transform.any_op):
+  transform.foreach_match in %arg0
+      @match_constant_not_under_scf_for -> @print
+    : (!transform.any_op) -> (!transform.any_op)
+  transform.yield 
+}
+}
