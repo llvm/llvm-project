@@ -1364,3 +1364,15 @@ endif()
 if (LLVM_INCLUDE_UTILS AND LLVM_INCLUDE_TOOLS)
   add_subdirectory(utils/llvm-locstats)
 endif()
+
+# Following variables are required for ROCM backwards compatibility,
+# and should be removed in ROCM 7.0 release.
+set(ROCM_LLVM_BACKWARD_COMPAT_LINK "" CACHE STRING "Old rocm-llvm install path")
+set(ROCM_LLVM_BACKWARD_COMPAT_LINK_TARGET "" CACHE STRING "New rocm-llvm install path")
+if (NOT ROCM_LLVM_BACKWARD_COMPAT_LINK STREQUAL "" AND
+    NOT ROCM_LLVM_BACKWARD_COMPAT_LINK_TARGET STREQUAL "")
+  install(CODE "execute_process(\
+                COMMAND ${CMAKE_COMMAND} -E create_symlink \
+                ${ROCM_LLVM_BACKWARD_COMPAT_LINK_TARGET} \
+                ${ROCM_LLVM_BACKWARD_COMPAT_LINK})")
+endif()
