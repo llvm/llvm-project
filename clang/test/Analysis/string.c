@@ -97,6 +97,17 @@ void strlen_constant2(char x) {
   clang_analyzer_eval(strlen(a) == 3); // expected-warning{{UNKNOWN}}
 }
 
+const char *const global_str_ptr = "abcd";
+const char global_str_arr[] = "efgh";
+
+void strlen_global_constant_ptr(void) {
+  clang_analyzer_eval(strlen(global_str_ptr) == 4); // expected-warning{{TRUE}}
+}
+
+void strlen_global_constant_arr(void) {
+  clang_analyzer_eval(strlen(global_str_arr) == 4); // expected-warning{{TRUE}}
+}
+
 size_t strlen_null(void) {
   return strlen(0); // expected-warning{{Null pointer passed as 1st argument to string length function}}
 }
