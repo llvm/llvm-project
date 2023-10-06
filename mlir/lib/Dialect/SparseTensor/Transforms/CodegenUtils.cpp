@@ -776,7 +776,7 @@ Value sparse_tensor::genReader(OpBuilder &builder, Location loc,
 
 Value sparse_tensor::genReaderBuffers(OpBuilder &builder, Location loc,
                                       SparseTensorType stt,
-                                      SmallVectorImpl<Value> &dimShapesValues,
+                                      ArrayRef<Value> dimShapesValues,
                                       Value dimSizesBuffer,
                                       /*out*/ Value &dim2lvlBuffer,
                                       /*out*/ Value &lvl2dimBuffer) {
