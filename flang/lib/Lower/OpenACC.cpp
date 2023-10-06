@@ -3011,19 +3011,17 @@ genACC(Fortran::lower::AbstractConverter &converter,
     funcName = funcOp.getName();
   }
 
-  mlir::OpBuilder modBuilder(mod.getBodyRegion());
-  std::stringstream routineOpName;
-  routineOpName << accRoutinePrefix.str() << routineCounter++;
-  auto routineOp = modBuilder.create<mlir::acc::RoutineOp>(
-      loc, routineOpName.str(), funcName, mlir::StringAttr{}, false, false,
-      false, false, false, false, mlir::IntegerAttr{});
+  bool hasSeq = false, hasGang = false, hasWorker = false, hasVector = false,
+       hasNohost = false;
+  std::optional<std::string> bindName = std::nullopt;
+  std::optional<int64_t> gangDim = std::nullopt;
 
   for (const Fortran::parser::AccClause &clause : clauses.v) {
     if (std::get_if<Fortran::parser::AccClause::Seq>(&clause.u)) {
-      routineOp.setSeqAttr(builder.getUnitAttr());
+      hasSeq = true;
     } else if (const auto *gangClause =
                    std::get_if<Fortran::parser::AccClause::Gang>(&clause.u)) {
-      routineOp.setGangAttr(builder.getUnitAttr());
+      hasGang = true;
       if (gangClause->v) {
         const Fortran::parser::AccGangArgList &x = *gangClause->v;
         for (const Fortran::parser::AccGangArg &gangArg : x.v) {
@@ -3034,35 +3032,59 @@ genACC(Fortran::lower::AbstractConverter &converter,
             if (!dimValue)
               mlir::emitError(loc,
                               "dim value must be a constant positive integer");
-            routineOp.setGangDimAttr(
-                builder.getIntegerAttr(builder.getIntegerType(32), *dimValue));
+            gangDim = *dimValue;
           }
         }
       }
     } else if (std::get_if<Fortran::parser::AccClause::Vector>(&clause.u)) {
-      routineOp.setVectorAttr(builder.getUnitAttr());
+      hasVector = true;
     } else if (std::get_if<Fortran::parser::AccClause::Worker>(&clause.u)) {
-      routineOp.setWorkerAttr(builder.getUnitAttr());
+      hasWorker = true;
     } else if (std::get_if<Fortran::parser::AccClause::Nohost>(&clause.u)) {
-      routineOp.setNohostAttr(builder.getUnitAttr());
+      hasNohost = true;
     } else if (const auto *bindClause =
                    std::get_if<Fortran::parser::AccClause::Bind>(&clause.u)) {
       if (const auto *name =
               std::get_if<Fortran::parser::Name>(&bindClause->v.u)) {
-        routineOp.setBindName(
-            builder.getStringAttr(converter.mangleName(*name->symbol)));
+        bindName = converter.mangleName(*name->symbol);
       } else if (const auto charExpr =
                      std::get_if<Fortran::parser::ScalarDefaultCharExpr>(
                          &bindClause->v.u)) {
-        const std::optional<std::string> bindName =
+        const std::optional<std::string> name =
             Fortran::semantics::GetConstExpr<std::string>(semanticsContext,
                                                           *charExpr);
-        if (!bindName)
-          routineOp.emitError("Could not retrieve the bind name");
-        routineOp.setBindName(builder.getStringAttr(*bindName));
+        if (!name)
+          mlir::emitError(loc, "Could not retrieve the bind name");
+        bindName = *name;
       }
     }
   }
+
+  mlir::OpBuilder modBuilder(mod.getBodyRegion());
+  std::stringstream routineOpName;
+  routineOpName << accRoutinePrefix.str() << routineCounter++;
+
+  for (auto routineOp : mod.getOps<mlir::acc::RoutineOp>()) {
+    if (routineOp.getFuncName().str().compare(funcName) == 0) {
+      // If the routine is already specified with the same clauses, just skip
+      // the operation creation.
+      if (routineOp.getBindName() == bindName &&
+          routineOp.getGang() == hasGang &&
+          routineOp.getWorker() == hasWorker &&
+          routineOp.getVector() == hasVector && routineOp.getSeq() == hasSeq &&
+          routineOp.getNohost() == hasNohost &&
+          routineOp.getGangDim() == gangDim)
+        return;
+      mlir::emitError(loc, "Routine already specified with different clauses");
+    }
+  }
+
+  modBuilder.create<mlir::acc::RoutineOp>(
+      loc, routineOpName.str(), funcName,
+      bindName ? builder.getStringAttr(*bindName) : mlir::StringAttr{}, hasGang,
+      hasWorker, hasVector, hasSeq, hasNohost, /*implicit=*/false,
+      gangDim ? builder.getIntegerAttr(builder.getIntegerType(32), *gangDim)
+              : mlir::IntegerAttr{});
 
   if (funcOp)
     attachRoutineInfo(funcOp, builder.getSymbolRefAttr(routineOpName.str()));
