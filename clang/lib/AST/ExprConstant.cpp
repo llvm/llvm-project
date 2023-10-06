@@ -3359,6 +3359,9 @@ static bool evaluateVarDeclInit(EvalInfo &Info, const Expr *E,
     return false;
   }
 
+  if (E->isValueDependent())
+    return false;
+
   // Dig out the initializer, and use the declaration which it's attached to.
   // FIXME: We should eventually check whether the variable has a reachable
   // initializing declaration.
