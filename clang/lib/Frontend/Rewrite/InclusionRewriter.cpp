@@ -426,7 +426,7 @@ void InclusionRewriter::Process(FileID FileId,
             SourceLocation Loc = HashToken.getLocation();
             const IncludedFile *Inc = FindIncludeAtLocation(Loc);
             CommentOutDirective(RawLex, HashToken, FromFile, LocalEOL, NextToWrite,
-              Line, Inc);
+                                Line, Inc);
             if (FileId != PP.getPredefinesFileID())
               WriteLineInfo(FileName, Line - 1, FileType, "");
             StringRef LineInfoExtra;
