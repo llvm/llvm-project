@@ -34,8 +34,8 @@ define ptr @fold_memrchr_a11111_c_n(i32 %C, i64 %N) {
 ; CHECK-NEXT:    [[TMP2:%.*]] = trunc i32 [[C:%.*]] to i8
 ; CHECK-NEXT:    [[TMP3:%.*]] = icmp eq i8 [[TMP2]], 1
 ; CHECK-NEXT:    [[TMP4:%.*]] = select i1 [[TMP1]], i1 [[TMP3]], i1 false
-; CHECK-NEXT:    [[TMP5:%.*]] = add i64 [[N]], -1
-; CHECK-NEXT:    [[MEMRCHR_PTR_PLUS:%.*]] = getelementptr inbounds i8, ptr @a11111, i64 [[TMP5]]
+; CHECK-NEXT:    [[TMP5:%.*]] = getelementptr i8, ptr @a11111, i64 [[N]]
+; CHECK-NEXT:    [[MEMRCHR_PTR_PLUS:%.*]] = getelementptr i8, ptr [[TMP5]], i64 -1
 ; CHECK-NEXT:    [[MEMRCHR_SEL:%.*]] = select i1 [[TMP4]], ptr [[MEMRCHR_PTR_PLUS]], ptr null
 ; CHECK-NEXT:    ret ptr [[MEMRCHR_SEL]]
 ;

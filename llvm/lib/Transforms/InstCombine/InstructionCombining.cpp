@@ -2316,10 +2316,26 @@ Instruction *InstCombinerImpl::visitGetElementPtrInst(GetElementPtrInst &GEP) {
         return CastInst::CreatePointerBitCastOrAddrSpaceCast(Y, GEPType);
     }
   }
-
   // We do not handle pointer-vector geps here.
   if (GEPType->isVectorTy())
     return nullptr;
+
+  if (GEP.getNumIndices() == 1) {
+    // Try to replace ADD + GEP with GEP + GEP.
+    Value *Idx1, *Idx2;
+    if (match(GEP.getOperand(1),
+              m_OneUse(m_Add(m_Value(Idx1), m_Value(Idx2))))) {
+      //   %idx = add i64 %idx1, %idx2
+      //   %gep = getelementptr i32, i32* %ptr, i64 %idx
+      // as:
+      //   %newptr = getelementptr i32, i32* %ptr, i64 %idx1
+      //   %newgep = getelementptr i32, i32* %newptr, i64 %idx2
+      auto *NewPtr = Builder.CreateGEP(GEP.getResultElementType(),
+                                       GEP.getPointerOperand(), Idx1);
+      return GetElementPtrInst::Create(GEP.getResultElementType(), NewPtr,
+                                       Idx2);
+    }
+  }
 
   if (!GEP.isInBounds()) {
     unsigned IdxWidth =
