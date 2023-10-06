@@ -283,7 +283,6 @@ bool PPCExpandAtomicPseudo::expandAtomicCmpSwap128(
       .addImm(PPC::PRED_NE)
       .addReg(PPC::CR0)
       .addMBB(LoopCmpMBB);
-  BuildMI(CurrentMBB, DL, TII->get(PPC::B)).addMBB(ExitMBB);
   CurrentMBB->addSuccessor(LoopCmpMBB);
   CurrentMBB->addSuccessor(ExitMBB);
 
