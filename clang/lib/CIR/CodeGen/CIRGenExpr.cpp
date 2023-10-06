@@ -753,9 +753,8 @@ static LValue buildGlobalVarDeclLValue(CIRGenFunction &CGF, const Expr *E,
 
   // Check if the variable is marked as declare target with link clause in
   // device codegen.
-  if (CGF.getLangOpts().OpenMP) {
-    assert(0 && "not implemented");
-  }
+  if (CGF.getLangOpts().OpenMP)
+    llvm_unreachable("not implemented");
 
   auto V = CGF.CGM.getAddrOfGlobalVar(VD);
   auto RealVarTy = CGF.getTypes().convertTypeForMem(VD->getType());

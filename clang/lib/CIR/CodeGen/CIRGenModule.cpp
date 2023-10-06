@@ -100,10 +100,10 @@ CIRGenModule::CIRGenModule(mlir::MLIRContext &context,
                            const clang::CodeGenOptions &CGO,
                            DiagnosticsEngine &Diags)
     : builder(context, *this), astCtx(astctx), langOpts(astctx.getLangOpts()),
-      codeGenOpts(CGO),
-      theModule{mlir::ModuleOp::create(builder.getUnknownLoc())}, Diags(Diags),
-      target(astCtx.getTargetInfo()), ABI(createCXXABI(*this)), genTypes{*this},
-      VTables{*this} {
+      codeGenOpts(CGO), theModule{mlir::ModuleOp::create(
+                            builder.getUnknownLoc())},
+      Diags(Diags), target(astCtx.getTargetInfo()),
+      ABI(createCXXABI(*this)), genTypes{*this}, VTables{*this} {
 
   // Initialize CIR signed integer types cache.
   SInt8Ty =
@@ -779,7 +779,8 @@ void CIRGenModule::buildGlobalVarDefinition(const clang::VarDecl *D,
   // If this is OpenMP device, check if it is legal to emit this global
   // normally.
   QualType ASTTy = D->getType();
-  assert(!(getLangOpts().OpenCL || getLangOpts().OpenMP) && "not implemented");
+  if (getLangOpts().OpenCL || getLangOpts().OpenMPIsTargetDevice)
+    llvm_unreachable("not implemented");
 
   // TODO(cir): LLVM's codegen uses a llvm::TrackingVH here. Is that
   // necessary here for CIR gen?
@@ -2508,9 +2509,9 @@ mlir::Attribute CIRGenModule::getAddrOfRTTIDescriptor(mlir::Location loc,
   // FIXME: should we even be calling this method if RTTI is disabled
   // and it's not for EH?
   if ((!ForEH && !getLangOpts().RTTI) || getLangOpts().CUDAIsDevice ||
-      (getLangOpts().OpenMP && getLangOpts().OpenMP && getTriple().isNVPTX())) {
+      (getLangOpts().OpenMP && getLangOpts().OpenMPIsTargetDevice &&
+       getTriple().isNVPTX()))
     llvm_unreachable("NYI");
-  }
 
   if (ForEH && Ty->isObjCObjectPointerType() &&
       getLangOpts().ObjCRuntime.isGNUFamily()) {
