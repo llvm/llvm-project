@@ -2546,7 +2546,17 @@ void RewriteInstance::handleRelocation(const SectionRef &RelocatedSection,
     // Adjust the point of reference to a code location inside a function.
     if (ReferencedBF->containsAddress(Address, /*UseMaxSize = */ true)) {
       RefFunctionOffset = Address - ReferencedBF->getAddress();
-      if (RefFunctionOffset) {
+      if (Relocation::isInstructionReference(RType)) {
+        // Instruction labels are created while disassembling so we just leave
+        // the symbol empty for now. Since the extracted value is typically
+        // unrelated to the referenced symbol (e.g., %pcrel_lo in RISC-V
+        // references an instruction but the patched value references the low
+        // bits of a data address), we set the extracted value to the symbol
+        // address in order to be able to correctly reconstruct the reference
+        // later.
+        ReferencedSymbol = nullptr;
+        ExtractedValue = Address;
+      } else if (RefFunctionOffset) {
         if (ContainingBF && ContainingBF != ReferencedBF) {
           ReferencedSymbol =
               ReferencedBF->addEntryPointAtOffset(RefFunctionOffset);

@@ -575,6 +575,7 @@ bool CheckLargeFunctions::shouldOptimize(const BinaryFunction &BF) const {
 
 void LowerAnnotations::runOnFunctions(BinaryContext &BC) {
   std::vector<std::pair<MCInst *, uint32_t>> PreservedOffsetAnnotations;
+  std::vector<std::pair<MCInst *, MCSymbol *>> PreservedLabelAnnotations;
 
   for (auto &It : BC.getBinaryFunctions()) {
     BinaryFunction &BF = It.second;
@@ -609,6 +610,8 @@ void LowerAnnotations::runOnFunctions(BinaryContext &BC) {
           if (BF.requiresAddressTranslation() && BC.MIB->getOffset(*II))
             PreservedOffsetAnnotations.emplace_back(&(*II),
                                                     *BC.MIB->getOffset(*II));
+          if (auto Label = BC.MIB->getLabel(*II))
+            PreservedLabelAnnotations.emplace_back(&*II, *Label);
           BC.MIB->stripAnnotations(*II);
         }
       }
@@ -625,6 +628,8 @@ void LowerAnnotations::runOnFunctions(BinaryContext &BC) {
   // Reinsert preserved annotations we need during code emission.
   for (const std::pair<MCInst *, uint32_t> &Item : PreservedOffsetAnnotations)
     BC.MIB->setOffset(*Item.first, Item.second);
+  for (auto [Instr, Label] : PreservedLabelAnnotations)
+    BC.MIB->setLabel(*Instr, Label);
 }
 
 // Check for dirty state in MCSymbol objects that might be a consequence

@@ -498,6 +498,9 @@ void BinaryEmitter::emitFunctionBody(BinaryFunction &BF, FunctionFragment &FF,
         BB->getLocSyms().emplace_back(Offset, LocSym);
       }
 
+      if (auto Label = BC.MIB->getLabel(Instr))
+        Streamer.emitLabel(*Label);
+
       Streamer.emitInstruction(Instr, *BC.STI);
       LastIsPrefix = BC.MIB->isPrefix(Instr);
     }
