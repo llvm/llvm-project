@@ -665,8 +665,6 @@ bool RISCVOptWInstrs::stripWSuffixes(MachineFunction &MF,
       case RISCV::ADDIW: Opc = RISCV::ADDI; break;
       case RISCV::MULW:  Opc = RISCV::MUL;  break;
       case RISCV::SLLIW: Opc = RISCV::SLLI; break;
-      case RISCV::SRLIW: Opc = RISCV::SRLI; break;
-      case RISCV::SRAIW: Opc = RISCV::SRAI; break;
       }
 
       if (hasAllWUsers(MI, ST, MRI)) {

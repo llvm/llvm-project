@@ -170,7 +170,7 @@ define i32 @abs32(i32 %x) {
 ;
 ; RV64I-LABEL: abs32:
 ; RV64I:       # %bb.0:
-; RV64I-NEXT:    srai a1, a0, 31
+; RV64I-NEXT:    sraiw a1, a0, 31
 ; RV64I-NEXT:    xor a0, a0, a1
 ; RV64I-NEXT:    subw a0, a0, a1
 ; RV64I-NEXT:    ret
@@ -201,7 +201,7 @@ define i32 @select_abs32(i32 %x) {
 ;
 ; RV64I-LABEL: select_abs32:
 ; RV64I:       # %bb.0:
-; RV64I-NEXT:    srai a1, a0, 31
+; RV64I-NEXT:    sraiw a1, a0, 31
 ; RV64I-NEXT:    xor a0, a0, a1
 ; RV64I-NEXT:    subw a0, a0, a1
 ; RV64I-NEXT:    ret
@@ -482,7 +482,7 @@ define i64 @zext_abs32(i32 %x) {
 ;
 ; RV64I-LABEL: zext_abs32:
 ; RV64I:       # %bb.0:
-; RV64I-NEXT:    srai a1, a0, 31
+; RV64I-NEXT:    sraiw a1, a0, 31
 ; RV64I-NEXT:    xor a0, a0, a1
 ; RV64I-NEXT:    subw a0, a0, a1
 ; RV64I-NEXT:    ret

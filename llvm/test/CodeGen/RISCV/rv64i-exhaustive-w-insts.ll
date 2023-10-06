@@ -1943,7 +1943,7 @@ define zeroext i32 @zext_sraiw_aext(i32 %a) nounwind {
 ;
 ; RV64ZBA-LABEL: zext_sraiw_aext:
 ; RV64ZBA:       # %bb.0:
-; RV64ZBA-NEXT:    srai a0, a0, 7
+; RV64ZBA-NEXT:    sraiw a0, a0, 7
 ; RV64ZBA-NEXT:    zext.w a0, a0
 ; RV64ZBA-NEXT:    ret
   %1 = ashr i32 %a, 7
@@ -1970,7 +1970,7 @@ define zeroext i32 @zext_sraiw_zext(i32 zeroext %a) nounwind {
 ;
 ; RV64ZBA-LABEL: zext_sraiw_zext:
 ; RV64ZBA:       # %bb.0:
-; RV64ZBA-NEXT:    srai a0, a0, 9
+; RV64ZBA-NEXT:    sraiw a0, a0, 9
 ; RV64ZBA-NEXT:    zext.w a0, a0
 ; RV64ZBA-NEXT:    ret
   %1 = ashr i32 %a, 9

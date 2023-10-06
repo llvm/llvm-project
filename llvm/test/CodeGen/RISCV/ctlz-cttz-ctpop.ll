@@ -3072,7 +3072,7 @@ define i32 @test_parity_i32(i32 %a) {
 ; RV64NOZBB:       # %bb.0:
 ; RV64NOZBB-NEXT:    slli a1, a0, 32
 ; RV64NOZBB-NEXT:    srli a1, a1, 32
-; RV64NOZBB-NEXT:    srli a0, a0, 16
+; RV64NOZBB-NEXT:    srliw a0, a0, 16
 ; RV64NOZBB-NEXT:    xor a0, a1, a0
 ; RV64NOZBB-NEXT:    srli a1, a0, 8
 ; RV64NOZBB-NEXT:    xor a0, a0, a1
@@ -3115,7 +3115,7 @@ define i32 @test_parity_i32(i32 %a) {
 ; RV64XTHEADBB-LABEL: test_parity_i32:
 ; RV64XTHEADBB:       # %bb.0:
 ; RV64XTHEADBB-NEXT:    th.extu a1, a0, 31, 0
-; RV64XTHEADBB-NEXT:    srli a0, a0, 16
+; RV64XTHEADBB-NEXT:    srliw a0, a0, 16
 ; RV64XTHEADBB-NEXT:    xor a0, a1, a0
 ; RV64XTHEADBB-NEXT:    srli a1, a0, 8
 ; RV64XTHEADBB-NEXT:    xor a0, a0, a1

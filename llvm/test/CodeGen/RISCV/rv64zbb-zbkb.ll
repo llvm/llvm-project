@@ -278,7 +278,7 @@ define signext i32 @rori_i32_fshl(i32 signext %a) nounwind {
 define void @rori_i32_fshl_nosext(i32 signext %a, ptr %x) nounwind {
 ; RV64I-LABEL: rori_i32_fshl_nosext:
 ; RV64I:       # %bb.0:
-; RV64I-NEXT:    srli a2, a0, 1
+; RV64I-NEXT:    srliw a2, a0, 1
 ; RV64I-NEXT:    slli a0, a0, 31
 ; RV64I-NEXT:    or a0, a0, a2
 ; RV64I-NEXT:    sw a0, 0(a1)
@@ -315,7 +315,7 @@ define void @rori_i32_fshr_nosext(i32 signext %a, ptr %x) nounwind {
 ; RV64I-LABEL: rori_i32_fshr_nosext:
 ; RV64I:       # %bb.0:
 ; RV64I-NEXT:    slli a2, a0, 1
-; RV64I-NEXT:    srli a0, a0, 31
+; RV64I-NEXT:    srliw a0, a0, 31
 ; RV64I-NEXT:    or a0, a0, a2
 ; RV64I-NEXT:    sw a0, 0(a1)
 ; RV64I-NEXT:    ret

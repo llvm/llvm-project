@@ -300,7 +300,7 @@ define i32 @ctlz_lshr_i32(i32 signext %a) {
 ;
 ; RV64XTHEADBB-LABEL: ctlz_lshr_i32:
 ; RV64XTHEADBB:       # %bb.0:
-; RV64XTHEADBB-NEXT:    srli a0, a0, 1
+; RV64XTHEADBB-NEXT:    srliw a0, a0, 1
 ; RV64XTHEADBB-NEXT:    not a0, a0
 ; RV64XTHEADBB-NEXT:    slli a0, a0, 32
 ; RV64XTHEADBB-NEXT:    th.ff0 a0, a0
@@ -776,7 +776,7 @@ define void @bswap_i32_nosext(i32 signext %a, ptr %x) nounwind {
 ; RV64I-NEXT:    lui a3, 16
 ; RV64I-NEXT:    addi a3, a3, -256
 ; RV64I-NEXT:    and a2, a2, a3
-; RV64I-NEXT:    srli a4, a0, 24
+; RV64I-NEXT:    srliw a4, a0, 24
 ; RV64I-NEXT:    or a2, a2, a4
 ; RV64I-NEXT:    and a3, a0, a3
 ; RV64I-NEXT:    slli a3, a3, 8
@@ -817,7 +817,7 @@ define i64 @bswap_i64(i64 %a) {
 ; RV64I-NEXT:    or a1, a3, a1
 ; RV64I-NEXT:    and a4, a0, a4
 ; RV64I-NEXT:    slli a4, a4, 24
-; RV64I-NEXT:    srli a3, a0, 24
+; RV64I-NEXT:    srliw a3, a0, 24
 ; RV64I-NEXT:    slli a3, a3, 32
 ; RV64I-NEXT:    or a3, a4, a3
 ; RV64I-NEXT:    and a2, a0, a2
