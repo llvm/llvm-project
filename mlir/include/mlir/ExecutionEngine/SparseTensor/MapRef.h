@@ -38,7 +38,8 @@ public:
   // Push forward maps from dimensions to levels.
   //
 
-  template <typename T> inline void pushforward(const T *in, T *out) const {
+  template <typename T>
+  inline void pushforward(const T *in, T *out) const {
     if (isPermutation) {
       for (uint64_t i = 0; i < lvlRank; ++i)
         out[i] = in[lvl2dim[i]];
@@ -51,7 +52,8 @@ public:
   // Push backward maps from levels to dimensions.
   //
 
-  template <typename T> inline void pushbackward(const T *in, T *out) const {
+  template <typename T>
+  inline void pushbackward(const T *in, T *out) const {
     if (isPermutation) {
       for (uint64_t i = 0; i < dimRank; ++i)
         out[i] = in[dim2lvl[i]];
