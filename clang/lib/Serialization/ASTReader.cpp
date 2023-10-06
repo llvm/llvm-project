@@ -3226,7 +3226,6 @@ llvm::Error ASTReader::ReadASTBlock(ModuleFile &F,
       case SOURCE_LOCATION_OFFSETS:
       case MODULE_OFFSET_MAP:
       case SOURCE_MANAGER_LINE_TABLE:
-      case SOURCE_LOCATION_PRELOADS:
       case PPD_ENTITIES_OFFSETS:
       case HEADER_SEARCH_TABLE:
       case IMPORTED_MODULES:
@@ -3575,18 +3574,6 @@ llvm::Error ASTReader::ReadASTBlock(ModuleFile &F,
     case SOURCE_MANAGER_LINE_TABLE:
       ParseLineTable(F, Record);
       break;
-
-    case SOURCE_LOCATION_PRELOADS: {
-      // Need to transform from the local view (1-based IDs) to the global view,
-      // which is based off F.SLocEntryBaseID.
-      if (!F.PreloadSLocEntries.empty())
-        return llvm::createStringError(
-            std::errc::illegal_byte_sequence,
-            "Multiple SOURCE_LOCATION_PRELOADS records in AST file");
-
-      F.PreloadSLocEntries.swap(Record);
-      break;
-    }
 
     case EXT_VECTOR_DECLS:
       for (unsigned I = 0, N = Record.size(); I != N; ++I)
@@ -4416,16 +4403,6 @@ ASTReader::ASTReadResult ASTReader::ReadAST(StringRef FileName, ModuleKind Type,
   // Preload source locations and interesting indentifiers.
   for (ImportedModule &M : Loaded) {
     ModuleFile &F = *M.Mod;
-
-    // Preload SLocEntries.
-    for (unsigned I = 0, N = F.PreloadSLocEntries.size(); I != N; ++I) {
-      int Index = int(F.PreloadSLocEntries[I] - 1) + F.SLocEntryBaseID;
-      // Load it through the SourceManager and don't call ReadSLocEntry()
-      // directly because the entry may have already been loaded in which case
-      // calling ReadSLocEntry() directly would trigger an assertion in
-      // SourceManager.
-      SourceMgr.getLoadedSLocEntryByID(Index);
-    }
 
     // Map the original source file ID into the ID space of the current
     // compilation.
