@@ -3457,6 +3457,7 @@ case; they are guaranteed to return a QNaN.
 
 Unfortunately, due to hard-or-impossible-to-fix issues, LLVM violates its own
 specification on some architectures:
+
 - x86-32 without SSE2 enabled may convert floating-point values to x86_fp80 and
   back when performing floating-point math operations; this can lead to results
   with different precision than expected and it can alter NaN values. Since
