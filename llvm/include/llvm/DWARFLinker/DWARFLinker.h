@@ -276,6 +276,12 @@ public:
 
   /// Helpful address information(list of valid address ranges, relocations).
   std::unique_ptr<AddressesMap> Addresses;
+
+  /// Unloads object file and corresponding AddressesMap and Dwarf Context.
+  void unload() {
+    Addresses.reset();
+    Dwarf.reset();
+  }
 };
 
 typedef std::map<std::string, std::string> swiftInterfacesMap;
@@ -524,7 +530,8 @@ private:
     /// the debug object.
     void clear() {
       CompileUnits.clear();
-      File.Addresses->clear();
+      ModuleUnits.clear();
+      File.unload();
     }
   };
 
