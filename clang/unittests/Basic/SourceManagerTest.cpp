@@ -418,6 +418,7 @@ TEST_F(SourceManagerTest, getLineNumber) {
 
 struct FakeExternalSLocEntrySource : ExternalSLocEntrySource {
   bool ReadSLocEntry(int ID) override { return {}; }
+  int getSLocEntryID(SourceLocation::UIntTy SLocOffset) override { return 0; }
   std::pair<SourceLocation, StringRef> getModuleImportLoc(int ID) override {
     return {};
   }
