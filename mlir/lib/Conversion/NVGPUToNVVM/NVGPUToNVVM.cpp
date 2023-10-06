@@ -967,13 +967,13 @@ struct NVGPUTmaAsyncLoadOpLowering
     return success();
   }
 };
-struct NVGPUGenerateGmmaDescriptorLowering
-    : public ConvertOpToLLVMPattern<nvgpu::GenerateGmmaDescriptorOp> {
+struct NVGPUGenerateWarpgroupDescriptorLowering
+    : public ConvertOpToLLVMPattern<nvgpu::GenerateWarpgroupDescriptorOp> {
   using ConvertOpToLLVMPattern<
-      nvgpu::GenerateGmmaDescriptorOp>::ConvertOpToLLVMPattern;
+      nvgpu::GenerateWarpgroupDescriptorOp>::ConvertOpToLLVMPattern;
 
   LogicalResult
-  matchAndRewrite(nvgpu::GenerateGmmaDescriptorOp op, OpAdaptor adaptor,
+  matchAndRewrite(nvgpu::GenerateWarpgroupDescriptorOp op, OpAdaptor adaptor,
                   ConversionPatternRewriter &rewriter) const override {
 
     ImplicitLocOpBuilder b(op->getLoc(), rewriter);
@@ -1035,7 +1035,7 @@ struct NVGPUGenerateGmmaDescriptorLowering
     // // [0,14)   start_address
     dsc = insertBit(dsc, basePtr14bit, startBaseAddrBit);
 
-    LLVM_DEBUG(DBGS() << "Generating wgmma.descriptor: "
+    LLVM_DEBUG(DBGS() << "Generating warpgroup.descriptor: "
                       << "leading_off:" << leadDimVal << "\t"
                       << "stride_off :" << strideDimVal << "\t"
                       << "base_offset:" << offsetVal << "\t"
@@ -1309,8 +1309,8 @@ void mlir::populateNVGPUToNVVMConversionPatterns(LLVMTypeConverter &converter,
       NVGPUTmaAsyncLoadOpLowering,           // nvgpu.tma.async.load
       NVGPUTmaCreateDescriptorOpLowering,    // nvgpu.tma.create.descriptor
       NVGPUMBarrierArriveExpectTxLowering,   // nvgpu.mbarrier.arrive.expect_tx
-      NVGPUGenerateGmmaDescriptorLowering,   // nvgpu.wgmma.generate.descriptor
-      NVGPUWarpgroupMmaOpLowering,           // nvgpu.warpgroup.mma
+      NVGPUGenerateWarpgroupDescriptorLowering, // nvgpu.warpgroup.generate.descriptor
+      NVGPUWarpgroupMmaOpLowering,              // nvgpu.warpgroup.mma
       MmaSyncOptoNVVM, MmaLdMatrixOpToNVVM, NVGPUAsyncCopyLowering,
       NVGPUAsyncCreateGroupLowering, NVGPUAsyncWaitLowering,
       NVGPUMmaSparseSyncLowering>(converter);
