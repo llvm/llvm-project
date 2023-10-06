@@ -97,10 +97,13 @@ std::string llvm::convertToSnakeFromCamelCase(StringRef input) {
   if (input.empty())
     return "";
 
+  llvm::Regex trailingCap = llvm::Regex("([A-Z]+)([A-Z][a-z])");
+  llvm::Regex leadingCap = llvm::Regex("([a-z0-9])([A-Z])");
+
   std::string snakeCase = input.str();
   for (int i = 0; i < 10; ++i) {
-    snakeCase = llvm::Regex("([A-Z]+)([A-Z][a-z])").sub("\\1_\\2", snakeCase);
-    snakeCase = llvm::Regex("([a-z0-9])([A-Z])").sub("\\1_\\2", snakeCase);
+    snakeCase = trailingCap.sub("\\1_\\2", snakeCase);
+    snakeCase = leadingCap.sub("\\1_\\2", snakeCase);
   }
   std::transform(snakeCase.begin(), snakeCase.end(), snakeCase.begin(),
                  [](unsigned char c) { return std::tolower(c); });
