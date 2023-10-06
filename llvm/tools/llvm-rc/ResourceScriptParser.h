@@ -143,6 +143,7 @@ private:
   ParseType parseIconResource();
   ParseType parseHTMLResource();
   ParseType parseMenuResource();
+  ParseType parseMenuExResource();
   ParseType parseStringTableResource();
   ParseType parseUserDefinedResource(IntOrString Type);
   ParseType parseVersionInfoResource();
@@ -152,6 +153,9 @@ private:
 
   // Helper MENU parser.
   Expected<MenuDefinitionList> parseMenuItemsList();
+
+  // Helper MENUEX parser.
+  Expected<MenuDefinitionList> parseMenuExItemsList();
 
   // Helper VERSIONINFO parser - read the contents of a single BLOCK statement,
   // from BEGIN to END.
