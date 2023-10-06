@@ -241,6 +241,11 @@ Changes in existing checks
   <clang-tidy/checks/llvm/namespace-comment>` check to provide fixes for
   ``inline`` namespaces in the same format as :program:`clang-format`.
 
+- Improved :doc:`llvmlibc-callee-namespace
+  <clang-tidy/checks/llvmlibc/callee-namespace>` to support
+  customizable namespace. This matches the change made to implementation in
+  namespace.
+
 - Improved :doc:`llvmlibc-implementation-in-namespace
   <clang-tidy/checks/llvmlibc/implementation-in-namespace>` to support
   customizable namespace. This further allows for testing the libc when the
@@ -318,6 +323,7 @@ Changes in existing checks
 - Improved :doc:`readability-static-accessed-through-instance
   <clang-tidy/checks/readability/static-accessed-through-instance>` check to
   identify calls to static member functions with out-of-class inline definitions.
+
 
 Removed checks
 ^^^^^^^^^^^^^^
