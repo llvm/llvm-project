@@ -347,7 +347,8 @@ multiclass VPseudoVC_XVW<LMULInfo m, DAGOperand RS1Class,
 
 multiclass VPseudoSiFiveVMACC<string mx, VReg vd_type, VReg vs2_type,
                               string Constraint = ""> {
-  def "Pseudo" # NAME # "_VV_" # mx : VPseudoTernaryNoMaskWithPolicy<vd_type, V_M1.vrclass, vs2_type, Constraint>;
+  def "Pseudo" # NAME # "_VV_" # mx
+      : VPseudoTernaryNoMaskWithPolicy<vd_type, V_M1.vrclass, vs2_type, Constraint>;
 }
 
 multiclass VPseudoSiFiveVQMACC<string Constraint = ""> {
