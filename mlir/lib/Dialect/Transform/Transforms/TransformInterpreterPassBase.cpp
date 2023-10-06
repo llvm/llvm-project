@@ -617,34 +617,20 @@ LogicalResult transform::detail::interpreterBaseRunOnOperationImpl(
                          extraMappings, options);
 }
 
-LogicalResult transform::detail::interpreterBaseInitializeImpl(
-    MLIRContext *context, StringRef transformFileName,
-    ArrayRef<std::string> transformLibraryPaths,
-    std::shared_ptr<OwningOpRef<ModuleOp>> &sharedTransformModule,
-    std::shared_ptr<OwningOpRef<ModuleOp>> &transformLibraryModule,
-    function_ref<std::optional<LogicalResult>(OpBuilder &, Location)>
-        moduleBuilder) {
-  auto unknownLoc = UnknownLoc::get(context);
-
-  // Parse module from file.
-  OwningOpRef<ModuleOp> moduleFromFile;
-  {
-    auto loc = FileLineColLoc::get(context, transformFileName, 0, 0);
-    if (failed(parseTransformModuleFromFile(context, transformFileName,
-                                            moduleFromFile)))
-      return emitError(loc) << "failed to parse transform module";
-    if (moduleFromFile && failed(mlir::verify(*moduleFromFile)))
-      return emitError(loc) << "failed to verify transform module";
-  }
-
-  // Assemble list of library files.
-  SmallVector<std::string> libraryFileNames;
-  for (const std::string &path : transformLibraryPaths) {
-    auto loc = FileLineColLoc::get(context, transformFileName, 0, 0);
+/// Expands the given list of `paths` to a list of `.mlir` files.
+///
+/// Each entry in `paths` may either be a regular file, in which case it ends up
+/// in the result list, or a directory, in which case all (regular) `.mlir`
+/// files in that directory are added. Any other file types lead to a failure.
+static LogicalResult
+expandPathsToMLIRFiles(ArrayRef<std::string> &paths, MLIRContext *const context,
+                       SmallVectorImpl<std::string> &fileNames) {
+  for (const std::string &path : paths) {
+    auto loc = FileLineColLoc::get(context, path, 0, 0);
 
     if (llvm::sys::fs::is_regular_file(path)) {
       LLVM_DEBUG(DBGS() << "Adding '" << path << "' to list of files\n");
-      libraryFileNames.push_back(path);
+      fileNames.push_back(path);
       continue;
     }
 
@@ -673,13 +659,42 @@ LogicalResult transform::detail::interpreterBaseInitializeImpl(
       }
 
       LLVM_DEBUG(DBGS() << "  Adding '" << fileName << "' to list of files\n");
-      libraryFileNames.push_back(fileName);
+      fileNames.push_back(fileName);
     }
 
     if (ec)
       return emitError(loc) << "error while opening files in '" << path
                             << "': " << ec.message();
   }
+
+  return success();
+}
+
+LogicalResult transform::detail::interpreterBaseInitializeImpl(
+    MLIRContext *context, StringRef transformFileName,
+    ArrayRef<std::string> transformLibraryPaths,
+    std::shared_ptr<OwningOpRef<ModuleOp>> &sharedTransformModule,
+    std::shared_ptr<OwningOpRef<ModuleOp>> &transformLibraryModule,
+    function_ref<std::optional<LogicalResult>(OpBuilder &, Location)>
+        moduleBuilder) {
+  auto unknownLoc = UnknownLoc::get(context);
+
+  // Parse module from file.
+  OwningOpRef<ModuleOp> moduleFromFile;
+  {
+    auto loc = FileLineColLoc::get(context, transformFileName, 0, 0);
+    if (failed(parseTransformModuleFromFile(context, transformFileName,
+                                            moduleFromFile)))
+      return emitError(loc) << "failed to parse transform module";
+    if (moduleFromFile && failed(mlir::verify(*moduleFromFile)))
+      return emitError(loc) << "failed to verify transform module";
+  }
+
+  // Assemble list of library files.
+  SmallVector<std::string> libraryFileNames;
+  if (failed(expandPathsToMLIRFiles(transformLibraryPaths, context,
+                                    libraryFileNames)))
+    return failure();
 
   // Parse modules from library files.
   SmallVector<OwningOpRef<ModuleOp>> parsedLibraries;
