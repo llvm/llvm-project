@@ -218,9 +218,9 @@ public:
           "select the container of the top-level transform op.")};
   Option<std::string> transformLibraryFileName{
       *this, "transform-library-file-name", llvm::cl::init(""),
-      llvm::cl::desc(
-          "Optional name of the file containing transform dialect symbol "
-          "definitions to be injected into the transform module.")};
+      llvm::cl::desc("Optional name of a file with a module that should be "
+                     "merged into the transform module to provide the "
+                     "definitions of external named sequences.")};
 
   Option<bool> testModuleGeneration{
       *this, "test-module-generation", llvm::cl::init(false),

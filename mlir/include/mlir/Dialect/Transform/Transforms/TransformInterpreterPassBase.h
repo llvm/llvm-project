@@ -62,9 +62,11 @@ LogicalResult interpreterBaseRunOnOperationImpl(
 ///     transform script. If empty, `debugTransformRootTag` is considered or the
 ///     pass root operation must contain a single top-level transform op that
 ///     will be interpreted.
-///   - transformLibraryFileName: if non-empty, the name of the file containing
-///     definitions of external symbols referenced in the transform script.
-///     These definitions will be used to replace declarations.
+///   - transformLibraryFileName: if non-empty, the module in this file will be
+///     merged into the main transform script run by the interpreter before
+///     execution. This allows to provide definitions for external functions
+///     used in the main script. Other public symbols in the library module may
+///     lead to collisions with public symbols in the main script.
 ///   - debugPayloadRootTag: if non-empty, the value of the attribute named
 ///     `kTransformDialectTagAttrName` indicating the single op that is
 ///     considered the payload root of the transform interpreter; otherwise, the
@@ -85,7 +87,7 @@ LogicalResult interpreterBaseRunOnOperationImpl(
 /// as template arguments. They are *not* expected to to implement `initialize`
 /// or `runOnOperation`. They *are* expected to call the copy constructor of
 /// this class in their copy constructors, short of which the file-based
-/// transform dialect script injection facility will become nonoperational.
+/// transform dialect script injection facility will become non-operational.
 ///
 /// Concrete passes may implement the `runBeforeInterpreter` and
 /// `runAfterInterpreter` to customize the behavior of the pass.
