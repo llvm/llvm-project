@@ -1426,6 +1426,85 @@ define i1 @icmp_ne_sext_ne_otherwise_i128(i128 %a) {
   ret i1 %cmp1
 }
 
+; Negative tests with non-equality predicates
+define i1 @icmp_ne_sext_sgt_zero_nofold(i32 %a) {
+; CHECK-LABEL: @icmp_ne_sext_sgt_zero_nofold(
+; CHECK-NEXT:    [[CMP:%.*]] = icmp sgt i32 [[A:%.*]], 0
+; CHECK-NEXT:    [[CONV:%.*]] = sext i1 [[CMP]] to i32
+; CHECK-NEXT:    [[CMP1:%.*]] = icmp ne i32 [[CONV]], [[A]]
+; CHECK-NEXT:    ret i1 [[CMP1]]
+;
+  %cmp = icmp sgt i32 %a, 0
+  %conv = sext i1 %cmp to i32
+  %cmp1 = icmp ne i32 %conv, %a
+  ret i1 %cmp1
+}
+
+define i1 @icmp_slt_sext_ne_zero_nofold(i32 %a) {
+; CHECK-LABEL: @icmp_slt_sext_ne_zero_nofold(
+; CHECK-NEXT:    [[CMP:%.*]] = icmp ne i32 [[A:%.*]], 0
+; CHECK-NEXT:    [[CONV:%.*]] = sext i1 [[CMP]] to i32
+; CHECK-NEXT:    [[CMP1:%.*]] = icmp slt i32 [[CONV]], [[A]]
+; CHECK-NEXT:    ret i1 [[CMP1]]
+;
+  %cmp = icmp ne i32 %a, 0
+  %conv = sext i1 %cmp to i32
+  %cmp1 = icmp slt i32 %conv, %a
+  ret i1 %cmp1
+}
+
+define i1 @icmp_ne_sext_slt_allones_nofold(i32 %a) {
+; CHECK-LABEL: @icmp_ne_sext_slt_allones_nofold(
+; CHECK-NEXT:    [[CMP:%.*]] = icmp slt i32 [[A:%.*]], -1
+; CHECK-NEXT:    [[CONV:%.*]] = sext i1 [[CMP]] to i32
+; CHECK-NEXT:    [[CMP1:%.*]] = icmp ne i32 [[CONV]], [[A]]
+; CHECK-NEXT:    ret i1 [[CMP1]]
+;
+  %cmp = icmp slt i32 %a, -1
+  %conv = sext i1 %cmp to i32
+  %cmp1 = icmp ne i32 %conv, %a
+  ret i1 %cmp1
+}
+
+define i1 @icmp_slt_sext_ne_allones_nofold(i32 %a) {
+; CHECK-LABEL: @icmp_slt_sext_ne_allones_nofold(
+; CHECK-NEXT:    [[CMP:%.*]] = icmp ne i32 [[A:%.*]], -1
+; CHECK-NEXT:    [[CONV:%.*]] = sext i1 [[CMP]] to i32
+; CHECK-NEXT:    [[CMP1:%.*]] = icmp slt i32 [[CONV]], [[A]]
+; CHECK-NEXT:    ret i1 [[CMP1]]
+;
+  %cmp = icmp ne i32 %a, -1
+  %conv = sext i1 %cmp to i32
+  %cmp1 = icmp slt i32 %conv, %a
+  ret i1 %cmp1
+}
+
+define i1 @icmp_ne_sext_slt_otherwise_nofold(i32 %a) {
+; CHECK-LABEL: @icmp_ne_sext_slt_otherwise_nofold(
+; CHECK-NEXT:    [[CMP:%.*]] = icmp slt i32 [[A:%.*]], 2
+; CHECK-NEXT:    [[CONV:%.*]] = sext i1 [[CMP]] to i32
+; CHECK-NEXT:    [[CMP1:%.*]] = icmp ne i32 [[CONV]], [[A]]
+; CHECK-NEXT:    ret i1 [[CMP1]]
+;
+  %cmp = icmp slt i32 %a, 2
+  %conv = sext i1 %cmp to i32
+  %cmp1 = icmp ne i32 %conv, %a
+  ret i1 %cmp1
+}
+
+define i1 @icmp_slt_sext_ne_otherwise_nofold(i32 %a) {
+; CHECK-LABEL: @icmp_slt_sext_ne_otherwise_nofold(
+; CHECK-NEXT:    [[CMP:%.*]] = icmp ne i32 [[A:%.*]], 2
+; CHECK-NEXT:    [[CONV:%.*]] = sext i1 [[CMP]] to i32
+; CHECK-NEXT:    [[CMP1:%.*]] = icmp slt i32 [[CONV]], [[A]]
+; CHECK-NEXT:    ret i1 [[CMP1]]
+;
+  %cmp = icmp ne i32 %a, 2
+  %conv = sext i1 %cmp to i32
+  %cmp1 = icmp slt i32 %conv, %a
+  ret i1 %cmp1
+}
+
 ; tests from PR59555
 define i1 @isFloat(i64 %0) {
 ; CHECK-LABEL: @isFloat(
