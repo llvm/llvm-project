@@ -244,10 +244,6 @@ bool RISCVInstructionSelector::select(MachineInstr &MI) {
     // which fail to get imported because it uses FrameAddrRegImm, which is a
     // ComplexPattern
     Register DstReg = MI.getOperand(0).getReg();
-
-    if (!MRI.getType(DstReg).isPointer())
-      return false;
-
     MI.setDesc(TII.get(RISCV::ADDI));
     MI.addOperand(MachineOperand::CreateImm(0));
     return constrainSelectedInstRegOperands(MI, TII, TRI, RBI);
