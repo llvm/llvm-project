@@ -628,7 +628,8 @@ template <class ELFT> void ObjFile<ELFT>::parse(bool ignoreComdats) {
     // remove all SHT_AARCH64_MEMTAG_GLOBALS_STATIC sections as they're unused
     // medatada, and we don't want them to end up in the output file for static
     // executables.
-    if (sec.sh_type == SHT_AARCH64_MEMTAG_GLOBALS_STATIC && !canHaveMemtagGlobals()){
+    if (sec.sh_type == SHT_AARCH64_MEMTAG_GLOBALS_STATIC &&
+        !canHaveMemtagGlobals()) {
       this->sections[i] = &InputSection::discarded;
       continue;
     }
