@@ -51,7 +51,7 @@ const unsigned VERSION_MAJOR = 29;
 /// for the previous version could still support reading the new
 /// version by ignoring new kinds of subblocks), this number
 /// should be increased.
-const unsigned VERSION_MINOR = 0;
+const unsigned VERSION_MINOR = 1;
 
 /// An ID number that refers to an identifier in an AST file.
 ///
@@ -524,13 +524,7 @@ enum ASTRecordTypes {
   /// of source-location information.
   SOURCE_LOCATION_OFFSETS = 14,
 
-  /// Record code for the set of source location entries
-  /// that need to be preloaded by the AST reader.
-  ///
-  /// This set contains the source location entry for the
-  /// predefines buffer and for any file entries that need to be
-  /// preloaded.
-  SOURCE_LOCATION_PRELOADS = 15,
+  // ID 15 used to be for source location entry preloads.
 
   /// Record code for the set of ext_vector type names.
   EXT_VECTOR_DECLS = 16,
