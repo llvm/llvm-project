@@ -471,8 +471,9 @@ namespace bolt {
 
 MCPlusBuilder *createRISCVMCPlusBuilder(const MCInstrAnalysis *Analysis,
                                         const MCInstrInfo *Info,
-                                        const MCRegisterInfo *RegInfo) {
-  return new RISCVMCPlusBuilder(Analysis, Info, RegInfo);
+                                        const MCRegisterInfo *RegInfo,
+                                        const MCSubtargetInfo *STI) {
+  return new RISCVMCPlusBuilder(Analysis, Info, RegInfo, STI);
 }
 
 } // namespace bolt
