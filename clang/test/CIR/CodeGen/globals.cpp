@@ -36,7 +36,7 @@ int use_func() { return func<int>(); }
 // CHECK-NEXT: cir.global external @w = 4.300000e+00 : f64
 // CHECK-NEXT: cir.global external @x = #cir.int<51> : !s8i
 // CHECK-NEXT: cir.global external @rgb = #cir.const_array<[#cir.int<0> : !u8i, #cir.int<233> : !u8i, #cir.int<33> : !u8i]> : !cir.array<!u8i x 3>
-// CHECK-NEXT: cir.global external @alpha = #cir.const_array<[#cir.int<97> : !s8i, #cir.int<98> : !s8i, #cir.int<99> : !s8i, #cir.int<0> : !s8i]> : !cir.array<!s8i x 4>
+// CHECK-NEXT: cir.global external @alpha = #cir.const_array<"abc\00" : !cir.array<!s8i x 4>> : !cir.array<!s8i x 4>
 
 // CHECK-NEXT: cir.global "private" constant internal @".str" = #cir.const_array<"example\00" : !cir.array<!s8i x 8>> : !cir.array<!s8i x 8> {alignment = 1 : i64}
 // CHECK-NEXT: cir.global external @s = #cir.global_view<@".str"> : !cir.ptr<!s8i>
@@ -80,7 +80,7 @@ int use_func() { return func<int>(); }
 
 
 char string[] = "whatnow";
-// CHECK: cir.global external @string = #cir.const_array<[#cir.int<119> : !s8i, #cir.int<104> : !s8i, #cir.int<97> : !s8i, #cir.int<116> : !s8i, #cir.int<110> : !s8i, #cir.int<111> : !s8i, #cir.int<119> : !s8i, #cir.int<0> : !s8i]> : !cir.array<!s8i x 8>
+// CHECK: cir.global external @string = #cir.const_array<"whatnow\00" : !cir.array<!s8i x 8>> : !cir.array<!s8i x 8>
 unsigned uint[] = {255};
 // CHECK: cir.global external @uint = #cir.const_array<[#cir.int<255> : !u32i]> : !cir.array<!u32i x 1>
 short sshort[] = {11111, 22222};
