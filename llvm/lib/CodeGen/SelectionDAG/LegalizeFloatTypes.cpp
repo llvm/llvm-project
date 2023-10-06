@@ -2198,6 +2198,7 @@ bool DAGTypeLegalizer::PromoteFloatOperand(SDNode *N, unsigned OpNo) {
   // to use the promoted float operand.  Nodes that produce at least one
   // promotion-requiring floating point result have their operands legalized as
   // a part of PromoteFloatResult.
+  // clang-format off
   switch (N->getOpcode()) {
     default:
   #ifndef NDEBUG
@@ -2206,7 +2207,6 @@ bool DAGTypeLegalizer::PromoteFloatOperand(SDNode *N, unsigned OpNo) {
   #endif
       report_fatal_error("Do not know how to promote this operator's operand!");
 
-      // clang-format off
     case ISD::BITCAST:    R = PromoteFloatOp_BITCAST(N, OpNo); break;
     case ISD::FCOPYSIGN:  R = PromoteFloatOp_FCOPYSIGN(N, OpNo); break;
     case ISD::FP_TO_SINT:
@@ -2220,8 +2220,8 @@ bool DAGTypeLegalizer::PromoteFloatOperand(SDNode *N, unsigned OpNo) {
     case ISD::SELECT_CC:  R = PromoteFloatOp_SELECT_CC(N, OpNo); break;
     case ISD::SETCC:      R = PromoteFloatOp_SETCC(N, OpNo); break;
     case ISD::STORE:      R = PromoteFloatOp_STORE(N, OpNo); break;
-                          // clang-format on
   }
+  // clang-format on
 
   if (R.getNode())
     ReplaceValueWith(SDValue(N, 0), R);

@@ -1912,8 +1912,8 @@ void DAGCombiner::Run(CombineLevel AtLevel) {
 }
 
 SDValue DAGCombiner::visit(SDNode *N) {
+  // clang-format off
   switch (N->getOpcode()) {
-    // clang-format off
   default: break;
   case ISD::TokenFactor:        return visitTokenFactor(N);
   case ISD::MERGE_VALUES:       return visitMERGE_VALUES(N);
@@ -2068,8 +2068,8 @@ SDValue DAGCombiner::visit(SDNode *N) {
 #define BEGIN_REGISTER_VP_SDNODE(SDOPC, ...) case ISD::SDOPC:
 #include "llvm/IR/VPIntrinsics.def"
     return visitVPOp(N);
-    // clang-format on
   }
+  // clang-format on
   return SDValue();
 }
 
