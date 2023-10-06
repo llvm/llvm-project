@@ -88,6 +88,15 @@ std::unique_ptr<Pass>
 createSparsificationPass(const SparsificationOptions &options);
 
 //===----------------------------------------------------------------------===//
+// The StageSparseOperations pass.
+//===----------------------------------------------------------------------===//
+
+/// Sets up StageSparseOperation rewriting rules.
+void populateStageSparseOperationsPatterns(RewritePatternSet &patterns);
+
+std::unique_ptr<Pass> createStageSparseOperationsPass();
+
+//===----------------------------------------------------------------------===//
 // The PostSparsificationRewriting pass.
 //===----------------------------------------------------------------------===//
 
