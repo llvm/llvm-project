@@ -27,6 +27,31 @@
 #include <cstdlib>  // for _byteswap_{ushort,ulong,uint64}
 #endif
 
+#if defined(__linux__) || defined(__GNU__) || defined(__HAIKU__) ||            \
+    defined(__Fuchsia__) || defined(__EMSCRIPTEN__)
+#include <endian.h>
+#elif defined(_AIX)
+#include <sys/machine.h>
+#elif defined(__sun)
+/* Solaris provides _BIG_ENDIAN/_LITTLE_ENDIAN selector in sys/types.h */
+#include <sys/types.h>
+#define BIG_ENDIAN 4321
+#define LITTLE_ENDIAN 1234
+#if defined(_BIG_ENDIAN)
+#define BYTE_ORDER BIG_ENDIAN
+#else
+#define BYTE_ORDER LITTLE_ENDIAN
+#endif
+#elif defined(__MVS__)
+#define BIG_ENDIAN 4321
+#define LITTLE_ENDIAN 1234
+#define BYTE_ORDER BIG_ENDIAN
+#else
+#if !defined(BYTE_ORDER) && !defined(_WIN32)
+#include <machine/endian.h>
+#endif
+#endif
+
 #ifdef _MSC_VER
 // Declare these intrinsics manually rather including intrin.h. It's very
 // expensive, and bit.h is popular via MathExtras.h.
@@ -40,6 +65,16 @@ unsigned char _BitScanReverse64(unsigned long *_Index, unsigned __int64 _Mask);
 #endif
 
 namespace llvm {
+
+enum class endianness {
+  big,
+  little,
+#if defined(BYTE_ORDER) && defined(BIG_ENDIAN) && BYTE_ORDER == BIG_ENDIAN
+  native = big
+#else
+  native = little
+#endif
+};
 
 // This implementation of bit_cast is different from the C++20 one in two ways:
 //  - It isn't constexpr because that requires compiler support.
