@@ -1309,34 +1309,24 @@ mlir::Attribute ConstantEmitter::tryEmitPrivateForVarInit(const VarDecl &D) {
   }
   InConstantContext = D.hasConstantInitialization();
 
+  const Expr * E = D.getInit();
+  assert(E && "No initializer to emit");
+
   QualType destType = D.getType();
+
+  if (!destType->isReferenceType()) {
+    QualType nonMemoryDestType = getNonMemoryType(CGM, destType);
+    if (auto C = ConstExprEmitter(*this).Visit(const_cast<Expr *>(E),
+                                               nonMemoryDestType))
+      return emitForMemory(C, destType);
+  }
 
   // Try to emit the initializer.  Note that this can allow some things that
   // are not allowed by tryEmitPrivateForMemory alone.
-  if (auto value = D.evaluateValue()) {
+  if (auto value = D.evaluateValue())
     return tryEmitPrivateForMemory(*value, destType);
-  }
 
-  // FIXME: Implement C++11 [basic.start.init]p2: if the initializer of a
-  // reference is a constant expression, and the reference binds to a temporary,
-  // then constant initialization is performed. ConstExprEmitter will
-  // incorrectly emit a prvalue constant in this case, and the calling code
-  // interprets that as the (pointer) value of the reference, rather than the
-  // desired value of the referee.
-  if (destType->isReferenceType())
-    return {};
-
-  // Evaluation failed and not a reference type: ensure initializer exists.
-  const Expr *E = D.getInit();
-  assert(E && "No initializer to emit");
-
-  // Initializer exists: emit it "manually" through visitors.
-  auto nonMemoryDestType = getNonMemoryType(CGM, destType);
-  auto C =
-      ConstExprEmitter(*this).Visit(const_cast<Expr *>(E), nonMemoryDestType);
-
-  // Return either the initializer attribute or a null attribute on failure.
-  return (C ? emitForMemory(C, destType) : nullptr);
+  return nullptr;
 }
 
 mlir::Attribute ConstantEmitter::tryEmitAbstract(const Expr *E,
@@ -1407,30 +1397,34 @@ mlir::Attribute ConstantEmitter::emitForMemory(CIRGenModule &CGM,
   return C;
 }
 
-mlir::TypedAttr ConstantEmitter::tryEmitPrivate(const Expr *E, QualType T) {
-  assert(!T->isVoidType() && "can't emit a void constant");
+mlir::TypedAttr ConstantEmitter::tryEmitPrivate(const Expr *E,
+                                                QualType destType) {
+  assert(!destType->isVoidType() && "can't emit a void constant");
+
+  if (auto C = ConstExprEmitter(*this).Visit(const_cast<Expr *>(E), destType)) {
+    if (auto TypedC = C.dyn_cast_or_null<mlir::TypedAttr>())
+      return TypedC;
+    llvm_unreachable("this should always be typed");
+  }
+
   Expr::EvalResult Result;
+
   bool Success;
 
-  // TODO: Implement the missing functionalities below.
-  assert(!T->isReferenceType() && "NYI");
-
-  // NOTE: Not all constant expressions can be emited by the ConstExprEmitter.
-  //       So we have to fold/evaluate the expression in some cases.
-  //
-  // Try folding constant expression into an RValue.
-  Success = E->EvaluateAsRValue(Result, CGM.getASTContext(), InConstantContext);
-
-  mlir::Attribute C;
-  if (Success && !Result.HasSideEffects)
-    C = tryEmitPrivate(Result.Val, T);
+  if (destType->isReferenceType())
+    Success = E->EvaluateAsLValue(Result, CGM.getASTContext());
   else
-    C = ConstExprEmitter(*this).Visit(const_cast<Expr *>(E), T);
+    Success =
+        E->EvaluateAsRValue(Result, CGM.getASTContext(), InConstantContext);
 
-  auto typedC = llvm::dyn_cast<mlir::TypedAttr>(C);
-  if (!typedC)
+  if (Success && !Result.hasSideEffects()) {
+    auto C = tryEmitPrivate(Result.Val, destType);
+    if (auto TypedC = C.dyn_cast_or_null<mlir::TypedAttr>())
+      return TypedC;
     llvm_unreachable("this should always be typed");
-  return typedC;
+  }
+
+  return nullptr;
 }
 
 mlir::Attribute ConstantEmitter::tryEmitPrivate(const APValue &Value,
