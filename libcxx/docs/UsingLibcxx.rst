@@ -147,6 +147,35 @@ IWYU, you should run the tool like so:
 If you would prefer to not use that flag, then you can replace ``/path/to/include-what-you-use/share/libcxx.imp``
 file with the libc++-provided ``libcxx.imp`` file.
 
+.. _assertions-mode:
+
+Enabling the "safe libc++" mode
+===============================
+
+Libc++ contains a number of assertions whose goal is to catch undefined behavior in the
+library, usually caused by precondition violations. Those assertions do not aim to be
+exhaustive -- instead they aim to provide a good balance between safety and performance.
+In particular, these assertions do not change the complexity of algorithms. However, they
+might, in some cases, interfere with compiler optimizations.
+
+By default, these assertions are turned off. Vendors can decide to turn them on while building
+the compiled library by defining ``LIBCXX_ENABLE_ASSERTIONS=ON`` at CMake configuration time.
+When ``LIBCXX_ENABLE_ASSERTIONS`` is used, the compiled library will be built with assertions
+enabled, **and** user code will be built with assertions enabled by default. If
+``LIBCXX_ENABLE_ASSERTIONS=OFF`` at CMake configure time, the compiled library will not contain
+assertions and the default when building user code will be to have assertions disabled.
+As a user, you can consult your vendor to know whether assertions are enabled by default.
+
+Furthermore, independently of any vendor-selected default, users can always control whether
+assertions are enabled in their code by defining ``_LIBCPP_ENABLE_ASSERTIONS=0|1`` before
+including any libc++ header (we recommend passing ``-D_LIBCPP_ENABLE_ASSERTIONS=X`` to the
+compiler). Note that if the compiled library was built by the vendor without assertions,
+functions compiled inside the static or shared library won't have assertions enabled even
+if the user defines ``_LIBCPP_ENABLE_ASSERTIONS=1`` (the same is true for the inverse case
+where the static or shared library was compiled **with** assertions but the user tries to
+disable them). However, most of the code in libc++ is in the headers, so the user-selected
+value for ``_LIBCPP_ENABLE_ASSERTIONS`` (if any) will usually be respected.
+
 .. _termination-handler:
 
 Overriding the default termination handler
