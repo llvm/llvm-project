@@ -500,6 +500,14 @@ public:
     return Expansion;
   }
 
+  /// Creates an incomplete SLocEntry that is only able to report its offset.
+  static SLocEntry getOffsetOnly(SourceLocation::UIntTy Offset) {
+    assert(!(Offset & (1ULL << OffsetBits)) && "Offset is too large");
+    SLocEntry E;
+    E.Offset = Offset;
+    return E;
+  }
+
   static SLocEntry get(SourceLocation::UIntTy Offset, const FileInfo &FI) {
     assert(!(Offset & (1ULL << OffsetBits)) && "Offset is too large");
     SLocEntry E;
@@ -533,6 +541,12 @@ public:
   /// \returns true if an error occurred that prevented the source-location
   /// entry from being loaded.
   virtual bool ReadSLocEntry(int ID) = 0;
+
+  /// Get the index ID for the loaded SourceLocation offset.
+  ///
+  /// \returns Invalid index ID (0) if an error occurred that prevented the
+  /// SLocEntry  from being loaded.
+  virtual int getSLocEntryID(SourceLocation::UIntTy SLocOffset) = 0;
 
   /// Retrieve the module import location and name for the given ID, if
   /// in fact it was loaded from a module (rather than, say, a precompiled
@@ -728,6 +742,12 @@ class SourceManager : public RefCountedBase<SourceManager> {
   ///
   /// Same indexing as LoadedSLocEntryTable.
   llvm::BitVector SLocEntryLoaded;
+
+  /// A bitmap that indicates whether the entries of LoadedSLocEntryTable
+  /// have already had their offset loaded from the external source.
+  ///
+  /// Superset of SLocEntryLoaded. Same indexing as SLocEntryLoaded.
+  llvm::BitVector SLocEntryOffsetLoaded;
 
   /// An external source for source location entries.
   ExternalSLocEntrySource *ExternalSLocEntries = nullptr;
