@@ -34,9 +34,9 @@ define i32 @add_i8_signext_i32(i8 %a, i8 %b) {
 ; RV64IM-LABEL: add_i8_signext_i32:
 ; RV64IM:       # %bb.0: # %entry
 ; RV64IM-NEXT:    slli a0, a0, 24
-; RV64IM-NEXT:    sraiw a0, a0, 24
+; RV64IM-NEXT:    srai a0, a0, 24
 ; RV64IM-NEXT:    slli a1, a1, 24
-; RV64IM-NEXT:    sraiw a1, a1, 24
+; RV64IM-NEXT:    srai a1, a1, 24
 ; RV64IM-NEXT:    addw a0, a0, a1
 ; RV64IM-NEXT:    ret
 entry:

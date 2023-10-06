@@ -9,10 +9,10 @@ define i32 @foo(i32 %x, i32 %y, i32 %z) {
 ; CHECK-LABEL: foo:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    mul a0, a0, a0
-; CHECK-NEXT:    addiw a0, a0, 1
+; CHECK-NEXT:    addi a0, a0, 1
 ; CHECK-NEXT:    mul a0, a0, a0
 ; CHECK-NEXT:    add a0, a0, a2
-; CHECK-NEXT:    addiw a0, a0, 1
+; CHECK-NEXT:    addi a0, a0, 1
 ; CHECK-NEXT:    sllw a0, a0, a1
 ; CHECK-NEXT:    ret
   %b = mul i32 %x, %x
@@ -169,7 +169,7 @@ define signext i32 @andi_srliw(i32 signext %0, ptr %1, i32 signext %2) {
 ; CHECK-LABEL: andi_srliw:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    andi a3, a0, -8
-; CHECK-NEXT:    srliw a4, a0, 3
+; CHECK-NEXT:    srli a4, a0, 3
 ; CHECK-NEXT:    addw a0, a3, a2
 ; CHECK-NEXT:    sw a4, 0(a1)
 ; CHECK-NEXT:    ret

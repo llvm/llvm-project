@@ -12,11 +12,12 @@
 // extended bits aren't consumed or because the input was already sign extended
 // by an earlier instruction.
 //
-// Then it removes the -w suffix from addw, slliw and mulw instructions
-// whenever all users are dependent only on the lower word of the result of the
-// instruction. We do this only for addw, slliw, and mulw because the -w forms
-// are less compressible: c.add and c.slli have a larger register encoding than
-// their w counterparts, and there's no compressible version of mulw.
+// Then it removes the -w suffix from opw instructions whenever all users are
+// dependent only on the lower word of the result of the instruction.  This is
+// profitable for addw because c.add has a larger register encoding than c.addw.
+// For the remaining opw instructions, there is no compressed w variant. This
+// tramsform also has the side effect of making RV32 and RV64 codegen for 32
+// bit constants match which helps reduce check duplication in LIT tests.
 //
 //===---------------------------------------------------------------------===//
 
@@ -661,8 +662,11 @@ bool RISCVOptWInstrs::stripWSuffixes(MachineFunction &MF,
       default:
         continue;
       case RISCV::ADDW:  Opc = RISCV::ADD;  break;
+      case RISCV::ADDIW: Opc = RISCV::ADDI; break;
       case RISCV::MULW:  Opc = RISCV::MUL;  break;
       case RISCV::SLLIW: Opc = RISCV::SLLI; break;
+      case RISCV::SRLIW: Opc = RISCV::SRLI; break;
+      case RISCV::SRAIW: Opc = RISCV::SRAI; break;
       }
 
       if (hasAllWUsers(MI, ST, MRI)) {

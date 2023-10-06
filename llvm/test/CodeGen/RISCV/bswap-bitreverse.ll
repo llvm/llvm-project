@@ -141,7 +141,7 @@ define i64 @test_bswap_i64(i64 %a) nounwind {
 ; RV64I-NEXT:    or a1, a3, a1
 ; RV64I-NEXT:    and a4, a0, a4
 ; RV64I-NEXT:    slli a4, a4, 24
-; RV64I-NEXT:    srliw a3, a0, 24
+; RV64I-NEXT:    srli a3, a0, 24
 ; RV64I-NEXT:    slli a3, a3, 32
 ; RV64I-NEXT:    or a3, a4, a3
 ; RV64I-NEXT:    and a2, a0, a2
@@ -497,7 +497,7 @@ define i32 @test_bitreverse_i32(i32 %a) nounwind {
 ; RV64ZBB-NEXT:    and a1, a1, a2
 ; RV64ZBB-NEXT:    srli a0, a0, 28
 ; RV64ZBB-NEXT:    lui a2, 986895
-; RV64ZBB-NEXT:    addiw a2, a2, 240
+; RV64ZBB-NEXT:    addi a2, a2, 240
 ; RV64ZBB-NEXT:    and a0, a0, a2
 ; RV64ZBB-NEXT:    sext.w a0, a0
 ; RV64ZBB-NEXT:    or a0, a1, a0
@@ -613,7 +613,7 @@ define i64 @test_bitreverse_i64(i64 %a) nounwind {
 ; RV64I-NEXT:    or a1, a3, a1
 ; RV64I-NEXT:    and a4, a0, a4
 ; RV64I-NEXT:    slli a4, a4, 24
-; RV64I-NEXT:    srliw a3, a0, 24
+; RV64I-NEXT:    srli a3, a0, 24
 ; RV64I-NEXT:    slli a3, a3, 32
 ; RV64I-NEXT:    or a3, a4, a3
 ; RV64I-NEXT:    and a2, a0, a2

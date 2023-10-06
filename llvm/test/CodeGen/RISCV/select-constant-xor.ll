@@ -225,7 +225,7 @@ define i32 @oneusecmp(i32 %a, i32 %b, i32 %d) {
 ; RV64-LABEL: oneusecmp:
 ; RV64:       # %bb.0:
 ; RV64-NEXT:    sext.w a3, a0
-; RV64-NEXT:    sraiw a0, a0, 31
+; RV64-NEXT:    srai a0, a0, 31
 ; RV64-NEXT:    xori a0, a0, 127
 ; RV64-NEXT:    bltz a3, .LBB10_2
 ; RV64-NEXT:  # %bb.1:
