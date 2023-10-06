@@ -1444,6 +1444,79 @@ llvm::Error ASTReader::ReadSourceManagerBlock(ModuleFile &F) {
   }
 }
 
+llvm::Expected<SourceLocation::UIntTy>
+ASTReader::readSLocOffset(ModuleFile *F, unsigned Index) {
+  BitstreamCursor &Cursor = F->SLocEntryCursor;
+  SavedStreamPosition SavedPosition(Cursor);
+  if (llvm::Error Err = Cursor.JumpToBit(F->SLocEntryOffsetsBase +
+                                         F->SLocEntryOffsets[Index]))
+    return Err;
+
+  Expected<llvm::BitstreamEntry> MaybeEntry = Cursor.advance();
+  if (!MaybeEntry)
+    return MaybeEntry.takeError();
+
+  llvm::BitstreamEntry Entry = MaybeEntry.get();
+  if (Entry.Kind != llvm::BitstreamEntry::Record)
+    return llvm::createStringError(
+        std::errc::illegal_byte_sequence,
+        "incorrectly-formatted source location entry in AST file");
+
+  RecordData Record;
+  StringRef Blob;
+  Expected<unsigned> MaybeSLOC = Cursor.readRecord(Entry.ID, Record, &Blob);
+  if (!MaybeSLOC)
+    return MaybeSLOC.takeError();
+
+  switch (MaybeSLOC.get()) {
+  default:
+    return llvm::createStringError(
+        std::errc::illegal_byte_sequence,
+        "incorrectly-formatted source location entry in AST file");
+  case SM_SLOC_FILE_ENTRY:
+  case SM_SLOC_BUFFER_ENTRY:
+  case SM_SLOC_EXPANSION_ENTRY:
+    return F->SLocEntryBaseOffset + Record[0];
+  }
+}
+
+int ASTReader::getSLocEntryID(SourceLocation::UIntTy SLocOffset) {
+  auto SLocMapI =
+      GlobalSLocOffsetMap.find(SourceManager::MaxLoadedOffset - SLocOffset - 1);
+  assert(SLocMapI != GlobalSLocOffsetMap.end() &&
+         "Corrupted global sloc offset map");
+  ModuleFile *F = SLocMapI->second;
+
+  bool Invalid = false;
+
+  auto It = llvm::upper_bound(
+      llvm::index_range(0, F->LocalNumSLocEntries), SLocOffset,
+      [&](SourceLocation::UIntTy Offset, std::size_t LocalIndex) {
+        int ID = F->SLocEntryBaseID + LocalIndex;
+        std::size_t Index = -ID - 2;
+        if (!SourceMgr.SLocEntryOffsetLoaded[Index]) {
+          assert(!SourceMgr.SLocEntryLoaded[Index]);
+          auto MaybeEntryOffset = readSLocOffset(F, LocalIndex);
+          if (!MaybeEntryOffset) {
+            Error(MaybeEntryOffset.takeError());
+            Invalid = true;
+            return true;
+          }
+          SourceMgr.LoadedSLocEntryTable[Index] =
+              SrcMgr::SLocEntry::getOffsetOnly(*MaybeEntryOffset);
+          SourceMgr.SLocEntryOffsetLoaded[Index] = true;
+        }
+        return Offset < SourceMgr.LoadedSLocEntryTable[Index].getOffset();
+      });
+
+  if (Invalid)
+    return 0;
+
+  // The iterator points to the first entry with start offset greater than the
+  // offset of interest. The previous entry must contain the offset of interest.
+  return F->SLocEntryBaseID + *std::prev(It);
+}
+
 bool ASTReader::ReadSLocEntry(int ID) {
   if (ID == 0)
     return false;

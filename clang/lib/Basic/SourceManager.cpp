@@ -337,6 +337,7 @@ void SourceManager::clearIDTables() {
   LocalSLocEntryTable.clear();
   LoadedSLocEntryTable.clear();
   SLocEntryLoaded.clear();
+  SLocEntryOffsetLoaded.clear();
   LastLineNoFileIDQuery = FileID();
   LastLineNoContentCache = nullptr;
   LastFileIDLookup = FileID();
@@ -459,6 +460,7 @@ SourceManager::AllocateLoadedSLocEntries(unsigned NumSLocEntries,
   }
   LoadedSLocEntryTable.resize(LoadedSLocEntryTable.size() + NumSLocEntries);
   SLocEntryLoaded.resize(LoadedSLocEntryTable.size());
+  SLocEntryOffsetLoaded.resize(LoadedSLocEntryTable.size());
   CurrentLoadedOffset -= TotalSize;
   int BaseID = -int(LoadedSLocEntryTable.size()) - 1;
   LoadedSLocEntryAllocBegin.push_back(FileID::get(BaseID));
@@ -597,7 +599,7 @@ FileID SourceManager::createFileIDImpl(ContentCache &File, StringRef Filename,
     assert(!SLocEntryLoaded[Index] && "FileID already loaded");
     LoadedSLocEntryTable[Index] = SLocEntry::get(
         LoadedOffset, FileInfo::get(IncludePos, File, FileCharacter, Filename));
-    SLocEntryLoaded[Index] = true;
+    SLocEntryLoaded[Index] = SLocEntryOffsetLoaded[Index] = true;
     return FileID::get(LoadedID);
   }
   unsigned FileSize = File.getSize();
@@ -657,7 +659,7 @@ SourceManager::createExpansionLocImpl(const ExpansionInfo &Info,
     assert(Index < LoadedSLocEntryTable.size() && "FileID out of range");
     assert(!SLocEntryLoaded[Index] && "FileID already loaded");
     LoadedSLocEntryTable[Index] = SLocEntry::get(LoadedOffset, Info);
-    SLocEntryLoaded[Index] = true;
+    SLocEntryLoaded[Index] = SLocEntryOffsetLoaded[Index] = true;
     return SourceLocation::getMacroLoc(LoadedOffset);
   }
   LocalSLocEntryTable.push_back(SLocEntry::get(NextLocalOffset, Info));
@@ -858,69 +860,7 @@ FileID SourceManager::getFileIDLoaded(SourceLocation::UIntTy SLocOffset) const {
     return FileID();
   }
 
-  // Essentially the same as the local case, but the loaded array is sorted
-  // in the other direction (decreasing order).
-  // GreaterIndex is the one where the offset is greater, which is actually a
-  // lower index!
-  unsigned GreaterIndex = 0;
-  unsigned LessIndex = LoadedSLocEntryTable.size();
-  if (LastFileIDLookup.ID < 0) {
-    // Prune the search space.
-    int LastID = LastFileIDLookup.ID;
-    if (getLoadedSLocEntryByID(LastID).getOffset() > SLocOffset)
-      GreaterIndex =
-          (-LastID - 2) + 1; // Exclude LastID, else we would have hit the cache
-    else
-      LessIndex = -LastID - 2;
-  }
-
-  // First do a linear scan from the last lookup position, if possible.
-  unsigned NumProbes;
-  bool Invalid = false;
-  for (NumProbes = 0; NumProbes < 8; ++NumProbes, ++GreaterIndex) {
-    // Make sure the entry is loaded!
-    const SrcMgr::SLocEntry &E = getLoadedSLocEntry(GreaterIndex, &Invalid);
-    if (Invalid)
-      return FileID(); // invalid entry.
-    if (E.getOffset() <= SLocOffset) {
-      FileID Res = FileID::get(-int(GreaterIndex) - 2);
-      LastFileIDLookup = Res;
-      NumLinearScans += NumProbes + 1;
-      return Res;
-    }
-  }
-
-  // Linear scan failed. Do the binary search.
-  NumProbes = 0;
-  while (true) {
-    ++NumProbes;
-    unsigned MiddleIndex = (LessIndex - GreaterIndex) / 2 + GreaterIndex;
-    const SrcMgr::SLocEntry &E = getLoadedSLocEntry(MiddleIndex, &Invalid);
-    if (Invalid)
-      return FileID(); // invalid entry.
-
-    if (E.getOffset() > SLocOffset) {
-      if (GreaterIndex == MiddleIndex) {
-        assert(0 && "binary search missed the entry");
-        return FileID();
-      }
-      GreaterIndex = MiddleIndex;
-      continue;
-    }
-
-    if (isOffsetInFileID(FileID::get(-int(MiddleIndex) - 2), SLocOffset)) {
-      FileID Res = FileID::get(-int(MiddleIndex) - 2);
-      LastFileIDLookup = Res;
-      NumBinaryProbes += NumProbes;
-      return Res;
-    }
-
-    if (LessIndex == MiddleIndex) {
-      assert(0 && "binary search missed the entry");
-      return FileID();
-    }
-    LessIndex = MiddleIndex;
-  }
+  return FileID::get(ExternalSLocEntries->getSLocEntryID(SLocOffset));
 }
 
 SourceLocation SourceManager::
