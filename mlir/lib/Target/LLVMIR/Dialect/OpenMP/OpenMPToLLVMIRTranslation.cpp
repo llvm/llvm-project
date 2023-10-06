@@ -2018,6 +2018,31 @@ handleDeclareTargetMapVar(llvm::ArrayRef<Value> mapOperands,
   }
 }
 
+static llvm::IRBuilderBase::InsertPoint
+createDeviceArgumentAccessor(llvm::Argument &arg, llvm::Value *input,
+                             llvm::Value *&retVal, llvm::IRBuilderBase &builder,
+                             llvm::OpenMPIRBuilder &ompBuilder,
+                             LLVM::ModuleTranslation &moduleTranslation,
+                             llvm::IRBuilderBase::InsertPoint allocaIP,
+                             llvm::IRBuilderBase::InsertPoint codeGenIP) {
+  builder.restoreIP(allocaIP);
+
+  llvm::Value *addr =
+      builder.CreateAlloca(arg.getType()->isPointerTy()
+                               ? arg.getType()
+                               : llvm::Type::getInt64Ty(builder.getContext()),
+                           ompBuilder.M.getDataLayout().getAllocaAddrSpace());
+  llvm::Value *addrAscast =
+      builder.CreatePointerBitCastOrAddrSpaceCast(addr, input->getType());
+  builder.CreateStore(&arg, addrAscast);
+
+  builder.restoreIP(codeGenIP);
+
+  retVal = builder.CreateLoad(arg.getType(), addrAscast);
+
+  return builder.saveIP();
+}
+
 static LogicalResult
 convertOmpTarget(Operation &opInst, llvm::IRBuilderBase &builder,
                  LLVM::ModuleTranslation &moduleTranslation) {
@@ -2109,9 +2134,29 @@ convertOmpTarget(Operation &opInst, llvm::IRBuilderBase &builder,
     return combinedInfos;
   };
 
+  auto argAccessorCB = [&](llvm::Argument &arg, llvm::Value *input,
+                           llvm::Value *&retVal, InsertPointTy allocaIP,
+                           InsertPointTy codeGenIP) {
+    llvm::OpenMPIRBuilder *ompBuilder = moduleTranslation.getOpenMPBuilder();
+
+    // We just return the unaltered argument for the host function
+    // for now, some alterations may be required in the future to
+    // keep host fallback functions working identically to the device
+    // version (e.g. pass ByCopy values should be treated as such on
+    // host and device, currently not always the case)
+    if (!ompBuilder->Config.isTargetDevice()) {
+      retVal = cast<llvm::Value>(&arg);
+      return codeGenIP;
+    }
+
+    return createDeviceArgumentAccessor(arg, input, retVal, builder,
+                                        *ompBuilder, moduleTranslation,
+                                        allocaIP, codeGenIP);
+  };
+
   builder.restoreIP(moduleTranslation.getOpenMPBuilder()->createTarget(
       ompLoc, allocaIP, builder.saveIP(), entryInfo, defaultValTeams,
-      defaultValThreads, inputs, genMapInfoCB, bodyCB));
+      defaultValThreads, inputs, genMapInfoCB, bodyCB, argAccessorCB));
 
   // Remap access operations to declare target reference pointers for the
   // device, essentially generating extra loadop's as necessary
