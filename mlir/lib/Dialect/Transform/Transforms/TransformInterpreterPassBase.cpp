@@ -163,7 +163,7 @@ static llvm::raw_ostream &printModuleForRepro(llvm::raw_ostream &os,
 
 /// Saves the payload and the transform IR into a temporary file and reports
 /// the file name to `os`.
-static void
+[[maybe_unused]] static void
 saveReproToTempFile(llvm::raw_ostream &os, Operation *target,
                     Operation *transform, StringRef passName,
                     const Pass::Option<std::string> &debugPayloadRootTag,
