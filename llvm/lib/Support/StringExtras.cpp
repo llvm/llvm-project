@@ -12,6 +12,7 @@
 
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/SmallVector.h"
+#include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/Regex.h"
 #include "llvm/Support/raw_ostream.h"
 #include <cctype>
@@ -100,14 +101,23 @@ std::string llvm::convertToSnakeFromCamelCase(StringRef input) {
   llvm::Regex trailingCap = llvm::Regex("([A-Z]+)([A-Z][a-z])");
   llvm::Regex leadingCap = llvm::Regex("([a-z0-9])([A-Z])");
 
-  std::string snakeCase = input.str();
-  for (int i = 0; i < 10; ++i) {
-    snakeCase = trailingCap.sub("\\1_\\2", snakeCase);
-    snakeCase = leadingCap.sub("\\1_\\2", snakeCase);
-  }
-  std::transform(snakeCase.begin(), snakeCase.end(), snakeCase.begin(),
+  std::string curr = input.str();
+  std::string prev = input.str();
+  size_t iters = 0;
+  do {
+    prev = curr;
+    curr = trailingCap.sub("\\1_\\2", prev);
+    curr = leadingCap.sub("\\1_\\2", curr);
+  } while (curr != prev && ++iters < input.size());
+
+  if (iters == input.size())
+    llvm::report_fatal_error(
+        input + Twine(" couldn't be converted to snake case after ") +
+        Twine(iters) + Twine("iterations."));
+
+  std::transform(curr.begin(), curr.end(), curr.begin(),
                  [](unsigned char c) { return std::tolower(c); });
-  return snakeCase;
+  return curr;
 }
 
 std::string llvm::convertToCamelFromSnakeCase(StringRef input,
