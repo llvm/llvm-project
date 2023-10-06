@@ -755,7 +755,7 @@ define <4 x i16> @dont_fold_urem_one(<4 x i16> %x) nounwind {
 ; RV64IM-NEXT:    subw a1, a1, a3
 ; RV64IM-NEXT:    mulhu a3, a4, a5
 ; RV64IM-NEXT:    lui a5, 1
-; RV64IM-NEXT:    addiw a5, a5, 1327
+; RV64IM-NEXT:    addi a5, a5, 1327
 ; RV64IM-NEXT:    mul a3, a3, a5
 ; RV64IM-NEXT:    subw a4, a4, a3
 ; RV64IM-NEXT:    sh zero, 0(a0)

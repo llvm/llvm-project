@@ -259,21 +259,13 @@ define ptr @offset_sh3add() {
 }
 
 define dso_local void @read_modify_write() local_unnamed_addr nounwind {
-; RV32-LABEL: read_modify_write:
-; RV32:       # %bb.0: # %entry
-; RV32-NEXT:    lui a0, %hi(s+160)
-; RV32-NEXT:    lw a1, %lo(s+160)(a0)
-; RV32-NEXT:    addi a1, a1, 10
-; RV32-NEXT:    sw a1, %lo(s+160)(a0)
-; RV32-NEXT:    ret
-;
-; RV64-LABEL: read_modify_write:
-; RV64:       # %bb.0: # %entry
-; RV64-NEXT:    lui a0, %hi(s+160)
-; RV64-NEXT:    lw a1, %lo(s+160)(a0)
-; RV64-NEXT:    addiw a1, a1, 10
-; RV64-NEXT:    sw a1, %lo(s+160)(a0)
-; RV64-NEXT:    ret
+; CHECK-LABEL: read_modify_write:
+; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    lui a0, %hi(s+160)
+; CHECK-NEXT:    lw a1, %lo(s+160)(a0)
+; CHECK-NEXT:    addi a1, a1, 10
+; CHECK-NEXT:    sw a1, %lo(s+160)(a0)
+; CHECK-NEXT:    ret
 entry:
   %x = load i32, ptr getelementptr inbounds (%struct.S, ptr @s, i32 0, i32 1), align 4
   %y = add i32 %x, 10
@@ -375,21 +367,13 @@ define void @store_sh3add() {
 }
 
 define dso_local void @rmw_addi_addi() nounwind {
-; RV32-LABEL: rmw_addi_addi:
-; RV32:       # %bb.0: # %entry
-; RV32-NEXT:    lui a0, %hi(bar+3211)
-; RV32-NEXT:    lbu a1, %lo(bar+3211)(a0)
-; RV32-NEXT:    addi a1, a1, 10
-; RV32-NEXT:    sb a1, %lo(bar+3211)(a0)
-; RV32-NEXT:    ret
-;
-; RV64-LABEL: rmw_addi_addi:
-; RV64:       # %bb.0: # %entry
-; RV64-NEXT:    lui a0, %hi(bar+3211)
-; RV64-NEXT:    lbu a1, %lo(bar+3211)(a0)
-; RV64-NEXT:    addiw a1, a1, 10
-; RV64-NEXT:    sb a1, %lo(bar+3211)(a0)
-; RV64-NEXT:    ret
+; CHECK-LABEL: rmw_addi_addi:
+; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    lui a0, %hi(bar+3211)
+; CHECK-NEXT:    lbu a1, %lo(bar+3211)(a0)
+; CHECK-NEXT:    addi a1, a1, 10
+; CHECK-NEXT:    sb a1, %lo(bar+3211)(a0)
+; CHECK-NEXT:    ret
 entry:
   %0 = load i8, ptr getelementptr inbounds ([0 x i8], ptr @bar, i32 0, i64 3211)
   %1 = add i8 %0, 10

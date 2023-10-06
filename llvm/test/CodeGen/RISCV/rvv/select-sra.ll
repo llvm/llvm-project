@@ -20,11 +20,11 @@ define <4 x i32> @vselect_of_consts(<4 x i1> %cc) {
 ; RV64-LABEL: vselect_of_consts:
 ; RV64:       # %bb.0:
 ; RV64-NEXT:    lui a0, 284280
-; RV64-NEXT:    addiw a0, a0, 291
+; RV64-NEXT:    addi a0, a0, 291
 ; RV64-NEXT:    vsetivli zero, 4, e32, m1, ta, ma
 ; RV64-NEXT:    vmv.v.x v8, a0
 ; RV64-NEXT:    lui a0, 214376
-; RV64-NEXT:    addiw a0, a0, -2030
+; RV64-NEXT:    addi a0, a0, -2030
 ; RV64-NEXT:    vmerge.vxm v8, v8, a0, v0
 ; RV64-NEXT:    ret
   %v = select <4 x i1> %cc, <4 x i32> <i32 878082066, i32 878082066, i32 878082066, i32 878082066>, <4 x i32> <i32 1164411171, i32 1164411171, i32 1164411171, i32 1164411171>

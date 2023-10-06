@@ -56,7 +56,7 @@ define void @gather_masked(ptr noalias nocapture %A, ptr noalias nocapture reado
 ; V:       # %bb.0: # %entry
 ; V-NEXT:    li a2, 1024
 ; V-NEXT:    lui a3, 983765
-; V-NEXT:    addiw a3, a3, 873
+; V-NEXT:    addi a3, a3, 873
 ; V-NEXT:    vsetivli zero, 1, e32, mf2, ta, ma
 ; V-NEXT:    vmv.s.x v0, a3
 ; V-NEXT:    li a3, 32
@@ -80,7 +80,7 @@ define void @gather_masked(ptr noalias nocapture %A, ptr noalias nocapture reado
 ; ZVE32F:       # %bb.0: # %entry
 ; ZVE32F-NEXT:    li a2, 1024
 ; ZVE32F-NEXT:    lui a3, 983765
-; ZVE32F-NEXT:    addiw a3, a3, 873
+; ZVE32F-NEXT:    addi a3, a3, 873
 ; ZVE32F-NEXT:    vsetivli zero, 1, e32, m1, ta, ma
 ; ZVE32F-NEXT:    vmv.s.x v0, a3
 ; ZVE32F-NEXT:    li a3, 32
@@ -331,7 +331,7 @@ define void @scatter_masked(ptr noalias nocapture %A, ptr noalias nocapture read
 ; V-NEXT:    li a2, 1024
 ; V-NEXT:    li a3, 32
 ; V-NEXT:    lui a4, 983765
-; V-NEXT:    addiw a4, a4, 873
+; V-NEXT:    addi a4, a4, 873
 ; V-NEXT:    vsetivli zero, 1, e32, mf2, ta, ma
 ; V-NEXT:    vmv.s.x v0, a4
 ; V-NEXT:    li a4, 5
@@ -355,7 +355,7 @@ define void @scatter_masked(ptr noalias nocapture %A, ptr noalias nocapture read
 ; ZVE32F-NEXT:    li a2, 1024
 ; ZVE32F-NEXT:    li a3, 32
 ; ZVE32F-NEXT:    lui a4, 983765
-; ZVE32F-NEXT:    addiw a4, a4, 873
+; ZVE32F-NEXT:    addi a4, a4, 873
 ; ZVE32F-NEXT:    vsetivli zero, 1, e32, m1, ta, ma
 ; ZVE32F-NEXT:    vmv.s.x v0, a4
 ; ZVE32F-NEXT:    li a4, 5
@@ -838,7 +838,7 @@ define void @strided_load_startval_add_with_splat(ptr noalias nocapture %arg, pt
 ; CHECK-NEXT:  # %bb.4: # %bb30
 ; CHECK-NEXT:    beq a4, a5, .LBB13_7
 ; CHECK-NEXT:  .LBB13_5: # %bb32
-; CHECK-NEXT:    addiw a2, a3, -1024
+; CHECK-NEXT:    addi a2, a3, -1024
 ; CHECK-NEXT:    add a0, a0, a3
 ; CHECK-NEXT:    slli a4, a3, 2
 ; CHECK-NEXT:    add a1, a1, a3

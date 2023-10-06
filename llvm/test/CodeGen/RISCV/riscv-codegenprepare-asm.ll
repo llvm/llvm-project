@@ -12,7 +12,7 @@ define void @test1(ptr nocapture noundef %a, i32 noundef signext %n) {
 ; CHECK-NEXT:  .LBB0_1: # %for.body
 ; CHECK-NEXT:    # =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    lw a2, 0(a0)
-; CHECK-NEXT:    addiw a2, a2, 4
+; CHECK-NEXT:    addi a2, a2, 4
 ; CHECK-NEXT:    sw a2, 0(a0)
 ; CHECK-NEXT:    addi a1, a1, -1
 ; CHECK-NEXT:    addi a0, a0, 4
@@ -62,9 +62,9 @@ define void @test2(ptr nocapture noundef %a, i32 noundef signext %n) {
 ; CHECK-NEXT:    # =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    lw a5, -4(a4)
 ; CHECK-NEXT:    lw a6, 0(a4)
-; CHECK-NEXT:    addiw a5, a5, 4
+; CHECK-NEXT:    addi a5, a5, 4
 ; CHECK-NEXT:    sw a5, -4(a4)
-; CHECK-NEXT:    addiw a6, a6, 4
+; CHECK-NEXT:    addi a6, a6, 4
 ; CHECK-NEXT:    sw a6, 0(a4)
 ; CHECK-NEXT:    addi a3, a3, 2
 ; CHECK-NEXT:    addi a4, a4, 8
@@ -75,7 +75,7 @@ define void @test2(ptr nocapture noundef %a, i32 noundef signext %n) {
 ; CHECK-NEXT:    slli a3, a3, 2
 ; CHECK-NEXT:    add a0, a0, a3
 ; CHECK-NEXT:    lw a1, 0(a0)
-; CHECK-NEXT:    addiw a1, a1, 4
+; CHECK-NEXT:    addi a1, a1, 4
 ; CHECK-NEXT:    sw a1, 0(a0)
 ; CHECK-NEXT:  .LBB1_7: # %for.cond.cleanup
 ; CHECK-NEXT:    ret
