@@ -428,6 +428,14 @@ enabled sub-projects. Nearly all of these variable names begin with
   $CMAKE_INSTALL_PREFIX/Toolchains containing an xctoolchain directory which can
   be used to override the default system tools.
 
+**LLVM_CUSTOM_BINARIES**:STRING
+  If set to a semicolon separated list of targets, those targets will be appended
+  with custom linker flags from ``LLVM_<target>_LINKER_FLAGS``.
+
+  **LLVM_<target>_LINKER_FLAGS**:STRING
+   Defines the set of linker flags that should be applied to a <target> defined via
+   LLVM_CUSTOM_BINARIES.
+
 **LLVM_DEFAULT_TARGET_TRIPLE**:STRING
   LLVM target to use for code generation when no target is explicitly specified.
   It defaults to "host", meaning that it shall pick the architecture
