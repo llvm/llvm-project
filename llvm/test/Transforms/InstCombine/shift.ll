@@ -1755,8 +1755,8 @@ define void @ashr_out_of_range_1(ptr %A) {
 ; CHECK-NEXT:    [[TMP1:%.*]] = icmp eq i177 [[L_FROZEN]], -1
 ; CHECK-NEXT:    [[B:%.*]] = select i1 [[TMP1]], i177 0, i177 [[L_FROZEN]]
 ; CHECK-NEXT:    [[TMP2:%.*]] = trunc i177 [[B]] to i64
-; CHECK-NEXT:    [[TMP3:%.*]] = add i64 [[TMP2]], -1
-; CHECK-NEXT:    [[G11:%.*]] = getelementptr i177, ptr [[A]], i64 [[TMP3]]
+; CHECK-NEXT:    [[TMP3:%.*]] = getelementptr i177, ptr [[A]], i64 [[TMP2]]
+; CHECK-NEXT:    [[G11:%.*]] = getelementptr i177, ptr [[TMP3]], i64 -1
 ; CHECK-NEXT:    [[C17:%.*]] = icmp sgt i177 [[B]], [[L_FROZEN]]
 ; CHECK-NEXT:    [[TMP4:%.*]] = sext i1 [[C17]] to i64
 ; CHECK-NEXT:    [[G62:%.*]] = getelementptr i177, ptr [[G11]], i64 [[TMP4]]
