@@ -50,10 +50,7 @@ protected:
   SmallVector<VFParameter, 8> &Parameters = Info.Shape.Parameters;
   std::string &ScalarName = Info.ScalarName;
   std::string &VectorName = Info.VectorName;
-  // Invoke the parser. We need to make sure that a function exist in
-  // the module because the parser fails if such function don't
-  // exists. Every time this method is invoked the state of the test
-  // is reset.
+  // Invoke the parser.
   //
   // \p MangledName -> the string the parser has to demangle.
   //
