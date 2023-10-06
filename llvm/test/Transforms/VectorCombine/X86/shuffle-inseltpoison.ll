@@ -68,15 +68,10 @@ define <16 x i16> @bitcast_shuf_narrow_element_concat_subvectors(<2 x i64> %v) {
 }
 
 define <16 x i8> @bitcast_shuf_extract_subvector(<8 x i32> %v) {
-; SSE-LABEL: @bitcast_shuf_extract_subvector(
-; SSE-NEXT:    [[TMP1:%.*]] = bitcast <8 x i32> [[V:%.*]] to <32 x i8>
-; SSE-NEXT:    [[R:%.*]] = shufflevector <32 x i8> [[TMP1]], <32 x i8> poison, <16 x i32> <i32 16, i32 17, i32 18, i32 19, i32 20, i32 21, i32 22, i32 23, i32 24, i32 25, i32 26, i32 27, i32 28, i32 29, i32 30, i32 31>
-; SSE-NEXT:    ret <16 x i8> [[R]]
-;
-; AVX-LABEL: @bitcast_shuf_extract_subvector(
-; AVX-NEXT:    [[SHUF:%.*]] = shufflevector <8 x i32> [[V:%.*]], <8 x i32> poison, <4 x i32> <i32 4, i32 5, i32 6, i32 7>
-; AVX-NEXT:    [[R:%.*]] = bitcast <4 x i32> [[SHUF]] to <16 x i8>
-; AVX-NEXT:    ret <16 x i8> [[R]]
+; CHECK-LABEL: @bitcast_shuf_extract_subvector(
+; CHECK-NEXT:    [[TMP1:%.*]] = bitcast <8 x i32> [[V:%.*]] to <32 x i8>
+; CHECK-NEXT:    [[R:%.*]] = shufflevector <32 x i8> [[TMP1]], <32 x i8> poison, <16 x i32> <i32 16, i32 17, i32 18, i32 19, i32 20, i32 21, i32 22, i32 23, i32 24, i32 25, i32 26, i32 27, i32 28, i32 29, i32 30, i32 31>
+; CHECK-NEXT:    ret <16 x i8> [[R]]
 ;
   %shuf = shufflevector <8 x i32> %v, <8 x i32> poison, <4 x i32> <i32 4, i32 5, i32 6, i32 7>
   %r = bitcast <4 x i32> %shuf to <16 x i8>
