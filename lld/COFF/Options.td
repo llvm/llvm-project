@@ -290,6 +290,14 @@ def wrap : P_priv<"wrap">;
 
 def vfsoverlay : P<"vfsoverlay", "Path to a vfsoverlay yaml file to optionally look for /defaultlib's in">;
 
+def time_trace_eq: Joined<["--"], "time-trace=">, MetaVarName<"<file>">,
+  HelpText<"Record time trace to <file>">;
+def : Flag<["--"], "time-trace">, Alias<time_trace_eq>,
+  HelpText<"Record time trace to file next to output">;
+
+def time_trace_granularity_eq: Joined<["--"], "time-trace-granularity=">,
+    HelpText<"Minimum time granularity (in microseconds) traced by time profiler">;
+
 // Flags for debugging
 def lldmap : F<"lldmap">;
 def lldmap_file : P_priv<"lldmap">;

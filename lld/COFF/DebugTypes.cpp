@@ -29,6 +29,7 @@
 #include "llvm/Support/FormatVariadic.h"
 #include "llvm/Support/Parallel.h"
 #include "llvm/Support/Path.h"
+#include "llvm/Support/TimeProfiler.h"
 
 using namespace llvm;
 using namespace llvm::codeview;
@@ -1068,6 +1069,7 @@ TypeMerger::~TypeMerger() = default;
 void TypeMerger::mergeTypesWithGHash() {
   // Load ghashes. Do type servers and PCH objects first.
   {
+    llvm::TimeTraceScope timeScope("Load GHASHes");
     ScopedTimer t1(ctx.loadGHashTimer);
     parallelForEach(dependencySources,
                     [&](TpiSource *source) { source->loadGHashes(); });
@@ -1075,6 +1077,7 @@ void TypeMerger::mergeTypesWithGHash() {
                     [&](TpiSource *source) { source->loadGHashes(); });
   }
 
+  llvm::TimeTraceScope timeScope("Merge types (GHASH)");
   ScopedTimer t2(ctx.mergeGHashTimer);
   GHashState ghashState;
 

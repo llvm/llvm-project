@@ -26,6 +26,7 @@
 #include "llvm/Support/BinaryItemStream.h"
 #include "llvm/Support/BinaryStreamWriter.h"
 #include "llvm/Support/Parallel.h"
+#include "llvm/Support/TimeProfiler.h"
 #include "llvm/Support/xxhash.h"
 #include <algorithm>
 #include <vector>
@@ -478,6 +479,7 @@ Error GSIStreamBuilder::commitGlobalsHashStream(
 
 Error GSIStreamBuilder::commit(const msf::MSFLayout &Layout,
                                WritableBinaryStreamRef Buffer) {
+  llvm::TimeTraceScope timeScope("Commit GSI stream");
   auto GS = WritableMappedBlockStream::createIndexedStream(
       Layout, Buffer, getGlobalsStreamIndex(), Msf.getAllocator());
   auto PS = WritableMappedBlockStream::createIndexedStream(

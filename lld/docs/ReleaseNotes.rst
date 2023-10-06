@@ -38,6 +38,9 @@ Breaking changes
 COFF Improvements
 -----------------
 
+* Added support for ``--time-trace`` and associated ``--time-trace-granularity``.
+  This generates a .json profile trace of the linker execution.
+
 MinGW Improvements
 ------------------
 

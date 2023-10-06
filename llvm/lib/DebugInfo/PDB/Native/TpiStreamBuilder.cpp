@@ -19,6 +19,7 @@
 #include "llvm/Support/BinaryStreamWriter.h"
 #include "llvm/Support/Endian.h"
 #include "llvm/Support/Error.h"
+#include "llvm/Support/TimeProfiler.h"
 #include <algorithm>
 #include <cstdint>
 #include <numeric>
@@ -171,6 +172,7 @@ Error TpiStreamBuilder::finalizeMsfLayout() {
 
 Error TpiStreamBuilder::commit(const msf::MSFLayout &Layout,
                                WritableBinaryStreamRef Buffer) {
+  llvm::TimeTraceScope timeScope("Commit TPI stream");
   if (auto EC = finalize())
     return EC;
 
