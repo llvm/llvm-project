@@ -1039,7 +1039,11 @@ materializeDebugLineSection(MCCASReader &Reader,
       DistinctDebugLineRefSeen = true;
       auto Data = DistinctRef->getData();
       DistinctData.append(Data.begin(), Data.end());
-      DWARFDataExtractor LineTableDataReader(Data, Reader.getEndian(), 8);
+      auto Endian = Reader.getEndian();
+      assert((Endian == support::big || Endian == support::little) &&
+             "Endian must be either big or little");
+      DWARFDataExtractor LineTableDataReader(Data, Endian == support::little,
+                                             8);
       auto Prologue = parseLineTableHeaderAndSkip(LineTableDataReader);
       if (!Prologue)
         return Prologue.takeError();
@@ -1059,9 +1063,12 @@ materializeDebugLineSection(MCCASReader &Reader,
       auto Data = LineRef->getData();
       uint64_t LineTableOffset = 0;
       while (LineTableOffset < Data.size()) {
-        auto Sizes = getOpcodeAndOperandSize(toStringRef(DistinctData), Data,
-                                             DistinctOffset, LineTableOffset,
-                                             Reader.getEndian(), OpcodeBase);
+        auto Endian = Reader.getEndian();
+        assert((Endian == support::big || Endian == support::little) &&
+               "Endian must be either big or little");
+        auto Sizes = getOpcodeAndOperandSize(
+            toStringRef(DistinctData), Data, DistinctOffset, LineTableOffset,
+            Endian == support::little, OpcodeBase);
         if (!Sizes)
           return Sizes.takeError();
         // Copy opcode and operand, only in the case of DW_LNS_set_file, the
@@ -2021,8 +2028,11 @@ inline void copyData(SmallVector<char, 0> &Data, StringRef DebugLineStrRef,
 
 Expected<uint64_t>
 MCCASBuilder::createOptimizedLineSection(StringRef DebugLineStrRef) {
+  auto Endian = Asm.getBackend().Endian;
+  assert((Endian == support::big || Endian == support::little) &&
+         "Endian must be either big or little");
   DWARFDataExtractor LineTableDataReader(DebugLineStrRef,
-                                         Asm.getBackend().Endian, 8);
+                                         Endian == support::little, 8);
   auto Prologue = parseLineTableHeaderAndSkip(LineTableDataReader);
   if (!Prologue)
     return Prologue.takeError();
