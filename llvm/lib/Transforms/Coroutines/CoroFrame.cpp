@@ -1292,10 +1292,7 @@ static StructType *buildFrameType(Function &F, coro::Shape &Shape,
   std::optional<FieldIDType> SwitchIndexFieldId;
 
   if (Shape.ABI == coro::ABI::Switch) {
-    auto *FramePtrTy = FrameTy->getPointerTo();
-    auto *FnTy = FunctionType::get(Type::getVoidTy(C), FramePtrTy,
-                                   /*IsVarArg=*/false);
-    auto *FnPtrTy = FnTy->getPointerTo();
+    auto *FnPtrTy = PointerType::getUnqual(C);
 
     // Add header fields for the resume and destroy functions.
     // We can rely on these being perfectly packed.
@@ -2487,7 +2484,7 @@ static Value *emitGetSwiftErrorValue(IRBuilder<> &Builder, Type *ValueTy,
                                      coro::Shape &Shape) {
   // Make a fake function pointer as a sort of intrinsic.
   auto FnTy = FunctionType::get(ValueTy, {}, false);
-  auto Fn = ConstantPointerNull::get(FnTy->getPointerTo());
+  auto Fn = ConstantPointerNull::get(Builder.getPtrTy());
 
   auto Call = Builder.CreateCall(FnTy, Fn, {});
   Shape.SwiftErrorOps.push_back(Call);
@@ -2501,9 +2498,9 @@ static Value *emitGetSwiftErrorValue(IRBuilder<> &Builder, Type *ValueTy,
 static Value *emitSetSwiftErrorValue(IRBuilder<> &Builder, Value *V,
                                      coro::Shape &Shape) {
   // Make a fake function pointer as a sort of intrinsic.
-  auto FnTy = FunctionType::get(V->getType()->getPointerTo(),
+  auto FnTy = FunctionType::get(Builder.getPtrTy(),
                                 {V->getType()}, false);
-  auto Fn = ConstantPointerNull::get(FnTy->getPointerTo());
+  auto Fn = ConstantPointerNull::get(Builder.getPtrTy());
 
   auto Call = Builder.CreateCall(FnTy, Fn, { V });
   Shape.SwiftErrorOps.push_back(Call);
@@ -2782,7 +2779,7 @@ static void collectFrameAlloca(AllocaInst *AI, coro::Shape &Shape,
 
   // The __coro_gro alloca should outlive the promise, make sure we
   // keep it outside the frame.
-  if (MDNode *MD = AI->getMetadata(LLVMContext::MD_coro_outside_frame))
+  if (AI->hasMetadata(LLVMContext::MD_coro_outside_frame))
     return;
 
   // The code that uses lifetime.start intrinsic does not work for functions

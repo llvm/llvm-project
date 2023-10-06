@@ -3597,14 +3597,14 @@ void CodeViewDebug::emitInlinees(
     const SmallSet<codeview::TypeIndex, 1> &Inlinees) {
   // Divide the list of inlinees into chunks such that each chunk fits within
   // one record.
-  constexpr auto ChunkSize =
+  constexpr size_t ChunkSize =
       (MaxRecordLength - sizeof(SymbolKind) - sizeof(uint32_t)) /
       sizeof(uint32_t);
 
   SmallVector<TypeIndex> SortedInlinees{Inlinees.begin(), Inlinees.end()};
   llvm::sort(SortedInlinees);
 
-  uint64_t CurrentIndex = 0;
+  size_t CurrentIndex = 0;
   while (CurrentIndex < SortedInlinees.size()) {
     auto Symbol = beginSymbolRecord(SymbolKind::S_INLINEES);
     auto CurrentChunkSize =
@@ -3612,7 +3612,7 @@ void CodeViewDebug::emitInlinees(
     OS.AddComment("Count");
     OS.emitInt32(CurrentChunkSize);
 
-    const uint64_t CurrentChunkEnd = CurrentIndex + CurrentChunkSize;
+    const size_t CurrentChunkEnd = CurrentIndex + CurrentChunkSize;
     for (; CurrentIndex < CurrentChunkEnd; ++CurrentIndex) {
       OS.AddComment("Inlinee");
       OS.emitInt32(SortedInlinees[CurrentIndex].getIndex());

@@ -461,44 +461,21 @@ exit:
 define void @combine_load_factor2_i64(ptr noalias %p, ptr noalias %q) {
 ; CHECK-LABEL: @combine_load_factor2_i64(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    br i1 false, label [[SCALAR_PH:%.*]], label [[VECTOR_PH:%.*]]
-; CHECK:       vector.ph:
-; CHECK-NEXT:    br label [[VECTOR_BODY:%.*]]
-; CHECK:       vector.body:
-; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
-; CHECK-NEXT:    [[TMP0:%.*]] = add i64 [[INDEX]], 0
-; CHECK-NEXT:    [[TMP1:%.*]] = shl i64 [[TMP0]], 1
-; CHECK-NEXT:    [[TMP2:%.*]] = getelementptr i64, ptr [[P:%.*]], i64 [[TMP1]]
-; CHECK-NEXT:    [[TMP3:%.*]] = getelementptr i64, ptr [[TMP2]], i32 0
-; CHECK-NEXT:    [[WIDE_VEC:%.*]] = load <8 x i64>, ptr [[TMP3]], align 4
-; CHECK-NEXT:    [[STRIDED_VEC:%.*]] = shufflevector <8 x i64> [[WIDE_VEC]], <8 x i64> poison, <4 x i32> <i32 0, i32 2, i32 4, i32 6>
-; CHECK-NEXT:    [[STRIDED_VEC1:%.*]] = shufflevector <8 x i64> [[WIDE_VEC]], <8 x i64> poison, <4 x i32> <i32 1, i32 3, i32 5, i32 7>
-; CHECK-NEXT:    [[TMP4:%.*]] = add <4 x i64> [[STRIDED_VEC]], [[STRIDED_VEC1]]
-; CHECK-NEXT:    [[TMP5:%.*]] = getelementptr i64, ptr [[Q:%.*]], i64 [[TMP0]]
-; CHECK-NEXT:    [[TMP6:%.*]] = getelementptr i64, ptr [[TMP5]], i32 0
-; CHECK-NEXT:    store <4 x i64> [[TMP4]], ptr [[TMP6]], align 4
-; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 4
-; CHECK-NEXT:    [[TMP7:%.*]] = icmp eq i64 [[INDEX_NEXT]], 1024
-; CHECK-NEXT:    br i1 [[TMP7]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP8:![0-9]+]]
-; CHECK:       middle.block:
-; CHECK-NEXT:    br i1 true, label [[EXIT:%.*]], label [[SCALAR_PH]]
-; CHECK:       scalar.ph:
-; CHECK-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ 1024, [[MIDDLE_BLOCK]] ], [ 0, [[ENTRY:%.*]] ]
 ; CHECK-NEXT:    br label [[LOOP:%.*]]
 ; CHECK:       loop:
-; CHECK-NEXT:    [[I:%.*]] = phi i64 [ [[BC_RESUME_VAL]], [[SCALAR_PH]] ], [ [[NEXTI:%.*]], [[LOOP]] ]
+; CHECK-NEXT:    [[I:%.*]] = phi i64 [ 0, [[ENTRY:%.*]] ], [ [[NEXTI:%.*]], [[LOOP]] ]
 ; CHECK-NEXT:    [[OFFSET0:%.*]] = shl i64 [[I]], 1
-; CHECK-NEXT:    [[Q0:%.*]] = getelementptr i64, ptr [[P]], i64 [[OFFSET0]]
+; CHECK-NEXT:    [[Q0:%.*]] = getelementptr i64, ptr [[P:%.*]], i64 [[OFFSET0]]
 ; CHECK-NEXT:    [[X0:%.*]] = load i64, ptr [[Q0]], align 4
 ; CHECK-NEXT:    [[OFFSET1:%.*]] = add i64 [[OFFSET0]], 1
 ; CHECK-NEXT:    [[Q1:%.*]] = getelementptr i64, ptr [[P]], i64 [[OFFSET1]]
 ; CHECK-NEXT:    [[X1:%.*]] = load i64, ptr [[Q1]], align 4
 ; CHECK-NEXT:    [[RES:%.*]] = add i64 [[X0]], [[X1]]
-; CHECK-NEXT:    [[DST:%.*]] = getelementptr i64, ptr [[Q]], i64 [[I]]
+; CHECK-NEXT:    [[DST:%.*]] = getelementptr i64, ptr [[Q:%.*]], i64 [[I]]
 ; CHECK-NEXT:    store i64 [[RES]], ptr [[DST]], align 4
 ; CHECK-NEXT:    [[NEXTI]] = add i64 [[I]], 1
 ; CHECK-NEXT:    [[DONE:%.*]] = icmp eq i64 [[NEXTI]], 1024
-; CHECK-NEXT:    br i1 [[DONE]], label [[EXIT]], label [[LOOP]], !llvm.loop [[LOOP9:![0-9]+]]
+; CHECK-NEXT:    br i1 [[DONE]], label [[EXIT:%.*]], label [[LOOP]]
 ; CHECK:       exit:
 ; CHECK-NEXT:    ret void
 ;

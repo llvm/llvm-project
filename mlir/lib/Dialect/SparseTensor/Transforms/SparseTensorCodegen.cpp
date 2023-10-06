@@ -472,8 +472,17 @@ public:
     llvm::raw_svector_ostream nameOstream(nameBuffer);
     nameOstream << kInsertFuncNamePrefix;
     const Level lvlRank = stt.getLvlRank();
-    for (Level l = 0; l < lvlRank; l++)
-      nameOstream << toMLIRString(stt.getLvlType(l)) << "_";
+    for (Level l = 0; l < lvlRank; l++) {
+      std::string lvlType = toMLIRString(stt.getLvlType(l));
+      // Replace/remove punctuations in level properties.
+      std::replace_if(
+          lvlType.begin(), lvlType.end(),
+          [](char c) { return c == '(' || c == ','; }, '_');
+      lvlType.erase(std::remove_if(lvlType.begin(), lvlType.end(),
+                                   [](char c) { return c == ')' || c == ' '; }),
+                    lvlType.end());
+      nameOstream << lvlType << "_";
+    }
     // Static dim sizes are used in the generated code while dynamic sizes are
     // loaded from the dimSizes buffer. This is the reason for adding the shape
     // to the function name.
@@ -498,7 +507,7 @@ static void genEndInsert(OpBuilder &builder, Location loc,
   const Level lvlRank = stt.getLvlRank();
   for (Level l = 0; l < lvlRank; l++) {
     const auto dlt = stt.getLvlType(l);
-    if (isCompressedWithHiDLT(dlt))
+    if (isLooseCompressedDLT(dlt))
       llvm_unreachable("TODO: Not yet implemented");
     if (isCompressedDLT(dlt)) {
       // Compressed dimensions need a position cleanup for all entries
@@ -931,7 +940,7 @@ public:
     // If the innermost level is ordered, we need to sort the coordinates
     // in the "added" array prior to applying the compression.
     if (dstType.isOrderedLvl(dstType.getLvlRank() - 1))
-      rewriter.create<SortCooOp>(
+      rewriter.create<SortOp>(
           loc, count, added, ValueRange{}, rewriter.getMultiDimIdentityMap(1),
           rewriter.getIndexAttr(0), SparseTensorSortKind::HybridQuickSort);
     // While performing the insertions, we also need to reset the elements
@@ -1237,17 +1246,17 @@ public:
                   ConversionPatternRewriter &rewriter) const override {
     // Query memSizes for the actually stored values.
     // FIXME: the nse value computed in this way might be wrong when there is
-    // any "compressed_hi" level.
+    // any "loose_compressed" level.
     rewriter.replaceOp(
         op, genValMemSize(rewriter, op.getLoc(), adaptor.getTensor()));
     return success();
   }
 };
 
-struct SparsePackOpConverter : public OpConversionPattern<PackOp> {
+struct SparseAssembleOpConverter : public OpConversionPattern<AssembleOp> {
   using OpConversionPattern::OpConversionPattern;
   LogicalResult
-  matchAndRewrite(PackOp op, OpAdaptor adaptor,
+  matchAndRewrite(AssembleOp op, OpAdaptor adaptor,
                   ConversionPatternRewriter &rewriter) const override {
     Location loc = op.getLoc();
     const auto stt = getSparseTensorType(op.getResult());
@@ -1316,8 +1325,8 @@ struct SparsePackOpConverter : public OpConversionPattern<PackOp> {
       }
 
       if (isDLTWithPos(dlt)) {
-        assert(isCompressedDLT(dlt) || isCompressedWithHiDLT(dlt));
-        if (isCompressedWithHiDLT(dlt)) {
+        assert(isCompressedDLT(dlt) || isLooseCompressedDLT(dlt));
+        if (isLooseCompressedDLT(dlt)) {
           memSize = rewriter.create<arith::MulIOp>(loc, memSize, c2);
           posBack = rewriter.create<arith::SubIOp>(loc, memSize, c1);
         } else {
@@ -1347,13 +1356,15 @@ struct SparsePackOpConverter : public OpConversionPattern<PackOp> {
   }
 };
 
-struct SparseUnpackOpConverter : public OpConversionPattern<UnpackOp> {
+struct SparseDisassembleOpConverter
+    : public OpConversionPattern<DisassembleOp> {
   using OpConversionPattern::OpConversionPattern;
-  SparseUnpackOpConverter(TypeConverter &typeConverter, MLIRContext *context)
+  SparseDisassembleOpConverter(TypeConverter &typeConverter,
+                               MLIRContext *context)
       : OpConversionPattern(typeConverter, context) {}
 
   LogicalResult
-  matchAndRewrite(UnpackOp op, OpAdaptor adaptor,
+  matchAndRewrite(DisassembleOp op, OpAdaptor adaptor,
                   ConversionPatternRewriter &rewriter) const override {
     auto desc = getDescriptorFromTensorTuple(adaptor.getTensor());
     Location loc = op.getLoc();
@@ -1529,9 +1540,9 @@ struct SparseNewOpConverter : public OpConversionPattern<NewOp> {
           rewriter.create<scf::IfOp>(loc, notSorted, /*else*/ false);
       rewriter.setInsertionPointToStart(&ifOp.getThenRegion().front());
       auto xPerm = rewriter.getMultiDimIdentityMap(lvlRank);
-      rewriter.create<SortCooOp>(loc, nse, xs, ValueRange{ys}, xPerm,
-                                 rewriter.getIndexAttr(0),
-                                 SparseTensorSortKind::HybridQuickSort);
+      rewriter.create<SortOp>(loc, nse, xs, ValueRange{ys}, xPerm,
+                              rewriter.getIndexAttr(0),
+                              SparseTensorSortKind::HybridQuickSort);
       rewriter.setInsertionPointAfter(ifOp);
     }
 
@@ -1571,7 +1582,7 @@ struct SparseNewOpConverter : public OpConversionPattern<NewOp> {
 void mlir::populateSparseTensorCodegenPatterns(
     TypeConverter &typeConverter, RewritePatternSet &patterns,
     bool createSparseDeallocs, bool enableBufferInitialization) {
-  patterns.add<SparsePackOpConverter, SparseUnpackOpConverter,
+  patterns.add<SparseAssembleOpConverter, SparseDisassembleOpConverter,
                SparseReturnConverter, SparseCallConverter, SparseDimOpConverter,
                SparseCastConverter, SparseExtractSliceConverter,
                SparseTensorLoadConverter, SparseExpandConverter,

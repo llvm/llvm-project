@@ -44,7 +44,7 @@ Module::Module(StringRef Name, SourceLocation DefinitionLoc, Module *Parent,
       InferSubmodules(false), InferExplicitSubmodules(false),
       InferExportWildcard(false), ConfigMacrosExhaustive(false),
       NoUndeclaredIncludes(false), ModuleMapIsPrivate(false),
-      NameVisibility(Hidden) {
+      NamedModuleHasInit(true), NameVisibility(Hidden) {
   if (Parent) {
     IsAvailable = Parent->isAvailable();
     IsUnimportable = Parent->isUnimportable();
@@ -299,8 +299,10 @@ bool Module::directlyUses(const Module *Requested) {
     if (Requested->isSubModuleOf(Use))
       return true;
 
-  // Anyone is allowed to use our builtin stddef.h and its accompanying module.
-  if (!Requested->Parent && Requested->Name == "_Builtin_stddef_max_align_t")
+  // Anyone is allowed to use our builtin stdarg.h and stddef.h and their
+  // accompanying modules.
+  if (Requested->getTopLevelModuleName() == "_Builtin_stdarg" ||
+      Requested->getTopLevelModuleName() == "_Builtin_stddef")
     return true;
 
   if (NoUndeclaredIncludes)
@@ -368,6 +370,28 @@ Module *Module::findOrInferSubmodule(StringRef Name) {
   if (Result->InferExportWildcard)
     Result->Exports.push_back(Module::ExportDecl(nullptr, true));
   return Result;
+}
+
+Module *Module::getGlobalModuleFragment() const {
+  assert(isNamedModuleUnit() && "We should only query the global module "
+                                "fragment from the C++ 20 Named modules");
+
+  for (auto *SubModule : SubModules)
+    if (SubModule->isExplicitGlobalModule())
+      return SubModule;
+
+  return nullptr;
+}
+
+Module *Module::getPrivateModuleFragment() const {
+  assert(isNamedModuleUnit() && "We should only query the private module "
+                                "fragment from the C++ 20 Named modules");
+
+  for (auto *SubModule : SubModules)
+    if (SubModule->isPrivateModule())
+      return SubModule;
+
+  return nullptr;
 }
 
 void Module::getExportedModules(SmallVectorImpl<Module *> &Exported) const {

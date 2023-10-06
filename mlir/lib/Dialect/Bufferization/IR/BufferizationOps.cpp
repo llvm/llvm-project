@@ -537,30 +537,45 @@ LogicalResult DeallocTensorOp::bufferize(RewriterBase &rewriter,
 
 bool MaterializeInDestinationOp::bufferizesToMemoryRead(
     OpOperand &opOperand, const AnalysisState &state) {
-  return &opOperand == &getSourceMutable()[0];
+  return &opOperand == &getSourceMutable();
 }
 
 bool MaterializeInDestinationOp::bufferizesToMemoryWrite(
     OpOperand &opOperand, const AnalysisState &state) {
-  return &opOperand == &getDestMutable()[0];
+  if (&opOperand == &getDestMutable()) {
+    assert(isa<TensorType>(getDest().getType()) && "expected tensor type");
+    return true;
+  }
+  return false;
 }
 
 AliasingValueList
 MaterializeInDestinationOp::getAliasingValues(OpOperand &opOperand,
                                               const AnalysisState &state) {
-  if (&opOperand == &getDestMutable()[0])
+  if (&opOperand == &getDestMutable()) {
+    assert(isa<TensorType>(getDest().getType()) && "expected tensor type");
     return {{getOperation()->getResult(0), BufferRelation::Equivalent}};
+  }
   return {};
 }
 
 LogicalResult
 MaterializeInDestinationOp::bufferize(RewriterBase &rewriter,
                                       const BufferizationOptions &options) {
-  FailureOr<Value> buffer = getBuffer(rewriter, getDest(), options);
-  if (failed(buffer))
-    return failure();
-  rewriter.create<memref::TensorStoreOp>(getLoc(), getSource(), *buffer);
-  replaceOpWithBufferizedValues(rewriter, getOperation(), *buffer);
+  bool tensorDest = isa<TensorType>(getDest().getType());
+  Value buffer;
+  if (tensorDest) {
+    FailureOr<Value> maybeBuffer = getBuffer(rewriter, getDest(), options);
+    if (failed(maybeBuffer))
+      return failure();
+    buffer = *maybeBuffer;
+  } else {
+    assert(isa<BaseMemRefType>(getDest().getType()) && "expected memref type");
+    buffer = getDest();
+  }
+  rewriter.create<memref::TensorStoreOp>(getLoc(), getSource(), buffer);
+  replaceOpWithBufferizedValues(rewriter, getOperation(),
+                                tensorDest ? ValueRange(buffer) : ValueRange());
   return success();
 }
 
@@ -573,15 +588,29 @@ bool MaterializeInDestinationOp::bufferizesToElementwiseAccess(
 
 LogicalResult MaterializeInDestinationOp::reifyResultShapes(
     OpBuilder &builder, ReifiedRankedShapedTypeDims &reifiedReturnShapes) {
-  reifiedReturnShapes.resize(1, SmallVector<OpFoldResult>(getType().getRank()));
-  reifiedReturnShapes[0] = tensor::getMixedSizes(builder, getLoc(), getDest());
+  if (getOperation()->getNumResults() == 1) {
+    assert(isa<TensorType>(getDest().getType()) && "expected tensor type");
+    reifiedReturnShapes.resize(1,
+                               SmallVector<OpFoldResult>(getType().getRank()));
+    reifiedReturnShapes[0] =
+        tensor::getMixedSizes(builder, getLoc(), getDest());
+  }
   return success();
 }
 
 Value MaterializeInDestinationOp::buildSubsetExtraction(OpBuilder &builder,
                                                         Location loc) {
-  // The subset is the entire destination tensor.
-  return getDest();
+  if (isa<TensorType>(getDest().getType())) {
+    // The subset is the entire destination tensor.
+    return getDest();
+  }
+
+  // Build a bufferization.to_tensor op.
+  assert(isa<BaseMemRefType>(getDest().getType()) && "expected memref type");
+  assert(getRestrict() &&
+         "expected that ops with memrefs dest have 'restrict'");
+  return builder.create<ToTensorOp>(loc, getDest(), getRestrict(),
+                                    getWritable());
 }
 
 bool MaterializeInDestinationOp::isEquivalentSubset(
@@ -596,6 +625,51 @@ MaterializeInDestinationOp::getValuesNeededToBuildSubsetExtraction() {
 
 OpOperand &MaterializeInDestinationOp::getSourceOperand() {
   return getOperation()->getOpOperand(0) /*source*/;
+}
+
+LogicalResult MaterializeInDestinationOp::verify() {
+  if (!isa<TensorType, BaseMemRefType>(getDest().getType()))
+    return emitOpError("'dest' must be a tensor or a memref");
+  if (auto destType = dyn_cast<TensorType>(getDest().getType())) {
+    if (getOperation()->getNumResults() != 1)
+      return emitOpError("tensor 'dest' implies exactly one tensor result");
+    if (destType != getResult().getType())
+      return emitOpError("result and 'dest' types must match");
+  }
+  if (isa<BaseMemRefType>(getDest().getType()) &&
+      getOperation()->getNumResults() != 0)
+    return emitOpError("memref 'dest' implies zero results");
+  if (getRestrict() != isa<BaseMemRefType>(getDest().getType()))
+    return emitOpError("'restrict' must be specified if and only if the "
+                       "destination is of memref type");
+  if (getWritable() != isa<BaseMemRefType>(getDest().getType()))
+    return emitOpError("'writable' must be specified if and only if the "
+                       "destination is of memref type");
+  return success();
+}
+
+void MaterializeInDestinationOp::build(OpBuilder &builder,
+                                       OperationState &state, Value source,
+                                       Value dest) {
+  assert(isa<TensorType>(dest.getType()) && "expected tensor type");
+  build(builder, state, /*result=*/dest.getType(), source, dest);
+}
+
+bool MaterializeInDestinationOp::isWritable(Value value,
+                                            const AnalysisState &state) {
+  return isa<TensorType>(getDest().getType()) ? true : getWritable();
+}
+
+MutableOperandRange MaterializeInDestinationOp::getDpsInitsMutable() {
+  return getDestMutable();
+}
+
+void MaterializeInDestinationOp::getEffects(
+    SmallVectorImpl<SideEffects::EffectInstance<MemoryEffects::Effect>>
+        &effects) {
+  if (isa<BaseMemRefType>(getDest().getType()))
+    effects.emplace_back(MemoryEffects::Write::get(), getDest(),
+                         SideEffects::DefaultResource::get());
 }
 
 //===----------------------------------------------------------------------===//
@@ -764,6 +838,9 @@ LogicalResult DeallocOp::verify() {
   if (getMemrefs().size() != getConditions().size())
     return emitOpError(
         "must have the same number of conditions as memrefs to deallocate");
+  if (getRetained().size() != getUpdatedConditions().size())
+    return emitOpError("must have the same number of updated conditions "
+                       "(results) as retained operands");
   return success();
 }
 

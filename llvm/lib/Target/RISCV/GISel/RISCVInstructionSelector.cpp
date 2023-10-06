@@ -44,11 +44,17 @@ private:
   const TargetRegisterClass *
   getRegClassForTypeOnBank(LLT Ty, const RegisterBank &RB) const;
 
+  // tblgen-erated 'select' implementation, used as the initial selector for
+  // the patterns that don't require complex C++.
   bool selectImpl(MachineInstr &I, CodeGenCoverage &CoverageInfo) const;
+
+  // Custom selection methods
   bool selectCopy(MachineInstr &MI, MachineRegisterInfo &MRI) const;
   bool selectConstant(MachineInstr &MI, MachineIRBuilder &MIB,
                       MachineRegisterInfo &MRI) const;
   bool selectSExtInreg(MachineInstr &MI, MachineIRBuilder &MIB) const;
+  bool selectSelect(MachineInstr &MI, MachineIRBuilder &MIB,
+                    MachineRegisterInfo &MRI) const;
 
   bool earlySelectShift(unsigned Opc, MachineInstr &I, MachineIRBuilder &MIB,
                         const MachineRegisterInfo &MRI);
@@ -226,8 +232,7 @@ bool RISCVInstructionSelector::select(MachineInstr &MI) {
   switch (Opc) {
   case TargetOpcode::G_ANYEXT:
   case TargetOpcode::G_TRUNC:
-    MI.setDesc(TII.get(TargetOpcode::COPY));
-    return true;
+    return selectCopy(MI, MRI);
   case TargetOpcode::G_CONSTANT:
     return selectConstant(MI, MIB, MRI);
   case TargetOpcode::G_BRCOND: {
@@ -240,6 +245,8 @@ bool RISCVInstructionSelector::select(MachineInstr &MI) {
   }
   case TargetOpcode::G_SEXT_INREG:
     return selectSExtInreg(MI, MIB);
+  case TargetOpcode::G_SELECT:
+    return selectSelect(MI, MIB, MRI);
   default:
     return false;
   }
@@ -268,37 +275,25 @@ const TargetRegisterClass *RISCVInstructionSelector::getRegClassForTypeOnBank(
 bool RISCVInstructionSelector::selectCopy(MachineInstr &MI,
                                           MachineRegisterInfo &MRI) const {
   Register DstReg = MI.getOperand(0).getReg();
-  Register SrcReg = MI.getOperand(1).getReg();
 
-  if (Register::isPhysicalRegister(SrcReg) &&
-      Register::isPhysicalRegister(DstReg))
+  if (DstReg.isPhysical())
     return true;
 
-  if (!Register::isPhysicalRegister(SrcReg)) {
-    const TargetRegisterClass *SrcRC = getRegClassForTypeOnBank(
-        MRI.getType(SrcReg), *RBI.getRegBank(SrcReg, MRI, TRI));
-    assert(SrcRC &&
-           "Register class not available for LLT, register bank combination");
+  const TargetRegisterClass *DstRC = getRegClassForTypeOnBank(
+      MRI.getType(DstReg), *RBI.getRegBank(DstReg, MRI, TRI));
+  assert(DstRC &&
+         "Register class not available for LLT, register bank combination");
 
-    if (!RBI.constrainGenericRegister(SrcReg, *SrcRC, MRI)) {
-      LLVM_DEBUG(dbgs() << "Failed to constrain " << TII.getName(MI.getOpcode())
-                        << " operand\n");
-      return false;
-    }
-  }
-  if (!Register::isPhysicalRegister(DstReg)) {
-    const TargetRegisterClass *DstRC = getRegClassForTypeOnBank(
-        MRI.getType(DstReg), *RBI.getRegBank(DstReg, MRI, TRI));
-    assert(DstRC &&
-           "Register class not available for LLT, register bank combination");
-
-    if (!RBI.constrainGenericRegister(DstReg, *DstRC, MRI)) {
-      LLVM_DEBUG(dbgs() << "Failed to constrain " << TII.getName(MI.getOpcode())
-                        << " operand\n");
-      return false;
-    }
+  // No need to constrain SrcReg. It will get constrained when
+  // we hit another of its uses or its defs.
+  // Copies do not have constraints.
+  if (!RBI.constrainGenericRegister(DstReg, *DstRC, MRI)) {
+    LLVM_DEBUG(dbgs() << "Failed to constrain " << TII.getName(MI.getOpcode())
+                      << " operand\n");
+    return false;
   }
 
+  MI.setDesc(TII.get(RISCV::COPY));
   return true;
 }
 
@@ -387,6 +382,27 @@ bool RISCVInstructionSelector::selectSExtInreg(MachineInstr &MI,
 
   MI.eraseFromParent();
   return true;
+}
+
+bool RISCVInstructionSelector::selectSelect(MachineInstr &MI,
+                                            MachineIRBuilder &MIB,
+                                            MachineRegisterInfo &MRI) const {
+  // TODO: Currently we check that the conditional code passed to G_SELECT is
+  // not equal to zero; however, in the future, we might want to try and check
+  // if the conditional code comes from a G_ICMP. If it does, we can directly
+  // use G_ICMP to get the first three input operands of the
+  // Select_GPR_Using_CC_GPR. This might be done here, or in the appropriate
+  // combiner.
+  assert(MI.getOpcode() == TargetOpcode::G_SELECT);
+  MachineInstr *Result = MIB.buildInstr(RISCV::Select_GPR_Using_CC_GPR)
+                             .addDef(MI.getOperand(0).getReg())
+                             .addReg(MI.getOperand(1).getReg())
+                             .addReg(RISCV::X0)
+                             .addImm(RISCVCC::COND_NE)
+                             .addReg(MI.getOperand(2).getReg())
+                             .addReg(MI.getOperand(3).getReg());
+  MI.eraseFromParent();
+  return constrainSelectedInstRegOperands(*Result, TII, TRI, RBI);
 }
 
 namespace llvm {

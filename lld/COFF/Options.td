@@ -232,6 +232,7 @@ defm demangle : B<"demangle",
 def include_optional : Joined<["/", "-", "/?", "-?"], "includeoptional:">,
     HelpText<"Add symbol as undefined, but allow it to remain undefined">;
 def kill_at : F<"kill-at">;
+def lldemit : P<"lldemit", "Specify output type">;
 def lldmingw : F<"lldmingw">;
 def noseh : F<"noseh">;
 def osversion : P_priv<"osversion">;
@@ -288,6 +289,14 @@ def print_symbol_order: P<
 def wrap : P_priv<"wrap">;
 
 def vfsoverlay : P<"vfsoverlay", "Path to a vfsoverlay yaml file to optionally look for /defaultlib's in">;
+
+def time_trace_eq: Joined<["--"], "time-trace=">, MetaVarName<"<file>">,
+  HelpText<"Record time trace to <file>">;
+def : Flag<["--"], "time-trace">, Alias<time_trace_eq>,
+  HelpText<"Record time trace to file next to output">;
+
+def time_trace_granularity_eq: Joined<["--"], "time-trace-granularity=">,
+    HelpText<"Minimum time granularity (in microseconds) traced by time profiler">;
 
 // Flags for debugging
 def lldmap : F<"lldmap">;

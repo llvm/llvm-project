@@ -21,8 +21,6 @@
 using namespace llvm;
 using namespace mlir;
 
-using ::testing::StartsWith;
-
 StringLiteral IRWithResources = R"(
 module @TestDialectResources attributes {
   bytecode.test = dense_resource<resource> : tensor<4xi32>
@@ -30,7 +28,8 @@ module @TestDialectResources attributes {
 {-#
   dialect_resources: {
     builtin: {
-      resource: "0x2000000001000000020000000300000004000000"
+      resource: "0x2000000001000000020000000300000004000000",
+      resource_2: "0x2000000001000000020000000300000004000000"
     }
   }
 #-}
@@ -65,8 +64,7 @@ TEST(Bytecode, MultiModuleWithResource) {
 
   // FIXME: Parsing external resources does not work on big-endian
   // platforms currently.
-  if (llvm::support::endian::system_endianness() ==
-      llvm::support::endianness::big)
+  if (llvm::endianness::native == llvm::endianness::big)
     GTEST_SKIP();
 
   // Try to see if we have a valid resource in the parsed module.
@@ -87,40 +85,4 @@ TEST(Bytecode, MultiModuleWithResource) {
 
   checkResourceAttribute(*module);
   checkResourceAttribute(*roundTripModule);
-}
-
-TEST(Bytecode, InsufficientAlignmentFailure) {
-  MLIRContext context;
-  Builder builder(&context);
-  ParserConfig parseConfig(&context);
-  OwningOpRef<Operation *> module =
-      parseSourceString<Operation *>(IRWithResources, parseConfig);
-  ASSERT_TRUE(module);
-
-  // Write the module to bytecode
-  std::string buffer;
-  llvm::raw_string_ostream ostream(buffer);
-  ASSERT_TRUE(succeeded(writeBytecodeToFile(module.get(), ostream)));
-  ostream.flush();
-
-  // Create copy of buffer which is insufficiently aligned.
-  constexpr size_t kAlignment = 0x20;
-  size_t buffer_size = buffer.size();
-  buffer.reserve(buffer_size + kAlignment - 1);
-  size_t pad = ~(uintptr_t)buffer.data() + kAlignment / 2 + 1 & kAlignment - 1;
-  buffer.insert(0, pad, ' ');
-  StringRef misaligned_buffer(buffer.data() + pad, buffer_size);
-
-  std::unique_ptr<Diagnostic> diagnostic;
-  context.getDiagEngine().registerHandler([&](Diagnostic &diag) {
-    diagnostic = std::make_unique<Diagnostic>(std::move(diag));
-  });
-
-  // Try to parse it back and check for alignment error.
-  OwningOpRef<Operation *> roundTripModule =
-      parseSourceString<Operation *>(misaligned_buffer, parseConfig);
-  EXPECT_FALSE(roundTripModule);
-  ASSERT_TRUE(diagnostic);
-  EXPECT_THAT(diagnostic->str(),
-              StartsWith("expected bytecode buffer to be aligned to 32"));
 }

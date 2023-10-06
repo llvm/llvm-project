@@ -545,16 +545,17 @@ private:
 
 namespace {
 
-struct EraseSelfCopyOnBuffers : OpRewritePattern<CopyOp> {
+struct EraseSelfCopy : OpRewritePattern<CopyOp> {
   using OpRewritePattern<CopyOp>::OpRewritePattern;
   LogicalResult matchAndRewrite(CopyOp copyOp,
                                 PatternRewriter &rewriter) const override {
-    if (!copyOp.hasBufferSemantics())
-      return rewriter.notifyMatchFailure(copyOp,
-                                         "does not have buffer semantics");
-    if (copyOp.getInputs().front() != copyOp.getOutputs().front())
+    if (copyOp.getInputs() != copyOp.getOutputs())
       return rewriter.notifyMatchFailure(copyOp, "not a self copy");
-    rewriter.eraseOp(copyOp);
+    if (copyOp.hasBufferSemantics())
+      rewriter.eraseOp(copyOp);
+    else
+      rewriter.replaceOp(copyOp, copyOp.getInputs());
+
     return success();
   }
 };
@@ -563,7 +564,7 @@ struct EraseSelfCopyOnBuffers : OpRewritePattern<CopyOp> {
 
 void CopyOp::getCanonicalizationPatterns(RewritePatternSet &results,
                                          MLIRContext *context) {
-  results.add<EraseSelfCopyOnBuffers>(context);
+  results.add<EraseSelfCopy>(context);
 }
 
 //===----------------------------------------------------------------------===//
@@ -2387,8 +2388,23 @@ LogicalResult SoftmaxOp::fold(FoldAdaptor, SmallVectorImpl<OpFoldResult> &) {
 LogicalResult
 SoftmaxOp::reifyResultShapes(OpBuilder &b,
                              ReifiedRankedShapedTypeDims &reifiedReturnShapes) {
-  return cast<LinalgOp>(getOperation())
-      .reifyResultShapes(b, reifiedReturnShapes);
+  SmallVector<OpFoldResult> shapes;
+  Location loc = getOperation()->getLoc();
+  IRRewriter rewriter(b);
+  auto inputShapedType = llvm::cast<ShapedType>(getInputOperandType());
+  auto outputShapedType = llvm::cast<ShapedType>(getOutputOperandType());
+  for (int64_t dim : llvm::seq<int64_t>(0, getOutputOperandRank())) {
+    if (!outputShapedType.isDynamicDim(dim)) {
+      // Static dim: Return IntegerAttr.
+      shapes.push_back(b.getIndexAttr(inputShapedType.getDimSize(dim)));
+    } else {
+      // Dynamic dim: Return Value.
+      OpFoldResult ofr = createOrFoldDimOp(b, loc, getInput(), dim);
+      shapes.push_back(getValueOrCreateConstantIndexOp(b, loc, ofr));
+    }
+  }
+  reifiedReturnShapes.emplace_back(std::move(shapes));
+  return success();
 }
 
 void SoftmaxOp::getEffects(

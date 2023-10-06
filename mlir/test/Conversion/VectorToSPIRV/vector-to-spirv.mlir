@@ -167,7 +167,7 @@ func.func @extract(%arg0 : vector<2xf32>) -> (vector<1xf32>, f32) {
 //       CHECK:   %[[R:.+]] = builtin.unrealized_conversion_cast %[[ARG0]]
 //       CHECK:   return %[[R]]
 func.func @extract_size1_vector(%arg0 : vector<1xf32>) -> f32 {
-  %0 = vector.extract %arg0[0] : vector<1xf32>
+  %0 = vector.extract %arg0[0] : f32 from vector<1xf32>
   return %0: f32
 }
 
