@@ -4539,25 +4539,11 @@ FunctionCallee OpenMPIRBuilder::createDispatchFiniFunction(unsigned IVSize,
   return getOrCreateRuntimeFunction(M, Name);
 }
 
-// Copy input from pointer or i64 to the expected argument type.
-static Value *copyInput(IRBuilderBase &Builder, unsigned AddrSpace,
-                        Value *Input, Argument &Arg) {
-  auto Addr = Builder.CreateAlloca(Arg.getType()->isPointerTy()
-                                       ? Arg.getType()
-                                       : Type::getInt64Ty(Builder.getContext()),
-                                   AddrSpace);
-  auto AddrAscast =
-      Builder.CreatePointerBitCastOrAddrSpaceCast(Addr, Input->getType());
-  Builder.CreateStore(&Arg, AddrAscast);
-  auto Copy = Builder.CreateLoad(Arg.getType(), AddrAscast);
-
-  return Copy;
-}
-
-static Function *
-createOutlinedFunction(OpenMPIRBuilder &OMPBuilder, IRBuilderBase &Builder,
-                       StringRef FuncName, SmallVectorImpl<Value *> &Inputs,
-                       OpenMPIRBuilder::TargetBodyGenCallbackTy &CBFunc) {
+static Function *createOutlinedFunction(
+    OpenMPIRBuilder &OMPBuilder, IRBuilderBase &Builder, StringRef FuncName,
+    SmallVectorImpl<Value *> &Inputs,
+    OpenMPIRBuilder::TargetBodyGenCallbackTy &CBFunc,
+    OpenMPIRBuilder::TargetGenArgAccessorsCallbackTy &ArgAccessorFuncCB) {
   SmallVector<Type *> ParameterTypes;
   if (OMPBuilder.Config.isTargetDevice()) {
     // All parameters to target devices are passed as pointers
@@ -4597,18 +4583,20 @@ createOutlinedFunction(OpenMPIRBuilder &OMPBuilder, IRBuilderBase &Builder,
   // Insert return instruction.
   Builder.CreateRetVoid();
 
-  // Rewrite uses of input valus to parameters.
+  // New Alloca IP at entry point of created device function.
+  Builder.SetInsertPoint(EntryBB->getFirstNonPHI());
+  auto AllocaIP = Builder.saveIP();
+
   Builder.SetInsertPoint(UserCodeEntryBB->getFirstNonPHIOrDbg());
+
+  // Rewrite uses of input valus to parameters.
   for (auto InArg : zip(Inputs, Func->args())) {
     Value *Input = std::get<0>(InArg);
     Argument &Arg = std::get<1>(InArg);
+    Value *InputCopy = nullptr;
 
-    Value *InputCopy =
-        OMPBuilder.Config.isTargetDevice()
-            ? copyInput(Builder,
-                        OMPBuilder.M.getDataLayout().getAllocaAddrSpace(),
-                        Input, Arg)
-            : &Arg;
+    Builder.restoreIP(
+        ArgAccessorFuncCB(Arg, Input, InputCopy, AllocaIP, Builder.saveIP()));
 
     // Collect all the instructions
     for (User *User : make_early_inc_range(Input->users()))
@@ -4623,18 +4611,19 @@ createOutlinedFunction(OpenMPIRBuilder &OMPBuilder, IRBuilderBase &Builder,
   return Func;
 }
 
-static void
-emitTargetOutlinedFunction(OpenMPIRBuilder &OMPBuilder, IRBuilderBase &Builder,
-                           TargetRegionEntryInfo &EntryInfo,
-                           Function *&OutlinedFn, Constant *&OutlinedFnID,
-                           int32_t NumTeams, int32_t NumThreads,
-                           SmallVectorImpl<Value *> &Inputs,
-                           OpenMPIRBuilder::TargetBodyGenCallbackTy &CBFunc) {
+static void emitTargetOutlinedFunction(
+    OpenMPIRBuilder &OMPBuilder, IRBuilderBase &Builder,
+    TargetRegionEntryInfo &EntryInfo, Function *&OutlinedFn,
+    Constant *&OutlinedFnID, int32_t NumTeams, int32_t NumThreads,
+    SmallVectorImpl<Value *> &Inputs,
+    OpenMPIRBuilder::TargetBodyGenCallbackTy &CBFunc,
+    OpenMPIRBuilder::TargetGenArgAccessorsCallbackTy &ArgAccessorFuncCB) {
 
   OpenMPIRBuilder::FunctionGenCallback &&GenerateOutlinedFunction =
-      [&OMPBuilder, &Builder, &Inputs, &CBFunc](StringRef EntryFnName) {
+      [&OMPBuilder, &Builder, &Inputs, &CBFunc,
+       &ArgAccessorFuncCB](StringRef EntryFnName) {
         return createOutlinedFunction(OMPBuilder, Builder, EntryFnName, Inputs,
-                                      CBFunc);
+                                      CBFunc, ArgAccessorFuncCB);
       };
 
   OMPBuilder.emitTargetRegionFunction(EntryInfo, GenerateOutlinedFunction,
@@ -4698,7 +4687,9 @@ OpenMPIRBuilder::InsertPointTy OpenMPIRBuilder::createTarget(
     const LocationDescription &Loc, InsertPointTy AllocaIP,
     InsertPointTy CodeGenIP, TargetRegionEntryInfo &EntryInfo, int32_t NumTeams,
     int32_t NumThreads, SmallVectorImpl<Value *> &Args,
-    GenMapInfoCallbackTy GenMapInfoCB, TargetBodyGenCallbackTy CBFunc) {
+    GenMapInfoCallbackTy GenMapInfoCB,
+    OpenMPIRBuilder::TargetBodyGenCallbackTy CBFunc,
+    OpenMPIRBuilder::TargetGenArgAccessorsCallbackTy ArgAccessorFuncCB) {
   if (!updateToLocation(Loc))
     return InsertPointTy();
 
@@ -4707,7 +4698,8 @@ OpenMPIRBuilder::InsertPointTy OpenMPIRBuilder::createTarget(
   Function *OutlinedFn;
   Constant *OutlinedFnID;
   emitTargetOutlinedFunction(*this, Builder, EntryInfo, OutlinedFn,
-                             OutlinedFnID, NumTeams, NumThreads, Args, CBFunc);
+                             OutlinedFnID, NumTeams, NumThreads, Args, CBFunc,
+                             ArgAccessorFuncCB);
   if (!Config.isTargetDevice())
     emitTargetCall(*this, Builder, AllocaIP, OutlinedFn, OutlinedFnID, NumTeams,
                    NumThreads, Args, GenMapInfoCB);
