@@ -29,6 +29,7 @@ package(default_visibility = ["//visibility:public"])
             "Transform/*-source.mlir",
             "Transform/*-symbol-def.mlir",
             "Transform/*-symbol-decl-and-schedule.mlir",
+            "Transform/*-symbol-decl-invalid.mlir",
             "Transform/test-repro-dump.mlir",
         ],
     )
