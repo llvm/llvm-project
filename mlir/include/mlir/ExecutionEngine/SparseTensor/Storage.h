@@ -49,103 +49,6 @@ class SparseTensorEnumeratorBase;
 template <typename P, typename C, typename V>
 class SparseTensorEnumerator;
 
-namespace detail {
-
-/// Checks whether the `perm` array is a permutation of `[0 .. size)`.
-inline bool isPermutation(uint64_t size, const uint64_t *perm) {
-  assert(perm && "Got nullptr for permutation");
-  std::vector<bool> seen(size, false);
-  for (uint64_t i = 0; i < size; ++i) {
-    const uint64_t j = perm[i];
-    if (j >= size || seen[j])
-      return false;
-    seen[j] = true;
-  }
-  for (uint64_t i = 0; i < size; ++i)
-    if (!seen[i])
-      return false;
-  return true;
-}
-
-/// Wrapper around `isPermutation` to ensure consistent error messages.
-inline void assertIsPermutation(uint64_t size, const uint64_t *perm) {
-#ifndef NDEBUG
-  if (!isPermutation(size, perm))
-    MLIR_SPARSETENSOR_FATAL("Not a permutation of [0..%" PRIu64 ")\n", size);
-#endif
-}
-
-/// A class for capturing the knowledge that `isPermutation` is true.
-class PermutationRef final {
-public:
-  /// Asserts `isPermutation` and returns the witness to that being true.
-  explicit PermutationRef(uint64_t size, const uint64_t *perm)
-      : permSize(size), perm(perm) {
-    assertIsPermutation(size, perm);
-  }
-
-  uint64_t size() const { return permSize; }
-
-  const uint64_t *data() const { return perm; }
-
-  const uint64_t &operator[](uint64_t i) const {
-    assert(i < permSize && "index is out of bounds");
-    return perm[i];
-  }
-
-  /// Constructs a pushforward array of values.  This method is the inverse
-  /// of `permute` in the sense that for all `p` and `xs` we have:
-  /// * `p.permute(p.pushforward(xs)) == xs`
-  /// * `p.pushforward(p.permute(xs)) == xs`
-  template <typename T>
-  inline std::vector<T> pushforward(const std::vector<T> &values) const {
-    return pushforward(values.size(), values.data());
-  }
-
-  template <typename T>
-  inline std::vector<T> pushforward(uint64_t size, const T *values) const {
-    std::vector<T> out(permSize);
-    pushforward(size, values, out.data());
-    return out;
-  }
-
-  template <typename T>
-  inline void pushforward(uint64_t size, const T *values, T *out) const {
-    assert(size == permSize && "size mismatch");
-    for (uint64_t i = 0; i < permSize; ++i)
-      out[perm[i]] = values[i];
-  }
-
-  /// Constructs a permuted array of values.  This method is the inverse
-  /// of `pushforward` in the sense that for all `p` and `xs` we have:
-  /// * `p.permute(p.pushforward(xs)) == xs`
-  /// * `p.pushforward(p.permute(xs)) == xs`
-  template <typename T>
-  inline std::vector<T> permute(const std::vector<T> &values) const {
-    return permute(values.size(), values.data());
-  }
-
-  template <typename T>
-  inline std::vector<T> permute(uint64_t size, const T *values) const {
-    std::vector<T> out(permSize);
-    permute(size, values, out.data());
-    return out;
-  }
-
-  template <typename T>
-  inline void permute(uint64_t size, const T *values, T *out) const {
-    assert(size == permSize && "size mismatch");
-    for (uint64_t i = 0; i < permSize; ++i)
-      out[i] = values[perm[i]];
-  }
-
-private:
-  const uint64_t permSize;
-  const uint64_t *const perm; // non-owning pointer.
-};
-
-} // namespace detail
-
 /// Abstract base class for `SparseTensorStorage<P,C,V>`.  This class
 /// takes responsibility for all the `<P,C,V>`-independent aspects
 /// of the tensor (e.g., shape, sparsity, permutation).  In addition,
@@ -263,7 +166,7 @@ public:
   bool isUniqueLvl(uint64_t l) const { return isUniqueDLT(getLvlType(l)); }
 
   /// Allocates a new enumerator.  Callers must make sure to delete
-  /// the enumerator when they're done with it.  The first argument
+  /// the enumerator when they're done with it. The first argument
   /// is the out-parameter for storing the newly allocated enumerator;
   /// all other arguments are passed along to the `SparseTensorEnumerator`
   /// ctor and must satisfy the preconditions/assertions thereof.
@@ -401,7 +304,7 @@ public:
                       const DimLevelType *lvlTypes, const uint64_t *lvl2dim,
                       const intptr_t *lvlBufs);
 
-  /// Allocates a new empty sparse tensor.  The preconditions/assertions
+  /// Allocates a new empty sparse tensor. The preconditions/assertions
   /// are as per the `SparseTensorStorageBase` ctor; which is to say,
   /// the `dimSizes` and `lvlSizes` must both be "sizes" not "shapes",
   /// since there's nowhere to reconstruct dynamic sizes from.
@@ -577,6 +480,7 @@ public:
   SparseTensorCOO<V> *toCOO(uint64_t trgRank, const uint64_t *trgSizes,
                             uint64_t srcRank, const uint64_t *src2trg) const {
     // We inline `newEnumerator` to avoid virtual dispatch and allocation.
+    // TODO: use MapRef here too for the translation
     SparseTensorEnumerator<P, C, V> enumerator(*this, trgRank, trgSizes,
                                                srcRank, src2trg);
     auto *coo = new SparseTensorCOO<V>(trgRank, trgSizes, values.size());
@@ -733,7 +637,7 @@ private:
     }
   }
 
-  /// Continues a single insertion path, outer to inner.  The first
+  /// Continues a single insertion path, outer to inner. The first
   /// argument is the level-coordinates for the value being inserted.
   void insPath(const uint64_t *lvlCoords, uint64_t diffLvl, uint64_t full,
                V val) {
