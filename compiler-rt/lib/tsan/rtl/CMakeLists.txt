@@ -2,7 +2,7 @@ include_directories(../..)
 
 set(TSAN_RTL_CFLAGS ${TSAN_CFLAGS})
 append_list_if(COMPILER_RT_HAS_MSSE4_2_FLAG -msse4.2 TSAN_RTL_CFLAGS)
-append_list_if(SANITIZER_LIMIT_FRAME_SIZE -Wframe-larger-than=530
+append_list_if(SANITIZER_LIMIT_FRAME_SIZE -Wframe-larger-than=656
                TSAN_RTL_CFLAGS)
 append_list_if(COMPILER_RT_HAS_WGLOBAL_CONSTRUCTORS_FLAG -Wglobal-constructors
                TSAN_RTL_CFLAGS)
@@ -219,6 +219,10 @@ else()
     elseif(arch MATCHES "mips64|mips64le")
       set(TSAN_ASM_SOURCES
         tsan_rtl_mips64.S
+        )
+    elseif(arch MATCHES "riscv64")
+      set(TSAN_ASM_SOURCES
+        tsan_rtl_riscv64.S
         )
     elseif(arch MATCHES "s390x")
       set(TSAN_ASM_SOURCES

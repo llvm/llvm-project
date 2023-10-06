@@ -57,7 +57,7 @@ namespace __tsan {
 #if !SANITIZER_GO
 struct MapUnmapCallback;
 #if defined(__mips64) || defined(__aarch64__) || defined(__loongarch__) || \
-    defined(__powerpc__)
+    defined(__powerpc__) || SANITIZER_RISCV64
 
 struct AP32 {
   static const uptr kSpaceBeg = 0;

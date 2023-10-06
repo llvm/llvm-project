@@ -267,6 +267,16 @@ void InitializePlatformEarly() {
     Die();
   }
 # endif
+#elif SANITIZER_RISCV64
+  // the bottom half of vma is allocated for userspace
+  vmaSize = vmaSize + 1;
+# if !SANITIZER_GO
+  if (vmaSize != 39 && vmaSize != 48) {
+    Printf("FATAL: ThreadSanitizer: unsupported VMA range\n");
+    Printf("FATAL: Found %zd - Supported 39 and 48\n", vmaSize);
+    Die();
+  }
+# endif
 #endif
 }
 
@@ -399,6 +409,8 @@ static uptr UnmangleLongJmpSp(uptr mangled_sp) {
   return mangled_sp ^ xor_key;
 #elif defined(__mips__)
   return mangled_sp;
+#elif SANITIZER_RISCV64
+  return mangled_sp;
 #elif defined(__s390x__)
   // tcbhead_t.stack_guard
   uptr xor_key = ((uptr *)__builtin_thread_pointer())[5];
@@ -429,6 +441,8 @@ static uptr UnmangleLongJmpSp(uptr mangled_sp) {
 #  define LONG_JMP_SP_ENV_SLOT 1
 # elif defined(__mips64)
 #  define LONG_JMP_SP_ENV_SLOT 1
+# elif SANITIZER_RISCV64
+#  define LONG_JMP_SP_ENV_SLOT 13
 # elif defined(__s390x__)
 #  define LONG_JMP_SP_ENV_SLOT 9
 # else
