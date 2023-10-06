@@ -58,6 +58,9 @@ Implemented Papers
 Improvements and New Features
 -----------------------------
 
+- ``std::ranges::count`` is now optimized for ``vector<bool>::iterator``, which
+  can lead up to 350x performance improvements.
+
 - The library now provides a hardened mode under which common cases of library undefined behavior will be turned into
   a reliable program termination. Vendors can configure whether the hardened mode is enabled by default with the
   ``LIBCXX_HARDENING_MODE`` variable at CMake configuration time. Users can control whether the hardened mode is
