@@ -81,6 +81,8 @@ struct ucontext_t {
 #define PTHREAD_ABI_BASE  "GLIBC_2.17"
 #elif SANITIZER_LOONGARCH64
 #define PTHREAD_ABI_BASE  "GLIBC_2.36"
+#elif SANITIZER_RISCV64
+#  define PTHREAD_ABI_BASE "GLIBC_2.27"
 #endif
 
 extern "C" int pthread_attr_init(void *attr);
