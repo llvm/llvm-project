@@ -33,15 +33,37 @@ define <4 x float> @bitcast_shuf_same_size(<4 x i32> %v) {
   ret <4 x float> %r
 }
 
-; Negative test - length-changing shuffle
+; TODO - length-changing shuffle
 
-define <16 x i8> @bitcast_shuf_narrow_element_wrong_size(<2 x i32> %v) {
-; CHECK-LABEL: @bitcast_shuf_narrow_element_wrong_size(
+define <16 x i8> @bitcast_shuf_narrow_element_subvector(<2 x i32> %v) {
+; CHECK-LABEL: @bitcast_shuf_narrow_element_subvector(
 ; CHECK-NEXT:    [[SHUF:%.*]] = shufflevector <2 x i32> [[V:%.*]], <2 x i32> poison, <4 x i32> <i32 1, i32 0, i32 1, i32 0>
 ; CHECK-NEXT:    [[R:%.*]] = bitcast <4 x i32> [[SHUF]] to <16 x i8>
 ; CHECK-NEXT:    ret <16 x i8> [[R]]
 ;
   %shuf = shufflevector <2 x i32> %v, <2 x i32> poison, <4 x i32> <i32 1, i32 0, i32 1, i32 0>
+  %r = bitcast <4 x i32> %shuf to <16 x i8>
+  ret <16 x i8> %r
+}
+
+define <16 x i16> @bitcast_shuf_narrow_element_concat_subvectors(<2 x i64> %v) {
+; CHECK-LABEL: @bitcast_shuf_narrow_element_concat_subvectors(
+; CHECK-NEXT:    [[SHUF:%.*]] = shufflevector <2 x i64> [[V:%.*]], <2 x i64> poison, <4 x i32> <i32 0, i32 1, i32 0, i32 1>
+; CHECK-NEXT:    [[R:%.*]] = bitcast <4 x i64> [[SHUF]] to <16 x i16>
+; CHECK-NEXT:    ret <16 x i16> [[R]]
+;
+  %shuf = shufflevector <2 x i64> %v, <2 x i64> poison, <4 x i32> <i32 0, i32 1, i32 0, i32 1>
+  %r = bitcast <4 x i64> %shuf to <16 x i16>
+  ret <16 x i16> %r
+}
+
+define <16 x i8> @bitcast_shuf_extract_subvector(<8 x i32> %v) {
+; CHECK-LABEL: @bitcast_shuf_extract_subvector(
+; CHECK-NEXT:    [[SHUF:%.*]] = shufflevector <8 x i32> [[V:%.*]], <8 x i32> poison, <4 x i32> <i32 4, i32 5, i32 6, i32 7>
+; CHECK-NEXT:    [[R:%.*]] = bitcast <4 x i32> [[SHUF]] to <16 x i8>
+; CHECK-NEXT:    ret <16 x i8> [[R]]
+;
+  %shuf = shufflevector <8 x i32> %v, <8 x i32> poison, <4 x i32> <i32 4, i32 5, i32 6, i32 7>
   %r = bitcast <4 x i32> %shuf to <16 x i8>
   ret <16 x i8> %r
 }
