@@ -2002,7 +2002,8 @@ void ASTDeclReader::ReadCXXDefinitionData(
       case LCK_StarThis:
       case LCK_This:
       case LCK_VLAType:
-        new (ToCapture) Capture(Loc, IsImplicit, Kind, nullptr,SourceLocation());
+        new (ToCapture)
+            Capture(Loc, IsImplicit, Kind, nullptr, SourceLocation());
         ToCapture++;
         break;
       case LCK_ByCopy:
