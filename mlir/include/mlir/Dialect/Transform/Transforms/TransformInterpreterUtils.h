@@ -26,12 +26,30 @@ class Region;
 
 namespace transform {
 namespace detail {
+
+/// Expands the given list of `paths` to a list of `.mlir` files.
+///
+/// Each entry in `paths` may either be a regular file, in which case it ends up
+/// in the result list, or a directory, in which case all (regular) `.mlir`
+/// files in that directory are added. Any other file types lead to a failure.
+LogicalResult expandPathsToMLIRFiles(ArrayRef<std::string> &paths,
+                                     MLIRContext *context,
+                                     SmallVectorImpl<std::string> &fileNames);
+
 /// Utility to parse and verify the content of a `transformFileName` MLIR file
 /// containing a transform dialect specification.
 LogicalResult
 parseTransformModuleFromFile(MLIRContext *context,
                              llvm::StringRef transformFileName,
                              OwningOpRef<ModuleOp> &transformModule);
+
+/// Utility to parse, verify, aggregate and link the content of all mlir files
+/// nested under `transformLibraryPaths` and containing transform dialect
+/// specifications.
+LogicalResult
+assembleTransformLibraryFromPaths(MLIRContext *context,
+                                  ArrayRef<std::string> transformLibraryPaths,
+                                  OwningOpRef<ModuleOp> &transformModule);
 
 /// Utility to load a transform interpreter `module` from a module that has
 /// already been preloaded in the context.
