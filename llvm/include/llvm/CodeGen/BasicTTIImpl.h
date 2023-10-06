@@ -944,11 +944,18 @@ public:
         return TTI::SK_Reverse;
       if (ShuffleVectorInst::isZeroEltSplatMask(Mask, NumSrcElts))
         return TTI::SK_Broadcast;
+      if (ShuffleVectorInst::isExtractSubvectorMask(Mask, NumSrcElts, Index) &&
+          (Index + Mask.size()) <= (size_t)NumSrcElts) {
+        SubTy = FixedVectorType::get(Ty->getElementType(), Mask.size());
+        return TTI::SK_ExtractSubvector;
+      }
       break;
     case TTI::SK_PermuteTwoSrc: {
       int NumSubElts;
       if (Mask.size() > 2 && ShuffleVectorInst::isInsertSubvectorMask(
                                  Mask, NumSrcElts, NumSubElts, Index)) {
+        if (Index + NumSubElts > NumSrcElts)
+          return Kind;
         SubTy = FixedVectorType::get(Ty->getElementType(), NumSubElts);
         return TTI::SK_InsertSubvector;
       }

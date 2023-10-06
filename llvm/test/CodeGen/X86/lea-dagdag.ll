@@ -199,7 +199,7 @@ define i64 @and_i32_zext_shl_add_i64_overshift(i64 %t0, i32 %t1) {
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    # kill: def $esi killed $esi def $rsi
 ; CHECK-NEXT:    andl $8, %esi
-; CHECK-NEXT:    shll $4, %esi
+; CHECK-NEXT:    shlq $4, %rsi
 ; CHECK-NEXT:    leaq (%rsi,%rdi), %rax
 ; CHECK-NEXT:    retq
   %t4 = and i32 %t1, 8

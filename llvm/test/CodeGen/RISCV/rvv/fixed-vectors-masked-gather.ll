@@ -14507,7 +14507,7 @@ define <8 x i16> @mgather_gather_4xSEW_partial_align(ptr %base) {
 ; RV64V-LABEL: mgather_gather_4xSEW_partial_align:
 ; RV64V:       # %bb.0:
 ; RV64V-NEXT:    lui a1, 82176
-; RV64V-NEXT:    addiw a1, a1, 1024
+; RV64V-NEXT:    addi a1, a1, 1024
 ; RV64V-NEXT:    vsetivli zero, 4, e32, m1, ta, ma
 ; RV64V-NEXT:    vmv.s.x v9, a1
 ; RV64V-NEXT:    vluxei8.v v8, (a0), v9

@@ -266,7 +266,7 @@ define signext i32 @add_select_all_zeros_i32(i1 zeroext %c, i32 signext %x, i32 
 ;
 ; RV64I-LABEL: add_select_all_zeros_i32:
 ; RV64I:       # %bb.0:
-; RV64I-NEXT:    addiw a0, a0, -1
+; RV64I-NEXT:    addi a0, a0, -1
 ; RV64I-NEXT:    and a0, a0, a1
 ; RV64I-NEXT:    addw a0, a2, a0
 ; RV64I-NEXT:    ret
@@ -366,7 +366,7 @@ define signext i32 @sub_select_all_zeros_i32(i1 zeroext %c, i32 signext %x, i32 
 ;
 ; RV64I-LABEL: sub_select_all_zeros_i32:
 ; RV64I:       # %bb.0:
-; RV64I-NEXT:    addiw a0, a0, -1
+; RV64I-NEXT:    addi a0, a0, -1
 ; RV64I-NEXT:    and a0, a0, a1
 ; RV64I-NEXT:    subw a0, a2, a0
 ; RV64I-NEXT:    ret

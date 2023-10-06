@@ -413,10 +413,9 @@ private:
   }
 
   support::endianness getDataEndianness() const {
-    support::endianness HostEndian = getHostEndianness();
     if (!ShouldSwapBytes)
-      return HostEndian;
-    if (HostEndian == support::little)
+      return llvm::endianness::native;
+    if (llvm::endianness::native == llvm::endianness::little)
       return support::big;
     else
       return support::little;

@@ -2735,6 +2735,7 @@ void OMPClauseEnqueue::VisitOMPDoacrossClause(const OMPDoacrossClause *C) {
 }
 void OMPClauseEnqueue::VisitOMPXAttributeClause(const OMPXAttributeClause *C) {
 }
+void OMPClauseEnqueue::VisitOMPXBareClause(const OMPXBareClause *C) {}
 
 } // namespace
 
