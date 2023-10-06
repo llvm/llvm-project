@@ -43,16 +43,6 @@ MBFIWrapper::getBlockProfileCount(const MachineBasicBlock *MBB) const {
   return MBFI.getBlockProfileCount(MBB);
 }
 
-raw_ostream & MBFIWrapper::printBlockFreq(raw_ostream &OS,
-                                          const MachineBasicBlock *MBB) const {
-  return MBFI.printBlockFreq(OS, getBlockFreq(MBB));
-}
-
-raw_ostream & MBFIWrapper::printBlockFreq(raw_ostream &OS,
-                                         BlockFrequency Freq) const {
-  return MBFI.printBlockFreq(OS, Freq);
-}
-
 void MBFIWrapper::view(const Twine &Name, bool isSimple) {
   MBFI.view(Name, isSimple);
 }

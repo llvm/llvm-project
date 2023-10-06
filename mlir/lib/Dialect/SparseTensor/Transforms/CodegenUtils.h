@@ -19,6 +19,7 @@
 #include "mlir/Dialect/LLVMIR/LLVMDialect.h"
 #include "mlir/Dialect/SparseTensor/IR/Enums.h"
 #include "mlir/Dialect/SparseTensor/IR/SparseTensor.h"
+#include "mlir/Dialect/SparseTensor/IR/SparseTensorType.h"
 #include "mlir/Dialect/Utils/ReshapeOpsUtils.h"
 #include "mlir/IR/Builders.h"
 
@@ -340,6 +341,23 @@ Value createOrFoldSliceOffsetOp(OpBuilder &builder, Location loc, Value tensor,
 /// return a constant if the offset is statically known.
 Value createOrFoldSliceStrideOp(OpBuilder &builder, Location loc, Value tensor,
                                 Dimension dim);
+
+/// Populates the array with the dimension-shape of the given
+/// `SparseTensorType`, where dynamic sizes are represented by zero.
+void fillDimShape(OpBuilder &builder, Location loc, SparseTensorType stt,
+                  SmallVectorImpl<Value> &out);
+
+/// Generates code that opens a reader and sets the dimension sizes.
+Value genReader(OpBuilder &builder, Location loc, SparseTensorType stt,
+                Value tensor,
+                /*out*/ SmallVectorImpl<Value> &dimShapeValues,
+                /*out*/ Value &dimSizesBuffer);
+
+/// Generates code to set up the buffer parameters for a reader.
+Value genReaderBuffers(OpBuilder &builder, Location loc, SparseTensorType stt,
+                       ArrayRef<Value> dimShapeValues, Value dimSizesBuffer,
+                       /*out*/ Value &dim2lvlBuffer,
+                       /*out*/ Value &lvl2dimBuffer);
 
 //===----------------------------------------------------------------------===//
 // Inlined constant generators.
