@@ -126,7 +126,7 @@ struct SimplifyQuery {
       : DL(DL), DT(DT), AC(AC), CxtI(CXTI), IIQ(UseInstrInfo),
         CanUseUndef(CanUseUndef) {}
 
-  SimplifyQuery getWithInstruction(Instruction *I) const {
+  SimplifyQuery getWithInstruction(const Instruction *I) const {
     SimplifyQuery Copy(*this);
     Copy.CxtI = I;
     return Copy;
