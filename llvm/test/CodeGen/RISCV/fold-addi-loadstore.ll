@@ -325,7 +325,7 @@ define dso_local void @inc_g_i32() nounwind {
 ; RV64I:       # %bb.0: # %entry
 ; RV64I-NEXT:    lui a0, %hi(g_4_i32)
 ; RV64I-NEXT:    lw a1, %lo(g_4_i32)(a0)
-; RV64I-NEXT:    addiw a1, a1, 1
+; RV64I-NEXT:    addi a1, a1, 1
 ; RV64I-NEXT:    sw a1, %lo(g_4_i32)(a0)
 ; RV64I-NEXT:    ret
 ;
@@ -334,7 +334,7 @@ define dso_local void @inc_g_i32() nounwind {
 ; RV64I-MEDIUM-NEXT:  .Lpcrel_hi8:
 ; RV64I-MEDIUM-NEXT:    auipc a0, %pcrel_hi(g_4_i32)
 ; RV64I-MEDIUM-NEXT:    lw a1, %pcrel_lo(.Lpcrel_hi8)(a0)
-; RV64I-MEDIUM-NEXT:    addiw a1, a1, 1
+; RV64I-MEDIUM-NEXT:    addi a1, a1, 1
 ; RV64I-MEDIUM-NEXT:    sw a1, %pcrel_lo(.Lpcrel_hi8)(a0)
 ; RV64I-MEDIUM-NEXT:    ret
 entry:

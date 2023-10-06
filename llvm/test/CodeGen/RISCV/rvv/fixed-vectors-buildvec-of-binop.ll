@@ -236,7 +236,7 @@ define <4 x i32> @add_constant_rhs_with_identity(i32 %a, i32 %b, i32 %c, i32 %d)
 ; RV64:       # %bb.0:
 ; RV64-NEXT:    addiw a1, a1, 25
 ; RV64-NEXT:    addiw a2, a2, 1
-; RV64-NEXT:    addiw a3, a3, 2047
+; RV64-NEXT:    addi a3, a3, 2047
 ; RV64-NEXT:    addiw a3, a3, 308
 ; RV64-NEXT:    vsetivli zero, 4, e32, m1, ta, ma
 ; RV64-NEXT:    vslide1down.vx v8, v8, a0
@@ -273,7 +273,7 @@ define <4 x i32> @add_constant_rhs_identity(i32 %a, i32 %b, i32 %c, i32 %d) {
 ; RV64:       # %bb.0:
 ; RV64-NEXT:    addiw a1, a1, 25
 ; RV64-NEXT:    addiw a2, a2, 1
-; RV64-NEXT:    addiw a3, a3, 2047
+; RV64-NEXT:    addi a3, a3, 2047
 ; RV64-NEXT:    addiw a3, a3, 308
 ; RV64-NEXT:    vsetivli zero, 4, e32, m1, ta, ma
 ; RV64-NEXT:    vslide1down.vx v8, v8, a0
