@@ -2229,6 +2229,10 @@ SDValue NVPTXTargetLowering::LowerBUILD_VECTOR(SDValue Op,
       Value = cast<ConstantSDNode>(Operand)->getAPIntValue();
     else
       llvm_unreachable("Unsupported type");
+    // i8 values are carried around as i16, so we need to zero out upper bits,
+    // so they do not get in the way of combining individual byte values
+    if (VT == MVT::v4i8)
+      Value = Value.trunc(8);
     return Value.zext(32);
   };
   APInt Value;

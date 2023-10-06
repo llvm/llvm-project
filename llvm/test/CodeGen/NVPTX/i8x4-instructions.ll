@@ -17,10 +17,10 @@ define <4 x i8> @test_ret_const() #0 {
 ; CHECK-NEXT:    .reg .b32 %r<3>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    mov.u32 %r1, 67305985;
+; CHECK-NEXT:    mov.u32 %r1, -66911489;
 ; CHECK-NEXT:    st.param.b32 [func_retval0+0], %r1;
 ; CHECK-NEXT:    ret;
-  ret <4 x i8> <i8 1, i8 2, i8 3, i8 4>
+  ret <4 x i8> <i8 -1, i8 2, i8 3, i8 -4>
 }
 
 define i8 @test_extract_0(<4 x i8> %a) #0 {
