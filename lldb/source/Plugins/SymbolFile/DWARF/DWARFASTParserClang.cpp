@@ -2878,8 +2878,8 @@ void DWARFASTParserClang::ParseSingleMember(
     attrs.accessibility = eAccessNone;
 
   // Handle static members, which are typically members without
-  // locations. However, GCC *never* emits DW_AT_data_member_location
-  // for static data members of unions.
+  // locations. However, GCC doesn't emit DW_AT_data_member_location
+  // for any union members (regardless of linkage).
   // Non-normative text pre-DWARFv5 recommends marking static
   // data members with an DW_AT_external flag. Clang emits this consistently
   // whereas GCC emits it only for static data members if not part of an
