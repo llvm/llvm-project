@@ -16,6 +16,7 @@
 #include "llvm/IR/PassManager.h"
 #include "llvm/Pass.h"
 #include "llvm/Support/BlockFrequency.h"
+#include "llvm/Support/Printable.h"
 #include <cstdint>
 #include <memory>
 #include <optional>
@@ -92,14 +93,6 @@ public:
   void calculate(const Function &F, const BranchProbabilityInfo &BPI,
                  const LoopInfo &LI);
 
-  // Print the block frequency Freq to OS using the current functions entry
-  // frequency to convert freq into a relative decimal form.
-  raw_ostream &printBlockFreq(raw_ostream &OS, BlockFrequency Freq) const;
-
-  // Convenience method that attempts to look up the frequency associated with
-  // BB and print it to OS.
-  raw_ostream &printBlockFreq(raw_ostream &OS, const BasicBlock *BB) const;
-
   BlockFrequency getEntryFreq() const;
   void releaseMemory();
   void print(raw_ostream &OS) const;
@@ -107,6 +100,15 @@ public:
   // Compare to the other BFI and verify they match.
   void verifyMatch(BlockFrequencyInfo &Other) const;
 };
+
+/// Print the block frequency @p Freq relative to the current functions entry
+/// frequency. Returns a Printable object that can be piped via `<<` to a
+/// `raw_ostream`.
+Printable printBlockFreq(const BlockFrequencyInfo &BFI, BlockFrequency Freq);
+
+/// Convenience function equivalent to calling
+/// `printBlockFreq(BFI, BFI.getBlocakFreq(&BB))`.
+Printable printBlockFreq(const BlockFrequencyInfo &BFI, const BasicBlock &BB);
 
 /// Analysis pass which computes \c BlockFrequencyInfo.
 class BlockFrequencyAnalysis

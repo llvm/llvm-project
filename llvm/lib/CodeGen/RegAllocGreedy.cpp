@@ -1061,8 +1061,8 @@ MCRegister RAGreedy::tryRegionSplit(const LiveInterval &VirtReg,
     // No benefit from the compact region, our fallback will be per-block
     // splitting. Make sure we find a solution that is cheaper than spilling.
     BestCost = SpillCost;
-    LLVM_DEBUG(dbgs() << "Cost of isolating all blocks = ";
-               MBFI->printBlockFreq(dbgs(), BestCost) << '\n');
+    LLVM_DEBUG(dbgs() << "Cost of isolating all blocks = "
+                      << printBlockFreq(*MBFI, BestCost) << '\n');
   }
 
   unsigned BestCand = calculateRegionSplitCost(VirtReg, Order, BestCost,
@@ -1112,8 +1112,8 @@ RAGreedy::calculateRegionSplitCostAroundReg(MCPhysReg PhysReg,
     LLVM_DEBUG(dbgs() << printReg(PhysReg, TRI) << "\tno positive bundles\n");
     return BestCand;
   }
-  LLVM_DEBUG(dbgs() << printReg(PhysReg, TRI) << "\tstatic = ";
-             MBFI->printBlockFreq(dbgs(), Cost));
+  LLVM_DEBUG(dbgs() << printReg(PhysReg, TRI)
+                    << "\tstatic = " << printBlockFreq(*MBFI, Cost));
   if (Cost >= BestCost) {
     LLVM_DEBUG({
       if (BestCand == NoCand)
@@ -1139,8 +1139,7 @@ RAGreedy::calculateRegionSplitCostAroundReg(MCPhysReg PhysReg,
 
   Cost += calcGlobalSplitCost(Cand, Order);
   LLVM_DEBUG({
-    dbgs() << ", total = ";
-    MBFI->printBlockFreq(dbgs(), Cost) << " with bundles";
+    dbgs() << ", total = " << printBlockFreq(*MBFI, Cost) << " with bundles";
     for (int I : Cand.LiveBundles.set_bits())
       dbgs() << " EB#" << I;
     dbgs() << ".\n";
@@ -2313,9 +2312,9 @@ void RAGreedy::tryHintRecoloring(const LiveInterval &VirtReg) {
       LLVM_DEBUG(dbgs() << "Checking profitability:\n");
       BlockFrequency OldCopiesCost = getBrokenHintFreq(Info, CurrPhys);
       BlockFrequency NewCopiesCost = getBrokenHintFreq(Info, PhysReg);
-      LLVM_DEBUG(dbgs() << "Old Cost: " << OldCopiesCost.getFrequency()
-                        << "\nNew Cost: " << NewCopiesCost.getFrequency()
-                        << '\n');
+      LLVM_DEBUG(dbgs() << "Old Cost: " << printBlockFreq(*MBFI, OldCopiesCost)
+                        << "\nNew Cost: "
+                        << printBlockFreq(*MBFI, NewCopiesCost) << '\n');
       if (OldCopiesCost < NewCopiesCost) {
         LLVM_DEBUG(dbgs() << "=> Not profitable.\n");
         continue;
