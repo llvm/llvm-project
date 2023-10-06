@@ -426,14 +426,12 @@ struct TypeBuilderImpl {
     }
     LLVM_DEBUG(llvm::dbgs() << "derived type: " << rec << '\n');
 
-    converter.registerDispatchTableInfo(loc, &tySpec);
-
     // Generate the type descriptor object if any
     if (const Fortran::semantics::Scope *derivedScope =
             tySpec.scope() ? tySpec.scope() : tySpec.typeSymbol().scope())
       if (const Fortran::semantics::Symbol *typeInfoSym =
               derivedScope->runtimeDerivedTypeDescription())
-        converter.registerRuntimeTypeInfo(loc, *typeInfoSym);
+        converter.registerTypeInfo(loc, *typeInfoSym, tySpec, rec);
     return rec;
   }
 

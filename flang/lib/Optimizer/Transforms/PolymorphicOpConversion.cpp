@@ -70,7 +70,7 @@ private:
                                         mlir::PatternRewriter &rewriter,
                                         fir::KindMapping &kindMap) const;
 
-  llvm::SmallSet<llvm::StringRef, 4> collectAncestors(fir::DispatchTableOp dt,
+  llvm::SmallSet<llvm::StringRef, 4> collectAncestors(fir::TypeInfoOp dt,
                                                       mlir::ModuleOp mod) const;
 
   // Mutex used to guard insertion of mlir::func::FuncOp in the module.
@@ -305,7 +305,7 @@ mlir::LogicalResult SelectTypeConv::matchAndRewrite(
 
     if (auto a = typeGuards[t].dyn_cast<fir::SubclassAttr>()) {
       if (auto recTy = a.getType().dyn_cast<fir::RecordType>()) {
-        auto dt = mod.lookupSymbol<fir::DispatchTableOp>(recTy.getName());
+        auto dt = mod.lookupSymbol<fir::TypeInfoOp>(recTy.getName());
         assert(dt && "dispatch table not found");
         llvm::SmallSet<llvm::StringRef, 4> ancestors =
             collectAncestors(dt, mod);
@@ -462,14 +462,12 @@ SelectTypeConv::genTypeDescCompare(mlir::Location loc, mlir::Value selector,
 }
 
 llvm::SmallSet<llvm::StringRef, 4>
-SelectTypeConv::collectAncestors(fir::DispatchTableOp dt,
-                                 mlir::ModuleOp mod) const {
+SelectTypeConv::collectAncestors(fir::TypeInfoOp dt, mlir::ModuleOp mod) const {
   llvm::SmallSet<llvm::StringRef, 4> ancestors;
-  if (!dt.getParent().has_value())
-    return ancestors;
-  while (dt.getParent().has_value()) {
-    ancestors.insert(*dt.getParent());
-    dt = mod.lookupSymbol<fir::DispatchTableOp>(*dt.getParent());
+  while (auto parentName = dt.getIfParentName()) {
+    ancestors.insert(*parentName);
+    dt = mod.lookupSymbol<fir::TypeInfoOp>(*parentName);
+    assert(dt && "parent type info not generated");
   }
   return ancestors;
 }

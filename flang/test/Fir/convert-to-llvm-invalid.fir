@@ -2,12 +2,6 @@
 
 // RUN: fir-opt --split-input-file --fir-to-llvm-ir="target=x86_64-unknown-linux-gnu" --verify-diagnostics %s
 
-// Verify that `fir.dt_entry` requires a parent op
-
-// expected-error@+1{{'fir.dt_entry' op expects parent op 'fir.dispatch_table'}}
-fir.dt_entry "method", @method_impl
-
-// -----
 
 // Test `fir.shape` conversion failure because the op has uses.
 
@@ -82,8 +76,25 @@ func.func @bar_select_type(%arg : !fir.class<!fir.type<derivedst{a:f32}>>) -> i3
 
 // Verify that `fir.dt_entry` requires a parent op
 
-// expected-error@+1{{'fir.dt_entry' op expects parent op 'fir.dispatch_table'}}
+// expected-error@+1{{'fir.dt_entry' op expects parent op 'fir.type_info'}}
 fir.dt_entry "method", @method_impl
+
+// -----
+
+// expected-error@+1{{'fir.type_info' op type must be a fir.type}}
+fir.type_info @bad : i32
+
+// -----
+
+// expected-error@+1{{'fir.type_info' op parent_type must be a fir.type}}
+fir.type_info @bad extends f32 : !fir.type<t1{i:i32}>
+
+// -----
+
+fir.type_info @bad : !fir.type<bad{i:i32}> dispatch_table {
+  // expected-error@+1{{dispatch table must contain dt_entry}}
+  %zero = arith.constant 0 : i32
+}
 
 // -----
 
