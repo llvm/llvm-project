@@ -425,8 +425,8 @@ void InclusionRewriter::Process(FileID FileId,
           case tok::pp_import: {
             SourceLocation Loc = HashToken.getLocation();
             const IncludedFile *Inc = FindIncludeAtLocation(Loc);
-            CommentOutDirective(RawLex, HashToken, FromFile, LocalEOL, NextToWrite,
-                                Line, Inc);
+            CommentOutDirective(RawLex, HashToken, FromFile, LocalEOL,
+                                NextToWrite, Line, Inc);
             if (FileId != PP.getPredefinesFileID())
               WriteLineInfo(FileName, Line - 1, FileType, "");
             StringRef LineInfoExtra;
