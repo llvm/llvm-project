@@ -9,14 +9,19 @@
 // UNSUPPORTED: c++03, c++11, c++14, c++17
 
 // Ensure that strings which fit within the SSO size can be constant-initialized
-// globals.  (this is permitted but not required to work by the standard).
+// as both a global and local.
 
 #include <string>
 
 #if __SIZE_WIDTH__ == 64
-constinit std::string my_str = "0123456789012345678901";
+#define LONGEST_STR "0123456789012345678901"
 #elif __SIZE_WIDTH__ == 32
-constinit std::string my_str = "0123456789";
+#define LONGEST_STR "0123456789"
 #else
 #  error "std::size_t has an unexpected size"
 #endif
+
+constinit std::string g_str = LONGEST_STR;
+void fn() {
+  constexpr std::string l_str = LONGEST_STR;
+}
