@@ -6716,8 +6716,7 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
     types::ID InputType = Inputs[0].getType();
     if (!isDerivedFromC(InputType))
       D.Diag(diag::err_drv_opt_unsupported_input_type)
-          << "-fminimize-whitespace"
-          << types::getTypeName(InputType);
+          << "-fminimize-whitespace" << types::getTypeName(InputType);
     CmdArgs.push_back("-fminimize-whitespace");
   }
 
@@ -6727,8 +6726,7 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
     types::ID InputType = Inputs[0].getType();
     if (!isDerivedFromC(InputType))
       D.Diag(diag::err_drv_opt_unsupported_input_type)
-      << "-fkeep-system-includes"
-      << types::getTypeName(InputType);
+          << "-fkeep-system-includes" << types::getTypeName(InputType);
     CmdArgs.push_back("-fkeep-system-includes");
   }
 

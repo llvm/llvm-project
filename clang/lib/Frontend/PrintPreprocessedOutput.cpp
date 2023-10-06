@@ -982,8 +982,7 @@ void clang::DoPrintPreprocessedInput(Preprocessor &PP, raw_ostream *OS,
   PrintPPOutputPPCallbacks *Callbacks = new PrintPPOutputPPCallbacks(
       PP, OS, !Opts.ShowLineMarkers, Opts.ShowMacros,
       Opts.ShowIncludeDirectives, Opts.UseLineDirectives,
-      Opts.MinimizeWhitespace, Opts.DirectivesOnly,
-      Opts.KeepSystemIncludes);
+      Opts.MinimizeWhitespace, Opts.DirectivesOnly, Opts.KeepSystemIncludes);
 
   // Expand macros in pragmas with -fms-extensions.  The assumption is that
   // the majority of pragmas in such a file will be Microsoft pragmas.
