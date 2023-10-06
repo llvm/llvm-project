@@ -12,6 +12,7 @@
 
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/SmallVector.h"
+#include "llvm/Support/Regex.h"
 #include "llvm/Support/raw_ostream.h"
 #include <cctype>
 
@@ -96,18 +97,13 @@ std::string llvm::convertToSnakeFromCamelCase(StringRef input) {
   if (input.empty())
     return "";
 
-  std::string snakeCase;
-  snakeCase.reserve(input.size());
-  for (char c : input) {
-    if (!std::isupper(c)) {
-      snakeCase.push_back(c);
-      continue;
-    }
-
-    if (!snakeCase.empty() && snakeCase.back() != '_')
-      snakeCase.push_back('_');
-    snakeCase.push_back(llvm::toLower(c));
+  std::string snakeCase = input.str();
+  for (int i = 0; i < 10; ++i) {
+    snakeCase = llvm::Regex("([A-Z]+)([A-Z][a-z])").sub("\\1_\\2", snakeCase);
+    snakeCase = llvm::Regex("([a-z0-9])([A-Z])").sub("\\1_\\2", snakeCase);
   }
+  std::transform(snakeCase.begin(), snakeCase.end(), snakeCase.begin(),
+                 [](unsigned char c) { return std::tolower(c); });
   return snakeCase;
 }
 
