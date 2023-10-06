@@ -184,6 +184,13 @@ TEST(StringExtrasTest, ConvertToSnakeFromCamelCase) {
 
   testConvertToSnakeCase("OpName", "op_name");
   testConvertToSnakeCase("opName", "op_name");
+  testConvertToSnakeCase("OPName", "op_name");
+  testConvertToSnakeCase("Intel_OCL_BI", "intel_ocl_bi");
+  testConvertToSnakeCase("I32Attr", "i32_attr");
+  testConvertToSnakeCase("opNAME", "op_name");
+  testConvertToSnakeCase("opNAMe", "op_na_me");
+  testConvertToSnakeCase("opnameE", "opname_e");
+  testConvertToSnakeCase("OPNameOPName", "op_name_op_name");
   testConvertToSnakeCase("_OpName", "_op_name");
   testConvertToSnakeCase("Op_Name", "op_name");
   testConvertToSnakeCase("", "");
