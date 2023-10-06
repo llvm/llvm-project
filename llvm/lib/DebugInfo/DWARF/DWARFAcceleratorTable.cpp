@@ -635,7 +635,7 @@ std::optional<uint64_t> DWARFDebugNames::Entry::getCUOffset() const {
 }
 
 void DWARFDebugNames::Entry::dump(ScopedPrinter &W) const {
-  W.printHex("Abbrev", Abbr->Code);
+  W.startLine() << formatv("Abbrev: {0:x}\n", Abbr->Code);
   W.startLine() << formatv("Tag: {0}\n", Abbr->Tag);
   assert(Abbr->Attributes.size() == Values.size());
   for (auto Tuple : zip_first(Abbr->Attributes, Values)) {
