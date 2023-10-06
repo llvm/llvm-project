@@ -134,8 +134,8 @@ MLIR_CRUNNERUTILS_EXPORT void *_mlir_ciface_createCheckedSparseTensorReader(
 MLIR_CRUNNERUTILS_EXPORT void *_mlir_ciface_newSparseTensorFromReader(
     void *p, StridedMemRefType<index_type, 1> *lvlSizesRef,
     StridedMemRefType<DimLevelType, 1> *lvlTypesRef,
-    StridedMemRefType<index_type, 1> *lvl2dimRef,
-    StridedMemRefType<index_type, 1> *dim2lvlRef, OverheadType posTp,
+    StridedMemRefType<index_type, 1> *dim2lvlRef,
+    StridedMemRefType<index_type, 1> *lvl2dimRef, OverheadType posTp,
     OverheadType crdTp, PrimaryType valTp);
 
 /// SparseTensorReader method to obtain direct access to the
@@ -149,7 +149,8 @@ MLIR_CRUNNERUTILS_EXPORT void _mlir_ciface_getSparseTensorReaderDimSizes(
   MLIR_CRUNNERUTILS_EXPORT bool                                                \
       _mlir_ciface_getSparseTensorReaderReadToBuffers##CNAME##VNAME(           \
           void *p, StridedMemRefType<index_type, 1> *dim2lvlRef,               \
-          StridedMemRefType<C, 1> *iref, StridedMemRefType<V, 1> *vref)        \
+          StridedMemRefType<index_type, 1> *lvl2dimRef,                        \
+          StridedMemRefType<C, 1> *cref, StridedMemRefType<V, 1> *vref)        \
           MLIR_SPARSETENSOR_FOREVERY_V_O(DECL_GETNEXT)
 #undef DECL_GETNEXT
 
