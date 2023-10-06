@@ -995,15 +995,19 @@ FailureOr<Value> ContractionOpLowering::lowerParallel(PatternRewriter &rewriter,
         diag << "expected lhsIndex=" << lhsIndex << " and rhsIndex=" << rhsIndex
              << " to map to the same dimension";
       });
-    // Unrolling a scalable dimension would be incorrect - bail out.
     if (lhsType.getScalableDims()[lhsIndex])
-      return failure();
+      return rewriter.notifyMatchFailure(op, [&](Diagnostic &diag) {
+        diag << "Unrolloing scalable dimension (lhsIndex=" << lhsIndex
+             << ") is not supported yet";
+      });
     dimSize = lhsType.getDimSize(lhsIndex);
   } else if (rhsIndex >= 0) {
     iterIndex = iMap[1].getDimPosition(rhsIndex);
-    // Unrolling a scalable dimension would be incorrect - bail out.
     if (rhsType.getScalableDims()[rhsIndex])
-      return failure();
+      return rewriter.notifyMatchFailure(op, [&](Diagnostic &diag) {
+        diag << "Unrolloing scalable dimension (lhsIndex=" << lhsIndex
+             << ") is not supported yet";
+      });
     dimSize = rhsType.getDimSize(rhsIndex);
   }
   if (iterIndex < 0)
