@@ -2981,9 +2981,8 @@ genACC(Fortran::lower::AbstractConverter &converter,
   std::stringstream routineOpName;
   routineOpName << accRoutinePrefix.str() << routineCounter++;
   auto routineOp = modBuilder.create<mlir::acc::RoutineOp>(
-      loc, routineOpName.str(), funcName, mlir::StringAttr{}, mlir::UnitAttr{},
-      mlir::UnitAttr{}, mlir::UnitAttr{}, mlir::UnitAttr{}, mlir::UnitAttr{},
-      mlir::UnitAttr{}, mlir::IntegerAttr{});
+      loc, routineOpName.str(), funcName, mlir::StringAttr{}, false, false,
+      false, false, false, false, mlir::IntegerAttr{});
 
   for (const Fortran::parser::AccClause &clause : clauses.v) {
     if (std::get_if<Fortran::parser::AccClause::Seq>(&clause.u)) {
