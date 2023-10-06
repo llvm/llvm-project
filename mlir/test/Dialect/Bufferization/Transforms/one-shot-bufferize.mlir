@@ -218,6 +218,20 @@ func.func @tensor_copy(%arg0: tensor<5xf32>) -> tensor<5xf32> {
   // CHECK: %[[r:.*]] = bufferization.to_tensor %[[alloc]]
   // CHECK: return %[[r]]
   %dest = bufferization.alloc_tensor() : tensor<5xf32>
-  %0 = bufferization.materialize_in_destination %arg0 in %dest : tensor<5xf32>
+  %0 = bufferization.materialize_in_destination %arg0 in %dest
+      : (tensor<5xf32>, tensor<5xf32>) -> tensor<5xf32>
   return %0 : tensor<5xf32>
 }
+
+// -----
+
+// CHECK-LABEL: func @materialize_in_destination_buffer(
+//  CHECK-SAME:     %[[t:.*]]: tensor<5xf32>, %[[m:.*]]: memref<5xf32>)
+//       CHECK:   %[[b:.*]] = bufferization.to_memref %[[t]] : memref<5xf32, strided<[?], offset: ?>>
+//       CHECK:   memref.copy %[[b]], %[[m]]
+func.func @materialize_in_destination_buffer(%t: tensor<5xf32>, %m: memref<5xf32>) {
+  bufferization.materialize_in_destination %t in restrict writable %m
+      : (tensor<5xf32>, memref<5xf32>) -> ()
+  return
+}
+
