@@ -925,10 +925,14 @@ ASTContext::ASTContext(LangOptions &LOpts, SourceManager &SM,
                        IdentifierTable &idents, SelectorTable &sels,
                        Builtin::Context &builtins, TranslationUnitKind TUKind)
     : ConstantArrayTypes(this_(), ConstantArrayTypesLog2InitSize),
+      DependentSizedArrayTypes(this_()), DependentSizedExtVectorTypes(this_()),
+      DependentAddressSpaceTypes(this_()), DependentVectorTypes(this_()),
+      DependentSizedMatrixTypes(this_()),
       FunctionProtoTypes(this_(), FunctionProtoTypesLog2InitSize),
+      DependentTypeOfExprTypes(this_()), DependentDecltypeTypes(this_()),
       TemplateSpecializationTypes(this_()),
       DependentTemplateSpecializationTypes(this_()), AutoTypes(this_()),
-      SubstTemplateTemplateParmPacks(this_()),
+      DependentBitIntTypes(this_()), SubstTemplateTemplateParmPacks(this_()),
       CanonTemplateTemplateParms(this_()), SourceMgr(SM), LangOpts(LOpts),
       NoSanitizeL(new NoSanitizeList(LangOpts.NoSanitizeFiles, SM)),
       XRayFilter(new XRayFunctionFilter(LangOpts.XRayAlwaysInstrumentFiles,
@@ -3786,11 +3790,8 @@ QualType ASTContext::getDependentSizedArrayType(QualType elementType,
   // initializer.  We do no canonicalization here at all, which is okay
   // because they can't be used in most locations.
   if (!numElements) {
-    auto *newType
-      = new (*this, TypeAlignment)
-          DependentSizedArrayType(*this, elementType, QualType(),
-                                  numElements, ASM, elementTypeQuals,
-                                  brackets);
+    auto *newType = new (*this, TypeAlignment) DependentSizedArrayType(
+        elementType, QualType(), numElements, ASM, elementTypeQuals, brackets);
     Types.push_back(newType);
     return QualType(newType, 0);
   }
@@ -3813,9 +3814,8 @@ QualType ASTContext::getDependentSizedArrayType(QualType elementType,
   // If we don't have one, build one.
   if (!canonTy) {
     canonTy = new (*this, TypeAlignment)
-      DependentSizedArrayType(*this, QualType(canonElementType.Ty, 0),
-                              QualType(), numElements, ASM, elementTypeQuals,
-                              brackets);
+        DependentSizedArrayType(QualType(canonElementType.Ty, 0), QualType(),
+                                numElements, ASM, elementTypeQuals, brackets);
     DependentSizedArrayTypes.InsertNode(canonTy, insertPos);
     Types.push_back(canonTy);
   }
@@ -3832,10 +3832,8 @@ QualType ASTContext::getDependentSizedArrayType(QualType elementType,
 
   // Otherwise, we need to build a type which follows the spelling
   // of the element type.
-  auto *sugaredType
-    = new (*this, TypeAlignment)
-        DependentSizedArrayType(*this, elementType, canon, numElements,
-                                ASM, elementTypeQuals, brackets);
+  auto *sugaredType = new (*this, TypeAlignment) DependentSizedArrayType(
+      elementType, canon, numElements, ASM, elementTypeQuals, brackets);
   Types.push_back(sugaredType);
   return QualType(sugaredType, 0);
 }
@@ -4111,12 +4109,12 @@ ASTContext::getDependentVectorType(QualType VecType, Expr *SizeExpr,
 
   if (Canon) {
     New = new (*this, TypeAlignment) DependentVectorType(
-        *this, VecType, QualType(Canon, 0), SizeExpr, AttrLoc, VecKind);
+        VecType, QualType(Canon, 0), SizeExpr, AttrLoc, VecKind);
   } else {
     QualType CanonVecTy = getCanonicalType(VecType);
     if (CanonVecTy == VecType) {
-      New = new (*this, TypeAlignment) DependentVectorType(
-          *this, VecType, QualType(), SizeExpr, AttrLoc, VecKind);
+      New = new (*this, TypeAlignment)
+          DependentVectorType(VecType, QualType(), SizeExpr, AttrLoc, VecKind);
 
       DependentVectorType *CanonCheck =
           DependentVectorTypes.FindNodeOrInsertPos(ID, InsertPos);
@@ -4127,8 +4125,8 @@ ASTContext::getDependentVectorType(QualType VecType, Expr *SizeExpr,
     } else {
       QualType CanonTy = getDependentVectorType(CanonVecTy, SizeExpr,
                                                 SourceLocation(), VecKind);
-      New = new (*this, TypeAlignment) DependentVectorType(
-          *this, VecType, CanonTy, SizeExpr, AttrLoc, VecKind);
+      New = new (*this, TypeAlignment)
+          DependentVectorType(VecType, CanonTy, SizeExpr, AttrLoc, VecKind);
     }
   }
 
@@ -4186,15 +4184,13 @@ ASTContext::getDependentSizedExtVectorType(QualType vecType,
   if (Canon) {
     // We already have a canonical version of this array type; use it as
     // the canonical type for a newly-built type.
-    New = new (*this, TypeAlignment)
-      DependentSizedExtVectorType(*this, vecType, QualType(Canon, 0),
-                                  SizeExpr, AttrLoc);
+    New = new (*this, TypeAlignment) DependentSizedExtVectorType(
+        vecType, QualType(Canon, 0), SizeExpr, AttrLoc);
   } else {
     QualType CanonVecTy = getCanonicalType(vecType);
     if (CanonVecTy == vecType) {
       New = new (*this, TypeAlignment)
-        DependentSizedExtVectorType(*this, vecType, QualType(), SizeExpr,
-                                    AttrLoc);
+          DependentSizedExtVectorType(vecType, QualType(), SizeExpr, AttrLoc);
 
       DependentSizedExtVectorType *CanonCheck
         = DependentSizedExtVectorTypes.FindNodeOrInsertPos(ID, InsertPos);
@@ -4204,8 +4200,8 @@ ASTContext::getDependentSizedExtVectorType(QualType vecType,
     } else {
       QualType CanonExtTy = getDependentSizedExtVectorType(CanonVecTy, SizeExpr,
                                                            SourceLocation());
-      New = new (*this, TypeAlignment) DependentSizedExtVectorType(
-          *this, vecType, CanonExtTy, SizeExpr, AttrLoc);
+      New = new (*this, TypeAlignment)
+          DependentSizedExtVectorType(vecType, CanonExtTy, SizeExpr, AttrLoc);
     }
   }
 
@@ -4260,7 +4256,7 @@ QualType ASTContext::getDependentSizedMatrixType(QualType ElementTy,
 
   if (!Canon) {
     Canon = new (*this, TypeAlignment) DependentSizedMatrixType(
-        *this, CanonElementTy, QualType(), RowExpr, ColumnExpr, AttrLoc);
+        CanonElementTy, QualType(), RowExpr, ColumnExpr, AttrLoc);
 #ifndef NDEBUG
     DependentSizedMatrixType *CanonCheck =
         DependentSizedMatrixTypes.FindNodeOrInsertPos(ID, InsertPos);
@@ -4279,7 +4275,7 @@ QualType ASTContext::getDependentSizedMatrixType(QualType ElementTy,
 
   // Use Canon as the canonical type for newly-built type.
   DependentSizedMatrixType *New = new (*this, TypeAlignment)
-      DependentSizedMatrixType(*this, ElementTy, QualType(Canon, 0), RowExpr,
+      DependentSizedMatrixType(ElementTy, QualType(Canon, 0), RowExpr,
                                ColumnExpr, AttrLoc);
   Types.push_back(New);
   return QualType(New, 0);
@@ -4301,9 +4297,8 @@ QualType ASTContext::getDependentAddressSpaceType(QualType PointeeType,
     DependentAddressSpaceTypes.FindNodeOrInsertPos(ID, insertPos);
 
   if (!canonTy) {
-    canonTy = new (*this, TypeAlignment)
-      DependentAddressSpaceType(*this, canonPointeeType,
-                                QualType(), AddrSpaceExpr, AttrLoc);
+    canonTy = new (*this, TypeAlignment) DependentAddressSpaceType(
+        canonPointeeType, QualType(), AddrSpaceExpr, AttrLoc);
     DependentAddressSpaceTypes.InsertNode(canonTy, insertPos);
     Types.push_back(canonTy);
   }
@@ -4312,10 +4307,8 @@ QualType ASTContext::getDependentAddressSpaceType(QualType PointeeType,
       canonTy->getAddrSpaceExpr() == AddrSpaceExpr)
     return QualType(canonTy, 0);
 
-  auto *sugaredType
-    = new (*this, TypeAlignment)
-        DependentAddressSpaceType(*this, PointeeType, QualType(canonTy, 0),
-                                  AddrSpaceExpr, AttrLoc);
+  auto *sugaredType = new (*this, TypeAlignment) DependentAddressSpaceType(
+      PointeeType, QualType(canonTy, 0), AddrSpaceExpr, AttrLoc);
   Types.push_back(sugaredType);
   return QualType(sugaredType, 0);
 }
@@ -4619,8 +4612,8 @@ QualType ASTContext::getDependentBitIntType(bool IsUnsigned,
           DependentBitIntTypes.FindNodeOrInsertPos(ID, InsertPos))
     return QualType(Existing, 0);
 
-  auto *New = new (*this, TypeAlignment)
-      DependentBitIntType(*this, IsUnsigned, NumBitsExpr);
+  auto *New =
+      new (*this, TypeAlignment) DependentBitIntType(IsUnsigned, NumBitsExpr);
   DependentBitIntTypes.InsertNode(New, InsertPos);
 
   Types.push_back(New);
@@ -5662,8 +5655,7 @@ QualType ASTContext::getTypeOfExprType(Expr *tofExpr, TypeOfKind Kind) const {
           TypeOfExprType(tofExpr, Kind, QualType((TypeOfExprType *)Canon, 0));
     } else {
       // Build a new, canonical typeof(expr) type.
-      Canon = new (*this, TypeAlignment)
-          DependentTypeOfExprType(*this, tofExpr, Kind);
+      Canon = new (*this, TypeAlignment) DependentTypeOfExprType(tofExpr, Kind);
       DependentTypeOfExprTypes.InsertNode(Canon, InsertPos);
       toe = Canon;
     }
@@ -5731,7 +5723,7 @@ QualType ASTContext::getDecltypeType(Expr *e, QualType UnderlyingType) const {
       = DependentDecltypeTypes.FindNodeOrInsertPos(ID, InsertPos);
     if (!Canon) {
       // Build a new, canonical decltype(expr) type.
-      Canon = new (*this, TypeAlignment) DependentDecltypeType(*this, e);
+      Canon = new (*this, TypeAlignment) DependentDecltypeType(e, DependentTy);
       DependentDecltypeTypes.InsertNode(Canon, InsertPos);
     }
     dt = new (*this, TypeAlignment)
@@ -11768,6 +11760,16 @@ GVALinkage ASTContext::GetGVALinkageForFunction(const FunctionDecl *FD) const {
 
 static GVALinkage basicGVALinkageForVariable(const ASTContext &Context,
                                              const VarDecl *VD) {
+  // As an extension for interactive REPLs, make sure constant variables are
+  // only emitted once instead of LinkageComputer::getLVForNamespaceScopeDecl
+  // marking them as internal.
+  if (Context.getLangOpts().CPlusPlus &&
+      Context.getLangOpts().IncrementalExtensions &&
+      VD->getType().isConstQualified() &&
+      !VD->getType().isVolatileQualified() && !VD->isInline() &&
+      !isa<VarTemplateSpecializationDecl>(VD) && !VD->getDescribedVarTemplate())
+    return GVA_DiscardableODR;
+
   if (!VD->isExternallyVisible())
     return GVA_Internal;
 

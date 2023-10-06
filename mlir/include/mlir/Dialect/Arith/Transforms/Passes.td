@@ -11,7 +11,7 @@
 
 include "mlir/Pass/PassBase.td"
 
-def ArithBufferize : Pass<"arith-bufferize", "ModuleOp"> {
+def ArithBufferizePass : Pass<"arith-bufferize", "ModuleOp"> {
   let summary = "Bufferize Arith dialect ops.";
   let description = [{
     This pass bufferizes arith dialect ops.
@@ -21,16 +21,14 @@ def ArithBufferize : Pass<"arith-bufferize", "ModuleOp"> {
     multi-threading. Most other bufferization passes can run in parallel at
     function granularity.
   }];
-  let constructor = "mlir::arith::createArithBufferizePass()";
   let options = [
     Option<"alignment", "alignment", "unsigned", /*default=*/"0",
            "Create global memrefs with a specified alignment">,
   ];
 }
 
-def ArithExpandOps : Pass<"arith-expand"> {
+def ArithExpandOpsPass : Pass<"arith-expand"> {
   let summary = "Legalize Arith ops to be convertible to LLVM.";
-  let constructor = "mlir::arith::createArithExpandOpsPass()";
   let dependentDialects = ["vector::VectorDialect"];
   let options = [
     Option<"includeBf16", "include-bf16", "bool", /*default=*/"false",

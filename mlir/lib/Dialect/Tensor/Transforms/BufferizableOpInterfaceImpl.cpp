@@ -119,7 +119,11 @@ struct CollapseShapeOpInterface
                                                     tensor::CollapseShapeOp> {
   bool bufferizesToMemoryRead(Operation *op, OpOperand &opOperand,
                               const AnalysisState &state) const {
-    return false;
+    // tensor.collapse_shape may reallocate, at which point the source buffer is
+    // copied. I.e., there will be a memory read side effect on the bufferized
+    // source. This function conservatively returns "true" because whether a
+    // copy will be created or not is not known at this point.
+    return true;
   }
 
   bool bufferizesToMemoryWrite(Operation *op, OpOperand &opOperand,
@@ -253,13 +257,12 @@ struct DimOpInterface
   }
 };
 
-/// Bufferization of tensor.empty. This op does not bufferize, but we need an
-/// interface implementation, so that the result of this op is considered
-/// "writable" (default impl. of `isWritable`). Results of ops that do not
-/// implement `BufferizableOpInterface` are not writable.
+/// Bufferization of "tensor.empty". Replace with "bufferization.alloc_tensor".
 struct EmptyOpInterface
     : public BufferizableOpInterface::ExternalModel<EmptyOpInterface,
                                                     tensor::EmptyOp> {
+  bool bufferizesToAllocation(Operation *op, Value value) const { return true; }
+
   bool resultBufferizesToMemoryWrite(Operation *op, OpResult opResult,
                                      const AnalysisState &state) const {
     // The returned tensor does not have specified contents.
@@ -268,17 +271,21 @@ struct EmptyOpInterface
 
   LogicalResult bufferize(Operation *op, RewriterBase &rewriter,
                           const BufferizationOptions &options) const {
+    auto emptyOp = cast<tensor::EmptyOp>(op);
+
+    // Optimization: Fold away the op if it has no uses.
     if (op->getUses().empty()) {
       rewriter.eraseOp(op);
       return success();
     }
 
-    // tensor.empty ops are used to indicate the shape of a tensor. They have
-    // no defined contents and cannot be bufferized. However, they can be
-    // converted to bufferization.alloc_tensor ops, which then bufferize to an
-    // allocation (--empty-tensor-to-alloc-tensor).
-    return op->emitOpError("cannot be bufferized, but can be converted to "
-                           "bufferization.alloc_tensor");
+    // Allocate a tensor. This emits a "bufferization.alloc_tensor" op.
+    FailureOr<Value> allocTensor = allocateTensorForShapedValue(
+        rewriter, op->getLoc(), emptyOp.getResult(), options, /*copy=*/false);
+    if (failed(allocTensor))
+      return failure();
+    rewriter.replaceOp(op, *allocTensor);
+    return success();
   }
 };
 
@@ -288,6 +295,8 @@ struct ExpandShapeOpInterface
                                                     tensor::ExpandShapeOp> {
   bool bufferizesToMemoryRead(Operation *op, OpOperand &opOperand,
                               const AnalysisState &state) const {
+    // In contrast to tensor.collapse_shape, this op can always be bufferized
+    // without a copy.
     return false;
   }
 
@@ -635,11 +644,11 @@ struct InsertSliceOpInterface
     RankedTensorType destType = insertSliceOp.getDestType();
 
     // The source is always read.
-    if (&opOperand == &insertSliceOp.getSourceMutable()[0])
+    if (&opOperand == &insertSliceOp.getSourceMutable())
       return true;
 
     // For the destination, it depends...
-    assert(&opOperand == &insertSliceOp.getDestMutable()[0] && "expected dest");
+    assert(&opOperand == &insertSliceOp.getDestMutable() && "expected dest");
 
     // Dest is not read if it is entirely overwritten. E.g.:
     // tensor.insert_slice %a into %t[0][10][1] : ... into tensor<10xf32>
@@ -838,8 +847,9 @@ struct ReshapeOpInterface
                                                     tensor::ReshapeOp> {
   bool bufferizesToMemoryRead(Operation *op, OpOperand &opOperand,
                               const AnalysisState &state) const {
+    // Depending on the layout map, the source buffer may have to be copied.
     auto reshapeOp = cast<tensor::ReshapeOp>(op);
-    return &opOperand == &reshapeOp.getShapeMutable()[0];
+    return &opOperand == &reshapeOp.getShapeMutable();
   }
 
   bool bufferizesToMemoryWrite(Operation *op, OpOperand &opOperand,
@@ -867,15 +877,20 @@ struct ReshapeOpInterface
       return failure();
 
     // memref.reshape requires the source buffer to have an identity layout.
-    // If the source memref does not have an identity layout, clone the source
+    // If the source memref does not have an identity layout, copy the source
     // into a new buffer with an identity layout.
     auto srcType = llvm::dyn_cast<MemRefType>(srcBuffer->getType());
     if (srcType && !srcType.getLayout().isIdentity()) {
-      auto identityType =
-          MemRefType::get(srcType.getShape(), srcType.getElementType());
+      FailureOr<Value> tensorAlloc = allocateTensorForShapedValue(
+          rewriter, op->getLoc(), reshapeOp.getSource(), options);
+      if (failed(tensorAlloc))
+        return failure();
+      auto memrefType = MemRefType::get(
+          srcType.getShape(), srcType.getElementType(), AffineMap(),
+          cast<BaseMemRefType>(srcBuffer->getType()).getMemorySpace());
       srcBuffer = rewriter
-                      .create<bufferization::CloneOp>(op->getLoc(),
-                                                      identityType, *srcBuffer)
+                      .create<bufferization::ToMemrefOp>(
+                          op->getLoc(), memrefType, *tensorAlloc)
                       .getResult();
     }
 
@@ -916,7 +931,7 @@ struct ParallelInsertSliceOpInterface
   bool bufferizesToMemoryWrite(Operation *op, OpOperand &opOperand,
                                const AnalysisState &state) const {
     auto parallelInsertSliceOp = cast<ParallelInsertSliceOp>(op);
-    return &opOperand == &parallelInsertSliceOp.getDestMutable()[0];
+    return &opOperand == &parallelInsertSliceOp.getDestMutable();
   }
 
   LogicalResult bufferize(Operation *op, RewriterBase &rewriter,

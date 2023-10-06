@@ -52,6 +52,7 @@ Implemented Papers
 - P2697R1 - Interfacing ``bitset`` with ``string_view``
 - P2443R1 - ``views::chunk_by``
 - P2538R1 - ADL-proof ``std::projected``
+- P2614R2 - Deprecate ``numeric_limits::has_denorm``
 
 
 Improvements and New Features
@@ -86,6 +87,9 @@ Deprecations and Removals
   is deprecated (setting it to ``1`` still enables the safe mode in this release while also issuing a deprecation
   warning). ``_LIBCPP_ENABLE_ASSERTIONS`` will be removed entirely in the next release and setting it will become an
   error. See :ref:`the hardening documentation <using-hardening-modes>` for more details.
+
+- The non-conforming constructor ``std::future_error(std::error_code)`` has been removed. Please use the
+  ``std::future_error(std::future_errc)`` constructor provided in C++17 instead.
 
 Upcoming Deprecations and Removals
 ----------------------------------

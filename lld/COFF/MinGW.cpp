@@ -16,6 +16,7 @@
 #include "llvm/Object/COFF.h"
 #include "llvm/Support/Parallel.h"
 #include "llvm/Support/Path.h"
+#include "llvm/Support/TimeProfiler.h"
 #include "llvm/Support/raw_ostream.h"
 
 using namespace llvm;
@@ -50,7 +51,8 @@ AutoExporter::AutoExporter(
       "libc++",
       "libc++abi",
       "libFortran_main",
-      "libflang-rt",
+      "libFortranRuntime",
+      "libFortranDecimal",
       "libunwind",
       "libmsvcrt",
       "libucrtbase",
@@ -171,6 +173,7 @@ bool AutoExporter::shouldExport(Defined *sym) const {
 
 void lld::coff::writeDefFile(StringRef name,
                              const std::vector<Export> &exports) {
+  llvm::TimeTraceScope timeScope("Write .def file");
   std::error_code ec;
   raw_fd_ostream os(name, ec, sys::fs::OF_None);
   if (ec)

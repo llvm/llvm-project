@@ -8,19 +8,12 @@
 //
 // This file contains method definitions for `SparseTensorNNZ`.
 //
-// This file is part of the lightweight runtime support library for sparse
-// tensor manipulations.  The functionality of the support library is meant
-// to simplify benchmarking, testing, and debugging MLIR code operating on
-// sparse tensors.  However, the provided functionality is **not** part of
-// core MLIR itself.
-//
 //===----------------------------------------------------------------------===//
 
 #include "mlir/ExecutionEngine/SparseTensor/Storage.h"
 
 using namespace mlir::sparse_tensor;
 
-//===----------------------------------------------------------------------===//
 SparseTensorNNZ::SparseTensorNNZ(const std::vector<uint64_t> &lvlSizes,
                                  const std::vector<DimLevelType> &lvlTypes)
     : lvlSizes(lvlSizes), lvlTypes(lvlTypes), nnz(getLvlRank()) {

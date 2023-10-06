@@ -1887,21 +1887,16 @@ gentbl_cc_library(
 )
 
 gentbl_cc_library(
-    name = "ArmSMEConversionIncGen",
+    name = "ArmSMEOpsIncGen",
     tbl_outs = [
         (
-            ["-gen-llvmir-conversions"],
-            "include/mlir/Dialect/ArmSME/IR/ArmSMEConversions.inc",
+            ["-gen-op-decls"],
+            "include/mlir/Dialect/ArmSME/IR/ArmSMEOps.h.inc",
         ),
-    ],
-    tblgen = ":mlir-tblgen",
-    td_file = "include/mlir/Dialect/ArmSME/IR/ArmSME.td",
-    deps = [":ArmSMETdFiles"],
-)
-
-gentbl_cc_library(
-    name = "ArmSMEAttrDefsIncGen",
-    tbl_outs = [
+        (
+            ["-gen-op-defs"],
+            "include/mlir/Dialect/ArmSME/IR/ArmSMEOps.cpp.inc",
+        ),
         (
             ["-gen-enum-decls"],
             "include/mlir/Dialect/ArmSME/IR/ArmSMEEnums.h.inc",
@@ -1926,7 +1921,41 @@ gentbl_cc_library(
         ),
     ],
     tblgen = ":mlir-tblgen",
-    td_file = "include/mlir/Dialect/ArmSME/IR/ArmSME.td",
+    td_file = "include/mlir/Dialect/ArmSME/IR/ArmSMEOps.td",
+    deps = [":ArmSMETdFiles"],
+)
+
+gentbl_cc_library(
+    name = "ArmSMEConversionIncGen",
+    tbl_outs = [
+        (
+            ["-gen-llvmir-conversions"],
+            "include/mlir/Dialect/ArmSME/IR/ArmSMEOpsConversions.inc",
+        ),
+    ],
+    tblgen = ":mlir-tblgen",
+    td_file = "include/mlir/Dialect/ArmSME/IR/ArmSMEOps.td",
+    deps = [":ArmSMETdFiles"],
+)
+
+gentbl_cc_library(
+    name = "ArmSMEIntrinsicOpsIncGen",
+    tbl_outs = [
+        (
+            ["-gen-op-decls"],
+            "include/mlir/Dialect/ArmSME/IR/ArmSMEIntrinsicOps.h.inc",
+        ),
+        (
+            ["-gen-op-defs"],
+            "include/mlir/Dialect/ArmSME/IR/ArmSMEIntrinsicOps.cpp.inc",
+        ),
+        (
+            ["-gen-llvmir-conversions"],
+            "include/mlir/Dialect/ArmSME/IR/ArmSMEIntrinsicConversions.inc",
+        ),
+    ],
+    tblgen = ":mlir-tblgen",
+    td_file = "include/mlir/Dialect/ArmSME/IR/ArmSMEIntrinsicOps.td",
     deps = [":ArmSMETdFiles"],
 )
 
@@ -1937,7 +1966,8 @@ cc_library(
     includes = ["include"],
     deps = [
         ":ArmSMEIncGen",
-        ":ArmSMEAttrDefsIncGen",
+        ":ArmSMEIntrinsicOpsIncGen",
+        ":ArmSMEOpsIncGen",
         ":IR",
         ":LLVMDialect",
         ":MemRefDialect",
@@ -3052,6 +3082,7 @@ cc_library(
     deps = [
         ":GPUDialect",
         ":IR",
+        ":LLVMDialect",
         ":NVGPUIncGen",
         ":SideEffectInterfaces",
         "//llvm:Core",
@@ -4484,6 +4515,7 @@ cc_library(
     deps = [
         ":CAPIIR",
         ":IR",
+        ":Rewrite",
         ":Support",
         "//llvm:Support",
     ],
@@ -5269,6 +5301,7 @@ cc_library(
     ]),
     includes = ["include"],
     deps = [
+        ":ArithDialect",
         ":ConversionPassIncGen",
         ":GPUCommonTransforms",
         ":GPUDialect",
@@ -7922,6 +7955,7 @@ cc_library(
     deps = [
         ":ArmSMEConversionIncGen",
         ":ArmSMEDialect",
+        ":ArmSMEIntrinsicOpsIncGen",
         ":IR",
         ":ToLLVMIRTranslation",
         "//llvm:Core",
