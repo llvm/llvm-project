@@ -699,7 +699,7 @@ func.func @sparse_convert_element_type(%arg0: tensor<32xf32, #SparseVector>) -> 
 // CHECK:       %[[VAL_30:.*]] = call @getSparseTensorReaderReadToBuffers0F32(%[[VAL_8]], %[[VAL_29]], %[[VAL_29]], %[[VAL_16]], %[[VAL_17]]) : (!llvm.ptr<i8>, memref<?xindex>, memref<?xindex>, memref<?xindex>, memref<?xf32>) -> i1
 // CHECK:       %[[VAL_31:.*]] = arith.cmpi eq, %[[VAL_30]], %[[VAL_1]] : i1
 // CHECK:       scf.if %[[VAL_31]] {
-// CHECK:         sparse_tensor.sort_coo  hybrid_quick_sort %[[VAL_10]], %[[VAL_16]] jointly %[[VAL_17]]
+// CHECK:         sparse_tensor.sort hybrid_quick_sort %[[VAL_10]], %[[VAL_16]] jointly %[[VAL_17]]
 // CHECK:       }
 // CHECK:       memref.store %[[VAL_10]], %[[VAL_25]]{{\[}}%[[VAL_3]]] : memref<?xindex>
 // CHECK:       %[[VAL_32:.*]] = sparse_tensor.storage_specifier.set %[[VAL_27]]  crd_mem_sz at 0 with %[[VAL_13]]
