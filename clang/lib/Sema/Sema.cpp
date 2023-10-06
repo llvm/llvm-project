@@ -226,7 +226,6 @@ Sema::Sema(Preprocessor &pp, ASTContext &ctxt, ASTConsumer &consumer,
       CurScope(nullptr), Ident_super(nullptr) {
   assert(pp.TUKind == TUKind);
   TUScope = nullptr;
-  isConstantEvaluatedOverride = false;
 
   LoadedExternalKnownNamespaces = false;
   for (unsigned I = 0; I != NSAPI::NumNSNumberLiteralMethods; ++I)
