@@ -702,6 +702,11 @@ class SourceManager : public RefCountedBase<SourceManager> {
   /// use (-ID - 2).
   llvm::PagedVector<SrcMgr::SLocEntry> LoadedSLocEntryTable;
 
+  /// For each allocation in LoadedSLocEntryTable, we keep the first FileID.
+  /// We assume exactly one allocation per AST file, and use that to determine
+  /// whether two FileIDs come from the same AST file.
+  SmallVector<FileID, 0> LoadedSLocEntryAllocBegin;
+
   /// The starting offset of the next local SLocEntry.
   ///
   /// This is LocalSLocEntryTable.back().Offset + the size of that entry.
@@ -1638,6 +1643,11 @@ public:
   std::pair<bool, bool>
   isInTheSameTranslationUnit(std::pair<FileID, unsigned> &LOffs,
                              std::pair<FileID, unsigned> &ROffs) const;
+
+  /// Determines whether the two decomposed source location is in the same TU.
+  bool isInTheSameTranslationUnitImpl(
+      const std::pair<FileID, unsigned> &LOffs,
+      const std::pair<FileID, unsigned> &ROffs) const;
 
   /// Determines the order of 2 source locations in the "source location
   /// address space".

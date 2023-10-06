@@ -460,8 +460,9 @@ SourceManager::AllocateLoadedSLocEntries(unsigned NumSLocEntries,
   LoadedSLocEntryTable.resize(LoadedSLocEntryTable.size() + NumSLocEntries);
   SLocEntryLoaded.resize(LoadedSLocEntryTable.size());
   CurrentLoadedOffset -= TotalSize;
-  int ID = LoadedSLocEntryTable.size();
-  return std::make_pair(-ID - 1, CurrentLoadedOffset);
+  int BaseID = -int(LoadedSLocEntryTable.size()) - 1;
+  LoadedSLocEntryAllocBegin.push_back(FileID::get(BaseID));
+  return std::make_pair(BaseID, CurrentLoadedOffset);
 }
 
 /// As part of recovering from missing or changed content, produce a
@@ -1964,14 +1965,38 @@ SourceManager::getDecomposedIncludedLoc(FileID FID) const {
   return DecompLoc;
 }
 
+bool SourceManager::isInTheSameTranslationUnitImpl(
+    const std::pair<FileID, unsigned> &LOffs,
+    const std::pair<FileID, unsigned> &ROffs) const {
+  // If one is local while the other is loaded.
+  if (isLoadedFileID(LOffs.first) != isLoadedFileID(ROffs.first))
+    return false;
+
+  if (isLoadedFileID(LOffs.first) && isLoadedFileID(ROffs.first)) {
+    auto FindSLocEntryAlloc = [this](FileID FID) {
+      // Loaded FileIDs are negative, we store the lowest FileID from each
+      // allocation, later allocations have lower FileIDs.
+      return llvm::lower_bound(LoadedSLocEntryAllocBegin, FID, std::greater{});
+    };
+
+    // If both are loaded from different AST files.
+    if (FindSLocEntryAlloc(LOffs.first) != FindSLocEntryAlloc(ROffs.first))
+      return false;
+  }
+
+  return true;
+}
+
 /// Given a decomposed source location, move it up the include/expansion stack
-/// to the parent source location.  If this is possible, return the decomposed
-/// version of the parent in Loc and return false.  If Loc is the top-level
-/// entry, return true and don't modify it.
-static bool MoveUpIncludeHierarchy(std::pair<FileID, unsigned> &Loc,
-                                   const SourceManager &SM) {
+/// to the parent source location within the same translation unit.  If this is
+/// possible, return the decomposed version of the parent in Loc and return
+/// false.  If Loc is a top-level entry, return true and don't modify it.
+static bool
+MoveUpTranslationUnitIncludeHierarchy(std::pair<FileID, unsigned> &Loc,
+                                      const SourceManager &SM) {
   std::pair<FileID, unsigned> UpperLoc = SM.getDecomposedIncludedLoc(Loc.first);
-  if (UpperLoc.first.isInvalid())
+  if (UpperLoc.first.isInvalid() ||
+      !SM.isInTheSameTranslationUnitImpl(UpperLoc, Loc))
     return true; // We reached the top.
 
   Loc = UpperLoc;
@@ -2027,45 +2052,18 @@ bool SourceManager::isBeforeInTranslationUnit(SourceLocation LHS,
   std::pair<bool, bool> InSameTU = isInTheSameTranslationUnit(LOffs, ROffs);
   if (InSameTU.first)
     return InSameTU.second;
-
-  // If we arrived here, the location is either in a built-ins buffer or
-  // associated with global inline asm. PR5662 and PR22576 are examples.
-
-  StringRef LB = getBufferOrFake(LOffs.first).getBufferIdentifier();
-  StringRef RB = getBufferOrFake(ROffs.first).getBufferIdentifier();
-  bool LIsBuiltins = LB == "<built-in>";
-  bool RIsBuiltins = RB == "<built-in>";
-  // Sort built-in before non-built-in.
-  if (LIsBuiltins || RIsBuiltins) {
-    if (LIsBuiltins != RIsBuiltins)
-      return LIsBuiltins;
-    // Both are in built-in buffers, but from different files. We just claim that
-    // lower IDs come first.
-    return LOffs.first < ROffs.first;
-  }
-  bool LIsAsm = LB == "<inline asm>";
-  bool RIsAsm = RB == "<inline asm>";
-  // Sort assembler after built-ins, but before the rest.
-  if (LIsAsm || RIsAsm) {
-    if (LIsAsm != RIsAsm)
-      return RIsAsm;
-    assert(LOffs.first == ROffs.first);
-    return false;
-  }
-  bool LIsScratch = LB == "<scratch space>";
-  bool RIsScratch = RB == "<scratch space>";
-  // Sort scratch after inline asm, but before the rest.
-  if (LIsScratch || RIsScratch) {
-    if (LIsScratch != RIsScratch)
-      return LIsScratch;
-    return LOffs.second < ROffs.second;
-  }
-  llvm_unreachable("Unsortable locations found");
+  // TODO: This should be unreachable, but some clients are calling this
+  //       function before making sure LHS and RHS are in the same TU.
+  return LOffs.first < ROffs.first;
 }
 
 std::pair<bool, bool> SourceManager::isInTheSameTranslationUnit(
     std::pair<FileID, unsigned> &LOffs,
     std::pair<FileID, unsigned> &ROffs) const {
+  // If the source locations are not in the same TU, return early.
+  if (!isInTheSameTranslationUnitImpl(LOffs, ROffs))
+    return std::make_pair(false, false);
+
   // If the source locations are in the same file, just compare offsets.
   if (LOffs.first == ROffs.first)
     return std::make_pair(true, LOffs.second < ROffs.second);
@@ -2088,53 +2086,88 @@ std::pair<bool, bool> SourceManager::isInTheSameTranslationUnit(
 
   // A location within a FileID on the path up from LOffs to the main file.
   struct Entry {
-    unsigned Offset;
-    FileID ParentFID; // Used for breaking ties.
+    std::pair<FileID, unsigned> DecomposedLoc; // FileID redundant, but clearer.
+    FileID ChildFID; // Used for breaking ties. Invalid for the initial loc.
   };
   llvm::SmallDenseMap<FileID, Entry, 16> LChain;
 
-  FileID Parent;
+  FileID LChild;
   do {
-    LChain.try_emplace(LOffs.first, Entry{LOffs.second, Parent});
+    LChain.try_emplace(LOffs.first, Entry{LOffs, LChild});
     // We catch the case where LOffs is in a file included by ROffs and
     // quit early. The other way round unfortunately remains suboptimal.
     if (LOffs.first == ROffs.first)
       break;
-    Parent = LOffs.first;
-  } while (!MoveUpIncludeHierarchy(LOffs, *this));
+    LChild = LOffs.first;
+  } while (!MoveUpTranslationUnitIncludeHierarchy(LOffs, *this));
 
-  Parent = FileID();
+  FileID RChild;
   do {
-    auto I = LChain.find(ROffs.first);
-    if (I != LChain.end()) {
+    auto LIt = LChain.find(ROffs.first);
+    if (LIt != LChain.end()) {
       // Compare the locations within the common file and cache them.
-      LOffs.first = I->first;
-      LOffs.second = I->second.Offset;
-      // The relative order of LParent and RParent is a tiebreaker when
+      LOffs = LIt->second.DecomposedLoc;
+      LChild = LIt->second.ChildFID;
+      // The relative order of LChild and RChild is a tiebreaker when
       // - locs expand to the same location (occurs in macro arg expansion)
       // - one loc is a parent of the other (we consider the parent as "first")
-      // For the parent to be first, the invalid file ID must compare smaller.
+      // For the parent entry to be first, its invalid child file ID must
+      // compare smaller to the valid child file ID of the other entry.
       // However loaded FileIDs are <0, so we perform *unsigned* comparison!
       // This changes the relative order of local vs loaded FileIDs, but it
       // doesn't matter as these are never mixed in macro expansion.
-      unsigned LParent = I->second.ParentFID.ID;
-      unsigned RParent = Parent.ID;
+      unsigned LChildID = LChild.ID;
+      unsigned RChildID = RChild.ID;
       assert(((LOffs.second != ROffs.second) ||
-              (LParent == 0 || RParent == 0) ||
-              isInSameSLocAddrSpace(getComposedLoc(I->second.ParentFID, 0),
-                                    getComposedLoc(Parent, 0), nullptr)) &&
+              (LChildID == 0 || RChildID == 0) ||
+              isInSameSLocAddrSpace(getComposedLoc(LChild, 0),
+                                    getComposedLoc(RChild, 0), nullptr)) &&
              "Mixed local/loaded FileIDs with same include location?");
       IsBeforeInTUCache.setCommonLoc(LOffs.first, LOffs.second, ROffs.second,
-                                     LParent < RParent);
+                                     LChildID < RChildID);
       return std::make_pair(
           true, IsBeforeInTUCache.getCachedResult(LOffs.second, ROffs.second));
     }
-    Parent = ROffs.first;
-  } while (!MoveUpIncludeHierarchy(ROffs, *this));
+    RChild = ROffs.first;
+  } while (!MoveUpTranslationUnitIncludeHierarchy(ROffs, *this));
 
-  // If we found no match, we're not in the same TU.
-  // We don't cache this, but it is rare.
-  return std::make_pair(false, false);
+  // If we found no match, the location is either in a built-ins buffer or
+  // associated with global inline asm. PR5662 and PR22576 are examples.
+
+  StringRef LB = getBufferOrFake(LOffs.first).getBufferIdentifier();
+  StringRef RB = getBufferOrFake(ROffs.first).getBufferIdentifier();
+
+  bool LIsBuiltins = LB == "<built-in>";
+  bool RIsBuiltins = RB == "<built-in>";
+  // Sort built-in before non-built-in.
+  if (LIsBuiltins || RIsBuiltins) {
+    if (LIsBuiltins != RIsBuiltins)
+      return std::make_pair(true, LIsBuiltins);
+    // Both are in built-in buffers, but from different files. We just claim
+    // that lower IDs come first.
+    return std::make_pair(true, LOffs.first < ROffs.first);
+  }
+
+  bool LIsAsm = LB == "<inline asm>";
+  bool RIsAsm = RB == "<inline asm>";
+  // Sort assembler after built-ins, but before the rest.
+  if (LIsAsm || RIsAsm) {
+    if (LIsAsm != RIsAsm)
+      return std::make_pair(true, RIsAsm);
+    assert(LOffs.first == ROffs.first);
+    return std::make_pair(true, false);
+  }
+
+  bool LIsScratch = LB == "<scratch space>";
+  bool RIsScratch = RB == "<scratch space>";
+  // Sort scratch after inline asm, but before the rest.
+  if (LIsScratch || RIsScratch) {
+    if (LIsScratch != RIsScratch)
+      return std::make_pair(true, LIsScratch);
+    return std::make_pair(true, LOffs.second < ROffs.second);
+  }
+
+  llvm_unreachable("Unsortable locations found");
 }
 
 void SourceManager::PrintStats() const {

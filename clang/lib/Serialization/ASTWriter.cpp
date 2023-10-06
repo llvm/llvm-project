@@ -839,7 +839,6 @@ void ASTWriter::WriteBlockInfoBlock() {
   RECORD(METHOD_POOL);
   RECORD(PP_COUNTER_VALUE);
   RECORD(SOURCE_LOCATION_OFFSETS);
-  RECORD(SOURCE_LOCATION_PRELOADS);
   RECORD(EXT_VECTOR_DECLS);
   RECORD(UNUSED_FILESCOPED_DECLS);
   RECORD(PPD_ENTITIES_OFFSETS);
@@ -2138,7 +2137,6 @@ void ASTWriter::WriteSourceManagerBlock(SourceManager &SourceMgr,
   // entry, which is always the same dummy entry.
   std::vector<uint32_t> SLocEntryOffsets;
   uint64_t SLocEntryOffsetsBase = Stream.GetCurrentBitNo();
-  RecordData PreloadSLocs;
   SLocEntryOffsets.reserve(SourceMgr.local_sloc_entry_size() - 1);
   for (unsigned I = 1, N = SourceMgr.local_sloc_entry_size();
        I != N; ++I) {
@@ -2214,9 +2212,6 @@ void ASTWriter::WriteSourceManagerBlock(SourceManager &SourceMgr,
         Stream.EmitRecordWithBlob(SLocBufferAbbrv, Record,
                                   StringRef(Name.data(), Name.size() + 1));
         EmitBlob = true;
-
-        if (Name == "<built-in>")
-          PreloadSLocs.push_back(SLocEntryOffsets.size());
       }
 
       if (EmitBlob) {
@@ -2278,9 +2273,6 @@ void ASTWriter::WriteSourceManagerBlock(SourceManager &SourceMgr,
     Stream.EmitRecordWithBlob(SLocOffsetsAbbrev, Record,
                               bytes(SLocEntryOffsets));
   }
-  // Write the source location entry preloads array, telling the AST
-  // reader which source locations entries it should load eagerly.
-  Stream.EmitRecord(SOURCE_LOCATION_PRELOADS, PreloadSLocs);
 
   // Write the line table. It depends on remapping working, so it must come
   // after the source location offsets.
