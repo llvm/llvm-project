@@ -1779,11 +1779,11 @@ CodeExtractor::extractCodeRegion(const CodeExtractorAnalysisCache &CEAC,
 
   // Update the entry count of the function.
   if (BFI) {
-    auto Count = BFI->getProfileCountFromFreq(EntryFreq.getFrequency());
+    auto Count = BFI->getProfileCountFromFreq(EntryFreq);
     if (Count)
       newFunction->setEntryCount(
           ProfileCount(*Count, Function::PCT_Real)); // FIXME
-    BFI->setBlockFreq(codeReplacer, EntryFreq.getFrequency());
+    BFI->setBlockFreq(codeReplacer, EntryFreq);
   }
 
   CallInst *TheCall =
