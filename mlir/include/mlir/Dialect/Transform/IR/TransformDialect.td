@@ -20,10 +20,14 @@ def Transform_Dialect : Dialect {
 
   let hasOperationAttrVerify = 1;
   let extraClassDeclaration = [{
+    /// Symbol name for the default entry point "named sequence".
+    constexpr const static ::llvm::StringLiteral
+        kTransformEntryPointSymbolName = "__transform_main";
+    
     /// Name of the attribute attachable to the symbol table operation
     /// containing named sequences. This is used to trigger verification.
-    constexpr const static ::llvm::StringLiteral kWithNamedSequenceAttrName =
-        "transform.with_named_sequence";
+    constexpr const static ::llvm::StringLiteral
+        kWithNamedSequenceAttrName = "transform.with_named_sequence";
 
     /// Name of the attribute attachable to an operation so it can be
     /// identified as root by the default interpreter pass.
@@ -73,6 +77,22 @@ def Transform_Dialect : Dialect {
     /// its extensions.
     using ExtensionTypePrintingHook =
         std::function<void(::mlir::Type, ::mlir::AsmPrinter &)>;
+
+    /// Appends the given module as a transform symbol library available to
+    /// all dialect users.
+    void registerLibraryModule(::mlir::OwningOpRef<::mlir::ModuleOp> &&
+                                library) {
+      libraryModules.push_back(std::move(library));
+    }
+
+    /// Returns a range of registered library modules.
+    auto getLibraryModules() const {
+      return ::llvm::map_range(
+          libraryModules,
+          [](const ::mlir::OwningOpRef<::mlir::ModuleOp> &library) {
+        return library.get();
+      });
+    }
 
   private:
     /// Registers operations specified as template parameters with this
@@ -132,6 +152,11 @@ def Transform_Dialect : Dialect {
     /// lookups when the type is fully constructed.
     ::llvm::DenseMap<::mlir::TypeID, ExtensionTypePrintingHook>
         typePrintingHooks;
+
+    /// Modules containing symbols, e.g. named sequences, that will be
+    /// resolved by the interpreter when used.
+    ::llvm::SmallVector<::mlir::OwningOpRef<::mlir::ModuleOp>, 2>
+        libraryModules;
   }];
 }
 
