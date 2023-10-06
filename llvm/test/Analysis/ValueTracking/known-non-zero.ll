@@ -1163,11 +1163,7 @@ define i1 @sdiv_known_non_zero_fail(i8 %x, i8 %y) {
 
 define <2 x i1> @cmp_excludes_zero_with_nonsplat_vec(<2 x i8> %a, <2 x i8> %b) {
 ; CHECK-LABEL: @cmp_excludes_zero_with_nonsplat_vec(
-; CHECK-NEXT:    [[C:%.*]] = icmp sge <2 x i8> [[A:%.*]], <i8 1, i8 4>
-; CHECK-NEXT:    [[S:%.*]] = select <2 x i1> [[C]], <2 x i8> [[A]], <2 x i8> <i8 4, i8 5>
-; CHECK-NEXT:    [[AND:%.*]] = or <2 x i8> [[S]], [[B:%.*]]
-; CHECK-NEXT:    [[R:%.*]] = icmp eq <2 x i8> [[AND]], zeroinitializer
-; CHECK-NEXT:    ret <2 x i1> [[R]]
+; CHECK-NEXT:    ret <2 x i1> zeroinitializer
 ;
   %c = icmp sge <2 x i8> %a, <i8 1, i8 4>
   %s = select <2 x i1> %c, <2 x i8> %a, <2 x i8> <i8 4, i8 5>
