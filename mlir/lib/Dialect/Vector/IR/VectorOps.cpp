@@ -1251,7 +1251,7 @@ LogicalResult vector::ExtractOp::verify() {
     return emitOpError(
         "mismatch between dynamic and static positions (kDynamic marker but no "
         "corresponding dynamic position) -- this can only happen due to an "
-        "incorrect/fold rewrite");
+        "incorrect fold/rewrite");
   auto position = getMixedPosition();
   if (position.size() > static_cast<unsigned>(getSourceVectorType().getRank()))
     return emitOpError(
