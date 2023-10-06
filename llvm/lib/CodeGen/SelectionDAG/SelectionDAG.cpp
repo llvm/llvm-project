@@ -10840,6 +10840,7 @@ void SelectionDAG::salvageDebugInfo(SDNode &N) {
         Changed = true;
       }
       assert(Changed && "Salvage target doesn't use N");
+      (void)Changed;
 
       SDDbgValue *Clone =
           getDbgValueList(DV->getVariable(), DbgExpression, NewLocOps,
