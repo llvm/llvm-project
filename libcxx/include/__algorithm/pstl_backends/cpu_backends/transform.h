@@ -17,13 +17,16 @@
 #include <__type_traits/enable_if.h>
 #include <__type_traits/is_execution_policy.h>
 #include <__type_traits/remove_cvref.h>
-#include <__utility/terminate_on_exception.h>
+#include <optional>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #  pragma GCC system_header
 #endif
 
 #if !defined(_LIBCPP_HAS_NO_INCOMPLETE_PSTL) && _LIBCPP_STD_VER >= 17
+
+_LIBCPP_PUSH_MACROS
+#  include <__undef_macros>
 
 _LIBCPP_BEGIN_NAMESPACE_STD
 
@@ -37,7 +40,7 @@ __simd_walk_2(_Iterator1 __first1, _DifferenceType __n, _Iterator2 __first2, _Fu
 }
 
 template <class _ExecutionPolicy, class _ForwardIterator, class _ForwardOutIterator, class _UnaryOperation>
-_LIBCPP_HIDE_FROM_ABI _ForwardOutIterator __pstl_transform(
+_LIBCPP_HIDE_FROM_ABI optional<_ForwardOutIterator> __pstl_transform(
     __cpu_backend_tag,
     _ForwardIterator __first,
     _ForwardIterator __last,
@@ -46,13 +49,13 @@ _LIBCPP_HIDE_FROM_ABI _ForwardOutIterator __pstl_transform(
   if constexpr (__is_parallel_execution_policy_v<_ExecutionPolicy> &&
                 __has_random_access_iterator_category_or_concept<_ForwardIterator>::value &&
                 __has_random_access_iterator_category_or_concept<_ForwardOutIterator>::value) {
-    std::__terminate_on_exception([&] {
-      std::__par_backend::__parallel_for(
-          __first, __last, [__op, __first, __result](_ForwardIterator __brick_first, _ForwardIterator __brick_last) {
-            return std::__pstl_transform<__remove_parallel_policy_t<_ExecutionPolicy>>(
-                __cpu_backend_tag{}, __brick_first, __brick_last, __result + (__brick_first - __first), __op);
-          });
-    });
+    std::__par_backend::__parallel_for(
+        __first, __last, [__op, __first, __result](_ForwardIterator __brick_first, _ForwardIterator __brick_last) {
+          auto __res = std::__pstl_transform<__remove_parallel_policy_t<_ExecutionPolicy>>(
+              __cpu_backend_tag{}, __brick_first, __brick_last, __result + (__brick_first - __first), __op);
+          _LIBCPP_ASSERT_INTERNAL(__res, "unseq/seq should never try to allocate!");
+          return *std::move(__res);
+        });
     return __result + (__last - __first);
   } else if constexpr (__is_unsequenced_execution_policy_v<_ExecutionPolicy> &&
                        __has_random_access_iterator_category_or_concept<_ForwardIterator>::value &&
@@ -83,7 +86,7 @@ template <class _ExecutionPolicy,
           class _ForwardOutIterator,
           class _BinaryOperation,
           enable_if_t<is_execution_policy_v<__remove_cvref_t<_ExecutionPolicy>>, int> = 0>
-_LIBCPP_HIDE_FROM_ABI _ForwardOutIterator __pstl_transform(
+_LIBCPP_HIDE_FROM_ABI optional<_ForwardOutIterator> __pstl_transform(
     __cpu_backend_tag,
     _ForwardIterator1 __first1,
     _ForwardIterator1 __last1,
@@ -94,20 +97,20 @@ _LIBCPP_HIDE_FROM_ABI _ForwardOutIterator __pstl_transform(
                 __has_random_access_iterator_category_or_concept<_ForwardIterator1>::value &&
                 __has_random_access_iterator_category_or_concept<_ForwardIterator2>::value &&
                 __has_random_access_iterator_category_or_concept<_ForwardOutIterator>::value) {
-    std::__terminate_on_exception([&] {
-      std::__par_backend::__parallel_for(
-          __first1,
-          __last1,
-          [__op, __first1, __first2, __result](_ForwardIterator1 __brick_first, _ForwardIterator1 __brick_last) {
-            return std::__pstl_transform<__remove_parallel_policy_t<_ExecutionPolicy>>(
-                __cpu_backend_tag{},
-                __brick_first,
-                __brick_last,
-                __first2 + (__brick_first - __first1),
-                __result + (__brick_first - __first1),
-                __op);
-          });
-    });
+    auto __res = std::__par_backend::__parallel_for(
+        __first1,
+        __last1,
+        [__op, __first1, __first2, __result](_ForwardIterator1 __brick_first, _ForwardIterator1 __brick_last) {
+          return std::__pstl_transform<__remove_parallel_policy_t<_ExecutionPolicy>>(
+              __cpu_backend_tag{},
+              __brick_first,
+              __brick_last,
+              __first2 + (__brick_first - __first1),
+              __result + (__brick_first - __first1),
+              __op);
+        });
+    if (!__res)
+      return nullopt;
     return __result + (__last1 - __first1);
   } else if constexpr (__is_unsequenced_execution_policy_v<_ExecutionPolicy> &&
                        __has_random_access_iterator_category_or_concept<_ForwardIterator1>::value &&
@@ -127,6 +130,8 @@ _LIBCPP_HIDE_FROM_ABI _ForwardOutIterator __pstl_transform(
 }
 
 _LIBCPP_END_NAMESPACE_STD
+
+_LIBCPP_POP_MACROS
 
 #endif // !defined(_LIBCPP_HAS_NO_INCOMPLETE_PSTL) && _LIBCPP_STD_VER >= 17
 
