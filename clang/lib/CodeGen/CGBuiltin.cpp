@@ -9815,6 +9815,11 @@ Value *CodeGenFunction::EmitSVEMaskedStore(const CallExpr *E,
   return Store;
 }
 
+Value *CodeGenFunction::EmitTileslice(Value *Offset, Value *Base) {
+  llvm::Value *CastOffset = Builder.CreateIntCast(Offset, Int64Ty, false);
+  return Builder.CreateAdd(Base, CastOffset, "tileslice");
+}
+
 Value *CodeGenFunction::EmitSMELd1St1(const SVETypeFlags &TypeFlags,
                                       SmallVectorImpl<Value *> &Ops,
                                       unsigned IntID) {
@@ -9870,18 +9875,34 @@ Value *CodeGenFunction::EmitSMEZero(const SVETypeFlags &TypeFlags,
 Value *CodeGenFunction::EmitSMELdrStr(const SVETypeFlags &TypeFlags,
                                       SmallVectorImpl<Value *> &Ops,
                                       unsigned IntID) {
-  if (Ops.size() == 3) {
-    Function *Cntsb = CGM.getIntrinsic(Intrinsic::aarch64_sme_cntsb);
-    llvm::Value *CntsbCall = Builder.CreateCall(Cntsb, {}, "svlb");
+  if (Ops.size() == 2) {
+    // Intrinsics without a vecnum also use this function, so just provide 0
+    Ops.push_back(Ops[1]);
+    Ops[1] = Builder.getInt32(0);
+  } else {
+    int Imm = -1;
+    if (ConstantInt* C = dyn_cast<ConstantInt>(Ops[2]))
+      if (C->getZExtValue() <= 15)
+          Imm = C->getZExtValue();
 
-    llvm::Value *VecNum = Ops[2];
-    llvm::Value *MulVL = Builder.CreateMul(CntsbCall, VecNum, "mulvl");
+    if (Imm != -1) {
+      Ops[2] = Ops[1];
+      Ops[1] = Builder.getInt32(Imm);
+    } else {
+      Function *Cntsb = CGM.getIntrinsic(Intrinsic::aarch64_sme_cntsb);
+      llvm::Value *CntsbCall = Builder.CreateCall(Cntsb, {}, "svlb");
 
-    Ops[1] = Builder.CreateGEP(Int8Ty, Ops[1], MulVL);
-    Ops[0] = Builder.CreateAdd(
-        Ops[0], Builder.CreateIntCast(VecNum, Int32Ty, true), "tileslice");
-    Ops.erase(&Ops[2]);
-  }
+      llvm::Value *VecNum = Ops[2];
+      llvm::Value *MulVL = Builder.CreateMul(
+          CntsbCall,
+          VecNum,
+          "mulvl");
+
+      Ops[2] = Builder.CreateGEP(Int8Ty, Ops[1], MulVL);
+      Ops[1] = Builder.getInt32(0);
+      Ops[0] = Builder.CreateIntCast(EmitTileslice(Ops[0], VecNum), Int32Ty, false);
+    }
+   }
   Function *F = CGM.getIntrinsic(IntID, {});
   return Builder.CreateCall(F, Ops);
 }

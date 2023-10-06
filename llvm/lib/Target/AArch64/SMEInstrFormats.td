@@ -794,8 +794,8 @@ multiclass sme_spill<string opcodestr> {
                   (!cast<Instruction>(NAME) MatrixOp:$ZAt,
                    MatrixIndexGPR32Op12_15:$Rv, sme_elm_idx0_15:$imm4, GPR64sp:$Rn, 0), 1>;
   // base
-  def : Pat<(int_aarch64_sme_str MatrixIndexGPR32Op12_15:$idx, GPR64sp:$base),
-            (!cast<Instruction>(NAME) ZA, $idx, 0, $base, 0)>;
+  def : Pat<(int_aarch64_sme_str MatrixIndexGPR32Op12_15:$idx, sme_elm_idx0_15:$imm, GPR64sp:$base),
+            (!cast<Instruction>(NAME) ZA, $idx, $imm, $base, 0)>;
 }
 
 multiclass sme_fill<string opcodestr> {
@@ -805,7 +805,7 @@ multiclass sme_fill<string opcodestr> {
                    MatrixIndexGPR32Op12_15:$Rv, sme_elm_idx0_15:$imm4, GPR64sp:$Rn, 0), 1>;
   def NAME # _PSEUDO
       : Pseudo<(outs),
-               (ins MatrixIndexGPR32Op12_15:$idx, imm0_15:$imm4,
+               (ins MatrixIndexGPR32Op12_15:$idx, sme_elm_idx0_15:$imm4,
                     GPR64sp:$base), []>,
         Sched<[]> {
     // Translated to actual instruction in AArch64ISelLowering.cpp
@@ -813,8 +813,8 @@ multiclass sme_fill<string opcodestr> {
     let mayLoad = 1;
   }
   // base
-  def : Pat<(int_aarch64_sme_ldr MatrixIndexGPR32Op12_15:$idx, GPR64sp:$base),
-            (!cast<Instruction>(NAME # _PSEUDO) $idx, 0, $base)>;
+  def : Pat<(int_aarch64_sme_ldr MatrixIndexGPR32Op12_15:$idx, sme_elm_idx0_15:$imm, GPR64sp:$base),
+            (!cast<Instruction>(NAME # _PSEUDO) $idx, $imm, $base)>;
 }
 
 //===----------------------------------------------------------------------===//

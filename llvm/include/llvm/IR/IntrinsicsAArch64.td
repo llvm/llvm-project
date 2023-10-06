@@ -2679,10 +2679,10 @@ let TargetPrefix = "aarch64" in {
   def int_aarch64_sme_st1q_vert  : SME_Load_Store_Intrinsic<llvm_nxv1i1_ty>;
 
   // Spill + fill
-  def int_aarch64_sme_ldr : DefaultAttrsIntrinsic<
-    [], [llvm_i32_ty, llvm_ptr_ty]>;
-  def int_aarch64_sme_str : DefaultAttrsIntrinsic<
-    [], [llvm_i32_ty, llvm_ptr_ty]>;
+  class SME_LDR_STR_Intrinsic
+    : DefaultAttrsIntrinsic<[], [llvm_i32_ty, llvm_ptr_ty, llvm_i32_ty], [ImmArg<ArgIndex<2>>]>;
+  def int_aarch64_sme_ldr : SME_LDR_STR_Intrinsic;
+  def int_aarch64_sme_str : SME_LDR_STR_Intrinsic;
 
   class SME_TileToVector_Intrinsic
       : DefaultAttrsIntrinsic<[llvm_anyvector_ty],
