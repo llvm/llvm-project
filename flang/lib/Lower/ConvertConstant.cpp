@@ -388,37 +388,38 @@ static mlir::Value genInlinedStructureCtorLitImpl(
 
     // Special handling for scalar c_ptr/c_funptr constants. The array constant
     // must fall through to genConstantValue() below.
-    if (Fortran::semantics::IsBuiltinCPtr(sym) && sym->Rank() == 0) {
-      // Builtin c_ptr and c_funptr have special handling because initial
-      // values are handled for them as an extension.
+    if (Fortran::semantics::IsBuiltinCPtr(sym) && sym->Rank() == 0 &&
+        (Fortran::evaluate::GetLastSymbol(expr.value()) ||
+         Fortran::evaluate::IsNullPointer(expr.value()))) {
+      // Builtin c_ptr and c_funptr have special handling because designators
+      // and NULL() are handled as initial values for them as an extension
+      // (otherwise only c_ptr_null/c_funptr_null are allowed and these are
+      // replaced by structure constructors by semantics, so GetLastSymbol
+      // returns nothing).
+
+      // The Ev::Expr is an initializer that is a pointer target (e.g., 'x' or
+      // NULL()) that must be inserted into an intermediate cptr record value's
+      // address field, which ought to be an intptr_t on the target.
       mlir::Value addr = fir::getBase(Fortran::lower::genExtAddrInInitializer(
           converter, loc, expr.value()));
-      if (addr.getType() == componentTy) {
-        // Do nothing. The Ev::Expr was returned as a value that can be
-        // inserted directly to the component without an intermediary.
-      } else {
-        // The Ev::Expr returned is an initializer that is a pointer (e.g.,
-        // null) that must be inserted into an intermediate cptr record
-        // value's address field, which ought to be an intptr_t on the target.
-        if (addr.getType().isa<fir::BoxProcType>())
-          addr = builder.create<fir::BoxAddrOp>(loc, addr);
-        assert((fir::isa_ref_type(addr.getType()) ||
-                addr.getType().isa<mlir::FunctionType>()) &&
-               "expect reference type for address field");
-        assert(fir::isa_derived(componentTy) &&
-               "expect C_PTR, C_FUNPTR to be a record");
-        auto cPtrRecTy = componentTy.cast<fir::RecordType>();
-        llvm::StringRef addrFieldName = Fortran::lower::builtin::cptrFieldName;
-        mlir::Type addrFieldTy = cPtrRecTy.getType(addrFieldName);
-        auto addrField = builder.create<fir::FieldIndexOp>(
-            loc, fieldTy, addrFieldName, componentTy,
-            /*typeParams=*/mlir::ValueRange{});
-        mlir::Value castAddr = builder.createConvert(loc, addrFieldTy, addr);
-        auto undef = builder.create<fir::UndefOp>(loc, componentTy);
-        addr = builder.create<fir::InsertValueOp>(
-            loc, componentTy, undef, castAddr,
-            builder.getArrayAttr(addrField.getAttributes()));
-      }
+      if (addr.getType().isa<fir::BoxProcType>())
+        addr = builder.create<fir::BoxAddrOp>(loc, addr);
+      assert((fir::isa_ref_type(addr.getType()) ||
+              addr.getType().isa<mlir::FunctionType>()) &&
+             "expect reference type for address field");
+      assert(fir::isa_derived(componentTy) &&
+             "expect C_PTR, C_FUNPTR to be a record");
+      auto cPtrRecTy = componentTy.cast<fir::RecordType>();
+      llvm::StringRef addrFieldName = Fortran::lower::builtin::cptrFieldName;
+      mlir::Type addrFieldTy = cPtrRecTy.getType(addrFieldName);
+      auto addrField = builder.create<fir::FieldIndexOp>(
+          loc, fieldTy, addrFieldName, componentTy,
+          /*typeParams=*/mlir::ValueRange{});
+      mlir::Value castAddr = builder.createConvert(loc, addrFieldTy, addr);
+      auto undef = builder.create<fir::UndefOp>(loc, componentTy);
+      addr = builder.create<fir::InsertValueOp>(
+          loc, componentTy, undef, castAddr,
+          builder.getArrayAttr(addrField.getAttributes()));
       res = builder.create<fir::InsertValueOp>(
           loc, recTy, res, addr, builder.getArrayAttr(field.getAttributes()));
       continue;
