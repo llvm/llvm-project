@@ -229,6 +229,7 @@ cc_test(
         "Dialect/Transform/*.h",
     ]),
     deps = [
+        "//llvm:Support",
         "//llvm:TestingSupport",
         "//mlir:FuncDialect",
         "//mlir:IR",
@@ -238,6 +239,7 @@ cc_test(
         "//mlir:Support",
         "//mlir:TransformDialect",
         "//mlir:TransformDialectTransforms",
+        "//mlir/test:TestTransformDialect",
         "//third-party/unittest:gtest",
         "//third-party/unittest:gtest_main",
     ],
