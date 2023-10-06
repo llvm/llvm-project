@@ -18,7 +18,7 @@
 #include "check_assertion.h"
 #include <ranges>
 
-void test() {
+void stride_view_over_only_input_ranges() {
   int range[] = {1, 2, 3};
   // Keep up to date with assertion message from the ctor.
   TEST_LIBCPP_ASSERT_FAILURE(
@@ -28,6 +28,6 @@ void test() {
 }
 
 int main() {
-  test();
+  stride_view_over_only_input_ranges();
   return 0;
 }
