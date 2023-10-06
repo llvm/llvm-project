@@ -17,8 +17,7 @@
 int main() {
 #ifdef __x86_64__
   const size_t kLog2Size = 39;
-#elif defined(__mips64) || defined(__aarch64__) ||                             \
-    defined(__loongarch_lp64) || (defined(__riscv) && __riscv_xlen == 64)
+#elif defined(__mips64) || defined(__aarch64__) || defined(__loongarch_lp64)
   const size_t kLog2Size = 32;
 #elif defined(__powerpc64__)
   const size_t kLog2Size = 39;
