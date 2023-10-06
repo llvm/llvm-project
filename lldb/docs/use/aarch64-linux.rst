@@ -35,30 +35,32 @@ In LLDB you will be able to see the following new registers:
 
 The example above has a vector length of 16 bytes. Within LLDB you will always
 see "vg" as in the ``vg`` register, which is 2 in this case (8*2 = 16).
-Elsewhere you may see "vq" which is the vector length in quadwords (16 bytes)
-elsewhere. Where you see "vl", it is in bytes.
-
-Changing the Vector Length
-..........................
+Elsewhere in kernel code or applications, you may see "vq" which is the vector
+length in quadwords (16 bytes). Where you see "vl", it is in bytes.
 
 While you can count the size of a P or Z register, it is intended that ``vg`` be
 used to find the current vector length.
 
-vg can be written. Writing the current vector length changes nothing. If you
-increase the vector length, the registers will likely be reset to 0. If you
-decrease it, LLDB will truncate the Z registers but everything else will be reset
-to 0.
+Changing the Vector Length
+..........................
 
-Generally you should not assume that SVE state after changing the vector length
-is in any way the same as it was previously. If you need to do it, do it before
-a function's first use of SVE.
+The ``vg`` register can be written during a debug session. Writing the current
+vector length changes nothing. If you increase the vector length, the registers
+will likely be reset to 0. If you decrease it, LLDB will truncate the Z
+registers but everything else will be reset to 0.
+
+You should not assume that SVE state after changing the vector length is in any
+way the same as it was previously. Whether that is done from within the
+debuggee, or by LLDB. If you need to change the vector length, do so before a
+function's first use of SVE.
 
 Z Register Presentation
 .......................
 
-LLDB makes no attempt to predict how an SVE Z register will be used. Even if the
-next SVE instruction (which may some distance away) would use, for example, 32
-bit elements, LLDB prints ``z0`` as single bytes.
+LLDB makes no attempt to predict how SVE Z registers will be used. Since LLDB
+does not know what sort of elements future instructions will interpret the
+register as. It therefore does not change the visualisation of the register
+and always defaults to showing a vector of byte sized elements.
 
 If you know what format you are going to use, give a format option::
 
@@ -94,7 +96,8 @@ See `here <https://community.arm.com/arm-community-blogs/b/architectures-and-pro
 to learn about the extension and `here <https://kernel.org/doc/html/latest/arch/arm64/sme.html>`__
 for the Linux Kernel's handling of it.
 
-SME adds a "Streaming Mode" to SVE. This mode has its own vector length.
+SME adds a "Streaming Mode" to SVE, and this mode has its own vector length
+known as the "Streaming Vector Length".
 
 In LLDB you will see the following new registers:
 
@@ -107,16 +110,27 @@ In LLDB you will see the following new registers:
 * ``za`` the Array Storage register. The "Matrix" part of "Scalable Matrix
   Extension". This is a square made up of rows of length equal to the streaming
   vector length (svl). Meaning that the total size is svl * svl.
-* ``svg`` the vector length in granules. This acts the same as ``vg`` for SVE.
-  Except that where ``vg`` shows the length for the active mode, ``svg`` will
-  always show the streaming vector length, even in non-streaming mode. This
-  register is read only.
 * ``svcr`` the Streaming Vector Control Register. This is actually a pseduo
   register but it matches the content of the architecturaly defined ``SVCR``.
   This is the register you should use to check whether streaming mode and/or
   ``za`` is active. This register is read only.
+* ``svg`` the streaming vector length in granules. This value is not connected
+  to the vector length of non-streaming mode and may change independently. This
+  register is read only.
 
-In the example below, the streaming vector length is 16 bytes::
+.. note::
+  While in non-streaming mode, the ``vg`` register shows the non-streaming
+  vector length, and the ``svg`` register shows the streaming vector length.
+  When in streaming mode, both ``vg`` and ``svg`` show the streaming mode vector
+  length. Therefore it is not possible at this time to read the non-streaming
+  vector length within LLDB, while in streaming mode. This is a limitation of
+  the LLDB implementation not the architecture, which stores both lengths
+  independently.
+
+In the example below, the streaming vector length is 16 bytes and we are in
+streaming mode. Note that bits 0 and 1 of ``svcr`` are set, indicating that we
+are in streaming mode and ZA is active. ``vg`` and ``svg`` report the same value
+as ``vg`` is showing the streaming mode vector length::
 
   Scalable Vector Extension Registers:
         vg = 0x0000000000000002
@@ -139,9 +153,6 @@ In the example below, the streaming vector length is 16 bytes::
          svg = 0x0000000000000002
         svcr = 0x0000000000000003
 
-Note that ``svcr`` bit 1 is set meaning we are in streaming mode. Therefore
-``svg`` and ``vg`` show the same value.
-
 Changing the Streaming Vector Length
 ....................................
 
@@ -153,8 +164,8 @@ As for non-streaming SVE, doing so will essentially make the content of the SVE
 registers undefined. It will also disable ZA, which follows what the Linux
 Kernel does.
 
-Inactive ZA Handling
-....................
+Visibility of an Inactive ZA Register
+.....................................
 
 LLDB does not handle registers that can come and go at runtime (SVE changes
 size but it does not dissappear). Therefore when ``za`` is not enabled, LLDB
@@ -173,14 +184,17 @@ no way from within LLDB to reverse this change. As for changing the vector
 length, the debugee could still do something that would disable ``za`` again.
 
 If you want to know whether ``za`` is active or not, refer to bit 2 of the
-``svcr`` register.
+``svcr`` register, otherwise known as ``SVCR.ZA``.
 
 ZA Register Presentation
 ........................
 
-As for SVE, LLDB does not know how you will use ``za``. At any given time an
-instruction could use any number of subsets of it. Therefore LLDB will show
-``za`` as one large vector of individual bytes.
+As for SVE, LLDB does not know how the debugee will use ``za``, and therefore
+does not know how it would be best to display it. At any time any given
+instrucion could interpret its contents as many kinds and sizes of data.
+
+So LLDB will default to showing  ``za`` as one large vector of individual bytes.
+You can override this with a format option (see the SVE example above).
 
 Expression evaluation
 .....................
