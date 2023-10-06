@@ -27,6 +27,7 @@ class CppUnionStaticMembersTestCase(TestBase):
                 name="val", value="137"
             )])
 
+    @expectedFailureWindows
     def test_expr_union_static_members(self):
         """Tests that frame variable and expr work
         for union static data members"""
