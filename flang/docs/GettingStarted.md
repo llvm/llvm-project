@@ -141,8 +141,14 @@ code is in good shape.
 
 ### Building flang standalone
 To do the standalone build, start by building flang in tree as described above.
-This build is base build for subsequent standalone builds.  Start each
-standalone build the same way by cloning the source for llvm-project:
+This build can be used as the  base build for several subsequent standalone
+builds.  Set the environment variable **ROOT_DIR** to the directory that
+contains the subdirectory `build` that was created previously, for example:
+```bash
+export ROOTDIR=/home/user/root
+```
+Start each standalone build the same way by cloning the source for
+llvm-project:
 ```bash
 mkdir standalone
 cd standalone
@@ -175,7 +181,7 @@ cmake \
 ninja
 ```
 
-To run the flang tests on this build, execute the command in the "flang/build"
+To run the flang tests on this build, execute the command in the `flang/build`
 directory:
 ```bash
 ninja check-flang
