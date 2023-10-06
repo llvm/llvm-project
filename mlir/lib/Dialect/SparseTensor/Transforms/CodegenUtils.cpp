@@ -782,7 +782,7 @@ Value sparse_tensor::genReaderBuffers(OpBuilder &builder, Location loc,
                                       /*out*/ Value &lvl2dimBuffer) {
   const Dimension dimRank = stt.getDimRank();
   const Level lvlRank = stt.getLvlRank();
-  // For an identify mapping, the dim2lvl and lvl2dim mappings are
+  // For an identity mapping, the dim2lvl and lvl2dim mappings are
   // identical as are dimSizes and lvlSizes, so buffers are reused
   // as much as possible.
   if (stt.isIdentity()) {
