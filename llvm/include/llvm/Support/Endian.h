@@ -13,6 +13,7 @@
 #ifndef LLVM_SUPPORT_ENDIAN_H
 #define LLVM_SUPPORT_ENDIAN_H
 
+#include "llvm/ADT/bit.h"
 #include "llvm/Support/Compiler.h"
 #include "llvm/Support/SwapByteOrder.h"
 #include <cassert>
@@ -22,13 +23,6 @@
 #include <type_traits>
 
 namespace llvm {
-
-enum class endianness {
-  big,
-  little,
-  native = llvm::sys::IsBigEndianHost ? big : little
-};
-
 namespace support {
 
 // TODO: Remove the following once we are done migrating to llvm::endianness,
