@@ -12863,6 +12863,15 @@ QualType Sema::deduceVarTypeFromInitializer(VarDecl *VDecl,
   DeducedType *Deduced = Type->getContainedDeducedType();
   assert(Deduced && "deduceVarTypeFromInitializer for non-deduced type");
 
+  // Diagnose auto array declarations in C23, unless it's a supported extension.
+  if (getLangOpts().C23 && Type->isArrayType() &&
+      !isa_and_present<StringLiteral, InitListExpr>(Init)) {
+      Diag(Range.getBegin(), diag::err_auto_not_allowed)
+          << (int)Deduced->getContainedAutoType()->getKeyword()
+          << /*in array decl*/ 23 << Range;
+    return QualType();
+  }
+
   // C++11 [dcl.spec.auto]p3
   if (!Init) {
     assert(VDecl && "no init for init capture deduction?");
@@ -18161,7 +18170,8 @@ ExprResult Sema::VerifyBitField(SourceLocation FieldLoc,
 
   // Zero-width bitfield is ok for anonymous field.
   if (Value == 0 && FieldName)
-    return Diag(FieldLoc, diag::err_bitfield_has_zero_width) << FieldName;
+    return Diag(FieldLoc, diag::err_bitfield_has_zero_width)
+           << FieldName << BitWidth->getSourceRange();
 
   if (Value.isSigned() && Value.isNegative()) {
     if (FieldName)
@@ -18215,8 +18225,8 @@ ExprResult Sema::VerifyBitField(SourceLocation FieldLoc,
 /// to create a FieldDecl object for it.
 Decl *Sema::ActOnField(Scope *S, Decl *TagD, SourceLocation DeclStart,
                        Declarator &D, Expr *BitfieldWidth) {
-  FieldDecl *Res = HandleField(S, cast_or_null<RecordDecl>(TagD),
-                               DeclStart, D, static_cast<Expr*>(BitfieldWidth),
+  FieldDecl *Res = HandleField(S, cast_if_present<RecordDecl>(TagD), DeclStart,
+                               D, BitfieldWidth,
                                /*InitStyle=*/ICIS_NoInit, AS_public);
   return Res;
 }

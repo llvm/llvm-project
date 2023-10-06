@@ -1390,6 +1390,19 @@ void CodeGenModule::setGlobalVisibility(llvm::GlobalValue *GV,
   }
   if (!D)
     return;
+
+  // OpenMP declare target variables must be visible to the host so they can
+  // be registered. We require protected visibility unless the variable has
+  // the DT_nohost modifier and does not need to be registered.
+  if (Context.getLangOpts().OpenMP &&
+      Context.getLangOpts().OpenMPIsTargetDevice && isa<VarDecl>(D) &&
+      D->hasAttr<OMPDeclareTargetDeclAttr>() &&
+      D->getAttr<OMPDeclareTargetDeclAttr>()->getDevType() !=
+          OMPDeclareTargetDeclAttr::DT_NoHost) {
+    GV->setVisibility(llvm::GlobalValue::ProtectedVisibility);
+    return;
+  }
+
   // Set visibility for definitions, and for declarations if requested globally
   // or set explicitly.
   LinkageInfo LV = D->getLinkageAndVisibility();
@@ -4790,7 +4803,8 @@ CodeGenModule::GetOrCreateLLVMGlobal(StringRef MangledName, llvm::Type *Ty,
   assert(getContext().getTargetAddressSpace(ExpectedAS) == TargetAS);
   if (DAddrSpace != ExpectedAS) {
     return getTargetCodeGenInfo().performAddrSpaceCast(
-        *this, GV, DAddrSpace, ExpectedAS, Ty->getPointerTo(TargetAS));
+        *this, GV, DAddrSpace, ExpectedAS,
+        llvm::PointerType::get(getLLVMContext(), TargetAS));
   }
 
   return GV;
@@ -5002,7 +5016,8 @@ castStringLiteralToDefaultAddressSpace(CodeGenModule &CGM,
     if (AS != LangAS::Default)
       Cast = CGM.getTargetCodeGenInfo().performAddrSpaceCast(
           CGM, GV, AS, LangAS::Default,
-          GV->getValueType()->getPointerTo(
+          llvm::PointerType::get(
+              CGM.getLLVMContext(),
               CGM.getContext().getTargetAddressSpace(LangAS::Default)));
   }
   return Cast;
@@ -6377,7 +6392,8 @@ ConstantAddress CodeGenModule::GetAddrOfGlobalTemporary(
   if (AddrSpace != LangAS::Default)
     CV = getTargetCodeGenInfo().performAddrSpaceCast(
         *this, GV, AddrSpace, LangAS::Default,
-        Type->getPointerTo(
+        llvm::PointerType::get(
+            getLLVMContext(),
             getContext().getTargetAddressSpace(LangAS::Default)));
 
   // Update the map with the new temporary. If we created a placeholder above,
