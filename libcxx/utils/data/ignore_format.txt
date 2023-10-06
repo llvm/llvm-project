@@ -1133,7 +1133,6 @@ libcxx/test/std/algorithms/alg.nonmodifying/alg.all_of/ranges.all_of.pass.cpp
 libcxx/test/std/algorithms/alg.nonmodifying/alg.any_of/any_of.pass.cpp
 libcxx/test/std/algorithms/alg.nonmodifying/alg.any_of/ranges.any_of.pass.cpp
 libcxx/test/std/algorithms/alg.nonmodifying/alg.count/count_if.pass.cpp
-libcxx/test/std/algorithms/alg.nonmodifying/alg.count/count.pass.cpp
 libcxx/test/std/algorithms/alg.nonmodifying/alg.count/pstl.count_if.pass.cpp
 libcxx/test/std/algorithms/alg.nonmodifying/alg.count/pstl.count.pass.cpp
 libcxx/test/std/algorithms/alg.nonmodifying/alg.count/ranges.count_if.pass.cpp
