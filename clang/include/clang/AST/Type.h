@@ -1482,7 +1482,8 @@ class ExtQualsTypeCommonBase {
 /// in three low bits on the QualType pointer; a fourth bit records whether
 /// the pointer is an ExtQuals node. The extended qualifiers (address spaces,
 /// Objective-C GC attributes) are much more rare.
-class alignas(TypeAlignment) ExtQuals : public ExtQualsTypeCommonBase, public llvm::FoldingSetNode {
+class alignas(TypeAlignment) ExtQuals : public ExtQualsTypeCommonBase,
+                                        public llvm::FoldingSetNode {
   // NOTE: changing the fast qualifiers should be straightforward as
   // long as you don't make 'const' non-fast.
   // 1. Qualifiers:
@@ -5459,9 +5460,7 @@ public:
 /// TemplateArguments, followed by a QualType representing the
 /// non-canonical aliased type when the template is a type alias
 /// template.
-class TemplateSpecializationType
-    : public Type,
-      public llvm::FoldingSetNode {
+class TemplateSpecializationType : public Type, public llvm::FoldingSetNode {
   friend class ASTContext; // ASTContext creates these
 
   /// The name of the template being specialized.  This is
@@ -5875,9 +5874,8 @@ public:
 /// Represents a template specialization type whose template cannot be
 /// resolved, e.g.
 ///   A<T>::template B<T>
-class DependentTemplateSpecializationType
-    : public TypeWithKeyword,
-      public llvm::FoldingSetNode {
+class DependentTemplateSpecializationType : public TypeWithKeyword,
+                                            public llvm::FoldingSetNode {
   friend class ASTContext; // ASTContext creates these
 
   /// The nested name specifier containing the qualifier.
