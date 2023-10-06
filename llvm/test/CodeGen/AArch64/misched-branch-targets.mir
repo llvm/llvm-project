@@ -1,6 +1,9 @@
 # RUN: llc -o - -run-pass=machine-scheduler -misched=shuffle %s | FileCheck %s
 # RUN: llc -o - -run-pass=postmisched %s | FileCheck %s
 
+# REQUIRES: asserts
+# -misched=shuffle is only available with assertions enabled
+
 # Check that instructions that are recognized as branch targets by BTI
 # are not reordered by machine instruction schedulers.
 
