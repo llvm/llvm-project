@@ -98,18 +98,17 @@ std::string llvm::convertToSnakeFromCamelCase(StringRef input) {
 
   std::string snakeCase;
   snakeCase.reserve(input.size());
-  auto check = [&input](size_t j, std::function<bool(int)> check) {
-    return j < input.size() ? check(input[j]) : false;
+  auto check = [&input](size_t j, function_ref<bool(int)> predicate) {
+    return j < input.size() && predicate(input[j]);
   };
   for (size_t i = 0; i < input.size(); ++i) {
-    snakeCase.push_back(input[i]);
+    snakeCase.push_back(tolower(input[i]));
+    // Handles "runs" of capitals, such as in OPName -> op_name.
     if (check(i, isupper) && check(i + 1, isupper) && check(i + 2, islower))
       snakeCase.push_back('_');
     if ((check(i, islower) || check(i, isdigit)) && check(i + 1, isupper))
       snakeCase.push_back('_');
   }
-  std::transform(snakeCase.begin(), snakeCase.end(), snakeCase.begin(),
-                 [](unsigned char c) { return std::tolower(c); });
   return snakeCase;
 }
 
