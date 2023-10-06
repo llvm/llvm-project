@@ -52,6 +52,7 @@ enum OperandKind {
   Constant = 0,
   LocalVariable,
   Type,
+  Function,
   UnimplementedOperand = 255,
 };
 
@@ -148,6 +149,12 @@ private:
     return Idx;
   }
 
+  size_t functionIndex(llvm::Function *F) {
+    // FIXME: For now we assume that function indicies in LLVM IR and our IR
+    // are the same.
+    return getIndex(&M, F);
+  }
+
 public:
   YkIRWriter(Module &M, MCStreamer &OutStreamer)
       : M(M), OutStreamer(OutStreamer) {}
@@ -177,6 +184,11 @@ public:
     serialiseString(S);
   }
 
+  void serialiseFunctionOperand(llvm::Function *F) {
+    OutStreamer.emitInt8(OperandKind::Function);
+    OutStreamer.emitSizeT(functionIndex(F));
+  }
+
   // YKFIXME: This allows programs which we haven't yet defined a
   // lowering for to compile. For now We just emit a string operand containing
   // the unhandled LLVM operand in textual form.
@@ -187,7 +199,9 @@ public:
 
   void serialiseOperand(Instruction *Parent, ValueLoweringMap &VLMap,
                         Value *V) {
-    if (llvm::Constant *C = dyn_cast<llvm::Constant>(V)) {
+    if (llvm::Function *F = dyn_cast<llvm::Function>(V)) {
+      serialiseFunctionOperand(F);
+    } else if (llvm::Constant *C = dyn_cast<llvm::Constant>(V)) {
       serialiseConstantOperand(Parent, C);
     } else if (Instruction *I = dyn_cast<Instruction>(V)) {
       // If an instruction defines the operand, it's a local variable.
@@ -325,7 +339,7 @@ public:
     BBIdx++;
   }
 
-  void serialiseFunc(Function &F) {
+  void serialiseFunc(llvm::Function &F) {
     // name:
     serialiseString(F.getName());
     // num_blocks:
@@ -385,7 +399,7 @@ public:
     // num_funcs:
     OutStreamer.emitSizeT(M.size());
     // funcs:
-    for (Function &F : M) {
+    for (llvm::Function &F : M) {
       serialiseFunc(F);
     }
 
