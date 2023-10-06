@@ -2778,6 +2778,10 @@ def fir_GlobalOp : fir_Op<"global", [IsolatedFromAbove, Symbol]> {
           (*this)->getAttrOfType<mlir::StringAttr>(
               mlir::SymbolTable::getSymbolAttrName()).getValue());
     }
+
+    bool isInitialized() {
+      return getInitVal() || hasInitializationBody();
+    }
   }];
 }
 
@@ -2809,20 +2813,31 @@ def fir_GlobalLenOp : fir_Op<"global_len", []> {
 
 def ImplicitFirTerminator : SingleBlockImplicitTerminator<"FirEndOp">;
 
-def fir_DispatchTableOp : fir_Op<"dispatch_table",
+def fir_TypeInfoOp : fir_Op<"type_info",
     [IsolatedFromAbove, Symbol, ImplicitFirTerminator]> {
-  let summary = "Dispatch table definition";
+  let summary = "Derived type information";
 
   let description = [{
-    Define a dispatch table for a derived type with type-bound procedures.
+    Define extra information about a !fir.type<> that represents
+    a Fortran derived type.
 
-    A dispatch table is an untyped symbol that contains a list of associations
+    The optional dispatch table region defines a dispatch table with the derived
+    type type-bound procedures. It contains a list of associations
     between method identifiers and corresponding `FuncOp` symbols.
-
     The ordering of associations in the map is determined by the front end.
 
+    The "no_init" flag indicates that this type has no components requiring default
+    initialization (including setting allocatable component to a clean deallocated
+    state).
+
+    The "no_destroy" flag indicates that there are no allocatable components
+    that require deallocation.
+
+    The "no_final" flag indicates that there are no final methods for this type,
+    for its parents ,or for components.
+
     ```mlir
-      fir.dispatch_table @_QDTMquuzTfoo {
+      fir.type_info @_QMquuzTfoo noinit nofinal : !fir.type<_QMquuzTfoo{i:i32}> dispatch_table {
         fir.dt_entry method1, @_QFNMquuzTfooPmethod1AfooR
         fir.dt_entry method2, @_QFNMquuzTfooPmethod2AfooII
       }
@@ -2831,32 +2846,46 @@ def fir_DispatchTableOp : fir_Op<"dispatch_table",
 
   let arguments = (ins
     SymbolNameAttr:$sym_name,
-    OptionalAttr<StrAttr>:$parent
+    TypeAttr:$type,
+    OptionalAttr<TypeAttr>:$parent_type,
+    UnitAttr:$no_init,
+    UnitAttr:$no_destroy,
+    UnitAttr:$no_final
   );
 
-  let hasCustomAssemblyFormat = 1;
   let hasVerifier = 1;
 
-  let regions = (region AnyRegion:$region);
+  let regions = (region MaxSizedRegion<1>:$dispatch_table);
 
-  let skipDefaultBuilders = 1;
   let builders = [
-    OpBuilder<(ins "llvm::StringRef":$name, "mlir::Type":$type,
-      "llvm::StringRef":$parent,
+    OpBuilder<(ins "fir::RecordType":$type, "fir::RecordType":$parent_type,
       CArg<"llvm::ArrayRef<mlir::NamedAttribute>", "{}">:$attrs)>
   ];
 
-  let extraClassDeclaration = [{
-    static constexpr llvm::StringRef getParentAttrNameStr() { return "parent"; }
-    static constexpr llvm::StringRef getExtendsKeyword() { return "extends"; }
+  let assemblyFormat = [{
+    $sym_name (`noinit` $no_init^)? (`nodestroy` $no_destroy^)?
+    (`nofinal` $no_final^)? (`extends` $parent_type^)? attr-dict `:` $type
+    (`dispatch_table` $dispatch_table^)?
+  }];
 
-    mlir::Block &getBlock() {
-      return getRegion().front();
+  let extraClassDeclaration = [{
+    fir::RecordType getRecordType() {
+      return mlir::cast<fir::RecordType>(getType());
+    }
+    fir::RecordType getIfParentType() {
+      if (auto parentType = getParentType())
+        return mlir::cast<fir::RecordType>(*parentType);
+      return {};
+    }
+    std::optional<llvm::StringRef> getIfParentName() {
+      if (auto parentType = getIfParentType())
+        return parentType.getName();
+      return std::nullopt;
     }
   }];
 }
 
-def fir_DTEntryOp : fir_Op<"dt_entry", [HasParent<"DispatchTableOp">]> {
+def fir_DTEntryOp : fir_Op<"dt_entry", [HasParent<"TypeInfoOp">]> {
   let summary = "map entry in a dispatch table";
 
   let description = [{
