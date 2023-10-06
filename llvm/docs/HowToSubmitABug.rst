@@ -153,6 +153,57 @@ Please run this, then file a bug with the instructions and reduced .bc file
 that bugpoint emits.  If something goes wrong with bugpoint, please submit
 the "foo.bc" file and the option that llc crashes with.
 
+​.. _lto-crash:
+
+LTO bugs
+---------------------------
+
+If you find a bug that crashes llvm in LTO phase (by using -flto option),
+compile your source file to a .bc file by passing
+"``-flto -fuse-ld=lld -Wl,-plugin-opt=save-temps``"
+to clang (in addition to the options you already pass). If you are building
+a project, pass the appropriate CFLAGS, CXXFLAG​S and LDFLAGS for example -
+
+.. code-block:: bash
+
+   export CFLAGS="-flto -fuse-ld=lld" CXXFLAGS="-flto -fuse-ld=lld" LDFLAGS="-Wl,-plugin-opt=save-temps"
+
+This will generate four intermediate bytecode files:
+
+1. a.out.0.0.preopt.bc      (Before any link-time optimizations (LTO) are applied)
+2. a.out.0.2.internalize.bc (After initial optimizations applied)
+3. a.out.0.4.opt.bc         (After the more extensive set of optimizations has been applied)
+4. a.out.0.5.precodegen.bc  (After LTO but before it's translated into machine code)
+
+Once you have these, one of the following commands should fail:
+
+#. ``opt "-passes=lto<O3>" a.out.0.0.preopt.bc``
+#. ``opt "-passes=lto<O3>" a.out.0.2.internalize.bc``
+#. ``opt "-passes=lto<O3>" a.out.0.4.opt.bc``
+#. ``llc a.out.0.5.precodegen.bc``
+
+If one of these do crash, you should be able to reduce
+this with :program:`llvm-reduce`
+command line (use the bc file corresponding to the command above that failed):
+
+#. ``llvm-reduce --test llvm-reduce.sh a.out.0.2.internalize.bc``
+
+An example of ``llvm-reduce.sh`` script
+
+.. code-block:: bash
+
+   $ cat llvm-reduce.sh
+   #!/usr/bin/env bash
+
+   $HOME/llvm/llvm-project/build/bin/opt "-passes=lto<O3>" $1 -o temp.bc  2>&1 | tee err.log
+   grep "It->second == &Insn" err.log
+   exit $?
+
+Here we have grepped the failed assert message.
+
+Please run this, then file a bug with the instructions and reduced .bc file
+that llvm-reduce emits.
+
 .. _miscompiling:
 
 Miscompilations
