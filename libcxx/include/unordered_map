@@ -874,9 +874,9 @@ public:
     void operator()(pointer __p) _NOEXCEPT
     {
         if (__second_constructed)
-            __alloc_traits::destroy(__na_, _VSTD::addressof(__p->__get_value().__get_value().second));
+            __alloc_traits::destroy(__na_, _VSTD::addressof(__p->__value_.__get_value().second));
         if (__first_constructed)
-            __alloc_traits::destroy(__na_, _VSTD::addressof(__p->__get_value().__get_value().first));
+            __alloc_traits::destroy(__na_, _VSTD::addressof(__p->__value_.__get_value().first));
         if (__p)
             __alloc_traits::deallocate(__na_, __p, 1);
     }
@@ -1828,7 +1828,7 @@ unordered_map<_Key, _Tp, _Hash, _Pred, _Alloc>::unordered_map(
         iterator __i = __u.begin();
         while (__u.size() != 0) {
             __table_.__emplace_unique(
-                __u.__table_.remove((__i++).__i_)->__get_value().__move());
+                __u.__table_.remove((__i++).__i_)->__value_.__move());
         }
     }
 }
@@ -1920,9 +1920,9 @@ unordered_map<_Key, _Tp, _Hash, _Pred, _Alloc>::__construct_node_with_key(const 
 {
     __node_allocator& __na = __table_.__node_alloc();
     __node_holder __h(__node_traits::allocate(__na, 1), _Dp(__na));
-    __node_traits::construct(__na, _VSTD::addressof(__h->__get_value().__get_value().first), __k);
+    __node_traits::construct(__na, _VSTD::addressof(__h->__value_.__get_value().first), __k);
     __h.get_deleter().__first_constructed = true;
-    __node_traits::construct(__na, _VSTD::addressof(__h->__get_value().__get_value().second));
+    __node_traits::construct(__na, _VSTD::addressof(__h->__value_.__get_value().second));
     __h.get_deleter().__second_constructed = true;
     return __h;
 }
@@ -2653,7 +2653,7 @@ unordered_multimap<_Key, _Tp, _Hash, _Pred, _Alloc>::unordered_multimap(
         while (__u.size() != 0)
         {
             __table_.__insert_multi(
-                __u.__table_.remove((__i++).__i_)->__get_value().__move());
+                __u.__table_.remove((__i++).__i_)->__value_.__move());
         }
     }
 }
