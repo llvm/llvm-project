@@ -225,6 +225,7 @@ LogicalResult SymbolTable::rename(StringAttr from, StringAttr to) {
 
 LogicalResult SymbolTable::rename(Operation *op, StringAttr to) {
   StringAttr from = getNameIfSymbol(op);
+  (void)from;
 
   assert(from && "expected valid 'name' attribute");
   assert(op->getParentOp() == symbolTableOp &&
