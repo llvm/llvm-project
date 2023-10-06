@@ -243,7 +243,6 @@ bool RISCVInstructionSelector::select(MachineInstr &MI) {
     // TODO: We may want to replace this code with the SelectionDAG patterns,
     // which fail to get imported because it uses FrameAddrRegImm, which is a
     // ComplexPattern
-    Register DstReg = MI.getOperand(0).getReg();
     MI.setDesc(TII.get(RISCV::ADDI));
     MI.addOperand(MachineOperand::CreateImm(0));
     return constrainSelectedInstRegOperands(MI, TII, TRI, RBI);
