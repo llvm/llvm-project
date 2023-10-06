@@ -35,8 +35,8 @@ define i1 @cmp_anybits_concat_shl_shl_i16(i16 %x, i16 %y) {
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    movzwl %di, %eax
 ; CHECK-NEXT:    movzwl %si, %ecx
-; CHECK-NEXT:    shll $8, %ecx
-; CHECK-NEXT:    orl %eax, %ecx
+; CHECK-NEXT:    shlq $8, %rcx
+; CHECK-NEXT:    orq %rax, %rcx
 ; CHECK-NEXT:    sete %al
 ; CHECK-NEXT:    retq
   %zx = zext i16 %x to i64
@@ -53,8 +53,8 @@ define i1 @cmp_anybits_concat_shl_shl_i16_commute(i16 %x, i16 %y) {
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    movzwl %di, %eax
 ; CHECK-NEXT:    movzwl %si, %ecx
-; CHECK-NEXT:    shll $8, %ecx
-; CHECK-NEXT:    orl %eax, %ecx
+; CHECK-NEXT:    shlq $8, %rcx
+; CHECK-NEXT:    orq %rax, %rcx
 ; CHECK-NEXT:    sete %al
 ; CHECK-NEXT:    retq
   %zx = zext i16 %x to i64
