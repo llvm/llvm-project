@@ -1431,20 +1431,18 @@ void mlir::affine::createAffineComputationSlice(
   // differ from opInst's operands only for those operands in 'subOperands', for
   // which they will be replaced by the corresponding one from 'sliceOps'.
   SmallVector<Value, 4> newOperands(opInst->getOperands());
-  for (unsigned i = 0, e = newOperands.size(); i < e; i++) {
+  for (Value &operand : newOperands) {
     // Replace the subOperands from among the new operands.
     unsigned j, f;
     for (j = 0, f = subOperands.size(); j < f; j++) {
-      if (newOperands[i] == subOperands[j])
+      if (operand == subOperands[j])
         break;
     }
-    if (j < subOperands.size()) {
-      newOperands[i] = (*sliceOps)[j];
-    }
+    if (j < subOperands.size())
+      operand = (*sliceOps)[j];
   }
-  for (unsigned idx = 0, e = newOperands.size(); idx < e; idx++) {
+  for (unsigned idx = 0, e = newOperands.size(); idx < e; idx++)
     opInst->setOperand(idx, newOperands[idx]);
-  }
 }
 
 /// Enum to set patterns of affine expr in tiled-layout map.
