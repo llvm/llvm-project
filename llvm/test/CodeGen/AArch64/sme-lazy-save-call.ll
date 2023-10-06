@@ -134,12 +134,12 @@ define void @test_lazy_save_and_conditional_smstart() nounwind "aarch64_pstate_z
 ; CHECK-NEXT:    msr TPIDR2_EL0, x9
 ; CHECK-NEXT:    bl __arm_sme_state
 ; CHECK-NEXT:    and x19, x0, #0x1
-; CHECK-NEXT:    tbz x19, #0, .LBB3_2
+; CHECK-NEXT:    tbz w19, #0, .LBB3_2
 ; CHECK-NEXT:  // %bb.1:
 ; CHECK-NEXT:    smstop sm
 ; CHECK-NEXT:  .LBB3_2:
 ; CHECK-NEXT:    bl private_za_callee
-; CHECK-NEXT:    tbz x19, #0, .LBB3_4
+; CHECK-NEXT:    tbz w19, #0, .LBB3_4
 ; CHECK-NEXT:  // %bb.3:
 ; CHECK-NEXT:    smstart sm
 ; CHECK-NEXT:  .LBB3_4:
@@ -187,12 +187,12 @@ define void @za_shared_caller_za_preserved_callee() nounwind "aarch64_pstate_za_
 ; CHECK-NEXT:    msr TPIDR2_EL0, x8
 ; CHECK-NEXT:    bl __arm_sme_state
 ; CHECK-NEXT:    and x19, x0, #0x1
-; CHECK-NEXT:    tbz x19, #0, .LBB4_2
+; CHECK-NEXT:    tbz w19, #0, .LBB4_2
 ; CHECK-NEXT:  // %bb.1:
 ; CHECK-NEXT:    smstop sm
 ; CHECK-NEXT:  .LBB4_2:
 ; CHECK-NEXT:    bl private_za_preserved_callee
-; CHECK-NEXT:    tbz x19, #0, .LBB4_4
+; CHECK-NEXT:    tbz w19, #0, .LBB4_4
 ; CHECK-NEXT:  // %bb.3:
 ; CHECK-NEXT:    smstart sm
 ; CHECK-NEXT:  .LBB4_4:
