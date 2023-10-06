@@ -233,6 +233,7 @@ cc_test(
         "//mlir:FuncDialect",
         "//mlir:IR",
         "//mlir:TransformDialect",
+        "//mlir:TransformDialectTransforms",
         "//third-party/unittest:gtest",
         "//third-party/unittest:gtest_main",
     ],
