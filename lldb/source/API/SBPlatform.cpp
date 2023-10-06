@@ -14,6 +14,7 @@
 #include "lldb/API/SBLaunchInfo.h"
 #include "lldb/API/SBModuleSpec.h"
 #include "lldb/API/SBPlatform.h"
+#include "lldb/API/SBProcessInfoList.h"
 #include "lldb/API/SBTarget.h"
 #include "lldb/API/SBUnixSignals.h"
 #include "lldb/Host/File.h"
@@ -591,6 +592,20 @@ SBProcess SBPlatform::Attach(SBAttachInfo &attach_info,
       return SBProcess(process_sp);
     }
 
+    error.SetErrorString("not connected");
+    return {};
+  }
+
+  error.SetErrorString("invalid platform");
+  return {};
+}
+
+SBProcessInfoList SBPlatform::GetAllProcesses(SBError &error) {
+  if (PlatformSP platform_sp = GetSP()) {
+    if (platform_sp->IsConnected()) {
+      ProcessInstanceInfoList list = platform_sp->GetAllProcesses();
+      return SBProcessInfoList(list);
+    }
     error.SetErrorString("not connected");
     return {};
   }
