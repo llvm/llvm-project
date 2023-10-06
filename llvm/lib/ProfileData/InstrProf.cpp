@@ -989,7 +989,7 @@ void ValueProfRecord::swapBytes(support::endianness Old,
   if (Old == New)
     return;
 
-  if (getHostEndianness() != Old) {
+  if (llvm::endianness::native != Old) {
     sys::swapByteOrder<uint32_t>(NumValueSites);
     sys::swapByteOrder<uint32_t>(Kind);
   }
@@ -1001,7 +1001,7 @@ void ValueProfRecord::swapBytes(support::endianness Old,
     sys::swapByteOrder<uint64_t>(VD[I].Value);
     sys::swapByteOrder<uint64_t>(VD[I].Count);
   }
-  if (getHostEndianness() == Old) {
+  if (llvm::endianness::native == Old) {
     sys::swapByteOrder<uint32_t>(NumValueSites);
     sys::swapByteOrder<uint32_t>(Kind);
   }
@@ -1086,7 +1086,7 @@ ValueProfData::getValueProfData(const unsigned char *D,
 void ValueProfData::swapBytesToHost(support::endianness Endianness) {
   using namespace support;
 
-  if (Endianness == getHostEndianness())
+  if (Endianness == llvm::endianness::native)
     return;
 
   sys::swapByteOrder<uint32_t>(TotalSize);
@@ -1094,7 +1094,7 @@ void ValueProfData::swapBytesToHost(support::endianness Endianness) {
 
   ValueProfRecord *VR = getFirstValueProfRecord(this);
   for (uint32_t K = 0; K < NumValueKinds; K++) {
-    VR->swapBytes(Endianness, getHostEndianness());
+    VR->swapBytes(Endianness, llvm::endianness::native);
     VR = getValueProfRecordNext(VR);
   }
 }
@@ -1102,13 +1102,13 @@ void ValueProfData::swapBytesToHost(support::endianness Endianness) {
 void ValueProfData::swapBytesFromHost(support::endianness Endianness) {
   using namespace support;
 
-  if (Endianness == getHostEndianness())
+  if (Endianness == llvm::endianness::native)
     return;
 
   ValueProfRecord *VR = getFirstValueProfRecord(this);
   for (uint32_t K = 0; K < NumValueKinds; K++) {
     ValueProfRecord *NVR = getValueProfRecordNext(VR);
-    VR->swapBytes(getHostEndianness(), Endianness);
+    VR->swapBytes(llvm::endianness::native, Endianness);
     VR = NVR;
   }
   sys::swapByteOrder<uint32_t>(TotalSize);

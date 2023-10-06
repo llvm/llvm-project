@@ -949,10 +949,6 @@ void InstrProfRecord::reserveSites(uint32_t ValueKind, uint32_t NumValueSites) {
   getOrCreateValueSitesForKind(ValueKind).reserve(NumValueSites);
 }
 
-inline support::endianness getHostEndianness() {
-  return sys::IsLittleEndianHost ? support::little : support::big;
-}
-
 // Include definitions for value profile data
 #define INSTR_PROF_VALUE_PROF_DATA
 #include "llvm/ProfileData/InstrProfData.inc"
