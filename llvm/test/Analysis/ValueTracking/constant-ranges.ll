@@ -96,11 +96,7 @@ define i1 @shl_X_C_ugt_fail2(i8 %x) {
 
 define i1 @and_ugt(i8 %xx) {
 ; CHECK-LABEL: @and_ugt(
-; CHECK-NEXT:    [[X:%.*]] = mul i8 [[XX:%.*]], [[XX]]
-; CHECK-NEXT:    [[NEGX:%.*]] = sub i8 0, [[X]]
-; CHECK-NEXT:    [[X_P2:%.*]] = and i8 [[NEGX]], [[X]]
-; CHECK-NEXT:    [[R:%.*]] = icmp ugt i8 [[X_P2]], -128
-; CHECK-NEXT:    ret i1 [[R]]
+; CHECK-NEXT:    ret i1 false
 ;
   %x = mul i8 %xx, %xx  ; thwart complexity-based canonicalization
   %negx = sub i8 0, %x
@@ -111,11 +107,7 @@ define i1 @and_ugt(i8 %xx) {
 
 define i1 @and_ugt2(i8 %xx) {
 ; CHECK-LABEL: @and_ugt2(
-; CHECK-NEXT:    [[X:%.*]] = mul i8 [[XX:%.*]], [[XX]]
-; CHECK-NEXT:    [[NEGX:%.*]] = sub i8 0, [[X]]
-; CHECK-NEXT:    [[X_P2:%.*]] = and i8 [[X]], [[NEGX]]
-; CHECK-NEXT:    [[R:%.*]] = icmp ugt i8 [[X_P2]], -128
-; CHECK-NEXT:    ret i1 [[R]]
+; CHECK-NEXT:    ret i1 false
 ;
   %x = mul i8 %xx, %xx  ; thwart complexity-based canonicalization
   %negx = sub i8 0, %x
