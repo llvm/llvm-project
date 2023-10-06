@@ -6,7 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 #include "mlir/IR/SymbolTable.h"
-#include "../../test/lib/Dialect/Test/TestDialect.h"
+#include "mlir/IR/BuiltinOps.h"
 #include "mlir/IR/Verifier.h"
 #include "mlir/Interfaces/CallInterfaces.h"
 #include "mlir/Interfaces/FunctionInterfaces.h"
@@ -16,12 +16,20 @@
 
 using namespace mlir;
 
+namespace test {
+void registerTestDialect(DialectRegistry &);
+} // namespace test
+
 namespace {
 TEST(SymbolTableTest, ReplaceAllSymbolUses) {
-  MLIRContext context;
-  context.getOrLoadDialect<test::TestDialect>();
+  DialectRegistry registry;
+  ::test::registerTestDialect(registry);
 
-  auto testReplaceAllSymbolUses = [&](auto replaceFn) {
+  MLIRContext context(registry);
+
+  using ReplaceFnType = llvm::function_ref<LogicalResult(
+      SymbolTable, ModuleOp, Operation *, Operation *)>;
+  auto testReplaceAllSymbolUses = [&](ReplaceFnType replaceFn) {
     const static llvm::StringLiteral input = R"MLIR(
       module {
         test.conversion_func_op private @foo() {
@@ -33,11 +41,11 @@ TEST(SymbolTableTest, ReplaceAllSymbolUses) {
     )MLIR";
 
     // Set up IR and find func ops.
-    OwningOpRef<Operation *> module = parseSourceString(input, &context);
+    OwningOpRef<ModuleOp> module = parseSourceString<ModuleOp>(input, &context);
     SymbolTable symbolTable(module.get());
-    auto ops = module->getRegion(0).getBlocks().front().getOperations().begin();
-    auto fooOp = cast<FunctionOpInterface>(ops++);
-    auto barOp = cast<FunctionOpInterface>(ops++);
+    auto opIterator = module->getBody(0)->getOperations().begin();
+    auto fooOp = cast<FunctionOpInterface>(opIterator++);
+    auto barOp = cast<FunctionOpInterface>(opIterator++);
     ASSERT_EQ(fooOp.getNameAttr(), "foo");
     ASSERT_EQ(barOp.getNameAttr(), "bar");
 
