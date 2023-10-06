@@ -12,34 +12,13 @@
 
 #include <__config>
 
-#include <__compare/three_way_comparable.h>
-#include <__concepts/constructible.h>
-#include <__concepts/convertible_to.h>
-#include <__concepts/derived_from.h>
 #include <__functional/bind_back.h>
-#include <__iterator/advance.h>
-#include <__iterator/concepts.h>
 #include <__iterator/default_sentinel.h>
 #include <__iterator/distance.h>
-#include <__iterator/iter_move.h>
 #include <__iterator/iter_swap.h>
-#include <__iterator/iterator_traits.h>
-#include <__iterator/next.h>
-#include <__ranges/access.h>
 #include <__ranges/all.h>
 #include <__ranges/concepts.h>
-#include <__ranges/enable_borrowed_range.h>
-#include <__ranges/non_propagating_cache.h>
-#include <__ranges/range_adaptor.h>
-#include <__ranges/size.h>
-#include <__ranges/subrange.h>
 #include <__ranges/view_interface.h>
-#include <__ranges/views.h>
-#include <__type_traits/conditional.h>
-#include <__type_traits/maybe_const.h>
-#include <__type_traits/remove_cvref.h>
-#include <__utility/forward.h>
-#include <__utility/move.h>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #  pragma GCC system_header
