@@ -1161,7 +1161,6 @@ void transform::ForeachOp::getEffects(
     SmallVectorImpl<MemoryEffects::EffectInstance> &effects) {
   BlockArgument iterVar = getIterationVariable();
   if (any_of(getBody().front().without_terminator(), [&](Operation &op) {
-
         return isHandleConsumed(iterVar, cast<TransformOpInterface>(&op));
       })) {
     consumesHandle(getTarget(), effects);
@@ -1244,6 +1243,10 @@ transform::GetParentOp::apply(transform::TransformRewriter &rewriter,
       parent = parent->getParentOp();
     }
     if (!parent) {
+      if (getAllowEmptyResults()) {
+        results.set(llvm::cast<OpResult>(getResult()), parents);
+        return DiagnosedSilenceableFailure::success();
+      }
       DiagnosedSilenceableFailure diag =
           emitSilenceableError()
           << "could not find a parent op that matches all requirements";
@@ -1543,6 +1546,21 @@ transform::IncludeOp::verifySymbolUses(SymbolTableCollection &symbolTable) {
              cast<FunctionOpInterface>(*target), /*emitWarnings=*/false,
              /*alsoVerifyInternal=*/true)
       .checkAndReport();
+}
+
+//===----------------------------------------------------------------------===//
+// MatchOperationEmptyOp
+//===----------------------------------------------------------------------===//
+
+DiagnosedSilenceableFailure transform::MatchOperationEmptyOp::matchOperation(
+    ::std::optional<::mlir::Operation *> maybeCurrent,
+    transform::TransformResults &results, transform::TransformState &state) {
+  if (!maybeCurrent.has_value()) {
+    DBGS_MATCHER() << "MatchOperationEmptyOp success\n";
+    return DiagnosedSilenceableFailure::success();
+  }
+  DBGS_MATCHER() << "MatchOperationEmptyOp failure\n";
+  return emitSilenceableError() << "operation is not empty";
 }
 
 //===----------------------------------------------------------------------===//
