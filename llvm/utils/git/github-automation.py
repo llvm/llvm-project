@@ -165,6 +165,8 @@ class PRSubscriber:
 {self.COMMENT_TAG}
 {team_mention}
 
+Author: {self.pr._user.name} ({self.pr._user.login})
+
 <details>
 <summary>Changes</summary>
 
