@@ -71,10 +71,12 @@ C++ Specific Potentially Breaking Changes
   (`#49884 <https://github.com/llvm/llvm-project/issues/49884>`_), and
   (`#61273 <https://github.com/llvm/llvm-project/issues/61273>`_)
 
-- The `ClassScopeFunctionSpecializationDecl` AST node has been removed. Dependent class scope
-explicit function template specializations now use `DependentFunctionTemplateSpecializationInfo`
-to store candidate primary templates and explicit template arguments. This should not impact users
-of Clang as a compiler, but it may break assumptions in Clang-based tools iterating over the AST.
+- The `ClassScopeFunctionSpecializationDecl` AST node has been removed.
+  Dependent class scope explicit function template specializations now use
+  `DependentFunctionTemplateSpecializationInfo` to store candidate primary
+  templates and explicit template arguments. This should not impact users of
+  Clang as a compiler, but it may break assumptions in Clang-based tools
+  iterating over the AST.
 
 ABI Changes in This Version
 ---------------------------
