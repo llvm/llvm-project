@@ -732,9 +732,8 @@ SwiftLanguage::GetHardcodedSummaries() {
   return g_formatters;
 }
 
-static CompilerType
-ExtractSwiftTypeFromCxxInteropType(CompilerType type, TypeSystemSwift &ts,
-                                   SwiftLanguageRuntime &runtime) {
+static llvm::StringRef
+ExtractSwiftTypeNameFromCxxInteropType(CompilerType type) {
   // Try to recognize a Swift type wrapped in a C++ interop wrapper class.
   // These types have a typedef from a char to the swift mangled name, and a
   // static constexpr char field whose type is the typedef, and whose name
@@ -764,8 +763,6 @@ ExtractSwiftTypeFromCxxInteropType(CompilerType type, TypeSystemSwift &ts,
   }
 
   const clang::RecordDecl *record_decl = record_type->getDecl();
-  CompilerType swift_type;
-
   for (auto *child_decl : record_decl->decls()) {
     auto *var_decl = llvm::dyn_cast<clang::VarDecl>(child_decl);
     if (!var_decl)
@@ -784,37 +781,44 @@ ExtractSwiftTypeFromCxxInteropType(CompilerType type, TypeSystemSwift &ts,
     if (!decl)
       break;
 
-    auto swift_name = decl->getName();
-    if (!swift::Demangle::isMangledName(swift_name))
-      break;
-
-    swift_type = ts.GetTypeFromMangledTypename(ConstString(swift_name));
-    break;
-  }
-
-  if (swift_type) {
-    auto bound_type = runtime.BindGenericTypeParameters(
-        swift_type, [&](unsigned depth, unsigned index) -> CompilerType {
-          assert(depth == 0 && "Unexpected depth! C++ interop does not support "
-                               "nested generic parameters");
-          if (depth > 0)
-            return {};
-
-          auto templated_type = type.GetTypeTemplateArgument(index);
-          auto substituted_type =
-              ExtractSwiftTypeFromCxxInteropType(templated_type, ts, runtime);
-
-          // The generic type might also not be a user defined type which
-          // ExtractSwiftTypeFromCxxInteropType can find, but which is still
-          // convertible to Swift (for example, int -> Int32). Attempt to
-          // convert it to a Swift type.
-          if (!substituted_type)
-            substituted_type = ts.ConvertClangTypeToSwiftType(templated_type);
-          return substituted_type;
-        });
-    return bound_type;
+    return decl->getName();
   }
   return {};
+}
+
+static CompilerType ExtractSwiftTypeFromCxxInteropTypeName(
+    CompilerType type, llvm::StringRef swift_name, TypeSystemSwift &ts,
+    SwiftLanguageRuntime &swift_runtime) {
+  if (!swift::Demangle::isMangledName(swift_name))
+    return {};
+
+  CompilerType swift_type =
+      ts.GetTypeFromMangledTypename(ConstString(swift_name));
+  if (!swift_type)
+    return {};
+
+  auto bound_type = swift_runtime.BindGenericTypeParameters(
+      swift_type, [&](unsigned depth, unsigned index) -> CompilerType {
+        assert(depth == 0 && "Unexpected depth! C++ interop does not support "
+                             "nested generic parameters");
+        if (depth > 0)
+          return {};
+
+        CompilerType templated_type = type.GetTypeTemplateArgument(index);
+        CompilerType substituted_type = ExtractSwiftTypeFromCxxInteropTypeName(
+            templated_type,
+            ExtractSwiftTypeNameFromCxxInteropType(templated_type), ts,
+            swift_runtime);
+
+        // The generic type might also not be a user defined type which
+        // ExtractSwiftTypeFromCxxInteropType can find, but which is still
+        // convertible to Swift (for example, int -> Int32). Attempt to
+        // convert it to a Swift type.
+        if (!substituted_type)
+          substituted_type = ts.ConvertClangTypeToSwiftType(templated_type);
+        return substituted_type;
+      });
+  return bound_type;
 }
 
 /// Synthetic child that wraps a value object.
@@ -998,30 +1002,39 @@ SwiftLanguage::GetHardcodedSynthetics() {
                               FormatManager &format_manager)
                                -> lldb::SyntheticChildrenSP {
       Log *log(GetLog(LLDBLog::DataFormatters));
-
-      ProcessSP process_sp(valobj.GetProcessSP());
-      auto *swift_runtime = SwiftLanguageRuntime::Get(process_sp);
-      if (!swift_runtime) {
-        LLDB_LOGV(log, "[Matching CxxBridgedSyntheticChildProvider] - "
-                       "Could not get the swift runtime.");
-        return nullptr;
-      }
-
-      auto scratch_ctx = valobj.GetSwiftScratchContext();
-      if (!scratch_ctx) {
-        LLDB_LOGV(log, "[Matching CxxBridgedSyntheticChildProvider] - "
-                       "Could not get the swift scratch context.");
-        return nullptr;
-      }
-      auto &type_system_swift = **scratch_ctx;
-
       auto type = valobj.GetCompilerType();
 
-      auto swift_type = ExtractSwiftTypeFromCxxInteropType(
-          type, type_system_swift, *swift_runtime);
-      if (!swift_type) {
+      // First, check whether this is a C++ wrapped Swift type.
+      llvm::StringRef swift_type_name =
+          ExtractSwiftTypeNameFromCxxInteropType(type);
+      if (swift_type_name.empty()) {
         LLDB_LOGV(log, "[Matching CxxBridgedSyntheticChildProvider] - "
                        "Did not find Swift type.");
+        return nullptr;
+      }
+
+      // Extract the Swift type.
+      ProcessSP process_sp(valobj.GetProcessSP());
+      auto *swift_runtime = SwiftLanguageRuntime::Get(process_sp);
+      if (!swift_runtime)
+        LLDB_LOGV(log, "[Matching CxxBridgedSyntheticChildProvider] - "
+                       "Could not get the swift runtime.");
+
+      llvm::Optional<SwiftScratchContextReader> scratch_ctx_reader =
+          valobj.GetSwiftScratchContext();
+      if (!scratch_ctx_reader || !scratch_ctx_reader->get()) {
+        LLDB_LOGV(log, "[Matching CxxBridgedSyntheticChildProvider] - "
+                       "Could not get the Swift scratch context.");
+        return nullptr;
+      }
+      auto &ts = *scratch_ctx_reader->get();
+      CompilerType swift_type = ExtractSwiftTypeFromCxxInteropTypeName(
+          type, swift_type_name, ts, *swift_runtime);
+      if (!swift_type) {
+        LLDB_LOGV(log,
+                  "[Matching CxxBridgedSyntheticChildProvider] - "
+                  "Did not find Swift type for type name \"{0}\".",
+                  swift_type_name);
         return nullptr;
       }
 
