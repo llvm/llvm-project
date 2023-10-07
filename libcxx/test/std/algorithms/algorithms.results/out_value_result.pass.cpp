@@ -17,48 +17,25 @@
 
 #include "MoveOnly.h"
 
-struct A {
-  explicit A(int);
+//
+// Helper structs
+//
+
+// only explicit construction
+struct IterTypeExplicit {
+  explicit IterTypeExplicit(int*);
 };
-// no implicit conversion
-static_assert(!std::is_constructible_v<std::ranges::out_value_result<A, A>, std::ranges::out_value_result<int, int>>);
 
-struct B {
-  B(int);
+// implicit construction
+struct IterTypeImplicit {
+  IterTypeImplicit(int*);
 };
-// implicit conversion
-static_assert(std::is_constructible_v<std::ranges::out_value_result<B, B>, std::ranges::out_value_result<int, int>>);
-static_assert(std::is_constructible_v<std::ranges::out_value_result<B, B>, std::ranges::out_value_result<int, int>&>);
-static_assert(
-    std::is_constructible_v<std::ranges::out_value_result<B, B>, const std::ranges::out_value_result<int, int>>);
-static_assert(
-    std::is_constructible_v<std::ranges::out_value_result<B, B>, const std::ranges::out_value_result<int, int>&>);
 
-struct C {
-  C(int&);
+struct IterTypeImplicitRef {
+  IterTypeImplicitRef(int&);
 };
-static_assert(!std::is_constructible_v<std::ranges::out_value_result<C, C>, std::ranges::out_value_result<int, int>&>);
-
-// has to be convertible via const&
-static_assert(
-    std::is_convertible_v<std::ranges::out_value_result<int, int>&, std::ranges::out_value_result<long, long>>);
-static_assert(
-    std::is_convertible_v<const std::ranges::out_value_result<int, int>&, std::ranges::out_value_result<long, long>>);
-static_assert(
-    std::is_convertible_v<std::ranges::out_value_result<int, int>&&, std::ranges::out_value_result<long, long>>);
-static_assert(
-    std::is_convertible_v<const std::ranges::out_value_result<int, int>&&, std::ranges::out_value_result<long, long>>);
-
-// should be move constructible
-static_assert(std::is_move_constructible_v<std::ranges::out_value_result<MoveOnly, int>>);
-static_assert(std::is_move_constructible_v<std::ranges::out_value_result<int, MoveOnly>>);
 
 struct NotConvertible {};
-// conversions should not work if there is no conversion
-static_assert(!std::is_convertible_v<std::ranges::out_value_result<NotConvertible, int>,
-                                     std::ranges::out_value_result<int, NotConvertible>>);
-static_assert(!std::is_convertible_v<std::ranges::out_value_result<int, NotConvertible>,
-                                     std::ranges::out_value_result<NotConvertible, int>>);
 
 template <class T>
 struct ConvertibleFrom {
@@ -66,6 +43,51 @@ struct ConvertibleFrom {
   T content;
 };
 
+//
+constexpr void test_constraints() {
+  // requires convertible_to<const _OutIter1&, _OutIter2> && convertible_to<const _ValType1&, _ValType2>
+  static_assert(
+      std::is_constructible_v<std::ranges::out_value_result<int*, int>, std::ranges::out_value_result<int*, int>>);
+
+  // test failure when implicit conversion isn't allowed
+  static_assert(!std::is_constructible_v<std::ranges::out_value_result<IterTypeExplicit, int>,
+                                         std::ranges::out_value_result<int*, int>>);
+
+  // test success when implicit conversion is allowed, checking combinations of value, reference, and const
+  static_assert(std::is_constructible_v<std::ranges::out_value_result<IterTypeImplicit, int>,
+                                        std::ranges::out_value_result<int*, int>>);
+  static_assert(std::is_constructible_v<std::ranges::out_value_result<IterTypeImplicit, int>,
+                                        std::ranges::out_value_result<int*, int> const>);
+  static_assert(std::is_constructible_v<std::ranges::out_value_result<IterTypeImplicit, int>,
+                                        std::ranges::out_value_result<int*, int>&>);
+  static_assert(std::is_constructible_v<std::ranges::out_value_result<IterTypeImplicit, int>,
+                                        std::ranges::out_value_result<int*, int> const&>);
+
+  static_assert(!std::is_constructible_v<std::ranges::out_value_result<IterTypeImplicitRef, int>,
+                                         std::ranges::out_value_result<int, int>&>);
+
+  // has to be convertible via const&
+  static_assert(
+      std::is_convertible_v<std::ranges::out_value_result<int, int>&, std::ranges::out_value_result<long, long>>);
+  static_assert(
+      std::is_convertible_v<const std::ranges::out_value_result<int, int>&, std::ranges::out_value_result<long, long>>);
+  static_assert(
+      std::is_convertible_v<std::ranges::out_value_result<int, int>&&, std::ranges::out_value_result<long, long>>);
+  static_assert(std::is_convertible_v<const std::ranges::out_value_result<int, int>&&,
+                                      std::ranges::out_value_result<long, long>>);
+
+  // should be move constructible
+  static_assert(std::is_move_constructible_v<std::ranges::out_value_result<MoveOnly, int>>);
+  static_assert(std::is_move_constructible_v<std::ranges::out_value_result<int, MoveOnly>>);
+
+  // conversions should not work if there is no conversion
+  static_assert(!std::is_convertible_v<std::ranges::out_value_result<NotConvertible, int>,
+                                       std::ranges::out_value_result<int, NotConvertible>>);
+  static_assert(!std::is_convertible_v<std::ranges::out_value_result<int, NotConvertible>,
+                                       std::ranges::out_value_result<NotConvertible, int>>);
+}
+
+// Test results
 constexpr bool test() {
   {
     std::ranges::out_value_result<double, int> res{10, 1};
@@ -86,17 +108,17 @@ constexpr bool test() {
     assert(res2.value == 10);
   }
   {
-    auto [min, max] = std::ranges::out_value_result<int, int>{1, 2};
-    assert(min == 1);
-    assert(max == 2);
+    auto [out, val] = std::ranges::out_value_result<int, int>{1, 2};
+    assert(out == 1);
+    assert(val == 2);
   }
 
   return true;
 }
 
 int main(int, char**) {
+  test_constraints();
   test();
   static_assert(test());
-
   return 0;
 }

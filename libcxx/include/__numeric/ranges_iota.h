@@ -13,6 +13,7 @@
 #include <__algorithm/out_value_result.h>
 #include <__config>
 #include <__ranges/concepts.h>
+#include <__utility/as_const.h>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #  pragma GCC system_header
@@ -30,7 +31,7 @@ struct __iota_fn {
     requires indirectly_writable<_Out, const _Tp&>
   constexpr iota_result<_Out, _Tp> operator()(_Out __first, _Sent __last, _Tp __value) const {
     while (__first != __last) {
-      *__first = static_cast<const _Tp&>(__value);
+      *__first = std::as_const(__value);
       ++__first;
       ++__value;
     }

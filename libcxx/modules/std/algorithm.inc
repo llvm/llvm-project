@@ -18,7 +18,7 @@ export namespace std {
     using std::ranges::in_out_result;
     // using std::ranges::in_value_result;
     using std::ranges::min_max_result;
-    // using std::ranges::out_value_result;
+    using std::ranges::out_value_result;
   } // namespace ranges
 
   // [alg.nonmodifying], non-modifying sequence operations
