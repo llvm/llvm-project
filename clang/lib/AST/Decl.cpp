@@ -4179,8 +4179,8 @@ DependentFunctionTemplateSpecializationInfo::
     DependentFunctionTemplateSpecializationInfo(
         const UnresolvedSetImpl &Candidates,
         const ASTTemplateArgumentListInfo *TemplateArgsWritten)
-    : TemplateArgumentsAsWritten(TemplateArgsWritten),
-      NumCandidates(Candidates.size()) {
+    : NumCandidates(Candidates.size()),
+      TemplateArgumentsAsWritten(TemplateArgsWritten) {
   std::transform(Candidates.begin(), Candidates.end(),
                  getTrailingObjects<FunctionTemplateDecl *>(),
                  [](NamedDecl *ND) {
