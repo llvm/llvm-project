@@ -2,8 +2,8 @@
 
 // Check that relaxation correctly adjusts symbol addresses and sizes.
 
-# RUN: llvm-mc -filetype=obj -triple=riscv32 -mattr=+relax -mattr=+experimental-zcmt %s -o %t.rv32.o
-# RUN: llvm-mc -filetype=obj -triple=riscv64 -mattr=+relax -mattr=+experimental-zcmt %s -o %t.rv64.o
+# RUN: llvm-mc -filetype=obj -triple=riscv32 -mattr=+relax -mattr=zcmt %s -o %t.rv32.o
+# RUN: llvm-mc -filetype=obj -triple=riscv64 -mattr=+relax -mattr=zcmt %s -o %t.rv64.o
 # RUN: ld.lld -Ttext=0x100000 --riscv-tbljal %t.rv32.o -o %t.rv32
 # RUN: ld.lld -Ttext=0x100000 --riscv-tbljal %t.rv64.o -o %t.rv64
 
