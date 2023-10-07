@@ -1486,10 +1486,6 @@ enum DeclCode {
   /// template template parameter pack.
   DECL_EXPANDED_TEMPLATE_TEMPLATE_PARM_PACK,
 
-  /// A ClassScopeFunctionSpecializationDecl record a class scope
-  /// function specialization. (Microsoft extension).
-  DECL_CLASS_SCOPE_FUNCTION_SPECIALIZATION,
-
   /// An ImportDecl recording a module import.
   DECL_IMPORT,
 
