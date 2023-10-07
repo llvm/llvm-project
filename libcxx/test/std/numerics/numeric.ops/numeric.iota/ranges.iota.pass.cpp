@@ -26,9 +26,8 @@ concept HasIotaIter = requires(Iter&& iter, Sent&& sent, Value&& val) {
 };
 
 template <class Range, class Value = int>
-concept HasIotaRange = requires(Range&& range, Value&& val) {
-  std::ranges::iota(std::forward<Range>(range), std::forward<Value>(val));
-};
+concept HasIotaRange =
+    requires(Range&& range, Value&& val) { std::ranges::iota(std::forward<Range>(range), std::forward<Value>(val)); };
 
 constexpr void test_constraints() {
   // Test constraints of the iterator/sentinel overload
