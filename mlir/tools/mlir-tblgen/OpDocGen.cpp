@@ -50,6 +50,7 @@ using mlir::tblgen::Operator;
 
 void mlir::tblgen::emitSummary(StringRef summary, raw_ostream &os) {
   if (!summary.empty()) {
+    summary = summary.trim();
     char first = std::toupper(summary.front());
     llvm::StringRef rest = summary.drop_front();
     os << "\n_" << first << rest << "_\n\n";
