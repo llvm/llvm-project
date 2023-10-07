@@ -226,11 +226,7 @@ extern "C" {
 static_assert(std::is_same<index_type, uint64_t>::value,
               "Expected index_type == uint64_t");
 
-// TODO: this swiss-army-knife should be split up into separate functions
-// for each action, since the various actions don't agree on (1) whether
-// the first two arguments are "sizes" vs "shapes", (2) whether the "lvl"
-// arguments are actually storage-levels vs target tensor-dimensions,
-// (3) whether all the arguments are actually used/required.
+// The Swiss-army-knife for sparse tensor creation.
 void *_mlir_ciface_newSparseTensor( // NOLINT
     StridedMemRefType<index_type, 1> *dimSizesRef,
     StridedMemRefType<index_type, 1> *lvlSizesRef,
@@ -241,18 +237,18 @@ void *_mlir_ciface_newSparseTensor( // NOLINT
   ASSERT_NO_STRIDE(dimSizesRef);
   ASSERT_NO_STRIDE(lvlSizesRef);
   ASSERT_NO_STRIDE(lvlTypesRef);
-  ASSERT_NO_STRIDE(lvl2dimRef);
   ASSERT_NO_STRIDE(dim2lvlRef);
+  ASSERT_NO_STRIDE(lvl2dimRef);
   const uint64_t dimRank = MEMREF_GET_USIZE(dimSizesRef);
   const uint64_t lvlRank = MEMREF_GET_USIZE(lvlSizesRef);
-  ASSERT_USIZE_EQ(dim2lvlRef, dimRank);
   ASSERT_USIZE_EQ(lvlTypesRef, lvlRank);
+  ASSERT_USIZE_EQ(dim2lvlRef, dimRank);
   ASSERT_USIZE_EQ(lvl2dimRef, lvlRank);
   const index_type *dimSizes = MEMREF_GET_PAYLOAD(dimSizesRef);
   const index_type *lvlSizes = MEMREF_GET_PAYLOAD(lvlSizesRef);
   const DimLevelType *lvlTypes = MEMREF_GET_PAYLOAD(lvlTypesRef);
-  const index_type *lvl2dim = MEMREF_GET_PAYLOAD(lvl2dimRef);
   const index_type *dim2lvl = MEMREF_GET_PAYLOAD(dim2lvlRef);
+  const index_type *lvl2dim = MEMREF_GET_PAYLOAD(lvl2dimRef);
 
   // Rewrite kIndex to kU64, to avoid introducing a bunch of new cases.
   // This is safe because of the static_assert above.
@@ -403,10 +399,7 @@ MLIR_SPARSETENSOR_FOREVERY_O(IMPL_SPARSECOORDINATES)
 #undef IMPL_SPARSECOORDINATES
 #undef IMPL_GETOVERHEAD
 
-// TODO: while this API design will work for arbitrary dim2lvl mappings,
-// we should probably move the `dimCoords`-to-`lvlCoords` computation into
-// codegen (since that could enable optimizations to remove the intermediate
-// memref).
+// TODO: use MapRef here for translation of coordinates
 #define IMPL_ADDELT(VNAME, V)                                                  \
   void *_mlir_ciface_addElt##VNAME(                                            \
       void *lvlCOO, StridedMemRefType<V, 0> *vref,                             \
@@ -506,44 +499,33 @@ void _mlir_ciface_getSparseTensorReaderDimSizes(
   aliasIntoMemref(reader.getRank(), dimSizes, *out);
 }
 
-#define IMPL_GETNEXT(VNAME, V)                                                 \
-  void _mlir_ciface_getSparseTensorReaderNext##VNAME(                          \
-      void *p, StridedMemRefType<index_type, 1> *dimCoordsRef,                 \
-      StridedMemRefType<V, 0> *vref) {                                         \
-    assert(p &&vref);                                                          \
-    auto &reader = *static_cast<SparseTensorReader *>(p);                      \
-    ASSERT_NO_STRIDE(dimCoordsRef);                                            \
-    const uint64_t dimRank = MEMREF_GET_USIZE(dimCoordsRef);                   \
-    index_type *dimCoords = MEMREF_GET_PAYLOAD(dimCoordsRef);                  \
-    V *value = MEMREF_GET_PAYLOAD(vref);                                       \
-    *value = reader.readElement<V>(dimRank, dimCoords);                        \
-  }
-MLIR_SPARSETENSOR_FOREVERY_V(IMPL_GETNEXT)
-#undef IMPL_GETNEXT
-
 #define IMPL_GETNEXT(VNAME, V, CNAME, C)                                       \
   bool _mlir_ciface_getSparseTensorReaderReadToBuffers##CNAME##VNAME(          \
       void *p, StridedMemRefType<index_type, 1> *dim2lvlRef,                   \
+      StridedMemRefType<index_type, 1> *lvl2dimRef,                            \
       StridedMemRefType<C, 1> *cref, StridedMemRefType<V, 1> *vref) {          \
     assert(p);                                                                 \
     auto &reader = *static_cast<SparseTensorReader *>(p);                      \
+    ASSERT_NO_STRIDE(dim2lvlRef);                                              \
+    ASSERT_NO_STRIDE(lvl2dimRef);                                              \
     ASSERT_NO_STRIDE(cref);                                                    \
     ASSERT_NO_STRIDE(vref);                                                    \
-    ASSERT_NO_STRIDE(dim2lvlRef);                                              \
+    const uint64_t dimRank = reader.getRank();                                 \
+    const uint64_t lvlRank = MEMREF_GET_USIZE(lvl2dimRef);                     \
     const uint64_t cSize = MEMREF_GET_USIZE(cref);                             \
     const uint64_t vSize = MEMREF_GET_USIZE(vref);                             \
-    const uint64_t lvlRank = reader.getRank();                                 \
-    assert(vSize *lvlRank <= cSize);                                           \
+    ASSERT_USIZE_EQ(dim2lvlRef, dimRank);                                      \
+    assert(cSize >= lvlRank * vSize);                                          \
     assert(vSize >= reader.getNSE() && "Not enough space in buffers");         \
-    ASSERT_USIZE_EQ(dim2lvlRef, lvlRank);                                      \
+    (void)dimRank;                                                             \
     (void)cSize;                                                               \
     (void)vSize;                                                               \
-    (void)lvlRank;                                                             \
+    index_type *dim2lvl = MEMREF_GET_PAYLOAD(dim2lvlRef);                      \
+    index_type *lvl2dim = MEMREF_GET_PAYLOAD(lvl2dimRef);                      \
     C *lvlCoordinates = MEMREF_GET_PAYLOAD(cref);                              \
     V *values = MEMREF_GET_PAYLOAD(vref);                                      \
-    index_type *dim2lvl = MEMREF_GET_PAYLOAD(dim2lvlRef);                      \
-    return reader.readToBuffers<C, V>(lvlRank, dim2lvl, lvlCoordinates,        \
-                                      values);                                 \
+    return reader.readToBuffers<C, V>(lvlRank, dim2lvl, lvl2dim,               \
+                                      lvlCoordinates, values);                 \
   }
 MLIR_SPARSETENSOR_FOREVERY_V_O(IMPL_GETNEXT)
 #undef IMPL_GETNEXT
@@ -551,8 +533,8 @@ MLIR_SPARSETENSOR_FOREVERY_V_O(IMPL_GETNEXT)
 void *_mlir_ciface_newSparseTensorFromReader(
     void *p, StridedMemRefType<index_type, 1> *lvlSizesRef,
     StridedMemRefType<DimLevelType, 1> *lvlTypesRef,
-    StridedMemRefType<index_type, 1> *lvl2dimRef,
-    StridedMemRefType<index_type, 1> *dim2lvlRef, OverheadType posTp,
+    StridedMemRefType<index_type, 1> *dim2lvlRef,
+    StridedMemRefType<index_type, 1> *lvl2dimRef, OverheadType posTp,
     OverheadType crdTp, PrimaryType valTp) {
   assert(p);
   SparseTensorReader &reader = *static_cast<SparseTensorReader *>(p);
@@ -568,13 +550,13 @@ void *_mlir_ciface_newSparseTensorFromReader(
   (void)dimRank;
   const index_type *lvlSizes = MEMREF_GET_PAYLOAD(lvlSizesRef);
   const DimLevelType *lvlTypes = MEMREF_GET_PAYLOAD(lvlTypesRef);
-  const index_type *lvl2dim = MEMREF_GET_PAYLOAD(lvl2dimRef);
   const index_type *dim2lvl = MEMREF_GET_PAYLOAD(dim2lvlRef);
+  const index_type *lvl2dim = MEMREF_GET_PAYLOAD(lvl2dimRef);
 #define CASE(p, c, v, P, C, V)                                                 \
   if (posTp == OverheadType::p && crdTp == OverheadType::c &&                  \
       valTp == PrimaryType::v)                                                 \
     return static_cast<void *>(reader.readSparseTensor<P, C, V>(               \
-        lvlRank, lvlSizes, lvlTypes, lvl2dim, dim2lvl));
+        lvlRank, lvlSizes, lvlTypes, dim2lvl, lvl2dim));
 #define CASE_SECSAME(p, v, P, V) CASE(p, p, v, P, P, V)
   // Rewrite kIndex to kU64, to avoid introducing a bunch of new cases.
   // This is safe because of the static_assert above.

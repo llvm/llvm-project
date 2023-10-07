@@ -8125,6 +8125,43 @@ SDValue RISCVTargetLowering::LowerINTRINSIC_WO_CHAIN(SDValue Op,
       report_fatal_error("EGW should be greater than or equal to 4 * SEW.");
     return Op;
   }
+  case Intrinsic::riscv_sf_vc_v_x:
+  case Intrinsic::riscv_sf_vc_v_i:
+  case Intrinsic::riscv_sf_vc_v_xv:
+  case Intrinsic::riscv_sf_vc_v_iv:
+  case Intrinsic::riscv_sf_vc_v_vv:
+  case Intrinsic::riscv_sf_vc_v_fv:
+  case Intrinsic::riscv_sf_vc_v_xvv:
+  case Intrinsic::riscv_sf_vc_v_ivv:
+  case Intrinsic::riscv_sf_vc_v_vvv:
+  case Intrinsic::riscv_sf_vc_v_fvv:
+  case Intrinsic::riscv_sf_vc_v_xvw:
+  case Intrinsic::riscv_sf_vc_v_ivw:
+  case Intrinsic::riscv_sf_vc_v_vvw:
+  case Intrinsic::riscv_sf_vc_v_fvw: {
+    MVT VT = Op.getSimpleValueType();
+
+    if (!VT.isFixedLengthVector())
+      break;
+
+    SmallVector<SDValue, 6> Ops;
+    for (const SDValue &V : Op->op_values()) {
+      // Skip non-fixed vector operands.
+      if (!V.getValueType().isFixedLengthVector()) {
+        Ops.push_back(V);
+        continue;
+      }
+
+      MVT OpContainerVT =
+          getContainerForFixedLengthVector(V.getSimpleValueType());
+      Ops.push_back(convertToScalableVector(OpContainerVT, V, DAG, Subtarget));
+    }
+
+    MVT RetContainerVT = getContainerForFixedLengthVector(VT);
+    SDValue Scalable =
+        DAG.getNode(ISD::INTRINSIC_WO_CHAIN, DL, RetContainerVT, Ops);
+    return convertFromScalableVector(VT, Scalable, DAG, Subtarget);
+  }
   }
 
   return lowerVectorIntrinsicScalars(Op, DAG, Subtarget);
@@ -8245,6 +8282,46 @@ SDValue RISCVTargetLowering::LowerINTRINSIC_W_CHAIN(SDValue Op,
     Results.push_back(Result.getValue(NF));
     return DAG.getMergeValues(Results, DL);
   }
+  case Intrinsic::riscv_sf_vc_v_x_se:
+  case Intrinsic::riscv_sf_vc_v_i_se:
+  case Intrinsic::riscv_sf_vc_v_xv_se:
+  case Intrinsic::riscv_sf_vc_v_iv_se:
+  case Intrinsic::riscv_sf_vc_v_vv_se:
+  case Intrinsic::riscv_sf_vc_v_fv_se:
+  case Intrinsic::riscv_sf_vc_v_xvv_se:
+  case Intrinsic::riscv_sf_vc_v_ivv_se:
+  case Intrinsic::riscv_sf_vc_v_vvv_se:
+  case Intrinsic::riscv_sf_vc_v_fvv_se:
+  case Intrinsic::riscv_sf_vc_v_xvw_se:
+  case Intrinsic::riscv_sf_vc_v_ivw_se:
+  case Intrinsic::riscv_sf_vc_v_vvw_se:
+  case Intrinsic::riscv_sf_vc_v_fvw_se: {
+    MVT VT = Op.getSimpleValueType();
+
+    if (!VT.isFixedLengthVector())
+      break;
+
+    SmallVector<SDValue, 6> Ops;
+    for (const SDValue &V : Op->op_values()) {
+      // Skip non-fixed vector operands.
+      if (!V.getValueType().isFixedLengthVector()) {
+        Ops.push_back(V);
+        continue;
+      }
+
+      MVT OpContainerVT =
+          getContainerForFixedLengthVector(V.getSimpleValueType());
+      Ops.push_back(convertToScalableVector(OpContainerVT, V, DAG, Subtarget));
+    }
+
+    SDLoc DL(Op);
+    MVT RetContainerVT = getContainerForFixedLengthVector(VT);
+    SDVTList VTs = DAG.getVTList({RetContainerVT, MVT::Other});
+    SDValue ScalableVector = DAG.getNode(ISD::INTRINSIC_W_CHAIN, DL, VTs, Ops);
+    SDValue FixedVector =
+        convertFromScalableVector(VT, ScalableVector, DAG, Subtarget);
+    return DAG.getMergeValues({FixedVector, ScalableVector.getValue(1)}, DL);
+  }
   }
 
   return lowerVectorIntrinsicScalars(Op, DAG, Subtarget);
@@ -8331,6 +8408,82 @@ SDValue RISCVTargetLowering::LowerINTRINSIC_VOID(SDValue Op,
     return DAG.getMemIntrinsicNode(
         ISD::INTRINSIC_VOID, DL, DAG.getVTList(MVT::Other), Ops,
         FixedIntrinsic->getMemoryVT(), FixedIntrinsic->getMemOperand());
+  }
+  case Intrinsic::riscv_sf_vc_x_se_e8mf8:
+  case Intrinsic::riscv_sf_vc_x_se_e8mf4:
+  case Intrinsic::riscv_sf_vc_x_se_e8mf2:
+  case Intrinsic::riscv_sf_vc_x_se_e8m1:
+  case Intrinsic::riscv_sf_vc_x_se_e8m2:
+  case Intrinsic::riscv_sf_vc_x_se_e8m4:
+  case Intrinsic::riscv_sf_vc_x_se_e8m8:
+  case Intrinsic::riscv_sf_vc_x_se_e16mf4:
+  case Intrinsic::riscv_sf_vc_x_se_e16mf2:
+  case Intrinsic::riscv_sf_vc_x_se_e16m1:
+  case Intrinsic::riscv_sf_vc_x_se_e16m2:
+  case Intrinsic::riscv_sf_vc_x_se_e16m4:
+  case Intrinsic::riscv_sf_vc_x_se_e16m8:
+  case Intrinsic::riscv_sf_vc_x_se_e32mf2:
+  case Intrinsic::riscv_sf_vc_x_se_e32m1:
+  case Intrinsic::riscv_sf_vc_x_se_e32m2:
+  case Intrinsic::riscv_sf_vc_x_se_e32m4:
+  case Intrinsic::riscv_sf_vc_x_se_e32m8:
+  case Intrinsic::riscv_sf_vc_x_se_e64m1:
+  case Intrinsic::riscv_sf_vc_x_se_e64m2:
+  case Intrinsic::riscv_sf_vc_x_se_e64m4:
+  case Intrinsic::riscv_sf_vc_x_se_e64m8:
+  case Intrinsic::riscv_sf_vc_i_se_e8mf8:
+  case Intrinsic::riscv_sf_vc_i_se_e8mf4:
+  case Intrinsic::riscv_sf_vc_i_se_e8mf2:
+  case Intrinsic::riscv_sf_vc_i_se_e8m1:
+  case Intrinsic::riscv_sf_vc_i_se_e8m2:
+  case Intrinsic::riscv_sf_vc_i_se_e8m4:
+  case Intrinsic::riscv_sf_vc_i_se_e8m8:
+  case Intrinsic::riscv_sf_vc_i_se_e16mf4:
+  case Intrinsic::riscv_sf_vc_i_se_e16mf2:
+  case Intrinsic::riscv_sf_vc_i_se_e16m1:
+  case Intrinsic::riscv_sf_vc_i_se_e16m2:
+  case Intrinsic::riscv_sf_vc_i_se_e16m4:
+  case Intrinsic::riscv_sf_vc_i_se_e16m8:
+  case Intrinsic::riscv_sf_vc_i_se_e32mf2:
+  case Intrinsic::riscv_sf_vc_i_se_e32m1:
+  case Intrinsic::riscv_sf_vc_i_se_e32m2:
+  case Intrinsic::riscv_sf_vc_i_se_e32m4:
+  case Intrinsic::riscv_sf_vc_i_se_e32m8:
+  case Intrinsic::riscv_sf_vc_i_se_e64m1:
+  case Intrinsic::riscv_sf_vc_i_se_e64m2:
+  case Intrinsic::riscv_sf_vc_i_se_e64m4:
+  case Intrinsic::riscv_sf_vc_i_se_e64m8:
+  case Intrinsic::riscv_sf_vc_xv_se:
+  case Intrinsic::riscv_sf_vc_iv_se:
+  case Intrinsic::riscv_sf_vc_vv_se:
+  case Intrinsic::riscv_sf_vc_fv_se:
+  case Intrinsic::riscv_sf_vc_xvv_se:
+  case Intrinsic::riscv_sf_vc_ivv_se:
+  case Intrinsic::riscv_sf_vc_vvv_se:
+  case Intrinsic::riscv_sf_vc_fvv_se:
+  case Intrinsic::riscv_sf_vc_xvw_se:
+  case Intrinsic::riscv_sf_vc_ivw_se:
+  case Intrinsic::riscv_sf_vc_vvw_se:
+  case Intrinsic::riscv_sf_vc_fvw_se: {
+    if (!llvm::any_of(Op->op_values(), [&](const SDValue &V) {
+          return V.getValueType().isFixedLengthVector();
+        }))
+      break;
+
+    SmallVector<SDValue, 6> Ops;
+    for (const SDValue &V : Op->op_values()) {
+      // Skip non-fixed vector operands.
+      if (!V.getValueType().isFixedLengthVector()) {
+        Ops.push_back(V);
+        continue;
+      }
+
+      MVT OpContainerVT =
+          getContainerForFixedLengthVector(V.getSimpleValueType());
+      Ops.push_back(convertToScalableVector(OpContainerVT, V, DAG, Subtarget));
+    }
+
+    return DAG.getNode(ISD::INTRINSIC_VOID, SDLoc(Op), Op->getVTList(), Ops);
   }
   }
 

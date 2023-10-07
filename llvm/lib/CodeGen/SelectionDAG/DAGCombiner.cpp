@@ -13512,8 +13512,12 @@ SDValue DAGCombiner::visitZERO_EXTEND(SDNode *N) {
                         N0.getScalarValueSizeInBits(),
                         std::min(Op.getScalarValueSizeInBits(),
                                  VT.getScalarSizeInBits()));
-    if (TruncatedBits.isSubsetOf(Known.Zero))
-      return DAG.getZExtOrTrunc(Op, DL, VT);
+    if (TruncatedBits.isSubsetOf(Known.Zero)) {
+      SDValue ZExtOrTrunc = DAG.getZExtOrTrunc(Op, DL, VT);
+      DAG.salvageDebugInfo(*N0.getNode());
+
+      return ZExtOrTrunc;
+    }
   }
 
   // fold (zext (truncate x)) -> (and x, mask)

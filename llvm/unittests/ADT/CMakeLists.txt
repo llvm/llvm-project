@@ -47,6 +47,7 @@ add_llvm_unittest(ADTTests
   IntervalTreeTest.cpp
   IntrusiveRefCntPtrTest.cpp
   IteratorTest.cpp
+  LazyAtomicPointerTest.cpp
   MappedIteratorTest.cpp
   MapVectorTest.cpp
   MoveOnly.cpp

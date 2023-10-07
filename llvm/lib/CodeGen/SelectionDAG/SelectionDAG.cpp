@@ -10778,7 +10778,7 @@ void SelectionDAG::salvageDebugInfo(SDNode &N) {
     switch (N.getOpcode()) {
     default:
       break;
-    case ISD::ADD:
+    case ISD::ADD: {
       SDValue N0 = N.getOperand(0);
       SDValue N1 = N.getOperand(1);
       if (!isa<ConstantSDNode>(N0) && isa<ConstantSDNode>(N1)) {
@@ -10819,6 +10819,41 @@ void SelectionDAG::salvageDebugInfo(SDNode &N) {
                    N0.getNode()->dumprFull(this);
                    dbgs() << " into " << *DIExpr << '\n');
       }
+      break;
+    }
+    case ISD::TRUNCATE: {
+      SDValue N0 = N.getOperand(0);
+      TypeSize FromSize = N0.getValueSizeInBits();
+      TypeSize ToSize = N.getValueSizeInBits(0);
+
+      DIExpression *DbgExpression = DV->getExpression();
+      auto ExtOps = DIExpression::getExtOps(FromSize, ToSize, false);
+      auto NewLocOps = DV->copyLocationOps();
+      bool Changed = false;
+      for (size_t i = 0; i < NewLocOps.size(); ++i) {
+        if (NewLocOps[i].getKind() != SDDbgOperand::SDNODE ||
+            NewLocOps[i].getSDNode() != &N)
+          continue;
+
+        NewLocOps[i] = SDDbgOperand::fromNode(N0.getNode(), N0.getResNo());
+        DbgExpression = DIExpression::appendOpsToArg(DbgExpression, ExtOps, i);
+        Changed = true;
+      }
+      assert(Changed && "Salvage target doesn't use N");
+      (void)Changed;
+
+      SDDbgValue *Clone =
+          getDbgValueList(DV->getVariable(), DbgExpression, NewLocOps,
+                          DV->getAdditionalDependencies(), DV->isIndirect(),
+                          DV->getDebugLoc(), DV->getOrder(), DV->isVariadic());
+
+      ClonedDVs.push_back(Clone);
+      DV->setIsInvalidated();
+      DV->setIsEmitted();
+      LLVM_DEBUG(dbgs() << "SALVAGE: Rewriting"; N0.getNode()->dumprFull(this);
+                 dbgs() << " into " << *DbgExpression << '\n');
+      break;
+    }
     }
   }
 

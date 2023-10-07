@@ -413,14 +413,14 @@ define float @frem_call_sm_compat(float %a, float %b) "aarch64_pstate_sm_compati
 ; CHECK-COMMON-NEXT:    stp s0, s1, [sp, #8] // 8-byte Folded Spill
 ; CHECK-COMMON-NEXT:    bl __arm_sme_state
 ; CHECK-COMMON-NEXT:    and x19, x0, #0x1
-; CHECK-COMMON-NEXT:    tbz x19, #0, .LBB12_2
+; CHECK-COMMON-NEXT:    tbz w19, #0, .LBB12_2
 ; CHECK-COMMON-NEXT:  // %bb.1:
 ; CHECK-COMMON-NEXT:    smstop sm
 ; CHECK-COMMON-NEXT:  .LBB12_2:
 ; CHECK-COMMON-NEXT:    ldp s0, s1, [sp, #8] // 8-byte Folded Reload
 ; CHECK-COMMON-NEXT:    bl fmodf
 ; CHECK-COMMON-NEXT:    str s0, [sp, #12] // 4-byte Folded Spill
-; CHECK-COMMON-NEXT:    tbz x19, #0, .LBB12_4
+; CHECK-COMMON-NEXT:    tbz w19, #0, .LBB12_4
 ; CHECK-COMMON-NEXT:  // %bb.3:
 ; CHECK-COMMON-NEXT:    smstart sm
 ; CHECK-COMMON-NEXT:  .LBB12_4:
