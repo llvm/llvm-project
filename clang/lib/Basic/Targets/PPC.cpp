@@ -807,6 +807,7 @@ ArrayRef<TargetInfo::GCCRegAlias> PPCTargetInfo::getGCCRegAliases() const {
 // PPC ELFABIv2 DWARF Definitoin "Table 2.26. Mappings of Common Registers".
 // vs0 ~ vs31 is mapping to 32 - 63,
 // vs32 ~ vs63 is mapping to 77 - 108.
+// And this mapping applies to all OSes which runs on powerpc.
 const TargetInfo::AddlRegName GCCAddlRegNames[] = {
     // Table of additional register names to use in user input.
     {{"vs0"}, 32},   {{"vs1"}, 33},   {{"vs2"}, 34},   {{"vs3"}, 35},
@@ -828,7 +829,7 @@ const TargetInfo::AddlRegName GCCAddlRegNames[] = {
 };
 
 ArrayRef<TargetInfo::AddlRegName> PPCTargetInfo::getGCCAddlRegNames() const {
-  if (ABI == "elfv2")
+  if (ABI == "elfv2" || ABI == "aix")
     return llvm::ArrayRef(GCCAddlRegNames);
   else
     return TargetInfo::getGCCAddlRegNames();

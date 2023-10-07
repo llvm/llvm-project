@@ -2,6 +2,10 @@
 
 // RUN: %clang_cc1 -triple powerpc64le-unknown-linux-gnu -target-feature +vsx \
 // RUN:   -target-cpu pwr9 -emit-llvm %s -o - | FileCheck %s
+// RUN: %clang_cc1 -triple powerpc64-ibm-aix -target-feature +vsx \
+// RUN:   -target-cpu pwr9 -emit-llvm %s -o - | FileCheck %s
+// RUN: %clang_cc1 -triple powerpc-ibm-aix -target-feature +vsx \
+// RUN:   -target-cpu pwr9 -emit-llvm %s -o - | FileCheck %s
 
 // This case is to test VSX register support in the clobbers list for inline asm.
 void testVSX (void) {

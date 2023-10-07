@@ -385,6 +385,7 @@ public:
       LongDoubleWidth = 64;
       LongDoubleAlign = DoubleAlign = 32;
       LongDoubleFormat = &llvm::APFloat::IEEEdouble();
+      ABI = "aix";
       break;
     default:
       break;
@@ -418,11 +419,11 @@ public:
     std::string DataLayout;
 
     if (Triple.isOSAIX()) {
-      // TODO: Set appropriate ABI for AIX platform.
       DataLayout = "E-m:a-Fi64-i64:64-n32:64";
       LongDoubleWidth = 64;
       LongDoubleAlign = DoubleAlign = 32;
       LongDoubleFormat = &llvm::APFloat::IEEEdouble();
+      ABI = "aix";
     } else if ((Triple.getArch() == llvm::Triple::ppc64le)) {
       DataLayout = "e-m:e-Fn32-i64:64-n32:64";
       ABI = "elfv2";
