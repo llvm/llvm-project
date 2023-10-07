@@ -1423,7 +1423,7 @@ static constexpr Attribute::AttrKind FnAttrsToStrip[] =
 
 // Create new attribute set containing only attributes which can be transferred
 // from original call to the safepoint.
-static AttributeList legalizeCallAttributes(LLVMContext &Ctx,
+static AttributeList legalizeCallAttributes(LLVMContext &Ctx, unsigned NumArgs,
                                             AttributeList OrigAL,
                                             AttributeList StatepointAL) {
   if (OrigAL.isEmpty())
@@ -1439,7 +1439,15 @@ static AttributeList legalizeCallAttributes(LLVMContext &Ctx,
       FnAttrs.removeAttribute(A);
   }
 
-  // Just skip parameter and return attributes for now
+  // Attach the argument attributes from the original call at the corresponding
+  // arguments in the statepoint. Note that any argument attributes that are
+  // invalid after lowering are stripped in stripNonValidDataFromBody.
+  for (unsigned I : llvm::seq(NumArgs))
+    StatepointAL = StatepointAL.addParamAttributes(
+        Ctx, GCStatepointInst::CallArgsBeginPos + I,
+        AttrBuilder(Ctx, OrigAL.getParamAttrs(I)));
+
+  // Return attributes are later attached to the gc.result intrinsic.
   return StatepointAL.addFnAttributes(Ctx, FnAttrs);
 }
 
@@ -1630,6 +1638,7 @@ makeStatepointExplicitImpl(CallBase *Call, /* to replace */
   // with a return value, we lower then as never returning calls to
   // __llvm_deoptimize that are followed by unreachable to get better codegen.
   bool IsDeoptimize = false;
+  bool IsMemIntrinsic = false;
 
   StatepointDirectives SD =
       parseStatepointDirectivesFromAttrs(Call->getAttributes());
@@ -1670,6 +1679,8 @@ makeStatepointExplicitImpl(CallBase *Call, /* to replace */
       IsDeoptimize = true;
     } else if (IID == Intrinsic::memcpy_element_unordered_atomic ||
                IID == Intrinsic::memmove_element_unordered_atomic) {
+      IsMemIntrinsic = true;
+
       // Unordered atomic memcpy and memmove intrinsics which are not explicitly
       // marked as "gc-leaf-function" should be lowered in a GC parseable way.
       // Specifically, these calls should be lowered to the
@@ -1785,12 +1796,19 @@ makeStatepointExplicitImpl(CallBase *Call, /* to replace */
     SPCall->setTailCallKind(CI->getTailCallKind());
     SPCall->setCallingConv(CI->getCallingConv());
 
-    // Currently we will fail on parameter attributes and on certain
-    // function attributes.  In case if we can handle this set of attributes -
-    // set up function attrs directly on statepoint and return attrs later for
+    // Set up function attrs directly on statepoint and return attrs later for
     // gc_result intrinsic.
-    SPCall->setAttributes(legalizeCallAttributes(
-        CI->getContext(), CI->getAttributes(), SPCall->getAttributes()));
+    AttributeList AttributeList = CI->getAttributes();
+    // The memory intrinsics do not have a 1:1 correspondence of the original
+    // call arguments to the produced statepoint. Remove the parameter
+    // attributes to avoid putting them on incorrect arguments.
+    if (IsMemIntrinsic)
+      AttributeList =
+          AttributeList::get(CI->getContext(), AttributeList.getFnAttrs(),
+                             AttributeList.getRetAttrs(), {});
+    SPCall->setAttributes(legalizeCallAttributes(CI->getContext(),
+                                                 CI->arg_size(), AttributeList,
+                                                 SPCall->getAttributes()));
 
     Token = cast<GCStatepointInst>(SPCall);
 
@@ -1812,12 +1830,19 @@ makeStatepointExplicitImpl(CallBase *Call, /* to replace */
 
     SPInvoke->setCallingConv(II->getCallingConv());
 
-    // Currently we will fail on parameter attributes and on certain
-    // function attributes.  In case if we can handle this set of attributes -
-    // set up function attrs directly on statepoint and return attrs later for
+    // Set up function attrs directly on statepoint and return attrs later for
     // gc_result intrinsic.
-    SPInvoke->setAttributes(legalizeCallAttributes(
-        II->getContext(), II->getAttributes(), SPInvoke->getAttributes()));
+    AttributeList AttributeList = II->getAttributes();
+    // The memory intrinsics do not have a 1:1 correspondence of the original
+    // call arguments to the produced statepoint. Remove the parameter
+    // attributes to avoid putting them on incorrect arguments.
+    if (IsMemIntrinsic)
+      AttributeList =
+          AttributeList::get(II->getContext(), AttributeList.getFnAttrs(),
+                             AttributeList.getRetAttrs(), {});
+    SPInvoke->setAttributes(
+        legalizeCallAttributes(II->getContext(), II->arg_size(),
+                               II->getAttributes(), SPInvoke->getAttributes()));
 
     Token = cast<GCStatepointInst>(SPInvoke);
 
