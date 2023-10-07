@@ -3411,7 +3411,7 @@ A floating-point NaN value consists of a sign bit, a quiet/signaling bit, and a
 payload (which makes up the rest of the mantissa except for the quiet/signaling
 bit). LLVM assumes that the quiet/signaling bit being set to ``1`` indicates a
 quiet NaN (QNaN), and a value of ``0`` indicates a signaling NaN (SNaN). In the
-following we will hence just call it the "quiet bit"
+following we will hence just call it the "quiet bit".
 
 The representation bits of a floating-point value do not mutate arbitrarily; in
 particular, if there is no floating-point operation being performed, NaN signs,
