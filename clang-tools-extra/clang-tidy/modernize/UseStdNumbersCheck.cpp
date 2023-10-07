@@ -62,7 +62,7 @@ AST_MATCHER_P2(clang::FloatingLiteral, near, double, Value, double, Threshold) {
 // another check.
 AST_MATCHER(clang::Expr, isMacro) { return Node.getBeginLoc().isMacroID(); }
 
-AST_MATCHER_P(clang::QualType, hasUnqualifiedDesugaredType,
+AST_MATCHER_P(clang::QualType, hasCanonicalTypeUnqualified,
               Matcher<clang::QualType>, InnerMatcher) {
   return InnerMatcher.matches(Node->getCanonicalTypeUnqualified(), Finder,
                               Builder);
@@ -228,7 +228,7 @@ RewriteRuleWith<std::string> makeRule(const Matcher<clang::Stmt> Matcher,
 
   return makeRule(
       expr(Matcher, unless(isInTemplateInstantiation()),
-           hasType(qualType(hasCanonicalType(hasUnqualifiedDesugaredType(anyOf(
+           hasType(qualType(hasCanonicalType(hasCanonicalTypeUnqualified(anyOf(
                qualType(asString("float")).bind("float"),
                qualType(asString("double")),
                qualType(asString("long double")).bind("long double"))))))),
