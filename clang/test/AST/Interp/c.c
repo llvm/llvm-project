@@ -14,14 +14,11 @@ _Static_assert(!!1.0, ""); // pedantic-ref-warning {{not an integer constant exp
                            // pedantic-expected-warning {{not an integer constant expression}}
 _Static_assert(!!1, "");
 
-int a = (1 == 1 ? 5 : 3); // expected-note {{declared here}} \
-                          // pedantic-expected-note {{declared here}}
+int a = (1 == 1 ? 5 : 3);
 _Static_assert(a == 5, ""); // ref-error {{not an integral constant expression}} \
                             // pedantic-ref-error {{not an integral constant expression}} \
                             // expected-error {{not an integral constant expression}} \
-                            // expected-note {{read of non-const variable}} \
-                            // pedantic-expected-error {{not an integral constant expression}} \
-                            // pedantic-expected-note {{read of non-const variable}}
+                            // pedantic-expected-error {{not an integral constant expression}}
 
 
 const int b = 3;
