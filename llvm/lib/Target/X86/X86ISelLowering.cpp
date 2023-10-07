@@ -56904,6 +56904,10 @@ X86TargetLowering::getRegForInlineAsmConstraint(const TargetRegisterInfo *TRI,
         if (!Subtarget.hasFP16())
           break;
         [[fallthrough]];
+      case MVT::v8bf16:
+        if (!Subtarget.hasBF16())
+          break;
+        [[fallthrough]];
       case MVT::f128:
       case MVT::v16i8:
       case MVT::v8i16:
@@ -56919,6 +56923,10 @@ X86TargetLowering::getRegForInlineAsmConstraint(const TargetRegisterInfo *TRI,
         if (!Subtarget.hasFP16())
           break;
         [[fallthrough]];
+      case MVT::v16bf16:
+        if (!Subtarget.hasBF16())
+          break;
+        [[fallthrough]];
       case MVT::v32i8:
       case MVT::v16i16:
       case MVT::v8i32:
@@ -56932,6 +56940,10 @@ X86TargetLowering::getRegForInlineAsmConstraint(const TargetRegisterInfo *TRI,
         break;
       case MVT::v32f16:
         if (!Subtarget.hasFP16())
+          break;
+        [[fallthrough]];
+      case MVT::v32bf16:
+        if (!Subtarget.hasBF16())
           break;
         [[fallthrough]];
       case MVT::v64i8:
@@ -56977,6 +56989,10 @@ X86TargetLowering::getRegForInlineAsmConstraint(const TargetRegisterInfo *TRI,
         if (!Subtarget.hasFP16())
           break;
         [[fallthrough]];
+      case MVT::v8bf16:
+        if (!Subtarget.hasBF16())
+          break;
+        [[fallthrough]];
       case MVT::f128:
       case MVT::v16i8:
       case MVT::v8i16:
@@ -56990,6 +57006,10 @@ X86TargetLowering::getRegForInlineAsmConstraint(const TargetRegisterInfo *TRI,
         if (!Subtarget.hasFP16())
           break;
         [[fallthrough]];
+      case MVT::v16bf16:
+        if (!Subtarget.hasBF16())
+          break;
+        [[fallthrough]];
       case MVT::v32i8:
       case MVT::v16i16:
       case MVT::v8i32:
@@ -57001,6 +57021,10 @@ X86TargetLowering::getRegForInlineAsmConstraint(const TargetRegisterInfo *TRI,
         break;
       case MVT::v32f16:
         if (!Subtarget.hasFP16())
+          break;
+        [[fallthrough]];
+      case MVT::v32bf16:
+        if (!Subtarget.hasBF16())
           break;
         [[fallthrough]];
       case MVT::v64i8:
