@@ -137,6 +137,13 @@ public:
   bool verifyInstruction(const MachineInstr &MI,
                          StringRef &ErrInfo) const override;
 
+  bool canFoldIntoAddrMode(const MachineInstr &MemI, Register Reg,
+                           const MachineInstr &AddrI,
+                           ExtAddrMode &AM) const override;
+
+  MachineInstr *emitLdStWithAddr(MachineInstr &MemI,
+                                 const ExtAddrMode &AM) const override;
+
   bool getMemOperandWithOffsetWidth(const MachineInstr &LdSt,
                                     const MachineOperand *&BaseOp,
                                     int64_t &Offset, unsigned &Width,
