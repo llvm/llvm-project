@@ -75,6 +75,10 @@ void foo(){
     // CHECK-MESSAGES: :[[@LINE-1]]:41: warning: prefer std::numbers math constant [modernize-use-std-numbers]
     // CHECK-FIXES: static constexpr long double Phi4 = std::numbers::phi_v<long double>;
 
+    static constexpr double InvPi = 1.0 / Pi;
+    // CHECK-MESSAGES: :[[@LINE-1]]:37: warning: prefer std::numbers math constant [modernize-use-std-numbers]
+    // CHECK-FIXES: static constexpr double InvPi = std::numbers::inv_pi;
+
     using my_float = const float;
     static constexpr my_float Actually2MyFloat = 2;
     bar::sqrt(Actually2MyFloat);
@@ -155,6 +159,8 @@ void foo(){
     // CHECK-MESSAGES: :[[@LINE-1]]:19: warning: prefer std::numbers math constant [modernize-use-std-numbers]
     // CHECK-FIXES: auto egamma = std::numbers::egamma * 42;
 
+    sink(InvPi);
+
     sink(1 / Pi);
     // CHECK-MESSAGES: :[[@LINE-1]]:10: warning: prefer std::numbers math constant [modernize-use-std-numbers]
     // CHECK-FIXES: sink(std::numbers::inv_pi);
@@ -192,6 +198,8 @@ void foo(){
     auto phi = 1.6180339;
     // CHECK-MESSAGES: :[[@LINE-1]]:16: warning: prefer std::numbers math constant [modernize-use-std-numbers]
     // CHECK-FIXES: auto phi = std::numbers::phi;
+
+    sink(Phi);
 
     sink((42 + bar::sqrt(5)) / 2);
 

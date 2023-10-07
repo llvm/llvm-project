@@ -149,8 +149,8 @@ auto matchPiTopLevel() { return matchFloatValueNear(llvm::numbers::pi, false); }
 auto matchEgamma() { return matchFloatValueNear(llvm::numbers::egamma, false); }
 
 auto matchInvPi() {
-  return expr(
-      anyOf(matchFloatValueNear(llvm::numbers::inv_pi), match1Div(matchPi())));
+  return expr(anyOf(matchFloatValueNear(llvm::numbers::inv_pi, false),
+                    match1Div(matchPi())));
 }
 
 auto matchInvSqrtPi() {
@@ -190,7 +190,8 @@ auto matchPhi() {
           hasOperatorName("+"), hasEitherOperand(matchValue(1)),
           hasEitherOperand(matchMathCall("sqrt", matchValue(5))))))),
       hasRHS(matchValue(2)));
-  return expr(anyOf(PhiFormula, matchFloatValueNear(llvm::numbers::phi)));
+  return expr(
+      anyOf(PhiFormula, matchFloatValueNear(llvm::numbers::phi, false)));
 }
 
 EditGenerator
