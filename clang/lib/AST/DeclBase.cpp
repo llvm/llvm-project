@@ -936,7 +936,6 @@ unsigned Decl::getIdentifierNamespaceForKind(Kind DeclKind) {
     case BuiltinTemplate:
     case ClassTemplateSpecialization:
     case ClassTemplatePartialSpecialization:
-    case ClassScopeFunctionSpecialization:
     case VarTemplateSpecialization:
     case VarTemplatePartialSpecialization:
     case ObjCImplementation:
@@ -1077,9 +1076,7 @@ bool Decl::AccessDeclContextCheck() const {
       isa<ParmVarDecl>(this) ||
       // FIXME: a ClassTemplateSpecialization or CXXRecordDecl can have
       // AS_none as access specifier.
-      isa<CXXRecordDecl>(this) ||
-      isa<ClassScopeFunctionSpecializationDecl>(this) ||
-      isa<LifetimeExtendedTemporaryDecl>(this))
+      isa<CXXRecordDecl>(this) || isa<LifetimeExtendedTemporaryDecl>(this))
     return true;
 
   assert(Access != AS_none &&

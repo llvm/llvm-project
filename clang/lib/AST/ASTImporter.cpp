@@ -3342,27 +3342,25 @@ Error ASTNodeImporter::ImportTemplateInformation(
 
   case FunctionDecl::TK_DependentFunctionTemplateSpecialization: {
     auto *FromInfo = FromFD->getDependentSpecializationInfo();
-    UnresolvedSet<8> TemplDecls;
-    unsigned NumTemplates = FromInfo->getNumTemplates();
-    for (unsigned I = 0; I < NumTemplates; I++) {
-      if (Expected<FunctionTemplateDecl *> ToFTDOrErr =
-          import(FromInfo->getTemplate(I)))
-        TemplDecls.addDecl(*ToFTDOrErr);
+    UnresolvedSet<8> Candidates;
+    for (FunctionTemplateDecl *FTD : FromInfo->getCandidates()) {
+      if (Expected<FunctionTemplateDecl *> ToFTDOrErr = import(FTD))
+        Candidates.addDecl(*ToFTDOrErr);
       else
         return ToFTDOrErr.takeError();
     }
 
     // Import TemplateArgumentListInfo.
     TemplateArgumentListInfo ToTAInfo;
-    if (Error Err = ImportTemplateArgumentListInfo(
-            FromInfo->getLAngleLoc(), FromInfo->getRAngleLoc(),
-            llvm::ArrayRef(FromInfo->getTemplateArgs(),
-                           FromInfo->getNumTemplateArgs()),
-            ToTAInfo))
-      return Err;
+    const auto *FromTAArgsAsWritten = FromInfo->TemplateArgumentsAsWritten;
+    if (FromTAArgsAsWritten)
+      if (Error Err =
+              ImportTemplateArgumentListInfo(*FromTAArgsAsWritten, ToTAInfo))
+        return Err;
 
-    ToFD->setDependentTemplateSpecialization(Importer.getToContext(),
-                                             TemplDecls, ToTAInfo);
+    ToFD->setDependentTemplateSpecialization(
+        Importer.getToContext(), Candidates,
+        FromTAArgsAsWritten ? &ToTAInfo : nullptr);
     return Error::success();
   }
   }

@@ -1196,19 +1196,6 @@ TypeAliasTemplateDecl::newCommon(ASTContext &C) const {
 }
 
 //===----------------------------------------------------------------------===//
-// ClassScopeFunctionSpecializationDecl Implementation
-//===----------------------------------------------------------------------===//
-
-void ClassScopeFunctionSpecializationDecl::anchor() {}
-
-ClassScopeFunctionSpecializationDecl *
-ClassScopeFunctionSpecializationDecl::CreateDeserialized(ASTContext &C,
-                                                         unsigned ID) {
-  return new (C, ID) ClassScopeFunctionSpecializationDecl(
-      nullptr, SourceLocation(), nullptr, nullptr);
-}
-
-//===----------------------------------------------------------------------===//
 // VarTemplateDecl Implementation
 //===----------------------------------------------------------------------===//
 

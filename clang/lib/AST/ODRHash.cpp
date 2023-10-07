@@ -658,6 +658,10 @@ void ODRHash::AddFunctionDecl(const FunctionDecl *Function,
       if (F->isFunctionTemplateSpecialization()) {
         if (!isa<CXXMethodDecl>(DC)) return;
         if (DC->getLexicalParent()->isFileContext()) return;
+        // Skip class scope explicit function template specializations,
+        // as they have not yet been instantiated.
+        if (F->getDependentSpecializationInfo())
+          return;
         // Inline method specializations are the only supported
         // specialization for now.
       }

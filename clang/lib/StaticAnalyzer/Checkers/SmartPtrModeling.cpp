@@ -202,7 +202,7 @@ static QualType getInnerPointerType(CheckerContext C, const CXXRecordDecl *RD) {
 static QualType getPointerTypeFromTemplateArg(const CallEvent &Call,
                                               CheckerContext &C) {
   const auto *FD = dyn_cast_or_null<FunctionDecl>(Call.getDecl());
-  if (!FD || !FD->isFunctionTemplateSpecialization())
+  if (!FD || !FD->getPrimaryTemplate())
     return {};
   const auto &TemplateArgs = FD->getTemplateSpecializationArgs()->asArray();
   if (TemplateArgs.size() == 0)
