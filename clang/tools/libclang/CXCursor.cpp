@@ -1364,8 +1364,8 @@ CXCursor clang_Cursor_getArgument(CXCursor C, unsigned i) {
 
 int clang_Cursor_getNumTemplateArguments(CXCursor C) {
   CXCursorKind kind = clang_getCursorKind(C);
-  if (kind != CXCursor_FunctionDecl && kind != CXCursor_StructDecl &&
-      kind != CXCursor_ClassDecl &&
+  if (kind != CXCursor_FunctionDecl && kind != CXCursor_CXXMethod &&
+      kind != CXCursor_StructDecl && kind != CXCursor_ClassDecl &&
       kind != CXCursor_ClassTemplatePartialSpecialization) {
     return -1;
   }
@@ -1411,8 +1411,8 @@ enum CXGetTemplateArgumentStatus {
 static int clang_Cursor_getTemplateArgument(CXCursor C, unsigned I,
                                             TemplateArgument *TA) {
   CXCursorKind kind = clang_getCursorKind(C);
-  if (kind != CXCursor_FunctionDecl && kind != CXCursor_StructDecl &&
-      kind != CXCursor_ClassDecl &&
+  if (kind != CXCursor_FunctionDecl && kind != CXCursor_CXXMethod &&
+      kind != CXCursor_StructDecl && kind != CXCursor_ClassDecl &&
       kind != CXCursor_ClassTemplatePartialSpecialization) {
     return -1;
   }

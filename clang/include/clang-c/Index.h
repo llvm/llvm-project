@@ -3126,9 +3126,9 @@ CINDEX_LINKAGE int clang_Cursor_getNumTemplateArguments(CXCursor C);
 /**
  * Retrieve the kind of the I'th template argument of the CXCursor C.
  *
- * If the argument CXCursor does not represent a FunctionDecl, StructDecl, or
- * ClassTemplatePartialSpecialization, an invalid template argument kind is
- * returned.
+ * If the argument CXCursor does not represent a FunctionDecl, CXXMethod,
+ * StructDecl, or ClassTemplatePartialSpecialization, an invalid template
+ * argument kind is returned.
  *
  * For example, for the following declaration and specialization:
  *   template <typename T, int kInt, bool kBool>
@@ -3147,9 +3147,10 @@ clang_Cursor_getTemplateArgumentKind(CXCursor C, unsigned I);
  * Retrieve a CXType representing the type of a TemplateArgument of a
  *  function decl representing a template specialization.
  *
- * If the argument CXCursor does not represent a FunctionDecl, StructDecl,
- * ClassDecl or ClassTemplatePartialSpecialization whose I'th template argument
- * has a kind of CXTemplateArgKind_Integral, an invalid type is returned.
+ * If the argument CXCursor does not represent a FunctionDecl, CXXMethod,
+ * StructDecl, ClassDecl or ClassTemplatePartialSpecialization whose I'th
+ * template argument has a kind of CXTemplateArgKind_Integral, an invalid type
+ * is returned.
  *
  * For example, for the following declaration and specialization:
  *   template <typename T, int kInt, bool kBool>
