@@ -1508,9 +1508,6 @@ public:
       : ExtQualsTypeCommonBase(baseType,
                                canon.isNull() ? QualType(this_(), 0) : canon),
         Quals(quals) {
-    static_assert(alignof(decltype(*this)) % TypeAlignment == 0,
-                  "Insufficient alignment!");
-
     assert(Quals.hasNonFastQualifiers()
            && "ExtQuals created with no fast qualifiers");
     assert(!Quals.hasFastQualifiers()
@@ -1986,7 +1983,8 @@ protected:
   Type(TypeClass tc, QualType canon, TypeDependence Dependence)
       : ExtQualsTypeCommonBase(this,
                                canon.isNull() ? QualType(this_(), 0) : canon) {
-    static_assert(sizeof(*this) <= 16 + sizeof(ExtQualsTypeCommonBase),
+    static_assert(sizeof(*this) <=
+                      alignof(decltype(*this)) + sizeof(ExtQualsTypeCommonBase),
                   "changing bitfields changed sizeof(Type)!");
     static_assert(alignof(decltype(*this)) % TypeAlignment == 0,
                   "Insufficient alignment!");
