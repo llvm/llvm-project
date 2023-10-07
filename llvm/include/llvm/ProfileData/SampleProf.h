@@ -43,7 +43,7 @@ class raw_ostream;
 
 const std::error_category &sampleprof_category();
 
-enum class sampleprof_error {
+enum sampleprof_error {
   success = 0,
   bad_magic,
   unsupported_version,

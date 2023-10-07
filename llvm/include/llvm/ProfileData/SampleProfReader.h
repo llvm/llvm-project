@@ -352,7 +352,7 @@ public:
   virtual ~SampleProfileReader() = default;
 
   /// Read and validate the file header.
-  virtual std::error_code readHeader() = 0;
+  virtual sampleprof_error readHeader() = 0;
 
   /// Set the bits for FS discriminators. Parameter Pass specify the sequence
   /// number, Pass == i is for the i-th round of adding FS discriminators.
@@ -381,7 +381,7 @@ public:
   }
 
   /// The implementaion to read sample profiles from the associated file.
-  virtual std::error_code readImpl() = 0;
+  virtual sampleprof_error readImpl() = 0;
 
   /// Print the profile for \p FunctionSamples on stream \p OS.
   void dumpFunctionProfile(const FunctionSamples &FS, raw_ostream &OS = dbgs());
@@ -564,10 +564,10 @@ public:
       : SampleProfileReader(std::move(B), C, SPF_Text) {}
 
   /// Read and validate the file header.
-  std::error_code readHeader() override { return sampleprof_error::success; }
+  sampleprof_error readHeader() override { return sampleprof_error::success; }
 
   /// Read sample profiles from the associated file.
-  std::error_code readImpl() override;
+  sampleprof_error readImpl() override;
 
   /// Return true if \p Buffer is in the format supported by this class.
   static bool hasFormat(const MemoryBuffer &Buffer);
@@ -588,10 +588,10 @@ public:
       : SampleProfileReader(std::move(B), C, Format) {}
 
   /// Read and validate the file header.
-  std::error_code readHeader() override;
+  sampleprof_error readHeader() override;
 
   /// Read sample profiles from the associated file.
-  std::error_code readImpl() override;
+  sampleprof_error readImpl() override;
 
   /// It includes all the names that have samples either in outline instance
   /// or inline instance.
@@ -604,11 +604,11 @@ protected:
   /// EC is set.
   ///
   /// \returns the read value.
-  template <typename T> ErrorOr<T> readNumber();
+  template <typename T> sampleprof_error readNumber(T &Result);
 
   /// Read a numeric value of type T from the profile. The value is saved
   /// without encoded.
-  template <typename T> ErrorOr<T> readUnencodedNumber();
+  template <typename T> sampleprof_error readUnencodedNumber(T &Result);
 
   /// Read a string from the profile.
   ///
@@ -616,36 +616,40 @@ protected:
   /// EC is set.
   ///
   /// \returns the read value.
-  ErrorOr<StringRef> readString();
+  sampleprof_error readString(StringRef &Result);
 
   /// Read the string index and check whether it overflows the table.
-  template <typename T> inline ErrorOr<size_t> readStringIndex(T &Table);
+  template <typename T> sampleprof_error readStringIndex(T &Table,
+                                   size_t &Result);
 
   /// Read the next function profile instance.
-  std::error_code readFuncProfile(const uint8_t *Start);
+  sampleprof_error readFuncProfile(const uint8_t *Start);
 
   /// Read the contents of the given profile instance.
-  std::error_code readProfile(FunctionSamples &FProfile);
+  sampleprof_error readProfile(FunctionSamples &FProfile);
 
   /// Read the contents of Magic number and Version number.
-  std::error_code readMagicIdent();
+  sampleprof_error readMagicIdent();
 
   /// Read profile summary.
-  std::error_code readSummary();
+  sampleprof_error readSummary();
 
   /// Read the whole name table.
-  std::error_code readNameTable();
+  sampleprof_error readNameTable();
 
   /// Read a string indirectly via the name table. Optionally return the index.
-  ErrorOr<StringRef> readStringFromTable(size_t *RetIdx = nullptr);
+  sampleprof_error readStringFromTable(StringRef &Result,
+                                       size_t *RetIdx = nullptr);
 
   /// Read a context indirectly via the CSNameTable. Optionally return the
   /// index.
-  ErrorOr<SampleContextFrames> readContextFromTable(size_t *RetIdx = nullptr);
+  sampleprof_error readContextFromTable(SampleContextFrames &Result,
+                                        size_t *RetIdx = nullptr);
 
   /// Read a context indirectly via the CSNameTable if the profile has context,
   /// otherwise same as readStringFromTable, also return its hash value.
-  ErrorOr<std::pair<SampleContext, uint64_t>> readSampleContextFromTable();
+  sampleprof_error readSampleContextFromTable(SampleContext &Result,
+                                              uint64_t &Hash);
 
   /// Points to the current location in the buffer.
   const uint8_t *Data = nullptr;
@@ -684,13 +688,13 @@ protected:
   const uint64_t *MD5SampleContextStart = nullptr;
 
 private:
-  std::error_code readSummaryEntry(std::vector<ProfileSummaryEntry> &Entries);
-  virtual std::error_code verifySPMagic(uint64_t Magic) = 0;
+  sampleprof_error readSummaryEntry(std::vector<ProfileSummaryEntry> &Entries);
+  virtual sampleprof_error verifySPMagic(uint64_t Magic) = 0;
 };
 
 class SampleProfileReaderRawBinary : public SampleProfileReaderBinary {
 private:
-  std::error_code verifySPMagic(uint64_t Magic) override;
+  sampleprof_error verifySPMagic(uint64_t Magic) override;
 
 public:
   SampleProfileReaderRawBinary(std::unique_ptr<MemoryBuffer> B, LLVMContext &C,
@@ -722,7 +726,7 @@ public:
 /// SampleProfileReaderExtBinaryBase/SampleProfileWriterExtBinaryBase.
 class SampleProfileReaderExtBinaryBase : public SampleProfileReaderBinary {
 private:
-  std::error_code decompressSection(const uint8_t *SecStart,
+  sampleprof_error decompressSection(const uint8_t *SecStart,
                                     const uint64_t SecSize,
                                     const uint8_t *&DecompressBuf,
                                     uint64_t &DecompressBufSize);
@@ -731,24 +735,24 @@ private:
 
 protected:
   std::vector<SecHdrTableEntry> SecHdrTable;
-  std::error_code readSecHdrTableEntry(uint64_t Idx);
-  std::error_code readSecHdrTable();
+  sampleprof_error readSecHdrTableEntry(uint64_t Idx);
+  sampleprof_error readSecHdrTable();
 
-  std::error_code readFuncMetadata(bool ProfileHasAttribute);
-  std::error_code readFuncMetadata(bool ProfileHasAttribute,
-                                   FunctionSamples *FProfile);
-  std::error_code readFuncOffsetTable();
-  std::error_code readFuncProfiles();
-  std::error_code readNameTableSec(bool IsMD5, bool FixedLengthMD5);
-  std::error_code readCSNameTableSec();
-  std::error_code readProfileSymbolList();
+  sampleprof_error readFuncMetadata(bool ProfileHasAttribute);
+  sampleprof_error readFuncMetadata(bool ProfileHasAttribute,
+                                    FunctionSamples *FProfile);
+  sampleprof_error readFuncOffsetTable();
+  sampleprof_error readFuncProfiles();
+  sampleprof_error readNameTableSec(bool IsMD5, bool FixedLengthMD5);
+  sampleprof_error readCSNameTableSec();
+  sampleprof_error readProfileSymbolList();
 
-  std::error_code readHeader() override;
-  std::error_code verifySPMagic(uint64_t Magic) override = 0;
-  virtual std::error_code readOneSection(const uint8_t *Start, uint64_t Size,
-                                         const SecHdrTableEntry &Entry);
+  sampleprof_error readHeader() override;
+  sampleprof_error verifySPMagic(uint64_t Magic) override = 0;
+  virtual sampleprof_error readOneSection(const uint8_t *Start, uint64_t Size,
+                                          const SecHdrTableEntry &Entry);
   // placeholder for subclasses to dispatch their own section readers.
-  virtual std::error_code readCustomSection(const SecHdrTableEntry &Entry) = 0;
+  virtual sampleprof_error readCustomSection(const SecHdrTableEntry &Entry) = 0;
 
   /// Determine which container readFuncOffsetTable() should populate, the list
   /// FuncOffsetList or the map FuncOffsetTable.
@@ -778,7 +782,7 @@ public:
       : SampleProfileReaderBinary(std::move(B), C, Format) {}
 
   /// Read sample profiles in extensible format from the associated file.
-  std::error_code readImpl() override;
+  sampleprof_error readImpl() override;
 
   /// Get the total size of all \p Type sections.
   uint64_t getSectionSize(SecType Type);
@@ -799,8 +803,8 @@ public:
 
 class SampleProfileReaderExtBinary : public SampleProfileReaderExtBinaryBase {
 private:
-  std::error_code verifySPMagic(uint64_t Magic) override;
-  std::error_code readCustomSection(const SecHdrTableEntry &Entry) override {
+  sampleprof_error verifySPMagic(uint64_t Magic) override;
+  sampleprof_error readCustomSection(const SecHdrTableEntry &Entry) override {
     // Update the data reader pointer to the end of the section.
     Data = End;
     return sampleprof_error::success;
@@ -837,25 +841,25 @@ public:
         GcovBuffer(Buffer.get()) {}
 
   /// Read and validate the file header.
-  std::error_code readHeader() override;
+  sampleprof_error readHeader() override;
 
   /// Read sample profiles from the associated file.
-  std::error_code readImpl() override;
+  sampleprof_error readImpl() override;
 
   /// Return true if \p Buffer is in the format supported by this class.
   static bool hasFormat(const MemoryBuffer &Buffer);
 
 protected:
-  std::error_code readNameTable();
-  std::error_code readOneFunctionProfile(const InlineCallStack &InlineStack,
-                                         bool Update, uint32_t Offset);
-  std::error_code readFunctionProfiles();
-  std::error_code skipNextWord();
-  template <typename T> ErrorOr<T> readNumber();
-  ErrorOr<StringRef> readString();
+  sampleprof_error readNameTable();
+  sampleprof_error readOneFunctionProfile(const InlineCallStack &InlineStack,
+                                          bool Update, uint32_t Offset);
+  sampleprof_error readFunctionProfiles();
+  sampleprof_error skipNextWord();
+  template <typename T> sampleprof_error readNumber(T &Result);
+  sampleprof_error readString(StringRef &Result);
 
   /// Read the section tag and check that it's the same as \p Expected.
-  std::error_code readSectionTag(uint32_t Expected);
+  sampleprof_error readSectionTag(uint32_t Expected);
 
   /// GCOV buffer containing the profile.
   GCOVBuffer GcovBuffer;
