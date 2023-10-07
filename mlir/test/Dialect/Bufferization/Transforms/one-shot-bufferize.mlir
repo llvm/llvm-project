@@ -1,12 +1,12 @@
-// RUN: mlir-opt %s -one-shot-bufferize="allow-unknown-ops" -split-input-file | FileCheck %s
+// RUN: mlir-opt %s -one-shot-bufferize="allow-unknown-ops" -verify-diagnostics -split-input-file | FileCheck %s
 
 // Run fuzzer with different seeds.
-// RUN: mlir-opt %s -one-shot-bufferize="test-analysis-only analysis-fuzzer-seed=23" -split-input-file -o /dev/null
-// RUN: mlir-opt %s -one-shot-bufferize="test-analysis-only analysis-fuzzer-seed=59" -split-input-file -o /dev/null
-// RUN: mlir-opt %s -one-shot-bufferize="test-analysis-only analysis-fuzzer-seed=91" -split-input-file -o /dev/null
+// RUN: mlir-opt %s -one-shot-bufferize="test-analysis-only analysis-fuzzer-seed=23" -verify-diagnostics -split-input-file -o /dev/null
+// RUN: mlir-opt %s -one-shot-bufferize="test-analysis-only analysis-fuzzer-seed=59" -verify-diagnostics -split-input-file -o /dev/null
+// RUN: mlir-opt %s -one-shot-bufferize="test-analysis-only analysis-fuzzer-seed=91" -verify-diagnostics -split-input-file -o /dev/null
 
 // Run with top-down analysis.
-// RUN: mlir-opt %s -one-shot-bufferize="allow-unknown-ops analysis-heuristic=top-down" -split-input-file | FileCheck %s --check-prefix=CHECK-TOP-DOWN-ANALYSIS
+// RUN: mlir-opt %s -one-shot-bufferize="allow-unknown-ops analysis-heuristic=top-down" -verify-diagnostics -split-input-file | FileCheck %s --check-prefix=CHECK-TOP-DOWN-ANALYSIS
 
 // Test without analysis: Insert a copy on every buffer write.
 // RUN: mlir-opt %s -allow-unregistered-dialect -one-shot-bufferize="allow-unknown-ops copy-before-write" -split-input-file | FileCheck %s --check-prefix=CHECK-COPY-BEFORE-WRITE
@@ -235,3 +235,37 @@ func.func @materialize_in_destination_buffer(%t: tensor<5xf32>, %m: memref<5xf32
   return
 }
 
+// -----
+
+func.func @materialize_in_func_bbarg(%t: tensor<?xf32>, %dest: tensor<?xf32>)
+    -> tensor<?xf32> {
+  // This op is not bufferizable because function block arguments are
+  // read-only in regular One-Shot Bufferize. (Run One-Shot Module
+  // Bufferization instead.)
+  // expected-error @below{{not bufferizable under the given constraints: would write to read-only buffer}}
+  %0 = bufferization.materialize_in_destination %t in %dest
+      : (tensor<?xf32>, tensor<?xf32>) -> tensor<?xf32>
+  return %0 : tensor<?xf32>
+}
+
+// -----
+
+func.func @materialize_in_dest_raw(%f: f32, %f2: f32, %idx: index) -> (tensor<5xf32>, f32) {
+  %dest = bufferization.alloc_tensor() : tensor<5xf32>
+  // Note: The location of the RaW conflict may not be accurate (such as in this
+  // example). This is because the analysis operates on "alias sets" and not
+  // single SSA values. The location may point to any SSA value in the alias set
+  // that participates in the conflict.
+  // expected-error @below{{not bufferizable under the given constraints: cannot avoid RaW conflict}}
+  %dest_filled = linalg.fill ins(%f : f32) outs(%dest : tensor<5xf32>) -> tensor<5xf32>
+  %src = bufferization.alloc_tensor() : tensor<5xf32>
+  %src_filled = linalg.fill ins(%f2 : f32) outs(%src : tensor<5xf32>) -> tensor<5xf32>
+
+  %0 = bufferization.materialize_in_destination %src_filled in %dest_filled
+      : (tensor<5xf32>, tensor<5xf32>) -> tensor<5xf32>
+  // Read from %dest_filled, which makes it impossible to bufferize the
+  // materialize_in_destination op in-place.
+  %r = tensor.extract %dest_filled[%idx] : tensor<5xf32>
+
+  return %0, %r : tensor<5xf32>, f32
+}

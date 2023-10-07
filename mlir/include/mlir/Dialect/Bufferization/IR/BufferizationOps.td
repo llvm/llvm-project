@@ -227,12 +227,14 @@ def Bufferization_MaterializeInDestinationOp
   let summary = "copy a tensor";
 
   let description = [{
-    This op indicates that the data of the `source` tensor should materialize
-    in `dest`, which can be a tensor or a memref. In case of a tensor, `source`
-    should materialize in the future buffer of `dest` and a the updated
-    destination tensor is returned. In case of a memref, `source` should
-    materialize in `dest`, which is already a buffer. The op has no results in
-    that case.
+    This op indicates that the data of the `source` tensor is guaranteed to
+    materialize in `dest`, which can be a tensor or a memref. In case of a
+    tensor, `source` materializes in the future buffer of `dest` and a the
+    updated destination tensor is returned. If this is not possible, e.g.,
+    because the destination tensor is read-only or because its original
+    contents are still read later, the input IR fails to bufferize. In case of a
+    memref, `source` materializes in `dest`, which is already a buffer. The op
+    has no results in that case.
 
     `source`, `dest` and `result` (if present) must have the same shape and
     element type. If the op has a result, the types of `result` and `dest` must
@@ -252,7 +254,8 @@ def Bufferization_MaterializeInDestinationOp
     indicates that this op is the only way for the tensor IR to access `dest`
     (or an alias thereof). E.g., there must be no other `to_tensor` ops with
     `dest` or with an alias of `dest`. Such IR is not supported by
-    One-Shot Bufferize.
+    One-Shot Bufferize. Ops that have incorrect usage of `restrict` may
+    bufferize incorrectly.
 
     Note: `restrict` and `writable` could be removed from this op because they
     must always be set for memref destinations. This op has these attributes to
@@ -262,7 +265,9 @@ def Bufferization_MaterializeInDestinationOp
     Note: If `dest` is a tensor, `tensor.insert_slice` could be used for the
     same purpose, but since tensor dialect ops only indicate *what* should be
     computed but not *where*, it could fold away, causing the computation to
-    materialize in a different buffer.
+    materialize in a different buffer. It is also possible that the
+    `tensor.insert_slice` destination bufferizes out-of-place, which would also
+    cause the computation to materialize in a buffer different buffer.
   }];
 
   let arguments = (ins AnyTensor:$source, AnyShaped:$dest,
@@ -281,6 +286,9 @@ def Bufferization_MaterializeInDestinationOp
 
     bool bufferizesToElementwiseAccess(const AnalysisState &state,
                                        ArrayRef<OpOperand *> opOperands);
+
+    bool mustBufferizeInPlace(OpOperand &opOperand,
+                              const AnalysisState &state);
 
     AliasingValueList getAliasingValues(
         OpOperand &opOperand, const AnalysisState &state);
@@ -408,6 +416,7 @@ def Bufferization_ToTensorOp : Bufferization_Op<"to_tensor", [
     Note: Only `to_tensor` ops with the `restrict` unit attribute are supported
     by One-Shot Bufferize. Other IR is rejected. (To support `to_tensor`
     without `restrict`, One-Shot Bufferize would have to analyze memref IR.)
+    Ops that have incorrect usage of `restrict` may bufferize incorrectly.
 
     Example:
 

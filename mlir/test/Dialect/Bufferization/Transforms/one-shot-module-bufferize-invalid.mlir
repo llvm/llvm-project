@@ -153,7 +153,7 @@ func.func @yield_alloc_dominance_test_2(%cst : f32, %idx : index,
 func.func @copy_of_unranked_tensor(%t: tensor<*xf32>) -> tensor<*xf32> {
   // Unranked tensor OpOperands always bufferize in-place. With this limitation,
   // there is no way to bufferize this IR correctly.
-  // expected-error @+1 {{input IR has RaW conflict}}
+  // expected-error @+1 {{not bufferizable under the given constraints: cannot avoid RaW conflict}}
   func.call @maybe_writing_func(%t) : (tensor<*xf32>) -> ()
   return %t : tensor<*xf32>
 }
