@@ -4163,6 +4163,9 @@ public:
   RValue EmitCXXOperatorMemberCallExpr(const CXXOperatorCallExpr *E,
                                        const CXXMethodDecl *MD,
                                        ReturnValueSlot ReturnValue);
+  RValue EmitCXXStaticOperatorMemberCallExpr(const CXXOperatorCallExpr *CE,
+                                             const CXXMethodDecl *MD,
+                                             ReturnValueSlot ReturnValue);
   RValue EmitCXXPseudoDestructorExpr(const CXXPseudoDestructorExpr *E);
 
   RValue EmitCUDAKernelCallExpr(const CUDAKernelCallExpr *E,

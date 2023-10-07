@@ -5070,7 +5070,7 @@ RValue CodeGenFunction::EmitCallExpr(const CallExpr *E,
   if (const auto *CE = dyn_cast<CXXOperatorCallExpr>(E))
     if (const auto *MD =
             dyn_cast_if_present<CXXMethodDecl>(CE->getCalleeDecl());
-        MD && MD->isImplicitObjectMemberFunction())
+        MD && !MD->isExplicitObjectMemberFunction())
       return EmitCXXOperatorMemberCallExpr(CE, MD, ReturnValue);
 
   CGCallee callee = EmitCallee(E->getCallee());

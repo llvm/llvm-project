@@ -489,11 +489,42 @@ RValue
 CodeGenFunction::EmitCXXOperatorMemberCallExpr(const CXXOperatorCallExpr *E,
                                                const CXXMethodDecl *MD,
                                                ReturnValueSlot ReturnValue) {
-  assert(MD->isImplicitObjectMemberFunction() &&
-         "Trying to emit a member call expr on a static method!");
-  return EmitCXXMemberOrOperatorMemberCallExpr(
-      E, MD, ReturnValue, /*HasQualifier=*/false, /*Qualifier=*/nullptr,
-      /*IsArrow=*/false, E->getArg(0));
+  assert(!MD->isExplicitObjectMemberFunction() &&
+         "Trying to emit a member call expr on an explicit object member "
+         "function!");
+
+  if (MD->isStatic())
+    return EmitCXXStaticOperatorMemberCallExpr(E, MD, ReturnValue);
+  else
+    return EmitCXXMemberOrOperatorMemberCallExpr(
+        E, MD, ReturnValue, /*HasQualifier=*/false, /*Qualifier=*/nullptr,
+        /*IsArrow=*/false, E->getArg(0));
+}
+
+RValue CodeGenFunction::EmitCXXStaticOperatorMemberCallExpr(
+    const CXXOperatorCallExpr *E, const CXXMethodDecl *MD,
+    ReturnValueSlot ReturnValue) {
+  assert(MD->isStatic());
+
+  CGCallee Callee = EmitCallee(E->getCallee());
+
+  // Emit and ignore `this` pointer.
+  EmitIgnoredExpr(E->getArg(0));
+
+  auto ProtoType = MD->getFunctionType()->castAs<FunctionProtoType>();
+
+  // Emit the rest of the call args.
+  CallArgList Args;
+  EmitCallArgs(Args, ProtoType, drop_begin(E->arguments(), 1),
+               E->getDirectCallee());
+
+  bool Chain = E == MustTailCall;
+  const CGFunctionInfo &FnInfo =
+      CGM.getTypes().arrangeFreeFunctionCall(Args, ProtoType, Chain);
+  llvm::CallBase *CallOrInvoke = nullptr;
+
+  return EmitCall(FnInfo, Callee, ReturnValue, Args, &CallOrInvoke, Chain,
+                  E->getExprLoc());
 }
 
 RValue CodeGenFunction::EmitCUDAKernelCallExpr(const CUDAKernelCallExpr *E,

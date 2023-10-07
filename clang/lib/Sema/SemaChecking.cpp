@@ -6942,9 +6942,8 @@ bool Sema::CheckFunctionCall(FunctionDecl *FDecl, CallExpr *TheCall,
   unsigned NumArgs = TheCall->getNumArgs();
 
   Expr *ImplicitThis = nullptr;
-  if (IsMemberOperatorCall && !FDecl->isStatic() &&
-      !FDecl->hasCXXExplicitFunctionObjectParameter()) {
-    // If this is a call to a non-static member operator, hide the first
+  if (IsMemberOperatorCall && !FDecl->hasCXXExplicitFunctionObjectParameter()) {
+    // If this is a call to a member operator, hide the first
     // argument from checkCall.
     // FIXME: Our choice of AST representation here is less than ideal.
     ImplicitThis = Args[0];
