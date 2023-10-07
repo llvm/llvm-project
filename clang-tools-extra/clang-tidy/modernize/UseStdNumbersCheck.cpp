@@ -41,11 +41,6 @@ using clang::transformer::flattenVector;
 using clang::transformer::RewriteRuleWith;
 using llvm::StringRef;
 
-constexpr double Pi = 3.141592653589793238462643383279502884197169399;
-constexpr double Euler = 2.718281828459045235360287471352662497757247093;
-constexpr double Phi = 1.618033988749894848204586834365638117720309179;
-constexpr double Egamma = 0.577215664901532860606512090082402431042159335;
-
 constexpr auto DiffThreshold = 0.001;
 
 AST_MATCHER_P2(clang::FloatingLiteral, near, double, Value, double, Threshold) {
@@ -130,11 +125,11 @@ auto match1Div(const Matcher<clang::Expr> Match) {
 }
 
 auto matchEuler() {
-  return expr(
-      anyOf(matchFloatValueNear(Euler), matchMathCall("exp", matchValue(1))));
+  return expr(anyOf(matchFloatValueNear(llvm::numbers::e),
+                    matchMathCall("exp", matchValue(1))));
 }
 auto matchEulerTopLevel() {
-  return expr(anyOf(matchFloatValueNear(Euler, false),
+  return expr(anyOf(matchFloatValueNear(llvm::numbers::e, false),
                     matchMathCall("exp", matchValue(1))));
 }
 
@@ -148,10 +143,10 @@ auto matchLog10Euler() {
                     matchMathCall("log10", matchEuler())));
 }
 
-auto matchPi() { return matchFloatValueNear(Pi); }
-auto matchPiTopLevel() { return matchFloatValueNear(Pi, false); }
+auto matchPi() { return matchFloatValueNear(llvm::numbers::pi); }
+auto matchPiTopLevel() { return matchFloatValueNear(llvm::numbers::pi, false); }
 
-auto matchEgamma() { return matchFloatValueNear(Egamma, false); }
+auto matchEgamma() { return matchFloatValueNear(llvm::numbers::egamma, false); }
 
 auto matchInvPi() {
   return expr(
@@ -195,7 +190,7 @@ auto matchPhi() {
           hasOperatorName("+"), hasEitherOperand(matchValue(1)),
           hasEitherOperand(matchMathCall("sqrt", matchValue(5))))))),
       hasRHS(matchValue(2)));
-  return expr(anyOf(PhiFormula, matchFloatValueNear(Phi)));
+  return expr(anyOf(PhiFormula, matchFloatValueNear(llvm::numbers::phi)));
 }
 
 EditGenerator
