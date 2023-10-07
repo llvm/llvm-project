@@ -17,11 +17,21 @@ using namespace clang::ast_matchers;
 namespace clang::tidy::modernize {
 
 void ReturnBracedInitListCheck::registerMatchers(MatchFinder *Finder) {
-  // Skip list initialization and constructors with an initializer list.
+  auto SemanticallyDifferentContainer = allOf(
+      argumentCountIs(2), hasArgument(0, hasType(isInteger())),
+      hasType(cxxRecordDecl(hasAnyName("::std::vector", "::std::deque",
+                                       "::std::forward_list", "::std::list"))));
+
   auto ConstructExpr =
       cxxConstructExpr(
-          unless(anyOf(hasDeclaration(cxxConstructorDecl(isExplicit())),
-                       isListInitialization(), hasDescendant(initListExpr()))))
+          unless(anyOf(
+              // Skip explicit constructor.
+              hasDeclaration(cxxConstructorDecl(isExplicit())),
+              // Skip list initialization and constructors with an initializer
+              // list.
+              isListInitialization(), hasDescendant(initListExpr()),
+              // Skip container `vector(size_type, const T&)`.
+              SemanticallyDifferentContainer)))
           .bind("ctor");
 
   Finder->addMatcher(
