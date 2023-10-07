@@ -43,8 +43,8 @@ using llvm::StringRef;
 
 constexpr auto DiffThreshold = 0.001;
 
-AST_MATCHER_P2(clang::FloatingLiteral, near, double, Value, double, Threshold) {
-  return std::abs(Node.getValue().convertToDouble() - Value) < Threshold;
+AST_MATCHER_P(clang::FloatingLiteral, near, double, Value) {
+  return std::abs(Node.getValue().convertToDouble() - Value) < DiffThreshold;
 }
 
 // We don't want to match uses of macros, such as
@@ -99,7 +99,7 @@ auto matchSqrt(const Matcher<clang::Expr> ArgumentMatcher) {
 // Therefore, all top-level matcher set MatchDeclRefExprOrMacro to false
 auto matchFloatValueNear(const double Val,
                          const bool MatchDeclRefExprOrMacro = true) {
-  const auto Float = floatLiteral(near(Val, DiffThreshold));
+  const auto Float = floatLiteral(near(Val));
   if (!MatchDeclRefExprOrMacro) {
     return expr(unless(isMacro()), ignoringImplicit(Float));
   }
