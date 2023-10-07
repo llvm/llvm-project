@@ -12,6 +12,7 @@
 #include "mlir/Dialect/Bufferization/IR/Bufferization.h"
 #include "mlir/Dialect/Bufferization/IR/SubsetInsertionOpInterface.h"
 #include "mlir/Dialect/Bufferization/Transforms/OneShotAnalysis.h"
+#include "mlir/Dialect/Bufferization/Transforms/OneShotModuleBufferize.h"
 #include "mlir/Dialect/Bufferization/Transforms/Transforms.h"
 #include "mlir/Dialect/Tensor/IR/Tensor.h"
 #include "mlir/IR/Dominance.h"
@@ -184,12 +185,25 @@ struct EmptyTensorElimination
 
 void EmptyTensorElimination::runOnOperation() {
   Operation *op = getOperation();
+  auto moduleOp = dyn_cast<ModuleOp>(op);
   OneShotBufferizationOptions options;
   options.allowReturnAllocsFromLoops = true;
+  if (moduleOp)
+    options.bufferizeFunctionBoundaries = true;
   OneShotAnalysisState state(op, options);
-  if (failed(analyzeOp(op, state))) {
-    signalPassFailure();
-    return;
+  if (moduleOp) {
+    // Module analysis takes into account function boundaries.
+    if (failed(analyzeModuleOp(moduleOp, state))) {
+      signalPassFailure();
+      return;
+    }
+  } else {
+    // Regular One-Shot Bufferize ignores func.func block arguments, func.call,
+    // func.return.
+    if (failed(analyzeOp(op, state))) {
+      signalPassFailure();
+      return;
+    }
   }
 
   IRRewriter rewriter(op->getContext());

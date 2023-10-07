@@ -549,6 +549,14 @@ bool MaterializeInDestinationOp::bufferizesToMemoryWrite(
   return false;
 }
 
+bool MaterializeInDestinationOp::mustBufferizeInPlace(
+    OpOperand &opOperand, const AnalysisState &state) {
+  // The source is only read and not written, so it always bufferizes in-place
+  // by default. The destination is written and is forced to bufferize in-place
+  // (if it is a tensor).
+  return true;
+}
+
 AliasingValueList
 MaterializeInDestinationOp::getAliasingValues(OpOperand &opOperand,
                                               const AnalysisState &state) {
