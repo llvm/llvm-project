@@ -161,16 +161,9 @@ const void* dyn_cast_to_derived(const void* static_ptr,
     // Fallback to the slow path to check that static_type is a public
     //   base type of dynamic_type.
     // Using giant short cut.  Add that information to info.
-    __dynamic_cast_info info = {
-        dst_type,
-        static_ptr,
-        static_type,
-        src2dst_offset,
-        0, 0, 0, 0, 0, 0, 0, 0,
-        1,  // number_of_dst_type
-        false, false, false,
-        true, nullptr
-    };
+    __dynamic_cast_info info = {dst_type, static_ptr, static_type, src2dst_offset, 0,      0, 0, 0, 0, 0, 0, 0,
+                                1, // number_of_dst_type
+                                false,    false,      false,       true,           nullptr};
     // Do the  search
     dst_type->search_above_dst(&info, dynamic_ptr, dynamic_ptr, public_path, false);
 #ifdef _LIBCXXABI_FORGIVING_DYNAMIC_CAST
@@ -189,14 +182,8 @@ const void* dyn_cast_to_derived(const void* static_ptr,
                     "should have public visibility. At least one of them is hidden. %s"
                     ", %s.\n", static_type->name(), dst_type->name());
         // Redo the search comparing type_info's using strcmp
-        info = {
-            dst_type,
-            static_ptr,
-            static_type,
-            src2dst_offset,
-            0, 0, 0, 0, 0, 0, 0, 0, 0, false, false, false,
-            true, nullptr
-        };
+        info = {dst_type, static_ptr, static_type, src2dst_offset, 0,     0,     0,    0,      0, 0,
+                0,        0,          0,           false,          false, false, true, nullptr};
         info.number_of_dst_type = 1;
         dst_type->search_above_dst(&info, dynamic_ptr, dynamic_ptr, public_path, true);
     }
@@ -235,16 +222,24 @@ const void* dyn_cast_try_downcast(const void* static_ptr,
     }
 
     // Try to search a path from dynamic_type to dst_type.
-    __dynamic_cast_info dynamic_to_dst_info = {
-        dynamic_type,
-        dst_ptr_to_static,
-        dst_type,
-        src2dst_offset,
-        0, 0, 0, 0, 0, 0, 0, 0,
-        1,  // number_of_dst_type
-        false, false, false,
-        true, nullptr
-    };
+    __dynamic_cast_info dynamic_to_dst_info = {dynamic_type,
+                                               dst_ptr_to_static,
+                                               dst_type,
+                                               src2dst_offset,
+                                               0,
+                                               0,
+                                               0,
+                                               0,
+                                               0,
+                                               0,
+                                               0,
+                                               0,
+                                               1, // number_of_dst_type
+                                               false,
+                                               false,
+                                               false,
+                                               true,
+                                               nullptr};
     dynamic_type->search_above_dst(&dynamic_to_dst_info, dynamic_ptr, dynamic_ptr, public_path, false);
     if (dynamic_to_dst_info.path_dst_ptr_to_static_ptr != unknown) {
         // We have found at least one path from dynamic_ptr to dst_ptr. The
@@ -265,14 +260,8 @@ const void* dyn_cast_slow(const void* static_ptr,
     // Not using giant short cut.  Do the search
 
     // Initialize info struct for this search.
-    __dynamic_cast_info info = {
-        dst_type,
-        static_ptr,
-        static_type,
-        src2dst_offset,
-        0, 0, 0, 0, 0, 0, 0, 0, 0, false, false, false,
-        true, nullptr
-    };
+    __dynamic_cast_info info = {dst_type, static_ptr, static_type, src2dst_offset, 0,     0,     0,    0,      0, 0,
+                                0,        0,          0,           false,          false, false, true, nullptr};
 
     dynamic_type->search_below_dst(&info, dynamic_ptr, public_path, false);
 #ifdef _LIBCXXABI_FORGIVING_DYNAMIC_CAST
@@ -292,13 +281,8 @@ const void* dyn_cast_slow(const void* static_ptr,
                             "%s, %s, %s.\n", static_type->name(), dynamic_type->name(),
                     dst_type->name());
         // Redo the search comparing type_info's using strcmp
-        info = {
-            dst_type,
-            static_ptr,
-            static_type,
-            src2dst_offset,
-            0, 0, 0, 0, 0, 0, 0, 0, 0, false, false, false, true, nullptr
-        };
+        info = {dst_type, static_ptr, static_type, src2dst_offset, 0,     0,     0,    0,      0, 0,
+                0,        0,          0,           false,          false, false, true, nullptr};
         dynamic_type->search_below_dst(&info, dynamic_ptr, public_path, true);
     }
 #endif // _LIBCXXABI_FORGIVING_DYNAMIC_CAST
@@ -487,9 +471,7 @@ __class_type_info::can_catch(const __shim_type_info* thrown_type,
         return false;
     // bullet 2
     assert(adjustedPtr && "catching a class without an object?");
-    __dynamic_cast_info info = {thrown_class_type, 0, this, -1,
-                                0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-                                true, nullptr };
+    __dynamic_cast_info info = {thrown_class_type, 0, this, -1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, true, nullptr};
     info.number_of_dst_type = 1;
     thrown_class_type->has_unambiguous_public_base(&info, adjustedPtr, public_path);
     if (info.path_dst_ptr_to_static_ptr == public_path)
@@ -716,9 +698,8 @@ __pointer_type_info::can_catch(const __shim_type_info* thrown_type,
     if (thrown_class_type == 0)
         return false;
     bool have_object = adjustedPtr != nullptr;
-    __dynamic_cast_info info = {thrown_class_type, 0, catch_class_type, -1,
-                                0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-                                have_object, nullptr};
+    __dynamic_cast_info info = {thrown_class_type, 0,      catch_class_type, -1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+                                have_object,       nullptr};
     info.number_of_dst_type = 1;
     thrown_class_type->has_unambiguous_public_base(&info, adjustedPtr, public_path);
     if (info.path_dst_ptr_to_static_ptr == public_path)
