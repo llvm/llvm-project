@@ -962,7 +962,14 @@ bool CursorVisitor::VisitFunctionTemplateDecl(FunctionTemplateDecl *D) {
     return true;
 
   auto *FD = D->getTemplatedDecl();
-  return VisitAttributes(FD) || VisitFunctionDecl(FD);
+  if (VisitAttributes(FD) || VisitFunctionDecl(FD))
+    return true;
+
+  for (auto *Child : D->specializations())
+    if (Visit(MakeCXCursor(Child, TU)))
+      return true;
+
+  return false;
 }
 
 bool CursorVisitor::VisitClassTemplateDecl(ClassTemplateDecl *D) {
