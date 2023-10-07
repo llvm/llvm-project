@@ -59,31 +59,6 @@ constexpr void test_constraints() {
   static_assert(!HasIotaRange<UncheckedRange<int*>, OutputIteratorNotIndirectlyWritable>);
 }
 
-// This is pulled directly from the std::iota test
-template <class InOutIter, class Sent = InOutIter>
-constexpr void test0() {
-  int ia[]         = {1, 2, 3, 4, 5};
-  int ir[]         = {5, 6, 7, 8, 9};
-  const unsigned s = sizeof(ia) / sizeof(ia[0]);
-  std::ranges::iota(InOutIter(ia), InOutIter(ia + s), 5);
-  assert(std::ranges::equal(ia, ir));
-}
-
-constexpr bool test0() {
-  // TODO why don't these work?
-  // test0<cpp17_input_iterator<int*>, sentinel_wrapper<cpp17_input_iterator<int*>>>();
-  // test0<cpp20_input_iterator<int*>, sentinel_wrapper<cpp20_input_iterator<int*>>>();
-  // test0<cpp17_output_iterator<int*>, sentinel_wrapper<cpp17_output_iterator<int*>>>();
-  // test0<cpp20_output_iterator<int*>, sentinel_wrapper<cpp20_output_iterator<int*>>>();
-  test0<forward_iterator<int*> >();
-  test0<bidirectional_iterator<int*> >();
-  test0<random_access_iterator<int*> >();
-  test0<contiguous_iterator<int*>>();
-  test0<int*>();
-
-  return true;
-}
-
 template <class Iter, class Sent, std::size_t N>
 constexpr void test_result(std::array<int, N> input, int starting_value, std::array<int, N> const expected) {
   { // (iterator, sentinel) overload
@@ -100,7 +75,10 @@ constexpr void test_result(std::array<int, N> input, int starting_value, std::ar
     assert(std::ranges::equal(input, expected));
   }
 
-  { // (range) overload
+  // The range overload adds the additional constraint that it must be an outputrange
+  // so skip this for the input iterators we test
+  if constexpr (!std::is_same_v<Iter, cpp17_input_iterator<int*>> &&
+                !std::is_same_v<Iter, cpp20_input_iterator<int*>>) { // (range) overload
     auto in_begin = Iter(input.data());
     auto in_end   = Sent(Iter(input.data() + input.size()));
     auto range    = std::ranges::subrange(std::move(in_begin), std::move(in_end));
@@ -117,27 +95,30 @@ constexpr void test_result(std::array<int, N> input, int starting_value, std::ar
   }
 }
 
-constexpr bool test_results() {
-  using Iter = forward_iterator<int*>;
-  using Sent = sentinel_wrapper<Iter>;
-
+template <class Iter, class Sent = sentinel_wrapper<Iter>>
+constexpr void test_results() {
   // Empty
   test_result<Iter, Sent, 0>({}, 0, {});
   // 1-element sequence
   test_result<Iter, Sent, 1>({1}, 0, {0});
   // Longer sequence
   test_result<Iter, Sent, 5>({1, 2, 3, 4, 5}, 0, {0, 1, 2, 3, 4});
+}
 
-  return true;
+void test_results() {
+  test_results<cpp17_input_iterator<int*>>();
+  test_results<cpp20_input_iterator<int*>>();
+  test_results<cpp17_output_iterator<int*>>();
+  test_results<cpp20_output_iterator<int*>>();
+  test_results<forward_iterator<int*>>();
+  test_results<bidirectional_iterator<int*>>();
+  test_results<random_access_iterator<int*>>();
+  test_results<contiguous_iterator<int*>>();
+  test_results<int*>();
 }
 
 int main(int, char**) {
   test_constraints();
-
-  test0();
-  static_assert(test0());
-
   test_results();
-  static_assert(test_results());
   return 0;
 }
