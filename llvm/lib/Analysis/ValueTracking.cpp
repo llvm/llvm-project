@@ -3122,18 +3122,34 @@ static bool isNonEqualPHIs(const PHINode *PN1, const PHINode *PN2,
   return true;
 }
 
-static bool isNonEqualSELECT(const Value *V1, const Value *V2, unsigned Depth,
+static bool isNonEqualSelect(const Value *V1, const Value *V2, unsigned Depth,
                              const SimplifyQuery &Q) {
   const SelectInst *SI1 = dyn_cast<SelectInst>(V1);
   if (!SI1)
     return false;
 
   if (const SelectInst *SI2 = dyn_cast<SelectInst>(V2)) {
-    if (SI1->getCondition() == SI2->getCondition())
-      return isKnownNonEqual(SI1->getTrueValue(), SI2->getTrueValue(),
-                             Depth + 1, Q) &&
-             isKnownNonEqual(SI1->getFalseValue(), SI2->getFalseValue(),
-                             Depth + 1, Q);
+    const Value *TVal1 = nullptr;
+    const Value *TVal2 = nullptr;
+    const Value *FVal1 = nullptr;
+    const Value *FVal2 = nullptr;
+    const Value *Cond1 = SI1->getCondition();
+    const Value *Cond2 = SI2->getCondition();
+    if (Cond1 == Cond2) {
+      TVal1 = SI1->getTrueValue();
+      TVal2 = SI2->getTrueValue();
+      FVal1 = SI1->getFalseValue();
+      FVal2 = SI2->getFalseValue();
+    }
+    if (match(Cond1, m_Not(m_Specific(Cond2)))) {
+      TVal1 = SI1->getFalseValue();
+      TVal2 = SI2->getTrueValue();
+      FVal1 = SI1->getTrueValue();
+      FVal2 = SI2->getFalseValue();
+    }
+    if (TVal1)
+      return isKnownNonEqual(TVal1, TVal2, Depth + 1, Q) &&
+             isKnownNonEqual(FVal1, FVal2, Depth + 1, Q);
   }
   return isKnownNonEqual(SI1->getTrueValue(), V2, Depth + 1, Q) &&
          isKnownNonEqual(SI1->getFalseValue(), V2, Depth + 1, Q);
@@ -3169,7 +3185,7 @@ static bool isKnownNonEqual(const Value *V1, const Value *V2, unsigned Depth,
     };
   }
 
-  if (isNonEqualSELECT(V1, V2, Depth, Q) || isNonEqualSELECT(V2, V1, Depth, Q))
+  if (isNonEqualSelect(V1, V2, Depth, Q) || isNonEqualSelect(V2, V1, Depth, Q))
     return true;
 
   if (isAddOfNonZero(V1, V2, Depth, Q) || isAddOfNonZero(V2, V1, Depth, Q))
