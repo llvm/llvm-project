@@ -139,7 +139,7 @@ bool CheckExtern(InterpState &S, CodePtr OpPC, const Pointer &Ptr) {
   if (!Ptr.isExtern())
     return true;
 
-  if (!S.checkingPotentialConstantExpression()) {
+  if (!S.checkingPotentialConstantExpression() && S.getLangOpts().CPlusPlus) {
     const auto *VD = Ptr.getDeclDesc()->asValueDecl();
     const SourceInfo &Loc = S.Current->getSource(OpPC);
     S.FFDiag(Loc, diag::note_constexpr_ltor_non_constexpr, 1) << VD;

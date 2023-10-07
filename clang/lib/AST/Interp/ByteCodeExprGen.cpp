@@ -2547,6 +2547,9 @@ bool ByteCodeExprGen<Emitter>::VisitDeclRefExpr(const DeclRefExpr *E) {
       // Retry.
       return this->VisitDeclRefExpr(E);
     }
+
+    if (std::optional<unsigned> I = P.getOrCreateDummy(D))
+      return this->emitGetPtrGlobal(*I, E);
   }
 
   return this->emitInvalidDeclRef(E, E);
