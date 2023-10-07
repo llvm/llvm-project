@@ -2727,7 +2727,8 @@ Instruction *InstCombinerImpl::matchBSwapOrBitReverse(Instruction &I,
 }
 
 /// Match UB-safe variants of the funnel shift intrinsic.
-static Instruction *matchFunnelShift(Instruction &Or, InstCombinerImpl &IC) {
+static Instruction *matchFunnelShift(Instruction &Or, InstCombinerImpl &IC,
+                                     const DominatorTree &DT) {
   // TODO: Can we reduce the code duplication between this and the related
   // rotate matching code under visitSelect and visitTrunc?
   unsigned Width = Or.getType()->getScalarSizeInBits();
@@ -2832,6 +2833,47 @@ static Instruction *matchFunnelShift(Instruction &Or, InstCombinerImpl &IC) {
       return nullptr;
 
     FShiftArgs = {ShVal0, ShVal1, ShAmt};
+
+  } else if (isa<ZExtInst>(Or0) || isa<ZExtInst>(Or1)) {
+    // If there are two 'or' instructions concat variables in opposite order,
+    // the latter one can be safely convert to fshl.
+    //
+    // LowHigh = or (shl (zext Low), Width - ZextHighShlAmt), (zext High)
+    // HighLow = or (shl (zext High), ZextHighShlAmt), (zext Low)
+    // ->
+    // HighLow = fshl LowHigh, LowHigh, ZextHighShlAmt
+    if (!isa<ZExtInst>(Or1))
+      std::swap(Or0, Or1);
+
+    Value *High, *ZextHigh, *Low;
+    const APInt *ZextHighShlAmt;
+    if (!match(Or0,
+               m_OneUse(m_Shl(m_Value(ZextHigh), m_APInt(ZextHighShlAmt)))))
+      return nullptr;
+
+    if (!match(Or1, m_ZExt(m_Value(Low))) ||
+        !match(ZextHigh, m_ZExt(m_Value(High))))
+      return nullptr;
+
+    unsigned HighSize = High->getType()->getScalarSizeInBits();
+    unsigned LowSize = Low->getType()->getScalarSizeInBits();
+    if (*ZextHighShlAmt != LowSize || HighSize + LowSize != Width)
+      return nullptr;
+
+    for (User *U : ZextHigh->users()) {
+      Value *X, *Y;
+      if (!match(U, m_Or(m_Value(X), m_Value(Y))))
+        continue;
+
+      if (!isa<ZExtInst>(Y))
+        std::swap(X, Y);
+
+      if (match(X, m_Shl(m_Specific(Or1), m_SpecificInt(HighSize))) &&
+          match(Y, m_Specific(ZextHigh)) && DT.dominates(U, &Or)) {
+        FShiftArgs = {U, U, ConstantInt::get(Or0->getType(), *ZextHighShlAmt)};
+        break;
+      }
+    }
   }
 
   if (FShiftArgs.empty())
@@ -3333,7 +3375,7 @@ Instruction *InstCombinerImpl::visitOr(BinaryOperator &I) {
                                                   /*MatchBitReversals*/ true))
     return BitOp;
 
-  if (Instruction *Funnel = matchFunnelShift(I, *this))
+  if (Instruction *Funnel = matchFunnelShift(I, *this, DT))
     return Funnel;
 
   if (Instruction *Concat = matchOrConcat(I, Builder))

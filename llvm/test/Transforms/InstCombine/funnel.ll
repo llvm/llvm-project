@@ -354,6 +354,48 @@ define <2 x i64> @fshl_select_vector(<2 x i64> %x, <2 x i64> %y, <2 x i64> %sham
   ret <2 x i64> %r
 }
 
+; Convert 'or concat' to fshl if opposite 'or concat' exists.
+
+define i32 @fshl_concat(i8 %x, i24 %y, ptr %addr) {
+; CHECK-LABEL: @fshl_concat(
+; CHECK-NEXT:    [[ZEXT_X:%.*]] = zext i8 [[X:%.*]] to i32
+; CHECK-NEXT:    [[SLX:%.*]] = shl nuw i32 [[ZEXT_X]], 24
+; CHECK-NEXT:    [[ZEXT_Y:%.*]] = zext i24 [[Y:%.*]] to i32
+; CHECK-NEXT:    [[XY:%.*]] = or i32 [[SLX]], [[ZEXT_Y]]
+; CHECK-NEXT:    store i32 [[XY]], ptr [[ADDR:%.*]], align 4
+; CHECK-NEXT:    [[YX:%.*]] = call i32 @llvm.fshl.i32(i32 [[XY]], i32 [[XY]], i32 8)
+; CHECK-NEXT:    ret i32 [[YX]]
+;
+  %zext.x = zext i8 %x to i32
+  %slx = shl nuw i32 %zext.x, 24
+  %zext.y = zext i24 %y to i32
+  %xy = or i32 %zext.y, %slx
+  store i32 %xy, ptr %addr, align 4
+  %sly = shl nuw i32 %zext.y, 8
+  %yx = or i32 %zext.x, %sly
+  ret i32 %yx
+}
+
+define <2 x i32> @fshl_concat_vector(<2 x i8> %x, <2 x i24> %y, ptr %addr) {
+; CHECK-LABEL: @fshl_concat_vector(
+; CHECK-NEXT:    [[ZEXT_X:%.*]] = zext <2 x i8> [[X:%.*]] to <2 x i32>
+; CHECK-NEXT:    [[SLX:%.*]] = shl nuw <2 x i32> [[ZEXT_X]], <i32 24, i32 24>
+; CHECK-NEXT:    [[ZEXT_Y:%.*]] = zext <2 x i24> [[Y:%.*]] to <2 x i32>
+; CHECK-NEXT:    [[XY:%.*]] = or <2 x i32> [[SLX]], [[ZEXT_Y]]
+; CHECK-NEXT:    store <2 x i32> [[XY]], ptr [[ADDR:%.*]], align 4
+; CHECK-NEXT:    [[YX:%.*]] = call <2 x i32> @llvm.fshl.v2i32(<2 x i32> [[XY]], <2 x i32> [[XY]], <2 x i32> <i32 8, i32 8>)
+; CHECK-NEXT:    ret <2 x i32> [[YX]]
+;
+  %zext.x = zext <2 x i8> %x to <2 x i32>
+  %slx = shl nuw <2 x i32> %zext.x, <i32 24, i32 24>
+  %zext.y = zext <2 x i24> %y to <2 x i32>
+  %xy = or <2 x i32> %slx, %zext.y
+  store <2 x i32> %xy, ptr %addr, align 4
+  %sly = shl nuw <2 x i32> %zext.y, <i32 8, i32 8>
+  %yx = or <2 x i32> %sly, %zext.x
+  ret <2 x i32> %yx
+}
+
 ; Negative test - an oversized shift in the narrow type would produce the wrong value.
 
 define i8 @unmasked_shlop_unmasked_shift_amount(i32 %x, i32 %y, i32 %shamt) {
