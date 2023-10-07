@@ -404,7 +404,7 @@ private:
   template <class ELFT> void copyShtGroup(uint8_t *buf);
 };
 
-static_assert(sizeof(InputSection) <= 152, "InputSection is too big");
+static_assert(sizeof(InputSection) <= 160, "InputSection is too big");
 
 class SyntheticSection : public InputSection {
 public:

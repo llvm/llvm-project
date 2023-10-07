@@ -1,13 +1,13 @@
 # REQUIRES: riscv
 
-# RUN: llvm-mc -filetype=obj -triple=riscv32 -mattr=+relax -mattr=+experimental-zcmt %s -o %t.rv32.o
-# RUN: llvm-mc -filetype=obj -triple=riscv64 -mattr=+relax -mattr=+experimental-zcmt %s -o %t.rv64.o
+# RUN: llvm-mc -filetype=obj -triple=riscv32 -mattr=+relax -mattr=zcmt %s -o %t.rv32.o
+# RUN: llvm-mc -filetype=obj -triple=riscv64 -mattr=+relax -mattr=zcmt %s -o %t.rv64.o
 
 # tbljal conversion
-# RUN: ld.lld %t.rv32.o --riscv-tbljal --defsym foo=_start+0x150000 -o %t.rv32
-# RUN: ld.lld %t.rv64.o --riscv-tbljal --defsym foo=_start+0x150000 -o %t.rv64
-# RUN: llvm-objdump -d -M no-aliases --mattr=+experimental-zcmt --no-show-raw-insn %t.rv32 | FileCheck --check-prefix=TBLJAL32 %s
-# RUN: llvm-objdump -d -M no-aliases --mattr=+experimental-zcmt --no-show-raw-insn %t.rv64 | FileCheck --check-prefix=TBLJAL64 %s
+# RUN: ld.lld %t.rv32.o --riscv-tbljal --defsym foo=0x150000 -o %t.rv32
+# RUN: ld.lld %t.rv64.o --riscv-tbljal --defsym foo=0x150000 -o %t.rv64
+# RUN: llvm-objdump -d -M no-aliases --mattr=zcmt --no-show-raw-insn %t.rv32 | FileCheck --check-prefix=TBLJAL32 %s
+# RUN: llvm-objdump -d -M no-aliases --mattr=zcmt --no-show-raw-insn %t.rv64 | FileCheck --check-prefix=TBLJAL64 %s
 # TBLJAL32:      cm.jalt 32
 # TBLJAL32-NEXT: cm.jalt 32
 # TBLJAL32-NEXT: cm.jalt 32
