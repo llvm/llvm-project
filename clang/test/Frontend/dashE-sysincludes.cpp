@@ -1,4 +1,4 @@
-// RUN: mkdir %t.dir
+// RUN: mkdir -p %t.dir
 // RUN: %clang_cc1 -E -fkeep-system-includes -I %S/Inputs/dashE -isystem %S/Inputs/dashE/sys %s | FileCheck %s
 
 int main_1 = 1;
