@@ -30,13 +30,16 @@ public:
 };
 
 template <typename T>
+struct allocator {};
+
+template <typename T, typename Allocator = ::std::allocator<T>>
 class vector {
 public:
   vector(T);
-  vector(size_t, T);
+  vector(size_t, T, const Allocator &alloc = Allocator());
   vector(std::initializer_list<T>);
 };
-}
+} // namespace std
 
 class Bar {};
 

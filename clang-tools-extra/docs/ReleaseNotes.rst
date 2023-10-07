@@ -272,8 +272,7 @@ Changes in existing checks
 - Improved :doc:`modernize-return-braced-init-list
   <clang-tidy/checks/modernize/return-braced-init-list>` check to ignore
   false-positives when constructing the container with ``count`` copies of
-  elements with value ``value``
-  (e.g., ``vector(size_type count, const T& value);``).
+  elements with value ``value``.
 
 - Improved :doc:`modernize-use-equals-delete
   <clang-tidy/checks/modernize/use-equals-delete>` check to ignore
