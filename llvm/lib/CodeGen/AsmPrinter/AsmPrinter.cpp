@@ -1929,7 +1929,8 @@ void AsmPrinter::emitFunctionBody() {
 
   // Output MBB ids, function names, and frequencies if the flag to dump
   // MBB profile information has been set
-  if (MBBProfileDumpFileOutput) {
+  if (MBBProfileDumpFileOutput && !MF->empty() &&
+      MF->getFunction().getEntryCount()) {
     if (!MF->hasBBLabels())
       MF->getContext().reportError(
           SMLoc(),
@@ -1937,10 +1938,23 @@ void AsmPrinter::emitFunctionBody() {
           "must be called with -basic-block-sections=labels");
     MachineBlockFrequencyInfo &MBFI =
         getAnalysis<LazyMachineBlockFrequencyInfoPass>().getBFI();
+    // The entry count and the entry basic block frequency aren't the same. We
+    // want to capture "absolute" frequencies, i.e. the frequency with which a
+    // MBB is executed when the program is executed. From there, we can derive
+    // Function-relative frequencies (divide by the value for the first MBB).
+    // We also have the information about frequency with which functions
+    // were called. This helps, for example, in a type of integration tests
+    // where we want to cross-validate the compiler's profile with a real
+    // profile.
+    // Using double precision because uint64 values used to encode mbb
+    // "frequencies" may be quite large.
+    const double EntryCount =
+        static_cast<double>(MF->getFunction().getEntryCount()->getCount());
     for (const auto &MBB : *MF) {
+      const double MBBRelFreq = MBFI.getBlockFreqRelativeToEntryBlock(&MBB);
+      const double AbsMBBFreq = MBBRelFreq * EntryCount;
       *MBBProfileDumpFileOutput.get()
-          << MF->getName() << "," << MBB.getBBID() << ","
-          << MBFI.getBlockFreq(&MBB).getFrequency() << "\n";
+          << MF->getName() << "," << MBB.getBBID() << "," << AbsMBBFreq << "\n";
     }
   }
 }

@@ -689,35 +689,43 @@ bool VectorCombine::foldBitcastShuf(Instruction &I) {
   // 1) Do not fold bitcast shuffle for scalable type. First, shuffle cost for
   // scalable type is unknown; Second, we cannot reason if the narrowed shuffle
   // mask for scalable type is a splat or not.
-  // 2) Disallow non-vector casts and length-changing shuffles.
+  // 2) Disallow non-vector casts.
   // TODO: We could allow any shuffle.
+  auto *DestTy = dyn_cast<FixedVectorType>(I.getType());
   auto *SrcTy = dyn_cast<FixedVectorType>(V->getType());
-  if (!SrcTy || I.getOperand(0)->getType() != SrcTy)
+  if (!DestTy || !SrcTy)
     return false;
 
-  auto *DestTy = cast<FixedVectorType>(I.getType());
-  unsigned DestNumElts = DestTy->getNumElements();
-  unsigned SrcNumElts = SrcTy->getNumElements();
+  unsigned DestEltSize = DestTy->getScalarSizeInBits();
+  unsigned SrcEltSize = SrcTy->getScalarSizeInBits();
+  if (SrcTy->getPrimitiveSizeInBits() % DestEltSize != 0)
+    return false;
+
   SmallVector<int, 16> NewMask;
-  if (SrcNumElts <= DestNumElts) {
+  if (DestEltSize <= SrcEltSize) {
     // The bitcast is from wide to narrow/equal elements. The shuffle mask can
     // always be expanded to the equivalent form choosing narrower elements.
-    assert(DestNumElts % SrcNumElts == 0 && "Unexpected shuffle mask");
-    unsigned ScaleFactor = DestNumElts / SrcNumElts;
+    assert(SrcEltSize % DestEltSize == 0 && "Unexpected shuffle mask");
+    unsigned ScaleFactor = SrcEltSize / DestEltSize;
     narrowShuffleMaskElts(ScaleFactor, Mask, NewMask);
   } else {
     // The bitcast is from narrow elements to wide elements. The shuffle mask
     // must choose consecutive elements to allow casting first.
-    assert(SrcNumElts % DestNumElts == 0 && "Unexpected shuffle mask");
-    unsigned ScaleFactor = SrcNumElts / DestNumElts;
+    assert(DestEltSize % SrcEltSize == 0 && "Unexpected shuffle mask");
+    unsigned ScaleFactor = DestEltSize / SrcEltSize;
     if (!widenShuffleMaskElts(ScaleFactor, Mask, NewMask))
       return false;
   }
 
+  // Bitcast the shuffle src - keep its original width but using the destination
+  // scalar type.
+  unsigned NumSrcElts = SrcTy->getPrimitiveSizeInBits() / DestEltSize;
+  auto *ShuffleTy = FixedVectorType::get(DestTy->getScalarType(), NumSrcElts);
+
   // The new shuffle must not cost more than the old shuffle. The bitcast is
   // moved ahead of the shuffle, so assume that it has the same cost as before.
   InstructionCost DestCost = TTI.getShuffleCost(
-      TargetTransformInfo::SK_PermuteSingleSrc, DestTy, NewMask);
+      TargetTransformInfo::SK_PermuteSingleSrc, ShuffleTy, NewMask);
   InstructionCost SrcCost =
       TTI.getShuffleCost(TargetTransformInfo::SK_PermuteSingleSrc, SrcTy, Mask);
   if (DestCost > SrcCost || !DestCost.isValid())
@@ -725,7 +733,7 @@ bool VectorCombine::foldBitcastShuf(Instruction &I) {
 
   // bitcast (shuf V, MaskC) --> shuf (bitcast V), MaskC'
   ++NumShufOfBitcast;
-  Value *CastV = Builder.CreateBitCast(V, DestTy);
+  Value *CastV = Builder.CreateBitCast(V, ShuffleTy);
   Value *Shuf = Builder.CreateShuffleVector(CastV, NewMask);
   replaceValue(I, *Shuf);
   return true;

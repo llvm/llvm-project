@@ -1323,6 +1323,20 @@ add_fp_unittest(
 )
 
 add_fp_unittest(
+ expm1_test
+ NEED_MPFR
+ SUITE
+   libc-math-unittests
+ SRCS
+   expm1_test.cpp
+ DEPENDS
+   libc.src.errno.errno
+   libc.include.math
+   libc.src.math.expm1
+   libc.src.__support.FPUtil.fp_bits
+)
+
+add_fp_unittest(
  log_test
  NEED_MPFR
  SUITE

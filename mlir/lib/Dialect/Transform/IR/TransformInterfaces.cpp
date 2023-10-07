@@ -2079,20 +2079,20 @@ LogicalResult transform::detail::verifyTransformOpInterface(Operation *op) {
 // Entry point.
 //===----------------------------------------------------------------------===//
 
-LogicalResult
-transform::applyTransforms(Operation *payloadRoot,
-                           TransformOpInterface transform,
-                           const RaggedArray<MappedValue> &extraMapping,
-                           const TransformOptions &options) {
-#ifndef NDEBUG
-  if (!transform->hasTrait<PossibleTopLevelTransformOpTrait>() ||
-      transform->getNumOperands() != 0) {
-    transform->emitError()
-        << "expected transform to start at the top-level transform op";
-    llvm::report_fatal_error("could not run transforms",
-                             /*gen_crash_diag=*/false);
+LogicalResult transform::applyTransforms(
+    Operation *payloadRoot, TransformOpInterface transform,
+    const RaggedArray<MappedValue> &extraMapping,
+    const TransformOptions &options, bool enforceToplevelTransformOp) {
+  if (enforceToplevelTransformOp) {
+    if (!transform->hasTrait<PossibleTopLevelTransformOpTrait>() ||
+        transform->getNumOperands() != 0) {
+      return transform->emitError()
+             << "expected transform to start at the top-level transform op";
+    }
+  } else if (failed(
+                 detail::verifyPossibleTopLevelTransformOpTrait(transform))) {
+    return failure();
   }
-#endif // NDEBUG
 
   TransformState state(transform->getParentRegion(), payloadRoot, extraMapping,
                        options);
