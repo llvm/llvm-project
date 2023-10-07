@@ -3788,8 +3788,8 @@ the configuration (without a prefix: ``Auto``).
            });
 
   * ``LBI_OuterScope`` (in configuration: ``OuterScope``)
-    Align lambda body relative to the indentation level of the outer scope
-    the lambda signature resides in.
+    For statements within block scope, align lambda body relative to the
+    indentation level of the outer scope the lambda signature resides in.
 
     .. code-block:: c++
 
@@ -5730,7 +5730,7 @@ Examples
 ========
 
 A style similar to the `Linux Kernel style
-<https://www.kernel.org/doc/Documentation/CodingStyle>`_:
+<https://www.kernel.org/doc/html/latest/process/coding-style.html>`_:
 
 .. code-block:: yaml
 

@@ -50,7 +50,7 @@ struct __unwrap_range_impl {
   }
 
   _LIBCPP_HIDE_FROM_ABI static constexpr auto __rewrap(const _Iter&, _Iter __iter)
-    requires (!(random_access_iterator<_Iter> && sized_sentinel_for<_Sent, _Iter>))
+    requires(!(random_access_iterator<_Iter> && sized_sentinel_for<_Sent, _Iter>))
   {
     return __iter;
   }
@@ -73,10 +73,7 @@ _LIBCPP_HIDE_FROM_ABI constexpr auto __unwrap_range(_Iter __first, _Sent __last)
   return __unwrap_range_impl<_Iter, _Sent>::__unwrap(std::move(__first), std::move(__last));
 }
 
-template <
-    class _Sent,
-    class _Iter,
-    class _Unwrapped = decltype(std::__unwrap_range(std::declval<_Iter>(), std::declval<_Sent>()))>
+template < class _Sent, class _Iter, class _Unwrapped>
 _LIBCPP_HIDE_FROM_ABI constexpr _Iter __rewrap_range(_Iter __orig_iter, _Unwrapped __iter) {
   return __unwrap_range_impl<_Iter, _Sent>::__rewrap(std::move(__orig_iter), std::move(__iter));
 }
@@ -86,7 +83,7 @@ _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR pair<_Unwrapped, _Unwrapped> __unwrap_ra
   return std::make_pair(std::__unwrap_iter(std::move(__first)), std::__unwrap_iter(std::move(__last)));
 }
 
-template <class _Iter, class _Unwrapped = decltype(std::__unwrap_iter(std::declval<_Iter>()))>
+template <class _Iter, class _Unwrapped>
 _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR _Iter __rewrap_range(_Iter __orig_iter, _Unwrapped __iter) {
   return std::__rewrap_iter(std::move(__orig_iter), std::move(__iter));
 }

@@ -1887,21 +1887,16 @@ gentbl_cc_library(
 )
 
 gentbl_cc_library(
-    name = "ArmSMEConversionIncGen",
+    name = "ArmSMEOpsIncGen",
     tbl_outs = [
         (
-            ["-gen-llvmir-conversions"],
-            "include/mlir/Dialect/ArmSME/IR/ArmSMEConversions.inc",
+            ["-gen-op-decls"],
+            "include/mlir/Dialect/ArmSME/IR/ArmSMEOps.h.inc",
         ),
-    ],
-    tblgen = ":mlir-tblgen",
-    td_file = "include/mlir/Dialect/ArmSME/IR/ArmSME.td",
-    deps = [":ArmSMETdFiles"],
-)
-
-gentbl_cc_library(
-    name = "ArmSMEAttrDefsIncGen",
-    tbl_outs = [
+        (
+            ["-gen-op-defs"],
+            "include/mlir/Dialect/ArmSME/IR/ArmSMEOps.cpp.inc",
+        ),
         (
             ["-gen-enum-decls"],
             "include/mlir/Dialect/ArmSME/IR/ArmSMEEnums.h.inc",
@@ -1926,7 +1921,41 @@ gentbl_cc_library(
         ),
     ],
     tblgen = ":mlir-tblgen",
-    td_file = "include/mlir/Dialect/ArmSME/IR/ArmSME.td",
+    td_file = "include/mlir/Dialect/ArmSME/IR/ArmSMEOps.td",
+    deps = [":ArmSMETdFiles"],
+)
+
+gentbl_cc_library(
+    name = "ArmSMEConversionIncGen",
+    tbl_outs = [
+        (
+            ["-gen-llvmir-conversions"],
+            "include/mlir/Dialect/ArmSME/IR/ArmSMEOpsConversions.inc",
+        ),
+    ],
+    tblgen = ":mlir-tblgen",
+    td_file = "include/mlir/Dialect/ArmSME/IR/ArmSMEOps.td",
+    deps = [":ArmSMETdFiles"],
+)
+
+gentbl_cc_library(
+    name = "ArmSMEIntrinsicOpsIncGen",
+    tbl_outs = [
+        (
+            ["-gen-op-decls"],
+            "include/mlir/Dialect/ArmSME/IR/ArmSMEIntrinsicOps.h.inc",
+        ),
+        (
+            ["-gen-op-defs"],
+            "include/mlir/Dialect/ArmSME/IR/ArmSMEIntrinsicOps.cpp.inc",
+        ),
+        (
+            ["-gen-llvmir-conversions"],
+            "include/mlir/Dialect/ArmSME/IR/ArmSMEIntrinsicConversions.inc",
+        ),
+    ],
+    tblgen = ":mlir-tblgen",
+    td_file = "include/mlir/Dialect/ArmSME/IR/ArmSMEIntrinsicOps.td",
     deps = [":ArmSMETdFiles"],
 )
 
@@ -1937,7 +1966,8 @@ cc_library(
     includes = ["include"],
     deps = [
         ":ArmSMEIncGen",
-        ":ArmSMEAttrDefsIncGen",
+        ":ArmSMEIntrinsicOpsIncGen",
+        ":ArmSMEOpsIncGen",
         ":IR",
         ":LLVMDialect",
         ":MemRefDialect",
@@ -3052,6 +3082,7 @@ cc_library(
     deps = [
         ":GPUDialect",
         ":IR",
+        ":LLVMDialect",
         ":NVGPUIncGen",
         ":SideEffectInterfaces",
         "//llvm:Core",
@@ -3520,6 +3551,7 @@ cc_library(
     deps = [
         ":AMDGPUToROCDL",
         ":AffineToStandard",
+        ":ArithToAMDGPU",
         ":ArithToLLVM",
         ":ArithToSPIRV",
         ":ArmNeon2dToIntr",
@@ -4483,6 +4515,7 @@ cc_library(
     deps = [
         ":CAPIIR",
         ":IR",
+        ":Rewrite",
         ":Support",
         "//llvm:Support",
     ],
@@ -5268,6 +5301,7 @@ cc_library(
     ]),
     includes = ["include"],
     deps = [
+        ":ArithDialect",
         ":ConversionPassIncGen",
         ":GPUCommonTransforms",
         ":GPUDialect",
@@ -7497,6 +7531,25 @@ cc_library(
 )
 
 cc_library(
+    name = "ArithToAMDGPU",
+    srcs = glob(["lib/Conversion/ArithToAMDGPU/*.cpp"]),
+    hdrs = glob(["include/mlir/Conversion/ArithToAMDGPU/*.h"]),
+    includes = ["include"],
+    deps = [
+        ":AMDGPUDialect",
+        ":ArithDialect",
+        ":ConversionPassIncGen",
+        ":ConvertToLLVM",
+        ":IR",
+        ":LLVMDialect",
+        ":Pass",
+        ":Support",
+        ":Transforms",
+        ":VectorDialect",
+    ],
+)
+
+cc_library(
     name = "ArithToLLVM",
     srcs = glob(["lib/Conversion/ArithToLLVM/*.cpp"]),
     hdrs = glob(["include/mlir/Conversion/ArithToLLVM/*.h"]),
@@ -7902,6 +7955,7 @@ cc_library(
     deps = [
         ":ArmSMEConversionIncGen",
         ":ArmSMEDialect",
+        ":ArmSMEIntrinsicOpsIncGen",
         ":IR",
         ":ToLLVMIRTranslation",
         "//llvm:Core",
@@ -8303,6 +8357,7 @@ cc_library(
         ":AffineTransformOps",
         ":AffineTransforms",
         ":ArithDialect",
+        ":ArithToAMDGPU",
         ":ArithToLLVM",
         ":ArithToSPIRV",
         ":ArithTransforms",
@@ -8588,6 +8643,7 @@ cc_library(
     name = "SparseTensorRuntime",
     srcs = [
         "lib/ExecutionEngine/SparseTensor/File.cpp",
+        "lib/ExecutionEngine/SparseTensor/MapRef.cpp",
         "lib/ExecutionEngine/SparseTensor/NNZ.cpp",
         "lib/ExecutionEngine/SparseTensor/Storage.cpp",
     ],
@@ -8596,6 +8652,7 @@ cc_library(
         "include/mlir/ExecutionEngine/SparseTensor/COO.h",
         "include/mlir/ExecutionEngine/SparseTensor/ErrorHandling.h",
         "include/mlir/ExecutionEngine/SparseTensor/File.h",
+        "include/mlir/ExecutionEngine/SparseTensor/MapRef.h",
         "include/mlir/ExecutionEngine/SparseTensor/Storage.h",
     ],
     includes = ["include"],

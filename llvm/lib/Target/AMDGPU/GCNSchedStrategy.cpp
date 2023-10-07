@@ -32,12 +32,11 @@
 
 using namespace llvm;
 
-static cl::opt<bool>
-    DisableUnclusterHighRP("amdgpu-disable-unclustred-high-rp-reschedule",
-                           cl::Hidden,
-                           cl::desc("Disable unclustred high register pressure "
-                                    "reduction scheduling stage."),
-                           cl::init(false));
+static cl::opt<bool> DisableUnclusterHighRP(
+    "amdgpu-disable-unclustered-high-rp-reschedule", cl::Hidden,
+    cl::desc("Disable unclustered high register pressure "
+             "reduction scheduling stage."),
+    cl::init(false));
 static cl::opt<unsigned> ScheduleMetricBias(
     "amdgpu-schedule-metric-bias", cl::Hidden,
     cl::desc(
@@ -707,7 +706,7 @@ bool UnclusteredHighRPStage::initGCNSchedStage() {
     return false;
 
   SavedMutations.swap(DAG.Mutations);
-  DAG.addMutation(createIGroupLPDAGMutation());
+  DAG.addMutation(createIGroupLPDAGMutation(/*IsPostRA=*/false));
 
   InitialOccupancy = DAG.MinOccupancy;
   // Aggressivly try to reduce register pressure in the unclustered high RP
@@ -844,7 +843,7 @@ bool GCNSchedStage::initGCNRegion() {
       StageID != GCNSchedStageID::UnclusteredHighRPReschedule) {
     SavedMutations.clear();
     SavedMutations.swap(DAG.Mutations);
-    DAG.addMutation(createIGroupLPDAGMutation());
+    DAG.addMutation(createIGroupLPDAGMutation(/*IsPostRA=*/false));
   }
 
   return true;
@@ -1116,7 +1115,7 @@ bool OccInitialScheduleStage::shouldRevertScheduling(unsigned WavesAfter) {
 }
 
 bool UnclusteredHighRPStage::shouldRevertScheduling(unsigned WavesAfter) {
-  // If RP is not reduced in the unclustred reschedule stage, revert to the
+  // If RP is not reduced in the unclustered reschedule stage, revert to the
   // old schedule.
   if ((WavesAfter <= PressureBefore.getOccupancy(ST) &&
        mayCauseSpilling(WavesAfter)) ||
@@ -1558,7 +1557,7 @@ void GCNPostScheduleDAGMILive::schedule() {
   if (HasIGLPInstrs) {
     SavedMutations.clear();
     SavedMutations.swap(Mutations);
-    addMutation(createIGroupLPDAGMutation());
+    addMutation(createIGroupLPDAGMutation(/*IsPostRA=*/true));
   }
 
   ScheduleDAGMI::schedule();

@@ -18,15 +18,13 @@ void quux(void) {
 // CHECK: !DICompileUnit{{.+}}retainedTypes: [[RETTYPES:![0-9]+]]
 // CHECK: [[TYPE0:![0-9]+]] = !DICompositeType(tag: DW_TAG_enumeration_type, name: "bar"
 // CHECK: [[TYPE1:![0-9]+]] = !DIEnumerator(name: "BAR"
-// CHECK: [[RETTYPES]] = !{[[TYPE2:![0-9]+]], [[TYPE3:![0-9]+]], [[TYPE0]], [[TYPE4:![0-9]+]], {{![0-9]+}}}
-// CHECK: [[TYPE2]] = !DIDerivedType(tag: DW_TAG_typedef, name: "my_int"
-// CHECK: [[TYPE3]] = distinct !DICompositeType(tag: DW_TAG_structure_type, name: "foo"
-// CHECK: [[TYPE4]] = distinct !DICompositeType(tag: DW_TAG_union_type, name: "baz"
-// CHECK: [[SP:![0-9]+]] = distinct !DISubprogram(name: "quux", {{.*}}, retainedNodes: [[SPRETNODES:![0-9]+]]
-// CHECK: [[SPRETNODES]] = !{[[TYPE5:![0-9]+]], [[TYPE6:![0-9]+]], [[TYPE8:![0-9]+]]}
-// CHECK: [[TYPE5]] = distinct !DICompositeType(tag: DW_TAG_structure_type, name: "y"
-// CHECK: [[TYPE6]] = !DICompositeType(tag: DW_TAG_enumeration_type, name: "z"
-// CHECK: [[TYPE7:![0-9]+]] = !DIEnumerator(name: "Z"
+// CHECK: [[TYPE2:![0-9]+]] = !DICompositeType(tag: DW_TAG_enumeration_type, name: "z"
+// CHECK: [[TYPE3:![0-9]+]] = !DIEnumerator(name: "Z"
+// CHECK: [[RETTYPES]] = !{[[TYPE4:![0-9]+]], [[TYPE5:![0-9]+]], [[TYPE0]], [[TYPE6:![0-9]+]], {{![0-9]+}}, [[TYPE7:![0-9]+]], [[TYPE2]], [[TYPE8:![0-9]+]]}
+// CHECK: [[TYPE4]] = !DIDerivedType(tag: DW_TAG_typedef, name: "my_int"
+// CHECK: [[TYPE5]] = distinct !DICompositeType(tag: DW_TAG_structure_type, name: "foo"
+// CHECK: [[TYPE6]] = distinct !DICompositeType(tag: DW_TAG_union_type, name: "baz"
+// CHECK: [[TYPE7]] = distinct !DICompositeType(tag: DW_TAG_structure_type, name: "y"
 // CHECK: [[TYPE8]] = distinct !DICompositeType(tag: DW_TAG_union_type, name: "w"
 
 // Check that debug info is not emitted for the typedef, struct, enum, and
