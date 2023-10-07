@@ -26,6 +26,7 @@ cc_test(
         "//llvm:Core",
         "//llvm:Support",
         "//llvm:TestingSupport",
+        "//llvm:config",
         "//third-party/unittest:gmock",
         "//third-party/unittest:gtest",
         "//third-party/unittest:gtest_main",
