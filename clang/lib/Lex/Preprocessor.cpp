@@ -1411,7 +1411,8 @@ bool Preprocessor::FinishLexStringLiteral(Token &Result, std::string &String,
   return true;
 }
 
-bool Preprocessor::parseSimpleIntegerLiteral(Token &Tok, uint64_t &Value) {
+bool Preprocessor::parseSimpleIntegerLiteral(Token &Tok, uint64_t &Value,
+                                             bool WithLex) {
   assert(Tok.is(tok::numeric_constant));
   SmallString<8> IntegerBuffer;
   bool NumberInvalid = false;
@@ -1426,7 +1427,8 @@ bool Preprocessor::parseSimpleIntegerLiteral(Token &Tok, uint64_t &Value) {
   llvm::APInt APVal(64, 0);
   if (Literal.GetIntegerValue(APVal))
     return false;
-  Lex(Tok);
+  if (WithLex)
+    Lex(Tok);
   Value = APVal.getLimitedValue();
   return true;
 }

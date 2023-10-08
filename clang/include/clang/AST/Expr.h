@@ -4805,6 +4805,57 @@ private:
   friend class ASTStmtReader;
 };
 
+/// Represents a function call to __builtin_pp_embed().
+class PPEmbedExpr final : public Expr {
+  SourceLocation BuiltinLoc, RParenLoc;
+  DeclContext *ParentContext;
+  StringLiteral *Filename;
+  StringLiteral *BinaryData;
+
+public:
+  enum Action {
+    NotFound,
+    FoundOne,
+    Expanded,
+  };
+
+  PPEmbedExpr(const ASTContext &Ctx, QualType ResultTy, StringLiteral *Filename,
+              StringLiteral *BinaryData, SourceLocation BLoc,
+              SourceLocation RParenLoc, DeclContext *Context);
+
+  /// Build an empty call expression.
+  explicit PPEmbedExpr(EmptyShell Empty) : Expr(SourceLocExprClass, Empty) {}
+
+  /// If the PPEmbedExpr has been resolved return the subexpression
+  /// representing the resolved value. Otherwise return null.
+  const DeclContext *getParentContext() const { return ParentContext; }
+  DeclContext *getParentContext() { return ParentContext; }
+
+  SourceLocation getLocation() const { return BuiltinLoc; }
+  SourceLocation getBeginLoc() const { return BuiltinLoc; }
+  SourceLocation getEndLoc() const { return RParenLoc; }
+
+  StringLiteral *getFilenameStringLiteral() const { return Filename; }
+  StringLiteral *getDataStringLiteral() const { return BinaryData; }
+
+  size_t getDataElementCount(ASTContext &Context) const;
+
+  child_range children() {
+    return child_range(child_iterator(), child_iterator());
+  }
+
+  const_child_range children() const {
+    return const_child_range(child_iterator(), child_iterator());
+  }
+
+  static bool classof(const Stmt *T) {
+    return T->getStmtClass() == PPEmbedExprClass;
+  }
+
+private:
+  friend class ASTStmtReader;
+};
+
 /// Describes an C or C++ initializer list.
 ///
 /// InitListExpr describes an initializer list, which can be used to

@@ -59,6 +59,9 @@ def err_expected_string_literal : Error<"expected string literal "
           "'external_source_symbol' attribute|"
           "as argument of '%1' attribute}0">;
 
+def err_builtin_pp_embed_invalid_argument : Error<
+  "invalid argument to '__builtin_pp_embed': %0">;
+
 def err_invalid_string_udl : Error<
   "string literal with user-defined suffix cannot be used here">;
 def err_invalid_character_udl : Error<
@@ -79,6 +82,9 @@ let CategoryName = "Parse Issue" in {
 def err_expected : Error<"expected %0">;
 def err_expected_either : Error<"expected %0 or %1">;
 def err_expected_after : Error<"expected %1 after %0">;
+
+def err_builtin_pp_embed_invalid_location : Error<
+  "'__builtin_pp_embed' in invalid location: %0%select{|%2}1">;
 
 def err_param_redefinition : Error<"redefinition of parameter %0">;
 def warn_method_param_redefinition : Warning<"redefinition of method parameter %0">;

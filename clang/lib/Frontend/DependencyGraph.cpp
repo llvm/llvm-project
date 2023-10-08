@@ -53,7 +53,7 @@ public:
   DependencyGraphCallback(const Preprocessor *_PP, StringRef OutputFile,
                           StringRef SysRoot,
                           DirectiveBehavior Action = IgnoreEmbed)
-    : PP(_PP), OutputFile(OutputFile.str()), SysRoot(SysRoot.str()) { }
+      : PP(_PP), OutputFile(OutputFile.str()), SysRoot(SysRoot.str()) {}
 
   void InclusionDirective(SourceLocation HashLoc, const Token &IncludeTok,
                           StringRef FileName, bool IsAngled,

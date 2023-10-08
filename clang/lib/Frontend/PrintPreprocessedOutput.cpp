@@ -107,9 +107,10 @@ private:
 
 public:
   PrintPPOutputPPCallbacks(Preprocessor &pp, raw_ostream *os, bool lineMarkers,
-                           bool defines, bool DumpIncludeDirectives, bool DumpEmbedDirectives,
-                           bool UseLineDirectives, bool MinimizeWhitespace,
-                           bool DirectivesOnly, bool KeepSystemIncludes)
+                           bool defines, bool DumpIncludeDirectives,
+                           bool DumpEmbedDirectives, bool UseLineDirectives,
+                           bool MinimizeWhitespace, bool DirectivesOnly,
+                           bool KeepSystemIncludes)
       : PP(pp), SM(PP.getSourceManager()), ConcatInfo(PP), OS(os),
         DisableLineMarkers(lineMarkers), DumpDefines(defines),
         DumpIncludeDirectives(DumpIncludeDirectives),
@@ -414,7 +415,7 @@ void PrintPPOutputPPCallbacks::EmbedDirective(
   if (DumpEmbedDirectives) {
     MoveToLine(HashLoc, /*RequireStartOfLine=*/true);
     *OS << "#embed " << (IsAngled ? '<' : '"') << FileName
-       << (IsAngled ? '>' : '"') << " /* clang -E -dE */";
+        << (IsAngled ? '>' : '"') << " /* clang -E -dE */";
     setEmittedDirectiveOnThisLine();
   }
 }
@@ -1002,8 +1003,9 @@ void clang::DoPrintPreprocessedInput(Preprocessor &PP, raw_ostream *OS,
 
   PrintPPOutputPPCallbacks *Callbacks = new PrintPPOutputPPCallbacks(
       PP, OS, !Opts.ShowLineMarkers, Opts.ShowMacros,
-      Opts.ShowIncludeDirectives, Opts.ShowEmbedDirectives, Opts.UseLineDirectives,
-      Opts.MinimizeWhitespace, Opts.DirectivesOnly, Opts.KeepSystemIncludes);
+      Opts.ShowIncludeDirectives, Opts.ShowEmbedDirectives,
+      Opts.UseLineDirectives, Opts.MinimizeWhitespace, Opts.DirectivesOnly,
+      Opts.KeepSystemIncludes);
 
   // Expand macros in pragmas with -fms-extensions.  The assumption is that
   // the majority of pragmas in such a file will be Microsoft pragmas.

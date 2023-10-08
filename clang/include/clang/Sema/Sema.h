@@ -5981,6 +5981,10 @@ public:
                         ArrayRef<Expr *> Arg, SourceLocation RParenLoc,
                         Expr *Config = nullptr, bool IsExecConfig = false,
                         ADLCallKind UsesADL = ADLCallKind::NotADL);
+  /// `Fn` may be a null pointer.
+  void ModifyCallExprArguments(Expr *Fn, SourceLocation LParenLoc,
+                               SmallVectorImpl<Expr *> &ArgExprs,
+                               SourceLocation RParenLoc);
 
   ExprResult ActOnCUDAExecConfigExpr(Scope *S, SourceLocation LLLLoc,
                                      MultiExprArg ExecConfig,
@@ -6097,6 +6101,35 @@ public:
   ExprResult ActOnSourceLocExpr(SourceLocExpr::IdentKind Kind,
                                 SourceLocation BuiltinLoc,
                                 SourceLocation RPLoc);
+
+  // __builtin_pp_embed()
+  ExprResult ActOnPPEmbedExpr(SourceLocation BuiltinLoc,
+                              SourceLocation Base64DataLocation,
+                              SourceLocation RPLoc, StringLiteral *Filename,
+                              QualType DataTy, std::vector<char> BinaryData);
+
+  IntegerLiteral *ExpandSinglePPEmbedExpr(PPEmbedExpr *PPEmbed);
+
+  PPEmbedExpr::Action
+  CheckExprListForPPEmbedExpr(ArrayRef<Expr *> ExprList,
+                              std::optional<QualType> MaybeInitType);
+  PPEmbedExpr::Action
+  ExpandPPEmbedExprInExprList(ArrayRef<Expr *> ExprList,
+                              SmallVectorImpl<Expr *> &OutputExprList,
+                              bool ClearOutputFirst = true);
+  PPEmbedExpr::Action
+  ExpandPPEmbedExprInExprList(SmallVectorImpl<Expr *> &OutputList);
+
+  enum PPEmbedExprContext {
+    PPEEC__StaticAssert,
+    PPEEC_StaticAssert,
+  };
+
+  StringRef GetLocationName(PPEmbedExprContext Context) const;
+
+  bool DiagnosePPEmbedExpr(Expr *&E, SourceLocation ContextLocation,
+                           PPEmbedExprContext Context,
+                           bool SingleAllowed = true);
 
   // Build a potentially resolved SourceLocExpr.
   ExprResult BuildSourceLocExpr(SourceLocExpr::IdentKind Kind,
@@ -8289,6 +8322,10 @@ public:
                                        unsigned Position,
                                        SourceLocation EqualLoc,
                                        ParsedTemplateArgument DefaultArg);
+
+  void ModifyTemplateArguments(
+      const TemplateTy &Template,
+      SmallVectorImpl<ParsedTemplateArgument> &TemplateArgs);
 
   TemplateParameterList *
   ActOnTemplateParameterList(unsigned Depth,

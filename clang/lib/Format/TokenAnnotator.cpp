@@ -1399,8 +1399,7 @@ private:
       if (Tok->isOneOf(Keywords.kw___has_include,
                        Keywords.kw___has_include_next)) {
         parseHasInclude();
-      }
-      else if (Tok->is(Keywords.kw___has_embed)) {
+      } else if (Tok->is(Keywords.kw___has_embed)) {
         parseHasEmbed();
       }
       if (Style.isCSharp() && Tok->is(Keywords.kw_where) && Tok->Next &&

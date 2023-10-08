@@ -154,10 +154,6 @@ TOK(eod)                 // End of preprocessing directive (end of line inside a
                          // directive).
 TOK(code_completion)     // Code completion marker
 
-// #embed speed support
-TOK(builtin_embed)
-
-
 // C99 6.4.9: Comments.
 TOK(comment)             // Comment (only in -E -C[C] mode)
 
@@ -758,6 +754,7 @@ ALIAS("__char32_t"   , char32_t          , KEYCXX)
 KEYWORD(__builtin_bit_cast               , KEYALL)
 KEYWORD(__builtin_available              , KEYALL)
 KEYWORD(__builtin_sycl_unique_stable_name, KEYSYCL)
+KEYWORD(__builtin_pp_embed               , KEYALL)
 
 // Keywords defined by Attr.td.
 #ifndef KEYWORD_ATTRIBUTE
@@ -993,6 +990,7 @@ ANNOTATION(repl_input_end)
 #undef CXX11_KEYWORD
 #undef KEYWORD
 #undef PUNCTUATOR
+#undef BUILTINOK
 #undef TOK
 #undef C99_KEYWORD
 #undef C23_KEYWORD

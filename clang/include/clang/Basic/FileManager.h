@@ -282,8 +282,9 @@ public:
   getBufferForFile(StringRef Filename, bool isVolatile = false,
                    bool RequiresNullTerminator = true,
                    std::optional<int64_t> MaybeLimit = std::nullopt) {
-    return getBufferForFileImpl(Filename, /*FileSize=*/(MaybeLimit ? *MaybeLimit : -1), isVolatile,
-                                RequiresNullTerminator);
+    return getBufferForFileImpl(Filename,
+                                /*FileSize=*/(MaybeLimit ? *MaybeLimit : -1),
+                                isVolatile, RequiresNullTerminator);
   }
 
 private:

@@ -49,6 +49,7 @@
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/StringRef.h"
+#include "llvm/Support/Base64.h"
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/Compiler.h"
 #include "llvm/Support/ErrorHandling.h"
@@ -1143,6 +1144,12 @@ void StmtPrinter::VisitOMPTargetParallelGenericLoopDirective(
 
 void StmtPrinter::VisitSourceLocExpr(SourceLocExpr *Node) {
   OS << Node->getBuiltinStr() << "()";
+}
+
+void StmtPrinter::VisitPPEmbedExpr(PPEmbedExpr *Node) {
+  OS << "__builtin_pp_embed(" << Node->getType() << ", "
+     << Node->getFilenameStringLiteral()->getBytes() << ", \""
+     << llvm::encodeBase64(Node->getDataStringLiteral()->getBytes()) << "\")";
 }
 
 void StmtPrinter::VisitConstantExpr(ConstantExpr *Node) {

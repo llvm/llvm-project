@@ -566,6 +566,7 @@ public:
         CStyleCastPtrExpr(S, Ctx.VoidPtrTy, (uintptr_t)Ty.getAsOpaquePtr());
     // The QualType parameter `OpaqueType`, represented as `void*`.
     Args.push_back(TypeArg);
+    S.ModifyCallExprArguments(nullptr, E->getBeginLoc(), Args, E->getEndLoc());
 
     // We push the last parameter based on the type of the Expr. Note we need
     // special care for rvalue struct.

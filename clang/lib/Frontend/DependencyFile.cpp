@@ -65,11 +65,11 @@ struct DepCollectorPPCallbacks : public PPCallbacks {
                                     /*IsMissing=*/false);
   }
 
-  void EmbedDirective(SourceLocation HashLoc,
-                          StringRef FileName, bool IsAngled,
-                          CharSourceRange FilenameRange, CharSourceRange ParametersRange,
-                          OptionalFileEntryRef File, StringRef SearchPath,
-                          StringRef RelativePath) override {
+  void EmbedDirective(SourceLocation HashLoc, StringRef FileName, bool IsAngled,
+                      CharSourceRange FilenameRange,
+                      CharSourceRange ParametersRange,
+                      OptionalFileEntryRef File, StringRef SearchPath,
+                      StringRef RelativePath) override {
     if (!File)
       DepCollector.maybeAddDependency(FileName,
                                       /*FromModule*/ false,
@@ -97,14 +97,13 @@ struct DepCollectorPPCallbacks : public PPCallbacks {
   }
 
   void HasEmbed(SourceLocation Loc, StringRef SpelledFilename, bool IsAngled,
-                  OptionalFileEntryRef File) override {
+                OptionalFileEntryRef File) override {
     if (!File)
       return;
     StringRef Filename =
         llvm::sys::path::remove_leading_dotslash(File->getName());
     DepCollector.maybeAddDependency(Filename,
-                                    /*FromModule=*/false,
-                                    false,
+                                    /*FromModule=*/false, false,
                                     /*IsModuleFile=*/false,
                                     &PP.getFileManager(),
                                     /*IsMissing=*/false);

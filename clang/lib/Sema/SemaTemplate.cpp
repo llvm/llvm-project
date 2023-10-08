@@ -1623,6 +1623,62 @@ NamedDecl *Sema::ActOnNonTypeTemplateParameter(Scope *S, Declarator &D,
   return Param;
 }
 
+void Sema::ModifyTemplateArguments(
+    const TemplateTy &Template,
+    SmallVectorImpl<ParsedTemplateArgument> &TemplateArgs) {
+  SmallVector<uint64_t, 4> ByteVals{};
+  for (size_t I = 0; I < TemplateArgs.size();) {
+    ParsedTemplateArgument &OriginalArg = TemplateArgs[I];
+    if (OriginalArg.getKind() != ParsedTemplateArgument::NonType) {
+      ++I;
+      continue;
+    }
+    PPEmbedExpr *PPEmbed = dyn_cast<PPEmbedExpr>(OriginalArg.getAsExpr());
+    if (!PPEmbed) {
+      ++I;
+      continue;
+    }
+    auto TemplateArgListIt = TemplateArgs.erase(&OriginalArg);
+    const size_t ExpectedDataElements = PPEmbed->getDataElementCount(Context);
+    if (ExpectedDataElements == 0) {
+      // No ++I; already pointing at the right element!
+      continue;
+    }
+    StringLiteral *DataLiteral = PPEmbed->getDataStringLiteral();
+    QualType ElementTy = PPEmbed->getType();
+    const size_t TargetWidth = Context.getTypeSize(ElementTy);
+    const size_t BytesPerElement = CHAR_BIT / TargetWidth;
+    StringRef Data = DataLiteral->getBytes();
+    size_t Insertions = 0;
+    for (size_t ByteIndex = 0; ByteIndex < Data.size();
+         ByteIndex += BytesPerElement) {
+      ByteVals.clear();
+      for (size_t ValIndex = 0; ValIndex < BytesPerElement; ++ValIndex) {
+        if ((ValIndex % sizeof(uint64_t)) == 0) {
+          ByteVals.push_back(0);
+        }
+        const unsigned char DataByte = Data[ByteIndex + ValIndex];
+        ByteVals.back() |=
+            (static_cast<uint64_t>(DataByte) << (ValIndex * CHAR_BIT));
+      }
+      ArrayRef<uint64_t> ByteValsRef(ByteVals);
+      IntegerLiteral *IntLit =
+          IntegerLiteral::Create(Context, llvm::APInt(TargetWidth, ByteValsRef),
+                                 ElementTy, DataLiteral->getBeginLoc());
+      TemplateArgListIt = TemplateArgs.insert(
+          TemplateArgListIt,
+          ParsedTemplateArgument(ParsedTemplateArgument::NonType, IntLit,
+                                 OriginalArg.getLocation()));
+      ++Insertions;
+      // make sure we are inserting **after** the item we just inserted, not
+      // before
+      ++TemplateArgListIt;
+    }
+    assert(Insertions == ExpectedDataElements);
+    I += Insertions;
+  }
+}
+
 /// ActOnTemplateTemplateParameter - Called when a C++ template template
 /// parameter (e.g. T in template <template \<typename> class T> class array)
 /// has been parsed. S is the current scope.

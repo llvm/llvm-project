@@ -17022,7 +17022,8 @@ Decl *Sema::ActOnStaticAssertDeclaration(SourceLocation StaticAssertLoc,
                                          SourceLocation RParenLoc) {
   if (DiagnoseUnexpandedParameterPack(AssertExpr, UPPC_StaticAssertExpression))
     return nullptr;
-
+  if (DiagnosePPEmbedExpr(AssertExpr, StaticAssertLoc, PPEEC_StaticAssert))
+    return nullptr;
   return BuildStaticAssertDeclaration(StaticAssertLoc, AssertExpr,
                                       AssertMessageExpr, RParenLoc, false);
 }
