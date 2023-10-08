@@ -269,6 +269,11 @@ Changes in existing checks
   <clang-tidy/checks/modernize/loop-convert>` to support for-loops with
   iterators initialized by free functions like ``begin``, ``end``, or ``size``.
 
+- Improved :doc:`modernize-return-braced-init-list
+  <clang-tidy/checks/modernize/return-braced-init-list>` check to ignore
+  false-positives when constructing the container with ``count`` copies of
+  elements with value ``value``.
+
 - Improved :doc:`modernize-use-equals-delete
   <clang-tidy/checks/modernize/use-equals-delete>` check to ignore
   false-positives when special member function is actually used or implicit.
