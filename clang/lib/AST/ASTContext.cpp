@@ -344,6 +344,9 @@ RawComment *ASTContext::getRawCommentForDeclNoCacheImpl(
   if (Invalid)
     return nullptr;
 
+  if (DeclLocDecomp.second < CommentEndOffset)
+    return nullptr;
+
   // Extract text between the comment and declaration.
   StringRef Text(Buffer + CommentEndOffset,
                  DeclLocDecomp.second - CommentEndOffset);
