@@ -2700,7 +2700,7 @@ public:
   ///         \c false if the module appears to be usable.
   static bool checkModuleIsAvailable(const LangOptions &LangOpts,
                                      const TargetInfo &TargetInfo,
-                                     DiagnosticsEngine &Diags, Module *M);
+                                     const Module &M, DiagnosticsEngine &Diags);
 
   // Module inclusion testing.
   /// Find the module that owns the source or header file that
