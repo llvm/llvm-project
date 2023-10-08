@@ -48,7 +48,7 @@ def UImmLog2XLenHalfAsmOperand : AsmOperandClass {
   let DiagnosticType = "InvalidUImmLog2XLenHalf";
 }
 
-def shfl_uimm : Operand<XLenVT>, ImmLeaf<XLenVT, [{
+def shfl_uimm : RISCVOp, ImmLeaf<XLenVT, [{
   if (Subtarget->is64Bit())
     return isUInt<5>(Imm);
   return isUInt<4>(Imm);
@@ -56,7 +56,6 @@ def shfl_uimm : Operand<XLenVT>, ImmLeaf<XLenVT, [{
   let ParserMatchClass = UImmLog2XLenHalfAsmOperand;
   let DecoderMethod = "decodeUImmOperand<5>";
   let OperandType = "OPERAND_UIMM_SHFL";
-  let OperandNamespace = "RISCVOp";
   let MCOperandPredicate = [{
     int64_t Imm;
     if (!MCOp.evaluateAsConstantImm(Imm))
