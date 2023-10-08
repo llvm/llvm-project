@@ -3713,6 +3713,10 @@ bool UnwrappedLineParser::parseEnum() {
       nextToken();
     addUnwrappedLine();
   }
+  if (auto Prev = FormatTok->getPreviousNonComment();
+      Prev && Prev->is(tok::r_brace)) {
+    Prev->setFinalizedType(TT_EnumRBrace);
+  }
   return true;
 
   // There is no addUnwrappedLine() here so that we fall through to parsing a

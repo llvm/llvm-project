@@ -68,6 +68,7 @@ namespace format {
   TYPE(DictLiteral)                                                            \
   TYPE(ElseLBrace)                                                             \
   TYPE(EnumLBrace)                                                             \
+  TYPE(EnumRBrace)                                                             \
   TYPE(FatArrow)                                                               \
   TYPE(ForEachMacro)                                                           \
   TYPE(FunctionAnnotationRParen)                                               \
