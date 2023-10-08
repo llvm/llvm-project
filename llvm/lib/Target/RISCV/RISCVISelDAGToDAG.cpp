@@ -2469,23 +2469,6 @@ bool RISCVDAGToDAGISel::SelectAddrRegImmLsb00000(SDValue Addr, SDValue &Base,
     int64_t CVal = cast<ConstantSDNode>(Addr.getOperand(1))->getSExtValue();
     if (isInt<12>(CVal)) {
       Base = Addr.getOperand(0);
-      if (Base.getOpcode() == RISCVISD::ADD_LO) {
-        SDValue LoOperand = Base.getOperand(1);
-        if (auto *GA = dyn_cast<GlobalAddressSDNode>(LoOperand)) {
-          const DataLayout &DL = CurDAG->getDataLayout();
-          Align Alignment = commonAlignment(
-              GA->getGlobal()->getPointerAlignment(DL), GA->getOffset());
-          int64_t CombinedOffset = CVal + GA->getOffset();
-          if (((CombinedOffset & 0b11111) == 0) &&
-              (CVal == 0 || Alignment > CVal)) {
-            Base = Base.getOperand(0);
-            Offset = CurDAG->getTargetGlobalAddress(
-                GA->getGlobal(), SDLoc(LoOperand), LoOperand.getValueType(),
-                CombinedOffset, GA->getTargetFlags());
-            return true;
-          }
-        }
-      }
 
       // Early-out if not a valid offset.
       if ((CVal & 0b11111) != 0) {
