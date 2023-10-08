@@ -335,6 +335,23 @@ bool AArch64FrameLowering::homogeneousPrologEpilog(
   if (AFI->hasSwiftAsyncContext())
     return false;
 
+  // If there are an odd number of GPRs before LR and FP in the CSRs list,
+  // they will not be paired into one RegPairInfo, which is incompatible with
+  // the assumption made by the homogeneous prolog epilog pass.
+  const MCPhysReg *CSRegs = MF.getRegInfo().getCalleeSavedRegs();
+  unsigned NumGPRs = 0;
+  for (unsigned I = 0; CSRegs[I]; ++I) {
+    Register Reg = CSRegs[I];
+    if (Reg == AArch64::LR) {
+      assert(CSRegs[I + 1] == AArch64::FP);
+      if (NumGPRs % 2 != 0)
+        return false;
+      break;
+    }
+    if (AArch64::GPR64RegClass.contains(Reg))
+      ++NumGPRs;
+  }
+
   return true;
 }
 
