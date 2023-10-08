@@ -5751,6 +5751,22 @@ SDValue RISCVTargetLowering::LowerOperation(SDValue Op,
     [[fallthrough]];
   case ISD::FP_TO_SINT:
   case ISD::FP_TO_UINT:
+    if (SDValue Op1 = Op.getOperand(0);
+        Op1.getValueType().isVector() &&
+        Op1.getValueType().getScalarType() == MVT::f16 &&
+        (Subtarget.hasVInstructionsF16Minimal() &&
+         !Subtarget.hasVInstructionsF16())) {
+      if (Op1.getValueType() == MVT::nxv32f16)
+        return SplitVectorOp(Op, DAG);
+      // f16 -> f32
+      SDLoc DL(Op);
+      MVT NVT = MVT::getVectorVT(MVT::f32,
+                                 Op1.getValueType().getVectorElementCount());
+      SDValue WidenVec = DAG.getNode(ISD::FP_EXTEND, DL, NVT, Op1);
+      // f32 -> int
+      return DAG.getNode(Op.getOpcode(), DL, Op.getValueType(), WidenVec);
+    }
+    [[fallthrough]];
   case ISD::STRICT_FP_TO_SINT:
   case ISD::STRICT_FP_TO_UINT:
   case ISD::STRICT_SINT_TO_FP:
@@ -6297,6 +6313,22 @@ SDValue RISCVTargetLowering::LowerOperation(SDValue Op,
     [[fallthrough]];
   case ISD::VP_FP_TO_SINT:
   case ISD::VP_FP_TO_UINT:
+    if (SDValue Op1 = Op.getOperand(0);
+        Op1.getValueType().isVector() &&
+        Op1.getValueType().getScalarType() == MVT::f16 &&
+        (Subtarget.hasVInstructionsF16Minimal() &&
+         !Subtarget.hasVInstructionsF16())) {
+      if (Op1.getValueType() == MVT::nxv32f16)
+        return SplitVPOp(Op, DAG);
+      // f16 -> f32
+      SDLoc DL(Op);
+      MVT NVT = MVT::getVectorVT(MVT::f32,
+                                 Op1.getValueType().getVectorElementCount());
+      SDValue WidenVec = DAG.getNode(ISD::FP_EXTEND, DL, NVT, Op1);
+      // f32 -> int
+      return DAG.getNode(Op.getOpcode(), DL, Op.getValueType(),
+                         {WidenVec, Op.getOperand(1), Op.getOperand(2)});
+    }
     return lowerVPFPIntConvOp(Op, DAG);
   case ISD::VP_SETCC:
     if (Op.getOperand(0).getSimpleValueType() == MVT::nxv32f16 &&
