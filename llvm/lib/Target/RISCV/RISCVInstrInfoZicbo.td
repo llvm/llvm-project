@@ -16,7 +16,7 @@
 //===----------------------------------------------------------------------===//
 
 // A 12-bit signed immediate where the least significant five bits are zero.
-def simm12_lsb00000 : Operand<XLenVT>,
+def simm12_lsb00000 : RISCVOp,
                       ImmLeaf<XLenVT, [{return isShiftedInt<7, 5>(Imm);}]> {
   let ParserMatchClass = SImmAsmOperand<12, "Lsb00000">;
   let EncoderMethod = "getImmOpValue";
@@ -28,7 +28,6 @@ def simm12_lsb00000 : Operand<XLenVT>,
     return MCOp.isBareSymbolRef();
   }];
   let OperandType = "OPERAND_SIMM12_LSB00000";
-  let OperandNamespace = "RISCVOp";
 }
 
 //===----------------------------------------------------------------------===//
