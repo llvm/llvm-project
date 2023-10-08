@@ -1,6 +1,6 @@
 ;; AArch64 is arbitralily chosen as a 32/64-bit RISC representative to show the transform in all tests.
 
-; RUN: opt < %s -codegenprepare -S -mtriple=aarch64-unknown-unknown | FileCheck %s --check-prefix=ARM64
+; RUN: opt < %s -passes=codegenprepare -S -mtriple=aarch64-unknown-unknown | FileCheck %s --check-prefix=ARM64
 
 ; AArch64 widens to 32-bit.
 

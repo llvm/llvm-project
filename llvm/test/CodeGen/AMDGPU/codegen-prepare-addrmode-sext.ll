@@ -1,4 +1,4 @@
-; RUN: opt -mtriple=amdgcn-- -codegenprepare -S < %s | FileCheck -check-prefix=OPT %s
+; RUN: opt -mtriple=amdgcn-- -passes=codegenprepare -S < %s | FileCheck -check-prefix=OPT %s
 ; RUN: llc -march=amdgcn -mcpu=verde -verify-machineinstrs < %s | FileCheck -check-prefix=SI-LLC %s
 
 ; OPT-LABEL: @test(

@@ -1,5 +1,5 @@
 ; REQUIRES: x86_64-linux
-; RUN: opt < %s -codegenprepare -mtriple=x86_64 -S -o %t 
+; RUN: opt < %s -passes=codegenprepare -mtriple=x86_64 -S -o %t
 ; RUN: FileCheck %s < %t --check-prefix=IR
 ; RUN: llc -mtriple=x86_64-- -stop-after=finalize-isel %t -o - | FileCheck %s --check-prefix=MIR
 

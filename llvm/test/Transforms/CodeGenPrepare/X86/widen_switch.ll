@@ -1,7 +1,7 @@
 ;; x86 is chosen to show the transform when 8-bit and 16-bit registers are available.
 
-; RUN: opt < %s -codegenprepare -S -mtriple=x86_64-unknown-unknown    | FileCheck %s --check-prefix=X86
-; RUN: opt < %s -debugify -codegenprepare -S -mtriple=x86_64-unknown-unknown | FileCheck %s --check-prefix=DEBUG
+; RUN: opt < %s -passes=codegenprepare -S -mtriple=x86_64-unknown-unknown    | FileCheck %s --check-prefix=X86
+; RUN: opt < %s -debugify -passes=codegenprepare -S -mtriple=x86_64-unknown-unknown | FileCheck %s --check-prefix=DEBUG
 
 ; X86 prefers i32 over i16 for address calculation.
 

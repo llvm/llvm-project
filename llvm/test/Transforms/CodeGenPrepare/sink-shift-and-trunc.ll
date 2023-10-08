@@ -1,5 +1,5 @@
 ; REQUIRES: aarch64-registered-target
-; RUN: opt < %s -codegenprepare -mtriple=arm64-apple-ios -S | FileCheck %s
+; RUN: opt < %s -passes=codegenprepare -mtriple=arm64-apple-ios -S | FileCheck %s
 
 @first_ones = external global [65536 x i8]
 

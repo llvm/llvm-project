@@ -1,4 +1,4 @@
-; RUN: opt -S -mtriple=amdgcn-amd-amdhsa -codegenprepare %s | FileCheck %s
+; RUN: opt -S -mtriple=amdgcn-amd-amdhsa -passes=codegenprepare %s | FileCheck %s
 
 define internal fastcc void @callee(ptr nocapture %p, i32 %a) #0 {
   store volatile i32 %a, ptr %p, align 4

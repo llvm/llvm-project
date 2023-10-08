@@ -1,4 +1,4 @@
-; RUN: opt < %s -codegenprepare -S -mtriple=x86_64-unknown-unknown    | FileCheck %s
+; RUN: opt < %s -passes=codegenprepare -S -mtriple=x86_64-unknown-unknown    | FileCheck %s
 
 
 @a = global [10 x i8] zeroinitializer, align 1

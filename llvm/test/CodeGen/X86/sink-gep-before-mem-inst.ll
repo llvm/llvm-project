@@ -1,4 +1,4 @@
-; RUN: opt < %s -S -codegenprepare -mtriple=x86_64-unknown-linux-gnu | FileCheck %s
+; RUN: opt < %s -S -passes=codegenprepare -mtriple=x86_64-unknown-linux-gnu | FileCheck %s
 
 define i64 @test.after(ptr addrspace(1) readonly align 8) {
 ; CHECK-LABEL: test.after

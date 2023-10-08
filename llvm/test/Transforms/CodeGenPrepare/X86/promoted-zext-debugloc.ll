@@ -1,4 +1,4 @@
-; RUN: opt < %s -codegenprepare -S -mtriple=x86_64-unknown-unknown | FileCheck %s --match-full-lines
+; RUN: opt < %s -passes=codegenprepare -S -mtriple=x86_64-unknown-unknown | FileCheck %s --match-full-lines
   
 ; Make sure the promoted zext doesn't get a debug location associated.
 ; CHECK: %promoted = zext i8 %t to i64

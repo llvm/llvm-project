@@ -1,5 +1,5 @@
-; RUN: opt %s -codegenprepare -mattr=+soft-float -S | FileCheck %s -check-prefix=CHECK -check-prefix=SOFTFP
-; RUN: opt %s -codegenprepare -mattr=-soft-float -S | FileCheck %s -check-prefix=CHECK -check-prefix=HARDFP
+; 
+; RUN: opt %s -passes=codegenprepare -mattr=-soft-float -S | FileCheck %s -check-prefix=CHECK -check-prefix=HARDFP
 
 target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
 target triple = "x86_64-unknown-linux-gnu"

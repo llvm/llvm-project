@@ -1,5 +1,5 @@
-; RUN: opt -codegenprepare -S < %s | FileCheck %s
-; RUN: opt -strip-debug -codegenprepare -S < %s | FileCheck %s
+; RUN: opt -passes=codegenprepare -S < %s | FileCheck %s
+; RUN: opt -strip-debug -passes=codegenprepare -S < %s | FileCheck %s
 ; REQUIRES: x86-registered-target
 
 ; In its current state, CodeGenPrepare should not optimize empty blocks after a switch

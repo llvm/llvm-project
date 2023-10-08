@@ -34,6 +34,7 @@
 #include "llvm/CodeGen/BasicBlockSectionsProfileReader.h"
 #include "llvm/CodeGen/ISDOpcodes.h"
 #include "llvm/CodeGen/MachineValueType.h"
+#include "llvm/CodeGen/CodeGenPrepare.h"
 #include "llvm/CodeGen/SelectionDAGNodes.h"
 #include "llvm/CodeGen/TargetLowering.h"
 #include "llvm/CodeGen/TargetPassConfig.h"
@@ -198,7 +199,7 @@ static cl::opt<bool> BBSectionsGuidedSectionPrefix(
              "impacted, i.e., their prefixes will be decided by FDO/sampleFDO "
              "profiles."));
 
-static cl::opt<uint64_t> FreqRatioToSkipMerge(
+static cl::opt<unsigned> FreqRatioToSkipMerge(
     "cgp-freq-ratio-to-skip-merge", cl::Hidden, cl::init(2),
     cl::desc("Skip merging empty blocks if (frequency of empty block) / "
              "(frequency of destination block) is greater than this ratio"));
@@ -268,12 +269,7 @@ static cl::opt<unsigned>
     MaxAddressUsersToScan("cgp-max-address-users-to-scan", cl::init(100),
                           cl::Hidden,
                           cl::desc("Max number of address users to look at"));
-
-static cl::opt<bool>
-    DisableDeletePHIs("disable-cgp-delete-phis", cl::Hidden, cl::init(false),
-                      cl::desc("Disable elimination of dead PHI nodes."));
-
-namespace {
+namespace llvm{
 
 enum ExtType {
   ZeroExtension, // Zero extension has been seen.
@@ -301,7 +297,8 @@ using ValueToSExts = MapVector<Value *, SExts>;
 
 class TypePromotionTransaction;
 
-class CodeGenPrepare : public FunctionPass {
+class CodeGenPrepare {
+  public:
   const TargetMachine *TM = nullptr;
   const TargetSubtargetInfo *SubtargetInfo = nullptr;
   const TargetLowering *TLI = nullptr;
@@ -364,7 +361,6 @@ class CodeGenPrepare : public FunctionPass {
   /// lazily and update it when required.
   std::unique_ptr<DominatorTree> DT;
 
-public:
   /// If encounter huge function, we need to limit the build time.
   bool IsHugeFunc = false;
 
@@ -373,61 +369,6 @@ public:
   /// Note: Consider building time in this pass, when a BB updated, we need
   /// to insert such BB into FreshBBs for huge function.
   SmallSet<BasicBlock *, 32> FreshBBs;
-
-  static char ID; // Pass identification, replacement for typeid
-
-  CodeGenPrepare() : FunctionPass(ID) {
-    initializeCodeGenPreparePass(*PassRegistry::getPassRegistry());
-  }
-
-  bool runOnFunction(Function &F) override;
-
-  void releaseMemory() override {
-    // Clear per function information.
-    InsertedInsts.clear();
-    PromotedInsts.clear();
-    FreshBBs.clear();
-    BPI.reset();
-    BFI.reset();
-  }
-
-  StringRef getPassName() const override { return "CodeGen Prepare"; }
-
-  void getAnalysisUsage(AnalysisUsage &AU) const override {
-    // FIXME: When we can selectively preserve passes, preserve the domtree.
-    AU.addRequired<ProfileSummaryInfoWrapperPass>();
-    AU.addRequired<TargetLibraryInfoWrapperPass>();
-    AU.addRequired<TargetPassConfig>();
-    AU.addRequired<TargetTransformInfoWrapperPass>();
-    AU.addRequired<LoopInfoWrapperPass>();
-    AU.addUsedIfAvailable<BasicBlockSectionsProfileReader>();
-  }
-
-private:
-  template <typename F>
-  void resetIteratorIfInvalidatedWhileCalling(BasicBlock *BB, F f) {
-    // Substituting can cause recursive simplifications, which can invalidate
-    // our iterator.  Use a WeakTrackingVH to hold onto it in case this
-    // happens.
-    Value *CurValue = &*CurInstIterator;
-    WeakTrackingVH IterHandle(CurValue);
-
-    f();
-
-    // If the iterator instruction was recursively deleted, start over at the
-    // start of the block.
-    if (IterHandle != CurValue) {
-      CurInstIterator = BB->begin();
-      SunkAddrs.clear();
-    }
-  }
-
-  // Get the DominatorTree, building if necessary.
-  DominatorTree &getDT(Function &F) {
-    if (!DT)
-      DT = std::make_unique<DominatorTree>(F);
-    return *DT;
-  }
 
   void removeAllAssertingVHReferences(Value *V);
   bool eliminateAssumptions(Function &F);
@@ -486,13 +427,84 @@ private:
   bool combineToUSubWithOverflow(CmpInst *Cmp, ModifyDT &ModifiedDT);
   bool combineToUAddWithOverflow(CmpInst *Cmp, ModifyDT &ModifiedDT);
   void verifyBFIUpdates(Function &F);
+
+  void releaseMemory() {
+    // Clear per function information.
+    InsertedInsts.clear();
+    PromotedInsts.clear();
+    FreshBBs.clear();
+    BPI.reset();
+    BFI.reset();
+  }
+  bool run(Function &F, const TargetMachine *TM,
+                              const TargetTransformInfo &TTI,
+                              LoopInfo &LI, ProfileSummaryInfo &PSI, 
+                              const TargetLibraryInfo &TLInfo);
+
+private:
+  template <typename F>
+  void resetIteratorIfInvalidatedWhileCalling(BasicBlock *BB, F f) {
+    // Substituting can cause recursive simplifications, which can invalidate
+    // our iterator.  Use a WeakTrackingVH to hold onto it in case this
+    // happens.
+    Value *CurValue = &*CurInstIterator;
+    WeakTrackingVH IterHandle(CurValue);
+
+    f();
+
+    // If the iterator instruction was recursively deleted, start over at the
+    // start of the block.
+    if (IterHandle != CurValue) {
+      CurInstIterator = BB->begin();
+      SunkAddrs.clear();
+    }
+  }
+
+  // Get the DominatorTree, building if necessary.
+  DominatorTree &getDT(Function &F) {
+    if (!DT)
+      DT = std::make_unique<DominatorTree>(F);
+    return *DT;
+  }
+};
+
+ class CodeGenPrepareLegacy : public FunctionPass {
+ public:
+    static char ID; // Pass identification, replacement for typeid
+    bool runOnFunction(Function &F) override;
+    const TargetMachine *TM = nullptr;
+    const TargetSubtargetInfo *SubtargetInfo = nullptr;
+    const TargetLowering *TLI = nullptr;
+    const TargetRegisterInfo *TRI = nullptr;
+    const TargetTransformInfo *TTI = nullptr;
+    const BasicBlockSectionsProfileReader *BBSectionsProfileReader = nullptr;
+    const TargetLibraryInfo *TLInfo = nullptr;
+    LoopInfo *LI = nullptr;
+    std::unique_ptr<BlockFrequencyInfo> BFI;
+    std::unique_ptr<BranchProbabilityInfo> BPI;
+    ProfileSummaryInfo *PSI = nullptr;
+    StringRef getPassName() const { return "CodeGen Prepare"; }
+
+    void getAnalysisUsage(AnalysisUsage &AU) const {
+      // FIXME: When we can selectively preserve passes, preserve the domtree.
+      AU.addRequired<ProfileSummaryInfoWrapperPass>();
+      AU.addRequired<TargetLibraryInfoWrapperPass>();
+      AU.addRequired<TargetPassConfig>();
+      AU.addRequired<TargetTransformInfoWrapperPass>();
+      AU.addRequired<LoopInfoWrapperPass>();
+      AU.addUsedIfAvailable<BasicBlockSectionsProfileReader>();
+    }
+
+    CodeGenPrepareLegacy() : FunctionPass(ID) {
+      initializeCodeGenPrepareLegacyPass(*PassRegistry::getPassRegistry());
+    }
 };
 
 } // end anonymous namespace
 
-char CodeGenPrepare::ID = 0;
+char CodeGenPrepareLegacy::ID = 0;
 
-INITIALIZE_PASS_BEGIN(CodeGenPrepare, DEBUG_TYPE,
+INITIALIZE_PASS_BEGIN(CodeGenPrepareLegacy, DEBUG_TYPE,
                       "Optimize for code generation", false, false)
 INITIALIZE_PASS_DEPENDENCY(BasicBlockSectionsProfileReader)
 INITIALIZE_PASS_DEPENDENCY(LoopInfoWrapperPass)
@@ -500,58 +512,100 @@ INITIALIZE_PASS_DEPENDENCY(ProfileSummaryInfoWrapperPass)
 INITIALIZE_PASS_DEPENDENCY(TargetLibraryInfoWrapperPass)
 INITIALIZE_PASS_DEPENDENCY(TargetPassConfig)
 INITIALIZE_PASS_DEPENDENCY(TargetTransformInfoWrapperPass)
-INITIALIZE_PASS_END(CodeGenPrepare, DEBUG_TYPE, "Optimize for code generation",
+INITIALIZE_PASS_END(CodeGenPrepareLegacy, DEBUG_TYPE, "Optimize for code generation",
                     false, false)
 
-FunctionPass *llvm::createCodeGenPreparePass() { return new CodeGenPrepare(); }
+FunctionPass *llvm::createCodeGenPreparePass() {
+ return new CodeGenPrepareLegacy();
+}
 
-bool CodeGenPrepare::runOnFunction(Function &F) {
+bool CodeGenPrepareLegacy::runOnFunction(Function &F) {
   if (skipFunction(F))
+    return false;
+  auto *TPC = getAnalysisIfAvailable<TargetPassConfig>();
+  if (!TPC)
+    return false;
+
+  auto *TM = &TPC->getTM<TargetMachine>();
+  auto &TTI = getAnalysis<TargetTransformInfoWrapperPass>().getTTI(F);
+  auto &LI = getAnalysis<LoopInfoWrapperPass>().getLoopInfo();
+  auto &PSI = getAnalysis<ProfileSummaryInfoWrapperPass>().getPSI();
+  auto &TLInfo = getAnalysis<TargetLibraryInfoWrapperPass>().getTLI(F);
+  // auto &BBSectionsProfileReader =
+  //     getAnalysisIfAvailable<BasicBlockSectionsProfileReader>();
+
+  CodeGenPrepare CGP;
+  return CGP.run(F, TM, TTI, LI, PSI, TLInfo);
+}
+
+PreservedAnalyses CodeGenPreparePass::run(Function &F, FunctionAnalysisManager &AM) {
+ auto &TTI = AM.getResult<TargetIRAnalysis>(F);
+ auto &LI = AM.getResult<LoopAnalysis>(F);
+ auto &PSI = AM.getResult<ProfileSummaryAnalysis>(F);
+ auto &TLInfo = AM.getResult<TargetLibraryAnalysis>(F);
+//  auto &BasicBlockSectionsProfileReader = AM.getResult<BasicBlockSectionsProfileReader>(F);
+
+ CodeGenPrepare CGP;
+ bool Changed = CGP.run(F, TM, TTI, LI, PSI, TLInfo);
+ if (!Changed)
+   return PreservedAnalyses::all();
+ PreservedAnalyses PA;
+ PA.preserveSet<CFGAnalyses>();
+ PA.preserve<LoopAnalysis>();
+ return PA;
+}
+
+bool CodeGenPrepare::run(Function &F, const TargetMachine *TM,
+                            const TargetTransformInfo &TTI,
+                            LoopInfo &LI, ProfileSummaryInfo &PSI,
+                            const TargetLibraryInfo &TLInfo) {
+  if (DisableBranchOpts)
     return false;
 
   DL = &F.getParent()->getDataLayout();
 
   bool EverMadeChange = false;
 
-  TM = &getAnalysis<TargetPassConfig>().getTM<TargetMachine>();
+  // TM = &getAnalysisUsage<TargetPassConfig>().getTM<TargetMachine>();
   SubtargetInfo = TM->getSubtargetImpl(F);
   TLI = SubtargetInfo->getTargetLowering();
   TRI = SubtargetInfo->getRegisterInfo();
-  TLInfo = &getAnalysis<TargetLibraryInfoWrapperPass>().getTLI(F);
-  TTI = &getAnalysis<TargetTransformInfoWrapperPass>().getTTI(F);
-  LI = &getAnalysis<LoopInfoWrapperPass>().getLoopInfo();
-  BPI.reset(new BranchProbabilityInfo(F, *LI));
-  BFI.reset(new BlockFrequencyInfo(F, *BPI, *LI));
-  PSI = &getAnalysis<ProfileSummaryInfoWrapperPass>().getPSI();
-  BBSectionsProfileReader =
-      getAnalysisIfAvailable<BasicBlockSectionsProfileReader>();
+  // TLInfo = &getAnalysis<TargetLibraryInfoWrapperPass>().getTLI(F);
+  // TTI = &getAnalysis<TargetTransformInfoWrapperPass>().getTTI(F);
+  // LI = &getAnalysis<LoopInfoWrapperPass>().getLoopInfo();
+  BPI.reset(new BranchProbabilityInfo(F, LI));
+  BFI.reset(new BlockFrequencyInfo(F, *BPI, LI));
+  // PSI = &getAnalysis<ProfileSummaryInfoWrapperPass>().getPSI();
+  // BBSectionsProfileReader =
+  //     getAnalysisIfAvailable<BasicBlockSectionsProfileReader>();
   OptSize = F.hasOptSize();
   // Use the basic-block-sections profile to promote hot functions to .text.hot
   // if requested.
   if (BBSectionsGuidedSectionPrefix && BBSectionsProfileReader &&
       BBSectionsProfileReader->isFunctionHot(F.getName())) {
     F.setSectionPrefix("hot");
-  } else if (ProfileGuidedSectionPrefix) {
+  } 
+  else if (ProfileGuidedSectionPrefix) {
     // The hot attribute overwrites profile count based hotness while profile
     // counts based hotness overwrite the cold attribute.
     // This is a conservative behabvior.
     if (F.hasFnAttribute(Attribute::Hot) ||
-        PSI->isFunctionHotInCallGraph(&F, *BFI))
+        PSI.isFunctionHotInCallGraph(&F, *BFI))
       F.setSectionPrefix("hot");
     // If PSI shows this function is not hot, we will placed the function
     // into unlikely section if (1) PSI shows this is a cold function, or
     // (2) the function has a attribute of cold.
-    else if (PSI->isFunctionColdInCallGraph(&F, *BFI) ||
+    else if (PSI.isFunctionColdInCallGraph(&F, *BFI) ||
              F.hasFnAttribute(Attribute::Cold))
       F.setSectionPrefix("unlikely");
-    else if (ProfileUnknownInSpecialSection && PSI->hasPartialSampleProfile() &&
-             PSI->isFunctionHotnessUnknown(F))
+    else if (ProfileUnknownInSpecialSection && PSI.hasPartialSampleProfile() &&
+             PSI.isFunctionHotnessUnknown(F))
       F.setSectionPrefix("unknown");
   }
 
   /// This optimization identifies DIV instructions that can be
   /// profitably bypassed and carried out with a shorter, faster divide.
-  if (!OptSize && !PSI->hasHugeWorkingSetSize() && TLI->isSlowDivBypassed()) {
+  if (!OptSize && !PSI.hasHugeWorkingSetSize() && TLI->isSlowDivBypassed()) {
     const DenseMap<unsigned int, unsigned int> &BypassWidths =
         TLI->getBypassSlowDivWidths();
     BasicBlock *BB = &*F.begin();
@@ -560,7 +614,7 @@ bool CodeGenPrepare::runOnFunction(Function &F) {
       // optimization to those blocks.
       BasicBlock *Next = BB->getNextNode();
       // F.hasOptSize is already checked in the outer if statement.
-      if (!llvm::shouldOptimizeForSize(BB, PSI, BFI.get()))
+      if (!llvm::shouldOptimizeForSize(BB, &PSI, BFI.get()))
         EverMadeChange |= bypassSlowDivision(BB, BypassWidths);
       BB = Next;
     }
@@ -590,8 +644,8 @@ bool CodeGenPrepare::runOnFunction(Function &F) {
 
   // Transformations above may invalidate dominator tree and/or loop info.
   DT.reset();
-  LI->releaseMemory();
-  LI->analyze(getDT(F));
+  LI.releaseMemory();
+  LI.analyze(getDT(F));
 
   bool MadeChange = true;
   bool FuncIterated = false;
@@ -883,12 +937,8 @@ bool CodeGenPrepare::eliminateMostlyEmptyBlocks(Function &F) {
   // as we remove them.
   // Note that this intentionally skips the entry block.
   SmallVector<WeakTrackingVH, 16> Blocks;
-  for (auto &Block : llvm::drop_begin(F)) {
-    // Delete phi nodes that could block deleting other empty blocks.
-    if (!DisableDeletePHIs)
-      MadeChange |= DeleteDeadPHIs(&Block, TLInfo);
+  for (auto &Block : llvm::drop_begin(F))
     Blocks.push_back(&Block);
-  }
 
   for (auto &Block : Blocks) {
     BasicBlock *BB = cast_or_null<BasicBlock>(Block);
@@ -986,8 +1036,8 @@ bool CodeGenPrepare::isMergingEmptyBlockProfitable(BasicBlock *BB,
         DestBB == findDestBlockOfMergeableEmptyBlock(SameValueBB))
       BBFreq += BFI->getBlockFreq(SameValueBB);
 
-  std::optional<BlockFrequency> Limit = BBFreq.mul(FreqRatioToSkipMerge);
-  return !Limit || PredFreq <= *Limit;
+  return PredFreq.getFrequency() <=
+         BBFreq.getFrequency() * FreqRatioToSkipMerge;
 }
 
 /// Return true if we can merge BB into DestBB if there is a single
@@ -1209,7 +1259,6 @@ simplifyRelocatesOffABase(GCRelocateInst *RelocatedBase,
       if (RI->getStatepoint() == RelocatedBase->getStatepoint())
         if (RI->getBasePtrIndex() == RelocatedBase->getBasePtrIndex()) {
           RelocatedBase->moveBefore(RI);
-          MadeChange = true;
           break;
         }
 
@@ -2263,7 +2312,7 @@ static bool despeculateCountZeros(IntrinsicInst *CountZeros,
 
   // Create a PHI in the end block to select either the output of the intrinsic
   // or the bit width of the operand.
-  Builder.SetInsertPoint(EndBlock, EndBlock->begin());
+  Builder.SetInsertPoint(&EndBlock->front());
   PHINode *PN = Builder.CreatePHI(Ty, 2, "ctz");
   replaceAllUsesWith(CountZeros, PN, FreshBBs, IsHugeFunc);
   Value *BitWidth = Builder.getInt(APInt(SizeInBits, SizeInBits));
@@ -2609,7 +2658,7 @@ bool CodeGenPrepare::dupRetToEnableTailCallOpts(BasicBlock *BB,
 // Memory Optimization
 //===----------------------------------------------------------------------===//
 
-namespace {
+namespace llvm {
 
 /// This is an extended version of TargetLowering::AddrMode
 /// which holds actual Value*'s for register values.
@@ -2780,7 +2829,7 @@ LLVM_DUMP_METHOD void ExtAddrMode::dump() const {
 
 } // end anonymous namespace
 
-namespace {
+namespace llvm{
 
 /// This class provides transaction based operation on the IR.
 /// Every change made through this class is recorded in the internal state and
@@ -3283,7 +3332,7 @@ void TypePromotionTransaction::rollback(
   }
 }
 
-namespace {
+namespace llvm {
 
 /// A helper class for matching addressing modes.
 ///
@@ -4209,7 +4258,7 @@ static bool isPromotedInstructionLegal(const TargetLowering &TLI,
       ISDOpcode, TLI.getValueType(DL, PromotedInst->getType()));
 }
 
-namespace {
+namespace llvm{
 
 /// Hepler class to perform type promotion.
 class TypePromotionHelper {
@@ -6304,7 +6353,7 @@ bool CodeGenPrepare::optimizePhiType(
   // correct type.
   ValueToValueMap ValMap;
   for (ConstantData *C : Constants)
-    ValMap[C] = ConstantExpr::getBitCast(C, ConvertTy);
+    ValMap[C] = ConstantExpr::getCast(Instruction::BitCast, C, ConvertTy);
   for (Instruction *D : Defs) {
     if (isa<BitCastInst>(D)) {
       ValMap[D] = D->getOperand(0);
@@ -7096,8 +7145,7 @@ bool CodeGenPrepare::optimizeSelectInst(SelectInst *SI) {
   // to get the PHI operand.
   for (SelectInst *SI : llvm::reverse(ASI)) {
     // The select itself is replaced with a PHI Node.
-    PHINode *PN = PHINode::Create(SI->getType(), 2, "");
-    PN->insertBefore(EndBlock->begin());
+    PHINode *PN = PHINode::Create(SI->getType(), 2, "", &EndBlock->front());
     PN->takeName(SI);
     PN->addIncoming(getTrueOrFalseValue(SI, true, INS), TrueBlock);
     PN->addIncoming(getTrueOrFalseValue(SI, false, INS), FalseBlock);
@@ -7369,7 +7417,7 @@ bool CodeGenPrepare::optimizeSwitchInst(SwitchInst *SI) {
   return Changed;
 }
 
-namespace {
+namespace llvm{
 
 /// Helper class to promote a scalar operation to a vector one.
 /// This class is used to move downward extractelement transition.

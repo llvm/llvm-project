@@ -1,4 +1,4 @@
-; RUN: opt < %s -codegenprepare -S | FileCheck %s
+; RUN: opt < %s -passes=codegenprepare -S | FileCheck %s
 
 target triple = "x86_64-pc-linux-gnu"
 

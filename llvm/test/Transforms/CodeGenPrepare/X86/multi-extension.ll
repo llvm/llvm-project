@@ -1,4 +1,4 @@
-; RUN: opt < %s -codegenprepare -S -mtriple=x86_64-unknown-unknown    | FileCheck %s
+; RUN: opt < %s -passes=codegenprepare -S -mtriple=x86_64-unknown-unknown    | FileCheck %s
 target datalayout = "e-m:o-i64:64-f80:128-n8:16:32:64-S128"
 target triple = "x86_64-apple-macosx10.13.0"
 

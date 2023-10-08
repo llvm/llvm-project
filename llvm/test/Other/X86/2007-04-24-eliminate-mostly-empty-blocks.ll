@@ -1,4 +1,4 @@
-;RUN: opt < %s -codegenprepare -S -mtriple=x86_64 | FileCheck %s
+;RUN: opt < %s -passes=codegenprepare -S -mtriple=x86_64 | FileCheck %s
 
 ;CHECK: define void @foo()
 ;CHECK-NEXT: entry:

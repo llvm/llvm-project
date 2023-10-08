@@ -1,4 +1,4 @@
-; RUN: opt -codegenprepare -S %s -o - | FileCheck %s
+; RUN: opt -passes=codegenprepare -S %s -o - | FileCheck %s
 ; typedef struct info {
 ;   unsigned long long size;
 ; } info_t;

@@ -1,4 +1,4 @@
-; RUN: opt < %s -loop-unroll -codegenprepare -S -mtriple=x86_64 | FileCheck %s
+; RUN: opt < %s -loop-unroll -passes=codegenprepare -S -mtriple=x86_64 | FileCheck %s
 
 ; This test is a worst-case scenario for bitreversal/byteswap detection.
 ; After loop unrolling (the unrolled loop is unreadably large so it has been kept

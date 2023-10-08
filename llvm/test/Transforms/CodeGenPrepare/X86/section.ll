@@ -1,4 +1,4 @@
-; RUN: opt < %s -codegenprepare -S | FileCheck %s
+; RUN: opt < %s -passes=codegenprepare -S | FileCheck %s
 ; RUN: llc < %s | FileCheck --check-prefix=ASM1 %s
 ; RUN: llc < %s -function-sections | FileCheck --check-prefix=ASM2 %s
 

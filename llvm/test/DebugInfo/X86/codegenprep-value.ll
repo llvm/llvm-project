@@ -1,4 +1,4 @@
-; RUN: opt -S -mtriple=x86_64 -codegenprepare %s | FileCheck %s
+; RUN: opt -S -mtriple=x86_64 -passes=codegenprepare %s | FileCheck %s
 ;
 ; Generated from the following source with:
 ; clang -O2 -g -S -emit-llvm -mllvm -stop-after=indirectbr-expand test.cpp
