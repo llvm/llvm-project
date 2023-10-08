@@ -41,7 +41,7 @@ class _LIBCPP_EXPORTED_FROM_ABI exception_ptr {
 
   template <class _Ep>
   friend _LIBCPP_HIDE_FROM_ABI exception_ptr make_exception_ptr(_Ep) _NOEXCEPT;
-#  endif
+#    endif
 #  endif
 
 public:
