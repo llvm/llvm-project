@@ -44,8 +44,9 @@ using namespace mlir::linalg;
 #define LDBG(X) LLVM_DEBUG(DBGS() << X << "\n")
 
 /// Try to vectorize `convOp` as a convolution.
-static FailureOr<Operation *> vectorizeConvolution(RewriterBase &rewriter,
-                                                   LinalgOp convOp);
+static FailureOr<Operation *>
+vectorizeConvolution(RewriterBase &rewriter, LinalgOp convOp,
+                     bool flatten1DDepthwiseConv = false);
 
 /// Return the unique instance of OpType in `block` if it is indeed unique.
 /// Return null if none or more than 1 instances exist.
@@ -1664,7 +1665,8 @@ static void convertAffineApply(RewriterBase &rewriter, LinalgOp linalgOp) {
 LogicalResult mlir::linalg::vectorize(RewriterBase &rewriter, Operation *op,
                                       ArrayRef<int64_t> inputVectorSizes,
                                       ArrayRef<bool> inputScalableVecDims,
-                                      bool vectorizeNDExtract) {
+                                      bool vectorizeNDExtract,
+                                      bool flatten1DDepthwiseConv) {
   LDBG("Attempting to vectorize:\n" << *op << "\n");
   LDBG("Input vector sizes: ");
   LLVM_DEBUG(llvm::interleaveComma(inputVectorSizes, llvm::dbgs()));
@@ -1696,8 +1698,8 @@ LogicalResult mlir::linalg::vectorize(RewriterBase &rewriter, Operation *op,
             // TODO: isaConvolutionOpInterface that can also infer from generic
             // features. Will require stride/dilation attributes inference.
             if (isa<ConvolutionOpInterface>(linalgOp.getOperation())) {
-              FailureOr<Operation *> convOr =
-                  vectorizeConvolution(rewriter, linalgOp);
+              FailureOr<Operation *> convOr = vectorizeConvolution(
+                  rewriter, linalgOp, flatten1DDepthwiseConv);
               if (succeeded(convOr)) {
                 llvm::append_range(results, (*convOr)->getResults());
                 return success();
@@ -2822,7 +2824,7 @@ struct Conv1DGenerator
   /// kw is always unrolled.
   /// TODO: w (resp. kw) is unrolled when the strideW ( resp. dilationW) is
   /// > 1.
-  FailureOr<Operation *> depthwiseConv() {
+  FailureOr<Operation *> depthwiseConvGeneric() {
     if (!valid)
       return rewriter.notifyMatchFailure(op, "unvectorizable depthwise conv");
 
@@ -2936,6 +2938,176 @@ struct Conv1DGenerator
         .getOperation();
   }
 
+  /// Generate a vector implementation for ("flatten channel dim"):
+  /// ```
+  ///   Op def: (     n,     w,     c,    kw)
+  ///    Iters: ({Par(), Par(), Par(), Red()})
+  ///   Layout: {{n, 1 * w + dilationW * kw, c}, {kw, c}, {n, w, c}}
+  /// ```
+  /// c of the input/output is collapsed with w. kw is always unrolled and
+  /// broadcast to match w.
+  ///
+  /// TODO: Add support for non-unit stride/dilation
+  /// TODO: w (resp. kw) is unrolled when the strideW ( resp. dilationW) is
+  /// > 1.
+  FailureOr<Operation *> depthwiseConvFlatten() {
+    if (!valid)
+      return rewriter.notifyMatchFailure(op, "unvectorizable depthwise conv");
+
+    int64_t nSize, iSize, wSize, cSize, kwSize;
+    // kernel{kw, c}
+    bindShapeDims(rhsShapedType, kwSize, cSize);
+    // out{n, w, c}
+    bindShapeDims(resShapedType, nSize, wSize);
+    // in{n, w, c}
+    bindShapeDims(lhsShapedType, nSize, iSize);
+
+    vector::TransferWriteOp write;
+    Value zero = rewriter.create<arith::ConstantIndexOp>(loc, 0);
+
+    if (strideW == 1)
+      return rewriter.notifyMatchFailure(
+          op, "Non-unit strides are not supported yet");
+    if (dilationW == 1)
+      return rewriter.notifyMatchFailure(
+          op, "Non-unit dilations are not supported yet");
+
+    Type lhsEltType = lhsShapedType.getElementType();
+    Type rhsEltType = rhsShapedType.getElementType();
+    Type resEltType = resShapedType.getElementType();
+    VectorType rhsType = VectorType::get({kwSize, cSize}, rhsEltType);
+    VectorType lhsType = VectorType::get(
+        {nSize,
+         // iw = (ow * sw + kw *  dw - 1) * c
+         //   (i.e. 16 convolved with 3 (@stride 1 dilation 1) -> 14)
+         (((wSize - 1) * strideW + 1) + ((kwSize - 1) * dilationW + 1) - 1) *
+             cSize},
+        lhsEltType);
+
+    VectorType resType = VectorType::get({nSize, wSize * cSize}, resEltType);
+
+    Value res, lhs, lhsFlat, resFlat;
+    // Read rhs slice of size {kw, c} @ [0, 0].
+    Value rhs = rewriter.create<vector::TransferReadOp>(loc, rhsType, rhsShaped,
+                                                        ValueRange{zero, zero});
+
+    SmallVector<ReassociationIndices> reassociation = {{0}, {1, 2}};
+
+    // Flatten w and c dimensions
+    auto lhsTypeCollapsed = VectorType::get({nSize, iSize * cSize}, lhsEltType);
+    auto linalgOp = dyn_cast<LinalgOp>(op);
+    lhsFlat =
+        linalgOp.hasTensorSemantics()
+            ? (Value)rewriter.create<tensor::CollapseShapeOp>(
+                  loc,
+                  RankedTensorType::get(lhsTypeCollapsed.getShape(),
+                                        lhsEltType),
+                  lhsShaped, reassociation)
+            : (Value)rewriter.create<memref::CollapseShapeOp>(
+                  loc, MemRefType::get(lhsTypeCollapsed.getShape(), lhsEltType),
+                  lhsShaped, reassociation);
+    resFlat =
+        linalgOp.hasTensorSemantics()
+            ? (Value)rewriter.create<tensor::CollapseShapeOp>(
+                  loc, RankedTensorType::get(resType.getShape(), resEltType),
+                  resShaped, reassociation)
+            : (Value)rewriter.create<memref::CollapseShapeOp>(
+                  loc, MemRefType::get(resType.getShape(), resEltType),
+                  resShaped, reassociation);
+
+    // Read lhs slice of size {n, (w * wSize + kw * dilationW) * c} @ [0,
+    // 0].
+    lhs = rewriter.create<vector::TransferReadOp>(loc, lhsType, lhsFlat,
+                                                  ValueRange{zero, zero});
+    // Read res slice of size {n, w * c} @ [0, 0].
+    res = rewriter.create<vector::TransferReadOp>(loc, resType, resFlat,
+                                                  ValueRange{zero, zero});
+
+    //===------------------------------------------------------------------===//
+    // Begin vector-only rewrite part
+    //===------------------------------------------------------------------===//
+    // Unroll along kw and read slices of lhs and rhs.
+    SmallVector<Value> lhsVals, rhsVals, resVals;
+    // Extract lhs slice of size {n, wSizeStep * c}
+    //   @ [0, (sw * w + dw * kw) * cSize].
+    for (int64_t kw = 0; kw < kwSize; ++kw) {
+      for (int64_t w = 0; w < wSize; w += wSize) {
+        lhsVals.push_back(rewriter.create<vector::ExtractStridedSliceOp>(
+            loc, lhs,
+            /*offsets=*/
+            ArrayRef<int64_t>{0, (w * wSize + kw * dilationW) * cSize},
+            /*sizes=*/ArrayRef<int64_t>{nSize, wSize * cSize},
+            /*strides=*/ArrayRef<int64_t>{1, 1}));
+      }
+    }
+    // Extract rhs slice of size {c} @ [kw].
+    for (int64_t kw = 0; kw < kwSize; ++kw) {
+      rhsVals.push_back(rewriter.create<vector::ExtractOp>(
+          loc, rhs, /*offsets=*/ArrayRef<int64_t>{kw}));
+    }
+
+    // Extract res slice
+    // Flattened case:  {n, wSizeStep * c} @ [0, w].
+    for (int64_t w = 0; w < wSize; w += wSize) {
+      resVals.push_back(rewriter.create<vector::ExtractStridedSliceOp>(
+          loc, res,
+          /*offsets=*/ArrayRef<int64_t>{0, w * cSize},
+          /*sizes=*/ArrayRef<int64_t>{nSize, wSize * cSize},
+          /*strides=*/ArrayRef<int64_t>{1, 1}));
+    }
+
+    auto linearIndex = [&](int64_t kw, int64_t w) {
+      return kw * (wSize / wSize) + w;
+    };
+
+    // Compute contraction:
+    //    O{n, w * c} += I{n, (sw * w + dw * kw) * c} * F{c}
+    for (int64_t kw = 0; kw < kwSize; ++kw) {
+      for (int64_t w = 0; w < wSize; w += wSize) {
+        resVals[w] = depthwiseConv1dFlatSliceAsMulAcc(
+            rewriter, loc, lhsVals[linearIndex(kw, w)], rhsVals[kw],
+            resVals[w]);
+      }
+    }
+
+    // Its possible we failed to create the Fma.
+    if (!llvm::all_of(resVals, [](Value v) { return v; })) {
+      // Manually revert (in reverse order) to avoid leaving a bad IR state.
+      for (auto &collection :
+           {resVals, rhsVals, lhsVals, {res, rhs, lhs, zero}})
+        for (Value v : collection)
+          rewriter.eraseOp(v.getDefiningOp());
+      return rewriter.notifyMatchFailure(op, "failed to create FMA");
+    }
+
+    // Write back res slice. This does not depend on kw.
+    // Flattened case: {n, wSizeStep * c} @ [0, w].
+    for (int64_t w = 0; w < wSize; w += wSize) {
+      res = rewriter.create<vector::InsertStridedSliceOp>(
+          loc, resVals[w], res,
+          /*offsets=*/ArrayRef<int64_t>{0, w * cSize},
+          /*strides=*/ArrayRef<int64_t>{1, 1});
+    }
+    //===------------------------------------------------------------------===//
+    // End vector-only rewrite part
+    //===------------------------------------------------------------------===//
+    // Write back res slice of size {n, w * c} @ [0, 0].
+    mlir::vector::TransferWriteOp tWrite =
+        rewriter.create<vector::TransferWriteOp>(loc, res, resFlat,
+                                                 ValueRange{zero, zero});
+
+    // A tensor has to be re-shaped back to it's original shape ...
+    if (linalgOp.hasTensorSemantics())
+      // Re-expand shape
+      return rewriter
+          .create<tensor::ExpandShapeOp>(loc, resShapedType, tWrite.getResult(),
+                                         reassociation)
+          .getOperation();
+    /// ... memrefs don't requie reshaping (re-shape is just a different view
+    /// into the same memref)
+    return tWrite.getOperation();
+  }
+
   /// Lower lhs{n, w, c} * rhs{c} -> res{n, w, c} to MulAcc
   Value depthwiseConv1dSliceAsMulAcc(RewriterBase &rewriter, Location loc,
                                      Value lhs, Value rhs, Value res) {
@@ -2953,6 +3125,39 @@ struct Conv1DGenerator
       return nullptr;
 
     if (isa<FloatType>(resTy.getElementType()))
+      return rewriter.create<vector::FMAOp>(loc, lhs, rhs, res);
+
+    auto mul = rewriter.create<arith::MulIOp>(loc, lhs, rhs);
+    return rewriter.create<arith::AddIOp>(loc, mul, res);
+  }
+
+  /// Lower lhs{n, w * c} * rhs{c} -> res{n, w * c} to MulAcc
+  Value depthwiseConv1dFlatSliceAsMulAcc(RewriterBase &rewriter, Location loc,
+                                         Value lhs, Value rhs, Value res) {
+    auto rhsTy = rhs.getType().cast<ShapedType>();
+    auto resTy = res.getType().cast<ShapedType>();
+
+    lhs = promote(rewriter, loc, lhs, resTy);
+
+    auto rhsSize = rhs.getType().cast<VectorType>().getShape()[0];
+    auto resSize = res.getType().cast<VectorType>().getShape()[1];
+
+    SmallVector<int64_t, 16> indicies;
+    for (int i = 0; i < resSize / rhsSize; ++i) {
+      for (int j = 0; j < rhsSize; ++j)
+        indicies.push_back(j);
+    }
+
+    rhs = rewriter.create<vector::ShuffleOp>(loc, rhs, rhs, indicies);
+
+    rhs = rewriter.create<vector::BroadcastOp>(
+        loc, resTy.clone(rhsTy.getElementType()), rhs);
+    rhs = promote(rewriter, loc, rhs, resTy);
+
+    if (!lhs || !rhs)
+      return nullptr;
+
+    if (resTy.getElementType().isa<FloatType>())
       return rewriter.create<vector::FMAOp>(loc, lhs, rhs, res);
 
     auto mul = rewriter.create<arith::MulIOp>(loc, lhs, rhs);
@@ -3049,7 +3254,7 @@ struct Conv1DGenerator
 
   /// Entry point that transposes into the common form:
   ///   {{n, strideW * w + dilationW * kw, c}, {kw, c}, {n, w, c}}
-  FailureOr<Operation *> generateDilatedConv() {
+  FailureOr<Operation *> generateDilatedConv(bool flatten = false) {
     AffineExpr n, w, c, kw;
     bindDims(ctx, n, w, c, kw);
     if (!iters({Par(), Par(), Par(), Red()}))
@@ -3060,7 +3265,7 @@ struct Conv1DGenerator
     if (layout({/*lhsIndex*/ {n, strideW * w + dilationW * kw, c},
                 /*rhsIndex*/ {kw, c},
                 /*resIndex*/ {n, w, c}}))
-      return depthwiseConv();
+      return flatten ? depthwiseConvFlatten() : depthwiseConvGeneric();
 
     return rewriter.notifyMatchFailure(op, "not a depthwise::Nwc layout");
   }
@@ -3125,8 +3330,9 @@ private:
 
 /// Helper function to vectorize a LinalgOp with convolution semantics.
 // TODO: extend the generic vectorization to support windows and drop this.
-static FailureOr<Operation *> vectorizeConvolution(RewriterBase &rewriter,
-                                                   LinalgOp op) {
+static FailureOr<Operation *>
+vectorizeConvolution(RewriterBase &rewriter, LinalgOp op,
+                     bool flatten1DDepthwiseConv) {
   // The ConvolutionOpInterface gives us guarantees of existence for
   // strides/dilations. However, we do not need to rely on those, we can simply
   // use them if present, otherwise use the default and let the generic conv.
@@ -3151,7 +3357,7 @@ static FailureOr<Operation *> vectorizeConvolution(RewriterBase &rewriter,
   res = e.generateNcwPooling();
   if (succeeded(res))
     return res;
-  return e.generateDilatedConv();
+  return e.generateDilatedConv(flatten1DDepthwiseConv);
 }
 
 struct VectorizeConvolution : public OpInterfaceRewritePattern<LinalgOp> {
