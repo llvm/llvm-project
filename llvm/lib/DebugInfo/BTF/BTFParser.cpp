@@ -204,7 +204,6 @@ const BTF::CommonType VoidTypeInst = {0, BTF::BTF_KIND_UNKN << 24, {0}};
 Error BTFParser::parseTypesInfo(ParseContext &Ctx, uint64_t TypesInfoStart,
                                 StringRef RawData) {
   using support::big;
-  using support::endianness;
   using support::little;
   using support::endian::byte_swap;
 

@@ -24,8 +24,6 @@
 namespace llvm {
 namespace object {
 
-using support::endianness;
-
 template <class ELFT> struct Elf_Ehdr_Impl;
 template <class ELFT> struct Elf_Shdr_Impl;
 template <class ELFT> struct Elf_Sym_Impl;
