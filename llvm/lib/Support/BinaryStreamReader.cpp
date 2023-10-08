@@ -13,7 +13,6 @@
 #include "llvm/Support/LEB128.h"
 
 using namespace llvm;
-using endianness = llvm::support::endianness;
 
 BinaryStreamReader::BinaryStreamReader(BinaryStreamRef Ref) : Stream(Ref) {}
 
