@@ -5070,7 +5070,7 @@ RValue CodeGenFunction::EmitCallExpr(const CallExpr *E,
   if (const auto *CE = dyn_cast<CXXOperatorCallExpr>(E))
     if (const auto *MD =
             dyn_cast_if_present<CXXMethodDecl>(CE->getCalleeDecl());
-        MD && !MD->isExplicitObjectMemberFunction())
+        MD && MD->isImplicitObjectMemberFunction())
       return EmitCXXOperatorMemberCallExpr(CE, MD, ReturnValue);
 
   CGCallee callee = EmitCallee(E->getCallee());
@@ -5519,7 +5519,9 @@ RValue CodeGenFunction::EmitCall(QualType CalleeType, const CGCallee &OrigCallee
   // destruction order is not necessarily reverse construction order.
   // FIXME: Revisit this based on C++ committee response to unimplementability.
   EvaluationOrder Order = EvaluationOrder::Default;
-  if (auto *OCE = dyn_cast<CXXOperatorCallExpr>(E)) {
+  auto *OCE = dyn_cast<CXXOperatorCallExpr>(E);
+  bool StaticOperator = false;
+  if (OCE) {
     if (OCE->isAssignmentOp())
       Order = EvaluationOrder::ForceRightToLeft;
     else {
@@ -5536,10 +5538,24 @@ RValue CodeGenFunction::EmitCall(QualType CalleeType, const CGCallee &OrigCallee
         break;
       }
     }
+
+    if (const auto *MD =
+            dyn_cast_if_present<CXXMethodDecl>(OCE->getCalleeDecl());
+        MD && MD->isStatic())
+      StaticOperator = true;
   }
 
-  EmitCallArgs(Args, dyn_cast<FunctionProtoType>(FnType), E->arguments(),
-               E->getDirectCallee(), /*ParamsToSkip*/ 0, Order);
+  if (StaticOperator) {
+    // If we're calling a static operator, we need to emit the object argument
+    // and ignore it.
+    EmitIgnoredExpr(OCE->getArg(0));
+
+    EmitCallArgs(Args, dyn_cast<FunctionProtoType>(FnType),
+                 drop_begin(E->arguments(), 1), E->getDirectCallee(),
+                 /*ParamsToSkip*/ 0, Order);
+  } else
+    EmitCallArgs(Args, dyn_cast<FunctionProtoType>(FnType), E->arguments(),
+                 E->getDirectCallee(), /*ParamsToSkip*/ 0, Order);
 
   const CGFunctionInfo &FnInfo = CGM.getTypes().arrangeFreeFunctionCall(
       Args, FnType, /*ChainCall=*/Chain);
