@@ -32,6 +32,13 @@ struct OneShotBufferizationOptions;
 /// In the above example, the subset op is "tensor.insert_slice". When tracing
 /// back the reverse use-def chain of a the source, we end up at a
 /// "tensor.empty" op.
+LogicalResult eliminateEmptyTensors(RewriterBase &rewriter, Operation *op);
+
+/// Try to eliminate "tensor.empty" ops inside `op`.
+///
+/// This function overload accepts an existing `OneShotAnalysisState`, which
+/// contains in-place bufferization decisions. This overload is useful if an
+/// existing analysis should be reused for empty tensor elimination.
 LogicalResult eliminateEmptyTensors(RewriterBase &rewriter, Operation *op,
                                     OneShotAnalysisState &state);
 
