@@ -15,7 +15,6 @@
 #include <__functional/unary_function.h>
 #include <__type_traits/integral_constant.h>
 #include <__type_traits/operation_traits.h>
-#include <__type_traits/predicate_traits.h>
 #include <__utility/forward.h>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
@@ -41,12 +40,12 @@ struct _LIBCPP_TEMPLATE_VIS plus
 };
 _LIBCPP_CTAD_SUPPORTED_FOR_TYPE(plus);
 
-template <class _Tp>
-struct __is_trivial_plus_operation<plus<_Tp>, _Tp, _Tp> : true_type {};
+template <class _Pred>
+struct __desugars_to<plus<_Pred>, plus<_Pred>> : true_type {};
 
 #if _LIBCPP_STD_VER >= 14
-template <class _Tp, class _Up>
-struct __is_trivial_plus_operation<plus<>, _Tp, _Up> : true_type {};
+template <>
+struct __desugars_to<plus<>, plus<>> : true_type {};
 #endif
 
 #if _LIBCPP_STD_VER >= 14
@@ -353,11 +352,11 @@ struct _LIBCPP_TEMPLATE_VIS equal_to<void>
 #endif
 
 template <class _Tp>
-struct __is_trivial_equality_predicate<equal_to<_Tp>, _Tp, _Tp> : true_type {};
+struct __desugars_to<equal_to<_Tp>, std::equal_to<_Tp>> : true_type {};
 
 #if _LIBCPP_STD_VER >= 14
-template <class _Tp>
-struct __is_trivial_equality_predicate<equal_to<>, _Tp, _Tp> : true_type {};
+template <>
+struct __desugars_to<equal_to<>, std::equal_to<>> : true_type {};
 #endif
 
 #if _LIBCPP_STD_VER >= 14

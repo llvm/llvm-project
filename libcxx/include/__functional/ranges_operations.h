@@ -13,8 +13,9 @@
 #include <__concepts/equality_comparable.h>
 #include <__concepts/totally_ordered.h>
 #include <__config>
+#include <__functional/operations.h>
 #include <__type_traits/integral_constant.h>
-#include <__type_traits/predicate_traits.h>
+#include <__type_traits/operation_traits.h>
 #include <__utility/forward.h>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
@@ -95,8 +96,8 @@ struct greater_equal {
 
 } // namespace ranges
 
-template <class _Lhs, class _Rhs>
-struct __is_trivial_equality_predicate<ranges::equal_to, _Lhs, _Rhs> : true_type {};
+template <>
+struct __desugars_to<ranges::equal_to, std::equal_to<>> : true_type {};
 
 #endif // _LIBCPP_STD_VER >= 20
 

@@ -18,8 +18,8 @@
 
 _LIBCPP_BEGIN_NAMESPACE_STD
 
-template <class _Pred, class _Lhs, class _Rhs>
-struct __is_trivial_plus_operation : false_type {};
+template <class _Pred, class _Reference>
+struct __desugars_to : false_type {};
 
 _LIBCPP_END_NAMESPACE_STD
 
