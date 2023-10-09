@@ -5547,7 +5547,7 @@ TEST_F(OpenMPIRBuilderTest, CreateTask) {
   // Verify that the data argument is used only once, and that too in the load
   // instruction that is then used for accessing shared data.
   Value *DataPtr = OutlinedFn->getArg(1);
-  EXPECT_EQ(DataPtr->getNumUses(), 1);
+  EXPECT_EQ(DataPtr->getNumUses(), 1U);
   EXPECT_TRUE(isa<LoadInst>(DataPtr->uses().begin()->getUser()));
   Value *Data = DataPtr->uses().begin()->getUser();
   EXPECT_TRUE(all_of(Data->uses(), [](Use &U) {
@@ -5604,7 +5604,7 @@ TEST_F(OpenMPIRBuilderTest, CreateTaskNoArgs) {
           ->user_back());
   Function *OutlinedFn = dyn_cast<Function>(TaskAllocCall->getArgOperand(5));
   ASSERT_NE(OutlinedFn, nullptr);
-  ASSERT_EQ(OutlinedFn->arg_size(), 1);
+  ASSERT_EQ(OutlinedFn->arg_size(), 1U);
 }
 
 TEST_F(OpenMPIRBuilderTest, CreateTaskUntied) {
