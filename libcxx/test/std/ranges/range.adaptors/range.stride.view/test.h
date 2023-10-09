@@ -9,6 +9,8 @@
 #ifndef TEST_STD_RANGES_RANGE_ADAPTORS_RANGE_STRIDE_TYPES_H
 #define TEST_STD_RANGES_RANGE_ADAPTORS_RANGE_STRIDE_TYPES_H
 
+#include "__concepts/movable.h"
+#include "__ranges/concepts.h"
 #include "test_iterators.h"
 #include <iterator>
 #include <ranges>
