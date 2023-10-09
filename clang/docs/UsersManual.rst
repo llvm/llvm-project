@@ -4731,10 +4731,9 @@ Restrictions and Limitations compared to Clang
 Strict Aliasing
 ^^^^^^^^^^^^^^^
 
-Strict aliasing (TBAA) is turned off by default in clang-cl at optimization
-levels O3 and below, and turned on at Ofast. Whereas in clang, strict aliasing
-is turned on by default for all optimization levels.
+Strict aliasing (TBAA) is always off by default in clang-cl. Whereas in clang,
+strict aliasing is turned on by default for all optimization levels.
 
 To enable LLVM optimizations based on strict aliasing rules (e.g., optimizations
 based on type of expressions in C/C++), user will need to explicitly pass
-`-fstrict-aliasing` to clang-cl when compiling at O3 and below.
+`-fstrict-aliasing` to clang-cl.
