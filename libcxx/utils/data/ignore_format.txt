@@ -6512,7 +6512,6 @@ libcxx/test/std/utilities/memory/allocator.traits/allocator.traits.types/void_po
 libcxx/test/std/utilities/memory/allocator.traits/allocator_type.pass.cpp
 libcxx/test/std/utilities/memory/allocator.traits/rebind_traits.pass.cpp
 libcxx/test/std/utilities/memory/allocator.traits/value_type.pass.cpp
-libcxx/test/std/utilities/memory/allocator.uses/allocator.uses.construction/uses_allocator_construction_args.pass.cpp
 libcxx/test/std/utilities/memory/allocator.uses/allocator.uses.trait/uses_allocator.pass.cpp
 libcxx/test/std/utilities/memory/c.malloc/nothing_to_do.pass.cpp
 libcxx/test/std/utilities/memory/default.allocator/allocator.ctor.pass.cpp

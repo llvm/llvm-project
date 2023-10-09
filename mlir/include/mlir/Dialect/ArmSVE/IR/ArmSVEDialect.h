@@ -19,9 +19,9 @@
 #include "mlir/IR/OpDefinition.h"
 #include "mlir/Interfaces/SideEffectInterfaces.h"
 
-#include "mlir/Dialect/ArmSVE/ArmSVEDialect.h.inc"
+#include "mlir/Dialect/ArmSVE/IR/ArmSVEDialect.h.inc"
 
 #define GET_OP_CLASSES
-#include "mlir/Dialect/ArmSVE/ArmSVE.h.inc"
+#include "mlir/Dialect/ArmSVE/IR/ArmSVE.h.inc"
 
 #endif // MLIR_DIALECT_ARMSVE_ARMSVEDIALECT_H
