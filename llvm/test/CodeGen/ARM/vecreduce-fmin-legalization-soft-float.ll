@@ -58,23 +58,23 @@ define float @test_v4f32(<4 x float> %a) nounwind {
 ; CHECK-NEXT:    .save {r4, r5, r6, r7, r11, lr}
 ; CHECK-NEXT:    push {r4, r5, r6, r7, r11, lr}
 ; CHECK-NEXT:    mov r4, r3
-; CHECK-NEXT:    mov r5, r2
-; CHECK-NEXT:    mov r6, r1
+; CHECK-NEXT:    mov r6, r2
+; CHECK-NEXT:    mov r5, r1
 ; CHECK-NEXT:    mov r7, r0
 ; CHECK-NEXT:    bl __aeabi_fcmplt
 ; CHECK-NEXT:    cmp r0, #0
-; CHECK-NEXT:    mov r1, r5
-; CHECK-NEXT:    movne r6, r7
-; CHECK-NEXT:    mov r0, r6
+; CHECK-NEXT:    mov r1, r6
+; CHECK-NEXT:    movne r5, r7
+; CHECK-NEXT:    mov r0, r5
 ; CHECK-NEXT:    bl __aeabi_fcmplt
 ; CHECK-NEXT:    cmp r0, #0
 ; CHECK-NEXT:    mov r1, r4
-; CHECK-NEXT:    moveq r6, r5
-; CHECK-NEXT:    mov r0, r6
+; CHECK-NEXT:    moveq r5, r6
+; CHECK-NEXT:    mov r0, r5
 ; CHECK-NEXT:    bl __aeabi_fcmplt
 ; CHECK-NEXT:    cmp r0, #0
-; CHECK-NEXT:    moveq r6, r4
-; CHECK-NEXT:    mov r0, r6
+; CHECK-NEXT:    moveq r5, r4
+; CHECK-NEXT:    mov r0, r5
 ; CHECK-NEXT:    pop {r4, r5, r6, r7, r11, lr}
 ; CHECK-NEXT:    mov pc, lr
   %b = call fast float @llvm.vector.reduce.fmin.v4f32(<4 x float> %a)

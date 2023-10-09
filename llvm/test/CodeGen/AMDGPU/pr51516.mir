@@ -4,8 +4,8 @@
 # is killed by that store.
 
 # GCN-LABEL: name: global_sextload_v32i32_to_v32i64
-# GCN: renamable $vgpr31_vgpr32_vgpr33_vgpr34 = SI_SPILL_V128_RESTORE %stack.0, $sgpr32, 0, implicit $exec :: (load (s128) from %stack.0, align 4, addrspace 5)
-# GCN: GLOBAL_STORE_DWORDX4_SADDR killed renamable $vgpr24, killed renamable $vgpr27_vgpr28_vgpr29_vgpr30, killed renamable $sgpr0_sgpr1, 16, 0, implicit $exec, implicit killed renamable $vgpr25
+# GCN: renamable $vgpr33_vgpr34_vgpr35_vgpr36 = SI_SPILL_V128_RESTORE %stack.0, $sgpr32, 0, implicit $exec :: (load (s128) from %stack.0, align 4, addrspace 5)
+# GCN: GLOBAL_STORE_DWORDX4_SADDR killed renamable $vgpr47, killed renamable $vgpr29_vgpr30_vgpr31_vgpr32, killed renamable $sgpr0_sgpr1, 16, 0, implicit $exec, implicit killed renamable $vgpr46
 
 ---
 name:            global_sextload_v32i32_to_v32i64

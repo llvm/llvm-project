@@ -1432,20 +1432,20 @@ define amdgpu_kernel void @test_div_fmas_f32_i1_phi_vcc(ptr addrspace(1) %out, [
 ; GFX10_W32-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX10_W32-NEXT:    global_load_dwordx3 v[1:3], v1, s[2:3]
 ; GFX10_W32-NEXT:    s_waitcnt_depctr 0xffe3
-; GFX10_W32-NEXT:    s_mov_b32 s3, 0
-; GFX10_W32-NEXT:    s_and_saveexec_b32 s2, vcc_lo
+; GFX10_W32-NEXT:    s_mov_b32 s2, 0
+; GFX10_W32-NEXT:    s_and_saveexec_b32 s3, vcc_lo
 ; GFX10_W32-NEXT:    s_cbranch_execz .LBB13_2
 ; GFX10_W32-NEXT:  ; %bb.1: ; %bb
 ; GFX10_W32-NEXT:    s_load_dwordx2 s[4:5], s[0:1], 0x50
 ; GFX10_W32-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX10_W32-NEXT:    s_load_dword s3, s[4:5], 0x0
+; GFX10_W32-NEXT:    s_load_dword s2, s[4:5], 0x0
 ; GFX10_W32-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX10_W32-NEXT:    s_cmp_lg_u32 s3, 0
-; GFX10_W32-NEXT:    s_cselect_b32 s3, 1, 0
+; GFX10_W32-NEXT:    s_cmp_lg_u32 s2, 0
+; GFX10_W32-NEXT:    s_cselect_b32 s2, 1, 0
 ; GFX10_W32-NEXT:  .LBB13_2: ; %exit
-; GFX10_W32-NEXT:    s_or_b32 exec_lo, exec_lo, s2
+; GFX10_W32-NEXT:    s_or_b32 exec_lo, exec_lo, s3
 ; GFX10_W32-NEXT:    s_load_dwordx2 s[0:1], s[0:1], 0x0
-; GFX10_W32-NEXT:    s_and_b32 s2, 1, s3
+; GFX10_W32-NEXT:    s_and_b32 s2, 1, s2
 ; GFX10_W32-NEXT:    v_cmp_ne_u32_e64 vcc_lo, 0, s2
 ; GFX10_W32-NEXT:    s_waitcnt vmcnt(0)
 ; GFX10_W32-NEXT:    v_div_fmas_f32 v0, v1, v2, v3
@@ -1490,21 +1490,21 @@ define amdgpu_kernel void @test_div_fmas_f32_i1_phi_vcc(ptr addrspace(1) %out, [
 ; GFX11_W32-NEXT:    v_lshlrev_b32_e32 v1, 2, v0
 ; GFX11_W32-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX11_W32-NEXT:    global_load_b96 v[1:3], v1, s[2:3]
-; GFX11_W32-NEXT:    s_mov_b32 s3, 0
-; GFX11_W32-NEXT:    s_mov_b32 s2, exec_lo
+; GFX11_W32-NEXT:    s_mov_b32 s2, 0
+; GFX11_W32-NEXT:    s_mov_b32 s3, exec_lo
 ; GFX11_W32-NEXT:    v_cmpx_eq_u32_e32 0, v0
 ; GFX11_W32-NEXT:    s_cbranch_execz .LBB13_2
 ; GFX11_W32-NEXT:  ; %bb.1: ; %bb
 ; GFX11_W32-NEXT:    s_load_b64 s[4:5], s[0:1], 0x50
 ; GFX11_W32-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX11_W32-NEXT:    s_load_b32 s3, s[4:5], 0x0
+; GFX11_W32-NEXT:    s_load_b32 s2, s[4:5], 0x0
 ; GFX11_W32-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX11_W32-NEXT:    s_cmp_lg_u32 s3, 0
-; GFX11_W32-NEXT:    s_cselect_b32 s3, 1, 0
+; GFX11_W32-NEXT:    s_cmp_lg_u32 s2, 0
+; GFX11_W32-NEXT:    s_cselect_b32 s2, 1, 0
 ; GFX11_W32-NEXT:  .LBB13_2: ; %exit
-; GFX11_W32-NEXT:    s_or_b32 exec_lo, exec_lo, s2
+; GFX11_W32-NEXT:    s_or_b32 exec_lo, exec_lo, s3
 ; GFX11_W32-NEXT:    s_load_b64 s[0:1], s[0:1], 0x0
-; GFX11_W32-NEXT:    s_and_b32 s2, 1, s3
+; GFX11_W32-NEXT:    s_and_b32 s2, 1, s2
 ; GFX11_W32-NEXT:    v_cmp_ne_u32_e64 vcc_lo, 0, s2
 ; GFX11_W32-NEXT:    s_waitcnt vmcnt(0)
 ; GFX11_W32-NEXT:    v_div_fmas_f32 v0, v1, v2, v3

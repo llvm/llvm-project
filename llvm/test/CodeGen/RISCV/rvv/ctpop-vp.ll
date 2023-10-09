@@ -2159,9 +2159,9 @@ define <vscale x 16 x i64> @vp_ctpop_nxv16i64(<vscale x 16 x i64> %va, <vscale x
 ; RV32-NEXT:    add a3, sp, a3
 ; RV32-NEXT:    addi a3, a3, 16
 ; RV32-NEXT:    vl8r.v v8, (a3) # Unknown-size Folded Reload
+; RV32-NEXT:    vadd.vv v8, v8, v16, v0.t
+; RV32-NEXT:    vsrl.vi v16, v8, 4, v0.t
 ; RV32-NEXT:    vadd.vv v16, v8, v16, v0.t
-; RV32-NEXT:    vsrl.vi v8, v16, 4, v0.t
-; RV32-NEXT:    vadd.vv v16, v16, v8, v0.t
 ; RV32-NEXT:    lui a3, 61681
 ; RV32-NEXT:    addi a3, a3, -241
 ; RV32-NEXT:    vsetvli a4, zero, e32, m8, ta, ma

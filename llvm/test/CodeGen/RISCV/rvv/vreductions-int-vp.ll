@@ -1177,21 +1177,21 @@ define signext i32 @vpreduce_umax_nxv32i32(i32 signext %s, <vscale x 32 x i32> %
 ; RV64-NEXT:    srli a2, a3, 2
 ; RV64-NEXT:    vsetvli a4, zero, e8, mf2, ta, ma
 ; RV64-NEXT:    vslidedown.vx v24, v0, a2
-; RV64-NEXT:    andi a0, a0, -1
+; RV64-NEXT:    andi a2, a0, -1
 ; RV64-NEXT:    slli a3, a3, 1
-; RV64-NEXT:    sub a2, a1, a3
-; RV64-NEXT:    sltu a4, a1, a2
+; RV64-NEXT:    sub a0, a1, a3
+; RV64-NEXT:    sltu a4, a1, a0
 ; RV64-NEXT:    addi a4, a4, -1
-; RV64-NEXT:    and a2, a4, a2
+; RV64-NEXT:    and a0, a4, a0
 ; RV64-NEXT:    bltu a1, a3, .LBB67_2
 ; RV64-NEXT:  # %bb.1:
 ; RV64-NEXT:    mv a1, a3
 ; RV64-NEXT:  .LBB67_2:
 ; RV64-NEXT:    vsetivli zero, 1, e32, m1, ta, ma
-; RV64-NEXT:    vmv.s.x v25, a0
+; RV64-NEXT:    vmv.s.x v25, a2
 ; RV64-NEXT:    vsetvli zero, a1, e32, m8, ta, ma
 ; RV64-NEXT:    vredmaxu.vs v25, v8, v25, v0.t
-; RV64-NEXT:    vsetvli zero, a2, e32, m8, ta, ma
+; RV64-NEXT:    vsetvli zero, a0, e32, m8, ta, ma
 ; RV64-NEXT:    vmv1r.v v0, v24
 ; RV64-NEXT:    vredmaxu.vs v25, v16, v25, v0.t
 ; RV64-NEXT:    vmv.x.s a0, v25

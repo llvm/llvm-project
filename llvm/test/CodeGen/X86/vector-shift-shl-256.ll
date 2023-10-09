@@ -246,30 +246,30 @@ define <16 x i16> @var_shift_v16i16(<16 x i16> %a, <16 x i16> %b) nounwind {
 ;
 ; X86-AVX1-LABEL: var_shift_v16i16:
 ; X86-AVX1:       # %bb.0:
-; X86-AVX1-NEXT:    vextractf128 $1, %ymm1, %xmm2
-; X86-AVX1-NEXT:    vpunpckhwd {{.*#+}} xmm3 = xmm2[4,4,5,5,6,6,7,7]
+; X86-AVX1-NEXT:    vextractf128 $1, %ymm1, %xmm3
+; X86-AVX1-NEXT:    vpunpckhwd {{.*#+}} xmm2 = xmm3[4,4,5,5,6,6,7,7]
+; X86-AVX1-NEXT:    vpslld $23, %xmm2, %xmm4
+; X86-AVX1-NEXT:    vbroadcastss {{.*#+}} xmm2 = [1065353216,1065353216,1065353216,1065353216]
+; X86-AVX1-NEXT:    vpaddd %xmm2, %xmm4, %xmm4
+; X86-AVX1-NEXT:    vcvttps2dq %xmm4, %xmm4
+; X86-AVX1-NEXT:    vpmovzxwd {{.*#+}} xmm3 = xmm3[0],zero,xmm3[1],zero,xmm3[2],zero,xmm3[3],zero
 ; X86-AVX1-NEXT:    vpslld $23, %xmm3, %xmm3
-; X86-AVX1-NEXT:    vbroadcastss {{.*#+}} xmm4 = [1065353216,1065353216,1065353216,1065353216]
-; X86-AVX1-NEXT:    vpaddd %xmm4, %xmm3, %xmm3
+; X86-AVX1-NEXT:    vpaddd %xmm2, %xmm3, %xmm3
 ; X86-AVX1-NEXT:    vcvttps2dq %xmm3, %xmm3
-; X86-AVX1-NEXT:    vpmovzxwd {{.*#+}} xmm2 = xmm2[0],zero,xmm2[1],zero,xmm2[2],zero,xmm2[3],zero
-; X86-AVX1-NEXT:    vpslld $23, %xmm2, %xmm2
-; X86-AVX1-NEXT:    vpaddd %xmm4, %xmm2, %xmm2
-; X86-AVX1-NEXT:    vcvttps2dq %xmm2, %xmm2
-; X86-AVX1-NEXT:    vpackusdw %xmm3, %xmm2, %xmm2
-; X86-AVX1-NEXT:    vextractf128 $1, %ymm0, %xmm3
-; X86-AVX1-NEXT:    vpmullw %xmm2, %xmm3, %xmm2
-; X86-AVX1-NEXT:    vpunpckhwd {{.*#+}} xmm3 = xmm1[4,4,5,5,6,6,7,7]
-; X86-AVX1-NEXT:    vpslld $23, %xmm3, %xmm3
-; X86-AVX1-NEXT:    vpaddd %xmm4, %xmm3, %xmm3
-; X86-AVX1-NEXT:    vcvttps2dq %xmm3, %xmm3
+; X86-AVX1-NEXT:    vpackusdw %xmm4, %xmm3, %xmm3
+; X86-AVX1-NEXT:    vextractf128 $1, %ymm0, %xmm4
+; X86-AVX1-NEXT:    vpmullw %xmm3, %xmm4, %xmm3
+; X86-AVX1-NEXT:    vpunpckhwd {{.*#+}} xmm4 = xmm1[4,4,5,5,6,6,7,7]
+; X86-AVX1-NEXT:    vpslld $23, %xmm4, %xmm4
+; X86-AVX1-NEXT:    vpaddd %xmm2, %xmm4, %xmm4
+; X86-AVX1-NEXT:    vcvttps2dq %xmm4, %xmm4
 ; X86-AVX1-NEXT:    vpmovzxwd {{.*#+}} xmm1 = xmm1[0],zero,xmm1[1],zero,xmm1[2],zero,xmm1[3],zero
 ; X86-AVX1-NEXT:    vpslld $23, %xmm1, %xmm1
-; X86-AVX1-NEXT:    vpaddd %xmm4, %xmm1, %xmm1
+; X86-AVX1-NEXT:    vpaddd %xmm2, %xmm1, %xmm1
 ; X86-AVX1-NEXT:    vcvttps2dq %xmm1, %xmm1
-; X86-AVX1-NEXT:    vpackusdw %xmm3, %xmm1, %xmm1
+; X86-AVX1-NEXT:    vpackusdw %xmm4, %xmm1, %xmm1
 ; X86-AVX1-NEXT:    vpmullw %xmm1, %xmm0, %xmm0
-; X86-AVX1-NEXT:    vinsertf128 $1, %xmm2, %ymm0, %ymm0
+; X86-AVX1-NEXT:    vinsertf128 $1, %xmm3, %ymm0, %ymm0
 ; X86-AVX1-NEXT:    retl
 ;
 ; X86-AVX2-LABEL: var_shift_v16i16:

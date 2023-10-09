@@ -47,67 +47,67 @@ declare i37 @llvm.fshl.i37(i37, i37, i37)
 define i37 @fshl_i37(i37 %x, i37 %y, i37 %z) {
 ; SCALAR-LABEL: fshl_i37:
 ; SCALAR:       @ %bb.0:
-; SCALAR-NEXT:    .save {r4, r5, r6, r7, r8, lr}
-; SCALAR-NEXT:    push {r4, r5, r6, r7, r8, lr}
+; SCALAR-NEXT:    .save {r4, r5, r6, r7, r8, r9, r11, lr}
+; SCALAR-NEXT:    push {r4, r5, r6, r7, r8, r9, r11, lr}
 ; SCALAR-NEXT:    mov r8, r0
-; SCALAR-NEXT:    ldr r0, [sp, #28]
-; SCALAR-NEXT:    mov r6, r1
-; SCALAR-NEXT:    mov r4, r3
+; SCALAR-NEXT:    ldr r0, [sp, #36]
+; SCALAR-NEXT:    mov r4, r1
+; SCALAR-NEXT:    mov r6, r3
 ; SCALAR-NEXT:    and r1, r0, #31
-; SCALAR-NEXT:    ldr r0, [sp, #24]
-; SCALAR-NEXT:    mov r5, r2
+; SCALAR-NEXT:    ldr r0, [sp, #32]
+; SCALAR-NEXT:    mov r9, r2
 ; SCALAR-NEXT:    mov r2, #37
 ; SCALAR-NEXT:    mov r3, #0
 ; SCALAR-NEXT:    bl __aeabi_uldivmod
-; SCALAR-NEXT:    lsl r1, r4, #27
-; SCALAR-NEXT:    ands r12, r2, #32
-; SCALAR-NEXT:    orr r1, r1, r5, lsr #5
+; SCALAR-NEXT:    lsl r1, r6, #27
+; SCALAR-NEXT:    ands r0, r2, #32
+; SCALAR-NEXT:    orr r1, r1, r9, lsr #5
 ; SCALAR-NEXT:    mov r3, r8
-; SCALAR-NEXT:    and r4, r2, #31
+; SCALAR-NEXT:    and r6, r2, #31
 ; SCALAR-NEXT:    mov r7, #31
 ; SCALAR-NEXT:    movne r3, r1
-; SCALAR-NEXT:    cmp r12, #0
-; SCALAR-NEXT:    lslne r1, r5, #27
+; SCALAR-NEXT:    cmp r0, #0
+; SCALAR-NEXT:    lslne r1, r9, #27
 ; SCALAR-NEXT:    bic r2, r7, r2
-; SCALAR-NEXT:    lsl r0, r3, r4
-; SCALAR-NEXT:    lsr r1, r1, #1
-; SCALAR-NEXT:    movne r6, r8
-; SCALAR-NEXT:    orr r0, r0, r1, lsr r2
-; SCALAR-NEXT:    lsl r1, r6, r4
+; SCALAR-NEXT:    movne r4, r8
+; SCALAR-NEXT:    lsl r5, r3, r6
+; SCALAR-NEXT:    lsr r0, r1, #1
+; SCALAR-NEXT:    lsl r1, r4, r6
 ; SCALAR-NEXT:    lsr r3, r3, #1
+; SCALAR-NEXT:    orr r0, r5, r0, lsr r2
 ; SCALAR-NEXT:    orr r1, r1, r3, lsr r2
-; SCALAR-NEXT:    pop {r4, r5, r6, r7, r8, pc}
+; SCALAR-NEXT:    pop {r4, r5, r6, r7, r8, r9, r11, pc}
 ;
 ; NEON-LABEL: fshl_i37:
 ; NEON:       @ %bb.0:
 ; NEON-NEXT:    .save {r4, r5, r6, r7, r11, lr}
 ; NEON-NEXT:    push {r4, r5, r6, r7, r11, lr}
-; NEON-NEXT:    mov r6, r1
+; NEON-NEXT:    mov r4, r1
 ; NEON-NEXT:    ldr r1, [sp, #28]
-; NEON-NEXT:    mov r4, r0
+; NEON-NEXT:    mov r6, r0
 ; NEON-NEXT:    ldr r0, [sp, #24]
 ; NEON-NEXT:    and r1, r1, #31
-; NEON-NEXT:    mov r7, r3
-; NEON-NEXT:    mov r5, r2
+; NEON-NEXT:    mov r5, r3
+; NEON-NEXT:    mov r7, r2
 ; NEON-NEXT:    mov r2, #37
 ; NEON-NEXT:    mov r3, #0
 ; NEON-NEXT:    bl __aeabi_uldivmod
 ; NEON-NEXT:    mov r0, #31
 ; NEON-NEXT:    bic r1, r0, r2
-; NEON-NEXT:    lsl r0, r7, #27
+; NEON-NEXT:    lsl r0, r5, #27
 ; NEON-NEXT:    ands r12, r2, #32
-; NEON-NEXT:    orr r0, r0, r5, lsr #5
-; NEON-NEXT:    mov r7, r4
+; NEON-NEXT:    orr r0, r0, r7, lsr #5
+; NEON-NEXT:    mov r5, r6
 ; NEON-NEXT:    and r2, r2, #31
-; NEON-NEXT:    movne r7, r0
-; NEON-NEXT:    lslne r0, r5, #27
+; NEON-NEXT:    movne r5, r0
+; NEON-NEXT:    lslne r0, r7, #27
 ; NEON-NEXT:    cmp r12, #0
-; NEON-NEXT:    lsl r3, r7, r2
+; NEON-NEXT:    lsl r3, r5, r2
 ; NEON-NEXT:    lsr r0, r0, #1
-; NEON-NEXT:    movne r6, r4
+; NEON-NEXT:    movne r4, r6
 ; NEON-NEXT:    orr r0, r3, r0, lsr r1
-; NEON-NEXT:    lsr r3, r7, #1
-; NEON-NEXT:    lsl r2, r6, r2
+; NEON-NEXT:    lsr r3, r5, #1
+; NEON-NEXT:    lsl r2, r4, r2
 ; NEON-NEXT:    orr r1, r2, r3, lsr r1
 ; NEON-NEXT:    pop {r4, r5, r6, r7, r11, pc}
   %f = call i37 @llvm.fshl.i37(i37 %x, i37 %y, i37 %z)
@@ -237,71 +237,71 @@ declare i37 @llvm.fshr.i37(i37, i37, i37)
 define i37 @fshr_i37(i37 %x, i37 %y, i37 %z) {
 ; SCALAR-LABEL: fshr_i37:
 ; SCALAR:       @ %bb.0:
-; SCALAR-NEXT:    .save {r4, r5, r6, r7, r11, lr}
-; SCALAR-NEXT:    push {r4, r5, r6, r7, r11, lr}
-; SCALAR-NEXT:    mov r4, r0
+; SCALAR-NEXT:    .save {r4, r5, r6, r7, r8, lr}
+; SCALAR-NEXT:    push {r4, r5, r6, r7, r8, lr}
+; SCALAR-NEXT:    mov r8, r0
 ; SCALAR-NEXT:    ldr r0, [sp, #28]
-; SCALAR-NEXT:    mov r6, r1
-; SCALAR-NEXT:    mov r7, r3
+; SCALAR-NEXT:    mov r4, r1
+; SCALAR-NEXT:    mov r5, r3
 ; SCALAR-NEXT:    and r1, r0, #31
 ; SCALAR-NEXT:    ldr r0, [sp, #24]
-; SCALAR-NEXT:    mov r5, r2
+; SCALAR-NEXT:    mov r7, r2
 ; SCALAR-NEXT:    mov r2, #37
 ; SCALAR-NEXT:    mov r3, #0
 ; SCALAR-NEXT:    bl __aeabi_uldivmod
-; SCALAR-NEXT:    lsl r3, r7, #27
+; SCALAR-NEXT:    lsl r3, r5, #27
 ; SCALAR-NEXT:    add r0, r2, #27
-; SCALAR-NEXT:    orr r3, r3, r5, lsr #5
+; SCALAR-NEXT:    orr r3, r3, r7, lsr #5
+; SCALAR-NEXT:    ands r2, r0, #32
+; SCALAR-NEXT:    mov r5, r8
 ; SCALAR-NEXT:    mov r1, #31
-; SCALAR-NEXT:    ands r12, r0, #32
-; SCALAR-NEXT:    mov r7, r4
-; SCALAR-NEXT:    moveq r7, r3
+; SCALAR-NEXT:    moveq r5, r3
+; SCALAR-NEXT:    lsleq r3, r7, #27
+; SCALAR-NEXT:    cmp r2, #0
 ; SCALAR-NEXT:    bic r1, r1, r0
-; SCALAR-NEXT:    lsl r2, r7, #1
-; SCALAR-NEXT:    lsleq r3, r5, #27
-; SCALAR-NEXT:    cmp r12, #0
-; SCALAR-NEXT:    and r5, r0, #31
-; SCALAR-NEXT:    lsl r2, r2, r1
-; SCALAR-NEXT:    moveq r6, r4
-; SCALAR-NEXT:    orr r0, r2, r3, lsr r5
-; SCALAR-NEXT:    lsl r2, r6, #1
+; SCALAR-NEXT:    moveq r4, r8
+; SCALAR-NEXT:    lsl r6, r5, #1
+; SCALAR-NEXT:    and r7, r0, #31
+; SCALAR-NEXT:    lsl r2, r4, #1
+; SCALAR-NEXT:    lsl r6, r6, r1
 ; SCALAR-NEXT:    lsl r1, r2, r1
-; SCALAR-NEXT:    orr r1, r1, r7, lsr r5
-; SCALAR-NEXT:    pop {r4, r5, r6, r7, r11, pc}
+; SCALAR-NEXT:    orr r0, r6, r3, lsr r7
+; SCALAR-NEXT:    orr r1, r1, r5, lsr r7
+; SCALAR-NEXT:    pop {r4, r5, r6, r7, r8, pc}
 ;
 ; NEON-LABEL: fshr_i37:
 ; NEON:       @ %bb.0:
-; NEON-NEXT:    .save {r4, r5, r6, r7, r11, lr}
-; NEON-NEXT:    push {r4, r5, r6, r7, r11, lr}
-; NEON-NEXT:    mov r6, r1
+; NEON-NEXT:    .save {r4, r5, r6, r7, r8, lr}
+; NEON-NEXT:    push {r4, r5, r6, r7, r8, lr}
+; NEON-NEXT:    mov r4, r1
 ; NEON-NEXT:    ldr r1, [sp, #28]
-; NEON-NEXT:    mov r4, r0
+; NEON-NEXT:    mov r8, r0
 ; NEON-NEXT:    ldr r0, [sp, #24]
 ; NEON-NEXT:    and r1, r1, #31
-; NEON-NEXT:    mov r7, r3
-; NEON-NEXT:    mov r5, r2
+; NEON-NEXT:    mov r5, r3
+; NEON-NEXT:    mov r7, r2
 ; NEON-NEXT:    mov r2, #37
 ; NEON-NEXT:    mov r3, #0
 ; NEON-NEXT:    bl __aeabi_uldivmod
-; NEON-NEXT:    lsl r3, r7, #27
+; NEON-NEXT:    lsl r3, r5, #27
 ; NEON-NEXT:    add r0, r2, #27
-; NEON-NEXT:    orr r3, r3, r5, lsr #5
+; NEON-NEXT:    orr r3, r3, r7, lsr #5
+; NEON-NEXT:    ands r2, r0, #32
+; NEON-NEXT:    mov r5, r8
 ; NEON-NEXT:    mov r1, #31
-; NEON-NEXT:    ands r12, r0, #32
-; NEON-NEXT:    mov r7, r4
-; NEON-NEXT:    moveq r7, r3
+; NEON-NEXT:    moveq r5, r3
+; NEON-NEXT:    lsleq r3, r7, #27
+; NEON-NEXT:    cmp r2, #0
 ; NEON-NEXT:    bic r1, r1, r0
-; NEON-NEXT:    lsl r2, r7, #1
-; NEON-NEXT:    lsleq r3, r5, #27
-; NEON-NEXT:    cmp r12, #0
-; NEON-NEXT:    and r5, r0, #31
-; NEON-NEXT:    lsl r2, r2, r1
-; NEON-NEXT:    moveq r6, r4
-; NEON-NEXT:    orr r0, r2, r3, lsr r5
-; NEON-NEXT:    lsl r2, r6, #1
+; NEON-NEXT:    moveq r4, r8
+; NEON-NEXT:    lsl r6, r5, #1
+; NEON-NEXT:    and r7, r0, #31
+; NEON-NEXT:    lsl r2, r4, #1
+; NEON-NEXT:    lsl r6, r6, r1
 ; NEON-NEXT:    lsl r1, r2, r1
-; NEON-NEXT:    orr r1, r1, r7, lsr r5
-; NEON-NEXT:    pop {r4, r5, r6, r7, r11, pc}
+; NEON-NEXT:    orr r0, r6, r3, lsr r7
+; NEON-NEXT:    orr r1, r1, r5, lsr r7
+; NEON-NEXT:    pop {r4, r5, r6, r7, r8, pc}
   %f = call i37 @llvm.fshr.i37(i37 %x, i37 %y, i37 %z)
   ret i37 %f
 }

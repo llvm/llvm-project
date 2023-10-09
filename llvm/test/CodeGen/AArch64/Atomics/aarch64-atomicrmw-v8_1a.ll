@@ -152,9 +152,10 @@ define dso_local i128 @atomicrmw_xchg_i128_aligned_monotonic(ptr %ptr, i128 %val
 ; -O0:    subs x8, x8, #0
 ;
 ; -O1-LABEL: atomicrmw_xchg_i128_aligned_monotonic:
-; -O1:    casp x0, x1, x2, x3, [x8]
-; -O1:    cmp x1, x5
-; -O1:    ccmp x0, x4, #0, eq
+; -O1:    ldp x4, x5, [x0]
+; -O1:    casp x4, x5, x2, x3, [x0]
+; -O1:    cmp x5, x7
+; -O1:    ccmp x4, x6, #0, eq
     %r = atomicrmw xchg ptr %ptr, i128 %value monotonic, align 16
     ret i128 %r
 }
@@ -168,9 +169,10 @@ define dso_local i128 @atomicrmw_xchg_i128_aligned_acquire(ptr %ptr, i128 %value
 ; -O0:    subs x8, x8, #0
 ;
 ; -O1-LABEL: atomicrmw_xchg_i128_aligned_acquire:
-; -O1:    caspa x0, x1, x2, x3, [x8]
-; -O1:    cmp x1, x5
-; -O1:    ccmp x0, x4, #0, eq
+; -O1:    ldp x4, x5, [x0]
+; -O1:    caspa x4, x5, x2, x3, [x0]
+; -O1:    cmp x5, x7
+; -O1:    ccmp x4, x6, #0, eq
     %r = atomicrmw xchg ptr %ptr, i128 %value acquire, align 16
     ret i128 %r
 }
@@ -184,9 +186,10 @@ define dso_local i128 @atomicrmw_xchg_i128_aligned_release(ptr %ptr, i128 %value
 ; -O0:    subs x8, x8, #0
 ;
 ; -O1-LABEL: atomicrmw_xchg_i128_aligned_release:
-; -O1:    caspl x0, x1, x2, x3, [x8]
-; -O1:    cmp x1, x5
-; -O1:    ccmp x0, x4, #0, eq
+; -O1:    ldp x4, x5, [x0]
+; -O1:    caspl x4, x5, x2, x3, [x0]
+; -O1:    cmp x5, x7
+; -O1:    ccmp x4, x6, #0, eq
     %r = atomicrmw xchg ptr %ptr, i128 %value release, align 16
     ret i128 %r
 }
@@ -200,9 +203,10 @@ define dso_local i128 @atomicrmw_xchg_i128_aligned_acq_rel(ptr %ptr, i128 %value
 ; -O0:    subs x8, x8, #0
 ;
 ; -O1-LABEL: atomicrmw_xchg_i128_aligned_acq_rel:
-; -O1:    caspal x0, x1, x2, x3, [x8]
-; -O1:    cmp x1, x5
-; -O1:    ccmp x0, x4, #0, eq
+; -O1:    ldp x4, x5, [x0]
+; -O1:    caspal x4, x5, x2, x3, [x0]
+; -O1:    cmp x5, x7
+; -O1:    ccmp x4, x6, #0, eq
     %r = atomicrmw xchg ptr %ptr, i128 %value acq_rel, align 16
     ret i128 %r
 }
@@ -216,9 +220,10 @@ define dso_local i128 @atomicrmw_xchg_i128_aligned_seq_cst(ptr %ptr, i128 %value
 ; -O0:    subs x8, x8, #0
 ;
 ; -O1-LABEL: atomicrmw_xchg_i128_aligned_seq_cst:
-; -O1:    caspal x0, x1, x2, x3, [x8]
-; -O1:    cmp x1, x5
-; -O1:    ccmp x0, x4, #0, eq
+; -O1:    ldp x4, x5, [x0]
+; -O1:    caspal x4, x5, x2, x3, [x0]
+; -O1:    cmp x5, x7
+; -O1:    ccmp x4, x6, #0, eq
     %r = atomicrmw xchg ptr %ptr, i128 %value seq_cst, align 16
     ret i128 %r
 }

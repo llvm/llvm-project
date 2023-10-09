@@ -1088,25 +1088,25 @@ define void @test_deferred_hardening(ptr %ptr1, ptr %ptr2, i32 %x) nounwind spec
 ; X64-LFENCE-NEXT:    pushq %r14
 ; X64-LFENCE-NEXT:    pushq %rbx
 ; X64-LFENCE-NEXT:    pushq %rax
-; X64-LFENCE-NEXT:    movq %rsi, %rbx
-; X64-LFENCE-NEXT:    movq %rdi, %r14
+; X64-LFENCE-NEXT:    movq %rsi, %r14
+; X64-LFENCE-NEXT:    movq %rdi, %rbx
 ; X64-LFENCE-NEXT:    movl (%rdi), %edi
 ; X64-LFENCE-NEXT:    incl %edi
 ; X64-LFENCE-NEXT:    imull %edx, %edi
 ; X64-LFENCE-NEXT:    callq sink@PLT
-; X64-LFENCE-NEXT:    movl (%r14), %eax
-; X64-LFENCE-NEXT:    movl (%rbx), %ecx
+; X64-LFENCE-NEXT:    movl (%rbx), %eax
+; X64-LFENCE-NEXT:    movl (%r14), %ecx
 ; X64-LFENCE-NEXT:    leal 1(%rax,%rcx), %edi
 ; X64-LFENCE-NEXT:    callq sink@PLT
-; X64-LFENCE-NEXT:    movl (%r14), %edi
+; X64-LFENCE-NEXT:    movl (%rbx), %edi
 ; X64-LFENCE-NEXT:    shll $7, %edi
 ; X64-LFENCE-NEXT:    callq sink@PLT
-; X64-LFENCE-NEXT:    movswl (%r14), %edi
+; X64-LFENCE-NEXT:    movswl (%rbx), %edi
 ; X64-LFENCE-NEXT:    notl %edi
 ; X64-LFENCE-NEXT:    shrl $7, %edi
 ; X64-LFENCE-NEXT:    orl $-65536, %edi # imm = 0xFFFF0000
 ; X64-LFENCE-NEXT:    callq sink@PLT
-; X64-LFENCE-NEXT:    movzwl (%r14), %eax
+; X64-LFENCE-NEXT:    movzwl (%rbx), %eax
 ; X64-LFENCE-NEXT:    rolw $9, %ax
 ; X64-LFENCE-NEXT:    movswl %ax, %edi
 ; X64-LFENCE-NEXT:    negl %edi

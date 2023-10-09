@@ -991,12 +991,12 @@ define <32 x double> @vfma_vv_v32f64_unmasked(<32 x double> %va, <32 x double> %
 ; CHECK-NEXT:    vle64.v v24, (a1)
 ; CHECK-NEXT:    addi a1, sp, 16
 ; CHECK-NEXT:    vs8r.v v24, (a1) # Unknown-size Folded Spill
-; CHECK-NEXT:    vle64.v v0, (a2)
+; CHECK-NEXT:    vle64.v v24, (a2)
 ; CHECK-NEXT:    csrr a1, vlenb
 ; CHECK-NEXT:    slli a1, a1, 3
 ; CHECK-NEXT:    add a1, sp, a1
 ; CHECK-NEXT:    addi a1, a1, 16
-; CHECK-NEXT:    vs8r.v v0, (a1) # Unknown-size Folded Spill
+; CHECK-NEXT:    vs8r.v v24, (a1) # Unknown-size Folded Spill
 ; CHECK-NEXT:    vle64.v v0, (a0)
 ; CHECK-NEXT:    li a1, 16
 ; CHECK-NEXT:    mv a0, a4

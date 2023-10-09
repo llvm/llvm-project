@@ -390,22 +390,22 @@ define arm_aapcs_vfpcc void @non_gatscat_use2(i32* noalias nocapture readonly %d
 ; CHECK-NEXT:    vpush {d8, d9, d10, d11}
 ; CHECK-NEXT:    adr r4, .LCPI8_0
 ; CHECK-NEXT:    movs r5, #18
-; CHECK-NEXT:    vldrw.u32 q0, [r4]
+; CHECK-NEXT:    vldrw.u32 q2, [r4]
 ; CHECK-NEXT:    mov.w r12, #9
 ; CHECK-NEXT:    mov.w lr, #12
 ; CHECK-NEXT:    movs r4, #8
-; CHECK-NEXT:    vdup.32 q1, r0
-; CHECK-NEXT:    vdup.32 q2, r5
+; CHECK-NEXT:    vdup.32 q0, r0
+; CHECK-NEXT:    vdup.32 q1, r5
 ; CHECK-NEXT:  .LBB8_1: @ %vector.body
 ; CHECK-NEXT:    @ =>This Inner Loop Header: Depth=1
-; CHECK-NEXT:    vmov q4, q1
-; CHECK-NEXT:    vadd.i32 q3, q0, r4
-; CHECK-NEXT:    vmla.i32 q4, q0, lr
+; CHECK-NEXT:    vmov q4, q0
+; CHECK-NEXT:    vadd.i32 q3, q2, r4
+; CHECK-NEXT:    vmla.i32 q4, q2, lr
 ; CHECK-NEXT:    subs r2, #4
 ; CHECK-NEXT:    vldrw.u32 q5, [q4, #24]
-; CHECK-NEXT:    vmov q4, q2
-; CHECK-NEXT:    vmla.i32 q4, q0, r12
-; CHECK-NEXT:    vmov q0, q3
+; CHECK-NEXT:    vmov q4, q1
+; CHECK-NEXT:    vmla.i32 q4, q2, r12
+; CHECK-NEXT:    vmov q2, q3
 ; CHECK-NEXT:    vstrb.8 q5, [r1], #16
 ; CHECK-NEXT:    vstrw.32 q4, [r3]
 ; CHECK-NEXT:    bne .LBB8_1
@@ -608,11 +608,11 @@ define dso_local void @arm_mat_mult_q15(i16* noalias nocapture readonly %A, i16*
 ; CHECK-NEXT:    sub sp, #32
 ; CHECK-NEXT:    strd r0, r2, [sp, #24] @ 8-byte Folded Spill
 ; CHECK-NEXT:    cmp r3, #0
-; CHECK-NEXT:    str r3, [sp, #4] @ 4-byte Spill
+; CHECK-NEXT:    str r3, [sp, #8] @ 4-byte Spill
 ; CHECK-NEXT:    mov r0, r3
 ; CHECK-NEXT:    itt ne
-; CHECK-NEXT:    ldrne r7, [sp, #136]
-; CHECK-NEXT:    cmpne r7, #0
+; CHECK-NEXT:    ldrne r0, [sp, #136]
+; CHECK-NEXT:    cmpne r0, #0
 ; CHECK-NEXT:    bne .LBB10_2
 ; CHECK-NEXT:  .LBB10_1: @ %for.cond.cleanup
 ; CHECK-NEXT:    add sp, #32
@@ -620,24 +620,24 @@ define dso_local void @arm_mat_mult_q15(i16* noalias nocapture readonly %A, i16*
 ; CHECK-NEXT:    add sp, #4
 ; CHECK-NEXT:    pop.w {r4, r5, r6, r7, r8, r9, r10, r11, pc}
 ; CHECK-NEXT:  .LBB10_2: @ %for.cond1.preheader.us.preheader
-; CHECK-NEXT:    ldr.w r9, [sp, #140]
-; CHECK-NEXT:    movs r3, #1
-; CHECK-NEXT:    vdup.32 q1, r7
-; CHECK-NEXT:    lsls r6, r7, #1
-; CHECK-NEXT:    bic r0, r9, #3
-; CHECK-NEXT:    str r0, [sp, #16] @ 4-byte Spill
-; CHECK-NEXT:    subs r0, #4
-; CHECK-NEXT:    mov.w r12, #0
+; CHECK-NEXT:    ldr.w r12, [sp, #140]
+; CHECK-NEXT:    movs r7, #1
+; CHECK-NEXT:    mov.w r11, #0
 ; CHECK-NEXT:    vmov.i32 q0, #0x0
-; CHECK-NEXT:    vshl.i32 q3, q1, #2
-; CHECK-NEXT:    add.w r0, r3, r0, lsr #2
-; CHECK-NEXT:    str r0, [sp, #12] @ 4-byte Spill
-; CHECK-NEXT:    lsl.w r0, r9, #1
-; CHECK-NEXT:    movs r2, #0
-; CHECK-NEXT:    str r0, [sp] @ 4-byte Spill
-; CHECK-NEXT:    adr r0, .LCPI10_0
-; CHECK-NEXT:    vldrw.u32 q2, [r0]
+; CHECK-NEXT:    bic r2, r12, #3
+; CHECK-NEXT:    subs r3, r2, #4
+; CHECK-NEXT:    add.w r0, r7, r3, lsr #2
+; CHECK-NEXT:    ldr r7, [sp, #136]
+; CHECK-NEXT:    adr r3, .LCPI10_0
+; CHECK-NEXT:    str r0, [sp, #16] @ 4-byte Spill
+; CHECK-NEXT:    lsl.w r0, r12, #1
+; CHECK-NEXT:    vdup.32 q1, r7
+; CHECK-NEXT:    vldrw.u32 q2, [r3]
+; CHECK-NEXT:    str r0, [sp, #4] @ 4-byte Spill
 ; CHECK-NEXT:    ldr r0, [sp, #24] @ 4-byte Reload
+; CHECK-NEXT:    lsls r6, r7, #1
+; CHECK-NEXT:    vshl.i32 q3, q1, #2
+; CHECK-NEXT:    movs r3, #0
 ; CHECK-NEXT:    str r0, [sp, #20] @ 4-byte Spill
 ; CHECK-NEXT:    b .LBB10_5
 ; CHECK-NEXT:  .LBB10_3: @ %for.cond5.preheader.us73.preheader
@@ -648,15 +648,15 @@ define dso_local void @arm_mat_mult_q15(i16* noalias nocapture readonly %A, i16*
 ; CHECK-NEXT:    b .LBB10_15
 ; CHECK-NEXT:  .LBB10_4: @ %for.cond1.for.cond.cleanup3_crit_edge.us
 ; CHECK-NEXT:    @ in Loop: Header=BB10_5 Depth=1
-; CHECK-NEXT:    ldr r0, [sp] @ 4-byte Reload
-; CHECK-NEXT:    add r12, r9
-; CHECK-NEXT:    ldr r2, [sp, #20] @ 4-byte Reload
-; CHECK-NEXT:    add r2, r0
-; CHECK-NEXT:    str r2, [sp, #20] @ 4-byte Spill
-; CHECK-NEXT:    ldr r2, [sp, #8] @ 4-byte Reload
 ; CHECK-NEXT:    ldr r0, [sp, #4] @ 4-byte Reload
-; CHECK-NEXT:    adds r2, #1
-; CHECK-NEXT:    cmp r2, r0
+; CHECK-NEXT:    add r11, r12
+; CHECK-NEXT:    ldr r3, [sp, #20] @ 4-byte Reload
+; CHECK-NEXT:    add r3, r0
+; CHECK-NEXT:    str r3, [sp, #20] @ 4-byte Spill
+; CHECK-NEXT:    ldr r3, [sp, #12] @ 4-byte Reload
+; CHECK-NEXT:    ldr r0, [sp, #8] @ 4-byte Reload
+; CHECK-NEXT:    adds r3, #1
+; CHECK-NEXT:    cmp r3, r0
 ; CHECK-NEXT:    beq .LBB10_1
 ; CHECK-NEXT:  .LBB10_5: @ %for.cond1.preheader.us
 ; CHECK-NEXT:    @ =>This Loop Header: Depth=1
@@ -664,9 +664,9 @@ define dso_local void @arm_mat_mult_q15(i16* noalias nocapture readonly %A, i16*
 ; CHECK-NEXT:    @ Child Loop BB10_11 Depth 3
 ; CHECK-NEXT:    @ Child Loop BB10_14 Depth 3
 ; CHECK-NEXT:    @ Child Loop BB10_15 Depth 2
-; CHECK-NEXT:    mul r5, r2, r7
-; CHECK-NEXT:    cmp.w r9, #0
-; CHECK-NEXT:    str r2, [sp, #8] @ 4-byte Spill
+; CHECK-NEXT:    mul r5, r3, r7
+; CHECK-NEXT:    cmp.w r12, #0
+; CHECK-NEXT:    str r3, [sp, #12] @ 4-byte Spill
 ; CHECK-NEXT:    beq .LBB10_3
 ; CHECK-NEXT:  @ %bb.6: @ %for.cond5.preheader.us.us.preheader
 ; CHECK-NEXT:    @ in Loop: Header=BB10_5 Depth=1
@@ -685,55 +685,54 @@ define dso_local void @arm_mat_mult_q15(i16* noalias nocapture readonly %A, i16*
 ; CHECK-NEXT:    @ => This Loop Header: Depth=2
 ; CHECK-NEXT:    @ Child Loop BB10_11 Depth 3
 ; CHECK-NEXT:    @ Child Loop BB10_14 Depth 3
-; CHECK-NEXT:    cmp.w r9, #3
+; CHECK-NEXT:    cmp.w r12, #3
 ; CHECK-NEXT:    bhi .LBB10_10
 ; CHECK-NEXT:  @ %bb.9: @ in Loop: Header=BB10_8 Depth=2
-; CHECK-NEXT:    movs r0, #0
+; CHECK-NEXT:    movs r4, #0
 ; CHECK-NEXT:    mov.w r10, #0
 ; CHECK-NEXT:    b .LBB10_13
 ; CHECK-NEXT:  .LBB10_10: @ %vector.ph
 ; CHECK-NEXT:    @ in Loop: Header=BB10_8 Depth=2
-; CHECK-NEXT:    ldr r0, [sp, #12] @ 4-byte Reload
+; CHECK-NEXT:    ldr r0, [sp, #16] @ 4-byte Reload
 ; CHECK-NEXT:    vmov q5, q1
 ; CHECK-NEXT:    vmov.i32 q4, #0x0
 ; CHECK-NEXT:    vmlas.i32 q5, q2, r8
 ; CHECK-NEXT:    dls lr, r0
-; CHECK-NEXT:    ldr r0, [sp, #20] @ 4-byte Reload
+; CHECK-NEXT:    ldr r3, [sp, #20] @ 4-byte Reload
 ; CHECK-NEXT:  .LBB10_11: @ %vector.body
 ; CHECK-NEXT:    @ Parent Loop BB10_5 Depth=1
 ; CHECK-NEXT:    @ Parent Loop BB10_8 Depth=2
 ; CHECK-NEXT:    @ => This Inner Loop Header: Depth=3
 ; CHECK-NEXT:    vadd.i32 q6, q5, q3
 ; CHECK-NEXT:    vldrh.s32 q7, [r1, q5, uxtw #1]
-; CHECK-NEXT:    vldrh.s32 q5, [r0], #8
+; CHECK-NEXT:    vldrh.s32 q5, [r3], #8
 ; CHECK-NEXT:    vmul.i32 q5, q7, q5
 ; CHECK-NEXT:    vadd.i32 q4, q5, q4
 ; CHECK-NEXT:    vmov q5, q6
 ; CHECK-NEXT:    le lr, .LBB10_11
 ; CHECK-NEXT:  @ %bb.12: @ %middle.block
 ; CHECK-NEXT:    @ in Loop: Header=BB10_8 Depth=2
-; CHECK-NEXT:    ldr r0, [sp, #16] @ 4-byte Reload
 ; CHECK-NEXT:    vaddv.u32 r10, q4
-; CHECK-NEXT:    cmp r0, r9
+; CHECK-NEXT:    cmp r2, r12
+; CHECK-NEXT:    mov r4, r2
 ; CHECK-NEXT:    beq .LBB10_7
 ; CHECK-NEXT:  .LBB10_13: @ %for.body8.us.us.preheader
 ; CHECK-NEXT:    @ in Loop: Header=BB10_8 Depth=2
-; CHECK-NEXT:    mla r3, r7, r0, r8
-; CHECK-NEXT:    mov r2, r7
-; CHECK-NEXT:    add.w r4, r12, r0
+; CHECK-NEXT:    mla r3, r7, r4, r8
+; CHECK-NEXT:    add.w r0, r11, r4
 ; CHECK-NEXT:    ldr r7, [sp, #24] @ 4-byte Reload
-; CHECK-NEXT:    sub.w lr, r9, r0
-; CHECK-NEXT:    add.w r4, r7, r4, lsl #1
-; CHECK-NEXT:    mov r7, r2
+; CHECK-NEXT:    sub.w lr, r12, r4
+; CHECK-NEXT:    add.w r9, r7, r0, lsl #1
+; CHECK-NEXT:    ldr r7, [sp, #136]
 ; CHECK-NEXT:    add.w r3, r1, r3, lsl #1
 ; CHECK-NEXT:  .LBB10_14: @ %for.body8.us.us
 ; CHECK-NEXT:    @ Parent Loop BB10_5 Depth=1
 ; CHECK-NEXT:    @ Parent Loop BB10_8 Depth=2
 ; CHECK-NEXT:    @ => This Inner Loop Header: Depth=3
-; CHECK-NEXT:    ldrsh.w r11, [r3]
+; CHECK-NEXT:    ldrsh.w r4, [r3]
 ; CHECK-NEXT:    add r3, r6
-; CHECK-NEXT:    ldrsh r0, [r4], #2
-; CHECK-NEXT:    smlabb r10, r11, r0, r10
+; CHECK-NEXT:    ldrsh r0, [r9], #2
+; CHECK-NEXT:    smlabb r10, r4, r0, r10
 ; CHECK-NEXT:    le lr, .LBB10_14
 ; CHECK-NEXT:    b .LBB10_7
 ; CHECK-NEXT:  .LBB10_15: @ Parent Loop BB10_5 Depth=1

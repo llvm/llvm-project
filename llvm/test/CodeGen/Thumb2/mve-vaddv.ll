@@ -90,12 +90,12 @@ define arm_aapcs_vfpcc i64 @vaddva_v2i64_i64(<2 x i64> %s1, i64 %x) {
 ; CHECK:       @ %bb.0: @ %entry
 ; CHECK-NEXT:    .save {r7, lr}
 ; CHECK-NEXT:    push {r7, lr}
-; CHECK-NEXT:    vmov r2, r12, d1
-; CHECK-NEXT:    vmov r3, lr, d0
-; CHECK-NEXT:    adds r2, r2, r3
-; CHECK-NEXT:    adc.w r3, lr, r12
-; CHECK-NEXT:    adds r0, r0, r2
-; CHECK-NEXT:    adcs r1, r3
+; CHECK-NEXT:    vmov lr, r12, d1
+; CHECK-NEXT:    vmov r3, r2, d0
+; CHECK-NEXT:    adds.w r3, r3, lr
+; CHECK-NEXT:    adc.w r2, r2, r12
+; CHECK-NEXT:    adds r0, r0, r3
+; CHECK-NEXT:    adcs r1, r2
 ; CHECK-NEXT:    pop {r7, pc}
 entry:
   %t = call i64 @llvm.vector.reduce.add.i64.v2i64(<2 x i64> %s1)

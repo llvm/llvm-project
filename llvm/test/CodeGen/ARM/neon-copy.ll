@@ -1301,17 +1301,17 @@ define <4 x i16> @test_extracts_inserts_varidx_extract(<8 x i16> %x, i32 %idx) {
 ; CHECK-NEXT:    .pad #28
 ; CHECK-NEXT:    sub sp, sp, #28
 ; CHECK-NEXT:    bfc sp, #0, #4
-; CHECK-NEXT:    vmov.u16 r12, d0[1]
+; CHECK-NEXT:    vmov.u16 r1, d0[1]
 ; CHECK-NEXT:    and r0, r0, #7
 ; CHECK-NEXT:    vmov.u16 r2, d0[2]
-; CHECK-NEXT:    mov r1, sp
-; CHECK-NEXT:    vmov.u16 r3, d0[3]
+; CHECK-NEXT:    mov r3, sp
+; CHECK-NEXT:    vmov.u16 r12, d0[3]
 ; CHECK-NEXT:    lsl r0, r0, #1
-; CHECK-NEXT:    vst1.64 {d0, d1}, [r1:128], r0
-; CHECK-NEXT:    vld1.16 {d0[0]}, [r1:16]
-; CHECK-NEXT:    vmov.16 d0[1], r12
+; CHECK-NEXT:    vst1.64 {d0, d1}, [r3:128], r0
+; CHECK-NEXT:    vld1.16 {d0[0]}, [r3:16]
+; CHECK-NEXT:    vmov.16 d0[1], r1
 ; CHECK-NEXT:    vmov.16 d0[2], r2
-; CHECK-NEXT:    vmov.16 d0[3], r3
+; CHECK-NEXT:    vmov.16 d0[3], r12
 ; CHECK-NEXT:    mov sp, r11
 ; CHECK-NEXT:    pop {r11}
 ; CHECK-NEXT:    bx lr
@@ -1331,17 +1331,17 @@ define <4 x i16> @test_extracts_inserts_varidx_insert(<8 x i16> %x, i32 %idx) {
 ; CHECK:       @ %bb.0:
 ; CHECK-NEXT:    .pad #8
 ; CHECK-NEXT:    sub sp, sp, #8
-; CHECK-NEXT:    vmov.u16 r12, d0[1]
+; CHECK-NEXT:    vmov.u16 r1, d0[1]
 ; CHECK-NEXT:    and r0, r0, #3
 ; CHECK-NEXT:    vmov.u16 r2, d0[2]
-; CHECK-NEXT:    mov r1, sp
-; CHECK-NEXT:    vmov.u16 r3, d0[3]
-; CHECK-NEXT:    orr r0, r1, r0, lsl #1
+; CHECK-NEXT:    mov r3, sp
+; CHECK-NEXT:    vmov.u16 r12, d0[3]
+; CHECK-NEXT:    orr r0, r3, r0, lsl #1
 ; CHECK-NEXT:    vst1.16 {d0[0]}, [r0:16]
 ; CHECK-NEXT:    vldr d0, [sp]
-; CHECK-NEXT:    vmov.16 d0[1], r12
+; CHECK-NEXT:    vmov.16 d0[1], r1
 ; CHECK-NEXT:    vmov.16 d0[2], r2
-; CHECK-NEXT:    vmov.16 d0[3], r3
+; CHECK-NEXT:    vmov.16 d0[3], r12
 ; CHECK-NEXT:    add sp, sp, #8
 ; CHECK-NEXT:    bx lr
   %tmp = extractelement <8 x i16> %x, i32 0
