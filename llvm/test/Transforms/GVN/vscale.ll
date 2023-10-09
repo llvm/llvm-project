@@ -84,10 +84,7 @@ define i32 @load_clobber_load_gep3(ptr %p) {
 ; CHECK-LABEL: @load_clobber_load_gep3(
 ; CHECK-NEXT:    [[GEP1:%.*]] = getelementptr <vscale x 4 x i32>, ptr [[P:%.*]], i64 1, i64 0
 ; CHECK-NEXT:    [[LOAD1:%.*]] = load i32, ptr [[GEP1]], align 4
-; CHECK-NEXT:    [[GEP2:%.*]] = getelementptr <vscale x 4 x float>, ptr [[P]], i64 1, i64 0
-; CHECK-NEXT:    [[LOAD2:%.*]] = load float, ptr [[GEP2]], align 4
-; CHECK-NEXT:    [[CAST:%.*]] = bitcast float [[LOAD2]] to i32
-; CHECK-NEXT:    [[ADD:%.*]] = add i32 [[LOAD1]], [[CAST]]
+; CHECK-NEXT:    [[ADD:%.*]] = add i32 [[LOAD1]], [[LOAD1]]
 ; CHECK-NEXT:    ret i32 [[ADD]]
 ;
   %gep1 = getelementptr <vscale x 4 x i32>, ptr %p, i64 1, i64 0
@@ -277,8 +274,7 @@ define void @redundant_load_elimination_2(i1 %c, ptr %p, ptr %q) {
 ; CHECK-NEXT:    store i32 1, ptr [[GEP2]], align 4
 ; CHECK-NEXT:    br i1 [[C:%.*]], label [[IF_ELSE:%.*]], label [[IF_THEN:%.*]]
 ; CHECK:       if.then:
-; CHECK-NEXT:    [[T:%.*]] = load i32, ptr [[GEP1]], align 4
-; CHECK-NEXT:    store i32 [[T]], ptr [[Q:%.*]], align 4
+; CHECK-NEXT:    store i32 0, ptr [[Q:%.*]], align 4
 ; CHECK-NEXT:    ret void
 ; CHECK:       if.else:
 ; CHECK-NEXT:    ret void
@@ -367,8 +363,7 @@ define void @missing_load_elimination(i1 %c, ptr %p, ptr %q, <vscale x 4 x i32> 
 ; CHECK-NEXT:    store <vscale x 4 x i32> [[V:%.*]], ptr [[P1]], align 16
 ; CHECK-NEXT:    br i1 [[C:%.*]], label [[IF_ELSE:%.*]], label [[IF_THEN:%.*]]
 ; CHECK:       if.then:
-; CHECK-NEXT:    [[T:%.*]] = load <vscale x 4 x i32>, ptr [[P]], align 16
-; CHECK-NEXT:    store <vscale x 4 x i32> [[T]], ptr [[Q:%.*]], align 16
+; CHECK-NEXT:    store <vscale x 4 x i32> zeroinitializer, ptr [[Q:%.*]], align 16
 ; CHECK-NEXT:    ret void
 ; CHECK:       if.else:
 ; CHECK-NEXT:    ret void
