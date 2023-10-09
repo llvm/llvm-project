@@ -1217,6 +1217,9 @@ bool RAGreedy::trySplitAroundHintReg(MCPhysReg Hint,
                                      const LiveInterval &VirtReg,
                                      SmallVectorImpl<Register> &NewVRegs,
                                      AllocationOrder &Order) {
+  // Split the VirtReg may generate COPY instructions in multiple cold basic
+  // blocks, and increase code size. So we avoid it when the function is
+  // optimized for size.
   if (MF->getFunction().hasOptSize())
     return false;
 

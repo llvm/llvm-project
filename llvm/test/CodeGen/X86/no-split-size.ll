@@ -4,7 +4,7 @@
 ; @foo is optimized for size. Variables %p2, %p3, %p4, %p5 and %p6 are not split
 ; in cold blocks.
 
-define i64 @foo(ptr %ptr, i64 %p2, i64 %p3, i64 %p4, i64 %p5, i64 %p6) #0 {
+define i64 @foo(ptr %ptr, i64 %p2, i64 %p3, i64 %p4, i64 %p5, i64 %p6) optsize {
 ; CHECK-LABEL: foo:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    pushq %r15
@@ -83,8 +83,6 @@ if.end:
   %res = add i64 %add4, %p6
   ret i64 %res
 }
-
-attributes #0 = { optsize }
 
 !5 = !{!"branch_weights", i32 1, i32 2000}
 
