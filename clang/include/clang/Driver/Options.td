@@ -3152,7 +3152,8 @@ defm diagnostics_show_line_numbers : BoolFOption<"diagnostics-show-line-numbers"
 def fno_stack_protector : Flag<["-"], "fno-stack-protector">, Group<f_Group>,
   HelpText<"Disable the use of stack protectors">;
 def fno_strict_aliasing : Flag<["-"], "fno-strict-aliasing">, Group<f_Group>,
-  Flags<[NoXarchOption]>, Visibility<[ClangOption, CLOption, DXCOption]>;
+  Flags<[NoXarchOption]>, Visibility<[ClangOption, CLOption, DXCOption]>,
+  HelpText<"Disable optimizations based on strict aliasing rules">;
 def fstruct_path_tbaa : Flag<["-"], "fstruct-path-tbaa">, Group<f_Group>;
 def fno_struct_path_tbaa : Flag<["-"], "fno-struct-path-tbaa">, Group<f_Group>;
 def fno_strict_enums : Flag<["-"], "fno-strict-enums">, Group<f_Group>;
@@ -3595,7 +3596,8 @@ def fno_debug_macro : Flag<["-"], "fno-debug-macro">, Group<f_Group>,
   Visibility<[ClangOption, CLOption, DXCOption]>,
   HelpText<"Do not emit macro debug information">;
 def fstrict_aliasing : Flag<["-"], "fstrict-aliasing">, Group<f_Group>,
-  Flags<[NoXarchOption]>, Visibility<[ClangOption, CLOption, DXCOption]>;
+  Flags<[NoXarchOption]>, Visibility<[ClangOption, CLOption, DXCOption]>,
+  HelpText<"Enable optimizations based on strict aliasing rules">;
 def fstrict_enums : Flag<["-"], "fstrict-enums">, Group<f_Group>,
   Visibility<[ClangOption, CC1Option]>,
   HelpText<"Enable optimizations based on the strict definition of an enum's "
