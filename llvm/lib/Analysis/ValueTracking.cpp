@@ -3129,27 +3129,13 @@ static bool isNonEqualSelect(const Value *V1, const Value *V2, unsigned Depth,
     return false;
 
   if (const SelectInst *SI2 = dyn_cast<SelectInst>(V2)) {
-    const Value *TVal1 = nullptr;
-    const Value *TVal2 = nullptr;
-    const Value *FVal1 = nullptr;
-    const Value *FVal2 = nullptr;
     const Value *Cond1 = SI1->getCondition();
     const Value *Cond2 = SI2->getCondition();
-    if (Cond1 == Cond2) {
-      TVal1 = SI1->getTrueValue();
-      TVal2 = SI2->getTrueValue();
-      FVal1 = SI1->getFalseValue();
-      FVal2 = SI2->getFalseValue();
-    }
-    if (match(Cond1, m_Not(m_Specific(Cond2)))) {
-      TVal1 = SI1->getFalseValue();
-      TVal2 = SI2->getTrueValue();
-      FVal1 = SI1->getTrueValue();
-      FVal2 = SI2->getFalseValue();
-    }
-    if (TVal1)
-      return isKnownNonEqual(TVal1, TVal2, Depth + 1, Q) &&
-             isKnownNonEqual(FVal1, FVal2, Depth + 1, Q);
+    if (Cond1 == Cond2)
+      return isKnownNonEqual(SI1->getTrueValue(), SI2->getTrueValue(),
+                             Depth + 1, Q) &&
+             isKnownNonEqual(SI1->getFalseValue(), SI2->getFalseValue(),
+                             Depth + 1, Q);
   }
   return isKnownNonEqual(SI1->getTrueValue(), V2, Depth + 1, Q) &&
          isKnownNonEqual(SI1->getFalseValue(), V2, Depth + 1, Q);

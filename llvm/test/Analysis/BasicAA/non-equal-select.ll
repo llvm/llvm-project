@@ -46,38 +46,6 @@ entry:
   ret void
 }
 
-define void @two_selects_in_gep_opposite_cond1(i1 %c, i64 %x) {
-entry:
-; CHECK-LABEL: Function: two_selects_in_gep_opposite_cond1
-; CHECK: NoAlias: i32* %arrayidx1, i32* %arrayidx2
-  %add1_ = add nsw i64 %x, 1
-  %add2_ = add nsw i64 %x, 2
-  %not_c = xor i1 %c, -1
-  %select1_ = select i1 %c, i64 %x, i64 %add1_
-  %select2_ = select i1 %not_c, i64 %x, i64 %add2_
-  %arrayidx1 = getelementptr inbounds [10 x i32], ptr @G, i64 0, i64 %select1_
-  store i32 42, ptr %arrayidx1, align 4
-  %arrayidx2 = getelementptr inbounds [10 x i32], ptr @G, i64 0, i64 %select2_
-  store i32 43, ptr %arrayidx2, align 4
-  ret void
-}
-
-define void @two_selects_in_gep_opposite_cond2(i1 %c, i64 %x) {
-entry:
-; CHECK-LABEL: Function: two_selects_in_gep_opposite_cond2
-; CHECK: NoAlias: i32* %arrayidx1, i32* %arrayidx2
-  %add1_ = add nsw i64 %x, 1
-  %add2_ = add nsw i64 %x, 2
-  %not_c = xor i1 %c, -1
-  %select1_ = select i1 %not_c, i64 %x, i64 %add1_
-  %select2_ = select i1 %c, i64 %x, i64 %add2_
-  %arrayidx1 = getelementptr inbounds [10 x i32], ptr @G, i64 0, i64 %select1_
-  store i32 42, ptr %arrayidx1, align 4
-  %arrayidx2 = getelementptr inbounds [10 x i32], ptr @G, i64 0, i64 %select2_
-  store i32 43, ptr %arrayidx2, align 4
-  ret void
-}
-
 define void @two_selects_in_gep_different_cond1(i1 %c1, i1 %c2, i64 %x) {
 entry:
 ; CHECK-LABEL: Function: two_selects_in_gep_different_cond1
