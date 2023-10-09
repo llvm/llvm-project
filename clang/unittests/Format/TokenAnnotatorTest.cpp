@@ -474,6 +474,7 @@ TEST_F(TokenAnnotatorTest, UnderstandsEnums) {
   auto Tokens = annotate("enum E {};");
   EXPECT_EQ(Tokens.size(), 6u) << Tokens;
   EXPECT_TOKEN(Tokens[2], tok::l_brace, TT_EnumLBrace);
+  EXPECT_TOKEN(Tokens[3], tok::r_brace, TT_EnumRBrace);
 }
 
 TEST_F(TokenAnnotatorTest, UnderstandsDefaultedAndDeletedFunctions) {
