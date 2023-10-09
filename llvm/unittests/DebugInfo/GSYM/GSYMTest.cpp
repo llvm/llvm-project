@@ -176,7 +176,7 @@ TEST(GSYMTest, TestFunctionInfo) {
   EXPECT_LT(FIWithLines, FIWithLinesWithHigherAddress);
 }
 
-static void TestFunctionInfoDecodeError(llvm::support::endianness ByteOrder,
+static void TestFunctionInfoDecodeError(llvm::endianness ByteOrder,
                                         StringRef Bytes,
                                         const uint64_t BaseAddr,
                                         std::string ExpectedErrorMsg) {
@@ -192,7 +192,7 @@ static void TestFunctionInfoDecodeError(llvm::support::endianness ByteOrder,
 TEST(GSYMTest, TestFunctionInfoDecodeErrors) {
   // Test decoding FunctionInfo objects that ensure we report an appropriate
   // error message.
-  const llvm::support::endianness ByteOrder = llvm::support::little;
+  const llvm::endianness ByteOrder = llvm::support::little;
   SmallString<512> Str;
   raw_svector_ostream OutStrm(Str);
   FileWriter FW(OutStrm, ByteOrder);
@@ -220,9 +220,9 @@ TEST(GSYMTest, TestFunctionInfoDecodeErrors) {
       "0x00000008: unsupported InfoType 4");
 }
 
-static void TestFunctionInfoEncodeError(llvm::support::endianness ByteOrder,
-                                      const FunctionInfo &FI,
-                                      std::string ExpectedErrorMsg) {
+static void TestFunctionInfoEncodeError(llvm::endianness ByteOrder,
+                                        const FunctionInfo &FI,
+                                        std::string ExpectedErrorMsg) {
   SmallString<512> Str;
   raw_svector_ostream OutStrm(Str);
   FileWriter FW(OutStrm, ByteOrder);
@@ -255,7 +255,7 @@ TEST(GSYMTest, TestFunctionInfoEncodeErrors) {
       "attempted to encode invalid InlineInfo object");
 }
 
-static void TestFunctionInfoEncodeDecode(llvm::support::endianness ByteOrder,
+static void TestFunctionInfoEncodeDecode(llvm::endianness ByteOrder,
                                          const FunctionInfo &FI) {
   // Test encoding and decoding FunctionInfo objects.
   SmallString<512> Str;
@@ -332,7 +332,7 @@ TEST(GSYMTest, TestFunctionInfoEncoding) {
   TestFunctionInfoEncodeDecode(llvm::support::big, FIBoth);
 }
 
-static void TestInlineInfoEncodeDecode(llvm::support::endianness ByteOrder,
+static void TestInlineInfoEncodeDecode(llvm::endianness ByteOrder,
                                        const InlineInfo &Inline) {
   // Test encoding and decoding InlineInfo objects
   SmallString<512> Str;
@@ -351,7 +351,7 @@ static void TestInlineInfoEncodeDecode(llvm::support::endianness ByteOrder,
   EXPECT_EQ(Inline, Decoded.get());
 }
 
-static void TestInlineInfoDecodeError(llvm::support::endianness ByteOrder,
+static void TestInlineInfoDecodeError(llvm::endianness ByteOrder,
                                       StringRef Bytes, const uint64_t BaseAddr,
                                       std::string ExpectedErrorMsg) {
   uint8_t AddressSize = 4;
@@ -363,7 +363,7 @@ static void TestInlineInfoDecodeError(llvm::support::endianness ByteOrder,
   checkError(ExpectedErrorMsg, Decoded.takeError());
 }
 
-static void TestInlineInfoEncodeError(llvm::support::endianness ByteOrder,
+static void TestInlineInfoEncodeError(llvm::endianness ByteOrder,
                                       const InlineInfo &Inline,
                                       std::string ExpectedErrorMsg) {
   SmallString<512> Str;
@@ -509,7 +509,7 @@ TEST(GSYMTest, TestInlineInfoEncodeErrors) {
 TEST(GSYMTest, TestInlineInfoDecodeErrors) {
   // Test decoding InlineInfo objects that ensure we report an appropriate
   // error message.
-  const llvm::support::endianness ByteOrder = llvm::support::little;
+  const llvm::endianness ByteOrder = llvm::support::little;
   SmallString<512> Str;
   raw_svector_ostream OutStrm(Str);
   FileWriter FW(OutStrm, ByteOrder);
@@ -571,7 +571,7 @@ TEST(GSYMTest, TestStringTable) {
   EXPECT_EQ(StrTab.getString(13), "");
 }
 
-static void TestFileWriterHelper(llvm::support::endianness ByteOrder) {
+static void TestFileWriterHelper(llvm::endianness ByteOrder) {
   SmallString<512> Str;
   raw_svector_ostream OutStrm(Str);
   FileWriter FW(OutStrm, ByteOrder);
@@ -686,7 +686,7 @@ TEST(GSYMTest, TestAddressRangesEncodeDecode) {
   TestAddressRangeEncodeDecodeHelper(Ranges, BaseAddr);
 }
 
-static void TestLineTableHelper(llvm::support::endianness ByteOrder,
+static void TestLineTableHelper(llvm::endianness ByteOrder,
                                 const LineTable &LT) {
   SmallString<512> Str;
   raw_svector_ostream OutStrm(Str);
@@ -762,7 +762,7 @@ TEST(GSYMTest, TestLineTable) {
   ASSERT_FALSE(LT2 < LT2);
 }
 
-static void TestLineTableDecodeError(llvm::support::endianness ByteOrder,
+static void TestLineTableDecodeError(llvm::endianness ByteOrder,
                                      StringRef Bytes, const uint64_t BaseAddr,
                                      std::string ExpectedErrorMsg) {
   uint8_t AddressSize = 4;
@@ -777,7 +777,7 @@ static void TestLineTableDecodeError(llvm::support::endianness ByteOrder,
 TEST(GSYMTest, TestLineTableDecodeErrors) {
   // Test decoding InlineInfo objects that ensure we report an appropriate
   // error message.
-  const llvm::support::endianness ByteOrder = llvm::support::little;
+  const llvm::endianness ByteOrder = llvm::support::little;
   SmallString<512> Str;
   raw_svector_ostream OutStrm(Str);
   FileWriter FW(OutStrm, ByteOrder);
@@ -813,7 +813,7 @@ TEST(GSYMTest, TestLineTableDecodeErrors) {
 TEST(GSYMTest, TestLineTableEncodeErrors) {
   const uint64_t BaseAddr = 0x1000;
   const uint32_t FileIdx = 1;
-  const llvm::support::endianness ByteOrder = llvm::support::little;
+  const llvm::endianness ByteOrder = llvm::support::little;
   SmallString<512> Str;
   raw_svector_ostream OutStrm(Str);
   FileWriter FW(OutStrm, ByteOrder);
@@ -897,7 +897,7 @@ TEST(GSYMTest, TestHeaderEncodeErrors) {
 }
 
 TEST(GSYMTest, TestHeaderDecodeErrors) {
-  const llvm::support::endianness ByteOrder = llvm::support::little;
+  const llvm::endianness ByteOrder = llvm::support::little;
   SmallString<512> Str;
   raw_svector_ostream OutStrm(Str);
   FileWriter FW(OutStrm, ByteOrder);
@@ -941,7 +941,7 @@ TEST(GSYMTest, TestHeaderEncodeDecode) {
   TestHeaderEncodeDecode(H, llvm::support::big);
 }
 
-static void TestGsymCreatorEncodeError(llvm::support::endianness ByteOrder,
+static void TestGsymCreatorEncodeError(llvm::endianness ByteOrder,
                                        const GsymCreator &GC,
                                        std::string ExpectedErrorMsg) {
   SmallString<512> Str;

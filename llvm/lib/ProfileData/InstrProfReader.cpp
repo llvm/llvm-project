@@ -92,7 +92,7 @@ readBinaryIdsInternal(const MemoryBuffer &DataBuffer,
                       const uint64_t BinaryIdsSize,
                       const uint8_t *BinaryIdsStart,
                       std::vector<llvm::object::BuildID> &BinaryIds,
-                      const llvm::support::endianness Endian) {
+                      const llvm::endianness Endian) {
   using namespace support;
 
   if (BinaryIdsSize == 0)
@@ -145,7 +145,7 @@ static Error printBinaryIdsInternal(raw_ostream &OS,
                                     const MemoryBuffer &DataBuffer,
                                     uint64_t BinaryIdsSize,
                                     const uint8_t *BinaryIdsStart,
-                                    llvm::support::endianness Endian) {
+                                    llvm::endianness Endian) {
   if (BinaryIdsSize == 0)
     return Error::success();
 
