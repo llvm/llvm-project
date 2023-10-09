@@ -274,6 +274,13 @@ static void equivalenceAnalysis(func::FuncOp funcOp,
   });
 }
 
+/// Return "true" if the given function signature has tensor semantics.
+static bool hasTensorSignature(func::FuncOp funcOp) {
+  auto isaTensor = [](Type t) { return isa<TensorType>(t); };
+  return llvm::any_of(funcOp.getFunctionType().getInputs(), isaTensor) ||
+         llvm::any_of(funcOp.getFunctionType().getResults(), isaTensor);
+}
+
 /// Store all functions of the `moduleOp` in `orderedFuncOps`, sorted by
 /// callee-caller order (i.e. callees without callers first).
 /// Store the map of FuncOp to all its callers in `callerMap`.
@@ -297,10 +304,16 @@ getFuncOpsOrderedByCalls(ModuleOp moduleOp,
                   "without a unique ReturnOp";
     }
 
+    // Collect function calls and populate the caller map.
     numberCallOpsContainedInFuncOp[funcOp] = 0;
     return funcOp.walk([&](func::CallOp callOp) -> WalkResult {
       func::FuncOp calledFunction = getCalledFunction(callOp);
       assert(calledFunction && "could not retrieved called func::FuncOp");
+      // If the called function does not have any tensors in its signature, then
+      // it is not necessary to bufferize the callee before the caller.
+      if (!hasTensorSignature(calledFunction))
+        return WalkResult::skip();
+
       callerMap[calledFunction].insert(callOp);
       if (calledBy[calledFunction].insert(funcOp).second) {
         numberCallOpsContainedInFuncOp[funcOp]++;
@@ -310,7 +323,7 @@ getFuncOpsOrderedByCalls(ModuleOp moduleOp,
   });
   if (res.wasInterrupted())
     return failure();
-  // Iteratively remove function operation that do not call any of the
+  // Iteratively remove function operations that do not call any of the
   // functions remaining in the callCounter map and add them to the worklist.
   while (!numberCallOpsContainedInFuncOp.empty()) {
     auto it = llvm::find_if(numberCallOpsContainedInFuncOp,
