@@ -56,7 +56,6 @@
 // CHECK-NEXT: ConsumableAutoCast (SubjectMatchRule_record)
 // CHECK-NEXT: ConsumableSetOnRead (SubjectMatchRule_record)
 // CHECK-NEXT: Convergent (SubjectMatchRule_function)
-// CHECK-NEXT: CountedBy (SubjectMatchRule_field)
 // CHECK-NEXT: DLLExport (SubjectMatchRule_function, SubjectMatchRule_variable, SubjectMatchRule_record, SubjectMatchRule_objc_interface)
 // CHECK-NEXT: DLLImport (SubjectMatchRule_function, SubjectMatchRule_variable, SubjectMatchRule_record, SubjectMatchRule_objc_interface)
 // CHECK-NEXT: Destructor (SubjectMatchRule_function)
