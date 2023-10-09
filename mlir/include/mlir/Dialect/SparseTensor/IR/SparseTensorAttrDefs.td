@@ -225,7 +225,7 @@ def SparseTensorEncodingAttr : SparseTensor_Attr<"SparseTensorEncoding",
     // Same block sparse row storage (2x3 blocks) but this time
     // also with a redundant reverse mapping, which can be inferred.
     #BSR_explicit = #sparse_tensor.encoding<{
-      map = {ib, jb, ii, jj}
+      map = { ib, jb, ii, jj }
             ( i = ib * 2 + ii,
               j = jb * 3 + jj) ->
       ( ib = i floordiv 2 : dense,
