@@ -1951,9 +1951,9 @@ void Fortran::lower::mapSymbolAttributes(
         std::tie(addr, len) = charHelp.createUnboxChar(arg);
       else if (!addr)
         addr = arg;
-      // Ensure proper type is given to array/scalar that transited via
+      // Ensure proper type is given to array/scalar that was transmitted as a
       // fir.boxchar arg or is a statement function actual argument with
-      // a different length.
+      // a different length than the dummy.
       mlir::Type castTy = builder.getRefType(converter.genType(var));
       addr = builder.createConvert(loc, castTy, addr);
     }
