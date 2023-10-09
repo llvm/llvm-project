@@ -3642,3 +3642,11 @@ void SparcTargetLowering::insertSSPDeclarations(Module &M) const {
   if (!Subtarget->isTargetLinux())
     return TargetLowering::insertSSPDeclarations(M);
 }
+
+void SparcTargetLowering::AdjustInstrPostInstrSelection(MachineInstr &MI,
+                                                        SDNode *Node) const {
+  assert(MI.getOpcode() == SP::SUBCCrr || MI.getOpcode() == SP::SUBCCri);
+  // If the result is dead, replace it with %g0.
+  if (!Node->hasAnyUseOfValue(0))
+    MI.getOperand(0).setReg(SP::G0);
+}
