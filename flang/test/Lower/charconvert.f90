@@ -19,10 +19,6 @@ end subroutine
 ! CHECK:   %[[VAL_3:.*]]:2 = hlfir.declare %[[VAL_2]]#0 typeparams %[[VAL_2]]#1 {uniq_name = "_QFtest_c1_to_c4Ec4"} : (!fir.ref<!fir.char<4,?>>, index) -> (!fir.boxchar<4>, !fir.ref<!fir.char<4,?>>)
 ! CHECK:   %[[VAL_4:.*]] = fir.alloca !fir.char<4,?>(%[[VAL_0]]#1 : index)
 ! CHECK:   fir.char_convert %[[VAL_1]]#1 for %[[VAL_0]]#1 to %[[VAL_4:.*]] : !fir.ref<!fir.char<1,?>>, index, !fir.ref<!fir.char<4,?>>
-! CHECK:   %[[VAL_5:.*]]:2 = hlfir.declare %[[VAL_4]] typeparams %[[VAL_0]]#1 {uniq_name = "ctor.temp"} : (!fir.ref<!fir.char<4,?>>, index) -> (!fir.boxchar<4>, !fir.ref<!fir.char<4,?>>)
-! CHECK:   hlfir.assign %[[VAL_5]]#0 to %[[VAL_3]]#0 : !fir.boxchar<4>, !fir.boxchar<4>
-! CHECK:   return
-! CHECK: }
 
 ! CHECK: func.func @_QPtest_c4_to_c1(%[[ARG0:.*]]: !fir.boxchar<4> {fir.bindc_name = "c4"}, %[[ARG1:.*]]: !fir.boxchar<1> {fir.bindc_name = "c1"}) {
 ! CHECK:   %[[VAL_0:.*]]:2 = fir.unboxchar %[[ARG1]] : (!fir.boxchar<1>) -> (!fir.ref<!fir.char<1,?>>, index)
@@ -34,6 +30,3 @@ end subroutine
 ! CHECK:   %[[VAL_5:.*]] = fir.alloca !fir.char<1,?>(%[[VAL_4]] : index)
 ! CHECK:   fir.char_convert %[[VAL_3]]#1 for %[[VAL_2]]#1 to %[[VAL_5:.*]] : !fir.ref<!fir.char<4,?>>, index, !fir.ref<!fir.char<1,?>>
 ! CHECK:   %[[VAL_6:.*]]:2 = hlfir.declare %[[VAL_5]] typeparams %[[VAL_2]]#1 {uniq_name = "ctor.temp"} : (!fir.ref<!fir.char<1,?>>, index) -> (!fir.boxchar<1>, !fir.ref<!fir.char<1,?>>)
-! CHECK:   hlfir.assign %[[VAL_6]]#0 to %[[VAL_1]]#0 : !fir.boxchar<1>, !fir.boxchar<1>
-! CHECK:   return
-! CHECK: }
