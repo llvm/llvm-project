@@ -435,7 +435,7 @@ static LogicalResult verifyInitLikeSingleArgRegion(
 LogicalResult acc::PrivateRecipeOp::verifyRegions() {
   if (failed(verifyInitLikeSingleArgRegion(*this, getInitRegion(),
                                            "privatization", "init", getType(),
-                                           /*verifyYield=*/false)))
+                                           /*verifyYield=*/true)))
     return failure();
   if (failed(verifyInitLikeSingleArgRegion(
           *this, getDestroyRegion(), "privatization", "destroy", getType(),
