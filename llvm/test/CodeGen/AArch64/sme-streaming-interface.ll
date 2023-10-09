@@ -368,15 +368,11 @@ define i8 @call_to_non_streaming_pass_sve_objects(ptr nocapture noundef readnone
 ; CHECK-NEXT:    stp d9, d8, [sp, #48] // 16-byte Folded Spill
 ; CHECK-NEXT:    stp x29, x30, [sp, #64] // 16-byte Folded Spill
 ; CHECK-NEXT:    addvl sp, sp, #-3
-; CHECK-NEXT:    rdsvl x8, #1
-; CHECK-NEXT:    addvl x9, sp, #2
-; CHECK-NEXT:    addvl x10, sp, #1
-; CHECK-NEXT:    mov x11, sp
+; CHECK-NEXT:    rdsvl x3, #1
 ; CHECK-NEXT:    smstop sm
-; CHECK-NEXT:    mov x0, x9
-; CHECK-NEXT:    mov x1, x10
-; CHECK-NEXT:    mov x2, x11
-; CHECK-NEXT:    mov x3, x8
+; CHECK-NEXT:    addvl x0, sp, #2
+; CHECK-NEXT:    addvl x1, sp, #1
+; CHECK-NEXT:    mov x2, sp
 ; CHECK-NEXT:    bl foo
 ; CHECK-NEXT:    smstart sm
 ; CHECK-NEXT:    ptrue p0.b

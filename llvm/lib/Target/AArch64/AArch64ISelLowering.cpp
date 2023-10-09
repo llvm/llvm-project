@@ -7687,14 +7687,13 @@ AArch64TargetLowering::LowerCall(CallLoweringInfo &CLI,
   if (!MemOpChains.empty())
     Chain = DAG.getNode(ISD::TokenFactor, DL, MVT::Other, MemOpChains);
 
-  SDValue InGlue;
   if (RequiresSMChange) {
     SDValue NewChain = changeStreamingMode(DAG, DL, *RequiresSMChange, Chain,
-                                           InGlue, PStateSM, true);
+                                           SDValue(), PStateSM, true);
     Chain = NewChain.getValue(0);
-    InGlue = NewChain.getValue(1);
   }
 
+  SDValue InGlue;
   // Build a sequence of copy-to-reg nodes chained together with token chain
   // and flag operands which copy the outgoing args into the appropriate regs.
   for (auto &RegToPass : RegsToPass) {
