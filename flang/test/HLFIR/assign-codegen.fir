@@ -347,21 +347,21 @@ func.func @_QFPtest_scalar_lhs_finalization(%arg0: !fir.ref<!fir.type<_QMa8vTt1{
 // CHECK-LABEL:   func.func @_QFPtest_scalar_lhs_finalization(
 // CHECK-SAME:                                                %[[VAL_0:.*]]: !fir.ref<!fir.type<_QMa8vTt1{val:i32}>> {fir.bindc_name = "s1"},
 // CHECK-SAME:                                                %[[VAL_1:.*]]: !fir.ref<!fir.type<_QMa8vTt1{val:i32}>> {fir.bindc_name = "s2"}) {
+// CHECK:           %[[BOX:.*]] = fir.alloca !fir.box<!fir.type<_QMa8vTt1{val:i32}>>
 // CHECK:           %[[VAL_2:.*]] = fir.declare %[[VAL_0]] {uniq_name = "_QFFtest_scalar_lhs_finalizationEs1"} : (!fir.ref<!fir.type<_QMa8vTt1{val:i32}>>) -> !fir.ref<!fir.type<_QMa8vTt1{val:i32}>>
 // CHECK:           %[[VAL_3:.*]] = fir.declare %[[VAL_1]] {uniq_name = "_QFFtest_scalar_lhs_finalizationEs2"} : (!fir.ref<!fir.type<_QMa8vTt1{val:i32}>>) -> !fir.ref<!fir.type<_QMa8vTt1{val:i32}>>
+
 // CHECK:           %[[VAL_4:.*]] = fir.embox %[[VAL_2]] : (!fir.ref<!fir.type<_QMa8vTt1{val:i32}>>) -> !fir.box<!fir.type<_QMa8vTt1{val:i32}>>
-// CHECK:           %[[VAL_5:.*]] = fir.convert %[[VAL_4]] : (!fir.box<!fir.type<_QMa8vTt1{val:i32}>>) -> !fir.box<none>
-// CHECK:           %[[VAL_6:.*]] = fir.call @_FortranADestroy(%[[VAL_5]]) : (!fir.box<none>) -> none
-// CHECK:           %[[VAL_7:.*]] = fir.field_index val, !fir.type<_QMa8vTt1{val:i32}>
-// CHECK:           %[[VAL_8:.*]] = fir.coordinate_of %[[VAL_3]], %[[VAL_7]] : (!fir.ref<!fir.type<_QMa8vTt1{val:i32}>>, !fir.field) -> !fir.ref<i32>
-// CHECK:           %[[VAL_9:.*]] = fir.field_index val, !fir.type<_QMa8vTt1{val:i32}>
-// CHECK:           %[[VAL_10:.*]] = fir.coordinate_of %[[VAL_2]], %[[VAL_9]] : (!fir.ref<!fir.type<_QMa8vTt1{val:i32}>>, !fir.field) -> !fir.ref<i32>
-// CHECK:           %[[VAL_11:.*]] = fir.load %[[VAL_8]] : !fir.ref<i32>
-// CHECK:           fir.store %[[VAL_11]] to %[[VAL_10]] : !fir.ref<i32>
+// CHECK:           %[[VAL_5:.*]] = fir.embox %[[VAL_3]] : (!fir.ref<!fir.type<_QMa8vTt1{val:i32}>>) -> !fir.box<!fir.type<_QMa8vTt1{val:i32}>>
+// CHECK:           fir.store %[[VAL_4]] to %[[BOX]] : !fir.ref<!fir.box<!fir.type<_QMa8vTt1{val:i32}>>>
+// CHECK:           %[[VAL_10:.*]] = fir.convert %[[BOX]] : (!fir.ref<!fir.box<!fir.type<_QMa8vTt1{val:i32}>>>) -> !fir.ref<!fir.box<none>>
+// CHECK:           %[[VAL_11:.*]] = fir.convert %[[VAL_5]] : (!fir.box<!fir.type<_QMa8vTt1{val:i32}>>) -> !fir.box<none>
+// CHECK:           %[[VAL_12:.*]] = fir.convert %{{.*}} : (!fir.ref<!fir.char<1,{{.*}}>>) -> !fir.ref<i8>
+// CHECK:           %[[VAL_13:.*]] = fir.call @_FortranAAssign(%[[VAL_10]], %[[VAL_11]], %[[VAL_12]], %{{.*}}) : (!fir.ref<!fir.box<none>>, !fir.box<none>, !fir.ref<i8>, i32) -> none
 // CHECK:           return
 // CHECK:         }
 
-// Check that Destroy() is not called for temporary LHS.
+// Check that Assign() or Destroy() is not called for temporary LHS.
 func.func @_QFPtest_scalar_temp_lhs_no_finalization(%arg0: !fir.ref<!fir.type<_QMa8vTt1{val:i32}>> {fir.bindc_name = "s1"}, %arg1: !fir.ref<!fir.type<_QMa8vTt1{val:i32}>> {fir.bindc_name = "s2"}) {
   %0:2 = hlfir.declare %arg0 {uniq_name = "_QFFtest_scalar_lhs_finalizationEs1"} : (!fir.ref<!fir.type<_QMa8vTt1{val:i32}>>) -> (!fir.ref<!fir.type<_QMa8vTt1{val:i32}>>, !fir.ref<!fir.type<_QMa8vTt1{val:i32}>>)
   %1:2 = hlfir.declare %arg1 {uniq_name = "_QFFtest_scalar_lhs_finalizationEs2"} : (!fir.ref<!fir.type<_QMa8vTt1{val:i32}>>) -> (!fir.ref<!fir.type<_QMa8vTt1{val:i32}>>, !fir.ref<!fir.type<_QMa8vTt1{val:i32}>>)
@@ -369,6 +369,7 @@ func.func @_QFPtest_scalar_temp_lhs_no_finalization(%arg0: !fir.ref<!fir.type<_Q
   return
 }
 // CHECK-LABEL:   func.func @_QFPtest_scalar_temp_lhs_no_finalization(
+// CHECK-NOT: fir.call @_FortranAAssign
 // CHECK-NOT: fir.call @_FortranADestroy
 
 func.func @test_upoly_expr_assignment(%arg0: !fir.class<!fir.array<?xnone>> {fir.bindc_name = "y"}) {
