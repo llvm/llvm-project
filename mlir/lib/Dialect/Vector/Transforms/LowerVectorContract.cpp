@@ -424,9 +424,17 @@ struct UnrolledOuterProductGenerator
     return rewriter.create<arith::ExtSIOp>(loc, promotedType, v);
   }
 
-  FailureOr<Value> outerProd(Value lhs, Value rhs, Value res, int reductionSize,
+  FailureOr<Value> outerProd(Value lhs, Value rhs, Value res,
+                             VectorType lhsType, int reductionDim,
                              std::optional<Value> maybeMask = std::nullopt) {
-    assert(reductionSize > 0);
+    // Unrolling a scalable dimension would be incorrect - bail out.
+    if (lhsType.getScalableDims()[reductionDim])
+      return failure();
+
+    int reductionSize = lhsType.getDimSize(reductionDim);
+    assert(reductionSize > 0 &&
+           "Reduction dim must be a known static size to allow unrolling");
+
     // Incremental support for masking.
     if (mask && !maybeMask.has_value())
       return failure();
@@ -459,33 +467,39 @@ struct UnrolledOuterProductGenerator
     Value transposedMask = t(mask, {2, 0, 1});
     // Classical row-major matmul:  Just permute the lhs.
     if (layout({{m, k}, {k, n}, {m, n}}))
-      return outerProd(t(lhs), rhs, res, lhsType.getDimSize(1), transposedMask);
+      return outerProd(t(lhs), rhs, res, lhsType, /*reductionDim=*/1,
+                       transposedMask);
     // TODO: may be better to fail and use some vector<k> -> scalar reduction.
     if (layout({{m, k}, {n, k}, {m, n}})) {
       Value tlhs = t(lhs);
-      return outerProd(tlhs, t(rhs), res, lhsType.getDimSize(1),
+      return outerProd(tlhs, t(rhs), res, lhsType, /*reductionDim=*/1,
                        transposedMask);
     }
     // No need to permute anything.
     if (layout({{k, m}, {k, n}, {m, n}}))
-      return outerProd(lhs, rhs, res, lhsType.getDimSize(0), transposedMask);
+      return outerProd(lhs, rhs, res, lhsType, /*reductionDim=*/0,
+                       transposedMask);
     // Just permute the rhs.
     if (layout({{k, m}, {n, k}, {m, n}}))
-      return outerProd(lhs, t(rhs), res, lhsType.getDimSize(0), transposedMask);
+      return outerProd(lhs, t(rhs), res, lhsType, /*reductionDim=*/0,
+                       transposedMask);
     // Transposed output: swap RHS and LHS.
     // Classical row-major matmul: permute the lhs.
     if (layout({{m, k}, {k, n}, {n, m}}))
-      return outerProd(rhs, t(lhs), res, lhsType.getDimSize(1), transposedMask);
+      return outerProd(rhs, t(lhs), res, lhsType, /*reductionDim=*/1,
+                       transposedMask);
     // TODO: may be better to fail and use some vector<k> -> scalar reduction.
     if (layout({{m, k}, {n, k}, {n, m}})) {
       Value trhs = t(rhs);
-      return outerProd(trhs, t(lhs), res, lhsType.getDimSize(1),
+      return outerProd(trhs, t(lhs), res, lhsType, /*reductionDim=*/1,
                        transposedMask);
     }
     if (layout({{k, m}, {k, n}, {n, m}}))
-      return outerProd(rhs, lhs, res, lhsType.getDimSize(0), transposedMask);
+      return outerProd(rhs, lhs, res, lhsType, /*reductionDim=*/0,
+                       transposedMask);
     if (layout({{k, m}, {n, k}, {n, m}}))
-      return outerProd(t(rhs), lhs, res, lhsType.getDimSize(0), transposedMask);
+      return outerProd(t(rhs), lhs, res, lhsType, /*reductionDim=*/0,
+                       transposedMask);
     return failure();
   }
 
@@ -503,16 +517,20 @@ struct UnrolledOuterProductGenerator
 
     // Case mat-vec: transpose.
     if (layout({{m, k}, {k}, {m}}))
-      return outerProd(t(lhs), rhs, res, lhsType.getDimSize(1), transposedMask);
+      return outerProd(t(lhs), rhs, res, lhsType, /*reductionDim=*/1,
+                       transposedMask);
     // Case mat-trans-vec: ready to go.
     if (layout({{k, m}, {k}, {m}}))
-      return outerProd(lhs, rhs, res, lhsType.getDimSize(0), transposedMask);
+      return outerProd(lhs, rhs, res, lhsType, /*reductionDim=*/0,
+                       transposedMask);
     // Case vec-mat: swap and transpose.
     if (layout({{k}, {m, k}, {m}}))
-      return outerProd(t(rhs), lhs, res, lhsType.getDimSize(0), transposedMask);
+      return outerProd(t(rhs), lhs, res, lhsType, /*reductionDim=*/0,
+                       transposedMask);
     // Case vec-mat-trans: swap and ready to go.
     if (layout({{k}, {k, m}, {m}}))
-      return outerProd(rhs, lhs, res, lhsType.getDimSize(0), transposedMask);
+      return outerProd(rhs, lhs, res, lhsType, /*reductionDim=*/0,
+                       transposedMask);
     return failure();
   }
 
@@ -528,16 +546,16 @@ struct UnrolledOuterProductGenerator
 
     // Case mat-vec: transpose.
     if (layout({{m, k}, {k}, {m}}))
-      return outerProd(t(lhs), rhs, res, lhsType.getDimSize(1), mask);
+      return outerProd(t(lhs), rhs, res, lhsType, /*reductionDim=*/1, mask);
     // Case mat-trans-vec: ready to go.
     if (layout({{k, m}, {k}, {m}}))
-      return outerProd(lhs, rhs, res, lhsType.getDimSize(0), mask);
+      return outerProd(lhs, rhs, res, lhsType, /*reductionDim=*/0, mask);
     // Case vec-mat: swap and transpose.
     if (layout({{k}, {m, k}, {m}}))
-      return outerProd(t(rhs), lhs, res, lhsType.getDimSize(0), mask);
+      return outerProd(t(rhs), lhs, res, lhsType, /*reductionDim=*/0, mask);
     // Case vec-mat-trans: swap and ready to go.
     if (layout({{k}, {k, m}, {m}}))
-      return outerProd(rhs, lhs, res, lhsType.getDimSize(0), mask);
+      return outerProd(rhs, lhs, res, lhsType, /*reductionDim=*/0, mask);
     return failure();
   }
 
@@ -980,9 +998,19 @@ FailureOr<Value> ContractionOpLowering::lowerParallel(PatternRewriter &rewriter,
         diag << "expected lhsIndex=" << lhsIndex << " and rhsIndex=" << rhsIndex
              << " to map to the same dimension";
       });
+    if (lhsType.getScalableDims()[lhsIndex])
+      return rewriter.notifyMatchFailure(op, [&](Diagnostic &diag) {
+        diag << "Unrolling scalable dimension (lhsIndex=" << lhsIndex
+             << ") is not supported yet";
+      });
     dimSize = lhsType.getDimSize(lhsIndex);
   } else if (rhsIndex >= 0) {
     iterIndex = iMap[1].getDimPosition(rhsIndex);
+    if (rhsType.getScalableDims()[rhsIndex])
+      return rewriter.notifyMatchFailure(op, [&](Diagnostic &diag) {
+        diag << "Unrolling scalable dimension (rhsIndex=" << rhsIndex
+             << ") is not supported yet";
+      });
     dimSize = rhsType.getDimSize(rhsIndex);
   }
   if (iterIndex < 0)

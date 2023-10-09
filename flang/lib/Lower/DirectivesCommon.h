@@ -799,13 +799,17 @@ genBoundsOps(fir::FirOpBuilder &builder, mlir::Location loc,
           }
         }
       }
-      // ub = baseLb + extent - 1
       if (!ubound) {
-        mlir::Value ext =
-            fir::factory::readExtent(builder, loc, dataExv, dimension);
-        mlir::Value lbExt =
-            builder.create<mlir::arith::AddIOp>(loc, ext, baseLb);
-        ubound = builder.create<mlir::arith::SubIOp>(loc, lbExt, one);
+        extent = fir::factory::readExtent(builder, loc, dataExv, dimension);
+        if (defaultLb) {
+          // ub = extent - 1
+          ubound = builder.create<mlir::arith::SubIOp>(loc, extent, one);
+        } else {
+          // ub = baseLb + extent - 1
+          mlir::Value lbExt =
+              builder.create<mlir::arith::AddIOp>(loc, extent, baseLb);
+          ubound = builder.create<mlir::arith::SubIOp>(loc, lbExt, one);
+        }
       }
       mlir::Value bound = builder.create<BoundsOp>(
           loc, boundTy, lbound, ubound, extent, stride, strideInBytes, baseLb);

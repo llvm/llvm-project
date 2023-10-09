@@ -300,7 +300,8 @@ static bool blockPrologueInterferes(const MachineBasicBlock *BB,
       if (!Reg)
         continue;
       if (MO.isUse()) {
-        if (Reg.isPhysical() && MRI && MRI->isConstantPhysReg(Reg))
+        if (Reg.isPhysical() &&
+            (TII->isIgnorableUse(MO) || (MRI && MRI->isConstantPhysReg(Reg))))
           continue;
         if (PI->modifiesRegister(Reg, TRI))
           return true;
@@ -528,7 +529,10 @@ bool MachineSinking::PerformSinkAndFold(MachineInstr &MI,
           continue;
         MachineInstr *NewDbgMI = SinkDst->getMF()->CloneMachineInstr(DbgMI);
         SinkMBB.insertAfter(InsertPt, NewDbgMI);
-        NewDbgMI->getOperand(0).setReg(DstReg);
+        for (auto &SrcMO : DbgMI->getDebugOperandsForReg(DefReg)) {
+          auto &DstMO = NewDbgMI->getOperand(SrcMO.getOperandNo());
+          DstMO.setReg(DstReg);
+        }
       }
     } else {
       // Fold instruction into the addressing mode of a memory instruction.
@@ -536,6 +540,8 @@ bool MachineSinking::PerformSinkAndFold(MachineInstr &MI,
     }
     LLVM_DEBUG(dbgs() << "yielding"; New->dump());
     SinkDst->eraseFromParent();
+    // Clear the StoreInstrCache, since we may have invalidated it by erasing.
+    StoreInstrCache.clear();
   }
 
   // Collect operands that need to be cleaned up because the registers no longer
@@ -731,6 +737,7 @@ bool MachineSinking::runOnMachineFunction(MachineFunction &MF) {
 
         MadeChange = true;
         ++NumSplit;
+        CI->splitCriticalEdge(Pair.first, Pair.second, NewSucc);
       } else
         LLVM_DEBUG(dbgs() << " *** Not legal to break critical edge\n");
     }
@@ -1247,24 +1254,19 @@ MachineSinking::FindSuccToSinkTo(MachineInstr &MI, MachineBasicBlock *MBB,
   if (MBB == SuccToSinkTo)
     return nullptr;
 
-  if (!SuccToSinkTo)
-    return nullptr;
-
   // It's not safe to sink instructions to EH landing pad. Control flow into
   // landing pad is implicitly defined.
-  if (SuccToSinkTo->isEHPad())
+  if (SuccToSinkTo && SuccToSinkTo->isEHPad())
     return nullptr;
 
   // It ought to be okay to sink instructions into an INLINEASM_BR target, but
   // only if we make sure that MI occurs _before_ an INLINEASM_BR instruction in
   // the source block (which this code does not yet do). So for now, forbid
   // doing so.
-  if (SuccToSinkTo->isInlineAsmBrIndirectTarget())
+  if (SuccToSinkTo && SuccToSinkTo->isInlineAsmBrIndirectTarget())
     return nullptr;
 
-  MachineBasicBlock::const_iterator InsertPos =
-      SuccToSinkTo->SkipPHIsAndLabels(SuccToSinkTo->begin());
-  if (blockPrologueInterferes(SuccToSinkTo, InsertPos, MI, TRI, TII, MRI))
+  if (SuccToSinkTo && !TII->isSafeToSink(MI, SuccToSinkTo, CI))
     return nullptr;
 
   return SuccToSinkTo;

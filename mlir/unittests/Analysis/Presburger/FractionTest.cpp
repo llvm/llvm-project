@@ -44,8 +44,8 @@ TEST(FractionTest, arithmetic) {
 
 TEST(FractionTest, relational) {
   Fraction f(2, 5), g(3, 7);
-  ASSERT_TRUE(f < g);
-  ASSERT_FALSE(g < f);
+  EXPECT_TRUE(f < g);
+  EXPECT_FALSE(g < f);
 
   EXPECT_EQ(f, Fraction(4, 10));
 }

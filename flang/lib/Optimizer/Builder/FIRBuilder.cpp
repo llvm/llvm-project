@@ -299,18 +299,6 @@ fir::GlobalOp fir::FirOpBuilder::createGlobal(
   return glob;
 }
 
-fir::DispatchTableOp fir::FirOpBuilder::createDispatchTableOp(
-    mlir::Location loc, llvm::StringRef name, llvm::StringRef parentName) {
-  auto module = getModule();
-  auto insertPt = saveInsertionPoint();
-  if (auto dt = module.lookupSymbol<fir::DispatchTableOp>(name))
-    return dt;
-  setInsertionPoint(module.getBody(), module.getBody()->end());
-  auto dt = create<fir::DispatchTableOp>(loc, name, mlir::Type{}, parentName);
-  restoreInsertionPoint(insertPt);
-  return dt;
-}
-
 mlir::Value
 fir::FirOpBuilder::convertWithSemantics(mlir::Location loc, mlir::Type toTy,
                                         mlir::Value val,
@@ -1273,6 +1261,15 @@ static bool recordTypeCanBeMemCopied(fir::RecordType recordType) {
   return true;
 }
 
+static bool mayHaveFinalizer(fir::RecordType recordType,
+                             fir::FirOpBuilder &builder) {
+  if (auto typeInfo = builder.getModule().lookupSymbol<fir::TypeInfoOp>(
+          recordType.getName()))
+    return !typeInfo.getNoFinal();
+  // No info, be pessimistic.
+  return true;
+}
+
 void fir::factory::genRecordAssignment(fir::FirOpBuilder &builder,
                                        mlir::Location loc,
                                        const fir::ExtendedValue &lhs,
@@ -1289,7 +1286,8 @@ void fir::factory::genRecordAssignment(fir::FirOpBuilder &builder,
                         fir::getBase(rhs).getType().isa<fir::BaseBoxType>();
   auto recTy = baseTy.dyn_cast<fir::RecordType>();
   assert(recTy && "must be a record type");
-  if (hasBoxOperands || !recordTypeCanBeMemCopied(recTy)) {
+  if ((needFinalization && mayHaveFinalizer(recTy, builder)) ||
+      hasBoxOperands || !recordTypeCanBeMemCopied(recTy)) {
     auto to = fir::getBase(builder.createBox(loc, lhs));
     auto from = fir::getBase(builder.createBox(loc, rhs));
     // The runtime entry point may modify the LHS descriptor if it is
@@ -1304,12 +1302,6 @@ void fir::factory::genRecordAssignment(fir::FirOpBuilder &builder,
     else
       fir::runtime::genAssign(builder, loc, toMutableBox, from);
     return;
-  }
-
-  // Finalize LHS on intrinsic assignment.
-  if (needFinalization) {
-    mlir::Value box = builder.createBox(loc, lhs);
-    fir::runtime::genDerivedTypeDestroy(builder, loc, box);
   }
 
   // Otherwise, the derived type has compile time constant size and for which

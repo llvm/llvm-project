@@ -33,6 +33,7 @@
 #include "mlir/IR/BuiltinOps.h"
 #include "mlir/IR/IRMapping.h"
 #include "mlir/IR/PatternMatch.h"
+#include "mlir/IR/SymbolTable.h"
 #include "mlir/IR/TypeUtilities.h"
 #include "mlir/Support/LogicalResult.h"
 #include "mlir/Support/MathExtras.h"
@@ -48,6 +49,7 @@
 #include "llvm/Support/FormatVariadic.h"
 #include <algorithm>
 #include <functional>
+#include <optional>
 
 namespace mlir {
 #define GEN_PASS_DEF_CONVERTFUNCTOLLVMPASS
@@ -71,44 +73,40 @@ static bool shouldUseBarePtrCallConv(Operation *op,
 }
 
 /// Only retain those attributes that are not constructed by
-/// `LLVMFuncOp::build`. If `filterArgAttrs` is set, also filter out argument
-/// attributes.
-static void filterFuncAttributes(func::FuncOp func, bool filterArgAndResAttrs,
+/// `LLVMFuncOp::build`.
+static void filterFuncAttributes(func::FuncOp func,
                                  SmallVectorImpl<NamedAttribute> &result) {
-  for (const NamedAttribute &attr : func->getAttrs()) {
-    if (attr.getName() == SymbolTable::getSymbolAttrName() ||
-        attr.getName() == func.getFunctionTypeAttrName() ||
-        attr.getName() == linkageAttrName ||
+  for (const NamedAttribute &attr : func->getDiscardableAttrs()) {
+    if (attr.getName() == linkageAttrName ||
         attr.getName() == varargsAttrName ||
-        attr.getName() == LLVM::LLVMDialect::getReadnoneAttrName() ||
-        (filterArgAndResAttrs &&
-         (attr.getName() == func.getArgAttrsAttrName() ||
-          attr.getName() == func.getResAttrsAttrName())))
+        attr.getName() == LLVM::LLVMDialect::getReadnoneAttrName())
       continue;
     result.push_back(attr);
   }
 }
 
-/// Adds a an empty set of argument attributes for the newly added argument in
-/// front of the existing ones.
-static void prependEmptyArgAttr(OpBuilder &builder,
-                                SmallVectorImpl<NamedAttribute> &newFuncAttrs,
-                                func::FuncOp func) {
-  auto argAttrs = func.getArgAttrs();
-  // Nothing to do when there were no arg attrs beforehand.
-  if (!argAttrs)
-    return;
-
-  size_t numArguments = func.getNumArguments();
-  SmallVector<Attribute> newArgAttrs;
-  newArgAttrs.reserve(numArguments + 1);
-  // Insert empty dictionary for the new argument.
-  newArgAttrs.push_back(builder.getDictionaryAttr({}));
-
-  llvm::append_range(newArgAttrs, *argAttrs);
-  auto newNamedAttr = builder.getNamedAttr(func.getArgAttrsAttrName(),
-                                           builder.getArrayAttr(newArgAttrs));
-  newFuncAttrs.push_back(newNamedAttr);
+/// Propagate argument/results attributes.
+static void propagateArgResAttrs(OpBuilder &builder, bool resultStructType,
+                                 func::FuncOp funcOp,
+                                 LLVM::LLVMFuncOp wrapperFuncOp) {
+  auto argAttrs = funcOp.getArgAttrs();
+  if (!resultStructType) {
+    if (auto resAttrs = funcOp.getAllResultAttrs())
+      wrapperFuncOp.setAllResultAttrs(resAttrs);
+    if (argAttrs)
+      wrapperFuncOp.setAllArgAttrs(*argAttrs);
+  } else {
+    SmallVector<Attribute> argAttributes;
+    // Only modify the argument and result attributes when the result is now
+    // an argument.
+    if (argAttrs) {
+      argAttributes.push_back(builder.getDictionaryAttr({}));
+      argAttributes.append(argAttrs->begin(), argAttrs->end());
+      wrapperFuncOp.setAllArgAttrs(argAttributes);
+    }
+  }
+  if (funcOp.getSymVisibilityAttr())
+    wrapperFuncOp.setSymVisibility(funcOp.getSymVisibilityAttr());
 }
 
 /// Creates an auxiliary function with pointer-to-memref-descriptor-struct
@@ -127,18 +125,14 @@ static void wrapForExternalCallers(OpBuilder &rewriter, Location loc,
   auto [wrapperFuncType, resultStructType] =
       typeConverter.convertFunctionTypeCWrapper(type);
 
-  SmallVector<NamedAttribute, 4> attributes;
-  // Only modify the argument and result attributes when the result is now an
-  // argument.
-  if (resultStructType)
-    prependEmptyArgAttr(rewriter, attributes, funcOp);
-  filterFuncAttributes(
-      funcOp, /*filterArgAndResAttrs=*/static_cast<bool>(resultStructType),
-      attributes);
+  SmallVector<NamedAttribute> attributes;
+  filterFuncAttributes(funcOp, attributes);
+
   auto wrapperFuncOp = rewriter.create<LLVM::LLVMFuncOp>(
       loc, llvm::formatv("_mlir_ciface_{0}", funcOp.getName()).str(),
       wrapperFuncType, LLVM::Linkage::External, /*dsoLocal=*/false,
       /*cconv=*/LLVM::CConv::C, /*comdat=*/nullptr, attributes);
+  propagateArgResAttrs(rewriter, !!resultStructType, funcOp, wrapperFuncOp);
 
   OpBuilder::InsertionGuard guard(rewriter);
   rewriter.setInsertionPointToStart(wrapperFuncOp.addEntryBlock());
@@ -197,19 +191,14 @@ static void wrapExternalFunction(OpBuilder &builder, Location loc,
   assert(wrapperType && "unexpected type conversion failure");
 
   SmallVector<NamedAttribute, 4> attributes;
-  // Only modify the argument and result attributes when the result is now an
-  // argument.
-  if (resultStructType)
-    prependEmptyArgAttr(builder, attributes, funcOp);
-  filterFuncAttributes(
-      funcOp, /*filterArgAndResAttrs=*/static_cast<bool>(resultStructType),
-      attributes);
+  filterFuncAttributes(funcOp, attributes);
 
   // Create the auxiliary function.
   auto wrapperFunc = builder.create<LLVM::LLVMFuncOp>(
       loc, llvm::formatv("_mlir_ciface_{0}", funcOp.getName()).str(),
       wrapperType, LLVM::Linkage::External, /*dsoLocal=*/false,
       /*cconv=*/LLVM::CConv::C, /*comdat=*/nullptr, attributes);
+  propagateArgResAttrs(builder, !!resultStructType, funcOp, wrapperFunc);
 
   // The wrapper that we synthetize here should only be visible in this module.
   newFuncOp.setLinkage(LLVM::Linkage::Private);
@@ -349,21 +338,56 @@ protected:
     if (!llvmType)
       return rewriter.notifyMatchFailure(funcOp, "signature conversion failed");
 
+    // Create an LLVM function, use external linkage by default until MLIR
+    // functions have linkage.
+    LLVM::Linkage linkage = LLVM::Linkage::External;
+    if (funcOp->hasAttr(linkageAttrName)) {
+      auto attr =
+          dyn_cast<mlir::LLVM::LinkageAttr>(funcOp->getAttr(linkageAttrName));
+      if (!attr) {
+        funcOp->emitError() << "Contains " << linkageAttrName
+                            << " attribute not of type LLVM::LinkageAttr";
+        return rewriter.notifyMatchFailure(
+            funcOp, "Contains linkage attribute not of type LLVM::LinkageAttr");
+      }
+      linkage = attr.getLinkage();
+    }
+
+    SmallVector<NamedAttribute, 4> attributes;
+    filterFuncAttributes(funcOp, attributes);
+    auto newFuncOp = rewriter.create<LLVM::LLVMFuncOp>(
+        funcOp.getLoc(), funcOp.getName(), llvmType, linkage,
+        /*dsoLocal=*/false, /*cconv=*/LLVM::CConv::C, /*comdat=*/nullptr,
+        attributes);
+    if (funcOp.getSymVisibilityAttr())
+      newFuncOp.setSymVisibility(funcOp.getSymVisibilityAttr());
+
+    // Create a memory effect attribute corresponding to readnone.
+    StringRef readnoneAttrName = LLVM::LLVMDialect::getReadnoneAttrName();
+    if (funcOp->hasAttr(readnoneAttrName)) {
+      auto attr = funcOp->getAttrOfType<UnitAttr>(readnoneAttrName);
+      if (!attr) {
+        funcOp->emitError() << "Contains " << readnoneAttrName
+                            << " attribute not of type UnitAttr";
+        return rewriter.notifyMatchFailure(
+            funcOp, "Contains readnone attribute not of type UnitAttr");
+      }
+      auto memoryAttr = LLVM::MemoryEffectsAttr::get(
+          rewriter.getContext(),
+          {LLVM::ModRefInfo::NoModRef, LLVM::ModRefInfo::NoModRef,
+           LLVM::ModRefInfo::NoModRef});
+      newFuncOp.setMemoryAttr(memoryAttr);
+    }
+
     // Propagate argument/result attributes to all converted arguments/result
     // obtained after converting a given original argument/result.
-    SmallVector<NamedAttribute, 4> attributes;
-    filterFuncAttributes(funcOp, /*filterArgAndResAttrs=*/true, attributes);
     if (ArrayAttr resAttrDicts = funcOp.getAllResultAttrs()) {
       assert(!resAttrDicts.empty() && "expected array to be non-empty");
-      auto newResAttrDicts =
-          (funcOp.getNumResults() == 1)
-              ? resAttrDicts
-              : rewriter.getArrayAttr(rewriter.getDictionaryAttr({}));
-      attributes.push_back(
-          rewriter.getNamedAttr(funcOp.getResAttrsAttrName(), newResAttrDicts));
+      if (funcOp.getNumResults() == 1)
+        newFuncOp.setAllResultAttrs(resAttrDicts);
     }
     if (ArrayAttr argAttrDicts = funcOp.getAllArgAttrs()) {
-      SmallVector<Attribute, 4> newArgAttrs(
+      SmallVector<Attribute> newArgAttrs(
           cast<LLVM::LLVMFunctionType>(llvmType).getNumParams());
       for (unsigned i = 0, e = funcOp.getNumArguments(); i < e; ++i) {
         // Some LLVM IR attribute have a type attached to them. During FuncOp ->
@@ -413,48 +437,10 @@ protected:
           newArgAttrs[mapping->inputNo + j] =
               DictionaryAttr::get(rewriter.getContext(), {});
       }
-      attributes.push_back(rewriter.getNamedAttr(
-          funcOp.getArgAttrsAttrName(), rewriter.getArrayAttr(newArgAttrs)));
+      if (!newArgAttrs.empty())
+        newFuncOp.setAllArgAttrs(rewriter.getArrayAttr(newArgAttrs));
     }
 
-    // Create an LLVM function, use external linkage by default until MLIR
-    // functions have linkage.
-    LLVM::Linkage linkage = LLVM::Linkage::External;
-    if (funcOp->hasAttr(linkageAttrName)) {
-      auto attr =
-          dyn_cast<mlir::LLVM::LinkageAttr>(funcOp->getAttr(linkageAttrName));
-      if (!attr) {
-        funcOp->emitError() << "Contains " << linkageAttrName
-                            << " attribute not of type LLVM::LinkageAttr";
-        return rewriter.notifyMatchFailure(
-            funcOp, "Contains linkage attribute not of type LLVM::LinkageAttr");
-      }
-      linkage = attr.getLinkage();
-    }
-
-    // Create a memory effect attribute corresponding to readnone.
-    StringRef readnoneAttrName = LLVM::LLVMDialect::getReadnoneAttrName();
-    LLVM::MemoryEffectsAttr memoryAttr = {};
-    if (funcOp->hasAttr(readnoneAttrName)) {
-      auto attr = funcOp->getAttrOfType<UnitAttr>(readnoneAttrName);
-      if (!attr) {
-        funcOp->emitError() << "Contains " << readnoneAttrName
-                            << " attribute not of type UnitAttr";
-        return rewriter.notifyMatchFailure(
-            funcOp, "Contains readnone attribute not of type UnitAttr");
-      }
-      memoryAttr = LLVM::MemoryEffectsAttr::get(rewriter.getContext(),
-                                                {LLVM::ModRefInfo::NoModRef,
-                                                 LLVM::ModRefInfo::NoModRef,
-                                                 LLVM::ModRefInfo::NoModRef});
-    }
-    auto newFuncOp = rewriter.create<LLVM::LLVMFuncOp>(
-        funcOp.getLoc(), funcOp.getName(), llvmType, linkage,
-        /*dsoLocal=*/false, /*cconv=*/LLVM::CConv::C, /*comdat=*/nullptr,
-        attributes);
-    // If the memory attribute was created, add it to the function.
-    if (memoryAttr)
-      newFuncOp.setMemoryAttr(memoryAttr);
     rewriter.inlineRegionBefore(funcOp.getBody(), newFuncOp.getBody(),
                                 newFuncOp.end());
     if (failed(rewriter.convertRegionTypes(&newFuncOp.getBody(), *typeConverter,
@@ -601,19 +587,38 @@ struct CallOpInterfaceLowering : public ConvertOpToLLVMPattern<CallOpType> {
   }
 };
 
-struct CallOpLowering : public CallOpInterfaceLowering<func::CallOp> {
-  using Super::Super;
+class CallOpLowering : public CallOpInterfaceLowering<func::CallOp> {
+public:
+  CallOpLowering(const LLVMTypeConverter &typeConverter,
+                 // Can be nullptr.
+                 const SymbolTable *symbolTable, PatternBenefit benefit = 1)
+      : CallOpInterfaceLowering<func::CallOp>(typeConverter, benefit),
+        symbolTable(symbolTable) {}
 
   LogicalResult
   matchAndRewrite(func::CallOp callOp, OpAdaptor adaptor,
                   ConversionPatternRewriter &rewriter) const override {
     bool useBarePtrCallConv = false;
-    if (Operation *callee = SymbolTable::lookupNearestSymbolFrom(
-            callOp, callOp.getCalleeAttr())) {
-      useBarePtrCallConv = shouldUseBarePtrCallConv(callee, getTypeConverter());
+    if (getTypeConverter()->getOptions().useBarePtrCallConv) {
+      useBarePtrCallConv = true;
+    } else if (symbolTable != nullptr) {
+      // Fast lookup.
+      Operation *callee =
+          symbolTable->lookup(callOp.getCalleeAttr().getValue());
+      useBarePtrCallConv =
+          callee != nullptr && callee->hasAttr(barePtrAttrName);
+    } else {
+      // Warning: This is a linear lookup.
+      Operation *callee =
+          SymbolTable::lookupNearestSymbolFrom(callOp, callOp.getCalleeAttr());
+      useBarePtrCallConv =
+          callee != nullptr && callee->hasAttr(barePtrAttrName);
     }
     return matchAndRewriteImpl(callOp, adaptor, rewriter, useBarePtrCallConv);
   }
+
+private:
+  const SymbolTable *symbolTable = nullptr;
 };
 
 struct CallIndirectOpLowering
@@ -728,16 +733,14 @@ void mlir::populateFuncToLLVMFuncOpConversionPattern(
   patterns.add<FuncOpConversion>(converter);
 }
 
-void mlir::populateFuncToLLVMConversionPatterns(LLVMTypeConverter &converter,
-                                                RewritePatternSet &patterns) {
+void mlir::populateFuncToLLVMConversionPatterns(
+    LLVMTypeConverter &converter, RewritePatternSet &patterns,
+    const SymbolTable *symbolTable) {
   populateFuncToLLVMFuncOpConversionPattern(converter, patterns);
-  // clang-format off
-  patterns.add<
-      CallIndirectOpLowering,
-      CallOpLowering,
-      ConstantOpLowering,
-      ReturnOpLowering>(converter);
-  // clang-format on
+  patterns.add<CallIndirectOpLowering>(converter);
+  patterns.add<CallOpLowering>(converter, symbolTable);
+  patterns.add<ConstantOpLowering>(converter);
+  patterns.add<ReturnOpLowering>(converter);
 }
 
 namespace {
@@ -776,8 +779,15 @@ struct ConvertFuncToLLVMPass
     LLVMTypeConverter typeConverter(&getContext(), options,
                                     &dataLayoutAnalysis);
 
+    std::optional<SymbolTable> optSymbolTable = std::nullopt;
+    const SymbolTable *symbolTable = nullptr;
+    if (!options.useBarePtrCallConv) {
+      optSymbolTable.emplace(m);
+      symbolTable = &optSymbolTable.value();
+    }
+
     RewritePatternSet patterns(&getContext());
-    populateFuncToLLVMConversionPatterns(typeConverter, patterns);
+    populateFuncToLLVMConversionPatterns(typeConverter, patterns, symbolTable);
 
     // TODO: Remove these in favor of their dedicated conversion passes.
     arith::populateArithToLLVMConversionPatterns(typeConverter, patterns);

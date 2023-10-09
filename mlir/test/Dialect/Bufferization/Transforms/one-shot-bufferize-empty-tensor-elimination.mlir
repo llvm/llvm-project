@@ -301,8 +301,21 @@ func.func @regression_multiple_insertion_points(%t1: tensor<?x?xf32>) -> tensor<
 func.func @materialize_in_destination(%t: tensor<5xf32>, %f: f32) -> tensor<5xf32> {
   %0 = tensor.empty() : tensor<5xf32>
   %filled = linalg.fill ins(%f : f32) outs(%0 : tensor<5xf32>) -> tensor<5xf32>
-  %1 = bufferization.materialize_in_destination %filled in %t : tensor<5xf32>
+  %1 = bufferization.materialize_in_destination %filled in %t : (tensor<5xf32>, tensor<5xf32>) -> tensor<5xf32>
   return %1 : tensor<5xf32>
+}
+
+// -----
+
+// CHECK-LABEL: func @materialize_in_destination_buffer(
+//  CHECK-SAME:     %[[m:.*]]: memref<5xf32>,
+//  CHECK-NEXT:   linalg.fill {{.*}} outs(%[[m]]
+//  CHECK-NEXT:   return
+func.func @materialize_in_destination_buffer(%m: memref<5xf32>, %f: f32) {
+  %0 = tensor.empty() : tensor<5xf32>
+  %filled = linalg.fill ins(%f : f32) outs(%0 : tensor<5xf32>) -> tensor<5xf32>
+  bufferization.materialize_in_destination %filled in restrict writable %m : (tensor<5xf32>, memref<5xf32>) -> ()
+  return
 }
 
 // -----
@@ -316,4 +329,15 @@ func.func @linalg_copy(%t: tensor<5xf32>, %f: f32) -> tensor<5xf32> {
   %filled = linalg.fill ins(%f : f32) outs(%0 : tensor<5xf32>) -> tensor<5xf32>
   %1 = linalg.copy ins(%filled : tensor<5xf32>) outs(%t : tensor<5xf32>) -> tensor<5xf32>
   return %1 : tensor<5xf32>
+}
+
+// -----
+
+// CHECK-LABEL: func @linalg_copy_empty(
+// CHECK: %[[ret:.*]] = memref.alloc()
+// CHECK-NEXT: return %[[ret]]
+func.func @linalg_copy_empty() -> tensor<26xi32> {
+  %0 = tensor.empty() : tensor<26xi32>
+  %1 = linalg.copy ins(%0 : tensor<26xi32>) outs(%0 : tensor<26xi32>) -> tensor<26xi32>
+  return %1 : tensor<26xi32>
 }
