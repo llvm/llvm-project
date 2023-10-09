@@ -526,7 +526,8 @@ StringRef ARM::computeDefaultTargetABI(const Triple &TT, StringRef CPU) {
   default:
     if (TT.isOSNetBSD())
       return "apcs-gnu";
-    if (TT.isOSFreeBSD() || TT.isOSOpenBSD() || TT.isOHOSFamily())
+    if (TT.isOSFreeBSD() || TT.isOSOpenBSD() || TT.isOSHaiku() ||
+        TT.isOHOSFamily())
       return "aapcs-linux";
     return "aapcs";
   }
@@ -542,6 +543,7 @@ StringRef ARM::getARMCPUForArch(const llvm::Triple &Triple, StringRef MArch) {
   case llvm::Triple::FreeBSD:
   case llvm::Triple::NetBSD:
   case llvm::Triple::OpenBSD:
+  case llvm::Triple::Haiku:
     if (!MArch.empty() && MArch == "v6")
       return "arm1176jzf-s";
     if (!MArch.empty() && MArch == "v7")
@@ -574,6 +576,8 @@ StringRef ARM::getARMCPUForArch(const llvm::Triple &Triple, StringRef MArch) {
   // If no specific architecture version is requested, return the minimum CPU
   // required by the OS and environment.
   switch (Triple.getOS()) {
+  case llvm::Triple::Haiku:
+    return "arm1176jzf-s";
   case llvm::Triple::NetBSD:
     switch (Triple.getEnvironment()) {
     case llvm::Triple::EABI:
