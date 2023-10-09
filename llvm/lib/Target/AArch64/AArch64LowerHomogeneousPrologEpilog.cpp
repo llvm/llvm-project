@@ -198,62 +198,74 @@ static MachineFunction &createFrameHelperMachineFunction(Module *M,
 }
 
 /// Emit a store-pair instruction for frame-setup.
-/// If Reg2 is AArch64::NoRegister, emit a gap to respect the alignment
-/// for unpaired registers.
+/// If Reg2 is AArch64::NoRegister, emit STR instead.
 static void emitStore(MachineFunction &MF, MachineBasicBlock &MBB,
                       MachineBasicBlock::iterator Pos,
                       const TargetInstrInfo &TII, unsigned Reg1, unsigned Reg2,
                       int Offset, bool IsPreDec) {
   assert(Reg1 != AArch64::NoRegister);
-  if (Reg2 == AArch64::NoRegister) {
-    assert(AArch64::GPR64RegClass.contains(Reg1));
-    Reg2 = Reg1;
-    Reg1 = AArch64::XZR;
-  }
+  const bool IsPaired = Reg2 != AArch64::NoRegister;
   bool IsFloat = AArch64::FPR64RegClass.contains(Reg1);
   assert(!(IsFloat ^ AArch64::FPR64RegClass.contains(Reg2)));
   unsigned Opc;
-  if (IsPreDec)
-    Opc = IsFloat ? AArch64::STPDpre : AArch64::STPXpre;
-  else
-    Opc = IsFloat ? AArch64::STPDi : AArch64::STPXi;
+  if (IsPreDec) {
+    if (IsFloat)
+      Opc = IsPaired ? AArch64::STPDpre : AArch64::STRDpre;
+    else
+      Opc = IsPaired ? AArch64::STPXpre : AArch64::STRXpre;
+  } else {
+    if (IsFloat)
+      Opc = IsPaired ? AArch64::STPDi : AArch64::STRDui;
+    else
+      Opc = IsPaired ? AArch64::STPXi : AArch64::STRXui;
+  }
+  // Fix the implicit scale for non-pair cases.
+  if (!IsPaired)
+    Offset *= 8;
 
   MachineInstrBuilder MIB = BuildMI(MBB, Pos, DebugLoc(), TII.get(Opc));
   if (IsPreDec)
     MIB.addDef(AArch64::SP);
-  MIB.addReg(Reg2)
-      .addReg(Reg1)
+  if (IsPaired)
+    MIB.addReg(Reg2);
+  MIB.addReg(Reg1)
       .addReg(AArch64::SP)
       .addImm(Offset)
       .setMIFlag(MachineInstr::FrameSetup);
 }
 
 /// Emit a load-pair instruction for frame-destroy.
-/// If Reg2 is AArch64::NoRegister, respect the alignment for unpaired
-/// registers by reading the gap into XZR.
+/// If Reg2 is AArch64::NoRegister, emit LTR instead.
 static void emitLoad(MachineFunction &MF, MachineBasicBlock &MBB,
                      MachineBasicBlock::iterator Pos,
                      const TargetInstrInfo &TII, unsigned Reg1, unsigned Reg2,
                      int Offset, bool IsPostDec) {
   assert(Reg1 != AArch64::NoRegister);
-  if (Reg2 == AArch64::NoRegister) {
-    assert(AArch64::GPR64RegClass.contains(Reg1));
-    Reg2 = Reg1;
-    Reg1 = AArch64::XZR;
-  }
+  const bool IsPaired = Reg2 != AArch64::NoRegister;
   bool IsFloat = AArch64::FPR64RegClass.contains(Reg1);
   assert(!(IsFloat ^ AArch64::FPR64RegClass.contains(Reg2)));
   unsigned Opc;
-  if (IsPostDec)
-    Opc = IsFloat ? AArch64::LDPDpost : AArch64::LDPXpost;
-  else
-    Opc = IsFloat ? AArch64::LDPDi : AArch64::LDPXi;
+  if (IsPostDec) {
+    if (IsFloat)
+      Opc = IsPaired ? AArch64::LDPDpost : AArch64::LDRDpost;
+    else
+      Opc = IsPaired ? AArch64::LDPXpost : AArch64::LDRXpost;
+  } else {
+    if (IsFloat)
+      Opc = IsPaired ? AArch64::LDPDi : AArch64::LDRDui;
+    else
+      Opc = IsPaired ? AArch64::LDPXi : AArch64::LDRXui;
+  }
+  // Fix the implicit scale for non-pair cases.
+  if (!IsPaired)
+    Offset *= 8;
 
   MachineInstrBuilder MIB = BuildMI(MBB, Pos, DebugLoc(), TII.get(Opc));
   if (IsPostDec)
     MIB.addDef(AArch64::SP);
-  MIB.addReg(Reg2, getDefRegState(true))
-      .addReg(Reg1, getDefRegState(true))
+  if (IsPaired)
+    MIB.addReg(Reg2, getDefRegState(true));
+  MIB.addReg(Reg1, getDefRegState(true))
       .addReg(AArch64::SP)
       .addImm(Offset)
       .setMIFlag(MachineInstr::FrameDestroy);
