@@ -90,7 +90,7 @@ MLIR_SPARSETENSOR_FOREVERY_V(IMPL_LEXINSERT)
 
 #define IMPL_EXPINSERT(VNAME, V)                                               \
   void SparseTensorStorageBase::expInsert(uint64_t *, V *, bool *, uint64_t *, \
-                                          uint64_t) {                          \
+                                          uint64_t, uint64_t) {                \
     FATAL_PIV("expInsert" #VNAME);                                             \
   }
 MLIR_SPARSETENSOR_FOREVERY_V(IMPL_EXPINSERT)
