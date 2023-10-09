@@ -248,8 +248,9 @@ end subroutine omp_target_device_ptr
  subroutine omp_target_device_addr
    integer, pointer :: a
    !CHECK: %[[VAL_0:.*]] = fir.alloca !fir.box<!fir.ptr<i32>> {bindc_name = "a", uniq_name = "_QFomp_target_device_addrEa"}
-   !CHECK: %[[MAP:.*]] = omp.map_info var_ptr({{.*}})   map_clauses(tofrom) capture(ByRef) -> {{.*}} {name = "a"}
-   !CHECK: omp.target_data map_entries(%[[MAP]] : {{.*}}) use_device_addr(%[[VAL_0]] : !fir.ref<!fir.box<!fir.ptr<i32>>>) {
+   !CHECK: %[[MAP_DESC:.*]] = omp.map_info var_ptr({{.*}})   map_clauses(tofrom) capture(ByRef) -> {{.*}} {name = "a"}
+   !CHECK: %[[MAP_PTR:.*]] = omp.map_info var_ptr({{.*}})   var_ptr_ptr({{.*}}) map_clauses(tofrom) capture(ByRef) -> {{.*}} {name = "a"}
+   !CHECK: omp.target_data map_entries(%[[MAP_DESC]], %[[MAP_PTR]] : {{.*}}) use_device_addr(%[[VAL_0]] : !fir.ref<!fir.box<!fir.ptr<i32>>>) {
    !$omp target data map(tofrom: a) use_device_addr(a)
    !CHECK: ^bb0(%[[VAL_1:.*]]: !fir.ref<!fir.box<!fir.ptr<i32>>>):
    !CHECK: {{.*}} = fir.load %[[VAL_1]] : !fir.ref<!fir.box<!fir.ptr<i32>>>

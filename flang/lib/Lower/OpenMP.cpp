@@ -48,6 +48,9 @@ getOmpObjectSymbol(const Fortran::parser::OmpObject &ompObject) {
                     Fortran::parser::Unwrap<Fortran::parser::ArrayElement>(
                         designator)) {
               sym = GetFirstName(arrayEle->base).symbol;
+            } else if (auto *structComp = Fortran::parser::Unwrap<
+                           Fortran::parser::StructureComponent>(designator)) {
+              sym = structComp->component.symbol;
             } else if (const Fortran::parser::Name *name =
                            Fortran::semantics::getDesignatorNameIfDataRef(
                                designator)) {
@@ -1663,11 +1666,10 @@ bool ClauseProcessor::processLink(
 
 static mlir::omp::MapInfoOp
 createMapInfoOp(fir::FirOpBuilder &builder, mlir::Location loc,
-                mlir::Value baseAddr, std::stringstream &name,
-                mlir::SmallVector<mlir::Value> bounds, uint64_t mapType,
-                mlir::omp::VariableCaptureKind mapCaptureType, bool implicit,
-                mlir::Type retTy) {
-  mlir::Value varPtrPtr;
+                mlir::Value baseAddr, mlir::Value varPtrPtr,
+                const std::string &name, mlir::SmallVector<mlir::Value> bounds,
+                uint64_t mapType, mlir::omp::VariableCaptureKind mapCaptureType,
+                bool implicit, mlir::Type retTy) {
   if (auto boxTy = baseAddr.getType().dyn_cast<fir::BaseBoxType>()) {
     baseAddr = builder.create<fir::BoxAddrOp>(loc, baseAddr);
     retTy = baseAddr.getType();
@@ -1675,7 +1677,7 @@ createMapInfoOp(fir::FirOpBuilder &builder, mlir::Location loc,
 
   mlir::omp::MapInfoOp op =
       builder.create<mlir::omp::MapInfoOp>(loc, retTy, baseAddr);
-  op.setNameAttr(builder.getStringAttr(name.str()));
+  op.setNameAttr(builder.getStringAttr(name));
   op.setImplicit(implicit);
   op.setMapType(mapType);
   op.setMapCaptureType(mapCaptureType);
@@ -1752,11 +1754,82 @@ bool ClauseProcessor::processMap(
                                        semanticsContext, stmtCtx, ompObject,
                                        clauseLocation, asFortran, bounds);
 
+          auto checkIfStructComponent =
+              [](const Fortran::parser::OmpObject &ompObject) {
+                bool isComponent = false;
+                std::visit(
+                    Fortran::common::visitors{
+                        [&](const Fortran::parser::Designator &designator) {
+                          if (auto *structComp = Fortran::parser::Unwrap<
+                                  Fortran::parser::StructureComponent>(
+                                  designator)) {
+                            if (std::holds_alternative<Fortran::parser::Name>(
+                                    structComp->base.u))
+                              isComponent = true;
+                          }
+                        },
+                        [&](const Fortran::parser::Name &name) {}},
+                    ompObject.u);
+
+                return isComponent;
+              };
+
+          // TODO: Currently, it appears there's missing symbol information
+          // and bounds information for allocatables and pointers inside
+          // of derived types. The latter needs some additional support
+          // added to the bounds generation whereas the former appears
+          // that it could be a problem when referring to pointer members
+          // via an OpenMP map clause, for the moment we do not handle
+          // these cases and must emit an error.
+          if (checkIfStructComponent(ompObject) &&
+              Fortran::semantics::IsAllocatableOrPointer(
+                  *getOmpObjectSymbol(ompObject)))
+            TODO(currentLocation,
+                 "pointer members of derived types are currently unmapped");
+
+          if (Fortran::semantics::IsAllocatableOrPointer(
+                  *getOmpObjectSymbol(ompObject))) {
+            // We mimic what will eventually be a structure containing a
+            // pointer mapping for allocatables/pointers/target e.g.:
+            //
+            // !$omp target map(from:in, in%map_ptr)
+            //
+            // ===>
+            //
+            // map_entry varptr(in) ....
+            // map_entry varptr(map_ptr) varptrptr(in) ...
+            //
+            // This is to attempt to keep the lowering of these consistent
+            // with structures containing pointers that are mapped like the
+            // example above, where we break it into the descriptor being the
+            // main "structure" being mapped and the contained pointer the
+            // specific member being referenced. This is of course implicit,
+            // the user just maps the pointer, target or allocatable.
+            mlir::Value descriptor =
+                converter.getSymbolAddress(*getOmpObjectSymbol(ompObject));
+            mapOperands.push_back(createMapInfoOp(
+                firOpBuilder, clauseLocation, descriptor, nullptr,
+                asFortran.str(), mlir::SmallVector<mlir::Value>{},
+                static_cast<std::underlying_type_t<
+                    llvm::omp::OpenMPOffloadMappingFlags>>(mapTypeBits),
+                mlir::omp::VariableCaptureKind::ByRef, false,
+                descriptor.getType()));
+            mapOperands.push_back(createMapInfoOp(
+                firOpBuilder, clauseLocation, baseAddr, descriptor,
+                asFortran.str(), bounds,
+                static_cast<std::underlying_type_t<
+                    llvm::omp::OpenMPOffloadMappingFlags>>(mapTypeBits),
+                mlir::omp::VariableCaptureKind::ByRef, false,
+                baseAddr.getType()));
+            continue;
+          }
+
           // Explicit map captures are captured ByRef by default,
           // optimisation passes may alter this to ByCopy or other capture
           // types to optimise
           mapOperands.push_back(createMapInfoOp(
-              firOpBuilder, clauseLocation, baseAddr, asFortran, bounds,
+              firOpBuilder, clauseLocation, baseAddr, nullptr, asFortran.str(),
+              bounds,
               static_cast<
                   std::underlying_type_t<llvm::omp::OpenMPOffloadMappingFlags>>(
                   mapTypeBits),
