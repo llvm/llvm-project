@@ -266,34 +266,34 @@ declare <64 x i8> @llvm.fshl.v64i8(<64 x i8>, <64 x i8>, <64 x i8>)
 define <64 x i8> @splatconstant_rotr_v64i8(<64 x i8> %a) nounwind {
 ; GFNISSE-LABEL: splatconstant_rotr_v64i8:
 ; GFNISSE:       # %bb.0:
-; GFNISSE-NEXT:    movdqa %xmm0, %xmm4
-; GFNISSE-NEXT:    psrlw $2, %xmm4
-; GFNISSE-NEXT:    movdqa {{.*#+}} xmm5 = [192,192,192,192,192,192,192,192,192,192,192,192,192,192,192,192]
-; GFNISSE-NEXT:    movdqa %xmm5, %xmm6
-; GFNISSE-NEXT:    pandn %xmm4, %xmm6
+; GFNISSE-NEXT:    movdqa %xmm0, %xmm5
+; GFNISSE-NEXT:    psrlw $2, %xmm5
+; GFNISSE-NEXT:    movdqa {{.*#+}} xmm4 = [192,192,192,192,192,192,192,192,192,192,192,192,192,192,192,192]
+; GFNISSE-NEXT:    movdqa %xmm4, %xmm6
+; GFNISSE-NEXT:    pandn %xmm5, %xmm6
 ; GFNISSE-NEXT:    psllw $6, %xmm0
-; GFNISSE-NEXT:    pand %xmm5, %xmm0
+; GFNISSE-NEXT:    pand %xmm4, %xmm0
 ; GFNISSE-NEXT:    por %xmm6, %xmm0
-; GFNISSE-NEXT:    movdqa %xmm1, %xmm4
-; GFNISSE-NEXT:    psrlw $2, %xmm4
-; GFNISSE-NEXT:    movdqa %xmm5, %xmm6
-; GFNISSE-NEXT:    pandn %xmm4, %xmm6
+; GFNISSE-NEXT:    movdqa %xmm1, %xmm5
+; GFNISSE-NEXT:    psrlw $2, %xmm5
+; GFNISSE-NEXT:    movdqa %xmm4, %xmm6
+; GFNISSE-NEXT:    pandn %xmm5, %xmm6
 ; GFNISSE-NEXT:    psllw $6, %xmm1
-; GFNISSE-NEXT:    pand %xmm5, %xmm1
+; GFNISSE-NEXT:    pand %xmm4, %xmm1
 ; GFNISSE-NEXT:    por %xmm6, %xmm1
-; GFNISSE-NEXT:    movdqa %xmm2, %xmm4
-; GFNISSE-NEXT:    psrlw $2, %xmm4
-; GFNISSE-NEXT:    movdqa %xmm5, %xmm6
-; GFNISSE-NEXT:    pandn %xmm4, %xmm6
+; GFNISSE-NEXT:    movdqa %xmm2, %xmm5
+; GFNISSE-NEXT:    psrlw $2, %xmm5
+; GFNISSE-NEXT:    movdqa %xmm4, %xmm6
+; GFNISSE-NEXT:    pandn %xmm5, %xmm6
 ; GFNISSE-NEXT:    psllw $6, %xmm2
-; GFNISSE-NEXT:    pand %xmm5, %xmm2
+; GFNISSE-NEXT:    pand %xmm4, %xmm2
 ; GFNISSE-NEXT:    por %xmm6, %xmm2
-; GFNISSE-NEXT:    movdqa %xmm3, %xmm4
-; GFNISSE-NEXT:    psrlw $2, %xmm4
+; GFNISSE-NEXT:    movdqa %xmm3, %xmm5
+; GFNISSE-NEXT:    psrlw $2, %xmm5
 ; GFNISSE-NEXT:    psllw $6, %xmm3
-; GFNISSE-NEXT:    pand %xmm5, %xmm3
-; GFNISSE-NEXT:    pandn %xmm4, %xmm5
-; GFNISSE-NEXT:    por %xmm5, %xmm3
+; GFNISSE-NEXT:    pand %xmm4, %xmm3
+; GFNISSE-NEXT:    pandn %xmm5, %xmm4
+; GFNISSE-NEXT:    por %xmm4, %xmm3
 ; GFNISSE-NEXT:    retq
 ;
 ; GFNIAVX1-LABEL: splatconstant_rotr_v64i8:

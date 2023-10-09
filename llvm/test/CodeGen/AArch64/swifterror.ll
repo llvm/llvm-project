@@ -1618,7 +1618,7 @@ define swiftcc { i64, i64, i64, i64, i64, i64, i64, i64 } @params_and_return_in_
 ; CHECK-APPLE-LABEL: params_and_return_in_reg:
 ; CHECK-APPLE:       ; %bb.0:
 ; CHECK-APPLE-NEXT:    sub sp, sp, #128
-; CHECK-APPLE-NEXT:    stp x21, x28, [sp, #24] ; 16-byte Folded Spill
+; CHECK-APPLE-NEXT:    stp x20, x28, [sp, #24] ; 16-byte Folded Spill
 ; CHECK-APPLE-NEXT:    stp x27, x26, [sp, #48] ; 16-byte Folded Spill
 ; CHECK-APPLE-NEXT:    stp x25, x24, [sp, #64] ; 16-byte Folded Spill
 ; CHECK-APPLE-NEXT:    stp x23, x22, [sp, #80] ; 16-byte Folded Spill
@@ -1637,8 +1637,8 @@ define swiftcc { i64, i64, i64, i64, i64, i64, i64, i64 } @params_and_return_in_
 ; CHECK-APPLE-NEXT:    .cfi_offset w26, -72
 ; CHECK-APPLE-NEXT:    .cfi_offset w27, -80
 ; CHECK-APPLE-NEXT:    .cfi_offset w28, -96
-; CHECK-APPLE-NEXT:    str x20, [sp, #8] ; 8-byte Folded Spill
-; CHECK-APPLE-NEXT:    mov x23, x7
+; CHECK-APPLE-NEXT:    mov x23, x21
+; CHECK-APPLE-NEXT:    str x7, [sp, #16] ; 8-byte Folded Spill
 ; CHECK-APPLE-NEXT:    mov x24, x6
 ; CHECK-APPLE-NEXT:    mov x25, x5
 ; CHECK-APPLE-NEXT:    mov x26, x4
@@ -1657,7 +1657,7 @@ define swiftcc { i64, i64, i64, i64, i64, i64, i64, i64 } @params_and_return_in_
 ; CHECK-APPLE-NEXT:    mov x20, xzr
 ; CHECK-APPLE-NEXT:    mov x21, xzr
 ; CHECK-APPLE-NEXT:    bl _params_in_reg2
-; CHECK-APPLE-NEXT:    str x21, [sp, #16] ; 8-byte Folded Spill
+; CHECK-APPLE-NEXT:    str x21, [sp, #8] ; 8-byte Folded Spill
 ; CHECK-APPLE-NEXT:    mov x0, x22
 ; CHECK-APPLE-NEXT:    mov x1, x19
 ; CHECK-APPLE-NEXT:    mov x2, x28
@@ -1665,18 +1665,17 @@ define swiftcc { i64, i64, i64, i64, i64, i64, i64, i64 } @params_and_return_in_
 ; CHECK-APPLE-NEXT:    mov x4, x26
 ; CHECK-APPLE-NEXT:    mov x5, x25
 ; CHECK-APPLE-NEXT:    mov x6, x24
-; CHECK-APPLE-NEXT:    mov x7, x23
-; CHECK-APPLE-NEXT:    ldr x20, [sp, #8] ; 8-byte Folded Reload
-; CHECK-APPLE-NEXT:    ldr x21, [sp, #24] ; 8-byte Folded Reload
+; CHECK-APPLE-NEXT:    ldp x7, x20, [sp, #16] ; 16-byte Folded Reload
+; CHECK-APPLE-NEXT:    mov x21, x23
 ; CHECK-APPLE-NEXT:    bl _params_and_return_in_reg2
 ; CHECK-APPLE-NEXT:    mov x19, x0
 ; CHECK-APPLE-NEXT:    mov x22, x1
-; CHECK-APPLE-NEXT:    mov x23, x2
-; CHECK-APPLE-NEXT:    mov x24, x3
-; CHECK-APPLE-NEXT:    mov x25, x4
-; CHECK-APPLE-NEXT:    mov x26, x5
-; CHECK-APPLE-NEXT:    mov x27, x6
-; CHECK-APPLE-NEXT:    mov x28, x7
+; CHECK-APPLE-NEXT:    mov x24, x2
+; CHECK-APPLE-NEXT:    mov x25, x3
+; CHECK-APPLE-NEXT:    mov x26, x4
+; CHECK-APPLE-NEXT:    mov x27, x5
+; CHECK-APPLE-NEXT:    mov x28, x6
+; CHECK-APPLE-NEXT:    mov x23, x7
 ; CHECK-APPLE-NEXT:    str x21, [sp, #24] ; 8-byte Folded Spill
 ; CHECK-APPLE-NEXT:    mov w0, #1 ; =0x1
 ; CHECK-APPLE-NEXT:    mov w1, #2 ; =0x2
@@ -1687,16 +1686,16 @@ define swiftcc { i64, i64, i64, i64, i64, i64, i64, i64 } @params_and_return_in_
 ; CHECK-APPLE-NEXT:    mov w6, #7 ; =0x7
 ; CHECK-APPLE-NEXT:    mov w7, #8 ; =0x8
 ; CHECK-APPLE-NEXT:    mov x20, xzr
-; CHECK-APPLE-NEXT:    ldr x21, [sp, #16] ; 8-byte Folded Reload
+; CHECK-APPLE-NEXT:    ldr x21, [sp, #8] ; 8-byte Folded Reload
 ; CHECK-APPLE-NEXT:    bl _params_in_reg2
 ; CHECK-APPLE-NEXT:    mov x0, x19
 ; CHECK-APPLE-NEXT:    mov x1, x22
-; CHECK-APPLE-NEXT:    mov x2, x23
-; CHECK-APPLE-NEXT:    mov x3, x24
-; CHECK-APPLE-NEXT:    mov x4, x25
-; CHECK-APPLE-NEXT:    mov x5, x26
-; CHECK-APPLE-NEXT:    mov x6, x27
-; CHECK-APPLE-NEXT:    mov x7, x28
+; CHECK-APPLE-NEXT:    mov x2, x24
+; CHECK-APPLE-NEXT:    mov x3, x25
+; CHECK-APPLE-NEXT:    mov x4, x26
+; CHECK-APPLE-NEXT:    mov x5, x27
+; CHECK-APPLE-NEXT:    mov x6, x28
+; CHECK-APPLE-NEXT:    mov x7, x23
 ; CHECK-APPLE-NEXT:    ldp x21, x28, [sp, #24] ; 16-byte Folded Reload
 ; CHECK-APPLE-NEXT:    ldp x29, x30, [sp, #112] ; 16-byte Folded Reload
 ; CHECK-APPLE-NEXT:    ldp x20, x19, [sp, #96] ; 16-byte Folded Reload

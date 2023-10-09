@@ -80,119 +80,119 @@ define void @zip_v32i16(ptr %a, ptr %b) {
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    sub sp, sp, #64
 ; CHECK-NEXT:    .cfi_def_cfa_offset 64
-; CHECK-NEXT:    ldp q2, q4, [x1]
-; CHECK-NEXT:    ldp q0, q5, [x0]
-; CHECK-NEXT:    ldp q1, q6, [x0, #32]
-; CHECK-NEXT:    mov z16.h, z4.h[7]
-; CHECK-NEXT:    mov z18.h, z4.h[6]
-; CHECK-NEXT:    mov z17.h, z5.h[7]
-; CHECK-NEXT:    ldp q3, q7, [x1, #32]
-; CHECK-NEXT:    mov z19.h, z5.h[6]
+; CHECK-NEXT:    ldp q1, q3, [x1]
+; CHECK-NEXT:    ldp q0, q4, [x0]
+; CHECK-NEXT:    ldp q2, q6, [x0, #32]
+; CHECK-NEXT:    mov z16.h, z3.h[7]
+; CHECK-NEXT:    mov z18.h, z3.h[6]
+; CHECK-NEXT:    mov z17.h, z4.h[7]
+; CHECK-NEXT:    ldp q5, q7, [x1, #32]
+; CHECK-NEXT:    mov z19.h, z4.h[6]
 ; CHECK-NEXT:    fmov w8, s16
-; CHECK-NEXT:    mov z16.h, z4.h[5]
+; CHECK-NEXT:    mov z16.h, z3.h[5]
 ; CHECK-NEXT:    fmov w9, s17
-; CHECK-NEXT:    mov z17.h, z5.h[5]
+; CHECK-NEXT:    mov z17.h, z4.h[5]
+; CHECK-NEXT:    mov z20.h, z7.h[6]
 ; CHECK-NEXT:    strh w8, [sp, #30]
 ; CHECK-NEXT:    fmov w8, s18
-; CHECK-NEXT:    mov z18.h, z4.h[4]
+; CHECK-NEXT:    mov z18.h, z3.h[4]
 ; CHECK-NEXT:    strh w9, [sp, #28]
 ; CHECK-NEXT:    fmov w9, s19
-; CHECK-NEXT:    mov z19.h, z7.h[6]
-; CHECK-NEXT:    zip1 z4.h, z5.h, z4.h
+; CHECK-NEXT:    mov z19.h, z6.h[7]
+; CHECK-NEXT:    zip1 z3.h, z4.h, z3.h
 ; CHECK-NEXT:    strh w8, [sp, #26]
 ; CHECK-NEXT:    fmov w8, s16
-; CHECK-NEXT:    mov z16.h, z5.h[4]
+; CHECK-NEXT:    mov z16.h, z4.h[4]
 ; CHECK-NEXT:    strh w9, [sp, #24]
-; CHECK-NEXT:    zip1 z5.h, z6.h, z7.h
+; CHECK-NEXT:    zip1 z4.h, z6.h, z7.h
 ; CHECK-NEXT:    strh w8, [sp, #22]
 ; CHECK-NEXT:    fmov w8, s17
-; CHECK-NEXT:    mov z17.h, z2.h[7]
+; CHECK-NEXT:    mov z17.h, z1.h[7]
+; CHECK-NEXT:    add z3.h, z3.h, z4.h
 ; CHECK-NEXT:    strh w8, [sp, #20]
 ; CHECK-NEXT:    fmov w8, s18
 ; CHECK-NEXT:    mov z18.h, z0.h[7]
 ; CHECK-NEXT:    strh w8, [sp, #18]
 ; CHECK-NEXT:    fmov w8, s16
-; CHECK-NEXT:    mov z16.h, z2.h[6]
+; CHECK-NEXT:    mov z16.h, z1.h[6]
 ; CHECK-NEXT:    strh w8, [sp, #16]
 ; CHECK-NEXT:    fmov w8, s17
 ; CHECK-NEXT:    mov z17.h, z0.h[6]
 ; CHECK-NEXT:    strh w8, [sp, #62]
 ; CHECK-NEXT:    fmov w8, s18
-; CHECK-NEXT:    mov z18.h, z2.h[5]
+; CHECK-NEXT:    mov z18.h, z1.h[5]
 ; CHECK-NEXT:    strh w8, [sp, #60]
 ; CHECK-NEXT:    fmov w8, s16
 ; CHECK-NEXT:    mov z16.h, z0.h[5]
 ; CHECK-NEXT:    strh w8, [sp, #58]
 ; CHECK-NEXT:    fmov w8, s17
-; CHECK-NEXT:    mov z17.h, z2.h[4]
+; CHECK-NEXT:    mov z17.h, z1.h[4]
 ; CHECK-NEXT:    strh w8, [sp, #56]
 ; CHECK-NEXT:    fmov w8, s18
 ; CHECK-NEXT:    mov z18.h, z0.h[4]
-; CHECK-NEXT:    zip1 z0.h, z0.h, z2.h
+; CHECK-NEXT:    zip1 z0.h, z0.h, z1.h
+; CHECK-NEXT:    zip1 z1.h, z2.h, z5.h
 ; CHECK-NEXT:    strh w8, [sp, #54]
 ; CHECK-NEXT:    fmov w8, s16
-; CHECK-NEXT:    mov z16.h, z7.h[7]
+; CHECK-NEXT:    ldr q16, [sp, #16]
+; CHECK-NEXT:    add z0.h, z0.h, z1.h
 ; CHECK-NEXT:    strh w8, [sp, #52]
 ; CHECK-NEXT:    fmov w8, s17
-; CHECK-NEXT:    mov z17.h, z6.h[7]
 ; CHECK-NEXT:    strh w8, [sp, #50]
 ; CHECK-NEXT:    fmov w8, s18
-; CHECK-NEXT:    ldr q18, [sp, #16]
+; CHECK-NEXT:    mov z18.h, z7.h[7]
 ; CHECK-NEXT:    strh w8, [sp, #48]
-; CHECK-NEXT:    fmov w8, s16
-; CHECK-NEXT:    mov z16.h, z6.h[6]
-; CHECK-NEXT:    ldr q20, [sp, #48]
+; CHECK-NEXT:    fmov w8, s18
+; CHECK-NEXT:    mov z18.h, z6.h[6]
+; CHECK-NEXT:    ldr q17, [sp, #48]
 ; CHECK-NEXT:    strh w8, [sp, #46]
-; CHECK-NEXT:    fmov w8, s17
-; CHECK-NEXT:    mov z17.h, z7.h[5]
+; CHECK-NEXT:    fmov w8, s19
+; CHECK-NEXT:    mov z19.h, z7.h[5]
 ; CHECK-NEXT:    strh w8, [sp, #44]
-; CHECK-NEXT:    fmov w8, s19
-; CHECK-NEXT:    mov z19.h, z6.h[5]
+; CHECK-NEXT:    fmov w8, s20
+; CHECK-NEXT:    mov z20.h, z6.h[5]
 ; CHECK-NEXT:    strh w8, [sp, #42]
-; CHECK-NEXT:    fmov w8, s16
-; CHECK-NEXT:    mov z16.h, z7.h[4]
+; CHECK-NEXT:    fmov w8, s18
+; CHECK-NEXT:    mov z18.h, z7.h[4]
 ; CHECK-NEXT:    strh w8, [sp, #40]
-; CHECK-NEXT:    fmov w8, s17
-; CHECK-NEXT:    mov z17.h, z6.h[4]
+; CHECK-NEXT:    fmov w8, s19
+; CHECK-NEXT:    mov z19.h, z6.h[4]
 ; CHECK-NEXT:    strh w8, [sp, #38]
-; CHECK-NEXT:    fmov w8, s19
-; CHECK-NEXT:    mov z19.h, z3.h[7]
+; CHECK-NEXT:    fmov w8, s20
+; CHECK-NEXT:    mov z20.h, z5.h[7]
 ; CHECK-NEXT:    strh w8, [sp, #36]
-; CHECK-NEXT:    fmov w8, s16
-; CHECK-NEXT:    mov z16.h, z1.h[7]
+; CHECK-NEXT:    fmov w8, s18
+; CHECK-NEXT:    mov z18.h, z2.h[7]
 ; CHECK-NEXT:    strh w8, [sp, #34]
-; CHECK-NEXT:    fmov w8, s17
-; CHECK-NEXT:    mov z17.h, z3.h[6]
+; CHECK-NEXT:    fmov w8, s19
+; CHECK-NEXT:    mov z19.h, z5.h[6]
 ; CHECK-NEXT:    strh w8, [sp, #32]
-; CHECK-NEXT:    fmov w8, s19
-; CHECK-NEXT:    mov z19.h, z1.h[6]
-; CHECK-NEXT:    ldr q2, [sp, #32]
+; CHECK-NEXT:    fmov w8, s20
+; CHECK-NEXT:    mov z20.h, z2.h[6]
 ; CHECK-NEXT:    strh w8, [sp, #14]
-; CHECK-NEXT:    fmov w8, s16
-; CHECK-NEXT:    mov z16.h, z3.h[5]
-; CHECK-NEXT:    add z2.h, z18.h, z2.h
+; CHECK-NEXT:    fmov w8, s18
+; CHECK-NEXT:    mov z18.h, z5.h[5]
 ; CHECK-NEXT:    strh w8, [sp, #12]
-; CHECK-NEXT:    fmov w8, s17
-; CHECK-NEXT:    mov z17.h, z1.h[5]
+; CHECK-NEXT:    fmov w8, s19
+; CHECK-NEXT:    mov z19.h, z2.h[5]
 ; CHECK-NEXT:    strh w8, [sp, #10]
-; CHECK-NEXT:    fmov w8, s19
-; CHECK-NEXT:    mov z19.h, z3.h[4]
-; CHECK-NEXT:    fmov w9, s17
+; CHECK-NEXT:    fmov w8, s20
+; CHECK-NEXT:    mov z20.h, z5.h[4]
+; CHECK-NEXT:    fmov w9, s19
 ; CHECK-NEXT:    strh w8, [sp, #8]
-; CHECK-NEXT:    fmov w8, s16
-; CHECK-NEXT:    mov z16.h, z1.h[4]
-; CHECK-NEXT:    zip1 z1.h, z1.h, z3.h
+; CHECK-NEXT:    fmov w8, s18
+; CHECK-NEXT:    mov z18.h, z2.h[4]
 ; CHECK-NEXT:    strh w9, [sp, #4]
-; CHECK-NEXT:    add z3.h, z4.h, z5.h
+; CHECK-NEXT:    ldr q2, [sp, #32]
 ; CHECK-NEXT:    strh w8, [sp, #6]
-; CHECK-NEXT:    fmov w8, s19
-; CHECK-NEXT:    add z0.h, z0.h, z1.h
+; CHECK-NEXT:    fmov w8, s20
+; CHECK-NEXT:    add z2.h, z16.h, z2.h
 ; CHECK-NEXT:    strh w8, [sp, #2]
-; CHECK-NEXT:    fmov w8, s16
+; CHECK-NEXT:    fmov w8, s18
 ; CHECK-NEXT:    strh w8, [sp]
 ; CHECK-NEXT:    ldr q4, [sp]
 ; CHECK-NEXT:    stp q3, q2, [x0, #32]
-; CHECK-NEXT:    add z1.h, z20.h, z4.h
+; CHECK-NEXT:    add z1.h, z17.h, z4.h
 ; CHECK-NEXT:    stp q0, q1, [x0]
 ; CHECK-NEXT:    add sp, sp, #64
 ; CHECK-NEXT:    ret
@@ -956,20 +956,22 @@ define void @uzp_v16i16(ptr %a, ptr %b) #0{
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    sub sp, sp, #64
 ; CHECK-NEXT:    .cfi_def_cfa_offset 64
-; CHECK-NEXT:    ldp q3, q2, [x0]
+; CHECK-NEXT:    ldp q2, q3, [x0]
 ; CHECK-NEXT:    ldp q0, q1, [x1]
-; CHECK-NEXT:    mov z4.h, z2.h[6]
-; CHECK-NEXT:    fmov w8, s2
-; CHECK-NEXT:    mov z6.h, z2.h[2]
-; CHECK-NEXT:    mov z5.h, z2.h[4]
-; CHECK-NEXT:    fmov w9, s3
-; CHECK-NEXT:    mov z7.h, z3.h[6]
+; CHECK-NEXT:    mov z4.h, z3.h[6]
+; CHECK-NEXT:    fmov w8, s3
+; CHECK-NEXT:    mov z6.h, z3.h[2]
+; CHECK-NEXT:    mov z5.h, z3.h[4]
+; CHECK-NEXT:    fmov w9, s2
+; CHECK-NEXT:    mov z7.h, z2.h[6]
+; CHECK-NEXT:    mov z17.h, z2.h[7]
+; CHECK-NEXT:    mov z16.h, z3.h[1]
 ; CHECK-NEXT:    strh w8, [sp, #40]
 ; CHECK-NEXT:    fmov w8, s4
-; CHECK-NEXT:    mov z4.h, z3.h[4]
+; CHECK-NEXT:    mov z4.h, z2.h[4]
 ; CHECK-NEXT:    strh w9, [sp, #32]
 ; CHECK-NEXT:    fmov w9, s5
-; CHECK-NEXT:    mov z5.h, z3.h[2]
+; CHECK-NEXT:    mov z5.h, z2.h[2]
 ; CHECK-NEXT:    strh w8, [sp, #46]
 ; CHECK-NEXT:    fmov w8, s6
 ; CHECK-NEXT:    mov z6.h, z1.h[2]
@@ -980,12 +982,13 @@ define void @uzp_v16i16(ptr %a, ptr %b) #0{
 ; CHECK-NEXT:    fmov w8, s4
 ; CHECK-NEXT:    mov z4.h, z1.h[6]
 ; CHECK-NEXT:    strh w9, [sp, #38]
+; CHECK-NEXT:    fmov w9, s16
 ; CHECK-NEXT:    strh w8, [sp, #36]
 ; CHECK-NEXT:    fmov w8, s5
 ; CHECK-NEXT:    mov z5.h, z1.h[4]
+; CHECK-NEXT:    strh w9, [sp, #56]
 ; CHECK-NEXT:    strh w8, [sp, #34]
 ; CHECK-NEXT:    fmov w8, s1
-; CHECK-NEXT:    ldr q16, [sp, #32]
 ; CHECK-NEXT:    strh w8, [sp, #8]
 ; CHECK-NEXT:    fmov w8, s0
 ; CHECK-NEXT:    strh w8, [sp]
@@ -996,66 +999,63 @@ define void @uzp_v16i16(ptr %a, ptr %b) #0{
 ; CHECK-NEXT:    mov z5.h, z0.h[2]
 ; CHECK-NEXT:    strh w8, [sp, #12]
 ; CHECK-NEXT:    fmov w8, s6
-; CHECK-NEXT:    mov z6.h, z2.h[7]
+; CHECK-NEXT:    mov z6.h, z3.h[7]
 ; CHECK-NEXT:    strh w8, [sp, #10]
 ; CHECK-NEXT:    fmov w8, s7
-; CHECK-NEXT:    mov z7.h, z3.h[7]
+; CHECK-NEXT:    mov z7.h, z3.h[5]
 ; CHECK-NEXT:    strh w8, [sp, #6]
 ; CHECK-NEXT:    fmov w8, s4
-; CHECK-NEXT:    mov z4.h, z2.h[5]
 ; CHECK-NEXT:    strh w8, [sp, #4]
+; CHECK-NEXT:    fmov w8, s5
+; CHECK-NEXT:    mov z5.h, z3.h[3]
+; CHECK-NEXT:    ldr q3, [sp, #32]
+; CHECK-NEXT:    strh w8, [sp, #2]
+; CHECK-NEXT:    fmov w8, s6
+; CHECK-NEXT:    mov z6.h, z2.h[5]
+; CHECK-NEXT:    ldr q4, [sp]
+; CHECK-NEXT:    strh w8, [sp, #62]
+; CHECK-NEXT:    fmov w8, s7
+; CHECK-NEXT:    mov z7.h, z1.h[7]
+; CHECK-NEXT:    strh w8, [sp, #60]
 ; CHECK-NEXT:    fmov w8, s5
 ; CHECK-NEXT:    mov z5.h, z2.h[3]
 ; CHECK-NEXT:    mov z2.h, z2.h[1]
-; CHECK-NEXT:    strh w8, [sp, #2]
-; CHECK-NEXT:    fmov w8, s6
-; CHECK-NEXT:    fmov w9, s2
-; CHECK-NEXT:    mov z2.h, z3.h[1]
-; CHECK-NEXT:    ldr q6, [sp]
-; CHECK-NEXT:    strh w8, [sp, #62]
-; CHECK-NEXT:    fmov w8, s4
-; CHECK-NEXT:    mov z4.h, z3.h[5]
-; CHECK-NEXT:    strh w9, [sp, #56]
+; CHECK-NEXT:    strh w8, [sp, #58]
+; CHECK-NEXT:    fmov w8, s17
 ; CHECK-NEXT:    fmov w9, s2
 ; CHECK-NEXT:    mov z2.h, z0.h[7]
-; CHECK-NEXT:    strh w8, [sp, #60]
-; CHECK-NEXT:    fmov w8, s5
-; CHECK-NEXT:    mov z5.h, z3.h[3]
-; CHECK-NEXT:    mov z3.h, z1.h[7]
-; CHECK-NEXT:    strh w9, [sp, #48]
-; CHECK-NEXT:    strh w8, [sp, #58]
-; CHECK-NEXT:    fmov w8, s7
 ; CHECK-NEXT:    strh w8, [sp, #54]
-; CHECK-NEXT:    fmov w8, s4
-; CHECK-NEXT:    mov z4.h, z1.h[5]
+; CHECK-NEXT:    fmov w8, s6
+; CHECK-NEXT:    mov z6.h, z1.h[5]
+; CHECK-NEXT:    strh w9, [sp, #48]
 ; CHECK-NEXT:    strh w8, [sp, #52]
 ; CHECK-NEXT:    fmov w8, s5
 ; CHECK-NEXT:    mov z5.h, z1.h[3]
 ; CHECK-NEXT:    mov z1.h, z1.h[1]
 ; CHECK-NEXT:    strh w8, [sp, #50]
-; CHECK-NEXT:    fmov w8, s3
-; CHECK-NEXT:    mov z3.h, z0.h[5]
+; CHECK-NEXT:    fmov w8, s7
 ; CHECK-NEXT:    strh w8, [sp, #30]
-; CHECK-NEXT:    fmov w8, s4
-; CHECK-NEXT:    mov z4.h, z0.h[3]
-; CHECK-NEXT:    mov z0.h, z0.h[1]
+; CHECK-NEXT:    fmov w8, s6
+; CHECK-NEXT:    mov z6.h, z0.h[5]
 ; CHECK-NEXT:    strh w8, [sp, #28]
 ; CHECK-NEXT:    fmov w8, s5
+; CHECK-NEXT:    mov z5.h, z0.h[3]
+; CHECK-NEXT:    mov z0.h, z0.h[1]
 ; CHECK-NEXT:    strh w8, [sp, #26]
 ; CHECK-NEXT:    fmov w8, s1
 ; CHECK-NEXT:    strh w8, [sp, #24]
 ; CHECK-NEXT:    fmov w8, s2
 ; CHECK-NEXT:    strh w8, [sp, #22]
-; CHECK-NEXT:    fmov w8, s3
+; CHECK-NEXT:    fmov w8, s6
 ; CHECK-NEXT:    strh w8, [sp, #20]
-; CHECK-NEXT:    fmov w8, s4
+; CHECK-NEXT:    fmov w8, s5
 ; CHECK-NEXT:    strh w8, [sp, #18]
 ; CHECK-NEXT:    fmov w8, s0
 ; CHECK-NEXT:    ldr q0, [sp, #48]
-; CHECK-NEXT:    add z0.h, z16.h, z0.h
+; CHECK-NEXT:    add z0.h, z3.h, z0.h
 ; CHECK-NEXT:    strh w8, [sp, #16]
 ; CHECK-NEXT:    ldr q1, [sp, #16]
-; CHECK-NEXT:    add z1.h, z6.h, z1.h
+; CHECK-NEXT:    add z1.h, z4.h, z1.h
 ; CHECK-NEXT:    stp q0, q1, [x0]
 ; CHECK-NEXT:    add sp, sp, #64
 ; CHECK-NEXT:    ret
@@ -1133,45 +1133,45 @@ define void @uzp_v8i16(ptr %a, ptr %b) #0{
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    sub sp, sp, #32
 ; CHECK-NEXT:    .cfi_def_cfa_offset 32
-; CHECK-NEXT:    ldr q0, [x1]
-; CHECK-NEXT:    ldr q1, [x0]
-; CHECK-NEXT:    mov z2.h, z0.h[6]
-; CHECK-NEXT:    fmov w8, s0
-; CHECK-NEXT:    mov z4.h, z0.h[2]
-; CHECK-NEXT:    mov z6.h, z1.h[4]
-; CHECK-NEXT:    mov z3.h, z0.h[4]
-; CHECK-NEXT:    fmov w9, s1
-; CHECK-NEXT:    mov z5.h, z1.h[6]
+; CHECK-NEXT:    ldr q1, [x1]
+; CHECK-NEXT:    ldr q0, [x0]
+; CHECK-NEXT:    mov z2.h, z1.h[6]
+; CHECK-NEXT:    fmov w8, s1
+; CHECK-NEXT:    mov z4.h, z1.h[2]
+; CHECK-NEXT:    mov z6.h, z0.h[4]
+; CHECK-NEXT:    mov z3.h, z1.h[4]
+; CHECK-NEXT:    fmov w9, s0
+; CHECK-NEXT:    mov z5.h, z0.h[6]
 ; CHECK-NEXT:    strh w8, [sp, #8]
 ; CHECK-NEXT:    fmov w8, s2
-; CHECK-NEXT:    mov z2.h, z1.h[2]
+; CHECK-NEXT:    mov z2.h, z0.h[2]
 ; CHECK-NEXT:    strh w9, [sp]
 ; CHECK-NEXT:    fmov w9, s3
-; CHECK-NEXT:    mov z3.h, z0.h[7]
+; CHECK-NEXT:    mov z3.h, z1.h[7]
 ; CHECK-NEXT:    strh w8, [sp, #14]
 ; CHECK-NEXT:    fmov w8, s4
-; CHECK-NEXT:    mov z4.h, z0.h[5]
+; CHECK-NEXT:    mov z4.h, z1.h[5]
 ; CHECK-NEXT:    strh w9, [sp, #12]
 ; CHECK-NEXT:    fmov w9, s5
-; CHECK-NEXT:    mov z5.h, z0.h[3]
-; CHECK-NEXT:    mov z0.h, z0.h[1]
+; CHECK-NEXT:    mov z5.h, z1.h[3]
+; CHECK-NEXT:    mov z1.h, z1.h[1]
 ; CHECK-NEXT:    strh w8, [sp, #10]
 ; CHECK-NEXT:    fmov w8, s6
 ; CHECK-NEXT:    strh w9, [sp, #6]
-; CHECK-NEXT:    fmov w9, s0
-; CHECK-NEXT:    mov z0.h, z1.h[1]
+; CHECK-NEXT:    fmov w9, s1
 ; CHECK-NEXT:    strh w8, [sp, #4]
 ; CHECK-NEXT:    fmov w8, s2
-; CHECK-NEXT:    mov z2.h, z1.h[7]
+; CHECK-NEXT:    mov z2.h, z0.h[7]
 ; CHECK-NEXT:    strh w9, [sp, #24]
 ; CHECK-NEXT:    strh w8, [sp, #2]
 ; CHECK-NEXT:    fmov w8, s3
 ; CHECK-NEXT:    strh w8, [sp, #30]
 ; CHECK-NEXT:    fmov w8, s4
-; CHECK-NEXT:    mov z4.h, z1.h[5]
+; CHECK-NEXT:    mov z4.h, z0.h[5]
 ; CHECK-NEXT:    strh w8, [sp, #28]
 ; CHECK-NEXT:    fmov w8, s5
-; CHECK-NEXT:    mov z5.h, z1.h[3]
+; CHECK-NEXT:    mov z5.h, z0.h[3]
+; CHECK-NEXT:    mov z0.h, z0.h[1]
 ; CHECK-NEXT:    strh w8, [sp, #26]
 ; CHECK-NEXT:    fmov w8, s2
 ; CHECK-NEXT:    strh w8, [sp, #22]

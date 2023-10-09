@@ -110,17 +110,17 @@ define <2 x double> @pow_v2f64_one_fourth_not_enough_fmf(<2 x double> %x) nounwi
 ; CHECK-LABEL: pow_v2f64_one_fourth_not_enough_fmf:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    sub sp, sp, #48
-; CHECK-NEXT:    str q0, [sp, #16] // 16-byte Folded Spill
+; CHECK-NEXT:    str q0, [sp] // 16-byte Folded Spill
 ; CHECK-NEXT:    mov d0, v0.d[1]
 ; CHECK-NEXT:    fmov d1, #0.25000000
 ; CHECK-NEXT:    str x30, [sp, #32] // 8-byte Folded Spill
 ; CHECK-NEXT:    bl pow
 ; CHECK-NEXT:    fmov d1, #0.25000000
-; CHECK-NEXT:    str q0, [sp] // 16-byte Folded Spill
-; CHECK-NEXT:    ldr q0, [sp, #16] // 16-byte Folded Reload
+; CHECK-NEXT:    str q0, [sp, #16] // 16-byte Folded Spill
+; CHECK-NEXT:    ldr q0, [sp] // 16-byte Folded Reload
 ; CHECK-NEXT:    // kill: def $d0 killed $d0 killed $q0
 ; CHECK-NEXT:    bl pow
-; CHECK-NEXT:    ldr q1, [sp] // 16-byte Folded Reload
+; CHECK-NEXT:    ldr q1, [sp, #16] // 16-byte Folded Reload
 ; CHECK-NEXT:    // kill: def $d0 killed $d0 def $q0
 ; CHECK-NEXT:    ldr x30, [sp, #32] // 8-byte Folded Reload
 ; CHECK-NEXT:    mov v0.d[1], v1.d[0]

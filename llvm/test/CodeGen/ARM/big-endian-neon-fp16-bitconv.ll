@@ -500,15 +500,14 @@ define void @conv_v8f16_to_i128( <8 x half> %a, ptr %store ) {
 ; CHECK-NEXT:    vrev64.16 q8, q8
 ; CHECK-NEXT:    vadd.f16 q8, q9, q8
 ; CHECK-NEXT:    vrev32.16 q8, q8
-; CHECK-NEXT:    vmov r1, r2, d17
-; CHECK-NEXT:    vmov r12, r3, d16
+; CHECK-NEXT:    vmov r12, r2, d17
+; CHECK-NEXT:    vmov r3, r1, d16
 ; CHECK-NEXT:    subs lr, r2, #1
-; CHECK-NEXT:    str lr, [r0, #12]
+; CHECK-NEXT:    sbcs r2, r12, #0
 ; CHECK-NEXT:    sbcs r1, r1, #0
-; CHECK-NEXT:    str r1, [r0, #8]
-; CHECK-NEXT:    sbcs r3, r3, #0
-; CHECK-NEXT:    sbc r2, r12, #0
-; CHECK-NEXT:    stm r0, {r2, r3}
+; CHECK-NEXT:    sbc r3, r3, #0
+; CHECK-NEXT:    str r3, [r0]
+; CHECK-NEXT:    stmib r0, {r1, r2, lr}
 ; CHECK-NEXT:    pop {r11, pc}
 ; CHECK-NEXT:    .p2align 4
 ; CHECK-NEXT:  @ %bb.1:

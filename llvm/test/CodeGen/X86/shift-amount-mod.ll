@@ -653,20 +653,20 @@ define void @store64_ashr_by_negated(i64 %val, ptr %dstptr, i64 %shamt) nounwind
 ; X32-NEXT:    pushl %esi
 ; X32-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X32-NEXT:    movl {{[0-9]+}}(%esp), %edx
-; X32-NEXT:    movl {{[0-9]+}}(%esp), %esi
+; X32-NEXT:    movl {{[0-9]+}}(%esp), %edi
 ; X32-NEXT:    movb $64, %cl
 ; X32-NEXT:    subb {{[0-9]+}}(%esp), %cl
-; X32-NEXT:    movl %esi, %edi
-; X32-NEXT:    sarl %cl, %edi
-; X32-NEXT:    shrdl %cl, %esi, %edx
+; X32-NEXT:    movl %edi, %esi
+; X32-NEXT:    sarl %cl, %esi
+; X32-NEXT:    shrdl %cl, %edi, %edx
 ; X32-NEXT:    testb $32, %cl
 ; X32-NEXT:    je .LBB22_2
 ; X32-NEXT:  # %bb.1:
-; X32-NEXT:    sarl $31, %esi
-; X32-NEXT:    movl %edi, %edx
-; X32-NEXT:    movl %esi, %edi
+; X32-NEXT:    sarl $31, %edi
+; X32-NEXT:    movl %esi, %edx
+; X32-NEXT:    movl %edi, %esi
 ; X32-NEXT:  .LBB22_2:
-; X32-NEXT:    movl %edi, 4(%eax)
+; X32-NEXT:    movl %esi, 4(%eax)
 ; X32-NEXT:    movl %edx, (%eax)
 ; X32-NEXT:    popl %esi
 ; X32-NEXT:    popl %edi

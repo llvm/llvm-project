@@ -507,20 +507,20 @@ define i32 @freeze_ashr_outofrange(i32 %a0) nounwind {
 define <8 x i16> @freeze_ashr_vec(<8 x i16> %a0) nounwind {
 ; X86-LABEL: freeze_ashr_vec:
 ; X86:       # %bb.0:
-; X86-NEXT:    movdqa %xmm0, %xmm1
-; X86-NEXT:    psraw $1, %xmm1
-; X86-NEXT:    movdqa {{.*#+}} xmm2 = [65535,0,65535,0,65535,0,65535,0]
-; X86-NEXT:    movdqa %xmm2, %xmm3
-; X86-NEXT:    pandn %xmm1, %xmm3
+; X86-NEXT:    movdqa %xmm0, %xmm2
+; X86-NEXT:    psraw $1, %xmm2
+; X86-NEXT:    movdqa {{.*#+}} xmm1 = [65535,0,65535,0,65535,0,65535,0]
+; X86-NEXT:    movdqa %xmm1, %xmm3
+; X86-NEXT:    pandn %xmm2, %xmm3
 ; X86-NEXT:    psraw $3, %xmm0
-; X86-NEXT:    pand %xmm2, %xmm0
+; X86-NEXT:    pand %xmm1, %xmm0
 ; X86-NEXT:    por %xmm3, %xmm0
-; X86-NEXT:    movdqa %xmm0, %xmm1
-; X86-NEXT:    psraw $3, %xmm1
+; X86-NEXT:    movdqa %xmm0, %xmm2
+; X86-NEXT:    psraw $3, %xmm2
 ; X86-NEXT:    psraw $1, %xmm0
-; X86-NEXT:    pand %xmm2, %xmm0
-; X86-NEXT:    pandn %xmm1, %xmm2
-; X86-NEXT:    por %xmm2, %xmm0
+; X86-NEXT:    pand %xmm1, %xmm0
+; X86-NEXT:    pandn %xmm2, %xmm1
+; X86-NEXT:    por %xmm1, %xmm0
 ; X86-NEXT:    retl
 ;
 ; X64-LABEL: freeze_ashr_vec:
@@ -616,20 +616,20 @@ define i32 @freeze_lshr_outofrange(i32 %a0) nounwind {
 define <8 x i16> @freeze_lshr_vec(<8 x i16> %a0) nounwind {
 ; X86-LABEL: freeze_lshr_vec:
 ; X86:       # %bb.0:
-; X86-NEXT:    movdqa %xmm0, %xmm1
-; X86-NEXT:    psrlw $1, %xmm1
-; X86-NEXT:    movdqa {{.*#+}} xmm2 = [65535,0,65535,0,65535,0,65535,0]
-; X86-NEXT:    movdqa %xmm2, %xmm3
-; X86-NEXT:    pandn %xmm1, %xmm3
+; X86-NEXT:    movdqa %xmm0, %xmm2
+; X86-NEXT:    psrlw $1, %xmm2
+; X86-NEXT:    movdqa {{.*#+}} xmm1 = [65535,0,65535,0,65535,0,65535,0]
+; X86-NEXT:    movdqa %xmm1, %xmm3
+; X86-NEXT:    pandn %xmm2, %xmm3
 ; X86-NEXT:    psrlw $2, %xmm0
-; X86-NEXT:    pand %xmm2, %xmm0
+; X86-NEXT:    pand %xmm1, %xmm0
 ; X86-NEXT:    por %xmm3, %xmm0
-; X86-NEXT:    movdqa %xmm0, %xmm1
-; X86-NEXT:    psrlw $2, %xmm1
+; X86-NEXT:    movdqa %xmm0, %xmm2
+; X86-NEXT:    psrlw $2, %xmm2
 ; X86-NEXT:    psrlw $1, %xmm0
-; X86-NEXT:    pand %xmm2, %xmm0
-; X86-NEXT:    pandn %xmm1, %xmm2
-; X86-NEXT:    por %xmm2, %xmm0
+; X86-NEXT:    pand %xmm1, %xmm0
+; X86-NEXT:    pandn %xmm2, %xmm1
+; X86-NEXT:    por %xmm1, %xmm0
 ; X86-NEXT:    retl
 ;
 ; X64-LABEL: freeze_lshr_vec:

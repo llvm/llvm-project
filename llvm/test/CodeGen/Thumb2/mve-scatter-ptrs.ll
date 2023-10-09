@@ -45,17 +45,17 @@ define arm_aapcs_vfpcc void @ptr_v8i32(<8 x i32> %v, ptr %offptr) {
 ; CHECK-NEXT:    vldrw.u32 q2, [r0, #16]
 ; CHECK-NEXT:    vmov r0, r5, d1
 ; CHECK-NEXT:    str r3, [r1]
-; CHECK-NEXT:    vmov r1, r6, d4
+; CHECK-NEXT:    vmov r1, r7, d4
 ; CHECK-NEXT:    str r4, [r2]
-; CHECK-NEXT:    vmov r2, r7, d5
+; CHECK-NEXT:    vmov r2, r4, d5
 ; CHECK-NEXT:    str.w r0, [lr]
 ; CHECK-NEXT:    vmov r0, r3, d2
 ; CHECK-NEXT:    str.w r5, [r12]
-; CHECK-NEXT:    vmov r5, r4, d3
+; CHECK-NEXT:    vmov r5, r6, d3
 ; CHECK-NEXT:    str r0, [r1]
-; CHECK-NEXT:    str r3, [r6]
+; CHECK-NEXT:    str r3, [r7]
 ; CHECK-NEXT:    str r5, [r2]
-; CHECK-NEXT:    str r4, [r7]
+; CHECK-NEXT:    str r6, [r4]
 ; CHECK-NEXT:    pop {r4, r5, r6, r7, pc}
 entry:
   %offs = load <8 x ptr>, ptr %offptr, align 4
@@ -154,17 +154,17 @@ define arm_aapcs_vfpcc void @ptr_v8f32(<8 x float> %v, ptr %offptr) {
 ; CHECK-NEXT:    .save {r4, r5, r7, lr}
 ; CHECK-NEXT:    push {r4, r5, r7, lr}
 ; CHECK-NEXT:    vldrw.u32 q2, [r0]
-; CHECK-NEXT:    vmov r1, r2, d4
+; CHECK-NEXT:    vmov r1, lr, d4
 ; CHECK-NEXT:    vmov r3, r12, d5
 ; CHECK-NEXT:    vldrw.u32 q2, [r0, #16]
-; CHECK-NEXT:    vmov r0, lr, d4
+; CHECK-NEXT:    vmov r0, r2, d4
 ; CHECK-NEXT:    vmov r4, r5, d5
 ; CHECK-NEXT:    vstr s0, [r1]
-; CHECK-NEXT:    vstr s1, [r2]
+; CHECK-NEXT:    vstr s1, [lr]
 ; CHECK-NEXT:    vstr s2, [r3]
 ; CHECK-NEXT:    vstr s3, [r12]
 ; CHECK-NEXT:    vstr s4, [r0]
-; CHECK-NEXT:    vstr s5, [lr]
+; CHECK-NEXT:    vstr s5, [r2]
 ; CHECK-NEXT:    vstr s6, [r4]
 ; CHECK-NEXT:    vstr s7, [r5]
 ; CHECK-NEXT:    pop {r4, r5, r7, pc}
@@ -271,17 +271,17 @@ define arm_aapcs_vfpcc void @ptr_v8i16_trunc(<8 x i32> %v, ptr %offptr) {
 ; CHECK-NEXT:    vldrw.u32 q2, [r0, #16]
 ; CHECK-NEXT:    vmov r0, r5, d1
 ; CHECK-NEXT:    strh r3, [r1]
-; CHECK-NEXT:    vmov r1, r6, d4
+; CHECK-NEXT:    vmov r1, r7, d4
 ; CHECK-NEXT:    strh r4, [r2]
-; CHECK-NEXT:    vmov r2, r7, d5
+; CHECK-NEXT:    vmov r2, r4, d5
 ; CHECK-NEXT:    strh.w r0, [lr]
 ; CHECK-NEXT:    vmov r0, r3, d2
 ; CHECK-NEXT:    strh.w r5, [r12]
-; CHECK-NEXT:    vmov r5, r4, d3
+; CHECK-NEXT:    vmov r5, r6, d3
 ; CHECK-NEXT:    strh r0, [r1]
-; CHECK-NEXT:    strh r3, [r6]
+; CHECK-NEXT:    strh r3, [r7]
 ; CHECK-NEXT:    strh r5, [r2]
-; CHECK-NEXT:    strh r4, [r7]
+; CHECK-NEXT:    strh r6, [r4]
 ; CHECK-NEXT:    pop {r4, r5, r6, r7, pc}
 entry:
   %offs = load <8 x ptr>, ptr %offptr, align 4
@@ -370,11 +370,11 @@ define arm_aapcs_vfpcc void @ptr_i8(<16 x i8> %v, ptr %offptr) {
 ; CHECK-NEXT:    vldrw.u32 q3, [r0, #32]
 ; CHECK-NEXT:    vmov.u8 r6, q0[0]
 ; CHECK-NEXT:    vmov r1, r2, d2
-; CHECK-NEXT:    vmov.u8 r5, q0[6]
+; CHECK-NEXT:    vmov.u8 r5, q0[4]
 ; CHECK-NEXT:    vmov r3, r12, d3
 ; CHECK-NEXT:    vldrw.u32 q1, [r0, #48]
 ; CHECK-NEXT:    vmov lr, r4, d4
-; CHECK-NEXT:    vmov.u8 r7, q0[8]
+; CHECK-NEXT:    vmov.u8 r7, q0[6]
 ; CHECK-NEXT:    vmov r0, r8, d5
 ; CHECK-NEXT:    strb r6, [r1]
 ; CHECK-NEXT:    vmov.u8 r1, q0[1]
@@ -383,18 +383,18 @@ define arm_aapcs_vfpcc void @ptr_i8(<16 x i8> %v, ptr %offptr) {
 ; CHECK-NEXT:    vmov r1, r9, d6
 ; CHECK-NEXT:    strb r6, [r3]
 ; CHECK-NEXT:    vmov.u8 r3, q0[3]
-; CHECK-NEXT:    vmov.u8 r2, q0[4]
+; CHECK-NEXT:    vmov.u8 r2, q0[8]
 ; CHECK-NEXT:    strb.w r3, [r12]
 ; CHECK-NEXT:    vmov r3, r6, d7
-; CHECK-NEXT:    strb.w r2, [lr]
-; CHECK-NEXT:    vmov.u8 r2, q0[5]
-; CHECK-NEXT:    strb r2, [r4]
-; CHECK-NEXT:    vmov r2, r4, d2
-; CHECK-NEXT:    strb r5, [r0]
+; CHECK-NEXT:    strb.w r5, [lr]
+; CHECK-NEXT:    vmov.u8 r5, q0[5]
+; CHECK-NEXT:    strb r5, [r4]
+; CHECK-NEXT:    vmov r5, r4, d2
+; CHECK-NEXT:    strb r7, [r0]
 ; CHECK-NEXT:    vmov.u8 r0, q0[7]
 ; CHECK-NEXT:    strb.w r0, [r8]
-; CHECK-NEXT:    vmov r0, r5, d3
-; CHECK-NEXT:    strb r7, [r1]
+; CHECK-NEXT:    vmov r0, r7, d3
+; CHECK-NEXT:    strb r2, [r1]
 ; CHECK-NEXT:    vmov.u8 r1, q0[9]
 ; CHECK-NEXT:    strb.w r1, [r9]
 ; CHECK-NEXT:    vmov.u8 r1, q0[10]
@@ -402,13 +402,13 @@ define arm_aapcs_vfpcc void @ptr_i8(<16 x i8> %v, ptr %offptr) {
 ; CHECK-NEXT:    vmov.u8 r1, q0[11]
 ; CHECK-NEXT:    strb r1, [r6]
 ; CHECK-NEXT:    vmov.u8 r1, q0[12]
-; CHECK-NEXT:    strb r1, [r2]
+; CHECK-NEXT:    strb r1, [r5]
 ; CHECK-NEXT:    vmov.u8 r1, q0[13]
 ; CHECK-NEXT:    strb r1, [r4]
 ; CHECK-NEXT:    vmov.u8 r1, q0[14]
 ; CHECK-NEXT:    strb r1, [r0]
 ; CHECK-NEXT:    vmov.u8 r0, q0[15]
-; CHECK-NEXT:    strb r0, [r5]
+; CHECK-NEXT:    strb r0, [r7]
 ; CHECK-NEXT:    pop.w {r4, r5, r6, r7, r8, r9, pc}
 entry:
   %offs = load <16 x ptr>, ptr %offptr, align 4
@@ -479,17 +479,17 @@ define arm_aapcs_vfpcc void @ptr_v8i8_trunc32(<8 x i32> %v, ptr %offptr) {
 ; CHECK-NEXT:    vldrw.u32 q2, [r0, #16]
 ; CHECK-NEXT:    vmov r0, r5, d1
 ; CHECK-NEXT:    strb r3, [r1]
-; CHECK-NEXT:    vmov r1, r6, d4
+; CHECK-NEXT:    vmov r1, r7, d4
 ; CHECK-NEXT:    strb r4, [r2]
-; CHECK-NEXT:    vmov r2, r7, d5
+; CHECK-NEXT:    vmov r2, r4, d5
 ; CHECK-NEXT:    strb.w r0, [lr]
 ; CHECK-NEXT:    vmov r0, r3, d2
 ; CHECK-NEXT:    strb.w r5, [r12]
-; CHECK-NEXT:    vmov r5, r4, d3
+; CHECK-NEXT:    vmov r5, r6, d3
 ; CHECK-NEXT:    strb r0, [r1]
-; CHECK-NEXT:    strb r3, [r6]
+; CHECK-NEXT:    strb r3, [r7]
 ; CHECK-NEXT:    strb r5, [r2]
-; CHECK-NEXT:    strb r4, [r7]
+; CHECK-NEXT:    strb r6, [r4]
 ; CHECK-NEXT:    pop {r4, r5, r6, r7, pc}
 entry:
   %offs = load <8 x ptr>, ptr %offptr, align 4

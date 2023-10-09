@@ -5822,34 +5822,34 @@ define amdgpu_ps <7 x double> @dyn_insertelement_v7f64_s_v_v(<7 x double> inreg 
 ; GFX11-NEXT:    v_dual_mov_b32 v8, s5 :: v_dual_mov_b32 v7, s4
 ; GFX11-NEXT:    v_dual_mov_b32 v6, s3 :: v_dual_mov_b32 v5, s2
 ; GFX11-NEXT:    v_cmp_eq_u32_e64 s0, 1, v2
-; GFX11-NEXT:    v_dual_cndmask_b32 v19, v3, v0 :: v_dual_cndmask_b32 v18, v4, v1
+; GFX11-NEXT:    v_dual_cndmask_b32 v18, v3, v0 :: v_dual_cndmask_b32 v17, v4, v1
 ; GFX11-NEXT:    v_cmp_eq_u32_e32 vcc_lo, 2, v2
 ; GFX11-NEXT:    v_cmp_eq_u32_e64 s6, 4, v2
 ; GFX11-NEXT:    v_cndmask_b32_e64 v3, v5, v0, s0
-; GFX11-NEXT:    v_cndmask_b32_e64 v17, v6, v1, s0
+; GFX11-NEXT:    v_cndmask_b32_e64 v4, v6, v1, s0
 ; GFX11-NEXT:    v_cmp_eq_u32_e64 s9, 6, v2
-; GFX11-NEXT:    v_dual_cndmask_b32 v4, v7, v0 :: v_dual_cndmask_b32 v5, v8, v1
+; GFX11-NEXT:    v_dual_cndmask_b32 v5, v7, v0 :: v_dual_cndmask_b32 v6, v8, v1
 ; GFX11-NEXT:    v_cmp_eq_u32_e32 vcc_lo, 3, v2
-; GFX11-NEXT:    v_cndmask_b32_e64 v8, v11, v0, s6
-; GFX11-NEXT:    v_readfirstlane_b32 s0, v19
-; GFX11-NEXT:    v_readfirstlane_b32 s1, v18
+; GFX11-NEXT:    v_readfirstlane_b32 s0, v18
+; GFX11-NEXT:    v_readfirstlane_b32 s1, v17
 ; GFX11-NEXT:    v_readfirstlane_b32 s2, v3
-; GFX11-NEXT:    v_dual_cndmask_b32 v6, v9, v0 :: v_dual_cndmask_b32 v7, v10, v1
+; GFX11-NEXT:    v_readfirstlane_b32 s3, v4
+; GFX11-NEXT:    v_dual_cndmask_b32 v7, v9, v0 :: v_dual_cndmask_b32 v8, v10, v1
 ; GFX11-NEXT:    v_cmp_eq_u32_e32 vcc_lo, 5, v2
+; GFX11-NEXT:    v_cndmask_b32_e64 v10, v11, v0, s6
 ; GFX11-NEXT:    v_cndmask_b32_e64 v9, v12, v1, s6
-; GFX11-NEXT:    v_cndmask_b32_e64 v12, v15, v0, s9
-; GFX11-NEXT:    v_readfirstlane_b32 s3, v17
-; GFX11-NEXT:    v_readfirstlane_b32 s4, v4
-; GFX11-NEXT:    v_dual_cndmask_b32 v10, v13, v0 :: v_dual_cndmask_b32 v11, v14, v1
+; GFX11-NEXT:    v_readfirstlane_b32 s4, v5
+; GFX11-NEXT:    v_readfirstlane_b32 s5, v6
+; GFX11-NEXT:    v_dual_cndmask_b32 v11, v13, v0 :: v_dual_cndmask_b32 v12, v14, v1
+; GFX11-NEXT:    v_cndmask_b32_e64 v14, v15, v0, s9
 ; GFX11-NEXT:    v_cndmask_b32_e64 v13, v16, v1, s9
-; GFX11-NEXT:    v_readfirstlane_b32 s5, v5
-; GFX11-NEXT:    v_readfirstlane_b32 s6, v6
-; GFX11-NEXT:    v_readfirstlane_b32 s7, v7
-; GFX11-NEXT:    v_readfirstlane_b32 s8, v8
+; GFX11-NEXT:    v_readfirstlane_b32 s6, v7
+; GFX11-NEXT:    v_readfirstlane_b32 s7, v8
+; GFX11-NEXT:    v_readfirstlane_b32 s8, v10
 ; GFX11-NEXT:    v_readfirstlane_b32 s9, v9
-; GFX11-NEXT:    v_readfirstlane_b32 s10, v10
-; GFX11-NEXT:    v_readfirstlane_b32 s11, v11
-; GFX11-NEXT:    v_readfirstlane_b32 s12, v12
+; GFX11-NEXT:    v_readfirstlane_b32 s10, v11
+; GFX11-NEXT:    v_readfirstlane_b32 s11, v12
+; GFX11-NEXT:    v_readfirstlane_b32 s12, v14
 ; GFX11-NEXT:    v_readfirstlane_b32 s13, v13
 ; GFX11-NEXT:    ; return to shader part epilog
 entry:

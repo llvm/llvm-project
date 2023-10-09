@@ -2113,38 +2113,38 @@ define <8 x half> @maxnum_v8f16(<8 x half> %0, <8 x half> %1) #0 {
 define void @pr63114() {
 ; CHECK-LIBCALL-LABEL: pr63114:
 ; CHECK-LIBCALL:       # %bb.0:
-; CHECK-LIBCALL-NEXT:    movdqu (%rax), %xmm0
-; CHECK-LIBCALL-NEXT:    pshuflw {{.*#+}} xmm1 = xmm0[0,1,3,3,4,5,6,7]
-; CHECK-LIBCALL-NEXT:    pshufd {{.*#+}} xmm1 = xmm1[0,0,2,1]
-; CHECK-LIBCALL-NEXT:    movdqa {{.*#+}} xmm2 = [65535,65535,65535,0,65535,65535,65535,65535]
-; CHECK-LIBCALL-NEXT:    pand %xmm2, %xmm1
-; CHECK-LIBCALL-NEXT:    movdqa {{.*#+}} xmm3 = [0,0,0,15360,0,0,0,0]
-; CHECK-LIBCALL-NEXT:    por %xmm3, %xmm1
-; CHECK-LIBCALL-NEXT:    movdqa {{.*#+}} xmm4 = [65535,65535,65535,65535,65535,65535,65535,0]
-; CHECK-LIBCALL-NEXT:    pand %xmm4, %xmm1
+; CHECK-LIBCALL-NEXT:    movdqu (%rax), %xmm4
+; CHECK-LIBCALL-NEXT:    pshuflw {{.*#+}} xmm0 = xmm4[0,1,3,3,4,5,6,7]
+; CHECK-LIBCALL-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[0,0,2,1]
+; CHECK-LIBCALL-NEXT:    movdqa {{.*#+}} xmm1 = [65535,65535,65535,0,65535,65535,65535,65535]
+; CHECK-LIBCALL-NEXT:    pand %xmm1, %xmm0
+; CHECK-LIBCALL-NEXT:    movdqa {{.*#+}} xmm2 = [0,0,0,15360,0,0,0,0]
+; CHECK-LIBCALL-NEXT:    por %xmm2, %xmm0
+; CHECK-LIBCALL-NEXT:    movdqa {{.*#+}} xmm3 = [65535,65535,65535,65535,65535,65535,65535,0]
+; CHECK-LIBCALL-NEXT:    pand %xmm3, %xmm0
 ; CHECK-LIBCALL-NEXT:    movdqa {{.*#+}} xmm5 = [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,60]
-; CHECK-LIBCALL-NEXT:    por %xmm5, %xmm1
-; CHECK-LIBCALL-NEXT:    pshufhw {{.*#+}} xmm6 = xmm0[0,1,2,3,4,5,7,7]
-; CHECK-LIBCALL-NEXT:    pshufd {{.*#+}} xmm6 = xmm6[0,2,2,3]
-; CHECK-LIBCALL-NEXT:    pand %xmm2, %xmm6
-; CHECK-LIBCALL-NEXT:    por %xmm3, %xmm6
-; CHECK-LIBCALL-NEXT:    pand %xmm4, %xmm6
-; CHECK-LIBCALL-NEXT:    por %xmm5, %xmm6
-; CHECK-LIBCALL-NEXT:    pshufhw {{.*#+}} xmm7 = xmm0[0,1,2,3,5,5,5,5]
-; CHECK-LIBCALL-NEXT:    shufps {{.*#+}} xmm0 = xmm0[0,3,0,3]
-; CHECK-LIBCALL-NEXT:    pshufhw {{.*#+}} xmm0 = xmm0[0,1,2,3,5,5,5,5]
-; CHECK-LIBCALL-NEXT:    pand %xmm2, %xmm0
-; CHECK-LIBCALL-NEXT:    por %xmm3, %xmm0
-; CHECK-LIBCALL-NEXT:    pand %xmm4, %xmm0
 ; CHECK-LIBCALL-NEXT:    por %xmm5, %xmm0
-; CHECK-LIBCALL-NEXT:    pand %xmm2, %xmm7
-; CHECK-LIBCALL-NEXT:    por %xmm3, %xmm7
-; CHECK-LIBCALL-NEXT:    pand %xmm4, %xmm7
+; CHECK-LIBCALL-NEXT:    pshufhw {{.*#+}} xmm6 = xmm4[0,1,2,3,4,5,7,7]
+; CHECK-LIBCALL-NEXT:    pshufd {{.*#+}} xmm6 = xmm6[0,2,2,3]
+; CHECK-LIBCALL-NEXT:    pand %xmm1, %xmm6
+; CHECK-LIBCALL-NEXT:    por %xmm2, %xmm6
+; CHECK-LIBCALL-NEXT:    pand %xmm3, %xmm6
+; CHECK-LIBCALL-NEXT:    por %xmm5, %xmm6
+; CHECK-LIBCALL-NEXT:    pshufhw {{.*#+}} xmm7 = xmm4[0,1,2,3,5,5,5,5]
+; CHECK-LIBCALL-NEXT:    shufps {{.*#+}} xmm4 = xmm4[0,3,0,3]
+; CHECK-LIBCALL-NEXT:    pshufhw {{.*#+}} xmm4 = xmm4[0,1,2,3,5,5,5,5]
+; CHECK-LIBCALL-NEXT:    pand %xmm1, %xmm4
+; CHECK-LIBCALL-NEXT:    por %xmm2, %xmm4
+; CHECK-LIBCALL-NEXT:    pand %xmm3, %xmm4
+; CHECK-LIBCALL-NEXT:    por %xmm5, %xmm4
+; CHECK-LIBCALL-NEXT:    pand %xmm1, %xmm7
+; CHECK-LIBCALL-NEXT:    por %xmm2, %xmm7
+; CHECK-LIBCALL-NEXT:    pand %xmm3, %xmm7
 ; CHECK-LIBCALL-NEXT:    por %xmm5, %xmm7
 ; CHECK-LIBCALL-NEXT:    movdqu %xmm7, 0
-; CHECK-LIBCALL-NEXT:    movdqu %xmm0, 32
+; CHECK-LIBCALL-NEXT:    movdqu %xmm4, 32
 ; CHECK-LIBCALL-NEXT:    movdqu %xmm6, 48
-; CHECK-LIBCALL-NEXT:    movdqu %xmm1, 16
+; CHECK-LIBCALL-NEXT:    movdqu %xmm0, 16
 ; CHECK-LIBCALL-NEXT:    retq
 ;
 ; BWON-F16C-LABEL: pr63114:
@@ -2178,8 +2178,8 @@ define void @pr63114() {
 ;
 ; CHECK-I686-LABEL: pr63114:
 ; CHECK-I686:       # %bb.0:
-; CHECK-I686-NEXT:    movdqu (%eax), %xmm4
-; CHECK-I686-NEXT:    pshuflw {{.*#+}} xmm0 = xmm4[0,1,3,3,4,5,6,7]
+; CHECK-I686-NEXT:    movdqu (%eax), %xmm6
+; CHECK-I686-NEXT:    pshuflw {{.*#+}} xmm0 = xmm6[0,1,3,3,4,5,6,7]
 ; CHECK-I686-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[0,0,2,1]
 ; CHECK-I686-NEXT:    movdqa {{.*#+}} xmm1 = [65535,65535,65535,0,65535,65535,65535,65535]
 ; CHECK-I686-NEXT:    pand %xmm1, %xmm0
@@ -2187,28 +2187,28 @@ define void @pr63114() {
 ; CHECK-I686-NEXT:    por %xmm2, %xmm0
 ; CHECK-I686-NEXT:    movdqa {{.*#+}} xmm3 = [65535,65535,65535,65535,65535,65535,65535,0]
 ; CHECK-I686-NEXT:    pand %xmm3, %xmm0
-; CHECK-I686-NEXT:    movdqa {{.*#+}} xmm5 = [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,60]
-; CHECK-I686-NEXT:    por %xmm5, %xmm0
-; CHECK-I686-NEXT:    pshufhw {{.*#+}} xmm6 = xmm4[0,1,2,3,4,5,7,7]
-; CHECK-I686-NEXT:    pshufd {{.*#+}} xmm6 = xmm6[0,2,2,3]
+; CHECK-I686-NEXT:    movdqa {{.*#+}} xmm4 = [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,60]
+; CHECK-I686-NEXT:    por %xmm4, %xmm0
+; CHECK-I686-NEXT:    pshufhw {{.*#+}} xmm5 = xmm6[0,1,2,3,4,5,7,7]
+; CHECK-I686-NEXT:    pshufd {{.*#+}} xmm5 = xmm5[0,2,2,3]
+; CHECK-I686-NEXT:    pand %xmm1, %xmm5
+; CHECK-I686-NEXT:    por %xmm2, %xmm5
+; CHECK-I686-NEXT:    pand %xmm3, %xmm5
+; CHECK-I686-NEXT:    por %xmm4, %xmm5
+; CHECK-I686-NEXT:    pshufhw {{.*#+}} xmm7 = xmm6[0,1,2,3,5,5,5,5]
+; CHECK-I686-NEXT:    shufps {{.*#+}} xmm6 = xmm6[0,3,0,3]
+; CHECK-I686-NEXT:    pshufhw {{.*#+}} xmm6 = xmm6[0,1,2,3,5,5,5,5]
 ; CHECK-I686-NEXT:    pand %xmm1, %xmm6
 ; CHECK-I686-NEXT:    por %xmm2, %xmm6
 ; CHECK-I686-NEXT:    pand %xmm3, %xmm6
-; CHECK-I686-NEXT:    por %xmm5, %xmm6
-; CHECK-I686-NEXT:    pshufhw {{.*#+}} xmm7 = xmm4[0,1,2,3,5,5,5,5]
-; CHECK-I686-NEXT:    shufps {{.*#+}} xmm4 = xmm4[0,3,0,3]
-; CHECK-I686-NEXT:    pshufhw {{.*#+}} xmm4 = xmm4[0,1,2,3,5,5,5,5]
-; CHECK-I686-NEXT:    pand %xmm1, %xmm4
-; CHECK-I686-NEXT:    por %xmm2, %xmm4
-; CHECK-I686-NEXT:    pand %xmm3, %xmm4
-; CHECK-I686-NEXT:    por %xmm5, %xmm4
+; CHECK-I686-NEXT:    por %xmm4, %xmm6
 ; CHECK-I686-NEXT:    pand %xmm1, %xmm7
 ; CHECK-I686-NEXT:    por %xmm2, %xmm7
 ; CHECK-I686-NEXT:    pand %xmm3, %xmm7
-; CHECK-I686-NEXT:    por %xmm5, %xmm7
+; CHECK-I686-NEXT:    por %xmm4, %xmm7
 ; CHECK-I686-NEXT:    movdqu %xmm7, 0
-; CHECK-I686-NEXT:    movdqu %xmm4, 32
-; CHECK-I686-NEXT:    movdqu %xmm6, 48
+; CHECK-I686-NEXT:    movdqu %xmm6, 32
+; CHECK-I686-NEXT:    movdqu %xmm5, 48
 ; CHECK-I686-NEXT:    movdqu %xmm0, 16
 ; CHECK-I686-NEXT:    retl
   %1 = load <24 x half>, ptr poison, align 2

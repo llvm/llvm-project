@@ -7,12 +7,12 @@ define void @knownbits_zext_in_reg(ptr) nounwind {
 ; X86:       # %bb.0: # %BB
 ; X86-NEXT:    pushl %ebx
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X86-NEXT:    movzbl (%eax), %eax
-; X86-NEXT:    imull $101, %eax, %ecx
-; X86-NEXT:    shrl $14, %ecx
-; X86-NEXT:    imull $177, %eax, %edx
+; X86-NEXT:    movzbl (%eax), %ecx
+; X86-NEXT:    imull $101, %ecx, %eax
+; X86-NEXT:    shrl $14, %eax
+; X86-NEXT:    imull $177, %ecx, %edx
 ; X86-NEXT:    shrl $14, %edx
-; X86-NEXT:    movzbl %cl, %ecx
+; X86-NEXT:    movzbl %al, %ecx
 ; X86-NEXT:    xorl %ebx, %ebx
 ; X86-NEXT:    .p2align 4, 0x90
 ; X86-NEXT:  .LBB0_1: # %CF

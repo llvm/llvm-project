@@ -80,11 +80,11 @@ define i64 @blsmask_through3(i64 %a, i64 %b, i64 %c, i64 %d) nounwind {
 ; X86-LABEL: blsmask_through3:
 ; X86:       # %bb.0: # %entry
 ; X86-NEXT:    pushl %esi
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %esi
-; X86-NEXT:    movl %ecx, %eax
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
+; X86-NEXT:    movl %esi, %eax
 ; X86-NEXT:    addl $-1, %eax
-; X86-NEXT:    movl %esi, %edx
+; X86-NEXT:    movl %ecx, %edx
 ; X86-NEXT:    adcl $-1, %edx
 ; X86-NEXT:    xorl {{[0-9]+}}(%esp), %edx
 ; X86-NEXT:    xorl {{[0-9]+}}(%esp), %eax
@@ -92,8 +92,8 @@ define i64 @blsmask_through3(i64 %a, i64 %b, i64 %c, i64 %d) nounwind {
 ; X86-NEXT:    xorl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    xorl {{[0-9]+}}(%esp), %edx
 ; X86-NEXT:    xorl {{[0-9]+}}(%esp), %eax
-; X86-NEXT:    xorl %ecx, %eax
-; X86-NEXT:    xorl %esi, %edx
+; X86-NEXT:    xorl %esi, %eax
+; X86-NEXT:    xorl %ecx, %edx
 ; X86-NEXT:    popl %esi
 ; X86-NEXT:    retl
 ;
@@ -154,19 +154,19 @@ define i64 @blsmask_through1_used2(i64 %a, i64 %b) nounwind {
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %esi
 ; X86-NEXT:    movl %ecx, %edi
 ; X86-NEXT:    addl $-1, %edi
-; X86-NEXT:    movl %esi, %ebx
-; X86-NEXT:    adcl $-1, %ebx
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %ebp
-; X86-NEXT:    xorl %ebx, %ebp
+; X86-NEXT:    movl %esi, %ebp
+; X86-NEXT:    adcl $-1, %ebp
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %ebx
+; X86-NEXT:    xorl %ebp, %ebx
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    xorl %edi, %eax
-; X86-NEXT:    xorl %ebp, %esi
+; X86-NEXT:    xorl %ebx, %esi
 ; X86-NEXT:    xorl %eax, %ecx
-; X86-NEXT:    imull %eax, %ebx
+; X86-NEXT:    imull %eax, %ebp
 ; X86-NEXT:    mull %edi
-; X86-NEXT:    addl %ebx, %edx
-; X86-NEXT:    imull %edi, %ebp
 ; X86-NEXT:    addl %ebp, %edx
+; X86-NEXT:    imull %edi, %ebx
+; X86-NEXT:    addl %ebx, %edx
 ; X86-NEXT:    orl %esi, %edx
 ; X86-NEXT:    orl %ecx, %eax
 ; X86-NEXT:    popl %esi
@@ -531,19 +531,19 @@ define i64 @blsr_through1_used2(i64 %a, i64 %b) nounwind {
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %esi
 ; X86-NEXT:    movl %ecx, %edi
 ; X86-NEXT:    addl $-1, %edi
-; X86-NEXT:    movl %esi, %ebx
-; X86-NEXT:    adcl $-1, %ebx
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %ebp
-; X86-NEXT:    andl %ebx, %ebp
+; X86-NEXT:    movl %esi, %ebp
+; X86-NEXT:    adcl $-1, %ebp
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %ebx
+; X86-NEXT:    andl %ebp, %ebx
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    andl %edi, %eax
-; X86-NEXT:    andl %ebp, %esi
+; X86-NEXT:    andl %ebx, %esi
 ; X86-NEXT:    andl %eax, %ecx
-; X86-NEXT:    imull %eax, %ebx
+; X86-NEXT:    imull %eax, %ebp
 ; X86-NEXT:    mull %edi
-; X86-NEXT:    addl %ebx, %edx
-; X86-NEXT:    imull %edi, %ebp
 ; X86-NEXT:    addl %ebp, %edx
+; X86-NEXT:    imull %edi, %ebx
+; X86-NEXT:    addl %ebx, %edx
 ; X86-NEXT:    orl %esi, %edx
 ; X86-NEXT:    orl %ecx, %eax
 ; X86-NEXT:    popl %esi

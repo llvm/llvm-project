@@ -83,21 +83,21 @@ define i1 @is_snan_f80(x86_fp80 %x) {
 ; CHECK-32-NEXT:    .cfi_def_cfa_offset 12
 ; CHECK-32-NEXT:    .cfi_offset %esi, -12
 ; CHECK-32-NEXT:    .cfi_offset %ebx, -8
-; CHECK-32-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; CHECK-32-NEXT:    movzwl {{[0-9]+}}(%esp), %ecx
-; CHECK-32-NEXT:    andl $32767, %ecx # imm = 0x7FFF
-; CHECK-32-NEXT:    xorl %edx, %edx
-; CHECK-32-NEXT:    cmpl {{[0-9]+}}(%esp), %edx
+; CHECK-32-NEXT:    movl {{[0-9]+}}(%esp), %edx
+; CHECK-32-NEXT:    movzwl {{[0-9]+}}(%esp), %eax
+; CHECK-32-NEXT:    andl $32767, %eax # imm = 0x7FFF
+; CHECK-32-NEXT:    xorl %ecx, %ecx
+; CHECK-32-NEXT:    cmpl {{[0-9]+}}(%esp), %ecx
 ; CHECK-32-NEXT:    movl $-2147483648, %esi # imm = 0x80000000
-; CHECK-32-NEXT:    sbbl %eax, %esi
+; CHECK-32-NEXT:    sbbl %edx, %esi
 ; CHECK-32-NEXT:    movl $32767, %esi # imm = 0x7FFF
-; CHECK-32-NEXT:    sbbl %ecx, %esi
+; CHECK-32-NEXT:    sbbl %eax, %esi
 ; CHECK-32-NEXT:    movl $0, %esi
 ; CHECK-32-NEXT:    sbbl %esi, %esi
 ; CHECK-32-NEXT:    setl %bl
-; CHECK-32-NEXT:    cmpl $-1073741824, %eax # imm = 0xC0000000
-; CHECK-32-NEXT:    sbbl $32767, %ecx # imm = 0x7FFF
-; CHECK-32-NEXT:    sbbl %edx, %edx
+; CHECK-32-NEXT:    cmpl $-1073741824, %edx # imm = 0xC0000000
+; CHECK-32-NEXT:    sbbl $32767, %eax # imm = 0x7FFF
+; CHECK-32-NEXT:    sbbl %ecx, %ecx
 ; CHECK-32-NEXT:    setl %al
 ; CHECK-32-NEXT:    andb %bl, %al
 ; CHECK-32-NEXT:    popl %esi
@@ -363,22 +363,22 @@ define i1 @is_posnormal_f80(x86_fp80 %x) {
 ; CHECK-32-NEXT:    pushl %esi
 ; CHECK-32-NEXT:    .cfi_def_cfa_offset 8
 ; CHECK-32-NEXT:    .cfi_offset %esi, -8
-; CHECK-32-NEXT:    movzwl {{[0-9]+}}(%esp), %ecx
-; CHECK-32-NEXT:    movswl %cx, %edx
-; CHECK-32-NEXT:    sarl $15, %edx
+; CHECK-32-NEXT:    movzwl {{[0-9]+}}(%esp), %edx
+; CHECK-32-NEXT:    movswl %dx, %ecx
+; CHECK-32-NEXT:    sarl $15, %ecx
 ; CHECK-32-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; CHECK-32-NEXT:    andl $32767, %ecx # imm = 0x7FFF
-; CHECK-32-NEXT:    decl %ecx
-; CHECK-32-NEXT:    movzwl %cx, %ecx
+; CHECK-32-NEXT:    andl $32767, %edx # imm = 0x7FFF
+; CHECK-32-NEXT:    decl %edx
+; CHECK-32-NEXT:    movzwl %dx, %edx
 ; CHECK-32-NEXT:    xorl %esi, %esi
-; CHECK-32-NEXT:    cmpl $32766, %ecx # imm = 0x7FFE
+; CHECK-32-NEXT:    cmpl $32766, %edx # imm = 0x7FFE
 ; CHECK-32-NEXT:    sbbl %esi, %esi
-; CHECK-32-NEXT:    setb %cl
-; CHECK-32-NEXT:    testl %edx, %edx
-; CHECK-32-NEXT:    setns %dl
+; CHECK-32-NEXT:    setb %dl
+; CHECK-32-NEXT:    testl %ecx, %ecx
+; CHECK-32-NEXT:    setns %cl
 ; CHECK-32-NEXT:    shrl $31, %eax
-; CHECK-32-NEXT:    andb %dl, %al
 ; CHECK-32-NEXT:    andb %cl, %al
+; CHECK-32-NEXT:    andb %dl, %al
 ; CHECK-32-NEXT:    # kill: def $al killed $al killed $eax
 ; CHECK-32-NEXT:    popl %esi
 ; CHECK-32-NEXT:    .cfi_def_cfa_offset 4
@@ -411,22 +411,22 @@ define i1 @is_negnormal_f80(x86_fp80 %x) {
 ; CHECK-32-NEXT:    pushl %esi
 ; CHECK-32-NEXT:    .cfi_def_cfa_offset 8
 ; CHECK-32-NEXT:    .cfi_offset %esi, -8
-; CHECK-32-NEXT:    movzwl {{[0-9]+}}(%esp), %ecx
-; CHECK-32-NEXT:    movswl %cx, %edx
-; CHECK-32-NEXT:    sarl $15, %edx
+; CHECK-32-NEXT:    movzwl {{[0-9]+}}(%esp), %edx
+; CHECK-32-NEXT:    movswl %dx, %ecx
+; CHECK-32-NEXT:    sarl $15, %ecx
 ; CHECK-32-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; CHECK-32-NEXT:    andl $32767, %ecx # imm = 0x7FFF
-; CHECK-32-NEXT:    decl %ecx
-; CHECK-32-NEXT:    movzwl %cx, %ecx
+; CHECK-32-NEXT:    andl $32767, %edx # imm = 0x7FFF
+; CHECK-32-NEXT:    decl %edx
+; CHECK-32-NEXT:    movzwl %dx, %edx
 ; CHECK-32-NEXT:    xorl %esi, %esi
-; CHECK-32-NEXT:    cmpl $32766, %ecx # imm = 0x7FFE
+; CHECK-32-NEXT:    cmpl $32766, %edx # imm = 0x7FFE
 ; CHECK-32-NEXT:    sbbl %esi, %esi
-; CHECK-32-NEXT:    setb %cl
-; CHECK-32-NEXT:    testl %edx, %edx
-; CHECK-32-NEXT:    sets %dl
+; CHECK-32-NEXT:    setb %dl
+; CHECK-32-NEXT:    testl %ecx, %ecx
+; CHECK-32-NEXT:    sets %cl
 ; CHECK-32-NEXT:    shrl $31, %eax
-; CHECK-32-NEXT:    andb %dl, %al
 ; CHECK-32-NEXT:    andb %cl, %al
+; CHECK-32-NEXT:    andb %dl, %al
 ; CHECK-32-NEXT:    # kill: def $al killed $al killed $eax
 ; CHECK-32-NEXT:    popl %esi
 ; CHECK-32-NEXT:    .cfi_def_cfa_offset 4
@@ -459,19 +459,19 @@ define i1 @is_subnormal_f80(x86_fp80 %x) {
 ; CHECK-32-NEXT:    pushl %esi
 ; CHECK-32-NEXT:    .cfi_def_cfa_offset 8
 ; CHECK-32-NEXT:    .cfi_offset %esi, -8
-; CHECK-32-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; CHECK-32-NEXT:    movl {{[0-9]+}}(%esp), %esi
 ; CHECK-32-NEXT:    movl {{[0-9]+}}(%esp), %ecx
-; CHECK-32-NEXT:    movzwl {{[0-9]+}}(%esp), %edx
-; CHECK-32-NEXT:    andl $32767, %edx # imm = 0x7FFF
-; CHECK-32-NEXT:    xorl %esi, %esi
-; CHECK-32-NEXT:    addl $-1, %eax
+; CHECK-32-NEXT:    movzwl {{[0-9]+}}(%esp), %eax
+; CHECK-32-NEXT:    andl $32767, %eax # imm = 0x7FFF
+; CHECK-32-NEXT:    xorl %edx, %edx
+; CHECK-32-NEXT:    addl $-1, %esi
 ; CHECK-32-NEXT:    adcl $-1, %ecx
+; CHECK-32-NEXT:    adcl $-1, %eax
 ; CHECK-32-NEXT:    adcl $-1, %edx
-; CHECK-32-NEXT:    adcl $-1, %esi
-; CHECK-32-NEXT:    cmpl $-1, %eax
+; CHECK-32-NEXT:    cmpl $-1, %esi
 ; CHECK-32-NEXT:    sbbl $2147483647, %ecx # imm = 0x7FFFFFFF
+; CHECK-32-NEXT:    sbbl $0, %eax
 ; CHECK-32-NEXT:    sbbl $0, %edx
-; CHECK-32-NEXT:    sbbl $0, %esi
 ; CHECK-32-NEXT:    setb %al
 ; CHECK-32-NEXT:    popl %esi
 ; CHECK-32-NEXT:    .cfi_def_cfa_offset 4
@@ -546,18 +546,18 @@ define i1 @is_negsubnormal_f80(x86_fp80 %x) {
 ; CHECK-32-NEXT:    movzwl {{[0-9]+}}(%esp), %ecx
 ; CHECK-32-NEXT:    movswl %cx, %eax
 ; CHECK-32-NEXT:    sarl $15, %eax
-; CHECK-32-NEXT:    movl {{[0-9]+}}(%esp), %edx
 ; CHECK-32-NEXT:    movl {{[0-9]+}}(%esp), %esi
+; CHECK-32-NEXT:    movl {{[0-9]+}}(%esp), %edi
 ; CHECK-32-NEXT:    andl $32767, %ecx # imm = 0x7FFF
-; CHECK-32-NEXT:    xorl %edi, %edi
-; CHECK-32-NEXT:    addl $-1, %edx
-; CHECK-32-NEXT:    adcl $-1, %esi
-; CHECK-32-NEXT:    adcl $-1, %ecx
+; CHECK-32-NEXT:    xorl %edx, %edx
+; CHECK-32-NEXT:    addl $-1, %esi
 ; CHECK-32-NEXT:    adcl $-1, %edi
-; CHECK-32-NEXT:    cmpl $-1, %edx
-; CHECK-32-NEXT:    sbbl $2147483647, %esi # imm = 0x7FFFFFFF
+; CHECK-32-NEXT:    adcl $-1, %ecx
+; CHECK-32-NEXT:    adcl $-1, %edx
+; CHECK-32-NEXT:    cmpl $-1, %esi
+; CHECK-32-NEXT:    sbbl $2147483647, %edi # imm = 0x7FFFFFFF
 ; CHECK-32-NEXT:    sbbl $0, %ecx
-; CHECK-32-NEXT:    sbbl $0, %edi
+; CHECK-32-NEXT:    sbbl $0, %edx
 ; CHECK-32-NEXT:    setb %cl
 ; CHECK-32-NEXT:    testl %eax, %eax
 ; CHECK-32-NEXT:    sets %al

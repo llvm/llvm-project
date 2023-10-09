@@ -3132,13 +3132,13 @@ define <2 x i16> @cvt_2f64_to_2i16(<2 x double> %a0) nounwind {
 ; AVX-LABEL: cvt_2f64_to_2i16:
 ; AVX:       # %bb.0:
 ; AVX-NEXT:    subq $40, %rsp
-; AVX-NEXT:    vmovapd %xmm0, (%rsp) # 16-byte Spill
+; AVX-NEXT:    vmovapd %xmm0, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
 ; AVX-NEXT:    vshufpd {{.*#+}} xmm0 = xmm0[1,0]
 ; AVX-NEXT:    callq __truncdfhf2@PLT
-; AVX-NEXT:    vmovapd %xmm0, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
-; AVX-NEXT:    vmovdqa (%rsp), %xmm0 # 16-byte Reload
+; AVX-NEXT:    vmovapd %xmm0, (%rsp) # 16-byte Spill
+; AVX-NEXT:    vmovdqa {{[-0-9]+}}(%r{{[sb]}}p), %xmm0 # 16-byte Reload
 ; AVX-NEXT:    callq __truncdfhf2@PLT
-; AVX-NEXT:    vpunpcklwd {{[-0-9]+}}(%r{{[sb]}}p), %xmm0, %xmm0 # 16-byte Folded Reload
+; AVX-NEXT:    vpunpcklwd (%rsp), %xmm0, %xmm0 # 16-byte Folded Reload
 ; AVX-NEXT:    # xmm0 = xmm0[0],mem[0],xmm0[1],mem[1],xmm0[2],mem[2],xmm0[3],mem[3]
 ; AVX-NEXT:    addq $40, %rsp
 ; AVX-NEXT:    retq
@@ -3177,14 +3177,14 @@ define <4 x i16> @cvt_4f64_to_4i16(<4 x double> %a0) nounwind {
 ; AVX1-NEXT:    vmovaps %xmm0, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
 ; AVX1-NEXT:    vmovups (%rsp), %ymm0 # 32-byte Reload
 ; AVX1-NEXT:    vextractf128 $1, %ymm0, %xmm0
-; AVX1-NEXT:    vmovapd %xmm0, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
+; AVX1-NEXT:    vmovapd %xmm0, (%rsp) # 16-byte Spill
 ; AVX1-NEXT:    vshufpd {{.*#+}} xmm0 = xmm0[1,0]
 ; AVX1-NEXT:    vzeroupper
 ; AVX1-NEXT:    callq __truncdfhf2@PLT
-; AVX1-NEXT:    vmovapd %xmm0, (%rsp) # 16-byte Spill
-; AVX1-NEXT:    vmovdqa {{[-0-9]+}}(%r{{[sb]}}p), %xmm0 # 16-byte Reload
+; AVX1-NEXT:    vmovapd %xmm0, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
+; AVX1-NEXT:    vmovdqa (%rsp), %xmm0 # 16-byte Reload
 ; AVX1-NEXT:    callq __truncdfhf2@PLT
-; AVX1-NEXT:    vpunpcklwd (%rsp), %xmm0, %xmm0 # 16-byte Folded Reload
+; AVX1-NEXT:    vpunpcklwd {{[-0-9]+}}(%r{{[sb]}}p), %xmm0, %xmm0 # 16-byte Folded Reload
 ; AVX1-NEXT:    # xmm0 = xmm0[0],mem[0],xmm0[1],mem[1],xmm0[2],mem[2],xmm0[3],mem[3]
 ; AVX1-NEXT:    vmovdqa {{[-0-9]+}}(%r{{[sb]}}p), %xmm1 # 16-byte Reload
 ; AVX1-NEXT:    vpunpcklwd {{[-0-9]+}}(%r{{[sb]}}p), %xmm1, %xmm1 # 16-byte Folded Reload
@@ -3208,14 +3208,14 @@ define <4 x i16> @cvt_4f64_to_4i16(<4 x double> %a0) nounwind {
 ; AVX2-NEXT:    vmovaps %xmm0, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
 ; AVX2-NEXT:    vmovupd (%rsp), %ymm0 # 32-byte Reload
 ; AVX2-NEXT:    vextractf128 $1, %ymm0, %xmm0
-; AVX2-NEXT:    vmovapd %xmm0, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
+; AVX2-NEXT:    vmovapd %xmm0, (%rsp) # 16-byte Spill
 ; AVX2-NEXT:    vshufpd {{.*#+}} xmm0 = xmm0[1,0]
 ; AVX2-NEXT:    vzeroupper
 ; AVX2-NEXT:    callq __truncdfhf2@PLT
-; AVX2-NEXT:    vmovapd %xmm0, (%rsp) # 16-byte Spill
-; AVX2-NEXT:    vmovdqa {{[-0-9]+}}(%r{{[sb]}}p), %xmm0 # 16-byte Reload
+; AVX2-NEXT:    vmovapd %xmm0, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
+; AVX2-NEXT:    vmovdqa (%rsp), %xmm0 # 16-byte Reload
 ; AVX2-NEXT:    callq __truncdfhf2@PLT
-; AVX2-NEXT:    vpunpcklwd (%rsp), %xmm0, %xmm0 # 16-byte Folded Reload
+; AVX2-NEXT:    vpunpcklwd {{[-0-9]+}}(%r{{[sb]}}p), %xmm0, %xmm0 # 16-byte Folded Reload
 ; AVX2-NEXT:    # xmm0 = xmm0[0],mem[0],xmm0[1],mem[1],xmm0[2],mem[2],xmm0[3],mem[3]
 ; AVX2-NEXT:    vmovdqa {{[-0-9]+}}(%r{{[sb]}}p), %xmm1 # 16-byte Reload
 ; AVX2-NEXT:    vpunpcklwd {{[-0-9]+}}(%r{{[sb]}}p), %xmm1, %xmm1 # 16-byte Folded Reload
@@ -3309,14 +3309,14 @@ define <8 x i16> @cvt_4f64_to_8i16_undef(<4 x double> %a0) nounwind {
 ; AVX1-NEXT:    vmovaps %xmm0, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
 ; AVX1-NEXT:    vmovups (%rsp), %ymm0 # 32-byte Reload
 ; AVX1-NEXT:    vextractf128 $1, %ymm0, %xmm0
-; AVX1-NEXT:    vmovapd %xmm0, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
+; AVX1-NEXT:    vmovapd %xmm0, (%rsp) # 16-byte Spill
 ; AVX1-NEXT:    vshufpd {{.*#+}} xmm0 = xmm0[1,0]
 ; AVX1-NEXT:    vzeroupper
 ; AVX1-NEXT:    callq __truncdfhf2@PLT
-; AVX1-NEXT:    vmovapd %xmm0, (%rsp) # 16-byte Spill
-; AVX1-NEXT:    vmovdqa {{[-0-9]+}}(%r{{[sb]}}p), %xmm0 # 16-byte Reload
+; AVX1-NEXT:    vmovapd %xmm0, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
+; AVX1-NEXT:    vmovdqa (%rsp), %xmm0 # 16-byte Reload
 ; AVX1-NEXT:    callq __truncdfhf2@PLT
-; AVX1-NEXT:    vpunpcklwd (%rsp), %xmm0, %xmm0 # 16-byte Folded Reload
+; AVX1-NEXT:    vpunpcklwd {{[-0-9]+}}(%r{{[sb]}}p), %xmm0, %xmm0 # 16-byte Folded Reload
 ; AVX1-NEXT:    # xmm0 = xmm0[0],mem[0],xmm0[1],mem[1],xmm0[2],mem[2],xmm0[3],mem[3]
 ; AVX1-NEXT:    vmovdqa {{[-0-9]+}}(%r{{[sb]}}p), %xmm1 # 16-byte Reload
 ; AVX1-NEXT:    vpunpcklwd {{[-0-9]+}}(%r{{[sb]}}p), %xmm1, %xmm1 # 16-byte Folded Reload
@@ -3340,14 +3340,14 @@ define <8 x i16> @cvt_4f64_to_8i16_undef(<4 x double> %a0) nounwind {
 ; AVX2-NEXT:    vmovaps %xmm0, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
 ; AVX2-NEXT:    vmovupd (%rsp), %ymm0 # 32-byte Reload
 ; AVX2-NEXT:    vextractf128 $1, %ymm0, %xmm0
-; AVX2-NEXT:    vmovapd %xmm0, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
+; AVX2-NEXT:    vmovapd %xmm0, (%rsp) # 16-byte Spill
 ; AVX2-NEXT:    vshufpd {{.*#+}} xmm0 = xmm0[1,0]
 ; AVX2-NEXT:    vzeroupper
 ; AVX2-NEXT:    callq __truncdfhf2@PLT
-; AVX2-NEXT:    vmovapd %xmm0, (%rsp) # 16-byte Spill
-; AVX2-NEXT:    vmovdqa {{[-0-9]+}}(%r{{[sb]}}p), %xmm0 # 16-byte Reload
+; AVX2-NEXT:    vmovapd %xmm0, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
+; AVX2-NEXT:    vmovdqa (%rsp), %xmm0 # 16-byte Reload
 ; AVX2-NEXT:    callq __truncdfhf2@PLT
-; AVX2-NEXT:    vpunpcklwd (%rsp), %xmm0, %xmm0 # 16-byte Folded Reload
+; AVX2-NEXT:    vpunpcklwd {{[-0-9]+}}(%r{{[sb]}}p), %xmm0, %xmm0 # 16-byte Folded Reload
 ; AVX2-NEXT:    # xmm0 = xmm0[0],mem[0],xmm0[1],mem[1],xmm0[2],mem[2],xmm0[3],mem[3]
 ; AVX2-NEXT:    vmovdqa {{[-0-9]+}}(%r{{[sb]}}p), %xmm1 # 16-byte Reload
 ; AVX2-NEXT:    vpunpcklwd {{[-0-9]+}}(%r{{[sb]}}p), %xmm1, %xmm1 # 16-byte Folded Reload
@@ -3442,14 +3442,14 @@ define <8 x i16> @cvt_4f64_to_8i16_zero(<4 x double> %a0) nounwind {
 ; AVX1-NEXT:    vmovaps %xmm0, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
 ; AVX1-NEXT:    vmovups (%rsp), %ymm0 # 32-byte Reload
 ; AVX1-NEXT:    vextractf128 $1, %ymm0, %xmm0
-; AVX1-NEXT:    vmovapd %xmm0, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
+; AVX1-NEXT:    vmovapd %xmm0, (%rsp) # 16-byte Spill
 ; AVX1-NEXT:    vshufpd {{.*#+}} xmm0 = xmm0[1,0]
 ; AVX1-NEXT:    vzeroupper
 ; AVX1-NEXT:    callq __truncdfhf2@PLT
-; AVX1-NEXT:    vmovapd %xmm0, (%rsp) # 16-byte Spill
-; AVX1-NEXT:    vmovdqa {{[-0-9]+}}(%r{{[sb]}}p), %xmm0 # 16-byte Reload
+; AVX1-NEXT:    vmovapd %xmm0, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
+; AVX1-NEXT:    vmovdqa (%rsp), %xmm0 # 16-byte Reload
 ; AVX1-NEXT:    callq __truncdfhf2@PLT
-; AVX1-NEXT:    vpunpcklwd (%rsp), %xmm0, %xmm0 # 16-byte Folded Reload
+; AVX1-NEXT:    vpunpcklwd {{[-0-9]+}}(%r{{[sb]}}p), %xmm0, %xmm0 # 16-byte Folded Reload
 ; AVX1-NEXT:    # xmm0 = xmm0[0],mem[0],xmm0[1],mem[1],xmm0[2],mem[2],xmm0[3],mem[3]
 ; AVX1-NEXT:    vmovdqa {{[-0-9]+}}(%r{{[sb]}}p), %xmm1 # 16-byte Reload
 ; AVX1-NEXT:    vpunpcklwd {{[-0-9]+}}(%r{{[sb]}}p), %xmm1, %xmm1 # 16-byte Folded Reload
@@ -3473,14 +3473,14 @@ define <8 x i16> @cvt_4f64_to_8i16_zero(<4 x double> %a0) nounwind {
 ; AVX2-NEXT:    vmovaps %xmm0, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
 ; AVX2-NEXT:    vmovupd (%rsp), %ymm0 # 32-byte Reload
 ; AVX2-NEXT:    vextractf128 $1, %ymm0, %xmm0
-; AVX2-NEXT:    vmovapd %xmm0, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
+; AVX2-NEXT:    vmovapd %xmm0, (%rsp) # 16-byte Spill
 ; AVX2-NEXT:    vshufpd {{.*#+}} xmm0 = xmm0[1,0]
 ; AVX2-NEXT:    vzeroupper
 ; AVX2-NEXT:    callq __truncdfhf2@PLT
-; AVX2-NEXT:    vmovapd %xmm0, (%rsp) # 16-byte Spill
-; AVX2-NEXT:    vmovdqa {{[-0-9]+}}(%r{{[sb]}}p), %xmm0 # 16-byte Reload
+; AVX2-NEXT:    vmovapd %xmm0, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
+; AVX2-NEXT:    vmovdqa (%rsp), %xmm0 # 16-byte Reload
 ; AVX2-NEXT:    callq __truncdfhf2@PLT
-; AVX2-NEXT:    vpunpcklwd (%rsp), %xmm0, %xmm0 # 16-byte Folded Reload
+; AVX2-NEXT:    vpunpcklwd {{[-0-9]+}}(%r{{[sb]}}p), %xmm0, %xmm0 # 16-byte Folded Reload
 ; AVX2-NEXT:    # xmm0 = xmm0[0],mem[0],xmm0[1],mem[1],xmm0[2],mem[2],xmm0[3],mem[3]
 ; AVX2-NEXT:    vmovdqa {{[-0-9]+}}(%r{{[sb]}}p), %xmm1 # 16-byte Reload
 ; AVX2-NEXT:    vpunpcklwd {{[-0-9]+}}(%r{{[sb]}}p), %xmm1, %xmm1 # 16-byte Folded Reload
@@ -4000,14 +4000,14 @@ define void @store_cvt_4f64_to_8i16_undef(<4 x double> %a0, ptr %a1) nounwind {
 ; AVX1-NEXT:    vmovaps %xmm0, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
 ; AVX1-NEXT:    vmovups (%rsp), %ymm0 # 32-byte Reload
 ; AVX1-NEXT:    vextractf128 $1, %ymm0, %xmm0
-; AVX1-NEXT:    vmovapd %xmm0, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
+; AVX1-NEXT:    vmovapd %xmm0, (%rsp) # 16-byte Spill
 ; AVX1-NEXT:    vshufpd {{.*#+}} xmm0 = xmm0[1,0]
 ; AVX1-NEXT:    vzeroupper
 ; AVX1-NEXT:    callq __truncdfhf2@PLT
-; AVX1-NEXT:    vmovapd %xmm0, (%rsp) # 16-byte Spill
-; AVX1-NEXT:    vmovdqa {{[-0-9]+}}(%r{{[sb]}}p), %xmm0 # 16-byte Reload
+; AVX1-NEXT:    vmovapd %xmm0, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
+; AVX1-NEXT:    vmovdqa (%rsp), %xmm0 # 16-byte Reload
 ; AVX1-NEXT:    callq __truncdfhf2@PLT
-; AVX1-NEXT:    vpunpcklwd (%rsp), %xmm0, %xmm0 # 16-byte Folded Reload
+; AVX1-NEXT:    vpunpcklwd {{[-0-9]+}}(%r{{[sb]}}p), %xmm0, %xmm0 # 16-byte Folded Reload
 ; AVX1-NEXT:    # xmm0 = xmm0[0],mem[0],xmm0[1],mem[1],xmm0[2],mem[2],xmm0[3],mem[3]
 ; AVX1-NEXT:    vmovdqa {{[-0-9]+}}(%r{{[sb]}}p), %xmm1 # 16-byte Reload
 ; AVX1-NEXT:    vpunpcklwd {{[-0-9]+}}(%r{{[sb]}}p), %xmm1, %xmm1 # 16-byte Folded Reload
@@ -4035,14 +4035,14 @@ define void @store_cvt_4f64_to_8i16_undef(<4 x double> %a0, ptr %a1) nounwind {
 ; AVX2-NEXT:    vmovaps %xmm0, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
 ; AVX2-NEXT:    vmovupd (%rsp), %ymm0 # 32-byte Reload
 ; AVX2-NEXT:    vextractf128 $1, %ymm0, %xmm0
-; AVX2-NEXT:    vmovapd %xmm0, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
+; AVX2-NEXT:    vmovapd %xmm0, (%rsp) # 16-byte Spill
 ; AVX2-NEXT:    vshufpd {{.*#+}} xmm0 = xmm0[1,0]
 ; AVX2-NEXT:    vzeroupper
 ; AVX2-NEXT:    callq __truncdfhf2@PLT
-; AVX2-NEXT:    vmovapd %xmm0, (%rsp) # 16-byte Spill
-; AVX2-NEXT:    vmovdqa {{[-0-9]+}}(%r{{[sb]}}p), %xmm0 # 16-byte Reload
+; AVX2-NEXT:    vmovapd %xmm0, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
+; AVX2-NEXT:    vmovdqa (%rsp), %xmm0 # 16-byte Reload
 ; AVX2-NEXT:    callq __truncdfhf2@PLT
-; AVX2-NEXT:    vpunpcklwd (%rsp), %xmm0, %xmm0 # 16-byte Folded Reload
+; AVX2-NEXT:    vpunpcklwd {{[-0-9]+}}(%r{{[sb]}}p), %xmm0, %xmm0 # 16-byte Folded Reload
 ; AVX2-NEXT:    # xmm0 = xmm0[0],mem[0],xmm0[1],mem[1],xmm0[2],mem[2],xmm0[3],mem[3]
 ; AVX2-NEXT:    vmovdqa {{[-0-9]+}}(%r{{[sb]}}p), %xmm1 # 16-byte Reload
 ; AVX2-NEXT:    vpunpcklwd {{[-0-9]+}}(%r{{[sb]}}p), %xmm1, %xmm1 # 16-byte Folded Reload
@@ -4150,14 +4150,14 @@ define void @store_cvt_4f64_to_8i16_zero(<4 x double> %a0, ptr %a1) nounwind {
 ; AVX1-NEXT:    vmovaps %xmm0, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
 ; AVX1-NEXT:    vmovups (%rsp), %ymm0 # 32-byte Reload
 ; AVX1-NEXT:    vextractf128 $1, %ymm0, %xmm0
-; AVX1-NEXT:    vmovapd %xmm0, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
+; AVX1-NEXT:    vmovapd %xmm0, (%rsp) # 16-byte Spill
 ; AVX1-NEXT:    vshufpd {{.*#+}} xmm0 = xmm0[1,0]
 ; AVX1-NEXT:    vzeroupper
 ; AVX1-NEXT:    callq __truncdfhf2@PLT
-; AVX1-NEXT:    vmovapd %xmm0, (%rsp) # 16-byte Spill
-; AVX1-NEXT:    vmovdqa {{[-0-9]+}}(%r{{[sb]}}p), %xmm0 # 16-byte Reload
+; AVX1-NEXT:    vmovapd %xmm0, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
+; AVX1-NEXT:    vmovdqa (%rsp), %xmm0 # 16-byte Reload
 ; AVX1-NEXT:    callq __truncdfhf2@PLT
-; AVX1-NEXT:    vpunpcklwd (%rsp), %xmm0, %xmm0 # 16-byte Folded Reload
+; AVX1-NEXT:    vpunpcklwd {{[-0-9]+}}(%r{{[sb]}}p), %xmm0, %xmm0 # 16-byte Folded Reload
 ; AVX1-NEXT:    # xmm0 = xmm0[0],mem[0],xmm0[1],mem[1],xmm0[2],mem[2],xmm0[3],mem[3]
 ; AVX1-NEXT:    vmovdqa {{[-0-9]+}}(%r{{[sb]}}p), %xmm1 # 16-byte Reload
 ; AVX1-NEXT:    vpunpcklwd {{[-0-9]+}}(%r{{[sb]}}p), %xmm1, %xmm1 # 16-byte Folded Reload
@@ -4185,14 +4185,14 @@ define void @store_cvt_4f64_to_8i16_zero(<4 x double> %a0, ptr %a1) nounwind {
 ; AVX2-NEXT:    vmovaps %xmm0, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
 ; AVX2-NEXT:    vmovupd (%rsp), %ymm0 # 32-byte Reload
 ; AVX2-NEXT:    vextractf128 $1, %ymm0, %xmm0
-; AVX2-NEXT:    vmovapd %xmm0, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
+; AVX2-NEXT:    vmovapd %xmm0, (%rsp) # 16-byte Spill
 ; AVX2-NEXT:    vshufpd {{.*#+}} xmm0 = xmm0[1,0]
 ; AVX2-NEXT:    vzeroupper
 ; AVX2-NEXT:    callq __truncdfhf2@PLT
-; AVX2-NEXT:    vmovapd %xmm0, (%rsp) # 16-byte Spill
-; AVX2-NEXT:    vmovdqa {{[-0-9]+}}(%r{{[sb]}}p), %xmm0 # 16-byte Reload
+; AVX2-NEXT:    vmovapd %xmm0, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
+; AVX2-NEXT:    vmovdqa (%rsp), %xmm0 # 16-byte Reload
 ; AVX2-NEXT:    callq __truncdfhf2@PLT
-; AVX2-NEXT:    vpunpcklwd (%rsp), %xmm0, %xmm0 # 16-byte Folded Reload
+; AVX2-NEXT:    vpunpcklwd {{[-0-9]+}}(%r{{[sb]}}p), %xmm0, %xmm0 # 16-byte Folded Reload
 ; AVX2-NEXT:    # xmm0 = xmm0[0],mem[0],xmm0[1],mem[1],xmm0[2],mem[2],xmm0[3],mem[3]
 ; AVX2-NEXT:    vmovdqa {{[-0-9]+}}(%r{{[sb]}}p), %xmm1 # 16-byte Reload
 ; AVX2-NEXT:    vpunpcklwd {{[-0-9]+}}(%r{{[sb]}}p), %xmm1, %xmm1 # 16-byte Folded Reload

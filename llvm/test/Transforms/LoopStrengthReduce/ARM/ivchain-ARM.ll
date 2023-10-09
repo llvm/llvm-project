@@ -408,9 +408,9 @@ declare <1 x i64> @llvm.arm.neon.vld1.v1i64.p0(ptr, i32) nounwind readonly
 define void @testReuse(ptr %src, i32 %stride) nounwind ssp {
 ; A9-LABEL: testReuse:
 ; A9:       @ %bb.0: @ %entry
-; A9-NEXT:    sub.w r2, r1, r1, lsl #2
 ; A9-NEXT:    sub.w r12, r0, r1, lsl #2
-; A9-NEXT:    lsls r2, r2, #1
+; A9-NEXT:    sub.w r0, r1, r1, lsl #2
+; A9-NEXT:    lsls r2, r0, #1
 ; A9-NEXT:    movs r3, #0
 ; A9-NEXT:  .LBB5_1: @ %for.body
 ; A9-NEXT:    @ =>This Inner Loop Header: Depth=1

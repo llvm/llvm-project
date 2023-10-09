@@ -168,25 +168,23 @@ define i1 @lshr_ctlz_undef_cmpne_zero_i64(i64 %in) nounwind {
 define <2 x i64> @lshr_ctlz_cmpeq_zero_v2i64(<2 x i64> %in) nounwind {
 ; X86-LABEL: lshr_ctlz_cmpeq_zero_v2i64:
 ; X86:       # %bb.0:
-; X86-NEXT:    pushl %ebx
 ; X86-NEXT:    pushl %esi
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %edx
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %esi
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %edx
 ; X86-NEXT:    xorl %ecx, %ecx
-; X86-NEXT:    orl {{[0-9]+}}(%esp), %esi
+; X86-NEXT:    orl {{[0-9]+}}(%esp), %edx
 ; X86-NEXT:    setne %cl
 ; X86-NEXT:    negl %ecx
-; X86-NEXT:    xorl %ebx, %ebx
-; X86-NEXT:    orl {{[0-9]+}}(%esp), %edx
-; X86-NEXT:    setne %bl
-; X86-NEXT:    negl %ebx
-; X86-NEXT:    movl %ebx, 12(%eax)
-; X86-NEXT:    movl %ebx, 8(%eax)
+; X86-NEXT:    xorl %edx, %edx
+; X86-NEXT:    orl {{[0-9]+}}(%esp), %esi
+; X86-NEXT:    setne %dl
+; X86-NEXT:    negl %edx
+; X86-NEXT:    movl %edx, 12(%eax)
+; X86-NEXT:    movl %edx, 8(%eax)
 ; X86-NEXT:    movl %ecx, 4(%eax)
 ; X86-NEXT:    movl %ecx, (%eax)
 ; X86-NEXT:    popl %esi
-; X86-NEXT:    popl %ebx
 ; X86-NEXT:    retl $4
 ;
 ; X64-LABEL: lshr_ctlz_cmpeq_zero_v2i64:
@@ -208,25 +206,23 @@ define <2 x i64> @lshr_ctlz_cmpeq_zero_v2i64(<2 x i64> %in) nounwind {
 define <2 x i64> @lshr_ctlz_cmpne_zero_v2i64(<2 x i64> %in) nounwind {
 ; X86-LABEL: lshr_ctlz_cmpne_zero_v2i64:
 ; X86:       # %bb.0:
-; X86-NEXT:    pushl %ebx
 ; X86-NEXT:    pushl %esi
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %edx
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %esi
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %edx
 ; X86-NEXT:    xorl %ecx, %ecx
-; X86-NEXT:    orl {{[0-9]+}}(%esp), %esi
+; X86-NEXT:    orl {{[0-9]+}}(%esp), %edx
 ; X86-NEXT:    sete %cl
 ; X86-NEXT:    negl %ecx
-; X86-NEXT:    xorl %ebx, %ebx
-; X86-NEXT:    orl {{[0-9]+}}(%esp), %edx
-; X86-NEXT:    sete %bl
-; X86-NEXT:    negl %ebx
-; X86-NEXT:    movl %ebx, 12(%eax)
-; X86-NEXT:    movl %ebx, 8(%eax)
+; X86-NEXT:    xorl %edx, %edx
+; X86-NEXT:    orl {{[0-9]+}}(%esp), %esi
+; X86-NEXT:    sete %dl
+; X86-NEXT:    negl %edx
+; X86-NEXT:    movl %edx, 12(%eax)
+; X86-NEXT:    movl %edx, 8(%eax)
 ; X86-NEXT:    movl %ecx, 4(%eax)
 ; X86-NEXT:    movl %ecx, (%eax)
 ; X86-NEXT:    popl %esi
-; X86-NEXT:    popl %ebx
 ; X86-NEXT:    retl $4
 ;
 ; X64-LABEL: lshr_ctlz_cmpne_zero_v2i64:

@@ -14,26 +14,26 @@ define arm_aapcs_vfpcc void @vabd_v4f32(<4 x float> %x, <4 x float> %y, ptr %z) 
 ; CHECK-MVE-NEXT:    vmov q4, q1
 ; CHECK-MVE-NEXT:    vmov q5, q0
 ; CHECK-MVE-NEXT:    mov r8, r0
-; CHECK-MVE-NEXT:    vmov r0, r5, d10
-; CHECK-MVE-NEXT:    vmov r1, r6, d8
+; CHECK-MVE-NEXT:    vmov r0, r6, d10
+; CHECK-MVE-NEXT:    vmov r1, r7, d8
 ; CHECK-MVE-NEXT:    bl __aeabi_fsub
 ; CHECK-MVE-NEXT:    mov r9, r0
-; CHECK-MVE-NEXT:    mov r0, r5
-; CHECK-MVE-NEXT:    mov r1, r6
+; CHECK-MVE-NEXT:    mov r0, r6
+; CHECK-MVE-NEXT:    mov r1, r7
 ; CHECK-MVE-NEXT:    bl __aeabi_fsub
-; CHECK-MVE-NEXT:    mov r5, r0
-; CHECK-MVE-NEXT:    vmov r0, r6, d11
+; CHECK-MVE-NEXT:    mov r6, r0
+; CHECK-MVE-NEXT:    vmov r0, r7, d11
 ; CHECK-MVE-NEXT:    vmov r1, r4, d9
 ; CHECK-MVE-NEXT:    bl __aeabi_fsub
-; CHECK-MVE-NEXT:    mov r7, r0
-; CHECK-MVE-NEXT:    mov r0, r6
+; CHECK-MVE-NEXT:    mov r5, r0
+; CHECK-MVE-NEXT:    mov r0, r7
 ; CHECK-MVE-NEXT:    mov r1, r4
 ; CHECK-MVE-NEXT:    bl __aeabi_fsub
 ; CHECK-MVE-NEXT:    bic r0, r0, #-2147483648
 ; CHECK-MVE-NEXT:    vmov s3, r0
-; CHECK-MVE-NEXT:    bic r0, r7, #-2147483648
-; CHECK-MVE-NEXT:    vmov s2, r0
 ; CHECK-MVE-NEXT:    bic r0, r5, #-2147483648
+; CHECK-MVE-NEXT:    vmov s2, r0
+; CHECK-MVE-NEXT:    bic r0, r6, #-2147483648
 ; CHECK-MVE-NEXT:    vmov s1, r0
 ; CHECK-MVE-NEXT:    bic r0, r9, #-2147483648
 ; CHECK-MVE-NEXT:    vmov s0, r0

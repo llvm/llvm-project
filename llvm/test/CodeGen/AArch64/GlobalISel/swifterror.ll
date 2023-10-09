@@ -372,7 +372,7 @@ declare swiftcc void @params_in_reg2(i64, i64, i64, i64, i64, i64, i64, i64, ptr
 
 ; CHECK-LABEL: params_and_return_in_reg
 ; Store callee saved registers.
-; CHECK:  str     x28, [sp, #16
+; CHECK:  stp     x28, x0, [sp, #16
 ; CHECK:  stp     x27, x26, [sp
 ; CHECK:  stp     x25, x24, [sp
 ; CHECK:  stp     x23, x22, [sp
@@ -398,8 +398,8 @@ declare swiftcc void @params_in_reg2(i64, i64, i64, i64, i64, i64, i64, i64, ptr
 ; CHECK:  mov      x21, xzr
 ; CHECK:  bl      _params_in_reg2
 ; Store swifterror %error_ptr_ref.
-; CHECK:  ldr     x8, [sp, #8]
-; CHECK:  str     x21, [sp, #24]
+; CHECK:  ldr     x0, [sp, #24]
+; CHECK:  stp     {{x[0-9]+}}, x21, [sp]
 ; Setup call arguments from original arguments.
 ; CHECK:  mov      x1, x20
 ; CHECK:  mov      x2, x22
@@ -410,17 +410,17 @@ declare swiftcc void @params_in_reg2(i64, i64, i64, i64, i64, i64, i64, i64, ptr
 ; CHECK:  mov      x7, x27
 ; CHECK:  mov      x21, x28
 ; CHECK:  bl      _params_and_return_in_reg2
-; CHECK:  mov      x28, x21
-; CHECK:  ldr      x21, [sp, #24
+; CHECK:  mov      x19, x21
+; CHECK:  ldr      x21, [sp, #8
 ; Store return values.
-; CHECK:  mov     x19, x0
-; CHECK:  mov     x20, x1
-; CHECK:  mov     x22, x2
-; CHECK:  mov     x23, x3
-; CHECK:  mov     x24, x4
-; CHECK:  mov     x25, x5
-; CHECK:  mov     x26, x6
-; CHECK:  mov     x27, x7
+; CHECK:  mov     x20, x0
+; CHECK:  mov     x22, x1
+; CHECK:  mov     x23, x2
+; CHECK:  mov     x24, x3
+; CHECK:  mov     x25, x4
+; CHECK:  mov     x26, x5
+; CHECK:  mov     x27, x6
+; CHECK:  mov     x28, x7
 ; Setup call.
 ; CHECK:  mov     w0, #1
 ; CHECK:  mov     w1, #2
@@ -433,15 +433,15 @@ declare swiftcc void @params_in_reg2(i64, i64, i64, i64, i64, i64, i64, i64, ptr
 ; CHECK:  str     xzr, [sp]
 ; CHECK:  bl      _params_in_reg2
 ; Restore return values for return from this function.
-; CHECK:  mov     x0, x19
-; CHECK:  mov     x1, x20
-; CHECK:  mov     x2, x22
-; CHECK:  mov     x3, x23
-; CHECK:  mov     x4, x24
-; CHECK:  mov     x5, x25
-; CHECK:  mov     x6, x26
-; CHECK:  mov     x7, x27
-; CHECK:  mov     x21, x28
+; CHECK:  mov     x0, x20
+; CHECK:  mov     x1, x22
+; CHECK:  mov     x2, x23
+; CHECK:  mov     x3, x24
+; CHECK:  mov     x4, x25
+; CHECK:  mov     x5, x26
+; CHECK:  mov     x6, x27
+; CHECK:  mov     x21, x19
+; CHECK:  mov     x7, x28
 ; CHECK:  ldp     x29, x30, [sp, #96]             ; 16-byte Folded Reload
 ; CHECK:  ldr     x28, [sp, #16]                  ; 8-byte Folded Reload
 ; CHECK:  ldp     x20, x19, [sp, #80]             ; 16-byte Folded Reload

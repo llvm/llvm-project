@@ -739,27 +739,27 @@ declare <4 x i128> @llvm.sadd.sat.v4i128(<4 x i128> %a, <4 x i128> %b);
 define <4 x i128> @sadd(<4 x i128> %a, <4 x i128> %b) local_unnamed_addr {
 ; CHECK-LABEL: sadd:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vadduqm 1, 2, 6
+; CHECK-NEXT:    vadduqm 0, 2, 6
 ; CHECK-NEXT:    vadduqm 10, 4, 8
 ; CHECK-NEXT:    mfocrf 12, 32
 ; CHECK-NEXT:    stw 12, 8(1)
 ; CHECK-NEXT:    xxswapd 0, 34
 ; CHECK-NEXT:    xxswapd 4, 36
-; CHECK-NEXT:    vadduqm 11, 3, 7
-; CHECK-NEXT:    vadduqm 0, 5, 9
+; CHECK-NEXT:    vadduqm 1, 3, 7
+; CHECK-NEXT:    vadduqm 11, 5, 9
 ; CHECK-NEXT:    mffprd 3, 0
 ; CHECK-NEXT:    mffprd 6, 4
 ; CHECK-NEXT:    lwz 12, 8(1)
 ; CHECK-NEXT:    xxswapd 2, 35
 ; CHECK-NEXT:    xxswapd 5, 37
 ; CHECK-NEXT:    mffprd 4, 2
-; CHECK-NEXT:    xxswapd 1, 33
+; CHECK-NEXT:    xxswapd 1, 32
 ; CHECK-NEXT:    xxswapd 6, 42
 ; CHECK-NEXT:    mffprd 5, 1
 ; CHECK-NEXT:    cmpld 6, 5, 3
 ; CHECK-NEXT:    mffprd 7, 6
-; CHECK-NEXT:    xxswapd 3, 43
-; CHECK-NEXT:    xxswapd 7, 32
+; CHECK-NEXT:    xxswapd 3, 33
+; CHECK-NEXT:    xxswapd 7, 43
 ; CHECK-NEXT:    mffprd 3, 3
 ; CHECK-NEXT:    cmpld 5, 7, 6
 ; CHECK-NEXT:    mffprd 6, 5
@@ -768,12 +768,12 @@ define <4 x i128> @sadd(<4 x i128> %a, <4 x i128> %b) local_unnamed_addr {
 ; CHECK-NEXT:    cmpld 3, 4
 ; CHECK-NEXT:    mfvsrd 3, 34
 ; CHECK-NEXT:    cmpld 1, 7, 6
-; CHECK-NEXT:    mfvsrd 7, 33
+; CHECK-NEXT:    mfvsrd 7, 32
 ; CHECK-NEXT:    mfvsrd 4, 35
 ; CHECK-NEXT:    mfvsrd 6, 37
 ; CHECK-NEXT:    cmpld 7, 7, 3
 ; CHECK-NEXT:    cmpd 2, 7, 3
-; CHECK-NEXT:    mfvsrd 3, 43
+; CHECK-NEXT:    mfvsrd 3, 33
 ; CHECK-NEXT:    crandc 21, 8, 30
 ; CHECK-NEXT:    crand 22, 30, 24
 ; CHECK-NEXT:    cmpld 6, 3, 4
@@ -786,7 +786,7 @@ define <4 x i128> @sadd(<4 x i128> %a, <4 x i128> %b) local_unnamed_addr {
 ; CHECK-NEXT:    crand 24, 26, 0
 ; CHECK-NEXT:    cmpld 4, 5
 ; CHECK-NEXT:    cmpd 7, 4, 5
-; CHECK-NEXT:    mfvsrd 5, 32
+; CHECK-NEXT:    mfvsrd 5, 43
 ; CHECK-NEXT:    crnor 22, 24, 23
 ; CHECK-NEXT:    mtfprd 5, 3
 ; CHECK-NEXT:    sradi 4, 4, 63
@@ -844,14 +844,14 @@ define <4 x i128> @sadd(<4 x i128> %a, <4 x i128> %b) local_unnamed_addr {
 ; CHECK-NEXT:    xxswapd 37, 9
 ; CHECK-NEXT:    xxlxor 2, 39, 37
 ; CHECK-NEXT:    xxlxor 3, 40, 37
-; CHECK-NEXT:    xxsel 34, 33, 2, 0
-; CHECK-NEXT:    xxsel 35, 43, 3, 1
+; CHECK-NEXT:    xxsel 34, 32, 2, 0
+; CHECK-NEXT:    xxsel 35, 33, 3, 1
 ; CHECK-NEXT:    xxlxor 0, 36, 47
 ; CHECK-NEXT:    xxlxor 1, 45, 37
 ; CHECK-NEXT:    xxsel 36, 42, 1, 0
 ; CHECK-NEXT:    xxlxor 0, 38, 48
 ; CHECK-NEXT:    xxlxor 1, 46, 37
-; CHECK-NEXT:    xxsel 37, 32, 1, 0
+; CHECK-NEXT:    xxsel 37, 43, 1, 0
 ; CHECK-NEXT:    blr
   %c = call <4 x i128> @llvm.sadd.sat.v4i128(<4 x i128> %a, <4 x i128> %b)
   ret <4 x i128> %c

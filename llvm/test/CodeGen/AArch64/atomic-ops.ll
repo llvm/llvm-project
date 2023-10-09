@@ -612,15 +612,16 @@ define dso_local i16 @test_atomic_load_xchg_i16(i16 %offset) nounwind {
 define dso_local i32 @test_atomic_load_xchg_i32(i32 %offset) nounwind {
 ; INLINE_ATOMICS-LABEL: test_atomic_load_xchg_i32:
 ; INLINE_ATOMICS:       // %bb.0:
+; INLINE_ATOMICS-NEXT:    mov w8, w0
 ; INLINE_ATOMICS-NEXT:    adrp x9, var32
 ; INLINE_ATOMICS-NEXT:    add x9, x9, :lo12:var32
 ; INLINE_ATOMICS-NEXT:  .LBB22_1: // %atomicrmw.start
 ; INLINE_ATOMICS-NEXT:    // =>This Inner Loop Header: Depth=1
-; INLINE_ATOMICS-NEXT:    ldxr w8, [x9]
-; INLINE_ATOMICS-NEXT:    stlxr w10, w0, [x9]
+; INLINE_ATOMICS-NEXT:    ldxr w0, [x9]
+; INLINE_ATOMICS-NEXT:    stlxr w10, w8, [x9]
 ; INLINE_ATOMICS-NEXT:    cbnz w10, .LBB22_1
 ; INLINE_ATOMICS-NEXT:  // %bb.2: // %atomicrmw.end
-; INLINE_ATOMICS-NEXT:    mov w0, w8
+; INLINE_ATOMICS-NEXT:    // kill: def $w0 killed $w0 killed $x0
 ; INLINE_ATOMICS-NEXT:    ret
 ;
 ; OUTLINE_ATOMICS-LABEL: test_atomic_load_xchg_i32:

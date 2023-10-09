@@ -2315,22 +2315,22 @@ define void @truncstore_v2i64_v2i8(<2 x i64> %x, ptr %p, <2 x i64> %mask) {
 ; SSE2-NEXT:    pcmpeqd %xmm1, %xmm2
 ; SSE2-NEXT:    pshufd {{.*#+}} xmm0 = xmm2[1,0,3,2]
 ; SSE2-NEXT:    pand %xmm2, %xmm0
-; SSE2-NEXT:    movmskpd %xmm0, %ecx
-; SSE2-NEXT:    xorl $3, %ecx
-; SSE2-NEXT:    testb $1, %cl
-; SSE2-NEXT:    movd %xmm3, %eax
+; SSE2-NEXT:    movmskpd %xmm0, %eax
+; SSE2-NEXT:    xorl $3, %eax
+; SSE2-NEXT:    testb $1, %al
+; SSE2-NEXT:    movd %xmm3, %ecx
 ; SSE2-NEXT:    jne .LBB8_1
 ; SSE2-NEXT:  # %bb.2: # %else
-; SSE2-NEXT:    testb $2, %cl
+; SSE2-NEXT:    testb $2, %al
 ; SSE2-NEXT:    jne .LBB8_3
 ; SSE2-NEXT:  .LBB8_4: # %else2
 ; SSE2-NEXT:    retq
 ; SSE2-NEXT:  .LBB8_1: # %cond.store
-; SSE2-NEXT:    movb %al, (%rdi)
-; SSE2-NEXT:    testb $2, %cl
+; SSE2-NEXT:    movb %cl, (%rdi)
+; SSE2-NEXT:    testb $2, %al
 ; SSE2-NEXT:    je .LBB8_4
 ; SSE2-NEXT:  .LBB8_3: # %cond.store1
-; SSE2-NEXT:    movb %ah, 1(%rdi)
+; SSE2-NEXT:    movb %ch, 1(%rdi)
 ; SSE2-NEXT:    retq
 ;
 ; SSE4-LABEL: truncstore_v2i64_v2i8:
@@ -3147,38 +3147,38 @@ define void @truncstore_v16i32_v16i8(<16 x i32> %x, ptr %p, <16 x i32> %mask) {
 ; SSE2-LABEL: truncstore_v16i32_v16i8:
 ; SSE2:       # %bb.0:
 ; SSE2-NEXT:    pxor %xmm8, %xmm8
-; SSE2-NEXT:    movdqa {{.*#+}} xmm9 = [255,255,255,255]
-; SSE2-NEXT:    movdqa {{.*#+}} xmm10 = [2147483648,2147483648,2147483648,2147483648]
-; SSE2-NEXT:    movdqa %xmm1, %xmm11
-; SSE2-NEXT:    pxor %xmm10, %xmm11
-; SSE2-NEXT:    movdqa {{.*#+}} xmm12 = [2147483903,2147483903,2147483903,2147483903]
-; SSE2-NEXT:    movdqa %xmm12, %xmm13
-; SSE2-NEXT:    pcmpgtd %xmm11, %xmm13
+; SSE2-NEXT:    movdqa {{.*#+}} xmm10 = [255,255,255,255]
+; SSE2-NEXT:    movdqa {{.*#+}} xmm11 = [2147483648,2147483648,2147483648,2147483648]
+; SSE2-NEXT:    movdqa %xmm1, %xmm12
+; SSE2-NEXT:    pxor %xmm11, %xmm12
+; SSE2-NEXT:    movdqa {{.*#+}} xmm9 = [2147483903,2147483903,2147483903,2147483903]
+; SSE2-NEXT:    movdqa %xmm9, %xmm13
+; SSE2-NEXT:    pcmpgtd %xmm12, %xmm13
 ; SSE2-NEXT:    pand %xmm13, %xmm1
-; SSE2-NEXT:    pandn %xmm9, %xmm13
+; SSE2-NEXT:    pandn %xmm10, %xmm13
 ; SSE2-NEXT:    por %xmm1, %xmm13
-; SSE2-NEXT:    movdqa %xmm0, %xmm11
-; SSE2-NEXT:    pxor %xmm10, %xmm11
-; SSE2-NEXT:    movdqa %xmm12, %xmm1
-; SSE2-NEXT:    pcmpgtd %xmm11, %xmm1
+; SSE2-NEXT:    movdqa %xmm0, %xmm12
+; SSE2-NEXT:    pxor %xmm11, %xmm12
+; SSE2-NEXT:    movdqa %xmm9, %xmm1
+; SSE2-NEXT:    pcmpgtd %xmm12, %xmm1
 ; SSE2-NEXT:    pand %xmm1, %xmm0
-; SSE2-NEXT:    pandn %xmm9, %xmm1
+; SSE2-NEXT:    pandn %xmm10, %xmm1
 ; SSE2-NEXT:    por %xmm0, %xmm1
 ; SSE2-NEXT:    packuswb %xmm13, %xmm1
 ; SSE2-NEXT:    movdqa %xmm3, %xmm0
-; SSE2-NEXT:    pxor %xmm10, %xmm0
-; SSE2-NEXT:    movdqa %xmm12, %xmm11
-; SSE2-NEXT:    pcmpgtd %xmm0, %xmm11
-; SSE2-NEXT:    pand %xmm11, %xmm3
-; SSE2-NEXT:    pandn %xmm9, %xmm11
-; SSE2-NEXT:    por %xmm3, %xmm11
-; SSE2-NEXT:    pxor %xmm2, %xmm10
-; SSE2-NEXT:    pcmpgtd %xmm10, %xmm12
-; SSE2-NEXT:    pand %xmm12, %xmm2
-; SSE2-NEXT:    pandn %xmm9, %xmm12
-; SSE2-NEXT:    por %xmm2, %xmm12
-; SSE2-NEXT:    packuswb %xmm11, %xmm12
-; SSE2-NEXT:    packuswb %xmm12, %xmm1
+; SSE2-NEXT:    pxor %xmm11, %xmm0
+; SSE2-NEXT:    movdqa %xmm9, %xmm12
+; SSE2-NEXT:    pcmpgtd %xmm0, %xmm12
+; SSE2-NEXT:    pand %xmm12, %xmm3
+; SSE2-NEXT:    pandn %xmm10, %xmm12
+; SSE2-NEXT:    por %xmm3, %xmm12
+; SSE2-NEXT:    pxor %xmm2, %xmm11
+; SSE2-NEXT:    pcmpgtd %xmm11, %xmm9
+; SSE2-NEXT:    pand %xmm9, %xmm2
+; SSE2-NEXT:    pandn %xmm10, %xmm9
+; SSE2-NEXT:    por %xmm2, %xmm9
+; SSE2-NEXT:    packuswb %xmm12, %xmm9
+; SSE2-NEXT:    packuswb %xmm9, %xmm1
 ; SSE2-NEXT:    pcmpeqd %xmm8, %xmm7
 ; SSE2-NEXT:    pcmpeqd %xmm8, %xmm6
 ; SSE2-NEXT:    packssdw %xmm7, %xmm6
