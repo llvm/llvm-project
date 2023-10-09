@@ -1761,10 +1761,9 @@ DiagnosedSilenceableFailure
 transform::NamedSequenceOp::apply(transform::TransformRewriter &rewriter,
                                   transform::TransformResults &results,
                                   transform::TransformState &state) {
-  if (getBody().empty()) {
-    emitOpError("Cannot apply a bodyless named sequence, did you forget to link?");
-    return DiagnosedSilenceableFailure::definiteFailure();
-  }
+  if (isExternal())
+    return emitDefiniteFailure() << "unresolved external named sequence";
+
   // Map the entry block argument to the list of operations.
   // Note: this is the same implementation as PossibleTopLevelTransformOp but
   // without attaching the interface / trait since that is tailored to a
@@ -1774,8 +1773,8 @@ transform::NamedSequenceOp::apply(transform::TransformRewriter &rewriter,
       state, this->getOperation(), getBody())))
     return DiagnosedSilenceableFailure::definiteFailure();
 
-  return applySequenceBlock(getBody().front(), FailurePropagationMode::Propagate, state,
-                            results);
+  return applySequenceBlock(getBody().front(),
+                            FailurePropagationMode::Propagate, state, results);
 }
 
 void transform::NamedSequenceOp::getEffects(

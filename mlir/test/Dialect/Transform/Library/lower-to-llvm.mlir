@@ -4,7 +4,7 @@
 module @lower_module_to_cpu attributes { transform.with_named_sequence } {
 
 transform.named_sequence @lower_to_cpu(
-    %module: !transform.any_op {transform.consumed}) -> !transform.any_op {
+    %module: !transform.any_op {transform.readonly}) -> !transform.any_op {
 
   %func = transform.structured.match ops{["func.func"]} in %module : (!transform.any_op) -> !transform.any_op
   %f = transform.apply_registered_pass "convert-vector-to-scf" to %func : (!transform.any_op) -> !transform.any_op
@@ -32,8 +32,8 @@ transform.named_sequence @lower_to_cpu(
     partial_conversion
   } : !transform.any_op
 
-  %m2 = transform.apply_registered_pass "reconcile-unrealized-casts" to %module : (!transform.any_op) -> !transform.any_op
-  transform.yield %m2 : !transform.any_op
+  %f6 = transform.apply_registered_pass "reconcile-unrealized-casts" to %f5 : (!transform.any_op) -> !transform.any_op
+  transform.yield %module : !transform.any_op
 }
 
 } // transform module
