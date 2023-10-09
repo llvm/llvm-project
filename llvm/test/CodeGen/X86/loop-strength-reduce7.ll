@@ -17,15 +17,15 @@ define fastcc void @outer_loop(ptr nocapture %gfp, ptr nocapture %xr, i32 %targ_
 ; CHECK-NEXT:  LBB0_2: ## %bb28.i37
 ; CHECK-NEXT:    ## =>This Loop Header: Depth=1
 ; CHECK-NEXT:    ## Child Loop BB0_3 Depth 2
-; CHECK-NEXT:    movl %eax, %edx
-; CHECK-NEXT:    xorl %esi, %esi
+; CHECK-NEXT:    xorl %edx, %edx
+; CHECK-NEXT:    movl %eax, %esi
 ; CHECK-NEXT:    .p2align 4, 0x90
 ; CHECK-NEXT:  LBB0_3: ## %bb29.i38
 ; CHECK-NEXT:    ## Parent Loop BB0_2 Depth=1
 ; CHECK-NEXT:    ## => This Inner Loop Header: Depth=2
-; CHECK-NEXT:    incl %esi
-; CHECK-NEXT:    addl $12, %edx
-; CHECK-NEXT:    cmpl $11, %esi
+; CHECK-NEXT:    incl %edx
+; CHECK-NEXT:    addl $12, %esi
+; CHECK-NEXT:    cmpl $11, %edx
 ; CHECK-NEXT:    jbe LBB0_3
 ; CHECK-NEXT:  ## %bb.1: ## %bb28.i37.loopexit
 ; CHECK-NEXT:    ## in Loop: Header=BB0_2 Depth=1
