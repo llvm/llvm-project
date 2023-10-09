@@ -65,3 +65,8 @@
 // CHECK-X86_64-SHARED-SAME: "-isysroot" "[[SYSROOT:[^"]+]]"
 // CHECK-X86_64-SHARED: "{{.*}}ld{{(.exe)?}}"
 // CHECK-X86_64-SHARED-NOT: "[[SYSROOT]]/boot/system/develop/lib/start_dyn.o"
+
+// Check default ARM CPU, ARMv6
+// RUN: %clang -### %s 2>&1 --target=arm-unknown-haiku \
+// RUN:   | FileCheck --check-prefix=CHECK-ARM-CPU %s
+// CHECK-ARM-CPU: "-target-cpu" "arm1176jzf-s"
