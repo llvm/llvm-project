@@ -62,10 +62,11 @@ mlir::scf::tileParallelLoop(ParallelOp op, ArrayRef<int64_t> tileSizes,
   SmallVector<Value, 2> tileSizeConstants;
   tileSizeConstants.reserve(op.getUpperBound().size());
   for (size_t i = 0, end = op.getUpperBound().size(); i != end; ++i) {
-    if (i < tileSizes.size())
+    if (i < tileSizes.size()) {
+      assert(tileSizes[i]);
       tileSizeConstants.push_back(
           b.create<arith::ConstantIndexOp>(op.getLoc(), tileSizes[i]));
-    else
+    } else
       // Just pick 1 for the remaining dimensions.
       tileSizeConstants.push_back(
           b.create<arith::ConstantIndexOp>(op.getLoc(), 1));
