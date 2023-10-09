@@ -133,9 +133,9 @@ def SparseTensorEncodingAttr : SparseTensor_Attr<"SparseTensorEncoding",
     level-expressions collectively define an affine map from dimension-coordinates to
     level-coordinates. The dimension-expressions collectively define the inverse map,
     which only needs to be provided for elaborate cases where it cannot be inferred
-    automatically. Within the sparse storage format, we refer to indices that are
-    stored explicitly as **coordinates** and offsets into the storage format as
-    **positions**.
+    automatically. Each dimension could also have an optional `SparseTensorDimSliceAttr`.
+    Within the sparse storage format, we refer to indices that are stored explicitly
+    as **coordinates** and offsets into the storage format as **positions**.
 
     The supported level-formats are the following:
 
@@ -175,9 +175,6 @@ def SparseTensorEncodingAttr : SparseTensor_Attr<"SparseTensorEncoding",
       the total required range (viz. the maximum value of each tensor
       coordinate over all levels).  The choices are `8`, `16`, `32`,
       `64`, or, the default, `0` to indicate a native bitwidth.
-
-    - An optional array of `SparseTensorDimSliceAttr`, which specifies
-      how the sparse tensor is partitioned on each dimension.
 
     Examples:
 
@@ -228,7 +225,8 @@ def SparseTensorEncodingAttr : SparseTensor_Attr<"SparseTensorEncoding",
     // Same block sparse row storage (2x3 blocks) but this time
     // also with a redundant reverse mapping, which can be inferred.
     #BSR_explicit = #sparse_tensor.encoding<{
-      map = ( i = ib * 2 + ii,
+      map = {ib, jb, ii, jj}
+            ( i = ib * 2 + ii,
               j = jb * 3 + jj) ->
       ( ib = i floordiv 2 : dense,
         jb = j floordiv 3 : compressed,
@@ -265,7 +263,7 @@ def SparseTensorEncodingAttr : SparseTensor_Attr<"SparseTensorEncoding",
              j : #sparse_tensor<slice(0, 8, ?)>) ->
             (i : dense, j : compressed)
     }>
-    ... tensor<?x?xf64, #CSC_SLICE> ...
+    ... tensor<?x?xf64, #CSR_SLICE> ...
 
     ```
   }];
