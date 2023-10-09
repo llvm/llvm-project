@@ -12,7 +12,7 @@
 #tbaa_type_desc = #llvm.tbaa_type_desc<id = "any access", members = {<#tbaa_root, 0>}>
 #tbaa_type_desc1 = #llvm.tbaa_type_desc<id = "any data access", members = {<#tbaa_type_desc, 0>}>
 #tbaa_type_desc2 = #llvm.tbaa_type_desc<id = "dummy arg data", members = {<#tbaa_type_desc1, 0>}>
-#tbaa_type_desc3 = #llvm.tbaa_type_desc<id = "dummy arg data/a", members = {<#tbaa_type_desc2, 0>}>
+#tbaa_type_desc3 = #llvm.tbaa_type_desc<id = "dummy arg data/_QFfuncEa", members = {<#tbaa_type_desc2, 0>}>
 #tbaa_tag = #llvm.tbaa_tag<base_type = #tbaa_type_desc3, access_type = #tbaa_type_desc3, offset = 0>
 module attributes {fir.defaultkind = "a1c4d8i4l4r4", fir.kindmap = "", llvm.target_triple = "aarch64-unknown-linux-gnu"} {
   func.func @_QPfunc(%arg0: !fir.box<!fir.array<?xi32>> {fir.bindc_name = "a"}) {
@@ -108,7 +108,7 @@ module attributes {fir.defaultkind = "a1c4d8i4l4r4", fir.kindmap = "", llvm.targ
 // CHECK: ![[ANY_ACCESS_TYPE]] = !{!"any access", ![[ROOT_TYPE:.*]], i64 0}
 // CHECK: ![[ROOT_TYPE]] = !{!"Flang function root _QPfunc"}
 // CHECK: ![[A_ACCESS_TAG]] = !{![[A_ACCESS_TYPE:.*]], ![[A_ACCESS_TYPE]], i64 0}
-// CHECK: ![[A_ACCESS_TYPE]] = !{!"dummy arg data/a", ![[ARG_ACCESS_TYPE:.*]], i64 0}
+// CHECK: ![[A_ACCESS_TYPE]] = !{!"dummy arg data/_QFfuncEa", ![[ARG_ACCESS_TYPE:.*]], i64 0}
 // CHECK: ![[ARG_ACCESS_TYPE]] = !{!"dummy arg data", ![[DATA_ACCESS_TYPE:.*]], i64 0}
 // CHECK: ![[DATA_ACCESS_TYPE]] = !{!"any data access", ![[ANY_ACCESS_TYPE]], i64 0}
 // CHECK: ![[DATA_ACCESS_TAG]] = !{![[DATA_ACCESS_TYPE]], ![[DATA_ACCESS_TYPE]], i64 0}
