@@ -18,6 +18,7 @@
 #include "flang/Optimizer/Dialect/FIROpsSupport.h"
 #include "flang/Optimizer/Support/FatalError.h"
 #include "flang/Optimizer/Support/InternalNames.h"
+#include "mlir/Dialect/OpenACC/OpenACC.h"
 #include "mlir/Dialect/OpenMP/OpenMPDialect.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/StringExtras.h"
@@ -200,9 +201,17 @@ mlir::Value fir::FirOpBuilder::allocateLocal(
 
 /// Get the block for adding Allocas.
 mlir::Block *fir::FirOpBuilder::getAllocaBlock() {
-  auto iface =
-      getRegion().getParentOfType<mlir::omp::OutlineableOpenMPOpInterface>();
-  return iface ? iface.getAllocaBlock() : getEntryBlock();
+  if (auto ompOutlineableIface =
+          getRegion()
+              .getParentOfType<mlir::omp::OutlineableOpenMPOpInterface>()) {
+    return ompOutlineableIface.getAllocaBlock();
+  }
+  if (auto accRecipeIface =
+          getRegion().getParentOfType<mlir::acc::RecipeInterface>()) {
+    return accRecipeIface.getAllocaBlock(getRegion());
+  }
+
+  return getEntryBlock();
 }
 
 mlir::Value fir::FirOpBuilder::createTemporaryAlloc(
