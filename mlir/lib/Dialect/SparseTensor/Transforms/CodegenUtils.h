@@ -353,11 +353,11 @@ Value genReader(OpBuilder &builder, Location loc, SparseTensorType stt,
                 /*out*/ SmallVectorImpl<Value> &dimShapeValues,
                 /*out*/ Value &dimSizesBuffer);
 
-/// Generates code to set up the buffer parameters for a reader.
-Value genReaderBuffers(OpBuilder &builder, Location loc, SparseTensorType stt,
-                       ArrayRef<Value> dimShapeValues, Value dimSizesBuffer,
-                       /*out*/ Value &dim2lvlBuffer,
-                       /*out*/ Value &lvl2dimBuffer);
+/// Generates code to set up the buffer parameters for a map.
+Value genMapBuffers(OpBuilder &builder, Location loc, SparseTensorType stt,
+                    ArrayRef<Value> dimShapeValues, Value dimSizesBuffer,
+                    /*out*/ Value &dim2lvlBuffer,
+                    /*out*/ Value &lvl2dimBuffer);
 
 //===----------------------------------------------------------------------===//
 // Inlined constant generators.
