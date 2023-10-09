@@ -456,70 +456,74 @@ define zeroext i1 @pr31257(ptr nocapture readonly dereferenceable(8) %s) minsize
 ; WIN64-NEXT:  .LBB3_1: # %for.cond
 ; WIN64-NEXT:    # =>This Inner Loop Header: Depth=1
 ; WIN64-NEXT:    testq %rax, %rax # encoding: [0x48,0x85,0xc0]
-; WIN64-NEXT:    je .LBB3_11 # encoding: [0x74,A]
-; WIN64-NEXT:    # fixup A - offset: 1, value: .LBB3_11-1, kind: FK_PCRel_1
+; WIN64-NEXT:    je .LBB3_12 # encoding: [0x74,A]
+; WIN64-NEXT:    # fixup A - offset: 1, value: .LBB3_12-1, kind: FK_PCRel_1
 ; WIN64-NEXT:  # %bb.2: # %for.body
 ; WIN64-NEXT:    # in Loop: Header=BB3_1 Depth=1
 ; WIN64-NEXT:    cmpl $2, %r8d # encoding: [0x41,0x83,0xf8,0x02]
-; WIN64-NEXT:    je .LBB3_9 # encoding: [0x74,A]
-; WIN64-NEXT:    # fixup A - offset: 1, value: .LBB3_9-1, kind: FK_PCRel_1
+; WIN64-NEXT:    je .LBB3_10 # encoding: [0x74,A]
+; WIN64-NEXT:    # fixup A - offset: 1, value: .LBB3_10-1, kind: FK_PCRel_1
 ; WIN64-NEXT:  # %bb.3: # %for.body
 ; WIN64-NEXT:    # in Loop: Header=BB3_1 Depth=1
 ; WIN64-NEXT:    cmpl $1, %r8d # encoding: [0x41,0x83,0xf8,0x01]
-; WIN64-NEXT:    je .LBB3_7 # encoding: [0x74,A]
-; WIN64-NEXT:    # fixup A - offset: 1, value: .LBB3_7-1, kind: FK_PCRel_1
+; WIN64-NEXT:    je .LBB3_8 # encoding: [0x74,A]
+; WIN64-NEXT:    # fixup A - offset: 1, value: .LBB3_8-1, kind: FK_PCRel_1
 ; WIN64-NEXT:  # %bb.4: # %for.body
 ; WIN64-NEXT:    # in Loop: Header=BB3_1 Depth=1
 ; WIN64-NEXT:    testl %r8d, %r8d # encoding: [0x45,0x85,0xc0]
-; WIN64-NEXT:    jne .LBB3_10 # encoding: [0x75,A]
-; WIN64-NEXT:    # fixup A - offset: 1, value: .LBB3_10-1, kind: FK_PCRel_1
+; WIN64-NEXT:    jne .LBB3_11 # encoding: [0x75,A]
+; WIN64-NEXT:    # fixup A - offset: 1, value: .LBB3_11-1, kind: FK_PCRel_1
 ; WIN64-NEXT:  # %bb.5: # %sw.bb
 ; WIN64-NEXT:    # in Loop: Header=BB3_1 Depth=1
 ; WIN64-NEXT:    movzbl (%rcx), %r9d # encoding: [0x44,0x0f,0xb6,0x09]
 ; WIN64-NEXT:    cmpl $43, %r9d # encoding: [0x41,0x83,0xf9,0x2b]
 ; WIN64-NEXT:    movl $1, %r8d # encoding: [0x41,0xb8,0x01,0x00,0x00,0x00]
-; WIN64-NEXT:    je .LBB3_10 # encoding: [0x74,A]
-; WIN64-NEXT:    # fixup A - offset: 1, value: .LBB3_10-1, kind: FK_PCRel_1
+; WIN64-NEXT:    je .LBB3_11 # encoding: [0x74,A]
+; WIN64-NEXT:    # fixup A - offset: 1, value: .LBB3_11-1, kind: FK_PCRel_1
 ; WIN64-NEXT:  # %bb.6: # %sw.bb
 ; WIN64-NEXT:    # in Loop: Header=BB3_1 Depth=1
 ; WIN64-NEXT:    cmpl $45, %r9d # encoding: [0x41,0x83,0xf9,0x2d]
-; WIN64-NEXT:    je .LBB3_10 # encoding: [0x74,A]
-; WIN64-NEXT:    # fixup A - offset: 1, value: .LBB3_10-1, kind: FK_PCRel_1
-; WIN64-NEXT:    jmp .LBB3_8 # encoding: [0xeb,A]
-; WIN64-NEXT:    # fixup A - offset: 1, value: .LBB3_8-1, kind: FK_PCRel_1
-; WIN64-NEXT:  .LBB3_7: # %sw.bb14
-; WIN64-NEXT:    # in Loop: Header=BB3_1 Depth=1
-; WIN64-NEXT:    movzbl (%rcx), %r9d # encoding: [0x44,0x0f,0xb6,0x09]
-; WIN64-NEXT:  .LBB3_8: # %if.else
+; WIN64-NEXT:    je .LBB3_11 # encoding: [0x74,A]
+; WIN64-NEXT:    # fixup A - offset: 1, value: .LBB3_11-1, kind: FK_PCRel_1
+; WIN64-NEXT:  # %bb.7: # %if.else
 ; WIN64-NEXT:    # in Loop: Header=BB3_1 Depth=1
 ; WIN64-NEXT:    addl $-48, %r9d # encoding: [0x41,0x83,0xc1,0xd0]
-; WIN64-NEXT:    movl $2, %r8d # encoding: [0x41,0xb8,0x02,0x00,0x00,0x00]
 ; WIN64-NEXT:    cmpl $10, %r9d # encoding: [0x41,0x83,0xf9,0x0a]
-; WIN64-NEXT:    jb .LBB3_10 # encoding: [0x72,A]
-; WIN64-NEXT:    # fixup A - offset: 1, value: .LBB3_10-1, kind: FK_PCRel_1
-; WIN64-NEXT:    jmp .LBB3_12 # encoding: [0xeb,A]
-; WIN64-NEXT:    # fixup A - offset: 1, value: .LBB3_12-1, kind: FK_PCRel_1
-; WIN64-NEXT:  .LBB3_9: # %sw.bb22
+; WIN64-NEXT:    jmp .LBB3_9 # encoding: [0xeb,A]
+; WIN64-NEXT:    # fixup A - offset: 1, value: .LBB3_9-1, kind: FK_PCRel_1
+; WIN64-NEXT:  .LBB3_8: # %sw.bb14
 ; WIN64-NEXT:    # in Loop: Header=BB3_1 Depth=1
-; WIN64-NEXT:    movzbl (%rcx), %r9d # encoding: [0x44,0x0f,0xb6,0x09]
-; WIN64-NEXT:    addl $-48, %r9d # encoding: [0x41,0x83,0xc1,0xd0]
+; WIN64-NEXT:    movzbl (%rcx), %r8d # encoding: [0x44,0x0f,0xb6,0x01]
+; WIN64-NEXT:    addl $-48, %r8d # encoding: [0x41,0x83,0xc0,0xd0]
+; WIN64-NEXT:    cmpl $10, %r8d # encoding: [0x41,0x83,0xf8,0x0a]
+; WIN64-NEXT:  .LBB3_9: # %if.else
+; WIN64-NEXT:    # in Loop: Header=BB3_1 Depth=1
 ; WIN64-NEXT:    movl $2, %r8d # encoding: [0x41,0xb8,0x02,0x00,0x00,0x00]
-; WIN64-NEXT:    cmpl $10, %r9d # encoding: [0x41,0x83,0xf9,0x0a]
+; WIN64-NEXT:    jb .LBB3_11 # encoding: [0x72,A]
+; WIN64-NEXT:    # fixup A - offset: 1, value: .LBB3_11-1, kind: FK_PCRel_1
+; WIN64-NEXT:    jmp .LBB3_13 # encoding: [0xeb,A]
+; WIN64-NEXT:    # fixup A - offset: 1, value: .LBB3_13-1, kind: FK_PCRel_1
+; WIN64-NEXT:  .LBB3_10: # %sw.bb22
+; WIN64-NEXT:    # in Loop: Header=BB3_1 Depth=1
+; WIN64-NEXT:    movzbl (%rcx), %r8d # encoding: [0x44,0x0f,0xb6,0x01]
+; WIN64-NEXT:    addl $-48, %r8d # encoding: [0x41,0x83,0xc0,0xd0]
+; WIN64-NEXT:    cmpl $10, %r8d # encoding: [0x41,0x83,0xf8,0x0a]
+; WIN64-NEXT:    movl $2, %r8d # encoding: [0x41,0xb8,0x02,0x00,0x00,0x00]
 ; WIN64-NEXT:    jae _Z20isValidIntegerSuffixN9__gnu_cxx17__normal_iteratorIPKcSsEES3_ # TAILCALL
 ; WIN64-NEXT:    # encoding: [0x73,A]
 ; WIN64-NEXT:    # fixup A - offset: 1, value: _Z20isValidIntegerSuffixN9__gnu_cxx17__normal_iteratorIPKcSsEES3_-1, kind: FK_PCRel_1
-; WIN64-NEXT:  .LBB3_10: # %for.inc
+; WIN64-NEXT:  .LBB3_11: # %for.inc
 ; WIN64-NEXT:    # in Loop: Header=BB3_1 Depth=1
 ; WIN64-NEXT:    incq %rcx # encoding: [0x48,0xff,0xc1]
 ; WIN64-NEXT:    decq %rax # encoding: [0x48,0xff,0xc8]
 ; WIN64-NEXT:    jmp .LBB3_1 # encoding: [0xeb,A]
 ; WIN64-NEXT:    # fixup A - offset: 1, value: .LBB3_1-1, kind: FK_PCRel_1
-; WIN64-NEXT:  .LBB3_11:
+; WIN64-NEXT:  .LBB3_12:
 ; WIN64-NEXT:    cmpl $2, %r8d # encoding: [0x41,0x83,0xf8,0x02]
 ; WIN64-NEXT:    sete %al # encoding: [0x0f,0x94,0xc0]
 ; WIN64-NEXT:    # kill: def $al killed $al killed $eax
 ; WIN64-NEXT:    retq # encoding: [0xc3]
-; WIN64-NEXT:  .LBB3_12:
+; WIN64-NEXT:  .LBB3_13:
 ; WIN64-NEXT:    xorl %eax, %eax # encoding: [0x31,0xc0]
 ; WIN64-NEXT:    # kill: def $al killed $al killed $eax
 ; WIN64-NEXT:    retq # encoding: [0xc3]
