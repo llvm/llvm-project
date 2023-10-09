@@ -17,23 +17,49 @@
 #include "test_macros.h"
 
 template <class T>
-void test() {
+constinit std::atomic<T> a1 = T();
+
+template <class T>
+constinit std::atomic<T> a2 = T(5.2);
+
+template <class T>
+constexpr void testOne() {
+  static_assert(std::is_nothrow_constructible_v<std::atomic<T>>);
+  static_assert(std::is_nothrow_constructible_v<std::atomic<T>, T>);
+
   // constexpr atomic() noexcept;
   {
-    constexpr std::atomic<T> a = {};
-    assert(a.load() == T(0));
+    std::atomic<T> a = {};
+    if (!TEST_IS_CONSTANT_EVALUATED) {
+      assert(a.load() == T(0));
+    }
   }
 
   // constexpr atomic(floating-point-type) noexcept;
   {
-    constexpr std::atomic<T> a = T(5.2);
-    assert(a.load() == T(5.2));
+    std::atomic<T> a = T(5.2);
+    if (!TEST_IS_CONSTANT_EVALUATED) {
+      assert(a.load() == T(5.2));
+    }
+  }
+
+  // test constinit
+  if (!TEST_IS_CONSTANT_EVALUATED) {
+    assert(a1<T> == T(0.0));
+    assert(a2<T> == T(5.2));
   }
 }
 
+constexpr bool test() {
+  testOne<float>();
+  testOne<double>();
+  testOne<long double>();
+  return true;
+}
+
 int main(int, char**) {
-  test<float>();
-  test<double>();
-  test<long double>();
+  test();
+  static_assert(test());
+
   return 0;
 }

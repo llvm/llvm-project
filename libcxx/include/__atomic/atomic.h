@@ -141,36 +141,36 @@ struct atomic<_Tp*>
 };
 
 #if _LIBCPP_STD_VER >= 20
-template <class _Tp> requires is_floating_point_v<_Tp>
-struct atomic<_Tp>
-    : public __atomic_base<_Tp>
-{
+template <class _Tp>
+  requires is_floating_point_v<_Tp>
+struct atomic<_Tp> : public __atomic_base<_Tp> {
   private:
     // The builtin __cxx_atomic_fetch_add does not work for
     // long double on some platforms with fp80 type
     // There is no way on the libc++ side to test whether it is
     // ok to use the builtin for a certain type.
     // Therefore, we do not use the builtin here
-    // For more details, see 
+    // For more details, see
     // lib/Sema/SemaChecking.cpp function IsAllowedValueType
     // LLVM Parser does not allow atomicrmw with x86_fp80 type.
     // if (ValType->isSpecificBuiltinType(BuiltinType::LongDouble) &&
     //    &Context.getTargetInfo().getLongDoubleFormat() ==
     //        &llvm::APFloat::x87DoubleExtended())
     // For more info
+    // https://github.com/llvm/llvm-project/issues/68602
     // https://reviews.llvm.org/D53965
 
     template <class _This, class _Operation>
     _LIBCPP_HIDE_FROM_ABI static _Tp __rmw_op(_This&& __self, _Tp __operand, memory_order __m, _Operation __operation) {
         _Tp __old = __self.load(memory_order_relaxed);
         _Tp __new = __operation(__old, __operand);
-        while(!__self.compare_exchange_weak(__old, __new, __m, memory_order_relaxed)) {
-            if constexpr (std::is_same_v<_Tp, long double>){
-                // https://bugs.llvm.org/show_bug.cgi?id=48634
-                // clang bug: __old is not updated on failure for atomic<long double>
-                __old = __self.load(memory_order_relaxed);
-            }
-            __new = __operation(__old, __operand);
+        while (!__self.compare_exchange_weak(__old, __new, __m, memory_order_relaxed)) {
+          if constexpr (std::is_same_v<_Tp, long double>) {
+            // https://github.com/llvm/llvm-project/issues/47978
+            // clang bug: __old is not updated on failure for atomic<long double>
+            __old = __self.load(memory_order_relaxed);
+          }
+          __new = __operation(__old, __operand);
         }
         return __old;
     }
@@ -193,57 +193,54 @@ struct atomic<_Tp>
     _LIBCPP_HIDE_FROM_ABI constexpr atomic() noexcept = default;
     _LIBCPP_HIDE_FROM_ABI constexpr atomic(_Tp __d) noexcept : __base(__d) {}
 
-    atomic(const atomic&) = delete;
-    atomic& operator=(const atomic&) = delete;
+    atomic(const atomic&)                     = delete;
+    atomic& operator=(const atomic&)          = delete;
     atomic& operator=(const atomic&) volatile = delete;
 
-    _LIBCPP_HIDE_FROM_ABI
-    _Tp operator=(_Tp __d) volatile noexcept
-        {__base::store(__d); return __d;}
-    _LIBCPP_HIDE_FROM_ABI
-    _Tp operator=(_Tp __d) noexcept
-        {__base::store(__d); return __d;}
+    _LIBCPP_HIDE_FROM_ABI _Tp operator=(_Tp __d) volatile noexcept {
+        __base::store(__d);
+        return __d;
+    }
+    _LIBCPP_HIDE_FROM_ABI _Tp operator=(_Tp __d) noexcept {
+        __base::store(__d);
+        return __d;
+    }
 
-    _LIBCPP_HIDE_FROM_ABI
-    _Tp fetch_add(_Tp __op, memory_order __m = memory_order_seq_cst) volatile noexcept
-      requires __base::is_always_lock_free {
+    _LIBCPP_HIDE_FROM_ABI _Tp fetch_add(_Tp __op, memory_order __m = memory_order_seq_cst) volatile noexcept
+      requires __base::is_always_lock_free
+    {
         return __fetch_add(*this, __op, __m);
     }
 
-    _LIBCPP_HIDE_FROM_ABI
-    _Tp fetch_add(_Tp __op, memory_order __m = memory_order_seq_cst) noexcept {
+    _LIBCPP_HIDE_FROM_ABI _Tp fetch_add(_Tp __op, memory_order __m = memory_order_seq_cst) noexcept {
         return __fetch_add(*this, __op, __m);
     }
 
-    _LIBCPP_HIDE_FROM_ABI
-    _Tp fetch_sub(_Tp __op, memory_order __m = memory_order_seq_cst) volatile noexcept
-      requires __base::is_always_lock_free {
+    _LIBCPP_HIDE_FROM_ABI _Tp fetch_sub(_Tp __op, memory_order __m = memory_order_seq_cst) volatile noexcept
+      requires __base::is_always_lock_free
+    {
         return __fetch_sub(*this, __op, __m);
     }
 
-    _LIBCPP_HIDE_FROM_ABI
-    _Tp fetch_sub(_Tp __op, memory_order __m = memory_order_seq_cst) noexcept {
+    _LIBCPP_HIDE_FROM_ABI _Tp fetch_sub(_Tp __op, memory_order __m = memory_order_seq_cst) noexcept {
         return __fetch_sub(*this, __op, __m);
     }
 
     _LIBCPP_HIDE_FROM_ABI _Tp operator+=(_Tp __op) volatile noexcept
-      requires __base::is_always_lock_free {
+      requires __base::is_always_lock_free
+    {
         return fetch_add(__op) + __op;
     }
 
-    _LIBCPP_HIDE_FROM_ABI _Tp operator+=(_Tp __op) noexcept {
-        return fetch_add(__op) + __op;
-    }
+    _LIBCPP_HIDE_FROM_ABI _Tp operator+=(_Tp __op) noexcept { return fetch_add(__op) + __op; }
 
     _LIBCPP_HIDE_FROM_ABI _Tp operator-=(_Tp __op) volatile noexcept
-      requires __base::is_always_lock_free {
+      requires __base::is_always_lock_free
+    {
         return fetch_sub(__op) - __op;
     }
 
-    _LIBCPP_HIDE_FROM_ABI _Tp operator-=(_Tp __op) noexcept {
-        return fetch_sub(__op) - __op;
-    }
-
+    _LIBCPP_HIDE_FROM_ABI _Tp operator-=(_Tp __op) noexcept { return fetch_sub(__op) - __op; }
 };
 
 #endif // _LIBCPP_STD_VER >= 20
