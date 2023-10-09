@@ -201,7 +201,7 @@ Expected<RegisterInfo> RegisterInfoParser::create(StringRef Response) {
 
 Expected<RegisterValue> parseRegisterValue(const RegisterInfo &Info,
                                            StringRef HexValue,
-                                           llvm::support::endianness Endian,
+                                           llvm::endianness Endian,
                                            bool ZeroPad) {
   SmallString<128> Storage;
   if (ZeroPad && HexValue.size() < Info.byte_size * 2) {
@@ -224,7 +224,7 @@ Expected<RegisterValue> parseRegisterValue(const RegisterInfo &Info,
 
 //====== StopReply =============================================================
 Expected<std::unique_ptr<StopReply>>
-StopReply::create(StringRef Response, llvm::support::endianness Endian,
+StopReply::create(StringRef Response, llvm::endianness Endian,
                   ArrayRef<RegisterInfo> RegInfos) {
   if (Response.size() < 3)
     return make_parsing_error("StopReply: Invalid packet");

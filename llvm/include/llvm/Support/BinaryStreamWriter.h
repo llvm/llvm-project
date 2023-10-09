@@ -33,7 +33,7 @@ public:
   explicit BinaryStreamWriter(WritableBinaryStreamRef Ref);
   explicit BinaryStreamWriter(WritableBinaryStream &Stream);
   explicit BinaryStreamWriter(MutableArrayRef<uint8_t> Data,
-                              llvm::support::endianness Endian);
+                              llvm::endianness Endian);
 
   BinaryStreamWriter(const BinaryStreamWriter &Other) = default;
 
