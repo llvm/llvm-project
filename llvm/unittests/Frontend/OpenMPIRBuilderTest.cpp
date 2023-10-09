@@ -4057,25 +4057,17 @@ TEST_F(OpenMPIRBuilderTest, CreateTeams) {
   ASSERT_NE(SrcSrc, nullptr);
 
   // Verify the outlined function signature.
-  Function *WrapperFn =
+  Function *OutlinedFn =
       dyn_cast<Function>(TeamsForkCall->getArgOperand(2)->stripPointerCasts());
-  ASSERT_NE(WrapperFn, nullptr);
-  EXPECT_FALSE(WrapperFn->isDeclaration());
-  EXPECT_TRUE(WrapperFn->arg_size() >= 3);
-  EXPECT_EQ(WrapperFn->getArg(0)->getType(), Builder.getPtrTy()); // global_tid
-  EXPECT_EQ(WrapperFn->getArg(1)->getType(), Builder.getPtrTy()); // bound_tid
-  EXPECT_EQ(WrapperFn->getArg(2)->getType(),
+  ASSERT_NE(OutlinedFn, nullptr);
+  EXPECT_FALSE(OutlinedFn->isDeclaration());
+  EXPECT_TRUE(OutlinedFn->arg_size() >= 3);
+  EXPECT_EQ(OutlinedFn->getArg(0)->getType(), Builder.getPtrTy()); // global_tid
+  EXPECT_EQ(OutlinedFn->getArg(1)->getType(), Builder.getPtrTy()); // bound_tid
+  EXPECT_EQ(OutlinedFn->getArg(2)->getType(),
             Builder.getPtrTy()); // captured args
 
   // Check for TruncInst and ICmpInst in the outlined function.
-  inst_range Instructions = instructions(WrapperFn);
-  auto OutlinedFnInst = find_if(
-      Instructions, [](Instruction &Inst) { return isa<CallInst>(&Inst); });
-  ASSERT_NE(OutlinedFnInst, Instructions.end());
-  CallInst *OutlinedFnCI = dyn_cast<CallInst>(&*OutlinedFnInst);
-  ASSERT_NE(OutlinedFnCI, nullptr);
-  Function *OutlinedFn = OutlinedFnCI->getCalledFunction();
-
   EXPECT_TRUE(any_of(instructions(OutlinedFn),
                      [](Instruction &inst) { return isa<TruncInst>(&inst); }));
   EXPECT_TRUE(any_of(instructions(OutlinedFn),
@@ -5541,25 +5533,28 @@ TEST_F(OpenMPIRBuilderTest, CreateTask) {
             24); // 64-bit pointer + 128-bit integer
 
   // Verify Wrapper function
-  Function *WrapperFunc =
+  Function *OutlinedFn =
       dyn_cast<Function>(TaskAllocCall->getArgOperand(5)->stripPointerCasts());
-  ASSERT_NE(WrapperFunc, nullptr);
+  ASSERT_NE(OutlinedFn, nullptr);
 
-  LoadInst *SharedsLoad = dyn_cast<LoadInst>(WrapperFunc->begin()->begin());
+  LoadInst *SharedsLoad = dyn_cast<LoadInst>(OutlinedFn->begin()->begin());
   ASSERT_NE(SharedsLoad, nullptr);
-  EXPECT_EQ(SharedsLoad->getPointerOperand(), WrapperFunc->getArg(1));
+  EXPECT_EQ(SharedsLoad->getPointerOperand(), OutlinedFn->getArg(1));
 
-  EXPECT_FALSE(WrapperFunc->isDeclaration());
-  CallInst *OutlinedFnCall =
-      dyn_cast<CallInst>(++WrapperFunc->begin()->begin());
-  ASSERT_NE(OutlinedFnCall, nullptr);
-  EXPECT_EQ(WrapperFunc->getArg(0)->getType(), Builder.getInt32Ty());
-  EXPECT_EQ(OutlinedFnCall->getArgOperand(0),
-            WrapperFunc->getArg(1)->uses().begin()->getUser());
+  EXPECT_FALSE(OutlinedFn->isDeclaration());
+  EXPECT_EQ(OutlinedFn->getArg(0)->getType(), Builder.getInt32Ty());
+
+  // Verify that the data argument is used only once, and that too in the load
+  // instruction that is then used for accessing shared data.
+  Value *DataPtr = OutlinedFn->getArg(1);
+  EXPECT_EQ(DataPtr->getNumUses(), 1);
+  EXPECT_TRUE(isa<LoadInst>(DataPtr->uses().begin()->getUser()));
+  Value *Data = DataPtr->uses().begin()->getUser();
+  EXPECT_TRUE(all_of(Data->uses(), [](Use &U) {
+    return isa<GetElementPtrInst>(U.getUser());
+  }));
 
   // Verify the presence of `trunc` and `icmp` instructions in Outlined function
-  Function *OutlinedFn = OutlinedFnCall->getCalledFunction();
-  ASSERT_NE(OutlinedFn, nullptr);
   EXPECT_TRUE(any_of(instructions(OutlinedFn),
                      [](Instruction &inst) { return isa<TruncInst>(&inst); }));
   EXPECT_TRUE(any_of(instructions(OutlinedFn),
@@ -5602,6 +5597,14 @@ TEST_F(OpenMPIRBuilderTest, CreateTaskNoArgs) {
   Builder.CreateRetVoid();
 
   EXPECT_FALSE(verifyModule(*M, &errs()));
+
+  // Check that the outlined function has only one argument.
+  CallInst *TaskAllocCall = dyn_cast<CallInst>(
+      OMPBuilder.getOrCreateRuntimeFunctionPtr(OMPRTL___kmpc_omp_task_alloc)
+          ->user_back());
+  Function *OutlinedFn = dyn_cast<Function>(TaskAllocCall->getArgOperand(5));
+  ASSERT_NE(OutlinedFn, nullptr);
+  ASSERT_EQ(OutlinedFn->arg_size(), 1);
 }
 
 TEST_F(OpenMPIRBuilderTest, CreateTaskUntied) {
@@ -5713,8 +5716,8 @@ TEST_F(OpenMPIRBuilderTest, CreateTaskFinal) {
   F->setName("func");
   IRBuilder<> Builder(BB);
   auto BodyGenCB = [&](InsertPointTy AllocaIP, InsertPointTy CodeGenIP) {};
-  IRBuilderBase::InsertPoint AllocaIP = Builder.saveIP();
   BasicBlock *BodyBB = splitBB(Builder, /*CreateBranch=*/true, "alloca.split");
+  IRBuilderBase::InsertPoint AllocaIP = Builder.saveIP();
   Builder.SetInsertPoint(BodyBB);
   Value *Final = Builder.CreateICmp(
       CmpInst::Predicate::ICMP_EQ, F->getArg(0),
@@ -5766,8 +5769,8 @@ TEST_F(OpenMPIRBuilderTest, CreateTaskIfCondition) {
   F->setName("func");
   IRBuilder<> Builder(BB);
   auto BodyGenCB = [&](InsertPointTy AllocaIP, InsertPointTy CodeGenIP) {};
-  IRBuilderBase::InsertPoint AllocaIP = Builder.saveIP();
   BasicBlock *BodyBB = splitBB(Builder, /*CreateBranch=*/true, "alloca.split");
+  IRBuilderBase::InsertPoint AllocaIP = Builder.saveIP();
   Builder.SetInsertPoint(BodyBB);
   Value *IfCondition = Builder.CreateICmp(
       CmpInst::Predicate::ICMP_EQ, F->getArg(0),
@@ -5813,15 +5816,16 @@ TEST_F(OpenMPIRBuilderTest, CreateTaskIfCondition) {
           ->user_back());
   ASSERT_NE(TaskBeginIfCall, nullptr);
   ASSERT_NE(TaskCompleteCall, nullptr);
-  Function *WrapperFunc =
+  Function *OulinedFn =
       dyn_cast<Function>(TaskAllocCall->getArgOperand(5)->stripPointerCasts());
-  ASSERT_NE(WrapperFunc, nullptr);
-  CallInst *WrapperFuncCall = dyn_cast<CallInst>(WrapperFunc->user_back());
-  ASSERT_NE(WrapperFuncCall, nullptr);
+  ASSERT_NE(OulinedFn, nullptr);
+  CallInst *OulinedFnCall = dyn_cast<CallInst>(OulinedFn->user_back());
+  ASSERT_NE(OulinedFnCall, nullptr);
   EXPECT_EQ(TaskBeginIfCall->getParent(),
             IfConditionBranchInst->getSuccessor(1));
-  EXPECT_EQ(TaskBeginIfCall->getNextNonDebugInstruction(), WrapperFuncCall);
-  EXPECT_EQ(WrapperFuncCall->getNextNonDebugInstruction(), TaskCompleteCall);
+
+  EXPECT_EQ(TaskBeginIfCall->getNextNonDebugInstruction(), OulinedFnCall);
+  EXPECT_EQ(OulinedFnCall->getNextNonDebugInstruction(), TaskCompleteCall);
 }
 
 TEST_F(OpenMPIRBuilderTest, CreateTaskgroup) {
