@@ -479,6 +479,7 @@ struct DwarfSectionsCache {
   MCSection *Line;
   MCSection *Str;
   MCSection *Abbrev;
+  MCSection *StrOffsets;
 };
 
 /// Queries `Asm` for all dwarf sections and returns an object with (possibly

@@ -79,15 +79,24 @@ class AbbrevSetWriter;
 /// debug info.
 class InMemoryCASDWARFObject : public DWARFObject {
   ArrayRef<char> DebugAbbrevSection;
+  DWARFSection DebugStringOffsetsSection;
   bool IsLittleEndian;
 
 public:
-  InMemoryCASDWARFObject(ArrayRef<char> AbbrevContents, bool IsLittleEndian)
-      : DebugAbbrevSection(AbbrevContents), IsLittleEndian(IsLittleEndian) {}
+  InMemoryCASDWARFObject(ArrayRef<char> AbbrevContents,
+                         ArrayRef<char> StringOffsetsContents,
+                         bool IsLittleEndian)
+      : DebugAbbrevSection(AbbrevContents),
+        DebugStringOffsetsSection({toStringRef(StringOffsetsContents)}),
+        IsLittleEndian(IsLittleEndian) {}
   bool isLittleEndian() const override { return IsLittleEndian; }
 
   StringRef getAbbrevSection() const override {
     return toStringRef(DebugAbbrevSection);
+  }
+
+  const DWARFSection &getStrOffsetsSection() const override {
+    return DebugStringOffsetsSection;
   }
 
   std::optional<RelocAddrEntry> find(const DWARFSection &Sec,
@@ -1411,7 +1420,8 @@ DwarfSectionsCache mccasformats::v1::getDwarfSections(MCAssembler &Asm) {
       Asm.getContext().getObjectFileInfo()->getDwarfInfoSection(),
       Asm.getContext().getObjectFileInfo()->getDwarfLineSection(),
       Asm.getContext().getObjectFileInfo()->getDwarfStrSection(),
-      Asm.getContext().getObjectFileInfo()->getDwarfAbbrevSection()};
+      Asm.getContext().getObjectFileInfo()->getDwarfAbbrevSection(),
+      Asm.getContext().getObjectFileInfo()->getDwarfStrOffSection()};
 }
 
 Error MCCASBuilder::prepare() {
