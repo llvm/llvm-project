@@ -9891,7 +9891,7 @@ const SCEV *ScalarEvolution::computeSCEVAtScope(const SCEV *V, const Loop *L) {
         // Do we have a loop invariant value flowing around the backedge
         // for a loop which must execute the backedge?
         if (!isa<SCEVCouldNotCompute>(BackedgeTakenCount) &&
-            isKnownPositive(BackedgeTakenCount) &&
+            isKnownNonZero(BackedgeTakenCount) &&
             PN->getNumIncomingValues() == 2) {
 
           unsigned InLoopPred =
