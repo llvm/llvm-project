@@ -162,10 +162,21 @@ lldb::ValueObjectSP lldb_private::formatters::
       if (!node_sp || error.Fail())
           return nullptr;
 
-      value_sp = node_sp->GetChildMemberWithName("__value_");
       hash_sp = node_sp->GetChildMemberWithName("__hash_");
-      if (!value_sp || !hash_sp)
+      if (!hash_sp)
         return nullptr;
+
+      value_sp = node_sp->GetChildMemberWithName("__value_");
+      if (!value_sp) {
+        // Newer libc++ versions wrap the `__value_` in an anonymous union.
+        auto anon_union_sp = node_sp->GetChildAtIndex(2);
+        if (!anon_union_sp)
+          return nullptr;
+
+        value_sp = anon_union_sp->GetChildMemberWithName("__value_");
+        if (!value_sp)
+          return nullptr;
+      }
     }
     m_elements_cache.push_back(
         {value_sp.get(), hash_sp->GetValueAsUnsigned(0)});
