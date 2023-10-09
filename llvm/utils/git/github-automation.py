@@ -82,6 +82,8 @@ class IssueSubscriber:
         comment = f"""
 @llvm/{team.slug}
 
+Author: {self.issue.user.name} ({self.issue.user.login})
+
 <details>
 {body}
 </details>
@@ -165,7 +167,7 @@ class PRSubscriber:
 {self.COMMENT_TAG}
 {team_mention}
 
-Author: {self.pr._user.name} ({self.pr._user.login})
+Author: {self.pr.user.name} ({self.pr.user.login})
 
 <details>
 <summary>Changes</summary>
