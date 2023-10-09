@@ -58,6 +58,7 @@ private:
   friend class ASTWriter;
   friend class ASTReader;
   friend class SourceManager;
+  friend class SourceManagerTestHelper;
 
   static FileID get(int V) {
     FileID F;
