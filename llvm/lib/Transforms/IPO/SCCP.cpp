@@ -107,63 +107,6 @@ static void findReturnsToZap(Function &F,
   }
 }
 
-static void createDebugConstantExpression(Module &M, GlobalVariable *GV) {
-  SmallVector<DIGlobalVariableExpression *, 1> GVEs;
-  GV->getDebugInfo(GVEs);
-  if (GVEs.size() != 1)
-    return;
-
-  DIBuilder DIB(M);
-
-  // Create integer constant expression.
-  auto createIntegerExpression = [&DIB](const Constant *CV) -> DIExpression * {
-    const APInt &API = cast<ConstantInt>(CV)->getValue();
-    std::optional<uint64_t> InitIntOpt;
-    if (API.isNonNegative())
-      InitIntOpt = API.tryZExtValue();
-    else if (auto Temp = API.trySExtValue())
-      // Transform a signed optional to unsigned optional.
-      InitIntOpt = static_cast<uint64_t>(*Temp);
-    return InitIntOpt ? DIB.createConstantValueExpression(InitIntOpt.value())
-                      : nullptr;
-  };
-
-  const Constant *CV = GV->getInitializer();
-  Type *Ty = GV->getValueType();
-  if (Ty->isIntegerTy()) {
-    DIExpression *InitExpr = createIntegerExpression(CV);
-    if (InitExpr)
-      GVEs[0]->replaceOperandWith(1, InitExpr);
-    return;
-  }
-
-  if (Ty->isFloatTy() || Ty->isDoubleTy()) {
-    const APFloat &APF = cast<ConstantFP>(CV)->getValueAPF();
-    GVEs[0]->replaceOperandWith(1, DIB.createConstantValueExpression(
-                                       APF.bitcastToAPInt().getZExtValue()));
-    return;
-  }
-
-  if (!Ty->isPointerTy())
-    return;
-
-  if (isa<ConstantPointerNull>(CV)) {
-    GVEs[0]->replaceOperandWith(1, DIB.createConstantValueExpression(0));
-    return;
-  }
-  if (const ConstantExpr *CE = dyn_cast<ConstantExpr>(CV);
-      CE->getNumOperands() == 1) {
-    const Value *V = CE->getOperand(0);
-    const Constant *CV = dyn_cast<Constant>(V);
-    if (CV && !isa<GlobalValue>(CV);
-        const ConstantInt *CI = dyn_cast<ConstantInt>(CV)) {
-      DIExpression *InitExpr = createIntegerExpression(CI);
-      if (InitExpr)
-        GVEs[0]->replaceOperandWith(1, InitExpr);
-    }
-  }
-}
-
 static bool
 runIPSCCP(Module &M, const DataLayout &DL, FunctionAnalysisManager *FAM,
           std::function<const TargetLibraryInfo &(Function &)> GetTLI,
@@ -432,7 +375,14 @@ runIPSCCP(Module &M, const DataLayout &DL, FunctionAnalysisManager *FAM,
 
     // Try to create a debug constant expression for the global variable
     // initializer value.
-    createDebugConstantExpression(M, GV);
+    SmallVector<DIGlobalVariableExpression *, 1> GVEs;
+    GV->getDebugInfo(GVEs);
+    if (GVEs.size() == 1) {
+      DIBuilder DIB(M);
+      if (DIExpression *InitExpr = getExpressionForConstant(
+              DIB, GV->getInitializer(), GV->getValueType()))
+        GVEs[0]->replaceOperandWith(1, InitExpr);
+    }
 
     MadeChanges = true;
     M.eraseGlobalVariable(GV);

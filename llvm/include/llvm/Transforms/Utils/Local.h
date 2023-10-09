@@ -515,6 +515,14 @@ Value *invertCondition(Value *Condition);
 /// function, explicitly materialize the maximal set in the IR.
 bool inferAttributesFromOthers(Function &F);
 
+///===---------------------------------------------------------------------===//
+///  DebugInfo utilities
+///
+
+/// Given a constant, create a debug information expression.
+DIExpression *getExpressionForConstant(DIBuilder &DIB, const Constant *C,
+                                       Type *Ty);
+
 } // end namespace llvm
 
 #endif // LLVM_TRANSFORMS_UTILS_LOCAL_H

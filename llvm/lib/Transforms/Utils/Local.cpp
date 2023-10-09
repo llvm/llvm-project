@@ -3606,3 +3606,41 @@ bool llvm::inferAttributesFromOthers(Function &F) {
 
   return Changed;
 }
+
+DIExpression *llvm::getExpressionForConstant(DIBuilder &DIB, const Constant *C,
+                                             Type *Ty) {
+
+  // Create integer constant expression.
+  auto createIntegerExpression = [&DIB](const Constant *CV) -> DIExpression * {
+    const APInt &API = cast<ConstantInt>(CV)->getValue();
+    std::optional<int64_t> InitIntOpt = API.trySExtValue();
+    return InitIntOpt ? DIB.createConstantValueExpression(
+                            static_cast<uint64_t>(*InitIntOpt))
+                      : nullptr;
+  };
+
+  if (Ty->isIntegerTy())
+    return createIntegerExpression(C);
+
+  if (Ty->isFloatTy() || Ty->isDoubleTy()) {
+    const APFloat &APF = cast<ConstantFP>(C)->getValueAPF();
+    return DIB.createConstantValueExpression(
+        APF.bitcastToAPInt().getZExtValue());
+  }
+
+  if (!Ty->isPointerTy())
+    return nullptr;
+
+  if (isa<ConstantPointerNull>(C))
+    return DIB.createConstantValueExpression(0);
+
+  if (const ConstantExpr *CE = dyn_cast<ConstantExpr>(C)) {
+    if (CE->getNumOperands() == 1) {
+      const Value *V = CE->getOperand(0);
+      if (auto CI = dyn_cast_or_null<ConstantInt>(V)) {
+        return createIntegerExpression(CI);
+      }
+    }
+  }
+  return nullptr;
+}
