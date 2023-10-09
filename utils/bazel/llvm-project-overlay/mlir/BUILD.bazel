@@ -9031,6 +9031,7 @@ td_library(
         "include/mlir/Dialect/OpenACC/AccCommon.td",
         "include/mlir/Dialect/OpenACC/OpenACCBase.td",
         "include/mlir/Dialect/OpenACC/OpenACCOps.td",
+        "include/mlir/Dialect/OpenACC/OpenACCOpsInterfaces.td",
         "include/mlir/Dialect/OpenACC/OpenACCOpsTypes.td",
         "include/mlir/Dialect/OpenACC/OpenACCTypeInterfaces.td",
         "include/mlir/Dialect/OpenACCMPCommon/Interfaces/AtomicInterfaces.td",
@@ -9041,6 +9042,25 @@ td_library(
         ":OpBaseTdFiles",
     ],
 )
+
+
+gentbl_cc_library(
+    name = "OpenACCOpsInterfacesIncGen",
+    tbl_outs = [
+        (
+            ["-gen-op-interface-decls"],
+            "include/mlir/Dialect/OpenACC/OpenACCOpsInterfaces.h.inc",
+        ),
+        (
+            ["-gen-op-interface-defs"],
+            "include/mlir/Dialect/OpenACC/OpenACCOpsInterfaces.cpp.inc",
+        ),
+    ],
+    tblgen = ":mlir-tblgen",
+    td_file = "include/mlir/Dialect/OpenACC/OpenACCOpsInterfaces.td",
+    deps = [":OpenAccOpsTdFiles"],
+)
+
 
 gentbl_cc_library(
     name = "OpenACCOpsIncGen",
@@ -9173,6 +9193,7 @@ cc_library(
         ":LLVMDialect",
         ":MemRefDialect",
         ":OpenACCOpsIncGen",
+        ":OpenACCOpsInterfacesIncGen",
         ":OpenACCTypeInterfacesIncGen",
         ":OpenACCTypesIncGen",
         ":Transforms",
