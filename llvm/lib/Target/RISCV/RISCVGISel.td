@@ -157,13 +157,8 @@ def : LdPat<sextloadi16, LH, i32>;
 def : LdPat<extloadi16, LH, i32>;
 def : LdPat<zextloadi16, LHU, i32>;
 def : LdPat<load, LW, i32>;
-}
-/*
-def : Pat<(PtrVT (load (AddrRegImm (PtrVT GPR:$rs1), simm12:$imm12))),
-          (LW GPR:$rs1, simm12:$imm12)>, Requires<[IsRV32]>;
-let Predicates = [IsRV64] in {
-def : Pat<(PtrVT (load (AddrRegImm (PtrVT GPR:$rs1), simm12:$imm12))),
-          (LD GPR:$rs1, simm12:$imm12)>;
-def : Pat<(i32 (load (AddrRegImm (PtrVT GPR:$rs1), simm12:$imm12))),
-          (
-}*/
+
+def : StPat<truncstorei8, SB, GPR, i32>;
+def : StPat<truncstorei16, SH, GPR, i32>;
+def : StPat<store, SW, GPR, i32>;
+} // Predicates = [IsRV64]

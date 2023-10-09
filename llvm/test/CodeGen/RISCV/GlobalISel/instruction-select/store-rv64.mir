@@ -2,7 +2,7 @@
 # RUN: llc -mtriple=riscv64 -run-pass=instruction-select %s -o - \
 # RUN: | FileCheck %s
 ---
-name:            store_i8
+name:            store_i8_i64
 legalized:       true
 regBankSelected: true
 tracksRegLiveness: true
@@ -10,7 +10,7 @@ body:            |
   bb.0:
     liveins: $x10, $x11
 
-    ; CHECK-LABEL: name: store_i8
+    ; CHECK-LABEL: name: store_i8_i64
     ; CHECK: liveins: $x10, $x11
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: [[COPY:%[0-9]+]]:gpr = COPY $x10
@@ -24,7 +24,7 @@ body:            |
 
 ...
 ---
-name:            store_i16
+name:            store_i16_i64
 legalized:       true
 regBankSelected: true
 tracksRegLiveness: true
@@ -32,7 +32,7 @@ body:            |
   bb.0:
     liveins: $x10, $x11
 
-    ; CHECK-LABEL: name: store_i16
+    ; CHECK-LABEL: name: store_i16_i64
     ; CHECK: liveins: $x10, $x11
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: [[COPY:%[0-9]+]]:gpr = COPY $x10
@@ -46,7 +46,7 @@ body:            |
 
 ...
 ---
-name:            store_i32
+name:            store_i32_i64
 legalized:       true
 regBankSelected: true
 tracksRegLiveness: true
@@ -54,7 +54,7 @@ body:            |
   bb.0:
     liveins: $x10, $x11
 
-    ; CHECK-LABEL: name: store_i32
+    ; CHECK-LABEL: name: store_i32_i64
     ; CHECK: liveins: $x10, $x11
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: [[COPY:%[0-9]+]]:gpr = COPY $x10
@@ -68,7 +68,7 @@ body:            |
 
 ...
 ---
-name:            store_i64
+name:            store_i64_i64
 legalized:       true
 regBankSelected: true
 tracksRegLiveness: true
@@ -76,7 +76,7 @@ body:            |
   bb.0:
     liveins: $x10, $x11
 
-    ; CHECK-LABEL: name: store_i64
+    ; CHECK-LABEL: name: store_i64_i64
     ; CHECK: liveins: $x10, $x11
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: [[COPY:%[0-9]+]]:gpr = COPY $x10
@@ -111,4 +111,99 @@ body:            |
     PseudoRET
 
 ...
+---
+name:            truncstore_i8_i32
+legalized:       true
+regBankSelected: true
+tracksRegLiveness: true
+body:             |
+  bb.0:
+    liveins: $x10, $x11, $x12
 
+    ; CHECK-LABEL: name: truncstore_i8_i32
+    ; CHECK: liveins: $x10, $x11, $x12
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:gpr = COPY $x10
+    ; CHECK-NEXT: [[COPY1:%[0-9]+]]:gpr = COPY $x11
+    ; CHECK-NEXT: [[COPY2:%[0-9]+]]:gpr = COPY $x12
+    ; CHECK-NEXT: [[ADDW:%[0-9]+]]:gpr = ADDW [[COPY1]], [[COPY2]]
+    ; CHECK-NEXT: SB [[ADDW]], [[COPY]], 0 :: (store (s8))
+    ; CHECK-NEXT: [[COPY3:%[0-9]+]]:gpr = COPY $x0
+    ; CHECK-NEXT: $x10 = COPY [[COPY3]]
+    ; CHECK-NEXT: PseudoRET implicit $x10
+    %0:gprb(p0) = COPY $x10
+    %3:gprb(s64) = COPY $x11
+    %4:gprb(s64) = COPY $x12
+    %9:gprb(s32) = G_TRUNC %3(s64)
+    %10:gprb(s32) = G_TRUNC %4(s64)
+    %11:gprb(s32) = G_ADD %9, %10
+    G_STORE %11(s32), %0(p0) :: (store (s8))
+    %7:gprb(s64) = G_CONSTANT i64 0
+    $x10 = COPY %7(s64)
+    PseudoRET implicit $x10
+
+...
+---
+name:            truncstore_i16_i32
+legalized:       true
+regBankSelected: true
+tracksRegLiveness: true
+body:             |
+  bb.0:
+    liveins: $x10, $x11, $x12
+
+    ; CHECK-LABEL: name: truncstore_i16_i32
+    ; CHECK: liveins: $x10, $x11, $x12
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:gpr = COPY $x10
+    ; CHECK-NEXT: [[COPY1:%[0-9]+]]:gpr = COPY $x11
+    ; CHECK-NEXT: [[COPY2:%[0-9]+]]:gpr = COPY $x12
+    ; CHECK-NEXT: [[ADDW:%[0-9]+]]:gpr = ADDW [[COPY1]], [[COPY2]]
+    ; CHECK-NEXT: SH [[ADDW]], [[COPY]], 0 :: (store (s16))
+    ; CHECK-NEXT: [[COPY3:%[0-9]+]]:gpr = COPY $x0
+    ; CHECK-NEXT: $x10 = COPY [[COPY3]]
+    ; CHECK-NEXT: PseudoRET implicit $x10
+    %0:gprb(p0) = COPY $x10
+    %3:gprb(s64) = COPY $x11
+    %4:gprb(s64) = COPY $x12
+    %9:gprb(s32) = G_TRUNC %3(s64)
+    %10:gprb(s32) = G_TRUNC %4(s64)
+    %11:gprb(s32) = G_ADD %9, %10
+    G_STORE %11(s32), %0(p0) :: (store (s16))
+    %7:gprb(s64) = G_CONSTANT i64 0
+    $x10 = COPY %7(s64)
+    PseudoRET implicit $x10
+
+...
+---
+name:            store_i32_i32
+legalized:       true
+regBankSelected: true
+tracksRegLiveness: true
+body:             |
+  bb.0:
+    liveins: $x10, $x11, $x12
+
+    ; CHECK-LABEL: name: store_i32_i32
+    ; CHECK: liveins: $x10, $x11, $x12
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:gpr = COPY $x10
+    ; CHECK-NEXT: [[COPY1:%[0-9]+]]:gpr = COPY $x11
+    ; CHECK-NEXT: [[COPY2:%[0-9]+]]:gpr = COPY $x12
+    ; CHECK-NEXT: [[ADDW:%[0-9]+]]:gpr = ADDW [[COPY1]], [[COPY2]]
+    ; CHECK-NEXT: SW [[ADDW]], [[COPY]], 0 :: (store (s32))
+    ; CHECK-NEXT: [[COPY3:%[0-9]+]]:gpr = COPY $x0
+    ; CHECK-NEXT: $x10 = COPY [[COPY3]]
+    ; CHECK-NEXT: PseudoRET implicit $x10
+    %0:gprb(p0) = COPY $x10
+    %3:gprb(s64) = COPY $x11
+    %4:gprb(s64) = COPY $x12
+    %9:gprb(s32) = G_TRUNC %3(s64)
+    %10:gprb(s32) = G_TRUNC %4(s64)
+    %11:gprb(s32) = G_ADD %9, %10
+    G_STORE %11(s32), %0(p0) :: (store (s32))
+    %7:gprb(s64) = G_CONSTANT i64 0
+    $x10 = COPY %7(s64)
+    PseudoRET implicit $x10
+
+...
