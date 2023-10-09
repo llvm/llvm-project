@@ -1,6 +1,7 @@
 #include "../include/OmptTester.h"
 
 #include <atomic>
+#include <cassert>
 #include <cstdlib>
 #include <cstring>
 

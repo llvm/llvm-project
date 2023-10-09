@@ -7,10 +7,15 @@ add_llvm_library(omptest
 SHARED
 
 ./include/InternalEvent.h
-./include/OmptTester.h
-./include/OmptCallbackHandler.h
-./include/OmptAssertEvent.h
+./include/InternalEventCommon.h
 ./include/OmptAsserter.h
+./include/OmptAssertEvent.h
+./include/OmptCallbackHandler.h
+./include/OmptTester.h
+./src/InternalEvent.cpp
+./src/InternalEventOperators.cpp
+./src/OmptAssertEvent.cpp
+./src/OmptCallbackHandler.cpp
 ./src/OmptTester.cpp
 
 ADDITIONAL_HEADER_DIRS

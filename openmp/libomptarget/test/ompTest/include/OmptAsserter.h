@@ -3,7 +3,6 @@
 
 #include "OmptAssertEvent.h"
 
-#include <algorithm>
 #include <cassert>
 #include <iostream>
 #include <set>
@@ -12,6 +11,7 @@
 /// General base class for the subscriber/notification pattern in
 /// OmptCallbachHandler. Derived classes need to implement the notify method.
 struct OmptListener {
+  virtual ~OmptListener() = default;
   /// Called for each registered OMPT event of the OmptCallbackHandler
   virtual void notify(omptest::OmptAssertEvent &&AE) = 0;
 };
@@ -25,7 +25,7 @@ public:
 
   // Called from the CallbackHandler with a corresponding AssertEvent to which
   // callback was handled.
-  void notify(omptest::OmptAssertEvent &&AE) {
+  void notify(omptest::OmptAssertEvent &&AE) override {
     this->notifyImpl(std::move(AE));
   }
 
@@ -176,7 +176,10 @@ private:
       omptest::internal::EventTy::ParallelBegin,
       omptest::internal::EventTy::ParallelEnd,
       omptest::internal::EventTy::ThreadBegin,
-      omptest::internal::EventTy::ThreadEnd};
+      omptest::internal::EventTy::ThreadEnd,
+      omptest::internal::EventTy::ImplicitTask,
+      omptest::internal::EventTy::TaskCreate,
+      omptest::internal::EventTy::TaskSchedule};
 };
 
 #endif
