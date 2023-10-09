@@ -39,13 +39,24 @@ public:
   constexpr auto end() const { return non_input_iterator<int>{}; }
 };
 
+class non_view_range {
+public:
+  constexpr int* begin() const { return nullptr; }
+  constexpr int* end() const { return nullptr; }
+};
+
 constexpr bool test() {
   // Ensure that the almost_input_range is a valid range.
   static_assert(std::ranges::range<almost_input_range>);
   // Ensure that the non_input_iterator is, well, not an input iterator.
   static_assert(!std::input_iterator<non_input_iterator<int>>);
-
   static_assert(!CanStrideView<almost_input_range, 1>, "A non input range cannot be the subject of a stride view.");
+
+  // Ensure that a range that is not a view cannot be the subject of a stride_view.
+  static_assert(std::ranges::range<non_view_range>, "non_view_range must be a range.");
+  static_assert(std::movable<non_view_range>, "non_view_range must be movable.");
+  static_assert(!std::ranges::view<non_view_range>, "A non-view range cannot be the subject of a stride_view.\n");
+
   return true;
 }
 
