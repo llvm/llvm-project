@@ -214,8 +214,10 @@ public:
   /// * `added` a map from `[0..count)` to last-level coordinates for
   ///   which `filled` is true and `values` contains the assotiated value.
   /// * `count` the size of `added`.
+  /// * `expsz` the size of the expanded vector (verification only).
 #define DECL_EXPINSERT(VNAME, V)                                               \
-  virtual void expInsert(uint64_t *, V *, bool *, uint64_t *, uint64_t);
+  virtual void expInsert(uint64_t *, V *, bool *, uint64_t *, uint64_t,        \
+                         uint64_t);
   MLIR_SPARSETENSOR_FOREVERY_V(DECL_EXPINSERT)
 #undef DECL_EXPINSERT
 
@@ -426,7 +428,7 @@ public:
 
   /// Partially specialize expanded insertions based on template types.
   void expInsert(uint64_t *lvlCoords, V *values, bool *filled, uint64_t *added,
-                 uint64_t count) final {
+                 uint64_t count, uint64_t expsz) final {
     assert((lvlCoords && values && filled && added) && "Received nullptr");
     if (count == 0)
       return;
@@ -435,6 +437,7 @@ public:
     // Restore insertion path for first insert.
     const uint64_t lastLvl = getLvlRank() - 1;
     uint64_t c = added[0];
+    assert(c <= expsz);
     assert(filled[c] && "added coordinate is not filled");
     lvlCoords[lastLvl] = c;
     lexInsert(lvlCoords, values[c]);
@@ -444,6 +447,7 @@ public:
     for (uint64_t i = 1; i < count; ++i) {
       assert(c < added[i] && "non-lexicographic insertion");
       c = added[i];
+      assert(c <= expsz);
       assert(filled[c] && "added coordinate is not filled");
       lvlCoords[lastLvl] = c;
       insPath(lvlCoords, lastLvl, added[i - 1] + 1, values[c]);
