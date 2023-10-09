@@ -404,6 +404,7 @@ arm::FloatABI arm::getDefaultFloatABI(const llvm::Triple &Triple) {
     }
     break;
 
+  case llvm::Triple::Haiku:
   case llvm::Triple::OpenBSD:
     return FloatABI::SoftFP;
 
