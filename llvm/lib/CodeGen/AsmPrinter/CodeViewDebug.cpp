@@ -3353,7 +3353,7 @@ void CodeViewDebug::emitConstantSymbolRecord(const DIType *DTy, APSInt &Value,
 
   // Encoded integers shouldn't need more than 10 bytes.
   uint8_t Data[10];
-  BinaryStreamWriter Writer(Data, llvm::support::endianness::little);
+  BinaryStreamWriter Writer(Data, llvm::endianness::little);
   CodeViewRecordIO IO(Writer);
   cantFail(IO.mapEncodedInteger(Value));
   StringRef SRef((char *)Data, Writer.getOffset());

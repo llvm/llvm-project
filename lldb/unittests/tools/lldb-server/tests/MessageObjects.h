@@ -31,7 +31,7 @@ class ProcessInfo : public Parser<ProcessInfo> {
 public:
   static llvm::Expected<ProcessInfo> create(llvm::StringRef response);
   lldb::pid_t GetPid() const;
-  llvm::support::endianness GetEndian() const;
+  llvm::endianness GetEndian() const;
 
 private:
   ProcessInfo() = default;
@@ -43,7 +43,7 @@ private:
   uint32_t m_effective_gid;
   std::string m_triple;
   llvm::SmallString<16> m_ostype;
-  llvm::support::endianness m_endian;
+  llvm::endianness m_endian;
   unsigned int m_ptrsize;
 };
 
@@ -85,7 +85,7 @@ struct RegisterInfoParser : public Parser<lldb_private::RegisterInfo> {
 
 llvm::Expected<lldb_private::RegisterValue>
 parseRegisterValue(const lldb_private::RegisterInfo &Info,
-                   llvm::StringRef HexValue, llvm::support::endianness Endian,
+                   llvm::StringRef HexValue, llvm::endianness Endian,
                    bool ZeroPad = false);
 
 class StopReply : public Parser<std::unique_ptr<StopReply>> {
@@ -94,7 +94,7 @@ public:
   virtual ~StopReply() = default;
 
   static llvm::Expected<std::unique_ptr<StopReply>>
-  create(llvm::StringRef Response, llvm::support::endianness Endian,
+  create(llvm::StringRef Response, llvm::endianness Endian,
          llvm::ArrayRef<lldb_private::RegisterInfo> RegInfos);
 
   // for llvm::cast<>
@@ -114,7 +114,7 @@ public:
         Reason(Reason) {}
 
   static llvm::Expected<std::unique_ptr<StopReplyStop>>
-  create(llvm::StringRef Response, llvm::support::endianness Endian,
+  create(llvm::StringRef Response, llvm::endianness Endian,
          llvm::ArrayRef<lldb_private::RegisterInfo> RegInfos);
 
   const RegisterMap &getThreadPcs() const { return ThreadPcs; }
@@ -131,7 +131,7 @@ public:
 private:
   static llvm::Expected<RegisterMap> parseRegisters(
       const llvm::StringMap<llvm::SmallVector<llvm::StringRef, 2>> &Elements,
-      llvm::support::endianness Endian,
+      llvm::endianness Endian,
       llvm::ArrayRef<lldb_private::RegisterInfo> RegInfos);
 
   uint8_t Signal;

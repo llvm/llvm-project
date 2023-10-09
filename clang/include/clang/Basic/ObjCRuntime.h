@@ -482,7 +482,7 @@ public:
     return llvm::hash_combine(OCR.getKind(), OCR.getVersion());
   }
 
-  template <typename HasherT, llvm::support::endianness Endianness>
+  template <typename HasherT, llvm::endianness Endianness>
   friend void addHash(llvm::HashBuilder<HasherT, Endianness> &HBuilder,
                       const ObjCRuntime &OCR) {
     HBuilder.add(OCR.getKind(), OCR.getVersion());

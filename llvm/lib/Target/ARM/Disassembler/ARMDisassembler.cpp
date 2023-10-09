@@ -166,7 +166,7 @@ private:
   DecodeStatus AddThumbPredicate(MCInst&) const;
   void UpdateThumbVFPPredicate(DecodeStatus &, MCInst&) const;
 
-  llvm::support::endianness InstructionEndianness;
+  llvm::endianness InstructionEndianness;
 };
 
 } // end anonymous namespace

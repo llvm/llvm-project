@@ -424,7 +424,7 @@ TEST(HashingTest, HashCombineArgs18) {
 struct StructWithHashBuilderSupport {
   char C;
   int I;
-  template <typename HasherT, llvm::support::endianness Endianness>
+  template <typename HasherT, llvm::endianness Endianness>
   friend void addHash(llvm::HashBuilder<HasherT, Endianness> &HBuilder,
                       const StructWithHashBuilderSupport &Value) {
     HBuilder.add(Value.C, Value.I);
@@ -439,7 +439,7 @@ TEST(HashingTest, HashWithHashBuilder) {
 struct StructWithHashBuilderAndHashValueSupport {
   char C;
   int I;
-  template <typename HasherT, llvm::support::endianness Endianness>
+  template <typename HasherT, llvm::endianness Endianness>
   friend void addHash(llvm::HashBuilder<HasherT, Endianness> &HBuilder,
                       const StructWithHashBuilderAndHashValueSupport &Value) {}
   friend hash_code

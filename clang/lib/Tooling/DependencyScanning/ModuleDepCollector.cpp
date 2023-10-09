@@ -295,8 +295,7 @@ void ModuleDepCollector::applyDiscoveredDependencies(CompilerInvocation &CI) {
 static std::string getModuleContextHash(const ModuleDeps &MD,
                                         const CowCompilerInvocation &CI,
                                         bool EagerLoadModules) {
-  llvm::HashBuilder<llvm::TruncatedBLAKE3<16>,
-                    llvm::support::endianness::native>
+  llvm::HashBuilder<llvm::TruncatedBLAKE3<16>, llvm::endianness::native>
       HashBuilder;
   SmallString<32> Scratch;
 
