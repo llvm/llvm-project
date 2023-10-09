@@ -10457,10 +10457,10 @@ Sema::ActOnFunctionDeclarator(Scope *S, Declarator &D, DeclContext *DC,
              TemplateSpecializationType::
                  anyInstantiationDependentTemplateArguments(
                      TemplateArgs.arguments()));
-        assert(!isDependentSpecialization ||
-               (HasExplicitTemplateArgs == isDependentSpecialization) &&
-                   "dependent friend function specialization without template "
-                   "args");
+        assert((!isDependentSpecialization ||
+                (HasExplicitTemplateArgs == isDependentSpecialization)) &&
+               "dependent friend function specialization without template "
+               "args");
       } else {
         // For class-scope explicit specializations of function templates,
         // if the lexical context is dependent, then the specialization
