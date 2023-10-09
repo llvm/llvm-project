@@ -200,8 +200,7 @@ public:
   /// MLIR buffers as needed, and returning `this` for method chaining.
   NewCallParams &genBuffers(SparseTensorType stt,
                             ArrayRef<Value> dimSizesValues) {
-    const Dimension dimRank = stt.getDimRank();
-    assert(dimSizesValues.size() == static_cast<size_t>(dimRank));
+    assert(dimSizesValues.size() == static_cast<size_t>(stt.getDimRank()));
     // Sparsity annotations.
     params[kParamLvlTypes] = genLvlTypesBuffer(builder, loc, stt);
     // Construct dimSizes, lvlSizes, dim2lvl, and lvl2dim buffers.
