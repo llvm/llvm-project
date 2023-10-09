@@ -338,17 +338,14 @@ std::string getDefaultOnDiskCASPath();
 /// schemes:
 ///  * InMemory CAS: mem://
 ///  * OnDisk CAS: file://${PATH_TO_ONDISK_CAS}
-///  * PlugIn CAS: plugin://${PATH_TO_PLUGIN}?${OPT1}=${VAL1}&${OPT2}=${VAL2}..
-/// If no URL scheme is used, it defaults to following (but might change in
-/// future)
-///  * empty string: Error!
-///  * "auto": default OnDiskCAS location
-///  * Other: path to OnDiskCAS.
 /// For the plugin scheme, use argument "ondisk-path=${PATH}" to choose the
 /// on-disk directory that the plugin should use, otherwise the default
 /// OnDiskCAS location will be used.
 /// FIXME: Need to implement proper URL encoding scheme that allows "%".
-Expected<std::shared_ptr<ObjectStore>> createCASFromIdentifier(StringRef Path);
+Expected<std::shared_ptr<ObjectStore>> createCASFromIdentifier(StringRef Id);
+
+/// Check if a string is a CAS identifier.
+bool isRegisteredCASIdentifier(StringRef Config);
 
 /// Register a URL scheme to CAS Identifier.
 using ObjectStoreCreateFuncTy =

@@ -210,7 +210,14 @@ ObjectProxy::getMemoryBuffer(StringRef Name,
 
 static Expected<std::shared_ptr<ObjectStore>>
 createOnDiskCASImpl(const Twine &Path) {
-  return createOnDiskCAS(Path);
+  std::string CASPath = Path.str();
+  // If path is empty, use default ondisk CAS path.
+  if (CASPath.empty())
+    CASPath = getDefaultOnDiskCASPath();
+  auto UniDB = builtin::createBuiltinUnifiedOnDiskCache(CASPath);
+  if (!UniDB)
+    return UniDB.takeError();
+  return builtin::createObjectStoreFromUnifiedOnDiskCache(std::move(*UniDB));
 }
 
 static Expected<std::shared_ptr<ObjectStore>>
@@ -229,28 +236,22 @@ static StringMap<ObjectStoreCreateFuncTy *> &getRegisteredScheme() {
 }
 
 Expected<std::shared_ptr<ObjectStore>>
-cas::createCASFromIdentifier(StringRef Path) {
+cas::createCASFromIdentifier(StringRef Id) {
   for (auto &Scheme : getRegisteredScheme()) {
-    if (Path.consume_front(Scheme.getKey()))
-      return Scheme.getValue()(Path);
+    if (Id.consume_front(Scheme.getKey()))
+      return Scheme.getValue()(Id);
   }
 
-  if (Path.empty())
-    return createStringError(std::make_error_code(std::errc::invalid_argument),
-                             "No CAS identifier is provided");
+  return createStringError(std::make_error_code(std::errc::invalid_argument),
+                           "Unknown CAS identifier is provided");
+}
 
-  // FIXME: some current default behavior.
-  SmallString<256> PathBuf;
-  if (Path == "auto") {
-    getDefaultOnDiskCASPath(PathBuf);
-    Path = PathBuf;
+bool cas::isRegisteredCASIdentifier(StringRef Id) {
+  for (auto &Scheme : getRegisteredScheme()) {
+    if (Id.consume_front(Scheme.getKey()))
+      return true;
   }
-
-  // Fallback is to create UnifiedOnDiskCache.
-  auto UniDB = builtin::createBuiltinUnifiedOnDiskCache(Path);
-  if (!UniDB)
-    return UniDB.takeError();
-  return builtin::createObjectStoreFromUnifiedOnDiskCache(std::move(*UniDB));
+  return false;
 }
 
 void cas::registerCASURLScheme(StringRef Prefix,

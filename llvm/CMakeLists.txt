@@ -831,6 +831,13 @@ option (LLVM_ENABLE_SPHINX "Use Sphinx to generate llvm documentation." OFF)
 option (LLVM_ENABLE_OCAMLDOC "Build OCaml bindings documentation." ON)
 option (LLVM_ENABLE_BINDINGS "Build bindings." ON)
 
+if(UNIX AND CMAKE_SIZEOF_VOID_P GREATER_EQUAL 8)
+  set(LLVM_ENABLE_ONDISK_CAS_default ON)
+else()
+  set(LLVM_ENABLE_ONDISK_CAS_default OFF)
+endif()
+option(LLVM_ENABLE_ONDISK_CAS "Build OnDiskCAS." ${LLVM_ENABLE_ONDISK_CAS_default})
+
 set(LLVM_INSTALL_DOXYGEN_HTML_DIR "${CMAKE_INSTALL_DOCDIR}/llvm/doxygen-html"
     CACHE STRING "Doxygen-generated HTML documentation install directory")
 set(LLVM_INSTALL_OCAMLDOC_HTML_DIR "${CMAKE_INSTALL_DOCDIR}/llvm/ocaml-html"
