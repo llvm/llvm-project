@@ -480,7 +480,8 @@ MLIR_SPARSETENSOR_FOREVERY_V(IMPL_LEXINSERT)
     V *values = MEMREF_GET_PAYLOAD(vref);                                      \
     bool *filled = MEMREF_GET_PAYLOAD(fref);                                   \
     index_type *added = MEMREF_GET_PAYLOAD(aref);                              \
-    tensor.expInsert(lvlCoords, values, filled, added, count);                 \
+    uint64_t expsz = vref->sizes[0];                                           \
+    tensor.expInsert(lvlCoords, values, filled, added, count, expsz);          \
   }
 MLIR_SPARSETENSOR_FOREVERY_V(IMPL_EXPINSERT)
 #undef IMPL_EXPINSERT
