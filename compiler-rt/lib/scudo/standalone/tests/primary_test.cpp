@@ -207,7 +207,7 @@ struct SmallRegionsConfig {
 // For the 32-bit one, it requires actually exhausting memory, so we skip it.
 TEST(ScudoPrimaryTest, Primary64OOM) {
   using Primary = scudo::SizeClassAllocator64<SmallRegionsConfig>;
-  using TransferBatch = Primary::TransferBatch;
+  using TransferBatch = Primary::TransferBatchT;
   Primary Allocator;
   Allocator.init(/*ReleaseToOsInterval=*/-1);
   typename Primary::CacheT Cache;

@@ -181,7 +181,7 @@ private:
         Allocator->popBlocks(this, ClassId, C->Chunks);
     DCHECK_LE(NumBlocksRefilled,
               getMaxCached(SizeClassAllocator::getSizeByClassId(ClassId)));
-    C->Count += NumBlocksRefilled;
+    C->Count = static_cast<u16>(C->Count + NumBlocksRefilled);
     return NumBlocksRefilled != 0;
   }
 
