@@ -6,31 +6,47 @@
 //
 //===----------------------------------------------------------------------===//
 
+#ifndef LLVM_UNITTESTS_CASTESTCONFIG_H
+#define LLVM_UNITTESTS_CASTESTCONFIG_H
+
+#include "llvm/CAS/ActionCache.h"
 #include "llvm/CAS/ObjectStore.h"
-#include "llvm/Config/llvm-config.h"
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Testing/Support/Error.h"
 #include "llvm/Testing/Support/SupportHelpers.h"
 #include "gtest/gtest.h"
+#include <memory>
 
-#ifndef LLVM_UNITTESTS_CASTESTCONFIG_H
-#define LLVM_UNITTESTS_CASTESTCONFIG_H
-
-struct CASTestingEnv {
-  std::unique_ptr<llvm::cas::ObjectStore> CAS;
+struct TestingAndDir {
+  std::shared_ptr<llvm::cas::ObjectStore> CAS;
+  std::unique_ptr<llvm::cas::ActionCache> Cache;
+  std::optional<llvm::unittest::TempDir> Temp;
 };
 
 class CASTest
-    : public testing::TestWithParam<std::function<CASTestingEnv(int)>> {
+    : public testing::TestWithParam<std::function<TestingAndDir(int)>> {
 protected:
   std::optional<int> NextCASIndex;
 
-  std::unique_ptr<llvm::cas::ObjectStore> createObjectStore() {
+  llvm::SmallVector<llvm::unittest::TempDir> Dirs;
+
+  std::shared_ptr<llvm::cas::ObjectStore> createObjectStore() {
     auto TD = GetParam()(++(*NextCASIndex));
+    if (TD.Temp)
+      Dirs.push_back(std::move(*TD.Temp));
     return std::move(TD.CAS);
   }
+  std::unique_ptr<llvm::cas::ActionCache> createActionCache() {
+    auto TD = GetParam()(++(*NextCASIndex));
+    if (TD.Temp)
+      Dirs.push_back(std::move(*TD.Temp));
+    return std::move(TD.Cache);
+  }
   void SetUp() { NextCASIndex = 0; }
-  void TearDown() { NextCASIndex = std::nullopt; }
+  void TearDown() {
+    NextCASIndex = std::nullopt;
+    Dirs.clear();
+  }
 };
 
 #endif
