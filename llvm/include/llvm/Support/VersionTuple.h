@@ -173,7 +173,7 @@ public:
     return hash_combine(VT.Major, VT.Minor, VT.Subminor, VT.Build);
   }
 
-  template <typename HasherT, llvm::support::endianness Endianness>
+  template <typename HasherT, llvm::endianness Endianness>
   friend void addHash(HashBuilder<HasherT, Endianness> &HBuilder,
                       const VersionTuple &VT) {
     HBuilder.add(VT.Major, VT.Minor, VT.Subminor, VT.Build);

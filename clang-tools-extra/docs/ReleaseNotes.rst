@@ -294,9 +294,14 @@ Changes in existing checks
   <clang-tidy/checks/performance/faster-string-find>` check to properly escape
   single quotes.
 
+- Improved :doc:`performance-noexcept-move-constructor
+  <clang-tidy/checks/performance/noexcept-move-constructor>` to better handle
+  conditional noexcept expressions, eliminating false-positives.
+
 - Improved :doc:`performance-noexcept-swap
   <clang-tidy/checks/performance/noexcept-swap>` check to enforce a stricter
-  match with the swap function signature, eliminating false-positives.
+  match with the swap function signature and better handling of condition
+  noexcept expressions, eliminating false-positives.
 
 - Improved :doc:`readability-braces-around-statements
   <clang-tidy/checks/readability/braces-around-statements>` check to
