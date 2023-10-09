@@ -395,7 +395,7 @@ static void genPrivateLikeInitRegion(mlir::OpBuilder &builder, RecipeOp recipe,
     }
   } else if (auto boxTy = mlir::dyn_cast_or_null<fir::BaseBoxType>(ty)) {
     mlir::Type innerTy = extractSequenceType(boxTy);
-    if (!mlir::isa<fir::SequenceType>(innerTy))
+    if (!innerTy)
       TODO(loc, "Unsupported boxed type in OpenACC privatization");
     fir::FirOpBuilder firBuilder{builder, recipe.getOperation()};
     hlfir::Entity source = hlfir::Entity{retVal};
