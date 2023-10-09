@@ -51,12 +51,12 @@ func.func @subview(%0 : memref<64x4xf32, strided<[4, 1], offset: 0>>, %arg0 : in
 }
 
 module @named_inclusion_in_named attributes { transform.with_named_sequence } {
-  transform.named_sequence @lower_to_cpu(
+  transform.named_sequence @lower_to_llvm(
     !transform.any_op {transform.readonly}) -> !transform.any_op
 
   transform.named_sequence @some_other_entry_point(
       %toplevel_module: !transform.any_op {transform.readonly}) {
-    transform.include @lower_to_cpu failures(suppress) (%toplevel_module)
+    transform.include @lower_to_llvm failures(suppress) (%toplevel_module)
       : (!transform.any_op) -> (!transform.any_op)
     transform.yield
   }

@@ -1,9 +1,9 @@
 // RUN: mlir-opt %s
 
 /// Schedule to lower to LLVM.
-module @lower_module_to_cpu attributes { transform.with_named_sequence } {
+module @lower_module_to_llvm attributes { transform.with_named_sequence } {
 
-transform.named_sequence @lower_to_cpu(
+transform.named_sequence @lower_to_llvm(
     %module: !transform.any_op {transform.readonly}) -> !transform.any_op {
 
   %func = transform.structured.match ops{["func.func"]} in %module : (!transform.any_op) -> !transform.any_op
