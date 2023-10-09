@@ -133,7 +133,9 @@ def SparseTensorEncodingAttr : SparseTensor_Attr<"SparseTensorEncoding",
     level-expressions collectively define an affine map from dimension-coordinates to
     level-coordinates. The dimension-expressions collectively define the inverse map,
     which only needs to be provided for elaborate cases where it cannot be inferred
-    automatically. Each dimension could also have an optional `SparseTensorDimSliceAttr`.
+    automatically.
+    
+    Each dimension could also have an optional `SparseTensorDimSliceAttr`.
     Within the sparse storage format, we refer to indices that are stored explicitly
     as **coordinates** and offsets into the storage format as **positions**.
 
