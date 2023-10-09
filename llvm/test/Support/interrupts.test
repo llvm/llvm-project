@@ -10,7 +10,8 @@ import sys
 import time
 
 def run_symbolizer():
-    proc = subprocess.Popen([sys.argv[2]], stdout=subprocess.PIPE, stdin=subprocess.PIPE)
+    proc = subprocess.Popen([sys.argv[2]], stdout=subprocess.PIPE,
+                            stdin=subprocess.PIPE, stderr=sys.stderr)
     # Write then read some output to ensure the process has started fully.
     proc.stdin.write(b'foo bar\n')
     proc.stdin.flush()
@@ -34,8 +35,8 @@ def run_wrapper():
                                 startupinfo=startupinfo,
                                 creationflags=subprocess.CREATE_NEW_CONSOLE)
     else:
-        proc = subprocess.Popen(args,
-                                stderr=subprocess.PIPE)
+        proc = subprocess.Popen(args, stderr=sys.stderr)
+        proc.wait()
 
 if sys.argv[1] == 'wrapper':
     run_wrapper()
