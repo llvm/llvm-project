@@ -52,12 +52,11 @@ bool GIMatchTableExecutor::executeMatchTable(
     const PredicateBitset &AvailableFeatures,
     CodeGenCoverage *CoverageInfo) const {
 
-
   uint64_t CurrentIdx = 0;
   SmallVector<uint64_t, 4> OnFailResumeAt;
   NewMIVector OutMIs;
 
-  GISelChangeObserver* Observer = Builder.getObserver();
+  GISelChangeObserver *Observer = Builder.getObserver();
   // Bypass the flag check on the instruction, and only look at the MCInstrDesc.
   bool NoFPException = !State.MIs[0]->getDesc().mayRaiseFPException();
 
@@ -907,13 +906,12 @@ bool GIMatchTableExecutor::executeMatchTable(
       if (NewInsnID >= OutMIs.size())
         OutMIs.resize(NewInsnID + 1);
 
-      MachineInstr* OldMI = State.MIs[OldInsnID];
-      if(Observer)
+      MachineInstr *OldMI = State.MIs[OldInsnID];
+      if (Observer)
         Observer->changingInstr(*OldMI);
-      OutMIs[NewInsnID] = MachineInstrBuilder(*OldMI->getMF(),
-                                              OldMI);
+      OutMIs[NewInsnID] = MachineInstrBuilder(*OldMI->getMF(), OldMI);
       OutMIs[NewInsnID]->setDesc(TII.get(NewOpcode));
-      if(Observer)
+      if (Observer)
         Observer->changedInstr(*OldMI);
       DEBUG_WITH_TYPE(TgtExecutor::getName(),
                       dbgs() << CurrentIdx << ": GIR_MutateOpcode(OutMIs["
@@ -1256,7 +1254,7 @@ bool GIMatchTableExecutor::executeMatchTable(
       // pointer in the builder.
       if (Builder.getInsertPt() == MI)
         Builder.setInsertPt(*MI->getParent(), ++MI->getIterator());
-      if(Observer)
+      if (Observer)
         Observer->erasingInstr(*MI);
       MI->eraseFromParent();
       break;
