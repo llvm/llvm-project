@@ -488,7 +488,7 @@ The program presented `here <https://eli.thegreenplace.net/2011/01/23/how-debugg
 is a great starting point. There is also an AArch64 specific example in
 `the LLDB examples folder <https://github.com/llvm/llvm-project/tree/main/lldb/examples/ptrace_example.c>`_.
 
-For either, you'll need to modify that to fit your architecture. An tip for this
+For either, you'll need to modify that to fit your architecture. A tip for this
 is to take any constants used in it, find in which function(s) they are used in
 LLDB and then you'll find the equivalent constants in the same LLDB functions
 for your architecture.
