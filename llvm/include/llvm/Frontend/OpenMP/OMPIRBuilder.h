@@ -2171,6 +2171,10 @@ public:
   using TargetBodyGenCallbackTy = function_ref<InsertPointTy(
       InsertPointTy AllocaIP, InsertPointTy CodeGenIP)>;
 
+  using TargetGenArgAccessorsCallbackTy = function_ref<InsertPointTy(
+      Argument &Arg, Value *Input, Value *&RetVal, InsertPointTy AllocaIP,
+      InsertPointTy CodeGenIP)>;
+
   /// Generator for '#omp target'
   ///
   /// \param Loc where the target data construct was encountered.
@@ -2182,6 +2186,8 @@ public:
   /// \param Inputs The input values to the region that will be passed.
   /// as arguments to the outlined function.
   /// \param BodyGenCB Callback that will generate the region code.
+  /// \param ArgAccessorFuncCB Callback that will generate accessors
+  /// instructions for passed in target arguments where neccessary
   InsertPointTy createTarget(const LocationDescription &Loc,
                              OpenMPIRBuilder::InsertPointTy AllocaIP,
                              OpenMPIRBuilder::InsertPointTy CodeGenIP,
@@ -2189,7 +2195,8 @@ public:
                              int32_t NumThreads,
                              SmallVectorImpl<Value *> &Inputs,
                              GenMapInfoCallbackTy GenMapInfoCB,
-                             TargetBodyGenCallbackTy BodyGenCB);
+                             TargetBodyGenCallbackTy BodyGenCB,
+                             TargetGenArgAccessorsCallbackTy ArgAccessorFuncCB);
 
   /// Returns __kmpc_for_static_init_* runtime function for the specified
   /// size \a IVSize and sign \a IVSigned. Will create a distribute call

@@ -55,6 +55,7 @@ public:
   Error visitHTMLResource(const RCResource *) override;
   Error visitIconResource(const RCResource *) override;
   Error visitMenuResource(const RCResource *) override;
+  Error visitMenuExResource(const RCResource *) override;
   Error visitVersionInfoResource(const RCResource *) override;
   Error visitStringTableResource(const RCResource *) override;
   Error visitUserDefinedResource(const RCResource *) override;
@@ -150,8 +151,12 @@ private:
   // MenuResource
   Error writeMenuDefinition(const std::unique_ptr<MenuDefinition> &,
                             uint16_t Flags);
+  Error writeMenuExDefinition(const std::unique_ptr<MenuDefinition> &,
+                              uint16_t Flags);
   Error writeMenuDefinitionList(const MenuDefinitionList &List);
+  Error writeMenuExDefinitionList(const MenuDefinitionList &List);
   Error writeMenuBody(const RCResource *);
+  Error writeMenuExBody(const RCResource *);
 
   // StringTableResource
   Error visitStringTableBundle(const RCResource *);

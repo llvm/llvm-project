@@ -392,7 +392,6 @@ static bool shouldForceLegacyPM() {
 //
 int main(int argc, char **argv) {
   InitLLVM X(argc, argv);
-  ExitOnError ExitOnErr(std::string(argv[0]) + ": error: ");
 
   // Enable debug stream buffering.
   EnableDebugBuffering = true;
@@ -598,8 +597,15 @@ int main(int argc, char **argv) {
   if (ModuleTriple.getArch()) {
     CPUStr = codegen::getCPUStr();
     FeaturesStr = codegen::getFeaturesStr();
-    TM = ExitOnErr(codegen::createTargetMachineForTriple(ModuleTriple.str(),
-                                                         GetCodeGenOptLevel()));
+    Expected<std::unique_ptr<TargetMachine>> ExpectedTM =
+        codegen::createTargetMachineForTriple(ModuleTriple.str(),
+                                              GetCodeGenOptLevel());
+    if (auto E = ExpectedTM.takeError()) {
+      errs() << argv[0] << ": WARNING: failed to create target machine for '"
+             << ModuleTriple.str() << "': " << toString(std::move(E)) << "\n";
+    } else {
+      TM = std::move(*ExpectedTM);
+    }
   } else if (ModuleTriple.getArchName() != "unknown" &&
              ModuleTriple.getArchName() != "") {
     errs() << argv[0] << ": unrecognized architecture '"

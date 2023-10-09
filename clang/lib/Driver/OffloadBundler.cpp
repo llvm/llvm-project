@@ -1003,15 +1003,21 @@ CompressedOffloadBundle::decompress(const llvm::MemoryBuffer &Input,
     return llvm::MemoryBuffer::getMemBufferCopy(Blob);
   }
 
-  uint16_t ThisVersion = *reinterpret_cast<const uint16_t *>(
-      Input.getBuffer().data() + MagicNumber.size());
-  uint16_t CompressionMethod = *reinterpret_cast<const uint16_t *>(
-      Blob.data() + MagicSize + VersionFieldSize);
-  uint32_t UncompressedSize = *reinterpret_cast<const uint32_t *>(
-      Blob.data() + MagicSize + VersionFieldSize + MethodFieldSize);
-  uint64_t StoredHash = *reinterpret_cast<const uint64_t *>(
-      Blob.data() + MagicSize + VersionFieldSize + MethodFieldSize +
-      SizeFieldSize);
+  uint16_t ThisVersion;
+  uint16_t CompressionMethod;
+  uint32_t UncompressedSize;
+  uint64_t StoredHash;
+  memcpy(&ThisVersion, Input.getBuffer().data() + MagicNumber.size(),
+         sizeof(uint16_t));
+  memcpy(&CompressionMethod, Blob.data() + MagicSize + VersionFieldSize,
+         sizeof(uint16_t));
+  memcpy(&UncompressedSize,
+         Blob.data() + MagicSize + VersionFieldSize + MethodFieldSize,
+         sizeof(uint32_t));
+  memcpy(&StoredHash,
+         Blob.data() + MagicSize + VersionFieldSize + MethodFieldSize +
+             SizeFieldSize,
+         sizeof(uint64_t));
 
   llvm::compression::Format CompressionFormat;
   if (CompressionMethod ==

@@ -8,6 +8,7 @@ add_subdirectory(mlir-spirv-cpu-runner)
 add_subdirectory(mlir-translate)
 add_subdirectory(mlir-vulkan-runner)
 add_subdirectory(tblgen-lsp-server)
+add_subdirectory(tblgen-to-irdl)
 
 # mlir-cpu-runner requires ExecutionEngine.
 if(MLIR_ENABLE_EXECUTION_ENGINE)

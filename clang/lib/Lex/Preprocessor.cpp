@@ -817,8 +817,8 @@ bool Preprocessor::HandleIdentifier(Token &Identifier) {
   }
 
   // If this is a macro to be expanded, do it.
-  if (MacroDefinition MD = getMacroDefinition(&II)) {
-    auto *MI = MD.getMacroInfo();
+  if (const MacroDefinition MD = getMacroDefinition(&II)) {
+    const auto *MI = MD.getMacroInfo();
     assert(MI && "macro definition with no macro info?");
     if (!DisableMacroExpansion) {
       if (!Identifier.isExpandDisabled() && MI->isEnabled()) {
@@ -995,6 +995,18 @@ void Preprocessor::Lex(Token &Result) {
       ++TokenCount;
     if (OnToken)
       OnToken(Result);
+  }
+}
+
+void Preprocessor::LexTokensUntilEOF(std::vector<Token> *Tokens) {
+  while (1) {
+    Token Tok;
+    Lex(Tok);
+    if (Tok.isOneOf(tok::unknown, tok::eof, tok::eod,
+                    tok::annot_repl_input_end))
+      break;
+    if (Tokens != nullptr)
+      Tokens->push_back(Tok);
   }
 }
 

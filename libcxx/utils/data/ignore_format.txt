@@ -1133,7 +1133,6 @@ libcxx/test/std/algorithms/alg.nonmodifying/alg.all_of/ranges.all_of.pass.cpp
 libcxx/test/std/algorithms/alg.nonmodifying/alg.any_of/any_of.pass.cpp
 libcxx/test/std/algorithms/alg.nonmodifying/alg.any_of/ranges.any_of.pass.cpp
 libcxx/test/std/algorithms/alg.nonmodifying/alg.count/count_if.pass.cpp
-libcxx/test/std/algorithms/alg.nonmodifying/alg.count/count.pass.cpp
 libcxx/test/std/algorithms/alg.nonmodifying/alg.count/pstl.count_if.pass.cpp
 libcxx/test/std/algorithms/alg.nonmodifying/alg.count/pstl.count.pass.cpp
 libcxx/test/std/algorithms/alg.nonmodifying/alg.count/ranges.count_if.pass.cpp
@@ -5614,9 +5613,6 @@ libcxx/test/std/thread/futures/futures.errors/equivalent_int_error_condition.pas
 libcxx/test/std/thread/futures/futures.errors/future_category.pass.cpp
 libcxx/test/std/thread/futures/futures.errors/make_error_code.pass.cpp
 libcxx/test/std/thread/futures/futures.errors/make_error_condition.pass.cpp
-libcxx/test/std/thread/futures/futures.future_error/code.pass.cpp
-libcxx/test/std/thread/futures/futures.future_error/types.pass.cpp
-libcxx/test/std/thread/futures/futures.future_error/what.pass.cpp
 libcxx/test/std/thread/futures/futures.overview/future_errc.pass.cpp
 libcxx/test/std/thread/futures/futures.overview/future_status.pass.cpp
 libcxx/test/std/thread/futures/futures.overview/is_error_code_enum_future_errc.pass.cpp
@@ -6516,7 +6512,6 @@ libcxx/test/std/utilities/memory/allocator.traits/allocator.traits.types/void_po
 libcxx/test/std/utilities/memory/allocator.traits/allocator_type.pass.cpp
 libcxx/test/std/utilities/memory/allocator.traits/rebind_traits.pass.cpp
 libcxx/test/std/utilities/memory/allocator.traits/value_type.pass.cpp
-libcxx/test/std/utilities/memory/allocator.uses/allocator.uses.construction/uses_allocator_construction_args.pass.cpp
 libcxx/test/std/utilities/memory/allocator.uses/allocator.uses.trait/uses_allocator.pass.cpp
 libcxx/test/std/utilities/memory/c.malloc/nothing_to_do.pass.cpp
 libcxx/test/std/utilities/memory/default.allocator/allocator.ctor.pass.cpp
